@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import time
 import random
 from datetime import datetime
@@ -5,11 +7,13 @@ from pathlib import Path
 
 import pandas as pd
 import yfinance as yf
+from typing import Optional, Literal
 
 from .db.mysql import MySQLClient
 from .db.schema import NYSE_SCHEMAS
 
 DB_NAME = "finance_meta"
+Kind = Literal["stock", "etf"]
 
 def _chunked(lst, size):
     for i in range(0, len(lst), size):
@@ -60,6 +64,7 @@ def _extract_profile(symbol: str, kind: str, t: yf.Ticker) -> dict:
 
     quote_type = info.get("quoteType")
     exchange = info.get("exchange")
+    long_name = info.get("longName") or info.get("shortName")
     # exchange_name = info.get("exchangeName")
 
     # fast_info 우선
@@ -77,6 +82,7 @@ def _extract_profile(symbol: str, kind: str, t: yf.Ticker) -> dict:
         "symbol": symbol,
         "kind": kind,
 
+        "long_name": long_name,
         "quote_type": quote_type,
         "exchange": exchange,
         # "exchange_name": exchange_name,
@@ -113,20 +119,21 @@ def _upsert_profiles(db: MySQLClient, rows: list[dict]):
     sql = """
     INSERT INTO nyse_asset_profile (
       symbol, kind,
-      quote_type, exchange,
+      long_name, quote_type, exchange,
       sector, industry, country,
       market_cap, dividend_yield, payout_ratio,
       is_spac,
       status, last_collected_at, delisted_at, error_msg
     ) VALUES (
       %(symbol)s, %(kind)s,
-      %(quote_type)s, %(exchange)s,
+      %(long_name)s, %(quote_type)s, %(exchange)s,
       %(sector)s, %(industry)s, %(country)s,
       %(market_cap)s, %(dividend_yield)s, %(payout_ratio)s,
       %(is_spac)s,
       %(status)s, %(last_collected_at)s, %(delisted_at)s, %(error_msg)s
     )
     ON DUPLICATE KEY UPDATE
+      long_name = VALUES(long_name),
       quote_type = VALUES(quote_type),
       exchange = VALUES(exchange),
       sector = VALUES(sector),
@@ -218,3 +225,73 @@ def collect_and_store_asset_profiles(
         pd.DataFrame(out_fail).to_csv(p, index=False, encoding="utf-8-sig")
 
     return out_fail
+
+
+def load_symbols_from_asset_profile(
+    kind: Kind,
+    sector: Optional[str] = None,
+    country: Optional[str] = None,
+    on_filter: bool = True,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+    limit: Optional[int] = None,
+) -> list[str]:
+    """
+    nyse_asset_profile 테이블에서 조건에 맞는 symbol 리스트를 반환.
+
+    필터 규칙(on_filter=True):
+      - is_spac == 1 제외
+      - country == 'china' 제외 (대소문자 무시)
+      - status in ('dilist','delist','delisted') 제외 (대소문자 무시)
+
+    sector / country 파라미터는 None이면 필터 제외.
+    """
+
+    if kind not in ("stock", "etf"):
+        raise ValueError("kind는 'stock' 또는 'etf'만 가능합니다.")
+
+    where = ["kind = %s"]
+    params: list = [kind]
+
+    if sector is not None:
+        where.append("sector = %s")
+        params.append(sector)
+
+    if country is not None:
+        where.append("country = %s")
+        params.append(country)
+
+    if on_filter:
+        # is_spec == 1 제외 (NULL은 허용)
+        where.append("(is_spac IS NULL OR is_spac <> 1)")
+
+        # country == china 제외 (NULL은 허용)
+        where.append("(country IS NULL OR LOWER(country) <> 'china')")
+
+        # status가 delist 류면 제외 (NULL은 허용)
+        where.append(
+            "(status IS NULL OR LOWER(status) NOT IN ('dilist', 'delist', 'delisted'))"
+        )
+
+    sql = f"""
+        SELECT symbol
+        FROM nyse_asset_profile
+        WHERE {" AND ".join(where)}
+        ORDER BY symbol
+    """
+
+    if limit is not None:
+        sql += " LIMIT %s"
+        params.append(int(limit))
+
+    db = MySQLClient(host, user, password, port)
+    try:
+        db.use_db(DB_NAME)
+        with db.conn.cursor() as cur:
+            cur.execute(sql, params)
+            rows = cur.fetchall()
+            return [r["symbol"] for r in rows if r and r.get("symbol")]
+    finally:
+        db.close()

@@ -1,4 +1,3 @@
-
 from IPython.display import display
 from .engine import BacktestEngine
 from .strategy import (
@@ -17,6 +16,9 @@ from .visualize import(
 from finance.data.asset_profile import(
     collect_and_store_asset_profiles
 )
+
+from finance.data.db.schema import sync_table_schema, NYSE_SCHEMAS
+from finance.data.db.mysql import MySQLClient
 
 def get_equal_weight(period="15y", option="month_end", interval=12, start=None):
     # tickers = ["GLD", "SPY", "SHY", "TLT"]
@@ -102,3 +104,14 @@ def load_sample():
         save_fail_csv=True,
         csv_dir="csv",
     )
+
+    db = MySQLClient("localhost", "root", "1234", 3306)
+    db.use_db("finance_meta")
+
+    # 테이블 생성 (없으면 생성)
+    db.execute(NYSE_SCHEMAS["asset_profile"])
+
+    # 스키마 동기화 (누락된 컬럼 자동 추가)
+    sync_table_schema(db, "nyse_asset_profile", NYSE_SCHEMAS["asset_profile"], "finance_meta")
+
+
