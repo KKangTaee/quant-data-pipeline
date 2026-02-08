@@ -126,6 +126,7 @@ def sync_table_schema(db, table_name: str, create_table_sql: str, db_name: str) 
                 print(f"⚠️  컬럼 추가 실패: {table_name}.{col_name} - {e}")
 
 
+
 NYSE_SCHEMAS = {
     "stock": """
         CREATE TABLE IF NOT EXISTS nyse_stock (
@@ -211,6 +212,98 @@ PRICE_SCHEMAS = {
             UNIQUE KEY uk_symbol_timeframe_date (symbol, timeframe, `date`),
             KEY ix_symbol (symbol),
             KEY ix_date (`date`)
+        );
+    """
+}
+
+
+FUNDAMENTAL_SCHEMAS = {
+    "fundamentals": """
+        CREATE TABLE IF NOT EXISTS nyse_fundamentals (
+          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+          symbol VARCHAR(20) NOT NULL,
+          freq   ENUM('annual','quarterly') NOT NULL,
+          period_end DATE NOT NULL,
+
+          currency VARCHAR(10) NULL,
+
+          total_revenue DOUBLE NULL,
+          gross_profit DOUBLE NULL,
+          operating_income DOUBLE NULL,
+          ebit DOUBLE NULL,
+          net_income DOUBLE NULL,
+
+          total_assets DOUBLE NULL,
+          current_assets DOUBLE NULL,
+          total_liabilities DOUBLE NULL,
+          current_liabilities DOUBLE NULL,
+          total_debt DOUBLE NULL,
+          net_assets DOUBLE NULL,
+
+          operating_cash_flow DOUBLE NULL,
+          free_cash_flow DOUBLE NULL,
+          capital_expenditure DOUBLE NULL,
+          cash_and_equivalents DOUBLE NULL,
+
+          dividends_paid DOUBLE NULL,
+          shares_outstanding BIGINT NULL,
+
+          source VARCHAR(20) NOT NULL DEFAULT 'yfinance',
+          last_collected_at TIMESTAMP NULL,
+          error_msg TEXT NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+          UNIQUE KEY uk_symbol_freq_period (symbol, freq, period_end),
+          KEY ix_symbol (symbol),
+          KEY ix_period_end (period_end)
+        );
+    """,
+
+    "factors": """
+        CREATE TABLE IF NOT EXISTS nyse_factors (
+          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+          symbol VARCHAR(20) NOT NULL,
+          freq   ENUM('annual','quarterly') NOT NULL,
+          period_end DATE NOT NULL,
+
+          price DOUBLE NULL,
+          market_cap BIGINT NULL,
+          enterprise_value BIGINT NULL,
+
+          psr DOUBLE NULL,
+          gpa DOUBLE NULL,
+          por DOUBLE NULL,
+          ev_ebit DOUBLE NULL,
+          per DOUBLE NULL,
+          liquidation_value DOUBLE NULL,
+          current_ratio DOUBLE NULL,
+          pbr DOUBLE NULL,
+          debt_ratio DOUBLE NULL,
+          pcr DOUBLE NULL,
+          pfcr DOUBLE NULL,
+          dividend_payout DOUBLE NULL,
+          op_income_growth DOUBLE NULL,
+          roe DOUBLE NULL,
+          roa DOUBLE NULL,
+          asset_turnover DOUBLE NULL,
+          interest_coverage DOUBLE NULL,
+          asset_growth DOUBLE NULL,
+          debt_growth DOUBLE NULL,
+          shares_growth DOUBLE NULL,
+
+          last_calculated_at TIMESTAMP NULL,
+          error_msg TEXT NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+          UNIQUE KEY uk_symbol_freq_period (symbol, freq, period_end),
+          KEY ix_symbol (symbol),
+          KEY ix_period_end (period_end)
         );
     """
 }

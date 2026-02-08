@@ -616,174 +616,185 @@ Stock에만 있는 키 (96개)
 
 
 # [손익계산서 항목] Income Statement Fields
-income_statement_fields = [
-    ("Tax Effect Of Unusual Items", "특이 항목의 세금 효과"),  # 예외 항목에 대한 세금 효과
-    ("Tax Rate For Calcs", "계산에 사용된 세율"),  # 세율
-    ("Normalized EBITDA", "정상화된 EBITDA"),  # 표준화 EBITDA
-    ("Net Income From Continuing Operation Net Minority Interest", "지배주주 귀속 지속 영업순이익"),  # 지속사업 순이익(비지배지분 차감 후)
-    ("Reconciled Depreciation", "조정된 감가상각비"),  # 조정 감가상각
-    ("Reconciled Cost Of Revenue", "조정된 매출원가"),  # 조정 매출원가
-    ("EBITDA", "상각전 영업이익 (EBITDA)"),  # 상각전 영업이익
-    ("EBIT", "영업이익 (EBIT)"),  # 영업이익
-    ("Net Interest Income", "순이자수익"),  # 순이자 수익
-    ("Interest Expense", "이자비용"),  # 이자 비용
-    ("Interest Income", "이자수익"),  # 이자 수익
-    ("Normalized Income", "정상화된 순이익"),  # 표준화 순이익
-    ("Net Income From Continuing And Discontinued Operation", "지속 및 중단사업 순이익"),  # 전체 순이익
-    ("Total Expenses", "총 비용"),  # 총비용
-    ("Total Operating Income As Reported", "보고된 영업수익"),  # 보고 영업이익
-    ("Diluted Average Shares", "희석주식수(평균)"),  # 희석주식수
-    ("Basic Average Shares", "기본주식수(평균)"),  # 기본주식수
-    ("Diluted EPS", "희석주당순이익"),  # 희석 EPS
-    ("Basic EPS", "기본주당순이익"),  # 기본 EPS
-    ("Diluted NI Availto Com Stockholders", "희석주식기준 순이익(보통주주귀속)"),  # 희석 주식 기준 순이익
-    ("Net Income Common Stockholders", "보통주주귀속 순이익"),  # 보통주주 순이익
-    ("Net Income", "당기순이익"),  # 순이익
-    ("Net Income Including Noncontrolling Interests", "비지배지분 포함 순이익"),  # 비지배지분 포함 순이익
-    ("Net Income Continuous Operations", "지속사업순이익"),  # 지속사업 순이익
-    ("Tax Provision", "법인세 계상액"),  # 세금 계상
-    ("Pretax Income", "세전 순이익"),  # 세전이익
-    ("Other Income Expense", "기타 수익/비용"),  # 기타수익/비용
-    ("Other Non Operating Income Expenses", "기타영업외수익/비용"),  # 기타 영업외 수익/비용
-    ("Net Non Operating Interest Income Expense", "순영업외이자수익/비용"),  # 영업외 순이자
-    ("Interest Expense Non Operating", "영업외 이자비용"),  # 영업외 이자비용
-    ("Interest Income Non Operating", "영업외 이자수익"),  # 영업외 이자수익
-    ("Operating Income", "영업이익"),  # 영업이익
-    ("Operating Expense", "영업비용"),  # 영업비용
-    ("Research And Development", "연구개발비"),  # 연구개발비
-    ("Selling General And Administration", "판매관리비"),  # 판매/일반관리비
-    ("Gross Profit", "매출총이익"),  # 매출총이익
-    ("Cost Of Revenue", "매출원가"),  # 매출원가
-    ("Total Revenue", "총매출액"),  # 총매출
-    ("Operating Revenue", "영업수익")  # 영업수익
-]
+# import yfinance as yf
+# ticker = yf.Ticker("AAPL")
+# ticker.income_stmt --> 호출시 나오는 값
+"""
+    Tax Effect Of Unusual Items # 예외 항목에 대한 세금 효과
+    Tax Rate For Calcs # 계산에 사용된 세율
+    Normalized EBITDA # 정상화된 EBITDA
+    Net Income From Continuing Operation Net Minority Interest # 지배주주 귀속 지속 영업순이익
+    Reconciled Depreciation # 조정된 감가상각비
+    Reconciled Cost Of Revenue # 조정된 매출원가
+    EBITDA # 상각전 영업이익 (EBITDA)
+    EBIT # 영업이익 (EBIT)
+    Net Interest Income # 순이자수익
+    Interest Expense # 이자비용
+    Interest Income # 이자수익
+    Normalized Income # 정상화된 순이익
+    Net Income From Continuing And Discontinued Operation # 지속 및 중단사업 순이익
+    Total Expenses # 총 비용
+    Total Operating Income As Reported # 보고된 영업수익
+    Diluted Average Shares # 희석주식수(평균)
+    Basic Average Shares # 기본주식수(평균)
+    Diluted EPS # 희석주당순이익
+    Basic EPS # 기본주당순이익
+    Diluted NI Availto Com Stockholders # 희석주식기준 순이익(보통주주귀속)
+    Net Income Common Stockholders # 보통주주귀속 순이익
+    Net Income # 당기순이익
+    Net Income Including Noncontrolling Interests # 비지배지분 포함 순이익
+    Net Income Continuous Operations # 지속사업순이익
+    Tax Provision # 법인세 계상액
+    Pretax Income # 세전 순이익
+    Other Income Expense # 기타 수익/비용
+    Other Non Operating Income Expenses # 기타영업외수익/비용
+    Net Non Operating Interest Income Expense # 순영업외이자수익/비용
+    Interest Expense Non Operating # 영업외 이자비용
+    Interest Income Non Operating # 영업외 이자수익
+    Operating Income # 영업이익
+    Operating Expense # 영업비용
+    Research And Development # 연구개발비
+    Selling General And Administration # 판매관리비
+    Gross Profit # 매출총이익
+    Cost Of Revenue # 매출원가
+    Total Revenue # 총매출액
+    Operating Revenue # 영업수익
+"""
 
 # [대차대조표 항목] Balance Sheet Fields
-balance_sheet_fields = [
-    ("Treasury Shares Number", "자기주식 수"),  # 자기주식수
-    ("Ordinary Shares Number", "보통주 수"),  # 보통주식수
-    ("Share Issued", "발행주식 수"),  # 발행주식수
-    ("Net Debt", "순부채"),  # 순부채
-    ("Total Debt", "총부채"),  # 총부채
-    ("Tangible Book Value", "유형장부가치"),  # 유형장부가치
-    ("Invested Capital", "투하자본"),  # 투자자본
-    ("Working Capital", "운전자본"),  # 운전자본
-    ("Net Tangible Assets", "순유형자산"),  # 순유형자산
-    ("Capital Lease Obligations", "자본리스채무"),  # 자본리스채무
-    ("Common Stock Equity", "보통주지분"),  # 보통주자본
-    ("Total Capitalization", "총자본"),  # 총자본(자본금+부채)
-    ("Total Equity Gross Minority Interest", "총지분(비지배지분포함)"),  # 총지분
-    ("Stockholders Equity", "주주지분"),  # 주주지분
-    ("Gains Losses Not Affecting Retained Earnings", "이익잉여금 미반영 손익"),  # 이익잉여금에 반영되지 않은 손익
-    ("Other Equity Adjustments", "기타 자본조정"),  # 기타 자본조정
-    ("Retained Earnings", "이익잉여금"),  # 이익잉여금
-    ("Capital Stock", "자본금"),  # 자본금
-    ("Common Stock", "보통주"),  # 보통주
-    ("Total Liabilities Net Minority Interest", "총부채(비지배지분 제외)"),  # 총부채(비지배지분 제외)
-    ("Total Non Current Liabilities Net Minority Interest", "총비유동부채(비지배지분 제외)"),  # 총비유동부채
-    ("Other Non Current Liabilities", "기타 비유동부채"),  # 기타 장기부채
-    ("Tradeand Other Payables Non Current", "장기 매입 및 기타 채무"),  # 장기 매입채무 등
-    ("Long Term Debt And Capital Lease Obligation", "장기부채 및 자본리스채무"),  # 장기부채+리스
-    ("Long Term Capital Lease Obligation", "장기 자본리스채무"),  # 장기리스채무
-    ("Long Term Debt", "장기부채"),  # 장기채무
-    ("Current Liabilities", "유동부채"),  # 유동부채
-    ("Other Current Liabilities", "기타유동부채"),  # 기타유동부채
-    ("Current Deferred Liabilities", "유동이연부채"),  # 유동이연부채
-    ("Current Deferred Revenue", "유동이연수익"),  # 유동이연수익
-    ("Current Debt And Capital Lease Obligation", "유동부채 및 자본리스채무"),  # 유동부채+리스
-    ("Current Capital Lease Obligation", "유동 자본리스채무"),  # 유동리스채무
-    ("Current Debt", "유동부채"),  # 유동부채
-    ("Other Current Borrowings", "기타 단기차입금"),  # 기타단기차입금
-    ("Commercial Paper", "상업어음"),  # 상업어음
-    ("Payables And Accrued Expenses", "미지급금 및 미지급비용"),  # 미지급금/비용
-    ("Current Accrued Expenses", "유동 미지급비용"),  # 유동미지급비용
-    ("Payables", "지불채무"),  # 지불채무
-    ("Total Tax Payable", "총납부세액"),  # 총납부세액
-    ("Income Tax Payable", "법인세 납부금"),  # 법인세 납부금
-    ("Accounts Payable", "매입채무"),  # 외상매입금
-    ("Total Assets", "총자산"),  # 총자산
-    ("Total Non Current Assets", "총비유동자산"),  # 총비유동자산
-    ("Other Non Current Assets", "기타비유동자산"),  # 기타비유동자산
-    ("Non Current Deferred Assets", "비유동이연자산"),  # 비유동이연자산
-    ("Non Current Deferred Taxes Assets", "비유동이연법인세자산"),  # 비유동이연법인세자산
-    ("Investments And Advances", "투자 및 선급금"),  # 투자 및 선급금
-    ("Other Investments", "기타 투자"),  # 기타투자
-    ("Investmentin Financial Assets", "금융자산 투자"),  # 금융자산 투자
-    ("Available For Sale Securities", "매도가능증권"),  # 매도가능증권
-    ("Net PPE", "유형자산 순액"),  # 유형자산 순액
-    ("Accumulated Depreciation", "누적감가상각"),  # 누적감가상각
-    ("Gross PPE", "총유형자산"),  # 총유형자산(감가상각 전)
-    ("Leases", "리스"),  # 리스
-    ("Other Properties", "기타 부동산"),  # 기타부동산
-    ("Machinery Furniture Equipment", "기계, 가구, 장비"),  # 기계·가구·장비
-    ("Land And Improvements", "토지 및 부속시설"),  # 토지 및 개량시설
-    ("Properties", "부동산"),  # 부동산
-    ("Current Assets", "유동자산"),  # 유동자산
-    ("Other Current Assets", "기타유동자산"),  # 기타유동자산
-    ("Inventory", "재고자산"),  # 재고
-    ("Receivables", "받을어음,외상매출금"),  # 받을어음 등
-    ("Other Receivables", "기타 수취채권"),  # 기타 받으실 금액
-    ("Accounts Receivable", "매출채권"),  # 외상매출금
-    ("Cash Cash Equivalents And Short Term Investments", "현금 및 현금성자산 및 단기투자자산"),  # 현금 등
-    ("Other Short Term Investments", "기타 단기 투자자산"),  # 기타 단기투자
-    ("Cash And Cash Equivalents", "현금 및 현금성자산"),  # 현금 및 현금성자산
-    ("Cash Equivalents", "현금성자산"),  # 현금성자산
-    ("Cash Financial", "금융성 현금"),  # 금융성 현금
-]
+# import yfinance as yf
+# ticker = yf.Ticker("AAPL")
+# ticker.balance_sheet --> 호출시 나오는 값
+
+"""
+    Treasury Shares Number # 자기주식 수
+    Ordinary Shares Number # 보통주 수
+    Share Issued # 발행주식 수
+    Net Debt # 순부채
+    Total Debt # 총부채
+    Tangible Book Value # 유형장부가치
+    Invested Capital # 투하자본
+    Working Capital # 운전자본
+    Net Tangible Assets # 순유형자산
+    Capital Lease Obligations # 자본리스채무
+    Common Stock Equity # 보통주지분
+    Total Capitalization # 총자본
+    Total Equity Gross Minority Interest # 총지분(비지배지분포함)
+    Stockholders Equity # 주주지분
+    Gains Losses Not Affecting Retained Earnings # 이익잉여금 미반영 손익
+    Other Equity Adjustments # 기타 자본조정
+    Retained Earnings # 이익잉여금
+    Capital Stock # 자본금
+    Common Stock # 보통주
+    Total Liabilities Net Minority Interest # 총부채(비지배지분 제외)
+    Total Non Current Liabilities Net Minority Interest # 총비유동부채(비지배지분 제외)
+    Other Non Current Liabilities # 기타 비유동부채
+    Tradeand Other Payables Non Current # 장기 매입 및 기타 채무
+    Long Term Debt And Capital Lease Obligation # 장기부채 및 자본리스채무
+    Long Term Capital Lease Obligation # 장기 자본리스채무
+    Long Term Debt # 장기부채
+    Current Liabilities # 유동부채
+    Other Current Liabilities # 기타유동부채
+    Current Deferred Liabilities # 유동이연부채
+    Current Deferred Revenue # 유동이연수익
+    Current Debt And Capital Lease Obligation # 유동부채 및 자본리스채무
+    Current Capital Lease Obligation # 유동 자본리스채무
+    Current Debt # 유동부채
+    Other Current Borrowings # 기타 단기차입금
+    Commercial Paper # 상업어음
+    Payables And Accrued Expenses # 미지급금 및 미지급비용
+    Current Accrued Expenses # 유동 미지급비용
+    Payables # 지불채무
+    Total Tax Payable # 총납부세액
+    Income Tax Payable # 법인세 납부금
+    Accounts Payable # 매입채무
+    Total Assets # 총자산
+    Total Non Current Assets # 총비유동자산
+    Other Non Current Assets # 기타비유동자산
+    Non Current Deferred Assets # 비유동이연자산
+    Non Current Deferred Taxes Assets # 비유동이연법인세자산
+    Investments And Advances # 투자 및 선급금
+    Other Investments # 기타 투자
+    Investmentin Financial Assets # 금융자산 투자
+    Available For Sale Securities # 매도가능증권
+    Net PPE # 유형자산 순액
+    Accumulated Depreciation # 누적감가상각
+    Gross PPE # 총유형자산
+    Leases # 리스
+    Other Properties # 기타 부동산
+    Machinery Furniture Equipment # 기계, 가구, 장비
+    Land And Improvements # 토지 및 부속시설
+    Properties # 부동산
+    Current Assets # 유동자산
+    Other Current Assets # 기타유동자산
+    Inventory # 재고자산
+    Receivables # 받을어음,외상매출금
+    Other Receivables # 기타 수취채권
+    Accounts Receivable # 매출채권
+    Cash Cash Equivalents And Short Term Investments # 현금 및 현금성자산 및 단기투자자산
+    Other Short Term Investments # 기타 단기 투자자산
+    Cash And Cash Equivalents # 현금 및 현금성자산
+    Cash Equivalents # 현금성자산
+    Cash Financial # 금융성 현금
+"""
 
 # [현금흐름표 항목] Cashflow Statement Fields
-cashflow_fields = [
-    ("Free Cash Flow", "자유현금흐름"),  # 자유현금흐름(FCF)
-    ("Repurchase Of Capital Stock", "자기주식 매입"),  # 자사주 매입
-    ("Repayment Of Debt", "부채 상환"),  # 부채 상환
-    ("Issuance Of Debt", "부채 발행"),  # 부채 발행
-    ("Issuance Of Capital Stock", "자본금 발행"),  # 자본금 발행
-    ("Capital Expenditure", "자본적지출"),  # 자본적지출(CAPEX)
-    ("Interest Paid Supplemental Data", "지급이자(지원자료)"),  # 지급이자(추가자료)
-    ("Income Tax Paid Supplemental Data", "납부법인세(지원자료)"),  # 납부법인세(추가자료)
-    ("End Cash Position", "기말현금"),  # 기말현금
-    ("Beginning Cash Position", "기초현금"),  # 기초현금
-    ("Changes In Cash", "현금의 변동"),  # 현금변동
-    ("Financing Cash Flow", "재무활동으로 인한 현금흐름"),  # 재무활동CF
-    ("Cash Flow From Continuing Financing Activities", "지속적 재무활동 현금흐름"),  # 지속적 재무활동
-    ("Net Other Financing Charges", "순기타재무비용"),  # 기타 재무비용 순액
-    ("Cash Dividends Paid", "현금배당 지급"),  # 현금배당
-    ("Common Stock Dividend Paid", "보통주 현금배당 지급"),  # 보통주 배당지급
-    ("Net Common Stock Issuance", "보통주 순발행"),  # 보통주 순발행
-    ("Common Stock Payments", "보통주 지급금"),  # 보통주 지급액
-    ("Common Stock Issuance", "보통주 발행"),  # 보통주 발행
-    ("Net Issuance Payments Of Debt", "부채 순발행/상환"),  # 부채 순발행·상환
-    ("Net Short Term Debt Issuance", "단기부채 순발행"),  # 단기부채 순발행
-    ("Net Long Term Debt Issuance", "장기부채 순발행"),  # 장기부채 순발행
-    ("Long Term Debt Payments", "장기부채 상환"),  # 장기부채 상환
-    ("Long Term Debt Issuance", "장기부채 발행"),  # 장기부채 발행
-    ("Investing Cash Flow", "투자활동 현금흐름"),  # 투자CF
-    ("Cash Flow From Continuing Investing Activities", "지속적 투자활동 현금흐름"),  # 지속적 투자현금흐름
-    ("Net Other Investing Changes", "순기타투자변동"),  # 기타 투자변동 순액
-    ("Net Investment Purchase And Sale", "순투자매입/매각"),  # 순투자매입매각
-    ("Sale Of Investment", "투자매각"),  # 투자매각
-    ("Purchase Of Investment", "투자매입"),  # 투자매입
-    ("Net Business Purchase And Sale", "사업 순매입/매각"),  # 사업 순매입·매각
-    ("Purchase Of Business", "사업매입"),  # 사업 매입
-    ("Net PPE Purchase And Sale", "순유형자산매입/매각"),  # 유형자산 순매입·매각
-    ("Purchase Of PPE", "유형자산매입"),  # 유형자산 매입
-    ("Operating Cash Flow", "영업활동 현금흐름"),  # 영업CF
-    ("Cash Flow From Continuing Operating Activities", "지속적 영업활동 현금흐름"),  # 지속적 영업현금흐름
-    ("Change In Working Capital", "운전자본의 변동"),  # 운전자본 변동
-    ("Change In Other Working Capital", "기타 운전자본 변동"),  # 기타 운전자본 변동
-    ("Change In Other Current Liabilities", "기타 유동부채 변동"),  # 기타유동부채 변동
-    ("Change In Other Current Assets", "기타 유동자산 변동"),  # 기타유동자산 변동
-    ("Change In Payables And Accrued Expense", "지불채무 및 미지급비용 변동"),  # 지불채무·미지급비용 변동
-    ("Change In Payable", "지불채무 변동"),  # 지불채무 변동
-    ("Change In Account Payable", "매입채무 변동"),  # 매입채무 변동
-    ("Change In Inventory", "재고자산 변동"),  # 재고 변동
-    ("Change In Receivables", "매출채권 변동"),  # 매출채권 변동
-    ("Changes In Account Receivables", "매출채권 변동(복수)"),  # 매출채권 변동(복수)
-    ("Other Non Cash Items", "기타 비현금항목"),  # 기타 비현금 항목
-    ("Stock Based Compensation", "주식기준보상비용"),  # 주식기준보상비용
-    ("Deferred Tax", "이연법인세"),  # 이연법인세
-    ("Deferred Income Tax", "이연소득세"),  # 이연소득세
-    ("Depreciation Amortization Depletion", "감가상각/무형자산상각/고갈"),  # 감가상각/상각/고갈
-    ("Depreciation And Amortization", "감가상각 및 무형자산상각비"),  # 감가상각 및 상각비
-    ("Net Income From Continuing Operations", "지속사업 순이익")  # 지속사업 순이익
-]
+# import yfinance as yf
+# ticker = yf.Ticker("AAPL")
+# ticker.cash_flow  --> 호출시 나오는 데이터 필드
+
+"""
+    Free Cash Flow # 자유현금흐름
+    Repurchase Of Capital Stock # 자기주식 매입
+    Repayment Of Debt # 부채 상환
+    Issuance Of Debt # 부채 발행
+    Issuance Of Capital Stock # 자본금 발행
+    Capital Expenditure # 자본적지출
+    Interest Paid Supplemental Data # 지급이자(지원자료)
+    Income Tax Paid Supplemental Data # 납부법인세(지원자료)
+    End Cash Position # 기말현금
+    Beginning Cash Position # 기초현금
+    Changes In Cash # 현금의 변동
+    Financing Cash Flow # 재무활동으로 인한 현금흐름
+    Cash Flow From Continuing Financing Activities # 지속적 재무활동 현금흐름
+    Net Other Financing Charges # 순기타재무비용
+    Cash Dividends Paid # 현금배당 지급
+    Common Stock Dividend Paid # 보통주 현금배당 지급
+    Net Common Stock Issuance # 보통주 순발행
+    Common Stock Payments # 보통주 지급금
+    Common Stock Issuance # 보통주 발행
+    Net Issuance Payments Of Debt # 부채 순발행/상환
+    Net Short Term Debt Issuance # 단기부채 순발행
+    Net Long Term Debt Issuance # 장기부채 순발행
+    Long Term Debt Payments # 장기부채 상환
+    Long Term Debt Issuance # 장기부채 발행
+    Investing Cash Flow # 투자활동 현금흐름
+    Cash Flow From Continuing Investing Activities # 지속적 투자활동 현금흐름
+    Net Other Investing Changes # 순기타투자변동
+    Net Investment Purchase And Sale # 순투자매입/매각
+    Sale Of Investment # 투자매각
+    Purchase Of Investment # 투자매입
+    Net Business Purchase And Sale # 사업 순매입/매각
+    Purchase Of Business # 사업매입
+    Net PPE Purchase And Sale # 순유형자산매입/매각
+    Purchase Of PPE # 유형자산매입
+    Operating Cash Flow # 영업활동 현금흐름
+    Cash Flow From Continuing Operating Activities # 지속적 영업활동 현금흐름
+    Change In Working Capital # 운전자본의 변동
+    Change In Other Working Capital # 기타 운전자본 변동
+    Change In Other Current Liabilities # 기타 유동부채 변동
+    Change In Other Current Assets # 기타 유동자산 변동
+    Change In Payables And Accrued Expense # 지불채무 및 미지급비용 변동
+    Change In Payable # 지불채무 변동
+    Change In Account Payable # 매입채무 변동
+    Change In Inventory # 재고자산 변동
+    Change In Receivables # 매출채권 변동
+    Changes In Account Receivables # 매출채권 변동(복수)
+    Other Non Cash Items # 기타 비현금항목
+    Stock Based Compensation # 주식기준보상비용
+    Deferred Tax # 이연법인세
+    Deferred Income Tax # 이연소득세
+    Depreciation Amortization Depletion # 감가상각/무형자산상각/고갈
+    Depreciation And Amortization # 감가상각 및 무형자산상각비
+    Net Income From Continuing Operations # 지속사업 순이익
+"""

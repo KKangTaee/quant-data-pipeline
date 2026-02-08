@@ -14,7 +14,16 @@ from .visualize import(
 )
 
 from finance.data.asset_profile import(
-    collect_and_store_asset_profiles
+    collect_and_store_asset_profiles,
+    load_symbols_from_asset_profile
+)
+
+from .data.fundamentals import(
+    upsert_fundamentals
+)
+
+from .data.factors import(
+    upsert_factors
 )
 
 from finance.data.db.schema import sync_table_schema, NYSE_SCHEMAS
@@ -67,7 +76,7 @@ def get_gtaa3(period="15y", option="month_end", top=3, start=None):
     return df
 
 
-def run_sample():
+def portfolio_sample():
     """
         쉽계 사용하기 위해 미리만들어 놓음
     """
@@ -88,7 +97,7 @@ def run_sample():
 
 
 
-def load_sample():
+def asset_profiles_sample():
     """
         기업정보 로드
     """
@@ -115,3 +124,16 @@ def load_sample():
     sync_table_schema(db, "nyse_asset_profile", NYSE_SCHEMAS["asset_profile"], "finance_meta")
 
 
+
+def fundamentals_sample():
+    """
+        재무재표 로드 샘플
+    """
+
+    symbols = load_symbols_from_asset_profile("stock", on_filter=True)
+
+    upsert_fundamentals(symbols[20:], freq="annual")
+    # upsert_fundamentals(symbols[:5], freq="quarterly")
+
+    upsert_factors(symbols, freq="annual")
+    # upsert_factors(symbols, freq="quarterly")
