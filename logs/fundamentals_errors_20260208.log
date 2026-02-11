@@ -1,0 +1,881 @@
+2026-02-08 09:21:11,082 | WARNING | METCI | annual | empty statements
+2026-02-08 09:21:11,990 | WARNING | METCZ | annual | empty statements
+2026-02-08 09:21:13,622 | WARNING | MFAN | annual | empty statements
+2026-02-08 09:21:15,661 | WARNING | MFAO | annual | empty statements
+2026-02-08 09:21:25,408 | WARNING | MFICL | annual | empty statements
+2026-02-08 09:21:43,380 | WARNING | MGR | annual | empty statements
+2026-02-08 09:21:43,877 | WARNING | MGRB | annual | empty statements
+2026-02-08 09:21:45,470 | WARNING | MGRD | annual | empty statements
+2026-02-08 09:21:46,010 | WARNING | MGRE | annual | empty statements
+2026-02-08 09:21:59,495 | WARNING | MHLA | annual | empty statements
+2026-02-08 09:22:01,587 | WARNING | MHNC | annual | empty statements
+2026-02-08 09:22:21,011 | WARNING | MITN | annual | empty statements
+2026-02-08 09:22:21,656 | WARNING | MITP | annual | empty statements
+2026-02-08 09:22:44,454 | WARNING | MLPB | annual | empty statements
+2026-02-08 09:22:45,011 | WARNING | MLPR | annual | empty statements
+2026-02-08 09:25:16,380 | WARNING | MTUL | annual | empty statements
+2026-02-08 09:25:39,722 | WARNING | MVRL | annual | empty statements
+2026-02-08 09:26:35,802 | WARNING | NAVN | annual | empty statements
+2026-02-08 09:27:45,835 | WARNING | NEWTG | annual | empty statements
+2026-02-08 09:27:46,425 | WARNING | NEWTH | annual | empty statements
+2026-02-08 09:27:47,026 | WARNING | NEWTI | annual | empty statements
+2026-02-08 09:28:58,070 | WARNING | NMFCZ | annual | empty statements
+2026-02-08 09:30:12,533 | WARNING | NRUC | annual | empty statements
+2026-02-08 09:32:45,009 | WARNING | OFSSH | annual | empty statements
+2026-02-08 09:32:45,571 | WARNING | OFSSO | annual | empty statements
+2026-02-08 09:33:00,025 | WARNING | OILD | annual | empty statements
+2026-02-08 09:33:00,585 | WARNING | OILU | annual | empty statements
+2026-02-08 09:35:11,886 | WARNING | OXLCG | annual | empty statements
+2026-02-08 09:35:12,447 | WARNING | OXLCI | annual | empty statements
+2026-02-08 09:35:12,995 | WARNING | OXLCL | annual | empty statements
+2026-02-08 09:35:17,084 | WARNING | OXLCZ | annual | empty statements
+2026-02-08 09:35:19,973 | WARNING | OXSQG | annual | empty statements
+2026-02-08 09:35:20,532 | WARNING | OXSQH | annual | empty statements
+2026-02-08 09:36:29,683 | WARNING | PCGpX | annual | empty statements
+2026-02-08 09:37:39,666 | WARNING | PFFL | annual | empty statements
+2026-02-08 09:37:42,718 | WARNING | PFH | annual | empty statements
+2026-02-08 09:37:54,088 | WARNING | PFXNZ | annual | empty statements
+2026-02-08 09:39:30,627 | WARNING | PMTU | annual | empty statements
+2026-02-08 09:39:31,151 | WARNING | PMTV | annual | empty statements
+2026-02-08 09:39:31,719 | WARNING | PMTW | annual | empty statements
+2026-02-08 09:40:29,822 | WARNING | PRH | annual | empty statements
+2026-02-08 09:40:31,597 | WARNING | PRHIZ | annual | empty statements
+2026-02-08 09:40:57,152 | WARNING | PRS | annual | empty statements
+2026-02-08 09:42:00,312 | WARNING | PURR | annual | empty statements
+2026-02-08 09:42:17,294 | WARNING | PYT | annual | empty statements
+2026-02-08 09:42:56,804 | WARNING | QULL | annual | empty statements
+2026-02-08 09:42:58,801 | WARNING | QVCC | annual | empty statements
+2026-02-08 09:42:59,384 | WARNING | QVCD | annual | empty statements
+2026-02-08 09:43:38,925 | WARNING | RCB | annual | empty statements
+2026-02-08 09:43:39,540 | WARNING | RCC | annual | empty statements
+2026-02-08 09:43:40,073 | WARNING | RCD | annual | empty statements
+2026-02-08 09:45:40,539 | WARNING | RILYG | annual | empty statements
+2026-02-08 09:45:43,287 | WARNING | RILYK | annual | empty statements
+2026-02-08 09:45:45,688 | WARNING | RILYN | annual | empty statements
+2026-02-08 09:45:48,546 | WARNING | RILYT | annual | empty statements
+2026-02-08 09:45:49,129 | WARNING | RILYZ | annual | empty statements
+2026-02-08 09:48:32,055 | WARNING | RWAYL | annual | empty statements
+2026-02-08 09:48:32,624 | WARNING | RWAYZ | annual | empty statements
+2026-02-08 09:48:34,437 | WARNING | RWTN | annual | empty statements
+2026-02-08 09:48:35,030 | WARNING | RWTO | annual | empty statements
+2026-02-08 09:48:35,654 | WARNING | RWTP | annual | empty statements
+2026-02-08 09:48:36,196 | WARNING | RWTQ | annual | empty statements
+2026-02-08 09:48:52,642 | WARNING | RZB | annual | empty statements
+2026-02-08 09:48:53,155 | WARNING | RZC | annual | empty statements
+2026-02-08 09:49:15,696 | WARNING | SAJ | annual | empty statements
+2026-02-08 09:49:28,023 | WARNING | SAT | annual | empty statements
+2026-02-08 09:49:33,939 | WARNING | SAY | annual | empty statements
+2026-02-08 09:49:34,519 | WARNING | SAZ | annual | empty statements
+2026-02-08 09:50:00,906 | WARNING | SBXE | annual | empty statements
+2026-02-08 09:50:01,454 | WARNING | SCCD | annual | empty statements
+2026-02-08 09:50:02,474 | WARNING | SCCE | annual | empty statements
+2026-02-08 09:50:03,017 | WARNING | SCCF | annual | empty statements
+2026-02-08 09:50:03,563 | WARNING | SCCG | annual | empty statements
+2026-02-08 09:50:07,906 | WARNING | SCDL | annual | empty statements
+2026-02-08 09:51:07,400 | WARNING | SEV | annual | empty statements
+2026-02-08 09:51:11,406 | WARNING | SFB | annual | empty statements
+2026-02-08 09:53:34,334 | WARNING | SLVO | annual | empty statements
+2026-02-08 09:53:47,517 | WARNING | SMHB | annual | empty statements
+2026-02-08 09:54:58,647 | WARNING | SOJC | annual | empty statements
+2026-02-08 09:54:59,207 | WARNING | SOJD | annual | empty statements
+2026-02-08 09:54:59,731 | WARNING | SOJE | annual | empty statements
+2026-02-08 09:55:00,283 | WARNING | SOJF | annual | empty statements
+2026-02-08 09:56:11,385 | WARNING | SREA | annual | empty statements
+2026-02-08 09:56:15,317 | WARNING | SRJN | annual | empty statements
+2026-02-08 09:56:39,880 | WARNING | SSSSL | annual | empty statements
+2026-02-08 09:57:55,316 | WARNING | SUNC | annual | empty statements
+2026-02-08 09:58:23,120 | WARNING | SWKHL | annual | empty statements
+2026-02-08 09:59:25,786 | WARNING | TCPA | annual | empty statements
+2026-02-08 09:59:56,608 | WARNING | TECTP | annual | empty statements
+2026-02-08 10:00:22,211 | WARNING | TFSA | annual | empty statements
+2026-02-08 10:01:52,412 | WARNING | TMUSI | annual | empty statements
+2026-02-08 10:01:52,998 | WARNING | TMUSL | annual | empty statements
+2026-02-08 10:01:53,651 | WARNING | TMUSZ | annual | empty statements
+2026-02-08 10:02:33,865 | WARNING | TPGXL | annual | empty statements
+2026-02-08 10:02:41,102 | WARNING | TPTA | annual | empty statements
+2026-02-08 10:02:58,473 | WARNING | TRINI | annual | empty statements
+2026-02-08 10:02:59,075 | WARNING | TRINZ | annual | empty statements
+2026-02-08 10:04:16,014 | WARNING | TVC | annual | empty statements
+2026-02-08 10:04:16,586 | WARNING | TVE | annual | empty statements
+2026-02-08 10:04:35,240 | WARNING | TWOD | annual | empty statements
+2026-02-08 10:05:13,886 | WARNING | UCIB | annual | empty statements
+2026-02-08 10:06:11,706 | WARNING | UNMA | annual | empty statements
+2026-02-08 10:06:59,302 | WARNING | USML | annual | empty statements
+2026-02-08 10:07:00,976 | WARNING | USOI | annual | empty statements
+2026-02-08 10:07:19,871 | WARNING | UZD | annual | empty statements
+2026-02-08 10:07:20,406 | WARNING | UZE | annual | empty statements
+2026-02-08 10:07:21,003 | WARNING | UZF | annual | empty statements
+2026-02-08 10:10:35,214 | WARNING | VXX | annual | empty statements
+2026-02-08 10:10:35,753 | WARNING | VXZ | annual | empty statements
+2026-02-08 10:11:49,952 | WARNING | WHFCL | annual | empty statements
+2026-02-08 10:11:54,242 | WARNING | WHLRL | annual | empty statements
+2026-02-08 10:14:01,663 | WARNING | XELLL | annual | empty statements
+2026-02-08 10:15:54,513 | WARNING | ZTR | annual | empty statements
+2026-02-08 11:33:19,630 | WARNING | ABXL | annual | empty statements
+2026-02-08 11:34:21,404 | WARNING | ADAMG | annual | empty statements
+2026-02-08 11:34:21,930 | WARNING | ADAMH | annual | empty statements
+2026-02-08 11:34:22,550 | WARNING | ADAMI | annual | empty statements
+2026-02-08 11:34:26,632 | WARNING | ADAMO | annual | empty statements
+2026-02-08 11:35:05,810 | WARNING | AEFC | annual | empty statements
+2026-02-08 11:35:33,422 | WARNING | AFGB | annual | empty statements
+2026-02-08 11:35:33,945 | WARNING | AFGC | annual | empty statements
+2026-02-08 11:35:34,491 | WARNING | AFGD | annual | empty statements
+2026-02-08 11:35:35,015 | WARNING | AFGE | annual | empty statements
+2026-02-08 11:36:58,049 | WARNING | AIZN | annual | empty statements
+2026-02-08 11:37:51,282 | WARNING | ALOVU | annual | empty statements
+2026-02-08 11:39:06,879 | WARNING | AMUB | annual | empty statements
+2026-02-08 11:39:45,113 | WARNING | AOMD | annual | empty statements
+2026-02-08 11:39:45,611 | WARNING | AOMN | annual | empty statements
+2026-02-08 11:40:14,984 | WARNING | APOS | annual | empty statements
+2026-02-08 11:40:33,109 | WARNING | AQNB | annual | empty statements
+2026-02-08 11:42:30,086 | WARNING | ATHS | annual | empty statements
+2026-02-08 11:42:34,903 | WARNING | ATLCL | annual | empty statements
+2026-02-08 11:42:37,614 | WARNING | ATLCZ | annual | empty statements
+2026-02-08 11:42:42,965 | WARNING | ATMP | annual | empty statements
+2026-02-08 11:43:27,579 | WARNING | AVBH | annual | empty statements
+2026-02-08 11:44:45,981 | WARNING | BANFP | annual | empty statements
+2026-02-08 11:45:53,727 | WARNING | BCSS | annual | empty statements
+2026-02-08 11:46:01,293 | WARNING | BDCX | annual | empty statements
+2026-02-08 11:46:01,832 | WARNING | BDCZ | annual | empty statements
+2026-02-08 11:46:26,363 | WARNING | BEPH | annual | empty statements
+2026-02-08 11:46:26,900 | WARNING | BEPI | annual | empty statements
+2026-02-08 11:46:27,446 | WARNING | BEPJ | annual | empty statements
+2026-02-08 11:46:28,038 | WARNING | BERZ | annual | empty statements
+2026-02-08 11:47:11,927 | WARNING | BHFAL | annual | empty statements
+2026-02-08 11:47:37,646 | WARNING | BIPH | annual | empty statements
+2026-02-08 11:47:38,172 | WARNING | BIPI | annual | empty statements
+2026-02-08 11:47:39,026 | WARNING | BIPJ | annual | empty statements
+2026-02-08 11:49:12,682 | WARNING | BNH | annual | empty statements
+2026-02-08 11:49:13,461 | WARNING | BNJ | annual | empty statements
+2026-02-08 11:49:50,893 | WARNING | BPOPM | annual | empty statements
+2026-02-08 11:49:51,388 | WARNING | BPRE | annual | empty statements
+2026-02-08 11:49:53,340 | WARNING | BPYPM | annual | empty statements
+2026-02-08 11:50:20,314 | WARNING | BRR | annual | empty statements
+2026-02-08 11:51:18,724 | WARNING | BULZ | annual | empty statements
+2026-02-08 11:51:48,542 | WARNING | BWNB | annual | empty statements
+2026-02-08 11:54:10,952 | WARNING | CCZ | annual | empty statements
+2026-02-08 11:54:35,785 | WARNING | CEFD | annual | empty statements
+2026-02-08 11:55:06,523 | WARNING | CFND | annual | empty statements
+2026-02-08 11:55:10,128 | WARNING | CGABL | annual | empty statements
+2026-02-08 11:55:26,058 | WARNING | CHAI | annual | empty statements
+2026-02-08 11:55:48,965 | WARNING | CHSCL | annual | empty statements
+2026-02-08 11:55:49,610 | WARNING | CHSCM | annual | empty statements
+2026-02-08 11:55:50,267 | WARNING | CHSCN | annual | empty statements
+2026-02-08 11:55:51,675 | WARNING | CHSCO | annual | empty statements
+2026-02-08 11:55:52,336 | WARNING | CHSCP | annual | empty statements
+2026-02-08 11:56:04,530 | WARNING | CICB | annual | empty statements
+2026-02-08 11:56:16,855 | WARNING | CIMN | annual | empty statements
+2026-02-08 11:56:17,361 | WARNING | CIMO | annual | empty statements
+2026-02-08 11:56:17,929 | WARNING | CIMP | annual | empty statements
+2026-02-08 11:56:26,885 | WARNING | CITR | annual | empty statements
+2026-02-08 11:57:41,495 | WARNING | CMSA | annual | empty statements
+2026-02-08 11:57:42,131 | WARNING | CMSC | annual | empty statements
+2026-02-08 11:57:42,696 | WARNING | CMSD | annual | empty statements
+2026-02-08 11:59:39,183 | WARNING | CRBD | annual | empty statements
+2026-02-08 12:00:55,411 | WARNING | CTBB | annual | empty statements
+2026-02-08 12:00:58,292 | WARNING | CTDD | annual | empty statements
+2026-02-08 12:01:26,642 | WARNING | CUBB | annual | empty statements
+2026-02-08 12:03:21,956 | WARNING | DCOMG | annual | empty statements
+2026-02-08 12:03:33,514 | WARNING | DDT | annual | empty statements
+2026-02-08 12:04:03,215 | WARNING | DGP | annual | empty statements
+2026-02-08 12:04:05,990 | WARNING | DGZ | annual | empty statements
+2026-02-08 12:04:09,739 | WARNING | DHCNI | annual | empty statements
+2026-02-08 12:04:10,298 | WARNING | DHCNL | annual | empty statements
+2026-02-08 12:04:29,045 | WARNING | DJP | annual | empty statements
+2026-02-08 12:05:54,500 | WARNING | DTB | annual | empty statements
+2026-02-08 12:05:56,264 | WARNING | DTCX | annual | empty statements
+2026-02-08 12:05:59,497 | WARNING | DTG | annual | empty statements
+2026-02-08 12:06:03,075 | WARNING | DTK | annual | empty statements
+2026-02-08 12:06:06,918 | WARNING | DTW | annual | empty statements
+2026-02-08 12:06:08,936 | WARNING | DUKB | annual | empty statements
+2026-02-08 12:06:36,633 | WARNING | DZZ | annual | empty statements
+2026-02-08 12:06:41,590 | WARNING | EAI | annual | empty statements
+2026-02-08 12:06:57,713 | WARNING | ECCU | annual | empty statements
+2026-02-08 12:06:58,249 | WARNING | ECCV | annual | empty statements
+2026-02-08 12:06:58,808 | WARNING | ECCW | annual | empty statements
+2026-02-08 12:06:59,353 | WARNING | ECCX | annual | empty statements
+2026-02-08 12:08:01,060 | WARNING | EIIA | annual | empty statements
+2026-02-08 12:08:12,833 | WARNING | ELC | annual | empty statements
+2026-02-08 12:08:46,886 | WARNING | EMP | annual | empty statements
+2026-02-08 12:08:55,461 | WARNING | ENJ | annual | empty statements
+2026-02-08 12:08:58,216 | WARNING | ENO | annual | empty statements
+2026-02-08 12:11:02,787 | WARNING | EVMN | annual | empty statements
+2026-02-08 12:12:32,883 | WARNING | FCRX | annual | empty statements
+2026-02-08 12:13:15,628 | WARNING | FGN | annual | empty statements
+2026-02-08 12:13:19,426 | WARNING | FGSN | annual | empty statements
+2026-02-08 12:14:14,916 | WARNING | FLYD | annual | empty statements
+2026-02-08 12:14:16,556 | WARNING | FLYU | annual | empty statements
+2026-02-08 12:14:40,398 | WARNING | FNGD | annual | empty statements
+2026-02-08 12:14:40,917 | WARNING | FNGO | annual | empty statements
+2026-02-08 12:14:42,609 | WARNING | FNGS | annual | empty statements
+2026-02-08 12:15:27,955 | WARNING | FRMI | annual | empty statements
+2026-02-08 12:16:51,782 | WARNING | GAINI | annual | empty statements
+2026-02-08 12:16:52,409 | WARNING | GAINN | annual | empty statements
+2026-02-08 12:16:54,031 | WARNING | GAINZ | annual | empty statements
+2026-02-08 12:17:44,759 | WARNING | GDXD | annual | empty statements
+2026-02-08 12:17:45,295 | WARNING | GDXU | annual | empty statements
+2026-02-08 12:17:48,158 | WARNING | GECCG | annual | empty statements
+2026-02-08 12:17:48,712 | WARNING | GECCH | annual | empty statements
+2026-02-08 12:17:49,260 | WARNING | GECCI | annual | empty statements
+2026-02-08 12:17:49,774 | WARNING | GECCO | annual | empty statements
+2026-02-08 12:17:53,721 | WARNING | GEGGL | annual | empty statements
+2026-02-08 12:18:49,302 | WARNING | GIW | annual | empty statements
+2026-02-08 12:18:49,893 | WARNING | GIWWU | annual | empty statements
+2026-02-08 12:18:50,502 | WARNING | GIXXU | annual | empty statements
+2026-02-08 12:18:51,073 | WARNING | GJH | annual | empty statements
+2026-02-08 12:18:52,379 | WARNING | GJO | annual | empty statements
+2026-02-08 12:18:52,878 | WARNING | GJP | annual | empty statements
+2026-02-08 12:18:53,413 | WARNING | GJR | annual | empty statements
+2026-02-08 12:18:53,984 | WARNING | GJS | annual | empty statements
+2026-02-08 12:18:55,149 | WARNING | GJT | annual | empty statements
+2026-02-08 12:19:04,808 | WARNING | GLDI | annual | empty statements
+2026-02-08 12:20:21,594 | WARNING | GPJA | annual | empty statements
+2026-02-08 12:20:42,150 | WARNING | GREEL | annual | empty statements
+2026-02-08 12:20:48,116 | WARNING | GRN | annual | empty statements
+2026-02-08 12:22:40,272 | WARNING | HCXY | annual | empty statements
+2026-02-08 12:22:47,036 | WARNING | HDLB | annual | empty statements
+2026-02-08 12:24:04,235 | WARNING | HNNAZ | annual | empty statements
+2026-02-08 12:25:12,046 | WARNING | HTFC | annual | empty statements
+2026-02-08 12:25:42,567 | WARNING | HVMC | annual | empty statements
+2026-02-08 12:25:48,667 | WARNING | HWCPZ | annual | empty statements
+2026-02-08 12:27:02,862 | WARNING | IFED | annual | empty statements
+2026-02-08 12:28:16,470 | WARNING | INBKZ | annual | empty statements
+2026-02-08 12:29:36,446 | WARNING | IPB | annual | empty statements
+2026-02-08 12:30:42,902 | WARNING | IWDL | annual | empty statements
+2026-02-08 12:30:43,481 | WARNING | IWFL | annual | empty statements
+2026-02-08 12:30:44,010 | WARNING | IWML | annual | empty statements
+2026-02-08 12:31:04,913 | WARNING | JBIO | annual | empty statements
+2026-02-08 12:31:06,210 | WARNING | JBK | annual | empty statements
+2026-02-08 12:32:09,478 | WARNING | JSM | annual | empty statements
+2026-02-08 12:33:14,279 | WARNING | KKRS | annual | empty statements
+2026-02-08 12:33:14,804 | WARNING | KKRT | annual | empty statements
+2026-02-08 12:33:27,962 | WARNING | KMPB | annual | empty statements
+2026-02-08 12:34:32,561 | WARNING | KTH | annual | empty statements
+2026-02-08 12:34:33,108 | WARNING | KTN | annual | empty statements
+2026-02-08 12:41:20,949 | WARNING | METCI | annual | empty statements
+2026-02-08 12:41:21,493 | WARNING | METCZ | annual | empty statements
+2026-02-08 12:41:23,585 | WARNING | MFAN | annual | empty statements
+2026-02-08 12:41:24,390 | WARNING | MFAO | annual | empty statements
+2026-02-08 12:41:30,020 | WARNING | MFICL | annual | empty statements
+2026-02-08 12:41:51,303 | WARNING | MGR | annual | empty statements
+2026-02-08 12:41:51,964 | WARNING | MGRB | annual | empty statements
+2026-02-08 12:41:53,755 | WARNING | MGRD | annual | empty statements
+2026-02-08 12:41:54,286 | WARNING | MGRE | annual | empty statements
+2026-02-08 12:42:09,461 | WARNING | MHLA | annual | empty statements
+2026-02-08 12:42:11,140 | WARNING | MHNC | annual | empty statements
+2026-02-08 12:42:31,088 | WARNING | MITN | annual | empty statements
+2026-02-08 12:42:31,611 | WARNING | MITP | annual | empty statements
+2026-02-08 12:42:58,045 | WARNING | MLPB | annual | empty statements
+2026-02-08 12:42:58,571 | WARNING | MLPR | annual | empty statements
+2026-02-08 12:45:27,619 | WARNING | MTUL | annual | empty statements
+2026-02-08 12:45:52,575 | WARNING | MVRL | annual | empty statements
+2026-02-08 12:46:46,064 | WARNING | NAVN | annual | empty statements
+2026-02-08 12:48:04,902 | WARNING | NEWTG | annual | empty statements
+2026-02-08 12:48:05,439 | WARNING | NEWTH | annual | empty statements
+2026-02-08 12:48:05,996 | WARNING | NEWTI | annual | empty statements
+2026-02-08 12:49:14,601 | WARNING | NMFCZ | annual | empty statements
+2026-02-08 12:50:30,019 | WARNING | NRUC | annual | empty statements
+2026-02-08 12:53:14,513 | WARNING | OFSSH | annual | empty statements
+2026-02-08 12:53:15,039 | WARNING | OFSSO | annual | empty statements
+2026-02-08 12:53:29,561 | WARNING | OILD | annual | empty statements
+2026-02-08 12:53:30,059 | WARNING | OILU | annual | empty statements
+2026-02-08 12:56:01,764 | WARNING | OXLCG | annual | empty statements
+2026-02-08 12:56:02,489 | WARNING | OXLCI | annual | empty statements
+2026-02-08 12:56:03,005 | WARNING | OXLCL | annual | empty statements
+2026-02-08 12:56:08,023 | WARNING | OXLCZ | annual | empty statements
+2026-02-08 12:56:11,279 | WARNING | OXSQG | annual | empty statements
+2026-02-08 12:56:11,811 | WARNING | OXSQH | annual | empty statements
+2026-02-08 12:57:29,872 | WARNING | PCGpX | annual | empty statements
+2026-02-08 12:58:36,948 | WARNING | PFFL | annual | empty statements
+2026-02-08 12:58:40,147 | WARNING | PFH | annual | empty statements
+2026-02-08 12:58:52,580 | WARNING | PFXNZ | annual | empty statements
+2026-02-08 13:00:40,771 | WARNING | PMTU | annual | empty statements
+2026-02-08 13:00:41,305 | WARNING | PMTV | annual | empty statements
+2026-02-08 13:00:42,020 | WARNING | PMTW | annual | empty statements
+2026-02-08 13:01:40,330 | WARNING | PRH | annual | empty statements
+2026-02-08 13:01:41,938 | WARNING | PRHIZ | annual | empty statements
+2026-02-08 13:02:04,584 | WARNING | PRS | annual | empty statements
+2026-02-08 13:03:11,403 | WARNING | PURR | annual | empty statements
+2026-02-08 13:03:28,299 | WARNING | PYT | annual | empty statements
+2026-02-08 13:04:12,318 | WARNING | QULL | annual | empty statements
+2026-02-08 13:04:14,075 | WARNING | QVCC | annual | empty statements
+2026-02-08 13:04:14,897 | WARNING | QVCD | annual | empty statements
+2026-02-08 13:04:53,991 | WARNING | RCB | annual | empty statements
+2026-02-08 13:04:54,532 | WARNING | RCC | annual | empty statements
+2026-02-08 13:04:55,063 | WARNING | RCD | annual | empty statements
+2026-02-08 13:06:36,977 | WARNING | RILYG | annual | empty statements
+2026-02-08 13:06:37,589 | WARNING | RILYK | annual | empty statements
+2026-02-08 13:06:40,065 | WARNING | RILYN | annual | empty statements
+2026-02-08 13:06:41,742 | WARNING | RILYT | annual | empty statements
+2026-02-08 13:06:42,271 | WARNING | RILYZ | annual | empty statements
+2026-02-08 13:08:44,871 | WARNING | RWAYL | annual | empty statements
+2026-02-08 13:08:45,401 | WARNING | RWAYZ | annual | empty statements
+2026-02-08 13:08:47,075 | WARNING | RWTN | annual | empty statements
+2026-02-08 13:08:47,587 | WARNING | RWTO | annual | empty statements
+2026-02-08 13:08:48,605 | WARNING | RWTP | annual | empty statements
+2026-02-08 13:08:49,106 | WARNING | RWTQ | annual | empty statements
+2026-02-08 13:09:07,241 | WARNING | RZB | annual | empty statements
+2026-02-08 13:09:07,762 | WARNING | RZC | annual | empty statements
+2026-02-08 13:09:30,794 | WARNING | SAJ | annual | empty statements
+2026-02-08 13:09:42,887 | WARNING | SAT | annual | empty statements
+2026-02-08 13:09:48,480 | WARNING | SAY | annual | empty statements
+2026-02-08 13:09:49,097 | WARNING | SAZ | annual | empty statements
+2026-02-08 13:10:15,673 | WARNING | SBXE | annual | empty statements
+2026-02-08 13:10:16,196 | WARNING | SCCD | annual | empty statements
+2026-02-08 13:10:16,732 | WARNING | SCCE | annual | empty statements
+2026-02-08 13:10:17,226 | WARNING | SCCF | annual | empty statements
+2026-02-08 13:10:17,720 | WARNING | SCCG | annual | empty statements
+2026-02-08 13:10:20,857 | WARNING | SCDL | annual | empty statements
+2026-02-08 13:11:19,477 | WARNING | SEV | annual | empty statements
+2026-02-08 13:11:23,490 | WARNING | SFB | annual | empty statements
+2026-02-08 13:13:40,890 | WARNING | SLVO | annual | empty statements
+2026-02-08 13:13:54,042 | WARNING | SMHB | annual | empty statements
+2026-02-08 13:15:02,977 | WARNING | SOJC | annual | empty statements
+2026-02-08 13:15:03,497 | WARNING | SOJD | annual | empty statements
+2026-02-08 13:15:04,014 | WARNING | SOJE | annual | empty statements
+2026-02-08 13:15:04,526 | WARNING | SOJF | annual | empty statements
+2026-02-08 13:16:18,272 | WARNING | SREA | annual | empty statements
+2026-02-08 13:16:22,862 | WARNING | SRJN | annual | empty statements
+2026-02-08 13:16:48,207 | WARNING | SSSSL | annual | empty statements
+2026-02-08 13:18:08,191 | WARNING | SUNC | annual | empty statements
+2026-02-08 13:18:35,913 | WARNING | SWKHL | annual | empty statements
+2026-02-08 13:19:43,846 | WARNING | TCPA | annual | empty statements
+2026-02-08 13:20:15,671 | WARNING | TECTP | annual | empty statements
+2026-02-08 13:20:39,627 | WARNING | TFSA | annual | empty statements
+2026-02-08 13:22:19,230 | WARNING | TMUSI | annual | empty statements
+2026-02-08 13:22:19,738 | WARNING | TMUSL | annual | empty statements
+2026-02-08 13:22:20,272 | WARNING | TMUSZ | annual | empty statements
+2026-02-08 13:22:59,596 | WARNING | TPGXL | annual | empty statements
+2026-02-08 13:23:04,777 | WARNING | TPTA | annual | empty statements
+2026-02-08 13:23:21,915 | WARNING | TRINI | annual | empty statements
+2026-02-08 13:23:22,430 | WARNING | TRINZ | annual | empty statements
+2026-02-08 13:24:36,100 | WARNING | TVC | annual | empty statements
+2026-02-08 13:24:37,199 | WARNING | TVE | annual | empty statements
+2026-02-08 13:24:57,827 | WARNING | TWOD | annual | empty statements
+2026-02-08 13:25:36,814 | WARNING | UCIB | annual | empty statements
+2026-02-08 13:26:33,635 | WARNING | UNMA | annual | empty statements
+2026-02-08 13:27:15,733 | WARNING | USML | annual | empty statements
+2026-02-08 13:27:17,819 | WARNING | USOI | annual | empty statements
+2026-02-08 13:27:36,298 | WARNING | UZD | annual | empty statements
+2026-02-08 13:27:36,794 | WARNING | UZE | annual | empty statements
+2026-02-08 13:27:37,329 | WARNING | UZF | annual | empty statements
+2026-02-08 13:30:38,810 | WARNING | VXX | annual | empty statements
+2026-02-08 13:30:39,336 | WARNING | VXZ | annual | empty statements
+2026-02-08 13:31:51,568 | WARNING | WHFCL | annual | empty statements
+2026-02-08 13:31:55,479 | WARNING | WHLRL | annual | empty statements
+2026-02-08 13:33:52,993 | WARNING | XELLL | annual | empty statements
+2026-02-08 13:35:42,309 | WARNING | ZTR | annual | empty statements
+2026-02-08 13:49:18,488 | INFO | start fundamentals | freq=quarterly | total_symbols=50 | chunk_size=25
+2026-02-08 13:49:53,450 | INFO | batch done | 25/50 (50.0%) | batch_symbols=25 | upsert_rows=158 | elapsed=0.6m
+2026-02-08 13:50:07,698 | WARNING | ABXL | quarterly | empty statements
+2026-02-08 13:50:28,544 | INFO | batch done | 50/50 (100.0%) | batch_symbols=25 | upsert_rows=134 | elapsed=1.2m
+2026-02-08 13:50:53,550 | INFO | start fundamentals | freq=quarterly | total_symbols=10 | chunk_size=25
+2026-02-08 13:51:09,812 | INFO | batch done | 10/10 (100.0%) | batch_symbols=10 | upsert_rows=63 | elapsed=0.3m
+2026-02-08 13:52:12,663 | INFO | start fundamentals | freq=quarterly | total_symbols=5 | chunk_size=25
+2026-02-08 13:52:18,798 | INFO | batch done | 5/5 (100.0%) | batch_symbols=5 | upsert_rows=32 | elapsed=0.1m
+2026-02-08 13:52:54,584 | INFO | start fundamentals | freq=quarterly | total_symbols=5 | chunk_size=25
+2026-02-08 13:53:01,803 | INFO | batch done | 5/5 (100.0%) | batch_symbols=5 | upsert_rows=32 | elapsed=0.1m
+2026-02-08 13:53:21,736 | INFO | start fundamentals | freq=quarterly | total_symbols=5 | chunk_size=25
+2026-02-08 13:53:23,758 | INFO | batch done | 5/5 (100.0%) | batch_symbols=5 | upsert_rows=32 | elapsed=0.0m
+2026-02-08 13:53:47,586 | INFO | start fundamentals | freq=quarterly | total_symbols=5 | chunk_size=25
+2026-02-08 13:54:02,120 | INFO | batch done | 5/5 (100.0%) | batch_symbols=5 | upsert_rows=32 | elapsed=0.2m
+2026-02-08 15:13:28,200 | INFO | start fundamentals | freq=quarterly | total_symbols=5782 | chunk_size=25
+2026-02-08 15:14:24,145 | INFO | batch done | 25/5782 (0.4%) | batch_symbols=25 | upsert_rows=158 | elapsed=0.9m
+2026-02-08 15:14:44,584 | WARNING | ABXL | quarterly | empty statements
+2026-02-08 15:15:19,677 | INFO | batch done | 50/5782 (0.9%) | batch_symbols=25 | upsert_rows=134 | elapsed=1.9m
+2026-02-08 15:16:21,963 | INFO | batch done | 75/5782 (1.3%) | batch_symbols=25 | upsert_rows=148 | elapsed=2.9m
+2026-02-08 15:16:34,730 | WARNING | ADAMG | quarterly | empty statements
+2026-02-08 15:16:35,239 | WARNING | ADAMH | quarterly | empty statements
+2026-02-08 15:16:35,767 | WARNING | ADAMI | quarterly | empty statements
+2026-02-08 15:16:44,932 | WARNING | ADAMO | quarterly | empty statements
+2026-02-08 15:17:12,495 | INFO | batch done | 100/5782 (1.7%) | batch_symbols=25 | upsert_rows=126 | elapsed=3.7m
+2026-02-08 15:17:44,651 | WARNING | AEFC | quarterly | empty statements
+2026-02-08 15:18:05,611 | INFO | batch done | 125/5782 (2.2%) | batch_symbols=25 | upsert_rows=133 | elapsed=4.6m
+2026-02-08 15:18:32,355 | WARNING | AFGB | quarterly | empty statements
+2026-02-08 15:18:33,476 | WARNING | AFGC | quarterly | empty statements
+2026-02-08 15:18:33,989 | WARNING | AFGD | quarterly | empty statements
+2026-02-08 15:18:34,505 | WARNING | AFGE | quarterly | empty statements
+2026-02-08 15:18:53,359 | INFO | batch done | 150/5782 (2.6%) | batch_symbols=25 | upsert_rows=117 | elapsed=5.4m
+2026-02-08 15:19:02,974 | WARNING | AGIG | quarterly | empty statements
+2026-02-08 15:19:44,754 | INFO | batch done | 175/5782 (3.0%) | batch_symbols=25 | upsert_rows=128 | elapsed=6.3m
+2026-02-08 15:20:36,274 | INFO | batch done | 200/5782 (3.5%) | batch_symbols=25 | upsert_rows=144 | elapsed=7.1m
+2026-02-08 15:20:41,015 | WARNING | AIZN | quarterly | empty statements
+2026-02-08 15:21:21,020 | INFO | batch done | 225/5782 (3.9%) | batch_symbols=25 | upsert_rows=141 | elapsed=7.9m
+2026-02-08 15:22:03,791 | WARNING | ALOVU | quarterly | empty statements
+2026-02-08 15:22:04,456 | WARNING | ALPS | quarterly | empty statements
+2026-02-08 15:22:12,324 | INFO | batch done | 250/5782 (4.3%) | batch_symbols=25 | upsert_rows=140 | elapsed=8.7m
+2026-02-08 15:23:03,931 | INFO | batch done | 275/5782 (4.8%) | batch_symbols=25 | upsert_rows=149 | elapsed=9.6m
+2026-02-08 15:23:57,714 | INFO | batch done | 300/5782 (5.2%) | batch_symbols=25 | upsert_rows=150 | elapsed=10.5m
+2026-02-08 15:24:02,555 | WARNING | AMUB | quarterly | empty statements
+2026-02-08 15:24:58,434 | INFO | batch done | 325/5782 (5.6%) | batch_symbols=25 | upsert_rows=136 | elapsed=11.5m
+2026-02-08 15:25:15,041 | WARNING | AOMD | quarterly | empty statements
+2026-02-08 15:25:16,696 | WARNING | AOMN | quarterly | empty statements
+2026-02-08 15:25:49,016 | INFO | batch done | 350/5782 (6.1%) | batch_symbols=25 | upsert_rows=137 | elapsed=12.3m
+2026-02-08 15:26:04,490 | WARNING | APOS | quarterly | empty statements
+2026-02-08 15:26:34,333 | WARNING | AQNB | quarterly | empty statements
+2026-02-08 15:26:38,810 | INFO | batch done | 375/5782 (6.5%) | batch_symbols=25 | upsert_rows=135 | elapsed=13.2m
+2026-02-08 15:27:34,377 | INFO | batch done | 400/5782 (6.9%) | batch_symbols=25 | upsert_rows=147 | elapsed=14.1m
+2026-02-08 15:28:32,325 | INFO | batch done | 425/5782 (7.4%) | batch_symbols=25 | upsert_rows=149 | elapsed=15.1m
+2026-02-08 15:29:27,903 | INFO | batch done | 450/5782 (7.8%) | batch_symbols=25 | upsert_rows=142 | elapsed=16.0m
+2026-02-08 15:29:39,130 | WARNING | ATCX | quarterly | empty statements
+2026-02-08 15:29:54,383 | WARNING | ATHS | quarterly | empty statements
+2026-02-08 15:30:00,794 | WARNING | ATLCL | quarterly | empty statements
+2026-02-08 15:30:03,889 | WARNING | ATLCZ | quarterly | empty statements
+2026-02-08 15:30:14,195 | WARNING | ATMP | quarterly | empty statements
+2026-02-08 15:30:14,214 | INFO | batch done | 475/5782 (8.2%) | batch_symbols=25 | upsert_rows=122 | elapsed=16.8m
+2026-02-08 15:31:05,179 | INFO | batch done | 500/5782 (8.6%) | batch_symbols=25 | upsert_rows=148 | elapsed=17.6m
+2026-02-08 15:31:57,387 | INFO | batch done | 525/5782 (9.1%) | batch_symbols=25 | upsert_rows=148 | elapsed=18.5m
+2026-02-08 15:32:45,002 | INFO | batch done | 550/5782 (9.5%) | batch_symbols=25 | upsert_rows=147 | elapsed=19.3m
+2026-02-08 15:33:24,948 | WARNING | BANFP | quarterly | empty statements
+2026-02-08 15:33:34,071 | INFO | batch done | 575/5782 (9.9%) | batch_symbols=25 | upsert_rows=150 | elapsed=20.1m
+2026-02-08 15:34:33,239 | INFO | batch done | 600/5782 (10.4%) | batch_symbols=25 | upsert_rows=152 | elapsed=21.1m
+2026-02-08 15:35:27,100 | INFO | batch done | 625/5782 (10.8%) | batch_symbols=25 | upsert_rows=142 | elapsed=22.0m
+2026-02-08 15:35:28,401 | WARNING | BDCX | quarterly | empty statements
+2026-02-08 15:35:28,998 | WARNING | BDCZ | quarterly | empty statements
+2026-02-08 15:36:03,544 | WARNING | BEPH | quarterly | empty statements
+2026-02-08 15:36:04,120 | WARNING | BEPI | quarterly | empty statements
+2026-02-08 15:36:04,652 | WARNING | BEPJ | quarterly | empty statements
+2026-02-08 15:36:05,418 | WARNING | BERZ | quarterly | empty statements
+2026-02-08 15:36:07,133 | INFO | batch done | 650/5782 (11.2%) | batch_symbols=25 | upsert_rows=109 | elapsed=22.6m
+2026-02-08 21:58:49,860 | INFO | start fundamentals | freq=quarterly | total_symbols=5182 | chunk_size=25
+2026-02-08 21:59:23,860 | INFO | batch done | 25/5182 (0.5%) | batch_symbols=25 | upsert_rows=142 | elapsed=0.6m
+2026-02-08 21:59:25,261 | WARNING | BDCX | quarterly | empty statements
+2026-02-08 21:59:25,834 | WARNING | BDCZ | quarterly | empty statements
+2026-02-08 21:59:52,457 | WARNING | BEPH | quarterly | empty statements
+2026-02-08 21:59:53,310 | WARNING | BEPI | quarterly | empty statements
+2026-02-08 21:59:53,912 | WARNING | BEPJ | quarterly | empty statements
+2026-02-08 21:59:54,525 | WARNING | BERZ | quarterly | empty statements
+2026-02-08 21:59:55,814 | INFO | batch done | 50/5182 (1.0%) | batch_symbols=25 | upsert_rows=109 | elapsed=1.1m
+2026-02-08 22:00:30,018 | INFO | batch done | 75/5182 (1.4%) | batch_symbols=25 | upsert_rows=125 | elapsed=1.7m
+2026-02-08 22:00:41,180 | WARNING | BHFAL | quarterly | empty statements
+2026-02-08 22:01:03,797 | INFO | batch done | 100/5182 (1.9%) | batch_symbols=25 | upsert_rows=123 | elapsed=2.2m
+2026-02-08 22:01:10,595 | WARNING | BIPH | quarterly | empty statements
+2026-02-08 22:01:11,228 | WARNING | BIPI | quarterly | empty statements
+2026-02-08 22:01:12,220 | WARNING | BIPJ | quarterly | empty statements
+2026-02-08 22:01:35,779 | INFO | batch done | 125/5182 (2.4%) | batch_symbols=25 | upsert_rows=125 | elapsed=2.8m
+2026-02-08 22:02:11,319 | INFO | batch done | 150/5182 (2.9%) | batch_symbols=25 | upsert_rows=144 | elapsed=3.4m
+2026-02-08 22:02:22,409 | WARNING | BMEZ | quarterly | empty statements
+2026-02-08 22:02:43,434 | INFO | batch done | 175/5182 (3.4%) | batch_symbols=25 | upsert_rows=129 | elapsed=3.9m
+2026-02-08 22:02:48,000 | WARNING | BNH | quarterly | empty statements
+2026-02-08 22:02:48,669 | WARNING | BNJ | quarterly | empty statements
+2026-02-08 22:03:15,918 | INFO | batch done | 200/5182 (3.9%) | batch_symbols=25 | upsert_rows=130 | elapsed=4.4m
+2026-02-08 22:03:24,879 | WARNING | BPOPM | quarterly | empty statements
+2026-02-08 22:03:25,425 | WARNING | BPRE | quarterly | empty statements
+2026-02-08 22:03:27,272 | WARNING | BPYPM | quarterly | empty statements
+2026-02-08 22:03:46,754 | INFO | batch done | 225/5182 (4.3%) | batch_symbols=25 | upsert_rows=131 | elapsed=4.9m
+2026-02-08 22:04:23,672 | INFO | batch done | 250/5182 (4.8%) | batch_symbols=25 | upsert_rows=138 | elapsed=5.6m
+2026-02-08 22:04:57,181 | INFO | batch done | 275/5182 (5.3%) | batch_symbols=25 | upsert_rows=124 | elapsed=6.1m
+2026-02-08 22:05:04,329 | WARNING | BULZ | quarterly | empty statements
+2026-02-08 22:05:34,113 | INFO | batch done | 300/5182 (5.8%) | batch_symbols=25 | upsert_rows=125 | elapsed=6.7m
+2026-02-08 22:05:41,728 | WARNING | BWNB | quarterly | empty statements
+2026-02-08 22:06:06,921 | INFO | batch done | 325/5182 (6.3%) | batch_symbols=25 | upsert_rows=143 | elapsed=7.3m
+2026-02-08 22:06:40,064 | INFO | batch done | 350/5182 (6.8%) | batch_symbols=25 | upsert_rows=146 | elapsed=7.8m
+2026-02-08 22:07:05,722 | WARNING | CBC | quarterly | empty statements
+2026-02-08 22:07:11,927 | INFO | batch done | 375/5182 (7.2%) | batch_symbols=25 | upsert_rows=145 | elapsed=8.4m
+2026-02-08 22:07:44,764 | INFO | batch done | 400/5182 (7.7%) | batch_symbols=25 | upsert_rows=140 | elapsed=8.9m
+2026-02-08 22:08:03,399 | WARNING | CCZ | quarterly | empty statements
+2026-02-08 22:08:17,265 | INFO | batch done | 425/5182 (8.2%) | batch_symbols=25 | upsert_rows=136 | elapsed=9.5m
+2026-02-08 22:08:29,583 | WARNING | CEFD | quarterly | empty statements
+2026-02-08 22:08:48,816 | INFO | batch done | 450/5182 (8.7%) | batch_symbols=25 | upsert_rows=140 | elapsed=10.0m
+2026-02-08 22:09:00,638 | WARNING | CFND | quarterly | empty statements
+2026-02-08 22:09:03,620 | WARNING | CGABL | quarterly | empty statements
+2026-02-08 22:09:20,479 | INFO | batch done | 475/5182 (9.2%) | batch_symbols=25 | upsert_rows=128 | elapsed=10.5m
+2026-02-08 22:09:44,813 | WARNING | CHSCL | quarterly | empty statements
+2026-02-08 22:09:45,441 | WARNING | CHSCM | quarterly | empty statements
+2026-02-08 22:09:46,139 | WARNING | CHSCN | quarterly | empty statements
+2026-02-08 22:09:47,018 | WARNING | CHSCO | quarterly | empty statements
+2026-02-08 22:09:47,697 | WARNING | CHSCP | quarterly | empty statements
+2026-02-08 22:09:51,483 | INFO | batch done | 500/5182 (9.6%) | batch_symbols=25 | upsert_rows=115 | elapsed=11.0m
+2026-02-08 22:10:00,521 | WARNING | CICB | quarterly | empty statements
+2026-02-08 22:10:13,780 | WARNING | CIMN | quarterly | empty statements
+2026-02-08 22:10:14,323 | WARNING | CIMO | quarterly | empty statements
+2026-02-08 22:10:14,859 | WARNING | CIMP | quarterly | empty statements
+2026-02-08 22:10:21,400 | INFO | batch done | 525/5182 (10.1%) | batch_symbols=25 | upsert_rows=111 | elapsed=11.5m
+2026-02-08 22:10:23,765 | WARNING | CITR | quarterly | empty statements
+2026-02-08 22:10:57,273 | INFO | batch done | 550/5182 (10.6%) | batch_symbols=25 | upsert_rows=142 | elapsed=12.1m
+2026-02-08 22:11:31,870 | INFO | batch done | 575/5182 (11.1%) | batch_symbols=25 | upsert_rows=142 | elapsed=12.7m
+2026-02-08 22:11:51,433 | WARNING | CMSA | quarterly | empty statements
+2026-02-08 22:11:52,054 | WARNING | CMSC | quarterly | empty statements
+2026-02-08 22:11:53,055 | WARNING | CMSD | quarterly | empty statements
+2026-02-08 22:12:07,109 | INFO | batch done | 600/5182 (11.6%) | batch_symbols=25 | upsert_rows=136 | elapsed=13.3m
+2026-02-08 22:12:46,763 | INFO | batch done | 625/5182 (12.1%) | batch_symbols=25 | upsert_rows=158 | elapsed=13.9m
+2026-02-08 22:13:21,234 | INFO | batch done | 650/5182 (12.5%) | batch_symbols=25 | upsert_rows=152 | elapsed=14.5m
+2026-02-08 22:13:54,960 | INFO | batch done | 675/5182 (13.0%) | batch_symbols=25 | upsert_rows=157 | elapsed=15.1m
+2026-02-08 22:14:01,950 | WARNING | CRBD | quarterly | empty statements
+2026-02-08 22:14:26,628 | INFO | batch done | 700/5182 (13.5%) | batch_symbols=25 | upsert_rows=129 | elapsed=15.6m
+2026-02-08 22:15:00,562 | INFO | batch done | 725/5182 (14.0%) | batch_symbols=25 | upsert_rows=151 | elapsed=16.2m
+2026-02-08 22:15:22,454 | WARNING | CTBB | quarterly | empty statements
+2026-02-08 22:15:24,460 | WARNING | CTDD | quarterly | empty statements
+2026-02-08 22:15:33,604 | INFO | batch done | 750/5182 (14.5%) | batch_symbols=25 | upsert_rows=139 | elapsed=16.7m
+2026-02-08 22:15:54,392 | WARNING | CUBB | quarterly | empty statements
+2026-02-08 22:16:07,061 | INFO | batch done | 775/5182 (15.0%) | batch_symbols=25 | upsert_rows=141 | elapsed=17.3m
+2026-02-08 22:16:40,718 | INFO | batch done | 800/5182 (15.4%) | batch_symbols=25 | upsert_rows=157 | elapsed=17.8m
+2026-02-08 22:17:14,209 | INFO | batch done | 825/5182 (15.9%) | batch_symbols=25 | upsert_rows=146 | elapsed=18.4m
+2026-02-08 22:17:50,285 | INFO | batch done | 850/5182 (16.4%) | batch_symbols=25 | upsert_rows=148 | elapsed=19.0m
+2026-02-08 22:18:02,153 | WARNING | DCOMG | quarterly | empty statements
+2026-02-08 22:18:15,056 | WARNING | DDT | quarterly | empty statements
+2026-02-08 22:18:25,364 | INFO | batch done | 875/5182 (16.9%) | batch_symbols=25 | upsert_rows=131 | elapsed=19.6m
+2026-02-08 22:18:44,495 | WARNING | DGP | quarterly | empty statements
+2026-02-08 22:18:48,886 | WARNING | DGZ | quarterly | empty statements
+2026-02-08 22:18:52,275 | WARNING | DHCNI | quarterly | empty statements
+2026-02-08 22:18:52,792 | WARNING | DHCNL | quarterly | empty statements
+2026-02-08 22:18:56,212 | INFO | batch done | 900/5182 (17.4%) | batch_symbols=25 | upsert_rows=121 | elapsed=20.1m
+2026-02-08 22:19:18,967 | WARNING | DJP | quarterly | empty statements
+2026-02-08 22:19:34,614 | INFO | batch done | 925/5182 (17.9%) | batch_symbols=25 | upsert_rows=142 | elapsed=20.7m
+2026-02-08 22:20:12,831 | INFO | batch done | 950/5182 (18.3%) | batch_symbols=25 | upsert_rows=133 | elapsed=21.4m
+2026-02-08 22:20:49,365 | INFO | batch done | 975/5182 (18.8%) | batch_symbols=25 | upsert_rows=142 | elapsed=22.0m
+2026-02-08 22:20:58,240 | WARNING | DTB | quarterly | empty statements
+2026-02-08 22:21:01,214 | WARNING | DTCX | quarterly | empty statements
+2026-02-08 22:21:04,628 | WARNING | DTG | quarterly | empty statements
+2026-02-08 22:21:09,621 | WARNING | DTK | quarterly | empty statements
+2026-02-08 22:21:12,862 | WARNING | DTW | quarterly | empty statements
+2026-02-08 22:21:14,793 | WARNING | DUKB | quarterly | empty statements
+2026-02-08 22:21:24,458 | INFO | batch done | 1000/5182 (19.3%) | batch_symbols=25 | upsert_rows=102 | elapsed=22.6m
+2026-02-08 22:21:47,899 | WARNING | DZZ | quarterly | empty statements
+2026-02-08 22:21:55,324 | WARNING | EAI | quarterly | empty statements
+2026-02-08 22:22:05,221 | INFO | batch done | 1025/5182 (19.8%) | batch_symbols=25 | upsert_rows=133 | elapsed=23.3m
+2026-02-08 22:22:15,908 | WARNING | ECCU | quarterly | empty statements
+2026-02-08 22:22:16,416 | WARNING | ECCV | quarterly | empty statements
+2026-02-08 22:22:17,165 | WARNING | ECCW | quarterly | empty statements
+2026-02-08 22:22:17,778 | WARNING | ECCX | quarterly | empty statements
+2026-02-08 22:22:35,410 | INFO | batch done | 1050/5182 (20.3%) | batch_symbols=25 | upsert_rows=105 | elapsed=23.8m
+2026-02-08 22:22:59,721 | WARNING | EFTY | quarterly | empty statements
+2026-02-08 22:23:09,078 | INFO | batch done | 1075/5182 (20.7%) | batch_symbols=25 | upsert_rows=136 | elapsed=24.3m
+2026-02-08 22:23:25,475 | WARNING | EIIA | quarterly | empty statements
+2026-02-08 22:23:36,328 | WARNING | ELC | quarterly | empty statements
+2026-02-08 22:23:40,362 | INFO | batch done | 1100/5182 (21.2%) | batch_symbols=25 | upsert_rows=125 | elapsed=24.8m
+2026-02-08 22:24:14,004 | WARNING | EMP | quarterly | empty statements
+2026-02-08 22:24:14,020 | INFO | batch done | 1125/5182 (21.7%) | batch_symbols=25 | upsert_rows=128 | elapsed=25.4m
+2026-02-08 22:24:24,145 | WARNING | ENJ | quarterly | empty statements
+2026-02-08 22:24:29,399 | WARNING | ENO | quarterly | empty statements
+2026-02-08 22:24:47,763 | INFO | batch done | 1150/5182 (22.2%) | batch_symbols=25 | upsert_rows=133 | elapsed=26.0m
+2026-02-08 22:25:23,382 | INFO | batch done | 1175/5182 (22.7%) | batch_symbols=25 | upsert_rows=144 | elapsed=26.6m
+2026-02-08 22:25:58,120 | INFO | batch done | 1200/5182 (23.2%) | batch_symbols=25 | upsert_rows=141 | elapsed=27.1m
+2026-02-08 22:26:35,379 | INFO | batch done | 1225/5182 (23.6%) | batch_symbols=25 | upsert_rows=123 | elapsed=27.8m
+2026-02-08 22:27:08,943 | INFO | batch done | 1250/5182 (24.1%) | batch_symbols=25 | upsert_rows=134 | elapsed=28.3m
+2026-02-08 22:27:43,999 | INFO | batch done | 1275/5182 (24.6%) | batch_symbols=25 | upsert_rows=151 | elapsed=28.9m
+2026-02-08 22:28:16,794 | INFO | batch done | 1300/5182 (25.1%) | batch_symbols=25 | upsert_rows=148 | elapsed=29.4m
+2026-02-08 22:28:26,097 | WARNING | FCRX | quarterly | empty statements
+2026-02-08 22:28:50,459 | INFO | batch done | 1325/5182 (25.6%) | batch_symbols=25 | upsert_rows=139 | elapsed=30.0m
+2026-02-08 22:29:15,416 | WARNING | FGN | quarterly | empty statements
+2026-02-08 22:29:19,377 | WARNING | FGSN | quarterly | empty statements
+2026-02-08 22:29:25,410 | INFO | batch done | 1350/5182 (26.1%) | batch_symbols=25 | upsert_rows=138 | elapsed=30.6m
+2026-02-08 22:30:02,789 | INFO | batch done | 1375/5182 (26.5%) | batch_symbols=25 | upsert_rows=146 | elapsed=31.2m
+2026-02-08 22:30:27,987 | WARNING | FLYD | quarterly | empty statements
+2026-02-08 22:30:30,093 | WARNING | FLYU | quarterly | empty statements
+2026-02-08 22:30:39,050 | INFO | batch done | 1400/5182 (27.0%) | batch_symbols=25 | upsert_rows=141 | elapsed=31.8m
+2026-02-08 22:30:51,775 | WARNING | FNGD | quarterly | empty statements
+2026-02-08 22:30:52,714 | WARNING | FNGO | quarterly | empty statements
+2026-02-08 22:30:55,016 | WARNING | FNGS | quarterly | empty statements
+2026-02-08 22:31:04,738 | WARNING | FOFO | quarterly | empty statements
+2026-02-08 22:31:10,535 | INFO | batch done | 1425/5182 (27.5%) | batch_symbols=25 | upsert_rows=128 | elapsed=32.3m
+2026-02-08 22:31:49,436 | INFO | batch done | 1450/5182 (28.0%) | batch_symbols=25 | upsert_rows=147 | elapsed=33.0m
+2026-02-08 22:32:23,734 | INFO | batch done | 1475/5182 (28.5%) | batch_symbols=25 | upsert_rows=145 | elapsed=33.6m
+2026-02-08 22:32:58,087 | INFO | batch done | 1500/5182 (28.9%) | batch_symbols=25 | upsert_rows=141 | elapsed=34.1m
+2026-02-08 22:33:25,249 | WARNING | GAINI | quarterly | empty statements
+2026-02-08 22:33:25,780 | WARNING | GAINN | quarterly | empty statements
+2026-02-08 22:33:26,356 | WARNING | GAINZ | quarterly | empty statements
+2026-02-08 22:33:31,686 | INFO | batch done | 1525/5182 (29.4%) | batch_symbols=25 | upsert_rows=127 | elapsed=34.7m
+2026-02-08 22:33:53,994 | WARNING | GCDT | quarterly | empty statements
+2026-02-08 22:34:03,806 | INFO | batch done | 1550/5182 (29.9%) | batch_symbols=25 | upsert_rows=140 | elapsed=35.2m
+2026-02-08 22:34:19,982 | WARNING | GDXD | quarterly | empty statements
+2026-02-08 22:34:20,519 | WARNING | GDXU | quarterly | empty statements
+2026-02-08 22:34:23,560 | WARNING | GECCG | quarterly | empty statements
+2026-02-08 22:34:24,125 | WARNING | GECCH | quarterly | empty statements
+2026-02-08 22:34:25,439 | WARNING | GECCI | quarterly | empty statements
+2026-02-08 22:34:25,986 | WARNING | GECCO | quarterly | empty statements
+2026-02-08 22:34:29,775 | WARNING | GEGGL | quarterly | empty statements
+2026-02-08 22:34:33,592 | INFO | batch done | 1575/5182 (30.4%) | batch_symbols=25 | upsert_rows=87 | elapsed=35.7m
+2026-02-08 22:35:09,005 | INFO | batch done | 1600/5182 (30.9%) | batch_symbols=25 | upsert_rows=136 | elapsed=36.3m
+2026-02-08 22:35:33,329 | WARNING | GIXXU | quarterly | empty statements
+2026-02-08 22:35:33,881 | WARNING | GJH | quarterly | empty statements
+2026-02-08 22:35:34,726 | WARNING | GJO | quarterly | empty statements
+2026-02-08 22:35:35,273 | WARNING | GJP | quarterly | empty statements
+2026-02-08 22:35:36,288 | WARNING | GJR | quarterly | empty statements
+2026-02-08 22:35:36,865 | WARNING | GJS | quarterly | empty statements
+2026-02-08 22:35:37,981 | WARNING | GJT | quarterly | empty statements
+2026-02-08 22:35:37,992 | INFO | batch done | 1625/5182 (31.4%) | batch_symbols=25 | upsert_rows=95 | elapsed=36.8m
+2026-02-08 22:35:50,300 | WARNING | GLDI | quarterly | empty statements
+2026-02-08 22:36:15,384 | INFO | batch done | 1650/5182 (31.8%) | batch_symbols=25 | upsert_rows=131 | elapsed=37.4m
+2026-02-08 22:36:49,628 | INFO | batch done | 1675/5182 (32.3%) | batch_symbols=25 | upsert_rows=137 | elapsed=38.0m
+2026-02-08 22:37:15,538 | WARNING | GPJA | quarterly | empty statements
+2026-02-08 22:37:22,907 | INFO | batch done | 1700/5182 (32.8%) | batch_symbols=25 | upsert_rows=148 | elapsed=38.6m
+2026-02-08 22:37:40,809 | WARNING | GREEL | quarterly | empty statements
+2026-02-08 22:37:46,355 | WARNING | GRN | quarterly | empty statements
+2026-02-08 22:37:55,937 | INFO | batch done | 1725/5182 (33.3%) | batch_symbols=25 | upsert_rows=130 | elapsed=39.1m
+2026-02-08 22:38:31,448 | INFO | batch done | 1750/5182 (33.8%) | batch_symbols=25 | upsert_rows=146 | elapsed=39.7m
+2026-02-08 22:39:07,130 | INFO | batch done | 1775/5182 (34.3%) | batch_symbols=25 | upsert_rows=136 | elapsed=40.3m
+2026-02-08 22:39:43,704 | INFO | batch done | 1800/5182 (34.7%) | batch_symbols=25 | upsert_rows=145 | elapsed=40.9m
+2026-02-08 22:39:46,823 | WARNING | HCXY | quarterly | empty statements
+2026-02-08 22:39:52,247 | WARNING | HDLB | quarterly | empty statements
+2026-02-08 22:40:18,531 | INFO | batch done | 1825/5182 (35.2%) | batch_symbols=25 | upsert_rows=130 | elapsed=41.5m
+2026-02-08 22:40:45,437 | WARNING | HKD | quarterly | empty statements
+2026-02-08 22:40:57,099 | INFO | batch done | 1850/5182 (35.7%) | batch_symbols=25 | upsert_rows=131 | elapsed=42.1m
+2026-02-08 22:41:12,527 | WARNING | HNNAZ | quarterly | empty statements
+2026-02-08 22:41:31,743 | INFO | batch done | 1875/5182 (36.2%) | batch_symbols=25 | upsert_rows=144 | elapsed=42.7m
+2026-02-08 22:42:06,950 | INFO | batch done | 1900/5182 (36.7%) | batch_symbols=25 | upsert_rows=130 | elapsed=43.3m
+2026-02-08 22:42:28,859 | WARNING | HTFC | quarterly | empty statements
+2026-02-08 22:42:46,632 | INFO | batch done | 1925/5182 (37.1%) | batch_symbols=25 | upsert_rows=133 | elapsed=43.9m
+2026-02-08 22:43:02,934 | WARNING | HWCPZ | quarterly | empty statements
+2026-02-08 22:43:21,277 | INFO | batch done | 1950/5182 (37.6%) | batch_symbols=25 | upsert_rows=137 | elapsed=44.5m
+2026-02-08 22:43:36,071 | WARNING | IBG | quarterly | empty statements
+2026-02-08 22:43:59,947 | INFO | batch done | 1975/5182 (38.1%) | batch_symbols=25 | upsert_rows=144 | elapsed=45.2m
+2026-02-08 22:44:28,707 | WARNING | IFED | quarterly | empty statements
+2026-02-08 22:44:37,688 | INFO | batch done | 2000/5182 (38.6%) | batch_symbols=25 | upsert_rows=138 | elapsed=45.8m
+2026-02-08 22:45:19,085 | INFO | batch done | 2025/5182 (39.1%) | batch_symbols=25 | upsert_rows=120 | elapsed=46.5m
+2026-02-08 22:45:50,580 | WARNING | INBKZ | quarterly | empty statements
+2026-02-08 22:45:54,336 | INFO | batch done | 2050/5182 (39.6%) | batch_symbols=25 | upsert_rows=126 | elapsed=47.1m
+2026-02-08 22:46:30,842 | INFO | batch done | 2075/5182 (40.0%) | batch_symbols=25 | upsert_rows=148 | elapsed=47.7m
+2026-02-08 22:47:10,687 | INFO | batch done | 2100/5182 (40.5%) | batch_symbols=25 | upsert_rows=147 | elapsed=48.3m
+2026-02-08 22:47:21,711 | WARNING | IPB | quarterly | empty statements
+2026-02-08 22:47:45,679 | INFO | batch done | 2125/5182 (41.0%) | batch_symbols=25 | upsert_rows=135 | elapsed=48.9m
+2026-02-08 22:48:19,530 | INFO | batch done | 2150/5182 (41.5%) | batch_symbols=25 | upsert_rows=149 | elapsed=49.5m
+2026-02-08 22:48:34,829 | WARNING | IWDL | quarterly | empty statements
+2026-02-08 22:48:35,485 | WARNING | IWFL | quarterly | empty statements
+2026-02-08 22:48:36,039 | WARNING | IWML | quarterly | empty statements
+2026-02-08 22:48:53,611 | INFO | batch done | 2175/5182 (42.0%) | batch_symbols=25 | upsert_rows=130 | elapsed=50.1m
+2026-02-08 22:48:59,592 | WARNING | JBK | quarterly | empty statements
+2026-02-08 22:49:26,366 | INFO | batch done | 2200/5182 (42.5%) | batch_symbols=25 | upsert_rows=123 | elapsed=50.6m
+2026-02-08 22:50:02,477 | WARNING | JSM | quarterly | empty statements
+2026-02-08 22:50:02,491 | INFO | batch done | 2225/5182 (42.9%) | batch_symbols=25 | upsert_rows=118 | elapsed=51.2m
+2026-02-08 22:50:39,963 | INFO | batch done | 2250/5182 (43.4%) | batch_symbols=25 | upsert_rows=152 | elapsed=51.9m
+2026-02-08 22:51:15,350 | WARNING | KKRS | quarterly | empty statements
+2026-02-08 22:51:15,871 | WARNING | KKRT | quarterly | empty statements
+2026-02-08 22:51:18,620 | INFO | batch done | 2275/5182 (43.9%) | batch_symbols=25 | upsert_rows=133 | elapsed=52.5m
+2026-02-08 22:51:33,212 | WARNING | KMPB | quarterly | empty statements
+2026-02-08 22:51:54,779 | INFO | batch done | 2300/5182 (44.4%) | batch_symbols=25 | upsert_rows=143 | elapsed=53.1m
+2026-02-08 22:52:29,119 | INFO | batch done | 2325/5182 (44.9%) | batch_symbols=25 | upsert_rows=157 | elapsed=53.7m
+2026-02-08 22:52:40,008 | WARNING | KTH | quarterly | empty statements
+2026-02-08 22:52:40,519 | WARNING | KTN | quarterly | empty statements
+2026-02-08 22:53:02,816 | INFO | batch done | 2350/5182 (45.3%) | batch_symbols=25 | upsert_rows=128 | elapsed=54.3m
+2026-02-08 22:53:41,024 | INFO | batch done | 2375/5182 (45.8%) | batch_symbols=25 | upsert_rows=143 | elapsed=54.9m
+2026-02-08 22:54:17,462 | INFO | batch done | 2400/5182 (46.3%) | batch_symbols=25 | upsert_rows=149 | elapsed=55.5m
+2026-02-08 22:54:55,982 | INFO | batch done | 2425/5182 (46.8%) | batch_symbols=25 | upsert_rows=136 | elapsed=56.1m
+2026-02-08 22:55:38,233 | INFO | batch done | 2450/5182 (47.3%) | batch_symbols=25 | upsert_rows=147 | elapsed=56.8m
+2026-02-08 22:56:18,658 | INFO | batch done | 2475/5182 (47.8%) | batch_symbols=25 | upsert_rows=144 | elapsed=57.5m
+2026-02-08 22:56:57,232 | INFO | batch done | 2500/5182 (48.2%) | batch_symbols=25 | upsert_rows=153 | elapsed=58.2m
+2026-02-08 22:57:33,968 | INFO | batch done | 2525/5182 (48.7%) | batch_symbols=25 | upsert_rows=154 | elapsed=58.8m
+2026-02-08 22:58:09,507 | INFO | batch done | 2550/5182 (49.2%) | batch_symbols=25 | upsert_rows=146 | elapsed=59.4m
+2026-02-08 22:58:50,014 | INFO | batch done | 2575/5182 (49.7%) | batch_symbols=25 | upsert_rows=144 | elapsed=60.0m
+2026-02-08 22:59:25,820 | INFO | batch done | 2600/5182 (50.2%) | batch_symbols=25 | upsert_rows=146 | elapsed=60.6m
+2026-02-08 23:00:01,826 | INFO | batch done | 2625/5182 (50.7%) | batch_symbols=25 | upsert_rows=138 | elapsed=61.2m
+2026-02-08 23:00:38,667 | INFO | batch done | 2650/5182 (51.1%) | batch_symbols=25 | upsert_rows=143 | elapsed=61.9m
+2026-02-08 23:00:41,357 | WARNING | METCI | quarterly | empty statements
+2026-02-08 23:00:41,891 | WARNING | METCZ | quarterly | empty statements
+2026-02-08 23:00:43,563 | WARNING | MFAN | quarterly | empty statements
+2026-02-08 23:00:44,090 | WARNING | MFAO | quarterly | empty statements
+2026-02-08 23:00:50,665 | WARNING | MFICL | quarterly | empty statements
+2026-02-08 23:01:10,138 | INFO | batch done | 2675/5182 (51.6%) | batch_symbols=25 | upsert_rows=104 | elapsed=62.4m
+2026-02-08 23:01:11,674 | WARNING | MGR | quarterly | empty statements
+2026-02-08 23:01:12,207 | WARNING | MGRB | quarterly | empty statements
+2026-02-08 23:01:14,718 | WARNING | MGRD | quarterly | empty statements
+2026-02-08 23:01:15,419 | WARNING | MGRE | quarterly | empty statements
+2026-02-08 23:01:32,455 | WARNING | MHLA | quarterly | empty statements
+2026-02-08 23:01:34,214 | WARNING | MHNC | quarterly | empty statements
+2026-02-08 23:01:42,715 | INFO | batch done | 2700/5182 (52.1%) | batch_symbols=25 | upsert_rows=95 | elapsed=62.9m
+2026-02-08 23:01:55,581 | WARNING | MITN | quarterly | empty statements
+2026-02-08 23:01:56,084 | WARNING | MITP | quarterly | empty statements
+2026-02-08 23:02:13,934 | INFO | batch done | 2725/5182 (52.6%) | batch_symbols=25 | upsert_rows=123 | elapsed=63.4m
+2026-02-08 23:02:21,392 | WARNING | MLPB | quarterly | empty statements
+2026-02-08 23:02:22,120 | WARNING | MLPR | quarterly | empty statements
+2026-02-08 23:02:31,184 | WARNING | MMA | quarterly | empty statements
+2026-02-08 23:02:49,769 | INFO | batch done | 2750/5182 (53.1%) | batch_symbols=25 | upsert_rows=126 | elapsed=64.0m
+2026-02-08 23:03:25,164 | INFO | batch done | 2775/5182 (53.6%) | batch_symbols=25 | upsert_rows=147 | elapsed=64.6m
+2026-02-08 23:03:58,422 | INFO | batch done | 2800/5182 (54.0%) | batch_symbols=25 | upsert_rows=138 | elapsed=65.2m
+2026-02-08 23:04:34,916 | INFO | batch done | 2825/5182 (54.5%) | batch_symbols=25 | upsert_rows=146 | elapsed=65.8m
+2026-02-08 23:05:05,879 | WARNING | MTUL | quarterly | empty statements
+2026-02-08 23:05:08,778 | INFO | batch done | 2850/5182 (55.0%) | batch_symbols=25 | upsert_rows=142 | elapsed=66.4m
+2026-02-08 23:05:33,838 | WARNING | MVRL | quarterly | empty statements
+2026-02-08 23:05:45,804 | INFO | batch done | 2875/5182 (55.5%) | batch_symbols=25 | upsert_rows=121 | elapsed=67.0m
+2026-02-08 23:06:20,268 | INFO | batch done | 2900/5182 (56.0%) | batch_symbols=25 | upsert_rows=118 | elapsed=67.5m
+2026-02-08 23:06:56,459 | INFO | batch done | 2925/5182 (56.4%) | batch_symbols=25 | upsert_rows=132 | elapsed=68.1m
+2026-02-08 23:07:34,153 | INFO | batch done | 2950/5182 (56.9%) | batch_symbols=25 | upsert_rows=120 | elapsed=68.8m
+2026-02-08 23:07:57,105 | WARNING | NEWTG | quarterly | empty statements
+2026-02-08 23:07:57,663 | WARNING | NEWTH | quarterly | empty statements
+2026-02-08 23:07:58,232 | WARNING | NEWTI | quarterly | empty statements
+2026-02-08 23:08:12,270 | INFO | batch done | 2975/5182 (57.4%) | batch_symbols=25 | upsert_rows=130 | elapsed=69.4m
+2026-02-08 23:08:49,452 | INFO | batch done | 3000/5182 (57.9%) | batch_symbols=25 | upsert_rows=138 | elapsed=70.0m
+2026-02-08 23:09:20,746 | WARNING | NMFCZ | quarterly | empty statements
+2026-02-08 23:09:25,268 | INFO | batch done | 3025/5182 (58.4%) | batch_symbols=25 | upsert_rows=124 | elapsed=70.6m
+2026-02-08 23:10:01,778 | INFO | batch done | 3050/5182 (58.9%) | batch_symbols=25 | upsert_rows=134 | elapsed=71.2m
+2026-02-08 23:10:37,153 | INFO | batch done | 3075/5182 (59.3%) | batch_symbols=25 | upsert_rows=136 | elapsed=71.8m
+2026-02-08 23:10:46,625 | WARNING | NRUC | quarterly | empty statements
+2026-02-08 23:11:13,624 | INFO | batch done | 3100/5182 (59.8%) | batch_symbols=25 | upsert_rows=138 | elapsed=72.4m
+2026-02-08 23:11:49,374 | INFO | batch done | 3125/5182 (60.3%) | batch_symbols=25 | upsert_rows=146 | elapsed=73.0m
+2026-02-08 23:12:24,151 | INFO | batch done | 3150/5182 (60.8%) | batch_symbols=25 | upsert_rows=142 | elapsed=73.6m
+2026-02-08 23:12:58,854 | INFO | batch done | 3175/5182 (61.3%) | batch_symbols=25 | upsert_rows=145 | elapsed=74.2m
+2026-02-08 23:13:32,351 | INFO | batch done | 3200/5182 (61.8%) | batch_symbols=25 | upsert_rows=136 | elapsed=74.7m
+2026-02-08 23:13:44,015 | WARNING | OFSSH | quarterly | empty statements
+2026-02-08 23:13:44,595 | WARNING | OFSSO | quarterly | empty statements
+2026-02-08 23:13:58,804 | WARNING | OILD | quarterly | empty statements
+2026-02-08 23:13:59,810 | WARNING | OILU | quarterly | empty statements
+2026-02-08 23:14:03,517 | INFO | batch done | 3225/5182 (62.2%) | batch_symbols=25 | upsert_rows=121 | elapsed=75.3m
+2026-02-08 23:14:39,118 | INFO | batch done | 3250/5182 (62.7%) | batch_symbols=25 | upsert_rows=143 | elapsed=75.9m
+2026-02-08 23:15:18,742 | INFO | batch done | 3275/5182 (63.2%) | batch_symbols=25 | upsert_rows=143 | elapsed=76.5m
+2026-02-08 23:15:54,774 | INFO | batch done | 3300/5182 (63.7%) | batch_symbols=25 | upsert_rows=147 | elapsed=77.1m
+2026-02-08 23:16:28,604 | INFO | batch done | 3325/5182 (64.2%) | batch_symbols=25 | upsert_rows=156 | elapsed=77.7m
+2026-02-08 23:16:37,651 | WARNING | OXLCG | quarterly | empty statements
+2026-02-08 23:16:38,191 | WARNING | OXLCI | quarterly | empty statements
+2026-02-08 23:16:39,258 | WARNING | OXLCL | quarterly | empty statements
+2026-02-08 23:16:44,402 | WARNING | OXLCZ | quarterly | empty statements
+2026-02-08 23:16:47,260 | WARNING | OXSQG | quarterly | empty statements
+2026-02-08 23:16:47,876 | WARNING | OXSQH | quarterly | empty statements
+2026-02-08 23:16:59,660 | INFO | batch done | 3350/5182 (64.6%) | batch_symbols=25 | upsert_rows=99 | elapsed=78.2m
+2026-02-08 23:17:33,814 | INFO | batch done | 3375/5182 (65.1%) | batch_symbols=25 | upsert_rows=138 | elapsed=78.8m
+2026-02-08 23:18:03,361 | WARNING | PCGpX | quarterly | empty statements
+2026-02-08 23:18:05,908 | INFO | batch done | 3400/5182 (65.6%) | batch_symbols=25 | upsert_rows=133 | elapsed=79.3m
+2026-02-08 23:18:37,171 | INFO | batch done | 3425/5182 (66.1%) | batch_symbols=25 | upsert_rows=122 | elapsed=79.8m
+2026-02-08 23:19:13,733 | INFO | batch done | 3450/5182 (66.6%) | batch_symbols=25 | upsert_rows=144 | elapsed=80.4m
+2026-02-08 23:19:15,202 | WARNING | PFFL | quarterly | empty statements
+2026-02-08 23:19:18,248 | WARNING | PFH | quarterly | empty statements
+2026-02-08 23:19:30,233 | WARNING | PFXNZ | quarterly | empty statements
+2026-02-08 23:19:43,621 | INFO | batch done | 3475/5182 (67.1%) | batch_symbols=25 | upsert_rows=124 | elapsed=80.9m
+2026-02-08 23:20:17,519 | INFO | batch done | 3500/5182 (67.5%) | batch_symbols=25 | upsert_rows=146 | elapsed=81.5m
+2026-02-08 23:20:52,621 | INFO | batch done | 3525/5182 (68.0%) | batch_symbols=25 | upsert_rows=140 | elapsed=82.1m
+2026-02-08 23:21:15,194 | WARNING | PMTU | quarterly | empty statements
+2026-02-08 23:21:15,744 | WARNING | PMTV | quarterly | empty statements
+2026-02-08 23:21:16,239 | WARNING | PMTW | quarterly | empty statements
+2026-02-08 23:21:24,134 | INFO | batch done | 3550/5182 (68.5%) | batch_symbols=25 | upsert_rows=113 | elapsed=82.6m
+2026-02-08 23:21:57,235 | INFO | batch done | 3575/5182 (69.0%) | batch_symbols=25 | upsert_rows=150 | elapsed=83.2m
+2026-02-08 23:22:17,850 | WARNING | PRH | quarterly | empty statements
+2026-02-08 23:22:19,581 | WARNING | PRHIZ | quarterly | empty statements
+2026-02-08 23:22:30,246 | INFO | batch done | 3600/5182 (69.5%) | batch_symbols=25 | upsert_rows=129 | elapsed=83.7m
+2026-02-08 23:22:43,105 | WARNING | PRS | quarterly | empty statements
+2026-02-08 23:23:01,824 | INFO | batch done | 3625/5182 (70.0%) | batch_symbols=25 | upsert_rows=136 | elapsed=84.2m
+2026-02-08 23:23:35,827 | INFO | batch done | 3650/5182 (70.4%) | batch_symbols=25 | upsert_rows=133 | elapsed=84.8m
+2026-02-08 23:24:08,782 | WARNING | PYT | quarterly | empty statements
+2026-02-08 23:24:13,022 | INFO | batch done | 3675/5182 (70.9%) | batch_symbols=25 | upsert_rows=132 | elapsed=85.4m
+2026-02-08 23:24:47,038 | INFO | batch done | 3700/5182 (71.4%) | batch_symbols=25 | upsert_rows=147 | elapsed=86.0m
+2026-02-08 23:24:52,044 | WARNING | QULL | quarterly | empty statements
+2026-02-08 23:24:53,911 | WARNING | QVCC | quarterly | empty statements
+2026-02-08 23:24:54,450 | WARNING | QVCD | quarterly | empty statements
+2026-02-08 23:25:17,637 | INFO | batch done | 3725/5182 (71.9%) | batch_symbols=25 | upsert_rows=125 | elapsed=86.5m
+2026-02-08 23:25:38,819 | WARNING | RCB | quarterly | empty statements
+2026-02-08 23:25:40,532 | WARNING | RCC | quarterly | empty statements
+2026-02-08 23:25:41,193 | WARNING | RCD | quarterly | empty statements
+2026-02-08 23:25:53,777 | INFO | batch done | 3750/5182 (72.4%) | batch_symbols=25 | upsert_rows=127 | elapsed=87.1m
+2026-02-08 23:26:28,030 | INFO | batch done | 3775/5182 (72.8%) | batch_symbols=25 | upsert_rows=143 | elapsed=87.7m
+2026-02-08 23:26:57,292 | WARNING | RFM | quarterly | empty statements
+2026-02-08 23:27:00,879 | INFO | batch done | 3800/5182 (73.3%) | batch_symbols=25 | upsert_rows=136 | elapsed=88.2m
+2026-02-08 23:27:26,332 | WARNING | RILYG | quarterly | empty statements
+2026-02-08 23:27:26,912 | WARNING | RILYK | quarterly | empty statements
+2026-02-08 23:27:28,814 | WARNING | RILYN | quarterly | empty statements
+2026-02-08 23:27:30,789 | WARNING | RILYT | quarterly | empty statements
+2026-02-08 23:27:31,486 | WARNING | RILYZ | quarterly | empty statements
+2026-02-08 23:27:31,500 | INFO | batch done | 3825/5182 (73.8%) | batch_symbols=25 | upsert_rows=116 | elapsed=88.7m
+2026-02-08 23:28:03,145 | INFO | batch done | 3850/5182 (74.3%) | batch_symbols=25 | upsert_rows=138 | elapsed=89.3m
+2026-02-08 23:28:39,042 | INFO | batch done | 3875/5182 (74.8%) | batch_symbols=25 | upsert_rows=136 | elapsed=89.9m
+2026-02-08 23:29:11,337 | INFO | batch done | 3900/5182 (75.3%) | batch_symbols=25 | upsert_rows=140 | elapsed=90.4m
+2026-02-08 23:29:38,719 | WARNING | RWAYL | quarterly | empty statements
+2026-02-08 23:29:39,268 | WARNING | RWAYZ | quarterly | empty statements
+2026-02-08 23:29:40,895 | WARNING | RWTN | quarterly | empty statements
+2026-02-08 23:29:40,929 | INFO | batch done | 3925/5182 (75.7%) | batch_symbols=25 | upsert_rows=121 | elapsed=90.9m
+2026-02-08 23:29:42,161 | WARNING | RWTO | quarterly | empty statements
+2026-02-08 23:29:43,257 | WARNING | RWTP | quarterly | empty statements
+2026-02-08 23:29:43,789 | WARNING | RWTQ | quarterly | empty statements
+2026-02-08 23:30:00,862 | WARNING | RZB | quarterly | empty statements
+2026-02-08 23:30:01,630 | WARNING | RZC | quarterly | empty statements
+2026-02-08 23:30:10,679 | INFO | batch done | 3950/5182 (76.2%) | batch_symbols=25 | upsert_rows=107 | elapsed=91.4m
+2026-02-08 23:30:26,159 | WARNING | SAJ | quarterly | empty statements
+2026-02-08 23:30:37,375 | WARNING | SAT | quarterly | empty statements
+2026-02-08 23:30:40,993 | INFO | batch done | 3975/5182 (76.7%) | batch_symbols=25 | upsert_rows=134 | elapsed=91.9m
+2026-02-08 23:30:43,534 | WARNING | SAY | quarterly | empty statements
+2026-02-08 23:30:44,061 | WARNING | SAZ | quarterly | empty statements
+2026-02-08 23:31:11,670 | WARNING | SBXE | quarterly | empty statements
+2026-02-08 23:31:12,592 | WARNING | SCCD | quarterly | empty statements
+2026-02-08 23:31:12,602 | INFO | batch done | 4000/5182 (77.2%) | batch_symbols=25 | upsert_rows=124 | elapsed=92.4m
+2026-02-08 23:31:13,919 | WARNING | SCCE | quarterly | empty statements
+2026-02-08 23:31:14,459 | WARNING | SCCF | quarterly | empty statements
+2026-02-08 23:31:15,124 | WARNING | SCCG | quarterly | empty statements
+2026-02-08 23:31:18,708 | WARNING | SCDL | quarterly | empty statements
+2026-02-08 23:31:43,389 | INFO | batch done | 4025/5182 (77.7%) | batch_symbols=25 | upsert_rows=123 | elapsed=92.9m
+2026-02-08 23:32:07,875 | WARNING | SELX | quarterly | empty statements
+2026-02-08 23:32:21,588 | INFO | batch done | 4050/5182 (78.2%) | batch_symbols=25 | upsert_rows=142 | elapsed=93.6m
+2026-02-08 23:32:29,270 | WARNING | SFB | quarterly | empty statements
+2026-02-08 23:32:51,665 | INFO | batch done | 4075/5182 (78.6%) | batch_symbols=25 | upsert_rows=139 | elapsed=94.1m
+2026-02-08 23:33:27,131 | INFO | batch done | 4100/5182 (79.1%) | batch_symbols=25 | upsert_rows=150 | elapsed=94.7m
+2026-02-08 23:34:02,771 | INFO | batch done | 4125/5182 (79.6%) | batch_symbols=25 | upsert_rows=148 | elapsed=95.3m
+2026-02-08 23:34:36,551 | INFO | batch done | 4150/5182 (80.1%) | batch_symbols=25 | upsert_rows=152 | elapsed=95.8m
+2026-02-08 23:34:57,867 | WARNING | SLVO | quarterly | empty statements
+2026-02-08 23:35:09,364 | WARNING | SMHB | quarterly | empty statements
+2026-02-08 23:35:09,375 | INFO | batch done | 4175/5182 (80.6%) | batch_symbols=25 | upsert_rows=141 | elapsed=96.3m
+2026-02-08 23:35:14,341 | WARNING | SMJF | quarterly | empty statements
+2026-02-08 23:35:44,004 | INFO | batch done | 4200/5182 (81.0%) | batch_symbols=25 | upsert_rows=146 | elapsed=96.9m
+2026-02-08 23:36:15,952 | INFO | batch done | 4225/5182 (81.5%) | batch_symbols=25 | upsert_rows=147 | elapsed=97.4m
+2026-02-08 23:36:21,890 | WARNING | SOJC | quarterly | empty statements
+2026-02-08 23:36:22,499 | WARNING | SOJD | quarterly | empty statements
+2026-02-08 23:36:22,991 | WARNING | SOJE | quarterly | empty statements
+2026-02-08 23:36:23,518 | WARNING | SOJF | quarterly | empty statements
+2026-02-08 23:36:43,989 | INFO | batch done | 4250/5182 (82.0%) | batch_symbols=25 | upsert_rows=117 | elapsed=97.9m
+2026-02-08 23:37:15,481 | INFO | batch done | 4275/5182 (82.5%) | batch_symbols=25 | upsert_rows=121 | elapsed=98.4m
+2026-02-08 23:37:34,095 | WARNING | SREA | quarterly | empty statements
+2026-02-08 23:37:38,594 | WARNING | SRJN | quarterly | empty statements
+2026-02-08 23:37:47,612 | INFO | batch done | 4300/5182 (83.0%) | batch_symbols=25 | upsert_rows=131 | elapsed=99.0m
+2026-02-08 23:38:05,189 | WARNING | SSSSL | quarterly | empty statements
+2026-02-08 23:38:26,306 | INFO | batch done | 4325/5182 (83.5%) | batch_symbols=25 | upsert_rows=147 | elapsed=99.6m
+2026-02-08 23:39:00,037 | INFO | batch done | 4350/5182 (83.9%) | batch_symbols=25 | upsert_rows=141 | elapsed=100.2m
+2026-02-08 23:39:27,985 | WARNING | SUNC | quarterly | empty statements
+2026-02-08 23:39:33,103 | INFO | batch done | 4375/5182 (84.4%) | batch_symbols=25 | upsert_rows=144 | elapsed=100.7m
+2026-02-08 23:40:00,293 | WARNING | SWKHL | quarterly | empty statements
+2026-02-08 23:40:06,733 | INFO | batch done | 4400/5182 (84.9%) | batch_symbols=25 | upsert_rows=128 | elapsed=101.3m
+2026-02-08 23:40:41,837 | INFO | batch done | 4425/5182 (85.4%) | batch_symbols=25 | upsert_rows=155 | elapsed=101.9m
+2026-02-08 23:41:01,828 | WARNING | TCGL | quarterly | empty statements
+2026-02-08 23:41:06,797 | WARNING | TCPA | quarterly | empty statements
+2026-02-08 23:41:13,794 | INFO | batch done | 4450/5182 (85.9%) | batch_symbols=25 | upsert_rows=139 | elapsed=102.4m
+2026-02-08 23:41:39,335 | WARNING | TECTP | quarterly | empty statements
+2026-02-08 23:41:47,573 | INFO | batch done | 4475/5182 (86.4%) | batch_symbols=25 | upsert_rows=137 | elapsed=103.0m
+2026-02-08 23:42:03,130 | WARNING | TFSA | quarterly | empty statements
+2026-02-08 23:42:20,842 | INFO | batch done | 4500/5182 (86.8%) | batch_symbols=25 | upsert_rows=141 | elapsed=103.5m
+2026-02-08 23:42:54,011 | INFO | batch done | 4525/5182 (87.3%) | batch_symbols=25 | upsert_rows=139 | elapsed=104.1m
+2026-02-08 23:43:28,593 | INFO | batch done | 4550/5182 (87.8%) | batch_symbols=25 | upsert_rows=127 | elapsed=104.6m
+2026-02-08 23:43:34,847 | WARNING | TMUSI | quarterly | empty statements
+2026-02-08 23:43:35,363 | WARNING | TMUSL | quarterly | empty statements
+2026-02-08 23:43:35,896 | WARNING | TMUSZ | quarterly | empty statements
+2026-02-08 23:44:01,496 | INFO | batch done | 4575/5182 (88.3%) | batch_symbols=25 | upsert_rows=123 | elapsed=105.2m
+2026-02-08 23:44:17,910 | WARNING | TPGXL | quarterly | empty statements
+2026-02-08 23:44:23,356 | WARNING | TPTA | quarterly | empty statements
+2026-02-08 23:44:34,467 | INFO | batch done | 4600/5182 (88.8%) | batch_symbols=25 | upsert_rows=135 | elapsed=105.7m
+2026-02-08 23:44:39,678 | WARNING | TRINI | quarterly | empty statements
+2026-02-08 23:44:40,230 | WARNING | TRINZ | quarterly | empty statements
+2026-02-08 23:45:07,039 | INFO | batch done | 4625/5182 (89.3%) | batch_symbols=25 | upsert_rows=131 | elapsed=106.3m
+2026-02-08 23:45:42,605 | INFO | batch done | 4650/5182 (89.7%) | batch_symbols=25 | upsert_rows=156 | elapsed=106.9m
+2026-02-08 23:45:57,438 | WARNING | TVC | quarterly | empty statements
+2026-02-08 23:45:57,972 | WARNING | TVE | quarterly | empty statements
+2026-02-08 23:46:17,993 | INFO | batch done | 4675/5182 (90.2%) | batch_symbols=25 | upsert_rows=128 | elapsed=107.5m
+2026-02-08 23:46:20,552 | WARNING | TWOD | quarterly | empty statements
+2026-02-08 23:46:52,900 | INFO | batch done | 4700/5182 (90.7%) | batch_symbols=25 | upsert_rows=143 | elapsed=108.0m
+2026-02-08 23:47:00,109 | WARNING | UCIB | quarterly | empty statements
+2026-02-08 23:47:23,951 | INFO | batch done | 4725/5182 (91.2%) | batch_symbols=25 | upsert_rows=147 | elapsed=108.6m
+2026-02-08 23:47:51,141 | WARNING | UNMA | quarterly | empty statements
+2026-02-08 23:47:53,848 | INFO | batch done | 4750/5182 (91.7%) | batch_symbols=25 | upsert_rows=146 | elapsed=109.1m
+2026-02-08 23:48:24,777 | INFO | batch done | 4775/5182 (92.1%) | batch_symbols=25 | upsert_rows=144 | elapsed=109.6m
+2026-02-08 23:48:33,933 | WARNING | USML | quarterly | empty statements
+2026-02-08 23:48:35,568 | WARNING | USOI | quarterly | empty statements
+2026-02-08 23:48:53,359 | WARNING | UZD | quarterly | empty statements
+2026-02-08 23:48:54,142 | WARNING | UZE | quarterly | empty statements
+2026-02-08 23:48:54,226 | INFO | batch done | 4800/5182 (92.6%) | batch_symbols=25 | upsert_rows=124 | elapsed=110.1m
+2026-02-08 23:48:55,524 | WARNING | UZF | quarterly | empty statements
+2026-02-08 23:49:25,428 | INFO | batch done | 4825/5182 (93.1%) | batch_symbols=25 | upsert_rows=136 | elapsed=110.6m
+2026-02-08 23:49:54,057 | WARNING | VIASP | quarterly | empty statements
+2026-02-08 23:49:58,219 | INFO | batch done | 4850/5182 (93.6%) | batch_symbols=25 | upsert_rows=134 | elapsed=111.1m
+2026-02-08 23:50:29,552 | INFO | batch done | 4875/5182 (94.1%) | batch_symbols=25 | upsert_rows=145 | elapsed=111.7m
+2026-02-08 23:51:02,453 | INFO | batch done | 4900/5182 (94.6%) | batch_symbols=25 | upsert_rows=134 | elapsed=112.2m
+2026-02-08 23:51:35,042 | INFO | batch done | 4925/5182 (95.0%) | batch_symbols=25 | upsert_rows=144 | elapsed=112.8m
+2026-02-08 23:51:57,910 | WARNING | VXX | quarterly | empty statements
+2026-02-08 23:51:58,431 | WARNING | VXZ | quarterly | empty statements
+2026-02-08 23:52:06,652 | INFO | batch done | 4950/5182 (95.5%) | batch_symbols=25 | upsert_rows=125 | elapsed=113.3m
+2026-02-08 23:52:41,183 | INFO | batch done | 4975/5182 (96.0%) | batch_symbols=25 | upsert_rows=142 | elapsed=113.9m
+2026-02-08 23:53:16,067 | WARNING | WHFCL | quarterly | empty statements
+2026-02-08 23:53:16,080 | INFO | batch done | 5000/5182 (96.5%) | batch_symbols=25 | upsert_rows=135 | elapsed=114.4m
+2026-02-08 23:53:20,589 | WARNING | WHLRL | quarterly | empty statements
+2026-02-08 23:53:48,612 | INFO | batch done | 5025/5182 (97.0%) | batch_symbols=25 | upsert_rows=134 | elapsed=115.0m
+2026-02-08 23:54:20,688 | INFO | batch done | 5050/5182 (97.5%) | batch_symbols=25 | upsert_rows=157 | elapsed=115.5m
+2026-02-08 23:54:56,706 | INFO | batch done | 5075/5182 (97.9%) | batch_symbols=25 | upsert_rows=150 | elapsed=116.1m
+2026-02-08 23:55:20,087 | WARNING | XELLL | quarterly | empty statements
+2026-02-08 23:55:28,861 | INFO | batch done | 5100/5182 (98.4%) | batch_symbols=25 | upsert_rows=140 | elapsed=116.6m
+2026-02-08 23:56:03,675 | INFO | batch done | 5125/5182 (98.9%) | batch_symbols=25 | upsert_rows=147 | elapsed=117.2m
+2026-02-08 23:56:39,099 | INFO | batch done | 5150/5182 (99.4%) | batch_symbols=25 | upsert_rows=132 | elapsed=117.8m
+2026-02-08 23:57:06,745 | WARNING | ZONE | quarterly | empty statements
+2026-02-08 23:57:11,919 | WARNING | ZTR | quarterly | empty statements
+2026-02-08 23:57:11,932 | INFO | batch done | 5175/5182 (99.9%) | batch_symbols=25 | upsert_rows=125 | elapsed=118.4m
+2026-02-08 23:57:21,915 | INFO | batch done | 5182/5182 (100.0%) | batch_symbols=7 | upsert_rows=43 | elapsed=118.5m

@@ -68,7 +68,6 @@ def _attach_price_asof(fund: pd.DataFrame, price: pd.DataFrame) -> pd.DataFrame:
     p["symbol"] = p["symbol"].astype(str).str.strip()
     p["date"] = pd.to_datetime(p["date"], errors="coerce")
     p = p[p["date"].notna()].copy()
-
     # price를 symbol별 dict로 캐싱
     price_map = {
         sym: g.sort_values("date").reset_index(drop=True)
@@ -307,7 +306,7 @@ def calculate_factors(fund: pd.DataFrame) -> pd.DataFrame:
         df.loc[m, "shares_growth"] = g.apply(lambda x: _growth(x, "shares_outstanding", n))
 
     # 이걸 해줘야지 소스점 처리가 된다.
-    for c in ["op_income_growth", "asset_growth", "debt_growth", "shares_growth"]:
+    for c in ["price", "op_income_growth", "asset_growth", "debt_growth", "shares_growth"]:
         if c in df.columns:
             df[c] = pd.to_numeric(df[c], errors="coerce")
 

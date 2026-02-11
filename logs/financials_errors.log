@@ -1,0 +1,4 @@
+2026-02-07 22:11:01,123 | ERROR | [AAPL] retry_failed: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2026-02-07 22:11:10,961 | ERROR | [MSFT] retry_failed: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2026-02-07 22:11:20,948 | ERROR | [AAPL] retry_failed: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+2026-02-07 22:11:30,586 | ERROR | [MSFT] retry_failed: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().

@@ -1,0 +1,25 @@
+[project]
+name = "financial-analyst"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "edgartools>=5.15.0",
+    "firecrawl-py==2.16.3",
+    "google-adk>=1.11.0",
+    "google-genai>=1.31.0",
+    "ipywidgets>=8.1.8",
+    "jupyter>=1.1.1",
+    "litellm>=1.75.8",
+    "pymysql>=1.1.2",
+    "python-dotenv>=1.1.1",
+    "selenium>=4.40.0",
+    "tqdm>=4.67.1",
+    "yfinance>=0.2.65",
+]
+
+[dependency-groups]
+dev = [
+    "watchdog>=6.0.0",
+]
