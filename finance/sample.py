@@ -82,7 +82,7 @@ def portfolio_sample():
     """
     period = "15y"
     option = "month_end"
-    start = "2015-12-01"
+    start = "2016-01-01"
     freq = "M"
 
     results = {
