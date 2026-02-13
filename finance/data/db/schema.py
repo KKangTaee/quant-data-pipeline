@@ -262,6 +262,57 @@ FUNDAMENTAL_SCHEMAS = {
         );
     """,
 
+    "financial_statement_values": """
+        CREATE TABLE IF NOT EXISTS nyse_financial_statement_values (
+        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+        symbol VARCHAR(20) NOT NULL,
+        freq   ENUM('annual','quarterly') NOT NULL,
+        period_end DATE NOT NULL,
+
+        statement_type VARCHAR(50) NOT NULL,
+        label VARCHAR(255) NOT NULL,
+        value DOUBLE NULL,
+
+        source VARCHAR(20) NOT NULL DEFAULT 'edgar',
+        last_collected_at TIMESTAMP NULL,
+        error_msg TEXT NULL,
+
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+        UNIQUE KEY uk_fin (symbol, freq, period_end, statement_type, label),
+        KEY ix_symbol (symbol),
+        KEY ix_period_end (period_end),
+        KEY ix_label (label)
+        );
+    """,
+
+    "financial_statement_labels":"""
+        CREATE TABLE IF NOT EXISTS nyse_financial_statement_labels (
+        symbol VARCHAR(20) NOT NULL,
+        label VARCHAR(255) NOT NULL,
+        as_of DATE NOT NULL,
+
+        label_kr VARCHAR(255) NULL,
+        statement_type VARCHAR(50) NULL,
+        confidence DOUBLE NULL,
+
+        enabled TINYINT(1) NOT NULL DEFAULT 1,
+        priority INT NULL,
+        condition_json JSON NULL,
+
+        last_updated_at TIMESTAMP NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+        PRIMARY KEY (symbol, label, as_of),
+        KEY ix_label (label),
+        KEY ix_symbol (symbol),
+        KEY ix_as_of (as_of)
+        );
+    """,
+
     "factors": """
         CREATE TABLE IF NOT EXISTS nyse_factors (
           id BIGINT AUTO_INCREMENT PRIMARY KEY,
