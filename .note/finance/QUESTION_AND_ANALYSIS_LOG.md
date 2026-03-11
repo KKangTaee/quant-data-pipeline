@@ -227,3 +227,123 @@ Do not copy full chat transcripts. Keep only the durable result.
 - Durable output:
   - `app/jobs/ingestion_jobs.py`
   - `app/web/streamlit_app.py`
+
+### 2026-03-11 - UI guidance and precondition clarity
+- Request topic:
+  - improve the app by making each job's preconditions and input behavior clearer in the UI
+- Interpreted goal:
+  - reduce ambiguity about which jobs use `Symbols` and which jobs depend on prior ingestion steps
+- Result:
+  - added a top-level app note explaining shared input behavior
+  - added job-level captions describing:
+    - whether `Symbols` is used
+    - execution order recommendations
+    - preconditions for factor calculation
+    - why asset profile collection behaves differently
+    - why financial statement ingestion may be slower
+- Durable output:
+  - `app/web/streamlit_app.py`
+
+### 2026-03-11 - Pre-execution validation in admin UI
+- Request topic:
+  - improve execution stability by validating job prerequisites before the user clicks run
+- Interpreted goal:
+  - move beyond static guidance text and expose simple operational readiness checks in the UI
+- Result:
+  - added symbol-presence validation
+  - added factor prerequisite checks against MySQL:
+    - price data existence
+    - fundamentals existence
+  - added asset profile prerequisite checks against NYSE universe tables
+  - surfaced these checks in the UI as info/warning/error blocks with optional details
+- Durable output:
+  - `app/jobs/preflight_checks.py`
+  - `app/web/streamlit_app.py`
+
+### 2026-03-11 - Invalid symbol handling fix
+- Request topic:
+  - review why a clearly invalid symbol like `야호` still produced a pipeline result that looked partially successful
+- Interpreted goal:
+  - make invalid input fail early instead of silently flowing into ingestion and returning misleading status
+- Result:
+  - identified that prior validation only checked for non-empty input
+  - added symbol format validation
+  - changed wrappers so no-row outcomes no longer appear as partial success
+  - confirmed `야호` now fails immediately in both preflight and execution layers
+- Durable output:
+  - `app/jobs/ingestion_jobs.py`
+  - `app/jobs/preflight_checks.py`
+
+### 2026-03-11 - UX cleanup phase start
+- Request topic:
+  - move to the UX-cleanup phase after invalid-symbol handling was confirmed
+- Interpreted goal:
+  - reduce user confusion and prevent obviously bad executions before they start
+- Result:
+  - grouped sidebar inputs by job context
+  - reused validation results across the page instead of recalculating inline
+  - disabled execution buttons when validation reaches blocking error state
+- Durable output:
+  - `app/web/streamlit_app.py`
+
+### 2026-03-11 - Job-local input UX
+- Request topic:
+  - continue the UX-cleanup phase by separating inputs per job instead of sharing a large common input area
+- Interpreted goal:
+  - make it obvious which input fields affect which execution buttons
+- Result:
+  - replaced the shared input model with job-local inputs embedded in each card
+  - each execution block now owns the fields it actually uses
+  - validation state is now shown next to the specific job it affects
+- Durable output:
+  - `app/web/streamlit_app.py`
+
+### 2026-03-11 - Preset-based repeated-operation UX
+- Request topic:
+  - continue UX cleanup by improving repeated-use ergonomics
+- Interpreted goal:
+  - reduce manual typing for common admin workflows
+- Result:
+  - added symbol presets:
+    - Big Tech
+    - Core ETFs
+    - Dividend ETFs
+    - Custom
+  - added period presets for OHLCV and pipeline jobs
+  - preserved custom manual entry paths for non-preset runs
+- Durable output:
+  - `app/web/streamlit_app.py`
+
+### 2026-03-11 - Execution stability visibility improvement
+- Request topic:
+  - prioritize execution stability improvements instead of preset management
+- Interpreted goal:
+  - make failed and zero-row runs easier to diagnose from the admin UI
+- Result:
+  - strengthened zero-row result messages for OHLCV, fundamentals, factors, and financial statements
+  - added failed-symbol counts to the summary cards
+  - changed pipeline-step rendering from plain text lines to a table
+  - improved recent-run visibility for failure counts
+- Durable output:
+  - `app/jobs/ingestion_jobs.py`
+  - `app/web/streamlit_app.py`
+
+### 2026-03-11 - DB-backed all-symbol source selection
+- Request topic:
+  - support running jobs against all tracked symbols instead of manually typing symbol lists
+- Interpreted goal:
+  - make daily or weekly OHLCV and related ingestion practical at scale
+- Result:
+  - added selectable symbol sources for symbol-based jobs
+  - supported sources:
+    - Manual
+    - NYSE Stocks
+    - NYSE ETFs
+    - NYSE Stocks + ETFs
+    - Profile Filtered Stocks
+    - Profile Filtered ETFs
+    - Profile Filtered Stocks + ETFs
+  - kept manual preset workflow for smaller ad hoc runs
+- Durable output:
+  - `app/jobs/symbol_sources.py`
+  - `app/web/streamlit_app.py`

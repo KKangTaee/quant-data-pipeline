@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from datetime import datetime
 from time import perf_counter
 from typing import Any, Iterable
@@ -12,6 +13,7 @@ from finance.data.asset_profile import collect_and_store_asset_profiles
 
 
 JobResult = dict[str, Any]
+SYMBOL_PATTERN = re.compile(r"^[A-Z0-9.\-_=^]+$")
 
 
 def _now_str() -> str:
@@ -38,6 +40,20 @@ def parse_symbols(symbols: str | Iterable[str] | None) -> list[str]:
         out.append(sym)
 
     return out
+
+
+def split_valid_invalid_symbols(symbols: str | Iterable[str] | None) -> tuple[list[str], list[str]]:
+    parsed = parse_symbols(symbols)
+    valid: list[str] = []
+    invalid: list[str] = []
+
+    for sym in parsed:
+        if SYMBOL_PATTERN.fullmatch(sym):
+            valid.append(sym)
+        else:
+            invalid.append(sym)
+
+    return valid, invalid
 
 
 def _build_result(
@@ -80,7 +96,7 @@ def run_collect_ohlcv(
     job_name = "collect_ohlcv"
     started_at = _now_str()
     t0 = perf_counter()
-    parsed = parse_symbols(symbols)
+    parsed, invalid_symbols = split_valid_invalid_symbols(symbols)
 
     if not parsed:
         finished_at = _now_str()
@@ -93,7 +109,8 @@ def run_collect_ohlcv(
             rows_written=0,
             symbols_requested=0,
             symbols_processed=0,
-            message="No symbols provided.",
+            failed_symbols=invalid_symbols,
+            message="No valid symbols provided.",
         )
 
     try:
@@ -105,19 +122,30 @@ def run_collect_ohlcv(
             interval=interval,
         )
         finished_at = _now_str()
-        msg = "OHLCV collection completed."
+        if rows_written > 0:
+            status = "success" if not invalid_symbols else "partial_success"
+            msg = "OHLCV collection completed."
+        else:
+            status = "failed"
+            msg = (
+                "OHLCV collection finished with no rows written. "
+                "The symbols may be invalid, delisted, or unavailable from the provider."
+            )
         if end is not None:
             msg += " Note: current low-level date-range handling may be start-oriented."
+        if invalid_symbols:
+            msg += f" Invalid symbols ignored: {', '.join(invalid_symbols[:10])}."
 
         return _build_result(
             job_name=job_name,
-            status="success" if rows_written > 0 else "partial_success",
+            status=status,
             started_at=started_at,
             finished_at=finished_at,
             duration_sec=perf_counter() - t0,
             rows_written=rows_written,
             symbols_requested=len(parsed),
-            symbols_processed=len(parsed),
+            symbols_processed=len(parsed) if rows_written > 0 else 0,
+            failed_symbols=invalid_symbols if invalid_symbols else parsed if rows_written == 0 else [],
             message=msg,
             details={
                 "start": start,
@@ -155,7 +183,7 @@ def run_collect_fundamentals(
     job_name = "collect_fundamentals"
     started_at = _now_str()
     t0 = perf_counter()
-    parsed = parse_symbols(symbols)
+    parsed, invalid_symbols = split_valid_invalid_symbols(symbols)
 
     if not parsed:
         finished_at = _now_str()
@@ -168,13 +196,24 @@ def run_collect_fundamentals(
             rows_written=0,
             symbols_requested=0,
             symbols_processed=0,
-            message="No symbols provided.",
+            failed_symbols=invalid_symbols,
+            message="No valid symbols provided.",
         )
 
     try:
         rows_written = upsert_fundamentals(parsed, freq=freq)
         finished_at = _now_str()
-        status = "success" if rows_written > 0 else "partial_success"
+        if rows_written > 0:
+            status = "success" if not invalid_symbols else "partial_success"
+            msg = "Fundamentals ingestion completed."
+        else:
+            status = "failed"
+            msg = (
+                "Fundamentals ingestion finished with no rows written. "
+                "Check symbol validity and provider coverage for the selected frequency."
+            )
+        if invalid_symbols:
+            msg += f" Invalid symbols ignored: {', '.join(invalid_symbols[:10])}."
         return _build_result(
             job_name=job_name,
             status=status,
@@ -183,8 +222,9 @@ def run_collect_fundamentals(
             duration_sec=perf_counter() - t0,
             rows_written=rows_written,
             symbols_requested=len(parsed),
-            symbols_processed=len(parsed),
-            message="Fundamentals ingestion completed.",
+            symbols_processed=len(parsed) if rows_written > 0 else 0,
+            failed_symbols=invalid_symbols if invalid_symbols else parsed if rows_written == 0 else [],
+            message=msg,
             details={"freq": freq},
         )
     except Exception as exc:
@@ -213,8 +253,28 @@ def run_calculate_factors(
     job_name = "calculate_factors"
     started_at = _now_str()
     t0 = perf_counter()
-    parsed = parse_symbols(symbols)
+    parsed, invalid_symbols = split_valid_invalid_symbols(symbols)
     requested = len(parsed) if parsed else None
+
+    if symbols is not None and not parsed:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=0,
+            symbols_processed=0,
+            failed_symbols=invalid_symbols,
+            message="No valid symbols provided.",
+            details={
+                "freq": freq,
+                "start": start,
+                "end": end,
+            },
+        )
 
     try:
         rows_written = upsert_factors(
@@ -224,7 +284,17 @@ def run_calculate_factors(
             end=end,
         )
         finished_at = _now_str()
-        status = "success" if rows_written > 0 else "partial_success"
+        if rows_written > 0:
+            status = "success" if not invalid_symbols else "partial_success"
+            msg = "Factor calculation completed."
+        else:
+            status = "failed"
+            msg = (
+                "Factor calculation finished with no rows written. "
+                "Matching OHLCV or fundamentals data may be missing in MySQL."
+            )
+        if invalid_symbols:
+            msg += f" Invalid symbols ignored: {', '.join(invalid_symbols[:10])}."
         return _build_result(
             job_name=job_name,
             status=status,
@@ -233,8 +303,9 @@ def run_calculate_factors(
             duration_sec=perf_counter() - t0,
             rows_written=rows_written,
             symbols_requested=requested,
-            symbols_processed=requested,
-            message="Factor calculation completed.",
+            symbols_processed=requested if rows_written > 0 else 0,
+            failed_symbols=invalid_symbols if invalid_symbols else parsed if rows_written == 0 and parsed else [],
+            message=msg,
             details={
                 "freq": freq,
                 "start": start,
@@ -273,7 +344,7 @@ def run_pipeline_core_market_data(
     job_name = "pipeline_core_market_data"
     started_at = _now_str()
     t0 = perf_counter()
-    parsed = parse_symbols(symbols)
+    parsed, invalid_symbols = split_valid_invalid_symbols(symbols)
 
     if not parsed:
         finished_at = _now_str()
@@ -286,7 +357,8 @@ def run_pipeline_core_market_data(
             rows_written=0,
             symbols_requested=0,
             symbols_processed=0,
-            message="No symbols provided.",
+            failed_symbols=invalid_symbols,
+            message="No valid symbols provided.",
             details={"steps": []},
         )
 
@@ -312,6 +384,7 @@ def run_pipeline_core_market_data(
             rows_written=ohlcv_result.get("rows_written") or 0,
             symbols_requested=len(parsed),
             symbols_processed=0,
+            failed_symbols=invalid_symbols + (ohlcv_result.get("failed_symbols") or []),
             message="Pipeline stopped because OHLCV collection failed.",
             details={"steps": steps},
         )
@@ -330,6 +403,7 @@ def run_pipeline_core_market_data(
             rows_written=(ohlcv_result.get("rows_written") or 0) + (fundamentals_result.get("rows_written") or 0),
             symbols_requested=len(parsed),
             symbols_processed=len(parsed),
+            failed_symbols=invalid_symbols + (fundamentals_result.get("failed_symbols") or []),
             message="Pipeline stopped because fundamentals ingestion failed.",
             details={"steps": steps},
         )
@@ -361,8 +435,9 @@ def run_pipeline_core_market_data(
         duration_sec=perf_counter() - t0,
         rows_written=total_rows,
         symbols_requested=len(parsed),
-        symbols_processed=len(parsed),
-        message="Core market-data pipeline completed.",
+        symbols_processed=len(parsed) if total_rows > 0 else 0,
+        failed_symbols=invalid_symbols + [sym for step in steps for sym in step.get("failed_symbols", [])],
+        message="Core market-data pipeline completed." if total_rows > 0 else "Core market-data pipeline finished with no rows written.",
         details={
             "steps": steps,
             "period": period,
@@ -429,7 +504,7 @@ def run_collect_financial_statements(
     job_name = "collect_financial_statements"
     started_at = _now_str()
     t0 = perf_counter()
-    parsed = parse_symbols(symbols)
+    parsed, invalid_symbols = split_valid_invalid_symbols(symbols)
 
     if not parsed:
         finished_at = _now_str()
@@ -442,7 +517,8 @@ def run_collect_financial_statements(
             rows_written=0,
             symbols_requested=0,
             symbols_processed=0,
-            message="No symbols provided.",
+            failed_symbols=invalid_symbols,
+            message="No valid symbols provided.",
         )
 
     try:
@@ -456,7 +532,17 @@ def run_collect_financial_statements(
         upserted_labels = int(result.get("upserted_labels", 0) or 0)
         failed_symbols = list(result.get("failed_symbols", []) or [])
         finished_at = _now_str()
-        status = "partial_success" if failed_symbols else "success"
+        if inserted_values > 0:
+            status = "partial_success" if (failed_symbols or invalid_symbols) else "success"
+            msg = "Financial statement ingestion completed." if not failed_symbols else "Financial statement ingestion completed with failures."
+        else:
+            status = "failed"
+            msg = (
+                "Financial statement ingestion finished with no rows written. "
+                "Check symbol validity, EDGAR availability, or filing coverage."
+            )
+        if invalid_symbols:
+            msg += f" Invalid symbols ignored: {', '.join(invalid_symbols[:10])}."
         return _build_result(
             job_name=job_name,
             status=status,
@@ -465,15 +551,16 @@ def run_collect_financial_statements(
             duration_sec=perf_counter() - t0,
             rows_written=inserted_values,
             symbols_requested=len(parsed),
-            symbols_processed=len(parsed) - len(failed_symbols),
-            failed_symbols=failed_symbols[:50],
-            message="Financial statement ingestion completed." if not failed_symbols else "Financial statement ingestion completed with failures.",
+            symbols_processed=(len(parsed) - len(failed_symbols)) if inserted_values > 0 else 0,
+            failed_symbols=(invalid_symbols + failed_symbols)[:50],
+            message=msg,
             details={
                 "freq": freq,
                 "periods": periods,
                 "period": period,
                 "inserted_values": inserted_values,
                 "upserted_labels": upserted_labels,
+                "failed_count": len(failed_symbols),
             },
         )
     except Exception as exc:

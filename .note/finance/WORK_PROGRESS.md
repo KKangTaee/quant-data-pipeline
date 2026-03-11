@@ -83,3 +83,23 @@ Keep entries append-only and concise.
 - Added:
   - asset profile collection wrapper and button
   - financial statement ingestion wrapper and button
+- Improved the admin UI guidance text.
+- Added explicit job-level precondition and input-scope explanations to reduce operator confusion.
+- Added preflight validation helpers for:
+  - symbol presence
+  - factor prerequisites in MySQL
+  - asset profile universe-table readiness
+- Added validation messages to the Streamlit UI before execution.
+- Tightened symbol validation so obviously invalid tickers do not execute ingestion jobs.
+- Changed zero-row ingestion outcomes to fail instead of looking like partial success.
+- Started the UX-cleanup phase.
+- Reorganized sidebar inputs by job context.
+- Added button disabling for blocking validation errors.
+- Moved from shared sidebar inputs toward job-local inputs in each execution card.
+- Reduced ambiguity about which fields affect which jobs.
+- Added symbol presets and period presets for repeated admin use.
+- Started moving the UI toward faster repeated operation instead of manual re-entry.
+- Improved execution-result visibility with clearer failure-oriented messaging.
+- Added failed-symbol counts to result summaries and recent-run views.
+- Added DB-backed symbol source selection for symbol-based jobs.
+- Users can now resolve symbols from NYSE tables or filtered asset-profile universes instead of typing all symbols manually.
