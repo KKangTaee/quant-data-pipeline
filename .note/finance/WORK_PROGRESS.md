@@ -103,3 +103,20 @@ Keep entries append-only and concise.
 - Added failed-symbol counts to result summaries and recent-run views.
 - Added DB-backed symbol source selection for symbol-based jobs.
 - Users can now resolve symbols from NYSE tables or filtered asset-profile universes instead of typing all symbols manually.
+- Added visible DB/table write-target mapping to the admin UI.
+- Each job card now shows which MySQL tables it writes to.
+- Added large-run UX safeguards.
+- The app now warns on large symbol counts, shows estimated runtime when possible, and requires confirmation for very large runs.
+
+- Added a global single-job execution lock to the Streamlit admin UI.
+- Switched button behavior from direct execution to scheduled execution so the UI can show a running banner and disable all execution buttons while a job is active.
+- Added a top-level running banner and a latest-completed-run summary to make long-running ingestion jobs easier to monitor.
+
+- Expanded OHLCV/UI period presets to include `1d` and a UI-level `7d` rolling window alias.
+- Implemented `7d` handling as derived `start/end` dates so it works safely with the existing yfinance ingestion path.
+
+- Removed the large-run confirmation checkbox from the Streamlit admin UI; large runs now show warnings and estimates without an extra confirmation gate.
+- Extended the running banner to show the current target-symbol count for symbol-based jobs.
+
+- Restored per-card running feedback in the Streamlit admin UI while keeping the top-level global running banner.
+- Moved scheduled job execution into the matching job card so loading feedback appears in the local card context again.

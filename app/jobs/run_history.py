@@ -30,3 +30,42 @@ def load_run_history(limit: int = 50) -> list[dict[str, Any]]:
             continue
 
     return rows[-limit:][::-1]
+
+
+def estimate_duration_from_history(job_name: str, symbol_count: int) -> dict[str, Any]:
+    history = load_run_history(limit=200)
+    relevant = [
+        item for item in history
+        if item.get("job_name") == job_name
+        and (item.get("symbols_requested") or 0) > 0
+        and (item.get("duration_sec") or 0) > 0
+    ]
+
+    if not relevant or symbol_count <= 0:
+        return {
+            "available": False,
+            "message": "No estimate available yet.",
+        }
+
+    per_symbol = [
+        float(item["duration_sec"]) / float(item["symbols_requested"])
+        for item in relevant
+        if item.get("symbols_requested")
+    ]
+    if not per_symbol:
+        return {
+            "available": False,
+            "message": "No estimate available yet.",
+        }
+
+    avg = sum(per_symbol) / len(per_symbol)
+    estimate_sec = avg * symbol_count
+    low = max(1, int(estimate_sec * 0.7))
+    high = max(low, int(estimate_sec * 1.3))
+
+    return {
+        "available": True,
+        "seconds_low": low,
+        "seconds_high": high,
+        "message": f"Estimated runtime: {low // 60}m {low % 60}s - {high // 60}m {high % 60}s",
+    }

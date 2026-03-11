@@ -347,3 +347,73 @@ Do not copy full chat transcripts. Keep only the durable result.
 - Durable output:
   - `app/jobs/symbol_sources.py`
   - `app/web/streamlit_app.py`
+
+### 2026-03-11 - UI write-target transparency
+- Request topic:
+  - make it explicit in the UI which buttons actually write to which databases and tables
+- Interpreted goal:
+  - remove ambiguity about whether the web app triggers real persistence and where that data lands
+- Result:
+  - added a write-target summary table near the top of the app
+  - added per-job `Writes to` captions on each execution card
+- Durable output:
+  - `app/web/streamlit_app.py`
+
+### 2026-03-11 - Large-run safeguards for all-symbol ingestion
+- Request topic:
+  - add better visual handling for large all-symbol runs such as OHLCV collection over the full universe
+- Interpreted goal:
+  - reduce accidental long-running executions and make the cost of large runs more visible before execution
+- Result:
+  - added symbol-count based warnings
+  - added estimated runtime using prior run history when available
+  - added confirmation checkbox gating for very large runs
+- Durable output:
+  - `app/jobs/run_history.py`
+  - `app/web/streamlit_app.py`
+
+### 2026-03-11 - Single-job lock and running banner for admin UI
+- Request topic:
+  - prevent other buttons from running while one ingestion job is already in progress and show a visible running banner
+- Interpreted goal:
+  - reduce accidental duplicate execution and make long-running ingestion state explicit in the internal admin console
+- Result:
+  - changed the Streamlit execution flow from direct button-run behavior to a scheduled single-job model
+  - added a session-level running job lock so all execution buttons are disabled while a job is active
+  - added a top-level running banner and a latest-completed-run summary after completion
+- Durable output:
+  - `app/web/streamlit_app.py`
+
+### 2026-03-11 - Short OHLCV period support in the admin UI
+- Request topic:
+  - support `1d` and `7d` in the pipeline period selector
+- Interpreted goal:
+  - make short-window OHLCV collection easier from the web UI without forcing manual start/end entry
+- Result:
+  - added `1d` directly as a period preset
+  - added `7d` as a UI alias that resolves to a rolling 7-day `start/end` window because the provider period format does not reliably accept `7d`
+- Durable output:
+  - `app/web/streamlit_app.py`
+
+### 2026-03-11 - Large-run UX simplification
+- Request topic:
+  - remove the confirmation toggle for large symbol runs and review whether live progress visualization is practical
+- Interpreted goal:
+  - reduce friction for large manual runs while keeping operators informed about scale and duration
+- Result:
+  - removed the large-run confirmation checkbox and kept warning / estimated-runtime messaging
+  - extended the running banner to show target symbol count for symbol-based jobs
+  - confirmed that true live progress is feasible for OHLCV, but it requires callback-style refactoring in the low-level batch ingestion loop
+- Durable output:
+  - `app/web/streamlit_app.py`
+
+### 2026-03-11 - Restoring local loading feedback in the admin UI
+- Request topic:
+  - keep the global running banner but restore job-local loading feedback similar to the earlier per-button behavior
+- Interpreted goal:
+  - make long-running execution feel active both globally and in the card where the operator clicked
+- Result:
+  - kept the top-level running banner for global lock visibility
+  - moved scheduled execution into the matching job card so the loading state appears again in the local card context
+- Durable output:
+  - `app/web/streamlit_app.py`
