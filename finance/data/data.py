@@ -1,6 +1,6 @@
 import yfinance as yf
 import pandas as pd
-from typing import Iterable, Optional, Literal
+from typing import Any, Callable, Iterable, Optional, Literal
 
 from .db.mysql import MySQLClient
 from .db.schema import PRICE_SCHEMAS  # 방금 추가한 것
@@ -106,6 +106,7 @@ def store_ohlcv_to_mysql(
     port=3306,
     chunk_size: int = 50,
     sleep: float = 0.4,
+    progress_callback: Optional[Callable[[dict[str, Any]], None]] = None,
 ):
     """
     symbols + (start/end 또는 period)로 yfinance OHLCV를 가져와 DB에 UPSERT.
@@ -151,7 +152,23 @@ def store_ohlcv_to_mysql(
             for i in range(0, len(lst), size):
                 yield lst[i:i+size]
 
-        for batch in chunked(symbols, chunk_size):
+        total_symbols = len(symbols)
+        total_batches = (total_symbols + chunk_size - 1) // chunk_size
+        processed_symbols = 0
+
+        if progress_callback is not None:
+            progress_callback(
+                {
+                    "event": "batch_progress",
+                    "processed_symbols": 0,
+                    "total_symbols": total_symbols,
+                    "batch_index": 0,
+                    "total_batches": total_batches,
+                    "rows_written": 0,
+                }
+            )
+
+        for batch_index, batch in enumerate(chunked(symbols, chunk_size), start=1):
             # ✅ 네가 이미 만든 get_ohlcv 재사용
             if start or end:
                 # yfinance download는 start/end 지원 → get_ohlcv는 start만 받으니,
@@ -194,6 +211,19 @@ def store_ohlcv_to_mysql(
             if rows:
                 db.executemany(upsert_sql, rows)
                 inserted += len(rows)
+
+            processed_symbols += len(batch)
+            if progress_callback is not None:
+                progress_callback(
+                    {
+                        "event": "batch_progress",
+                        "processed_symbols": processed_symbols,
+                        "total_symbols": total_symbols,
+                        "batch_index": batch_index,
+                        "total_batches": total_batches,
+                        "rows_written": inserted,
+                    }
+                )
 
             # 배치 sleep + 지터 (rate limit 완화)
             time.sleep(sleep + random.random() * 0.2)

@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from datetime import datetime
 from time import perf_counter
-from typing import Any, Iterable
+from typing import Any, Callable, Iterable
 
 from finance.data.data import store_ohlcv_to_mysql
 from finance.data.factors import upsert_factors
@@ -92,6 +92,7 @@ def run_collect_ohlcv(
     end: str | None = None,
     period: str = "1y",
     interval: str = "1d",
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
 ) -> JobResult:
     job_name = "collect_ohlcv"
     started_at = _now_str()
@@ -120,6 +121,7 @@ def run_collect_ohlcv(
             end=end,
             period=period,
             interval=interval,
+            progress_callback=progress_callback,
         )
         finished_at = _now_str()
         if rows_written > 0:
@@ -340,6 +342,7 @@ def run_pipeline_core_market_data(
     period: str = "1y",
     interval: str = "1d",
     freq: str = "annual",
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
 ) -> JobResult:
     job_name = "pipeline_core_market_data"
     started_at = _now_str()
@@ -364,14 +367,35 @@ def run_pipeline_core_market_data(
 
     steps: list[JobResult] = []
 
+    if progress_callback is not None:
+        progress_callback(
+            {
+                "event": "stage_start",
+                "stage": "ohlcv",
+                "stage_index": 1,
+                "total_stages": 3,
+            }
+        )
+
     ohlcv_result = run_collect_ohlcv(
         parsed,
         start=start,
         end=end,
         period=period,
         interval=interval,
+        progress_callback=progress_callback,
     )
     steps.append(ohlcv_result)
+
+    if progress_callback is not None:
+        progress_callback(
+            {
+                "event": "stage_complete",
+                "stage": "ohlcv",
+                "stage_index": 1,
+                "total_stages": 3,
+            }
+        )
 
     if ohlcv_result["status"] == "failed":
         finished_at = _now_str()
@@ -389,8 +413,28 @@ def run_pipeline_core_market_data(
             details={"steps": steps},
         )
 
+    if progress_callback is not None:
+        progress_callback(
+            {
+                "event": "stage_start",
+                "stage": "fundamentals",
+                "stage_index": 2,
+                "total_stages": 3,
+            }
+        )
+
     fundamentals_result = run_collect_fundamentals(parsed, freq=freq)
     steps.append(fundamentals_result)
+
+    if progress_callback is not None:
+        progress_callback(
+            {
+                "event": "stage_complete",
+                "stage": "fundamentals",
+                "stage_index": 2,
+                "total_stages": 3,
+            }
+        )
 
     if fundamentals_result["status"] == "failed":
         finished_at = _now_str()
@@ -408,6 +452,16 @@ def run_pipeline_core_market_data(
             details={"steps": steps},
         )
 
+    if progress_callback is not None:
+        progress_callback(
+            {
+                "event": "stage_start",
+                "stage": "factors",
+                "stage_index": 3,
+                "total_stages": 3,
+            }
+        )
+
     factors_result = run_calculate_factors(
         parsed,
         freq=freq,
@@ -415,6 +469,16 @@ def run_pipeline_core_market_data(
         end=end,
     )
     steps.append(factors_result)
+
+    if progress_callback is not None:
+        progress_callback(
+            {
+                "event": "stage_complete",
+                "stage": "factors",
+                "stage_index": 3,
+                "total_stages": 3,
+            }
+        )
 
     statuses = [step["status"] for step in steps]
     if any(status == "failed" for status in statuses):

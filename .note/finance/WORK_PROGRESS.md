@@ -120,3 +120,9 @@ Keep entries append-only and concise.
 
 - Restored per-card running feedback in the Streamlit admin UI while keeping the top-level global running banner.
 - Moved scheduled job execution into the matching job card so loading feedback appears in the local card context again.
+
+- Added live batch-progress callbacks to the OHLCV ingestion path.
+- Added Streamlit progress-bar rendering for large OHLCV runs and for the OHLCV stage inside the core pipeline when the symbol count is 100 or more.
+
+- Adjusted the Streamlit execution flow so non-run panels keep rendering while a job is active; only run controls remain blocked.
+- The right-side recent-run, history, log, and failure panels now stay visible during execution.

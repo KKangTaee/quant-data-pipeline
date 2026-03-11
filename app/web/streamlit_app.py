@@ -135,13 +135,15 @@ def _clear_running_job() -> None:
     st.session_state.running_job = None
 
 
-def _dispatch_job(job: dict[str, Any]) -> JobResult:
+def _dispatch_job(job: dict[str, Any], *, progress_callback: Any = None) -> JobResult:
     action = job["action"]
-    params = job["params"]
+    params = dict(job["params"])
 
     if action == "pipeline_core_market_data":
+        params["progress_callback"] = progress_callback
         return run_pipeline_core_market_data(**params)
     if action == "collect_ohlcv":
+        params["progress_callback"] = progress_callback
         return run_collect_ohlcv(**params)
     if action == "collect_fundamentals":
         return run_collect_fundamentals(**params)
@@ -154,14 +156,14 @@ def _dispatch_job(job: dict[str, Any]) -> JobResult:
     raise ValueError(f"Unsupported job action: {action}")
 
 
-def _run_scheduled_job() -> None:
+def _run_scheduled_job(progress_callback: Any = None) -> None:
     job = st.session_state.running_job
     if job is None:
         return
 
     try:
         with st.spinner(job["spinner_text"]):
-            result = _dispatch_job(job)
+            result = _dispatch_job(job, progress_callback=progress_callback)
     except Exception as exc:
         result = {
             "job_name": job["job_name"],
@@ -196,6 +198,72 @@ def _render_running_banner() -> None:
 def _render_inline_running_hint(action: str, label: str) -> None:
     if _is_running_action(action):
         st.info(f"`{label}` is running. Progress is still synchronous, so the page will update again when the job finishes.")
+
+
+def _build_progress_callback(job: dict[str, Any], *, label: str) -> Any:
+    action = job.get("action")
+    symbol_count = len(job.get("params", {}).get("symbols", []) or [])
+
+    if action not in {"collect_ohlcv", "pipeline_core_market_data"} or symbol_count < 100:
+        _render_inline_running_hint(action, label)
+        return None
+
+    progress_text = st.empty()
+    progress_meta = st.empty()
+    progress_bar = st.progress(0)
+
+    if action == "collect_ohlcv":
+        progress_text.info(f"`{label}` is running with live OHLCV progress.")
+    else:
+        progress_text.info(f"`{label}` is running with pipeline-stage progress.")
+
+    def _callback(event: dict[str, Any]) -> None:
+        event_type = event.get("event")
+
+        if action == "collect_ohlcv" and event_type == "batch_progress":
+            total_symbols = max(int(event.get("total_symbols", symbol_count) or symbol_count), 1)
+            processed_symbols = min(int(event.get("processed_symbols", 0) or 0), total_symbols)
+            percent = int((processed_symbols / total_symbols) * 100)
+            progress_bar.progress(percent)
+            progress_meta.caption(
+                "Processed "
+                f"`{processed_symbols}/{total_symbols}` symbols | "
+                f"batch `{event.get('batch_index', 0)}/{event.get('total_batches', 0)}` | "
+                f"rows written `{event.get('rows_written', 0)}`"
+            )
+            return
+
+        if action == "pipeline_core_market_data":
+            total_stages = max(int(event.get("total_stages", 3) or 3), 1)
+            stage_index = int(event.get("stage_index", 1) or 1)
+            stage = str(event.get("stage", "") or "").upper()
+
+            if event_type == "stage_start":
+                percent = int(((stage_index - 1) / total_stages) * 100)
+                progress_bar.progress(percent)
+                progress_meta.caption(f"Current stage: `{stage}` ({stage_index}/{total_stages})")
+                return
+
+            if event_type == "stage_complete":
+                percent = int((stage_index / total_stages) * 100)
+                progress_bar.progress(percent)
+                progress_meta.caption(f"Completed stage: `{stage}` ({stage_index}/{total_stages})")
+                return
+
+            if event_type == "batch_progress":
+                total_symbols = max(int(event.get("total_symbols", symbol_count) or symbol_count), 1)
+                processed_symbols = min(int(event.get("processed_symbols", 0) or 0), total_symbols)
+                stage_fraction = processed_symbols / total_symbols
+                percent = int((((stage_index - 1) + stage_fraction) / total_stages) * 100)
+                progress_bar.progress(percent)
+                progress_meta.caption(
+                    "Current stage: `OHLCV` | "
+                    f"processed `{processed_symbols}/{total_symbols}` symbols | "
+                    f"batch `{event.get('batch_index', 0)}/{event.get('total_batches', 0)}` | "
+                    f"rows written `{event.get('rows_written', 0)}`"
+                )
+
+    return _callback
 
 
 def _render_last_completed_result() -> None:
@@ -475,6 +543,7 @@ def main() -> None:
     _render_write_target_table()
     _render_last_completed_result()
 
+    current_progress_callback = None
     col_left, col_right = st.columns([3, 2])
 
     with col_left:
@@ -532,9 +601,11 @@ def main() -> None:
                         },
                     }
                 )
-            _render_inline_running_hint("pipeline_core_market_data", "Core Market Data Pipeline")
             if _is_running_action("pipeline_core_market_data"):
-                _run_scheduled_job()
+                current_progress_callback = _build_progress_callback(
+                    st.session_state.running_job,
+                    label="Core Market Data Pipeline",
+                )
 
         with st.container(border=True):
             st.markdown("### OHLCV Collection")
@@ -586,9 +657,11 @@ def main() -> None:
                         },
                     }
                 )
-            _render_inline_running_hint("collect_ohlcv", "OHLCV Collection")
             if _is_running_action("collect_ohlcv"):
-                _run_scheduled_job()
+                current_progress_callback = _build_progress_callback(
+                    st.session_state.running_job,
+                    label="OHLCV Collection",
+                )
 
         with st.container(border=True):
             st.markdown("### Fundamentals Ingestion")
@@ -627,9 +700,11 @@ def main() -> None:
                         },
                     }
                 )
-            _render_inline_running_hint("collect_fundamentals", "Fundamentals Ingestion")
             if _is_running_action("collect_fundamentals"):
-                _run_scheduled_job()
+                current_progress_callback = _build_progress_callback(
+                    st.session_state.running_job,
+                    label="Fundamentals Ingestion",
+                )
 
         with st.container(border=True):
             st.markdown("### Factor Calculation")
@@ -668,9 +743,11 @@ def main() -> None:
                         },
                     }
                 )
-            _render_inline_running_hint("calculate_factors", "Factor Calculation")
             if _is_running_action("calculate_factors"):
-                _run_scheduled_job()
+                current_progress_callback = _build_progress_callback(
+                    st.session_state.running_job,
+                    label="Factor Calculation",
+                )
 
         with st.container(border=True):
             st.markdown("### Asset Profile Collection")
@@ -704,9 +781,11 @@ def main() -> None:
                         },
                     }
                 )
-            _render_inline_running_hint("collect_asset_profiles", "Asset Profile Collection")
             if _is_running_action("collect_asset_profiles"):
-                _run_scheduled_job()
+                current_progress_callback = _build_progress_callback(
+                    st.session_state.running_job,
+                    label="Asset Profile Collection",
+                )
 
         with st.container(border=True):
             st.markdown("### Financial Statement Ingestion")
@@ -746,9 +825,11 @@ def main() -> None:
                         },
                     }
                 )
-            _render_inline_running_hint("collect_financial_statements", "Financial Statement Ingestion")
             if _is_running_action("collect_financial_statements"):
-                _run_scheduled_job()
+                current_progress_callback = _build_progress_callback(
+                    st.session_state.running_job,
+                    label="Financial Statement Ingestion",
+                )
 
     with col_right:
         _render_recent_results()
@@ -758,6 +839,9 @@ def main() -> None:
         _render_recent_logs()
         st.divider()
         _render_failure_csv_preview()
+
+    if _has_running_job():
+        _run_scheduled_job(progress_callback=current_progress_callback)
 
 if __name__ == "__main__":
     main()

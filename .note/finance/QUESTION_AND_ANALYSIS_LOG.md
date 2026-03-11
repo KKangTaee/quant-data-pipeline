@@ -417,3 +417,28 @@ Do not copy full chat transcripts. Keep only the durable result.
   - moved scheduled execution into the matching job card so the loading state appears again in the local card context
 - Durable output:
   - `app/web/streamlit_app.py`
+
+### 2026-03-11 - Live OHLCV progress visualization for large runs
+- Request topic:
+  - add visual progress feedback for large symbol runs instead of only showing a static running banner
+- Interpreted goal:
+  - make long-running OHLCV ingestion operationally safer by exposing real-time progress within the web app
+- Result:
+  - added a batch-level progress callback to the low-level OHLCV MySQL ingestion loop
+  - threaded that callback through the OHLCV wrapper and the core pipeline wrapper
+  - added Streamlit progress bars and processed-symbol counters for large OHLCV runs and for the OHLCV stage of the core pipeline when symbol count is at least 100
+- Durable output:
+  - `finance/data/data.py`
+  - `app/jobs/ingestion_jobs.py`
+  - `app/web/streamlit_app.py`
+
+### 2026-03-11 - Keep non-run panels visible during execution
+- Request topic:
+  - avoid hiding other jobs and log/history panels while a run is active; only block the run controls and live-updating widgets
+- Interpreted goal:
+  - preserve operator visibility into logs and prior runs during long ingestion work without allowing duplicate execution
+- Result:
+  - changed the execution flow so the page renders both left and right panels first, then runs the active job
+  - kept the run controls disabled during execution, while allowing the non-run panels to remain visible
+- Durable output:
+  - `app/web/streamlit_app.py`
