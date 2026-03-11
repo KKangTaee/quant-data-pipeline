@@ -1,0 +1,496 @@
+from __future__ import annotations
+
+from datetime import datetime
+from time import perf_counter
+from typing import Any, Iterable
+
+from finance.data.data import store_ohlcv_to_mysql
+from finance.data.factors import upsert_factors
+from finance.data.financial_statements import upsert_financial_statements
+from finance.data.fundamentals import upsert_fundamentals
+from finance.data.asset_profile import collect_and_store_asset_profiles
+
+
+JobResult = dict[str, Any]
+
+
+def _now_str() -> str:
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+
+def parse_symbols(symbols: str | Iterable[str] | None) -> list[str]:
+    if symbols is None:
+        return []
+
+    if isinstance(symbols, str):
+        raw = symbols.replace("\n", ",").split(",")
+    else:
+        raw = list(symbols)
+
+    out: list[str] = []
+    seen: set[str] = set()
+
+    for item in raw:
+        sym = str(item).strip().upper()
+        if not sym or sym in seen:
+            continue
+        seen.add(sym)
+        out.append(sym)
+
+    return out
+
+
+def _build_result(
+    *,
+    job_name: str,
+    status: str,
+    started_at: str,
+    finished_at: str,
+    duration_sec: float,
+    rows_written: int | None = None,
+    symbols_requested: int | None = None,
+    symbols_processed: int | None = None,
+    failed_symbols: list[str] | None = None,
+    message: str = "",
+    details: dict[str, Any] | None = None,
+) -> JobResult:
+    return {
+        "job_name": job_name,
+        "status": status,
+        "started_at": started_at,
+        "finished_at": finished_at,
+        "duration_sec": round(duration_sec, 3),
+        "rows_written": rows_written,
+        "symbols_requested": symbols_requested,
+        "symbols_processed": symbols_processed,
+        "failed_symbols": failed_symbols or [],
+        "message": message,
+        "details": details or {},
+    }
+
+
+def run_collect_ohlcv(
+    symbols: str | Iterable[str] | None,
+    *,
+    start: str | None = None,
+    end: str | None = None,
+    period: str = "1y",
+    interval: str = "1d",
+) -> JobResult:
+    job_name = "collect_ohlcv"
+    started_at = _now_str()
+    t0 = perf_counter()
+    parsed = parse_symbols(symbols)
+
+    if not parsed:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=0,
+            symbols_processed=0,
+            message="No symbols provided.",
+        )
+
+    try:
+        rows_written = store_ohlcv_to_mysql(
+            parsed,
+            start=start,
+            end=end,
+            period=period,
+            interval=interval,
+        )
+        finished_at = _now_str()
+        msg = "OHLCV collection completed."
+        if end is not None:
+            msg += " Note: current low-level date-range handling may be start-oriented."
+
+        return _build_result(
+            job_name=job_name,
+            status="success" if rows_written > 0 else "partial_success",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=rows_written,
+            symbols_requested=len(parsed),
+            symbols_processed=len(parsed),
+            message=msg,
+            details={
+                "start": start,
+                "end": end,
+                "period": period,
+                "interval": interval,
+            },
+        )
+    except Exception as exc:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=len(parsed),
+            symbols_processed=0,
+            message=f"OHLCV collection failed: {exc}",
+            details={
+                "start": start,
+                "end": end,
+                "period": period,
+                "interval": interval,
+            },
+        )
+
+
+def run_collect_fundamentals(
+    symbols: str | Iterable[str] | None,
+    *,
+    freq: str = "annual",
+) -> JobResult:
+    job_name = "collect_fundamentals"
+    started_at = _now_str()
+    t0 = perf_counter()
+    parsed = parse_symbols(symbols)
+
+    if not parsed:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=0,
+            symbols_processed=0,
+            message="No symbols provided.",
+        )
+
+    try:
+        rows_written = upsert_fundamentals(parsed, freq=freq)
+        finished_at = _now_str()
+        status = "success" if rows_written > 0 else "partial_success"
+        return _build_result(
+            job_name=job_name,
+            status=status,
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=rows_written,
+            symbols_requested=len(parsed),
+            symbols_processed=len(parsed),
+            message="Fundamentals ingestion completed.",
+            details={"freq": freq},
+        )
+    except Exception as exc:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=len(parsed),
+            symbols_processed=0,
+            message=f"Fundamentals ingestion failed: {exc}",
+            details={"freq": freq},
+        )
+
+
+def run_calculate_factors(
+    symbols: str | Iterable[str] | None = None,
+    *,
+    freq: str | None = None,
+    start: str | None = None,
+    end: str | None = None,
+) -> JobResult:
+    job_name = "calculate_factors"
+    started_at = _now_str()
+    t0 = perf_counter()
+    parsed = parse_symbols(symbols)
+    requested = len(parsed) if parsed else None
+
+    try:
+        rows_written = upsert_factors(
+            symbols=parsed or None,
+            freq=freq,
+            start=start,
+            end=end,
+        )
+        finished_at = _now_str()
+        status = "success" if rows_written > 0 else "partial_success"
+        return _build_result(
+            job_name=job_name,
+            status=status,
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=rows_written,
+            symbols_requested=requested,
+            symbols_processed=requested,
+            message="Factor calculation completed.",
+            details={
+                "freq": freq,
+                "start": start,
+                "end": end,
+            },
+        )
+    except Exception as exc:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=requested,
+            symbols_processed=0,
+            message=f"Factor calculation failed: {exc}",
+            details={
+                "freq": freq,
+                "start": start,
+                "end": end,
+            },
+        )
+
+
+def run_pipeline_core_market_data(
+    symbols: str | Iterable[str] | None,
+    *,
+    start: str | None = None,
+    end: str | None = None,
+    period: str = "1y",
+    interval: str = "1d",
+    freq: str = "annual",
+) -> JobResult:
+    job_name = "pipeline_core_market_data"
+    started_at = _now_str()
+    t0 = perf_counter()
+    parsed = parse_symbols(symbols)
+
+    if not parsed:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=0,
+            symbols_processed=0,
+            message="No symbols provided.",
+            details={"steps": []},
+        )
+
+    steps: list[JobResult] = []
+
+    ohlcv_result = run_collect_ohlcv(
+        parsed,
+        start=start,
+        end=end,
+        period=period,
+        interval=interval,
+    )
+    steps.append(ohlcv_result)
+
+    if ohlcv_result["status"] == "failed":
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=ohlcv_result.get("rows_written") or 0,
+            symbols_requested=len(parsed),
+            symbols_processed=0,
+            message="Pipeline stopped because OHLCV collection failed.",
+            details={"steps": steps},
+        )
+
+    fundamentals_result = run_collect_fundamentals(parsed, freq=freq)
+    steps.append(fundamentals_result)
+
+    if fundamentals_result["status"] == "failed":
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=(ohlcv_result.get("rows_written") or 0) + (fundamentals_result.get("rows_written") or 0),
+            symbols_requested=len(parsed),
+            symbols_processed=len(parsed),
+            message="Pipeline stopped because fundamentals ingestion failed.",
+            details={"steps": steps},
+        )
+
+    factors_result = run_calculate_factors(
+        parsed,
+        freq=freq,
+        start=start,
+        end=end,
+    )
+    steps.append(factors_result)
+
+    statuses = [step["status"] for step in steps]
+    if any(status == "failed" for status in statuses):
+        status = "failed"
+    elif any(status == "partial_success" for status in statuses):
+        status = "partial_success"
+    else:
+        status = "success"
+
+    finished_at = _now_str()
+    total_rows = sum((step.get("rows_written") or 0) for step in steps)
+
+    return _build_result(
+        job_name=job_name,
+        status=status,
+        started_at=started_at,
+        finished_at=finished_at,
+        duration_sec=perf_counter() - t0,
+        rows_written=total_rows,
+        symbols_requested=len(parsed),
+        symbols_processed=len(parsed),
+        message="Core market-data pipeline completed.",
+        details={
+            "steps": steps,
+            "period": period,
+            "interval": interval,
+            "freq": freq,
+            "start": start,
+            "end": end,
+        },
+    )
+
+
+def run_collect_asset_profiles(
+    *,
+    kinds: tuple[str, ...] = ("stock", "etf"),
+) -> JobResult:
+    job_name = "collect_asset_profiles"
+    started_at = _now_str()
+    t0 = perf_counter()
+
+    try:
+        failed_rows = collect_and_store_asset_profiles(kinds=kinds)
+        finished_at = _now_str()
+        failure_count = len(failed_rows)
+        status = "partial_success" if failure_count > 0 else "success"
+        return _build_result(
+            job_name=job_name,
+            status=status,
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=None,
+            symbols_requested=None,
+            symbols_processed=None,
+            failed_symbols=[row["symbol"] for row in failed_rows[:20] if row.get("symbol")],
+            message="Asset profile collection completed." if failure_count == 0 else "Asset profile collection completed with failures.",
+            details={
+                "kinds": list(kinds),
+                "failure_count": failure_count,
+            },
+        )
+    except Exception as exc:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=None,
+            symbols_processed=0,
+            message=f"Asset profile collection failed: {exc}",
+            details={"kinds": list(kinds)},
+        )
+
+
+def run_collect_financial_statements(
+    symbols: str | Iterable[str] | None,
+    *,
+    freq: str = "annual",
+    periods: int = 4,
+    period: str = "annual",
+) -> JobResult:
+    job_name = "collect_financial_statements"
+    started_at = _now_str()
+    t0 = perf_counter()
+    parsed = parse_symbols(symbols)
+
+    if not parsed:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=0,
+            symbols_processed=0,
+            message="No symbols provided.",
+        )
+
+    try:
+        result = upsert_financial_statements(
+            parsed,
+            freq=freq,
+            periods=periods,
+            period=period,
+        )
+        inserted_values = int(result.get("inserted_values", 0) or 0)
+        upserted_labels = int(result.get("upserted_labels", 0) or 0)
+        failed_symbols = list(result.get("failed_symbols", []) or [])
+        finished_at = _now_str()
+        status = "partial_success" if failed_symbols else "success"
+        return _build_result(
+            job_name=job_name,
+            status=status,
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=inserted_values,
+            symbols_requested=len(parsed),
+            symbols_processed=len(parsed) - len(failed_symbols),
+            failed_symbols=failed_symbols[:50],
+            message="Financial statement ingestion completed." if not failed_symbols else "Financial statement ingestion completed with failures.",
+            details={
+                "freq": freq,
+                "periods": periods,
+                "period": period,
+                "inserted_values": inserted_values,
+                "upserted_labels": upserted_labels,
+            },
+        )
+    except Exception as exc:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=len(parsed),
+            symbols_processed=0,
+            message=f"Financial statement ingestion failed: {exc}",
+            details={
+                "freq": freq,
+                "periods": periods,
+                "period": period,
+            },
+        )

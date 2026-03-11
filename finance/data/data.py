@@ -43,7 +43,15 @@ def get_ohlcv(tickers:list, start:str=None, period:str="1y", interval:str="1d") 
         interval : 1d, 1mo
     """
 
-    df = yf.download(tickers, start=start, period=period, interval=interval, group_by="column", actions=True)
+    df = yf.download(
+        tickers,
+        start=start,
+        period=period,
+        interval=interval,
+        group_by="column",
+        actions=True,
+        progress=False,
+    )
     tickers = df.columns.levels[1]
 
     out = {}
