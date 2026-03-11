@@ -126,3 +126,7 @@ Keep entries append-only and concise.
 
 - Adjusted the Streamlit execution flow so non-run panels keep rendering while a job is active; only run controls remain blocked.
 - The right-side recent-run, history, log, and failure panels now stay visible during execution.
+
+- Added a dedicated Phase 2 plan document covering operational pipeline restructuring, settings externalization, backtest loader design, and strategy UI preparation.
+
+- Updated the Phase 2 plan to treat detailed financial statement tables as a first-class loader source for long-horizon backtests and custom factor derivation, based on the historical-depth limitations of the yfinance summary datasets.

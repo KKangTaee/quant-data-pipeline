@@ -442,3 +442,36 @@ Do not copy full chat transcripts. Keep only the durable result.
   - kept the run controls disabled during execution, while allowing the non-run panels to remain visible
 - Durable output:
   - `app/web/streamlit_app.py`
+
+### 2026-03-11 - Phase 2 planning for web app and backtest transition
+- Request topic:
+  - create a concrete Phase 2 plan before continuing implementation
+- Interpreted goal:
+  - define the next development sequence after the first admin-console milestone, with emphasis on operational maturity and DB-backed backtesting preparation
+- Result:
+  - defined Phase 2 around five tracks:
+    - execution/history hardening
+    - operational pipeline restructuring
+    - configuration externalization
+    - backtest data loader layer
+    - strategy execution UI
+  - recommended starting with daily/weekly/monthly pipeline separation before moving to backtest UI
+- Durable output:
+  - `.note/finance/PHASE2_WEB_APP_AND_BACKTEST_PLAN.md`
+
+### 2026-03-11 - Why detailed financial statement tables must remain first-class
+- Request topic:
+  - clarify why `nyse_financial_statement_labels` and `nyse_financial_statement_values` matter even though `nyse_fundamentals` and `nyse_factors` already exist
+- Interpreted goal:
+  - preserve an important architectural assumption for future data collection, loader design, and long-horizon backtesting
+- Result:
+  - recorded that `nyse_fundamentals` and `nyse_factors` are currently `yfinance`-based summary datasets with limited historical depth
+  - recorded the user's working assumption that these summary datasets effectively cover only roughly the most recent 4 years
+  - recorded that the detailed financial statement tables are being collected specifically to preserve:
+    - older pre-2022 style history
+    - more granular account-level data
+    - future custom factor derivation potential
+    - longer-horizon backtest support
+  - concluded that the detailed statement tables should be treated as a first-class raw ledger, not as an optional side dataset
+- Durable output:
+  - `.note/finance/PHASE2_WEB_APP_AND_BACKTEST_PLAN.md`
