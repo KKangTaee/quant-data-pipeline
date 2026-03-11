@@ -200,15 +200,15 @@ def asset_profiles_sample():
 
 
 
-def fundamentals_sample():
+def fundamentals_sample(freq="annual"):
     """
         재무재표 로드 샘플
     """
 
     symbols = load_symbols_from_asset_profile("stock", on_filter=True)
 
-    upsert_fundamentals(symbols, freq="annual")
+    upsert_fundamentals(symbols, freq=freq)
     # upsert_fundamentals(symbols[:5], freq="quarterly")
 
-    upsert_factors(symbols, freq="annual")
+    upsert_factors(symbols, freq=freq)
     # upsert_factors(symbols, freq="quarterly")

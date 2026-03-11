@@ -360,32 +360,146 @@ def _infer_as_of_from_df(df: pd.DataFrame) -> date:
     return max(dates) if dates else date.today()
 
 
+def _infer_latest_period_meta(df: pd.DataFrame) -> Dict[str, Any]:
+    meta_cols = {"symbol", "statement_type", "label", "label_kr", "confidence"}
+    metas: List[Dict[str, Any]] = []
+
+    for c in df.columns:
+        if c in meta_cols:
+            continue
+        m = _parse_period_meta(c)
+        if m["period_end"] is not None:
+            metas.append(m)
+
+    if not metas:
+        today = date.today()
+        return {
+            "period_end": today,
+            "period_label": today.isoformat(),
+            "period_type": "DATE",
+            "fiscal_year": today.year,
+            "fiscal_quarter": None,
+        }
+
+    # 가장 최신 period_end를 기준으로 대표 메타 선택
+    metas.sort(key=lambda x: x["period_end"])
+    return metas[-1]
+
+
 _FY_RE = re.compile(r"^FY\s*(\d{4})$", re.IGNORECASE)
 _Q_RE  = re.compile(r"^Q([1-4])\s*(\d{4})$", re.IGNORECASE)
 
-def _parse_period_end(col_name: str) -> date | None:
+def _parse_period_meta(col_name: str) -> Dict[str, Any]:
     """
-    'FY 2025', 'FY2025', 'Q4 2025' 같은 컬럼명을 period_end(date)로 변환.
+    컬럼명에서 period 메타를 추출.
+    예:
+      - FY 2025 -> period_end=2025-12-31, period_label='FY 2025', period_type='FY'
+      - Q4 2025 -> period_end=2025-12-31, period_label='Q4 2025', period_type='Q'
     """
     s = str(col_name).strip()
 
     m = _FY_RE.match(s)
     if m:
         y = int(m.group(1))
-        return date(y, 12, 31)
+        return {
+            "period_end": date(y, 12, 31),
+            "period_label": f"FY {y}",
+            "period_type": "FY",
+            "fiscal_year": y,
+            "fiscal_quarter": None,
+        }
 
     m = _Q_RE.match(s)
     if m:
         q = int(m.group(1))
         y = int(m.group(2))
         q_end = {1: (3, 31), 2: (6, 30), 3: (9, 30), 4: (12, 31)}[q]
-        return date(y, q_end[0], q_end[1])
+        return {
+            "period_end": date(y, q_end[0], q_end[1]),
+            "period_label": f"Q{q} {y}",
+            "period_type": "Q",
+            "fiscal_year": y,
+            "fiscal_quarter": q,
+        }
 
     dt = pd.to_datetime(s, errors="coerce")
     if pd.notna(dt):
-        return dt.date()
+        d = dt.date()
+        return {
+            "period_end": d,
+            "period_label": d.isoformat(),
+            "period_type": "DATE",
+            "fiscal_year": d.year,
+            "fiscal_quarter": None,
+        }
 
-    return None
+    return {
+        "period_end": None,
+        "period_label": None,
+        "period_type": None,
+        "fiscal_year": None,
+        "fiscal_quarter": None,
+    }
+
+
+def _parse_period_end(col_name: str) -> date | None:
+    """
+    'FY 2025', 'FY2025', 'Q4 2025' 같은 컬럼명을 period_end(date)로 변환.
+    """
+    return _parse_period_meta(col_name)["period_end"]
+
+
+def _coerce_date(v) -> date | None:
+    if v is None:
+        return None
+    try:
+        dt = pd.to_datetime(v, errors="coerce")
+    except Exception:
+        return None
+    if pd.isna(dt):
+        return None
+    return dt.date()
+
+
+def _coerce_datetime(v):
+    if v is None:
+        return None
+    try:
+        dt = pd.to_datetime(v, errors="coerce")
+    except Exception:
+        return None
+    if pd.isna(dt):
+        return None
+    return dt.to_pydatetime()
+
+
+def _extract_pit_fields(row: pd.Series) -> Dict[str, Any]:
+    """
+    EDGAR/원천 DF에 filing/acceptance 시점 정보가 있는 경우 추출.
+    없으면 None으로 저장.
+    """
+    filing_date = None
+    accepted_at = None
+
+    filing_candidates = ["filed", "filing_date", "filed_at", "report_date"]
+    accepted_candidates = ["accepted", "accepted_at", "accepted_datetime", "acceptance_datetime"]
+
+    for k in filing_candidates:
+        if k in row.index:
+            filing_date = _coerce_date(row.get(k))
+            if filing_date is not None:
+                break
+
+    for k in accepted_candidates:
+        if k in row.index:
+            accepted_at = _coerce_datetime(row.get(k))
+            if accepted_at is not None:
+                break
+
+    return {
+        "filing_date": filing_date,
+        "accepted_at": accepted_at,
+    }
 
 
 def _none_if_nan(v):
@@ -430,7 +544,8 @@ def _iter_value_rows(df: pd.DataFrame, freq: Freq) -> List[Dict[str, Any]]:
             if pd.isna(v):
                 continue
 
-            period_end = _parse_period_end(col)
+            meta = _parse_period_meta(col)
+            period_end = meta["period_end"]
             if period_end is None:
                 continue
 
@@ -438,13 +553,21 @@ def _iter_value_rows(df: pd.DataFrame, freq: Freq) -> List[Dict[str, Any]]:
             if fv is None:
                 continue
 
+            pit = _extract_pit_fields(r)
+
             rows.append({
                 "symbol": symbol,
                 "freq": freq,
                 "period_end": period_end,
+                "period_label": meta["period_label"],
+                "period_type": meta["period_type"],
+                "fiscal_year": meta["fiscal_year"],
+                "fiscal_quarter": meta["fiscal_quarter"],
                 "statement_type": stype,
                 "label": label,
                 "value": fv,
+                "filing_date": pit["filing_date"],
+                "accepted_at": pit["accepted_at"],
                 "source": "edgar",
                 "last_collected_at": now,
                 "error_msg": None,
@@ -464,7 +587,8 @@ def _iter_label_rows(df: pd.DataFrame) -> List[Dict[str, Any]]:
         return []
 
     now = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
-    as_of = _infer_as_of_from_df(df)
+    as_of_meta = _infer_latest_period_meta(df)
+    as_of = as_of_meta["period_end"]
 
     cols = [c for c in ["symbol", "label", "label_kr", "statement_type", "confidence"] if c in df.columns]
     x = df[cols].drop_duplicates(subset=["symbol", "label"]).copy()
@@ -484,6 +608,10 @@ def _iter_label_rows(df: pd.DataFrame) -> List[Dict[str, Any]]:
             "symbol": symbol,
             "label": label,
             "as_of": as_of,
+            "as_of_label": as_of_meta["period_label"] or (as_of.isoformat() if isinstance(as_of, date) else None),
+            "as_of_period_type": as_of_meta["period_type"],
+            "as_of_fiscal_year": as_of_meta["fiscal_year"],
+            "as_of_fiscal_quarter": as_of_meta["fiscal_quarter"],
             "label_kr": _none_if_nan(r.get("label_kr")),
             "statement_type": _none_if_nan(r.get("statement_type")),
             "confidence": conf,
@@ -551,11 +679,17 @@ def upsert_financial_statements(
 
         upsert_labels_sql = """
         INSERT INTO nyse_financial_statement_labels (
-            symbol, label, as_of, label_kr, statement_type, confidence, last_updated_at
+            symbol, label, as_of, as_of_label, as_of_period_type, as_of_fiscal_year, as_of_fiscal_quarter,
+            label_kr, statement_type, confidence, last_updated_at
         ) VALUES (
-        %(symbol)s, %(label)s, %(as_of)s, %(label_kr)s, %(statement_type)s, %(confidence)s, %(last_updated_at)s
+        %(symbol)s, %(label)s, %(as_of)s, %(as_of_label)s, %(as_of_period_type)s, %(as_of_fiscal_year)s, %(as_of_fiscal_quarter)s,
+        %(label_kr)s, %(statement_type)s, %(confidence)s, %(last_updated_at)s
         )
             ON DUPLICATE KEY UPDATE
+            as_of_label = VALUES(as_of_label),
+            as_of_period_type = VALUES(as_of_period_type),
+            as_of_fiscal_year = VALUES(as_of_fiscal_year),
+            as_of_fiscal_quarter = VALUES(as_of_fiscal_quarter),
             label_kr = VALUES(label_kr),
             statement_type = VALUES(statement_type),
             confidence = VALUES(confidence),
@@ -574,17 +708,27 @@ def upsert_financial_statements(
         upsert_values_sql = """
         INSERT INTO nyse_financial_statement_values (
           symbol, freq, period_end,
+          period_label, period_type, fiscal_year, fiscal_quarter,
           statement_type, label,
           value,
+          filing_date, accepted_at,
           source, last_collected_at, error_msg
         ) VALUES (
           %(symbol)s, %(freq)s, %(period_end)s,
+          %(period_label)s, %(period_type)s, %(fiscal_year)s, %(fiscal_quarter)s,
           %(statement_type)s, %(label)s,
           %(value)s,
+          %(filing_date)s, %(accepted_at)s,
           %(source)s, %(last_collected_at)s, %(error_msg)s
         )
         ON DUPLICATE KEY UPDATE
+          period_label = VALUES(period_label),
+          period_type = VALUES(period_type),
+          fiscal_year = VALUES(fiscal_year),
+          fiscal_quarter = VALUES(fiscal_quarter),
           value = VALUES(value),
+          filing_date = VALUES(filing_date),
+          accepted_at = VALUES(accepted_at),
           last_collected_at = VALUES(last_collected_at),
           error_msg = VALUES(error_msg)
         """

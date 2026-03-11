@@ -8,3 +8,11 @@ wheels/
 
 # Virtual environments
 .venv
+
+# IDE files
+.idea/
+AGENTS.md
+
+# Project runtime artifacts
+tmp/
+logs/

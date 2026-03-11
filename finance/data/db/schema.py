@@ -21,31 +21,70 @@ def _parse_columns_from_schema(create_table_sql: str) -> List[Tuple[str, str]]:
     match = re.search(r'CREATE TABLE[^(]*\((.*)\)', create_table_sql, re.DOTALL | re.IGNORECASE)
     if not match:
         return []
-    
+
     table_body = match.group(1)
-    columns = []
-    
-    # 라인별로 분리
-    lines = [line.strip() for line in table_body.split('\n')]
-    
-    for line in lines:
-        if not line or line.startswith('--'):
+    columns: List[Tuple[str, str]] = []
+
+    # ENUM/함수 인자 내부 콤마를 안전하게 처리하기 위해 top-level 콤마 기준으로 분해
+    chunks: List[str] = []
+    cur: List[str] = []
+    depth = 0
+    in_single = False
+    in_double = False
+    escaped = False
+
+    for ch in table_body:
+        if escaped:
+            cur.append(ch)
+            escaped = False
             continue
-        
+
+        if ch == "\\":
+            cur.append(ch)
+            escaped = True
+            continue
+
+        if ch == "'" and not in_double:
+            in_single = not in_single
+            cur.append(ch)
+            continue
+
+        if ch == '"' and not in_single:
+            in_double = not in_double
+            cur.append(ch)
+            continue
+
+        if not in_single and not in_double:
+            if ch == "(":
+                depth += 1
+            elif ch == ")":
+                depth = max(0, depth - 1)
+            elif ch == "," and depth == 0:
+                chunks.append("".join(cur).strip())
+                cur = []
+                continue
+
+        cur.append(ch)
+
+    if cur:
+        chunks.append("".join(cur).strip())
+
+    for chunk in chunks:
+        line = chunk.strip()
+        if not line or line.startswith("--"):
+            continue
+
         # KEY, PRIMARY KEY, UNIQUE KEY, FOREIGN KEY 등은 제외
         if re.match(r'^\s*(PRIMARY\s+KEY|UNIQUE\s+KEY|KEY|FOREIGN\s+KEY|INDEX|CONSTRAINT)', line, re.IGNORECASE):
             continue
-        
-        # 컬럼 정의 파싱 (첫 번째 단어가 컬럼명)
-        # 예: "id BIGINT AUTO_INCREMENT PRIMARY KEY,"
-        # 예: "symbol VARCHAR(20) NOT NULL,"
-        # 예: "long_name VARCHAR(255) NULL,"
-        column_match = re.match(r'^`?(\w+)`?\s+(.+?)(?:,|$)', line, re.IGNORECASE)
+
+        # 컬럼 정의 파싱 (첫 토큰이 컬럼명)
+        column_match = re.match(r'^`?(\w+)`?\s+(.+)$', line, re.IGNORECASE | re.DOTALL)
         if column_match:
             column_name = column_match.group(1)
             column_def = column_match.group(2).strip().rstrip(',')
             columns.append((column_name, column_def))
-    
+
     return columns
 
 
@@ -269,10 +308,16 @@ FUNDAMENTAL_SCHEMAS = {
         symbol VARCHAR(20) NOT NULL,
         freq   ENUM('annual','quarterly') NOT NULL,
         period_end DATE NOT NULL,
+        period_label VARCHAR(20) NULL,
+        period_type ENUM('Q','FY','DATE') NULL,
+        fiscal_year SMALLINT NULL,
+        fiscal_quarter TINYINT NULL,
 
         statement_type VARCHAR(50) NOT NULL,
         label VARCHAR(255) NOT NULL,
         value DOUBLE NULL,
+        filing_date DATE NULL,
+        accepted_at DATETIME NULL,
 
         source VARCHAR(20) NOT NULL DEFAULT 'edgar',
         last_collected_at TIMESTAMP NULL,
@@ -293,6 +338,10 @@ FUNDAMENTAL_SCHEMAS = {
         symbol VARCHAR(20) NOT NULL,
         label VARCHAR(255) NOT NULL,
         as_of DATE NOT NULL,
+        as_of_label VARCHAR(20) NULL,
+        as_of_period_type ENUM('Q','FY','DATE') NULL,
+        as_of_fiscal_year SMALLINT NULL,
+        as_of_fiscal_quarter TINYINT NULL,
 
         label_kr VARCHAR(255) NULL,
         statement_type VARCHAR(50) NULL,
