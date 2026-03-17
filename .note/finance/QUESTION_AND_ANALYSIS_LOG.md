@@ -475,3 +475,234 @@ Do not copy full chat transcripts. Keep only the durable result.
   - concluded that the detailed statement tables should be treated as a first-class raw ledger, not as an optional side dataset
 - Durable output:
   - `.note/finance/PHASE2_WEB_APP_AND_BACKTEST_PLAN.md`
+
+### 2026-03-12 - Phase 2 start: operational pipeline separation
+- Request topic:
+  - start Phase 2 implementation
+- Interpreted goal:
+  - begin with the highest-priority Phase 2 task: restructuring the admin app around routine operational pipelines instead of only low-level component jobs
+- Result:
+  - added operational wrappers for:
+    - daily market update
+    - weekly fundamental refresh
+    - extended statement refresh
+    - metadata refresh
+  - added a dedicated Operational Pipelines section to the Streamlit UI
+  - kept the existing manual job cards for lower-level control
+- Durable output:
+  - `app/jobs/ingestion_jobs.py`
+  - `app/jobs/__init__.py`
+  - `app/web/streamlit_app.py`
+
+### 2026-03-12 - Simplify Extended Statement Refresh frequency selection
+- Request topic:
+  - avoid confusing mismatches between `Extended Statement Freq` and `Extended Statement Period Type`
+- Interpreted goal:
+  - make the operational pipeline UI safer by preventing semantically inconsistent parameter combinations
+- Result:
+  - removed the separate frequency selector from the operational `Extended Statement Refresh` UI
+  - aligned `freq` automatically to the selected `Period Type`
+- Durable output:
+  - `app/web/streamlit_app.py`
+
+### 2026-03-17 - Phase 2 execution-history hardening start
+- Request topic:
+  - continue Phase 2 by moving into the next concrete work item after operational pipeline separation
+- Interpreted goal:
+  - make the persisted run history durable enough to explain how each job was executed, not only whether it succeeded
+- Result:
+  - added `run_metadata` capture to scheduled UI jobs
+  - began storing symbol source, symbol count, and key input parameters alongside execution results
+  - updated the UI history views to surface symbol source and input parameters more directly
+- Durable output:
+  - `app/web/streamlit_app.py`
+
+### 2026-03-17 - Current PHASE2 chapter TODO note
+- Request topic:
+  - show the currently active TODO work for the present Phase 2 chapter
+- Interpreted goal:
+  - separate immediate execution tasks from the broader Phase 2 plan so ongoing implementation is easier to track
+- Result:
+  - created a dedicated current-chapter TODO note with status, remaining work, and recommended next actions
+- Durable output:
+  - `.note/finance/PHASE2_CURRENT_CHAPTER_TODO.md`
+
+### 2026-03-17 - Convert the current PHASE2 TODO into a larger execution board
+- Request topic:
+  - manage the ongoing chapter with a larger TODO and visible step-by-step check progress
+- Interpreted goal:
+  - make the active PHASE2 work easier to track collaboratively while implementing one checked item at a time
+- Result:
+  - rewrote the current chapter TODO into a grouped execution board
+  - organized it by major workstreams with `pending / in_progress / completed` item states
+  - fixed the immediate next target as `B-6 pipeline_type` under execution-history hardening
+- Durable output:
+  - `.note/finance/PHASE2_CURRENT_CHAPTER_TODO.md`
+
+### 2026-03-17 - Add explanations to each current PHASE2 checklist item
+- Request topic:
+  - make each detailed TODO item explain what that work actually means
+- Interpreted goal:
+  - improve the current chapter board so it works not only as a checklist but also as a readable execution guide
+- Result:
+  - added short explanations under each detailed checklist item in the current PHASE2 board
+- Durable output:
+  - `.note/finance/PHASE2_CURRENT_CHAPTER_TODO.md`
+
+### 2026-03-17 - Complete TODO item B-6 pipeline_type storage
+- Request topic:
+  - proceed with the next tracked TODO item in the current PHASE2 board
+- Interpreted goal:
+  - make persisted run history explicitly record what operational or manual pipeline type each execution belongs to
+- Result:
+  - added `pipeline_type` into `run_metadata` for all scheduled Streamlit jobs
+  - distinguished operational pipelines and manual jobs with explicit pipeline labels
+  - updated the current TODO board so B-6 is completed and B-7 is the next target
+- Durable output:
+  - `app/web/streamlit_app.py`
+  - `.note/finance/PHASE2_CURRENT_CHAPTER_TODO.md`
+
+### 2026-03-17 - Complete TODO item B-7 execution_mode storage
+- Request topic:
+  - proceed with the next tracked TODO item after pipeline_type storage
+- Interpreted goal:
+  - make persisted history clearly distinguish routine operational runs from manual lower-level runs
+- Result:
+  - added `execution_mode` into `run_metadata` for all scheduled Streamlit jobs
+  - used `operational` for routine pipeline buttons and `manual` for detailed job cards
+  - surfaced the field in both recent-run and persistent-history UI views
+  - updated the current TODO board so B-7 is completed and B-8 is the next target
+- Durable output:
+  - `app/web/streamlit_app.py`
+  - `.note/finance/PHASE2_CURRENT_CHAPTER_TODO.md`
+
+### 2026-03-17 - Complete TODO item B-8 execution_context storage
+- Request topic:
+  - proceed with the next tracked TODO item after execution_mode storage
+- Interpreted goal:
+  - preserve a short human-readable explanation of why or in what context each execution was performed
+- Result:
+  - added `execution_context` into `run_metadata` for all scheduled Streamlit jobs
+  - populated it automatically with short descriptions for each operational pipeline and manual job type
+  - surfaced the field in both recent-run and persistent-history UI views
+  - updated the current TODO board so B-8 is completed and B-9 is the next target
+- Durable output:
+  - `app/web/streamlit_app.py`
+  - `.note/finance/PHASE2_CURRENT_CHAPTER_TODO.md`
+
+### 2026-03-17 - Complete TODO item B-9 persistent history table reflection
+- Request topic:
+  - proceed with the next tracked TODO item for history UI reflection
+- Interpreted goal:
+  - make the new run-metadata fields actually readable in the persistent history table, not only stored in JSONL
+- Result:
+  - reorganized the persistent history table columns to foreground execution mode, pipeline type, source, context, and parameter summary
+  - updated the current TODO board so B-9 is completed and the next target is the JSONL schema review step
+- Durable output:
+  - `app/web/streamlit_app.py`
+  - `.note/finance/PHASE2_CURRENT_CHAPTER_TODO.md`
+
+### 2026-03-17 - Complete TODO item B-10 JSONL schema review and normalization
+- Request topic:
+  - proceed with the final tracked TODO item under execution-history hardening
+- Interpreted goal:
+  - verify the actual persisted JSONL history shape and prevent older rows from becoming second-class records as the schema evolves
+- Result:
+  - reviewed the existing run history samples and confirmed that older rows lacked `run_metadata`
+  - added run-history normalization so legacy rows are enriched on load with inferred pipeline type, execution mode, and execution context when possible
+  - added a run-history schema version for newly written records
+  - updated the current TODO board so execution-history hardening is now complete
+- Durable output:
+  - `app/jobs/run_history.py`
+  - `.note/finance/PHASE2_CURRENT_CHAPTER_TODO.md`
+
+### 2026-03-17 - Complete TODO item A-7 operational pipeline cadence guidance
+- Request topic:
+  - proceed with the next tracked TODO item after execution-history hardening completed
+- Interpreted goal:
+  - make each operational pipeline easier to use by stating when it should normally be run
+- Result:
+  - added recommended cadence captions to:
+    - Daily Market Update
+    - Weekly Fundamental Refresh
+    - Extended Statement Refresh
+    - Metadata Refresh
+  - updated the current TODO board so A-7 is completed and A-8 is the next target
+- Durable output:
+  - `app/web/streamlit_app.py`
+  - `.note/finance/PHASE2_CURRENT_CHAPTER_TODO.md`
+
+### 2026-03-17 - Complete TODO item A-8 operational symbol-source guidance
+- Request topic:
+  - proceed with the next tracked TODO item under operational pipeline cleanup
+- Interpreted goal:
+  - make each operational pipeline easier to use by clarifying which symbol source is the recommended default
+- Result:
+  - added symbol-source guidance captions to each operational pipeline card
+  - updated the current TODO board so A-8 is completed and A-9 is the next target
+- Durable output:
+  - `app/web/streamlit_app.py`
+  - `.note/finance/PHASE2_CURRENT_CHAPTER_TODO.md`
+
+### 2026-03-17 - Complete TODO item A-9 operational vs manual role clarity
+- Request topic:
+  - proceed with the next tracked TODO item under operational pipeline cleanup
+- Interpreted goal:
+  - reduce operator confusion by clearly distinguishing routine operational buttons from lower-level manual execution cards
+- Result:
+  - strengthened the Operational Pipelines section caption to make it the default path for recurring work
+  - added a Manual Jobs section caption describing it as exception handling / partial rerun / fine-grained control territory
+  - adjusted the Core Market Data Pipeline description so it reads as a manual composite job rather than the default routine path
+  - updated the current TODO board so A-9 is completed and A-10 is the next target
+- Durable output:
+  - `app/web/streamlit_app.py`
+  - `.note/finance/PHASE2_CURRENT_CHAPTER_TODO.md`
+
+### 2026-03-17 - Complete TODO item A-10 operational default review
+- Request topic:
+  - proceed with the next tracked TODO item after clarifying operational/manual role differences
+- Interpreted goal:
+  - make the operational pipeline defaults better match actual recurring usage rather than leaving them at generic development defaults
+- Result:
+  - parameterized the symbol-source input helper so each operational card can choose its own default source
+  - set Daily Market Update defaults to `NYSE Stocks`, `1mo`, `1d`
+  - set Weekly Fundamental Refresh defaults to `NYSE Stocks`, `quarterly`
+  - set Extended Statement Refresh defaults to `Profile Filtered Stocks`, `annual`, `8 periods`
+  - marked the entire operational-pipeline cleanup track as complete and moved the current focus to configuration externalization preparation
+- Durable output:
+  - `app/web/streamlit_app.py`
+  - `.note/finance/PHASE2_CURRENT_CHAPTER_TODO.md`
+
+### 2026-03-18 - Complete TODO item C-1 hardcoded constant inventory
+- Request topic:
+  - proceed with the next tracked TODO item after operational pipeline cleanup completed
+- Interpreted goal:
+  - prepare configuration externalization by first identifying which runtime and UI values are currently hardcoded in code
+- Result:
+  - created a dedicated inventory note covering:
+    - web-app defaults
+    - DB connection constants
+    - batch/sleep/retry ingest parameters
+    - period/freq defaults
+    - UI display limits
+    - low-priority non-config constants
+  - updated the current TODO board so C-1 is completed and C-2 is the next target
+- Durable output:
+  - `.note/finance/CONFIG_EXTERNALIZATION_INVENTORY.md`
+  - `.note/finance/PHASE2_CURRENT_CHAPTER_TODO.md`
+
+### 2026-03-18 - Complete TODO item C-2 externalization priority classification
+- Request topic:
+  - proceed with the next tracked TODO item under configuration externalization preparation
+- Interpreted goal:
+  - move from a raw inventory of hardcoded constants to a staged externalization plan that clarifies what should be extracted first
+- Result:
+  - classified config candidates into:
+    - immediate externalization
+    - next-stage externalization
+    - later externalization
+    - not-recommended / deferred
+  - updated the current TODO board so C-2 is completed and C-3 is the next target
+- Durable output:
+  - `.note/finance/CONFIG_EXTERNALIZATION_INVENTORY.md`
+  - `.note/finance/PHASE2_CURRENT_CHAPTER_TODO.md`

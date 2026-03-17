@@ -7,12 +7,78 @@ from typing import Any
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 HISTORY_FILE = PROJECT_ROOT / ".note" / "finance" / "WEB_APP_RUN_HISTORY.jsonl"
+RUN_HISTORY_SCHEMA_VERSION = 2
+
+
+def _infer_pipeline_type(record: dict[str, Any]) -> str | None:
+    job_name = record.get("job_name")
+    mapping = {
+        "daily_market_update": "daily_market_update",
+        "weekly_fundamental_refresh": "weekly_fundamental_refresh",
+        "extended_statement_refresh": "extended_statement_refresh",
+        "metadata_refresh": "metadata_refresh",
+        "pipeline_core_market_data": "core_market_data_pipeline",
+        "collect_ohlcv": "manual_ohlcv_collection",
+        "collect_fundamentals": "manual_fundamentals_ingestion",
+        "calculate_factors": "manual_factor_calculation",
+        "collect_financial_statements": "manual_financial_statement_ingestion",
+        "collect_asset_profiles": "manual_asset_profile_collection",
+    }
+    return mapping.get(job_name)
+
+
+def _infer_execution_mode(record: dict[str, Any]) -> str | None:
+    pipeline_type = _infer_pipeline_type(record)
+    if pipeline_type in {
+        "daily_market_update",
+        "weekly_fundamental_refresh",
+        "extended_statement_refresh",
+        "metadata_refresh",
+    }:
+        return "operational"
+    if pipeline_type is not None:
+        return "manual"
+    return None
+
+
+def _infer_execution_context(record: dict[str, Any]) -> str | None:
+    pipeline_type = _infer_pipeline_type(record)
+    mapping = {
+        "daily_market_update": "Routine daily price-history refresh for the selected operating universe.",
+        "weekly_fundamental_refresh": "Routine weekly refresh of normalized fundamentals and derived factors.",
+        "extended_statement_refresh": "Extended refresh of detailed financial statement ledgers for long-horizon analysis.",
+        "metadata_refresh": "Routine metadata refresh for tracked stock and ETF asset profiles.",
+        "core_market_data_pipeline": "Manual composite run of OHLCV, fundamentals, and factor calculation in sequence.",
+        "manual_ohlcv_collection": "Manual OHLCV ingestion for the selected symbols or universe source.",
+        "manual_fundamentals_ingestion": "Manual normalized fundamentals ingestion for the selected symbols or universe source.",
+        "manual_factor_calculation": "Manual factor calculation using already stored prices and fundamentals.",
+        "manual_financial_statement_ingestion": "Manual detailed financial statement ingestion for the selected symbols or universe source.",
+        "manual_asset_profile_collection": "Manual asset-profile refresh for the tracked stock and ETF universes.",
+    }
+    return mapping.get(pipeline_type)
+
+
+def _normalize_history_record(record: dict[str, Any]) -> dict[str, Any]:
+    normalized = dict(record)
+    normalized.setdefault("schema_version", RUN_HISTORY_SCHEMA_VERSION)
+
+    run_metadata = dict(normalized.get("run_metadata") or {})
+    run_metadata.setdefault("pipeline_type", _infer_pipeline_type(normalized))
+    run_metadata.setdefault("execution_mode", _infer_execution_mode(normalized))
+    run_metadata.setdefault("symbol_source", None)
+    run_metadata.setdefault("symbol_count", normalized.get("symbols_requested"))
+    run_metadata.setdefault("input_params", {})
+    run_metadata.setdefault("execution_context", _infer_execution_context(normalized))
+
+    normalized["run_metadata"] = run_metadata
+    return normalized
 
 
 def append_run_history(result: dict[str, Any]) -> None:
+    record = _normalize_history_record(result)
     HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
     with HISTORY_FILE.open("a", encoding="utf-8") as f:
-        f.write(json.dumps(result, ensure_ascii=False) + "\n")
+        f.write(json.dumps(record, ensure_ascii=False) + "\n")
 
 
 def load_run_history(limit: int = 50) -> list[dict[str, Any]]:
@@ -25,7 +91,7 @@ def load_run_history(limit: int = 50) -> list[dict[str, Any]]:
         if not line:
             continue
         try:
-            rows.append(json.loads(line))
+            rows.append(_normalize_history_record(json.loads(line)))
         except json.JSONDecodeError:
             continue
 

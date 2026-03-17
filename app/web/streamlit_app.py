@@ -14,12 +14,16 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from app.jobs.ingestion_jobs import (
+    run_daily_market_update,
+    run_extended_statement_refresh,
+    run_metadata_refresh,
     run_collect_asset_profiles,
     run_collect_financial_statements,
     run_calculate_factors,
     run_collect_fundamentals,
     run_collect_ohlcv,
     run_pipeline_core_market_data,
+    run_weekly_fundamental_refresh,
 )
 from app.jobs.preflight_checks import (
     check_asset_profile_prerequisites,
@@ -55,6 +59,22 @@ SYMBOL_SOURCE_OPTIONS = [
     "Profile Filtered Stocks + ETFs",
 ]
 WRITE_TARGETS = [
+    {
+        "job": "Daily Market Update",
+        "writes_to": "finance_price.nyse_price_history",
+    },
+    {
+        "job": "Weekly Fundamental Refresh",
+        "writes_to": "finance_fundamental.nyse_fundamentals, finance_fundamental.nyse_factors",
+    },
+    {
+        "job": "Extended Statement Refresh",
+        "writes_to": "finance_fundamental.nyse_financial_statement_labels, finance_fundamental.nyse_financial_statement_values",
+    },
+    {
+        "job": "Metadata Refresh",
+        "writes_to": "finance_meta.nyse_asset_profile",
+    },
     {
         "job": "Core Market Data Pipeline",
         "writes_to": "finance_price.nyse_price_history, finance_fundamental.nyse_fundamentals, finance_fundamental.nyse_factors",
@@ -131,6 +151,30 @@ def _schedule_job(job: dict[str, Any]) -> None:
     st.rerun()
 
 
+def _job_metadata(
+    *,
+    pipeline_type: str | None = None,
+    execution_mode: str | None = None,
+    symbol_source: str | None = None,
+    symbol_count: int | None = None,
+    input_params: dict[str, Any] | None = None,
+    execution_context: str | None = None,
+    notes: str | None = None,
+) -> dict[str, Any]:
+    metadata: dict[str, Any] = {
+        "pipeline_type": pipeline_type,
+        "execution_mode": execution_mode,
+        "symbol_source": symbol_source,
+        "symbol_count": symbol_count,
+        "input_params": input_params or {},
+    }
+    if execution_context:
+        metadata["execution_context"] = execution_context
+    if notes:
+        metadata["notes"] = notes
+    return metadata
+
+
 def _clear_running_job() -> None:
     st.session_state.running_job = None
 
@@ -142,6 +186,15 @@ def _dispatch_job(job: dict[str, Any], *, progress_callback: Any = None) -> JobR
     if action == "pipeline_core_market_data":
         params["progress_callback"] = progress_callback
         return run_pipeline_core_market_data(**params)
+    if action == "daily_market_update":
+        params["progress_callback"] = progress_callback
+        return run_daily_market_update(**params)
+    if action == "weekly_fundamental_refresh":
+        return run_weekly_fundamental_refresh(**params)
+    if action == "extended_statement_refresh":
+        return run_extended_statement_refresh(**params)
+    if action == "metadata_refresh":
+        return run_metadata_refresh(**params)
     if action == "collect_ohlcv":
         params["progress_callback"] = progress_callback
         return run_collect_ohlcv(**params)
@@ -178,6 +231,7 @@ def _run_scheduled_job(progress_callback: Any = None) -> None:
             "details": {"action": job["action"]},
         }
 
+    result["run_metadata"] = job.get("run_metadata") or {}
     _push_result(result)
     st.session_state.last_completed_result = result
     _clear_running_job()
@@ -204,7 +258,7 @@ def _build_progress_callback(job: dict[str, Any], *, label: str) -> Any:
     action = job.get("action")
     symbol_count = len(job.get("params", {}).get("symbols", []) or [])
 
-    if action not in {"collect_ohlcv", "pipeline_core_market_data"} or symbol_count < 100:
+    if action not in {"collect_ohlcv", "pipeline_core_market_data", "daily_market_update"} or symbol_count < 100:
         _render_inline_running_hint(action, label)
         return None
 
@@ -212,7 +266,7 @@ def _build_progress_callback(job: dict[str, Any], *, label: str) -> Any:
     progress_meta = st.empty()
     progress_bar = st.progress(0)
 
-    if action == "collect_ohlcv":
+    if action in {"collect_ohlcv", "daily_market_update"}:
         progress_text.info(f"`{label}` is running with live OHLCV progress.")
     else:
         progress_text.info(f"`{label}` is running with pipeline-stage progress.")
@@ -220,7 +274,7 @@ def _build_progress_callback(job: dict[str, Any], *, label: str) -> Any:
     def _callback(event: dict[str, Any]) -> None:
         event_type = event.get("event")
 
-        if action == "collect_ohlcv" and event_type == "batch_progress":
+        if action in {"collect_ohlcv", "daily_market_update"} and event_type == "batch_progress":
             total_symbols = max(int(event.get("total_symbols", symbol_count) or symbol_count), 1)
             processed_symbols = min(int(event.get("processed_symbols", 0) or 0), total_symbols)
             percent = int((processed_symbols / total_symbols) * 100)
@@ -328,6 +382,19 @@ def _render_recent_results() -> None:
                 f'Finished: `{result["finished_at"]}` | '
                 f'Failed Symbols: `{len(result.get("failed_symbols") or [])}`'
             )
+            run_metadata = result.get("run_metadata") or {}
+            symbol_source = run_metadata.get("symbol_source")
+            execution_mode = run_metadata.get("execution_mode")
+            pipeline_type = run_metadata.get("pipeline_type")
+            execution_context = run_metadata.get("execution_context")
+            if execution_mode:
+                st.write(f"Execution Mode: `{execution_mode}`")
+            if pipeline_type:
+                st.write(f"Pipeline Type: `{pipeline_type}`")
+            if symbol_source:
+                st.write(f"Symbol Source: `{symbol_source}`")
+            if execution_context:
+                st.write(f"Execution Context: {execution_context}")
             st.write(result["message"])
             if result.get("failed_symbols"):
                 st.write("Failed Symbols:", ", ".join(result["failed_symbols"]))
@@ -404,15 +471,21 @@ def _render_persistent_run_history() -> None:
     st.caption(f"Path: {HISTORY_FILE}")
     rows = []
     for item in history:
+        run_metadata = item.get("run_metadata") or {}
+        input_params = run_metadata.get("input_params") or {}
         rows.append(
             {
+                "started_at": item.get("started_at"),
                 "job_name": item.get("job_name"),
                 "status": item.get("status"),
-                "started_at": item.get("started_at"),
-                "finished_at": item.get("finished_at"),
+                "mode": run_metadata.get("execution_mode"),
+                "pipeline": run_metadata.get("pipeline_type"),
+                "source": run_metadata.get("symbol_source"),
+                "symbols": item.get("symbols_requested"),
                 "rows_written": item.get("rows_written"),
-                "symbols_requested": item.get("symbols_requested"),
                 "duration_sec": item.get("duration_sec"),
+                "context": run_metadata.get("execution_context"),
+                "params": ", ".join(f"{k}={v}" for k, v in input_params.items()),
                 "message": item.get("message"),
             }
         )
@@ -445,11 +518,17 @@ def _resolve_symbols(preset_name: str, manual_value: str) -> str:
     return preset_value if preset_name != "Custom" else manual_value
 
 
-def _render_symbol_source_inputs(prefix: str, title: str = "Symbols") -> list[str]:
+def _render_symbol_source_inputs(
+    prefix: str,
+    title: str = "Symbols",
+    *,
+    default_source_mode: str = "Manual",
+) -> dict[str, Any]:
+    default_source_index = SYMBOL_SOURCE_OPTIONS.index(default_source_mode) if default_source_mode in SYMBOL_SOURCE_OPTIONS else 0
     source_mode = st.selectbox(
         f"{title} Source",
         SYMBOL_SOURCE_OPTIONS,
-        index=0,
+        index=default_source_index,
         key=f"{prefix}_source_mode",
     )
 
@@ -477,7 +556,7 @@ def _render_symbol_source_inputs(prefix: str, title: str = "Symbols") -> list[st
     else:
         st.error(source_result["message"])
 
-    return source_result["symbols"]
+    return source_result
 
 
 def _render_large_run_guard(
@@ -549,15 +628,259 @@ def main() -> None:
     with col_left:
         st.subheader("Run Jobs")
 
+        st.markdown("## Operational Pipelines")
+        st.caption(
+            "Use these buttons for routine daily / weekly / extended refresh workflows. "
+            "Choose this section first when you are doing normal recurring operations."
+        )
+
+        with st.container(border=True):
+            st.markdown("### Daily Market Update")
+            st.write("Refresh price history for the current operating universe.")
+            st.caption("Recommended cadence: every trading day after market close or before the next backtest/data sync.")
+            st.caption("Recommended symbol source: `NYSE Stocks` for broad market refresh, or `Profile Filtered Stocks` for the managed strategy universe.")
+            st.caption("Current defaults: `NYSE Stocks`, `1mo`, `1d`.")
+            st.caption("Writes to: `finance_price.nyse_price_history`")
+            daily_symbol_result = _render_symbol_source_inputs(
+                "daily_market",
+                "Daily Market Symbols",
+                default_source_mode="NYSE Stocks",
+            )
+            daily_symbols_input = daily_symbol_result["symbols"]
+            daily_col1, daily_col2 = st.columns(2)
+            daily_period_input = daily_col1.selectbox("Daily Period", PERIOD_PRESETS, index=2, key="daily_period_input")
+            daily_interval_input = daily_col2.selectbox("Daily Interval", ["1d", "1wk", "1mo"], index=0, key="daily_interval_input")
+            daily_col3, daily_col4 = st.columns(2)
+            daily_start_input = daily_col3.text_input("Daily Start", value="", key="daily_start_input")
+            daily_end_input = daily_col4.text_input("Daily End", value="", key="daily_end_input")
+            daily_resolved_period, daily_resolved_start, daily_resolved_end = _normalize_ohlcv_window(
+                daily_period_input,
+                daily_start_input,
+                daily_end_input,
+            )
+            daily_symbol_check = check_symbol_input(daily_symbols_input)
+            _render_check_result(daily_symbol_check)
+            daily_run_allowed = _render_large_run_guard(
+                prefix="daily_market",
+                job_name="daily_market_update",
+                symbols=daily_symbols_input,
+            )
+            if st.button(
+                "Run Daily Market Update",
+                use_container_width=True,
+                disabled=_has_running_job() or _is_blocking(daily_symbol_check) or not daily_run_allowed,
+            ):
+                _schedule_job(
+                    {
+                        "action": "daily_market_update",
+                        "job_name": "daily_market_update",
+                        "spinner_text": "Running daily market update...",
+                        "params": {
+                            "symbols": daily_symbols_input,
+                            "start": daily_resolved_start,
+                            "end": daily_resolved_end,
+                            "period": daily_resolved_period,
+                            "interval": daily_interval_input,
+                        },
+                        "run_metadata": _job_metadata(
+                            pipeline_type="daily_market_update",
+                            execution_mode="operational",
+                            symbol_source=daily_symbol_result.get("source_mode"),
+                            symbol_count=len(daily_symbols_input),
+                            execution_context="Routine daily price-history refresh for the selected operating universe.",
+                            input_params={
+                                "start": daily_resolved_start,
+                                "end": daily_resolved_end,
+                                "period": daily_resolved_period,
+                                "interval": daily_interval_input,
+                            },
+                        ),
+                    }
+                )
+            if _is_running_action("daily_market_update"):
+                current_progress_callback = _build_progress_callback(
+                    st.session_state.running_job,
+                    label="Daily Market Update",
+                )
+
+        with st.container(border=True):
+            st.markdown("### Weekly Fundamental Refresh")
+            st.write("Refresh normalized fundamentals and recompute factors for the selected universe.")
+            st.caption("Recommended cadence: once per week, or after a meaningful batch of earnings / filing updates.")
+            st.caption("Recommended symbol source: match the same stock universe used by Daily Market Update so factor coverage stays aligned.")
+            st.caption("Current defaults: `NYSE Stocks`, `quarterly`.")
+            st.caption("Writes to: `finance_fundamental.nyse_fundamentals`, `finance_fundamental.nyse_factors`")
+            weekly_symbol_result = _render_symbol_source_inputs(
+                "weekly_fundamental",
+                "Weekly Refresh Symbols",
+                default_source_mode="NYSE Stocks",
+            )
+            weekly_symbols_input = weekly_symbol_result["symbols"]
+            weekly_freq_input = st.selectbox(
+                "Weekly Refresh Frequency",
+                ["annual", "quarterly"],
+                index=1,
+                key="weekly_refresh_freq_input",
+            )
+            weekly_symbol_check = check_symbol_input(weekly_symbols_input)
+            _render_check_result(weekly_symbol_check)
+            weekly_run_allowed = _render_large_run_guard(
+                prefix="weekly_fundamental",
+                job_name="weekly_fundamental_refresh",
+                symbols=weekly_symbols_input,
+            )
+            if st.button(
+                "Run Weekly Fundamental Refresh",
+                use_container_width=True,
+                disabled=_has_running_job() or _is_blocking(weekly_symbol_check) or not weekly_run_allowed,
+            ):
+                _schedule_job(
+                    {
+                        "action": "weekly_fundamental_refresh",
+                        "job_name": "weekly_fundamental_refresh",
+                        "spinner_text": "Running weekly fundamental refresh...",
+                        "params": {
+                            "symbols": weekly_symbols_input,
+                            "freq": weekly_freq_input,
+                        },
+                        "run_metadata": _job_metadata(
+                            pipeline_type="weekly_fundamental_refresh",
+                            execution_mode="operational",
+                            symbol_source=weekly_symbol_result.get("source_mode"),
+                            symbol_count=len(weekly_symbols_input),
+                            execution_context="Routine weekly refresh of normalized fundamentals and derived factors.",
+                            input_params={"freq": weekly_freq_input},
+                        ),
+                    }
+                )
+            if _is_running_action("weekly_fundamental_refresh"):
+                current_progress_callback = _build_progress_callback(
+                    st.session_state.running_job,
+                    label="Weekly Fundamental Refresh",
+                )
+
+        with st.container(border=True):
+            st.markdown("### Extended Statement Refresh")
+            st.write("Refresh detailed financial statement ledgers for longer-history and account-level analysis.")
+            st.caption("Recommended cadence: monthly, or before deep factor research and long-horizon backtest preparation.")
+            st.caption("Recommended symbol source: `Profile Filtered Stocks` or a narrower research universe, because this job is heavier than summary fundamentals refresh.")
+            st.caption("Current defaults: `Profile Filtered Stocks`, `annual`, `8 periods`.")
+            st.caption("Writes to: `finance_fundamental.nyse_financial_statement_labels`, `finance_fundamental.nyse_financial_statement_values`")
+            ext_symbol_result = _render_symbol_source_inputs(
+                "extended_statement",
+                "Extended Statement Symbols",
+                default_source_mode="Profile Filtered Stocks",
+            )
+            ext_symbols_input = ext_symbol_result["symbols"]
+            ext_col1, ext_col2 = st.columns(2)
+            ext_period_input = ext_col1.selectbox("Extended Statement Period Type", ["annual", "quarterly"], index=0, key="ext_period_input")
+            ext_periods_input = ext_col2.number_input("Extended Statement Periods", min_value=1, max_value=12, value=8, step=1, key="ext_periods_input")
+            st.caption("`freq` is automatically matched to the selected `Period Type` for this operational pipeline.")
+            ext_symbol_check = check_symbol_input(ext_symbols_input)
+            _render_check_result(ext_symbol_check)
+            ext_run_allowed = _render_large_run_guard(
+                prefix="extended_statement",
+                job_name="extended_statement_refresh",
+                symbols=ext_symbols_input,
+            )
+            if st.button(
+                "Run Extended Statement Refresh",
+                use_container_width=True,
+                disabled=_has_running_job() or _is_blocking(ext_symbol_check) or not ext_run_allowed,
+            ):
+                _schedule_job(
+                    {
+                        "action": "extended_statement_refresh",
+                        "job_name": "extended_statement_refresh",
+                        "spinner_text": "Running extended statement refresh...",
+                        "params": {
+                            "symbols": ext_symbols_input,
+                            "freq": ext_period_input,
+                            "periods": int(ext_periods_input),
+                            "period": ext_period_input,
+                        },
+                        "run_metadata": _job_metadata(
+                            pipeline_type="extended_statement_refresh",
+                            execution_mode="operational",
+                            symbol_source=ext_symbol_result.get("source_mode"),
+                            symbol_count=len(ext_symbols_input),
+                            execution_context="Extended refresh of detailed financial statement ledgers for long-horizon analysis.",
+                            input_params={
+                                "freq": ext_period_input,
+                                "periods": int(ext_periods_input),
+                                "period": ext_period_input,
+                            },
+                        ),
+                    }
+                )
+            if _is_running_action("extended_statement_refresh"):
+                current_progress_callback = _build_progress_callback(
+                    st.session_state.running_job,
+                    label="Extended Statement Refresh",
+                )
+
+        with st.container(border=True):
+            st.markdown("### Metadata Refresh")
+            st.write("Refresh asset profile metadata for the currently tracked stock and ETF universes.")
+            st.caption("Recommended cadence: weekly or whenever the tracked universe definition / profile filters change.")
+            st.caption("Recommended source scope: keep both `stock` and `etf` selected unless you are intentionally refreshing only one side of the universe.")
+            st.caption("Writes to: `finance_meta.nyse_asset_profile`")
+            metadata_kind_options = st.multiselect(
+                "Metadata Refresh Kinds",
+                options=["stock", "etf"],
+                default=["stock", "etf"],
+                key="metadata_kind_options",
+            )
+            metadata_kinds = tuple(metadata_kind_options) if metadata_kind_options else ()
+            metadata_check = check_asset_profile_prerequisites(metadata_kinds)
+            _render_check_result(metadata_check)
+            if st.button(
+                "Run Metadata Refresh",
+                use_container_width=True,
+                disabled=_has_running_job() or _is_blocking(metadata_check),
+            ):
+                _schedule_job(
+                    {
+                        "action": "metadata_refresh",
+                        "job_name": "metadata_refresh",
+                        "spinner_text": "Running metadata refresh...",
+                        "params": {
+                            "kinds": tuple(metadata_kind_options) if metadata_kind_options else ("stock", "etf"),
+                        },
+                        "run_metadata": _job_metadata(
+                            pipeline_type="metadata_refresh",
+                            execution_mode="operational",
+                            symbol_source=None,
+                            symbol_count=None,
+                            execution_context="Routine metadata refresh for tracked stock and ETF asset profiles.",
+                            input_params={
+                                "kinds": tuple(metadata_kind_options) if metadata_kind_options else ("stock", "etf"),
+                            },
+                        ),
+                    }
+                )
+            if _is_running_action("metadata_refresh"):
+                current_progress_callback = _build_progress_callback(
+                    st.session_state.running_job,
+                    label="Metadata Refresh",
+                )
+
+        st.markdown("## Manual Jobs")
+        st.caption(
+            "Use the cards below for exception handling, partial reruns, debugging, or fine-grained control. "
+            "These are lower-level jobs and are not the default choice for routine operations."
+        )
+
         with st.container(border=True):
             st.markdown("### Core Market Data Pipeline")
             st.write("Run OHLCV collection, fundamentals ingestion, and factor calculation in sequence.")
             st.caption(
                 "Execution order: OHLCV -> Fundamentals -> Factors. "
-                "This is the safest button when you want factors for the current symbol set."
+                "This is a manual composite job for one-off full reruns on the current symbol set."
             )
             st.caption("Writes to: `finance_price.nyse_price_history`, `finance_fundamental.nyse_fundamentals`, `finance_fundamental.nyse_factors`")
-            pipeline_symbols_input = _render_symbol_source_inputs("pipeline", "Pipeline Symbols")
+            pipeline_symbol_result = _render_symbol_source_inputs("pipeline", "Pipeline Symbols")
+            pipeline_symbols_input = pipeline_symbol_result["symbols"]
             pipe_col1, pipe_col2 = st.columns(2)
             pipeline_period_input = pipe_col1.selectbox("Pipeline Period", PERIOD_PRESETS, index=3, key="pipeline_period_input")
             pipeline_interval_input = pipe_col2.selectbox("Pipeline Interval", ["1d", "1wk", "1mo"], index=0, key="pipeline_interval_input")
@@ -599,6 +922,20 @@ def main() -> None:
                             "interval": pipeline_interval_input,
                             "freq": pipeline_freq_input,
                         },
+                        "run_metadata": _job_metadata(
+                            pipeline_type="core_market_data_pipeline",
+                            execution_mode="manual",
+                            symbol_source=pipeline_symbol_result.get("source_mode"),
+                            symbol_count=len(pipeline_symbols_input),
+                            execution_context="Manual composite run of OHLCV, fundamentals, and factor calculation in sequence.",
+                            input_params={
+                                "start": pipeline_resolved_start,
+                                "end": pipeline_resolved_end,
+                                "period": pipeline_resolved_period,
+                                "interval": pipeline_interval_input,
+                                "freq": pipeline_freq_input,
+                            },
+                        ),
                     }
                 )
             if _is_running_action("pipeline_core_market_data"):
@@ -615,7 +952,8 @@ def main() -> None:
                 "Current date-range handling is more reliable with `period` than with `end`."
             )
             st.caption("Writes to: `finance_price.nyse_price_history`")
-            ohlcv_symbols_input = _render_symbol_source_inputs("ohlcv", "OHLCV Symbols")
+            ohlcv_symbol_result = _render_symbol_source_inputs("ohlcv", "OHLCV Symbols")
+            ohlcv_symbols_input = ohlcv_symbol_result["symbols"]
             ohlcv_col1, ohlcv_col2 = st.columns(2)
             ohlcv_period_input = ohlcv_col1.selectbox("OHLCV Period", PERIOD_PRESETS, index=3, key="ohlcv_period_input")
             ohlcv_interval_input = ohlcv_col2.selectbox("OHLCV Interval", ["1d", "1wk", "1mo"], index=0, key="ohlcv_interval_input")
@@ -655,6 +993,19 @@ def main() -> None:
                             "period": ohlcv_resolved_period,
                             "interval": ohlcv_interval_input,
                         },
+                        "run_metadata": _job_metadata(
+                            pipeline_type="manual_ohlcv_collection",
+                            execution_mode="manual",
+                            symbol_source=ohlcv_symbol_result.get("source_mode"),
+                            symbol_count=len(ohlcv_symbols_input),
+                            execution_context="Manual OHLCV ingestion for the selected symbols or universe source.",
+                            input_params={
+                                "start": ohlcv_resolved_start,
+                                "end": ohlcv_resolved_end,
+                                "period": ohlcv_resolved_period,
+                                "interval": ohlcv_interval_input,
+                            },
+                        ),
                     }
                 )
             if _is_running_action("collect_ohlcv"):
@@ -670,7 +1021,8 @@ def main() -> None:
                 "Uses the `Symbols` input. Required before `Factor Calculation` for those symbols."
             )
             st.caption("Writes to: `finance_fundamental.nyse_fundamentals`")
-            fundamentals_symbols_input = _render_symbol_source_inputs("fundamentals", "Fundamentals Symbols")
+            fundamentals_symbol_result = _render_symbol_source_inputs("fundamentals", "Fundamentals Symbols")
+            fundamentals_symbols_input = fundamentals_symbol_result["symbols"]
             fundamentals_freq_input = st.selectbox(
                 "Fundamentals Frequency",
                 ["annual", "quarterly"],
@@ -698,6 +1050,14 @@ def main() -> None:
                             "symbols": fundamentals_symbols_input,
                             "freq": fundamentals_freq_input,
                         },
+                        "run_metadata": _job_metadata(
+                            pipeline_type="manual_fundamentals_ingestion",
+                            execution_mode="manual",
+                            symbol_source=fundamentals_symbol_result.get("source_mode"),
+                            symbol_count=len(fundamentals_symbols_input),
+                            execution_context="Manual normalized fundamentals ingestion for the selected symbols or universe source.",
+                            input_params={"freq": fundamentals_freq_input},
+                        ),
                     }
                 )
             if _is_running_action("collect_fundamentals"):
@@ -713,7 +1073,8 @@ def main() -> None:
                 "Uses the `Symbols` input. Requires matching OHLCV and fundamentals data to already exist in MySQL."
             )
             st.caption("Writes to: `finance_fundamental.nyse_factors`")
-            factor_symbols_input = _render_symbol_source_inputs("factor", "Factor Symbols")
+            factor_symbol_result = _render_symbol_source_inputs("factor", "Factor Symbols")
+            factor_symbols_input = factor_symbol_result["symbols"]
             factor_col1, factor_col2, factor_col3 = st.columns(3)
             factor_freq_input = factor_col1.selectbox("Factor Frequency", ["annual", "quarterly"], index=0, key="factor_freq_input")
             factor_start_input = factor_col2.text_input("Factor Start", value="", key="factor_start_input")
@@ -741,6 +1102,18 @@ def main() -> None:
                             "start": factor_start_input or None,
                             "end": factor_end_input or None,
                         },
+                        "run_metadata": _job_metadata(
+                            pipeline_type="manual_factor_calculation",
+                            execution_mode="manual",
+                            symbol_source=factor_symbol_result.get("source_mode"),
+                            symbol_count=len(factor_symbols_input),
+                            execution_context="Manual factor calculation using already stored prices and fundamentals.",
+                            input_params={
+                                "freq": factor_freq_input,
+                                "start": factor_start_input or None,
+                                "end": factor_end_input or None,
+                            },
+                        ),
                     }
                 )
             if _is_running_action("calculate_factors"):
@@ -795,7 +1168,8 @@ def main() -> None:
                 "produce partial success if some issuers fail."
             )
             st.caption("Writes to: `finance_fundamental.nyse_financial_statement_labels`, `finance_fundamental.nyse_financial_statement_values`")
-            fs_symbols_input = _render_symbol_source_inputs("fs", "Financial Statement Symbols")
+            fs_symbol_result = _render_symbol_source_inputs("fs", "Financial Statement Symbols")
+            fs_symbols_input = fs_symbol_result["symbols"]
             fs_col1, fs_col2, fs_col3 = st.columns(3)
             fs_freq_input = fs_col1.selectbox("Financial Statement Freq", ["annual", "quarterly"], index=0, key="fs_freq_input")
             fs_periods_input = fs_col2.number_input("Financial Statement Periods", min_value=1, max_value=12, value=4, step=1, key="fs_periods_input")
@@ -823,6 +1197,18 @@ def main() -> None:
                             "periods": int(fs_periods_input),
                             "period": fs_period_input,
                         },
+                        "run_metadata": _job_metadata(
+                            pipeline_type="manual_financial_statement_ingestion",
+                            execution_mode="manual",
+                            symbol_source=fs_symbol_result.get("source_mode"),
+                            symbol_count=len(fs_symbols_input),
+                            execution_context="Manual detailed financial statement ingestion for the selected symbols or universe source.",
+                            input_params={
+                                "freq": fs_freq_input,
+                                "periods": int(fs_periods_input),
+                                "period": fs_period_input,
+                            },
+                        ),
                     }
                 )
             if _is_running_action("collect_financial_statements"):

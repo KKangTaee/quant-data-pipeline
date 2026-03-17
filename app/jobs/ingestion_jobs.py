@@ -85,6 +85,22 @@ def _build_result(
     }
 
 
+def _merge_step_failures(steps: list[JobResult], invalid_symbols: list[str] | None = None) -> list[str]:
+    failures: list[str] = list(invalid_symbols or [])
+    for step in steps:
+        failures.extend(step.get("failed_symbols") or [])
+    return failures
+
+
+def _pipeline_status(steps: list[JobResult]) -> str:
+    statuses = [step["status"] for step in steps]
+    if any(status == "failed" for status in statuses):
+        return "failed"
+    if any(status == "partial_success" for status in statuses):
+        return "partial_success"
+    return "success"
+
+
 def run_collect_ohlcv(
     symbols: str | Iterable[str] | None,
     *,
@@ -511,6 +527,144 @@ def run_pipeline_core_market_data(
             "end": end,
         },
     )
+
+
+def run_daily_market_update(
+    symbols: str | Iterable[str] | None,
+    *,
+    start: str | None = None,
+    end: str | None = None,
+    period: str = "1y",
+    interval: str = "1d",
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
+) -> JobResult:
+    result = run_collect_ohlcv(
+        symbols,
+        start=start,
+        end=end,
+        period=period,
+        interval=interval,
+        progress_callback=progress_callback,
+    )
+    result["job_name"] = "daily_market_update"
+    if result["status"] == "success":
+        result["message"] = "Daily market update completed."
+    elif result["status"] == "partial_success":
+        result["message"] = "Daily market update completed with partial success."
+    else:
+        result["message"] = "Daily market update failed."
+    result.setdefault("details", {})
+    result["details"]["pipeline_type"] = "daily_market_update"
+    return result
+
+
+def run_weekly_fundamental_refresh(
+    symbols: str | Iterable[str] | None,
+    *,
+    freq: str = "annual",
+) -> JobResult:
+    job_name = "weekly_fundamental_refresh"
+    started_at = _now_str()
+    t0 = perf_counter()
+    parsed, invalid_symbols = split_valid_invalid_symbols(symbols)
+
+    if not parsed:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=0,
+            symbols_processed=0,
+            failed_symbols=invalid_symbols,
+            message="No valid symbols provided.",
+            details={"steps": [], "freq": freq},
+        )
+
+    steps: list[JobResult] = []
+
+    fundamentals_result = run_collect_fundamentals(parsed, freq=freq)
+    steps.append(fundamentals_result)
+    if fundamentals_result["status"] == "failed":
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=fundamentals_result.get("rows_written") or 0,
+            symbols_requested=len(parsed),
+            symbols_processed=0,
+            failed_symbols=_merge_step_failures(steps, invalid_symbols),
+            message="Weekly fundamental refresh stopped because fundamentals ingestion failed.",
+            details={"steps": steps, "freq": freq},
+        )
+
+    factors_result = run_calculate_factors(parsed, freq=freq)
+    steps.append(factors_result)
+
+    finished_at = _now_str()
+    total_rows = sum((step.get("rows_written") or 0) for step in steps)
+    status = _pipeline_status(steps)
+    return _build_result(
+        job_name=job_name,
+        status=status,
+        started_at=started_at,
+        finished_at=finished_at,
+        duration_sec=perf_counter() - t0,
+        rows_written=total_rows,
+        symbols_requested=len(parsed),
+        symbols_processed=len(parsed) if total_rows > 0 else 0,
+        failed_symbols=_merge_step_failures(steps, invalid_symbols),
+        message="Weekly fundamental refresh completed." if total_rows > 0 else "Weekly fundamental refresh finished with no rows written.",
+        details={"steps": steps, "freq": freq},
+    )
+
+
+def run_extended_statement_refresh(
+    symbols: str | Iterable[str] | None,
+    *,
+    freq: str = "annual",
+    periods: int = 4,
+    period: str = "annual",
+) -> JobResult:
+    result = run_collect_financial_statements(
+        symbols,
+        freq=freq,
+        periods=periods,
+        period=period,
+    )
+    result["job_name"] = "extended_statement_refresh"
+    if result["status"] == "success":
+        result["message"] = "Extended statement refresh completed."
+    elif result["status"] == "partial_success":
+        result["message"] = "Extended statement refresh completed with partial success."
+    else:
+        result["message"] = "Extended statement refresh failed."
+    result.setdefault("details", {})
+    result["details"]["pipeline_type"] = "extended_statement_refresh"
+    return result
+
+
+def run_metadata_refresh(
+    *,
+    kinds: tuple[str, ...] = ("stock", "etf"),
+) -> JobResult:
+    result = run_collect_asset_profiles(kinds=kinds)
+    result["job_name"] = "metadata_refresh"
+    if result["status"] == "success":
+        result["message"] = "Metadata refresh completed."
+    elif result["status"] == "partial_success":
+        result["message"] = "Metadata refresh completed with partial success."
+    else:
+        result["message"] = "Metadata refresh failed."
+    result.setdefault("details", {})
+    result["details"]["pipeline_type"] = "metadata_refresh"
+    return result
 
 
 def run_collect_asset_profiles(
