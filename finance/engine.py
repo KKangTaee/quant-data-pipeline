@@ -35,10 +35,11 @@ class BacktestEngine:
         self.dfs = get_ohlcv(self.tickers, period=self.period)
         return self
 
-    def load_ohlcv_from_db(self, start=None, end=None, timeframe="1d"):
+    def load_ohlcv_from_db(self, start=None, end=None, timeframe="1d", history_start=None):
+        query_start = history_start if history_start is not None else start
         self.dfs = load_price_strategy_dfs(
             symbols=self.tickers,
-            start=start,
+            start=query_start,
             end=end,
             timeframe=timeframe,
         )

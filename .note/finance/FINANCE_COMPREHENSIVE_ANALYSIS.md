@@ -74,6 +74,12 @@ Data Collection / Persistence
       |
       v
 
+Loader / Runtime Read Path
+  - finance/loaders/*
+
+      |
+      v
+
 Research / Backtest Processing
   - finance/transform.py
   - finance/engine.py
@@ -93,15 +99,39 @@ Analysis / Presentation
 예를 들어:
 
 - 가격/재무/팩터는 DB 적재 경로가 존재한다.
-- 하지만 샘플 백테스트는 대부분 DB를 직접 쓰지 않고 `yfinance`에서 즉시 로드한 OHLCV를 사용한다.
+- 그리고 이제 `finance/loaders/*`와 `*_from_db` 샘플 entrypoint를 통해 DB 기반 실행 경로도 생겼다.
+- 최근에는 DB 기반 sample 경로가 direct path와 같은 indicator warmup 순서를 따르도록 보강되었다.
 
-즉, 아직은 "운영용 데이터 파이프라인"과 "리서치용 전략 실행"이 완전히 통합된 상태는 아니다.
+즉, 예전보다 통합은 많이 진행됐지만 아직 모든 전략과 모든 입력이 loader 계층으로 완전히 이행된 상태는 아니다.
 
 ---
 
 ## 4. 상위 디렉터리 기준 파일 역할
 
 ## 4-1. 핵심 실행 계층
+
+### `finance/loaders/*`
+Phase 3에서 추가된 조회 계층이다.
+
+역할:
+- DB 적재 데이터 조회
+- loader 계약 기준 입력 정규화
+- broad research loader와 strict PIT loader 분리의 기반 제공
+- 기존 전략 계층과 DB 사이의 read path 담당
+
+현재 구현된 것:
+- `load_universe`
+- `load_price_history`
+- `load_price_matrix`
+- `load_fundamentals`
+- `load_fundamental_snapshot`
+- `load_factors`
+- `load_factor_snapshot`
+- `load_factor_matrix`
+- `load_statement_values`
+- `load_statement_labels`
+- `load_statement_snapshot_strict`
+- runtime adapter 계열
 
 ### `finance/engine.py`
 `BacktestEngine`이 패키지의 전략 실행 중심 인터페이스다.
@@ -129,6 +159,10 @@ engine = (
 ```
 
 의미:
+- 기존 외부 직접조회 기반 실행과
+  DB 기반 loader 실행을 같은 체이닝 인터페이스 안에서 관리한다.
+- `load_ohlcv_from_db(...)`는 `history_start`를 받아
+  지표 warmup용 과거 이력을 먼저 읽고 마지막에 실제 start/end를 자르는 흐름도 지원한다.
 - `engine.py`는 계산 엔진 자체라기보다 orchestration wrapper다.
 - 실질 계산은 대부분 `data.py`, `transform.py`, `strategy.py`에 있다.
 
@@ -189,10 +223,16 @@ Matplotlib 시각화 계층이다.
 
 함수군:
 - 전략 실행 샘플
+- DB 기반 전략 실행 샘플 (`*_from_db`)
 - 자산 프로필 적재 샘플
 - fundamentals/factors 적재 샘플
 
 즉, 사용 예제이면서 현재 프로젝트의 "실행 가이드" 역할도 같이 한다.
+
+추가 메모:
+- DB 기반 sample 함수들은 indicator warmup이 필요한 전략에 대해
+  실제 `start`보다 더 앞선 이력을 먼저 읽고,
+  마지막에 `slice(start=...)`를 적용하는 구조로 정리되었다.
 
 ---
 
@@ -213,6 +253,10 @@ Matplotlib 시각화 계층이다.
 
 이 파일의 의미:
 - 시장 데이터와 시스템 내부 표현 사이의 첫 번째 boundary
+- 최근에는 canonical refresh 관점에서:
+  - blank OHLCV row를 적재하지 않도록 보강되었고
+  - 요청 구간의 기존 row를 지우고 다시 적재하는 경로를 지원하며
+  - `end`를 inclusive semantics로 보정해 direct provider path와 DB path의 일관성을 맞추고 있다
 - 가격 데이터만 놓고 보면 현재 가장 기본적인 source adapter 역할
 
 ### `finance/data/nyse.py`

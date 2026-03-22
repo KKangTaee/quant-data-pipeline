@@ -88,15 +88,15 @@
 - `없음`
 
 바로 다음 체크 대상:
-- `Phase 3 첫 코드 구현 시작`
+- `완료 - 다음은 PHASE3_RUNTIME_GENERALIZATION_TODO.md`
 
 ---
 
 ## 현재 진척도
 
 - Phase 3 현재 챕터:
-  - 약 `65%`
+  - 약 `100%`
 
 판단 근거:
 - Phase 3는 개시되었고
-- strict / broad policy, loader scope, implementation entry set이 정리된 상태
+- strict / broad policy, loader scope, implementation entry set이 모두 정리된 상태

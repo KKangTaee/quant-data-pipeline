@@ -1235,3 +1235,146 @@ Do not copy full chat transcripts. Keep only the durable result.
   - `app/jobs/ingestion_jobs.py`
   - `app/web/streamlit_app.py`
   - `.note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md`
+
+### 2026-03-22 - Defer deeper yfinance optimization and extend broad fundamentals/factors loaders
+- Request topic:
+  - keep the current OHLCV hardening result, defer deeper yfinance optimization for later, and continue to the next Phase 3 step
+- Interpreted goal:
+  - preserve momentum by moving from ingestion stabilization back into loader/runtime expansion
+- Result:
+  - recorded that deeper yfinance / very-large-universe optimization will be handled later
+  - implemented broad fundamentals and factors loaders under `finance/loaders/*`
+  - verified the new loaders against local DB data for `AAPL`, `MSFT`, and `GOOG`
+- Durable output:
+  - `finance/loaders/fundamentals.py`
+  - `finance/loaders/factors.py`
+  - `finance/loaders/__init__.py`
+  - `.note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md`
+
+### 2026-03-22 - Implement broad and strict financial statement loaders
+- Request topic:
+  - continue Phase 3 by finishing the financial statement loader layer
+- Interpreted goal:
+  - complete the first broad/strict loader set so the read-path covers price, fundamentals, factors, and detailed statements
+- Result:
+  - implemented:
+    - `load_statement_values(...)`
+    - `load_statement_labels(...)`
+    - `load_statement_snapshot_strict(...)`
+  - verified the new loaders against local annual statement data for `AAPL` and `MSFT`
+  - confirmed that the broad/strict statement policy is now represented in code, not only in docs
+- Durable output:
+  - `finance/loaders/financial_statements.py`
+  - `finance/loaders/__init__.py`
+  - `.note/finance/phase3/PHASE3_STATEMENT_LOADER_VALIDATION.md`
+  - `.note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md`
+
+### 2026-03-22 - Close Phase 3 chapter 1 and open the next runtime chapter
+- Request topic:
+  - wrap the current Phase 3 work once before moving forward
+- Interpreted goal:
+  - mark the loader/runtime groundwork as complete, preserve the achieved structure in docs, and open a focused next chapter without prematurely opening a new major phase
+- Result:
+  - created a dedicated Phase 3 chapter completion summary
+  - opened a new Phase 3 TODO board for runtime generalization and Phase 4 handoff preparation
+  - updated the master roadmap and finance doc index so the current project position is clearer
+- Durable output:
+  - `.note/finance/phase3/PHASE3_CHAPTER1_COMPLETION_SUMMARY.md`
+  - `.note/finance/phase3/PHASE3_RUNTIME_GENERALIZATION_TODO.md`
+  - `.note/finance/MASTER_PHASE_ROADMAP.md`
+  - `.note/finance/FINANCE_DOC_INDEX.md`
+
+### 2026-03-22 - Extend Daily Period preset to 20 years
+- Request topic:
+  - allow `Daily Period` to go beyond `15y` and support `20y`
+- Interpreted goal:
+  - support longer-horizon OHLCV collection directly from the Streamlit operating console without requiring custom date entry
+- Result:
+  - added `20y` to the shared period preset list used by Daily Market Update and OHLCV-related UI controls
+  - verified locally that yfinance accepts `period='20y'` for daily OHLCV downloads
+- Durable output:
+  - `app/web/streamlit_app.py`
+
+### 2026-03-22 - Analyze discrepancy between direct sample results and DB-backed sample results
+- Request topic:
+  - explain why `portfolio_sample(...)` and `portfolio_sample_from_db(...)` return materially different backtest metrics from the same nominal start point
+- Interpreted goal:
+  - distinguish between expected DB-vs-provider differences and real runtime/data bugs before changing the strategy path further
+- Result:
+  - identified two separate root causes:
+    1. `finance_price.nyse_price_history` is still mixed-state for older OHLCV history
+       - several dividend-paying assets have legacy rows where `close` matches provider `Adj Close` rather than raw `Close`
+       - example pattern was confirmed for `VIG`, `SCHD`, `DGRO`, `SPY`, `TLT`, `IEF`, `LQD`, `QQQ`, `IWM`, `SOXX`, `BIL`, `MTUM`
+       - this explains why even `Equal Weight` can start on the same date but end with a different balance under DB-backed execution
+    2. DB-backed sample functions load from the requested `start` date before computing warmup-dependent indicators
+       - `get_gtaa3_from_db(...)`, `get_risk_parity_trend_from_db(...)`, and `get_dual_momentum_from_db(...)` call `load_ohlcv_from_db(start=...)` first, then compute `MA200` and trailing return columns
+       - the legacy direct-fetch sample path loads a longer period first, computes indicators, and only slices after that
+       - this explains the later DB-backed start dates such as `2016-10-31` and `2017-10-31`
+- Durable output:
+  - issue analysis recorded in this log
+
+### 2026-03-22 - Align DB-backed sample warmup behavior with the direct runtime path
+- Request topic:
+  - proceed with the discrepancy fix after identifying the causes
+- Interpreted goal:
+  - remove the avoidable runtime-order mismatch first, while leaving the historical OHLCV mixed-state issue as a separate data cleanup track
+- Result:
+  - added `history_start` support to `BacktestEngine.load_ohlcv_from_db(...)`
+  - updated DB-backed sample functions so indicator-heavy strategies load buffered history first and slice back to the requested range afterwards
+  - revalidated that `GTAA`, `Risk Parity`, and `Dual Momentum` now start on the same first month-end date and row count as the direct sample path
+  - remaining performance differences are now attributable mainly to `nyse_price_history` historical price-state inconsistency
+- Durable output:
+  - `finance/engine.py`
+  - `finance/sample.py`
+  - `.note/finance/phase3/PHASE3_DB_SAMPLE_ALIGNMENT_VALIDATION.md`
+  - `.note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md`
+
+### 2026-03-22 - Re-check remaining discrepancy after warmup alignment
+- Request topic:
+  - verify whether any further code changes are still needed after the DB-backed sample warmup fix
+- Interpreted goal:
+  - separate remaining runtime-order issues from underlying DB price-history consistency problems
+- Result:
+  - confirmed that the warmup-related discrepancy is resolved:
+    - DB-backed `GTAA`, `Risk Parity`, and `Dual Momentum` now start on the same first month-end and have the same row counts as the direct path
+  - confirmed that the remaining performance gap is data-driven:
+    - many symbols in `finance_price.nyse_price_history` still have `close` values that effectively match provider `Adj Close` instead of raw `Close`
+    - `adj_close` is still null across the checked historical DB rows
+    - therefore direct provider-based samples and DB-backed samples are still not expected to match until price history is canonicalized or rebuilt
+- Durable output:
+  - issue analysis recorded in this log
+
+### 2026-03-22 - Canonicalize sample-universe OHLCV and achieve direct-vs-DB sample parity
+- Request topic:
+  - continue after the remaining discrepancy review and fix the residual gap
+- Interpreted goal:
+  - make DB-backed sample results match the legacy direct sample results by fixing the historical OHLCV consistency problem, not only the runtime order
+- Result:
+  - hardened the OHLCV writer so explicit `end` is treated as inclusive when fetching from yfinance
+  - prevented blank price rows from being inserted during canonical refresh
+  - allowed requested OHLCV ranges to be replaced and reinserted cleanly
+  - rebuilt the sample strategy universe in `finance_price.nyse_price_history`
+  - revalidated parity between direct and DB-backed sample paths for:
+    - `Equal Weight`
+    - `GTAA`
+    - `Risk Parity`
+    - `Dual Momentum`
+- Durable output:
+  - `finance/data/data.py`
+  - `.note/finance/phase3/PHASE3_DB_SAMPLE_ALIGNMENT_VALIDATION.md`
+  - `.note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md`
+
+### 2026-03-22 - Summarize what changed between the mismatch state and the final parity state
+- Request topic:
+  - compare the earlier inconsistent `portfolio_sample(...)` / `portfolio_sample_from_db(...)` outputs with the final matching outputs and explain what changed
+- Interpreted goal:
+  - leave a durable team-facing record of the root causes, observed before/after metrics, and the exact fixes that restored parity
+- Result:
+  - created a comparison-focused postmortem document that captures:
+    - the earlier mismatched metrics
+    - the two root causes
+    - the runtime-order fix
+    - the canonical OHLCV rebuild fix
+    - the final matching state
+- Durable output:
+  - `.note/finance/phase3/PHASE3_PORTFOLIO_SAMPLE_PARITY_POSTMORTEM.md`

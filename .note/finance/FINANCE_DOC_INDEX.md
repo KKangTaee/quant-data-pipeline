@@ -69,6 +69,10 @@
   - Phase 3 첫 최소 검증 경로
 - `.note/finance/phase3/PHASE3_LOADER_IMPLEMENTATION_TODO.md`
   - Phase 3 실제 loader 코드 구현 챕터 보드
+- `.note/finance/phase3/PHASE3_CHAPTER1_COMPLETION_SUMMARY.md`
+  - Phase 3 첫 구현 챕터 종료 요약
+- `.note/finance/phase3/PHASE3_RUNTIME_GENERALIZATION_TODO.md`
+  - Phase 3 다음 실행 챕터 TODO 보드
 - `.note/finance/phase3/PHASE3_RUNTIME_ADAPTER_PATH.md`
   - Phase 3 첫 runtime adapter 연결 방식
 - `.note/finance/phase3/PHASE3_FIRST_DB_BACKED_RUNTIME_VALIDATION.md`
@@ -81,6 +85,12 @@
   - stock + ETF OHLCV 단일 price table 유지 결정
 - `.note/finance/phase3/PHASE3_OHLCV_INGESTION_VALIDATION.md`
   - OHLCV hardening 후 실제 적재/전략 검증 결과
+- `.note/finance/phase3/PHASE3_STATEMENT_LOADER_VALIDATION.md`
+  - broad / strict statement loader 기본 검증 결과
+- `.note/finance/phase3/PHASE3_DB_SAMPLE_ALIGNMENT_VALIDATION.md`
+  - DB-backed sample warmup 정렬과 direct-vs-DB 차이 분석 결과
+- `.note/finance/phase3/PHASE3_PORTFOLIO_SAMPLE_PARITY_POSTMORTEM.md`
+  - `portfolio_sample` vs `portfolio_sample_from_db` 불일치 원인과 해결 회고
 
 ---
 
@@ -148,3 +158,9 @@ Phase 3 시작 시:
 10. `PHASE3_FIRST_LOADER_IMPLEMENTATION_ORDER.md`
 11. `PHASE3_FIRST_DB_BACKED_STRATEGY_CANDIDATE.md`
 12. `PHASE3_MINIMAL_VALIDATION_PATH.md`
+
+Phase 3 현재 위치를 볼 때:
+1. `PHASE3_CHAPTER1_COMPLETION_SUMMARY.md`
+2. `PHASE3_RUNTIME_GENERALIZATION_TODO.md`
+3. `WORK_PROGRESS.md`
+4. `QUESTION_AND_ANALYSIS_LOG.md`

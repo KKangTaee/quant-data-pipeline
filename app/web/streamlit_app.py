@@ -48,7 +48,7 @@ SYMBOL_PRESETS = {
     "Dividend ETFs": "VIG,SCHD,DGRO,GLD",
     "Custom": "",
 }
-PERIOD_PRESETS = ["1d", "7d", "1mo", "3mo", "6mo", "1y", "5y", "10y", "15y"]
+PERIOD_PRESETS = ["1d", "7d", "1mo", "3mo", "6mo", "1y", "5y", "10y", "15y", "20y"]
 SYMBOL_SOURCE_OPTIONS = [
     "Manual",
     "NYSE Stocks",

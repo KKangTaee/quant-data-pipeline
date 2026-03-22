@@ -11,6 +11,16 @@ from .db.schema import PRICE_SCHEMAS  # 방금 추가한 것
 TABLE = "nyse_price_history"
 DB_PRICE = "finance_price"
 Interval = Literal["1d", "1wk", "1mo"]
+PRICE_VALUE_COLUMNS = [
+    "Open",
+    "High",
+    "Low",
+    "Close",
+    "Adj Close",
+    "Volume",
+    "Dividends",
+    "Stock Splits",
+]
 
 
 """
@@ -36,6 +46,67 @@ def _to_none(x):
     except Exception:
         pass
     return x
+
+
+def _infer_requested_date_window(
+    *,
+    start: str | None = None,
+    end: str | None = None,
+    period: str = "1y",
+) -> tuple[str | None, str | None]:
+    """
+    start/end가 없을 때 period 기준으로 대략적인 요청 구간을 계산한다.
+    canonical refresh에서 기존 범위를 지우고 다시 넣을 때 사용한다.
+    """
+    end_ts = pd.to_datetime(end).normalize() if end is not None else pd.Timestamp.today().normalize()
+
+    if start is not None:
+        start_ts = pd.to_datetime(start).normalize()
+        return start_ts.strftime("%Y-%m-%d"), end_ts.strftime("%Y-%m-%d")
+
+    p = str(period).strip().lower()
+    if p == "max":
+        return None, end_ts.strftime("%Y-%m-%d")
+
+    if p.endswith("d") and p[:-1].isdigit():
+        start_ts = end_ts - pd.DateOffset(days=int(p[:-1]))
+        return start_ts.strftime("%Y-%m-%d"), end_ts.strftime("%Y-%m-%d")
+
+    if p.endswith("mo") and p[:-2].isdigit():
+        start_ts = end_ts - pd.DateOffset(months=int(p[:-2]))
+        return start_ts.strftime("%Y-%m-%d"), end_ts.strftime("%Y-%m-%d")
+
+    if p.endswith("y") and p[:-1].isdigit():
+        start_ts = end_ts - pd.DateOffset(years=int(p[:-1]))
+        return start_ts.strftime("%Y-%m-%d"), end_ts.strftime("%Y-%m-%d")
+
+    return None, end_ts.strftime("%Y-%m-%d")
+
+
+def _delete_ohlcv_rows(
+    db: MySQLClient,
+    *,
+    symbols: list[str],
+    timeframe: str,
+    start: str | None,
+    end: str | None,
+) -> None:
+    if not symbols:
+        return
+
+    placeholders = ",".join(["%s"] * len(symbols))
+    where = [f"symbol IN ({placeholders})", "timeframe = %s"]
+    params: list[Any] = list(symbols) + [timeframe]
+
+    if start is not None:
+        where.append("`date` >= %s")
+        params.append(start)
+    if end is not None:
+        where.append("`date` <= %s")
+        params.append(end)
+
+    sql = f"DELETE FROM {TABLE} WHERE {' AND '.join(where)}"
+    db.execute(sql, params)
 
 
 def get_ohlcv(
@@ -66,7 +137,11 @@ def get_ohlcv(
     }
     if start is not None or end is not None:
         download_kwargs["start"] = start
-        download_kwargs["end"] = end
+        if end is not None:
+            inclusive_end = pd.to_datetime(end).normalize() + pd.Timedelta(days=1)
+            download_kwargs["end"] = inclusive_end.strftime("%Y-%m-%d")
+        else:
+            download_kwargs["end"] = end
     else:
         download_kwargs["period"] = period
 
@@ -145,6 +220,7 @@ def store_ohlcv_to_mysql(
     max_workers: int = 4,
     max_retry: int = 2,
     retry_backoff: float = 0.8,
+    replace_requested_range: bool = True,
     return_stats: bool = False,
     progress_callback: Optional[Callable[[dict[str, Any]], None]] = None,
 ):
@@ -173,6 +249,8 @@ def store_ohlcv_to_mysql(
         for i in range(0, len(lst), size):
             yield lst[i:i+size]
 
+    requested_start, requested_end = _infer_requested_date_window(start=start, end=end, period=period)
+
     def rows_from_downloaded_frames(downloaded: dict[str, pd.DataFrame], timeframe: str) -> tuple[list[tuple], list[str]]:
         rows: list[tuple] = []
         loaded_symbols: list[str] = []
@@ -188,6 +266,12 @@ def store_ohlcv_to_mysql(
                 continue
 
             cols = {c.lower(): c for c in d.columns}
+
+            existing_value_cols = [cols[c.lower()] for c in PRICE_VALUE_COLUMNS if c.lower() in cols]
+            if existing_value_cols:
+                d = d.dropna(subset=existing_value_cols, how="all")
+            if d.empty:
+                continue
 
             def col(name, default=None):
                 return cols.get(name.lower(), default)
@@ -304,6 +388,14 @@ def store_ohlcv_to_mysql(
                 result = future.result()
                 rows = result["rows"]
                 if rows:
+                    if replace_requested_range and requested_end is not None:
+                        _delete_ohlcv_rows(
+                            db,
+                            symbols=result["loaded_symbols"],
+                            timeframe=interval,
+                            start=requested_start,
+                            end=requested_end,
+                        )
                     db.executemany(upsert_sql, rows)
                     inserted += len(rows)
 

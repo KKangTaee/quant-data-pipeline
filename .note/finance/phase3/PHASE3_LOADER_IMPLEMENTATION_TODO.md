@@ -103,17 +103,51 @@
 
 ---
 
+### F. Fundamentals / Factors Loaders
+상태:
+- `completed`
+
+세부 작업:
+- `[completed]` `finance/loaders/fundamentals.py` 구현
+  - broad fundamentals history / snapshot loader 추가
+- `[completed]` `finance/loaders/factors.py` 구현
+  - broad factors history / snapshot / matrix loader 추가
+- `[completed]` public export 및 smoke validation
+  - `finance.loaders` 루트 import와 기본 조회 확인
+
+완료 기준:
+- fundamentals / factors를 DB에서 loader 계층으로 조회할 수 있어야 함
+
+---
+
+### G. Financial Statement Loaders
+상태:
+- `completed`
+
+세부 작업:
+- `[completed]` `finance/loaders/financial_statements.py` 구현
+  - broad statement values / labels loader 추가
+- `[completed]` strict statement snapshot loader 구현
+  - `available_at <= as_of_date` 기준 strict PIT snapshot path 추가
+- `[completed]` public export 및 smoke validation
+  - values / labels / strict snapshot 기본 조회 확인
+
+완료 기준:
+- detailed financial statements를 broad / strict 경로로 조회할 수 있어야 함
+
+---
+
 ## 현재 작업 중 항목
 
 현재 `in_progress`:
 - `없음`
 
 바로 다음 체크 대상:
-- `fundamentals / factors loader 확장 또는 runtime 정리`
+- `완료 - 다음은 PHASE3_RUNTIME_GENERALIZATION_TODO.md`
 
 ---
 
 ## 현재 진척도
 
 - Phase 3 loader implementation chapter:
-  - 약 `95%`
+  - 약 `100%`

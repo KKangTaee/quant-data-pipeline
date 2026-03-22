@@ -1,5 +1,6 @@
 from math import comb
 from IPython.display import display
+import pandas as pd
 from .engine import BacktestEngine
 from .strategy import (
     EqualWeightStrategy,
@@ -36,6 +37,20 @@ from .data.financial_statements import (
 
 from finance.data.db.schema import sync_table_schema, NYSE_SCHEMAS
 from finance.data.db.mysql import MySQLClient
+
+
+def _history_start_with_buffer(start=None, *, years: int = 0, months: int = 0, days: int = 0):
+    """
+        지표 warmup을 위해 실제 조회 시작일을 더 앞당긴다.
+        sample 함수는 마지막에 `.slice(start=...)`를 다시 수행하므로
+        여기서는 indicator 계산에 필요한 이력만 확보하면 된다.
+    """
+    if start is None:
+        return None
+
+    ts = pd.to_datetime(start)
+    buffered = ts - pd.DateOffset(years=years, months=months, days=days)
+    return buffered.strftime("%Y-%m-%d")
 
 def get_equal_weight(period="15y", option="month_end", interval=12, start=None):
     # tickers = ["GLD", "SPY", "SHY", "TLT"]
@@ -127,9 +142,11 @@ def get_gtaa3_from_db(
     if tickers is None:
         tickers = ['SPY','IWD','IWM','IWN','MTUM','EFA','TLT','IEF','LQD','DBC','VNQ','GLD']
 
+    history_start = _history_start_with_buffer(start, years=3)
+
     engine = (
         BacktestEngine(tickers, period="db", option=option)
-        .load_ohlcv_from_db(start=start, end=end, timeframe=timeframe)
+        .load_ohlcv_from_db(start=start, end=end, timeframe=timeframe, history_start=history_start)
         .add_ma(200)
         .filter_by_period()
         .add_interval_returns([1,3,6,12])
@@ -188,9 +205,11 @@ def get_risk_parity_trend_from_db(
     if tickers is None:
         tickers = ['SPY','TLT','GLD','IEF','LQD']
 
+    history_start = _history_start_with_buffer(start, years=2)
+
     engine = (
         BacktestEngine(tickers, period="db", option=option)
-        .load_ohlcv_from_db(start=start, end=end, timeframe=timeframe)
+        .load_ohlcv_from_db(start=start, end=end, timeframe=timeframe, history_start=history_start)
         .add_ma(200)
         .filter_by_period()
         .align_dates()
@@ -251,9 +270,11 @@ def get_dual_momentum_from_db(
     if tickers is None:
         tickers = ["QQQ", "SPY", "IWM", "SOXX", "BIL"]
 
+    history_start = _history_start_with_buffer(start, years=3)
+
     engine = (
         BacktestEngine(tickers, period="db", option=option)
-        .load_ohlcv_from_db(start=start, end=end, timeframe=timeframe)
+        .load_ohlcv_from_db(start=start, end=end, timeframe=timeframe, history_start=history_start)
         .add_ma(200)
         .filter_by_period()
         .add_interval_returns([12])

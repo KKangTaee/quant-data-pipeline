@@ -5,6 +5,13 @@ This package will expose public loader entry points while keeping
 shared normalization and query helpers inside domain modules.
 """
 
+from .financial_statements import (
+    load_statement_labels,
+    load_statement_snapshot_strict,
+    load_statement_values,
+)
+from .factors import load_factor_matrix, load_factor_snapshot, load_factors
+from .fundamentals import load_fundamental_snapshot, load_fundamentals
 from .price import load_price_history, load_price_matrix
 from .runtime_adapter import adapt_price_history_to_strategy_dfs, load_price_strategy_dfs
 from .universe import load_universe
@@ -13,6 +20,14 @@ __all__ = [
     "load_universe",
     "load_price_history",
     "load_price_matrix",
+    "load_fundamentals",
+    "load_fundamental_snapshot",
+    "load_factors",
+    "load_factor_snapshot",
+    "load_factor_matrix",
+    "load_statement_values",
+    "load_statement_labels",
+    "load_statement_snapshot_strict",
     "adapt_price_history_to_strategy_dfs",
     "load_price_strategy_dfs",
 ]

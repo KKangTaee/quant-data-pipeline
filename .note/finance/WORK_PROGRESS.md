@@ -373,3 +373,47 @@ Keep entries append-only and concise.
 - Re-verified DB-backed strategy execution with the ETF set:
   - `get_equal_weight_from_db(tickers=['VIG','SCHD','DGRO','GLD'], start='2025-01-01', end='2026-03-22', interval=1)`
   - final `Total Balance = 11815.2`
+- Decided to defer deeper yfinance / large-universe optimization beyond the current hardening pass and keep it as a later optimization track.
+- Implemented broad fundamentals / factors loaders in `finance/loaders/*`:
+  - `load_fundamentals(...)`
+  - `load_fundamental_snapshot(...)`
+  - `load_factors(...)`
+  - `load_factor_snapshot(...)`
+  - `load_factor_matrix(...)`
+- Verified loader smoke checks in the project virtualenv with `AAPL`, `MSFT`, `GOOG`:
+  - fundamentals annual history: 15 rows
+  - fundamentals annual snapshot: 3 rows
+  - factors annual history: 15 rows
+  - factor snapshot: 3 rows
+  - factor matrix shape: `(15, 3)`
+- Implemented detailed financial statement loaders in `finance/loaders/financial_statements.py`:
+  - `load_statement_values(...)`
+  - `load_statement_labels(...)`
+  - `load_statement_snapshot_strict(...)`
+- Verified statement loader smoke checks in the project virtualenv with `AAPL`, `MSFT`:
+  - values annual history: 203 rows
+  - labels summary rows: 203 rows
+  - strict annual snapshot rows: 138
+- Phase 3 current chapter and loader implementation chapter are now effectively complete from the loader/runtime groundwork perspective.
+- Added a dedicated Phase 3 chapter completion summary document for the finished loader/runtime groundwork.
+- Opened the next Phase 3 execution board:
+  - `.note/finance/phase3/PHASE3_RUNTIME_GENERALIZATION_TODO.md`
+- Reframed the active Phase 3 focus from “first loader implementation” to “runtime generalization and Phase 4 handoff preparation”.
+- Extended the Streamlit OHLCV period presets to include `20y` for long-horizon Daily Market Update and manual OHLCV runs.
+- Verified with the project virtualenv that yfinance accepts `period='20y'` for daily OHLCV fetches.
+- Analyzed the discrepancy between `portfolio_sample(...)` and `portfolio_sample_from_db(...)`.
+- Refined `BacktestEngine.load_ohlcv_from_db(...)` with `history_start` so DB-backed runtime can load extra history for indicator warmup.
+- Updated DB-backed sample functions to read buffered history first and then slice back to the requested `start/end`.
+- Revalidated that DB-backed `GTAA`, `Risk Parity`, and `Dual Momentum` now start on the same first month-end date as the direct path.
+- Confirmed that the remaining performance gap is now primarily explained by legacy mixed-state OHLCV in `finance_price.nyse_price_history`.
+- Hardened `finance/data/data.py` further so canonical OHLCV refresh can:
+  - skip blank price rows
+  - treat explicit `end` as inclusive for yfinance fetches
+  - replace an already-requested date range before reinserting fresh rows
+- Rebuilt the sample strategy OHLCV universe in `finance_price.nyse_price_history` for `2010-01-01 ~ 2026-03-20`.
+- Revalidated that direct sample paths and DB-backed sample paths now match for:
+  - Equal Weight
+  - GTAA
+  - Risk Parity
+  - Dual Momentum
+- Added a dedicated postmortem document comparing the original mismatch state with the final parity state for `portfolio_sample(...)` vs `portfolio_sample_from_db(...)`.
