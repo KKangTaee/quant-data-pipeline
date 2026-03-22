@@ -23,14 +23,14 @@
 
 ### A. Loader Scope Finalization
 상태:
-- `pending`
+- `completed`
 
 세부 작업:
-- `[pending]` 1차 loader 구현 목록 확정
+- `[completed]` 1차 loader 구현 목록 확정
   - 어떤 loader를 지금 구현하고 어떤 loader를 다음으로 미룰지 결정
-- `[pending]` loader 모듈 경로 확정
+- `[completed]` loader 모듈 경로 확정
   - `finance/loaders/*` 구조로 갈지 최종 확정
-- `[pending]` helper 분리 범위 확정
+- `[completed]` helper 분리 범위 확정
   - symbol resolution / date normalization / strict PIT helper 범위 정리
 
 완료 기준:
@@ -40,14 +40,14 @@
 
 ### B. Strict vs Broad Loader Policy
 상태:
-- `in_progress`
+- `completed`
 
 세부 작업:
 - `[completed]` naming 규칙 확정
   - strict PIT loader와 broad research loader 이름을 어떻게 구분할지 결정
-- `[pending]` strict statement loader 범위 확정
+- `[completed]` strict statement loader 범위 확정
   - accession-bearing rows만 읽는 strict statement snapshot 규칙 고정
-- `[pending]` broad loader 허용 범위 확정
+- `[completed]` broad loader 허용 범위 확정
   - broad research loader가 legacy/mixed-state를 어디까지 허용할지 결정
 
 완료 기준:
@@ -76,26 +76,27 @@
 
 1. B-1 naming 규칙 확정
 2. B-2 strict statement loader 범위 확정
-3. A-1 1차 loader 구현 목록 확정
-4. C-1 첫 구현 loader 순서 확정
+3. B-3 broad loader 허용 범위 확정
+4. A-1 1차 loader 구현 목록 확정
+5. C-1 첫 구현 loader 순서 확정
 
 ---
 
 ## 현재 작업 중 항목
 
 현재 `in_progress`:
-- `B. Strict vs Broad Loader Policy`
+- `없음`
 
 바로 다음 체크 대상:
-- `B-2 strict statement loader 범위 확정`
+- `C-1 첫 구현 loader 순서 확정`
 
 ---
 
 ## 현재 진척도
 
 - Phase 3 현재 챕터:
-  - 약 `12%`
+  - 약 `55%`
 
 판단 근거:
 - Phase 3는 개시되었고
-- naming 규칙 1개가 고정된 상태
+- strict / broad policy와 loader scope finalization이 정리된 상태

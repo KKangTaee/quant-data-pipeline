@@ -283,3 +283,30 @@ Keep entries append-only and concise.
 - Completed the first Phase 3 task by fixing the loader naming policy:
   - base names for broad research loaders
   - `*_snapshot_strict` for strict PIT snapshot loaders
+- Completed the next Phase 3 policy step by fixing the conservative scope of the first strict statement loader:
+  - values-table-first
+  - snapshot-first
+  - `available_at <= as_of_date`
+  - accession-bearing / identity-complete rows only
+- Explicitly scoped `nyse_financial_statement_labels` out of the strict source path and positioned it as a summary/support layer.
+- Completed the complementary Phase 3 policy step for broad statement loaders:
+  - broadness means research-oriented time semantics, not broken-row tolerance
+  - `period_end`-centered history reads are allowed
+  - legacy mixed-state support is not being reintroduced after the stricter ledger cleanup
+- Fixed the initial Phase 3 loader implementation set around the shortest DB-backed runtime path:
+  - `load_universe(...)`
+  - `load_price_history(...)`
+  - `load_price_matrix(...)`
+- Explicitly moved fundamentals / factors / statements behind the first price-based runtime milestone.
+- Finalized the loader package location as `finance/loaders/*` and created the package scaffold.
+- Kept the separation explicit:
+  - `finance/data/*` for write path
+  - `finance/loaders/*` for read path
+- Finalized the shared loader helper scope and created `finance/loaders/_common.py`.
+- Put the following shared concerns into the common loader layer:
+  - symbol list parsing
+  - symbol/universe resolution
+  - date normalization
+  - freq/timeframe normalization
+  - snapshot input validation
+- Closed `A. Loader Scope Finalization` on the Phase 3 board.

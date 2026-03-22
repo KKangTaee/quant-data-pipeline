@@ -51,6 +51,16 @@
   - PHASE3 첫 챕터 TODO 보드
 - `.note/finance/phase3/PHASE3_LOADER_NAMING_POLICY.md`
   - Phase 3 loader naming 규칙
+- `.note/finance/phase3/PHASE3_STRICT_STATEMENT_LOADER_SCOPE.md`
+  - strict statement snapshot loader 범위 정책
+- `.note/finance/phase3/PHASE3_BROAD_STATEMENT_LOADER_POLICY.md`
+  - broad statement research loader 허용 범위 정책
+- `.note/finance/phase3/PHASE3_INITIAL_LOADER_IMPLEMENTATION_SET.md`
+  - Phase 3 1차 loader 구현 세트 정의
+- `.note/finance/phase3/PHASE3_LOADER_MODULE_PATH.md`
+  - Phase 3 loader 패키지 경로와 모듈 경계
+- `.note/finance/phase3/PHASE3_LOADER_HELPER_SCOPE.md`
+  - Phase 3 `_common.py` helper 범위 정의
 
 ---
 
@@ -110,3 +120,8 @@ Phase 3 시작 시:
 2. `PHASE2_COMPLETION_SUMMARY.md`
 3. `PHASE3_LOADER_AND_RUNTIME_PLAN.md`
 4. `PHASE3_CURRENT_CHAPTER_TODO.md`
+5. `PHASE3_STRICT_STATEMENT_LOADER_SCOPE.md`
+6. `PHASE3_BROAD_STATEMENT_LOADER_POLICY.md`
+7. `PHASE3_INITIAL_LOADER_IMPLEMENTATION_SET.md`
+8. `PHASE3_LOADER_MODULE_PATH.md`
+9. `PHASE3_LOADER_HELPER_SCOPE.md`

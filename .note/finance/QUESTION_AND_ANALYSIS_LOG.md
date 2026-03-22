@@ -1015,3 +1015,97 @@ Do not copy full chat transcripts. Keep only the durable result.
 - Durable output:
   - `.note/finance/phase3/PHASE3_LOADER_NAMING_POLICY.md`
   - `.note/finance/phase3/PHASE3_CURRENT_CHAPTER_TODO.md`
+
+### 2026-03-22 - Fix the initial strict statement loader scope for Phase 3
+- Request topic:
+  - continue Phase 3 by deciding what the first strict detailed financial statement loader should and should not do
+- Interpreted goal:
+  - lock the conservative point-in-time scope before implementation so the first loader path favors correctness over breadth
+- Result:
+  - fixed the policy that the first strict loader is:
+    - values-table-centered
+    - snapshot-oriented
+    - availability-gated by `available_at <= as_of_date`
+    - limited to accession-bearing and identity-complete rows
+  - explicitly excluded `nyse_financial_statement_labels` from the strict source-of-truth path
+  - left full-history strict reads and broad research coverage decisions for later steps
+- Durable output:
+  - `.note/finance/phase3/PHASE3_STRICT_STATEMENT_LOADER_SCOPE.md`
+  - `.note/finance/phase3/PHASE3_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/FINANCE_DOC_INDEX.md`
+
+### 2026-03-22 - Fix the broad statement loader policy for Phase 3
+- Request topic:
+  - continue Phase 3 by deciding how broad statement loaders should differ from strict PIT loaders
+- Interpreted goal:
+  - avoid reintroducing early mixed-state compromises while still leaving room for research-oriented reads
+- Result:
+  - fixed the policy that broad statement loaders:
+    - can read history by `period_end`
+    - can skip strict PIT snapshot semantics
+    - remain values-table-centered
+    - do not reopen support for broken legacy rows after the Phase 2 schema cleanup
+  - clarified that the strict/broad difference is now about time semantics and use case, not row-identity quality
+- Durable output:
+  - `.note/finance/phase3/PHASE3_BROAD_STATEMENT_LOADER_POLICY.md`
+  - `.note/finance/phase3/PHASE3_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/FINANCE_DOC_INDEX.md`
+
+### 2026-03-22 - Fix the first loader implementation set for Phase 3
+- Request topic:
+  - continue Phase 3 by deciding which loaders should be implemented first
+- Interpreted goal:
+  - open the shortest possible DB-backed strategy runtime path before expanding into more complex loader families
+- Result:
+  - fixed the first implementation set as:
+    - `load_universe(...)`
+    - `load_price_history(...)`
+    - `load_price_matrix(...)`
+  - moved fundamentals / factors / statements behind the first price-based strategy milestone
+  - recorded the reasoning that existing strategies are currently price-centric, so price loaders are the safest first implementation target
+- Durable output:
+  - `.note/finance/phase3/PHASE3_INITIAL_LOADER_IMPLEMENTATION_SET.md`
+  - `.note/finance/phase3/PHASE3_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/FINANCE_DOC_INDEX.md`
+
+### 2026-03-22 - Fix the loader module path for Phase 3
+- Request topic:
+  - continue Phase 3 by deciding where the loader implementation should live in the package structure
+- Interpreted goal:
+  - separate runtime/read-path code from the existing ingestion/write-path code before implementation begins
+- Result:
+  - fixed the loader path as `finance/loaders/*`
+  - documented module responsibilities for:
+    - `__init__.py`
+    - `_common.py`
+    - `universe.py`
+    - `price.py`
+    - `fundamentals.py`
+    - `factors.py`
+    - `financial_statements.py`
+  - created the initial `finance/loaders/__init__.py` scaffold so the package boundary is now real, not just planned
+- Durable output:
+  - `.note/finance/phase3/PHASE3_LOADER_MODULE_PATH.md`
+  - `finance/loaders/__init__.py`
+  - `.note/finance/phase3/PHASE3_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/FINANCE_DOC_INDEX.md`
+
+### 2026-03-22 - Fix the shared helper scope for Phase 3 loaders
+- Request topic:
+  - continue Phase 3 by deciding which shared helpers belong in the common loader layer
+- Interpreted goal:
+  - avoid duplicated input-normalization logic before domain-specific loader modules are implemented
+- Result:
+  - fixed the helper boundary so `_common.py` contains only shared input and symbol-resolution logic
+  - created common helpers for:
+    - symbol parsing
+    - universe resolution
+    - date normalization
+    - freq/timeframe normalization
+    - snapshot input validation
+  - explicitly left domain-specific query logic out of `_common.py`
+- Durable output:
+  - `.note/finance/phase3/PHASE3_LOADER_HELPER_SCOPE.md`
+  - `finance/loaders/_common.py`
+  - `.note/finance/phase3/PHASE3_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/FINANCE_DOC_INDEX.md`
