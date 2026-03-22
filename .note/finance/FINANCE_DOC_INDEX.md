@@ -91,10 +91,53 @@
   - DB-backed sample warmup 정렬과 direct-vs-DB 차이 분석 결과
 - `.note/finance/phase3/PHASE3_PORTFOLIO_SAMPLE_PARITY_POSTMORTEM.md`
   - `portfolio_sample` vs `portfolio_sample_from_db` 불일치 원인과 해결 회고
+- `.note/finance/phase3/PHASE3_RUNTIME_PATH_ROLE_SPLIT.md`
+  - legacy direct-fetch path와 DB-backed runtime path 역할 분리 문서
+- `.note/finance/phase3/PHASE3_PRICE_ONLY_RUNTIME_PATTERN.md`
+  - price-only 전략 sample의 공통 runtime 시작 패턴 정리
+- `.note/finance/phase3/PHASE3_FACTOR_FUNDAMENTAL_RUNTIME_CONNECTIONS.md`
+  - factor / fundamental 전략의 loader-to-runtime 연결 포인트 정리
+- `.note/finance/phase3/PHASE3_RUNTIME_STRATEGY_INPUT_CONTRACT.md`
+  - Phase 3 기준 strategy runtime 입력 계약 정리
+- `.note/finance/phase3/PHASE3_REPEATABLE_DB_BACKED_SMOKE_SCENARIOS.md`
+  - DB-backed runtime 반복 smoke scenario 세트
+- `.note/finance/phase3/PHASE3_LOADER_RUNTIME_VALIDATION_EXAMPLES.md`
+  - loader/runtime 검증용 실행 예시 모음
+- `.note/finance/phase3/PHASE3_RUNTIME_CLEANUP_BACKLOG.md`
+  - runtime generalization 이후 남겨둔 warning / cleanup / optimization backlog
+- `.note/finance/phase3/PHASE3_UI_RUNTIME_FUNCTION_CANDIDATES.md`
+  - Phase 4 UI가 직접 호출할 최소 runtime function 후보 정리
+- `.note/finance/phase3/PHASE3_UI_USER_INPUT_SET_DRAFT.md`
+  - Phase 4 전략 실행 UI의 최소 user-facing 입력 세트 초안
+- `.note/finance/phase3/PHASE3_UI_RESULT_BUNDLE_DRAFT.md`
+  - Phase 4 전략 실행 UI가 받게 될 최소 결과 bundle 초안
+- `.note/finance/phase3/PHASE3_FUNDAMENTALS_FACTORS_HARDENING_TODO.md`
+  - `nyse_fundamentals` / `nyse_factors` hardening 실행 보드
+- `.note/finance/phase3/PHASE3_FUNDAMENTALS_FACTORS_REVIEW_AND_DIRECTION.md`
+  - `nyse_fundamentals` / `nyse_factors` 역할, 수정 내용, 장기 방향 정리
 
 ---
 
-## 5. Phase 2 / Phase 3 - Backtest / Loader 관련 문서
+## 5. Phase 4 상위 문서
+
+- `.note/finance/phase4/PHASE4_UI_AND_BACKTEST_PLAN.md`
+  - Phase 4 전체 계획 문서
+- `.note/finance/phase4/PHASE4_CURRENT_CHAPTER_TODO.md`
+  - Phase 4 첫 실행 챕터 TODO 보드
+- `.note/finance/phase4/PHASE4_UI_STRUCTURE_DECISION.md`
+  - 단일 메인 앱 + `Ingestion` / `Backtest` 탭 구조 결정 문서
+- `.note/finance/phase4/PHASE4_RUNTIME_WRAPPER_SIGNATURES.md`
+  - Phase 4 first public runtime wrapper와 공통 result bundle builder 시그니처 문서
+- `.note/finance/phase4/PHASE4_FIRST_SCREEN_SCOPE.md`
+  - Phase 4 첫 백테스트 화면 범위와 form-first 결정 문서
+- `.note/finance/phase4/PHASE4_FIRST_RESULT_LAYOUT_DRAFT.md`
+  - Phase 4 첫 결과 레이아웃 초안과 현재 탭 구조 정리
+- `.note/finance/phase4/PHASE4_ERROR_AND_EMPTY_RESULT_RULES.md`
+  - Phase 4 첫 오류/빈 결과 처리 규칙 문서
+
+---
+
+## 6. Phase 2 / Phase 3 - Backtest / Loader 관련 문서
 
 - `.note/finance/phase2/BACKTEST_LOADER_FUNCTION_DRAFT.md`
   - loader 함수 초안
@@ -107,7 +150,7 @@
 
 ---
 
-## 6. Phase 2 - Point-In-Time / 재무제표 정리 문서
+## 7. Phase 2 - Point-In-Time / 재무제표 정리 문서
 
 - `.note/finance/phase2/POINT_IN_TIME_SCHEMA_REVIEW_AND_PATCH_PLAN.md`
   - point-in-time 스키마 리뷰와 패치 계획
@@ -116,7 +159,7 @@
 
 ---
 
-## 7. 운영 / 설정 / 수집 전략 문서
+## 8. 운영 / 설정 / 수집 전략 문서
 
 - `.note/finance/DATA_COLLECTION_UI_STRATEGY.md`
   - 내부 운영 수집 UI 전략
@@ -127,7 +170,7 @@
 
 ---
 
-## 8. 문서 사용 순서 권장
+## 9. 문서 사용 순서 권장
 
 처음 프로젝트 전체를 볼 때:
 1. `MASTER_PHASE_ROADMAP.md`
@@ -162,5 +205,20 @@ Phase 3 시작 시:
 Phase 3 현재 위치를 볼 때:
 1. `PHASE3_CHAPTER1_COMPLETION_SUMMARY.md`
 2. `PHASE3_RUNTIME_GENERALIZATION_TODO.md`
-3. `WORK_PROGRESS.md`
-4. `QUESTION_AND_ANALYSIS_LOG.md`
+3. `PHASE3_RUNTIME_CLEANUP_BACKLOG.md`
+4. `PHASE3_UI_RUNTIME_FUNCTION_CANDIDATES.md`
+5. `PHASE3_UI_USER_INPUT_SET_DRAFT.md`
+6. `PHASE3_UI_RESULT_BUNDLE_DRAFT.md`
+7. `WORK_PROGRESS.md`
+8. `QUESTION_AND_ANALYSIS_LOG.md`
+
+Phase 4 시작 시:
+1. `MASTER_PHASE_ROADMAP.md`
+2. `PHASE3_RUNTIME_GENERALIZATION_TODO.md`
+3. `PHASE3_UI_RUNTIME_FUNCTION_CANDIDATES.md`
+4. `PHASE3_UI_USER_INPUT_SET_DRAFT.md`
+5. `PHASE3_UI_RESULT_BUNDLE_DRAFT.md`
+6. `PHASE4_UI_AND_BACKTEST_PLAN.md`
+7. `PHASE4_UI_STRUCTURE_DECISION.md`
+8. `PHASE4_RUNTIME_WRAPPER_SIGNATURES.md`
+9. `PHASE4_CURRENT_CHAPTER_TODO.md`

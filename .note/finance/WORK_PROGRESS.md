@@ -417,3 +417,150 @@ Keep entries append-only and concise.
   - Risk Parity
   - Dual Momentum
 - Added a dedicated postmortem document comparing the original mismatch state with the final parity state for `portfolio_sample(...)` vs `portfolio_sample_from_db(...)`.
+- Added a dedicated Phase 3 runtime path role-split document to clarify:
+  - legacy direct-fetch sample path
+  - DB-backed runtime sample path
+- Updated `finance/sample.py` docstrings so the two path families are easier to distinguish in code.
+- Refactored `finance/sample.py` so price-only strategy samples now share `_build_price_only_engine(...)` for:
+  - Equal Weight
+  - GTAA
+  - Risk Parity
+  - Dual Momentum
+- Added a dedicated Phase 3 note documenting the common price-only runtime start pattern.
+- Advanced the active Phase 3 runtime-generalization board from `B-1` to `B-2`.
+- Cleaned up the recurring `SettingWithCopyWarning` in `finance/transform.py` by:
+  - materializing the grouped slice with `.copy()`
+  - aligning grouped dividend sums by index before assignment
+- Re-ran the DB-backed Equal Weight smoke path and confirmed the warning no longer appears.
+- Documented the Phase 3 connection policy for future factor / fundamental strategies:
+  - loader
+  - snapshot connection helper
+  - strategy
+- Advanced the active runtime-generalization board from `B-2` to `B-3`.
+- Added a dedicated Phase 3 runtime strategy input contract document:
+  - price-only strategies use `{ticker: price_df}` directly
+  - future factor / fundamental strategies are expected to use
+    `price_dfs + snapshot_by_date + rebalance_dates`
+- Advanced the active runtime-generalization board from `B-3` to `C-1`.
+- Opened a dedicated Phase 3 hardening board for `nyse_fundamentals` / `nyse_factors`.
+- Reframed the two tables as:
+  - `nyse_fundamentals`: broad coverage summary layer
+  - `nyse_factors`: broad research derived layer
+- Hardened `finance/data/fundamentals.py` by:
+  - filtering blank summary rows
+  - adding additional base fields for factor use
+  - storing derivation/source metadata for key normalized fields
+  - refreshing symbol/freq history canonically during reingestion
+- Hardened `finance/data/factors.py` by:
+  - storing price attachment metadata
+  - expanding valuation / margin / leverage / growth factor coverage
+  - calculating interest coverage when interest expense exists
+  - refreshing symbol/freq history canonically during recalculation
+- Extended `schema.py` and loader column lists to match the revised fundamentals/factors meaning.
+- Validated the revised pipeline with `AAPL`, `MSFT` annual/quarterly sample runs.
+- Confirmed that legacy blank annual rows are removed under the new canonical refresh path.
+- Deferred the full-universe fundamentals/factors backfill as a later operational task.
+- Returned to the main Phase 3 runtime-generalization board.
+- Added a dedicated Phase 3 repeatable DB-backed smoke-scenario document covering:
+  - minimal DB-backed price strategy
+  - ETF ingestion + DB runtime
+  - direct vs DB portfolio parity
+  - broad loader smoke
+  - fundamentals/factors hardening sample
+- Advanced the main Phase 3 runtime-generalization board from `C-1` to `C-2`.
+- Added a dedicated Phase 3 loader/runtime validation examples document with ready-to-run snippets for:
+  - price loader + adapter
+  - engine DB price path
+  - DB-backed sample strategy
+  - parity check
+  - fundamentals/factors loaders
+  - statement loaders
+  - fundamentals/factors rebuild sample
+- Advanced the main Phase 3 runtime-generalization board from `C-2` to `C-3`.
+- Added a dedicated Phase 3 runtime cleanup backlog document and marked `C-3` complete.
+- Split the Phase 3 runtime backlog into:
+  - resolved during Phase 3
+  - deferred operational work
+  - deferred optimization work
+  - deferred architecture work
+- Advanced the main Phase 3 runtime-generalization board from `C-3` to `D-1`.
+- Added a dedicated Phase 3 UI runtime function candidates document.
+- Chose the Phase 4 first-pass runtime direction as:
+  - strategy-specific DB-backed runtime wrappers
+  - plus a shared backtest result bundle builder
+- Advanced the main Phase 3 runtime-generalization board from `D-1` to `D-2`.
+- Added a dedicated Phase 3 user-facing input-set draft document for the future strategy UI.
+- Fixed the Phase 4 first-pass user input direction as:
+  - strategy selection
+  - universe mode plus tickers or preset
+  - start/end date
+- Chose to keep `timeframe`, warmup, DB/direct mode, and most strategy-specific parameters hidden or advanced by default.
+- Advanced the main Phase 3 runtime-generalization board from `D-2` to `D-3`.
+- Added a dedicated Phase 3 UI result-bundle draft document.
+- Fixed the Phase 4 first-pass output direction as:
+  - `result_df`
+  - `summary_df`
+  - `chart_df`
+  - `meta`
+- Chose to reuse `portfolio_performance_summary(...)` for summary generation and to keep chart data as a thin view over `result_df`.
+- Marked `D-3` complete and moved the runtime-generalization chapter to completion review state.
+- Updated the following Codex finance skills to reflect the project's Phase 3 operating patterns:
+  - `finance-strategy-implementation`
+  - `finance-doc-sync`
+  - `finance-factor-pipeline`
+  - `finance-db-pipeline`
+- Added guidance for:
+  - direct-fetch vs DB-backed runtime role separation
+  - DB-backed warmup/parity checks
+  - phase-board and finance doc index synchronization
+  - curated `nyse_fundamentals` / broad `nyse_factors` table roles
+  - canonical refresh and shared stock+ETF price-table rules
+- Opened Phase 4 and added:
+  - `.note/finance/phase4/PHASE4_UI_AND_BACKTEST_PLAN.md`
+  - `.note/finance/phase4/PHASE4_CURRENT_CHAPTER_TODO.md`
+- Updated the roadmap to mark Phase 4 as active.
+- Fixed the Phase 4 collaboration rule explicitly:
+  - non-obvious UI/runtime/product choices must be explained as options
+  - implementation proceeds only after the user selects a direction
+- Started the first Phase 4 task as `A-1 UI 구조 선택지 정리`.
+- Revised the Phase 4 UI structure decision after clarifying the desired product shape.
+- Finalized the Phase 4 first UI structure as:
+  - one main app
+  - ingestion tab + backtest tab
+  - internal code split by tab/concern
+- Dropped the separate `app/web/backtest_app.py` direction to avoid a stale unused entrypoint.
+- Kept the Phase 4 first chapter moving at `B-1` with the updated structure assumption.
+- Implemented the first unified-app tab shell in `app/web/streamlit_app.py`.
+- Added `app/web/pages/backtest.py` as the first tab-specific page module.
+- Kept the ingestion console path working inside the `Ingestion` tab and opened the `Backtest` tab as a Phase 4 placeholder.
+- Added `app/web/runtime/backtest.py` as the first Phase 4 public runtime boundary module.
+- Implemented `run_equal_weight_backtest_from_db(...)` and `build_backtest_result_bundle(...)` for the first DB-backed backtest UI path.
+- Verified with `.venv` that the first wrapper returns the agreed bundle shape:
+  - `strategy_name`
+  - `result_df`
+  - `summary_df`
+  - `chart_df`
+  - `meta`
+- Implemented the first `Equal Weight` execution form in `app/web/pages/backtest.py`.
+- Added:
+  - preset/manual universe input
+  - start/end date inputs
+  - advanced input expander
+  - runtime payload preview on submit
+- Connected the first Backtest form to `run_equal_weight_backtest_from_db(...)`.
+- Added first-pass result visibility in the Backtest tab:
+  - execution success/error state
+  - summary table
+  - Total Balance line chart
+  - execution meta
+  - result preview table
+- Polished the first result layout into a more product-like structure:
+  - KPI metric row
+  - `Summary / Equity Curve / Result Table / Meta` tabs
+  - clearer separation between summary, raw result, and execution context
+- Hardened first-pass backtest error handling.
+- Added runtime/UI separation for:
+  - input validation errors
+  - DB data availability errors
+  - generic execution errors
+- Added explicit missing-data guidance for DB-backed failures.

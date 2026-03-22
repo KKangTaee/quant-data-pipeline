@@ -26,14 +26,14 @@ runtime 일반화와 Phase 4 handoff 준비 관점에서 관리하기 위한 작
 
 ### A. Runtime Path Generalization
 상태:
-- `in_progress`
+- `completed`
 
 세부 작업:
 - `[completed]` engine 기준 DB-backed runtime entrypoint 정리
   - sample helper가 아니라 engine 쪽 공개 진입점 기준으로 실행 경로를 표준화
 - `[completed]` loader -> strategy input adapter 재사용성 점검
   - price loader 출력이 여러 price-only 전략에서 공통으로 재사용 가능한지 검토
-- `[pending]` legacy direct-fetch path와 DB-backed path 역할 분리
+- `[completed]` legacy direct-fetch path와 DB-backed path 역할 분리
   - 기존 외부 직접조회 예시와 DB 기반 경로의 책임을 문서/코드에서 더 명확히 분리
 
 완료 기준:
@@ -43,14 +43,14 @@ runtime 일반화와 Phase 4 handoff 준비 관점에서 관리하기 위한 작
 
 ### B. Strategy Runtime Alignment
 상태:
-- `pending`
+- `completed`
 
 세부 작업:
-- `[pending]` price-only 전략 공통 실행 패턴 정리
+- `[completed]` price-only 전략 공통 실행 패턴 정리
   - Equal Weight 외 다른 price-only 전략도 같은 loader/runtime 계약을 탈 수 있게 정리
-- `[pending]` future factor/fundamental 전략 연결 포인트 정리
+- `[completed]` future factor/fundamental 전략 연결 포인트 정리
   - factors / fundamentals loader가 전략 runtime에 어떻게 연결될지 경계 정리
-- `[pending]` strategy input contract 문서 보강
+- `[completed]` strategy input contract 문서 보강
   - runtime이 기대하는 입력 형태를 다음 단계에서 바로 쓸 수 있게 명시
 
 완료 기준:
@@ -60,14 +60,14 @@ runtime 일반화와 Phase 4 handoff 준비 관점에서 관리하기 위한 작
 
 ### C. Validation Harness
 상태:
-- `pending`
+- `completed`
 
 세부 작업:
-- `[pending]` repeatable DB-backed smoke scenario 정리
+- `[completed]` repeatable DB-backed smoke scenario 정리
   - 최소 검증에 사용할 심볼 세트 / 기간 / 기대 확인 포인트를 고정
-- `[pending]` loader/runtime 검증 예시 정리
+- `[completed]` loader/runtime 검증 예시 정리
   - 이후 UI 연결 전에도 빠르게 재검증 가능한 예시 경로 문서화
-- `[pending]` 후속 warning/cleanup backlog 분리
+- `[completed]` 후속 warning/cleanup backlog 분리
   - 예: `transform.py` warning, deeper yfinance optimization 등을 별도 후속 항목으로 분리
 
 완료 기준:
@@ -77,14 +77,14 @@ runtime 일반화와 Phase 4 handoff 준비 관점에서 관리하기 위한 작
 
 ### D. Phase 4 Handoff Preparation
 상태:
-- `pending`
+- `completed`
 
 세부 작업:
-- `[pending]` UI 호출용 최소 runtime function 후보 정의
+- `[completed]` UI 호출용 최소 runtime function 후보 정의
   - 웹 UI에서 바로 호출 가능한 최소 backtest 실행 함수 후보 정리
-- `[pending]` user-facing input set 초안 정리
+- `[completed]` user-facing input set 초안 정리
   - tickers / universe / period / rebalance / strategy selection 중 최소 입력 집합 정리
-- `[pending]` 결과 반환 형태 초안 정리
+- `[completed]` 결과 반환 형태 초안 정리
   - UI가 기대할 결과 DataFrame / 요약 지표 / 차트 입력 구조 초안 정리
 
 완료 기준:
@@ -95,19 +95,28 @@ runtime 일반화와 Phase 4 handoff 준비 관점에서 관리하기 위한 작
 ## 현재 작업 중 항목
 
 현재 `in_progress`:
-- `A. Runtime Path Generalization`
+- `없음`
 
 바로 다음 체크 대상:
-- `A-3 legacy direct-fetch path와 DB-backed path 역할 분리`
+- `Phase 3 runtime generalization chapter completion review`
 
 ---
 
 ## 현재 진척도
 
 - Phase 3 runtime generalization chapter:
-  - 약 `30%`
+  - 약 `100%`
 
 판단 근거:
 - engine 기준 DB-backed runtime entrypoint refinement는 시작되었고
-- DB-backed sample warmup 정렬 문제와 sample parity 검증이 해결되었지만
-- runtime 공통 경로, validation harness, UI handoff 준비는 아직 남아 있다
+- DB-backed sample warmup 정렬 문제와 sample parity 검증이 해결되었고
+- direct-fetch path vs DB-backed path 역할 분리도 정리되었지만
+- price-only 전략 공통 runtime 시작 패턴도 정리되었지만
+- factor/fundamental 전략 연결 포인트도 정리되었지만
+- strategy input contract도 정리되었지만
+- repeatable smoke scenarios도 정리되었지만
+- loader/runtime 예시 정리도 끝났고
+- cleanup backlog 분리도 끝났지만
+- UI runtime function 후보도 정리됐지만
+- user-facing input set도 정리됐지만
+- result bundle/output contract도 정리되었다
