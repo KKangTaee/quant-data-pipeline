@@ -57,14 +57,14 @@
 
 ### C. Implementation Entry Set
 상태:
-- `pending`
+- `completed`
 
 세부 작업:
-- `[pending]` 첫 구현 loader 순서 확정
+- `[completed]` 첫 구현 loader 순서 확정
   - universe / price / fundamentals / factors / statements 중 어떤 순서로 구현할지 정리
-- `[pending]` first DB-backed strategy 후보 결정
+- `[completed]` first DB-backed strategy 후보 결정
   - 가장 먼저 loader와 연결해 볼 전략 1개 후보 선택
-- `[pending]` 최소 검증 경로 정의
+- `[completed]` 최소 검증 경로 정의
   - 어떤 입력과 어떤 결과로 성공 여부를 판별할지 정의
 
 완료 기준:
@@ -88,15 +88,15 @@
 - `없음`
 
 바로 다음 체크 대상:
-- `C-1 첫 구현 loader 순서 확정`
+- `Phase 3 첫 코드 구현 시작`
 
 ---
 
 ## 현재 진척도
 
 - Phase 3 현재 챕터:
-  - 약 `55%`
+  - 약 `65%`
 
 판단 근거:
 - Phase 3는 개시되었고
-- strict / broad policy와 loader scope finalization이 정리된 상태
+- strict / broad policy, loader scope, implementation entry set이 정리된 상태

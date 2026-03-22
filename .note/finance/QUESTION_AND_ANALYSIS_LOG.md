@@ -1109,3 +1109,129 @@ Do not copy full chat transcripts. Keep only the durable result.
   - `finance/loaders/_common.py`
   - `.note/finance/phase3/PHASE3_CURRENT_CHAPTER_TODO.md`
   - `.note/finance/FINANCE_DOC_INDEX.md`
+
+### 2026-03-22 - Fix the first implementation entry set for Phase 3
+- Request topic:
+  - continue Phase 3 by deciding the first implementation order, first DB-backed strategy candidate, and minimal validation path
+- Interpreted goal:
+  - remove the last major uncertainty before actual loader coding starts
+- Result:
+  - fixed the first implementation order as:
+    - `load_universe(...)`
+    - `load_price_history(...)`
+    - `load_price_matrix(...)`
+    - runtime adapter
+  - fixed the first DB-backed strategy candidate as `EqualWeightStrategy`
+  - fixed the minimal validation path as:
+    - DB price loader
+    - adapter
+    - `EqualWeightStrategy`
+    - result DataFrame checks
+- Durable output:
+  - `.note/finance/phase3/PHASE3_FIRST_LOADER_IMPLEMENTATION_ORDER.md`
+  - `.note/finance/phase3/PHASE3_FIRST_DB_BACKED_STRATEGY_CANDIDATE.md`
+  - `.note/finance/phase3/PHASE3_MINIMAL_VALIDATION_PATH.md`
+  - `.note/finance/phase3/PHASE3_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/FINANCE_DOC_INDEX.md`
+
+### 2026-03-22 - Start the first concrete loader implementation for Phase 3
+- Request topic:
+  - continue Phase 3 into actual code after the policy and entry-set documents were fixed
+- Interpreted goal:
+  - turn the first agreed loader set into a real package entry path that later runtime code can call
+- Result:
+  - opened a dedicated loader implementation TODO board
+  - implemented:
+    - `finance/loaders/universe.py`
+    - `finance/loaders/price.py`
+  - re-exported the first public loader functions from `finance/loaders/__init__.py`
+- Durable output:
+  - `.note/finance/phase3/PHASE3_LOADER_IMPLEMENTATION_TODO.md`
+  - `finance/loaders/universe.py`
+  - `finance/loaders/price.py`
+  - `finance/loaders/__init__.py`
+
+### 2026-03-22 - Add the first runtime adapter for Phase 3
+- Request topic:
+  - continue Phase 3 by connecting loader output to the existing strategy input shape
+- Interpreted goal:
+  - make the first DB-backed strategy validation path executable without rewriting the current strategy layer
+- Result:
+  - added a runtime adapter that converts long-form price history into the existing ticker-keyed OHLCV dict shape
+  - added a convenience helper that loads and adapts DB price history in one step
+  - updated the validation example to use symbols currently confirmed in the local DB
+- Durable output:
+  - `finance/loaders/runtime_adapter.py`
+  - `.note/finance/phase3/PHASE3_RUNTIME_ADAPTER_PATH.md`
+  - `.note/finance/phase3/PHASE3_MINIMAL_VALIDATION_PATH.md`
+  - `.note/finance/phase3/PHASE3_LOADER_IMPLEMENTATION_TODO.md`
+
+### 2026-03-22 - Validate the first DB-backed strategy runtime path
+- Request topic:
+  - continue Phase 3 by running the first end-to-end DB-backed strategy check
+- Interpreted goal:
+  - verify that the new loader path is not just importable, but actually usable by an existing strategy
+- Result:
+  - validated `DB price loader -> runtime adapter -> EqualWeightStrategy` successfully
+  - used local DB-backed symbols with confirmed coverage:
+    - `AAPL`
+    - `MSFT`
+    - `GOOG`
+  - confirmed 252 daily rows per symbol, 252 strategy result rows, and a final balance of `12998.14`
+- Durable output:
+  - `.note/finance/phase3/PHASE3_FIRST_DB_BACKED_RUNTIME_VALIDATION.md`
+  - `.note/finance/phase3/PHASE3_LOADER_IMPLEMENTATION_TODO.md`
+
+### 2026-03-22 - Add DB-backed sample entrypoints without changing the old strategy samples
+- Request topic:
+  - keep the existing sample functions intact and add separate `*_from_db` functions for DB-backed testing
+- Interpreted goal:
+  - preserve the old external-source strategy tests while giving the user explicit DB-based entrypoints for Phase 3 validation
+- Result:
+  - added `BacktestEngine.load_ohlcv_from_db(...)`
+  - added separate DB-backed sample functions in `finance/sample.py`
+  - kept the old `get_*` functions unchanged
+- Durable output:
+  - `finance/engine.py`
+  - `finance/sample.py`
+  - `.note/finance/phase3/PHASE3_DB_SAMPLE_ENTRYPOINTS.md`
+
+### 2026-03-22 - Verify missing ETF OHLCV rows for DB-backed sample testing
+- Request topic:
+  - confirm whether `VIG`, `SCHD`, `DGRO`, `GLD` actually exist in MySQL price history after the DB-backed equal-weight sample raised a missing-data error
+- Interpreted goal:
+  - distinguish between a loader bug and a genuine data-availability problem
+- Result:
+  - confirmed that `finance_price.nyse_price_history` currently has no rows for:
+    - `VIG`
+    - `SCHD`
+    - `DGRO`
+    - `GLD`
+  - confirmed that the same symbols do exist in `finance_meta.nyse_etf`
+  - confirmed that ETF OHLCV is not stored in a separate ETF-specific price table; both stock and ETF OHLCV go into the same `finance_price.nyse_price_history` table
+  - likely cause: the earlier collection path did not actually ingest those ETF symbols into price history
+
+### 2026-03-22 - Harden OHLCV ingestion for shared stock and ETF price collection
+- Request topic:
+  - update OHLCV DB collection so stock and ETF can both be collected smoothly, reduce all-symbol collection latency, and make Daily Market Update behave correctly
+- Interpreted goal:
+  - keep a single shared price ledger for mixed-asset backtesting while fixing both ingestion performance and Daily Market Update correctness
+- Result:
+  - decided to keep stock and ETF OHLCV in the same `finance_price.nyse_price_history` table
+  - improved the low-level OHLCV writer by adding:
+    - true `start/end` support
+    - parallel batch fetches
+    - retry/backoff
+    - missing-symbol / symbols-with-data stats
+  - fixed the Manual preset/custom symbol UX in the Streamlit app
+  - changed Daily Market Update defaults toward a stock + ETF broad market refresh
+  - validated ETF ingestion for `VIG`, `SCHD`, `DGRO`, `GLD`
+  - validated DB-backed ETF equal-weight sample execution
+- Durable output:
+  - `.note/finance/phase3/PHASE3_OHLCV_INGESTION_HARDENING_TODO.md`
+  - `.note/finance/phase3/PHASE3_OHLCV_STORAGE_DECISION.md`
+  - `.note/finance/phase3/PHASE3_OHLCV_INGESTION_VALIDATION.md`
+  - `finance/data/data.py`
+  - `app/jobs/ingestion_jobs.py`
+  - `app/web/streamlit_app.py`
+  - `.note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md`

@@ -310,3 +310,66 @@ Keep entries append-only and concise.
   - freq/timeframe normalization
   - snapshot input validation
 - Closed `A. Loader Scope Finalization` on the Phase 3 board.
+- Closed `C. Implementation Entry Set` on the Phase 3 board by fixing:
+  - the first implementation order
+  - the first DB-backed strategy candidate
+  - the minimal validation path
+- Fixed the first DB-backed strategy candidate as `EqualWeightStrategy`.
+- Fixed the first validation path as:
+  - `load_universe(...)`
+  - `load_price_history(...)`
+  - runtime adapter
+  - `EqualWeightStrategy`
+- Opened a dedicated Phase 3 loader implementation chapter board.
+- Implemented the first concrete loader modules:
+  - `finance/loaders/universe.py`
+  - `finance/loaders/price.py`
+- Exported the first public loader functions from `finance/loaders/__init__.py`:
+  - `load_universe(...)`
+  - `load_price_history(...)`
+  - `load_price_matrix(...)`
+- Verified loader smoke checks with the project virtualenv:
+  - `load_universe(symbols=['spy','tlt','spy']) -> ['SPY', 'TLT']`
+  - `load_price_history` / `load_price_matrix` import successfully from `finance.loaders`
+- Added the first runtime adapter module:
+  - `finance/loaders/runtime_adapter.py`
+- Exported runtime adapter helpers:
+  - `adapt_price_history_to_strategy_dfs(...)`
+  - `load_price_strategy_dfs(...)`
+- Updated the minimal validation path to use currently populated DB symbols:
+  - `AAPL`, `MSFT`, `GOOG`
+- Verified the first DB-backed runtime path end-to-end in the project virtualenv:
+  - `load_price_strategy_dfs(symbols=['AAPL','MSFT','GOOG'], start='2024-01-01', end='2024-12-31')`
+  - `EqualWeightStrategy(start_balance=10000, rebalance_interval=21)`
+  - 252 rows per symbol
+  - 252 result rows
+  - final `Total Balance = 12998.14`
+- Added `BacktestEngine.load_ohlcv_from_db(...)` so the existing engine chain can load DB-backed OHLCV.
+- Added DB-backed strategy sample entrypoints in `finance/sample.py`:
+  - `get_equal_weight_from_db(...)`
+  - `get_gtaa3_from_db(...)`
+  - `get_risk_parity_trend_from_db(...)`
+  - `get_dual_momentum_from_db(...)`
+  - `portfolio_sample_from_db(...)`
+- Verified `get_equal_weight_from_db(...)` in the project virtualenv with:
+  - `tickers=['AAPL','MSFT','GOOG']`
+  - `start='2024-01-01'`
+  - `end='2024-12-31'`
+  - `interval=21`
+- Result:
+  - 12 monthly rows after `month_end` filtering
+  - final `Total Balance = 12602.0`
+- Observed an existing `SettingWithCopyWarning` in `finance/transform.py:121`, but the DB-backed sample path completed successfully.
+- Completed OHLCV ingestion hardening for stock + ETF support.
+- Kept `finance_price.nyse_price_history` as the single shared price fact table for both stock and ETF assets.
+- Improved OHLCV ingestion by:
+  - adding real `end` support to yfinance fetches
+  - parallelizing batch fetches
+  - adding retry/backoff and better missing-symbol stats
+- Updated Daily Market Update defaults and manual symbol handling so ETF-heavy refresh paths are easier to execute correctly.
+- Verified ETF ingestion with:
+  - `VIG`, `SCHD`, `DGRO`, `GLD`
+  - 251 daily rows per ETF after a 1-year refresh
+- Re-verified DB-backed strategy execution with the ETF set:
+  - `get_equal_weight_from_db(tickers=['VIG','SCHD','DGRO','GLD'], start='2025-01-01', end='2026-03-22', interval=1)`
+  - final `Total Balance = 11815.2`

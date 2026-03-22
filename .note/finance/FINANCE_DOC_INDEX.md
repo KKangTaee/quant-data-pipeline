@@ -61,6 +61,26 @@
   - Phase 3 loader 패키지 경로와 모듈 경계
 - `.note/finance/phase3/PHASE3_LOADER_HELPER_SCOPE.md`
   - Phase 3 `_common.py` helper 범위 정의
+- `.note/finance/phase3/PHASE3_FIRST_LOADER_IMPLEMENTATION_ORDER.md`
+  - Phase 3 첫 loader 구현 순서
+- `.note/finance/phase3/PHASE3_FIRST_DB_BACKED_STRATEGY_CANDIDATE.md`
+  - Phase 3 첫 DB-backed 전략 후보
+- `.note/finance/phase3/PHASE3_MINIMAL_VALIDATION_PATH.md`
+  - Phase 3 첫 최소 검증 경로
+- `.note/finance/phase3/PHASE3_LOADER_IMPLEMENTATION_TODO.md`
+  - Phase 3 실제 loader 코드 구현 챕터 보드
+- `.note/finance/phase3/PHASE3_RUNTIME_ADAPTER_PATH.md`
+  - Phase 3 첫 runtime adapter 연결 방식
+- `.note/finance/phase3/PHASE3_FIRST_DB_BACKED_RUNTIME_VALIDATION.md`
+  - Phase 3 첫 DB-backed 전략 실행 검증 결과
+- `.note/finance/phase3/PHASE3_DB_SAMPLE_ENTRYPOINTS.md`
+  - Phase 3 DB 기반 전략 샘플 함수 정리
+- `.note/finance/phase3/PHASE3_OHLCV_INGESTION_HARDENING_TODO.md`
+  - stock + ETF 공통 OHLCV 수집 hardening 작업 보드
+- `.note/finance/phase3/PHASE3_OHLCV_STORAGE_DECISION.md`
+  - stock + ETF OHLCV 단일 price table 유지 결정
+- `.note/finance/phase3/PHASE3_OHLCV_INGESTION_VALIDATION.md`
+  - OHLCV hardening 후 실제 적재/전략 검증 결과
 
 ---
 
@@ -125,3 +145,6 @@ Phase 3 시작 시:
 7. `PHASE3_INITIAL_LOADER_IMPLEMENTATION_SET.md`
 8. `PHASE3_LOADER_MODULE_PATH.md`
 9. `PHASE3_LOADER_HELPER_SCOPE.md`
+10. `PHASE3_FIRST_LOADER_IMPLEMENTATION_ORDER.md`
+11. `PHASE3_FIRST_DB_BACKED_STRATEGY_CANDIDATE.md`
+12. `PHASE3_MINIMAL_VALIDATION_PATH.md`
