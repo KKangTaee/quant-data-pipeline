@@ -167,3 +167,119 @@ Keep entries append-only and concise.
 - Completed TODO item C-1 by extracting the current hardcoded-constant inventory into a dedicated config externalization note.
 
 - Completed TODO item C-2 by classifying externalization targets into immediate, next, later, and not-recommended groups inside the config inventory note.
+
+- Completed TODO item C-3 by fixing the future runtime config path to `config/finance_web_app.toml`.
+
+- Completed TODO item C-4 by drafting the first `config/finance_web_app.toml` structure, sections, and staged implementation order in the config externalization inventory note.
+
+- Completed TODO item D-2 by defining the first backtest-loader function draft, covering universe, price, fundamentals, factors, and detailed financial statement loaders.
+
+- Completed TODO item D-3 by documenting a shared input contract for universe, price, fundamentals, factor, and detailed-statement loaders, including precedence rules for `symbols` vs `universe_source`, date-range handling, `freq` vs `timeframe`, and snapshot-style `as_of_date` usage.
+
+- Completed TODO item D-4 by separating point-in-time guidance into a dedicated loader-design note, covering look-ahead bias risks, `period_end` vs availability timing, staged fallback rules, and table-specific handling for fundamentals, factors, and detailed financial statements.
+
+### 2026-03-18
+- Started detailed financial statement ingestion review focused on point-in-time availability fields and the actual EDGAR payload shape behind `nyse_financial_statement_labels` / `nyse_financial_statement_values`.
+- Verified by direct EDGAR API inspection on representative symbols (`AAPL`, `MSFT`, `JPM`, `XOM`, `O`) that raw fact objects include:
+  - actual `period_end`
+  - `filing_date`
+  - `form_type`
+  - `accession`
+  - filing-level `acceptance_datetime` via the filings endpoint
+- Identified the main design gap in the old implementation:
+  - `Company(...).income_statement(..., as_dataframe=True)` drops filing metadata
+  - inferred `FY 2025 -> 2025-12-31` style parsing is wrong for non-calendar fiscal year issuers
+  - the old `uk_fin(symbol, freq, period_end, statement_type, label)` key can collapse different filings for the same accounting period
+- Reworked detailed financial statement ingestion to use raw EDGAR facts plus filing metadata instead of only the wide statement DataFrame.
+- Added `finance_fundamental.nyse_financial_statement_filings` as a human-inspectable filing ledger keyed by `(symbol, accession_no)`.
+- Expanded `nyse_financial_statement_values` to store:
+  - `period_start`
+  - actual `period_end`
+  - `source_period_type`
+  - `fiscal_period`
+  - `concept`
+  - `taxonomy`
+  - `unit`
+  - `available_at`
+  - `report_date`
+  - `form_type`
+  - `accession_no`
+  - audit/restatement/quality metadata
+- Expanded `nyse_financial_statement_labels` to store latest concept and filing metadata for easier operator review.
+- Added schema/index migration logic so existing environments can move from the old value-row uniqueness to filing-aware uniqueness.
+- Added reusable inspection/sample helpers for detailed financial statement source review and updated the Streamlit write-target captions to include the new filings table.
+- Verified locally that the new raw-fact path produces:
+  - correct non-calendar `period_end` values for issuers like `AAPL` and `MSFT`
+  - populated `accepted_at` / `available_at`
+  - filing-aware `accession_no`
+  - bounded latest-period filtering via the existing `periods` parameter
+- Ran live MySQL verification on `finance_fundamental` with:
+  - `AAPL`, `MSFT` annual 2 periods
+  - `AAPL` quarterly 3 periods
+- Confirmed in MySQL that:
+  - `nyse_financial_statement_filings` was created and populated
+  - existing labels/values tables received the new point-in-time columns
+  - AAPL annual rows store `period_end=2025-09-27`, filing `2025-10-31`, acceptance `2025-10-31 06:01:26`
+  - MSFT annual rows store `period_end=2025-06-30`, filing `2025-07-30`, acceptance `2025-07-30 20:11:40`
+- Confirmed a known raw-provider behavior during quarterly verification:
+  - comparative rows inside a 10-Q can carry the filing's `fiscal_period` context even when the row `period_end` is an earlier quarter
+  - downstream loaders should treat `period_end` and `accession_no` as the primary row identity, not `fiscal_period` alone
+- Reviewed the new detailed-statement point-in-time design and recorded the next patch priorities:
+  - conservative `available_at` fallback
+  - non-null/stable raw value identity for unique keys
+  - summary-only positioning for the labels table unless concept-level identity is introduced
+- Added a dedicated review-and-patch-plan note for the new detailed-statement point-in-time schema.
+- Created the next PHASE2 chapter TODO board for point-in-time hardening work.
+- Completed the first hardening patch by changing `_available_at_from_dates(...)` to use a conservative end-of-day fallback when only `filing_date` is available.
+- Verified locally with the project virtualenv that:
+  - `filing_date`-only rows now fall back to `23:59:59`
+  - rows with `accepted_at` still preserve the accepted timestamp
+- Audited the current `nyse_financial_statement_values` table for raw-identity readiness and found it is still in a mixed state:
+  - 303,054 total rows
+  - 302,712 rows missing `accession_no`
+  - 302,712 rows missing `unit`
+  - only 342 rows currently carry accession-based raw identity, across 2 symbols
+- Recorded the resulting policy decision:
+  - new raw-path rows should move toward strict accession-based identity
+  - legacy rows should not be assumed strict-PIT-ready until backfilled or rebuilt
+- Verified on representative raw EDGAR sources (`AAPL`, `MSFT`, `JPM`) that statement facts currently carry both `accession` and `unit` consistently.
+- Added an ingestion-side identity guard so the new PIT raw path skips value rows that do not have both `accession_no` and `unit`.
+- Re-ran quarterly detailed-statement ingestion for `AAPL` and verified that accession-bearing raw rows remain stable:
+  - 139 accession-based quarterly rows before rerun
+  - 139 accession-based quarterly rows after rerun
+  - 0 duplicate groups under `(symbol, freq, accession_no, statement_type, concept, period_end, unit)`
+- Added a dedicated strategy note for how to move from the current mixed-state table toward stricter PIT behavior:
+  - keep ingestion guards
+  - use accession-bearing rows for strict loaders
+  - backfill research-first universes first
+  - defer DB-level strict constraints until coverage improves
+- Updated the loader design notes to explicitly position `nyse_financial_statement_labels` as a summary layer and keep future strict PIT statement loaders values-centered.
+- Added a strict PIT loader query draft covering:
+  - accession-bearing row filters
+  - `available_at <= as_of_date` snapshot rules
+  - latest-available ordering by `available_at`, `period_end`, and `accession_no`
+- Decided that the early-stage `nyse_financial_statement_labels` / `nyse_financial_statement_values` design was worth cleaning up immediately rather than preserving legacy compromises.
+- Tightened `nyse_financial_statement_values` into a stricter raw ledger:
+  - `concept`, `unit`, `available_at`, and `accession_no` are now required in the schema
+  - ingestion skips rows that cannot satisfy that identity
+- Re-centered `nyse_financial_statement_labels` around concept identity by changing it to a `(symbol, statement_type, concept, as_of)` summary key.
+- Dropped and recreated the local `nyse_financial_statement_labels` / `nyse_financial_statement_values` tables, then reingested `AAPL` and `MSFT` annual sample rows successfully.
+- Added a top-level phase-management structure for future finance work:
+  - a master roadmap document
+  - a finance document index
+  - updated project instructions in `AGENTS.md` to prefer phase-based execution and documentation
+- Reorganized `.note/finance/` so phase-specific documents now live under:
+  - `phase1/`
+  - `phase2/`
+  - `phase3/`
+  while cross-phase documents remain at the `.note/finance/` root.
+- Closed Phase 2 with a dedicated completion summary document.
+- Opened Phase 3 with:
+  - a loader/runtime plan document
+  - a first chapter TODO board
+- Updated the master roadmap and finance document index so the project now reflects:
+  - Phase 2 completed
+  - Phase 3 in progress
+- Completed the first Phase 3 task by fixing the loader naming policy:
+  - base names for broad research loaders
+  - `*_snapshot_strict` for strict PIT snapshot loaders

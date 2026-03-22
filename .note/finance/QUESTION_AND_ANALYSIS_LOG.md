@@ -94,7 +94,7 @@ Do not copy full chat transcripts. Keep only the durable result.
     - wrapper jobs
     - OHLCV / fundamentals / factors first
 - Durable output:
-  - `.note/finance/INTERNAL_WEB_APP_DEVELOPMENT_GUIDE.md`
+  - `.note/finance/phase1/INTERNAL_WEB_APP_DEVELOPMENT_GUIDE.md`
 
 ### 2026-03-11 - Phase 1 web app scope definition
 - Request topic:
@@ -110,7 +110,7 @@ Do not copy full chat transcripts. Keep only the durable result.
     - run result visibility
   - explicitly excluded backtest UI, automation, complex frontend, and multi-user features
 - Durable output:
-  - `.note/finance/PHASE1_WEB_APP_SCOPE.md`
+  - `.note/finance/phase1/PHASE1_WEB_APP_SCOPE.md`
 
 ### 2026-03-11 - Phase 1 job wrapper interface planning
 - Request topic:
@@ -125,7 +125,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - defined a common result payload for UI integration
   - recommended a thin wrapper layer rather than rewriting ingestion logic
 - Durable output:
-  - `.note/finance/PHASE1_JOB_WRAPPER_INTERFACE.md`
+  - `.note/finance/phase1/PHASE1_JOB_WRAPPER_INTERFACE.md`
 
 ### 2026-03-11 - Phase 1 job wrapper implementation
 - Request topic:
@@ -372,6 +372,34 @@ Do not copy full chat transcripts. Keep only the durable result.
   - `app/jobs/run_history.py`
   - `app/web/streamlit_app.py`
 
+### 2026-03-18 - Backtest loader input contract
+- Request topic:
+  - define the common input contract that future backtest loaders should follow
+- Interpreted goal:
+  - prevent loader implementations from diverging on symbol resolution, date filtering, and frequency semantics before code is written
+- Result:
+  - defined precedence rules for `symbols` and `universe_source`
+  - separated `timeframe` for price loaders from `freq` for fundamentals / factors / statements
+  - standardized `start/end` range filtering and `as_of_date` snapshot usage
+  - recorded that detailed financial statement loaders are core ledger loaders, not optional side loaders
+- Durable output:
+  - `.note/finance/phase2/BACKTEST_LOADER_INPUT_CONTRACT.md`
+
+### 2026-03-18 - Backtest point-in-time guidelines
+- Request topic:
+  - separate point-in-time cautions into an explicit loader-design note before backtest implementation starts
+- Interpreted goal:
+  - prevent future backtest and loader work from silently using `period_end` as if it were the real market-available date
+- Result:
+  - documented the difference between `period_end` and real information availability
+  - defined staged implementation guidance:
+    - temporary `period_end <= as_of_date` snapshots
+    - conservative lag fallback
+    - later strict filing-date-based point-in-time
+  - recorded table-specific cautions for fundamentals, factors, and detailed financial statement loaders
+- Durable output:
+  - `.note/finance/phase2/BACKTEST_POINT_IN_TIME_GUIDELINES.md`
+
 ### 2026-03-11 - Single-job lock and running banner for admin UI
 - Request topic:
   - prevent other buttons from running while one ingestion job is already in progress and show a visible running banner
@@ -457,7 +485,7 @@ Do not copy full chat transcripts. Keep only the durable result.
     - strategy execution UI
   - recommended starting with daily/weekly/monthly pipeline separation before moving to backtest UI
 - Durable output:
-  - `.note/finance/PHASE2_WEB_APP_AND_BACKTEST_PLAN.md`
+  - `.note/finance/phase2/PHASE2_WEB_APP_AND_BACKTEST_PLAN.md`
 
 ### 2026-03-11 - Why detailed financial statement tables must remain first-class
 - Request topic:
@@ -474,7 +502,7 @@ Do not copy full chat transcripts. Keep only the durable result.
     - longer-horizon backtest support
   - concluded that the detailed statement tables should be treated as a first-class raw ledger, not as an optional side dataset
 - Durable output:
-  - `.note/finance/PHASE2_WEB_APP_AND_BACKTEST_PLAN.md`
+  - `.note/finance/phase2/PHASE2_WEB_APP_AND_BACKTEST_PLAN.md`
 
 ### 2026-03-12 - Phase 2 start: operational pipeline separation
 - Request topic:
@@ -525,7 +553,7 @@ Do not copy full chat transcripts. Keep only the durable result.
 - Result:
   - created a dedicated current-chapter TODO note with status, remaining work, and recommended next actions
 - Durable output:
-  - `.note/finance/PHASE2_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/phase2/PHASE2_CURRENT_CHAPTER_TODO.md`
 
 ### 2026-03-17 - Convert the current PHASE2 TODO into a larger execution board
 - Request topic:
@@ -537,7 +565,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - organized it by major workstreams with `pending / in_progress / completed` item states
   - fixed the immediate next target as `B-6 pipeline_type` under execution-history hardening
 - Durable output:
-  - `.note/finance/PHASE2_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/phase2/PHASE2_CURRENT_CHAPTER_TODO.md`
 
 ### 2026-03-17 - Add explanations to each current PHASE2 checklist item
 - Request topic:
@@ -547,7 +575,7 @@ Do not copy full chat transcripts. Keep only the durable result.
 - Result:
   - added short explanations under each detailed checklist item in the current PHASE2 board
 - Durable output:
-  - `.note/finance/PHASE2_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/phase2/PHASE2_CURRENT_CHAPTER_TODO.md`
 
 ### 2026-03-17 - Complete TODO item B-6 pipeline_type storage
 - Request topic:
@@ -560,7 +588,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - updated the current TODO board so B-6 is completed and B-7 is the next target
 - Durable output:
   - `app/web/streamlit_app.py`
-  - `.note/finance/PHASE2_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/phase2/PHASE2_CURRENT_CHAPTER_TODO.md`
 
 ### 2026-03-17 - Complete TODO item B-7 execution_mode storage
 - Request topic:
@@ -574,7 +602,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - updated the current TODO board so B-7 is completed and B-8 is the next target
 - Durable output:
   - `app/web/streamlit_app.py`
-  - `.note/finance/PHASE2_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/phase2/PHASE2_CURRENT_CHAPTER_TODO.md`
 
 ### 2026-03-17 - Complete TODO item B-8 execution_context storage
 - Request topic:
@@ -588,7 +616,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - updated the current TODO board so B-8 is completed and B-9 is the next target
 - Durable output:
   - `app/web/streamlit_app.py`
-  - `.note/finance/PHASE2_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/phase2/PHASE2_CURRENT_CHAPTER_TODO.md`
 
 ### 2026-03-17 - Complete TODO item B-9 persistent history table reflection
 - Request topic:
@@ -600,7 +628,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - updated the current TODO board so B-9 is completed and the next target is the JSONL schema review step
 - Durable output:
   - `app/web/streamlit_app.py`
-  - `.note/finance/PHASE2_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/phase2/PHASE2_CURRENT_CHAPTER_TODO.md`
 
 ### 2026-03-17 - Complete TODO item B-10 JSONL schema review and normalization
 - Request topic:
@@ -614,7 +642,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - updated the current TODO board so execution-history hardening is now complete
 - Durable output:
   - `app/jobs/run_history.py`
-  - `.note/finance/PHASE2_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/phase2/PHASE2_CURRENT_CHAPTER_TODO.md`
 
 ### 2026-03-17 - Complete TODO item A-7 operational pipeline cadence guidance
 - Request topic:
@@ -630,7 +658,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - updated the current TODO board so A-7 is completed and A-8 is the next target
 - Durable output:
   - `app/web/streamlit_app.py`
-  - `.note/finance/PHASE2_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/phase2/PHASE2_CURRENT_CHAPTER_TODO.md`
 
 ### 2026-03-17 - Complete TODO item A-8 operational symbol-source guidance
 - Request topic:
@@ -642,7 +670,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - updated the current TODO board so A-8 is completed and A-9 is the next target
 - Durable output:
   - `app/web/streamlit_app.py`
-  - `.note/finance/PHASE2_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/phase2/PHASE2_CURRENT_CHAPTER_TODO.md`
 
 ### 2026-03-17 - Complete TODO item A-9 operational vs manual role clarity
 - Request topic:
@@ -656,7 +684,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - updated the current TODO board so A-9 is completed and A-10 is the next target
 - Durable output:
   - `app/web/streamlit_app.py`
-  - `.note/finance/PHASE2_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/phase2/PHASE2_CURRENT_CHAPTER_TODO.md`
 
 ### 2026-03-17 - Complete TODO item A-10 operational default review
 - Request topic:
@@ -671,7 +699,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - marked the entire operational-pipeline cleanup track as complete and moved the current focus to configuration externalization preparation
 - Durable output:
   - `app/web/streamlit_app.py`
-  - `.note/finance/PHASE2_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/phase2/PHASE2_CURRENT_CHAPTER_TODO.md`
 
 ### 2026-03-18 - Complete TODO item C-1 hardcoded constant inventory
 - Request topic:
@@ -689,7 +717,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - updated the current TODO board so C-1 is completed and C-2 is the next target
 - Durable output:
   - `.note/finance/CONFIG_EXTERNALIZATION_INVENTORY.md`
-  - `.note/finance/PHASE2_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/phase2/PHASE2_CURRENT_CHAPTER_TODO.md`
 
 ### 2026-03-18 - Complete TODO item C-2 externalization priority classification
 - Request topic:
@@ -705,4 +733,285 @@ Do not copy full chat transcripts. Keep only the durable result.
   - updated the current TODO board so C-2 is completed and C-3 is the next target
 - Durable output:
   - `.note/finance/CONFIG_EXTERNALIZATION_INVENTORY.md`
-  - `.note/finance/PHASE2_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/phase2/PHASE2_CURRENT_CHAPTER_TODO.md`
+
+### 2026-03-18 - Complete TODO item C-3 config file path decision
+- Request topic:
+  - proceed with the next tracked TODO item under configuration externalization preparation
+- Interpreted goal:
+  - fix a stable path for the first runtime config file before deciding the file format and actual keys
+- Result:
+  - decided to use `config/finance_web_app.toml` as the first runtime config path
+  - recorded why runtime config belongs under a dedicated `config/` directory instead of `.note/finance`
+  - updated the current TODO board so C-3 is completed and C-4 is the next target
+- Durable output:
+  - `.note/finance/CONFIG_EXTERNALIZATION_INVENTORY.md`
+  - `.note/finance/phase2/PHASE2_CURRENT_CHAPTER_TODO.md`
+
+### 2026-03-18 - Complete TODO item C-4 config format draft
+- Request topic:
+  - proceed with the next tracked TODO item after deciding the config file path
+- Interpreted goal:
+  - define the first runtime config structure clearly enough that actual file creation and code wiring can follow without rethinking the format
+- Result:
+  - selected TOML as the config format
+  - drafted the first `config/finance_web_app.toml` section structure and example keys
+  - recorded which sections should be included first and which can be deferred
+  - updated the current TODO board so configuration externalization preparation is complete and the next focus is the backtest-loader planning track
+- Durable output:
+  - `.note/finance/CONFIG_EXTERNALIZATION_INVENTORY.md`
+  - `.note/finance/phase2/PHASE2_CURRENT_CHAPTER_TODO.md`
+
+### 2026-03-18 - Complete TODO item D-2 backtest loader function draft
+- Request topic:
+  - proceed with the next tracked TODO item after configuration externalization preparation completed
+- Interpreted goal:
+  - define the first concrete loader-function surface so the future DB-backed backtest layer has a stable API direction before implementation starts
+- Result:
+  - created a dedicated loader draft note covering:
+    - universe loader
+    - price loader
+    - fundamentals loader
+    - factor loader
+    - detailed financial statement loader
+    - common helper functions
+  - prioritized initial loader implementation order
+  - updated the current TODO board so D-2 is completed and D-3 is the next target
+- Durable output:
+  - `.note/finance/phase2/BACKTEST_LOADER_FUNCTION_DRAFT.md`
+  - `.note/finance/phase2/PHASE2_CURRENT_CHAPTER_TODO.md`
+
+### 2026-03-18 - EDGAR detailed statement payload and point-in-time schema redesign
+- Request topic:
+  - inspect the actual API behind `nyse_financial_statement_labels` / `nyse_financial_statement_values`, confirm whether filing-time metadata exists, and redesign the table structure so public-availability timing can be stored correctly
+- Interpreted goal:
+  - replace assumption-based detailed-statement storage with a source-verified EDGAR ingestion design that preserves real filing timing and is easier for humans to inspect
+- Result:
+  - confirmed by direct EDGAR inspection on representative issuers that raw `FinancialFact` records include:
+    - actual `period_end`
+    - `filing_date`
+    - `form_type`
+    - `accession`
+    - statement/concept/unit metadata
+  - confirmed filing-level `acceptance_datetime` and `report_date` are available through `Company.get_filings(...)`
+  - identified that the old ingestion path lost this metadata because it depended on `as_dataframe=True` statement views
+  - identified a second critical bug:
+    - the old label parser inferred `FY 2025 -> 2025-12-31` and `Q1 2026 -> 2026-03-31`, which is wrong for non-calendar fiscal year issuers
+  - redesigned the ingestion around raw facts plus filing metadata
+  - added `nyse_financial_statement_filings` for human inspection of filing-level availability metadata
+  - expanded `nyse_financial_statement_values` to store `available_at`, `accession_no`, `form_type`, actual `period_end`, concept/unit/taxonomy, and audit/restatement flags
+  - expanded `nyse_financial_statement_labels` to summarize latest concept and filing metadata per label/as-of row
+  - changed value-row uniqueness to filing-aware identity so different filings for the same accounting period are no longer collapsed
+- Important follow-up decisions:
+  - raw detailed-statement storage now prioritizes provider truth over synthetic convenience
+  - quarterly DB storage does not synthesize Q4 at ingestion time; if Q4 is needed later it should be derived in a loader or transformation step with explicit logic
+  - when interpreting detailed-statement rows, `period_end` and `accession_no` should be treated as the primary row identity; provider `fiscal_year` / `fiscal_period` can reflect filing context on comparative facts
+- Durable output:
+  - `finance/data/financial_statements.py`
+  - `finance/data/db/schema.py`
+  - `.note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md`
+
+### 2026-03-18 - Post-change review of detailed-statement point-in-time design
+- Request topic:
+  - review the newly modified point-in-time code from another thread and decide what still needs to be fixed before moving to the next chapter
+- Interpreted goal:
+  - turn the raw code change into an explicit engineering judgment with concrete next patch priorities instead of assuming the redesign is already strict-PIT complete
+- Result:
+  - confirmed the redesign is directionally correct because filing-level metadata and `available_at` are now preserved
+  - identified two immediate follow-up risks:
+    - `available_at` falls back to `filing_date 00:00:00`, which is too early for strict PIT
+    - the raw values unique key still depends on nullable fields, which can break idempotent ingestion
+  - identified one secondary design issue:
+    - `nyse_financial_statement_labels` can collapse concept-level meaning and should be treated as an operator-facing summary table unless its identity is widened
+  - recorded the recommended patch order around fallback timing, key stabilization, and labels-table role definition
+- Durable output:
+  - `.note/finance/phase2/POINT_IN_TIME_SCHEMA_REVIEW_AND_PATCH_PLAN.md`
+
+### 2026-03-18 - Start next PHASE2 point-in-time hardening chapter
+- Request topic:
+  - create the next TODO board and begin the follow-up hardening work step by step
+- Interpreted goal:
+  - move from design review into concrete point-in-time stabilization tasks without losing the chapter-based execution style
+- Result:
+  - created a dedicated next-chapter TODO board for point-in-time hardening
+  - completed the first code patch by making `available_at` conservative when `accepted_at` is missing
+  - verified the new behavior locally:
+    - `filing_date` only -> `23:59:59`
+    - explicit `accepted_at` -> preserved
+- Durable output:
+  - `.note/finance/phase2/PHASE2_POINT_IN_TIME_HARDENING_TODO.md`
+  - `finance/data/financial_statements.py`
+
+### 2026-03-18 - Audit current detailed-statement raw identity readiness
+- Request topic:
+  - continue the new point-in-time hardening chapter by checking whether the values-table identity can actually support strict PIT behavior
+- Interpreted goal:
+  - avoid patching the schema blindly by first measuring how much of the existing table still reflects the old legacy ingestion format
+- Result:
+  - verified that `nyse_financial_statement_values` is still mixed-state
+  - measured:
+    - 303,054 total rows
+    - 302,712 rows without `accession_no`
+    - 302,712 rows without `unit`
+    - only 342 accession-bearing rows across 2 symbols
+  - concluded that future strict identity must distinguish between:
+    - new raw rows that can use accession-based identity
+    - legacy rows that need backfill or rebuild before they are PIT-safe
+- Durable output:
+  - `.note/finance/phase2/PHASE2_POINT_IN_TIME_HARDENING_TODO.md`
+  - `.note/finance/phase2/POINT_IN_TIME_SCHEMA_REVIEW_AND_PATCH_PLAN.md`
+
+### 2026-03-18 - Add raw-identity guard to new detailed-statement ingestion path
+- Request topic:
+  - continue the hardening chapter after the mixed-state DB audit by making the new raw ingestion path refuse identity-incomplete rows
+- Interpreted goal:
+  - improve future PIT ledger quality immediately without trying to hard-migrate the entire legacy table in the same patch
+- Result:
+  - verified on representative raw sources that current EDGAR statement facts do carry both `accession` and `unit`
+  - added an ingestion-side guard so `_iter_value_rows_from_source(...)` skips rows lacking either `accession_no` or `unit`
+  - kept the DB-level strict constraint as a later step because the existing table is still dominated by legacy rows
+- Durable output:
+  - `finance/data/financial_statements.py`
+  - `.note/finance/phase2/PHASE2_POINT_IN_TIME_HARDENING_TODO.md`
+
+### 2026-03-18 - Validate accession-based reingestion stability on new raw path
+- Request topic:
+  - continue the hardening chapter by verifying that the new accession-based rows do not duplicate on rerun
+- Interpreted goal:
+  - confirm that the ingestion-side identity guard plus the existing unique key are sufficient for new raw rows before attempting broader schema hardening
+- Result:
+  - reran quarterly detailed-statement ingestion for `AAPL`
+  - confirmed accession-bearing quarterly rows stayed at 139 before and after rerun
+  - confirmed duplicate groups under `(symbol, freq, accession_no, statement_type, concept, period_end, unit)` remained 0
+  - concluded that the immediate remaining issue is legacy-row cleanup, not new-path duplicate behavior
+- Durable output:
+  - `.note/finance/phase2/PHASE2_POINT_IN_TIME_HARDENING_TODO.md`
+
+### 2026-03-18 - Define legacy backfill and strict-constraint transition strategy
+- Request topic:
+  - continue the hardening chapter by deciding how to handle the legacy/new mixed-state values table before applying stricter PIT constraints
+- Interpreted goal:
+  - avoid forcing DB constraints too early by first deciding how strict loaders, backfills, and eventual schema hardening should interact
+- Result:
+  - defined a staged strategy:
+    - keep new-path ingestion guards
+    - let strict PIT loaders read accession-bearing rows only
+    - backfill research-first universes first
+    - delay DB-level strict constraints until coverage is sufficient
+  - documented that the immediate next focus should move from raw identity to labels/loader boundary
+- Durable output:
+  - `.note/finance/phase2/POINT_IN_TIME_BACKFILL_AND_CONSTRAINT_STRATEGY.md`
+  - `.note/finance/phase2/PHASE2_POINT_IN_TIME_HARDENING_TODO.md`
+
+### 2026-03-18 - Clarify labels vs values responsibility in loader design
+- Request topic:
+  - continue the hardening chapter by making the labels table role explicit before loader implementation proceeds
+- Interpreted goal:
+  - prevent future loaders from treating the summary labels table as the semantic source of truth
+- Result:
+  - updated the loader design notes so:
+    - `nyse_financial_statement_values` is the raw ledger source of truth
+    - `nyse_financial_statement_labels` is an operator-facing summary / lookup helper
+  - shifted the next TODO focus toward writing strict PIT loader query conditions
+- Durable output:
+  - `.note/finance/phase2/BACKTEST_LOADER_INPUT_CONTRACT.md`
+  - `.note/finance/phase2/BACKTEST_LOADER_FUNCTION_DRAFT.md`
+  - `.note/finance/phase2/PHASE2_POINT_IN_TIME_HARDENING_TODO.md`
+
+### 2026-03-18 - Draft strict PIT statement-loader query rules
+- Request topic:
+  - continue the hardening chapter by writing the actual query conditions a future strict PIT statement loader should use
+- Interpreted goal:
+  - make the move from design principles to implementable loader-query rules while the mixed-state DB caveats are still fresh
+- Result:
+  - drafted strict filters around:
+    - `accession_no`
+    - `unit`
+    - `available_at`
+  - documented that strict snapshots must prioritize `available_at <= as_of_date`, not just `period_end`
+  - provided latest-available selection patterns using window-function and subquery styles
+- Durable output:
+  - `.note/finance/phase2/STRICT_PIT_LOADER_QUERY_DRAFT.md`
+  - `.note/finance/phase2/PHASE2_POINT_IN_TIME_HARDENING_TODO.md`
+
+### 2026-03-18 - One-time cleanup redesign of statement labels/values tables
+- Request topic:
+  - decide whether the old `nyse_financial_statement_labels` / `nyse_financial_statement_values` tables should be kept or heavily revised, with permission to discard data if needed
+- Interpreted goal:
+  - avoid carrying early-stage schema compromises forward now that these tables are still unused and can be reset safely
+- Result:
+  - concluded that a cleanup redesign was preferable
+  - tightened `nyse_financial_statement_values` into a stricter raw ledger by requiring `concept`, `unit`, `available_at`, and `accession_no`
+  - changed `nyse_financial_statement_labels` into a concept-centered summary table keyed by `(symbol, statement_type, concept, as_of)`
+  - recreated the local labels/values tables and confirmed sample reingestion succeeded
+- Durable output:
+  - `finance/data/db/schema.py`
+  - `finance/data/financial_statements.py`
+  - `.note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md`
+  - `.note/finance/phase2/PHASE2_POINT_IN_TIME_HARDENING_TODO.md`
+
+### 2026-03-22 - Establish phase-based project management as the default workflow
+- Request topic:
+  - formalize phase-based project management, documentation, and future phase creation as the standard way to run the finance project
+- Interpreted goal:
+  - make future development easier to track and maintain by putting all major work under explicit phases tied to the product goals of data collection and backtesting
+- Result:
+  - created a top-level master phase roadmap
+  - created a finance document index
+  - updated `AGENTS.md` so future work follows:
+    - phase-first planning
+    - per-phase TODO boards
+    - roadmap/index maintenance
+    - explicit user confirmation before opening major new phases
+- Durable output:
+  - `.note/finance/MASTER_PHASE_ROADMAP.md`
+  - `.note/finance/FINANCE_DOC_INDEX.md`
+  - `AGENTS.md`
+
+### 2026-03-22 - Reorganize finance notes into phase folders
+- Request topic:
+  - review whether phase-based folders under `.note/finance/` would be better than keeping all documents flat, and proceed if beneficial
+- Interpreted goal:
+  - keep the growing documentation set maintainable by separating phase-specific execution docs from cross-phase reference documents
+- Result:
+  - moved phase-specific documents into:
+    - `.note/finance/phase1/`
+    - `.note/finance/phase2/`
+    - `.note/finance/phase3/`
+  - kept cross-phase anchor documents at the `.note/finance/` root
+  - updated roadmap/index/log references to the new structure
+- Durable output:
+  - `.note/finance/FINANCE_DOC_INDEX.md`
+  - `.note/finance/MASTER_PHASE_ROADMAP.md`
+  - `AGENTS.md`
+
+### 2026-03-22 - Close Phase 2 and open Phase 3
+- Request topic:
+  - finish Phase 2 and proceed into Phase 3 work
+- Interpreted goal:
+  - turn the current loader/backtest-preparation state into a clean phase transition so future work starts from an explicit Phase 3 runtime implementation baseline
+- Result:
+  - created a Phase 2 completion summary
+  - created a Phase 3 plan document
+  - created the first Phase 3 TODO board
+  - updated the roadmap and doc index to show Phase 2 completed and Phase 3 active
+- Durable output:
+  - `.note/finance/phase2/PHASE2_COMPLETION_SUMMARY.md`
+  - `.note/finance/phase3/PHASE3_LOADER_AND_RUNTIME_PLAN.md`
+  - `.note/finance/phase3/PHASE3_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/MASTER_PHASE_ROADMAP.md`
+
+### 2026-03-22 - Fix Phase 3 loader naming policy
+- Request topic:
+  - continue Phase 3 by deciding how broad research loaders and strict PIT loaders should be named
+- Interpreted goal:
+  - avoid ambiguity before loader implementation starts by making function names encode the intended data assumptions
+- Result:
+  - fixed the policy that:
+    - base names are for broad research loaders
+    - `*_snapshot` is for broad snapshot reads
+    - `*_snapshot_strict` is for strict PIT snapshot reads
+  - recorded this as the default naming rule for Phase 3
+- Durable output:
+  - `.note/finance/phase3/PHASE3_LOADER_NAMING_POLICY.md`
+  - `.note/finance/phase3/PHASE3_CURRENT_CHAPTER_TODO.md`

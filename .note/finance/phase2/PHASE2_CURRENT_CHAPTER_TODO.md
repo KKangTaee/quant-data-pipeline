@@ -11,7 +11,7 @@
 상태를 갱신하면서 작업을 진행한다.
 
 상위 계획 문서:
-- `.note/finance/PHASE2_WEB_APP_AND_BACKTEST_PLAN.md`
+- `.note/finance/phase2/PHASE2_WEB_APP_AND_BACKTEST_PLAN.md`
 
 ---
 
@@ -98,16 +98,16 @@
 
 ### C. 설정 외부화 준비
 상태:
-- `in_progress`
+- `completed`
 
 세부 작업:
 - `[completed]` 현재 하드코딩 상수 목록 추출
   - 어떤 값들이 코드 안에 박혀 있는지 먼저 inventory 작성
 - `[completed]` 외부화 우선순위 분류
   - 꼭 먼저 뺄 값과 나중에 빼도 되는 값을 구분
-- `[pending]` 설정 파일 경로 확정
+- `[completed]` 설정 파일 경로 확정
   - 설정 파일을 어디에 둘지 프로젝트 규칙 확정
-- `[pending]` 설정 파일 포맷 초안 작성
+- `[completed]` 설정 파일 포맷 초안 작성
   - TOML/YAML/JSON 중 어떤 형태로 읽고 관리할지 정리
 
 후보 항목:
@@ -126,16 +126,16 @@
 
 ### D. 백테스트 준비 메모 정리
 상태:
-- `pending`
+- `completed`
 
 세부 작업:
 - `[completed]` detailed financial statement tables를 first-class raw ledger로 취급한다는 전제 기록
   - 요약 fundamentals/factors보다 더 긴 과거 이력과 세부 계정 확보용 원장이라는 점 명시
-- `[pending]` loader 계층 초안 함수 목록 정의
+- `[completed]` loader 계층 초안 함수 목록 정의
   - 어떤 loader가 필요하고 함수 이름을 어떻게 잡을지 초안 작성
-- `[pending]` price / fundamentals / factors / detailed statements / universe loader 입력 계약 정리
+- `[completed]` price / fundamentals / factors / detailed statements / universe loader 입력 계약 정리
   - symbols, start/end, freq, source 같은 입력 규격을 통일
-- `[pending]` point-in-time 주의사항을 loader 설계 항목으로 분리
+- `[completed]` point-in-time 주의사항을 loader 설계 항목으로 분리
   - 룩어헤드 방지와 공시 시점 반영을 loader 설계에서 빠뜨리지 않도록 분리
 
 완료 기준:
@@ -145,32 +145,33 @@
 
 ## 현재 추천 다음 작업 순서
 
-1. A-7 운영 파이프라인 권장 사용 주기 문구 추가
-2. A-8 권장 symbol source 문구 추가
-3. A-9 운영 파이프라인과 manual jobs 역할 차이 명시
-4. C-1 하드코딩 상수 목록 추출
+1. 다음 챕터 TODO 보드 생성
+2. loader 실제 구현 범위 확정
+3. 설정 외부화 실제 구현 순서 확정
+4. backtest UI 진입 전 선행조건 점검
 
 ---
 
 ## 현재 작업 중 항목
 
 현재 `in_progress`:
-- `C. 설정 외부화 준비`
+- 없음
 
 바로 다음 체크 대상:
-- `C-3 설정 파일 경로 확정`
+- 다음 챕터 TODO 보드 생성
 
 ---
 
 ## 현재 진척도
 
 - PHASE2 전체:
-  - 약 `46%`
+  - 약 `64%`
 
 - 현재 챕터:
-  - 약 `79%`
+  - 약 `100%`
 
 판단 근거:
 - 운영 파이프라인 정리는 현재 챕터 기준으로 완료
 - 실행 이력 고도화는 현재 챕터 기준으로 완료
-- 설정 외부화 준비가 시작되었고 inventory가 작성됨
+- 설정 외부화 준비도 현재 챕터 기준으로 완료
+- 백테스트 준비 메모 정리도 현재 챕터 기준으로 완료
