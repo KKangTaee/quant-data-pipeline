@@ -131,17 +131,22 @@ def run_collect_ohlcv(
         )
 
     try:
-        rows_written = store_ohlcv_to_mysql(
+        write_stats = store_ohlcv_to_mysql(
             parsed,
             start=start,
             end=end,
             period=period,
             interval=interval,
+            return_stats=True,
             progress_callback=progress_callback,
         )
+        rows_written = int(write_stats["rows_written"])
+        missing_symbols = list(write_stats.get("missing_symbols") or [])
+        symbols_with_data = int(write_stats.get("symbols_with_data") or 0)
+        all_failed_symbols = invalid_symbols + [sym for sym in missing_symbols if sym not in invalid_symbols]
         finished_at = _now_str()
         if rows_written > 0:
-            status = "success" if not invalid_symbols else "partial_success"
+            status = "success" if not all_failed_symbols else "partial_success"
             msg = "OHLCV collection completed."
         else:
             status = "failed"
@@ -149,8 +154,8 @@ def run_collect_ohlcv(
                 "OHLCV collection finished with no rows written. "
                 "The symbols may be invalid, delisted, or unavailable from the provider."
             )
-        if end is not None:
-            msg += " Note: current low-level date-range handling may be start-oriented."
+        if missing_symbols:
+            msg += f" Missing provider data for: {', '.join(missing_symbols[:10])}."
         if invalid_symbols:
             msg += f" Invalid symbols ignored: {', '.join(invalid_symbols[:10])}."
 
@@ -162,14 +167,17 @@ def run_collect_ohlcv(
             duration_sec=perf_counter() - t0,
             rows_written=rows_written,
             symbols_requested=len(parsed),
-            symbols_processed=len(parsed) if rows_written > 0 else 0,
-            failed_symbols=invalid_symbols if invalid_symbols else parsed if rows_written == 0 else [],
+            symbols_processed=symbols_with_data,
+            failed_symbols=all_failed_symbols if all_failed_symbols else parsed if rows_written == 0 else [],
             message=msg,
             details={
                 "start": start,
                 "end": end,
                 "period": period,
                 "interval": interval,
+                "symbols_with_data": symbols_with_data,
+                "missing_symbols": missing_symbols,
+                "batch_errors": write_stats.get("batch_errors") or [],
             },
         )
     except Exception as exc:

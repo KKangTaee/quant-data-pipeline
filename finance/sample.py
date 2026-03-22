@@ -58,6 +58,38 @@ def get_equal_weight(period="15y", option="month_end", interval=12, start=None):
     return df
 
 
+def get_equal_weight_from_db(
+    option="month_end",
+    interval=12,
+    start=None,
+    end=None,
+    timeframe="1d",
+    tickers=None,
+):
+    """
+        DB에 적재된 OHLCV를 사용한 균등 전략 샘플
+    """
+    if tickers is None:
+        tickers = ['VIG', 'SCHD', 'DGRO', 'GLD']
+
+    engine = (
+        BacktestEngine(tickers, period="15y", option=option)
+        .load_ohlcv_from_db(start=start, end=end, timeframe=timeframe)
+        .filter_by_period()
+        .align_dates()
+        .slice(start=start, end=end)
+        .drop_columns(["High","Low","Open","Volume"])
+    )
+
+    strategy = EqualWeightStrategy(
+        start_balance=10000,
+        rebalance_interval=interval
+    )
+
+    df = engine.run(strategy).round_columns().round_columns(cols=["Return", "Total Return"], decimals=3).result
+    return df
+
+
 def get_gtaa3(period="15y", option="month_end", top=3, start=None):
     tickers = ['SPY','IWD','IWM','IWN','MTUM','EFA','TLT','IEF','LQD','DBC','VNQ','GLD']
 
@@ -69,6 +101,40 @@ def get_gtaa3(period="15y", option="month_end", top=3, start=None):
         .add_interval_returns([1,3,6,12])
         .align_dates()
         .slice(start=start)
+        .add_avg_score()
+        .drop_columns(["High","Low","Open","Volume","1MReturn","3MReturn","6MReturn","12MReturn"])
+        .interval(2)
+    )
+
+    strategy = GTAA3Strategy(
+        start_balance=10000,
+        top=top,
+        filter_ma="MA200"
+    )
+
+    df = engine.run(strategy).round_columns().round_columns(cols=["Return", "Total Return"], decimals=3).result
+    return df
+
+
+def get_gtaa3_from_db(
+    option="month_end",
+    top=3,
+    start=None,
+    end=None,
+    timeframe="1d",
+    tickers=None,
+):
+    if tickers is None:
+        tickers = ['SPY','IWD','IWM','IWN','MTUM','EFA','TLT','IEF','LQD','DBC','VNQ','GLD']
+
+    engine = (
+        BacktestEngine(tickers, period="db", option=option)
+        .load_ohlcv_from_db(start=start, end=end, timeframe=timeframe)
+        .add_ma(200)
+        .filter_by_period()
+        .add_interval_returns([1,3,6,12])
+        .align_dates()
+        .slice(start=start, end=end)
         .add_avg_score()
         .drop_columns(["High","Low","Open","Volume","1MReturn","3MReturn","6MReturn","12MReturn"])
         .interval(2)
@@ -112,6 +178,41 @@ def get_risk_parity_trend(period="15y", option="month_end", start=None):
     return df
 
 
+def get_risk_parity_trend_from_db(
+    option="month_end",
+    start=None,
+    end=None,
+    timeframe="1d",
+    tickers=None,
+):
+    if tickers is None:
+        tickers = ['SPY','TLT','GLD','IEF','LQD']
+
+    engine = (
+        BacktestEngine(tickers, period="db", option=option)
+        .load_ohlcv_from_db(start=start, end=end, timeframe=timeframe)
+        .add_ma(200)
+        .filter_by_period()
+        .align_dates()
+        .slice(start=start, end=end)
+        .drop_columns(["High","Low","Open","Volume"])
+    )
+
+    strategy = RiskParityTrendStrategy(
+        start_balance=10000,
+        rebalance_interval=1,
+        vol_window=6,
+        filter_ma="MA200",
+    )
+
+    df = engine.run(strategy).round_columns(
+        cols=["Cash","Total Balance","End Balance","Next Balance"],
+        decimals=1
+    ).result
+
+    return df
+
+
 def get_dual_momentum(period="15y", option="month_end", start=None):
     # 공격형: 주식/테크 승자추종 + 하락시 현금(BIL) 회피
     tickers = ["QQQ", "SPY", "IWM", "SOXX", "BIL"]
@@ -134,6 +235,40 @@ def get_dual_momentum(period="15y", option="month_end", start=None):
         filter_ma="MA200",
         rebalance_interval=1,      # 월 1회 리밸런싱(월말 데이터 기준)
         cash_ticker="BIL",         # ✅ 현금이 아니라 단기채로 현금 수익 반영
+    )
+
+    df = engine.run(strategy).round_columns().round_columns(cols=["Total Return"], decimals=3).result
+    return df
+
+
+def get_dual_momentum_from_db(
+    option="month_end",
+    start=None,
+    end=None,
+    timeframe="1d",
+    tickers=None,
+):
+    if tickers is None:
+        tickers = ["QQQ", "SPY", "IWM", "SOXX", "BIL"]
+
+    engine = (
+        BacktestEngine(tickers, period="db", option=option)
+        .load_ohlcv_from_db(start=start, end=end, timeframe=timeframe)
+        .add_ma(200)
+        .filter_by_period()
+        .add_interval_returns([12])
+        .align_dates()
+        .slice(start=start, end=end)
+        .drop_columns(["High","Low","Open","Volume"])
+    )
+
+    strategy = DualMomentumStrategy(
+        start_balance=10000,
+        top=1,
+        lookback_col="12MReturn",
+        filter_ma="MA200",
+        rebalance_interval=1,
+        cash_ticker="BIL",
     )
 
     df = engine.run(strategy).round_columns().round_columns(cols=["Total Return"], decimals=3).result
@@ -171,6 +306,31 @@ def portfolio_sample():
 
     display(results['GTAA'].tail())
     plot_equity_curves(results, "Equity Curve Comparison")
+    for key, df in results.items():
+        display(portfolio_performance_summary(df, key, freq))
+
+
+def portfolio_sample_from_db(start=None, end=None, timeframe="1d"):
+    """
+        DB 기반 전략 샘플 포트폴리오
+    """
+    option = "month_end"
+    freq = "M"
+
+    equal = get_equal_weight_from_db(start=start, end=end, timeframe=timeframe, option=option)
+    gtaa3 = get_gtaa3_from_db(start=start, end=end, timeframe=timeframe, option=option)
+    risk = get_risk_parity_trend_from_db(start=start, end=end, timeframe=timeframe, option=option)
+    dual = get_dual_momentum_from_db(start=start, end=end, timeframe=timeframe, option=option)
+
+    results = {
+        "Equal Weight": equal,
+        "GTAA": gtaa3,
+        "Risk Parity" : risk,
+        "Dual Momentum" : dual,
+    }
+
+    display(results['GTAA'].tail())
+    plot_equity_curves(results, "Equity Curve Comparison (DB)")
     for key, df in results.items():
         display(portfolio_performance_summary(df, key, freq))
 

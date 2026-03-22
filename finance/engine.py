@@ -5,6 +5,9 @@ from .display import (
 from .data.data import (
     get_ohlcv
 )
+from .loaders import (
+    load_price_strategy_dfs
+)
 from .transform import (
     add_avg_score,
     add_ma,
@@ -30,6 +33,17 @@ class BacktestEngine:
     # =====================
     def load_ohlcv(self):
         self.dfs = get_ohlcv(self.tickers, period=self.period)
+        return self
+
+    def load_ohlcv_from_db(self, start=None, end=None, timeframe="1d"):
+        self.dfs = load_price_strategy_dfs(
+            symbols=self.tickers,
+            start=start,
+            end=end,
+            timeframe=timeframe,
+        )
+        if not self.dfs:
+            raise ValueError("DB에서 조회된 OHLCV 데이터가 없습니다. 먼저 가격 데이터를 수집해 주세요.")
         return self
 
     # =====================

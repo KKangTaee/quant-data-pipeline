@@ -534,18 +534,34 @@ def _render_symbol_source_inputs(
 
     manual_symbols: list[str] = []
     if source_mode == "Manual":
+        text_key = f"{prefix}_symbols_input"
+        preset_applied_key = f"{prefix}_preset_applied"
         preset_name = st.selectbox(
             f"{title} Preset",
             list(SYMBOL_PRESETS.keys()),
             index=0,
             key=f"{prefix}_preset",
         )
-        manual_text = st.text_area(
-            title,
-            value=SYMBOL_PRESETS["Big Tech"],
-            key=f"{prefix}_symbols_input",
-        )
-        manual_symbols = [s.strip() for s in _resolve_symbols(preset_name, manual_text).split(",") if s.strip()]
+        if preset_name != "Custom":
+            preset_value = SYMBOL_PRESETS.get(preset_name, "")
+            if st.session_state.get(preset_applied_key) != preset_name:
+                st.session_state[text_key] = preset_value
+                st.session_state[preset_applied_key] = preset_name
+            manual_text = st.text_area(
+                title,
+                key=text_key,
+                disabled=True,
+            )
+            manual_symbols = [s.strip() for s in preset_value.split(",") if s.strip()]
+        else:
+            if text_key not in st.session_state:
+                st.session_state[text_key] = ""
+            st.session_state[preset_applied_key] = preset_name
+            manual_text = st.text_area(
+                title,
+                key=text_key,
+            )
+            manual_symbols = [s.strip() for s in manual_text.split(",") if s.strip()]
 
     source_result = resolve_symbol_source(source_mode, manual_symbols)
     if source_result["status"] == "ok":
@@ -638,17 +654,17 @@ def main() -> None:
             st.markdown("### Daily Market Update")
             st.write("Refresh price history for the current operating universe.")
             st.caption("Recommended cadence: every trading day after market close or before the next backtest/data sync.")
-            st.caption("Recommended symbol source: `NYSE Stocks` for broad market refresh, or `Profile Filtered Stocks` for the managed strategy universe.")
-            st.caption("Current defaults: `NYSE Stocks`, `1mo`, `1d`.")
+            st.caption("Recommended symbol source: `NYSE Stocks + ETFs` for broad market refresh, or `Profile Filtered Stocks + ETFs` for the managed strategy universe.")
+            st.caption("Current defaults: `NYSE Stocks + ETFs`, `1d`, `1d`.")
             st.caption("Writes to: `finance_price.nyse_price_history`")
             daily_symbol_result = _render_symbol_source_inputs(
                 "daily_market",
                 "Daily Market Symbols",
-                default_source_mode="NYSE Stocks",
+                default_source_mode="NYSE Stocks + ETFs",
             )
             daily_symbols_input = daily_symbol_result["symbols"]
             daily_col1, daily_col2 = st.columns(2)
-            daily_period_input = daily_col1.selectbox("Daily Period", PERIOD_PRESETS, index=2, key="daily_period_input")
+            daily_period_input = daily_col1.selectbox("Daily Period", PERIOD_PRESETS, index=0, key="daily_period_input")
             daily_interval_input = daily_col2.selectbox("Daily Interval", ["1d", "1wk", "1mo"], index=0, key="daily_interval_input")
             daily_col3, daily_col4 = st.columns(2)
             daily_start_input = daily_col3.text_input("Daily Start", value="", key="daily_start_input")
