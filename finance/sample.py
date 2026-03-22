@@ -1,3 +1,13 @@
+"""
+Sample and smoke-test entrypoints for the finance package.
+
+Path split:
+- legacy direct-fetch functions:
+  provider-backed reference samples that read OHLCV directly from yfinance
+- `*_from_db` functions:
+  DB-backed runtime samples that validate the loader/engine/strategy path
+"""
+
 from math import comb
 from IPython.display import display
 import pandas as pd
@@ -52,12 +62,48 @@ def _history_start_with_buffer(start=None, *, years: int = 0, months: int = 0, d
     buffered = ts - pd.DateOffset(years=years, months=months, days=days)
     return buffered.strftime("%Y-%m-%d")
 
+
+def _build_price_only_engine(
+    tickers,
+    *,
+    option="month_end",
+    period="15y",
+    start=None,
+    end=None,
+    timeframe="1d",
+    from_db=False,
+    history_buffer_years=0,
+):
+    """
+        Price-only 전략 sample이 공통으로 사용하는 engine 시작 경로.
+        - direct path: provider-backed reference sample
+        - DB path: loader/runtime-backed sample
+    """
+    engine = BacktestEngine(tickers, period=("db" if from_db else period), option=option)
+
+    if from_db:
+        history_start = _history_start_with_buffer(start, years=history_buffer_years)
+        return engine.load_ohlcv_from_db(
+            start=start,
+            end=end,
+            timeframe=timeframe,
+            history_start=history_start,
+        )
+
+    return engine.load_ohlcv()
+
 def get_equal_weight(period="15y", option="month_end", interval=12, start=None):
-    # tickers = ["GLD", "SPY", "SHY", "TLT"]
+    """
+        Legacy direct-fetch sample.
+        외부 provider(yfinance) 기준 reference 예시로 유지한다.
+    """
     tickers = ['VIG','SCHD','DGRO','GLD']
     engine = (
-        BacktestEngine(tickers, period=period, option=option)
-        .load_ohlcv()
+        _build_price_only_engine(
+            tickers,
+            option=option,
+            period=period,
+        )
         .filter_by_period()
         .align_dates()
         .slice(start=start)
@@ -82,14 +128,21 @@ def get_equal_weight_from_db(
     tickers=None,
 ):
     """
-        DB에 적재된 OHLCV를 사용한 균등 전략 샘플
+        DB-backed runtime sample.
+        MySQL price history와 loader/engine 경로를 검증하는 기준 예시다.
     """
     if tickers is None:
         tickers = ['VIG', 'SCHD', 'DGRO', 'GLD']
 
     engine = (
-        BacktestEngine(tickers, period="15y", option=option)
-        .load_ohlcv_from_db(start=start, end=end, timeframe=timeframe)
+        _build_price_only_engine(
+            tickers,
+            option=option,
+            start=start,
+            end=end,
+            timeframe=timeframe,
+            from_db=True,
+        )
         .filter_by_period()
         .align_dates()
         .slice(start=start, end=end)
@@ -106,11 +159,17 @@ def get_equal_weight_from_db(
 
 
 def get_gtaa3(period="15y", option="month_end", top=3, start=None):
+    """
+        Legacy direct-fetch sample.
+    """
     tickers = ['SPY','IWD','IWM','IWN','MTUM','EFA','TLT','IEF','LQD','DBC','VNQ','GLD']
 
     engine = (
-        BacktestEngine(tickers, period=period, option=option)
-        .load_ohlcv()
+        _build_price_only_engine(
+            tickers,
+            option=option,
+            period=period,
+        )
         .add_ma(200)
         .filter_by_period()
         .add_interval_returns([1,3,6,12])
@@ -142,11 +201,16 @@ def get_gtaa3_from_db(
     if tickers is None:
         tickers = ['SPY','IWD','IWM','IWN','MTUM','EFA','TLT','IEF','LQD','DBC','VNQ','GLD']
 
-    history_start = _history_start_with_buffer(start, years=3)
-
     engine = (
-        BacktestEngine(tickers, period="db", option=option)
-        .load_ohlcv_from_db(start=start, end=end, timeframe=timeframe, history_start=history_start)
+        _build_price_only_engine(
+            tickers,
+            option=option,
+            start=start,
+            end=end,
+            timeframe=timeframe,
+            from_db=True,
+            history_buffer_years=3,
+        )
         .add_ma(200)
         .filter_by_period()
         .add_interval_returns([1,3,6,12])
@@ -168,11 +232,17 @@ def get_gtaa3_from_db(
 
 
 def get_risk_parity_trend(period="15y", option="month_end", start=None):
+    """
+        Legacy direct-fetch sample.
+    """
     tickers = ['SPY','TLT','GLD','IEF','LQD']  # 예시
 
     engine = (
-        BacktestEngine(tickers, period=period, option=option)
-        .load_ohlcv()
+        _build_price_only_engine(
+            tickers,
+            option=option,
+            period=period,
+        )
         .add_ma(200)              # ✅ filter_ma="MA200"을 쓰기 위함
         .filter_by_period()
         .align_dates()
@@ -205,11 +275,16 @@ def get_risk_parity_trend_from_db(
     if tickers is None:
         tickers = ['SPY','TLT','GLD','IEF','LQD']
 
-    history_start = _history_start_with_buffer(start, years=2)
-
     engine = (
-        BacktestEngine(tickers, period="db", option=option)
-        .load_ohlcv_from_db(start=start, end=end, timeframe=timeframe, history_start=history_start)
+        _build_price_only_engine(
+            tickers,
+            option=option,
+            start=start,
+            end=end,
+            timeframe=timeframe,
+            from_db=True,
+            history_buffer_years=2,
+        )
         .add_ma(200)
         .filter_by_period()
         .align_dates()
@@ -233,12 +308,17 @@ def get_risk_parity_trend_from_db(
 
 
 def get_dual_momentum(period="15y", option="month_end", start=None):
-    # 공격형: 주식/테크 승자추종 + 하락시 현금(BIL) 회피
+    """
+        Legacy direct-fetch sample.
+    """
     tickers = ["QQQ", "SPY", "IWM", "SOXX", "BIL"]
 
     engine = (
-        BacktestEngine(tickers, period=period, option=option)
-        .load_ohlcv()
+        _build_price_only_engine(
+            tickers,
+            option=option,
+            period=period,
+        )
         .add_ma(200)
         .filter_by_period()
         .add_interval_returns([12])   # ✅ 12MReturn 생성
@@ -270,11 +350,16 @@ def get_dual_momentum_from_db(
     if tickers is None:
         tickers = ["QQQ", "SPY", "IWM", "SOXX", "BIL"]
 
-    history_start = _history_start_with_buffer(start, years=3)
-
     engine = (
-        BacktestEngine(tickers, period="db", option=option)
-        .load_ohlcv_from_db(start=start, end=end, timeframe=timeframe, history_start=history_start)
+        _build_price_only_engine(
+            tickers,
+            option=option,
+            start=start,
+            end=end,
+            timeframe=timeframe,
+            from_db=True,
+            history_buffer_years=3,
+        )
         .add_ma(200)
         .filter_by_period()
         .add_interval_returns([12])
@@ -298,7 +383,8 @@ def get_dual_momentum_from_db(
 
 def portfolio_sample():
     """
-        쉽계 사용하기 위해 미리만들어 놓음
+        Legacy direct-fetch portfolio sample.
+        provider 기준 reference output 비교용으로 유지한다.
     """
     period = "15y"
     option = "month_end"
@@ -333,7 +419,8 @@ def portfolio_sample():
 
 def portfolio_sample_from_db(start=None, end=None, timeframe="1d"):
     """
-        DB 기반 전략 샘플 포트폴리오
+        DB-backed portfolio sample.
+        loader/runtime/product path 검증용 기준 포트폴리오 샘플이다.
     """
     option = "month_end"
     freq = "M"
@@ -414,3 +501,12 @@ def financial_statements_sample(symbols=None, freq="annual"):
         symbols = ["AAPL", "MSFT", "JPM"]
 
     return upsert_financial_statements(symbols=symbols, freq=freq, period=freq)
+    """
+        DB-backed runtime sample.
+    """
+    """
+        DB-backed runtime sample.
+    """
+    """
+        DB-backed runtime sample.
+    """

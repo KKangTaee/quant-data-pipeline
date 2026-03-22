@@ -37,6 +37,7 @@ from app.jobs.run_history import (
     load_run_history,
 )
 from app.jobs.symbol_sources import resolve_symbol_source
+from app.web.pages.backtest import render_backtest_tab
 
 
 JobResult = dict[str, Any]
@@ -619,17 +620,7 @@ def _normalize_ohlcv_window(period: str, start: str | None, end: str | None) -> 
     return period, clean_start, clean_end
 
 
-def main() -> None:
-    st.set_page_config(
-        page_title="Finance Admin",
-        page_icon="F",
-        layout="wide",
-    )
-    _init_state()
-    _promote_pending_job()
-
-    st.title("Finance Data Collection Admin")
-    st.caption("Phase 1 internal web app for ingestion jobs")
+def _render_ingestion_console() -> None:
     _render_running_banner()
     st.info(
         "Inputs are now grouped by job. Symbol-based jobs use their own symbol input. "
@@ -1244,6 +1235,27 @@ def main() -> None:
 
     if _has_running_job():
         _run_scheduled_job(progress_callback=current_progress_callback)
+
+
+def main() -> None:
+    st.set_page_config(
+        page_title="Finance Console",
+        page_icon="F",
+        layout="wide",
+    )
+    _init_state()
+    _promote_pending_job()
+
+    st.title("Finance Console")
+    st.caption("Unified internal app for ingestion operations and backtest workflows")
+
+    ingestion_tab, backtest_tab = st.tabs(["Ingestion", "Backtest"])
+
+    with ingestion_tab:
+        _render_ingestion_console()
+
+    with backtest_tab:
+        render_backtest_tab()
 
 if __name__ == "__main__":
     main()

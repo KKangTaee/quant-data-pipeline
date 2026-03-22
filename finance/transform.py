@@ -115,10 +115,11 @@ def filter_finance_history(df: pd.DataFrame, option: str) -> pd.DataFrame:
 
     # 2️⃣ 기간별 첫/마지막 거래일
     grouped = d.groupby(pd.Grouper(freq=freq))
-    result = grouped.head(1) if selector == "head" else grouped.tail(1)
+    result = (grouped.head(1) if selector == "head" else grouped.tail(1)).copy()
 
     # 3️⃣ 배당금 합계 반영
-    result["Dividends"] = dividends_sum.values
+    aligned_dividends = dividends_sum.reindex(result.index, fill_value=0)
+    result.loc[:, "Dividends"] = aligned_dividends.to_numpy()
 
     return result.reset_index()
 

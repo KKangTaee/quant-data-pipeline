@@ -62,6 +62,8 @@ def _attach_price_asof(fund: pd.DataFrame, price: pd.DataFrame) -> pd.DataFrame:
 
     if price is None or price.empty:
         f["price"] = None
+        f["price_date"] = pd.NaT
+        f["price_match_gap_days"] = None
         return f
 
     p = price.copy()
@@ -81,6 +83,8 @@ def _attach_price_asof(fund: pd.DataFrame, price: pd.DataFrame) -> pd.DataFrame:
 
         if pg is None or pg.empty:
             gg["price"] = None
+            gg["price_date"] = pd.NaT
+            gg["price_match_gap_days"] = None
             out_parts.append(gg)
             continue
 
@@ -92,7 +96,10 @@ def _attach_price_asof(fund: pd.DataFrame, price: pd.DataFrame) -> pd.DataFrame:
             direction="backward",
             allow_exact_matches=True,
         )
-        merged = merged.drop(columns=["date"], errors="ignore").rename(columns={"close": "price"})
+        merged = merged.rename(columns={"date": "price_date", "close": "price"})
+        merged["price_match_gap_days"] = (
+            merged["period_end"] - merged["price_date"]
+        ).dt.days.where(merged["price_date"].notna(), pd.NA)
         out_parts.append(merged)
 
     return pd.concat(out_parts, ignore_index=True)
@@ -243,19 +250,38 @@ def calculate_factors(fund: pd.DataFrame) -> pd.DataFrame:
     ocf = df["operating_cash_flow"]
     fcf = df["free_cash_flow"]
     div_paid = df["dividends_paid"]
-    sh = df["shares_outstanding"]
+    cash = df["cash_and_equivalents"]
+    interest = df.get("interest_expense")
 
     # 팩터 계산
     df["psr"] = [ _safe_div(a, b) for a, b in zip(mc, rev) ]
+    df["sales_yield"] = [ _safe_div(a, b) for a, b in zip(rev, mc) ]
     df["gpa"] = [ _safe_div(a, b) for a, b in zip(gp, ta) ]
     df["por"] = [ _safe_div(a, b) for a, b in zip(mc, op) ]          # POR=Price/OperatingIncome(=MC/OP)
+    df["operating_income_yield"] = [ _safe_div(a, b) for a, b in zip(op, mc) ]
     df["ev_ebit"] = [ _safe_div(a, b) for a, b in zip(ev, ebit) ]
     df["per"] = [ _safe_div(a, b) for a, b in zip(mc, ni) ]
+    df["earnings_yield"] = [ _safe_div(a, b) for a, b in zip(ni, mc) ]
     df["pbr"] = [ _safe_div(a, b) for a, b in zip(mc, eq) ]
+    df["book_to_market"] = [ _safe_div(a, b) for a, b in zip(eq, mc) ]
     df["pcr"] = [ _safe_div(a, b) for a, b in zip(mc, ocf) ]
+    df["ocf_yield"] = [ _safe_div(a, b) for a, b in zip(ocf, mc) ]
     df["pfcr"] = [ _safe_div(a, b) for a, b in zip(mc, fcf) ]
+    df["fcf_yield"] = [ _safe_div(a, b) for a, b in zip(fcf, mc) ]
     df["current_ratio"] = [ _safe_div(a, b) for a, b in zip(ca, cl) ]
+    df["cash_ratio"] = [ _safe_div(a, b) for a, b in zip(cash, cl) ]
     df["debt_ratio"] = [ _safe_div(a, b) for a, b in zip(td, eq) ]   # (총차입금/자기자본)
+    df["debt_to_assets"] = [ _safe_div(a, b) for a, b in zip(td, ta) ]
+    df["net_debt"] = [
+        None if pd.isna(d) or pd.isna(c) else float(d) - float(c)
+        for d, c in zip(td, cash)
+    ]
+    df["net_debt_to_equity"] = [ _safe_div(a, b) for a, b in zip(df["net_debt"], eq) ]
+    df["gross_margin"] = [ _safe_div(a, b) for a, b in zip(gp, rev) ]
+    df["operating_margin"] = [ _safe_div(a, b) for a, b in zip(op, rev) ]
+    df["net_margin"] = [ _safe_div(a, b) for a, b in zip(ni, rev) ]
+    df["ocf_margin"] = [ _safe_div(a, b) for a, b in zip(ocf, rev) ]
+    df["fcf_margin"] = [ _safe_div(a, b) for a, b in zip(fcf, rev) ]
 
     # 청산가치(보수적 근사): 유동자산 - 부채총계
     df["liquidation_value"] = df.apply(
@@ -287,31 +313,69 @@ def calculate_factors(fund: pd.DataFrame) -> pd.DataFrame:
     lag = df["freq"].map(lambda x: 1 if x == "annual" else 4)
 
     # 그룹별 shift를 “freq에 따라 다르게” 적용하기 위해 freq별로 나눠서 계산
-    def _growth(group: pd.DataFrame, col: str, n: int) -> pd.Series:
-        prev = group[col].shift(n)
-        return (group[col] - prev) / prev.replace({0: pd.NA})
+    def _growth_series(series: pd.Series, n: int) -> pd.Series:
+        prev = series.shift(n)
+        return (series - prev) / prev.replace({0: pd.NA})
 
+    df["revenue_growth"] = None
+    df["gross_profit_growth"] = None
     df["op_income_growth"] = None
     df["asset_growth"] = None
     df["debt_growth"] = None
+    df["net_income_growth"] = None
+    df["fcf_growth"] = None
     df["shares_growth"] = None
 
     for fq, n in [("annual", 1), ("quarterly", 4)]:
         m = df["freq"] == fq
-        g = df[m].groupby("symbol", group_keys=False)
+        sub = df.loc[m].copy()
+        if sub.empty:
+            continue
+        g = sub.groupby("symbol", group_keys=False)
 
-        df.loc[m, "op_income_growth"] = g.apply(lambda x: _growth(x, "operating_income", n))
-        df.loc[m, "asset_growth"] = g.apply(lambda x: _growth(x, "total_assets", n))
-        df.loc[m, "debt_growth"] = g.apply(lambda x: _growth(x, "total_debt", n))
-        df.loc[m, "shares_growth"] = g.apply(lambda x: _growth(x, "shares_outstanding", n))
+        df.loc[m, "revenue_growth"] = g["total_revenue"].transform(lambda s: _growth_series(s, n))
+        df.loc[m, "gross_profit_growth"] = g["gross_profit"].transform(lambda s: _growth_series(s, n))
+        df.loc[m, "op_income_growth"] = g["operating_income"].transform(lambda s: _growth_series(s, n))
+        df.loc[m, "asset_growth"] = g["total_assets"].transform(lambda s: _growth_series(s, n))
+        df.loc[m, "debt_growth"] = g["total_debt"].transform(lambda s: _growth_series(s, n))
+        df.loc[m, "net_income_growth"] = g["net_income"].transform(lambda s: _growth_series(s, n))
+        df.loc[m, "fcf_growth"] = g["free_cash_flow"].transform(lambda s: _growth_series(s, n))
+        df.loc[m, "shares_growth"] = g["shares_outstanding"].transform(lambda s: _growth_series(s, n))
 
     # 이걸 해줘야지 소스점 처리가 된다.
-    for c in ["price", "op_income_growth", "asset_growth", "debt_growth", "shares_growth"]:
+    for c in [
+        "price",
+        "price_match_gap_days",
+        "revenue_growth",
+        "gross_profit_growth",
+        "op_income_growth",
+        "asset_growth",
+        "debt_growth",
+        "net_income_growth",
+        "fcf_growth",
+        "shares_growth",
+    ]:
         if c in df.columns:
             df[c] = pd.to_numeric(df[c], errors="coerce")
 
-    # interest_coverage는 interest_expense가 없어서 NULL(추후 컬럼/수집 추가 추천)
-    df["interest_coverage"] = None
+    def _interest_coverage(op_income, interest_expense):
+        if op_income is None or interest_expense is None:
+            return None
+        try:
+            if pd.isna(op_income) or pd.isna(interest_expense):
+                return None
+            if float(interest_expense) == 0:
+                return None
+            return float(op_income) / abs(float(interest_expense))
+        except Exception:
+            return None
+
+    if interest is None:
+        df["interest_coverage"] = None
+    else:
+        df["interest_coverage"] = [
+            _interest_coverage(o, i) for o, i in zip(op, interest)
+        ]
 
     return df
 
@@ -326,6 +390,7 @@ def upsert_factors(
     password="1234",
     port=3306,
     log_dir: str = "logs",
+    replace_symbol_history: bool = True,
 ) -> int:
     """
     nyse_fundamentals를 읽고 nyse_factors에 UPSERT.
@@ -391,7 +456,7 @@ def upsert_factors(
                 missing.append("total_assets")
             if pd.isna(r.get("net_assets")):
                 missing.append("net_assets")
-            if pd.isna(r.get("enterprise_value")) and pd.isna(r.get("ev")):
+            if pd.isna(r.get("enterprise_value")):
                 missing.append("enterprise_value")
             return None if not missing else "missing:" + ",".join(missing)
 
@@ -400,44 +465,72 @@ def upsert_factors(
         upsert_sql = """
         INSERT INTO nyse_factors (
           symbol, freq, period_end,
-          price, market_cap, enterprise_value,
-          psr, gpa, por, ev_ebit, per,
-          liquidation_value, current_ratio, pbr, debt_ratio,
-          pcr, pfcr, dividend_payout,
-          op_income_growth, roe, roa, asset_turnover, interest_coverage,
-          asset_growth, debt_growth, shares_growth,
+          price, price_date, price_match_gap_days, price_source, price_timeframe, timing_basis, pit_mode,
+          market_cap, enterprise_value,
+          psr, sales_yield, gpa, por, operating_income_yield, ev_ebit, per, earnings_yield,
+          liquidation_value, current_ratio, cash_ratio, pbr, book_to_market, debt_ratio, debt_to_assets, net_debt, net_debt_to_equity,
+          pcr, ocf_yield, pfcr, fcf_yield, dividend_payout,
+          gross_margin, operating_margin, net_margin, ocf_margin, fcf_margin,
+          revenue_growth, gross_profit_growth, op_income_growth, net_income_growth, roe, roa, asset_turnover, interest_coverage,
+          asset_growth, debt_growth, fcf_growth, shares_growth,
           last_calculated_at, error_msg
         ) VALUES (
           %(symbol)s, %(freq)s, %(period_end)s,
-          %(price)s, %(market_cap)s, %(enterprise_value)s,
-          %(psr)s, %(gpa)s, %(por)s, %(ev_ebit)s, %(per)s,
-          %(liquidation_value)s, %(current_ratio)s, %(pbr)s, %(debt_ratio)s,
-          %(pcr)s, %(pfcr)s, %(dividend_payout)s,
-          %(op_income_growth)s, %(roe)s, %(roa)s, %(asset_turnover)s, %(interest_coverage)s,
-          %(asset_growth)s, %(debt_growth)s, %(shares_growth)s,
+          %(price)s, %(price_date)s, %(price_match_gap_days)s, %(price_source)s, %(price_timeframe)s, %(timing_basis)s, %(pit_mode)s,
+          %(market_cap)s, %(enterprise_value)s,
+          %(psr)s, %(sales_yield)s, %(gpa)s, %(por)s, %(operating_income_yield)s, %(ev_ebit)s, %(per)s, %(earnings_yield)s,
+          %(liquidation_value)s, %(current_ratio)s, %(cash_ratio)s, %(pbr)s, %(book_to_market)s, %(debt_ratio)s, %(debt_to_assets)s, %(net_debt)s, %(net_debt_to_equity)s,
+          %(pcr)s, %(ocf_yield)s, %(pfcr)s, %(fcf_yield)s, %(dividend_payout)s,
+          %(gross_margin)s, %(operating_margin)s, %(net_margin)s, %(ocf_margin)s, %(fcf_margin)s,
+          %(revenue_growth)s, %(gross_profit_growth)s, %(op_income_growth)s, %(net_income_growth)s, %(roe)s, %(roa)s, %(asset_turnover)s, %(interest_coverage)s,
+          %(asset_growth)s, %(debt_growth)s, %(fcf_growth)s, %(shares_growth)s,
           %(last_calculated_at)s, %(error_msg)s
         )
         ON DUPLICATE KEY UPDATE
           price = VALUES(price),
+          price_date = VALUES(price_date),
+          price_match_gap_days = VALUES(price_match_gap_days),
+          price_source = VALUES(price_source),
+          price_timeframe = VALUES(price_timeframe),
+          timing_basis = VALUES(timing_basis),
+          pit_mode = VALUES(pit_mode),
           market_cap = VALUES(market_cap),
           enterprise_value = VALUES(enterprise_value),
 
           psr = VALUES(psr),
+          sales_yield = VALUES(sales_yield),
           gpa = VALUES(gpa),
           por = VALUES(por),
+          operating_income_yield = VALUES(operating_income_yield),
           ev_ebit = VALUES(ev_ebit),
           per = VALUES(per),
+          earnings_yield = VALUES(earnings_yield),
 
           liquidation_value = VALUES(liquidation_value),
           current_ratio = VALUES(current_ratio),
+          cash_ratio = VALUES(cash_ratio),
           pbr = VALUES(pbr),
+          book_to_market = VALUES(book_to_market),
           debt_ratio = VALUES(debt_ratio),
+          debt_to_assets = VALUES(debt_to_assets),
+          net_debt = VALUES(net_debt),
+          net_debt_to_equity = VALUES(net_debt_to_equity),
 
           pcr = VALUES(pcr),
+          ocf_yield = VALUES(ocf_yield),
           pfcr = VALUES(pfcr),
+          fcf_yield = VALUES(fcf_yield),
           dividend_payout = VALUES(dividend_payout),
 
+          gross_margin = VALUES(gross_margin),
+          operating_margin = VALUES(operating_margin),
+          net_margin = VALUES(net_margin),
+          ocf_margin = VALUES(ocf_margin),
+          fcf_margin = VALUES(fcf_margin),
+          revenue_growth = VALUES(revenue_growth),
+          gross_profit_growth = VALUES(gross_profit_growth),
           op_income_growth = VALUES(op_income_growth),
+          net_income_growth = VALUES(net_income_growth),
           roe = VALUES(roe),
           roa = VALUES(roa),
           asset_turnover = VALUES(asset_turnover),
@@ -445,6 +538,7 @@ def upsert_factors(
 
           asset_growth = VALUES(asset_growth),
           debt_growth = VALUES(debt_growth),
+          fcf_growth = VALUES(fcf_growth),
           shares_growth = VALUES(shares_growth),
 
           last_calculated_at = VALUES(last_calculated_at),
@@ -465,12 +559,27 @@ def upsert_factors(
             rec = r.to_dict()
             for k, v in list(rec.items()):
                 rec[k] = to_none(v)
-            # enterprise_value fill
-            if rec.get("enterprise_value") is None:
-                rec["enterprise_value"] = rec.get("ev")
+            rec.setdefault("price_source", "nyse_price_history")
+            rec.setdefault("price_timeframe", "1d")
+            rec.setdefault("timing_basis", "period_end_asof")
+            rec.setdefault("pit_mode", "broad_research")
             records.append(rec)
 
         if records:
+            if replace_symbol_history:
+                target_symbols = sorted({record["symbol"] for record in records if record.get("symbol")})
+                delete_params: list[object] = []
+                where = []
+                if freq:
+                    where.append("freq=%s")
+                    delete_params.append(freq)
+                if target_symbols:
+                    placeholders = ",".join(["%s"] * len(target_symbols))
+                    where.append(f"symbol IN ({placeholders})")
+                    delete_params.extend(target_symbols)
+                delete_sql = f"DELETE FROM nyse_factors WHERE {' AND '.join(where)}"
+                db.execute(delete_sql, delete_params)
+
             db.executemany(upsert_sql, records)
             inserted = len(records)
 
