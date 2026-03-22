@@ -69,7 +69,7 @@ WRITE_TARGETS = [
     },
     {
         "job": "Extended Statement Refresh",
-        "writes_to": "finance_fundamental.nyse_financial_statement_labels, finance_fundamental.nyse_financial_statement_values",
+        "writes_to": "finance_fundamental.nyse_financial_statement_filings, finance_fundamental.nyse_financial_statement_labels, finance_fundamental.nyse_financial_statement_values",
     },
     {
         "job": "Metadata Refresh",
@@ -97,7 +97,7 @@ WRITE_TARGETS = [
     },
     {
         "job": "Financial Statement Ingestion",
-        "writes_to": "finance_fundamental.nyse_financial_statement_labels, finance_fundamental.nyse_financial_statement_values",
+        "writes_to": "finance_fundamental.nyse_financial_statement_filings, finance_fundamental.nyse_financial_statement_labels, finance_fundamental.nyse_financial_statement_values",
     },
 ]
 
@@ -765,7 +765,7 @@ def main() -> None:
             st.caption("Recommended cadence: monthly, or before deep factor research and long-horizon backtest preparation.")
             st.caption("Recommended symbol source: `Profile Filtered Stocks` or a narrower research universe, because this job is heavier than summary fundamentals refresh.")
             st.caption("Current defaults: `Profile Filtered Stocks`, `annual`, `8 periods`.")
-            st.caption("Writes to: `finance_fundamental.nyse_financial_statement_labels`, `finance_fundamental.nyse_financial_statement_values`")
+            st.caption("Writes to: `finance_fundamental.nyse_financial_statement_filings`, `finance_fundamental.nyse_financial_statement_labels`, `finance_fundamental.nyse_financial_statement_values`")
             ext_symbol_result = _render_symbol_source_inputs(
                 "extended_statement",
                 "Extended Statement Symbols",
@@ -1167,7 +1167,7 @@ def main() -> None:
                 "Uses the `Symbols` input. This job is usually slower than the normalized fundamentals job and may "
                 "produce partial success if some issuers fail."
             )
-            st.caption("Writes to: `finance_fundamental.nyse_financial_statement_labels`, `finance_fundamental.nyse_financial_statement_values`")
+            st.caption("Writes to: `finance_fundamental.nyse_financial_statement_filings`, `finance_fundamental.nyse_financial_statement_labels`, `finance_fundamental.nyse_financial_statement_values`")
             fs_symbol_result = _render_symbol_source_inputs("fs", "Financial Statement Symbols")
             fs_symbols_input = fs_symbol_result["symbols"]
             fs_col1, fs_col2, fs_col3 = st.columns(3)

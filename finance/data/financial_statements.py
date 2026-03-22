@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import contextlib
+import io
 import logging
 import random
 import time
-from datetime import datetime, date
+from datetime import datetime, date, time as dt_time, timezone
 from pathlib import Path
 from typing import Iterable, Literal, Optional, List, Dict, Any
 import re
@@ -18,6 +20,15 @@ from .db.schema import FUNDAMENTAL_SCHEMAS, sync_table_schema
 
 DB_FUND = "finance_fundamental"
 Freq = Literal["annual", "quarterly"]
+RAW_STATEMENT_TYPES = {
+    "IncomeStatement": "income_statement",
+    "BalanceSheet": "balance_sheet",
+    "CashFlowStatement": "cashflow",
+    "CashFlow": "cashflow",
+}
+ANNUAL_FORM_TYPES = {"10-K", "10-K/A"}
+QUARTERLY_FORM_TYPES = {"10-Q", "10-Q/A"}
+PERIODIC_FORM_TYPES = ANNUAL_FORM_TYPES | QUARTERLY_FORM_TYPES
 
 
 # NOTE:
@@ -287,6 +298,12 @@ def _chunked(lst: List[str], size: int):
         yield lst[i : i + size]
 
 
+def _quiet_edgar_call(fn, *args, **kwargs):
+    sink = io.StringIO()
+    with contextlib.redirect_stdout(sink), contextlib.redirect_stderr(sink):
+        return fn(*args, **kwargs)
+
+
 def get_fundamental(symbol: str, periods: int = 4, period: str = "annual") -> pd.DataFrame:
     """
     SEC EDGAR 기반 재무제표(손익/재무상태/현금흐름)를 하나의 DataFrame으로 반환.
@@ -347,6 +364,57 @@ def get_fundamental(symbol: str, periods: int = 4, period: str = "annual") -> pd
         return pd.DataFrame()
 
     return pd.concat(dfs, ignore_index=True)
+
+
+def _allowed_forms_for_freq(freq: Freq) -> set[str]:
+    return ANNUAL_FORM_TYPES if freq == "annual" else QUARTERLY_FORM_TYPES
+
+
+def _allowed_fiscal_periods_for_freq(freq: Freq) -> set[str]:
+    return {"FY"} if freq == "annual" else {"Q1", "Q2", "Q3"}
+
+
+def _normalize_statement_type(statement_type: Any) -> str | None:
+    if statement_type is None:
+        return None
+    return RAW_STATEMENT_TYPES.get(str(statement_type).strip())
+
+
+def _period_type_from_fiscal_period(fiscal_period: Any) -> str | None:
+    if fiscal_period is None:
+        return None
+
+    s = str(fiscal_period).strip().upper()
+    if s == "FY":
+        return "FY"
+    if s.startswith("Q"):
+        return "Q"
+    return "DATE"
+
+
+def _fiscal_quarter_from_period(fiscal_period: Any) -> int | None:
+    if fiscal_period is None:
+        return None
+
+    s = str(fiscal_period).strip().upper()
+    if re.match(r"^Q[1-4]$", s):
+        return int(s[1])
+    return None
+
+
+def _build_period_label(
+    fiscal_period: Any,
+    fiscal_year: Any,
+    period_end: date | None,
+) -> str | None:
+    if period_end is not None:
+        return period_end.isoformat()
+
+    if fiscal_period is not None and fiscal_year is not None:
+        s = str(fiscal_period).strip().upper()
+        return f"{s} {int(fiscal_year)}"
+
+    return None
 
 def _infer_as_of_from_df(df: pd.DataFrame) -> date:
     meta_cols = {"symbol", "statement_type", "label", "label_kr", "confidence"}
@@ -473,6 +541,34 @@ def _coerce_datetime(v):
     return dt.to_pydatetime()
 
 
+def _coerce_utc_naive_datetime(v):
+    dt = _coerce_datetime(v)
+    if dt is None:
+        return None
+    if dt.tzinfo is not None:
+        return dt.astimezone(timezone.utc).replace(tzinfo=None)
+    return dt
+
+
+def _coerce_bool(v) -> int | None:
+    if v is None:
+        return None
+    return 1 if bool(v) else 0
+
+
+def _available_at_from_dates(
+    filing_date: date | None,
+    accepted_at: datetime | None,
+) -> datetime | None:
+    if accepted_at is not None:
+        return accepted_at
+    if filing_date is not None:
+        # Conservative fallback: without an accepted timestamp,
+        # do not treat the filing as available from the start of the filing day.
+        return datetime.combine(filing_date, dt_time(23, 59, 59))
+    return None
+
+
 def _extract_pit_fields(row: pd.Series) -> Dict[str, Any]:
     """
     EDGAR/원천 DF에 filing/acceptance 시점 정보가 있는 경우 추출.
@@ -516,6 +612,115 @@ def _none_if_not_finite_number(x):
     if not math.isfinite(fx):   # nan, inf, -inf 방지
         return None
     return fx
+
+
+def _build_filing_row(symbol: str, filing) -> Dict[str, Any] | None:
+    accession_no = getattr(filing, "accession_no", None)
+    if not accession_no:
+        return None
+
+    filing_date = _coerce_date(getattr(filing, "filing_date", None))
+    accepted_at = _coerce_utc_naive_datetime(getattr(filing, "acceptance_datetime", None))
+    report_date = _coerce_date(getattr(filing, "report_date", None))
+    now = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+
+    return {
+        "symbol": symbol,
+        "accession_no": accession_no,
+        "form_type": _none_if_nan(getattr(filing, "form", None)),
+        "filing_date": filing_date,
+        "accepted_at": accepted_at,
+        "available_at": _available_at_from_dates(filing_date, accepted_at),
+        "report_date": report_date,
+        "file_number": _none_if_nan(getattr(filing, "file_number", None)),
+        "primary_document": _none_if_nan(getattr(filing, "primary_document", None)),
+        "primary_doc_description": _none_if_nan(getattr(filing, "primary_doc_description", None)),
+        "is_xbrl": _coerce_bool(getattr(filing, "is_xbrl", None)),
+        "is_inline_xbrl": _coerce_bool(getattr(filing, "is_inline_xbrl", None)),
+        "size": _none_if_nan(getattr(filing, "size", None)),
+        "source": "edgar",
+        "last_collected_at": now,
+    }
+
+
+def _get_financial_statement_source(symbol: str) -> Dict[str, Any]:
+    try:
+        set_identity("honeypipeline@gmail.com")
+    except Exception:
+        pass
+
+    company = Company(symbol)
+    facts_obj = _quiet_edgar_call(company.get_facts)
+    all_facts = _quiet_edgar_call(facts_obj.get_all_facts) if facts_obj else []
+
+    filings = _quiet_edgar_call(
+        company.get_filings,
+        form=sorted(PERIODIC_FORM_TYPES),
+        amendments=True,
+    )
+
+    filing_rows: List[Dict[str, Any]] = []
+    filings_by_accession: Dict[str, Dict[str, Any]] = {}
+
+    filing_count = len(filings) if filings is not None else 0
+    for idx in range(filing_count):
+        filing = filings[idx]
+        row = _build_filing_row(symbol, filing)
+        if row is None:
+            continue
+        filing_rows.append(row)
+        filings_by_accession[row["accession_no"]] = row
+
+    return {
+        "facts": all_facts or [],
+        "filing_rows": filing_rows,
+        "filings_by_accession": filings_by_accession,
+    }
+
+
+def inspect_financial_statement_source(
+    symbol: str,
+    sample_size: int = 5,
+) -> Dict[str, Any]:
+    """
+    EDGAR 원천 fact / filing 구조를 빠르게 확인하기 위한 inspection helper.
+    """
+    source = _get_financial_statement_source(symbol)
+    statement_facts = [
+        f for f in source["facts"]
+        if _normalize_statement_type(getattr(f, "statement_type", None)) is not None
+    ]
+
+    form_counts = (
+        pd.Series([getattr(f, "form_type", None) for f in statement_facts], dtype="object")
+        .fillna("UNKNOWN")
+        .value_counts()
+        .to_dict()
+    )
+
+    sample_facts = []
+    for fact in statement_facts[:sample_size]:
+        sample_facts.append({
+            "concept": getattr(fact, "concept", None),
+            "label": getattr(fact, "label", None),
+            "statement_type": getattr(fact, "statement_type", None),
+            "period_start": str(getattr(fact, "period_start", None) or ""),
+            "period_end": str(getattr(fact, "period_end", None) or ""),
+            "fiscal_year": getattr(fact, "fiscal_year", None),
+            "fiscal_period": getattr(fact, "fiscal_period", None),
+            "form_type": getattr(fact, "form_type", None),
+            "filing_date": str(getattr(fact, "filing_date", None) or ""),
+            "accession": getattr(fact, "accession", None),
+            "unit": getattr(fact, "unit", None),
+        })
+
+    return {
+        "symbol": symbol,
+        "statement_fact_count": len(statement_facts),
+        "filing_count": len(source["filing_rows"]),
+        "form_counts": form_counts,
+        "sample_facts": sample_facts,
+    }
 
 
 def _iter_value_rows(df: pd.DataFrame, freq: Freq) -> List[Dict[str, Any]]:
@@ -576,48 +781,276 @@ def _iter_value_rows(df: pd.DataFrame, freq: Freq) -> List[Dict[str, Any]]:
     return rows
 
 
-def _iter_label_rows(df: pd.DataFrame) -> List[Dict[str, Any]]:
-    """
-    labels 테이블(심볼별 label 메타)에 넣을 rows 생성
-    - symbol 포함 (symbol마다 condition/priority 등이 달라질 수 있으므로)
-    - condition/priority/enabled 같은 운영 컬럼은 여기서 세팅하지 않고 DB에 맡김
-      (수집이 운영 설정을 덮어쓰지 않도록 upsert에서도 update 제외)
-    """
-    if df is None or df.empty:
+def _iter_value_rows_from_source(
+    symbol: str,
+    source: Dict[str, Any],
+    freq: Freq,
+    periods: int,
+) -> List[Dict[str, Any]]:
+    if not source["facts"]:
         return []
 
-    now = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
-    as_of_meta = _infer_latest_period_meta(df)
-    as_of = as_of_meta["period_end"]
-
-    cols = [c for c in ["symbol", "label", "label_kr", "statement_type", "confidence"] if c in df.columns]
-    x = df[cols].drop_duplicates(subset=["symbol", "label"]).copy()
-
+    allowed_forms = _allowed_forms_for_freq(freq)
+    allowed_periods = _allowed_fiscal_periods_for_freq(freq)
+    filings_by_accession = source["filings_by_accession"]
     rows: List[Dict[str, Any]] = []
-    for _, r in x.iterrows():
-        symbol = r.get("symbol")
-        label = r.get("label")
-        if not symbol or not label:
+    now = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+
+    for fact in source["facts"]:
+        statement_type = _normalize_statement_type(getattr(fact, "statement_type", None))
+        if statement_type is None:
             continue
 
-        conf = None
-        if "confidence" in x.columns:
-            conf = _none_if_not_finite_number(r.get("confidence"))
+        form_type = _none_if_nan(getattr(fact, "form_type", None))
+        if form_type not in allowed_forms:
+            continue
+
+        fiscal_period = _none_if_nan(getattr(fact, "fiscal_period", None))
+        if fiscal_period not in allowed_periods:
+            continue
+
+        label = _none_if_nan(getattr(fact, "label", None))
+        concept = _none_if_nan(getattr(fact, "concept", None))
+        period_end = _coerce_date(getattr(fact, "period_end", None))
+        if not label or not concept or period_end is None:
+            continue
+
+        value = _none_if_not_finite_number(getattr(fact, "numeric_value", None))
+        if value is None:
+            continue
+
+        filing_date = _coerce_date(getattr(fact, "filing_date", None))
+        accession_no = _none_if_nan(getattr(fact, "accession", None))
+        unit = _none_if_nan(getattr(fact, "unit", None))
+        # Raw value identity depends on accession + unit.
+        # If either is missing, do not emit the row into the PIT ledger path.
+        if not accession_no or not unit:
+            continue
+        filing_row = filings_by_accession.get(accession_no or "", {})
+        accepted_at = _coerce_utc_naive_datetime(filing_row.get("accepted_at"))
+        report_date = _coerce_date(filing_row.get("report_date"))
+        fiscal_year = getattr(fact, "fiscal_year", None)
 
         rows.append({
             "symbol": symbol,
+            "freq": freq,
+            "period_start": _coerce_date(getattr(fact, "period_start", None)),
+            "period_end": period_end,
+            "period_label": _build_period_label(fiscal_period, fiscal_year, period_end),
+            "period_type": _period_type_from_fiscal_period(fiscal_period),
+            "source_period_type": _none_if_nan(getattr(fact, "period_type", None)),
+            "fiscal_year": fiscal_year,
+            "fiscal_period": fiscal_period,
+            "fiscal_quarter": _fiscal_quarter_from_period(fiscal_period),
+            "statement_type": statement_type,
+            "concept": concept,
+            "taxonomy": _none_if_nan(getattr(fact, "taxonomy", None)),
             "label": label,
-            "as_of": as_of,
-            "as_of_label": as_of_meta["period_label"] or (as_of.isoformat() if isinstance(as_of, date) else None),
-            "as_of_period_type": as_of_meta["period_type"],
-            "as_of_fiscal_year": as_of_meta["fiscal_year"],
-            "as_of_fiscal_quarter": as_of_meta["fiscal_quarter"],
-            "label_kr": _none_if_nan(r.get("label_kr")),
-            "statement_type": _none_if_nan(r.get("statement_type")),
-            "confidence": conf,
+            "value": value,
+            "unit": unit,
+            "filing_date": filing_date,
+            "accepted_at": accepted_at,
+            "available_at": _available_at_from_dates(filing_date, accepted_at),
+            "report_date": report_date,
+            "form_type": form_type,
+            "accession_no": accession_no,
+            "data_quality": str(getattr(fact, "data_quality", "") or "") or None,
+            "is_audited": _coerce_bool(getattr(fact, "is_audited", None)),
+            "is_restated": _coerce_bool(getattr(fact, "is_restated", None)),
+            "is_estimated": _coerce_bool(getattr(fact, "is_estimated", None)),
+            "confidence": _none_if_not_finite_number(getattr(fact, "confidence_score", None)),
+            "source": "edgar",
+            "last_collected_at": now,
+            "error_msg": None,
+        })
+
+    if periods <= 0 or not rows:
+        return rows
+
+    period_keys = sorted(
+        {
+            (
+                row["period_end"],
+                row.get("fiscal_year"),
+                row.get("fiscal_period"),
+                row.get("period_label"),
+            )
+            for row in rows
+        },
+        key=lambda x: (
+            x[0] or date.min,
+            x[1] or -1,
+            x[2] or "",
+            x[3] or "",
+        ),
+        reverse=True,
+    )
+    allowed_period_keys = set(period_keys[:periods])
+
+    return [
+        row for row in rows
+        if (
+            row["period_end"],
+            row.get("fiscal_year"),
+            row.get("fiscal_period"),
+            row.get("period_label"),
+        ) in allowed_period_keys
+    ]
+
+
+def _iter_label_rows_from_values(value_rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    values rows에서 최신 메타를 뽑아 labels 테이블 row를 구성.
+    """
+    if not value_rows:
+        return []
+
+    now = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+    latest_by_label: Dict[tuple[str, str, str, date], Dict[str, Any]] = {}
+
+    def _sort_key(row: Dict[str, Any]):
+        available_at = row.get("available_at")
+        filing_date = row.get("filing_date")
+        period_end = row.get("period_end")
+        return (
+            available_at or datetime.min,
+            datetime.combine(filing_date, dt_time.min) if isinstance(filing_date, date) else datetime.min,
+            datetime.combine(period_end, dt_time.min) if isinstance(period_end, date) else datetime.min,
+            row.get("accession_no") or "",
+        )
+
+    for row in value_rows:
+        label = row.get("label")
+        symbol = row.get("symbol")
+        statement_type = row.get("statement_type")
+        concept = row.get("concept")
+        as_of = row.get("period_end")
+        if not symbol or not label or not statement_type or not concept or not isinstance(as_of, date):
+            continue
+
+        key = (symbol, statement_type, concept, as_of)
+        current = latest_by_label.get(key)
+        if current is None or _sort_key(row) >= _sort_key(current):
+            latest_by_label[key] = row
+
+    rows: List[Dict[str, Any]] = []
+    for row in latest_by_label.values():
+        rows.append({
+            "symbol": row["symbol"],
+            "statement_type": row["statement_type"],
+            "concept": row["concept"],
+            "as_of": row["period_end"],
+            "label": row["label"],
+            "as_of_label": row.get("period_label") or row["period_end"].isoformat(),
+            "as_of_period_type": row.get("period_type"),
+            "as_of_fiscal_year": row.get("fiscal_year"),
+            "as_of_fiscal_quarter": row.get("fiscal_quarter"),
+            "label_kr": financial_term_kor_map.get(row["label"]),
+            "taxonomy": row.get("taxonomy"),
+            "latest_unit": row.get("unit"),
+            "latest_filing_date": row.get("filing_date"),
+            "latest_accepted_at": row.get("accepted_at"),
+            "latest_available_at": row.get("available_at"),
+            "latest_accession_no": row.get("accession_no"),
+            "latest_form_type": row.get("form_type"),
+            "confidence": row.get("confidence"),
             "last_updated_at": now,
         })
     return rows
+
+
+def _dedupe_filing_rows(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    deduped: Dict[tuple[str, str], Dict[str, Any]] = {}
+    for row in rows:
+        symbol = row.get("symbol")
+        accession_no = row.get("accession_no")
+        if not symbol or not accession_no:
+            continue
+        deduped[(symbol, accession_no)] = row
+    return list(deduped.values())
+
+
+def _get_index_map(db, table_name: str, db_name: str) -> Dict[str, Dict[str, Any]]:
+    rows = db.query(
+        """
+        SELECT INDEX_NAME, NON_UNIQUE, COLUMN_NAME, SEQ_IN_INDEX
+        FROM information_schema.STATISTICS
+        WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s
+        ORDER BY INDEX_NAME, SEQ_IN_INDEX
+        """,
+        (db_name, table_name),
+    )
+
+    index_map: Dict[str, Dict[str, Any]] = {}
+    for row in rows:
+        name = row["INDEX_NAME"]
+        if name not in index_map:
+            index_map[name] = {
+                "non_unique": row["NON_UNIQUE"],
+                "columns": [],
+            }
+        index_map[name]["columns"].append(row["COLUMN_NAME"])
+
+    return index_map
+
+
+def _ensure_index(
+    db,
+    table_name: str,
+    db_name: str,
+    index_name: str,
+    columns: List[str],
+    unique: bool = False,
+) -> None:
+    index_map = _get_index_map(db, table_name, db_name)
+    current = index_map.get(index_name)
+    if current and current["columns"] == columns and (current["non_unique"] == 0) == unique:
+        return
+    if current:
+        db.execute(f"ALTER TABLE `{table_name}` DROP INDEX `{index_name}`")
+
+    kind = "UNIQUE KEY" if unique else "KEY"
+    cols = ", ".join(f"`{c}`" for c in columns)
+    db.execute(f"ALTER TABLE `{table_name}` ADD {kind} `{index_name}` ({cols})")
+
+
+def _ensure_financial_statement_schema_state(db) -> None:
+    _ensure_index(
+        db,
+        "nyse_financial_statement_values",
+        DB_FUND,
+        "uk_fin",
+        ["symbol", "freq", "accession_no", "statement_type", "concept", "period_end", "unit"],
+        unique=True,
+    )
+    _ensure_index(
+        db,
+        "nyse_financial_statement_values",
+        DB_FUND,
+        "ix_symbol_available_at",
+        ["symbol", "available_at"],
+    )
+    _ensure_index(
+        db,
+        "nyse_financial_statement_values",
+        DB_FUND,
+        "ix_accession_no",
+        ["accession_no"],
+    )
+    _ensure_index(
+        db,
+        "nyse_financial_statement_values",
+        DB_FUND,
+        "ix_symbol_concept_available_at",
+        ["symbol", "statement_type", "concept", "available_at"],
+    )
+    _ensure_index(
+        db,
+        "nyse_financial_statement_labels",
+        DB_FUND,
+        "ix_symbol_available_at",
+        ["symbol", "latest_available_at"],
+    )
 
 
 
@@ -638,11 +1071,12 @@ def upsert_financial_statements(
     log_dir: str = "logs",
 ) -> Dict[str, Any]:
     """
-    get_fundamental(symbol, periods, period)로 재무제표를 수집한 후,
-    아래 2개 테이블에 업서트:
+    raw EDGAR facts / filing 메타를 수집한 후,
+    아래 3개 테이블에 업서트:
 
-    1) nyse_financial_statement_labels  (symbol, label 기준)
-    2) nyse_financial_statement_values  (symbol, freq, period_end, statement_type, label 기준)
+    1) nyse_financial_statement_filings (symbol, accession 기준)
+    2) nyse_financial_statement_labels  (symbol, statement_type, concept, as_of 기준)
+    3) nyse_financial_statement_values  (symbol, freq, accession, concept, period_end 기준)
 
     - symbols 를 chunk_size 로 나눠 배치 처리
     - 배치 간 sleep + 지터
@@ -668,7 +1102,41 @@ def upsert_financial_statements(
     try:
         db.use_db(DB_FUND)
 
-        # --- (1) labels 테이블 준비 ---
+        # --- (1) filings 테이블 준비 ---
+        db.execute(FUNDAMENTAL_SCHEMAS["financial_statement_filings"])
+        sync_table_schema(
+            db,
+            "nyse_financial_statement_filings",
+            FUNDAMENTAL_SCHEMAS["financial_statement_filings"],
+            DB_FUND,
+        )
+
+        upsert_filings_sql = """
+        INSERT INTO nyse_financial_statement_filings (
+            symbol, accession_no, form_type, filing_date, accepted_at, available_at, report_date,
+            file_number, primary_document, primary_doc_description, is_xbrl, is_inline_xbrl, size,
+            source, last_collected_at
+        ) VALUES (
+            %(symbol)s, %(accession_no)s, %(form_type)s, %(filing_date)s, %(accepted_at)s, %(available_at)s, %(report_date)s,
+            %(file_number)s, %(primary_document)s, %(primary_doc_description)s, %(is_xbrl)s, %(is_inline_xbrl)s, %(size)s,
+            %(source)s, %(last_collected_at)s
+        )
+        ON DUPLICATE KEY UPDATE
+            form_type = VALUES(form_type),
+            filing_date = VALUES(filing_date),
+            accepted_at = VALUES(accepted_at),
+            available_at = VALUES(available_at),
+            report_date = VALUES(report_date),
+            file_number = VALUES(file_number),
+            primary_document = VALUES(primary_document),
+            primary_doc_description = VALUES(primary_doc_description),
+            is_xbrl = VALUES(is_xbrl),
+            is_inline_xbrl = VALUES(is_inline_xbrl),
+            size = VALUES(size),
+            last_collected_at = VALUES(last_collected_at)
+        """
+
+        # --- (2) labels 테이블 준비 ---
         db.execute(FUNDAMENTAL_SCHEMAS["financial_statement_labels"])
         sync_table_schema(
             db,
@@ -679,24 +1147,35 @@ def upsert_financial_statements(
 
         upsert_labels_sql = """
         INSERT INTO nyse_financial_statement_labels (
-            symbol, label, as_of, as_of_label, as_of_period_type, as_of_fiscal_year, as_of_fiscal_quarter,
-            label_kr, statement_type, confidence, last_updated_at
+            symbol, statement_type, concept, as_of, label, as_of_label, as_of_period_type, as_of_fiscal_year, as_of_fiscal_quarter,
+            label_kr, taxonomy, latest_unit,
+            latest_filing_date, latest_accepted_at, latest_available_at, latest_accession_no, latest_form_type,
+            confidence, last_updated_at
         ) VALUES (
-        %(symbol)s, %(label)s, %(as_of)s, %(as_of_label)s, %(as_of_period_type)s, %(as_of_fiscal_year)s, %(as_of_fiscal_quarter)s,
-        %(label_kr)s, %(statement_type)s, %(confidence)s, %(last_updated_at)s
+        %(symbol)s, %(statement_type)s, %(concept)s, %(as_of)s, %(label)s, %(as_of_label)s, %(as_of_period_type)s, %(as_of_fiscal_year)s, %(as_of_fiscal_quarter)s,
+        %(label_kr)s, %(taxonomy)s, %(latest_unit)s,
+        %(latest_filing_date)s, %(latest_accepted_at)s, %(latest_available_at)s, %(latest_accession_no)s, %(latest_form_type)s,
+        %(confidence)s, %(last_updated_at)s
         )
             ON DUPLICATE KEY UPDATE
+            label = VALUES(label),
             as_of_label = VALUES(as_of_label),
             as_of_period_type = VALUES(as_of_period_type),
             as_of_fiscal_year = VALUES(as_of_fiscal_year),
             as_of_fiscal_quarter = VALUES(as_of_fiscal_quarter),
             label_kr = VALUES(label_kr),
-            statement_type = VALUES(statement_type),
+            taxonomy = VALUES(taxonomy),
+            latest_unit = VALUES(latest_unit),
+            latest_filing_date = VALUES(latest_filing_date),
+            latest_accepted_at = VALUES(latest_accepted_at),
+            latest_available_at = VALUES(latest_available_at),
+            latest_accession_no = VALUES(latest_accession_no),
+            latest_form_type = VALUES(latest_form_type),
             confidence = VALUES(confidence),
             last_updated_at = VALUES(last_updated_at)
         """
 
-        # --- (2) values 테이블 준비 ---
+        # --- (3) values 테이블 준비 ---
         db.execute(FUNDAMENTAL_SCHEMAS["financial_statement_values"])
         sync_table_schema(
             db,
@@ -704,31 +1183,51 @@ def upsert_financial_statements(
             FUNDAMENTAL_SCHEMAS["financial_statement_values"],
             DB_FUND,
         )
+        _ensure_financial_statement_schema_state(db)
 
         upsert_values_sql = """
         INSERT INTO nyse_financial_statement_values (
-          symbol, freq, period_end,
-          period_label, period_type, fiscal_year, fiscal_quarter,
-          statement_type, label,
+          symbol, freq, period_start, period_end,
+          period_label, period_type, source_period_type, fiscal_year, fiscal_period, fiscal_quarter,
+          statement_type, concept, taxonomy, label,
           value,
-          filing_date, accepted_at,
+          unit,
+          filing_date, accepted_at, available_at, report_date, form_type, accession_no,
+          data_quality, is_audited, is_restated, is_estimated, confidence,
           source, last_collected_at, error_msg
         ) VALUES (
-          %(symbol)s, %(freq)s, %(period_end)s,
-          %(period_label)s, %(period_type)s, %(fiscal_year)s, %(fiscal_quarter)s,
-          %(statement_type)s, %(label)s,
+          %(symbol)s, %(freq)s, %(period_start)s, %(period_end)s,
+          %(period_label)s, %(period_type)s, %(source_period_type)s, %(fiscal_year)s, %(fiscal_period)s, %(fiscal_quarter)s,
+          %(statement_type)s, %(concept)s, %(taxonomy)s, %(label)s,
           %(value)s,
-          %(filing_date)s, %(accepted_at)s,
+          %(unit)s,
+          %(filing_date)s, %(accepted_at)s, %(available_at)s, %(report_date)s, %(form_type)s, %(accession_no)s,
+          %(data_quality)s, %(is_audited)s, %(is_restated)s, %(is_estimated)s, %(confidence)s,
           %(source)s, %(last_collected_at)s, %(error_msg)s
         )
         ON DUPLICATE KEY UPDATE
+          period_start = VALUES(period_start),
           period_label = VALUES(period_label),
           period_type = VALUES(period_type),
+          source_period_type = VALUES(source_period_type),
           fiscal_year = VALUES(fiscal_year),
+          fiscal_period = VALUES(fiscal_period),
           fiscal_quarter = VALUES(fiscal_quarter),
+          taxonomy = VALUES(taxonomy),
+          label = VALUES(label),
           value = VALUES(value),
+          unit = VALUES(unit),
           filing_date = VALUES(filing_date),
           accepted_at = VALUES(accepted_at),
+          available_at = VALUES(available_at),
+          report_date = VALUES(report_date),
+          form_type = VALUES(form_type),
+          accession_no = VALUES(accession_no),
+          data_quality = VALUES(data_quality),
+          is_audited = VALUES(is_audited),
+          is_restated = VALUES(is_restated),
+          is_estimated = VALUES(is_estimated),
+          confidence = VALUES(confidence),
           last_collected_at = VALUES(last_collected_at),
           error_msg = VALUES(error_msg)
         """
@@ -736,23 +1235,26 @@ def upsert_financial_statements(
         for batch in _chunked(symbols, chunk_size):
             all_value_rows: List[Dict[str, Any]] = []
             all_label_rows: List[Dict[str, Any]] = []
+            all_filing_rows: List[Dict[str, Any]] = []
 
             for sym in batch:
                 last_err: Optional[str] = None
 
                 for k in range(max_retry):
                     try:
-                        df = get_fundamental(sym, periods=periods, period=period)
-
-                        # labels / values rows 생성
-                        label_rows = _iter_label_rows(df)
-                        value_rows = _iter_value_rows(df, freq)
+                        source = _get_financial_statement_source(sym)
+                        filing_rows = _dedupe_filing_rows(source["filing_rows"])
+                        value_rows = _iter_value_rows_from_source(sym, source, freq, periods)
+                        label_rows = _iter_label_rows_from_values(value_rows)
 
                         if not value_rows:
                             logger.warning(f"{sym} | {freq} | empty financial statement values")
                         if not label_rows:
                             logger.warning(f"{sym} | {freq} | empty financial statement labels")
+                        if not filing_rows:
+                            logger.warning(f"{sym} | {freq} | empty financial statement filings")
 
+                        all_filing_rows.extend(filing_rows)
                         all_label_rows.extend(label_rows)
                         all_value_rows.extend(value_rows)
                         break
@@ -764,7 +1266,9 @@ def upsert_financial_statements(
                     logger.error(f"{sym} | {freq} | {last_err}")
                     failed.append(sym)
 
-            # labels 먼저 (선택: 중복이 많으면 dedup 후 넣어도 됨)
+            if all_filing_rows:
+                db.executemany(upsert_filings_sql, all_filing_rows)
+
             if all_label_rows:
                 db.executemany(upsert_labels_sql, all_label_rows)
                 upserted_labels += len(all_label_rows)

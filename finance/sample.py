@@ -29,6 +29,10 @@ from .data.fundamentals import(
 from .data.factors import(
     upsert_factors
 )
+from .data.financial_statements import (
+    inspect_financial_statement_source,
+    upsert_financial_statements,
+)
 
 from finance.data.db.schema import sync_table_schema, NYSE_SCHEMAS
 from finance.data.db.mysql import MySQLClient
@@ -212,3 +216,20 @@ def fundamentals_sample(freq="annual"):
 
     upsert_factors(symbols, freq=freq)
     # upsert_factors(symbols, freq="quarterly")
+
+
+def financial_statement_source_sample(symbol="AAPL"):
+    """
+        EDGAR 상세 재무제표 원천 fact / filing 메타 구조 확인용 샘플
+    """
+    return inspect_financial_statement_source(symbol)
+
+
+def financial_statements_sample(symbols=None, freq="annual"):
+    """
+        상세 재무제표 DB 적재 샘플
+    """
+    if symbols is None:
+        symbols = ["AAPL", "MSFT", "JPM"]
+
+    return upsert_financial_statements(symbols=symbols, freq=freq, period=freq)

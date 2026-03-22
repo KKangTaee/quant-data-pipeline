@@ -301,23 +301,70 @@ FUNDAMENTAL_SCHEMAS = {
         );
     """,
 
+    "financial_statement_filings": """
+        CREATE TABLE IF NOT EXISTS nyse_financial_statement_filings (
+        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+        symbol VARCHAR(20) NOT NULL,
+        accession_no VARCHAR(32) NOT NULL,
+        form_type VARCHAR(20) NULL,
+        filing_date DATE NULL,
+        accepted_at DATETIME NULL,
+        available_at DATETIME NULL,
+        report_date DATE NULL,
+
+        file_number VARCHAR(40) NULL,
+        primary_document VARCHAR(255) NULL,
+        primary_doc_description VARCHAR(255) NULL,
+        is_xbrl TINYINT(1) NULL,
+        is_inline_xbrl TINYINT(1) NULL,
+        size BIGINT NULL,
+
+        source VARCHAR(20) NOT NULL DEFAULT 'edgar',
+        last_collected_at TIMESTAMP NULL,
+
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+        UNIQUE KEY uk_symbol_accession (symbol, accession_no),
+        KEY ix_symbol_filing_date (symbol, filing_date),
+        KEY ix_symbol_available_at (symbol, available_at),
+        KEY ix_form_type (form_type)
+        );
+    """,
+
     "financial_statement_values": """
         CREATE TABLE IF NOT EXISTS nyse_financial_statement_values (
         id BIGINT AUTO_INCREMENT PRIMARY KEY,
 
         symbol VARCHAR(20) NOT NULL,
         freq   ENUM('annual','quarterly') NOT NULL,
+        period_start DATE NULL,
         period_end DATE NOT NULL,
         period_label VARCHAR(20) NULL,
         period_type ENUM('Q','FY','DATE') NULL,
+        source_period_type VARCHAR(20) NULL,
         fiscal_year SMALLINT NULL,
+        fiscal_period VARCHAR(10) NULL,
         fiscal_quarter TINYINT NULL,
 
         statement_type VARCHAR(50) NOT NULL,
+        concept VARCHAR(255) NOT NULL,
+        taxonomy VARCHAR(50) NULL,
         label VARCHAR(255) NOT NULL,
         value DOUBLE NULL,
+        unit VARCHAR(32) NOT NULL,
         filing_date DATE NULL,
         accepted_at DATETIME NULL,
+        available_at DATETIME NOT NULL,
+        report_date DATE NULL,
+        form_type VARCHAR(20) NULL,
+        accession_no VARCHAR(32) NOT NULL,
+        data_quality VARCHAR(20) NULL,
+        is_audited TINYINT(1) NULL,
+        is_restated TINYINT(1) NULL,
+        is_estimated TINYINT(1) NULL,
+        confidence DOUBLE NULL,
 
         source VARCHAR(20) NOT NULL DEFAULT 'edgar',
         last_collected_at TIMESTAMP NULL,
@@ -326,25 +373,36 @@ FUNDAMENTAL_SCHEMAS = {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
-        UNIQUE KEY uk_fin (symbol, freq, period_end, statement_type, label),
+        UNIQUE KEY uk_fin (symbol, freq, accession_no, statement_type, concept, period_end, unit),
         KEY ix_symbol (symbol),
         KEY ix_period_end (period_end),
-        KEY ix_label (label)
+        KEY ix_label (label),
+        KEY ix_symbol_available_at (symbol, available_at),
+        KEY ix_accession_no (accession_no),
+        KEY ix_symbol_concept_available_at (symbol, statement_type, concept, available_at)
         );
     """,
 
     "financial_statement_labels":"""
         CREATE TABLE IF NOT EXISTS nyse_financial_statement_labels (
         symbol VARCHAR(20) NOT NULL,
-        label VARCHAR(255) NOT NULL,
+        statement_type VARCHAR(50) NOT NULL,
+        concept VARCHAR(255) NOT NULL,
         as_of DATE NOT NULL,
+        label VARCHAR(255) NOT NULL,
         as_of_label VARCHAR(20) NULL,
         as_of_period_type ENUM('Q','FY','DATE') NULL,
         as_of_fiscal_year SMALLINT NULL,
         as_of_fiscal_quarter TINYINT NULL,
 
         label_kr VARCHAR(255) NULL,
-        statement_type VARCHAR(50) NULL,
+        taxonomy VARCHAR(50) NULL,
+        latest_unit VARCHAR(32) NULL,
+        latest_filing_date DATE NULL,
+        latest_accepted_at DATETIME NULL,
+        latest_available_at DATETIME NULL,
+        latest_accession_no VARCHAR(32) NULL,
+        latest_form_type VARCHAR(20) NULL,
         confidence DOUBLE NULL,
 
         enabled TINYINT(1) NOT NULL DEFAULT 1,
@@ -355,10 +413,11 @@ FUNDAMENTAL_SCHEMAS = {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
-        PRIMARY KEY (symbol, label, as_of),
+        PRIMARY KEY (symbol, statement_type, concept, as_of),
         KEY ix_label (label),
         KEY ix_symbol (symbol),
-        KEY ix_as_of (as_of)
+        KEY ix_as_of (as_of),
+        KEY ix_symbol_available_at (symbol, latest_available_at)
         );
     """,
 
