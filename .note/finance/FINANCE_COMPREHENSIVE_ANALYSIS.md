@@ -130,6 +130,34 @@ Analysis / Presentation
   - 데이터 부재 오류
   - 일반 실행 오류
   를 구분해 표시하도록 정리되어, 사용자가 실패 원인을 더 직접적으로 이해할 수 있게 됐다.
+- 이후 같은 runtime/public-boundary 패턴으로 `GTAA`, `Risk Parity Trend`, `Dual Momentum`까지 공개 전략으로 연결되었고,
+  현재 `Backtest` 탭은 `Equal Weight`, `GTAA`, `Risk Parity Trend`, `Dual Momentum`을 selector 형태로 전환 실행할 수 있다.
+- 또한 GTAA는 더 이상 고정 `2개월` cadence에 묶여 있지 않고,
+  advanced input을 통해 signal interval을 조정할 수 있다.
+- Phase 4에서는 여기서 한 단계 더 나아가,
+  `Backtest` 탭 안에 `Single Strategy` / `Compare & Portfolio Builder` 구조가 추가되었고,
+  최대 4개 전략 비교와 월별 weighted portfolio 결합까지 first-pass 수준으로 열렸다.
+- 또한 compare mode에서도 전략별 advanced input override가 가능하도록 확장되어,
+  GTAA interval, Equal Weight rebalance interval, Risk Parity volatility window, Dual Momentum top/rebalance interval을 조절할 수 있다.
+- 최근에는 Backtest 탭 실행도 별도 JSONL history로 남기기 시작했으며,
+  single strategy / strategy compare / weighted portfolio 실행을 구분해서 다시 조회할 수 있다.
+- 그 history surface도 이후 한 단계 더 강화되어,
+  run kind filter, text search, selected record drilldown까지 지원하게 되었다.
+- 그리고 추가로
+  recorded date range filter, metric sort, single-strategy `Run Again`
+  까지 지원하게 되었다.
+- 이어서 persistent history는 third-pass 수준으로 더 강화되어,
+  metric threshold filter,
+  single-strategy `Load Into Form`,
+  stored input의 current form prefill
+  까지 지원하게 되었다.
+- compare / weighted replay는 현재 저장된 context로는 fidelity를 보장하기 어려워
+  아직 intentionally deferred 상태로 유지된다.
+- 또한 single-strategy 결과는 최고점/최저점/end marker와 `Best / Worst Period` marker,
+  top/bottom period 표까지 볼 수 있고,
+  compare view에서는 total return overlay, overlay end marker, strategy highlight table, focused strategy drilldown까지,
+  weighted portfolio 결과에서도 같은 marker / balance-extremes / period-extremes 읽기 흐름과
+  strategy contribution amount/share view까지 확인할 수 있게 되었다.
 
 즉, 예전보다 통합은 많이 진행됐지만 아직 모든 전략과 모든 입력이 loader 계층으로 완전히 이행된 상태는 아니다.
 

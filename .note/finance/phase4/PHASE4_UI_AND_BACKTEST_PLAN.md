@@ -101,7 +101,9 @@ Phase 4는 UI/UX와 공개 실행 경계가 직접 결정되는 단계다.
 현재 상태:
 - `run_equal_weight_backtest_from_db(...)` first public wrapper 구현 완료
 - 공통 `build_backtest_result_bundle(...)` 초안 구현 완료
-- 나머지 price-only 전략 wrapper는 같은 패턴으로 후속 확장 예정
+- `run_gtaa_backtest_from_db(...)` second public wrapper 구현 완료
+- `run_risk_parity_trend_backtest_from_db(...)` third public wrapper 구현 완료
+- `run_dual_momentum_backtest_from_db(...)` fourth public wrapper 구현 완료
 
 ---
 
@@ -145,7 +147,12 @@ Phase 4는 UI/UX와 공개 실행 경계가 직접 결정되는 단계다.
 - 현재 form은 실제 `run_equal_weight_backtest_from_db(...)` 실행까지 연결됨
 - first-pass 결과 표시는 summary + line chart + result preview 수준으로 열려 있음
 - 입력 오류 / 데이터 부재 / 일반 실행 오류도 first-pass 수준으로 구분된다
-- 다음 단계는 사용자 선택 후 확장 방향을 여는 것이 맞다
+- `GTAA` 전략 선택과 실행 form도 추가되어, 현재는 두 개의 공개 price-only 전략을 UI에서 전환 실행할 수 있다
+- GTAA form의 `Signal Interval (months)`도 advanced input으로 노출되어,
+  기존 고정 `2개월` cadence를 사용자 입력으로 조정할 수 있다
+- `Risk Parity Trend` 전략 선택과 실행 form도 추가되어, 현재는 세 개의 공개 price-only 전략을 UI에서 전환 실행할 수 있다
+- `Dual Momentum` 전략 선택과 실행 form도 추가되어, 현재는 네 개의 공개 price-only 전략을 UI에서 전환 실행할 수 있다
+- 다음 단계는 history / visualization / execution history 강화 중에서 사용자 선택 후 진행하는 것이 맞다
 
 ---
 
@@ -168,6 +175,41 @@ Phase 4는 UI/UX와 공개 실행 경계가 직접 결정되는 단계다.
 - KPI metric row 연결 완료
 - `Summary / Equity Curve / Result Table / Meta` 탭 구성 완료
 - first-pass 결과 레이아웃은 product-like read path를 확보한 상태
+- `Compare & Portfolio Builder` first-pass가 추가되어,
+  - 최대 4개 전략 summary comparison
+  - equity overlay
+  - drawdown overlay
+  - weighted portfolio builder
+  까지 열린 상태
+- compare mode에서도 전략별 advanced override가 열려 있어,
+  첫 price-only 4개 전략의 핵심 cadence/selection 파라미터를 비교 실행 중 조정할 수 있다
+- 백테스트 실행 이력도 `.note/finance/BACKTEST_RUN_HISTORY.jsonl` 기준으로
+  first-pass 수준에서 영속 저장되며,
+  `Compare & Portfolio Builder` 하단에서 최근 이력을 다시 확인할 수 있다
+- 이어서 history는 한 단계 더 강화되어,
+  - run kind filter
+  - 검색
+  - selected record drilldown
+  까지 지원하게 되었다
+- 그리고 다음 단계에서
+  - recorded date range filter
+  - metric sort
+  - single-strategy `Run Again`
+  까지 지원하게 되었다
+- 이어서 history는 third-pass 수준으로 더 강화되어,
+  - metric threshold filter
+  - single-strategy `Load Into Form`
+  - stored input의 current form prefill
+  까지 지원하게 되었다
+- compare / weighted rerun은 replay fidelity를 보장하기 전까지 intentionally deferred 상태로 유지한다
+- 시각화도 한 단계 더 강화되어,
+  - single strategy: `High / Low / End` marker, `Best / Worst Period` marker, top/bottom period table
+  - compare: `Total Return` overlay + focused strategy drilldown
+    + overlay end marker
+    + strategy highlight table
+  - weighted portfolio: single-strategy와 같은 marker / balance-extremes / period-extremes read path
+    + strategy contribution amount/share view
+  까지 확인할 수 있는 상태가 되었다
 
 ---
 

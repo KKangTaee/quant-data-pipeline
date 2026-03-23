@@ -7,7 +7,12 @@ import pandas as pd
 
 from finance.loaders import load_price_history
 from finance.performance import portfolio_performance_summary
-from finance.sample import get_equal_weight_from_db
+from finance.sample import (
+    get_dual_momentum_from_db,
+    get_equal_weight_from_db,
+    get_gtaa3_from_db,
+    get_risk_parity_trend_from_db,
+)
 
 
 class BacktestInputError(ValueError):
@@ -84,6 +89,34 @@ def _preflight_equal_weight_data(
         )
 
 
+def _preflight_price_strategy_data(
+    *,
+    tickers: list[str],
+    start: str | None,
+    end: str | None,
+    timeframe: str,
+) -> None:
+    history = load_price_history(
+        symbols=tickers,
+        start=start,
+        end=end,
+        timeframe=timeframe,
+    )
+    if history.empty:
+        raise BacktestDataError(
+            "No OHLCV rows were found in MySQL for the requested tickers and date range. "
+            "Run the ingestion pipeline first."
+        )
+
+    available_symbols = set(history["symbol"].astype(str).str.upper().unique().tolist())
+    missing = [ticker for ticker in tickers if ticker not in available_symbols]
+    if missing:
+        raise BacktestDataError(
+            "Some requested tickers do not have DB price history for the selected range: "
+            + ", ".join(missing)
+        )
+
+
 def build_backtest_result_bundle(
     result_df: pd.DataFrame,
     *,
@@ -131,6 +164,10 @@ def build_backtest_result_bundle(
         "preset_name": input_params.get("preset_name"),
         "warnings": warnings or [],
     }
+    if input_params.get("top") is not None:
+        meta["top"] = input_params.get("top")
+    if input_params.get("vol_window") is not None:
+        meta["vol_window"] = input_params.get("vol_window")
 
     return {
         "strategy_name": strategy_name,
@@ -157,7 +194,7 @@ def run_equal_weight_backtest_from_db(
     """
     normalized_tickers = _normalize_tickers(tickers)
     _validate_backtest_date_range(start, end)
-    _preflight_equal_weight_data(
+    _preflight_price_strategy_data(
         tickers=normalized_tickers,
         start=start,
         end=end,
@@ -183,6 +220,159 @@ def run_equal_weight_backtest_from_db(
             "end": end,
             "timeframe": timeframe,
             "option": option,
+            "rebalance_interval": rebalance_interval,
+            "universe_mode": universe_mode,
+            "preset_name": preset_name,
+        },
+        summary_freq=_summary_frequency(option, timeframe),
+    )
+
+
+def run_gtaa_backtest_from_db(
+    *,
+    tickers: Sequence[str] | None = None,
+    start: str | None = None,
+    end: str | None = None,
+    timeframe: str = "1d",
+    option: str = "month_end",
+    top: int = 3,
+    interval: int = 2,
+    universe_mode: str = "preset",
+    preset_name: str | None = None,
+) -> dict[str, Any]:
+    """
+    Public UI-facing runtime wrapper for the second DB-backed backtest screen.
+    """
+    normalized_tickers = _normalize_tickers(tickers)
+    _validate_backtest_date_range(start, end)
+    _preflight_price_strategy_data(
+        tickers=normalized_tickers,
+        start=start,
+        end=end,
+        timeframe=timeframe,
+    )
+
+    result_df = get_gtaa3_from_db(
+        tickers=normalized_tickers,
+        start=start,
+        end=end,
+        timeframe=timeframe,
+        option=option,
+        top=top,
+        interval=interval,
+    )
+
+    return build_backtest_result_bundle(
+        result_df,
+        strategy_name="GTAA",
+        strategy_key="gtaa",
+        input_params={
+            "tickers": normalized_tickers,
+            "start": start,
+            "end": end,
+            "timeframe": timeframe,
+            "option": option,
+            "top": top,
+            "rebalance_interval": interval,
+            "universe_mode": universe_mode,
+            "preset_name": preset_name,
+        },
+        summary_freq=_summary_frequency(option, timeframe),
+    )
+
+
+def run_risk_parity_trend_backtest_from_db(
+    *,
+    tickers: Sequence[str] | None = None,
+    start: str | None = None,
+    end: str | None = None,
+    timeframe: str = "1d",
+    option: str = "month_end",
+    rebalance_interval: int = 1,
+    vol_window: int = 6,
+    universe_mode: str = "preset",
+    preset_name: str | None = None,
+) -> dict[str, Any]:
+    normalized_tickers = _normalize_tickers(tickers)
+    _validate_backtest_date_range(start, end)
+    _preflight_price_strategy_data(
+        tickers=normalized_tickers,
+        start=start,
+        end=end,
+        timeframe=timeframe,
+    )
+
+    result_df = get_risk_parity_trend_from_db(
+        tickers=normalized_tickers,
+        start=start,
+        end=end,
+        timeframe=timeframe,
+        option=option,
+        rebalance_interval=rebalance_interval,
+        vol_window=vol_window,
+    )
+
+    return build_backtest_result_bundle(
+        result_df,
+        strategy_name="Risk Parity Trend",
+        strategy_key="risk_parity_trend",
+        input_params={
+            "tickers": normalized_tickers,
+            "start": start,
+            "end": end,
+            "timeframe": timeframe,
+            "option": option,
+            "rebalance_interval": rebalance_interval,
+            "vol_window": vol_window,
+            "universe_mode": universe_mode,
+            "preset_name": preset_name,
+        },
+        summary_freq=_summary_frequency(option, timeframe),
+    )
+
+
+def run_dual_momentum_backtest_from_db(
+    *,
+    tickers: Sequence[str] | None = None,
+    start: str | None = None,
+    end: str | None = None,
+    timeframe: str = "1d",
+    option: str = "month_end",
+    top: int = 1,
+    rebalance_interval: int = 1,
+    universe_mode: str = "preset",
+    preset_name: str | None = None,
+) -> dict[str, Any]:
+    normalized_tickers = _normalize_tickers(tickers)
+    _validate_backtest_date_range(start, end)
+    _preflight_price_strategy_data(
+        tickers=normalized_tickers,
+        start=start,
+        end=end,
+        timeframe=timeframe,
+    )
+
+    result_df = get_dual_momentum_from_db(
+        tickers=normalized_tickers,
+        start=start,
+        end=end,
+        timeframe=timeframe,
+        option=option,
+        top=top,
+        rebalance_interval=rebalance_interval,
+    )
+
+    return build_backtest_result_bundle(
+        result_df,
+        strategy_name="Dual Momentum",
+        strategy_key="dual_momentum",
+        input_params={
+            "tickers": normalized_tickers,
+            "start": start,
+            "end": end,
+            "timeframe": timeframe,
+            "option": option,
+            "top": top,
             "rebalance_interval": rebalance_interval,
             "universe_mode": universe_mode,
             "preset_name": preset_name,

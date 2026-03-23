@@ -134,6 +134,32 @@
   - Phase 4 첫 결과 레이아웃 초안과 현재 탭 구조 정리
 - `.note/finance/phase4/PHASE4_ERROR_AND_EMPTY_RESULT_RULES.md`
   - Phase 4 첫 오류/빈 결과 처리 규칙 문서
+- `.note/finance/phase4/PHASE4_SECOND_STRATEGY_GTAA_ADDITION.md`
+  - Phase 4 두 번째 공개 전략으로 GTAA를 추가한 기록 문서
+- `.note/finance/phase4/PHASE4_THIRD_STRATEGY_RISK_PARITY_ADDITION.md`
+  - Phase 4 세 번째 공개 전략으로 Risk Parity Trend를 추가한 기록 문서
+- `.note/finance/phase4/PHASE4_FOURTH_STRATEGY_DUAL_MOMENTUM_ADDITION.md`
+  - Phase 4 네 번째 공개 전략으로 Dual Momentum을 추가한 기록 문서
+- `.note/finance/phase4/PHASE4_FOURTH_STRATEGY_DUAL_MOMENTUM_NEXT.md`
+  - Dual Momentum 추가 직전 후보 상태를 남긴 기록 문서
+- `.note/finance/phase4/PHASE4_VISUALIZATION_AND_PORTFOLIO_BUILDER_OPTIONS.md`
+  - 시각화 강화, 전략 비중 결합, 다중 전략 비교 UI 선택지 정리 문서
+- `.note/finance/phase4/PHASE4_COMPARE_AND_WEIGHTED_PORTFOLIO_FIRST_PASS.md`
+  - 다중 전략 비교와 weighted portfolio builder first-pass 구현 기록 문서
+- `.note/finance/phase4/PHASE4_WEIGHTED_PORTFOLIO_CONTRIBUTION_FIRST_PASS.md`
+  - weighted portfolio 기여도 시각화 first-pass 구현 기록 문서
+- `.note/finance/phase4/PHASE4_BACKTEST_HISTORY_FIRST_PASS.md`
+  - Backtest 탭 실행 이력 저장 first-pass 구현 기록 문서
+- `.note/finance/phase4/PHASE4_BACKTEST_HISTORY_ENHANCEMENT_FIRST_PASS.md`
+  - Backtest history의 filter / search / drilldown first-pass 구현 기록 문서
+- `.note/finance/phase4/PHASE4_BACKTEST_HISTORY_ENHANCEMENT_SECOND_PASS.md`
+  - Backtest history의 date filter / metric sort / single-strategy rerun second-pass 구현 기록 문서
+- `.note/finance/phase4/PHASE4_BACKTEST_HISTORY_ENHANCEMENT_THIRD_PASS.md`
+  - Backtest history의 metric threshold filter / form prefill / single-strategy form reload third-pass 구현 기록 문서
+- `.note/finance/phase4/PHASE4_VISUALIZATION_ENHANCEMENT_FIRST_PASS.md`
+  - Backtest 탭 시각화 강화 first-pass 구현 기록 문서
+- `.note/finance/phase4/PHASE4_VISUALIZATION_ENHANCEMENT_SECOND_PASS.md`
+  - compare overlay end marker와 strategy highlight table을 추가한 second-pass 시각화 기록 문서
 
 ---
 

@@ -158,7 +158,7 @@ def get_equal_weight_from_db(
     return df
 
 
-def get_gtaa3(period="15y", option="month_end", top=3, start=None):
+def get_gtaa3(period="15y", option="month_end", top=3, interval=2, start=None):
     """
         Legacy direct-fetch sample.
     """
@@ -177,7 +177,7 @@ def get_gtaa3(period="15y", option="month_end", top=3, start=None):
         .slice(start=start)
         .add_avg_score()
         .drop_columns(["High","Low","Open","Volume","1MReturn","3MReturn","6MReturn","12MReturn"])
-        .interval(2)
+        .interval(interval)
     )
 
     strategy = GTAA3Strategy(
@@ -193,6 +193,7 @@ def get_gtaa3(period="15y", option="month_end", top=3, start=None):
 def get_gtaa3_from_db(
     option="month_end",
     top=3,
+    interval=2,
     start=None,
     end=None,
     timeframe="1d",
@@ -218,7 +219,7 @@ def get_gtaa3_from_db(
         .slice(start=start, end=end)
         .add_avg_score()
         .drop_columns(["High","Low","Open","Volume","1MReturn","3MReturn","6MReturn","12MReturn"])
-        .interval(2)
+        .interval(interval)
     )
 
     strategy = GTAA3Strategy(
@@ -231,7 +232,7 @@ def get_gtaa3_from_db(
     return df
 
 
-def get_risk_parity_trend(period="15y", option="month_end", start=None):
+def get_risk_parity_trend(period="15y", option="month_end", rebalance_interval=1, vol_window=6, start=None):
     """
         Legacy direct-fetch sample.
     """
@@ -252,8 +253,8 @@ def get_risk_parity_trend(period="15y", option="month_end", start=None):
 
     strategy = RiskParityTrendStrategy(
         start_balance=10000,
-        rebalance_interval=1,  # 월말 데이터면 1=매월 리밸런싱
-        vol_window=6,          # 최근 6개월 변동성
+        rebalance_interval=rebalance_interval,  # 월말 데이터면 1=매월 리밸런싱
+        vol_window=vol_window,                  # 최근 n개월 변동성
         filter_ma="MA200",
     )
 
@@ -267,6 +268,8 @@ def get_risk_parity_trend(period="15y", option="month_end", start=None):
 
 def get_risk_parity_trend_from_db(
     option="month_end",
+    rebalance_interval=1,
+    vol_window=6,
     start=None,
     end=None,
     timeframe="1d",
@@ -294,8 +297,8 @@ def get_risk_parity_trend_from_db(
 
     strategy = RiskParityTrendStrategy(
         start_balance=10000,
-        rebalance_interval=1,
-        vol_window=6,
+        rebalance_interval=rebalance_interval,
+        vol_window=vol_window,
         filter_ma="MA200",
     )
 
@@ -307,7 +310,7 @@ def get_risk_parity_trend_from_db(
     return df
 
 
-def get_dual_momentum(period="15y", option="month_end", start=None):
+def get_dual_momentum(period="15y", option="month_end", top=1, rebalance_interval=1, start=None):
     """
         Legacy direct-fetch sample.
     """
@@ -329,10 +332,10 @@ def get_dual_momentum(period="15y", option="month_end", start=None):
 
     strategy = DualMomentumStrategy(
         start_balance=10000,
-        top=1,                    # ✅ 가장 강한 1개에 집중(공격적)
+        top=top,                  # ✅ 가장 강한 n개에 집중
         lookback_col="12MReturn",
         filter_ma="MA200",
-        rebalance_interval=1,      # 월 1회 리밸런싱(월말 데이터 기준)
+        rebalance_interval=rebalance_interval,  # 월 1회 리밸런싱(월말 데이터 기준)
         cash_ticker="BIL",         # ✅ 현금이 아니라 단기채로 현금 수익 반영
     )
 
@@ -342,6 +345,8 @@ def get_dual_momentum(period="15y", option="month_end", start=None):
 
 def get_dual_momentum_from_db(
     option="month_end",
+    top=1,
+    rebalance_interval=1,
     start=None,
     end=None,
     timeframe="1d",
@@ -370,10 +375,10 @@ def get_dual_momentum_from_db(
 
     strategy = DualMomentumStrategy(
         start_balance=10000,
-        top=1,
+        top=top,
         lookback_col="12MReturn",
         filter_ma="MA200",
-        rebalance_interval=1,
+        rebalance_interval=rebalance_interval,
         cash_ticker="BIL",
     )
 

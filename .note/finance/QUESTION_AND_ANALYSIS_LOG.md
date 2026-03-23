@@ -1758,6 +1758,41 @@ Do not copy full chat transcripts. Keep only the durable result.
   - `app/web/runtime/backtest.py`
   - `app/web/pages/backtest.py`
 
+### 2026-03-22 - Add GTAA as the second public Phase 4 strategy
+- Request topic:
+  - after stabilizing the first `Equal Weight` path, add a second strategy rather than moving immediately to visualization or history
+- Interpreted goal:
+  - confirm that the Phase 4 public runtime boundary and first UI can scale beyond a trivial strategy while still staying within price-only scope
+- Result:
+  - added `run_gtaa_backtest_from_db(...)`
+  - extended the Backtest tab to switch between:
+    - `Equal Weight`
+    - `GTAA`
+  - added a GTAA-specific form including `top` parameter input
+  - verified the GTAA wrapper with DB-backed parity output
+- Durable output:
+  - `.note/finance/phase4/PHASE4_SECOND_STRATEGY_GTAA_ADDITION.md`
+  - `app/web/runtime/backtest.py`
+  - `app/web/pages/backtest.py`
+
+### 2026-03-22 - Add Risk Parity Trend as the third public Phase 4 strategy
+- Request topic:
+  - after `Equal Weight` and `GTAA`, continue expanding the first Phase 4 public strategy set with another price-only strategy
+- Interpreted goal:
+  - broaden the first UI to cover a different portfolio-construction style without yet moving into factor/fundamental strategy territory
+- Result:
+  - added `run_risk_parity_trend_backtest_from_db(...)`
+  - extended the Backtest tab strategy selector to:
+    - `Equal Weight`
+    - `GTAA`
+    - `Risk Parity Trend`
+  - added a Risk Parity Trend form with its default universe
+  - verified DB-backed wrapper parity for the default sample universe
+- Durable output:
+  - `.note/finance/phase4/PHASE4_THIRD_STRATEGY_RISK_PARITY_ADDITION.md`
+  - `app/web/runtime/backtest.py`
+  - `app/web/pages/backtest.py`
+
 ### 2026-03-22 - Update finance skills to match the project's current Phase 3 operating patterns
 - Request topic:
   - review whether the existing finance-related Codex skills should be updated based on the work completed so far, then apply the recommended updates
@@ -1785,3 +1820,296 @@ Do not copy full chat transcripts. Keep only the durable result.
   - `/Users/taeho/.codex/skills/finance-doc-sync/SKILL.md`
   - `/Users/taeho/.codex/skills/finance-factor-pipeline/SKILL.md`
   - `/Users/taeho/.codex/skills/finance-db-pipeline/SKILL.md`
+
+### 2026-03-22 - Add Dual Momentum as the fourth public DB-backed Phase 4 strategy
+- Request topic:
+  - continue the Phase 4 Backtest tab expansion by adding `Dual Momentum` after `Equal Weight`, `GTAA`, and `Risk Parity Trend`
+- Interpreted goal:
+  - expose the fourth representative price-only strategy through the same public runtime wrapper and unified Backtest tab UI
+- Result:
+  - added `run_dual_momentum_backtest_from_db(...)` as the fourth public runtime wrapper
+  - expanded the Backtest strategy selector to:
+    - `Equal Weight`
+    - `GTAA`
+    - `Risk Parity Trend`
+    - `Dual Momentum`
+  - added a Dual Momentum-specific execution form using the default universe `QQQ, SPY, IWM, SOXX, BIL`
+  - verified DB-backed runtime smoke output with `End Balance = 24600.7`
+- Durable output:
+  - `.note/finance/phase4/PHASE4_FOURTH_STRATEGY_DUAL_MOMENTUM_ADDITION.md`
+  - `app/web/runtime/backtest.py`
+  - `app/web/pages/backtest.py`
+
+### 2026-03-22 - Plan the next Phase 4 step for visualization strengthening and weighted portfolio construction
+- Request topic:
+  - strengthen Backtest-tab visualization, add weighted strategy-combination portfolios, and support multi-strategy graphs in one view
+- Interpreted goal:
+  - move the first-pass single-strategy UI toward a more practical research dashboard without breaking the existing Phase 4 public runtime boundary
+- Result:
+  - confirmed local code already has usable primitives:
+    - `make_monthly_weighted_portfolio(...)`
+    - summary helpers
+    - multi-curve comparison helpers
+  - concluded this is primarily a UI-flow decision, not a missing-core-logic problem
+  - documented explicit choices for:
+    - screen structure
+    - implementation order
+    - comparison scope
+  - current recommended direction:
+    - split the Backtest tab into `Single Strategy` and `Compare / Portfolio Builder`
+    - build comparison first
+    - then weighted portfolio builder
+    - then richer annotations like top/bottom periods
+- Durable output:
+  - `.note/finance/phase4/PHASE4_VISUALIZATION_AND_PORTFOLIO_BUILDER_OPTIONS.md`
+
+### 2026-03-22 - Implement the selected Phase 4 compare-first path with weighted portfolio builder
+- Request topic:
+  - proceed with the recommended Phase 4 route:
+    - split the Backtest tab into `Single Strategy` and `Compare & Portfolio Builder`
+    - implement comparison first
+    - then open weighted portfolio construction
+    - allow comparison up to 4 strategies
+- Interpreted goal:
+  - make the Backtest tab useful for research workflows where multiple DB-backed strategies must be compared and combined, while keeping the current public runtime boundary intact
+- Result:
+  - split the Backtest tab into:
+    - `Single Strategy`
+    - `Compare & Portfolio Builder`
+  - added multi-strategy comparison for up to 4 strategies
+  - added:
+    - summary comparison table
+    - equity overlay chart
+    - drawdown overlay chart
+    - execution meta table
+  - added a first-pass weighted portfolio builder that reuses comparison results
+  - verified a concrete example:
+    - `Dual Momentum 50 + GTAA 50`
+    - `Weighted Portfolio End Balance = 23594.9`
+- Durable output:
+  - `.note/finance/phase4/PHASE4_COMPARE_AND_WEIGHTED_PORTFOLIO_FIRST_PASS.md`
+  - `app/web/pages/backtest.py`
+
+### 2026-03-22 - Fix GTAA visibility in the compare equity overlay
+- Request topic:
+  - investigate why `GTAA` looked missing in the compare equity overlay
+- Interpreted goal:
+  - determine whether the compare-mode data path was broken or whether the chart was failing to present a sparse strategy clearly
+- Result:
+  - confirmed this was not a runtime/data bug
+  - `GTAA` result rows are intentionally sparser because the strategy output only has rebalance-period observations
+  - the original `st.line_chart` compare rendering made sparse paths hard to see
+  - updated compare charts to use `line + point` Altair rendering so sparse strategies remain visible
+- Durable output:
+  - `app/web/pages/backtest.py`
+  - `.note/finance/phase4/PHASE4_COMPARE_AND_WEIGHTED_PORTFOLIO_FIRST_PASS.md`
+
+### 2026-03-22 - Expose GTAA interval as an advanced input in the Backtest tab
+- Request topic:
+  - make GTAA's currently fixed `2`-month interval adjustable from the Backtest UI
+- Interpreted goal:
+  - remove a hardcoded GTAA cadence from the user-facing execution path while keeping the existing default behavior intact
+- Result:
+  - added `interval` support to:
+    - `get_gtaa3(...)`
+    - `get_gtaa3_from_db(...)`
+    - `run_gtaa_backtest_from_db(...)`
+  - added `Signal Interval (months)` to the GTAA advanced inputs in the Backtest UI
+  - verified the parameter changes both runtime meta and end result:
+    - `interval=2` -> `End Balance = 22589.1`
+    - `interval=1` -> `End Balance = 23383.5`
+- Durable output:
+  - `finance/sample.py`
+  - `app/web/runtime/backtest.py`
+  - `app/web/pages/backtest.py`
+
+### 2026-03-22 - Allow strategy-specific advanced overrides inside compare mode
+- Request topic:
+  - make the compare-strategies screen support advanced input changes for each selected strategy
+- Interpreted goal:
+  - keep the compare flow shared at the date/timeframe layer, while still allowing each strategy to expose its own meaningful tuning parameters
+- Result:
+  - compare mode now supports per-strategy advanced overrides for:
+    - `Equal Weight`: rebalance interval
+    - `GTAA`: top assets, signal interval
+    - `Risk Parity Trend`: rebalance interval, vol window
+    - `Dual Momentum`: top assets, rebalance interval
+  - extended sample/runtime wrappers where needed so the overrides reach the actual backtest execution path
+  - verified that changed compare inputs propagate to both runtime meta and end results
+- Durable output:
+  - `finance/sample.py`
+  - `app/web/runtime/backtest.py`
+  - `app/web/pages/backtest.py`
+  - `.note/finance/phase4/PHASE4_COMPARE_AND_WEIGHTED_PORTFOLIO_FIRST_PASS.md`
+
+### 2026-03-22 - Add first-pass persistent backtest history
+- Request topic:
+  - start with backtest execution history as the next Phase 4 improvement
+- Interpreted goal:
+  - make the Backtest tab usable as a research surface where previous runs can be reviewed instead of disappearing after execution
+- Result:
+  - added a dedicated backtest-history JSONL path:
+    - `.note/finance/BACKTEST_RUN_HISTORY.jsonl`
+  - implemented append/load helpers in:
+    - `app/web/runtime/history.py`
+  - wired history recording for:
+    - single strategy execution
+    - strategy comparison
+    - weighted portfolio build
+  - added a `Persistent Backtest History` section in the Backtest tab
+  - verified append/load behavior for all three run kinds and cleared the temporary validation file afterwards
+- Durable output:
+  - `.note/finance/phase4/PHASE4_BACKTEST_HISTORY_FIRST_PASS.md`
+  - `app/web/runtime/history.py`
+  - `app/web/runtime/__init__.py`
+  - `app/web/pages/backtest.py`
+
+### 2026-03-22 - Add first-pass visualization enhancements to the Backtest tab
+- Request topic:
+  - move on to visualization strengthening after the first pass of backtest history
+- Interpreted goal:
+  - make single-strategy and compare views easier to interpret without changing the public runtime boundary again
+- Result:
+  - single strategy:
+    - upgraded the equity curve to an Altair chart with `High / Low / End` markers
+    - added a `Period Extremes` tab for top 3 best / worst periods by `Total Return`
+  - compare mode:
+    - added a `Total Return` overlay tab
+  - verified both helper outputs and compare datasets locally
+- Durable output:
+  - `.note/finance/phase4/PHASE4_VISUALIZATION_ENHANCEMENT_FIRST_PASS.md`
+  - `app/web/pages/backtest.py`
+
+### 2026-03-22 - Extend visualization markers to best/worst periods and weighted portfolio
+- Request topic:
+  - continue the recommended visualization-improvement path after the first-pass charts landed
+- Interpreted goal:
+  - make the equity curve itself more explanatory and keep the weighted-portfolio result view aligned with the single-strategy reading experience
+- Result:
+  - single-strategy equity charts now annotate not only `High / Low / End` but also `Best Period / Worst Period`
+  - weighted-portfolio results now reuse the same marker-based equity chart and `Period Extremes` tab structure
+  - Phase 4 planning/docs were synced so the implemented visualization state no longer lagged behind the code
+- Durable output:
+  - `.note/finance/phase4/PHASE4_VISUALIZATION_ENHANCEMENT_FIRST_PASS.md`
+  - `.note/finance/phase4/PHASE4_UI_AND_BACKTEST_PLAN.md`
+  - `app/web/pages/backtest.py`
+
+### 2026-03-22 - Deepen compare and weighted visual interpretation
+- Request topic:
+  - continue with deeper visualization improvements in Phase 4
+- Interpreted goal:
+  - keep the compare overlay useful at a glance while giving the user a way to inspect one chosen strategy or weighted result in more detail
+- Result:
+  - compare mode gained a `Focused Strategy` drilldown with:
+    - KPI summary
+    - marker-based equity curve
+    - `Top 3 Balance Highs / Lows`
+    - `Top 3 Best / Worst Periods`
+  - single-strategy and weighted-portfolio views both gained `Balance Extremes` tables
+  - documentation was synced so the implemented Phase 4 visualization state matches the code
+- Durable output:
+  - `.note/finance/phase4/PHASE4_COMPARE_AND_WEIGHTED_PORTFOLIO_FIRST_PASS.md`
+  - `.note/finance/phase4/PHASE4_VISUALIZATION_ENHANCEMENT_FIRST_PASS.md`
+  - `app/web/pages/backtest.py`
+
+### 2026-03-22 - Enhance persistent backtest history with filter and drilldown
+- Request topic:
+  - start the next Phase 4 step by improving backtest history first
+- Interpreted goal:
+  - turn history from a simple append-only table into a surface where previous runs can be found and inspected again
+- Result:
+  - added run-kind filtering for:
+    - `single_strategy`
+    - `strategy_compare`
+    - `weighted_portfolio`
+  - added text search across strategy, ticker, preset, and selected strategies
+  - added a selected-record drilldown with:
+    - `Summary`
+    - `Input & Context`
+    - `Raw Record`
+  - synced Phase 4 docs and the finance analysis document to reflect the stronger history surface
+- Durable output:
+  - `.note/finance/phase4/PHASE4_BACKTEST_HISTORY_ENHANCEMENT_FIRST_PASS.md`
+  - `app/web/pages/backtest.py`
+
+### 2026-03-22 - Add weighted portfolio contribution visualization
+- Request topic:
+  - continue Phase 4 with additional visualization strengthening
+- Interpreted goal:
+  - make weighted portfolio results explainable, not just report a final end balance
+- Result:
+  - added a `Contribution` tab to weighted portfolio results
+  - added:
+    - configured weight vs ending share snapshot
+    - stacked contribution amount chart
+    - stacked contribution share chart
+  - implemented the contribution view as a UI-layer monthly decomposition that follows the same `date_policy` used by the weighted builder
+  - verified both a synthetic decomposition and a real `Dual Momentum 50 + GTAA 50` example
+- Durable output:
+  - `.note/finance/phase4/PHASE4_WEIGHTED_PORTFOLIO_CONTRIBUTION_FIRST_PASS.md`
+  - `app/web/pages/backtest.py`
+
+### 2026-03-22 - Add second-pass backtest history controls
+- Request topic:
+  - continue Phase 4 with the second round of backtest-history improvements
+- Interpreted goal:
+  - make stored history not only readable but also sortable, date-filterable, and partly reusable
+- Result:
+  - added `recorded_at` date range filter
+  - added metric sort options:
+    - end balance
+    - CAGR
+    - Sharpe ratio
+    - drawdown
+  - added `Run Again` for supported single-strategy records
+  - intentionally kept compare / weighted rerun closed because the current stored context is not yet rich enough to replay them safely
+- Durable output:
+  - `.note/finance/phase4/PHASE4_BACKTEST_HISTORY_ENHANCEMENT_SECOND_PASS.md`
+  - `app/web/pages/backtest.py`
+
+### 2026-03-23 - Add second-pass compare visualization aids
+- Request topic:
+  - continue Phase 4 with the next round of visualization strengthening
+- Interpreted goal:
+  - make compare overlays easier to read without forcing the user to switch immediately into single-strategy drilldown
+- Result:
+  - compare overlay charts now show end markers and strategy labels at the latest point
+  - compare mode gained a `Strategy Highlights` tab summarizing each strategy's:
+    - high
+    - low
+    - end
+    - best period
+    - worst period
+  - the Phase 4 docs and finance analysis document were synced to reflect the stronger compare visualization state
+- Durable output:
+  - `.note/finance/phase4/PHASE4_VISUALIZATION_ENHANCEMENT_SECOND_PASS.md`
+  - `app/web/pages/backtest.py`
+
+### 2026-03-23 - Add third-pass backtest history reuse flow
+- Request topic:
+  - finish the next Phase 4 history enhancement step after the visualization pass
+- Interpreted goal:
+  - make stored single-strategy backtests easier to filter and safer to reuse without forcing immediate rerun
+- Result:
+  - added metric threshold filters for:
+    - end balance
+    - CAGR
+    - Sharpe ratio
+    - drawdown
+  - added `Load Into Form` for supported single-strategy history records
+  - wired stored payloads back into the current single-strategy forms through session-state prefill
+  - intentionally kept compare / weighted rerun closed because the current stored context is still not rich enough to replay advanced overrides safely
+- Durable output:
+  - `.note/finance/phase4/PHASE4_BACKTEST_HISTORY_ENHANCEMENT_THIRD_PASS.md`
+  - `app/web/pages/backtest.py`
+
+### 2026-03-23 - Tighten metric-threshold handling for history rows with missing values
+- Request topic:
+  - fix the narrow issue where metric threshold filters did not exclude `None` rows consistently
+- Interpreted goal:
+  - make enabled metric thresholds behave predictably by excluding rows that do not have the required metric
+- Result:
+  - when `Min End Balance`, `Min CAGR`, `Min Sharpe Ratio`, or `Max Drawdown` is enabled,
+    rows with `None` for that metric are now excluded from the filtered history view
+- Durable output:
+  - `app/web/pages/backtest.py`

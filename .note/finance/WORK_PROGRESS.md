@@ -564,3 +564,133 @@ Keep entries append-only and concise.
   - DB data availability errors
   - generic execution errors
 - Added explicit missing-data guidance for DB-backed failures.
+- Added `GTAA` as the second public Phase 4 strategy.
+- Implemented:
+  - `run_gtaa_backtest_from_db(...)`
+  - backtest strategy selector (`Equal Weight` / `GTAA`)
+  - GTAA-specific execution form with `top` parameter
+- Verified GTAA wrapper smoke output with DB-backed runtime parity (`End Balance = 22589.1`).
+- Added `Risk Parity Trend` as the third public Phase 4 strategy.
+- Implemented:
+  - `run_risk_parity_trend_backtest_from_db(...)`
+  - backtest strategy selector expansion to three strategies
+  - Risk Parity Trend-specific execution form
+- Verified Risk Parity Trend wrapper smoke output with DB-backed runtime parity (`End Balance = 15880.0`).
+- Recorded `Dual Momentum` as the next ready-to-implement public strategy candidate after the first three price-only strategies.
+- Added `Dual Momentum` as the fourth public Phase 4 strategy.
+- Implemented:
+  - `run_dual_momentum_backtest_from_db(...)`
+  - backtest strategy selector expansion to four strategies
+  - Dual Momentum-specific execution form with preset/manual universe flow
+- Verified Dual Momentum wrapper smoke output with DB-backed runtime parity (`End Balance = 24600.7`).
+- Reviewed the next Phase 4 UI request around:
+  - stronger portfolio visualization
+  - weighted multi-strategy portfolio construction
+  - multi-strategy comparison graphs
+- Confirmed the repo already has the core building blocks:
+  - `make_monthly_weighted_portfolio(...)`
+  - summary helpers
+  - multi-curve visualization primitives
+- Wrote a dedicated Phase 4 options document before implementation so the next UI choice can be made explicitly.
+- Implemented the chosen Phase 4 path:
+  - `Backtest` tab split into `Single Strategy` and `Compare & Portfolio Builder`
+  - multi-strategy comparison for up to 4 strategies
+  - summary/equity/drawdown comparison views
+  - weighted portfolio builder based on comparison outputs
+- Verified first-pass weighted example:
+  - `Dual Momentum 50 + GTAA 50`
+  - `Weighted Portfolio End Balance = 23594.9`
+- Investigated a compare-chart visibility issue where `GTAA` looked missing in the equity overlay.
+- Root cause:
+  - `GTAA` emits sparser rebalance dates than monthly strategies
+  - the original compare `st.line_chart` made that path hard to see
+- Updated compare charts to use `line + point` rendering so sparse strategies remain visible.
+- Exposed GTAA's previously hardcoded `2`-month interval as a user-facing advanced input.
+- Wired the parameter through:
+  - `finance/sample.py`
+  - `app/web/runtime/backtest.py`
+  - `app/web/pages/backtest.py`
+- Verified:
+  - `interval=2` -> `End Balance = 22589.1`
+  - `interval=1` -> `End Balance = 23383.5`
+- Extended compare mode so each selected strategy can override its own advanced inputs.
+- Added compare-mode strategy-specific controls for:
+  - `Equal Weight`: rebalance interval
+  - `GTAA`: top assets, signal interval
+  - `Risk Parity Trend`: rebalance interval, vol window
+  - `Dual Momentum`: top assets, rebalance interval
+- Verified compare/runtime propagation:
+  - `GTAA(top=4, interval=1)` -> `End Balance = 22430.9`
+  - `Risk Parity Trend(rebalance_interval=2, vol_window=9)` -> `End Balance = 14829.2`
+  - `Dual Momentum(top=2, rebalance_interval=2)` -> `End Balance = 24832.5`
+- Added first-pass persistent backtest history support.
+- Introduced:
+  - `app/web/runtime/history.py`
+  - `.note/finance/BACKTEST_RUN_HISTORY.jsonl`
+- Backtest history now records:
+  - `single_strategy`
+  - `strategy_compare`
+  - `weighted_portfolio`
+- Added `Persistent Backtest History` view to the Backtest tab.
+- Verified append/load behavior for all three run kinds, then cleared the temporary validation file.
+- Added first-pass visualization enhancements to the Backtest tab.
+- Implemented:
+  - single-strategy equity chart with `High / Low / End` markers
+  - `Period Extremes` tab with top 3 best / worst periods
+  - compare-mode `Total Return` overlay
+- Verified helper outputs for:
+  - single-strategy best/worst periods
+  - compare-mode total return overlay dataset
+- Extended the same visualization language to deeper chart annotations.
+- Single-strategy equity charts now also show:
+  - `Best Period`
+  - `Worst Period`
+  markers directly on the chart
+- Weighted portfolio results now reuse:
+  - the same marker-based equity chart
+  - the same `Period Extremes` view
+- Synced Phase 4 docs and the finance analysis document to reflect the new weighted-portfolio visualization state.
+- Added a second-pass compare/readability enhancement.
+- Compare mode now includes:
+  - `Focused Strategy` drilldown
+  - one selected strategy's KPI summary
+  - marker equity curve
+  - `Top 3 Balance Highs / Lows`
+  - `Top 3 Best / Worst Periods`
+- Single-strategy and weighted-portfolio results also gained `Balance Extremes` tables.
+- Enhanced persistent backtest history beyond a flat table.
+- Added:
+  - run kind filter
+  - search across strategy/ticker/preset/selected strategies
+  - selected record drilldown with `Summary / Input & Context / Raw Record`
+- Registered the new Phase 4 history-enhancement document and synced analysis docs.
+- Added a weighted-portfolio contribution visualization first pass.
+- Weighted portfolio results now include:
+  - `Contribution` tab
+  - configured weight vs ending share snapshot
+  - stacked contribution amount chart
+  - stacked contribution share chart
+- Verified:
+  - synthetic helper decomposition
+  - real `Dual Momentum 50 + GTAA 50` contribution shape `(62, 2)`
+  - ending share roughly `52.1% / 47.9%`
+- Added backtest history second-pass improvements.
+- Persistent history now supports:
+  - recorded date range filter
+  - metric-based sorting
+  - `Run Again` for supported single-strategy records
+- Kept compare / weighted rerun intentionally closed until enough context is stored to replay them safely.
+- Added visualization second-pass improvements for compare mode.
+- Compare results now include:
+  - end markers on overlay charts
+  - a `Strategy Highlights` table with high / low / end / best / worst period stats
+- Verified compare highlight extraction for `Equal Weight` and `GTAA`.
+- Closed the third pass of backtest-history enhancement.
+- Added:
+  - metric threshold filters
+  - `Load Into Form` for supported single-strategy records
+  - single-strategy form prefill from stored history payloads
+- Kept compare / weighted rerun intentionally deferred because the current stored context is not rich enough to replay their advanced overrides safely.
+- Synced Phase 4 docs and the finance analysis document to reflect the stronger history workflow.
+- Narrow follow-up fix:
+  - when a metric threshold is enabled, history rows with `None` for that metric are now excluded instead of silently passing through the filter

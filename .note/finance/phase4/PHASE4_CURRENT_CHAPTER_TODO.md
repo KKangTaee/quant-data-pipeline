@@ -90,7 +90,7 @@
 ## 현재 진척도
 
 - Phase 4 first chapter:
-  - 약 `18%`
+  - 약 `65%`
 
 판단 근거:
 - Phase 4는 공식 진입을 마쳤고
@@ -101,4 +101,19 @@
 - form submit이 실제 DB-backed wrapper 실행까지 연결되었고
 - first-pass 결과 레이아웃도 KPI / chart / table / meta 구조로 정리되었고
 - 입력 오류 / 데이터 부재 / 일반 실행 오류 구분도 first-pass 수준으로 반영되었고
-- 이제 다음 확장 방향은 사용자 선택 후에 여는 것이 맞다
+- `GTAA`가 두 번째 공개 전략으로 추가되었고
+- `Risk Parity Trend`가 세 번째 공개 전략으로 추가되었고
+- `Dual Momentum`이 네 번째 공개 전략으로 추가되었고
+- 현재 공개 DB-backed price-only 전략 4종이 UI에서 모두 선택 가능하며,
+  `Backtest` 탭은 `Single Strategy` / `Compare & Portfolio Builder` 2단 구조로 확장되었고
+- 다중 전략 비교와 weighted portfolio builder가 first-pass 수준으로 열렸으며,
+  persistent backtest history도 first-pass 수준으로 추가되었으며,
+  이후 filter / search / drilldown,
+  recorded date range / metric sort / single-strategy rerun까지 열렸으며,
+  metric threshold filter,
+  single-strategy `Load Into Form`,
+  current form prefill까지 지원하게 되었고,
+  single-strategy / compare 시각화 강화도 first-pass 수준으로 반영되었고,
+  compare 결과에도 focused strategy drilldown이 추가되었고,
+  weighted portfolio 결과도 동일한 marker / balance-extremes / period-extremes 읽기 흐름으로 정리되었으며,
+  다음 선택지는 history 고도화 또는 더 깊은 annotation/visual refinement 쪽으로 넘어가는 것이 자연스럽다
