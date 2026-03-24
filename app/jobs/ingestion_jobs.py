@@ -570,6 +570,7 @@ def run_weekly_fundamental_refresh(
     symbols: str | Iterable[str] | None,
     *,
     freq: str = "annual",
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
 ) -> JobResult:
     job_name = "weekly_fundamental_refresh"
     started_at = _now_str()
@@ -594,8 +595,28 @@ def run_weekly_fundamental_refresh(
 
     steps: list[JobResult] = []
 
+    if progress_callback is not None:
+        progress_callback(
+            {
+                "event": "stage_start",
+                "stage": "fundamentals",
+                "stage_index": 1,
+                "total_stages": 2,
+            }
+        )
+
     fundamentals_result = run_collect_fundamentals(parsed, freq=freq)
     steps.append(fundamentals_result)
+
+    if progress_callback is not None:
+        progress_callback(
+            {
+                "event": "stage_complete",
+                "stage": "fundamentals",
+                "stage_index": 1,
+                "total_stages": 2,
+            }
+        )
     if fundamentals_result["status"] == "failed":
         finished_at = _now_str()
         return _build_result(
@@ -612,8 +633,28 @@ def run_weekly_fundamental_refresh(
             details={"steps": steps, "freq": freq},
         )
 
+    if progress_callback is not None:
+        progress_callback(
+            {
+                "event": "stage_start",
+                "stage": "factors",
+                "stage_index": 2,
+                "total_stages": 2,
+            }
+        )
+
     factors_result = run_calculate_factors(parsed, freq=freq)
     steps.append(factors_result)
+
+    if progress_callback is not None:
+        progress_callback(
+            {
+                "event": "stage_complete",
+                "stage": "factors",
+                "stage_index": 2,
+                "total_stages": 2,
+            }
+        )
 
     finished_at = _now_str()
     total_rows = sum((step.get("rows_written") or 0) for step in steps)
@@ -639,12 +680,14 @@ def run_extended_statement_refresh(
     freq: str = "annual",
     periods: int = 4,
     period: str = "annual",
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
 ) -> JobResult:
     result = run_collect_financial_statements(
         symbols,
         freq=freq,
         periods=periods,
         period=period,
+        progress_callback=progress_callback,
     )
     result["job_name"] = "extended_statement_refresh"
     if result["status"] == "success":
@@ -726,6 +769,7 @@ def run_collect_financial_statements(
     freq: str = "annual",
     periods: int = 4,
     period: str = "annual",
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
 ) -> JobResult:
     job_name = "collect_financial_statements"
     started_at = _now_str()
@@ -753,9 +797,11 @@ def run_collect_financial_statements(
             freq=freq,
             periods=periods,
             period=period,
+            progress_callback=progress_callback,
         )
         inserted_values = int(result.get("inserted_values", 0) or 0)
         upserted_labels = int(result.get("upserted_labels", 0) or 0)
+        upserted_filings = int(result.get("upserted_filings", 0) or 0)
         failed_symbols = list(result.get("failed_symbols", []) or [])
         finished_at = _now_str()
         if inserted_values > 0:
@@ -786,6 +832,7 @@ def run_collect_financial_statements(
                 "period": period,
                 "inserted_values": inserted_values,
                 "upserted_labels": upserted_labels,
+                "upserted_filings": upserted_filings,
                 "failed_count": len(failed_symbols),
             },
         )

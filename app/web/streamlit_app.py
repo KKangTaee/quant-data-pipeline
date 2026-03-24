@@ -191,8 +191,10 @@ def _dispatch_job(job: dict[str, Any], *, progress_callback: Any = None) -> JobR
         params["progress_callback"] = progress_callback
         return run_daily_market_update(**params)
     if action == "weekly_fundamental_refresh":
+        params["progress_callback"] = progress_callback
         return run_weekly_fundamental_refresh(**params)
     if action == "extended_statement_refresh":
+        params["progress_callback"] = progress_callback
         return run_extended_statement_refresh(**params)
     if action == "metadata_refresh":
         return run_metadata_refresh(**params)
@@ -206,6 +208,7 @@ def _dispatch_job(job: dict[str, Any], *, progress_callback: Any = None) -> JobR
     if action == "collect_asset_profiles":
         return run_collect_asset_profiles(**params)
     if action == "collect_financial_statements":
+        params["progress_callback"] = progress_callback
         return run_collect_financial_statements(**params)
     raise ValueError(f"Unsupported job action: {action}")
 
@@ -259,7 +262,14 @@ def _build_progress_callback(job: dict[str, Any], *, label: str) -> Any:
     action = job.get("action")
     symbol_count = len(job.get("params", {}).get("symbols", []) or [])
 
-    if action not in {"collect_ohlcv", "pipeline_core_market_data", "daily_market_update"} or symbol_count < 100:
+    if action not in {
+        "collect_ohlcv",
+        "pipeline_core_market_data",
+        "daily_market_update",
+        "weekly_fundamental_refresh",
+        "extended_statement_refresh",
+        "collect_financial_statements",
+    } or symbol_count < 100:
         _render_inline_running_hint(action, label)
         return None
 
@@ -269,6 +279,8 @@ def _build_progress_callback(job: dict[str, Any], *, label: str) -> Any:
 
     if action in {"collect_ohlcv", "daily_market_update"}:
         progress_text.info(f"`{label}` is running with live OHLCV progress.")
+    elif action in {"extended_statement_refresh", "collect_financial_statements"}:
+        progress_text.info(f"`{label}` is running with live statement-ingestion progress.")
     else:
         progress_text.info(f"`{label}` is running with pipeline-stage progress.")
 
@@ -288,8 +300,9 @@ def _build_progress_callback(job: dict[str, Any], *, label: str) -> Any:
             )
             return
 
-        if action == "pipeline_core_market_data":
-            total_stages = max(int(event.get("total_stages", 3) or 3), 1)
+        if action in {"pipeline_core_market_data", "weekly_fundamental_refresh"}:
+            fallback_total_stages = 3 if action == "pipeline_core_market_data" else 2
+            total_stages = max(int(event.get("total_stages", fallback_total_stages) or fallback_total_stages), 1)
             stage_index = int(event.get("stage_index", 1) or 1)
             stage = str(event.get("stage", "") or "").upper()
 
@@ -311,12 +324,29 @@ def _build_progress_callback(job: dict[str, Any], *, label: str) -> Any:
                 stage_fraction = processed_symbols / total_symbols
                 percent = int((((stage_index - 1) + stage_fraction) / total_stages) * 100)
                 progress_bar.progress(percent)
-                progress_meta.caption(
-                    "Current stage: `OHLCV` | "
-                    f"processed `{processed_symbols}/{total_symbols}` symbols | "
-                    f"batch `{event.get('batch_index', 0)}/{event.get('total_batches', 0)}` | "
-                    f"rows written `{event.get('rows_written', 0)}`"
-                )
+                if action == "pipeline_core_market_data":
+                    progress_meta.caption(
+                        "Current stage: `OHLCV` | "
+                        f"processed `{processed_symbols}/{total_symbols}` symbols | "
+                        f"batch `{event.get('batch_index', 0)}/{event.get('total_batches', 0)}` | "
+                        f"rows written `{event.get('rows_written', 0)}`"
+                    )
+                return
+
+        if action in {"extended_statement_refresh", "collect_financial_statements"} and event_type == "batch_progress":
+            total_symbols = max(int(event.get("total_symbols", symbol_count) or symbol_count), 1)
+            processed_symbols = min(int(event.get("processed_symbols", 0) or 0), total_symbols)
+            percent = int((processed_symbols / total_symbols) * 100)
+            progress_bar.progress(percent)
+            progress_meta.caption(
+                "Processed "
+                f"`{processed_symbols}/{total_symbols}` symbols | "
+                f"batch `{event.get('batch_index', 0)}/{event.get('total_batches', 0)}` | "
+                f"values `{event.get('inserted_values', 0)}` | "
+                f"labels `{event.get('upserted_labels', 0)}` | "
+                f"filings `{event.get('upserted_filings', 0)}` | "
+                f"failed `{event.get('failed_symbols_count', 0)}`"
+            )
 
     return _callback
 
@@ -716,6 +746,7 @@ def _render_ingestion_console() -> None:
             st.caption("Recommended cadence: once per week, or after a meaningful batch of earnings / filing updates.")
             st.caption("Recommended symbol source: match the same stock universe used by Daily Market Update so factor coverage stays aligned.")
             st.caption("Current defaults: `NYSE Stocks`, `quarterly`.")
+            st.caption("Large NYSE stock runs can take noticeably longer than OHLCV refreshes because this job executes both fundamentals ingestion and factor recomputation.")
             st.caption("Writes to: `finance_fundamental.nyse_fundamentals`, `finance_fundamental.nyse_factors`")
             weekly_symbol_result = _render_symbol_source_inputs(
                 "weekly_fundamental",

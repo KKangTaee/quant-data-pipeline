@@ -493,6 +493,155 @@ class Strategy(ABC):
         pass
 
 
+def _rank_quality_snapshot(
+    snapshot_df: pd.DataFrame,
+    *,
+    quality_factors: list[str],
+    lower_is_better_factors: list[str] | None = None,
+) -> pd.DataFrame:
+    if snapshot_df is None or snapshot_df.empty:
+        return pd.DataFrame()
+
+    lower_is_better = set(lower_is_better_factors or [])
+    required = {"symbol", *quality_factors}
+    missing = required.difference(snapshot_df.columns)
+    if missing:
+        raise ValueError(f"quality snapshot is missing required columns: {sorted(missing)}")
+
+    ranked = snapshot_df.copy()
+    ranked["symbol"] = ranked["symbol"].astype(str).str.strip().str.upper()
+
+    for factor in quality_factors:
+        ranked[factor] = pd.to_numeric(ranked[factor], errors="coerce")
+
+    ranked = ranked.dropna(subset=quality_factors).reset_index(drop=True)
+    if ranked.empty:
+        return ranked
+
+    score_columns = []
+    for factor in quality_factors:
+        base = -ranked[factor] if factor in lower_is_better else ranked[factor]
+        score_col = f"{factor}_score"
+        ranked[score_col] = base.rank(method="average", pct=True, ascending=True)
+        score_columns.append(score_col)
+
+    ranked["Quality Score"] = ranked[score_columns].mean(axis=1)
+    return ranked.sort_values(["Quality Score", "symbol"], ascending=[False, True]).reset_index(drop=True)
+
+
+def quality_snapshot_equal_weight(
+    price_dfs: dict,
+    snapshot_by_date: dict,
+    *,
+    start_balance: float,
+    quality_factors: list[str],
+    top_n: int = 10,
+    lower_is_better_factors: list[str] | None = None,
+    rebalance_interval: int = 1,
+) -> pd.DataFrame:
+    """
+    Monthly snapshot-based quality strategy.
+
+    - rebalance date마다 quality snapshot을 조회해 top N을 선택
+    - 선택된 종목을 동일가중으로 다음 구간 동안 보유
+    - first-pass는 price-only engine을 억지로 확장하지 않고,
+      runtime connection layer가 만든 snapshot payload를 직접 사용한다
+    """
+    if not price_dfs:
+        raise ValueError("price_dfs is empty.")
+    if not quality_factors:
+        raise ValueError("quality_factors must not be empty.")
+    if top_n <= 0:
+        raise ValueError("top_n must be positive.")
+    if rebalance_interval <= 0:
+        raise ValueError("rebalance_interval must be positive.")
+
+    tickers = list(price_dfs.keys())
+    base_df = price_dfs[tickers[0]].sort_values("Date").reset_index(drop=True)
+    dates = pd.to_datetime(base_df["Date"]).tolist()
+
+    prev_close: dict[str, float | None] = {ticker: None for ticker in tickers}
+    prev_total_balance = None
+    held_tickers: list[str] = []
+    next_balances: list[float] = []
+    cash = 0.0
+
+    rows = []
+
+    for i, date in enumerate(dates):
+        current_date = pd.to_datetime(date)
+        close_now = {
+            ticker: float(price_dfs[ticker].iloc[i]["Close"])
+            for ticker in tickers
+        }
+
+        if i == 0:
+            end_balances = []
+            total_balance = float(start_balance)
+            total_return = np.nan
+        else:
+            end_balances = []
+            for ticker, balance in zip(held_tickers, next_balances):
+                prev = prev_close.get(ticker)
+                if prev is None or prev == 0:
+                    asset_return = 0.0
+                else:
+                    asset_return = (close_now[ticker] / prev) - 1
+                end_balances.append(balance * (1 + asset_return))
+
+            total_balance = float(sum(end_balances) + cash)
+            total_return = np.nan if prev_total_balance is None else (total_balance / prev_total_balance) - 1
+
+        rebalancing = (i == 0) or (i % rebalance_interval == 0)
+        base_balance = float(start_balance if i == 0 else total_balance)
+        snapshot_key = current_date.normalize()
+        selected_snapshot = pd.DataFrame()
+        selected_scores: list[float] = []
+
+        if rebalancing:
+            snapshot_df = snapshot_by_date.get(snapshot_key)
+            ranked = _rank_quality_snapshot(
+                snapshot_df if snapshot_df is not None else pd.DataFrame(),
+                quality_factors=quality_factors,
+                lower_is_better_factors=lower_is_better_factors,
+            )
+            if not ranked.empty:
+                ranked = ranked[ranked["symbol"].isin(tickers)].reset_index(drop=True)
+
+            if ranked.empty:
+                held_tickers = []
+                next_balances = []
+                cash = base_balance
+            else:
+                selected_snapshot = ranked.head(min(top_n, len(ranked))).reset_index(drop=True)
+                held_tickers = selected_snapshot["symbol"].tolist()
+                selected_scores = selected_snapshot["Quality Score"].astype(float).tolist()
+                allocation = base_balance / len(held_tickers)
+                next_balances = [allocation] * len(held_tickers)
+                cash = base_balance - sum(next_balances)
+
+        rows.append(
+            {
+                "Date": current_date,
+                "End Ticker": (np.nan if i == 0 else held_tickers),
+                "Next Ticker": held_tickers,
+                "End Balance": (np.nan if i == 0 else end_balances),
+                "Next Balance": next_balances,
+                "Cash": float(cash),
+                "Selected Count": len(held_tickers),
+                "Selected Score": selected_scores,
+                "Total Balance": float(total_balance),
+                "Total Return": total_return,
+                "Rebalancing": rebalancing,
+            }
+        )
+
+        prev_close = close_now
+        prev_total_balance = total_balance
+
+    return pd.DataFrame(rows)
+
+
 class EqualWeightStrategy(Strategy):
 
     def __init__(self, start_balance: float, rebalance_interval: int):

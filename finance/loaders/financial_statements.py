@@ -253,3 +253,90 @@ def load_statement_snapshot_strict(
     )
     snapshot["as_of_date"] = as_of_ts.normalize()
     return snapshot
+
+
+def load_statement_coverage_summary(
+    symbols: str | Iterable[str] | None = None,
+    *,
+    universe_source: str | None = None,
+    freq: str = "annual",
+) -> pd.DataFrame:
+    df = load_statement_values(
+        symbols=symbols,
+        universe_source=universe_source,
+        freq=freq,
+    )
+    if df.empty:
+        return pd.DataFrame(
+            columns=[
+                "symbol",
+                "freq",
+                "strict_rows",
+                "distinct_accessions",
+                "distinct_period_ends",
+                "min_period_end",
+                "max_period_end",
+                "min_available_at",
+                "max_available_at",
+                "statement_types",
+            ]
+        )
+
+    strict = df[
+        df["accession_no"].notna()
+        & (df["accession_no"] != "")
+        & df["unit"].notna()
+        & (df["unit"] != "")
+        & df["available_at"].notna()
+    ].copy()
+    if strict.empty:
+        return pd.DataFrame(
+            columns=[
+                "symbol",
+                "freq",
+                "strict_rows",
+                "distinct_accessions",
+                "distinct_period_ends",
+                "min_period_end",
+                "max_period_end",
+                "min_available_at",
+                "max_available_at",
+                "statement_types",
+            ]
+        )
+
+    summary = (
+        strict.groupby("symbol", as_index=False)
+        .agg(
+            strict_rows=("concept", "size"),
+            distinct_accessions=("accession_no", "nunique"),
+            distinct_period_ends=("period_end", "nunique"),
+            min_period_end=("period_end", "min"),
+            max_period_end=("period_end", "max"),
+            min_available_at=("available_at", "min"),
+            max_available_at=("available_at", "max"),
+        )
+        .sort_values("symbol")
+        .reset_index(drop=True)
+    )
+    statement_types = (
+        strict.groupby("symbol")["statement_type"]
+        .apply(lambda s: ",".join(sorted({str(v) for v in s if pd.notna(v)})))
+        .reset_index(name="statement_types")
+    )
+    summary = summary.merge(statement_types, on="symbol", how="left")
+    summary["freq"] = normalize_loader_freq(freq)
+    return summary[
+        [
+            "symbol",
+            "freq",
+            "strict_rows",
+            "distinct_accessions",
+            "distinct_period_ends",
+            "min_period_end",
+            "max_period_end",
+            "min_available_at",
+            "max_available_at",
+            "statement_types",
+        ]
+    ]

@@ -5,13 +5,15 @@ from typing import Any
 
 import pandas as pd
 
-from finance.loaders import load_price_history
+from finance.loaders import load_factor_snapshot, load_price_history, load_statement_snapshot_strict
 from finance.performance import portfolio_performance_summary
 from finance.sample import (
     get_dual_momentum_from_db,
     get_equal_weight_from_db,
     get_gtaa3_from_db,
+    get_quality_snapshot_from_db,
     get_risk_parity_trend_from_db,
+    get_statement_quality_snapshot_from_db,
 )
 
 
@@ -117,6 +119,63 @@ def _preflight_price_strategy_data(
         )
 
 
+def _preflight_quality_snapshot_data(
+    *,
+    tickers: list[str],
+    end: str | None,
+    factor_freq: str,
+    quality_factors: list[str],
+) -> None:
+    if end is None:
+        raise BacktestInputError("Quality snapshot strategy requires an end date.")
+
+    snapshot = load_factor_snapshot(
+        quality_factors,
+        symbols=tickers,
+        as_of_date=end,
+        freq=factor_freq,
+    )
+    if snapshot.empty:
+        raise BacktestDataError(
+            "No factor snapshot rows were found for the requested tickers and end date. "
+            "Run the fundamentals/factors pipeline first."
+        )
+
+    available_symbols = set(snapshot["symbol"].astype(str).str.upper().unique().tolist())
+    missing = [ticker for ticker in tickers if ticker not in available_symbols]
+    if len(missing) == len(tickers):
+        raise BacktestDataError(
+            "None of the requested tickers have factor snapshot rows for the selected end date."
+        )
+
+
+def _preflight_statement_quality_data(
+    *,
+    tickers: list[str],
+    end: str | None,
+    statement_freq: str,
+) -> None:
+    if end is None:
+        raise BacktestInputError("Statement-driven quality prototype requires an end date.")
+
+    snapshot = load_statement_snapshot_strict(
+        symbols=tickers,
+        as_of_date=end,
+        freq=statement_freq,
+    )
+    if snapshot.empty:
+        raise BacktestDataError(
+            "No strict statement snapshot rows were found for the requested tickers and end date. "
+            "Run Extended Statement Refresh first."
+        )
+
+    available_symbols = set(snapshot["symbol"].astype(str).str.upper().unique().tolist())
+    if not available_symbols:
+        raise BacktestDataError(
+            "No symbols in the requested universe have strict statement snapshot coverage at the selected end date."
+        )
+
+
 def build_backtest_result_bundle(
     result_df: pd.DataFrame,
     *,
@@ -168,6 +227,14 @@ def build_backtest_result_bundle(
         meta["top"] = input_params.get("top")
     if input_params.get("vol_window") is not None:
         meta["vol_window"] = input_params.get("vol_window")
+    if input_params.get("factor_freq") is not None:
+        meta["factor_freq"] = input_params.get("factor_freq")
+    if input_params.get("rebalance_freq") is not None:
+        meta["rebalance_freq"] = input_params.get("rebalance_freq")
+    if input_params.get("snapshot_mode") is not None:
+        meta["snapshot_mode"] = input_params.get("snapshot_mode")
+    if input_params.get("quality_factors") is not None:
+        meta["quality_factors"] = input_params.get("quality_factors")
 
     return {
         "strategy_name": strategy_name,
@@ -378,4 +445,250 @@ def run_dual_momentum_backtest_from_db(
             "preset_name": preset_name,
         },
         summary_freq=_summary_frequency(option, timeframe),
+    )
+
+
+def run_quality_snapshot_backtest_from_db(
+    *,
+    tickers: Sequence[str] | None = None,
+    start: str | None = None,
+    end: str | None = None,
+    timeframe: str = "1d",
+    option: str = "month_end",
+    factor_freq: str = "annual",
+    rebalance_freq: str = "monthly",
+    quality_factors: Sequence[str] | None = None,
+    top_n: int = 2,
+    rebalance_interval: int = 1,
+    snapshot_mode: str = "broad_research",
+    universe_mode: str = "manual_tickers",
+    preset_name: str | None = None,
+) -> dict[str, Any]:
+    normalized_tickers = _normalize_tickers(tickers)
+    _validate_backtest_date_range(start, end)
+
+    if snapshot_mode != "broad_research":
+        raise BacktestInputError("The first public quality snapshot runtime supports only 'broad_research' mode.")
+    if rebalance_freq != "monthly":
+        raise BacktestInputError("The first public quality snapshot runtime currently supports only monthly rebalance.")
+
+    normalized_factors = [str(name).strip() for name in (quality_factors or ["roe", "gross_margin", "operating_margin", "debt_ratio"]) if str(name).strip()]
+    if not normalized_factors:
+        raise BacktestInputError("At least one quality factor must be provided.")
+
+    _preflight_price_strategy_data(
+        tickers=normalized_tickers,
+        start=start,
+        end=end,
+        timeframe=timeframe,
+    )
+    _preflight_quality_snapshot_data(
+        tickers=normalized_tickers,
+        end=end,
+        factor_freq=factor_freq,
+        quality_factors=normalized_factors,
+    )
+
+    result_df = get_quality_snapshot_from_db(
+        tickers=normalized_tickers,
+        start=start,
+        end=end,
+        timeframe=timeframe,
+        option=option,
+        factor_freq=factor_freq,
+        quality_factors=normalized_factors,
+        top_n=top_n,
+        rebalance_interval=rebalance_interval,
+        snapshot_mode=snapshot_mode,
+    )
+
+    warnings: list[str] = []
+    if start:
+        selected_mask = result_df.get("Selected Count")
+        if selected_mask is not None:
+            active_rows = result_df[result_df["Selected Count"].fillna(0) > 0]
+            if not active_rows.empty:
+                first_active_date = pd.to_datetime(active_rows.iloc[0]["Date"]).strftime("%Y-%m-%d")
+                if first_active_date > start:
+                    warnings.append(
+                        "No usable quality snapshot rows were available at the requested start date. "
+                        f"The strategy stayed in cash until `{first_active_date}`."
+                    )
+
+    return build_backtest_result_bundle(
+        result_df,
+        strategy_name="Quality Snapshot",
+        strategy_key="quality_snapshot",
+        input_params={
+            "tickers": normalized_tickers,
+            "start": start,
+            "end": end,
+            "timeframe": timeframe,
+            "option": option,
+            "top": top_n,
+            "rebalance_interval": rebalance_interval,
+            "factor_freq": factor_freq,
+            "rebalance_freq": rebalance_freq,
+            "snapshot_mode": snapshot_mode,
+            "quality_factors": normalized_factors,
+            "universe_mode": universe_mode,
+            "preset_name": preset_name,
+        },
+        summary_freq=_summary_frequency(option, timeframe),
+        data_mode="db_backed_factor_snapshot",
+        warnings=warnings,
+    )
+
+
+def _run_statement_quality_bundle(
+    *,
+    strategy_name: str,
+    strategy_key: str,
+    tickers: Sequence[str] | None = None,
+    start: str | None = None,
+    end: str | None = None,
+    timeframe: str = "1d",
+    option: str = "month_end",
+    statement_freq: str = "annual",
+    quality_factors: Sequence[str] | None = None,
+    top_n: int = 2,
+    rebalance_interval: int = 1,
+    universe_mode: str = "manual_tickers",
+    preset_name: str | None = None,
+    static_warnings: Sequence[str] | None = None,
+) -> dict[str, Any]:
+    normalized_tickers = _normalize_tickers(tickers)
+    _validate_backtest_date_range(start, end)
+
+    normalized_factors = [
+        str(name).strip()
+        for name in (quality_factors or ["roe", "gross_margin", "operating_margin", "debt_ratio"])
+        if str(name).strip()
+    ]
+    if not normalized_factors:
+        raise BacktestInputError("At least one quality factor must be provided.")
+
+    _preflight_price_strategy_data(
+        tickers=normalized_tickers,
+        start=start,
+        end=end,
+        timeframe=timeframe,
+    )
+    _preflight_statement_quality_data(
+        tickers=normalized_tickers,
+        end=end,
+        statement_freq=statement_freq,
+    )
+
+    result_df = get_statement_quality_snapshot_from_db(
+        tickers=normalized_tickers,
+        start=start,
+        end=end,
+        timeframe=timeframe,
+        option=option,
+        statement_freq=statement_freq,
+        quality_factors=normalized_factors,
+        top_n=top_n,
+        rebalance_interval=rebalance_interval,
+    )
+
+    warnings: list[str] = list(static_warnings or [])
+    if start:
+        active_rows = result_df[result_df["Selected Count"].fillna(0) > 0]
+        if not active_rows.empty:
+            first_active_date = pd.to_datetime(active_rows.iloc[0]["Date"]).strftime("%Y-%m-%d")
+            if first_active_date > start:
+                warnings.append(
+                    "No usable strict statement snapshot rows were available at the requested start date. "
+                    f"The strategy stayed in cash until `{first_active_date}`."
+                )
+
+    return build_backtest_result_bundle(
+        result_df,
+        strategy_name=strategy_name,
+        strategy_key=strategy_key,
+        input_params={
+            "tickers": normalized_tickers,
+            "start": start,
+            "end": end,
+            "timeframe": timeframe,
+            "option": option,
+            "top": top_n,
+            "rebalance_interval": rebalance_interval,
+            "factor_freq": statement_freq,
+            "quality_factors": normalized_factors,
+            "snapshot_mode": "strict_statement_annual",
+            "universe_mode": universe_mode,
+            "preset_name": preset_name,
+        },
+        summary_freq=_summary_frequency(option, timeframe),
+        data_mode="db_backed_strict_statement_snapshot",
+        warnings=warnings,
+    )
+
+
+def run_quality_snapshot_strict_annual_backtest_from_db(
+    *,
+    tickers: Sequence[str] | None = None,
+    start: str | None = None,
+    end: str | None = None,
+    timeframe: str = "1d",
+    option: str = "month_end",
+    quality_factors: Sequence[str] | None = None,
+    top_n: int = 2,
+    rebalance_interval: int = 1,
+    universe_mode: str = "manual_tickers",
+    preset_name: str | None = None,
+) -> dict[str, Any]:
+    return _run_statement_quality_bundle(
+        strategy_name="Quality Snapshot (Strict Annual)",
+        strategy_key="quality_snapshot_strict_annual",
+        tickers=tickers,
+        start=start,
+        end=end,
+        timeframe=timeframe,
+        option=option,
+        statement_freq="annual",
+        quality_factors=quality_factors,
+        top_n=top_n,
+        rebalance_interval=rebalance_interval,
+        universe_mode=universe_mode,
+        preset_name=preset_name,
+        static_warnings=[
+            "Strict annual statement path: ranks annual statement-driven quality snapshots rebuilt from the detailed statement ledger.",
+        ],
+    )
+
+
+def run_statement_quality_prototype_backtest_from_db(
+    *,
+    tickers: Sequence[str] | None = None,
+    start: str | None = None,
+    end: str | None = None,
+    timeframe: str = "1d",
+    option: str = "month_end",
+    statement_freq: str = "annual",
+    quality_factors: Sequence[str] | None = None,
+    top_n: int = 2,
+    rebalance_interval: int = 1,
+    universe_mode: str = "manual_tickers",
+    preset_name: str | None = None,
+) -> dict[str, Any]:
+    return _run_statement_quality_bundle(
+        strategy_name="Statement Quality Prototype",
+        strategy_key="statement_quality_prototype",
+        tickers=tickers,
+        start=start,
+        end=end,
+        timeframe=timeframe,
+        option=option,
+        statement_freq=statement_freq,
+        quality_factors=quality_factors,
+        top_n=top_n,
+        rebalance_interval=rebalance_interval,
+        universe_mode=universe_mode,
+        preset_name=preset_name,
+        static_warnings=[
+            "Prototype path: strict statement snapshots are used for sample-universe architecture validation.",
+        ],
     )

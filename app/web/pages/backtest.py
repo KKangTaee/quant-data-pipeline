@@ -15,6 +15,8 @@ from app.web.runtime import (
     run_dual_momentum_backtest_from_db,
     run_equal_weight_backtest_from_db,
     run_gtaa_backtest_from_db,
+    run_quality_snapshot_backtest_from_db,
+    run_quality_snapshot_strict_annual_backtest_from_db,
     run_risk_parity_trend_backtest_from_db,
 )
 from app.web.runtime.backtest import BacktestDataError, BacktestInputError
@@ -39,11 +41,56 @@ DUAL_MOMENTUM_PRESETS = {
     "Dual Momentum Universe": ["QQQ", "SPY", "IWM", "SOXX", "BIL"],
 }
 
+QUALITY_BROAD_PRESETS = {
+    "Big Tech Quality Trial": ["AAPL", "MSFT", "GOOG"],
+}
+
+QUALITY_STRICT_TOP300_TICKERS = [
+    "NVDA", "GOOGL", "GOOG", "AAPL", "MSFT", "AMZN", "META", "TSLA", "AVGO", "WMT",
+    "LLY", "JPM", "V", "XOM", "JNJ", "MA", "MU", "COST", "ORCL", "ABBV",
+    "BAC", "HD", "PG", "CVX", "PLTR", "NFLX", "KO", "AMD", "CAT", "CSCO",
+    "MRK", "WFC", "LRCX", "MS", "GS", "PM", "AMAT", "IBM", "RTX", "UNH",
+    "INTC", "AXP", "MCD", "PEP", "TMUS", "TMO", "GEV", "C", "AMGN", "TXN",
+    "VZ", "T", "ABT", "SCHW", "NEE", "CRM", "DIS", "BA", "APH", "KLAC",
+    "GILD", "ANET", "TJX", "ISRG", "BX", "SCCO", "BLK", "QCOM", "HON", "LOW",
+    "APP", "UBER", "ADI", "DHR", "BKNG", "PFE", "DE", "UNP", "LMT", "COF",
+    "SYK", "SPGI", "BSX", "COP", "NEM", "WELL", "IBKR", "PLD", "PH", "VRTX",
+    "CMCSA", "HCA", "INTU", "PGR", "BMY", "ADBE", "PANW", "NOW", "SBUX", "MO",
+    "CRWD", "CME", "MCK", "SO", "NOC", "UPS", "CVS", "CEG", "GLW", "PNC",
+    "GD", "DUK", "KKR", "USB", "NKE", "FCX", "MRSH", "WDC", "ICE", "SHW",
+    "SNDK", "WM", "RCL", "CVNA", "MAR", "ADP", "DASH", "EMR", "MMM", "FDX",
+    "BK", "CMI", "ORLY", "ITW", "REGN", "MCO", "AMT", "WMB", "SNPS", "MNST",
+    "ECL", "GM", "ABNB", "EQIX", "DELL", "MDLZ", "CTAS", "BAM", "ELV", "SLB",
+    "CL", "HOOD", "EPD", "NSC", "APO", "CI", "SPG", "CDNS", "CSX", "HLT",
+    "AEP", "VRT", "TDG", "PWR", "TFC", "COR", "PCAR", "MSI", "RSG", "WBD",
+    "KMI", "TRV", "LHX", "MRVL", "ET", "ROST", "PSX", "APD", "AZO", "FTNT",
+    "EOG", "VLO", "NET", "BDX", "MPC", "SNOW", "RKT", "MPWR", "DLR", "FITB",
+    "BKR", "AFL", "SRE", "O", "MPLX", "ZTS", "GWW", "F", "AJG", "ALL",
+    "ADSK", "FAST", "URI", "CMG", "D", "AME", "CARR", "CAH", "FERG", "TGT",
+    "MET", "CTVA", "IDXX", "AU", "EA", "PSA", "OKE", "NDAQ", "ROK", "VST",
+    "CBRE", "COIN", "EW", "FANG", "CRWV", "HEI", "DAL", "LNG", "XEL", "OXY",
+    "WDAY", "DHI", "EXC", "RBLX", "CCL", "YUM", "TER", "ETR", "KR", "NUE",
+    "TRGP", "ARES", "MCHP", "ALNY", "FIX", "MSCI", "AMP", "EBAY", "AIG", "CUK",
+    "DDOG", "EL", "WAB", "HSY", "VMC", "ODFL", "SYY", "LVS", "PEG", "MLM",
+    "RKLB", "BE", "KEYS", "PYPL", "HIG", "CIEN", "ED", "ROP", "KDP", "IR",
+    "HBAN", "RMD", "TTWO", "CPRT", "MDLN", "STT", "WEC", "CCI", "MTB", "MSTR",
+    "VTR", "CTSH", "PRU", "UAL", "COHR", "GEHC", "AXON", "CPNG", "XYZ", "LITE",
+    "OTIS", "PAYX", "EQT", "PCG", "XYL", "IQV", "KVUE", "KMB", "UI", "INSM",
+]
+
+QUALITY_STRICT_PRESETS = {
+    "US Statement Coverage 300": QUALITY_STRICT_TOP300_TICKERS,
+    "US Statement Coverage 100": QUALITY_STRICT_TOP300_TICKERS[:100],
+    "Big Tech Strict Trial": ["AAPL", "MSFT", "GOOG"],
+}
+
 COMPARE_STRATEGY_OPTIONS = [
     "Equal Weight",
     "GTAA",
     "Risk Parity Trend",
     "Dual Momentum",
+    "Quality Snapshot",
+    "Quality Snapshot (Strict Annual)",
 ]
 
 
@@ -104,6 +151,10 @@ def _summarize_params(meta: dict[str, Any]) -> str:
         parts.append(f"timeframe={meta['timeframe']}")
     if meta.get("option"):
         parts.append(f"option={meta['option']}")
+    if meta.get("factor_freq"):
+        parts.append(f"factor_freq={meta['factor_freq']}")
+    if meta.get("snapshot_mode"):
+        parts.append(f"snapshot_mode={meta['snapshot_mode']}")
     if meta.get("rebalance_interval") is not None:
         parts.append(f"rebalance_interval={meta['rebalance_interval']}")
     if meta.get("top") is not None:
@@ -153,6 +204,8 @@ def _render_last_run() -> None:
 
     st.markdown("### Latest Backtest Run")
     st.caption("First-pass result view. Summary, equity curve, preview table, and execution meta are separated so the screen reads more like a product surface.")
+    for warning in meta.get("warnings") or []:
+        st.warning(warning)
 
     st.markdown(f"#### {bundle['strategy_name']}")
     _render_summary_metrics(summary_df)
@@ -239,6 +292,29 @@ def _strategy_compare_defaults(strategy_name: str) -> dict:
             "preset_name": "Dual Momentum Universe",
             "runner": run_dual_momentum_backtest_from_db,
             "extra": {},
+        }
+    if strategy_name == "Quality Snapshot":
+        return {
+            "tickers": ["AAPL", "MSFT", "GOOG"],
+            "preset_name": "Big Tech Quality Trial",
+            "runner": run_quality_snapshot_backtest_from_db,
+            "extra": {
+                "factor_freq": "annual",
+                "rebalance_freq": "monthly",
+                "quality_factors": ["roe", "gross_margin", "operating_margin", "debt_ratio"],
+                "top_n": 2,
+                "snapshot_mode": "broad_research",
+            },
+        }
+    if strategy_name == "Quality Snapshot (Strict Annual)":
+        return {
+            "tickers": QUALITY_STRICT_PRESETS["US Statement Coverage 100"],
+            "preset_name": "US Statement Coverage 100",
+            "runner": run_quality_snapshot_strict_annual_backtest_from_db,
+            "extra": {
+                "quality_factors": ["roe", "gross_margin", "operating_margin", "debt_ratio"],
+                "top_n": 2,
+            },
         }
     raise BacktestInputError(f"Unsupported compare strategy: {strategy_name}")
 
@@ -998,7 +1074,8 @@ def _history_strategy_display_name(record: dict[str, Any]) -> str:
 def _build_history_payload(record: dict[str, Any]) -> dict[str, Any] | None:
     strategy_key = record.get("strategy_key")
     if strategy_key not in {"equal_weight", "gtaa", "risk_parity_trend", "dual_momentum"}:
-        return None
+        if strategy_key not in {"quality_snapshot", "quality_snapshot_strict_annual"}:
+            return None
 
     payload = {
         "strategy_key": strategy_key,
@@ -1017,6 +1094,14 @@ def _build_history_payload(record: dict[str, Any]) -> dict[str, Any] | None:
         payload["top"] = int(record["top"])
     if record.get("vol_window") is not None:
         payload["vol_window"] = int(record["vol_window"])
+    if record.get("factor_freq") is not None:
+        payload["factor_freq"] = record.get("factor_freq")
+    if record.get("rebalance_freq") is not None:
+        payload["rebalance_freq"] = record.get("rebalance_freq")
+    if record.get("snapshot_mode") is not None:
+        payload["snapshot_mode"] = record.get("snapshot_mode")
+    if record.get("quality_factors") is not None:
+        payload["quality_factors"] = list(record.get("quality_factors") or [])
 
     # GTAA stores cadence in rebalance_interval for history summarization; map it back.
     if strategy_key == "gtaa":
@@ -1030,6 +1115,8 @@ def _strategy_key_to_display_name(strategy_key: str | None) -> str | None:
         "gtaa": "GTAA",
         "risk_parity_trend": "Risk Parity Trend",
         "dual_momentum": "Dual Momentum",
+        "quality_snapshot": "Quality Snapshot",
+        "quality_snapshot_strict_annual": "Quality Snapshot (Strict Annual)",
     }
     return mapping.get(strategy_key)
 
@@ -1102,6 +1189,32 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         st.session_state["dm_end"] = end_date
         st.session_state["dm_timeframe"] = payload.get("timeframe") or "1d"
         st.session_state["dm_option"] = payload.get("option") or "month_end"
+    elif strategy_key == "quality_snapshot":
+        st.session_state["qs_universe_mode"] = "Preset" if universe_mode == "preset" and preset_name in QUALITY_BROAD_PRESETS else "Manual"
+        if st.session_state["qs_universe_mode"] == "Preset":
+            st.session_state["qs_preset"] = preset_name
+        else:
+            st.session_state["qs_manual_tickers"] = tickers_text
+        st.session_state["qs_start"] = start_date
+        st.session_state["qs_end"] = end_date
+        st.session_state["qs_top_n"] = int(payload.get("top") or 2)
+        st.session_state["qs_timeframe"] = payload.get("timeframe") or "1d"
+        st.session_state["qs_option"] = payload.get("option") or "month_end"
+        st.session_state["qs_factor_freq"] = payload.get("factor_freq") or "annual"
+        st.session_state["qs_snapshot_mode"] = payload.get("snapshot_mode") or "broad_research"
+        st.session_state["qs_quality_factors"] = payload.get("quality_factors") or ["roe", "gross_margin", "operating_margin", "debt_ratio"]
+    elif strategy_key == "quality_snapshot_strict_annual":
+        st.session_state["qss_universe_mode"] = "Preset" if universe_mode == "preset" and preset_name in QUALITY_STRICT_PRESETS else "Manual"
+        if st.session_state["qss_universe_mode"] == "Preset":
+            st.session_state["qss_preset"] = preset_name
+        else:
+            st.session_state["qss_manual_tickers"] = tickers_text
+        st.session_state["qss_start"] = start_date
+        st.session_state["qss_end"] = end_date
+        st.session_state["qss_top_n"] = int(payload.get("top") or 2)
+        st.session_state["qss_timeframe"] = payload.get("timeframe") or "1d"
+        st.session_state["qss_option"] = payload.get("option") or "month_end"
+        st.session_state["qss_quality_factors"] = payload.get("quality_factors") or ["roe", "gross_margin", "operating_margin", "debt_ratio"]
 
     st.session_state.backtest_prefill_pending = False
 
@@ -1301,6 +1414,10 @@ def _render_persistent_backtest_history() -> None:
                     "rebalance_interval": selected_record.get("rebalance_interval"),
                     "top": selected_record.get("top"),
                     "vol_window": selected_record.get("vol_window"),
+                    "factor_freq": selected_record.get("factor_freq"),
+                    "rebalance_freq": selected_record.get("rebalance_freq"),
+                    "snapshot_mode": selected_record.get("snapshot_mode"),
+                    "quality_factors": selected_record.get("quality_factors"),
                     "universe_mode": selected_record.get("universe_mode"),
                     "preset_name": selected_record.get("preset_name"),
                 }
@@ -1377,6 +1494,33 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> None:
                     end=payload["end"],
                     timeframe=payload["timeframe"],
                     option=payload["option"],
+                    universe_mode=payload["universe_mode"],
+                    preset_name=payload["preset_name"],
+                )
+            elif payload["strategy_key"] == "quality_snapshot":
+                bundle = run_quality_snapshot_backtest_from_db(
+                    tickers=payload["tickers"],
+                    start=payload["start"],
+                    end=payload["end"],
+                    timeframe=payload["timeframe"],
+                    option=payload["option"],
+                    factor_freq=payload["factor_freq"],
+                    rebalance_freq=payload["rebalance_freq"],
+                    quality_factors=payload["quality_factors"],
+                    top_n=payload["top"],
+                    snapshot_mode=payload["snapshot_mode"],
+                    universe_mode=payload["universe_mode"],
+                    preset_name=payload["preset_name"],
+                )
+            elif payload["strategy_key"] == "quality_snapshot_strict_annual":
+                bundle = run_quality_snapshot_strict_annual_backtest_from_db(
+                    tickers=payload["tickers"],
+                    start=payload["start"],
+                    end=payload["end"],
+                    timeframe=payload["timeframe"],
+                    option=payload["option"],
+                    quality_factors=payload["quality_factors"],
+                    top_n=payload["top"],
                     universe_mode=payload["universe_mode"],
                     preset_name=payload["preset_name"],
                 )
@@ -1736,6 +1880,239 @@ def _render_dual_momentum_form() -> None:
     _handle_backtest_run(payload, strategy_name="Dual Momentum")
 
 
+def _render_quality_snapshot_form() -> None:
+    st.markdown("### Quality Snapshot")
+    st.caption("Research-oriented quality snapshot strategy using broad-research factor snapshots. This first pass ranks quality factors and holds top names equally between monthly rebalances.")
+    with st.expander("Data Requirements", expanded=False):
+        st.markdown(
+            "- `Daily Market Update` 또는 OHLCV 수집으로 **가격 데이터**를 먼저 채워야 합니다.\n"
+            "- `Weekly Fundamental Refresh`로 **`nyse_fundamentals` + `nyse_factors`**를 채워야 합니다.\n"
+            "- 현재 공개 버전은 **`Extended Statement Refresh`가 필수는 아닙니다**. 이 전략은 detailed statement ledger를 직접 읽지 않습니다.\n"
+            "- 첫 공개 버전은 **stock-oriented** 입니다. ETF 위주 유니버스는 quality factor snapshot이 비거나 의미가 약할 수 있습니다.\n"
+            "- 현재 `Factor Frequency`는 `annual`만 지원하므로, 같은 universe에 대해 `Weekly Fundamental Refresh (annual)`를 맞춰서 돌리는 편이 가장 자연스럽습니다."
+        )
+        st.caption("Current public mode: `broad_research` (research-oriented snapshot, not strict PIT)")
+    _apply_single_strategy_prefill("quality_snapshot")
+
+    with st.form("quality_snapshot_backtest_form", clear_on_submit=False):
+        universe_mode = st.radio(
+            "Universe Mode",
+            options=["Preset", "Manual"],
+            horizontal=True,
+            help="첫 factor strategy는 stock-only quality universe를 기준으로 시작하는 편이 안전합니다.",
+            key="qs_universe_mode",
+        )
+
+        preset_name = None
+        tickers: list[str] = []
+
+        if universe_mode == "Preset":
+            preset_name = st.selectbox(
+                "Preset",
+                options=list(QUALITY_BROAD_PRESETS.keys()),
+                index=0,
+                key="qs_preset",
+            )
+            tickers = QUALITY_BROAD_PRESETS[preset_name]
+            st.caption(f"Selected tickers: `{', '.join(tickers)}`")
+        else:
+            manual_tickers = st.text_input(
+                "Tickers",
+                value="AAPL,MSFT,GOOG",
+                help="Comma-separated stock tickers. Example: AAPL,MSFT,GOOG",
+                key="qs_manual_tickers",
+            )
+            tickers = _parse_manual_tickers(manual_tickers)
+
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            start_date = st.date_input("Start Date", value=date(2016, 1, 1), key="qs_start")
+        with col2:
+            end_date = st.date_input("End Date", value=date(2026, 3, 20), key="qs_end")
+        with col3:
+            top_n = st.number_input(
+                "Top N",
+                min_value=1,
+                max_value=20,
+                value=2,
+                step=1,
+                help="Quality score 상위 종목 수입니다.",
+                key="qs_top_n",
+            )
+
+        st.caption("Hidden defaults in this first pass: `monthly rebalance`, `equal-weight holding`.")
+
+        with st.expander("Advanced Inputs", expanded=False):
+            timeframe = st.selectbox("Timeframe", options=["1d"], index=0, key="qs_timeframe")
+            option = st.selectbox("Option", options=["month_end"], index=0, key="qs_option")
+            factor_freq = st.selectbox(
+                "Factor Frequency",
+                options=["annual"],
+                index=0,
+                key="qs_factor_freq",
+                help="첫 버전은 annual quality snapshot만 지원합니다.",
+            )
+            quality_factors = st.multiselect(
+                "Quality Factors",
+                options=["roe", "gross_margin", "operating_margin", "debt_ratio"],
+                default=["roe", "gross_margin", "operating_margin", "debt_ratio"],
+                key="qs_quality_factors",
+                help="높을수록 좋은 factor와 낮을수록 좋은 factor를 내부 score rule로 함께 처리합니다.",
+            )
+            snapshot_mode = st.selectbox(
+                "Snapshot Mode",
+                options=["broad_research"],
+                index=0,
+                key="qs_snapshot_mode",
+                help="첫 공개 버전은 broad-research snapshot을 사용합니다. strict PIT mode는 후속 단계로 남겨둡니다.",
+            )
+
+        submitted = st.form_submit_button("Run Quality Snapshot Backtest", use_container_width=True)
+
+    if not submitted:
+        return
+
+    validation_errors: list[str] = []
+    if not tickers:
+        validation_errors.append("At least one ticker is required.")
+    if start_date > end_date:
+        validation_errors.append("Start Date must be earlier than or equal to End Date.")
+    if not quality_factors:
+        validation_errors.append("Select at least one quality factor.")
+
+    if validation_errors:
+        for error in validation_errors:
+            st.error(error)
+        return
+
+    payload = {
+        "strategy_key": "quality_snapshot",
+        "tickers": tickers,
+        "start": start_date.isoformat(),
+        "end": end_date.isoformat(),
+        "timeframe": timeframe,
+        "option": option,
+        "top": int(top_n),
+        "factor_freq": factor_freq,
+        "rebalance_freq": "monthly",
+        "snapshot_mode": snapshot_mode,
+        "quality_factors": quality_factors,
+        "universe_mode": "preset" if universe_mode == "Preset" else "manual_tickers",
+        "preset_name": preset_name,
+    }
+
+    _handle_backtest_run(payload, strategy_name="Quality Snapshot")
+
+
+def _render_quality_snapshot_strict_annual_form() -> None:
+    st.markdown("### Quality Snapshot (Strict Annual)")
+    st.caption("Strict annual statement-driven quality strategy. This public candidate ranks annual quality snapshots rebuilt from the detailed statement ledger, then holds the top names equally between monthly rebalances.")
+    with st.expander("Data Requirements", expanded=False):
+        st.markdown(
+            "- `Daily Market Update` 또는 OHLCV 수집으로 **가격 데이터**를 먼저 채워야 합니다.\n"
+            "- `Extended Statement Refresh`를 **annual** 기준으로 먼저 채워야 합니다.\n"
+            "- 이 경로는 현재 **strict annual statement snapshot**을 사용합니다.\n"
+            "- wider annual coverage 검증은 **US / EDGAR-friendly top-300 stock universe** 기준으로 확인되었습니다.\n"
+            "- 현재는 stock-oriented path이며, ETF 중심 universe에는 적합하지 않습니다."
+        )
+        st.caption("Current public candidate mode: `strict_statement_annual`")
+    _apply_single_strategy_prefill("quality_snapshot_strict_annual")
+
+    with st.form("quality_snapshot_strict_annual_backtest_form", clear_on_submit=False):
+        universe_mode = st.radio(
+            "Universe Mode",
+            options=["Preset", "Manual"],
+            horizontal=True,
+            help="Single-strategy 기본값은 annual statement coverage가 검증된 US stock preset입니다.",
+            key="qss_universe_mode",
+        )
+
+        preset_name = None
+        tickers: list[str] = []
+
+        if universe_mode == "Preset":
+            preset_name = st.selectbox(
+                "Preset",
+                options=list(QUALITY_STRICT_PRESETS.keys()),
+                index=0,
+                key="qss_preset",
+            )
+            tickers = QUALITY_STRICT_PRESETS[preset_name]
+            st.caption(f"Selected tickers: `{', '.join(tickers)}`")
+        else:
+            manual_tickers = st.text_input(
+                "Tickers",
+                value="AAPL,MSFT,GOOG",
+                help="Comma-separated stock tickers. Example: AAPL,MSFT,GOOG",
+                key="qss_manual_tickers",
+            )
+            tickers = _parse_manual_tickers(manual_tickers)
+
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            start_date = st.date_input("Start Date", value=date(2016, 1, 1), key="qss_start")
+        with col2:
+            end_date = st.date_input("End Date", value=date(2026, 3, 20), key="qss_end")
+        with col3:
+            top_n = st.number_input(
+                "Top N",
+                min_value=1,
+                max_value=20,
+                value=2,
+                step=1,
+                help="Strict annual quality score 상위 종목 수입니다.",
+                key="qss_top_n",
+            )
+
+        st.caption("Hidden defaults in this first pass: `annual statement snapshots`, `monthly rebalance`, `equal-weight holding`.")
+
+        with st.expander("Advanced Inputs", expanded=False):
+            timeframe = st.selectbox("Timeframe", options=["1d"], index=0, key="qss_timeframe")
+            option = st.selectbox("Option", options=["month_end"], index=0, key="qss_option")
+            quality_factors = st.multiselect(
+                "Quality Factors",
+                options=["roe", "gross_margin", "operating_margin", "debt_ratio"],
+                default=["roe", "gross_margin", "operating_margin", "debt_ratio"],
+                key="qss_quality_factors",
+                help="strict annual statement snapshot에서 계산 가능한 quality factor만 노출합니다.",
+            )
+
+        submitted = st.form_submit_button("Run Strict Annual Quality Backtest", use_container_width=True)
+
+    if not submitted:
+        return
+
+    validation_errors: list[str] = []
+    if not tickers:
+        validation_errors.append("At least one ticker is required.")
+    if start_date > end_date:
+        validation_errors.append("Start Date must be earlier than or equal to End Date.")
+    if not quality_factors:
+        validation_errors.append("Select at least one quality factor.")
+
+    if validation_errors:
+        for error in validation_errors:
+            st.error(error)
+        return
+
+    payload = {
+        "strategy_key": "quality_snapshot_strict_annual",
+        "tickers": tickers,
+        "start": start_date.isoformat(),
+        "end": end_date.isoformat(),
+        "timeframe": timeframe,
+        "option": option,
+        "top": int(top_n),
+        "factor_freq": "annual",
+        "snapshot_mode": "strict_statement_annual",
+        "quality_factors": quality_factors,
+        "universe_mode": "preset" if universe_mode == "Preset" else "manual_tickers",
+        "preset_name": preset_name,
+    }
+
+    _handle_backtest_run(payload, strategy_name="Quality Snapshot (Strict Annual)")
+
+
 def render_backtest_tab() -> None:
     _init_backtest_state()
 
@@ -1757,8 +2134,8 @@ def render_backtest_tab() -> None:
             - One main app
             - Separate `Ingestion` and `Backtest` tabs
             - Internal code split by tab / concern
-            - DB-backed price-only strategies first
-            - `Equal Weight`, `GTAA`, `Risk Parity Trend`, and `Dual Momentum` are the first public strategies
+            - DB-backed price-only strategies first, then the first factor strategy
+            - `Equal Weight`, `GTAA`, `Risk Parity Trend`, `Dual Momentum`, `Quality Snapshot`, and `Quality Snapshot (Strict Annual)` are the current public strategy set
             - `Compare & Portfolio Builder` is the next layer on top of those strategy wrappers
             """
         )
@@ -1770,6 +2147,8 @@ def render_backtest_tab() -> None:
             - GTAA (second public wrapper)
             - Risk Parity Trend (third public wrapper)
             - Dual Momentum (fourth public wrapper)
+            - Quality Snapshot (first broad factor strategy)
+            - Quality Snapshot (Strict Annual) (first strict statement-driven public candidate)
             """
         )
 
@@ -1778,7 +2157,7 @@ def render_backtest_tab() -> None:
         st.markdown(
             """
             - UI structure: chosen
-            - Runtime public boundary: Equal Weight + GTAA + Risk Parity Trend + Dual Momentum
+            - Runtime public boundary: Equal Weight + GTAA + Risk Parity Trend + Dual Momentum + Quality Snapshot + Quality Snapshot (Strict Annual)
             - First screen scope: single-strategy execution forms
             - Strategy execution UI: basic result layout connected
             - Compare and weighted-portfolio builder: first-pass rollout
@@ -1814,14 +2193,18 @@ def render_backtest_tab() -> None:
             _render_gtaa_form()
         elif strategy_choice == "Risk Parity Trend":
             _render_risk_parity_form()
-        else:
+        elif strategy_choice == "Dual Momentum":
             _render_dual_momentum_form()
+        elif strategy_choice == "Quality Snapshot":
+            _render_quality_snapshot_form()
+        else:
+            _render_quality_snapshot_strict_annual_form()
         st.divider()
         _render_last_run()
 
     with compare_tab:
         st.markdown("### Compare Strategies")
-        st.caption("Start with a shared date range and compare up to four DB-backed price-only strategies at once. This section then feeds directly into a weighted portfolio builder.")
+        st.caption("Start with a shared date range and compare up to four strategies chosen from six DB-backed strategies. This section then feeds directly into a weighted portfolio builder.")
 
         with st.form("compare_backtests_form", clear_on_submit=False):
             selected_strategies = st.multiselect(
@@ -1933,6 +2316,52 @@ def render_backtest_tab() -> None:
                                 key="compare_dm_interval",
                             )
                         ),
+                    }
+
+                if "Quality Snapshot" in selected_strategies:
+                    st.markdown("**Quality Snapshot**")
+                    compare_strategy_overrides["Quality Snapshot"] = {
+                        "top_n": int(
+                            st.number_input(
+                                "Quality Top N",
+                                min_value=1,
+                                max_value=20,
+                                value=2,
+                                step=1,
+                                key="compare_qs_top_n",
+                            )
+                        ),
+                        "quality_factors": st.multiselect(
+                            "Quality Factors",
+                            options=["roe", "gross_margin", "operating_margin", "debt_ratio"],
+                            default=["roe", "gross_margin", "operating_margin", "debt_ratio"],
+                            key="compare_qs_factors",
+                        ),
+                        "factor_freq": "annual",
+                        "rebalance_freq": "monthly",
+                        "snapshot_mode": "broad_research",
+                    }
+
+                if "Quality Snapshot (Strict Annual)" in selected_strategies:
+                    st.markdown("**Quality Snapshot (Strict Annual)**")
+                    st.caption("Compare mode keeps the strict annual default lighter with `US Statement Coverage 100` so multi-strategy runs stay responsive.")
+                    compare_strategy_overrides["Quality Snapshot (Strict Annual)"] = {
+                        "top_n": int(
+                            st.number_input(
+                                "Strict Annual Quality Top N",
+                                min_value=1,
+                                max_value=20,
+                                value=2,
+                                step=1,
+                                key="compare_qss_top_n",
+                            )
+                        ),
+                        "quality_factors": st.multiselect(
+                            "Strict Annual Quality Factors",
+                            options=["roe", "gross_margin", "operating_margin", "debt_ratio"],
+                                default=["roe", "gross_margin", "operating_margin", "debt_ratio"],
+                                key="compare_qss_factors",
+                            ),
                     }
 
             compare_submitted = st.form_submit_button("Run Strategy Comparison", use_container_width=True)

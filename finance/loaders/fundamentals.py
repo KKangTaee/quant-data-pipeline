@@ -53,6 +53,12 @@ FUNDAMENTAL_COLUMNS = [
     "shareholders_equity_source",
 ]
 
+STATEMENT_FUNDAMENTAL_COLUMNS = FUNDAMENTAL_COLUMNS + [
+    "latest_available_at",
+    "latest_accession_no",
+    "latest_form_type",
+]
+
 
 def load_fundamentals(
     symbols: str | Iterable[str] | None = None,
@@ -118,3 +124,48 @@ def load_fundamental_snapshot(
     snapshot = ordered.groupby("symbol", as_index=False).tail(1).reset_index(drop=True)
     snapshot["as_of_date"] = as_of_ts.normalize()
     return snapshot
+
+
+def load_statement_fundamentals_shadow(
+    symbols: str | Iterable[str] | None = None,
+    *,
+    universe_source: str | None = None,
+    freq: str = "annual",
+    start: str | None = None,
+    end: str | None = None,
+) -> pd.DataFrame:
+    resolved_symbols = resolve_loader_symbols(symbols=symbols, universe_source=universe_source)
+    normalized_freq = normalize_loader_freq(freq)
+    start_ts, end_ts = normalize_date_range(start=start, end=end)
+
+    db = MySQLClient("localhost", "root", "1234", 3306)
+    try:
+        db.use_db("finance_fundamental")
+        placeholders = ",".join(["%s"] * len(resolved_symbols))
+        where = [f"symbol IN ({placeholders})", "freq = %s"]
+        params: list[object] = list(resolved_symbols) + [normalized_freq]
+
+        if start_ts is not None:
+            where.append("period_end >= %s")
+            params.append(start_ts.strftime("%Y-%m-%d"))
+        if end_ts is not None:
+            where.append("period_end <= %s")
+            params.append(end_ts.strftime("%Y-%m-%d"))
+
+        sql = f"""
+        SELECT {", ".join(STATEMENT_FUNDAMENTAL_COLUMNS)}
+        FROM nyse_fundamentals_statement
+        WHERE {" AND ".join(where)}
+        ORDER BY symbol ASC, period_end ASC
+        """
+        rows = db.query(sql, params)
+    finally:
+        db.close()
+
+    df = pd.DataFrame(rows)
+    if df.empty:
+        return df
+    df["period_end"] = pd.to_datetime(df["period_end"])
+    if "latest_available_at" in df.columns:
+        df["latest_available_at"] = pd.to_datetime(df["latest_available_at"])
+    return df

@@ -16,13 +16,15 @@ from .strategy import (
     EqualWeightStrategy,
     GTAA3Strategy,
     RiskParityTrendStrategy,
-    DualMomentumStrategy
+    DualMomentumStrategy,
+    quality_snapshot_equal_weight,
 )
 
 from .performance import(
     portfolio_performance_summary,
     make_monthly_weighted_portfolio,
 )
+from .display import round_columns
 
 from .visualize import(
     plot_equity_curves
@@ -32,13 +34,17 @@ from finance.data.asset_profile import(
     collect_and_store_asset_profiles,
     load_symbols_from_asset_profile
 )
+from .loaders import (
+    load_factor_snapshot,
+    load_statement_quality_snapshot_strict,
+)
 
 from .data.fundamentals import(
     upsert_fundamentals
 )
 
 from .data.factors import(
-    upsert_factors
+    upsert_factors,
 )
 from .data.financial_statements import (
     inspect_financial_statement_source,
@@ -383,6 +389,144 @@ def get_dual_momentum_from_db(
     )
 
     df = engine.run(strategy).round_columns().round_columns(cols=["Total Return"], decimals=3).result
+    return df
+
+
+def get_quality_snapshot_from_db(
+    *,
+    start=None,
+    end=None,
+    timeframe="1d",
+    option="month_end",
+    tickers=None,
+    factor_freq="annual",
+    quality_factors=None,
+    top_n=2,
+    rebalance_interval=1,
+    snapshot_mode="broad_research",
+):
+    if snapshot_mode != "broad_research":
+        raise ValueError("first-pass quality snapshot sample currently supports only 'broad_research' mode.")
+
+    if tickers is None:
+        tickers = ["AAPL", "MSFT", "GOOG"]
+    if quality_factors is None:
+        quality_factors = ["roe", "gross_margin", "operating_margin", "debt_ratio"]
+
+    engine = (
+        _build_price_only_engine(
+            tickers,
+            option=option,
+            start=start,
+            end=end,
+            timeframe=timeframe,
+            from_db=True,
+        )
+        .filter_by_period()
+        .align_dates()
+        .slice(start=start, end=end)
+        .drop_columns(["High", "Low", "Open", "Volume"])
+    )
+
+    price_dfs = engine.dfs
+    if not price_dfs:
+        raise ValueError("No DB-backed price data is available for the requested quality strategy run.")
+
+    rebalance_dates = pd.to_datetime(next(iter(price_dfs.values()))["Date"]).tolist()
+    snapshot_by_date = {}
+    for rebalance_date in rebalance_dates:
+        snapshot = load_factor_snapshot(
+            quality_factors,
+            symbols=tickers,
+            as_of_date=pd.Timestamp(rebalance_date).strftime("%Y-%m-%d"),
+            freq=factor_freq,
+        )
+        snapshot_by_date[pd.Timestamp(rebalance_date).normalize()] = snapshot
+
+    df = quality_snapshot_equal_weight(
+        price_dfs,
+        snapshot_by_date,
+        start_balance=10000,
+        quality_factors=quality_factors,
+        top_n=top_n,
+        lower_is_better_factors=["debt_ratio"],
+        rebalance_interval=rebalance_interval,
+    )
+
+    df = (
+        round_columns(df, cols=["Cash", "Total Balance", "End Balance", "Next Balance"], decimals=1)
+        .pipe(round_columns, cols=["Total Return", "Selected Score"], decimals=3)
+    )
+    return df
+
+
+def get_statement_quality_snapshot_from_db(
+    *,
+    start=None,
+    end=None,
+    timeframe="1d",
+    option="month_end",
+    tickers=None,
+    statement_freq="annual",
+    quality_factors=None,
+    top_n=2,
+    rebalance_interval=1,
+):
+    """
+    strict statement snapshot 기반 quality strategy prototype.
+
+    현재는 sample-universe feasibility 확인용 경로이며,
+    public UI 기본 전략이 아니라 statement-driven quality 가능성을 검증하는 목적이다.
+    """
+    if tickers is None:
+        tickers = ["AAPL", "MSFT", "GOOG"]
+    if quality_factors is None:
+        quality_factors = ["roe", "gross_margin", "operating_margin", "debt_ratio"]
+
+    engine = (
+        _build_price_only_engine(
+            tickers,
+            option=option,
+            start=start,
+            end=end,
+            timeframe=timeframe,
+            from_db=True,
+        )
+        .filter_by_period()
+        .align_dates()
+        .slice(start=start, end=end)
+        .drop_columns(["High", "Low", "Open", "Volume"])
+    )
+
+    price_dfs = engine.dfs
+    if not price_dfs:
+        raise ValueError("No DB-backed price data is available for the requested statement-driven quality run.")
+
+    rebalance_dates = pd.to_datetime(next(iter(price_dfs.values()))["Date"]).tolist()
+    snapshot_by_date = {}
+    for rebalance_date in rebalance_dates:
+        quality_snapshot = load_statement_quality_snapshot_strict(
+            quality_factors,
+            symbols=tickers,
+            as_of_date=pd.Timestamp(rebalance_date).strftime("%Y-%m-%d"),
+            freq=statement_freq,
+        )
+        snapshot_by_date[pd.Timestamp(rebalance_date).normalize()] = quality_snapshot
+
+    df = quality_snapshot_equal_weight(
+        price_dfs,
+        snapshot_by_date,
+        start_balance=10000,
+        quality_factors=quality_factors,
+        top_n=top_n,
+        lower_is_better_factors=["debt_ratio"],
+        rebalance_interval=rebalance_interval,
+    )
+
+    df = (
+        round_columns(df, cols=["Cash", "Total Balance", "End Balance", "Next Balance"], decimals=1)
+        .pipe(round_columns, cols=["Total Return", "Selected Score"], decimals=3)
+    )
     return df
 
 

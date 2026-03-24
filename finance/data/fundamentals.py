@@ -324,9 +324,766 @@ def _calc_free_cash_flow(row: pd.Series) -> tuple[Optional[float], Optional[str]
         return None, None
 
     try:
-        return float(operating_cf) - float(capex), "operating_cf_minus_capex"
+        ocf = float(operating_cf)
+        cap = float(capex)
+        if pd.isna(ocf) or pd.isna(cap):
+            return None, None
+        if cap <= 0:
+            return ocf + cap, "operating_cash_flow_plus_capex"
+        return ocf - cap, "operating_cash_flow_minus_capex"
     except Exception:
         return None, None
+
+
+def _pick_statement_value(row: pd.Series, candidates: list[str]) -> tuple[Optional[float], Optional[str]]:
+    for concept in candidates:
+        if concept not in row.index:
+            continue
+        value = row[concept]
+        if pd.notna(value):
+            try:
+                return float(value), concept
+            except Exception:
+                return None, None
+    return None, None
+
+
+def _safe_div_scalar(a, b):
+    if a is None or b is None:
+        return None
+    try:
+        if pd.isna(a) or pd.isna(b) or float(b) == 0:
+            return None
+        return float(a) / float(b)
+    except Exception:
+        return None
+
+
+def build_fundamentals_from_statement_snapshot(
+    statement_snapshot: pd.DataFrame,
+    *,
+    as_of_date=None,
+    freq: str = "annual",
+) -> pd.DataFrame:
+    """
+    strict statement snapshot rows를 normalized fundamentals 단면으로 변환한다.
+
+    용도:
+    - statement-driven factor prototype
+    - future statement-driven fundamentals/factors rebuild path
+
+    현재는 sample/prototype 성격의 pure transform이며 DB write는 하지 않는다.
+    """
+    base_columns = [
+        "symbol",
+        "freq",
+        "as_of_date",
+        "statement_period_end",
+        "total_revenue",
+        "gross_profit",
+        "operating_income",
+        "net_income",
+        "total_assets",
+        "current_assets",
+        "total_liabilities",
+        "current_liabilities",
+        "total_debt",
+        "net_assets",
+        "operating_cash_flow",
+        "free_cash_flow",
+        "capital_expenditure",
+        "cash_and_equivalents",
+        "interest_expense",
+        "revenue_source",
+        "gross_profit_source",
+        "operating_income_source",
+        "net_income_source",
+        "net_assets_source",
+        "total_debt_source",
+        "operating_cash_flow_source",
+        "free_cash_flow_source",
+        "capital_expenditure_source",
+        "cash_and_equivalents_source",
+        "interest_expense_source",
+    ]
+    if statement_snapshot is None or statement_snapshot.empty:
+        return pd.DataFrame(columns=base_columns)
+
+    working = statement_snapshot.copy()
+    working["symbol"] = working["symbol"].astype(str).str.strip().str.upper()
+    if "unit" in working.columns and (working["unit"] == "USD").any():
+        working = working[working["unit"] == "USD"].copy()
+    if working.empty:
+        return pd.DataFrame(columns=base_columns)
+
+    pivot = working.pivot_table(
+        index="symbol",
+        columns="concept",
+        values="value",
+        aggfunc="last",
+    )
+    if pivot.empty:
+        return pd.DataFrame(columns=base_columns)
+
+    period_end_map = (
+        working.groupby("symbol")["period_end"]
+        .max()
+        .to_dict()
+    )
+    normalized_as_of = pd.to_datetime(as_of_date).normalize() if as_of_date is not None else pd.NaT
+
+    revenue_candidates = [
+        "us-gaap:RevenueFromContractWithCustomerExcludingAssessedTax",
+        "us-gaap:Revenues",
+        "us-gaap:SalesRevenueNet",
+    ]
+    gross_profit_candidates = ["us-gaap:GrossProfit"]
+    cost_candidates = [
+        "us-gaap:CostOfRevenue",
+        "us-gaap:CostOfGoodsSold",
+        "us-gaap:CostOfSales",
+    ]
+    operating_income_candidates = ["us-gaap:OperatingIncomeLoss"]
+    net_income_candidates = [
+        "us-gaap:NetIncomeLoss",
+        "us-gaap:ProfitLoss",
+    ]
+    assets_candidates = ["us-gaap:Assets"]
+    current_assets_candidates = ["us-gaap:AssetsCurrent"]
+    liabilities_candidates = ["us-gaap:Liabilities"]
+    current_liabilities_candidates = ["us-gaap:LiabilitiesCurrent"]
+    equity_candidates = [
+        "us-gaap:StockholdersEquity",
+        "us-gaap:StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest",
+        "us-gaap:StockholdersEquityIncludingPortionAttributableToRedeemableNoncontrollingInterest",
+    ]
+    cash_candidates = [
+        "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+        "us-gaap:Cash",
+        "us-gaap:CashCashEquivalentsAndShortTermInvestments",
+    ]
+    operating_cash_flow_candidates = ["us-gaap:NetCashProvidedByUsedInOperatingActivities"]
+    capex_candidates = ["us-gaap:PaymentsToAcquirePropertyPlantAndEquipment"]
+    interest_candidates = [
+        "us-gaap:InterestExpense",
+        "us-gaap:InterestExpenseAndOther",
+        "us-gaap:InterestExpenseDebt",
+    ]
+    debt_component_candidates = [
+        "us-gaap:LongTermDebt",
+        "us-gaap:LongTermDebtCurrent",
+        "us-gaap:ShortTermBorrowings",
+        "us-gaap:ShortTermDebt",
+    ]
+
+    records: list[dict] = []
+    for symbol, row in pivot.iterrows():
+        total_revenue, revenue_source = _pick_statement_value(row, revenue_candidates)
+        gross_profit, gross_profit_source = _pick_statement_value(row, gross_profit_candidates)
+        cost_of_revenue, cost_source = _pick_statement_value(row, cost_candidates)
+        operating_income, operating_income_source = _pick_statement_value(row, operating_income_candidates)
+        net_income, net_income_source = _pick_statement_value(row, net_income_candidates)
+        total_assets, total_assets_source = _pick_statement_value(row, assets_candidates)
+        current_assets, current_assets_source = _pick_statement_value(row, current_assets_candidates)
+        total_liabilities, total_liabilities_source = _pick_statement_value(row, liabilities_candidates)
+        current_liabilities, current_liabilities_source = _pick_statement_value(row, current_liabilities_candidates)
+        net_assets, net_assets_source = _pick_statement_value(row, equity_candidates)
+        cash_and_equivalents, cash_source = _pick_statement_value(row, cash_candidates)
+        operating_cash_flow, operating_cash_flow_source = _pick_statement_value(row, operating_cash_flow_candidates)
+        capital_expenditure, capital_expenditure_source = _pick_statement_value(row, capex_candidates)
+        interest_expense, interest_expense_source = _pick_statement_value(row, interest_candidates)
+
+        debt_parts = []
+        debt_sources = []
+        for candidate in debt_component_candidates:
+            debt_value, debt_source = _pick_statement_value(row, [candidate])
+            if debt_value is None:
+                continue
+            debt_parts.append(debt_value)
+            if debt_source is not None:
+                debt_sources.append(debt_source)
+        total_debt = float(sum(debt_parts)) if debt_parts else None
+
+        if gross_profit is None and total_revenue is not None and cost_of_revenue is not None:
+            gross_profit = float(total_revenue - cost_of_revenue)
+            gross_profit_source = "derived:revenue_minus_cost_of_revenue"
+
+        free_cash_flow = None
+        free_cash_flow_source = None
+        if operating_cash_flow is not None and capital_expenditure is not None:
+            free_cash_flow = float(operating_cash_flow - capital_expenditure)
+            free_cash_flow_source = "derived:operating_cash_flow_minus_capex"
+
+        records.append(
+            {
+                "symbol": symbol,
+                "freq": freq,
+                "as_of_date": normalized_as_of,
+                "statement_period_end": period_end_map.get(symbol),
+                "total_revenue": total_revenue,
+                "gross_profit": gross_profit,
+                "operating_income": operating_income,
+                "net_income": net_income,
+                "total_assets": total_assets,
+                "current_assets": current_assets,
+                "total_liabilities": total_liabilities,
+                "current_liabilities": current_liabilities,
+                "total_debt": total_debt,
+                "net_assets": net_assets,
+                "operating_cash_flow": operating_cash_flow,
+                "free_cash_flow": free_cash_flow,
+                "capital_expenditure": capital_expenditure,
+                "cash_and_equivalents": cash_and_equivalents,
+                "interest_expense": interest_expense,
+                "revenue_source": revenue_source,
+                "gross_profit_source": gross_profit_source or cost_source,
+                "operating_income_source": operating_income_source,
+                "net_income_source": net_income_source,
+                "net_assets_source": net_assets_source,
+                "total_assets_source": total_assets_source,
+                "current_assets_source": current_assets_source,
+                "total_liabilities_source": total_liabilities_source,
+                "current_liabilities_source": current_liabilities_source,
+                "total_debt_source": ",".join(debt_sources) if debt_sources else None,
+                "operating_cash_flow_source": operating_cash_flow_source,
+                "free_cash_flow_source": free_cash_flow_source,
+                "capital_expenditure_source": capital_expenditure_source,
+                "cash_and_equivalents_source": cash_source,
+                "interest_expense_source": interest_expense_source,
+            }
+        )
+
+    out = pd.DataFrame(records)
+    if out.empty:
+        return pd.DataFrame(columns=base_columns)
+
+    # optional quality preview columns; downstream factor builder can reuse them directly
+    out["gross_margin"] = [_safe_div_scalar(a, b) for a, b in zip(out["gross_profit"], out["total_revenue"])]
+    out["operating_margin"] = [_safe_div_scalar(a, b) for a, b in zip(out["operating_income"], out["total_revenue"])]
+    out["roe"] = [_safe_div_scalar(a, b) for a, b in zip(out["net_income"], out["net_assets"])]
+    out["debt_ratio"] = [_safe_div_scalar(a, b) for a, b in zip(out["total_debt"], out["net_assets"])]
+    return out.sort_values("symbol").reset_index(drop=True)
+
+
+def _normalize_symbol_list(symbols: Iterable[str] | None) -> list[str]:
+    if not symbols:
+        return []
+    out: list[str] = []
+    seen: set[str] = set()
+    for symbol in symbols:
+        value = str(symbol).strip().upper()
+        if not value or value in seen:
+            continue
+        seen.add(value)
+        out.append(value)
+    return out
+
+
+def _load_statement_values_strict_history_mysql(
+    symbols: Iterable[str] | None = None,
+    *,
+    freq: Freq = "annual",
+    start: str | None = None,
+    end: str | None = None,
+    host="localhost",
+    user="root",
+    password="1234",
+    port=3306,
+) -> pd.DataFrame:
+    db = MySQLClient(host, user, password, port)
+    try:
+        db.use_db(DB_FUND)
+
+        where = [
+            "freq = %s",
+            "accession_no IS NOT NULL",
+            "accession_no <> ''",
+            "unit IS NOT NULL",
+            "unit <> ''",
+            "available_at IS NOT NULL",
+        ]
+        params: list[object] = [freq]
+
+        symbol_list = _normalize_symbol_list(symbols)
+        if symbol_list:
+            placeholders = ",".join(["%s"] * len(symbol_list))
+            where.append(f"symbol IN ({placeholders})")
+            params.extend(symbol_list)
+
+        if start:
+            where.append("period_end >= %s")
+            params.append(pd.Timestamp(start).strftime("%Y-%m-%d"))
+        if end:
+            where.append("period_end <= %s")
+            params.append(pd.Timestamp(end).strftime("%Y-%m-%d"))
+
+        sql = f"""
+        SELECT
+          symbol,
+          freq,
+          period_end,
+          statement_type,
+          concept,
+          value,
+          unit,
+          available_at,
+          accession_no,
+          form_type
+        FROM nyse_financial_statement_values
+        WHERE {" AND ".join(where)}
+        ORDER BY
+          symbol ASC,
+          period_end ASC,
+          statement_type ASC,
+          concept ASC,
+          unit ASC,
+          available_at ASC,
+          accession_no ASC
+        """
+        rows = db.query(sql, params)
+    finally:
+        db.close()
+
+    df = pd.DataFrame(rows)
+    if df.empty:
+        return df
+
+    df["symbol"] = df["symbol"].astype(str).str.strip().str.upper()
+    df["period_end"] = pd.to_datetime(df["period_end"], errors="coerce")
+    df["available_at"] = pd.to_datetime(df["available_at"], errors="coerce")
+    df = df[df["period_end"].notna() & df["available_at"].notna()].copy()
+    return df
+
+
+def _load_broad_shares_fallback_mysql(
+    symbols: Iterable[str] | None = None,
+    *,
+    freq: Freq = "annual",
+    host="localhost",
+    user="root",
+    password="1234",
+    port=3306,
+) -> pd.DataFrame:
+    db = MySQLClient(host, user, password, port)
+    try:
+        db.use_db(DB_FUND)
+        where = ["freq = %s", "shares_outstanding IS NOT NULL"]
+        params: list[object] = [freq]
+
+        symbol_list = _normalize_symbol_list(symbols)
+        if symbol_list:
+            placeholders = ",".join(["%s"] * len(symbol_list))
+            where.append(f"symbol IN ({placeholders})")
+            params.extend(symbol_list)
+
+        sql = f"""
+        SELECT
+          symbol,
+          period_end,
+          shares_outstanding,
+          shares_outstanding_source
+        FROM nyse_fundamentals
+        WHERE {" AND ".join(where)}
+        ORDER BY symbol ASC, period_end ASC
+        """
+        rows = db.query(sql, params)
+    finally:
+        db.close()
+
+    df = pd.DataFrame(rows)
+    if df.empty:
+        return df
+    df["symbol"] = df["symbol"].astype(str).str.strip().str.upper()
+    df["period_end"] = pd.to_datetime(df["period_end"], errors="coerce")
+    return df[df["period_end"].notna()].copy()
+
+
+def build_fundamentals_history_from_statement_values(
+    statement_values: pd.DataFrame,
+    *,
+    freq: Freq = "annual",
+    broad_shares_fallback: pd.DataFrame | None = None,
+    shares_tolerance_days: int = 15,
+) -> pd.DataFrame:
+    base_columns = [
+        "symbol",
+        "freq",
+        "period_end",
+        "currency",
+        "total_revenue",
+        "gross_profit",
+        "operating_income",
+        "ebit",
+        "pretax_income",
+        "interest_expense",
+        "net_income",
+        "total_assets",
+        "current_assets",
+        "inventory",
+        "total_liabilities",
+        "current_liabilities",
+        "short_term_debt",
+        "long_term_debt",
+        "total_debt",
+        "shareholders_equity",
+        "net_assets",
+        "operating_cash_flow",
+        "free_cash_flow",
+        "capital_expenditure",
+        "cash_and_equivalents",
+        "dividends_paid",
+        "shares_outstanding",
+        "latest_available_at",
+        "latest_accession_no",
+        "latest_form_type",
+        "source_mode",
+        "timing_basis",
+        "gross_profit_source",
+        "operating_income_source",
+        "ebit_source",
+        "free_cash_flow_source",
+        "shares_outstanding_source",
+        "total_debt_source",
+        "shareholders_equity_source",
+        "source",
+        "last_collected_at",
+        "error_msg",
+    ]
+    if statement_values is None or statement_values.empty:
+        return pd.DataFrame(columns=base_columns)
+
+    working = statement_values.copy()
+    working["symbol"] = working["symbol"].astype(str).str.strip().str.upper()
+    working["period_end"] = pd.to_datetime(working["period_end"], errors="coerce")
+    working["available_at"] = pd.to_datetime(working["available_at"], errors="coerce")
+    working = working[
+        working["period_end"].notna()
+        & working["available_at"].notna()
+        & working["accession_no"].notna()
+        & (working["accession_no"] != "")
+        & working["unit"].notna()
+        & (working["unit"] != "")
+    ].copy()
+    if working.empty:
+        return pd.DataFrame(columns=base_columns)
+
+    working = working.sort_values(
+        ["symbol", "period_end", "statement_type", "concept", "unit", "available_at", "accession_no"],
+        ascending=[True, True, True, True, True, True, True],
+    )
+
+    inventory_candidates = ["us-gaap:InventoryNet", "us-gaap:InventoryFinishedGoods", "us-gaap:InventoryGross"]
+    pretax_income_candidates = ["us-gaap:IncomeBeforeTaxExpenseBenefit", "us-gaap:PretaxIncome"]
+    short_term_debt_candidates = [
+        "us-gaap:LongTermDebtCurrent",
+        "us-gaap:ShortTermBorrowings",
+        "us-gaap:ShortTermDebt",
+    ]
+    long_term_debt_candidates = ["us-gaap:LongTermDebt", "us-gaap:LongTermDebtNoncurrent"]
+    dividends_paid_candidates = [
+        "us-gaap:PaymentsOfDividends",
+        "us-gaap:PaymentsOfOrdinaryDividends",
+        "us-gaap:DividendsPaid",
+    ]
+    shares_outstanding_candidates = [
+        "dei:EntityCommonStockSharesOutstanding",
+        "us-gaap:CommonStockSharesOutstanding",
+        "us-gaap:CommonSharesOutstanding",
+    ]
+    now = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+    records: list[dict] = []
+
+    for (symbol, period_end), group in working.groupby(["symbol", "period_end"], sort=False):
+        latest_snapshot = (
+            group.groupby(["symbol", "statement_type", "concept", "unit"], as_index=False)
+            .tail(1)
+            .sort_values(["symbol", "statement_type", "concept", "unit"])
+            .reset_index(drop=True)
+        )
+        if latest_snapshot.empty:
+            continue
+
+        fundamentals = build_fundamentals_from_statement_snapshot(
+            latest_snapshot,
+            as_of_date=latest_snapshot["available_at"].max(),
+            freq=freq,
+        )
+        if fundamentals.empty:
+            continue
+
+        latest_point = latest_snapshot.sort_values(["available_at", "accession_no"]).iloc[-1]
+        pivot = latest_snapshot.pivot_table(
+            index="symbol",
+            columns="concept",
+            values="value",
+            aggfunc="last",
+        )
+        pivot_row = pivot.iloc[0] if not pivot.empty else pd.Series(dtype="object")
+
+        pretax_income, _ = _pick_statement_value(pivot_row, pretax_income_candidates)
+        inventory, _ = _pick_statement_value(pivot_row, inventory_candidates)
+        short_term_debt, _ = _pick_statement_value(pivot_row, short_term_debt_candidates)
+        long_term_debt, _ = _pick_statement_value(pivot_row, long_term_debt_candidates)
+        dividends_paid, _ = _pick_statement_value(pivot_row, dividends_paid_candidates)
+        shares_outstanding, shares_source = _pick_statement_value(pivot_row, shares_outstanding_candidates)
+
+        fund_row = fundamentals.iloc[0].to_dict()
+        record = {
+            "symbol": symbol,
+            "freq": freq,
+            "period_end": pd.Timestamp(period_end).date(),
+            "currency": "USD",
+            "total_revenue": fund_row.get("total_revenue"),
+            "gross_profit": fund_row.get("gross_profit"),
+            "operating_income": fund_row.get("operating_income"),
+            "ebit": fund_row.get("operating_income"),
+            "pretax_income": pretax_income,
+            "interest_expense": fund_row.get("interest_expense"),
+            "net_income": fund_row.get("net_income"),
+            "total_assets": fund_row.get("total_assets"),
+            "current_assets": fund_row.get("current_assets"),
+            "inventory": inventory,
+            "total_liabilities": fund_row.get("total_liabilities"),
+            "current_liabilities": fund_row.get("current_liabilities"),
+            "short_term_debt": short_term_debt,
+            "long_term_debt": long_term_debt,
+            "total_debt": fund_row.get("total_debt"),
+            "shareholders_equity": fund_row.get("net_assets"),
+            "net_assets": fund_row.get("net_assets"),
+            "operating_cash_flow": fund_row.get("operating_cash_flow"),
+            "free_cash_flow": fund_row.get("free_cash_flow"),
+            "capital_expenditure": fund_row.get("capital_expenditure"),
+            "cash_and_equivalents": fund_row.get("cash_and_equivalents"),
+            "dividends_paid": dividends_paid,
+            "shares_outstanding": int(shares_outstanding) if shares_outstanding is not None else None,
+            "latest_available_at": latest_point.get("available_at"),
+            "latest_accession_no": latest_point.get("accession_no"),
+            "latest_form_type": latest_point.get("form_type"),
+            "source_mode": "statement_ledger_shadow",
+            "timing_basis": "latest_available_for_period_end",
+            "gross_profit_source": fund_row.get("gross_profit_source"),
+            "operating_income_source": fund_row.get("operating_income_source"),
+            "ebit_source": fund_row.get("operating_income_source"),
+            "free_cash_flow_source": fund_row.get("free_cash_flow_source"),
+            "shares_outstanding_source": shares_source,
+            "total_debt_source": fund_row.get("total_debt_source"),
+            "shareholders_equity_source": fund_row.get("net_assets_source"),
+            "source": "statement_ledger",
+            "last_collected_at": now,
+            "error_msg": None,
+        }
+        if _has_meaningful_fundamental_payload(record):
+            records.append(record)
+
+    out = pd.DataFrame(records)
+    if out.empty:
+        return pd.DataFrame(columns=base_columns)
+
+    if broad_shares_fallback is not None and not broad_shares_fallback.empty:
+        fallback = broad_shares_fallback.copy()
+        fallback["symbol"] = fallback["symbol"].astype(str).str.strip().str.upper()
+        fallback["period_end"] = pd.to_datetime(fallback["period_end"], errors="coerce")
+        fallback = fallback[
+            fallback["period_end"].notna()
+            & fallback["shares_outstanding"].notna()
+        ].copy()
+        if not fallback.empty:
+            out["period_end"] = pd.to_datetime(out["period_end"], errors="coerce")
+            for symbol, group in out.groupby("symbol", sort=False):
+                fallback_group = fallback[fallback["symbol"] == symbol].copy()
+                if fallback_group.empty:
+                    continue
+                fallback_group = fallback_group.sort_values("period_end")
+                target_idx = group.index[group["shares_outstanding"].isna()]
+                if len(target_idx) == 0:
+                    continue
+
+                left = out.loc[target_idx, ["period_end"]].sort_values("period_end")
+                right = fallback_group[["period_end", "shares_outstanding", "shares_outstanding_source"]]
+                merged = pd.merge_asof(
+                    left,
+                    right,
+                    on="period_end",
+                    direction="nearest",
+                    tolerance=pd.Timedelta(days=shares_tolerance_days),
+                )
+                merged.index = left.index
+                matched = merged["shares_outstanding"].notna()
+                if matched.any():
+                    matched_idx = merged.index[matched]
+                    out.loc[matched_idx, "shares_outstanding"] = merged.loc[matched_idx, "shares_outstanding"]
+                    out.loc[matched_idx, "shares_outstanding_source"] = merged.loc[matched_idx, "shares_outstanding_source"].apply(
+                        lambda v: f"fallback:{v}" if pd.notna(v) else "fallback:broad_fundamentals_nearest_period_end"
+                    )
+
+    out["period_end"] = pd.to_datetime(out["period_end"], errors="coerce")
+    out["latest_available_at"] = pd.to_datetime(out["latest_available_at"], errors="coerce")
+    return out.sort_values(["symbol", "period_end"]).reset_index(drop=True)
+
+
+def upsert_statement_fundamentals_shadow(
+    symbols: Iterable[str] | None = None,
+    *,
+    freq: Freq = "annual",
+    start: str | None = None,
+    end: str | None = None,
+    host="localhost",
+    user="root",
+    password="1234",
+    port=3306,
+    log_dir: str = "logs",
+    replace_symbol_history: bool = True,
+) -> int:
+    logger = _setup_logger(log_dir)
+    symbol_list = _normalize_symbol_list(symbols)
+
+    statement_values = _load_statement_values_strict_history_mysql(
+        symbols=symbol_list,
+        freq=freq,
+        start=start,
+        end=end,
+        host=host,
+        user=user,
+        password=password,
+        port=port,
+    )
+    if statement_values.empty:
+        logger.warning("statement fundamentals shadow | empty strict statement history")
+        return 0
+
+    broad_shares_fallback = _load_broad_shares_fallback_mysql(
+        symbols=symbol_list or None,
+        freq=freq,
+        host=host,
+        user=user,
+        password=password,
+        port=port,
+    )
+
+    fundamentals = build_fundamentals_history_from_statement_values(
+        statement_values,
+        freq=freq,
+        broad_shares_fallback=broad_shares_fallback,
+    )
+    if fundamentals.empty:
+        logger.warning("statement fundamentals shadow | no normalized rows built")
+        return 0
+
+    db = MySQLClient(host, user, password, port)
+    inserted = 0
+    try:
+        db.use_db(DB_FUND)
+        db.execute(FUNDAMENTAL_SCHEMAS["fundamentals_statement"])
+        sync_table_schema(
+            db,
+            "nyse_fundamentals_statement",
+            FUNDAMENTAL_SCHEMAS["fundamentals_statement"],
+            DB_FUND,
+        )
+
+        upsert_sql = """
+        INSERT INTO nyse_fundamentals_statement (
+          symbol, freq, period_end,
+          currency,
+          total_revenue, gross_profit, operating_income, ebit, pretax_income, interest_expense, net_income,
+          total_assets, current_assets, inventory, total_liabilities, current_liabilities,
+          short_term_debt, long_term_debt, total_debt, shareholders_equity, net_assets,
+          operating_cash_flow, free_cash_flow, capital_expenditure,
+          cash_and_equivalents,
+          dividends_paid, shares_outstanding,
+          latest_available_at, latest_accession_no, latest_form_type,
+          source_mode, timing_basis,
+          gross_profit_source, operating_income_source, ebit_source,
+          free_cash_flow_source, shares_outstanding_source, total_debt_source, shareholders_equity_source,
+          source, last_collected_at, error_msg
+        ) VALUES (
+          %(symbol)s, %(freq)s, %(period_end)s,
+          %(currency)s,
+          %(total_revenue)s, %(gross_profit)s, %(operating_income)s, %(ebit)s, %(pretax_income)s, %(interest_expense)s, %(net_income)s,
+          %(total_assets)s, %(current_assets)s, %(inventory)s, %(total_liabilities)s, %(current_liabilities)s,
+          %(short_term_debt)s, %(long_term_debt)s, %(total_debt)s, %(shareholders_equity)s, %(net_assets)s,
+          %(operating_cash_flow)s, %(free_cash_flow)s, %(capital_expenditure)s,
+          %(cash_and_equivalents)s,
+          %(dividends_paid)s, %(shares_outstanding)s,
+          %(latest_available_at)s, %(latest_accession_no)s, %(latest_form_type)s,
+          %(source_mode)s, %(timing_basis)s,
+          %(gross_profit_source)s, %(operating_income_source)s, %(ebit_source)s,
+          %(free_cash_flow_source)s, %(shares_outstanding_source)s, %(total_debt_source)s, %(shareholders_equity_source)s,
+          %(source)s, %(last_collected_at)s, %(error_msg)s
+        )
+        ON DUPLICATE KEY UPDATE
+          currency = VALUES(currency),
+          total_revenue = VALUES(total_revenue),
+          gross_profit = VALUES(gross_profit),
+          operating_income = VALUES(operating_income),
+          ebit = VALUES(ebit),
+          pretax_income = VALUES(pretax_income),
+          interest_expense = VALUES(interest_expense),
+          net_income = VALUES(net_income),
+          total_assets = VALUES(total_assets),
+          current_assets = VALUES(current_assets),
+          inventory = VALUES(inventory),
+          total_liabilities = VALUES(total_liabilities),
+          current_liabilities = VALUES(current_liabilities),
+          short_term_debt = VALUES(short_term_debt),
+          long_term_debt = VALUES(long_term_debt),
+          total_debt = VALUES(total_debt),
+          shareholders_equity = VALUES(shareholders_equity),
+          net_assets = VALUES(net_assets),
+          operating_cash_flow = VALUES(operating_cash_flow),
+          free_cash_flow = VALUES(free_cash_flow),
+          capital_expenditure = VALUES(capital_expenditure),
+          cash_and_equivalents = VALUES(cash_and_equivalents),
+          dividends_paid = VALUES(dividends_paid),
+          shares_outstanding = VALUES(shares_outstanding),
+          latest_available_at = VALUES(latest_available_at),
+          latest_accession_no = VALUES(latest_accession_no),
+          latest_form_type = VALUES(latest_form_type),
+          source_mode = VALUES(source_mode),
+          timing_basis = VALUES(timing_basis),
+          gross_profit_source = VALUES(gross_profit_source),
+          operating_income_source = VALUES(operating_income_source),
+          ebit_source = VALUES(ebit_source),
+          free_cash_flow_source = VALUES(free_cash_flow_source),
+          shares_outstanding_source = VALUES(shares_outstanding_source),
+          total_debt_source = VALUES(total_debt_source),
+          shareholders_equity_source = VALUES(shareholders_equity_source),
+          source = VALUES(source),
+          last_collected_at = VALUES(last_collected_at),
+          error_msg = VALUES(error_msg)
+        """
+
+        records = []
+        for _, row in fundamentals.iterrows():
+            rec = {}
+            for key, value in row.to_dict().items():
+                try:
+                    rec[key] = None if pd.isna(value) else value
+                except Exception:
+                    rec[key] = value
+            records.append(rec)
+
+        if records:
+            if replace_symbol_history:
+                delete_symbols = sorted({record["symbol"] for record in records if record.get("symbol")})
+                delete_params: list[object] = [freq]
+                placeholders = ",".join(["%s"] * len(delete_symbols))
+                delete_sql = f"DELETE FROM nyse_fundamentals_statement WHERE freq=%s AND symbol IN ({placeholders})"
+                delete_params.extend(delete_symbols)
+                db.execute(delete_sql, delete_params)
+
+            db.executemany(upsert_sql, records)
+            inserted = len(records)
+
+        logger.info(
+            "statement fundamentals shadow | freq=%s | symbols=%s | rows=%s",
+            freq,
+            ",".join(symbol_list) if symbol_list else "ALL",
+            inserted,
+        )
+        return inserted
+    finally:
+        db.close()
 
 
 def _calc_total_debt(row: pd.Series) -> tuple[Optional[float], Optional[str], Optional[float], Optional[float]]:

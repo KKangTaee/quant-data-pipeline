@@ -317,6 +317,71 @@ FUNDAMENTAL_SCHEMAS = {
         );
     """,
 
+    "fundamentals_statement": """
+        CREATE TABLE IF NOT EXISTS nyse_fundamentals_statement (
+          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+          symbol VARCHAR(20) NOT NULL,
+          freq   ENUM('annual','quarterly') NOT NULL,
+          period_end DATE NOT NULL,
+
+          currency VARCHAR(10) NULL,
+
+          total_revenue DOUBLE NULL,
+          gross_profit DOUBLE NULL,
+          operating_income DOUBLE NULL,
+          ebit DOUBLE NULL,
+          pretax_income DOUBLE NULL,
+          interest_expense DOUBLE NULL,
+          net_income DOUBLE NULL,
+
+          total_assets DOUBLE NULL,
+          current_assets DOUBLE NULL,
+          inventory DOUBLE NULL,
+          total_liabilities DOUBLE NULL,
+          current_liabilities DOUBLE NULL,
+          short_term_debt DOUBLE NULL,
+          long_term_debt DOUBLE NULL,
+          total_debt DOUBLE NULL,
+          shareholders_equity DOUBLE NULL,
+          net_assets DOUBLE NULL,
+
+          operating_cash_flow DOUBLE NULL,
+          free_cash_flow DOUBLE NULL,
+          capital_expenditure DOUBLE NULL,
+          cash_and_equivalents DOUBLE NULL,
+
+          dividends_paid DOUBLE NULL,
+          shares_outstanding BIGINT NULL,
+
+          latest_available_at DATETIME NULL,
+          latest_accession_no VARCHAR(32) NULL,
+          latest_form_type VARCHAR(20) NULL,
+
+          source_mode VARCHAR(32) NOT NULL DEFAULT 'statement_ledger_shadow',
+          timing_basis VARCHAR(32) NOT NULL DEFAULT 'latest_available_for_period_end',
+          gross_profit_source VARCHAR(64) NULL,
+          operating_income_source VARCHAR(64) NULL,
+          ebit_source VARCHAR(64) NULL,
+          free_cash_flow_source VARCHAR(64) NULL,
+          shares_outstanding_source VARCHAR(64) NULL,
+          total_debt_source VARCHAR(128) NULL,
+          shareholders_equity_source VARCHAR(64) NULL,
+
+          source VARCHAR(20) NOT NULL DEFAULT 'statement_ledger',
+          last_collected_at TIMESTAMP NULL,
+          error_msg TEXT NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+          UNIQUE KEY uk_symbol_freq_period (symbol, freq, period_end),
+          KEY ix_symbol (symbol),
+          KEY ix_period_end (period_end),
+          KEY ix_symbol_available_at (symbol, latest_available_at)
+        );
+    """,
+
     "financial_statement_filings": """
         CREATE TABLE IF NOT EXISTS nyse_financial_statement_filings (
         id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -504,6 +569,80 @@ FUNDAMENTAL_SCHEMAS = {
           UNIQUE KEY uk_symbol_freq_period (symbol, freq, period_end),
           KEY ix_symbol (symbol),
           KEY ix_period_end (period_end)
+        );
+    """,
+
+    "factors_statement": """
+        CREATE TABLE IF NOT EXISTS nyse_factors_statement (
+          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+          symbol VARCHAR(20) NOT NULL,
+          freq   ENUM('annual','quarterly') NOT NULL,
+          period_end DATE NOT NULL,
+
+          fundamental_available_at DATETIME NULL,
+          fundamental_accession_no VARCHAR(32) NULL,
+
+          price DOUBLE NULL,
+          price_date DATE NULL,
+          price_match_gap_days INT NULL,
+          price_source VARCHAR(32) NOT NULL DEFAULT 'nyse_price_history',
+          price_timeframe VARCHAR(10) NOT NULL DEFAULT '1d',
+          timing_basis VARCHAR(48) NOT NULL DEFAULT 'latest_available_for_period_end',
+          pit_mode VARCHAR(32) NOT NULL DEFAULT 'statement_derived_shadow',
+          market_cap BIGINT NULL,
+          enterprise_value BIGINT NULL,
+
+          psr DOUBLE NULL,
+          sales_yield DOUBLE NULL,
+          gpa DOUBLE NULL,
+          por DOUBLE NULL,
+          operating_income_yield DOUBLE NULL,
+          ev_ebit DOUBLE NULL,
+          per DOUBLE NULL,
+          earnings_yield DOUBLE NULL,
+          liquidation_value DOUBLE NULL,
+          current_ratio DOUBLE NULL,
+          cash_ratio DOUBLE NULL,
+          pbr DOUBLE NULL,
+          book_to_market DOUBLE NULL,
+          debt_ratio DOUBLE NULL,
+          debt_to_assets DOUBLE NULL,
+          net_debt DOUBLE NULL,
+          net_debt_to_equity DOUBLE NULL,
+          pcr DOUBLE NULL,
+          ocf_yield DOUBLE NULL,
+          pfcr DOUBLE NULL,
+          fcf_yield DOUBLE NULL,
+          dividend_payout DOUBLE NULL,
+          gross_margin DOUBLE NULL,
+          operating_margin DOUBLE NULL,
+          net_margin DOUBLE NULL,
+          ocf_margin DOUBLE NULL,
+          fcf_margin DOUBLE NULL,
+          revenue_growth DOUBLE NULL,
+          gross_profit_growth DOUBLE NULL,
+          op_income_growth DOUBLE NULL,
+          net_income_growth DOUBLE NULL,
+          roe DOUBLE NULL,
+          roa DOUBLE NULL,
+          asset_turnover DOUBLE NULL,
+          interest_coverage DOUBLE NULL,
+          asset_growth DOUBLE NULL,
+          debt_growth DOUBLE NULL,
+          fcf_growth DOUBLE NULL,
+          shares_growth DOUBLE NULL,
+
+          last_calculated_at TIMESTAMP NULL,
+          error_msg TEXT NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+          UNIQUE KEY uk_symbol_freq_period (symbol, freq, period_end),
+          KEY ix_symbol (symbol),
+          KEY ix_period_end (period_end),
+          KEY ix_symbol_available_at (symbol, fundamental_available_at)
         );
     """
 }

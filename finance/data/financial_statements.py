@@ -7,7 +7,7 @@ import random
 import time
 from datetime import datetime, date, time as dt_time, timezone
 from pathlib import Path
-from typing import Iterable, Literal, Optional, List, Dict, Any
+from typing import Iterable, Literal, Optional, List, Dict, Any, Callable
 import re
 import math
 
@@ -867,21 +867,23 @@ def _iter_value_rows_from_source(
     if periods <= 0 or not rows:
         return rows
 
+    def _selection_period_key(row: Dict[str, Any]) -> tuple[date, Any, Any]:
+        # Limit history by reported filing period rather than raw fact period_end.
+        # This prevents recent 10-K facts with quarter-end-like period_end values
+        # from crowding out older true annual coverage.
+        selection_period_end = row.get("report_date") or row.get("period_end") or date.min
+        return (
+            selection_period_end,
+            row.get("fiscal_year"),
+            row.get("fiscal_period"),
+        )
+
     period_keys = sorted(
-        {
-            (
-                row["period_end"],
-                row.get("fiscal_year"),
-                row.get("fiscal_period"),
-                row.get("period_label"),
-            )
-            for row in rows
-        },
+        {_selection_period_key(row) for row in rows},
         key=lambda x: (
             x[0] or date.min,
             x[1] or -1,
             x[2] or "",
-            x[3] or "",
         ),
         reverse=True,
     )
@@ -889,12 +891,7 @@ def _iter_value_rows_from_source(
 
     return [
         row for row in rows
-        if (
-            row["period_end"],
-            row.get("fiscal_year"),
-            row.get("fiscal_period"),
-            row.get("period_label"),
-        ) in allowed_period_keys
+        if _selection_period_key(row) in allowed_period_keys
     ]
 
 
@@ -1069,6 +1066,8 @@ def upsert_financial_statements(
     sleep: float = 0.8,
     max_retry: int = 3,
     log_dir: str = "logs",
+    replace_symbol_history: bool = True,
+    progress_callback: Callable[[Dict[str, Any]], None] | None = None,
 ) -> Dict[str, Any]:
     """
     raw EDGAR facts / filing 메타를 수집한 후,
@@ -1097,7 +1096,11 @@ def upsert_financial_statements(
     db = MySQLClient(host, user, password, port)
     inserted_values = 0
     upserted_labels = 0
+    upserted_filings = 0
     failed: List[str] = []
+    processed_symbols = 0
+    total_symbols = len(symbols)
+    total_batches = max(1, math.ceil(total_symbols / chunk_size))
 
     try:
         db.use_db(DB_FUND)
@@ -1232,10 +1235,11 @@ def upsert_financial_statements(
           error_msg = VALUES(error_msg)
         """
 
-        for batch in _chunked(symbols, chunk_size):
+        for batch_index, batch in enumerate(_chunked(symbols, chunk_size), start=1):
             all_value_rows: List[Dict[str, Any]] = []
             all_label_rows: List[Dict[str, Any]] = []
             all_filing_rows: List[Dict[str, Any]] = []
+            batch_failed_before = len(failed)
 
             for sym in batch:
                 last_err: Optional[str] = None
@@ -1266,8 +1270,28 @@ def upsert_financial_statements(
                     logger.error(f"{sym} | {freq} | {last_err}")
                     failed.append(sym)
 
+                processed_symbols += 1
+
             if all_filing_rows:
                 db.executemany(upsert_filings_sql, all_filing_rows)
+                upserted_filings += len(all_filing_rows)
+
+            if replace_symbol_history and all_value_rows:
+                target_symbols = sorted({row["symbol"] for row in all_value_rows if row.get("symbol")})
+                if target_symbols:
+                    placeholders = ",".join(["%s"] * len(target_symbols))
+                    delete_values_sql = (
+                        f"DELETE FROM nyse_financial_statement_values "
+                        f"WHERE freq=%s AND symbol IN ({placeholders})"
+                    )
+                    db.execute(delete_values_sql, [freq, *target_symbols])
+
+                    period_type = "FY" if freq == "annual" else "Q"
+                    delete_labels_sql = (
+                        f"DELETE FROM nyse_financial_statement_labels "
+                        f"WHERE as_of_period_type=%s AND symbol IN ({placeholders})"
+                    )
+                    db.execute(delete_labels_sql, [period_type, *target_symbols])
 
             if all_label_rows:
                 db.executemany(upsert_labels_sql, all_label_rows)
@@ -1277,6 +1301,27 @@ def upsert_financial_statements(
                 db.executemany(upsert_values_sql, all_value_rows)
                 inserted_values += len(all_value_rows)
 
+            if progress_callback is not None:
+                progress_callback(
+                    {
+                        "event": "batch_progress",
+                        "processed_symbols": processed_symbols,
+                        "total_symbols": total_symbols,
+                        "batch_index": batch_index,
+                        "total_batches": total_batches,
+                        "batch_symbols": list(batch),
+                        "rows_written": inserted_values,
+                        "inserted_values": inserted_values,
+                        "upserted_labels": upserted_labels,
+                        "upserted_filings": upserted_filings,
+                        "failed_symbols_count": len(failed),
+                        "batch_failed_count": len(failed) - batch_failed_before,
+                        "freq": freq,
+                        "period": period,
+                        "periods": periods,
+                    }
+                )
+
             time.sleep(sleep + random.random() * 0.3)
 
     finally:
@@ -1285,5 +1330,6 @@ def upsert_financial_statements(
     return {
         "inserted_values": inserted_values,
         "upserted_labels": upserted_labels,
+        "upserted_filings": upserted_filings,
         "failed_symbols": failed,
     }

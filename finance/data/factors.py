@@ -12,6 +12,7 @@ import numpy as np
 from .db.mysql import MySQLClient
 from .db.schema import FUNDAMENTAL_SCHEMAS, sync_table_schema
 from .data import load_ohlcv_many_mysql
+from .fundamentals import build_fundamentals_from_statement_snapshot
 
 DB_FUND = "finance_fundamental"
 DB_PRICE = "finance_price"  # load_ohlcv_many_mysql 내부에서 사용
@@ -223,6 +224,68 @@ def load_fundamentals_mysql(
         db.close()
 
 
+def load_statement_fundamentals_shadow_mysql(
+    symbols: list[str] | None = None,
+    freq: Freq | None = None,
+    start: str | None = None,
+    end: str | None = None,
+    host="localhost",
+    user="root",
+    password="1234",
+    port=3306,
+) -> pd.DataFrame:
+    db = MySQLClient(host, user, password, port)
+    try:
+        db.use_db(DB_FUND)
+
+        where = []
+        params = []
+
+        if symbols:
+            placeholders = ",".join(["%s"] * len(symbols))
+            where.append(f"symbol IN ({placeholders})")
+            params.extend(symbols)
+
+        if freq:
+            where.append("freq=%s")
+            params.append(freq)
+
+        if start:
+            where.append("period_end >= %s")
+            params.append(start)
+        if end:
+            where.append("period_end <= %s")
+            params.append(end)
+
+        sql = f"""
+        SELECT
+          symbol, freq, period_end, currency,
+          total_revenue, gross_profit, operating_income, ebit, pretax_income, interest_expense, net_income,
+          total_assets, current_assets, inventory, total_liabilities, current_liabilities,
+          short_term_debt, long_term_debt, total_debt, shareholders_equity, net_assets,
+          operating_cash_flow, free_cash_flow, capital_expenditure,
+          cash_and_equivalents,
+          dividends_paid, shares_outstanding,
+          latest_available_at, latest_accession_no, latest_form_type,
+          source_mode, timing_basis,
+          gross_profit_source, operating_income_source, ebit_source,
+          free_cash_flow_source, shares_outstanding_source, total_debt_source, shareholders_equity_source
+        FROM nyse_fundamentals_statement
+        {("WHERE " + " AND ".join(where)) if where else ""}
+        ORDER BY symbol ASC, freq ASC, period_end ASC
+        """
+        rows = db.query(sql, params)
+        df = pd.DataFrame(rows)
+        if df.empty:
+            return df
+        df["period_end"] = pd.to_datetime(df["period_end"])
+        if "latest_available_at" in df.columns:
+            df["latest_available_at"] = pd.to_datetime(df["latest_available_at"])
+        return df
+    finally:
+        db.close()
+
+
 def calculate_factors(fund: pd.DataFrame) -> pd.DataFrame:
     """
     fund(필수항목 스냅샷) -> 백테스트용 팩터 계산
@@ -378,6 +441,87 @@ def calculate_factors(fund: pd.DataFrame) -> pd.DataFrame:
         ]
 
     return df
+
+
+def calculate_quality_factors_from_fundamentals(fund: pd.DataFrame) -> pd.DataFrame:
+    """
+    normalized fundamentals 단면에서 quality 전략에 필요한 핵심 팩터만 계산한다.
+
+    이 함수는 sample/prototype 경로에서
+    `strict statement snapshot -> normalized fundamentals -> quality factors`
+    흐름을 재사용 가능하게 만들기 위한 lightweight helper다.
+    """
+    if fund is None or fund.empty:
+        return pd.DataFrame()
+
+    df = fund.copy()
+    df["gross_margin"] = [_safe_div(a, b) for a, b in zip(df.get("gross_profit"), df.get("total_revenue"))]
+    df["operating_margin"] = [_safe_div(a, b) for a, b in zip(df.get("operating_income"), df.get("total_revenue"))]
+    df["roe"] = [_safe_div(a, b) for a, b in zip(df.get("net_income"), df.get("net_assets"))]
+    df["debt_ratio"] = [_safe_div(a, b) for a, b in zip(df.get("total_debt"), df.get("net_assets"))]
+    return df
+
+
+def build_quality_factor_snapshot_from_statement_snapshot(
+    statement_snapshot: pd.DataFrame,
+    *,
+    as_of_date=None,
+    freq: str = "annual",
+) -> pd.DataFrame:
+    """
+    strict statement snapshot을 quality ranking용 factor snapshot으로 변환한다.
+
+    현재 목적:
+    - statement-driven quality prototype의 reusable data-layer path 제공
+    - public broad-research quality path와 별개로
+      strict statement 기반 factor construction을 명시적으로 분리
+    """
+    fundamentals = build_fundamentals_from_statement_snapshot(
+        statement_snapshot,
+        as_of_date=as_of_date,
+        freq=freq,
+    )
+    if fundamentals.empty:
+        return pd.DataFrame(
+            columns=[
+                "symbol",
+                "as_of_date",
+                "freq",
+                "statement_period_end",
+                "roe",
+                "gross_margin",
+                "operating_margin",
+                "debt_ratio",
+            ]
+        )
+
+    factors = calculate_quality_factors_from_fundamentals(fundamentals)
+    keep_columns = [
+        "symbol",
+        "as_of_date",
+        "freq",
+        "statement_period_end",
+        "roe",
+        "gross_margin",
+        "operating_margin",
+        "debt_ratio",
+        "total_revenue",
+        "gross_profit",
+        "operating_income",
+        "net_income",
+        "net_assets",
+        "total_debt",
+        "revenue_source",
+        "gross_profit_source",
+        "operating_income_source",
+        "net_income_source",
+        "net_assets_source",
+        "total_debt_source",
+        "operating_cash_flow_source",
+        "free_cash_flow_source",
+    ]
+    existing_columns = [col for col in keep_columns if col in factors.columns]
+    return factors[existing_columns].sort_values("symbol").reset_index(drop=True)
 
 
 def upsert_factors(
@@ -590,5 +734,211 @@ def upsert_factors(
 
         return inserted
 
+    finally:
+        db.close()
+
+
+def upsert_statement_factors_shadow(
+    symbols: Iterable[str] | None = None,
+    freq: Freq | None = None,
+    start: str | None = None,
+    end: str | None = None,
+    host="localhost",
+    user="root",
+    password="1234",
+    port=3306,
+    log_dir: str = "logs",
+    replace_symbol_history: bool = True,
+) -> int:
+    logger = _setup_logger(log_dir)
+    symbols = list(symbols) if symbols else None
+
+    fund = load_statement_fundamentals_shadow_mysql(
+        symbols=symbols,
+        freq=freq,
+        start=start,
+        end=end,
+        host=host,
+        user=user,
+        password=password,
+        port=port,
+    )
+    if fund.empty:
+        return 0
+
+    min_d = (fund["period_end"].min() - pd.Timedelta(days=14)).strftime("%Y-%m-%d")
+    max_d = fund["period_end"].max().strftime("%Y-%m-%d")
+    price = load_ohlcv_many_mysql(
+        symbols=fund["symbol"].unique().tolist(),
+        start=min_d,
+        end=max_d,
+        timeframe="1d",
+        host=host,
+        user=user,
+        password=password,
+        port=port,
+    )
+
+    fund2 = _attach_price_asof(fund, price)
+    fund2 = add_market_cap(fund2)
+    fund2 = add_enterprise_value(fund2)
+    fac = calculate_factors(fund2)
+    fac = round_numeric_columns(
+        fac,
+        decimals=4,
+        exclude={"market_cap", "shares_outstanding"},
+    )
+
+    db = MySQLClient(host, user, password, port)
+    inserted = 0
+    try:
+        db.use_db(DB_FUND)
+        db.execute(FUNDAMENTAL_SCHEMAS["factors_statement"])
+        sync_table_schema(db, "nyse_factors_statement", FUNDAMENTAL_SCHEMAS["factors_statement"], DB_FUND)
+
+        now = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+        fac["last_calculated_at"] = now
+
+        def build_err(row):
+            missing = []
+            if pd.isna(row.get("net_income")):
+                missing.append("net_income")
+            if pd.isna(row.get("total_revenue")):
+                missing.append("total_revenue")
+            if pd.isna(row.get("total_assets")):
+                missing.append("total_assets")
+            if pd.isna(row.get("net_assets")):
+                missing.append("net_assets")
+            if pd.isna(row.get("enterprise_value")):
+                missing.append("enterprise_value")
+            return None if not missing else "missing:" + ",".join(missing)
+
+        fac["error_msg"] = fac.apply(build_err, axis=1)
+
+        upsert_sql = """
+        INSERT INTO nyse_factors_statement (
+          symbol, freq, period_end,
+          fundamental_available_at, fundamental_accession_no,
+          price, price_date, price_match_gap_days, price_source, price_timeframe, timing_basis, pit_mode,
+          market_cap, enterprise_value,
+          psr, sales_yield, gpa, por, operating_income_yield, ev_ebit, per, earnings_yield,
+          liquidation_value, current_ratio, cash_ratio, pbr, book_to_market, debt_ratio, debt_to_assets, net_debt, net_debt_to_equity,
+          pcr, ocf_yield, pfcr, fcf_yield, dividend_payout,
+          gross_margin, operating_margin, net_margin, ocf_margin, fcf_margin,
+          revenue_growth, gross_profit_growth, op_income_growth, net_income_growth, roe, roa, asset_turnover, interest_coverage,
+          asset_growth, debt_growth, fcf_growth, shares_growth,
+          last_calculated_at, error_msg
+        ) VALUES (
+          %(symbol)s, %(freq)s, %(period_end)s,
+          %(fundamental_available_at)s, %(fundamental_accession_no)s,
+          %(price)s, %(price_date)s, %(price_match_gap_days)s, %(price_source)s, %(price_timeframe)s, %(timing_basis)s, %(pit_mode)s,
+          %(market_cap)s, %(enterprise_value)s,
+          %(psr)s, %(sales_yield)s, %(gpa)s, %(por)s, %(operating_income_yield)s, %(ev_ebit)s, %(per)s, %(earnings_yield)s,
+          %(liquidation_value)s, %(current_ratio)s, %(cash_ratio)s, %(pbr)s, %(book_to_market)s, %(debt_ratio)s, %(debt_to_assets)s, %(net_debt)s, %(net_debt_to_equity)s,
+          %(pcr)s, %(ocf_yield)s, %(pfcr)s, %(fcf_yield)s, %(dividend_payout)s,
+          %(gross_margin)s, %(operating_margin)s, %(net_margin)s, %(ocf_margin)s, %(fcf_margin)s,
+          %(revenue_growth)s, %(gross_profit_growth)s, %(op_income_growth)s, %(net_income_growth)s, %(roe)s, %(roa)s, %(asset_turnover)s, %(interest_coverage)s,
+          %(asset_growth)s, %(debt_growth)s, %(fcf_growth)s, %(shares_growth)s,
+          %(last_calculated_at)s, %(error_msg)s
+        )
+        ON DUPLICATE KEY UPDATE
+          fundamental_available_at = VALUES(fundamental_available_at),
+          fundamental_accession_no = VALUES(fundamental_accession_no),
+          price = VALUES(price),
+          price_date = VALUES(price_date),
+          price_match_gap_days = VALUES(price_match_gap_days),
+          price_source = VALUES(price_source),
+          price_timeframe = VALUES(price_timeframe),
+          timing_basis = VALUES(timing_basis),
+          pit_mode = VALUES(pit_mode),
+          market_cap = VALUES(market_cap),
+          enterprise_value = VALUES(enterprise_value),
+          psr = VALUES(psr),
+          sales_yield = VALUES(sales_yield),
+          gpa = VALUES(gpa),
+          por = VALUES(por),
+          operating_income_yield = VALUES(operating_income_yield),
+          ev_ebit = VALUES(ev_ebit),
+          per = VALUES(per),
+          earnings_yield = VALUES(earnings_yield),
+          liquidation_value = VALUES(liquidation_value),
+          current_ratio = VALUES(current_ratio),
+          cash_ratio = VALUES(cash_ratio),
+          pbr = VALUES(pbr),
+          book_to_market = VALUES(book_to_market),
+          debt_ratio = VALUES(debt_ratio),
+          debt_to_assets = VALUES(debt_to_assets),
+          net_debt = VALUES(net_debt),
+          net_debt_to_equity = VALUES(net_debt_to_equity),
+          pcr = VALUES(pcr),
+          ocf_yield = VALUES(ocf_yield),
+          pfcr = VALUES(pfcr),
+          fcf_yield = VALUES(fcf_yield),
+          dividend_payout = VALUES(dividend_payout),
+          gross_margin = VALUES(gross_margin),
+          operating_margin = VALUES(operating_margin),
+          net_margin = VALUES(net_margin),
+          ocf_margin = VALUES(ocf_margin),
+          fcf_margin = VALUES(fcf_margin),
+          revenue_growth = VALUES(revenue_growth),
+          gross_profit_growth = VALUES(gross_profit_growth),
+          op_income_growth = VALUES(op_income_growth),
+          net_income_growth = VALUES(net_income_growth),
+          roe = VALUES(roe),
+          roa = VALUES(roa),
+          asset_turnover = VALUES(asset_turnover),
+          interest_coverage = VALUES(interest_coverage),
+          asset_growth = VALUES(asset_growth),
+          debt_growth = VALUES(debt_growth),
+          fcf_growth = VALUES(fcf_growth),
+          shares_growth = VALUES(shares_growth),
+          last_calculated_at = VALUES(last_calculated_at),
+          error_msg = VALUES(error_msg)
+        """
+
+        records = []
+        for _, row in fac.iterrows():
+            rec = row.to_dict()
+            for key, value in list(rec.items()):
+                try:
+                    rec[key] = None if pd.isna(value) else value
+                except Exception:
+                    pass
+            rec["fundamental_available_at"] = rec.pop("latest_available_at", None)
+            rec["fundamental_accession_no"] = rec.pop("latest_accession_no", None)
+            rec.setdefault("price_source", "nyse_price_history")
+            rec.setdefault("price_timeframe", "1d")
+            rec.setdefault("timing_basis", "latest_available_for_period_end")
+            rec.setdefault("pit_mode", "statement_derived_shadow")
+            records.append(rec)
+
+        if records:
+            if replace_symbol_history:
+                target_symbols = sorted({record["symbol"] for record in records if record.get("symbol")})
+                delete_params: list[object] = []
+                where = []
+                if freq:
+                    where.append("freq=%s")
+                    delete_params.append(freq)
+                if target_symbols:
+                    placeholders = ",".join(["%s"] * len(target_symbols))
+                    where.append(f"symbol IN ({placeholders})")
+                    delete_params.extend(target_symbols)
+                delete_sql = f"DELETE FROM nyse_factors_statement WHERE {' AND '.join(where)}"
+                db.execute(delete_sql, delete_params)
+
+            db.executemany(upsert_sql, records)
+            inserted = len(records)
+
+        bad = fac[fac["error_msg"].notna()]
+        for _, row in bad.iterrows():
+            logger.warning(
+                "%s | %s | %s | %s",
+                row["symbol"],
+                row["freq"],
+                str(row["period_end"])[:10],
+                row["error_msg"],
+            )
+        return inserted
     finally:
         db.close()
