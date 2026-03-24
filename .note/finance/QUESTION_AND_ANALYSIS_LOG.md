@@ -2113,3 +2113,501 @@ Do not copy full chat transcripts. Keep only the durable result.
     rows with `None` for that metric are now excluded from the filtered history view
 - Durable output:
   - `app/web/pages/backtest.py`
+
+### 2026-03-23 - Open the next Phase 4 chapter for factor / fundamental entry
+- Request topic:
+  - proceed with the next major Phase 4 step after the price-only UI chapter
+- Interpreted goal:
+  - transition from completed price-only strategy UI work into the preparation chapter for factor / fundamental strategies
+- Result:
+  - documented that the first Phase 4 UI execution chapter is effectively complete
+  - opened a new Phase 4 TODO board focused on factor / fundamental strategy entry
+  - created a first-strategy options memo comparing:
+    - Value snapshot strategy
+    - Quality snapshot strategy
+    - Simple multi-factor strategy
+  - narrowed the realistic first candidate set to `Value` or `Quality`
+- Durable output:
+  - `.note/finance/phase4/PHASE4_UI_CHAPTER1_COMPLETION_SUMMARY.md`
+  - `.note/finance/phase4/PHASE4_FACTOR_FUNDAMENTAL_ENTRY_TODO.md`
+  - `.note/finance/phase4/PHASE4_FACTOR_FUNDAMENTAL_FIRST_STRATEGY_OPTIONS.md`
+
+### 2026-03-23 - Fix the first factor/fundamental strategy direction to Quality
+- Request topic:
+  - choose `Quality` as the first factor / fundamental strategy direction
+- Interpreted goal:
+  - move from generic entry prep into a concrete first-strategy path that can be implemented next
+- Result:
+  - fixed the first strategy direction to `Quality Snapshot Strategy`
+  - documented the first-pass quality factor set around:
+    - `roe`
+    - `gross_margin`
+    - `operating_margin`
+    - `debt_ratio`
+  - documented the first wrapper shape and narrowed the next unresolved decision to `snapshot_mode`
+- Durable output:
+  - `.note/finance/phase4/PHASE4_QUALITY_SNAPSHOT_STRATEGY_SCOPE.md`
+  - `.note/finance/phase4/PHASE4_QUALITY_RUNTIME_WRAPPER_DRAFT.md`
+
+### 2026-03-23 - Choose broad_research mode and implement the first quality runtime path
+- Request topic:
+  - proceed with option `1`, using `broad_research` as the first public snapshot mode
+- Interpreted goal:
+  - move beyond planning and open the first working factor / fundamental runtime path
+- Result:
+  - fixed `broad_research` as the first public mode for `Quality Snapshot Strategy`
+  - implemented the first-pass quality simulation function
+  - added a DB-backed sample entrypoint
+  - added a public backtest runtime wrapper
+  - validated the path on `AAPL/MSFT/GOOG`
+- Durable output:
+  - `.note/finance/phase4/PHASE4_QUALITY_BROAD_RESEARCH_DECISION.md`
+  - `.note/finance/phase4/PHASE4_QUALITY_SNAPSHOT_IMPLEMENTATION_FIRST_PASS.md`
+  - `finance/strategy.py`
+  - `finance/sample.py`
+  - `app/web/runtime/backtest.py`
+
+### 2026-03-23 - Define Quality Snapshot UI inputs and expose it in the Backtest UI
+- Request topic:
+  - do both:
+    1. organize the UI inputs first
+    2. then expose the strategy in the UI
+- Interpreted goal:
+  - avoid dumping too many factor-strategy controls into the UI while still making the first factor strategy actually usable
+- Result:
+  - documented the first-pass quality UI input split into:
+    - basic
+    - advanced
+    - hidden defaults
+  - exposed `Quality Snapshot` as the fifth public strategy in the Backtest selector
+  - extended history/meta/prefill support for the quality strategy
+  - also allowed first-pass compare exposure for the quality path
+- Durable output:
+  - `.note/finance/phase4/PHASE4_QUALITY_UI_INPUT_DRAFT.md`
+  - `.note/finance/phase4/PHASE4_FIFTH_STRATEGY_QUALITY_ADDITION.md`
+  - `app/web/pages/backtest.py`
+  - `app/web/runtime/history.py`
+
+### 2026-03-23 - Clarify which ingestion jobs are required for the first-pass Quality Snapshot backtest
+- Request topic:
+  - ask which collection jobs are needed before running the current quality backtest
+- Interpreted goal:
+  - identify the minimum required data-refresh path for the new factor/fundamental strategy UI
+- Result:
+  - confirmed that the current first-pass `Quality Snapshot` strategy reads:
+    - DB-backed price history from `finance_price.nyse_price_history`
+    - factor snapshots from `finance_fundamental.nyse_factors`
+  - therefore the practical minimum collection path is:
+    - `Daily Market Update` or equivalent OHLCV collection for price history
+    - `Weekly Fundamental Refresh` for `nyse_fundamentals` and `nyse_factors`
+  - confirmed that `Extended Statement Refresh` is not required for the current public quality strategy, because the runtime wrapper does not read the detailed statement ledger directly
+- Durable output:
+  - `app/web/runtime/backtest.py`
+  - `finance/sample.py`
+  - `app/web/streamlit_app.py`
+
+### 2026-03-24 - Surface Quality Snapshot data requirements directly in the UI
+- Request topic:
+  - continue the next Phase 4 step after clarifying the required collection path for the quality strategy
+- Interpreted goal:
+  - reduce user confusion by making the collection prerequisites visible where the strategy is actually run
+- Result:
+  - added in-form guidance to the `Quality Snapshot` UI explaining that the current public path depends on:
+    - price history from `Daily Market Update` / OHLCV collection
+    - factor data from `Weekly Fundamental Refresh`
+  - clarified in the UI that:
+    - the public mode is `broad_research`
+    - the strategy is stock-oriented
+    - `Extended Statement Refresh` is not a first-pass requirement
+- Durable output:
+  - `app/web/pages/backtest.py`
+  - `.note/finance/phase4/PHASE4_QUALITY_UI_INPUT_DRAFT.md`
+  - `.note/finance/phase4/PHASE4_FIFTH_STRATEGY_QUALITY_ADDITION.md`
+
+### 2026-03-24 - Investigate flat early Quality Snapshot results and improve Weekly Fundamental Refresh progress visibility
+- Request topic:
+  - verify why `Quality Snapshot` appears flat before 2022 for `AAPL/MSFT/GOOG`
+  - add Daily-like progress visibility for long `Weekly Fundamental Refresh` runs
+- Interpreted goal:
+  - separate true strategy/data coverage behavior from UI bugs, and reduce uncertainty during long summary-factor refresh jobs
+- Result:
+  - confirmed the flat 2016~2021 equity segment is expected under the current data state:
+    - the strategy itself is not broken
+    - the current annual factor coverage in `nyse_factors` for the tested symbols begins only around 2021/2022
+    - therefore `Quality Snapshot` stays in cash until the first usable factor snapshot date
+  - verified concrete examples:
+    - `load_factor_snapshot(..., as_of_date='2021-01-29', freq='annual')` returned no rows
+    - `load_factor_snapshot(..., as_of_date='2022-01-31', freq='annual')` returned only `GOOG`
+    - `load_factor_snapshot(..., as_of_date='2023-01-31', freq='annual')` returned `AAPL`, `GOOG`, `MSFT`
+  - added a runtime warning so the UI now explains when the first usable factor snapshot is materially later than the requested start date
+  - added stage-based progress support for `Weekly Fundamental Refresh`:
+    - `fundamentals`
+    - `factors`
+    so long NYSE-stock runs now show stage progress rather than only a blocking spinner
+- Durable output:
+  - `app/web/runtime/backtest.py`
+  - `app/web/pages/backtest.py`
+  - `app/jobs/ingestion_jobs.py`
+  - `app/web/streamlit_app.py`
+
+### 2026-03-24 - Measure actual historical depth of Weekly Fundamental Refresh
+- Request topic:
+  - run `Weekly Fundamental Refresh` directly and verify how far back the current summary/factor pipeline can collect data
+- Interpreted goal:
+  - determine whether the missing pre-2022 quality backtest coverage is a pipeline bug or a source-depth limitation
+- Result:
+  - executed `run_weekly_fundamental_refresh(['AAPL','MSFT','GOOG'], freq='annual')`
+    - completed successfully in about 6.1s
+    - wrote 12 fundamentals rows and 12 factor rows
+  - executed `run_weekly_fundamental_refresh(['AAPL','MSFT','GOOG'], freq='quarterly')`
+    - completed successfully in about 4.6s
+    - wrote 17 fundamentals rows and 17 factor rows
+  - post-run DB inspection confirmed shallow historical depth:
+    - annual:
+      - `GOOG` begins at `2021-12-31`
+      - `MSFT` begins at `2022-06-30`
+      - `AAPL` begins at `2022-09-30`
+    - quarterly:
+      - `GOOG`, `MSFT` begin at `2024-06-30`
+      - `AAPL` begins at `2024-12-31`
+  - conclusion:
+    - the current yfinance-backed `Weekly Fundamental Refresh` path is working, but its available historical depth is too short for a meaningful 2016-start quality backtest
+    - this is a source-depth / current-pipeline limitation, not a basic job failure
+- Durable output:
+  - `app/jobs/ingestion_jobs.py`
+  - `finance/data/fundamentals.py`
+  - `finance/data/factors.py`
+
+### 2026-03-24 - Present options for enabling longer-history quality backtests
+- Request topic:
+  - provide concrete next-step options after confirming that the current public quality path does not reach back to 2016
+- Interpreted goal:
+  - choose a practical product/engineering direction for longer-history factor/fundamental backtests
+- Result:
+  - narrowed the realistic options to three paths:
+    1. keep the current broad-research quality path and limit the visible date range to available factor history
+    2. rebuild quality factors from the detailed statement ledger for longer and stricter history
+    3. add a separate deeper-history provider/raw summary path before recomputing factors
+  - recommended option `2` as the long-term architecture fit because it aligns with the existing statement-ledger direction and improves both history depth and timing semantics
+
+### 2026-03-24 - Validate whether option 2 can start immediately with the current statement ledger
+- Request topic:
+  - proceed with option `2`, i.e. move toward a statement-driven quality path
+- Interpreted goal:
+  - verify whether the existing `nyse_financial_statement_values` coverage is already sufficient to start rebuilding longer-history quality factors
+- Result:
+  - checked current local statement ledger coverage for `AAPL/MSFT/GOOG`
+  - confirmed that the current statement ledger is also still too shallow for the intended 2016-start quality backtest:
+    - `AAPL annual` begins around `2024-09-28`
+    - `MSFT annual` begins around `2025-05-01`
+    - `GOOG` currently has no local statement rows in the checked ledger result
+  - conclusion:
+    - option `2` remains the right direction architecturally
+    - but the immediate next task is not more strategy code
+    - the immediate next task is securing deeper statement history / backfill coverage first
+- Durable output:
+  - `.note/finance/phase4/PHASE4_STATEMENT_DRIVEN_QUALITY_BLOCKER_AND_NEXT_STEPS.md`
+  - `.note/finance/phase4/PHASE4_FACTOR_FUNDAMENTAL_ENTRY_TODO.md`
+
+### 2026-03-24 - Execute the agreed feasibility-first, then targeted-backfill sequence for statement-driven quality
+- Request topic:
+  - do option `2` first (small feasibility test), then option `1` (statement ledger backfill)
+- Interpreted goal:
+  - validate the statement-based path with low risk first, then immediately turn the successful test into useful coverage for the sample quality universe
+- Result:
+  - ran `Extended Statement Refresh` for `AAPL/MSFT/GOOG` with:
+    - `annual`, `periods=12`
+    - `quarterly`, `periods=12`
+  - both runs completed successfully
+  - the same runs functioned as a targeted sample-universe statement backfill
+  - coverage improved materially:
+    - `AAPL annual`: starts around `2021-09-25`
+    - `GOOG annual`: starts around `2021-12-31`
+    - `MSFT annual`: starts around `2023-12-31`
+  - strict annual snapshot checks still show that usable statement-driven quality coverage does not yet reach back to `2016`
+  - conclusion:
+    - statement-driven quality is a viable path
+    - but it still needs deeper history before it can replace the current public quality strategy for long backtests
+- Durable output:
+  - `.note/finance/phase4/PHASE4_STATEMENT_LEDGER_FEASIBILITY_AND_TARGETED_BACKFILL.md`
+  - `.note/finance/phase4/PHASE4_FACTOR_FUNDAMENTAL_ENTRY_TODO.md`
+
+### 2026-03-24 - Build a sample-universe statement-driven quality prototype after feasibility and targeted backfill
+- Request topic:
+  - proceed with the next recommended step: create a sample-universe statement-driven quality prototype before deciding on wider public exposure
+- Interpreted goal:
+  - prove that strict statement snapshots can drive a real quality backtest path, using the existing targeted sample universe, without prematurely exposing the path in the public UI
+- Result:
+  - implemented reusable preprocessing/mapping helpers:
+    - `build_fundamentals_from_statement_snapshot(...)` in `finance/data/fundamentals.py`
+    - `build_quality_factor_snapshot_from_statement_snapshot(...)` in `finance/data/factors.py`
+  - implemented a DB-backed sample entrypoint:
+    - `get_statement_quality_snapshot_from_db(...)` in `finance/sample.py`
+  - implemented a runtime wrapper:
+    - `run_statement_quality_prototype_backtest_from_db(...)` in `app/web/runtime/backtest.py`
+  - the prototype uses:
+    - strict annual statement snapshots from `load_statement_snapshot_strict(...)`
+    - derived quality columns:
+      - `roe`
+      - `gross_margin`
+      - `operating_margin`
+      - `debt_ratio`
+    - the existing `quality_snapshot_equal_weight(...)` strategy simulation
+  - validation run:
+    - tickers: `AAPL/MSFT/GOOG`
+    - period: `2023-01-01 ~ 2026-03-20`
+    - result:
+      - first active date `2023-01-31`
+      - `End Balance = 23645.4`
+      - `CAGR = 0.316218`
+      - `Sharpe Ratio = 1.587924`
+  - conclusion:
+    - the statement-driven quality path is now proven at prototype level for the targeted sample universe
+    - but it remains inappropriate to expose as a long-history public strategy until statement coverage becomes deeper and more even across the universe
+- Durable output:
+  - `.note/finance/phase4/PHASE4_STATEMENT_DRIVEN_QUALITY_PROTOTYPE_FIRST_PASS.md`
+  - `.note/finance/phase4/PHASE4_FACTOR_FUNDAMENTAL_ENTRY_TODO.md`
+
+### 2026-03-24 - Move statement-driven quality preprocessing into reusable data-layer mapping
+- Request topic:
+  - after confirming the overall direction, continue with the next work needed for a real statement-ledger-based path
+- Interpreted goal:
+  - stop treating the statement-driven quality prototype as a one-off transform and create a reusable mapping path that can later support rebuilt fundamentals/factors
+- Result:
+  - added `build_fundamentals_from_statement_snapshot(...)` to `finance/data/fundamentals.py`
+  - added:
+    - `calculate_quality_factors_from_fundamentals(...)`
+    - `build_quality_factor_snapshot_from_statement_snapshot(...)`
+    to `finance/data/factors.py`
+  - refactored the statement-driven quality sample to use:
+    - strict statement snapshot
+    - normalized fundamentals mapping
+    - quality factor snapshot mapping
+    - existing quality strategy
+  - conclusion:
+    - the project now has a reusable `statement -> fundamentals -> factors` code path
+    - this still does not mean public replacement of the current broad-research quality path
+    - but it is the right base for any future statement-driven rebuild/backfill
+- Durable output:
+  - `.note/finance/phase4/PHASE4_STATEMENT_TO_FUNDAMENTALS_FACTORS_MAPPING_FIRST_PASS.md`
+  - `.note/finance/phase4/PHASE4_FACTOR_FUNDAMENTAL_ENTRY_TODO.md`
+
+### 2026-03-24 - Add a strict statement quality loader boundary on top of the new mapping
+- Request topic:
+  - continue the same workstream so the statement-driven path has a proper loader/read boundary rather than only sample-time builder composition
+- Interpreted goal:
+  - make the prototype path easier to reuse and keep the architecture consistent with the rest of the DB-backed runtime flow
+- Result:
+  - added `load_statement_quality_snapshot_strict(...)` to `finance/loaders/factors.py`
+  - exported the loader from `finance/loaders/__init__.py`
+  - refactored `get_statement_quality_snapshot_from_db(...)` to consume the loader
+  - validated the loader directly for `AAPL/MSFT/GOOG` at `2025-01-31`
+  - revalidated the sample-universe prototype end-to-end with unchanged final balance
+- Durable output:
+  - `.note/finance/phase4/PHASE4_STATEMENT_QUALITY_LOADER_FIRST_PASS.md`
+
+### 2026-03-24 - Start the statement-driven fundamentals/factors backfill planning step
+- Request topic:
+  - proceed with the next recommended step: statement-driven fundamentals/factors backfill preparation
+- Interpreted goal:
+  - define how this backfill should begin without accidentally overwriting the current broad-research public tables
+- Result:
+  - documented the key structural constraint:
+    - current `nyse_fundamentals` / `nyse_factors` unique keys do not allow broad and statement-driven rows to coexist for the same `symbol/freq/period_end`
+  - narrowed the realistic storage choices to:
+    - overwrite current tables
+    - shadow tables
+    - same-table multi-mode schema expansion
+  - recommended the shadow-table path as the safest first rollout
+  - added `load_statement_coverage_summary(...)` so statement usable history can be audited before any write path is chosen
+- Durable output:
+  - `.note/finance/phase4/PHASE4_STATEMENT_DRIVEN_BACKFILL_PLAN_FIRST_PASS.md`
+
+### 2026-03-24 - Open the statement-driven shadow-table backfill path
+- Request topic:
+  - proceed with the recommended shadow-table direction rather than overwriting the current broad-research public tables
+- Interpreted goal:
+  - implement a first safe write/read path for statement-driven fundamentals/factors so sample-universe history can be backfilled and compared without changing public UI behavior
+- Result:
+  - added schema-backed shadow tables:
+    - `nyse_fundamentals_statement`
+    - `nyse_factors_statement`
+  - added first-pass write paths:
+    - `upsert_statement_fundamentals_shadow(...)`
+    - `upsert_statement_factors_shadow(...)`
+  - added matching loader read paths:
+    - `load_statement_fundamentals_shadow(...)`
+    - `load_statement_factors_shadow(...)`
+  - validated annual sample-universe write/read on `AAPL/MSFT/GOOG`
+  - confirmed current shadow path is useful for accounting-quality history, but valuation fields remain incomplete because statement-driven `shares_outstanding` is still sparse
+- Durable output:
+  - `.note/finance/phase4/PHASE4_STATEMENT_SHADOW_TABLES_FIRST_PASS.md`
+
+### 2026-03-24 - Add first-pass shares fallback to the statement-driven shadow path
+- Request topic:
+  - continue with the next recommended step: improve `shares_outstanding` so shadow factor history can populate valuation fields
+- Interpreted goal:
+  - keep the new statement-driven shadow path useful not only for quality/accounting ratios, but also for `market_cap` / `per` / `pbr` where reasonable
+- Result:
+  - confirmed the current local statement ledger for `AAPL/MSFT/GOOG` does not contain the expected direct shares concepts
+  - added a conservative fallback from broad `nyse_fundamentals`
+    using nearest `period_end`, same `symbol/freq`, and `15-day` tolerance
+  - re-ran sample-universe annual shadow backfill and verified:
+    - `shares_outstanding` now populates on `10 / 12` rows
+    - `market_cap` now populates on `10 / 12` rows
+    - valuation fields such as `per` / `pbr` are available for most rows
+  - clarified the new meaning:
+    - accounting quality fields remain statement-driven
+    - valuation fields are currently `statement + broad shares fallback` hybrid rows
+- Durable output:
+  - `.note/finance/phase4/PHASE4_STATEMENT_SHADOW_SHARES_ENHANCEMENT_FIRST_PASS.md`
+
+### 2026-03-24 - Verify user-run Extended Statement Refresh and recheck the shadow path
+- Request topic:
+  - verify the user's new `Extended Statement Refresh` run and continue the in-progress statement-driven workstream
+- Interpreted goal:
+  - confirm how much annual/quarterly statement coverage actually improved, then rebuild the shadow fundamentals/factors and see which strict statement path is the more usable candidate
+- Result:
+  - verified strict annual coverage for `AAPL/MSFT/GOOG` is still more useful than quarterly
+  - verified quarterly strict coverage now exists, but mostly begins in `2024`
+  - rebuilt both annual and quarterly shadow tables successfully
+  - revalidated statement-driven quality prototype:
+    - annual path:
+      - `first_active = 2023-01-31`
+      - `End Balance = 23645.4`
+    - quarterly path:
+      - `first_active = 2024-10-31`
+      - `End Balance = 13952.3`
+  - current conclusion:
+    - annual strict statement path remains the better sample-universe candidate
+    - quarterly path is working but still too shallow to be the next public candidate
+- Durable output:
+  - `.note/finance/phase4/PHASE4_EXTENDED_STATEMENT_REFRESH_VERIFICATION_AND_SHADOW_REBUILD.md`
+
+### 2026-03-24 - Fix annual statement period limiting and reopen long-history strict quality on the sample universe
+- Request topic:
+  - continue the next recommended statement-driven work after the user refreshed annual/quarterly extended statements
+- Interpreted goal:
+  - identify why annual strict coverage was still too shallow and fix the actual collector behavior rather than treating it as a source-data limitation
+- Result:
+  - confirmed the source itself already had deeper annual reported periods for `AAPL/MSFT/GOOG`
+  - found the real issue in `finance.data.financial_statements._iter_value_rows_from_source(...)`:
+    - `periods=N` was being limited by raw row-level `period_end`
+    - this let recent 10-K facts with quarter-end-like `period_end` values crowd out older true annual history
+  - changed the limit semantics to use reported period identity:
+    - `report_date` first
+    - `period_end` fallback
+  - added canonical refresh behavior in `upsert_financial_statements(...)` for the refreshed symbol/freq scope so old semantics rows do not linger
+  - reran sample-universe annual refresh and verified annual strict coverage now reaches roughly `2011~2025`
+  - rebuilt annual shadow fundamentals/factors and revalidated the statement-driven quality prototype:
+    - `first_active = 2016-02-29`
+    - long-history annual strict quality backtest is now actually usable on `AAPL/MSFT/GOOG`
+- Durable output:
+  - `.note/finance/phase4/PHASE4_ANNUAL_STATEMENT_PERIOD_LIMIT_FIX_AND_COVERAGE_EXPANSION.md`
+
+### 2026-03-24 - Promote strict annual statement quality into a public UI candidate
+- Request topic:
+  - proceed with the recommended next step after strict annual sample-universe coverage became usable again
+- Interpreted goal:
+  - stop keeping the strict annual statement-driven quality path as backend-only and expose it in the Backtest product surface without breaking the current broad quality path
+- Result:
+  - added `run_quality_snapshot_strict_annual_backtest_from_db(...)`
+  - kept existing broad `Quality Snapshot` unchanged
+  - exposed a separate sixth strategy in the UI:
+    - `Quality Snapshot (Strict Annual)`
+  - connected the new strategy to:
+    - single-strategy execution
+    - compare mode
+    - persistent history
+    - form reload / rerun
+  - validated wrapper output on `AAPL/MSFT/GOOG` over `2016-01-01 ~ 2026-03-20`
+  - current product meaning:
+    - broad quality = current research-oriented public path
+    - strict annual quality = statement-driven public candidate path
+- Durable output:
+  - `.note/finance/phase4/PHASE4_STRICT_ANNUAL_QUALITY_PUBLIC_CANDIDATE_FIRST_PASS.md`
+
+### 2026-03-24 - Prefer annual statement coverage expansion before treating strict annual quality as trustworthy
+- Request topic:
+  - the user preferred annual statement coverage work first because `Quality Snapshot (Strict Annual)` still did not yet feel like a trustworthy finished strategy
+- Interpreted goal:
+  - stop polishing the strict annual strategy in isolation and instead make wider annual statement coverage operationally feasible so the strategy can later be judged on broader data
+- Result:
+  - confirmed `Profile Filtered Stocks` currently resolves to about `5783` symbols, so wider annual coverage is a genuinely heavy run
+  - added batch-progress emission to `upsert_financial_statements(...)`
+  - extended the progress path through:
+    - `run_collect_financial_statements(...)`
+    - `run_extended_statement_refresh(...)`
+    - Streamlit live progress rendering for large runs
+  - manual `Financial Statement Ingestion` now benefits from the same progress path
+  - sample validation confirmed the new callback contract works and result details now expose `upserted_filings`
+- Durable output:
+  - `.note/finance/phase4/PHASE4_ANNUAL_STATEMENT_COVERAGE_OPERATOR_SUPPORT_FIRST_PASS.md`
+
+### 2026-03-24 - Stage 1 wider annual coverage run shows strict annual path can scale, but foreign issuers distort naive top-market-cap rollout
+- Request topic:
+  - proceed with a staged annual coverage run instead of jumping directly to the full `Profile Filtered Stocks` universe
+- Interpreted goal:
+  - confirm that annual strict statement coverage can expand beyond `AAPL/MSFT/GOOG` while keeping operational risk reasonable
+- Result:
+  - chose stage 1 as `Profile Filtered Stocks` top `100` by `market_cap`
+  - annual statement refresh completed successfully:
+    - `rows_written = 188709`
+    - `upserted_labels = 85164`
+    - `upserted_filings = 8575`
+    - `failed_symbols = 0`
+  - annual shadow fundamentals/factors rebuild also completed:
+    - `2376` rows each
+  - strict annual coverage was confirmed on `80 / 100` symbols
+  - `68` symbols already have `12+` annual accessions
+  - the `20` missing symbols are mostly foreign issuers (`TSM`, `AZN`, `ASML`, `BABA`, `TM`, `HSBC`, etc.)
+- Durable output:
+  - `.note/finance/phase4/PHASE4_ANNUAL_STATEMENT_COVERAGE_STAGE1_TOP100_RUN.md`
+
+### 2026-03-24 - Stage 2 US top-300 annual coverage run shows strict annual path is viable beyond the sample universe
+- Request topic:
+  - continue the next staged annual coverage expansion after stage 1
+- Interpreted goal:
+  - test whether refining the universe toward US / EDGAR-friendly stocks materially improves strict annual coverage
+- Result:
+  - selected stage 2 as:
+    - `Profile Filtered Stocks`
+    - `country = United States`
+    - `market_cap DESC`
+    - top `300`
+  - annual statement refresh completed successfully:
+    - `rows_written = 701189`
+    - `upserted_labels = 316761`
+    - `upserted_filings = 30170`
+    - `failed_symbols = 0`
+  - annual shadow fundamentals/factors rebuild completed:
+    - `9385` rows each
+  - strict annual coverage was confirmed on `297 / 300` symbols
+  - only `3` symbols were still missing:
+    - `MRSH`
+    - `AU`
+    - `CUK`
+  - this materially increases confidence that the strict annual path is not just a sample-universe artifact
+- Durable output:
+  - `.note/finance/phase4/PHASE4_ANNUAL_STATEMENT_COVERAGE_STAGE2_US_TOP300_RUN.md`
+
+### 2026-03-25 - Redefine strict annual quality as a verified wider-universe public candidate
+- Request topic:
+  - continue with the recommended next step after stage 2 annual coverage succeeded
+- Interpreted goal:
+  - stop presenting `Quality Snapshot (Strict Annual)` as only a sample-universe candidate and align its public role/default universe with the wider annual coverage evidence
+- Result:
+  - broad quality presets and strict annual presets were separated in the Backtest UI
+  - broad `Quality Snapshot` stayed on:
+    - `Big Tech Quality Trial`
+  - strict annual quality now exposes:
+    - `US Statement Coverage 300`
+    - `US Statement Coverage 100`
+    - `Big Tech Strict Trial`
+  - single-strategy strict annual default was moved to:
+    - `US Statement Coverage 300`
+  - compare-mode strict annual default was set to:
+    - `US Statement Coverage 100`
+    - this keeps compare runs lighter while preserving the wider-universe product meaning
+- Durable output:
+  - `.note/finance/phase4/PHASE4_STRICT_ANNUAL_QUALITY_PUBLIC_ROLE_AND_DEFAULT_UNIVERSE.md`

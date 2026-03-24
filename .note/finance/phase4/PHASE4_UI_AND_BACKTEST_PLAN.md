@@ -228,6 +228,55 @@ Phase 4는 UI/UX와 공개 실행 경계가 직접 결정되는 단계다.
 - 후속 확장 메모
 - Phase 5와의 연결 정리
 
+현재 다음 활성 챕터:
+- `factor / fundamental 전략 진입 준비`
+
+현재 권장 순서:
+1. 첫 factor / fundamental 전략 후보 선택
+2. snapshot-first runtime wrapper 경계 정리
+3. `snapshot_mode` 기본값 결정
+4. 첫 UI 입력 세트 초안
+5. 선택된 전략 기준 구현 범위 확정
+
+현재 상태 업데이트:
+- 첫 factor / fundamental 전략 방향은 `Quality Snapshot Strategy`
+- first public mode는 `broad_research`
+- broad-research first-pass runtime wrapper와 DB-backed sample entrypoint까지 구현 완료
+- Quality Snapshot Strategy는 이제 Backtest UI의 다섯 번째 공개 전략으로 연결되었고,
+  history / form prefill / compare first-pass 경로에도 반영되었다
+- 추가로 sample-universe 기준 strict annual statement snapshot을 직접 사용하는
+  `statement-driven quality prototype`도 backend/runtime 수준에서 first-pass 구현 및 검증되었다
+- 이어서 이 prototype의 preprocessing은
+  `strict statement snapshot -> normalized fundamentals -> quality factor snapshot`
+  형태의 reusable data-layer mapping으로 정리되었다
+- 그리고 broad public tables를 보존하기 위해
+  `nyse_fundamentals_statement`, `nyse_factors_statement`
+  shadow table first-pass도 실제 code path와 sample-universe validation까지 열렸다
+- 이후 annual period-limit semantics fix와 canonical refresh를 통해
+  sample-universe annual strict coverage가 `2011~2025` 수준까지 확장되었고,
+  strict annual quality path는 이제 `Quality Snapshot (Strict Annual)` 이름으로
+  Backtest UI의 public candidate 전략까지 올라왔다
+- 그리고 wider-universe annual coverage 실행을 준비하기 위해,
+  `Extended Statement Refresh`와 manual statement ingestion은
+  large run에서 live statement-ingestion progress를 보여주도록 보강되었다
+- 또한 first staged annual coverage run으로
+  `Profile Filtered Stocks` top-100 market-cap seed를 실제 실행했고,
+  annual strict coverage가 `80/100` symbols 수준으로 확인되었다
+- 이후 stage 2에서는
+  `United States` issuer top-300 annual run까지 진행했고,
+  strict annual coverage가 `297/300` symbols 수준으로 확인되었다
+- 그 결과 strict annual quality의 public 역할도 다시 정리되었다.
+  - single-strategy 기본 preset:
+    - `US Statement Coverage 300`
+  - compare default preset:
+    - `US Statement Coverage 100`
+  - broad quality의 `Big Tech Quality Trial`과는 별도 역할로 분리
+- 다음 선택은
+  broad quality와 strict annual quality의 공존 원칙을 더 정리할지,
+  shadow coverage를 더 넓힐지, valuation 보강을 할지,
+  아니면 strict statement quality를 public 후보로 더 키울지
+  쪽으로 넘어가는 것이 자연스럽다
+
 ---
 
 ## Phase 4 진입 전 이미 준비된 것

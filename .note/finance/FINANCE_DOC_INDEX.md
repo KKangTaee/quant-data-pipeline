@@ -160,6 +160,54 @@
   - Backtest 탭 시각화 강화 first-pass 구현 기록 문서
 - `.note/finance/phase4/PHASE4_VISUALIZATION_ENHANCEMENT_SECOND_PASS.md`
   - compare overlay end marker와 strategy highlight table을 추가한 second-pass 시각화 기록 문서
+- `.note/finance/phase4/PHASE4_UI_CHAPTER1_COMPLETION_SUMMARY.md`
+  - Phase 4 첫 UI 실행 챕터 완료 요약 문서
+- `.note/finance/phase4/PHASE4_FACTOR_FUNDAMENTAL_ENTRY_TODO.md`
+  - Phase 4 다음 챕터인 factor / fundamental 전략 진입 준비 보드
+- `.note/finance/phase4/PHASE4_FACTOR_FUNDAMENTAL_FIRST_STRATEGY_OPTIONS.md`
+  - 첫 factor / fundamental 전략 후보 선택지 문서
+- `.note/finance/phase4/PHASE4_QUALITY_SNAPSHOT_STRATEGY_SCOPE.md`
+  - 첫 factor / fundamental 전략으로 선택된 Quality Snapshot Strategy의 범위 문서
+- `.note/finance/phase4/PHASE4_QUALITY_RUNTIME_WRAPPER_DRAFT.md`
+  - Quality Snapshot Strategy용 first public runtime wrapper 초안
+- `.note/finance/phase4/PHASE4_QUALITY_BROAD_RESEARCH_DECISION.md`
+  - Quality Snapshot Strategy의 first public mode를 broad_research로 정한 결정 문서
+- `.note/finance/phase4/PHASE4_QUALITY_SNAPSHOT_IMPLEMENTATION_FIRST_PASS.md`
+  - Quality Snapshot Strategy broad-research first-pass 구현 기록 문서
+- `.note/finance/phase4/PHASE4_QUALITY_UI_INPUT_DRAFT.md`
+  - Quality Snapshot Strategy의 기본 / advanced / hidden UI 입력 정리 문서
+- `.note/finance/phase4/PHASE4_FIFTH_STRATEGY_QUALITY_ADDITION.md`
+  - Quality Snapshot Strategy를 Backtest UI의 다섯 번째 전략으로 연결한 기록 문서
+- `.note/finance/phase4/PHASE4_STATEMENT_DRIVEN_QUALITY_BLOCKER_AND_NEXT_STEPS.md`
+  - statement-driven quality path로 바로 넘어갈 때의 현재 blocker와 다음 현실적 선택지 정리 문서
+- `.note/finance/phase4/PHASE4_STATEMENT_LEDGER_FEASIBILITY_AND_TARGETED_BACKFILL.md`
+  - statement-driven quality로 가기 전 수행한 sample-universe feasibility test와 targeted backfill 결과 문서
+- `.note/finance/phase4/PHASE4_STATEMENT_DRIVEN_QUALITY_PROTOTYPE_FIRST_PASS.md`
+  - strict statement snapshot 기반 sample-universe quality prototype first-pass 구현 및 검증 문서
+- `.note/finance/phase4/PHASE4_STATEMENT_TO_FUNDAMENTALS_FACTORS_MAPPING_FIRST_PASS.md`
+  - strict statement snapshot에서 normalized fundamentals와 quality factor snapshot으로 가는 reusable mapping 정리 문서
+- `.note/finance/phase4/PHASE4_STATEMENT_QUALITY_LOADER_FIRST_PASS.md`
+  - strict statement 기반 quality snapshot을 loader 계층으로 올린 first-pass 정리 문서
+- `.note/finance/phase4/PHASE4_STATEMENT_DRIVEN_BACKFILL_PLAN_FIRST_PASS.md`
+  - statement-driven fundamentals/factors backfill을 시작하기 전 필요한 저장 전략과 rollout 순서를 정리한 문서
+- `.note/finance/phase4/PHASE4_STATEMENT_SHADOW_TABLES_FIRST_PASS.md`
+  - statement-driven fundamentals/factors를 shadow table에 first-pass로 write/read 검증한 구현 기록 문서
+- `.note/finance/phase4/PHASE4_STATEMENT_SHADOW_SHARES_ENHANCEMENT_FIRST_PASS.md`
+  - statement-driven shadow path에서 broad fundamentals fallback으로 shares/valuation 계열을 보강한 기록 문서
+- `.note/finance/phase4/PHASE4_EXTENDED_STATEMENT_REFRESH_VERIFICATION_AND_SHADOW_REBUILD.md`
+  - 사용자가 실행한 extended statement refresh 이후 annual/quarterly coverage와 shadow rebuild 결과를 검증한 문서
+- `.note/finance/phase4/PHASE4_ANNUAL_STATEMENT_PERIOD_LIMIT_FIX_AND_COVERAGE_EXPANSION.md`
+  - annual statement collector의 period-limit semantics를 reported-period 기준으로 고치고 sample-universe annual strict coverage를 확장한 기록 문서
+- `.note/finance/phase4/PHASE4_STRICT_ANNUAL_QUALITY_PUBLIC_CANDIDATE_FIRST_PASS.md`
+  - strict annual statement-driven quality path를 Backtest UI의 public candidate 전략으로 노출한 기록 문서
+- `.note/finance/phase4/PHASE4_STRICT_ANNUAL_QUALITY_PUBLIC_ROLE_AND_DEFAULT_UNIVERSE.md`
+  - strict annual quality의 public 역할과 wider stock-universe 기본 preset을 재정의한 문서
+- `.note/finance/phase4/PHASE4_ANNUAL_STATEMENT_COVERAGE_OPERATOR_SUPPORT_FIRST_PASS.md`
+  - wider-universe annual statement coverage 실행 전에 extended statement refresh/operator progress를 보강한 기록 문서
+- `.note/finance/phase4/PHASE4_ANNUAL_STATEMENT_COVERAGE_STAGE1_TOP100_RUN.md`
+  - 시가총액 상위 100개 profile-filtered stocks를 대상으로 annual statement coverage stage 1 run을 수행하고 결과를 정리한 문서
+- `.note/finance/phase4/PHASE4_ANNUAL_STATEMENT_COVERAGE_STAGE2_US_TOP300_RUN.md`
+  - United States issuer top-300 profile-filtered stocks를 대상으로 annual statement coverage stage 2 run을 수행하고 strict annual path 확장성을 검증한 문서
 
 ---
 

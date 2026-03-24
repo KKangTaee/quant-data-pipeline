@@ -83,7 +83,7 @@
 - `없음`
 
 바로 다음 체크 대상:
-- `다음 Phase 4 선택지 합의`
+- `Phase 4 factor / fundamental entry chapter 진행`
 
 ---
 
@@ -116,4 +116,5 @@
   single-strategy / compare 시각화 강화도 first-pass 수준으로 반영되었고,
   compare 결과에도 focused strategy drilldown이 추가되었고,
   weighted portfolio 결과도 동일한 marker / balance-extremes / period-extremes 읽기 흐름으로 정리되었으며,
-  다음 선택지는 history 고도화 또는 더 깊은 annotation/visual refinement 쪽으로 넘어가는 것이 자연스럽다
+  첫 UI 실행 챕터는 실질적으로 완료 상태로 보고,
+  다음 활성 챕터는 factor / fundamental 전략 진입 준비로 넘어가는 것이 자연스럽다
