@@ -570,10 +570,10 @@ def quality_snapshot_equal_weight(
 
     for i, date in enumerate(dates):
         current_date = pd.to_datetime(date)
-        close_now = {
-            ticker: float(price_dfs[ticker].iloc[i]["Close"])
-            for ticker in tickers
-        }
+        close_now = {}
+        for ticker in tickers:
+            close_value = pd.to_numeric(price_dfs[ticker].iloc[i]["Close"], errors="coerce")
+            close_now[ticker] = float(close_value) if pd.notna(close_value) else np.nan
 
         if i == 0:
             end_balances = []
@@ -583,10 +583,11 @@ def quality_snapshot_equal_weight(
             end_balances = []
             for ticker, balance in zip(held_tickers, next_balances):
                 prev = prev_close.get(ticker)
-                if prev is None or prev == 0:
+                current_close = close_now.get(ticker)
+                if prev is None or pd.isna(prev) or prev == 0 or pd.isna(current_close):
                     asset_return = 0.0
                 else:
-                    asset_return = (close_now[ticker] / prev) - 1
+                    asset_return = (current_close / prev) - 1
                 end_balances.append(balance * (1 + asset_return))
 
             total_balance = float(sum(end_balances) + cash)
@@ -606,7 +607,11 @@ def quality_snapshot_equal_weight(
                 lower_is_better_factors=lower_is_better_factors,
             )
             if not ranked.empty:
-                ranked = ranked[ranked["symbol"].isin(tickers)].reset_index(drop=True)
+                available_tickers = {
+                    ticker for ticker in tickers
+                    if pd.notna(close_now.get(ticker))
+                }
+                ranked = ranked[ranked["symbol"].isin(available_tickers)].reset_index(drop=True)
 
             if ranked.empty:
                 held_tickers = []

@@ -6,9 +6,9 @@ from time import perf_counter
 from typing import Any, Callable, Iterable
 
 from finance.data.data import store_ohlcv_to_mysql
-from finance.data.factors import upsert_factors
+from finance.data.factors import upsert_factors, upsert_statement_factors_shadow
 from finance.data.financial_statements import upsert_financial_statements
-from finance.data.fundamentals import upsert_fundamentals
+from finance.data.fundamentals import upsert_fundamentals, upsert_statement_fundamentals_shadow
 from finance.data.asset_profile import collect_and_store_asset_profiles
 
 
@@ -854,3 +854,132 @@ def run_collect_financial_statements(
                 "period": period,
             },
         )
+
+
+def run_strict_annual_shadow_refresh(
+    symbols: str | Iterable[str] | None,
+    *,
+    periods: int = 12,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
+) -> JobResult:
+    job_name = "strict_annual_shadow_refresh"
+    started_at = _now_str()
+    t0 = perf_counter()
+    parsed, invalid_symbols = split_valid_invalid_symbols(symbols)
+
+    if not parsed:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=0,
+            symbols_processed=0,
+            failed_symbols=invalid_symbols,
+            message="No valid symbols provided.",
+            details={"steps": [], "periods": periods},
+        )
+
+    steps: list[JobResult] = []
+
+    if progress_callback is not None:
+        progress_callback({"event": "stage_start", "stage": "extended_statement_refresh", "stage_index": 1, "total_stages": 3})
+    refresh_result = run_extended_statement_refresh(
+        parsed,
+        freq="annual",
+        periods=periods,
+        period="annual",
+    )
+    steps.append(refresh_result)
+    if progress_callback is not None:
+        progress_callback({"event": "stage_complete", "stage": "extended_statement_refresh", "stage_index": 1, "total_stages": 3})
+
+    if refresh_result["status"] == "failed":
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=refresh_result.get("rows_written") or 0,
+            symbols_requested=len(parsed),
+            symbols_processed=0,
+            failed_symbols=_merge_step_failures(steps, invalid_symbols),
+            message="Strict annual shadow refresh stopped because statement refresh failed.",
+            details={"steps": steps, "periods": periods},
+        )
+
+    if progress_callback is not None:
+        progress_callback({"event": "stage_start", "stage": "fundamentals_shadow", "stage_index": 2, "total_stages": 3})
+    fundamentals_rows = upsert_statement_fundamentals_shadow(parsed, freq="annual")
+    steps.append(
+        _build_result(
+            job_name="statement_fundamentals_shadow",
+            status="success" if fundamentals_rows > 0 else "failed",
+            started_at=started_at,
+            finished_at=_now_str(),
+            duration_sec=0.0,
+            rows_written=fundamentals_rows,
+            symbols_requested=len(parsed),
+            symbols_processed=len(parsed) if fundamentals_rows > 0 else 0,
+            message="Statement fundamentals shadow rebuild completed." if fundamentals_rows > 0 else "Statement fundamentals shadow rebuild wrote no rows.",
+            details={"freq": "annual"},
+        )
+    )
+    if progress_callback is not None:
+        progress_callback({"event": "stage_complete", "stage": "fundamentals_shadow", "stage_index": 2, "total_stages": 3})
+
+    if fundamentals_rows == 0:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=sum((step.get("rows_written") or 0) for step in steps),
+            symbols_requested=len(parsed),
+            symbols_processed=0,
+            failed_symbols=_merge_step_failures(steps, invalid_symbols),
+            message="Strict annual shadow refresh stopped because fundamentals shadow rebuild wrote no rows.",
+            details={"steps": steps, "periods": periods},
+        )
+
+    if progress_callback is not None:
+        progress_callback({"event": "stage_start", "stage": "factors_shadow", "stage_index": 3, "total_stages": 3})
+    factor_rows = upsert_statement_factors_shadow(parsed, freq="annual")
+    steps.append(
+        _build_result(
+            job_name="statement_factors_shadow",
+            status="success" if factor_rows > 0 else "failed",
+            started_at=started_at,
+            finished_at=_now_str(),
+            duration_sec=0.0,
+            rows_written=factor_rows,
+            symbols_requested=len(parsed),
+            symbols_processed=len(parsed) if factor_rows > 0 else 0,
+            message="Statement factors shadow rebuild completed." if factor_rows > 0 else "Statement factors shadow rebuild wrote no rows.",
+            details={"freq": "annual"},
+        )
+    )
+    if progress_callback is not None:
+        progress_callback({"event": "stage_complete", "stage": "factors_shadow", "stage_index": 3, "total_stages": 3})
+
+    finished_at = _now_str()
+    return _build_result(
+        job_name=job_name,
+        status=_pipeline_status(steps),
+        started_at=started_at,
+        finished_at=finished_at,
+        duration_sec=perf_counter() - t0,
+        rows_written=sum((step.get("rows_written") or 0) for step in steps),
+        symbols_requested=len(parsed),
+        symbols_processed=len(parsed) if factor_rows > 0 else 0,
+        failed_symbols=_merge_step_failures(steps, invalid_symbols),
+        message="Strict annual shadow refresh completed." if factor_rows > 0 else "Strict annual shadow refresh finished with issues.",
+        details={"steps": steps, "periods": periods},
+    )

@@ -295,3 +295,74 @@ def load_symbols_from_asset_profile(
             return [r["symbol"] for r in rows if r and r.get("symbol")]
     finally:
         db.close()
+
+
+def load_top_symbols_from_asset_profile(
+    kind: Kind,
+    *,
+    sector: Optional[str] = None,
+    country: Optional[str] = None,
+    on_filter: bool = True,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+    limit: int = 100,
+    order_by: str = "market_cap_desc",
+) -> list[str]:
+    """
+    nyse_asset_profile 테이블에서 조건에 맞는 상위 symbol 리스트를 반환.
+
+    기본 용도는 strict annual operator preset처럼 "미국 주식 + 필터 통과 + 시가총액 상위 N"
+    형태의 관리형 universe를 재사용하는 것이다.
+    """
+
+    if kind not in ("stock", "etf"):
+        raise ValueError("kind는 'stock' 또는 'etf'만 가능합니다.")
+    if limit <= 0:
+        raise ValueError("limit는 1 이상의 정수여야 합니다.")
+
+    normalized_order = str(order_by).strip().lower()
+    if normalized_order not in {"market_cap_desc", "symbol_asc"}:
+        raise ValueError("order_by는 'market_cap_desc' 또는 'symbol_asc'만 가능합니다.")
+
+    where = ["kind = %s"]
+    params: list = [kind]
+
+    if sector is not None:
+        where.append("sector = %s")
+        params.append(sector)
+
+    if country is not None:
+        where.append("country = %s")
+        params.append(country)
+
+    if on_filter:
+        where.append("(is_spac IS NULL OR is_spac <> 1)")
+        where.append("(country IS NULL OR LOWER(country) <> 'china')")
+        where.append(
+            "(status IS NULL OR LOWER(status) NOT IN ('dilist', 'delist', 'delisted'))"
+        )
+
+    order_sql = "ORDER BY COALESCE(market_cap, 0) DESC, symbol ASC"
+    if normalized_order == "symbol_asc":
+        order_sql = "ORDER BY symbol ASC"
+
+    sql = f"""
+        SELECT symbol
+        FROM nyse_asset_profile
+        WHERE {" AND ".join(where)}
+        {order_sql}
+        LIMIT %s
+    """
+    params.append(int(limit))
+
+    db = MySQLClient(host, user, password, port)
+    try:
+        db.use_db(DB_NAME)
+        with db.conn.cursor() as cur:
+            cur.execute(sql, params)
+            rows = cur.fetchall()
+            return [r["symbol"] for r in rows if r and r.get("symbol")]
+    finally:
+        db.close()

@@ -954,3 +954,342 @@ Keep entries append-only and concise.
 - Switched strict annual single-strategy default toward the verified wider stock universe.
 - Kept strict annual compare default lighter at `US Statement Coverage 100` so multi-strategy runs stay responsive.
 - Synced prefill/history handling to use strict preset validation instead of the broad preset set.
+
+### 2026-03-25 - Quality preset preview refresh UX fix
+
+- Fixed the quality single-strategy preset preview UX in `app/web/pages/backtest.py`.
+- Moved `Quality Snapshot` / `Quality Snapshot (Strict Annual)` universe selection widgets outside the submit form so Streamlit reruns immediately on preset change.
+- Added compact ticker preview rendering with ticker count and truncated preview text.
+- Result:
+  - changing the preset now refreshes the ticker preview immediately instead of waiting for form submit.
+
+### 2026-03-25 - Strict annual fast path, interpretation, and value strict rollout
+
+- Optimized `Quality Snapshot (Strict Annual)` to use statement shadow factor history instead of rebuilding strict statement snapshots on every rebalance date.
+- Added `load_statement_factor_snapshot_shadow(...)` and DB-backed shadow snapshot sample/runtime wiring.
+- Found and fixed a semantic bug in annual shadow rebuild:
+  - annual shadow history had quarter-like comparative rows mixed in
+  - and stored too-late availability for each period end
+- Corrected annual shadow fundamentals/factors toward:
+  - report-date-anchored annual periods
+  - `first_available_for_period_end`
+- Verified sample-universe parity:
+  - optimized strict annual path and prototype rebuild path now both return
+    `End Balance = 93934.6`
+- Added `Selection History` to snapshot strategies in the Backtest result UI.
+- Added `Value Snapshot (Strict Annual)` to:
+  - single strategy
+  - compare
+  - history / prefill
+- Added operator-facing symbol presets:
+  - `US Statement Coverage 100`
+  - `US Statement Coverage 300`
+  to the ingestion app as well.
+- Rebuilt annual shadow for `US Statement Coverage 300` after the timing fix:
+  - fundamentals rows: `3286`
+  - factors rows: `3286`
+- Runtime checks:
+  - strict annual top-100 quality:
+    - `3.381s`
+    - `End Balance = 20198.7`
+  - strict annual top-100 value:
+    - `3.399s`
+    - `End Balance = 19578.5`
+
+### 2026-03-25 - Strict annual productionization doc sync and final validation
+
+- Synced Phase 4 plan and comprehensive analysis to the latest strict annual state.
+- Recorded that the public strict annual path now uses:
+  - `nyse_factors_statement` fast runtime
+  - `Selection History` interpretation view
+  - `Value Snapshot (Strict Annual)` companion strategy
+  - annual coverage operator presets (`US Statement Coverage 100/300`)
+- Re-ran compile validation for the strict annual UI/runtime path.
+- Confirmed the Streamlit app is live on `http://localhost:8501`.
+
+### 2026-03-25 - Backtest UI elapsed-time display for strict annual validation
+
+- Added explicit elapsed-time recording to Backtest single-strategy execution.
+- The last-run result view now shows `Elapsed` under execution context.
+- The success banner now includes the measured seconds for the completed run.
+- Backtest history records now persist `ui_elapsed_seconds` for later drilldown.
+
+### 2026-03-25 - Strict annual large-universe calendar fix
+
+- Replaced full-date intersection with union-calendar alignment for snapshot strategy price inputs.
+- Added `align_dfs_by_date_union(...)` in `finance/transform.py`.
+- Added snapshot-specific price builder in `finance/sample.py`.
+- Hardened `quality_snapshot_equal_weight(...)` so rebalance selection excludes symbols whose current `Close` is unavailable.
+- Validation:
+  - `US Statement Coverage 300` strict quality:
+    - first active date moved from effectively `2025-12-31` to `2016-01-29`
+    - active rows: `124`
+    - runtime: `9.086s`
+    - end balance: `73778.4`
+  - `US Statement Coverage 100` strict quality:
+    - first active date: `2016-01-29`
+    - active rows: `124`
+    - runtime: `3.320s`
+    - end balance: `79295.2`
+  - sample-universe strict parity stayed intact:
+    - optimized strict path `0.322s`
+    - prototype rebuild path `16.793s`
+    - both `End Balance = 93934.6`
+
+### 2026-03-25 - Broad/strict guide, strict family comparison, and Phase 4 closeout prep
+
+- Added `Broad vs Strict Guide` to the quality/value snapshot forms in the Backtest UI.
+- Re-ran strict annual family comparison on the current public path:
+  - quality strict / coverage 100:
+    - `3.321s`
+    - `End Balance = 79295.2`
+  - quality strict / coverage 300:
+    - `9.264s`
+    - `End Balance = 73778.4`
+  - value strict / coverage 100:
+    - `3.197s`
+    - `End Balance = 20228.2`
+  - value strict / coverage 300:
+    - `9.080s`
+    - `End Balance = 20931.1`
+- Recorded the current interpretation:
+  - `Quality Snapshot (Strict Annual)` is the primary strict annual public candidate
+  - `Value Snapshot (Strict Annual)` remains the secondary strict annual family
+- Added Phase 4 closeout documents and next-phase preparation notes without formally opening a new phase.
+
+### 2026-03-25 - Quality factor expansion shortlist for wider-universe strict annual path
+
+- Measured latest-snapshot factor coverage on `US Statement Coverage 300` annual shadow factors.
+- Confirmed that the current default strict-quality set has uneven coverage:
+  - `roe`: `90.91%`
+  - `operating_margin`: `75.08%`
+  - `debt_ratio`: `61.28%`
+  - `gross_margin`: `42.42%`
+- Identified stronger coverage candidates:
+  - `roa`
+  - `net_margin`
+  - `asset_turnover`
+  - `current_ratio`
+- Wrote a factor-expansion recommendation doc with three options and a coverage-first recommendation.
+
+### 2026-03-25 - Strict annual quality default factor set refreshed to coverage-first
+
+- Applied the coverage-first strict annual quality default:
+  - `roe`
+  - `roa`
+  - `net_margin`
+  - `asset_turnover`
+  - `current_ratio`
+- Updated:
+  - strict annual sample defaults
+  - strict annual runtime defaults
+  - Backtest single-strategy strict annual form defaults
+  - compare-mode strict annual form defaults
+  - history/prefill fallback defaults
+- Re-validated current public default:
+  - coverage 100:
+    - `3.319s`
+    - `End Balance = 107324.3`
+  - coverage 300:
+    - `9.359s`
+    - `End Balance = 366404.7`
+
+### 2026-03-25 - Strict annual final-month duplicate rows traced to uneven daily price freshness and resolved by targeted refresh
+
+- Investigated why `Quality Snapshot (Strict Annual)` on `US Statement Coverage 300` showed both `2026-03-17` and `2026-03-20` in the final month.
+- Confirmed the first suspected lagging names (`APH`, `CVNA`, `GWW`, `LLY`, `MPWR`) were stale through `2026-03-17`, then refreshed them with a targeted `Daily Market Update`.
+- Re-checked the full `US Statement Coverage 300` universe and found `28` symbols still ending at `2026-03-17`.
+- Ran a second targeted `Daily Market Update` for those `28` lagging symbols and confirmed all `300` symbols now reach at least `2026-03-20`.
+- Re-ran `Quality Snapshot (Strict Annual)` on `US Statement Coverage 300`:
+  - final duplicated March rows collapsed to a single `2026-03-20` row
+  - row count moved from `124` to `123`
+  - `End Balance = 192994.7`
+  - `CAGR = 33.91%`
+- This verified that the duplicate final-month rows were driven by uneven price freshness rather than a strict-annual ranking bug.
+
+### 2026-03-25 - Strict annual price freshness preflight added to single-strategy UI and runtime metadata
+
+- Added `load_price_freshness_summary(...)` to the loader layer for lightweight latest-date aggregation.
+- Added `inspect_strict_annual_price_freshness(...)` to the backtest runtime.
+- Strict annual quality/value wrappers now append price freshness warnings and store compact freshness metadata in result `meta`.
+- Added `Price Freshness Preflight` sections to:
+  - `Quality Snapshot (Strict Annual)`
+  - `Value Snapshot (Strict Annual)`
+- Verified current `US Statement Coverage 300` state:
+  - `status = ok`
+  - `common_latest_date = 2026-03-20`
+  - `spread_days = 0`
+
+### 2026-03-25 - Strict annual operator UX, wider managed presets, and staged audit refresh
+
+- Added `load_top_symbols_from_asset_profile(..., order_by='market_cap_desc')` so strict annual managed universes can be built from asset-profile DB state instead of hardcoded arrays only.
+- Expanded strict annual managed presets to:
+  - `US Statement Coverage 100`
+  - `US Statement Coverage 300`
+  - `US Statement Coverage 500`
+  - `US Statement Coverage 1000`
+  - `Big Tech Strict Trial`
+- Added preflight second-pass UX:
+  - stale / missing symbol payload for `Daily Market Update`
+  - preset-status note in strict annual forms
+- Current DB wider-universe audit:
+  - `Profile Filtered Stocks / United States = 4441`
+  - coverage `500`:
+    - covered `396 / 500`
+    - price freshness spread `3d`
+  - coverage `1000`:
+    - covered `396 / 1000`
+    - price freshness spread `49d`
+- Decision:
+  - strict annual public default remains
+    - single: `US Statement Coverage 300`
+    - compare: `US Statement Coverage 100`
+  - `500/1000` stay as staged operator presets for now
+
+### 2026-03-25 - Strict annual interpretability and multi-factor family extended
+
+- Selection-history UI now includes `Selection Frequency`.
+- Added new public candidate:
+  - `Quality + Value Snapshot (Strict Annual)`
+- Integrated it into:
+  - single strategy
+  - compare strategy
+  - history / prefill
+  - runtime wrapper family
+- First-pass multi-factor validation:
+  - coverage `100`:
+    - `3.569s`
+    - `End Balance = 24778.9`
+    - `CAGR = 9.36%`
+  - coverage `300`:
+    - `9.785s`
+    - `End Balance = 16931.4`
+    - `CAGR = 5.33%`
+
+### 2026-03-25 - Strict annual operator automation first pass
+
+- Added `run_strict_annual_shadow_refresh(...)` helper job.
+- Flow:
+  - annual `Extended Statement Refresh`
+  - statement fundamentals shadow rebuild
+  - statement factors shadow rebuild
+- Smoke check:
+  - `AAPL/MSFT/GOOG`, `periods=1`
+  - `status = success`
+  - `rows_written = 581`
+
+### 2026-03-25 - Phase 4 closeout docs synced after staged strict-annual expansion
+
+- Synced Phase 4 closeout documents so the current public strategy set now explicitly includes:
+  - `Quality + Value Snapshot (Strict Annual)`
+- Synced strict-annual chapter docs with the completed staged-operator work:
+  - wider managed presets `500/1000`
+  - stale-symbol operator UX
+  - repeatable shadow refresh helper
+- Reconfirmed the current product stance in docs:
+  - strict annual public default remains `US Statement Coverage 300` for single strategy
+  - strict annual compare default remains `US Statement Coverage 100`
+  - `500/1000` remain staged operator presets pending deeper coverage
+
+### 2026-03-26 - Strict annual managed preset import crash fixed
+
+- Investigated Streamlit startup failure at:
+  - `app/web/streamlit_app.py:52`
+  - `QUALITY_STRICT_PRESETS["US Statement Coverage 500"]`
+- Root cause:
+  - strict managed preset loading could omit `500/1000` when DB-backed asset-profile loading returned no rows or raised, but `streamlit_app.py` assumed those keys always existed during import.
+- Fix:
+  - `app/web/pages/backtest.py`
+    - `_load_managed_strict_annual_presets()` now always emits fallback values for
+      `US Statement Coverage 500` and `US Statement Coverage 1000`
+      by degrading to the best available strict annual preset
+  - `app/web/streamlit_app.py`
+    - `SYMBOL_PRESETS` now uses a safe `_preset_csv(...)` helper instead of direct dictionary indexing
+- Verification:
+  - `PYTHONPYCACHEPREFIX=/tmp/pycache python3 -m py_compile app/web/pages/backtest.py app/web/streamlit_app.py`
+  - `.venv` import of `app.web.streamlit_app` succeeded
+  - currently exposed counts:
+    - `US Statement Coverage 100`: `100`
+    - `US Statement Coverage 300`: `300`
+    - `US Statement Coverage 500`: fallback `300`
+    - `US Statement Coverage 1000`: fallback `300`
+
+### 2026-03-26 - Strict annual wide presets now resolve true DB-backed top-N sets, and canonical monthly rows are fixed
+
+- Revalidated strict annual managed universes in a DB-connected runtime instead of the earlier sandbox-only import path.
+- Current DB-backed managed preset counts are:
+  - `US Statement Coverage 100`: `100`
+  - `US Statement Coverage 300`: `300`
+  - `US Statement Coverage 500`: `500`
+  - `US Statement Coverage 1000`: `1000`
+- Current annual shadow coverage was rechecked directly from DB:
+  - `US Statement Coverage 500`: covered `496 / 500`
+  - `US Statement Coverage 1000`: covered `987 / 1000`
+- Added canonical period-date alignment for snapshot strategies:
+  - `finance/transform.py`
+    - `align_dfs_to_canonical_period_dates(...)`
+  - `finance/sample.py`
+    - snapshot price builders now apply union-calendar alignment first, then collapse each period to one canonical date
+- This fixes the large-universe strict annual result-table issue where month-end runs could emit symbol-specific dates like `2026-02-03` or `2026-03-17`.
+- Runtime verification for `Quality Snapshot (Strict Annual)` on `US Statement Coverage 1000`:
+  - ticker count: `1000`
+  - result rows: `15` for `2025-01-01 ~ 2026-03-20`
+  - tail dates are now canonical monthly rows:
+    - `2025-08-29`
+    - `2025-09-30`
+    - `2025-10-31`
+    - `2025-11-28`
+    - `2025-12-31`
+    - `2026-01-30`
+    - `2026-02-27`
+    - `2026-03-20`
+- `Price Freshness Preflight` still matters at the 1000-name scale:
+  - current spread: `49d`
+  - lagging symbols:
+    - `CADE`, `CMA`, `DAY`, `CFLT`, `GSAT`, `UBSI`, `WMG`, `WTS`, `WWD`
+
+### 2026-03-27 - Coverage 1000 closeout and value strict recovery completed
+
+- Refreshed the remaining stale names inside `US Statement Coverage 1000` with a targeted `Daily Market Update` run:
+  - `CADE`, `CMA`, `DAY`, `CFLT`, `GSAT`, `UBSI`, `WMG`, `WTS`, `WWD`
+- Rechecked strict annual `Coverage 1000` freshness after refresh:
+  - stale symbols reduced from `9` to `4`
+  - remaining lagging names:
+    - `CADE`, `CMA`, `DAY`, `CFLT`
+  - common latest stayed at `2026-01-30`
+  - newest latest stayed at `2026-03-20`
+  - spread remains `49d`
+- Kept the public-position decision unchanged:
+  - `US Statement Coverage 1000` is usable and real DB-backed top-1000
+  - but still remains a staged operator preset rather than the public default
+- Investigated why `Value Snapshot (Strict Annual)` stayed flat through `2016~2021` and traced it to late `shares_outstanding` availability in statement shadow fundamentals.
+- Expanded statement-driven shares fallback in `finance/data/fundamentals.py` to use historical weighted-average share-count concepts when direct outstanding concepts are absent.
+- Rebuilt annual statement shadow fundamentals/factors for the top-1000 US universe after the shares-fallback change:
+  - fundamentals rows: `10292`
+  - factors rows: `10292`
+- Expanded the strict annual value factor set and UI options:
+  - new strict default factors:
+    - `book_to_market`
+    - `earnings_yield`
+    - `sales_yield`
+    - `ocf_yield`
+    - `operating_income_yield`
+  - additional UI-selectable strict value factors:
+    - `fcf_yield`, `per`, `pbr`, `psr`, `pcr`, `pfcr`, `ev_ebit`, `por`
+- Revalidated `Value Snapshot (Strict Annual)` after the shadow rebuild:
+  - `US Statement Coverage 300`
+    - `first_active = 2016-01-29`
+    - `End Balance = 85378.4`
+    - `CAGR = 23.56%`
+    - `Sharpe Ratio = 1.1341`
+  - `US Statement Coverage 1000`
+    - `first_active = 2016-01-29`
+    - `End Balance = 91733.7`
+    - `CAGR = 24.43%`
+    - `Sharpe Ratio = 1.0644`
+- Closeout interpretation:
+  - `Quality Snapshot (Strict Annual)` remains the primary strict annual public candidate
+  - `Value Snapshot (Strict Annual)` now behaves as a real 2016-start strategy path instead of a 2021-onward partial path
+  - `Coverage 1000` remains staged because freshness risk, not strategy logic, is still the limiting factor
+- Added one more UI clarification to strict annual preflight:
+  - `stale` now explicitly means that the symbol's latest daily price in DB stops before the selected end date

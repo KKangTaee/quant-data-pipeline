@@ -115,13 +115,42 @@
 
 ---
 
+### F. Strict Annual Productionization
+상태:
+- `completed`
+
+세부 작업:
+- `[completed]` strict annual public fast path 최적화
+  - statement rebuild 반복 대신 shadow factor snapshot 기반 public 경로로 전환
+- `[completed]` strict annual shadow timing semantics 보정
+  - annual shadow history를 `first_available_for_period_end` 의미로 정리
+- `[completed]` strict annual 전략 검증/해석 강화
+  - `Selection History` 탭으로 rebalance-level selection read path 추가
+- `[completed]` annual coverage operator preset 연결
+  - ingestion 쪽 symbol preset에 `US Statement Coverage 100/300` 추가
+- `[completed]` `Value Snapshot (Strict Annual)` public candidate 추가
+  - single / compare / history / prefill 경로 연결
+- `[completed]` strict annual staged managed preset 확장
+  - `US Statement Coverage 500/1000`을 staged operator preset으로 추가
+- `[completed]` strict annual stale-symbol operator UX 보강
+  - price freshness preflight에서 refresh payload와 stale symbol list를 바로 확인 가능하게 정리
+- `[completed]` `Quality + Value Snapshot (Strict Annual)` public candidate 추가
+  - strict multi-factor family를 single / compare / history / prefill 경로에 연결
+- `[completed]` strict annual operator automation helper 추가
+  - `run_strict_annual_shadow_refresh(...)`로 annual refresh + shadow rebuild를 repeatable job으로 정리
+
+완료 기준:
+- strict annual public path가 faster public runtime, operator preset, interpretation view, multi-factor public candidate, repeatable operator helper까지 갖춰야 함
+
+---
+
 ## 현재 작업 중 항목
 
 현재 `in_progress`:
 - `없음`
 
 바로 다음 체크 대상:
-- `wider-universe annual coverage scope 결정 및 실행`
+- `Phase 4 closeout 정리 및 next-phase 사용자 확인`
 
 현재 보조 판단:
 - sample-universe strict path 기준
@@ -137,7 +166,7 @@
 ## 현재 진척도
 
 - Phase 4 factor/fundamental entry chapter:
-  - 약 `82%`
+  - 약 `100%`
 
 판단 근거:
 - price-only UI 챕터는 실질적으로 완료되었고
@@ -171,3 +200,30 @@
   strict annual quality의 public 역할과 기본 universe도
   `US Statement Coverage 300` / `US Statement Coverage 100`
   기준으로 재정의되었다
+- 이어서 strict annual public path는
+  statement shadow factors 기반 fast runtime으로 최적화되었고,
+  sample-universe 기준 prototype parity도 확인되었다
+- 또한 strict annual family는 이제
+  `Selection History` 검증 화면과
+  `Value Snapshot (Strict Annual)` public candidate까지 갖추었다
+- 이후 broader/strict 역할 설명도 UI `Broad vs Strict Guide`로 정리되었고,
+  strict family 비교 평가 결과
+  - `Quality Snapshot (Strict Annual)`은 primary strict annual public candidate
+  - `Value Snapshot (Strict Annual)`은 secondary candidate
+  로 보는 편이 현재 구현/coverage 상태와 가장 잘 맞는다
+- 그리고 staged managed preset `500/1000`과
+  strict multi-factor public candidate,
+  stale-symbol operator UX,
+  repeatable strict annual helper job까지 추가되었기 때문에
+  이 챕터는 closeout-ready 상태를 넘어서
+  next-phase comparison / library work로 자연스럽게 이어질 준비를 마친 상태다
+- large-universe strict annual 경로의 full-date intersection 문제도
+  union calendar + per-symbol availability 방식으로 해결되었기 때문에,
+  `US Statement Coverage 300` strict quality는 이제 `2016-01-29 ~ 2026-03-20`
+  구간의 실제 전략 경로로 볼 수 있다
+- 따라서 이 챕터는 실질적으로 종료 상태이며,
+  다음 major phase를 열기 전에는 closeout summary와 next-phase candidate 정리만 남은 상태다
+- 이후 closeout verification까지 반영하면:
+  - `Coverage 1000`은 real staged preset으로 확인되었지만 public default는 아님
+  - `Value Snapshot (Strict Annual)`은 `2016-01-29`부터 active하게 동작하는 real strict-value path로 회복되었다
+  - 따라서 이 챕터와 Phase 4는 구현 기준으로 마감된 것으로 본다

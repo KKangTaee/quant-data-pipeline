@@ -29,6 +29,7 @@ from .display import round_columns
 from .visualize import(
     plot_equity_curves
 )
+from .transform import align_dfs_by_date_union, align_dfs_to_canonical_period_dates
 
 from finance.data.asset_profile import(
     collect_and_store_asset_profiles,
@@ -36,6 +37,8 @@ from finance.data.asset_profile import(
 )
 from .loaders import (
     load_factor_snapshot,
+    load_statement_factor_snapshot_shadow,
+    load_statement_factors_shadow,
     load_statement_quality_snapshot_strict,
 )
 
@@ -53,6 +56,22 @@ from .data.financial_statements import (
 
 from finance.data.db.schema import sync_table_schema, NYSE_SCHEMAS
 from finance.data.db.mysql import MySQLClient
+
+QUALITY_STRICT_DEFAULT_FACTORS = [
+    "roe",
+    "roa",
+    "net_margin",
+    "asset_turnover",
+    "current_ratio",
+]
+
+VALUE_STRICT_DEFAULT_FACTORS = [
+    "book_to_market",
+    "earnings_yield",
+    "sales_yield",
+    "ocf_yield",
+    "operating_income_yield",
+]
 
 
 def _history_start_with_buffer(start=None, *, years: int = 0, months: int = 0, days: int = 0):
@@ -97,6 +116,52 @@ def _build_price_only_engine(
         )
 
     return engine.load_ohlcv()
+
+
+def _build_snapshot_strategy_price_dfs(
+    tickers,
+    *,
+    option="month_end",
+    start=None,
+    end=None,
+    timeframe="1d",
+    from_db=False,
+):
+    """
+    Snapshot 전략용 price input builder.
+
+    price-only ETF 전략과 달리, 대형 주식 유니버스 snapshot 전략은
+    모든 심볼의 공통 날짜 교집합을 강제하면 usable history가 극단적으로 줄어들 수 있다.
+    따라서 여기서는:
+    - period filter는 유지하고
+    - 마지막에 union calendar를 만든 뒤
+    - period당 canonical date 하나로 다시 정렬
+    하는 방식을 사용한다.
+    """
+    engine = (
+        _build_price_only_engine(
+            tickers,
+            option=option,
+            start=start,
+            end=end,
+            timeframe=timeframe,
+            from_db=from_db,
+        )
+        .filter_by_period()
+        .slice(start=start, end=end)
+        .drop_columns(["High", "Low", "Open", "Volume"])
+    )
+
+    price_dfs = align_dfs_by_date_union(engine.dfs)
+    if option in {"month_start", "month_end", "year_start", "year_end"}:
+        price_dfs = align_dfs_to_canonical_period_dates(
+            price_dfs,
+            option=option,
+        )
+    if not price_dfs:
+        raise ValueError("No DB-backed price data is available for the requested snapshot strategy run.")
+
+    return price_dfs
 
 def get_equal_weight(period="15y", option="month_end", interval=12, start=None):
     """
@@ -413,24 +478,14 @@ def get_quality_snapshot_from_db(
     if quality_factors is None:
         quality_factors = ["roe", "gross_margin", "operating_margin", "debt_ratio"]
 
-    engine = (
-        _build_price_only_engine(
-            tickers,
-            option=option,
-            start=start,
-            end=end,
-            timeframe=timeframe,
-            from_db=True,
-        )
-        .filter_by_period()
-        .align_dates()
-        .slice(start=start, end=end)
-        .drop_columns(["High", "Low", "Open", "Volume"])
+    price_dfs = _build_snapshot_strategy_price_dfs(
+        tickers,
+        option=option,
+        start=start,
+        end=end,
+        timeframe=timeframe,
+        from_db=True,
     )
-
-    price_dfs = engine.dfs
-    if not price_dfs:
-        raise ValueError("No DB-backed price data is available for the requested quality strategy run.")
 
     rebalance_dates = pd.to_datetime(next(iter(price_dfs.values()))["Date"]).tolist()
     snapshot_by_date = {}
@@ -481,26 +536,16 @@ def get_statement_quality_snapshot_from_db(
     if tickers is None:
         tickers = ["AAPL", "MSFT", "GOOG"]
     if quality_factors is None:
-        quality_factors = ["roe", "gross_margin", "operating_margin", "debt_ratio"]
+        quality_factors = QUALITY_STRICT_DEFAULT_FACTORS.copy()
 
-    engine = (
-        _build_price_only_engine(
-            tickers,
-            option=option,
-            start=start,
-            end=end,
-            timeframe=timeframe,
-            from_db=True,
-        )
-        .filter_by_period()
-        .align_dates()
-        .slice(start=start, end=end)
-        .drop_columns(["High", "Low", "Open", "Volume"])
+    price_dfs = _build_snapshot_strategy_price_dfs(
+        tickers,
+        option=option,
+        start=start,
+        end=end,
+        timeframe=timeframe,
+        from_db=True,
     )
-
-    price_dfs = engine.dfs
-    if not price_dfs:
-        raise ValueError("No DB-backed price data is available for the requested statement-driven quality run.")
 
     rebalance_dates = pd.to_datetime(next(iter(price_dfs.values()))["Date"]).tolist()
     snapshot_by_date = {}
@@ -519,7 +564,245 @@ def get_statement_quality_snapshot_from_db(
         start_balance=10000,
         quality_factors=quality_factors,
         top_n=top_n,
-        lower_is_better_factors=["debt_ratio"],
+        lower_is_better_factors=["debt_ratio", "debt_to_assets", "net_debt_to_equity"],
+        rebalance_interval=rebalance_interval,
+    )
+
+    df = (
+        round_columns(df, cols=["Cash", "Total Balance", "End Balance", "Next Balance"], decimals=1)
+        .pipe(round_columns, cols=["Total Return", "Selected Score"], decimals=3)
+    )
+    return df
+
+
+def _build_shadow_factor_snapshot_map(
+    factor_history: pd.DataFrame,
+    *,
+    rebalance_dates: list[pd.Timestamp],
+    factor_names: list[str],
+) -> dict[pd.Timestamp, pd.DataFrame]:
+    if factor_history is None or factor_history.empty:
+        return {pd.Timestamp(d).normalize(): pd.DataFrame() for d in rebalance_dates}
+
+    working = factor_history.copy()
+    working["symbol"] = working["symbol"].astype(str).str.upper()
+    working["period_end"] = pd.to_datetime(working["period_end"], errors="coerce")
+    working["fundamental_available_at"] = pd.to_datetime(
+        working["fundamental_available_at"], errors="coerce"
+    )
+    if "fundamental_accession_no" in working.columns:
+        working["fundamental_accession_no"] = (
+            working["fundamental_accession_no"].fillna("").astype(str)
+        )
+
+    working = working[
+        working["symbol"].notna()
+        & working["period_end"].notna()
+        & working["fundamental_available_at"].notna()
+    ].copy()
+    if working.empty:
+        return {pd.Timestamp(d).normalize(): pd.DataFrame() for d in rebalance_dates}
+
+    sort_cols = ["symbol", "fundamental_available_at", "period_end", "fundamental_accession_no"]
+    working = working.sort_values(sort_cols)
+    keep_cols = [
+        "symbol",
+        "freq",
+        "period_end",
+        "fundamental_available_at",
+    ] + [name for name in factor_names if name in working.columns]
+
+    snapshot_by_date: dict[pd.Timestamp, pd.DataFrame] = {}
+    for rebalance_date in rebalance_dates:
+        as_of_ts = pd.Timestamp(rebalance_date)
+        eligible = working[working["fundamental_available_at"] <= as_of_ts]
+        if eligible.empty:
+            snapshot_by_date[as_of_ts.normalize()] = pd.DataFrame(columns=keep_cols + ["as_of_date"])
+            continue
+
+        snapshot = eligible.groupby("symbol", as_index=False).tail(1).reset_index(drop=True)
+        snapshot = snapshot[keep_cols].copy()
+        snapshot["as_of_date"] = as_of_ts.normalize()
+        snapshot_by_date[as_of_ts.normalize()] = snapshot
+
+    return snapshot_by_date
+
+
+def get_statement_quality_snapshot_shadow_from_db(
+    *,
+    start=None,
+    end=None,
+    timeframe="1d",
+    option="month_end",
+    tickers=None,
+    statement_freq="annual",
+    quality_factors=None,
+    top_n=2,
+    rebalance_interval=1,
+):
+    if tickers is None:
+        tickers = ["AAPL", "MSFT", "GOOG"]
+    if quality_factors is None:
+        quality_factors = QUALITY_STRICT_DEFAULT_FACTORS.copy()
+
+    price_dfs = _build_snapshot_strategy_price_dfs(
+        tickers,
+        option=option,
+        start=start,
+        end=end,
+        timeframe=timeframe,
+        from_db=True,
+    )
+
+    rebalance_dates = pd.to_datetime(next(iter(price_dfs.values()))["Date"]).tolist()
+    factor_history = load_statement_factors_shadow(
+        symbols=tickers,
+        freq=statement_freq,
+        end=end,
+    )
+    snapshot_by_date = _build_shadow_factor_snapshot_map(
+        factor_history,
+        rebalance_dates=rebalance_dates,
+        factor_names=quality_factors,
+    )
+
+    df = quality_snapshot_equal_weight(
+        price_dfs,
+        snapshot_by_date,
+        start_balance=10000,
+        quality_factors=quality_factors,
+        top_n=top_n,
+        lower_is_better_factors=["debt_ratio", "debt_to_assets", "net_debt_to_equity"],
+        rebalance_interval=rebalance_interval,
+    )
+
+    df = (
+        round_columns(df, cols=["Cash", "Total Balance", "End Balance", "Next Balance"], decimals=1)
+        .pipe(round_columns, cols=["Total Return", "Selected Score"], decimals=3)
+    )
+    return df
+
+
+def get_statement_value_snapshot_shadow_from_db(
+    *,
+    start=None,
+    end=None,
+    timeframe="1d",
+    option="month_end",
+    tickers=None,
+    statement_freq="annual",
+    value_factors=None,
+    top_n=10,
+    rebalance_interval=1,
+):
+    if tickers is None:
+        tickers = ["AAPL", "MSFT", "GOOG"]
+    if value_factors is None:
+        value_factors = VALUE_STRICT_DEFAULT_FACTORS.copy()
+
+    price_dfs = _build_snapshot_strategy_price_dfs(
+        tickers,
+        option=option,
+        start=start,
+        end=end,
+        timeframe=timeframe,
+        from_db=True,
+    )
+
+    rebalance_dates = pd.to_datetime(next(iter(price_dfs.values()))["Date"]).tolist()
+    factor_history = load_statement_factors_shadow(
+        symbols=tickers,
+        freq=statement_freq,
+        end=end,
+    )
+    snapshot_by_date = _build_shadow_factor_snapshot_map(
+        factor_history,
+        rebalance_dates=rebalance_dates,
+        factor_names=value_factors,
+    )
+
+    df = quality_snapshot_equal_weight(
+        price_dfs,
+        snapshot_by_date,
+        start_balance=10000,
+        quality_factors=value_factors,
+        top_n=top_n,
+        lower_is_better_factors=["per", "pbr", "psr", "pcr", "pfcr", "ev_ebit", "por"],
+        rebalance_interval=rebalance_interval,
+    )
+
+    df = (
+        round_columns(df, cols=["Cash", "Total Balance", "End Balance", "Next Balance"], decimals=1)
+        .pipe(round_columns, cols=["Total Return", "Selected Score"], decimals=3)
+    )
+    return df
+
+
+def get_statement_quality_value_snapshot_shadow_from_db(
+    *,
+    start=None,
+    end=None,
+    timeframe="1d",
+    option="month_end",
+    tickers=None,
+    statement_freq="annual",
+    quality_factors=None,
+    value_factors=None,
+    top_n=10,
+    rebalance_interval=1,
+):
+    if tickers is None:
+        tickers = ["AAPL", "MSFT", "GOOG"]
+    if quality_factors is None:
+        quality_factors = QUALITY_STRICT_DEFAULT_FACTORS.copy()
+    if value_factors is None:
+        value_factors = VALUE_STRICT_DEFAULT_FACTORS.copy()
+
+    combined_factors = []
+    for factor_name in [*quality_factors, *value_factors]:
+        normalized_name = str(factor_name).strip()
+        if normalized_name and normalized_name not in combined_factors:
+            combined_factors.append(normalized_name)
+
+    price_dfs = _build_snapshot_strategy_price_dfs(
+        tickers,
+        option=option,
+        start=start,
+        end=end,
+        timeframe=timeframe,
+        from_db=True,
+    )
+
+    rebalance_dates = pd.to_datetime(next(iter(price_dfs.values()))["Date"]).tolist()
+    factor_history = load_statement_factors_shadow(
+        symbols=tickers,
+        freq=statement_freq,
+        end=end,
+    )
+    snapshot_by_date = _build_shadow_factor_snapshot_map(
+        factor_history,
+        rebalance_dates=rebalance_dates,
+        factor_names=combined_factors,
+    )
+
+    df = quality_snapshot_equal_weight(
+        price_dfs,
+        snapshot_by_date,
+        start_balance=10000,
+        quality_factors=combined_factors,
+        top_n=top_n,
+        lower_is_better_factors=[
+            "per",
+            "pbr",
+            "psr",
+            "pcr",
+            "pfcr",
+            "ev_ebit",
+            "por",
+            "debt_ratio",
+            "debt_to_assets",
+            "net_debt_to_equity",
+        ],
         rebalance_interval=rebalance_interval,
     )
 

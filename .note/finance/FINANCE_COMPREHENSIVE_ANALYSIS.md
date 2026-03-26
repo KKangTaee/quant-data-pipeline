@@ -249,15 +249,37 @@ Analysis / Presentation
   - `Quality Snapshot (Strict Annual)`
 - broad path는 `nyse_factors` 기반 first public research path이고,
   strict annual path는 statement ledger / shadow path 기반 public candidate이다.
+- 이후 strict annual public path는 추가 최적화를 거쳐,
+  백테스트 중 매 리밸런싱마다
+  `nyse_financial_statement_values`를 다시 재구성하지 않고
+  `nyse_factors_statement` shadow factor history를 읽는 fast runtime으로 전환되었다.
+- sample-universe(`AAPL/MSFT/GOOG`) 기준으로는
+  optimized strict annual runtime이
+  기존 prototype rebuild 경로와 동일한
+  `End Balance = 93934.6`
+  결과를 내면서도,
+  실행 시간은 대략
+  `0.33초 vs 17.09초`
+  수준으로 줄어드는 것이 확인되었다.
 - 이후 UI 기본값도 분리되었다.
   - broad quality single default:
     - `Big Tech Quality Trial`
   - strict annual quality single default:
     - `US Statement Coverage 300`
-  - strict annual quality compare default:
-    - `US Statement Coverage 100`
+- strict annual quality compare default:
+  - `US Statement Coverage 100`
 - 즉 strict annual path는 이제 sample-universe smoke path라기보다,
   verified US / EDGAR-friendly wider stock universe를 전제로 한 public candidate로 해석하는 편이 맞다.
+- 또한 strict annual family도 한 단계 더 확장되어,
+  `Value Snapshot (Strict Annual)`이
+  single-strategy / compare / history / form prefill 경로에 함께 연결되었다.
+- snapshot 계열 전략 결과 화면도 강화되어,
+  `Selection History` 탭에서
+  - first active date
+  - active rebalances
+  - distinct selected names
+  - rebalance-level selected tickers
+  를 바로 읽을 수 있다.
 - 또한 wider-universe annual coverage 확장을 준비하기 위해,
   `Extended Statement Refresh`와 manual `Financial Statement Ingestion`은
   large run일 때 batch-progress 기반 live progress를 표시하도록 보강되었다.
@@ -275,6 +297,147 @@ Analysis / Presentation
 - 즉 annual strict statement path는
   단순 sample universe를 넘어, US/EDGAR-friendly stock universe에서는
   실제 전략 후보로 볼 수 있을 정도의 coverage 기반을 갖추기 시작했다.
+- 이 wider annual coverage 운용을 위해 ingestion/operator 경로에도
+  `US Statement Coverage 100`,
+  `US Statement Coverage 300`
+  preset이 추가되어,
+  annual refresh와 shadow rebuild를 반복 가능한 운영 run으로 가져가기 쉬워졌다.
+- 이후 large-universe actual runtime 검증 과정에서,
+  strict annual snapshot 전략은 statement coverage보다
+  price input shaping이 더 큰 문제라는 점도 확인되었다.
+- 기존 경로는 snapshot 전략임에도 모든 심볼의 가격 날짜를 full intersection으로 맞췄고,
+  그 결과 `US Statement Coverage 300`은 실제 strategy input이
+  `2025-12-31 ~ 2026-02-27`의 `3` row만 남는 상태가 되었다.
+- 이를 해결하기 위해 strict annual family는
+  full intersection 대신
+  `union calendar + per-symbol availability`
+  방식으로 price input을 재정렬하도록 보강되었다.
+- 그 결과 `Quality Snapshot (Strict Annual)`의
+  `US Statement Coverage 300` 경로는
+  `2016-01-29 ~ 2026-03-20` 구간의 `124` monthly row를 가진 실제 전략 경로로 회복되었고,
+  `first_active_date`도 `2016-01-29`로 당겨졌다.
+- 이후 strict annual single-strategy UI에는
+  `Price Freshness Preflight`가 추가되었다.
+  이 preflight는 per-symbol latest price date 집계를 바탕으로
+  common latest date / newest latest date / spread days / stale symbol count를 보여주며,
+  large-universe strict annual 결과에서 final-month duplicate row가
+  selection bug가 아니라 stale daily price coverage 때문인지 빠르게 구분할 수 있게 한다.
+- 그리고 second pass에서는 이 preflight가 operator 대응 UX까지 확장되어,
+  stale / missing symbol이 있을 때
+  `Daily Market Update`에 넣을 수 있는 refresh payload를 같이 보여준다.
+- 이어서 UI에는 `Broad vs Strict Guide`도 추가되어,
+  `Quality Snapshot`,
+  `Quality Snapshot (Strict Annual)`,
+  `Value Snapshot (Strict Annual)`
+  세 전략의 data source / timing / history / speed / best-for 차이를 직접 설명한다.
+- 이후 `Quality Snapshot (Strict Annual)`의 기본 factor set도
+  coverage-first 방향으로 다시 정리되었다.
+  - `roe`
+  - `roa`
+  - `net_margin`
+  - `asset_turnover`
+  - `current_ratio`
+- 이 변경은 strict annual wider-universe에서
+  `gross_margin`, `debt_ratio` coverage가 약했던 점을 반영한 것이다.
+- strict family 비교 평가 기준으로 보면,
+  `Quality Snapshot (Strict Annual)`은 현재 primary strict annual public candidate이고,
+  `Value Snapshot (Strict Annual)`은 secondary candidate에 가깝다.
+- 이후 strict annual managed universe도 더 넓혀서
+  `US Statement Coverage 500`,
+  `US Statement Coverage 1000`
+  preset이 추가되었다.
+- 이후 DB-connected runtime / shadow coverage 재검증 결과,
+  strict annual managed preset은 실제 top-N universe로 동작한다.
+  - top `500` covered symbols:
+    - `496 / 500`
+  - top `1000` covered symbols:
+    - `987 / 1000`
+- 다만 wide preset이 완전히 운영 안정 상태인 것은 아니고,
+  `US Statement Coverage 1000` 기준으로도
+  price freshness spread가 `49d`까지 벌어질 수 있어
+  preflight warning과 targeted `Daily Market Update` 대응이 여전히 중요하다.
+- 실제 closeout refresh 이후 stale symbol은
+  `4`개(`CADE`, `CMA`, `DAY`, `CFLT`)까지 줄었지만,
+  아직 `common_latest_date = 2026-01-30`,
+  `newest_latest_date = 2026-03-20` 상태이므로
+  `Coverage 1000`은 still staged operator preset으로 두는 편이 맞다.
+- 따라서 strict annual public default는 현재도 그대로
+  - single strategy:
+    - `US Statement Coverage 300`
+  - compare:
+    - `US Statement Coverage 100`
+  으로 유지하는 것이 맞다.
+- 즉 `500/1000`은 노출은 되었지만,
+  현재는 staged operator preset으로 해석하는 편이 가장 정확하다.
+- strict annual selection-history 해석도 한 단계 더 보강되어,
+  이제 `Selection Frequency` view에서
+  어떤 이름이 여러 rebalance에서 반복 선택되는지 바로 확인할 수 있다.
+- strict annual family는 여기서 한 단계 더 확장되어,
+  `Quality + Value Snapshot (Strict Annual)`
+  first public multi-factor candidate까지 추가되었다.
+- 그리고 `Value Snapshot (Strict Annual)` 자체도 later closeout에서 추가로 보강되었다.
+  초기에는 valuation factor usable history가 `2021` 이후로 밀려
+  `2016~2021` 구간이 사실상 현금 대기에 가까웠지만,
+  statement shadow fundamentals의 `shares_outstanding` fallback을
+  historical weighted-average share-count concept까지 넓히면서
+  valuation factor usable history가 `2011` 수준까지 회복되었다.
+- 그 결과 strict annual value 기본 factor set도
+  보다 stable한 coverage-first 방향으로 정리되었다.
+  - `book_to_market`
+  - `earnings_yield`
+  - `sales_yield`
+  - `ocf_yield`
+  - `operating_income_yield`
+- 추가로 UI advanced input에서는
+  아래 strict value factor도 선택 가능하다.
+  - `fcf_yield`
+  - `per`
+  - `pbr`
+  - `psr`
+  - `pcr`
+  - `pfcr`
+  - `ev_ebit`
+  - `por`
+- 이 보강 이후 `Value Snapshot (Strict Annual)`은
+  `US Statement Coverage 300` / `1000` 검증에서
+  모두 `2016-01-29`부터 active하게 동작하는 것이 확인되었다.
+- first-pass 검증 기준으로 이 multi-factor candidate는
+  `US Statement Coverage 100`에서
+  - `3.569s`
+  - `End Balance = 24778.9`
+  - `CAGR = 9.36%`
+  - `Sharpe Ratio = 0.7048`
+  수준을 보였다.
+- 마지막으로 operator 반복 경로도 더 정리되어,
+  `run_strict_annual_shadow_refresh(...)`
+  helper를 통해
+  annual statement refresh ->
+  statement fundamentals shadow rebuild ->
+  statement factors shadow rebuild
+  순서를 하나의 maintenance flow로 재사용할 수 있게 되었다.
+- large-universe snapshot 전략의 date-shaping도 이후 한 번 더 보강되었다.
+  기존 union-calendar path는 symbol별 마지막 available date를 그대로 보존해서,
+  `month_end` 전략에서도 `2026-02-03`, `2026-03-17` 같은 symbol-specific row가
+  결과 테이블에 남을 수 있었다.
+- 이를 해결하기 위해 `finance/transform.py`에는
+  `align_dfs_to_canonical_period_dates(...)`가 추가되었고,
+  snapshot 전략용 price builder는
+  union calendar 생성 후 period당 1개의 canonical date로 다시 정렬한다.
+- 그 결과 `Quality Snapshot (Strict Annual)`의
+  `US Statement Coverage 1000` 검증에서도
+  tail row가
+  `2026-02-27`, `2026-03-20`
+  처럼 canonical month-end row로 정리되는 것이 확인되었다.
+- 따라서 현재 `finance`의 factor/fundamental public family는
+  - broad research representative:
+    - `Quality Snapshot`
+  - strict annual representative:
+    - `Quality Snapshot (Strict Annual)`
+  - strict annual secondary family:
+    - `Value Snapshot (Strict Annual)`
+  - strict annual multi-factor candidate:
+    - `Quality + Value Snapshot (Strict Annual)`
+  구조로 보는 편이 가장 정확하다.
 
 즉, 예전보다 통합은 많이 진행됐지만 아직 모든 전략과 모든 입력이 loader 계층으로 완전히 이행된 상태는 아니다.
 
@@ -763,9 +926,12 @@ EDGAR
 성격:
 - statement-driven shadow layer
 - `nyse_financial_statement_values`에서 strict usable row를 읽어 재구성
-- `latest_available_for_period_end` 의미의 summary history
+- `first_available_for_period_end` 의미의 summary history
 - public broad table을 대체하지 않고 비교/검증용으로 유지
-- `latest_available_at`, `latest_accession_no`, `latest_form_type` 메타 포함
+- schema의 메타 컬럼 이름은 여전히
+  `latest_available_at`, `latest_accession_no`, `latest_form_type`
+  이지만,
+  현재 의미는 각 `period_end`에 대한 **가장 이른 usable filing snapshot**을 가리킨다
 - `shares_outstanding`은 현재 가능하면 statement-derived를 우선하고,
   없을 때는 broad `nyse_fundamentals` nearest-period fallback을 사용할 수 있음
 
@@ -789,6 +955,8 @@ EDGAR
   shares fallback이 붙은 row에서는 valuation 계열도 일부 계산 가능
 - `fundamental_available_at`, `fundamental_accession_no` 메타 포함
 - 여전히 shares 부재 시 valuation 계열은 일부 `NULL`일 수 있음
+- 현재는 `Quality Snapshot (Strict Annual)`과
+  `Value Snapshot (Strict Annual)`의 public fast runtime source로도 사용된다
 
 ### `nyse_financial_statement_filings`
 역할:

@@ -186,6 +186,61 @@ def load_statement_quality_snapshot_strict(
     return quality_snapshot
 
 
+def load_statement_factor_snapshot_shadow(
+    factor_names: list[str] | None = None,
+    symbols: str | Iterable[str] | None = None,
+    *,
+    universe_source: str | None = None,
+    as_of_date: str,
+    freq: str = "annual",
+) -> pd.DataFrame:
+    as_of_ts = validate_snapshot_inputs(as_of_date=as_of_date)
+    history = load_statement_factors_shadow(
+        symbols=symbols,
+        universe_source=universe_source,
+        freq=freq,
+        end=as_of_ts.strftime("%Y-%m-%d"),
+    )
+    if history.empty:
+        return history
+
+    working = history.copy()
+    working["fundamental_available_at"] = pd.to_datetime(
+        working["fundamental_available_at"], errors="coerce"
+    )
+    working["period_end"] = pd.to_datetime(working["period_end"], errors="coerce")
+    if "fundamental_accession_no" in working.columns:
+        working["fundamental_accession_no"] = (
+            working["fundamental_accession_no"].astype(str).fillna("")
+        )
+
+    working = working[
+        working["symbol"].notna()
+        & working["period_end"].notna()
+        & working["fundamental_available_at"].notna()
+        & (working["fundamental_available_at"] <= as_of_ts)
+    ].copy()
+    if working.empty:
+        return working
+
+    working = working.sort_values(
+        ["symbol", "fundamental_available_at", "period_end", "fundamental_accession_no"]
+    )
+    snapshot = working.groupby("symbol", as_index=False).tail(1).reset_index(drop=True)
+    snapshot["as_of_date"] = as_of_ts.normalize()
+
+    if factor_names:
+        keep = [
+            "symbol",
+            "freq",
+            "period_end",
+            "fundamental_available_at",
+            "as_of_date",
+        ] + [name for name in factor_names if name in snapshot.columns]
+        snapshot = snapshot[keep]
+    return snapshot
+
+
 def load_factor_matrix(
     factor_name: str,
     symbols: str | Iterable[str] | None = None,

@@ -37,16 +37,27 @@ from app.jobs.run_history import (
     load_run_history,
 )
 from app.jobs.symbol_sources import resolve_symbol_source
-from app.web.pages.backtest import render_backtest_tab
+from app.web.pages.backtest import QUALITY_STRICT_PRESETS, render_backtest_tab
 
 
 JobResult = dict[str, Any]
 LOG_DIR = PROJECT_ROOT / "logs"
 CSV_DIR = PROJECT_ROOT / "csv"
+
+
+def _preset_csv(name: str, fallback_name: str = "US Statement Coverage 300") -> str:
+    tickers = QUALITY_STRICT_PRESETS.get(name) or QUALITY_STRICT_PRESETS.get(fallback_name, [])
+    return ",".join(tickers)
+
+
 SYMBOL_PRESETS = {
     "Big Tech": "AAPL,MSFT,GOOG",
     "Core ETFs": "SPY,QQQ,TLT,GLD",
     "Dividend ETFs": "VIG,SCHD,DGRO,GLD",
+    "US Statement Coverage 100": _preset_csv("US Statement Coverage 100"),
+    "US Statement Coverage 300": _preset_csv("US Statement Coverage 300"),
+    "US Statement Coverage 500": _preset_csv("US Statement Coverage 500"),
+    "US Statement Coverage 1000": _preset_csv("US Statement Coverage 1000"),
     "Custom": "",
 }
 PERIOD_PRESETS = ["1d", "7d", "1mo", "3mo", "6mo", "1y", "5y", "10y", "15y", "20y"]
@@ -802,6 +813,10 @@ def _render_ingestion_console() -> None:
             st.write("Refresh detailed financial statement ledgers for longer-history and account-level analysis.")
             st.caption("Recommended cadence: monthly, or before deep factor research and long-horizon backtest preparation.")
             st.caption("Recommended symbol source: `Profile Filtered Stocks` or a narrower research universe, because this job is heavier than summary fundamentals refresh.")
+            st.caption(
+                "Managed annual coverage presets are also available in the symbol preset dropdown: "
+                "`US Statement Coverage 100`, `US Statement Coverage 300`, `US Statement Coverage 500`, and `US Statement Coverage 1000`."
+            )
             st.caption("Current defaults: `Profile Filtered Stocks`, `annual`, `8 periods`.")
             st.caption("Writes to: `finance_fundamental.nyse_financial_statement_filings`, `finance_fundamental.nyse_financial_statement_labels`, `finance_fundamental.nyse_financial_statement_values`")
             ext_symbol_result = _render_symbol_source_inputs(
@@ -1204,6 +1219,10 @@ def _render_ingestion_console() -> None:
             st.caption(
                 "Uses the `Symbols` input. This job is usually slower than the normalized fundamentals job and may "
                 "produce partial success if some issuers fail."
+            )
+            st.caption(
+                "For strict annual operator runs, the symbol preset dropdown also exposes "
+                "`US Statement Coverage 100`, `US Statement Coverage 300`, `US Statement Coverage 500`, and `US Statement Coverage 1000`."
             )
             st.caption("Writes to: `finance_fundamental.nyse_financial_statement_filings`, `finance_fundamental.nyse_financial_statement_labels`, `finance_fundamental.nyse_financial_statement_values`")
             fs_symbol_result = _render_symbol_source_inputs("fs", "Financial Statement Symbols")

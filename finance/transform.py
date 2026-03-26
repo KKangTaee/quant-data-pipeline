@@ -326,6 +326,150 @@ def align_dfs_by_date_intersection(
     return out
 
 
+def align_dfs_by_date_union(
+    dfs: dict,
+    date_col: str = "Date",
+) -> dict:
+    """
+    dfs(dict)의 각 DataFrame을 Date 컬럼 기준 합집합 calendar로 정렬한다.
+
+    주식 단면 전략처럼 심볼별 상장 시점이 다른 경우,
+    교집합 정렬은 usable history를 과도하게 줄일 수 있다.
+    이 helper는 union calendar를 만들고 각 df를 그 캘린더에 reindex해서
+    심볼별 미가용 구간은 NaN으로 남긴다.
+    """
+
+    if not dfs:
+        return {}
+
+    all_dates = set()
+    for df in dfs.values():
+        if date_col not in df.columns:
+            raise KeyError(f"'{date_col}' 컬럼이 없습니다.")
+        dates = pd.to_datetime(df[date_col]).dropna().unique()
+        all_dates.update(dates)
+
+    if not all_dates:
+        raise ValueError("정렬할 Date가 없습니다.")
+
+    calendar = pd.DatetimeIndex(sorted(all_dates), name=date_col)
+    out = {}
+
+    for key, df in dfs.items():
+        d = df.copy()
+        d[date_col] = pd.to_datetime(d[date_col])
+        d = d.sort_values(date_col).drop_duplicates(subset=[date_col], keep="last")
+        d = d.set_index(date_col).reindex(calendar).reset_index()
+
+        if "Ticker" in d.columns:
+            d["Ticker"] = d["Ticker"].fillna(key)
+        if "Dividends" in d.columns:
+            d["Dividends"] = d["Dividends"].fillna(0.0)
+        if "Stock Splits" in d.columns:
+            d["Stock Splits"] = d["Stock Splits"].fillna(0.0)
+
+        out[key] = d
+
+    return out
+
+
+def align_dfs_to_canonical_period_dates(
+    dfs: dict,
+    *,
+    option: str,
+    date_col: str = "Date",
+    price_col: str = "Close",
+) -> dict:
+    """
+    Period-filtered price dfs를 period당 1개의 canonical date로 다시 정렬한다.
+
+    Snapshot 전략의 large-universe 경로에서는 각 심볼별 마지막 가용 거래일이
+    서로 달라질 수 있다. 이 helper는:
+    - 전체 유니버스 기준 canonical period date를 하나 정하고
+    - 각 심볼은 같은 period 안에서 가장 최근(또는 가장 이른) 실제 row를 사용하되
+    - 결과 row의 Date는 canonical date로 통일
+    하도록 정리한다.
+
+    주의:
+    - 같은 period 안에 실제 row가 없는 심볼은 NaN row로 남는다.
+    - 이전 period 값을 넘어와서 forward-fill 하지는 않는다.
+    """
+    if not dfs:
+        return {}
+
+    option_map = {
+        "month_start": ("M", "head"),
+        "month_end": ("M", "tail"),
+        "year_start": ("Y", "head"),
+        "year_end": ("Y", "tail"),
+    }
+    if option not in option_map:
+        raise ValueError(f"지원하지 않는 option입니다: {option}")
+
+    period_freq, selector = option_map[option]
+    all_dates = []
+    for df in dfs.values():
+        if date_col not in df.columns:
+            raise KeyError(f"'{date_col}' 컬럼이 없습니다.")
+        dates = pd.to_datetime(df[date_col], errors="coerce").dropna()
+        all_dates.extend(dates.tolist())
+
+    if not all_dates:
+        raise ValueError("정렬할 Date가 없습니다.")
+
+    calendar_df = pd.DataFrame({date_col: pd.to_datetime(sorted(set(all_dates)))})
+    calendar_df["_period"] = calendar_df[date_col].dt.to_period(period_freq)
+    if selector == "head":
+        canonical = calendar_df.groupby("_period", as_index=False).head(1)
+    else:
+        canonical = calendar_df.groupby("_period", as_index=False).tail(1)
+    canonical = canonical.sort_values(date_col).reset_index(drop=True)
+
+    out = {}
+    for key, df in dfs.items():
+        d = df.copy()
+        d[date_col] = pd.to_datetime(d[date_col], errors="coerce")
+        d = d.sort_values(date_col).drop_duplicates(subset=[date_col], keep="last")
+        d["_period"] = d[date_col].dt.to_period(period_freq)
+
+        if price_col in d.columns:
+            available = d[d[price_col].notna()].copy()
+        else:
+            available = d.copy()
+
+        rows = []
+        base_cols = [col for col in d.columns if col != "_period"]
+        for _, canonical_row in canonical.iterrows():
+            period_key = canonical_row["_period"]
+            canonical_date = canonical_row[date_col]
+            period_rows = available[available["_period"] == period_key]
+
+            if selector == "head":
+                picked = period_rows.head(1).copy()
+            else:
+                picked = period_rows.tail(1).copy()
+
+            if picked.empty:
+                empty_row = {col: np.nan for col in base_cols}
+                empty_row[date_col] = canonical_date
+                if "Ticker" in base_cols:
+                    empty_row["Ticker"] = key
+                if "Dividends" in base_cols:
+                    empty_row["Dividends"] = 0.0
+                if "Stock Splits" in base_cols:
+                    empty_row["Stock Splits"] = 0.0
+                rows.append(empty_row)
+                continue
+
+            row = picked.iloc[0][base_cols].to_dict()
+            row[date_col] = canonical_date
+            rows.append(row)
+
+        out[key] = pd.DataFrame(rows, columns=base_cols)
+
+    return out
+
+
 def merge_dfs_to_df(dfs: dict, input_df: pd.DataFrame) -> dict:
     """
     dfs 딕셔너리의 각 df에 input_df를 병합하기

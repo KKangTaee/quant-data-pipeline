@@ -6,6 +6,9 @@
 Phase 4의 정식 이름:
 - `Portfolio Construction And Backtest UI`
 
+현재 상태:
+- `completed`
+
 이 단계의 목적은
 Phase 3에서 정리한 DB-backed runtime 경로를 바탕으로,
 사용자가 웹 UI에서 전략을 선택하고 백테스트를 실행할 수 있게 만드는 것이다.
@@ -152,6 +155,17 @@ Phase 4는 UI/UX와 공개 실행 경계가 직접 결정되는 단계다.
   기존 고정 `2개월` cadence를 사용자 입력으로 조정할 수 있다
 - `Risk Parity Trend` 전략 선택과 실행 form도 추가되어, 현재는 세 개의 공개 price-only 전략을 UI에서 전환 실행할 수 있다
 - `Dual Momentum` 전략 선택과 실행 form도 추가되어, 현재는 네 개의 공개 price-only 전략을 UI에서 전환 실행할 수 있다
+- 이후 factor / fundamental 전략 진입 준비 결과로
+  `Quality Snapshot`,
+  `Quality Snapshot (Strict Annual)`,
+  `Value Snapshot (Strict Annual)`,
+  `Quality + Value Snapshot (Strict Annual)`
+  도 single-strategy selector에 연결되었다
+- 즉 현재 Backtest UI의 공개 전략군은
+  price-only 4개 +
+  broad quality 1개 +
+  strict annual 계열 3개
+  구조로 확장된 상태다
 - 다음 단계는 history / visualization / execution history 강화 중에서 사용자 선택 후 진행하는 것이 맞다
 
 ---
@@ -210,6 +224,105 @@ Phase 4는 UI/UX와 공개 실행 경계가 직접 결정되는 단계다.
   - weighted portfolio: single-strategy와 같은 marker / balance-extremes / period-extremes read path
     + strategy contribution amount/share view
   까지 확인할 수 있는 상태가 되었다
+- snapshot 전략군 결과 영역도 이후 강화되어,
+  `Quality Snapshot`,
+  `Quality Snapshot (Strict Annual)`,
+  `Value Snapshot (Strict Annual)`
+  실행 시 `Selection History` 탭에서
+  - first active date
+  - active rebalance count
+  - distinct selected names
+  - rebalance-level selected tickers
+  를 바로 확인할 수 있다
+- strict annual public path는 이제
+  `nyse_financial_statement_values`를 매 리밸런싱마다 다시 재구성하는 방식이 아니라,
+  `nyse_factors_statement` shadow table을 읽는 fast runtime으로 전환되었다
+- sample-universe 기준으로는
+  optimized strict annual path와 prototype rebuild path가
+  동일한 `End Balance = 93934.6`
+  결과를 내면서도 실행 시간은
+  약 `0.33s` vs `17.09s`
+  수준으로 차이가 나는 것이 확인되었다
+- 그리고 annual coverage operator 흐름도 보강되어,
+  ingestion UI에서는 `US Statement Coverage 100`, `US Statement Coverage 300`
+  preset을 기준으로 annual strict coverage run을 재사용할 수 있다
+- 추가로 strict annual large-universe 경로도 보강되어,
+  snapshot 전략용 price input은 더 이상 full-date intersection에 의존하지 않고
+  union calendar + per-symbol availability 방식으로 정리되었다
+- 이 수정 이후
+  `US Statement Coverage 300` strict annual quality는
+  더 이상 `3` row만 남는 sparse path가 아니라,
+  `2016-01-29 ~ 2026-03-20` 구간의 `124`개 monthly row를 가진 실제 전략 경로가 되었다
+- 그리고 strict annual single-strategy UI에는
+  `Price Freshness Preflight`도 추가되었다.
+  이 preflight는 실행 전에 현재 universe의
+  common latest date / newest latest date / spread days / stale symbol count를 보여주며,
+  large-universe final-month duplicate row가
+  가격 freshness 문제인지 바로 판단하게 돕는다.
+- 이후 preflight는 second pass로 더 강화되어,
+  stale / missing symbol이 있을 때
+  `Daily Market Update`에 바로 넣을 수 있는 refresh payload도 같이 보여준다.
+- strict annual managed preset도 이제
+  `US Statement Coverage 100`,
+  `US Statement Coverage 300`,
+  `US Statement Coverage 500`,
+  `US Statement Coverage 1000`
+  까지 노출된다.
+- 다만 current DB audit 기준으로도
+  `500`, `1000`은 아직 public default로 올리기보다 staged operator preset으로 보는 편이 맞아서,
+  strict annual 공식 preset은 그대로
+  - single-strategy:
+    - `US Statement Coverage 300`
+  - compare:
+    - `US Statement Coverage 100`
+  으로 유지한다.
+- current DB wider-universe audit 결과:
+  - `Profile Filtered Stocks / United States`:
+    - `4441`
+  - `US Statement Coverage 500`:
+    - covered `496 / 500`
+  - `US Statement Coverage 1000`:
+    - covered `987 / 1000`
+    - price freshness spread `49d`
+- 이후 targeted `Daily Market Update` refresh로
+  `Coverage 1000` stale symbol은 `4`개까지 줄었지만,
+  `common_latest_date = 2026-01-30`,
+  `newest_latest_date = 2026-03-20`
+  상태가 아직 남아 있으므로
+  `Coverage 1000`은 current closeout 기준으로도 staged operator preset으로 해석한다.
+- 따라서 wider strict annual universe는
+  현재 시점에는 staged operator preset으로 해석하는 것이 맞고,
+  NYSE 전체 strict annual feasibility도 아직 시기상조다.
+- large-universe month-end shaping도 이후 보강되어,
+  snapshot 전략 price path는 union calendar 후
+  period당 1개의 canonical date로 다시 정렬한다.
+- 따라서 `US Statement Coverage 1000`에서도
+  result table tail이 `2026-02-03`, `2026-03-17`처럼 쪼개지지 않고,
+  `2026-02-27`, `2026-03-20` 같은 canonical monthly row로 정리된다.
+- strict annual selection-history 해석도 한 단계 더 보강되어,
+  이제 `Selection Frequency` view에서
+  어떤 이름이 여러 rebalance에서 반복 선택되는지 바로 읽을 수 있다.
+- strict annual family는 추가로
+  `Quality + Value Snapshot (Strict Annual)`
+  first public multi-factor candidate까지 확장되었다.
+- 그리고 `Value Snapshot (Strict Annual)`도 closeout 단계에서 다시 보강되었다.
+  초기에는 valuation factor usable history가 `2021` 이후로 밀려
+  `2016~2021` 구간이 사실상 flat path처럼 보였지만,
+  statement shadow fundamentals의 historical share-count fallback을 넓히고
+  annual shadow rebuild를 다시 수행한 뒤에는
+  `US Statement Coverage 300` / `1000` 모두
+  `2016-01-29`부터 active하게 동작한다.
+- strict annual value 기본 factor set도 현재는 다음처럼 정리된다.
+  - `book_to_market`
+  - `earnings_yield`
+  - `sales_yield`
+  - `ocf_yield`
+  - `operating_income_yield`
+- 그리고 operator 흐름에는
+  `run_strict_annual_shadow_refresh(...)`
+  helper가 추가되어,
+  annual statement refresh -> fundamentals shadow rebuild -> factors shadow rebuild
+  순서를 하나의 반복 가능한 maintenance path로 재사용할 수 있게 되었다.
 
 ---
 
@@ -271,11 +384,38 @@ Phase 4는 UI/UX와 공개 실행 경계가 직접 결정되는 단계다.
   - compare default preset:
     - `US Statement Coverage 100`
   - broad quality의 `Big Tech Quality Trial`과는 별도 역할로 분리
+- 추가로 quality single-strategy forms에서는
+  universe / preset selector를 form 밖으로 옮겨,
+  preset 변경 시 ticker preview가 즉시 갱신되도록 UX를 보강했다
+- 이어서 quality/value strict forms에는
+  `Broad vs Strict Guide`가 추가되어,
+  `Quality Snapshot`,
+  `Quality Snapshot (Strict Annual)`,
+  `Value Snapshot (Strict Annual)`
+  의 data source / timing / history / speed / best-for 차이를 UI에서 직접 설명한다
+- 그리고 strict annual quality 기본 factor set도
+  coverage-first 방향으로 다시 정리되었다.
+  - `roe`
+  - `roa`
+  - `net_margin`
+  - `asset_turnover`
+  - `current_ratio`
+- strict family 비교 평가 기준으로는
+  - `Quality Snapshot (Strict Annual)`:
+    - 현재 primary strict annual public candidate
+  - `Value Snapshot (Strict Annual)`:
+    - secondary candidate
+  로 해석하는 것이 현재 coverage와 activation depth에 가장 잘 맞는다
 - 다음 선택은
-  broad quality와 strict annual quality의 공존 원칙을 더 정리할지,
-  shadow coverage를 더 넓힐지, valuation 보강을 할지,
-  아니면 strict statement quality를 public 후보로 더 키울지
-  쪽으로 넘어가는 것이 자연스럽다
+  Phase 4 closeout을 정리하고,
+  strict family comparative research / strategy-library 확장 같은
+  다음 major phase 후보를 사용자와 확인하는 쪽으로 넘어가는 것이 자연스럽다
+- 현재 next-phase preparation 기준으로는
+  새 major phase를 열기 전에
+  - wider strict annual coverage 운영 반복
+  - strict family comparative research
+  - multi-factor family 후속 평가
+  쪽을 먼저 정리하는 흐름이 가장 자연스럽다
 
 ---
 

@@ -5,15 +5,26 @@ from typing import Any
 
 import pandas as pd
 
-from finance.loaders import load_factor_snapshot, load_price_history, load_statement_snapshot_strict
+from finance.loaders import (
+    load_factor_snapshot,
+    load_price_freshness_summary,
+    load_price_history,
+    load_statement_factor_snapshot_shadow,
+    load_statement_snapshot_strict,
+)
 from finance.performance import portfolio_performance_summary
 from finance.sample import (
+    QUALITY_STRICT_DEFAULT_FACTORS,
+    VALUE_STRICT_DEFAULT_FACTORS,
     get_dual_momentum_from_db,
     get_equal_weight_from_db,
     get_gtaa3_from_db,
     get_quality_snapshot_from_db,
     get_risk_parity_trend_from_db,
+    get_statement_quality_value_snapshot_shadow_from_db,
     get_statement_quality_snapshot_from_db,
+    get_statement_quality_snapshot_shadow_from_db,
+    get_statement_value_snapshot_shadow_from_db,
 )
 
 
@@ -176,6 +187,136 @@ def _preflight_statement_quality_data(
         )
 
 
+def _preflight_statement_quality_shadow_data(
+    *,
+    tickers: list[str],
+    end: str | None,
+    statement_freq: str,
+    factor_names: list[str],
+) -> None:
+    if end is None:
+        raise BacktestInputError("Statement-driven shadow quality path requires an end date.")
+
+    snapshot = load_statement_factor_snapshot_shadow(
+        factor_names,
+        symbols=tickers,
+        as_of_date=end,
+        freq=statement_freq,
+    )
+    if snapshot.empty:
+        raise BacktestDataError(
+            "No statement-driven shadow factor snapshot rows were found for the requested tickers and end date. "
+            "Run Extended Statement Refresh and rebuild statement shadow factors first."
+        )
+
+
+def inspect_strict_annual_price_freshness(
+    *,
+    tickers: Sequence[str] | None = None,
+    end: str | None = None,
+    timeframe: str = "1d",
+) -> dict[str, Any]:
+    normalized_tickers = _normalize_tickers(tickers)
+    end_ts = pd.to_datetime(end).normalize() if end is not None else None
+
+    summary = load_price_freshness_summary(
+        symbols=normalized_tickers,
+        end=end,
+        timeframe=timeframe,
+    )
+    if summary.empty:
+        return {
+            "status": "error",
+            "message": "No DB price rows were found for the selected strict annual universe.",
+            "details": {
+                "requested_count": len(normalized_tickers),
+                "covered_count": 0,
+                "missing_count": len(normalized_tickers),
+                "missing_symbols": normalized_tickers[:20],
+                "target_end_date": end_ts.strftime("%Y-%m-%d") if end_ts is not None else None,
+            },
+        }
+
+    working = summary.copy()
+    working["symbol"] = working["symbol"].astype(str).str.upper()
+    working["latest_date"] = pd.to_datetime(working["latest_date"], errors="coerce")
+    working = working[working["symbol"].notna() & working["latest_date"].notna()].reset_index(drop=True)
+
+    covered_symbols = set(working["symbol"].tolist())
+    missing_symbols = [ticker for ticker in normalized_tickers if ticker not in covered_symbols]
+
+    if working.empty:
+        return {
+            "status": "error",
+            "message": "No usable DB price dates were found for the selected strict annual universe.",
+            "details": {
+                "requested_count": len(normalized_tickers),
+                "covered_count": 0,
+                "missing_count": len(normalized_tickers),
+                "missing_symbols": normalized_tickers[:20],
+                "target_end_date": end_ts.strftime("%Y-%m-%d") if end_ts is not None else None,
+            },
+        }
+
+    common_latest = working["latest_date"].min().normalize()
+    newest_latest = working["latest_date"].max().normalize()
+    spread_days = int((newest_latest - common_latest).days)
+    target_end = end_ts if end_ts is not None else newest_latest
+
+    stale_df = working[working["latest_date"].dt.normalize() < target_end].sort_values(["latest_date", "symbol"])
+    lagging_df = working[working["latest_date"].dt.normalize() < newest_latest].sort_values(["latest_date", "symbol"])
+    stale_symbols_all = stale_df["symbol"].tolist()
+    lagging_symbols_all = lagging_df["symbol"].tolist()
+
+    details = {
+        "requested_count": len(normalized_tickers),
+        "covered_count": int(len(working)),
+        "missing_count": len(missing_symbols),
+        "missing_symbols": missing_symbols[:20],
+        "missing_symbols_all": missing_symbols,
+        "target_end_date": target_end.strftime("%Y-%m-%d") if target_end is not None else None,
+        "common_latest_date": common_latest.strftime("%Y-%m-%d"),
+        "newest_latest_date": newest_latest.strftime("%Y-%m-%d"),
+        "spread_days": spread_days,
+        "stale_count": int(len(stale_df)),
+        "stale_symbols": stale_symbols_all[:20],
+        "stale_symbols_all": stale_symbols_all,
+        "lagging_count": int(len(lagging_df)),
+        "lagging_symbols": lagging_symbols_all[:20],
+        "lagging_symbols_all": lagging_symbols_all,
+        "refresh_symbols_all": sorted(set(stale_symbols_all + missing_symbols)),
+    }
+
+    if not missing_symbols and len(stale_df) == 0 and spread_days == 0:
+        return {
+            "status": "ok",
+            "message": (
+                f"All {len(normalized_tickers)} selected symbols have price data through "
+                f"`{common_latest.strftime('%Y-%m-%d')}`."
+            ),
+            "details": details,
+        }
+
+    message_parts: list[str] = []
+    if missing_symbols:
+        message_parts.append(f"{len(missing_symbols)} symbols have no DB price rows.")
+    if len(stale_df) > 0:
+        message_parts.append(
+            f"{len(stale_df)} symbols stop before the selected end `{target_end.strftime('%Y-%m-%d')}`."
+        )
+    if spread_days > 0:
+        message_parts.append(
+            f"Latest-date spread inside the universe is {spread_days} day(s) "
+            f"(`{common_latest.strftime('%Y-%m-%d')}` -> `{newest_latest.strftime('%Y-%m-%d')}`)."
+        )
+
+    return {
+        "status": "warning",
+        "message": " ".join(message_parts),
+        "details": details,
+    }
+
+
 def build_backtest_result_bundle(
     result_df: pd.DataFrame,
     *,
@@ -235,6 +376,10 @@ def build_backtest_result_bundle(
         meta["snapshot_mode"] = input_params.get("snapshot_mode")
     if input_params.get("quality_factors") is not None:
         meta["quality_factors"] = input_params.get("quality_factors")
+    if input_params.get("value_factors") is not None:
+        meta["value_factors"] = input_params.get("value_factors")
+    if input_params.get("snapshot_source") is not None:
+        meta["snapshot_source"] = input_params.get("snapshot_source")
 
     return {
         "strategy_name": strategy_name,
@@ -556,17 +701,24 @@ def _run_statement_quality_bundle(
     universe_mode: str = "manual_tickers",
     preset_name: str | None = None,
     static_warnings: Sequence[str] | None = None,
+    snapshot_source: str = "rebuild_statement",
 ) -> dict[str, Any]:
     normalized_tickers = _normalize_tickers(tickers)
     _validate_backtest_date_range(start, end)
 
     normalized_factors = [
         str(name).strip()
-        for name in (quality_factors or ["roe", "gross_margin", "operating_margin", "debt_ratio"])
+        for name in (quality_factors or QUALITY_STRICT_DEFAULT_FACTORS)
         if str(name).strip()
     ]
     if not normalized_factors:
         raise BacktestInputError("At least one quality factor must be provided.")
+
+    price_freshness = inspect_strict_annual_price_freshness(
+        tickers=normalized_tickers,
+        end=end,
+        timeframe=timeframe,
+    )
 
     _preflight_price_strategy_data(
         tickers=normalized_tickers,
@@ -574,25 +726,49 @@ def _run_statement_quality_bundle(
         end=end,
         timeframe=timeframe,
     )
-    _preflight_statement_quality_data(
-        tickers=normalized_tickers,
-        end=end,
-        statement_freq=statement_freq,
-    )
-
-    result_df = get_statement_quality_snapshot_from_db(
-        tickers=normalized_tickers,
-        start=start,
-        end=end,
-        timeframe=timeframe,
-        option=option,
-        statement_freq=statement_freq,
-        quality_factors=normalized_factors,
-        top_n=top_n,
-        rebalance_interval=rebalance_interval,
-    )
+    if snapshot_source == "shadow_factors":
+        _preflight_statement_quality_shadow_data(
+            tickers=normalized_tickers,
+            end=end,
+            statement_freq=statement_freq,
+            factor_names=normalized_factors,
+        )
+        result_df = get_statement_quality_snapshot_shadow_from_db(
+            tickers=normalized_tickers,
+            start=start,
+            end=end,
+            timeframe=timeframe,
+            option=option,
+            statement_freq=statement_freq,
+            quality_factors=normalized_factors,
+            top_n=top_n,
+            rebalance_interval=rebalance_interval,
+        )
+    else:
+        _preflight_statement_quality_data(
+            tickers=normalized_tickers,
+            end=end,
+            statement_freq=statement_freq,
+        )
+        result_df = get_statement_quality_snapshot_from_db(
+            tickers=normalized_tickers,
+            start=start,
+            end=end,
+            timeframe=timeframe,
+            option=option,
+            statement_freq=statement_freq,
+            quality_factors=normalized_factors,
+            top_n=top_n,
+            rebalance_interval=rebalance_interval,
+        )
 
     warnings: list[str] = list(static_warnings or [])
+    if price_freshness["status"] == "warning":
+        warnings.append(
+            "Price freshness preflight: "
+            + price_freshness["message"]
+            + " Large-universe strict annual runs can show duplicate or shifted final-month rows until lagging symbols are refreshed."
+        )
     if start:
         active_rows = result_df[result_df["Selected Count"].fillna(0) > 0]
         if not active_rows.empty:
@@ -603,7 +779,7 @@ def _run_statement_quality_bundle(
                     f"The strategy stayed in cash until `{first_active_date}`."
                 )
 
-    return build_backtest_result_bundle(
+    bundle = build_backtest_result_bundle(
         result_df,
         strategy_name=strategy_name,
         strategy_key=strategy_key,
@@ -620,11 +796,14 @@ def _run_statement_quality_bundle(
             "snapshot_mode": "strict_statement_annual",
             "universe_mode": universe_mode,
             "preset_name": preset_name,
+            "snapshot_source": snapshot_source,
         },
         summary_freq=_summary_frequency(option, timeframe),
-        data_mode="db_backed_strict_statement_snapshot",
+        data_mode="db_backed_strict_statement_shadow_factors" if snapshot_source == "shadow_factors" else "db_backed_strict_statement_snapshot",
         warnings=warnings,
     )
+    bundle["meta"]["price_freshness"] = price_freshness
+    return bundle
 
 
 def run_quality_snapshot_strict_annual_backtest_from_db(
@@ -654,8 +833,9 @@ def run_quality_snapshot_strict_annual_backtest_from_db(
         rebalance_interval=rebalance_interval,
         universe_mode=universe_mode,
         preset_name=preset_name,
+        snapshot_source="shadow_factors",
         static_warnings=[
-            "Strict annual statement path: ranks annual statement-driven quality snapshots rebuilt from the detailed statement ledger.",
+            "Strict annual statement path: ranks annual statement-driven quality snapshots using precomputed statement shadow factors for faster public execution.",
         ],
     )
 
@@ -688,7 +868,223 @@ def run_statement_quality_prototype_backtest_from_db(
         rebalance_interval=rebalance_interval,
         universe_mode=universe_mode,
         preset_name=preset_name,
+        snapshot_source="rebuild_statement",
         static_warnings=[
             "Prototype path: strict statement snapshots are used for sample-universe architecture validation.",
         ],
     )
+
+
+def run_value_snapshot_strict_annual_backtest_from_db(
+    *,
+    tickers: Sequence[str] | None = None,
+    start: str | None = None,
+    end: str | None = None,
+    timeframe: str = "1d",
+    option: str = "month_end",
+    value_factors: Sequence[str] | None = None,
+    top_n: int = 10,
+    rebalance_interval: int = 1,
+    universe_mode: str = "manual_tickers",
+    preset_name: str | None = None,
+) -> dict[str, Any]:
+    normalized_tickers = _normalize_tickers(tickers)
+    _validate_backtest_date_range(start, end)
+
+    normalized_factors = [
+        str(name).strip()
+        for name in (value_factors or VALUE_STRICT_DEFAULT_FACTORS)
+        if str(name).strip()
+    ]
+    if not normalized_factors:
+        raise BacktestInputError("At least one value factor must be provided.")
+
+    price_freshness = inspect_strict_annual_price_freshness(
+        tickers=normalized_tickers,
+        end=end,
+        timeframe=timeframe,
+    )
+
+    _preflight_price_strategy_data(
+        tickers=normalized_tickers,
+        start=start,
+        end=end,
+        timeframe=timeframe,
+    )
+    _preflight_statement_quality_shadow_data(
+        tickers=normalized_tickers,
+        end=end,
+        statement_freq="annual",
+        factor_names=normalized_factors,
+    )
+
+    result_df = get_statement_value_snapshot_shadow_from_db(
+        tickers=normalized_tickers,
+        start=start,
+        end=end,
+        timeframe=timeframe,
+        option=option,
+        statement_freq="annual",
+        value_factors=normalized_factors,
+        top_n=top_n,
+        rebalance_interval=rebalance_interval,
+    )
+
+    warnings = [
+        "Strict annual value path: ranks annual statement-driven value snapshots using precomputed statement shadow factors.",
+    ]
+    if price_freshness["status"] == "warning":
+        warnings.append(
+            "Price freshness preflight: "
+            + price_freshness["message"]
+            + " Large-universe strict annual runs can show duplicate or shifted final-month rows until lagging symbols are refreshed."
+        )
+    if start:
+        active_rows = result_df[result_df["Selected Count"].fillna(0) > 0]
+        if not active_rows.empty:
+            first_active_date = pd.to_datetime(active_rows.iloc[0]["Date"]).strftime("%Y-%m-%d")
+            if first_active_date > start:
+                warnings.append(
+                    "No usable strict statement shadow rows were available at the requested start date. "
+                    f"The strategy stayed in cash until `{first_active_date}`."
+                )
+
+    bundle = build_backtest_result_bundle(
+        result_df,
+        strategy_name="Value Snapshot (Strict Annual)",
+        strategy_key="value_snapshot_strict_annual",
+        input_params={
+            "tickers": normalized_tickers,
+            "start": start,
+            "end": end,
+            "timeframe": timeframe,
+            "option": option,
+            "top": top_n,
+            "rebalance_interval": rebalance_interval,
+            "factor_freq": "annual",
+            "value_factors": normalized_factors,
+            "snapshot_mode": "strict_statement_annual",
+            "snapshot_source": "shadow_factors",
+            "universe_mode": universe_mode,
+            "preset_name": preset_name,
+        },
+        summary_freq=_summary_frequency(option, timeframe),
+        data_mode="db_backed_strict_statement_shadow_factors",
+        warnings=warnings,
+    )
+    bundle["meta"]["price_freshness"] = price_freshness
+    return bundle
+
+
+def run_quality_value_snapshot_strict_annual_backtest_from_db(
+    *,
+    tickers: Sequence[str] | None = None,
+    start: str | None = None,
+    end: str | None = None,
+    timeframe: str = "1d",
+    option: str = "month_end",
+    quality_factors: Sequence[str] | None = None,
+    value_factors: Sequence[str] | None = None,
+    top_n: int = 10,
+    rebalance_interval: int = 1,
+    universe_mode: str = "manual_tickers",
+    preset_name: str | None = None,
+) -> dict[str, Any]:
+    normalized_tickers = _normalize_tickers(tickers)
+    _validate_backtest_date_range(start, end)
+
+    normalized_quality_factors = [
+        str(name).strip()
+        for name in (quality_factors or QUALITY_STRICT_DEFAULT_FACTORS)
+        if str(name).strip()
+    ]
+    normalized_value_factors = [
+        str(name).strip()
+        for name in (value_factors or VALUE_STRICT_DEFAULT_FACTORS)
+        if str(name).strip()
+    ]
+    normalized_factor_names: list[str] = []
+    for factor_name in [*normalized_quality_factors, *normalized_value_factors]:
+        if factor_name and factor_name not in normalized_factor_names:
+            normalized_factor_names.append(factor_name)
+
+    if not normalized_factor_names:
+        raise BacktestInputError("At least one strict annual quality/value factor must be provided.")
+
+    price_freshness = inspect_strict_annual_price_freshness(
+        tickers=normalized_tickers,
+        end=end,
+        timeframe=timeframe,
+    )
+
+    _preflight_price_strategy_data(
+        tickers=normalized_tickers,
+        start=start,
+        end=end,
+        timeframe=timeframe,
+    )
+    _preflight_statement_quality_shadow_data(
+        tickers=normalized_tickers,
+        end=end,
+        statement_freq="annual",
+        factor_names=normalized_factor_names,
+    )
+
+    result_df = get_statement_quality_value_snapshot_shadow_from_db(
+        tickers=normalized_tickers,
+        start=start,
+        end=end,
+        timeframe=timeframe,
+        option=option,
+        statement_freq="annual",
+        quality_factors=normalized_quality_factors,
+        value_factors=normalized_value_factors,
+        top_n=top_n,
+        rebalance_interval=rebalance_interval,
+    )
+
+    warnings = [
+        "Strict annual multi-factor path: combines coverage-first quality factors with annual statement-driven valuation factors.",
+    ]
+    if price_freshness["status"] == "warning":
+        warnings.append(
+            "Price freshness preflight: "
+            + price_freshness["message"]
+            + " Large-universe strict annual runs can show duplicate or shifted final-month rows until lagging symbols are refreshed."
+        )
+    if start:
+        active_rows = result_df[result_df["Selected Count"].fillna(0) > 0]
+        if not active_rows.empty:
+            first_active_date = pd.to_datetime(active_rows.iloc[0]["Date"]).strftime("%Y-%m-%d")
+            if first_active_date > start:
+                warnings.append(
+                    "No usable strict annual multi-factor snapshot rows were available at the requested start date. "
+                    f"The strategy stayed in cash until `{first_active_date}`."
+                )
+
+    bundle = build_backtest_result_bundle(
+        result_df,
+        strategy_name="Quality + Value Snapshot (Strict Annual)",
+        strategy_key="quality_value_snapshot_strict_annual",
+        input_params={
+            "tickers": normalized_tickers,
+            "start": start,
+            "end": end,
+            "timeframe": timeframe,
+            "option": option,
+            "top": top_n,
+            "rebalance_interval": rebalance_interval,
+            "factor_freq": "annual",
+            "quality_factors": normalized_quality_factors,
+            "value_factors": normalized_value_factors,
+            "snapshot_mode": "strict_statement_annual",
+            "snapshot_source": "shadow_factors",
+            "universe_mode": universe_mode,
+            "preset_name": preset_name,
+        },
+        summary_freq=_summary_frequency(option, timeframe),
+        data_mode="db_backed_strict_statement_shadow_factors",
+        warnings=warnings,
+    )
+    bundle["meta"]["price_freshness"] = price_freshness
+    return bundle

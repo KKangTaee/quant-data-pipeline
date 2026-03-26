@@ -208,6 +208,40 @@
   - 시가총액 상위 100개 profile-filtered stocks를 대상으로 annual statement coverage stage 1 run을 수행하고 결과를 정리한 문서
 - `.note/finance/phase4/PHASE4_ANNUAL_STATEMENT_COVERAGE_STAGE2_US_TOP300_RUN.md`
   - United States issuer top-300 profile-filtered stocks를 대상으로 annual statement coverage stage 2 run을 수행하고 strict annual path 확장성을 검증한 문서
+- `.note/finance/phase4/PHASE4_STRICT_ANNUAL_SHADOW_FACTOR_OPTIMIZATION_FIRST_PASS.md`
+  - strict annual public 경로를 statement shadow factors 기반 fast path로 최적화하고 prototype parity를 확인한 문서
+- `.note/finance/phase4/PHASE4_STRICT_ANNUAL_INTERPRETATION_AND_VALUE_STRICT_FIRST_PASS.md`
+  - strict annual 전략의 selection history 해석 UI와 Value Snapshot (Strict Annual) public candidate 추가를 정리한 문서
+- `.note/finance/phase4/PHASE4_ANNUAL_COVERAGE_OPERATORIZATION_PRESETS_FIRST_PASS.md`
+  - strict annual annual coverage preset을 ingestion/operator 흐름에 재사용 가능하게 만든 기록 문서
+- `.note/finance/phase4/PHASE4_STRICT_ANNUAL_LARGE_UNIVERSE_CALENDAR_FIX_FIRST_PASS.md`
+  - strict annual large stock universe에서 full date intersection 대신 union calendar를 사용하도록 바꾸고 sparse issue를 해결한 문서
+- `.note/finance/phase4/PHASE4_STRICT_ANNUAL_FINAL_MONTH_PRICE_REFRESH_VERIFICATION.md`
+  - strict annual coverage 300의 duplicated final-month row가 uneven daily price freshness 때문이었음을 확인하고 targeted refresh로 해소한 검증 문서
+- `.note/finance/phase4/PHASE4_STRICT_ANNUAL_PRICE_FRESHNESS_PREFLIGHT_FIRST_PASS.md`
+  - strict annual single-strategy UI와 runtime meta에 price freshness preflight를 추가한 기록 문서
+- `.note/finance/phase4/PHASE4_STRICT_ANNUAL_PRICE_FRESHNESS_PREFLIGHT_SECOND_PASS.md`
+  - strict annual preflight가 stale/missing symbol 대응 payload와 preset status note까지 보여주도록 확장한 문서
+- `.note/finance/phase4/PHASE4_STRICT_FAMILY_COMPARISON_EVALUATION.md`
+  - strict annual family에서 quality/value public candidate를 같은 조건으로 비교 평가한 문서
+- `.note/finance/phase4/PHASE4_COMPLETION_SUMMARY.md`
+  - unified Backtest UI와 strict annual family까지 포함한 Phase 4 종료 요약 문서
+- `.note/finance/phase4/PHASE4_NEXT_PHASE_PREPARATION.md`
+  - Phase 4 이후 next-phase 후보와 kickoff 전 확인 포인트를 정리한 문서
+- `.note/finance/phase4/PHASE4_QUALITY_FACTOR_EXPANSION_OPTIONS.md`
+  - strict annual wider-universe 기준 quality factor 확장 후보의 coverage와 추천안을 정리한 문서
+- `.note/finance/phase4/PHASE4_STRICT_ANNUAL_QUALITY_FACTOR_SET_REFRESH_FIRST_PASS.md`
+  - strict annual quality 기본 factor set을 coverage-first 방향으로 재정렬하고 current public default를 재검증한 문서
+- `.note/finance/phase4/PHASE4_STRICT_ANNUAL_WIDER_UNIVERSE_STAGE3_CURRENT_DB_AUDIT.md`
+  - current DB 기준으로 `US Statement Coverage 500/1000`을 audit하고 wider-universe stage 3 readiness를 평가한 문서
+- `.note/finance/phase4/PHASE4_STRICT_ANNUAL_PUBLIC_UNIVERSE_DECISION_CURRENT_DB.md`
+  - current DB audit 기준 strict annual public default universe를 `300`으로 유지한 결정 문서
+- `.note/finance/phase4/PHASE4_STRICT_MULTIFACTOR_PUBLIC_CANDIDATE_FIRST_PASS.md`
+  - `Quality + Value Snapshot (Strict Annual)` first public multi-factor candidate를 추가하고 first-pass 성능을 정리한 문서
+- `.note/finance/phase4/PHASE4_STRICT_ANNUAL_OPERATOR_AUTOMATION_FIRST_PASS.md`
+  - strict annual operator helper `run_strict_annual_shadow_refresh(...)`를 추가하고 반복 maintenance path를 정리한 문서
+- `.note/finance/phase4/PHASE4_COVERAGE1000_AND_VALUE_STRICT_CLOSEOUT.md`
+  - `Coverage 1000` closeout 판단과 `Value Snapshot (Strict Annual)`의 2016-start recovery를 함께 정리한 문서
 
 ---
 

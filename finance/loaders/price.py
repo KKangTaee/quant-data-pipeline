@@ -4,9 +4,10 @@ from collections.abc import Iterable
 
 import pandas as pd
 
+from finance.data.db.mysql import MySQLClient
 from finance.data.data import load_ohlcv_many_mysql
 
-from ._common import normalize_date_range, normalize_timeframe, resolve_loader_symbols
+from ._common import normalize_date_range, normalize_timeframe, normalize_timestamp, resolve_loader_symbols
 
 
 VALID_PRICE_FIELDS = {"open", "high", "low", "close", "adj_close", "volume", "dividends", "stock_splits"}
@@ -80,3 +81,53 @@ def load_price_matrix(
     matrix = history.pivot(index="date", columns="symbol", values=normalized_field).sort_index()
     matrix.columns.name = None
     return matrix
+
+
+def load_price_freshness_summary(
+    symbols: str | Iterable[str] | None = None,
+    *,
+    universe_source: str | None = None,
+    end: str | None = None,
+    timeframe: str = "1d",
+) -> pd.DataFrame:
+    """
+    Load per-symbol latest available price dates from MySQL.
+
+    This is intended for preflight freshness checks where loading the full
+    price history would be unnecessarily expensive.
+    """
+    resolved_symbols = resolve_loader_symbols(symbols=symbols, universe_source=universe_source)
+    normalized_timeframe = normalize_timeframe(timeframe)
+    end_ts = normalize_timestamp(end, field_name="end") if end is not None else None
+
+    db = MySQLClient("localhost", "root", "1234", 3306)
+    try:
+        db.use_db("finance_price")
+        placeholders = ",".join(["%s"] * len(resolved_symbols))
+        where = [f"symbol IN ({placeholders})", "timeframe = %s"]
+        params: list[object] = list(resolved_symbols) + [normalized_timeframe]
+
+        if end_ts is not None:
+            where.append("Date <= %s")
+            params.append(end_ts.strftime("%Y-%m-%d"))
+
+        sql = f"""
+        SELECT
+            symbol,
+            MAX(Date) AS latest_date,
+            COUNT(*) AS row_count
+        FROM nyse_price_history
+        WHERE {" AND ".join(where)}
+        GROUP BY symbol
+        ORDER BY symbol ASC
+        """
+        rows = db.query(sql, params)
+    finally:
+        db.close()
+
+    df = pd.DataFrame(rows)
+    if df.empty:
+        return df
+
+    df["latest_date"] = pd.to_datetime(df["latest_date"], errors="coerce")
+    return df

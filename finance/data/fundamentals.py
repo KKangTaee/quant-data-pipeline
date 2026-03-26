@@ -359,6 +359,56 @@ def _safe_div_scalar(a, b):
         return None
 
 
+def _sanitize_share_count(value: Optional[float]) -> Optional[float]:
+    if value is None:
+        return None
+    try:
+        numeric = float(value)
+    except Exception:
+        return None
+    if pd.isna(numeric) or numeric <= 0:
+        return None
+    if numeric > 1e13:
+        return None
+    return numeric
+
+
+def _pick_statement_shares_outstanding(row: pd.Series) -> tuple[Optional[float], Optional[str]]:
+    """
+    statement ledger 기반 historical shares fallback.
+
+    우선순위:
+    1) point-in-time 성격이 더 강한 outstanding concepts
+    2) 없으면 weighted-average shares fallback
+
+    주의:
+    - weighted-average shares는 period-end snapshot은 아니지만,
+      strict annual valuation factor history를 너무 늦게 시작시키는 문제를
+      줄이기 위한 fallback으로만 사용한다.
+    """
+    direct_candidates = [
+        "dei:EntityCommonStockSharesOutstanding",
+        "us-gaap:CommonStockSharesOutstanding",
+        "us-gaap:CommonSharesOutstanding",
+    ]
+    weighted_average_candidates = [
+        "us-gaap:WeightedAverageNumberOfSharesOutstandingBasic",
+        "us-gaap:WeightedAverageNumberOfDilutedSharesOutstanding",
+    ]
+
+    shares_outstanding, shares_source = _pick_statement_value(row, direct_candidates)
+    shares_outstanding = _sanitize_share_count(shares_outstanding)
+    if shares_outstanding is not None:
+        return shares_outstanding, shares_source
+
+    shares_outstanding, shares_source = _pick_statement_value(row, weighted_average_candidates)
+    shares_outstanding = _sanitize_share_count(shares_outstanding)
+    if shares_outstanding is not None and shares_source is not None:
+        return shares_outstanding, f"fallback:{shares_source}"
+
+    return None, None
+
+
 def build_fundamentals_from_statement_snapshot(
     statement_snapshot: pd.DataFrame,
     *,
@@ -622,6 +672,7 @@ def _load_statement_values_strict_history_mysql(
           symbol,
           freq,
           period_end,
+          report_date,
           statement_type,
           concept,
           value,
@@ -650,6 +701,8 @@ def _load_statement_values_strict_history_mysql(
 
     df["symbol"] = df["symbol"].astype(str).str.strip().str.upper()
     df["period_end"] = pd.to_datetime(df["period_end"], errors="coerce")
+    if "report_date" in df.columns:
+        df["report_date"] = pd.to_datetime(df["report_date"], errors="coerce")
     df["available_at"] = pd.to_datetime(df["available_at"], errors="coerce")
     df = df[df["period_end"].notna() & df["available_at"].notna()].copy()
     return df
@@ -767,6 +820,26 @@ def build_fundamentals_history_from_statement_values(
     if working.empty:
         return pd.DataFrame(columns=base_columns)
 
+    if "report_date" in working.columns:
+        working["report_date"] = pd.to_datetime(working["report_date"], errors="coerce")
+        report_anchor_map = (
+            working[working["report_date"].notna()]
+            .groupby("symbol", sort=False)["report_date"]
+            .apply(lambda s: {pd.Timestamp(value).normalize() for value in s.dropna().tolist()})
+            .to_dict()
+        )
+        if report_anchor_map:
+            keep_mask = []
+            for row in working.itertuples(index=False):
+                anchors = report_anchor_map.get(getattr(row, "symbol"), set())
+                period_end = getattr(row, "period_end")
+                keep_mask.append(
+                    not anchors or pd.Timestamp(period_end).normalize() in anchors
+                )
+            working = working[pd.Series(keep_mask, index=working.index)].copy()
+            if working.empty:
+                return pd.DataFrame(columns=base_columns)
+
     working = working.sort_values(
         ["symbol", "period_end", "statement_type", "concept", "unit", "available_at", "accession_no"],
         ascending=[True, True, True, True, True, True, True],
@@ -785,34 +858,34 @@ def build_fundamentals_history_from_statement_values(
         "us-gaap:PaymentsOfOrdinaryDividends",
         "us-gaap:DividendsPaid",
     ]
-    shares_outstanding_candidates = [
-        "dei:EntityCommonStockSharesOutstanding",
-        "us-gaap:CommonStockSharesOutstanding",
-        "us-gaap:CommonSharesOutstanding",
-    ]
     now = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
     records: list[dict] = []
 
     for (symbol, period_end), group in working.groupby(["symbol", "period_end"], sort=False):
-        latest_snapshot = (
-            group.groupby(["symbol", "statement_type", "concept", "unit"], as_index=False)
-            .tail(1)
-            .sort_values(["symbol", "statement_type", "concept", "unit"])
-            .reset_index(drop=True)
-        )
-        if latest_snapshot.empty:
+        ordered_group = group.sort_values(
+            ["available_at", "accession_no", "statement_type", "concept", "unit"],
+            ascending=[True, True, True, True, True],
+        ).reset_index(drop=True)
+        if ordered_group.empty:
             continue
 
+        first_accession_no = ordered_group.iloc[0].get("accession_no")
+        filing_snapshot = ordered_group[
+            ordered_group["accession_no"] == first_accession_no
+        ].copy()
+        if filing_snapshot.empty:
+            filing_snapshot = ordered_group.copy()
+
         fundamentals = build_fundamentals_from_statement_snapshot(
-            latest_snapshot,
-            as_of_date=latest_snapshot["available_at"].max(),
+            filing_snapshot,
+            as_of_date=filing_snapshot["available_at"].max(),
             freq=freq,
         )
         if fundamentals.empty:
             continue
 
-        latest_point = latest_snapshot.sort_values(["available_at", "accession_no"]).iloc[-1]
-        pivot = latest_snapshot.pivot_table(
+        availability_point = filing_snapshot.sort_values(["available_at", "accession_no"]).iloc[-1]
+        pivot = filing_snapshot.pivot_table(
             index="symbol",
             columns="concept",
             values="value",
@@ -825,7 +898,7 @@ def build_fundamentals_history_from_statement_values(
         short_term_debt, _ = _pick_statement_value(pivot_row, short_term_debt_candidates)
         long_term_debt, _ = _pick_statement_value(pivot_row, long_term_debt_candidates)
         dividends_paid, _ = _pick_statement_value(pivot_row, dividends_paid_candidates)
-        shares_outstanding, shares_source = _pick_statement_value(pivot_row, shares_outstanding_candidates)
+        shares_outstanding, shares_source = _pick_statement_shares_outstanding(pivot_row)
 
         fund_row = fundamentals.iloc[0].to_dict()
         record = {
@@ -856,11 +929,11 @@ def build_fundamentals_history_from_statement_values(
             "cash_and_equivalents": fund_row.get("cash_and_equivalents"),
             "dividends_paid": dividends_paid,
             "shares_outstanding": int(shares_outstanding) if shares_outstanding is not None else None,
-            "latest_available_at": latest_point.get("available_at"),
-            "latest_accession_no": latest_point.get("accession_no"),
-            "latest_form_type": latest_point.get("form_type"),
-            "source_mode": "statement_ledger_shadow",
-            "timing_basis": "latest_available_for_period_end",
+            "latest_available_at": availability_point.get("available_at"),
+            "latest_accession_no": availability_point.get("accession_no"),
+            "latest_form_type": availability_point.get("form_type"),
+            "source_mode": "statement_shadow_first_available",
+            "timing_basis": "first_available_for_period_end",
             "gross_profit_source": fund_row.get("gross_profit_source"),
             "operating_income_source": fund_row.get("operating_income_source"),
             "ebit_source": fund_row.get("operating_income_source"),

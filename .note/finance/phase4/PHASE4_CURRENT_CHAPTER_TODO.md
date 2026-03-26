@@ -90,7 +90,7 @@
 ## 현재 진척도
 
 - Phase 4 first chapter:
-  - 약 `65%`
+  - 약 `100%`
 
 판단 근거:
 - Phase 4는 공식 진입을 마쳤고
@@ -118,3 +118,5 @@
   weighted portfolio 결과도 동일한 marker / balance-extremes / period-extremes 읽기 흐름으로 정리되었으며,
   첫 UI 실행 챕터는 실질적으로 완료 상태로 보고,
   다음 활성 챕터는 factor / fundamental 전략 진입 준비로 넘어가는 것이 자연스럽다
+  그리고 현재 시점에서는 그 후속 strict annual family까지 public candidate 수준으로 확장되었기 때문에,
+  이 first chapter는 마감된 것으로 보는 편이 맞다
