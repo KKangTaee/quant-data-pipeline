@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import time
 from datetime import date
 from functools import lru_cache
@@ -21,12 +22,16 @@ from app.web.runtime import (
     run_gtaa_backtest_from_db,
     run_quality_snapshot_backtest_from_db,
     run_quality_snapshot_strict_annual_backtest_from_db,
+    run_quality_snapshot_strict_quarterly_prototype_backtest_from_db,
     run_quality_value_snapshot_strict_annual_backtest_from_db,
+    run_quality_value_snapshot_strict_quarterly_prototype_backtest_from_db,
     run_risk_parity_trend_backtest_from_db,
     run_value_snapshot_strict_annual_backtest_from_db,
+    run_value_snapshot_strict_quarterly_prototype_backtest_from_db,
 )
 from app.web.runtime.backtest import BacktestDataError, BacktestInputError
 from finance.data.asset_profile import load_top_symbols_from_asset_profile
+from finance.loaders import load_statement_fundamentals_shadow
 from finance.performance import make_monthly_weighted_portfolio
 
 
@@ -113,6 +118,10 @@ VALUE_STRICT_FACTOR_OPTIONS = [
 
 STRICT_TREND_FILTER_DEFAULT_ENABLED = False
 STRICT_TREND_FILTER_DEFAULT_WINDOW = 200
+STRICT_MARKET_REGIME_DEFAULT_ENABLED = False
+STRICT_MARKET_REGIME_DEFAULT_WINDOW = 200
+STRICT_MARKET_REGIME_DEFAULT_BENCHMARK = "SPY"
+STRICT_MARKET_REGIME_BENCHMARK_OPTIONS = ["SPY", "QQQ", "VTI", "IWM"]
 DEFAULT_BACKTEST_END_DATE = date.today()
 
 QUALITY_STRICT_TOP300_TICKERS = [
@@ -156,6 +165,7 @@ STRICT_ANNUAL_MANAGED_PRESET_SPECS = {
 }
 STRICT_ANNUAL_SINGLE_DEFAULT_PRESET = "US Statement Coverage 300"
 STRICT_ANNUAL_COMPARE_DEFAULT_PRESET = "US Statement Coverage 100"
+STRICT_QUARTERLY_PROTOTYPE_DEFAULT_PRESET = "US Statement Coverage 100"
 
 
 @lru_cache(maxsize=1)
@@ -208,9 +218,62 @@ COMPARE_STRATEGY_OPTIONS = [
     "Dual Momentum",
     "Quality Snapshot",
     "Quality Snapshot (Strict Annual)",
+    "Quality Snapshot (Strict Quarterly Prototype)",
     "Value Snapshot (Strict Annual)",
+    "Value Snapshot (Strict Quarterly Prototype)",
     "Quality + Value Snapshot (Strict Annual)",
+    "Quality + Value Snapshot (Strict Quarterly Prototype)",
 ]
+
+SINGLE_STRATEGY_OPTIONS = COMPARE_STRATEGY_OPTIONS
+
+
+@lru_cache(maxsize=128)
+def _load_statement_shadow_coverage_preview(symbols_key: tuple[str, ...], freq: str) -> dict[str, Any]:
+    symbols = [str(symbol).strip().upper() for symbol in symbols_key if str(symbol).strip()]
+    if not symbols:
+        return {
+            "requested_count": 0,
+            "covered_count": 0,
+            "row_count": 0,
+            "min_period_end": None,
+            "max_period_end": None,
+            "median_rows_per_symbol": 0,
+            "min_available_at": None,
+        }
+
+    shadow_df = load_statement_fundamentals_shadow(symbols=symbols, freq=freq)
+    if shadow_df.empty:
+        return {
+            "requested_count": len(symbols),
+            "covered_count": 0,
+            "row_count": 0,
+            "min_period_end": None,
+            "max_period_end": None,
+            "median_rows_per_symbol": 0,
+            "min_available_at": None,
+        }
+
+    working = shadow_df.copy()
+    working["symbol"] = working["symbol"].astype(str).str.upper()
+    working["period_end"] = pd.to_datetime(working["period_end"], errors="coerce")
+    if "latest_available_at" in working.columns:
+        working["latest_available_at"] = pd.to_datetime(working["latest_available_at"], errors="coerce")
+
+    rows_per_symbol = working.groupby("symbol").size()
+    min_available_at = None
+    if "latest_available_at" in working.columns and working["latest_available_at"].notna().any():
+        min_available_at = working["latest_available_at"].min()
+
+    return {
+        "requested_count": len(symbols),
+        "covered_count": int(rows_per_symbol.size),
+        "row_count": int(len(working)),
+        "min_period_end": working["period_end"].min(),
+        "max_period_end": working["period_end"].max(),
+        "median_rows_per_symbol": int(rows_per_symbol.median()) if not rows_per_symbol.empty else 0,
+        "min_available_at": min_available_at,
+    }
 
 
 def _init_backtest_state() -> None:
@@ -236,30 +299,92 @@ def _init_backtest_state() -> None:
         st.session_state.backtest_prefill_pending = False
     if "backtest_prefill_notice" not in st.session_state:
         st.session_state.backtest_prefill_notice = None
+    if "backtest_prefill_strategy_choice" not in st.session_state:
+        st.session_state.backtest_prefill_strategy_choice = None
     if "qss_end" not in st.session_state:
-        st.session_state["qss_end"] = date(2026, 3, 20)
+        st.session_state["qss_end"] = DEFAULT_BACKTEST_END_DATE
     if "qss_timeframe" not in st.session_state:
         st.session_state["qss_timeframe"] = "1d"
     if "vss_end" not in st.session_state:
-        st.session_state["vss_end"] = date(2026, 3, 20)
+        st.session_state["vss_end"] = DEFAULT_BACKTEST_END_DATE
     if "vss_timeframe" not in st.session_state:
         st.session_state["vss_timeframe"] = "1d"
     if "qvss_end" not in st.session_state:
-        st.session_state["qvss_end"] = date(2026, 3, 20)
+        st.session_state["qvss_end"] = DEFAULT_BACKTEST_END_DATE
     if "qvss_timeframe" not in st.session_state:
         st.session_state["qvss_timeframe"] = "1d"
+    if "qsqp_end" not in st.session_state:
+        st.session_state["qsqp_end"] = DEFAULT_BACKTEST_END_DATE
+    if "qsqp_timeframe" not in st.session_state:
+        st.session_state["qsqp_timeframe"] = "1d"
+    if "vsqp_end" not in st.session_state:
+        st.session_state["vsqp_end"] = DEFAULT_BACKTEST_END_DATE
+    if "vsqp_timeframe" not in st.session_state:
+        st.session_state["vsqp_timeframe"] = "1d"
+    if "qvqp_end" not in st.session_state:
+        st.session_state["qvqp_end"] = DEFAULT_BACKTEST_END_DATE
+    if "qvqp_timeframe" not in st.session_state:
+        st.session_state["qvqp_timeframe"] = "1d"
     if "qss_trend_filter_enabled" not in st.session_state:
         st.session_state["qss_trend_filter_enabled"] = STRICT_TREND_FILTER_DEFAULT_ENABLED
     if "qss_trend_filter_window" not in st.session_state:
         st.session_state["qss_trend_filter_window"] = STRICT_TREND_FILTER_DEFAULT_WINDOW
+    if "qss_market_regime_enabled" not in st.session_state:
+        st.session_state["qss_market_regime_enabled"] = STRICT_MARKET_REGIME_DEFAULT_ENABLED
+    if "qss_market_regime_window" not in st.session_state:
+        st.session_state["qss_market_regime_window"] = STRICT_MARKET_REGIME_DEFAULT_WINDOW
+    if "qss_market_regime_benchmark" not in st.session_state:
+        st.session_state["qss_market_regime_benchmark"] = STRICT_MARKET_REGIME_DEFAULT_BENCHMARK
     if "vss_trend_filter_enabled" not in st.session_state:
         st.session_state["vss_trend_filter_enabled"] = STRICT_TREND_FILTER_DEFAULT_ENABLED
     if "vss_trend_filter_window" not in st.session_state:
         st.session_state["vss_trend_filter_window"] = STRICT_TREND_FILTER_DEFAULT_WINDOW
+    if "vss_market_regime_enabled" not in st.session_state:
+        st.session_state["vss_market_regime_enabled"] = STRICT_MARKET_REGIME_DEFAULT_ENABLED
+    if "vss_market_regime_window" not in st.session_state:
+        st.session_state["vss_market_regime_window"] = STRICT_MARKET_REGIME_DEFAULT_WINDOW
+    if "vss_market_regime_benchmark" not in st.session_state:
+        st.session_state["vss_market_regime_benchmark"] = STRICT_MARKET_REGIME_DEFAULT_BENCHMARK
     if "qvss_trend_filter_enabled" not in st.session_state:
         st.session_state["qvss_trend_filter_enabled"] = STRICT_TREND_FILTER_DEFAULT_ENABLED
     if "qvss_trend_filter_window" not in st.session_state:
         st.session_state["qvss_trend_filter_window"] = STRICT_TREND_FILTER_DEFAULT_WINDOW
+    if "qvss_market_regime_enabled" not in st.session_state:
+        st.session_state["qvss_market_regime_enabled"] = STRICT_MARKET_REGIME_DEFAULT_ENABLED
+    if "qvss_market_regime_window" not in st.session_state:
+        st.session_state["qvss_market_regime_window"] = STRICT_MARKET_REGIME_DEFAULT_WINDOW
+    if "qvss_market_regime_benchmark" not in st.session_state:
+        st.session_state["qvss_market_regime_benchmark"] = STRICT_MARKET_REGIME_DEFAULT_BENCHMARK
+    if "qsqp_trend_filter_enabled" not in st.session_state:
+        st.session_state["qsqp_trend_filter_enabled"] = STRICT_TREND_FILTER_DEFAULT_ENABLED
+    if "qsqp_trend_filter_window" not in st.session_state:
+        st.session_state["qsqp_trend_filter_window"] = STRICT_TREND_FILTER_DEFAULT_WINDOW
+    if "qsqp_market_regime_enabled" not in st.session_state:
+        st.session_state["qsqp_market_regime_enabled"] = STRICT_MARKET_REGIME_DEFAULT_ENABLED
+    if "qsqp_market_regime_window" not in st.session_state:
+        st.session_state["qsqp_market_regime_window"] = STRICT_MARKET_REGIME_DEFAULT_WINDOW
+    if "qsqp_market_regime_benchmark" not in st.session_state:
+        st.session_state["qsqp_market_regime_benchmark"] = STRICT_MARKET_REGIME_DEFAULT_BENCHMARK
+    if "vsqp_trend_filter_enabled" not in st.session_state:
+        st.session_state["vsqp_trend_filter_enabled"] = STRICT_TREND_FILTER_DEFAULT_ENABLED
+    if "vsqp_trend_filter_window" not in st.session_state:
+        st.session_state["vsqp_trend_filter_window"] = STRICT_TREND_FILTER_DEFAULT_WINDOW
+    if "vsqp_market_regime_enabled" not in st.session_state:
+        st.session_state["vsqp_market_regime_enabled"] = STRICT_MARKET_REGIME_DEFAULT_ENABLED
+    if "vsqp_market_regime_window" not in st.session_state:
+        st.session_state["vsqp_market_regime_window"] = STRICT_MARKET_REGIME_DEFAULT_WINDOW
+    if "vsqp_market_regime_benchmark" not in st.session_state:
+        st.session_state["vsqp_market_regime_benchmark"] = STRICT_MARKET_REGIME_DEFAULT_BENCHMARK
+    if "qvqp_trend_filter_enabled" not in st.session_state:
+        st.session_state["qvqp_trend_filter_enabled"] = STRICT_TREND_FILTER_DEFAULT_ENABLED
+    if "qvqp_trend_filter_window" not in st.session_state:
+        st.session_state["qvqp_trend_filter_window"] = STRICT_TREND_FILTER_DEFAULT_WINDOW
+    if "qvqp_market_regime_enabled" not in st.session_state:
+        st.session_state["qvqp_market_regime_enabled"] = STRICT_MARKET_REGIME_DEFAULT_ENABLED
+    if "qvqp_market_regime_window" not in st.session_state:
+        st.session_state["qvqp_market_regime_window"] = STRICT_MARKET_REGIME_DEFAULT_WINDOW
+    if "qvqp_market_regime_benchmark" not in st.session_state:
+        st.session_state["qvqp_market_regime_benchmark"] = STRICT_MARKET_REGIME_DEFAULT_BENCHMARK
 
     # Migrate old strict-annual default factor selections from prior sessions.
     if st.session_state.get("qss_quality_factors") == QUALITY_STRICT_LEGACY_DEFAULT_FACTORS:
@@ -446,6 +571,10 @@ def _summarize_params(meta: dict[str, Any]) -> str:
     if meta.get("trend_filter_enabled"):
         parts.append("trend_filter=on")
         parts.append(f"trend_window={meta.get('trend_filter_window') or STRICT_TREND_FILTER_DEFAULT_WINDOW}")
+    if meta.get("market_regime_enabled"):
+        parts.append("market_regime=on")
+        parts.append(f"regime_benchmark={meta.get('market_regime_benchmark') or STRICT_MARKET_REGIME_DEFAULT_BENCHMARK}")
+        parts.append(f"regime_window={meta.get('market_regime_window') or STRICT_MARKET_REGIME_DEFAULT_WINDOW}")
     return ", ".join(parts)
 
 
@@ -472,10 +601,17 @@ def _render_trend_filter_help_popover() -> None:
     )
 
 
+def _render_market_regime_help_popover() -> None:
+    _render_inline_help_popover(
+        "마켓 레짐 오버레이",
+        "개별 종목이 아니라 시장 전체 상태를 먼저 보는 상위 오버레이입니다. 1차 버전에서는 월말 리밸런싱 시점에만 지정한 벤치마크(예: SPY)의 종가가 이동평균선 아래인지 확인합니다. Window 200은 보통 200거래일 이동평균선, 즉 장기 추세선을 뜻합니다. 벤치마크가 해당 이동평균선 아래면 그 달 strict factor 포트폴리오는 전부 현금으로 두고, 위에 있으면 기존 팩터 선택 결과를 그대로 집행합니다.",
+    )
+
+
 def _render_interpretation_summary_help_popover() -> None:
     _render_inline_help_popover(
         "해석 요약",
-        "Raw Candidate Events는 각 리밸런싱에서 팩터 랭킹으로 최종 후보(top N)까지 올라온 종목 수의 총합입니다. Final Selected Events는 오버레이까지 반영한 뒤 실제 보유 후보로 남은 종목 수의 총합입니다. 이 값들은 전체 모집군 크기를 뜻하지 않습니다. 오버레이가 꺼져 있으면 보통 Raw와 Final이 같고, 오버레이가 켜져 있으면 Raw와 Final의 차이만큼 추세 필터가 개입한 것으로 해석하면 됩니다. Overlay Rejections는 오버레이로 제외된 횟수 합계이고, Cash-Only Rebalances는 해당 리밸런싱에서 전부 현금 상태가 된 횟수입니다.",
+        "Raw Candidate Events는 각 리밸런싱에서 팩터 랭킹으로 최종 후보(top N)까지 올라온 종목 수의 총합입니다. Final Selected Events는 오버레이까지 반영한 뒤 실제 보유 후보로 남은 종목 수의 총합입니다. 이 값들은 전체 모집군 크기를 뜻하지 않습니다. 오버레이가 꺼져 있으면 보통 Raw와 Final이 같고, 오버레이가 켜져 있으면 Raw와 Final의 차이만큼 추가 필터가 개입한 것으로 해석하면 됩니다. Overlay Rejections는 개별 종목 추세 필터로 제외된 횟수 합계이고, Regime Blocked Events / Regime Cash Rebalances는 시장 상태 오버레이 때문에 포트폴리오 전체가 현금으로 이동한 흔적을 요약합니다.",
     )
 
 
@@ -486,11 +622,68 @@ def _render_overlay_rejection_frequency_help_popover() -> None:
     )
 
 
+def _render_market_regime_events_help_popover() -> None:
+    _render_inline_help_popover(
+        "마켓 레짐 이벤트",
+        "이 표는 벤치마크가 risk-off 상태로 판단되어 포트폴리오 전체가 현금으로 이동한 리밸런싱만 모아 보여줍니다. 즉 특정 종목이 잘린 기록이 아니라, 시장 상태 때문에 strict factor 포트폴리오 전체 노출이 차단된 날짜를 읽는 용도입니다.",
+    )
+
+
 def _render_cash_share_help_popover() -> None:
     _render_inline_help_popover(
         "현금 비중",
         "Cash Share는 해당 리밸런싱 직후 포트폴리오에서 현금으로 남아 있는 비중입니다. 오버레이로 일부 종목이 제외되거나, 투자 가능한 종목 수가 목표 Top N보다 적을 때 현금 비중이 생길 수 있습니다. 오버레이가 꺼져 있고 투자 가능한 종목 수가 충분하면 보통 0%에 가깝습니다.",
     )
+
+
+def _render_statement_shadow_coverage_preview(
+    *,
+    tickers: list[str],
+    freq: str,
+    strategy_label: str,
+) -> None:
+    if not tickers:
+        return
+
+    summary = _load_statement_shadow_coverage_preview(tuple(tickers), freq)
+    st.markdown("#### Statement Shadow Coverage Preview")
+    st.caption(f"Current `{freq}` statement-shadow coverage for `{strategy_label}` before execution.")
+
+    if summary.get("covered_count", 0) == 0:
+        st.warning("No statement shadow rows are currently available for the selected symbols.")
+        return
+
+    metric_cols = st.columns(5)
+    metric_cols[0].metric("Requested", summary.get("requested_count", 0))
+    metric_cols[1].metric("Covered", summary.get("covered_count", 0))
+    metric_cols[2].metric(
+        "Earliest Period",
+        (
+            pd.to_datetime(summary.get("min_period_end")).strftime("%Y-%m-%d")
+            if summary.get("min_period_end") is not None and pd.notna(summary.get("min_period_end"))
+            else "-"
+        ),
+    )
+    metric_cols[3].metric(
+        "Latest Period",
+        (
+            pd.to_datetime(summary.get("max_period_end")).strftime("%Y-%m-%d")
+            if summary.get("max_period_end") is not None and pd.notna(summary.get("max_period_end"))
+            else "-"
+        ),
+    )
+    metric_cols[4].metric("Median Rows / Symbol", summary.get("median_rows_per_symbol", 0))
+
+    if summary.get("covered_count", 0) < summary.get("requested_count", 0):
+        st.caption(
+            "일부 심볼은 아직 statement shadow coverage가 없습니다. 이 경우 해당 심볼은 초기 리밸런싱 구간에서 자연스럽게 제외됩니다."
+        )
+    min_available_at = summary.get("min_available_at")
+    if min_available_at is not None and pd.notna(min_available_at):
+        st.caption(
+            "이 preview는 raw statement ledger가 아니라 rebuilt statement shadow를 기준으로 합니다. "
+            f"현재 earliest `latest_available_at`은 `{pd.to_datetime(min_available_at).strftime('%Y-%m-%d')}` 입니다."
+        )
 
 
 def _build_daily_market_update_refresh_payload(details: dict[str, Any]) -> dict[str, str] | None:
@@ -521,6 +714,43 @@ def _build_daily_market_update_refresh_payload(details: dict[str, Any]) -> dict[
     }
 
 
+def _render_market_regime_overlay_inputs(
+    *,
+    key_prefix: str,
+    label_prefix: str,
+) -> tuple[bool, int, str]:
+    regime_title_col, regime_help_col = st.columns([0.92, 0.08], gap="small")
+    with regime_title_col:
+        st.markdown(f"##### {label_prefix}Market Regime Overlay")
+    with regime_help_col:
+        _render_market_regime_help_popover()
+
+    regime_enabled = st.checkbox(
+        "Enable",
+        value=STRICT_MARKET_REGIME_DEFAULT_ENABLED,
+        key=f"{key_prefix}_market_regime_enabled",
+    )
+    regime_window = int(
+        st.number_input(
+            f"{label_prefix}Market Regime Window",
+            min_value=20,
+            max_value=400,
+            value=STRICT_MARKET_REGIME_DEFAULT_WINDOW,
+            step=10,
+            key=f"{key_prefix}_market_regime_window",
+        )
+    )
+    regime_benchmark = st.selectbox(
+        f"{label_prefix}Market Regime Benchmark",
+        options=STRICT_MARKET_REGIME_BENCHMARK_OPTIONS,
+        index=STRICT_MARKET_REGIME_BENCHMARK_OPTIONS.index(STRICT_MARKET_REGIME_DEFAULT_BENCHMARK),
+        key=f"{key_prefix}_market_regime_benchmark",
+        help="risk-on / risk-off를 판단할 벤치마크를 고릅니다.",
+    )
+    st.caption("Enable이 꺼져 있어도 Window와 Benchmark 값은 미리 조정할 수 있고, 오버레이를 켜면 그 값이 사용됩니다.")
+    return regime_enabled, regime_window, regime_benchmark
+
+
 def _render_strict_price_freshness_preflight(
     *,
     tickers: list[str],
@@ -544,7 +774,15 @@ def _render_strict_price_freshness_preflight(
     with help_col:
         _render_historical_universe_help_popover()
     st.caption(f"Current DB latest-date spread for `{strategy_label}` before execution.")
-    st.caption("`Stale` means the symbol's latest daily price in DB stops before the selected end date.")
+    st.caption("`Stale` means the symbol's latest daily price in DB stops before the effective trading end used for this check.")
+    if (
+        details.get("selected_end_date")
+        and details.get("effective_end_date")
+        and details.get("selected_end_date") != details.get("effective_end_date")
+    ):
+        st.caption(
+            f"Selected end `{details['selected_end_date']}` is being compared against effective trading end `{details['effective_end_date']}`."
+        )
 
     if report["status"] == "ok":
         st.success(report["message"])
@@ -562,8 +800,10 @@ def _render_strict_price_freshness_preflight(
 
     if details.get("stale_count", 0) > 0 or details.get("missing_count", 0) > 0:
         with st.expander("Preflight Details", expanded=False):
-            if details.get("target_end_date"):
-                st.markdown(f"- `Selected End`: `{details['target_end_date']}`")
+            if details.get("selected_end_date"):
+                st.markdown(f"- `Selected End`: `{details['selected_end_date']}`")
+            if details.get("effective_end_date"):
+                st.markdown(f"- `Effective Trading End`: `{details['effective_end_date']}`")
             if details.get("stale_count", 0) > 0:
                 st.markdown(f"- `Stale Symbols`: `{details['stale_count']}`")
                 if details.get("stale_symbols"):
@@ -600,7 +840,7 @@ def _render_strict_price_freshness_preflight(
                 st.dataframe(classification_df, use_container_width=True, hide_index=True)
             st.caption(
                 "If this check is yellow, run `Daily Market Update` for the lagging symbols first. "
-                "That usually prevents duplicate or shifted final-month rows in large-universe strict annual runs."
+                "That usually prevents duplicate or shifted final-month rows in large-universe strict statement runs."
             )
             payload = _build_daily_market_update_refresh_payload(details)
             if payload is not None:
@@ -655,8 +895,11 @@ def _render_last_run() -> None:
     has_selection_history = strategy_key in {
         "quality_snapshot",
         "quality_snapshot_strict_annual",
+        "quality_snapshot_strict_quarterly_prototype",
         "value_snapshot_strict_annual",
+        "value_snapshot_strict_quarterly_prototype",
         "quality_value_snapshot_strict_annual",
+        "quality_value_snapshot_strict_quarterly_prototype",
     }
 
     tab_labels = ["Summary", "Equity Curve", "Balance Extremes", "Period Extremes"]
@@ -735,6 +978,10 @@ def _render_last_run() -> None:
                 st.markdown(f"- `Top`: `{meta['top']}`")
             if meta.get("trend_filter_enabled"):
                 st.markdown(f"- `Trend Filter`: `MA{meta.get('trend_filter_window', STRICT_TREND_FILTER_DEFAULT_WINDOW)}`")
+            if meta.get("market_regime_enabled"):
+                st.markdown(
+                    f"- `Market Regime`: `{meta.get('market_regime_benchmark', STRICT_MARKET_REGIME_DEFAULT_BENCHMARK)} < MA{meta.get('market_regime_window', STRICT_MARKET_REGIME_DEFAULT_WINDOW)} => cash`"
+                )
             price_freshness = meta.get("price_freshness") or {}
             freshness_details = price_freshness.get("details") or {}
             if freshness_details:
@@ -800,6 +1047,16 @@ def _strategy_compare_defaults(strategy_name: str) -> dict:
                 "top_n": 2,
             },
         }
+    if strategy_name == "Quality Snapshot (Strict Quarterly Prototype)":
+        return {
+            "tickers": QUALITY_STRICT_PRESETS[STRICT_QUARTERLY_PROTOTYPE_DEFAULT_PRESET],
+            "preset_name": STRICT_QUARTERLY_PROTOTYPE_DEFAULT_PRESET,
+            "runner": run_quality_snapshot_strict_quarterly_prototype_backtest_from_db,
+            "extra": {
+                "quality_factors": QUALITY_STRICT_DEFAULT_FACTORS,
+                "top_n": 2,
+            },
+        }
     if strategy_name == "Value Snapshot (Strict Annual)":
         return {
             "tickers": VALUE_STRICT_PRESETS[STRICT_ANNUAL_COMPARE_DEFAULT_PRESET],
@@ -810,11 +1067,32 @@ def _strategy_compare_defaults(strategy_name: str) -> dict:
                 "top_n": 10,
             },
         }
+    if strategy_name == "Value Snapshot (Strict Quarterly Prototype)":
+        return {
+            "tickers": VALUE_STRICT_PRESETS[STRICT_QUARTERLY_PROTOTYPE_DEFAULT_PRESET],
+            "preset_name": STRICT_QUARTERLY_PROTOTYPE_DEFAULT_PRESET,
+            "runner": run_value_snapshot_strict_quarterly_prototype_backtest_from_db,
+            "extra": {
+                "value_factors": VALUE_STRICT_DEFAULT_FACTORS,
+                "top_n": 10,
+            },
+        }
     if strategy_name == "Quality + Value Snapshot (Strict Annual)":
         return {
             "tickers": QUALITY_STRICT_PRESETS[STRICT_ANNUAL_COMPARE_DEFAULT_PRESET],
             "preset_name": STRICT_ANNUAL_COMPARE_DEFAULT_PRESET,
             "runner": run_quality_value_snapshot_strict_annual_backtest_from_db,
+            "extra": {
+                "quality_factors": QUALITY_STRICT_DEFAULT_FACTORS,
+                "value_factors": VALUE_STRICT_DEFAULT_FACTORS,
+                "top_n": 10,
+            },
+        }
+    if strategy_name == "Quality + Value Snapshot (Strict Quarterly Prototype)":
+        return {
+            "tickers": QUALITY_STRICT_PRESETS[STRICT_QUARTERLY_PROTOTYPE_DEFAULT_PRESET],
+            "preset_name": STRICT_QUARTERLY_PROTOTYPE_DEFAULT_PRESET,
+            "runner": run_quality_value_snapshot_strict_quarterly_prototype_backtest_from_db,
             "extra": {
                 "quality_factors": QUALITY_STRICT_DEFAULT_FACTORS,
                 "value_factors": VALUE_STRICT_DEFAULT_FACTORS,
@@ -833,10 +1111,19 @@ def _resolve_compare_strategy_universe(
     if strategy_name == "Quality Snapshot (Strict Annual)":
         if preset_name in QUALITY_STRICT_PRESETS:
             return QUALITY_STRICT_PRESETS[preset_name], preset_name
+    elif strategy_name == "Quality Snapshot (Strict Quarterly Prototype)":
+        if preset_name in QUALITY_STRICT_PRESETS:
+            return QUALITY_STRICT_PRESETS[preset_name], preset_name
     elif strategy_name == "Value Snapshot (Strict Annual)":
         if preset_name in VALUE_STRICT_PRESETS:
             return VALUE_STRICT_PRESETS[preset_name], preset_name
+    elif strategy_name == "Value Snapshot (Strict Quarterly Prototype)":
+        if preset_name in VALUE_STRICT_PRESETS:
+            return VALUE_STRICT_PRESETS[preset_name], preset_name
     elif strategy_name == "Quality + Value Snapshot (Strict Annual)":
+        if preset_name in QUALITY_STRICT_PRESETS:
+            return QUALITY_STRICT_PRESETS[preset_name], preset_name
+    elif strategy_name == "Quality + Value Snapshot (Strict Quarterly Prototype)":
         if preset_name in QUALITY_STRICT_PRESETS:
             return QUALITY_STRICT_PRESETS[preset_name], preset_name
 
@@ -863,8 +1150,11 @@ def _run_compare_strategy(
     universe_mode = "preset"
     if strategy_name in {
         "Quality Snapshot (Strict Annual)",
+        "Quality Snapshot (Strict Quarterly Prototype)",
         "Value Snapshot (Strict Annual)",
+        "Value Snapshot (Strict Quarterly Prototype)",
         "Quality + Value Snapshot (Strict Annual)",
+        "Quality + Value Snapshot (Strict Quarterly Prototype)",
     }:
         tickers, preset_name = _resolve_compare_strategy_universe(
             strategy_name,
@@ -1332,8 +1622,11 @@ def _render_compare_results() -> None:
         if focused_bundle["meta"].get("strategy_key") in {
             "quality_snapshot",
             "quality_snapshot_strict_annual",
+            "quality_snapshot_strict_quarterly_prototype",
             "value_snapshot_strict_annual",
+            "value_snapshot_strict_quarterly_prototype",
             "quality_value_snapshot_strict_annual",
+            "quality_value_snapshot_strict_quarterly_prototype",
         }:
             st.divider()
             st.markdown("##### Selection Interpretation")
@@ -1640,8 +1933,11 @@ def _build_history_payload(record: dict[str, Any]) -> dict[str, Any] | None:
         if strategy_key not in {
             "quality_snapshot",
             "quality_snapshot_strict_annual",
+            "quality_snapshot_strict_quarterly_prototype",
             "value_snapshot_strict_annual",
+            "value_snapshot_strict_quarterly_prototype",
             "quality_value_snapshot_strict_annual",
+            "quality_value_snapshot_strict_quarterly_prototype",
         }:
             return None
 
@@ -1676,6 +1972,12 @@ def _build_history_payload(record: dict[str, Any]) -> dict[str, Any] | None:
         payload["trend_filter_enabled"] = bool(record.get("trend_filter_enabled"))
     if record.get("trend_filter_window") is not None:
         payload["trend_filter_window"] = int(record.get("trend_filter_window") or STRICT_TREND_FILTER_DEFAULT_WINDOW)
+    if record.get("market_regime_enabled") is not None:
+        payload["market_regime_enabled"] = bool(record.get("market_regime_enabled"))
+    if record.get("market_regime_window") is not None:
+        payload["market_regime_window"] = int(record.get("market_regime_window") or STRICT_MARKET_REGIME_DEFAULT_WINDOW)
+    if record.get("market_regime_benchmark") is not None:
+        payload["market_regime_benchmark"] = record.get("market_regime_benchmark") or STRICT_MARKET_REGIME_DEFAULT_BENCHMARK
     if record.get("snapshot_source") is not None:
         payload["snapshot_source"] = record.get("snapshot_source")
 
@@ -1693,8 +1995,11 @@ def _strategy_key_to_display_name(strategy_key: str | None) -> str | None:
         "dual_momentum": "Dual Momentum",
         "quality_snapshot": "Quality Snapshot",
         "quality_snapshot_strict_annual": "Quality Snapshot (Strict Annual)",
+        "quality_snapshot_strict_quarterly_prototype": "Quality Snapshot (Strict Quarterly Prototype)",
         "value_snapshot_strict_annual": "Value Snapshot (Strict Annual)",
+        "value_snapshot_strict_quarterly_prototype": "Value Snapshot (Strict Quarterly Prototype)",
         "quality_value_snapshot_strict_annual": "Quality + Value Snapshot (Strict Annual)",
+        "quality_value_snapshot_strict_quarterly_prototype": "Quality + Value Snapshot (Strict Quarterly Prototype)",
     }
     return mapping.get(strategy_key)
 
@@ -1708,7 +2013,7 @@ def _load_history_into_form(record: dict[str, Any]) -> bool:
     st.session_state.backtest_prefill_payload = payload
     st.session_state.backtest_prefill_pending = True
     st.session_state.backtest_prefill_notice = f"Loaded `{strategy_name}` inputs from history."
-    st.session_state.backtest_strategy_choice = strategy_name
+    st.session_state.backtest_prefill_strategy_choice = strategy_name
     return True
 
 
@@ -1795,6 +2100,26 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         st.session_state["qss_quality_factors"] = payload.get("quality_factors") or QUALITY_STRICT_DEFAULT_FACTORS
         st.session_state["qss_trend_filter_enabled"] = bool(payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED))
         st.session_state["qss_trend_filter_window"] = int(payload.get("trend_filter_window") or STRICT_TREND_FILTER_DEFAULT_WINDOW)
+        st.session_state["qss_market_regime_enabled"] = bool(payload.get("market_regime_enabled", STRICT_MARKET_REGIME_DEFAULT_ENABLED))
+        st.session_state["qss_market_regime_window"] = int(payload.get("market_regime_window") or STRICT_MARKET_REGIME_DEFAULT_WINDOW)
+        st.session_state["qss_market_regime_benchmark"] = payload.get("market_regime_benchmark") or STRICT_MARKET_REGIME_DEFAULT_BENCHMARK
+    elif strategy_key == "quality_snapshot_strict_quarterly_prototype":
+        st.session_state["qsqp_universe_mode"] = "Preset" if universe_mode == "preset" and preset_name in QUALITY_STRICT_PRESETS else "Manual"
+        if st.session_state["qsqp_universe_mode"] == "Preset":
+            st.session_state["qsqp_preset"] = preset_name
+        else:
+            st.session_state["qsqp_manual_tickers"] = tickers_text
+        st.session_state["qsqp_start"] = start_date
+        st.session_state["qsqp_end"] = end_date
+        st.session_state["qsqp_top_n"] = int(payload.get("top") or 2)
+        st.session_state["qsqp_timeframe"] = payload.get("timeframe") or "1d"
+        st.session_state["qsqp_option"] = payload.get("option") or "month_end"
+        st.session_state["qsqp_quality_factors"] = payload.get("quality_factors") or QUALITY_STRICT_DEFAULT_FACTORS
+        st.session_state["qsqp_trend_filter_enabled"] = bool(payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED))
+        st.session_state["qsqp_trend_filter_window"] = int(payload.get("trend_filter_window") or STRICT_TREND_FILTER_DEFAULT_WINDOW)
+        st.session_state["qsqp_market_regime_enabled"] = bool(payload.get("market_regime_enabled", STRICT_MARKET_REGIME_DEFAULT_ENABLED))
+        st.session_state["qsqp_market_regime_window"] = int(payload.get("market_regime_window") or STRICT_MARKET_REGIME_DEFAULT_WINDOW)
+        st.session_state["qsqp_market_regime_benchmark"] = payload.get("market_regime_benchmark") or STRICT_MARKET_REGIME_DEFAULT_BENCHMARK
     elif strategy_key == "value_snapshot_strict_annual":
         st.session_state["vss_universe_mode"] = "Preset" if universe_mode == "preset" and preset_name in VALUE_STRICT_PRESETS else "Manual"
         if st.session_state["vss_universe_mode"] == "Preset":
@@ -1809,6 +2134,26 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         st.session_state["vss_value_factors"] = payload.get("value_factors") or VALUE_STRICT_DEFAULT_FACTORS
         st.session_state["vss_trend_filter_enabled"] = bool(payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED))
         st.session_state["vss_trend_filter_window"] = int(payload.get("trend_filter_window") or STRICT_TREND_FILTER_DEFAULT_WINDOW)
+        st.session_state["vss_market_regime_enabled"] = bool(payload.get("market_regime_enabled", STRICT_MARKET_REGIME_DEFAULT_ENABLED))
+        st.session_state["vss_market_regime_window"] = int(payload.get("market_regime_window") or STRICT_MARKET_REGIME_DEFAULT_WINDOW)
+        st.session_state["vss_market_regime_benchmark"] = payload.get("market_regime_benchmark") or STRICT_MARKET_REGIME_DEFAULT_BENCHMARK
+    elif strategy_key == "value_snapshot_strict_quarterly_prototype":
+        st.session_state["vsqp_universe_mode"] = "Preset" if universe_mode == "preset" and preset_name in VALUE_STRICT_PRESETS else "Manual"
+        if st.session_state["vsqp_universe_mode"] == "Preset":
+            st.session_state["vsqp_preset"] = preset_name
+        else:
+            st.session_state["vsqp_manual_tickers"] = tickers_text
+        st.session_state["vsqp_start"] = start_date
+        st.session_state["vsqp_end"] = end_date
+        st.session_state["vsqp_top_n"] = int(payload.get("top") or 10)
+        st.session_state["vsqp_timeframe"] = payload.get("timeframe") or "1d"
+        st.session_state["vsqp_option"] = payload.get("option") or "month_end"
+        st.session_state["vsqp_value_factors"] = payload.get("value_factors") or VALUE_STRICT_DEFAULT_FACTORS
+        st.session_state["vsqp_trend_filter_enabled"] = bool(payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED))
+        st.session_state["vsqp_trend_filter_window"] = int(payload.get("trend_filter_window") or STRICT_TREND_FILTER_DEFAULT_WINDOW)
+        st.session_state["vsqp_market_regime_enabled"] = bool(payload.get("market_regime_enabled", STRICT_MARKET_REGIME_DEFAULT_ENABLED))
+        st.session_state["vsqp_market_regime_window"] = int(payload.get("market_regime_window") or STRICT_MARKET_REGIME_DEFAULT_WINDOW)
+        st.session_state["vsqp_market_regime_benchmark"] = payload.get("market_regime_benchmark") or STRICT_MARKET_REGIME_DEFAULT_BENCHMARK
     elif strategy_key == "quality_value_snapshot_strict_annual":
         st.session_state["qvss_universe_mode"] = "Preset" if universe_mode == "preset" and preset_name in QUALITY_STRICT_PRESETS else "Manual"
         if st.session_state["qvss_universe_mode"] == "Preset":
@@ -1824,6 +2169,27 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         st.session_state["qvss_value_factors"] = payload.get("value_factors") or VALUE_STRICT_DEFAULT_FACTORS
         st.session_state["qvss_trend_filter_enabled"] = bool(payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED))
         st.session_state["qvss_trend_filter_window"] = int(payload.get("trend_filter_window") or STRICT_TREND_FILTER_DEFAULT_WINDOW)
+        st.session_state["qvss_market_regime_enabled"] = bool(payload.get("market_regime_enabled", STRICT_MARKET_REGIME_DEFAULT_ENABLED))
+        st.session_state["qvss_market_regime_window"] = int(payload.get("market_regime_window") or STRICT_MARKET_REGIME_DEFAULT_WINDOW)
+        st.session_state["qvss_market_regime_benchmark"] = payload.get("market_regime_benchmark") or STRICT_MARKET_REGIME_DEFAULT_BENCHMARK
+    elif strategy_key == "quality_value_snapshot_strict_quarterly_prototype":
+        st.session_state["qvqp_universe_mode"] = "Preset" if universe_mode == "preset" and preset_name in QUALITY_STRICT_PRESETS else "Manual"
+        if st.session_state["qvqp_universe_mode"] == "Preset":
+            st.session_state["qvqp_preset"] = preset_name
+        else:
+            st.session_state["qvqp_manual_tickers"] = tickers_text
+        st.session_state["qvqp_start"] = start_date
+        st.session_state["qvqp_end"] = end_date
+        st.session_state["qvqp_top_n"] = int(payload.get("top") or 10)
+        st.session_state["qvqp_timeframe"] = payload.get("timeframe") or "1d"
+        st.session_state["qvqp_option"] = payload.get("option") or "month_end"
+        st.session_state["qvqp_quality_factors"] = payload.get("quality_factors") or QUALITY_STRICT_DEFAULT_FACTORS
+        st.session_state["qvqp_value_factors"] = payload.get("value_factors") or VALUE_STRICT_DEFAULT_FACTORS
+        st.session_state["qvqp_trend_filter_enabled"] = bool(payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED))
+        st.session_state["qvqp_trend_filter_window"] = int(payload.get("trend_filter_window") or STRICT_TREND_FILTER_DEFAULT_WINDOW)
+        st.session_state["qvqp_market_regime_enabled"] = bool(payload.get("market_regime_enabled", STRICT_MARKET_REGIME_DEFAULT_ENABLED))
+        st.session_state["qvqp_market_regime_window"] = int(payload.get("market_regime_window") or STRICT_MARKET_REGIME_DEFAULT_WINDOW)
+        st.session_state["qvqp_market_regime_benchmark"] = payload.get("market_regime_benchmark") or STRICT_MARKET_REGIME_DEFAULT_BENCHMARK
 
     st.session_state.backtest_prefill_pending = False
 
@@ -1866,11 +2232,17 @@ def _build_snapshot_selection_history(result_df: pd.DataFrame) -> pd.DataFrame:
         "Raw Selected Score",
         "Overlay Rejected Ticker",
         "Overlay Rejected Count",
+        "Regime Blocked Ticker",
+        "Regime Blocked Count",
         "Next Ticker",
         "Selected Count",
         "Selected Score",
         "Trend Filter Enabled",
         "Trend Filter Column",
+        "Market Regime Enabled",
+        "Market Regime Benchmark",
+        "Market Regime Column",
+        "Market Regime State",
         "Cash",
         "Total Balance",
         "Total Return",
@@ -1883,12 +2255,14 @@ def _build_snapshot_selection_history(result_df: pd.DataFrame) -> pd.DataFrame:
         "Raw Selected Ticker": "Raw Selected Tickers",
         "Raw Selected Score": "Raw Selection Score",
         "Overlay Rejected Ticker": "Overlay Rejected Tickers",
+        "Regime Blocked Ticker": "Regime Blocked Tickers",
     }
     selection_df = selection_df.rename(columns=rename_map).reset_index(drop=True)
 
     list_columns = [
         "Raw Selected Tickers",
         "Overlay Rejected Tickers",
+        "Regime Blocked Tickers",
         "Selected Tickers",
     ]
     score_list_columns = [
@@ -1918,7 +2292,10 @@ def _build_snapshot_selection_history(result_df: pd.DataFrame) -> pd.DataFrame:
     def _build_interpretation(row: pd.Series) -> str:
         raw_count = int(row.get("Raw Selected Count") or 0)
         rejected_count = int(row.get("Overlay Rejected Count") or 0)
+        regime_blocked_count = int(row.get("Regime Blocked Count") or 0)
         selected_count = int(row.get("Selected Count") or 0)
+        regime_state = str(row.get("Market Regime State") or "").strip().lower()
+        regime_benchmark = str(row.get("Market Regime Benchmark") or "").strip() or "benchmark"
         cash_share = row.get("Cash Share Ratio")
         cash_share_text = (
             f"{float(cash_share) * 100:.1f}%"
@@ -1928,6 +2305,11 @@ def _build_snapshot_selection_history(result_df: pd.DataFrame) -> pd.DataFrame:
 
         if raw_count <= 0:
             return "No usable ranked candidates were available at this rebalance, so the portfolio stayed in cash."
+        if regime_blocked_count > 0 and regime_state == "risk_off":
+            return (
+                f"Market regime overlay moved the portfolio fully to cash because `{regime_benchmark}` "
+                f"was in risk-off state at this rebalance. It blocked {regime_blocked_count} post-filter candidate(s)."
+            )
         if selected_count <= 0 and rejected_count > 0:
             return f"Trend overlay rejected all {raw_count} raw candidates, so the portfolio moved fully to cash."
         if rejected_count > 0:
@@ -1981,6 +2363,30 @@ def _build_overlay_rejection_frequency_view(selection_df: pd.DataFrame) -> pd.Da
     return rejection_df
 
 
+def _build_market_regime_event_view(selection_df: pd.DataFrame) -> pd.DataFrame:
+    if selection_df.empty or "Market Regime State" not in selection_df.columns:
+        return pd.DataFrame()
+
+    regime_df = selection_df.copy()
+    regime_df = regime_df[regime_df["Market Regime State"].astype(str).str.lower() == "risk_off"].copy()
+    if regime_df.empty:
+        return pd.DataFrame()
+
+    keep = [
+        "Date",
+        "Market Regime Benchmark",
+        "Market Regime Column",
+        "Raw Selected Count",
+        "Regime Blocked Count",
+        "Regime Blocked Tickers",
+        "Cash Share",
+    ]
+    keep = [column for column in keep if column in regime_df.columns]
+    event_df = regime_df[keep].copy()
+    event_df["Date"] = pd.to_datetime(event_df["Date"]).dt.strftime("%Y-%m-%d")
+    return event_df.reset_index(drop=True)
+
+
 def _build_selection_interpretation_summary(selection_df: pd.DataFrame) -> pd.DataFrame:
     if selection_df.empty:
         return pd.DataFrame()
@@ -1988,6 +2394,15 @@ def _build_selection_interpretation_summary(selection_df: pd.DataFrame) -> pd.Da
     raw_candidate_events = int(pd.to_numeric(selection_df.get("Raw Selected Count"), errors="coerce").fillna(0).sum())
     final_selected_events = int(pd.to_numeric(selection_df.get("Selected Count"), errors="coerce").fillna(0).sum())
     overlay_rejections = int(pd.to_numeric(selection_df.get("Overlay Rejected Count"), errors="coerce").fillna(0).sum())
+    regime_rejections = int(pd.to_numeric(selection_df.get("Regime Blocked Count"), errors="coerce").fillna(0).sum())
+    regime_cash_rebalances = int(
+        (
+            selection_df.get("Market Regime State", pd.Series(dtype=str))
+            .astype(str)
+            .str.lower()
+            .eq("risk_off")
+        ).sum()
+    )
     cash_only_rebalances = int(
         (pd.to_numeric(selection_df.get("Selected Count"), errors="coerce").fillna(0) <= 0).sum()
     )
@@ -2003,6 +2418,8 @@ def _build_selection_interpretation_summary(selection_df: pd.DataFrame) -> pd.Da
                 "Raw Candidate Events": raw_candidate_events,
                 "Final Selected Events": final_selected_events,
                 "Overlay Rejections": overlay_rejections,
+                "Regime Blocked Events": regime_rejections,
+                "Regime Cash Rebalances": regime_cash_rebalances,
                 "Cash-Only Rebalances": cash_only_rebalances,
                 "Avg Selected Count": round(avg_selected_count, 2),
                 "Avg Cash Share": f"{avg_cash_share * 100:.1f}%",
@@ -2105,6 +2522,10 @@ def _render_snapshot_selection_history(
         "Trend Filter Enabled" in selection_df.columns
         and selection_df["Trend Filter Enabled"].fillna(False).astype(bool).any()
     )
+    regime_active = (
+        "Market Regime Enabled" in selection_df.columns
+        and selection_df["Market Regime Enabled"].fillna(False).astype(bool).any()
+    )
 
     st.caption(
         "이 화면은 strict annual 전략 검증에서 가장 실무적인 질문인 "
@@ -2130,6 +2551,14 @@ def _render_snapshot_selection_history(
                     if overlay_active and "Trend Filter Column" in selection_df.columns
                     else "off"
                 ),
+                "Market Regime Overlay": (
+                    (
+                        f"{selection_df.loc[selection_df['Market Regime Enabled'].fillna(False), 'Market Regime Benchmark'].iloc[0]} / "
+                        f"{selection_df.loc[selection_df['Market Regime Enabled'].fillna(False), 'Market Regime Column'].iloc[0]}"
+                    )
+                    if regime_active
+                    else "off"
+                ),
             }
         ]
     )
@@ -2137,6 +2566,10 @@ def _render_snapshot_selection_history(
     if overlay_active:
         st.caption(
             "Raw Selected는 팩터 랭킹으로 뽑힌 1차 후보이고, Final Selected는 오버레이까지 통과한 실제 보유 후보입니다. Overlay Rejected는 월말 추세 필터를 통과하지 못해 해당 리밸런싱에서 현금으로 전환된 종목입니다."
+        )
+    if regime_active:
+        st.caption(
+            "Market Regime은 개별 종목 필터가 아니라 시장 전체 상태를 보는 상위 오버레이입니다. risk-off로 판정된 리밸런싱에서는 strict factor 후보가 있어도 포트폴리오 전체가 현금으로 이동할 수 있습니다."
         )
 
     history_tab, interpretation_tab, frequency_tab = st.tabs(["History", "Interpretation", "Selection Frequency"])
@@ -2167,6 +2600,14 @@ def _render_snapshot_selection_history(
             st.dataframe(rejection_df, use_container_width=True, hide_index=True)
         else:
             st.caption("이번 실행에서는 오버레이로 제외된 종목이 기록되지 않았습니다.")
+        regime_event_df = _build_market_regime_event_view(selection_df)
+        if not regime_event_df.empty:
+            regime_title_col, regime_help_col = st.columns([0.92, 0.08], gap="small")
+            with regime_title_col:
+                st.markdown("##### Market Regime Events")
+            with regime_help_col:
+                _render_market_regime_events_help_popover()
+            st.dataframe(regime_event_df, use_container_width=True, hide_index=True)
     with frequency_tab:
         frequency_df = _build_selection_frequency_view(selection_df)
         if frequency_df.empty:
@@ -2352,6 +2793,13 @@ def _render_persistent_backtest_history() -> None:
     with detail_tabs[0]:
         if summary:
             st.dataframe(pd.DataFrame([summary]), use_container_width=True, hide_index=True)
+        elif selected_record.get("run_kind") == "strategy_compare":
+            compare_summary_rows = context.get("strategy_summaries") or []
+            if compare_summary_rows:
+                st.caption("Compare records keep per-strategy summary rows instead of one primary summary row.")
+                st.dataframe(pd.DataFrame(compare_summary_rows), use_container_width=True, hide_index=True)
+            else:
+                st.info("This compare history record does not include stored per-strategy summary rows. Older compare records may only keep the selected strategy list.")
         else:
             st.info("This history record does not include a primary summary row.")
 
@@ -2378,6 +2826,9 @@ def _render_persistent_backtest_history() -> None:
                     "value_factors": selected_record.get("value_factors"),
                     "trend_filter_enabled": selected_record.get("trend_filter_enabled"),
                     "trend_filter_window": selected_record.get("trend_filter_window"),
+                    "market_regime_enabled": selected_record.get("market_regime_enabled"),
+                    "market_regime_window": selected_record.get("market_regime_window"),
+                    "market_regime_benchmark": selected_record.get("market_regime_benchmark"),
                     "snapshot_source": selected_record.get("snapshot_source"),
                     "ui_elapsed_seconds": selected_record.get("ui_elapsed_seconds"),
                     "universe_mode": selected_record.get("universe_mode"),
@@ -2386,6 +2837,26 @@ def _render_persistent_backtest_history() -> None:
             )
         with right:
             st.markdown("##### Context")
+            if selected_record.get("run_kind") == "strategy_compare":
+                compare_overrides = context.get("strategy_overrides") or {}
+                if compare_overrides:
+                    override_rows = []
+                    for strategy_name, overrides in compare_overrides.items():
+                        override_rows.append(
+                            {
+                                "Strategy": strategy_name,
+                                "Preset": overrides.get("preset_name"),
+                                "Top N": overrides.get("top_n"),
+                                "Rebalance Interval": overrides.get("rebalance_interval"),
+                                "Trend Filter": overrides.get("trend_filter_enabled"),
+                                "Trend Window": overrides.get("trend_filter_window"),
+                                "Market Regime": overrides.get("market_regime_enabled"),
+                                "Regime Window": overrides.get("market_regime_window"),
+                                "Regime Benchmark": overrides.get("market_regime_benchmark"),
+                            }
+                        )
+                    st.caption("Compare 기록은 전략별 override가 context에 저장됩니다. 아래 표에서 trend/regime 설정을 바로 확인할 수 있습니다.")
+                    st.dataframe(pd.DataFrame(override_rows), use_container_width=True, hide_index=True)
             st.json(context or {"context": None})
 
     with detail_tabs[2]:
@@ -2406,7 +2877,7 @@ def _render_persistent_backtest_history() -> None:
         if st.button("Run Again", key="backtest_history_run_again", use_container_width=True):
             _handle_backtest_run(payload, strategy_name=_history_strategy_display_name(selected_record))
     with action_cols[2]:
-        st.caption("Use `Load Into Form` when you want to tweak inputs before rerunning. `Run Again` executes the stored payload immediately.")
+        st.caption("`Load Into Form`은 저장된 입력값을 Single Strategy 화면으로 불러와서 수정만 하도록 돕는 기능입니다. `Run Again`은 저장된 payload를 즉시 다시 실행합니다.")
 
 
 def _handle_backtest_run(payload: dict, *, strategy_name: str) -> None:
@@ -2487,6 +2958,27 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> None:
                     rebalance_interval=payload.get("rebalance_interval", 1),
                     trend_filter_enabled=payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED),
                     trend_filter_window=payload.get("trend_filter_window", STRICT_TREND_FILTER_DEFAULT_WINDOW),
+                    market_regime_enabled=payload.get("market_regime_enabled", STRICT_MARKET_REGIME_DEFAULT_ENABLED),
+                    market_regime_window=payload.get("market_regime_window", STRICT_MARKET_REGIME_DEFAULT_WINDOW),
+                    market_regime_benchmark=payload.get("market_regime_benchmark", STRICT_MARKET_REGIME_DEFAULT_BENCHMARK),
+                    universe_mode=payload["universe_mode"],
+                    preset_name=payload["preset_name"],
+                )
+            elif payload["strategy_key"] == "quality_snapshot_strict_quarterly_prototype":
+                bundle = run_quality_snapshot_strict_quarterly_prototype_backtest_from_db(
+                    tickers=payload["tickers"],
+                    start=payload["start"],
+                    end=payload["end"],
+                    timeframe=payload["timeframe"],
+                    option=payload["option"],
+                    quality_factors=payload["quality_factors"],
+                    top_n=payload["top"],
+                    rebalance_interval=payload.get("rebalance_interval", 1),
+                    trend_filter_enabled=payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED),
+                    trend_filter_window=payload.get("trend_filter_window", STRICT_TREND_FILTER_DEFAULT_WINDOW),
+                    market_regime_enabled=payload.get("market_regime_enabled", STRICT_MARKET_REGIME_DEFAULT_ENABLED),
+                    market_regime_window=payload.get("market_regime_window", STRICT_MARKET_REGIME_DEFAULT_WINDOW),
+                    market_regime_benchmark=payload.get("market_regime_benchmark", STRICT_MARKET_REGIME_DEFAULT_BENCHMARK),
                     universe_mode=payload["universe_mode"],
                     preset_name=payload["preset_name"],
                 )
@@ -2502,6 +2994,27 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> None:
                     rebalance_interval=payload.get("rebalance_interval", 1),
                     trend_filter_enabled=payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED),
                     trend_filter_window=payload.get("trend_filter_window", STRICT_TREND_FILTER_DEFAULT_WINDOW),
+                    market_regime_enabled=payload.get("market_regime_enabled", STRICT_MARKET_REGIME_DEFAULT_ENABLED),
+                    market_regime_window=payload.get("market_regime_window", STRICT_MARKET_REGIME_DEFAULT_WINDOW),
+                    market_regime_benchmark=payload.get("market_regime_benchmark", STRICT_MARKET_REGIME_DEFAULT_BENCHMARK),
+                    universe_mode=payload["universe_mode"],
+                    preset_name=payload["preset_name"],
+                )
+            elif payload["strategy_key"] == "value_snapshot_strict_quarterly_prototype":
+                bundle = run_value_snapshot_strict_quarterly_prototype_backtest_from_db(
+                    tickers=payload["tickers"],
+                    start=payload["start"],
+                    end=payload["end"],
+                    timeframe=payload["timeframe"],
+                    option=payload["option"],
+                    value_factors=payload["value_factors"],
+                    top_n=payload["top"],
+                    rebalance_interval=payload.get("rebalance_interval", 1),
+                    trend_filter_enabled=payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED),
+                    trend_filter_window=payload.get("trend_filter_window", STRICT_TREND_FILTER_DEFAULT_WINDOW),
+                    market_regime_enabled=payload.get("market_regime_enabled", STRICT_MARKET_REGIME_DEFAULT_ENABLED),
+                    market_regime_window=payload.get("market_regime_window", STRICT_MARKET_REGIME_DEFAULT_WINDOW),
+                    market_regime_benchmark=payload.get("market_regime_benchmark", STRICT_MARKET_REGIME_DEFAULT_BENCHMARK),
                     universe_mode=payload["universe_mode"],
                     preset_name=payload["preset_name"],
                 )
@@ -2518,6 +3031,28 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> None:
                     rebalance_interval=payload.get("rebalance_interval", 1),
                     trend_filter_enabled=payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED),
                     trend_filter_window=payload.get("trend_filter_window", STRICT_TREND_FILTER_DEFAULT_WINDOW),
+                    market_regime_enabled=payload.get("market_regime_enabled", STRICT_MARKET_REGIME_DEFAULT_ENABLED),
+                    market_regime_window=payload.get("market_regime_window", STRICT_MARKET_REGIME_DEFAULT_WINDOW),
+                    market_regime_benchmark=payload.get("market_regime_benchmark", STRICT_MARKET_REGIME_DEFAULT_BENCHMARK),
+                    universe_mode=payload["universe_mode"],
+                    preset_name=payload["preset_name"],
+                )
+            elif payload["strategy_key"] == "quality_value_snapshot_strict_quarterly_prototype":
+                bundle = run_quality_value_snapshot_strict_quarterly_prototype_backtest_from_db(
+                    tickers=payload["tickers"],
+                    start=payload["start"],
+                    end=payload["end"],
+                    timeframe=payload["timeframe"],
+                    option=payload["option"],
+                    quality_factors=payload["quality_factors"],
+                    value_factors=payload["value_factors"],
+                    top_n=payload["top"],
+                    rebalance_interval=payload.get("rebalance_interval", 1),
+                    trend_filter_enabled=payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED),
+                    trend_filter_window=payload.get("trend_filter_window", STRICT_TREND_FILTER_DEFAULT_WINDOW),
+                    market_regime_enabled=payload.get("market_regime_enabled", STRICT_MARKET_REGIME_DEFAULT_ENABLED),
+                    market_regime_window=payload.get("market_regime_window", STRICT_MARKET_REGIME_DEFAULT_WINDOW),
+                    market_regime_benchmark=payload.get("market_regime_benchmark", STRICT_MARKET_REGIME_DEFAULT_BENCHMARK),
                     universe_mode=payload["universe_mode"],
                     preset_name=payload["preset_name"],
                 )
@@ -3057,7 +3592,7 @@ def _render_quality_snapshot_strict_annual_form() -> None:
 
     _render_strict_price_freshness_preflight(
         tickers=tickers,
-        end_value=st.session_state.get("qss_end", date(2026, 3, 20)),
+        end_value=st.session_state.get("qss_end", DEFAULT_BACKTEST_END_DATE),
         timeframe=st.session_state.get("qss_timeframe", "1d"),
         strategy_label="Quality Snapshot (Strict Annual)",
     )
@@ -3117,9 +3652,12 @@ def _render_quality_snapshot_strict_annual_form() -> None:
                     max_value=400,
                     value=STRICT_TREND_FILTER_DEFAULT_WINDOW,
                     step=10,
-                    disabled=not trend_filter_enabled,
                     key="qss_trend_filter_window",
                 )
+            )
+            market_regime_enabled, market_regime_window, market_regime_benchmark = _render_market_regime_overlay_inputs(
+                key_prefix="qss",
+                label_prefix="",
             )
 
         submitted = st.form_submit_button("Run Strict Annual Quality Backtest", use_container_width=True)
@@ -3154,11 +3692,346 @@ def _render_quality_snapshot_strict_annual_form() -> None:
         "quality_factors": quality_factors,
         "trend_filter_enabled": bool(trend_filter_enabled),
         "trend_filter_window": int(trend_filter_window),
+        "market_regime_enabled": bool(market_regime_enabled),
+        "market_regime_window": int(market_regime_window),
+        "market_regime_benchmark": market_regime_benchmark,
         "universe_mode": "preset" if universe_mode == "Preset" else "manual_tickers",
         "preset_name": preset_name,
     }
 
     _handle_backtest_run(payload, strategy_name="Quality Snapshot (Strict Annual)")
+
+
+def _render_quality_snapshot_strict_quarterly_prototype_form() -> None:
+    st.markdown("### Quality Snapshot (Strict Quarterly Prototype)")
+    st.caption("Research-only quarterly strict quality strategy. This Phase 7 path ranks quarterly statement shadow factors and keeps the top names equally between monthly rebalances.")
+    _apply_single_strategy_prefill("quality_snapshot_strict_quarterly_prototype")
+
+    with st.expander("Data Requirements", expanded=False):
+        st.markdown(
+            "- `Daily Market Update` 또는 OHLCV 수집으로 **가격 데이터**를 먼저 채워야 합니다.\n"
+            "- `Extended Statement Refresh`와 statement shadow factor rebuild가 **quarterly** 기준으로 준비되어 있어야 합니다.\n"
+            "- 이 경로는 현재 **research-only quarterly strict prototype** 입니다.\n"
+            "- annual strict public family와 달리, coverage / freshness / runtime 검증이 이번 Phase 7에서 함께 진행됩니다."
+        )
+        st.caption("Current prototype mode: `strict_statement_quarterly` + `shadow_factors` + `research_only`")
+        st.caption(
+            "주의: 현재 DB의 quarterly shadow coverage 상태에 따라 실제 투자 구간이 요청한 시작일보다 늦게 열릴 수 있습니다. "
+            "Phase 7 first pass 이후 `US Statement Coverage 100` 기본 preset은 다시 2016 부근부터 열리지만, 다른 universe나 수동 ticker 조합은 coverage 상태에 따라 더 늦을 수 있습니다."
+        )
+
+    universe_mode = st.radio(
+        "Universe Mode",
+        options=["Preset", "Manual"],
+        horizontal=True,
+        help="quarterly prototype first pass는 검증 비용을 낮추기 위해 `US Statement Coverage 100`을 기본 preset으로 둡니다.",
+        key="qsqp_universe_mode",
+    )
+
+    preset_name = None
+    tickers: list[str] = []
+    if universe_mode == "Preset":
+        preset_name = st.selectbox(
+            "Preset",
+            options=list(QUALITY_STRICT_PRESETS.keys()),
+            index=list(QUALITY_STRICT_PRESETS.keys()).index(STRICT_QUARTERLY_PROTOTYPE_DEFAULT_PRESET),
+            key="qsqp_preset",
+        )
+        tickers = QUALITY_STRICT_PRESETS[preset_name]
+        _render_ticker_preview(tickers)
+        _render_historical_universe_caption()
+    else:
+        manual_tickers = st.text_input(
+            "Tickers",
+            value="AAPL,MSFT,GOOG",
+            help="쉼표로 구분한 주식 티커를 입력합니다. 예: AAPL,MSFT,GOOG",
+            key="qsqp_manual_tickers",
+        )
+        tickers = _parse_manual_tickers(manual_tickers)
+        _render_ticker_preview(tickers)
+
+    _render_strict_price_freshness_preflight(
+        tickers=tickers,
+        end_value=st.session_state.get("qsqp_end", DEFAULT_BACKTEST_END_DATE),
+        timeframe=st.session_state.get("qsqp_timeframe", "1d"),
+        strategy_label="Quality Snapshot (Strict Quarterly Prototype)",
+    )
+    _render_statement_shadow_coverage_preview(
+        tickers=tickers,
+        freq="quarterly",
+        strategy_label="Quality Snapshot (Strict Quarterly Prototype)",
+    )
+
+    with st.form("quality_snapshot_strict_quarterly_prototype_backtest_form", clear_on_submit=False):
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            start_date = st.date_input("Start Date", value=date(2016, 1, 1), key="qsqp_start")
+        with col2:
+            end_date = st.date_input("End Date", value=DEFAULT_BACKTEST_END_DATE, key="qsqp_end")
+        with col3:
+            top_n = st.number_input(
+                "Top N",
+                min_value=1,
+                max_value=20,
+                value=2,
+                step=1,
+                help="strict quarterly quality 점수 기준으로 상위 몇 개 종목을 선택할지 정합니다.",
+                key="qsqp_top_n",
+            )
+
+        st.caption("Research-only defaults in this first pass: `quarterly statement snapshots`, `monthly rebalance`, `equal-weight holding`.")
+
+        with st.expander("Advanced Inputs", expanded=False):
+            timeframe = st.selectbox("Timeframe", options=["1d"], index=0, key="qsqp_timeframe")
+            option = st.selectbox("Option", options=["month_end"], index=0, key="qsqp_option")
+            rebalance_interval = st.number_input(
+                "Rebalance Interval",
+                min_value=1,
+                max_value=12,
+                value=1,
+                step=1,
+                help="기본은 매월 리밸런싱(1)이며, quarterly snapshot 자체는 가장 최근 usable filing 기준으로 따라갑니다.",
+                key="qsqp_rebalance_interval",
+            )
+            quality_factors = st.multiselect(
+                "Quality Factors",
+                options=QUALITY_STRICT_FACTOR_OPTIONS,
+                default=QUALITY_STRICT_DEFAULT_FACTORS,
+                key="qsqp_quality_factors",
+                help="first-pass quarterly prototype도 quality strict와 같은 coverage-first 팩터 조합을 기본값으로 사용합니다.",
+            )
+            trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
+            with trend_title_col:
+                st.markdown("##### Trend Filter Overlay")
+            with trend_help_col:
+                _render_trend_filter_help_popover()
+            trend_filter_enabled = st.checkbox(
+                "Enable",
+                value=STRICT_TREND_FILTER_DEFAULT_ENABLED,
+                key="qsqp_trend_filter_enabled",
+            )
+            trend_filter_window = int(
+                st.number_input(
+                    "Trend Filter Window",
+                    min_value=20,
+                    max_value=400,
+                    value=STRICT_TREND_FILTER_DEFAULT_WINDOW,
+                    step=10,
+                    key="qsqp_trend_filter_window",
+                )
+            )
+            market_regime_enabled, market_regime_window, market_regime_benchmark = _render_market_regime_overlay_inputs(
+                key_prefix="qsqp",
+                label_prefix="",
+            )
+
+        submitted = st.form_submit_button("Run Strict Quarterly Quality Prototype", use_container_width=True)
+
+    if not submitted:
+        return
+
+    validation_errors: list[str] = []
+    if not tickers:
+        validation_errors.append("At least one ticker is required.")
+    if start_date > end_date:
+        validation_errors.append("Start Date must be earlier than or equal to End Date.")
+    if not quality_factors:
+        validation_errors.append("Select at least one quality factor.")
+
+    if validation_errors:
+        for error in validation_errors:
+            st.error(error)
+        return
+
+    payload = {
+        "strategy_key": "quality_snapshot_strict_quarterly_prototype",
+        "tickers": tickers,
+        "start": start_date.isoformat(),
+        "end": end_date.isoformat(),
+        "timeframe": timeframe,
+        "option": option,
+        "top": int(top_n),
+        "rebalance_interval": int(rebalance_interval),
+        "factor_freq": "quarterly",
+        "snapshot_mode": "strict_statement_quarterly",
+        "quality_factors": quality_factors,
+        "trend_filter_enabled": bool(trend_filter_enabled),
+        "trend_filter_window": int(trend_filter_window),
+        "market_regime_enabled": bool(market_regime_enabled),
+        "market_regime_window": int(market_regime_window),
+        "market_regime_benchmark": market_regime_benchmark,
+        "universe_mode": "preset" if universe_mode == "Preset" else "manual_tickers",
+        "preset_name": preset_name,
+    }
+
+    _handle_backtest_run(payload, strategy_name="Quality Snapshot (Strict Quarterly Prototype)")
+
+
+def _render_value_snapshot_strict_quarterly_prototype_form() -> None:
+    st.markdown("### Value Snapshot (Strict Quarterly Prototype)")
+    st.caption(
+        "Research-only quarterly strict value strategy. This Phase 8 path ranks quarterly statement shadow value factors and holds the cheapest names equally between monthly rebalances."
+    )
+    with st.expander("Data Requirements", expanded=False):
+        st.markdown(
+            "- `Daily Market Update` 또는 OHLCV 수집으로 **가격 데이터**를 먼저 채워야 합니다.\n"
+            "- `Extended Statement Refresh`와 statement shadow factor rebuild가 **quarterly** 기준으로 준비되어 있어야 합니다.\n"
+            "- 이 경로는 현재 **research-only quarterly strict value prototype** 입니다.\n"
+            "- annual strict value public candidate와 달리, coverage / freshness / interpretation parity를 이번 Phase 8에서 함께 검증합니다."
+        )
+        st.caption("Current prototype mode: `strict_statement_quarterly` + `shadow_factors` + `research_only`")
+        st.caption(
+            "주의: 현재 DB의 quarterly shadow coverage 상태에 따라 실제 투자 구간이 요청한 시작일보다 늦게 열릴 수 있습니다. "
+            "`US Statement Coverage 100` 기본 preset은 검증용 anchor일 뿐이고, 다른 universe나 수동 ticker 조합은 coverage 상태에 따라 더 늦게 열릴 수 있습니다."
+        )
+    _apply_single_strategy_prefill("value_snapshot_strict_quarterly_prototype")
+
+    universe_mode = st.radio(
+        "Universe Mode",
+        options=["Preset", "Manual"],
+        horizontal=True,
+        help="quarterly strict value prototype first pass는 검증 비용을 낮추기 위해 `US Statement Coverage 100`을 기본 preset으로 둡니다.",
+        key="vsqp_universe_mode",
+    )
+
+    preset_name = None
+    tickers: list[str] = []
+    if universe_mode == "Preset":
+        preset_name = st.selectbox(
+            "Preset",
+            options=list(VALUE_STRICT_PRESETS.keys()),
+            index=list(VALUE_STRICT_PRESETS.keys()).index(STRICT_QUARTERLY_PROTOTYPE_DEFAULT_PRESET),
+            key="vsqp_preset",
+        )
+        tickers = VALUE_STRICT_PRESETS[preset_name]
+        _render_ticker_preview(tickers)
+        _render_historical_universe_caption()
+    else:
+        manual_tickers = st.text_input(
+            "Tickers",
+            value="AAPL,MSFT,GOOG",
+            help="쉼표로 구분한 주식 티커를 입력합니다. 예: AAPL,MSFT,GOOG",
+            key="vsqp_manual_tickers",
+        )
+        tickers = _parse_manual_tickers(manual_tickers)
+        _render_ticker_preview(tickers)
+
+    _render_strict_price_freshness_preflight(
+        tickers=tickers,
+        end_value=st.session_state.get("vsqp_end", DEFAULT_BACKTEST_END_DATE),
+        timeframe=st.session_state.get("vsqp_timeframe", "1d"),
+        strategy_label="Value Snapshot (Strict Quarterly Prototype)",
+    )
+    _render_statement_shadow_coverage_preview(
+        tickers=tickers,
+        freq="quarterly",
+        strategy_label="Value Snapshot (Strict Quarterly Prototype)",
+    )
+
+    with st.form("value_snapshot_strict_quarterly_prototype_backtest_form", clear_on_submit=False):
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            start_date = st.date_input("Start Date", value=date(2016, 1, 1), key="vsqp_start")
+        with col2:
+            end_date = st.date_input("End Date", value=DEFAULT_BACKTEST_END_DATE, key="vsqp_end")
+        with col3:
+            top_n = st.number_input(
+                "Top N",
+                min_value=1,
+                max_value=50,
+                value=10,
+                step=1,
+                help="strict quarterly value 점수 기준으로 상위 몇 개 종목을 선택할지 정합니다.",
+                key="vsqp_top_n",
+            )
+
+        st.caption("Research-only defaults in this first pass: `quarterly statement shadow factors`, `monthly rebalance`, `equal-weight holding`.")
+
+        with st.expander("Advanced Inputs", expanded=False):
+            timeframe = st.selectbox("Timeframe", options=["1d"], index=0, key="vsqp_timeframe")
+            option = st.selectbox("Option", options=["month_end"], index=0, key="vsqp_option")
+            rebalance_interval = st.number_input(
+                "Rebalance Interval",
+                min_value=1,
+                max_value=12,
+                value=1,
+                step=1,
+                help="기본은 매월 리밸런싱(1)이며, quarterly snapshot 자체는 가장 최근 usable filing 기준으로 따라갑니다.",
+                key="vsqp_rebalance_interval",
+            )
+            value_factors = st.multiselect(
+                "Value Factors",
+                options=VALUE_STRICT_FACTOR_OPTIONS,
+                default=VALUE_STRICT_DEFAULT_FACTORS,
+                key="vsqp_value_factors",
+                help="quarterly prototype도 yield / book-to-market 중심의 coverage-first 기본 조합을 사용합니다.",
+            )
+            trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
+            with trend_title_col:
+                st.markdown("##### Trend Filter Overlay")
+            with trend_help_col:
+                _render_trend_filter_help_popover()
+            trend_filter_enabled = st.checkbox(
+                "Enable",
+                value=STRICT_TREND_FILTER_DEFAULT_ENABLED,
+                key="vsqp_trend_filter_enabled",
+            )
+            trend_filter_window = int(
+                st.number_input(
+                    "Trend Filter Window",
+                    min_value=20,
+                    max_value=400,
+                    value=STRICT_TREND_FILTER_DEFAULT_WINDOW,
+                    step=10,
+                    key="vsqp_trend_filter_window",
+                )
+            )
+            market_regime_enabled, market_regime_window, market_regime_benchmark = _render_market_regime_overlay_inputs(
+                key_prefix="vsqp",
+                label_prefix="",
+            )
+
+        submitted = st.form_submit_button("Run Strict Quarterly Value Prototype", use_container_width=True)
+
+    if not submitted:
+        return
+
+    validation_errors: list[str] = []
+    if not tickers:
+        validation_errors.append("At least one ticker is required.")
+    if start_date > end_date:
+        validation_errors.append("Start Date must be earlier than or equal to End Date.")
+    if not value_factors:
+        validation_errors.append("Select at least one value factor.")
+
+    if validation_errors:
+        for error in validation_errors:
+            st.error(error)
+        return
+
+    payload = {
+        "strategy_key": "value_snapshot_strict_quarterly_prototype",
+        "tickers": tickers,
+        "start": start_date.isoformat(),
+        "end": end_date.isoformat(),
+        "timeframe": timeframe,
+        "option": option,
+        "top": int(top_n),
+        "rebalance_interval": int(rebalance_interval),
+        "factor_freq": "quarterly",
+        "snapshot_mode": "strict_statement_quarterly",
+        "snapshot_source": "shadow_factors",
+        "value_factors": value_factors,
+        "trend_filter_enabled": bool(trend_filter_enabled),
+        "trend_filter_window": int(trend_filter_window),
+        "market_regime_enabled": bool(market_regime_enabled),
+        "market_regime_window": int(market_regime_window),
+        "market_regime_benchmark": market_regime_benchmark,
+        "universe_mode": "preset" if universe_mode == "Preset" else "manual_tickers",
+        "preset_name": preset_name,
+    }
+
+    _handle_backtest_run(payload, strategy_name="Value Snapshot (Strict Quarterly Prototype)")
 
 
 def _render_value_snapshot_strict_annual_form() -> None:
@@ -3209,7 +4082,7 @@ def _render_value_snapshot_strict_annual_form() -> None:
 
     _render_strict_price_freshness_preflight(
         tickers=tickers,
-        end_value=st.session_state.get("vss_end", date(2026, 3, 20)),
+        end_value=st.session_state.get("vss_end", DEFAULT_BACKTEST_END_DATE),
         timeframe=st.session_state.get("vss_timeframe", "1d"),
         strategy_label="Value Snapshot (Strict Annual)",
     )
@@ -3269,9 +4142,12 @@ def _render_value_snapshot_strict_annual_form() -> None:
                     max_value=400,
                     value=STRICT_TREND_FILTER_DEFAULT_WINDOW,
                     step=10,
-                    disabled=not trend_filter_enabled,
                     key="vss_trend_filter_window",
                 )
+            )
+            market_regime_enabled, market_regime_window, market_regime_benchmark = _render_market_regime_overlay_inputs(
+                key_prefix="vss",
+                label_prefix="",
             )
 
         submitted = st.form_submit_button("Run Strict Annual Value Backtest", use_container_width=True)
@@ -3307,11 +4183,189 @@ def _render_value_snapshot_strict_annual_form() -> None:
         "value_factors": value_factors,
         "trend_filter_enabled": bool(trend_filter_enabled),
         "trend_filter_window": int(trend_filter_window),
+        "market_regime_enabled": bool(market_regime_enabled),
+        "market_regime_window": int(market_regime_window),
+        "market_regime_benchmark": market_regime_benchmark,
         "universe_mode": "preset" if universe_mode == "Preset" else "manual_tickers",
         "preset_name": preset_name,
     }
 
     _handle_backtest_run(payload, strategy_name="Value Snapshot (Strict Annual)")
+
+
+def _render_quality_value_snapshot_strict_quarterly_prototype_form() -> None:
+    st.markdown("### Quality + Value Snapshot (Strict Quarterly Prototype)")
+    st.caption(
+        "Research-only quarterly strict multi-factor strategy. This Phase 8 path blends quarterly quality and value shadow factors, then holds the combined top names equally between monthly rebalances."
+    )
+    with st.expander("Data Requirements", expanded=False):
+        st.markdown(
+            "- `Daily Market Update` 또는 OHLCV 수집으로 **가격 데이터**를 먼저 채워야 합니다.\n"
+            "- `Extended Statement Refresh`와 statement shadow factor rebuild가 **quarterly** 기준으로 준비되어 있어야 합니다.\n"
+            "- 이 경로는 현재 **research-only quarterly strict multi-factor prototype** 입니다.\n"
+            "- quality + value availability가 동시에 필요하므로 quarterly quality/value 단독 경로보다 usable history가 조금 더 보수적으로 보일 수 있습니다."
+        )
+        st.caption("Current prototype mode: `strict_statement_quarterly` + `shadow_factors` + `quality_value_blend` + `research_only`")
+        st.caption(
+            "주의: 현재 DB의 quarterly shadow coverage 상태에 따라 실제 투자 구간이 요청한 시작일보다 늦게 열릴 수 있습니다. "
+            "`US Statement Coverage 100` 기본 preset은 검증 anchor이고, 다른 universe나 수동 ticker 조합은 coverage 상태에 따라 더 늦게 열릴 수 있습니다."
+        )
+    _apply_single_strategy_prefill("quality_value_snapshot_strict_quarterly_prototype")
+
+    universe_mode = st.radio(
+        "Universe Mode",
+        options=["Preset", "Manual"],
+        horizontal=True,
+        help="quarterly strict multi-factor prototype first pass는 검증 비용을 낮추기 위해 `US Statement Coverage 100`을 기본 preset으로 둡니다.",
+        key="qvqp_universe_mode",
+    )
+
+    preset_name = None
+    tickers: list[str] = []
+    if universe_mode == "Preset":
+        preset_name = st.selectbox(
+            "Preset",
+            options=list(QUALITY_STRICT_PRESETS.keys()),
+            index=list(QUALITY_STRICT_PRESETS.keys()).index(STRICT_QUARTERLY_PROTOTYPE_DEFAULT_PRESET),
+            key="qvqp_preset",
+        )
+        tickers = QUALITY_STRICT_PRESETS[preset_name]
+        _render_ticker_preview(tickers)
+        _render_historical_universe_caption()
+    else:
+        manual_tickers = st.text_input(
+            "Tickers",
+            value="AAPL,MSFT,GOOG",
+            help="쉼표로 구분한 주식 티커를 입력합니다. 예: AAPL,MSFT,GOOG",
+            key="qvqp_manual_tickers",
+        )
+        tickers = _parse_manual_tickers(manual_tickers)
+        _render_ticker_preview(tickers)
+
+    _render_strict_price_freshness_preflight(
+        tickers=tickers,
+        end_value=st.session_state.get("qvqp_end", DEFAULT_BACKTEST_END_DATE),
+        timeframe=st.session_state.get("qvqp_timeframe", "1d"),
+        strategy_label="Quality + Value Snapshot (Strict Quarterly Prototype)",
+    )
+    _render_statement_shadow_coverage_preview(
+        tickers=tickers,
+        freq="quarterly",
+        strategy_label="Quality + Value Snapshot (Strict Quarterly Prototype)",
+    )
+
+    with st.form("quality_value_snapshot_strict_quarterly_prototype_backtest_form", clear_on_submit=False):
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            start_date = st.date_input("Start Date", value=date(2016, 1, 1), key="qvqp_start")
+        with col2:
+            end_date = st.date_input("End Date", value=DEFAULT_BACKTEST_END_DATE, key="qvqp_end")
+        with col3:
+            top_n = st.number_input(
+                "Top N",
+                min_value=1,
+                max_value=30,
+                value=10,
+                step=1,
+                help="strict quarterly multi-factor 종합 점수 기준으로 상위 몇 개 종목을 선택할지 정합니다.",
+                key="qvqp_top_n",
+            )
+
+        st.caption("Research-only defaults in this first pass: `quarterly statement shadow factors`, `monthly rebalance`, `equal-weight holding`.")
+
+        with st.expander("Advanced Inputs", expanded=False):
+            timeframe = st.selectbox("Timeframe", options=["1d"], index=0, key="qvqp_timeframe")
+            option = st.selectbox("Option", options=["month_end"], index=0, key="qvqp_option")
+            rebalance_interval = st.number_input(
+                "Rebalance Interval",
+                min_value=1,
+                max_value=12,
+                value=1,
+                step=1,
+                help="기본은 매월 리밸런싱(1)이며, quarterly snapshot 자체는 가장 최근 usable filing 기준으로 따라갑니다.",
+                key="qvqp_rebalance_interval",
+            )
+            quality_factors = st.multiselect(
+                "Quality Factors",
+                options=QUALITY_STRICT_FACTOR_OPTIONS,
+                default=QUALITY_STRICT_DEFAULT_FACTORS,
+                key="qvqp_quality_factors",
+            )
+            value_factors = st.multiselect(
+                "Value Factors",
+                options=VALUE_STRICT_FACTOR_OPTIONS,
+                default=VALUE_STRICT_DEFAULT_FACTORS,
+                key="qvqp_value_factors",
+            )
+            trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
+            with trend_title_col:
+                st.markdown("##### Trend Filter Overlay")
+            with trend_help_col:
+                _render_trend_filter_help_popover()
+            trend_filter_enabled = st.checkbox(
+                "Enable",
+                value=STRICT_TREND_FILTER_DEFAULT_ENABLED,
+                key="qvqp_trend_filter_enabled",
+            )
+            trend_filter_window = int(
+                st.number_input(
+                    "Trend Filter Window",
+                    min_value=20,
+                    max_value=400,
+                    value=STRICT_TREND_FILTER_DEFAULT_WINDOW,
+                    step=10,
+                    key="qvqp_trend_filter_window",
+                )
+            )
+            market_regime_enabled, market_regime_window, market_regime_benchmark = _render_market_regime_overlay_inputs(
+                key_prefix="qvqp",
+                label_prefix="",
+            )
+
+        submitted = st.form_submit_button("Run Strict Quarterly Quality + Value Prototype", use_container_width=True)
+
+    if not submitted:
+        return
+
+    validation_errors: list[str] = []
+    if not tickers:
+        validation_errors.append("At least one ticker is required.")
+    if start_date > end_date:
+        validation_errors.append("Start Date must be earlier than or equal to End Date.")
+    if not quality_factors:
+        validation_errors.append("Select at least one quality factor.")
+    if not value_factors:
+        validation_errors.append("Select at least one value factor.")
+
+    if validation_errors:
+        for error in validation_errors:
+            st.error(error)
+        return
+
+    payload = {
+        "strategy_key": "quality_value_snapshot_strict_quarterly_prototype",
+        "tickers": tickers,
+        "start": start_date.isoformat(),
+        "end": end_date.isoformat(),
+        "timeframe": timeframe,
+        "option": option,
+        "top": int(top_n),
+        "rebalance_interval": int(rebalance_interval),
+        "factor_freq": "quarterly",
+        "snapshot_mode": "strict_statement_quarterly",
+        "snapshot_source": "shadow_factors",
+        "quality_factors": quality_factors,
+        "value_factors": value_factors,
+        "trend_filter_enabled": bool(trend_filter_enabled),
+        "trend_filter_window": int(trend_filter_window),
+        "market_regime_enabled": bool(market_regime_enabled),
+        "market_regime_window": int(market_regime_window),
+        "market_regime_benchmark": market_regime_benchmark,
+        "universe_mode": "preset" if universe_mode == "Preset" else "manual_tickers",
+        "preset_name": preset_name,
+    }
+
+    _handle_backtest_run(payload, strategy_name="Quality + Value Snapshot (Strict Quarterly Prototype)")
 
 
 def _render_quality_value_snapshot_strict_annual_form() -> None:
@@ -3365,7 +4419,7 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
 
     _render_strict_price_freshness_preflight(
         tickers=tickers,
-        end_value=st.session_state.get("qvss_end", date(2026, 3, 20)),
+        end_value=st.session_state.get("qvss_end", DEFAULT_BACKTEST_END_DATE),
         timeframe=st.session_state.get("qvss_timeframe", "1d"),
         strategy_label="Quality + Value Snapshot (Strict Annual)",
     )
@@ -3430,9 +4484,12 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
                     max_value=400,
                     value=STRICT_TREND_FILTER_DEFAULT_WINDOW,
                     step=10,
-                    disabled=not trend_filter_enabled,
                     key="qvss_trend_filter_window",
                 )
+            )
+            market_regime_enabled, market_regime_window, market_regime_benchmark = _render_market_regime_overlay_inputs(
+                key_prefix="qvss",
+                label_prefix="",
             )
 
         submitted = st.form_submit_button("Run Strict Annual Quality + Value Backtest", use_container_width=True)
@@ -3471,6 +4528,9 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
         "value_factors": value_factors,
         "trend_filter_enabled": bool(trend_filter_enabled),
         "trend_filter_window": int(trend_filter_window),
+        "market_regime_enabled": bool(market_regime_enabled),
+        "market_regime_window": int(market_regime_window),
+        "market_regime_benchmark": market_regime_benchmark,
         "universe_mode": "preset" if universe_mode == "Preset" else "manual_tickers",
         "preset_name": preset_name,
     }
@@ -3545,9 +4605,14 @@ def render_backtest_tab() -> None:
             st.info(prefill_notice)
             st.session_state.backtest_prefill_notice = None
 
+        pending_strategy_choice = st.session_state.get("backtest_prefill_strategy_choice")
+        if pending_strategy_choice in SINGLE_STRATEGY_OPTIONS:
+            st.session_state.backtest_strategy_choice = pending_strategy_choice
+            st.session_state.backtest_prefill_strategy_choice = None
+
         strategy_choice = st.selectbox(
             "Strategy",
-            options=COMPARE_STRATEGY_OPTIONS,
+            options=SINGLE_STRATEGY_OPTIONS,
             index=0,
             help="The first Phase 4 UI keeps one strategy form visible at a time.",
             key="backtest_strategy_choice",
@@ -3566,8 +4631,14 @@ def render_backtest_tab() -> None:
             _render_quality_snapshot_form()
         elif strategy_choice == "Quality Snapshot (Strict Annual)":
             _render_quality_snapshot_strict_annual_form()
+        elif strategy_choice == "Quality Snapshot (Strict Quarterly Prototype)":
+            _render_quality_snapshot_strict_quarterly_prototype_form()
+        elif strategy_choice == "Value Snapshot (Strict Quarterly Prototype)":
+            _render_value_snapshot_strict_quarterly_prototype_form()
         elif strategy_choice == "Value Snapshot (Strict Annual)":
             _render_value_snapshot_strict_annual_form()
+        elif strategy_choice == "Quality + Value Snapshot (Strict Quarterly Prototype)":
+            _render_quality_value_snapshot_strict_quarterly_prototype_form()
         else:
             _render_quality_value_snapshot_strict_annual_form()
         st.divider()
@@ -3602,44 +4673,44 @@ def render_backtest_tab() -> None:
                 compare_strategy_overrides: dict[str, dict] = {}
 
                 if "Equal Weight" in selected_strategies:
-                    st.markdown("**Equal Weight**")
-                    compare_strategy_overrides["Equal Weight"] = {
-                        "rebalance_interval": int(
-                            st.number_input(
-                                "Equal Weight Rebalance Interval",
-                                min_value=1,
-                                max_value=36,
-                                value=12,
-                                step=1,
-                                key="compare_eq_interval",
+                    with st.expander("Equal Weight", expanded=False):
+                        compare_strategy_overrides["Equal Weight"] = {
+                            "rebalance_interval": int(
+                                st.number_input(
+                                    "Equal Weight Rebalance Interval",
+                                    min_value=1,
+                                    max_value=36,
+                                    value=12,
+                                    step=1,
+                                    key="compare_eq_interval",
+                                )
                             )
-                        )
-                    }
+                        }
 
                 if "GTAA" in selected_strategies:
-                    st.markdown("**GTAA**")
-                    compare_strategy_overrides["GTAA"] = {
-                        "top": int(
-                            st.number_input(
-                                "GTAA Top Assets",
-                                min_value=1,
-                                max_value=12,
-                                value=3,
-                                step=1,
-                                key="compare_gtaa_top",
-                            )
-                        ),
-                        "interval": int(
-                            st.number_input(
-                                "GTAA Signal Interval (months)",
-                                min_value=1,
-                                max_value=12,
-                                value=2,
-                                step=1,
-                                key="compare_gtaa_interval",
-                            )
-                        ),
-                    }
+                    with st.expander("GTAA", expanded=False):
+                        compare_strategy_overrides["GTAA"] = {
+                            "top": int(
+                                st.number_input(
+                                    "GTAA Top Assets",
+                                    min_value=1,
+                                    max_value=12,
+                                    value=3,
+                                    step=1,
+                                    key="compare_gtaa_top",
+                                )
+                            ),
+                            "interval": int(
+                                st.number_input(
+                                    "GTAA Signal Interval (months)",
+                                    min_value=1,
+                                    max_value=12,
+                                    value=2,
+                                    step=1,
+                                    key="compare_gtaa_interval",
+                                )
+                            ),
+                        }
 
                 if "Risk Parity Trend" in selected_strategies:
                     st.markdown("**Risk Parity Trend**")
@@ -3716,202 +4787,442 @@ def render_backtest_tab() -> None:
                     }
 
                 if "Quality Snapshot (Strict Annual)" in selected_strategies:
-                    st.markdown("**Quality Snapshot (Strict Annual)**")
-                    st.caption("Compare mode keeps the strict annual default lighter with `US Statement Coverage 100` so multi-strategy runs stay responsive.")
-                    qss_compare_preset = st.selectbox(
-                        "Strict Annual Quality Preset",
-                        options=list(QUALITY_STRICT_PRESETS.keys()),
-                        index=list(QUALITY_STRICT_PRESETS.keys()).index(STRICT_ANNUAL_COMPARE_DEFAULT_PRESET),
-                        key="compare_qss_preset",
-                    )
-                    _render_ticker_preview(QUALITY_STRICT_PRESETS[qss_compare_preset], preview_count=8, tail_count=3)
-                    _render_historical_universe_caption()
-                    compare_strategy_overrides["Quality Snapshot (Strict Annual)"] = {
-                        "preset_name": qss_compare_preset,
-                        "tickers": QUALITY_STRICT_PRESETS[qss_compare_preset],
-                        "universe_mode": "preset",
-                        "top_n": int(
-                            st.number_input(
-                                "Strict Annual Quality Top N",
-                                min_value=1,
-                                max_value=20,
-                                value=2,
-                                step=1,
-                                key="compare_qss_top_n",
-                            )
-                        ),
-                        "rebalance_interval": int(
-                            st.number_input(
-                                "Strict Annual Quality Rebalance Interval",
-                                min_value=1,
-                                max_value=12,
-                                value=1,
-                                step=1,
-                                key="compare_qss_rebalance_interval",
-                            )
-                        ),
-                        "quality_factors": st.multiselect(
-                            "Strict Annual Quality Factors",
-                            options=QUALITY_STRICT_FACTOR_OPTIONS,
-                            default=QUALITY_STRICT_DEFAULT_FACTORS,
-                            key="compare_qss_factors",
-                        ),
-                    }
-                    trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
-                    with trend_title_col:
-                        st.markdown("##### Strict Annual Quality Trend Filter")
-                    with trend_help_col:
-                        _render_trend_filter_help_popover()
-                    compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["trend_filter_enabled"] = st.checkbox(
-                        "Enable",
-                        value=STRICT_TREND_FILTER_DEFAULT_ENABLED,
-                        key="compare_qss_trend_filter_enabled",
-                    )
-                    compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["trend_filter_window"] = int(
-                        st.number_input(
-                            "Strict Annual Quality Trend Filter Window",
-                            min_value=20,
-                            max_value=400,
-                            value=STRICT_TREND_FILTER_DEFAULT_WINDOW,
-                            step=10,
-                            disabled=not compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["trend_filter_enabled"],
-                            key="compare_qss_trend_filter_window",
+                    with st.expander("Quality Snapshot (Strict Annual)", expanded=False):
+                        st.caption("Compare mode keeps the strict annual default lighter with `US Statement Coverage 100` so multi-strategy runs stay responsive.")
+                        qss_compare_preset = st.selectbox(
+                            "Strict Annual Quality Preset",
+                            options=list(QUALITY_STRICT_PRESETS.keys()),
+                            index=list(QUALITY_STRICT_PRESETS.keys()).index(STRICT_ANNUAL_COMPARE_DEFAULT_PRESET),
+                            key="compare_qss_preset",
                         )
-                    )
+                        _render_ticker_preview(QUALITY_STRICT_PRESETS[qss_compare_preset], preview_count=8, tail_count=3)
+                        _render_historical_universe_caption()
+                        compare_strategy_overrides["Quality Snapshot (Strict Annual)"] = {
+                            "preset_name": qss_compare_preset,
+                            "tickers": QUALITY_STRICT_PRESETS[qss_compare_preset],
+                            "universe_mode": "preset",
+                            "top_n": int(
+                                st.number_input(
+                                    "Strict Annual Quality Top N",
+                                    min_value=1,
+                                    max_value=20,
+                                    value=2,
+                                    step=1,
+                                    key="compare_qss_top_n",
+                                )
+                            ),
+                            "rebalance_interval": int(
+                                st.number_input(
+                                    "Strict Annual Quality Rebalance Interval",
+                                    min_value=1,
+                                    max_value=12,
+                                    value=1,
+                                    step=1,
+                                    key="compare_qss_rebalance_interval",
+                                )
+                            ),
+                            "quality_factors": st.multiselect(
+                                "Strict Annual Quality Factors",
+                                options=QUALITY_STRICT_FACTOR_OPTIONS,
+                                default=QUALITY_STRICT_DEFAULT_FACTORS,
+                                key="compare_qss_factors",
+                            ),
+                        }
+                        trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
+                        with trend_title_col:
+                            st.markdown("##### Strict Annual Quality Trend Filter")
+                        with trend_help_col:
+                            _render_trend_filter_help_popover()
+                        compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["trend_filter_enabled"] = st.checkbox(
+                            "Enable",
+                            value=STRICT_TREND_FILTER_DEFAULT_ENABLED,
+                            key="compare_qss_trend_filter_enabled",
+                        )
+                        compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["trend_filter_window"] = int(
+                            st.number_input(
+                                "Strict Annual Quality Trend Filter Window",
+                                min_value=20,
+                                max_value=400,
+                                value=STRICT_TREND_FILTER_DEFAULT_WINDOW,
+                                step=10,
+                                key="compare_qss_trend_filter_window",
+                            )
+                        )
+                        (
+                            compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["market_regime_enabled"],
+                            compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["market_regime_window"],
+                            compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["market_regime_benchmark"],
+                        ) = _render_market_regime_overlay_inputs(
+                            key_prefix="compare_qss",
+                            label_prefix="Strict Annual Quality ",
+                        )
+
+                if "Quality Snapshot (Strict Quarterly Prototype)" in selected_strategies:
+                    with st.expander("Quality Snapshot (Strict Quarterly Prototype)", expanded=False):
+                        st.caption("Research-only compare path. Default preset stays at `US Statement Coverage 100` to keep quarterly family validation tractable.")
+                        qsqp_compare_preset = st.selectbox(
+                            "Strict Quarterly Quality Preset",
+                            options=list(QUALITY_STRICT_PRESETS.keys()),
+                            index=list(QUALITY_STRICT_PRESETS.keys()).index(STRICT_QUARTERLY_PROTOTYPE_DEFAULT_PRESET),
+                            key="compare_qsqp_preset",
+                        )
+                        _render_ticker_preview(QUALITY_STRICT_PRESETS[qsqp_compare_preset], preview_count=8, tail_count=3)
+                        _render_historical_universe_caption()
+                        compare_strategy_overrides["Quality Snapshot (Strict Quarterly Prototype)"] = {
+                            "preset_name": qsqp_compare_preset,
+                            "tickers": QUALITY_STRICT_PRESETS[qsqp_compare_preset],
+                            "universe_mode": "preset",
+                            "top_n": int(
+                                st.number_input(
+                                    "Strict Quarterly Quality Top N",
+                                    min_value=1,
+                                    max_value=20,
+                                    value=2,
+                                    step=1,
+                                    key="compare_qsqp_top_n",
+                                )
+                            ),
+                            "rebalance_interval": int(
+                                st.number_input(
+                                    "Strict Quarterly Quality Rebalance Interval",
+                                    min_value=1,
+                                    max_value=12,
+                                    value=1,
+                                    step=1,
+                                    key="compare_qsqp_rebalance_interval",
+                                )
+                            ),
+                            "quality_factors": st.multiselect(
+                                "Strict Quarterly Quality Factors",
+                                options=QUALITY_STRICT_FACTOR_OPTIONS,
+                                default=QUALITY_STRICT_DEFAULT_FACTORS,
+                                key="compare_qsqp_factors",
+                            ),
+                        }
+                        trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
+                        with trend_title_col:
+                            st.markdown("##### Strict Quarterly Quality Trend Filter")
+                        with trend_help_col:
+                            _render_trend_filter_help_popover()
+                        compare_strategy_overrides["Quality Snapshot (Strict Quarterly Prototype)"]["trend_filter_enabled"] = st.checkbox(
+                            "Enable",
+                            value=STRICT_TREND_FILTER_DEFAULT_ENABLED,
+                            key="compare_qsqp_trend_filter_enabled",
+                        )
+                        compare_strategy_overrides["Quality Snapshot (Strict Quarterly Prototype)"]["trend_filter_window"] = int(
+                            st.number_input(
+                                "Strict Quarterly Quality Trend Filter Window",
+                                min_value=20,
+                                max_value=400,
+                                value=STRICT_TREND_FILTER_DEFAULT_WINDOW,
+                                step=10,
+                                key="compare_qsqp_trend_filter_window",
+                            )
+                        )
+                        (
+                            compare_strategy_overrides["Quality Snapshot (Strict Quarterly Prototype)"]["market_regime_enabled"],
+                            compare_strategy_overrides["Quality Snapshot (Strict Quarterly Prototype)"]["market_regime_window"],
+                            compare_strategy_overrides["Quality Snapshot (Strict Quarterly Prototype)"]["market_regime_benchmark"],
+                        ) = _render_market_regime_overlay_inputs(
+                            key_prefix="compare_qsqp",
+                            label_prefix="Strict Quarterly Quality ",
+                        )
 
                 if "Value Snapshot (Strict Annual)" in selected_strategies:
-                    st.markdown("**Value Snapshot (Strict Annual)**")
-                    st.caption("Compare mode keeps the strict annual value default lighter with `US Statement Coverage 100` for responsiveness.")
-                    vss_compare_preset = st.selectbox(
-                        "Strict Annual Value Preset",
-                        options=list(VALUE_STRICT_PRESETS.keys()),
-                        index=list(VALUE_STRICT_PRESETS.keys()).index(STRICT_ANNUAL_COMPARE_DEFAULT_PRESET),
-                        key="compare_vss_preset",
-                    )
-                    _render_ticker_preview(VALUE_STRICT_PRESETS[vss_compare_preset], preview_count=8, tail_count=3)
-                    _render_historical_universe_caption()
-                    compare_strategy_overrides["Value Snapshot (Strict Annual)"] = {
-                        "preset_name": vss_compare_preset,
-                        "tickers": VALUE_STRICT_PRESETS[vss_compare_preset],
-                        "universe_mode": "preset",
-                        "top_n": int(
-                            st.number_input(
-                                "Strict Annual Value Top N",
-                                min_value=1,
-                                max_value=50,
-                                value=10,
-                                step=1,
-                                key="compare_vss_top_n",
-                            )
-                        ),
-                        "rebalance_interval": int(
-                            st.number_input(
-                                "Strict Annual Value Rebalance Interval",
-                                min_value=1,
-                                max_value=12,
-                                value=1,
-                                step=1,
-                                key="compare_vss_rebalance_interval",
-                            )
-                        ),
-                        "value_factors": st.multiselect(
-                            "Strict Annual Value Factors",
-                            options=VALUE_STRICT_FACTOR_OPTIONS,
-                            default=VALUE_STRICT_DEFAULT_FACTORS,
-                            key="compare_vss_factors",
-                        ),
-                    }
-                    trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
-                    with trend_title_col:
-                        st.markdown("##### Strict Annual Value Trend Filter")
-                    with trend_help_col:
-                        _render_trend_filter_help_popover()
-                    compare_strategy_overrides["Value Snapshot (Strict Annual)"]["trend_filter_enabled"] = st.checkbox(
-                        "Enable",
-                        value=STRICT_TREND_FILTER_DEFAULT_ENABLED,
-                        key="compare_vss_trend_filter_enabled",
-                    )
-                    compare_strategy_overrides["Value Snapshot (Strict Annual)"]["trend_filter_window"] = int(
-                        st.number_input(
-                            "Strict Annual Value Trend Filter Window",
-                            min_value=20,
-                            max_value=400,
-                            value=STRICT_TREND_FILTER_DEFAULT_WINDOW,
-                            step=10,
-                            disabled=not compare_strategy_overrides["Value Snapshot (Strict Annual)"]["trend_filter_enabled"],
-                            key="compare_vss_trend_filter_window",
+                    with st.expander("Value Snapshot (Strict Annual)", expanded=False):
+                        st.caption("Compare mode keeps the strict annual value default lighter with `US Statement Coverage 100` for responsiveness.")
+                        vss_compare_preset = st.selectbox(
+                            "Strict Annual Value Preset",
+                            options=list(VALUE_STRICT_PRESETS.keys()),
+                            index=list(VALUE_STRICT_PRESETS.keys()).index(STRICT_ANNUAL_COMPARE_DEFAULT_PRESET),
+                            key="compare_vss_preset",
                         )
-                    )
+                        _render_ticker_preview(VALUE_STRICT_PRESETS[vss_compare_preset], preview_count=8, tail_count=3)
+                        _render_historical_universe_caption()
+                        compare_strategy_overrides["Value Snapshot (Strict Annual)"] = {
+                            "preset_name": vss_compare_preset,
+                            "tickers": VALUE_STRICT_PRESETS[vss_compare_preset],
+                            "universe_mode": "preset",
+                            "top_n": int(
+                                st.number_input(
+                                    "Strict Annual Value Top N",
+                                    min_value=1,
+                                    max_value=50,
+                                    value=10,
+                                    step=1,
+                                    key="compare_vss_top_n",
+                                )
+                            ),
+                            "rebalance_interval": int(
+                                st.number_input(
+                                    "Strict Annual Value Rebalance Interval",
+                                    min_value=1,
+                                    max_value=12,
+                                    value=1,
+                                    step=1,
+                                    key="compare_vss_rebalance_interval",
+                                )
+                            ),
+                            "value_factors": st.multiselect(
+                                "Strict Annual Value Factors",
+                                options=VALUE_STRICT_FACTOR_OPTIONS,
+                                default=VALUE_STRICT_DEFAULT_FACTORS,
+                                key="compare_vss_factors",
+                            ),
+                        }
+                        trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
+                        with trend_title_col:
+                            st.markdown("##### Strict Annual Value Trend Filter")
+                        with trend_help_col:
+                            _render_trend_filter_help_popover()
+                        compare_strategy_overrides["Value Snapshot (Strict Annual)"]["trend_filter_enabled"] = st.checkbox(
+                            "Enable",
+                            value=STRICT_TREND_FILTER_DEFAULT_ENABLED,
+                            key="compare_vss_trend_filter_enabled",
+                        )
+                        compare_strategy_overrides["Value Snapshot (Strict Annual)"]["trend_filter_window"] = int(
+                            st.number_input(
+                                "Strict Annual Value Trend Filter Window",
+                                min_value=20,
+                                max_value=400,
+                                value=STRICT_TREND_FILTER_DEFAULT_WINDOW,
+                                step=10,
+                                key="compare_vss_trend_filter_window",
+                            )
+                        )
+                        (
+                            compare_strategy_overrides["Value Snapshot (Strict Annual)"]["market_regime_enabled"],
+                            compare_strategy_overrides["Value Snapshot (Strict Annual)"]["market_regime_window"],
+                            compare_strategy_overrides["Value Snapshot (Strict Annual)"]["market_regime_benchmark"],
+                        ) = _render_market_regime_overlay_inputs(
+                            key_prefix="compare_vss",
+                            label_prefix="Strict Annual Value ",
+                        )
+
+                if "Value Snapshot (Strict Quarterly Prototype)" in selected_strategies:
+                    with st.expander("Value Snapshot (Strict Quarterly Prototype)", expanded=False):
+                        st.caption("Research-only compare path. Default preset stays at `US Statement Coverage 100` while quarterly value history is being validated.")
+                        vsqp_compare_preset = st.selectbox(
+                            "Strict Quarterly Value Preset",
+                            options=list(VALUE_STRICT_PRESETS.keys()),
+                            index=list(VALUE_STRICT_PRESETS.keys()).index(STRICT_QUARTERLY_PROTOTYPE_DEFAULT_PRESET),
+                            key="compare_vsqp_preset",
+                        )
+                        _render_ticker_preview(VALUE_STRICT_PRESETS[vsqp_compare_preset], preview_count=8, tail_count=3)
+                        _render_historical_universe_caption()
+                        compare_strategy_overrides["Value Snapshot (Strict Quarterly Prototype)"] = {
+                            "preset_name": vsqp_compare_preset,
+                            "tickers": VALUE_STRICT_PRESETS[vsqp_compare_preset],
+                            "universe_mode": "preset",
+                            "top_n": int(
+                                st.number_input(
+                                    "Strict Quarterly Value Top N",
+                                    min_value=1,
+                                    max_value=50,
+                                    value=10,
+                                    step=1,
+                                    key="compare_vsqp_top_n",
+                                )
+                            ),
+                            "rebalance_interval": int(
+                                st.number_input(
+                                    "Strict Quarterly Value Rebalance Interval",
+                                    min_value=1,
+                                    max_value=12,
+                                    value=1,
+                                    step=1,
+                                    key="compare_vsqp_rebalance_interval",
+                                )
+                            ),
+                            "value_factors": st.multiselect(
+                                "Strict Quarterly Value Factors",
+                                options=VALUE_STRICT_FACTOR_OPTIONS,
+                                default=VALUE_STRICT_DEFAULT_FACTORS,
+                                key="compare_vsqp_factors",
+                            ),
+                        }
+                        trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
+                        with trend_title_col:
+                            st.markdown("##### Strict Quarterly Value Trend Filter")
+                        with trend_help_col:
+                            _render_trend_filter_help_popover()
+                        compare_strategy_overrides["Value Snapshot (Strict Quarterly Prototype)"]["trend_filter_enabled"] = st.checkbox(
+                            "Enable",
+                            value=STRICT_TREND_FILTER_DEFAULT_ENABLED,
+                            key="compare_vsqp_trend_filter_enabled",
+                        )
+                        compare_strategy_overrides["Value Snapshot (Strict Quarterly Prototype)"]["trend_filter_window"] = int(
+                            st.number_input(
+                                "Strict Quarterly Value Trend Filter Window",
+                                min_value=20,
+                                max_value=400,
+                                value=STRICT_TREND_FILTER_DEFAULT_WINDOW,
+                                step=10,
+                                key="compare_vsqp_trend_filter_window",
+                            )
+                        )
+                        (
+                            compare_strategy_overrides["Value Snapshot (Strict Quarterly Prototype)"]["market_regime_enabled"],
+                            compare_strategy_overrides["Value Snapshot (Strict Quarterly Prototype)"]["market_regime_window"],
+                            compare_strategy_overrides["Value Snapshot (Strict Quarterly Prototype)"]["market_regime_benchmark"],
+                        ) = _render_market_regime_overlay_inputs(
+                            key_prefix="compare_vsqp",
+                            label_prefix="Strict Quarterly Value ",
+                        )
 
                 if "Quality + Value Snapshot (Strict Annual)" in selected_strategies:
-                    st.markdown("**Quality + Value Snapshot (Strict Annual)**")
-                    st.caption("Compare mode keeps the strict annual multi-factor default lighter with `US Statement Coverage 100` so multi-strategy runs stay responsive.")
-                    qvss_compare_preset = st.selectbox(
-                        "Strict Annual Multi-Factor Preset",
-                        options=list(QUALITY_STRICT_PRESETS.keys()),
-                        index=list(QUALITY_STRICT_PRESETS.keys()).index(STRICT_ANNUAL_COMPARE_DEFAULT_PRESET),
-                        key="compare_qvss_preset",
-                    )
-                    _render_ticker_preview(QUALITY_STRICT_PRESETS[qvss_compare_preset], preview_count=8, tail_count=3)
-                    _render_historical_universe_caption()
-                    compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"] = {
-                        "preset_name": qvss_compare_preset,
-                        "tickers": QUALITY_STRICT_PRESETS[qvss_compare_preset],
-                        "universe_mode": "preset",
-                        "top_n": int(
-                            st.number_input(
-                                "Strict Annual Multi-Factor Top N",
-                                min_value=1,
-                                max_value=30,
-                                value=10,
-                                step=1,
-                                key="compare_qvss_top_n",
-                            )
-                        ),
-                        "rebalance_interval": int(
-                            st.number_input(
-                                "Strict Annual Multi-Factor Rebalance Interval",
-                                min_value=1,
-                                max_value=12,
-                                value=1,
-                                step=1,
-                                key="compare_qvss_rebalance_interval",
-                            )
-                        ),
-                        "quality_factors": st.multiselect(
-                            "Strict Annual Multi-Factor Quality Factors",
-                            options=QUALITY_STRICT_FACTOR_OPTIONS,
-                            default=QUALITY_STRICT_DEFAULT_FACTORS,
-                            key="compare_qvss_quality_factors",
-                        ),
-                        "value_factors": st.multiselect(
-                            "Strict Annual Multi-Factor Value Factors",
-                            options=VALUE_STRICT_FACTOR_OPTIONS,
-                            default=VALUE_STRICT_DEFAULT_FACTORS,
-                            key="compare_qvss_value_factors",
-                        ),
-                    }
-                    trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
-                    with trend_title_col:
-                        st.markdown("##### Strict Annual Multi-Factor Trend Filter")
-                    with trend_help_col:
-                        _render_trend_filter_help_popover()
-                    compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["trend_filter_enabled"] = st.checkbox(
-                        "Enable",
-                        value=STRICT_TREND_FILTER_DEFAULT_ENABLED,
-                        key="compare_qvss_trend_filter_enabled",
-                    )
-                    compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["trend_filter_window"] = int(
-                        st.number_input(
-                            "Strict Annual Multi-Factor Trend Filter Window",
-                            min_value=20,
-                            max_value=400,
-                            value=STRICT_TREND_FILTER_DEFAULT_WINDOW,
-                            step=10,
-                            disabled=not compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["trend_filter_enabled"],
-                            key="compare_qvss_trend_filter_window",
+                    with st.expander("Quality + Value Snapshot (Strict Annual)", expanded=False):
+                        st.caption("Compare mode keeps the strict annual multi-factor default lighter with `US Statement Coverage 100` so multi-strategy runs stay responsive.")
+                        qvss_compare_preset = st.selectbox(
+                            "Strict Annual Multi-Factor Preset",
+                            options=list(QUALITY_STRICT_PRESETS.keys()),
+                            index=list(QUALITY_STRICT_PRESETS.keys()).index(STRICT_ANNUAL_COMPARE_DEFAULT_PRESET),
+                            key="compare_qvss_preset",
                         )
-                    )
+                        _render_ticker_preview(QUALITY_STRICT_PRESETS[qvss_compare_preset], preview_count=8, tail_count=3)
+                        _render_historical_universe_caption()
+                        compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"] = {
+                            "preset_name": qvss_compare_preset,
+                            "tickers": QUALITY_STRICT_PRESETS[qvss_compare_preset],
+                            "universe_mode": "preset",
+                            "top_n": int(
+                                st.number_input(
+                                    "Strict Annual Multi-Factor Top N",
+                                    min_value=1,
+                                    max_value=30,
+                                    value=10,
+                                    step=1,
+                                    key="compare_qvss_top_n",
+                                )
+                            ),
+                            "rebalance_interval": int(
+                                st.number_input(
+                                    "Strict Annual Multi-Factor Rebalance Interval",
+                                    min_value=1,
+                                    max_value=12,
+                                    value=1,
+                                    step=1,
+                                    key="compare_qvss_rebalance_interval",
+                                )
+                            ),
+                            "quality_factors": st.multiselect(
+                                "Strict Annual Multi-Factor Quality Factors",
+                                options=QUALITY_STRICT_FACTOR_OPTIONS,
+                                default=QUALITY_STRICT_DEFAULT_FACTORS,
+                                key="compare_qvss_quality_factors",
+                            ),
+                            "value_factors": st.multiselect(
+                                "Strict Annual Multi-Factor Value Factors",
+                                options=VALUE_STRICT_FACTOR_OPTIONS,
+                                default=VALUE_STRICT_DEFAULT_FACTORS,
+                                key="compare_qvss_value_factors",
+                            ),
+                        }
+                        trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
+                        with trend_title_col:
+                            st.markdown("##### Strict Annual Multi-Factor Trend Filter")
+                        with trend_help_col:
+                            _render_trend_filter_help_popover()
+                        compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["trend_filter_enabled"] = st.checkbox(
+                            "Enable",
+                            value=STRICT_TREND_FILTER_DEFAULT_ENABLED,
+                            key="compare_qvss_trend_filter_enabled",
+                        )
+                        compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["trend_filter_window"] = int(
+                            st.number_input(
+                                "Strict Annual Multi-Factor Trend Filter Window",
+                                min_value=20,
+                                max_value=400,
+                                value=STRICT_TREND_FILTER_DEFAULT_WINDOW,
+                                step=10,
+                                key="compare_qvss_trend_filter_window",
+                            )
+                        )
+                        (
+                            compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["market_regime_enabled"],
+                            compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["market_regime_window"],
+                            compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["market_regime_benchmark"],
+                        ) = _render_market_regime_overlay_inputs(
+                            key_prefix="compare_qvss",
+                            label_prefix="Strict Annual Multi-Factor ",
+                        )
+
+                if "Quality + Value Snapshot (Strict Quarterly Prototype)" in selected_strategies:
+                    with st.expander("Quality + Value Snapshot (Strict Quarterly Prototype)", expanded=False):
+                        st.caption("Research-only compare path. Default preset stays at `US Statement Coverage 100` while quarterly blended history is being validated.")
+                        qvqp_compare_preset = st.selectbox(
+                            "Strict Quarterly Multi-Factor Preset",
+                            options=list(QUALITY_STRICT_PRESETS.keys()),
+                            index=list(QUALITY_STRICT_PRESETS.keys()).index(STRICT_QUARTERLY_PROTOTYPE_DEFAULT_PRESET),
+                            key="compare_qvqp_preset",
+                        )
+                        _render_ticker_preview(QUALITY_STRICT_PRESETS[qvqp_compare_preset], preview_count=8, tail_count=3)
+                        _render_historical_universe_caption()
+                        compare_strategy_overrides["Quality + Value Snapshot (Strict Quarterly Prototype)"] = {
+                            "preset_name": qvqp_compare_preset,
+                            "tickers": QUALITY_STRICT_PRESETS[qvqp_compare_preset],
+                            "universe_mode": "preset",
+                            "top_n": int(
+                                st.number_input(
+                                    "Strict Quarterly Multi-Factor Top N",
+                                    min_value=1,
+                                    max_value=30,
+                                    value=10,
+                                    step=1,
+                                    key="compare_qvqp_top_n",
+                                )
+                            ),
+                            "rebalance_interval": int(
+                                st.number_input(
+                                    "Strict Quarterly Multi-Factor Rebalance Interval",
+                                    min_value=1,
+                                    max_value=12,
+                                    value=1,
+                                    step=1,
+                                    key="compare_qvqp_rebalance_interval",
+                                )
+                            ),
+                            "quality_factors": st.multiselect(
+                                "Strict Quarterly Multi-Factor Quality Factors",
+                                options=QUALITY_STRICT_FACTOR_OPTIONS,
+                                default=QUALITY_STRICT_DEFAULT_FACTORS,
+                                key="compare_qvqp_quality_factors",
+                            ),
+                            "value_factors": st.multiselect(
+                                "Strict Quarterly Multi-Factor Value Factors",
+                                options=VALUE_STRICT_FACTOR_OPTIONS,
+                                default=VALUE_STRICT_DEFAULT_FACTORS,
+                                key="compare_qvqp_value_factors",
+                            ),
+                        }
+                        trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
+                        with trend_title_col:
+                            st.markdown("##### Strict Quarterly Multi-Factor Trend Filter")
+                        with trend_help_col:
+                            _render_trend_filter_help_popover()
+                        compare_strategy_overrides["Quality + Value Snapshot (Strict Quarterly Prototype)"]["trend_filter_enabled"] = st.checkbox(
+                            "Enable",
+                            value=STRICT_TREND_FILTER_DEFAULT_ENABLED,
+                            key="compare_qvqp_trend_filter_enabled",
+                        )
+                        compare_strategy_overrides["Quality + Value Snapshot (Strict Quarterly Prototype)"]["trend_filter_window"] = int(
+                            st.number_input(
+                                "Strict Quarterly Multi-Factor Trend Filter Window",
+                                min_value=20,
+                                max_value=400,
+                                value=STRICT_TREND_FILTER_DEFAULT_WINDOW,
+                                step=10,
+                                key="compare_qvqp_trend_filter_window",
+                            )
+                        )
+                        (
+                            compare_strategy_overrides["Quality + Value Snapshot (Strict Quarterly Prototype)"]["market_regime_enabled"],
+                            compare_strategy_overrides["Quality + Value Snapshot (Strict Quarterly Prototype)"]["market_regime_window"],
+                            compare_strategy_overrides["Quality + Value Snapshot (Strict Quarterly Prototype)"]["market_regime_benchmark"],
+                        ) = _render_market_regime_overlay_inputs(
+                            key_prefix="compare_qvqp",
+                            label_prefix="Strict Quarterly Multi-Factor ",
+                        )
 
             compare_submitted = st.form_submit_button("Run Strategy Comparison", use_container_width=True)
 
@@ -3959,7 +5270,15 @@ def render_backtest_tab() -> None:
                             },
                         },
                         run_kind="strategy_compare",
-                        context={"selected_strategies": selected_strategies},
+                        context={
+                            "selected_strategies": selected_strategies,
+                            "strategy_overrides": compare_strategy_overrides,
+                            "strategy_summaries": [
+                                row
+                                for bundle in bundles
+                                for row in json.loads(bundle["summary_df"].to_json(orient="records", date_format="iso"))
+                            ],
+                        },
                     )
                     st.success("Strategy comparison completed.")
                 except BacktestInputError as exc:

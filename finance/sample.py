@@ -75,6 +75,10 @@ VALUE_STRICT_DEFAULT_FACTORS = [
 
 STRICT_TREND_FILTER_DEFAULT_ENABLED = False
 STRICT_TREND_FILTER_DEFAULT_WINDOW = 200
+STRICT_MARKET_REGIME_DEFAULT_ENABLED = False
+STRICT_MARKET_REGIME_DEFAULT_WINDOW = 200
+STRICT_MARKET_REGIME_DEFAULT_BENCHMARK = "SPY"
+STRICT_MARKET_REGIME_BENCHMARK_OPTIONS = ["SPY", "QQQ", "VTI", "IWM"]
 
 
 def _history_start_with_buffer(start=None, *, years: int = 0, months: int = 0, days: int = 0):
@@ -172,6 +176,30 @@ def _build_snapshot_strategy_price_dfs(
         raise ValueError("No DB-backed price data is available for the requested snapshot strategy run.")
 
     return price_dfs
+
+
+def _build_market_regime_overlay_df(
+    benchmark_ticker: str,
+    *,
+    option="month_end",
+    start=None,
+    end=None,
+    timeframe="1d",
+    from_db=False,
+    market_regime_window: int = STRICT_MARKET_REGIME_DEFAULT_WINDOW,
+) -> pd.DataFrame:
+    benchmark_dfs = _build_snapshot_strategy_price_dfs(
+        [benchmark_ticker],
+        option=option,
+        start=start,
+        end=end,
+        timeframe=timeframe,
+        from_db=from_db,
+        trend_filter_window=market_regime_window,
+    )
+    benchmark_df = next(iter(benchmark_dfs.values())).copy()
+    keep_cols = ["Date", "Close", f"MA{market_regime_window}"]
+    return benchmark_df[[column for column in keep_cols if column in benchmark_df.columns]].copy()
 
 def get_equal_weight(period="15y", option="month_end", interval=12, start=None):
     """
@@ -651,6 +679,9 @@ def get_statement_quality_snapshot_shadow_from_db(
     rebalance_interval=1,
     trend_filter_enabled=False,
     trend_filter_window=STRICT_TREND_FILTER_DEFAULT_WINDOW,
+    market_regime_enabled=False,
+    market_regime_window=STRICT_MARKET_REGIME_DEFAULT_WINDOW,
+    market_regime_benchmark=STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
 ):
     if tickers is None:
         tickers = ["AAPL", "MSFT", "GOOG"]
@@ -678,6 +709,17 @@ def get_statement_quality_snapshot_shadow_from_db(
         rebalance_dates=rebalance_dates,
         factor_names=quality_factors,
     )
+    market_regime_df = None
+    if market_regime_enabled:
+        market_regime_df = _build_market_regime_overlay_df(
+            market_regime_benchmark,
+            option=option,
+            start=start,
+            end=end,
+            timeframe=timeframe,
+            from_db=True,
+            market_regime_window=market_regime_window,
+        )
 
     df = quality_snapshot_equal_weight(
         price_dfs,
@@ -689,6 +731,10 @@ def get_statement_quality_snapshot_shadow_from_db(
         rebalance_interval=rebalance_interval,
         trend_filter_enabled=trend_filter_enabled,
         trend_filter_window=trend_filter_window,
+        market_regime_enabled=market_regime_enabled,
+        market_regime_window=market_regime_window,
+        market_regime_benchmark=market_regime_benchmark,
+        market_regime_df=market_regime_df,
     )
 
     df = (
@@ -711,6 +757,9 @@ def get_statement_value_snapshot_shadow_from_db(
     rebalance_interval=1,
     trend_filter_enabled=False,
     trend_filter_window=STRICT_TREND_FILTER_DEFAULT_WINDOW,
+    market_regime_enabled=False,
+    market_regime_window=STRICT_MARKET_REGIME_DEFAULT_WINDOW,
+    market_regime_benchmark=STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
 ):
     if tickers is None:
         tickers = ["AAPL", "MSFT", "GOOG"]
@@ -738,6 +787,17 @@ def get_statement_value_snapshot_shadow_from_db(
         rebalance_dates=rebalance_dates,
         factor_names=value_factors,
     )
+    market_regime_df = None
+    if market_regime_enabled:
+        market_regime_df = _build_market_regime_overlay_df(
+            market_regime_benchmark,
+            option=option,
+            start=start,
+            end=end,
+            timeframe=timeframe,
+            from_db=True,
+            market_regime_window=market_regime_window,
+        )
 
     df = quality_snapshot_equal_weight(
         price_dfs,
@@ -749,6 +809,10 @@ def get_statement_value_snapshot_shadow_from_db(
         rebalance_interval=rebalance_interval,
         trend_filter_enabled=trend_filter_enabled,
         trend_filter_window=trend_filter_window,
+        market_regime_enabled=market_regime_enabled,
+        market_regime_window=market_regime_window,
+        market_regime_benchmark=market_regime_benchmark,
+        market_regime_df=market_regime_df,
     )
 
     df = (
@@ -772,6 +836,9 @@ def get_statement_quality_value_snapshot_shadow_from_db(
     rebalance_interval=1,
     trend_filter_enabled=False,
     trend_filter_window=STRICT_TREND_FILTER_DEFAULT_WINDOW,
+    market_regime_enabled=False,
+    market_regime_window=STRICT_MARKET_REGIME_DEFAULT_WINDOW,
+    market_regime_benchmark=STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
 ):
     if tickers is None:
         tickers = ["AAPL", "MSFT", "GOOG"]
@@ -807,6 +874,17 @@ def get_statement_quality_value_snapshot_shadow_from_db(
         rebalance_dates=rebalance_dates,
         factor_names=combined_factors,
     )
+    market_regime_df = None
+    if market_regime_enabled:
+        market_regime_df = _build_market_regime_overlay_df(
+            market_regime_benchmark,
+            option=option,
+            start=start,
+            end=end,
+            timeframe=timeframe,
+            from_db=True,
+            market_regime_window=market_regime_window,
+        )
 
     df = quality_snapshot_equal_weight(
         price_dfs,
@@ -829,6 +907,10 @@ def get_statement_quality_value_snapshot_shadow_from_db(
         rebalance_interval=rebalance_interval,
         trend_filter_enabled=trend_filter_enabled,
         trend_filter_window=trend_filter_window,
+        market_regime_enabled=market_regime_enabled,
+        market_regime_window=market_regime_window,
+        market_regime_benchmark=market_regime_benchmark,
+        market_regime_df=market_regime_df,
     )
 
     df = (

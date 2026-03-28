@@ -218,7 +218,7 @@ Phase 5는 최소한 아래가 충족되면 첫 챕터 완료로 본다.
 - phase formal opening:
   - `opened`
 - current implementation:
-  - `in_progress`
+  - `first_chapter_completed`
 
 ## 현재 첫 챕터 진척
 
@@ -237,7 +237,6 @@ Phase 5는 최소한 아래가 충족되면 첫 챕터 완료로 본다.
 
 현재 남은 핵심:
 
-- overlay-enabled strict family 사용자 검증
-- stale reason classification UX 확인
 - next chapter에서 second overlay 착수 여부 확정
 - quarterly strict family를 실제로 열 시점 확정
+- project operating-model refresh를 먼저 수행할지 여부 확정

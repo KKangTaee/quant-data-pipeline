@@ -541,6 +541,11 @@ def quality_snapshot_equal_weight(
     trend_filter_enabled: bool = False,
     trend_filter_window: int = 200,
     trend_filter_col: str | None = None,
+    market_regime_enabled: bool = False,
+    market_regime_window: int = 200,
+    market_regime_benchmark: str | None = None,
+    market_regime_df: pd.DataFrame | None = None,
+    market_regime_col: str | None = None,
 ) -> pd.DataFrame:
     """
     Monthly snapshot-based quality strategy.
@@ -560,11 +565,30 @@ def quality_snapshot_equal_weight(
         raise ValueError("rebalance_interval must be positive.")
     if trend_filter_enabled and trend_filter_window <= 0:
         raise ValueError("trend_filter_window must be positive when trend filter is enabled.")
+    if market_regime_enabled and market_regime_window <= 0:
+        raise ValueError("market_regime_window must be positive when market regime overlay is enabled.")
+    if market_regime_enabled and market_regime_df is None:
+        raise ValueError("market_regime_df is required when market regime overlay is enabled.")
 
     tickers = list(price_dfs.keys())
     base_df = price_dfs[tickers[0]].sort_values("Date").reset_index(drop=True)
     dates = pd.to_datetime(base_df["Date"]).tolist()
     active_trend_col = trend_filter_col or f"MA{trend_filter_window}"
+    active_regime_col = market_regime_col or f"MA{market_regime_window}"
+
+    regime_by_date: dict[pd.Timestamp, dict[str, float]] = {}
+    if market_regime_enabled and market_regime_df is not None:
+        working_regime = market_regime_df.copy()
+        working_regime["Date"] = pd.to_datetime(working_regime["Date"], errors="coerce")
+        working_regime = working_regime.dropna(subset=["Date"]).sort_values("Date")
+        for _, regime_row in working_regime.iterrows():
+            regime_date = pd.Timestamp(regime_row["Date"]).normalize()
+            regime_close = pd.to_numeric(regime_row.get("Close"), errors="coerce")
+            regime_trend = pd.to_numeric(regime_row.get(active_regime_col), errors="coerce")
+            regime_by_date[regime_date] = {
+                "close": float(regime_close) if pd.notna(regime_close) else np.nan,
+                "trend": float(regime_trend) if pd.notna(regime_trend) else np.nan,
+            }
 
     prev_close: dict[str, float | None] = {ticker: None for ticker in tickers}
     prev_total_balance = None
@@ -612,6 +636,22 @@ def quality_snapshot_equal_weight(
         raw_selected_tickers: list[str] = []
         raw_selected_scores: list[float] = []
         overlay_rejected_tickers: list[str] = []
+        regime_blocked_tickers: list[str] = []
+
+        regime_state = "off"
+        regime_close_now = np.nan
+        regime_trend_now = np.nan
+        if market_regime_enabled:
+            regime_row = regime_by_date.get(snapshot_key)
+            if regime_row is None:
+                regime_state = "unknown"
+            else:
+                regime_close_now = regime_row["close"]
+                regime_trend_now = regime_row["trend"]
+                if pd.notna(regime_close_now) and pd.notna(regime_trend_now):
+                    regime_state = "risk_on" if float(regime_close_now) >= float(regime_trend_now) else "risk_off"
+                else:
+                    regime_state = "unknown"
 
         if rebalancing:
             snapshot_df = snapshot_by_date.get(snapshot_key)
@@ -652,6 +692,10 @@ def quality_snapshot_equal_weight(
                     ]
                     selected_snapshot = filtered_snapshot
 
+                if market_regime_enabled and not selected_snapshot.empty and regime_state == "risk_off":
+                    regime_blocked_tickers = selected_snapshot["symbol"].tolist()
+                    selected_snapshot = selected_snapshot.iloc[0:0].copy()
+
                 held_tickers = selected_snapshot["symbol"].tolist()
                 selected_scores = selected_snapshot["Quality Score"].astype(float).tolist()
                 if not held_tickers:
@@ -674,6 +718,14 @@ def quality_snapshot_equal_weight(
                 "Overlay Rejected Count": len(overlay_rejected_tickers),
                 "Trend Filter Enabled": trend_filter_enabled,
                 "Trend Filter Column": (active_trend_col if trend_filter_enabled else np.nan),
+                "Market Regime Enabled": market_regime_enabled,
+                "Market Regime Benchmark": (market_regime_benchmark if market_regime_enabled else np.nan),
+                "Market Regime Column": (active_regime_col if market_regime_enabled else np.nan),
+                "Market Regime State": regime_state,
+                "Market Regime Close": regime_close_now,
+                "Market Regime Trend": regime_trend_now,
+                "Regime Blocked Ticker": regime_blocked_tickers,
+                "Regime Blocked Count": len(regime_blocked_tickers),
                 "End Balance": (np.nan if i == 0 else end_balances),
                 "Next Balance": next_balances,
                 "Cash": float(cash),

@@ -204,7 +204,7 @@ risk overlay 설계 관점에서 관리하기 위한 작업 보드다.
 ## 현재 진척도
 
 - Phase 5 first chapter:
-  - 약 `90%`
+  - 약 `100%`
 
 판단 근거:
 - baseline comparative research와 compare advanced-input parity가 구현되었고,
@@ -215,3 +215,14 @@ risk overlay 설계 관점에서 관리하기 위한 작업 보드다.
   stale reason classification / selection interpretation 보강까지 끝난 상태다.
 - 또한 strict managed preset은
   historical backtest 기준의 static-universe semantics로 정리되었다.
+- 사용자 기준 Phase 5 manual checklist 확인도 어느 정도 통과한 상태다.
+
+## 현재 챕터 종료 판단
+
+- Phase 5 first chapter:
+  - `completed`
+
+다음으로 남은 것은:
+- second overlay 실제 착수 여부 확정
+- quarterly strict family 실제 구현 여부 확정
+- project operating-model refresh 착수 여부 확정

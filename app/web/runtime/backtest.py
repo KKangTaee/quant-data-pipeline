@@ -8,6 +8,7 @@ import pandas as pd
 from finance.loaders import (
     load_asset_profile_status_summary,
     load_factor_snapshot,
+    load_latest_market_date,
     load_price_freshness_summary,
     load_price_history,
     load_statement_factor_snapshot_shadow,
@@ -15,6 +16,8 @@ from finance.loaders import (
 )
 from finance.performance import portfolio_performance_summary
 from finance.sample import (
+    STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
+    STRICT_MARKET_REGIME_DEFAULT_WINDOW,
     QUALITY_STRICT_DEFAULT_FACTORS,
     VALUE_STRICT_DEFAULT_FACTORS,
     get_dual_momentum_from_db,
@@ -22,8 +25,8 @@ from finance.sample import (
     get_gtaa3_from_db,
     get_quality_snapshot_from_db,
     get_risk_parity_trend_from_db,
-    get_statement_quality_value_snapshot_shadow_from_db,
     get_statement_quality_snapshot_from_db,
+    get_statement_quality_value_snapshot_shadow_from_db,
     get_statement_quality_snapshot_shadow_from_db,
     get_statement_value_snapshot_shadow_from_db,
 )
@@ -219,6 +222,12 @@ def inspect_strict_annual_price_freshness(
 ) -> dict[str, Any]:
     normalized_tickers = _normalize_tickers(tickers)
     end_ts = pd.to_datetime(end).normalize() if end is not None else None
+    effective_end_ts = end_ts
+
+    if end_ts is not None:
+        market_latest = load_latest_market_date(end=end, timeframe=timeframe)
+        if market_latest is not None and pd.notna(market_latest):
+            effective_end_ts = market_latest.normalize()
 
     summary = load_price_freshness_summary(
         symbols=normalized_tickers,
@@ -234,7 +243,13 @@ def inspect_strict_annual_price_freshness(
                 "covered_count": 0,
                 "missing_count": len(normalized_tickers),
                 "missing_symbols": normalized_tickers[:20],
-                "target_end_date": end_ts.strftime("%Y-%m-%d") if end_ts is not None else None,
+                "selected_end_date": end_ts.strftime("%Y-%m-%d") if end_ts is not None else None,
+                "effective_end_date": effective_end_ts.strftime("%Y-%m-%d") if effective_end_ts is not None else None,
+                "effective_end_shift_days": (
+                    int((end_ts - effective_end_ts).days)
+                    if end_ts is not None and effective_end_ts is not None
+                    else 0
+                ),
             },
         }
 
@@ -255,14 +270,23 @@ def inspect_strict_annual_price_freshness(
                 "covered_count": 0,
                 "missing_count": len(normalized_tickers),
                 "missing_symbols": normalized_tickers[:20],
-                "target_end_date": end_ts.strftime("%Y-%m-%d") if end_ts is not None else None,
+                "selected_end_date": end_ts.strftime("%Y-%m-%d") if end_ts is not None else None,
+                "effective_end_date": effective_end_ts.strftime("%Y-%m-%d") if effective_end_ts is not None else None,
+                "effective_end_shift_days": (
+                    int((end_ts - effective_end_ts).days)
+                    if end_ts is not None and effective_end_ts is not None
+                    else 0
+                ),
             },
         }
 
     common_latest = working["latest_date"].min().normalize()
     newest_latest = working["latest_date"].max().normalize()
     spread_days = int((newest_latest - common_latest).days)
-    target_end = end_ts if end_ts is not None else newest_latest
+    target_end = effective_end_ts if effective_end_ts is not None else newest_latest
+    effective_shift_days = (
+        int((end_ts - target_end).days) if end_ts is not None and target_end is not None else 0
+    )
 
     stale_df = working[working["latest_date"].dt.normalize() < target_end].sort_values(["latest_date", "symbol"])
     lagging_df = working[working["latest_date"].dt.normalize() < newest_latest].sort_values(["latest_date", "symbol"])
@@ -337,7 +361,15 @@ def inspect_strict_annual_price_freshness(
         "missing_count": len(missing_symbols),
         "missing_symbols": missing_symbols[:20],
         "missing_symbols_all": missing_symbols,
+        "selected_end_date": end_ts.strftime("%Y-%m-%d") if end_ts is not None else None,
         "target_end_date": target_end.strftime("%Y-%m-%d") if target_end is not None else None,
+        "effective_end_date": target_end.strftime("%Y-%m-%d") if target_end is not None else None,
+        "effective_end_shift_days": effective_shift_days,
+        "effective_end_basis": (
+            "latest_market_date_on_or_before_selected_end"
+            if effective_shift_days > 0
+            else "selected_end_date"
+        ),
         "common_latest_date": common_latest.strftime("%Y-%m-%d"),
         "newest_latest_date": newest_latest.strftime("%Y-%m-%d"),
         "spread_days": spread_days,
@@ -354,21 +386,34 @@ def inspect_strict_annual_price_freshness(
     }
 
     if not missing_symbols and len(stale_df) == 0 and spread_days == 0:
-        return {
-            "status": "ok",
-            "message": (
+        if effective_shift_days > 0 and end_ts is not None:
+            message = (
+                f"All {len(normalized_tickers)} selected symbols have price data through effective trading end "
+                f"`{target_end.strftime('%Y-%m-%d')}`. Selected end `{end_ts.strftime('%Y-%m-%d')}` does not have "
+                "a later DB market session."
+            )
+        else:
+            message = (
                 f"All {len(normalized_tickers)} selected symbols have price data through "
                 f"`{common_latest.strftime('%Y-%m-%d')}`."
-            ),
+            )
+        return {
+            "status": "ok",
+            "message": message,
             "details": details,
         }
 
     message_parts: list[str] = []
+    if effective_shift_days > 0 and end_ts is not None:
+        message_parts.append(
+            f"Selected end `{end_ts.strftime('%Y-%m-%d')}` maps to effective trading end "
+            f"`{target_end.strftime('%Y-%m-%d')}` for DB freshness checks."
+        )
     if missing_symbols:
         message_parts.append(f"{len(missing_symbols)} symbols have no DB price rows.")
     if len(stale_df) > 0:
         message_parts.append(
-            f"{len(stale_df)} symbols stop before the selected end `{target_end.strftime('%Y-%m-%d')}`."
+            f"{len(stale_df)} symbols stop before the effective trading end `{target_end.strftime('%Y-%m-%d')}`."
         )
     if spread_days > 0:
         message_parts.append(
@@ -448,6 +493,12 @@ def build_backtest_result_bundle(
         meta["trend_filter_enabled"] = input_params.get("trend_filter_enabled")
     if input_params.get("trend_filter_window") is not None:
         meta["trend_filter_window"] = input_params.get("trend_filter_window")
+    if input_params.get("market_regime_enabled") is not None:
+        meta["market_regime_enabled"] = input_params.get("market_regime_enabled")
+    if input_params.get("market_regime_window") is not None:
+        meta["market_regime_window"] = input_params.get("market_regime_window")
+    if input_params.get("market_regime_benchmark") is not None:
+        meta["market_regime_benchmark"] = input_params.get("market_regime_benchmark")
     if input_params.get("snapshot_source") is not None:
         meta["snapshot_source"] = input_params.get("snapshot_source")
 
@@ -627,6 +678,7 @@ def run_dual_momentum_backtest_from_db(
 ) -> dict[str, Any]:
     normalized_tickers = _normalize_tickers(tickers)
     _validate_backtest_date_range(start, end)
+    strict_label = f"strict {statement_freq}"
     _preflight_price_strategy_data(
         tickers=normalized_tickers,
         start=start,
@@ -770,6 +822,9 @@ def _run_statement_quality_bundle(
     rebalance_interval: int = 1,
     trend_filter_enabled: bool = False,
     trend_filter_window: int = 200,
+    market_regime_enabled: bool = False,
+    market_regime_window: int = STRICT_MARKET_REGIME_DEFAULT_WINDOW,
+    market_regime_benchmark: str = STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
     universe_mode: str = "manual_tickers",
     preset_name: str | None = None,
     static_warnings: Sequence[str] | None = None,
@@ -777,6 +832,7 @@ def _run_statement_quality_bundle(
 ) -> dict[str, Any]:
     normalized_tickers = _normalize_tickers(tickers)
     _validate_backtest_date_range(start, end)
+    strict_label = f"strict {statement_freq}"
 
     normalized_factors = [
         str(name).strip()
@@ -798,6 +854,13 @@ def _run_statement_quality_bundle(
         end=end,
         timeframe=timeframe,
     )
+    if market_regime_enabled:
+        _preflight_price_strategy_data(
+            tickers=[market_regime_benchmark],
+            start=start,
+            end=end,
+            timeframe=timeframe,
+        )
     if snapshot_source == "shadow_factors":
         _preflight_statement_quality_shadow_data(
             tickers=normalized_tickers,
@@ -817,6 +880,9 @@ def _run_statement_quality_bundle(
             rebalance_interval=rebalance_interval,
             trend_filter_enabled=trend_filter_enabled,
             trend_filter_window=trend_filter_window,
+            market_regime_enabled=market_regime_enabled,
+            market_regime_window=market_regime_window,
+            market_regime_benchmark=market_regime_benchmark,
         )
     else:
         _preflight_statement_quality_data(
@@ -841,7 +907,7 @@ def _run_statement_quality_bundle(
         warnings.append(
             "Price freshness preflight: "
             + price_freshness["message"]
-            + " Large-universe strict annual runs can show duplicate or shifted final-month rows until lagging symbols are refreshed."
+            + f" Large-universe {strict_label} runs can show duplicate or shifted final-month rows until lagging symbols are refreshed."
         )
     if start:
         active_rows = result_df[result_df["Selected Count"].fillna(0) > 0]
@@ -869,7 +935,10 @@ def _run_statement_quality_bundle(
             "quality_factors": normalized_factors,
             "trend_filter_enabled": trend_filter_enabled,
             "trend_filter_window": trend_filter_window,
-            "snapshot_mode": "strict_statement_annual",
+            "market_regime_enabled": market_regime_enabled,
+            "market_regime_window": market_regime_window,
+            "market_regime_benchmark": market_regime_benchmark,
+            "snapshot_mode": f"strict_statement_{statement_freq}",
             "universe_mode": universe_mode,
             "preset_name": preset_name,
             "snapshot_source": snapshot_source,
@@ -882,6 +951,10 @@ def _run_statement_quality_bundle(
     if trend_filter_enabled:
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
             f"Trend Filter Overlay enabled: month-end selections with `Close < MA{trend_filter_window}` move to cash until the next rebalance."
+        ]
+    if market_regime_enabled:
+        bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
+            f"Market Regime Overlay enabled: month-end selections move fully to cash when `{market_regime_benchmark}` closes below `MA{market_regime_window}`."
         ]
     return bundle
 
@@ -898,6 +971,9 @@ def run_quality_snapshot_strict_annual_backtest_from_db(
     rebalance_interval: int = 1,
     trend_filter_enabled: bool = False,
     trend_filter_window: int = 200,
+    market_regime_enabled: bool = False,
+    market_regime_window: int = STRICT_MARKET_REGIME_DEFAULT_WINDOW,
+    market_regime_benchmark: str = STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
     universe_mode: str = "manual_tickers",
     preset_name: str | None = None,
 ) -> dict[str, Any]:
@@ -915,6 +991,9 @@ def run_quality_snapshot_strict_annual_backtest_from_db(
         rebalance_interval=rebalance_interval,
         trend_filter_enabled=trend_filter_enabled,
         trend_filter_window=trend_filter_window,
+        market_regime_enabled=market_regime_enabled,
+        market_regime_window=market_regime_window,
+        market_regime_benchmark=market_regime_benchmark,
         universe_mode=universe_mode,
         preset_name=preset_name,
         snapshot_source="shadow_factors",
@@ -935,6 +1014,11 @@ def run_statement_quality_prototype_backtest_from_db(
     quality_factors: Sequence[str] | None = None,
     top_n: int = 2,
     rebalance_interval: int = 1,
+    trend_filter_enabled: bool = False,
+    trend_filter_window: int = 200,
+    market_regime_enabled: bool = False,
+    market_regime_window: int = STRICT_MARKET_REGIME_DEFAULT_WINDOW,
+    market_regime_benchmark: str = STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
     universe_mode: str = "manual_tickers",
     preset_name: str | None = None,
 ) -> dict[str, Any]:
@@ -950,6 +1034,11 @@ def run_statement_quality_prototype_backtest_from_db(
         quality_factors=quality_factors,
         top_n=top_n,
         rebalance_interval=rebalance_interval,
+        trend_filter_enabled=trend_filter_enabled,
+        trend_filter_window=trend_filter_window,
+        market_regime_enabled=market_regime_enabled,
+        market_regime_window=market_regime_window,
+        market_regime_benchmark=market_regime_benchmark,
         universe_mode=universe_mode,
         preset_name=preset_name,
         snapshot_source="rebuild_statement",
@@ -971,6 +1060,9 @@ def run_value_snapshot_strict_annual_backtest_from_db(
     rebalance_interval: int = 1,
     trend_filter_enabled: bool = False,
     trend_filter_window: int = 200,
+    market_regime_enabled: bool = False,
+    market_regime_window: int = STRICT_MARKET_REGIME_DEFAULT_WINDOW,
+    market_regime_benchmark: str = STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
     universe_mode: str = "manual_tickers",
     preset_name: str | None = None,
 ) -> dict[str, Any]:
@@ -997,6 +1089,13 @@ def run_value_snapshot_strict_annual_backtest_from_db(
         end=end,
         timeframe=timeframe,
     )
+    if market_regime_enabled:
+        _preflight_price_strategy_data(
+            tickers=[market_regime_benchmark],
+            start=start,
+            end=end,
+            timeframe=timeframe,
+        )
     _preflight_statement_quality_shadow_data(
         tickers=normalized_tickers,
         end=end,
@@ -1016,6 +1115,9 @@ def run_value_snapshot_strict_annual_backtest_from_db(
         rebalance_interval=rebalance_interval,
         trend_filter_enabled=trend_filter_enabled,
         trend_filter_window=trend_filter_window,
+        market_regime_enabled=market_regime_enabled,
+        market_regime_window=market_regime_window,
+        market_regime_benchmark=market_regime_benchmark,
     )
 
     warnings = [
@@ -1053,6 +1155,9 @@ def run_value_snapshot_strict_annual_backtest_from_db(
             "value_factors": normalized_factors,
             "trend_filter_enabled": trend_filter_enabled,
             "trend_filter_window": trend_filter_window,
+            "market_regime_enabled": market_regime_enabled,
+            "market_regime_window": market_regime_window,
+            "market_regime_benchmark": market_regime_benchmark,
             "snapshot_mode": "strict_statement_annual",
             "snapshot_source": "shadow_factors",
             "universe_mode": universe_mode,
@@ -1066,6 +1171,141 @@ def run_value_snapshot_strict_annual_backtest_from_db(
     if trend_filter_enabled:
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
             f"Trend Filter Overlay enabled: month-end selections with `Close < MA{trend_filter_window}` move to cash until the next rebalance."
+        ]
+    if market_regime_enabled:
+        bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
+            f"Market Regime Overlay enabled: month-end selections move fully to cash when `{market_regime_benchmark}` closes below `MA{market_regime_window}`."
+        ]
+    return bundle
+
+
+def run_value_snapshot_strict_quarterly_prototype_backtest_from_db(
+    *,
+    tickers: Sequence[str] | None = None,
+    start: str | None = None,
+    end: str | None = None,
+    timeframe: str = "1d",
+    option: str = "month_end",
+    value_factors: Sequence[str] | None = None,
+    top_n: int = 10,
+    rebalance_interval: int = 1,
+    trend_filter_enabled: bool = False,
+    trend_filter_window: int = 200,
+    market_regime_enabled: bool = False,
+    market_regime_window: int = STRICT_MARKET_REGIME_DEFAULT_WINDOW,
+    market_regime_benchmark: str = STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
+    universe_mode: str = "manual_tickers",
+    preset_name: str | None = None,
+) -> dict[str, Any]:
+    normalized_tickers = _normalize_tickers(tickers)
+    _validate_backtest_date_range(start, end)
+
+    normalized_factors = [
+        str(name).strip()
+        for name in (value_factors or VALUE_STRICT_DEFAULT_FACTORS)
+        if str(name).strip()
+    ]
+    if not normalized_factors:
+        raise BacktestInputError("At least one quarterly value factor must be provided.")
+
+    price_freshness = inspect_strict_annual_price_freshness(
+        tickers=normalized_tickers,
+        end=end,
+        timeframe=timeframe,
+    )
+
+    _preflight_price_strategy_data(
+        tickers=normalized_tickers,
+        start=start,
+        end=end,
+        timeframe=timeframe,
+    )
+    if market_regime_enabled:
+        _preflight_price_strategy_data(
+            tickers=[market_regime_benchmark],
+            start=start,
+            end=end,
+            timeframe=timeframe,
+        )
+    _preflight_statement_quality_shadow_data(
+        tickers=normalized_tickers,
+        end=end,
+        statement_freq="quarterly",
+        factor_names=normalized_factors,
+    )
+
+    result_df = get_statement_value_snapshot_shadow_from_db(
+        tickers=normalized_tickers,
+        start=start,
+        end=end,
+        timeframe=timeframe,
+        option=option,
+        statement_freq="quarterly",
+        value_factors=normalized_factors,
+        top_n=top_n,
+        rebalance_interval=rebalance_interval,
+        trend_filter_enabled=trend_filter_enabled,
+        trend_filter_window=trend_filter_window,
+        market_regime_enabled=market_regime_enabled,
+        market_regime_window=market_regime_window,
+        market_regime_benchmark=market_regime_benchmark,
+    )
+
+    warnings = [
+        "Research-only quarterly value prototype: ranks quarterly statement shadow value factors and is intended for quarterly family validation rather than public default use.",
+    ]
+    if price_freshness["status"] == "warning":
+        warnings.append(
+            "Price freshness preflight: "
+            + price_freshness["message"]
+            + " Wider quarterly prototype runs can degrade in the final month until lagging symbols are refreshed."
+        )
+    if start:
+        active_rows = result_df[result_df["Selected Count"].fillna(0) > 0]
+        if not active_rows.empty:
+            first_active_date = pd.to_datetime(active_rows.iloc[0]["Date"]).strftime("%Y-%m-%d")
+            if first_active_date > start:
+                warnings.append(
+                    "No usable quarterly statement shadow rows were available at the requested start date. "
+                    f"The strategy stayed in cash until `{first_active_date}`."
+                )
+
+    bundle = build_backtest_result_bundle(
+        result_df,
+        strategy_name="Value Snapshot (Strict Quarterly Prototype)",
+        strategy_key="value_snapshot_strict_quarterly_prototype",
+        input_params={
+            "tickers": normalized_tickers,
+            "start": start,
+            "end": end,
+            "timeframe": timeframe,
+            "option": option,
+            "top": top_n,
+            "rebalance_interval": rebalance_interval,
+            "factor_freq": "quarterly",
+            "value_factors": normalized_factors,
+            "trend_filter_enabled": trend_filter_enabled,
+            "trend_filter_window": trend_filter_window,
+            "market_regime_enabled": market_regime_enabled,
+            "market_regime_window": market_regime_window,
+            "market_regime_benchmark": market_regime_benchmark,
+            "snapshot_mode": "strict_statement_quarterly",
+            "snapshot_source": "shadow_factors",
+            "universe_mode": universe_mode,
+            "preset_name": preset_name,
+        },
+        summary_freq=_summary_frequency(option, timeframe),
+        data_mode="db_backed_strict_statement_shadow_factors",
+        warnings=warnings,
+    )
+    bundle["meta"]["price_freshness"] = price_freshness
+    if trend_filter_enabled:
+        bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
+            f"Trend Filter Overlay enabled: month-end selections with `Close < MA{trend_filter_window}` move to cash until the next rebalance."
+        ]
+    if market_regime_enabled:
+        bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
+            f"Market Regime Overlay enabled: month-end selections move fully to cash when `{market_regime_benchmark}` closes below `MA{market_regime_window}`."
         ]
     return bundle
 
@@ -1083,6 +1323,9 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
     rebalance_interval: int = 1,
     trend_filter_enabled: bool = False,
     trend_filter_window: int = 200,
+    market_regime_enabled: bool = False,
+    market_regime_window: int = STRICT_MARKET_REGIME_DEFAULT_WINDOW,
+    market_regime_benchmark: str = STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
     universe_mode: str = "manual_tickers",
     preset_name: str | None = None,
 ) -> dict[str, Any]:
@@ -1119,6 +1362,13 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
         end=end,
         timeframe=timeframe,
     )
+    if market_regime_enabled:
+        _preflight_price_strategy_data(
+            tickers=[market_regime_benchmark],
+            start=start,
+            end=end,
+            timeframe=timeframe,
+        )
     _preflight_statement_quality_shadow_data(
         tickers=normalized_tickers,
         end=end,
@@ -1139,6 +1389,9 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
         rebalance_interval=rebalance_interval,
         trend_filter_enabled=trend_filter_enabled,
         trend_filter_window=trend_filter_window,
+        market_regime_enabled=market_regime_enabled,
+        market_regime_window=market_regime_window,
+        market_regime_benchmark=market_regime_benchmark,
     )
 
     warnings = [
@@ -1177,6 +1430,9 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
             "value_factors": normalized_value_factors,
             "trend_filter_enabled": trend_filter_enabled,
             "trend_filter_window": trend_filter_window,
+            "market_regime_enabled": market_regime_enabled,
+            "market_regime_window": market_regime_window,
+            "market_regime_benchmark": market_regime_benchmark,
             "snapshot_mode": "strict_statement_annual",
             "snapshot_source": "shadow_factors",
             "universe_mode": universe_mode,
@@ -1191,4 +1447,196 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
             f"Trend Filter Overlay enabled: month-end selections with `Close < MA{trend_filter_window}` move to cash until the next rebalance."
         ]
+    if market_regime_enabled:
+        bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
+            f"Market Regime Overlay enabled: month-end selections move fully to cash when `{market_regime_benchmark}` closes below `MA{market_regime_window}`."
+        ]
     return bundle
+
+
+def run_quality_value_snapshot_strict_quarterly_prototype_backtest_from_db(
+    *,
+    tickers: Sequence[str] | None = None,
+    start: str | None = None,
+    end: str | None = None,
+    timeframe: str = "1d",
+    option: str = "month_end",
+    quality_factors: Sequence[str] | None = None,
+    value_factors: Sequence[str] | None = None,
+    top_n: int = 10,
+    rebalance_interval: int = 1,
+    trend_filter_enabled: bool = False,
+    trend_filter_window: int = 200,
+    market_regime_enabled: bool = False,
+    market_regime_window: int = STRICT_MARKET_REGIME_DEFAULT_WINDOW,
+    market_regime_benchmark: str = STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
+    universe_mode: str = "manual_tickers",
+    preset_name: str | None = None,
+) -> dict[str, Any]:
+    normalized_tickers = _normalize_tickers(tickers)
+    _validate_backtest_date_range(start, end)
+
+    normalized_quality_factors = [
+        str(name).strip()
+        for name in (quality_factors or QUALITY_STRICT_DEFAULT_FACTORS)
+        if str(name).strip()
+    ]
+    normalized_value_factors = [
+        str(name).strip()
+        for name in (value_factors or VALUE_STRICT_DEFAULT_FACTORS)
+        if str(name).strip()
+    ]
+    normalized_factor_names: list[str] = []
+    for factor_name in [*normalized_quality_factors, *normalized_value_factors]:
+        if factor_name and factor_name not in normalized_factor_names:
+            normalized_factor_names.append(factor_name)
+
+    if not normalized_factor_names:
+        raise BacktestInputError("At least one quarterly quality/value factor must be provided.")
+
+    price_freshness = inspect_strict_annual_price_freshness(
+        tickers=normalized_tickers,
+        end=end,
+        timeframe=timeframe,
+    )
+
+    _preflight_price_strategy_data(
+        tickers=normalized_tickers,
+        start=start,
+        end=end,
+        timeframe=timeframe,
+    )
+    if market_regime_enabled:
+        _preflight_price_strategy_data(
+            tickers=[market_regime_benchmark],
+            start=start,
+            end=end,
+            timeframe=timeframe,
+        )
+    _preflight_statement_quality_shadow_data(
+        tickers=normalized_tickers,
+        end=end,
+        statement_freq="quarterly",
+        factor_names=normalized_factor_names,
+    )
+
+    result_df = get_statement_quality_value_snapshot_shadow_from_db(
+        tickers=normalized_tickers,
+        start=start,
+        end=end,
+        timeframe=timeframe,
+        option=option,
+        statement_freq="quarterly",
+        quality_factors=normalized_quality_factors,
+        value_factors=normalized_value_factors,
+        top_n=top_n,
+        rebalance_interval=rebalance_interval,
+        trend_filter_enabled=trend_filter_enabled,
+        trend_filter_window=trend_filter_window,
+        market_regime_enabled=market_regime_enabled,
+        market_regime_window=market_regime_window,
+        market_regime_benchmark=market_regime_benchmark,
+    )
+
+    warnings = [
+        "Research-only quarterly multi-factor prototype: combines quarterly quality and value shadow factors for family-level validation, not public default use.",
+    ]
+    if price_freshness["status"] == "warning":
+        warnings.append(
+            "Price freshness preflight: "
+            + price_freshness["message"]
+            + " Wider quarterly prototype runs can degrade in the final month until lagging symbols are refreshed."
+        )
+    if start:
+        active_rows = result_df[result_df["Selected Count"].fillna(0) > 0]
+        if not active_rows.empty:
+            first_active_date = pd.to_datetime(active_rows.iloc[0]["Date"]).strftime("%Y-%m-%d")
+            if first_active_date > start:
+                warnings.append(
+                    "No usable quarterly multi-factor snapshot rows were available at the requested start date. "
+                    f"The strategy stayed in cash until `{first_active_date}`."
+                )
+
+    bundle = build_backtest_result_bundle(
+        result_df,
+        strategy_name="Quality + Value Snapshot (Strict Quarterly Prototype)",
+        strategy_key="quality_value_snapshot_strict_quarterly_prototype",
+        input_params={
+            "tickers": normalized_tickers,
+            "start": start,
+            "end": end,
+            "timeframe": timeframe,
+            "option": option,
+            "top": top_n,
+            "rebalance_interval": rebalance_interval,
+            "factor_freq": "quarterly",
+            "quality_factors": normalized_quality_factors,
+            "value_factors": normalized_value_factors,
+            "trend_filter_enabled": trend_filter_enabled,
+            "trend_filter_window": trend_filter_window,
+            "market_regime_enabled": market_regime_enabled,
+            "market_regime_window": market_regime_window,
+            "market_regime_benchmark": market_regime_benchmark,
+            "snapshot_mode": "strict_statement_quarterly",
+            "snapshot_source": "shadow_factors",
+            "universe_mode": universe_mode,
+            "preset_name": preset_name,
+        },
+        summary_freq=_summary_frequency(option, timeframe),
+        data_mode="db_backed_strict_statement_shadow_factors",
+        warnings=warnings,
+    )
+    bundle["meta"]["price_freshness"] = price_freshness
+    if trend_filter_enabled:
+        bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
+            f"Trend Filter Overlay enabled: month-end selections with `Close < MA{trend_filter_window}` move to cash until the next rebalance."
+        ]
+    if market_regime_enabled:
+        bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
+            f"Market Regime Overlay enabled: month-end selections move fully to cash when `{market_regime_benchmark}` closes below `MA{market_regime_window}`."
+        ]
+    return bundle
+
+
+def run_quality_snapshot_strict_quarterly_prototype_backtest_from_db(
+    *,
+    tickers: Sequence[str] | None = None,
+    start: str | None = None,
+    end: str | None = None,
+    timeframe: str = "1d",
+    option: str = "month_end",
+    quality_factors: Sequence[str] | None = None,
+    top_n: int = 2,
+    rebalance_interval: int = 1,
+    trend_filter_enabled: bool = False,
+    trend_filter_window: int = 200,
+    market_regime_enabled: bool = False,
+    market_regime_window: int = STRICT_MARKET_REGIME_DEFAULT_WINDOW,
+    market_regime_benchmark: str = STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
+    universe_mode: str = "manual_tickers",
+    preset_name: str | None = None,
+) -> dict[str, Any]:
+    return _run_statement_quality_bundle(
+        strategy_name="Quality Snapshot (Strict Quarterly Prototype)",
+        strategy_key="quality_snapshot_strict_quarterly_prototype",
+        tickers=tickers,
+        start=start,
+        end=end,
+        timeframe=timeframe,
+        option=option,
+        statement_freq="quarterly",
+        quality_factors=quality_factors,
+        top_n=top_n,
+        rebalance_interval=rebalance_interval,
+        trend_filter_enabled=trend_filter_enabled,
+        trend_filter_window=trend_filter_window,
+        market_regime_enabled=market_regime_enabled,
+        market_regime_window=market_regime_window,
+        market_regime_benchmark=market_regime_benchmark,
+        universe_mode=universe_mode,
+        preset_name=preset_name,
+        snapshot_source="shadow_factors",
+        static_warnings=[
+            "Research-only quarterly strict prototype: ranks quarterly statement shadow factors and is intended for Phase 6 entry/validation rather than public default use.",
+        ],
+    )
