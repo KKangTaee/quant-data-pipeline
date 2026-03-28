@@ -16,6 +16,8 @@
   - 구현 진행 로그
 - `.note/finance/QUESTION_AND_ANALYSIS_LOG.md`
   - 질의/설계/분석 결과 로그
+- `.note/finance/DAILY_MARKET_UPDATE_RATE_LIMIT_ANALYSIS_20260328.md`
+  - `Daily Market Update`의 yfinance rate-limit 재현 결과와 first-pass 최적화 방향 분석 문서
 
 ---
 
@@ -245,7 +247,38 @@
 
 ---
 
-## 6. Phase 2 / Phase 3 - Backtest / Loader 관련 문서
+## 6. Phase 5 상위 문서
+
+- `.note/finance/phase5/PHASE5_STRATEGY_LIBRARY_AND_RISK_OVERLAY_PLAN.md`
+  - strict factor strategy library 확장과 risk overlay를 다음 major phase의 공식 방향으로 정리한 문서
+- `.note/finance/phase5/PHASE5_CURRENT_CHAPTER_TODO.md`
+  - Phase 5 첫 챕터 TODO 보드
+- `.note/finance/phase5/PHASE5_BASELINE_STRICT_FAMILY_COMPARATIVE_RESEARCH.md`
+  - strict annual family의 canonical compare/single baseline을 고정한 문서
+- `.note/finance/phase5/PHASE5_COMPARE_ADVANCED_INPUT_PARITY_FIRST_PASS.md`
+  - compare 화면에서 strict factor 전략별 preset/factor/overlay 입력을 조절할 수 있게 한 first-pass 구현 문서
+- `.note/finance/phase5/PHASE5_FIRST_OVERLAY_REQUIREMENTS_AND_SELECTION.md`
+  - first overlay 요구사항과 선정 결과를 고정한 문서
+- `.note/finance/phase5/PHASE5_OVERLAY_RUNTIME_FIRST_PASS.md`
+  - strict family의 month-end trend filter overlay first-pass 구현 문서
+- `.note/finance/phase5/PHASE5_FIRST_OVERLAY_ON_OFF_VALIDATION.md`
+  - strict family first overlay의 on/off 비교 결과를 canonical preset 기준으로 정리한 문서
+- `.note/finance/phase5/PHASE5_STALE_REASON_CLASSIFICATION_FIRST_PASS.md`
+  - strict preflight stale / missing symbol에 heuristic reason을 붙인 first-pass 진단 문서
+- `.note/finance/phase5/PHASE5_STRICT_FAMILY_TEST_CHECKLIST.md`
+  - strict family single / compare / overlay / preflight / history 테스트 체크리스트 문서
+- `.note/finance/phase5/PHASE5_PRACTICAL_INVESTMENT_READINESS_POLICY.md`
+  - strict managed universe를 historical-backtest 우선 기준으로 운영하기 위한 freshness / transparency 정책 문서
+- `.note/finance/phase5/PHASE5_MANAGED_UNIVERSE_FRESHNESS_BACKFILL_FIRST_PASS.md`
+  - freshness-aware backfill 실험과 이후 historical-only 방향으로의 롤백 결정을 기록한 문서
+- `.note/finance/phase5/PHASE5_QUARTERLY_STRICT_FAMILY_REVIEW.md`
+  - quarterly strict family를 언제 여는 것이 맞는지 review한 문서
+- `.note/finance/phase5/PHASE5_SECOND_OVERLAY_CANDIDATE_REVIEW.md`
+  - first overlay 다음 후보 overlay 우선순위를 정리한 문서
+
+---
+
+## 7. Phase 2 / Phase 3 - Backtest / Loader 관련 문서
 
 - `.note/finance/phase2/BACKTEST_LOADER_FUNCTION_DRAFT.md`
   - loader 함수 초안
@@ -258,7 +291,7 @@
 
 ---
 
-## 7. Phase 2 - Point-In-Time / 재무제표 정리 문서
+## 8. Phase 2 - Point-In-Time / 재무제표 정리 문서
 
 - `.note/finance/phase2/POINT_IN_TIME_SCHEMA_REVIEW_AND_PATCH_PLAN.md`
   - point-in-time 스키마 리뷰와 패치 계획
@@ -267,7 +300,7 @@
 
 ---
 
-## 8. 운영 / 설정 / 수집 전략 문서
+## 9. 운영 / 설정 / 수집 전략 문서
 
 - `.note/finance/DATA_COLLECTION_UI_STRATEGY.md`
   - 내부 운영 수집 UI 전략
@@ -278,7 +311,7 @@
 
 ---
 
-## 9. 문서 사용 순서 권장
+## 10. 문서 사용 순서 권장
 
 처음 프로젝트 전체를 볼 때:
 1. `MASTER_PHASE_ROADMAP.md`

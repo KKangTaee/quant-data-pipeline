@@ -93,4 +93,21 @@ UI를 새로 여는 것보다
 - next-phase candidate 정리:
   - `completed`
 - next-phase formal opening:
-  - `pending user confirmation`
+  - `completed`
+
+## 후속 결정
+
+이후 사용자 확인을 거쳐,
+다음 phase 방향은 아래처럼 고정되었다.
+
+- next phase:
+  - `Strategy Library And Comparative Research + Risk Overlay`
+
+관련 문서:
+- `.note/finance/phase5/PHASE5_STRATEGY_LIBRARY_AND_RISK_OVERLAY_PLAN.md`
+- `.note/finance/phase5/PHASE5_CURRENT_CHAPTER_TODO.md`
+- `.note/finance/phase5/PHASE5_PRACTICAL_INVESTMENT_READINESS_POLICY.md`
+
+추가로 사용자 요청 기준 carry-over 항목도 같이 반영되었다.
+- compare 화면에서 strict factor 전략의 advanced-input parity 보강
+- strict factor family의 quarterly expansion candidate 검토

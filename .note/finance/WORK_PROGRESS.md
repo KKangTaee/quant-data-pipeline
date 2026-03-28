@@ -1293,3 +1293,260 @@ Keep entries append-only and concise.
   - `Coverage 1000` remains staged because freshness risk, not strategy logic, is still the limiting factor
 - Added one more UI clarification to strict annual preflight:
   - `stale` now explicitly means that the symbol's latest daily price in DB stops before the selected end date
+
+### 2026-03-27 - Phase 5 strategy-library and risk-overlay direction opened
+
+- After Phase 4 closeout, the next major direction was user-confirmed and documented as a new Phase 5 workstream.
+- Added Phase 5 planning documents:
+  - `.note/finance/phase5/PHASE5_STRATEGY_LIBRARY_AND_RISK_OVERLAY_PLAN.md`
+  - `.note/finance/phase5/PHASE5_CURRENT_CHAPTER_TODO.md`
+- The next phase direction is now explicitly:
+  - strategy library / comparative research
+  - strict factor risk overlay design
+  - first overlay candidate selection before implementation
+- Synced the phase handoff documents so they now point from Phase 4 closeout into the opened Phase 5 kickoff/planning state.
+
+### 2026-03-27 - Phase 5 carry-over requests registered
+
+- Added two user-requested follow-up items into Phase 5 planning:
+  - compare-screen advanced-input parity for strict factor strategies
+  - quarterly strict family expansion candidate
+- Current recommendation/order was documented as:
+  - compare advanced-input parity first
+  - quarterly expansion later
+- Rationale:
+  - compare parity is a smaller UI/runtime consistency fix
+  - quarterly strict family is a larger coverage/timing/runtime expansion and should be treated as a separate candidate track
+
+### 2026-03-27 - Phase 5 first chapter baseline, compare parity, and first overlay first pass
+
+- Executed the first recommended Phase 5 sequence:
+  - baseline strict-family comparative research
+  - compare advanced-input parity
+  - overlay requirement lock
+  - first overlay selection
+  - overlay runtime first pass
+  - strict family compare / interpretation expansion
+  - quarterly strict-family review
+  - second overlay candidate review
+- Compare strict factor strategies now expose strategy-specific advanced overrides for:
+  - preset
+  - factor set
+  - `top_n`
+  - `rebalance_interval`
+  - trend filter on/off
+  - trend filter window
+- The first overlay was fixed as:
+  - `month-end MA200 trend filter + cash fallback`
+- Implemented the overlay across strict annual quality / value / quality+value:
+  - sample/runtime wrappers accept overlay inputs
+  - strategy result schema now records raw selected names vs overlay-rejected names
+  - single-run history and compare focused-strategy interpretation now surface those fields
+- Added durable Phase 5 docs for:
+  - baseline comparative research
+  - compare parity first pass
+  - first overlay requirements and selection
+  - overlay runtime first pass
+  - quarterly review
+  - second overlay review
+- Validation:
+  - `python3 -m py_compile` passed for all changed finance/UI/runtime files
+  - `.venv` smoke checks confirmed:
+    - compare strict quality override can switch preset and persist overlay meta
+    - strict value overlay path records `Overlay Rejected Ticker`
+    - strict quality+value overlay path reuses the same first-pass overlay contract
+
+### 2026-03-27 - Added trend-filter tooltip/explanation to strict family UI
+
+- Added a shared inline help popover for the strict-family trend filter overlay in both single-strategy and compare forms.
+- The tooltip now explains the actual first-pass behavior with a short A/B example:
+  - month-end only check
+  - `Close < MA(window)` moves that selected name to cash until the next rebalance
+  - not an intramonth daily trigger
+
+### 2026-03-27 - Phase 5 investable-readiness policy documented
+
+- Fixed the Phase 5 operating direction around a more practical, investable research goal.
+- Added a dedicated Phase 5 policy document:
+  - `.note/finance/phase5/PHASE5_PRACTICAL_INVESTMENT_READINESS_POLICY.md`
+- The policy now explicitly states:
+  - the target is a decision-support quality research environment, not immediate live trading automation
+  - strict managed universes should evolve toward freshness-aware presets
+  - the preferred managed-universe policy is `backfill-to-target`, not `drop-only`
+  - stale exclusions and replacement symbols should be shown transparently rather than silently hidden
+- Synced the Phase 5 plan/TODO, Phase 4 handoff, roadmap, and doc index so the same practical-investment direction is visible from the planning documents.
+
+### 2026-03-27 - Strict managed preset freshness backfill first pass implemented
+
+- Implemented freshness-aware strict managed preset resolution in `app/web/pages/backtest.py`.
+- Managed presets (`100/300/500/1000`) now:
+  - scan a wider asset-profile candidate pool
+  - exclude stale / missing symbols for the selected end date
+  - backfill from lower-ranked eligible symbols
+  - preserve target count as much as possible
+- Added reporting for:
+  - excluded symbols
+  - replacement symbols
+  - target vs resolved count
+  - candidate scan size
+- Single strict forms now show:
+  - managed preset resolution summary
+  - managed preset resolution details expander
+- Compare strict forms now also use the same freshness-aware resolution instead of the old static preset list.
+- Metadata/history now retain `managed_universe_resolution`.
+- Validation:
+  - `python3 -m py_compile` passed
+  - smoke check:
+    - `US Statement Coverage 300` -> `300/300`, no replacements
+    - `US Statement Coverage 1000` -> `1000/1000`, `5` exclusions, `5` replacements
+
+### 2026-03-27 - Historical-only strict preset semantics restored
+
+- Rolled back the run-level freshness replacement experiment for strict managed presets.
+- Current strict preset behavior is now:
+  - preset ticker list stays fixed for the run
+  - stale / missing symbols are not replaced at run level
+  - each rebalance date naturally filters to symbols with usable price and factor data
+- Kept `Price Freshness Preflight` as a diagnostic layer and added a short historical-backtest help tooltip in the UI.
+- Removed managed-universe replacement metadata from:
+  - `app/web/pages/backtest.py`
+  - `app/web/runtime/backtest.py`
+  - `app/web/runtime/history.py`
+- Synced Phase 5 policy / roadmap / index docs so the current code now clearly reflects:
+  - historical backtest first
+  - no `Investable Now` mode in the current product surface
+
+### 2026-03-27 - Compare strict strategy advanced-input visibility fixed
+
+- Fixed the compare-screen UX issue where selecting strict family strategies did not immediately reveal their strategy-specific advanced inputs.
+- Root cause:
+  - the compare `Strategies` selector lived inside `st.form(...)`
+  - so Streamlit did not rerun until submit, and the conditional advanced-input blocks stayed stale
+- Changed `Strategies` selection to live outside the form while keeping execution inputs/submission inside the form.
+- Added a short caption explaining that strategy-specific advanced inputs now update immediately.
+
+### 2026-03-27 - Shared backtest history moved to its own top-level tab
+
+- Reviewed the role of `Persistent Backtest History` / `History Drilldown` and confirmed they are shared assets for both:
+  - single-strategy runs
+  - compare / strategy-comparison runs
+- Updated the backtest top-level tab structure to:
+  - `Single Strategy`
+  - `Compare & Portfolio Builder`
+  - `History`
+- Moved the shared history surface out of the compare tab into the new dedicated history tab.
+- Added a short caption clarifying that the history view is common to both single and compare workflows.
+
+### 2026-03-27 - Strict preflight stale classification and selection interpretation expanded
+
+- Added heuristic stale / missing reason classification to strict annual price freshness preflight.
+- Current classification labels:
+  - `likely_delisted_or_symbol_changed`
+  - `asset_profile_error`
+  - `missing_price_rows`
+  - `minor_source_lag`
+  - `source_gap_or_symbol_issue`
+  - `persistent_source_gap_or_symbol_issue`
+- Added `Interpretation` support to strict selection history:
+  - cash share computation
+  - interpretation summary
+  - overlay rejection frequency
+  - row-level explanation strings
+
+### 2026-03-27 - First overlay on/off validation completed
+
+- Collected canonical overlay on/off validation results for:
+  - `Quality Snapshot (Strict Annual)`
+  - `Value Snapshot (Strict Annual)`
+  - `Quality + Value Snapshot (Strict Annual)`
+- Validation baseline:
+  - `US Statement Coverage 100`
+  - `2016-01-01 ~ 2026-03-20`
+  - `month_end`
+  - `MA200`
+- Added wide-preset sanity check for `Quality Snapshot (Strict Annual)` on `US Statement Coverage 300`.
+- Main result:
+  - `Quality` strict saw a more defensive but weaker outcome with overlay on
+  - `Value` and `Quality + Value` strict improved on canonical compare metrics with overlay on
+- Synced the result into Phase 5 validation / roadmap docs.
+
+### 2026-03-27 - Backtest selection interpretation hotfix: missing numpy import
+
+- Fixed a runtime `NameError: name 'np' is not defined` in `app/web/pages/backtest.py`.
+- Root cause:
+  - the new selection-interpretation path uses `np.where(...)`
+  - but `numpy as np` was not imported in the page module
+- Added the missing import and re-ran `py_compile` for the page module successfully.
+
+### 2026-03-28 - Value strict selection history hotfix: duplicate-column-safe cash handling
+
+- Fixed a follow-up runtime failure while rendering `Selection History` for `Value Snapshot (Strict Annual)` runs.
+- Root cause:
+  - `_build_snapshot_selection_history(...)` assumed `selection_df['Cash']` and similar columns were always a 1-D series
+  - some result shapes can surface duplicate column names, which makes `frame['Cash']` return a DataFrame instead
+- Added duplicate-column-safe first-series extraction for:
+  - `Selected Count`
+  - `Raw Selected Count`
+  - `Cash`
+  - `Total Balance`
+- Also de-duplicates columns defensively before building the selection-history view.
+
+### 2026-03-28 - Latest-run selection-history renderer fallback added
+
+- Added a defensive fallback in `_render_snapshot_selection_history(...)`.
+- If an older or malformed run payload still fails the selection-history builder,
+  the page now shows a warning with renderer detail instead of crashing the entire `Backtest` screen.
+- This keeps the latest-run UI usable while older session/history payloads are being flushed or rerun.
+
+### 2026-03-28 - Phase 5 strict family manual test checklist documented
+
+- Added a dedicated manual QA checklist document for the current Phase 5 strict-family surface.
+- Coverage includes:
+  - single-strategy smoke
+  - overlay on/off comparison
+  - preflight / freshness diagnostics
+  - compare strategy advanced inputs
+  - shared history tab behavior
+  - tooltip / copy verification
+- Added the new checklist document to `FINANCE_DOC_INDEX.md`.
+
+### 2026-03-28 - Phase closeout checklist rule added to repository guidance
+
+- Updated `AGENTS.md` so future phase closeouts explicitly require:
+  - a phase-specific manual test checklist document
+  - user-facing verification coverage for the main features and UI paths added in that phase
+  - checklist sharing as part of the final phase handoff
+
+### 2026-03-28 - Strict-family interpretation/help copy localized to Korean
+
+- Added Korean help/popover copy for the strict-family interpretation surfaces.
+- Updated:
+  - historical-universe help
+  - trend-filter help
+  - interpretation summary help
+  - overlay rejection frequency help
+  - cash-share help
+- Also translated the main strict-family widget help text in single-strategy forms so tooltip copy aligns with the Korean UI flow.
+
+### 2026-03-28 - Interpretation metric help refined for Raw/Final event semantics
+
+- Refined strict-family interpretation help copy so `Raw Candidate Events` / `Final Selected Events` are described as:
+  - rebalance-level selection event totals
+  - not full eligible-universe size
+- Added the practical reading rule:
+  - overlay off -> Raw and Final are usually the same
+  - overlay on -> the gap between Raw and Final indicates overlay intervention
+- Added a short caption under `Interpretation Summary` to reinforce this reading in the UI.
+
+### 2026-03-28 - Daily Market Update rate-limit reproduction and direction note
+
+- Investigated `Daily Market Update` for `NYSE Stocks + ETFs` broad refresh behavior.
+- Confirmed current raw source size:
+  - `11,736` symbols
+  - `434` non-plain symbols in the raw exchange source
+- Reproduced early `YFRateLimitError('Too Many Requests...')` on broad runs.
+- Also confirmed a secondary issue:
+  - visible rate-limit failures do not always populate `batch_errors`
+  - because `yfinance` can return partial frames while only surfacing symbol failures in provider output
+- Added a durable analysis / direction document:
+  - `.note/finance/DAILY_MARKET_UPDATE_RATE_LIMIT_ANALYSIS_20260328.md`

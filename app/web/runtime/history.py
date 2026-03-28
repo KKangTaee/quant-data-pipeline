@@ -57,6 +57,8 @@ def append_backtest_run_history(
         "snapshot_mode": meta.get("snapshot_mode"),
         "quality_factors": meta.get("quality_factors"),
         "value_factors": meta.get("value_factors"),
+        "trend_filter_enabled": meta.get("trend_filter_enabled"),
+        "trend_filter_window": meta.get("trend_filter_window"),
         "snapshot_source": meta.get("snapshot_source"),
         "ui_elapsed_seconds": meta.get("ui_elapsed_seconds"),
         "universe_mode": meta.get("universe_mode"),

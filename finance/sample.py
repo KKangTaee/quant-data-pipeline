@@ -73,6 +73,9 @@ VALUE_STRICT_DEFAULT_FACTORS = [
     "operating_income_yield",
 ]
 
+STRICT_TREND_FILTER_DEFAULT_ENABLED = False
+STRICT_TREND_FILTER_DEFAULT_WINDOW = 200
+
 
 def _history_start_with_buffer(start=None, *, years: int = 0, months: int = 0, days: int = 0):
     """
@@ -126,6 +129,7 @@ def _build_snapshot_strategy_price_dfs(
     end=None,
     timeframe="1d",
     from_db=False,
+    trend_filter_window: int | None = None,
 ):
     """
     Snapshot 전략용 price input builder.
@@ -138,16 +142,22 @@ def _build_snapshot_strategy_price_dfs(
     - period당 canonical date 하나로 다시 정렬
     하는 방식을 사용한다.
     """
+    history_buffer_years = 2 if trend_filter_window else 0
+    engine = _build_price_only_engine(
+        tickers,
+        option=option,
+        start=start,
+        end=end,
+        timeframe=timeframe,
+        from_db=from_db,
+        history_buffer_years=history_buffer_years,
+    )
+
+    if trend_filter_window:
+        engine = engine.add_ma(trend_filter_window)
+
     engine = (
-        _build_price_only_engine(
-            tickers,
-            option=option,
-            start=start,
-            end=end,
-            timeframe=timeframe,
-            from_db=from_db,
-        )
-        .filter_by_period()
+        engine.filter_by_period()
         .slice(start=start, end=end)
         .drop_columns(["High", "Low", "Open", "Volume"])
     )
@@ -639,6 +649,8 @@ def get_statement_quality_snapshot_shadow_from_db(
     quality_factors=None,
     top_n=2,
     rebalance_interval=1,
+    trend_filter_enabled=False,
+    trend_filter_window=STRICT_TREND_FILTER_DEFAULT_WINDOW,
 ):
     if tickers is None:
         tickers = ["AAPL", "MSFT", "GOOG"]
@@ -652,6 +664,7 @@ def get_statement_quality_snapshot_shadow_from_db(
         end=end,
         timeframe=timeframe,
         from_db=True,
+        trend_filter_window=(trend_filter_window if trend_filter_enabled else None),
     )
 
     rebalance_dates = pd.to_datetime(next(iter(price_dfs.values()))["Date"]).tolist()
@@ -674,6 +687,8 @@ def get_statement_quality_snapshot_shadow_from_db(
         top_n=top_n,
         lower_is_better_factors=["debt_ratio", "debt_to_assets", "net_debt_to_equity"],
         rebalance_interval=rebalance_interval,
+        trend_filter_enabled=trend_filter_enabled,
+        trend_filter_window=trend_filter_window,
     )
 
     df = (
@@ -694,6 +709,8 @@ def get_statement_value_snapshot_shadow_from_db(
     value_factors=None,
     top_n=10,
     rebalance_interval=1,
+    trend_filter_enabled=False,
+    trend_filter_window=STRICT_TREND_FILTER_DEFAULT_WINDOW,
 ):
     if tickers is None:
         tickers = ["AAPL", "MSFT", "GOOG"]
@@ -707,6 +724,7 @@ def get_statement_value_snapshot_shadow_from_db(
         end=end,
         timeframe=timeframe,
         from_db=True,
+        trend_filter_window=(trend_filter_window if trend_filter_enabled else None),
     )
 
     rebalance_dates = pd.to_datetime(next(iter(price_dfs.values()))["Date"]).tolist()
@@ -729,6 +747,8 @@ def get_statement_value_snapshot_shadow_from_db(
         top_n=top_n,
         lower_is_better_factors=["per", "pbr", "psr", "pcr", "pfcr", "ev_ebit", "por"],
         rebalance_interval=rebalance_interval,
+        trend_filter_enabled=trend_filter_enabled,
+        trend_filter_window=trend_filter_window,
     )
 
     df = (
@@ -750,6 +770,8 @@ def get_statement_quality_value_snapshot_shadow_from_db(
     value_factors=None,
     top_n=10,
     rebalance_interval=1,
+    trend_filter_enabled=False,
+    trend_filter_window=STRICT_TREND_FILTER_DEFAULT_WINDOW,
 ):
     if tickers is None:
         tickers = ["AAPL", "MSFT", "GOOG"]
@@ -771,6 +793,7 @@ def get_statement_quality_value_snapshot_shadow_from_db(
         end=end,
         timeframe=timeframe,
         from_db=True,
+        trend_filter_window=(trend_filter_window if trend_filter_enabled else None),
     )
 
     rebalance_dates = pd.to_datetime(next(iter(price_dfs.values()))["Date"]).tolist()
@@ -804,6 +827,8 @@ def get_statement_quality_value_snapshot_shadow_from_db(
             "net_debt_to_equity",
         ],
         rebalance_interval=rebalance_interval,
+        trend_filter_enabled=trend_filter_enabled,
+        trend_filter_window=trend_filter_window,
     )
 
     df = (

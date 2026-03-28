@@ -135,7 +135,7 @@ Analysis / Presentation
 - 또한 GTAA는 더 이상 고정 `2개월` cadence에 묶여 있지 않고,
   advanced input을 통해 signal interval을 조정할 수 있다.
 - Phase 4에서는 여기서 한 단계 더 나아가,
-  `Backtest` 탭 안에 `Single Strategy` / `Compare & Portfolio Builder` 구조가 추가되었고,
+  `Backtest` 탭 안에 `Single Strategy` / `Compare & Portfolio Builder` / `History` 구조가 추가되었고,
   최대 4개 전략 비교와 월별 weighted portfolio 결합까지 first-pass 수준으로 열렸다.
 - 또한 compare mode에서도 전략별 advanced input override가 가능하도록 확장되어,
   GTAA interval, Equal Weight rebalance interval, Risk Parity volatility window, Dual Momentum top/rebalance interval을 조절할 수 있다.
@@ -146,6 +146,8 @@ Analysis / Presentation
 - 그리고 추가로
   recorded date range filter, metric sort, single-strategy `Run Again`
   까지 지원하게 되었다.
+- 현재는 이 persistent history와 drilldown이 compare 하단에 붙어 있지 않고,
+  `History` top-level tab에서 single / compare 공용 surface로 노출된다.
 - 이어서 persistent history는 third-pass 수준으로 더 강화되어,
   metric threshold filter,
   single-strategy `Load Into Form`,
@@ -356,11 +358,28 @@ Analysis / Presentation
   `US Statement Coverage 1000` 기준으로도
   price freshness spread가 `49d`까지 벌어질 수 있어
   preflight warning과 targeted `Daily Market Update` 대응이 여전히 중요하다.
-- 실제 closeout refresh 이후 stale symbol은
-  `4`개(`CADE`, `CMA`, `DAY`, `CFLT`)까지 줄었지만,
-  아직 `common_latest_date = 2026-01-30`,
-  `newest_latest_date = 2026-03-20` 상태이므로
-  `Coverage 1000`은 still staged operator preset으로 두는 편이 맞다.
+- 이후 Phase 5에서는 strict managed preset에
+  `freshness-aware backfill-to-target` 실험을 잠시 붙여 보았지만,
+  historical backtest 타당성 관점에서 selected end date 기준 stale 여부로
+  run 전체 universe를 미리 교체하는 것은 과하다는 결론이 났다.
+- 그래서 현재 코드는 다시
+  **run-level static preset + rebalance-date availability filtering**
+  으로 정리되어 있다.
+- 즉 `Coverage 1000`을 선택해도
+  preset ticker list 자체를 실행 전에 replacement로 갈아끼우지는 않는다.
+- 대신 각 월말 리밸런싱 날짜마다
+  - 가격이 있는 종목
+  - factor snapshot이 usable한 종목
+  만 실제 후보가 된다.
+- `Price Freshness Preflight`는 계속 유지되며,
+  stale / missing symbol이 selected end date 근처에 있는지 보여주는
+  운영/해석용 진단 레이어 역할을 한다.
+- 이 설계는
+  - 과거 구간에서 아직 살아 있던 종목을
+    end-date stale라는 이유로 run 전체에서 제거하지 않고
+  - 해당 종목이 실제로 가격을 잃는 시점부터
+    자연스럽게 후보에서 빠지게 한다는 점에서
+  historical backtest에 더 타당한 방향이다.
 - 따라서 strict annual public default는 현재도 그대로
   - single strategy:
     - `US Statement Coverage 300`
@@ -438,6 +457,67 @@ Analysis / Presentation
   - strict annual multi-factor candidate:
     - `Quality + Value Snapshot (Strict Annual)`
   구조로 보는 편이 가장 정확하다.
+- Phase 5 first chapter에서는 이 strict annual family 위에
+  strategy-library baseline과 first risk overlay가 추가로 올라갔다.
+  현재 구현 상태는 다음과 같다.
+  - `Backtest` 화면 상단은
+    - `Single Strategy`
+    - `Compare & Portfolio Builder`
+    - `History`
+    구조로 정리되었고,
+    history는 single / compare 공용 surface로 분리되었다
+  - compare 화면에서도 strict family별 advanced input parity가 열려 있다
+    - preset
+    - factor set
+    - `top_n`
+    - `rebalance_interval`
+    - trend filter on/off
+    - trend filter window
+  - first overlay는
+    `month-end MA200 trend filter + cash fallback`
+    으로 고정되었다
+  - overlay가 켜진 strict family result는
+    - `Raw Selected Ticker`
+    - `Raw Selected Count`
+    - `Raw Selected Score`
+    - `Overlay Rejected Ticker`
+    - `Overlay Rejected Count`
+    - `Trend Filter Enabled`
+    - `Trend Filter Column`
+    을 함께 남긴다
+  - strict family의 `Selection History`는
+    `History / Interpretation / Selection Frequency`
+    구조로 확장되었고,
+    `Interpretation` 탭에서
+    - raw candidate 수
+    - final selected 수
+    - overlay rejection 수
+    - cash-only rebalance 수
+    - 평균 cash share
+    - overlay rejection frequency
+    를 함께 읽을 수 있다
+  - single strategy뿐 아니라 compare focused strategy에서도
+    selection interpretation과 selection frequency를 함께 읽을 수 있다
+  - strict preset은 현재 historical backtest semantics를 유지한다
+    - run-level preset universe는 고정
+    - selected end date freshness로 run 전체 universe를 교체하지 않음
+    - 각 rebalance date마다 usable한 price / factor가 있는 종목만 자연스럽게 후보로 남음
+  - `Price Freshness Preflight`는
+    경고 / 진단 레이어로 유지되며,
+    stale / missing symbol에 대해
+    heuristic reason을 추가로 보여준다
+    - `likely_delisted_or_symbol_changed`
+    - `asset_profile_error`
+    - `missing_price_rows`
+    - `minor_source_lag`
+    - `source_gap_or_symbol_issue`
+    - `persistent_source_gap_or_symbol_issue`
+  - first overlay on/off 검증 결과는 strategy별로 달랐다
+    - `Quality` strict에서는 overlay가 더 보수적으로 작동해
+      canonical compare 기준 성과가 약화되었다
+    - `Value`, `Quality + Value` strict에서는
+      canonical compare 기준으로
+      End Balance / CAGR / Sharpe가 개선되고 MDD가 완화되었다
 
 즉, 예전보다 통합은 많이 진행됐지만 아직 모든 전략과 모든 입력이 loader 계층으로 완전히 이행된 상태는 아니다.
 

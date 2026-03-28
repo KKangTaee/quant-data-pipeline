@@ -538,6 +538,9 @@ def quality_snapshot_equal_weight(
     top_n: int = 10,
     lower_is_better_factors: list[str] | None = None,
     rebalance_interval: int = 1,
+    trend_filter_enabled: bool = False,
+    trend_filter_window: int = 200,
+    trend_filter_col: str | None = None,
 ) -> pd.DataFrame:
     """
     Monthly snapshot-based quality strategy.
@@ -555,10 +558,13 @@ def quality_snapshot_equal_weight(
         raise ValueError("top_n must be positive.")
     if rebalance_interval <= 0:
         raise ValueError("rebalance_interval must be positive.")
+    if trend_filter_enabled and trend_filter_window <= 0:
+        raise ValueError("trend_filter_window must be positive when trend filter is enabled.")
 
     tickers = list(price_dfs.keys())
     base_df = price_dfs[tickers[0]].sort_values("Date").reset_index(drop=True)
     dates = pd.to_datetime(base_df["Date"]).tolist()
+    active_trend_col = trend_filter_col or f"MA{trend_filter_window}"
 
     prev_close: dict[str, float | None] = {ticker: None for ticker in tickers}
     prev_total_balance = None
@@ -571,9 +577,14 @@ def quality_snapshot_equal_weight(
     for i, date in enumerate(dates):
         current_date = pd.to_datetime(date)
         close_now = {}
+        trend_now = {}
         for ticker in tickers:
-            close_value = pd.to_numeric(price_dfs[ticker].iloc[i]["Close"], errors="coerce")
+            current_row = price_dfs[ticker].iloc[i]
+            close_value = pd.to_numeric(current_row["Close"], errors="coerce")
             close_now[ticker] = float(close_value) if pd.notna(close_value) else np.nan
+            if trend_filter_enabled:
+                trend_value = pd.to_numeric(current_row.get(active_trend_col), errors="coerce")
+                trend_now[ticker] = float(trend_value) if pd.notna(trend_value) else np.nan
 
         if i == 0:
             end_balances = []
@@ -598,6 +609,9 @@ def quality_snapshot_equal_weight(
         snapshot_key = current_date.normalize()
         selected_snapshot = pd.DataFrame()
         selected_scores: list[float] = []
+        raw_selected_tickers: list[str] = []
+        raw_selected_scores: list[float] = []
+        overlay_rejected_tickers: list[str] = []
 
         if rebalancing:
             snapshot_df = snapshot_by_date.get(snapshot_key)
@@ -619,17 +633,47 @@ def quality_snapshot_equal_weight(
                 cash = base_balance
             else:
                 selected_snapshot = ranked.head(min(top_n, len(ranked))).reset_index(drop=True)
+                raw_selected_tickers = selected_snapshot["symbol"].tolist()
+                raw_selected_scores = selected_snapshot["Quality Score"].astype(float).tolist()
+
+                if trend_filter_enabled:
+                    passed_mask = []
+                    for symbol in raw_selected_tickers:
+                        current_close = close_now.get(symbol)
+                        current_trend = trend_now.get(symbol)
+                        passed_mask.append(
+                            pd.notna(current_close)
+                            and pd.notna(current_trend)
+                            and float(current_close) >= float(current_trend)
+                        )
+                    filtered_snapshot = selected_snapshot[passed_mask].reset_index(drop=True)
+                    overlay_rejected_tickers = [
+                        symbol for symbol, passed in zip(raw_selected_tickers, passed_mask) if not passed
+                    ]
+                    selected_snapshot = filtered_snapshot
+
                 held_tickers = selected_snapshot["symbol"].tolist()
                 selected_scores = selected_snapshot["Quality Score"].astype(float).tolist()
-                allocation = base_balance / len(held_tickers)
-                next_balances = [allocation] * len(held_tickers)
-                cash = base_balance - sum(next_balances)
+                if not held_tickers:
+                    next_balances = []
+                    cash = base_balance
+                else:
+                    allocation = base_balance / len(held_tickers)
+                    next_balances = [allocation] * len(held_tickers)
+                    cash = base_balance - sum(next_balances)
 
         rows.append(
             {
                 "Date": current_date,
                 "End Ticker": (np.nan if i == 0 else held_tickers),
                 "Next Ticker": held_tickers,
+                "Raw Selected Ticker": raw_selected_tickers,
+                "Raw Selected Count": len(raw_selected_tickers),
+                "Raw Selected Score": raw_selected_scores,
+                "Overlay Rejected Ticker": overlay_rejected_tickers,
+                "Overlay Rejected Count": len(overlay_rejected_tickers),
+                "Trend Filter Enabled": trend_filter_enabled,
+                "Trend Filter Column": (active_trend_col if trend_filter_enabled else np.nan),
                 "End Balance": (np.nan if i == 0 else end_balances),
                 "Next Balance": next_balances,
                 "Cash": float(cash),

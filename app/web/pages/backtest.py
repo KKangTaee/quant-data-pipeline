@@ -6,6 +6,7 @@ from functools import lru_cache
 from typing import Any
 
 import altair as alt
+import numpy as np
 import pandas as pd
 import streamlit as st
 
@@ -109,6 +110,9 @@ VALUE_STRICT_FACTOR_OPTIONS = [
     "ev_ebit",
     "por",
 ]
+
+STRICT_TREND_FILTER_DEFAULT_ENABLED = False
+STRICT_TREND_FILTER_DEFAULT_WINDOW = 200
 
 QUALITY_STRICT_TOP300_TICKERS = [
     "NVDA", "GOOGL", "GOOG", "AAPL", "MSFT", "AMZN", "META", "TSLA", "AVGO", "WMT",
@@ -243,6 +247,18 @@ def _init_backtest_state() -> None:
         st.session_state["qvss_end"] = date(2026, 3, 20)
     if "qvss_timeframe" not in st.session_state:
         st.session_state["qvss_timeframe"] = "1d"
+    if "qss_trend_filter_enabled" not in st.session_state:
+        st.session_state["qss_trend_filter_enabled"] = STRICT_TREND_FILTER_DEFAULT_ENABLED
+    if "qss_trend_filter_window" not in st.session_state:
+        st.session_state["qss_trend_filter_window"] = STRICT_TREND_FILTER_DEFAULT_WINDOW
+    if "vss_trend_filter_enabled" not in st.session_state:
+        st.session_state["vss_trend_filter_enabled"] = STRICT_TREND_FILTER_DEFAULT_ENABLED
+    if "vss_trend_filter_window" not in st.session_state:
+        st.session_state["vss_trend_filter_window"] = STRICT_TREND_FILTER_DEFAULT_WINDOW
+    if "qvss_trend_filter_enabled" not in st.session_state:
+        st.session_state["qvss_trend_filter_enabled"] = STRICT_TREND_FILTER_DEFAULT_ENABLED
+    if "qvss_trend_filter_window" not in st.session_state:
+        st.session_state["qvss_trend_filter_window"] = STRICT_TREND_FILTER_DEFAULT_WINDOW
 
     # Migrate old strict-annual default factor selections from prior sessions.
     if st.session_state.get("qss_quality_factors") == QUALITY_STRICT_LEGACY_DEFAULT_FACTORS:
@@ -323,6 +339,20 @@ def _render_strict_preset_status_note(preset_name: str | None) -> None:
         )
     elif preset_name == "Big Tech Strict Trial":
         st.caption("This preset is still useful for strict annual smoke checks and fast architecture validation.")
+
+
+def _render_historical_universe_help_popover() -> None:
+    _render_inline_help_popover(
+        "히스토리컬 백테스트 모집군",
+        "Preset 종목군은 실행 전체 기간 동안 고정됩니다. 종료일 기준으로 stale 종목을 다른 종목으로 교체하지 않습니다. 대신 각 리밸런싱 날짜마다 그 날짜에 가격과 팩터 데이터를 사용할 수 있는 종목만 후보로 평가합니다.",
+    )
+
+
+def _render_historical_universe_caption() -> None:
+    st.caption(
+        "히스토리컬 모드: preset 종목군은 실행 동안 고정됩니다. "
+        "각 리밸런싱 날짜마다 가격과 팩터 데이터를 사용할 수 있는 종목만 후보가 됩니다."
+    )
 
 
 def _render_quality_family_guide(current_strategy: str) -> None:
@@ -412,6 +442,9 @@ def _summarize_params(meta: dict[str, Any]) -> str:
         parts.append(f"quality_factors={','.join(meta['quality_factors'])}")
     if meta.get("value_factors"):
         parts.append(f"value_factors={','.join(meta['value_factors'])}")
+    if meta.get("trend_filter_enabled"):
+        parts.append("trend_filter=on")
+        parts.append(f"trend_window={meta.get('trend_filter_window') or STRICT_TREND_FILTER_DEFAULT_WINDOW}")
     return ", ".join(parts)
 
 
@@ -429,6 +462,34 @@ def _render_inline_help_popover(title: str, body: str) -> None:
     with st.popover("?", help=title, use_container_width=False):
         st.markdown(f"**{title}**")
         st.caption(body)
+
+
+def _render_trend_filter_help_popover() -> None:
+    _render_inline_help_popover(
+        "추세 필터 오버레이",
+        "월말 리밸런싱 시점에만 확인하는 1차 버전입니다. 예를 들어 랭킹으로 A와 B가 뽑혔는데, 리밸런싱 당일 A는 200일 이동평균선 아래이고 B는 위에 있으면 A 비중은 현금으로 두고 B만 다음 리밸런싱까지 보유합니다. 일별로 중간 점검하는 구조는 아닙니다.",
+    )
+
+
+def _render_interpretation_summary_help_popover() -> None:
+    _render_inline_help_popover(
+        "해석 요약",
+        "Raw Candidate Events는 각 리밸런싱에서 팩터 랭킹으로 최종 후보(top N)까지 올라온 종목 수의 총합입니다. Final Selected Events는 오버레이까지 반영한 뒤 실제 보유 후보로 남은 종목 수의 총합입니다. 이 값들은 전체 모집군 크기를 뜻하지 않습니다. 오버레이가 꺼져 있으면 보통 Raw와 Final이 같고, 오버레이가 켜져 있으면 Raw와 Final의 차이만큼 추세 필터가 개입한 것으로 해석하면 됩니다. Overlay Rejections는 오버레이로 제외된 횟수 합계이고, Cash-Only Rebalances는 해당 리밸런싱에서 전부 현금 상태가 된 횟수입니다.",
+    )
+
+
+def _render_overlay_rejection_frequency_help_popover() -> None:
+    _render_inline_help_popover(
+        "오버레이 제외 빈도",
+        "각 종목이 추세 필터 때문에 실제 보유에서 몇 번 제외되었는지 보여줍니다. RejectedEvents는 제외된 횟수, FirstRejected와 LastRejected는 처음/마지막으로 제외된 날짜입니다. 이 표는 오버레이가 특정 종목에 얼마나 자주 개입했는지 보는 용도입니다.",
+    )
+
+
+def _render_cash_share_help_popover() -> None:
+    _render_inline_help_popover(
+        "현금 비중",
+        "Cash Share는 해당 리밸런싱 직후 포트폴리오에서 현금으로 남아 있는 비중입니다. 오버레이로 일부 종목이 제외되거나, 투자 가능한 종목 수가 목표 Top N보다 적을 때 현금 비중이 생길 수 있습니다. 오버레이가 꺼져 있고 투자 가능한 종목 수가 충분하면 보통 0%에 가깝습니다.",
+    )
 
 
 def _build_daily_market_update_refresh_payload(details: dict[str, Any]) -> dict[str, str] | None:
@@ -476,7 +537,11 @@ def _render_strict_price_freshness_preflight(
     )
     details = report.get("details") or {}
 
-    st.markdown("#### Price Freshness Preflight")
+    title_col, help_col = st.columns([0.92, 0.08], gap="small")
+    with title_col:
+        st.markdown("#### Price Freshness Preflight")
+    with help_col:
+        _render_historical_universe_help_popover()
     st.caption(f"Current DB latest-date spread for `{strategy_label}` before execution.")
     st.caption("`Stale` means the symbol's latest daily price in DB stops before the selected end date.")
 
@@ -508,6 +573,30 @@ def _render_strict_price_freshness_preflight(
                 if details.get("missing_symbols"):
                     st.caption("First missing symbols:")
                     st.code(", ".join(details["missing_symbols"]))
+            reason_counts = details.get("reason_counts") or {}
+            classification_rows = details.get("classification_rows") or []
+            if reason_counts:
+                st.markdown("**Heuristic Reason Summary**")
+                reason_df = pd.DataFrame(
+                    [{"Reason": reason, "Count": count} for reason, count in reason_counts.items()]
+                ).sort_values(["Count", "Reason"], ascending=[False, True])
+                st.dataframe(reason_df, use_container_width=True, hide_index=True)
+            if classification_rows:
+                st.markdown("**Stale / Missing Classification**")
+                st.caption(
+                    "These labels are heuristic. They help us distinguish likely delisting/symbol issues from ordinary lagging price coverage, but they are not a formal delisting confirmation."
+                )
+                classification_df = pd.DataFrame(classification_rows).rename(
+                    columns={
+                        "symbol": "Symbol",
+                        "latest_date": "Latest Date",
+                        "lag_days": "Lag Days",
+                        "profile_status": "Profile Status",
+                        "reason": "Reason",
+                        "note": "Note",
+                    }
+                )
+                st.dataframe(classification_df, use_container_width=True, hide_index=True)
             st.caption(
                 "If this check is yellow, run `Daily Market Update` for the lagging symbols first. "
                 "That usually prevents duplicate or shifted final-month rows in large-universe strict annual runs."
@@ -643,6 +732,8 @@ def _render_last_run() -> None:
                 st.markdown(f"- `Elapsed`: `{meta['ui_elapsed_seconds']:.3f}s`")
             if meta.get("top") is not None:
                 st.markdown(f"- `Top`: `{meta['top']}`")
+            if meta.get("trend_filter_enabled"):
+                st.markdown(f"- `Trend Filter`: `MA{meta.get('trend_filter_window', STRICT_TREND_FILTER_DEFAULT_WINDOW)}`")
             price_freshness = meta.get("price_freshness") or {}
             freshness_details = price_freshness.get("details") or {}
             if freshness_details:
@@ -732,6 +823,25 @@ def _strategy_compare_defaults(strategy_name: str) -> dict:
     raise BacktestInputError(f"Unsupported compare strategy: {strategy_name}")
 
 
+def _resolve_compare_strategy_universe(
+    strategy_name: str,
+    *,
+    preset_name: str | None,
+    fallback_tickers: list[str],
+) -> tuple[list[str], str | None]:
+    if strategy_name == "Quality Snapshot (Strict Annual)":
+        if preset_name in QUALITY_STRICT_PRESETS:
+            return QUALITY_STRICT_PRESETS[preset_name], preset_name
+    elif strategy_name == "Value Snapshot (Strict Annual)":
+        if preset_name in VALUE_STRICT_PRESETS:
+            return VALUE_STRICT_PRESETS[preset_name], preset_name
+    elif strategy_name == "Quality + Value Snapshot (Strict Annual)":
+        if preset_name in QUALITY_STRICT_PRESETS:
+            return QUALITY_STRICT_PRESETS[preset_name], preset_name
+
+    return fallback_tickers, preset_name
+
+
 def _run_compare_strategy(
     strategy_name: str,
     *,
@@ -747,14 +857,29 @@ def _run_compare_strategy(
     if overrides:
         params.update(overrides)
 
+    tickers = config["tickers"]
+    preset_name = config["preset_name"]
+    universe_mode = "preset"
+    if strategy_name in {
+        "Quality Snapshot (Strict Annual)",
+        "Value Snapshot (Strict Annual)",
+        "Quality + Value Snapshot (Strict Annual)",
+    }:
+        tickers, preset_name = _resolve_compare_strategy_universe(
+            strategy_name,
+            preset_name=params.pop("preset_name", preset_name),
+            fallback_tickers=params.pop("tickers", tickers),
+        )
+        universe_mode = params.pop("universe_mode", "preset")
+
     return runner(
-        tickers=config["tickers"],
+        tickers=tickers,
         start=start,
         end=end,
         timeframe=timeframe,
         option=option,
-        universe_mode="preset",
-        preset_name=config["preset_name"],
+        universe_mode=universe_mode,
+        preset_name=preset_name,
         **params,
     )
 
@@ -1203,6 +1328,25 @@ def _render_compare_results() -> None:
             st.markdown("##### Top 3 Worst Periods")
             st.dataframe(worst_df, use_container_width=True, hide_index=True)
 
+        if focused_bundle["meta"].get("strategy_key") in {
+            "quality_snapshot",
+            "quality_snapshot_strict_annual",
+            "value_snapshot_strict_annual",
+            "quality_value_snapshot_strict_annual",
+        }:
+            st.divider()
+            st.markdown("##### Selection Interpretation")
+            _render_snapshot_selection_history(
+                focused_result_df,
+                strategy_name=focused_bundle["strategy_name"],
+                factor_names=(focused_bundle["meta"].get("quality_factors") or []) + [
+                    name for name in (focused_bundle["meta"].get("value_factors") or [])
+                    if name not in (focused_bundle["meta"].get("quality_factors") or [])
+                ],
+                snapshot_mode=focused_bundle["meta"].get("snapshot_mode"),
+                snapshot_source=focused_bundle["meta"].get("snapshot_source"),
+            )
+
     with meta_tab:
         meta_rows = []
         for bundle in bundles:
@@ -1217,6 +1361,11 @@ def _render_compare_results() -> None:
                     "option": meta["option"],
                     "rebalance_interval": meta.get("rebalance_interval"),
                     "top": meta.get("top"),
+                    "trend_filter": (
+                        f"MA{meta.get('trend_filter_window', STRICT_TREND_FILTER_DEFAULT_WINDOW)}"
+                        if meta.get("trend_filter_enabled")
+                        else "off"
+                    ),
                     "vol_window": meta.get("vol_window"),
                     "preset_name": meta["preset_name"],
                 }
@@ -1522,6 +1671,10 @@ def _build_history_payload(record: dict[str, Any]) -> dict[str, Any] | None:
         payload["quality_factors"] = list(record.get("quality_factors") or [])
     if record.get("value_factors") is not None:
         payload["value_factors"] = list(record.get("value_factors") or [])
+    if record.get("trend_filter_enabled") is not None:
+        payload["trend_filter_enabled"] = bool(record.get("trend_filter_enabled"))
+    if record.get("trend_filter_window") is not None:
+        payload["trend_filter_window"] = int(record.get("trend_filter_window") or STRICT_TREND_FILTER_DEFAULT_WINDOW)
     if record.get("snapshot_source") is not None:
         payload["snapshot_source"] = record.get("snapshot_source")
 
@@ -1639,6 +1792,8 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         st.session_state["qss_timeframe"] = payload.get("timeframe") or "1d"
         st.session_state["qss_option"] = payload.get("option") or "month_end"
         st.session_state["qss_quality_factors"] = payload.get("quality_factors") or QUALITY_STRICT_DEFAULT_FACTORS
+        st.session_state["qss_trend_filter_enabled"] = bool(payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED))
+        st.session_state["qss_trend_filter_window"] = int(payload.get("trend_filter_window") or STRICT_TREND_FILTER_DEFAULT_WINDOW)
     elif strategy_key == "value_snapshot_strict_annual":
         st.session_state["vss_universe_mode"] = "Preset" if universe_mode == "preset" and preset_name in VALUE_STRICT_PRESETS else "Manual"
         if st.session_state["vss_universe_mode"] == "Preset":
@@ -1651,6 +1806,8 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         st.session_state["vss_timeframe"] = payload.get("timeframe") or "1d"
         st.session_state["vss_option"] = payload.get("option") or "month_end"
         st.session_state["vss_value_factors"] = payload.get("value_factors") or VALUE_STRICT_DEFAULT_FACTORS
+        st.session_state["vss_trend_filter_enabled"] = bool(payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED))
+        st.session_state["vss_trend_filter_window"] = int(payload.get("trend_filter_window") or STRICT_TREND_FILTER_DEFAULT_WINDOW)
     elif strategy_key == "quality_value_snapshot_strict_annual":
         st.session_state["qvss_universe_mode"] = "Preset" if universe_mode == "preset" and preset_name in QUALITY_STRICT_PRESETS else "Manual"
         if st.session_state["qvss_universe_mode"] == "Preset":
@@ -1664,6 +1821,8 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         st.session_state["qvss_option"] = payload.get("option") or "month_end"
         st.session_state["qvss_quality_factors"] = payload.get("quality_factors") or QUALITY_STRICT_DEFAULT_FACTORS
         st.session_state["qvss_value_factors"] = payload.get("value_factors") or VALUE_STRICT_DEFAULT_FACTORS
+        st.session_state["qvss_trend_filter_enabled"] = bool(payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED))
+        st.session_state["qvss_trend_filter_window"] = int(payload.get("trend_filter_window") or STRICT_TREND_FILTER_DEFAULT_WINDOW)
 
     st.session_state.backtest_prefill_pending = False
 
@@ -1673,21 +1832,45 @@ def _build_snapshot_selection_history(result_df: pd.DataFrame) -> pd.DataFrame:
         return pd.DataFrame()
 
     selection_df = result_df.copy()
+
+    def _first_series(frame: pd.DataFrame, column: str) -> pd.Series | None:
+        if column not in frame.columns:
+            return None
+        value = frame[column]
+        if isinstance(value, pd.DataFrame):
+            return value.iloc[:, 0]
+        return value
+
+    if selection_df.columns.duplicated().any():
+        selection_df = selection_df.loc[:, ~selection_df.columns.duplicated()].copy()
+
     selection_df["Date"] = pd.to_datetime(selection_df["Date"], errors="coerce")
     selection_df = selection_df.dropna(subset=["Date"])
 
     if "Rebalancing" in selection_df.columns:
         selection_df = selection_df[selection_df["Rebalancing"].fillna(False)]
 
-    selection_df = selection_df[selection_df["Selected Count"].fillna(0) > 0].copy()
+    selected_count_series = _first_series(selection_df, "Selected Count")
+    raw_selected_count_series = _first_series(selection_df, "Raw Selected Count")
+    selected_count = selected_count_series.fillna(0) if selected_count_series is not None else 0
+    raw_selected_count = raw_selected_count_series.fillna(0) if raw_selected_count_series is not None else 0
+    selection_df = selection_df[(selected_count > 0) | (raw_selected_count > 0)].copy()
     if selection_df.empty:
         return pd.DataFrame()
 
     keep_columns = [
         "Date",
+        "Raw Selected Ticker",
+        "Raw Selected Count",
+        "Raw Selected Score",
+        "Overlay Rejected Ticker",
+        "Overlay Rejected Count",
         "Next Ticker",
         "Selected Count",
         "Selected Score",
+        "Trend Filter Enabled",
+        "Trend Filter Column",
+        "Cash",
         "Total Balance",
         "Total Return",
     ]
@@ -1696,8 +1879,163 @@ def _build_snapshot_selection_history(result_df: pd.DataFrame) -> pd.DataFrame:
     rename_map = {
         "Next Ticker": "Selected Tickers",
         "Selected Score": "Selection Score",
+        "Raw Selected Ticker": "Raw Selected Tickers",
+        "Raw Selected Score": "Raw Selection Score",
+        "Overlay Rejected Ticker": "Overlay Rejected Tickers",
     }
-    return selection_df.rename(columns=rename_map).reset_index(drop=True)
+    selection_df = selection_df.rename(columns=rename_map).reset_index(drop=True)
+
+    list_columns = [
+        "Raw Selected Tickers",
+        "Overlay Rejected Tickers",
+        "Selected Tickers",
+    ]
+    score_list_columns = [
+        "Raw Selection Score",
+        "Selection Score",
+    ]
+    for column in list_columns:
+        if column in selection_df.columns:
+            selection_df[column] = selection_df[column].apply(_stringify_symbol_list)
+    for column in score_list_columns:
+        if column in selection_df.columns:
+            selection_df[column] = selection_df[column].apply(_stringify_score_list)
+
+    cash_series = _first_series(selection_df, "Cash")
+    total_balance_series = _first_series(selection_df, "Total Balance")
+    if cash_series is not None and total_balance_series is not None:
+        total_balance = pd.to_numeric(total_balance_series, errors="coerce")
+        cash_balance = pd.to_numeric(cash_series, errors="coerce").fillna(0.0)
+        selection_df["Cash Share Ratio"] = np.where(
+            total_balance > 0,
+            cash_balance / total_balance,
+            np.nan,
+        )
+    else:
+        selection_df["Cash Share Ratio"] = np.nan
+
+    def _build_interpretation(row: pd.Series) -> str:
+        raw_count = int(row.get("Raw Selected Count") or 0)
+        rejected_count = int(row.get("Overlay Rejected Count") or 0)
+        selected_count = int(row.get("Selected Count") or 0)
+        cash_share = row.get("Cash Share Ratio")
+        cash_share_text = (
+            f"{float(cash_share) * 100:.1f}%"
+            if pd.notna(cash_share)
+            else "n/a"
+        )
+
+        if raw_count <= 0:
+            return "No usable ranked candidates were available at this rebalance, so the portfolio stayed in cash."
+        if selected_count <= 0 and rejected_count > 0:
+            return f"Trend overlay rejected all {raw_count} raw candidates, so the portfolio moved fully to cash."
+        if rejected_count > 0:
+            return (
+                f"Trend overlay kept {selected_count} of {raw_count} raw candidates and sent "
+                f"{rejected_count} name(s) to cash. Cash share after rebalance: {cash_share_text}."
+            )
+        if pd.notna(cash_share) and float(cash_share) > 0:
+            return (
+                f"All final candidates passed the current filters, but the portfolio still kept "
+                f"{cash_share_text} in cash because fewer names were investable than the nominal top-N."
+            )
+        return "All selected candidates passed the current rules and the portfolio remained fully invested."
+
+    selection_df["Interpretation"] = selection_df.apply(_build_interpretation, axis=1)
+    if "Cash Share Ratio" in selection_df.columns:
+        selection_df["Cash Share"] = selection_df["Cash Share Ratio"].apply(
+            lambda value: f"{float(value) * 100:.1f}%" if pd.notna(value) else ""
+        )
+
+    return selection_df
+
+
+def _build_overlay_rejection_frequency_view(selection_df: pd.DataFrame) -> pd.DataFrame:
+    if selection_df.empty or "Overlay Rejected Tickers" not in selection_df.columns:
+        return pd.DataFrame()
+
+    exploded_rows: list[dict[str, Any]] = []
+    for _, row in selection_df.iterrows():
+        row_date = pd.to_datetime(row.get("Date"), errors="coerce")
+        rejected_tickers = _normalize_symbol_sequence(row.get("Overlay Rejected Tickers"))
+        for symbol in rejected_tickers:
+            exploded_rows.append({"symbol": symbol, "Date": row_date})
+
+    if not exploded_rows:
+        return pd.DataFrame()
+
+    exploded_df = pd.DataFrame(exploded_rows)
+    rejection_df = (
+        exploded_df.groupby("symbol", as_index=False)
+        .agg(
+            RejectedEvents=("Date", "size"),
+            FirstRejected=("Date", "min"),
+            LastRejected=("Date", "max"),
+        )
+        .sort_values(["RejectedEvents", "symbol"], ascending=[False, True])
+        .reset_index(drop=True)
+    )
+    rejection_df["FirstRejected"] = pd.to_datetime(rejection_df["FirstRejected"]).dt.strftime("%Y-%m-%d")
+    rejection_df["LastRejected"] = pd.to_datetime(rejection_df["LastRejected"]).dt.strftime("%Y-%m-%d")
+    return rejection_df
+
+
+def _build_selection_interpretation_summary(selection_df: pd.DataFrame) -> pd.DataFrame:
+    if selection_df.empty:
+        return pd.DataFrame()
+
+    raw_candidate_events = int(pd.to_numeric(selection_df.get("Raw Selected Count"), errors="coerce").fillna(0).sum())
+    final_selected_events = int(pd.to_numeric(selection_df.get("Selected Count"), errors="coerce").fillna(0).sum())
+    overlay_rejections = int(pd.to_numeric(selection_df.get("Overlay Rejected Count"), errors="coerce").fillna(0).sum())
+    cash_only_rebalances = int(
+        (pd.to_numeric(selection_df.get("Selected Count"), errors="coerce").fillna(0) <= 0).sum()
+    )
+    avg_selected_count = float(
+        pd.to_numeric(selection_df.get("Selected Count"), errors="coerce").fillna(0).mean()
+    )
+    cash_share_series = pd.to_numeric(selection_df.get("Cash Share Ratio"), errors="coerce")
+    avg_cash_share = float(cash_share_series.fillna(0).mean()) if cash_share_series is not None else 0.0
+
+    return pd.DataFrame(
+        [
+            {
+                "Raw Candidate Events": raw_candidate_events,
+                "Final Selected Events": final_selected_events,
+                "Overlay Rejections": overlay_rejections,
+                "Cash-Only Rebalances": cash_only_rebalances,
+                "Avg Selected Count": round(avg_selected_count, 2),
+                "Avg Cash Share": f"{avg_cash_share * 100:.1f}%",
+            }
+        ]
+    )
+
+
+def _normalize_symbol_sequence(value: Any) -> list[str]:
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return []
+    if isinstance(value, (list, tuple, set)):
+        return [str(symbol).strip() for symbol in value if str(symbol).strip()]
+
+    raw = str(value).strip()
+    if not raw:
+        return []
+
+    raw = raw.strip("[]")
+    cleaned = [part.strip().strip("'").strip('"') for part in raw.split(",")]
+    return [symbol for symbol in cleaned if symbol]
+
+
+def _stringify_symbol_list(value: Any) -> str:
+    symbols = _normalize_symbol_sequence(value)
+    return ", ".join(symbols)
+
+
+def _stringify_score_list(value: Any) -> str:
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return ""
+    if isinstance(value, (list, tuple, set)):
+        return ", ".join(f"{float(item):.3f}" for item in value)
+    return str(value)
 
 
 def _build_selection_frequency_view(selection_df: pd.DataFrame) -> pd.DataFrame:
@@ -1707,11 +2045,7 @@ def _build_selection_frequency_view(selection_df: pd.DataFrame) -> pd.DataFrame:
     exploded_rows: list[dict[str, Any]] = []
     for _, row in selection_df.iterrows():
         row_date = pd.to_datetime(row.get("Date"), errors="coerce")
-        selected_tickers = [
-            symbol.strip()
-            for symbol in str(row.get("Selected Tickers") or "").split(",")
-            if symbol.strip()
-        ]
+        selected_tickers = _normalize_symbol_sequence(row.get("Selected Tickers"))
         for symbol in selected_tickers:
             exploded_rows.append({"symbol": symbol, "Date": row_date})
 
@@ -1742,7 +2076,16 @@ def _render_snapshot_selection_history(
     snapshot_mode: str | None,
     snapshot_source: str | None,
 ) -> None:
-    selection_df = _build_snapshot_selection_history(result_df)
+    try:
+        selection_df = _build_snapshot_selection_history(result_df)
+    except Exception as exc:  # pragma: no cover - UI fallback path
+        st.warning(
+            "Selection history could not be rendered for this run payload. "
+            "Try rerunning the backtest to rebuild the latest result bundle."
+        )
+        st.caption(f"Renderer detail: {type(exc).__name__}: {exc}")
+        return
+
     if selection_df.empty:
         st.info("No active selection history is available for this run.")
         return
@@ -1752,15 +2095,19 @@ def _render_snapshot_selection_history(
     distinct_names = sorted(
         {
             symbol.strip()
-            for value in selection_df["Selected Tickers"].dropna().astype(str)
-            for symbol in value.split(",")
+            for value in selection_df["Selected Tickers"].dropna()
+            for symbol in _normalize_symbol_sequence(value)
             if symbol.strip()
         }
     )
+    overlay_active = (
+        "Trend Filter Enabled" in selection_df.columns
+        and selection_df["Trend Filter Enabled"].fillna(False).astype(bool).any()
+    )
 
     st.caption(
-        "This view is intended to answer the practical question behind strict annual validation: "
-        "which names were actually selected at each rebalance date, and under what factor family."
+        "이 화면은 strict annual 전략 검증에서 가장 실무적인 질문인 "
+        "‘각 리밸런싱 날짜에 실제로 어떤 종목이 선택되었는가?’를 읽기 쉽게 보여주기 위한 뷰입니다."
     )
     left, center, right = st.columns(3, gap="large")
     with left:
@@ -1777,20 +2124,54 @@ def _render_snapshot_selection_history(
                 "Snapshot Mode": snapshot_mode,
                 "Snapshot Source": snapshot_source or "n/a",
                 "Factors": ", ".join(factor_names) if factor_names else "n/a",
+                "Trend Overlay": (
+                    selection_df.loc[selection_df["Trend Filter Enabled"].fillna(False), "Trend Filter Column"].iloc[0]
+                    if overlay_active and "Trend Filter Column" in selection_df.columns
+                    else "off"
+                ),
             }
         ]
     )
     st.dataframe(meta_df, use_container_width=True, hide_index=True)
+    if overlay_active:
+        st.caption(
+            "Raw Selected는 팩터 랭킹으로 뽑힌 1차 후보이고, Final Selected는 오버레이까지 통과한 실제 보유 후보입니다. Overlay Rejected는 월말 추세 필터를 통과하지 못해 해당 리밸런싱에서 현금으로 전환된 종목입니다."
+        )
 
-    history_tab, frequency_tab = st.tabs(["History", "Selection Frequency"])
+    history_tab, interpretation_tab, frequency_tab = st.tabs(["History", "Interpretation", "Selection Frequency"])
     with history_tab:
-        st.dataframe(selection_df, use_container_width=True, hide_index=True)
+        cash_title_col, cash_help_col = st.columns([0.92, 0.08], gap="small")
+        with cash_title_col:
+            st.caption("`Cash Share`는 각 리밸런싱 직후 포트폴리오에서 현금으로 남아 있는 비중입니다.")
+        with cash_help_col:
+            _render_cash_share_help_popover()
+        st.dataframe(selection_df.drop(columns=["Cash Share Ratio"], errors="ignore"), use_container_width=True, hide_index=True)
+    with interpretation_tab:
+        interpretation_summary_df = _build_selection_interpretation_summary(selection_df)
+        if not interpretation_summary_df.empty:
+            summary_title_col, summary_help_col = st.columns([0.92, 0.08], gap="small")
+            with summary_title_col:
+                st.markdown("##### Interpretation Summary")
+            with summary_help_col:
+                _render_interpretation_summary_help_popover()
+            st.caption("참고: 이 표의 Raw / Final 값은 전체 모집군 크기가 아니라 리밸런싱별 선택 이벤트의 누적 합계입니다.")
+            st.dataframe(interpretation_summary_df, use_container_width=True, hide_index=True)
+        rejection_df = _build_overlay_rejection_frequency_view(selection_df)
+        if not rejection_df.empty:
+            reject_title_col, reject_help_col = st.columns([0.92, 0.08], gap="small")
+            with reject_title_col:
+                st.markdown("##### Overlay Rejection Frequency")
+            with reject_help_col:
+                _render_overlay_rejection_frequency_help_popover()
+            st.dataframe(rejection_df, use_container_width=True, hide_index=True)
+        else:
+            st.caption("이번 실행에서는 오버레이로 제외된 종목이 기록되지 않았습니다.")
     with frequency_tab:
         frequency_df = _build_selection_frequency_view(selection_df)
         if frequency_df.empty:
-            st.info("No selection frequency breakdown is available for this run.")
+            st.info("이번 실행에서는 선택 빈도 요약을 만들 수 있는 데이터가 없습니다.")
         else:
-            st.caption("This view helps us see which names the strategy repeatedly comes back to across rebalances.")
+            st.caption("이 표는 전략이 여러 리밸런싱에 걸쳐 반복적으로 선택하는 종목이 무엇인지 보기 위한 요약입니다.")
             st.dataframe(frequency_df, use_container_width=True, hide_index=True)
 
 
@@ -1994,6 +2375,8 @@ def _render_persistent_backtest_history() -> None:
                     "snapshot_mode": selected_record.get("snapshot_mode"),
                     "quality_factors": selected_record.get("quality_factors"),
                     "value_factors": selected_record.get("value_factors"),
+                    "trend_filter_enabled": selected_record.get("trend_filter_enabled"),
+                    "trend_filter_window": selected_record.get("trend_filter_window"),
                     "snapshot_source": selected_record.get("snapshot_source"),
                     "ui_elapsed_seconds": selected_record.get("ui_elapsed_seconds"),
                     "universe_mode": selected_record.get("universe_mode"),
@@ -2100,6 +2483,9 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> None:
                     option=payload["option"],
                     quality_factors=payload["quality_factors"],
                     top_n=payload["top"],
+                    rebalance_interval=payload.get("rebalance_interval", 1),
+                    trend_filter_enabled=payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED),
+                    trend_filter_window=payload.get("trend_filter_window", STRICT_TREND_FILTER_DEFAULT_WINDOW),
                     universe_mode=payload["universe_mode"],
                     preset_name=payload["preset_name"],
                 )
@@ -2112,6 +2498,9 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> None:
                     option=payload["option"],
                     value_factors=payload["value_factors"],
                     top_n=payload["top"],
+                    rebalance_interval=payload.get("rebalance_interval", 1),
+                    trend_filter_enabled=payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED),
+                    trend_filter_window=payload.get("trend_filter_window", STRICT_TREND_FILTER_DEFAULT_WINDOW),
                     universe_mode=payload["universe_mode"],
                     preset_name=payload["preset_name"],
                 )
@@ -2125,6 +2514,9 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> None:
                     quality_factors=payload["quality_factors"],
                     value_factors=payload["value_factors"],
                     top_n=payload["top"],
+                    rebalance_interval=payload.get("rebalance_interval", 1),
+                    trend_filter_enabled=payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED),
+                    trend_filter_window=payload.get("trend_filter_window", STRICT_TREND_FILTER_DEFAULT_WINDOW),
                     universe_mode=payload["universe_mode"],
                     preset_name=payload["preset_name"],
                 )
@@ -2635,13 +3027,12 @@ def _render_quality_snapshot_strict_annual_form() -> None:
         "Universe Mode",
         options=["Preset", "Manual"],
         horizontal=True,
-        help="Single-strategy 기본값은 annual statement coverage가 검증된 US stock preset입니다.",
+        help="Single Strategy에서는 annual statement coverage가 검증된 미국 주식 preset을 기본값으로 사용합니다.",
         key="qss_universe_mode",
     )
 
     preset_name = None
     tickers: list[str] = []
-
     if universe_mode == "Preset":
         preset_name = st.selectbox(
             "Preset",
@@ -2651,12 +3042,13 @@ def _render_quality_snapshot_strict_annual_form() -> None:
         )
         tickers = QUALITY_STRICT_PRESETS[preset_name]
         _render_ticker_preview(tickers)
+        _render_historical_universe_caption()
         _render_strict_preset_status_note(preset_name)
     else:
         manual_tickers = st.text_input(
             "Tickers",
             value="AAPL,MSFT,GOOG",
-            help="Comma-separated stock tickers. Example: AAPL,MSFT,GOOG",
+            help="쉼표로 구분한 주식 티커를 입력합니다. 예: AAPL,MSFT,GOOG",
             key="qss_manual_tickers",
         )
         tickers = _parse_manual_tickers(manual_tickers)
@@ -2682,7 +3074,7 @@ def _render_quality_snapshot_strict_annual_form() -> None:
                 max_value=20,
                 value=2,
                 step=1,
-                help="Strict annual quality score 상위 종목 수입니다.",
+                help="strict annual quality 점수 기준으로 상위 몇 개 종목을 선택할지 정합니다.",
                 key="qss_top_n",
             )
 
@@ -2691,12 +3083,42 @@ def _render_quality_snapshot_strict_annual_form() -> None:
         with st.expander("Advanced Inputs", expanded=False):
             timeframe = st.selectbox("Timeframe", options=["1d"], index=0, key="qss_timeframe")
             option = st.selectbox("Option", options=["month_end"], index=0, key="qss_option")
+            rebalance_interval = st.number_input(
+                "Rebalance Interval",
+                min_value=1,
+                max_value=12,
+                value=1,
+                step=1,
+                help="기본은 매월 리밸런싱(1)이며, 연구 목적이면 몇 달 간격으로 건너뛸 수도 있습니다.",
+                key="qss_rebalance_interval",
+            )
             quality_factors = st.multiselect(
                 "Quality Factors",
                 options=QUALITY_STRICT_FACTOR_OPTIONS,
                 default=QUALITY_STRICT_DEFAULT_FACTORS,
                 key="qss_quality_factors",
-                help="coverage-first 기본값을 사용합니다. 필요하면 legacy quality factors도 다시 포함할 수 있습니다.",
+                help="기본은 coverage-first 팩터 조합입니다. 필요하면 예전 quality factor도 다시 포함할 수 있습니다.",
+            )
+            trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
+            with trend_title_col:
+                st.markdown("##### Trend Filter Overlay")
+            with trend_help_col:
+                _render_trend_filter_help_popover()
+            trend_filter_enabled = st.checkbox(
+                "Enable",
+                value=STRICT_TREND_FILTER_DEFAULT_ENABLED,
+                key="qss_trend_filter_enabled",
+            )
+            trend_filter_window = int(
+                st.number_input(
+                    "Trend Filter Window",
+                    min_value=20,
+                    max_value=400,
+                    value=STRICT_TREND_FILTER_DEFAULT_WINDOW,
+                    step=10,
+                    disabled=not trend_filter_enabled,
+                    key="qss_trend_filter_window",
+                )
             )
 
         submitted = st.form_submit_button("Run Strict Annual Quality Backtest", use_container_width=True)
@@ -2725,9 +3147,12 @@ def _render_quality_snapshot_strict_annual_form() -> None:
         "timeframe": timeframe,
         "option": option,
         "top": int(top_n),
+        "rebalance_interval": int(rebalance_interval),
         "factor_freq": "annual",
         "snapshot_mode": "strict_statement_annual",
         "quality_factors": quality_factors,
+        "trend_filter_enabled": bool(trend_filter_enabled),
+        "trend_filter_window": int(trend_filter_window),
         "universe_mode": "preset" if universe_mode == "Preset" else "manual_tickers",
         "preset_name": preset_name,
     }
@@ -2754,13 +3179,12 @@ def _render_value_snapshot_strict_annual_form() -> None:
         "Universe Mode",
         options=["Preset", "Manual"],
         horizontal=True,
-        help="Strict annual value도 verified annual coverage preset을 기본으로 시작합니다.",
+        help="strict annual value도 annual coverage가 확인된 preset을 기본값으로 사용합니다.",
         key="vss_universe_mode",
     )
 
     preset_name = None
     tickers: list[str] = []
-
     if universe_mode == "Preset":
         preset_name = st.selectbox(
             "Preset",
@@ -2770,12 +3194,13 @@ def _render_value_snapshot_strict_annual_form() -> None:
         )
         tickers = VALUE_STRICT_PRESETS[preset_name]
         _render_ticker_preview(tickers)
+        _render_historical_universe_caption()
         _render_strict_preset_status_note(preset_name)
     else:
         manual_tickers = st.text_input(
             "Tickers",
             value="AAPL,MSFT,GOOG",
-            help="Comma-separated stock tickers. Example: AAPL,MSFT,GOOG",
+            help="쉼표로 구분한 주식 티커를 입력합니다. 예: AAPL,MSFT,GOOG",
             key="vss_manual_tickers",
         )
         tickers = _parse_manual_tickers(manual_tickers)
@@ -2801,7 +3226,7 @@ def _render_value_snapshot_strict_annual_form() -> None:
                 max_value=50,
                 value=10,
                 step=1,
-                help="Strict annual value score 상위 종목 수입니다.",
+                help="strict annual value 점수 기준으로 상위 몇 개 종목을 선택할지 정합니다.",
                 key="vss_top_n",
             )
 
@@ -2810,12 +3235,42 @@ def _render_value_snapshot_strict_annual_form() -> None:
         with st.expander("Advanced Inputs", expanded=False):
             timeframe = st.selectbox("Timeframe", options=["1d"], index=0, key="vss_timeframe")
             option = st.selectbox("Option", options=["month_end"], index=0, key="vss_option")
+            rebalance_interval = st.number_input(
+                "Rebalance Interval",
+                min_value=1,
+                max_value=12,
+                value=1,
+                step=1,
+                help="기본은 매월 리밸런싱(1)이며, 연구 목적이면 몇 달 간격으로 건너뛸 수도 있습니다.",
+                key="vss_rebalance_interval",
+            )
             value_factors = st.multiselect(
                 "Value Factors",
                 options=VALUE_STRICT_FACTOR_OPTIONS,
                 default=VALUE_STRICT_DEFAULT_FACTORS,
                 key="vss_value_factors",
-                help="높을수록 좋은 yield / book-to-market 계열과 낮을수록 좋은 inverse multiples를 함께 지원합니다.",
+                help="높을수록 좋은 yield / book-to-market 계열과 낮을수록 좋은 inverse multiple 계열을 함께 지원합니다.",
+            )
+            trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
+            with trend_title_col:
+                st.markdown("##### Trend Filter Overlay")
+            with trend_help_col:
+                _render_trend_filter_help_popover()
+            trend_filter_enabled = st.checkbox(
+                "Enable",
+                value=STRICT_TREND_FILTER_DEFAULT_ENABLED,
+                key="vss_trend_filter_enabled",
+            )
+            trend_filter_window = int(
+                st.number_input(
+                    "Trend Filter Window",
+                    min_value=20,
+                    max_value=400,
+                    value=STRICT_TREND_FILTER_DEFAULT_WINDOW,
+                    step=10,
+                    disabled=not trend_filter_enabled,
+                    key="vss_trend_filter_window",
+                )
             )
 
         submitted = st.form_submit_button("Run Strict Annual Value Backtest", use_container_width=True)
@@ -2844,10 +3299,13 @@ def _render_value_snapshot_strict_annual_form() -> None:
         "timeframe": timeframe,
         "option": option,
         "top": int(top_n),
+        "rebalance_interval": int(rebalance_interval),
         "factor_freq": "annual",
         "snapshot_mode": "strict_statement_annual",
         "snapshot_source": "shadow_factors",
         "value_factors": value_factors,
+        "trend_filter_enabled": bool(trend_filter_enabled),
+        "trend_filter_window": int(trend_filter_window),
         "universe_mode": "preset" if universe_mode == "Preset" else "manual_tickers",
         "preset_name": preset_name,
     }
@@ -2877,13 +3335,12 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
         "Universe Mode",
         options=["Preset", "Manual"],
         horizontal=True,
-        help="Strict annual multi-factor도 managed annual coverage preset을 기본으로 시작합니다.",
+        help="strict annual multi-factor도 annual coverage가 검증된 preset을 기본값으로 사용합니다.",
         key="qvss_universe_mode",
     )
 
     preset_name = None
     tickers: list[str] = []
-
     if universe_mode == "Preset":
         preset_name = st.selectbox(
             "Preset",
@@ -2893,12 +3350,13 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
         )
         tickers = QUALITY_STRICT_PRESETS[preset_name]
         _render_ticker_preview(tickers)
+        _render_historical_universe_caption()
         _render_strict_preset_status_note(preset_name)
     else:
         manual_tickers = st.text_input(
             "Tickers",
             value="AAPL,MSFT,GOOG",
-            help="Comma-separated stock tickers. Example: AAPL,MSFT,GOOG",
+            help="쉼표로 구분한 주식 티커를 입력합니다. 예: AAPL,MSFT,GOOG",
             key="qvss_manual_tickers",
         )
         tickers = _parse_manual_tickers(manual_tickers)
@@ -2924,7 +3382,7 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
                 max_value=30,
                 value=10,
                 step=1,
-                help="Strict annual multi-factor score 상위 종목 수입니다.",
+                help="strict annual multi-factor 종합 점수 기준으로 상위 몇 개 종목을 선택할지 정합니다.",
                 key="qvss_top_n",
             )
 
@@ -2933,6 +3391,15 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
         with st.expander("Advanced Inputs", expanded=False):
             timeframe = st.selectbox("Timeframe", options=["1d"], index=0, key="qvss_timeframe")
             option = st.selectbox("Option", options=["month_end"], index=0, key="qvss_option")
+            rebalance_interval = st.number_input(
+                "Rebalance Interval",
+                min_value=1,
+                max_value=12,
+                value=1,
+                step=1,
+                help="기본은 매월 리밸런싱(1)이며, 연구 목적이면 몇 달 간격으로 건너뛸 수도 있습니다.",
+                key="qvss_rebalance_interval",
+            )
             quality_factors = st.multiselect(
                 "Quality Factors",
                 options=QUALITY_STRICT_FACTOR_OPTIONS,
@@ -2944,6 +3411,27 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
                 options=VALUE_STRICT_FACTOR_OPTIONS,
                 default=VALUE_STRICT_DEFAULT_FACTORS,
                 key="qvss_value_factors",
+            )
+            trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
+            with trend_title_col:
+                st.markdown("##### Trend Filter Overlay")
+            with trend_help_col:
+                _render_trend_filter_help_popover()
+            trend_filter_enabled = st.checkbox(
+                "Enable",
+                value=STRICT_TREND_FILTER_DEFAULT_ENABLED,
+                key="qvss_trend_filter_enabled",
+            )
+            trend_filter_window = int(
+                st.number_input(
+                    "Trend Filter Window",
+                    min_value=20,
+                    max_value=400,
+                    value=STRICT_TREND_FILTER_DEFAULT_WINDOW,
+                    step=10,
+                    disabled=not trend_filter_enabled,
+                    key="qvss_trend_filter_window",
+                )
             )
 
         submitted = st.form_submit_button("Run Strict Annual Quality + Value Backtest", use_container_width=True)
@@ -2974,11 +3462,14 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
         "timeframe": timeframe,
         "option": option,
         "top": int(top_n),
+        "rebalance_interval": int(rebalance_interval),
         "factor_freq": "annual",
         "snapshot_mode": "strict_statement_annual",
         "snapshot_source": "shadow_factors",
         "quality_factors": quality_factors,
         "value_factors": value_factors,
+        "trend_filter_enabled": bool(trend_filter_enabled),
+        "trend_filter_window": int(trend_filter_window),
         "universe_mode": "preset" if universe_mode == "Preset" else "manual_tickers",
         "preset_name": preset_name,
     }
@@ -3045,7 +3536,7 @@ def render_backtest_tab() -> None:
             The current step opens multi-strategy comparison first, then uses those results for weighted portfolio construction.
             """
         )
-    single_tab, compare_tab = st.tabs(["Single Strategy", "Compare & Portfolio Builder"])
+    single_tab, compare_tab, history_tab = st.tabs(["Single Strategy", "Compare & Portfolio Builder", "History"])
 
     with single_tab:
         prefill_notice = st.session_state.get("backtest_prefill_notice")
@@ -3085,15 +3576,17 @@ def render_backtest_tab() -> None:
         st.markdown("### Compare Strategies")
         st.caption("Start with a shared date range and compare up to four strategies chosen from eight DB-backed strategies. This section then feeds directly into a weighted portfolio builder.")
 
-        with st.form("compare_backtests_form", clear_on_submit=False):
-            selected_strategies = st.multiselect(
-                "Strategies",
-                options=COMPARE_STRATEGY_OPTIONS,
-                default=["Equal Weight", "GTAA"],
-                max_selections=4,
-                help="Up to four strategies can be compared at once in the first pass.",
-            )
+        selected_strategies = st.multiselect(
+            "Strategies",
+            options=COMPARE_STRATEGY_OPTIONS,
+            default=["Equal Weight", "GTAA"],
+            max_selections=4,
+            help="Up to four strategies can be compared at once in the first pass.",
+            key="compare_selected_strategies",
+        )
+        st.caption("Strategy selection is outside the form so the strategy-specific advanced inputs update immediately.")
 
+        with st.form("compare_backtests_form", clear_on_submit=False):
             col1, col2 = st.columns(2)
             with col1:
                 compare_start = st.date_input("Start Date", value=date(2016, 1, 1), key="compare_start")
@@ -3224,7 +3717,18 @@ def render_backtest_tab() -> None:
                 if "Quality Snapshot (Strict Annual)" in selected_strategies:
                     st.markdown("**Quality Snapshot (Strict Annual)**")
                     st.caption("Compare mode keeps the strict annual default lighter with `US Statement Coverage 100` so multi-strategy runs stay responsive.")
+                    qss_compare_preset = st.selectbox(
+                        "Strict Annual Quality Preset",
+                        options=list(QUALITY_STRICT_PRESETS.keys()),
+                        index=list(QUALITY_STRICT_PRESETS.keys()).index(STRICT_ANNUAL_COMPARE_DEFAULT_PRESET),
+                        key="compare_qss_preset",
+                    )
+                    _render_ticker_preview(QUALITY_STRICT_PRESETS[qss_compare_preset], preview_count=8, tail_count=3)
+                    _render_historical_universe_caption()
                     compare_strategy_overrides["Quality Snapshot (Strict Annual)"] = {
+                        "preset_name": qss_compare_preset,
+                        "tickers": QUALITY_STRICT_PRESETS[qss_compare_preset],
+                        "universe_mode": "preset",
                         "top_n": int(
                             st.number_input(
                                 "Strict Annual Quality Top N",
@@ -3235,6 +3739,16 @@ def render_backtest_tab() -> None:
                                 key="compare_qss_top_n",
                             )
                         ),
+                        "rebalance_interval": int(
+                            st.number_input(
+                                "Strict Annual Quality Rebalance Interval",
+                                min_value=1,
+                                max_value=12,
+                                value=1,
+                                step=1,
+                                key="compare_qss_rebalance_interval",
+                            )
+                        ),
                         "quality_factors": st.multiselect(
                             "Strict Annual Quality Factors",
                             options=QUALITY_STRICT_FACTOR_OPTIONS,
@@ -3242,11 +3756,43 @@ def render_backtest_tab() -> None:
                             key="compare_qss_factors",
                         ),
                     }
+                    trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
+                    with trend_title_col:
+                        st.markdown("##### Strict Annual Quality Trend Filter")
+                    with trend_help_col:
+                        _render_trend_filter_help_popover()
+                    compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["trend_filter_enabled"] = st.checkbox(
+                        "Enable",
+                        value=STRICT_TREND_FILTER_DEFAULT_ENABLED,
+                        key="compare_qss_trend_filter_enabled",
+                    )
+                    compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["trend_filter_window"] = int(
+                        st.number_input(
+                            "Strict Annual Quality Trend Filter Window",
+                            min_value=20,
+                            max_value=400,
+                            value=STRICT_TREND_FILTER_DEFAULT_WINDOW,
+                            step=10,
+                            disabled=not compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["trend_filter_enabled"],
+                            key="compare_qss_trend_filter_window",
+                        )
+                    )
 
                 if "Value Snapshot (Strict Annual)" in selected_strategies:
                     st.markdown("**Value Snapshot (Strict Annual)**")
                     st.caption("Compare mode keeps the strict annual value default lighter with `US Statement Coverage 100` for responsiveness.")
+                    vss_compare_preset = st.selectbox(
+                        "Strict Annual Value Preset",
+                        options=list(VALUE_STRICT_PRESETS.keys()),
+                        index=list(VALUE_STRICT_PRESETS.keys()).index(STRICT_ANNUAL_COMPARE_DEFAULT_PRESET),
+                        key="compare_vss_preset",
+                    )
+                    _render_ticker_preview(VALUE_STRICT_PRESETS[vss_compare_preset], preview_count=8, tail_count=3)
+                    _render_historical_universe_caption()
                     compare_strategy_overrides["Value Snapshot (Strict Annual)"] = {
+                        "preset_name": vss_compare_preset,
+                        "tickers": VALUE_STRICT_PRESETS[vss_compare_preset],
+                        "universe_mode": "preset",
                         "top_n": int(
                             st.number_input(
                                 "Strict Annual Value Top N",
@@ -3257,6 +3803,16 @@ def render_backtest_tab() -> None:
                                 key="compare_vss_top_n",
                             )
                         ),
+                        "rebalance_interval": int(
+                            st.number_input(
+                                "Strict Annual Value Rebalance Interval",
+                                min_value=1,
+                                max_value=12,
+                                value=1,
+                                step=1,
+                                key="compare_vss_rebalance_interval",
+                            )
+                        ),
                         "value_factors": st.multiselect(
                             "Strict Annual Value Factors",
                             options=VALUE_STRICT_FACTOR_OPTIONS,
@@ -3264,11 +3820,43 @@ def render_backtest_tab() -> None:
                             key="compare_vss_factors",
                         ),
                     }
+                    trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
+                    with trend_title_col:
+                        st.markdown("##### Strict Annual Value Trend Filter")
+                    with trend_help_col:
+                        _render_trend_filter_help_popover()
+                    compare_strategy_overrides["Value Snapshot (Strict Annual)"]["trend_filter_enabled"] = st.checkbox(
+                        "Enable",
+                        value=STRICT_TREND_FILTER_DEFAULT_ENABLED,
+                        key="compare_vss_trend_filter_enabled",
+                    )
+                    compare_strategy_overrides["Value Snapshot (Strict Annual)"]["trend_filter_window"] = int(
+                        st.number_input(
+                            "Strict Annual Value Trend Filter Window",
+                            min_value=20,
+                            max_value=400,
+                            value=STRICT_TREND_FILTER_DEFAULT_WINDOW,
+                            step=10,
+                            disabled=not compare_strategy_overrides["Value Snapshot (Strict Annual)"]["trend_filter_enabled"],
+                            key="compare_vss_trend_filter_window",
+                        )
+                    )
 
                 if "Quality + Value Snapshot (Strict Annual)" in selected_strategies:
                     st.markdown("**Quality + Value Snapshot (Strict Annual)**")
                     st.caption("Compare mode keeps the strict annual multi-factor default lighter with `US Statement Coverage 100` so multi-strategy runs stay responsive.")
+                    qvss_compare_preset = st.selectbox(
+                        "Strict Annual Multi-Factor Preset",
+                        options=list(QUALITY_STRICT_PRESETS.keys()),
+                        index=list(QUALITY_STRICT_PRESETS.keys()).index(STRICT_ANNUAL_COMPARE_DEFAULT_PRESET),
+                        key="compare_qvss_preset",
+                    )
+                    _render_ticker_preview(QUALITY_STRICT_PRESETS[qvss_compare_preset], preview_count=8, tail_count=3)
+                    _render_historical_universe_caption()
                     compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"] = {
+                        "preset_name": qvss_compare_preset,
+                        "tickers": QUALITY_STRICT_PRESETS[qvss_compare_preset],
+                        "universe_mode": "preset",
                         "top_n": int(
                             st.number_input(
                                 "Strict Annual Multi-Factor Top N",
@@ -3277,6 +3865,16 @@ def render_backtest_tab() -> None:
                                 value=10,
                                 step=1,
                                 key="compare_qvss_top_n",
+                            )
+                        ),
+                        "rebalance_interval": int(
+                            st.number_input(
+                                "Strict Annual Multi-Factor Rebalance Interval",
+                                min_value=1,
+                                max_value=12,
+                                value=1,
+                                step=1,
+                                key="compare_qvss_rebalance_interval",
                             )
                         ),
                         "quality_factors": st.multiselect(
@@ -3292,6 +3890,27 @@ def render_backtest_tab() -> None:
                             key="compare_qvss_value_factors",
                         ),
                     }
+                    trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
+                    with trend_title_col:
+                        st.markdown("##### Strict Annual Multi-Factor Trend Filter")
+                    with trend_help_col:
+                        _render_trend_filter_help_popover()
+                    compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["trend_filter_enabled"] = st.checkbox(
+                        "Enable",
+                        value=STRICT_TREND_FILTER_DEFAULT_ENABLED,
+                        key="compare_qvss_trend_filter_enabled",
+                    )
+                    compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["trend_filter_window"] = int(
+                        st.number_input(
+                            "Strict Annual Multi-Factor Trend Filter Window",
+                            min_value=20,
+                            max_value=400,
+                            value=STRICT_TREND_FILTER_DEFAULT_WINDOW,
+                            step=10,
+                            disabled=not compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["trend_filter_enabled"],
+                            key="compare_qvss_trend_filter_window",
+                        )
+                    )
 
             compare_submitted = st.form_submit_button("Run Strategy Comparison", use_container_width=True)
 
@@ -3359,5 +3978,8 @@ def render_backtest_tab() -> None:
         _render_compare_results()
         st.divider()
         _render_weighted_portfolio_builder()
-        st.divider()
+
+    with history_tab:
+        st.markdown("### Backtest History")
+        st.caption("Single-strategy runs and strategy-comparison runs share the same persistent history and drilldown surface.")
         _render_persistent_backtest_history()

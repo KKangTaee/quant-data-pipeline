@@ -6,6 +6,7 @@ from typing import Any
 import pandas as pd
 
 from finance.loaders import (
+    load_asset_profile_status_summary,
     load_factor_snapshot,
     load_price_freshness_summary,
     load_price_history,
@@ -268,6 +269,68 @@ def inspect_strict_annual_price_freshness(
     stale_symbols_all = stale_df["symbol"].tolist()
     lagging_symbols_all = lagging_df["symbol"].tolist()
 
+    classification_symbols = sorted(set(stale_symbols_all + missing_symbols))
+    classification_rows: list[dict[str, Any]] = []
+    reason_counts: dict[str, int] = {}
+    if classification_symbols:
+        profile_df = load_asset_profile_status_summary(classification_symbols)
+        profile_map = {
+            str(row["symbol"]).upper(): row
+            for _, row in profile_df.iterrows()
+            if row.get("symbol") is not None
+        }
+
+        def _classify_reason(symbol: str, latest_date: pd.Timestamp | None) -> dict[str, Any]:
+            profile = profile_map.get(symbol, {})
+            profile_status = str(profile.get("status") or "").strip().lower()
+            profile_error = str(profile.get("error_msg") or "").strip() or None
+            delisted_at = profile.get("delisted_at")
+            lag_days = None
+            if latest_date is not None and pd.notna(latest_date) and target_end is not None:
+                lag_days = int((target_end - latest_date.normalize()).days)
+
+            if profile_status in {"delisted", "not_found"} or pd.notna(delisted_at):
+                reason = "likely_delisted_or_symbol_changed"
+                note = "Asset profile already marks this symbol as unavailable or delisted."
+            elif profile_status == "error":
+                reason = "asset_profile_error"
+                note = "Asset profile collection is in an error state for this symbol."
+            elif latest_date is None or pd.isna(latest_date):
+                reason = "missing_price_rows"
+                note = "No DB daily price rows exist for the selected timeframe."
+            elif lag_days is not None and lag_days <= 7:
+                reason = "minor_source_lag"
+                note = "The symbol lags the selected end date by less than or equal to 7 days."
+            elif lag_days is not None and lag_days <= 30:
+                reason = "source_gap_or_symbol_issue"
+                note = "The symbol has a material lag versus the selected end date while still looking active in asset profile."
+            else:
+                reason = "persistent_source_gap_or_symbol_issue"
+                note = "The symbol is far behind the selected end date and may need provider or symbol-status investigation."
+
+            if profile_error and reason != "asset_profile_error":
+                note = f"{note} asset_profile_error={profile_error}"
+
+            return {
+                "symbol": symbol,
+                "latest_date": (
+                    latest_date.normalize().strftime("%Y-%m-%d")
+                    if latest_date is not None and pd.notna(latest_date)
+                    else None
+                ),
+                "lag_days": lag_days,
+                "profile_status": profile_status or None,
+                "reason": reason,
+                "note": note,
+            }
+
+        for symbol in classification_symbols:
+            latest_match = working.loc[working["symbol"] == symbol, "latest_date"]
+            latest_date = latest_match.iloc[0] if not latest_match.empty else None
+            row = _classify_reason(symbol, latest_date)
+            classification_rows.append(row)
+            reason_counts[row["reason"]] = reason_counts.get(row["reason"], 0) + 1
+
     details = {
         "requested_count": len(normalized_tickers),
         "covered_count": int(len(working)),
@@ -285,6 +348,9 @@ def inspect_strict_annual_price_freshness(
         "lagging_symbols": lagging_symbols_all[:20],
         "lagging_symbols_all": lagging_symbols_all,
         "refresh_symbols_all": sorted(set(stale_symbols_all + missing_symbols)),
+        "reason_counts": reason_counts,
+        "classification_rows": classification_rows[:50],
+        "classification_scope": "heuristic",
     }
 
     if not missing_symbols and len(stale_df) == 0 and spread_days == 0:
@@ -378,6 +444,10 @@ def build_backtest_result_bundle(
         meta["quality_factors"] = input_params.get("quality_factors")
     if input_params.get("value_factors") is not None:
         meta["value_factors"] = input_params.get("value_factors")
+    if input_params.get("trend_filter_enabled") is not None:
+        meta["trend_filter_enabled"] = input_params.get("trend_filter_enabled")
+    if input_params.get("trend_filter_window") is not None:
+        meta["trend_filter_window"] = input_params.get("trend_filter_window")
     if input_params.get("snapshot_source") is not None:
         meta["snapshot_source"] = input_params.get("snapshot_source")
 
@@ -698,6 +768,8 @@ def _run_statement_quality_bundle(
     quality_factors: Sequence[str] | None = None,
     top_n: int = 2,
     rebalance_interval: int = 1,
+    trend_filter_enabled: bool = False,
+    trend_filter_window: int = 200,
     universe_mode: str = "manual_tickers",
     preset_name: str | None = None,
     static_warnings: Sequence[str] | None = None,
@@ -743,6 +815,8 @@ def _run_statement_quality_bundle(
             quality_factors=normalized_factors,
             top_n=top_n,
             rebalance_interval=rebalance_interval,
+            trend_filter_enabled=trend_filter_enabled,
+            trend_filter_window=trend_filter_window,
         )
     else:
         _preflight_statement_quality_data(
@@ -793,6 +867,8 @@ def _run_statement_quality_bundle(
             "rebalance_interval": rebalance_interval,
             "factor_freq": statement_freq,
             "quality_factors": normalized_factors,
+            "trend_filter_enabled": trend_filter_enabled,
+            "trend_filter_window": trend_filter_window,
             "snapshot_mode": "strict_statement_annual",
             "universe_mode": universe_mode,
             "preset_name": preset_name,
@@ -803,6 +879,10 @@ def _run_statement_quality_bundle(
         warnings=warnings,
     )
     bundle["meta"]["price_freshness"] = price_freshness
+    if trend_filter_enabled:
+        bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
+            f"Trend Filter Overlay enabled: month-end selections with `Close < MA{trend_filter_window}` move to cash until the next rebalance."
+        ]
     return bundle
 
 
@@ -816,6 +896,8 @@ def run_quality_snapshot_strict_annual_backtest_from_db(
     quality_factors: Sequence[str] | None = None,
     top_n: int = 2,
     rebalance_interval: int = 1,
+    trend_filter_enabled: bool = False,
+    trend_filter_window: int = 200,
     universe_mode: str = "manual_tickers",
     preset_name: str | None = None,
 ) -> dict[str, Any]:
@@ -831,6 +913,8 @@ def run_quality_snapshot_strict_annual_backtest_from_db(
         quality_factors=quality_factors,
         top_n=top_n,
         rebalance_interval=rebalance_interval,
+        trend_filter_enabled=trend_filter_enabled,
+        trend_filter_window=trend_filter_window,
         universe_mode=universe_mode,
         preset_name=preset_name,
         snapshot_source="shadow_factors",
@@ -885,6 +969,8 @@ def run_value_snapshot_strict_annual_backtest_from_db(
     value_factors: Sequence[str] | None = None,
     top_n: int = 10,
     rebalance_interval: int = 1,
+    trend_filter_enabled: bool = False,
+    trend_filter_window: int = 200,
     universe_mode: str = "manual_tickers",
     preset_name: str | None = None,
 ) -> dict[str, Any]:
@@ -928,6 +1014,8 @@ def run_value_snapshot_strict_annual_backtest_from_db(
         value_factors=normalized_factors,
         top_n=top_n,
         rebalance_interval=rebalance_interval,
+        trend_filter_enabled=trend_filter_enabled,
+        trend_filter_window=trend_filter_window,
     )
 
     warnings = [
@@ -963,6 +1051,8 @@ def run_value_snapshot_strict_annual_backtest_from_db(
             "rebalance_interval": rebalance_interval,
             "factor_freq": "annual",
             "value_factors": normalized_factors,
+            "trend_filter_enabled": trend_filter_enabled,
+            "trend_filter_window": trend_filter_window,
             "snapshot_mode": "strict_statement_annual",
             "snapshot_source": "shadow_factors",
             "universe_mode": universe_mode,
@@ -973,6 +1063,10 @@ def run_value_snapshot_strict_annual_backtest_from_db(
         warnings=warnings,
     )
     bundle["meta"]["price_freshness"] = price_freshness
+    if trend_filter_enabled:
+        bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
+            f"Trend Filter Overlay enabled: month-end selections with `Close < MA{trend_filter_window}` move to cash until the next rebalance."
+        ]
     return bundle
 
 
@@ -987,6 +1081,8 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
     value_factors: Sequence[str] | None = None,
     top_n: int = 10,
     rebalance_interval: int = 1,
+    trend_filter_enabled: bool = False,
+    trend_filter_window: int = 200,
     universe_mode: str = "manual_tickers",
     preset_name: str | None = None,
 ) -> dict[str, Any]:
@@ -1041,6 +1137,8 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
         value_factors=normalized_value_factors,
         top_n=top_n,
         rebalance_interval=rebalance_interval,
+        trend_filter_enabled=trend_filter_enabled,
+        trend_filter_window=trend_filter_window,
     )
 
     warnings = [
@@ -1077,6 +1175,8 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
             "factor_freq": "annual",
             "quality_factors": normalized_quality_factors,
             "value_factors": normalized_value_factors,
+            "trend_filter_enabled": trend_filter_enabled,
+            "trend_filter_window": trend_filter_window,
             "snapshot_mode": "strict_statement_annual",
             "snapshot_source": "shadow_factors",
             "universe_mode": universe_mode,
@@ -1087,4 +1187,8 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
         warnings=warnings,
     )
     bundle["meta"]["price_freshness"] = price_freshness
+    if trend_filter_enabled:
+        bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
+            f"Trend Filter Overlay enabled: month-end selections with `Close < MA{trend_filter_window}` move to cash until the next rebalance."
+        ]
     return bundle

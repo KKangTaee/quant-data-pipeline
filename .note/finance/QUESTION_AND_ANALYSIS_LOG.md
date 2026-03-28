@@ -3154,3 +3154,384 @@ Do not copy full chat transcripts. Keep only the durable result.
     - `Quality + Trend Filter`
     - `Value + Trend Filter`
     - `Quality + Value + Risk Overlay`
+
+### 2026-03-27 - Next major phase should explicitly include risk overlay work rather than leaving it as an implicit future idea
+- Request topic:
+  - after reviewing `PHASE4_NEXT_PHASE_PREPARATION.md`, create the next phase in a way that clearly includes later risk-management additions for strict factor strategies
+- Interpreted goal:
+  - make the absence of current risk overlays explicit and turn their addition into a formal next-phase workstream instead of a vague backlog item
+- Result:
+  - Phase 5 was opened in planning form with a combined direction:
+    - `Strategy Library And Comparative Research`
+    - `Risk Overlay For Strict Factor Strategies`
+  - created:
+    - `.note/finance/phase5/PHASE5_STRATEGY_LIBRARY_AND_RISK_OVERLAY_PLAN.md`
+    - `.note/finance/phase5/PHASE5_CURRENT_CHAPTER_TODO.md`
+  - updated phase-handoff documents so the next phase is no longer just a candidate list; it now explicitly includes:
+    - strict family baseline comparison
+    - overlay requirement definition
+    - first overlay candidate selection
+    - future examples such as
+      - `Quality + Trend Filter`
+      - `Value + Trend Filter`
+      - `Quality + Value + Risk Overlay`
+- Durable output:
+  - the project now has a formal next-phase container for adding risk management to strict factor strategies later
+  - Phase 4 remains closed around current strategy behavior, while overlay logic is clearly deferred into Phase 5
+
+### 2026-03-27 - Phase 5 should also carry over quarterly strict-family work and compare advanced-input parity
+- Request topic:
+  - before implementation starts, capture two additional desired features in the next-phase plan:
+    - quarterly strict family
+    - compare-screen advanced-input parity for quality/value strict strategies
+- Interpreted goal:
+  - avoid losing known UX and strategy-extension requirements between Phase 4 closeout and Phase 5 kickoff
+- Result:
+  - both items were added to Phase 5 planning documents
+  - recommended priority was fixed as:
+    1. compare advanced-input parity
+    2. quarterly strict-family evaluation / expansion
+  - reasoning:
+    - compare parity is a near-term UI/runtime consistency gap
+    - quarterly strict family is a larger factor-coverage / timing / runtime project and should be treated as a separate expansion candidate
+- Durable output:
+  - Phase 5 now explicitly includes both:
+    - strict factor risk overlay work
+    - carry-over compare/quarterly expansion requests
+
+### 2026-03-27 - Phase 5 first overlay should start as month-end trend filter, not intramonth risk-off
+- Request topic:
+  - execute the recommended Phase 5 order from baseline comparative research through first overlay selection and implementation
+- Interpreted goal:
+  - make the first strict-family risk overlay small, understandable, and safe enough to wire through UI/runtime/history without prematurely committing to intramonth complexity
+- Result:
+  - baseline strict-family research was fixed around:
+    - compare baseline: `US Statement Coverage 100`
+    - single baseline: `US Statement Coverage 300`
+  - compare advanced-input parity was implemented for:
+    - `Quality Snapshot (Strict Annual)`
+    - `Value Snapshot (Strict Annual)`
+    - `Quality + Value Snapshot (Strict Annual)`
+  - first overlay was explicitly selected as:
+    - `month-end MA200 trend filter + cash fallback`
+  - the overlay was implemented in first-pass form across strict family runtime/UI/history/result schema
+  - selection interpretation now distinguishes:
+    - raw factor-ranked candidates
+    - overlay-rejected names
+    - final selected holdings
+  - quarterly strict-family work and second-overlay work were documented as reviewed but deferred
+- Durable output:
+  - the project now has a concrete first overlay contract instead of a generic “risk overlay later” note
+  - strict-family compare is materially closer to single-run parity
+  - next Phase 5 decisions can focus on validating and extending the chosen overlay rather than re-deciding its baseline shape
+
+### 2026-03-27 - Trend filter overlay needed an in-UI explanation example
+- Request topic:
+  - provide a very short practical example of the first strict-family trend filter behavior and expose it directly in the UI as a tooltip
+- Interpreted goal:
+  - reduce confusion around whether the current overlay is checked daily or only at rebalance time
+- Result:
+  - added a shared strict-family trend filter tooltip to single and compare forms
+  - the tooltip now states that the current first pass is month-end only, not intramonth daily risk-off
+  - it also includes a short example: if A and B are selected, and A is below MA200 at rebalance while B is above, then A moves to cash and B remains invested until the next rebalance
+- Durable output:
+  - the UI now explains the actual overlay semantics at the point of input instead of forcing the user to infer them from docs or chat
+
+### 2026-03-27 - Some stale strict-universe symbols remain stale even after Daily Market Update because the source itself is not returning newer daily bars
+- Request topic:
+  - verify why `CADE`, `CMA`, `DAY`, `CFLT` still appear in strict-annual price freshness preflight after a user reran `Daily Market Update`
+- Interpreted goal:
+  - distinguish between a preflight bug, ingestion failure, and upstream price-source unavailability
+- Result:
+  - preflight is behaving correctly
+  - DB latest dates currently are:
+    - `CADE`: `2026-01-30`
+    - `CMA`: `2026-01-30`
+    - `DAY`: `2026-02-03`
+    - `CFLT`: `2026-03-17`
+  - `Daily Market Update` uses the same yfinance-backed OHLCV path as manual price collection
+  - direct yfinance checks showed:
+    - `CADE`: recent `1mo` fetch empty, `3mo` only through `2026-01-30`
+    - `CMA`: recent `1mo` fetch empty, `3mo` only through `2026-01-30`
+    - `DAY`: recent `1mo` fetch empty, `3mo` only through `2026-02-03`
+    - `CFLT`: recent fetches only through `2026-03-17`
+  - asset profile still marks all four as active, so the issue is not caused by local profile filtering; it is an upstream source freshness / symbol-resolution mismatch
+- Durable output:
+  - if these names continue to block managed strict presets, the right next fix is not another blind refresh but either:
+    - excluding persistently stale names from managed presets, or
+    - adding a freshness filter when building strict managed universes
+
+### 2026-03-27 - Practical/investable strict managed universes should prefer backfill-to-target over drop-only
+- Request topic:
+  - define the practical policy for strict managed universes so the project can move toward a level where the user can realistically review backtests and use them for live investment judgment
+- Interpreted goal:
+  - move from “research demos that technically run” toward a more operationally trustworthy backtest environment without pretending the system is already full live-trading infrastructure
+- Result:
+  - the preferred managed-universe policy was fixed as:
+    - `backfill-to-target`
+  - meaning:
+    - stale names are excluded
+    - the preset then pulls in next-ranked eligible symbols (`1001`, `1002`, `1003`, ...) until the target count is restored as much as possible
+  - this was chosen over `drop-only` because:
+    - preset meaning stays more stable
+    - `Coverage 1000` remains closer to a real usable 1000-name universe
+    - the system becomes more practical for repeated real-world review
+  - an important companion rule was also fixed:
+    - exclusions and replacements should be shown transparently
+  - the project target was explicitly reframed as:
+    - decision-support quality research environment for real investment judgment
+    - not immediate full live-trading automation
+- Durable output:
+  - Phase 5 now includes an explicit investable-readiness policy covering:
+    - freshness-aware managed universes
+    - backfill-to-target as the default policy
+    - transparency for stale exclusions / replacements
+    - acknowledgement that stale filtering alone does not fully solve delisting/symbol-change classification
+
+### 2026-03-27 - Freshness-aware strict managed preset first pass was implemented at the UI preset-resolution layer
+- Request topic:
+  - turn the new practical-investment policy into actual behavior for strict managed presets
+- Interpreted goal:
+  - make `Coverage 300/500/1000` behave more like real usable universes instead of static lists that only warn about stale symbols
+- Result:
+  - strict managed presets are now resolved dynamically at UI/runtime handoff time
+  - policy:
+    - `freshness_backfill_to_target`
+  - behavior:
+    - stale / missing symbols inside the target top-N block are excluded
+    - lower-ranked fresh symbols are pulled in until the target count is restored as much as possible
+  - both single and compare strict-family flows now use the resolved universe instead of the old static preset list
+  - exclusion / replacement details are shown to the user and also stored in metadata/history
+  - smoke verification for `end=2026-03-20` showed:
+    - `US Statement Coverage 300` -> `300/300`, no changes
+    - `US Statement Coverage 1000` -> `1000/1000`, `5` exclusions, `5` replacements
+- Durable output:
+  - the project now has a first-pass investable managed-universe mechanism
+  - next follow-up is no longer “make the preset usable,” but
+    - refine stale reason classification
+    - decide how aggressively to surface replacement history in compare/results
+
+### 2026-03-27 - Historical backtests should not use end-date freshness replacement as the only universe rule
+- Request topic:
+  - sanity-check whether a 2016~2026 backtest should really exclude names like `CADE`, `CMA`, `DAY` from the whole run just because they are stale at the selected end date
+- Interpreted goal:
+  - distinguish between:
+    - a practical “what can I invest in now?” managed universe
+    - a historically faithful backtest universe
+- Result:
+  - the current freshness-aware `backfill-to-target` preset resolution is useful for **present-day investable preset hygiene**
+  - but for **historical backtest validity**, applying an end-date freshness filter to the whole run is too aggressive
+  - a more realistic historical rule is:
+    - keep a symbol in the backtest universe until its last valid trading date
+    - after that date, naturally exclude it at rebalance time
+    - if replacements are desired, do them only on scheduled universe-reconstitution dates, not retroactively from the full-run start
+  - therefore the recommended practical direction is to split the behavior into two modes:
+    1. `historical_backtest`:
+       - no full-run exclusion just because the symbol is stale at the selected end date
+       - per-rebalance availability filtering decides whether a symbol can be selected
+       - warnings still show stale/end-date issues
+    2. `investable_now`:
+       - freshness-aware `backfill-to-target`
+       - designed for “if I ran this today, what is the usable managed universe now?”
+- Durable output:
+  - the project should not treat the current run-level freshness replacement policy as the final answer for all strict backtests
+  - the more robust design is to separate:
+    - historical backtest validity
+    - present-day investable universe construction
+
+### 2026-03-27 - Historical-only strict preset semantics were adopted as the current product behavior
+- Request topic:
+  - decide whether to keep the new freshness-aware replacement logic or return to a pure historical-backtest interpretation
+- Interpreted goal:
+  - make strict annual backtests valid enough to support real research/investment judgment without retroactively removing names that were still tradable earlier in the test window
+- Result:
+  - the project does **not** keep a separate `Investable Now` mode at this time
+  - strict managed presets now stay fixed for the run
+  - `Price Freshness Preflight` remains as a warning/diagnostic layer only
+  - symbols are filtered at each rebalance date by actual price/factor availability instead of by selected end-date freshness replacement
+  - UI now includes a short tooltip explaining this historical-backtest behavior
+- Durable output:
+  - current official behavior is:
+    - run-level static preset universe
+    - rebalance-date candidate filtering
+    - freshness warning, but no run-level replacement
+  - any future `investable now` mode is deferred and not part of the present product surface
+
+### 2026-03-27 - Compare strategy advanced-input blocks should rerender immediately when the selected strategies change
+- Request topic:
+  - compare screen did not show the expected advanced input controls for quality/value strict strategies after selecting them
+- Interpreted goal:
+  - make compare behave like the single-strategy screen, where strategy selection immediately reveals the relevant controls
+- Result:
+  - the compare `Strategies` selector was inside `st.form(...)`, which prevented immediate reruns
+  - it was moved outside the form so the strategy-specific advanced-input sections now update as soon as the selection changes
+- Durable output:
+  - compare strict-family preset/factor/overlay controls should now appear immediately after selecting the relevant strategies
+
+### 2026-03-27 - Backtest history should live as a shared top-level surface instead of being nested under compare
+- Request topic:
+  - review whether `Persistent Backtest History` / `History Drilldown` should move into a separate tab because they are shared by single and compare workflows
+- Interpreted goal:
+  - make the backtest UI structure reflect ownership more clearly and avoid implying that history belongs only to compare/portfolio builder
+- Result:
+  - the backtest top-level navigation now has a dedicated `History` tab
+  - `Persistent Backtest History` and `History Drilldown` were moved there from the bottom of the compare tab
+  - compare remains focused on:
+    - strategy selection
+    - advanced inputs
+    - comparison results
+    - weighted portfolio builder
+- Durable output:
+  - history is now presented as a shared cross-workflow surface for:
+    - single-strategy execution
+    - strategy comparison
+
+### 2026-03-27 - Finish Phase 5 first-pass workstream for overlay validation, stale diagnostics, interpretation, quarterly review, and second-overlay review
+- Request topic:
+  - finish the pending Phase 5 workstream in order:
+    1. overlay on/off validation
+    2. stale reason classification
+    3. selection interpretation strengthening
+    4. quarterly strict family review
+    5. second overlay candidate review
+- Interpreted goal:
+  - move the Phase 5 first chapter from “feature scaffolding exists” to “research/diagnostic results are documented and ready for user testing”
+- Result:
+  - strict preflight now includes heuristic stale/missing reason classification
+  - strict selection history now exposes interpretation summary, cash-share context, and overlay rejection frequency
+  - first overlay on/off validation was collected on canonical compare settings
+  - quarterly strict family remains deferred, with clearer public-entry criteria
+  - second overlay next candidate is still `Market Regime Overlay`, now with clearer entry conditions
+- Durable output:
+  - current Phase 5 chapter should be understood as:
+    - overlay implemented
+    - overlay validation documented
+    - stale diagnostics implemented
+    - selection interpretation strengthened
+    - quarterly and second-overlay decisions documented
+  - next step is user validation of the current surface before opening the next chapter
+
+### 2026-03-27 - Streamlit runtime error after selection-interpretation change
+- Request topic:
+  - app crashed while rendering the latest backtest run with `NameError: name 'np' is not defined`
+- Interpreted goal:
+  - restore the backtest page quickly and keep the new interpretation feature intact
+- Result:
+  - the selection-interpretation path in `app/web/pages/backtest.py` used `np.where(...)`
+    without importing `numpy as np`
+  - the missing import was added and the page compiled successfully
+- Durable output:
+  - this was a hotfix only; no strategy behavior changed
+  - the interpretation feature still stands, and the failure was caused only by a missing module import
+
+### 2026-03-28 - Value strict coverage-1000 history rendering failed in selection-history cash-share logic
+- Request topic:
+  - `Value Snapshot (Strict Annual)` with `Coverage 1000` still crashed while rendering selection history around the `Cash` column path
+- Interpreted goal:
+  - make the selection-interpretation/history surface robust enough that value strict runs do not fail on result-shape edge cases
+- Result:
+  - `_build_snapshot_selection_history(...)` was hardened so duplicate column names no longer break the `Cash` / `Total Balance` / selected-count extraction path
+  - the function now:
+    - de-duplicates duplicate columns defensively
+    - resolves the first valid series for duplicate-named fields before numeric coercion
+- Durable output:
+  - this is a rendering-layer robustness fix
+  - it does not change selection logic or backtest strategy behavior
+
+### 2026-03-28 - Latest Backtest Run should not crash when an older selection-history payload is malformed
+- Request topic:
+  - even after the direct selection-history fix, the user still saw the backtest screen die when rendering the latest run
+- Interpreted goal:
+  - protect the `Latest Backtest Run` surface from total failure while we flush old payloads and continue verifying the exact edge case
+- Result:
+  - `_render_snapshot_selection_history(...)` now catches builder failures and falls back to:
+    - a warning message
+    - a short renderer-detail caption
+    - no full-page crash
+- Durable output:
+  - malformed or older run payloads should no longer take down the entire backtest page
+  - rerunning the backtest remains the recommended way to rebuild a clean latest-run bundle
+
+### 2026-03-28 - Provide a practical Phase 5 manual test checklist as a Markdown document
+- Request topic:
+  - convert the current verbal testing guidance into an actual `.md` file for user-driven verification
+- Interpreted goal:
+  - make the current strict-family validation process repeatable and easy to follow without relying on chat history
+- Result:
+  - created a dedicated Phase 5 strict-family checklist document covering:
+    - single strategy smoke tests
+    - overlay on/off checks
+    - preflight / stale-classification checks
+    - compare advanced-input checks
+    - history tab checks
+    - tooltip / copy checks
+- Durable output:
+  - the current recommended manual QA entry point is:
+    - `.note/finance/phase5/PHASE5_STRICT_FAMILY_TEST_CHECKLIST.md`
+
+### 2026-03-28 - Make phase-end manual test checklists a standing repository rule
+- Request topic:
+  - add a durable instruction so future phases always end with a user-facing test checklist document
+- Interpreted goal:
+  - prevent phase closeout testing guidance from living only in chat and make final verification repeatable
+- Result:
+  - updated `AGENTS.md` to require:
+    - a phase-specific manual test checklist at practical phase completion
+    - checklist coverage for major features, UI paths, and validation points added in that phase
+    - checklist sharing as part of final phase handoff
+- Durable output:
+  - future phase closeouts should now include a checklist document by default, not as an ad hoc extra
+
+### 2026-03-28 - Clarify strict-family interpretation metrics and localize tooltip/help copy to Korean
+- Request topic:
+  - explain:
+    - `Raw Candidate Events`
+    - `Final Selected Events`
+    - `Overlay Rejection Frequency`
+    - `Cash Share`
+  - and translate the `?`/tooltip help copy into Korean
+- Interpreted goal:
+  - make the current strict-family UI easier to understand during manual testing without relying on chat explanations
+- Result:
+  - clarified the semantics of the interpretation metrics and added Korean help/popover copy for:
+    - historical universe behavior
+    - trend filter overlay
+    - interpretation summary
+    - overlay rejection frequency
+    - cash share
+  - translated the main strict-family single-form help text to Korean as well
+- Durable output:
+  - strict-family testing should now be possible with in-product Korean explanations for the main interpretation surfaces
+
+### 2026-03-28 - Raw/Final event counts should explain overlay intervention rather than imply universe size
+- Request topic:
+  - refine the help copy so users do not misread `Raw Candidate Events` / `Final Selected Events` as the size of the filtered universe
+- Interpreted goal:
+  - make the UI explain that these numbers are event totals used mainly to understand overlay intervention
+- Result:
+  - updated the interpretation help text so it explicitly says:
+    - Raw / Final are cumulative selection-event counts across rebalances
+    - they are not the size of the whole eligible universe
+    - when overlay is off, Raw and Final are usually the same
+    - when overlay is on, the Raw-Final gap measures how much the overlay intervened
+- Durable output:
+  - the strict-family interpretation UI now better supports the intended reading of the overlay metrics
+
+### 2026-03-28 - Daily Market Update should be optimized to avoid yfinance rate limiting on `NYSE Stocks + ETFs`
+- Request topic:
+  - reproduce the broad `Daily Market Update` issue on `NYSE Stocks + ETFs`, then propose a direction first in Markdown before implementation
+- Interpreted goal:
+  - understand why large daily price refreshes start well and then degrade into repeated `Too Many Requests` failures, and define a practical optimization path
+- Result:
+  - reproduced the issue on the raw exchange source
+  - confirmed current raw source size is `11,736` symbols
+  - confirmed the raw source contains many noisy non-plain symbols (`434`) compared with the profile-filtered source (`18`)
+  - observed that visible rate-limit failures can occur without being captured in current `batch_errors`, because the provider may return partial data while surfacing failures as symbol-level messages
+  - created a durable direction document:
+    - `.note/finance/DAILY_MARKET_UPDATE_RATE_LIMIT_ANALYSIS_20260328.md`
+- Durable output:
+  - recommended first-pass direction is:
+    - safer/default managed source preference
+    - smaller chunk / lower concurrency / jitter
+    - rate-limit cooldown / circuit breaker
+    - better diagnostics separating provider no-data from true rate limiting
