@@ -755,7 +755,7 @@ def run_extended_statement_refresh(
     symbols: str | Iterable[str] | None,
     *,
     freq: str = "annual",
-    periods: int = 4,
+    periods: int = 0,
     period: str = "annual",
     progress_callback: Callable[[dict[str, Any]], None] | None = None,
 ) -> JobResult:
@@ -844,7 +844,7 @@ def run_collect_financial_statements(
     symbols: str | Iterable[str] | None,
     *,
     freq: str = "annual",
-    periods: int = 4,
+    periods: int = 0,
     period: str = "annual",
     progress_callback: Callable[[dict[str, Any]], None] | None = None,
 ) -> JobResult:

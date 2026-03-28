@@ -367,11 +367,21 @@ def get_fundamental(symbol: str, periods: int = 4, period: str = "annual") -> pd
 
 
 def _allowed_forms_for_freq(freq: Freq) -> set[str]:
-    return ANNUAL_FORM_TYPES if freq == "annual" else QUARTERLY_FORM_TYPES
+    if freq == "annual":
+        return ANNUAL_FORM_TYPES
+    # Quarterly history needs both 10-Q rows and year-end quarter facts that
+    # only arrive through 10-K filings. Without this, Q4-like coverage drops
+    # out of the strict quarterly ledger and the prototype starts far too late.
+    return PERIODIC_FORM_TYPES
 
 
 def _allowed_fiscal_periods_for_freq(freq: Freq) -> set[str]:
-    return {"FY"} if freq == "annual" else {"Q1", "Q2", "Q3"}
+    if freq == "annual":
+        return {"FY"}
+    # EDGAR commonly encodes the year-end quarter as FY in 10-K facts.
+    # Keep the raw fiscal_period value intact, but allow FY rows into the
+    # quarterly ledger so downstream grouping by period_end can recover Q4.
+    return {"Q1", "Q2", "Q3", "FY"}
 
 
 def _normalize_statement_type(statement_type: Any) -> str | None:
@@ -697,6 +707,24 @@ def inspect_financial_statement_source(
         .value_counts()
         .to_dict()
     )
+    fiscal_period_counts = (
+        pd.Series([getattr(f, "fiscal_period", None) for f in statement_facts], dtype="object")
+        .fillna("UNKNOWN")
+        .value_counts()
+        .to_dict()
+    )
+    timing_field_inventory = {
+        "facts_with_period_start": sum(1 for f in statement_facts if getattr(f, "period_start", None) is not None),
+        "facts_with_period_end": sum(1 for f in statement_facts if getattr(f, "period_end", None) is not None),
+        "facts_with_filing_date": sum(1 for f in statement_facts if getattr(f, "filing_date", None) is not None),
+        "facts_with_accession": sum(1 for f in statement_facts if getattr(f, "accession", None) is not None),
+        "facts_with_unit": sum(1 for f in statement_facts if getattr(f, "unit", None) is not None),
+        "facts_with_numeric_value": sum(1 for f in statement_facts if getattr(f, "numeric_value", None) is not None),
+        "filings_with_filing_date": sum(1 for row in source["filing_rows"] if row.get("filing_date") is not None),
+        "filings_with_accepted_at": sum(1 for row in source["filing_rows"] if row.get("accepted_at") is not None),
+        "filings_with_available_at": sum(1 for row in source["filing_rows"] if row.get("available_at") is not None),
+        "filings_with_report_date": sum(1 for row in source["filing_rows"] if row.get("report_date") is not None),
+    }
 
     sample_facts = []
     for fact in statement_facts[:sample_size]:
@@ -714,12 +742,38 @@ def inspect_financial_statement_source(
             "unit": getattr(fact, "unit", None),
         })
 
+    sample_filings = []
+    filing_rows = sorted(
+        source["filing_rows"],
+        key=lambda row: (
+            row.get("accepted_at") or datetime.min,
+            row.get("filing_date") or date.min,
+            row.get("accession_no") or "",
+        ),
+        reverse=True,
+    )
+    for filing in filing_rows[:sample_size]:
+        sample_filings.append(
+            {
+                "accession_no": filing.get("accession_no"),
+                "form_type": filing.get("form_type"),
+                "filing_date": str(filing.get("filing_date") or ""),
+                "accepted_at": str(filing.get("accepted_at") or ""),
+                "available_at": str(filing.get("available_at") or ""),
+                "report_date": str(filing.get("report_date") or ""),
+                "primary_document": filing.get("primary_document"),
+            }
+        )
+
     return {
         "symbol": symbol,
         "statement_fact_count": len(statement_facts),
         "filing_count": len(source["filing_rows"]),
         "form_counts": form_counts,
+        "fiscal_period_counts": fiscal_period_counts,
+        "timing_field_inventory": timing_field_inventory,
         "sample_facts": sample_facts,
+        "sample_filings": sample_filings,
     }
 
 
@@ -1056,7 +1110,7 @@ def _ensure_financial_statement_schema_state(db) -> None:
 def upsert_financial_statements(
     symbols: Iterable[str],
     freq: Freq = "annual",
-    periods: int = 4,
+    periods: int = 0,
     period: str = "annual",
     host: str = "localhost",
     user: str = "root",

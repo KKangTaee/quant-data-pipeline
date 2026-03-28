@@ -819,26 +819,13 @@ def build_fundamentals_history_from_statement_values(
     ].copy()
     if working.empty:
         return pd.DataFrame(columns=base_columns)
-
     if "report_date" in working.columns:
         working["report_date"] = pd.to_datetime(working["report_date"], errors="coerce")
-        report_anchor_map = (
-            working[working["report_date"].notna()]
-            .groupby("symbol", sort=False)["report_date"]
-            .apply(lambda s: {pd.Timestamp(value).normalize() for value in s.dropna().tolist()})
-            .to_dict()
-        )
-        if report_anchor_map:
-            keep_mask = []
-            for row in working.itertuples(index=False):
-                anchors = report_anchor_map.get(getattr(row, "symbol"), set())
-                period_end = getattr(row, "period_end")
-                keep_mask.append(
-                    not anchors or pd.Timestamp(period_end).normalize() in anchors
-                )
-            working = working[pd.Series(keep_mask, index=working.index)].copy()
-            if working.empty:
-                return pd.DataFrame(columns=base_columns)
+    # Do not force `period_end` to match `report_date`.
+    # Quarterly filings routinely carry comparative prior-period facts where
+    # `report_date` refers to the current filing window, not the fact's own
+    # period_end. The older anchor filter dropped valid rows and caused the
+    # strict quarterly shadow to start years too late.
 
     working = working.sort_values(
         ["symbol", "period_end", "statement_type", "concept", "unit", "available_at", "accession_no"],

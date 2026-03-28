@@ -68,6 +68,30 @@ STATEMENT_LABEL_COLUMNS = [
     "condition_json",
 ]
 
+STATEMENT_TIMING_AUDIT_COLUMNS = [
+    "symbol",
+    "freq",
+    "period_start",
+    "period_end",
+    "period_label",
+    "period_type",
+    "source_period_type",
+    "fiscal_year",
+    "fiscal_period",
+    "fiscal_quarter",
+    "statement_type",
+    "concept",
+    "label",
+    "unit",
+    "filing_date",
+    "accepted_at",
+    "available_at",
+    "report_date",
+    "form_type",
+    "accession_no",
+    "value",
+]
+
 
 def _normalize_optional_list(values: str | Iterable[str] | None) -> list[str]:
     if values is None:
@@ -340,3 +364,49 @@ def load_statement_coverage_summary(
             "statement_types",
         ]
     ]
+
+
+def load_statement_timing_audit(
+    symbols: str | Iterable[str] | None = None,
+    *,
+    universe_source: str | None = None,
+    freq: str = "annual",
+    start: str | None = None,
+    end: str | None = None,
+    strict_only: bool = True,
+    limit_per_symbol: int = 20,
+) -> pd.DataFrame:
+    df = load_statement_values(
+        symbols=symbols,
+        universe_source=universe_source,
+        freq=freq,
+        start=start,
+        end=end,
+    )
+    if df.empty:
+        return pd.DataFrame(columns=STATEMENT_TIMING_AUDIT_COLUMNS)
+
+    if strict_only:
+        df = df[
+            df["accession_no"].notna()
+            & (df["accession_no"] != "")
+            & df["unit"].notna()
+            & (df["unit"] != "")
+            & df["available_at"].notna()
+        ].copy()
+        if df.empty:
+            return pd.DataFrame(columns=STATEMENT_TIMING_AUDIT_COLUMNS)
+
+    keep_columns = [col for col in STATEMENT_TIMING_AUDIT_COLUMNS if col in df.columns]
+    audit = df[keep_columns].copy()
+    audit = audit.sort_values(
+        ["symbol", "period_end", "available_at", "statement_type", "concept", "accession_no"],
+        ascending=[True, True, True, True, True, True],
+    )
+    if limit_per_symbol > 0:
+        audit = (
+            audit.groupby("symbol", as_index=False, group_keys=False)
+            .tail(limit_per_symbol)
+            .reset_index(drop=True)
+        )
+    return audit

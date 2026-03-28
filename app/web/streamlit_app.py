@@ -39,6 +39,8 @@ from app.jobs.run_history import (
 from app.jobs.symbol_sources import resolve_symbol_source
 from app.jobs.symbol_sources import filter_non_plain_symbols
 from app.web.pages.backtest import QUALITY_STRICT_PRESETS, render_backtest_tab
+from finance.data.financial_statements import inspect_financial_statement_source
+from finance.loaders import load_statement_coverage_summary, load_statement_timing_audit
 
 
 JobResult = dict[str, Any]
@@ -124,6 +126,8 @@ def _init_state() -> None:
         st.session_state.running_job = None
     if "last_completed_result" not in st.session_state:
         st.session_state.last_completed_result = None
+    if "statement_pit_inspection_result" not in st.session_state:
+        st.session_state.statement_pit_inspection_result = None
 
 
 def _push_result(result: JobResult) -> None:
@@ -612,6 +616,179 @@ def _is_blocking(result: dict[str, Any]) -> bool:
     return result.get("status") == "error"
 
 
+def _json_safe(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {str(k): _json_safe(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_json_safe(v) for v in value]
+    if isinstance(value, tuple):
+        return [_json_safe(v) for v in value]
+    if isinstance(value, (pd.Timestamp, date)):
+        return str(value)
+    return value
+
+
+def _render_statement_pit_inspection_result(result: dict[str, Any]) -> None:
+    coverage_df = result.get("coverage_df")
+    audit_df = result.get("audit_df")
+    source_payload = result.get("source_payload")
+    source_symbol = result.get("source_symbol")
+    inspect_freq = result.get("inspect_freq")
+    audit_scope = result.get("audit_scope") or []
+
+    st.markdown("#### Inspection Result")
+    summary_cols = st.columns(4)
+    summary_cols[0].metric("Inspection Freq", inspect_freq or "-")
+    summary_cols[1].metric("Coverage Symbols", len(coverage_df) if isinstance(coverage_df, pd.DataFrame) else 0)
+    summary_cols[2].metric("Audit Symbols", len(audit_scope))
+    summary_cols[3].metric("Source Sample", source_symbol or "-")
+
+    if isinstance(coverage_df, pd.DataFrame) and not coverage_df.empty:
+        st.markdown("##### Coverage Summary")
+        view = coverage_df.copy()
+        for column in ["min_period_end", "max_period_end", "min_available_at", "max_available_at"]:
+            if column in view.columns:
+                view[column] = pd.to_datetime(view[column], errors="coerce").dt.strftime("%Y-%m-%d")
+        st.dataframe(view, use_container_width=True, hide_index=True)
+    else:
+        st.info("Coverage summary returned no rows for the selected symbols/frequency.")
+
+    if isinstance(audit_df, pd.DataFrame) and not audit_df.empty:
+        st.markdown("##### Timing Audit")
+        audit_view = audit_df.copy()
+        for column in ["period_start", "period_end", "filing_date", "accepted_at", "available_at", "report_date"]:
+            if column in audit_view.columns:
+                audit_view[column] = pd.to_datetime(audit_view[column], errors="coerce").astype(str).replace("NaT", "")
+        st.dataframe(audit_view, use_container_width=True, hide_index=True)
+    else:
+        st.info("Timing audit returned no rows for the selected audit scope.")
+
+    if source_payload:
+        st.markdown("##### Source Payload Inspection")
+        top_level = {
+            "symbol": source_payload.get("symbol"),
+            "statement_fact_count": source_payload.get("statement_fact_count"),
+            "filing_count": source_payload.get("filing_count"),
+            "form_counts": source_payload.get("form_counts"),
+            "fiscal_period_counts": source_payload.get("fiscal_period_counts"),
+            "timing_field_inventory": source_payload.get("timing_field_inventory"),
+        }
+        st.json(_json_safe(top_level), expanded=False)
+
+        sample_filings = source_payload.get("sample_filings") or []
+        if sample_filings:
+            st.caption("Sample Filings")
+            st.dataframe(pd.DataFrame(_json_safe(sample_filings)), use_container_width=True, hide_index=True)
+
+        sample_facts = source_payload.get("sample_facts") or []
+        if sample_facts:
+            st.caption("Sample Facts")
+            st.dataframe(pd.DataFrame(_json_safe(sample_facts)), use_container_width=True, hide_index=True)
+    else:
+        st.info("Source payload inspection was not available for the selected symbol.")
+
+
+def _render_statement_pit_inspection_card() -> None:
+    with st.container(border=True):
+        st.markdown("### Statement PIT Inspection")
+        st.write("Inspect statement coverage, timing rows, and source payload shape without leaving the UI.")
+        st.caption(
+            "Phase 7 helper card: read-only inspection for quarterly/annual PIT validation. This reduces the need for notebook snippets during manual checks."
+        )
+
+        inspect_symbol_result = _render_symbol_source_inputs(
+            "statement_pit",
+            "Inspection Symbols",
+            default_source_mode="Manual",
+        )
+        inspect_symbols_input = inspect_symbol_result["symbols"]
+        inspect_symbol_check = check_symbol_input(inspect_symbols_input)
+        _render_check_result(inspect_symbol_check)
+
+        col1, col2, col3, col4 = st.columns(4)
+        inspect_freq = col1.selectbox(
+            "Inspection Frequency",
+            ["annual", "quarterly"],
+            index=1,
+            key="statement_pit_freq",
+        )
+        audit_symbol_limit = int(
+            col2.number_input(
+                "Timing Audit Symbols",
+                min_value=1,
+                max_value=20,
+                value=3,
+                step=1,
+                key="statement_pit_audit_symbol_limit",
+                help="Timing audit는 선택한 심볼 중 앞쪽 일부만 대상으로 읽습니다.",
+            )
+        )
+        audit_limit_per_symbol = int(
+            col3.number_input(
+                "Rows / Symbol",
+                min_value=1,
+                max_value=20,
+                value=5,
+                step=1,
+                key="statement_pit_audit_limit_per_symbol",
+            )
+        )
+        source_sample_size = int(
+            col4.number_input(
+                "Source Sample Size",
+                min_value=1,
+                max_value=10,
+                value=2,
+                step=1,
+                key="statement_pit_source_sample_size",
+            )
+        )
+
+        source_symbol_options = inspect_symbols_input[:20]
+        source_symbol = st.selectbox(
+            "Source Inspection Symbol",
+            options=source_symbol_options if source_symbol_options else [""],
+            index=0,
+            key="statement_pit_source_symbol",
+            help="EDGAR source payload inspection은 한 번에 한 심볼만 대상으로 합니다.",
+        )
+
+        if st.button(
+            "Run Statement PIT Inspection",
+            use_container_width=True,
+            disabled=_has_running_job() or _is_blocking(inspect_symbol_check),
+        ):
+            audit_scope = inspect_symbols_input[:audit_symbol_limit]
+            with st.spinner("Running statement PIT inspection..."):
+                coverage_df = load_statement_coverage_summary(
+                    symbols=inspect_symbols_input,
+                    freq=inspect_freq,
+                )
+                audit_df = load_statement_timing_audit(
+                    symbols=audit_scope,
+                    freq=inspect_freq,
+                    limit_per_symbol=audit_limit_per_symbol,
+                )
+                source_payload = (
+                    inspect_financial_statement_source(source_symbol, sample_size=source_sample_size)
+                    if source_symbol
+                    else None
+                )
+
+            st.session_state.statement_pit_inspection_result = {
+                "inspect_freq": inspect_freq,
+                "coverage_df": coverage_df,
+                "audit_df": audit_df,
+                "audit_scope": audit_scope,
+                "source_symbol": source_symbol,
+                "source_payload": source_payload,
+            }
+
+        result = st.session_state.get("statement_pit_inspection_result")
+        if result:
+            _render_statement_pit_inspection_result(result)
+
+
 def _resolve_symbols(preset_name: str, manual_value: str) -> str:
     preset_value = SYMBOL_PRESETS.get(preset_name, "")
     return preset_value if preset_name != "Custom" else manual_value
@@ -926,7 +1103,7 @@ def _render_ingestion_console() -> None:
                 "Managed annual coverage presets are also available in the symbol preset dropdown: "
                 "`US Statement Coverage 100`, `US Statement Coverage 300`, `US Statement Coverage 500`, and `US Statement Coverage 1000`."
             )
-            st.caption("Current defaults: `Profile Filtered Stocks`, `annual`, `8 periods`.")
+            st.caption("Current defaults: `Profile Filtered Stocks`, `annual`, `0 periods (all available)`.")
             st.caption("Writes to: `finance_fundamental.nyse_financial_statement_filings`, `finance_fundamental.nyse_financial_statement_labels`, `finance_fundamental.nyse_financial_statement_values`")
             ext_symbol_result = _render_symbol_source_inputs(
                 "extended_statement",
@@ -936,8 +1113,17 @@ def _render_ingestion_console() -> None:
             ext_symbols_input = ext_symbol_result["symbols"]
             ext_col1, ext_col2 = st.columns(2)
             ext_period_input = ext_col1.selectbox("Extended Statement Period Type", ["annual", "quarterly"], index=0, key="ext_period_input")
-            ext_periods_input = ext_col2.number_input("Extended Statement Periods", min_value=1, max_value=12, value=8, step=1, key="ext_periods_input")
+            ext_periods_input = ext_col2.number_input(
+                "Extended Statement Periods",
+                min_value=0,
+                max_value=80,
+                value=0,
+                step=1,
+                key="ext_periods_input",
+                help="`0` means collect all available statement periods from the source. Use this for PIT recovery and quarterly history hardening.",
+            )
             st.caption("`freq` is automatically matched to the selected `Period Type` for this operational pipeline.")
+            st.caption("Tip: `0 = all available periods`. Use a positive number only when you intentionally want a shorter rolling refresh.")
             ext_symbol_check = check_symbol_input(ext_symbols_input)
             _render_check_result(ext_symbol_check)
             ext_run_allowed = _render_large_run_guard(
@@ -1338,8 +1524,17 @@ def _render_ingestion_console() -> None:
             fs_symbols_input = fs_symbol_result["symbols"]
             fs_col1, fs_col2, fs_col3 = st.columns(3)
             fs_freq_input = fs_col1.selectbox("Financial Statement Freq", ["annual", "quarterly"], index=0, key="fs_freq_input")
-            fs_periods_input = fs_col2.number_input("Financial Statement Periods", min_value=1, max_value=12, value=4, step=1, key="fs_periods_input")
+            fs_periods_input = fs_col2.number_input(
+                "Financial Statement Periods",
+                min_value=0,
+                max_value=80,
+                value=0,
+                step=1,
+                key="fs_periods_input",
+                help="`0` means collect all available statement periods from EDGAR for each symbol.",
+            )
             fs_period_input = fs_col3.selectbox("Financial Statement Period Type", ["annual", "quarterly"], index=0, key="fs_period_input")
+            st.caption("Tip: `0 = all available periods`. This is recommended when rebuilding quarterly strict coverage.")
             fs_symbol_check = check_symbol_input(fs_symbols_input)
             _render_check_result(fs_symbol_check)
             fs_run_allowed = _render_large_run_guard(
@@ -1382,6 +1577,8 @@ def _render_ingestion_console() -> None:
                     st.session_state.running_job,
                     label="Financial Statement Ingestion",
                 )
+
+        _render_statement_pit_inspection_card()
 
     with col_right:
         _render_recent_results()

@@ -131,3 +131,46 @@ def load_price_freshness_summary(
 
     df["latest_date"] = pd.to_datetime(df["latest_date"], errors="coerce")
     return df
+
+
+def load_latest_market_date(
+    *,
+    end: str | None = None,
+    timeframe: str = "1d",
+) -> pd.Timestamp | None:
+    """
+    Load the latest trading date present in MySQL up to the requested end date.
+
+    This is used by preflight checks so weekend or holiday end dates can be
+    compared against the last actual market session instead of being treated as
+    universal staleness.
+    """
+    normalized_timeframe = normalize_timeframe(timeframe)
+    end_ts = normalize_timestamp(end, field_name="end") if end is not None else None
+
+    db = MySQLClient("localhost", "root", "1234", 3306)
+    try:
+        db.use_db("finance_price")
+        where = ["timeframe = %s"]
+        params: list[object] = [normalized_timeframe]
+
+        if end_ts is not None:
+            where.append("Date <= %s")
+            params.append(end_ts.strftime("%Y-%m-%d"))
+
+        sql = f"""
+        SELECT MAX(Date) AS latest_market_date
+        FROM nyse_price_history
+        WHERE {" AND ".join(where)}
+        """
+        rows = db.query(sql, params)
+    finally:
+        db.close()
+
+    if not rows:
+        return None
+
+    latest_market_date = rows[0].get("latest_market_date")
+    if latest_market_date is None:
+        return None
+    return pd.to_datetime(latest_market_date, errors="coerce")
