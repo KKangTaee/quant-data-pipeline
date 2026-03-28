@@ -113,6 +113,7 @@ VALUE_STRICT_FACTOR_OPTIONS = [
 
 STRICT_TREND_FILTER_DEFAULT_ENABLED = False
 STRICT_TREND_FILTER_DEFAULT_WINDOW = 200
+DEFAULT_BACKTEST_END_DATE = date.today()
 
 QUALITY_STRICT_TOP300_TICKERS = [
     "NVDA", "GOOGL", "GOOG", "AAPL", "MSFT", "AMZN", "META", "TSLA", "AVGO", "WMT",
@@ -1718,7 +1719,7 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         return
 
     start_date = pd.to_datetime(payload.get("start")).date() if payload.get("start") else date(2016, 1, 1)
-    end_date = pd.to_datetime(payload.get("end")).date() if payload.get("end") else date(2026, 3, 20)
+    end_date = pd.to_datetime(payload.get("end")).date() if payload.get("end") else DEFAULT_BACKTEST_END_DATE
     tickers_text = ",".join(payload.get("tickers", []))
     preset_name = payload.get("preset_name")
     universe_mode = payload.get("universe_mode")
@@ -2590,7 +2591,7 @@ def _render_equal_weight_form() -> None:
         with col1:
             start_date = st.date_input("Start Date", value=date(2016, 1, 1), key="eq_start")
         with col2:
-            end_date = st.date_input("End Date", value=date(2026, 3, 20), key="eq_end")
+            end_date = st.date_input("End Date", value=DEFAULT_BACKTEST_END_DATE, key="eq_end")
 
         with st.expander("Advanced Inputs", expanded=False):
             timeframe = st.selectbox("Timeframe", options=["1d"], index=0, key="eq_timeframe")
@@ -2676,7 +2677,7 @@ def _render_gtaa_form() -> None:
         with col1:
             start_date = st.date_input("Start Date", value=date(2016, 1, 1), key="gtaa_start")
         with col2:
-            end_date = st.date_input("End Date", value=date(2026, 3, 20), key="gtaa_end")
+            end_date = st.date_input("End Date", value=DEFAULT_BACKTEST_END_DATE, key="gtaa_end")
 
         with st.expander("Advanced Inputs", expanded=False):
             timeframe = st.selectbox("Timeframe", options=["1d"], index=0, key="gtaa_timeframe")
@@ -2771,7 +2772,7 @@ def _render_risk_parity_form() -> None:
         with col1:
             start_date = st.date_input("Start Date", value=date(2016, 1, 1), key="rp_start")
         with col2:
-            end_date = st.date_input("End Date", value=date(2026, 3, 20), key="rp_end")
+            end_date = st.date_input("End Date", value=DEFAULT_BACKTEST_END_DATE, key="rp_end")
 
         with st.expander("Advanced Inputs", expanded=False):
             timeframe = st.selectbox("Timeframe", options=["1d"], index=0, key="rp_timeframe")
@@ -2846,7 +2847,7 @@ def _render_dual_momentum_form() -> None:
         with col1:
             start_date = st.date_input("Start Date", value=date(2016, 1, 1), key="dm_start")
         with col2:
-            end_date = st.date_input("End Date", value=date(2026, 3, 20), key="dm_end")
+            end_date = st.date_input("End Date", value=DEFAULT_BACKTEST_END_DATE, key="dm_end")
 
         with st.expander("Advanced Inputs", expanded=False):
             timeframe = st.selectbox("Timeframe", options=["1d"], index=0, key="dm_timeframe")
@@ -2932,7 +2933,7 @@ def _render_quality_snapshot_form() -> None:
         with col1:
             start_date = st.date_input("Start Date", value=date(2016, 1, 1), key="qs_start")
         with col2:
-            end_date = st.date_input("End Date", value=date(2026, 3, 20), key="qs_end")
+            end_date = st.date_input("End Date", value=DEFAULT_BACKTEST_END_DATE, key="qs_end")
         with col3:
             top_n = st.number_input(
                 "Top N",
@@ -3066,7 +3067,7 @@ def _render_quality_snapshot_strict_annual_form() -> None:
         with col1:
             start_date = st.date_input("Start Date", value=date(2016, 1, 1), key="qss_start")
         with col2:
-            end_date = st.date_input("End Date", value=date(2026, 3, 20), key="qss_end")
+            end_date = st.date_input("End Date", value=DEFAULT_BACKTEST_END_DATE, key="qss_end")
         with col3:
             top_n = st.number_input(
                 "Top N",
@@ -3218,7 +3219,7 @@ def _render_value_snapshot_strict_annual_form() -> None:
         with col1:
             start_date = st.date_input("Start Date", value=date(2016, 1, 1), key="vss_start")
         with col2:
-            end_date = st.date_input("End Date", value=date(2026, 3, 20), key="vss_end")
+            end_date = st.date_input("End Date", value=DEFAULT_BACKTEST_END_DATE, key="vss_end")
         with col3:
             top_n = st.number_input(
                 "Top N",
@@ -3374,7 +3375,7 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
         with col1:
             start_date = st.date_input("Start Date", value=date(2016, 1, 1), key="qvss_start")
         with col2:
-            end_date = st.date_input("End Date", value=date(2026, 3, 20), key="qvss_end")
+            end_date = st.date_input("End Date", value=DEFAULT_BACKTEST_END_DATE, key="qvss_end")
         with col3:
             top_n = st.number_input(
                 "Top N",
@@ -3591,7 +3592,7 @@ def render_backtest_tab() -> None:
             with col1:
                 compare_start = st.date_input("Start Date", value=date(2016, 1, 1), key="compare_start")
             with col2:
-                compare_end = st.date_input("End Date", value=date(2026, 3, 20), key="compare_end")
+                compare_end = st.date_input("End Date", value=DEFAULT_BACKTEST_END_DATE, key="compare_end")
 
             with st.expander("Advanced Inputs", expanded=False):
                 compare_timeframe = st.selectbox("Timeframe", options=["1d"], index=0, key="compare_timeframe")

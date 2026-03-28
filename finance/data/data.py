@@ -1,4 +1,9 @@
+import io
+import random
+import re
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from contextlib import redirect_stderr, redirect_stdout
 from typing import Any, Callable, Iterable, Optional, Literal
 
 import pandas as pd
@@ -21,6 +26,13 @@ PRICE_VALUE_COLUMNS = [
     "Dividends",
     "Stock Splits",
 ]
+RATE_LIMIT_MARKERS = ("too many requests", "rate limited", "yfratelimiterror")
+PROVIDER_NO_DATA_MARKERS = (
+    "possibly delisted",
+    "no price data found",
+    "no timezone found",
+    "http error 404",
+)
 
 
 """
@@ -46,6 +58,59 @@ def _to_none(x):
     except Exception:
         pass
     return x
+
+
+def _sleep_with_jitter(base_sleep: float, jitter_ratio: float = 0.25) -> float:
+    if base_sleep <= 0:
+        return 0.0
+    jitter = base_sleep * max(jitter_ratio, 0.0)
+    actual_sleep = base_sleep + random.uniform(0.0, jitter)
+    time.sleep(actual_sleep)
+    return actual_sleep
+
+
+def _extract_provider_symbols(provider_output: str, batch: list[str]) -> list[str]:
+    if not provider_output:
+        return []
+
+    output_upper = provider_output.upper()
+    matched: list[str] = []
+    for sym in batch:
+        if sym.upper() in output_upper:
+            matched.append(sym)
+    return matched
+
+
+def _classify_provider_output(
+    *,
+    provider_output: str,
+    batch: list[str],
+    missing_symbols: list[str],
+) -> dict[str, Any]:
+    normalized = provider_output.lower()
+    matched_symbols = _extract_provider_symbols(provider_output, batch)
+    rate_limit_hit = any(marker in normalized for marker in RATE_LIMIT_MARKERS)
+    no_data_hit = any(marker in normalized for marker in PROVIDER_NO_DATA_MARKERS)
+
+    rate_limited_symbols: list[str] = []
+    provider_no_data_symbols: list[str] = []
+
+    if rate_limit_hit:
+        rate_limited_symbols = matched_symbols or missing_symbols or list(batch)
+
+    if no_data_hit:
+        provider_no_data_symbols = [
+            sym for sym in (matched_symbols or missing_symbols) if sym not in rate_limited_symbols
+        ]
+
+    provider_excerpt = "\n".join(line for line in provider_output.splitlines()[:8] if line.strip())
+
+    return {
+        "rate_limit_hit": rate_limit_hit,
+        "rate_limited_symbols": sorted(set(rate_limited_symbols)),
+        "provider_no_data_symbols": sorted(set(provider_no_data_symbols)),
+        "provider_output_excerpt": provider_excerpt,
+    }
 
 
 def _infer_requested_date_window(
@@ -115,7 +180,8 @@ def get_ohlcv(
     end: str | None = None,
     period: str = "1y",
     interval: str = "1d",
-) -> dict:
+    return_provider_output: bool = False,
+) -> dict | tuple[dict, str]:
     """
     일봉, 월봉 데이터 가져오기
         period : 1y, 1m
@@ -145,9 +211,17 @@ def get_ohlcv(
     else:
         download_kwargs["period"] = period
 
-    df = yf.download(**download_kwargs)
+    stdout_buffer = io.StringIO()
+    stderr_buffer = io.StringIO()
+    with redirect_stdout(stdout_buffer), redirect_stderr(stderr_buffer):
+        df = yf.download(**download_kwargs)
+    provider_output = "\n".join(
+        part.strip()
+        for part in (stdout_buffer.getvalue(), stderr_buffer.getvalue())
+        if part and part.strip()
+    )
     if df is None or df.empty:
-        return {}
+        return ({}, provider_output) if return_provider_output else {}
 
     out = {}
     if isinstance(df.columns, pd.MultiIndex):
@@ -178,7 +252,7 @@ def get_ohlcv(
             cols.insert(1, cols.pop(cols.index("Ticker")))
             out[ticker] = d[cols]
     
-    return out
+    return (out, provider_output) if return_provider_output else out
 
 
 
@@ -215,11 +289,16 @@ def store_ohlcv_to_mysql(
     user="root",
     password="1234",
     port=3306,
-    chunk_size: int = 100,
-    sleep: float = 0.0,
-    max_workers: int = 4,
-    max_retry: int = 2,
-    retry_backoff: float = 0.8,
+    chunk_size: int = 40,
+    sleep: float = 0.15,
+    max_workers: int = 2,
+    max_retry: int = 3,
+    retry_backoff: float = 1.5,
+    sleep_jitter_ratio: float = 0.25,
+    rate_limit_cooldown_sec: float = 0.0,
+    rate_limit_circuit_break_threshold: int = 1,
+    cooldown_chunk_size: int | None = None,
+    degrade_to_single_worker_on_rate_limit: bool = True,
     replace_requested_range: bool = True,
     return_stats: bool = False,
     progress_callback: Optional[Callable[[dict[str, Any]], None]] = None,
@@ -230,8 +309,6 @@ def store_ohlcv_to_mysql(
     - start/end가 주어지면 start/end 우선
     - start/end가 없으면 period 사용
     """
-    import time
-
     symbols = [s for s in symbols if s and str(s).strip()]
     if not symbols:
         return {
@@ -240,6 +317,22 @@ def store_ohlcv_to_mysql(
             "symbols_with_data": 0,
             "missing_symbols": [],
             "batch_errors": [],
+            "rate_limited_symbols": [],
+            "provider_no_data_symbols": [],
+            "provider_message_batches": [],
+            "cooldown_events": [],
+            "timing_breakdown": {
+                "fetch_sec": 0.0,
+                "delete_sec": 0.0,
+                "upsert_sec": 0.0,
+                "retry_sleep_sec": 0.0,
+                "cooldown_sleep_sec": 0.0,
+                "inter_batch_sleep_sec": 0.0,
+                "batch_count": 0,
+                "written_batch_count": 0,
+                "avg_fetch_sec_per_batch": 0.0,
+                "avg_rows_per_written_batch": 0.0,
+            },
         } if return_stats else 0
 
     db = MySQLClient(host, user, password, port)
@@ -298,36 +391,58 @@ def store_ohlcv_to_mysql(
         return rows, loaded_symbols
 
     def fetch_batch(batch_index: int, batch: list[str]) -> dict[str, Any]:
+        fetch_started = time.perf_counter()
         last_error: str | None = None
+        retry_sleep_sec = 0.0
         for attempt in range(max_retry + 1):
             try:
-                dfs = get_ohlcv(
+                dfs, provider_output = get_ohlcv(
                     list(batch),
                     start=start,
                     end=end,
                     period=period,
                     interval=interval,
+                    return_provider_output=True,
                 )
                 rows, loaded_symbols = rows_from_downloaded_frames(dfs, interval)
                 loaded_symbol_set = set(loaded_symbols)
                 missing_symbols = [sym for sym in batch if sym not in loaded_symbol_set]
+                provider_diag = _classify_provider_output(
+                    provider_output=provider_output,
+                    batch=batch,
+                    missing_symbols=missing_symbols,
+                )
                 return {
                     "batch_index": batch_index,
                     "rows": rows,
                     "loaded_symbols": loaded_symbols,
                     "missing_symbols": missing_symbols,
+                    "fetch_elapsed_sec": time.perf_counter() - fetch_started,
+                    "retry_sleep_sec": retry_sleep_sec,
+                    "rate_limit_hit": provider_diag["rate_limit_hit"],
+                    "rate_limited_symbols": provider_diag["rate_limited_symbols"],
+                    "provider_no_data_symbols": provider_diag["provider_no_data_symbols"],
+                    "provider_output_excerpt": provider_diag["provider_output_excerpt"],
                     "error": None,
                 }
             except Exception as exc:
                 last_error = str(exc)
                 if attempt < max_retry:
-                    time.sleep(retry_backoff * (attempt + 1))
+                    retry_sleep_sec += _sleep_with_jitter(retry_backoff * (attempt + 1), sleep_jitter_ratio)
 
         return {
             "batch_index": batch_index,
             "rows": [],
             "loaded_symbols": [],
             "missing_symbols": list(batch),
+            "fetch_elapsed_sec": time.perf_counter() - fetch_started,
+            "retry_sleep_sec": retry_sleep_sec,
+            "rate_limit_hit": any(marker in str(last_error).lower() for marker in RATE_LIMIT_MARKERS),
+            "rate_limited_symbols": list(batch)
+            if any(marker in str(last_error).lower() for marker in RATE_LIMIT_MARKERS)
+            else [],
+            "provider_no_data_symbols": [],
+            "provider_output_excerpt": "",
             "error": last_error,
         }
 
@@ -356,11 +471,22 @@ def store_ohlcv_to_mysql(
         """
 
         total_symbols = len(symbols)
-        total_batches = (total_symbols + chunk_size - 1) // chunk_size
+        total_batches = (total_symbols + max(chunk_size, 1) - 1) // max(chunk_size, 1)
         processed_symbols = 0
         symbols_with_data: set[str] = set()
         missing_symbols: set[str] = set()
+        rate_limited_symbols: set[str] = set()
+        provider_no_data_symbols: set[str] = set()
         batch_errors: list[dict[str, Any]] = []
+        provider_message_batches: list[dict[str, Any]] = []
+        cooldown_events: list[dict[str, Any]] = []
+        total_fetch_sec = 0.0
+        total_delete_sec = 0.0
+        total_upsert_sec = 0.0
+        total_retry_sleep_sec = 0.0
+        total_cooldown_sleep_sec = 0.0
+        total_inter_batch_sleep_sec = 0.0
+        total_written_batches = 0
 
         if progress_callback is not None:
             progress_callback(
@@ -374,21 +500,46 @@ def store_ohlcv_to_mysql(
                 }
             )
 
-        batches = list(enumerate(chunked(symbols, chunk_size), start=1))
-        worker_count = max(1, min(max_workers, len(batches)))
+        current_chunk_size = max(1, chunk_size)
+        current_worker_count = max(1, max_workers)
+        next_batch_index = 1
+        offset = 0
+        consecutive_rate_limit_batches = 0
 
-        with ThreadPoolExecutor(max_workers=worker_count) as executor:
-            future_map = {
-                executor.submit(fetch_batch, batch_index, list(batch)): (batch_index, list(batch))
-                for batch_index, batch in batches
-            }
+        while offset < total_symbols:
+            window_batches: list[tuple[int, list[str]]] = []
+            for _ in range(max(1, current_worker_count)):
+                batch = symbols[offset : offset + current_chunk_size]
+                if not batch:
+                    break
+                window_batches.append((next_batch_index, batch))
+                next_batch_index += 1
+                offset += len(batch)
 
-            for future in as_completed(future_map):
-                batch_index, batch = future_map[future]
-                result = future.result()
+            if not window_batches:
+                break
+
+            if len(window_batches) == 1:
+                batch_index, batch = window_batches[0]
+                window_results = [(batch_index, batch, fetch_batch(batch_index, batch))]
+            else:
+                with ThreadPoolExecutor(max_workers=len(window_batches)) as executor:
+                    future_map = {
+                        executor.submit(fetch_batch, batch_index, list(batch)): (batch_index, list(batch))
+                        for batch_index, batch in window_batches
+                    }
+                    window_results = []
+                    for future in as_completed(future_map):
+                        batch_index, batch = future_map[future]
+                        window_results.append((batch_index, batch, future.result()))
+
+            for batch_index, batch, result in sorted(window_results, key=lambda item: item[0]):
                 rows = result["rows"]
+                total_fetch_sec += float(result.get("fetch_elapsed_sec") or 0.0)
+                total_retry_sleep_sec += float(result.get("retry_sleep_sec") or 0.0)
                 if rows:
                     if replace_requested_range and requested_end is not None:
+                        delete_started = time.perf_counter()
                         _delete_ohlcv_rows(
                             db,
                             symbols=result["loaded_symbols"],
@@ -396,11 +547,25 @@ def store_ohlcv_to_mysql(
                             start=requested_start,
                             end=requested_end,
                         )
+                        total_delete_sec += time.perf_counter() - delete_started
+                    upsert_started = time.perf_counter()
                     db.executemany(upsert_sql, rows)
+                    total_upsert_sec += time.perf_counter() - upsert_started
                     inserted += len(rows)
+                    total_written_batches += 1
 
                 symbols_with_data.update(result["loaded_symbols"])
                 missing_symbols.update(result["missing_symbols"])
+                rate_limited_symbols.update(result.get("rate_limited_symbols") or [])
+                provider_no_data_symbols.update(result.get("provider_no_data_symbols") or [])
+                if result.get("provider_output_excerpt"):
+                    provider_message_batches.append(
+                        {
+                            "batch_index": batch_index,
+                            "symbols": batch,
+                            "message_excerpt": result["provider_output_excerpt"],
+                        }
+                    )
                 if result["error"]:
                     batch_errors.append(
                         {
@@ -422,21 +587,76 @@ def store_ohlcv_to_mysql(
                             "rows_written": inserted,
                             "symbols_with_data": len(symbols_with_data),
                             "missing_symbols": len(missing_symbols),
+                            "rate_limited_symbols": len(rate_limited_symbols),
                         }
                     )
 
-                if sleep > 0:
-                    time.sleep(sleep)
+            window_rate_limit_hits = sum(
+                1 for _, _, result in window_results if bool(result.get("rate_limit_hit"))
+            )
+            if window_rate_limit_hits:
+                consecutive_rate_limit_batches += window_rate_limit_hits
+                if degrade_to_single_worker_on_rate_limit:
+                    current_worker_count = 1
+                if cooldown_chunk_size is not None:
+                    current_chunk_size = max(1, min(current_chunk_size, cooldown_chunk_size))
+                if (
+                    rate_limit_cooldown_sec > 0
+                    and consecutive_rate_limit_batches >= max(1, rate_limit_circuit_break_threshold)
+                ):
+                    cooldown_event = {
+                        "after_batch_index": window_results[-1][0],
+                        "cooldown_sec": rate_limit_cooldown_sec,
+                        "rate_limit_batches": window_rate_limit_hits,
+                        "current_chunk_size": current_chunk_size,
+                        "current_max_workers": current_worker_count,
+                    }
+                    cooldown_events.append(cooldown_event)
+                    if progress_callback is not None:
+                        progress_callback(
+                            {
+                                "event": "rate_limit_cooldown",
+                                **cooldown_event,
+                                "total_symbols": total_symbols,
+                                "processed_symbols": processed_symbols,
+                            }
+                        )
+                    total_cooldown_sleep_sec += _sleep_with_jitter(rate_limit_cooldown_sec, sleep_jitter_ratio)
+            else:
+                consecutive_rate_limit_batches = 0
+
+            total_inter_batch_sleep_sec += _sleep_with_jitter(sleep, sleep_jitter_ratio)
 
     finally:
         db.close()
 
+    total_completed_batches = next_batch_index - 1
     stats = {
         "rows_written": inserted,
         "symbols_requested": total_symbols,
         "symbols_with_data": len(symbols_with_data),
         "missing_symbols": sorted(missing_symbols),
         "batch_errors": batch_errors,
+        "rate_limited_symbols": sorted(rate_limited_symbols),
+        "provider_no_data_symbols": sorted(provider_no_data_symbols),
+        "provider_message_batches": provider_message_batches,
+        "cooldown_events": cooldown_events,
+        "timing_breakdown": {
+            "fetch_sec": round(total_fetch_sec, 3),
+            "delete_sec": round(total_delete_sec, 3),
+            "upsert_sec": round(total_upsert_sec, 3),
+            "retry_sleep_sec": round(total_retry_sleep_sec, 3),
+            "cooldown_sleep_sec": round(total_cooldown_sleep_sec, 3),
+            "inter_batch_sleep_sec": round(total_inter_batch_sleep_sec, 3),
+            "batch_count": total_completed_batches,
+            "written_batch_count": total_written_batches,
+            "avg_fetch_sec_per_batch": round(total_fetch_sec / total_completed_batches, 3)
+            if total_completed_batches
+            else 0.0,
+            "avg_rows_per_written_batch": round(inserted / total_written_batches, 3)
+            if total_written_batches
+            else 0.0,
+        },
     }
     return stats if return_stats else inserted
 

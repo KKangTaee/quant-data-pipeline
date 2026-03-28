@@ -18,6 +18,12 @@
   - 질의/설계/분석 결과 로그
 - `.note/finance/DAILY_MARKET_UPDATE_RATE_LIMIT_ANALYSIS_20260328.md`
   - `Daily Market Update`의 yfinance rate-limit 재현 결과와 first-pass 최적화 방향 분석 문서
+- `.note/finance/DAILY_MARKET_UPDATE_RATE_LIMIT_IMPLEMENTATION_20260328.md`
+  - `Daily Market Update` rate-limit 완화를 위한 1차/2차/3차 구현 요약과 검증 문서
+- `.note/finance/DAILY_MARKET_UPDATE_SPEED_OPTIMIZATION_PLAN_20260328.md`
+  - 안정화 이후 속도 최적화 2차 계획 문서
+- `.note/finance/DAILY_MARKET_UPDATE_SPEED_OPTIMIZATION_IMPLEMENTATION_20260328.md`
+  - execution breakdown, managed-fast profile, source별 profile 분리 구현 요약 문서
 
 ---
 

@@ -3535,3 +3535,51 @@ Do not copy full chat transcripts. Keep only the durable result.
     - smaller chunk / lower concurrency / jitter
     - rate-limit cooldown / circuit breaker
     - better diagnostics separating provider no-data from true rate limiting
+
+### 2026-03-28 - Daily Market Update rate-limit mitigation implemented as managed-safe default plus raw-heavy fallback
+- Request topic:
+  - implement the proposed `1차 -> 2차 -> 3차` optimization set for `Daily Market Update`, then leave the system ready for user testing
+- Interpreted goal:
+  - keep broad daily price refreshes from degrading into repeated rate-limit failures, while preserving operator visibility into what failed and why
+- Result:
+  - changed the default Daily Market Update source to `Profile Filtered Stocks + ETFs`
+  - added execution profiles:
+    - `managed_safe`
+    - `raw_heavy`
+  - hardened `store_ohlcv_to_mysql(...)` with:
+    - smaller batches
+    - single-worker safe mode
+    - retry backoff
+    - sleep jitter
+    - rate-limit cooldown events
+  - added provider-message based diagnostics so results now distinguish:
+    - `rate_limited_symbols`
+    - `provider_no_data_symbols`
+  - added optional raw-source filtering for non-plain symbols
+  - added result-level replay payloads for operator reruns
+- Durable output:
+  - `.note/finance/DAILY_MARKET_UPDATE_RATE_LIMIT_IMPLEMENTATION_20260328.md`
+
+### 2026-03-28 - Daily Market Update should move from pure stabilization to measured speed optimization
+- Request topic:
+  - after a successful but slow run (~2400 sec), create a second-pass speed optimization plan and implement it in three steps
+- Interpreted goal:
+  - preserve the new rate-limit stability while improving runtime for managed broad refreshes
+- Result:
+  - added a planning note for the second-pass speed optimization
+  - implemented timing breakdown metrics in the OHLCV writer so slow runs can now be decomposed into:
+    - fetch
+    - delete
+    - upsert
+    - retry sleep
+    - cooldown sleep
+    - inter-batch sleep
+  - added a new `managed_fast` execution profile
+  - split source-to-profile routing so:
+    - `Profile Filtered Stocks + ETFs` uses `managed_fast`
+    - raw NYSE sources use `raw_heavy`
+    - narrower/manual sources use `managed_safe`
+  - surfaced the timing breakdown in the Streamlit result diagnostics
+- Durable output:
+  - `.note/finance/DAILY_MARKET_UPDATE_SPEED_OPTIMIZATION_PLAN_20260328.md`
+  - `.note/finance/DAILY_MARKET_UPDATE_SPEED_OPTIMIZATION_IMPLEMENTATION_20260328.md`

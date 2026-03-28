@@ -37,6 +37,7 @@ from app.jobs.run_history import (
     load_run_history,
 )
 from app.jobs.symbol_sources import resolve_symbol_source
+from app.jobs.symbol_sources import filter_non_plain_symbols
 from app.web.pages.backtest import QUALITY_STRICT_PRESETS, render_backtest_tab
 
 
@@ -307,7 +308,20 @@ def _build_progress_callback(job: dict[str, Any], *, label: str) -> Any:
                 "Processed "
                 f"`{processed_symbols}/{total_symbols}` symbols | "
                 f"batch `{event.get('batch_index', 0)}/{event.get('total_batches', 0)}` | "
-                f"rows written `{event.get('rows_written', 0)}`"
+                f"rows written `{event.get('rows_written', 0)}` | "
+                f"rate-limited `{event.get('rate_limited_symbols', 0)}`"
+            )
+            return
+
+        if action in {"collect_ohlcv", "daily_market_update"} and event_type == "rate_limit_cooldown":
+            progress_text.warning(
+                f"`{label}` detected provider rate limiting. Applying cooldown before the next batch window."
+            )
+            progress_meta.caption(
+                f"Processed `{event.get('processed_symbols', 0)}/{event.get('total_symbols', symbol_count)}` symbols | "
+                f"cooldown `{event.get('cooldown_sec', 0)}` sec | "
+                f"next chunk `{event.get('current_chunk_size', 0)}` | "
+                f"workers `{event.get('current_max_workers', 0)}`"
             )
             return
 
@@ -390,7 +404,50 @@ def _render_result_summary(result: JobResult) -> None:
     with st.expander("Result Details", expanded=False):
         st.json(result)
 
-    steps = result.get("details", {}).get("steps")
+    details = result.get("details") or {}
+    if any(
+        details.get(key)
+        for key in (
+            "rate_limited_symbols",
+            "provider_no_data_symbols",
+            "excluded_symbols",
+            "cooldown_events",
+            "rerun_rate_limited_payload",
+            "rerun_missing_payload",
+            "timing_breakdown",
+        )
+    ):
+        with st.expander("OHLCV Diagnostics", expanded=False):
+            diag_col1, diag_col2, diag_col3, diag_col4 = st.columns(4)
+            diag_col1.metric("Rate-Limited", len(details.get("rate_limited_symbols") or []))
+            diag_col2.metric("Provider No-Data", len(details.get("provider_no_data_symbols") or []))
+            diag_col3.metric("Filtered Symbols", len(details.get("excluded_symbols") or []))
+            diag_col4.metric("Cooldown Events", len(details.get("cooldown_events") or []))
+            timing_breakdown = details.get("timing_breakdown") or {}
+            if timing_breakdown:
+                st.caption("Timing Breakdown")
+                time_col1, time_col2, time_col3, time_col4 = st.columns(4)
+                time_col1.metric("Fetch (sec)", timing_breakdown.get("fetch_sec", 0.0))
+                time_col2.metric("Delete (sec)", timing_breakdown.get("delete_sec", 0.0))
+                time_col3.metric("Upsert (sec)", timing_breakdown.get("upsert_sec", 0.0))
+                time_col4.metric("Cooldown (sec)", timing_breakdown.get("cooldown_sleep_sec", 0.0))
+                time_col5, time_col6, time_col7, time_col8 = st.columns(4)
+                time_col5.metric("Retry Sleep (sec)", timing_breakdown.get("retry_sleep_sec", 0.0))
+                time_col6.metric("Inter-batch Sleep (sec)", timing_breakdown.get("inter_batch_sleep_sec", 0.0))
+                time_col7.metric("Batch Count", timing_breakdown.get("batch_count", 0))
+                time_col8.metric("Avg Fetch / Batch", timing_breakdown.get("avg_fetch_sec_per_batch", 0.0))
+            if details.get("rerun_rate_limited_payload"):
+                st.caption("Retry payload for rate-limited symbols")
+                st.code(details["rerun_rate_limited_payload"], language="text")
+            if details.get("rerun_missing_payload"):
+                st.caption("Retry payload for missing-provider symbols")
+                st.code(details["rerun_missing_payload"], language="text")
+            provider_message_batches = details.get("provider_message_batches") or []
+            if provider_message_batches:
+                st.caption("Provider message excerpts")
+                st.json(provider_message_batches[:5])
+
+    steps = details.get("steps")
     if steps:
         with st.expander("Pipeline Steps", expanded=False):
             rows = []
@@ -661,6 +718,24 @@ def _normalize_ohlcv_window(period: str, start: str | None, end: str | None) -> 
     return period, clean_start, clean_end
 
 
+def _resolve_daily_market_execution_profile(source_mode: str) -> tuple[str, str]:
+    raw_source_modes = {"NYSE Stocks", "NYSE ETFs", "NYSE Stocks + ETFs"}
+    if source_mode in raw_source_modes:
+        return (
+            "raw_heavy",
+            "Execution profile: `raw_heavy` | smaller batches, single-worker mode, longer cooldown, raw-universe operator sweep.",
+        )
+    if source_mode == "Profile Filtered Stocks + ETFs":
+        return (
+            "managed_fast",
+            "Execution profile: `managed_fast` | larger managed-universe batches, shorter idle sleep, lighter cooldown.",
+        )
+    return (
+        "managed_safe",
+        "Execution profile: `managed_safe` | moderate batching for narrower or manual universes with built-in cooldown.",
+    )
+
+
 def _render_ingestion_console() -> None:
     _render_running_banner()
     st.info(
@@ -686,15 +761,42 @@ def _render_ingestion_console() -> None:
             st.markdown("### Daily Market Update")
             st.write("Refresh price history for the current operating universe.")
             st.caption("Recommended cadence: every trading day after market close or before the next backtest/data sync.")
-            st.caption("Recommended symbol source: `NYSE Stocks + ETFs` for broad market refresh, or `Profile Filtered Stocks + ETFs` for the managed strategy universe.")
-            st.caption("Current defaults: `NYSE Stocks + ETFs`, `1d`, `1d`.")
+            st.caption(
+                "Recommended symbol source: use `Profile Filtered Stocks + ETFs` for routine refreshes. "
+                "Use raw `NYSE Stocks + ETFs` only for broad operator sweeps."
+            )
+            st.caption("Current defaults: `Profile Filtered Stocks + ETFs`, `1d`, `1d`.")
             st.caption("Writes to: `finance_price.nyse_price_history`")
             daily_symbol_result = _render_symbol_source_inputs(
                 "daily_market",
                 "Daily Market Symbols",
-                default_source_mode="NYSE Stocks + ETFs",
+                default_source_mode="Profile Filtered Stocks + ETFs",
             )
             daily_symbols_input = daily_symbol_result["symbols"]
+            daily_source_mode = daily_symbol_result.get("source_mode") or "Manual"
+            daily_raw_source_modes = {"NYSE Stocks", "NYSE ETFs", "NYSE Stocks + ETFs"}
+            daily_filter_non_plain = st.checkbox(
+                "Exclude special share-class / non-plain symbols",
+                value=True,
+                key="daily_filter_non_plain_symbols",
+                help=(
+                    "When raw NYSE universes are selected, exclude symbols such as preferred/unit/special share classes. "
+                    "This usually reduces noisy provider failures and wasted requests."
+                ),
+            )
+            daily_filtered_symbols: list[str] = list(daily_symbols_input)
+            daily_excluded_symbols: list[str] = []
+            if daily_filter_non_plain and daily_source_mode in daily_raw_source_modes:
+                daily_filtered_symbols, daily_excluded_symbols = filter_non_plain_symbols(daily_symbols_input)
+                if daily_excluded_symbols:
+                    st.info(
+                        "Filtered non-plain symbols for provider stability: "
+                        f"`{len(daily_excluded_symbols)}` excluded, `{len(daily_filtered_symbols)}` remain."
+                    )
+                    st.caption(f"Excluded sample: {', '.join(daily_excluded_symbols[:10])}")
+            daily_symbols_input = daily_filtered_symbols
+            daily_execution_profile, daily_profile_caption = _resolve_daily_market_execution_profile(daily_source_mode)
+            st.caption(daily_profile_caption)
             daily_col1, daily_col2 = st.columns(2)
             daily_period_input = daily_col1.selectbox("Daily Period", PERIOD_PRESETS, index=0, key="daily_period_input")
             daily_interval_input = daily_col2.selectbox("Daily Interval", ["1d", "1wk", "1mo"], index=0, key="daily_interval_input")
@@ -729,18 +831,25 @@ def _render_ingestion_console() -> None:
                             "end": daily_resolved_end,
                             "period": daily_resolved_period,
                             "interval": daily_interval_input,
+                            "execution_profile": daily_execution_profile,
+                            "excluded_symbols": daily_excluded_symbols,
                         },
                         "run_metadata": _job_metadata(
                             pipeline_type="daily_market_update",
                             execution_mode="operational",
                             symbol_source=daily_symbol_result.get("source_mode"),
                             symbol_count=len(daily_symbols_input),
-                            execution_context="Routine daily price-history refresh for the selected operating universe.",
+                            execution_context=(
+                                "Routine daily price-history refresh for the selected operating universe. "
+                                "Managed universes use managed execution profiles; raw NYSE sweeps use the heavy profile."
+                            ),
                             input_params={
                                 "start": daily_resolved_start,
                                 "end": daily_resolved_end,
                                 "period": daily_resolved_period,
                                 "interval": daily_interval_input,
+                                "execution_profile": daily_execution_profile,
+                                "exclude_non_plain_symbols": daily_filter_non_plain,
                             },
                         ),
                     }

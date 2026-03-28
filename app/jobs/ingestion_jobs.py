@@ -14,6 +14,44 @@ from finance.data.asset_profile import collect_and_store_asset_profiles
 
 JobResult = dict[str, Any]
 SYMBOL_PATTERN = re.compile(r"^[A-Z0-9.\-_=^]+$")
+OHLCV_EXECUTION_PROFILES: dict[str, dict[str, Any]] = {
+    "managed_fast": {
+        "chunk_size": 60,
+        "sleep": 0.05,
+        "max_workers": 1,
+        "max_retry": 2,
+        "retry_backoff": 1.0,
+        "sleep_jitter_ratio": 0.2,
+        "rate_limit_cooldown_sec": 12.0,
+        "rate_limit_circuit_break_threshold": 1,
+        "cooldown_chunk_size": 30,
+        "degrade_to_single_worker_on_rate_limit": True,
+    },
+    "managed_safe": {
+        "chunk_size": 40,
+        "sleep": 0.15,
+        "max_workers": 1,
+        "max_retry": 3,
+        "retry_backoff": 1.5,
+        "sleep_jitter_ratio": 0.3,
+        "rate_limit_cooldown_sec": 20.0,
+        "rate_limit_circuit_break_threshold": 1,
+        "cooldown_chunk_size": 20,
+        "degrade_to_single_worker_on_rate_limit": True,
+    },
+    "raw_heavy": {
+        "chunk_size": 25,
+        "sleep": 0.35,
+        "max_workers": 1,
+        "max_retry": 4,
+        "retry_backoff": 2.5,
+        "sleep_jitter_ratio": 0.35,
+        "rate_limit_cooldown_sec": 30.0,
+        "rate_limit_circuit_break_threshold": 1,
+        "cooldown_chunk_size": 10,
+        "degrade_to_single_worker_on_rate_limit": True,
+    },
+}
 
 
 def _now_str() -> str:
@@ -85,6 +123,13 @@ def _build_result(
     }
 
 
+def _resolve_ohlcv_execution_profile(execution_profile: str) -> tuple[str, dict[str, Any]]:
+    normalized = str(execution_profile or "managed_safe").strip().lower()
+    if normalized not in OHLCV_EXECUTION_PROFILES:
+        normalized = "managed_safe"
+    return normalized, dict(OHLCV_EXECUTION_PROFILES[normalized])
+
+
 def _merge_step_failures(steps: list[JobResult], invalid_symbols: list[str] | None = None) -> list[str]:
     failures: list[str] = list(invalid_symbols or [])
     for step in steps:
@@ -108,6 +153,8 @@ def run_collect_ohlcv(
     end: str | None = None,
     period: str = "1y",
     interval: str = "1d",
+    execution_profile: str = "managed_safe",
+    excluded_symbols: Iterable[str] | None = None,
     progress_callback: Callable[[dict[str, Any]], None] | None = None,
 ) -> JobResult:
     job_name = "collect_ohlcv"
@@ -130,6 +177,9 @@ def run_collect_ohlcv(
             message="No valid symbols provided.",
         )
 
+    normalized_profile, writer_kwargs = _resolve_ohlcv_execution_profile(execution_profile)
+    excluded_symbols_list = parse_symbols(excluded_symbols)
+
     try:
         write_stats = store_ohlcv_to_mysql(
             parsed,
@@ -139,10 +189,15 @@ def run_collect_ohlcv(
             interval=interval,
             return_stats=True,
             progress_callback=progress_callback,
+            **writer_kwargs,
         )
         rows_written = int(write_stats["rows_written"])
         missing_symbols = list(write_stats.get("missing_symbols") or [])
         symbols_with_data = int(write_stats.get("symbols_with_data") or 0)
+        provider_no_data_symbols = list(write_stats.get("provider_no_data_symbols") or [])
+        rate_limited_symbols = list(write_stats.get("rate_limited_symbols") or [])
+        cooldown_events = list(write_stats.get("cooldown_events") or [])
+        timing_breakdown = dict(write_stats.get("timing_breakdown") or {})
         all_failed_symbols = invalid_symbols + [sym for sym in missing_symbols if sym not in invalid_symbols]
         finished_at = _now_str()
         if rows_written > 0:
@@ -158,6 +213,10 @@ def run_collect_ohlcv(
             msg += f" Missing provider data for: {', '.join(missing_symbols[:10])}."
         if invalid_symbols:
             msg += f" Invalid symbols ignored: {', '.join(invalid_symbols[:10])}."
+        if rate_limited_symbols:
+            msg += f" Rate limit detected for: {', '.join(rate_limited_symbols[:10])}."
+        if excluded_symbols_list:
+            msg += f" Filtered non-plain symbols: {', '.join(excluded_symbols_list[:10])}."
 
         return _build_result(
             job_name=job_name,
@@ -175,9 +234,19 @@ def run_collect_ohlcv(
                 "end": end,
                 "period": period,
                 "interval": interval,
+                "execution_profile": normalized_profile,
+                "write_settings": writer_kwargs,
                 "symbols_with_data": symbols_with_data,
                 "missing_symbols": missing_symbols,
+                "provider_no_data_symbols": provider_no_data_symbols,
+                "rate_limited_symbols": rate_limited_symbols,
+                "excluded_symbols": excluded_symbols_list,
+                "cooldown_events": cooldown_events,
+                "timing_breakdown": timing_breakdown,
                 "batch_errors": write_stats.get("batch_errors") or [],
+                "provider_message_batches": write_stats.get("provider_message_batches") or [],
+                "rerun_missing_payload": ",".join(missing_symbols),
+                "rerun_rate_limited_payload": ",".join(rate_limited_symbols),
             },
         )
     except Exception as exc:
@@ -197,6 +266,10 @@ def run_collect_ohlcv(
                 "end": end,
                 "period": period,
                 "interval": interval,
+                "execution_profile": normalized_profile,
+                "write_settings": writer_kwargs,
+                "excluded_symbols": excluded_symbols_list,
+                "timing_breakdown": {},
             },
         )
 
@@ -544,6 +617,8 @@ def run_daily_market_update(
     end: str | None = None,
     period: str = "1y",
     interval: str = "1d",
+    execution_profile: str = "managed_safe",
+    excluded_symbols: Iterable[str] | None = None,
     progress_callback: Callable[[dict[str, Any]], None] | None = None,
 ) -> JobResult:
     result = run_collect_ohlcv(
@@ -552,6 +627,8 @@ def run_daily_market_update(
         end=end,
         period=period,
         interval=interval,
+        execution_profile=execution_profile,
+        excluded_symbols=excluded_symbols,
         progress_callback=progress_callback,
     )
     result["job_name"] = "daily_market_update"

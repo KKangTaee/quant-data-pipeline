@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from finance.data.asset_profile import load_symbols_from_asset_profile
@@ -7,6 +8,7 @@ from finance.data.db.mysql import MySQLClient
 
 
 SourceResult = dict[str, Any]
+PLAIN_MARKET_SYMBOL_PATTERN = re.compile(r"^[A-Z]{1,5}$")
 
 
 def _query_symbols(table: str) -> list[str]:
@@ -29,6 +31,21 @@ def _merge_unique(*groups: list[str]) -> list[str]:
             seen.add(sym)
             out.append(sym)
     return out
+
+
+def is_plain_market_symbol(symbol: str) -> bool:
+    return bool(PLAIN_MARKET_SYMBOL_PATTERN.fullmatch(str(symbol).strip().upper()))
+
+
+def filter_non_plain_symbols(symbols: list[str]) -> tuple[list[str], list[str]]:
+    filtered: list[str] = []
+    excluded: list[str] = []
+    for sym in symbols:
+        if is_plain_market_symbol(sym):
+            filtered.append(sym)
+        else:
+            excluded.append(sym)
+    return filtered, excluded
 
 
 def resolve_symbol_source(source_mode: str, manual_symbols: list[str]) -> SourceResult:

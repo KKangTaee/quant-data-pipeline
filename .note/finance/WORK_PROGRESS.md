@@ -1550,3 +1550,57 @@ Keep entries append-only and concise.
   - because `yfinance` can return partial frames while only surfacing symbol failures in provider output
 - Added a durable analysis / direction document:
   - `.note/finance/DAILY_MARKET_UPDATE_RATE_LIMIT_ANALYSIS_20260328.md`
+
+### 2026-03-28 - Daily Market Update rate-limit mitigation first pass implemented
+
+- Implemented first-pass stabilization for `Daily Market Update`.
+- Changed the UI default source from raw `NYSE Stocks + ETFs` to managed `Profile Filtered Stocks + ETFs`.
+- Added OHLCV execution profiles:
+  - `managed_safe`
+  - `raw_heavy`
+- Hardened the yfinance write path with:
+  - smaller chunking
+  - single-worker safe mode
+  - retry backoff
+  - sleep jitter
+  - rate-limit cooldown events
+- Added provider-message diagnostics so result details now track:
+  - `rate_limited_symbols`
+  - `provider_no_data_symbols`
+  - `provider_message_batches`
+  - `cooldown_events`
+- Added raw-source optional filtering for non-plain symbols such as preferred/unit/special share classes.
+- Added operator replay support in the result summary via:
+  - `rerun_missing_payload`
+  - `rerun_rate_limited_payload`
+- Added an implementation summary note:
+  - `.note/finance/DAILY_MARKET_UPDATE_RATE_LIMIT_IMPLEMENTATION_20260328.md`
+
+### 2026-03-28 - Daily Market Update speed optimization second pass implemented
+
+- Added a dedicated speed-optimization planning note after user validation showed a successful but slow broad run (~2400 sec).
+- Implemented timing breakdown metrics in `store_ohlcv_to_mysql(...)`:
+  - fetch
+  - delete
+  - upsert
+  - retry sleep
+  - cooldown sleep
+  - inter-batch sleep
+  - batch counts
+- Surfaced the timing breakdown in the Streamlit `OHLCV Diagnostics` result panel.
+- Added a new `managed_fast` execution profile for broad managed universes.
+- Split execution profile routing by source:
+  - `Profile Filtered Stocks + ETFs` -> `managed_fast`
+  - raw NYSE sources -> `raw_heavy`
+  - narrower/manual/profile-filtered single-side sources -> `managed_safe`
+- Added a speed-optimization implementation note:
+  - `.note/finance/DAILY_MARKET_UPDATE_SPEED_OPTIMIZATION_IMPLEMENTATION_20260328.md`
+
+### 2026-03-28 - Backtest end-date default switched to today
+
+- Replaced the hardcoded backtest end-date default (`2026-03-20`) with a shared `DEFAULT_BACKTEST_END_DATE = date.today()` constant.
+- Applied the change across:
+  - single-strategy forms
+  - compare form
+  - history/prefill fallback path
+- This keeps new backtest runs aligned with the current calendar date by default.
