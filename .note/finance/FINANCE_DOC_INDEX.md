@@ -24,6 +24,42 @@
   - 안정화 이후 속도 최적화 2차 계획 문서
 - `.note/finance/DAILY_MARKET_UPDATE_SPEED_OPTIMIZATION_IMPLEMENTATION_20260328.md`
   - execution breakdown, managed-fast profile, source별 profile 분리 구현 요약 문서
+- `.note/finance/phase7/PHASE7_QUARTERLY_COVERAGE_AND_STATEMENT_PIT_HARDENING_PLAN.md`
+  - Phase 7 전체 계획 문서
+- `.note/finance/phase7/PHASE7_CURRENT_CHAPTER_TODO.md`
+  - Phase 7 현재 챕터 TODO 보드
+- `.note/finance/phase7/PHASE7_STATEMENT_SOURCE_PAYLOAD_INSPECTION.md`
+  - EDGAR statement source가 실제로 돌려주는 fact/filing/timing field reality check 문서
+- `.note/finance/phase7/PHASE7_RAW_STATEMENT_LEDGER_REVIEW_AND_DECISION.md`
+  - raw statement ledger의 역할 점검과 유지/수정 결정 문서
+- `.note/finance/phase7/PHASE7_QUARTERLY_COVERAGE_HARDENING_FIRST_PASS.md`
+  - quarterly late-start를 줄이기 위한 first-pass 코드 변경과 coverage 회복 결과 문서
+- `.note/finance/phase7/PHASE7_QUARTERLY_RERUN_VALIDATION.md`
+  - quarterly strict prototype rerun validation 결과 문서
+- `.note/finance/phase7/PHASE7_SUPPLEMENTARY_POLISH_PASS.md`
+  - weekend/holiday-aware preflight와 quarterly shadow coverage preview를 정리한 실사용성 보강 문서
+- `.note/finance/phase7/PHASE7_COMPLETION_SUMMARY.md`
+  - Phase 7 implementation closeout 요약 문서
+- `.note/finance/phase7/PHASE7_NEXT_PHASE_PREPARATION.md`
+  - Phase 8 kickoff 전 다음 방향 정리 문서
+- `.note/finance/phase7/PHASE7_TEST_CHECKLIST.md`
+  - Phase 7 manual validation checklist
+- `.note/finance/phase8/PHASE8_QUARTERLY_STRATEGY_FAMILY_EXPANSION_PLAN.md`
+  - Phase 8 전체 계획 문서
+- `.note/finance/phase8/PHASE8_CURRENT_CHAPTER_TODO.md`
+  - Phase 8 현재 챕터 TODO 보드
+- `.note/finance/phase8/PHASE8_QUARTERLY_FAMILY_SCOPE_AND_COMPARE_DECISION.md`
+  - quarterly strict family 3종의 naming / research-only 역할 / compare exposure 정책 문서
+- `.note/finance/phase8/PHASE8_QUARTERLY_VALUE_AND_MULTI_FACTOR_FIRST_PASS.md`
+  - quarterly value / quality+value prototype first-pass 구현 기록 문서
+- `.note/finance/phase8/PHASE8_QUARTERLY_VALIDATION_FIRST_PASS.md`
+  - quarterly family first-pass smoke / preset / compare 검증 문서
+- `.note/finance/phase8/PHASE8_PROMOTION_READINESS_CRITERIA_DRAFT.md`
+  - quarterly strict family의 research-only 유지 기준과 향후 promotion 판단 기준 초안
+- `.note/finance/phase8/PHASE8_TEST_CHECKLIST.md`
+  - Phase 8 manual validation checklist
+- `.note/finance/phase8/PHASE8_CHECKLIST_PREVALIDATION.md`
+  - assistant가 Phase 8 checklist를 먼저 자동 점검한 결과 문서
 
 ---
 
@@ -258,7 +294,67 @@
 - `.note/finance/phase5/PHASE5_STRATEGY_LIBRARY_AND_RISK_OVERLAY_PLAN.md`
   - strict factor strategy library 확장과 risk overlay를 다음 major phase의 공식 방향으로 정리한 문서
 - `.note/finance/phase5/PHASE5_CURRENT_CHAPTER_TODO.md`
-  - Phase 5 첫 챕터 TODO 보드
+  - Phase 5 first chapter TODO 보드
+- `.note/finance/phase5/PHASE5_COMPLETION_SUMMARY.md`
+  - Phase 5 first chapter 종료 요약 문서
+- `.note/finance/phase5/PHASE5_NEXT_PHASE_PREPARATION.md`
+  - Phase 5 이후 next-phase 후보와 kickoff 기준 정리 문서
+- `.note/finance/phase5/PHASE5_STRICT_FAMILY_TEST_CHECKLIST.md`
+  - Phase 5 결과물을 수동 검증하기 위한 테스트 체크리스트
+
+---
+
+## 7. Phase 6 상위 문서
+
+- `.note/finance/phase6/PHASE6_OVERLAY_AND_QUARTERLY_EXPANSION_PLAN.md`
+  - second overlay와 quarterly strict family entry/validation을 이번 chapter의 공식 방향으로 고정한 문서
+- `.note/finance/phase6/PHASE6_CURRENT_CHAPTER_TODO.md`
+  - Phase 6 current chapter TODO 보드
+- `.note/finance/phase6/PHASE6_MARKET_REGIME_OVERLAY_REQUIREMENTS.md`
+  - second overlay로 선택된 `Market Regime Overlay`의 first-pass rule을 고정한 문서
+- `.note/finance/phase6/PHASE6_MARKET_REGIME_OVERLAY_FIRST_PASS.md`
+  - strict family와 quarterly prototype에 market regime overlay를 연결한 first-pass 구현 문서
+- `.note/finance/phase6/PHASE6_MARKET_REGIME_OVERLAY_VALIDATION.md`
+  - annual strict family small-smoke 기준 on/off validation 결과 문서
+- `.note/finance/phase6/PHASE6_STRICT_QUARTERLY_ENTRY_CRITERIA.md`
+  - strict quarterly family first candidate와 research-only semantics를 고정한 문서
+- `.note/finance/phase6/PHASE6_STRICT_QUARTERLY_FIRST_PASS_VALIDATION.md`
+  - `Quality Snapshot (Strict Quarterly Prototype)` first-pass 검증 문서
+- `.note/finance/phase6/PHASE6_TEST_CHECKLIST.md`
+  - Phase 6 market regime overlay / quarterly prototype 수동 테스트 체크리스트
+- `.note/finance/phase6/PHASE6_COMPLETION_SUMMARY.md`
+  - Phase 6 종료 요약 문서
+- `.note/finance/phase6/PHASE6_NEXT_PHASE_PREPARATION.md`
+  - Phase 7 kickoff 전 준비 문서
+
+---
+
+## 8. Phase 7 상위 문서
+
+- `.note/finance/phase7/PHASE7_QUARTERLY_COVERAGE_AND_STATEMENT_PIT_HARDENING_PLAN.md`
+  - quarterly strict family late-start 문제와 statement PIT hardening을 다음 major phase 방향으로 고정한 문서
+- `.note/finance/phase7/PHASE7_CURRENT_CHAPTER_TODO.md`
+  - Phase 7 current chapter TODO 보드
+- `.note/finance/phase7/PHASE7_SUPPLEMENTARY_POLISH_PASS.md`
+  - Phase 7 first pass 이후 practical UX/runtime 보강 사항 정리 문서
+- `.note/finance/phase7/PHASE7_COMPLETION_SUMMARY.md`
+  - Phase 7 implementation closeout 요약 문서
+- `.note/finance/phase7/PHASE7_NEXT_PHASE_PREPARATION.md`
+  - Phase 8 kickoff 전 다음 방향 정리 문서
+
+---
+
+## 9. Phase 8 상위 문서
+
+- `.note/finance/phase8/PHASE8_QUARTERLY_STRATEGY_FAMILY_EXPANSION_PLAN.md`
+  - quarterly strict strategy family를 quality/value/quality+value research library로 확장하기 위한 계획 문서
+- `.note/finance/phase8/PHASE8_CURRENT_CHAPTER_TODO.md`
+  - Phase 8 current chapter TODO 보드
+
+---
+
+## 10. Phase 5 세부 구현 문서
+
 - `.note/finance/phase5/PHASE5_BASELINE_STRICT_FAMILY_COMPARATIVE_RESEARCH.md`
   - strict annual family의 canonical compare/single baseline을 고정한 문서
 - `.note/finance/phase5/PHASE5_COMPARE_ADVANCED_INPUT_PARITY_FIRST_PASS.md`
@@ -281,10 +377,14 @@
   - quarterly strict family를 언제 여는 것이 맞는지 review한 문서
 - `.note/finance/phase5/PHASE5_SECOND_OVERLAY_CANDIDATE_REVIEW.md`
   - first overlay 다음 후보 overlay 우선순위를 정리한 문서
+- `.note/finance/phase5/PHASE5_COMPLETION_SUMMARY.md`
+  - Phase 5 첫 챕터 완료 범위와 남겨둔 후속 후보를 정리한 종료 요약 문서
+- `.note/finance/phase5/PHASE5_NEXT_PHASE_PREPARATION.md`
+  - Phase 5 종료 이후 다음 chapter/phase 후보와 추천 순서를 정리한 문서
 
 ---
 
-## 7. Phase 2 / Phase 3 - Backtest / Loader 관련 문서
+## 10. Phase 2 / Phase 3 - Backtest / Loader 관련 문서
 
 - `.note/finance/phase2/BACKTEST_LOADER_FUNCTION_DRAFT.md`
   - loader 함수 초안
@@ -297,7 +397,7 @@
 
 ---
 
-## 8. Phase 2 - Point-In-Time / 재무제표 정리 문서
+## 11. Phase 2 - Point-In-Time / 재무제표 정리 문서
 
 - `.note/finance/phase2/POINT_IN_TIME_SCHEMA_REVIEW_AND_PATCH_PLAN.md`
   - point-in-time 스키마 리뷰와 패치 계획
@@ -306,7 +406,7 @@
 
 ---
 
-## 9. 운영 / 설정 / 수집 전략 문서
+## 12. 운영 / 설정 / 수집 전략 문서
 
 - `.note/finance/DATA_COLLECTION_UI_STRATEGY.md`
   - 내부 운영 수집 UI 전략
@@ -317,7 +417,7 @@
 
 ---
 
-## 10. 문서 사용 순서 권장
+## 13. 문서 사용 순서 권장
 
 처음 프로젝트 전체를 볼 때:
 1. `MASTER_PHASE_ROADMAP.md`

@@ -1604,3 +1604,288 @@ Keep entries append-only and concise.
   - compare form
   - history/prefill fallback path
 - This keeps new backtest runs aligned with the current calendar date by default.
+
+### 2026-03-28 - Phase 5 first chapter closeout documentation added
+
+- Added Phase 5 closeout documents:
+  - `.note/finance/phase5/PHASE5_COMPLETION_SUMMARY.md`
+  - `.note/finance/phase5/PHASE5_NEXT_PHASE_PREPARATION.md`
+- Updated the Phase 5 current-chapter TODO board to reflect effective completion.
+- Updated the roadmap and finance doc index so Phase 5 now reads as a closed first chapter with next-step candidates prepared.
+
+### 2026-03-28 - Phase closeout rule expanded to include skill/reference refresh
+
+- Updated `AGENTS.md` so future phase closeouts do not stop at:
+  - completion summary
+  - next-phase prep
+  - manual test checklist
+- Phase closeout now also requires a review of:
+  - `AGENTS.md`
+  - active finance skills / `SKILL.md`
+  - `FINANCE_DOC_INDEX.md`
+  - `MASTER_PHASE_ROADMAP.md`
+  - phase-specific reference/preparation docs
+- The new rule explicitly says that workflow/guidance changes should be refreshed at phase end if the implemented behavior changed how future work should be executed.
+
+### 2026-03-28 - Codex MCP tool setup refreshed before next phase
+
+- Confirmed `playwright` MCP was already installed and enabled in `~/.codex/config.toml`.
+- Added `firecrawl` MCP to Codex using the hosted MCP endpoint:
+  - `https://mcp.firecrawl.dev/v2/mcp`
+  - bearer token env var: `FIRECRAWL_API_KEY`
+- Kept the Firecrawl API key out of the Codex config file so the secret can be supplied via environment variable later.
+- Scope note:
+  - this is Codex/tooling setup work rather than a finance package behavior change.
+
+### 2026-03-28 - Phase 6 formally opened
+
+- Opened Phase 6 as the next major chapter after the Phase 5 first-chapter closeout.
+- Fixed the new phase direction as:
+  - second overlay implementation first
+  - quarterly strict family entry/validation second
+- Added:
+  - `.note/finance/phase6/PHASE6_OVERLAY_AND_QUARTERLY_EXPANSION_PLAN.md`
+  - `.note/finance/phase6/PHASE6_CURRENT_CHAPTER_TODO.md`
+- Synced the new phase opening into:
+  - `MASTER_PHASE_ROADMAP.md`
+  - `FINANCE_DOC_INDEX.md`
+
+### 2026-03-28 - Phase 6 first pass implemented: market regime overlay + strict quarterly prototype
+
+- Fixed the initial Phase 6 runtime blocker in `app/web/runtime/backtest.py` where a stray `strict_label` reference caused the new strict wrapper path to fail.
+- Implemented `Market Regime Overlay` first pass across strict family code paths:
+  - strategy-level market-state evaluation in `finance/strategy.py`
+  - benchmark MA data build path in `finance/sample.py`
+  - strict annual runtime wrappers in `app/web/runtime/backtest.py`
+  - single / compare / history / interpretation UI in `app/web/pages/backtest.py`
+  - history persistence in `app/web/runtime/history.py`
+- Added a research-only single-strategy path:
+  - `Quality Snapshot (Strict Quarterly Prototype)`
+- Verified DB-backed smoke runs for:
+  - annual strict quality with trend + market regime overlay
+  - annual strict value with trend + market regime overlay
+  - annual strict quality+value with trend + market regime overlay
+  - quarterly strict quality prototype with trend + market regime overlay
+- Added Phase 6 reference and validation docs:
+  - `.note/finance/phase6/PHASE6_MARKET_REGIME_OVERLAY_REQUIREMENTS.md`
+  - `.note/finance/phase6/PHASE6_MARKET_REGIME_OVERLAY_FIRST_PASS.md`
+  - `.note/finance/phase6/PHASE6_MARKET_REGIME_OVERLAY_VALIDATION.md`
+  - `.note/finance/phase6/PHASE6_STRICT_QUARTERLY_ENTRY_CRITERIA.md`
+  - `.note/finance/phase6/PHASE6_STRICT_QUARTERLY_FIRST_PASS_VALIDATION.md`
+  - `.note/finance/phase6/PHASE6_TEST_CHECKLIST.md`
+- Updated the Phase 6 TODO board, roadmap, finance doc index, and comprehensive analysis to reflect the implemented first pass.
+- Current state:
+  - Phase 6 implementation work for the planned `1 -> 9` first pass is complete
+  - manual user testing is the next step
+
+### 2026-03-28 - Phase 6 checklist-driven UX/history fixes
+
+- Applied follow-up fixes from manual Phase 6 checklist review in `app/web/pages/backtest.py`.
+- Clarified `Market Regime Window` semantics in help copy:
+  - `200` now explicitly means the benchmark `200-trading-day moving average`.
+- Relaxed regime/trend overlay input editing semantics:
+  - window / benchmark inputs stay editable even when overlay enable is off
+  - this applies to single strict forms and compare strict-family overrides
+- Improved compare strict-family readability:
+  - grouped each annual strict strategy override block into a separate bordered container
+- Fixed single-strategy history prefill path:
+  - `Load Into Form` now defers strategy selector changes until before widget creation, avoiding the Streamlit session-state mutation error
+- Improved history drilldown:
+  - compare records now store per-strategy summary rows in context
+  - drilldown summary renders those rows instead of a confusing empty-primary-summary message
+  - drilldown context now exposes strategy-level trend / market regime overrides in a readable table
+- Added clearer UI copy:
+  - `Load Into Form` action meaning
+  - quarterly prototype late-coverage / delayed-active-period warning
+- Added collapsible expander sections for compare strict annual family overrides so Quality / Value / Quality+Value settings can be opened and closed independently.
+- Extended compare advanced-input collapsible expander pattern to `Equal Weight` and `GTAA` so their override sections can also be opened and closed independently.
+
+### 2026-03-28 - Phase 6 closeout and Phase 7 opening
+
+- Closed out Phase 6 with:
+  - `.note/finance/phase6/PHASE6_COMPLETION_SUMMARY.md`
+  - `.note/finance/phase6/PHASE6_NEXT_PHASE_PREPARATION.md`
+- Marked the Phase 6 chapter TODO and phase plan as closeout-complete.
+- Updated roadmap/index/comprehensive analysis so Phase 6 now reads as completed.
+- Opened Phase 7 as the next active chapter with:
+  - `.note/finance/phase7/PHASE7_QUARTERLY_COVERAGE_AND_STATEMENT_PIT_HARDENING_PLAN.md`
+  - `.note/finance/phase7/PHASE7_CURRENT_CHAPTER_TODO.md`
+- Fixed the next-phase direction as:
+  - quarterly coverage hardening first
+  - statement raw payload / PIT timing reality-check first
+  - quarterly prototype longer-history recovery second
+
+### 2026-03-28 - Phase 7 statement payload inspection and quarterly hardening
+
+- Inspected live EDGAR statement source payloads for `AAPL`, `MSFT`, `GOOG`, `NVDA`, `JPM`.
+- Confirmed the source already provides long-history fact coverage and real timing fields:
+  - `filing_date`
+  - `accepted_at`
+  - `available_at`
+  - `report_date`
+  - `accession`
+- Confirmed quarterly late-start was not primarily a source problem.
+- Identified the concrete blockers:
+  - quarterly ingestion excluded `10-K/FY` rows
+  - statement ingestion defaults were too shallow
+  - quarterly shadow builder was dropping valid rows via a `report_date` anchor filter
+- Patched:
+  - `finance/data/financial_statements.py`
+  - `finance/data/fundamentals.py`
+  - `finance/loaders/financial_statements.py`
+  - `finance/loaders/__init__.py`
+  - `app/jobs/ingestion_jobs.py`
+  - `app/web/streamlit_app.py`
+- Opened `periods=0` as `all available periods` in both statement-ingestion UI paths.
+- Added human-readable inspection path:
+  - richer `inspect_financial_statement_source()`
+  - new `load_statement_timing_audit(...)`
+- Reingested quarterly all-history sample symbols:
+  - `AAPL`, `MSFT`, `GOOG`
+- Verified raw quarterly ledger recovery:
+  - `AAPL`: `2024-09-28 -> 2006-09-30`
+  - `MSFT`: `2024-09-30 -> 2007-06-30`
+  - `GOOG`: `2024-06-30 -> 2012-12-31`
+- Rebuilt quarterly statement shadow fundamentals/factors for the sample and confirmed the strict quarterly prototype becomes active again from `2016-01-29`.
+- Rebuilt quarterly `US Statement Coverage 100`:
+  - raw values ingest job: `509.03s`, `inserted_values=1,023,285`
+  - raw values table state: `100 symbols`, `876,657 rows`, `distinct_accessions=6,163`, `min_period_end=2000-01-01`
+  - shadow fundamentals/factors: `100 symbols`, `6,796 rows`, `min_period_end=2006-09-24`
+- Confirmed `Quality Snapshot (Strict Quarterly Prototype)` on `US Statement Coverage 100` now opens from `2016-01-29` rather than only near `2025`.
+
+### 2026-03-28 - Phase 7 checklist pre-validation by assistant
+
+- Re-ran the Phase 7 checklist before user handoff.
+- Verified UI/input semantics by code inspection:
+  - `Extended Statement Periods` and `Financial Statement Periods` both allow `0`
+  - both surfaces include `0 = all available periods` guidance
+- Verified helper/runtime checkpoints:
+  - `load_statement_coverage_summary(..., freq="quarterly")` shows restored long-history sample coverage for `AAPL/MSFT/GOOG`
+  - `load_statement_timing_audit(...)` returns the expected PIT timing columns
+  - `inspect_financial_statement_source(...)` returns `fiscal_period_counts`, `timing_field_inventory`, and `sample_filings`
+- Verified quarterly prototype behavior:
+  - `US Statement Coverage 100` first active date = `2016-01-29`
+  - manual `AAPL,MSFT,GOOG` first active date = `2016-01-29`
+  - 2016 balances move over time, so the prototype is no longer stuck in flat late-start cash mode
+- Verified quarterly shadow coverage:
+  - `nyse_fundamentals_statement` quarterly = `100 symbols`, `6,796 rows`
+- Verified annual strict regression:
+  - annual strict quality/value runtime still execute successfully
+  - manual `AAPL,MSFT,GOOG` annual strict late start remains around `2025-07-31`, which matches current annual strict data availability and is not introduced by Phase 7
+
+### 2026-03-28 - Phase 7 supplementary polish pass
+
+- Audited remaining practical gaps after the quarterly coverage/PIT hardening first pass.
+- Added weekend/holiday-aware strict price freshness handling:
+  - new loader helper `load_latest_market_date(...)`
+  - preflight now compares against `effective trading end` instead of blindly using the selected end date
+- Verified `US Statement Coverage 100` with end `2026-03-28` now reports:
+  - `effective trading end = 2026-03-27`
+  - `stale_count = 0`
+- Added `Statement Shadow Coverage Preview` to the quarterly prototype single-strategy form.
+  - preview now shows:
+    - requested / covered
+    - earliest period
+    - latest period
+    - median rows per symbol
+- Added `Statement PIT Inspection` card to the `Ingestion` tab.
+  - UI now exposes:
+    - DB coverage summary
+    - DB timing audit
+    - EDGAR source payload inspection
+  - this reduces the need for separate notebook snippets during Phase 7 validation
+- Refreshed quarterly prototype guidance text to reflect Phase 7 coverage recovery.
+- Synced:
+  - `PHASE7_QUARTERLY_RERUN_VALIDATION.md`
+  - `PHASE7_CURRENT_CHAPTER_TODO.md`
+  - `PHASE7_QUARTERLY_COVERAGE_AND_STATEMENT_PIT_HARDENING_PLAN.md`
+  - `PHASE7_TEST_CHECKLIST.md`
+  - `FINANCE_COMPREHENSIVE_ANALYSIS.md`
+  - `FINANCE_DOC_INDEX.md`
+
+### 2026-03-28 - Phase 7 deferred-validation closeout and Phase 8 kickoff
+
+- Added Phase 7 closeout docs:
+  - `PHASE7_COMPLETION_SUMMARY.md`
+  - `PHASE7_NEXT_PHASE_PREPARATION.md`
+- Marked Phase 7 as:
+  - implementation completed
+  - user manual validation deferred for later batch review together with Phase 8
+- Opened Phase 8 documents:
+  - `PHASE8_QUARTERLY_STRATEGY_FAMILY_EXPANSION_PLAN.md`
+  - `PHASE8_CURRENT_CHAPTER_TODO.md`
+- Updated:
+  - `MASTER_PHASE_ROADMAP.md`
+  - `FINANCE_DOC_INDEX.md`
+  - `PHASE7_CURRENT_CHAPTER_TODO.md`
+- Fixed the next active direction as:
+  - quarterly strategy family expansion
+  - quarterly promotion readiness
+
+### 2026-03-28 - Phase 8 quarterly family first pass
+
+- Implemented quarterly strict family expansion beyond the existing quality-only prototype.
+- Added runtime wrappers:
+  - `run_value_snapshot_strict_quarterly_prototype_backtest_from_db(...)`
+  - `run_quality_value_snapshot_strict_quarterly_prototype_backtest_from_db(...)`
+- Added single-strategy UI forms:
+  - `Value Snapshot (Strict Quarterly Prototype)`
+  - `Quality + Value Snapshot (Strict Quarterly Prototype)`
+- Opened quarterly family compare exposure for all three quarterly prototypes:
+  - quality
+  - value
+  - quality + value
+- Wired quarterly strategy keys through:
+  - latest run selection history
+  - history payload rerun / load-into-form prefill
+  - focused strategy interpretation
+  - compare strategy defaults / preset resolution
+- Validation:
+  - manual `AAPL/MSFT/GOOG`
+    - quarterly value first active = `2017-05-31`
+    - quarterly quality+value first active = `2017-05-31`
+  - preset `US Statement Coverage 100`
+    - quarterly value first active = `2016-01-29`
+    - quarterly quality+value first active = `2016-01-29`
+  - compare smoke:
+    - `_run_compare_strategy(\"Value Snapshot (Strict Quarterly Prototype)\")` returned a bundle
+    - selection history build returned `123` rows
+  - compile/import:
+    - `py_compile` passed for pages/runtime/sample touched in Phase 8
+    - `app.web.streamlit_app` import OK
+- Added Phase 8 durable docs:
+  - `PHASE8_QUARTERLY_FAMILY_SCOPE_AND_COMPARE_DECISION.md`
+  - `PHASE8_QUARTERLY_VALUE_AND_MULTI_FACTOR_FIRST_PASS.md`
+  - `PHASE8_QUARTERLY_VALIDATION_FIRST_PASS.md`
+  - `PHASE8_PROMOTION_READINESS_CRITERIA_DRAFT.md`
+  - `PHASE8_TEST_CHECKLIST.md`
+- Synced:
+  - `PHASE8_CURRENT_CHAPTER_TODO.md`
+  - `PHASE8_QUARTERLY_STRATEGY_FAMILY_EXPANSION_PLAN.md`
+  - `FINANCE_COMPREHENSIVE_ANALYSIS.md`
+  - `FINANCE_DOC_INDEX.md`
+
+### 2026-03-28 - Phase 8 checklist prevalidation by assistant
+
+- Ran an automated prevalidation pass against `PHASE8_TEST_CHECKLIST.md`.
+- Confirmed all checklist items that are testable without a browser:
+  - single quarterly value runtime/UI wiring
+  - single quarterly quality+value runtime/UI wiring
+  - manual small-universe runs
+  - compare quarterly-family exposure
+  - compare execution
+  - history append/load/payload/prefill helper
+  - quarterly meta/context fields
+  - research-only semantics and default preset
+- Notable outputs:
+  - preset `US Statement Coverage 100`
+    - value quarterly `End Balance = 140,853.2`
+    - quality+value quarterly `End Balance = 187,769.4`
+  - manual `AAPL/MSFT,GOOG`
+    - quality quarterly first active = `2016-01-29`
+    - value quarterly first active = `2017-05-31`
+    - quality+value quarterly first active = `2017-05-31`
+- Created:
+  - `PHASE8_CHECKLIST_PREVALIDATION.md`
+- Remaining validation:
+  - browser-level visual/manual UX readout by the user later

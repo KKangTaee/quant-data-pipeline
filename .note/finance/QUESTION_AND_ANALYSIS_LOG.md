@@ -3583,3 +3583,306 @@ Do not copy full chat transcripts. Keep only the durable result.
 - Durable output:
   - `.note/finance/DAILY_MARKET_UPDATE_SPEED_OPTIMIZATION_PLAN_20260328.md`
   - `.note/finance/DAILY_MARKET_UPDATE_SPEED_OPTIMIZATION_IMPLEMENTATION_20260328.md`
+
+### 2026-03-28 - Phase 5 can now be treated as a completed first chapter and should hand off to next-phase preparation
+- Request topic:
+  - after user testing indicated the Phase 5 surface is broadly in good shape, determine whether Phase 5 is effectively done and add formal closeout documents
+- Interpreted goal:
+  - move Phase 5 from active implementation to an explicit closeout-ready state before choosing the next major workstream
+- Result:
+  - judged the current Phase 5 scope as effectively complete at the first-chapter level
+  - added:
+    - `.note/finance/phase5/PHASE5_COMPLETION_SUMMARY.md`
+    - `.note/finance/phase5/PHASE5_NEXT_PHASE_PREPARATION.md`
+  - updated the Phase 5 TODO board, roadmap, and doc index to reflect closeout
+- Durable output:
+  - Phase 5 should now be read as:
+    - first chapter completed
+    - next chapter / next phase not yet formally opened
+
+### 2026-03-28 - Phase closeout should also refresh skills and reference guidance when workflows changed
+- Request topic:
+  - make phase-end closeout update not only the phase docs and test checklist, but also the project’s skill/reference guidance whenever newly implemented behavior changed how future work should be done
+- Interpreted goal:
+  - prevent future turns from relying on stale workflow guidance after a phase materially changes defaults, operator flow, validation rules, or execution patterns
+- Result:
+  - updated `AGENTS.md` so phase closeout now explicitly includes a review of:
+    - `AGENTS.md`
+    - active skills / `SKILL.md`
+    - `FINANCE_DOC_INDEX.md`
+    - `MASTER_PHASE_ROADMAP.md`
+    - phase-specific reference/preparation docs
+  - also added the expectation that if no refresh is needed, that outcome should still be recorded briefly in closeout notes or progress logs
+- Durable output:
+  - future finance phase closeouts should now include:
+    - closeout summary
+    - next-phase prep
+    - manual checklist
+    - skill/reference guidance refresh review
+
+### 2026-03-28 - Install Firecrawl and verify Playwright MCP for Codex before the next phase
+- Request topic:
+  - install Firecrawl MCP and Playwright MCP into Codex before starting the next phase
+- Interpreted goal:
+  - make the local Codex environment ready to use browser automation and hosted scraping/search tools without delaying the next chapter
+- Result:
+  - verified that `playwright` MCP was already installed and enabled in `~/.codex/config.toml`
+  - added `firecrawl` MCP to Codex as a hosted streamable HTTP server using:
+    - `https://mcp.firecrawl.dev/v2/mcp`
+    - `FIRECRAWL_API_KEY` as the bearer-token environment variable
+  - intentionally avoided storing the Firecrawl API key directly in the config file
+- Follow-up note:
+  - Firecrawl is installed/configured, but actual use still requires `FIRECRAWL_API_KEY` to be available in the environment of the Codex process.
+
+### 2026-03-28 - Open the next finance phase after Phase 5 closeout
+- Request topic:
+  - move into the next phase
+- Interpreted goal:
+  - formally open the next major workstream rather than leaving next steps only in preparatory notes
+- Result:
+  - opened Phase 6
+  - fixed the new phase direction as:
+    - second overlay implementation first
+    - quarterly strict family entry and validation second
+  - created:
+    - `.note/finance/phase6/PHASE6_OVERLAY_AND_QUARTERLY_EXPANSION_PLAN.md`
+    - `.note/finance/phase6/PHASE6_CURRENT_CHAPTER_TODO.md`
+  - synced the new phase into:
+    - `MASTER_PHASE_ROADMAP.md`
+    - `FINANCE_DOC_INDEX.md`
+- Durable output:
+  - the next active finance chapter is now Phase 6, with `Market Regime Overlay` as the leading candidate and quarterly strict family work framed as entry/validation rather than immediate full rollout.
+
+### 2026-03-28 - Complete the planned Phase 6 first pass before user testing
+- Request topic:
+  - follow the recommended Phase 6 implementation order end-to-end and prepare a checklist before user testing
+- Interpreted goal:
+  - complete the first full chapter pass for:
+    - `Market Regime Overlay`
+    - strict quarterly family entry path
+  - then hand off a concrete manual test checklist instead of partial implementation notes
+- Result:
+  - fixed the initial runtime blocker in the new strict wrapper path
+  - implemented `Market Regime Overlay` first pass for strict family:
+    - benchmark/window inputs
+    - runtime and strategy integration
+    - compare/single/history support
+    - interpretation and event-level reporting
+  - implemented a research-only single-strategy path:
+    - `Quality Snapshot (Strict Quarterly Prototype)`
+  - ran DB-backed small-smoke validations for:
+    - annual strict quality
+    - annual strict value
+    - annual strict quality+value
+    - strict quarterly prototype
+  - documented requirements, implementation, validation, quarterly entry criteria, and the Phase 6 manual test checklist
+- Durable output:
+  - Phase 6 current chapter should now be read as:
+    - implementation first pass complete
+    - closeout not yet done
+    - manual UI validation next
+
+### 2026-03-28 - Resolve Phase 6 checklist UX and history issues
+- Request topic:
+  - fix the issues found while manually testing the Phase 6 checklist
+- Interpreted goal:
+  - make market regime inputs easier to understand and edit
+  - fix history/prefill runtime issues
+  - make compare/history surfaces easier to interpret during manual validation
+- Result:
+  - clarified that `Market Regime Window = 200` means the benchmark `200-trading-day moving average`
+  - changed strict-family overlay inputs so window / benchmark can be edited before the enable toggle is turned on
+  - grouped compare strict annual override sections into clearer separated UI blocks
+  - fixed `Load Into Form` for single-strategy history by deferring the strategy selector update until before the widget is instantiated
+  - improved compare history drilldown so newer compare records show stored per-strategy summary rows and strategy-level override/regime context instead of only an empty-primary-summary message
+  - added clearer copy explaining that `Load Into Form` prefills the single-strategy form for editing rather than rerunning immediately
+  - added a quarterly prototype warning that coverage can begin later than the requested start date
+- Durable output:
+  - Phase 6 history/prefill and compare drilldown should now be read as:
+    - single-strategy `Load Into Form` is supported and safe
+    - compare records keep strategy-level override context
+    - older compare records may still lack stored per-strategy summary rows because they were recorded before the new context shape existed
+- updated compare strict annual advanced inputs again so each strategy block is collapsible via expander, reducing visual clutter during manual testing
+- extended the compare advanced-input collapsible UI pattern to Equal Weight and GTAA for consistency with the strict annual strategy blocks
+
+### 2026-03-28 - Close out Phase 6 and open Phase 7
+- Request topic:
+  - finish Phase 6 and move to the next phase
+- Interpreted goal:
+  - formally close the second-overlay / quarterly-entry chapter
+  - open the next major workstream in a way that matches the quarterly prototype findings
+- Result:
+  - wrote Phase 6 closeout docs:
+    - `PHASE6_COMPLETION_SUMMARY.md`
+    - `PHASE6_NEXT_PHASE_PREPARATION.md`
+  - updated roadmap / index / current chapter documents so Phase 6 now reads as completed
+  - opened Phase 7 with:
+    - `PHASE7_QUARTERLY_COVERAGE_AND_STATEMENT_PIT_HARDENING_PLAN.md`
+    - `PHASE7_CURRENT_CHAPTER_TODO.md`
+  - fixed the recommended next direction as:
+    - quarterly coverage hardening
+    - statement source payload inspection
+    - PIT timing / raw ledger hardening
+- Durable output:
+  - the active finance phase is now Phase 7
+  - the immediate next priority is not a new overlay, but rebuilding the quarterly statement / shadow foundation so quarterly strict family can gain longer usable history
+
+### 2026-03-28 - Phase 7 quarterly late-start root cause and hardening decision
+- Request topic:
+  - execute Phase 7 in the recommended order and prepare a checklist when the first pass is complete
+- Interpreted goal:
+  - make `Quality Snapshot (Strict Quarterly Prototype)` stop behaving like a near-2025-only strategy
+  - verify what the statement source really returns
+  - decide whether raw statement tables need destructive redesign
+- Result:
+  - source inspection showed the EDGAR path already returns long-history facts and real timing fields (`filing_date`, `accepted_at`, `available_at`, `report_date`, `accession`)
+  - current raw statement tables were not the main blocker; they already had enough PIT columns for a first-pass quarterly recovery
+  - the real blockers were:
+    - quarterly ingestion excluded `10-K/FY`
+    - statement ingestion defaults were too shallow
+    - quarterly shadow fundamentals builder incorrectly filtered rows by `report_date` semantics
+  - decision:
+    - keep the current raw statement tables
+    - harden loader semantics instead of dropping/recreating the schema
+    - add a human-readable inspection path rather than a destructive redesign
+  - implementation first pass:
+    - quarterly path now accepts `10-K/10-K-A` and `FY`
+    - statement ingestion now officially supports `periods=0` meaning all available periods
+    - quarterly shadow builder no longer drops valid rows via the old `report_date` anchor filter
+    - new inspection path:
+      - richer `inspect_financial_statement_source()`
+      - `load_statement_timing_audit(...)`
+  - validation:
+    - sample symbols `AAPL/MSFT/GOOG` recovered long quarterly history back to 2006/2007/2012
+    - `US Statement Coverage 100` quarterly shadow rebuilt to `100 symbols / 6,796 rows`
+    - quarterly prototype on `US Statement Coverage 100` now becomes active from `2016-01-29`
+- Durable output:
+  - Phase 7 first pass should be understood as a quarterly data-foundation repair, not a new strategy feature
+  - destructive schema redesign is not required at this point
+  - future quarterly work should start from the repaired statement ingestion + shadow path rather than from the old late-start assumption
+
+### 2026-03-28 - Phase 7 checklist pre-check result
+- Request topic:
+  - run the Phase 7 checklist once before the user starts manual validation
+- Interpreted goal:
+  - confirm that the new quarterly PIT/coverage work is actually testable and not just documented
+- Result:
+  - checklist items 1 through 7 were effectively confirmed by code/runtime checks
+  - quarterly prototype now activates from `2016-01-29` for both:
+    - manual `AAPL,MSFT,GOOG`
+    - `US Statement Coverage 100`
+  - helper inspection paths are usable:
+    - `load_statement_coverage_summary`
+    - `load_statement_timing_audit`
+    - `inspect_financial_statement_source`
+  - annual strict regression was also checked:
+    - runtime path still works
+    - manual `AAPL,MSFT,GOOG` annual strict starting in `2025-07-31` is expected given current annual strict data availability and is not a new Phase 7 regression
+- Durable output:
+  - the user can now run the written Phase 7 checklist with high confidence that the key quarterly recovery path is already working
+
+### 2026-03-28 - Phase 7 supplementary polish direction
+- Request topic:
+  - proactively organize and add practical Phase 7 improvements before the user starts manual checking
+- Interpreted goal:
+  - reduce avoidable confusion in the quarterly prototype UI and diagnostics after the core quarterly PIT/coverage repair was already completed
+- Result:
+  - selected a low-risk polish scope instead of reopening the data foundation:
+    - weekend/holiday-aware price freshness preflight
+    - quarterly statement shadow coverage preview
+    - statement PIT inspection UI card
+    - refreshed quarterly prototype UI wording
+  - key decision:
+    - end-date freshness should be judged against the latest actual market session in DB, not blindly against a non-trading selected date
+  - validation:
+    - `US Statement Coverage 100`, selected end `2026-03-28` now maps to effective trading end `2026-03-27`
+    - `stale_count = 0`
+    - quarterly shadow preview reports full preset coverage and long-history period bounds
+- Durable output:
+  - Phase 7 user validation should now read quarterly prototype state more accurately:
+    - fewer false stale warnings on weekends/holidays
+    - visible shadow coverage bounds before execution
+    - UI-based PIT inspection path without requiring notebook snippets
+
+### 2026-03-28 - Phase 7 validation deferral and Phase 8 opening decision
+- Request topic:
+  - proceed to the next phase without waiting for immediate Phase 7 manual validation
+- Interpreted goal:
+  - keep development momentum while the user is occupied, and batch manual validation later with the next phase checklist
+- Result:
+  - decided to treat Phase 7 as:
+    - implementation completed
+    - manual validation intentionally deferred
+  - decided that the most natural next phase is:
+    - `Quarterly Strategy Family Expansion And Promotion Readiness`
+  - rationale:
+    - Phase 7 repaired quarterly data foundation
+    - the next meaningful product step is to expand quarterly from a single quality prototype into a broader strategy family
+- Durable output:
+  - Phase 7 closeout docs created
+  - Phase 8 kickoff docs created
+  - future user validation can review Phase 7 + Phase 8 checklists together in one batch
+
+### 2026-03-28 - Phase 8 quarterly family scope and exposure decision
+- Request topic:
+  - continue Phase 8 autonomously so the user can review later in one batch via checklist
+- Interpreted goal:
+  - turn quarterly strict from a single quality prototype into a research-ready strategy family without requiring frequent ping-pong decisions
+- Result:
+  - decided to expose quarterly strict as a 3-strategy research-only family:
+    - `Quality Snapshot (Strict Quarterly Prototype)`
+    - `Value Snapshot (Strict Quarterly Prototype)`
+    - `Quality + Value Snapshot (Strict Quarterly Prototype)`
+  - decided to open all three not only in single strategy UI but also in compare first pass
+  - rationale:
+    - annual vs quarterly and quality vs value vs quality+value research is much weaker if compare remains absent
+    - the existing annual strict runtime/UI pattern was reusable enough to open compare without a new architecture pass
+- Durable output:
+  - quarterly family naming policy fixed as `Strict Quarterly Prototype`
+  - compare exposure decision fixed as `enabled first pass`
+  - manual validation can now treat quarterly family as a coherent research surface rather than a quality-only experiment
+
+### 2026-03-28 - Phase 8 quarterly value / multi-factor first-pass validation
+- Request topic:
+  - continue development and leave a later checklist-driven review surface
+- Interpreted goal:
+  - implement quarterly value and quarterly quality+value product surfaces deeply enough that later user testing can happen in one batch
+- Result:
+  - implemented runtime/UI/history/compare integration for:
+    - `Value Snapshot (Strict Quarterly Prototype)`
+    - `Quality + Value Snapshot (Strict Quarterly Prototype)`
+  - smoke validation results:
+    - manual `AAPL/MSFT/GOOG`
+      - value quarterly first active = `2017-05-31`
+      - quality+value quarterly first active = `2017-05-31`
+    - preset `US Statement Coverage 100`
+      - value quarterly first active = `2016-01-29`
+      - quality+value quarterly first active = `2016-01-29`
+  - compare smoke also succeeded for quarterly value with selection-history build
+- Durable output:
+  - quarterly strict family should now be understood as:
+    - research-ready for single + compare + history
+    - still not promotion-ready for public candidate status
+  - promotion decision should wait for manual validation plus annual-vs-quarterly comparative readout
+
+### 2026-03-28 - Phase 8 checklist prevalidation result
+- Request topic:
+  - run the Phase 8 checklist once before the user reviews it later in one batch
+- Interpreted goal:
+  - reduce the chance that the later manual review finds basic runtime or wiring failures
+- Result:
+  - all checklist items that are automatable without browser clicks passed
+  - verified:
+    - quarterly value single path
+    - quarterly quality+value single path
+    - manual small-universe runs
+    - compare exposure and compare execution
+    - history append/load/payload/prefill helper
+    - quarterly meta/context fields
+    - research-only semantics and default preset
+  - the only remaining unchecked layer is true browser-side manual UX readability
+- Durable output:
+  - Phase 8 can now be treated as:
+    - implementation complete for first pass
+    - checklist prevalidated by assistant
+    - user manual validation still pending for final visual confirmation
