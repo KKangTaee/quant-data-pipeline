@@ -255,6 +255,119 @@ def get_ohlcv(
     return (out, provider_output) if return_provider_output else out
 
 
+def probe_ohlcv_provider(
+    symbol: str,
+    *,
+    periods: Iterable[str] = ("5d", "1mo", "3mo"),
+    interval: Interval = "1d",
+) -> dict[str, Any]:
+    """
+    Read-only provider probe for a single symbol.
+
+    This helper does not write anything to MySQL. It is intended for
+    diagnostics where we want to distinguish:
+    - local ingestion gaps
+    - provider/source gaps
+    - probable delisting/symbol issues
+    """
+    normalized_symbol = str(symbol).strip().upper()
+    normalized_periods = [str(period).strip() for period in periods if str(period).strip()]
+    if not normalized_symbol:
+        return {
+            "symbol": None,
+            "interval": interval,
+            "probe_status": "invalid_symbol",
+            "latest_provider_date": None,
+            "any_data": False,
+            "rate_limit_hit": False,
+            "provider_no_data_hit": False,
+            "probes": [],
+        }
+
+    probes: list[dict[str, Any]] = []
+    latest_provider_date: pd.Timestamp | None = None
+    any_data = False
+    rate_limit_hit = False
+    provider_no_data_hit = False
+
+    for probe_period in normalized_periods:
+        try:
+            downloaded, provider_output = get_ohlcv(
+                [normalized_symbol],
+                period=probe_period,
+                interval=interval,
+                return_provider_output=True,
+            )
+            frame = downloaded.get(normalized_symbol)
+            row_count = 0
+            latest_date = None
+            if frame is not None and not frame.empty and "Date" in frame.columns:
+                dates = pd.to_datetime(frame["Date"], errors="coerce").dropna()
+                if not dates.empty:
+                    latest_date = dates.max().normalize()
+                    latest_provider_date = latest_date if latest_provider_date is None else max(latest_provider_date, latest_date)
+                    row_count = int(len(frame))
+                    any_data = True
+
+            missing_symbols = [] if row_count > 0 else [normalized_symbol]
+            provider_diag = _classify_provider_output(
+                provider_output=provider_output,
+                batch=[normalized_symbol],
+                missing_symbols=missing_symbols,
+            )
+            rate_limit_hit = rate_limit_hit or bool(provider_diag.get("rate_limit_hit"))
+            provider_no_data_hit = provider_no_data_hit or bool(provider_diag.get("provider_no_data_symbols"))
+            probes.append(
+                {
+                    "period": probe_period,
+                    "row_count": row_count,
+                    "latest_date": latest_date.strftime("%Y-%m-%d") if latest_date is not None else None,
+                    "rate_limit_hit": bool(provider_diag.get("rate_limit_hit")),
+                    "provider_no_data_hit": bool(provider_diag.get("provider_no_data_symbols")),
+                    "provider_output_excerpt": provider_diag.get("provider_output_excerpt") or None,
+                }
+            )
+        except Exception as exc:
+            provider_output = str(exc)
+            provider_diag = _classify_provider_output(
+                provider_output=provider_output,
+                batch=[normalized_symbol],
+                missing_symbols=[normalized_symbol],
+            )
+            rate_limit_hit = rate_limit_hit or bool(provider_diag.get("rate_limit_hit"))
+            provider_no_data_hit = provider_no_data_hit or bool(provider_diag.get("provider_no_data_symbols"))
+            probes.append(
+                {
+                    "period": probe_period,
+                    "row_count": 0,
+                    "latest_date": None,
+                    "rate_limit_hit": bool(provider_diag.get("rate_limit_hit")),
+                    "provider_no_data_hit": bool(provider_diag.get("provider_no_data_symbols")),
+                    "provider_output_excerpt": provider_diag.get("provider_output_excerpt") or provider_output,
+                }
+            )
+
+    if rate_limit_hit and not any_data:
+        probe_status = "rate_limited"
+    elif any_data:
+        probe_status = "data"
+    elif provider_no_data_hit:
+        probe_status = "no_data"
+    else:
+        probe_status = "empty_or_unknown"
+
+    return {
+        "symbol": normalized_symbol,
+        "interval": interval,
+        "probe_status": probe_status,
+        "latest_provider_date": latest_provider_date.strftime("%Y-%m-%d") if latest_provider_date is not None else None,
+        "any_data": any_data,
+        "rate_limit_hit": rate_limit_hit,
+        "provider_no_data_hit": provider_no_data_hit,
+        "probes": probes,
+    }
+
+
 
 def get_fx_rate(base: str, quote: str, period="1y", interval="1d") -> float:
     """

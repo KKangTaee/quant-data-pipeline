@@ -285,11 +285,41 @@ def load_statement_coverage_summary(
     universe_source: str | None = None,
     freq: str = "annual",
 ) -> pd.DataFrame:
-    df = load_statement_values(
-        symbols=symbols,
-        universe_source=universe_source,
-        freq=freq,
-    )
+    resolved_symbols = resolve_loader_symbols(symbols=symbols, universe_source=universe_source)
+    normalized_freq = normalize_loader_freq(freq)
+
+    db = MySQLClient("localhost", "root", "1234", 3306)
+    try:
+        db.use_db("finance_fundamental")
+        placeholders = ",".join(["%s"] * len(resolved_symbols))
+        sql = f"""
+        SELECT
+          symbol,
+          %s AS freq,
+          COUNT(*) AS strict_rows,
+          COUNT(DISTINCT accession_no) AS distinct_accessions,
+          COUNT(DISTINCT period_end) AS distinct_period_ends,
+          MIN(period_end) AS min_period_end,
+          MAX(period_end) AS max_period_end,
+          MIN(available_at) AS min_available_at,
+          MAX(available_at) AS max_available_at,
+          GROUP_CONCAT(DISTINCT statement_type ORDER BY statement_type SEPARATOR ',') AS statement_types
+        FROM nyse_financial_statement_values
+        WHERE symbol IN ({placeholders})
+          AND freq = %s
+          AND accession_no IS NOT NULL
+          AND accession_no <> ''
+          AND unit IS NOT NULL
+          AND unit <> ''
+          AND available_at IS NOT NULL
+        GROUP BY symbol
+        ORDER BY symbol ASC
+        """
+        rows = db.query(sql, [normalized_freq] + list(resolved_symbols) + [normalized_freq])
+    finally:
+        db.close()
+
+    df = pd.DataFrame(rows)
     if df.empty:
         return pd.DataFrame(
             columns=[
@@ -305,52 +335,11 @@ def load_statement_coverage_summary(
                 "statement_types",
             ]
         )
-
-    strict = df[
-        df["accession_no"].notna()
-        & (df["accession_no"] != "")
-        & df["unit"].notna()
-        & (df["unit"] != "")
-        & df["available_at"].notna()
-    ].copy()
-    if strict.empty:
-        return pd.DataFrame(
-            columns=[
-                "symbol",
-                "freq",
-                "strict_rows",
-                "distinct_accessions",
-                "distinct_period_ends",
-                "min_period_end",
-                "max_period_end",
-                "min_available_at",
-                "max_available_at",
-                "statement_types",
-            ]
-        )
-
-    summary = (
-        strict.groupby("symbol", as_index=False)
-        .agg(
-            strict_rows=("concept", "size"),
-            distinct_accessions=("accession_no", "nunique"),
-            distinct_period_ends=("period_end", "nunique"),
-            min_period_end=("period_end", "min"),
-            max_period_end=("period_end", "max"),
-            min_available_at=("available_at", "min"),
-            max_available_at=("available_at", "max"),
-        )
-        .sort_values("symbol")
-        .reset_index(drop=True)
-    )
-    statement_types = (
-        strict.groupby("symbol")["statement_type"]
-        .apply(lambda s: ",".join(sorted({str(v) for v in s if pd.notna(v)})))
-        .reset_index(name="statement_types")
-    )
-    summary = summary.merge(statement_types, on="symbol", how="left")
-    summary["freq"] = normalize_loader_freq(freq)
-    return summary[
+    df["min_period_end"] = pd.to_datetime(df["min_period_end"], errors="coerce")
+    df["max_period_end"] = pd.to_datetime(df["max_period_end"], errors="coerce")
+    df["min_available_at"] = pd.to_datetime(df["min_available_at"], errors="coerce")
+    df["max_available_at"] = pd.to_datetime(df["max_available_at"], errors="coerce")
+    return df[
         [
             "symbol",
             "freq",

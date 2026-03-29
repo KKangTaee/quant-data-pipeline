@@ -16,6 +16,7 @@ def _infer_pipeline_type(record: dict[str, Any]) -> str | None:
         "daily_market_update": "daily_market_update",
         "weekly_fundamental_refresh": "weekly_fundamental_refresh",
         "extended_statement_refresh": "extended_statement_refresh",
+        "rebuild_statement_shadow": "statement_shadow_rebuild",
         "metadata_refresh": "metadata_refresh",
         "pipeline_core_market_data": "core_market_data_pipeline",
         "collect_ohlcv": "manual_ohlcv_collection",
@@ -53,6 +54,7 @@ def _infer_execution_context(record: dict[str, Any]) -> str | None:
         "manual_fundamentals_ingestion": "Manual normalized fundamentals ingestion for the selected symbols or universe source.",
         "manual_factor_calculation": "Manual factor calculation using already stored prices and fundamentals.",
         "manual_financial_statement_ingestion": "Manual detailed financial statement ingestion for the selected symbols or universe source.",
+        "statement_shadow_rebuild": "Manual rebuild of statement shadow tables using already stored raw statement ledgers.",
         "manual_asset_profile_collection": "Manual asset-profile refresh for the tracked stock and ETF universes.",
     }
     return mapping.get(pipeline_type)

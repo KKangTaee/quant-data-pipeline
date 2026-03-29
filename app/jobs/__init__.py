@@ -1,6 +1,7 @@
 from .ingestion_jobs import (
     run_daily_market_update,
     run_extended_statement_refresh,
+    run_rebuild_statement_shadow,
     run_metadata_refresh,
     run_collect_asset_profiles,
     run_collect_financial_statements,
@@ -14,6 +15,7 @@ from .ingestion_jobs import (
 __all__ = [
     "run_daily_market_update",
     "run_extended_statement_refresh",
+    "run_rebuild_statement_shadow",
     "run_metadata_refresh",
     "run_collect_asset_profiles",
     "run_collect_financial_statements",

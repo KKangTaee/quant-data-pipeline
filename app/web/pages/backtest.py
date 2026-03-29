@@ -31,7 +31,7 @@ from app.web.runtime import (
 )
 from app.web.runtime.backtest import BacktestDataError, BacktestInputError
 from finance.data.asset_profile import load_top_symbols_from_asset_profile
-from finance.loaders import load_statement_fundamentals_shadow
+from finance.loaders import load_statement_coverage_summary, load_statement_shadow_coverage_summary
 from finance.performance import make_monthly_weighted_portfolio
 
 
@@ -240,39 +240,171 @@ def _load_statement_shadow_coverage_preview(symbols_key: tuple[str, ...], freq: 
             "max_period_end": None,
             "median_rows_per_symbol": 0,
             "min_available_at": None,
+            "covered_symbols": [],
+            "missing_symbols": [],
+            "missing_count": 0,
+            "raw_present_missing_count": 0,
+            "no_raw_missing_count": 0,
+            "missing_rows": [],
+            "refresh_payload": None,
+            "shadow_rebuild_payload": None,
         }
 
-    shadow_df = load_statement_fundamentals_shadow(symbols=symbols, freq=freq)
-    if shadow_df.empty:
-        return {
-            "requested_count": len(symbols),
-            "covered_count": 0,
-            "row_count": 0,
-            "min_period_end": None,
-            "max_period_end": None,
-            "median_rows_per_symbol": 0,
-            "min_available_at": None,
+    shadow_summary = load_statement_shadow_coverage_summary(symbols=symbols, freq=freq)
+    if not shadow_summary.empty:
+        working = shadow_summary.copy()
+        working["symbol"] = working["symbol"].astype(str).str.upper()
+        working["min_period_end"] = pd.to_datetime(working["min_period_end"], errors="coerce")
+        working["max_period_end"] = pd.to_datetime(working["max_period_end"], errors="coerce")
+        working["min_available_at"] = pd.to_datetime(working["min_available_at"], errors="coerce")
+        working["max_available_at"] = pd.to_datetime(working["max_available_at"], errors="coerce")
+    else:
+        working = pd.DataFrame(
+            columns=[
+                "symbol",
+                "shadow_rows",
+                "min_period_end",
+                "max_period_end",
+                "min_available_at",
+                "max_available_at",
+            ]
+        )
+
+    rows_per_symbol = working["shadow_rows"] if not working.empty and "shadow_rows" in working.columns else pd.Series(dtype="int64")
+    min_available_at = working["min_available_at"].min() if not working.empty and working["min_available_at"].notna().any() else None
+
+    covered_symbols = sorted(working["symbol"].dropna().astype(str).str.upper().unique().tolist()) if not working.empty else []
+    covered_symbol_set = set(covered_symbols)
+    missing_symbols = [symbol for symbol in symbols if symbol not in covered_symbol_set]
+
+    raw_summary = load_statement_coverage_summary(symbols=missing_symbols, freq=freq) if missing_symbols else pd.DataFrame()
+    if not raw_summary.empty:
+        raw_summary = raw_summary.copy()
+        raw_summary["symbol"] = raw_summary["symbol"].astype(str).str.upper()
+        raw_summary["min_period_end"] = pd.to_datetime(raw_summary["min_period_end"], errors="coerce")
+        raw_summary["max_period_end"] = pd.to_datetime(raw_summary["max_period_end"], errors="coerce")
+        raw_summary["min_available_at"] = pd.to_datetime(raw_summary["min_available_at"], errors="coerce")
+        raw_summary["max_available_at"] = pd.to_datetime(raw_summary["max_available_at"], errors="coerce")
+    raw_map = {
+        str(row["symbol"]).upper(): row
+        for _, row in raw_summary.iterrows()
+        if row.get("symbol") is not None
+    }
+
+    missing_rows: list[dict[str, Any]] = []
+    raw_present_missing_symbols: list[str] = []
+    no_raw_missing_symbols: list[str] = []
+    for symbol in missing_symbols:
+        raw_row = raw_map.get(symbol)
+        if raw_row is not None:
+            raw_present_missing_symbols.append(symbol)
+            diagnosis = "raw_statement_present_but_shadow_missing"
+            recommended_action = (
+                "Raw strict statement rows already exist. Re-run Extended Statement Refresh under the current shadow-rebuild path first; "
+                "if the symbol still remains uncovered, inspect the statement-shadow coverage hardening path."
+            )
+        else:
+            no_raw_missing_symbols.append(symbol)
+            diagnosis = "no_raw_statement_coverage"
+            recommended_action = (
+                "No strict raw statement coverage is currently stored for this symbol. "
+                "Run Extended Statement Refresh or Financial Statement Ingestion first."
+            )
+
+        missing_rows.append(
+            {
+                "Symbol": symbol,
+                "Diagnosis": diagnosis,
+                "Raw Strict Rows": int(raw_row["strict_rows"]) if raw_row is not None and pd.notna(raw_row.get("strict_rows")) else 0,
+                "Raw Earliest Period": (
+                    pd.to_datetime(raw_row["min_period_end"]).strftime("%Y-%m-%d")
+                    if raw_row is not None and pd.notna(raw_row.get("min_period_end"))
+                    else "-"
+                ),
+                "Raw Latest Period": (
+                    pd.to_datetime(raw_row["max_period_end"]).strftime("%Y-%m-%d")
+                    if raw_row is not None and pd.notna(raw_row.get("max_period_end"))
+                    else "-"
+                ),
+                "Raw Latest Available": (
+                    pd.to_datetime(raw_row["max_available_at"]).strftime("%Y-%m-%d")
+                    if raw_row is not None and pd.notna(raw_row.get("max_available_at"))
+                    else "-"
+                ),
+                "Recommended Action": recommended_action,
+            }
+        )
+
+    refresh_payload = None
+    if no_raw_missing_symbols:
+        symbols_csv = ",".join(no_raw_missing_symbols)
+        refresh_payload = {
+            "symbols_csv": symbols_csv,
+            "payload_block": (
+                f"symbols={symbols_csv}\n"
+                f"freq={freq}\n"
+                "periods=0\n"
+                f"period={freq}"
+            ),
         }
 
-    working = shadow_df.copy()
-    working["symbol"] = working["symbol"].astype(str).str.upper()
-    working["period_end"] = pd.to_datetime(working["period_end"], errors="coerce")
-    if "latest_available_at" in working.columns:
-        working["latest_available_at"] = pd.to_datetime(working["latest_available_at"], errors="coerce")
-
-    rows_per_symbol = working.groupby("symbol").size()
-    min_available_at = None
-    if "latest_available_at" in working.columns and working["latest_available_at"].notna().any():
-        min_available_at = working["latest_available_at"].min()
+    shadow_rebuild_payload = None
+    if raw_present_missing_symbols:
+        rebuild_csv = ",".join(raw_present_missing_symbols)
+        shadow_rebuild_payload = {
+            "symbols_csv": rebuild_csv,
+            "payload_block": (
+                f"symbols={rebuild_csv}\n"
+                f"freq={freq}"
+            ),
+        }
 
     return {
         "requested_count": len(symbols),
-        "covered_count": int(rows_per_symbol.size),
-        "row_count": int(len(working)),
-        "min_period_end": working["period_end"].min(),
-        "max_period_end": working["period_end"].max(),
+        "covered_count": int(len(covered_symbols)),
+        "row_count": int(rows_per_symbol.sum()) if not rows_per_symbol.empty else 0,
+        "min_period_end": working["min_period_end"].min() if not working.empty else None,
+        "max_period_end": working["max_period_end"].max() if not working.empty else None,
         "median_rows_per_symbol": int(rows_per_symbol.median()) if not rows_per_symbol.empty else 0,
         "min_available_at": min_available_at,
+        "covered_symbols": covered_symbols,
+        "missing_symbols": missing_symbols,
+        "missing_count": len(missing_symbols),
+        "raw_present_missing_count": len(raw_present_missing_symbols),
+        "no_raw_missing_count": len(no_raw_missing_symbols),
+        "missing_rows": missing_rows,
+        "refresh_payload": refresh_payload,
+        "shadow_rebuild_payload": shadow_rebuild_payload,
+    }
+
+
+def clear_backtest_preview_caches() -> None:
+    _load_statement_shadow_coverage_preview.cache_clear()
+
+
+def _queue_ingestion_prefill(
+    *,
+    target: str,
+    symbols_csv: str,
+    freq: str,
+    notice: str,
+) -> None:
+    widget_values: dict[str, Any] = {}
+    if target == "extended_statement_refresh":
+        widget_values = {
+            "ext_period_input": freq,
+            "ext_periods_input": 0,
+        }
+    elif target == "statement_shadow_rebuild":
+        widget_values = {
+            "shadow_rebuild_freq_input": freq,
+        }
+
+    st.session_state.ingestion_prefill_request = {
+        "target": target,
+        "symbols_csv": symbols_csv,
+        "widget_values": widget_values,
+        "notice": notice,
     }
 
 
@@ -636,6 +768,16 @@ def _render_cash_share_help_popover() -> None:
     )
 
 
+def _render_statement_shadow_coverage_help_popover() -> None:
+    _render_inline_help_popover(
+        "Statement Shadow Coverage Preview",
+        "이 preview는 가격 데이터가 아니라 quarterly/annual statement shadow coverage를 확인하는 용도입니다. "
+        "`Covered`는 현재 DB의 `nyse_fundamentals_statement`에서 usable shadow rows가 있는 심볼 수를 뜻합니다. "
+        "`Requested`보다 작으면 일부 심볼은 factor 계산용 statement shadow가 아직 없다는 뜻이며, "
+        "아래 drilldown에서 어떤 심볼이 빠졌는지와 raw statement가 아예 없는지까지 확인할 수 있습니다.",
+    )
+
+
 def _render_statement_shadow_coverage_preview(
     *,
     tickers: list[str],
@@ -646,12 +788,12 @@ def _render_statement_shadow_coverage_preview(
         return
 
     summary = _load_statement_shadow_coverage_preview(tuple(tickers), freq)
-    st.markdown("#### Statement Shadow Coverage Preview")
+    title_col, help_col = st.columns([0.92, 0.08], gap="small")
+    with title_col:
+        st.markdown("#### Statement Shadow Coverage Preview")
+    with help_col:
+        _render_statement_shadow_coverage_help_popover()
     st.caption(f"Current `{freq}` statement-shadow coverage for `{strategy_label}` before execution.")
-
-    if summary.get("covered_count", 0) == 0:
-        st.warning("No statement shadow rows are currently available for the selected symbols.")
-        return
 
     metric_cols = st.columns(5)
     metric_cols[0].metric("Requested", summary.get("requested_count", 0))
@@ -674,6 +816,9 @@ def _render_statement_shadow_coverage_preview(
     )
     metric_cols[4].metric("Median Rows / Symbol", summary.get("median_rows_per_symbol", 0))
 
+    if summary.get("covered_count", 0) == 0:
+        st.warning("No statement shadow rows are currently available for the selected symbols.")
+
     if summary.get("covered_count", 0) < summary.get("requested_count", 0):
         st.caption(
             "일부 심볼은 아직 statement shadow coverage가 없습니다. 이 경우 해당 심볼은 초기 리밸런싱 구간에서 자연스럽게 제외됩니다."
@@ -684,6 +829,83 @@ def _render_statement_shadow_coverage_preview(
             "이 preview는 raw statement ledger가 아니라 rebuilt statement shadow를 기준으로 합니다. "
             f"현재 earliest `latest_available_at`은 `{pd.to_datetime(min_available_at).strftime('%Y-%m-%d')}` 입니다."
         )
+
+    missing_count = int(summary.get("missing_count", 0) or 0)
+    if missing_count == 0:
+        return
+
+    st.info(
+        f"`Covered`에서 빠진 `{missing_count}`개 심볼을 아래에서 확인할 수 있습니다. "
+        "이 표는 단순히 missing symbol 목록만 보여주는 것이 아니라, "
+        "raw statement 자체가 없는지(`no_raw_statement_coverage`) 아니면 raw는 있는데 shadow만 비어 있는지까지 같이 구분합니다."
+    )
+    gap_cols = st.columns(3)
+    gap_cols[0].metric("Missing", missing_count)
+    gap_cols[1].metric("Need Raw Collection", int(summary.get("no_raw_missing_count", 0) or 0))
+    gap_cols[2].metric("Raw Exists / Shadow Missing", int(summary.get("raw_present_missing_count", 0) or 0))
+
+    with st.expander("Coverage Gap Drilldown", expanded=False):
+        st.caption(
+            "`no_raw_statement_coverage`는 추가 statement 수집이 필요한 심볼이고, "
+            "`raw_statement_present_but_shadow_missing`는 raw는 이미 있지만 shadow가 비어 있는 심볼입니다. "
+            "현재는 `Extended Statement Refresh`가 shadow rebuild까지 같이 수행하므로, 먼저 그 경로를 다시 실행해보고 "
+            "그래도 남으면 coverage hardening을 점검하는 것이 좋습니다."
+        )
+        missing_df = pd.DataFrame(summary.get("missing_rows") or [])
+        if not missing_df.empty:
+            st.dataframe(missing_df, use_container_width=True, hide_index=True)
+
+        refresh_payload = summary.get("refresh_payload")
+        if refresh_payload:
+            st.caption(
+                "아래 payload는 `no_raw_statement_coverage`로 분류된 심볼만 대상으로 한 `Extended Statement Refresh` / "
+                "`Financial Statement Ingestion` 입력 예시입니다."
+            )
+            st.code(refresh_payload["payload_block"], language="text")
+            if st.button(
+                "Send Raw-Coverage Gaps To Extended Statement Refresh",
+                key=f"shadow_gap_send_refresh_{strategy_label}_{freq}",
+                use_container_width=True,
+            ):
+                _queue_ingestion_prefill(
+                    target="extended_statement_refresh",
+                    symbols_csv=refresh_payload["symbols_csv"],
+                    freq=freq,
+                    notice=(
+                        "Loaded raw-coverage gap symbols into `Extended Statement Refresh`. "
+                        "Open the `Ingestion` tab and run the prepared card when you are ready."
+                    ),
+                )
+                st.rerun()
+        else:
+            st.caption(
+                "현재 missing symbol은 모두 raw statement coverage가 이미 있는 상태입니다. "
+                "현행 `Extended Statement Refresh`는 shadow rebuild까지 같이 수행하므로, 먼저 그 경로를 다시 실행해보고 "
+                "그래도 남으면 coverage hardening 점검이 더 우선입니다."
+            )
+
+        shadow_rebuild_payload = summary.get("shadow_rebuild_payload")
+        if shadow_rebuild_payload:
+            st.caption(
+                "아래 payload는 `raw_statement_present_but_shadow_missing` 심볼만 대상으로 한 "
+                "`Statement Shadow Rebuild Only` 입력 예시입니다."
+            )
+            st.code(shadow_rebuild_payload["payload_block"], language="text")
+            if st.button(
+                "Send Shadow-Missing Gaps To Statement Shadow Rebuild",
+                key=f"shadow_gap_send_rebuild_{strategy_label}_{freq}",
+                use_container_width=True,
+            ):
+                _queue_ingestion_prefill(
+                    target="statement_shadow_rebuild",
+                    symbols_csv=shadow_rebuild_payload["symbols_csv"],
+                    freq=freq,
+                    notice=(
+                        "Loaded raw-present / shadow-missing symbols into `Statement Shadow Rebuild Only`. "
+                        "Open the `Ingestion` tab and run the prepared card when you are ready."
+                    ),
+                )
+                st.rerun()
 
 
 def _build_daily_market_update_refresh_payload(details: dict[str, Any]) -> dict[str, str] | None:
@@ -841,6 +1063,10 @@ def _render_strict_price_freshness_preflight(
             st.caption(
                 "If this check is yellow, run `Daily Market Update` for the lagging symbols first. "
                 "That usually prevents duplicate or shifted final-month rows in large-universe strict statement runs."
+            )
+            st.caption(
+                "If you need to distinguish DB ingestion gaps from provider/source gaps or likely delisting, "
+                "use `Ingestion > Manual Jobs / Inspection > Price Stale Diagnosis`."
             )
             payload = _build_daily_market_update_refresh_payload(details)
             if payload is not None:

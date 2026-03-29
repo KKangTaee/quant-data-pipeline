@@ -169,3 +169,55 @@ def load_statement_fundamentals_shadow(
     if "latest_available_at" in df.columns:
         df["latest_available_at"] = pd.to_datetime(df["latest_available_at"])
     return df
+
+
+def load_statement_shadow_coverage_summary(
+    symbols: str | Iterable[str] | None = None,
+    *,
+    universe_source: str | None = None,
+    freq: str = "annual",
+) -> pd.DataFrame:
+    resolved_symbols = resolve_loader_symbols(symbols=symbols, universe_source=universe_source)
+    normalized_freq = normalize_loader_freq(freq)
+
+    db = MySQLClient("localhost", "root", "1234", 3306)
+    try:
+        db.use_db("finance_fundamental")
+        placeholders = ",".join(["%s"] * len(resolved_symbols))
+        sql = f"""
+        SELECT
+          symbol,
+          freq,
+          COUNT(*) AS shadow_rows,
+          MIN(period_end) AS min_period_end,
+          MAX(period_end) AS max_period_end,
+          MIN(latest_available_at) AS min_available_at,
+          MAX(latest_available_at) AS max_available_at
+        FROM nyse_fundamentals_statement
+        WHERE symbol IN ({placeholders}) AND freq = %s
+        GROUP BY symbol, freq
+        ORDER BY symbol ASC
+        """
+        rows = db.query(sql, list(resolved_symbols) + [normalized_freq])
+    finally:
+        db.close()
+
+    df = pd.DataFrame(rows)
+    if df.empty:
+        return pd.DataFrame(
+            columns=[
+                "symbol",
+                "freq",
+                "shadow_rows",
+                "min_period_end",
+                "max_period_end",
+                "min_available_at",
+                "max_available_at",
+            ]
+        )
+
+    df["min_period_end"] = pd.to_datetime(df["min_period_end"], errors="coerce")
+    df["max_period_end"] = pd.to_datetime(df["max_period_end"], errors="coerce")
+    df["min_available_at"] = pd.to_datetime(df["min_available_at"], errors="coerce")
+    df["max_available_at"] = pd.to_datetime(df["max_available_at"], errors="coerce")
+    return df

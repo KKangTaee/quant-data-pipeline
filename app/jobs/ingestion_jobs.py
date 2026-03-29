@@ -759,23 +759,271 @@ def run_extended_statement_refresh(
     period: str = "annual",
     progress_callback: Callable[[dict[str, Any]], None] | None = None,
 ) -> JobResult:
-    result = run_collect_financial_statements(
-        symbols,
+    job_name = "extended_statement_refresh"
+    started_at = _now_str()
+    t0 = perf_counter()
+    parsed, invalid_symbols = split_valid_invalid_symbols(symbols)
+
+    if not parsed:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=0,
+            symbols_processed=0,
+            failed_symbols=invalid_symbols,
+            message="No valid symbols provided.",
+            details={"pipeline_type": "extended_statement_refresh", "freq": freq, "periods": periods, "period": period, "steps": []},
+        )
+
+    steps: list[JobResult] = []
+
+    if progress_callback is not None:
+        progress_callback({"event": "stage_start", "stage": "collect_financial_statements", "stage_index": 1, "total_stages": 3})
+    refresh_result = run_collect_financial_statements(
+        parsed,
         freq=freq,
         periods=periods,
         period=period,
         progress_callback=progress_callback,
     )
-    result["job_name"] = "extended_statement_refresh"
-    if result["status"] == "success":
-        result["message"] = "Extended statement refresh completed."
-    elif result["status"] == "partial_success":
-        result["message"] = "Extended statement refresh completed with partial success."
-    else:
-        result["message"] = "Extended statement refresh failed."
-    result.setdefault("details", {})
-    result["details"]["pipeline_type"] = "extended_statement_refresh"
-    return result
+    steps.append(refresh_result)
+    if progress_callback is not None:
+        progress_callback({"event": "stage_complete", "stage": "collect_financial_statements", "stage_index": 1, "total_stages": 3})
+
+    if refresh_result["status"] == "failed":
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=refresh_result.get("rows_written") or 0,
+            symbols_requested=len(parsed),
+            symbols_processed=0,
+            failed_symbols=_merge_step_failures(steps, invalid_symbols),
+            message="Extended statement refresh stopped because raw statement collection failed.",
+            details={
+                "pipeline_type": "extended_statement_refresh",
+                "freq": freq,
+                "periods": periods,
+                "period": period,
+                "steps": steps,
+            },
+        )
+
+    if progress_callback is not None:
+        progress_callback({"event": "stage_start", "stage": "statement_fundamentals_shadow", "stage_index": 2, "total_stages": 3})
+    fundamentals_rows = upsert_statement_fundamentals_shadow(parsed, freq=freq)
+    steps.append(
+        _build_result(
+            job_name="statement_fundamentals_shadow",
+            status="success" if fundamentals_rows > 0 else "failed",
+            started_at=started_at,
+            finished_at=_now_str(),
+            duration_sec=0.0,
+            rows_written=fundamentals_rows,
+            symbols_requested=len(parsed),
+            symbols_processed=len(parsed) if fundamentals_rows > 0 else 0,
+            message=(
+                "Statement fundamentals shadow rebuild completed."
+                if fundamentals_rows > 0
+                else "Statement fundamentals shadow rebuild wrote no rows."
+            ),
+            details={"freq": freq},
+        )
+    )
+    if progress_callback is not None:
+        progress_callback({"event": "stage_complete", "stage": "statement_fundamentals_shadow", "stage_index": 2, "total_stages": 3})
+
+    if fundamentals_rows == 0:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=sum((step.get("rows_written") or 0) for step in steps),
+            symbols_requested=len(parsed),
+            symbols_processed=0,
+            failed_symbols=_merge_step_failures(steps, invalid_symbols),
+            message="Extended statement refresh stopped because statement shadow rebuild wrote no rows.",
+            details={
+                "pipeline_type": "extended_statement_refresh",
+                "freq": freq,
+                "periods": periods,
+                "period": period,
+                "steps": steps,
+            },
+        )
+
+    if progress_callback is not None:
+        progress_callback({"event": "stage_start", "stage": "statement_factors_shadow", "stage_index": 3, "total_stages": 3})
+    factor_rows = upsert_statement_factors_shadow(parsed, freq=freq)
+    steps.append(
+        _build_result(
+            job_name="statement_factors_shadow",
+            status="success" if factor_rows > 0 else "failed",
+            started_at=started_at,
+            finished_at=_now_str(),
+            duration_sec=0.0,
+            rows_written=factor_rows,
+            symbols_requested=len(parsed),
+            symbols_processed=len(parsed) if factor_rows > 0 else 0,
+            message=(
+                "Statement factors shadow rebuild completed."
+                if factor_rows > 0
+                else "Statement factors shadow rebuild wrote no rows."
+            ),
+            details={"freq": freq},
+        )
+    )
+    if progress_callback is not None:
+        progress_callback({"event": "stage_complete", "stage": "statement_factors_shadow", "stage_index": 3, "total_stages": 3})
+
+    finished_at = _now_str()
+    return _build_result(
+        job_name=job_name,
+        status=_pipeline_status(steps),
+        started_at=started_at,
+        finished_at=finished_at,
+        duration_sec=perf_counter() - t0,
+        rows_written=sum((step.get("rows_written") or 0) for step in steps),
+        symbols_requested=len(parsed),
+        symbols_processed=len(parsed) if factor_rows > 0 else 0,
+        failed_symbols=_merge_step_failures(steps, invalid_symbols),
+        message=(
+            "Extended statement refresh completed."
+            if factor_rows > 0
+            else "Extended statement refresh finished with issues."
+        ),
+        details={
+            "pipeline_type": "extended_statement_refresh",
+            "freq": freq,
+            "periods": periods,
+            "period": period,
+            "steps": steps,
+        },
+    )
+
+
+def run_rebuild_statement_shadow(
+    symbols: str | Iterable[str] | None,
+    *,
+    freq: str = "quarterly",
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
+) -> JobResult:
+    job_name = "rebuild_statement_shadow"
+    started_at = _now_str()
+    t0 = perf_counter()
+    parsed, invalid_symbols = split_valid_invalid_symbols(symbols)
+
+    if not parsed:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=0,
+            symbols_processed=0,
+            failed_symbols=invalid_symbols,
+            message="No valid symbols provided.",
+            details={"pipeline_type": "statement_shadow_rebuild", "freq": freq, "steps": []},
+        )
+
+    steps: list[JobResult] = []
+
+    if progress_callback is not None:
+        progress_callback({"event": "stage_start", "stage": "statement_fundamentals_shadow", "stage_index": 1, "total_stages": 2})
+    fundamentals_rows = upsert_statement_fundamentals_shadow(parsed, freq=freq)
+    steps.append(
+        _build_result(
+            job_name="statement_fundamentals_shadow",
+            status="success" if fundamentals_rows > 0 else "failed",
+            started_at=started_at,
+            finished_at=_now_str(),
+            duration_sec=0.0,
+            rows_written=fundamentals_rows,
+            symbols_requested=len(parsed),
+            symbols_processed=len(parsed) if fundamentals_rows > 0 else 0,
+            message=(
+                "Statement fundamentals shadow rebuild completed."
+                if fundamentals_rows > 0
+                else "Statement fundamentals shadow rebuild wrote no rows."
+            ),
+            details={"freq": freq},
+        )
+    )
+    if progress_callback is not None:
+        progress_callback({"event": "stage_complete", "stage": "statement_fundamentals_shadow", "stage_index": 1, "total_stages": 2})
+
+    if fundamentals_rows == 0:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=len(parsed),
+            symbols_processed=0,
+            failed_symbols=_merge_step_failures(steps, invalid_symbols),
+            message="Statement shadow rebuild stopped because fundamentals shadow rebuild wrote no rows.",
+            details={"pipeline_type": "statement_shadow_rebuild", "freq": freq, "steps": steps},
+        )
+
+    if progress_callback is not None:
+        progress_callback({"event": "stage_start", "stage": "statement_factors_shadow", "stage_index": 2, "total_stages": 2})
+    factor_rows = upsert_statement_factors_shadow(parsed, freq=freq)
+    steps.append(
+        _build_result(
+            job_name="statement_factors_shadow",
+            status="success" if factor_rows > 0 else "failed",
+            started_at=started_at,
+            finished_at=_now_str(),
+            duration_sec=0.0,
+            rows_written=factor_rows,
+            symbols_requested=len(parsed),
+            symbols_processed=len(parsed) if factor_rows > 0 else 0,
+            message=(
+                "Statement factors shadow rebuild completed."
+                if factor_rows > 0
+                else "Statement factors shadow rebuild wrote no rows."
+            ),
+            details={"freq": freq},
+        )
+    )
+    if progress_callback is not None:
+        progress_callback({"event": "stage_complete", "stage": "statement_factors_shadow", "stage_index": 2, "total_stages": 2})
+
+    finished_at = _now_str()
+    return _build_result(
+        job_name=job_name,
+        status=_pipeline_status(steps),
+        started_at=started_at,
+        finished_at=finished_at,
+        duration_sec=perf_counter() - t0,
+        rows_written=sum((step.get("rows_written") or 0) for step in steps),
+        symbols_requested=len(parsed),
+        symbols_processed=len(parsed) if factor_rows > 0 else 0,
+        failed_symbols=_merge_step_failures(steps, invalid_symbols),
+        message=(
+            "Statement shadow rebuild completed."
+            if factor_rows > 0
+            else "Statement shadow rebuild finished with issues."
+        ),
+        details={"pipeline_type": "statement_shadow_rebuild", "freq": freq, "steps": steps},
+    )
 
 
 def run_metadata_refresh(
