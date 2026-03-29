@@ -53,3 +53,21 @@
 - `completed` promotion criteria draft
   - research-only 유지 기준 vs public candidate 진입 기준 정리
 - `completed` manual test checklist 작성
+
+## 7. Operator Diagnostics
+
+- `completed` stale price diagnosis first pass
+  - DB stale / provider gap / likely delisted를 구분하기 위한 read-only diagnosis card 추가
+- `completed` statement shadow coverage gap drilldown
+  - quarterly prototype preview에서 missing symbol / raw coverage 여부 / targeted statement refresh payload 확인 가능
+
+## 8. Operator Tooling Polish
+
+- `completed` runtime / build indicator
+  - 현재 Streamlit 프로세스가 어떤 코드 상태로 떠 있는지 `Ingestion` 화면에서 바로 확인 가능
+- `completed` statement shadow rebuild only helper
+  - raw statement 재수집 없이 shadow rebuild만 수행하는 manual helper 추가
+- `completed` coverage gap action bridge
+  - quarterly preview에서 missing symbol을 `Extended Statement Refresh` / `Statement Shadow Rebuild Only`로 바로 넘기는 prefill bridge 추가
+- `completed` run inspector and standardized artifacts first pass
+  - persisted run에서 runtime marker / related logs / standardized JSON+failure CSV artifact를 확인 가능

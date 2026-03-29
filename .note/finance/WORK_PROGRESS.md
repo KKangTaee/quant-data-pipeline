@@ -218,39 +218,7 @@ Keep entries append-only and concise.
   - `AAPL` quarterly 3 periods
 - Confirmed in MySQL that:
   - `nyse_financial_statement_filings` was created and populated
-  - existing labels/values tables received the new point-in-time columns
-  - AAPL annual rows store `period_end=2025-09-27`, filing `2025-10-31`, acceptance `2025-10-31 06:01:26`
-  - MSFT annual rows store `period_end=2025-06-30`, filing `2025-07-30`, acceptance `2025-07-30 20:11:40`
-- Confirmed a known raw-provider behavior during quarterly verification:
-  - comparative rows inside a 10-Q can carry the filing's `fiscal_period` context even when the row `period_end` is an earlier quarter
-  - downstream loaders should treat `period_end` and `accession_no` as the primary row identity, not `fiscal_period` alone
-- Reviewed the new detailed-statement point-in-time design and recorded the next patch priorities:
-  - conservative `available_at` fallback
-  - non-null/stable raw value identity for unique keys
-  - summary-only positioning for the labels table unless concept-level identity is introduced
-- Added a dedicated review-and-patch-plan note for the new detailed-statement point-in-time schema.
-- Created the next PHASE2 chapter TODO board for point-in-time hardening work.
-- Completed the first hardening patch by changing `_available_at_from_dates(...)` to use a conservative end-of-day fallback when only `filing_date` is available.
-- Verified locally with the project virtualenv that:
-  - `filing_date`-only rows now fall back to `23:59:59`
-  - rows with `accepted_at` still preserve the accepted timestamp
-- Audited the current `nyse_financial_statement_values` table for raw-identity readiness and found it is still in a mixed state:
-  - 303,054 total rows
-  - 302,712 rows missing `accession_no`
-  - 302,712 rows missing `unit`
-  - only 342 rows currently carry accession-based raw identity, across 2 symbols
-- Recorded the resulting policy decision:
-  - new raw-path rows should move toward strict accession-based identity
-  - legacy rows should not be assumed strict-PIT-ready until backfilled or rebuilt
-- Verified on representative raw EDGAR sources (`AAPL`, `MSFT`, `JPM`) that statement facts currently carry both `accession` and `unit` consistently.
-- Added an ingestion-side identity guard so the new PIT raw path skips value rows that do not have both `accession_no` and `unit`.
-- Re-ran quarterly detailed-statement ingestion for `AAPL` and verified that accession-bearing raw rows remain stable:
-  - 139 accession-based quarterly rows before rerun
-  - 139 accession-based quarterly rows after rerun
-  - 0 duplicate groups under `(symbol, freq, accession_no, statement_type, concept, period_end, unit)`
-- Added a dedicated strategy note for how to move from the current mixed-state table toward stricter PIT behavior:
-  - keep ingestion guards
-  - use accession-bearing rows for strict loaders
+
   - backfill research-first universes first
   - defer DB-level strict constraints until coverage improves
 - Updated the loader design notes to explicitly position `nyse_financial_statement_labels` as a summary layer and keep future strict PIT statement loaders values-centered.
@@ -1889,3 +1857,251 @@ Keep entries append-only and concise.
   - `PHASE8_CHECKLIST_PREVALIDATION.md`
 - Remaining validation:
   - browser-level visual/manual UX readout by the user later
+
+### 2026-03-28 - Phase 7 ingestion UI clarification pass
+
+- Addressed user confusion around Phase 7 checklist item 1 and 2:
+  - clarified in `Ingestion > Extended Statement Refresh` that the older lower-level `Financial Statement Ingestion` card still exists further below under `Manual Jobs`
+  - clarified in `Ingestion > Financial Statement Ingestion` that it is a lower-level manual card and that routine statement history recovery should start with `Extended Statement Refresh`
+  - clarified in `Ingestion > Statement PIT Inspection` that it is read-only:
+    - `Coverage Summary` and `Timing Audit` read already stored MySQL statement ledgers
+    - `Source Payload Inspection` fetches one live EDGAR sample payload only for field inspection
+- Updated `PHASE7_TEST_CHECKLIST.md` so item 1 points to the actual UI structure and item 2 explains what PIT inspection reads.
+- Validation:
+  - `python3 -m py_compile app/web/streamlit_app.py` passed
+
+### 2026-03-28 - Ingestion console tab separation
+
+- Reworked the `Ingestion` left-side console to separate collection work into two explicit tabs:
+  - `Operational Pipelines`
+  - `Manual Jobs / Inspection`
+- Added Korean top-of-tab guidance boxes because Streamlit tab labels do not support native hover help:
+  - operational tab now explains it owns recurring production refresh work
+  - manual tab now explains it owns exception handling, partial reruns, debugging, and PIT inspection
+- Moved the Phase 7/8 mental model into the UI:
+  - routine statement history recovery starts from `Extended Statement Refresh`
+  - lower-level `Financial Statement Ingestion` and `Statement PIT Inspection` live under the manual/inspection tab
+- Updated `PHASE7_TEST_CHECKLIST.md` to match the new tab layout.
+- Validation:
+  - `python3 -m py_compile app/web/streamlit_app.py` passed
+
+### 2026-03-28 - Ingestion UI clarification and inline result placement
+
+- Added inline help/caption clarification for:
+  - `Financial Statement Freq` vs `Financial Statement Period Type`
+  - `Timing Audit Symbols`
+  - `Rows / Symbol`
+  - `Source Sample Size`
+  - `Source Inspection Symbol`
+- Interpretation now exposed in UI:
+  - `Statement PIT Inspection` is read-only
+  - `Financial Statement Freq` controls target ledger frequency / allowed filing filters
+  - `Financial Statement Period Type` controls the EDGAR statement view request
+  - normal runs should usually keep the two aligned
+- Removed the global top-of-page `Latest Completed Run` insertion from the ingestion console and now render the latest completed result inline under the matching job card to reduce scroll disruption after job completion.
+- Validation:
+  - `python3 -m py_compile app/web/streamlit_app.py` passed
+
+### 2026-03-29 - Manual financial statement ingestion mode simplification
+
+- Simplified `Ingestion > Manual Jobs / Inspection > Financial Statement Ingestion`:
+  - removed separate operator-facing `Financial Statement Freq` and `Financial Statement Period Type` controls
+  - added one operator-facing `Statement Mode` control (`annual` / `quarterly`)
+  - internal job params still pass both `freq` and `period`, but now they are aligned automatically from the selected mode
+- Updated:
+  - `PHASE7_TEST_CHECKLIST.md`
+  - `FINANCE_COMPREHENSIVE_ANALYSIS.md`
+- Validation:
+  - `python3 -m py_compile app/web/streamlit_app.py` passed
+
+### 2026-03-29 - Statement PIT Inspection interpretation guide
+
+- Added inline interpretation help to `Ingestion > Manual Jobs / Inspection > Statement PIT Inspection`:
+  - top-level `이 카드 읽는 법` expander
+  - per-section captions for:
+    - `Coverage Summary`
+    - `Timing Audit`
+    - `Source Payload Inspection`
+- The card now explains in Korean how to read:
+  - DB coverage vs timing audit vs live source sample
+  - `Inspection Frequency`
+  - `Timing Audit Symbols`
+  - `Rows / Symbol`
+  - `Source Sample Size`
+  - `Source Inspection Symbol`
+- Synced:
+  - `FINANCE_COMPREHENSIVE_ANALYSIS.md`
+- Validation:
+  - `python3 -m py_compile app/web/streamlit_app.py` passed
+
+### 2026-03-29 - Overlay cash policy research
+
+- Researched overlay cash-handling semantics for the strict factor family without changing strategy logic.
+- Reconfirmed current implementation behavior:
+  - partial trend-overlay rejections are reallocated across surviving names
+  - only `all rejected` and market-regime `risk_off` paths create full cash states
+- Collected practitioner references across three buckets:
+  - stock-selection / factor-filter portfolios
+  - tactical asset allocation sleeves
+  - market-regime / hedge overlays
+- Concluded that the current strict family is closer to the stock-selection bucket, where survivor reweighting is the more typical default.
+- Added a durable research note:
+  - `.note/finance/OVERLAY_CASH_POLICY_RESEARCH.md`
+- Synced:
+  - `FINANCE_DOC_INDEX.md`
+  - `QUESTION_AND_ANALYSIS_LOG.md`
+  - `FINANCE_COMPREHENSIVE_ANALYSIS.md`
+
+### 2026-03-29 - Price stale diagnosis first pass
+
+- Added a read-only stale-price diagnosis flow under:
+  - `Ingestion > Manual Jobs / Inspection > Price Stale Diagnosis`
+- Implemented provider probing without DB writes:
+  - `5d`
+  - `1mo`
+  - `3mo`
+- The diagnosis now combines:
+  - DB latest daily price date
+  - provider re-probe result
+  - asset profile status summary
+- Added first-pass operator classifications:
+  - `local_ingestion_gap`
+  - `provider_source_gap`
+  - `likely_delisted_or_symbol_changed`
+  - `asset_profile_error`
+  - `rate_limited_during_probe`
+  - `inconclusive`
+- Added targeted `Daily Market Update` payload output only for:
+  - `local_ingestion_gap`
+  - `local_ingestion_gap_partial`
+- Updated strict backtest preflight copy so yellow stale warnings now point to the new diagnosis card for deeper triage.
+- Synced:
+  - `FINANCE_DOC_INDEX.md`
+  - `FINANCE_COMPREHENSIVE_ANALYSIS.md`
+  - `QUESTION_AND_ANALYSIS_LOG.md`
+  - `PHASE7_TEST_CHECKLIST.md`
+  - `PHASE8_TEST_CHECKLIST.md`
+
+### 2026-03-29 - Statement shadow coverage gap diagnostics
+
+- Expanded quarterly prototype `Statement Shadow Coverage Preview` so it no longer stops at `Requested` / `Covered` metrics.
+- Added:
+  - help popover explaining what `Covered` means
+  - `Coverage Gap Drilldown`
+  - missing symbol table
+  - raw-statement-vs-shadow classification
+  - targeted `Extended Statement Refresh` / `Financial Statement Ingestion` payload for symbols with no strict raw statement coverage
+- Introduced two operator-facing labels:
+  - `no_raw_statement_coverage`
+  - `raw_statement_present_but_shadow_missing`
+- Verified on `US Statement Coverage 300` quarterly preview:
+  - `Requested = 300`
+  - `Covered = 100`
+  - `Missing = 200`
+  - `Need Raw Collection = 200`
+  - `Raw Exists / Shadow Missing = 0`
+- Synced:
+  - `FINANCE_DOC_INDEX.md`
+  - `FINANCE_COMPREHENSIVE_ANALYSIS.md`
+  - `PHASE7_TEST_CHECKLIST.md`
+  - `PHASE8_TEST_CHECKLIST.md`
+  - `PHASE8_CURRENT_CHAPTER_TODO.md`
+
+### 2026-03-29 - Extended Statement Refresh shadow rebuild fix
+
+- Investigated why `Quality Snapshot (Strict Quarterly Prototype)` could still show the same `Statement Shadow Coverage Preview` after a user-triggered quarterly `Extended Statement Refresh`.
+- Confirmed the root cause:
+  - `Extended Statement Refresh` had only been refreshing raw statement ledgers
+  - quarterly preview reads `nyse_fundamentals_statement`
+  - therefore preview coverage could stay unchanged even after a successful raw refresh
+- Updated `run_extended_statement_refresh(...)` to execute three stages for the selected `freq`:
+  - `collect_financial_statements`
+  - `statement_fundamentals_shadow`
+  - `statement_factors_shadow`
+- Updated `Ingestion > Extended Statement Refresh` copy to describe the shadow rebuild behavior and write targets.
+- Smoke validation:
+  - before fix, `CRWD` quarterly raw ledger existed while quarterly shadow rows were `0`
+  - after the fixed `Extended Statement Refresh`, `CRWD` quarterly shadow rows became `33`
+
+### 2026-03-29 - Ingestion UI polish and utility review
+
+- Removed the top-level `Write Targets` table from `Ingestion` because the same information already exists in each card's `Writes to:` caption.
+- Converted the left-column run-job surfaces to expander-based sections in both:
+  - `Operational Pipelines`
+  - `Manual Jobs / Inspection`
+- Reviewed utility panels:
+  - `Recent Logs`
+    - confirmed functional
+    - reads latest `*.log` files and renders tail preview
+  - `Failure CSV Preview`
+    - confirmed functional
+    - currently lower operational value because only legacy `*failures*.csv` artifacts are present and not all modern jobs emit them
+- Added captions to make the current intended semantics of both panels explicit.
+- Added durable review note:
+  - `.note/finance/phase8/PHASE8_INGESTION_UI_POLISH_AND_REVIEW.md`
+
+### 2026-03-29 - Quarterly shadow preview cache/performance follow-up
+
+- Investigated the user report that:
+  - `Statement Shadow Coverage Preview` was slower than `Price Freshness Preflight`
+  - `Covered` barely moved after large quarterly refresh runs
+- Confirmed three root causes:
+  - pre-fix `Extended Statement Refresh` had left many symbols in `raw present / shadow missing` state
+  - preview helper used `lru_cache` and was not cleared after statement-related jobs
+  - preview diagnostics still relied on expensive Python-side grouping for raw/shadow coverage summaries
+- Implemented:
+  - cache clear after `extended_statement_refresh` and `collect_financial_statements`
+  - SQL aggregate loader for raw statement coverage summary
+  - SQL aggregate loader for statement shadow coverage summary
+- Validation snapshot on `US Statement Coverage 500` quarterly:
+  - `Covered = 101`
+  - `Missing = 399`
+  - `Need Raw Collection = 3`
+  - `Raw Exists / Shadow Missing = 396`
+- Verified that post-fix refresh now repairs the large `raw present / shadow missing` bucket:
+  - `CME`: shadow rows `0 -> 73`
+  - `MCK`: shadow rows `0 -> 73`
+- Verified the user's long `US Statement Coverage 500` run via `WEB_APP_RUN_HISTORY.jsonl`:
+  - `2026-03-29 11:03:02`
+  - `symbols_requested = 500`
+  - `duration_sec = 1506.713`
+  - `step_jobs = []`
+- Interpretation:
+  - that 500-symbol run was executed on the old raw-only `Extended Statement Refresh` path
+  - therefore it consumed runtime but could not materially raise quarterly `Statement Shadow Coverage Preview`
+- Current post-fix coverage snapshot:
+  - `Covered = 103`
+  - `Missing = 397`
+  - `Need Raw Collection = 3`
+  - `Raw Exists / Shadow Missing = 394`
+
+### 2026-03-29 - Operator runtime / shadow rebuild / artifact tooling
+
+- Implemented `Runtime / Build` indicator at the top of `Ingestion`:
+  - shows runtime marker, process loaded time, and git short SHA
+  - the same runtime metadata now flows into persisted run metadata
+- Added `Statement Shadow Rebuild Only` under `Ingestion > Manual Jobs / Inspection`:
+  - rebuilds `nyse_fundamentals_statement` and `nyse_factors_statement`
+  - does not call EDGAR raw collection again
+- Added coverage-gap action bridge from quarterly backtest preview:
+  - raw-gap symbols can be sent to `Extended Statement Refresh`
+  - raw-present / shadow-missing symbols can be sent to `Statement Shadow Rebuild Only`
+- Added `Run Inspector` under persisted ingestion history:
+  - re-renders selected run summary
+  - shows runtime marker and related logs
+  - exposes standardized artifact paths
+- Added standardized run artifact emission for web-app ingestion runs:
+  - `.note/finance/run_artifacts/<run-key>/result.json`
+  - `.note/finance/run_artifacts/<run-key>/manifest.json`
+  - `csv/<run-key>_failures.csv` when symbol-level issues exist
+- Validation:
+  - `py_compile` passed for updated app/job/backtest files
+  - `run_rebuild_statement_shadow(['CRWD'], freq='quarterly')` returned `success`
+  - current quarterly coverage summary for `US Statement Coverage 500` still reads:
+    - `Covered = 103`
+    - `Missing = 397`
+    - `Need Raw Collection = 3`
+    - `Raw Exists / Shadow Missing = 394`
+  - both action payloads now exist:
+    - raw refresh payload = `True`
+    - shadow rebuild payload = `True`

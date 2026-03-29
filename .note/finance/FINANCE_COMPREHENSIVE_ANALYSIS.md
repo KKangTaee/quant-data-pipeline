@@ -295,6 +295,12 @@ Analysis / Presentation
 - 또한 wider-universe annual coverage 확장을 준비하기 위해,
   `Extended Statement Refresh`와 manual `Financial Statement Ingestion`은
   large run일 때 batch-progress 기반 live progress를 표시하도록 보강되었다.
+- 이후 동작 보강으로 `Extended Statement Refresh`는
+  raw statement ledger만 갱신하는 카드가 아니라,
+  선택한 `freq` 기준으로 아래를 연속 실행하는 operational pipeline이 되었다.
+  - raw statement collection
+  - `nyse_fundamentals_statement` rebuild
+  - `nyse_factors_statement` rebuild
 - 그리고 first staged annual coverage run으로
   `Profile Filtered Stocks` 중 시가총액 상위 `100`개를 대상으로
   annual statement refresh + annual shadow rebuild를 수행했고,
@@ -337,6 +343,26 @@ Analysis / Presentation
 - 그리고 second pass에서는 이 preflight가 operator 대응 UX까지 확장되어,
   stale / missing symbol이 있을 때
   `Daily Market Update`에 넣을 수 있는 refresh payload를 같이 보여준다.
+- 이후 `Ingestion > Manual Jobs / Inspection`에는
+  `Price Stale Diagnosis` 카드도 추가되었다.
+  이 카드는
+  - DB latest date
+  - provider read-only 재조회 (`5d`, `1mo`, `3mo`)
+  - asset profile status
+  를 합쳐서
+  stale symbol을 아래처럼 좁혀본다.
+  - `local_ingestion_gap`
+  - `provider_source_gap`
+  - `likely_delisted_or_symbol_changed`
+  - `asset_profile_error`
+  - `rate_limited_during_probe`
+  - `inconclusive`
+- 이 diagnosis card는 새 데이터를 쓰지 않는 read-only helper이며,
+  `Price Freshness Preflight`의 yellow 상태를
+  “다시 수집할 것인지 / source 문제로 볼 것인지 / symbol-status 문제로 볼 것인지”
+  더 명확히 해석하기 위한 operator 도구다.
+- diagnosis 결과가 `local_ingestion_gap`으로 좁혀지는 경우에만
+  targeted `Daily Market Update` payload를 제안한다.
 - 이어서 UI에는 `Broad vs Strict Guide`도 추가되어,
   `Quality Snapshot`,
   `Quality Snapshot (Strict Annual)`,
@@ -484,7 +510,7 @@ Analysis / Presentation
     - trend filter on/off
     - trend filter window
   - first overlay는
-    `month-end MA200 trend filter + cash fallback`
+    `month-end MA200 trend filter + survivor reweight / full-cash fallback`
     으로 고정되었다
   - overlay가 켜진 strict family result는
     - `Raw Selected Ticker`
@@ -506,6 +532,16 @@ Analysis / Presentation
     - 평균 cash share
     - overlay rejection frequency
     를 함께 읽을 수 있다
+  - 현재 구현 기준으로는
+    partial trend rejection이 발생해도
+    생존 종목들에 다시 균등배분한다
+    - 즉 부분 탈락분은 자동으로 현금으로 남지 않는다
+    - `cash share`가 커지는 경우는
+      raw 후보 전부 탈락하거나
+      market regime overlay가 전체를 막는 경우에 더 가깝다
+  - 다만 일부 runtime / interpretation copy에는
+    여전히 부분 탈락분이 cash로 간다고 읽힐 수 있는 문구가 남아 있다
+    - 이는 현재 코드 의미와 완전히 일치하지 않는다
   - single strategy뿐 아니라 compare focused strategy에서도
     selection interpretation과 selection frequency를 함께 읽을 수 있다
   - strict preset은 현재 historical backtest semantics를 유지한다
@@ -618,12 +654,88 @@ Analysis / Presentation
     - latest period
     - median rows per symbol
     을 실행 전 바로 읽을 수 있다
-  - `Ingestion` 탭에는
-    `Statement PIT Inspection` helper card가 추가되어
+  - same preview는 이후 보강으로
+    `Covered < Requested`일 때
+    - missing symbol 목록
+    - raw statement coverage 존재 여부
+    - targeted `Extended Statement Refresh` payload
+    까지 보여주도록 확장되었다
+    - `no_raw_statement_coverage`
+      - strict raw statement ledger 자체가 없음
+      - 추가 statement 수집 우선
+    - `raw_statement_present_but_shadow_missing`
+      - raw는 존재하지만 shadow가 비어 있음
+      - source 추가 수집보다 shadow rebuild / coverage hardening 점검 우선
+  - 또한 `Extended Statement Refresh`가 quarterly raw statement만 갱신하고
+    quarterly shadow coverage는 그대로 두던 경로도 수정되었다.
+    - 이제 post-fix run에서는
+      `Quality Snapshot (Strict Quarterly Prototype)` 같은 quarterly preview가
+      같은 실행 안에서 raw + shadow 기준으로 함께 갱신된다
+    - 다만 pre-fix 시점에 이미 raw-only refresh가 누적된 심볼은
+      `raw_statement_present_but_shadow_missing`로 대량 남아 있을 수 있고,
+      이 경우에는 post-fix `Extended Statement Refresh`를 한 번 더 태워야
+      quarterly shadow coverage가 실제로 올라간다
+  - same preview는 이후 성능 보강으로
+    `nyse_fundamentals_statement` / `nyse_financial_statement_values`를
+    aggregate query로 요약해서 읽고,
+    statement-related job 완료 시 preview cache도 함께 비우도록 수정되었다
+    - 목적:
+      - large-universe preview 응답 개선
+      - refresh 직후 stale cached summary 노출 방지
+- `Ingestion` 탭에는
+  `Statement PIT Inspection` helper card가 추가되어
     아래를 UI에서 직접 확인할 수 있다
     - DB coverage summary
     - DB timing audit
     - EDGAR source payload inspection
+  - 또한 같은 카드 안에
+    결과 해석용 한국어 가이드가 추가되어
+    - `Coverage Summary`는 DB coverage 확인
+    - `Timing Audit`는 PIT timing 확인
+    - `Source Payload Inspection`은 live source field 구조 확인
+    으로 읽도록 정리되어 있다
+  - same operator polish pass에서
+    `Ingestion` 화면의 상단 `Write Targets` 표는 제거되었고,
+    각 실행 카드는 expander 기반으로 바뀌었다
+    - 이유:
+      - write target 정보는 각 카드 안의 `Writes to:` 설명과 중복
+      - 운영/수동 작업이 한 화면에 너무 길게 펼쳐지는 문제 완화
+  - `Recent Logs`는 현재도 실사용 가치가 높고,
+    최근 `logs/*.log`를 tail preview하는 방식으로 유지된다
+  - `Failure CSV Preview`는 기술적으로는 동작하지만,
+    최근 주요 job들이 failure CSV를 일관되게 남기지 않아서
+    현재 운영 가치는 상대적으로 낮다
+  - same operator-tooling pass에서
+    `Ingestion` 상단에 `Runtime / Build` block이 추가되어
+    - current runtime marker
+    - process loaded timestamp
+    - git short SHA
+    를 확인할 수 있게 되었다
+  - 또한 manual helper로
+    `Statement Shadow Rebuild Only`가 추가되어
+    raw statement ledger를 다시 수집하지 않고
+    - `nyse_fundamentals_statement`
+    - `nyse_factors_statement`
+    shadow만 재생성할 수 있게 되었다
+  - quarterly prototype의 `Statement Shadow Coverage Preview` drilldown은
+    이제 단순 payload 제안에 그치지 않고
+    - raw-gap symbols -> `Extended Statement Refresh`
+    - raw-present / shadow-missing symbols -> `Statement Shadow Rebuild Only`
+    로 넘기는 action bridge까지 가진다
+  - persisted ingestion runs에는
+    standardized run artifacts가 붙는다
+    - every run:
+      - `.note/finance/run_artifacts/<run-key>/result.json`
+      - `.note/finance/run_artifacts/<run-key>/manifest.json`
+    - symbol-level issue가 있을 때:
+      - `csv/<run-key>_failures.csv`
+  - `Persistent Run History` 아래에는 `Run Inspector`가 추가되어
+    selected run의
+    - runtime marker
+    - pipeline steps
+    - artifact paths
+    - related logs
+    를 다시 읽을 수 있게 되었다
 - Phase 6 smoke validation 기준으로는
   `AAPL/MSFT/GOOG`, `2024-01-01 -> 2026-03-28`, `SPY < MA200 => cash`
   small universe에서
@@ -1202,6 +1314,9 @@ EDGAR
   - `10-K/A`
   를 함께 받아 year-end `FY` rows를 quarterly longer-history에 포함한다
 - statement ingestion은 이제 `periods=0`을 `all available periods`로 공식 지원한다
+- web operator UI에서 manual `Financial Statement Ingestion`은
+  `Statement Mode` 단일 입력을 노출하고,
+  내부적으로 `freq`와 `period`를 같은 값으로 맞춰 실행한다
 
 ### `nyse_financial_statement_labels`
 역할:

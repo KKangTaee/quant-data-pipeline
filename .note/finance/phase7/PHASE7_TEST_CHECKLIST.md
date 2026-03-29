@@ -6,21 +6,33 @@
 
 ## 1. Statement Ingestion UI
 
-- `Ingestion > Extended Statement Refresh`
+- `Ingestion > Operational Pipelines`
+  - 운영 파이프라인 역할 설명 박스가 보이는지 확인
+- `Ingestion > Operational Pipelines > Extended Statement Refresh`
   - `Extended Statement Periods`가 `0`부터 입력 가능한지 확인
   - help/caption에 `0 = all available periods`가 보이는지 확인
-- `Ingestion > Financial Statement Ingestion`
+  - 같은 카드 안의 안내 문구에서
+    - `Financial Statement Ingestion`은 별도 상단 탭이 아니라 `Manual Jobs / Inspection` 탭에 남아 있다는 설명이 보이는지 확인
+- `Ingestion > Manual Jobs / Inspection`
+  - 수동/진단 작업 역할 설명 박스가 보이는지 확인
+- `Ingestion > Manual Jobs / Inspection > Financial Statement Ingestion`
+  - `Statement Mode`가 `annual / quarterly` 단일 입력으로 보이는지 확인
   - `Financial Statement Periods`가 `0`부터 입력 가능한지 확인
   - help/caption에 `0 = all available periods`가 보이는지 확인
+  - `Extended Statement Refresh`를 우선 사용하라는 안내 문구가 보이는지 확인
+  - `Statement Mode` 하나로 내부 `freq` / `period`가 같이 맞춰진다는 설명이 보이는지 확인
 
 ## 2. Quarterly Raw Ledger Coverage
 
 - 우선 추천:
-  - `Ingestion > Statement PIT Inspection`
+  - `Ingestion > Manual Jobs / Inspection > Statement PIT Inspection`
   - symbols: `AAPL,MSFT,GOOG`
   - freq: `quarterly`
   - `Run Statement PIT Inspection`
   - `Coverage Summary`에서 min/max period 확인
+  - 카드 설명에 아래 의미가 보이는지 확인
+    - DB에 저장된 statement ledger를 읽는 read-only inspection
+    - `Source Payload Inspection`은 EDGAR live sample payload 1건을 읽어서 필드 구조를 보여주는 용도
 
 - Python or notebook으로도 아래 확인 가능
 
@@ -99,6 +111,9 @@ print(inspect_financial_statement_source("AAPL", sample_size=2))
 - `Selection History`가 보이는지
 - `Statement Shadow Coverage Preview`가 보이는지
   - `Earliest Period`가 `2000s` / `2010s` 초반 구간으로 열려 있는지
+  - `Covered < Requested`일 때 `Coverage Gap Drilldown`이 보이는지
+  - missing symbol과 `Recommended Action`이 읽히는지
+  - `Need Raw Collection`이 0보다 크면 targeted statement refresh payload가 보이는지
 - end가 비거래일일 때
   - `Price Freshness Preflight`가 `effective trading end`를 보여주고
   - whole-universe stale warning으로 오해를 만들지 않는지
@@ -145,6 +160,19 @@ db.close()
 기대:
 
 - quarterly shadow가 최근 6 row 수준에 머무르지 않고 longer-history row를 갖고 있어야 함
+
+## 8. Optional Follow-up - Price Stale Diagnosis
+
+- `Backtest`에서 quarterly prototype preflight가 yellow일 때만 확인
+- `Ingestion > Manual Jobs / Inspection > Price Stale Diagnosis`
+- symbol 예시:
+  - preflight에서 stale로 보인 symbol 1~5개
+
+확인 포인트:
+
+- `DB Latest`, `Provider Latest`, `Diagnosis`, `Recommended Action`이 보이는지
+- `local_ingestion_gap`이면 `Suggested Daily Market Update Payload`가 나오는지
+- `provider_source_gap` 또는 `likely_delisted_or_symbol_changed`면 payload가 무조건 나오지 않는지
 
 ## 8. Regression Check
 

@@ -11,6 +11,8 @@
 확인 포인트:
 - `Price Freshness Preflight`가 보이는지
 - `Statement Shadow Coverage Preview`가 보이는지
+- `Covered < Requested`일 때 `Coverage Gap Drilldown`이 보이는지
+- missing symbol과 `Recommended Action`이 읽히는지
 - 실행이 성공하는지
 - `Selection History`가 열리는지
 - `Interpretation` 탭이 보이는지
@@ -99,6 +101,38 @@
 - default preset이 `US Statement Coverage 100`인지
 - 늦은 active start가 warning/caption으로 설명되는지
 
+## 9. Operator Diagnosis - Stale Price Follow-up
+
+- `Ingestion > Manual Jobs / Inspection > Price Stale Diagnosis`
+- symbol 예시:
+  - `AAPL`
+  - quarterly / annual preflight에서 stale로 보였던 symbol 1개 이상
+
+확인 포인트:
+- `AAPL` 같은 정상 심볼은 `up_to_date_in_db`로 읽히는지
+- stale 심볼은 `DB Latest`, `Provider Latest`, `Diagnosis`, `Recommended Action`이 같이 보이는지
+- `Provider Probe Details`가 `5d / 1mo / 3mo` 기준으로 보이는지
+- `local_ingestion_gap`이 있는 경우에만 targeted `Daily Market Update` payload가 제안되는지
+
+## 10. Operator Tooling - Runtime / Rebuild / Inspector
+
+- `Ingestion`
+
+확인 포인트:
+- 상단에 `Runtime / Build` block이 보이는지
+- `Runtime Marker`, `Loaded At`, `Git SHA`가 보이는지
+- `Manual Jobs / Inspection > Statement Shadow Rebuild Only` 카드가 보이는지
+- quarterly prototype의 `Coverage Gap Drilldown`에서 아래 둘이 같이 보이는지
+  - `Send Raw-Coverage Gaps To Extended Statement Refresh`
+  - `Send Shadow-Missing Gaps To Statement Shadow Rebuild`
+- 위 버튼 중 하나를 누른 뒤 ingestion 관련 카드에 symbols/freq가 prefill 되는지
+- `Persistent Run History > Run Inspector`에서 아래가 보이는지
+  - runtime marker
+  - pipeline steps
+  - run artifacts
+  - related logs
+- symbol-level issue가 있는 run 이후 `Failure CSV Preview`에서 새 standardized failure CSV가 보이는지
+
 ## 추천 확인 순서
 
 1. quarterly value single
@@ -106,3 +140,5 @@
 3. quarterly quality / value / quality+value compare
 4. history / prefill
 5. annual vs quarterly compare readout
+6. stale price diagnosis card
+7. operator runtime / rebuild / inspector tooling

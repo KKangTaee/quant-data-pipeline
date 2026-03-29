@@ -238,11 +238,6 @@ Do not copy full chat transcripts. Keep only the durable result.
   - added job-level captions describing:
     - whether `Symbols` is used
     - execution order recommendations
-    - preconditions for factor calculation
-    - why asset profile collection behaves differently
-    - why financial statement ingestion may be slower
-- Durable output:
-  - `app/web/streamlit_app.py`
 
 ### 2026-03-11 - Pre-execution validation in admin UI
 - Request topic:
@@ -3886,3 +3881,339 @@ Do not copy full chat transcripts. Keep only the durable result.
     - implementation complete for first pass
     - checklist prevalidated by assistant
     - user manual validation still pending for final visual confirmation
+
+### 2026-03-28 - Phase 7 ingestion checklist clarification
+- Request topic:
+  - the user could not find `Financial Statement Ingestion` from the Phase 7 checklist and wanted to understand what `Statement PIT Inspection` actually does
+- Interpreted goal:
+  - remove UI ambiguity before the user continues with the rest of the Phase 7 manual checklist
+- Result:
+  - confirmed `Financial Statement Ingestion` still exists, but lives under `Ingestion > Manual Jobs` rather than next to `Extended Statement Refresh`
+  - updated the UI copy so the relationship is explicit:
+    - `Extended Statement Refresh` is the recommended operational entry point
+    - `Financial Statement Ingestion` is the lower-level manual card kept for exception handling / debugging
+  - clarified that `Statement PIT Inspection` is not an ingestion job:
+    - `Coverage Summary` and `Timing Audit` read existing MySQL statement ledgers
+    - `Source Payload Inspection` fetches a live EDGAR sample payload only to inspect source fields
+  - updated `PHASE7_TEST_CHECKLIST.md` to match the actual UI layout
+- Durable output:
+  - future Phase 7 validation should treat item 1 as:
+    - operational card = `Extended Statement Refresh`
+    - lower-level manual card = `Manual Jobs > Financial Statement Ingestion`
+  - item 2 should be read as a PIT inspection / diagnostic helper, not as a data collection step
+
+### 2026-03-28 - Ingestion console structure review
+- Request topic:
+  - review whether `Operational Pipelines` and `Manual Jobs` should be separated more clearly because the single list layout was causing confusion
+- Interpreted goal:
+  - make the ingestion console easier to understand before the user continues the Phase 7 checklist
+- Result:
+  - separated the ingestion console into two explicit tabs:
+    - `Operational Pipelines`
+    - `Manual Jobs / Inspection`
+  - added Korean explanatory boxes at the top of each tab instead of hover-only tooltips because Streamlit tab labels do not support native help icons
+  - kept the intended mental model explicit:
+    - operational tab = recurring production refresh workflows
+    - manual/inspection tab = exception handling, lower-level reruns, debugging, and PIT diagnostics
+- Durable output:
+  - future ingestion-related checklist/docs should reference the two-tab layout rather than describing the console as one long list
+
+### 2026-03-28 - Statement ingestion field semantics and latest-run UX
+- Request topic:
+  - clarify the meaning of statement ingestion controls and reduce scroll disruption caused by the global `Latest Completed Run`
+- Interpreted goal:
+  - let the user continue the Phase 7 checklist without stopping to reverse-engineer ambiguous ingestion fields
+- Result:
+  - clarified the actual semantics in UI copy:
+    - `Financial Statement Freq` = target ledger frequency plus filing/fiscal-period filtering semantics
+    - `Financial Statement Period Type` = which EDGAR statement view (`annual` / `quarterly`) is requested from the source
+    - normal operator runs should generally keep them aligned
+  - clarified `Statement PIT Inspection` field roles:
+    - `Timing Audit Symbols` = how many of the selected symbols are included in the timing audit table
+    - `Rows / Symbol` = how many timing rows per symbol are shown
+    - `Source Sample Size` = how many live payload samples are displayed in source inspection
+    - `Source Inspection Symbol` = the single symbol used for the live EDGAR payload inspection
+  - moved `Latest Completed Run` rendering away from the global top insertion and now show it inline under the matching ingestion card
+- Durable output:
+  - Phase 7 ingestion checklist can now be interpreted directly from the UI without relying on chat context
+
+### 2026-03-29 - Statement PIT Inspection role and freq/period UI simplification
+- Request topic:
+  - clarify whether `Statement PIT Inspection` is mainly a pre-ingestion source check and whether `Financial Statement Freq` and `Financial Statement Period Type` should be unified
+- Interpreted goal:
+  - reduce operator confusion in the Phase 7 ingestion flow by removing controls that do not provide meaningful day-to-day value
+- Result:
+  - `Statement PIT Inspection` should be understood as a mixed diagnostic helper, not a single-purpose pre-ingestion checker:
+    - `Coverage Summary` and `Timing Audit` inspect already stored MySQL statement ledgers
+    - `Source Payload Inspection` is the pre-ingestion/live-source part that shows one EDGAR sample payload and its timing fields
+  - therefore the card is useful both before and after ingestion, but only the `Source Payload Inspection` subsection is truly "before-ingestion"
+  - for `Financial Statement Ingestion`, the current split between `Financial Statement Freq` and `Financial Statement Period Type` is technically meaningful in the codebase:
+    - `freq` controls target ledger frequency plus filing/fiscal-period filtering
+    - `period` controls which EDGAR statement view is requested
+  - however, current operator usage does not have a strong real-world need to set them differently
+- Durable output:
+  - recommended UX direction:
+    - unify the visible UI into one operator-facing control for normal runs
+    - keep the internal code parameters separate behind the scenes
+    - if needed later, reintroduce the split as an advanced/override option rather than as the default UI
+
+### 2026-03-29 - Manual statement ingestion UI unified to statement mode
+- Request topic:
+  - proceed with the freq/period simplification
+- Interpreted goal:
+  - reduce operator confusion in the manual statement ingestion card without changing the underlying ingestion semantics
+- Result:
+  - replaced the two separate operator-facing controls with one `Statement Mode` control
+  - the selected mode now feeds both internal params:
+    - `freq = statement_mode`
+    - `period = statement_mode`
+  - preserved the backend distinction in code so advanced behavior could be reintroduced later if needed
+- Durable output:
+  - current operator UX should be treated as:
+    - one visible statement mode selector
+    - one periods selector
+    - no default need to reason about mismatched `freq` vs `period`
+
+### 2026-03-29 - Statement PIT Inspection interpretation guide added
+- Request topic:
+  - after explaining how to read `Statement PIT Inspection`, add that interpretation guidance back into the UI
+- Interpreted goal:
+  - keep the user from having to reopen chat to remember how to interpret coverage/timing/source sections
+- Result:
+  - added Korean interpretation help directly into the card:
+    - a top-level `이 카드 읽는 법` expander
+    - per-section captions for `Coverage Summary`, `Timing Audit`, and `Source Payload Inspection`
+  - the UI now explicitly states:
+    - `Coverage Summary` = DB ledger coverage
+    - `Timing Audit` = PIT timing/readiness audit
+    - `Source Payload Inspection` = live EDGAR source field inspection
+- Durable output:
+  - future Phase 7 validation can rely on in-app guidance instead of chat-only explanation for PIT inspection interpretation
+
+### 2026-03-29 - Trend overlay cash handling semantics
+- Request topic:
+  - clarify whether partial trend-overlay rejections in quality/value snapshot strategies move the rejected portion to cash or reallocate across surviving names
+- Interpreted goal:
+  - explain why the Result Table can show overlay rejections while the `Cash` column stays at zero
+- Result:
+  - current implementation does **not** keep partial cash for partially rejected month-end selections
+  - runtime behavior is:
+    - raw top `N` is selected
+    - trend overlay removes names that fail `Close >= MA(window)`
+    - if at least one name survives, the remaining names are re-equal-weighted across the full base balance
+    - therefore `Cash` stays near `0`
+  - only two cases move the portfolio to cash:
+    - no names survive the final filtered selection
+    - market-regime overlay sets the entire rebalance to `risk_off`
+- Durable output:
+  - current semantics should be read as:
+    - partial trend rejection => survivors are reweighted, not partially cash-funded
+    - full rejection or regime-off => cash
+  - there is currently a wording mismatch because some UI/runtime warning text still says rejected selections "move to cash until next rebalance" even though the code only does that when the final selected set is empty
+
+### 2026-03-29 - Overlay cash policy research
+- Request topic:
+  - investigate whether partial overlay rejections in the strict factor family should be left as cash or reallocated to surviving names
+- Interpreted goal:
+  - compare real-world conventions and decide which interpretation best fits the current monthly top-N stock-selection strategy
+- Result:
+  - confirmed current repo behavior:
+    - partial trend-overlay rejections are reallocated across surviving names
+    - only `all rejected` or `market regime risk-off` leads to `100% cash`
+  - identified a wording mismatch:
+    - some runtime/UI copy still implies rejected names move to cash even when only part of the basket is rejected
+  - external review separated three practitioner buckets:
+    - stock-selection / factor-filter portfolios: usually drop rejected names and equal-weight survivors
+    - tactical asset allocation sleeves: usually move failed sleeves to cash / T-bills
+    - market-regime overlays: often hedge or reduce net exposure instead of using per-name cash slots
+  - recommended for the current project:
+    - keep `survivor reweighting` as the default semantics for strict factor strategies
+    - treat `partial cash retention` as a separate optional policy only if explicitly desired later
+- Durable output:
+  - `.note/finance/OVERLAY_CASH_POLICY_RESEARCH.md`
+
+### 2026-03-29 - Price stale diagnosis first pass
+- Request topic:
+  - propose and implement a practical way to separate delisting/symbol issues, provider source gaps, and local ingestion gaps when strict backtest preflight shows stale symbols
+- Interpreted goal:
+  - move from a yellow `Price Freshness Preflight` warning to a more actionable diagnosis flow before re-running ingestion
+- Result:
+  - recommended and implemented a three-step operator flow:
+    - stale warning
+    - read-only diagnosis
+    - explicit retry payload
+  - added `Ingestion > Manual Jobs / Inspection > Price Stale Diagnosis`
+  - the card combines:
+    - DB latest daily price date
+    - provider re-probe using `5d`, `1mo`, `3mo`
+    - asset profile status summary
+  - first-pass diagnosis labels:
+    - `up_to_date_in_db`
+    - `local_ingestion_gap`
+    - `local_ingestion_gap_partial`
+    - `provider_source_gap`
+    - `provider_source_gap_or_symbol_issue`
+    - `likely_delisted_or_symbol_changed`
+    - `asset_profile_error`
+    - `rate_limited_during_probe`
+    - `inconclusive`
+  - only `local_ingestion_gap`-class results generate a targeted `Daily Market Update` payload
+  - backtest preflight now points users toward this diagnosis card when a stale warning remains yellow
+- Durable output:
+  - `.note/finance/phase8/PHASE8_PRICE_STALE_DIAGNOSIS_FIRST_PASS.md`
+
+### 2026-03-29 - Statement shadow coverage gap drilldown
+- Request topic:
+  - when `Statement Shadow Coverage Preview` shows `Covered < Requested`, identify which symbols are missing and whether they need additional statement collection
+- Interpreted goal:
+  - turn the quarterly prototype preview from a passive metric block into an operator-facing action surface
+- Result:
+  - expanded `Statement Shadow Coverage Preview` with:
+    - help popover
+    - coverage gap metrics
+    - `Coverage Gap Drilldown`
+    - missing symbol table
+    - recommended actions
+    - targeted statement refresh payload
+  - added two durable diagnosis labels:
+    - `no_raw_statement_coverage`
+    - `raw_statement_present_but_shadow_missing`
+  - current interpretation:
+    - `no_raw_statement_coverage`
+      - strict raw statement ledger is missing
+      - additional statement collection is the right next step
+    - `raw_statement_present_but_shadow_missing`
+      - raw statement rows exist
+      - source collection is not the first suspect; shadow rebuild / coverage hardening is
+  - validated on `US Statement Coverage 300` quarterly preview:
+    - `Requested = 300`
+    - `Covered = 100`
+    - `Missing = 200`
+    - all 200 missing symbols currently fall into `no_raw_statement_coverage`
+- Durable output:
+  - `.note/finance/phase8/PHASE8_STATEMENT_SHADOW_COVERAGE_GAP_DIAGNOSTICS.md`
+
+### 2026-03-29 - Extended Statement Refresh quarterly shadow rebuild fix
+- Request topic:
+  - the user reran `Extended Statement Refresh` for a large quarterly universe, but `Quality Snapshot (Strict Quarterly Prototype)` still showed the same coverage gap
+- Interpreted goal:
+  - verify whether the operational refresh path actually updates the data source that `Statement Shadow Coverage Preview` reads
+- Result:
+  - confirmed the mismatch:
+    - the preview reads quarterly statement shadow coverage from `nyse_fundamentals_statement`
+    - the previous `Extended Statement Refresh` implementation refreshed raw statement ledgers only
+    - so a successful quarterly refresh could still leave the preview unchanged
+  - fixed `run_extended_statement_refresh(...)` so it now runs, for the selected `freq`:
+    - raw statement collection
+    - statement fundamentals shadow rebuild
+    - statement factors shadow rebuild
+  - smoke validation on `CRWD`:
+    - before fix:
+      - quarterly raw statement coverage existed
+      - quarterly statement shadow rows = `0`
+    - after fixed refresh:
+      - quarterly statement shadow rows = `33`
+- Durable output:
+  - post-fix `Extended Statement Refresh` should now be interpreted as the correct operational recovery path for quarterly preview coverage gaps
+
+### 2026-03-29 - Quarterly shadow preview slowness and low covered-count follow-up
+- Request topic:
+  - the user reported that `Statement Shadow Coverage Preview` was much slower than `Price Freshness Preflight` and that `Covered` still barely changed after a large quarterly refresh run
+- Interpreted goal:
+  - determine whether the issue was still broken ingestion, stale UI state, or simply legacy pre-fix raw-only refresh residue
+- Result:
+  - confirmed that the situation was a mix of three things:
+    - many symbols had already been refreshed in the old raw-only path before the fix
+    - preview cache was not cleared after statement-related jobs
+    - coverage summaries were still computed with heavy Python-side grouping
+  - direct inspection on `US Statement Coverage 500` quarterly now shows:
+    - `Covered = 101`
+    - `Missing = 399`
+    - `Need Raw Collection = 3`
+    - `Raw Exists / Shadow Missing = 396`
+  - this means the current bottleneck is no longer raw statement collection for most symbols; it is legacy `raw present / shadow missing` residue from pre-fix runs
+  - validated with symbol-level post-fix reruns:
+    - `CME`: shadow rows `0 -> 73`
+    - `MCK`: shadow rows `0 -> 73`
+  - therefore the correct interpretation is:
+    - the pipeline fix works
+    - but large pre-fix quarterly runs need to be rerun once under the fixed `Extended Statement Refresh` path before `Covered` rises materially
+- Durable output:
+  - preview cache is now cleared after statement jobs
+  - raw/shadow coverage summaries now use SQL aggregate queries instead of Python-side full-history grouping
+
+### 2026-03-29 - Why the 500-symbol quarterly refresh barely changed coverage
+- Request topic:
+  - the user reported that after spending about 30 minutes on a `US Statement Coverage 500` quarterly `Extended Statement Refresh`, `Covered` only changed from `101` to `103`
+- Interpreted goal:
+  - verify whether the long run actually used the fixed shadow-rebuild path or whether the runtime was spent on the old raw-only path
+- Result:
+  - current post-fix coverage check shows:
+    - `Covered = 103`
+    - `Missing = 397`
+    - `Need Raw Collection = 3`
+    - `Raw Exists / Shadow Missing = 394`
+  - run-history inspection of the user's 500-symbol job shows:
+    - `started_at = 2026-03-29 11:03:02`
+    - `duration_sec = 1506.713`
+    - `symbols_requested = 500`
+    - `step_jobs = []`
+  - the empty `step_jobs` proves that this long run executed before the fixed three-stage path was active in the running app process
+  - therefore the 30-minute runtime was mostly spent refreshing raw statement ledgers only, not rebuilding quarterly shadow coverage
+  - this is consistent with the current bucket mix:
+    - only `3` symbols still need raw collection
+    - `394` symbols already have raw quarterly statements but still need the post-fix shadow rebuild path
+- Durable output:
+  - when a long quarterly refresh barely moves `Covered`, check whether the job record has `step_jobs = []`
+  - if so, the server likely ran an old raw-only `Extended Statement Refresh` implementation and should be restarted before rerun
+
+### 2026-03-29 - Ingestion UI simplification and utility-panel review
+- Request topic:
+  - remove redundant `Write Targets`, add fold/unfold behavior for run jobs, and review whether `Recent Logs` / `Failure CSV Preview` are actually useful and functioning
+- Interpreted goal:
+  - simplify the `Ingestion` surface before the next large rerun and leave a durable recommendation for additional operator-facing improvements
+- Result:
+  - removed the top-level `Write Targets` table because each run card already carries its own `Writes to:` description
+  - converted run jobs to expander-based sections so the ingestion console is no longer one long fully expanded list
+  - reviewed utility panels:
+    - `Recent Logs`
+      - functional
+      - reads recent `logs/*.log` and renders tail preview
+      - worth keeping
+    - `Failure CSV Preview`
+      - functional
+      - but current operational value is limited because recent modern jobs do not consistently emit failure CSVs
+      - more useful if failure artifacts are standardized later
+  - documented follow-up recommendations:
+    - runtime/build indicator
+    - statement shadow rebuild-only helper
+    - failure artifact standardization
+- Durable output:
+  - `.note/finance/phase8/PHASE8_INGESTION_UI_POLISH_AND_REVIEW.md`
+
+### 2026-03-29 - Operator tooling implementation follow-up
+- Request topic:
+  - after the ingestion UI review, the user asked which recommended follow-up features should be built next and then requested that the top 1~5 operator improvements be implemented together
+- Interpreted goal:
+  - reduce operator confusion around old runtimes, shorten quarterly coverage recovery loops, and make long ingestion runs easier to inspect after the fact
+- Result:
+  - implemented a `Runtime / Build` indicator in `Ingestion` showing:
+    - runtime marker
+    - process loaded timestamp
+    - git short SHA
+  - added `Statement Shadow Rebuild Only`:
+    - a manual helper that rebuilds statement shadow tables from existing raw ledgers without re-calling EDGAR
+  - added coverage-gap action bridges from quarterly backtest preview:
+    - raw-gap symbols -> `Extended Statement Refresh`
+    - raw-present / shadow-missing symbols -> `Statement Shadow Rebuild Only`
+  - added `Run Inspector` under persisted ingestion history so a selected run can be re-read with:
+    - runtime metadata
+    - pipeline steps
+    - related log files
+    - standardized artifact paths
+  - standardized web-app run artifacts first pass:
+    - every ingestion run now writes JSON artifacts under `.note/finance/run_artifacts/`
+    - runs with symbol-level issues also write standardized `csv/*_failures.csv`
+- Durable output:
+  - `.note/finance/phase8/PHASE8_OPERATOR_RUNTIME_AND_SHADOW_REBUILD_TOOLING.md`
+  - updated `PHASE8_TEST_CHECKLIST.md` with operator-tooling validation items

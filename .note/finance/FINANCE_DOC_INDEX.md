@@ -16,6 +16,8 @@
   - 구현 진행 로그
 - `.note/finance/QUESTION_AND_ANALYSIS_LOG.md`
   - 질의/설계/분석 결과 로그
+- `.note/finance/OVERLAY_CASH_POLICY_RESEARCH.md`
+  - strict factor overlay의 partial rejection을 survivor reweighting으로 볼지, cash retention으로 볼지에 대한 실무 관행 조사와 현재 프로젝트 권고 문서
 - `.note/finance/DAILY_MARKET_UPDATE_RATE_LIMIT_ANALYSIS_20260328.md`
   - `Daily Market Update`의 yfinance rate-limit 재현 결과와 first-pass 최적화 방향 분석 문서
 - `.note/finance/DAILY_MARKET_UPDATE_RATE_LIMIT_IMPLEMENTATION_20260328.md`
@@ -56,6 +58,14 @@
   - quarterly family first-pass smoke / preset / compare 검증 문서
 - `.note/finance/phase8/PHASE8_PROMOTION_READINESS_CRITERIA_DRAFT.md`
   - quarterly strict family의 research-only 유지 기준과 향후 promotion 판단 기준 초안
+- `.note/finance/phase8/PHASE8_PRICE_STALE_DIAGNOSIS_FIRST_PASS.md`
+  - stale price symbol을 DB gap / provider gap / likely delisted 쪽으로 좁히는 read-only diagnosis 카드 구현 문서
+- `.note/finance/phase8/PHASE8_STATEMENT_SHADOW_COVERAGE_GAP_DIAGNOSTICS.md`
+  - quarterly prototype의 `Statement Shadow Coverage Preview`에서 missing symbol drilldown과 targeted statement refresh payload를 제공하는 진단 보강 문서
+- `.note/finance/phase8/PHASE8_INGESTION_UI_POLISH_AND_REVIEW.md`
+  - Ingestion 화면의 Write Targets 제거, run-job expander 전환, Recent Logs / Failure CSV Preview 검토 결과와 후속 권고 문서
+- `.note/finance/phase8/PHASE8_OPERATOR_RUNTIME_AND_SHADOW_REBUILD_TOOLING.md`
+  - Runtime / Build indicator, Statement Shadow Rebuild Only helper, coverage-gap action bridge, Run Inspector, standardized run artifacts 문서
 - `.note/finance/phase8/PHASE8_TEST_CHECKLIST.md`
   - Phase 8 manual validation checklist
 - `.note/finance/phase8/PHASE8_CHECKLIST_PREVALIDATION.md`
