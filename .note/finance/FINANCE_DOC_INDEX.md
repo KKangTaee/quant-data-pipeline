@@ -66,10 +66,56 @@
   - Ingestion 화면의 Write Targets 제거, run-job expander 전환, Recent Logs / Failure CSV Preview 검토 결과와 후속 권고 문서
 - `.note/finance/phase8/PHASE8_OPERATOR_RUNTIME_AND_SHADOW_REBUILD_TOOLING.md`
   - Runtime / Build indicator, Statement Shadow Rebuild Only helper, coverage-gap action bridge, Run Inspector, standardized run artifacts 문서
+- `.note/finance/phase8/PHASE8_STATEMENT_COVERAGE_DIAGNOSIS_GUIDANCE.md`
+  - coverage-missing symbol을 raw recollection / shadow rebuild / source-structure / symbol-source issue로 분류하고 단계별 가이드를 제공하는 operator 문서
 - `.note/finance/phase8/PHASE8_TEST_CHECKLIST.md`
   - Phase 8 manual validation checklist
 - `.note/finance/phase8/PHASE8_CHECKLIST_PREVALIDATION.md`
   - assistant가 Phase 8 checklist를 먼저 자동 점검한 결과 문서
+- `.note/finance/phase9/PHASE9_STRICT_COVERAGE_POLICY_AND_PROMOTION_PLAN.md`
+  - strict coverage exception policy, foreign-form handling, public promotion gate를 다음 단계에서 어떻게 정리할지에 대한 Phase 9 guidance 문서
+- `.note/finance/phase9/PHASE9_CURRENT_CHAPTER_TODO.md`
+  - Phase 9의 현재 실행 보드로, strict coverage exception inventory / foreign-form policy / promotion gate 작업 상태를 관리하는 문서
+- `.note/finance/phase9/PHASE9_REAL_MONEY_VALIDATION_DIRECTION.md`
+  - current strict preset을 어디까지 실전 투자 판단 근거로 볼 수 있는지와, policy 고정 이후 `historical dynamic PIT universe`를 다음 우선 구현으로 둘지에 대한 권고 문서
+- `.note/finance/phase9/PHASE9_STRICT_COVERAGE_EXCEPTION_INVENTORY.md`
+  - current preset에서 실제로 관찰되는 strict coverage gap bucket, 대표 심볼, diagnosis 분포를 정리한 inventory 문서
+- `.note/finance/phase9/PHASE9_STRICT_COVERAGE_POLICY_DECISION.md`
+  - diagnostics bucket을 `eligible / review_needed / excluded` 정책으로 연결하고 canonical preset 유지 원칙을 고정한 문서
+- `.note/finance/phase9/PHASE9_STRICT_FAMILY_PROMOTION_GATE.md`
+  - strict annual / quarterly family의 public-candidate / research-only 경계를 정리한 승격 기준 문서
+- `.note/finance/phase9/PHASE9_OPERATOR_DECISION_TREE.md`
+  - preflight / diagnosis / rebuild / recollection / exclusion을 어떤 순서로 해석할지 정리한 운영 decision tree 문서
+- `.note/finance/phase9/PHASE9_TEST_CHECKLIST.md`
+  - Phase 9 policy / governance / promotion 문구를 현재 구현과 함께 검수하기 위한 checklist 문서
+- `.note/finance/phase10/PHASE10_HISTORICAL_DYNAMIC_PIT_UNIVERSE_PLAN.md`
+  - current static preset과 분리된 rebalance-date historical dynamic PIT universe mode를 다음 실제 구현 workstream으로 여는 계획 문서
+- `.note/finance/phase10/PHASE10_CURRENT_CHAPTER_TODO.md`
+  - Phase 10 dynamic PIT universe 실행 보드 초안으로, contract / source inventory / annual strict first pass / validation 항목을 관리하는 문서
+- `.note/finance/phase10/PHASE10_PIT_SOURCE_AND_SCHEMA_GAP_ANALYSIS.md`
+  - current DB/schema 기준으로 dynamic PIT universe 구현에 바로 활용 가능한 데이터와 부족한 데이터를 구분한 gap analysis 문서
+- `.note/finance/phase10/PHASE10_DYNAMIC_PIT_FIRST_PASS_IMPLEMENTATION_ORDER.md`
+  - annual strict family + rebalance-date approximate PIT market-cap universe를 기준으로 한 first-pass 구현 순서 문서
+- `.note/finance/phase10/PHASE10_ANNUAL_STRICT_DYNAMIC_PIT_FIRST_PASS.md`
+  - annual strict single-strategy form에 `Historical Dynamic PIT Universe`를 first pass로 연결하고, candidate-pool / target-size / universe-debug contract를 정리한 구현 요약 문서
+- `.note/finance/phase10/PHASE10_DYNAMIC_PIT_SECOND_PASS_HARDENING.md`
+  - continuity / delisting diagnostics, history artifact persistence, quarterly dynamic PIT first pass 확장, approximate PIT contract 한계를 함께 정리한 second-pass hardening 문서
+- `.note/finance/phase10/PHASE10_COMPLETION_SUMMARY.md`
+  - Phase 10 dynamic PIT universe workstream의 practical closeout 요약 문서
+- `.note/finance/phase10/PHASE10_NEXT_PHASE_PREPARATION.md`
+  - Phase 10 종료 이후 Phase 11 productization/workflow 방향으로 어떻게 이어갈지 정리한 handoff 문서
+- `.note/finance/phase10/PHASE10_TEST_CHECKLIST.md`
+  - dynamic PIT universe mode가 current static mode와 구분되는 실전형 validation contract로 동작하는지 확인하는 checklist 문서
+- `.note/finance/phase11/PHASE11_PORTFOLIO_PRODUCTIZATION_AND_RESEARCH_WORKFLOW_PLAN.md`
+  - 전략 조합, 저장 가능한 포트폴리오, compare-to-portfolio bridge를 제품형 workflow로 확장하기 위한 Phase 11 guidance 문서
+- `.note/finance/phase11/PHASE11_CURRENT_CHAPTER_TODO.md`
+  - Phase 11 현재 실행 보드로, saved portfolio first pass 진행 상태와 남은 productization backlog를 관리하는 문서
+- `.note/finance/phase11/PHASE11_EXECUTION_PREPARATION.md`
+  - Phase 11을 바로 열어도 흔들리지 않도록 chapter별 구현 순서와 선행 확인 사항을 정리한 준비 문서
+- `.note/finance/phase11/PHASE11_SAVED_PORTFOLIO_FIRST_PASS.md`
+  - saved portfolio store, load-into-compare bridge, saved portfolio rerun, weighted result meta 보강까지 포함한 Phase 11 first-pass 구현 요약 문서
+- `.note/finance/phase11/PHASE11_TEST_CHECKLIST.md`
+  - Phase 11 구현 이후 later batch review에서 사용할 productization checklist 문서
 
 ---
 

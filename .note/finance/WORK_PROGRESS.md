@@ -2105,3 +2105,396 @@ Keep entries append-only and concise.
   - both action payloads now exist:
     - raw refresh payload = `True`
     - shadow rebuild payload = `True`
+
+### 2026-03-29 - Statement coverage diagnosis guidance
+
+- Added `Statement Coverage Diagnosis` under `Ingestion > Manual Jobs / Inspection`:
+  - combines DB strict raw coverage
+  - DB statement shadow coverage
+  - live EDGAR sample inspection
+  - returns per-symbol next-action guidance instead of showing only a numeric coverage gap
+- Added quarterly backtest bridge:
+  - `Coverage Gap Drilldown` can now send missing symbols directly to `Statement Coverage Diagnosis`
+- Implemented per-symbol diagnosis buckets:
+  - `shadow_available`
+  - `raw_present_shadow_missing`
+  - `source_present_raw_missing`
+  - `foreign_or_nonstandard_form_structure`
+  - `source_empty_or_symbol_issue`
+  - `source_present_but_not_supported_for_current_mode`
+  - `inconclusive_statement_coverage`
+- Verified real examples:
+  - `MRSH` -> `source_empty_or_symbol_issue`
+  - `AU` -> `foreign_or_nonstandard_form_structure`
+- Validation:
+  - `python3 -m py_compile app/jobs/diagnostics.py app/web/streamlit_app.py app/web/pages/backtest.py`
+  - `.venv/bin/python` smoke test confirmed per-symbol diagnosis output and no recommended refresh/rebuild payload for `MRSH`, `AU`
+
+### 2026-03-29 - Coverage Gap Drilldown wording and bridge feedback polish
+
+- Clarified that `Coverage Gap Drilldown` is a coarse stage only:
+  - renamed the table column from `Diagnosis` to `Coverage Gap Status`
+  - added caption text explaining that fine-grained root-cause labels live in `Statement Coverage Diagnosis`
+- Added backtest-side feedback after bridge buttons are pressed:
+  - when a handoff button is clicked, backtest now shows a success banner after rerun
+  - this makes it visible that symbols were loaded into the target ingestion card instead of looking like “nothing happened”
+
+### 2026-03-29 - Statement coverage guidance localized to Korean
+
+- Localized per-symbol operator guidance text in `Statement Coverage Diagnosis`:
+  - `recommended_action`
+  - `note`
+  - `stepwise_guidance`
+- Kept the column labels in English and localized only the values shown inside those columns.
+- Validation:
+  - `python3 -m py_compile app/jobs/diagnostics.py app/web/streamlit_app.py`
+  - smoke check confirmed Korean action/guidance output for `MRSH`, `AU`
+
+### 2026-03-29 - Phase 7 closeout and Phase 9/10 guidance prep
+
+- Marked Phase 7 as closeout-complete after substantial checklist review and later operator follow-up absorption into Phase 8 tooling
+- Updated roadmap state:
+  - `Phase 7 = completed`
+  - `Phase 8 = implementation_completed / manual_validation_pending`
+- Added forward guidance docs:
+  - `phase9/PHASE9_STRICT_COVERAGE_POLICY_AND_PROMOTION_PLAN.md`
+  - `phase10/PHASE10_PORTFOLIO_PRODUCTIZATION_AND_RESEARCH_WORKFLOW_PLAN.md`
+- Intent:
+  - keep Phase 8 active for later batch validation
+  - prepare the next two major workstreams without prematurely opening them
+
+### 2026-03-29 - Phase 9 kickoff
+
+- Opened `Phase 9` as the active policy/governance phase
+- Added:
+  - `phase9/PHASE9_CURRENT_CHAPTER_TODO.md`
+- Updated roadmap state:
+  - `Phase 8 = implementation_completed / manual_validation_pending`
+  - `Phase 9 = in_progress`
+- Current Phase 9 focus:
+  - strict coverage exception inventory
+  - foreign / non-standard form policy
+  - annual / quarterly promotion gate
+
+### 2026-03-29 - Phase 9 plan concretized
+
+- Expanded `PHASE9_STRICT_COVERAGE_POLICY_AND_PROMOTION_PLAN.md` from a directional note into a more concrete execution plan
+- Added:
+  - recommended default policy stance
+  - chapter-by-chapter execution order
+  - concrete decisions that must be locked this phase
+  - provisional default handling for:
+    - `source_empty_or_symbol_issue`
+    - `foreign_or_nonstandard_form_structure`
+    - `raw_present_shadow_missing`
+    - `source_present_raw_missing`
+- Updated `PHASE9_CURRENT_CHAPTER_TODO.md` with the same provisional baseline
+
+### 2026-03-29 - Static preset vs historical dynamic universe clarification
+
+- Confirmed current strict preset semantics from code and docs:
+  - preset membership is loaded from the current managed market-cap/profile universe
+  - the run then applies rebalance-date availability filtering for price/factor usability
+- Interpretation:
+  - current `Coverage 100/300/500/1000` is **not** a historical monthly top-N universe
+  - it is a **run-level static managed research universe**
+- Added this semantic decision as an explicit Phase 9 policy item
+
+### 2026-03-29 - Real-money validation direction documented
+
+- Added `phase9/PHASE9_REAL_MONEY_VALIDATION_DIRECTION.md`
+- Documented the recommended order for a real-investing target:
+  - Phase 9 locks policy / governance / promotion gate
+  - the next major engineering priority should be `historical dynamic PIT universe`
+  - portfolio productization should follow after the PIT universe contract is available
+- Synced the same guidance into:
+  - `PHASE9_STRICT_COVERAGE_POLICY_AND_PROMOTION_PLAN.md`
+  - `PHASE9_CURRENT_CHAPTER_TODO.md`
+  - `PHASE10_PORTFOLIO_PRODUCTIZATION_AND_RESEARCH_WORKFLOW_PLAN.md`
+  - `FINANCE_DOC_INDEX.md`
+
+### 2026-03-29 - Phase 9 policy document set completed (first pass)
+
+- Added:
+  - `phase9/PHASE9_STRICT_COVERAGE_EXCEPTION_INVENTORY.md`
+  - `phase9/PHASE9_STRICT_COVERAGE_POLICY_DECISION.md`
+  - `phase9/PHASE9_STRICT_FAMILY_PROMOTION_GATE.md`
+  - `phase9/PHASE9_OPERATOR_DECISION_TREE.md`
+  - `phase9/PHASE9_TEST_CHECKLIST.md`
+- Assistant-side precheck used current diagnostics/contracts:
+  - `US Statement Coverage 300` -> covered `298`, missing `2`
+  - `US Statement Coverage 500` -> covered `497`, missing `3`
+  - `US Statement Coverage 1000` -> covered `988`, missing `12`
+  - active missing symbols were dominated by:
+    - `source_empty_or_symbol_issue`
+    - `foreign_or_nonstandard_form_structure`
+- Synced the same first-pass policy conclusion into:
+  - `PHASE9_CURRENT_CHAPTER_TODO.md`
+  - `MASTER_PHASE_ROADMAP.md`
+  - `FINANCE_DOC_INDEX.md`
+  - `FINANCE_COMPREHENSIVE_ANALYSIS.md`
+- Current Phase 9 status:
+  - policy/guidance/checklist first pass completed
+  - user review and later checklist confirmation still pending
+
+### 2026-03-29 - Phase 8/9/10 batch validation path agreed
+
+- Confirmed that the user can defer manual validation and later run:
+  - `Phase 8 checklist`
+  - `Phase 9 checklist`
+  - `Phase 10 checklist`
+  together as a batch review
+- Recorded the guidance that:
+  - this is operationally acceptable
+  - the tradeoff is slightly harder regression isolation if an issue appears later
+- Synced the same note into `phase9/PHASE9_CURRENT_CHAPTER_TODO.md`
+
+### 2026-03-29 - Phase 10 preparation documents added
+
+- Added:
+  - `phase10/PHASE10_CURRENT_CHAPTER_TODO.md`
+  - `phase10/PHASE10_EXECUTION_PREPARATION.md`
+  - `phase10/PHASE10_TEST_CHECKLIST.md`
+- Goal:
+  - keep Phase 10 prepared without activating it yet
+  - make the execution order explicit once productization becomes the active workstream
+- Key preparation decision:
+  - if Phase 10 opens later, the preferred order is:
+    - saved portfolio contract
+    - compare-to-portfolio bridge
+    - saved portfolio UI first pass
+    - richer portfolio readouts
+    - workflow integration
+- Synced the new docs into:
+  - `PHASE10_PORTFOLIO_PRODUCTIZATION_AND_RESEARCH_WORKFLOW_PLAN.md`
+  - `FINANCE_DOC_INDEX.md`
+  - `MASTER_PHASE_ROADMAP.md`
+
+### 2026-03-29 - Phase 10 vs dynamic PIT scope clarified
+
+- Clarified the phase boundary:
+  - `historical dynamic PIT universe` is not part of Phase 10
+  - Phase 10 remains the portfolio productization/workflow phase
+- Recommended execution order remains:
+  - Phase 9 policy lock
+  - separate dynamic PIT universe workstream
+  - then Phase 10 activation if productization is the next priority
+
+### 2026-03-29 - Phase numbering reordered for real-money priority
+
+- Reordered the planned phases to match the actual recommended execution order:
+  - `Phase 10` -> `historical dynamic PIT universe`
+  - `Phase 11` -> portfolio productization / research workflow
+- Moved the previously prepared productization docs from `phase10/` to `phase11/`
+- Added the new dynamic-PIT planning docs:
+  - `phase10/PHASE10_HISTORICAL_DYNAMIC_PIT_UNIVERSE_PLAN.md`
+  - `phase10/PHASE10_CURRENT_CHAPTER_TODO.md`
+  - `phase10/PHASE10_TEST_CHECKLIST.md`
+- Synced the renumbering into:
+  - `MASTER_PHASE_ROADMAP.md`
+  - `FINANCE_DOC_INDEX.md`
+  - `QUESTION_AND_ANALYSIS_LOG.md`
+
+### 2026-03-29 - Phase 10 dynamic PIT plan concretized
+
+- Added:
+  - `phase10/PHASE10_PIT_SOURCE_AND_SCHEMA_GAP_ANALYSIS.md`
+  - `phase10/PHASE10_DYNAMIC_PIT_FIRST_PASS_IMPLEMENTATION_ORDER.md`
+- Confirmed from current code/schema:
+  - `nyse_asset_profile` is a current snapshot, not historical PIT universe history
+  - `nyse_price_history` is usable as rebalance-date price input
+  - `nyse_fundamentals_statement` and `nyse_factors_statement` contain PIT-aware shadow timing and shares-outstanding / market-cap ingredients
+- First-pass implementation recommendation was tightened to:
+  - keep current static preset mode unchanged
+  - start dynamic PIT with `strict annual family`
+  - build rebalance-date approximate PIT market-cap membership from:
+    - price history
+    - latest known statement `shares_outstanding`
+- Synced the same planning set into:
+  - `PHASE10_CURRENT_CHAPTER_TODO.md`
+  - `PHASE10_HISTORICAL_DYNAMIC_PIT_UNIVERSE_PLAN.md`
+  - `FINANCE_DOC_INDEX.md`
+  - `MASTER_PHASE_ROADMAP.md`
+
+### 2026-03-29 - Phase 10 annual strict dynamic PIT first pass implemented
+
+- Started actual Phase 10 implementation with annual strict single-strategy family first.
+- Added a new `Universe Contract` selector to:
+  - `Quality Snapshot (Strict Annual)`
+  - `Value Snapshot (Strict Annual)`
+  - `Quality + Value Snapshot (Strict Annual)`
+- Kept the existing static contract unchanged:
+  - `static_managed_research`
+- Added a new additive first-pass contract:
+  - `historical_dynamic_pit`
+- Implemented a rebalance-date approximate PIT universe builder in `finance/sample.py` that:
+  - reads rebalance-date price rows
+  - selects the latest annual statement-shadow row with `latest_available_at <= rebalance_date`
+  - uses `shares_outstanding`
+  - recomputes approximate market cap and top-N membership
+- Integrated the new builder into annual strict runtime wrappers in `app/web/runtime/backtest.py`.
+- Added first-pass result/meta readouts:
+  - result row:
+    - `Universe Membership Count`
+    - `Universe Contract`
+  - meta:
+    - `universe_contract`
+    - `dynamic_candidate_count`
+    - `dynamic_target_size`
+    - `universe_debug`
+- Added history/prefill carry-through for `universe_contract` on annual strict single-strategy runs.
+- Smoke validation in `.venv` confirmed:
+  - annual strict quality / value / quality+value dynamic bundles all return
+  - `Universe Membership Count` is written into result rows
+  - `universe_debug` is present in bundle meta
+- Dynamic preset smoke exposed a contract mismatch and it was corrected:
+  - dynamic PIT candidate pools should not fail just because some late listings do not have full-range price history
+  - annual strict dynamic preflight now only requires usable DB price history up to the selected end date
+  - preset smoke after the fix completed with:
+    - `dynamic_candidate_count = 1000`
+    - `universe_debug.candidate_pool_count = 921`
+    - first `Universe Membership Count = 100`
+- Extended the same dynamic contract into annual strict compare mode:
+  - compare blocks now expose `Universe Contract`
+  - compare runtime passes `universe_contract`, `dynamic_candidate_tickers`, `dynamic_target_size`
+  - `Strategy Highlights` now exposes `Universe Contract`, `Dynamic Candidate Pool`, `Membership Avg`, `Membership Range`
+- Compare smoke in `.venv` confirmed:
+  - annual strict compare override reaches runtime with `historical_dynamic_pit`
+  - highlight rows render dynamic membership columns
+- Updated:
+  - `PHASE10_CURRENT_CHAPTER_TODO.md`
+  - `PHASE10_TEST_CHECKLIST.md`
+  - `PHASE10_ANNUAL_STRICT_DYNAMIC_PIT_FIRST_PASS.md`
+  - `FINANCE_COMPREHENSIVE_ANALYSIS.md`
+  - `FINANCE_DOC_INDEX.md`
+  - `MASTER_PHASE_ROADMAP.md`
+
+### 2026-03-29 - Phase 10 dynamic PIT second pass hardened
+
+- Continued Phase 10 in the agreed order:
+  1. listing / delisting / symbol continuity second pass
+  2. dynamic universe snapshot persistence
+  3. quarterly family dynamic PIT expansion
+  4. perfect constituent-history source reinforcement first pass
+- Extended `finance/sample.py` dynamic universe builder to emit continuity diagnostics:
+  - `continuity_ready_count`
+  - `pre_listing_excluded_count`
+  - `post_last_price_excluded_count`
+  - `asset_profile_delisted_count`
+  - `asset_profile_issue_count`
+- Added candidate-level continuity/profile status rows:
+  - `first_price_date`
+  - `last_price_date`
+  - `price_row_count`
+  - `profile_status`
+  - `profile_delisted_at`
+  - `profile_error`
+- Added dynamic universe artifact persistence in backtest history:
+  - `.note/finance/backtest_artifacts/.../dynamic_universe_snapshot.json`
+  - history context now stores `dynamic_universe_artifact` and `dynamic_universe_preview_rows`
+- Extended `historical_dynamic_pit` to quarterly strict prototype family:
+  - `Quality Snapshot (Strict Quarterly Prototype)`
+  - `Value Snapshot (Strict Quarterly Prototype)`
+  - `Quality + Value Snapshot (Strict Quarterly Prototype)`
+  - both single-strategy and compare first pass now work under the same contract
+- Kept the constituent-history source boundary explicit:
+  - current contract is still `approximate PIT + diagnostics`
+  - asset profile status remains diagnostic only, not a hard membership filter
+- `.venv` smoke validation confirmed:
+  - annual strict dynamic 3종 모두 정상 bundle 반환
+  - quarterly strict dynamic 3종 모두 정상 bundle 반환
+  - annual/quarterly compare dynamic override 모두 정상 runtime 연동
+  - dynamic history append 후 artifact json path 실존 확인
+- Updated:
+  - `phase10/PHASE10_CURRENT_CHAPTER_TODO.md`
+  - `phase10/PHASE10_TEST_CHECKLIST.md`
+  - `phase10/PHASE10_ANNUAL_STRICT_DYNAMIC_PIT_FIRST_PASS.md`
+  - `phase10/PHASE10_DYNAMIC_PIT_SECOND_PASS_HARDENING.md`
+  - `FINANCE_COMPREHENSIVE_ANALYSIS.md`
+  - `FINANCE_DOC_INDEX.md`
+  - `MASTER_PHASE_ROADMAP.md`
+
+### 2026-03-30 - Phase 8 checklist refreshed against Phase 9/10 changes
+
+- Reworked `phase8/PHASE8_TEST_CHECKLIST.md` so it matches the current codebase rather than the original Phase 8-only snapshot.
+- Kept the core Phase 8 validation target unchanged:
+  - quarterly strict prototype family should still work as a research-only single / compare / history surface
+- Added later-phase regression expectations now visible on the same UI:
+  - quarterly forms now expose `Universe Contract`
+  - history/prefill now includes `Universe Contract`
+  - coverage guidance is split into coarse `Coverage Gap Status` vs fine `Statement Coverage Diagnosis`
+  - operator tooling expectations now include runtime/build, rebuild, run inspector, and standardized guidance behavior
+- Added an explicit optional Phase 10 regression item:
+  - quarterly `Historical Dynamic PIT Universe` runs should complete without breaking the original quarterly surface
+
+### 2026-03-30 - Phase 8 QA follow-up fixes for history UX and backtest navigation
+
+- Fixed `Persistent Backtest History` recorded-date filtering crash:
+  - when the user selected only the start side of `Recorded Date Range`, Streamlit returned a partial date tuple and the history filter compared `datetime.date` against a tuple
+  - added `_normalize_recorded_date_range(...)` so partial / single-date inputs normalize safely
+- Improved `Load Into Form` UX:
+  - loading a history record now switches the Backtest panel to `Single Strategy`
+  - the Single Strategy panel now shows a short Korean summary of the loaded inputs:
+    - strategy
+    - date range
+    - preset/manual universe
+    - top N
+    - universe contract when present
+- Simplified the top Backtest header surface:
+  - removed the old `Current Direction / Planned First Strategies / Current Phase 4 Status / Next Step` blocks
+  - replaced them with a shorter Korean `Backtest 사용 안내` expander
+  - clarified `research-only quarterly strict prototype` and `late active start` semantics in Korean
+
+### 2026-03-30 - Phase 9 real-money validation direction doc clarified with glossary
+
+- Expanded `phase9/PHASE9_REAL_MONEY_VALIDATION_DIRECTION.md` with a new terminology section.
+- Added practical Korean explanations for:
+  - `universe contract`
+  - `survivorship`
+  - `universe drift`
+  - `diagnostics bucket`
+  - `eligible / review_needed / excluded`
+  - `foreign / non-standard form issuer`
+  - `portfolio productization`
+- The document now explains these terms as current project contracts rather than leaving them as shorthand.
+
+### 2026-03-31 - Phase 10 QA follow-up: dynamic PIT result semantics and compare reuse
+
+- Added a dedicated `Dynamic Universe` result tab for dynamic PIT runs so `dynamic_universe_snapshot_rows` and `dynamic_candidate_status_rows` are visible directly from a run result instead of only through history artifacts.
+- Clarified history drilldown wording for:
+  - `dynamic_universe_preview_rows`
+  - `dynamic_universe_artifact`
+  including what the persisted path fields mean.
+- Fixed `universe_builder_scope` in strict quarterly quality dynamic runs so it reflects `quarterly_first_pass` instead of always `annual_first_pass`.
+- Added small in-process caches for repeated DB-backed dynamic PIT inputs:
+  - price panel build
+  - statement factor shadow load
+  - statement fundamentals shadow load
+  - asset profile status summary
+- Goal: reduce repeated compare overhead when annual/quarterly strict strategies share the same candidate pool and date window.
+
+- Fixed Streamlit panel-switch crash in `Load Into Form` by introducing `backtest_requested_panel` and applying panel changes before the radio widget is instantiated.
+
+### 2026-03-31 - Phase 10 practical closeout
+
+- Added `phase10/PHASE10_COMPLETION_SUMMARY.md` and `phase10/PHASE10_NEXT_PHASE_PREPARATION.md`.
+- Marked Phase 10 as practical closeout in roadmap/TODO/index.
+- Synced comprehensive analysis to reflect current dynamic PIT result surface (`Dynamic Universe` tab, history artifact semantics, small compare caches).
+- Clarified next direction: Phase 11 remains the next natural product/workflow phase after dynamic PIT validation contract hardening.
+
+### 2026-03-31 - Phase 11 first pass: saved portfolio workflow opened
+
+- Opened Phase 11 as the active productization/workflow phase after Phase 10 practical closeout.
+- Added a dedicated saved-portfolio store:
+  - `.note/finance/SAVED_PORTFOLIOS.jsonl`
+  - `app/web/runtime/portfolio_store.py`
+- Added `Saved Portfolios` workspace to `Backtest > Compare & Portfolio Builder`.
+- Implemented first-pass workflow:
+  - save current weighted portfolio
+  - inspect saved portfolios
+  - `Load Into Compare`
+  - `Run Saved Portfolio`
+  - `Delete`
+- Added compare prefill + deferred weight/date-policy prefill so saved portfolios can be brought back into the compare screen without manual re-entry.
+- Added weighted portfolio `Meta` tab and saved-portfolio context linkage in history.
+- Synced Phase 11 roadmap/TODO/checklist/docs to reflect that Phase 11 is now `in_progress`.

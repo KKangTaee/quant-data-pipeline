@@ -147,15 +147,14 @@ prototype이 실제로 움직이는 단계까지는 복구되었다.
 - assistant-side precheck:
   - `completed`
 - user manual validation:
-  - `deferred`
+  - `substantially_completed`
 
-사용자 검증은
-`PHASE7_TEST_CHECKLIST.md`
-기준으로 나중에 진행하면 된다.
+사용자 검수 과정에서 나온 추가 operator 보강은
+Phase 8 operator tooling으로 흡수되었다.
 
-이번 closeout에서는
-**Phase 7 구현을 닫고, manual validation은 Phase 8 검수와 함께 묶어서 진행하는 운영 방식**
-으로 정리한다.
+즉 현재는
+**Phase 7 핵심 목표 기준으로 closeout 가능한 상태**
+로 본다.
 
 ## Phase 7 종료 판단
 
@@ -163,10 +162,10 @@ prototype이 실제로 움직이는 단계까지는 복구되었다.
 - code / docs / checklist / polish:
   - `completed`
 - manual validation:
-  - `pending but intentionally deferred`
+  - `completed enough for closeout`
 - next-phase kickoff:
   - `ready`
 
 즉 지금은
-**Phase 7을 implementation-complete 상태로 닫고, 다음 Phase 8을 여는 것이 자연스러운 시점**
+**Phase 7을 완료 상태로 닫고, 다음 workstream은 Phase 8 이후 guidance에 따라 이어가는 것이 자연스러운 시점**
 이다.

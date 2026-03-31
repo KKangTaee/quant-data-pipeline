@@ -170,6 +170,27 @@ Analysis / Presentation
   compare view에서는 total return overlay, overlay end marker, strategy highlight table, focused strategy drilldown까지,
   weighted portfolio 결과에서도 같은 marker / balance-extremes / period-extremes 읽기 흐름과
   strategy contribution amount/share view까지 확인할 수 있게 되었다.
+- 이후 Phase 11 first pass에서는
+  `Compare & Portfolio Builder` 아래에 `Saved Portfolios` surface가 추가되어,
+  현재 compare 결과와 weighted portfolio 구성을
+  - 저장하고
+  - 다시 compare 화면으로 불러오고
+  - end-to-end로 다시 실행하는
+  workflow가 열렸다.
+- 이 saved portfolio는 별도 store
+  `.note/finance/SAVED_PORTFOLIOS.jsonl`
+  에 저장되며,
+  내부적으로는
+  - `compare_context`
+  - `portfolio_context`
+  - `source_context`
+  구조를 사용한다.
+- 또한 weighted portfolio 결과에도 `Meta` 탭이 추가되어
+  `portfolio_name`, `portfolio_id`, `portfolio_source_kind`, `date_policy`,
+  `selected_strategies`, `input_weights_percent`
+  를 같이 확인할 수 있게 되었다.
+- history context에도 `saved_portfolio_id` / `saved_portfolio_name`가 남도록 보강되어,
+  later batch review 시 saved portfolio definition과 rerun history를 연결할 수 있다.
 - 이 시점 기준으로 Phase 4의 첫 UI 실행 챕터는 실질적으로 완료 상태로 보고,
   다음 활성 챕터는 factor / fundamental 전략 진입 준비로 넘어간 상태다.
 - 현재 다음 챕터의 핵심은
@@ -722,6 +743,18 @@ Analysis / Presentation
     - raw-gap symbols -> `Extended Statement Refresh`
     - raw-present / shadow-missing symbols -> `Statement Shadow Rebuild Only`
     로 넘기는 action bridge까지 가진다
+  - 같은 operator tooling pass에서
+    `Statement Coverage Diagnosis` card도 추가되었다
+    - 목적:
+      - coverage-missing symbol이 단순 재수집 대상인지
+      - shadow rebuild 대상인지
+      - foreign/non-standard form 구조 때문에 현재 strict path와 잘 맞지 않는지
+      - symbol/source issue 쪽인지
+      를 한 번 더 좁히기 위함
+    - 예를 들어:
+      - `MRSH` 같은 source-empty case는 `source_empty_or_symbol_issue`
+      - `AU` 같이 `20-F` / `6-K` form 위주인 case는 `foreign_or_nonstandard_form_structure`
+      로 분리되도록 구현되었다
   - persisted ingestion runs에는
     standardized run artifacts가 붙는다
     - every run:
@@ -753,6 +786,74 @@ Analysis / Presentation
   - quarterly strict family:
     - research-only family 3종이 single / compare / history까지 열린 상태
     - 다음 major question은 promotion readiness와 wider-universe stability다
+  - current strict coverage preset semantics:
+    - `Coverage 100/300/500/1000`은 historical monthly top-N universe가 아니라
+      current managed universe 기준 membership를 쓰는 `managed static research universe`
+    - run 안에서는 각 rebalance date마다 usable price/factor availability filtering이 적용된다
+    - 따라서 현재 preset 결과는 실전 투자용 final validation contract가 아니라
+      research/operator validation contract로 읽는 편이 맞다
+    - real-money 수준의 final validation은 future `historical dynamic PIT universe` mode에서 다시 봐야 한다
+  - Phase 10 first pass 이후 annual strict single-strategy surface에는
+    별도 `Universe Contract`가 추가되었다:
+    - `static_managed_research`
+    - `historical_dynamic_pit`
+  - current 구현 범위에서 dynamic PIT는
+    annual strict + quarterly strict prototype
+    single-strategy + compare first pass를 포함한다
+  - dynamic PIT membership first/second pass는
+    - managed candidate pool
+    - rebalance-date close
+    - `latest_available_at <= rebalance_date`인 최신 statement `shares_outstanding`
+    를 사용해 `approx_market_cap`을 계산하고 top-N membership를 다시 구성한다
+  - dynamic first pass는 candidate pool 전체의 full-range price history를 강제하지 않는다
+    - selected end까지 DB price history가 확인된 candidate만 natural inclusion된다
+    - 따라서 `dynamic_candidate_count`와 실제 `candidate_pool_count`는 다를 수 있다
+  - second pass에서는 continuity / profile diagnostics도 함께 남긴다
+    - `continuity_ready_count`
+    - `pre_listing_excluded_count`
+    - `post_last_price_excluded_count`
+    - `asset_profile_delisted_count`
+    - `asset_profile_issue_count`
+  - candidate-level continuity 진단도 별도 row로 남긴다
+    - `first_price_date`
+    - `last_price_date`
+    - `price_row_count`
+    - `profile_status`
+    - `profile_delisted_at`
+    - `profile_error`
+  - result / meta surface에도 dynamic 계약 정보가 함께 남는다:
+    - result row:
+      - `Universe Membership Count`
+      - `Universe Contract`
+    - bundle meta:
+      - `universe_contract`
+      - `dynamic_candidate_count`
+      - `dynamic_target_size`
+      - `universe_debug`
+    - bundle top-level:
+      - `dynamic_universe_snapshot_rows`
+      - `dynamic_candidate_status_rows`
+    - result UI:
+      - `Dynamic Universe` 탭
+      - history drilldown의 `dynamic_universe_preview_rows`
+      - history drilldown의 `dynamic_universe_artifact`
+  - dynamic run history에는 universe artifact도 같이 남는다
+    - `dynamic_universe_artifact`
+    - `dynamic_universe_preview_rows`
+    - `.note/finance/backtest_artifacts/.../dynamic_universe_snapshot.json`
+  - compare / repeated strict run에서는 small in-process cache를 사용해
+    price panel / statement shadow / asset profile summary의 중복 로드를 일부 줄인다
+  - compare mode에서도 annual strict family는 dynamic first pass를 사용할 수 있으며,
+    `Strategy Highlights`에
+    - `Universe Contract`
+    - `Dynamic Candidate Pool`
+    - `Membership Avg`
+    - `Membership Range`
+    를 같이 노출해 static vs dynamic 차이를 읽을 수 있게 했다
+  - quarterly strict prototype family도 same contract first pass를 지원하지만,
+    이 결과는 여전히 research-only quarterly family로 읽는 것이 맞다
+  - current dynamic PIT는 여전히 perfect constituent-history engine이 아니며,
+    current-source 기반 `approximate PIT + diagnostics` contract다
 로 보는 것이 가장 정확하다
 
 즉, 예전보다 통합은 많이 진행됐지만 아직 모든 전략과 모든 입력이 loader 계층으로 완전히 이행된 상태는 아니다.

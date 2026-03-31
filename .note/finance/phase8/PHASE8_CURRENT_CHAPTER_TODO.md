@@ -71,3 +71,5 @@
   - quarterly preview에서 missing symbol을 `Extended Statement Refresh` / `Statement Shadow Rebuild Only`로 바로 넘기는 prefill bridge 추가
 - `completed` run inspector and standardized artifacts first pass
   - persisted run에서 runtime marker / related logs / standardized JSON+failure CSV artifact를 확인 가능
+- `completed` statement coverage diagnosis guidance
+  - coverage-missing symbol에 대해 raw recollection / shadow rebuild / source-structure issue / exclusion 판단을 단계별로 안내하는 diagnosis card 추가

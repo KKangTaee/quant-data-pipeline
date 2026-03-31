@@ -59,5 +59,5 @@
 
 - `completed` assistant pre-validation
   - checklist 핵심 항목을 코드/runtime 기준으로 먼저 점검
-- `completed` manual validation deferral decision
-  - Phase 7 사용자 검수는 Phase 8 체크리스트와 함께 later batch review로 진행
+- `completed` closeout confirmation
+  - later operator 보강과 checklist 확인을 거쳐 Phase 7은 closeout-ready가 아니라 closeout-complete 상태로 전환
