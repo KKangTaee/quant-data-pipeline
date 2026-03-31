@@ -16,6 +16,8 @@ from finance.loaders import (
 )
 from finance.performance import portfolio_performance_summary
 from finance.sample import (
+    HISTORICAL_DYNAMIC_PIT_UNIVERSE,
+    STATIC_MANAGED_RESEARCH_UNIVERSE,
     STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
     STRICT_MARKET_REGIME_DEFAULT_WINDOW,
     QUALITY_STRICT_DEFAULT_FACTORS,
@@ -132,6 +134,45 @@ def _preflight_price_strategy_data(
             "Some requested tickers do not have DB price history for the selected range: "
             + ", ".join(missing)
         )
+
+
+def _inspect_dynamic_universe_price_pool(
+    *,
+    tickers: list[str],
+    end: str | None,
+    timeframe: str,
+) -> dict[str, Any]:
+    history = load_price_history(
+        symbols=tickers,
+        start=None,
+        end=end,
+        timeframe=timeframe,
+    )
+    if history.empty:
+        raise BacktestDataError(
+            "No OHLCV rows were found in MySQL for the requested dynamic candidate pool. "
+            "Run the ingestion pipeline first."
+        )
+
+    available_symbols = sorted(
+        history["symbol"].astype(str).str.upper().dropna().unique().tolist()
+    )
+    available_set = set(available_symbols)
+    missing = [ticker for ticker in tickers if ticker not in available_set]
+    return {
+        "requested_count": len(tickers),
+        "available_count": len(available_symbols),
+        "missing_count": len(missing),
+        "missing_symbols": missing,
+    }
+
+
+def _dynamic_universe_warning(statement_freq: str) -> str:
+    normalized_freq = str(statement_freq or "annual").strip().lower()
+    return (
+        "Phase 10 first pass dynamic universe: approximate rebalance-date PIT membership is rebuilt "
+        f"from the managed candidate pool using rebalance-date close * latest-known {normalized_freq} shares_outstanding."
+    )
 
 
 def _preflight_quality_snapshot_data(
@@ -501,6 +542,18 @@ def build_backtest_result_bundle(
         meta["market_regime_benchmark"] = input_params.get("market_regime_benchmark")
     if input_params.get("snapshot_source") is not None:
         meta["snapshot_source"] = input_params.get("snapshot_source")
+    if input_params.get("universe_contract") is not None:
+        meta["universe_contract"] = input_params.get("universe_contract")
+    if input_params.get("dynamic_target_size") is not None:
+        meta["dynamic_target_size"] = input_params.get("dynamic_target_size")
+    if input_params.get("dynamic_candidate_count") is not None:
+        meta["dynamic_candidate_count"] = input_params.get("dynamic_candidate_count")
+    if input_params.get("dynamic_candidate_preview") is not None:
+        meta["dynamic_candidate_preview"] = input_params.get("dynamic_candidate_preview")
+    if input_params.get("universe_builder_scope") is not None:
+        meta["universe_builder_scope"] = input_params.get("universe_builder_scope")
+    if input_params.get("universe_debug") is not None:
+        meta["universe_debug"] = input_params.get("universe_debug")
 
     return {
         "strategy_name": strategy_name,
@@ -827,12 +880,18 @@ def _run_statement_quality_bundle(
     market_regime_benchmark: str = STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
     universe_mode: str = "manual_tickers",
     preset_name: str | None = None,
+    universe_contract: str = STATIC_MANAGED_RESEARCH_UNIVERSE,
+    dynamic_candidate_tickers: Sequence[str] | None = None,
+    dynamic_target_size: int | None = None,
     static_warnings: Sequence[str] | None = None,
     snapshot_source: str = "rebuild_statement",
 ) -> dict[str, Any]:
     normalized_tickers = _normalize_tickers(tickers)
     _validate_backtest_date_range(start, end)
     strict_label = f"strict {statement_freq}"
+    universe_input_tickers = normalized_tickers
+    if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE:
+        universe_input_tickers = _normalize_tickers(dynamic_candidate_tickers or normalized_tickers)
 
     normalized_factors = [
         str(name).strip()
@@ -843,17 +902,25 @@ def _run_statement_quality_bundle(
         raise BacktestInputError("At least one quality factor must be provided.")
 
     price_freshness = inspect_strict_annual_price_freshness(
-        tickers=normalized_tickers,
+        tickers=universe_input_tickers,
         end=end,
         timeframe=timeframe,
     )
 
-    _preflight_price_strategy_data(
-        tickers=normalized_tickers,
-        start=start,
-        end=end,
-        timeframe=timeframe,
-    )
+    dynamic_price_pool = None
+    if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE:
+        dynamic_price_pool = _inspect_dynamic_universe_price_pool(
+            tickers=universe_input_tickers,
+            end=end,
+            timeframe=timeframe,
+        )
+    else:
+        _preflight_price_strategy_data(
+            tickers=universe_input_tickers,
+            start=start,
+            end=end,
+            timeframe=timeframe,
+        )
     if market_regime_enabled:
         _preflight_price_strategy_data(
             tickers=[market_regime_benchmark],
@@ -863,12 +930,12 @@ def _run_statement_quality_bundle(
         )
     if snapshot_source == "shadow_factors":
         _preflight_statement_quality_shadow_data(
-            tickers=normalized_tickers,
+            tickers=universe_input_tickers,
             end=end,
             statement_freq=statement_freq,
             factor_names=normalized_factors,
         )
-        result_df = get_statement_quality_snapshot_shadow_from_db(
+        result_payload = get_statement_quality_snapshot_shadow_from_db(
             tickers=normalized_tickers,
             start=start,
             end=end,
@@ -883,7 +950,15 @@ def _run_statement_quality_bundle(
             market_regime_enabled=market_regime_enabled,
             market_regime_window=market_regime_window,
             market_regime_benchmark=market_regime_benchmark,
+            universe_contract=universe_contract,
+            dynamic_candidate_tickers=universe_input_tickers,
+            dynamic_target_size=dynamic_target_size,
+            return_details=True,
         )
+        result_df = result_payload["result_df"]
+        universe_debug = result_payload.get("universe_debug")
+        dynamic_universe_snapshot_rows = result_payload.get("universe_snapshot_rows") or []
+        dynamic_candidate_status_rows = result_payload.get("candidate_status_rows") or []
     else:
         _preflight_statement_quality_data(
             tickers=normalized_tickers,
@@ -901,8 +976,23 @@ def _run_statement_quality_bundle(
             top_n=top_n,
             rebalance_interval=rebalance_interval,
         )
+        universe_debug = None
+        dynamic_universe_snapshot_rows = []
+        dynamic_candidate_status_rows = []
 
     warnings: list[str] = list(static_warnings or [])
+    if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE:
+        warnings.append(_dynamic_universe_warning(statement_freq))
+        if dynamic_price_pool and dynamic_price_pool["missing_count"] > 0:
+            preview = ", ".join(dynamic_price_pool["missing_symbols"][:15])
+            more = ""
+            if dynamic_price_pool["missing_count"] > 15:
+                more = f" ... (+{dynamic_price_pool['missing_count'] - 15} more)"
+            warnings.append(
+                "Dynamic candidate pool note: "
+                f"{dynamic_price_pool['missing_count']} candidate symbols do not have any DB price history up to the selected end date "
+                f"and were naturally excluded from the approximate PIT membership build: {preview}{more}"
+            )
     if price_freshness["status"] == "warning":
         warnings.append(
             "Price freshness preflight: "
@@ -942,6 +1032,16 @@ def _run_statement_quality_bundle(
             "universe_mode": universe_mode,
             "preset_name": preset_name,
             "snapshot_source": snapshot_source,
+            "universe_contract": universe_contract,
+            "dynamic_target_size": dynamic_target_size,
+            "dynamic_candidate_count": len(universe_input_tickers),
+            "dynamic_candidate_preview": universe_input_tickers[:20],
+            "universe_builder_scope": (
+                f"{statement_freq}_first_pass"
+                if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE
+                else None
+            ),
+            "universe_debug": universe_debug,
         },
         summary_freq=_summary_frequency(option, timeframe),
         data_mode="db_backed_strict_statement_shadow_factors" if snapshot_source == "shadow_factors" else "db_backed_strict_statement_snapshot",
@@ -956,6 +1056,10 @@ def _run_statement_quality_bundle(
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
             f"Market Regime Overlay enabled: month-end selections move fully to cash when `{market_regime_benchmark}` closes below `MA{market_regime_window}`."
         ]
+    if dynamic_universe_snapshot_rows:
+        bundle["dynamic_universe_snapshot_rows"] = dynamic_universe_snapshot_rows
+    if dynamic_candidate_status_rows:
+        bundle["dynamic_candidate_status_rows"] = dynamic_candidate_status_rows
     return bundle
 
 
@@ -976,6 +1080,9 @@ def run_quality_snapshot_strict_annual_backtest_from_db(
     market_regime_benchmark: str = STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
     universe_mode: str = "manual_tickers",
     preset_name: str | None = None,
+    universe_contract: str = STATIC_MANAGED_RESEARCH_UNIVERSE,
+    dynamic_candidate_tickers: Sequence[str] | None = None,
+    dynamic_target_size: int | None = None,
 ) -> dict[str, Any]:
     return _run_statement_quality_bundle(
         strategy_name="Quality Snapshot (Strict Annual)",
@@ -996,6 +1103,9 @@ def run_quality_snapshot_strict_annual_backtest_from_db(
         market_regime_benchmark=market_regime_benchmark,
         universe_mode=universe_mode,
         preset_name=preset_name,
+        universe_contract=universe_contract,
+        dynamic_candidate_tickers=dynamic_candidate_tickers,
+        dynamic_target_size=dynamic_target_size,
         snapshot_source="shadow_factors",
         static_warnings=[
             "Strict annual statement path: ranks annual statement-driven quality snapshots using precomputed statement shadow factors for faster public execution.",
@@ -1065,9 +1175,15 @@ def run_value_snapshot_strict_annual_backtest_from_db(
     market_regime_benchmark: str = STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
     universe_mode: str = "manual_tickers",
     preset_name: str | None = None,
+    universe_contract: str = STATIC_MANAGED_RESEARCH_UNIVERSE,
+    dynamic_candidate_tickers: Sequence[str] | None = None,
+    dynamic_target_size: int | None = None,
 ) -> dict[str, Any]:
     normalized_tickers = _normalize_tickers(tickers)
     _validate_backtest_date_range(start, end)
+    universe_input_tickers = normalized_tickers
+    if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE:
+        universe_input_tickers = _normalize_tickers(dynamic_candidate_tickers or normalized_tickers)
 
     normalized_factors = [
         str(name).strip()
@@ -1078,17 +1194,25 @@ def run_value_snapshot_strict_annual_backtest_from_db(
         raise BacktestInputError("At least one value factor must be provided.")
 
     price_freshness = inspect_strict_annual_price_freshness(
-        tickers=normalized_tickers,
+        tickers=universe_input_tickers,
         end=end,
         timeframe=timeframe,
     )
 
-    _preflight_price_strategy_data(
-        tickers=normalized_tickers,
-        start=start,
-        end=end,
-        timeframe=timeframe,
-    )
+    dynamic_price_pool = None
+    if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE:
+        dynamic_price_pool = _inspect_dynamic_universe_price_pool(
+            tickers=universe_input_tickers,
+            end=end,
+            timeframe=timeframe,
+        )
+    else:
+        _preflight_price_strategy_data(
+            tickers=universe_input_tickers,
+            start=start,
+            end=end,
+            timeframe=timeframe,
+        )
     if market_regime_enabled:
         _preflight_price_strategy_data(
             tickers=[market_regime_benchmark],
@@ -1097,13 +1221,13 @@ def run_value_snapshot_strict_annual_backtest_from_db(
             timeframe=timeframe,
         )
     _preflight_statement_quality_shadow_data(
-        tickers=normalized_tickers,
+        tickers=universe_input_tickers,
         end=end,
         statement_freq="annual",
         factor_names=normalized_factors,
     )
 
-    result_df = get_statement_value_snapshot_shadow_from_db(
+    result_payload = get_statement_value_snapshot_shadow_from_db(
         tickers=normalized_tickers,
         start=start,
         end=end,
@@ -1118,11 +1242,31 @@ def run_value_snapshot_strict_annual_backtest_from_db(
         market_regime_enabled=market_regime_enabled,
         market_regime_window=market_regime_window,
         market_regime_benchmark=market_regime_benchmark,
+        universe_contract=universe_contract,
+        dynamic_candidate_tickers=universe_input_tickers,
+        dynamic_target_size=dynamic_target_size,
+        return_details=True,
     )
+    result_df = result_payload["result_df"]
+    universe_debug = result_payload.get("universe_debug")
+    dynamic_universe_snapshot_rows = result_payload.get("universe_snapshot_rows") or []
+    dynamic_candidate_status_rows = result_payload.get("candidate_status_rows") or []
 
     warnings = [
         "Strict annual value path: ranks annual statement-driven value snapshots using precomputed statement shadow factors.",
     ]
+    if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE:
+        warnings.append(_dynamic_universe_warning("annual"))
+        if dynamic_price_pool and dynamic_price_pool["missing_count"] > 0:
+            preview = ", ".join(dynamic_price_pool["missing_symbols"][:15])
+            more = ""
+            if dynamic_price_pool["missing_count"] > 15:
+                more = f" ... (+{dynamic_price_pool['missing_count'] - 15} more)"
+            warnings.append(
+                "Dynamic candidate pool note: "
+                f"{dynamic_price_pool['missing_count']} candidate symbols do not have any DB price history up to the selected end date "
+                f"and were naturally excluded from the approximate PIT membership build: {preview}{more}"
+            )
     if price_freshness["status"] == "warning":
         warnings.append(
             "Price freshness preflight: "
@@ -1162,6 +1306,12 @@ def run_value_snapshot_strict_annual_backtest_from_db(
             "snapshot_source": "shadow_factors",
             "universe_mode": universe_mode,
             "preset_name": preset_name,
+            "universe_contract": universe_contract,
+            "dynamic_target_size": dynamic_target_size,
+            "dynamic_candidate_count": len(universe_input_tickers),
+            "dynamic_candidate_preview": universe_input_tickers[:20],
+            "universe_builder_scope": ("annual_first_pass" if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE else None),
+            "universe_debug": universe_debug,
         },
         summary_freq=_summary_frequency(option, timeframe),
         data_mode="db_backed_strict_statement_shadow_factors",
@@ -1176,6 +1326,10 @@ def run_value_snapshot_strict_annual_backtest_from_db(
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
             f"Market Regime Overlay enabled: month-end selections move fully to cash when `{market_regime_benchmark}` closes below `MA{market_regime_window}`."
         ]
+    if dynamic_universe_snapshot_rows:
+        bundle["dynamic_universe_snapshot_rows"] = dynamic_universe_snapshot_rows
+    if dynamic_candidate_status_rows:
+        bundle["dynamic_candidate_status_rows"] = dynamic_candidate_status_rows
     return bundle
 
 
@@ -1196,9 +1350,15 @@ def run_value_snapshot_strict_quarterly_prototype_backtest_from_db(
     market_regime_benchmark: str = STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
     universe_mode: str = "manual_tickers",
     preset_name: str | None = None,
+    universe_contract: str = STATIC_MANAGED_RESEARCH_UNIVERSE,
+    dynamic_candidate_tickers: Sequence[str] | None = None,
+    dynamic_target_size: int | None = None,
 ) -> dict[str, Any]:
     normalized_tickers = _normalize_tickers(tickers)
     _validate_backtest_date_range(start, end)
+    universe_input_tickers = normalized_tickers
+    if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE:
+        universe_input_tickers = _normalize_tickers(dynamic_candidate_tickers or normalized_tickers)
 
     normalized_factors = [
         str(name).strip()
@@ -1209,17 +1369,25 @@ def run_value_snapshot_strict_quarterly_prototype_backtest_from_db(
         raise BacktestInputError("At least one quarterly value factor must be provided.")
 
     price_freshness = inspect_strict_annual_price_freshness(
-        tickers=normalized_tickers,
+        tickers=universe_input_tickers,
         end=end,
         timeframe=timeframe,
     )
 
-    _preflight_price_strategy_data(
-        tickers=normalized_tickers,
-        start=start,
-        end=end,
-        timeframe=timeframe,
-    )
+    dynamic_price_pool = None
+    if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE:
+        dynamic_price_pool = _inspect_dynamic_universe_price_pool(
+            tickers=universe_input_tickers,
+            end=end,
+            timeframe=timeframe,
+        )
+    else:
+        _preflight_price_strategy_data(
+            tickers=universe_input_tickers,
+            start=start,
+            end=end,
+            timeframe=timeframe,
+        )
     if market_regime_enabled:
         _preflight_price_strategy_data(
             tickers=[market_regime_benchmark],
@@ -1228,13 +1396,13 @@ def run_value_snapshot_strict_quarterly_prototype_backtest_from_db(
             timeframe=timeframe,
         )
     _preflight_statement_quality_shadow_data(
-        tickers=normalized_tickers,
+        tickers=universe_input_tickers,
         end=end,
         statement_freq="quarterly",
         factor_names=normalized_factors,
     )
 
-    result_df = get_statement_value_snapshot_shadow_from_db(
+    result_payload = get_statement_value_snapshot_shadow_from_db(
         tickers=normalized_tickers,
         start=start,
         end=end,
@@ -1249,11 +1417,31 @@ def run_value_snapshot_strict_quarterly_prototype_backtest_from_db(
         market_regime_enabled=market_regime_enabled,
         market_regime_window=market_regime_window,
         market_regime_benchmark=market_regime_benchmark,
+        universe_contract=universe_contract,
+        dynamic_candidate_tickers=universe_input_tickers,
+        dynamic_target_size=dynamic_target_size,
+        return_details=True,
     )
+    result_df = result_payload["result_df"]
+    universe_debug = result_payload.get("universe_debug")
+    dynamic_universe_snapshot_rows = result_payload.get("universe_snapshot_rows") or []
+    dynamic_candidate_status_rows = result_payload.get("candidate_status_rows") or []
 
     warnings = [
         "Research-only quarterly value prototype: ranks quarterly statement shadow value factors and is intended for quarterly family validation rather than public default use.",
     ]
+    if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE:
+        warnings.append(_dynamic_universe_warning("quarterly"))
+        if dynamic_price_pool and dynamic_price_pool["missing_count"] > 0:
+            preview = ", ".join(dynamic_price_pool["missing_symbols"][:15])
+            more = ""
+            if dynamic_price_pool["missing_count"] > 15:
+                more = f" ... (+{dynamic_price_pool['missing_count'] - 15} more)"
+            warnings.append(
+                "Dynamic candidate pool note: "
+                f"{dynamic_price_pool['missing_count']} candidate symbols do not have any DB price history up to the selected end date "
+                f"and were naturally excluded from the approximate PIT membership build: {preview}{more}"
+            )
     if price_freshness["status"] == "warning":
         warnings.append(
             "Price freshness preflight: "
@@ -1293,6 +1481,12 @@ def run_value_snapshot_strict_quarterly_prototype_backtest_from_db(
             "snapshot_source": "shadow_factors",
             "universe_mode": universe_mode,
             "preset_name": preset_name,
+            "universe_contract": universe_contract,
+            "dynamic_target_size": dynamic_target_size,
+            "dynamic_candidate_count": len(universe_input_tickers),
+            "dynamic_candidate_preview": universe_input_tickers[:20],
+            "universe_builder_scope": ("quarterly_first_pass" if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE else None),
+            "universe_debug": universe_debug,
         },
         summary_freq=_summary_frequency(option, timeframe),
         data_mode="db_backed_strict_statement_shadow_factors",
@@ -1307,6 +1501,10 @@ def run_value_snapshot_strict_quarterly_prototype_backtest_from_db(
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
             f"Market Regime Overlay enabled: month-end selections move fully to cash when `{market_regime_benchmark}` closes below `MA{market_regime_window}`."
         ]
+    if dynamic_universe_snapshot_rows:
+        bundle["dynamic_universe_snapshot_rows"] = dynamic_universe_snapshot_rows
+    if dynamic_candidate_status_rows:
+        bundle["dynamic_candidate_status_rows"] = dynamic_candidate_status_rows
     return bundle
 
 
@@ -1328,9 +1526,15 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
     market_regime_benchmark: str = STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
     universe_mode: str = "manual_tickers",
     preset_name: str | None = None,
+    universe_contract: str = STATIC_MANAGED_RESEARCH_UNIVERSE,
+    dynamic_candidate_tickers: Sequence[str] | None = None,
+    dynamic_target_size: int | None = None,
 ) -> dict[str, Any]:
     normalized_tickers = _normalize_tickers(tickers)
     _validate_backtest_date_range(start, end)
+    universe_input_tickers = normalized_tickers
+    if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE:
+        universe_input_tickers = _normalize_tickers(dynamic_candidate_tickers or normalized_tickers)
 
     normalized_quality_factors = [
         str(name).strip()
@@ -1351,17 +1555,25 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
         raise BacktestInputError("At least one strict annual quality/value factor must be provided.")
 
     price_freshness = inspect_strict_annual_price_freshness(
-        tickers=normalized_tickers,
+        tickers=universe_input_tickers,
         end=end,
         timeframe=timeframe,
     )
 
-    _preflight_price_strategy_data(
-        tickers=normalized_tickers,
-        start=start,
-        end=end,
-        timeframe=timeframe,
-    )
+    dynamic_price_pool = None
+    if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE:
+        dynamic_price_pool = _inspect_dynamic_universe_price_pool(
+            tickers=universe_input_tickers,
+            end=end,
+            timeframe=timeframe,
+        )
+    else:
+        _preflight_price_strategy_data(
+            tickers=universe_input_tickers,
+            start=start,
+            end=end,
+            timeframe=timeframe,
+        )
     if market_regime_enabled:
         _preflight_price_strategy_data(
             tickers=[market_regime_benchmark],
@@ -1370,13 +1582,13 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
             timeframe=timeframe,
         )
     _preflight_statement_quality_shadow_data(
-        tickers=normalized_tickers,
+        tickers=universe_input_tickers,
         end=end,
         statement_freq="annual",
         factor_names=normalized_factor_names,
     )
 
-    result_df = get_statement_quality_value_snapshot_shadow_from_db(
+    result_payload = get_statement_quality_value_snapshot_shadow_from_db(
         tickers=normalized_tickers,
         start=start,
         end=end,
@@ -1392,11 +1604,31 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
         market_regime_enabled=market_regime_enabled,
         market_regime_window=market_regime_window,
         market_regime_benchmark=market_regime_benchmark,
+        universe_contract=universe_contract,
+        dynamic_candidate_tickers=universe_input_tickers,
+        dynamic_target_size=dynamic_target_size,
+        return_details=True,
     )
+    result_df = result_payload["result_df"]
+    universe_debug = result_payload.get("universe_debug")
+    dynamic_universe_snapshot_rows = result_payload.get("universe_snapshot_rows") or []
+    dynamic_candidate_status_rows = result_payload.get("candidate_status_rows") or []
 
     warnings = [
         "Strict annual multi-factor path: combines coverage-first quality factors with annual statement-driven valuation factors.",
     ]
+    if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE:
+        warnings.append(_dynamic_universe_warning("annual"))
+        if dynamic_price_pool and dynamic_price_pool["missing_count"] > 0:
+            preview = ", ".join(dynamic_price_pool["missing_symbols"][:15])
+            more = ""
+            if dynamic_price_pool["missing_count"] > 15:
+                more = f" ... (+{dynamic_price_pool['missing_count'] - 15} more)"
+            warnings.append(
+                "Dynamic candidate pool note: "
+                f"{dynamic_price_pool['missing_count']} candidate symbols do not have any DB price history up to the selected end date "
+                f"and were naturally excluded from the approximate PIT membership build: {preview}{more}"
+            )
     if price_freshness["status"] == "warning":
         warnings.append(
             "Price freshness preflight: "
@@ -1437,6 +1669,12 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
             "snapshot_source": "shadow_factors",
             "universe_mode": universe_mode,
             "preset_name": preset_name,
+            "universe_contract": universe_contract,
+            "dynamic_target_size": dynamic_target_size,
+            "dynamic_candidate_count": len(universe_input_tickers),
+            "dynamic_candidate_preview": universe_input_tickers[:20],
+            "universe_builder_scope": ("annual_first_pass" if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE else None),
+            "universe_debug": universe_debug,
         },
         summary_freq=_summary_frequency(option, timeframe),
         data_mode="db_backed_strict_statement_shadow_factors",
@@ -1451,6 +1689,10 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
             f"Market Regime Overlay enabled: month-end selections move fully to cash when `{market_regime_benchmark}` closes below `MA{market_regime_window}`."
         ]
+    if dynamic_universe_snapshot_rows:
+        bundle["dynamic_universe_snapshot_rows"] = dynamic_universe_snapshot_rows
+    if dynamic_candidate_status_rows:
+        bundle["dynamic_candidate_status_rows"] = dynamic_candidate_status_rows
     return bundle
 
 
@@ -1472,9 +1714,15 @@ def run_quality_value_snapshot_strict_quarterly_prototype_backtest_from_db(
     market_regime_benchmark: str = STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
     universe_mode: str = "manual_tickers",
     preset_name: str | None = None,
+    universe_contract: str = STATIC_MANAGED_RESEARCH_UNIVERSE,
+    dynamic_candidate_tickers: Sequence[str] | None = None,
+    dynamic_target_size: int | None = None,
 ) -> dict[str, Any]:
     normalized_tickers = _normalize_tickers(tickers)
     _validate_backtest_date_range(start, end)
+    universe_input_tickers = normalized_tickers
+    if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE:
+        universe_input_tickers = _normalize_tickers(dynamic_candidate_tickers or normalized_tickers)
 
     normalized_quality_factors = [
         str(name).strip()
@@ -1495,17 +1743,25 @@ def run_quality_value_snapshot_strict_quarterly_prototype_backtest_from_db(
         raise BacktestInputError("At least one quarterly quality/value factor must be provided.")
 
     price_freshness = inspect_strict_annual_price_freshness(
-        tickers=normalized_tickers,
+        tickers=universe_input_tickers,
         end=end,
         timeframe=timeframe,
     )
 
-    _preflight_price_strategy_data(
-        tickers=normalized_tickers,
-        start=start,
-        end=end,
-        timeframe=timeframe,
-    )
+    dynamic_price_pool = None
+    if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE:
+        dynamic_price_pool = _inspect_dynamic_universe_price_pool(
+            tickers=universe_input_tickers,
+            end=end,
+            timeframe=timeframe,
+        )
+    else:
+        _preflight_price_strategy_data(
+            tickers=universe_input_tickers,
+            start=start,
+            end=end,
+            timeframe=timeframe,
+        )
     if market_regime_enabled:
         _preflight_price_strategy_data(
             tickers=[market_regime_benchmark],
@@ -1514,13 +1770,13 @@ def run_quality_value_snapshot_strict_quarterly_prototype_backtest_from_db(
             timeframe=timeframe,
         )
     _preflight_statement_quality_shadow_data(
-        tickers=normalized_tickers,
+        tickers=universe_input_tickers,
         end=end,
         statement_freq="quarterly",
         factor_names=normalized_factor_names,
     )
 
-    result_df = get_statement_quality_value_snapshot_shadow_from_db(
+    result_payload = get_statement_quality_value_snapshot_shadow_from_db(
         tickers=normalized_tickers,
         start=start,
         end=end,
@@ -1536,11 +1792,31 @@ def run_quality_value_snapshot_strict_quarterly_prototype_backtest_from_db(
         market_regime_enabled=market_regime_enabled,
         market_regime_window=market_regime_window,
         market_regime_benchmark=market_regime_benchmark,
+        universe_contract=universe_contract,
+        dynamic_candidate_tickers=universe_input_tickers,
+        dynamic_target_size=dynamic_target_size,
+        return_details=True,
     )
+    result_df = result_payload["result_df"]
+    universe_debug = result_payload.get("universe_debug")
+    dynamic_universe_snapshot_rows = result_payload.get("universe_snapshot_rows") or []
+    dynamic_candidate_status_rows = result_payload.get("candidate_status_rows") or []
 
     warnings = [
         "Research-only quarterly multi-factor prototype: combines quarterly quality and value shadow factors for family-level validation, not public default use.",
     ]
+    if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE:
+        warnings.append(_dynamic_universe_warning("quarterly"))
+        if dynamic_price_pool and dynamic_price_pool["missing_count"] > 0:
+            preview = ", ".join(dynamic_price_pool["missing_symbols"][:15])
+            more = ""
+            if dynamic_price_pool["missing_count"] > 15:
+                more = f" ... (+{dynamic_price_pool['missing_count'] - 15} more)"
+            warnings.append(
+                "Dynamic candidate pool note: "
+                f"{dynamic_price_pool['missing_count']} candidate symbols do not have any DB price history up to the selected end date "
+                f"and were naturally excluded from the approximate PIT membership build: {preview}{more}"
+            )
     if price_freshness["status"] == "warning":
         warnings.append(
             "Price freshness preflight: "
@@ -1581,6 +1857,12 @@ def run_quality_value_snapshot_strict_quarterly_prototype_backtest_from_db(
             "snapshot_source": "shadow_factors",
             "universe_mode": universe_mode,
             "preset_name": preset_name,
+            "universe_contract": universe_contract,
+            "dynamic_target_size": dynamic_target_size,
+            "dynamic_candidate_count": len(universe_input_tickers),
+            "dynamic_candidate_preview": universe_input_tickers[:20],
+            "universe_builder_scope": ("quarterly_first_pass" if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE else None),
+            "universe_debug": universe_debug,
         },
         summary_freq=_summary_frequency(option, timeframe),
         data_mode="db_backed_strict_statement_shadow_factors",
@@ -1595,6 +1877,10 @@ def run_quality_value_snapshot_strict_quarterly_prototype_backtest_from_db(
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
             f"Market Regime Overlay enabled: month-end selections move fully to cash when `{market_regime_benchmark}` closes below `MA{market_regime_window}`."
         ]
+    if dynamic_universe_snapshot_rows:
+        bundle["dynamic_universe_snapshot_rows"] = dynamic_universe_snapshot_rows
+    if dynamic_candidate_status_rows:
+        bundle["dynamic_candidate_status_rows"] = dynamic_candidate_status_rows
     return bundle
 
 
@@ -1615,6 +1901,9 @@ def run_quality_snapshot_strict_quarterly_prototype_backtest_from_db(
     market_regime_benchmark: str = STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
     universe_mode: str = "manual_tickers",
     preset_name: str | None = None,
+    universe_contract: str = STATIC_MANAGED_RESEARCH_UNIVERSE,
+    dynamic_candidate_tickers: Sequence[str] | None = None,
+    dynamic_target_size: int | None = None,
 ) -> dict[str, Any]:
     return _run_statement_quality_bundle(
         strategy_name="Quality Snapshot (Strict Quarterly Prototype)",
@@ -1635,6 +1924,9 @@ def run_quality_snapshot_strict_quarterly_prototype_backtest_from_db(
         market_regime_benchmark=market_regime_benchmark,
         universe_mode=universe_mode,
         preset_name=preset_name,
+        universe_contract=universe_contract,
+        dynamic_candidate_tickers=dynamic_candidate_tickers,
+        dynamic_target_size=dynamic_target_size,
         snapshot_source="shadow_factors",
         static_warnings=[
             "Research-only quarterly strict prototype: ranks quarterly statement shadow factors and is intended for Phase 6 entry/validation rather than public default use.",

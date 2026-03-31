@@ -13,10 +13,13 @@ import streamlit as st
 
 from app.web.runtime import (
     BACKTEST_HISTORY_FILE,
+    SAVED_PORTFOLIO_FILE,
     append_backtest_run_history,
     build_backtest_result_bundle,
+    delete_saved_portfolio,
     inspect_strict_annual_price_freshness,
     load_backtest_run_history,
+    load_saved_portfolios,
     run_dual_momentum_backtest_from_db,
     run_equal_weight_backtest_from_db,
     run_gtaa_backtest_from_db,
@@ -26,6 +29,7 @@ from app.web.runtime import (
     run_quality_value_snapshot_strict_annual_backtest_from_db,
     run_quality_value_snapshot_strict_quarterly_prototype_backtest_from_db,
     run_risk_parity_trend_backtest_from_db,
+    save_saved_portfolio,
     run_value_snapshot_strict_annual_backtest_from_db,
     run_value_snapshot_strict_quarterly_prototype_backtest_from_db,
 )
@@ -123,6 +127,12 @@ STRICT_MARKET_REGIME_DEFAULT_WINDOW = 200
 STRICT_MARKET_REGIME_DEFAULT_BENCHMARK = "SPY"
 STRICT_MARKET_REGIME_BENCHMARK_OPTIONS = ["SPY", "QQQ", "VTI", "IWM"]
 DEFAULT_BACKTEST_END_DATE = date.today()
+STATIC_MANAGED_RESEARCH_UNIVERSE = "static_managed_research"
+HISTORICAL_DYNAMIC_PIT_UNIVERSE = "historical_dynamic_pit"
+STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS = {
+    "Static Managed Research Universe": STATIC_MANAGED_RESEARCH_UNIVERSE,
+    "Historical Dynamic PIT Universe": HISTORICAL_DYNAMIC_PIT_UNIVERSE,
+}
 
 QUALITY_STRICT_TOP300_TICKERS = [
     "NVDA", "GOOGL", "GOOG", "AAPL", "MSFT", "AMZN", "META", "TSLA", "AVGO", "WMT",
@@ -314,7 +324,7 @@ def _load_statement_shadow_coverage_preview(symbols_key: tuple[str, ...], freq: 
         missing_rows.append(
             {
                 "Symbol": symbol,
-                "Diagnosis": diagnosis,
+                "Coverage Gap Status": diagnosis,
                 "Raw Strict Rows": int(raw_row["strict_rows"]) if raw_row is not None and pd.notna(raw_row.get("strict_rows")) else 0,
                 "Raw Earliest Period": (
                     pd.to_datetime(raw_row["min_period_end"]).strftime("%Y-%m-%d")
@@ -399,6 +409,11 @@ def _queue_ingestion_prefill(
         widget_values = {
             "shadow_rebuild_freq_input": freq,
         }
+    elif target == "statement_coverage_diagnosis":
+        widget_values = {
+            "statement_coverage_diag_freq": freq,
+            "statement_coverage_diag_sample_size": 2,
+        }
 
     st.session_state.ingestion_prefill_request = {
         "target": target,
@@ -406,6 +421,11 @@ def _queue_ingestion_prefill(
         "widget_values": widget_values,
         "notice": notice,
     }
+    st.session_state.backtest_prefill_notice = notice
+    st.session_state.backtest_operator_bridge_notice = (
+        f"{notice} `Coverage Gap Drilldown` 표는 coarse 상태만 보여주고, "
+        "세부 원인 분류는 `Statement Coverage Diagnosis` 카드에서 확인합니다."
+    )
 
 
 def _init_backtest_state() -> None:
@@ -431,8 +451,28 @@ def _init_backtest_state() -> None:
         st.session_state.backtest_prefill_pending = False
     if "backtest_prefill_notice" not in st.session_state:
         st.session_state.backtest_prefill_notice = None
+    if "backtest_operator_bridge_notice" not in st.session_state:
+        st.session_state.backtest_operator_bridge_notice = None
     if "backtest_prefill_strategy_choice" not in st.session_state:
         st.session_state.backtest_prefill_strategy_choice = None
+    if "backtest_compare_prefill_payload" not in st.session_state:
+        st.session_state.backtest_compare_prefill_payload = None
+    if "backtest_compare_prefill_pending" not in st.session_state:
+        st.session_state.backtest_compare_prefill_pending = False
+    if "backtest_compare_prefill_notice" not in st.session_state:
+        st.session_state.backtest_compare_prefill_notice = None
+    if "backtest_weighted_portfolio_prefill" not in st.session_state:
+        st.session_state.backtest_weighted_portfolio_prefill = None
+    if "backtest_saved_portfolio_notice" not in st.session_state:
+        st.session_state.backtest_saved_portfolio_notice = None
+    if "backtest_active_panel" not in st.session_state:
+        st.session_state.backtest_active_panel = "Single Strategy"
+    if "backtest_requested_panel" not in st.session_state:
+        st.session_state.backtest_requested_panel = None
+    requested_panel = st.session_state.get("backtest_requested_panel")
+    if requested_panel in {"Single Strategy", "Compare & Portfolio Builder", "History"}:
+        st.session_state.backtest_active_panel = requested_panel
+        st.session_state.backtest_requested_panel = None
     if "qss_end" not in st.session_state:
         st.session_state["qss_end"] = DEFAULT_BACKTEST_END_DATE
     if "qss_timeframe" not in st.session_state:
@@ -613,6 +653,68 @@ def _render_historical_universe_caption() -> None:
     )
 
 
+def _resolve_strict_dynamic_universe_inputs(
+    *,
+    tickers: list[str],
+    preset_name: str | None,
+    universe_contract: str,
+    statement_freq: str = "annual",
+) -> tuple[list[str], int | None]:
+    if universe_contract != HISTORICAL_DYNAMIC_PIT_UNIVERSE:
+        return [], None
+
+    target_size = STRICT_ANNUAL_MANAGED_PRESET_SPECS.get(preset_name or "", len(tickers))
+    if preset_name in STRICT_ANNUAL_MANAGED_PRESET_SPECS and "US Statement Coverage 1000" in QUALITY_STRICT_PRESETS:
+        candidate_tickers = QUALITY_STRICT_PRESETS["US Statement Coverage 1000"]
+    else:
+        candidate_tickers = tickers
+
+    return candidate_tickers, int(target_size)
+
+
+def _render_strict_dynamic_universe_contract_note(
+    *,
+    universe_contract: str,
+    tickers: list[str],
+    preset_name: str | None,
+    statement_freq: str = "annual",
+) -> tuple[list[str], int | None]:
+    dynamic_candidate_tickers, dynamic_target_size = _resolve_strict_dynamic_universe_inputs(
+        tickers=tickers,
+        preset_name=preset_name,
+        universe_contract=universe_contract,
+        statement_freq=statement_freq,
+    )
+
+    if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE:
+        freq_label = str(statement_freq).strip().lower()
+        st.info(
+            "Phase 10 first pass dynamic PIT mode입니다. 현재 managed candidate pool 안에서 "
+            f"각 리밸런싱 날짜 기준 `price * latest-known {freq_label} shares_outstanding`로 top-N 모집군을 다시 구성합니다."
+        )
+        st.caption(
+            f"Dynamic candidate pool: `{len(dynamic_candidate_tickers)}` symbols | "
+            f"target membership: `{dynamic_target_size}` | "
+            f"현재는 `{freq_label}` strict family first pass, approximate PIT market-cap mode입니다."
+        )
+
+    return dynamic_candidate_tickers, dynamic_target_size
+
+
+def _render_strict_annual_universe_contract_note(
+    *,
+    universe_contract: str,
+    tickers: list[str],
+    preset_name: str | None,
+) -> tuple[list[str], int | None]:
+    return _render_strict_dynamic_universe_contract_note(
+        universe_contract=universe_contract,
+        tickers=tickers,
+        preset_name=preset_name,
+        statement_freq="annual",
+    )
+
+
 def _render_quality_family_guide(current_strategy: str) -> None:
     guide_df = pd.DataFrame(
         [
@@ -680,6 +782,8 @@ def _render_quality_family_guide(current_strategy: str) -> None:
 
 def _summarize_params(meta: dict[str, Any]) -> str:
     parts = []
+    if meta.get("universe_contract"):
+        parts.append(f"universe_contract={meta['universe_contract']}")
     if meta.get("timeframe"):
         parts.append(f"timeframe={meta['timeframe']}")
     if meta.get("option"):
@@ -834,6 +938,11 @@ def _render_statement_shadow_coverage_preview(
     if missing_count == 0:
         return
 
+    bridge_notice = st.session_state.get("backtest_operator_bridge_notice")
+    if bridge_notice:
+        st.success(bridge_notice)
+        st.session_state.backtest_operator_bridge_notice = None
+
     st.info(
         f"`Covered`에서 빠진 `{missing_count}`개 심볼을 아래에서 확인할 수 있습니다. "
         "이 표는 단순히 missing symbol 목록만 보여주는 것이 아니라, "
@@ -846,11 +955,31 @@ def _render_statement_shadow_coverage_preview(
 
     with st.expander("Coverage Gap Drilldown", expanded=False):
         st.caption(
+            "여기 표의 `Coverage Gap Status`는 coarse 분류입니다. "
             "`no_raw_statement_coverage`는 추가 statement 수집이 필요한 심볼이고, "
             "`raw_statement_present_but_shadow_missing`는 raw는 이미 있지만 shadow가 비어 있는 심볼입니다. "
+            "세부 원인 분류(`source_empty_or_symbol_issue`, `foreign_or_nonstandard_form_structure`, "
+            "`source_present_raw_missing` 등)는 `Statement Coverage Diagnosis` 카드에서 확인합니다. "
             "현재는 `Extended Statement Refresh`가 shadow rebuild까지 같이 수행하므로, 먼저 그 경로를 다시 실행해보고 "
             "그래도 남으면 coverage hardening을 점검하는 것이 좋습니다."
         )
+        missing_symbols_csv = ",".join(summary.get("missing_symbols") or [])
+        if missing_symbols_csv:
+            if st.button(
+                "Send Missing Symbols To Statement Coverage Diagnosis",
+                key=f"shadow_gap_send_diagnosis_{strategy_label}_{freq}",
+                use_container_width=True,
+            ):
+                _queue_ingestion_prefill(
+                    target="statement_coverage_diagnosis",
+                    symbols_csv=missing_symbols_csv,
+                    freq=freq,
+                    notice=(
+                        "Loaded missing coverage symbols into `Statement Coverage Diagnosis`. "
+                        "Open the `Ingestion` tab and run the prepared diagnosis card when you are ready."
+                    ),
+                )
+                st.rerun()
         missing_df = pd.DataFrame(summary.get("missing_rows") or [])
         if not missing_df.empty:
             st.dataframe(missing_df, use_container_width=True, hide_index=True)
@@ -1128,9 +1257,19 @@ def _render_last_run() -> None:
         "quality_value_snapshot_strict_quarterly_prototype",
     }
 
+    dynamic_snapshot_rows = bundle.get("dynamic_universe_snapshot_rows") or []
+    dynamic_candidate_status_rows = bundle.get("dynamic_candidate_status_rows") or []
+    has_dynamic_details = bool(
+        dynamic_snapshot_rows
+        or dynamic_candidate_status_rows
+        or meta.get("universe_contract") == HISTORICAL_DYNAMIC_PIT_UNIVERSE
+    )
+
     tab_labels = ["Summary", "Equity Curve", "Balance Extremes", "Period Extremes"]
     if has_selection_history:
         tab_labels.append("Selection History")
+    if has_dynamic_details:
+        tab_labels.append("Dynamic Universe")
     tab_labels.extend(["Result Table", "Meta"])
     tabs = st.tabs(tab_labels)
     tab_iter = iter(tabs)
@@ -1139,6 +1278,7 @@ def _render_last_run() -> None:
     balance_tab = next(tab_iter)
     periods_tab = next(tab_iter)
     selection_tab = next(tab_iter) if has_selection_history else None
+    dynamic_tab = next(tab_iter) if has_dynamic_details else None
     table_tab = next(tab_iter)
     meta_tab = next(tab_iter)
 
@@ -1186,6 +1326,10 @@ def _render_last_run() -> None:
                 snapshot_source=meta.get("snapshot_source"),
             )
 
+    if dynamic_tab is not None:
+        with dynamic_tab:
+            _render_dynamic_universe_details(bundle)
+
     with table_tab:
         st.dataframe(result_df, use_container_width=True)
 
@@ -1196,12 +1340,24 @@ def _render_last_run() -> None:
             st.markdown(f"- `Mode`: `{meta['execution_mode']}`")
             st.markdown(f"- `Data`: `{meta['data_mode']}`")
             st.markdown(f"- `Universe`: `{meta['universe_mode']}`")
+            if meta.get("universe_contract"):
+                st.markdown(f"- `Universe Contract`: `{meta['universe_contract']}`")
             st.markdown(f"- `Tickers`: `{', '.join(meta['tickers'])}`")
             st.markdown(f"- `Period`: `{meta['start']}` -> `{meta['end']}`")
             if meta.get("ui_elapsed_seconds") is not None:
                 st.markdown(f"- `Elapsed`: `{meta['ui_elapsed_seconds']:.3f}s`")
             if meta.get("top") is not None:
                 st.markdown(f"- `Top`: `{meta['top']}`")
+            if meta.get("dynamic_candidate_count") is not None:
+                st.markdown(
+                    f"- `Dynamic Candidate Pool`: `{meta.get('dynamic_candidate_count')}` "
+                    f"(target `{meta.get('dynamic_target_size') or '-'}`)"
+                )
+            if dynamic_snapshot_rows or dynamic_candidate_status_rows:
+                st.markdown(
+                    f"- `Dynamic Detail Rows`: snapshot `{len(dynamic_snapshot_rows)}`, "
+                    f"candidate `{len(dynamic_candidate_status_rows)}`"
+                )
             if meta.get("trend_filter_enabled"):
                 st.markdown(f"- `Trend Filter`: `MA{meta.get('trend_filter_window', STRICT_TREND_FILTER_DEFAULT_WINDOW)}`")
             if meta.get("market_regime_enabled"):
@@ -1216,6 +1372,23 @@ def _render_last_run() -> None:
                     f"newest `{freshness_details.get('newest_latest_date', '-')}`, "
                     f"spread `{freshness_details.get('spread_days', 0)}d`"
                 )
+            universe_debug = meta.get("universe_debug") or {}
+            if universe_debug:
+                st.markdown(
+                    f"- `Membership Count`: avg `{universe_debug.get('avg_membership_count', '-')}`, "
+                    f"min `{universe_debug.get('min_membership_count', '-')}`, "
+                    f"max `{universe_debug.get('max_membership_count', '-')}`"
+                )
+                if universe_debug.get("price_window_start") or universe_debug.get("price_window_end"):
+                    st.markdown(
+                        f"- `Price Window`: `{universe_debug.get('price_window_start', '-')}` -> `{universe_debug.get('price_window_end', '-')}`"
+                    )
+                if universe_debug.get("profile_delisted_count") is not None or universe_debug.get("profile_issue_count") is not None:
+                    st.markdown(
+                        f"- `Profile Diagnostics`: active `{universe_debug.get('profile_active_count', '-')}`, "
+                        f"delisted `{universe_debug.get('profile_delisted_count', '-')}`, "
+                        f"issue `{universe_debug.get('profile_issue_count', '-')}`"
+                    )
         with right:
             st.markdown("##### Runtime Metadata")
             st.json(meta)
@@ -1610,11 +1783,60 @@ def _render_balance_chart_with_markers(
     )
 
 
+def _render_dynamic_universe_details(bundle: dict[str, Any]) -> None:
+    meta = bundle.get("meta") or {}
+    universe_debug = meta.get("universe_debug") or {}
+    snapshot_rows = bundle.get("dynamic_universe_snapshot_rows") or []
+    candidate_status_rows = bundle.get("dynamic_candidate_status_rows") or []
+
+    if (
+        not snapshot_rows
+        and not candidate_status_rows
+        and meta.get("universe_contract") != HISTORICAL_DYNAMIC_PIT_UNIVERSE
+    ):
+        st.caption("이번 결과는 `Historical Dynamic PIT Universe` run이 아니어서 dynamic universe 상세가 없습니다.")
+        return
+
+    st.caption(
+        "`Historical Dynamic PIT Universe`에서는 리밸런싱 날짜마다 모집군을 다시 계산합니다. "
+        "`dynamic_universe_snapshot_rows`는 날짜별 membership/continuity 요약이고, "
+        "`dynamic_candidate_status_rows`는 후보 심볼별 가격 이력과 profile 상태를 보여줍니다."
+    )
+
+    if universe_debug:
+        summary_cols = st.columns(4)
+        summary_cols[0].metric("Candidate Pool", universe_debug.get("candidate_pool_count", "-"))
+        summary_cols[1].metric("Target Size", universe_debug.get("target_size", "-"))
+        summary_cols[2].metric("Membership Avg", universe_debug.get("avg_membership_count", "-"))
+        summary_cols[3].metric("Turnover Avg", universe_debug.get("avg_turnover_count", "-"))
+
+    if snapshot_rows:
+        st.markdown("##### dynamic_universe_snapshot_rows")
+        st.caption(
+            "각 행은 리밸런싱 날짜 1개입니다. "
+            "`membership_count`는 실제 편입 수, "
+            "`continuity_ready_count`는 그 날짜를 가격 이력상 자연스럽게 커버하는 후보 수, "
+            "`pre_listing_excluded_count` / `post_last_price_excluded_count`는 상장 전 또는 마지막 가격 이후라 제외된 후보 수입니다."
+        )
+        st.dataframe(pd.DataFrame(snapshot_rows), use_container_width=True, hide_index=True)
+
+    if candidate_status_rows:
+        st.markdown("##### dynamic_candidate_status_rows")
+        st.caption(
+            "각 행은 후보 심볼 1개입니다. "
+            "`first_price_date` / `last_price_date`는 현재 DB 가격 이력 범위, "
+            "`profile_status` / `profile_delisted_at`는 asset profile 기준 continuity 힌트입니다."
+        )
+        st.dataframe(pd.DataFrame(candidate_status_rows), use_container_width=True, hide_index=True)
+
+
 def _build_compare_highlight_rows(bundles: list[dict]) -> pd.DataFrame:
     rows: list[dict[str, Any]] = []
     for bundle in bundles:
         chart_df = bundle["chart_df"].copy().sort_values("Date")
         result_df = bundle["result_df"].copy().sort_values("Date")
+        meta = bundle.get("meta") or {}
+        universe_debug = meta.get("universe_debug") or {}
         high_df, low_df = _build_balance_extremes_tables(chart_df, top_n=1)
         best_df, worst_df = _build_period_extremes_tables(result_df, top_n=1)
 
@@ -1627,6 +1849,15 @@ def _build_compare_highlight_rows(bundles: list[dict]) -> pd.DataFrame:
         rows.append(
             {
                 "Strategy": bundle["strategy_name"],
+                "Universe Contract": meta.get("universe_contract") or "-",
+                "Dynamic Candidate Pool": meta.get("dynamic_candidate_count"),
+                "Membership Avg": universe_debug.get("avg_membership_count"),
+                "Membership Range": (
+                    f"{int(universe_debug['min_membership_count'])} -> {int(universe_debug['max_membership_count'])}"
+                    if universe_debug.get("min_membership_count") is not None
+                    and universe_debug.get("max_membership_count") is not None
+                    else "-"
+                ),
                 "High Date": high_row.get("Date"),
                 "High Balance": high_row.get("Total Balance"),
                 "Low Date": low_row.get("Date"),
@@ -1765,6 +1996,12 @@ def _render_compare_results() -> None:
 
     st.markdown("### Strategy Comparison")
     st.caption("The first compare view focuses on strategy-to-strategy readability: one summary table, one overlay equity chart, and one overlay drawdown chart.")
+    if any((bundle.get("meta") or {}).get("universe_contract") == HISTORICAL_DYNAMIC_PIT_UNIVERSE for bundle in bundles):
+        st.info(
+            "This compare run includes `Historical Dynamic PIT Universe` strategies. "
+            "In Phase 10 first pass, annual strict strategies rebuild approximate rebalance-date membership, so "
+            "`Dynamic Candidate Pool`, `Membership Avg`, and `Membership Range` help explain why static and dynamic results diverge."
+        )
 
     summary_tab, balance_tab, drawdown_tab, return_tab, highlights_tab, focus_tab, meta_tab = st.tabs(
         ["Summary Compare", "Equity Overlay", "Drawdown Overlay", "Return Overlay", "Strategy Highlights", "Focused Strategy", "Execution Meta"]
@@ -1893,6 +2130,183 @@ def _render_compare_results() -> None:
         st.dataframe(pd.DataFrame(meta_rows), use_container_width=True)
 
 
+def _build_weighted_portfolio_bundle(
+    *,
+    bundles: list[dict[str, Any]],
+    weights_percent: list[float],
+    date_policy: str,
+    portfolio_name: str | None = None,
+    portfolio_id: str | None = None,
+    source_kind: str = "weighted_builder",
+) -> dict[str, Any]:
+    strategy_names = [bundle["strategy_name"] for bundle in bundles]
+    total_weight = sum(float(weight) for weight in weights_percent)
+    if total_weight <= 0:
+        raise ValueError("At least one strategy weight must be greater than zero.")
+
+    normalized_weights = [float(weight) / total_weight for weight in weights_percent]
+    combined_result = make_monthly_weighted_portfolio(
+        dfs=[bundle["result_df"] for bundle in bundles],
+        ratios=weights_percent,
+        names=strategy_names,
+        date_policy=date_policy,
+    )
+    result_name = f"Saved Portfolio: {portfolio_name}" if portfolio_name else "Weighted Portfolio"
+    weighted_bundle = build_backtest_result_bundle(
+        combined_result,
+        strategy_name=result_name,
+        strategy_key="weighted_portfolio",
+        input_params={
+            "tickers": strategy_names,
+            "start": bundles[0]["meta"]["start"],
+            "end": bundles[0]["meta"]["end"],
+            "timeframe": bundles[0]["meta"]["timeframe"],
+            "option": bundles[0]["meta"]["option"],
+            "universe_mode": "strategy_mix",
+            "preset_name": "weighted_builder",
+        },
+        execution_mode="db",
+        data_mode="db_backed_composite",
+        summary_freq="M",
+        warnings=[],
+    )
+    contribution_amount_df, contribution_share_df = _build_monthly_component_balance_views(
+        bundles,
+        strategy_names=strategy_names,
+        weights=normalized_weights,
+        date_policy=date_policy,
+    )
+    weighted_bundle["component_contribution_amount_df"] = contribution_amount_df
+    weighted_bundle["component_contribution_share_df"] = contribution_share_df
+    weighted_bundle["component_input_weights"] = [float(weight) for weight in weights_percent]
+    weighted_bundle["component_weights"] = normalized_weights
+    weighted_bundle["component_strategy_names"] = strategy_names
+    weighted_bundle["date_policy"] = date_policy
+    weighted_bundle["meta"] = dict(weighted_bundle.get("meta") or {})
+    weighted_bundle["meta"].update(
+        {
+            "portfolio_name": portfolio_name,
+            "portfolio_id": portfolio_id,
+            "portfolio_source_kind": source_kind,
+            "selected_strategies": strategy_names,
+            "date_policy": date_policy,
+            "input_weights_percent": [float(weight) for weight in weights_percent],
+            "normalized_weights": normalized_weights,
+        }
+    )
+    return weighted_bundle
+
+
+def _build_saved_portfolio_display_rows(saved_portfolios: list[dict[str, Any]]) -> pd.DataFrame:
+    rows: list[dict[str, Any]] = []
+    for item in saved_portfolios:
+        compare_context = item.get("compare_context") or {}
+        portfolio_context = item.get("portfolio_context") or {}
+        strategy_names = list(portfolio_context.get("strategy_names") or compare_context.get("selected_strategies") or [])
+        weights_percent = list(portfolio_context.get("weights_percent") or [])
+        weight_pairs = [
+            f"{strategy_name} {float(weight):.1f}%"
+            for strategy_name, weight in zip(strategy_names, weights_percent)
+        ]
+        rows.append(
+            {
+                "Name": item.get("name"),
+                "Updated At": item.get("updated_at") or item.get("saved_at"),
+                "Strategies": ", ".join(strategy_names),
+                "Weights": " | ".join(weight_pairs),
+                "Date Policy": portfolio_context.get("date_policy"),
+                "Period": f"{compare_context.get('start')} -> {compare_context.get('end')}",
+                "Description": item.get("description"),
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def _run_saved_portfolio_record(record: dict[str, Any]) -> None:
+    compare_context = dict(record.get("compare_context") or {})
+    selected_strategies = list(compare_context.get("selected_strategies") or [])
+    if not selected_strategies:
+        raise BacktestInputError("Saved portfolio does not contain selected strategies.")
+
+    strategy_overrides = compare_context.get("strategy_overrides") or {}
+    bundles: list[dict[str, Any]] = []
+    for strategy_name in selected_strategies:
+        bundles.append(
+            _run_compare_strategy(
+                strategy_name,
+                start=str(compare_context.get("start")),
+                end=str(compare_context.get("end")),
+                timeframe=str(compare_context.get("timeframe") or "1d"),
+                option=str(compare_context.get("option") or "month_end"),
+                overrides=_resolve_saved_portfolio_dynamic_inputs(
+                    strategy_name=strategy_name,
+                    override=dict(strategy_overrides.get(strategy_name) or {}),
+                ),
+            )
+        )
+
+    portfolio_context = dict(record.get("portfolio_context") or {})
+    weights_percent = [float(weight) for weight in (portfolio_context.get("weights_percent") or [])]
+    if len(weights_percent) != len(selected_strategies):
+        raise BacktestInputError("Saved portfolio weight count does not match the saved strategy count.")
+
+    weighted_bundle = _build_weighted_portfolio_bundle(
+        bundles=bundles,
+        weights_percent=weights_percent,
+        date_policy=str(portfolio_context.get("date_policy") or "intersection"),
+        portfolio_name=str(record.get("name") or ""),
+        portfolio_id=str(record.get("portfolio_id") or ""),
+        source_kind="saved_portfolio",
+    )
+
+    st.session_state.backtest_compare_bundles = bundles
+    st.session_state.backtest_compare_error = None
+    st.session_state.backtest_compare_error_kind = None
+    st.session_state.backtest_weighted_bundle = weighted_bundle
+    st.session_state.backtest_weighted_error = None
+    st.session_state.backtest_requested_panel = "Compare & Portfolio Builder"
+
+    append_backtest_run_history(
+        bundle={
+            "summary_df": pd.DataFrame(),
+            "meta": {
+                "strategy_key": "strategy_comparison",
+                "execution_mode": "db",
+                "data_mode": "db_backed_compare",
+                "tickers": selected_strategies,
+                "start": compare_context.get("start"),
+                "end": compare_context.get("end"),
+                "timeframe": compare_context.get("timeframe"),
+                "option": compare_context.get("option"),
+                "universe_mode": "strategy_compare",
+                "preset_name": "saved_portfolio_compare",
+            },
+        },
+        run_kind="strategy_compare",
+        context={
+            "selected_strategies": selected_strategies,
+            "strategy_overrides": strategy_overrides,
+            "saved_portfolio_id": record.get("portfolio_id"),
+            "saved_portfolio_name": record.get("name"),
+            "strategy_summaries": [
+                row
+                for bundle in bundles
+                for row in json.loads(bundle["summary_df"].to_json(orient="records", date_format="iso"))
+            ],
+        },
+    )
+    append_backtest_run_history(
+        bundle=weighted_bundle,
+        run_kind="weighted_portfolio",
+        context={
+            "selected_strategies": selected_strategies,
+            "date_policy": portfolio_context.get("date_policy"),
+            "saved_portfolio_id": record.get("portfolio_id"),
+            "saved_portfolio_name": record.get("name"),
+        },
+    )
+
+
 def _render_weighted_portfolio_builder() -> None:
     bundles = st.session_state.backtest_compare_bundles
     if not bundles or len(bundles) < 2:
@@ -1900,6 +2314,7 @@ def _render_weighted_portfolio_builder() -> None:
 
     strategy_names = [bundle["strategy_name"] for bundle in bundles]
     default_weight = round(100 / len(strategy_names), 2)
+    _apply_weighted_portfolio_prefill(strategy_names)
 
     st.markdown("### Weighted Portfolio Builder")
     st.caption("Combine already-compared strategies into one monthly weighted portfolio. This is the first UI path for cases like `Dual Momentum 50 + GTAA 50`.")
@@ -1924,6 +2339,7 @@ def _render_weighted_portfolio_builder() -> None:
             options=["intersection", "union"],
             index=0,
             help="`intersection` keeps only shared months across strategies. It is the safer first default for combined backtests.",
+            key="weighted_portfolio_date_policy",
         )
 
         submitted = st.form_submit_button("Build Weighted Portfolio", use_container_width=True)
@@ -1942,42 +2358,12 @@ def _render_weighted_portfolio_builder() -> None:
         return
 
     try:
-        normalized_weights = [weight / total_weight for weight in weights]
-        combined_result = make_monthly_weighted_portfolio(
-            dfs=[bundle["result_df"] for bundle in bundles],
-            ratios=weights,
-            names=strategy_names,
+        weighted_bundle = _build_weighted_portfolio_bundle(
+            bundles=bundles,
+            weights_percent=weights,
             date_policy=date_policy,
+            source_kind="weighted_builder",
         )
-        weighted_bundle = build_backtest_result_bundle(
-            combined_result,
-            strategy_name="Weighted Portfolio",
-            strategy_key="weighted_portfolio",
-            input_params={
-                "tickers": strategy_names,
-                "start": bundles[0]["meta"]["start"],
-                "end": bundles[0]["meta"]["end"],
-                "timeframe": bundles[0]["meta"]["timeframe"],
-                "option": bundles[0]["meta"]["option"],
-                "universe_mode": "strategy_mix",
-                "preset_name": "weighted_builder",
-            },
-            execution_mode="db",
-            data_mode="db_backed_composite",
-            summary_freq="M",
-            warnings=[],
-        )
-        contribution_amount_df, contribution_share_df = _build_monthly_component_balance_views(
-            bundles,
-            strategy_names=strategy_names,
-            weights=normalized_weights,
-            date_policy=date_policy,
-        )
-        weighted_bundle["component_contribution_amount_df"] = contribution_amount_df
-        weighted_bundle["component_contribution_share_df"] = contribution_share_df
-        weighted_bundle["component_weights"] = normalized_weights
-        weighted_bundle["component_strategy_names"] = strategy_names
-        weighted_bundle["date_policy"] = date_policy
     except Exception as exc:
         st.session_state.backtest_weighted_bundle = None
         st.session_state.backtest_weighted_error = f"Weighted portfolio build failed: {exc}"
@@ -1995,6 +2381,139 @@ def _render_weighted_portfolio_builder() -> None:
     _render_weighted_portfolio_result(weighted_bundle)
 
 
+def _render_saved_portfolio_workspace() -> None:
+    st.markdown("### Saved Portfolios")
+    st.caption("현재 compare 결과와 weighted portfolio 구성을 저장해두고, 나중에 다시 `Load Into Compare` 또는 `Run Saved Portfolio`로 이어갈 수 있습니다.")
+
+    saved_notice = st.session_state.get("backtest_saved_portfolio_notice")
+    if saved_notice:
+        st.success(saved_notice)
+        st.session_state.backtest_saved_portfolio_notice = None
+
+    compare_bundles = st.session_state.backtest_compare_bundles
+    weighted_bundle = st.session_state.backtest_weighted_bundle
+    if compare_bundles and weighted_bundle:
+        with st.expander("Save Current Weighted Portfolio", expanded=False):
+            st.caption("현재 compare 결과 + weighted portfolio 구성(weight/date policy)을 저장합니다. 이후에는 저장된 포트폴리오를 바로 다시 실행하거나 compare 화면으로 불러와 수정할 수 있습니다.")
+            with st.form("save_saved_portfolio_form", clear_on_submit=False):
+                portfolio_name = st.text_input(
+                    "Portfolio Name",
+                    value="",
+                    placeholder="예: Annual Strict Blend 60/40",
+                    key="saved_portfolio_name_input",
+                )
+                portfolio_description = st.text_area(
+                    "Description",
+                    value="",
+                    placeholder="이 포트폴리오를 어떻게 쓰려는지 간단히 메모합니다.",
+                    key="saved_portfolio_description_input",
+                )
+                save_submitted = st.form_submit_button("Save Portfolio", use_container_width=True)
+            if save_submitted:
+                try:
+                    record = save_saved_portfolio(
+                        name=portfolio_name,
+                        description=portfolio_description,
+                        compare_context=_build_saved_portfolio_compare_context(compare_bundles),
+                        portfolio_context=_build_saved_portfolio_context(
+                            bundles=compare_bundles,
+                            weighted_bundle=weighted_bundle,
+                        ),
+                        source_context={
+                            "created_from": "weighted_portfolio_builder",
+                            "source_strategy_names": [bundle["strategy_name"] for bundle in compare_bundles],
+                        },
+                    )
+                    st.session_state.backtest_saved_portfolio_notice = (
+                        f"저장된 포트폴리오 `{record.get('name')}`를 만들었습니다."
+                    )
+                    st.rerun()
+                except Exception as exc:
+                    st.error(f"Saved portfolio creation failed: {exc}")
+    else:
+        st.caption("먼저 compare를 실행하고 `Weighted Portfolio Builder`에서 결과를 만든 뒤 저장할 수 있습니다.")
+
+    saved_portfolios = load_saved_portfolios(limit=100)
+    if not saved_portfolios:
+        st.info("저장된 포트폴리오가 아직 없습니다.")
+        st.caption(f"Path: {SAVED_PORTFOLIO_FILE}")
+        return
+
+    st.caption(f"Path: {SAVED_PORTFOLIO_FILE}")
+    st.dataframe(_build_saved_portfolio_display_rows(saved_portfolios), use_container_width=True, hide_index=True)
+
+    record_labels = [
+        f"{item.get('updated_at') or item.get('saved_at')} | {item.get('name')}"
+        for item in saved_portfolios
+    ]
+    selected_label = st.selectbox(
+        "Inspect Saved Portfolio",
+        options=record_labels,
+        index=0,
+        key="saved_portfolio_selected_record",
+    )
+    selected_record = saved_portfolios[record_labels.index(selected_label)]
+
+    compare_context = selected_record.get("compare_context") or {}
+    portfolio_context = selected_record.get("portfolio_context") or {}
+    detail_tabs = st.tabs(["Summary", "Compare Context", "Raw Record"])
+    with detail_tabs[0]:
+        st.json(
+            {
+                "portfolio_id": selected_record.get("portfolio_id"),
+                "name": selected_record.get("name"),
+                "description": selected_record.get("description"),
+                "saved_at": selected_record.get("saved_at"),
+                "updated_at": selected_record.get("updated_at"),
+                "selected_strategies": compare_context.get("selected_strategies"),
+                "weights_percent": portfolio_context.get("weights_percent"),
+                "date_policy": portfolio_context.get("date_policy"),
+                "period": f"{compare_context.get('start')} -> {compare_context.get('end')}",
+            }
+        )
+    with detail_tabs[1]:
+        left, right = st.columns(2, gap="large")
+        with left:
+            st.markdown("##### Compare Context")
+            st.json(compare_context)
+        with right:
+            st.markdown("##### Portfolio Context")
+            st.json(portfolio_context)
+    with detail_tabs[2]:
+        st.json(selected_record)
+
+    action_cols = st.columns([0.24, 0.24, 0.20, 0.32], gap="small")
+    with action_cols[0]:
+        if st.button("Load Into Compare", key="saved_portfolio_load_into_compare", use_container_width=True):
+            _queue_saved_portfolio_compare_prefill(selected_record)
+            st.rerun()
+    with action_cols[1]:
+        if st.button("Run Saved Portfolio", key="saved_portfolio_run", use_container_width=True):
+            try:
+                with st.spinner("Running saved portfolio from stored compare context..."):
+                    _run_saved_portfolio_record(selected_record)
+                st.session_state.backtest_saved_portfolio_notice = (
+                    f"저장된 포트폴리오 `{selected_record.get('name')}`를 다시 실행했습니다."
+                )
+                st.rerun()
+            except Exception as exc:
+                st.error(f"Saved portfolio run failed: {exc}")
+    with action_cols[2]:
+        if st.button("Delete", key="saved_portfolio_delete", use_container_width=True):
+            if delete_saved_portfolio(str(selected_record.get("portfolio_id") or "")):
+                st.session_state.backtest_saved_portfolio_notice = (
+                    f"저장된 포트폴리오 `{selected_record.get('name')}`를 삭제했습니다."
+                )
+                st.rerun()
+            else:
+                st.error("Saved portfolio delete failed.")
+    with action_cols[3]:
+        st.caption(
+            "`Load Into Compare`는 저장된 전략 조합/기간/weights를 비교 화면으로 다시 채웁니다. "
+            "`Run Saved Portfolio`는 compare부터 weighted portfolio 결과까지 한 번에 다시 실행합니다."
+        )
+
+
 def _render_weighted_portfolio_result(bundle: dict) -> None:
     if st.session_state.backtest_weighted_error:
         st.error(st.session_state.backtest_weighted_error)
@@ -2006,11 +2525,13 @@ def _render_weighted_portfolio_result(bundle: dict) -> None:
     chart_df = bundle["chart_df"]
     contribution_amount_df = bundle.get("component_contribution_amount_df")
     contribution_share_df = bundle.get("component_contribution_share_df")
+    component_input_weights = bundle.get("component_input_weights") or []
     component_weights = bundle.get("component_weights") or []
     component_strategy_names = bundle.get("component_strategy_names") or []
+    meta = bundle.get("meta") or {}
 
-    summary_tab, curve_tab, contribution_tab, balance_tab, periods_tab, table_tab = st.tabs(
-        ["Summary", "Equity Curve", "Contribution", "Balance Extremes", "Period Extremes", "Result Table"]
+    summary_tab, curve_tab, contribution_tab, balance_tab, periods_tab, table_tab, meta_tab = st.tabs(
+        ["Summary", "Equity Curve", "Contribution", "Balance Extremes", "Period Extremes", "Result Table", "Meta"]
     )
 
     with summary_tab:
@@ -2030,7 +2551,8 @@ def _render_weighted_portfolio_result(bundle: dict) -> None:
             weights_df = pd.DataFrame(
                 {
                     "Strategy": component_strategy_names,
-                    "Configured Weight": component_weights,
+                    "Configured Weight (%)": component_input_weights or [round(float(weight) * 100.0, 2) for weight in component_weights],
+                    "Normalized Weight": component_weights,
                 }
             )
             end_share_row = contribution_share_df.iloc[-1].rename("Ending Share").reset_index()
@@ -2093,6 +2615,15 @@ def _render_weighted_portfolio_result(bundle: dict) -> None:
             st.dataframe(worst_df, use_container_width=True, hide_index=True)
     with table_tab:
         st.dataframe(result_df, use_container_width=True)
+    with meta_tab:
+        st.markdown("##### Portfolio Context")
+        st.markdown(f"- `Portfolio Name`: `{meta.get('portfolio_name') or '-'}`")
+        st.markdown(f"- `Portfolio ID`: `{meta.get('portfolio_id') or '-'}`")
+        st.markdown(f"- `Source`: `{meta.get('portfolio_source_kind') or 'weighted_builder'}`")
+        st.markdown(f"- `Date Policy`: `{meta.get('date_policy') or bundle.get('date_policy') or '-'}`")
+        st.markdown(f"- `Selected Strategies`: `{', '.join(meta.get('selected_strategies') or component_strategy_names)}`")
+        st.markdown(f"- `Input Weights (%)`: `{meta.get('input_weights_percent') or component_input_weights or []}`")
+        st.json(meta)
 
 
 def _build_backtest_history_rows(history: list[dict[str, Any]]) -> tuple[pd.DataFrame, list[dict[str, Any]]]:
@@ -2206,6 +2737,10 @@ def _build_history_payload(record: dict[str, Any]) -> dict[str, Any] | None:
         payload["market_regime_benchmark"] = record.get("market_regime_benchmark") or STRICT_MARKET_REGIME_DEFAULT_BENCHMARK
     if record.get("snapshot_source") is not None:
         payload["snapshot_source"] = record.get("snapshot_source")
+    if record.get("universe_contract") is not None:
+        payload["universe_contract"] = record.get("universe_contract")
+    if record.get("dynamic_target_size") is not None:
+        payload["dynamic_target_size"] = int(record.get("dynamic_target_size"))
 
     # GTAA stores cadence in rebalance_interval for history summarization; map it back.
     if strategy_key == "gtaa":
@@ -2238,9 +2773,329 @@ def _load_history_into_form(record: dict[str, Any]) -> bool:
 
     st.session_state.backtest_prefill_payload = payload
     st.session_state.backtest_prefill_pending = True
-    st.session_state.backtest_prefill_notice = f"Loaded `{strategy_name}` inputs from history."
+    st.session_state.backtest_prefill_notice = f"히스토리에서 `{strategy_name}` 입력값을 불러왔습니다."
     st.session_state.backtest_prefill_strategy_choice = strategy_name
+    st.session_state.backtest_requested_panel = "Single Strategy"
     return True
+
+
+def _build_prefill_summary_lines(payload: dict[str, Any] | None) -> list[str]:
+    if not payload:
+        return []
+
+    lines: list[str] = []
+    strategy_name = _strategy_key_to_display_name(payload.get("strategy_key"))
+    if strategy_name:
+        lines.append(f"전략: `{strategy_name}`")
+
+    start = payload.get("start")
+    end = payload.get("end")
+    if start or end:
+        lines.append(f"기간: `{start or '-'} -> {end or '-'}`")
+
+    preset_name = payload.get("preset_name")
+    tickers = payload.get("tickers") or []
+    universe_mode = payload.get("universe_mode")
+    if universe_mode == "preset" and preset_name:
+        lines.append(f"모집군: preset `{preset_name}`")
+    elif tickers:
+        lines.append(f"모집군: 수동 ticker `{','.join(tickers[:10])}`")
+
+    if payload.get("top") is not None:
+        lines.append(f"Top N: `{payload.get('top')}`")
+
+    contract = payload.get("universe_contract")
+    if contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE:
+        lines.append("Universe Contract: `Historical Dynamic PIT Universe`")
+    elif contract == STATIC_MANAGED_RESEARCH_UNIVERSE:
+        lines.append("Universe Contract: `Static Managed Research Universe`")
+
+    factor_freq = payload.get("factor_freq")
+    snapshot_mode = payload.get("snapshot_mode")
+    if factor_freq or snapshot_mode:
+        lines.append(
+            "설정: "
+            f"`factor_freq={factor_freq or '-'}`, `snapshot_mode={snapshot_mode or '-'}`"
+        )
+
+    return lines
+
+
+def _universe_contract_value_to_label(value: str | None) -> str:
+    for label, contract_value in STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS.items():
+        if contract_value == value:
+            return label
+    return "Static Managed Research Universe"
+
+
+def _bundle_to_saved_strategy_override(bundle: dict[str, Any]) -> dict[str, Any]:
+    meta = dict(bundle.get("meta") or {})
+    strategy_name = bundle.get("strategy_name")
+
+    if strategy_name == "Equal Weight":
+        return {
+            "rebalance_interval": int(meta.get("rebalance_interval") or 12),
+        }
+    if strategy_name == "GTAA":
+        return {
+            "top": int(meta.get("top") or 3),
+            "interval": int(meta.get("rebalance_interval") or 2),
+        }
+    if strategy_name == "Risk Parity Trend":
+        return {
+            "rebalance_interval": int(meta.get("rebalance_interval") or 1),
+            "vol_window": int(meta.get("vol_window") or 6),
+        }
+    if strategy_name == "Dual Momentum":
+        return {
+            "top": int(meta.get("top") or 1),
+            "rebalance_interval": int(meta.get("rebalance_interval") or 1),
+        }
+
+    override: dict[str, Any] = {
+        "tickers": list(meta.get("tickers") or []),
+        "preset_name": meta.get("preset_name"),
+        "universe_mode": meta.get("universe_mode") or "preset",
+    }
+    if meta.get("top") is not None:
+        override["top_n"] = int(meta.get("top"))
+    if meta.get("rebalance_interval") is not None:
+        override["rebalance_interval"] = int(meta.get("rebalance_interval"))
+    if meta.get("quality_factors") is not None:
+        override["quality_factors"] = list(meta.get("quality_factors") or [])
+    if meta.get("value_factors") is not None:
+        override["value_factors"] = list(meta.get("value_factors") or [])
+    if meta.get("factor_freq") is not None:
+        override["factor_freq"] = meta.get("factor_freq")
+    if meta.get("rebalance_freq") is not None:
+        override["rebalance_freq"] = meta.get("rebalance_freq")
+    if meta.get("snapshot_mode") is not None:
+        override["snapshot_mode"] = meta.get("snapshot_mode")
+    if meta.get("universe_contract") is not None:
+        override["universe_contract"] = meta.get("universe_contract")
+    if meta.get("dynamic_target_size") is not None:
+        override["dynamic_target_size"] = int(meta.get("dynamic_target_size"))
+    if meta.get("trend_filter_enabled") is not None:
+        override["trend_filter_enabled"] = bool(meta.get("trend_filter_enabled"))
+    if meta.get("trend_filter_window") is not None:
+        override["trend_filter_window"] = int(meta.get("trend_filter_window"))
+    if meta.get("market_regime_enabled") is not None:
+        override["market_regime_enabled"] = bool(meta.get("market_regime_enabled"))
+    if meta.get("market_regime_window") is not None:
+        override["market_regime_window"] = int(meta.get("market_regime_window"))
+    if meta.get("market_regime_benchmark") is not None:
+        override["market_regime_benchmark"] = meta.get("market_regime_benchmark")
+    return override
+
+
+def _build_saved_portfolio_compare_context(bundles: list[dict[str, Any]]) -> dict[str, Any]:
+    if not bundles:
+        raise ValueError("Compare bundles are required.")
+
+    first_meta = bundles[0].get("meta") or {}
+    selected_strategies = [str(bundle.get("strategy_name")) for bundle in bundles]
+    strategy_overrides = {
+        str(bundle.get("strategy_name")): _bundle_to_saved_strategy_override(bundle)
+        for bundle in bundles
+    }
+    return {
+        "selected_strategies": selected_strategies,
+        "start": first_meta.get("start"),
+        "end": first_meta.get("end"),
+        "timeframe": first_meta.get("timeframe") or "1d",
+        "option": first_meta.get("option") or "month_end",
+        "strategy_overrides": strategy_overrides,
+    }
+
+
+def _build_saved_portfolio_context(
+    *,
+    bundles: list[dict[str, Any]],
+    weighted_bundle: dict[str, Any],
+) -> dict[str, Any]:
+    strategy_names = list(weighted_bundle.get("component_strategy_names") or [bundle["strategy_name"] for bundle in bundles])
+    input_weights = list(weighted_bundle.get("component_input_weights") or [])
+    normalized_weights = list(weighted_bundle.get("component_weights") or [])
+    if not input_weights and normalized_weights:
+        input_weights = [round(float(weight) * 100.0, 4) for weight in normalized_weights]
+    if not normalized_weights and input_weights:
+        total_weight = sum(float(weight) for weight in input_weights)
+        normalized_weights = [
+            (float(weight) / total_weight) if total_weight > 0 else 0.0
+            for weight in input_weights
+        ]
+
+    return {
+        "strategy_names": strategy_names,
+        "weights_percent": [float(weight) for weight in input_weights],
+        "normalized_weights": [float(weight) for weight in normalized_weights],
+        "date_policy": weighted_bundle.get("date_policy") or "intersection",
+    }
+
+
+def _queue_saved_portfolio_compare_prefill(saved_portfolio: dict[str, Any]) -> None:
+    compare_context = dict(saved_portfolio.get("compare_context") or {})
+    portfolio_context = dict(saved_portfolio.get("portfolio_context") or {})
+    st.session_state.backtest_compare_prefill_payload = compare_context
+    st.session_state.backtest_compare_prefill_pending = True
+    st.session_state.backtest_compare_prefill_notice = (
+        f"저장된 포트폴리오 `{saved_portfolio.get('name')}` 설정을 `Compare & Portfolio Builder`로 불러왔습니다."
+    )
+    st.session_state.backtest_weighted_portfolio_prefill = {
+        "strategy_names": list(portfolio_context.get("strategy_names") or []),
+        "weights_percent": list(portfolio_context.get("weights_percent") or []),
+        "date_policy": portfolio_context.get("date_policy") or "intersection",
+    }
+    st.session_state.backtest_requested_panel = "Compare & Portfolio Builder"
+
+
+def _apply_compare_strategy_prefill(strategy_name: str, override: dict[str, Any]) -> None:
+    if strategy_name == "Equal Weight":
+        st.session_state["compare_eq_interval"] = int(override.get("rebalance_interval") or 12)
+        return
+    if strategy_name == "GTAA":
+        st.session_state["compare_gtaa_top"] = int(override.get("top") or 3)
+        st.session_state["compare_gtaa_interval"] = int(override.get("interval") or override.get("rebalance_interval") or 2)
+        return
+    if strategy_name == "Risk Parity Trend":
+        st.session_state["compare_rp_interval"] = int(override.get("rebalance_interval") or 1)
+        st.session_state["compare_rp_vol_window"] = int(override.get("vol_window") or 6)
+        return
+    if strategy_name == "Dual Momentum":
+        st.session_state["compare_dm_top"] = int(override.get("top") or 1)
+        st.session_state["compare_dm_interval"] = int(override.get("rebalance_interval") or 1)
+        return
+    if strategy_name == "Quality Snapshot":
+        st.session_state["compare_qs_top_n"] = int(override.get("top_n") or 2)
+        st.session_state["compare_qs_factors"] = list(override.get("quality_factors") or ["roe", "gross_margin", "operating_margin", "debt_ratio"])
+        return
+
+    strict_compare_key_map = {
+        "Quality Snapshot (Strict Annual)": "qss",
+        "Quality Snapshot (Strict Quarterly Prototype)": "qsqp",
+        "Value Snapshot (Strict Annual)": "vss",
+        "Value Snapshot (Strict Quarterly Prototype)": "vsqp",
+        "Quality + Value Snapshot (Strict Annual)": "qvss",
+        "Quality + Value Snapshot (Strict Quarterly Prototype)": "qvqp",
+    }
+    key_prefix = strict_compare_key_map.get(strategy_name)
+    if not key_prefix:
+        return
+
+    preset_name = override.get("preset_name")
+    if preset_name:
+        st.session_state[f"compare_{key_prefix}_preset"] = preset_name
+    st.session_state[f"compare_{key_prefix}_top_n"] = int(override.get("top_n") or (10 if "Value" in strategy_name or "Multi-Factor" in strategy_name else 2))
+    st.session_state[f"compare_{key_prefix}_rebalance_interval"] = int(override.get("rebalance_interval") or 1)
+    st.session_state[f"compare_{key_prefix}_universe_contract"] = _universe_contract_value_to_label(
+        override.get("universe_contract") or STATIC_MANAGED_RESEARCH_UNIVERSE
+    )
+    st.session_state[f"compare_{key_prefix}_trend_filter_enabled"] = bool(
+        override.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED)
+    )
+    st.session_state[f"compare_{key_prefix}_trend_filter_window"] = int(
+        override.get("trend_filter_window") or STRICT_TREND_FILTER_DEFAULT_WINDOW
+    )
+    st.session_state[f"compare_{key_prefix}_market_regime_enabled"] = bool(
+        override.get("market_regime_enabled", STRICT_MARKET_REGIME_DEFAULT_ENABLED)
+    )
+    st.session_state[f"compare_{key_prefix}_market_regime_window"] = int(
+        override.get("market_regime_window") or STRICT_MARKET_REGIME_DEFAULT_WINDOW
+    )
+    st.session_state[f"compare_{key_prefix}_market_regime_benchmark"] = (
+        override.get("market_regime_benchmark") or STRICT_MARKET_REGIME_DEFAULT_BENCHMARK
+    )
+    if override.get("quality_factors") is not None:
+        quality_key = "quality_factors" if key_prefix in {"qvss", "qvqp"} else "factors"
+        st.session_state[f"compare_{key_prefix}_{quality_key}"] = list(override.get("quality_factors") or [])
+    if override.get("value_factors") is not None:
+        value_key = "factors" if key_prefix in {"vss", "vsqp"} else "value_factors"
+        st.session_state[f"compare_{key_prefix}_{value_key}"] = list(override.get("value_factors") or [])
+
+
+def _apply_compare_prefill() -> None:
+    payload = st.session_state.get("backtest_compare_prefill_payload")
+    pending = st.session_state.get("backtest_compare_prefill_pending")
+    if not payload or not pending:
+        return
+
+    selected_strategies = list(payload.get("selected_strategies") or [])
+    if selected_strategies:
+        st.session_state["compare_selected_strategies"] = selected_strategies
+    if payload.get("start"):
+        st.session_state["compare_start"] = pd.to_datetime(payload.get("start")).date()
+    if payload.get("end"):
+        st.session_state["compare_end"] = pd.to_datetime(payload.get("end")).date()
+    if payload.get("timeframe"):
+        st.session_state["compare_timeframe"] = payload.get("timeframe")
+    if payload.get("option"):
+        st.session_state["compare_option"] = payload.get("option")
+
+    strategy_overrides = payload.get("strategy_overrides") or {}
+    for strategy_name in selected_strategies:
+        override = strategy_overrides.get(strategy_name) or {}
+        _apply_compare_strategy_prefill(strategy_name, override)
+
+    st.session_state.backtest_compare_prefill_pending = False
+
+
+def _apply_weighted_portfolio_prefill(strategy_names: list[str]) -> None:
+    payload = st.session_state.get("backtest_weighted_portfolio_prefill")
+    if not payload:
+        return
+
+    saved_strategy_names = list(payload.get("strategy_names") or [])
+    if saved_strategy_names != strategy_names:
+        return
+
+    for strategy_name, weight in zip(saved_strategy_names, payload.get("weights_percent") or []):
+        st.session_state[f"weight_{strategy_name}"] = float(weight)
+    st.session_state["weighted_portfolio_date_policy"] = payload.get("date_policy") or "intersection"
+    st.session_state.backtest_weighted_portfolio_prefill = None
+
+
+def _resolve_saved_portfolio_dynamic_inputs(
+    *,
+    strategy_name: str,
+    override: dict[str, Any],
+) -> dict[str, Any]:
+    params = dict(override)
+    universe_contract = params.get("universe_contract") or STATIC_MANAGED_RESEARCH_UNIVERSE
+    if universe_contract != HISTORICAL_DYNAMIC_PIT_UNIVERSE:
+        return params
+
+    tickers = list(params.get("tickers") or [])
+    preset_name = params.get("preset_name")
+    statement_freq = "quarterly" if "Quarterly Prototype" in strategy_name else "annual"
+    dynamic_candidate_tickers, dynamic_target_size = _resolve_strict_dynamic_universe_inputs(
+        tickers=tickers,
+        preset_name=preset_name,
+        universe_contract=universe_contract,
+        statement_freq=statement_freq,
+    )
+    params["dynamic_candidate_tickers"] = dynamic_candidate_tickers
+    params["dynamic_target_size"] = dynamic_target_size
+    return params
+
+
+def _normalize_recorded_date_range(
+    value: Any,
+    *,
+    fallback_start: date,
+    fallback_end: date,
+) -> tuple[date, date]:
+    if isinstance(value, tuple):
+        normalized_items = [item for item in value if isinstance(item, date)]
+        if len(normalized_items) >= 2:
+            return normalized_items[0], normalized_items[1]
+        if len(normalized_items) == 1:
+            return normalized_items[0], fallback_end
+        return fallback_start, fallback_end
+
+    if isinstance(value, date):
+        return value, fallback_end
+
+    return fallback_start, fallback_end
 
 
 def _apply_single_strategy_prefill(strategy_key: str) -> None:
@@ -2324,6 +3179,10 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         st.session_state["qss_timeframe"] = payload.get("timeframe") or "1d"
         st.session_state["qss_option"] = payload.get("option") or "month_end"
         st.session_state["qss_quality_factors"] = payload.get("quality_factors") or QUALITY_STRICT_DEFAULT_FACTORS
+        st.session_state["qss_universe_contract"] = next(
+            (label for label, value in STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS.items() if value == (payload.get("universe_contract") or STATIC_MANAGED_RESEARCH_UNIVERSE)),
+            "Static Managed Research Universe",
+        )
         st.session_state["qss_trend_filter_enabled"] = bool(payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED))
         st.session_state["qss_trend_filter_window"] = int(payload.get("trend_filter_window") or STRICT_TREND_FILTER_DEFAULT_WINDOW)
         st.session_state["qss_market_regime_enabled"] = bool(payload.get("market_regime_enabled", STRICT_MARKET_REGIME_DEFAULT_ENABLED))
@@ -2341,6 +3200,10 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         st.session_state["qsqp_timeframe"] = payload.get("timeframe") or "1d"
         st.session_state["qsqp_option"] = payload.get("option") or "month_end"
         st.session_state["qsqp_quality_factors"] = payload.get("quality_factors") or QUALITY_STRICT_DEFAULT_FACTORS
+        st.session_state["qsqp_universe_contract"] = next(
+            (label for label, value in STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS.items() if value == (payload.get("universe_contract") or STATIC_MANAGED_RESEARCH_UNIVERSE)),
+            "Static Managed Research Universe",
+        )
         st.session_state["qsqp_trend_filter_enabled"] = bool(payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED))
         st.session_state["qsqp_trend_filter_window"] = int(payload.get("trend_filter_window") or STRICT_TREND_FILTER_DEFAULT_WINDOW)
         st.session_state["qsqp_market_regime_enabled"] = bool(payload.get("market_regime_enabled", STRICT_MARKET_REGIME_DEFAULT_ENABLED))
@@ -2358,6 +3221,10 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         st.session_state["vss_timeframe"] = payload.get("timeframe") or "1d"
         st.session_state["vss_option"] = payload.get("option") or "month_end"
         st.session_state["vss_value_factors"] = payload.get("value_factors") or VALUE_STRICT_DEFAULT_FACTORS
+        st.session_state["vss_universe_contract"] = next(
+            (label for label, value in STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS.items() if value == (payload.get("universe_contract") or STATIC_MANAGED_RESEARCH_UNIVERSE)),
+            "Static Managed Research Universe",
+        )
         st.session_state["vss_trend_filter_enabled"] = bool(payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED))
         st.session_state["vss_trend_filter_window"] = int(payload.get("trend_filter_window") or STRICT_TREND_FILTER_DEFAULT_WINDOW)
         st.session_state["vss_market_regime_enabled"] = bool(payload.get("market_regime_enabled", STRICT_MARKET_REGIME_DEFAULT_ENABLED))
@@ -2375,6 +3242,10 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         st.session_state["vsqp_timeframe"] = payload.get("timeframe") or "1d"
         st.session_state["vsqp_option"] = payload.get("option") or "month_end"
         st.session_state["vsqp_value_factors"] = payload.get("value_factors") or VALUE_STRICT_DEFAULT_FACTORS
+        st.session_state["vsqp_universe_contract"] = next(
+            (label for label, value in STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS.items() if value == (payload.get("universe_contract") or STATIC_MANAGED_RESEARCH_UNIVERSE)),
+            "Static Managed Research Universe",
+        )
         st.session_state["vsqp_trend_filter_enabled"] = bool(payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED))
         st.session_state["vsqp_trend_filter_window"] = int(payload.get("trend_filter_window") or STRICT_TREND_FILTER_DEFAULT_WINDOW)
         st.session_state["vsqp_market_regime_enabled"] = bool(payload.get("market_regime_enabled", STRICT_MARKET_REGIME_DEFAULT_ENABLED))
@@ -2393,6 +3264,10 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         st.session_state["qvss_option"] = payload.get("option") or "month_end"
         st.session_state["qvss_quality_factors"] = payload.get("quality_factors") or QUALITY_STRICT_DEFAULT_FACTORS
         st.session_state["qvss_value_factors"] = payload.get("value_factors") or VALUE_STRICT_DEFAULT_FACTORS
+        st.session_state["qvss_universe_contract"] = next(
+            (label for label, value in STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS.items() if value == (payload.get("universe_contract") or STATIC_MANAGED_RESEARCH_UNIVERSE)),
+            "Static Managed Research Universe",
+        )
         st.session_state["qvss_trend_filter_enabled"] = bool(payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED))
         st.session_state["qvss_trend_filter_window"] = int(payload.get("trend_filter_window") or STRICT_TREND_FILTER_DEFAULT_WINDOW)
         st.session_state["qvss_market_regime_enabled"] = bool(payload.get("market_regime_enabled", STRICT_MARKET_REGIME_DEFAULT_ENABLED))
@@ -2411,6 +3286,10 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         st.session_state["qvqp_option"] = payload.get("option") or "month_end"
         st.session_state["qvqp_quality_factors"] = payload.get("quality_factors") or QUALITY_STRICT_DEFAULT_FACTORS
         st.session_state["qvqp_value_factors"] = payload.get("value_factors") or VALUE_STRICT_DEFAULT_FACTORS
+        st.session_state["qvqp_universe_contract"] = next(
+            (label for label, value in STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS.items() if value == (payload.get("universe_contract") or STATIC_MANAGED_RESEARCH_UNIVERSE)),
+            "Static Managed Research Universe",
+        )
         st.session_state["qvqp_trend_filter_enabled"] = bool(payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED))
         st.session_state["qvqp_trend_filter_window"] = int(payload.get("trend_filter_window") or STRICT_TREND_FILTER_DEFAULT_WINDOW)
         st.session_state["qvqp_market_regime_enabled"] = bool(payload.get("market_regime_enabled", STRICT_MARKET_REGIME_DEFAULT_ENABLED))
@@ -2939,10 +3818,11 @@ def _render_persistent_backtest_history() -> None:
                 disabled=not use_max_drawdown,
             )
 
-    if isinstance(recorded_range, tuple) and len(recorded_range) == 2:
-        recorded_start, recorded_end = recorded_range
-    else:
-        recorded_start = recorded_end = recorded_range
+    recorded_start, recorded_end = _normalize_recorded_date_range(
+        recorded_range,
+        fallback_start=min_recorded_date,
+        fallback_end=max_recorded_date,
+    )
 
     filtered_indices = []
     for idx, row in history_df.iterrows():
@@ -3056,6 +3936,8 @@ def _render_persistent_backtest_history() -> None:
                     "market_regime_window": selected_record.get("market_regime_window"),
                     "market_regime_benchmark": selected_record.get("market_regime_benchmark"),
                     "snapshot_source": selected_record.get("snapshot_source"),
+                    "universe_contract": selected_record.get("universe_contract"),
+                    "dynamic_target_size": selected_record.get("dynamic_target_size"),
                     "ui_elapsed_seconds": selected_record.get("ui_elapsed_seconds"),
                     "universe_mode": selected_record.get("universe_mode"),
                     "preset_name": selected_record.get("preset_name"),
@@ -3083,6 +3965,38 @@ def _render_persistent_backtest_history() -> None:
                         )
                     st.caption("Compare 기록은 전략별 override가 context에 저장됩니다. 아래 표에서 trend/regime 설정을 바로 확인할 수 있습니다.")
                     st.dataframe(pd.DataFrame(override_rows), use_container_width=True, hide_index=True)
+            dynamic_universe_preview_rows = context.get("dynamic_universe_preview_rows") or []
+            if dynamic_universe_preview_rows:
+                st.caption(
+                    "`dynamic_universe_preview_rows`는 history에 같이 저장되는 날짜별 모집군 미리보기입니다. "
+                    "각 행은 리밸런싱 날짜 1개이며, membership / continuity / profile 관련 count를 빠르게 다시 확인할 때 씁니다."
+                )
+                st.dataframe(pd.DataFrame(dynamic_universe_preview_rows), use_container_width=True, hide_index=True)
+            dynamic_universe_artifact = context.get("dynamic_universe_artifact") or {}
+            if dynamic_universe_artifact:
+                st.caption(
+                    "`dynamic_universe_artifact`는 dynamic universe 상세를 별도 JSON 파일로 저장한 산출물입니다. "
+                    "`artifact_dir`는 저장 폴더, `snapshot_json`은 실제 JSON 파일 경로입니다."
+                )
+                artifact_cols = st.columns(2)
+                with artifact_cols[0]:
+                    st.markdown(f"- `artifact_dir`: `{dynamic_universe_artifact.get('artifact_dir', '-')}`")
+                    st.markdown(f"- `snapshot_json`: `{dynamic_universe_artifact.get('snapshot_json', '-')}`")
+                with artifact_cols[1]:
+                    st.markdown(f"- `snapshot_row_count`: `{dynamic_universe_artifact.get('snapshot_row_count', '-')}`")
+                    st.markdown(f"- `candidate_status_row_count`: `{dynamic_universe_artifact.get('candidate_status_row_count', '-')}`")
+                st.json(dynamic_universe_artifact)
+            if context.get("saved_portfolio_name") or context.get("saved_portfolio_id"):
+                st.caption(
+                    "이 run은 저장된 포트폴리오에서 다시 실행된 결과입니다. "
+                    "아래 값으로 history run과 saved portfolio definition을 연결할 수 있습니다."
+                )
+                st.json(
+                    {
+                        "saved_portfolio_name": context.get("saved_portfolio_name"),
+                        "saved_portfolio_id": context.get("saved_portfolio_id"),
+                    }
+                )
             st.json(context or {"context": None})
 
     with detail_tabs[2]:
@@ -3103,7 +4017,11 @@ def _render_persistent_backtest_history() -> None:
         if st.button("Run Again", key="backtest_history_run_again", use_container_width=True):
             _handle_backtest_run(payload, strategy_name=_history_strategy_display_name(selected_record))
     with action_cols[2]:
-        st.caption("`Load Into Form`은 저장된 입력값을 Single Strategy 화면으로 불러와서 수정만 하도록 돕는 기능입니다. `Run Again`은 저장된 payload를 즉시 다시 실행합니다.")
+        st.caption(
+            "`Load Into Form`을 누르면 저장된 입력값을 `Single Strategy` 화면으로 불러오고, "
+            "화면도 자동으로 그쪽으로 이동합니다. "
+            "`Run Again`은 저장된 payload를 즉시 다시 실행합니다."
+        )
 
 
 def _handle_backtest_run(payload: dict, *, strategy_name: str) -> None:
@@ -3189,6 +4107,9 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> None:
                     market_regime_benchmark=payload.get("market_regime_benchmark", STRICT_MARKET_REGIME_DEFAULT_BENCHMARK),
                     universe_mode=payload["universe_mode"],
                     preset_name=payload["preset_name"],
+                    universe_contract=payload.get("universe_contract", STATIC_MANAGED_RESEARCH_UNIVERSE),
+                    dynamic_candidate_tickers=payload.get("dynamic_candidate_tickers"),
+                    dynamic_target_size=payload.get("dynamic_target_size"),
                 )
             elif payload["strategy_key"] == "quality_snapshot_strict_quarterly_prototype":
                 bundle = run_quality_snapshot_strict_quarterly_prototype_backtest_from_db(
@@ -3207,6 +4128,9 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> None:
                     market_regime_benchmark=payload.get("market_regime_benchmark", STRICT_MARKET_REGIME_DEFAULT_BENCHMARK),
                     universe_mode=payload["universe_mode"],
                     preset_name=payload["preset_name"],
+                    universe_contract=payload.get("universe_contract", STATIC_MANAGED_RESEARCH_UNIVERSE),
+                    dynamic_candidate_tickers=payload.get("dynamic_candidate_tickers"),
+                    dynamic_target_size=payload.get("dynamic_target_size"),
                 )
             elif payload["strategy_key"] == "value_snapshot_strict_annual":
                 bundle = run_value_snapshot_strict_annual_backtest_from_db(
@@ -3225,6 +4149,9 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> None:
                     market_regime_benchmark=payload.get("market_regime_benchmark", STRICT_MARKET_REGIME_DEFAULT_BENCHMARK),
                     universe_mode=payload["universe_mode"],
                     preset_name=payload["preset_name"],
+                    universe_contract=payload.get("universe_contract", STATIC_MANAGED_RESEARCH_UNIVERSE),
+                    dynamic_candidate_tickers=payload.get("dynamic_candidate_tickers"),
+                    dynamic_target_size=payload.get("dynamic_target_size"),
                 )
             elif payload["strategy_key"] == "value_snapshot_strict_quarterly_prototype":
                 bundle = run_value_snapshot_strict_quarterly_prototype_backtest_from_db(
@@ -3243,6 +4170,9 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> None:
                     market_regime_benchmark=payload.get("market_regime_benchmark", STRICT_MARKET_REGIME_DEFAULT_BENCHMARK),
                     universe_mode=payload["universe_mode"],
                     preset_name=payload["preset_name"],
+                    universe_contract=payload.get("universe_contract", STATIC_MANAGED_RESEARCH_UNIVERSE),
+                    dynamic_candidate_tickers=payload.get("dynamic_candidate_tickers"),
+                    dynamic_target_size=payload.get("dynamic_target_size"),
                 )
             elif payload["strategy_key"] == "quality_value_snapshot_strict_annual":
                 bundle = run_quality_value_snapshot_strict_annual_backtest_from_db(
@@ -3262,6 +4192,9 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> None:
                     market_regime_benchmark=payload.get("market_regime_benchmark", STRICT_MARKET_REGIME_DEFAULT_BENCHMARK),
                     universe_mode=payload["universe_mode"],
                     preset_name=payload["preset_name"],
+                    universe_contract=payload.get("universe_contract", STATIC_MANAGED_RESEARCH_UNIVERSE),
+                    dynamic_candidate_tickers=payload.get("dynamic_candidate_tickers"),
+                    dynamic_target_size=payload.get("dynamic_target_size"),
                 )
             elif payload["strategy_key"] == "quality_value_snapshot_strict_quarterly_prototype":
                 bundle = run_quality_value_snapshot_strict_quarterly_prototype_backtest_from_db(
@@ -3281,6 +4214,9 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> None:
                     market_regime_benchmark=payload.get("market_regime_benchmark", STRICT_MARKET_REGIME_DEFAULT_BENCHMARK),
                     universe_mode=payload["universe_mode"],
                     preset_name=payload["preset_name"],
+                    universe_contract=payload.get("universe_contract", STATIC_MANAGED_RESEARCH_UNIVERSE),
+                    dynamic_candidate_tickers=payload.get("dynamic_candidate_tickers"),
+                    dynamic_target_size=payload.get("dynamic_target_size"),
                 )
             else:
                 raise BacktestInputError(f"Unsupported strategy key: {payload['strategy_key']}")
@@ -3854,6 +4790,19 @@ def _render_quality_snapshot_strict_annual_form() -> None:
                 help="기본은 매월 리밸런싱(1)이며, 연구 목적이면 몇 달 간격으로 건너뛸 수도 있습니다.",
                 key="qss_rebalance_interval",
             )
+            universe_contract_label = st.selectbox(
+                "Universe Contract",
+                options=list(STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS.keys()),
+                index=0,
+                key="qss_universe_contract",
+                help="Static은 현재 managed preset을 고정해서 사용합니다. Dynamic PIT는 Phase 10 first pass로, annual strict에서만 각 리밸런싱 날짜 기준 모집군을 다시 계산합니다.",
+            )
+            universe_contract = STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS[universe_contract_label]
+            dynamic_candidate_tickers, dynamic_target_size = _render_strict_annual_universe_contract_note(
+                universe_contract=universe_contract,
+                tickers=tickers,
+                preset_name=preset_name,
+            )
             quality_factors = st.multiselect(
                 "Quality Factors",
                 options=QUALITY_STRICT_FACTOR_OPTIONS,
@@ -3921,6 +4870,9 @@ def _render_quality_snapshot_strict_annual_form() -> None:
         "market_regime_enabled": bool(market_regime_enabled),
         "market_regime_window": int(market_regime_window),
         "market_regime_benchmark": market_regime_benchmark,
+        "universe_contract": universe_contract,
+        "dynamic_candidate_tickers": dynamic_candidate_tickers,
+        "dynamic_target_size": dynamic_target_size,
         "universe_mode": "preset" if universe_mode == "Preset" else "manual_tickers",
         "preset_name": preset_name,
     }
@@ -4019,6 +4971,20 @@ def _render_quality_snapshot_strict_quarterly_prototype_form() -> None:
                 help="기본은 매월 리밸런싱(1)이며, quarterly snapshot 자체는 가장 최근 usable filing 기준으로 따라갑니다.",
                 key="qsqp_rebalance_interval",
             )
+            universe_contract_label = st.selectbox(
+                "Universe Contract",
+                options=list(STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS.keys()),
+                index=0,
+                key="qsqp_universe_contract",
+                help="Static은 현재 managed preset을 고정해서 사용합니다. Dynamic PIT는 Phase 10 first pass로, quarterly strict에서도 각 리밸런싱 날짜 기준 모집군을 다시 계산합니다.",
+            )
+            universe_contract = STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS[universe_contract_label]
+            dynamic_candidate_tickers, dynamic_target_size = _render_strict_dynamic_universe_contract_note(
+                universe_contract=universe_contract,
+                tickers=tickers,
+                preset_name=preset_name,
+                statement_freq="quarterly",
+            )
             quality_factors = st.multiselect(
                 "Quality Factors",
                 options=QUALITY_STRICT_FACTOR_OPTIONS,
@@ -4086,6 +5052,9 @@ def _render_quality_snapshot_strict_quarterly_prototype_form() -> None:
         "market_regime_enabled": bool(market_regime_enabled),
         "market_regime_window": int(market_regime_window),
         "market_regime_benchmark": market_regime_benchmark,
+        "universe_contract": universe_contract,
+        "dynamic_candidate_tickers": dynamic_candidate_tickers,
+        "dynamic_target_size": dynamic_target_size,
         "universe_mode": "preset" if universe_mode == "Preset" else "manual_tickers",
         "preset_name": preset_name,
     }
@@ -4185,6 +5154,20 @@ def _render_value_snapshot_strict_quarterly_prototype_form() -> None:
                 help="기본은 매월 리밸런싱(1)이며, quarterly snapshot 자체는 가장 최근 usable filing 기준으로 따라갑니다.",
                 key="vsqp_rebalance_interval",
             )
+            universe_contract_label = st.selectbox(
+                "Universe Contract",
+                options=list(STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS.keys()),
+                index=0,
+                key="vsqp_universe_contract",
+                help="Static은 현재 managed preset을 고정해서 사용합니다. Dynamic PIT는 Phase 10 first pass로, quarterly strict에서도 각 리밸런싱 날짜 기준 모집군을 다시 계산합니다.",
+            )
+            universe_contract = STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS[universe_contract_label]
+            dynamic_candidate_tickers, dynamic_target_size = _render_strict_dynamic_universe_contract_note(
+                universe_contract=universe_contract,
+                tickers=tickers,
+                preset_name=preset_name,
+                statement_freq="quarterly",
+            )
             value_factors = st.multiselect(
                 "Value Factors",
                 options=VALUE_STRICT_FACTOR_OPTIONS,
@@ -4253,6 +5236,9 @@ def _render_value_snapshot_strict_quarterly_prototype_form() -> None:
         "market_regime_enabled": bool(market_regime_enabled),
         "market_regime_window": int(market_regime_window),
         "market_regime_benchmark": market_regime_benchmark,
+        "universe_contract": universe_contract,
+        "dynamic_candidate_tickers": dynamic_candidate_tickers,
+        "dynamic_target_size": dynamic_target_size,
         "universe_mode": "preset" if universe_mode == "Preset" else "manual_tickers",
         "preset_name": preset_name,
     }
@@ -4344,6 +5330,19 @@ def _render_value_snapshot_strict_annual_form() -> None:
                 help="기본은 매월 리밸런싱(1)이며, 연구 목적이면 몇 달 간격으로 건너뛸 수도 있습니다.",
                 key="vss_rebalance_interval",
             )
+            universe_contract_label = st.selectbox(
+                "Universe Contract",
+                options=list(STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS.keys()),
+                index=0,
+                key="vss_universe_contract",
+                help="Static은 현재 managed preset을 고정해서 사용합니다. Dynamic PIT는 Phase 10 first pass로, annual strict에서만 각 리밸런싱 날짜 기준 모집군을 다시 계산합니다.",
+            )
+            universe_contract = STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS[universe_contract_label]
+            dynamic_candidate_tickers, dynamic_target_size = _render_strict_annual_universe_contract_note(
+                universe_contract=universe_contract,
+                tickers=tickers,
+                preset_name=preset_name,
+            )
             value_factors = st.multiselect(
                 "Value Factors",
                 options=VALUE_STRICT_FACTOR_OPTIONS,
@@ -4412,6 +5411,9 @@ def _render_value_snapshot_strict_annual_form() -> None:
         "market_regime_enabled": bool(market_regime_enabled),
         "market_regime_window": int(market_regime_window),
         "market_regime_benchmark": market_regime_benchmark,
+        "universe_contract": universe_contract,
+        "dynamic_candidate_tickers": dynamic_candidate_tickers,
+        "dynamic_target_size": dynamic_target_size,
         "universe_mode": "preset" if universe_mode == "Preset" else "manual_tickers",
         "preset_name": preset_name,
     }
@@ -4511,6 +5513,20 @@ def _render_quality_value_snapshot_strict_quarterly_prototype_form() -> None:
                 help="기본은 매월 리밸런싱(1)이며, quarterly snapshot 자체는 가장 최근 usable filing 기준으로 따라갑니다.",
                 key="qvqp_rebalance_interval",
             )
+            universe_contract_label = st.selectbox(
+                "Universe Contract",
+                options=list(STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS.keys()),
+                index=0,
+                key="qvqp_universe_contract",
+                help="Static은 현재 managed preset을 고정해서 사용합니다. Dynamic PIT는 Phase 10 first pass로, quarterly strict에서도 각 리밸런싱 날짜 기준 모집군을 다시 계산합니다.",
+            )
+            universe_contract = STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS[universe_contract_label]
+            dynamic_candidate_tickers, dynamic_target_size = _render_strict_dynamic_universe_contract_note(
+                universe_contract=universe_contract,
+                tickers=tickers,
+                preset_name=preset_name,
+                statement_freq="quarterly",
+            )
             quality_factors = st.multiselect(
                 "Quality Factors",
                 options=QUALITY_STRICT_FACTOR_OPTIONS,
@@ -4587,6 +5603,9 @@ def _render_quality_value_snapshot_strict_quarterly_prototype_form() -> None:
         "market_regime_enabled": bool(market_regime_enabled),
         "market_regime_window": int(market_regime_window),
         "market_regime_benchmark": market_regime_benchmark,
+        "universe_contract": universe_contract,
+        "dynamic_candidate_tickers": dynamic_candidate_tickers,
+        "dynamic_target_size": dynamic_target_size,
         "universe_mode": "preset" if universe_mode == "Preset" else "manual_tickers",
         "preset_name": preset_name,
     }
@@ -4681,6 +5700,19 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
                 help="기본은 매월 리밸런싱(1)이며, 연구 목적이면 몇 달 간격으로 건너뛸 수도 있습니다.",
                 key="qvss_rebalance_interval",
             )
+            universe_contract_label = st.selectbox(
+                "Universe Contract",
+                options=list(STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS.keys()),
+                index=0,
+                key="qvss_universe_contract",
+                help="Static은 현재 managed preset을 고정해서 사용합니다. Dynamic PIT는 Phase 10 first pass로, annual strict에서만 각 리밸런싱 날짜 기준 모집군을 다시 계산합니다.",
+            )
+            universe_contract = STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS[universe_contract_label]
+            dynamic_candidate_tickers, dynamic_target_size = _render_strict_annual_universe_contract_note(
+                universe_contract=universe_contract,
+                tickers=tickers,
+                preset_name=preset_name,
+            )
             quality_factors = st.multiselect(
                 "Quality Factors",
                 options=QUALITY_STRICT_FACTOR_OPTIONS,
@@ -4757,6 +5789,9 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
         "market_regime_enabled": bool(market_regime_enabled),
         "market_regime_window": int(market_regime_window),
         "market_regime_benchmark": market_regime_benchmark,
+        "universe_contract": universe_contract,
+        "dynamic_candidate_tickers": dynamic_candidate_tickers,
+        "dynamic_target_size": dynamic_target_size,
         "universe_mode": "preset" if universe_mode == "Preset" else "manual_tickers",
         "preset_name": preset_name,
     }
@@ -4768,67 +5803,39 @@ def render_backtest_tab() -> None:
     _init_backtest_state()
 
     st.subheader("Backtest")
-    st.caption("Phase 4 backtest tab")
+    st.caption("단일 전략 실행, 전략 비교, 실행 이력을 한 화면에서 관리합니다.")
 
-    st.info(
-        "This tab is intentionally being opened in small steps. "
-        "The app structure is now unified, but the public runtime boundary and first execution screen "
-        "will be implemented after each product choice is confirmed."
+    with st.expander("Backtest 사용 안내", expanded=False):
+        st.markdown(
+            """
+            - `Single Strategy`: 전략 1개를 실행하고 결과를 바로 확인하는 화면입니다.
+            - `Compare & Portfolio Builder`: 여러 전략을 같은 기간으로 비교하는 화면입니다.
+            - `History`: 저장된 실행 결과를 다시 보고, `Run Again` 또는 `Load Into Form`을 사용하는 화면입니다.
+            - `Load Into Form`을 누르면 저장된 입력값이 `Single Strategy` 화면으로 자동 이동하며 다시 채워집니다.
+            - `quarterly strict prototype` 전략은 현재 **research-only** 경로입니다.
+            """
+        )
+        st.caption(
+            "`늦은 active start`는 요청한 시작일에는 아직 usable한 statement shadow가 부족해서, "
+            "실제 첫 보유/선택이 그보다 뒤에서 시작되는 상황을 뜻합니다."
+        )
+
+    active_panel = st.radio(
+        "Backtest Panel",
+        options=["Single Strategy", "Compare & Portfolio Builder", "History"],
+        horizontal=True,
+        label_visibility="collapsed",
+        key="backtest_active_panel",
     )
 
-    left, right = st.columns([1.2, 1.0], gap="large")
-
-    with left:
-        st.markdown("### Current Direction")
-        st.markdown(
-            """
-            - One main app
-            - Separate `Ingestion` and `Backtest` tabs
-            - Internal code split by tab / concern
-            - DB-backed price-only strategies first, then the first factor strategy
-            - `Equal Weight`, `GTAA`, `Risk Parity Trend`, `Dual Momentum`, `Quality Snapshot`, `Quality Snapshot (Strict Annual)`, `Value Snapshot (Strict Annual)`, and `Quality + Value Snapshot (Strict Annual)` are the current public strategy set
-            - `Compare & Portfolio Builder` is the next layer on top of those strategy wrappers
-            """
-        )
-
-        st.markdown("### Planned First Strategies")
-        st.markdown(
-            """
-            - Equal Weight (first public wrapper)
-            - GTAA (second public wrapper)
-            - Risk Parity Trend (third public wrapper)
-            - Dual Momentum (fourth public wrapper)
-            - Quality Snapshot (first broad factor strategy)
-            - Quality Snapshot (Strict Annual) (first strict statement-driven public candidate)
-            - Value Snapshot (Strict Annual) (second strict statement-driven public candidate)
-            - Quality + Value Snapshot (Strict Annual) (first strict multi-factor public candidate)
-            """
-        )
-
-    with right:
-        st.markdown("### Current Phase 4 Status")
-        st.markdown(
-            """
-            - UI structure: chosen
-            - Runtime public boundary: Equal Weight + GTAA + Risk Parity Trend + Dual Momentum + Quality Snapshot + Quality Snapshot (Strict Annual) + Value Snapshot (Strict Annual) + Quality + Value Snapshot (Strict Annual)
-            - First screen scope: single-strategy execution forms
-            - Strategy execution UI: basic result layout connected
-            - Compare and weighted-portfolio builder: first-pass rollout
-            """
-        )
-
-        st.markdown("### Next Step")
-        st.markdown(
-            """
-            The current step opens multi-strategy comparison first, then uses those results for weighted portfolio construction.
-            """
-        )
-    single_tab, compare_tab, history_tab = st.tabs(["Single Strategy", "Compare & Portfolio Builder", "History"])
-
-    with single_tab:
+    if active_panel == "Single Strategy":
         prefill_notice = st.session_state.get("backtest_prefill_notice")
         if prefill_notice:
             st.info(prefill_notice)
+            prefill_lines = _build_prefill_summary_lines(st.session_state.get("backtest_prefill_payload"))
+            if prefill_lines:
+                st.caption("이번에 불러온 입력값 요약")
+                st.markdown("\n".join(f"- {line}" for line in prefill_lines))
             st.session_state.backtest_prefill_notice = None
 
         pending_strategy_choice = st.session_state.get("backtest_prefill_strategy_choice")
@@ -4870,9 +5877,15 @@ def render_backtest_tab() -> None:
         st.divider()
         _render_last_run()
 
-    with compare_tab:
+    elif active_panel == "Compare & Portfolio Builder":
         st.markdown("### Compare Strategies")
         st.caption("Start with a shared date range and compare up to four strategies chosen from eight DB-backed strategies. This section then feeds directly into a weighted portfolio builder.")
+        _apply_compare_prefill()
+
+        compare_prefill_notice = st.session_state.get("backtest_compare_prefill_notice")
+        if compare_prefill_notice:
+            st.info(compare_prefill_notice)
+            st.session_state.backtest_compare_prefill_notice = None
 
         selected_strategies = st.multiselect(
             "Strategies",
@@ -5021,12 +6034,28 @@ def render_backtest_tab() -> None:
                             index=list(QUALITY_STRICT_PRESETS.keys()).index(STRICT_ANNUAL_COMPARE_DEFAULT_PRESET),
                             key="compare_qss_preset",
                         )
+                        qss_compare_contract_label = st.selectbox(
+                            "Strict Annual Quality Universe Contract",
+                            options=list(STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS.keys()),
+                            index=0,
+                            key="compare_qss_universe_contract",
+                            help="Static은 현재 managed preset을 고정해서 사용합니다. Dynamic PIT는 Phase 10 first pass로, annual strict compare에서도 각 리밸런싱 날짜 기준 membership를 다시 계산합니다.",
+                        )
+                        qss_compare_universe_contract = STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS[qss_compare_contract_label]
+                        qss_dynamic_candidate_tickers, qss_dynamic_target_size = _render_strict_annual_universe_contract_note(
+                            universe_contract=qss_compare_universe_contract,
+                            tickers=QUALITY_STRICT_PRESETS[qss_compare_preset],
+                            preset_name=qss_compare_preset,
+                        )
                         _render_ticker_preview(QUALITY_STRICT_PRESETS[qss_compare_preset], preview_count=8, tail_count=3)
                         _render_historical_universe_caption()
                         compare_strategy_overrides["Quality Snapshot (Strict Annual)"] = {
                             "preset_name": qss_compare_preset,
                             "tickers": QUALITY_STRICT_PRESETS[qss_compare_preset],
                             "universe_mode": "preset",
+                            "universe_contract": qss_compare_universe_contract,
+                            "dynamic_candidate_tickers": qss_dynamic_candidate_tickers,
+                            "dynamic_target_size": qss_dynamic_target_size,
                             "top_n": int(
                                 st.number_input(
                                     "Strict Annual Quality Top N",
@@ -5092,12 +6121,29 @@ def render_backtest_tab() -> None:
                             index=list(QUALITY_STRICT_PRESETS.keys()).index(STRICT_QUARTERLY_PROTOTYPE_DEFAULT_PRESET),
                             key="compare_qsqp_preset",
                         )
+                        qsqp_compare_contract_label = st.selectbox(
+                            "Strict Quarterly Quality Universe Contract",
+                            options=list(STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS.keys()),
+                            index=0,
+                            key="compare_qsqp_universe_contract",
+                            help="Static은 현재 managed preset을 고정해서 사용합니다. Dynamic PIT는 Phase 10 first pass로, quarterly strict에서도 각 리밸런싱 날짜 기준 membership를 다시 계산합니다.",
+                        )
+                        qsqp_compare_universe_contract = STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS[qsqp_compare_contract_label]
+                        qsqp_dynamic_candidate_tickers, qsqp_dynamic_target_size = _render_strict_dynamic_universe_contract_note(
+                            universe_contract=qsqp_compare_universe_contract,
+                            tickers=QUALITY_STRICT_PRESETS[qsqp_compare_preset],
+                            preset_name=qsqp_compare_preset,
+                            statement_freq="quarterly",
+                        )
                         _render_ticker_preview(QUALITY_STRICT_PRESETS[qsqp_compare_preset], preview_count=8, tail_count=3)
                         _render_historical_universe_caption()
                         compare_strategy_overrides["Quality Snapshot (Strict Quarterly Prototype)"] = {
                             "preset_name": qsqp_compare_preset,
                             "tickers": QUALITY_STRICT_PRESETS[qsqp_compare_preset],
                             "universe_mode": "preset",
+                            "universe_contract": qsqp_compare_universe_contract,
+                            "dynamic_candidate_tickers": qsqp_dynamic_candidate_tickers,
+                            "dynamic_target_size": qsqp_dynamic_target_size,
                             "top_n": int(
                                 st.number_input(
                                     "Strict Quarterly Quality Top N",
@@ -5163,12 +6209,28 @@ def render_backtest_tab() -> None:
                             index=list(VALUE_STRICT_PRESETS.keys()).index(STRICT_ANNUAL_COMPARE_DEFAULT_PRESET),
                             key="compare_vss_preset",
                         )
+                        vss_compare_contract_label = st.selectbox(
+                            "Strict Annual Value Universe Contract",
+                            options=list(STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS.keys()),
+                            index=0,
+                            key="compare_vss_universe_contract",
+                            help="Static은 현재 managed preset을 고정해서 사용합니다. Dynamic PIT는 Phase 10 first pass로, annual strict compare에서도 각 리밸런싱 날짜 기준 membership를 다시 계산합니다.",
+                        )
+                        vss_compare_universe_contract = STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS[vss_compare_contract_label]
+                        vss_dynamic_candidate_tickers, vss_dynamic_target_size = _render_strict_annual_universe_contract_note(
+                            universe_contract=vss_compare_universe_contract,
+                            tickers=VALUE_STRICT_PRESETS[vss_compare_preset],
+                            preset_name=vss_compare_preset,
+                        )
                         _render_ticker_preview(VALUE_STRICT_PRESETS[vss_compare_preset], preview_count=8, tail_count=3)
                         _render_historical_universe_caption()
                         compare_strategy_overrides["Value Snapshot (Strict Annual)"] = {
                             "preset_name": vss_compare_preset,
                             "tickers": VALUE_STRICT_PRESETS[vss_compare_preset],
                             "universe_mode": "preset",
+                            "universe_contract": vss_compare_universe_contract,
+                            "dynamic_candidate_tickers": vss_dynamic_candidate_tickers,
+                            "dynamic_target_size": vss_dynamic_target_size,
                             "top_n": int(
                                 st.number_input(
                                     "Strict Annual Value Top N",
@@ -5234,12 +6296,29 @@ def render_backtest_tab() -> None:
                             index=list(VALUE_STRICT_PRESETS.keys()).index(STRICT_QUARTERLY_PROTOTYPE_DEFAULT_PRESET),
                             key="compare_vsqp_preset",
                         )
+                        vsqp_compare_contract_label = st.selectbox(
+                            "Strict Quarterly Value Universe Contract",
+                            options=list(STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS.keys()),
+                            index=0,
+                            key="compare_vsqp_universe_contract",
+                            help="Static은 현재 managed preset을 고정해서 사용합니다. Dynamic PIT는 Phase 10 first pass로, quarterly strict에서도 각 리밸런싱 날짜 기준 membership를 다시 계산합니다.",
+                        )
+                        vsqp_compare_universe_contract = STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS[vsqp_compare_contract_label]
+                        vsqp_dynamic_candidate_tickers, vsqp_dynamic_target_size = _render_strict_dynamic_universe_contract_note(
+                            universe_contract=vsqp_compare_universe_contract,
+                            tickers=VALUE_STRICT_PRESETS[vsqp_compare_preset],
+                            preset_name=vsqp_compare_preset,
+                            statement_freq="quarterly",
+                        )
                         _render_ticker_preview(VALUE_STRICT_PRESETS[vsqp_compare_preset], preview_count=8, tail_count=3)
                         _render_historical_universe_caption()
                         compare_strategy_overrides["Value Snapshot (Strict Quarterly Prototype)"] = {
                             "preset_name": vsqp_compare_preset,
                             "tickers": VALUE_STRICT_PRESETS[vsqp_compare_preset],
                             "universe_mode": "preset",
+                            "universe_contract": vsqp_compare_universe_contract,
+                            "dynamic_candidate_tickers": vsqp_dynamic_candidate_tickers,
+                            "dynamic_target_size": vsqp_dynamic_target_size,
                             "top_n": int(
                                 st.number_input(
                                     "Strict Quarterly Value Top N",
@@ -5305,12 +6384,28 @@ def render_backtest_tab() -> None:
                             index=list(QUALITY_STRICT_PRESETS.keys()).index(STRICT_ANNUAL_COMPARE_DEFAULT_PRESET),
                             key="compare_qvss_preset",
                         )
+                        qvss_compare_contract_label = st.selectbox(
+                            "Strict Annual Multi-Factor Universe Contract",
+                            options=list(STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS.keys()),
+                            index=0,
+                            key="compare_qvss_universe_contract",
+                            help="Static은 현재 managed preset을 고정해서 사용합니다. Dynamic PIT는 Phase 10 first pass로, annual strict compare에서도 각 리밸런싱 날짜 기준 membership를 다시 계산합니다.",
+                        )
+                        qvss_compare_universe_contract = STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS[qvss_compare_contract_label]
+                        qvss_dynamic_candidate_tickers, qvss_dynamic_target_size = _render_strict_annual_universe_contract_note(
+                            universe_contract=qvss_compare_universe_contract,
+                            tickers=QUALITY_STRICT_PRESETS[qvss_compare_preset],
+                            preset_name=qvss_compare_preset,
+                        )
                         _render_ticker_preview(QUALITY_STRICT_PRESETS[qvss_compare_preset], preview_count=8, tail_count=3)
                         _render_historical_universe_caption()
                         compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"] = {
                             "preset_name": qvss_compare_preset,
                             "tickers": QUALITY_STRICT_PRESETS[qvss_compare_preset],
                             "universe_mode": "preset",
+                            "universe_contract": qvss_compare_universe_contract,
+                            "dynamic_candidate_tickers": qvss_dynamic_candidate_tickers,
+                            "dynamic_target_size": qvss_dynamic_target_size,
                             "top_n": int(
                                 st.number_input(
                                     "Strict Annual Multi-Factor Top N",
@@ -5382,12 +6477,29 @@ def render_backtest_tab() -> None:
                             index=list(QUALITY_STRICT_PRESETS.keys()).index(STRICT_QUARTERLY_PROTOTYPE_DEFAULT_PRESET),
                             key="compare_qvqp_preset",
                         )
+                        qvqp_compare_contract_label = st.selectbox(
+                            "Strict Quarterly Multi-Factor Universe Contract",
+                            options=list(STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS.keys()),
+                            index=0,
+                            key="compare_qvqp_universe_contract",
+                            help="Static은 현재 managed preset을 고정해서 사용합니다. Dynamic PIT는 Phase 10 first pass로, quarterly strict에서도 각 리밸런싱 날짜 기준 membership를 다시 계산합니다.",
+                        )
+                        qvqp_compare_universe_contract = STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS[qvqp_compare_contract_label]
+                        qvqp_dynamic_candidate_tickers, qvqp_dynamic_target_size = _render_strict_dynamic_universe_contract_note(
+                            universe_contract=qvqp_compare_universe_contract,
+                            tickers=QUALITY_STRICT_PRESETS[qvqp_compare_preset],
+                            preset_name=qvqp_compare_preset,
+                            statement_freq="quarterly",
+                        )
                         _render_ticker_preview(QUALITY_STRICT_PRESETS[qvqp_compare_preset], preview_count=8, tail_count=3)
                         _render_historical_universe_caption()
                         compare_strategy_overrides["Quality + Value Snapshot (Strict Quarterly Prototype)"] = {
                             "preset_name": qvqp_compare_preset,
                             "tickers": QUALITY_STRICT_PRESETS[qvqp_compare_preset],
                             "universe_mode": "preset",
+                            "universe_contract": qvqp_compare_universe_contract,
+                            "dynamic_candidate_tickers": qvqp_dynamic_candidate_tickers,
+                            "dynamic_target_size": qvqp_dynamic_target_size,
                             "top_n": int(
                                 st.number_input(
                                     "Strict Quarterly Multi-Factor Top N",
@@ -5524,8 +6636,10 @@ def render_backtest_tab() -> None:
         _render_compare_results()
         st.divider()
         _render_weighted_portfolio_builder()
+        st.divider()
+        _render_saved_portfolio_workspace()
 
-    with history_tab:
+    else:
         st.markdown("### Backtest History")
         st.caption("Single-strategy runs and strategy-comparison runs share the same persistent history and drilldown surface.")
         _render_persistent_backtest_history()

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -8,7 +9,65 @@ from typing import Any
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 BACKTEST_HISTORY_FILE = PROJECT_ROOT / ".note" / "finance" / "BACKTEST_RUN_HISTORY.jsonl"
+BACKTEST_ARTIFACT_DIR = PROJECT_ROOT / ".note" / "finance" / "backtest_artifacts"
 BACKTEST_HISTORY_SCHEMA_VERSION = 1
+_SAFE_CHARS = re.compile(r"[^A-Za-z0-9_.-]+")
+
+
+def _safe_token(value: str | None, *, fallback: str) -> str:
+    token = _SAFE_CHARS.sub("_", (value or "").strip())
+    token = token.strip("._")
+    return token or fallback
+
+
+def _write_dynamic_universe_artifact(
+    *,
+    bundle: dict[str, Any],
+    run_kind: str,
+    recorded_at: str,
+) -> dict[str, Any] | None:
+    snapshot_rows = bundle.get("dynamic_universe_snapshot_rows") or []
+    candidate_status_rows = bundle.get("dynamic_candidate_status_rows") or []
+    meta = dict(bundle.get("meta") or {})
+    universe_debug = meta.get("universe_debug") or {}
+    if not snapshot_rows and not universe_debug:
+        return None
+
+    BACKTEST_ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
+    base_name = (
+        f"{_safe_token(recorded_at.replace(':', '-'), fallback='record')}_"
+        f"{_safe_token(str(meta.get('strategy_key')), fallback='strategy')}_dynamic_universe"
+    )
+    artifact_dir = BACKTEST_ARTIFACT_DIR / base_name
+    counter = 2
+    while artifact_dir.exists():
+        artifact_dir = BACKTEST_ARTIFACT_DIR / f"{base_name}_{counter}"
+        counter += 1
+    artifact_dir.mkdir(parents=True, exist_ok=False)
+
+    payload = {
+        "recorded_at": recorded_at,
+        "run_kind": run_kind,
+        "strategy_key": meta.get("strategy_key"),
+        "strategy_name": bundle.get("strategy_name"),
+        "universe_contract": meta.get("universe_contract"),
+        "dynamic_target_size": meta.get("dynamic_target_size"),
+        "dynamic_candidate_count": meta.get("dynamic_candidate_count"),
+        "universe_debug": universe_debug,
+        "snapshot_rows": snapshot_rows,
+        "candidate_status_rows": candidate_status_rows,
+    }
+    artifact_path = artifact_dir / "dynamic_universe_snapshot.json"
+    artifact_path.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2, default=str),
+        encoding="utf-8",
+    )
+    return {
+        "artifact_dir": str(artifact_dir),
+        "snapshot_json": str(artifact_path),
+        "snapshot_row_count": len(snapshot_rows),
+        "candidate_status_row_count": len(candidate_status_rows),
+    }
 
 
 def _extract_primary_summary(bundle: dict[str, Any]) -> dict[str, Any]:
@@ -37,9 +96,23 @@ def append_backtest_run_history(
     context: dict[str, Any] | None = None,
 ) -> None:
     meta = dict(bundle.get("meta") or {})
+    recorded_at = datetime.now().isoformat(timespec="seconds")
+    merged_context = dict(context or {})
+    dynamic_artifact = _write_dynamic_universe_artifact(
+        bundle=bundle,
+        run_kind=run_kind,
+        recorded_at=recorded_at,
+    )
+    if dynamic_artifact is not None:
+        merged_context.setdefault("dynamic_universe_artifact", dynamic_artifact)
+        merged_context.setdefault(
+            "dynamic_universe_preview_rows",
+            list((meta.get("universe_debug") or {}).get("per_date_rows") or [])[:24],
+        )
+
     record = {
         "schema_version": BACKTEST_HISTORY_SCHEMA_VERSION,
-        "recorded_at": datetime.now().isoformat(timespec="seconds"),
+        "recorded_at": recorded_at,
         "run_kind": run_kind,
         "strategy_key": meta.get("strategy_key"),
         "execution_mode": meta.get("execution_mode"),
@@ -63,12 +136,14 @@ def append_backtest_run_history(
         "market_regime_window": meta.get("market_regime_window"),
         "market_regime_benchmark": meta.get("market_regime_benchmark"),
         "snapshot_source": meta.get("snapshot_source"),
+        "universe_contract": meta.get("universe_contract"),
+        "dynamic_target_size": meta.get("dynamic_target_size"),
         "ui_elapsed_seconds": meta.get("ui_elapsed_seconds"),
         "universe_mode": meta.get("universe_mode"),
         "preset_name": meta.get("preset_name"),
         "warnings": meta.get("warnings", []),
         "summary": _extract_primary_summary(bundle),
-        "context": context or {},
+        "context": merged_context,
     }
 
     BACKTEST_HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)

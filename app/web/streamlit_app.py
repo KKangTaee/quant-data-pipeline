@@ -27,7 +27,7 @@ from app.jobs.ingestion_jobs import (
     run_pipeline_core_market_data,
     run_weekly_fundamental_refresh,
 )
-from app.jobs.diagnostics import inspect_price_stale_symbols
+from app.jobs.diagnostics import inspect_price_stale_symbols, inspect_statement_coverage_symbols
 from app.jobs.result_artifacts import write_run_artifacts
 from app.jobs.preflight_checks import (
     check_asset_profile_prerequisites,
@@ -115,6 +115,8 @@ def _init_state() -> None:
         st.session_state.statement_pit_inspection_result = None
     if "price_stale_diagnosis_result" not in st.session_state:
         st.session_state.price_stale_diagnosis_result = None
+    if "statement_coverage_diagnosis_result" not in st.session_state:
+        st.session_state.statement_coverage_diagnosis_result = None
     if "ingestion_prefill_request" not in st.session_state:
         st.session_state.ingestion_prefill_request = None
     if "ingestion_prefill_notice" not in st.session_state:
@@ -135,6 +137,7 @@ def _apply_pending_ingestion_prefill() -> None:
     prefix_map = {
         "extended_statement_refresh": "extended_statement",
         "statement_shadow_rebuild": "shadow_rebuild",
+        "statement_coverage_diagnosis": "statement_coverage_diag",
     }
     prefix = prefix_map.get(target)
     if prefix is None:
@@ -968,6 +971,100 @@ def _render_price_stale_diagnosis_result(result: dict[str, Any]) -> None:
         st.code(payload.get("payload_block") or "", language="text")
 
 
+def _render_statement_coverage_diagnosis_result(result: dict[str, Any]) -> None:
+    st.markdown("#### Diagnosis Result")
+    details = result.get("details") or {}
+    status = result.get("status")
+    if status == "ok":
+        st.success(result.get("message") or "Statement coverage diagnosis completed.")
+    elif status == "warning":
+        st.warning(result.get("message") or "Statement coverage diagnosis completed with guidance.")
+    else:
+        st.error(result.get("message") or "Statement coverage diagnosis failed.")
+
+    st.caption(
+        "이 결과는 `DB raw coverage + DB shadow coverage + live EDGAR source sample`을 합쳐서 "
+        "이 심볼이 재수집 대상인지, shadow rebuild 대상인지, 아니면 구조적으로 현재 파이프라인과 잘 맞지 않는지 좁혀보는 진단용 결과입니다."
+    )
+    meta_cols = st.columns(3)
+    meta_cols[0].metric("Requested", details.get("requested_count", 0))
+    meta_cols[1].metric("Frequency", details.get("freq", "-"))
+    meta_cols[2].metric("Invalid Symbols", len(details.get("invalid_symbols") or []))
+
+    diagnosis_counts = details.get("diagnosis_counts") or {}
+    if diagnosis_counts:
+        st.markdown("##### Diagnosis Summary")
+        summary_df = pd.DataFrame(
+            [{"Diagnosis": diagnosis, "Count": count} for diagnosis, count in diagnosis_counts.items()]
+        ).sort_values(["Count", "Diagnosis"], ascending=[False, True])
+        st.dataframe(summary_df, use_container_width=True, hide_index=True)
+
+    rows = details.get("rows") or []
+    if rows:
+        st.markdown("##### Recovery Guidance")
+        st.caption(
+            "`source_present_raw_missing`이면 먼저 `Extended Statement Refresh`, "
+            "`raw_present_shadow_missing`이면 먼저 `Statement Shadow Rebuild Only`, "
+            "`foreign_or_nonstandard_form_structure`면 재수집보다 form support / exclusion 판단이 우선입니다."
+        )
+        diagnosis_df = pd.DataFrame(rows).rename(
+            columns={
+                "symbol": "Symbol",
+                "raw_strict_rows": "Raw Strict Rows",
+                "shadow_rows": "Shadow Rows",
+                "source_fact_count": "Source Facts",
+                "source_filing_count": "Source Filings",
+                "dominant_forms": "Dominant Forms",
+                "diagnosis": "Diagnosis",
+                "recommended_action": "Recommended Action",
+                "note": "Note",
+                "stepwise_guidance": "Stepwise Guidance",
+            }
+        )
+        st.dataframe(diagnosis_df, use_container_width=True, hide_index=True)
+
+    source_rows = details.get("source_rows") or []
+    if source_rows:
+        with st.expander("Source Payload Details", expanded=False):
+            st.caption(
+                "각 심볼별 live EDGAR sample을 다시 요약해서 보여줍니다. "
+                "특히 `statement_fact_count`, `form_counts`, `timing_field_inventory`를 보면 "
+                "source가 비어 있는지, foreign/non-standard form 위주인지, supported form인데도 DB에 안 들어온 건지 구분하는 데 도움이 됩니다."
+            )
+            source_df = pd.DataFrame(
+                [
+                    {
+                        "Symbol": row.get("symbol"),
+                        "Source Facts": row.get("statement_fact_count"),
+                        "Source Filings": row.get("filing_count"),
+                        "Form Counts": row.get("form_counts"),
+                        "Fiscal Period Counts": row.get("fiscal_period_counts"),
+                        "Timing Field Inventory": row.get("timing_field_inventory"),
+                    }
+                    for row in source_rows
+                ]
+            )
+            st.dataframe(source_df, use_container_width=True, hide_index=True)
+
+    refresh_payload = details.get("extended_refresh_payload")
+    if refresh_payload:
+        st.markdown("##### Suggested Extended Statement Refresh Payload")
+        st.caption(
+            "Only symbols classified as `source_present_raw_missing` are included here. "
+            "즉 source에는 usable facts가 보이는데 DB strict raw rows가 없는 경우만 다시 수집 대상으로 제안합니다."
+        )
+        st.code(refresh_payload.get("payload_block") or "", language="text")
+
+    rebuild_payload = details.get("shadow_rebuild_payload")
+    if rebuild_payload:
+        st.markdown("##### Suggested Statement Shadow Rebuild Payload")
+        st.caption(
+            "Only symbols classified as `raw_present_shadow_missing` are included here. "
+            "즉 raw strict rows는 이미 있고 shadow만 비어 있는 경우만 rebuild 대상으로 제안합니다."
+        )
+        st.code(rebuild_payload.get("payload_block") or "", language="text")
+
+
 def _render_price_stale_diagnosis_card() -> None:
     with st.container(border=True):
         st.markdown("### Price Stale Diagnosis")
@@ -1028,6 +1125,75 @@ def _render_price_stale_diagnosis_card() -> None:
         result = st.session_state.get("price_stale_diagnosis_result")
         if result:
             _render_price_stale_diagnosis_result(result)
+
+
+def _render_statement_coverage_diagnosis_card() -> None:
+    with st.container(border=True):
+        st.markdown("### Statement Coverage Diagnosis")
+        st.write("Run a read-only diagnosis to understand why strict statement coverage is missing and what the next action should be.")
+        st.caption(
+            "Use this when `Statement Shadow Coverage Preview` or `Coverage Gap Drilldown` tells you a symbol is missing. "
+            "This card helps separate normal re-collection cases from shadow-only rebuild cases and source-structure issues."
+        )
+        with st.expander("이 카드 읽는 법", expanded=False):
+            st.markdown(
+                """
+                - 이 카드는 **새 데이터를 저장하지 않습니다.**
+                - 먼저 DB의 strict raw statement coverage와 statement shadow coverage를 봅니다.
+                - 그다음 같은 심볼을 live EDGAR sample로 다시 읽습니다.
+                - 마지막으로 아래처럼 원인을 좁힙니다.
+                  - `source_present_raw_missing`: 먼저 `Extended Statement Refresh`
+                  - `raw_present_shadow_missing`: 먼저 `Statement Shadow Rebuild Only`
+                  - `foreign_or_nonstandard_form_structure`: 재수집보다 foreign/non-standard form support 여부 판단 우선
+                  - `source_empty_or_symbol_issue`: source 자체가 비어 있어서 symbol/source validity 점검 우선
+                - 추천 사용 범위는 **소수의 coverage-missing symbol 수동 진단**입니다.
+                """
+            )
+
+        diag_symbol_result = _render_symbol_source_inputs(
+            "statement_coverage_diag",
+            "Coverage Diagnosis Symbols",
+            default_source_mode="Manual",
+        )
+        diag_symbols_input = diag_symbol_result["symbols"]
+        diag_symbol_check = check_symbol_input(diag_symbols_input)
+        _render_check_result(diag_symbol_check)
+
+        col1, col2 = st.columns(2)
+        diag_freq_input = col1.selectbox(
+            "Coverage Diagnosis Frequency",
+            ["annual", "quarterly"],
+            index=1,
+            key="statement_coverage_diag_freq",
+        )
+        diag_sample_size = int(
+            col2.number_input(
+                "Source Sample Size",
+                min_value=1,
+                max_value=5,
+                value=2,
+                step=1,
+                key="statement_coverage_diag_sample_size",
+                help="진단용 source sample row 수입니다. sample이 많을수록 느려질 수 있습니다.",
+            )
+        )
+
+        if st.button(
+            "Run Statement Coverage Diagnosis",
+            use_container_width=True,
+            disabled=_has_running_job() or _is_blocking(diag_symbol_check),
+        ):
+            with st.spinner("Running statement coverage diagnosis..."):
+                result = inspect_statement_coverage_symbols(
+                    diag_symbols_input,
+                    freq=diag_freq_input,
+                    sample_size=diag_sample_size,
+                )
+            st.session_state.statement_coverage_diagnosis_result = result
+
+        result = st.session_state.get("statement_coverage_diagnosis_result")
+        if result:
+            _render_statement_coverage_diagnosis_result(result)
 
 
 def _render_statement_pit_inspection_card() -> None:
@@ -2025,6 +2191,9 @@ def _render_ingestion_console() -> None:
 
             with st.expander("Price Stale Diagnosis", expanded=False):
                 _render_price_stale_diagnosis_card()
+
+            with st.expander("Statement Coverage Diagnosis", expanded=False):
+                _render_statement_coverage_diagnosis_card()
 
             with st.expander("Statement PIT Inspection", expanded=False):
                 _render_statement_pit_inspection_card()

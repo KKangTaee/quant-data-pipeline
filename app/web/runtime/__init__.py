@@ -15,13 +15,22 @@ from .backtest import (
     run_value_snapshot_strict_quarterly_prototype_backtest_from_db,
 )
 from .history import BACKTEST_HISTORY_FILE, append_backtest_run_history, load_backtest_run_history
+from .portfolio_store import (
+    SAVED_PORTFOLIO_FILE,
+    delete_saved_portfolio,
+    load_saved_portfolios,
+    save_saved_portfolio,
+)
 
 __all__ = [
     "BACKTEST_HISTORY_FILE",
+    "SAVED_PORTFOLIO_FILE",
     "append_backtest_run_history",
     "build_backtest_result_bundle",
+    "delete_saved_portfolio",
     "inspect_strict_annual_price_freshness",
     "load_backtest_run_history",
+    "load_saved_portfolios",
     "run_dual_momentum_backtest_from_db",
     "run_equal_weight_backtest_from_db",
     "run_gtaa_backtest_from_db",
@@ -34,4 +43,5 @@ __all__ = [
     "run_statement_quality_prototype_backtest_from_db",
     "run_value_snapshot_strict_annual_backtest_from_db",
     "run_value_snapshot_strict_quarterly_prototype_backtest_from_db",
+    "save_saved_portfolio",
 ]

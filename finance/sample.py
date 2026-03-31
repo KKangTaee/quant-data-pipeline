@@ -9,6 +9,7 @@ Path split:
 """
 
 from math import comb
+from functools import lru_cache
 from IPython.display import display
 import pandas as pd
 from .engine import BacktestEngine
@@ -36,9 +37,11 @@ from finance.data.asset_profile import(
     load_symbols_from_asset_profile
 )
 from .loaders import (
+    load_asset_profile_status_summary,
     load_factor_snapshot,
     load_statement_factor_snapshot_shadow,
     load_statement_factors_shadow,
+    load_statement_fundamentals_shadow,
     load_statement_quality_snapshot_strict,
 )
 
@@ -79,6 +82,8 @@ STRICT_MARKET_REGIME_DEFAULT_ENABLED = False
 STRICT_MARKET_REGIME_DEFAULT_WINDOW = 200
 STRICT_MARKET_REGIME_DEFAULT_BENCHMARK = "SPY"
 STRICT_MARKET_REGIME_BENCHMARK_OPTIONS = ["SPY", "QQQ", "VTI", "IWM"]
+STATIC_MANAGED_RESEARCH_UNIVERSE = "static_managed_research"
+HISTORICAL_DYNAMIC_PIT_UNIVERSE = "historical_dynamic_pit"
 
 
 def _history_start_with_buffer(start=None, *, years: int = 0, months: int = 0, days: int = 0):
@@ -666,7 +671,498 @@ def _build_shadow_factor_snapshot_map(
     return snapshot_by_date
 
 
-def get_statement_quality_snapshot_shadow_from_db(
+def _normalize_symbol_list(symbols) -> list[str]:
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for raw in symbols or []:
+        symbol = str(raw).strip().upper()
+        if not symbol or symbol in seen:
+            continue
+        seen.add(symbol)
+        normalized.append(symbol)
+    return normalized
+
+
+def _clone_price_df_map(price_dfs: dict[str, pd.DataFrame]) -> dict[str, pd.DataFrame]:
+    return {symbol: df.copy(deep=True) for symbol, df in price_dfs.items()}
+
+
+@lru_cache(maxsize=12)
+def _cached_snapshot_strategy_price_dfs(
+    symbols_key: tuple[str, ...],
+    option: str,
+    start: str | None,
+    end: str | None,
+    timeframe: str,
+    trend_filter_window: int | None,
+) -> dict[str, pd.DataFrame]:
+    return _build_snapshot_strategy_price_dfs(
+        list(symbols_key),
+        option=option,
+        start=start,
+        end=end,
+        timeframe=timeframe,
+        from_db=True,
+        trend_filter_window=trend_filter_window,
+    )
+
+
+def _get_cached_snapshot_strategy_price_dfs(
+    *,
+    symbols,
+    option: str,
+    start: str | None,
+    end: str | None,
+    timeframe: str,
+    trend_filter_window: int | None,
+) -> dict[str, pd.DataFrame]:
+    symbols_key = tuple(_normalize_symbol_list(symbols))
+    return _clone_price_df_map(
+        _cached_snapshot_strategy_price_dfs(
+            symbols_key,
+            option,
+            start,
+            end,
+            timeframe,
+            trend_filter_window,
+        )
+    )
+
+
+@lru_cache(maxsize=12)
+def _cached_statement_factors_shadow(
+    symbols_key: tuple[str, ...],
+    freq: str,
+    end: str | None,
+) -> pd.DataFrame:
+    factor_history = load_statement_factors_shadow(
+        symbols=list(symbols_key),
+        freq=freq,
+        end=end,
+    )
+    if factor_history is None:
+        return pd.DataFrame()
+    return factor_history.copy(deep=True)
+
+
+def _get_cached_statement_factors_shadow(
+    *,
+    symbols,
+    freq: str,
+    end: str | None,
+) -> pd.DataFrame:
+    symbols_key = tuple(_normalize_symbol_list(symbols))
+    return _cached_statement_factors_shadow(symbols_key, freq, end).copy(deep=True)
+
+
+@lru_cache(maxsize=12)
+def _cached_statement_fundamentals_shadow(
+    symbols_key: tuple[str, ...],
+    freq: str,
+    end: str | None,
+) -> pd.DataFrame:
+    statement_shadow = load_statement_fundamentals_shadow(
+        symbols=list(symbols_key),
+        freq=freq,
+        end=end,
+    )
+    if statement_shadow is None:
+        return pd.DataFrame()
+    return statement_shadow.copy(deep=True)
+
+
+def _get_cached_statement_fundamentals_shadow(
+    *,
+    symbols,
+    freq: str,
+    end: str | None,
+) -> pd.DataFrame:
+    symbols_key = tuple(_normalize_symbol_list(symbols))
+    return _cached_statement_fundamentals_shadow(symbols_key, freq, end).copy(deep=True)
+
+
+@lru_cache(maxsize=12)
+def _cached_asset_profile_status_summary(
+    symbols_key: tuple[str, ...],
+) -> pd.DataFrame:
+    summary = load_asset_profile_status_summary(list(symbols_key))
+    if summary is None:
+        return pd.DataFrame()
+    return summary.copy(deep=True)
+
+
+def _get_cached_asset_profile_status_summary(
+    *,
+    symbols,
+) -> pd.DataFrame:
+    symbols_key = tuple(_normalize_symbol_list(symbols))
+    return _cached_asset_profile_status_summary(symbols_key).copy(deep=True)
+
+
+def _build_dynamic_pit_membership_map(
+    *,
+    price_dfs: dict[str, pd.DataFrame],
+    statement_shadow: pd.DataFrame,
+    rebalance_dates: list[pd.Timestamp],
+    target_size: int,
+    requested_tickers: list[str],
+    statement_freq: str = "annual",
+    input_candidate_count: int | None = None,
+    asset_profile_summary: pd.DataFrame | None = None,
+) -> tuple[dict[pd.Timestamp, list[str]], dict[str, object], list[dict[str, object]], list[dict[str, object]]]:
+    if target_size <= 0:
+        raise ValueError("target_size must be positive for dynamic PIT universe construction.")
+
+    candidate_tickers = _normalize_symbol_list(price_dfs.keys())
+    if not candidate_tickers:
+        raise ValueError("price_dfs is empty for dynamic PIT universe construction.")
+
+    input_candidate_count = int(input_candidate_count or len(candidate_tickers))
+
+    if statement_shadow is None or statement_shadow.empty:
+        empty_map = {pd.Timestamp(date).normalize(): [] for date in rebalance_dates}
+        return empty_map, {
+            "contract": HISTORICAL_DYNAMIC_PIT_UNIVERSE,
+            "statement_freq": statement_freq,
+            "requested_count": len(requested_tickers),
+            "input_candidate_count": input_candidate_count,
+            "candidate_pool_count": len(candidate_tickers),
+            "target_size": int(target_size),
+            "membership_dates": len(rebalance_dates),
+            "first_membership_count": 0,
+            "last_membership_count": 0,
+            "min_membership_count": 0,
+            "max_membership_count": 0,
+            "avg_membership_count": 0.0,
+            "avg_turnover_count": 0.0,
+            "avg_turnover_pct": 0.0,
+            "statement_ready_count": 0,
+            "per_date_rows": [],
+        }, [], []
+
+    price_rows: list[pd.DataFrame] = []
+    for symbol, df in price_dfs.items():
+        working_price = df[["Date", "Close"]].copy()
+        working_price["Date"] = pd.to_datetime(working_price["Date"], errors="coerce").dt.normalize()
+        working_price["Close"] = pd.to_numeric(working_price["Close"], errors="coerce")
+        working_price["symbol"] = str(symbol).strip().upper()
+        price_rows.append(working_price.dropna(subset=["Date", "Close"]))
+
+    price_panel = pd.concat(price_rows, ignore_index=True) if price_rows else pd.DataFrame()
+    if price_panel.empty:
+        empty_map = {pd.Timestamp(date).normalize(): [] for date in rebalance_dates}
+        return empty_map, {
+            "contract": HISTORICAL_DYNAMIC_PIT_UNIVERSE,
+            "statement_freq": statement_freq,
+            "requested_count": len(requested_tickers),
+            "input_candidate_count": input_candidate_count,
+            "candidate_pool_count": len(candidate_tickers),
+            "target_size": int(target_size),
+            "membership_dates": len(rebalance_dates),
+            "first_membership_count": 0,
+            "last_membership_count": 0,
+            "min_membership_count": 0,
+            "max_membership_count": 0,
+            "avg_membership_count": 0.0,
+            "avg_turnover_count": 0.0,
+            "avg_turnover_pct": 0.0,
+            "statement_ready_count": 0,
+            "per_date_rows": [],
+        }, [], []
+
+    price_by_date = {
+        snapshot_date: group[["symbol", "Close"]].copy()
+        for snapshot_date, group in price_panel.groupby("Date", sort=True)
+    }
+    price_window_df = (
+        price_panel.groupby("symbol", as_index=False)
+        .agg(
+            first_price_date=("Date", "min"),
+            last_price_date=("Date", "max"),
+            price_row_count=("Date", "count"),
+        )
+        .sort_values("symbol")
+        .reset_index(drop=True)
+    )
+    price_window_map = {
+        row["symbol"]: row for row in price_window_df.to_dict(orient="records")
+    }
+
+    if asset_profile_summary is None:
+        asset_profile_summary = load_asset_profile_status_summary(candidate_tickers)
+    profile_map: dict[str, dict[str, object]] = {}
+    if asset_profile_summary is not None and not asset_profile_summary.empty:
+        profile_df = asset_profile_summary.copy()
+        profile_df["symbol"] = profile_df["symbol"].astype(str).str.upper()
+        if "delisted_at" in profile_df.columns:
+            profile_df["delisted_at"] = pd.to_datetime(profile_df["delisted_at"], errors="coerce")
+        profile_map = {
+            row["symbol"]: row
+            for row in profile_df.to_dict(orient="records")
+        }
+
+    candidate_status_rows: list[dict[str, object]] = []
+    for symbol in candidate_tickers:
+        price_row = price_window_map.get(symbol, {})
+        profile_row = profile_map.get(symbol, {})
+        first_price_date = pd.to_datetime(price_row.get("first_price_date"), errors="coerce")
+        last_price_date = pd.to_datetime(price_row.get("last_price_date"), errors="coerce")
+        delisted_at = pd.to_datetime(profile_row.get("delisted_at"), errors="coerce")
+        candidate_status_rows.append(
+            {
+                "symbol": symbol,
+                "first_price_date": first_price_date.strftime("%Y-%m-%d") if pd.notna(first_price_date) else None,
+                "last_price_date": last_price_date.strftime("%Y-%m-%d") if pd.notna(last_price_date) else None,
+                "price_row_count": int(price_row.get("price_row_count") or 0),
+                "profile_status": profile_row.get("status"),
+                "profile_delisted_at": delisted_at.strftime("%Y-%m-%d") if pd.notna(delisted_at) else None,
+                "profile_error": profile_row.get("error_msg"),
+            }
+        )
+
+    working = statement_shadow.copy()
+    working["symbol"] = working["symbol"].astype(str).str.upper()
+    working["period_end"] = pd.to_datetime(working["period_end"], errors="coerce")
+    working["latest_available_at"] = pd.to_datetime(working["latest_available_at"], errors="coerce")
+    working["shares_outstanding"] = pd.to_numeric(working["shares_outstanding"], errors="coerce")
+    if "latest_accession_no" in working.columns:
+        working["latest_accession_no"] = working["latest_accession_no"].fillna("").astype(str)
+    else:
+        working["latest_accession_no"] = ""
+
+    working = working[
+        working["symbol"].notna()
+        & working["period_end"].notna()
+        & working["latest_available_at"].notna()
+        & working["shares_outstanding"].notna()
+        & (working["shares_outstanding"] > 0)
+    ].copy()
+
+    if working.empty:
+        empty_map = {pd.Timestamp(date).normalize(): [] for date in rebalance_dates}
+        return empty_map, {
+            "contract": HISTORICAL_DYNAMIC_PIT_UNIVERSE,
+            "statement_freq": statement_freq,
+            "requested_count": len(requested_tickers),
+            "input_candidate_count": input_candidate_count,
+            "candidate_pool_count": len(candidate_tickers),
+            "target_size": int(target_size),
+            "membership_dates": len(rebalance_dates),
+            "first_membership_count": 0,
+            "last_membership_count": 0,
+            "min_membership_count": 0,
+            "max_membership_count": 0,
+            "avg_membership_count": 0.0,
+            "avg_turnover_count": 0.0,
+            "avg_turnover_pct": 0.0,
+            "statement_ready_count": 0,
+            "per_date_rows": [],
+        }, [], candidate_status_rows
+
+    sort_cols = ["symbol", "latest_available_at", "period_end", "latest_accession_no"]
+    working = working.sort_values(sort_cols)
+
+    membership_map: dict[pd.Timestamp, list[str]] = {}
+    per_date_rows: list[dict[str, object]] = []
+    snapshot_rows: list[dict[str, object]] = []
+    membership_counts: list[int] = []
+    turnover_counts: list[int] = []
+    prev_members: set[str] = set()
+
+    for rebalance_date in rebalance_dates:
+        as_of_ts = pd.Timestamp(rebalance_date).normalize()
+        pre_listing_excluded_count = int(
+            sum(
+                1
+                for row in candidate_status_rows
+                if row.get("first_price_date")
+                and pd.to_datetime(row["first_price_date"], errors="coerce") > as_of_ts
+            )
+        )
+        post_last_price_excluded_count = int(
+            sum(
+                1
+                for row in candidate_status_rows
+                if row.get("last_price_date")
+                and pd.to_datetime(row["last_price_date"], errors="coerce") < as_of_ts
+            )
+        )
+        continuity_ready_count = int(
+            sum(
+                1
+                for row in candidate_status_rows
+                if row.get("first_price_date")
+                and row.get("last_price_date")
+                and pd.to_datetime(row["first_price_date"], errors="coerce") <= as_of_ts <= pd.to_datetime(row["last_price_date"], errors="coerce")
+            )
+        )
+        asset_profile_delisted_count = int(
+            sum(
+                1
+                for row in candidate_status_rows
+                if row.get("profile_delisted_at")
+                and pd.to_datetime(row["profile_delisted_at"], errors="coerce") <= as_of_ts
+            )
+        )
+        asset_profile_issue_count = int(
+            sum(
+                1
+                for row in candidate_status_rows
+                if str(row.get("profile_status") or "").lower() in {"not_found", "error"}
+            )
+        )
+        eligible_shadow = working[working["latest_available_at"] <= as_of_ts]
+        if eligible_shadow.empty:
+            membership_map[as_of_ts] = []
+            per_date_rows.append(
+                {
+                    "date": as_of_ts.strftime("%Y-%m-%d"),
+                    "membership_count": 0,
+                    "rankable_count": 0,
+                    "statement_ready_count": 0,
+                    "continuity_ready_count": continuity_ready_count,
+                    "pre_listing_excluded_count": pre_listing_excluded_count,
+                    "post_last_price_excluded_count": post_last_price_excluded_count,
+                    "asset_profile_delisted_count": asset_profile_delisted_count,
+                    "asset_profile_issue_count": asset_profile_issue_count,
+                    "turnover_count": 0,
+                }
+            )
+            snapshot_rows.append(
+                {
+                    "date": as_of_ts.strftime("%Y-%m-%d"),
+                    "members": [],
+                    "membership_count": 0,
+                    "rankable_count": 0,
+                    "statement_ready_count": 0,
+                }
+            )
+            membership_counts.append(0)
+            turnover_counts.append(0)
+            prev_members = set()
+            continue
+
+        latest_shadow = eligible_shadow.groupby("symbol", as_index=False).tail(1).reset_index(drop=True)
+        price_snapshot = price_by_date.get(as_of_ts)
+        if price_snapshot is None or price_snapshot.empty:
+            membership_map[as_of_ts] = []
+            per_date_rows.append(
+                {
+                    "date": as_of_ts.strftime("%Y-%m-%d"),
+                    "membership_count": 0,
+                    "rankable_count": 0,
+                    "statement_ready_count": int(latest_shadow["symbol"].nunique()),
+                    "continuity_ready_count": continuity_ready_count,
+                    "pre_listing_excluded_count": pre_listing_excluded_count,
+                    "post_last_price_excluded_count": post_last_price_excluded_count,
+                    "asset_profile_delisted_count": asset_profile_delisted_count,
+                    "asset_profile_issue_count": asset_profile_issue_count,
+                    "turnover_count": 0,
+                }
+            )
+            snapshot_rows.append(
+                {
+                    "date": as_of_ts.strftime("%Y-%m-%d"),
+                    "members": [],
+                    "membership_count": 0,
+                    "rankable_count": 0,
+                    "statement_ready_count": int(latest_shadow["symbol"].nunique()),
+                }
+            )
+            membership_counts.append(0)
+            turnover_counts.append(0)
+            prev_members = set()
+            continue
+
+        rankable = latest_shadow.merge(price_snapshot, on="symbol", how="inner")
+        rankable["approx_market_cap"] = rankable["shares_outstanding"] * rankable["Close"]
+        rankable = rankable[pd.to_numeric(rankable["approx_market_cap"], errors="coerce").notna()].copy()
+        rankable = rankable[rankable["approx_market_cap"] > 0].copy()
+        rankable = rankable.sort_values(["approx_market_cap", "symbol"], ascending=[False, True]).reset_index(drop=True)
+
+        members = rankable.head(min(target_size, len(rankable)))["symbol"].astype(str).tolist()
+        membership_map[as_of_ts] = members
+
+        current_members = set(members)
+        turnover_count = 0 if not prev_members else len(current_members.symmetric_difference(prev_members))
+        prev_members = current_members
+
+        membership_counts.append(len(members))
+        turnover_counts.append(turnover_count)
+        per_date_rows.append(
+            {
+                "date": as_of_ts.strftime("%Y-%m-%d"),
+                "membership_count": len(members),
+                "rankable_count": int(rankable["symbol"].nunique()),
+                "statement_ready_count": int(latest_shadow["symbol"].nunique()),
+                "continuity_ready_count": continuity_ready_count,
+                "pre_listing_excluded_count": pre_listing_excluded_count,
+                "post_last_price_excluded_count": post_last_price_excluded_count,
+                "asset_profile_delisted_count": asset_profile_delisted_count,
+                "asset_profile_issue_count": asset_profile_issue_count,
+                "turnover_count": turnover_count,
+            }
+        )
+        snapshot_rows.append(
+            {
+                "date": as_of_ts.strftime("%Y-%m-%d"),
+                "members": members,
+                "membership_count": len(members),
+                "rankable_count": int(rankable["symbol"].nunique()),
+                "statement_ready_count": int(latest_shadow["symbol"].nunique()),
+            }
+        )
+
+    avg_membership_count = float(sum(membership_counts) / len(membership_counts)) if membership_counts else 0.0
+    avg_turnover_count = (
+        float(sum(turnover_counts[1:]) / max(1, len(turnover_counts) - 1))
+        if len(turnover_counts) > 1
+        else 0.0
+    )
+
+    summary = {
+        "contract": HISTORICAL_DYNAMIC_PIT_UNIVERSE,
+        "statement_freq": statement_freq,
+        "requested_count": len(requested_tickers),
+        "input_candidate_count": input_candidate_count,
+        "candidate_pool_count": len(candidate_tickers),
+        "target_size": int(target_size),
+        "membership_dates": len(rebalance_dates),
+        "first_membership_count": int(membership_counts[0]) if membership_counts else 0,
+        "last_membership_count": int(membership_counts[-1]) if membership_counts else 0,
+        "min_membership_count": int(min(membership_counts)) if membership_counts else 0,
+        "max_membership_count": int(max(membership_counts)) if membership_counts else 0,
+        "avg_membership_count": round(avg_membership_count, 2),
+        "avg_turnover_count": round(avg_turnover_count, 2),
+        "avg_turnover_pct": round((avg_turnover_count / target_size) if target_size else 0.0, 4),
+        "statement_ready_count": int(working["symbol"].nunique()),
+        "price_window_start": price_window_df["first_price_date"].min().strftime("%Y-%m-%d") if not price_window_df.empty else None,
+        "price_window_end": price_window_df["last_price_date"].max().strftime("%Y-%m-%d") if not price_window_df.empty else None,
+        "profile_active_count": int(sum(1 for row in candidate_status_rows if str(row.get("profile_status") or "").lower() == "active")),
+        "profile_delisted_count": int(sum(1 for row in candidate_status_rows if str(row.get("profile_status") or "").lower() == "delisted")),
+        "profile_issue_count": int(sum(1 for row in candidate_status_rows if str(row.get("profile_status") or "").lower() in {"not_found", "error"})),
+        "per_date_rows": per_date_rows[:120],
+    }
+    return membership_map, summary, snapshot_rows, candidate_status_rows
+
+
+def _apply_universe_membership_to_snapshot_map(
+    snapshot_by_date: dict[pd.Timestamp, pd.DataFrame],
+    membership_map: dict[pd.Timestamp, list[str]],
+) -> dict[pd.Timestamp, pd.DataFrame]:
+    filtered_map: dict[pd.Timestamp, pd.DataFrame] = {}
+    for snapshot_date, snapshot_df in snapshot_by_date.items():
+        allowed = set(membership_map.get(pd.Timestamp(snapshot_date).normalize(), []))
+        if snapshot_df is None or snapshot_df.empty or not allowed:
+            filtered_map[pd.Timestamp(snapshot_date).normalize()] = snapshot_df.iloc[0:0].copy() if isinstance(snapshot_df, pd.DataFrame) else pd.DataFrame()
+            continue
+        filtered_map[pd.Timestamp(snapshot_date).normalize()] = (
+            snapshot_df[snapshot_df["symbol"].astype(str).str.upper().isin(allowed)].copy().reset_index(drop=True)
+        )
+    return filtered_map
+
+
+def _run_statement_shadow_snapshot_from_db(
     *,
     start=None,
     end=None,
@@ -674,41 +1170,93 @@ def get_statement_quality_snapshot_shadow_from_db(
     option="month_end",
     tickers=None,
     statement_freq="annual",
-    quality_factors=None,
+    factor_names: list[str],
     top_n=2,
     rebalance_interval=1,
+    lower_is_better_factors: list[str] | None = None,
     trend_filter_enabled=False,
     trend_filter_window=STRICT_TREND_FILTER_DEFAULT_WINDOW,
     market_regime_enabled=False,
     market_regime_window=STRICT_MARKET_REGIME_DEFAULT_WINDOW,
     market_regime_benchmark=STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
+    universe_contract: str = STATIC_MANAGED_RESEARCH_UNIVERSE,
+    dynamic_candidate_tickers=None,
+    dynamic_target_size: int | None = None,
+    return_details: bool = False,
 ):
-    if tickers is None:
-        tickers = ["AAPL", "MSFT", "GOOG"]
-    if quality_factors is None:
-        quality_factors = QUALITY_STRICT_DEFAULT_FACTORS.copy()
+    requested_tickers = _normalize_symbol_list(
+        tickers if tickers is not None else ["AAPL", "MSFT", "GOOG"]
+    )
+    if not requested_tickers:
+        raise ValueError("At least one ticker is required for statement shadow snapshot execution.")
 
-    price_dfs = _build_snapshot_strategy_price_dfs(
-        tickers,
+    candidate_tickers = requested_tickers
+    if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE:
+        candidate_tickers = _normalize_symbol_list(dynamic_candidate_tickers or requested_tickers)
+        if not candidate_tickers:
+            candidate_tickers = requested_tickers
+
+    price_dfs = _get_cached_snapshot_strategy_price_dfs(
+        symbols=candidate_tickers,
         option=option,
         start=start,
         end=end,
         timeframe=timeframe,
-        from_db=True,
         trend_filter_window=(trend_filter_window if trend_filter_enabled else None),
     )
 
     rebalance_dates = pd.to_datetime(next(iter(price_dfs.values()))["Date"]).tolist()
-    factor_history = load_statement_factors_shadow(
-        symbols=tickers,
+    factor_history = _get_cached_statement_factors_shadow(
+        symbols=list(price_dfs.keys()),
         freq=statement_freq,
         end=end,
     )
     snapshot_by_date = _build_shadow_factor_snapshot_map(
         factor_history,
         rebalance_dates=rebalance_dates,
-        factor_names=quality_factors,
+        factor_names=factor_names,
     )
+
+    universe_debug: dict[str, object] = {
+        "contract": universe_contract,
+        "requested_count": len(requested_tickers),
+        "candidate_pool_count": len(price_dfs),
+        "target_size": len(requested_tickers),
+        "membership_dates": len(rebalance_dates),
+    }
+    membership_count_map = {
+        pd.Timestamp(snapshot_date).normalize(): len(requested_tickers)
+        for snapshot_date in rebalance_dates
+    }
+
+    if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE:
+        statement_shadow = _get_cached_statement_fundamentals_shadow(
+            symbols=list(price_dfs.keys()),
+            freq=statement_freq,
+            end=end,
+        )
+        asset_profile_summary = _get_cached_asset_profile_status_summary(
+            symbols=list(price_dfs.keys())
+        )
+        membership_map, universe_debug, universe_snapshot_rows, candidate_status_rows = _build_dynamic_pit_membership_map(
+            price_dfs=price_dfs,
+            statement_shadow=statement_shadow,
+            rebalance_dates=rebalance_dates,
+            target_size=int(dynamic_target_size or len(requested_tickers)),
+            requested_tickers=requested_tickers,
+            statement_freq=statement_freq,
+            input_candidate_count=len(candidate_tickers),
+            asset_profile_summary=asset_profile_summary,
+        )
+        snapshot_by_date = _apply_universe_membership_to_snapshot_map(snapshot_by_date, membership_map)
+        membership_count_map = {
+            membership_date: len(members)
+            for membership_date, members in membership_map.items()
+        }
+    else:
+        universe_snapshot_rows = []
+        candidate_status_rows = []
+
     market_regime_df = None
     if market_regime_enabled:
         market_regime_df = _build_market_regime_overlay_df(
@@ -725,9 +1273,9 @@ def get_statement_quality_snapshot_shadow_from_db(
         price_dfs,
         snapshot_by_date,
         start_balance=10000,
-        quality_factors=quality_factors,
+        quality_factors=factor_names,
         top_n=top_n,
-        lower_is_better_factors=["debt_ratio", "debt_to_assets", "net_debt_to_equity"],
+        lower_is_better_factors=lower_is_better_factors,
         rebalance_interval=rebalance_interval,
         trend_filter_enabled=trend_filter_enabled,
         trend_filter_window=trend_filter_window,
@@ -737,11 +1285,71 @@ def get_statement_quality_snapshot_shadow_from_db(
         market_regime_df=market_regime_df,
     )
 
+    count_series = pd.to_datetime(df["Date"], errors="coerce").dt.normalize().map(membership_count_map).fillna(0).astype(int)
+    df["Universe Membership Count"] = count_series
+    df["Universe Contract"] = universe_contract
+
     df = (
         round_columns(df, cols=["Cash", "Total Balance", "End Balance", "Next Balance"], decimals=1)
         .pipe(round_columns, cols=["Total Return", "Selected Score"], decimals=3)
     )
+
+    if return_details:
+        return {
+            "result_df": df,
+            "universe_debug": universe_debug,
+            "candidate_tickers": list(price_dfs.keys()),
+            "universe_snapshot_rows": universe_snapshot_rows,
+            "candidate_status_rows": candidate_status_rows,
+        }
     return df
+
+
+def get_statement_quality_snapshot_shadow_from_db(
+    *,
+    start=None,
+    end=None,
+    timeframe="1d",
+    option="month_end",
+    tickers=None,
+    statement_freq="annual",
+    quality_factors=None,
+    top_n=2,
+    rebalance_interval=1,
+    trend_filter_enabled=False,
+    trend_filter_window=STRICT_TREND_FILTER_DEFAULT_WINDOW,
+    market_regime_enabled=False,
+    market_regime_window=STRICT_MARKET_REGIME_DEFAULT_WINDOW,
+    market_regime_benchmark=STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
+    universe_contract: str = STATIC_MANAGED_RESEARCH_UNIVERSE,
+    dynamic_candidate_tickers=None,
+    dynamic_target_size: int | None = None,
+    return_details: bool = False,
+):
+    if quality_factors is None:
+        quality_factors = QUALITY_STRICT_DEFAULT_FACTORS.copy()
+
+    return _run_statement_shadow_snapshot_from_db(
+        start=start,
+        end=end,
+        timeframe=timeframe,
+        option=option,
+        tickers=tickers,
+        statement_freq=statement_freq,
+        factor_names=quality_factors,
+        top_n=top_n,
+        lower_is_better_factors=["debt_ratio", "debt_to_assets", "net_debt_to_equity"],
+        rebalance_interval=rebalance_interval,
+        trend_filter_enabled=trend_filter_enabled,
+        trend_filter_window=trend_filter_window,
+        market_regime_enabled=market_regime_enabled,
+        market_regime_window=market_regime_window,
+        market_regime_benchmark=market_regime_benchmark,
+        universe_contract=universe_contract,
+        dynamic_candidate_tickers=dynamic_candidate_tickers,
+        dynamic_target_size=dynamic_target_size,
+        return_details=return_details,
+    )
 
 
 def get_statement_value_snapshot_shadow_from_db(
@@ -760,66 +1368,35 @@ def get_statement_value_snapshot_shadow_from_db(
     market_regime_enabled=False,
     market_regime_window=STRICT_MARKET_REGIME_DEFAULT_WINDOW,
     market_regime_benchmark=STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
+    universe_contract: str = STATIC_MANAGED_RESEARCH_UNIVERSE,
+    dynamic_candidate_tickers=None,
+    dynamic_target_size: int | None = None,
+    return_details: bool = False,
 ):
-    if tickers is None:
-        tickers = ["AAPL", "MSFT", "GOOG"]
     if value_factors is None:
         value_factors = VALUE_STRICT_DEFAULT_FACTORS.copy()
 
-    price_dfs = _build_snapshot_strategy_price_dfs(
-        tickers,
-        option=option,
+    return _run_statement_shadow_snapshot_from_db(
         start=start,
         end=end,
         timeframe=timeframe,
-        from_db=True,
-        trend_filter_window=(trend_filter_window if trend_filter_enabled else None),
-    )
-
-    rebalance_dates = pd.to_datetime(next(iter(price_dfs.values()))["Date"]).tolist()
-    factor_history = load_statement_factors_shadow(
-        symbols=tickers,
-        freq=statement_freq,
-        end=end,
-    )
-    snapshot_by_date = _build_shadow_factor_snapshot_map(
-        factor_history,
-        rebalance_dates=rebalance_dates,
+        option=option,
+        tickers=tickers,
+        statement_freq=statement_freq,
         factor_names=value_factors,
-    )
-    market_regime_df = None
-    if market_regime_enabled:
-        market_regime_df = _build_market_regime_overlay_df(
-            market_regime_benchmark,
-            option=option,
-            start=start,
-            end=end,
-            timeframe=timeframe,
-            from_db=True,
-            market_regime_window=market_regime_window,
-        )
-
-    df = quality_snapshot_equal_weight(
-        price_dfs,
-        snapshot_by_date,
-        start_balance=10000,
-        quality_factors=value_factors,
         top_n=top_n,
-        lower_is_better_factors=["per", "pbr", "psr", "pcr", "pfcr", "ev_ebit", "por"],
         rebalance_interval=rebalance_interval,
+        lower_is_better_factors=["per", "pbr", "psr", "pcr", "pfcr", "ev_ebit", "por"],
         trend_filter_enabled=trend_filter_enabled,
         trend_filter_window=trend_filter_window,
         market_regime_enabled=market_regime_enabled,
         market_regime_window=market_regime_window,
         market_regime_benchmark=market_regime_benchmark,
-        market_regime_df=market_regime_df,
+        universe_contract=universe_contract,
+        dynamic_candidate_tickers=dynamic_candidate_tickers,
+        dynamic_target_size=dynamic_target_size,
+        return_details=return_details,
     )
-
-    df = (
-        round_columns(df, cols=["Cash", "Total Balance", "End Balance", "Next Balance"], decimals=1)
-        .pipe(round_columns, cols=["Total Return", "Selected Score"], decimals=3)
-    )
-    return df
 
 
 def get_statement_quality_value_snapshot_shadow_from_db(
@@ -839,9 +1416,11 @@ def get_statement_quality_value_snapshot_shadow_from_db(
     market_regime_enabled=False,
     market_regime_window=STRICT_MARKET_REGIME_DEFAULT_WINDOW,
     market_regime_benchmark=STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
+    universe_contract: str = STATIC_MANAGED_RESEARCH_UNIVERSE,
+    dynamic_candidate_tickers=None,
+    dynamic_target_size: int | None = None,
+    return_details: bool = False,
 ):
-    if tickers is None:
-        tickers = ["AAPL", "MSFT", "GOOG"]
     if quality_factors is None:
         quality_factors = QUALITY_STRICT_DEFAULT_FACTORS.copy()
     if value_factors is None:
@@ -853,45 +1432,16 @@ def get_statement_quality_value_snapshot_shadow_from_db(
         if normalized_name and normalized_name not in combined_factors:
             combined_factors.append(normalized_name)
 
-    price_dfs = _build_snapshot_strategy_price_dfs(
-        tickers,
-        option=option,
+    return _run_statement_shadow_snapshot_from_db(
         start=start,
         end=end,
         timeframe=timeframe,
-        from_db=True,
-        trend_filter_window=(trend_filter_window if trend_filter_enabled else None),
-    )
-
-    rebalance_dates = pd.to_datetime(next(iter(price_dfs.values()))["Date"]).tolist()
-    factor_history = load_statement_factors_shadow(
-        symbols=tickers,
-        freq=statement_freq,
-        end=end,
-    )
-    snapshot_by_date = _build_shadow_factor_snapshot_map(
-        factor_history,
-        rebalance_dates=rebalance_dates,
+        option=option,
+        tickers=tickers,
+        statement_freq=statement_freq,
         factor_names=combined_factors,
-    )
-    market_regime_df = None
-    if market_regime_enabled:
-        market_regime_df = _build_market_regime_overlay_df(
-            market_regime_benchmark,
-            option=option,
-            start=start,
-            end=end,
-            timeframe=timeframe,
-            from_db=True,
-            market_regime_window=market_regime_window,
-        )
-
-    df = quality_snapshot_equal_weight(
-        price_dfs,
-        snapshot_by_date,
-        start_balance=10000,
-        quality_factors=combined_factors,
         top_n=top_n,
+        rebalance_interval=rebalance_interval,
         lower_is_better_factors=[
             "per",
             "pbr",
@@ -904,20 +1454,16 @@ def get_statement_quality_value_snapshot_shadow_from_db(
             "debt_to_assets",
             "net_debt_to_equity",
         ],
-        rebalance_interval=rebalance_interval,
         trend_filter_enabled=trend_filter_enabled,
         trend_filter_window=trend_filter_window,
         market_regime_enabled=market_regime_enabled,
         market_regime_window=market_regime_window,
         market_regime_benchmark=market_regime_benchmark,
-        market_regime_df=market_regime_df,
+        universe_contract=universe_contract,
+        dynamic_candidate_tickers=dynamic_candidate_tickers,
+        dynamic_target_size=dynamic_target_size,
+        return_details=return_details,
     )
-
-    df = (
-        round_columns(df, cols=["Cash", "Total Balance", "End Balance", "Next Balance"], decimals=1)
-        .pipe(round_columns, cols=["Total Return", "Selected Score"], decimals=3)
-    )
-    return df
 
 
 def portfolio_sample():
