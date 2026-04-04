@@ -33,6 +33,7 @@
 - `completed` saved portfolio -> compare prefill bridge
 - `completed` saved portfolio -> end-to-end rerun bridge
 - `pending` focused drilldown -> save direct bridge
+  - current first-pass closeout 범위 밖 backlog로 남긴다
 
 ## 4. Portfolio UX First Pass
 
@@ -40,6 +41,7 @@
 - `completed` `Load Into Compare` / `Run Saved Portfolio` / `Delete` action
 - `completed` weighted portfolio `Meta` 탭 추가
 - `pending` in-place edit / overwrite UX
+  - later polish backlog
 
 ## 5. Richer Portfolio Readouts
 
@@ -48,6 +50,7 @@
 - `pending` strategy-level exposure summary
 - `pending` rebalance-level change summary
 - `pending` benchmark / drawdown portfolio readout 강화
+  - current first-pass closeout 이후 backlog
 
 ## 6. Workflow Surface
 
@@ -56,22 +59,24 @@
   - `saved_portfolio_name`
 - `completed` saved portfolio first-pass 구현 요약 문서 작성
 - `pending` saved run / saved portfolio 역할 차이 문구 polish
+  - later wording backlog
 
 ## 7. Documentation And Validation
 
 - `completed` first-pass 구현 요약 문서 추가
   - `PHASE11_SAVED_PORTFOLIO_FIRST_PASS.md`
-- `in_progress` Phase 11 checklist를 현재 코드 기준으로 갱신
-- `in_progress` roadmap / index / comprehensive analysis / logs sync
+- `completed` Phase 11 checklist refresh
+- `completed` roadmap / index / logs sync
+- `completed` practical closeout 문서 작성
+  - `PHASE11_COMPLETION_SUMMARY.md`
+  - `PHASE11_NEXT_PHASE_PREPARATION.md`
 
 ## 현재 메모
 
-- Phase 11은 이제 `planned`가 아니라 **실제 active phase**다.
-- 이번 first pass의 핵심은
-  “weighted portfolio를 저장 가능한 workflow object로 승격하는 것”이다.
-- 아직 full productization closeout은 아니고,
-  남은 큰 축은
-  - edit/overwrite UX
-  - richer portfolio readouts
-  - workflow wording polish
-  쪽이다.
+- Phase 11 first pass는 practical closeout 처리한다.
+- 이번 phase의 핵심 목표였던
+  “weighted portfolio를 저장 가능한 workflow object로 승격하는 것”
+  은 달성되었다.
+- 남은 항목은 여전히 가치가 있지만,
+  current phase closeout blocker는 아니며 later backlog로 남긴다.
+- active phase는 이제 `Phase 12 real-money strategy promotion`으로 넘어간다.

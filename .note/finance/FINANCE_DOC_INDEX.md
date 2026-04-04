@@ -16,6 +16,8 @@
   - 구현 진행 로그
 - `.note/finance/QUESTION_AND_ANALYSIS_LOG.md`
   - 질의/설계/분석 결과 로그
+- `.note/finance/FINANCE_TERM_GLOSSARY.md`
+  - 퀀트 / 백테스트 / 실전형 전략 관련 반복 용어를 `기본 설명 / 왜 사용되는지 / 예시 / 필요 상황` 구조로 정리하는 공통 용어 사전
 - `.note/finance/OVERLAY_CASH_POLICY_RESEARCH.md`
   - strict factor overlay의 partial rejection을 survivor reweighting으로 볼지, cash retention으로 볼지에 대한 실무 관행 조사와 현재 프로젝트 권고 문서
 - `.note/finance/DAILY_MARKET_UPDATE_RATE_LIMIT_ANALYSIS_20260328.md`
@@ -26,6 +28,12 @@
   - 안정화 이후 속도 최적화 2차 계획 문서
 - `.note/finance/DAILY_MARKET_UPDATE_SPEED_OPTIMIZATION_IMPLEMENTATION_20260328.md`
   - execution breakdown, managed-fast profile, source별 profile 분리 구현 요약 문서
+- `.note/finance/DAILY_MARKET_UPDATE_SHORT_WINDOW_ACCELERATION_20260404.md`
+  - `1d`/짧은 daily refresh가 `20y`와 비슷하게 느린 이유를 fetch 병목 기준으로 분석하고, short-window 전용 `managed_refresh_short` profile을 도입한 구현/검증 문서
+- `.note/finance/PLAYWRIGHT_MARKET_RESEARCH_PLAYBOOK_20260331.md`
+  - Playwright를 활용한 공개정보 기반 시장/기업 조사 프레임으로, 기관형 키워드별 3단계 리서치와 반복 운용용 5단계 보강안을 함께 정리한 플레이북
+- `.note/finance/US_PUBLIC_PORTFOLIO_AND_STRATEGY_SOURCE_MAP_20260404.md`
+  - 미국 유명 기관/펀드/투자자들의 포트폴리오와 공개 전략을 어디서 봐야 하는지 공식 소스 중심으로 정리한 source map
 - `.note/finance/phase7/PHASE7_QUARTERLY_COVERAGE_AND_STATEMENT_PIT_HARDENING_PLAN.md`
   - Phase 7 전체 계획 문서
 - `.note/finance/phase7/PHASE7_CURRENT_CHAPTER_TODO.md`
@@ -114,8 +122,42 @@
   - Phase 11을 바로 열어도 흔들리지 않도록 chapter별 구현 순서와 선행 확인 사항을 정리한 준비 문서
 - `.note/finance/phase11/PHASE11_SAVED_PORTFOLIO_FIRST_PASS.md`
   - saved portfolio store, load-into-compare bridge, saved portfolio rerun, weighted result meta 보강까지 포함한 Phase 11 first-pass 구현 요약 문서
+- `.note/finance/phase11/PHASE11_COMPLETION_SUMMARY.md`
+  - saved portfolio workflow first pass를 practical closeout으로 정리한 Phase 11 종료 요약 문서
+- `.note/finance/phase11/PHASE11_NEXT_PHASE_PREPARATION.md`
+  - Phase 11 이후 real-money strategy promotion phase로 어떻게 handoff할지 정리한 문서
 - `.note/finance/phase11/PHASE11_TEST_CHECKLIST.md`
   - Phase 11 구현 이후 later batch review에서 사용할 productization checklist 문서
+- `.note/finance/phase12/PHASE12_REAL_MONEY_STRATEGY_PROMOTION_PLAN.md`
+  - 현재 전략군을 실전형 계약으로 승격하기 위한 Phase 12 상위 계획 문서
+- `.note/finance/phase12/PHASE12_CURRENT_CHAPTER_TODO.md`
+  - Phase 12 현재 실행 보드로, strategy audit / promotion contract / ETF-first hardening 순서를 관리하는 문서
+- `.note/finance/phase12/PHASE12_STRATEGY_PRODUCTION_AUDIT_MATRIX.md`
+  - current strategy family를 production-priority / baseline / research-only로 재분류한 audit 문서
+- `.note/finance/phase12/PHASE12_REAL_MONEY_PROMOTION_CONTRACT.md`
+  - 실전 전략 승격에 필요한 공통 contract를 정리한 문서
+- `.note/finance/phase12/PHASE12_ETF_REAL_MONEY_HARDENING_FIRST_PASS.md`
+  - ETF 전략 3종에 `Minimum Price`, `Transaction Cost`, benchmark overlay, gross-vs-net result surface, history/prefill contract를 first pass로 연결한 구현 요약 문서
+- `.note/finance/phase12/PHASE12_GTAA_DBC_PDBC_NO_COMMODITY_ANALYSIS.md`
+  - `GTAA`에서 `DBC`, `PDBC`, `No Commodity Sleeve`를 비교하고, ETF 자체 유사성과 전략 결과 차이가 왜 증폭되는지, 대안 ETF 후보까지 정리한 분석 문서
+- `.note/finance/phase12/PHASE12_GTAA_COMMODITY_ALTERNATIVE_CANDIDATE_ANALYSIS.md`
+  - `GTAA`에서 `CMDY`, `BCI`, `COMT` 대안 후보를 custom backfill 후 실제 백테스트에 넣어 `DBC`, `PDBC`, `No Commodity Sleeve`와 함께 비교한 분석 문서
+- `.note/finance/phase12/PHASE12_GTAA_INTERVAL1_UNIVERSE_VARIATION_SEARCH.md`
+  - `Signal Interval = 1` 고정 조건에서 GTAA universe를 10개 변형해 `CAGR`와 `MDD`가 더 좋은 조합을 찾고, 어떤 수정이 실전형 개선으로 이어지는지 정리한 분석 문서
+- `.note/finance/phase12/PHASE12_GTAA_NO_DBC_INTERVAL1_VARIATION_SEARCH.md`
+  - `DBC`를 완전히 제외한 GTAA 10개 변형을 `Signal Interval = 1` 계약으로 비교하고, no-DBC 환경에서 더 나은 `CAGR`/`MDD` 조합과 개선 방향을 정리한 분석 문서
+- `.note/finance/phase12/PHASE12_GTAA_DB_ETF_GROUP_SEARCH.md`
+  - 현재 GTAA 기본 계약(`top=3`, `interval=2`, `month_end`, `10 bps`)을 유지한 채 DB-backed ETF 그룹 18개를 비교하고, `QQQ + IAU + XLE` 중심의 개선 방향을 도출한 분석 문서
+- `.note/finance/phase12/PHASE12_GTAA_INTERVAL1_DEFAULT_REBASE_ANALYSIS.md`
+  - GTAA 기본 `Signal Interval`을 `1`로 rebased 한 뒤, 주요 preset과 상위 후보군을 공통 시작점에서 다시 비교해 현재 default cadence 기준의 우선순위를 정리한 문서
+- `.note/finance/phase12/PHASE12_GTAA_SCORE_WEIGHT_AND_RISK_OFF_FIRST_PASS.md`
+  - GTAA의 고정 `1/3/6/12` score blend를 UI에서 조절 가능하게 만들고, `Fallback Mode`, `Defensive Tickers`, `Market Regime`, `Crash Guardrail`을 포함한 risk-off contract를 first pass로 연결한 구현 문서
+- `.note/finance/phase12/PHASE12_GTAA_VS_SPY_DOMINANCE_SEARCH.md`
+  - current Phase 12 GTAA 후보군을 `SPY` benchmark와 직접 비교해, `CAGR`는 더 높고 `MDD`는 더 낮은 dominance candidate가 존재하는지 탐색하고 그 결과가 없었음을 정리한 분석 문서
+- `.note/finance/phase12/PHASE12_GTAA_CAGR9_MDD16_TARGET_SEARCH.md`
+  - GTAA manual universe를 더 넓게 확장하고 `top / interval / score horizon`을 재조정해, `CAGR >= 9%`와 `MDD >= -16%`를 동시에 만족하는 실전형 candidate를 찾은 분석 문서
+- `.note/finance/phase12/PHASE12_TEST_CHECKLIST.md`
+  - Phase 12 real-money hardening 결과를 later batch review로 검수하기 위한 checklist 문서
 
 ---
 

@@ -2498,3 +2498,639 @@ Keep entries append-only and concise.
 - Added compare prefill + deferred weight/date-policy prefill so saved portfolios can be brought back into the compare screen without manual re-entry.
 - Added weighted portfolio `Meta` tab and saved-portfolio context linkage in history.
 - Synced Phase 11 roadmap/TODO/checklist/docs to reflect that Phase 11 is now `in_progress`.
+
+### 2026-03-31 - Added Playwright-based public market research playbook
+
+- Added `.note/finance/PLAYWRIGHT_MARKET_RESEARCH_PLAYBOOK_20260331.md`.
+- Organized institution-themed market-research requests into public-source workflows for:
+  - screening
+  - DCF valuation
+  - earnings analysis
+  - portfolio construction
+  - technical analysis
+  - dividend/income strategy
+  - competitor analysis
+  - pattern detection
+  - macro impact assessment
+- Fixed the playbook around a shared three-stage process:
+  - source mapping / collection
+  - structured parsing / normalization
+  - synthesis / decision memo
+- Synced the new research note into `FINANCE_DOC_INDEX.md`.
+- Appended durable analysis context to `QUESTION_AND_ANALYSIS_LOG.md`.
+
+### 2026-04-01 - Strengthened the Playwright research playbook for repeated use
+
+- Expanded `.note/finance/PLAYWRIGHT_MARKET_RESEARCH_PLAYBOOK_20260331.md` beyond the original lightweight three-step flow.
+- Added a repeatable five-stage operating model with:
+  - research brief / decision contract
+  - source mapping
+  - structured parsing
+  - synthesis
+  - validation / contradiction review / refresh planning
+- Added cross-cutting guidance for:
+  - point-in-time and filing acceptance timing
+  - ticker vs CIK/accession identity handling
+  - macro vintage / revision management
+  - official-source precedence
+  - API-first collection and Playwright evidence capture
+  - fair-access / rate-limit compliance
+  - trace/download preservation
+  - refresh-policy management
+- Updated the finance document index description and appended the durable analysis result.
+
+### 2026-04-04 - Added a US public portfolio/strategy source map for discovery-stage research
+
+- Added `.note/finance/US_PUBLIC_PORTFOLIO_AND_STRATEGY_SOURCE_MAP_20260404.md`.
+- Organized the discovery layer for finding public portfolios and disclosed strategies of notable US institutions, funds, and investors.
+- Fixed the core source stack around:
+  - SEC 13F
+  - SEC 13D / 13G
+  - SEC N-PORT
+  - official annual reports / investor letters / product holdings pages / methodology pages
+- Added representative official examples for Berkshire, Pershing, Bridgewater, Third Point, Icahn, Renaissance, BlackRock/iShares, ARK, and Harvard Management Company.
+- Synced the new source map into `FINANCE_DOC_INDEX.md`.
+- Appended the durable discovery-model summary to `QUESTION_AND_ANALYSIS_LOG.md`.
+
+### 2026-04-01 - Phase 11 practical closeout and Phase 12 kickoff
+
+- Recorded Phase 11 as first-pass practical closeout after saved-portfolio workflow validation.
+- Added:
+  - `phase11/PHASE11_COMPLETION_SUMMARY.md`
+  - `phase11/PHASE11_NEXT_PHASE_PREPARATION.md`
+- Opened Phase 12 as the new active phase for real-money strategy promotion.
+- Added Phase 12 planning/execution docs:
+  - `phase12/PHASE12_REAL_MONEY_STRATEGY_PROMOTION_PLAN.md`
+  - `phase12/PHASE12_CURRENT_CHAPTER_TODO.md`
+  - `phase12/PHASE12_STRATEGY_PRODUCTION_AUDIT_MATRIX.md`
+  - `phase12/PHASE12_REAL_MONEY_PROMOTION_CONTRACT.md`
+  - `phase12/PHASE12_TEST_CHECKLIST.md`
+- Fixed the next implementation order around:
+  - ETF strategy hardening first
+  - strict annual family promotion second
+  - quarterly strict prototype family hold
+- Synced roadmap, document index, and Phase 11/12 phase boards to reflect that Phase 12 is now the active direction.
+- No finance code paths were changed in this step; this was a phase-management and real-money strategy planning update.
+
+### 2026-04-01 - Clarified the real-money promotion contract wording for Phase 12
+
+- Expanded `phase12/PHASE12_REAL_MONEY_PROMOTION_CONTRACT.md` so the `공통 계약 축` section is easier to read.
+- Added plain-language explanations for:
+  - `Universe / Data Contract`
+  - `Investability Filter`
+  - `Turnover / Transaction Cost`
+  - `Portfolio Guardrail`
+  - `Validation Surface`
+- Added “why this matters” guidance for each axis so the document reads as an operator/decision aid rather than only as compressed policy language.
+- No code paths changed; this was a documentation clarification update for Phase 12 kickoff.
+
+### 2026-04-01 - Added a durable documentation-writing rule for future phase docs
+
+- Updated `AGENTS.md` so future phase/policy/real-money guidance documents should include plain-language explanations for important concepts instead of leaving them as compressed jargon only.
+- Added a preferred structure:
+  - what this means
+  - why it matters
+- Goal: keep future finance phase documents understandable on first pass without losing technical precision.
+
+### 2026-04-01 - Clarified the Phase 12 strategy promotion plan wording in plain language
+
+- Expanded `phase12/PHASE12_REAL_MONEY_STRATEGY_PROMOTION_PLAN.md` with easier explanations for:
+  - the overall phase goal
+  - strategy classification buckets
+  - promotion / hardening / audit terminology
+  - chapter-by-chapter intent
+  - why ETF-first / annual-next / quarterly-hold is the recommended order
+- Goal: make the plan read as a practical guide, not only as compressed policy shorthand.
+
+### 2026-04-01 - Added a terminology section to the Phase 12 strategy promotion plan
+
+- Expanded `phase12/PHASE12_REAL_MONEY_STRATEGY_PROMOTION_PLAN.md` with a dedicated glossary-style section.
+- Added short definitions for recurring planning terms such as:
+  - `prototype`
+  - `research-only`
+  - `public-candidate`
+  - `production-grade`
+  - `promotion`
+  - `hardening`
+  - `candidate`
+  - `strategy family`
+  - `baseline`
+  - `universe semantics`
+  - `dynamic PIT`
+  - `hold`
+  - `checklist`
+- Goal: make the Phase 12 plan self-explanatory without requiring extra chat interpretation of each planning term.
+
+### 2026-04-01 - Added a glossary for the Phase 12 real-money promotion contract
+
+- Expanded `phase12/PHASE12_REAL_MONEY_PROMOTION_CONTRACT.md` with a dedicated terminology section.
+- Added short definitions for recurring terms such as:
+  - `contract`
+  - `universe`
+  - `managed static research universe`
+  - `historical dynamic PIT universe`
+  - `look-ahead bias`
+  - `survivorship bias`
+  - `investability`
+  - `turnover`
+  - `slippage`
+  - `portfolio guardrail`
+  - `production candidate`
+  - `real-money candidate`
+- Goal: let the user/operator read the common promotion contract without needing extra chat clarification for each term.
+
+### 2026-04-01 - Phase 12 ETF real-money hardening first pass
+
+- Implemented Phase 12 ETF hardening first pass across:
+  - `finance/strategy.py`
+  - `finance/sample.py`
+  - `app/web/runtime/backtest.py`
+  - `app/web/runtime/history.py`
+  - `app/web/pages/backtest.py`
+- Added common ETF real-money inputs:
+  - `Minimum Price`
+  - `Transaction Cost (bps)`
+  - `Benchmark Ticker`
+- Added missing single-strategy knobs so ETF forms are closer to compare parity:
+  - `Risk Parity Trend`: rebalance interval, vol window
+  - `Dual Momentum`: top assets, rebalance interval
+- Added strategy-level `min_price` investability filter to:
+  - `GTAA`
+  - `Risk Parity Trend`
+  - `Dual Momentum`
+- Added runtime post-process for ETF strategies:
+  - `Gross Total Balance`
+  - `Gross Total Return`
+  - `Turnover`
+  - `Estimated Cost`
+  - `Cumulative Estimated Cost`
+  - `Net Total Balance`
+  - `Net Total Return`
+- Added benchmark overlay first pass:
+  - `benchmark_chart_df`
+  - `benchmark_summary_df`
+  - benchmark availability / end-balance / excess-balance meta
+- Added single-strategy `Real-Money` tab and compare-level real-money readout.
+- Synced history/prefill/saved-portfolio compare context so:
+  - `min_price_filter`
+  - `transaction_cost_bps`
+  - `benchmark_ticker`
+  round-trip through `Load Into Form`, `Run Again`, and compare overrides.
+- Verified compile and DB-backed smoke:
+  - `GTAA`
+  - `Risk Parity Trend`
+  - `Dual Momentum`
+  - compare override path
+  - history payload path
+
+### 2026-04-01 - Clarified Phase 12 ETF result-table metric meaning and strict-annual checklist scope
+
+- Added a plain-language interpretation block to `phase12/PHASE12_ETF_REAL_MONEY_HARDENING_FIRST_PASS.md` for:
+  - `Turnover`
+  - `Gross Total Balance`
+  - `Total Balance`
+  - `Estimated Cost`
+  - `Cumulative Estimated Cost`
+- Updated `phase12/PHASE12_TEST_CHECKLIST.md` so `Strict Annual Family Promotion Surface` is explicitly marked as a later target, not an already-implemented expectation in the ETF-first pass.
+
+### 2026-04-01 - Added a shared finance term glossary
+
+- Added `.note/finance/FINANCE_TERM_GLOSSARY.md` as a cross-phase glossary for recurring quant / backtest / real-money terminology.
+- Seeded the glossary with current recurring terms such as:
+  - `Universe Contract`
+  - `Historical Dynamic PIT Universe`
+  - `Turnover`
+  - `Transaction Cost`
+  - `Benchmark`
+  - `Portfolio Guardrail`
+- Updated `AGENTS.md` so future recurring terms should be added to the glossary using:
+  - `기본 설명`
+  - `왜 사용되는지`
+  - `예시 / 필요 상황`
+- Updated `FINANCE_DOC_INDEX.md` so the glossary is part of the durable finance documentation set.
+
+### 2026-04-02 - Swapped the default GTAA commodity sleeve from DBC to PDBC
+
+- Updated the current GTAA default universe to use `PDBC` instead of `DBC`.
+- Synced the change across:
+  - `app/web/pages/backtest.py`
+  - `finance/sample.py`
+- Kept the change at the default/preset layer so:
+  - GTAA preset execution
+  - compare defaults
+  - manual default ticker input
+  - sample entrypoints
+  all point to the same current baseline universe.
+- Updated Phase 12 and finance analysis docs so the current GTAA default universe change is explicit.
+
+### 2026-04-02 - Added a DBC comparison preset for GTAA
+
+- Kept `GTAA Universe` as the current default preset using `PDBC`.
+- Added `GTAA Universe (DBC)` as an alternate preset so the user can compare `PDBC` vs `DBC` without switching to manual ticker entry.
+- Added small UI captions clarifying which preset uses `PDBC` and which one uses `DBC`.
+- Updated the Phase 12 ETF hardening note so the alternate DBC preset is documented.
+
+### 2026-04-02 - Added a no-commodity GTAA comparison preset
+
+- Added `GTAA Universe (No Commodity Sleeve)` so the user can compare GTAA with both `PDBC` and `DBC` removed from the universe.
+- Added a UI caption clarifying that this preset excludes both commodity sleeve tickers.
+- Updated the Phase 12 ETF hardening note so the third GTAA preset is documented.
+
+### 2026-04-02 - Analyzed GTAA DBC vs PDBC vs no-commodity sleeve behavior
+
+- Ran DB-backed GTAA comparisons for:
+  - `PDBC`
+  - `DBC`
+  - `No Commodity Sleeve`
+- Confirmed that `DBC` and `PDBC` are highly similar at the standalone ETF level, but GTAA amplifies small differences because it uses:
+  - top-3 ranking
+  - `MA200` trend filter
+  - cash fallback
+  - interval-based rebalance anchoring
+- Identified a major structural driver in the current default-like comparison:
+  - with `Signal Interval = 2`, `PDBC` starts later, so the usable start date and the entire every-other-month rebalance cadence shift
+- Verified that even after normalizing to a common start date, `DBC` still outperformed:
+  - `PDBC`
+  - `No Commodity Sleeve`
+- Added a dedicated Phase 12 analysis note with:
+  - root-cause breakdown
+  - result tables
+  - practical interpretation
+  - alternative commodity ETF candidates and official source links
+
+### 2026-04-02 - Backfilled and tested GTAA commodity alternative candidates
+
+- Backfilled targeted daily price history for:
+  - `CMDY`
+  - `BCI`
+  - `COMT`
+- Confirmed DB coverage after backfill and then ran GTAA comparisons across:
+  - `DBC`
+  - `PDBC`
+  - `CMDY`
+  - `BCI`
+  - `COMT`
+  - `No Commodity Sleeve`
+- Compared both:
+  - current-contract runs
+  - common-start normalized runs
+- Found that:
+  - `DBC` remains the strongest sleeve in current GTAA tests
+  - among K-1-free alternatives, `COMT` and `CMDY` are the most plausible next candidates
+  - however, both still lagged `No Commodity Sleeve` in the normalized comparison
+- Added a dedicated candidate-analysis note with:
+  - official ETF information
+  - DB backfill status
+  - `CAGR` / `MDD` comparison tables
+  - practical recommendation ordering
+
+### 2026-04-02 - Ran a 10-configuration GTAA interval-1 universe variation search
+
+- Fixed the GTAA search contract to:
+  - `Signal Interval = 1`
+  - `month_end`
+  - `top = 3`
+  - `Minimum Price = 5`
+  - `Transaction Cost = 10 bps`
+- Backfilled additional ETF history for:
+  - `TIP`
+  - `QUAL`
+  - `USMV`
+  - `VEA`
+- Tested 10 GTAA universe variants including:
+  - current `PDBC`
+  - `DBC`
+  - no commodity
+  - `DBC` plus `TIP`
+  - `DBC` plus `QUAL`
+  - `DBC` plus `USMV`
+  - `DBC` plus `VEA`
+  - multi-add variants
+- Found the most promising real-money improvement directions were:
+  - `DBC + USMV`
+  - `DBC + QUAL + USMV`
+- Confirmed that:
+  - `USMV` improved both `CAGR` and `MDD` relative to `DBC` base
+  - `QUAL` alone helped `CAGR` but worsened `MDD`
+  - `TIP` was selected rarely and is not currently a strong GTAA improvement lever
+- Added a dedicated search note summarizing:
+  - all 10 backtests
+  - candidate rationale
+  - result ranking
+  - practical GTAA modification guidance
+
+### 2026-04-02 - Ran a no-DBC GTAA interval-1 variation search
+
+- Built a second 10-run GTAA search where `DBC` was fully excluded.
+- Tested practical no-DBC families built around:
+  - `PDBC`
+  - `COMT`
+  - `CMDY`
+  - `BCI`
+  - `No Commodity`
+  plus:
+  - `QUAL`
+  - `USMV`
+- Compared both:
+  - current full-history runs
+  - common-start `2020-01-31` normalized runs
+- Found the strongest no-DBC candidates were:
+  - `No Commodity + QUAL + USMV`
+  - `COMT + QUAL + USMV`
+- Confirmed that in the no-DBC setting:
+  - `QUAL + USMV` additions mattered more than picking a different commodity sleeve
+  - `PDBC` remained weak even after additive tweaks
+- Added a dedicated note summarizing the 10-run no-DBC comparison and practical recommendation ordering.
+
+### 2026-04-02 - Added recommended no-DBC GTAA presets based on the search results
+
+- Added two GTAA comparison presets to the Backtest UI:
+  - `GTAA Universe (COMT + QUAL + USMV)`
+  - `GTAA Universe (No Commodity + QUAL + USMV)`
+- These were chosen from the no-DBC interval-1 search as the most practical next-step presets to test:
+  - keep commodity via `COMT` while adding `QUAL` and `USMV`
+  - remove commodity entirely while adding `QUAL` and `USMV`
+- Kept the current default preset unchanged:
+  - `GTAA Universe` still uses `PDBC`
+
+### 2026-04-04 - Daily Market Update short-window acceleration implemented
+
+- Investigated why `Daily Market Update` on `Profile Filtered Stocks + ETFs` still took about `2,384 sec` even for a short refresh.
+- Confirmed from the latest broad managed run that the bottleneck was almost entirely provider fetch time:
+  - `fetch_sec = 2367.96`
+  - `delete_sec = 2.663`
+  - `upsert_sec = 2.758`
+  - `batch_count = 178`
+  - `rate_limited_symbols = 0`
+- Concluded that `1d` and `20y` felt similarly slow because wall time was dominated by batch fetch overhead, not rows written.
+- Added a new OHLCV execution profile:
+  - `managed_refresh_short`
+- Routed short-window daily managed refreshes to that profile:
+  - managed source
+  - `interval = 1d`
+  - `period = 1d`
+  - or explicit date span roughly `10` days or shorter
+- Kept long historical fetches and raw broad sweeps on their previous profiles so earlier rate-limit stabilization is preserved.
+- Tuned the new profile from measured local comparison on the same managed-symbol sample:
+  - `managed_fast` baseline on `240` symbols: `40.221 sec`
+  - `60x2` trial: `36.365 sec`
+  - `70x2` trial: `23.886 sec`
+  - adopted `chunk_size = 70`, `max_workers = 2`, `sleep = 0.01`
+- Added a dedicated implementation note:
+  - `.note/finance/DAILY_MARKET_UPDATE_SHORT_WINDOW_ACCELERATION_20260404.md`
+
+### 2026-04-04 - Fixed GTAA preset refresh UX and ran a DB-backed ETF group search under the current contract
+
+- Fixed a GTAA Backtest UX issue where changing the preset did not immediately refresh the `Selected tickers` preview.
+- Moved the GTAA universe-mode / preset / manual-ticker controls outside the submit form so preset changes rerender immediately.
+- Backfilled additional ETF histories needed for a broader GTAA search:
+  - `XLP`, `XLU`, `XLV`, `XLE`, `SHY`, `AGG`, `HYG`, `IAU`, `VEU`, `VWO`, `EWJ`, `VUG`, `VTV`, `RSP`, `ACWV`, `VGK`
+- Ran an 18-group DB-backed GTAA search under the current default-style contract:
+  - `start = 2016-01-01`
+  - `end = 2026-04-02`
+  - `top = 3`
+  - `signal interval = 2`
+  - `month_end`
+  - `min_price = 5`
+  - `transaction_cost = 10 bps`
+- Used theme-based ETF groups rather than random combinations:
+  - growth leadership
+  - quality / low-volatility
+  - defensive sectors
+  - bond-menu expansion
+  - alternative / inflation / cyclicality
+- Confirmed that the strongest additive direction in the current GTAA contract is centered on:
+  - `QQQ`
+  - `IAU`
+  - `XLE`
+- Best current result from the focused follow-up:
+  - `Base + QQQ + QUAL + USMV + XLE + IAU`
+  - `CAGR = 11.50%`
+  - `MDD = -16.69%`
+  - `Sharpe = 1.184`
+- Simpler runner-up:
+  - `Base + QQQ + XLE + IAU + TIP`
+  - `CAGR = 11.02%`
+  - `MDD = -16.69%`
+  - `TIP` looked largely redundant in actual selection counts
+- Observed that:
+  - extra bond menu expansion (`AGG`, `HYG`, `SHY`, `TIP`) added little because the base universe already carries strong bond sleeves
+  - defensive-sector-only additions (`XLP`, `XLU`, `XLV`) hurt CAGR more than they helped drawdown
+  - `QUAL` and `USMV` work better as supporting broadeners than as the primary engine
+- Saved the full study as:
+  - `.note/finance/phase12/PHASE12_GTAA_DB_ETF_GROUP_SEARCH.md`
+
+### 2026-04-04 - Rebased GTAA default signal interval to 1 and reran the main candidates under the new default
+
+- Changed the GTAA default signal interval from `2` to `1` across:
+  - single-strategy default input
+  - compare default input
+  - history / `Load Into Form` fallback
+  - saved-portfolio compare override fallback
+  - runtime/sample helper defaults
+- Kept explicit historical payload values intact; only missing-value fallbacks were rebased.
+- Ran a normalized interval-1 comparison on the main GTAA candidates using a common start date (`2016-08-31`) so `PDBC`-based and non-`PDBC` universes are compared more fairly.
+- Interval-1 results still favored the same broad direction:
+  - `Base + QQQ + QUAL + USMV + XLE + IAU`
+    - `CAGR = 11.41%`
+    - `MDD = -21.96%`
+  - `Base + QQQ + XLE + IAU + TIP`
+    - `CAGR = 10.08%`
+    - `MDD = -21.60%`
+- Among already-exposed UI presets, the strongest interval-1 choices were:
+  - `GTAA Universe (No Commodity + QUAL + USMV)` for higher CAGR
+  - `GTAA Universe (DBC)` for slightly lower MDD
+- Confirmed that rebasing interval to `1` does not by itself fix the relative weakness of the current default `PDBC` preset.
+- Saved the rerun note as:
+  - `.note/finance/phase12/PHASE12_GTAA_INTERVAL1_DEFAULT_REBASE_ANALYSIS.md`
+
+### 2026-04-04 - Simplified GTAA preset surface to the default plus the current top three candidates
+
+- Removed older comparison/experiment presets from the GTAA preset list so the UI no longer presents every historical search branch.
+- Kept only:
+  - `GTAA Universe`
+  - `GTAA Universe (No Commodity + QUAL + USMV)`
+  - `GTAA Universe (QQQ + XLE + IAU + TIP)`
+  - `GTAA Universe (QQQ + QUAL + USMV + XLE + IAU)`
+- This keeps the default benchmark universe available while also surfacing the three strongest Phase 12 candidate directions without forcing manual ticker edits.
+
+### 2026-04-04 - Added GTAA score-weight controls and a first-pass configurable risk-off contract
+
+- Extended GTAA so the score blend is no longer fixed to a hardcoded equal average of `1M / 3M / 6M / 12M`.
+- Added user-facing score-weight inputs for:
+  - `1M Weight`
+  - `3M Weight`
+  - `6M Weight`
+  - `12M Weight`
+- Added a first-pass GTAA risk-off contract surface:
+  - `Trend Filter Window`
+  - `Fallback Mode` (`Cash Only` vs `Defensive Bond Preference`)
+  - `Defensive Tickers`
+  - `Market Regime Overlay`
+  - `Crash Guardrail`
+- Implemented weighted score computation in `finance.transform.add_avg_score(...)`.
+- Reworked GTAA sample/runtime path so GTAA can now run with:
+  - custom score weights
+  - custom trend filter window
+  - defensive bond fallback
+  - benchmark-based market regime gating
+  - benchmark drawdown-based crash guardrail
+- Extended GTAA history/prefill/save/compare flow so the new contract values round-trip instead of getting lost after execution.
+- Added result/debug columns so GTAA runs can now show:
+  - `Defensive Fallback Count`
+  - `Regime State`
+  - `Crash Guardrail Triggered`
+  - `Risk-Off Reason`
+- Saved the implementation note as:
+  - `.note/finance/phase12/PHASE12_GTAA_SCORE_WEIGHT_AND_RISK_OFF_FIRST_PASS.md`
+
+### 2026-04-04 - Expanded GTAA score controls from fixed 1/3/6/12 weights to editable month-horizon rows
+
+- The first GTAA score UI only allowed changing the weights of a fixed `1M / 3M / 6M / 12M` blend.
+- Reworked it into a row-based score editor:
+  - default rows: `1M`, `3M`, `6M`, `12M`
+  - user can remove rows
+  - user can add new month horizons such as `9M`
+  - duplicate month rows are blocked
+- Kept the default behavior unchanged:
+  - initial rows are still `1M / 3M / 6M / 12M`
+  - initial weights are all `1`
+- Wired the new `score_lookback_months` / derived `score_return_columns` contract through:
+  - single GTAA form
+  - compare GTAA override block
+  - runtime meta/history
+  - history `Load Into Form`
+  - saved override prefill
+- Verified with a DB-backed GTAA smoke run that custom rows like:
+  - `1M, 3M, 9M`
+  correctly reach runtime/meta as:
+  - `score_lookback_months=[1,3,9]`
+  - `score_return_columns=['1MReturn','3MReturn','9MReturn']`
+
+### 2026-04-04 - Simplified GTAA score UI back down to equal-weight horizon selection
+
+- The row-based add/remove editor worked functionally, but it made the GTAA UI heavier than the user wanted.
+- Simplified the GTAA score surface back to a cleaner selector:
+  - fixed selectable horizons: `1M / 3M / 6M / 12M`
+  - no visible weight inputs
+  - all selected horizons are treated equally
+- Kept the default behavior as:
+  - `1M / 3M / 6M / 12M` all selected
+  - equal weighting across the selected horizons
+- Reintegrated the score selector into the GTAA form / compare expander so the UI flow feels like the previous version again.
+- Adjusted runtime metadata so `score_weights` now matches the selected horizons instead of retaining the old full default dict when fewer horizons are chosen.
+
+### 2026-04-04 - Ran a GTAA vs SPY dominance search and documented that no tested Phase 12 configuration beat SPY on both CAGR and MDD
+
+- Defined the practical test as:
+  - `GTAA` candidate CAGR must be strictly higher than `SPY`
+  - `GTAA` candidate MDD must be less negative than `SPY`
+- Rebased the comparison to a common start point:
+  - `2016-08-31`
+- Measured the `SPY` baseline:
+  - `CAGR 12.21%`
+  - `MDD -24.80%`
+- Ran two search passes:
+  - base GTAA dominance search across universe / horizon / risk-off combinations
+  - overlay-extended dominance search with `Regime`, `Crash`, `Regime + Crash`
+- Result:
+  - no tested Phase 12 GTAA configuration dominated `SPY` on both axes
+- Closest offensive candidate:
+  - `GTAA Universe (QQQ + XLE + IAU + TIP)` or `GTAA Universe (QQQ + XLE + IAU)`
+  - `Score Horizons = 1/3/6`
+  - `CAGR 11.90%`
+  - `MDD -20.03%`
+- Strongest defensive candidate:
+  - `GTAA Universe (No Commodity + QUAL + USMV)`
+  - `CAGR 8.96%`
+  - `MDD -16.17%`
+- Saved the durable note as:
+  - `.note/finance/phase12/PHASE12_GTAA_VS_SPY_DOMINANCE_SEARCH.md`
+
+### 2026-04-04 - Found a GTAA candidate that meets the practical CAGR 9 / MDD 16 floor
+
+- Expanded the GTAA search to broader manual universes and tightened the contract around a more favorable cadence.
+- Best practical-floor candidate:
+  - universe: `QQQ|VUG|RSP|VTV|QUAL|USMV|XLE|IAU|TIP|TLT|LQD|ACWV|SPY`
+  - `top=2`
+  - `interval=2`
+  - `Score Horizons = 1/3`
+  - `risk-off = cash_only`
+- Result:
+  - `CAGR 12.90%`
+  - `MDD -11.10%`
+- Saved the durable note as:
+  - `.note/finance/phase12/PHASE12_GTAA_CAGR9_MDD16_TARGET_SEARCH.md`
+
+### 2026-04-04 - Expanded the GTAA practical-floor search with cadence follow-up and found stronger target hits
+
+- Extended the search to:
+  - 6 universe groups
+  - `top=2/3/4`
+  - score horizons `1/3`, `1/3/6`, `1/3/6/12`
+  - `cash_only` and `defensive_bond_preference`
+  - `interval=1` first pass
+  - `interval=2/3` on the strongest universe groups
+- Total search size:
+  - `180` DB-backed backtests
+- Result:
+  - `88` target hits satisfying:
+    - `CAGR >= 9%`
+    - `MDD >= -16%`
+- Best offensive candidate:
+  - `U3_commodity`
+  - `interval=3`
+  - `top=2`
+  - `horizons=1/3/6`
+  - `CAGR 16.66%`
+  - `MDD -11.29%`
+- Best balanced candidate:
+  - `U1_offensive`
+  - `interval=3`
+  - `top=2`
+  - `horizons=1/3/6/12`
+  - `CAGR 16.25%`
+  - `MDD -10.59%`
+- Best defensive candidate:
+  - `U5_smallcap_value`
+  - `interval=3`
+  - `top=3`
+  - `horizons=1/3/6/12`
+  - `CAGR 12.04%`
+  - `MDD -9.79%`
+- Saved the durable note as:
+  - `.note/finance/phase12/PHASE12_GTAA_CAGR9_MDD16_TARGET_SEARCH.md`
+
+### 2026-04-04 - Added verified GTAA candidate-base presets to the UI
+
+- Added three GTAA universe presets backed by the verified practical-floor search:
+  - `GTAA Universe (U3 Commodity Candidate Base)`
+  - `GTAA Universe (U1 Offensive Candidate Base)`
+  - `GTAA Universe (U5 Smallcap Value Candidate Base)`
+- Added captions that show the best validated contract for each preset base:
+  - recommended `top`
+  - recommended `interval = 3`
+  - recommended `Score Horizons`
+- Kept the existing default and earlier comparison presets intact.
+
+### 2026-04-04 - Extended GTAA universe selection into compare mode and added a real-money candidate decision table
+
+- Added the GTAA `Preset` / `Manual` universe selector to `Compare & Portfolio Builder`.
+- Kept the selector outside the compare submit form so preset changes refresh the ticker preview immediately.
+- Wired the compare GTAA universe contract through:
+  - compare execution
+  - history/saved-portfolio prefill
+  - saved strategy override restoration
+- Expanded `.note/finance/phase12/PHASE12_GTAA_CAGR9_MDD16_TARGET_SEARCH.md` with a candidate decision table:
+  - offensive
+  - balanced
+  - defensive
+
+### 2026-04-04 - Equal Weight compare mode now exposes the same universe contract as single mode
+
+- Added `Equal Weight Universe` selection to `Compare & Portfolio Builder`.
+- Compare now supports:
+  - `Preset` / `Manual`
+  - immediate ticker preview refresh
+  - compare execution using the selected equal-weight ticker set
+  - prefill / saved-portfolio restoration of equal-weight universe choice

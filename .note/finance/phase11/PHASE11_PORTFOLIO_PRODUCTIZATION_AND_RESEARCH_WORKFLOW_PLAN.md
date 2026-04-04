@@ -8,10 +8,11 @@
 
 ## 현재 상태 메모
 
-- Phase 11은 이제 실제 active phase다.
-- current first-pass slice는
+- Phase 11은 first-pass practical closeout 상태다.
+- current implemented slice는
   **saved portfolio contract + load/rerun workflow**
-  로 고정되었다.
+  까지다.
+- richer portfolio readout / overwrite UX 같은 항목은 later backlog로 남는다.
 
 ## 왜 이 phase가 필요한가
 
