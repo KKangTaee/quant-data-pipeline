@@ -105,7 +105,22 @@ def equal_weight(
 
 
 
-def gtaa3(dfs:dict, start_balance:int, top:int, filter_ma:str) ->dict:
+def gtaa3(
+    dfs: dict,
+    start_balance: int,
+    top: int,
+    filter_ma: str,
+    min_price: float = 0.0,
+    score_col: str = "Avg Score",
+    risk_off_mode: str = "cash_only",
+    defensive_tickers: list[str] | None = None,
+    risk_overlay_df: pd.DataFrame | None = None,
+    market_regime_enabled: bool = False,
+    market_regime_window: int = 200,
+    market_regime_benchmark: str | None = None,
+    crash_guardrail_enabled: bool = False,
+    crash_guardrail_drawdown_threshold: float = 0.15,
+) -> dict:
     """
         gtaa3 전략
             * dfs 에서 평균 수익률 이 높은  top개를 뽑음
@@ -124,6 +139,30 @@ def gtaa3(dfs:dict, start_balance:int, top:int, filter_ma:str) ->dict:
 
     tickers = list(dfs.keys())
     n_assets = top
+    defensive_set = {
+        ticker for ticker in (defensive_tickers or [])
+        if ticker in tickers
+    }
+
+    if risk_off_mode not in {"cash_only", "defensive_bond_preference"}:
+        raise ValueError("risk_off_mode must be one of {'cash_only', 'defensive_bond_preference'}.")
+
+    regime_by_date: dict[pd.Timestamp, dict[str, float | str | bool]] = {}
+    active_regime_col = f"MA{market_regime_window}"
+    if risk_overlay_df is not None and not risk_overlay_df.empty:
+        working_overlay = risk_overlay_df.copy()
+        working_overlay["Date"] = pd.to_datetime(working_overlay["Date"], errors="coerce")
+        working_overlay = working_overlay.dropna(subset=["Date"]).sort_values("Date")
+        for _, overlay_row in working_overlay.iterrows():
+            overlay_date = pd.Timestamp(overlay_row["Date"]).normalize()
+            regime_close = pd.to_numeric(overlay_row.get("Close"), errors="coerce")
+            regime_trend = pd.to_numeric(overlay_row.get(active_regime_col), errors="coerce")
+            crash_drawdown = pd.to_numeric(overlay_row.get("Crash Drawdown"), errors="coerce")
+            regime_by_date[overlay_date] = {
+                "close": float(regime_close) if pd.notna(regime_close) else np.nan,
+                "trend": float(regime_trend) if pd.notna(regime_trend) else np.nan,
+                "crash_drawdown": float(crash_drawdown) if pd.notna(crash_drawdown) else np.nan,
+            }
 
     base_df = dfs[tickers[0]].sort_values("Date").reset_index(drop=True)
     dates = base_df["Date"]
@@ -138,18 +177,83 @@ def gtaa3(dfs:dict, start_balance:int, top:int, filter_ma:str) ->dict:
     for i, date in enumerate(dates):
 
         closes = [dfs[t].iloc[i]["Close"] for t in tickers]
-        scores = [dfs[t].iloc[i]['Avg Score'] for t in tickers]
+        scores = [dfs[t].iloc[i][score_col] for t in tickers]
         mas = [dfs[t].iloc[i][filter_ma] for t in tickers]
 
         top_idx = np.argsort(scores)[-n_assets:][::-1]
         next_ticker = [tickers[i] for i in top_idx]
+        raw_selected_tickers = next_ticker.copy()
+        raw_selected_scores = [float(scores[idx]) for idx in top_idx]
 
         # 필터 후 결정된 티커들만 수집
         next_ticker_to_index = [
             (ticker, idx)
             for ticker, idx in zip(next_ticker, top_idx)
-            if closes[idx] >= mas[idx]
+            if closes[idx] >= mas[idx] and _passes_min_price(closes[idx], min_price)
         ]
+        overlay_rejected_tickers = [ticker for ticker in next_ticker if ticker not in {t for t, _ in next_ticker_to_index}]
+        defensive_fill_tickers: list[str] = []
+
+        current_date = pd.to_datetime(date).normalize()
+        regime_state = "off"
+        regime_close_now = np.nan
+        regime_trend_now = np.nan
+        crash_drawdown_now = np.nan
+        crash_guardrail_triggered = False
+        risk_off_reasons: list[str] = []
+
+        overlay_state = regime_by_date.get(current_date)
+        if market_regime_enabled:
+            if overlay_state is None:
+                regime_state = "unknown"
+            else:
+                regime_close_now = overlay_state["close"]
+                regime_trend_now = overlay_state["trend"]
+                if pd.notna(regime_close_now) and pd.notna(regime_trend_now):
+                    regime_state = "risk_on" if float(regime_close_now) >= float(regime_trend_now) else "risk_off"
+                else:
+                    regime_state = "unknown"
+                if regime_state == "risk_off":
+                    risk_off_reasons.append("market_regime")
+
+        if crash_guardrail_enabled:
+            if overlay_state is None:
+                crash_drawdown_now = np.nan
+            else:
+                crash_drawdown_now = overlay_state["crash_drawdown"]
+                if pd.notna(crash_drawdown_now) and float(crash_drawdown_now) <= -abs(float(crash_guardrail_drawdown_threshold)):
+                    crash_guardrail_triggered = True
+                    risk_off_reasons.append("crash_guardrail")
+
+        def _build_defensive_candidates(existing_pairs: list[tuple[str, int]]) -> list[tuple[str, int]]:
+            if not defensive_set:
+                return []
+            existing_names = {ticker for ticker, _ in existing_pairs}
+            candidate_pairs = [
+                (ticker, idx)
+                for idx, ticker in enumerate(tickers)
+                if ticker in defensive_set and ticker not in existing_names
+            ]
+            candidate_pairs = [
+                (ticker, idx)
+                for ticker, idx in candidate_pairs
+                if closes[idx] >= mas[idx] and _passes_min_price(closes[idx], min_price)
+            ]
+            candidate_pairs.sort(key=lambda item: float(scores[item[1]]), reverse=True)
+            return candidate_pairs
+
+        if risk_off_reasons:
+            if risk_off_mode == "defensive_bond_preference":
+                next_ticker_to_index = _build_defensive_candidates([])[:n_assets]
+                defensive_fill_tickers = [ticker for ticker, _ in next_ticker_to_index]
+            else:
+                next_ticker_to_index = []
+        elif risk_off_mode == "defensive_bond_preference" and len(next_ticker_to_index) < n_assets:
+            defensive_candidates = _build_defensive_candidates(next_ticker_to_index)
+            slots_left = max(n_assets - len(next_ticker_to_index), 0)
+            added_pairs = defensive_candidates[:slots_left]
+            next_ticker_to_index = next_ticker_to_index + added_pairs
+            defensive_fill_tickers = [ticker for ticker, _ in added_pairs]
 
         # =========================
         # Return & End Balance
@@ -198,6 +302,23 @@ def gtaa3(dfs:dict, start_balance:int, top:int, filter_ma:str) ->dict:
             # "Ticker": tickers,
             "End Ticker" : end_tickers,
             "Next Ticker" : [t for t,_ in next_ticker_to_index],
+            "Raw Selected Ticker": raw_selected_tickers,
+            "Raw Selected Score": raw_selected_scores,
+            "Overlay Rejected Ticker": overlay_rejected_tickers,
+            "Overlay Rejected Count": len(overlay_rejected_tickers),
+            "Defensive Fallback Ticker": defensive_fill_tickers,
+            "Defensive Fallback Count": len(defensive_fill_tickers),
+            "Trend Filter Column": filter_ma,
+            "Risk-Off Mode": risk_off_mode,
+            "Market Regime Enabled": market_regime_enabled,
+            "Market Regime Benchmark": market_regime_benchmark if market_regime_enabled else np.nan,
+            "Regime State": regime_state,
+            "Regime Close": regime_close_now,
+            "Regime Trend": regime_trend_now,
+            "Crash Guardrail Enabled": crash_guardrail_enabled,
+            "Crash Guardrail Triggered": crash_guardrail_triggered,
+            "Crash Drawdown": crash_drawdown_now,
+            "Risk-Off Reason": risk_off_reasons,
             # "Close": closes,
             "End Balance": end_balances,
             "Next Balance": next_balances,
@@ -214,12 +335,18 @@ def gtaa3(dfs:dict, start_balance:int, top:int, filter_ma:str) ->dict:
     return pd.DataFrame(rows)
 
 
+def _passes_min_price(close_value: float, min_price: float) -> bool:
+    threshold = max(float(min_price or 0.0), 0.0)
+    return float(close_value) >= threshold
+
+
 def risk_parity_trend(
     dfs: dict,
     start_balance: float,
     rebalance_interval: int = 1,
     vol_window: int = 6,        # 변동성 계산 window (월말 데이터면 6 = 6개월)
     filter_ma: str = "MA200",   # 트렌드 필터 컬럼명
+    min_price: float = 0.0,
 ) -> pd.DataFrame:
     """
     Risk Parity(1/vol) + Trend Filter 전략
@@ -287,7 +414,11 @@ def risk_parity_trend(
             eligible = []
             for j, t in enumerate(tickers):
                 ma_val = dfs[t].iloc[i].get(filter_ma, np.nan)
-                if pd.notna(ma_val) and closes[j] >= float(ma_val):
+                if (
+                    pd.notna(ma_val)
+                    and closes[j] >= float(ma_val)
+                    and _passes_min_price(closes[j], min_price)
+                ):
                     eligible.append(j)
 
             # (B) 변동성 계산: 최근 vol_window 기간 rolling std
@@ -354,6 +485,7 @@ def dual_momentum(
     filter_ma: str = "MA200",
     rebalance_interval: int = 1,
     cash_ticker: str | None = None,   # 예: "BIL" or "SHY" (없으면 '현금 고정')
+    min_price: float = 0.0,
 ) -> pd.DataFrame:
     """
     Dual Momentum + Trend Filter 전략
@@ -444,7 +576,13 @@ def dual_momentum(
             picked = [t for t, _ in risky_scores[-top:]][::-1]  # 높은 점수부터
 
             # 2-2) 트렌드 필터 통과만 투자
-            invest = [t for t in picked if pd.notna(ma_now[t]) and close_now[t] >= ma_now[t]]
+            invest = [
+                t
+                for t in picked
+                if pd.notna(ma_now[t])
+                and close_now[t] >= ma_now[t]
+                and _passes_min_price(close_now[t], min_price)
+            ]
 
             if len(invest) == 0:
                 # 전부 현금(또는 cash_ticker)
@@ -759,17 +897,52 @@ class EqualWeightStrategy(Strategy):
 
 class GTAA3Strategy(Strategy):
 
-    def __init__(self, start_balance: int, top: int, filter_ma: str):
+    def __init__(
+        self,
+        start_balance: int,
+        top: int,
+        filter_ma: str,
+        min_price: float = 0.0,
+        score_col: str = "Avg Score",
+        risk_off_mode: str = "cash_only",
+        defensive_tickers: list[str] | None = None,
+        risk_overlay_df: pd.DataFrame | None = None,
+        market_regime_enabled: bool = False,
+        market_regime_window: int = 200,
+        market_regime_benchmark: str | None = None,
+        crash_guardrail_enabled: bool = False,
+        crash_guardrail_drawdown_threshold: float = 0.15,
+    ):
         self.start_balance = start_balance
         self.top = top
         self.filter_ma = filter_ma
+        self.min_price = min_price
+        self.score_col = score_col
+        self.risk_off_mode = risk_off_mode
+        self.defensive_tickers = defensive_tickers or []
+        self.risk_overlay_df = risk_overlay_df
+        self.market_regime_enabled = market_regime_enabled
+        self.market_regime_window = market_regime_window
+        self.market_regime_benchmark = market_regime_benchmark
+        self.crash_guardrail_enabled = crash_guardrail_enabled
+        self.crash_guardrail_drawdown_threshold = crash_guardrail_drawdown_threshold
 
     def run(self, dfs: dict) -> pd.DataFrame:
         return gtaa3(
             dfs,
             self.start_balance,
             self.top,
-            self.filter_ma
+            self.filter_ma,
+            self.min_price,
+            self.score_col,
+            self.risk_off_mode,
+            self.defensive_tickers,
+            self.risk_overlay_df,
+            self.market_regime_enabled,
+            self.market_regime_window,
+            self.market_regime_benchmark,
+            self.crash_guardrail_enabled,
+            self.crash_guardrail_drawdown_threshold,
         )
 
 
@@ -780,11 +953,13 @@ class RiskParityTrendStrategy(Strategy):
         rebalance_interval: int = 1,
         vol_window: int = 6,
         filter_ma: str = "MA200",
+        min_price: float = 0.0,
     ):
         self.start_balance = start_balance
         self.rebalance_interval = rebalance_interval
         self.vol_window = vol_window
         self.filter_ma = filter_ma
+        self.min_price = min_price
 
     def run(self, dfs: dict) -> pd.DataFrame:
         return risk_parity_trend(
@@ -793,6 +968,7 @@ class RiskParityTrendStrategy(Strategy):
             rebalance_interval=self.rebalance_interval,
             vol_window=self.vol_window,
             filter_ma=self.filter_ma,
+            min_price=self.min_price,
         )
 
 
@@ -805,6 +981,7 @@ class DualMomentumStrategy(Strategy):
         filter_ma: str = "MA200",
         rebalance_interval: int = 1,
         cash_ticker: str | None = None,
+        min_price: float = 0.0,
     ):
         self.start_balance = start_balance
         self.top = top
@@ -812,6 +989,7 @@ class DualMomentumStrategy(Strategy):
         self.filter_ma = filter_ma
         self.rebalance_interval = rebalance_interval
         self.cash_ticker = cash_ticker
+        self.min_price = min_price
 
     def run(self, dfs: dict) -> pd.DataFrame:
         return dual_momentum(
@@ -822,4 +1000,5 @@ class DualMomentumStrategy(Strategy):
             filter_ma=self.filter_ma,
             rebalance_interval=self.rebalance_interval,
             cash_ticker=self.cash_ticker,
+            min_price=self.min_price,
         )

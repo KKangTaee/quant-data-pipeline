@@ -530,6 +530,7 @@ def drop_columns(dfs:dict, drop_cols) -> dict:
 def add_avg_score(
     dfs:dict,
     return_cols = ("1MReturn", "3MReturn", "6MReturn", "12MReturn"),
+    weights: dict[str, float] | None = None,
     out_col ="Avg Score",
 ) -> dict:
 
@@ -541,7 +542,19 @@ def add_avg_score(
         if missing:
             raise KeyError(f"다음 컬럼이 없습니다 : {missing}")
 
-        d[out_col] = d[list(return_cols)].mean(axis=1)
+        selected = d[list(return_cols)].astype(float)
+        if weights is None:
+            d[out_col] = selected.mean(axis=1)
+        else:
+            weight_map = {
+                col: float(weights.get(col, 0.0))
+                for col in return_cols
+            }
+            weight_series = pd.Series(weight_map, index=list(return_cols), dtype=float)
+            weighted_values = selected.mul(weight_series, axis=1)
+            active_weights = selected.notna().mul(weight_series, axis=1)
+            denom = active_weights.sum(axis=1).replace(0.0, np.nan)
+            d[out_col] = weighted_values.sum(axis=1, skipna=True) / denom
         out[key] = d
 
     return out

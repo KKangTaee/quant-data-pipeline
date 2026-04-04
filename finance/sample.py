@@ -12,6 +12,7 @@ from math import comb
 from functools import lru_cache
 from IPython.display import display
 import pandas as pd
+import numpy as np
 from .engine import BacktestEngine
 from .strategy import (
     EqualWeightStrategy,
@@ -84,6 +85,71 @@ STRICT_MARKET_REGIME_DEFAULT_BENCHMARK = "SPY"
 STRICT_MARKET_REGIME_BENCHMARK_OPTIONS = ["SPY", "QQQ", "VTI", "IWM"]
 STATIC_MANAGED_RESEARCH_UNIVERSE = "static_managed_research"
 HISTORICAL_DYNAMIC_PIT_UNIVERSE = "historical_dynamic_pit"
+GTAA_DEFAULT_SIGNAL_INTERVAL = 1
+GTAA_DEFAULT_SCORE_LOOKBACK_MONTHS = [1, 3, 6, 12]
+GTAA_SCORE_RETURN_COLUMNS = tuple(f"{months}MReturn" for months in GTAA_DEFAULT_SCORE_LOOKBACK_MONTHS)
+GTAA_DEFAULT_SCORE_WEIGHTS = {
+    "1MReturn": 1.0,
+    "3MReturn": 1.0,
+    "6MReturn": 1.0,
+    "12MReturn": 1.0,
+}
+GTAA_DEFAULT_TREND_FILTER_WINDOW = 200
+GTAA_DEFAULT_DEFENSIVE_TICKERS = ["TLT", "IEF", "LQD"]
+GTAA_RISK_OFF_MODE_CASH = "cash_only"
+GTAA_RISK_OFF_MODE_DEFENSIVE = "defensive_bond_preference"
+GTAA_DEFAULT_RISK_OFF_MODE = GTAA_RISK_OFF_MODE_CASH
+GTAA_DEFAULT_CRASH_GUARDRAIL_ENABLED = False
+GTAA_DEFAULT_CRASH_GUARDRAIL_DRAWDOWN_THRESHOLD = 0.15
+GTAA_DEFAULT_CRASH_GUARDRAIL_LOOKBACK_MONTHS = 12
+GTAA_DEFAULT_TICKERS = ["SPY", "IWD", "IWM", "IWN", "MTUM", "EFA", "TLT", "IEF", "LQD", "PDBC", "VNQ", "GLD"]
+
+
+def _score_return_col_from_months(months: int) -> str:
+    return f"{int(months)}MReturn"
+
+
+def _parse_score_months_from_return_col(value: str) -> int | None:
+    text = str(value or "").strip()
+    if not text.endswith("MReturn"):
+        return None
+    number_text = text[:-7]
+    if not number_text.isdigit():
+        return None
+    months = int(number_text)
+    return months if months > 0 else None
+
+
+def _normalize_gtaa_score_lookback_months(
+    score_lookback_months=None,
+    score_return_columns=None,
+):
+    raw_values = []
+    if score_lookback_months is not None:
+        raw_values = list(score_lookback_months)
+    elif score_return_columns is not None:
+        raw_values = list(score_return_columns)
+    else:
+        raw_values = list(GTAA_DEFAULT_SCORE_LOOKBACK_MONTHS)
+
+    normalized = []
+    seen = set()
+    for value in raw_values:
+        if isinstance(value, str):
+            months = _parse_score_months_from_return_col(value)
+            if months is None and value.strip().isdigit():
+                months = int(value.strip())
+        else:
+            try:
+                months = int(value)
+            except (TypeError, ValueError):
+                months = None
+        if months is None or months <= 0 or months in seen:
+            continue
+        seen.add(months)
+        normalized.append(months)
+
+    return normalized or list(GTAA_DEFAULT_SCORE_LOOKBACK_MONTHS)
 
 
 def _history_start_with_buffer(start=None, *, years: int = 0, months: int = 0, days: int = 0):
@@ -206,6 +272,62 @@ def _build_market_regime_overlay_df(
     keep_cols = ["Date", "Close", f"MA{market_regime_window}"]
     return benchmark_df[[column for column in keep_cols if column in benchmark_df.columns]].copy()
 
+
+def _build_gtaa_risk_overlay_df(
+    benchmark_ticker: str,
+    *,
+    option="month_end",
+    start=None,
+    end=None,
+    timeframe="1d",
+    from_db=False,
+    market_regime_enabled=False,
+    market_regime_window=STRICT_MARKET_REGIME_DEFAULT_WINDOW,
+    crash_guardrail_enabled=GTAA_DEFAULT_CRASH_GUARDRAIL_ENABLED,
+    crash_guardrail_lookback_months=GTAA_DEFAULT_CRASH_GUARDRAIL_LOOKBACK_MONTHS,
+):
+    history_buffer_years = max(
+        2,
+        int(np.ceil(float(max(market_regime_window, 1)) / 252.0)) + 1 if market_regime_enabled else 2,
+        int(np.ceil(float(max(crash_guardrail_lookback_months, 1)) / 12.0)) + 1 if crash_guardrail_enabled else 2,
+    )
+
+    engine = _build_price_only_engine(
+        [benchmark_ticker],
+        option=option,
+        start=start,
+        end=end,
+        timeframe=timeframe,
+        from_db=from_db,
+        history_buffer_years=history_buffer_years,
+    )
+    if market_regime_enabled:
+        engine = engine.add_ma(market_regime_window)
+
+    engine = (
+        engine.filter_by_period()
+        .slice(start=start, end=end)
+        .drop_columns(["High", "Low", "Open", "Volume"])
+    )
+
+    benchmark_df = next(iter(engine.dfs.values())).copy()
+    keep_cols = ["Date", "Close"]
+    if market_regime_enabled:
+        keep_cols.append(f"MA{market_regime_window}")
+
+    overlay_df = benchmark_df[[column for column in keep_cols if column in benchmark_df.columns]].copy()
+    if crash_guardrail_enabled:
+        overlay_df["Crash Rolling Peak"] = (
+            pd.to_numeric(overlay_df["Close"], errors="coerce")
+            .rolling(window=max(int(crash_guardrail_lookback_months), 1), min_periods=1)
+            .max()
+        )
+        overlay_df["Crash Drawdown"] = (
+            pd.to_numeric(overlay_df["Close"], errors="coerce") / overlay_df["Crash Rolling Peak"]
+        ) - 1.0
+
+    return overlay_df.reset_index(drop=True)
+
 def get_equal_weight(period="15y", option="month_end", interval=12, start=None):
     """
         Legacy direct-fetch sample.
@@ -272,11 +394,40 @@ def get_equal_weight_from_db(
     return df
 
 
-def get_gtaa3(period="15y", option="month_end", top=3, interval=2, start=None):
+def get_gtaa3(
+    period="15y",
+    option="month_end",
+    top=3,
+    interval=GTAA_DEFAULT_SIGNAL_INTERVAL,
+    start=None,
+    score_lookback_months=None,
+    score_return_columns=None,
+    score_weights=None,
+    trend_filter_window=GTAA_DEFAULT_TREND_FILTER_WINDOW,
+    risk_off_mode=GTAA_DEFAULT_RISK_OFF_MODE,
+    defensive_tickers=None,
+    market_regime_enabled=False,
+    market_regime_window=STRICT_MARKET_REGIME_DEFAULT_WINDOW,
+    market_regime_benchmark=STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
+    crash_guardrail_enabled=GTAA_DEFAULT_CRASH_GUARDRAIL_ENABLED,
+    crash_guardrail_drawdown_threshold=GTAA_DEFAULT_CRASH_GUARDRAIL_DRAWDOWN_THRESHOLD,
+    crash_guardrail_lookback_months=GTAA_DEFAULT_CRASH_GUARDRAIL_LOOKBACK_MONTHS,
+):
     """
         Legacy direct-fetch sample.
     """
-    tickers = ['SPY','IWD','IWM','IWN','MTUM','EFA','TLT','IEF','LQD','DBC','VNQ','GLD']
+    tickers = GTAA_DEFAULT_TICKERS
+    effective_score_lookback_months = _normalize_gtaa_score_lookback_months(
+        score_lookback_months=score_lookback_months,
+        score_return_columns=score_return_columns,
+    )
+    effective_score_return_columns = tuple(
+        _score_return_col_from_months(months) for months in effective_score_lookback_months
+    )
+    effective_score_weights = dict(GTAA_DEFAULT_SCORE_WEIGHTS if score_weights is None else score_weights)
+    effective_defensive_tickers = _normalize_symbol_list(
+        defensive_tickers if defensive_tickers is not None else GTAA_DEFAULT_DEFENSIVE_TICKERS
+    )
 
     engine = (
         _build_price_only_engine(
@@ -284,20 +435,43 @@ def get_gtaa3(period="15y", option="month_end", top=3, interval=2, start=None):
             option=option,
             period=period,
         )
-        .add_ma(200)
+        .add_ma(trend_filter_window)
         .filter_by_period()
-        .add_interval_returns([1,3,6,12])
+        .add_interval_returns(effective_score_lookback_months)
         .align_dates()
         .slice(start=start)
-        .add_avg_score()
-        .drop_columns(["High","Low","Open","Volume","1MReturn","3MReturn","6MReturn","12MReturn"])
+        .add_avg_score(return_cols=effective_score_return_columns, weights=effective_score_weights)
+        .drop_columns(["High","Low","Open","Volume", *effective_score_return_columns])
         .interval(interval)
     )
+
+    risk_overlay_df = None
+    if market_regime_enabled or crash_guardrail_enabled:
+        risk_overlay_df = _build_gtaa_risk_overlay_df(
+            market_regime_benchmark,
+            option=option,
+            start=start,
+            timeframe="1d",
+            from_db=False,
+            market_regime_enabled=market_regime_enabled,
+            market_regime_window=market_regime_window,
+            crash_guardrail_enabled=crash_guardrail_enabled,
+            crash_guardrail_lookback_months=crash_guardrail_lookback_months,
+        )
 
     strategy = GTAA3Strategy(
         start_balance=10000,
         top=top,
-        filter_ma="MA200"
+        filter_ma=f"MA{trend_filter_window}",
+        score_col="Avg Score",
+        risk_off_mode=risk_off_mode,
+        defensive_tickers=effective_defensive_tickers,
+        risk_overlay_df=risk_overlay_df,
+        market_regime_enabled=market_regime_enabled,
+        market_regime_window=market_regime_window,
+        market_regime_benchmark=market_regime_benchmark,
+        crash_guardrail_enabled=crash_guardrail_enabled,
+        crash_guardrail_drawdown_threshold=crash_guardrail_drawdown_threshold,
     )
 
     df = engine.run(strategy).round_columns().round_columns(cols=["Return", "Total Return"], decimals=3).result
@@ -307,14 +481,38 @@ def get_gtaa3(period="15y", option="month_end", top=3, interval=2, start=None):
 def get_gtaa3_from_db(
     option="month_end",
     top=3,
-    interval=2,
+    interval=GTAA_DEFAULT_SIGNAL_INTERVAL,
+    min_price=0.0,
+    score_lookback_months=None,
+    score_return_columns=None,
+    score_weights=None,
+    trend_filter_window=GTAA_DEFAULT_TREND_FILTER_WINDOW,
+    risk_off_mode=GTAA_DEFAULT_RISK_OFF_MODE,
+    defensive_tickers=None,
+    market_regime_enabled=False,
+    market_regime_window=STRICT_MARKET_REGIME_DEFAULT_WINDOW,
+    market_regime_benchmark=STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
+    crash_guardrail_enabled=GTAA_DEFAULT_CRASH_GUARDRAIL_ENABLED,
+    crash_guardrail_drawdown_threshold=GTAA_DEFAULT_CRASH_GUARDRAIL_DRAWDOWN_THRESHOLD,
+    crash_guardrail_lookback_months=GTAA_DEFAULT_CRASH_GUARDRAIL_LOOKBACK_MONTHS,
     start=None,
     end=None,
     timeframe="1d",
     tickers=None,
 ):
     if tickers is None:
-        tickers = ['SPY','IWD','IWM','IWN','MTUM','EFA','TLT','IEF','LQD','DBC','VNQ','GLD']
+        tickers = GTAA_DEFAULT_TICKERS
+    effective_score_lookback_months = _normalize_gtaa_score_lookback_months(
+        score_lookback_months=score_lookback_months,
+        score_return_columns=score_return_columns,
+    )
+    effective_score_return_columns = tuple(
+        _score_return_col_from_months(months) for months in effective_score_lookback_months
+    )
+    effective_score_weights = dict(GTAA_DEFAULT_SCORE_WEIGHTS if score_weights is None else score_weights)
+    effective_defensive_tickers = _normalize_symbol_list(
+        defensive_tickers if defensive_tickers is not None else GTAA_DEFAULT_DEFENSIVE_TICKERS
+    )
 
     engine = (
         _build_price_only_engine(
@@ -326,20 +524,45 @@ def get_gtaa3_from_db(
             from_db=True,
             history_buffer_years=3,
         )
-        .add_ma(200)
+        .add_ma(trend_filter_window)
         .filter_by_period()
-        .add_interval_returns([1,3,6,12])
+        .add_interval_returns(effective_score_lookback_months)
         .align_dates()
         .slice(start=start, end=end)
-        .add_avg_score()
-        .drop_columns(["High","Low","Open","Volume","1MReturn","3MReturn","6MReturn","12MReturn"])
+        .add_avg_score(return_cols=effective_score_return_columns, weights=effective_score_weights)
+        .drop_columns(["High","Low","Open","Volume", *effective_score_return_columns])
         .interval(interval)
     )
+
+    risk_overlay_df = None
+    if market_regime_enabled or crash_guardrail_enabled:
+        risk_overlay_df = _build_gtaa_risk_overlay_df(
+            market_regime_benchmark,
+            option=option,
+            start=start,
+            end=end,
+            timeframe=timeframe,
+            from_db=True,
+            market_regime_enabled=market_regime_enabled,
+            market_regime_window=market_regime_window,
+            crash_guardrail_enabled=crash_guardrail_enabled,
+            crash_guardrail_lookback_months=crash_guardrail_lookback_months,
+        )
 
     strategy = GTAA3Strategy(
         start_balance=10000,
         top=top,
-        filter_ma="MA200"
+        filter_ma=f"MA{trend_filter_window}",
+        min_price=min_price,
+        score_col="Avg Score",
+        risk_off_mode=risk_off_mode,
+        defensive_tickers=effective_defensive_tickers,
+        risk_overlay_df=risk_overlay_df,
+        market_regime_enabled=market_regime_enabled,
+        market_regime_window=market_regime_window,
+        market_regime_benchmark=market_regime_benchmark,
+        crash_guardrail_enabled=crash_guardrail_enabled,
+        crash_guardrail_drawdown_threshold=crash_guardrail_drawdown_threshold,
     )
 
     df = engine.run(strategy).round_columns().round_columns(cols=["Return", "Total Return"], decimals=3).result
@@ -384,6 +607,7 @@ def get_risk_parity_trend_from_db(
     option="month_end",
     rebalance_interval=1,
     vol_window=6,
+    min_price=0.0,
     start=None,
     end=None,
     timeframe="1d",
@@ -414,6 +638,7 @@ def get_risk_parity_trend_from_db(
         rebalance_interval=rebalance_interval,
         vol_window=vol_window,
         filter_ma="MA200",
+        min_price=min_price,
     )
 
     df = engine.run(strategy).round_columns(
@@ -461,6 +686,7 @@ def get_dual_momentum_from_db(
     option="month_end",
     top=1,
     rebalance_interval=1,
+    min_price=0.0,
     start=None,
     end=None,
     timeframe="1d",
@@ -494,6 +720,7 @@ def get_dual_momentum_from_db(
         filter_ma="MA200",
         rebalance_interval=rebalance_interval,
         cash_ticker="BIL",
+        min_price=min_price,
     )
 
     df = engine.run(strategy).round_columns().round_columns(cols=["Total Return"], decimals=3).result

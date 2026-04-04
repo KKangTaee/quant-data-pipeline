@@ -74,8 +74,8 @@ class BacktestEngine:
         self.dfs = add_interval_returns(self.dfs, intervals)
         return self
 
-    def add_avg_score(self):
-        self.dfs = add_avg_score(self.dfs)
+    def add_avg_score(self, return_cols=("1MReturn", "3MReturn", "6MReturn", "12MReturn"), weights=None, out_col="Avg Score"):
+        self.dfs = add_avg_score(self.dfs, return_cols=return_cols, weights=weights, out_col=out_col)
         return self
 
     def interval(self, interval):

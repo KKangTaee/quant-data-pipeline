@@ -34,6 +34,23 @@ from app.web.runtime import (
     run_value_snapshot_strict_quarterly_prototype_backtest_from_db,
 )
 from app.web.runtime.backtest import BacktestDataError, BacktestInputError
+from app.web.runtime.backtest import (
+    ETF_REAL_MONEY_DEFAULT_BENCHMARK,
+    GTAA_DEFAULT_SIGNAL_INTERVAL,
+    ETF_REAL_MONEY_DEFAULT_MIN_PRICE,
+    ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
+)
+from finance.sample import (
+    GTAA_DEFAULT_CRASH_GUARDRAIL_DRAWDOWN_THRESHOLD,
+    GTAA_DEFAULT_CRASH_GUARDRAIL_ENABLED,
+    GTAA_DEFAULT_CRASH_GUARDRAIL_LOOKBACK_MONTHS,
+    GTAA_DEFAULT_DEFENSIVE_TICKERS,
+    GTAA_DEFAULT_SCORE_LOOKBACK_MONTHS,
+    GTAA_DEFAULT_RISK_OFF_MODE,
+    GTAA_SCORE_RETURN_COLUMNS,
+    GTAA_DEFAULT_SCORE_WEIGHTS,
+    GTAA_DEFAULT_TREND_FILTER_WINDOW,
+)
 from finance.data.asset_profile import load_top_symbols_from_asset_profile
 from finance.loaders import load_statement_coverage_summary, load_statement_shadow_coverage_summary
 from finance.performance import make_monthly_weighted_portfolio
@@ -45,9 +62,34 @@ EQUAL_WEIGHT_PRESETS = {
     "Big Tech": ["AAPL", "MSFT", "GOOG"],
 }
 
+GTAA_DEFAULT_TICKERS = ["SPY", "IWD", "IWM", "IWN", "MTUM", "EFA", "TLT", "IEF", "LQD", "PDBC", "VNQ", "GLD"]
+GTAA_NO_COMMODITY_QUAL_USMV_TICKERS = ["SPY", "IWD", "IWM", "IWN", "MTUM", "EFA", "TLT", "IEF", "LQD", "VNQ", "GLD", "QUAL", "USMV"]
+GTAA_QQQ_XLE_IAU_TIP_TICKERS = ["SPY", "IWD", "IWM", "IWN", "MTUM", "EFA", "TLT", "IEF", "LQD", "PDBC", "VNQ", "GLD", "QQQ", "XLE", "IAU", "TIP"]
+GTAA_QQQ_QUAL_USMV_XLE_IAU_TICKERS = ["SPY", "IWD", "IWM", "IWN", "MTUM", "EFA", "TLT", "IEF", "LQD", "PDBC", "VNQ", "GLD", "QQQ", "QUAL", "USMV", "XLE", "IAU"]
+GTAA_U3_COMMODITY_TICKERS = ["SPY", "QQQ", "XLE", "COMT", "IAU", "GLD", "QUAL", "USMV", "TIP", "TLT", "IEF", "LQD", "VNQ", "EFA", "MTUM"]
+GTAA_U1_OFFENSIVE_TICKERS = ["SPY", "QQQ", "MTUM", "QUAL", "USMV", "VUG", "VTV", "RSP", "IAU", "XLE", "TIP", "TLT", "IEF", "LQD", "VNQ", "EFA"]
+GTAA_U5_SMALLCAP_VALUE_TICKERS = ["SPY", "QQQ", "IWM", "IWN", "IWD", "MTUM", "QUAL", "USMV", "EFA", "VNQ", "TLT", "IEF", "LQD", "IAU", "XLE", "TIP"]
+
 GTAA_PRESETS = {
-    "GTAA Universe": ["SPY", "IWD", "IWM", "IWN", "MTUM", "EFA", "TLT", "IEF", "LQD", "DBC", "VNQ", "GLD"],
+    "GTAA Universe": GTAA_DEFAULT_TICKERS,
+    "GTAA Universe (No Commodity + QUAL + USMV)": GTAA_NO_COMMODITY_QUAL_USMV_TICKERS,
+    "GTAA Universe (QQQ + XLE + IAU + TIP)": GTAA_QQQ_XLE_IAU_TIP_TICKERS,
+    "GTAA Universe (QQQ + QUAL + USMV + XLE + IAU)": GTAA_QQQ_QUAL_USMV_XLE_IAU_TICKERS,
+    "GTAA Universe (U3 Commodity Candidate Base)": GTAA_U3_COMMODITY_TICKERS,
+    "GTAA Universe (U1 Offensive Candidate Base)": GTAA_U1_OFFENSIVE_TICKERS,
+    "GTAA Universe (U5 Smallcap Value Candidate Base)": GTAA_U5_SMALLCAP_VALUE_TICKERS,
 }
+
+GTAA_RISK_OFF_MODE_LABELS = {
+    "Cash Only": "cash_only",
+    "Defensive Bond Preference": "defensive_bond_preference",
+}
+GTAA_SCORE_WEIGHT_LABELS = [
+    ("1MReturn", "1M"),
+    ("3MReturn", "3M"),
+    ("6MReturn", "6M"),
+    ("12MReturn", "12M"),
+]
 
 RISK_PARITY_PRESETS = {
     "Risk Parity Universe": ["SPY", "TLT", "GLD", "IEF", "LQD"],
@@ -622,6 +664,102 @@ def _render_ticker_preview(tickers: list[str], *, preview_count: int = 12, tail_
     st.caption(f"Selected tickers ({len(tickers)}): `{preview}`")
 
 
+def _render_equal_weight_universe_inputs(
+    *,
+    key_prefix: str,
+    radio_label: str = "Universe Mode",
+    preset_label: str = "Preset",
+    ticker_label: str = "Tickers",
+) -> tuple[str, str | None, list[str]]:
+    universe_mode_label = st.radio(
+        radio_label,
+        options=["Preset", "Manual"],
+        horizontal=True,
+        help="Preset은 빠른 실행용, Manual은 직접 종목을 입력하는 방식입니다.",
+        key=f"{key_prefix}_universe_mode",
+    )
+
+    preset_name: str | None = None
+    tickers: list[str] = []
+
+    if universe_mode_label == "Preset":
+        preset_name = st.selectbox(
+            preset_label,
+            options=list(EQUAL_WEIGHT_PRESETS.keys()),
+            index=0,
+            key=f"{key_prefix}_preset",
+        )
+        tickers = list(EQUAL_WEIGHT_PRESETS[preset_name])
+    else:
+        manual_tickers = st.text_input(
+            ticker_label,
+            value="VIG,SCHD,DGRO,GLD",
+            help="Comma-separated tickers. Example: VIG,SCHD,DGRO,GLD",
+            key=f"{key_prefix}_manual_tickers",
+        )
+        tickers = _parse_manual_tickers(manual_tickers)
+
+    _render_ticker_preview(tickers)
+    return ("preset" if universe_mode_label == "Preset" else "manual_tickers"), preset_name, tickers
+
+
+def _render_gtaa_preset_note(preset_name: str | None) -> None:
+    if preset_name == "GTAA Universe":
+        st.caption("Current default preset: uses `PDBC` as the commodity sleeve.")
+    elif preset_name == "GTAA Universe (No Commodity + QUAL + USMV)":
+        st.caption("Top candidate preset: removes the commodity sleeve and adds `QUAL`, `USMV`.")
+    elif preset_name == "GTAA Universe (QQQ + XLE + IAU + TIP)":
+        st.caption("Top candidate preset: adds `QQQ`, `XLE`, `IAU`, `TIP` on top of the current GTAA core.")
+    elif preset_name == "GTAA Universe (QQQ + QUAL + USMV + XLE + IAU)":
+        st.caption("Top candidate preset: current strongest Phase 12 GTAA candidate with growth, quality, low-vol, gold, and energy broadeners.")
+    elif preset_name == "GTAA Universe (U3 Commodity Candidate Base)":
+        st.caption("Verified Phase 12 candidate base: commodity/inflation-heavy mix. Best validated contract so far was `month_end`, `top=2`, `interval=3`, `Score Horizons=1/3/6`.")
+    elif preset_name == "GTAA Universe (U1 Offensive Candidate Base)":
+        st.caption("Verified Phase 12 candidate base: growth + quality + style diversification mix. Best validated contract so far was `month_end`, `top=2`, `interval=3`, `Score Horizons=1/3/6/12`.")
+    elif preset_name == "GTAA Universe (U5 Smallcap Value Candidate Base)":
+        st.caption("Verified Phase 12 candidate base: smallcap/value-aware defensive mix. Best validated contract so far was `month_end`, `top=3`, `interval=3`, `Score Horizons=1/3/6/12`.")
+
+
+def _render_gtaa_universe_inputs(
+    *,
+    key_prefix: str,
+    radio_label: str = "Universe Mode",
+    preset_label: str = "Preset",
+    ticker_label: str = "Tickers",
+) -> tuple[str, str | None, list[str]]:
+    universe_mode_label = st.radio(
+        radio_label,
+        options=["Preset", "Manual"],
+        horizontal=True,
+        help="GTAA는 기본적으로 preset universe 사용을 권장합니다.",
+        key=f"{key_prefix}_universe_mode",
+    )
+
+    preset_name: str | None = None
+    tickers: list[str] = []
+
+    if universe_mode_label == "Preset":
+        preset_name = st.selectbox(
+            preset_label,
+            options=list(GTAA_PRESETS.keys()),
+            index=0,
+            key=f"{key_prefix}_preset",
+        )
+        tickers = list(GTAA_PRESETS[preset_name])
+        _render_gtaa_preset_note(preset_name)
+    else:
+        manual_tickers = st.text_input(
+            ticker_label,
+            value="SPY,IWD,IWM,IWN,MTUM,EFA,TLT,IEF,LQD,PDBC,VNQ,GLD",
+            help="Comma-separated tickers. Example: SPY,IWD,IWM,IWN,MTUM,EFA,TLT,IEF,LQD,PDBC,VNQ,GLD",
+            key=f"{key_prefix}_manual_tickers",
+        )
+        tickers = _parse_manual_tickers(manual_tickers)
+
+    _render_ticker_preview(tickers)
+    return ("preset" if universe_mode_label == "Preset" else "manual_tickers"), preset_name, tickers
+
+
 def _render_strict_preset_status_note(preset_name: str | None) -> None:
     if preset_name == "US Statement Coverage 300":
         st.info(
@@ -1102,6 +1240,215 @@ def _render_market_regime_overlay_inputs(
     return regime_enabled, regime_window, regime_benchmark
 
 
+def _render_etf_real_money_inputs(
+    *,
+    key_prefix: str,
+    default_min_price: float = ETF_REAL_MONEY_DEFAULT_MIN_PRICE,
+    default_transaction_cost_bps: float = ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
+    default_benchmark: str = ETF_REAL_MONEY_DEFAULT_BENCHMARK,
+) -> tuple[float, float, str]:
+    st.markdown("##### Real-Money Contract")
+    st.caption(
+        "실전형 first pass에서는 너무 낮은 가격 ETF를 걸러내는 `Minimum Price`, "
+        "리밸런싱 turnover에 적용할 `Transaction Cost`, 비교 기준이 되는 `Benchmark Ticker`를 같이 사용합니다."
+    )
+    left, center, right = st.columns(3, gap="small")
+    with left:
+        min_price_filter = float(
+            st.number_input(
+                "Minimum Price",
+                min_value=0.0,
+                max_value=1000.0,
+                value=float(default_min_price),
+                step=1.0,
+                key=f"{key_prefix}_min_price_filter",
+                help="이 값보다 싼 ETF는 해당 날짜 투자 후보에서 제외합니다.",
+            )
+        )
+    with center:
+        transaction_cost_bps = float(
+            st.number_input(
+                "Transaction Cost (bps)",
+                min_value=0.0,
+                max_value=500.0,
+                value=float(default_transaction_cost_bps),
+                step=1.0,
+                key=f"{key_prefix}_transaction_cost_bps",
+                help="리밸런싱 turnover 비율에 곱하는 왕복 비용 가정입니다. 10bps = 0.10%입니다.",
+            )
+        )
+    with right:
+        benchmark_ticker = str(
+            st.text_input(
+                "Benchmark Ticker",
+                value=default_benchmark,
+                key=f"{key_prefix}_benchmark_ticker",
+                help="전략 결과를 비교할 기준 ETF ticker입니다. 기본값은 `SPY`입니다.",
+            )
+        ).strip().upper()
+
+    st.caption(
+        "이 first pass는 `gross` 전략 곡선을 유지하면서, turnover 기반 예상 비용을 반영한 `net` 곡선과 benchmark overlay를 같이 보여줍니다."
+    )
+    return min_price_filter, transaction_cost_bps, benchmark_ticker
+
+
+def _gtaa_return_col_from_months(months: int) -> str:
+    return f"{int(months)}MReturn"
+
+
+def _gtaa_months_from_return_col(return_col: str) -> int | None:
+    text = str(return_col or "").strip()
+    if not text.endswith("MReturn"):
+        return None
+    number_text = text[:-7]
+    if not number_text.isdigit():
+        return None
+    months = int(number_text)
+    return months if months > 0 else None
+
+
+def _build_equal_gtaa_score_weights(score_lookback_months: list[int]) -> dict[str, float]:
+    return {
+        _gtaa_return_col_from_months(int(months)): 1.0
+        for months in score_lookback_months
+    }
+
+
+def _set_gtaa_score_selection_state(
+    *,
+    key_prefix: str,
+    score_lookback_months: list[int] | None,
+) -> None:
+    normalized: list[int] = []
+    seen: set[int] = set()
+    for value in list(score_lookback_months or GTAA_DEFAULT_SCORE_LOOKBACK_MONTHS):
+        try:
+            months = int(value)
+        except (TypeError, ValueError):
+            continue
+        if months <= 0 or months in seen:
+            continue
+        seen.add(months)
+        normalized.append(months)
+    if not normalized:
+        normalized = list(GTAA_DEFAULT_SCORE_LOOKBACK_MONTHS)
+    st.session_state[f"{key_prefix}_score_lookback_months"] = normalized
+
+
+def _render_gtaa_score_weight_inputs(*, key_prefix: str) -> tuple[list[int], dict[str, float]]:
+    st.markdown("##### Score Horizons")
+    st.caption(
+        "기본값은 `1M / 3M / 6M / 12M`이고, 여기서 사용할 horizon만 고를 수 있습니다. "
+        "선택된 horizon은 모두 동일 비중으로 점수에 반영됩니다."
+    )
+    score_lookback_months = st.multiselect(
+        "Score Horizons",
+        options=list(GTAA_DEFAULT_SCORE_LOOKBACK_MONTHS),
+        default=list(GTAA_DEFAULT_SCORE_LOOKBACK_MONTHS),
+        format_func=lambda months: f"{int(months)}M",
+        key=f"{key_prefix}_score_lookback_months",
+        help="GTAA score 계산에 실제로 포함할 horizon입니다. 예를 들어 `1M, 3M`만 남기면 두 구간만 균등하게 사용합니다.",
+    )
+    if not score_lookback_months:
+        st.warning("Score Horizon을 최소 1개는 선택해야 합니다.")
+    score_weights = _build_equal_gtaa_score_weights(list(score_lookback_months))
+    return score_lookback_months, score_weights
+
+
+def _risk_off_mode_value_to_label(value: str | None) -> str:
+    for label, mode_value in GTAA_RISK_OFF_MODE_LABELS.items():
+        if mode_value == value:
+            return label
+    return "Cash Only"
+
+
+def _render_gtaa_risk_off_contract_inputs(*, key_prefix: str) -> dict[str, Any]:
+    st.markdown("##### Risk-Off Contract")
+    st.caption(
+        "GTAA가 위험구간으로 판단될 때 현금으로 물러날지, 방어 채권으로 더 채울지, "
+        "그리고 어떤 조건을 위험구간으로 볼지 설정합니다."
+    )
+    left, right = st.columns(2, gap="small")
+    with left:
+        trend_filter_window = int(
+            st.number_input(
+                "Trend Filter Window",
+                min_value=20,
+                max_value=400,
+                value=GTAA_DEFAULT_TREND_FILTER_WINDOW,
+                step=10,
+                key=f"{key_prefix}_trend_filter_window",
+                help="GTAA 각 후보가 통과해야 하는 이동평균 필터 기간입니다. 기본은 `MA200`입니다.",
+            )
+        )
+    with right:
+        risk_off_mode_label = st.selectbox(
+            "Fallback Mode",
+            options=list(GTAA_RISK_OFF_MODE_LABELS.keys()),
+            index=list(GTAA_RISK_OFF_MODE_LABELS.values()).index(GTAA_DEFAULT_RISK_OFF_MODE),
+            key=f"{key_prefix}_risk_off_mode",
+            help="위험구간 또는 top 후보 부족 시 현금만 들고 있을지, 방어 채권으로 남은 슬롯을 채울지 고릅니다.",
+        )
+
+    defensive_tickers_text = st.text_input(
+        "Defensive Tickers",
+        value=",".join(GTAA_DEFAULT_DEFENSIVE_TICKERS),
+        key=f"{key_prefix}_defensive_tickers",
+        help="Fallback Mode가 `Defensive Bond Preference`일 때 사용할 방어 채권 후보입니다.",
+    )
+
+    regime_enabled, regime_window, regime_benchmark = _render_market_regime_overlay_inputs(
+        key_prefix=f"{key_prefix}_risk_off",
+        label_prefix="GTAA ",
+    )
+
+    crash_cols = st.columns([0.32, 0.34, 0.34], gap="small")
+    with crash_cols[0]:
+        crash_guardrail_enabled = st.checkbox(
+            "Enable Crash Guardrail",
+            value=GTAA_DEFAULT_CRASH_GUARDRAIL_ENABLED,
+            key=f"{key_prefix}_crash_guardrail_enabled",
+            help="벤치마크가 최근 고점 대비 크게 빠지면 GTAA를 위험구간으로 간주합니다.",
+        )
+    with crash_cols[1]:
+        crash_guardrail_drawdown_threshold = float(
+            st.number_input(
+                "Crash Drawdown Threshold (%)",
+                min_value=1.0,
+                max_value=80.0,
+                value=float(GTAA_DEFAULT_CRASH_GUARDRAIL_DRAWDOWN_THRESHOLD * 100.0),
+                step=1.0,
+                key=f"{key_prefix}_crash_guardrail_drawdown_threshold",
+                help="이 비율 이상 벤치마크가 최근 고점에서 빠지면 crash-side guardrail을 켭니다.",
+            )
+        )
+    with crash_cols[2]:
+        crash_guardrail_lookback_months = int(
+            st.number_input(
+                "Crash Lookback (months)",
+                min_value=3,
+                max_value=36,
+                value=GTAA_DEFAULT_CRASH_GUARDRAIL_LOOKBACK_MONTHS,
+                step=1,
+                key=f"{key_prefix}_crash_guardrail_lookback_months",
+                help="최근 몇 개월의 고점을 기준으로 drawdown을 계산할지 정합니다.",
+            )
+        )
+
+    return {
+        "trend_filter_window": trend_filter_window,
+        "risk_off_mode": GTAA_RISK_OFF_MODE_LABELS[risk_off_mode_label],
+        "defensive_tickers": _parse_manual_tickers(defensive_tickers_text),
+        "market_regime_enabled": bool(regime_enabled),
+        "market_regime_window": int(regime_window),
+        "market_regime_benchmark": regime_benchmark,
+        "crash_guardrail_enabled": bool(crash_guardrail_enabled),
+        "crash_guardrail_drawdown_threshold": float(crash_guardrail_drawdown_threshold) / 100.0,
+        "crash_guardrail_lookback_months": int(crash_guardrail_lookback_months),
+    }
+
+
 def _render_strict_price_freshness_preflight(
     *,
     tickers: list[str],
@@ -1264,12 +1611,15 @@ def _render_last_run() -> None:
         or dynamic_candidate_status_rows
         or meta.get("universe_contract") == HISTORICAL_DYNAMIC_PIT_UNIVERSE
     )
+    has_real_money_details = bool(meta.get("real_money_hardening"))
 
     tab_labels = ["Summary", "Equity Curve", "Balance Extremes", "Period Extremes"]
     if has_selection_history:
         tab_labels.append("Selection History")
     if has_dynamic_details:
         tab_labels.append("Dynamic Universe")
+    if has_real_money_details:
+        tab_labels.append("Real-Money")
     tab_labels.extend(["Result Table", "Meta"])
     tabs = st.tabs(tab_labels)
     tab_iter = iter(tabs)
@@ -1279,6 +1629,7 @@ def _render_last_run() -> None:
     periods_tab = next(tab_iter)
     selection_tab = next(tab_iter) if has_selection_history else None
     dynamic_tab = next(tab_iter) if has_dynamic_details else None
+    real_money_tab = next(tab_iter) if has_real_money_details else None
     table_tab = next(tab_iter)
     meta_tab = next(tab_iter)
 
@@ -1330,6 +1681,10 @@ def _render_last_run() -> None:
         with dynamic_tab:
             _render_dynamic_universe_details(bundle)
 
+    if real_money_tab is not None:
+        with real_money_tab:
+            _render_real_money_details(bundle)
+
     with table_tab:
         st.dataframe(result_df, use_container_width=True)
 
@@ -1348,6 +1703,16 @@ def _render_last_run() -> None:
                 st.markdown(f"- `Elapsed`: `{meta['ui_elapsed_seconds']:.3f}s`")
             if meta.get("top") is not None:
                 st.markdown(f"- `Top`: `{meta['top']}`")
+            if meta.get("min_price_filter") is not None:
+                st.markdown(f"- `Minimum Price`: `{float(meta['min_price_filter']):.2f}`")
+            if meta.get("transaction_cost_bps") is not None:
+                st.markdown(f"- `Transaction Cost`: `{float(meta['transaction_cost_bps']):.1f} bps`")
+            if meta.get("benchmark_ticker"):
+                st.markdown(f"- `Benchmark`: `{meta['benchmark_ticker']}`")
+            if meta.get("avg_turnover") is not None:
+                st.markdown(f"- `Average Turnover`: `{float(meta['avg_turnover']):.2%}`")
+            if meta.get("estimated_cost_total") is not None:
+                st.markdown(f"- `Estimated Cost Total`: `{float(meta['estimated_cost_total']):,.1f}`")
             if meta.get("dynamic_candidate_count") is not None:
                 st.markdown(
                     f"- `Dynamic Candidate Pool`: `{meta.get('dynamic_candidate_count')}` "
@@ -1404,24 +1769,50 @@ def _strategy_compare_defaults(strategy_name: str) -> dict:
         }
     if strategy_name == "GTAA":
         return {
-            "tickers": ["SPY", "IWD", "IWM", "IWN", "MTUM", "EFA", "TLT", "IEF", "LQD", "DBC", "VNQ", "GLD"],
+            "tickers": GTAA_DEFAULT_TICKERS,
             "preset_name": "GTAA Universe",
             "runner": run_gtaa_backtest_from_db,
-            "extra": {"top": 3},
+            "extra": {
+                "top": 3,
+                "interval": GTAA_DEFAULT_SIGNAL_INTERVAL,
+                "score_lookback_months": list(GTAA_DEFAULT_SCORE_LOOKBACK_MONTHS),
+                "score_return_columns": list(GTAA_SCORE_RETURN_COLUMNS),
+                "score_weights": GTAA_DEFAULT_SCORE_WEIGHTS.copy(),
+                "trend_filter_window": GTAA_DEFAULT_TREND_FILTER_WINDOW,
+                "risk_off_mode": GTAA_DEFAULT_RISK_OFF_MODE,
+                "defensive_tickers": GTAA_DEFAULT_DEFENSIVE_TICKERS.copy(),
+                "market_regime_enabled": False,
+                "market_regime_window": STRICT_MARKET_REGIME_DEFAULT_WINDOW,
+                "market_regime_benchmark": STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
+                "crash_guardrail_enabled": GTAA_DEFAULT_CRASH_GUARDRAIL_ENABLED,
+                "crash_guardrail_drawdown_threshold": GTAA_DEFAULT_CRASH_GUARDRAIL_DRAWDOWN_THRESHOLD,
+                "crash_guardrail_lookback_months": GTAA_DEFAULT_CRASH_GUARDRAIL_LOOKBACK_MONTHS,
+                "min_price_filter": ETF_REAL_MONEY_DEFAULT_MIN_PRICE,
+                "transaction_cost_bps": ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
+                "benchmark_ticker": ETF_REAL_MONEY_DEFAULT_BENCHMARK,
+            },
         }
     if strategy_name == "Risk Parity Trend":
         return {
             "tickers": ["SPY", "TLT", "GLD", "IEF", "LQD"],
             "preset_name": "Risk Parity Universe",
             "runner": run_risk_parity_trend_backtest_from_db,
-            "extra": {},
+            "extra": {
+                "min_price_filter": ETF_REAL_MONEY_DEFAULT_MIN_PRICE,
+                "transaction_cost_bps": ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
+                "benchmark_ticker": ETF_REAL_MONEY_DEFAULT_BENCHMARK,
+            },
         }
     if strategy_name == "Dual Momentum":
         return {
             "tickers": ["QQQ", "SPY", "IWM", "SOXX", "BIL"],
             "preset_name": "Dual Momentum Universe",
             "runner": run_dual_momentum_backtest_from_db,
-            "extra": {},
+            "extra": {
+                "min_price_filter": ETF_REAL_MONEY_DEFAULT_MIN_PRICE,
+                "transaction_cost_bps": ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
+                "benchmark_ticker": ETF_REAL_MONEY_DEFAULT_BENCHMARK,
+            },
         }
     if strategy_name == "Quality Snapshot":
         return {
@@ -1547,7 +1938,25 @@ def _run_compare_strategy(
     tickers = config["tickers"]
     preset_name = config["preset_name"]
     universe_mode = "preset"
-    if strategy_name in {
+    if strategy_name == "Equal Weight":
+        universe_mode = params.pop("universe_mode", "preset")
+        preset_name = params.pop("preset_name", preset_name)
+        tickers = list(params.pop("tickers", tickers))
+        if universe_mode == "preset" and preset_name in EQUAL_WEIGHT_PRESETS:
+            tickers = EQUAL_WEIGHT_PRESETS[preset_name]
+        else:
+            universe_mode = "manual_tickers"
+            preset_name = None
+    elif strategy_name == "GTAA":
+        universe_mode = params.pop("universe_mode", "preset")
+        preset_name = params.pop("preset_name", preset_name)
+        tickers = list(params.pop("tickers", tickers))
+        if universe_mode == "preset" and preset_name in GTAA_PRESETS:
+            tickers = GTAA_PRESETS[preset_name]
+        else:
+            universe_mode = "manual_tickers"
+            preset_name = None
+    elif strategy_name in {
         "Quality Snapshot (Strict Annual)",
         "Quality Snapshot (Strict Quarterly Prototype)",
         "Value Snapshot (Strict Annual)",
@@ -1830,6 +2239,82 @@ def _render_dynamic_universe_details(bundle: dict[str, Any]) -> None:
         st.dataframe(pd.DataFrame(candidate_status_rows), use_container_width=True, hide_index=True)
 
 
+def _render_real_money_details(bundle: dict[str, Any]) -> None:
+    meta = bundle.get("meta") or {}
+    if not meta.get("real_money_hardening"):
+        st.caption("이 결과에는 Phase 12 real-money hardening 정보가 없습니다.")
+        return
+
+    result_df = bundle.get("result_df")
+    benchmark_chart_df = bundle.get("benchmark_chart_df")
+    benchmark_summary_df = bundle.get("benchmark_summary_df")
+
+    st.caption(
+        "실전형 first pass에서는 `Minimum Price`, turnover 기반 `Transaction Cost`, `Benchmark Ticker`를 같이 반영합니다. "
+        "요약/차트는 비용 반영 후 `net` 기준이고, 결과 표에는 `gross`와 `net`이 같이 남습니다."
+    )
+
+    top_cols = st.columns(4, gap="small")
+    top_cols[0].metric("Minimum Price", f"{float(meta.get('min_price_filter') or 0.0):.2f}")
+    top_cols[1].metric("Transaction Cost", f"{float(meta.get('transaction_cost_bps') or 0.0):.1f} bps")
+    top_cols[2].metric("Avg Turnover", f"{float(meta.get('avg_turnover') or 0.0):.2%}")
+    top_cols[3].metric("Estimated Cost Total", f"{float(meta.get('estimated_cost_total') or 0.0):,.1f}")
+
+    if meta.get("benchmark_ticker"):
+        benchmark_cols = st.columns(4, gap="small")
+        benchmark_cols[0].metric("Benchmark", str(meta.get("benchmark_ticker")))
+        benchmark_cols[1].metric("Benchmark Available", "Yes" if meta.get("benchmark_available") else "No")
+        if meta.get("benchmark_end_balance") is not None:
+            benchmark_cols[2].metric("Benchmark End Balance", f"{float(meta.get('benchmark_end_balance')):,.1f}")
+        if meta.get("net_excess_end_balance") is not None:
+            benchmark_cols[3].metric("Net Excess End Balance", f"{float(meta.get('net_excess_end_balance')):,.1f}")
+
+    if benchmark_chart_df is not None and result_df is not None:
+        strategy_line = (
+            bundle["chart_df"][["Date", "Total Balance"]]
+            .rename(columns={"Total Balance": bundle["strategy_name"]})
+            .set_index("Date")
+        )
+        benchmark_line = (
+            benchmark_chart_df[["Date", "Benchmark Total Balance"]]
+            .rename(columns={"Benchmark Total Balance": f"{meta.get('benchmark_ticker')} Benchmark"})
+            .set_index("Date")
+        )
+        overlay_df = pd.concat([strategy_line, benchmark_line], axis=1).sort_index()
+        _render_compare_altair_chart(
+            overlay_df,
+            title="Net Strategy vs Benchmark",
+            y_title="Total Balance",
+            show_end_markers=True,
+        )
+        st.caption(
+            "전략은 비용 반영 후 `net` 곡선이고, benchmark는 비용을 반영하지 않은 단순 reference curve입니다."
+        )
+
+    detail_cols = []
+    if result_df is not None and "Estimated Cost" in result_df.columns:
+        detail_cols.append("Date")
+        detail_cols.extend(
+            [
+                column
+                for column in [
+                    "Gross Total Balance",
+                    "Total Balance",
+                    "Turnover",
+                    "Estimated Cost",
+                    "Cumulative Estimated Cost",
+                ]
+                if column in result_df.columns
+            ]
+        )
+        st.markdown("##### Cost Detail Preview")
+        st.dataframe(result_df[detail_cols].head(12), use_container_width=True, hide_index=True)
+
+    if benchmark_summary_df is not None:
+        st.markdown("##### Benchmark Summary")
+        st.dataframe(benchmark_summary_df, use_container_width=True, hide_index=True)
+
+
 def _build_compare_highlight_rows(bundles: list[dict]) -> pd.DataFrame:
     rows: list[dict[str, Any]] = []
     for bundle in bundles:
@@ -1852,6 +2337,10 @@ def _build_compare_highlight_rows(bundles: list[dict]) -> pd.DataFrame:
                 "Universe Contract": meta.get("universe_contract") or "-",
                 "Dynamic Candidate Pool": meta.get("dynamic_candidate_count"),
                 "Membership Avg": universe_debug.get("avg_membership_count"),
+                "Min Price": meta.get("min_price_filter"),
+                "Cost (bps)": meta.get("transaction_cost_bps"),
+                "Avg Turnover": meta.get("avg_turnover"),
+                "Benchmark": meta.get("benchmark_ticker"),
                 "Membership Range": (
                     f"{int(universe_debug['min_membership_count'])} -> {int(universe_debug['max_membership_count'])}"
                     if universe_debug.get("min_membership_count") is not None
@@ -2104,6 +2593,11 @@ def _render_compare_results() -> None:
                 snapshot_source=focused_bundle["meta"].get("snapshot_source"),
             )
 
+        if focused_bundle["meta"].get("real_money_hardening"):
+            st.divider()
+            st.markdown("##### Real-Money Contract")
+            _render_real_money_details(focused_bundle)
+
     with meta_tab:
         meta_rows = []
         for bundle in bundles:
@@ -2118,6 +2612,10 @@ def _render_compare_results() -> None:
                     "option": meta["option"],
                     "rebalance_interval": meta.get("rebalance_interval"),
                     "top": meta.get("top"),
+                    "min_price_filter": meta.get("min_price_filter"),
+                    "transaction_cost_bps": meta.get("transaction_cost_bps"),
+                    "benchmark_ticker": meta.get("benchmark_ticker"),
+                    "avg_turnover": meta.get("avg_turnover"),
                     "trend_filter": (
                         f"MA{meta.get('trend_filter_window', STRICT_TREND_FILTER_DEFAULT_WINDOW)}"
                         if meta.get("trend_filter_enabled")
@@ -2735,6 +3233,28 @@ def _build_history_payload(record: dict[str, Any]) -> dict[str, Any] | None:
         payload["market_regime_window"] = int(record.get("market_regime_window") or STRICT_MARKET_REGIME_DEFAULT_WINDOW)
     if record.get("market_regime_benchmark") is not None:
         payload["market_regime_benchmark"] = record.get("market_regime_benchmark") or STRICT_MARKET_REGIME_DEFAULT_BENCHMARK
+    if record.get("score_lookback_months") is not None:
+        payload["score_lookback_months"] = [int(value) for value in list(record.get("score_lookback_months") or [])]
+    if record.get("score_return_columns") is not None:
+        payload["score_return_columns"] = list(record.get("score_return_columns") or [])
+    if record.get("score_weights") is not None:
+        payload["score_weights"] = dict(record.get("score_weights") or {})
+    if record.get("risk_off_mode") is not None:
+        payload["risk_off_mode"] = record.get("risk_off_mode") or GTAA_DEFAULT_RISK_OFF_MODE
+    if record.get("defensive_tickers") is not None:
+        payload["defensive_tickers"] = list(record.get("defensive_tickers") or [])
+    if record.get("crash_guardrail_enabled") is not None:
+        payload["crash_guardrail_enabled"] = bool(record.get("crash_guardrail_enabled"))
+    if record.get("crash_guardrail_drawdown_threshold") is not None:
+        payload["crash_guardrail_drawdown_threshold"] = float(record.get("crash_guardrail_drawdown_threshold") or GTAA_DEFAULT_CRASH_GUARDRAIL_DRAWDOWN_THRESHOLD)
+    if record.get("crash_guardrail_lookback_months") is not None:
+        payload["crash_guardrail_lookback_months"] = int(record.get("crash_guardrail_lookback_months") or GTAA_DEFAULT_CRASH_GUARDRAIL_LOOKBACK_MONTHS)
+    if record.get("min_price_filter") is not None:
+        payload["min_price_filter"] = float(record.get("min_price_filter") or 0.0)
+    if record.get("transaction_cost_bps") is not None:
+        payload["transaction_cost_bps"] = float(record.get("transaction_cost_bps") or 0.0)
+    if record.get("benchmark_ticker") is not None:
+        payload["benchmark_ticker"] = str(record.get("benchmark_ticker") or "").strip().upper() or ETF_REAL_MONEY_DEFAULT_BENCHMARK
     if record.get("snapshot_source") is not None:
         payload["snapshot_source"] = record.get("snapshot_source")
     if record.get("universe_contract") is not None:
@@ -2744,7 +3264,7 @@ def _build_history_payload(record: dict[str, Any]) -> dict[str, Any] | None:
 
     # GTAA stores cadence in rebalance_interval for history summarization; map it back.
     if strategy_key == "gtaa":
-        payload["interval"] = int(record.get("rebalance_interval") or 2)
+        payload["interval"] = int(record.get("rebalance_interval") or GTAA_DEFAULT_SIGNAL_INTERVAL)
     return payload
 
 
@@ -2803,6 +3323,19 @@ def _build_prefill_summary_lines(payload: dict[str, Any] | None) -> list[str]:
 
     if payload.get("top") is not None:
         lines.append(f"Top N: `{payload.get('top')}`")
+    if payload.get("min_price_filter") is not None:
+        lines.append(f"Minimum Price: `{payload.get('min_price_filter')}`")
+    if payload.get("transaction_cost_bps") is not None:
+        lines.append(f"Transaction Cost: `{payload.get('transaction_cost_bps')}` bps")
+    if payload.get("benchmark_ticker"):
+        lines.append(f"Benchmark: `{payload.get('benchmark_ticker')}`")
+    if payload.get("score_lookback_months"):
+        selected_horizons = [f"{int(months)}M" for months in list(payload.get("score_lookback_months") or [])]
+        lines.append(f"Score Horizons: `{', '.join(selected_horizons)}`")
+    elif payload.get("score_return_columns"):
+        label_map = dict(GTAA_SCORE_WEIGHT_LABELS)
+        selected_horizons = [label_map.get(col, col) for col in list(payload.get("score_return_columns") or [])]
+        lines.append(f"Score Horizons: `{', '.join(selected_horizons)}`")
 
     contract = payload.get("universe_contract")
     if contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE:
@@ -2834,22 +3367,49 @@ def _bundle_to_saved_strategy_override(bundle: dict[str, Any]) -> dict[str, Any]
 
     if strategy_name == "Equal Weight":
         return {
+            "tickers": list(meta.get("tickers") or EQUAL_WEIGHT_PRESETS["Dividend ETFs"]),
+            "preset_name": meta.get("preset_name") or "Dividend ETFs",
+            "universe_mode": meta.get("universe_mode") or "preset",
             "rebalance_interval": int(meta.get("rebalance_interval") or 12),
         }
     if strategy_name == "GTAA":
         return {
+            "tickers": list(meta.get("tickers") or GTAA_DEFAULT_TICKERS),
+            "preset_name": meta.get("preset_name") or "GTAA Universe",
+            "universe_mode": meta.get("universe_mode") or "preset",
             "top": int(meta.get("top") or 3),
-            "interval": int(meta.get("rebalance_interval") or 2),
+            "interval": int(meta.get("rebalance_interval") or GTAA_DEFAULT_SIGNAL_INTERVAL),
+            "score_lookback_months": list(meta.get("score_lookback_months") or GTAA_DEFAULT_SCORE_LOOKBACK_MONTHS),
+            "score_return_columns": list(meta.get("score_return_columns") or GTAA_SCORE_RETURN_COLUMNS),
+            "score_weights": dict(meta.get("score_weights") or GTAA_DEFAULT_SCORE_WEIGHTS),
+            "trend_filter_window": int(meta.get("trend_filter_window") or GTAA_DEFAULT_TREND_FILTER_WINDOW),
+            "risk_off_mode": meta.get("risk_off_mode") or GTAA_DEFAULT_RISK_OFF_MODE,
+            "defensive_tickers": list(meta.get("defensive_tickers") or GTAA_DEFAULT_DEFENSIVE_TICKERS),
+            "market_regime_enabled": bool(meta.get("market_regime_enabled", False)),
+            "market_regime_window": int(meta.get("market_regime_window") or STRICT_MARKET_REGIME_DEFAULT_WINDOW),
+            "market_regime_benchmark": meta.get("market_regime_benchmark") or STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
+            "crash_guardrail_enabled": bool(meta.get("crash_guardrail_enabled", GTAA_DEFAULT_CRASH_GUARDRAIL_ENABLED)),
+            "crash_guardrail_drawdown_threshold": float(meta.get("crash_guardrail_drawdown_threshold") or GTAA_DEFAULT_CRASH_GUARDRAIL_DRAWDOWN_THRESHOLD),
+            "crash_guardrail_lookback_months": int(meta.get("crash_guardrail_lookback_months") or GTAA_DEFAULT_CRASH_GUARDRAIL_LOOKBACK_MONTHS),
+            "min_price_filter": float(meta.get("min_price_filter") or ETF_REAL_MONEY_DEFAULT_MIN_PRICE),
+            "transaction_cost_bps": float(meta.get("transaction_cost_bps") or ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS),
+            "benchmark_ticker": meta.get("benchmark_ticker") or ETF_REAL_MONEY_DEFAULT_BENCHMARK,
         }
     if strategy_name == "Risk Parity Trend":
         return {
             "rebalance_interval": int(meta.get("rebalance_interval") or 1),
             "vol_window": int(meta.get("vol_window") or 6),
+            "min_price_filter": float(meta.get("min_price_filter") or ETF_REAL_MONEY_DEFAULT_MIN_PRICE),
+            "transaction_cost_bps": float(meta.get("transaction_cost_bps") or ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS),
+            "benchmark_ticker": meta.get("benchmark_ticker") or ETF_REAL_MONEY_DEFAULT_BENCHMARK,
         }
     if strategy_name == "Dual Momentum":
         return {
             "top": int(meta.get("top") or 1),
             "rebalance_interval": int(meta.get("rebalance_interval") or 1),
+            "min_price_filter": float(meta.get("min_price_filter") or ETF_REAL_MONEY_DEFAULT_MIN_PRICE),
+            "transaction_cost_bps": float(meta.get("transaction_cost_bps") or ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS),
+            "benchmark_ticker": meta.get("benchmark_ticker") or ETF_REAL_MONEY_DEFAULT_BENCHMARK,
         }
 
     override: dict[str, Any] = {
@@ -2951,19 +3511,84 @@ def _queue_saved_portfolio_compare_prefill(saved_portfolio: dict[str, Any]) -> N
 
 def _apply_compare_strategy_prefill(strategy_name: str, override: dict[str, Any]) -> None:
     if strategy_name == "Equal Weight":
+        preset_name = override.get("preset_name")
+        universe_mode = override.get("universe_mode")
+        tickers_text = ",".join(list(override.get("tickers") or EQUAL_WEIGHT_PRESETS["Dividend ETFs"]))
+        st.session_state["compare_eq_universe_mode"] = (
+            "Preset" if universe_mode == "preset" and preset_name in EQUAL_WEIGHT_PRESETS else "Manual"
+        )
+        if st.session_state["compare_eq_universe_mode"] == "Preset":
+            st.session_state["compare_eq_preset"] = preset_name or "Dividend ETFs"
+        else:
+            st.session_state["compare_eq_manual_tickers"] = tickers_text
         st.session_state["compare_eq_interval"] = int(override.get("rebalance_interval") or 12)
         return
     if strategy_name == "GTAA":
+        preset_name = override.get("preset_name")
+        universe_mode = override.get("universe_mode")
+        tickers_text = ",".join(list(override.get("tickers") or GTAA_DEFAULT_TICKERS))
+        st.session_state["compare_gtaa_universe_mode"] = (
+            "Preset" if universe_mode == "preset" and preset_name in GTAA_PRESETS else "Manual"
+        )
+        if st.session_state["compare_gtaa_universe_mode"] == "Preset":
+            st.session_state["compare_gtaa_preset"] = preset_name or "GTAA Universe"
+        else:
+            st.session_state["compare_gtaa_manual_tickers"] = tickers_text
         st.session_state["compare_gtaa_top"] = int(override.get("top") or 3)
-        st.session_state["compare_gtaa_interval"] = int(override.get("interval") or override.get("rebalance_interval") or 2)
+        st.session_state["compare_gtaa_interval"] = int(
+            override.get("interval") or override.get("rebalance_interval") or GTAA_DEFAULT_SIGNAL_INTERVAL
+        )
+        _set_gtaa_score_selection_state(
+            key_prefix="compare_gtaa",
+            score_lookback_months=list(
+                override.get("score_lookback_months")
+                or [_gtaa_months_from_return_col(col) for col in list(override.get("score_return_columns") or GTAA_SCORE_RETURN_COLUMNS)]
+            ),
+        )
+        st.session_state["compare_gtaa_trend_filter_window"] = int(
+            override.get("trend_filter_window") or GTAA_DEFAULT_TREND_FILTER_WINDOW
+        )
+        st.session_state["compare_gtaa_risk_off_mode"] = _risk_off_mode_value_to_label(
+            override.get("risk_off_mode") or GTAA_DEFAULT_RISK_OFF_MODE
+        )
+        st.session_state["compare_gtaa_defensive_tickers"] = ",".join(
+            list(override.get("defensive_tickers") or GTAA_DEFAULT_DEFENSIVE_TICKERS)
+        )
+        st.session_state["compare_gtaa_risk_off_market_regime_enabled"] = bool(
+            override.get("market_regime_enabled", False)
+        )
+        st.session_state["compare_gtaa_risk_off_market_regime_window"] = int(
+            override.get("market_regime_window") or STRICT_MARKET_REGIME_DEFAULT_WINDOW
+        )
+        st.session_state["compare_gtaa_risk_off_market_regime_benchmark"] = (
+            override.get("market_regime_benchmark") or STRICT_MARKET_REGIME_DEFAULT_BENCHMARK
+        )
+        st.session_state["compare_gtaa_crash_guardrail_enabled"] = bool(
+            override.get("crash_guardrail_enabled", GTAA_DEFAULT_CRASH_GUARDRAIL_ENABLED)
+        )
+        st.session_state["compare_gtaa_crash_guardrail_drawdown_threshold"] = float(
+            (override.get("crash_guardrail_drawdown_threshold") or GTAA_DEFAULT_CRASH_GUARDRAIL_DRAWDOWN_THRESHOLD) * 100.0
+        )
+        st.session_state["compare_gtaa_crash_guardrail_lookback_months"] = int(
+            override.get("crash_guardrail_lookback_months") or GTAA_DEFAULT_CRASH_GUARDRAIL_LOOKBACK_MONTHS
+        )
+        st.session_state["compare_gtaa_min_price_filter"] = float(override.get("min_price_filter") or ETF_REAL_MONEY_DEFAULT_MIN_PRICE)
+        st.session_state["compare_gtaa_transaction_cost_bps"] = float(override.get("transaction_cost_bps") or ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS)
+        st.session_state["compare_gtaa_benchmark_ticker"] = str(override.get("benchmark_ticker") or ETF_REAL_MONEY_DEFAULT_BENCHMARK).strip().upper()
         return
     if strategy_name == "Risk Parity Trend":
         st.session_state["compare_rp_interval"] = int(override.get("rebalance_interval") or 1)
         st.session_state["compare_rp_vol_window"] = int(override.get("vol_window") or 6)
+        st.session_state["compare_rp_min_price_filter"] = float(override.get("min_price_filter") or ETF_REAL_MONEY_DEFAULT_MIN_PRICE)
+        st.session_state["compare_rp_transaction_cost_bps"] = float(override.get("transaction_cost_bps") or ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS)
+        st.session_state["compare_rp_benchmark_ticker"] = str(override.get("benchmark_ticker") or ETF_REAL_MONEY_DEFAULT_BENCHMARK).strip().upper()
         return
     if strategy_name == "Dual Momentum":
         st.session_state["compare_dm_top"] = int(override.get("top") or 1)
         st.session_state["compare_dm_interval"] = int(override.get("rebalance_interval") or 1)
+        st.session_state["compare_dm_min_price_filter"] = float(override.get("min_price_filter") or ETF_REAL_MONEY_DEFAULT_MIN_PRICE)
+        st.session_state["compare_dm_transaction_cost_bps"] = float(override.get("transaction_cost_bps") or ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS)
+        st.session_state["compare_dm_benchmark_ticker"] = str(override.get("benchmark_ticker") or ETF_REAL_MONEY_DEFAULT_BENCHMARK).strip().upper()
         return
     if strategy_name == "Quality Snapshot":
         st.session_state["compare_qs_top_n"] = int(override.get("top_n") or 2)
@@ -3132,7 +3757,40 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         st.session_state["gtaa_timeframe"] = payload.get("timeframe") or "1d"
         st.session_state["gtaa_option"] = payload.get("option") or "month_end"
         st.session_state["gtaa_top"] = int(payload.get("top") or 3)
-        st.session_state["gtaa_interval"] = int(payload.get("interval") or 2)
+        st.session_state["gtaa_interval"] = int(payload.get("interval") or GTAA_DEFAULT_SIGNAL_INTERVAL)
+        _set_gtaa_score_selection_state(
+            key_prefix="gtaa",
+            score_lookback_months=list(
+                payload.get("score_lookback_months")
+                or [_gtaa_months_from_return_col(col) for col in list(payload.get("score_return_columns") or GTAA_SCORE_RETURN_COLUMNS)]
+            ),
+        )
+        st.session_state["gtaa_trend_filter_window"] = int(payload.get("trend_filter_window") or GTAA_DEFAULT_TREND_FILTER_WINDOW)
+        st.session_state["gtaa_risk_off_mode"] = _risk_off_mode_value_to_label(payload.get("risk_off_mode") or GTAA_DEFAULT_RISK_OFF_MODE)
+        st.session_state["gtaa_defensive_tickers"] = ",".join(
+            list(payload.get("defensive_tickers") or GTAA_DEFAULT_DEFENSIVE_TICKERS)
+        )
+        st.session_state["gtaa_risk_off_market_regime_enabled"] = bool(
+            payload.get("market_regime_enabled", False)
+        )
+        st.session_state["gtaa_risk_off_market_regime_window"] = int(
+            payload.get("market_regime_window") or STRICT_MARKET_REGIME_DEFAULT_WINDOW
+        )
+        st.session_state["gtaa_risk_off_market_regime_benchmark"] = (
+            payload.get("market_regime_benchmark") or STRICT_MARKET_REGIME_DEFAULT_BENCHMARK
+        )
+        st.session_state["gtaa_crash_guardrail_enabled"] = bool(
+            payload.get("crash_guardrail_enabled", GTAA_DEFAULT_CRASH_GUARDRAIL_ENABLED)
+        )
+        st.session_state["gtaa_crash_guardrail_drawdown_threshold"] = float(
+            (payload.get("crash_guardrail_drawdown_threshold") or GTAA_DEFAULT_CRASH_GUARDRAIL_DRAWDOWN_THRESHOLD) * 100.0
+        )
+        st.session_state["gtaa_crash_guardrail_lookback_months"] = int(
+            payload.get("crash_guardrail_lookback_months") or GTAA_DEFAULT_CRASH_GUARDRAIL_LOOKBACK_MONTHS
+        )
+        st.session_state["gtaa_min_price_filter"] = float(payload.get("min_price_filter") or ETF_REAL_MONEY_DEFAULT_MIN_PRICE)
+        st.session_state["gtaa_transaction_cost_bps"] = float(payload.get("transaction_cost_bps") or ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS)
+        st.session_state["gtaa_benchmark_ticker"] = str(payload.get("benchmark_ticker") or ETF_REAL_MONEY_DEFAULT_BENCHMARK).strip().upper()
     elif strategy_key == "risk_parity_trend":
         st.session_state["rp_universe_mode"] = "Preset" if universe_mode == "preset" and preset_name in RISK_PARITY_PRESETS else "Manual"
         if st.session_state["rp_universe_mode"] == "Preset":
@@ -3143,6 +3801,11 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         st.session_state["rp_end"] = end_date
         st.session_state["rp_timeframe"] = payload.get("timeframe") or "1d"
         st.session_state["rp_option"] = payload.get("option") or "month_end"
+        st.session_state["rp_rebalance_interval"] = int(payload.get("rebalance_interval") or 1)
+        st.session_state["rp_vol_window"] = int(payload.get("vol_window") or 6)
+        st.session_state["rp_min_price_filter"] = float(payload.get("min_price_filter") or ETF_REAL_MONEY_DEFAULT_MIN_PRICE)
+        st.session_state["rp_transaction_cost_bps"] = float(payload.get("transaction_cost_bps") or ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS)
+        st.session_state["rp_benchmark_ticker"] = str(payload.get("benchmark_ticker") or ETF_REAL_MONEY_DEFAULT_BENCHMARK).strip().upper()
     elif strategy_key == "dual_momentum":
         st.session_state["dm_universe_mode"] = "Preset" if universe_mode == "preset" and preset_name in DUAL_MOMENTUM_PRESETS else "Manual"
         if st.session_state["dm_universe_mode"] == "Preset":
@@ -3153,6 +3816,11 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         st.session_state["dm_end"] = end_date
         st.session_state["dm_timeframe"] = payload.get("timeframe") or "1d"
         st.session_state["dm_option"] = payload.get("option") or "month_end"
+        st.session_state["dm_top"] = int(payload.get("top") or 1)
+        st.session_state["dm_rebalance_interval"] = int(payload.get("rebalance_interval") or 1)
+        st.session_state["dm_min_price_filter"] = float(payload.get("min_price_filter") or ETF_REAL_MONEY_DEFAULT_MIN_PRICE)
+        st.session_state["dm_transaction_cost_bps"] = float(payload.get("transaction_cost_bps") or ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS)
+        st.session_state["dm_benchmark_ticker"] = str(payload.get("benchmark_ticker") or ETF_REAL_MONEY_DEFAULT_BENCHMARK).strip().upper()
     elif strategy_key == "quality_snapshot":
         st.session_state["qs_universe_mode"] = "Preset" if universe_mode == "preset" and preset_name in QUALITY_BROAD_PRESETS else "Manual"
         if st.session_state["qs_universe_mode"] == "Preset":
@@ -4052,6 +4720,21 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> None:
                     option=payload["option"],
                     top=payload["top"],
                     interval=payload["interval"],
+                    score_lookback_months=payload.get("score_lookback_months"),
+                    score_return_columns=payload.get("score_return_columns"),
+                    score_weights=payload.get("score_weights"),
+                    trend_filter_window=payload.get("trend_filter_window", GTAA_DEFAULT_TREND_FILTER_WINDOW),
+                    risk_off_mode=payload.get("risk_off_mode", GTAA_DEFAULT_RISK_OFF_MODE),
+                    defensive_tickers=payload.get("defensive_tickers", GTAA_DEFAULT_DEFENSIVE_TICKERS),
+                    market_regime_enabled=payload.get("market_regime_enabled", False),
+                    market_regime_window=payload.get("market_regime_window", STRICT_MARKET_REGIME_DEFAULT_WINDOW),
+                    market_regime_benchmark=payload.get("market_regime_benchmark", STRICT_MARKET_REGIME_DEFAULT_BENCHMARK),
+                    crash_guardrail_enabled=payload.get("crash_guardrail_enabled", GTAA_DEFAULT_CRASH_GUARDRAIL_ENABLED),
+                    crash_guardrail_drawdown_threshold=payload.get("crash_guardrail_drawdown_threshold", GTAA_DEFAULT_CRASH_GUARDRAIL_DRAWDOWN_THRESHOLD),
+                    crash_guardrail_lookback_months=payload.get("crash_guardrail_lookback_months", GTAA_DEFAULT_CRASH_GUARDRAIL_LOOKBACK_MONTHS),
+                    min_price_filter=payload.get("min_price_filter", ETF_REAL_MONEY_DEFAULT_MIN_PRICE),
+                    transaction_cost_bps=payload.get("transaction_cost_bps", ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS),
+                    benchmark_ticker=payload.get("benchmark_ticker", ETF_REAL_MONEY_DEFAULT_BENCHMARK),
                     universe_mode=payload["universe_mode"],
                     preset_name=payload["preset_name"],
                 )
@@ -4062,6 +4745,11 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> None:
                     end=payload["end"],
                     timeframe=payload["timeframe"],
                     option=payload["option"],
+                    rebalance_interval=payload.get("rebalance_interval", 1),
+                    vol_window=payload.get("vol_window", 6),
+                    min_price_filter=payload.get("min_price_filter", ETF_REAL_MONEY_DEFAULT_MIN_PRICE),
+                    transaction_cost_bps=payload.get("transaction_cost_bps", ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS),
+                    benchmark_ticker=payload.get("benchmark_ticker", ETF_REAL_MONEY_DEFAULT_BENCHMARK),
                     universe_mode=payload["universe_mode"],
                     preset_name=payload["preset_name"],
                 )
@@ -4072,6 +4760,11 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> None:
                     end=payload["end"],
                     timeframe=payload["timeframe"],
                     option=payload["option"],
+                    top=payload.get("top", 1),
+                    rebalance_interval=payload.get("rebalance_interval", 1),
+                    min_price_filter=payload.get("min_price_filter", ETF_REAL_MONEY_DEFAULT_MIN_PRICE),
+                    transaction_cost_bps=payload.get("transaction_cost_bps", ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS),
+                    benchmark_ticker=payload.get("benchmark_ticker", ETF_REAL_MONEY_DEFAULT_BENCHMARK),
                     universe_mode=payload["universe_mode"],
                     preset_name=payload["preset_name"],
                 )
@@ -4254,36 +4947,11 @@ def _render_equal_weight_form() -> None:
     st.caption("DB-backed equal-weight portfolio execution using the first public runtime wrapper.")
     _apply_single_strategy_prefill("equal_weight")
 
+    _universe_mode, preset_name, tickers = _render_equal_weight_universe_inputs(
+        key_prefix="eq",
+    )
+
     with st.form("equal_weight_backtest_form", clear_on_submit=False):
-        universe_mode = st.radio(
-            "Universe Mode",
-            options=["Preset", "Manual"],
-            horizontal=True,
-            help="Preset은 빠른 실행용, Manual은 직접 종목을 입력하는 방식입니다.",
-            key="eq_universe_mode",
-        )
-
-        preset_name = None
-        tickers: list[str] = []
-
-        if universe_mode == "Preset":
-            preset_name = st.selectbox(
-                "Preset",
-                options=list(EQUAL_WEIGHT_PRESETS.keys()),
-                index=0,
-                key="eq_preset",
-            )
-            tickers = EQUAL_WEIGHT_PRESETS[preset_name]
-            st.caption(f"Selected tickers: `{', '.join(tickers)}`")
-        else:
-            manual_tickers = st.text_input(
-                "Tickers",
-                value="VIG,SCHD,DGRO,GLD",
-                help="Comma-separated tickers. Example: VIG,SCHD,DGRO,GLD",
-                key="eq_manual_tickers",
-            )
-            tickers = _parse_manual_tickers(manual_tickers)
-
         col1, col2 = st.columns(2)
         with col1:
             start_date = st.date_input("Start Date", value=date(2016, 1, 1), key="eq_start")
@@ -4328,7 +4996,7 @@ def _render_equal_weight_form() -> None:
         "timeframe": timeframe,
         "option": option,
         "rebalance_interval": int(rebalance_interval),
-        "universe_mode": "preset" if universe_mode == "Preset" else "manual_tickers",
+        "universe_mode": _universe_mode,
         "preset_name": preset_name,
     }
 
@@ -4340,35 +5008,11 @@ def _render_gtaa_form() -> None:
     st.caption("DB-backed GTAA execution using the second public runtime wrapper.")
     _apply_single_strategy_prefill("gtaa")
 
+    _universe_mode, preset_name, tickers = _render_gtaa_universe_inputs(
+        key_prefix="gtaa",
+    )
+
     with st.form("gtaa_backtest_form", clear_on_submit=False):
-        universe_mode = st.radio(
-            "Universe Mode",
-            options=["Preset", "Manual"],
-            horizontal=True,
-            help="GTAA는 기본적으로 preset universe 사용을 권장합니다.",
-            key="gtaa_universe_mode",
-        )
-
-        preset_name = None
-        tickers: list[str] = []
-
-        if universe_mode == "Preset":
-            preset_name = st.selectbox(
-                "Preset",
-                options=list(GTAA_PRESETS.keys()),
-                index=0,
-                key="gtaa_preset",
-            )
-            tickers = GTAA_PRESETS[preset_name]
-            st.caption(f"Selected tickers: `{', '.join(tickers)}`")
-        else:
-            manual_tickers = st.text_input(
-                "Tickers",
-                value="SPY,IWD,IWM,IWN,MTUM,EFA,TLT,IEF,LQD,DBC,VNQ,GLD",
-                help="Comma-separated tickers. Example: SPY,IWD,IWM,IWN,MTUM,EFA,TLT,IEF,LQD,DBC,VNQ,GLD",
-                key="gtaa_manual_tickers",
-            )
-            tickers = _parse_manual_tickers(manual_tickers)
 
         col1, col2 = st.columns(2)
         with col1:
@@ -4392,11 +5036,17 @@ def _render_gtaa_form() -> None:
                 "Signal Interval (months)",
                 min_value=1,
                 max_value=12,
-                value=2,
+                value=GTAA_DEFAULT_SIGNAL_INTERVAL,
                 step=1,
-                help="기본값 2는 현재 GTAA 기준값입니다. 1이면 매월, 2면 격월로 신호를 계산합니다.",
+                help="현재 기본값은 1입니다. 1이면 매월, 2면 격월로 신호를 계산합니다.",
                 key="gtaa_interval",
             )
+            st.divider()
+            min_price_filter, transaction_cost_bps, benchmark_ticker = _render_etf_real_money_inputs(
+                key_prefix="gtaa",
+            )
+            score_lookback_months, score_weights = _render_gtaa_score_weight_inputs(key_prefix="gtaa")
+            risk_off_contract = _render_gtaa_risk_off_contract_inputs(key_prefix="gtaa")
 
         submitted = st.form_submit_button("Run GTAA Backtest", use_container_width=True)
 
@@ -4408,6 +5058,8 @@ def _render_gtaa_form() -> None:
         validation_errors.append("At least one ticker is required.")
     if start_date > end_date:
         validation_errors.append("Start Date must be earlier than or equal to End Date.")
+    if not score_lookback_months:
+        validation_errors.append("GTAA Score Horizons must contain at least one lookback window.")
 
     if validation_errors:
         for error in validation_errors:
@@ -4423,6 +5075,21 @@ def _render_gtaa_form() -> None:
         "option": option,
         "top": int(top),
         "interval": int(interval),
+        "score_lookback_months": list(score_lookback_months),
+        "score_return_columns": [_gtaa_return_col_from_months(months) for months in score_lookback_months],
+        "score_weights": score_weights,
+        "trend_filter_window": int(risk_off_contract["trend_filter_window"]),
+        "risk_off_mode": risk_off_contract["risk_off_mode"],
+        "defensive_tickers": list(risk_off_contract["defensive_tickers"]),
+        "market_regime_enabled": bool(risk_off_contract["market_regime_enabled"]),
+        "market_regime_window": int(risk_off_contract["market_regime_window"]),
+        "market_regime_benchmark": risk_off_contract["market_regime_benchmark"],
+        "crash_guardrail_enabled": bool(risk_off_contract["crash_guardrail_enabled"]),
+        "crash_guardrail_drawdown_threshold": float(risk_off_contract["crash_guardrail_drawdown_threshold"]),
+        "crash_guardrail_lookback_months": int(risk_off_contract["crash_guardrail_lookback_months"]),
+        "min_price_filter": float(min_price_filter),
+        "transaction_cost_bps": float(transaction_cost_bps),
+        "benchmark_ticker": benchmark_ticker,
         "universe_mode": "preset" if universe_mode == "Preset" else "manual_tickers",
         "preset_name": preset_name,
     }
@@ -4474,6 +5141,30 @@ def _render_risk_parity_form() -> None:
         with st.expander("Advanced Inputs", expanded=False):
             timeframe = st.selectbox("Timeframe", options=["1d"], index=0, key="rp_timeframe")
             option = st.selectbox("Option", options=["month_end"], index=0, key="rp_option")
+            rebalance_interval = int(
+                st.number_input(
+                    "Rebalance Interval (months)",
+                    min_value=1,
+                    max_value=12,
+                    value=1,
+                    step=1,
+                    key="rp_rebalance_interval",
+                )
+            )
+            vol_window = int(
+                st.number_input(
+                    "Volatility Window (months)",
+                    min_value=1,
+                    max_value=24,
+                    value=6,
+                    step=1,
+                    key="rp_vol_window",
+                )
+            )
+            st.divider()
+            min_price_filter, transaction_cost_bps, benchmark_ticker = _render_etf_real_money_inputs(
+                key_prefix="rp",
+            )
 
         submitted = st.form_submit_button("Run Risk Parity Trend Backtest", use_container_width=True)
 
@@ -4498,6 +5189,11 @@ def _render_risk_parity_form() -> None:
         "end": end_date.isoformat(),
         "timeframe": timeframe,
         "option": option,
+        "rebalance_interval": int(rebalance_interval),
+        "vol_window": int(vol_window),
+        "min_price_filter": float(min_price_filter),
+        "transaction_cost_bps": float(transaction_cost_bps),
+        "benchmark_ticker": benchmark_ticker,
         "universe_mode": "preset" if universe_mode == "Preset" else "manual_tickers",
         "preset_name": preset_name,
     }
@@ -4549,6 +5245,30 @@ def _render_dual_momentum_form() -> None:
         with st.expander("Advanced Inputs", expanded=False):
             timeframe = st.selectbox("Timeframe", options=["1d"], index=0, key="dm_timeframe")
             option = st.selectbox("Option", options=["month_end"], index=0, key="dm_option")
+            top = int(
+                st.number_input(
+                    "Top Assets",
+                    min_value=1,
+                    max_value=5,
+                    value=1,
+                    step=1,
+                    key="dm_top",
+                )
+            )
+            rebalance_interval = int(
+                st.number_input(
+                    "Rebalance Interval (months)",
+                    min_value=1,
+                    max_value=12,
+                    value=1,
+                    step=1,
+                    key="dm_rebalance_interval",
+                )
+            )
+            st.divider()
+            min_price_filter, transaction_cost_bps, benchmark_ticker = _render_etf_real_money_inputs(
+                key_prefix="dm",
+            )
 
         submitted = st.form_submit_button("Run Dual Momentum Backtest", use_container_width=True)
 
@@ -4573,6 +5293,11 @@ def _render_dual_momentum_form() -> None:
         "end": end_date.isoformat(),
         "timeframe": timeframe,
         "option": option,
+        "top": int(top),
+        "rebalance_interval": int(rebalance_interval),
+        "min_price_filter": float(min_price_filter),
+        "transaction_cost_bps": float(transaction_cost_bps),
+        "benchmark_ticker": benchmark_ticker,
         "universe_mode": "preset" if universe_mode == "Preset" else "manual_tickers",
         "preset_name": preset_name,
     }
@@ -5897,6 +6622,40 @@ def render_backtest_tab() -> None:
         )
         st.caption("Strategy selection is outside the form so the strategy-specific advanced inputs update immediately.")
 
+        compare_eq_universe_mode = "preset"
+        compare_eq_preset_name: str | None = "Dividend ETFs"
+        compare_eq_tickers = list(EQUAL_WEIGHT_PRESETS["Dividend ETFs"])
+        if "Equal Weight" in selected_strategies:
+            with st.expander("Equal Weight Universe", expanded=False):
+                st.caption("Equal Weight universe selection is outside the compare submit form so preset changes refresh the ticker preview immediately.")
+                (
+                    compare_eq_universe_mode,
+                    compare_eq_preset_name,
+                    compare_eq_tickers,
+                ) = _render_equal_weight_universe_inputs(
+                    key_prefix="compare_eq",
+                    radio_label="Equal Weight Universe Mode",
+                    preset_label="Equal Weight Preset",
+                    ticker_label="Equal Weight Tickers",
+                )
+
+        compare_gtaa_universe_mode = "preset"
+        compare_gtaa_preset_name: str | None = "GTAA Universe"
+        compare_gtaa_tickers = list(GTAA_DEFAULT_TICKERS)
+        if "GTAA" in selected_strategies:
+            with st.expander("GTAA Universe", expanded=False):
+                st.caption("GTAA universe selection is outside the compare submit form so preset changes refresh the ticker preview immediately.")
+                (
+                    compare_gtaa_universe_mode,
+                    compare_gtaa_preset_name,
+                    compare_gtaa_tickers,
+                ) = _render_gtaa_universe_inputs(
+                    key_prefix="compare_gtaa",
+                    radio_label="GTAA Universe Mode",
+                    preset_label="GTAA Preset",
+                    ticker_label="GTAA Tickers",
+                )
+
         with st.form("compare_backtests_form", clear_on_submit=False):
             col1, col2 = st.columns(2)
             with col1:
@@ -5914,6 +6673,9 @@ def render_backtest_tab() -> None:
                 if "Equal Weight" in selected_strategies:
                     with st.expander("Equal Weight", expanded=False):
                         compare_strategy_overrides["Equal Weight"] = {
+                            "tickers": list(compare_eq_tickers),
+                            "preset_name": compare_eq_preset_name,
+                            "universe_mode": compare_eq_universe_mode,
                             "rebalance_interval": int(
                                 st.number_input(
                                     "Equal Weight Rebalance Interval",
@@ -5928,7 +6690,17 @@ def render_backtest_tab() -> None:
 
                 if "GTAA" in selected_strategies:
                     with st.expander("GTAA", expanded=False):
+                        min_price_filter, transaction_cost_bps, benchmark_ticker = _render_etf_real_money_inputs(
+                            key_prefix="compare_gtaa",
+                        )
+                        compare_gtaa_score_lookback_months, compare_gtaa_score_weights = _render_gtaa_score_weight_inputs(
+                            key_prefix="compare_gtaa"
+                        )
+                        risk_off_contract = _render_gtaa_risk_off_contract_inputs(key_prefix="compare_gtaa")
                         compare_strategy_overrides["GTAA"] = {
+                            "tickers": list(compare_gtaa_tickers),
+                            "preset_name": compare_gtaa_preset_name,
+                            "universe_mode": compare_gtaa_universe_mode,
                             "top": int(
                                 st.number_input(
                                     "GTAA Top Assets",
@@ -5944,15 +6716,33 @@ def render_backtest_tab() -> None:
                                     "GTAA Signal Interval (months)",
                                     min_value=1,
                                     max_value=12,
-                                    value=2,
+                                    value=GTAA_DEFAULT_SIGNAL_INTERVAL,
                                     step=1,
                                     key="compare_gtaa_interval",
                                 )
                             ),
+                            "score_lookback_months": list(compare_gtaa_score_lookback_months),
+                            "score_return_columns": [_gtaa_return_col_from_months(months) for months in compare_gtaa_score_lookback_months],
+                            "score_weights": compare_gtaa_score_weights,
+                            "trend_filter_window": int(risk_off_contract["trend_filter_window"]),
+                            "risk_off_mode": risk_off_contract["risk_off_mode"],
+                            "defensive_tickers": list(risk_off_contract["defensive_tickers"]),
+                            "market_regime_enabled": bool(risk_off_contract["market_regime_enabled"]),
+                            "market_regime_window": int(risk_off_contract["market_regime_window"]),
+                            "market_regime_benchmark": risk_off_contract["market_regime_benchmark"],
+                            "crash_guardrail_enabled": bool(risk_off_contract["crash_guardrail_enabled"]),
+                            "crash_guardrail_drawdown_threshold": float(risk_off_contract["crash_guardrail_drawdown_threshold"]),
+                            "crash_guardrail_lookback_months": int(risk_off_contract["crash_guardrail_lookback_months"]),
+                            "min_price_filter": float(min_price_filter),
+                            "transaction_cost_bps": float(transaction_cost_bps),
+                            "benchmark_ticker": benchmark_ticker,
                         }
 
                 if "Risk Parity Trend" in selected_strategies:
                     st.markdown("**Risk Parity Trend**")
+                    min_price_filter, transaction_cost_bps, benchmark_ticker = _render_etf_real_money_inputs(
+                        key_prefix="compare_rp",
+                    )
                     compare_strategy_overrides["Risk Parity Trend"] = {
                         "rebalance_interval": int(
                             st.number_input(
@@ -5974,10 +6764,16 @@ def render_backtest_tab() -> None:
                                 key="compare_rp_vol_window",
                             )
                         ),
+                        "min_price_filter": float(min_price_filter),
+                        "transaction_cost_bps": float(transaction_cost_bps),
+                        "benchmark_ticker": benchmark_ticker,
                     }
 
                 if "Dual Momentum" in selected_strategies:
                     st.markdown("**Dual Momentum**")
+                    min_price_filter, transaction_cost_bps, benchmark_ticker = _render_etf_real_money_inputs(
+                        key_prefix="compare_dm",
+                    )
                     compare_strategy_overrides["Dual Momentum"] = {
                         "top": int(
                             st.number_input(
@@ -5999,6 +6795,9 @@ def render_backtest_tab() -> None:
                                 key="compare_dm_interval",
                             )
                         ),
+                        "min_price_filter": float(min_price_filter),
+                        "transaction_cost_bps": float(transaction_cost_bps),
+                        "benchmark_ticker": benchmark_ticker,
                     }
 
                 if "Quality Snapshot" in selected_strategies:
@@ -6573,6 +7372,27 @@ def render_backtest_tab() -> None:
                 st.session_state.backtest_compare_bundles = None
                 st.session_state.backtest_compare_error_kind = "input"
                 st.session_state.backtest_compare_error = "Start Date must be earlier than or equal to End Date."
+            elif (
+                "Equal Weight" in selected_strategies
+                and not (compare_strategy_overrides.get("Equal Weight", {}).get("tickers") or [])
+            ):
+                st.session_state.backtest_compare_bundles = None
+                st.session_state.backtest_compare_error_kind = "input"
+                st.session_state.backtest_compare_error = "Equal Weight universe must contain at least one ticker."
+            elif (
+                "GTAA" in selected_strategies
+                and not (compare_strategy_overrides.get("GTAA", {}).get("score_lookback_months") or [])
+            ):
+                st.session_state.backtest_compare_bundles = None
+                st.session_state.backtest_compare_error_kind = "input"
+                st.session_state.backtest_compare_error = "GTAA Score Horizons must contain at least one lookback window."
+            elif (
+                "GTAA" in selected_strategies
+                and not (compare_strategy_overrides.get("GTAA", {}).get("tickers") or [])
+            ):
+                st.session_state.backtest_compare_bundles = None
+                st.session_state.backtest_compare_error_kind = "input"
+                st.session_state.backtest_compare_error = "GTAA universe must contain at least one ticker."
             else:
                 try:
                     bundles = []

@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
+import numpy as np
 import pandas as pd
 
 from finance.loaders import (
@@ -16,6 +17,15 @@ from finance.loaders import (
 )
 from finance.performance import portfolio_performance_summary
 from finance.sample import (
+    GTAA_DEFAULT_CRASH_GUARDRAIL_DRAWDOWN_THRESHOLD,
+    GTAA_DEFAULT_CRASH_GUARDRAIL_ENABLED,
+    GTAA_DEFAULT_CRASH_GUARDRAIL_LOOKBACK_MONTHS,
+    GTAA_DEFAULT_DEFENSIVE_TICKERS,
+    GTAA_DEFAULT_RISK_OFF_MODE,
+    GTAA_DEFAULT_SCORE_LOOKBACK_MONTHS,
+    GTAA_DEFAULT_SIGNAL_INTERVAL,
+    GTAA_DEFAULT_TREND_FILTER_WINDOW,
+    GTAA_DEFAULT_SCORE_WEIGHTS,
     HISTORICAL_DYNAMIC_PIT_UNIVERSE,
     STATIC_MANAGED_RESEARCH_UNIVERSE,
     STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
@@ -40,6 +50,12 @@ class BacktestInputError(ValueError):
 
 class BacktestDataError(ValueError):
     """Raised when the requested DB-backed backtest cannot find required market data."""
+
+
+ETF_REAL_MONEY_DEFAULT_MIN_PRICE = 5.0
+ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS = 10.0
+ETF_REAL_MONEY_DEFAULT_BENCHMARK = "SPY"
+REAL_MONEY_CASH_LABEL = "__CASH__"
 
 
 def _normalize_tickers(tickers: Sequence[str] | None) -> list[str]:
@@ -134,6 +150,284 @@ def _preflight_price_strategy_data(
             "Some requested tickers do not have DB price history for the selected range: "
             + ", ".join(missing)
         )
+
+
+def _coerce_list_cell(value: Any) -> list[Any]:
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return value
+    if isinstance(value, tuple):
+        return list(value)
+    if isinstance(value, np.ndarray):
+        return value.tolist()
+    if pd.isna(value):
+        return []
+    return []
+
+
+def _coerce_float(value: Any, default: float = 0.0) -> float:
+    if value is None or pd.isna(value):
+        return float(default)
+    return float(value)
+
+
+def _build_weight_map(
+    tickers: list[Any],
+    balances: list[Any],
+    *,
+    cash_value: float,
+    total_balance: float,
+) -> dict[str, float]:
+    if total_balance <= 0:
+        return {REAL_MONEY_CASH_LABEL: 1.0}
+
+    weights: dict[str, float] = {}
+    for ticker, balance in zip(tickers, balances):
+        symbol = str(ticker).strip().upper()
+        if not symbol:
+            continue
+        weight = max(_coerce_float(balance), 0.0) / total_balance
+        weights[symbol] = weights.get(symbol, 0.0) + weight
+
+    cash_weight = max(float(cash_value), 0.0) / total_balance
+    if cash_weight > 0 or not weights:
+        weights[REAL_MONEY_CASH_LABEL] = cash_weight
+
+    return weights
+
+
+def _estimate_turnover_series(result_df: pd.DataFrame) -> pd.Series:
+    turnovers: list[float] = []
+    for _, row in result_df.iterrows():
+        if "Rebalancing" in result_df.columns and bool(row.get("Rebalancing")) is False:
+            turnovers.append(0.0)
+            continue
+
+        gross_total_balance = max(_coerce_float(row.get("Total Balance")), 0.0)
+        if gross_total_balance <= 0:
+            turnovers.append(0.0)
+            continue
+
+        end_tickers = _coerce_list_cell(row.get("End Ticker"))
+        end_balances = _coerce_list_cell(row.get("End Balance"))
+        next_tickers = _coerce_list_cell(row.get("Next Ticker"))
+        next_balances = _coerce_list_cell(row.get("Next Balance"))
+        next_cash = max(_coerce_float(row.get("Cash")), 0.0)
+        end_cash = max(gross_total_balance - sum(_coerce_float(value) for value in end_balances), 0.0)
+
+        current_weights = _build_weight_map(
+            end_tickers,
+            end_balances,
+            cash_value=end_cash,
+            total_balance=gross_total_balance,
+        )
+        target_weights = _build_weight_map(
+            next_tickers,
+            next_balances,
+            cash_value=next_cash,
+            total_balance=gross_total_balance,
+        )
+
+        universe = set(current_weights) | set(target_weights)
+        turnover = 0.5 * sum(
+            abs(current_weights.get(symbol, 0.0) - target_weights.get(symbol, 0.0))
+            for symbol in universe
+        )
+        turnovers.append(float(turnover))
+
+    return pd.Series(turnovers, index=result_df.index, dtype=float)
+
+
+def _apply_transaction_cost_postprocess(
+    result_df: pd.DataFrame,
+    *,
+    transaction_cost_bps: float,
+) -> tuple[pd.DataFrame, dict[str, float]]:
+    working = result_df.copy()
+    working["Gross Total Balance"] = pd.to_numeric(working["Total Balance"], errors="coerce")
+    working["Gross Total Return"] = pd.to_numeric(working["Total Return"], errors="coerce")
+    working["Turnover"] = _estimate_turnover_series(working)
+
+    cost_rate = max(float(transaction_cost_bps or 0.0), 0.0) / 10000.0
+    prev_net_balance: float | None = None
+    net_balances: list[float] = []
+    net_returns: list[float] = []
+    estimated_costs: list[float] = []
+    cumulative_cost = 0.0
+    cumulative_costs: list[float] = []
+
+    for _, row in working.iterrows():
+        gross_balance = max(_coerce_float(row.get("Gross Total Balance")), 0.0)
+        gross_return = row.get("Gross Total Return")
+        turnover = max(_coerce_float(row.get("Turnover")), 0.0)
+
+        if prev_net_balance is None or pd.isna(gross_return):
+            pre_cost_balance = gross_balance
+        else:
+            pre_cost_balance = prev_net_balance * (1.0 + float(gross_return))
+
+        estimated_cost = pre_cost_balance * cost_rate * turnover
+        net_balance = max(pre_cost_balance - estimated_cost, 0.0)
+        net_return = (
+            np.nan
+            if prev_net_balance is None or prev_net_balance == 0
+            else (net_balance / prev_net_balance) - 1.0
+        )
+
+        cumulative_cost += estimated_cost
+        net_balances.append(float(net_balance))
+        net_returns.append(net_return)
+        estimated_costs.append(float(estimated_cost))
+        cumulative_costs.append(float(cumulative_cost))
+        prev_net_balance = float(net_balance)
+
+    working["Estimated Cost"] = estimated_costs
+    working["Cumulative Estimated Cost"] = cumulative_costs
+    working["Net Total Balance"] = net_balances
+    working["Net Total Return"] = net_returns
+    working["Total Balance"] = working["Net Total Balance"]
+    working["Total Return"] = working["Net Total Return"]
+
+    diagnostics = {
+        "avg_turnover": float(working["Turnover"].mean()) if not working.empty else 0.0,
+        "max_turnover": float(working["Turnover"].max()) if not working.empty else 0.0,
+        "estimated_cost_total": float(working["Estimated Cost"].sum()) if not working.empty else 0.0,
+    }
+    return working, diagnostics
+
+
+def _build_benchmark_result_df(
+    *,
+    benchmark_ticker: str | None,
+    dates: pd.Series,
+    start: str | None,
+    end: str | None,
+    timeframe: str,
+    initial_balance: float,
+) -> pd.DataFrame | None:
+    symbol = str(benchmark_ticker or "").strip().upper()
+    if not symbol:
+        return None
+
+    history = load_price_history(
+        symbols=[symbol],
+        start=start,
+        end=end,
+        timeframe=timeframe,
+    )
+    if history.empty:
+        return None
+
+    benchmark_history = (
+        history.loc[history["symbol"].astype(str).str.upper() == symbol, ["date", "close"]]
+        .dropna(subset=["date", "close"])
+        .sort_values("date")
+        .rename(columns={"date": "price_date", "close": "Benchmark Close"})
+        .reset_index(drop=True)
+    )
+    if benchmark_history.empty:
+        return None
+
+    target_dates = pd.DataFrame({"Date": pd.to_datetime(dates).sort_values().unique()})
+    aligned = pd.merge_asof(
+        target_dates.sort_values("Date"),
+        benchmark_history,
+        left_on="Date",
+        right_on="price_date",
+        direction="backward",
+    ).dropna(subset=["Benchmark Close"])
+    if aligned.empty:
+        return None
+
+    base_price = float(aligned.iloc[0]["Benchmark Close"])
+    if base_price <= 0:
+        return None
+
+    aligned["Benchmark Total Balance"] = float(initial_balance) * (
+        aligned["Benchmark Close"].astype(float) / base_price
+    )
+    aligned["Benchmark Total Return"] = aligned["Benchmark Total Balance"].pct_change()
+    return aligned.reset_index(drop=True)
+
+
+def _apply_etf_real_money_hardening(
+    bundle: dict[str, Any],
+    *,
+    summary_freq: str,
+    min_price_filter: float,
+    transaction_cost_bps: float,
+    benchmark_ticker: str | None,
+) -> dict[str, Any]:
+    result_df = bundle["result_df"].copy()
+    hardened_df, turnover_stats = _apply_transaction_cost_postprocess(
+        result_df,
+        transaction_cost_bps=transaction_cost_bps,
+    )
+
+    bundle["result_df"] = hardened_df
+    bundle["chart_df"] = hardened_df[["Date", "Total Balance", "Total Return"]].copy()
+    bundle["summary_df"] = portfolio_performance_summary(
+        hardened_df,
+        name=bundle["strategy_name"],
+        freq=summary_freq,
+    )
+
+    meta = dict(bundle.get("meta") or {})
+    warnings = list(meta.get("warnings") or [])
+    warnings.append(
+        "Phase 12 first pass real-money hardening applied: minimum price filter, turnover estimate, "
+        "transaction cost, and single-ticker benchmark overlay."
+    )
+    meta.update(
+        {
+            "warnings": warnings,
+            "real_money_hardening": True,
+            "min_price_filter": float(min_price_filter or 0.0),
+            "transaction_cost_bps": float(transaction_cost_bps or 0.0),
+            "benchmark_ticker": str(benchmark_ticker or "").strip().upper() or None,
+            "avg_turnover": turnover_stats["avg_turnover"],
+            "max_turnover": turnover_stats["max_turnover"],
+            "estimated_cost_total": turnover_stats["estimated_cost_total"],
+            "gross_start_balance": float(hardened_df["Gross Total Balance"].iloc[0]),
+            "gross_end_balance": float(hardened_df["Gross Total Balance"].iloc[-1]),
+        }
+    )
+
+    benchmark_df = _build_benchmark_result_df(
+        benchmark_ticker=benchmark_ticker,
+        dates=hardened_df["Date"],
+        start=meta.get("start"),
+        end=meta.get("end"),
+        timeframe=meta.get("timeframe") or "1d",
+        initial_balance=float(hardened_df["Gross Total Balance"].iloc[0]),
+    )
+    if benchmark_df is not None:
+        benchmark_summary_input = benchmark_df.rename(
+            columns={
+                "Benchmark Total Balance": "Total Balance",
+                "Benchmark Total Return": "Total Return",
+            }
+        )[["Date", "Total Balance", "Total Return"]].copy()
+        bundle["benchmark_chart_df"] = benchmark_df
+        bundle["benchmark_summary_df"] = portfolio_performance_summary(
+            benchmark_summary_input,
+            name=f"{meta.get('benchmark_ticker')} Benchmark",
+            freq=summary_freq,
+        )
+        meta["benchmark_available"] = True
+        meta["benchmark_end_balance"] = float(benchmark_df["Benchmark Total Balance"].iloc[-1])
+        meta["net_excess_end_balance"] = float(hardened_df["Total Balance"].iloc[-1] - benchmark_df["Benchmark Total Balance"].iloc[-1])
+    else:
+        meta["benchmark_available"] = False
+        if meta.get("benchmark_ticker"):
+            warnings.append(
+                f"Benchmark overlay could not be built because DB price history for `{meta['benchmark_ticker']}` "
+                "was not available on the requested dates."
+            )
+
+    bundle["meta"] = meta
+    return bundle
 
 
 def _inspect_dynamic_universe_price_pool(
@@ -540,6 +834,12 @@ def build_backtest_result_bundle(
         meta["market_regime_window"] = input_params.get("market_regime_window")
     if input_params.get("market_regime_benchmark") is not None:
         meta["market_regime_benchmark"] = input_params.get("market_regime_benchmark")
+    if input_params.get("min_price_filter") is not None:
+        meta["min_price_filter"] = input_params.get("min_price_filter")
+    if input_params.get("transaction_cost_bps") is not None:
+        meta["transaction_cost_bps"] = input_params.get("transaction_cost_bps")
+    if input_params.get("benchmark_ticker") is not None:
+        meta["benchmark_ticker"] = input_params.get("benchmark_ticker")
     if input_params.get("snapshot_source") is not None:
         meta["snapshot_source"] = input_params.get("snapshot_source")
     if input_params.get("universe_contract") is not None:
@@ -554,6 +854,22 @@ def build_backtest_result_bundle(
         meta["universe_builder_scope"] = input_params.get("universe_builder_scope")
     if input_params.get("universe_debug") is not None:
         meta["universe_debug"] = input_params.get("universe_debug")
+    if input_params.get("score_weights") is not None:
+        meta["score_weights"] = input_params.get("score_weights")
+    if input_params.get("score_lookback_months") is not None:
+        meta["score_lookback_months"] = input_params.get("score_lookback_months")
+    if input_params.get("score_return_columns") is not None:
+        meta["score_return_columns"] = input_params.get("score_return_columns")
+    if input_params.get("risk_off_mode") is not None:
+        meta["risk_off_mode"] = input_params.get("risk_off_mode")
+    if input_params.get("defensive_tickers") is not None:
+        meta["defensive_tickers"] = input_params.get("defensive_tickers")
+    if input_params.get("crash_guardrail_enabled") is not None:
+        meta["crash_guardrail_enabled"] = input_params.get("crash_guardrail_enabled")
+    if input_params.get("crash_guardrail_drawdown_threshold") is not None:
+        meta["crash_guardrail_drawdown_threshold"] = input_params.get("crash_guardrail_drawdown_threshold")
+    if input_params.get("crash_guardrail_lookback_months") is not None:
+        meta["crash_guardrail_lookback_months"] = input_params.get("crash_guardrail_lookback_months")
 
     return {
         "strategy_name": strategy_name,
@@ -622,7 +938,22 @@ def run_gtaa_backtest_from_db(
     timeframe: str = "1d",
     option: str = "month_end",
     top: int = 3,
-    interval: int = 2,
+    interval: int = GTAA_DEFAULT_SIGNAL_INTERVAL,
+    min_price_filter: float = ETF_REAL_MONEY_DEFAULT_MIN_PRICE,
+    transaction_cost_bps: float = ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
+    benchmark_ticker: str = ETF_REAL_MONEY_DEFAULT_BENCHMARK,
+    score_lookback_months: Sequence[int] | None = None,
+    score_return_columns: Sequence[str] | None = None,
+    score_weights: dict[str, float] | None = None,
+    trend_filter_window: int = GTAA_DEFAULT_TREND_FILTER_WINDOW,
+    risk_off_mode: str = GTAA_DEFAULT_RISK_OFF_MODE,
+    defensive_tickers: Sequence[str] | None = None,
+    market_regime_enabled: bool = False,
+    market_regime_window: int = STRICT_MARKET_REGIME_DEFAULT_WINDOW,
+    market_regime_benchmark: str = STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
+    crash_guardrail_enabled: bool = GTAA_DEFAULT_CRASH_GUARDRAIL_ENABLED,
+    crash_guardrail_drawdown_threshold: float = GTAA_DEFAULT_CRASH_GUARDRAIL_DRAWDOWN_THRESHOLD,
+    crash_guardrail_lookback_months: int = GTAA_DEFAULT_CRASH_GUARDRAIL_LOOKBACK_MONTHS,
     universe_mode: str = "preset",
     preset_name: str | None = None,
 ) -> dict[str, Any]:
@@ -637,6 +968,30 @@ def run_gtaa_backtest_from_db(
         end=end,
         timeframe=timeframe,
     )
+    if (market_regime_enabled or crash_guardrail_enabled) and market_regime_benchmark:
+        benchmark_symbol = str(market_regime_benchmark).strip().upper()
+        if benchmark_symbol and benchmark_symbol not in normalized_tickers:
+            _preflight_price_strategy_data(
+                tickers=[benchmark_symbol],
+                start=start,
+                end=end,
+                timeframe=timeframe,
+            )
+
+    normalized_score_lookback_months = [
+        int(value)
+        for value in (
+            list(score_lookback_months)
+            if score_lookback_months is not None
+            else list(GTAA_DEFAULT_SCORE_LOOKBACK_MONTHS)
+        )
+    ]
+    normalized_score_return_columns = [f"{months}MReturn" for months in normalized_score_lookback_months]
+    normalized_score_weights = (
+        {f"{months}MReturn": 1.0 for months in normalized_score_lookback_months}
+        if score_weights is None
+        else dict(score_weights)
+    )
 
     result_df = get_gtaa3_from_db(
         tickers=normalized_tickers,
@@ -646,9 +1001,22 @@ def run_gtaa_backtest_from_db(
         option=option,
         top=top,
         interval=interval,
+        min_price=min_price_filter,
+        score_lookback_months=normalized_score_lookback_months,
+        score_return_columns=normalized_score_return_columns,
+        score_weights=normalized_score_weights,
+        trend_filter_window=trend_filter_window,
+        risk_off_mode=risk_off_mode,
+        defensive_tickers=list(defensive_tickers or GTAA_DEFAULT_DEFENSIVE_TICKERS),
+        market_regime_enabled=market_regime_enabled,
+        market_regime_window=market_regime_window,
+        market_regime_benchmark=market_regime_benchmark,
+        crash_guardrail_enabled=crash_guardrail_enabled,
+        crash_guardrail_drawdown_threshold=crash_guardrail_drawdown_threshold,
+        crash_guardrail_lookback_months=crash_guardrail_lookback_months,
     )
 
-    return build_backtest_result_bundle(
+    bundle = build_backtest_result_bundle(
         result_df,
         strategy_name="GTAA",
         strategy_key="gtaa",
@@ -660,10 +1028,32 @@ def run_gtaa_backtest_from_db(
             "option": option,
             "top": top,
             "rebalance_interval": interval,
+            "min_price_filter": min_price_filter,
+            "transaction_cost_bps": transaction_cost_bps,
+            "benchmark_ticker": benchmark_ticker,
+            "score_lookback_months": normalized_score_lookback_months,
+            "score_return_columns": normalized_score_return_columns,
+            "score_weights": normalized_score_weights,
+            "trend_filter_window": trend_filter_window,
+            "risk_off_mode": risk_off_mode,
+            "defensive_tickers": list(defensive_tickers or GTAA_DEFAULT_DEFENSIVE_TICKERS),
+            "market_regime_enabled": market_regime_enabled,
+            "market_regime_window": market_regime_window,
+            "market_regime_benchmark": market_regime_benchmark,
+            "crash_guardrail_enabled": crash_guardrail_enabled,
+            "crash_guardrail_drawdown_threshold": crash_guardrail_drawdown_threshold,
+            "crash_guardrail_lookback_months": crash_guardrail_lookback_months,
             "universe_mode": universe_mode,
             "preset_name": preset_name,
         },
         summary_freq=_summary_frequency(option, timeframe),
+    )
+    return _apply_etf_real_money_hardening(
+        bundle,
+        summary_freq=_summary_frequency(option, timeframe),
+        min_price_filter=min_price_filter,
+        transaction_cost_bps=transaction_cost_bps,
+        benchmark_ticker=benchmark_ticker,
     )
 
 
@@ -676,6 +1066,9 @@ def run_risk_parity_trend_backtest_from_db(
     option: str = "month_end",
     rebalance_interval: int = 1,
     vol_window: int = 6,
+    min_price_filter: float = ETF_REAL_MONEY_DEFAULT_MIN_PRICE,
+    transaction_cost_bps: float = ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
+    benchmark_ticker: str = ETF_REAL_MONEY_DEFAULT_BENCHMARK,
     universe_mode: str = "preset",
     preset_name: str | None = None,
 ) -> dict[str, Any]:
@@ -696,9 +1089,10 @@ def run_risk_parity_trend_backtest_from_db(
         option=option,
         rebalance_interval=rebalance_interval,
         vol_window=vol_window,
+        min_price=min_price_filter,
     )
 
-    return build_backtest_result_bundle(
+    bundle = build_backtest_result_bundle(
         result_df,
         strategy_name="Risk Parity Trend",
         strategy_key="risk_parity_trend",
@@ -710,10 +1104,20 @@ def run_risk_parity_trend_backtest_from_db(
             "option": option,
             "rebalance_interval": rebalance_interval,
             "vol_window": vol_window,
+            "min_price_filter": min_price_filter,
+            "transaction_cost_bps": transaction_cost_bps,
+            "benchmark_ticker": benchmark_ticker,
             "universe_mode": universe_mode,
             "preset_name": preset_name,
         },
         summary_freq=_summary_frequency(option, timeframe),
+    )
+    return _apply_etf_real_money_hardening(
+        bundle,
+        summary_freq=_summary_frequency(option, timeframe),
+        min_price_filter=min_price_filter,
+        transaction_cost_bps=transaction_cost_bps,
+        benchmark_ticker=benchmark_ticker,
     )
 
 
@@ -726,12 +1130,14 @@ def run_dual_momentum_backtest_from_db(
     option: str = "month_end",
     top: int = 1,
     rebalance_interval: int = 1,
+    min_price_filter: float = ETF_REAL_MONEY_DEFAULT_MIN_PRICE,
+    transaction_cost_bps: float = ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
+    benchmark_ticker: str = ETF_REAL_MONEY_DEFAULT_BENCHMARK,
     universe_mode: str = "preset",
     preset_name: str | None = None,
 ) -> dict[str, Any]:
     normalized_tickers = _normalize_tickers(tickers)
     _validate_backtest_date_range(start, end)
-    strict_label = f"strict {statement_freq}"
     _preflight_price_strategy_data(
         tickers=normalized_tickers,
         start=start,
@@ -747,9 +1153,10 @@ def run_dual_momentum_backtest_from_db(
         option=option,
         top=top,
         rebalance_interval=rebalance_interval,
+        min_price=min_price_filter,
     )
 
-    return build_backtest_result_bundle(
+    bundle = build_backtest_result_bundle(
         result_df,
         strategy_name="Dual Momentum",
         strategy_key="dual_momentum",
@@ -761,10 +1168,20 @@ def run_dual_momentum_backtest_from_db(
             "option": option,
             "top": top,
             "rebalance_interval": rebalance_interval,
+            "min_price_filter": min_price_filter,
+            "transaction_cost_bps": transaction_cost_bps,
+            "benchmark_ticker": benchmark_ticker,
             "universe_mode": universe_mode,
             "preset_name": preset_name,
         },
         summary_freq=_summary_frequency(option, timeframe),
+    )
+    return _apply_etf_real_money_hardening(
+        bundle,
+        summary_freq=_summary_frequency(option, timeframe),
+        min_price_filter=min_price_filter,
+        transaction_cost_bps=transaction_cost_bps,
+        benchmark_ticker=benchmark_ticker,
     )
 
 
