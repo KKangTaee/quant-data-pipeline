@@ -1415,12 +1415,61 @@ def _normalize_ohlcv_window(period: str, start: str | None, end: str | None) -> 
     return period, clean_start, clean_end
 
 
-def _resolve_daily_market_execution_profile(source_mode: str) -> tuple[str, str]:
+def _is_short_daily_refresh_window(
+    *,
+    period: str | None,
+    start: str | None,
+    end: str | None,
+    interval: str,
+) -> bool:
+    if interval != "1d":
+        return False
+
+    normalized_period = str(period or "").strip().lower()
+    if normalized_period == "1d":
+        return True
+
+    if not start and not end:
+        return False
+
+    try:
+        resolved_start = pd.to_datetime(start).date() if start else None
+        resolved_end = pd.to_datetime(end).date() if end else date.today()
+    except Exception:
+        return False
+
+    if resolved_start is None:
+        return False
+
+    return (resolved_end - resolved_start).days <= 10
+
+
+def _resolve_daily_market_execution_profile(
+    source_mode: str,
+    *,
+    period: str | None,
+    start: str | None,
+    end: str | None,
+    interval: str,
+) -> tuple[str, str]:
     raw_source_modes = {"NYSE Stocks", "NYSE ETFs", "NYSE Stocks + ETFs"}
     if source_mode in raw_source_modes:
         return (
             "raw_heavy",
             "Execution profile: `raw_heavy` | smaller batches, single-worker mode, longer cooldown, raw-universe operator sweep.",
+        )
+    managed_source_modes = {
+        "Profile Filtered Stocks",
+        "Profile Filtered ETFs",
+        "Profile Filtered Stocks + ETFs",
+    }
+    if (
+        source_mode in managed_source_modes
+        and _is_short_daily_refresh_window(period=period, start=start, end=end, interval=interval)
+    ):
+        return (
+            "managed_refresh_short",
+            "Execution profile: `managed_refresh_short` | short-window daily refresh, larger batches, two-worker first pass, rate-limit fallback still enabled.",
         )
     if source_mode == "Profile Filtered Stocks + ETFs":
         return (
@@ -1500,8 +1549,6 @@ def _render_ingestion_console() -> None:
                         )
                         st.caption(f"Excluded sample: {', '.join(daily_excluded_symbols[:10])}")
                 daily_symbols_input = daily_filtered_symbols
-                daily_execution_profile, daily_profile_caption = _resolve_daily_market_execution_profile(daily_source_mode)
-                st.caption(daily_profile_caption)
                 daily_col1, daily_col2 = st.columns(2)
                 daily_period_input = daily_col1.selectbox("Daily Period", PERIOD_PRESETS, index=0, key="daily_period_input")
                 daily_interval_input = daily_col2.selectbox("Daily Interval", ["1d", "1wk", "1mo"], index=0, key="daily_interval_input")
@@ -1513,6 +1560,14 @@ def _render_ingestion_console() -> None:
                     daily_start_input,
                     daily_end_input,
                 )
+                daily_execution_profile, daily_profile_caption = _resolve_daily_market_execution_profile(
+                    daily_source_mode,
+                    period=daily_resolved_period,
+                    start=daily_resolved_start,
+                    end=daily_resolved_end,
+                    interval=daily_interval_input,
+                )
+                st.caption(daily_profile_caption)
                 daily_symbol_check = check_symbol_input(daily_symbols_input)
                 _render_check_result(daily_symbol_check)
                 daily_run_allowed = _render_large_run_guard(

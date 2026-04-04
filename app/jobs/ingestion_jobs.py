@@ -15,6 +15,18 @@ from finance.data.asset_profile import collect_and_store_asset_profiles
 JobResult = dict[str, Any]
 SYMBOL_PATTERN = re.compile(r"^[A-Z0-9.\-_=^]+$")
 OHLCV_EXECUTION_PROFILES: dict[str, dict[str, Any]] = {
+    "managed_refresh_short": {
+        "chunk_size": 70,
+        "sleep": 0.01,
+        "max_workers": 2,
+        "max_retry": 2,
+        "retry_backoff": 1.0,
+        "sleep_jitter_ratio": 0.15,
+        "rate_limit_cooldown_sec": 10.0,
+        "rate_limit_circuit_break_threshold": 1,
+        "cooldown_chunk_size": 40,
+        "degrade_to_single_worker_on_rate_limit": True,
+    },
     "managed_fast": {
         "chunk_size": 60,
         "sleep": 0.05,
