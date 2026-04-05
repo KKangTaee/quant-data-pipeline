@@ -150,6 +150,7 @@ def append_backtest_run_history(
         "benchmark_ticker": meta.get("benchmark_ticker"),
         "promotion_min_benchmark_coverage": meta.get("promotion_min_benchmark_coverage"),
         "promotion_min_net_cagr_spread": meta.get("promotion_min_net_cagr_spread"),
+        "promotion_min_liquidity_clean_coverage": meta.get("promotion_min_liquidity_clean_coverage"),
         "snapshot_source": meta.get("snapshot_source"),
         "universe_contract": meta.get("universe_contract"),
         "dynamic_target_size": meta.get("dynamic_target_size"),

@@ -62,6 +62,7 @@ ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS = 10.0
 ETF_REAL_MONEY_DEFAULT_BENCHMARK = "SPY"
 STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE = 0.95
 STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD = -0.02
+STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE = 0.90
 REAL_MONEY_CASH_LABEL = "__CASH__"
 
 
@@ -463,6 +464,7 @@ def _build_promotion_decision(meta: dict[str, Any]) -> dict[str, Any]:
     benchmark_available = bool(meta.get("benchmark_available"))
     validation_status = str(meta.get("validation_status") or "").strip().lower()
     benchmark_policy_status = str(meta.get("benchmark_policy_status") or "").strip().lower()
+    liquidity_policy_status = str(meta.get("liquidity_policy_status") or "").strip().lower()
     universe_contract = meta.get("universe_contract")
     price_freshness = meta.get("price_freshness") or {}
     freshness_status = str(price_freshness.get("status") or "").strip().lower()
@@ -478,6 +480,14 @@ def _build_promotion_decision(meta: dict[str, Any]) -> dict[str, Any]:
         rationale.append("benchmark_policy_caution")
     elif benchmark_policy_status == "watch":
         rationale.append("benchmark_policy_watch")
+    elif benchmark_policy_status == "unavailable":
+        rationale.append("benchmark_policy_unavailable")
+    if liquidity_policy_status == "caution":
+        rationale.append("liquidity_policy_caution")
+    elif liquidity_policy_status == "watch":
+        rationale.append("liquidity_policy_watch")
+    elif liquidity_policy_status == "unavailable":
+        rationale.append("liquidity_policy_unavailable")
     if universe_contract == STATIC_MANAGED_RESEARCH_UNIVERSE:
         rationale.append("static_universe_contract")
     if freshness_status == "warning":
@@ -489,6 +499,7 @@ def _build_promotion_decision(meta: dict[str, Any]) -> dict[str, Any]:
         benchmark_available
         and validation_status == "normal"
         and benchmark_policy_status in {"", "normal"}
+        and liquidity_policy_status in {"", "normal"}
         and universe_contract != STATIC_MANAGED_RESEARCH_UNIVERSE
         and freshness_status not in {"warning", "error"}
     ):
@@ -498,6 +509,7 @@ def _build_promotion_decision(meta: dict[str, Any]) -> dict[str, Any]:
         not benchmark_available
         or validation_status == "caution"
         or benchmark_policy_status == "caution"
+        or liquidity_policy_status in {"caution", "unavailable"}
         or freshness_status == "error"
     ):
         decision = "hold"
@@ -579,6 +591,48 @@ def _build_benchmark_policy_surface(meta: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _build_liquidity_policy_surface(meta: dict[str, Any]) -> dict[str, Any]:
+    min_clean_coverage_raw = meta.get("promotion_min_liquidity_clean_coverage")
+    if min_clean_coverage_raw is None:
+        return {}
+
+    min_avg_dollar_volume = float(meta.get("min_avg_dollar_volume_20d_m_filter") or 0.0)
+    clean_coverage = meta.get("liquidity_clean_coverage")
+    min_clean_coverage = float(min_clean_coverage_raw)
+
+    if min_avg_dollar_volume <= 0.0:
+        return {
+            "liquidity_policy_status": "unavailable",
+            "liquidity_policy_watch_signals": ["liquidity_filter_disabled"],
+            "liquidity_policy_clean_coverage_pass": None,
+        }
+
+    if clean_coverage is None:
+        return {
+            "liquidity_policy_status": "unavailable",
+            "liquidity_policy_watch_signals": ["liquidity_coverage_missing"],
+            "liquidity_policy_clean_coverage_pass": None,
+        }
+
+    clean_coverage_value = float(clean_coverage)
+    coverage_pass = clean_coverage_value >= min_clean_coverage
+    if coverage_pass:
+        status = "normal"
+        watch_signals: list[str] = []
+    else:
+        watch_signals = ["liquidity_clean_coverage_below_policy"]
+        if clean_coverage_value < max(0.0, min_clean_coverage - 0.10):
+            status = "caution"
+        else:
+            status = "watch"
+
+    return {
+        "liquidity_policy_status": status,
+        "liquidity_policy_watch_signals": watch_signals,
+        "liquidity_policy_clean_coverage_pass": coverage_pass,
+    }
+
+
 def _apply_real_money_hardening(
     bundle: dict[str, Any],
     *,
@@ -588,6 +642,7 @@ def _apply_real_money_hardening(
     benchmark_ticker: str | None,
     promotion_min_benchmark_coverage: float | None = None,
     promotion_min_net_cagr_spread: float | None = None,
+    promotion_min_liquidity_clean_coverage: float | None = None,
 ) -> dict[str, Any]:
     result_df = bundle["result_df"].copy()
     hardened_df, turnover_stats = _apply_transaction_cost_postprocess(
@@ -606,8 +661,8 @@ def _apply_real_money_hardening(
     meta = dict(bundle.get("meta") or {})
     warnings = list(meta.get("warnings") or [])
     warnings.append(
-        "Phase 12 first pass real-money hardening applied: minimum price filter, turnover estimate, "
-        "transaction cost, and single-ticker benchmark overlay."
+        "Phase 12 real-money hardening applied: investability filters, turnover estimate, "
+        "transaction cost, and benchmark/liquidity promotion policy overlays."
     )
     meta.update(
         {
@@ -621,6 +676,11 @@ def _apply_real_money_hardening(
             ),
             "promotion_min_net_cagr_spread": (
                 float(promotion_min_net_cagr_spread) if promotion_min_net_cagr_spread is not None else None
+            ),
+            "promotion_min_liquidity_clean_coverage": (
+                float(promotion_min_liquidity_clean_coverage)
+                if promotion_min_liquidity_clean_coverage is not None
+                else None
             ),
             "avg_turnover": turnover_stats["avg_turnover"],
             "max_turnover": turnover_stats["max_turnover"],
@@ -640,8 +700,22 @@ def _apply_real_money_hardening(
         )
     if "Liquidity Excluded Count" in hardened_df.columns:
         liquidity_excluded = pd.to_numeric(hardened_df["Liquidity Excluded Count"], errors="coerce").fillna(0)
+        rebalancing_mask = pd.Series(True, index=hardened_df.index)
+        if "Rebalancing" in hardened_df.columns:
+            rebalancing_mask = hardened_df["Rebalancing"].fillna(False).astype(bool)
+        liquidity_rebalance_rows = int(rebalancing_mask.sum())
+        if liquidity_rebalance_rows <= 0:
+            liquidity_rebalance_rows = int(len(hardened_df))
+            rebalancing_mask = pd.Series(True, index=hardened_df.index)
+        liquidity_excluded_active_rows = int(((liquidity_excluded > 0) & rebalancing_mask).sum())
         meta["liquidity_excluded_total"] = int(liquidity_excluded.sum())
-        meta["liquidity_excluded_active_rows"] = int((liquidity_excluded > 0).sum())
+        meta["liquidity_excluded_active_rows"] = liquidity_excluded_active_rows
+        meta["liquidity_rebalance_rows"] = liquidity_rebalance_rows
+        meta["liquidity_clean_coverage"] = (
+            float(1.0 - (liquidity_excluded_active_rows / liquidity_rebalance_rows))
+            if liquidity_rebalance_rows > 0
+            else None
+        )
 
     benchmark_df = _build_benchmark_result_df(
         benchmark_ticker=benchmark_ticker,
@@ -715,6 +789,26 @@ def _apply_real_money_hardening(
             )
         if policy_signals:
             meta["benchmark_policy_watch_signals"] = policy_signals
+
+    liquidity_policy_surface = _build_liquidity_policy_surface(meta)
+    if liquidity_policy_surface:
+        meta.update(liquidity_policy_surface)
+        liquidity_policy_status = liquidity_policy_surface.get("liquidity_policy_status")
+        liquidity_policy_signals = liquidity_policy_surface.get("liquidity_policy_watch_signals") or []
+        if liquidity_policy_status == "caution":
+            warnings.append(
+                "Liquidity policy caution: too many rebalance rows required liquidity exclusions for the current promotion contract."
+            )
+        elif liquidity_policy_status == "watch":
+            warnings.append(
+                "Liquidity policy watch: liquidity exclusions are above the preferred promotion contract."
+            )
+        elif liquidity_policy_status == "unavailable":
+            warnings.append(
+                "Liquidity policy unavailable: promotion-grade liquidity review needs an active Min Avg Dollar Volume 20D filter."
+            )
+        if liquidity_policy_signals:
+            meta["liquidity_policy_watch_signals"] = liquidity_policy_signals
 
     meta.update(_build_promotion_decision(meta))
     bundle["meta"] = meta
@@ -1139,6 +1233,8 @@ def build_backtest_result_bundle(
         meta["promotion_min_benchmark_coverage"] = input_params.get("promotion_min_benchmark_coverage")
     if input_params.get("promotion_min_net_cagr_spread") is not None:
         meta["promotion_min_net_cagr_spread"] = input_params.get("promotion_min_net_cagr_spread")
+    if input_params.get("promotion_min_liquidity_clean_coverage") is not None:
+        meta["promotion_min_liquidity_clean_coverage"] = input_params.get("promotion_min_liquidity_clean_coverage")
     if input_params.get("underperformance_guardrail_enabled") is not None:
         meta["underperformance_guardrail_enabled"] = input_params.get("underperformance_guardrail_enabled")
     if input_params.get("underperformance_guardrail_window_months") is not None:
@@ -1602,6 +1698,7 @@ def _run_statement_quality_bundle(
     benchmark_ticker: str = ETF_REAL_MONEY_DEFAULT_BENCHMARK,
     promotion_min_benchmark_coverage: float = STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE,
     promotion_min_net_cagr_spread: float = STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD,
+    promotion_min_liquidity_clean_coverage: float = STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE,
     trend_filter_enabled: bool = False,
     trend_filter_window: int = 200,
     market_regime_enabled: bool = False,
@@ -1813,6 +1910,8 @@ def _run_statement_quality_bundle(
         input_params["promotion_min_benchmark_coverage"] = float(promotion_min_benchmark_coverage)
     if promotion_min_net_cagr_spread is not None:
         input_params["promotion_min_net_cagr_spread"] = float(promotion_min_net_cagr_spread)
+    if promotion_min_liquidity_clean_coverage is not None:
+        input_params["promotion_min_liquidity_clean_coverage"] = float(promotion_min_liquidity_clean_coverage)
 
     bundle = build_backtest_result_bundle(
         result_df,
@@ -1862,6 +1961,7 @@ def run_quality_snapshot_strict_annual_backtest_from_db(
     benchmark_ticker: str = ETF_REAL_MONEY_DEFAULT_BENCHMARK,
     promotion_min_benchmark_coverage: float = STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE,
     promotion_min_net_cagr_spread: float = STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD,
+    promotion_min_liquidity_clean_coverage: float = STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE,
     trend_filter_enabled: bool = False,
     trend_filter_window: int = 200,
     market_regime_enabled: bool = False,
@@ -1895,6 +1995,7 @@ def run_quality_snapshot_strict_annual_backtest_from_db(
         benchmark_ticker=benchmark_ticker,
         promotion_min_benchmark_coverage=promotion_min_benchmark_coverage,
         promotion_min_net_cagr_spread=promotion_min_net_cagr_spread,
+        promotion_min_liquidity_clean_coverage=promotion_min_liquidity_clean_coverage,
         trend_filter_enabled=trend_filter_enabled,
         trend_filter_window=trend_filter_window,
         market_regime_enabled=market_regime_enabled,
@@ -1921,6 +2022,7 @@ def run_quality_snapshot_strict_annual_backtest_from_db(
         benchmark_ticker=benchmark_ticker,
         promotion_min_benchmark_coverage=promotion_min_benchmark_coverage,
         promotion_min_net_cagr_spread=promotion_min_net_cagr_spread,
+        promotion_min_liquidity_clean_coverage=promotion_min_liquidity_clean_coverage,
     )
 
 
@@ -1986,6 +2088,7 @@ def run_value_snapshot_strict_annual_backtest_from_db(
     benchmark_ticker: str = ETF_REAL_MONEY_DEFAULT_BENCHMARK,
     promotion_min_benchmark_coverage: float = STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE,
     promotion_min_net_cagr_spread: float = STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD,
+    promotion_min_liquidity_clean_coverage: float = STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE,
     trend_filter_enabled: bool = False,
     trend_filter_window: int = 200,
     market_regime_enabled: bool = False,
@@ -2148,6 +2251,7 @@ def run_value_snapshot_strict_annual_backtest_from_db(
             "benchmark_ticker": benchmark_ticker,
             "promotion_min_benchmark_coverage": float(promotion_min_benchmark_coverage),
             "promotion_min_net_cagr_spread": float(promotion_min_net_cagr_spread),
+            "promotion_min_liquidity_clean_coverage": float(promotion_min_liquidity_clean_coverage),
             "factor_freq": "annual",
             "value_factors": normalized_factors,
             "trend_filter_enabled": trend_filter_enabled,
@@ -2200,6 +2304,7 @@ def run_value_snapshot_strict_annual_backtest_from_db(
         benchmark_ticker=benchmark_ticker,
         promotion_min_benchmark_coverage=promotion_min_benchmark_coverage,
         promotion_min_net_cagr_spread=promotion_min_net_cagr_spread,
+        promotion_min_liquidity_clean_coverage=promotion_min_liquidity_clean_coverage,
     )
 
 
@@ -2396,6 +2501,7 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
     benchmark_ticker: str = ETF_REAL_MONEY_DEFAULT_BENCHMARK,
     promotion_min_benchmark_coverage: float = STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE,
     promotion_min_net_cagr_spread: float = STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD,
+    promotion_min_liquidity_clean_coverage: float = STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE,
     trend_filter_enabled: bool = False,
     trend_filter_window: int = 200,
     market_regime_enabled: bool = False,
@@ -2569,6 +2675,7 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
             "benchmark_ticker": benchmark_ticker,
             "promotion_min_benchmark_coverage": float(promotion_min_benchmark_coverage),
             "promotion_min_net_cagr_spread": float(promotion_min_net_cagr_spread),
+            "promotion_min_liquidity_clean_coverage": float(promotion_min_liquidity_clean_coverage),
             "factor_freq": "annual",
             "quality_factors": normalized_quality_factors,
             "value_factors": normalized_value_factors,
@@ -2622,6 +2729,7 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
         benchmark_ticker=benchmark_ticker,
         promotion_min_benchmark_coverage=promotion_min_benchmark_coverage,
         promotion_min_net_cagr_spread=promotion_min_net_cagr_spread,
+        promotion_min_liquidity_clean_coverage=promotion_min_liquidity_clean_coverage,
     )
 
 

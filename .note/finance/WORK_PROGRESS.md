@@ -3307,3 +3307,31 @@ Keep entries append-only and concise.
   - Phase 12 checklist
   - comprehensive analysis
   - doc index
+
+### 2026-04-05 - Strict annual liquidity policy / later-pass investability reinforcement was added
+
+- Extended the strict annual family (`Quality`, `Value`, `Quality+Value`) with:
+  - `Min Liquidity Clean Coverage (%)`
+- The shared real-money helper now evaluates:
+  - `liquidity_rebalance_rows`
+  - `liquidity_excluded_active_rows`
+  - `liquidity_clean_coverage`
+  - `liquidity_policy_status = normal / watch / caution / unavailable`
+- Promotion decision now considers liquidity policy together with:
+  - benchmark policy
+  - validation status
+  - universe contract
+  - price freshness
+- The new contract now travels through:
+  - single-strategy form
+  - compare override
+  - runtime metadata
+  - real-money tab
+  - execution context
+  - history / `Load Into Form`
+- Added a dedicated Phase 12 implementation note and refreshed:
+  - current TODO board
+  - Phase 12 checklist
+  - comprehensive analysis
+  - doc index
+  - glossary

@@ -207,6 +207,13 @@
   - promotion decision이 benchmark policy 상태를 함께 반영
   - single / compare / history / meta surface까지 contract 연결
   - `PHASE12_STRICT_ANNUAL_BENCHMARK_POLICY_AND_PROMOTION_REINFORCEMENT_LATER_PASS.md`
+- `completed` strict annual liquidity policy / later-pass investability reinforcement 구현
+  - `Min Liquidity Clean Coverage (%)`
+  - `liquidity_clean_coverage`
+  - `liquidity_policy_status = normal / watch / caution / unavailable`
+  - promotion decision이 liquidity policy 상태를 함께 반영
+  - single / compare / history / meta surface까지 contract 연결
+  - `PHASE12_STRICT_ANNUAL_LIQUIDITY_POLICY_AND_PROMOTION_REINFORCEMENT_LATER_PASS.md`
 - `in_progress` investability / turnover / benchmark / guardrail 보강
   - investability / turnover / benchmark는 first pass 완료
   - validation surface second pass 완료
@@ -215,7 +222,8 @@
   - minimum-history investability proxy와 benchmark spread/coverage first pass도 now 완료
   - 20D average dollar volume liquidity proxy first pass도 now 완료
   - richer benchmark policy / stricter promotion reinforcement later pass도 now 완료
-  - broader liquidity policy는 still later pass
+  - liquidity policy / later-pass investability reinforcement도 now 완료
+  - broader benchmark contract / broader promotion robustness는 still later pass
 - `completed` annual strict promotion checklist baseline refresh
   - `PHASE12_TEST_CHECKLIST.md`에 strict annual real-money surface 항목 반영
 
@@ -239,7 +247,7 @@
   strict annual family도 now `real-money hardening first pass completed` 상태다.
 - GTAA는 이번 턴에서 더 밀지 않고, 이후 다시 다루기로 정리했다.
 - next active implementation target은
-  strict annual broader liquidity policy / later-pass investability 쪽이다.
+  strict annual broader benchmark contract / broader promotion robustness 쪽이다.
 - GTAA 쪽에서는 current default contract 기준으로
   `QQQ`, `IAU`, `XLE`가 가장 강한 additive direction으로 보이며,
   `QUAL`, `USMV`는 보조 broadener로 해석하는 편이 맞다.

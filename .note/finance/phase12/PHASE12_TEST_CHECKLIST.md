@@ -181,6 +181,7 @@
   - `benchmark_ticker`
   - `promotion_min_benchmark_coverage`
   - `promotion_min_net_cagr_spread`
+  - `promotion_min_liquidity_clean_coverage`
   - `underperformance_guardrail_enabled`
   - `underperformance_guardrail_window_months`
   - `underperformance_guardrail_threshold`
@@ -193,6 +194,10 @@
   - `Min Net CAGR Spread`
   - `Actual Net CAGR Spread`
   - `Benchmark Policy Signals`
+  - `Liquidity Policy`
+  - `Min Clean Coverage`
+  - `Actual Clean Coverage`
+  - `Liquidity Policy Signals`
   가 보이는지
 
 현재 상태 설명:
@@ -202,9 +207,10 @@
 - minimum-history investability proxy / benchmark spread / coverage first pass도 now 추가되었다.
 - 20D average dollar volume liquidity proxy first pass도 now 추가되었다.
 - richer benchmark policy / stricter promotion reinforcement later pass도 now 추가되었다.
+- liquidity policy / later-pass investability reinforcement도 now 추가되었다.
 - 다만 아래는 아직 later pass다.
   - stronger portfolio guardrail
-  - richer liquidity / spread / AUM policy
+  - richer spread / AUM policy
 
 ## 4. Static vs Dynamic Contract Boundary
 
@@ -247,6 +253,7 @@
 - rolling underperformance validation surface는 구현되었음
 - annual strict underperformance guardrail actual-rule first pass도 구현되었음
 - benchmark policy later pass는 구현되었음
+- liquidity policy later pass는 구현되었음
 - broader benchmark contract 자체를 더 늘리는 건 still later pass
 
 ## 8. History / Metadata / Handoff

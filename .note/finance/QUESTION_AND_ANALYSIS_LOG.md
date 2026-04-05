@@ -5815,3 +5815,33 @@ Do not copy full chat transcripts. Keep only the durable result.
     - benchmark exists but is policy-weak
     - benchmark exists and is promotion-usable
   - this makes `hold / production_candidate / real_money_candidate` more explainable before real-money promotion
+
+### 2026-04-05 - Strict annual liquidity should be judged by how often liquidity exclusions actually happen
+
+- Request topic:
+  - continue the next strict annual later-pass investability step after benchmark policy reinforcement
+- Interpreted goal:
+  - treat liquidity as a promotion-quality signal, not only as a raw filter setting
+- Result:
+  - added a new strict annual policy input:
+    - `Min Liquidity Clean Coverage (%)`
+  - runtime now evaluates:
+    - `liquidity_rebalance_rows`
+    - `liquidity_excluded_active_rows`
+    - `liquidity_clean_coverage`
+    - `liquidity_policy_status = normal / watch / caution / unavailable`
+  - `promotion_decision` now uses liquidity policy status together with:
+    - benchmark policy
+    - validation status
+    - universe contract
+    - price freshness
+  - UI/history surface now shows and restores the new policy fields across:
+    - single
+    - compare
+    - history / `Load Into Form`
+    - execution context
+- Durable implication:
+  - strict annual now distinguishes between:
+    - liquidity filter exists
+    - liquidity exclusions are actually rare enough for promotion
+  - this makes real-money promotion less optimistic when the strategy keeps running into liquidity limits at rebalance time
