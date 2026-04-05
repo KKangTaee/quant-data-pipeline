@@ -3131,6 +3131,93 @@ Keep entries append-only and concise.
 - Added `Equal Weight Universe` selection to `Compare & Portfolio Builder`.
 - Compare now supports:
   - `Preset` / `Manual`
-  - immediate ticker preview refresh
   - compare execution using the selected equal-weight ticker set
   - prefill / saved-portfolio restoration of equal-weight universe choice
+
+### 2026-04-04 - Compare strategy option surface is now opened by default so preset-only confusion is reduced
+
+- `Compare & Portfolio Builder` had a confusing structure where universe preset selectors were visible first, but the actual per-strategy execution controls were hidden inside collapsed nested expanders.
+- Changed compare UI so:
+  - the outer `Advanced Inputs` block opens by default
+  - selected strategy blocks such as `Equal Weight` and `GTAA` also open by default
+  - a short caption now clarifies that preset/universe selection and strategy execution options are separate layers
+
+### 2026-04-04 - Compare universe selectors were moved back under strategy-specific advanced inputs for a more regular layout
+
+- Moved `Equal Weight Universe` and `GTAA Universe` into:
+  - `Advanced Inputs`
+  - `Strategy-Specific Advanced Inputs`
+  - each strategy's own block
+- This keeps compare strategy configuration in one place instead of splitting:
+  - universe/preset selection
+  - strategy execution options
+  across different sections.
+- The layout is now more regular, but universe preview follows form semantics again because those selectors now live inside the compare form.
+
+### 2026-04-04 - Strict annual family real-money hardening first pass was implemented
+
+- Resumed Phase 12 after pausing GTAA-specific exploration and moved the next active implementation target back to `Strict Annual Family`.
+- Added first-pass real-money inputs to:
+  - `Quality Snapshot (Strict Annual)`
+  - `Value Snapshot (Strict Annual)`
+  - `Quality + Value Snapshot (Strict Annual)`
+- Added the same contract to compare overrides:
+  - `Minimum Price`
+  - `Transaction Cost (bps)`
+  - `Benchmark Ticker`
+- Extended annual strict runtime so the same hardening contract now applies:
+  - candidate-level `min_price` filter
+  - turnover / gross-vs-net postprocess
+  - benchmark overlay
+- Connected history / `Load Into Form` / compare prefill restoration for annual strict real-money fields.
+- Added Phase 12 documentation and checklist sync for the new annual strict first pass.
+
+### 2026-04-04 - Shared real-money validation surface second pass was added for annual strict review
+
+- Extended the shared real-money runtime helper so benchmark-backed runs now also compute:
+  - benchmark-relative drawdown diagnostics
+  - rolling underperformance diagnostics
+  - `validation_status = normal / watch / caution`
+- Exposed the new validation surface in:
+  - single-strategy `Real-Money` tab
+  - compare `Strategy Highlights`
+  - focused strategy `Real-Money Contract`
+  - `Execution Context`
+- This was driven by the strict annual next-step goal, but the helper is shared so ETF strategies also inherit the same validation surface.
+- The current scope is still read-only diagnostics; it does not yet convert underperformance into automatic strategy guardrails.
+
+### 2026-04-05 - Promotion decision surface was wired into the strict annual second-pass UI
+
+- Shared real-money runtime was already computing:
+  - `promotion_decision`
+  - `promotion_rationale`
+  - `promotion_next_step`
+- Completed the remaining UI integration so these values now show up in:
+  - single-strategy `Real-Money` tab
+  - compare `Strategy Highlights`
+  - `Execution Context`
+- Kept this as a review surface, not a hard trading rule:
+  - `real_money_candidate`
+  - `production_candidate`
+  - `hold`
+  should currently be read as promotion guidance, not automatic portfolio behavior.
+
+### 2026-04-05 - Strict annual underperformance guardrail first pass was wired as an optional actual strategy rule
+
+- Added an optional benchmark-relative trailing excess return guardrail to:
+  - `Quality Snapshot (Strict Annual)`
+  - `Value Snapshot (Strict Annual)`
+  - `Quality + Value Snapshot (Strict Annual)`
+- Added new annual strict inputs in single and compare:
+  - `Underperformance Guardrail`
+  - `Guardrail Window (Months)`
+  - `Worst Excess Threshold (%)`
+- Extended strict annual runtime and strategy paths so that when the guardrail is enabled:
+  - trailing strategy excess return vs benchmark is tracked
+  - rebalance dates that breach the threshold move to cash
+  - trigger/state/count diagnostics are exposed in result rows and real-money surfaces
+- Synced history/prefill/meta so the same guardrail contract survives:
+  - `Load Into Form`
+  - compare prefill
+  - execution context
+- Added AGENTS guidance that finished implementation units should be committed in coherent groups with descriptive commit logs.

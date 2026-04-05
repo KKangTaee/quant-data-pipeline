@@ -92,19 +92,90 @@
 에 대해 아래가 확인되는지 본다.
 
 - dynamic PIT contract를 실전형 validation 기준으로 읽을 수 있는지
-- investability / stale / delisted handling rule이 읽히는지
-- turnover / cost surface가 추가되었는지
-- benchmark / drawdown / guardrail 정보가 보이는지
+- investability / turnover / benchmark 정보가 추가되었는지
+- dynamic PIT에서도 같은 real-money contract로 읽히는지
+- stronger guardrail policy 전부가 이미 끝난 것처럼 과장되지 않는지 확인
+
+구체 확인:
+- `Single Strategy`의 annual strict 3종 form에
+  - `Minimum Price`
+  - `Transaction Cost (bps)`
+  - `Benchmark Ticker`
+  가 보이는지
+- annual strict single 실행 후 `Real-Money` 탭에서
+  - gross / net / turnover / cost
+  - strategy net vs benchmark overlay
+  를 읽을 수 있는지
+- `Result Table`에
+  - `Gross Total Balance`
+  - `Turnover`
+  - `Estimated Cost`
+  - `Cumulative Estimated Cost`
+  가 보이는지
+- `Compare`의 annual strict block에도
+  - `Minimum Price`
+  - `Transaction Cost (bps)`
+  - `Benchmark Ticker`
+  override가 보이는지
+- annual strict form / compare block에
+  - `Underperformance Guardrail`
+  - `Guardrail Window (Months)`
+  - `Worst Excess Threshold (%)`
+  가 보이는지
+- annual strict compare 실행 후 focused strategy에서
+  `Real-Money Contract` 섹션이 보이는지
+- `Meta`에
+  - `Minimum Price`
+  - `Transaction Cost`
+  - `Benchmark`
+  - `Average Turnover`
+  - `Estimated Cost Total`
+  이 남는지
+- `Real-Money` 탭에
+  - `Validation Status`
+  - `Promotion Decision`
+  - `Promotion Next Step`
+  - `Guardrail`
+  - `Window`
+  - `Threshold`
+  - `Trigger Count`
+  - `Strategy Max Drawdown`
+  - `Benchmark Max Drawdown`
+  - `Underperformance Share`
+  - `Current Underperf Streak`
+  - `Worst Rolling Excess`
+  가 보이는지
+- `Execution Context`에도
+  - validation 요약
+  - `Promotion Decision`
+  - `Promotion Rationale`
+  - guardrail contract와 trigger summary
+  가 같이 보이는지
+- `Compare > Strategy Highlights`에도
+  - `Validation`
+  - `Promotion`
+  - `Guardrail Triggers`
+  - `Worst Rolling Excess`
+  가 같이 보이는지
+- watch / caution 상태일 때 안내 문구가 같이 보이는지
+- `History -> Load Into Form` 또는 compare prefill에서
+  annual strict의
+  - `min_price_filter`
+  - `transaction_cost_bps`
+  - `benchmark_ticker`
+  - `underperformance_guardrail_enabled`
+  - `underperformance_guardrail_window_months`
+  - `underperformance_guardrail_threshold`
+  가 복원되는지
 
 현재 상태 설명:
-- 이 항목은 **이번 ETF first pass에서 아직 구현되지 않은 다음 작업 대상**이다.
-- 그래서 지금 테스트 시점에 strict annual 화면에서
-  - turnover / cost
-  - benchmark
-  - guardrail
-  정보가 안 보이는 것은 현재로서는 **정상**이다.
-- 여기서는 "이미 구현됐는지"를 확인하는 항목이 아니라,
-  다음 strict annual hardening 작업 전에 baseline을 확인하는 항목으로 읽는 편이 맞다.
+- annual strict는 now `real-money hardening first pass completed` 상태다.
+- benchmark-relative validation surface second pass도 now 추가되었다.
+- underperformance guardrail actual-rule first pass도 now 추가되었다.
+- 다만 아래는 아직 later pass다.
+  - stronger portfolio guardrail
+  - stronger investability proxy
+  - richer benchmark contract
 
 ## 4. Static vs Dynamic Contract Boundary
 
@@ -130,7 +201,8 @@
 
 현재 구현 범위:
 - turnover / cost / rebalance impact는 ETF 전략군 first pass에서 구현됨
-- stronger portfolio guardrail은 아직 later pass
+- GTAA risk-off contract와 annual strict underperformance guardrail은 일부 구현되었지만
+  stronger portfolio guardrail 전체가 끝난 것은 아님
 
 ## 7. Benchmark / Drawdown Validation
 
@@ -143,7 +215,9 @@
 현재 구현 범위:
 - benchmark 비교는 ETF 전략군 first pass에서 구현됨
 - drawdown은 기존 summary / compare surface로 읽음
-- rolling underperformance는 아직 later pass
+- rolling underperformance validation surface는 구현되었음
+- annual strict underperformance guardrail actual-rule first pass도 구현되었음
+- richer benchmark contract와 stronger policy reinforcement는 아직 later pass
 
 ## 8. History / Metadata / Handoff
 

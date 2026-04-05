@@ -5559,7 +5559,6 @@ Do not copy full chat transcripts. Keep only the durable result.
     - current status
   - added GTAA universe selection to compare mode:
     - `Preset` / `Manual`
-    - immediate ticker preview refresh
     - compare execution now respects the chosen GTAA preset/ticker set
   - compare prefill and saved-portfolio compare restoration now also preserve:
     - GTAA tickers
@@ -5582,10 +5581,121 @@ Do not copy full chat transcripts. Keep only the durable result.
   - added `Equal Weight Universe` to `Compare & Portfolio Builder`
   - compare now supports:
     - `Preset` / `Manual`
-    - immediate ticker preview refresh
     - execution with the chosen equal-weight universe
     - prefill / saved-portfolio restoration of the equal-weight universe contract
 - Durable implication:
   - compare mode should now be read as supporting the same universe-contract surface for:
     - `Equal Weight`
     - `GTAA`
+
+### 2026-04-04 - Compare universe selectors were moved under each strategy block for a more regular UI contract
+
+- Request topic:
+  - the user asked why `Equal Weight Universe` and `GTAA Universe` were not inside `Advanced Inputs > Strategy-Specific Advanced Inputs`, and requested that they be moved there for more regular management
+- Interpreted goal:
+  - keep compare strategy configuration grouped by strategy instead of splitting universe selection outside and execution options inside
+- Result:
+  - moved `Equal Weight Universe` and `GTAA Universe` into each strategy's own compare block under `Advanced Inputs`
+  - kept execution/prefill/saved-portfolio restoration working with the same universe-contract fields
+- Durable implication:
+  - compare strategy configuration should now be read as one grouped contract per strategy
+  - the tradeoff is that universe selection now follows compare form submission semantics again
+
+### 2026-04-04 - GTAA was intentionally paused and Phase 12 resumed with strict annual hardening
+
+- Request topic:
+  - the user asked to stop pushing GTAA for now and return to the original Phase 12 workstream
+- Interpreted goal:
+  - resume the Phase 12 main path instead of spending more time on GTAA candidate exploration
+- Result:
+  - resumed `Strict Annual Family` as the next active implementation target
+  - implemented annual strict real-money hardening first pass for:
+    - `Quality Snapshot (Strict Annual)`
+    - `Value Snapshot (Strict Annual)`
+    - `Quality + Value Snapshot (Strict Annual)`
+  - added:
+    - `Minimum Price`
+    - `Transaction Cost (bps)`
+    - `Benchmark Ticker`
+    to single, compare, history/prefill, and runtime paths
+  - extended annual strict runtime so min-price filtering is applied before selection and the result surface now exposes gross/net/turnover/cost/benchmark in the same contract style as ETF strategies
+- Durable implication:
+  - Phase 12 should now be read as having:
+    - ETF real-money hardening first pass completed
+    - strict annual real-money hardening first pass completed
+  - the next annual strict work is no longer first-pass contract wiring, but second-pass guardrail / validation reinforcement
+
+### 2026-04-04 - Strict annual next step was interpreted as validation-surface reinforcement rather than immediate hard guardrails
+
+- Request topic:
+  - after annual strict first-pass hardening, the next step in Phase 12 needed to continue without returning to GTAA
+- Interpreted goal:
+  - make annual strict more useful for real-money review, but avoid prematurely baking fragile benchmark rules directly into portfolio decisions
+- Result:
+  - added shared benchmark-relative validation diagnostics:
+    - strategy / benchmark max drawdown
+    - rolling underperformance
+    - `validation_status = normal / watch / caution`
+  - surfaced them in:
+    - single-strategy `Real-Money` tab
+    - compare `Strategy Highlights`
+    - focused strategy `Real-Money Contract`
+    - `Execution Context`
+- Durable implication:
+  - current Phase 12 second pass should be read as:
+    - stronger review / caution surface
+    - not yet automatic stop/risk-off strategy rules
+  - if later we add hard guardrails, they should be treated as a separate decision from this validation-surface layer
+
+### 2026-04-05 - Promotion decision should be exposed as a read-only review surface before any stronger guardrail is added
+
+- Request topic:
+  - after the next Phase 12 step resumed, the runtime already had promotion-decision logic but the UI surface was incomplete
+- Interpreted goal:
+  - finish the annual strict second pass by making the promotion recommendation visible wherever validation is already reviewed
+- Result:
+  - exposed:
+    - `promotion_decision`
+    - `promotion_rationale`
+    - `promotion_next_step`
+  in:
+    - single-strategy `Real-Money`
+    - compare `Strategy Highlights`
+    - `Execution Context`
+- Durable implication:
+  - current Phase 12 should now be read as having:
+    - validation diagnostics
+    - promotion guidance
+  but still not automatic hard guardrails
+  - the next deeper step remains stronger guardrail / actual strategy-rule reinforcement, not more UI plumbing
+
+### 2026-04-05 - Strict annual underperformance guardrail was promoted from review-only concept to optional actual rule
+
+- Request topic:
+  - continue the next Phase 12 step after validation/promotion surface and add commit workflow guidance to project instructions
+- Interpreted goal:
+  - keep strict annual family moving toward a more practical real-money contract by turning one benchmark-relative warning into an optional, explicit strategy rule
+- Result:
+  - added an optional underperformance guardrail for annual strict family only
+  - contract:
+    - benchmark-relative trailing excess return
+    - configurable lookback window
+    - configurable worst-excess threshold
+  - behavior:
+    - when the guardrail is enabled and trailing excess return breaches the threshold on rebalance,
+      the strategy stays in cash for that rebalance
+  - surfaced guardrail diagnostics in:
+    - single `Real-Money`
+    - compare `Strategy Highlights`
+    - `Execution Context`
+    - history/prefill contract
+  - also added AGENTS guidance to commit each finished implementation unit with a descriptive log
+- Durable implication:
+  - Phase 12 strict annual family now has:
+    - first-pass real-money hardening
+    - second-pass validation/promotion surface
+    - first-pass optional actual guardrail
+  - later work should focus on:
+    - stronger investability proxy
+    - richer benchmark contract
+    - broader promotion robustness

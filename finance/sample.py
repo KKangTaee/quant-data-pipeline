@@ -83,6 +83,9 @@ STRICT_MARKET_REGIME_DEFAULT_ENABLED = False
 STRICT_MARKET_REGIME_DEFAULT_WINDOW = 200
 STRICT_MARKET_REGIME_DEFAULT_BENCHMARK = "SPY"
 STRICT_MARKET_REGIME_BENCHMARK_OPTIONS = ["SPY", "QQQ", "VTI", "IWM"]
+STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED = False
+STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS = 12
+STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD = -0.10
 STATIC_MANAGED_RESEARCH_UNIVERSE = "static_managed_research"
 HISTORICAL_DYNAMIC_PIT_UNIVERSE = "historical_dynamic_pit"
 GTAA_DEFAULT_SIGNAL_INTERVAL = 1
@@ -270,6 +273,28 @@ def _build_market_regime_overlay_df(
     )
     benchmark_df = next(iter(benchmark_dfs.values())).copy()
     keep_cols = ["Date", "Close", f"MA{market_regime_window}"]
+    return benchmark_df[[column for column in keep_cols if column in benchmark_df.columns]].copy()
+
+
+def _build_underperformance_guardrail_df(
+    benchmark_ticker: str,
+    *,
+    option="month_end",
+    start=None,
+    end=None,
+    timeframe="1d",
+    from_db=False,
+) -> pd.DataFrame:
+    benchmark_dfs = _build_snapshot_strategy_price_dfs(
+        [benchmark_ticker],
+        option=option,
+        start=start,
+        end=end,
+        timeframe=timeframe,
+        from_db=from_db,
+    )
+    benchmark_df = next(iter(benchmark_dfs.values())).copy()
+    keep_cols = ["Date", "Close"]
     return benchmark_df[[column for column in keep_cols if column in benchmark_df.columns]].copy()
 
 
@@ -1400,12 +1425,17 @@ def _run_statement_shadow_snapshot_from_db(
     factor_names: list[str],
     top_n=2,
     rebalance_interval=1,
+    min_price: float = 0.0,
     lower_is_better_factors: list[str] | None = None,
     trend_filter_enabled=False,
     trend_filter_window=STRICT_TREND_FILTER_DEFAULT_WINDOW,
     market_regime_enabled=False,
     market_regime_window=STRICT_MARKET_REGIME_DEFAULT_WINDOW,
     market_regime_benchmark=STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
+    benchmark_ticker=STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
+    underperformance_guardrail_enabled=STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED,
+    underperformance_guardrail_window_months=STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
+    underperformance_guardrail_threshold=STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD,
     universe_contract: str = STATIC_MANAGED_RESEARCH_UNIVERSE,
     dynamic_candidate_tickers=None,
     dynamic_target_size: int | None = None,
@@ -1496,12 +1526,24 @@ def _run_statement_shadow_snapshot_from_db(
             market_regime_window=market_regime_window,
         )
 
+    underperformance_guardrail_df = None
+    if underperformance_guardrail_enabled:
+        underperformance_guardrail_df = _build_underperformance_guardrail_df(
+            benchmark_ticker,
+            option=option,
+            start=start,
+            end=end,
+            timeframe=timeframe,
+            from_db=True,
+        )
+
     df = quality_snapshot_equal_weight(
         price_dfs,
         snapshot_by_date,
         start_balance=10000,
         quality_factors=factor_names,
         top_n=top_n,
+        min_price=min_price,
         lower_is_better_factors=lower_is_better_factors,
         rebalance_interval=rebalance_interval,
         trend_filter_enabled=trend_filter_enabled,
@@ -1510,6 +1552,11 @@ def _run_statement_shadow_snapshot_from_db(
         market_regime_window=market_regime_window,
         market_regime_benchmark=market_regime_benchmark,
         market_regime_df=market_regime_df,
+        underperformance_guardrail_enabled=underperformance_guardrail_enabled,
+        underperformance_guardrail_window_months=underperformance_guardrail_window_months,
+        underperformance_guardrail_threshold=underperformance_guardrail_threshold,
+        underperformance_guardrail_benchmark=benchmark_ticker,
+        underperformance_guardrail_df=underperformance_guardrail_df,
     )
 
     count_series = pd.to_datetime(df["Date"], errors="coerce").dt.normalize().map(membership_count_map).fillna(0).astype(int)
@@ -1543,11 +1590,16 @@ def get_statement_quality_snapshot_shadow_from_db(
     quality_factors=None,
     top_n=2,
     rebalance_interval=1,
+    min_price: float = 0.0,
     trend_filter_enabled=False,
     trend_filter_window=STRICT_TREND_FILTER_DEFAULT_WINDOW,
     market_regime_enabled=False,
     market_regime_window=STRICT_MARKET_REGIME_DEFAULT_WINDOW,
     market_regime_benchmark=STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
+    benchmark_ticker=STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
+    underperformance_guardrail_enabled=STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED,
+    underperformance_guardrail_window_months=STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
+    underperformance_guardrail_threshold=STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD,
     universe_contract: str = STATIC_MANAGED_RESEARCH_UNIVERSE,
     dynamic_candidate_tickers=None,
     dynamic_target_size: int | None = None,
@@ -1565,6 +1617,7 @@ def get_statement_quality_snapshot_shadow_from_db(
         statement_freq=statement_freq,
         factor_names=quality_factors,
         top_n=top_n,
+        min_price=min_price,
         lower_is_better_factors=["debt_ratio", "debt_to_assets", "net_debt_to_equity"],
         rebalance_interval=rebalance_interval,
         trend_filter_enabled=trend_filter_enabled,
@@ -1572,6 +1625,10 @@ def get_statement_quality_snapshot_shadow_from_db(
         market_regime_enabled=market_regime_enabled,
         market_regime_window=market_regime_window,
         market_regime_benchmark=market_regime_benchmark,
+        benchmark_ticker=benchmark_ticker,
+        underperformance_guardrail_enabled=underperformance_guardrail_enabled,
+        underperformance_guardrail_window_months=underperformance_guardrail_window_months,
+        underperformance_guardrail_threshold=underperformance_guardrail_threshold,
         universe_contract=universe_contract,
         dynamic_candidate_tickers=dynamic_candidate_tickers,
         dynamic_target_size=dynamic_target_size,
@@ -1590,11 +1647,16 @@ def get_statement_value_snapshot_shadow_from_db(
     value_factors=None,
     top_n=10,
     rebalance_interval=1,
+    min_price: float = 0.0,
     trend_filter_enabled=False,
     trend_filter_window=STRICT_TREND_FILTER_DEFAULT_WINDOW,
     market_regime_enabled=False,
     market_regime_window=STRICT_MARKET_REGIME_DEFAULT_WINDOW,
     market_regime_benchmark=STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
+    benchmark_ticker=STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
+    underperformance_guardrail_enabled=STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED,
+    underperformance_guardrail_window_months=STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
+    underperformance_guardrail_threshold=STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD,
     universe_contract: str = STATIC_MANAGED_RESEARCH_UNIVERSE,
     dynamic_candidate_tickers=None,
     dynamic_target_size: int | None = None,
@@ -1612,6 +1674,7 @@ def get_statement_value_snapshot_shadow_from_db(
         statement_freq=statement_freq,
         factor_names=value_factors,
         top_n=top_n,
+        min_price=min_price,
         rebalance_interval=rebalance_interval,
         lower_is_better_factors=["per", "pbr", "psr", "pcr", "pfcr", "ev_ebit", "por"],
         trend_filter_enabled=trend_filter_enabled,
@@ -1619,6 +1682,10 @@ def get_statement_value_snapshot_shadow_from_db(
         market_regime_enabled=market_regime_enabled,
         market_regime_window=market_regime_window,
         market_regime_benchmark=market_regime_benchmark,
+        benchmark_ticker=benchmark_ticker,
+        underperformance_guardrail_enabled=underperformance_guardrail_enabled,
+        underperformance_guardrail_window_months=underperformance_guardrail_window_months,
+        underperformance_guardrail_threshold=underperformance_guardrail_threshold,
         universe_contract=universe_contract,
         dynamic_candidate_tickers=dynamic_candidate_tickers,
         dynamic_target_size=dynamic_target_size,
@@ -1638,11 +1705,16 @@ def get_statement_quality_value_snapshot_shadow_from_db(
     value_factors=None,
     top_n=10,
     rebalance_interval=1,
+    min_price: float = 0.0,
     trend_filter_enabled=False,
     trend_filter_window=STRICT_TREND_FILTER_DEFAULT_WINDOW,
     market_regime_enabled=False,
     market_regime_window=STRICT_MARKET_REGIME_DEFAULT_WINDOW,
     market_regime_benchmark=STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
+    benchmark_ticker=STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
+    underperformance_guardrail_enabled=STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED,
+    underperformance_guardrail_window_months=STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
+    underperformance_guardrail_threshold=STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD,
     universe_contract: str = STATIC_MANAGED_RESEARCH_UNIVERSE,
     dynamic_candidate_tickers=None,
     dynamic_target_size: int | None = None,
@@ -1668,6 +1740,7 @@ def get_statement_quality_value_snapshot_shadow_from_db(
         statement_freq=statement_freq,
         factor_names=combined_factors,
         top_n=top_n,
+        min_price=min_price,
         rebalance_interval=rebalance_interval,
         lower_is_better_factors=[
             "per",
@@ -1686,6 +1759,10 @@ def get_statement_quality_value_snapshot_shadow_from_db(
         market_regime_enabled=market_regime_enabled,
         market_regime_window=market_regime_window,
         market_regime_benchmark=market_regime_benchmark,
+        benchmark_ticker=benchmark_ticker,
+        underperformance_guardrail_enabled=underperformance_guardrail_enabled,
+        underperformance_guardrail_window_months=underperformance_guardrail_window_months,
+        underperformance_guardrail_threshold=underperformance_guardrail_threshold,
         universe_contract=universe_contract,
         dynamic_candidate_tickers=dynamic_candidate_tickers,
         dynamic_target_size=dynamic_target_size,

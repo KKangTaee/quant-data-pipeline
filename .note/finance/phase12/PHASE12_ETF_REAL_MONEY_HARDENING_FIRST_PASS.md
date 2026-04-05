@@ -51,7 +51,8 @@ ETF 전략 3종의 `Single Strategy` form에 아래 입력이 추가되었다.
   기본 universe, 기존 비교 후보, 그리고 검증된 candidate-base preset을 바로 비교할 수 있다.
 - 이제 같은 GTAA universe selector가 `Compare & Portfolio Builder`에도 들어가서,
   compare에서도 `Preset` / `Manual`을 고를 수 있고,
-  preset 변경 시 ticker preview가 바로 갱신된다.
+  현재는 `Advanced Inputs > Strategy-Specific Advanced Inputs` 안에서
+  해당 전략 옵션과 함께 관리된다.
 
 추가 설명:
 - `U3 / U1 / U5` preset은 universe만 저장한 preset이다.
@@ -170,6 +171,12 @@ meta 추가 항목:
 - benchmark availability
 - strategy net vs benchmark overlay
 - cost detail preview
+- 이후 shared real-money helper 보강으로
+  benchmark-relative validation surface도 함께 읽을 수 있게 되었다.
+  예:
+  - `Validation Status`
+  - strategy / benchmark max drawdown
+  - rolling underperformance
 
 `Compare`에서도 ETF 전략이 real-money hardening 정보를 유지한다.
 
@@ -223,7 +230,7 @@ smoke:
 ## 이번 pass에서 일부러 안 한 것
 
 - volume / spread / AUM 기반 investability
-- rolling underperformance guardrail
+- rolling underperformance를 실제 전략 guardrail로 쓰는 것
 - ETF strategy benchmark 선택지의 제품화
 - transaction cost model 세분화
 - strict annual family hardening

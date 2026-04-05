@@ -50,6 +50,9 @@ from finance.sample import (
     GTAA_SCORE_RETURN_COLUMNS,
     GTAA_DEFAULT_SCORE_WEIGHTS,
     GTAA_DEFAULT_TREND_FILTER_WINDOW,
+    STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED,
+    STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD,
+    STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
 )
 from finance.data.asset_profile import load_top_symbols_from_asset_profile
 from finance.loaders import load_statement_coverage_summary, load_statement_shadow_coverage_summary
@@ -549,6 +552,12 @@ def _init_backtest_state() -> None:
         st.session_state["qss_market_regime_window"] = STRICT_MARKET_REGIME_DEFAULT_WINDOW
     if "qss_market_regime_benchmark" not in st.session_state:
         st.session_state["qss_market_regime_benchmark"] = STRICT_MARKET_REGIME_DEFAULT_BENCHMARK
+    if "qss_underperformance_guardrail_enabled" not in st.session_state:
+        st.session_state["qss_underperformance_guardrail_enabled"] = STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED
+    if "qss_underperformance_guardrail_window_months" not in st.session_state:
+        st.session_state["qss_underperformance_guardrail_window_months"] = STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS
+    if "qss_underperformance_guardrail_threshold" not in st.session_state:
+        st.session_state["qss_underperformance_guardrail_threshold"] = STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD * 100.0
     if "vss_trend_filter_enabled" not in st.session_state:
         st.session_state["vss_trend_filter_enabled"] = STRICT_TREND_FILTER_DEFAULT_ENABLED
     if "vss_trend_filter_window" not in st.session_state:
@@ -559,6 +568,12 @@ def _init_backtest_state() -> None:
         st.session_state["vss_market_regime_window"] = STRICT_MARKET_REGIME_DEFAULT_WINDOW
     if "vss_market_regime_benchmark" not in st.session_state:
         st.session_state["vss_market_regime_benchmark"] = STRICT_MARKET_REGIME_DEFAULT_BENCHMARK
+    if "vss_underperformance_guardrail_enabled" not in st.session_state:
+        st.session_state["vss_underperformance_guardrail_enabled"] = STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED
+    if "vss_underperformance_guardrail_window_months" not in st.session_state:
+        st.session_state["vss_underperformance_guardrail_window_months"] = STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS
+    if "vss_underperformance_guardrail_threshold" not in st.session_state:
+        st.session_state["vss_underperformance_guardrail_threshold"] = STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD * 100.0
     if "qvss_trend_filter_enabled" not in st.session_state:
         st.session_state["qvss_trend_filter_enabled"] = STRICT_TREND_FILTER_DEFAULT_ENABLED
     if "qvss_trend_filter_window" not in st.session_state:
@@ -569,6 +584,12 @@ def _init_backtest_state() -> None:
         st.session_state["qvss_market_regime_window"] = STRICT_MARKET_REGIME_DEFAULT_WINDOW
     if "qvss_market_regime_benchmark" not in st.session_state:
         st.session_state["qvss_market_regime_benchmark"] = STRICT_MARKET_REGIME_DEFAULT_BENCHMARK
+    if "qvss_underperformance_guardrail_enabled" not in st.session_state:
+        st.session_state["qvss_underperformance_guardrail_enabled"] = STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED
+    if "qvss_underperformance_guardrail_window_months" not in st.session_state:
+        st.session_state["qvss_underperformance_guardrail_window_months"] = STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS
+    if "qvss_underperformance_guardrail_threshold" not in st.session_state:
+        st.session_state["qvss_underperformance_guardrail_threshold"] = STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD * 100.0
     if "qsqp_trend_filter_enabled" not in st.session_state:
         st.session_state["qsqp_trend_filter_enabled"] = STRICT_TREND_FILTER_DEFAULT_ENABLED
     if "qsqp_trend_filter_window" not in st.session_state:
@@ -1293,6 +1314,50 @@ def _render_etf_real_money_inputs(
     return min_price_filter, transaction_cost_bps, benchmark_ticker
 
 
+def _render_underperformance_guardrail_inputs(
+    *,
+    key_prefix: str,
+    label_prefix: str = "",
+) -> tuple[bool, int, float]:
+    st.markdown(f"##### {label_prefix}Underperformance Guardrail")
+    st.caption(
+        "전략의 trailing 성과가 benchmark보다 일정 수준 이상 계속 약하면, "
+        "다음 리밸런싱 구간은 현금으로 물러나는 실험적 guardrail입니다."
+    )
+    enabled = st.checkbox(
+        "Enable",
+        value=STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED,
+        key=f"{key_prefix}_underperformance_guardrail_enabled",
+    )
+    left, right = st.columns(2, gap="small")
+    with left:
+        window_months = int(
+            st.number_input(
+                f"{label_prefix}Guardrail Window (Months)",
+                min_value=3,
+                max_value=36,
+                value=STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
+                step=1,
+                key=f"{key_prefix}_underperformance_guardrail_window_months",
+                help="전략과 benchmark의 trailing 비교를 몇 개월 기준으로 볼지 정합니다.",
+            )
+        )
+    with right:
+        threshold_percent = float(
+            st.number_input(
+                f"{label_prefix}Worst Excess Threshold (%)",
+                min_value=-50.0,
+                max_value=0.0,
+                value=float(STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD) * 100.0,
+                step=1.0,
+                key=f"{key_prefix}_underperformance_guardrail_threshold",
+                help="전략 trailing 수익률이 benchmark보다 이 값 이하로 더 나쁘면 guardrail을 켭니다.",
+            )
+        )
+    st.caption("Enable이 꺼져 있어도 Window와 Threshold는 미리 조정해둘 수 있습니다.")
+    return enabled, window_months, threshold_percent / 100.0
+
+
 def _gtaa_return_col_from_months(months: int) -> str:
     return f"{int(months)}MReturn"
 
@@ -1709,10 +1774,40 @@ def _render_last_run() -> None:
                 st.markdown(f"- `Transaction Cost`: `{float(meta['transaction_cost_bps']):.1f} bps`")
             if meta.get("benchmark_ticker"):
                 st.markdown(f"- `Benchmark`: `{meta['benchmark_ticker']}`")
+            if meta.get("underperformance_guardrail_enabled"):
+                st.markdown(
+                    f"- `Underperformance Guardrail`: `{int(meta.get('underperformance_guardrail_window_months') or STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS)}M`, "
+                    f"`{float(meta.get('underperformance_guardrail_threshold') or STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD):.0%}`"
+                )
+                if meta.get("underperformance_guardrail_trigger_count") is not None:
+                    st.markdown(
+                        f"- `Guardrail Trigger Count`: `{int(meta.get('underperformance_guardrail_trigger_count') or 0)}`"
+                    )
             if meta.get("avg_turnover") is not None:
                 st.markdown(f"- `Average Turnover`: `{float(meta['avg_turnover']):.2%}`")
             if meta.get("estimated_cost_total") is not None:
                 st.markdown(f"- `Estimated Cost Total`: `{float(meta['estimated_cost_total']):,.1f}`")
+            if meta.get("validation_status"):
+                st.markdown(f"- `Validation Status`: `{meta['validation_status']}`")
+            if meta.get("promotion_decision"):
+                st.markdown(f"- `Promotion Decision`: `{meta['promotion_decision']}`")
+            if meta.get("promotion_next_step"):
+                st.markdown(f"- `Promotion Next Step`: `{meta['promotion_next_step']}`")
+            if meta.get("strategy_max_drawdown") is not None:
+                st.markdown(f"- `Strategy Max Drawdown`: `{float(meta['strategy_max_drawdown']):.2%}`")
+            if meta.get("benchmark_max_drawdown") is not None:
+                st.markdown(f"- `Benchmark Max Drawdown`: `{float(meta['benchmark_max_drawdown']):.2%}`")
+            if meta.get("rolling_underperformance_share") is not None:
+                st.markdown(
+                    f"- `Rolling Underperformance`: share `{float(meta['rolling_underperformance_share']):.2%}`, "
+                    f"current streak `{int(meta.get('rolling_underperformance_current_streak') or 0)}`, "
+                    f"worst excess `{float(meta.get('rolling_underperformance_worst_excess_return') or 0.0):.2%}`"
+                )
+            if meta.get("promotion_rationale"):
+                st.markdown(
+                    "- `Promotion Rationale`: "
+                    + ", ".join(f"`{item}`" for item in list(meta.get("promotion_rationale") or []))
+                )
             if meta.get("dynamic_candidate_count") is not None:
                 st.markdown(
                     f"- `Dynamic Candidate Pool`: `{meta.get('dynamic_candidate_count')}` "
@@ -1835,6 +1930,12 @@ def _strategy_compare_defaults(strategy_name: str) -> dict:
             "extra": {
                 "quality_factors": QUALITY_STRICT_DEFAULT_FACTORS,
                 "top_n": 2,
+                "min_price_filter": ETF_REAL_MONEY_DEFAULT_MIN_PRICE,
+                "transaction_cost_bps": ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
+                "benchmark_ticker": ETF_REAL_MONEY_DEFAULT_BENCHMARK,
+                "underperformance_guardrail_enabled": STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED,
+                "underperformance_guardrail_window_months": STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
+                "underperformance_guardrail_threshold": STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD,
             },
         }
     if strategy_name == "Quality Snapshot (Strict Quarterly Prototype)":
@@ -1855,6 +1956,12 @@ def _strategy_compare_defaults(strategy_name: str) -> dict:
             "extra": {
                 "value_factors": VALUE_STRICT_DEFAULT_FACTORS,
                 "top_n": 10,
+                "min_price_filter": ETF_REAL_MONEY_DEFAULT_MIN_PRICE,
+                "transaction_cost_bps": ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
+                "benchmark_ticker": ETF_REAL_MONEY_DEFAULT_BENCHMARK,
+                "underperformance_guardrail_enabled": STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED,
+                "underperformance_guardrail_window_months": STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
+                "underperformance_guardrail_threshold": STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD,
             },
         }
     if strategy_name == "Value Snapshot (Strict Quarterly Prototype)":
@@ -1876,6 +1983,12 @@ def _strategy_compare_defaults(strategy_name: str) -> dict:
                 "quality_factors": QUALITY_STRICT_DEFAULT_FACTORS,
                 "value_factors": VALUE_STRICT_DEFAULT_FACTORS,
                 "top_n": 10,
+                "min_price_filter": ETF_REAL_MONEY_DEFAULT_MIN_PRICE,
+                "transaction_cost_bps": ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
+                "benchmark_ticker": ETF_REAL_MONEY_DEFAULT_BENCHMARK,
+                "underperformance_guardrail_enabled": STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED,
+                "underperformance_guardrail_window_months": STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
+                "underperformance_guardrail_threshold": STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD,
             },
         }
     if strategy_name == "Quality + Value Snapshot (Strict Quarterly Prototype)":
@@ -2269,6 +2382,90 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
         if meta.get("net_excess_end_balance") is not None:
             benchmark_cols[3].metric("Net Excess End Balance", f"{float(meta.get('net_excess_end_balance')):,.1f}")
 
+    if meta.get("benchmark_available"):
+        st.markdown("##### Validation Surface")
+        validation_cols = st.columns(4, gap="small")
+        validation_cols[0].metric("Validation Status", str(meta.get("validation_status") or "normal").upper())
+        if meta.get("strategy_max_drawdown") is not None:
+            validation_cols[1].metric("Strategy Max Drawdown", f"{float(meta.get('strategy_max_drawdown')):.2%}")
+        if meta.get("benchmark_max_drawdown") is not None:
+            validation_cols[2].metric("Benchmark Max Drawdown", f"{float(meta.get('benchmark_max_drawdown')):.2%}")
+        validation_cols[3].metric("Rolling Window", str(meta.get("validation_window_label") or "-"))
+
+        rolling_cols = st.columns(4, gap="small")
+        if meta.get("rolling_underperformance_share") is not None:
+            rolling_cols[0].metric("Underperformance Share", f"{float(meta.get('rolling_underperformance_share')):.2%}")
+        rolling_cols[1].metric("Current Underperf Streak", str(int(meta.get("rolling_underperformance_current_streak") or 0)))
+        rolling_cols[2].metric("Longest Underperf Streak", str(int(meta.get("rolling_underperformance_longest_streak") or 0)))
+        if meta.get("rolling_underperformance_worst_excess_return") is not None:
+            rolling_cols[3].metric(
+                "Worst Rolling Excess",
+                f"{float(meta.get('rolling_underperformance_worst_excess_return')):.2%}",
+            )
+
+        watch_signals = list(meta.get("validation_watch_signals") or [])
+        if watch_signals:
+            st.caption("Validation watch signals: " + ", ".join(f"`{signal}`" for signal in watch_signals))
+        status = str(meta.get("validation_status") or "normal")
+        if status == "caution":
+            st.warning(
+                "Benchmark-relative drawdown 또는 rolling underperformance 진단이 높게 나왔습니다. "
+                "실전 승격 전 재검토가 필요한 상태로 보는 편이 맞습니다."
+            )
+        elif status == "watch":
+            st.info(
+                "일부 benchmark-relative validation 지표가 watch 상태입니다. "
+                "추가 구간 검증이나 contract robustness 확인이 권장됩니다."
+            )
+
+        if meta.get("underperformance_guardrail_enabled"):
+            st.markdown("##### Guardrail Contract")
+            guardrail_cols = st.columns(4, gap="small")
+            guardrail_cols[0].metric("Guardrail", "ON")
+            guardrail_cols[1].metric(
+                "Window",
+                f"{int(meta.get('underperformance_guardrail_window_months') or STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS)}M",
+            )
+            guardrail_cols[2].metric(
+                "Threshold",
+                f"{float(meta.get('underperformance_guardrail_threshold') or STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD):.0%}",
+            )
+            guardrail_cols[3].metric(
+                "Trigger Count",
+                str(int(meta.get("underperformance_guardrail_trigger_count") or 0)),
+            )
+            if meta.get("underperformance_guardrail_trigger_share") is not None:
+                st.caption(
+                    "Guardrail triggered on "
+                    f"`{float(meta.get('underperformance_guardrail_trigger_share')):.2%}` of recorded rows."
+                )
+
+        if meta.get("promotion_decision"):
+            st.markdown("##### Promotion Decision")
+            decision = str(meta.get("promotion_decision") or "-")
+            next_step = str(meta.get("promotion_next_step") or "-")
+            promotion_cols = st.columns(2, gap="small")
+            promotion_cols[0].metric("Decision", decision.upper())
+            promotion_cols[1].metric("Next Step", next_step)
+            rationale = list(meta.get("promotion_rationale") or [])
+            if rationale:
+                st.caption("Promotion rationale: " + ", ".join(f"`{item}`" for item in rationale))
+            if decision == "real_money_candidate":
+                st.success(
+                    "현재 계약 기준에서는 실전형 후보로 읽을 수 있는 상태입니다. "
+                    "다음 단계는 paper trading 또는 소액 probation 쪽이 자연스럽습니다."
+                )
+            elif decision == "production_candidate":
+                st.info(
+                    "지금은 hardening은 되었지만, 더 강한 robustness / guardrail 검토 전까지는 "
+                    "production candidate로 두는 편이 맞습니다."
+                )
+            elif decision == "hold":
+                st.warning(
+                    "현재 run은 바로 승격하기보다 hold로 보는 편이 맞습니다. "
+                    "validation gap 또는 contract issue를 먼저 정리하는 것이 좋습니다."
+                )
+
     if benchmark_chart_df is not None and result_df is not None:
         strategy_line = (
             bundle["chart_df"][["Date", "Total Balance"]]
@@ -2341,6 +2538,10 @@ def _build_compare_highlight_rows(bundles: list[dict]) -> pd.DataFrame:
                 "Cost (bps)": meta.get("transaction_cost_bps"),
                 "Avg Turnover": meta.get("avg_turnover"),
                 "Benchmark": meta.get("benchmark_ticker"),
+                "Validation": meta.get("validation_status"),
+                "Promotion": meta.get("promotion_decision"),
+                "Guardrail Triggers": meta.get("underperformance_guardrail_trigger_count"),
+                "Worst Rolling Excess": meta.get("rolling_underperformance_worst_excess_return"),
                 "Membership Range": (
                     f"{int(universe_debug['min_membership_count'])} -> {int(universe_debug['max_membership_count'])}"
                     if universe_debug.get("min_membership_count") is not None
@@ -3233,6 +3434,16 @@ def _build_history_payload(record: dict[str, Any]) -> dict[str, Any] | None:
         payload["market_regime_window"] = int(record.get("market_regime_window") or STRICT_MARKET_REGIME_DEFAULT_WINDOW)
     if record.get("market_regime_benchmark") is not None:
         payload["market_regime_benchmark"] = record.get("market_regime_benchmark") or STRICT_MARKET_REGIME_DEFAULT_BENCHMARK
+    if record.get("underperformance_guardrail_enabled") is not None:
+        payload["underperformance_guardrail_enabled"] = bool(record.get("underperformance_guardrail_enabled"))
+    if record.get("underperformance_guardrail_window_months") is not None:
+        payload["underperformance_guardrail_window_months"] = int(
+            record.get("underperformance_guardrail_window_months") or STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS
+        )
+    if record.get("underperformance_guardrail_threshold") is not None:
+        payload["underperformance_guardrail_threshold"] = float(
+            record.get("underperformance_guardrail_threshold") or STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD
+        )
     if record.get("score_lookback_months") is not None:
         payload["score_lookback_months"] = [int(value) for value in list(record.get("score_lookback_months") or [])]
     if record.get("score_return_columns") is not None:
@@ -3329,6 +3540,12 @@ def _build_prefill_summary_lines(payload: dict[str, Any] | None) -> list[str]:
         lines.append(f"Transaction Cost: `{payload.get('transaction_cost_bps')}` bps")
     if payload.get("benchmark_ticker"):
         lines.append(f"Benchmark: `{payload.get('benchmark_ticker')}`")
+    if payload.get("underperformance_guardrail_enabled"):
+        lines.append(
+            "Underperformance Guardrail: "
+            f"`{payload.get('underperformance_guardrail_window_months', STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS)}M`, "
+            f"`{float(payload.get('underperformance_guardrail_threshold', STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD)):.0%}`"
+        )
     if payload.get("score_lookback_months"):
         selected_horizons = [f"{int(months)}M" for months in list(payload.get("score_lookback_months") or [])]
         lines.append(f"Score Horizons: `{', '.join(selected_horizons)}`")
@@ -3445,6 +3662,18 @@ def _bundle_to_saved_strategy_override(bundle: dict[str, Any]) -> dict[str, Any]
         override["market_regime_window"] = int(meta.get("market_regime_window"))
     if meta.get("market_regime_benchmark") is not None:
         override["market_regime_benchmark"] = meta.get("market_regime_benchmark")
+    if meta.get("min_price_filter") is not None:
+        override["min_price_filter"] = float(meta.get("min_price_filter"))
+    if meta.get("transaction_cost_bps") is not None:
+        override["transaction_cost_bps"] = float(meta.get("transaction_cost_bps"))
+    if meta.get("benchmark_ticker") is not None:
+        override["benchmark_ticker"] = meta.get("benchmark_ticker")
+    if meta.get("underperformance_guardrail_enabled") is not None:
+        override["underperformance_guardrail_enabled"] = bool(meta.get("underperformance_guardrail_enabled"))
+    if meta.get("underperformance_guardrail_window_months") is not None:
+        override["underperformance_guardrail_window_months"] = int(meta.get("underperformance_guardrail_window_months"))
+    if meta.get("underperformance_guardrail_threshold") is not None:
+        override["underperformance_guardrail_threshold"] = float(meta.get("underperformance_guardrail_threshold"))
     return override
 
 
@@ -3630,6 +3859,24 @@ def _apply_compare_strategy_prefill(strategy_name: str, override: dict[str, Any]
     st.session_state[f"compare_{key_prefix}_market_regime_benchmark"] = (
         override.get("market_regime_benchmark") or STRICT_MARKET_REGIME_DEFAULT_BENCHMARK
     )
+    st.session_state[f"compare_{key_prefix}_underperformance_guardrail_enabled"] = bool(
+        override.get("underperformance_guardrail_enabled", STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED)
+    )
+    st.session_state[f"compare_{key_prefix}_underperformance_guardrail_window_months"] = int(
+        override.get("underperformance_guardrail_window_months") or STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS
+    )
+    st.session_state[f"compare_{key_prefix}_underperformance_guardrail_threshold"] = float(
+        (override.get("underperformance_guardrail_threshold") or STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD) * 100.0
+    )
+    st.session_state[f"compare_{key_prefix}_min_price_filter"] = float(
+        override.get("min_price_filter") or ETF_REAL_MONEY_DEFAULT_MIN_PRICE
+    )
+    st.session_state[f"compare_{key_prefix}_transaction_cost_bps"] = float(
+        override.get("transaction_cost_bps") or ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS
+    )
+    st.session_state[f"compare_{key_prefix}_benchmark_ticker"] = str(
+        override.get("benchmark_ticker") or ETF_REAL_MONEY_DEFAULT_BENCHMARK
+    ).strip().upper()
     if override.get("quality_factors") is not None:
         quality_key = "quality_factors" if key_prefix in {"qvss", "qvqp"} else "factors"
         st.session_state[f"compare_{key_prefix}_{quality_key}"] = list(override.get("quality_factors") or [])
@@ -3856,6 +4103,18 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         st.session_state["qss_market_regime_enabled"] = bool(payload.get("market_regime_enabled", STRICT_MARKET_REGIME_DEFAULT_ENABLED))
         st.session_state["qss_market_regime_window"] = int(payload.get("market_regime_window") or STRICT_MARKET_REGIME_DEFAULT_WINDOW)
         st.session_state["qss_market_regime_benchmark"] = payload.get("market_regime_benchmark") or STRICT_MARKET_REGIME_DEFAULT_BENCHMARK
+        st.session_state["qss_underperformance_guardrail_enabled"] = bool(
+            payload.get("underperformance_guardrail_enabled", STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED)
+        )
+        st.session_state["qss_underperformance_guardrail_window_months"] = int(
+            payload.get("underperformance_guardrail_window_months") or STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS
+        )
+        st.session_state["qss_underperformance_guardrail_threshold"] = float(
+            (payload.get("underperformance_guardrail_threshold") or STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD) * 100.0
+        )
+        st.session_state["qss_min_price_filter"] = float(payload.get("min_price_filter") or ETF_REAL_MONEY_DEFAULT_MIN_PRICE)
+        st.session_state["qss_transaction_cost_bps"] = float(payload.get("transaction_cost_bps") or ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS)
+        st.session_state["qss_benchmark_ticker"] = str(payload.get("benchmark_ticker") or ETF_REAL_MONEY_DEFAULT_BENCHMARK).strip().upper()
     elif strategy_key == "quality_snapshot_strict_quarterly_prototype":
         st.session_state["qsqp_universe_mode"] = "Preset" if universe_mode == "preset" and preset_name in QUALITY_STRICT_PRESETS else "Manual"
         if st.session_state["qsqp_universe_mode"] == "Preset":
@@ -3898,6 +4157,18 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         st.session_state["vss_market_regime_enabled"] = bool(payload.get("market_regime_enabled", STRICT_MARKET_REGIME_DEFAULT_ENABLED))
         st.session_state["vss_market_regime_window"] = int(payload.get("market_regime_window") or STRICT_MARKET_REGIME_DEFAULT_WINDOW)
         st.session_state["vss_market_regime_benchmark"] = payload.get("market_regime_benchmark") or STRICT_MARKET_REGIME_DEFAULT_BENCHMARK
+        st.session_state["vss_underperformance_guardrail_enabled"] = bool(
+            payload.get("underperformance_guardrail_enabled", STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED)
+        )
+        st.session_state["vss_underperformance_guardrail_window_months"] = int(
+            payload.get("underperformance_guardrail_window_months") or STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS
+        )
+        st.session_state["vss_underperformance_guardrail_threshold"] = float(
+            (payload.get("underperformance_guardrail_threshold") or STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD) * 100.0
+        )
+        st.session_state["vss_min_price_filter"] = float(payload.get("min_price_filter") or ETF_REAL_MONEY_DEFAULT_MIN_PRICE)
+        st.session_state["vss_transaction_cost_bps"] = float(payload.get("transaction_cost_bps") or ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS)
+        st.session_state["vss_benchmark_ticker"] = str(payload.get("benchmark_ticker") or ETF_REAL_MONEY_DEFAULT_BENCHMARK).strip().upper()
     elif strategy_key == "value_snapshot_strict_quarterly_prototype":
         st.session_state["vsqp_universe_mode"] = "Preset" if universe_mode == "preset" and preset_name in VALUE_STRICT_PRESETS else "Manual"
         if st.session_state["vsqp_universe_mode"] == "Preset":
@@ -3941,6 +4212,18 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         st.session_state["qvss_market_regime_enabled"] = bool(payload.get("market_regime_enabled", STRICT_MARKET_REGIME_DEFAULT_ENABLED))
         st.session_state["qvss_market_regime_window"] = int(payload.get("market_regime_window") or STRICT_MARKET_REGIME_DEFAULT_WINDOW)
         st.session_state["qvss_market_regime_benchmark"] = payload.get("market_regime_benchmark") or STRICT_MARKET_REGIME_DEFAULT_BENCHMARK
+        st.session_state["qvss_underperformance_guardrail_enabled"] = bool(
+            payload.get("underperformance_guardrail_enabled", STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED)
+        )
+        st.session_state["qvss_underperformance_guardrail_window_months"] = int(
+            payload.get("underperformance_guardrail_window_months") or STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS
+        )
+        st.session_state["qvss_underperformance_guardrail_threshold"] = float(
+            (payload.get("underperformance_guardrail_threshold") or STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD) * 100.0
+        )
+        st.session_state["qvss_min_price_filter"] = float(payload.get("min_price_filter") or ETF_REAL_MONEY_DEFAULT_MIN_PRICE)
+        st.session_state["qvss_transaction_cost_bps"] = float(payload.get("transaction_cost_bps") or ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS)
+        st.session_state["qvss_benchmark_ticker"] = str(payload.get("benchmark_ticker") or ETF_REAL_MONEY_DEFAULT_BENCHMARK).strip().upper()
     elif strategy_key == "quality_value_snapshot_strict_quarterly_prototype":
         st.session_state["qvqp_universe_mode"] = "Preset" if universe_mode == "preset" and preset_name in QUALITY_STRICT_PRESETS else "Manual"
         if st.session_state["qvqp_universe_mode"] == "Preset":
@@ -4793,11 +5076,17 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> None:
                     quality_factors=payload["quality_factors"],
                     top_n=payload["top"],
                     rebalance_interval=payload.get("rebalance_interval", 1),
+                    min_price_filter=payload.get("min_price_filter", ETF_REAL_MONEY_DEFAULT_MIN_PRICE),
+                    transaction_cost_bps=payload.get("transaction_cost_bps", ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS),
+                    benchmark_ticker=payload.get("benchmark_ticker", ETF_REAL_MONEY_DEFAULT_BENCHMARK),
                     trend_filter_enabled=payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED),
                     trend_filter_window=payload.get("trend_filter_window", STRICT_TREND_FILTER_DEFAULT_WINDOW),
                     market_regime_enabled=payload.get("market_regime_enabled", STRICT_MARKET_REGIME_DEFAULT_ENABLED),
                     market_regime_window=payload.get("market_regime_window", STRICT_MARKET_REGIME_DEFAULT_WINDOW),
                     market_regime_benchmark=payload.get("market_regime_benchmark", STRICT_MARKET_REGIME_DEFAULT_BENCHMARK),
+                    underperformance_guardrail_enabled=payload.get("underperformance_guardrail_enabled", STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED),
+                    underperformance_guardrail_window_months=payload.get("underperformance_guardrail_window_months", STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS),
+                    underperformance_guardrail_threshold=payload.get("underperformance_guardrail_threshold", STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD),
                     universe_mode=payload["universe_mode"],
                     preset_name=payload["preset_name"],
                     universe_contract=payload.get("universe_contract", STATIC_MANAGED_RESEARCH_UNIVERSE),
@@ -4835,11 +5124,17 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> None:
                     value_factors=payload["value_factors"],
                     top_n=payload["top"],
                     rebalance_interval=payload.get("rebalance_interval", 1),
+                    min_price_filter=payload.get("min_price_filter", ETF_REAL_MONEY_DEFAULT_MIN_PRICE),
+                    transaction_cost_bps=payload.get("transaction_cost_bps", ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS),
+                    benchmark_ticker=payload.get("benchmark_ticker", ETF_REAL_MONEY_DEFAULT_BENCHMARK),
                     trend_filter_enabled=payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED),
                     trend_filter_window=payload.get("trend_filter_window", STRICT_TREND_FILTER_DEFAULT_WINDOW),
                     market_regime_enabled=payload.get("market_regime_enabled", STRICT_MARKET_REGIME_DEFAULT_ENABLED),
                     market_regime_window=payload.get("market_regime_window", STRICT_MARKET_REGIME_DEFAULT_WINDOW),
                     market_regime_benchmark=payload.get("market_regime_benchmark", STRICT_MARKET_REGIME_DEFAULT_BENCHMARK),
+                    underperformance_guardrail_enabled=payload.get("underperformance_guardrail_enabled", STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED),
+                    underperformance_guardrail_window_months=payload.get("underperformance_guardrail_window_months", STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS),
+                    underperformance_guardrail_threshold=payload.get("underperformance_guardrail_threshold", STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD),
                     universe_mode=payload["universe_mode"],
                     preset_name=payload["preset_name"],
                     universe_contract=payload.get("universe_contract", STATIC_MANAGED_RESEARCH_UNIVERSE),
@@ -4878,11 +5173,17 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> None:
                     value_factors=payload["value_factors"],
                     top_n=payload["top"],
                     rebalance_interval=payload.get("rebalance_interval", 1),
+                    min_price_filter=payload.get("min_price_filter", ETF_REAL_MONEY_DEFAULT_MIN_PRICE),
+                    transaction_cost_bps=payload.get("transaction_cost_bps", ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS),
+                    benchmark_ticker=payload.get("benchmark_ticker", ETF_REAL_MONEY_DEFAULT_BENCHMARK),
                     trend_filter_enabled=payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED),
                     trend_filter_window=payload.get("trend_filter_window", STRICT_TREND_FILTER_DEFAULT_WINDOW),
                     market_regime_enabled=payload.get("market_regime_enabled", STRICT_MARKET_REGIME_DEFAULT_ENABLED),
                     market_regime_window=payload.get("market_regime_window", STRICT_MARKET_REGIME_DEFAULT_WINDOW),
                     market_regime_benchmark=payload.get("market_regime_benchmark", STRICT_MARKET_REGIME_DEFAULT_BENCHMARK),
+                    underperformance_guardrail_enabled=payload.get("underperformance_guardrail_enabled", STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED),
+                    underperformance_guardrail_window_months=payload.get("underperformance_guardrail_window_months", STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS),
+                    underperformance_guardrail_threshold=payload.get("underperformance_guardrail_threshold", STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD),
                     universe_mode=payload["universe_mode"],
                     preset_name=payload["preset_name"],
                     universe_contract=payload.get("universe_contract", STATIC_MANAGED_RESEARCH_UNIVERSE),
@@ -5559,6 +5860,17 @@ def _render_quality_snapshot_strict_annual_form() -> None:
                 key_prefix="qss",
                 label_prefix="",
             )
+            min_price_filter, transaction_cost_bps, benchmark_ticker = _render_etf_real_money_inputs(
+                key_prefix="qss",
+            )
+            (
+                underperformance_guardrail_enabled,
+                underperformance_guardrail_window_months,
+                underperformance_guardrail_threshold,
+            ) = _render_underperformance_guardrail_inputs(
+                key_prefix="qss",
+                label_prefix="Strict Annual Quality ",
+            )
 
         submitted = st.form_submit_button("Run Strict Annual Quality Backtest", use_container_width=True)
 
@@ -5595,6 +5907,12 @@ def _render_quality_snapshot_strict_annual_form() -> None:
         "market_regime_enabled": bool(market_regime_enabled),
         "market_regime_window": int(market_regime_window),
         "market_regime_benchmark": market_regime_benchmark,
+        "min_price_filter": float(min_price_filter),
+        "transaction_cost_bps": float(transaction_cost_bps),
+        "benchmark_ticker": benchmark_ticker,
+        "underperformance_guardrail_enabled": bool(underperformance_guardrail_enabled),
+        "underperformance_guardrail_window_months": int(underperformance_guardrail_window_months),
+        "underperformance_guardrail_threshold": float(underperformance_guardrail_threshold),
         "universe_contract": universe_contract,
         "dynamic_candidate_tickers": dynamic_candidate_tickers,
         "dynamic_target_size": dynamic_target_size,
@@ -6099,6 +6417,17 @@ def _render_value_snapshot_strict_annual_form() -> None:
                 key_prefix="vss",
                 label_prefix="",
             )
+            min_price_filter, transaction_cost_bps, benchmark_ticker = _render_etf_real_money_inputs(
+                key_prefix="vss",
+            )
+            (
+                underperformance_guardrail_enabled,
+                underperformance_guardrail_window_months,
+                underperformance_guardrail_threshold,
+            ) = _render_underperformance_guardrail_inputs(
+                key_prefix="vss",
+                label_prefix="Strict Annual Value ",
+            )
 
         submitted = st.form_submit_button("Run Strict Annual Value Backtest", use_container_width=True)
 
@@ -6136,6 +6465,12 @@ def _render_value_snapshot_strict_annual_form() -> None:
         "market_regime_enabled": bool(market_regime_enabled),
         "market_regime_window": int(market_regime_window),
         "market_regime_benchmark": market_regime_benchmark,
+        "min_price_filter": float(min_price_filter),
+        "transaction_cost_bps": float(transaction_cost_bps),
+        "benchmark_ticker": benchmark_ticker,
+        "underperformance_guardrail_enabled": bool(underperformance_guardrail_enabled),
+        "underperformance_guardrail_window_months": int(underperformance_guardrail_window_months),
+        "underperformance_guardrail_threshold": float(underperformance_guardrail_threshold),
         "universe_contract": universe_contract,
         "dynamic_candidate_tickers": dynamic_candidate_tickers,
         "dynamic_target_size": dynamic_target_size,
@@ -6474,6 +6809,17 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
                 key_prefix="qvss",
                 label_prefix="",
             )
+            min_price_filter, transaction_cost_bps, benchmark_ticker = _render_etf_real_money_inputs(
+                key_prefix="qvss",
+            )
+            (
+                underperformance_guardrail_enabled,
+                underperformance_guardrail_window_months,
+                underperformance_guardrail_threshold,
+            ) = _render_underperformance_guardrail_inputs(
+                key_prefix="qvss",
+                label_prefix="Strict Annual Multi-Factor ",
+            )
 
         submitted = st.form_submit_button("Run Strict Annual Quality + Value Backtest", use_container_width=True)
 
@@ -6514,6 +6860,12 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
         "market_regime_enabled": bool(market_regime_enabled),
         "market_regime_window": int(market_regime_window),
         "market_regime_benchmark": market_regime_benchmark,
+        "min_price_filter": float(min_price_filter),
+        "transaction_cost_bps": float(transaction_cost_bps),
+        "benchmark_ticker": benchmark_ticker,
+        "underperformance_guardrail_enabled": bool(underperformance_guardrail_enabled),
+        "underperformance_guardrail_window_months": int(underperformance_guardrail_window_months),
+        "underperformance_guardrail_threshold": float(underperformance_guardrail_threshold),
         "universe_contract": universe_contract,
         "dynamic_candidate_tickers": dynamic_candidate_tickers,
         "dynamic_target_size": dynamic_target_size,
@@ -6620,41 +6972,15 @@ def render_backtest_tab() -> None:
             help="Up to four strategies can be compared at once in the first pass.",
             key="compare_selected_strategies",
         )
-        st.caption("Strategy selection is outside the form so the strategy-specific advanced inputs update immediately.")
+        st.caption("Strategy selection is outside the form so the strategy-specific sections update immediately.")
 
         compare_eq_universe_mode = "preset"
         compare_eq_preset_name: str | None = "Dividend ETFs"
         compare_eq_tickers = list(EQUAL_WEIGHT_PRESETS["Dividend ETFs"])
-        if "Equal Weight" in selected_strategies:
-            with st.expander("Equal Weight Universe", expanded=False):
-                st.caption("Equal Weight universe selection is outside the compare submit form so preset changes refresh the ticker preview immediately.")
-                (
-                    compare_eq_universe_mode,
-                    compare_eq_preset_name,
-                    compare_eq_tickers,
-                ) = _render_equal_weight_universe_inputs(
-                    key_prefix="compare_eq",
-                    radio_label="Equal Weight Universe Mode",
-                    preset_label="Equal Weight Preset",
-                    ticker_label="Equal Weight Tickers",
-                )
 
         compare_gtaa_universe_mode = "preset"
         compare_gtaa_preset_name: str | None = "GTAA Universe"
         compare_gtaa_tickers = list(GTAA_DEFAULT_TICKERS)
-        if "GTAA" in selected_strategies:
-            with st.expander("GTAA Universe", expanded=False):
-                st.caption("GTAA universe selection is outside the compare submit form so preset changes refresh the ticker preview immediately.")
-                (
-                    compare_gtaa_universe_mode,
-                    compare_gtaa_preset_name,
-                    compare_gtaa_tickers,
-                ) = _render_gtaa_universe_inputs(
-                    key_prefix="compare_gtaa",
-                    radio_label="GTAA Universe Mode",
-                    preset_label="GTAA Preset",
-                    ticker_label="GTAA Tickers",
-                )
 
         with st.form("compare_backtests_form", clear_on_submit=False):
             col1, col2 = st.columns(2)
@@ -6663,7 +6989,7 @@ def render_backtest_tab() -> None:
             with col2:
                 compare_end = st.date_input("End Date", value=DEFAULT_BACKTEST_END_DATE, key="compare_end")
 
-            with st.expander("Advanced Inputs", expanded=False):
+            with st.expander("Advanced Inputs", expanded=True):
                 compare_timeframe = st.selectbox("Timeframe", options=["1d"], index=0, key="compare_timeframe")
                 compare_option = st.selectbox("Option", options=["month_end"], index=0, key="compare_option")
                 st.markdown("##### Strategy-Specific Advanced Inputs")
@@ -6671,7 +6997,17 @@ def render_backtest_tab() -> None:
                 compare_strategy_overrides: dict[str, dict] = {}
 
                 if "Equal Weight" in selected_strategies:
-                    with st.expander("Equal Weight", expanded=False):
+                    with st.expander("Equal Weight", expanded=True):
+                        (
+                            compare_eq_universe_mode,
+                            compare_eq_preset_name,
+                            compare_eq_tickers,
+                        ) = _render_equal_weight_universe_inputs(
+                            key_prefix="compare_eq",
+                            radio_label="Equal Weight Universe Mode",
+                            preset_label="Equal Weight Preset",
+                            ticker_label="Equal Weight Tickers",
+                        )
                         compare_strategy_overrides["Equal Weight"] = {
                             "tickers": list(compare_eq_tickers),
                             "preset_name": compare_eq_preset_name,
@@ -6689,7 +7025,17 @@ def render_backtest_tab() -> None:
                         }
 
                 if "GTAA" in selected_strategies:
-                    with st.expander("GTAA", expanded=False):
+                    with st.expander("GTAA", expanded=True):
+                        (
+                            compare_gtaa_universe_mode,
+                            compare_gtaa_preset_name,
+                            compare_gtaa_tickers,
+                        ) = _render_gtaa_universe_inputs(
+                            key_prefix="compare_gtaa",
+                            radio_label="GTAA Universe Mode",
+                            preset_label="GTAA Preset",
+                            ticker_label="GTAA Tickers",
+                        )
                         min_price_filter, transaction_cost_bps, benchmark_ticker = _render_etf_real_money_inputs(
                             key_prefix="compare_gtaa",
                         )
@@ -6910,6 +7256,20 @@ def render_backtest_tab() -> None:
                             key_prefix="compare_qss",
                             label_prefix="Strict Annual Quality ",
                         )
+                        min_price_filter, transaction_cost_bps, benchmark_ticker = _render_etf_real_money_inputs(
+                            key_prefix="compare_qss",
+                        )
+                        compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["min_price_filter"] = float(min_price_filter)
+                        compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["transaction_cost_bps"] = float(transaction_cost_bps)
+                        compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["benchmark_ticker"] = benchmark_ticker
+                        (
+                            compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["underperformance_guardrail_enabled"],
+                            compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["underperformance_guardrail_window_months"],
+                            compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["underperformance_guardrail_threshold"],
+                        ) = _render_underperformance_guardrail_inputs(
+                            key_prefix="compare_qss",
+                            label_prefix="Strict Annual Quality ",
+                        )
 
                 if "Quality Snapshot (Strict Quarterly Prototype)" in selected_strategies:
                     with st.expander("Quality Snapshot (Strict Quarterly Prototype)", expanded=False):
@@ -7082,6 +7442,20 @@ def render_backtest_tab() -> None:
                             compare_strategy_overrides["Value Snapshot (Strict Annual)"]["market_regime_window"],
                             compare_strategy_overrides["Value Snapshot (Strict Annual)"]["market_regime_benchmark"],
                         ) = _render_market_regime_overlay_inputs(
+                            key_prefix="compare_vss",
+                            label_prefix="Strict Annual Value ",
+                        )
+                        min_price_filter, transaction_cost_bps, benchmark_ticker = _render_etf_real_money_inputs(
+                            key_prefix="compare_vss",
+                        )
+                        compare_strategy_overrides["Value Snapshot (Strict Annual)"]["min_price_filter"] = float(min_price_filter)
+                        compare_strategy_overrides["Value Snapshot (Strict Annual)"]["transaction_cost_bps"] = float(transaction_cost_bps)
+                        compare_strategy_overrides["Value Snapshot (Strict Annual)"]["benchmark_ticker"] = benchmark_ticker
+                        (
+                            compare_strategy_overrides["Value Snapshot (Strict Annual)"]["underperformance_guardrail_enabled"],
+                            compare_strategy_overrides["Value Snapshot (Strict Annual)"]["underperformance_guardrail_window_months"],
+                            compare_strategy_overrides["Value Snapshot (Strict Annual)"]["underperformance_guardrail_threshold"],
+                        ) = _render_underperformance_guardrail_inputs(
                             key_prefix="compare_vss",
                             label_prefix="Strict Annual Value ",
                         )
@@ -7263,6 +7637,20 @@ def render_backtest_tab() -> None:
                             compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["market_regime_window"],
                             compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["market_regime_benchmark"],
                         ) = _render_market_regime_overlay_inputs(
+                            key_prefix="compare_qvss",
+                            label_prefix="Strict Annual Multi-Factor ",
+                        )
+                        min_price_filter, transaction_cost_bps, benchmark_ticker = _render_etf_real_money_inputs(
+                            key_prefix="compare_qvss",
+                        )
+                        compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["min_price_filter"] = float(min_price_filter)
+                        compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["transaction_cost_bps"] = float(transaction_cost_bps)
+                        compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["benchmark_ticker"] = benchmark_ticker
+                        (
+                            compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["underperformance_guardrail_enabled"],
+                            compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["underperformance_guardrail_window_months"],
+                            compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["underperformance_guardrail_threshold"],
+                        ) = _render_underperformance_guardrail_inputs(
                             key_prefix="compare_qvss",
                             label_prefix="Strict Annual Multi-Factor ",
                         )

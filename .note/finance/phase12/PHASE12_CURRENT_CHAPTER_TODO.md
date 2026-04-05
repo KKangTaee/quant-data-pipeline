@@ -165,13 +165,37 @@
 
 ## 5. Strict Annual Family Promotion
 
-- `pending` strict annual family hardening scope 확정
+- `completed` strict annual family hardening scope 확정
   - `Quality Snapshot (Strict Annual)`
   - `Value Snapshot (Strict Annual)`
   - `Quality + Value Snapshot (Strict Annual)`
-- `pending` dynamic PIT 기반 real-money caution / promotion contract 구현
-- `pending` investability / turnover / benchmark / guardrail 보강
-- `pending` annual strict promotion checklist 초안 작성
+- `completed` strict annual real-money hardening first pass 구현
+  - `Minimum Price`
+  - `Transaction Cost (bps)`
+  - `Benchmark Ticker`
+  - single / compare / history prefill contract
+  - `PHASE12_STRICT_ANNUAL_REAL_MONEY_HARDENING_FIRST_PASS.md`
+- `completed` dynamic PIT 기반 real-money caution / promotion contract first pass 연결
+  - annual strict dynamic PIT run도 같은 real-money readout으로 읽을 수 있게 정렬
+- `completed` strict annual validation surface second pass 구현
+  - benchmark-relative drawdown / rolling underperformance 진단
+  - `validation_status = normal / watch / caution`
+  - `promotion_decision = real_money_candidate / production_candidate / hold`
+  - single / compare / meta surface 반영
+  - `PHASE12_STRICT_ANNUAL_VALIDATION_SURFACE_SECOND_PASS.md`
+- `completed` strict annual underperformance guardrail first pass 구현
+  - optional benchmark-relative trailing excess return rule을 실제 전략 규칙으로 연결
+  - trailing excess return이 임계치 아래로 내려가면 해당 rebalance는 cash로 유지
+  - single / compare / history / real-money surface까지 contract 연결
+  - `PHASE12_STRICT_ANNUAL_UNDERPERFORMANCE_GUARDRAIL_FIRST_PASS.md`
+- `in_progress` investability / turnover / benchmark / guardrail 보강
+  - investability / turnover / benchmark는 first pass 완료
+  - validation surface second pass 완료
+  - promotion decision reinforcement surface 완료
+  - underperformance guardrail actual-rule first pass 완료
+  - stronger investability proxy / richer benchmark contract / stricter promotion reinforcement는 later pass
+- `completed` annual strict promotion checklist baseline refresh
+  - `PHASE12_TEST_CHECKLIST.md`에 strict annual real-money surface 항목 반영
 
 ## 6. Documentation And Validation
 
@@ -190,7 +214,10 @@
 - strict annual family는 Phase 10 dynamic PIT contract 위에서 다음 승격 대상이다.
 - quarterly strict prototype family는 current phase에서 여전히 hold가 맞다.
 - ETF 전략군은 now `real-money hardening first pass completed` 상태이고,
-  next active implementation target은 strict annual family다.
+  strict annual family도 now `real-money hardening first pass completed` 상태다.
+- GTAA는 이번 턴에서 더 밀지 않고, 이후 다시 다루기로 정리했다.
+- next active implementation target은
+  strict annual stronger investability proxy / richer benchmark reinforcement 쪽이다.
 - GTAA 쪽에서는 current default contract 기준으로
   `QQQ`, `IAU`, `XLE`가 가장 강한 additive direction으로 보이며,
   `QUAL`, `USMV`는 보조 broadener로 해석하는 편이 맞다.

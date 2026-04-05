@@ -676,6 +676,7 @@ def quality_snapshot_equal_weight(
     top_n: int = 10,
     lower_is_better_factors: list[str] | None = None,
     rebalance_interval: int = 1,
+    min_price: float = 0.0,
     trend_filter_enabled: bool = False,
     trend_filter_window: int = 200,
     trend_filter_col: str | None = None,
@@ -684,6 +685,11 @@ def quality_snapshot_equal_weight(
     market_regime_benchmark: str | None = None,
     market_regime_df: pd.DataFrame | None = None,
     market_regime_col: str | None = None,
+    underperformance_guardrail_enabled: bool = False,
+    underperformance_guardrail_window_months: int = 12,
+    underperformance_guardrail_threshold: float = -0.10,
+    underperformance_guardrail_benchmark: str | None = None,
+    underperformance_guardrail_df: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     """
     Monthly snapshot-based quality strategy.
@@ -701,12 +707,18 @@ def quality_snapshot_equal_weight(
         raise ValueError("top_n must be positive.")
     if rebalance_interval <= 0:
         raise ValueError("rebalance_interval must be positive.")
+    if min_price < 0:
+        raise ValueError("min_price must be non-negative.")
     if trend_filter_enabled and trend_filter_window <= 0:
         raise ValueError("trend_filter_window must be positive when trend filter is enabled.")
     if market_regime_enabled and market_regime_window <= 0:
         raise ValueError("market_regime_window must be positive when market regime overlay is enabled.")
     if market_regime_enabled and market_regime_df is None:
         raise ValueError("market_regime_df is required when market regime overlay is enabled.")
+    if underperformance_guardrail_enabled and underperformance_guardrail_window_months <= 0:
+        raise ValueError("underperformance_guardrail_window_months must be positive when the guardrail is enabled.")
+    if underperformance_guardrail_enabled and underperformance_guardrail_df is None:
+        raise ValueError("underperformance_guardrail_df is required when the guardrail is enabled.")
 
     tickers = list(price_dfs.keys())
     base_df = price_dfs[tickers[0]].sort_values("Date").reset_index(drop=True)
@@ -728,11 +740,23 @@ def quality_snapshot_equal_weight(
                 "trend": float(regime_trend) if pd.notna(regime_trend) else np.nan,
             }
 
+    guardrail_close_by_date: dict[pd.Timestamp, float] = {}
+    if underperformance_guardrail_enabled and underperformance_guardrail_df is not None:
+        working_guardrail = underperformance_guardrail_df.copy()
+        working_guardrail["Date"] = pd.to_datetime(working_guardrail["Date"], errors="coerce")
+        working_guardrail = working_guardrail.dropna(subset=["Date"]).sort_values("Date")
+        for _, guardrail_row in working_guardrail.iterrows():
+            guardrail_date = pd.Timestamp(guardrail_row["Date"]).normalize()
+            guardrail_close = pd.to_numeric(guardrail_row.get("Close"), errors="coerce")
+            guardrail_close_by_date[guardrail_date] = float(guardrail_close) if pd.notna(guardrail_close) else np.nan
+
     prev_close: dict[str, float | None] = {ticker: None for ticker in tickers}
     prev_total_balance = None
     held_tickers: list[str] = []
     next_balances: list[float] = []
     cash = 0.0
+    total_balance_history: list[float] = []
+    guardrail_close_history: list[float] = []
 
     rows = []
 
@@ -775,6 +799,7 @@ def quality_snapshot_equal_weight(
         raw_selected_scores: list[float] = []
         overlay_rejected_tickers: list[str] = []
         regime_blocked_tickers: list[str] = []
+        underperformance_blocked_tickers: list[str] = []
 
         regime_state = "off"
         regime_close_now = np.nan
@@ -791,6 +816,47 @@ def quality_snapshot_equal_weight(
                 else:
                     regime_state = "unknown"
 
+        guardrail_state = "off"
+        guardrail_triggered = False
+        guardrail_benchmark_close_now = np.nan
+        guardrail_strategy_return = np.nan
+        guardrail_benchmark_return = np.nan
+        guardrail_excess_return = np.nan
+        if underperformance_guardrail_enabled:
+            guardrail_benchmark_close_now = guardrail_close_by_date.get(snapshot_key, np.nan)
+            if i < int(underperformance_guardrail_window_months):
+                guardrail_state = "warming_up"
+            else:
+                lookback_index = i - int(underperformance_guardrail_window_months)
+                if (
+                    lookback_index >= 0
+                    and lookback_index < len(total_balance_history)
+                    and lookback_index < len(guardrail_close_history)
+                ):
+                    base_strategy_balance = total_balance_history[lookback_index]
+                    base_benchmark_close = guardrail_close_history[lookback_index]
+                    if (
+                        pd.notna(base_strategy_balance)
+                        and pd.notna(base_benchmark_close)
+                        and float(base_strategy_balance) > 0
+                        and float(base_benchmark_close) > 0
+                        and pd.notna(guardrail_benchmark_close_now)
+                    ):
+                        guardrail_strategy_return = (float(total_balance) / float(base_strategy_balance)) - 1.0
+                        guardrail_benchmark_return = (
+                            float(guardrail_benchmark_close_now) / float(base_benchmark_close)
+                        ) - 1.0
+                        guardrail_excess_return = guardrail_strategy_return - guardrail_benchmark_return
+                        if float(guardrail_excess_return) <= -abs(float(underperformance_guardrail_threshold)):
+                            guardrail_state = "risk_off"
+                            guardrail_triggered = True
+                        else:
+                            guardrail_state = "risk_on"
+                    else:
+                        guardrail_state = "unknown"
+                else:
+                    guardrail_state = "unknown"
+
         if rebalancing:
             snapshot_df = snapshot_by_date.get(snapshot_key)
             ranked = _rank_quality_snapshot(
@@ -802,6 +868,7 @@ def quality_snapshot_equal_weight(
                 available_tickers = {
                     ticker for ticker in tickers
                     if pd.notna(close_now.get(ticker))
+                    and _passes_min_price(float(close_now.get(ticker)), min_price)
                 }
                 ranked = ranked[ranked["symbol"].isin(available_tickers)].reset_index(drop=True)
 
@@ -834,6 +901,10 @@ def quality_snapshot_equal_weight(
                     regime_blocked_tickers = selected_snapshot["symbol"].tolist()
                     selected_snapshot = selected_snapshot.iloc[0:0].copy()
 
+                if underperformance_guardrail_enabled and not selected_snapshot.empty and guardrail_state == "risk_off":
+                    underperformance_blocked_tickers = selected_snapshot["symbol"].tolist()
+                    selected_snapshot = selected_snapshot.iloc[0:0].copy()
+
                 held_tickers = selected_snapshot["symbol"].tolist()
                 selected_scores = selected_snapshot["Quality Score"].astype(float).tolist()
                 if not held_tickers:
@@ -864,6 +935,24 @@ def quality_snapshot_equal_weight(
                 "Market Regime Trend": regime_trend_now,
                 "Regime Blocked Ticker": regime_blocked_tickers,
                 "Regime Blocked Count": len(regime_blocked_tickers),
+                "Underperformance Guardrail Enabled": underperformance_guardrail_enabled,
+                "Underperformance Guardrail Benchmark": (
+                    underperformance_guardrail_benchmark if underperformance_guardrail_enabled else np.nan
+                ),
+                "Underperformance Guardrail Window": (
+                    int(underperformance_guardrail_window_months) if underperformance_guardrail_enabled else np.nan
+                ),
+                "Underperformance Guardrail Threshold": (
+                    -abs(float(underperformance_guardrail_threshold)) if underperformance_guardrail_enabled else np.nan
+                ),
+                "Underperformance Guardrail State": guardrail_state,
+                "Underperformance Guardrail Triggered": guardrail_triggered,
+                "Underperformance Guardrail Benchmark Close": guardrail_benchmark_close_now,
+                "Underperformance Guardrail Strategy Return": guardrail_strategy_return,
+                "Underperformance Guardrail Benchmark Return": guardrail_benchmark_return,
+                "Underperformance Guardrail Excess Return": guardrail_excess_return,
+                "Underperformance Blocked Ticker": underperformance_blocked_tickers,
+                "Underperformance Blocked Count": len(underperformance_blocked_tickers),
                 "End Balance": (np.nan if i == 0 else end_balances),
                 "Next Balance": next_balances,
                 "Cash": float(cash),
@@ -877,6 +966,10 @@ def quality_snapshot_equal_weight(
 
         prev_close = close_now
         prev_total_balance = total_balance
+        total_balance_history.append(float(total_balance))
+        guardrail_close_history.append(
+            float(guardrail_benchmark_close_now) if pd.notna(guardrail_benchmark_close_now) else np.nan
+        )
 
     return pd.DataFrame(rows)
 

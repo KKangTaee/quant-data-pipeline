@@ -138,6 +138,12 @@
   - 실전 전략 승격에 필요한 공통 contract를 정리한 문서
 - `.note/finance/phase12/PHASE12_ETF_REAL_MONEY_HARDENING_FIRST_PASS.md`
   - ETF 전략 3종에 `Minimum Price`, `Transaction Cost`, benchmark overlay, gross-vs-net result surface, history/prefill contract를 first pass로 연결한 구현 요약 문서
+- `.note/finance/phase12/PHASE12_STRICT_ANNUAL_REAL_MONEY_HARDENING_FIRST_PASS.md`
+  - strict annual family 3종에 `Minimum Price`, `Transaction Cost`, benchmark overlay, real-money result surface, single/compare/history contract를 first pass로 연결한 구현 요약 문서
+- `.note/finance/phase12/PHASE12_STRICT_ANNUAL_VALIDATION_SURFACE_SECOND_PASS.md`
+  - strict annual family의 benchmark-relative drawdown / rolling underperformance 진단과 `validation_status`, `promotion_decision` surface를 second pass로 보강한 문서
+- `.note/finance/phase12/PHASE12_STRICT_ANNUAL_UNDERPERFORMANCE_GUARDRAIL_FIRST_PASS.md`
+  - strict annual family에 optional benchmark-relative trailing excess return guardrail을 실제 전략 규칙으로 연결하고, single / compare / history / real-money surface까지 같이 연결한 first-pass 문서
 - `.note/finance/phase12/PHASE12_GTAA_DBC_PDBC_NO_COMMODITY_ANALYSIS.md`
   - `GTAA`에서 `DBC`, `PDBC`, `No Commodity Sleeve`를 비교하고, ETF 자체 유사성과 전략 결과 차이가 왜 증폭되는지, 대안 ETF 후보까지 정리한 분석 문서
 - `.note/finance/phase12/PHASE12_GTAA_COMMODITY_ALTERNATIVE_CANDIDATE_ANALYSIS.md`
