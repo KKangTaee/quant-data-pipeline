@@ -3779,3 +3779,12 @@ Keep entries append-only and concise.
   - what warnings should be reviewed together
 - Replaced scattered English guidance with grouped Korean guidance.
 - Merged per-run warnings into one clearer warning block instead of rendering them as disconnected lines.
+
+### 2026-04-05 - Real-Money 탭 섹션을 카드형 그룹으로 시각 정리
+
+- Wrapped the main Real-Money sections in bordered containers so related metrics and captions read as one group.
+- Added consistent section structure:
+  - title
+  - short explanation
+  - metrics / rationale / status message
+- Kept the same underlying runtime/meta semantics while making section boundaries easier to scan.

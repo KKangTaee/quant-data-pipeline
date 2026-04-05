@@ -6430,3 +6430,29 @@ Do not copy full chat transcripts. Keep only the durable result.
   - replaced the old English first-pass caption with Korean operator-facing copy
 - Durable implication:
   - users can now orient themselves faster at the top of the result surface before moving into `Summary`, `Equity Curve`, `Real-Money`, or `Meta`
+
+### 2026-04-05 - The Real-Money tab should visually separate related information more clearly
+
+- Request topic:
+  - the user liked the reorganized Real-Money tab, but still felt that related information inside each internal tab was not visually grouped strongly enough
+- Interpreted goal:
+  - keep the same information and tab order, but make section boundaries clearer so users can distinguish one block of meaning from another at a glance
+- Result:
+  - wrapped the main Real-Money sections in bordered containers
+  - standardized each section to show:
+    - title
+    - short explanation
+    - related metrics / rationale / status message
+  - applied this to:
+    - promotion
+    - shortlist
+    - probation / monitoring
+    - deployment readiness
+    - benchmark / validation
+    - rolling / out-of-sample review
+    - execution contract
+    - ETF operability
+    - actual guardrails
+    - detail previews
+- Durable implication:
+  - the Real-Money tab now separates related meaning visually as well as logically, reducing the chance that users read adjacent sections as one continuous block

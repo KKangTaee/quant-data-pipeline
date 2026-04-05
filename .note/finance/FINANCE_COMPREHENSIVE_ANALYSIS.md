@@ -304,6 +304,15 @@ Analysis / Presentation
   cost / liquidity / ETF operability는 실행 부담 확인용으로 다시 배치한 UI-layer 정리다.
   낮은 신호의 raw detail은 expander나 마지막 상세 탭으로 내려가서,
   사용자가 "지금 상태가 뭔지"를 먼저 판단하기 쉬운 구조가 되었다.
+  이후 시각적 그룹화도 한 번 더 보강되어,
+  각 섹션은 border container 안에서
+  - 제목
+  - 짧은 설명
+  - 관련 metric / status / rationale
+  순서로 보이게 되었다.
+  그래서 같은 탭 안에서도 `승격`, `숏리스트`, `probation`, `deployment`,
+  `benchmark`, `validation`, `ETF operability`, `guardrail`
+  같은 묶음을 서로 더 쉽게 구분할 수 있다.
 - 그리고 single run 결과 헤더인 `Latest Backtest Run` 아래도 다시 정리되어,
   이제는
   - 결과 읽는 순서
