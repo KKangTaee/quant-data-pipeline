@@ -37,6 +37,8 @@ from app.web.runtime.backtest import BacktestDataError, BacktestInputError
 from app.web.runtime.backtest import (
     ETF_REAL_MONEY_DEFAULT_BENCHMARK,
     GTAA_DEFAULT_SIGNAL_INTERVAL,
+    ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT,
+    ETF_OPERABILITY_DEFAULT_MIN_AUM_B,
     ETF_REAL_MONEY_DEFAULT_MIN_PRICE,
     ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
     STRICT_BENCHMARK_CONTRACT_CANDIDATE_EQUAL_WEIGHT,
@@ -1442,13 +1444,16 @@ def _render_etf_real_money_inputs(
     default_min_price: float = ETF_REAL_MONEY_DEFAULT_MIN_PRICE,
     default_transaction_cost_bps: float = ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
     default_benchmark: str = ETF_REAL_MONEY_DEFAULT_BENCHMARK,
-) -> tuple[float, float, str]:
+    default_min_etf_aum_b: float = ETF_OPERABILITY_DEFAULT_MIN_AUM_B,
+    default_max_bid_ask_spread_pct: float = ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT,
+) -> tuple[float, float, str, float, float]:
     st.markdown("##### Real-Money Contract")
     st.caption(
         "실전형 first pass에서는 너무 낮은 가격 ETF를 걸러내는 `Minimum Price`, "
-        "리밸런싱 turnover에 적용할 `Transaction Cost`, 비교 기준이 되는 `Benchmark Ticker`를 같이 사용합니다."
+        "리밸런싱 turnover에 적용할 `Transaction Cost`, 비교 기준이 되는 `Benchmark Ticker`, "
+        "ETF current-operability를 읽는 `Min ETF AUM`, `Max Bid-Ask Spread`를 같이 사용합니다."
     )
-    left, center, right = st.columns(3, gap="small")
+    left, center, right, far_left, far_right = st.columns(5, gap="small")
     with left:
         min_price_filter = float(
             st.number_input(
@@ -1482,11 +1487,42 @@ def _render_etf_real_money_inputs(
                 help="전략 결과를 비교할 기준 ETF ticker입니다. 기본값은 `SPY`입니다.",
             )
         ).strip().upper()
+    with far_left:
+        promotion_min_etf_aum_b = float(
+            st.number_input(
+                "Min ETF AUM ($B)",
+                min_value=0.0,
+                max_value=1000.0,
+                value=float(default_min_etf_aum_b),
+                step=0.5,
+                key=f"{key_prefix}_promotion_min_etf_aum_b",
+                help="현재 asset profile 기준 ETF 총자산이 이 값보다 작은 종목은 실전 운용 후보로 보수적으로 평가합니다.",
+            )
+        )
+    with far_right:
+        max_bid_ask_spread_percent = float(
+            st.number_input(
+                "Max Bid-Ask Spread (%)",
+                min_value=0.0,
+                max_value=100.0,
+                value=float(default_max_bid_ask_spread_pct) * 100.0,
+                step=0.05,
+                key=f"{key_prefix}_promotion_max_bid_ask_spread_pct",
+                help="현재 bid/ask 기준 스프레드가 이 값보다 넓은 ETF는 실전 운용 후보로 보수적으로 평가합니다.",
+            )
+        )
 
     st.caption(
-        "이 first pass는 `gross` 전략 곡선을 유지하면서, turnover 기반 예상 비용을 반영한 `net` 곡선과 benchmark overlay를 같이 보여줍니다."
+        "이 first pass는 `gross` 전략 곡선을 유지하면서, turnover 기반 예상 비용을 반영한 `net` 곡선, "
+        "benchmark overlay, ETF current-operability(AUM / bid-ask spread) policy를 같이 보여줍니다."
     )
-    return min_price_filter, transaction_cost_bps, benchmark_ticker
+    return (
+        min_price_filter,
+        transaction_cost_bps,
+        benchmark_ticker,
+        promotion_min_etf_aum_b,
+        max_bid_ask_spread_percent / 100.0,
+    )
 
 
 def _render_strict_annual_real_money_inputs(
@@ -2253,6 +2289,14 @@ def _render_last_run() -> None:
                     )
             if meta.get("transaction_cost_bps") is not None:
                 st.markdown(f"- `Transaction Cost`: `{float(meta['transaction_cost_bps']):.1f} bps`")
+            if meta.get("promotion_min_etf_aum_b") is not None:
+                st.markdown(
+                    f"- `Min ETF AUM`: `${float(meta.get('promotion_min_etf_aum_b') or 0.0):.1f}B`"
+                )
+            if meta.get("promotion_max_bid_ask_spread_pct") is not None:
+                st.markdown(
+                    f"- `Max Bid-Ask Spread`: `{float(meta.get('promotion_max_bid_ask_spread_pct') or 0.0):.2%}`"
+                )
             if meta.get("benchmark_contract"):
                 st.markdown(
                     f"- `Benchmark Contract`: `{_benchmark_contract_value_to_label(meta.get('benchmark_contract'))}`"
@@ -2297,6 +2341,8 @@ def _render_last_run() -> None:
                 st.markdown(
                     f"- `Max Drawdown Gap`: `{float(meta.get('promotion_max_drawdown_gap_vs_benchmark') or 0.0):.0%}`"
                 )
+            if meta.get("etf_operability_status"):
+                st.markdown(f"- `ETF Operability Status`: `{meta.get('etf_operability_status')}`")
             if meta.get("underperformance_guardrail_enabled"):
                 st.markdown(
                     f"- `Underperformance Guardrail`: `{int(meta.get('underperformance_guardrail_window_months') or STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS)}M`, "
@@ -2427,6 +2473,8 @@ def _strategy_compare_defaults(strategy_name: str) -> dict:
                 "crash_guardrail_lookback_months": GTAA_DEFAULT_CRASH_GUARDRAIL_LOOKBACK_MONTHS,
                 "min_price_filter": ETF_REAL_MONEY_DEFAULT_MIN_PRICE,
                 "transaction_cost_bps": ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
+                "promotion_min_etf_aum_b": ETF_OPERABILITY_DEFAULT_MIN_AUM_B,
+                "promotion_max_bid_ask_spread_pct": ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT,
                 "benchmark_ticker": ETF_REAL_MONEY_DEFAULT_BENCHMARK,
             },
         }
@@ -2438,6 +2486,8 @@ def _strategy_compare_defaults(strategy_name: str) -> dict:
             "extra": {
                 "min_price_filter": ETF_REAL_MONEY_DEFAULT_MIN_PRICE,
                 "transaction_cost_bps": ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
+                "promotion_min_etf_aum_b": ETF_OPERABILITY_DEFAULT_MIN_AUM_B,
+                "promotion_max_bid_ask_spread_pct": ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT,
                 "benchmark_ticker": ETF_REAL_MONEY_DEFAULT_BENCHMARK,
             },
         }
@@ -2449,6 +2499,8 @@ def _strategy_compare_defaults(strategy_name: str) -> dict:
             "extra": {
                 "min_price_filter": ETF_REAL_MONEY_DEFAULT_MIN_PRICE,
                 "transaction_cost_bps": ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
+                "promotion_min_etf_aum_b": ETF_OPERABILITY_DEFAULT_MIN_AUM_B,
+                "promotion_max_bid_ask_spread_pct": ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT,
                 "benchmark_ticker": ETF_REAL_MONEY_DEFAULT_BENCHMARK,
             },
         }
@@ -2946,7 +2998,8 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
 
     st.caption(
         "실전형 first pass에서는 `Minimum Price`, `Minimum History (Months)`, turnover 기반 `Transaction Cost`, "
-        "`Benchmark Contract`, `Benchmark Ticker`, `Benchmark Policy`, `Liquidity Policy`를 같이 반영합니다. "
+        "`Benchmark Contract`, `Benchmark Ticker`, `Benchmark Policy`, `Liquidity Policy`, "
+        "ETF 전략군의 경우 `AUM / bid-ask spread` current-operability policy까지 같이 반영합니다. "
         "요약/차트는 비용 반영 후 `net` 기준이고, 결과 표에는 `gross`와 `net`이 같이 남습니다."
     )
 
@@ -2968,6 +3021,77 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
             "Liquidity clean coverage on rebalance rows: "
             f"`{float(meta.get('liquidity_clean_coverage') or 0.0):.2%}`"
         )
+    if (
+        meta.get("promotion_min_etf_aum_b") is not None
+        or meta.get("promotion_max_bid_ask_spread_pct") is not None
+        or meta.get("etf_operability_status")
+    ):
+        st.markdown("##### ETF Operability Policy")
+        etf_cols = st.columns(5, gap="small")
+        etf_cols[0].metric("Policy Status", str(meta.get("etf_operability_status") or "unavailable").upper())
+        if meta.get("promotion_min_etf_aum_b") is not None:
+            etf_cols[1].metric("Min ETF AUM", f"${float(meta.get('promotion_min_etf_aum_b') or 0.0):.1f}B")
+        if meta.get("promotion_max_bid_ask_spread_pct") is not None:
+            etf_cols[2].metric(
+                "Max Bid-Ask Spread",
+                f"{float(meta.get('promotion_max_bid_ask_spread_pct') or 0.0):.2%}",
+            )
+        if meta.get("etf_operability_clean_coverage") is not None:
+            etf_cols[3].metric(
+                "Clean Coverage",
+                f"{float(meta.get('etf_operability_clean_coverage') or 0.0):.2%}",
+            )
+        if meta.get("etf_operability_clean_pass_count") is not None:
+            etf_cols[4].metric(
+                "Clean Pass",
+                f"{int(meta.get('etf_operability_clean_pass_count') or 0)} / {int(meta.get('etf_symbol_count') or 0)}",
+            )
+        if meta.get("etf_operability_data_coverage") is not None:
+            st.caption(
+                f"ETF operability data coverage: `{float(meta.get('etf_operability_data_coverage') or 0.0):.2%}`"
+            )
+        if meta.get("etf_aum_pass_count") is not None or meta.get("etf_spread_pass_count") is not None:
+            st.caption(
+                "Pass counts: "
+                f"AUM `{int(meta.get('etf_aum_pass_count') or 0)}` / `{int(meta.get('etf_symbol_count') or 0)}`, "
+                f"Spread `{int(meta.get('etf_spread_pass_count') or 0)}` / `{int(meta.get('etf_symbol_count') or 0)}`"
+            )
+        if meta.get("etf_aum_failed_symbols"):
+            st.caption(
+                "AUM-below-policy ETF: "
+                + ", ".join(f"`{symbol}`" for symbol in list(meta.get("etf_aum_failed_symbols") or []))
+            )
+        if meta.get("etf_spread_failed_symbols"):
+            st.caption(
+                "Spread-above-policy ETF: "
+                + ", ".join(f"`{symbol}`" for symbol in list(meta.get("etf_spread_failed_symbols") or []))
+            )
+        if meta.get("etf_operability_missing_data_symbols"):
+            st.caption(
+                "Missing ETF operability fields: "
+                + ", ".join(
+                    f"`{symbol}`" for symbol in list(meta.get("etf_operability_missing_data_symbols") or [])
+                )
+            )
+        etf_signals = list(meta.get("etf_operability_watch_signals") or [])
+        if etf_signals:
+            st.caption("ETF operability signals: " + ", ".join(f"`{signal}`" for signal in etf_signals))
+        etf_status = str(meta.get("etf_operability_status") or "unavailable").lower()
+        if etf_status == "caution":
+            st.warning(
+                "현재 ETF operability policy 기준에서는 자산 규모나 bid-ask spread가 충분히 안정적이지 않습니다. "
+                "실전 승격 전 ETF universe를 다시 점검하는 편이 맞습니다."
+            )
+        elif etf_status == "watch":
+            st.info(
+                "ETF operability policy 기준에서 일부 watch 신호가 있습니다. "
+                "현재 AUM과 bid-ask spread를 한 번 더 점검하는 편이 좋습니다."
+            )
+        elif etf_status == "unavailable":
+            st.info(
+                "ETF operability policy는 현재 unavailable 상태입니다. "
+                "ETF asset profile을 새로 수집한 뒤 다시 해석하는 편이 맞습니다."
+            )
 
     if meta.get("benchmark_available") or meta.get("benchmark_contract") or meta.get("benchmark_ticker"):
         benchmark_cols = st.columns(6, gap="small")
@@ -3395,9 +3519,16 @@ def _build_compare_highlight_rows(bundles: list[dict]) -> pd.DataFrame:
                 "Min History (M)": meta.get("min_history_months_filter"),
                 "Min ADV20D ($M)": meta.get("min_avg_dollar_volume_20d_m_filter"),
                 "Cost (bps)": meta.get("transaction_cost_bps"),
+                "Min ETF AUM ($B)": meta.get("promotion_min_etf_aum_b"),
+                "Max Spread (%)": (
+                    float(meta.get("promotion_max_bid_ask_spread_pct")) * 100.0
+                    if meta.get("promotion_max_bid_ask_spread_pct") is not None
+                    else None
+                ),
                 "Avg Turnover": meta.get("avg_turnover"),
                 "Benchmark Contract": _benchmark_contract_value_to_label(meta.get("benchmark_contract")),
                 "Benchmark": meta.get("benchmark_ticker") or meta.get("benchmark_label"),
+                "ETF Operability": meta.get("etf_operability_status"),
                 "Benchmark Policy": meta.get("benchmark_policy_status"),
                 "Liquidity Policy": meta.get("liquidity_policy_status"),
                 "Validation Policy": meta.get("validation_policy_status"),
@@ -3685,7 +3816,10 @@ def _render_compare_results() -> None:
                     "min_history_months_filter": meta.get("min_history_months_filter"),
                     "min_avg_dollar_volume_20d_m_filter": meta.get("min_avg_dollar_volume_20d_m_filter"),
                     "transaction_cost_bps": meta.get("transaction_cost_bps"),
+                    "promotion_min_etf_aum_b": meta.get("promotion_min_etf_aum_b"),
+                    "promotion_max_bid_ask_spread_pct": meta.get("promotion_max_bid_ask_spread_pct"),
                     "benchmark_ticker": meta.get("benchmark_ticker"),
+                    "etf_operability_status": meta.get("etf_operability_status"),
                     "promotion_min_benchmark_coverage": meta.get("promotion_min_benchmark_coverage"),
                     "promotion_min_net_cagr_spread": meta.get("promotion_min_net_cagr_spread"),
                     "promotion_min_liquidity_clean_coverage": meta.get("promotion_min_liquidity_clean_coverage"),
@@ -4370,6 +4504,12 @@ def _build_history_payload(record: dict[str, Any]) -> dict[str, Any] | None:
         )
     if record.get("transaction_cost_bps") is not None:
         payload["transaction_cost_bps"] = float(record.get("transaction_cost_bps") or 0.0)
+    if record.get("promotion_min_etf_aum_b") is not None:
+        payload["promotion_min_etf_aum_b"] = float(record.get("promotion_min_etf_aum_b") or 0.0)
+    if record.get("promotion_max_bid_ask_spread_pct") is not None:
+        payload["promotion_max_bid_ask_spread_pct"] = float(
+            record.get("promotion_max_bid_ask_spread_pct") or 0.0
+        )
     if record.get("benchmark_contract") is not None:
         payload["benchmark_contract"] = str(
             record.get("benchmark_contract") or STRICT_DEFAULT_BENCHMARK_CONTRACT
@@ -4525,6 +4665,12 @@ def _build_prefill_summary_lines(payload: dict[str, Any] | None) -> list[str]:
         lines.append(f"Min Avg Dollar Volume 20D: `{payload.get('min_avg_dollar_volume_20d_m_filter')}M`")
     if payload.get("transaction_cost_bps") is not None:
         lines.append(f"Transaction Cost: `{payload.get('transaction_cost_bps')}` bps")
+    if payload.get("promotion_min_etf_aum_b") is not None:
+        lines.append(f"Min ETF AUM: `${float(payload.get('promotion_min_etf_aum_b')):.1f}B`")
+    if payload.get("promotion_max_bid_ask_spread_pct") is not None:
+        lines.append(
+            f"Max Bid-Ask Spread: `{float(payload.get('promotion_max_bid_ask_spread_pct')):.2%}`"
+        )
     if payload.get("benchmark_contract"):
         lines.append(f"Benchmark Contract: `{_benchmark_contract_value_to_label(payload.get('benchmark_contract'))}`")
     if payload.get("benchmark_ticker"):
@@ -4641,6 +4787,10 @@ def _bundle_to_saved_strategy_override(bundle: dict[str, Any]) -> dict[str, Any]
             "crash_guardrail_lookback_months": int(meta.get("crash_guardrail_lookback_months") or GTAA_DEFAULT_CRASH_GUARDRAIL_LOOKBACK_MONTHS),
             "min_price_filter": float(meta.get("min_price_filter") or ETF_REAL_MONEY_DEFAULT_MIN_PRICE),
             "transaction_cost_bps": float(meta.get("transaction_cost_bps") or ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS),
+            "promotion_min_etf_aum_b": float(meta.get("promotion_min_etf_aum_b") or ETF_OPERABILITY_DEFAULT_MIN_AUM_B),
+            "promotion_max_bid_ask_spread_pct": float(
+                meta.get("promotion_max_bid_ask_spread_pct") or ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT
+            ),
             "benchmark_ticker": meta.get("benchmark_ticker") or ETF_REAL_MONEY_DEFAULT_BENCHMARK,
         }
     if strategy_name == "Risk Parity Trend":
@@ -4649,6 +4799,10 @@ def _bundle_to_saved_strategy_override(bundle: dict[str, Any]) -> dict[str, Any]
             "vol_window": int(meta.get("vol_window") or 6),
             "min_price_filter": float(meta.get("min_price_filter") or ETF_REAL_MONEY_DEFAULT_MIN_PRICE),
             "transaction_cost_bps": float(meta.get("transaction_cost_bps") or ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS),
+            "promotion_min_etf_aum_b": float(meta.get("promotion_min_etf_aum_b") or ETF_OPERABILITY_DEFAULT_MIN_AUM_B),
+            "promotion_max_bid_ask_spread_pct": float(
+                meta.get("promotion_max_bid_ask_spread_pct") or ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT
+            ),
             "benchmark_ticker": meta.get("benchmark_ticker") or ETF_REAL_MONEY_DEFAULT_BENCHMARK,
         }
     if strategy_name == "Dual Momentum":
@@ -4657,6 +4811,10 @@ def _bundle_to_saved_strategy_override(bundle: dict[str, Any]) -> dict[str, Any]
             "rebalance_interval": int(meta.get("rebalance_interval") or 1),
             "min_price_filter": float(meta.get("min_price_filter") or ETF_REAL_MONEY_DEFAULT_MIN_PRICE),
             "transaction_cost_bps": float(meta.get("transaction_cost_bps") or ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS),
+            "promotion_min_etf_aum_b": float(meta.get("promotion_min_etf_aum_b") or ETF_OPERABILITY_DEFAULT_MIN_AUM_B),
+            "promotion_max_bid_ask_spread_pct": float(
+                meta.get("promotion_max_bid_ask_spread_pct") or ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT
+            ),
             "benchmark_ticker": meta.get("benchmark_ticker") or ETF_REAL_MONEY_DEFAULT_BENCHMARK,
         }
 
@@ -4862,6 +5020,12 @@ def _apply_compare_strategy_prefill(strategy_name: str, override: dict[str, Any]
         )
         st.session_state["compare_gtaa_min_price_filter"] = float(override.get("min_price_filter") or ETF_REAL_MONEY_DEFAULT_MIN_PRICE)
         st.session_state["compare_gtaa_transaction_cost_bps"] = float(override.get("transaction_cost_bps") or ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS)
+        st.session_state["compare_gtaa_promotion_min_etf_aum_b"] = float(
+            override.get("promotion_min_etf_aum_b") or ETF_OPERABILITY_DEFAULT_MIN_AUM_B
+        )
+        st.session_state["compare_gtaa_promotion_max_bid_ask_spread_pct"] = float(
+            (override.get("promotion_max_bid_ask_spread_pct") or ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT) * 100.0
+        )
         st.session_state["compare_gtaa_benchmark_ticker"] = str(override.get("benchmark_ticker") or ETF_REAL_MONEY_DEFAULT_BENCHMARK).strip().upper()
         return
     if strategy_name == "Risk Parity Trend":
@@ -4869,6 +5033,12 @@ def _apply_compare_strategy_prefill(strategy_name: str, override: dict[str, Any]
         st.session_state["compare_rp_vol_window"] = int(override.get("vol_window") or 6)
         st.session_state["compare_rp_min_price_filter"] = float(override.get("min_price_filter") or ETF_REAL_MONEY_DEFAULT_MIN_PRICE)
         st.session_state["compare_rp_transaction_cost_bps"] = float(override.get("transaction_cost_bps") or ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS)
+        st.session_state["compare_rp_promotion_min_etf_aum_b"] = float(
+            override.get("promotion_min_etf_aum_b") or ETF_OPERABILITY_DEFAULT_MIN_AUM_B
+        )
+        st.session_state["compare_rp_promotion_max_bid_ask_spread_pct"] = float(
+            (override.get("promotion_max_bid_ask_spread_pct") or ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT) * 100.0
+        )
         st.session_state["compare_rp_benchmark_ticker"] = str(override.get("benchmark_ticker") or ETF_REAL_MONEY_DEFAULT_BENCHMARK).strip().upper()
         return
     if strategy_name == "Dual Momentum":
@@ -4876,6 +5046,12 @@ def _apply_compare_strategy_prefill(strategy_name: str, override: dict[str, Any]
         st.session_state["compare_dm_interval"] = int(override.get("rebalance_interval") or 1)
         st.session_state["compare_dm_min_price_filter"] = float(override.get("min_price_filter") or ETF_REAL_MONEY_DEFAULT_MIN_PRICE)
         st.session_state["compare_dm_transaction_cost_bps"] = float(override.get("transaction_cost_bps") or ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS)
+        st.session_state["compare_dm_promotion_min_etf_aum_b"] = float(
+            override.get("promotion_min_etf_aum_b") or ETF_OPERABILITY_DEFAULT_MIN_AUM_B
+        )
+        st.session_state["compare_dm_promotion_max_bid_ask_spread_pct"] = float(
+            (override.get("promotion_max_bid_ask_spread_pct") or ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT) * 100.0
+        )
         st.session_state["compare_dm_benchmark_ticker"] = str(override.get("benchmark_ticker") or ETF_REAL_MONEY_DEFAULT_BENCHMARK).strip().upper()
         return
     if strategy_name == "Quality Snapshot":
@@ -5147,6 +5323,12 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         )
         st.session_state["gtaa_min_price_filter"] = float(payload.get("min_price_filter") or ETF_REAL_MONEY_DEFAULT_MIN_PRICE)
         st.session_state["gtaa_transaction_cost_bps"] = float(payload.get("transaction_cost_bps") or ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS)
+        st.session_state["gtaa_promotion_min_etf_aum_b"] = float(
+            payload.get("promotion_min_etf_aum_b") or ETF_OPERABILITY_DEFAULT_MIN_AUM_B
+        )
+        st.session_state["gtaa_promotion_max_bid_ask_spread_pct"] = float(
+            (payload.get("promotion_max_bid_ask_spread_pct") or ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT) * 100.0
+        )
         st.session_state["gtaa_benchmark_ticker"] = str(payload.get("benchmark_ticker") or ETF_REAL_MONEY_DEFAULT_BENCHMARK).strip().upper()
     elif strategy_key == "risk_parity_trend":
         st.session_state["rp_universe_mode"] = "Preset" if universe_mode == "preset" and preset_name in RISK_PARITY_PRESETS else "Manual"
@@ -5162,6 +5344,12 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         st.session_state["rp_vol_window"] = int(payload.get("vol_window") or 6)
         st.session_state["rp_min_price_filter"] = float(payload.get("min_price_filter") or ETF_REAL_MONEY_DEFAULT_MIN_PRICE)
         st.session_state["rp_transaction_cost_bps"] = float(payload.get("transaction_cost_bps") or ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS)
+        st.session_state["rp_promotion_min_etf_aum_b"] = float(
+            payload.get("promotion_min_etf_aum_b") or ETF_OPERABILITY_DEFAULT_MIN_AUM_B
+        )
+        st.session_state["rp_promotion_max_bid_ask_spread_pct"] = float(
+            (payload.get("promotion_max_bid_ask_spread_pct") or ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT) * 100.0
+        )
         st.session_state["rp_benchmark_ticker"] = str(payload.get("benchmark_ticker") or ETF_REAL_MONEY_DEFAULT_BENCHMARK).strip().upper()
     elif strategy_key == "dual_momentum":
         st.session_state["dm_universe_mode"] = "Preset" if universe_mode == "preset" and preset_name in DUAL_MOMENTUM_PRESETS else "Manual"
@@ -5177,6 +5365,12 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         st.session_state["dm_rebalance_interval"] = int(payload.get("rebalance_interval") or 1)
         st.session_state["dm_min_price_filter"] = float(payload.get("min_price_filter") or ETF_REAL_MONEY_DEFAULT_MIN_PRICE)
         st.session_state["dm_transaction_cost_bps"] = float(payload.get("transaction_cost_bps") or ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS)
+        st.session_state["dm_promotion_min_etf_aum_b"] = float(
+            payload.get("promotion_min_etf_aum_b") or ETF_OPERABILITY_DEFAULT_MIN_AUM_B
+        )
+        st.session_state["dm_promotion_max_bid_ask_spread_pct"] = float(
+            (payload.get("promotion_max_bid_ask_spread_pct") or ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT) * 100.0
+        )
         st.session_state["dm_benchmark_ticker"] = str(payload.get("benchmark_ticker") or ETF_REAL_MONEY_DEFAULT_BENCHMARK).strip().upper()
     elif strategy_key == "quality_snapshot":
         st.session_state["qs_universe_mode"] = "Preset" if universe_mode == "preset" and preset_name in QUALITY_BROAD_PRESETS else "Manual"
@@ -6261,6 +6455,8 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> None:
                     min_price_filter=payload.get("min_price_filter", ETF_REAL_MONEY_DEFAULT_MIN_PRICE),
                     transaction_cost_bps=payload.get("transaction_cost_bps", ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS),
                     benchmark_ticker=payload.get("benchmark_ticker", ETF_REAL_MONEY_DEFAULT_BENCHMARK),
+                    promotion_min_etf_aum_b=payload.get("promotion_min_etf_aum_b", ETF_OPERABILITY_DEFAULT_MIN_AUM_B),
+                    promotion_max_bid_ask_spread_pct=payload.get("promotion_max_bid_ask_spread_pct", ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT),
                     universe_mode=payload["universe_mode"],
                     preset_name=payload["preset_name"],
                 )
@@ -6276,6 +6472,8 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> None:
                     min_price_filter=payload.get("min_price_filter", ETF_REAL_MONEY_DEFAULT_MIN_PRICE),
                     transaction_cost_bps=payload.get("transaction_cost_bps", ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS),
                     benchmark_ticker=payload.get("benchmark_ticker", ETF_REAL_MONEY_DEFAULT_BENCHMARK),
+                    promotion_min_etf_aum_b=payload.get("promotion_min_etf_aum_b", ETF_OPERABILITY_DEFAULT_MIN_AUM_B),
+                    promotion_max_bid_ask_spread_pct=payload.get("promotion_max_bid_ask_spread_pct", ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT),
                     universe_mode=payload["universe_mode"],
                     preset_name=payload["preset_name"],
                 )
@@ -6291,6 +6489,8 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> None:
                     min_price_filter=payload.get("min_price_filter", ETF_REAL_MONEY_DEFAULT_MIN_PRICE),
                     transaction_cost_bps=payload.get("transaction_cost_bps", ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS),
                     benchmark_ticker=payload.get("benchmark_ticker", ETF_REAL_MONEY_DEFAULT_BENCHMARK),
+                    promotion_min_etf_aum_b=payload.get("promotion_min_etf_aum_b", ETF_OPERABILITY_DEFAULT_MIN_AUM_B),
+                    promotion_max_bid_ask_spread_pct=payload.get("promotion_max_bid_ask_spread_pct", ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT),
                     universe_mode=payload["universe_mode"],
                     preset_name=payload["preset_name"],
                 )
@@ -6628,7 +6828,13 @@ def _render_gtaa_form() -> None:
                 key="gtaa_interval",
             )
             st.divider()
-            min_price_filter, transaction_cost_bps, benchmark_ticker = _render_etf_real_money_inputs(
+            (
+                min_price_filter,
+                transaction_cost_bps,
+                benchmark_ticker,
+                promotion_min_etf_aum_b,
+                promotion_max_bid_ask_spread_pct,
+            ) = _render_etf_real_money_inputs(
                 key_prefix="gtaa",
             )
             score_lookback_months, score_weights = _render_gtaa_score_weight_inputs(key_prefix="gtaa")
@@ -6676,6 +6882,8 @@ def _render_gtaa_form() -> None:
         "min_price_filter": float(min_price_filter),
         "transaction_cost_bps": float(transaction_cost_bps),
         "benchmark_ticker": benchmark_ticker,
+        "promotion_min_etf_aum_b": float(promotion_min_etf_aum_b),
+        "promotion_max_bid_ask_spread_pct": float(promotion_max_bid_ask_spread_pct),
         "universe_mode": "preset" if universe_mode == "Preset" else "manual_tickers",
         "preset_name": preset_name,
     }
@@ -6748,7 +6956,13 @@ def _render_risk_parity_form() -> None:
                 )
             )
             st.divider()
-            min_price_filter, transaction_cost_bps, benchmark_ticker = _render_etf_real_money_inputs(
+            (
+                min_price_filter,
+                transaction_cost_bps,
+                benchmark_ticker,
+                promotion_min_etf_aum_b,
+                promotion_max_bid_ask_spread_pct,
+            ) = _render_etf_real_money_inputs(
                 key_prefix="rp",
             )
 
@@ -6780,6 +6994,8 @@ def _render_risk_parity_form() -> None:
         "min_price_filter": float(min_price_filter),
         "transaction_cost_bps": float(transaction_cost_bps),
         "benchmark_ticker": benchmark_ticker,
+        "promotion_min_etf_aum_b": float(promotion_min_etf_aum_b),
+        "promotion_max_bid_ask_spread_pct": float(promotion_max_bid_ask_spread_pct),
         "universe_mode": "preset" if universe_mode == "Preset" else "manual_tickers",
         "preset_name": preset_name,
     }
@@ -6852,7 +7068,13 @@ def _render_dual_momentum_form() -> None:
                 )
             )
             st.divider()
-            min_price_filter, transaction_cost_bps, benchmark_ticker = _render_etf_real_money_inputs(
+            (
+                min_price_filter,
+                transaction_cost_bps,
+                benchmark_ticker,
+                promotion_min_etf_aum_b,
+                promotion_max_bid_ask_spread_pct,
+            ) = _render_etf_real_money_inputs(
                 key_prefix="dm",
             )
 
@@ -6884,6 +7106,8 @@ def _render_dual_momentum_form() -> None:
         "min_price_filter": float(min_price_filter),
         "transaction_cost_bps": float(transaction_cost_bps),
         "benchmark_ticker": benchmark_ticker,
+        "promotion_min_etf_aum_b": float(promotion_min_etf_aum_b),
+        "promotion_max_bid_ask_spread_pct": float(promotion_max_bid_ask_spread_pct),
         "universe_mode": "preset" if universe_mode == "Preset" else "manual_tickers",
         "preset_name": preset_name,
     }
@@ -8494,7 +8718,13 @@ def render_backtest_tab() -> None:
                             preset_label="GTAA Preset",
                             ticker_label="GTAA Tickers",
                         )
-                        min_price_filter, transaction_cost_bps, benchmark_ticker = _render_etf_real_money_inputs(
+                        (
+                            min_price_filter,
+                            transaction_cost_bps,
+                            benchmark_ticker,
+                            promotion_min_etf_aum_b,
+                            promotion_max_bid_ask_spread_pct,
+                        ) = _render_etf_real_money_inputs(
                             key_prefix="compare_gtaa",
                         )
                         compare_gtaa_score_lookback_months, compare_gtaa_score_weights = _render_gtaa_score_weight_inputs(
@@ -8540,11 +8770,19 @@ def render_backtest_tab() -> None:
                             "min_price_filter": float(min_price_filter),
                             "transaction_cost_bps": float(transaction_cost_bps),
                             "benchmark_ticker": benchmark_ticker,
+                            "promotion_min_etf_aum_b": float(promotion_min_etf_aum_b),
+                            "promotion_max_bid_ask_spread_pct": float(promotion_max_bid_ask_spread_pct),
                         }
 
                 if "Risk Parity Trend" in selected_strategies:
                     st.markdown("**Risk Parity Trend**")
-                    min_price_filter, transaction_cost_bps, benchmark_ticker = _render_etf_real_money_inputs(
+                    (
+                        min_price_filter,
+                        transaction_cost_bps,
+                        benchmark_ticker,
+                        promotion_min_etf_aum_b,
+                        promotion_max_bid_ask_spread_pct,
+                    ) = _render_etf_real_money_inputs(
                         key_prefix="compare_rp",
                     )
                     compare_strategy_overrides["Risk Parity Trend"] = {
@@ -8571,11 +8809,19 @@ def render_backtest_tab() -> None:
                         "min_price_filter": float(min_price_filter),
                         "transaction_cost_bps": float(transaction_cost_bps),
                         "benchmark_ticker": benchmark_ticker,
+                        "promotion_min_etf_aum_b": float(promotion_min_etf_aum_b),
+                        "promotion_max_bid_ask_spread_pct": float(promotion_max_bid_ask_spread_pct),
                     }
 
                 if "Dual Momentum" in selected_strategies:
                     st.markdown("**Dual Momentum**")
-                    min_price_filter, transaction_cost_bps, benchmark_ticker = _render_etf_real_money_inputs(
+                    (
+                        min_price_filter,
+                        transaction_cost_bps,
+                        benchmark_ticker,
+                        promotion_min_etf_aum_b,
+                        promotion_max_bid_ask_spread_pct,
+                    ) = _render_etf_real_money_inputs(
                         key_prefix="compare_dm",
                     )
                     compare_strategy_overrides["Dual Momentum"] = {
@@ -8602,6 +8848,8 @@ def render_backtest_tab() -> None:
                         "min_price_filter": float(min_price_filter),
                         "transaction_cost_bps": float(transaction_cost_bps),
                         "benchmark_ticker": benchmark_ticker,
+                        "promotion_min_etf_aum_b": float(promotion_min_etf_aum_b),
+                        "promotion_max_bid_ask_spread_pct": float(promotion_max_bid_ask_spread_pct),
                     }
 
                 if quality_compare_strategy_name == "Quality Snapshot":

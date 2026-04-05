@@ -140,6 +140,8 @@
   - 실전 전략 승격에 필요한 공통 contract를 정리한 문서
 - `.note/finance/phase12/PHASE12_ETF_REAL_MONEY_HARDENING_FIRST_PASS.md`
   - ETF 전략 3종에 `Minimum Price`, `Transaction Cost`, benchmark overlay, gross-vs-net result surface, history/prefill contract를 first pass로 연결한 구현 요약 문서
+- `.note/finance/phase12/PHASE12_ETF_AUM_AND_SPREAD_POLICY_FIRST_PASS.md`
+  - ETF 전략 3종에 `Min ETF AUM ($B)`, `Max Bid-Ask Spread (%)` current-operability policy를 추가하고, asset profile schema 확장과 promotion/readout 연동까지 정리한 문서
 - `.note/finance/phase12/PHASE12_STRICT_ANNUAL_REAL_MONEY_HARDENING_FIRST_PASS.md`
   - strict annual family 3종에 `Minimum Price`, `Transaction Cost`, benchmark overlay, real-money result surface, single/compare/history contract를 first pass로 연결한 구현 요약 문서
 - `.note/finance/phase12/PHASE12_STRICT_ANNUAL_VALIDATION_SURFACE_SECOND_PASS.md`

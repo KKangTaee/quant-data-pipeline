@@ -45,6 +45,8 @@
   - `Minimum Price`
   - `Transaction Cost (bps)`
   - `Benchmark Ticker`
+  - `Min ETF AUM ($B)`
+  - `Max Bid-Ask Spread (%)`
   가 보이는지
 - `GTAA` form에 추가로
   - `Score Horizons`
@@ -81,9 +83,21 @@
   - `Minimum Price`
   - `Transaction Cost`
   - `Benchmark`
+  - `Min ETF AUM`
+  - `Max Bid-Ask Spread`
+  - `ETF Operability Status`
   - `Average Turnover`
   - `Estimated Cost Total`
   이 보이는지
+- `Real-Money` 탭에
+  - `ETF Operability Policy`
+  - `Policy Status`
+  - `Clean Coverage`
+  - `Data Coverage`
+  - `AUM failed symbols`
+  - `Spread failed symbols`
+  - `Missing data symbols`
+  가 보이는지
 - `GTAA`의 `Meta` 또는 `Runtime Metadata`에
   - `score_weights`
   - `risk_off_mode`
@@ -94,7 +108,13 @@
   - `crash_guardrail_enabled`
   - `crash_guardrail_drawdown_threshold`
   - `crash_guardrail_lookback_months`
+  - `etf_operability_status`
+  - `etf_operability_clean_coverage`
+  - `etf_operability_data_coverage`
   이 남는지
+- harsh threshold를 줬을 때
+  - `etf_operability_status`가 `watch` 또는 `caution`으로 바뀌는지
+  - `promotion_decision`이 같이 더 보수적으로 읽히는지 확인
 
 ## 3. Strict Annual Family Promotion Surface
 
@@ -274,7 +294,7 @@
 - portfolio guardrail policy / drawdown-based promotion reinforcement later pass도 now 추가되었다.
 - actual strategy-side drawdown guardrail first pass도 now 추가되었다.
 - 다만 아래는 아직 later pass다.
-  - richer spread / AUM policy
+  - stock-side richer spread / AUM policy
 
 ## 4. Static vs Dynamic Contract Boundary
 

@@ -13,6 +13,22 @@ Do not copy full chat transcripts. Keep only the durable result.
 
 ## Entries
 
+### 2026-04-05 - ETF AUM/spread operability policy placement
+- Request topic:
+  - continue Phase 12 hardening with the next practical real-money step
+- Interpreted goal:
+  - strengthen ETF strategy operability review without forcing an inappropriate AUM/spread model onto strict annual stock strategies
+- Result:
+  - decided that `AUM` and current `bid/ask spread` belong naturally to ETF strategy current-operability review
+  - kept strict annual stock-side work on price/history/liquidity proxy/benchmark/guardrail policy
+  - implemented ETF-only current-snapshot operability policy using `nyse_asset_profile`
+  - explicitly documented the current boundary:
+    - current snapshot overlay
+    - not point-in-time ETF operability history
+    - not an actual trade-blocking rule yet
+- Durable output:
+  - `.note/finance/phase12/PHASE12_ETF_AUM_AND_SPREAD_POLICY_FIRST_PASS.md`
+
 ### 2026-03-11 - Finance package structure analysis
 - Request topic:
   - understand the `finance` package structure and summarize it for future conversations

@@ -199,14 +199,21 @@ NYSE_SCHEMAS = {
 
           long_name VARCHAR(255) NULL,
           quote_type VARCHAR(20) NULL,
+          exchange VARCHAR(20) NULL,
 
           sector   VARCHAR(100) NULL,
           industry VARCHAR(150) NULL,
           country  VARCHAR(50)  NULL,
+          fund_family VARCHAR(255) NULL,
 
           market_cap BIGINT NULL,
+          total_assets DOUBLE NULL,
           dividend_yield DOUBLE NULL,
           payout_ratio   DOUBLE NULL,
+          bid DOUBLE NULL,
+          ask DOUBLE NULL,
+          bid_size BIGINT NULL,
+          ask_size BIGINT NULL,
 
           is_spac TINYINT(1) NULL,
 

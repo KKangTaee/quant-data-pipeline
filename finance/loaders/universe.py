@@ -42,6 +42,8 @@ def load_asset_profile_status_summary(
         return pd.DataFrame(
             columns=[
                 "symbol",
+                "kind",
+                "quote_type",
                 "status",
                 "error_msg",
                 "last_collected_at",
@@ -49,6 +51,13 @@ def load_asset_profile_status_summary(
                 "exchange",
                 "country",
                 "long_name",
+                "market_cap",
+                "total_assets",
+                "fund_family",
+                "bid",
+                "ask",
+                "bid_size",
+                "ask_size",
             ]
         )
 
@@ -56,13 +65,22 @@ def load_asset_profile_status_summary(
     sql = f"""
         SELECT
             symbol,
+            kind,
+            quote_type,
             status,
             error_msg,
             last_collected_at,
             delisted_at,
             exchange,
             country,
-            long_name
+            long_name,
+            market_cap,
+            total_assets,
+            fund_family,
+            bid,
+            ask,
+            bid_size,
+            ask_size
         FROM nyse_asset_profile
         WHERE symbol IN ({placeholders})
         ORDER BY symbol ASC

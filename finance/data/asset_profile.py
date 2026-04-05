@@ -10,7 +10,7 @@ import yfinance as yf
 from typing import Optional, Literal
 
 from .db.mysql import MySQLClient
-from .db.schema import NYSE_SCHEMAS
+from .db.schema import NYSE_SCHEMAS, sync_table_schema
 
 DB_NAME = "finance_meta"
 Kind = Literal["stock", "etf"]
@@ -78,6 +78,12 @@ def _extract_profile(symbol: str, kind: str, t: yf.Ticker) -> dict:
     if market_cap is None:
         market_cap = info.get("marketCap")
 
+    total_assets = info.get("totalAssets")
+    bid = info.get("bid")
+    ask = info.get("ask")
+    bid_size = info.get("bidSize")
+    ask_size = info.get("askSize")
+
     row = {
         "symbol": symbol,
         "kind": kind,
@@ -90,10 +96,16 @@ def _extract_profile(symbol: str, kind: str, t: yf.Ticker) -> dict:
         "sector": info.get("sector"),
         "industry": info.get("industry"),
         "country": info.get("country"),
+        "fund_family": info.get("fundFamily"),
 
         "market_cap": market_cap,
+        "total_assets": total_assets,
         "dividend_yield": info.get("dividendYield"),
         "payout_ratio": info.get("payoutRatio"),
+        "bid": bid,
+        "ask": ask,
+        "bid_size": bid_size,
+        "ask_size": ask_size,
 
         # 지수 편입은 별도 소스가 필요 → 일단 None로 두고 나중에 enrichment 추천
         # "in_sp500": None,
@@ -120,15 +132,17 @@ def _upsert_profiles(db: MySQLClient, rows: list[dict]):
     INSERT INTO nyse_asset_profile (
       symbol, kind,
       long_name, quote_type, exchange,
-      sector, industry, country,
-      market_cap, dividend_yield, payout_ratio,
+      sector, industry, country, fund_family,
+      market_cap, total_assets, dividend_yield, payout_ratio,
+      bid, ask, bid_size, ask_size,
       is_spac,
       status, last_collected_at, delisted_at, error_msg
     ) VALUES (
       %(symbol)s, %(kind)s,
       %(long_name)s, %(quote_type)s, %(exchange)s,
-      %(sector)s, %(industry)s, %(country)s,
-      %(market_cap)s, %(dividend_yield)s, %(payout_ratio)s,
+      %(sector)s, %(industry)s, %(country)s, %(fund_family)s,
+      %(market_cap)s, %(total_assets)s, %(dividend_yield)s, %(payout_ratio)s,
+      %(bid)s, %(ask)s, %(bid_size)s, %(ask_size)s,
       %(is_spac)s,
       %(status)s, %(last_collected_at)s, %(delisted_at)s, %(error_msg)s
     )
@@ -139,9 +153,15 @@ def _upsert_profiles(db: MySQLClient, rows: list[dict]):
       sector = VALUES(sector),
       industry = VALUES(industry),
       country = VALUES(country),
+      fund_family = VALUES(fund_family),
       market_cap = VALUES(market_cap),
+      total_assets = VALUES(total_assets),
       dividend_yield = VALUES(dividend_yield),
       payout_ratio = VALUES(payout_ratio),
+      bid = VALUES(bid),
+      ask = VALUES(ask),
+      bid_size = VALUES(bid_size),
+      ask_size = VALUES(ask_size),
       is_spac = VALUES(is_spac),
       status = VALUES(status),
       last_collected_at = VALUES(last_collected_at),
@@ -167,7 +187,7 @@ def collect_and_store_asset_profiles(
 
     try:
         db.use_db(DB_NAME)
-        db.execute(NYSE_SCHEMAS["asset_profile"])
+        sync_table_schema(db, "nyse_asset_profile", NYSE_SCHEMAS["asset_profile"], DB_NAME)
 
         for kind in kinds:
             symbols = db.query(f"SELECT symbol FROM nyse_{kind}")

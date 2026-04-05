@@ -219,6 +219,41 @@ Keep entries append-only and concise.
 - Confirmed in MySQL that:
   - `nyse_financial_statement_filings` was created and populated
 
+### 2026-04-05
+- Continued Phase 12 ETF real-money hardening with a current-operability policy first pass for `GTAA`, `Risk Parity Trend`, and `Dual Momentum`.
+- Expanded `finance_meta.nyse_asset_profile` to store ETF-oriented current snapshot fields:
+  - `fund_family`
+  - `total_assets`
+  - `bid`
+  - `ask`
+  - `bid_size`
+  - `ask_size`
+- Updated asset-profile collection to sync the schema and persist the new ETF fields from yfinance metadata/quote payloads.
+- Extended asset-profile loader summaries so runtime policy helpers can read:
+  - `total_assets`
+  - `fund_family`
+  - `bid`
+  - `ask`
+  - `bid_size`
+  - `ask_size`
+- Added ETF real-money inputs:
+  - `Min ETF AUM ($B)`
+  - `Max Bid-Ask Spread (%)`
+- Added shared ETF operability policy output:
+  - `etf_operability_status`
+  - coverage/pass counts
+  - failed-symbol previews
+- Connected the ETF operability policy to:
+  - single strategy forms
+  - compare overrides
+  - history / `Load Into Form`
+  - saved strategy overrides
+  - `Real-Money`
+  - `Execution Context`
+  - compare `Strategy Highlights`
+- Reflected ETF operability status in `promotion_decision` so `caution` / `unavailable` states hold back promotion.
+- Documented the change as a current-snapshot ETF operability overlay rather than a point-in-time ETF liquidity history model.
+
   - backfill research-first universes first
   - defer DB-level strict constraints until coverage improves
 - Updated the loader design notes to explicitly position `nyse_financial_statement_labels` as a summary layer and keep future strict PIT statement loaders values-centered.

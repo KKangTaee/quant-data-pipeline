@@ -64,6 +64,8 @@ class BacktestDataError(ValueError):
 ETF_REAL_MONEY_DEFAULT_MIN_PRICE = 5.0
 ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS = 10.0
 ETF_REAL_MONEY_DEFAULT_BENCHMARK = "SPY"
+ETF_OPERABILITY_DEFAULT_MIN_AUM_B = 1.0
+ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT = 0.005
 STRICT_BENCHMARK_CONTRACT_TICKER = "ticker"
 STRICT_BENCHMARK_CONTRACT_CANDIDATE_EQUAL_WEIGHT = "candidate_universe_equal_weight"
 STRICT_DEFAULT_BENCHMARK_CONTRACT = STRICT_BENCHMARK_CONTRACT_TICKER
@@ -75,6 +77,7 @@ STRICT_PROMOTION_DEFAULT_MIN_WORST_ROLLING_EXCESS_RETURN = -0.15
 STRICT_PROMOTION_DEFAULT_MAX_STRATEGY_DRAWDOWN = -0.35
 STRICT_PROMOTION_DEFAULT_MAX_DRAWDOWN_GAP_VS_BENCHMARK = 0.08
 REAL_MONEY_CASH_LABEL = "__CASH__"
+ETF_OPERABILITY_STRATEGY_KEYS = {"gtaa", "risk_parity_trend", "dual_momentum"}
 
 
 def _normalize_tickers(tickers: Sequence[str] | None) -> list[str]:
@@ -609,6 +612,7 @@ def _build_promotion_decision(meta: dict[str, Any]) -> dict[str, Any]:
     benchmark_available = bool(meta.get("benchmark_available"))
     validation_status = str(meta.get("validation_status") or "").strip().lower()
     benchmark_policy_status = str(meta.get("benchmark_policy_status") or "").strip().lower()
+    etf_operability_status = str(meta.get("etf_operability_status") or "").strip().lower()
     liquidity_policy_status = str(meta.get("liquidity_policy_status") or "").strip().lower()
     validation_policy_status = str(meta.get("validation_policy_status") or "").strip().lower()
     guardrail_policy_status = str(meta.get("guardrail_policy_status") or "").strip().lower()
@@ -629,6 +633,12 @@ def _build_promotion_decision(meta: dict[str, Any]) -> dict[str, Any]:
         rationale.append("benchmark_policy_watch")
     elif benchmark_policy_status == "unavailable":
         rationale.append("benchmark_policy_unavailable")
+    if etf_operability_status == "caution":
+        rationale.append("etf_operability_caution")
+    elif etf_operability_status == "watch":
+        rationale.append("etf_operability_watch")
+    elif etf_operability_status == "unavailable":
+        rationale.append("etf_operability_unavailable")
     if liquidity_policy_status == "caution":
         rationale.append("liquidity_policy_caution")
     elif liquidity_policy_status == "watch":
@@ -658,6 +668,7 @@ def _build_promotion_decision(meta: dict[str, Any]) -> dict[str, Any]:
         benchmark_available
         and validation_status == "normal"
         and benchmark_policy_status in {"", "normal"}
+        and etf_operability_status in {"", "normal"}
         and liquidity_policy_status in {"", "normal"}
         and validation_policy_status in {"", "normal"}
         and guardrail_policy_status in {"", "normal"}
@@ -670,6 +681,7 @@ def _build_promotion_decision(meta: dict[str, Any]) -> dict[str, Any]:
         not benchmark_available
         or validation_status == "caution"
         or benchmark_policy_status == "caution"
+        or etf_operability_status in {"caution", "unavailable"}
         or liquidity_policy_status in {"caution", "unavailable"}
         or validation_policy_status in {"caution", "unavailable"}
         or guardrail_policy_status in {"caution", "unavailable"}
@@ -935,6 +947,157 @@ def _build_guardrail_policy_surface(meta: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _build_etf_operability_policy_surface(meta: dict[str, Any]) -> dict[str, Any]:
+    min_aum_raw = meta.get("promotion_min_etf_aum_b")
+    max_spread_raw = meta.get("promotion_max_bid_ask_spread_pct")
+    if min_aum_raw is None and max_spread_raw is None:
+        return {}
+
+    strategy_key = str(meta.get("strategy_key") or "").strip()
+    if strategy_key not in ETF_OPERABILITY_STRATEGY_KEYS:
+        return {}
+
+    tickers = _normalize_tickers(meta.get("tickers") or [])
+    if not tickers:
+        return {
+            "etf_operability_status": "unavailable",
+            "etf_operability_watch_signals": ["etf_operability_universe_empty"],
+        }
+
+    profile_df = load_asset_profile_status_summary(tickers)
+    if profile_df.empty:
+        return {
+            "etf_operability_status": "unavailable",
+            "etf_operability_watch_signals": ["etf_operability_profile_missing"],
+            "etf_symbol_count": len(tickers),
+            "etf_profile_symbol_count": 0,
+        }
+
+    working = profile_df.copy()
+    working["symbol"] = working["symbol"].astype(str).str.upper()
+    if "kind" in working.columns:
+        working["kind"] = working["kind"].astype(str).str.lower()
+    if "quote_type" in working.columns:
+        working["quote_type"] = working["quote_type"].astype(str).str.upper()
+
+    etf_mask = pd.Series(False, index=working.index)
+    if "kind" in working.columns:
+        etf_mask = etf_mask | working["kind"].eq("etf")
+    if "quote_type" in working.columns:
+        etf_mask = etf_mask | working["quote_type"].eq("ETF")
+    etf_rows = working.loc[etf_mask].copy()
+    if etf_rows.empty:
+        return {
+            "etf_operability_status": "unavailable",
+            "etf_operability_watch_signals": ["etf_operability_no_etf_profile_rows"],
+            "etf_symbol_count": len(tickers),
+            "etf_profile_symbol_count": 0,
+        }
+
+    min_aum_b = float(min_aum_raw) if min_aum_raw is not None else None
+    max_spread_pct = float(max_spread_raw) if max_spread_raw is not None else None
+
+    etf_rows["total_assets"] = pd.to_numeric(etf_rows.get("total_assets"), errors="coerce")
+    etf_rows["bid"] = pd.to_numeric(etf_rows.get("bid"), errors="coerce")
+    etf_rows["ask"] = pd.to_numeric(etf_rows.get("ask"), errors="coerce")
+    etf_rows["aum_b"] = etf_rows["total_assets"] / 1_000_000_000.0
+    etf_rows["mid_price"] = (etf_rows["bid"] + etf_rows["ask"]) / 2.0
+    etf_rows["bid_ask_spread_pct"] = np.where(
+        (etf_rows["bid"] > 0) & (etf_rows["ask"] > 0) & (etf_rows["mid_price"] > 0),
+        (etf_rows["ask"] - etf_rows["bid"]).abs() / etf_rows["mid_price"],
+        np.nan,
+    )
+
+    etf_count = int(len(etf_rows))
+    available_aum_mask = etf_rows["aum_b"].notna()
+    available_spread_mask = etf_rows["bid_ask_spread_pct"].notna()
+    available_aum_count = int(available_aum_mask.sum())
+    available_spread_count = int(available_spread_mask.sum())
+
+    if min_aum_b is not None and available_aum_count <= 0:
+        return {
+            "etf_operability_status": "unavailable",
+            "etf_operability_watch_signals": ["etf_aum_missing"],
+            "etf_symbol_count": etf_count,
+            "etf_profile_symbol_count": etf_count,
+            "etf_aum_available_count": available_aum_count,
+            "etf_spread_available_count": available_spread_count,
+        }
+    if max_spread_pct is not None and available_spread_count <= 0:
+        return {
+            "etf_operability_status": "unavailable",
+            "etf_operability_watch_signals": ["etf_bid_ask_spread_missing"],
+            "etf_symbol_count": etf_count,
+            "etf_profile_symbol_count": etf_count,
+            "etf_aum_available_count": available_aum_count,
+            "etf_spread_available_count": available_spread_count,
+        }
+
+    aum_pass_mask = (
+        etf_rows["aum_b"] >= min_aum_b
+        if min_aum_b is not None
+        else pd.Series(True, index=etf_rows.index)
+    )
+    spread_pass_mask = (
+        etf_rows["bid_ask_spread_pct"] <= max_spread_pct
+        if max_spread_pct is not None
+        else pd.Series(True, index=etf_rows.index)
+    )
+    aum_pass_mask = aum_pass_mask.fillna(False)
+    spread_pass_mask = spread_pass_mask.fillna(False)
+    clean_mask = aum_pass_mask & spread_pass_mask
+    operability_data_mask = available_aum_mask & available_spread_mask
+
+    clean_coverage = float(clean_mask.mean()) if etf_count > 0 else None
+    data_coverage = float(operability_data_mask.mean()) if etf_count > 0 else None
+    aum_pass_count = int(aum_pass_mask.sum())
+    spread_pass_count = int(spread_pass_mask.sum())
+    clean_pass_count = int(clean_mask.sum())
+
+    aum_failed_symbols = etf_rows.loc[available_aum_mask & ~aum_pass_mask, "symbol"].astype(str).tolist()
+    spread_failed_symbols = etf_rows.loc[available_spread_mask & ~spread_pass_mask, "symbol"].astype(str).tolist()
+    missing_data_symbols = etf_rows.loc[~operability_data_mask, "symbol"].astype(str).tolist()
+
+    watch_signals: list[str] = []
+    severe_signals = 0
+    if data_coverage is not None and data_coverage < 1.0:
+        watch_signals.append("etf_operability_partial_data_coverage")
+        if data_coverage < 0.75:
+            severe_signals += 1
+    if aum_failed_symbols:
+        watch_signals.append("etf_aum_below_policy")
+        if clean_coverage is not None and clean_coverage < 0.75:
+            severe_signals += 1
+    if spread_failed_symbols:
+        watch_signals.append("etf_bid_ask_spread_above_policy")
+        if clean_coverage is not None and clean_coverage < 0.75:
+            severe_signals += 1
+
+    if severe_signals > 0:
+        status = "caution"
+    elif watch_signals:
+        status = "watch"
+    else:
+        status = "normal"
+
+    return {
+        "etf_operability_status": status,
+        "etf_operability_watch_signals": watch_signals,
+        "etf_symbol_count": etf_count,
+        "etf_profile_symbol_count": etf_count,
+        "etf_aum_available_count": available_aum_count,
+        "etf_spread_available_count": available_spread_count,
+        "etf_aum_pass_count": aum_pass_count,
+        "etf_spread_pass_count": spread_pass_count,
+        "etf_operability_clean_pass_count": clean_pass_count,
+        "etf_operability_clean_coverage": clean_coverage,
+        "etf_operability_data_coverage": data_coverage,
+        "etf_aum_failed_symbols": aum_failed_symbols[:10],
+        "etf_spread_failed_symbols": spread_failed_symbols[:10],
+        "etf_operability_missing_data_symbols": missing_data_symbols[:10],
+    }
+
+
 def _apply_real_money_hardening(
     bundle: dict[str, Any],
     *,
@@ -944,6 +1107,8 @@ def _apply_real_money_hardening(
     benchmark_contract: str | None,
     benchmark_ticker: str | None,
     benchmark_universe_tickers: Sequence[str] | None = None,
+    promotion_min_etf_aum_b: float | None = None,
+    promotion_max_bid_ask_spread_pct: float | None = None,
     promotion_min_benchmark_coverage: float | None = None,
     promotion_min_net_cagr_spread: float | None = None,
     promotion_min_liquidity_clean_coverage: float | None = None,
@@ -980,6 +1145,14 @@ def _apply_real_money_hardening(
             "transaction_cost_bps": float(transaction_cost_bps or 0.0),
             "benchmark_contract": str(benchmark_contract or STRICT_DEFAULT_BENCHMARK_CONTRACT).strip().lower(),
             "benchmark_ticker": str(benchmark_ticker or "").strip().upper() or None,
+            "promotion_min_etf_aum_b": (
+                float(promotion_min_etf_aum_b) if promotion_min_etf_aum_b is not None else None
+            ),
+            "promotion_max_bid_ask_spread_pct": (
+                float(promotion_max_bid_ask_spread_pct)
+                if promotion_max_bid_ask_spread_pct is not None
+                else None
+            ),
             "promotion_min_benchmark_coverage": (
                 float(promotion_min_benchmark_coverage) if promotion_min_benchmark_coverage is not None else None
             ),
@@ -1051,6 +1224,23 @@ def _apply_real_money_hardening(
             if liquidity_rebalance_rows > 0
             else None
         )
+
+    etf_operability_policy_surface = _build_etf_operability_policy_surface(meta)
+    if etf_operability_policy_surface:
+        meta.update(etf_operability_policy_surface)
+        etf_operability_status = str(etf_operability_policy_surface.get("etf_operability_status") or "").lower()
+        if etf_operability_status == "caution":
+            warnings.append(
+                "ETF operability policy is caution: at least one ETF failed the AUM/spread policy or required profile data coverage is too thin."
+            )
+        elif etf_operability_status == "watch":
+            warnings.append(
+                "ETF operability policy is watch: some ETFs are below the AUM/spread policy or current profile coverage is partial."
+            )
+        elif etf_operability_status == "unavailable":
+            warnings.append(
+                "ETF operability policy is unavailable: refresh ETF asset profiles before interpreting this strategy as a real-money candidate."
+            )
 
     benchmark_df, benchmark_info = _build_benchmark_result_df(
         benchmark_contract=meta.get("benchmark_contract"),
@@ -1614,6 +1804,10 @@ def build_backtest_result_bundle(
         meta["min_avg_dollar_volume_20d_m_filter"] = input_params.get("min_avg_dollar_volume_20d_m_filter")
     if input_params.get("transaction_cost_bps") is not None:
         meta["transaction_cost_bps"] = input_params.get("transaction_cost_bps")
+    if input_params.get("promotion_min_etf_aum_b") is not None:
+        meta["promotion_min_etf_aum_b"] = input_params.get("promotion_min_etf_aum_b")
+    if input_params.get("promotion_max_bid_ask_spread_pct") is not None:
+        meta["promotion_max_bid_ask_spread_pct"] = input_params.get("promotion_max_bid_ask_spread_pct")
     if input_params.get("benchmark_ticker") is not None:
         meta["benchmark_ticker"] = input_params.get("benchmark_ticker")
     if input_params.get("promotion_min_benchmark_coverage") is not None:
@@ -1758,6 +1952,8 @@ def run_gtaa_backtest_from_db(
     crash_guardrail_enabled: bool = GTAA_DEFAULT_CRASH_GUARDRAIL_ENABLED,
     crash_guardrail_drawdown_threshold: float = GTAA_DEFAULT_CRASH_GUARDRAIL_DRAWDOWN_THRESHOLD,
     crash_guardrail_lookback_months: int = GTAA_DEFAULT_CRASH_GUARDRAIL_LOOKBACK_MONTHS,
+    promotion_min_etf_aum_b: float = ETF_OPERABILITY_DEFAULT_MIN_AUM_B,
+    promotion_max_bid_ask_spread_pct: float = ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT,
     universe_mode: str = "preset",
     preset_name: str | None = None,
 ) -> dict[str, Any]:
@@ -1835,6 +2031,8 @@ def run_gtaa_backtest_from_db(
             "min_price_filter": min_price_filter,
             "transaction_cost_bps": transaction_cost_bps,
             "benchmark_ticker": benchmark_ticker,
+            "promotion_min_etf_aum_b": promotion_min_etf_aum_b,
+            "promotion_max_bid_ask_spread_pct": promotion_max_bid_ask_spread_pct,
             "score_lookback_months": normalized_score_lookback_months,
             "score_return_columns": normalized_score_return_columns,
             "score_weights": normalized_score_weights,
@@ -1860,6 +2058,8 @@ def run_gtaa_backtest_from_db(
         benchmark_contract=STRICT_DEFAULT_BENCHMARK_CONTRACT,
         benchmark_ticker=benchmark_ticker,
         benchmark_universe_tickers=normalized_tickers,
+        promotion_min_etf_aum_b=promotion_min_etf_aum_b,
+        promotion_max_bid_ask_spread_pct=promotion_max_bid_ask_spread_pct,
     )
 
 
@@ -1875,6 +2075,8 @@ def run_risk_parity_trend_backtest_from_db(
     min_price_filter: float = ETF_REAL_MONEY_DEFAULT_MIN_PRICE,
     transaction_cost_bps: float = ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
     benchmark_ticker: str = ETF_REAL_MONEY_DEFAULT_BENCHMARK,
+    promotion_min_etf_aum_b: float = ETF_OPERABILITY_DEFAULT_MIN_AUM_B,
+    promotion_max_bid_ask_spread_pct: float = ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT,
     universe_mode: str = "preset",
     preset_name: str | None = None,
 ) -> dict[str, Any]:
@@ -1913,6 +2115,8 @@ def run_risk_parity_trend_backtest_from_db(
             "min_price_filter": min_price_filter,
             "transaction_cost_bps": transaction_cost_bps,
             "benchmark_ticker": benchmark_ticker,
+            "promotion_min_etf_aum_b": promotion_min_etf_aum_b,
+            "promotion_max_bid_ask_spread_pct": promotion_max_bid_ask_spread_pct,
             "universe_mode": universe_mode,
             "preset_name": preset_name,
         },
@@ -1926,6 +2130,8 @@ def run_risk_parity_trend_backtest_from_db(
         benchmark_contract=STRICT_DEFAULT_BENCHMARK_CONTRACT,
         benchmark_ticker=benchmark_ticker,
         benchmark_universe_tickers=normalized_tickers,
+        promotion_min_etf_aum_b=promotion_min_etf_aum_b,
+        promotion_max_bid_ask_spread_pct=promotion_max_bid_ask_spread_pct,
     )
 
 
@@ -1941,6 +2147,8 @@ def run_dual_momentum_backtest_from_db(
     min_price_filter: float = ETF_REAL_MONEY_DEFAULT_MIN_PRICE,
     transaction_cost_bps: float = ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
     benchmark_ticker: str = ETF_REAL_MONEY_DEFAULT_BENCHMARK,
+    promotion_min_etf_aum_b: float = ETF_OPERABILITY_DEFAULT_MIN_AUM_B,
+    promotion_max_bid_ask_spread_pct: float = ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT,
     universe_mode: str = "preset",
     preset_name: str | None = None,
 ) -> dict[str, Any]:
@@ -1979,6 +2187,8 @@ def run_dual_momentum_backtest_from_db(
             "min_price_filter": min_price_filter,
             "transaction_cost_bps": transaction_cost_bps,
             "benchmark_ticker": benchmark_ticker,
+            "promotion_min_etf_aum_b": promotion_min_etf_aum_b,
+            "promotion_max_bid_ask_spread_pct": promotion_max_bid_ask_spread_pct,
             "universe_mode": universe_mode,
             "preset_name": preset_name,
         },
@@ -1992,6 +2202,8 @@ def run_dual_momentum_backtest_from_db(
         benchmark_contract=STRICT_DEFAULT_BENCHMARK_CONTRACT,
         benchmark_ticker=benchmark_ticker,
         benchmark_universe_tickers=normalized_tickers,
+        promotion_min_etf_aum_b=promotion_min_etf_aum_b,
+        promotion_max_bid_ask_spread_pct=promotion_max_bid_ask_spread_pct,
     )
 
 

@@ -158,9 +158,20 @@
     - `top=3`
     - `horizons=1/3/6/12`
   - `PHASE12_GTAA_CAGR9_MDD16_TARGET_SEARCH.md`
+- `completed` ETF 전략 AUM / 스프레드 운용 가능성 정책 first pass 구현
+  - asset profile schema에
+    `fund_family`, `total_assets`, `bid`, `ask`, `bid_size`, `ask_size` 추가
+  - ETF 전략 3종에
+    `Min ETF AUM ($B)`
+    `Max Bid-Ask Spread (%)`
+    current-operability readout 추가
+  - `etf_operability_status = normal / watch / caution / unavailable`
+    를 `promotion_decision`과 같이 읽도록 연결
+  - `PHASE12_ETF_AUM_AND_SPREAD_POLICY_FIRST_PASS.md`
 - `pending` ETF 전략 second-pass guardrail / underperformance contract
   - rolling underperformance
-  - stronger investability proxy
+  - point-in-time ETF operability later pass
+  - actual ETF-side block rule 여부 검토
   - richer benchmark contract
 
 ## 5. Strict Annual Family Promotion
@@ -249,6 +260,7 @@
   - `PHASE12_BACKTEST_STRATEGY_SURFACE_CONSOLIDATION_FIRST_PASS.md`
 - `in_progress` investability / turnover / benchmark / guardrail 보강
   - investability / turnover / benchmark는 first pass 완료
+  - ETF current AUM / bid-ask spread policy first pass 완료
   - validation surface second pass 완료
   - promotion decision reinforcement surface 완료
   - underperformance guardrail actual-rule first pass 완료
@@ -256,7 +268,7 @@
   - 20D average dollar volume liquidity proxy first pass도 now 완료
   - portfolio guardrail policy later pass도 now 완료
   - actual strategy-side drawdown guardrail first pass도 now 완료
-  - 남은 큰 later backlog는 richer spread / AUM policy다
+  - stricter stock-side richer spread / AUM policy는 여전히 later backlog다
   - richer benchmark policy / stricter promotion reinforcement later pass도 now 완료
   - liquidity policy / later-pass investability reinforcement도 now 완료
   - validation-policy 기반 broader promotion robustness도 now 완료
@@ -290,7 +302,8 @@
   에 있고,
   이번 턴에서 정리한 것은 주로 `app/web/pages/backtest.py`의 strategy surface / orchestration 구조다.
 - next active implementation target은
-  strict annual richer spread / AUM policy 쪽이다.
+  ETF second-pass guardrail / underperformance contract 또는
+  point-in-time ETF operability later pass 쪽이다.
 - GTAA 쪽에서는 current default contract 기준으로
   `QQQ`, `IAU`, `XLE`가 가장 강한 additive direction으로 보이며,
   `QUAL`, `USMV`는 보조 broadener로 해석하는 편이 맞다.
