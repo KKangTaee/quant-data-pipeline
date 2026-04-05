@@ -109,10 +109,18 @@ Analysis / Presentation
   첫 전략 실행 UI는 우선 `전략 + 유니버스 + 기간` 중심 입력 세트로 시작하는 것이 권장된다.
 - 또한 결과 반환은 `result_df` 단일 반환 대신
   `summary_df`, `chart_df`, `meta`를 포함한 단순 result bundle 형태로 handoff하는 방향이 권장된다.
-- Phase 4의 첫 UI 구조는 메인 Streamlit 앱 하나를 유지하되,
-  수집 탭과 백테스트 탭을 분리하고 내부 코드를 탭별/속성별 모듈로 나누는 방향으로 정리되었다.
-- 현재 구현 기준으로 메인 앱에는 이미 `Ingestion` / `Backtest` 탭 골격이 들어갔고,
-  백테스트 탭은 placeholder 상태에서 이후 runtime wrapper와 첫 실행 화면을 기다리는 단계다.
+- 초기 Phase 4에서는 메인 Streamlit 앱 하나를 유지하되,
+  수집 탭과 백테스트 탭을 분리하는 방향으로 시작했다.
+- 이후 UI가 커지면서 현재 구현 기준의 메인 앱은 explicit top navigation을 사용한다.
+  상단 페이지는 현재:
+  - `Overview`
+  - `Ingestion`
+  - `Backtest`
+  - `Ops Review`
+  - `Guides`
+  로 나뉘고,
+  helper 모듈은 더 이상 Streamlit `pages/` auto-discovery에 섞이지 않도록
+  실제 페이지 경로 밖으로 분리했다.
 - 첫 public runtime boundary는 `app/web/runtime/backtest.py`의
   `run_equal_weight_backtest_from_db(...)`와 `build_backtest_result_bundle(...)` 조합으로 열렸다.
 - 즉 UI는 `sample.py`나 `BacktestEngine` 체인을 직접 호출하지 않고,
@@ -186,7 +194,7 @@ Analysis / Presentation
   - `app/web/pages/backtest.py` = Streamlit form / compare / history orchestration
   이다.
 - 또한 family / variant / concrete strategy key 매핑은
-  새 `app/web/pages/backtest_strategy_catalog.py`로 분리되어,
+  새 `app/web/backtest_strategy_catalog.py`로 분리되어,
   history / `Load Into Form` / compare prefill도 기존 concrete strategy key를 유지한 채
   family UI로 복원된다.
 - 같은 Phase 12에서 `Strict Annual Family`

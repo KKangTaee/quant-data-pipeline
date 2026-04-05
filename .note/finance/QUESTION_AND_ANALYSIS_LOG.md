@@ -46,6 +46,25 @@ Do not copy full chat transcripts. Keep only the durable result.
   - `.note/finance/phase12/PHASE12_COMPLETION_SUMMARY.md`
   - `.note/finance/phase12/PHASE12_NEXT_PHASE_PREPARATION.md`
 
+### 2026-04-05 - Streamlit page list and helper-module collision
+- Request topic:
+  - fix the import/navigation issue seen before manual Phase 12 testing and improve the top-left page navigation
+- Interpreted goal:
+  - stop helper modules from appearing as Streamlit pages and make the app navigation align with actual operator workflows
+- Result:
+  - identified the core structural issue as helper code living under `app/web/pages/`, which let Streamlit auto-discovery treat non-page modules as pages
+  - moved `backtest_strategy_catalog` out of the `pages/` directory
+  - switched the main app to explicit `st.navigation(..., position=\"top\")`
+  - defined the top-level workspace pages as:
+    - `Overview`
+    - `Ingestion`
+    - `Backtest`
+    - `Ops Review`
+    - `Guides`
+- Durable output:
+  - `app/web/streamlit_app.py`
+  - `app/web/backtest_strategy_catalog.py`
+
 ### 2026-03-11 - Finance package structure analysis
 - Request topic:
   - understand the `finance` package structure and summarize it for future conversations

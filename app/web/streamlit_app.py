@@ -2266,6 +2266,109 @@ def _render_ingestion_console() -> None:
         _run_scheduled_job(progress_callback=current_progress_callback)
 
 
+def _render_overview_page() -> None:
+    st.title("Finance Console")
+    st.caption("데이터 수집, 백테스트, 운영 검토를 한 곳에서 관리하는 내부 콘솔입니다.")
+    _render_running_banner()
+    _render_runtime_build_indicator()
+
+    latest_result = st.session_state.get("last_completed_result")
+    recent_results = st.session_state.get("recent_results") or []
+
+    col1, col2, col3 = st.columns(3)
+    col1.metric("현재 상태", "Phase 12 Closeout")
+    col2.metric("Recent Results", len(recent_results))
+    col3.metric("Git SHA", CURRENT_GIT_SHORT_SHA or "unknown")
+
+    st.markdown("### 시작 가이드")
+    st.markdown(
+        """
+        - `Ingestion`: 일별 업데이트, statement refresh, 진단 작업을 실행합니다.
+        - `Backtest`: 전략 실행, compare, history, saved portfolio workflow를 다룹니다.
+        - `Ops Review`: 최근 실행 결과, persistent history, logs, failure CSV를 한 번에 봅니다.
+        - `Guides`: 현재 phase 문서, 체크리스트, glossary 같은 기준 문서를 빠르게 찾습니다.
+        """
+    )
+
+    if latest_result:
+        status = str(latest_result.get("status") or "-")
+        label = str(latest_result.get("label") or latest_result.get("job_name") or "latest_run")
+        run_time = latest_result.get("finished_at") or latest_result.get("started_at") or "-"
+        st.markdown("### Latest Completed Run")
+        summary_cols = st.columns(3)
+        summary_cols[0].metric("Label", label)
+        summary_cols[1].metric("Status", status.upper())
+        summary_cols[2].metric("Finished At", str(run_time))
+    else:
+        st.info("아직 완료된 실행 기록이 없습니다. 먼저 `Ingestion`이나 `Backtest`에서 작업을 실행하면 여기에도 요약이 보입니다.")
+
+
+def _render_ingestion_page() -> None:
+    st.title("Ingestion")
+    st.caption("운영 파이프라인, 수동 수집, 진단 작업을 실행하는 작업 공간입니다.")
+    _render_ingestion_console()
+
+
+def _render_backtest_page() -> None:
+    st.title("Backtest")
+    st.caption("전략 실행, compare, history, saved portfolio workflow를 다루는 작업 공간입니다.")
+    render_backtest_tab()
+
+
+def _render_ops_review_page() -> None:
+    st.title("Ops Review")
+    st.caption("최근 실행 결과, persistent history, 로그와 failure artifact를 운영 관점에서 한 곳에 모아 봅니다.")
+    _render_running_banner()
+    _render_runtime_build_indicator()
+
+    left, right = st.columns([3, 2])
+    with left:
+        _render_recent_results()
+        st.divider()
+        _render_persistent_run_history()
+    with right:
+        _render_recent_logs()
+        st.divider()
+        _render_failure_csv_preview()
+
+
+def _render_guides_page() -> None:
+    st.title("Guides")
+    st.caption("현재 운영 기준과 phase 문서를 빠르게 찾는 참고 페이지입니다.")
+    _render_runtime_build_indicator()
+
+    st.markdown("### 지금 먼저 보면 좋은 문서")
+    st.markdown(
+        """
+        - `FINANCE_COMPREHENSIVE_ANALYSIS.md`
+          현재 finance 구조와 runtime/data/strategy 흐름 종합 문서
+        - `MASTER_PHASE_ROADMAP.md`
+          전체 phase 흐름과 현재 위치를 보여주는 상위 로드맵
+        - `PHASE12_TEST_CHECKLIST.md`
+          방금 closeout된 Phase 12 수동 검수 기준
+        - `FINANCE_TERM_GLOSSARY.md`
+          반복되는 퀀트/백테스트 용어를 쉽게 다시 확인하는 문서
+        - `WORK_PROGRESS.md`
+          구현 진행 로그
+        """
+    )
+
+    st.markdown("### 주요 파일 경로")
+    st.code(
+        "\n".join(
+            [
+                ".note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md",
+                ".note/finance/MASTER_PHASE_ROADMAP.md",
+                ".note/finance/phase12/PHASE12_TEST_CHECKLIST.md",
+                ".note/finance/FINANCE_TERM_GLOSSARY.md",
+                ".note/finance/WORK_PROGRESS.md",
+                ".note/finance/QUESTION_AND_ANALYSIS_LOG.md",
+            ]
+        ),
+        language="text",
+    )
+
+
 def main() -> None:
     st.set_page_config(
         page_title="Finance Console",
@@ -2275,17 +2378,23 @@ def main() -> None:
     _init_state()
     _promote_pending_job()
     _apply_pending_ingestion_prefill()
-
-    st.title("Finance Console")
-    st.caption("Unified internal app for ingestion operations and backtest workflows")
-
-    ingestion_tab, backtest_tab = st.tabs(["Ingestion", "Backtest"])
-
-    with ingestion_tab:
-        _render_ingestion_console()
-
-    with backtest_tab:
-        render_backtest_tab()
+    navigation = st.navigation(
+        {
+            "Workspace": [
+                st.Page(_render_overview_page, title="Overview", icon="🏠", default=True, url_path="overview"),
+                st.Page(_render_ingestion_page, title="Ingestion", icon="🛠️", url_path="ingestion"),
+                st.Page(_render_backtest_page, title="Backtest", icon="📈", url_path="backtest"),
+            ],
+            "Operations": [
+                st.Page(_render_ops_review_page, title="Ops Review", icon="🧾", url_path="ops-review"),
+            ],
+            "Reference": [
+                st.Page(_render_guides_page, title="Guides", icon="📚", url_path="guides"),
+            ],
+        },
+        position="top",
+    )
+    navigation.run()
 
 if __name__ == "__main__":
     main()

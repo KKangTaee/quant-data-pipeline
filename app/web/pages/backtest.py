@@ -52,7 +52,7 @@ from app.web.runtime.backtest import (
     STRICT_PROMOTION_DEFAULT_MAX_STRATEGY_DRAWDOWN,
     STRICT_PROMOTION_DEFAULT_MAX_DRAWDOWN_GAP_VS_BENCHMARK,
 )
-from app.web.pages.backtest_strategy_catalog import (
+from app.web.backtest_strategy_catalog import (
     COMPARE_STRATEGY_OPTIONS,
     SINGLE_STRATEGY_OPTIONS,
     display_name_to_selection,

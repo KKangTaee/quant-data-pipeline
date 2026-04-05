@@ -261,6 +261,11 @@ Keep entries append-only and concise.
   - roadmap
   - doc index
   - phase TODO board
+- Fixed Streamlit navigation structure before Phase 12 manual testing:
+  - moved `backtest_strategy_catalog` helper out of `app/web/pages/`
+  - switched the main app to explicit top navigation
+  - added `Overview`, `Ingestion`, `Backtest`, `Ops Review`, `Guides` pages
+- This also removes the accidental helper-page exposure that previously showed `backtest_strategy_catalog` in the UI page list.
 
   - backfill research-first universes first
   - defer DB-level strict constraints until coverage improves
