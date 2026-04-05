@@ -276,6 +276,21 @@ Analysis / Presentation
   최근 window excess return, recent drawdown gap, split-period excess deterioration를 같이 남긴다.
   현재 first pass는 이를 promotion을 직접 바꾸는 rule이 아니라,
   probation / monitoring을 더 보수적으로 읽게 하는 deployment-readiness review layer로 사용한다.
+- 그 위에 deployment-readiness checklist first pass도 추가되어,
+  이제 `Universe Contract`, `Benchmark Availability`, 각 policy status,
+  `Shortlist`, `Probation`, `Monitoring`, `Rolling Review`, `Out-Of-Sample Review`
+  를 한 장의 checklist row로 같이 읽을 수 있다.
+  이 checklist는
+  - `blocked`
+  - `review_required`
+  - `watchlist_only`
+  - `paper_only`
+  - `small_capital_ready`
+  - `small_capital_ready_with_review`
+  같은 deployment status를 만들고,
+  single `Real-Money`, `Execution Context`, compare `Strategy Highlights`, compare meta table까지 같이 연결된다.
+  현재는 deployment를 자동 승인하는 rule이 아니라,
+  실제 운용 전 점검표를 product surface에서 읽는 summary layer다.
 - 이와 함께 `GTAA`의 현재 기본 preset/sample universe는
   commodity sleeve에서 `DBC` 대신 `PDBC`를 사용하도록 조정되었다.
 - GTAA preset surface는 현재 기본 preset과,

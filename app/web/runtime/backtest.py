@@ -1125,6 +1125,168 @@ def _build_probation_and_monitoring_contract(meta: dict[str, Any]) -> dict[str, 
     }
 
 
+def _policy_status_to_check_status(value: Any) -> str:
+    normalized = str(value or "").strip().lower()
+    if normalized in {"", "normal"}:
+        return "pass"
+    if normalized == "watch":
+        return "watch"
+    if normalized == "unavailable":
+        return "unavailable"
+    return "fail"
+
+
+def _build_deployment_readiness_contract(meta: dict[str, Any]) -> dict[str, Any]:
+    checklist_rows: list[dict[str, Any]] = []
+
+    def add_row(check: str, status: str, detail: str) -> None:
+        checklist_rows.append(
+            {
+                "Check": check,
+                "Status": status,
+                "Detail": detail,
+            }
+        )
+
+    benchmark_available = bool(meta.get("benchmark_available"))
+    benchmark_contract = str(meta.get("benchmark_contract") or "").strip().lower()
+    universe_contract = str(meta.get("universe_contract") or "").strip().lower()
+    freshness_status = str((meta.get("price_freshness") or {}).get("status") or "").strip().lower()
+    shortlist_status = str(meta.get("shortlist_status") or "").strip().lower()
+    probation_status = str(meta.get("probation_status") or "").strip().lower()
+    monitoring_status = str(meta.get("monitoring_status") or "").strip().lower()
+    rolling_review_status = str(meta.get("rolling_review_status") or "").strip().lower()
+    out_of_sample_review_status = str(meta.get("out_of_sample_review_status") or "").strip().lower()
+    benchmark_policy_status = str(meta.get("benchmark_policy_status") or "").strip().lower()
+    liquidity_policy_status = str(meta.get("liquidity_policy_status") or "").strip().lower()
+    validation_policy_status = str(meta.get("validation_policy_status") or "").strip().lower()
+    guardrail_policy_status = str(meta.get("guardrail_policy_status") or "").strip().lower()
+    etf_operability_status = str(meta.get("etf_operability_status") or "").strip().lower()
+
+    if universe_contract:
+        universe_status = "fail" if universe_contract == STATIC_MANAGED_RESEARCH_UNIVERSE else "pass"
+        add_row(
+            "Universe Contract",
+            universe_status,
+            "historical dynamic PIT가 아니면 strict annual 실전 해석은 더 보수적으로 본다"
+            if universe_status == "fail"
+            else "dynamic PIT contract 기준으로 해석 가능",
+        )
+
+    add_row(
+        "Benchmark Availability",
+        "pass" if benchmark_available else "fail",
+        "benchmark overlay available" if benchmark_available else "benchmark overlay unavailable",
+    )
+
+    if benchmark_contract:
+        add_row(
+            "Benchmark Contract",
+            "pass" if benchmark_contract else "unavailable",
+            str(meta.get("benchmark_label") or meta.get("benchmark_ticker") or benchmark_contract),
+        )
+
+    if benchmark_policy_status:
+        add_row("Benchmark Policy", _policy_status_to_check_status(benchmark_policy_status), benchmark_policy_status)
+    if liquidity_policy_status:
+        add_row("Liquidity Policy", _policy_status_to_check_status(liquidity_policy_status), liquidity_policy_status)
+    if validation_policy_status:
+        add_row("Validation Policy", _policy_status_to_check_status(validation_policy_status), validation_policy_status)
+    if guardrail_policy_status:
+        add_row("Guardrail Policy", _policy_status_to_check_status(guardrail_policy_status), guardrail_policy_status)
+    if etf_operability_status:
+        add_row("ETF Operability", _policy_status_to_check_status(etf_operability_status), etf_operability_status)
+
+    if freshness_status:
+        freshness_check_status = "pass"
+        if freshness_status == "warning":
+            freshness_check_status = "watch"
+        elif freshness_status == "error":
+            freshness_check_status = "fail"
+        add_row("Price Freshness", freshness_check_status, freshness_status)
+
+    if shortlist_status:
+        shortlist_check_status = "watch"
+        if shortlist_status == "small_capital_trial":
+            shortlist_check_status = "pass"
+        elif shortlist_status == "hold":
+            shortlist_check_status = "fail"
+        add_row("Shortlist", shortlist_check_status, shortlist_status)
+
+    if probation_status:
+        probation_check_status = "watch"
+        if probation_status == "small_capital_live_trial":
+            probation_check_status = "pass"
+        elif probation_status == "not_ready":
+            probation_check_status = "fail"
+        add_row("Probation", probation_check_status, probation_status)
+
+    if monitoring_status:
+        monitoring_check_status = "pass"
+        if monitoring_status == "heightened_review":
+            monitoring_check_status = "watch"
+        elif monitoring_status in {"breach_watch", "blocked"}:
+            monitoring_check_status = "fail"
+        add_row("Monitoring", monitoring_check_status, monitoring_status)
+
+    if rolling_review_status:
+        add_row("Rolling Review", _policy_status_to_check_status(rolling_review_status), rolling_review_status)
+    if out_of_sample_review_status:
+        add_row(
+            "Out-Of-Sample Review",
+            _policy_status_to_check_status(out_of_sample_review_status),
+            out_of_sample_review_status,
+        )
+
+    pass_count = sum(1 for row in checklist_rows if row["Status"] == "pass")
+    watch_count = sum(1 for row in checklist_rows if row["Status"] == "watch")
+    fail_count = sum(1 for row in checklist_rows if row["Status"] == "fail")
+    unavailable_count = sum(1 for row in checklist_rows if row["Status"] == "unavailable")
+
+    rationale: list[str] = []
+    if fail_count > 0:
+        if probation_status == "not_ready" or shortlist_status == "hold":
+            status = "blocked"
+            next_step = "resolve_failed_checks_before_probation"
+            rationale.append("failed_checks_block_progress")
+        else:
+            status = "review_required"
+            next_step = "review_failed_checks_before_capital_increase"
+            rationale.append("failed_checks_need_manual_review")
+    elif probation_status == "small_capital_live_trial":
+        if watch_count > 0 or unavailable_count > 0:
+            status = "small_capital_ready_with_review"
+            next_step = "run_small_capital_trial_with_review_checklist"
+            rationale.append("small_capital_ready_but_review_needed")
+        else:
+            status = "small_capital_ready"
+            next_step = "run_small_capital_trial"
+            rationale.append("small_capital_ready")
+    elif probation_status == "paper_tracking":
+        status = "paper_only"
+        next_step = "continue_paper_probation_until_checklist_improves"
+        rationale.append("paper_probation_stage")
+    elif probation_status == "watchlist_review":
+        status = "watchlist_only"
+        next_step = "complete_robustness_review_before_paper_probation"
+        rationale.append("watchlist_stage")
+    else:
+        status = "blocked"
+        next_step = "resolve_contract_gaps_before_deployment"
+        rationale.append("deployment_contract_incomplete")
+
+    return {
+        "deployment_readiness_status": status,
+        "deployment_readiness_next_step": next_step,
+        "deployment_readiness_rationale": rationale,
+        "deployment_checklist_rows": checklist_rows,
+        "deployment_check_pass_count": int(pass_count),
+        "deployment_check_watch_count": int(watch_count),
+        "deployment_check_fail_count": int(fail_count),
+        "deployment_check_unavailable_count": int(unavailable_count),
+    }
+
+
 def _build_benchmark_policy_surface(meta: dict[str, Any]) -> dict[str, Any]:
     min_coverage_raw = meta.get("promotion_min_benchmark_coverage")
     min_spread_raw = meta.get("promotion_min_net_cagr_spread")
@@ -1847,6 +2009,7 @@ def _apply_real_money_hardening(
     meta.update(_build_promotion_decision(meta))
     meta.update(_build_shortlist_contract(meta))
     meta.update(_build_probation_and_monitoring_contract(meta))
+    meta.update(_build_deployment_readiness_contract(meta))
     bundle["meta"] = meta
     return bundle
 

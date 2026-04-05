@@ -63,7 +63,14 @@
 - `completed` out-of-sample review checklist 초안 작성
   - fixed long-period 결과와 분리해서 본다
 
-## 6. Documentation And Validation
+## 6. Deployment-Readiness Checklist
+
+- `completed` deployment-readiness checklist first pass 작성
+  - checklist row
+  - status / next step
+  - single / compare / execution context surface
+
+## 7. Documentation And Validation
 
 - `completed` Phase 13 문서 인덱스 반영
 - `completed` roadmap / progress / analysis log 동기화
@@ -89,3 +96,7 @@
   현재는 promotion을 직접 바꾸는 규칙이 아니라,
   recent regime review와 split-period consistency를
   monitoring / deployment-readiness 언어로 같이 읽는 layer다.
+- deployment-readiness checklist first pass도 now connected 상태다.
+  현재는 shortlist / probation / monitoring / rolling review / policy status를
+  한 장의 operational checklist로 묶어서,
+  blocked / paper_only / review_required / small_capital_ready를 읽는 layer다.

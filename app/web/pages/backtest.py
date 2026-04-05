@@ -2457,6 +2457,20 @@ def _render_last_run() -> None:
                     "- `Monitoring Breach Signals`: "
                     + ", ".join(f"`{item}`" for item in list(meta.get("monitoring_breach_signals") or []))
                 )
+            if meta.get("deployment_readiness_status"):
+                st.markdown(
+                    f"- `Deployment Readiness`: `{meta['deployment_readiness_status']}` "
+                    f"(`{_deployment_readiness_status_value_to_label(meta.get('deployment_readiness_status'))}`)"
+                )
+            if meta.get("deployment_readiness_next_step"):
+                st.markdown(f"- `Deployment Next Step`: `{meta['deployment_readiness_next_step']}`")
+            if meta.get("deployment_check_pass_count") is not None:
+                st.markdown(
+                    f"- `Deployment Checklist Counts`: pass `{int(meta.get('deployment_check_pass_count') or 0)}`, "
+                    f"watch `{int(meta.get('deployment_check_watch_count') or 0)}`, "
+                    f"fail `{int(meta.get('deployment_check_fail_count') or 0)}`, "
+                    f"unavailable `{int(meta.get('deployment_check_unavailable_count') or 0)}`"
+                )
             if meta.get("rolling_review_status"):
                 st.markdown(
                     f"- `Rolling Review`: `{meta['rolling_review_status']}` "
@@ -3620,6 +3634,47 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
                     "현재 기준에서는 routine monthly review로 probation을 이어갈 수 있는 상태입니다."
                 )
 
+        if meta.get("deployment_readiness_status"):
+            st.markdown("##### Deployment Readiness Checklist")
+            deployment_status = str(meta.get("deployment_readiness_status") or "-")
+            deployment_next_step = str(meta.get("deployment_readiness_next_step") or "-")
+            deployment_cols = st.columns(6, gap="small")
+            deployment_cols[0].metric("Status", _deployment_readiness_status_value_to_label(deployment_status))
+            deployment_cols[1].metric("Next Step", deployment_next_step)
+            deployment_cols[2].metric("Pass", str(int(meta.get("deployment_check_pass_count") or 0)))
+            deployment_cols[3].metric("Watch", str(int(meta.get("deployment_check_watch_count") or 0)))
+            deployment_cols[4].metric("Fail", str(int(meta.get("deployment_check_fail_count") or 0)))
+            deployment_cols[5].metric("Unavailable", str(int(meta.get("deployment_check_unavailable_count") or 0)))
+
+            checklist_rows = list(meta.get("deployment_checklist_rows") or [])
+            if checklist_rows:
+                st.dataframe(pd.DataFrame(checklist_rows), use_container_width=True, hide_index=True)
+
+            deployment_rationale = list(meta.get("deployment_readiness_rationale") or [])
+            if deployment_rationale:
+                st.caption("Deployment rationale: " + ", ".join(f"`{item}`" for item in deployment_rationale))
+
+            if deployment_status == "small_capital_ready":
+                st.success(
+                    "현재 checklist 기준에서는 small-capital trial까지 비교적 자연스럽게 볼 수 있는 상태입니다."
+                )
+            elif deployment_status == "small_capital_ready_with_review":
+                st.info(
+                    "현재 checklist 기준에서는 소액 trial은 가능하지만, watch / unavailable 항목을 같이 보면서 더 보수적으로 운용하는 편이 맞습니다."
+                )
+            elif deployment_status == "paper_only":
+                st.info(
+                    "지금은 deployment-ready보다는 paper probation 단계로 두는 편이 맞습니다."
+                )
+            elif deployment_status == "review_required":
+                st.warning(
+                    "failed checklist 항목이 있어, 수동 review 없이 바로 비중을 늘리는 것은 보수적이지 않습니다."
+                )
+            elif deployment_status == "blocked":
+                st.warning(
+                    "현재 checklist 기준에서는 deployment를 열기보다 blocker를 먼저 해결하는 편이 맞습니다."
+                )
+
         if meta.get("rolling_review_status") or meta.get("out_of_sample_review_status"):
             st.markdown("##### Rolling / Out-Of-Sample Review")
             review_cols = st.columns(5, gap="small")
@@ -3789,6 +3844,8 @@ def _build_compare_highlight_rows(bundles: list[dict]) -> pd.DataFrame:
                 "Shortlist": _shortlist_status_value_to_label(meta.get("shortlist_status")),
                 "Probation": _probation_status_value_to_label(meta.get("probation_status")),
                 "Monitoring": _monitoring_status_value_to_label(meta.get("monitoring_status")),
+                "Deployment": _deployment_readiness_status_value_to_label(meta.get("deployment_readiness_status")),
+                "Deploy Next": meta.get("deployment_readiness_next_step"),
                 "Rolling Review": _review_status_value_to_label(meta.get("rolling_review_status")),
                 "Recent Excess": meta.get("rolling_review_recent_excess_return"),
                 "OOS Review": _review_status_value_to_label(meta.get("out_of_sample_review_status")),
@@ -4095,6 +4152,11 @@ def _render_compare_results() -> None:
                     "monitoring_status": meta.get("monitoring_status"),
                     "monitoring_review_frequency": meta.get("monitoring_review_frequency"),
                     "monitoring_next_step": meta.get("monitoring_next_step"),
+                    "deployment_readiness_status": meta.get("deployment_readiness_status"),
+                    "deployment_readiness_next_step": meta.get("deployment_readiness_next_step"),
+                    "deployment_check_pass_count": meta.get("deployment_check_pass_count"),
+                    "deployment_check_watch_count": meta.get("deployment_check_watch_count"),
+                    "deployment_check_fail_count": meta.get("deployment_check_fail_count"),
                     "rolling_review_status": meta.get("rolling_review_status"),
                     "rolling_review_window_label": meta.get("rolling_review_window_label"),
                     "rolling_review_recent_excess_return": meta.get("rolling_review_recent_excess_return"),
@@ -5064,6 +5126,18 @@ def _review_status_value_to_label(value: str | None) -> str:
         "watch": "Watch",
         "caution": "Caution",
         "unavailable": "Unavailable",
+    }
+    return mapping.get(str(value or "").strip().lower(), "-")
+
+
+def _deployment_readiness_status_value_to_label(value: str | None) -> str:
+    mapping = {
+        "blocked": "Blocked",
+        "review_required": "Review Required",
+        "watchlist_only": "Watchlist Only",
+        "paper_only": "Paper Only",
+        "small_capital_ready": "Small Capital Ready",
+        "small_capital_ready_with_review": "Small Capital Ready (Review)",
     }
     return mapping.get(str(value or "").strip().lower(), "-")
 

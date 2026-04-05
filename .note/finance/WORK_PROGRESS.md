@@ -3672,3 +3672,33 @@ Keep entries append-only and concise.
   - finance doc index
   - comprehensive analysis
   - question and analysis log
+
+### 2026-04-05 - Phase 13 deployment-readiness checklist first pass was added
+
+- Added a new deployment checklist layer on top of:
+  - shortlist
+  - probation / monitoring
+  - rolling / out-of-sample review
+  - benchmark / liquidity / validation / guardrail policy
+- New runtime meta now includes:
+  - `deployment_readiness_status`
+  - `deployment_readiness_next_step`
+  - `deployment_checklist_rows`
+  - pass/watch/fail/unavailable counts
+- First-pass deployment status now reads:
+  - `blocked`
+  - `review_required`
+  - `watchlist_only`
+  - `paper_only`
+  - `small_capital_ready`
+  - `small_capital_ready_with_review`
+- Connected the new checklist through:
+  - single strategy `Real-Money`
+  - `Execution Context`
+  - compare `Strategy Highlights`
+  - compare meta table
+- Added a dedicated Phase 13 implementation note and refreshed:
+  - current TODO board
+  - finance doc index
+  - comprehensive analysis
+  - question and analysis log

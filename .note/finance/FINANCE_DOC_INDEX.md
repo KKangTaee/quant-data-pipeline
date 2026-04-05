@@ -202,6 +202,8 @@
   - shortlist 결과를 `probation_status / monitoring_status / monthly review` 언어로 다시 읽고, single / compare / execution context surface까지 연결한 Phase 13 first-pass 문서
 - `.note/finance/phase13/PHASE13_ROLLING_AND_OUT_OF_SAMPLE_VALIDATION_WORKFLOW_FIRST_PASS.md`
   - 최근 validation window와 split-period consistency를 따로 읽는 rolling / out-of-sample review layer를 추가하고, monitoring surface와 review checklist 초안까지 정리한 Phase 13 first-pass 문서
+- `.note/finance/phase13/PHASE13_DEPLOYMENT_READINESS_CHECKLIST_FIRST_PASS.md`
+  - shortlist / probation / monitoring / rolling review / policy status를 한 장의 checklist로 묶고 deployment status를 `blocked / paper_only / small_capital_ready` 언어로 다시 읽는 Phase 13 first-pass 문서
 
 ---
 

@@ -6286,3 +6286,36 @@ Do not copy full chat transcripts. Keep only the durable result.
   - Phase 13 is no longer only about shortlist and monthly monitoring
   - it now includes a lightweight current-regime and split-period consistency check before capital increases
   - this remains safer than turning current-snapshot ETF operability data into a hard actual block rule too early
+
+### 2026-04-05 - After shortlist, probation, and rolling review, Phase 13 should surface a deployment-readiness checklist
+
+- Request topic:
+  - continue Phase 13 into the next step after rolling / out-of-sample review
+- Interpreted goal:
+  - make the current deployment-readiness state readable as one operational checklist rather than as scattered policy fields
+- Result:
+  - added a deployment-readiness checklist first pass on top of:
+    - shortlist
+    - probation / monitoring
+    - rolling / out-of-sample review
+    - benchmark / liquidity / validation / guardrail policy
+  - new runtime meta now includes:
+    - `deployment_readiness_status`
+    - `deployment_readiness_next_step`
+    - `deployment_checklist_rows`
+    - pass/watch/fail/unavailable counts
+  - first-pass deployment status was fixed as:
+    - `blocked`
+    - `review_required`
+    - `watchlist_only`
+    - `paper_only`
+    - `small_capital_ready`
+    - `small_capital_ready_with_review`
+  - UI surface now shows the checklist in:
+    - single `Real-Money`
+    - `Execution Context`
+    - compare `Strategy Highlights`
+    - compare meta table
+- Durable implication:
+  - Phase 13 now has a product-surface summary for "can we move toward deployment yet?"
+  - this checklist is still conservative and read-only; it is not an automatic execution approval rule
