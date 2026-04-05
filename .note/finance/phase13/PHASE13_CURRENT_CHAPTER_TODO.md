@@ -37,10 +37,12 @@
     underperformance / drawdown guardrail actual rule을 연결했다
   - single / compare / history / saved-portfolio compare context까지
     같은 contract로 round-trip된다
-- `pending` ETF current-operability rule 검토
-  - 현재 AUM / spread warning을 actual block rule로 쓸지 판단
-- `pending` ETF point-in-time operability later-pass 필요성 검토
-  - current snapshot overlay를 어디까지로 볼지 다시 정리
+- `completed` ETF current-operability rule 검토
+  - current AUM / spread warning은 현재 snapshot overlay이므로
+    actual block rule로는 아직 올리지 않고 later-pass backlog로 둔다
+- `completed` ETF point-in-time operability later-pass 필요성 검토
+  - current snapshot overlay는 유지하되,
+    PIT operability history는 다음 phase backlog로 넘긴다
 
 ## 4. Probation And Monitoring Workflow
 
@@ -74,7 +76,9 @@
 
 - `completed` Phase 13 문서 인덱스 반영
 - `completed` roadmap / progress / analysis log 동기화
-- `pending` phase closeout checklist skeleton 준비
+- `completed` phase closeout checklist skeleton 준비
+- `completed` phase manual test checklist 작성
+- `completed` phase closeout summary / next-phase preparation 작성
 
 ## 현재 메모
 
@@ -100,3 +104,9 @@
   현재는 shortlist / probation / monitoring / rolling review / policy status를
   한 장의 operational checklist로 묶어서,
   blocked / paper_only / review_required / small_capital_ready를 읽는 layer다.
+- ETF operability actual block rule과 PIT operability history는
+  value는 있지만 현재 phase closeout blocker는 아니므로
+  다음 phase backlog로 넘긴다.
+- 현재 closeout 기준은:
+  - `Phase 12`: implementation closed / manual_validation_pending
+  - `Phase 13`: practical closeout / manual_validation_pending

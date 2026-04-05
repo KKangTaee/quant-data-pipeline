@@ -3702,3 +3702,26 @@ Keep entries append-only and concise.
   - finance doc index
   - comprehensive analysis
   - question and analysis log
+
+### 2026-04-05 - Phase 13 was closed out at practical completion
+
+- Reviewed the remaining Phase 13 backlog and separated:
+  - closeout blockers
+  - later-pass backlog
+- Concluded that the following remain valuable but are not closeout blockers:
+  - ETF current-operability actual block rule
+  - ETF point-in-time operability history
+  - monthly probation note logging
+  - richer live deployment workflow
+- Marked Phase 13 as:
+  - `practical closeout`
+  - `manual_validation_pending`
+- Added closeout / handoff documents:
+  - `PHASE13_COMPLETION_SUMMARY.md`
+  - `PHASE13_NEXT_PHASE_PREPARATION.md`
+  - `PHASE13_TEST_CHECKLIST.md`
+- Refreshed:
+  - current TODO board
+  - roadmap
+  - finance doc index
+  - question and analysis log

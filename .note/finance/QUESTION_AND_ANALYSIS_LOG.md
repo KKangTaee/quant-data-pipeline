@@ -6319,3 +6319,27 @@ Do not copy full chat transcripts. Keep only the durable result.
 - Durable implication:
   - Phase 13 now has a product-surface summary for "can we move toward deployment yet?"
   - this checklist is still conservative and read-only; it is not an automatic execution approval rule
+
+### 2026-04-05 - Phase 13 can be closed out after deployment-readiness checklist, with manual validation still pending
+
+- Request topic:
+  - finish Phase 13 and prepare the user-facing checklist before opening the next phase
+- Interpreted goal:
+  - decide whether the remaining ETF operability / deployment items are closeout blockers, and if not, close the phase cleanly with a practical summary and manual checklist
+- Result:
+  - treated the following as later-pass backlog, not closeout blockers:
+    - ETF current-operability actual block rule
+    - ETF point-in-time operability history
+    - monthly probation note logging
+    - richer live deployment workflow
+  - concluded that Phase 13 is now:
+    - `practical closeout`
+    - `manual_validation_pending`
+  - added:
+    - completion summary
+    - next-phase preparation
+    - manual test checklist
+  - updated roadmap, index, progress log, and current TODO board to match the closeout state
+- Durable implication:
+  - Phase 13 is no longer the active implementation phase
+  - the project now has deployment-readiness / probation / monitoring / rolling review / checklist layers in place, and the next decision is about which live deployment or PIT execution-readiness direction to open next

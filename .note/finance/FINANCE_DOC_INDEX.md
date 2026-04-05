@@ -204,6 +204,12 @@
   - 최근 validation window와 split-period consistency를 따로 읽는 rolling / out-of-sample review layer를 추가하고, monitoring surface와 review checklist 초안까지 정리한 Phase 13 first-pass 문서
 - `.note/finance/phase13/PHASE13_DEPLOYMENT_READINESS_CHECKLIST_FIRST_PASS.md`
   - shortlist / probation / monitoring / rolling review / policy status를 한 장의 checklist로 묶고 deployment status를 `blocked / paper_only / small_capital_ready` 언어로 다시 읽는 Phase 13 first-pass 문서
+- `.note/finance/phase13/PHASE13_COMPLETION_SUMMARY.md`
+  - Phase 13 deployment-readiness / probation work를 practical closeout 기준으로 정리하고, 완료 범위와 다음 phase backlog를 명확히 남긴 문서
+- `.note/finance/phase13/PHASE13_NEXT_PHASE_PREPARATION.md`
+  - Phase 13 이후 다음 phase를 live deployment workflow 또는 PIT execution-readiness 방향으로 어떻게 열지 정리한 handoff 문서
+- `.note/finance/phase13/PHASE13_TEST_CHECKLIST.md`
+  - Phase 13 manual validation checklist로, shortlist / probation / rolling review / deployment checklist surface를 현재 UI에서 검수하기 위한 문서
 
 ---
 
