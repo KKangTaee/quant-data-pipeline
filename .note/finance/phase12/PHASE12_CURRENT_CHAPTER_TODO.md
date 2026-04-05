@@ -221,6 +221,13 @@
   - promotion decision이 validation policy 상태를 함께 반영
   - single / compare / history / meta surface까지 contract 연결
   - `PHASE12_STRICT_ANNUAL_VALIDATION_POLICY_AND_PROMOTION_REINFORCEMENT_LATER_PASS.md`
+- `completed` strict annual portfolio guardrail policy / promotion reinforcement later pass 구현
+  - `Max Strategy Drawdown (%)`
+  - `Max Drawdown Gap vs Benchmark (%)`
+  - `guardrail_policy_status = normal / watch / caution / unavailable`
+  - promotion decision이 portfolio guardrail policy 상태를 함께 반영
+  - single / compare / history / meta surface까지 contract 연결
+  - `PHASE12_STRICT_ANNUAL_PORTFOLIO_GUARDRAIL_POLICY_AND_PROMOTION_REINFORCEMENT_LATER_PASS.md`
 - `completed` backtest strategy surface consolidation first pass 구현
   - 새 `app/web/pages/backtest_strategy_catalog.py`에 family / variant / concrete strategy key 매핑 분리
   - `Single Strategy` top-level 목록을
@@ -238,6 +245,8 @@
   - underperformance guardrail actual-rule first pass 완료
   - minimum-history investability proxy와 benchmark spread/coverage first pass도 now 완료
   - 20D average dollar volume liquidity proxy first pass도 now 완료
+  - portfolio guardrail policy later pass도 now 완료
+  - 남은 큰 later backlog는 richer spread / AUM policy와 actual strategy-side drawdown guardrail
   - richer benchmark policy / stricter promotion reinforcement later pass도 now 완료
   - liquidity policy / later-pass investability reinforcement도 now 완료
   - validation-policy 기반 broader promotion robustness도 now 완료

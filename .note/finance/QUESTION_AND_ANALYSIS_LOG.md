@@ -6012,3 +6012,26 @@ Do not copy full chat transcripts. Keep only the durable result.
     1. is the strategy better than a broad reference ticker like `SPY`?
     2. is the strategy better than simply holding the same candidate universe equally?
   - underperformance guardrail actual-rule still uses `benchmark_ticker` in this first pass, so the broader benchmark contract currently widens validation/promotion interpretation more than execution rules
+
+### 2026-04-05 - Strict annual promotion should also cap drawdown behavior
+
+- Request topic:
+  - continue Phase 12 after broader benchmark contract was already connected
+- Interpreted goal:
+  - make strict annual promotion more conservative when drawdown itself is too deep or too much worse than benchmark, instead of relying only on benchmark spread, liquidity cleanliness, and rolling-underperformance validation
+- Result:
+  - added two drawdown-based promotion thresholds:
+    - `Max Strategy Drawdown (%)`
+    - `Max Drawdown Gap vs Benchmark (%)`
+  - introduced:
+    - `guardrail_policy_status = normal / watch / caution / unavailable`
+    - `guardrail_policy_watch_signals`
+    - `drawdown_gap_vs_benchmark`
+  - updated `promotion_decision` so that guardrail policy now matters alongside:
+    - benchmark policy
+    - liquidity policy
+    - validation policy
+    - dynamic/static universe contract
+- Durable implication:
+  - strict annual promotion is now closer to a real-money review contract where drawdown severity matters directly
+  - this is still a promotion/interpretation rule, not an actual strategy-side drawdown guardrail that changes rebalance behavior

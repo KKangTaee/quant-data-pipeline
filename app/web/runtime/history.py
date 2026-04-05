@@ -154,6 +154,8 @@ def append_backtest_run_history(
         "promotion_min_liquidity_clean_coverage": meta.get("promotion_min_liquidity_clean_coverage"),
         "promotion_max_underperformance_share": meta.get("promotion_max_underperformance_share"),
         "promotion_min_worst_rolling_excess_return": meta.get("promotion_min_worst_rolling_excess_return"),
+        "promotion_max_strategy_drawdown": meta.get("promotion_max_strategy_drawdown"),
+        "promotion_max_drawdown_gap_vs_benchmark": meta.get("promotion_max_drawdown_gap_vs_benchmark"),
         "snapshot_source": meta.get("snapshot_source"),
         "universe_contract": meta.get("universe_contract"),
         "dynamic_target_size": meta.get("dynamic_target_size"),

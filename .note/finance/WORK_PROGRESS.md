@@ -3422,3 +3422,33 @@ Keep entries append-only and concise.
   - Phase 12 checklist
   - comprehensive analysis
   - doc index
+
+### 2026-04-05 - Strict annual portfolio guardrail policy later pass was added
+
+- Added two drawdown-based promotion thresholds to strict annual family:
+  - `Max Strategy Drawdown (%)`
+  - `Max Drawdown Gap vs Benchmark (%)`
+- Runtime now records:
+  - `guardrail_policy_status`
+  - `guardrail_policy_watch_signals`
+  - `drawdown_gap_vs_benchmark`
+- Promotion decision now considers guardrail policy together with:
+  - benchmark policy
+  - liquidity policy
+  - validation policy
+- Connected the new contract through:
+  - strict annual single strategy forms
+  - compare overrides
+  - history / `Load Into Form`
+  - `Real-Money`
+  - `Execution Context`
+  - compare `Strategy Highlights`
+- Verified:
+  - `py_compile`
+  - page import smoke
+  - DB-backed strict annual manual-ticker smoke showing `normal` and `caution` guardrail states
+- Added a dedicated Phase 12 implementation note and refreshed:
+  - current TODO board
+  - Phase 12 checklist
+  - comprehensive analysis
+  - doc index

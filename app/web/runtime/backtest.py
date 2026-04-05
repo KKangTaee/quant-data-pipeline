@@ -68,6 +68,8 @@ STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD = -0.02
 STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE = 0.90
 STRICT_PROMOTION_DEFAULT_MAX_UNDERPERFORMANCE_SHARE = 0.55
 STRICT_PROMOTION_DEFAULT_MIN_WORST_ROLLING_EXCESS_RETURN = -0.15
+STRICT_PROMOTION_DEFAULT_MAX_STRATEGY_DRAWDOWN = -0.35
+STRICT_PROMOTION_DEFAULT_MAX_DRAWDOWN_GAP_VS_BENCHMARK = 0.08
 REAL_MONEY_CASH_LABEL = "__CASH__"
 
 
@@ -605,6 +607,7 @@ def _build_promotion_decision(meta: dict[str, Any]) -> dict[str, Any]:
     benchmark_policy_status = str(meta.get("benchmark_policy_status") or "").strip().lower()
     liquidity_policy_status = str(meta.get("liquidity_policy_status") or "").strip().lower()
     validation_policy_status = str(meta.get("validation_policy_status") or "").strip().lower()
+    guardrail_policy_status = str(meta.get("guardrail_policy_status") or "").strip().lower()
     universe_contract = meta.get("universe_contract")
     price_freshness = meta.get("price_freshness") or {}
     freshness_status = str(price_freshness.get("status") or "").strip().lower()
@@ -634,6 +637,12 @@ def _build_promotion_decision(meta: dict[str, Any]) -> dict[str, Any]:
         rationale.append("validation_policy_watch")
     elif validation_policy_status == "unavailable":
         rationale.append("validation_policy_unavailable")
+    if guardrail_policy_status == "caution":
+        rationale.append("guardrail_policy_caution")
+    elif guardrail_policy_status == "watch":
+        rationale.append("guardrail_policy_watch")
+    elif guardrail_policy_status == "unavailable":
+        rationale.append("guardrail_policy_unavailable")
     if universe_contract == STATIC_MANAGED_RESEARCH_UNIVERSE:
         rationale.append("static_universe_contract")
     if freshness_status == "warning":
@@ -647,6 +656,7 @@ def _build_promotion_decision(meta: dict[str, Any]) -> dict[str, Any]:
         and benchmark_policy_status in {"", "normal"}
         and liquidity_policy_status in {"", "normal"}
         and validation_policy_status in {"", "normal"}
+        and guardrail_policy_status in {"", "normal"}
         and universe_contract != STATIC_MANAGED_RESEARCH_UNIVERSE
         and freshness_status not in {"warning", "error"}
     ):
@@ -658,6 +668,7 @@ def _build_promotion_decision(meta: dict[str, Any]) -> dict[str, Any]:
         or benchmark_policy_status == "caution"
         or liquidity_policy_status in {"caution", "unavailable"}
         or validation_policy_status in {"caution", "unavailable"}
+        or guardrail_policy_status in {"caution", "unavailable"}
         or freshness_status == "error"
     ):
         decision = "hold"
@@ -851,6 +862,75 @@ def _build_validation_policy_surface(meta: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _build_guardrail_policy_surface(meta: dict[str, Any]) -> dict[str, Any]:
+    max_strategy_dd_raw = meta.get("promotion_max_strategy_drawdown")
+    max_drawdown_gap_raw = meta.get("promotion_max_drawdown_gap_vs_benchmark")
+    if max_strategy_dd_raw is None and max_drawdown_gap_raw is None:
+        return {}
+
+    strategy_max_drawdown = meta.get("strategy_max_drawdown")
+    benchmark_available = bool(meta.get("benchmark_available"))
+    benchmark_max_drawdown = meta.get("benchmark_max_drawdown")
+    max_strategy_drawdown = float(max_strategy_dd_raw) if max_strategy_dd_raw is not None else None
+    max_drawdown_gap = float(max_drawdown_gap_raw) if max_drawdown_gap_raw is not None else None
+
+    strategy_drawdown_pass: bool | None = None
+    drawdown_gap_pass: bool | None = None
+    drawdown_gap_vs_benchmark: float | None = None
+    unavailable_signals: list[str] = []
+    watch_signals: list[str] = []
+    severe_signals = 0
+
+    if max_strategy_drawdown is not None:
+        if strategy_max_drawdown is None:
+            unavailable_signals.append("strategy_drawdown_missing")
+        else:
+            strategy_drawdown_value = float(strategy_max_drawdown)
+            strategy_drawdown_pass = strategy_drawdown_value >= max_strategy_drawdown
+            if not strategy_drawdown_pass:
+                watch_signals.append("strategy_drawdown_above_policy")
+                if strategy_drawdown_value < (max_strategy_drawdown - 0.05):
+                    severe_signals += 1
+
+    if max_drawdown_gap is not None:
+        if not benchmark_available or benchmark_max_drawdown is None or strategy_max_drawdown is None:
+            if not benchmark_available or benchmark_max_drawdown is None:
+                unavailable_signals.append("guardrail_policy_benchmark_unavailable")
+            if strategy_max_drawdown is None:
+                unavailable_signals.append("guardrail_policy_strategy_drawdown_missing")
+        else:
+            drawdown_gap_vs_benchmark = float(benchmark_max_drawdown) - float(strategy_max_drawdown)
+            drawdown_gap_pass = drawdown_gap_vs_benchmark <= max_drawdown_gap
+            if not drawdown_gap_pass:
+                watch_signals.append("drawdown_gap_above_policy")
+                if drawdown_gap_vs_benchmark > (max_drawdown_gap + 0.05):
+                    severe_signals += 1
+
+    if unavailable_signals:
+        return {
+            "guardrail_policy_status": "unavailable",
+            "guardrail_policy_watch_signals": unavailable_signals,
+            "guardrail_policy_strategy_drawdown_pass": strategy_drawdown_pass,
+            "guardrail_policy_drawdown_gap_pass": drawdown_gap_pass,
+            "drawdown_gap_vs_benchmark": drawdown_gap_vs_benchmark,
+        }
+
+    if severe_signals > 0:
+        status = "caution"
+    elif watch_signals:
+        status = "watch"
+    else:
+        status = "normal"
+
+    return {
+        "guardrail_policy_status": status,
+        "guardrail_policy_watch_signals": watch_signals,
+        "guardrail_policy_strategy_drawdown_pass": strategy_drawdown_pass,
+        "guardrail_policy_drawdown_gap_pass": drawdown_gap_pass,
+        "drawdown_gap_vs_benchmark": drawdown_gap_vs_benchmark,
+    }
+
+
 def _apply_real_money_hardening(
     bundle: dict[str, Any],
     *,
@@ -865,6 +945,8 @@ def _apply_real_money_hardening(
     promotion_min_liquidity_clean_coverage: float | None = None,
     promotion_max_underperformance_share: float | None = None,
     promotion_min_worst_rolling_excess_return: float | None = None,
+    promotion_max_strategy_drawdown: float | None = None,
+    promotion_max_drawdown_gap_vs_benchmark: float | None = None,
 ) -> dict[str, Any]:
     result_df = bundle["result_df"].copy()
     hardened_df, turnover_stats = _apply_transaction_cost_postprocess(
@@ -913,6 +995,16 @@ def _apply_real_money_hardening(
             "promotion_min_worst_rolling_excess_return": (
                 float(promotion_min_worst_rolling_excess_return)
                 if promotion_min_worst_rolling_excess_return is not None
+                else None
+            ),
+            "promotion_max_strategy_drawdown": (
+                float(promotion_max_strategy_drawdown)
+                if promotion_max_strategy_drawdown is not None
+                else None
+            ),
+            "promotion_max_drawdown_gap_vs_benchmark": (
+                float(promotion_max_drawdown_gap_vs_benchmark)
+                if promotion_max_drawdown_gap_vs_benchmark is not None
                 else None
             ),
             "avg_turnover": turnover_stats["avg_turnover"],
@@ -1074,6 +1166,26 @@ def _apply_real_money_hardening(
             )
         if validation_policy_signals:
             meta["validation_policy_watch_signals"] = validation_policy_signals
+
+    guardrail_policy_surface = _build_guardrail_policy_surface(meta)
+    if guardrail_policy_surface:
+        meta.update(guardrail_policy_surface)
+        guardrail_policy_status = guardrail_policy_surface.get("guardrail_policy_status")
+        guardrail_policy_signals = guardrail_policy_surface.get("guardrail_policy_watch_signals") or []
+        if guardrail_policy_status == "caution":
+            warnings.append(
+                "Guardrail policy caution: strategy drawdown or drawdown gap vs benchmark exceeded the current portfolio guardrail contract."
+            )
+        elif guardrail_policy_status == "watch":
+            warnings.append(
+                "Guardrail policy watch: drawdown behavior is weaker than the preferred portfolio guardrail contract."
+            )
+        elif guardrail_policy_status == "unavailable":
+            warnings.append(
+                "Guardrail policy unavailable: promotion-grade drawdown guardrail review needs usable strategy and benchmark drawdown history."
+            )
+        if guardrail_policy_signals:
+            meta["guardrail_policy_watch_signals"] = guardrail_policy_signals
 
     meta.update(_build_promotion_decision(meta))
     bundle["meta"] = meta
@@ -1504,6 +1616,10 @@ def build_backtest_result_bundle(
         meta["promotion_max_underperformance_share"] = input_params.get("promotion_max_underperformance_share")
     if input_params.get("promotion_min_worst_rolling_excess_return") is not None:
         meta["promotion_min_worst_rolling_excess_return"] = input_params.get("promotion_min_worst_rolling_excess_return")
+    if input_params.get("promotion_max_strategy_drawdown") is not None:
+        meta["promotion_max_strategy_drawdown"] = input_params.get("promotion_max_strategy_drawdown")
+    if input_params.get("promotion_max_drawdown_gap_vs_benchmark") is not None:
+        meta["promotion_max_drawdown_gap_vs_benchmark"] = input_params.get("promotion_max_drawdown_gap_vs_benchmark")
     if input_params.get("underperformance_guardrail_enabled") is not None:
         meta["underperformance_guardrail_enabled"] = input_params.get("underperformance_guardrail_enabled")
     if input_params.get("underperformance_guardrail_window_months") is not None:
@@ -1977,6 +2093,8 @@ def _run_statement_quality_bundle(
     promotion_min_liquidity_clean_coverage: float = STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE,
     promotion_max_underperformance_share: float = STRICT_PROMOTION_DEFAULT_MAX_UNDERPERFORMANCE_SHARE,
     promotion_min_worst_rolling_excess_return: float = STRICT_PROMOTION_DEFAULT_MIN_WORST_ROLLING_EXCESS_RETURN,
+    promotion_max_strategy_drawdown: float = STRICT_PROMOTION_DEFAULT_MAX_STRATEGY_DRAWDOWN,
+    promotion_max_drawdown_gap_vs_benchmark: float = STRICT_PROMOTION_DEFAULT_MAX_DRAWDOWN_GAP_VS_BENCHMARK,
     trend_filter_enabled: bool = False,
     trend_filter_window: int = 200,
     market_regime_enabled: bool = False,
@@ -2196,6 +2314,10 @@ def _run_statement_quality_bundle(
         input_params["promotion_max_underperformance_share"] = float(promotion_max_underperformance_share)
     if promotion_min_worst_rolling_excess_return is not None:
         input_params["promotion_min_worst_rolling_excess_return"] = float(promotion_min_worst_rolling_excess_return)
+    if promotion_max_strategy_drawdown is not None:
+        input_params["promotion_max_strategy_drawdown"] = float(promotion_max_strategy_drawdown)
+    if promotion_max_drawdown_gap_vs_benchmark is not None:
+        input_params["promotion_max_drawdown_gap_vs_benchmark"] = float(promotion_max_drawdown_gap_vs_benchmark)
 
     bundle = build_backtest_result_bundle(
         result_df,
@@ -2249,6 +2371,8 @@ def run_quality_snapshot_strict_annual_backtest_from_db(
     promotion_min_liquidity_clean_coverage: float = STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE,
     promotion_max_underperformance_share: float = STRICT_PROMOTION_DEFAULT_MAX_UNDERPERFORMANCE_SHARE,
     promotion_min_worst_rolling_excess_return: float = STRICT_PROMOTION_DEFAULT_MIN_WORST_ROLLING_EXCESS_RETURN,
+    promotion_max_strategy_drawdown: float = STRICT_PROMOTION_DEFAULT_MAX_STRATEGY_DRAWDOWN,
+    promotion_max_drawdown_gap_vs_benchmark: float = STRICT_PROMOTION_DEFAULT_MAX_DRAWDOWN_GAP_VS_BENCHMARK,
     trend_filter_enabled: bool = False,
     trend_filter_window: int = 200,
     market_regime_enabled: bool = False,
@@ -2286,6 +2410,8 @@ def run_quality_snapshot_strict_annual_backtest_from_db(
         promotion_min_liquidity_clean_coverage=promotion_min_liquidity_clean_coverage,
         promotion_max_underperformance_share=promotion_max_underperformance_share,
         promotion_min_worst_rolling_excess_return=promotion_min_worst_rolling_excess_return,
+        promotion_max_strategy_drawdown=promotion_max_strategy_drawdown,
+        promotion_max_drawdown_gap_vs_benchmark=promotion_max_drawdown_gap_vs_benchmark,
         trend_filter_enabled=trend_filter_enabled,
         trend_filter_window=trend_filter_window,
         market_regime_enabled=market_regime_enabled,
@@ -2317,6 +2443,8 @@ def run_quality_snapshot_strict_annual_backtest_from_db(
         promotion_min_liquidity_clean_coverage=promotion_min_liquidity_clean_coverage,
         promotion_max_underperformance_share=promotion_max_underperformance_share,
         promotion_min_worst_rolling_excess_return=promotion_min_worst_rolling_excess_return,
+        promotion_max_strategy_drawdown=promotion_max_strategy_drawdown,
+        promotion_max_drawdown_gap_vs_benchmark=promotion_max_drawdown_gap_vs_benchmark,
     )
 
 
@@ -2386,6 +2514,8 @@ def run_value_snapshot_strict_annual_backtest_from_db(
     promotion_min_liquidity_clean_coverage: float = STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE,
     promotion_max_underperformance_share: float = STRICT_PROMOTION_DEFAULT_MAX_UNDERPERFORMANCE_SHARE,
     promotion_min_worst_rolling_excess_return: float = STRICT_PROMOTION_DEFAULT_MIN_WORST_ROLLING_EXCESS_RETURN,
+    promotion_max_strategy_drawdown: float = STRICT_PROMOTION_DEFAULT_MAX_STRATEGY_DRAWDOWN,
+    promotion_max_drawdown_gap_vs_benchmark: float = STRICT_PROMOTION_DEFAULT_MAX_DRAWDOWN_GAP_VS_BENCHMARK,
     trend_filter_enabled: bool = False,
     trend_filter_window: int = 200,
     market_regime_enabled: bool = False,
@@ -2552,6 +2682,8 @@ def run_value_snapshot_strict_annual_backtest_from_db(
             "promotion_min_liquidity_clean_coverage": float(promotion_min_liquidity_clean_coverage),
             "promotion_max_underperformance_share": float(promotion_max_underperformance_share),
             "promotion_min_worst_rolling_excess_return": float(promotion_min_worst_rolling_excess_return),
+            "promotion_max_strategy_drawdown": float(promotion_max_strategy_drawdown),
+            "promotion_max_drawdown_gap_vs_benchmark": float(promotion_max_drawdown_gap_vs_benchmark),
             "factor_freq": "annual",
             "value_factors": normalized_factors,
             "trend_filter_enabled": trend_filter_enabled,
@@ -2609,6 +2741,8 @@ def run_value_snapshot_strict_annual_backtest_from_db(
         promotion_min_liquidity_clean_coverage=promotion_min_liquidity_clean_coverage,
         promotion_max_underperformance_share=promotion_max_underperformance_share,
         promotion_min_worst_rolling_excess_return=promotion_min_worst_rolling_excess_return,
+        promotion_max_strategy_drawdown=promotion_max_strategy_drawdown,
+        promotion_max_drawdown_gap_vs_benchmark=promotion_max_drawdown_gap_vs_benchmark,
     )
 
 
@@ -2809,6 +2943,8 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
     promotion_min_liquidity_clean_coverage: float = STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE,
     promotion_max_underperformance_share: float = STRICT_PROMOTION_DEFAULT_MAX_UNDERPERFORMANCE_SHARE,
     promotion_min_worst_rolling_excess_return: float = STRICT_PROMOTION_DEFAULT_MIN_WORST_ROLLING_EXCESS_RETURN,
+    promotion_max_strategy_drawdown: float = STRICT_PROMOTION_DEFAULT_MAX_STRATEGY_DRAWDOWN,
+    promotion_max_drawdown_gap_vs_benchmark: float = STRICT_PROMOTION_DEFAULT_MAX_DRAWDOWN_GAP_VS_BENCHMARK,
     trend_filter_enabled: bool = False,
     trend_filter_window: int = 200,
     market_regime_enabled: bool = False,
@@ -2986,6 +3122,8 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
             "promotion_min_liquidity_clean_coverage": float(promotion_min_liquidity_clean_coverage),
             "promotion_max_underperformance_share": float(promotion_max_underperformance_share),
             "promotion_min_worst_rolling_excess_return": float(promotion_min_worst_rolling_excess_return),
+            "promotion_max_strategy_drawdown": float(promotion_max_strategy_drawdown),
+            "promotion_max_drawdown_gap_vs_benchmark": float(promotion_max_drawdown_gap_vs_benchmark),
             "factor_freq": "annual",
             "quality_factors": normalized_quality_factors,
             "value_factors": normalized_value_factors,
@@ -3044,6 +3182,8 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
         promotion_min_liquidity_clean_coverage=promotion_min_liquidity_clean_coverage,
         promotion_max_underperformance_share=promotion_max_underperformance_share,
         promotion_min_worst_rolling_excess_return=promotion_min_worst_rolling_excess_return,
+        promotion_max_strategy_drawdown=promotion_max_strategy_drawdown,
+        promotion_max_drawdown_gap_vs_benchmark=promotion_max_drawdown_gap_vs_benchmark,
     )
 
 

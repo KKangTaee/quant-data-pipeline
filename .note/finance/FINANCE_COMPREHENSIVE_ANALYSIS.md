@@ -202,6 +202,13 @@ Analysis / Presentation
   `Benchmark CAGR`, `Net CAGR Spread`, `Benchmark Coverage`
   도 first pass로 추가되어,
   strategy-vs-benchmark 판단을 더 직접적으로 읽을 수 있게 되었다.
+- 그리고 strict annual promotion contract는 later pass에서 더 강화되어,
+  `Max Strategy Drawdown (%)`와
+  `Max Drawdown Gap vs Benchmark (%)`를 입력할 수 있고,
+  `guardrail_policy_status = normal / watch / caution / unavailable`가
+  `promotion_decision`에 함께 반영된다.
+  이 변경은 actual strategy-side drawdown rule을 더한 것은 아니고,
+  drawdown-based promotion review를 더 엄격하게 만든 쪽에 가깝다.
 - 이와 함께 `GTAA`의 현재 기본 preset/sample universe는
   commodity sleeve에서 `DBC` 대신 `PDBC`를 사용하도록 조정되었다.
 - GTAA preset surface는 현재 기본 preset과,
