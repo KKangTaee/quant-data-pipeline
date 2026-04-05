@@ -253,6 +253,14 @@ Keep entries append-only and concise.
   - compare `Strategy Highlights`
 - Reflected ETF operability status in `promotion_decision` so `caution` / `unavailable` states hold back promotion.
 - Documented the change as a current-snapshot ETF operability overlay rather than a point-in-time ETF liquidity history model.
+- Reviewed Phase 12 remaining work and decided the current ETF second-pass items are next-phase backlog rather than closeout blockers.
+- Created:
+  - `.note/finance/phase12/PHASE12_COMPLETION_SUMMARY.md`
+  - `.note/finance/phase12/PHASE12_NEXT_PHASE_PREPARATION.md`
+- Marked Phase 12 as practical closeout in:
+  - roadmap
+  - doc index
+  - phase TODO board
 
   - backfill research-first universes first
   - defer DB-level strict constraints until coverage improves

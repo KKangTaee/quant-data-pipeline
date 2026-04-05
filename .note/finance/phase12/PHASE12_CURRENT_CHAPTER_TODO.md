@@ -168,11 +168,12 @@
   - `etf_operability_status = normal / watch / caution / unavailable`
     를 `promotion_decision`과 같이 읽도록 연결
   - `PHASE12_ETF_AUM_AND_SPREAD_POLICY_FIRST_PASS.md`
-- `pending` ETF 전략 second-pass guardrail / underperformance contract
+- `completed` ETF 전략 second-pass backlog 정리
   - rolling underperformance
   - point-in-time ETF operability later pass
   - actual ETF-side block rule 여부 검토
   - richer benchmark contract
+  는 이번 phase closeout blocker가 아니라 다음 phase backlog로 이관
 
 ## 5. Strict Annual Family Promotion
 
@@ -258,7 +259,7 @@
   - `Compare & Portfolio Builder`도 같은 family surface를 사용하도록 정리
   - history / `Load Into Form`는 기존 concrete strategy key를 유지하면서 family + variant UI로 복원
   - `PHASE12_BACKTEST_STRATEGY_SURFACE_CONSOLIDATION_FIRST_PASS.md`
-- `in_progress` investability / turnover / benchmark / guardrail 보강
+- `completed` investability / turnover / benchmark / guardrail 보강
   - investability / turnover / benchmark는 first pass 완료
   - ETF current AUM / bid-ask spread policy first pass 완료
   - validation surface second pass 완료
@@ -282,6 +283,9 @@
   - `PHASE12_TEST_CHECKLIST.md`
 - `completed` roadmap / index / logs에 Phase 12 반영
 - `completed` ETF-first implementation 이후 checklist current code 기준 refresh
+- `completed` Phase 12 closeout 문서 작성
+  - `PHASE12_COMPLETION_SUMMARY.md`
+  - `PHASE12_NEXT_PHASE_PREPARATION.md`
 
 ## 현재 메모
 
@@ -301,9 +305,11 @@
   - `app/web/runtime/backtest.py`
   에 있고,
   이번 턴에서 정리한 것은 주로 `app/web/pages/backtest.py`의 strategy surface / orchestration 구조다.
-- next active implementation target은
-  ETF second-pass guardrail / underperformance contract 또는
-  point-in-time ETF operability later pass 쪽이다.
+- Phase 12는 practical closeout 상태로 본다.
+- next phase 후보는
+  ETF second-pass guardrail / underperformance contract,
+  point-in-time ETF operability later pass,
+  실전형 probation / monitoring workflow 쪽이다.
 - GTAA 쪽에서는 current default contract 기준으로
   `QQQ`, `IAU`, `XLE`가 가장 강한 additive direction으로 보이며,
   `QUAL`, `USMV`는 보조 broadener로 해석하는 편이 맞다.

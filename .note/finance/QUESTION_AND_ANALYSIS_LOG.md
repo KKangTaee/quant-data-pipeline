@@ -29,6 +29,23 @@ Do not copy full chat transcripts. Keep only the durable result.
 - Durable output:
   - `.note/finance/phase12/PHASE12_ETF_AUM_AND_SPREAD_POLICY_FIRST_PASS.md`
 
+### 2026-04-05 - Phase 12 closeout judgment
+- Request topic:
+  - finish Phase 12 all the way through official closeout
+- Interpreted goal:
+  - decide whether the remaining items are blockers or should move to next-phase backlog, and leave durable closeout/handoff documents
+- Result:
+  - judged that Phase 12 core goal was already achieved:
+    - strategy promotion contract fixed
+    - ETF strategy first-pass hardening completed
+    - strict annual family promotion surface completed
+    - quarterly family still clearly held as research-only
+  - decided that remaining ETF second-pass guardrail / PIT operability items are valuable but not closeout blockers
+  - closed Phase 12 as `practical completion` and prepared next-phase direction around deployment-readiness / probation / monitoring
+- Durable output:
+  - `.note/finance/phase12/PHASE12_COMPLETION_SUMMARY.md`
+  - `.note/finance/phase12/PHASE12_NEXT_PHASE_PREPARATION.md`
+
 ### 2026-03-11 - Finance package structure analysis
 - Request topic:
   - understand the `finance` package structure and summarize it for future conversations

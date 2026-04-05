@@ -138,6 +138,10 @@
   - current strategy family를 production-priority / baseline / research-only로 재분류한 audit 문서
 - `.note/finance/phase12/PHASE12_REAL_MONEY_PROMOTION_CONTRACT.md`
   - 실전 전략 승격에 필요한 공통 contract를 정리한 문서
+- `.note/finance/phase12/PHASE12_COMPLETION_SUMMARY.md`
+  - Phase 12 real-money strategy promotion workstream을 practical closeout 기준으로 정리한 요약 문서
+- `.note/finance/phase12/PHASE12_NEXT_PHASE_PREPARATION.md`
+  - Phase 12 이후 어떤 deployment-readiness / probation 방향으로 이어가는 것이 자연스러운지 정리한 handoff 문서
 - `.note/finance/phase12/PHASE12_ETF_REAL_MONEY_HARDENING_FIRST_PASS.md`
   - ETF 전략 3종에 `Minimum Price`, `Transaction Cost`, benchmark overlay, gross-vs-net result surface, history/prefill contract를 first pass로 연결한 구현 요약 문서
 - `.note/finance/phase12/PHASE12_ETF_AUM_AND_SPREAD_POLICY_FIRST_PASS.md`
