@@ -73,5 +73,6 @@
 - 즉:
   - strategy output은 그대로 두고
   - 실전 승격 판정만 더 엄격하게 만든 later pass다.
-- actual strategy-side drawdown guardrail은 아직 later backlog다.
-
+- actual strategy-side drawdown guardrail은 이 문서 범위 밖이었고,
+  이후 별도 first pass로 구현되었다.
+  - `PHASE12_STRICT_ANNUAL_DRAWDOWN_GUARDRAIL_ACTUAL_RULE_FIRST_PASS.md`

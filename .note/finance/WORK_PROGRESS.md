@@ -3452,3 +3452,34 @@ Keep entries append-only and concise.
   - Phase 12 checklist
   - comprehensive analysis
   - doc index
+
+### 2026-04-05 - Strict annual actual drawdown guardrail first pass was added
+
+- Added an optional actual strategy-side drawdown guardrail to strict annual family:
+  - `Drawdown Guardrail`
+  - `Drawdown Window (Months)`
+  - `Strategy DD Threshold (%)`
+  - `Drawdown Gap Threshold (%)`
+- Connected the new contract through:
+  - strict annual single strategy forms
+  - compare overrides
+  - history / `Load Into Form`
+  - runtime meta
+  - `Real-Money`
+  - `Execution Context`
+  - compare `Strategy Highlights`
+- Strategy rows now record:
+  - drawdown guardrail state / trigger
+  - strategy drawdown
+  - benchmark drawdown
+  - drawdown gap
+  - blocked ticker/count
+- Verified:
+  - `py_compile`
+  - page import smoke
+  - DB-backed strict annual quality / value / quality+value smoke
+- Added a dedicated Phase 12 implementation note and refreshed:
+  - current TODO board
+  - Phase 12 checklist
+  - comprehensive analysis
+  - doc index

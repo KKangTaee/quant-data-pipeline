@@ -6035,3 +6035,31 @@ Do not copy full chat transcripts. Keep only the durable result.
 - Durable implication:
   - strict annual promotion is now closer to a real-money review contract where drawdown severity matters directly
   - this is still a promotion/interpretation rule, not an actual strategy-side drawdown guardrail that changes rebalance behavior
+
+### 2026-04-05 - Strict annual should support an actual drawdown-based risk-off rule
+
+- Request topic:
+  - continue Phase 12 after drawdown-based promotion policy was already connected
+- Interpreted goal:
+  - move one step beyond promotion-only review and allow strict annual family to actually step aside when recent drawdown behavior is too severe
+- Result:
+  - added an optional actual guardrail to strict annual family:
+    - `Drawdown Guardrail`
+    - `Drawdown Window (Months)`
+    - `Strategy DD Threshold (%)`
+    - `Drawdown Gap Threshold (%)`
+  - rebalance can now move to cash when:
+    - trailing strategy max drawdown is too deep
+    - or drawdown gap vs benchmark is too large
+  - runtime/result/meta now record:
+    - guardrail state
+    - trigger count/share
+    - strategy drawdown
+    - benchmark drawdown
+    - drawdown gap
+    - blocked ticker/count
+- Durable implication:
+  - strict annual family now has both:
+    - promotion-side drawdown policy
+    - actual strategy-side drawdown guardrail
+  - this makes annual strict real-money review materially closer to a true operating contract instead of a read-only interpretation layer

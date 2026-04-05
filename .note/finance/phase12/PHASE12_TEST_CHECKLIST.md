@@ -139,6 +139,12 @@
   - `Worst Excess Threshold (%)`
   가 보이는지
 - annual strict form / compare block에
+  - `Drawdown Guardrail`
+  - `Drawdown Window (Months)`
+  - `Strategy DD Threshold (%)`
+  - `Drawdown Gap Threshold (%)`
+  가 보이는지
+- annual strict form / compare block에
   - `Max Strategy Drawdown (%)`
   - `Max Drawdown Gap vs Benchmark (%)`
   가 보이는지
@@ -175,6 +181,10 @@
   - `Max DD Gap`
   - `Actual DD Gap`
   - `Guardrail Policy Signals`
+  - `Drawdown Guardrail Contract`
+  - `Strategy DD Threshold`
+  - `DD Gap Threshold`
+  - `DD Guardrail Triggers`
   가 보이는지
 - `Execution Context`에도
   - validation 요약
@@ -213,7 +223,19 @@
   - `underperformance_guardrail_enabled`
   - `underperformance_guardrail_window_months`
   - `underperformance_guardrail_threshold`
+  - `drawdown_guardrail_enabled`
+  - `drawdown_guardrail_window_months`
+  - `drawdown_guardrail_strategy_threshold`
+  - `drawdown_guardrail_gap_threshold`
   가 복원되는지
+- `Result Table` 또는 export row에서
+  - `Drawdown Guardrail State`
+  - `Drawdown Guardrail Triggered`
+  - `Drawdown Guardrail Strategy Drawdown`
+  - `Drawdown Guardrail Benchmark Drawdown`
+  - `Drawdown Guardrail Gap`
+  - `Drawdown Blocked Count`
+  가 보이는지
 - `Real-Money` 탭에서
   - `Benchmark Policy`
   - `Policy Status`
@@ -250,9 +272,9 @@
 - liquidity policy / later-pass investability reinforcement도 now 추가되었다.
 - validation policy / broader promotion robustness later pass도 now 추가되었다.
 - portfolio guardrail policy / drawdown-based promotion reinforcement later pass도 now 추가되었다.
+- actual strategy-side drawdown guardrail first pass도 now 추가되었다.
 - 다만 아래는 아직 later pass다.
   - richer spread / AUM policy
-  - actual strategy-side drawdown guardrail
 
 ## 4. Static vs Dynamic Contract Boundary
 
@@ -279,8 +301,8 @@
 현재 구현 범위:
 - turnover / cost / rebalance impact는 ETF 전략군 first pass에서 구현됨
 - GTAA risk-off contract와 annual strict underperformance guardrail은 일부 구현되었지만
-  strict annual의 portfolio guardrail policy later pass는 now 구현되었고,
-  actual strategy-side drawdown guardrail은 아직 남아 있다.
+  strict annual의 portfolio guardrail policy later pass와
+  actual strategy-side drawdown guardrail first pass는 now 구현되었다.
 
 ## 7. Benchmark / Drawdown Validation
 
@@ -300,6 +322,7 @@
 - validation policy later pass도 구현되었음
 - broader benchmark contract later pass도 구현되었음
 - portfolio guardrail policy later pass도 구현되었음
+- actual strategy-side drawdown guardrail first pass도 구현되었음
 
 추가 확인:
 - strict annual 3종에서 `Benchmark Contract`가 보이는지 확인
@@ -314,6 +337,12 @@
   - `Max Drawdown Gap`
   - `Guardrail Policy Status`
   - `Drawdown Gap vs Benchmark`
+- strict annual 3종에서 actual drawdown guardrail contract가 보이는지 확인
+  - `Drawdown Guardrail`
+  - `Drawdown Window`
+  - `Strategy DD Threshold`
+  - `DD Gap Threshold`
+  - `DD Guardrail Triggers`
 - history `Load Into Form` 후 benchmark contract가 복원되는지 확인
 
 ## 8. History / Metadata / Handoff

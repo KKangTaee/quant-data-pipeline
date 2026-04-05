@@ -709,6 +709,15 @@ def _passes_min_history_months(
     return months_delta >= int(min_history_months)
 
 
+def _window_max_drawdown(values: list[float]) -> float:
+    series = pd.to_numeric(pd.Series(list(values), dtype="float64"), errors="coerce").dropna()
+    if series.empty:
+        return np.nan
+    running_max = series.cummax()
+    drawdown = series / running_max - 1.0
+    return float(drawdown.min())
+
+
 def quality_snapshot_equal_weight(
     price_dfs: dict,
     snapshot_by_date: dict,
@@ -734,6 +743,12 @@ def quality_snapshot_equal_weight(
     underperformance_guardrail_threshold: float = -0.10,
     underperformance_guardrail_benchmark: str | None = None,
     underperformance_guardrail_df: pd.DataFrame | None = None,
+    drawdown_guardrail_enabled: bool = False,
+    drawdown_guardrail_window_months: int = 12,
+    drawdown_guardrail_strategy_threshold: float = -0.35,
+    drawdown_guardrail_gap_threshold: float = 0.08,
+    drawdown_guardrail_benchmark: str | None = None,
+    drawdown_guardrail_df: pd.DataFrame | None = None,
     first_valid_price_dates: dict[str, pd.Timestamp | None] | None = None,
     avg_dollar_volume_20d_by_date: dict[str, dict[pd.Timestamp, float]] | None = None,
 ) -> pd.DataFrame:
@@ -769,6 +784,12 @@ def quality_snapshot_equal_weight(
         raise ValueError("underperformance_guardrail_window_months must be positive when the guardrail is enabled.")
     if underperformance_guardrail_enabled and underperformance_guardrail_df is None:
         raise ValueError("underperformance_guardrail_df is required when the guardrail is enabled.")
+    if drawdown_guardrail_enabled and drawdown_guardrail_window_months <= 0:
+        raise ValueError("drawdown_guardrail_window_months must be positive when the guardrail is enabled.")
+    if drawdown_guardrail_enabled and drawdown_guardrail_df is None:
+        raise ValueError("drawdown_guardrail_df is required when the guardrail is enabled.")
+    if drawdown_guardrail_enabled and drawdown_guardrail_gap_threshold < 0:
+        raise ValueError("drawdown_guardrail_gap_threshold must be non-negative when the guardrail is enabled.")
 
     tickers = list(price_dfs.keys())
     base_df = price_dfs[tickers[0]].sort_values("Date").reset_index(drop=True)
@@ -811,6 +832,18 @@ def quality_snapshot_equal_weight(
             guardrail_close = pd.to_numeric(guardrail_row.get("Close"), errors="coerce")
             guardrail_close_by_date[guardrail_date] = float(guardrail_close) if pd.notna(guardrail_close) else np.nan
 
+    drawdown_guardrail_close_by_date: dict[pd.Timestamp, float] = {}
+    if drawdown_guardrail_enabled and drawdown_guardrail_df is not None:
+        working_drawdown_guardrail = drawdown_guardrail_df.copy()
+        working_drawdown_guardrail["Date"] = pd.to_datetime(working_drawdown_guardrail["Date"], errors="coerce")
+        working_drawdown_guardrail = working_drawdown_guardrail.dropna(subset=["Date"]).sort_values("Date")
+        for _, guardrail_row in working_drawdown_guardrail.iterrows():
+            guardrail_date = pd.Timestamp(guardrail_row["Date"]).normalize()
+            guardrail_close = pd.to_numeric(guardrail_row.get("Close"), errors="coerce")
+            drawdown_guardrail_close_by_date[guardrail_date] = (
+                float(guardrail_close) if pd.notna(guardrail_close) else np.nan
+            )
+
     prev_close: dict[str, float | None] = {ticker: None for ticker in tickers}
     prev_total_balance = None
     held_tickers: list[str] = []
@@ -818,6 +851,7 @@ def quality_snapshot_equal_weight(
     cash = 0.0
     total_balance_history: list[float] = []
     guardrail_close_history: list[float] = []
+    drawdown_guardrail_close_history: list[float] = []
 
     rows = []
 
@@ -861,6 +895,7 @@ def quality_snapshot_equal_weight(
         overlay_rejected_tickers: list[str] = []
         regime_blocked_tickers: list[str] = []
         underperformance_blocked_tickers: list[str] = []
+        drawdown_blocked_tickers: list[str] = []
         history_excluded_tickers: list[str] = []
         liquidity_excluded_tickers: list[str] = []
 
@@ -919,6 +954,50 @@ def quality_snapshot_equal_weight(
                         guardrail_state = "unknown"
                 else:
                     guardrail_state = "unknown"
+
+        drawdown_guardrail_state = "off"
+        drawdown_guardrail_triggered = False
+        drawdown_guardrail_benchmark_close_now = np.nan
+        drawdown_guardrail_strategy_drawdown = np.nan
+        drawdown_guardrail_benchmark_drawdown = np.nan
+        drawdown_guardrail_gap = np.nan
+        if drawdown_guardrail_enabled:
+            drawdown_guardrail_benchmark_close_now = drawdown_guardrail_close_by_date.get(snapshot_key, np.nan)
+            if i < int(drawdown_guardrail_window_months):
+                drawdown_guardrail_state = "warming_up"
+            else:
+                lookback_index = i - int(drawdown_guardrail_window_months)
+                strategy_window_values = total_balance_history[lookback_index:i] + [float(total_balance)]
+                drawdown_guardrail_strategy_drawdown = _window_max_drawdown(strategy_window_values)
+                if pd.notna(drawdown_guardrail_benchmark_close_now):
+                    benchmark_window_values = drawdown_guardrail_close_history[lookback_index:i] + [
+                        float(drawdown_guardrail_benchmark_close_now)
+                    ]
+                    drawdown_guardrail_benchmark_drawdown = _window_max_drawdown(benchmark_window_values)
+                    if (
+                        pd.notna(drawdown_guardrail_strategy_drawdown)
+                        and pd.notna(drawdown_guardrail_benchmark_drawdown)
+                    ):
+                        drawdown_guardrail_gap = (
+                            float(drawdown_guardrail_benchmark_drawdown)
+                            - float(drawdown_guardrail_strategy_drawdown)
+                        )
+                breached_strategy = (
+                    pd.notna(drawdown_guardrail_strategy_drawdown)
+                    and float(drawdown_guardrail_strategy_drawdown)
+                    <= -abs(float(drawdown_guardrail_strategy_threshold))
+                )
+                breached_gap = (
+                    pd.notna(drawdown_guardrail_gap)
+                    and float(drawdown_guardrail_gap) > float(drawdown_guardrail_gap_threshold)
+                )
+                if breached_strategy or breached_gap:
+                    drawdown_guardrail_state = "risk_off"
+                    drawdown_guardrail_triggered = True
+                elif pd.notna(drawdown_guardrail_strategy_drawdown):
+                    drawdown_guardrail_state = "risk_on"
+                else:
+                    drawdown_guardrail_state = "unknown"
 
         if rebalancing:
             snapshot_df = snapshot_by_date.get(snapshot_key)
@@ -984,6 +1063,10 @@ def quality_snapshot_equal_weight(
                     underperformance_blocked_tickers = selected_snapshot["symbol"].tolist()
                     selected_snapshot = selected_snapshot.iloc[0:0].copy()
 
+                if drawdown_guardrail_enabled and not selected_snapshot.empty and drawdown_guardrail_state == "risk_off":
+                    drawdown_blocked_tickers = selected_snapshot["symbol"].tolist()
+                    selected_snapshot = selected_snapshot.iloc[0:0].copy()
+
                 held_tickers = selected_snapshot["symbol"].tolist()
                 selected_scores = selected_snapshot["Quality Score"].astype(float).tolist()
                 if not held_tickers:
@@ -1038,6 +1121,27 @@ def quality_snapshot_equal_weight(
                 "Underperformance Guardrail Excess Return": guardrail_excess_return,
                 "Underperformance Blocked Ticker": underperformance_blocked_tickers,
                 "Underperformance Blocked Count": len(underperformance_blocked_tickers),
+                "Drawdown Guardrail Enabled": drawdown_guardrail_enabled,
+                "Drawdown Guardrail Benchmark": (
+                    drawdown_guardrail_benchmark if drawdown_guardrail_enabled else np.nan
+                ),
+                "Drawdown Guardrail Window": (
+                    int(drawdown_guardrail_window_months) if drawdown_guardrail_enabled else np.nan
+                ),
+                "Drawdown Guardrail Strategy Threshold": (
+                    -abs(float(drawdown_guardrail_strategy_threshold)) if drawdown_guardrail_enabled else np.nan
+                ),
+                "Drawdown Guardrail Gap Threshold": (
+                    float(drawdown_guardrail_gap_threshold) if drawdown_guardrail_enabled else np.nan
+                ),
+                "Drawdown Guardrail State": drawdown_guardrail_state,
+                "Drawdown Guardrail Triggered": drawdown_guardrail_triggered,
+                "Drawdown Guardrail Benchmark Close": drawdown_guardrail_benchmark_close_now,
+                "Drawdown Guardrail Strategy Drawdown": drawdown_guardrail_strategy_drawdown,
+                "Drawdown Guardrail Benchmark Drawdown": drawdown_guardrail_benchmark_drawdown,
+                "Drawdown Guardrail Gap": drawdown_guardrail_gap,
+                "Drawdown Blocked Ticker": drawdown_blocked_tickers,
+                "Drawdown Blocked Count": len(drawdown_blocked_tickers),
                 "End Balance": (np.nan if i == 0 else end_balances),
                 "Next Balance": next_balances,
                 "Cash": float(cash),
@@ -1054,6 +1158,11 @@ def quality_snapshot_equal_weight(
         total_balance_history.append(float(total_balance))
         guardrail_close_history.append(
             float(guardrail_benchmark_close_now) if pd.notna(guardrail_benchmark_close_now) else np.nan
+        )
+        drawdown_guardrail_close_history.append(
+            float(drawdown_guardrail_benchmark_close_now)
+            if pd.notna(drawdown_guardrail_benchmark_close_now)
+            else np.nan
         )
 
     return pd.DataFrame(rows)

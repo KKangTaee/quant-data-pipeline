@@ -71,6 +71,10 @@ from finance.sample import (
     GTAA_DEFAULT_TREND_FILTER_WINDOW,
     STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M,
     STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS,
+    STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_ENABLED,
+    STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD,
+    STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD,
+    STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
     STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED,
     STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD,
     STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
@@ -581,6 +585,18 @@ def _init_backtest_state() -> None:
         st.session_state["qss_underperformance_guardrail_window_months"] = STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS
     if "qss_underperformance_guardrail_threshold" not in st.session_state:
         st.session_state["qss_underperformance_guardrail_threshold"] = STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD * 100.0
+    if "qss_drawdown_guardrail_enabled" not in st.session_state:
+        st.session_state["qss_drawdown_guardrail_enabled"] = STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_ENABLED
+    if "qss_drawdown_guardrail_window_months" not in st.session_state:
+        st.session_state["qss_drawdown_guardrail_window_months"] = STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_WINDOW_MONTHS
+    if "qss_drawdown_guardrail_strategy_threshold" not in st.session_state:
+        st.session_state["qss_drawdown_guardrail_strategy_threshold"] = (
+            STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD * 100.0
+        )
+    if "qss_drawdown_guardrail_gap_threshold" not in st.session_state:
+        st.session_state["qss_drawdown_guardrail_gap_threshold"] = (
+            STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD * 100.0
+        )
     if "qss_min_history_months_filter" not in st.session_state:
         st.session_state["qss_min_history_months_filter"] = STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS
     if "qss_min_avg_dollar_volume_20d_m_filter" not in st.session_state:
@@ -627,6 +643,18 @@ def _init_backtest_state() -> None:
         st.session_state["vss_underperformance_guardrail_window_months"] = STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS
     if "vss_underperformance_guardrail_threshold" not in st.session_state:
         st.session_state["vss_underperformance_guardrail_threshold"] = STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD * 100.0
+    if "vss_drawdown_guardrail_enabled" not in st.session_state:
+        st.session_state["vss_drawdown_guardrail_enabled"] = STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_ENABLED
+    if "vss_drawdown_guardrail_window_months" not in st.session_state:
+        st.session_state["vss_drawdown_guardrail_window_months"] = STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_WINDOW_MONTHS
+    if "vss_drawdown_guardrail_strategy_threshold" not in st.session_state:
+        st.session_state["vss_drawdown_guardrail_strategy_threshold"] = (
+            STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD * 100.0
+        )
+    if "vss_drawdown_guardrail_gap_threshold" not in st.session_state:
+        st.session_state["vss_drawdown_guardrail_gap_threshold"] = (
+            STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD * 100.0
+        )
     if "vss_min_history_months_filter" not in st.session_state:
         st.session_state["vss_min_history_months_filter"] = STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS
     if "vss_min_avg_dollar_volume_20d_m_filter" not in st.session_state:
@@ -673,6 +701,18 @@ def _init_backtest_state() -> None:
         st.session_state["qvss_underperformance_guardrail_window_months"] = STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS
     if "qvss_underperformance_guardrail_threshold" not in st.session_state:
         st.session_state["qvss_underperformance_guardrail_threshold"] = STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD * 100.0
+    if "qvss_drawdown_guardrail_enabled" not in st.session_state:
+        st.session_state["qvss_drawdown_guardrail_enabled"] = STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_ENABLED
+    if "qvss_drawdown_guardrail_window_months" not in st.session_state:
+        st.session_state["qvss_drawdown_guardrail_window_months"] = STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_WINDOW_MONTHS
+    if "qvss_drawdown_guardrail_strategy_threshold" not in st.session_state:
+        st.session_state["qvss_drawdown_guardrail_strategy_threshold"] = (
+            STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD * 100.0
+        )
+    if "qvss_drawdown_guardrail_gap_threshold" not in st.session_state:
+        st.session_state["qvss_drawdown_guardrail_gap_threshold"] = (
+            STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD * 100.0
+        )
     if "qvss_min_history_months_filter" not in st.session_state:
         st.session_state["qvss_min_history_months_filter"] = STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS
     if "qvss_min_avg_dollar_volume_20d_m_filter" not in st.session_state:
@@ -1723,6 +1763,67 @@ def _render_underperformance_guardrail_inputs(
     return enabled, window_months, threshold_percent / 100.0
 
 
+def _render_drawdown_guardrail_inputs(
+    *,
+    key_prefix: str,
+    label_prefix: str = "",
+) -> tuple[bool, int, float, float]:
+    st.markdown(f"##### {label_prefix}Drawdown Guardrail")
+    st.caption(
+        "전략의 최근 낙폭이 너무 깊어지거나 benchmark보다 낙폭이 지나치게 나빠지면, "
+        "다음 리밸런싱 구간은 현금으로 물러나는 실험적 guardrail입니다."
+    )
+    enabled = st.checkbox(
+        "Enable",
+        value=STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_ENABLED,
+        key=f"{key_prefix}_drawdown_guardrail_enabled",
+    )
+    left, center, right = st.columns(3, gap="small")
+    with left:
+        window_months = int(
+            st.number_input(
+                f"{label_prefix}Drawdown Window (Months)",
+                min_value=3,
+                max_value=36,
+                value=STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
+                step=1,
+                key=f"{key_prefix}_drawdown_guardrail_window_months",
+                help="전략과 benchmark의 trailing drawdown을 몇 개월 기준으로 볼지 정합니다.",
+            )
+        )
+    with center:
+        strategy_threshold_percent = float(
+            st.number_input(
+                f"{label_prefix}Strategy DD Threshold (%)",
+                min_value=-80.0,
+                max_value=0.0,
+                value=float(STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD) * 100.0,
+                step=1.0,
+                key=f"{key_prefix}_drawdown_guardrail_strategy_threshold",
+                help="전략의 trailing drawdown이 이 값보다 더 깊어지면 guardrail을 켭니다.",
+            )
+        )
+    with right:
+        gap_threshold_percent = float(
+            st.number_input(
+                f"{label_prefix}Drawdown Gap Threshold (%)",
+                min_value=0.0,
+                max_value=50.0,
+                value=float(STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD) * 100.0,
+                step=1.0,
+                key=f"{key_prefix}_drawdown_guardrail_gap_threshold",
+                help="전략 drawdown이 benchmark보다 이 값 이상 더 나빠지면 guardrail을 켭니다.",
+            )
+        )
+    st.caption("Enable이 꺼져 있어도 Window와 Threshold는 미리 조정해둘 수 있습니다.")
+    return (
+        enabled,
+        window_months,
+        strategy_threshold_percent / 100.0,
+        gap_threshold_percent / 100.0,
+    )
+
+
 def _gtaa_return_col_from_months(months: int) -> str:
     return f"{int(months)}MReturn"
 
@@ -2387,6 +2488,10 @@ def _strategy_compare_defaults(strategy_name: str) -> dict:
                 "underperformance_guardrail_enabled": STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED,
                 "underperformance_guardrail_window_months": STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
                 "underperformance_guardrail_threshold": STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD,
+                "drawdown_guardrail_enabled": STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_ENABLED,
+                "drawdown_guardrail_window_months": STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
+                "drawdown_guardrail_strategy_threshold": STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD,
+                "drawdown_guardrail_gap_threshold": STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD,
             },
         }
     if strategy_name == "Quality Snapshot (Strict Quarterly Prototype)":
@@ -2422,6 +2527,10 @@ def _strategy_compare_defaults(strategy_name: str) -> dict:
                 "underperformance_guardrail_enabled": STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED,
                 "underperformance_guardrail_window_months": STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
                 "underperformance_guardrail_threshold": STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD,
+                "drawdown_guardrail_enabled": STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_ENABLED,
+                "drawdown_guardrail_window_months": STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
+                "drawdown_guardrail_strategy_threshold": STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD,
+                "drawdown_guardrail_gap_threshold": STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD,
             },
         }
     if strategy_name == "Value Snapshot (Strict Quarterly Prototype)":
@@ -2458,6 +2567,10 @@ def _strategy_compare_defaults(strategy_name: str) -> dict:
                 "underperformance_guardrail_enabled": STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED,
                 "underperformance_guardrail_window_months": STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
                 "underperformance_guardrail_threshold": STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD,
+                "drawdown_guardrail_enabled": STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_ENABLED,
+                "drawdown_guardrail_window_months": STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
+                "drawdown_guardrail_strategy_threshold": STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD,
+                "drawdown_guardrail_gap_threshold": STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD,
             },
         }
     if strategy_name == "Quality + Value Snapshot (Strict Quarterly Prototype)":
@@ -3152,6 +3265,32 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
                     f"`{float(meta.get('underperformance_guardrail_trigger_share')):.2%}` of recorded rows."
                 )
 
+        if meta.get("drawdown_guardrail_enabled"):
+            st.markdown("##### Drawdown Guardrail Contract")
+            drawdown_guardrail_cols = st.columns(5, gap="small")
+            drawdown_guardrail_cols[0].metric("Guardrail", "ON")
+            drawdown_guardrail_cols[1].metric(
+                "Window",
+                f"{int(meta.get('drawdown_guardrail_window_months') or STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_WINDOW_MONTHS)}M",
+            )
+            drawdown_guardrail_cols[2].metric(
+                "Strategy DD Threshold",
+                f"{float(meta.get('drawdown_guardrail_strategy_threshold') or STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD):.0%}",
+            )
+            drawdown_guardrail_cols[3].metric(
+                "DD Gap Threshold",
+                f"{float(meta.get('drawdown_guardrail_gap_threshold') or STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD):.0%}",
+            )
+            drawdown_guardrail_cols[4].metric(
+                "Trigger Count",
+                str(int(meta.get("drawdown_guardrail_trigger_count") or 0)),
+            )
+            if meta.get("drawdown_guardrail_trigger_share") is not None:
+                st.caption(
+                    "Drawdown guardrail triggered on "
+                    f"`{float(meta.get('drawdown_guardrail_trigger_share')):.2%}` of recorded rows."
+                )
+
         if meta.get("promotion_decision"):
             st.markdown("##### Promotion Decision")
             decision = str(meta.get("promotion_decision") or "-")
@@ -3267,6 +3406,7 @@ def _build_compare_highlight_rows(bundles: list[dict]) -> pd.DataFrame:
                 "Validation": meta.get("validation_status"),
                 "Promotion": meta.get("promotion_decision"),
                 "Guardrail Triggers": meta.get("underperformance_guardrail_trigger_count"),
+                "DD Guardrail Triggers": meta.get("drawdown_guardrail_trigger_count"),
                 "Strategy Max DD": meta.get("strategy_max_drawdown"),
                 "Drawdown Gap": meta.get("drawdown_gap_vs_benchmark"),
                 "Worst Rolling Excess": meta.get("rolling_underperformance_worst_excess_return"),
@@ -3553,6 +3693,13 @@ def _render_compare_results() -> None:
                     "promotion_min_worst_rolling_excess_return": meta.get("promotion_min_worst_rolling_excess_return"),
                     "promotion_max_strategy_drawdown": meta.get("promotion_max_strategy_drawdown"),
                     "promotion_max_drawdown_gap_vs_benchmark": meta.get("promotion_max_drawdown_gap_vs_benchmark"),
+                    "underperformance_guardrail_enabled": meta.get("underperformance_guardrail_enabled"),
+                    "underperformance_guardrail_window_months": meta.get("underperformance_guardrail_window_months"),
+                    "underperformance_guardrail_threshold": meta.get("underperformance_guardrail_threshold"),
+                    "drawdown_guardrail_enabled": meta.get("drawdown_guardrail_enabled"),
+                    "drawdown_guardrail_window_months": meta.get("drawdown_guardrail_window_months"),
+                    "drawdown_guardrail_strategy_threshold": meta.get("drawdown_guardrail_strategy_threshold"),
+                    "drawdown_guardrail_gap_threshold": meta.get("drawdown_guardrail_gap_threshold"),
                     "avg_turnover": meta.get("avg_turnover"),
                     "trend_filter": (
                         f"MA{meta.get('trend_filter_window', STRICT_TREND_FILTER_DEFAULT_WINDOW)}"
@@ -4181,6 +4328,20 @@ def _build_history_payload(record: dict[str, Any]) -> dict[str, Any] | None:
         payload["underperformance_guardrail_threshold"] = float(
             record.get("underperformance_guardrail_threshold") or STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD
         )
+    if record.get("drawdown_guardrail_enabled") is not None:
+        payload["drawdown_guardrail_enabled"] = bool(record.get("drawdown_guardrail_enabled"))
+    if record.get("drawdown_guardrail_window_months") is not None:
+        payload["drawdown_guardrail_window_months"] = int(
+            record.get("drawdown_guardrail_window_months") or STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_WINDOW_MONTHS
+        )
+    if record.get("drawdown_guardrail_strategy_threshold") is not None:
+        payload["drawdown_guardrail_strategy_threshold"] = float(
+            record.get("drawdown_guardrail_strategy_threshold") or STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD
+        )
+    if record.get("drawdown_guardrail_gap_threshold") is not None:
+        payload["drawdown_guardrail_gap_threshold"] = float(
+            record.get("drawdown_guardrail_gap_threshold") or STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD
+        )
     if record.get("score_lookback_months") is not None:
         payload["score_lookback_months"] = [int(value) for value in list(record.get("score_lookback_months") or [])]
     if record.get("score_return_columns") is not None:
@@ -4402,6 +4563,13 @@ def _build_prefill_summary_lines(payload: dict[str, Any] | None) -> list[str]:
             f"`{payload.get('underperformance_guardrail_window_months', STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS)}M`, "
             f"`{float(payload.get('underperformance_guardrail_threshold', STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD)):.0%}`"
         )
+    if payload.get("drawdown_guardrail_enabled"):
+        lines.append(
+            "Drawdown Guardrail: "
+            f"`{payload.get('drawdown_guardrail_window_months', STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_WINDOW_MONTHS)}M`, "
+            f"`{float(payload.get('drawdown_guardrail_strategy_threshold', STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD)):.0%}`, "
+            f"`gap {float(payload.get('drawdown_guardrail_gap_threshold', STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD)):.0%}`"
+        )
     if payload.get("score_lookback_months"):
         selected_horizons = [f"{int(months)}M" for months in list(payload.get("score_lookback_months") or [])]
         lines.append(f"Score Horizons: `{', '.join(selected_horizons)}`")
@@ -4557,6 +4725,14 @@ def _bundle_to_saved_strategy_override(bundle: dict[str, Any]) -> dict[str, Any]
         override["underperformance_guardrail_window_months"] = int(meta.get("underperformance_guardrail_window_months"))
     if meta.get("underperformance_guardrail_threshold") is not None:
         override["underperformance_guardrail_threshold"] = float(meta.get("underperformance_guardrail_threshold"))
+    if meta.get("drawdown_guardrail_enabled") is not None:
+        override["drawdown_guardrail_enabled"] = bool(meta.get("drawdown_guardrail_enabled"))
+    if meta.get("drawdown_guardrail_window_months") is not None:
+        override["drawdown_guardrail_window_months"] = int(meta.get("drawdown_guardrail_window_months"))
+    if meta.get("drawdown_guardrail_strategy_threshold") is not None:
+        override["drawdown_guardrail_strategy_threshold"] = float(meta.get("drawdown_guardrail_strategy_threshold"))
+    if meta.get("drawdown_guardrail_gap_threshold") is not None:
+        override["drawdown_guardrail_gap_threshold"] = float(meta.get("drawdown_guardrail_gap_threshold"))
     return override
 
 
@@ -4750,6 +4926,18 @@ def _apply_compare_strategy_prefill(strategy_name: str, override: dict[str, Any]
     )
     st.session_state[f"compare_{key_prefix}_underperformance_guardrail_threshold"] = float(
         (override.get("underperformance_guardrail_threshold") or STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD) * 100.0
+    )
+    st.session_state[f"compare_{key_prefix}_drawdown_guardrail_enabled"] = bool(
+        override.get("drawdown_guardrail_enabled", STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_ENABLED)
+    )
+    st.session_state[f"compare_{key_prefix}_drawdown_guardrail_window_months"] = int(
+        override.get("drawdown_guardrail_window_months") or STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_WINDOW_MONTHS
+    )
+    st.session_state[f"compare_{key_prefix}_drawdown_guardrail_strategy_threshold"] = float(
+        (override.get("drawdown_guardrail_strategy_threshold") or STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD) * 100.0
+    )
+    st.session_state[f"compare_{key_prefix}_drawdown_guardrail_gap_threshold"] = float(
+        (override.get("drawdown_guardrail_gap_threshold") or STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD) * 100.0
     )
     st.session_state[f"compare_{key_prefix}_min_price_filter"] = float(
         override.get("min_price_filter") or ETF_REAL_MONEY_DEFAULT_MIN_PRICE
@@ -5034,6 +5222,18 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         st.session_state["qss_underperformance_guardrail_threshold"] = float(
             (payload.get("underperformance_guardrail_threshold") or STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD) * 100.0
         )
+        st.session_state["qss_drawdown_guardrail_enabled"] = bool(
+            payload.get("drawdown_guardrail_enabled", STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_ENABLED)
+        )
+        st.session_state["qss_drawdown_guardrail_window_months"] = int(
+            payload.get("drawdown_guardrail_window_months") or STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_WINDOW_MONTHS
+        )
+        st.session_state["qss_drawdown_guardrail_strategy_threshold"] = float(
+            (payload.get("drawdown_guardrail_strategy_threshold") or STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD) * 100.0
+        )
+        st.session_state["qss_drawdown_guardrail_gap_threshold"] = float(
+            (payload.get("drawdown_guardrail_gap_threshold") or STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD) * 100.0
+        )
         st.session_state["qss_min_price_filter"] = float(payload.get("min_price_filter") or ETF_REAL_MONEY_DEFAULT_MIN_PRICE)
         st.session_state["qss_min_history_months_filter"] = int(
             payload.get("min_history_months_filter") or STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS
@@ -5117,6 +5317,18 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         )
         st.session_state["vss_underperformance_guardrail_threshold"] = float(
             (payload.get("underperformance_guardrail_threshold") or STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD) * 100.0
+        )
+        st.session_state["vss_drawdown_guardrail_enabled"] = bool(
+            payload.get("drawdown_guardrail_enabled", STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_ENABLED)
+        )
+        st.session_state["vss_drawdown_guardrail_window_months"] = int(
+            payload.get("drawdown_guardrail_window_months") or STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_WINDOW_MONTHS
+        )
+        st.session_state["vss_drawdown_guardrail_strategy_threshold"] = float(
+            (payload.get("drawdown_guardrail_strategy_threshold") or STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD) * 100.0
+        )
+        st.session_state["vss_drawdown_guardrail_gap_threshold"] = float(
+            (payload.get("drawdown_guardrail_gap_threshold") or STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD) * 100.0
         )
         st.session_state["vss_min_price_filter"] = float(payload.get("min_price_filter") or ETF_REAL_MONEY_DEFAULT_MIN_PRICE)
         st.session_state["vss_min_history_months_filter"] = int(
@@ -5202,6 +5414,18 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         )
         st.session_state["qvss_underperformance_guardrail_threshold"] = float(
             (payload.get("underperformance_guardrail_threshold") or STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD) * 100.0
+        )
+        st.session_state["qvss_drawdown_guardrail_enabled"] = bool(
+            payload.get("drawdown_guardrail_enabled", STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_ENABLED)
+        )
+        st.session_state["qvss_drawdown_guardrail_window_months"] = int(
+            payload.get("drawdown_guardrail_window_months") or STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_WINDOW_MONTHS
+        )
+        st.session_state["qvss_drawdown_guardrail_strategy_threshold"] = float(
+            (payload.get("drawdown_guardrail_strategy_threshold") or STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD) * 100.0
+        )
+        st.session_state["qvss_drawdown_guardrail_gap_threshold"] = float(
+            (payload.get("drawdown_guardrail_gap_threshold") or STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD) * 100.0
         )
         st.session_state["qvss_min_price_filter"] = float(payload.get("min_price_filter") or ETF_REAL_MONEY_DEFAULT_MIN_PRICE)
         st.session_state["qvss_min_history_months_filter"] = int(
@@ -5898,6 +6122,13 @@ def _render_persistent_backtest_history() -> None:
                     "market_regime_enabled": selected_record.get("market_regime_enabled"),
                     "market_regime_window": selected_record.get("market_regime_window"),
                     "market_regime_benchmark": selected_record.get("market_regime_benchmark"),
+                    "underperformance_guardrail_enabled": selected_record.get("underperformance_guardrail_enabled"),
+                    "underperformance_guardrail_window_months": selected_record.get("underperformance_guardrail_window_months"),
+                    "underperformance_guardrail_threshold": selected_record.get("underperformance_guardrail_threshold"),
+                    "drawdown_guardrail_enabled": selected_record.get("drawdown_guardrail_enabled"),
+                    "drawdown_guardrail_window_months": selected_record.get("drawdown_guardrail_window_months"),
+                    "drawdown_guardrail_strategy_threshold": selected_record.get("drawdown_guardrail_strategy_threshold"),
+                    "drawdown_guardrail_gap_threshold": selected_record.get("drawdown_guardrail_gap_threshold"),
                     "snapshot_source": selected_record.get("snapshot_source"),
                     "universe_contract": selected_record.get("universe_contract"),
                     "dynamic_target_size": selected_record.get("dynamic_target_size"),
@@ -6109,6 +6340,10 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> None:
                     underperformance_guardrail_enabled=payload.get("underperformance_guardrail_enabled", STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED),
                     underperformance_guardrail_window_months=payload.get("underperformance_guardrail_window_months", STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS),
                     underperformance_guardrail_threshold=payload.get("underperformance_guardrail_threshold", STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD),
+                    drawdown_guardrail_enabled=payload.get("drawdown_guardrail_enabled", STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_ENABLED),
+                    drawdown_guardrail_window_months=payload.get("drawdown_guardrail_window_months", STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_WINDOW_MONTHS),
+                    drawdown_guardrail_strategy_threshold=payload.get("drawdown_guardrail_strategy_threshold", STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD),
+                    drawdown_guardrail_gap_threshold=payload.get("drawdown_guardrail_gap_threshold", STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD),
                     universe_mode=payload["universe_mode"],
                     preset_name=payload["preset_name"],
                     universe_contract=payload.get("universe_contract", STATIC_MANAGED_RESEARCH_UNIVERSE),
@@ -6167,6 +6402,10 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> None:
                     underperformance_guardrail_enabled=payload.get("underperformance_guardrail_enabled", STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED),
                     underperformance_guardrail_window_months=payload.get("underperformance_guardrail_window_months", STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS),
                     underperformance_guardrail_threshold=payload.get("underperformance_guardrail_threshold", STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD),
+                    drawdown_guardrail_enabled=payload.get("drawdown_guardrail_enabled", STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_ENABLED),
+                    drawdown_guardrail_window_months=payload.get("drawdown_guardrail_window_months", STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_WINDOW_MONTHS),
+                    drawdown_guardrail_strategy_threshold=payload.get("drawdown_guardrail_strategy_threshold", STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD),
+                    drawdown_guardrail_gap_threshold=payload.get("drawdown_guardrail_gap_threshold", STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD),
                     universe_mode=payload["universe_mode"],
                     preset_name=payload["preset_name"],
                     universe_contract=payload.get("universe_contract", STATIC_MANAGED_RESEARCH_UNIVERSE),
@@ -6226,6 +6465,10 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> None:
                     underperformance_guardrail_enabled=payload.get("underperformance_guardrail_enabled", STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED),
                     underperformance_guardrail_window_months=payload.get("underperformance_guardrail_window_months", STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS),
                     underperformance_guardrail_threshold=payload.get("underperformance_guardrail_threshold", STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD),
+                    drawdown_guardrail_enabled=payload.get("drawdown_guardrail_enabled", STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_ENABLED),
+                    drawdown_guardrail_window_months=payload.get("drawdown_guardrail_window_months", STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_WINDOW_MONTHS),
+                    drawdown_guardrail_strategy_threshold=payload.get("drawdown_guardrail_strategy_threshold", STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD),
+                    drawdown_guardrail_gap_threshold=payload.get("drawdown_guardrail_gap_threshold", STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD),
                     universe_mode=payload["universe_mode"],
                     preset_name=payload["preset_name"],
                     universe_contract=payload.get("universe_contract", STATIC_MANAGED_RESEARCH_UNIVERSE),
@@ -6927,6 +7170,15 @@ def _render_quality_snapshot_strict_annual_form() -> None:
                 key_prefix="qss",
                 label_prefix="Strict Annual Quality ",
             )
+            (
+                drawdown_guardrail_enabled,
+                drawdown_guardrail_window_months,
+                drawdown_guardrail_strategy_threshold,
+                drawdown_guardrail_gap_threshold,
+            ) = _render_drawdown_guardrail_inputs(
+                key_prefix="qss",
+                label_prefix="Strict Annual Quality ",
+            )
 
         submitted = st.form_submit_button("Run Strict Annual Quality Backtest", use_container_width=True)
 
@@ -6979,6 +7231,10 @@ def _render_quality_snapshot_strict_annual_form() -> None:
         "underperformance_guardrail_enabled": bool(underperformance_guardrail_enabled),
         "underperformance_guardrail_window_months": int(underperformance_guardrail_window_months),
         "underperformance_guardrail_threshold": float(underperformance_guardrail_threshold),
+        "drawdown_guardrail_enabled": bool(drawdown_guardrail_enabled),
+        "drawdown_guardrail_window_months": int(drawdown_guardrail_window_months),
+        "drawdown_guardrail_strategy_threshold": float(drawdown_guardrail_strategy_threshold),
+        "drawdown_guardrail_gap_threshold": float(drawdown_guardrail_gap_threshold),
         "universe_contract": universe_contract,
         "dynamic_candidate_tickers": dynamic_candidate_tickers,
         "dynamic_target_size": dynamic_target_size,
@@ -7508,6 +7764,15 @@ def _render_value_snapshot_strict_annual_form() -> None:
                 key_prefix="vss",
                 label_prefix="Strict Annual Value ",
             )
+            (
+                drawdown_guardrail_enabled,
+                drawdown_guardrail_window_months,
+                drawdown_guardrail_strategy_threshold,
+                drawdown_guardrail_gap_threshold,
+            ) = _render_drawdown_guardrail_inputs(
+                key_prefix="vss",
+                label_prefix="Strict Annual Value ",
+            )
 
         submitted = st.form_submit_button("Run Strict Annual Value Backtest", use_container_width=True)
 
@@ -7561,6 +7826,10 @@ def _render_value_snapshot_strict_annual_form() -> None:
         "underperformance_guardrail_enabled": bool(underperformance_guardrail_enabled),
         "underperformance_guardrail_window_months": int(underperformance_guardrail_window_months),
         "underperformance_guardrail_threshold": float(underperformance_guardrail_threshold),
+        "drawdown_guardrail_enabled": bool(drawdown_guardrail_enabled),
+        "drawdown_guardrail_window_months": int(drawdown_guardrail_window_months),
+        "drawdown_guardrail_strategy_threshold": float(drawdown_guardrail_strategy_threshold),
+        "drawdown_guardrail_gap_threshold": float(drawdown_guardrail_gap_threshold),
         "universe_contract": universe_contract,
         "dynamic_candidate_tickers": dynamic_candidate_tickers,
         "dynamic_target_size": dynamic_target_size,
@@ -7924,6 +8193,15 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
                 key_prefix="qvss",
                 label_prefix="Strict Annual Multi-Factor ",
             )
+            (
+                drawdown_guardrail_enabled,
+                drawdown_guardrail_window_months,
+                drawdown_guardrail_strategy_threshold,
+                drawdown_guardrail_gap_threshold,
+            ) = _render_drawdown_guardrail_inputs(
+                key_prefix="qvss",
+                label_prefix="Strict Annual Multi-Factor ",
+            )
 
         submitted = st.form_submit_button("Run Strict Annual Quality + Value Backtest", use_container_width=True)
 
@@ -7980,6 +8258,10 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
         "underperformance_guardrail_enabled": bool(underperformance_guardrail_enabled),
         "underperformance_guardrail_window_months": int(underperformance_guardrail_window_months),
         "underperformance_guardrail_threshold": float(underperformance_guardrail_threshold),
+        "drawdown_guardrail_enabled": bool(drawdown_guardrail_enabled),
+        "drawdown_guardrail_window_months": int(drawdown_guardrail_window_months),
+        "drawdown_guardrail_strategy_threshold": float(drawdown_guardrail_strategy_threshold),
+        "drawdown_guardrail_gap_threshold": float(drawdown_guardrail_gap_threshold),
         "universe_contract": universe_contract,
         "dynamic_candidate_tickers": dynamic_candidate_tickers,
         "dynamic_target_size": dynamic_target_size,
@@ -8470,6 +8752,15 @@ def render_backtest_tab() -> None:
                             key_prefix="compare_qss",
                             label_prefix="Strict Annual Quality ",
                         )
+                        (
+                            compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["drawdown_guardrail_enabled"],
+                            compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["drawdown_guardrail_window_months"],
+                            compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["drawdown_guardrail_strategy_threshold"],
+                            compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["drawdown_guardrail_gap_threshold"],
+                        ) = _render_drawdown_guardrail_inputs(
+                            key_prefix="compare_qss",
+                            label_prefix="Strict Annual Quality ",
+                        )
 
                 if quality_compare_strategy_name == "Quality Snapshot (Strict Quarterly Prototype)":
                     with st.expander("Quality Snapshot (Strict Quarterly Prototype)", expanded=False):
@@ -8680,6 +8971,15 @@ def render_backtest_tab() -> None:
                             compare_strategy_overrides["Value Snapshot (Strict Annual)"]["underperformance_guardrail_window_months"],
                             compare_strategy_overrides["Value Snapshot (Strict Annual)"]["underperformance_guardrail_threshold"],
                         ) = _render_underperformance_guardrail_inputs(
+                            key_prefix="compare_vss",
+                            label_prefix="Strict Annual Value ",
+                        )
+                        (
+                            compare_strategy_overrides["Value Snapshot (Strict Annual)"]["drawdown_guardrail_enabled"],
+                            compare_strategy_overrides["Value Snapshot (Strict Annual)"]["drawdown_guardrail_window_months"],
+                            compare_strategy_overrides["Value Snapshot (Strict Annual)"]["drawdown_guardrail_strategy_threshold"],
+                            compare_strategy_overrides["Value Snapshot (Strict Annual)"]["drawdown_guardrail_gap_threshold"],
+                        ) = _render_drawdown_guardrail_inputs(
                             key_prefix="compare_vss",
                             label_prefix="Strict Annual Value ",
                         )
@@ -8899,6 +9199,15 @@ def render_backtest_tab() -> None:
                             compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["underperformance_guardrail_window_months"],
                             compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["underperformance_guardrail_threshold"],
                         ) = _render_underperformance_guardrail_inputs(
+                            key_prefix="compare_qvss",
+                            label_prefix="Strict Annual Multi-Factor ",
+                        )
+                        (
+                            compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["drawdown_guardrail_enabled"],
+                            compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["drawdown_guardrail_window_months"],
+                            compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["drawdown_guardrail_strategy_threshold"],
+                            compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["drawdown_guardrail_gap_threshold"],
+                        ) = _render_drawdown_guardrail_inputs(
                             key_prefix="compare_qvss",
                             label_prefix="Strict Annual Multi-Factor ",
                         )

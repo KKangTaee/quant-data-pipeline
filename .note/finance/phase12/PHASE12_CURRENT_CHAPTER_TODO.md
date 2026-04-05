@@ -228,6 +228,15 @@
   - promotion decision이 portfolio guardrail policy 상태를 함께 반영
   - single / compare / history / meta surface까지 contract 연결
   - `PHASE12_STRICT_ANNUAL_PORTFOLIO_GUARDRAIL_POLICY_AND_PROMOTION_REINFORCEMENT_LATER_PASS.md`
+- `completed` strict annual drawdown guardrail actual-rule first pass 구현
+  - `Drawdown Guardrail`
+  - `Drawdown Window (Months)`
+  - `Strategy DD Threshold (%)`
+  - `Drawdown Gap Threshold (%)`
+  - trailing strategy drawdown 또는 benchmark 대비 drawdown gap가 임계치를 넘으면
+    해당 rebalance는 cash로 유지
+  - single / compare / history / meta / result row까지 contract 연결
+  - `PHASE12_STRICT_ANNUAL_DRAWDOWN_GUARDRAIL_ACTUAL_RULE_FIRST_PASS.md`
 - `completed` backtest strategy surface consolidation first pass 구현
   - 새 `app/web/pages/backtest_strategy_catalog.py`에 family / variant / concrete strategy key 매핑 분리
   - `Single Strategy` top-level 목록을
@@ -246,7 +255,8 @@
   - minimum-history investability proxy와 benchmark spread/coverage first pass도 now 완료
   - 20D average dollar volume liquidity proxy first pass도 now 완료
   - portfolio guardrail policy later pass도 now 완료
-  - 남은 큰 later backlog는 richer spread / AUM policy와 actual strategy-side drawdown guardrail
+  - actual strategy-side drawdown guardrail first pass도 now 완료
+  - 남은 큰 later backlog는 richer spread / AUM policy다
   - richer benchmark policy / stricter promotion reinforcement later pass도 now 완료
   - liquidity policy / later-pass investability reinforcement도 now 완료
   - validation-policy 기반 broader promotion robustness도 now 완료
@@ -280,7 +290,7 @@
   에 있고,
   이번 턴에서 정리한 것은 주로 `app/web/pages/backtest.py`의 strategy surface / orchestration 구조다.
 - next active implementation target은
-  strict annual broader benchmark contract / broader promotion robustness 쪽이다.
+  strict annual richer spread / AUM policy 쪽이다.
 - GTAA 쪽에서는 current default contract 기준으로
   `QQQ`, `IAU`, `XLE`가 가장 강한 additive direction으로 보이며,
   `QUAL`, `USMV`는 보조 broadener로 해석하는 편이 맞다.

@@ -28,6 +28,10 @@ from finance.sample import (
     GTAA_DEFAULT_SCORE_WEIGHTS,
     HISTORICAL_DYNAMIC_PIT_UNIVERSE,
     STATIC_MANAGED_RESEARCH_UNIVERSE,
+    STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_ENABLED,
+    STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD,
+    STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD,
+    STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
     STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M,
     STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS,
     STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
@@ -1023,6 +1027,12 @@ def _apply_real_money_hardening(
         meta["underperformance_guardrail_trigger_share"] = (
             float(guardrail_triggered.mean()) if not guardrail_triggered.empty else 0.0
         )
+    if "Drawdown Guardrail Triggered" in hardened_df.columns:
+        drawdown_guardrail_triggered = hardened_df["Drawdown Guardrail Triggered"].fillna(False).astype(bool)
+        meta["drawdown_guardrail_trigger_count"] = int(drawdown_guardrail_triggered.sum())
+        meta["drawdown_guardrail_trigger_share"] = (
+            float(drawdown_guardrail_triggered.mean()) if not drawdown_guardrail_triggered.empty else 0.0
+        )
     if "Liquidity Excluded Count" in hardened_df.columns:
         liquidity_excluded = pd.to_numeric(hardened_df["Liquidity Excluded Count"], errors="coerce").fillna(0)
         rebalancing_mask = pd.Series(True, index=hardened_df.index)
@@ -1626,6 +1636,14 @@ def build_backtest_result_bundle(
         meta["underperformance_guardrail_window_months"] = input_params.get("underperformance_guardrail_window_months")
     if input_params.get("underperformance_guardrail_threshold") is not None:
         meta["underperformance_guardrail_threshold"] = input_params.get("underperformance_guardrail_threshold")
+    if input_params.get("drawdown_guardrail_enabled") is not None:
+        meta["drawdown_guardrail_enabled"] = input_params.get("drawdown_guardrail_enabled")
+    if input_params.get("drawdown_guardrail_window_months") is not None:
+        meta["drawdown_guardrail_window_months"] = input_params.get("drawdown_guardrail_window_months")
+    if input_params.get("drawdown_guardrail_strategy_threshold") is not None:
+        meta["drawdown_guardrail_strategy_threshold"] = input_params.get("drawdown_guardrail_strategy_threshold")
+    if input_params.get("drawdown_guardrail_gap_threshold") is not None:
+        meta["drawdown_guardrail_gap_threshold"] = input_params.get("drawdown_guardrail_gap_threshold")
     if input_params.get("snapshot_source") is not None:
         meta["snapshot_source"] = input_params.get("snapshot_source")
     if input_params.get("universe_contract") is not None:
@@ -2103,6 +2121,10 @@ def _run_statement_quality_bundle(
     underperformance_guardrail_enabled: bool = STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED,
     underperformance_guardrail_window_months: int = STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
     underperformance_guardrail_threshold: float = STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD,
+    drawdown_guardrail_enabled: bool = STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_ENABLED,
+    drawdown_guardrail_window_months: int = STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
+    drawdown_guardrail_strategy_threshold: float = STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD,
+    drawdown_guardrail_gap_threshold: float = STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD,
     universe_mode: str = "manual_tickers",
     preset_name: str | None = None,
     universe_contract: str = STATIC_MANAGED_RESEARCH_UNIVERSE,
@@ -2160,6 +2182,13 @@ def _run_statement_quality_bundle(
             end=end,
             timeframe=timeframe,
         )
+    if drawdown_guardrail_enabled and benchmark_ticker:
+        _preflight_price_strategy_data(
+            tickers=[benchmark_ticker],
+            start=start,
+            end=end,
+            timeframe=timeframe,
+        )
     if snapshot_source == "shadow_factors":
         _preflight_statement_quality_shadow_data(
             tickers=universe_input_tickers,
@@ -2189,6 +2218,10 @@ def _run_statement_quality_bundle(
             underperformance_guardrail_enabled=underperformance_guardrail_enabled,
             underperformance_guardrail_window_months=underperformance_guardrail_window_months,
             underperformance_guardrail_threshold=underperformance_guardrail_threshold,
+            drawdown_guardrail_enabled=drawdown_guardrail_enabled,
+            drawdown_guardrail_window_months=drawdown_guardrail_window_months,
+            drawdown_guardrail_strategy_threshold=drawdown_guardrail_strategy_threshold,
+            drawdown_guardrail_gap_threshold=drawdown_guardrail_gap_threshold,
             universe_contract=universe_contract,
             dynamic_candidate_tickers=universe_input_tickers,
             dynamic_target_size=dynamic_target_size,
@@ -2318,6 +2351,14 @@ def _run_statement_quality_bundle(
         input_params["promotion_max_strategy_drawdown"] = float(promotion_max_strategy_drawdown)
     if promotion_max_drawdown_gap_vs_benchmark is not None:
         input_params["promotion_max_drawdown_gap_vs_benchmark"] = float(promotion_max_drawdown_gap_vs_benchmark)
+    if drawdown_guardrail_enabled is not None:
+        input_params["drawdown_guardrail_enabled"] = bool(drawdown_guardrail_enabled)
+    if drawdown_guardrail_window_months is not None:
+        input_params["drawdown_guardrail_window_months"] = int(drawdown_guardrail_window_months)
+    if drawdown_guardrail_strategy_threshold is not None:
+        input_params["drawdown_guardrail_strategy_threshold"] = float(drawdown_guardrail_strategy_threshold)
+    if drawdown_guardrail_gap_threshold is not None:
+        input_params["drawdown_guardrail_gap_threshold"] = float(drawdown_guardrail_gap_threshold)
 
     bundle = build_backtest_result_bundle(
         result_df,
@@ -2342,6 +2383,12 @@ def _run_statement_quality_bundle(
             "Underperformance Guardrail enabled: rebalance candidates move to cash when trailing strategy excess return "
             f"vs `{benchmark_ticker}` over `{underperformance_guardrail_window_months}M` falls below "
             f"`{underperformance_guardrail_threshold:.0%}`."
+        ]
+    if drawdown_guardrail_enabled:
+        bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
+            "Drawdown Guardrail enabled: rebalance candidates move to cash when trailing strategy drawdown over "
+            f"`{drawdown_guardrail_window_months}M` falls below `{drawdown_guardrail_strategy_threshold:.0%}` "
+            f"or drawdown gap vs `{benchmark_ticker}` rises above `{drawdown_guardrail_gap_threshold:.0%}`."
         ]
     if dynamic_universe_snapshot_rows:
         bundle["dynamic_universe_snapshot_rows"] = dynamic_universe_snapshot_rows
@@ -2381,6 +2428,10 @@ def run_quality_snapshot_strict_annual_backtest_from_db(
     underperformance_guardrail_enabled: bool = STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED,
     underperformance_guardrail_window_months: int = STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
     underperformance_guardrail_threshold: float = STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD,
+    drawdown_guardrail_enabled: bool = STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_ENABLED,
+    drawdown_guardrail_window_months: int = STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
+    drawdown_guardrail_strategy_threshold: float = STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD,
+    drawdown_guardrail_gap_threshold: float = STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD,
     universe_mode: str = "manual_tickers",
     preset_name: str | None = None,
     universe_contract: str = STATIC_MANAGED_RESEARCH_UNIVERSE,
@@ -2420,6 +2471,10 @@ def run_quality_snapshot_strict_annual_backtest_from_db(
         underperformance_guardrail_enabled=underperformance_guardrail_enabled,
         underperformance_guardrail_window_months=underperformance_guardrail_window_months,
         underperformance_guardrail_threshold=underperformance_guardrail_threshold,
+        drawdown_guardrail_enabled=drawdown_guardrail_enabled,
+        drawdown_guardrail_window_months=drawdown_guardrail_window_months,
+        drawdown_guardrail_strategy_threshold=drawdown_guardrail_strategy_threshold,
+        drawdown_guardrail_gap_threshold=drawdown_guardrail_gap_threshold,
         universe_mode=universe_mode,
         preset_name=preset_name,
         universe_contract=universe_contract,
@@ -2524,6 +2579,10 @@ def run_value_snapshot_strict_annual_backtest_from_db(
     underperformance_guardrail_enabled: bool = STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED,
     underperformance_guardrail_window_months: int = STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
     underperformance_guardrail_threshold: float = STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD,
+    drawdown_guardrail_enabled: bool = STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_ENABLED,
+    drawdown_guardrail_window_months: int = STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
+    drawdown_guardrail_strategy_threshold: float = STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD,
+    drawdown_guardrail_gap_threshold: float = STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD,
     universe_mode: str = "manual_tickers",
     preset_name: str | None = None,
     universe_contract: str = STATIC_MANAGED_RESEARCH_UNIVERSE,
@@ -2578,6 +2637,13 @@ def run_value_snapshot_strict_annual_backtest_from_db(
             end=end,
             timeframe=timeframe,
         )
+    if drawdown_guardrail_enabled and benchmark_ticker:
+        _preflight_price_strategy_data(
+            tickers=[benchmark_ticker],
+            start=start,
+            end=end,
+            timeframe=timeframe,
+        )
     _preflight_statement_quality_shadow_data(
         tickers=universe_input_tickers,
         end=end,
@@ -2607,6 +2673,10 @@ def run_value_snapshot_strict_annual_backtest_from_db(
         underperformance_guardrail_enabled=underperformance_guardrail_enabled,
         underperformance_guardrail_window_months=underperformance_guardrail_window_months,
         underperformance_guardrail_threshold=underperformance_guardrail_threshold,
+        drawdown_guardrail_enabled=drawdown_guardrail_enabled,
+        drawdown_guardrail_window_months=drawdown_guardrail_window_months,
+        drawdown_guardrail_strategy_threshold=drawdown_guardrail_strategy_threshold,
+        drawdown_guardrail_gap_threshold=drawdown_guardrail_gap_threshold,
         universe_contract=universe_contract,
         dynamic_candidate_tickers=universe_input_tickers,
         dynamic_target_size=dynamic_target_size,
@@ -2694,6 +2764,10 @@ def run_value_snapshot_strict_annual_backtest_from_db(
             "underperformance_guardrail_enabled": underperformance_guardrail_enabled,
             "underperformance_guardrail_window_months": underperformance_guardrail_window_months,
             "underperformance_guardrail_threshold": underperformance_guardrail_threshold,
+            "drawdown_guardrail_enabled": bool(drawdown_guardrail_enabled),
+            "drawdown_guardrail_window_months": int(drawdown_guardrail_window_months),
+            "drawdown_guardrail_strategy_threshold": float(drawdown_guardrail_strategy_threshold),
+            "drawdown_guardrail_gap_threshold": float(drawdown_guardrail_gap_threshold),
             "snapshot_mode": "strict_statement_annual",
             "snapshot_source": "shadow_factors",
             "universe_mode": universe_mode,
@@ -2723,6 +2797,12 @@ def run_value_snapshot_strict_annual_backtest_from_db(
             "Underperformance Guardrail enabled: rebalance candidates move to cash when trailing strategy excess return "
             f"vs `{benchmark_ticker}` over `{underperformance_guardrail_window_months}M` falls below "
             f"`{underperformance_guardrail_threshold:.0%}`."
+        ]
+    if drawdown_guardrail_enabled:
+        bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
+            "Drawdown Guardrail enabled: rebalance candidates move to cash when trailing strategy drawdown over "
+            f"`{drawdown_guardrail_window_months}M` falls below `{drawdown_guardrail_strategy_threshold:.0%}` "
+            f"or drawdown gap vs `{benchmark_ticker}` rises above `{drawdown_guardrail_gap_threshold:.0%}`."
         ]
     if dynamic_universe_snapshot_rows:
         bundle["dynamic_universe_snapshot_rows"] = dynamic_universe_snapshot_rows
@@ -2953,6 +3033,10 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
     underperformance_guardrail_enabled: bool = STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED,
     underperformance_guardrail_window_months: int = STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
     underperformance_guardrail_threshold: float = STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD,
+    drawdown_guardrail_enabled: bool = STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_ENABLED,
+    drawdown_guardrail_window_months: int = STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
+    drawdown_guardrail_strategy_threshold: float = STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD,
+    drawdown_guardrail_gap_threshold: float = STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD,
     universe_mode: str = "manual_tickers",
     preset_name: str | None = None,
     universe_contract: str = STATIC_MANAGED_RESEARCH_UNIVERSE,
@@ -3017,6 +3101,13 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
             end=end,
             timeframe=timeframe,
         )
+    if drawdown_guardrail_enabled and benchmark_ticker:
+        _preflight_price_strategy_data(
+            tickers=[benchmark_ticker],
+            start=start,
+            end=end,
+            timeframe=timeframe,
+        )
     _preflight_statement_quality_shadow_data(
         tickers=universe_input_tickers,
         end=end,
@@ -3047,6 +3138,10 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
         underperformance_guardrail_enabled=underperformance_guardrail_enabled,
         underperformance_guardrail_window_months=underperformance_guardrail_window_months,
         underperformance_guardrail_threshold=underperformance_guardrail_threshold,
+        drawdown_guardrail_enabled=drawdown_guardrail_enabled,
+        drawdown_guardrail_window_months=drawdown_guardrail_window_months,
+        drawdown_guardrail_strategy_threshold=drawdown_guardrail_strategy_threshold,
+        drawdown_guardrail_gap_threshold=drawdown_guardrail_gap_threshold,
         universe_contract=universe_contract,
         dynamic_candidate_tickers=universe_input_tickers,
         dynamic_target_size=dynamic_target_size,
@@ -3135,6 +3230,10 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
             "underperformance_guardrail_enabled": underperformance_guardrail_enabled,
             "underperformance_guardrail_window_months": underperformance_guardrail_window_months,
             "underperformance_guardrail_threshold": underperformance_guardrail_threshold,
+            "drawdown_guardrail_enabled": bool(drawdown_guardrail_enabled),
+            "drawdown_guardrail_window_months": int(drawdown_guardrail_window_months),
+            "drawdown_guardrail_strategy_threshold": float(drawdown_guardrail_strategy_threshold),
+            "drawdown_guardrail_gap_threshold": float(drawdown_guardrail_gap_threshold),
             "snapshot_mode": "strict_statement_annual",
             "snapshot_source": "shadow_factors",
             "universe_mode": universe_mode,
@@ -3164,6 +3263,12 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
             "Underperformance Guardrail enabled: rebalance candidates move to cash when trailing strategy excess return "
             f"vs `{benchmark_ticker}` over `{underperformance_guardrail_window_months}M` falls below "
             f"`{underperformance_guardrail_threshold:.0%}`."
+        ]
+    if drawdown_guardrail_enabled:
+        bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
+            "Drawdown Guardrail enabled: rebalance candidates move to cash when trailing strategy drawdown over "
+            f"`{drawdown_guardrail_window_months}M` falls below `{drawdown_guardrail_strategy_threshold:.0%}` "
+            f"or drawdown gap vs `{benchmark_ticker}` rises above `{drawdown_guardrail_gap_threshold:.0%}`."
         ]
     if dynamic_universe_snapshot_rows:
         bundle["dynamic_universe_snapshot_rows"] = dynamic_universe_snapshot_rows

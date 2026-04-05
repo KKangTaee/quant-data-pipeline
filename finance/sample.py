@@ -90,6 +90,10 @@ STRICT_INVESTABILITY_DEFAULT_LIQUIDITY_LOOKBACK_DAYS = 20
 STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED = False
 STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS = 12
 STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD = -0.10
+STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_ENABLED = False
+STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_WINDOW_MONTHS = 12
+STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD = -0.35
+STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD = 0.08
 STATIC_MANAGED_RESEARCH_UNIVERSE = "static_managed_research"
 HISTORICAL_DYNAMIC_PIT_UNIVERSE = "historical_dynamic_pit"
 GTAA_DEFAULT_SIGNAL_INTERVAL = 1
@@ -1577,6 +1581,10 @@ def _run_statement_shadow_snapshot_from_db(
     underperformance_guardrail_enabled=STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED,
     underperformance_guardrail_window_months=STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
     underperformance_guardrail_threshold=STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD,
+    drawdown_guardrail_enabled=STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_ENABLED,
+    drawdown_guardrail_window_months=STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
+    drawdown_guardrail_strategy_threshold=STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD,
+    drawdown_guardrail_gap_threshold=STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD,
     universe_contract: str = STATIC_MANAGED_RESEARCH_UNIVERSE,
     dynamic_candidate_tickers=None,
     dynamic_target_size: int | None = None,
@@ -1684,9 +1692,9 @@ def _run_statement_shadow_snapshot_from_db(
             market_regime_window=market_regime_window,
         )
 
-    underperformance_guardrail_df = None
-    if underperformance_guardrail_enabled:
-        underperformance_guardrail_df = _build_underperformance_guardrail_df(
+    guardrail_benchmark_df = None
+    if underperformance_guardrail_enabled or drawdown_guardrail_enabled:
+        guardrail_benchmark_df = _build_underperformance_guardrail_df(
             benchmark_ticker,
             option=option,
             start=start,
@@ -1718,7 +1726,13 @@ def _run_statement_shadow_snapshot_from_db(
         underperformance_guardrail_window_months=underperformance_guardrail_window_months,
         underperformance_guardrail_threshold=underperformance_guardrail_threshold,
         underperformance_guardrail_benchmark=benchmark_ticker,
-        underperformance_guardrail_df=underperformance_guardrail_df,
+        underperformance_guardrail_df=guardrail_benchmark_df if underperformance_guardrail_enabled else None,
+        drawdown_guardrail_enabled=drawdown_guardrail_enabled,
+        drawdown_guardrail_window_months=drawdown_guardrail_window_months,
+        drawdown_guardrail_strategy_threshold=drawdown_guardrail_strategy_threshold,
+        drawdown_guardrail_gap_threshold=drawdown_guardrail_gap_threshold,
+        drawdown_guardrail_benchmark=benchmark_ticker,
+        drawdown_guardrail_df=guardrail_benchmark_df if drawdown_guardrail_enabled else None,
     )
 
     count_series = pd.to_datetime(df["Date"], errors="coerce").dt.normalize().map(membership_count_map).fillna(0).astype(int)
@@ -1764,6 +1778,10 @@ def get_statement_quality_snapshot_shadow_from_db(
     underperformance_guardrail_enabled=STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED,
     underperformance_guardrail_window_months=STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
     underperformance_guardrail_threshold=STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD,
+    drawdown_guardrail_enabled=STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_ENABLED,
+    drawdown_guardrail_window_months=STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
+    drawdown_guardrail_strategy_threshold=STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD,
+    drawdown_guardrail_gap_threshold=STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD,
     universe_contract: str = STATIC_MANAGED_RESEARCH_UNIVERSE,
     dynamic_candidate_tickers=None,
     dynamic_target_size: int | None = None,
@@ -1795,6 +1813,10 @@ def get_statement_quality_snapshot_shadow_from_db(
         underperformance_guardrail_enabled=underperformance_guardrail_enabled,
         underperformance_guardrail_window_months=underperformance_guardrail_window_months,
         underperformance_guardrail_threshold=underperformance_guardrail_threshold,
+        drawdown_guardrail_enabled=drawdown_guardrail_enabled,
+        drawdown_guardrail_window_months=drawdown_guardrail_window_months,
+        drawdown_guardrail_strategy_threshold=drawdown_guardrail_strategy_threshold,
+        drawdown_guardrail_gap_threshold=drawdown_guardrail_gap_threshold,
         universe_contract=universe_contract,
         dynamic_candidate_tickers=dynamic_candidate_tickers,
         dynamic_target_size=dynamic_target_size,
@@ -1825,6 +1847,10 @@ def get_statement_value_snapshot_shadow_from_db(
     underperformance_guardrail_enabled=STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED,
     underperformance_guardrail_window_months=STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
     underperformance_guardrail_threshold=STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD,
+    drawdown_guardrail_enabled=STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_ENABLED,
+    drawdown_guardrail_window_months=STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
+    drawdown_guardrail_strategy_threshold=STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD,
+    drawdown_guardrail_gap_threshold=STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD,
     universe_contract: str = STATIC_MANAGED_RESEARCH_UNIVERSE,
     dynamic_candidate_tickers=None,
     dynamic_target_size: int | None = None,
@@ -1856,6 +1882,10 @@ def get_statement_value_snapshot_shadow_from_db(
         underperformance_guardrail_enabled=underperformance_guardrail_enabled,
         underperformance_guardrail_window_months=underperformance_guardrail_window_months,
         underperformance_guardrail_threshold=underperformance_guardrail_threshold,
+        drawdown_guardrail_enabled=drawdown_guardrail_enabled,
+        drawdown_guardrail_window_months=drawdown_guardrail_window_months,
+        drawdown_guardrail_strategy_threshold=drawdown_guardrail_strategy_threshold,
+        drawdown_guardrail_gap_threshold=drawdown_guardrail_gap_threshold,
         universe_contract=universe_contract,
         dynamic_candidate_tickers=dynamic_candidate_tickers,
         dynamic_target_size=dynamic_target_size,
@@ -1887,6 +1917,10 @@ def get_statement_quality_value_snapshot_shadow_from_db(
     underperformance_guardrail_enabled=STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED,
     underperformance_guardrail_window_months=STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
     underperformance_guardrail_threshold=STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD,
+    drawdown_guardrail_enabled=STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_ENABLED,
+    drawdown_guardrail_window_months=STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
+    drawdown_guardrail_strategy_threshold=STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD,
+    drawdown_guardrail_gap_threshold=STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD,
     universe_contract: str = STATIC_MANAGED_RESEARCH_UNIVERSE,
     dynamic_candidate_tickers=None,
     dynamic_target_size: int | None = None,
@@ -1937,6 +1971,10 @@ def get_statement_quality_value_snapshot_shadow_from_db(
         underperformance_guardrail_enabled=underperformance_guardrail_enabled,
         underperformance_guardrail_window_months=underperformance_guardrail_window_months,
         underperformance_guardrail_threshold=underperformance_guardrail_threshold,
+        drawdown_guardrail_enabled=drawdown_guardrail_enabled,
+        drawdown_guardrail_window_months=drawdown_guardrail_window_months,
+        drawdown_guardrail_strategy_threshold=drawdown_guardrail_strategy_threshold,
+        drawdown_guardrail_gap_threshold=drawdown_guardrail_gap_threshold,
         universe_contract=universe_contract,
         dynamic_candidate_tickers=dynamic_candidate_tickers,
         dynamic_target_size=dynamic_target_size,
