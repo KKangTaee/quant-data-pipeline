@@ -5970,3 +5970,23 @@ Do not copy full chat transcripts. Keep only the durable result.
     - keep current runtime boundaries stable
     - refactor only the hotspots we touch next
     - treat `backtest.py` modularization as incremental maintenance, not a big-bang rewrite
+
+### 2026-04-05 - Strict annual promotion should use validation metrics as policy, not only readout
+
+- Request topic:
+  - continue Phase 12 after strict annual validation / liquidity / benchmark surfaces were already visible
+- Interpreted goal:
+  - move strict annual promotion one step closer to a real-money contract by using existing validation metrics as actual promotion thresholds
+- Result:
+  - added two later-pass promotion thresholds:
+    - `Max Underperformance Share (%)`
+    - `Min Worst Rolling Excess (%)`
+  - introduced `validation_policy_status = normal / watch / caution / unavailable`
+  - updated `promotion_decision` so that validation policy now matters alongside:
+    - benchmark policy
+    - liquidity policy
+    - dynamic/static universe contract
+    - price freshness
+- Durable implication:
+  - strict annual promotion is no longer based only on benchmark spread/coverage and liquidity cleanliness
+  - rolling-underperformance robustness is now part of the actual promotion contract

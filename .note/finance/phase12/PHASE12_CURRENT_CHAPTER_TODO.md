@@ -214,6 +214,13 @@
   - promotion decision이 liquidity policy 상태를 함께 반영
   - single / compare / history / meta surface까지 contract 연결
   - `PHASE12_STRICT_ANNUAL_LIQUIDITY_POLICY_AND_PROMOTION_REINFORCEMENT_LATER_PASS.md`
+- `completed` strict annual validation policy / broader promotion robustness later pass 구현
+  - `Max Underperformance Share (%)`
+  - `Min Worst Rolling Excess (%)`
+  - `validation_policy_status = normal / watch / caution / unavailable`
+  - promotion decision이 validation policy 상태를 함께 반영
+  - single / compare / history / meta surface까지 contract 연결
+  - `PHASE12_STRICT_ANNUAL_VALIDATION_POLICY_AND_PROMOTION_REINFORCEMENT_LATER_PASS.md`
 - `completed` backtest strategy surface consolidation first pass 구현
   - 새 `app/web/pages/backtest_strategy_catalog.py`에 family / variant / concrete strategy key 매핑 분리
   - `Single Strategy` top-level 목록을
@@ -233,7 +240,8 @@
   - 20D average dollar volume liquidity proxy first pass도 now 완료
   - richer benchmark policy / stricter promotion reinforcement later pass도 now 완료
   - liquidity policy / later-pass investability reinforcement도 now 완료
-  - broader benchmark contract / broader promotion robustness는 still later pass
+  - validation-policy 기반 broader promotion robustness도 now 완료
+  - broader benchmark contract는 still later pass
 - `completed` annual strict promotion checklist baseline refresh
   - `PHASE12_TEST_CHECKLIST.md`에 strict annual real-money surface 항목 반영
 

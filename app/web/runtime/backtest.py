@@ -63,6 +63,8 @@ ETF_REAL_MONEY_DEFAULT_BENCHMARK = "SPY"
 STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE = 0.95
 STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD = -0.02
 STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE = 0.90
+STRICT_PROMOTION_DEFAULT_MAX_UNDERPERFORMANCE_SHARE = 0.55
+STRICT_PROMOTION_DEFAULT_MIN_WORST_ROLLING_EXCESS_RETURN = -0.15
 REAL_MONEY_CASH_LABEL = "__CASH__"
 
 
@@ -465,6 +467,7 @@ def _build_promotion_decision(meta: dict[str, Any]) -> dict[str, Any]:
     validation_status = str(meta.get("validation_status") or "").strip().lower()
     benchmark_policy_status = str(meta.get("benchmark_policy_status") or "").strip().lower()
     liquidity_policy_status = str(meta.get("liquidity_policy_status") or "").strip().lower()
+    validation_policy_status = str(meta.get("validation_policy_status") or "").strip().lower()
     universe_contract = meta.get("universe_contract")
     price_freshness = meta.get("price_freshness") or {}
     freshness_status = str(price_freshness.get("status") or "").strip().lower()
@@ -488,6 +491,12 @@ def _build_promotion_decision(meta: dict[str, Any]) -> dict[str, Any]:
         rationale.append("liquidity_policy_watch")
     elif liquidity_policy_status == "unavailable":
         rationale.append("liquidity_policy_unavailable")
+    if validation_policy_status == "caution":
+        rationale.append("validation_policy_caution")
+    elif validation_policy_status == "watch":
+        rationale.append("validation_policy_watch")
+    elif validation_policy_status == "unavailable":
+        rationale.append("validation_policy_unavailable")
     if universe_contract == STATIC_MANAGED_RESEARCH_UNIVERSE:
         rationale.append("static_universe_contract")
     if freshness_status == "warning":
@@ -500,6 +509,7 @@ def _build_promotion_decision(meta: dict[str, Any]) -> dict[str, Any]:
         and validation_status == "normal"
         and benchmark_policy_status in {"", "normal"}
         and liquidity_policy_status in {"", "normal"}
+        and validation_policy_status in {"", "normal"}
         and universe_contract != STATIC_MANAGED_RESEARCH_UNIVERSE
         and freshness_status not in {"warning", "error"}
     ):
@@ -510,6 +520,7 @@ def _build_promotion_decision(meta: dict[str, Any]) -> dict[str, Any]:
         or validation_status == "caution"
         or benchmark_policy_status == "caution"
         or liquidity_policy_status in {"caution", "unavailable"}
+        or validation_policy_status in {"caution", "unavailable"}
         or freshness_status == "error"
     ):
         decision = "hold"
@@ -633,6 +644,76 @@ def _build_liquidity_policy_surface(meta: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _build_validation_policy_surface(meta: dict[str, Any]) -> dict[str, Any]:
+    max_share_raw = meta.get("promotion_max_underperformance_share")
+    min_worst_raw = meta.get("promotion_min_worst_rolling_excess_return")
+    if max_share_raw is None and min_worst_raw is None:
+        return {}
+
+    benchmark_available = bool(meta.get("benchmark_available"))
+    share = meta.get("rolling_underperformance_share")
+    worst = meta.get("rolling_underperformance_worst_excess_return")
+    observations = int(meta.get("rolling_underperformance_observations") or 0)
+    max_share = float(max_share_raw) if max_share_raw is not None else None
+    min_worst = float(min_worst_raw) if min_worst_raw is not None else None
+
+    watch_signals: list[str] = []
+    severe_signals = 0
+    share_pass: bool | None = None
+    worst_pass: bool | None = None
+
+    if not benchmark_available or observations <= 0:
+        unavailable_signals: list[str] = []
+        if not benchmark_available:
+            unavailable_signals.append("validation_policy_benchmark_unavailable")
+        if observations <= 0:
+            unavailable_signals.append("validation_policy_observations_missing")
+        return {
+            "validation_policy_status": "unavailable",
+            "validation_policy_watch_signals": unavailable_signals,
+            "validation_policy_share_pass": share_pass,
+            "validation_policy_worst_excess_pass": worst_pass,
+        }
+
+    if max_share is not None:
+        if share is None:
+            watch_signals.append("underperformance_share_missing")
+            severe_signals += 1
+        else:
+            share_value = float(share)
+            share_pass = share_value <= max_share
+            if not share_pass:
+                watch_signals.append("underperformance_share_above_policy")
+                if share_value > min(1.0, max_share + 0.10):
+                    severe_signals += 1
+
+    if min_worst is not None:
+        if worst is None:
+            watch_signals.append("worst_rolling_excess_missing")
+            severe_signals += 1
+        else:
+            worst_value = float(worst)
+            worst_pass = worst_value >= min_worst
+            if not worst_pass:
+                watch_signals.append("worst_rolling_excess_below_policy")
+                if worst_value < (min_worst - 0.05):
+                    severe_signals += 1
+
+    if severe_signals > 0:
+        status = "caution"
+    elif watch_signals:
+        status = "watch"
+    else:
+        status = "normal"
+
+    return {
+        "validation_policy_status": status,
+        "validation_policy_watch_signals": watch_signals,
+        "validation_policy_share_pass": share_pass,
+        "validation_policy_worst_excess_pass": worst_pass,
+    }
+
+
 def _apply_real_money_hardening(
     bundle: dict[str, Any],
     *,
@@ -643,6 +724,8 @@ def _apply_real_money_hardening(
     promotion_min_benchmark_coverage: float | None = None,
     promotion_min_net_cagr_spread: float | None = None,
     promotion_min_liquidity_clean_coverage: float | None = None,
+    promotion_max_underperformance_share: float | None = None,
+    promotion_min_worst_rolling_excess_return: float | None = None,
 ) -> dict[str, Any]:
     result_df = bundle["result_df"].copy()
     hardened_df, turnover_stats = _apply_transaction_cost_postprocess(
@@ -680,6 +763,16 @@ def _apply_real_money_hardening(
             "promotion_min_liquidity_clean_coverage": (
                 float(promotion_min_liquidity_clean_coverage)
                 if promotion_min_liquidity_clean_coverage is not None
+                else None
+            ),
+            "promotion_max_underperformance_share": (
+                float(promotion_max_underperformance_share)
+                if promotion_max_underperformance_share is not None
+                else None
+            ),
+            "promotion_min_worst_rolling_excess_return": (
+                float(promotion_min_worst_rolling_excess_return)
+                if promotion_min_worst_rolling_excess_return is not None
                 else None
             ),
             "avg_turnover": turnover_stats["avg_turnover"],
@@ -809,6 +902,26 @@ def _apply_real_money_hardening(
             )
         if liquidity_policy_signals:
             meta["liquidity_policy_watch_signals"] = liquidity_policy_signals
+
+    validation_policy_surface = _build_validation_policy_surface(meta)
+    if validation_policy_surface:
+        meta.update(validation_policy_surface)
+        validation_policy_status = validation_policy_surface.get("validation_policy_status")
+        validation_policy_signals = validation_policy_surface.get("validation_policy_watch_signals") or []
+        if validation_policy_status == "caution":
+            warnings.append(
+                "Validation policy caution: rolling underperformance share or worst rolling excess return fell materially below the current promotion contract."
+            )
+        elif validation_policy_status == "watch":
+            warnings.append(
+                "Validation policy watch: rolling underperformance share or worst rolling excess return is below the preferred promotion contract."
+            )
+        elif validation_policy_status == "unavailable":
+            warnings.append(
+                "Validation policy unavailable: promotion-grade robustness review needs aligned benchmark validation history."
+            )
+        if validation_policy_signals:
+            meta["validation_policy_watch_signals"] = validation_policy_signals
 
     meta.update(_build_promotion_decision(meta))
     bundle["meta"] = meta
@@ -1235,6 +1348,10 @@ def build_backtest_result_bundle(
         meta["promotion_min_net_cagr_spread"] = input_params.get("promotion_min_net_cagr_spread")
     if input_params.get("promotion_min_liquidity_clean_coverage") is not None:
         meta["promotion_min_liquidity_clean_coverage"] = input_params.get("promotion_min_liquidity_clean_coverage")
+    if input_params.get("promotion_max_underperformance_share") is not None:
+        meta["promotion_max_underperformance_share"] = input_params.get("promotion_max_underperformance_share")
+    if input_params.get("promotion_min_worst_rolling_excess_return") is not None:
+        meta["promotion_min_worst_rolling_excess_return"] = input_params.get("promotion_min_worst_rolling_excess_return")
     if input_params.get("underperformance_guardrail_enabled") is not None:
         meta["underperformance_guardrail_enabled"] = input_params.get("underperformance_guardrail_enabled")
     if input_params.get("underperformance_guardrail_window_months") is not None:
@@ -1699,6 +1816,8 @@ def _run_statement_quality_bundle(
     promotion_min_benchmark_coverage: float = STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE,
     promotion_min_net_cagr_spread: float = STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD,
     promotion_min_liquidity_clean_coverage: float = STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE,
+    promotion_max_underperformance_share: float = STRICT_PROMOTION_DEFAULT_MAX_UNDERPERFORMANCE_SHARE,
+    promotion_min_worst_rolling_excess_return: float = STRICT_PROMOTION_DEFAULT_MIN_WORST_ROLLING_EXCESS_RETURN,
     trend_filter_enabled: bool = False,
     trend_filter_window: int = 200,
     market_regime_enabled: bool = False,
@@ -1912,6 +2031,10 @@ def _run_statement_quality_bundle(
         input_params["promotion_min_net_cagr_spread"] = float(promotion_min_net_cagr_spread)
     if promotion_min_liquidity_clean_coverage is not None:
         input_params["promotion_min_liquidity_clean_coverage"] = float(promotion_min_liquidity_clean_coverage)
+    if promotion_max_underperformance_share is not None:
+        input_params["promotion_max_underperformance_share"] = float(promotion_max_underperformance_share)
+    if promotion_min_worst_rolling_excess_return is not None:
+        input_params["promotion_min_worst_rolling_excess_return"] = float(promotion_min_worst_rolling_excess_return)
 
     bundle = build_backtest_result_bundle(
         result_df,
@@ -1962,6 +2085,8 @@ def run_quality_snapshot_strict_annual_backtest_from_db(
     promotion_min_benchmark_coverage: float = STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE,
     promotion_min_net_cagr_spread: float = STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD,
     promotion_min_liquidity_clean_coverage: float = STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE,
+    promotion_max_underperformance_share: float = STRICT_PROMOTION_DEFAULT_MAX_UNDERPERFORMANCE_SHARE,
+    promotion_min_worst_rolling_excess_return: float = STRICT_PROMOTION_DEFAULT_MIN_WORST_ROLLING_EXCESS_RETURN,
     trend_filter_enabled: bool = False,
     trend_filter_window: int = 200,
     market_regime_enabled: bool = False,
@@ -1996,6 +2121,8 @@ def run_quality_snapshot_strict_annual_backtest_from_db(
         promotion_min_benchmark_coverage=promotion_min_benchmark_coverage,
         promotion_min_net_cagr_spread=promotion_min_net_cagr_spread,
         promotion_min_liquidity_clean_coverage=promotion_min_liquidity_clean_coverage,
+        promotion_max_underperformance_share=promotion_max_underperformance_share,
+        promotion_min_worst_rolling_excess_return=promotion_min_worst_rolling_excess_return,
         trend_filter_enabled=trend_filter_enabled,
         trend_filter_window=trend_filter_window,
         market_regime_enabled=market_regime_enabled,
@@ -2023,6 +2150,8 @@ def run_quality_snapshot_strict_annual_backtest_from_db(
         promotion_min_benchmark_coverage=promotion_min_benchmark_coverage,
         promotion_min_net_cagr_spread=promotion_min_net_cagr_spread,
         promotion_min_liquidity_clean_coverage=promotion_min_liquidity_clean_coverage,
+        promotion_max_underperformance_share=promotion_max_underperformance_share,
+        promotion_min_worst_rolling_excess_return=promotion_min_worst_rolling_excess_return,
     )
 
 
@@ -2089,6 +2218,8 @@ def run_value_snapshot_strict_annual_backtest_from_db(
     promotion_min_benchmark_coverage: float = STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE,
     promotion_min_net_cagr_spread: float = STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD,
     promotion_min_liquidity_clean_coverage: float = STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE,
+    promotion_max_underperformance_share: float = STRICT_PROMOTION_DEFAULT_MAX_UNDERPERFORMANCE_SHARE,
+    promotion_min_worst_rolling_excess_return: float = STRICT_PROMOTION_DEFAULT_MIN_WORST_ROLLING_EXCESS_RETURN,
     trend_filter_enabled: bool = False,
     trend_filter_window: int = 200,
     market_regime_enabled: bool = False,
@@ -2252,6 +2383,8 @@ def run_value_snapshot_strict_annual_backtest_from_db(
             "promotion_min_benchmark_coverage": float(promotion_min_benchmark_coverage),
             "promotion_min_net_cagr_spread": float(promotion_min_net_cagr_spread),
             "promotion_min_liquidity_clean_coverage": float(promotion_min_liquidity_clean_coverage),
+            "promotion_max_underperformance_share": float(promotion_max_underperformance_share),
+            "promotion_min_worst_rolling_excess_return": float(promotion_min_worst_rolling_excess_return),
             "factor_freq": "annual",
             "value_factors": normalized_factors,
             "trend_filter_enabled": trend_filter_enabled,
@@ -2305,6 +2438,8 @@ def run_value_snapshot_strict_annual_backtest_from_db(
         promotion_min_benchmark_coverage=promotion_min_benchmark_coverage,
         promotion_min_net_cagr_spread=promotion_min_net_cagr_spread,
         promotion_min_liquidity_clean_coverage=promotion_min_liquidity_clean_coverage,
+        promotion_max_underperformance_share=promotion_max_underperformance_share,
+        promotion_min_worst_rolling_excess_return=promotion_min_worst_rolling_excess_return,
     )
 
 
@@ -2502,6 +2637,8 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
     promotion_min_benchmark_coverage: float = STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE,
     promotion_min_net_cagr_spread: float = STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD,
     promotion_min_liquidity_clean_coverage: float = STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE,
+    promotion_max_underperformance_share: float = STRICT_PROMOTION_DEFAULT_MAX_UNDERPERFORMANCE_SHARE,
+    promotion_min_worst_rolling_excess_return: float = STRICT_PROMOTION_DEFAULT_MIN_WORST_ROLLING_EXCESS_RETURN,
     trend_filter_enabled: bool = False,
     trend_filter_window: int = 200,
     market_regime_enabled: bool = False,
@@ -2676,6 +2813,8 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
             "promotion_min_benchmark_coverage": float(promotion_min_benchmark_coverage),
             "promotion_min_net_cagr_spread": float(promotion_min_net_cagr_spread),
             "promotion_min_liquidity_clean_coverage": float(promotion_min_liquidity_clean_coverage),
+            "promotion_max_underperformance_share": float(promotion_max_underperformance_share),
+            "promotion_min_worst_rolling_excess_return": float(promotion_min_worst_rolling_excess_return),
             "factor_freq": "annual",
             "quality_factors": normalized_quality_factors,
             "value_factors": normalized_value_factors,
@@ -2730,6 +2869,8 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
         promotion_min_benchmark_coverage=promotion_min_benchmark_coverage,
         promotion_min_net_cagr_spread=promotion_min_net_cagr_spread,
         promotion_min_liquidity_clean_coverage=promotion_min_liquidity_clean_coverage,
+        promotion_max_underperformance_share=promotion_max_underperformance_share,
+        promotion_min_worst_rolling_excess_return=promotion_min_worst_rolling_excess_return,
     )
 
 

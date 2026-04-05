@@ -154,6 +154,8 @@
   - strict annual family에 `Min Benchmark Coverage (%)`, `Min Net CAGR Spread (%)`, `benchmark_policy_status`를 추가하고 promotion decision이 그 상태를 함께 반영하도록 보강한 later-pass 문서
 - `.note/finance/phase12/PHASE12_STRICT_ANNUAL_LIQUIDITY_POLICY_AND_PROMOTION_REINFORCEMENT_LATER_PASS.md`
   - strict annual family에 `Min Liquidity Clean Coverage (%)`, `liquidity_clean_coverage`, `liquidity_policy_status`를 추가하고 promotion decision이 그 상태를 함께 반영하도록 보강한 later-pass 문서
+- `.note/finance/phase12/PHASE12_STRICT_ANNUAL_VALIDATION_POLICY_AND_PROMOTION_REINFORCEMENT_LATER_PASS.md`
+  - strict annual family에 `Max Underperformance Share (%)`, `Min Worst Rolling Excess (%)`, `validation_policy_status`를 추가하고 promotion decision이 그 상태를 함께 반영하도록 보강한 later-pass 문서
 - `.note/finance/phase12/PHASE12_BACKTEST_STRATEGY_SURFACE_CONSOLIDATION_FIRST_PASS.md`
   - `backtest.py`의 strategy surface를 family 중심으로 정리하고, quality/value 계열을 `Quality` / `Value` / `Quality + Value`로 통합한 first-pass UI/orchestration 리팩터링 문서
 - `.note/finance/phase12/PHASE12_GTAA_DBC_PDBC_NO_COMMODITY_ANALYSIS.md`

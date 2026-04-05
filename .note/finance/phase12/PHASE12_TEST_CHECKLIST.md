@@ -195,6 +195,8 @@
   - `promotion_min_benchmark_coverage`
   - `promotion_min_net_cagr_spread`
   - `promotion_min_liquidity_clean_coverage`
+  - `promotion_max_underperformance_share`
+  - `promotion_min_worst_rolling_excess_return`
   - `underperformance_guardrail_enabled`
   - `underperformance_guardrail_window_months`
   - `underperformance_guardrail_threshold`
@@ -211,6 +213,12 @@
   - `Min Clean Coverage`
   - `Actual Clean Coverage`
   - `Liquidity Policy Signals`
+  - `Validation Policy`
+  - `Max Underperf Share`
+  - `Actual Underperf Share`
+  - `Min Worst Excess`
+  - `Actual Worst Excess`
+  - `Validation Policy Signals`
   가 보이는지
 
 현재 상태 설명:
@@ -221,6 +229,7 @@
 - 20D average dollar volume liquidity proxy first pass도 now 추가되었다.
 - richer benchmark policy / stricter promotion reinforcement later pass도 now 추가되었다.
 - liquidity policy / later-pass investability reinforcement도 now 추가되었다.
+- validation policy / broader promotion robustness later pass도 now 추가되었다.
 - 다만 아래는 아직 later pass다.
   - stronger portfolio guardrail
   - richer spread / AUM policy
@@ -267,6 +276,7 @@
 - annual strict underperformance guardrail actual-rule first pass도 구현되었음
 - benchmark policy later pass는 구현되었음
 - liquidity policy later pass는 구현되었음
+- validation policy later pass도 구현되었음
 - broader benchmark contract 자체를 더 늘리는 건 still later pass
 
 ## 8. History / Metadata / Handoff

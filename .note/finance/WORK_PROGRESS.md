@@ -3371,3 +3371,27 @@ Keep entries append-only and concise.
   - split by family/shared helper modules rather than forcing a deep inheritance hierarchy
 - Logged the durable guidance in:
   - `QUESTION_AND_ANALYSIS_LOG.md`
+
+### 2026-04-05 - Strict annual validation policy later pass was connected to promotion decision
+
+- Added stricter later-pass promotion thresholds for strict annual family:
+  - `Max Underperformance Share (%)`
+  - `Min Worst Rolling Excess (%)`
+- Connected the new thresholds through:
+  - single strategy strict annual forms
+  - compare overrides
+  - history / `Load Into Form`
+  - runtime meta
+  - `Real-Money`
+  - `Execution Context`
+  - compare `Strategy Highlights`
+- Added `validation_policy_status = normal / watch / caution / unavailable`
+  and made `promotion_decision` consider that status.
+- Verified:
+  - `py_compile`
+  - DB-backed strict annual smoke with preset-backed tickers
+- Added a dedicated Phase 12 implementation note and refreshed:
+  - current TODO board
+  - Phase 12 checklist
+  - comprehensive analysis
+  - doc index

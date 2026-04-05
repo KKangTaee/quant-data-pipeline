@@ -42,6 +42,8 @@ from app.web.runtime.backtest import (
     STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE,
     STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE,
     STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD,
+    STRICT_PROMOTION_DEFAULT_MAX_UNDERPERFORMANCE_SHARE,
+    STRICT_PROMOTION_DEFAULT_MIN_WORST_ROLLING_EXCESS_RETURN,
 )
 from app.web.pages.backtest_strategy_catalog import (
     COMPARE_STRATEGY_OPTIONS,
@@ -582,6 +584,14 @@ def _init_backtest_state() -> None:
         st.session_state["qss_promotion_min_liquidity_clean_coverage"] = (
             STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE * 100.0
         )
+    if "qss_promotion_max_underperformance_share" not in st.session_state:
+        st.session_state["qss_promotion_max_underperformance_share"] = (
+            STRICT_PROMOTION_DEFAULT_MAX_UNDERPERFORMANCE_SHARE * 100.0
+        )
+    if "qss_promotion_min_worst_rolling_excess_return" not in st.session_state:
+        st.session_state["qss_promotion_min_worst_rolling_excess_return"] = (
+            STRICT_PROMOTION_DEFAULT_MIN_WORST_ROLLING_EXCESS_RETURN * 100.0
+        )
     if "vss_trend_filter_enabled" not in st.session_state:
         st.session_state["vss_trend_filter_enabled"] = STRICT_TREND_FILTER_DEFAULT_ENABLED
     if "vss_trend_filter_window" not in st.session_state:
@@ -610,6 +620,14 @@ def _init_backtest_state() -> None:
         st.session_state["vss_promotion_min_liquidity_clean_coverage"] = (
             STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE * 100.0
         )
+    if "vss_promotion_max_underperformance_share" not in st.session_state:
+        st.session_state["vss_promotion_max_underperformance_share"] = (
+            STRICT_PROMOTION_DEFAULT_MAX_UNDERPERFORMANCE_SHARE * 100.0
+        )
+    if "vss_promotion_min_worst_rolling_excess_return" not in st.session_state:
+        st.session_state["vss_promotion_min_worst_rolling_excess_return"] = (
+            STRICT_PROMOTION_DEFAULT_MIN_WORST_ROLLING_EXCESS_RETURN * 100.0
+        )
     if "qvss_trend_filter_enabled" not in st.session_state:
         st.session_state["qvss_trend_filter_enabled"] = STRICT_TREND_FILTER_DEFAULT_ENABLED
     if "qvss_trend_filter_window" not in st.session_state:
@@ -637,6 +655,14 @@ def _init_backtest_state() -> None:
     if "qvss_promotion_min_liquidity_clean_coverage" not in st.session_state:
         st.session_state["qvss_promotion_min_liquidity_clean_coverage"] = (
             STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE * 100.0
+        )
+    if "qvss_promotion_max_underperformance_share" not in st.session_state:
+        st.session_state["qvss_promotion_max_underperformance_share"] = (
+            STRICT_PROMOTION_DEFAULT_MAX_UNDERPERFORMANCE_SHARE * 100.0
+        )
+    if "qvss_promotion_min_worst_rolling_excess_return" not in st.session_state:
+        st.session_state["qvss_promotion_min_worst_rolling_excess_return"] = (
+            STRICT_PROMOTION_DEFAULT_MIN_WORST_ROLLING_EXCESS_RETURN * 100.0
         )
     if "qsqp_trend_filter_enabled" not in st.session_state:
         st.session_state["qsqp_trend_filter_enabled"] = STRICT_TREND_FILTER_DEFAULT_ENABLED
@@ -1026,6 +1052,12 @@ def _summarize_params(meta: dict[str, Any]) -> str:
         parts.append(f"min_net_cagr_spread={float(meta.get('promotion_min_net_cagr_spread') or 0.0):.0%}")
     if meta.get("promotion_min_liquidity_clean_coverage") is not None:
         parts.append(f"min_liquidity_clean_coverage={float(meta.get('promotion_min_liquidity_clean_coverage') or 0.0):.0%}")
+    if meta.get("promotion_max_underperformance_share") is not None:
+        parts.append(f"max_underperf_share={float(meta.get('promotion_max_underperformance_share') or 0.0):.0%}")
+    if meta.get("promotion_min_worst_rolling_excess_return") is not None:
+        parts.append(
+            f"min_worst_rolling_excess={float(meta.get('promotion_min_worst_rolling_excess_return') or 0.0):.0%}"
+        )
     return ", ".join(parts)
 
 
@@ -1381,7 +1413,9 @@ def _render_strict_annual_real_money_inputs(
     default_promotion_min_benchmark_coverage: float = STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE,
     default_promotion_min_net_cagr_spread: float = STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD,
     default_promotion_min_liquidity_clean_coverage: float = STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE,
-) -> tuple[float, int, float, float, str, float, float, float]:
+    default_promotion_max_underperformance_share: float = STRICT_PROMOTION_DEFAULT_MAX_UNDERPERFORMANCE_SHARE,
+    default_promotion_min_worst_rolling_excess_return: float = STRICT_PROMOTION_DEFAULT_MIN_WORST_ROLLING_EXCESS_RETURN,
+) -> tuple[float, int, float, float, str, float, float, float, float, float]:
     st.markdown("##### Real-Money Contract")
     st.caption(
         "실전형 annual strict contract에서는 `Minimum Price`, `Minimum History (Months)`, "
@@ -1502,6 +1536,35 @@ def _render_strict_annual_real_money_inputs(
         "`Liquidity Clean Coverage`는 리밸런싱 행 대부분이 유동성 제외 없이 지나가야 "
         "실전 승격 후보로 인정하겠다는 later-pass 기준입니다."
     )
+    robustness_left, robustness_right = st.columns(2, gap="small")
+    with robustness_left:
+        promotion_max_underperformance_share = float(
+            st.number_input(
+                "Max Underperformance Share (%)",
+                min_value=0.0,
+                max_value=100.0,
+                value=float(default_promotion_max_underperformance_share) * 100.0,
+                step=1.0,
+                key=f"{key_prefix}_promotion_max_underperformance_share",
+                help="rolling window 중 benchmark를 밑돈 비율이 이 값보다 높으면 승격을 보수적으로 봅니다.",
+            )
+        )
+    with robustness_right:
+        promotion_min_worst_rolling_excess_return = float(
+            st.number_input(
+                "Min Worst Rolling Excess (%)",
+                min_value=-100.0,
+                max_value=100.0,
+                value=float(default_promotion_min_worst_rolling_excess_return) * 100.0,
+                step=1.0,
+                key=f"{key_prefix}_promotion_min_worst_rolling_excess_return",
+                help="rolling excess return 최악 구간이 이 값보다 더 낮으면 승격을 보수적으로 봅니다.",
+            )
+        )
+    st.caption(
+        "`Validation Policy`는 benchmark-relative validation 지표 중 "
+        "`Underperformance Share`와 `Worst Rolling Excess`를 실제 승격 판단 기준으로 연결한 later-pass rule입니다."
+    )
     return (
         min_price_filter,
         min_history_months_filter,
@@ -1511,6 +1574,8 @@ def _render_strict_annual_real_money_inputs(
         promotion_min_benchmark_coverage / 100.0,
         promotion_min_net_cagr_spread / 100.0,
         promotion_min_liquidity_clean_coverage / 100.0,
+        promotion_max_underperformance_share / 100.0,
+        promotion_min_worst_rolling_excess_return / 100.0,
     )
 
 
@@ -2007,6 +2072,14 @@ def _render_last_run() -> None:
                 st.markdown(
                     f"- `Min Liquidity Clean Coverage`: `{float(meta.get('promotion_min_liquidity_clean_coverage') or 0.0):.0%}`"
                 )
+            if meta.get("promotion_max_underperformance_share") is not None:
+                st.markdown(
+                    f"- `Max Underperformance Share`: `{float(meta.get('promotion_max_underperformance_share') or 0.0):.0%}`"
+                )
+            if meta.get("promotion_min_worst_rolling_excess_return") is not None:
+                st.markdown(
+                    f"- `Min Worst Rolling Excess`: `{float(meta.get('promotion_min_worst_rolling_excess_return') or 0.0):.0%}`"
+                )
             if meta.get("underperformance_guardrail_enabled"):
                 st.markdown(
                     f"- `Underperformance Guardrail`: `{int(meta.get('underperformance_guardrail_window_months') or STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS)}M`, "
@@ -2026,6 +2099,8 @@ def _render_last_run() -> None:
                 st.markdown(f"- `Benchmark Policy Status`: `{meta['benchmark_policy_status']}`")
             if meta.get("liquidity_policy_status"):
                 st.markdown(f"- `Liquidity Policy Status`: `{meta['liquidity_policy_status']}`")
+            if meta.get("validation_policy_status"):
+                st.markdown(f"- `Validation Policy Status`: `{meta['validation_policy_status']}`")
             if meta.get("promotion_decision"):
                 st.markdown(f"- `Promotion Decision`: `{meta['promotion_decision']}`")
             if meta.get("promotion_next_step"):
@@ -2180,6 +2255,8 @@ def _strategy_compare_defaults(strategy_name: str) -> dict:
                 "promotion_min_benchmark_coverage": STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE,
                 "promotion_min_net_cagr_spread": STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD,
                 "promotion_min_liquidity_clean_coverage": STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE,
+                "promotion_max_underperformance_share": STRICT_PROMOTION_DEFAULT_MAX_UNDERPERFORMANCE_SHARE,
+                "promotion_min_worst_rolling_excess_return": STRICT_PROMOTION_DEFAULT_MIN_WORST_ROLLING_EXCESS_RETURN,
                 "underperformance_guardrail_enabled": STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED,
                 "underperformance_guardrail_window_months": STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
                 "underperformance_guardrail_threshold": STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD,
@@ -2211,6 +2288,8 @@ def _strategy_compare_defaults(strategy_name: str) -> dict:
                 "promotion_min_benchmark_coverage": STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE,
                 "promotion_min_net_cagr_spread": STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD,
                 "promotion_min_liquidity_clean_coverage": STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE,
+                "promotion_max_underperformance_share": STRICT_PROMOTION_DEFAULT_MAX_UNDERPERFORMANCE_SHARE,
+                "promotion_min_worst_rolling_excess_return": STRICT_PROMOTION_DEFAULT_MIN_WORST_ROLLING_EXCESS_RETURN,
                 "underperformance_guardrail_enabled": STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED,
                 "underperformance_guardrail_window_months": STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
                 "underperformance_guardrail_threshold": STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD,
@@ -2243,6 +2322,8 @@ def _strategy_compare_defaults(strategy_name: str) -> dict:
                 "promotion_min_benchmark_coverage": STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE,
                 "promotion_min_net_cagr_spread": STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD,
                 "promotion_min_liquidity_clean_coverage": STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE,
+                "promotion_max_underperformance_share": STRICT_PROMOTION_DEFAULT_MAX_UNDERPERFORMANCE_SHARE,
+                "promotion_min_worst_rolling_excess_return": STRICT_PROMOTION_DEFAULT_MIN_WORST_ROLLING_EXCESS_RETURN,
                 "underperformance_guardrail_enabled": STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED,
                 "underperformance_guardrail_window_months": STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
                 "underperformance_guardrail_threshold": STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD,
@@ -2669,6 +2750,15 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
             "Liquidity policy: "
             f"clean coverage >= `{float(meta.get('promotion_min_liquidity_clean_coverage') or 0.0):.0%}`"
         )
+    if (
+        meta.get("promotion_max_underperformance_share") is not None
+        or meta.get("promotion_min_worst_rolling_excess_return") is not None
+    ):
+        st.caption(
+            "Validation policy: "
+            f"underperformance share <= `{float(meta.get('promotion_max_underperformance_share') or 0.0):.0%}`, "
+            f"worst rolling excess >= `{float(meta.get('promotion_min_worst_rolling_excess_return') or 0.0):.0%}`"
+        )
 
     if meta.get("benchmark_available"):
         st.markdown("##### Validation Surface")
@@ -2782,6 +2872,56 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
                 st.info(
                     "Liquidity policy는 현재 unavailable 상태입니다. "
                     "실전 승격 기준으로 보려면 `Min Avg Dollar Volume 20D` 필터를 함께 사용하는 편이 좋습니다."
+                )
+
+        if meta.get("validation_policy_status"):
+            st.markdown("##### Validation Policy")
+            validation_policy_cols = st.columns(5, gap="small")
+            validation_policy_cols[0].metric(
+                "Policy Status",
+                str(meta.get("validation_policy_status") or "normal").upper(),
+            )
+            if meta.get("promotion_max_underperformance_share") is not None:
+                validation_policy_cols[1].metric(
+                    "Max Underperf Share",
+                    f"{float(meta.get('promotion_max_underperformance_share') or 0.0):.0%}",
+                )
+            if meta.get("rolling_underperformance_share") is not None:
+                validation_policy_cols[2].metric(
+                    "Actual Underperf Share",
+                    f"{float(meta.get('rolling_underperformance_share') or 0.0):.2%}",
+                )
+            if meta.get("promotion_min_worst_rolling_excess_return") is not None:
+                validation_policy_cols[3].metric(
+                    "Min Worst Excess",
+                    f"{float(meta.get('promotion_min_worst_rolling_excess_return') or 0.0):.0%}",
+                )
+            if meta.get("rolling_underperformance_worst_excess_return") is not None:
+                validation_policy_cols[4].metric(
+                    "Actual Worst Excess",
+                    f"{float(meta.get('rolling_underperformance_worst_excess_return') or 0.0):.2%}",
+                )
+            validation_policy_signals = list(meta.get("validation_policy_watch_signals") or [])
+            if validation_policy_signals:
+                st.caption(
+                    "Validation policy signals: "
+                    + ", ".join(f"`{signal}`" for signal in validation_policy_signals)
+                )
+            validation_policy_status = str(meta.get("validation_policy_status") or "normal").lower()
+            if validation_policy_status == "caution":
+                st.warning(
+                    "현재 validation policy 기준에서는 rolling underperformance robustness가 충분하지 않습니다. "
+                    "실전 승격 전 계약을 더 보수적으로 보는 편이 맞습니다."
+                )
+            elif validation_policy_status == "watch":
+                st.info(
+                    "Validation policy 기준에서 watch 신호가 있습니다. "
+                    "추가 구간 robustness 검증을 더 하는 편이 좋습니다."
+                )
+            elif validation_policy_status == "unavailable":
+                st.info(
+                    "Validation policy는 현재 unavailable 상태입니다. "
+                    "aligned benchmark validation history가 있어야 승격 기준으로 해석할 수 있습니다."
                 )
 
         if meta.get("underperformance_guardrail_enabled"):
@@ -2908,6 +3048,7 @@ def _build_compare_highlight_rows(bundles: list[dict]) -> pd.DataFrame:
                 "Benchmark": meta.get("benchmark_ticker"),
                 "Benchmark Policy": meta.get("benchmark_policy_status"),
                 "Liquidity Policy": meta.get("liquidity_policy_status"),
+                "Validation Policy": meta.get("validation_policy_status"),
                 "Net CAGR Spread": meta.get("net_cagr_spread"),
                 "Validation": meta.get("validation_status"),
                 "Promotion": meta.get("promotion_decision"),
@@ -3192,6 +3333,8 @@ def _render_compare_results() -> None:
                     "promotion_min_benchmark_coverage": meta.get("promotion_min_benchmark_coverage"),
                     "promotion_min_net_cagr_spread": meta.get("promotion_min_net_cagr_spread"),
                     "promotion_min_liquidity_clean_coverage": meta.get("promotion_min_liquidity_clean_coverage"),
+                    "promotion_max_underperformance_share": meta.get("promotion_max_underperformance_share"),
+                    "promotion_min_worst_rolling_excess_return": meta.get("promotion_min_worst_rolling_excess_return"),
                     "avg_turnover": meta.get("avg_turnover"),
                     "trend_filter": (
                         f"MA{meta.get('trend_filter_window', STRICT_TREND_FILTER_DEFAULT_WINDOW)}"
@@ -3862,6 +4005,15 @@ def _build_history_payload(record: dict[str, Any]) -> dict[str, Any] | None:
         payload["promotion_min_liquidity_clean_coverage"] = float(
             record.get("promotion_min_liquidity_clean_coverage") or STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE
         )
+    if record.get("promotion_max_underperformance_share") is not None:
+        payload["promotion_max_underperformance_share"] = float(
+            record.get("promotion_max_underperformance_share") or STRICT_PROMOTION_DEFAULT_MAX_UNDERPERFORMANCE_SHARE
+        )
+    if record.get("promotion_min_worst_rolling_excess_return") is not None:
+        payload["promotion_min_worst_rolling_excess_return"] = float(
+            record.get("promotion_min_worst_rolling_excess_return")
+            or STRICT_PROMOTION_DEFAULT_MIN_WORST_ROLLING_EXCESS_RETURN
+        )
     if record.get("snapshot_source") is not None:
         payload["snapshot_source"] = record.get("snapshot_source")
     if record.get("universe_contract") is not None:
@@ -3994,6 +4146,14 @@ def _build_prefill_summary_lines(payload: dict[str, Any] | None) -> list[str]:
     if payload.get("promotion_min_liquidity_clean_coverage") is not None:
         lines.append(
             f"Min Liquidity Clean Coverage: `{float(payload.get('promotion_min_liquidity_clean_coverage')):.0%}`"
+        )
+    if payload.get("promotion_max_underperformance_share") is not None:
+        lines.append(
+            f"Max Underperformance Share: `{float(payload.get('promotion_max_underperformance_share')):.0%}`"
+        )
+    if payload.get("promotion_min_worst_rolling_excess_return") is not None:
+        lines.append(
+            f"Min Worst Rolling Excess: `{float(payload.get('promotion_min_worst_rolling_excess_return')):.0%}`"
         )
     if payload.get("underperformance_guardrail_enabled"):
         lines.append(
@@ -4133,6 +4293,10 @@ def _bundle_to_saved_strategy_override(bundle: dict[str, Any]) -> dict[str, Any]
         override["promotion_min_net_cagr_spread"] = float(meta.get("promotion_min_net_cagr_spread"))
     if meta.get("promotion_min_liquidity_clean_coverage") is not None:
         override["promotion_min_liquidity_clean_coverage"] = float(meta.get("promotion_min_liquidity_clean_coverage"))
+    if meta.get("promotion_max_underperformance_share") is not None:
+        override["promotion_max_underperformance_share"] = float(meta.get("promotion_max_underperformance_share"))
+    if meta.get("promotion_min_worst_rolling_excess_return") is not None:
+        override["promotion_min_worst_rolling_excess_return"] = float(meta.get("promotion_min_worst_rolling_excess_return"))
     if meta.get("underperformance_guardrail_enabled") is not None:
         override["underperformance_guardrail_enabled"] = bool(meta.get("underperformance_guardrail_enabled"))
     if meta.get("underperformance_guardrail_window_months") is not None:
@@ -4356,6 +4520,12 @@ def _apply_compare_strategy_prefill(strategy_name: str, override: dict[str, Any]
     )
     st.session_state[f"compare_{key_prefix}_promotion_min_liquidity_clean_coverage"] = float(
         (override.get("promotion_min_liquidity_clean_coverage") or STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE) * 100.0
+    )
+    st.session_state[f"compare_{key_prefix}_promotion_max_underperformance_share"] = float(
+        (override.get("promotion_max_underperformance_share") or STRICT_PROMOTION_DEFAULT_MAX_UNDERPERFORMANCE_SHARE) * 100.0
+    )
+    st.session_state[f"compare_{key_prefix}_promotion_min_worst_rolling_excess_return"] = float(
+        (override.get("promotion_min_worst_rolling_excess_return") or STRICT_PROMOTION_DEFAULT_MIN_WORST_ROLLING_EXCESS_RETURN) * 100.0
     )
     if override.get("quality_factors") is not None:
         quality_key = "quality_factors" if key_prefix in {"qvss", "qvqp"} else "factors"
@@ -4619,6 +4789,12 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         st.session_state["qss_promotion_min_liquidity_clean_coverage"] = float(
             (payload.get("promotion_min_liquidity_clean_coverage") or STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE) * 100.0
         )
+        st.session_state["qss_promotion_max_underperformance_share"] = float(
+            (payload.get("promotion_max_underperformance_share") or STRICT_PROMOTION_DEFAULT_MAX_UNDERPERFORMANCE_SHARE) * 100.0
+        )
+        st.session_state["qss_promotion_min_worst_rolling_excess_return"] = float(
+            (payload.get("promotion_min_worst_rolling_excess_return") or STRICT_PROMOTION_DEFAULT_MIN_WORST_ROLLING_EXCESS_RETURN) * 100.0
+        )
     elif strategy_key == "quality_snapshot_strict_quarterly_prototype":
         st.session_state["qsqp_universe_mode"] = "Preset" if universe_mode == "preset" and preset_name in QUALITY_STRICT_PRESETS else "Manual"
         if st.session_state["qsqp_universe_mode"] == "Preset":
@@ -4687,6 +4863,12 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         )
         st.session_state["vss_promotion_min_liquidity_clean_coverage"] = float(
             (payload.get("promotion_min_liquidity_clean_coverage") or STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE) * 100.0
+        )
+        st.session_state["vss_promotion_max_underperformance_share"] = float(
+            (payload.get("promotion_max_underperformance_share") or STRICT_PROMOTION_DEFAULT_MAX_UNDERPERFORMANCE_SHARE) * 100.0
+        )
+        st.session_state["vss_promotion_min_worst_rolling_excess_return"] = float(
+            (payload.get("promotion_min_worst_rolling_excess_return") or STRICT_PROMOTION_DEFAULT_MIN_WORST_ROLLING_EXCESS_RETURN) * 100.0
         )
     elif strategy_key == "value_snapshot_strict_quarterly_prototype":
         st.session_state["vsqp_universe_mode"] = "Preset" if universe_mode == "preset" and preset_name in VALUE_STRICT_PRESETS else "Manual"
@@ -4757,6 +4939,12 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         )
         st.session_state["qvss_promotion_min_liquidity_clean_coverage"] = float(
             (payload.get("promotion_min_liquidity_clean_coverage") or STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE) * 100.0
+        )
+        st.session_state["qvss_promotion_max_underperformance_share"] = float(
+            (payload.get("promotion_max_underperformance_share") or STRICT_PROMOTION_DEFAULT_MAX_UNDERPERFORMANCE_SHARE) * 100.0
+        )
+        st.session_state["qvss_promotion_min_worst_rolling_excess_return"] = float(
+            (payload.get("promotion_min_worst_rolling_excess_return") or STRICT_PROMOTION_DEFAULT_MIN_WORST_ROLLING_EXCESS_RETURN) * 100.0
         )
     elif strategy_key == "quality_value_snapshot_strict_quarterly_prototype":
         st.session_state["qvqp_universe_mode"] = "Preset" if universe_mode == "preset" and preset_name in QUALITY_STRICT_PRESETS else "Manual"
@@ -5618,6 +5806,8 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> None:
                     promotion_min_benchmark_coverage=payload.get("promotion_min_benchmark_coverage", STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE),
                     promotion_min_net_cagr_spread=payload.get("promotion_min_net_cagr_spread", STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD),
                     promotion_min_liquidity_clean_coverage=payload.get("promotion_min_liquidity_clean_coverage", STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE),
+                    promotion_max_underperformance_share=payload.get("promotion_max_underperformance_share", STRICT_PROMOTION_DEFAULT_MAX_UNDERPERFORMANCE_SHARE),
+                    promotion_min_worst_rolling_excess_return=payload.get("promotion_min_worst_rolling_excess_return", STRICT_PROMOTION_DEFAULT_MIN_WORST_ROLLING_EXCESS_RETURN),
                     trend_filter_enabled=payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED),
                     trend_filter_window=payload.get("trend_filter_window", STRICT_TREND_FILTER_DEFAULT_WINDOW),
                     market_regime_enabled=payload.get("market_regime_enabled", STRICT_MARKET_REGIME_DEFAULT_ENABLED),
@@ -5671,6 +5861,8 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> None:
                     promotion_min_benchmark_coverage=payload.get("promotion_min_benchmark_coverage", STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE),
                     promotion_min_net_cagr_spread=payload.get("promotion_min_net_cagr_spread", STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD),
                     promotion_min_liquidity_clean_coverage=payload.get("promotion_min_liquidity_clean_coverage", STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE),
+                    promotion_max_underperformance_share=payload.get("promotion_max_underperformance_share", STRICT_PROMOTION_DEFAULT_MAX_UNDERPERFORMANCE_SHARE),
+                    promotion_min_worst_rolling_excess_return=payload.get("promotion_min_worst_rolling_excess_return", STRICT_PROMOTION_DEFAULT_MIN_WORST_ROLLING_EXCESS_RETURN),
                     trend_filter_enabled=payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED),
                     trend_filter_window=payload.get("trend_filter_window", STRICT_TREND_FILTER_DEFAULT_WINDOW),
                     market_regime_enabled=payload.get("market_regime_enabled", STRICT_MARKET_REGIME_DEFAULT_ENABLED),
@@ -5725,6 +5917,8 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> None:
                     promotion_min_benchmark_coverage=payload.get("promotion_min_benchmark_coverage", STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE),
                     promotion_min_net_cagr_spread=payload.get("promotion_min_net_cagr_spread", STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD),
                     promotion_min_liquidity_clean_coverage=payload.get("promotion_min_liquidity_clean_coverage", STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE),
+                    promotion_max_underperformance_share=payload.get("promotion_max_underperformance_share", STRICT_PROMOTION_DEFAULT_MAX_UNDERPERFORMANCE_SHARE),
+                    promotion_min_worst_rolling_excess_return=payload.get("promotion_min_worst_rolling_excess_return", STRICT_PROMOTION_DEFAULT_MIN_WORST_ROLLING_EXCESS_RETURN),
                     trend_filter_enabled=payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED),
                     trend_filter_window=payload.get("trend_filter_window", STRICT_TREND_FILTER_DEFAULT_WINDOW),
                     market_regime_enabled=payload.get("market_regime_enabled", STRICT_MARKET_REGIME_DEFAULT_ENABLED),
@@ -6418,6 +6612,8 @@ def _render_quality_snapshot_strict_annual_form() -> None:
                 promotion_min_benchmark_coverage,
                 promotion_min_net_cagr_spread,
                 promotion_min_liquidity_clean_coverage,
+                promotion_max_underperformance_share,
+                promotion_min_worst_rolling_excess_return,
             ) = _render_strict_annual_real_money_inputs(
                 key_prefix="qss",
             )
@@ -6473,6 +6669,8 @@ def _render_quality_snapshot_strict_annual_form() -> None:
         "promotion_min_benchmark_coverage": float(promotion_min_benchmark_coverage),
         "promotion_min_net_cagr_spread": float(promotion_min_net_cagr_spread),
         "promotion_min_liquidity_clean_coverage": float(promotion_min_liquidity_clean_coverage),
+        "promotion_max_underperformance_share": float(promotion_max_underperformance_share),
+        "promotion_min_worst_rolling_excess_return": float(promotion_min_worst_rolling_excess_return),
         "underperformance_guardrail_enabled": bool(underperformance_guardrail_enabled),
         "underperformance_guardrail_window_months": int(underperformance_guardrail_window_months),
         "underperformance_guardrail_threshold": float(underperformance_guardrail_threshold),
@@ -6989,6 +7187,8 @@ def _render_value_snapshot_strict_annual_form() -> None:
                 promotion_min_benchmark_coverage,
                 promotion_min_net_cagr_spread,
                 promotion_min_liquidity_clean_coverage,
+                promotion_max_underperformance_share,
+                promotion_min_worst_rolling_excess_return,
             ) = _render_strict_annual_real_money_inputs(
                 key_prefix="vss",
             )
@@ -7045,6 +7245,8 @@ def _render_value_snapshot_strict_annual_form() -> None:
         "promotion_min_benchmark_coverage": float(promotion_min_benchmark_coverage),
         "promotion_min_net_cagr_spread": float(promotion_min_net_cagr_spread),
         "promotion_min_liquidity_clean_coverage": float(promotion_min_liquidity_clean_coverage),
+        "promotion_max_underperformance_share": float(promotion_max_underperformance_share),
+        "promotion_min_worst_rolling_excess_return": float(promotion_min_worst_rolling_excess_return),
         "underperformance_guardrail_enabled": bool(underperformance_guardrail_enabled),
         "underperformance_guardrail_window_months": int(underperformance_guardrail_window_months),
         "underperformance_guardrail_threshold": float(underperformance_guardrail_threshold),
@@ -7395,6 +7597,8 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
                 promotion_min_benchmark_coverage,
                 promotion_min_net_cagr_spread,
                 promotion_min_liquidity_clean_coverage,
+                promotion_max_underperformance_share,
+                promotion_min_worst_rolling_excess_return,
             ) = _render_strict_annual_real_money_inputs(
                 key_prefix="qvss",
             )
@@ -7454,6 +7658,8 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
         "promotion_min_benchmark_coverage": float(promotion_min_benchmark_coverage),
         "promotion_min_net_cagr_spread": float(promotion_min_net_cagr_spread),
         "promotion_min_liquidity_clean_coverage": float(promotion_min_liquidity_clean_coverage),
+        "promotion_max_underperformance_share": float(promotion_max_underperformance_share),
+        "promotion_min_worst_rolling_excess_return": float(promotion_min_worst_rolling_excess_return),
         "underperformance_guardrail_enabled": bool(underperformance_guardrail_enabled),
         "underperformance_guardrail_window_months": int(underperformance_guardrail_window_months),
         "underperformance_guardrail_threshold": float(underperformance_guardrail_threshold),
@@ -7918,6 +8124,8 @@ def render_backtest_tab() -> None:
                             promotion_min_benchmark_coverage,
                             promotion_min_net_cagr_spread,
                             promotion_min_liquidity_clean_coverage,
+                            promotion_max_underperformance_share,
+                            promotion_min_worst_rolling_excess_return,
                         ) = _render_strict_annual_real_money_inputs(
                             key_prefix="compare_qss",
                         )
@@ -7929,6 +8137,8 @@ def render_backtest_tab() -> None:
                         compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["promotion_min_benchmark_coverage"] = float(promotion_min_benchmark_coverage)
                         compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["promotion_min_net_cagr_spread"] = float(promotion_min_net_cagr_spread)
                         compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["promotion_min_liquidity_clean_coverage"] = float(promotion_min_liquidity_clean_coverage)
+                        compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["promotion_max_underperformance_share"] = float(promotion_max_underperformance_share)
+                        compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["promotion_min_worst_rolling_excess_return"] = float(promotion_min_worst_rolling_excess_return)
                         (
                             compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["underperformance_guardrail_enabled"],
                             compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["underperformance_guardrail_window_months"],
@@ -8121,6 +8331,8 @@ def render_backtest_tab() -> None:
                             promotion_min_benchmark_coverage,
                             promotion_min_net_cagr_spread,
                             promotion_min_liquidity_clean_coverage,
+                            promotion_max_underperformance_share,
+                            promotion_min_worst_rolling_excess_return,
                         ) = _render_strict_annual_real_money_inputs(
                             key_prefix="compare_vss",
                         )
@@ -8132,6 +8344,8 @@ def render_backtest_tab() -> None:
                         compare_strategy_overrides["Value Snapshot (Strict Annual)"]["promotion_min_benchmark_coverage"] = float(promotion_min_benchmark_coverage)
                         compare_strategy_overrides["Value Snapshot (Strict Annual)"]["promotion_min_net_cagr_spread"] = float(promotion_min_net_cagr_spread)
                         compare_strategy_overrides["Value Snapshot (Strict Annual)"]["promotion_min_liquidity_clean_coverage"] = float(promotion_min_liquidity_clean_coverage)
+                        compare_strategy_overrides["Value Snapshot (Strict Annual)"]["promotion_max_underperformance_share"] = float(promotion_max_underperformance_share)
+                        compare_strategy_overrides["Value Snapshot (Strict Annual)"]["promotion_min_worst_rolling_excess_return"] = float(promotion_min_worst_rolling_excess_return)
                         (
                             compare_strategy_overrides["Value Snapshot (Strict Annual)"]["underperformance_guardrail_enabled"],
                             compare_strategy_overrides["Value Snapshot (Strict Annual)"]["underperformance_guardrail_window_months"],
@@ -8330,6 +8544,8 @@ def render_backtest_tab() -> None:
                             promotion_min_benchmark_coverage,
                             promotion_min_net_cagr_spread,
                             promotion_min_liquidity_clean_coverage,
+                            promotion_max_underperformance_share,
+                            promotion_min_worst_rolling_excess_return,
                         ) = _render_strict_annual_real_money_inputs(
                             key_prefix="compare_qvss",
                         )
@@ -8341,6 +8557,8 @@ def render_backtest_tab() -> None:
                         compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["promotion_min_benchmark_coverage"] = float(promotion_min_benchmark_coverage)
                         compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["promotion_min_net_cagr_spread"] = float(promotion_min_net_cagr_spread)
                         compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["promotion_min_liquidity_clean_coverage"] = float(promotion_min_liquidity_clean_coverage)
+                        compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["promotion_max_underperformance_share"] = float(promotion_max_underperformance_share)
+                        compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["promotion_min_worst_rolling_excess_return"] = float(promotion_min_worst_rolling_excess_return)
                         (
                             compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["underperformance_guardrail_enabled"],
                             compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["underperformance_guardrail_window_months"],
