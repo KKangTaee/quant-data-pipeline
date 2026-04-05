@@ -6143,3 +6143,26 @@ Do not copy full chat transcripts. Keep only the durable result.
   - current operating state should be read as:
     - `Phase 12`: implementation closed / manual_validation_pending
     - `Phase 13`: active phase
+
+### 2026-04-05 - Quality / Value / Quality+Value family is not uniformly ready for real-money deployment
+
+- Request topic:
+  - before continuing Phase 13, confirm whether `Quality`, `Value`, `Quality + Value` strategies are already fully implemented for actual use
+- Interpreted goal:
+  - distinguish which variants are truly usable as real-money candidates versus which still remain research-only
+- Result:
+  - the correct interpretation is variant-specific, not family-wide
+  - `Research` variants:
+    - usable for exploration
+    - not a real-money deployment target
+  - `Strict Annual` variants:
+    - now have substantial real-money candidate surface
+    - including dynamic PIT contract, investability filters, transaction cost, benchmark contract, liquidity proxy, validation policy, promotion policy, and actual drawdown guardrail
+    - should be read as `real-money candidate` or `production candidate`, not as fully deployment-ready live strategies
+  - `Strict Quarterly Prototype` variants:
+    - remain explicitly `research-only`
+    - should not be interpreted as ready for actual capital deployment
+- Durable implication:
+  - the annual strict family is sufficiently implemented to enter Phase 13 shortlist / probation review
+  - but it is still not the same thing as “safe to deploy live immediately”
+  - Phase 13 exists exactly because deployment-readiness, probation, monitoring, and rolling/out-of-sample review are still needed after Phase 12
