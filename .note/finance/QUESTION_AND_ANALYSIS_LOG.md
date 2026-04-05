@@ -6456,3 +6456,32 @@ Do not copy full chat transcripts. Keep only the durable result.
     - detail previews
 - Durable implication:
   - the Real-Money tab now separates related meaning visually as well as logically, reducing the chance that users read adjacent sections as one continuous block
+
+### 2026-04-05 - `resolve_validation_gaps_before_promotion` means promotion is blocked by concrete validation or policy issues
+
+- Request topic:
+  - the user asked what should actually be done when `Promotion Next Step` shows `resolve_validation_gaps_before_promotion`
+- Interpreted goal:
+  - explain the operational meaning of this next step and translate the runtime rule into concrete debugging actions
+- Result:
+  - confirmed from runtime logic that this next step is used only when `promotion_decision = hold`
+  - the main blockers are:
+    - `benchmark_unavailable`
+    - `validation_status = caution`
+    - `benchmark_policy_status = caution`
+    - ETF strategies only: `etf_operability_status = caution / unavailable`
+    - `liquidity_policy_status = caution / unavailable`
+    - `validation_policy_status = caution / unavailable`
+    - `guardrail_policy_status = caution / unavailable`
+    - `price_freshness.status = error`
+  - clarified that the following do **not** trigger this hold path by themselves:
+    - `static_universe_contract`
+    - `validation/watch`
+    - policy `watch`
+    - `price_freshness.warning`
+  - recommended the operator flow:
+    - check `Real-Money > 현재 판단` for the hold message
+    - check `Promotion rationale`
+    - then inspect `검토 근거` and `실행 부담` to find which policy block is `caution` or `unavailable`
+- Durable implication:
+  - users can now interpret `resolve_validation_gaps_before_promotion` as a concrete validation/debugging to-do rather than a vague status label
