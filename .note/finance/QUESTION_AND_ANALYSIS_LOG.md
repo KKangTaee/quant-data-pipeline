@@ -5939,3 +5939,34 @@ Do not copy full chat transcripts. Keep only the durable result.
     - price-only strategies
     - statement/factor strategies
     - shared simulation helpers
+
+### 2026-04-05 - Current recommendation is selective refactor, not large rewrite
+
+- Request topic:
+  - ask whether we should proactively refactor more now or leave the current structure alone if it is still working
+- Interpreted goal:
+  - choose the best maintenance path for future finance work without creating unnecessary regression risk
+- Result:
+  - recommended stance:
+    - **do not** perform a large structural rewrite immediately
+    - **do** continue with small, high-signal refactors when a touched area is already causing friction
+  - practical recommendation:
+    1. keep `finance/strategy.py` as-is for now
+       - it is not yet the biggest maintenance hotspot
+       - its current role boundary is still understandable
+    2. keep `backtest.py` as the page orchestrator
+       - but gradually peel off large family UI blocks into helper/modules
+       - especially when touching the same area again
+    3. avoid deep inheritance as the next move
+       - current strategy differences are driven more by inputs/configuration/UI surface than by a clean polymorphic class tree
+    4. prefer staged refactor triggers
+       - refactor when:
+         - the same file area is touched repeatedly
+         - one family block becomes hard to review safely
+         - compare/prefill/history logic keeps duplicating
+       - do not refactor only for aesthetics
+- Durable implication:
+  - best near-term path is:
+    - keep current runtime boundaries stable
+    - refactor only the hotspots we touch next
+    - treat `backtest.py` modularization as incremental maintenance, not a big-bang rewrite
