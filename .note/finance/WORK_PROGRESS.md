@@ -3756,3 +3756,17 @@ Keep entries append-only and concise.
   - collapsed policy/detail areas
   - the final detail tab
 - Updated the Phase 13 checklist wording so it points to the new `Real-Money` internal tab structure.
+
+### 2026-04-05 - 실전형 핵심 용어를 glossary에 추가 정리
+
+- Added glossary entries or clearer definitions for:
+  - `Validation`
+  - `Validation Policy`
+  - `Liquidity`
+  - `Benchmark Policy`
+  - `Guardrail Policy`
+- Kept the existing:
+  - `Benchmark`
+  - `Liquidity Policy`
+  - `Portfolio Guardrail`
+  entries and aligned the new terms around the same explanation structure.

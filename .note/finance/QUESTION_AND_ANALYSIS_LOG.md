@@ -6393,3 +6393,24 @@ Do not copy full chat transcripts. Keep only the durable result.
 - Durable implication:
   - the `Real-Money` tab now follows the operator’s decision order rather than the implementation order
   - future checklist wording should reference the internal `Real-Money` tabs when guiding manual QA
+
+### 2026-04-05 - Validation, benchmark, liquidity, and guardrail terms should be easy to look up in one shared glossary
+
+- Request topic:
+  - the user wanted a simpler explanation of `validation`, `benchmark`, `liquidity`, and `guardrail`, and asked for the shared term document to be updated if these terms were missing or too thin
+- Interpreted goal:
+  - make the core Phase 12 / 13 interpretation vocabulary reusable without relying on chat explanations
+- Result:
+  - kept the existing `Benchmark`, `Liquidity Policy`, and `Portfolio Guardrail` entries
+  - added or expanded:
+    - `Benchmark Policy`
+    - `Liquidity`
+    - `Validation`
+    - `Validation Policy`
+    - `Guardrail Policy`
+  - aligned the new terms with the same glossary structure:
+    - basic explanation
+    - why it is used
+    - example / use case
+- Durable implication:
+  - future manual QA and result interpretation can point to the glossary directly when users ask what these policy layers mean
