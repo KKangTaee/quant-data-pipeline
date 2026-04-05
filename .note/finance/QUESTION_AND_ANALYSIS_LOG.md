@@ -6197,3 +6197,26 @@ Do not copy full chat transcripts. Keep only the durable result.
     - candidate quality
     - immediate next action
     - whether the strategy should stay on watchlist, go to paper probation, or be considered for small-capital trial
+
+### 2026-04-05 - ETF second-pass hardening should add actual guardrail rules, not only read-only review overlays
+
+- Request topic:
+  - continue Phase 13 into the next ETF second-pass step after the shortlist layer
+- Interpreted goal:
+  - make ETF deployment-readiness more operational by allowing `GTAA`, `Risk Parity Trend`, and `Dual Momentum` to enforce benchmark-relative guardrails at rebalance time
+- Result:
+  - added actual ETF-side:
+    - `Underperformance Guardrail`
+    - `Drawdown Guardrail`
+  - the new contract now propagates through:
+    - single strategy forms
+    - compare overrides
+    - history / `Load Into Form`
+    - saved-portfolio compare context
+    - runtime / sample / strategy execution
+  - ETF rebalance behavior now moves to cash when the configured underperformance or drawdown rule is breached
+  - ETF result rows now record guardrail state / trigger columns, and runtime meta collects ETF trigger counts
+- Durable implication:
+  - the ETF second-pass guardrail item is now implemented as a first pass
+  - ETF current-operability remains a current-snapshot overlay, not PIT operability history
+  - actual AUM/spread block rules remain later-pass backlog

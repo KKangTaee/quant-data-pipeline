@@ -196,6 +196,8 @@
   - Phase 13 현재 실행 보드로, candidate shortlist / ETF second-pass / monitoring / rolling validation 작업 상태를 관리하는 문서
 - `.note/finance/phase13/PHASE13_CANDIDATE_SHORTLIST_CONTRACT_FIRST_PASS.md`
   - Phase 12의 `promotion_decision`을 `watchlist / paper_probation / small_capital_trial / hold` shortlist language로 다시 읽고, single / compare / execution context surface까지 연결한 Phase 13 first-pass 문서
+- `.note/finance/phase13/PHASE13_ETF_GUARDRAIL_SECOND_PASS_FIRST_PASS.md`
+  - ETF 전략군(`GTAA`, `Risk Parity Trend`, `Dual Momentum`)에 underperformance / drawdown guardrail actual rule을 second pass로 연결하고, single / compare / history round-trip까지 확장한 문서
 
 ---
 

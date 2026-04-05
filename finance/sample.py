@@ -528,6 +528,14 @@ def get_gtaa3_from_db(
     crash_guardrail_enabled=GTAA_DEFAULT_CRASH_GUARDRAIL_ENABLED,
     crash_guardrail_drawdown_threshold=GTAA_DEFAULT_CRASH_GUARDRAIL_DRAWDOWN_THRESHOLD,
     crash_guardrail_lookback_months=GTAA_DEFAULT_CRASH_GUARDRAIL_LOOKBACK_MONTHS,
+    benchmark_ticker=STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
+    underperformance_guardrail_enabled=STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED,
+    underperformance_guardrail_window_months=STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
+    underperformance_guardrail_threshold=STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD,
+    drawdown_guardrail_enabled=STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_ENABLED,
+    drawdown_guardrail_window_months=STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
+    drawdown_guardrail_strategy_threshold=STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD,
+    drawdown_guardrail_gap_threshold=STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD,
     start=None,
     end=None,
     timeframe="1d",
@@ -535,6 +543,7 @@ def get_gtaa3_from_db(
 ):
     if tickers is None:
         tickers = GTAA_DEFAULT_TICKERS
+    benchmark_ticker = str(benchmark_ticker or STRICT_MARKET_REGIME_DEFAULT_BENCHMARK).strip().upper()
     effective_score_lookback_months = _normalize_gtaa_score_lookback_months(
         score_lookback_months=score_lookback_months,
         score_return_columns=score_return_columns,
@@ -582,6 +591,17 @@ def get_gtaa3_from_db(
             crash_guardrail_lookback_months=crash_guardrail_lookback_months,
         )
 
+    guardrail_benchmark_df = None
+    if underperformance_guardrail_enabled or drawdown_guardrail_enabled:
+        guardrail_benchmark_df = _build_underperformance_guardrail_df(
+            benchmark_ticker,
+            option=option,
+            start=start,
+            end=end,
+            timeframe=timeframe,
+            from_db=True,
+        )
+
     strategy = GTAA3Strategy(
         start_balance=10000,
         top=top,
@@ -596,6 +616,17 @@ def get_gtaa3_from_db(
         market_regime_benchmark=market_regime_benchmark,
         crash_guardrail_enabled=crash_guardrail_enabled,
         crash_guardrail_drawdown_threshold=crash_guardrail_drawdown_threshold,
+        underperformance_guardrail_enabled=underperformance_guardrail_enabled,
+        underperformance_guardrail_window_months=underperformance_guardrail_window_months,
+        underperformance_guardrail_threshold=underperformance_guardrail_threshold,
+        underperformance_guardrail_benchmark=benchmark_ticker,
+        underperformance_guardrail_df=guardrail_benchmark_df if underperformance_guardrail_enabled else None,
+        drawdown_guardrail_enabled=drawdown_guardrail_enabled,
+        drawdown_guardrail_window_months=drawdown_guardrail_window_months,
+        drawdown_guardrail_strategy_threshold=drawdown_guardrail_strategy_threshold,
+        drawdown_guardrail_gap_threshold=drawdown_guardrail_gap_threshold,
+        drawdown_guardrail_benchmark=benchmark_ticker,
+        drawdown_guardrail_df=guardrail_benchmark_df if drawdown_guardrail_enabled else None,
     )
 
     df = engine.run(strategy).round_columns().round_columns(cols=["Return", "Total Return"], decimals=3).result
@@ -641,6 +672,14 @@ def get_risk_parity_trend_from_db(
     rebalance_interval=1,
     vol_window=6,
     min_price=0.0,
+    benchmark_ticker=STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
+    underperformance_guardrail_enabled=STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED,
+    underperformance_guardrail_window_months=STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
+    underperformance_guardrail_threshold=STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD,
+    drawdown_guardrail_enabled=STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_ENABLED,
+    drawdown_guardrail_window_months=STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
+    drawdown_guardrail_strategy_threshold=STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD,
+    drawdown_guardrail_gap_threshold=STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD,
     start=None,
     end=None,
     timeframe="1d",
@@ -648,6 +687,7 @@ def get_risk_parity_trend_from_db(
 ):
     if tickers is None:
         tickers = ['SPY','TLT','GLD','IEF','LQD']
+    benchmark_ticker = str(benchmark_ticker or STRICT_MARKET_REGIME_DEFAULT_BENCHMARK).strip().upper()
 
     engine = (
         _build_price_only_engine(
@@ -666,12 +706,34 @@ def get_risk_parity_trend_from_db(
         .drop_columns(["High","Low","Open","Volume"])
     )
 
+    guardrail_benchmark_df = None
+    if underperformance_guardrail_enabled or drawdown_guardrail_enabled:
+        guardrail_benchmark_df = _build_underperformance_guardrail_df(
+            benchmark_ticker,
+            option=option,
+            start=start,
+            end=end,
+            timeframe=timeframe,
+            from_db=True,
+        )
+
     strategy = RiskParityTrendStrategy(
         start_balance=10000,
         rebalance_interval=rebalance_interval,
         vol_window=vol_window,
         filter_ma="MA200",
         min_price=min_price,
+        underperformance_guardrail_enabled=underperformance_guardrail_enabled,
+        underperformance_guardrail_window_months=underperformance_guardrail_window_months,
+        underperformance_guardrail_threshold=underperformance_guardrail_threshold,
+        underperformance_guardrail_benchmark=benchmark_ticker,
+        underperformance_guardrail_df=guardrail_benchmark_df if underperformance_guardrail_enabled else None,
+        drawdown_guardrail_enabled=drawdown_guardrail_enabled,
+        drawdown_guardrail_window_months=drawdown_guardrail_window_months,
+        drawdown_guardrail_strategy_threshold=drawdown_guardrail_strategy_threshold,
+        drawdown_guardrail_gap_threshold=drawdown_guardrail_gap_threshold,
+        drawdown_guardrail_benchmark=benchmark_ticker,
+        drawdown_guardrail_df=guardrail_benchmark_df if drawdown_guardrail_enabled else None,
     )
 
     df = engine.run(strategy).round_columns(
@@ -720,6 +782,14 @@ def get_dual_momentum_from_db(
     top=1,
     rebalance_interval=1,
     min_price=0.0,
+    benchmark_ticker=STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
+    underperformance_guardrail_enabled=STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED,
+    underperformance_guardrail_window_months=STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
+    underperformance_guardrail_threshold=STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD,
+    drawdown_guardrail_enabled=STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_ENABLED,
+    drawdown_guardrail_window_months=STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
+    drawdown_guardrail_strategy_threshold=STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD,
+    drawdown_guardrail_gap_threshold=STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD,
     start=None,
     end=None,
     timeframe="1d",
@@ -727,6 +797,7 @@ def get_dual_momentum_from_db(
 ):
     if tickers is None:
         tickers = ["QQQ", "SPY", "IWM", "SOXX", "BIL"]
+    benchmark_ticker = str(benchmark_ticker or STRICT_MARKET_REGIME_DEFAULT_BENCHMARK).strip().upper()
 
     engine = (
         _build_price_only_engine(
@@ -746,6 +817,17 @@ def get_dual_momentum_from_db(
         .drop_columns(["High","Low","Open","Volume"])
     )
 
+    guardrail_benchmark_df = None
+    if underperformance_guardrail_enabled or drawdown_guardrail_enabled:
+        guardrail_benchmark_df = _build_underperformance_guardrail_df(
+            benchmark_ticker,
+            option=option,
+            start=start,
+            end=end,
+            timeframe=timeframe,
+            from_db=True,
+        )
+
     strategy = DualMomentumStrategy(
         start_balance=10000,
         top=top,
@@ -754,6 +836,17 @@ def get_dual_momentum_from_db(
         rebalance_interval=rebalance_interval,
         cash_ticker="BIL",
         min_price=min_price,
+        underperformance_guardrail_enabled=underperformance_guardrail_enabled,
+        underperformance_guardrail_window_months=underperformance_guardrail_window_months,
+        underperformance_guardrail_threshold=underperformance_guardrail_threshold,
+        underperformance_guardrail_benchmark=benchmark_ticker,
+        underperformance_guardrail_df=guardrail_benchmark_df if underperformance_guardrail_enabled else None,
+        drawdown_guardrail_enabled=drawdown_guardrail_enabled,
+        drawdown_guardrail_window_months=drawdown_guardrail_window_months,
+        drawdown_guardrail_strategy_threshold=drawdown_guardrail_strategy_threshold,
+        drawdown_guardrail_gap_threshold=drawdown_guardrail_gap_threshold,
+        drawdown_guardrail_benchmark=benchmark_ticker,
+        drawdown_guardrail_df=guardrail_benchmark_df if drawdown_guardrail_enabled else None,
     )
 
     df = engine.run(strategy).round_columns().round_columns(cols=["Total Return"], decimals=3).result

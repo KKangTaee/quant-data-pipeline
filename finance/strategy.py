@@ -134,6 +134,17 @@ def gtaa3(
     market_regime_benchmark: str | None = None,
     crash_guardrail_enabled: bool = False,
     crash_guardrail_drawdown_threshold: float = 0.15,
+    underperformance_guardrail_enabled: bool = False,
+    underperformance_guardrail_window_months: int = 12,
+    underperformance_guardrail_threshold: float = -0.10,
+    underperformance_guardrail_benchmark: str | None = None,
+    underperformance_guardrail_df: pd.DataFrame | None = None,
+    drawdown_guardrail_enabled: bool = False,
+    drawdown_guardrail_window_months: int = 12,
+    drawdown_guardrail_strategy_threshold: float = -0.35,
+    drawdown_guardrail_gap_threshold: float = 0.08,
+    drawdown_guardrail_benchmark: str | None = None,
+    drawdown_guardrail_df: pd.DataFrame | None = None,
 ) -> dict:
     """
         gtaa3 전략
@@ -177,6 +188,17 @@ def gtaa3(
                 "trend": float(regime_trend) if pd.notna(regime_trend) else np.nan,
                 "crash_drawdown": float(crash_drawdown) if pd.notna(crash_drawdown) else np.nan,
             }
+
+    if underperformance_guardrail_enabled and underperformance_guardrail_df is None:
+        raise ValueError("underperformance_guardrail_df is required when GTAA underperformance guardrail is enabled.")
+    if drawdown_guardrail_enabled and drawdown_guardrail_df is None:
+        raise ValueError("drawdown_guardrail_df is required when GTAA drawdown guardrail is enabled.")
+
+    guardrail_close_by_date = _build_guardrail_close_by_date(
+        underperformance_guardrail_df if underperformance_guardrail_enabled else drawdown_guardrail_df
+    )
+    guardrail_close_history: list[float] = []
+    strategy_balance_history: list[float] = []
 
     base_df = dfs[tickers[0]].sort_values("Date").reset_index(drop=True)
     dates = base_df["Date"]
@@ -256,19 +278,6 @@ def gtaa3(
             candidate_pairs.sort(key=lambda item: float(scores[item[1]]), reverse=True)
             return candidate_pairs
 
-        if risk_off_reasons:
-            if risk_off_mode == "defensive_bond_preference":
-                next_ticker_to_index = _build_defensive_candidates([])[:n_assets]
-                defensive_fill_tickers = [ticker for ticker, _ in next_ticker_to_index]
-            else:
-                next_ticker_to_index = []
-        elif risk_off_mode == "defensive_bond_preference" and len(next_ticker_to_index) < n_assets:
-            defensive_candidates = _build_defensive_candidates(next_ticker_to_index)
-            slots_left = max(n_assets - len(next_ticker_to_index), 0)
-            added_pairs = defensive_candidates[:slots_left]
-            next_ticker_to_index = next_ticker_to_index + added_pairs
-            defensive_fill_tickers = [ticker for ticker, _ in added_pairs]
-
         # =========================
         # Return & End Balance
         # =========================
@@ -295,6 +304,47 @@ def gtaa3(
                 else (total_balance / prev_total_balance) - 1
             )
 
+        guardrail_fields = _evaluate_portfolio_guardrails(
+            current_date=current_date,
+            step_index=i,
+            current_total_balance=float(total_balance),
+            strategy_balance_history=strategy_balance_history,
+            guardrail_close_history=guardrail_close_history,
+            guardrail_close_by_date=guardrail_close_by_date,
+            underperformance_guardrail_enabled=underperformance_guardrail_enabled,
+            underperformance_guardrail_window_months=underperformance_guardrail_window_months,
+            underperformance_guardrail_threshold=underperformance_guardrail_threshold,
+            underperformance_guardrail_benchmark=underperformance_guardrail_benchmark,
+            drawdown_guardrail_enabled=drawdown_guardrail_enabled,
+            drawdown_guardrail_window_months=drawdown_guardrail_window_months,
+            drawdown_guardrail_strategy_threshold=drawdown_guardrail_strategy_threshold,
+            drawdown_guardrail_gap_threshold=drawdown_guardrail_gap_threshold,
+            drawdown_guardrail_benchmark=drawdown_guardrail_benchmark,
+        )
+        guardrail_risk_off = bool(
+            guardrail_fields["Underperformance Guardrail Triggered"]
+            or guardrail_fields["Drawdown Guardrail Triggered"]
+        )
+        if bool(guardrail_fields["Underperformance Guardrail Triggered"]):
+            risk_off_reasons.append("underperformance_guardrail")
+        if bool(guardrail_fields["Drawdown Guardrail Triggered"]):
+            risk_off_reasons.append("drawdown_guardrail")
+
+        if guardrail_risk_off:
+            next_ticker_to_index = []
+        elif risk_off_reasons:
+            if risk_off_mode == "defensive_bond_preference":
+                next_ticker_to_index = _build_defensive_candidates([])[:n_assets]
+                defensive_fill_tickers = [ticker for ticker, _ in next_ticker_to_index]
+            else:
+                next_ticker_to_index = []
+        elif risk_off_mode == "defensive_bond_preference" and len(next_ticker_to_index) < n_assets:
+            defensive_candidates = _build_defensive_candidates(next_ticker_to_index)
+            slots_left = max(n_assets - len(next_ticker_to_index), 0)
+            added_pairs = defensive_candidates[:slots_left]
+            next_ticker_to_index = next_ticker_to_index + added_pairs
+            defensive_fill_tickers = [ticker for ticker, _ in added_pairs]
+
 
         # =========================
         # Next Balance
@@ -311,7 +361,7 @@ def gtaa3(
             else np.nan
         )
         
-        rows.append({
+        row = {
             "Date": date,
             # "Ticker": tickers,
             "End Ticker" : end_tickers,
@@ -340,11 +390,19 @@ def gtaa3(
             # "Return": returns,
             "Total Balance": total_balance,
             "Total Return": total_return, 
-        })
+        }
+        row.update(guardrail_fields)
+        rows.append(row)
 
         prev_close = closes
         end_ticker_to_index = next_ticker_to_index
         prev_total_balance = total_balance
+        strategy_balance_history.append(float(total_balance))
+        guardrail_close_history.append(
+            float(guardrail_fields["Underperformance Guardrail Benchmark Close"])
+            if pd.notna(guardrail_fields["Underperformance Guardrail Benchmark Close"])
+            else np.nan
+        )
 
     return pd.DataFrame(rows)
 
@@ -373,6 +431,17 @@ def risk_parity_trend(
     vol_window: int = 6,        # 변동성 계산 window (월말 데이터면 6 = 6개월)
     filter_ma: str = "MA200",   # 트렌드 필터 컬럼명
     min_price: float = 0.0,
+    underperformance_guardrail_enabled: bool = False,
+    underperformance_guardrail_window_months: int = 12,
+    underperformance_guardrail_threshold: float = -0.10,
+    underperformance_guardrail_benchmark: str | None = None,
+    underperformance_guardrail_df: pd.DataFrame | None = None,
+    drawdown_guardrail_enabled: bool = False,
+    drawdown_guardrail_window_months: int = 12,
+    drawdown_guardrail_strategy_threshold: float = -0.35,
+    drawdown_guardrail_gap_threshold: float = 0.08,
+    drawdown_guardrail_benchmark: str | None = None,
+    drawdown_guardrail_df: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     """
     Risk Parity(1/vol) + Trend Filter 전략
@@ -387,6 +456,16 @@ def risk_parity_trend(
     tickers = list(dfs.keys())
     base_df = dfs[tickers[0]].sort_values("Date").reset_index(drop=True)
     dates = base_df["Date"]
+
+    if underperformance_guardrail_enabled and underperformance_guardrail_df is None:
+        raise ValueError("underperformance_guardrail_df is required when risk parity guardrail is enabled.")
+    if drawdown_guardrail_enabled and drawdown_guardrail_df is None:
+        raise ValueError("drawdown_guardrail_df is required when risk parity drawdown guardrail is enabled.")
+    guardrail_close_by_date = _build_guardrail_close_by_date(
+        underperformance_guardrail_df if underperformance_guardrail_enabled else drawdown_guardrail_df
+    )
+    guardrail_close_history: list[float] = []
+    strategy_balance_history: list[float] = []
 
     # 수익률/변동성 계산을 위해 Close 행렬 구성 (shape: [T, N])
     closes_mat = np.column_stack([dfs[t].sort_values("Date").reset_index(drop=True)["Close"].values for t in tickers])
@@ -433,50 +512,76 @@ def risk_parity_trend(
 
         # i == 0이면 start_balance로, 아니면 total_balance 기준으로 다음 배분 결정
         base_balance = start_balance if i == 0 else total_balance
+        guardrail_fields = _evaluate_portfolio_guardrails(
+            current_date=date,
+            step_index=i,
+            current_total_balance=float(base_balance),
+            strategy_balance_history=strategy_balance_history,
+            guardrail_close_history=guardrail_close_history,
+            guardrail_close_by_date=guardrail_close_by_date,
+            underperformance_guardrail_enabled=underperformance_guardrail_enabled,
+            underperformance_guardrail_window_months=underperformance_guardrail_window_months,
+            underperformance_guardrail_threshold=underperformance_guardrail_threshold,
+            underperformance_guardrail_benchmark=underperformance_guardrail_benchmark,
+            drawdown_guardrail_enabled=drawdown_guardrail_enabled,
+            drawdown_guardrail_window_months=drawdown_guardrail_window_months,
+            drawdown_guardrail_strategy_threshold=drawdown_guardrail_strategy_threshold,
+            drawdown_guardrail_gap_threshold=drawdown_guardrail_gap_threshold,
+            drawdown_guardrail_benchmark=drawdown_guardrail_benchmark,
+        )
+        guardrail_risk_off = bool(
+            guardrail_fields["Underperformance Guardrail Triggered"]
+            or guardrail_fields["Drawdown Guardrail Triggered"]
+        )
 
         if rebalancing:
-            # (A) 트렌드 필터 통과 자산 선정
-            # filter_ma 컬럼이 각 df에 존재한다고 가정 (engine.add_ma로 생성)
-            eligible = []
-            for j, t in enumerate(tickers):
-                ma_val = dfs[t].iloc[i].get(filter_ma, np.nan)
-                if (
-                    pd.notna(ma_val)
-                    and closes[j] >= float(ma_val)
-                    and _passes_min_price(closes[j], min_price)
-                ):
-                    eligible.append(j)
-
-            # (B) 변동성 계산: 최근 vol_window 기간 rolling std
-            # i 기준으로 과거 vol_window개 수익률 필요
-            vols = {}
-            for j in eligible:
-                start_idx = max(0, i - vol_window + 1)
-                window = rets_mat[start_idx:i+1, j]
-                window = window[~np.isnan(window)]
-                if len(window) < max(2, vol_window // 2):  # 너무 짧으면 제외(완화 가능)
-                    continue
-                v = float(np.std(window, ddof=1))
-                if v > 0:
-                    vols[j] = v
-
-            # (C) 가중치 = 1/vol 정규화
-            if vols:
-                inv = {j: 1.0 / v for j, v in vols.items()}
-                s = sum(inv.values())
-                weights = {j: inv[j] / s for j in inv}
-                held_ticker_idx = list(weights.keys())
-
-                next_balances = [base_balance * weights[j] for j in held_ticker_idx]
-                cash = base_balance - sum(next_balances)
-                next_weights = [weights[j] for j in held_ticker_idx]
-                next_tickers = [tickers[j] for j in held_ticker_idx]
-            else:
+            if guardrail_risk_off:
                 held_ticker_idx = []
                 next_balances = []
                 cash = base_balance
                 next_weights = []
                 next_tickers = []
+            else:
+                # (A) 트렌드 필터 통과 자산 선정
+                eligible = []
+                for j, t in enumerate(tickers):
+                    ma_val = dfs[t].iloc[i].get(filter_ma, np.nan)
+                    if (
+                        pd.notna(ma_val)
+                        and closes[j] >= float(ma_val)
+                        and _passes_min_price(closes[j], min_price)
+                    ):
+                        eligible.append(j)
+
+                # (B) 변동성 계산
+                vols = {}
+                for j in eligible:
+                    start_idx = max(0, i - vol_window + 1)
+                    window = rets_mat[start_idx:i+1, j]
+                    window = window[~np.isnan(window)]
+                    if len(window) < max(2, vol_window // 2):
+                        continue
+                    v = float(np.std(window, ddof=1))
+                    if v > 0:
+                        vols[j] = v
+
+                # (C) 가중치 = 1/vol 정규화
+                if vols:
+                    inv = {j: 1.0 / v for j, v in vols.items()}
+                    s = sum(inv.values())
+                    weights = {j: inv[j] / s for j in inv}
+                    held_ticker_idx = list(weights.keys())
+
+                    next_balances = [base_balance * weights[j] for j in held_ticker_idx]
+                    cash = base_balance - sum(next_balances)
+                    next_weights = [weights[j] for j in held_ticker_idx]
+                    next_tickers = [tickers[j] for j in held_ticker_idx]
+                else:
+                    held_ticker_idx = []
+                    next_balances = []
+                    cash = base_balance
+                    next_weights = []
+                    next_tickers = []
         else:
             # 리밸런싱이 아니면, 그대로 보유(현금/보유자산 유지)
             next_weights = np.nan
@@ -484,7 +589,7 @@ def risk_parity_trend(
 
         end_tickers = [tickers[j] for j in held_ticker_idx] if i != 0 else np.nan
 
-        rows.append({
+        row = {
             "Date": date,
             "End Ticker": end_tickers,
             "Next Ticker": next_tickers,
@@ -495,10 +600,18 @@ def risk_parity_trend(
             "Total Balance": float(total_balance),
             "Total Return": float(total_return) if pd.notna(total_return) else total_return,
             "Rebalancing": rebalancing
-        })
+        }
+        row.update(guardrail_fields)
+        rows.append(row)
 
         prev_close = closes
         prev_total_balance = total_balance
+        strategy_balance_history.append(float(total_balance))
+        guardrail_close_history.append(
+            float(guardrail_fields["Underperformance Guardrail Benchmark Close"])
+            if pd.notna(guardrail_fields["Underperformance Guardrail Benchmark Close"])
+            else np.nan
+        )
 
     return pd.DataFrame(rows)
 
@@ -512,6 +625,17 @@ def dual_momentum(
     rebalance_interval: int = 1,
     cash_ticker: str | None = None,   # 예: "BIL" or "SHY" (없으면 '현금 고정')
     min_price: float = 0.0,
+    underperformance_guardrail_enabled: bool = False,
+    underperformance_guardrail_window_months: int = 12,
+    underperformance_guardrail_threshold: float = -0.10,
+    underperformance_guardrail_benchmark: str | None = None,
+    underperformance_guardrail_df: pd.DataFrame | None = None,
+    drawdown_guardrail_enabled: bool = False,
+    drawdown_guardrail_window_months: int = 12,
+    drawdown_guardrail_strategy_threshold: float = -0.35,
+    drawdown_guardrail_gap_threshold: float = 0.08,
+    drawdown_guardrail_benchmark: str | None = None,
+    drawdown_guardrail_df: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     """
     Dual Momentum + Trend Filter 전략
@@ -537,6 +661,16 @@ def dual_momentum(
     risky_tickers = [t for t in tickers if t != cash_ticker]
     if len(risky_tickers) == 0:
         raise ValueError("risky_tickers가 비었습니다. cash_ticker만 있는 상태입니다.")
+
+    if underperformance_guardrail_enabled and underperformance_guardrail_df is None:
+        raise ValueError("underperformance_guardrail_df is required when dual momentum guardrail is enabled.")
+    if drawdown_guardrail_enabled and drawdown_guardrail_df is None:
+        raise ValueError("drawdown_guardrail_df is required when dual momentum drawdown guardrail is enabled.")
+    guardrail_close_by_date = _build_guardrail_close_by_date(
+        underperformance_guardrail_df if underperformance_guardrail_enabled else drawdown_guardrail_df
+    )
+    guardrail_close_history: list[float] = []
+    strategy_balance_history: list[float] = []
 
     base_df = dfs[risky_tickers[0]].sort_values("Date").reset_index(drop=True)
     dates = base_df["Date"].tolist()
@@ -594,38 +728,60 @@ def dual_momentum(
         # =========================
         rebalancing = (i == 0) or (i % rebalance_interval == 0)
         base_balance = float(start_balance if i == 0 else total_balance)
+        guardrail_fields = _evaluate_portfolio_guardrails(
+            current_date=date,
+            step_index=i,
+            current_total_balance=float(base_balance),
+            strategy_balance_history=strategy_balance_history,
+            guardrail_close_history=guardrail_close_history,
+            guardrail_close_by_date=guardrail_close_by_date,
+            underperformance_guardrail_enabled=underperformance_guardrail_enabled,
+            underperformance_guardrail_window_months=underperformance_guardrail_window_months,
+            underperformance_guardrail_threshold=underperformance_guardrail_threshold,
+            underperformance_guardrail_benchmark=underperformance_guardrail_benchmark,
+            drawdown_guardrail_enabled=drawdown_guardrail_enabled,
+            drawdown_guardrail_window_months=drawdown_guardrail_window_months,
+            drawdown_guardrail_strategy_threshold=drawdown_guardrail_strategy_threshold,
+            drawdown_guardrail_gap_threshold=drawdown_guardrail_gap_threshold,
+            drawdown_guardrail_benchmark=drawdown_guardrail_benchmark,
+        )
+        guardrail_risk_off = bool(
+            guardrail_fields["Underperformance Guardrail Triggered"]
+            or guardrail_fields["Drawdown Guardrail Triggered"]
+        )
 
         if rebalancing:
-            # 2-1) risky 중 모멘텀 top N 선택
-            risky_scores = [(t, score_now[t]) for t in risky_tickers if pd.notna(score_now[t])]
-            risky_scores.sort(key=lambda x: x[1])
-            picked = [t for t, _ in risky_scores[-top:]][::-1]  # 높은 점수부터
-
-            # 2-2) 트렌드 필터 통과만 투자
-            invest = [
-                t
-                for t in picked
-                if pd.notna(ma_now[t])
-                and close_now[t] >= ma_now[t]
-                and _passes_min_price(close_now[t], min_price)
-            ]
-
-            if len(invest) == 0:
-                # 전부 현금(또는 cash_ticker)
+            if guardrail_risk_off:
                 held = []
                 next_balances = []
                 cash = base_balance
             else:
-                # 동일가중 (공격형 기본)
-                w = 1.0 / len(invest)
-                held = invest
-                next_balances = [base_balance * w] * len(invest)
-                cash = base_balance - sum(next_balances)
+                risky_scores = [(t, score_now[t]) for t in risky_tickers if pd.notna(score_now[t])]
+                risky_scores.sort(key=lambda x: x[1])
+                picked = [t for t, _ in risky_scores[-top:]][::-1]
+
+                invest = [
+                    t
+                    for t in picked
+                    if pd.notna(ma_now[t])
+                    and close_now[t] >= ma_now[t]
+                    and _passes_min_price(close_now[t], min_price)
+                ]
+
+                if len(invest) == 0:
+                    held = []
+                    next_balances = []
+                    cash = base_balance
+                else:
+                    w = 1.0 / len(invest)
+                    held = invest
+                    next_balances = [base_balance * w] * len(invest)
+                    cash = base_balance - sum(next_balances)
         else:
             # 리밸런싱 아니면 그대로 유지
             pass
 
-        rows.append({
+        row = {
             "Date": date,
             "End Ticker": (np.nan if i == 0 else held),
             "Next Ticker": held,
@@ -635,12 +791,20 @@ def dual_momentum(
             "Total Balance": float(total_balance),
             "Total Return": total_return,
             "Rebalancing": rebalancing,
-        })
+        }
+        row.update(guardrail_fields)
+        rows.append(row)
 
         # prev update
         for t in tickers:
             prev_close[t] = close_now[t]
         prev_total_balance = total_balance
+        strategy_balance_history.append(float(total_balance))
+        guardrail_close_history.append(
+            float(guardrail_fields["Underperformance Guardrail Benchmark Close"])
+            if pd.notna(guardrail_fields["Underperformance Guardrail Benchmark Close"])
+            else np.nan
+        )
 
     return pd.DataFrame(rows)
 
@@ -716,6 +880,147 @@ def _window_max_drawdown(values: list[float]) -> float:
     running_max = series.cummax()
     drawdown = series / running_max - 1.0
     return float(drawdown.min())
+
+
+def _build_guardrail_close_by_date(guardrail_df: pd.DataFrame | None) -> dict[pd.Timestamp, float]:
+    close_by_date: dict[pd.Timestamp, float] = {}
+    if guardrail_df is None or guardrail_df.empty:
+        return close_by_date
+
+    working = guardrail_df.copy()
+    working["Date"] = pd.to_datetime(working["Date"], errors="coerce")
+    working = working.dropna(subset=["Date"]).sort_values("Date")
+    for _, row in working.iterrows():
+        close_value = pd.to_numeric(row.get("Close"), errors="coerce")
+        if pd.isna(close_value):
+            continue
+        close_by_date[pd.Timestamp(row["Date"]).normalize()] = float(close_value)
+    return close_by_date
+
+
+def _evaluate_portfolio_guardrails(
+    *,
+    current_date,
+    step_index: int,
+    current_total_balance: float,
+    strategy_balance_history: list[float],
+    guardrail_close_history: list[float],
+    guardrail_close_by_date: dict[pd.Timestamp, float],
+    underperformance_guardrail_enabled: bool = False,
+    underperformance_guardrail_window_months: int = 12,
+    underperformance_guardrail_threshold: float = -0.10,
+    underperformance_guardrail_benchmark: str | None = None,
+    drawdown_guardrail_enabled: bool = False,
+    drawdown_guardrail_window_months: int = 12,
+    drawdown_guardrail_strategy_threshold: float = -0.35,
+    drawdown_guardrail_gap_threshold: float = 0.08,
+    drawdown_guardrail_benchmark: str | None = None,
+) -> dict[str, float | str | bool]:
+    snapshot_key = pd.to_datetime(current_date).normalize()
+    benchmark_close_now = guardrail_close_by_date.get(snapshot_key, np.nan)
+
+    under_state = "off"
+    under_triggered = False
+    strategy_return = np.nan
+    benchmark_return = np.nan
+    excess_return = np.nan
+    if underperformance_guardrail_enabled:
+        if step_index < int(underperformance_guardrail_window_months):
+            under_state = "warming_up"
+        else:
+            lookback_index = step_index - int(underperformance_guardrail_window_months)
+            start_strategy_balance = strategy_balance_history[lookback_index]
+            start_benchmark_close = guardrail_close_history[lookback_index]
+            if (
+                pd.notna(start_strategy_balance)
+                and float(start_strategy_balance) > 0.0
+                and pd.notna(start_benchmark_close)
+                and float(start_benchmark_close) > 0.0
+                and pd.notna(benchmark_close_now)
+                and float(benchmark_close_now) > 0.0
+            ):
+                strategy_return = (float(current_total_balance) / float(start_strategy_balance)) - 1.0
+                benchmark_return = (float(benchmark_close_now) / float(start_benchmark_close)) - 1.0
+                excess_return = float(strategy_return - benchmark_return)
+                if float(excess_return) <= -abs(float(underperformance_guardrail_threshold)):
+                    under_state = "risk_off"
+                    under_triggered = True
+                else:
+                    under_state = "risk_on"
+            else:
+                under_state = "unknown"
+
+    drawdown_state = "off"
+    drawdown_triggered = False
+    strategy_drawdown = np.nan
+    benchmark_drawdown = np.nan
+    drawdown_gap = np.nan
+    if drawdown_guardrail_enabled:
+        if step_index < int(drawdown_guardrail_window_months):
+            drawdown_state = "warming_up"
+        else:
+            lookback_index = step_index - int(drawdown_guardrail_window_months)
+            strategy_window_values = strategy_balance_history[lookback_index:step_index] + [float(current_total_balance)]
+            strategy_drawdown = _window_max_drawdown(strategy_window_values)
+            if pd.notna(benchmark_close_now):
+                benchmark_window_values = guardrail_close_history[lookback_index:step_index] + [float(benchmark_close_now)]
+                benchmark_drawdown = _window_max_drawdown(benchmark_window_values)
+                if pd.notna(strategy_drawdown) and pd.notna(benchmark_drawdown):
+                    drawdown_gap = float(benchmark_drawdown) - float(strategy_drawdown)
+
+            drawdown_limit_breached = (
+                pd.notna(strategy_drawdown)
+                and float(strategy_drawdown) <= -abs(float(drawdown_guardrail_strategy_threshold))
+            )
+            gap_limit_breached = (
+                pd.notna(drawdown_gap)
+                and float(drawdown_gap) > float(drawdown_guardrail_gap_threshold)
+            )
+            if drawdown_limit_breached or gap_limit_breached:
+                drawdown_state = "risk_off"
+                drawdown_triggered = True
+            elif pd.notna(strategy_drawdown):
+                drawdown_state = "risk_on"
+            else:
+                drawdown_state = "unknown"
+
+    return {
+        "Underperformance Guardrail Enabled": underperformance_guardrail_enabled,
+        "Underperformance Guardrail Benchmark": (
+            underperformance_guardrail_benchmark if underperformance_guardrail_enabled else np.nan
+        ),
+        "Underperformance Guardrail Window (Months)": (
+            int(underperformance_guardrail_window_months) if underperformance_guardrail_enabled else np.nan
+        ),
+        "Underperformance Guardrail Threshold": (
+            -abs(float(underperformance_guardrail_threshold)) if underperformance_guardrail_enabled else np.nan
+        ),
+        "Underperformance Guardrail State": under_state,
+        "Underperformance Guardrail Triggered": under_triggered,
+        "Underperformance Guardrail Benchmark Close": benchmark_close_now,
+        "Underperformance Guardrail Strategy Return": strategy_return,
+        "Underperformance Guardrail Benchmark Return": benchmark_return,
+        "Underperformance Guardrail Excess Return": excess_return,
+        "Drawdown Guardrail Enabled": drawdown_guardrail_enabled,
+        "Drawdown Guardrail Benchmark": (
+            drawdown_guardrail_benchmark if drawdown_guardrail_enabled else np.nan
+        ),
+        "Drawdown Guardrail Window (Months)": (
+            int(drawdown_guardrail_window_months) if drawdown_guardrail_enabled else np.nan
+        ),
+        "Drawdown Guardrail Strategy Threshold": (
+            -abs(float(drawdown_guardrail_strategy_threshold)) if drawdown_guardrail_enabled else np.nan
+        ),
+        "Drawdown Guardrail Gap Threshold": (
+            float(drawdown_guardrail_gap_threshold) if drawdown_guardrail_enabled else np.nan
+        ),
+        "Drawdown Guardrail State": drawdown_state,
+        "Drawdown Guardrail Triggered": drawdown_triggered,
+        "Drawdown Guardrail Benchmark Close": benchmark_close_now,
+        "Drawdown Guardrail Strategy Drawdown": strategy_drawdown,
+        "Drawdown Guardrail Benchmark Drawdown": benchmark_drawdown,
+        "Drawdown Guardrail Gap": drawdown_gap,
+    }
 
 
 def quality_snapshot_equal_weight(
@@ -1199,6 +1504,17 @@ class GTAA3Strategy(Strategy):
         market_regime_benchmark: str | None = None,
         crash_guardrail_enabled: bool = False,
         crash_guardrail_drawdown_threshold: float = 0.15,
+        underperformance_guardrail_enabled: bool = False,
+        underperformance_guardrail_window_months: int = 12,
+        underperformance_guardrail_threshold: float = -0.10,
+        underperformance_guardrail_benchmark: str | None = None,
+        underperformance_guardrail_df: pd.DataFrame | None = None,
+        drawdown_guardrail_enabled: bool = False,
+        drawdown_guardrail_window_months: int = 12,
+        drawdown_guardrail_strategy_threshold: float = -0.35,
+        drawdown_guardrail_gap_threshold: float = 0.08,
+        drawdown_guardrail_benchmark: str | None = None,
+        drawdown_guardrail_df: pd.DataFrame | None = None,
     ):
         self.start_balance = start_balance
         self.top = top
@@ -1213,6 +1529,17 @@ class GTAA3Strategy(Strategy):
         self.market_regime_benchmark = market_regime_benchmark
         self.crash_guardrail_enabled = crash_guardrail_enabled
         self.crash_guardrail_drawdown_threshold = crash_guardrail_drawdown_threshold
+        self.underperformance_guardrail_enabled = underperformance_guardrail_enabled
+        self.underperformance_guardrail_window_months = underperformance_guardrail_window_months
+        self.underperformance_guardrail_threshold = underperformance_guardrail_threshold
+        self.underperformance_guardrail_benchmark = underperformance_guardrail_benchmark
+        self.underperformance_guardrail_df = underperformance_guardrail_df
+        self.drawdown_guardrail_enabled = drawdown_guardrail_enabled
+        self.drawdown_guardrail_window_months = drawdown_guardrail_window_months
+        self.drawdown_guardrail_strategy_threshold = drawdown_guardrail_strategy_threshold
+        self.drawdown_guardrail_gap_threshold = drawdown_guardrail_gap_threshold
+        self.drawdown_guardrail_benchmark = drawdown_guardrail_benchmark
+        self.drawdown_guardrail_df = drawdown_guardrail_df
 
     def run(self, dfs: dict) -> pd.DataFrame:
         return gtaa3(
@@ -1230,6 +1557,17 @@ class GTAA3Strategy(Strategy):
             self.market_regime_benchmark,
             self.crash_guardrail_enabled,
             self.crash_guardrail_drawdown_threshold,
+            self.underperformance_guardrail_enabled,
+            self.underperformance_guardrail_window_months,
+            self.underperformance_guardrail_threshold,
+            self.underperformance_guardrail_benchmark,
+            self.underperformance_guardrail_df,
+            self.drawdown_guardrail_enabled,
+            self.drawdown_guardrail_window_months,
+            self.drawdown_guardrail_strategy_threshold,
+            self.drawdown_guardrail_gap_threshold,
+            self.drawdown_guardrail_benchmark,
+            self.drawdown_guardrail_df,
         )
 
 
@@ -1241,12 +1579,34 @@ class RiskParityTrendStrategy(Strategy):
         vol_window: int = 6,
         filter_ma: str = "MA200",
         min_price: float = 0.0,
+        underperformance_guardrail_enabled: bool = False,
+        underperformance_guardrail_window_months: int = 12,
+        underperformance_guardrail_threshold: float = -0.10,
+        underperformance_guardrail_benchmark: str | None = None,
+        underperformance_guardrail_df: pd.DataFrame | None = None,
+        drawdown_guardrail_enabled: bool = False,
+        drawdown_guardrail_window_months: int = 12,
+        drawdown_guardrail_strategy_threshold: float = -0.35,
+        drawdown_guardrail_gap_threshold: float = 0.08,
+        drawdown_guardrail_benchmark: str | None = None,
+        drawdown_guardrail_df: pd.DataFrame | None = None,
     ):
         self.start_balance = start_balance
         self.rebalance_interval = rebalance_interval
         self.vol_window = vol_window
         self.filter_ma = filter_ma
         self.min_price = min_price
+        self.underperformance_guardrail_enabled = underperformance_guardrail_enabled
+        self.underperformance_guardrail_window_months = underperformance_guardrail_window_months
+        self.underperformance_guardrail_threshold = underperformance_guardrail_threshold
+        self.underperformance_guardrail_benchmark = underperformance_guardrail_benchmark
+        self.underperformance_guardrail_df = underperformance_guardrail_df
+        self.drawdown_guardrail_enabled = drawdown_guardrail_enabled
+        self.drawdown_guardrail_window_months = drawdown_guardrail_window_months
+        self.drawdown_guardrail_strategy_threshold = drawdown_guardrail_strategy_threshold
+        self.drawdown_guardrail_gap_threshold = drawdown_guardrail_gap_threshold
+        self.drawdown_guardrail_benchmark = drawdown_guardrail_benchmark
+        self.drawdown_guardrail_df = drawdown_guardrail_df
 
     def run(self, dfs: dict) -> pd.DataFrame:
         return risk_parity_trend(
@@ -1256,6 +1616,17 @@ class RiskParityTrendStrategy(Strategy):
             vol_window=self.vol_window,
             filter_ma=self.filter_ma,
             min_price=self.min_price,
+            underperformance_guardrail_enabled=self.underperformance_guardrail_enabled,
+            underperformance_guardrail_window_months=self.underperformance_guardrail_window_months,
+            underperformance_guardrail_threshold=self.underperformance_guardrail_threshold,
+            underperformance_guardrail_benchmark=self.underperformance_guardrail_benchmark,
+            underperformance_guardrail_df=self.underperformance_guardrail_df,
+            drawdown_guardrail_enabled=self.drawdown_guardrail_enabled,
+            drawdown_guardrail_window_months=self.drawdown_guardrail_window_months,
+            drawdown_guardrail_strategy_threshold=self.drawdown_guardrail_strategy_threshold,
+            drawdown_guardrail_gap_threshold=self.drawdown_guardrail_gap_threshold,
+            drawdown_guardrail_benchmark=self.drawdown_guardrail_benchmark,
+            drawdown_guardrail_df=self.drawdown_guardrail_df,
         )
 
 
@@ -1269,6 +1640,17 @@ class DualMomentumStrategy(Strategy):
         rebalance_interval: int = 1,
         cash_ticker: str | None = None,
         min_price: float = 0.0,
+        underperformance_guardrail_enabled: bool = False,
+        underperformance_guardrail_window_months: int = 12,
+        underperformance_guardrail_threshold: float = -0.10,
+        underperformance_guardrail_benchmark: str | None = None,
+        underperformance_guardrail_df: pd.DataFrame | None = None,
+        drawdown_guardrail_enabled: bool = False,
+        drawdown_guardrail_window_months: int = 12,
+        drawdown_guardrail_strategy_threshold: float = -0.35,
+        drawdown_guardrail_gap_threshold: float = 0.08,
+        drawdown_guardrail_benchmark: str | None = None,
+        drawdown_guardrail_df: pd.DataFrame | None = None,
     ):
         self.start_balance = start_balance
         self.top = top
@@ -1277,6 +1659,17 @@ class DualMomentumStrategy(Strategy):
         self.rebalance_interval = rebalance_interval
         self.cash_ticker = cash_ticker
         self.min_price = min_price
+        self.underperformance_guardrail_enabled = underperformance_guardrail_enabled
+        self.underperformance_guardrail_window_months = underperformance_guardrail_window_months
+        self.underperformance_guardrail_threshold = underperformance_guardrail_threshold
+        self.underperformance_guardrail_benchmark = underperformance_guardrail_benchmark
+        self.underperformance_guardrail_df = underperformance_guardrail_df
+        self.drawdown_guardrail_enabled = drawdown_guardrail_enabled
+        self.drawdown_guardrail_window_months = drawdown_guardrail_window_months
+        self.drawdown_guardrail_strategy_threshold = drawdown_guardrail_strategy_threshold
+        self.drawdown_guardrail_gap_threshold = drawdown_guardrail_gap_threshold
+        self.drawdown_guardrail_benchmark = drawdown_guardrail_benchmark
+        self.drawdown_guardrail_df = drawdown_guardrail_df
 
     def run(self, dfs: dict) -> pd.DataFrame:
         return dual_momentum(
@@ -1288,4 +1681,15 @@ class DualMomentumStrategy(Strategy):
             rebalance_interval=self.rebalance_interval,
             cash_ticker=self.cash_ticker,
             min_price=self.min_price,
+            underperformance_guardrail_enabled=self.underperformance_guardrail_enabled,
+            underperformance_guardrail_window_months=self.underperformance_guardrail_window_months,
+            underperformance_guardrail_threshold=self.underperformance_guardrail_threshold,
+            underperformance_guardrail_benchmark=self.underperformance_guardrail_benchmark,
+            underperformance_guardrail_df=self.underperformance_guardrail_df,
+            drawdown_guardrail_enabled=self.drawdown_guardrail_enabled,
+            drawdown_guardrail_window_months=self.drawdown_guardrail_window_months,
+            drawdown_guardrail_strategy_threshold=self.drawdown_guardrail_strategy_threshold,
+            drawdown_guardrail_gap_threshold=self.drawdown_guardrail_gap_threshold,
+            drawdown_guardrail_benchmark=self.drawdown_guardrail_benchmark,
+            drawdown_guardrail_df=self.drawdown_guardrail_df,
         )

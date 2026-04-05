@@ -32,9 +32,11 @@
 
 ## 3. ETF Second-Pass Hardening
 
-- `pending` ETF underperformance / guardrail later pass 정리
-  - rolling underperformance
-  - stronger ETF guardrail
+- `completed` ETF underperformance / guardrail later pass 정리
+  - `GTAA`, `Risk Parity Trend`, `Dual Momentum`에
+    underperformance / drawdown guardrail actual rule을 연결했다
+  - single / compare / history / saved-portfolio compare context까지
+    같은 contract로 round-trip된다
 - `pending` ETF current-operability rule 검토
   - 현재 AUM / spread warning을 actual block rule로 쓸지 판단
 - `pending` ETF point-in-time operability later-pass 필요성 검토
@@ -78,3 +80,5 @@
   이다.
 - Phase 13 first pass는 현재 `promotion_decision`을
   shortlist language로 다시 읽는 layer까지 연결한 상태다.
+- ETF second pass는 now optional actual guardrail rule까지 연결된 상태다.
+  다만 operability actual block rule과 PIT operability history는 아직 backlog다.

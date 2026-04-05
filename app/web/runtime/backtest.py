@@ -2036,6 +2036,13 @@ def run_gtaa_backtest_from_db(
     crash_guardrail_enabled: bool = GTAA_DEFAULT_CRASH_GUARDRAIL_ENABLED,
     crash_guardrail_drawdown_threshold: float = GTAA_DEFAULT_CRASH_GUARDRAIL_DRAWDOWN_THRESHOLD,
     crash_guardrail_lookback_months: int = GTAA_DEFAULT_CRASH_GUARDRAIL_LOOKBACK_MONTHS,
+    underperformance_guardrail_enabled: bool = STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED,
+    underperformance_guardrail_window_months: int = STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
+    underperformance_guardrail_threshold: float = STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD,
+    drawdown_guardrail_enabled: bool = STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_ENABLED,
+    drawdown_guardrail_window_months: int = STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
+    drawdown_guardrail_strategy_threshold: float = STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD,
+    drawdown_guardrail_gap_threshold: float = STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD,
     promotion_min_etf_aum_b: float = ETF_OPERABILITY_DEFAULT_MIN_AUM_B,
     promotion_max_bid_ask_spread_pct: float = ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT,
     universe_mode: str = "preset",
@@ -2045,6 +2052,7 @@ def run_gtaa_backtest_from_db(
     Public UI-facing runtime wrapper for the second DB-backed backtest screen.
     """
     normalized_tickers = _normalize_tickers(tickers)
+    benchmark_ticker = str(benchmark_ticker or ETF_REAL_MONEY_DEFAULT_BENCHMARK).strip().upper()
     _validate_backtest_date_range(start, end)
     _preflight_price_strategy_data(
         tickers=normalized_tickers,
@@ -2057,6 +2065,15 @@ def run_gtaa_backtest_from_db(
         if benchmark_symbol and benchmark_symbol not in normalized_tickers:
             _preflight_price_strategy_data(
                 tickers=[benchmark_symbol],
+                start=start,
+                end=end,
+                timeframe=timeframe,
+            )
+    if (underperformance_guardrail_enabled or drawdown_guardrail_enabled) and benchmark_ticker:
+        guardrail_symbol = str(benchmark_ticker).strip().upper()
+        if guardrail_symbol and guardrail_symbol not in normalized_tickers:
+            _preflight_price_strategy_data(
+                tickers=[guardrail_symbol],
                 start=start,
                 end=end,
                 timeframe=timeframe,
@@ -2098,6 +2115,14 @@ def run_gtaa_backtest_from_db(
         crash_guardrail_enabled=crash_guardrail_enabled,
         crash_guardrail_drawdown_threshold=crash_guardrail_drawdown_threshold,
         crash_guardrail_lookback_months=crash_guardrail_lookback_months,
+        benchmark_ticker=benchmark_ticker,
+        underperformance_guardrail_enabled=underperformance_guardrail_enabled,
+        underperformance_guardrail_window_months=underperformance_guardrail_window_months,
+        underperformance_guardrail_threshold=underperformance_guardrail_threshold,
+        drawdown_guardrail_enabled=drawdown_guardrail_enabled,
+        drawdown_guardrail_window_months=drawdown_guardrail_window_months,
+        drawdown_guardrail_strategy_threshold=drawdown_guardrail_strategy_threshold,
+        drawdown_guardrail_gap_threshold=drawdown_guardrail_gap_threshold,
     )
 
     bundle = build_backtest_result_bundle(
@@ -2129,12 +2154,19 @@ def run_gtaa_backtest_from_db(
             "crash_guardrail_enabled": crash_guardrail_enabled,
             "crash_guardrail_drawdown_threshold": crash_guardrail_drawdown_threshold,
             "crash_guardrail_lookback_months": crash_guardrail_lookback_months,
+            "underperformance_guardrail_enabled": underperformance_guardrail_enabled,
+            "underperformance_guardrail_window_months": underperformance_guardrail_window_months,
+            "underperformance_guardrail_threshold": underperformance_guardrail_threshold,
+            "drawdown_guardrail_enabled": drawdown_guardrail_enabled,
+            "drawdown_guardrail_window_months": drawdown_guardrail_window_months,
+            "drawdown_guardrail_strategy_threshold": drawdown_guardrail_strategy_threshold,
+            "drawdown_guardrail_gap_threshold": drawdown_guardrail_gap_threshold,
             "universe_mode": universe_mode,
             "preset_name": preset_name,
         },
         summary_freq=_summary_frequency(option, timeframe),
     )
-    return _apply_real_money_hardening(
+    bundle = _apply_real_money_hardening(
         bundle,
         summary_freq=_summary_frequency(option, timeframe),
         min_price_filter=min_price_filter,
@@ -2145,6 +2177,19 @@ def run_gtaa_backtest_from_db(
         promotion_min_etf_aum_b=promotion_min_etf_aum_b,
         promotion_max_bid_ask_spread_pct=promotion_max_bid_ask_spread_pct,
     )
+    if underperformance_guardrail_enabled:
+        bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
+            "ETF Underperformance Guardrail enabled: rebalance candidates move to cash when trailing strategy excess return "
+            f"vs `{benchmark_ticker}` over `{underperformance_guardrail_window_months}M` falls below "
+            f"`{underperformance_guardrail_threshold:.0%}`."
+        ]
+    if drawdown_guardrail_enabled:
+        bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
+            "ETF Drawdown Guardrail enabled: rebalance candidates move to cash when trailing strategy drawdown over "
+            f"`{drawdown_guardrail_window_months}M` falls below `{drawdown_guardrail_strategy_threshold:.0%}` "
+            f"or drawdown gap vs `{benchmark_ticker}` rises above `{drawdown_guardrail_gap_threshold:.0%}`."
+        ]
+    return bundle
 
 
 def run_risk_parity_trend_backtest_from_db(
@@ -2159,12 +2204,20 @@ def run_risk_parity_trend_backtest_from_db(
     min_price_filter: float = ETF_REAL_MONEY_DEFAULT_MIN_PRICE,
     transaction_cost_bps: float = ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
     benchmark_ticker: str = ETF_REAL_MONEY_DEFAULT_BENCHMARK,
+    underperformance_guardrail_enabled: bool = STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED,
+    underperformance_guardrail_window_months: int = STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
+    underperformance_guardrail_threshold: float = STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD,
+    drawdown_guardrail_enabled: bool = STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_ENABLED,
+    drawdown_guardrail_window_months: int = STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
+    drawdown_guardrail_strategy_threshold: float = STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD,
+    drawdown_guardrail_gap_threshold: float = STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD,
     promotion_min_etf_aum_b: float = ETF_OPERABILITY_DEFAULT_MIN_AUM_B,
     promotion_max_bid_ask_spread_pct: float = ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT,
     universe_mode: str = "preset",
     preset_name: str | None = None,
 ) -> dict[str, Any]:
     normalized_tickers = _normalize_tickers(tickers)
+    benchmark_ticker = str(benchmark_ticker or ETF_REAL_MONEY_DEFAULT_BENCHMARK).strip().upper()
     _validate_backtest_date_range(start, end)
     _preflight_price_strategy_data(
         tickers=normalized_tickers,
@@ -2172,6 +2225,15 @@ def run_risk_parity_trend_backtest_from_db(
         end=end,
         timeframe=timeframe,
     )
+    if (underperformance_guardrail_enabled or drawdown_guardrail_enabled) and benchmark_ticker:
+        guardrail_symbol = str(benchmark_ticker).strip().upper()
+        if guardrail_symbol and guardrail_symbol not in normalized_tickers:
+            _preflight_price_strategy_data(
+                tickers=[guardrail_symbol],
+                start=start,
+                end=end,
+                timeframe=timeframe,
+            )
 
     result_df = get_risk_parity_trend_from_db(
         tickers=normalized_tickers,
@@ -2182,6 +2244,14 @@ def run_risk_parity_trend_backtest_from_db(
         rebalance_interval=rebalance_interval,
         vol_window=vol_window,
         min_price=min_price_filter,
+        benchmark_ticker=benchmark_ticker,
+        underperformance_guardrail_enabled=underperformance_guardrail_enabled,
+        underperformance_guardrail_window_months=underperformance_guardrail_window_months,
+        underperformance_guardrail_threshold=underperformance_guardrail_threshold,
+        drawdown_guardrail_enabled=drawdown_guardrail_enabled,
+        drawdown_guardrail_window_months=drawdown_guardrail_window_months,
+        drawdown_guardrail_strategy_threshold=drawdown_guardrail_strategy_threshold,
+        drawdown_guardrail_gap_threshold=drawdown_guardrail_gap_threshold,
     )
 
     bundle = build_backtest_result_bundle(
@@ -2199,6 +2269,13 @@ def run_risk_parity_trend_backtest_from_db(
             "min_price_filter": min_price_filter,
             "transaction_cost_bps": transaction_cost_bps,
             "benchmark_ticker": benchmark_ticker,
+            "underperformance_guardrail_enabled": underperformance_guardrail_enabled,
+            "underperformance_guardrail_window_months": underperformance_guardrail_window_months,
+            "underperformance_guardrail_threshold": underperformance_guardrail_threshold,
+            "drawdown_guardrail_enabled": drawdown_guardrail_enabled,
+            "drawdown_guardrail_window_months": drawdown_guardrail_window_months,
+            "drawdown_guardrail_strategy_threshold": drawdown_guardrail_strategy_threshold,
+            "drawdown_guardrail_gap_threshold": drawdown_guardrail_gap_threshold,
             "promotion_min_etf_aum_b": promotion_min_etf_aum_b,
             "promotion_max_bid_ask_spread_pct": promotion_max_bid_ask_spread_pct,
             "universe_mode": universe_mode,
@@ -2206,7 +2283,7 @@ def run_risk_parity_trend_backtest_from_db(
         },
         summary_freq=_summary_frequency(option, timeframe),
     )
-    return _apply_real_money_hardening(
+    bundle = _apply_real_money_hardening(
         bundle,
         summary_freq=_summary_frequency(option, timeframe),
         min_price_filter=min_price_filter,
@@ -2217,6 +2294,19 @@ def run_risk_parity_trend_backtest_from_db(
         promotion_min_etf_aum_b=promotion_min_etf_aum_b,
         promotion_max_bid_ask_spread_pct=promotion_max_bid_ask_spread_pct,
     )
+    if underperformance_guardrail_enabled:
+        bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
+            "ETF Underperformance Guardrail enabled: rebalance candidates move to cash when trailing strategy excess return "
+            f"vs `{benchmark_ticker}` over `{underperformance_guardrail_window_months}M` falls below "
+            f"`{underperformance_guardrail_threshold:.0%}`."
+        ]
+    if drawdown_guardrail_enabled:
+        bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
+            "ETF Drawdown Guardrail enabled: rebalance candidates move to cash when trailing strategy drawdown over "
+            f"`{drawdown_guardrail_window_months}M` falls below `{drawdown_guardrail_strategy_threshold:.0%}` "
+            f"or drawdown gap vs `{benchmark_ticker}` rises above `{drawdown_guardrail_gap_threshold:.0%}`."
+        ]
+    return bundle
 
 
 def run_dual_momentum_backtest_from_db(
@@ -2231,12 +2321,20 @@ def run_dual_momentum_backtest_from_db(
     min_price_filter: float = ETF_REAL_MONEY_DEFAULT_MIN_PRICE,
     transaction_cost_bps: float = ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
     benchmark_ticker: str = ETF_REAL_MONEY_DEFAULT_BENCHMARK,
+    underperformance_guardrail_enabled: bool = STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED,
+    underperformance_guardrail_window_months: int = STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
+    underperformance_guardrail_threshold: float = STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD,
+    drawdown_guardrail_enabled: bool = STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_ENABLED,
+    drawdown_guardrail_window_months: int = STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
+    drawdown_guardrail_strategy_threshold: float = STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD,
+    drawdown_guardrail_gap_threshold: float = STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD,
     promotion_min_etf_aum_b: float = ETF_OPERABILITY_DEFAULT_MIN_AUM_B,
     promotion_max_bid_ask_spread_pct: float = ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT,
     universe_mode: str = "preset",
     preset_name: str | None = None,
 ) -> dict[str, Any]:
     normalized_tickers = _normalize_tickers(tickers)
+    benchmark_ticker = str(benchmark_ticker or ETF_REAL_MONEY_DEFAULT_BENCHMARK).strip().upper()
     _validate_backtest_date_range(start, end)
     _preflight_price_strategy_data(
         tickers=normalized_tickers,
@@ -2244,6 +2342,15 @@ def run_dual_momentum_backtest_from_db(
         end=end,
         timeframe=timeframe,
     )
+    if (underperformance_guardrail_enabled or drawdown_guardrail_enabled) and benchmark_ticker:
+        guardrail_symbol = str(benchmark_ticker).strip().upper()
+        if guardrail_symbol and guardrail_symbol not in normalized_tickers:
+            _preflight_price_strategy_data(
+                tickers=[guardrail_symbol],
+                start=start,
+                end=end,
+                timeframe=timeframe,
+            )
 
     result_df = get_dual_momentum_from_db(
         tickers=normalized_tickers,
@@ -2254,6 +2361,14 @@ def run_dual_momentum_backtest_from_db(
         top=top,
         rebalance_interval=rebalance_interval,
         min_price=min_price_filter,
+        benchmark_ticker=benchmark_ticker,
+        underperformance_guardrail_enabled=underperformance_guardrail_enabled,
+        underperformance_guardrail_window_months=underperformance_guardrail_window_months,
+        underperformance_guardrail_threshold=underperformance_guardrail_threshold,
+        drawdown_guardrail_enabled=drawdown_guardrail_enabled,
+        drawdown_guardrail_window_months=drawdown_guardrail_window_months,
+        drawdown_guardrail_strategy_threshold=drawdown_guardrail_strategy_threshold,
+        drawdown_guardrail_gap_threshold=drawdown_guardrail_gap_threshold,
     )
 
     bundle = build_backtest_result_bundle(
@@ -2271,6 +2386,13 @@ def run_dual_momentum_backtest_from_db(
             "min_price_filter": min_price_filter,
             "transaction_cost_bps": transaction_cost_bps,
             "benchmark_ticker": benchmark_ticker,
+            "underperformance_guardrail_enabled": underperformance_guardrail_enabled,
+            "underperformance_guardrail_window_months": underperformance_guardrail_window_months,
+            "underperformance_guardrail_threshold": underperformance_guardrail_threshold,
+            "drawdown_guardrail_enabled": drawdown_guardrail_enabled,
+            "drawdown_guardrail_window_months": drawdown_guardrail_window_months,
+            "drawdown_guardrail_strategy_threshold": drawdown_guardrail_strategy_threshold,
+            "drawdown_guardrail_gap_threshold": drawdown_guardrail_gap_threshold,
             "promotion_min_etf_aum_b": promotion_min_etf_aum_b,
             "promotion_max_bid_ask_spread_pct": promotion_max_bid_ask_spread_pct,
             "universe_mode": universe_mode,
@@ -2278,7 +2400,7 @@ def run_dual_momentum_backtest_from_db(
         },
         summary_freq=_summary_frequency(option, timeframe),
     )
-    return _apply_real_money_hardening(
+    bundle = _apply_real_money_hardening(
         bundle,
         summary_freq=_summary_frequency(option, timeframe),
         min_price_filter=min_price_filter,
@@ -2289,6 +2411,19 @@ def run_dual_momentum_backtest_from_db(
         promotion_min_etf_aum_b=promotion_min_etf_aum_b,
         promotion_max_bid_ask_spread_pct=promotion_max_bid_ask_spread_pct,
     )
+    if underperformance_guardrail_enabled:
+        bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
+            "ETF Underperformance Guardrail enabled: rebalance candidates move to cash when trailing strategy excess return "
+            f"vs `{benchmark_ticker}` over `{underperformance_guardrail_window_months}M` falls below "
+            f"`{underperformance_guardrail_threshold:.0%}`."
+        ]
+    if drawdown_guardrail_enabled:
+        bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
+            "ETF Drawdown Guardrail enabled: rebalance candidates move to cash when trailing strategy drawdown over "
+            f"`{drawdown_guardrail_window_months}M` falls below `{drawdown_guardrail_strategy_threshold:.0%}` "
+            f"or drawdown gap vs `{benchmark_ticker}` rises above `{drawdown_guardrail_gap_threshold:.0%}`."
+        ]
+    return bundle
 
 
 def run_quality_snapshot_backtest_from_db(

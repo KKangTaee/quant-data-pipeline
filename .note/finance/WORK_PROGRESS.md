@@ -3580,3 +3580,33 @@ Keep entries append-only and concise.
   - finance doc index
   - comprehensive analysis
   - question and analysis log
+
+### 2026-04-05 - Phase 13 ETF second-pass guardrail first pass was added
+
+- Added optional ETF actual guardrail rules to:
+  - `GTAA`
+  - `Risk Parity Trend`
+  - `Dual Momentum`
+- Connected the ETF guardrail contract through:
+  - single strategy forms
+  - compare overrides
+  - history / `Load Into Form`
+  - saved-portfolio compare context
+- ETF runtime wrappers and DB-backed sample functions now carry:
+  - `underperformance_guardrail_enabled`
+  - `underperformance_guardrail_window_months`
+  - `underperformance_guardrail_threshold`
+  - `drawdown_guardrail_enabled`
+  - `drawdown_guardrail_window_months`
+  - `drawdown_guardrail_strategy_threshold`
+  - `drawdown_guardrail_gap_threshold`
+- ETF result rows now expose guardrail state / trigger columns, so runtime meta can collect trigger counts in the same way as strict annual.
+- Verified:
+  - `py_compile`
+  - page/runtime import smoke
+  - DB-backed ETF smoke for `GTAA`, `Risk Parity Trend`, `Dual Momentum`
+- Added a dedicated Phase 13 implementation note and refreshed:
+  - current TODO board
+  - finance doc index
+  - comprehensive analysis
+  - question and analysis log
