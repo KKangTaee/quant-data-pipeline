@@ -195,13 +195,19 @@
   - `Benchmark Coverage`
   - single / compare / history / meta surface까지 contract 연결
   - `PHASE12_STRICT_ANNUAL_INVESTABILITY_AND_BENCHMARK_REINFORCEMENT_FIRST_PASS.md`
+- `completed` strict annual liquidity proxy later-pass first pass 구현
+  - `Min Avg Dollar Volume 20D ($M)` 추가
+  - DB 일봉 `close * volume` 기준 trailing 20-day average dollar volume filter
+  - single / compare / history / meta surface까지 contract 연결
+  - `PHASE12_STRICT_ANNUAL_LIQUIDITY_PROXY_FIRST_PASS.md`
 - `in_progress` investability / turnover / benchmark / guardrail 보강
   - investability / turnover / benchmark는 first pass 완료
   - validation surface second pass 완료
   - promotion decision reinforcement surface 완료
   - underperformance guardrail actual-rule first pass 완료
   - minimum-history investability proxy와 benchmark spread/coverage first pass도 now 완료
-  - stronger volume/liquidity proxy / richer benchmark policy / stricter promotion reinforcement는 later pass
+  - 20D average dollar volume liquidity proxy first pass도 now 완료
+  - richer benchmark policy / stricter promotion reinforcement / broader liquidity policy는 later pass
 - `completed` annual strict promotion checklist baseline refresh
   - `PHASE12_TEST_CHECKLIST.md`에 strict annual real-money surface 항목 반영
 

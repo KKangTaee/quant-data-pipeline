@@ -50,6 +50,7 @@ from finance.sample import (
     GTAA_SCORE_RETURN_COLUMNS,
     GTAA_DEFAULT_SCORE_WEIGHTS,
     GTAA_DEFAULT_TREND_FILTER_WINDOW,
+    STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M,
     STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS,
     STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED,
     STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD,
@@ -561,6 +562,8 @@ def _init_backtest_state() -> None:
         st.session_state["qss_underperformance_guardrail_threshold"] = STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD * 100.0
     if "qss_min_history_months_filter" not in st.session_state:
         st.session_state["qss_min_history_months_filter"] = STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS
+    if "qss_min_avg_dollar_volume_20d_m_filter" not in st.session_state:
+        st.session_state["qss_min_avg_dollar_volume_20d_m_filter"] = STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M
     if "vss_trend_filter_enabled" not in st.session_state:
         st.session_state["vss_trend_filter_enabled"] = STRICT_TREND_FILTER_DEFAULT_ENABLED
     if "vss_trend_filter_window" not in st.session_state:
@@ -579,6 +582,8 @@ def _init_backtest_state() -> None:
         st.session_state["vss_underperformance_guardrail_threshold"] = STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD * 100.0
     if "vss_min_history_months_filter" not in st.session_state:
         st.session_state["vss_min_history_months_filter"] = STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS
+    if "vss_min_avg_dollar_volume_20d_m_filter" not in st.session_state:
+        st.session_state["vss_min_avg_dollar_volume_20d_m_filter"] = STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M
     if "qvss_trend_filter_enabled" not in st.session_state:
         st.session_state["qvss_trend_filter_enabled"] = STRICT_TREND_FILTER_DEFAULT_ENABLED
     if "qvss_trend_filter_window" not in st.session_state:
@@ -597,6 +602,8 @@ def _init_backtest_state() -> None:
         st.session_state["qvss_underperformance_guardrail_threshold"] = STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD * 100.0
     if "qvss_min_history_months_filter" not in st.session_state:
         st.session_state["qvss_min_history_months_filter"] = STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS
+    if "qvss_min_avg_dollar_volume_20d_m_filter" not in st.session_state:
+        st.session_state["qvss_min_avg_dollar_volume_20d_m_filter"] = STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M
     if "qsqp_trend_filter_enabled" not in st.session_state:
         st.session_state["qsqp_trend_filter_enabled"] = STRICT_TREND_FILTER_DEFAULT_ENABLED
     if "qsqp_trend_filter_window" not in st.session_state:
@@ -977,6 +984,8 @@ def _summarize_params(meta: dict[str, Any]) -> str:
         parts.append("market_regime=on")
         parts.append(f"regime_benchmark={meta.get('market_regime_benchmark') or STRICT_MARKET_REGIME_DEFAULT_BENCHMARK}")
         parts.append(f"regime_window={meta.get('market_regime_window') or STRICT_MARKET_REGIME_DEFAULT_WINDOW}")
+    if meta.get("min_avg_dollar_volume_20d_m_filter") is not None:
+        parts.append(f"min_adv20d_m={float(meta.get('min_avg_dollar_volume_20d_m_filter') or 0.0):.1f}")
     return ", ".join(parts)
 
 
@@ -1326,15 +1335,16 @@ def _render_strict_annual_real_money_inputs(
     key_prefix: str,
     default_min_price: float = ETF_REAL_MONEY_DEFAULT_MIN_PRICE,
     default_min_history_months: int = STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS,
+    default_min_avg_dollar_volume_20d_m: float = STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M,
     default_transaction_cost_bps: float = ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
     default_benchmark: str = ETF_REAL_MONEY_DEFAULT_BENCHMARK,
-) -> tuple[float, int, float, str]:
+) -> tuple[float, int, float, float, str]:
     st.markdown("##### Real-Money Contract")
     st.caption(
         "실전형 annual strict contract에서는 `Minimum Price`, `Minimum History (Months)`, "
-        "`Transaction Cost`, `Benchmark Ticker`를 같이 사용합니다."
+        "`Minimum Avg Dollar Volume 20D`, `Transaction Cost`, `Benchmark Ticker`를 같이 사용합니다."
     )
-    col1, col2, col3, col4 = st.columns(4, gap="small")
+    col1, col2, col3, col4, col5 = st.columns(5, gap="small")
     with col1:
         min_price_filter = float(
             st.number_input(
@@ -1360,6 +1370,18 @@ def _render_strict_annual_real_money_inputs(
             )
         )
     with col3:
+        min_avg_dollar_volume_20d_m_filter = float(
+            st.number_input(
+                "Min Avg Dollar Volume 20D ($M)",
+                min_value=0.0,
+                max_value=5000.0,
+                value=float(default_min_avg_dollar_volume_20d_m),
+                step=1.0,
+                key=f"{key_prefix}_min_avg_dollar_volume_20d_m_filter",
+                help="최근 20거래일 평균 거래대금이 이 값보다 낮은 종목은 해당 날짜 후보에서 제외합니다. 단위는 백만 달러입니다.",
+            )
+        )
+    with col4:
         transaction_cost_bps = float(
             st.number_input(
                 "Transaction Cost (bps)",
@@ -1371,7 +1393,7 @@ def _render_strict_annual_real_money_inputs(
                 help="리밸런싱 turnover 비율에 곱하는 왕복 비용 가정입니다. 10bps = 0.10%입니다.",
             )
         )
-    with col4:
+    with col5:
         benchmark_ticker = str(
             st.text_input(
                 "Benchmark Ticker",
@@ -1385,7 +1407,18 @@ def _render_strict_annual_real_money_inputs(
         "`Minimum History (Months)`는 각 리밸런싱 시점 전에 최소 몇 개월의 가격 이력이 쌓여 있어야 "
         "그 종목을 투자 후보로 인정할지를 뜻합니다."
     )
-    return min_price_filter, min_history_months_filter, transaction_cost_bps, benchmark_ticker
+    if float(min_avg_dollar_volume_20d_m_filter or 0.0) > 0.0:
+        st.caption(
+            "`Min Avg Dollar Volume 20D ($M)`는 최근 20거래일 평균 거래대금이 충분히 큰 종목만 남겨서 "
+            "실제로 사고팔기 너무 어려운 후보를 줄이기 위한 필터입니다."
+        )
+    return (
+        min_price_filter,
+        min_history_months_filter,
+        min_avg_dollar_volume_20d_m_filter,
+        transaction_cost_bps,
+        benchmark_ticker,
+    )
 
 
 def _render_underperformance_guardrail_inputs(
@@ -1846,6 +1879,15 @@ def _render_last_run() -> None:
                 st.markdown(f"- `Minimum Price`: `{float(meta['min_price_filter']):.2f}`")
             if meta.get("min_history_months_filter") is not None:
                 st.markdown(f"- `Minimum History`: `{int(meta.get('min_history_months_filter') or 0)}M`")
+            if meta.get("min_avg_dollar_volume_20d_m_filter") is not None:
+                st.markdown(
+                    f"- `Min Avg Dollar Volume 20D`: `{float(meta.get('min_avg_dollar_volume_20d_m_filter') or 0.0):.1f}M`"
+                )
+                if meta.get("liquidity_excluded_total") is not None:
+                    st.markdown(
+                        f"- `Liquidity Excluded`: total `{int(meta.get('liquidity_excluded_total') or 0)}`, "
+                        f"rows `{int(meta.get('liquidity_excluded_active_rows') or 0)}`"
+                    )
             if meta.get("transaction_cost_bps") is not None:
                 st.markdown(f"- `Transaction Cost`: `{float(meta['transaction_cost_bps']):.1f} bps`")
             if meta.get("benchmark_ticker"):
@@ -2014,6 +2056,7 @@ def _strategy_compare_defaults(strategy_name: str) -> dict:
                 "top_n": 2,
                 "min_price_filter": ETF_REAL_MONEY_DEFAULT_MIN_PRICE,
                 "min_history_months_filter": STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS,
+                "min_avg_dollar_volume_20d_m_filter": STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M,
                 "transaction_cost_bps": ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
                 "benchmark_ticker": ETF_REAL_MONEY_DEFAULT_BENCHMARK,
                 "underperformance_guardrail_enabled": STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED,
@@ -2041,6 +2084,7 @@ def _strategy_compare_defaults(strategy_name: str) -> dict:
                 "top_n": 10,
                 "min_price_filter": ETF_REAL_MONEY_DEFAULT_MIN_PRICE,
                 "min_history_months_filter": STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS,
+                "min_avg_dollar_volume_20d_m_filter": STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M,
                 "transaction_cost_bps": ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
                 "benchmark_ticker": ETF_REAL_MONEY_DEFAULT_BENCHMARK,
                 "underperformance_guardrail_enabled": STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED,
@@ -2069,6 +2113,7 @@ def _strategy_compare_defaults(strategy_name: str) -> dict:
                 "top_n": 10,
                 "min_price_filter": ETF_REAL_MONEY_DEFAULT_MIN_PRICE,
                 "min_history_months_filter": STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS,
+                "min_avg_dollar_volume_20d_m_filter": STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M,
                 "transaction_cost_bps": ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
                 "benchmark_ticker": ETF_REAL_MONEY_DEFAULT_BENCHMARK,
                 "underperformance_guardrail_enabled": STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED,
@@ -2452,12 +2497,19 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
         "`Benchmark Ticker`를 같이 반영합니다. 요약/차트는 비용 반영 후 `net` 기준이고, 결과 표에는 `gross`와 `net`이 같이 남습니다."
     )
 
-    top_cols = st.columns(5, gap="small")
+    top_cols = st.columns(6, gap="small")
     top_cols[0].metric("Minimum Price", f"{float(meta.get('min_price_filter') or 0.0):.2f}")
     top_cols[1].metric("Minimum History", f"{int(meta.get('min_history_months_filter') or 0)}M")
-    top_cols[2].metric("Transaction Cost", f"{float(meta.get('transaction_cost_bps') or 0.0):.1f} bps")
-    top_cols[3].metric("Avg Turnover", f"{float(meta.get('avg_turnover') or 0.0):.2%}")
-    top_cols[4].metric("Estimated Cost Total", f"{float(meta.get('estimated_cost_total') or 0.0):,.1f}")
+    top_cols[2].metric("Min Avg Dollar Volume 20D", f"{float(meta.get('min_avg_dollar_volume_20d_m_filter') or 0.0):.1f}M")
+    top_cols[3].metric("Transaction Cost", f"{float(meta.get('transaction_cost_bps') or 0.0):.1f} bps")
+    top_cols[4].metric("Avg Turnover", f"{float(meta.get('avg_turnover') or 0.0):.2%}")
+    top_cols[5].metric("Estimated Cost Total", f"{float(meta.get('estimated_cost_total') or 0.0):,.1f}")
+    if meta.get("liquidity_excluded_total") is not None:
+        st.caption(
+            "Liquidity excluded candidates: "
+            f"`{int(meta.get('liquidity_excluded_total') or 0)}` total, "
+            f"`{int(meta.get('liquidity_excluded_active_rows') or 0)}` rows."
+        )
 
     if meta.get("benchmark_ticker"):
         benchmark_cols = st.columns(5, gap="small")
@@ -2628,6 +2680,7 @@ def _build_compare_highlight_rows(bundles: list[dict]) -> pd.DataFrame:
                 "Membership Avg": universe_debug.get("avg_membership_count"),
                 "Min Price": meta.get("min_price_filter"),
                 "Min History (M)": meta.get("min_history_months_filter"),
+                "Min ADV20D ($M)": meta.get("min_avg_dollar_volume_20d_m_filter"),
                 "Cost (bps)": meta.get("transaction_cost_bps"),
                 "Avg Turnover": meta.get("avg_turnover"),
                 "Benchmark": meta.get("benchmark_ticker"),
@@ -2908,6 +2961,8 @@ def _render_compare_results() -> None:
                     "rebalance_interval": meta.get("rebalance_interval"),
                     "top": meta.get("top"),
                     "min_price_filter": meta.get("min_price_filter"),
+                    "min_history_months_filter": meta.get("min_history_months_filter"),
+                    "min_avg_dollar_volume_20d_m_filter": meta.get("min_avg_dollar_volume_20d_m_filter"),
                     "transaction_cost_bps": meta.get("transaction_cost_bps"),
                     "benchmark_ticker": meta.get("benchmark_ticker"),
                     "avg_turnover": meta.get("avg_turnover"),
@@ -3560,6 +3615,10 @@ def _build_history_payload(record: dict[str, Any]) -> dict[str, Any] | None:
         payload["min_history_months_filter"] = int(
             record.get("min_history_months_filter") or STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS
         )
+    if record.get("min_avg_dollar_volume_20d_m_filter") is not None:
+        payload["min_avg_dollar_volume_20d_m_filter"] = float(
+            record.get("min_avg_dollar_volume_20d_m_filter") or STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M
+        )
     if record.get("transaction_cost_bps") is not None:
         payload["transaction_cost_bps"] = float(record.get("transaction_cost_bps") or 0.0)
     if record.get("benchmark_ticker") is not None:
@@ -3636,6 +3695,8 @@ def _build_prefill_summary_lines(payload: dict[str, Any] | None) -> list[str]:
         lines.append(f"Minimum Price: `{payload.get('min_price_filter')}`")
     if payload.get("min_history_months_filter") is not None:
         lines.append(f"Minimum History: `{payload.get('min_history_months_filter')}M`")
+    if payload.get("min_avg_dollar_volume_20d_m_filter") is not None:
+        lines.append(f"Min Avg Dollar Volume 20D: `{payload.get('min_avg_dollar_volume_20d_m_filter')}M`")
     if payload.get("transaction_cost_bps") is not None:
         lines.append(f"Transaction Cost: `{payload.get('transaction_cost_bps')}` bps")
     if payload.get("benchmark_ticker"):
@@ -3766,6 +3827,8 @@ def _bundle_to_saved_strategy_override(bundle: dict[str, Any]) -> dict[str, Any]
         override["min_price_filter"] = float(meta.get("min_price_filter"))
     if meta.get("min_history_months_filter") is not None:
         override["min_history_months_filter"] = int(meta.get("min_history_months_filter"))
+    if meta.get("min_avg_dollar_volume_20d_m_filter") is not None:
+        override["min_avg_dollar_volume_20d_m_filter"] = float(meta.get("min_avg_dollar_volume_20d_m_filter"))
     if meta.get("transaction_cost_bps") is not None:
         override["transaction_cost_bps"] = float(meta.get("transaction_cost_bps"))
     if meta.get("benchmark_ticker") is not None:
@@ -3975,6 +4038,9 @@ def _apply_compare_strategy_prefill(strategy_name: str, override: dict[str, Any]
     )
     st.session_state[f"compare_{key_prefix}_min_history_months_filter"] = int(
         override.get("min_history_months_filter") or STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS
+    )
+    st.session_state[f"compare_{key_prefix}_min_avg_dollar_volume_20d_m_filter"] = float(
+        override.get("min_avg_dollar_volume_20d_m_filter") or STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M
     )
     st.session_state[f"compare_{key_prefix}_transaction_cost_bps"] = float(
         override.get("transaction_cost_bps") or ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS
@@ -4221,6 +4287,9 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         st.session_state["qss_min_history_months_filter"] = int(
             payload.get("min_history_months_filter") or STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS
         )
+        st.session_state["qss_min_avg_dollar_volume_20d_m_filter"] = float(
+            payload.get("min_avg_dollar_volume_20d_m_filter") or STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M
+        )
         st.session_state["qss_transaction_cost_bps"] = float(payload.get("transaction_cost_bps") or ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS)
         st.session_state["qss_benchmark_ticker"] = str(payload.get("benchmark_ticker") or ETF_REAL_MONEY_DEFAULT_BENCHMARK).strip().upper()
     elif strategy_key == "quality_snapshot_strict_quarterly_prototype":
@@ -4277,6 +4346,9 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         st.session_state["vss_min_price_filter"] = float(payload.get("min_price_filter") or ETF_REAL_MONEY_DEFAULT_MIN_PRICE)
         st.session_state["vss_min_history_months_filter"] = int(
             payload.get("min_history_months_filter") or STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS
+        )
+        st.session_state["vss_min_avg_dollar_volume_20d_m_filter"] = float(
+            payload.get("min_avg_dollar_volume_20d_m_filter") or STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M
         )
         st.session_state["vss_transaction_cost_bps"] = float(payload.get("transaction_cost_bps") or ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS)
         st.session_state["vss_benchmark_ticker"] = str(payload.get("benchmark_ticker") or ETF_REAL_MONEY_DEFAULT_BENCHMARK).strip().upper()
@@ -4335,6 +4407,9 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         st.session_state["qvss_min_price_filter"] = float(payload.get("min_price_filter") or ETF_REAL_MONEY_DEFAULT_MIN_PRICE)
         st.session_state["qvss_min_history_months_filter"] = int(
             payload.get("min_history_months_filter") or STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS
+        )
+        st.session_state["qvss_min_avg_dollar_volume_20d_m_filter"] = float(
+            payload.get("min_avg_dollar_volume_20d_m_filter") or STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M
         )
         st.session_state["qvss_transaction_cost_bps"] = float(payload.get("transaction_cost_bps") or ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS)
         st.session_state["qvss_benchmark_ticker"] = str(payload.get("benchmark_ticker") or ETF_REAL_MONEY_DEFAULT_BENCHMARK).strip().upper()
@@ -5192,6 +5267,7 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> None:
                     rebalance_interval=payload.get("rebalance_interval", 1),
                     min_price_filter=payload.get("min_price_filter", ETF_REAL_MONEY_DEFAULT_MIN_PRICE),
                     min_history_months_filter=payload.get("min_history_months_filter", STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS),
+                    min_avg_dollar_volume_20d_m_filter=payload.get("min_avg_dollar_volume_20d_m_filter", STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M),
                     transaction_cost_bps=payload.get("transaction_cost_bps", ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS),
                     benchmark_ticker=payload.get("benchmark_ticker", ETF_REAL_MONEY_DEFAULT_BENCHMARK),
                     trend_filter_enabled=payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED),
@@ -5241,6 +5317,7 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> None:
                     rebalance_interval=payload.get("rebalance_interval", 1),
                     min_price_filter=payload.get("min_price_filter", ETF_REAL_MONEY_DEFAULT_MIN_PRICE),
                     min_history_months_filter=payload.get("min_history_months_filter", STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS),
+                    min_avg_dollar_volume_20d_m_filter=payload.get("min_avg_dollar_volume_20d_m_filter", STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M),
                     transaction_cost_bps=payload.get("transaction_cost_bps", ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS),
                     benchmark_ticker=payload.get("benchmark_ticker", ETF_REAL_MONEY_DEFAULT_BENCHMARK),
                     trend_filter_enabled=payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED),
@@ -5291,6 +5368,7 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> None:
                     rebalance_interval=payload.get("rebalance_interval", 1),
                     min_price_filter=payload.get("min_price_filter", ETF_REAL_MONEY_DEFAULT_MIN_PRICE),
                     min_history_months_filter=payload.get("min_history_months_filter", STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS),
+                    min_avg_dollar_volume_20d_m_filter=payload.get("min_avg_dollar_volume_20d_m_filter", STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M),
                     transaction_cost_bps=payload.get("transaction_cost_bps", ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS),
                     benchmark_ticker=payload.get("benchmark_ticker", ETF_REAL_MONEY_DEFAULT_BENCHMARK),
                     trend_filter_enabled=payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED),
@@ -5977,7 +6055,7 @@ def _render_quality_snapshot_strict_annual_form() -> None:
                 key_prefix="qss",
                 label_prefix="",
             )
-            min_price_filter, min_history_months_filter, transaction_cost_bps, benchmark_ticker = _render_strict_annual_real_money_inputs(
+            min_price_filter, min_history_months_filter, min_avg_dollar_volume_20d_m_filter, transaction_cost_bps, benchmark_ticker = _render_strict_annual_real_money_inputs(
                 key_prefix="qss",
             )
             (
@@ -6026,6 +6104,7 @@ def _render_quality_snapshot_strict_annual_form() -> None:
         "market_regime_benchmark": market_regime_benchmark,
         "min_price_filter": float(min_price_filter),
         "min_history_months_filter": int(min_history_months_filter),
+        "min_avg_dollar_volume_20d_m_filter": float(min_avg_dollar_volume_20d_m_filter),
         "transaction_cost_bps": float(transaction_cost_bps),
         "benchmark_ticker": benchmark_ticker,
         "underperformance_guardrail_enabled": bool(underperformance_guardrail_enabled),
@@ -6535,7 +6614,7 @@ def _render_value_snapshot_strict_annual_form() -> None:
                 key_prefix="vss",
                 label_prefix="",
             )
-            min_price_filter, min_history_months_filter, transaction_cost_bps, benchmark_ticker = _render_strict_annual_real_money_inputs(
+            min_price_filter, min_history_months_filter, min_avg_dollar_volume_20d_m_filter, transaction_cost_bps, benchmark_ticker = _render_strict_annual_real_money_inputs(
                 key_prefix="vss",
             )
             (
@@ -6585,6 +6664,7 @@ def _render_value_snapshot_strict_annual_form() -> None:
         "market_regime_benchmark": market_regime_benchmark,
         "min_price_filter": float(min_price_filter),
         "min_history_months_filter": int(min_history_months_filter),
+        "min_avg_dollar_volume_20d_m_filter": float(min_avg_dollar_volume_20d_m_filter),
         "transaction_cost_bps": float(transaction_cost_bps),
         "benchmark_ticker": benchmark_ticker,
         "underperformance_guardrail_enabled": bool(underperformance_guardrail_enabled),
@@ -6928,7 +7008,7 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
                 key_prefix="qvss",
                 label_prefix="",
             )
-            min_price_filter, min_history_months_filter, transaction_cost_bps, benchmark_ticker = _render_strict_annual_real_money_inputs(
+            min_price_filter, min_history_months_filter, min_avg_dollar_volume_20d_m_filter, transaction_cost_bps, benchmark_ticker = _render_strict_annual_real_money_inputs(
                 key_prefix="qvss",
             )
             (
@@ -6981,6 +7061,7 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
         "market_regime_benchmark": market_regime_benchmark,
         "min_price_filter": float(min_price_filter),
         "min_history_months_filter": int(min_history_months_filter),
+        "min_avg_dollar_volume_20d_m_filter": float(min_avg_dollar_volume_20d_m_filter),
         "transaction_cost_bps": float(transaction_cost_bps),
         "benchmark_ticker": benchmark_ticker,
         "underperformance_guardrail_enabled": bool(underperformance_guardrail_enabled),
@@ -7376,11 +7457,12 @@ def render_backtest_tab() -> None:
                             key_prefix="compare_qss",
                             label_prefix="Strict Annual Quality ",
                         )
-                        min_price_filter, min_history_months_filter, transaction_cost_bps, benchmark_ticker = _render_strict_annual_real_money_inputs(
+                        min_price_filter, min_history_months_filter, min_avg_dollar_volume_20d_m_filter, transaction_cost_bps, benchmark_ticker = _render_strict_annual_real_money_inputs(
                             key_prefix="compare_qss",
                         )
                         compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["min_price_filter"] = float(min_price_filter)
                         compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["min_history_months_filter"] = int(min_history_months_filter)
+                        compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["min_avg_dollar_volume_20d_m_filter"] = float(min_avg_dollar_volume_20d_m_filter)
                         compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["transaction_cost_bps"] = float(transaction_cost_bps)
                         compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["benchmark_ticker"] = benchmark_ticker
                         (
@@ -7566,11 +7648,12 @@ def render_backtest_tab() -> None:
                             key_prefix="compare_vss",
                             label_prefix="Strict Annual Value ",
                         )
-                        min_price_filter, min_history_months_filter, transaction_cost_bps, benchmark_ticker = _render_strict_annual_real_money_inputs(
+                        min_price_filter, min_history_months_filter, min_avg_dollar_volume_20d_m_filter, transaction_cost_bps, benchmark_ticker = _render_strict_annual_real_money_inputs(
                             key_prefix="compare_vss",
                         )
                         compare_strategy_overrides["Value Snapshot (Strict Annual)"]["min_price_filter"] = float(min_price_filter)
                         compare_strategy_overrides["Value Snapshot (Strict Annual)"]["min_history_months_filter"] = int(min_history_months_filter)
+                        compare_strategy_overrides["Value Snapshot (Strict Annual)"]["min_avg_dollar_volume_20d_m_filter"] = float(min_avg_dollar_volume_20d_m_filter)
                         compare_strategy_overrides["Value Snapshot (Strict Annual)"]["transaction_cost_bps"] = float(transaction_cost_bps)
                         compare_strategy_overrides["Value Snapshot (Strict Annual)"]["benchmark_ticker"] = benchmark_ticker
                         (
@@ -7762,11 +7845,12 @@ def render_backtest_tab() -> None:
                             key_prefix="compare_qvss",
                             label_prefix="Strict Annual Multi-Factor ",
                         )
-                        min_price_filter, min_history_months_filter, transaction_cost_bps, benchmark_ticker = _render_strict_annual_real_money_inputs(
+                        min_price_filter, min_history_months_filter, min_avg_dollar_volume_20d_m_filter, transaction_cost_bps, benchmark_ticker = _render_strict_annual_real_money_inputs(
                             key_prefix="compare_qvss",
                         )
                         compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["min_price_filter"] = float(min_price_filter)
                         compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["min_history_months_filter"] = int(min_history_months_filter)
+                        compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["min_avg_dollar_volume_20d_m_filter"] = float(min_avg_dollar_volume_20d_m_filter)
                         compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["transaction_cost_bps"] = float(transaction_cost_bps)
                         compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["benchmark_ticker"] = benchmark_ticker
                         (

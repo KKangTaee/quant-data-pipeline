@@ -5750,3 +5750,38 @@ Do not copy full chat transcripts. Keep only the durable result.
   - the repository remains easy to open from one top-level log
   - but future cleanup should happen by phase, not by calendar month
   - workflow guidance now matches the actual phase-managed operating model of the project
+
+### 2026-04-05 - Strict annual later-pass investability should start with average dollar volume, not a full trading model
+
+- Request topic:
+  - continue the next Phase 12 step after minimum-history / benchmark reinforcement
+- Interpreted goal:
+  - improve real-money usefulness of annual strict family by filtering out candidates that may pass price/history rules but still look too small in actual trading activity
+- Result:
+  - added `Min Avg Dollar Volume 20D ($M)` to:
+    - `Quality Snapshot (Strict Annual)`
+    - `Value Snapshot (Strict Annual)`
+    - `Quality + Value Snapshot (Strict Annual)`
+  - implementation uses DB daily `close * volume` and trailing 20-day average dollar volume
+  - the filter now travels through:
+    - single
+    - compare
+    - history / prefill
+    - execution context
+    - real-money tab
+  - result rows now also keep:
+    - `Liquidity Excluded Ticker`
+    - `Liquidity Excluded Count`
+- Durable implication:
+  - current strict annual contract now has:
+    - minimum price
+    - minimum history
+    - minimum average dollar volume
+    - turnover / cost
+    - benchmark-relative validation
+    - optional underperformance guardrail
+  - but this is still a practical proxy, not a full execution model
+  - later passes should still consider:
+    - spread-aware liquidity
+    - richer benchmark policy
+    - broader promotion robustness

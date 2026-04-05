@@ -28,6 +28,7 @@ from finance.sample import (
     GTAA_DEFAULT_SCORE_WEIGHTS,
     HISTORICAL_DYNAMIC_PIT_UNIVERSE,
     STATIC_MANAGED_RESEARCH_UNIVERSE,
+    STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M,
     STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS,
     STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
     STRICT_MARKET_REGIME_DEFAULT_WINDOW,
@@ -554,6 +555,10 @@ def _apply_real_money_hardening(
         meta["underperformance_guardrail_trigger_share"] = (
             float(guardrail_triggered.mean()) if not guardrail_triggered.empty else 0.0
         )
+    if "Liquidity Excluded Count" in hardened_df.columns:
+        liquidity_excluded = pd.to_numeric(hardened_df["Liquidity Excluded Count"], errors="coerce").fillna(0)
+        meta["liquidity_excluded_total"] = int(liquidity_excluded.sum())
+        meta["liquidity_excluded_active_rows"] = int((liquidity_excluded > 0).sum())
 
     benchmark_df = _build_benchmark_result_df(
         benchmark_ticker=benchmark_ticker,
@@ -1025,6 +1030,8 @@ def build_backtest_result_bundle(
         meta["min_price_filter"] = input_params.get("min_price_filter")
     if input_params.get("min_history_months_filter") is not None:
         meta["min_history_months_filter"] = input_params.get("min_history_months_filter")
+    if input_params.get("min_avg_dollar_volume_20d_m_filter") is not None:
+        meta["min_avg_dollar_volume_20d_m_filter"] = input_params.get("min_avg_dollar_volume_20d_m_filter")
     if input_params.get("transaction_cost_bps") is not None:
         meta["transaction_cost_bps"] = input_params.get("transaction_cost_bps")
     if input_params.get("benchmark_ticker") is not None:
@@ -1487,6 +1494,7 @@ def _run_statement_quality_bundle(
     rebalance_interval: int = 1,
     min_price_filter: float = ETF_REAL_MONEY_DEFAULT_MIN_PRICE,
     min_history_months_filter: int = STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS,
+    min_avg_dollar_volume_20d_m_filter: float = STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M,
     transaction_cost_bps: float = ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
     benchmark_ticker: str = ETF_REAL_MONEY_DEFAULT_BENCHMARK,
     trend_filter_enabled: bool = False,
@@ -1573,6 +1581,7 @@ def _run_statement_quality_bundle(
             rebalance_interval=rebalance_interval,
             min_price=float(min_price_filter or 0.0),
             min_history_months=int(min_history_months_filter or 0),
+            min_avg_dollar_volume_20d_m=float(min_avg_dollar_volume_20d_m_filter or 0.0),
             trend_filter_enabled=trend_filter_enabled,
             trend_filter_window=trend_filter_window,
             market_regime_enabled=market_regime_enabled,
@@ -1645,6 +1654,12 @@ def _run_statement_quality_bundle(
             "Minimum history filter enabled: candidates need at least "
             f"`{int(min_history_months_filter)}M` of DB price history before each rebalance."
         )
+    if min_avg_dollar_volume_20d_m_filter:
+        warnings.append(
+            "Liquidity filter enabled: candidates need at least "
+            f"`{float(min_avg_dollar_volume_20d_m_filter):.1f}M` of trailing 20-day average dollar volume "
+            "before each rebalance."
+        )
 
     input_params = {
         "tickers": normalized_tickers,
@@ -1683,6 +1698,8 @@ def _run_statement_quality_bundle(
         input_params["min_price_filter"] = min_price_filter
     if min_history_months_filter is not None:
         input_params["min_history_months_filter"] = int(min_history_months_filter or 0)
+    if min_avg_dollar_volume_20d_m_filter is not None:
+        input_params["min_avg_dollar_volume_20d_m_filter"] = float(min_avg_dollar_volume_20d_m_filter or 0.0)
     if transaction_cost_bps is not None:
         input_params["transaction_cost_bps"] = transaction_cost_bps
     if benchmark_ticker is not None:
@@ -1731,6 +1748,7 @@ def run_quality_snapshot_strict_annual_backtest_from_db(
     rebalance_interval: int = 1,
     min_price_filter: float = ETF_REAL_MONEY_DEFAULT_MIN_PRICE,
     min_history_months_filter: int = STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS,
+    min_avg_dollar_volume_20d_m_filter: float = STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M,
     transaction_cost_bps: float = ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
     benchmark_ticker: str = ETF_REAL_MONEY_DEFAULT_BENCHMARK,
     trend_filter_enabled: bool = False,
@@ -1761,6 +1779,7 @@ def run_quality_snapshot_strict_annual_backtest_from_db(
         rebalance_interval=rebalance_interval,
         min_price_filter=min_price_filter,
         min_history_months_filter=min_history_months_filter,
+        min_avg_dollar_volume_20d_m_filter=min_avg_dollar_volume_20d_m_filter,
         transaction_cost_bps=transaction_cost_bps,
         benchmark_ticker=benchmark_ticker,
         trend_filter_enabled=trend_filter_enabled,
@@ -1847,6 +1866,7 @@ def run_value_snapshot_strict_annual_backtest_from_db(
     rebalance_interval: int = 1,
     min_price_filter: float = ETF_REAL_MONEY_DEFAULT_MIN_PRICE,
     min_history_months_filter: int = STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS,
+    min_avg_dollar_volume_20d_m_filter: float = STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M,
     transaction_cost_bps: float = ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
     benchmark_ticker: str = ETF_REAL_MONEY_DEFAULT_BENCHMARK,
     trend_filter_enabled: bool = False,
@@ -1930,6 +1950,7 @@ def run_value_snapshot_strict_annual_backtest_from_db(
         rebalance_interval=rebalance_interval,
         min_price=min_price_filter,
         min_history_months=min_history_months_filter,
+        min_avg_dollar_volume_20d_m=min_avg_dollar_volume_20d_m_filter,
         trend_filter_enabled=trend_filter_enabled,
         trend_filter_window=trend_filter_window,
         market_regime_enabled=market_regime_enabled,
@@ -1984,6 +2005,12 @@ def run_value_snapshot_strict_annual_backtest_from_db(
             "Minimum history filter enabled: candidates need at least "
             f"`{int(min_history_months_filter)}M` of DB price history before each rebalance."
         )
+    if min_avg_dollar_volume_20d_m_filter:
+        warnings.append(
+            "Liquidity filter enabled: candidates need at least "
+            f"`{float(min_avg_dollar_volume_20d_m_filter):.1f}M` of trailing 20-day average dollar volume "
+            "before each rebalance."
+        )
 
     bundle = build_backtest_result_bundle(
         result_df,
@@ -1999,6 +2026,7 @@ def run_value_snapshot_strict_annual_backtest_from_db(
             "rebalance_interval": rebalance_interval,
             "min_price_filter": min_price_filter,
             "min_history_months_filter": int(min_history_months_filter or 0),
+            "min_avg_dollar_volume_20d_m_filter": float(min_avg_dollar_volume_20d_m_filter or 0.0),
             "transaction_cost_bps": transaction_cost_bps,
             "benchmark_ticker": benchmark_ticker,
             "factor_freq": "annual",
@@ -2242,6 +2270,7 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
     rebalance_interval: int = 1,
     min_price_filter: float = ETF_REAL_MONEY_DEFAULT_MIN_PRICE,
     min_history_months_filter: int = STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS,
+    min_avg_dollar_volume_20d_m_filter: float = STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M,
     transaction_cost_bps: float = ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
     benchmark_ticker: str = ETF_REAL_MONEY_DEFAULT_BENCHMARK,
     trend_filter_enabled: bool = False,
@@ -2336,6 +2365,7 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
         rebalance_interval=rebalance_interval,
         min_price=min_price_filter,
         min_history_months=min_history_months_filter,
+        min_avg_dollar_volume_20d_m=min_avg_dollar_volume_20d_m_filter,
         trend_filter_enabled=trend_filter_enabled,
         trend_filter_window=trend_filter_window,
         market_regime_enabled=market_regime_enabled,
@@ -2390,6 +2420,12 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
             "Minimum history filter enabled: candidates need at least "
             f"`{int(min_history_months_filter)}M` of DB price history before each rebalance."
         )
+    if min_avg_dollar_volume_20d_m_filter:
+        warnings.append(
+            "Liquidity filter enabled: candidates need at least "
+            f"`{float(min_avg_dollar_volume_20d_m_filter):.1f}M` of trailing 20-day average dollar volume "
+            "before each rebalance."
+        )
 
     bundle = build_backtest_result_bundle(
         result_df,
@@ -2405,6 +2441,7 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
             "rebalance_interval": rebalance_interval,
             "min_price_filter": min_price_filter,
             "min_history_months_filter": int(min_history_months_filter or 0),
+            "min_avg_dollar_volume_20d_m_filter": float(min_avg_dollar_volume_20d_m_filter or 0.0),
             "transaction_cost_bps": transaction_cost_bps,
             "benchmark_ticker": benchmark_ticker,
             "factor_freq": "annual",

@@ -148,6 +148,8 @@
   - strict annual family에 optional benchmark-relative trailing excess return guardrail을 실제 전략 규칙으로 연결하고, single / compare / history / real-money surface까지 같이 연결한 first-pass 문서
 - `.note/finance/phase12/PHASE12_STRICT_ANNUAL_INVESTABILITY_AND_BENCHMARK_REINFORCEMENT_FIRST_PASS.md`
   - strict annual family에 `Minimum History (Months)` investability proxy와 `Benchmark CAGR` / `Net CAGR Spread` / `Benchmark Coverage`를 first pass로 추가한 문서
+- `.note/finance/phase12/PHASE12_STRICT_ANNUAL_LIQUIDITY_PROXY_FIRST_PASS.md`
+  - strict annual family에 `Min Avg Dollar Volume 20D ($M)` later-pass liquidity proxy를 추가하고, single / compare / history / meta surface까지 연결한 문서
 - `.note/finance/phase12/PHASE12_GTAA_DBC_PDBC_NO_COMMODITY_ANALYSIS.md`
   - `GTAA`에서 `DBC`, `PDBC`, `No Commodity Sleeve`를 비교하고, ETF 자체 유사성과 전략 결과 차이가 왜 증폭되는지, 대안 ETF 후보까지 정리한 분석 문서
 - `.note/finance/phase12/PHASE12_GTAA_COMMODITY_ALTERNATIVE_CANDIDATE_ANALYSIS.md`

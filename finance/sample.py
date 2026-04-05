@@ -40,6 +40,7 @@ from finance.data.asset_profile import(
 from .loaders import (
     load_asset_profile_status_summary,
     load_factor_snapshot,
+    load_price_history,
     load_statement_factor_snapshot_shadow,
     load_statement_factors_shadow,
     load_statement_fundamentals_shadow,
@@ -84,6 +85,8 @@ STRICT_MARKET_REGIME_DEFAULT_WINDOW = 200
 STRICT_MARKET_REGIME_DEFAULT_BENCHMARK = "SPY"
 STRICT_MARKET_REGIME_BENCHMARK_OPTIONS = ["SPY", "QQQ", "VTI", "IWM"]
 STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS = 0
+STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M = 0.0
+STRICT_INVESTABILITY_DEFAULT_LIQUIDITY_LOOKBACK_DAYS = 20
 STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED = False
 STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS = 12
 STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD = -0.10
@@ -1046,6 +1049,78 @@ def _get_cached_snapshot_strategy_price_first_dates(
 
 
 @lru_cache(maxsize=12)
+def _cached_snapshot_strategy_avg_dollar_volume_20d(
+    symbols_key: tuple[str, ...],
+    start: str | None,
+    end: str | None,
+    timeframe: str,
+    lookback_days: int,
+) -> dict[str, dict[pd.Timestamp, float]]:
+    if lookback_days <= 0:
+        return {}
+
+    history_start = _history_start_with_buffer(
+        start,
+        days=max(int(lookback_days) * 5, 60),
+    )
+    history = load_price_history(
+        symbols=list(symbols_key),
+        start=history_start,
+        end=end,
+        timeframe=timeframe,
+    )
+    if history.empty:
+        return {}
+
+    working = history.copy()
+    working["symbol"] = working["symbol"].astype(str).str.strip().str.upper()
+    working["date"] = pd.to_datetime(working["date"], errors="coerce")
+    working["close"] = pd.to_numeric(working["close"], errors="coerce")
+    working["volume"] = pd.to_numeric(working["volume"], errors="coerce")
+    working = working.dropna(subset=["symbol", "date", "close", "volume"]).sort_values(["symbol", "date"])
+    if working.empty:
+        return {}
+
+    result: dict[str, dict[pd.Timestamp, float]] = {}
+    for symbol, group in working.groupby("symbol", sort=False):
+        symbol_df = group[["date", "close", "volume"]].copy()
+        symbol_df["dollar_volume"] = symbol_df["close"] * symbol_df["volume"]
+        symbol_df["avg_dollar_volume_20d"] = (
+            symbol_df["dollar_volume"]
+            .rolling(window=int(lookback_days), min_periods=int(lookback_days))
+            .mean()
+        )
+        valid = symbol_df.dropna(subset=["avg_dollar_volume_20d"])
+        result[str(symbol)] = {
+            pd.Timestamp(row["date"]).normalize(): float(row["avg_dollar_volume_20d"])
+            for _, row in valid.iterrows()
+        }
+    return result
+
+
+def _get_cached_snapshot_strategy_avg_dollar_volume_20d(
+    *,
+    symbols,
+    start: str | None,
+    end: str | None,
+    timeframe: str,
+    lookback_days: int = STRICT_INVESTABILITY_DEFAULT_LIQUIDITY_LOOKBACK_DAYS,
+) -> dict[str, dict[pd.Timestamp, float]]:
+    symbols_key = tuple(_normalize_symbol_list(symbols))
+    cached = _cached_snapshot_strategy_avg_dollar_volume_20d(
+        symbols_key,
+        start,
+        end,
+        timeframe,
+        int(lookback_days),
+    )
+    return {
+        str(symbol): dict(per_date)
+        for symbol, per_date in cached.items()
+    }
+
+
+@lru_cache(maxsize=12)
 def _cached_statement_factors_shadow(
     symbols_key: tuple[str, ...],
     freq: str,
@@ -1491,6 +1566,7 @@ def _run_statement_shadow_snapshot_from_db(
     rebalance_interval=1,
     min_price: float = 0.0,
     min_history_months: int = STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS,
+    min_avg_dollar_volume_20d_m: float = STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M,
     lower_is_better_factors: list[str] | None = None,
     trend_filter_enabled=False,
     trend_filter_window=STRICT_TREND_FILTER_DEFAULT_WINDOW,
@@ -1535,6 +1611,14 @@ def _run_statement_shadow_snapshot_from_db(
         trend_filter_window=(trend_filter_window if trend_filter_enabled else None),
         min_history_months=int(min_history_months or 0),
     )
+    avg_dollar_volume_20d_by_date: dict[str, dict[pd.Timestamp, float]] = {}
+    if float(min_avg_dollar_volume_20d_m or 0.0) > 0.0:
+        avg_dollar_volume_20d_by_date = _get_cached_snapshot_strategy_avg_dollar_volume_20d(
+            symbols=candidate_tickers,
+            start=start,
+            end=end,
+            timeframe=timeframe,
+        )
 
     rebalance_dates = pd.to_datetime(next(iter(price_dfs.values()))["Date"]).tolist()
     factor_history = _get_cached_statement_factors_shadow(
@@ -1619,7 +1703,9 @@ def _run_statement_shadow_snapshot_from_db(
         top_n=top_n,
         min_price=min_price,
         min_history_months=min_history_months,
+        min_avg_dollar_volume_20d_m=min_avg_dollar_volume_20d_m,
         first_valid_price_dates=first_valid_price_dates,
+        avg_dollar_volume_20d_by_date=avg_dollar_volume_20d_by_date,
         lower_is_better_factors=lower_is_better_factors,
         rebalance_interval=rebalance_interval,
         trend_filter_enabled=trend_filter_enabled,
@@ -1668,6 +1754,7 @@ def get_statement_quality_snapshot_shadow_from_db(
     rebalance_interval=1,
     min_price: float = 0.0,
     min_history_months: int = STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS,
+    min_avg_dollar_volume_20d_m: float = STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M,
     trend_filter_enabled=False,
     trend_filter_window=STRICT_TREND_FILTER_DEFAULT_WINDOW,
     market_regime_enabled=False,
@@ -1696,6 +1783,7 @@ def get_statement_quality_snapshot_shadow_from_db(
         top_n=top_n,
         min_price=min_price,
         min_history_months=min_history_months,
+        min_avg_dollar_volume_20d_m=min_avg_dollar_volume_20d_m,
         lower_is_better_factors=["debt_ratio", "debt_to_assets", "net_debt_to_equity"],
         rebalance_interval=rebalance_interval,
         trend_filter_enabled=trend_filter_enabled,
@@ -1727,6 +1815,7 @@ def get_statement_value_snapshot_shadow_from_db(
     rebalance_interval=1,
     min_price: float = 0.0,
     min_history_months: int = STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS,
+    min_avg_dollar_volume_20d_m: float = STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M,
     trend_filter_enabled=False,
     trend_filter_window=STRICT_TREND_FILTER_DEFAULT_WINDOW,
     market_regime_enabled=False,
@@ -1755,6 +1844,7 @@ def get_statement_value_snapshot_shadow_from_db(
         top_n=top_n,
         min_price=min_price,
         min_history_months=min_history_months,
+        min_avg_dollar_volume_20d_m=min_avg_dollar_volume_20d_m,
         rebalance_interval=rebalance_interval,
         lower_is_better_factors=["per", "pbr", "psr", "pcr", "pfcr", "ev_ebit", "por"],
         trend_filter_enabled=trend_filter_enabled,
@@ -1787,6 +1877,7 @@ def get_statement_quality_value_snapshot_shadow_from_db(
     rebalance_interval=1,
     min_price: float = 0.0,
     min_history_months: int = STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS,
+    min_avg_dollar_volume_20d_m: float = STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M,
     trend_filter_enabled=False,
     trend_filter_window=STRICT_TREND_FILTER_DEFAULT_WINDOW,
     market_regime_enabled=False,
@@ -1823,6 +1914,7 @@ def get_statement_quality_value_snapshot_shadow_from_db(
         top_n=top_n,
         min_price=min_price,
         min_history_months=min_history_months,
+        min_avg_dollar_volume_20d_m=min_avg_dollar_volume_20d_m,
         rebalance_interval=rebalance_interval,
         lower_is_better_factors=[
             "per",

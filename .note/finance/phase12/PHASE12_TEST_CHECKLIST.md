@@ -100,6 +100,7 @@
 - `Single Strategy`의 annual strict 3종 form에
   - `Minimum Price`
   - `Minimum History (Months)`
+  - `Min Avg Dollar Volume 20D ($M)`
   - `Transaction Cost (bps)`
   - `Benchmark Ticker`
   가 보이는지
@@ -115,6 +116,7 @@
   가 보이는지
 - `Compare`의 annual strict block에도
   - `Minimum Price`
+  - `Min Avg Dollar Volume 20D ($M)`
   - `Transaction Cost (bps)`
   - `Benchmark Ticker`
   override가 보이는지
@@ -128,6 +130,7 @@
 - `Meta`에
   - `Minimum Price`
   - `Minimum History`
+  - `Min Avg Dollar Volume 20D`
   - `Transaction Cost`
   - `Benchmark`
   - `Average Turnover`
@@ -154,6 +157,7 @@
   - `Promotion Decision`
   - `Promotion Rationale`
   - `Minimum History`
+  - `Min Avg Dollar Volume 20D`
   - `Benchmark Coverage`
   - `Benchmark CAGR`
   - `Net CAGR Spread`
@@ -172,6 +176,7 @@
   annual strict의
   - `min_price_filter`
   - `min_history_months_filter`
+  - `min_avg_dollar_volume_20d_m_filter`
   - `transaction_cost_bps`
   - `benchmark_ticker`
   - `underperformance_guardrail_enabled`
@@ -184,9 +189,10 @@
 - benchmark-relative validation surface second pass도 now 추가되었다.
 - underperformance guardrail actual-rule first pass도 now 추가되었다.
 - minimum-history investability proxy / benchmark spread / coverage first pass도 now 추가되었다.
+- 20D average dollar volume liquidity proxy first pass도 now 추가되었다.
 - 다만 아래는 아직 later pass다.
   - stronger portfolio guardrail
-  - stronger liquidity / volume investability proxy
+  - richer liquidity / spread / AUM policy
   - richer benchmark policy
 
 ## 4. Static vs Dynamic Contract Boundary

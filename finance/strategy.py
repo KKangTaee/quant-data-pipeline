@@ -340,6 +340,18 @@ def _passes_min_price(close_value: float, min_price: float) -> bool:
     return float(close_value) >= threshold
 
 
+def _passes_min_avg_dollar_volume(
+    avg_dollar_volume: float | None,
+    min_avg_dollar_volume_20d_m: float,
+) -> bool:
+    threshold = max(float(min_avg_dollar_volume_20d_m or 0.0), 0.0) * 1_000_000.0
+    if threshold <= 0:
+        return True
+    if avg_dollar_volume is None or pd.isna(avg_dollar_volume):
+        return False
+    return float(avg_dollar_volume) >= threshold
+
+
 def risk_parity_trend(
     dfs: dict,
     start_balance: float,
@@ -694,6 +706,7 @@ def quality_snapshot_equal_weight(
     rebalance_interval: int = 1,
     min_price: float = 0.0,
     min_history_months: int = 0,
+    min_avg_dollar_volume_20d_m: float = 0.0,
     trend_filter_enabled: bool = False,
     trend_filter_window: int = 200,
     trend_filter_col: str | None = None,
@@ -708,6 +721,7 @@ def quality_snapshot_equal_weight(
     underperformance_guardrail_benchmark: str | None = None,
     underperformance_guardrail_df: pd.DataFrame | None = None,
     first_valid_price_dates: dict[str, pd.Timestamp | None] | None = None,
+    avg_dollar_volume_20d_by_date: dict[str, dict[pd.Timestamp, float]] | None = None,
 ) -> pd.DataFrame:
     """
     Monthly snapshot-based quality strategy.
@@ -729,6 +743,8 @@ def quality_snapshot_equal_weight(
         raise ValueError("min_price must be non-negative.")
     if min_history_months < 0:
         raise ValueError("min_history_months must be non-negative.")
+    if min_avg_dollar_volume_20d_m < 0:
+        raise ValueError("min_avg_dollar_volume_20d_m must be non-negative.")
     if trend_filter_enabled and trend_filter_window <= 0:
         raise ValueError("trend_filter_window must be positive when trend filter is enabled.")
     if market_regime_enabled and market_regime_window <= 0:
@@ -744,6 +760,7 @@ def quality_snapshot_equal_weight(
     base_df = price_dfs[tickers[0]].sort_values("Date").reset_index(drop=True)
     dates = pd.to_datetime(base_df["Date"]).tolist()
     effective_first_valid_dates = dict(first_valid_price_dates or {})
+    effective_avg_dollar_volume = dict(avg_dollar_volume_20d_by_date or {})
     if not effective_first_valid_dates:
         for ticker in tickers:
             working = price_dfs[ticker][["Date", "Close"]].copy()
@@ -831,6 +848,7 @@ def quality_snapshot_equal_weight(
         regime_blocked_tickers: list[str] = []
         underperformance_blocked_tickers: list[str] = []
         history_excluded_tickers: list[str] = []
+        liquidity_excluded_tickers: list[str] = []
 
         regime_state = "off"
         regime_close_now = np.nan
@@ -909,6 +927,12 @@ def quality_snapshot_equal_weight(
                         int(min_history_months),
                     ):
                         history_excluded_tickers.append(ticker)
+                        continue
+                    if not _passes_min_avg_dollar_volume(
+                        (effective_avg_dollar_volume.get(ticker) or {}).get(snapshot_key),
+                        float(min_avg_dollar_volume_20d_m or 0.0),
+                    ):
+                        liquidity_excluded_tickers.append(ticker)
                         continue
                     available_tickers.add(ticker)
                 ranked = ranked[ranked["symbol"].isin(available_tickers)].reset_index(drop=True)
@@ -989,6 +1013,9 @@ def quality_snapshot_equal_weight(
                 "Minimum History Months": int(min_history_months or 0),
                 "History Excluded Ticker": history_excluded_tickers,
                 "History Excluded Count": len(history_excluded_tickers),
+                "Minimum Avg Dollar Volume 20D ($M)": float(min_avg_dollar_volume_20d_m or 0.0),
+                "Liquidity Excluded Ticker": liquidity_excluded_tickers,
+                "Liquidity Excluded Count": len(liquidity_excluded_tickers),
                 "Underperformance Guardrail State": guardrail_state,
                 "Underperformance Guardrail Triggered": guardrail_triggered,
                 "Underperformance Guardrail Benchmark Close": guardrail_benchmark_close_now,

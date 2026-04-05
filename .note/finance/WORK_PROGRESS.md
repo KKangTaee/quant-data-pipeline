@@ -3257,3 +3257,27 @@ Keep entries append-only and concise.
   - future commit descriptions for this repository should prefer Korean unless explicitly requested otherwise
 - Added a new reference note:
   - `.note/finance/FINANCE_WORK_PROGRESS_POLICY.md`
+
+### 2026-04-05 - Strict annual liquidity proxy first pass was added
+
+- Extended the strict annual family (`Quality`, `Value`, `Quality+Value`) with a later-pass investability filter:
+  - `Min Avg Dollar Volume 20D ($M)`
+- Implementation detail:
+  - uses DB daily `close * volume`
+  - computes trailing 20-day average dollar volume before each rebalance
+  - excludes candidates that fall below the configured threshold
+- The new contract now travels through:
+  - single-strategy form
+  - compare override
+  - runtime metadata
+  - result rows / real-money tab
+  - history / `Load Into Form`
+- Added new result diagnostics:
+  - `Minimum Avg Dollar Volume 20D ($M)`
+  - `Liquidity Excluded Ticker`
+  - `Liquidity Excluded Count`
+- Added a dedicated Phase 12 implementation note and refreshed:
+  - current TODO board
+  - Phase 12 checklist
+  - comprehensive analysis
+  - doc index
