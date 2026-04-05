@@ -3610,3 +3610,41 @@ Keep entries append-only and concise.
   - finance doc index
   - comprehensive analysis
   - question and analysis log
+
+### 2026-04-05 - Phase 13 probation and monitoring workflow first pass was added
+
+- Added a new deployment-readiness layer on top of shortlist meta:
+  - `probation_status`
+  - `probation_stage`
+  - `probation_review_frequency`
+  - `probation_next_step`
+  - `monitoring_status`
+  - `monitoring_focus`
+  - `monitoring_breach_signals`
+  - `monitoring_review_frequency`
+  - `monitoring_next_step`
+- First-pass probation mapping now reads:
+  - `hold -> not_ready`
+  - `watchlist -> watchlist_review`
+  - `paper_probation -> paper_tracking`
+  - `small_capital_trial -> small_capital_live_trial`
+- Monitoring is now derived from existing policy statuses and guardrail trigger counts, so Phase 13 can surface:
+  - `blocked`
+  - `routine_review`
+  - `heightened_review`
+  - `breach_watch`
+- Connected the new workflow readout through:
+  - single strategy `Real-Money`
+  - `Execution Context`
+  - compare `Strategy Highlights`
+  - compare meta table
+- Verified:
+  - `py_compile`
+  - page/runtime import smoke
+  - helper-level branch smoke for probation / monitoring mappings
+  - DB-backed strict annual and ETF smoke for meta propagation
+- Added a dedicated Phase 13 implementation note and refreshed:
+  - current TODO board
+  - finance doc index
+  - comprehensive analysis
+  - question and analysis log

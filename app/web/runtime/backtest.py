@@ -781,6 +781,120 @@ def _build_shortlist_contract(meta: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _build_probation_and_monitoring_contract(meta: dict[str, Any]) -> dict[str, Any]:
+    shortlist_status = str(meta.get("shortlist_status") or "").strip().lower()
+    strategy_key = str(meta.get("strategy_key") or "").strip().lower()
+    strategy_family = str(meta.get("shortlist_family") or meta.get("strategy_family") or "").strip()
+    benchmark_available = bool(meta.get("benchmark_available"))
+    price_freshness = meta.get("price_freshness") or {}
+    freshness_status = str(price_freshness.get("status") or "").strip().lower()
+
+    if not shortlist_status:
+        return {}
+
+    probation_status: str
+    probation_stage: str
+    probation_review_frequency: str
+    probation_next_step: str
+    probation_rationale: list[str] = []
+
+    if shortlist_status == "hold":
+        probation_status = "not_ready"
+        probation_stage = "contract_gap_resolution"
+        probation_review_frequency = "ad_hoc"
+        probation_next_step = "resolve_contract_gaps_before_probation"
+        probation_rationale.append("shortlist_hold")
+    elif shortlist_status == "watchlist":
+        probation_status = "watchlist_review"
+        probation_stage = "pre_probation_review"
+        probation_review_frequency = "monthly"
+        probation_next_step = "review_robustness_and_policy_gaps_before_paper_probation"
+        probation_rationale.append("shortlist_watchlist")
+    elif shortlist_status == "small_capital_trial":
+        probation_status = "small_capital_live_trial"
+        probation_stage = "live_probation"
+        probation_review_frequency = "monthly"
+        probation_next_step = "run_small_capital_trial_with_monthly_breach_review"
+        probation_rationale.append("shortlist_small_capital_trial")
+    else:
+        probation_status = "paper_tracking"
+        probation_stage = "paper_probation"
+        probation_review_frequency = "monthly"
+        probation_next_step = "track_paper_results_and_recheck_policy_monthly"
+        probation_rationale.append("shortlist_paper_probation")
+
+    monitoring_focus: list[str] = []
+    if benchmark_available:
+        monitoring_focus.append("benchmark_relative_validation")
+    if meta.get("underperformance_guardrail_enabled") or meta.get("rolling_underperformance_share") is not None:
+        monitoring_focus.append("rolling_underperformance")
+    if meta.get("drawdown_guardrail_enabled") or meta.get("strategy_max_drawdown") is not None:
+        monitoring_focus.append("drawdown_control")
+    if meta.get("liquidity_policy_status"):
+        monitoring_focus.append("liquidity_cleanliness")
+    if strategy_key in ETF_OPERABILITY_STRATEGY_KEYS or str(meta.get("etf_operability_status") or "").strip():
+        monitoring_focus.append("etf_operability")
+    if freshness_status:
+        monitoring_focus.append("price_freshness")
+
+    watch_signals: list[str] = []
+    severe_signals: list[str] = []
+
+    def _register_policy_signal(name: str, value: Any) -> None:
+        status = str(value or "").strip().lower()
+        if status in {"caution", "unavailable", "error"}:
+            severe_signals.append(f"{name}_{status}")
+        elif status in {"watch", "warning"}:
+            watch_signals.append(f"{name}_{status}")
+
+    _register_policy_signal("validation", meta.get("validation_status"))
+    _register_policy_signal("benchmark_policy", meta.get("benchmark_policy_status"))
+    _register_policy_signal("etf_operability", meta.get("etf_operability_status"))
+    _register_policy_signal("liquidity_policy", meta.get("liquidity_policy_status"))
+    _register_policy_signal("validation_policy", meta.get("validation_policy_status"))
+    _register_policy_signal("guardrail_policy", meta.get("guardrail_policy_status"))
+    _register_policy_signal("price_freshness", freshness_status)
+
+    under_trigger_count = int(meta.get("underperformance_guardrail_trigger_count") or 0)
+    drawdown_trigger_count = int(meta.get("drawdown_guardrail_trigger_count") or 0)
+    if under_trigger_count > 0:
+        severe_signals.append("underperformance_guardrail_triggered")
+    if drawdown_trigger_count > 0:
+        severe_signals.append("drawdown_guardrail_triggered")
+
+    monitoring_breach_signals = severe_signals + watch_signals
+    if probation_status == "not_ready":
+        monitoring_status = "blocked"
+        monitoring_review_frequency = "ad_hoc"
+        monitoring_next_step = "resolve_blockers_before_monitoring"
+    elif severe_signals:
+        monitoring_status = "breach_watch"
+        monitoring_review_frequency = "monthly"
+        monitoring_next_step = "review_breach_signals_before_capital_increase"
+    elif watch_signals:
+        monitoring_status = "heightened_review"
+        monitoring_review_frequency = "monthly"
+        monitoring_next_step = "continue_monthly_review_and_track_watch_signals"
+    else:
+        monitoring_status = "routine_review"
+        monitoring_review_frequency = "monthly"
+        monitoring_next_step = "continue_probation_and_record_monthly_notes"
+
+    return {
+        "probation_status": probation_status,
+        "probation_stage": probation_stage,
+        "probation_review_frequency": probation_review_frequency,
+        "probation_next_step": probation_next_step,
+        "probation_rationale": probation_rationale,
+        "monitoring_status": monitoring_status,
+        "monitoring_focus": monitoring_focus,
+        "monitoring_breach_signals": monitoring_breach_signals,
+        "monitoring_review_frequency": monitoring_review_frequency,
+        "monitoring_next_step": monitoring_next_step,
+        "monitoring_family": strategy_family,
+    }
+
+
 def _build_benchmark_policy_surface(meta: dict[str, Any]) -> dict[str, Any]:
     min_coverage_raw = meta.get("promotion_min_benchmark_coverage")
     min_spread_raw = meta.get("promotion_min_net_cagr_spread")
@@ -1470,6 +1584,7 @@ def _apply_real_money_hardening(
 
     meta.update(_build_promotion_decision(meta))
     meta.update(_build_shortlist_contract(meta))
+    meta.update(_build_probation_and_monitoring_contract(meta))
     bundle["meta"] = meta
     return bundle
 

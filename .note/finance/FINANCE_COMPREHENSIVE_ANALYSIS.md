@@ -250,6 +250,22 @@ Analysis / Presentation
   strict annual 계열 중 actual guardrail과 candidate-equal-weight benchmark contract가 함께 맞는 경우에만
   보수적으로 `small_capital_trial`을 추천한다.
   이 상태는 single `Real-Money`, `Execution Context`, compare `Strategy Highlights`와 meta 표에도 같이 남는다.
+- 그리고 그 shortlist 위에 probation / monitoring workflow first pass가 더해져,
+  각 run이 지금
+  - `not_ready`
+  - `watchlist_review`
+  - `paper_tracking`
+  - `small_capital_live_trial`
+  중 어느 probation 상태인지,
+  그리고 monitoring은
+  - `blocked`
+  - `routine_review`
+  - `heightened_review`
+  - `breach_watch`
+  중 어디로 읽어야 하는지까지 같이 보여주게 되었다.
+  이 layer는 새 전략 규칙을 더 추가한 것이 아니라,
+  기존 `validation / benchmark / liquidity / guardrail / freshness` 정책 상태와
+  actual guardrail trigger count를 운영 언어로 다시 해석한 것이다.
 - 이와 함께 `GTAA`의 현재 기본 preset/sample universe는
   commodity sleeve에서 `DBC` 대신 `PDBC`를 사용하도록 조정되었다.
 - GTAA preset surface는 현재 기본 preset과,

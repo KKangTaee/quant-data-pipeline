@@ -2427,6 +2427,36 @@ def _render_last_run() -> None:
                 st.markdown(f"- `Shortlist Next Step`: `{meta['shortlist_next_step']}`")
             if meta.get("shortlist_family"):
                 st.markdown(f"- `Shortlist Family`: `{meta['shortlist_family']}`")
+            if meta.get("probation_status"):
+                st.markdown(
+                    f"- `Probation Status`: `{meta['probation_status']}` "
+                    f"(`{_probation_status_value_to_label(meta.get('probation_status'))}`)"
+                )
+            if meta.get("probation_stage"):
+                st.markdown(f"- `Probation Stage`: `{meta['probation_stage']}`")
+            if meta.get("probation_review_frequency"):
+                st.markdown(f"- `Probation Review Frequency`: `{meta['probation_review_frequency']}`")
+            if meta.get("probation_next_step"):
+                st.markdown(f"- `Probation Next Step`: `{meta['probation_next_step']}`")
+            if meta.get("monitoring_status"):
+                st.markdown(
+                    f"- `Monitoring Status`: `{meta['monitoring_status']}` "
+                    f"(`{_monitoring_status_value_to_label(meta.get('monitoring_status'))}`)"
+                )
+            if meta.get("monitoring_review_frequency"):
+                st.markdown(f"- `Monitoring Review Frequency`: `{meta['monitoring_review_frequency']}`")
+            if meta.get("monitoring_next_step"):
+                st.markdown(f"- `Monitoring Next Step`: `{meta['monitoring_next_step']}`")
+            if meta.get("monitoring_focus"):
+                st.markdown(
+                    "- `Monitoring Focus`: "
+                    + ", ".join(f"`{item}`" for item in list(meta.get("monitoring_focus") or []))
+                )
+            if meta.get("monitoring_breach_signals"):
+                st.markdown(
+                    "- `Monitoring Breach Signals`: "
+                    + ", ".join(f"`{item}`" for item in list(meta.get("monitoring_breach_signals") or []))
+                )
             if meta.get("strategy_max_drawdown") is not None:
                 st.markdown(f"- `Strategy Max Drawdown`: `{float(meta['strategy_max_drawdown']):.2%}`")
             if meta.get("benchmark_max_drawdown") is not None:
@@ -3531,6 +3561,45 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
                     "promotion / policy gap을 먼저 정리한 뒤 다시 보는 것이 좋습니다."
                 )
 
+        if meta.get("probation_status") or meta.get("monitoring_status"):
+            st.markdown("##### Probation And Monitoring")
+            probation_status = str(meta.get("probation_status") or "-")
+            probation_stage = str(meta.get("probation_stage") or "-")
+            probation_review_frequency = str(meta.get("probation_review_frequency") or "-")
+            monitoring_status = str(meta.get("monitoring_status") or "-")
+            monitoring_review_frequency = str(meta.get("monitoring_review_frequency") or "-")
+            probation_cols = st.columns(5, gap="small")
+            probation_cols[0].metric("Probation", _probation_status_value_to_label(probation_status))
+            probation_cols[1].metric("Stage", probation_stage)
+            probation_cols[2].metric("Probation Review", probation_review_frequency)
+            probation_cols[3].metric("Monitoring", _monitoring_status_value_to_label(monitoring_status))
+            probation_cols[4].metric("Monitoring Review", monitoring_review_frequency)
+            if meta.get("probation_next_step"):
+                st.caption(f"Probation next step: `{meta.get('probation_next_step')}`")
+            probation_rationale = list(meta.get("probation_rationale") or [])
+            if probation_rationale:
+                st.caption("Probation rationale: " + ", ".join(f"`{item}`" for item in probation_rationale))
+            monitoring_focus = list(meta.get("monitoring_focus") or [])
+            if monitoring_focus:
+                st.caption("Monitoring focus: " + ", ".join(f"`{item}`" for item in monitoring_focus))
+            monitoring_breach_signals = list(meta.get("monitoring_breach_signals") or [])
+            if monitoring_breach_signals:
+                st.caption("Monitoring breach signals: " + ", ".join(f"`{item}`" for item in monitoring_breach_signals))
+
+            if monitoring_status == "breach_watch":
+                st.warning(
+                    "현재 probation 단계에서 breach signal이 관찰됐습니다. "
+                    "비중 확대보다는 월별 review와 rule re-check를 먼저 하는 편이 맞습니다."
+                )
+            elif monitoring_status == "heightened_review":
+                st.info(
+                    "지금은 monitoring watch signal이 있어서, routine review보다 조금 더 보수적으로 월별 확인을 이어가는 편이 좋습니다."
+                )
+            elif monitoring_status == "routine_review":
+                st.success(
+                    "현재 기준에서는 routine monthly review로 probation을 이어갈 수 있는 상태입니다."
+                )
+
     if benchmark_chart_df is not None and result_df is not None:
         strategy_line = (
             bundle["chart_df"][["Date", "Total Balance"]]
@@ -3627,6 +3696,8 @@ def _build_compare_highlight_rows(bundles: list[dict]) -> pd.DataFrame:
                 "Validation": meta.get("validation_status"),
                 "Promotion": meta.get("promotion_decision"),
                 "Shortlist": _shortlist_status_value_to_label(meta.get("shortlist_status")),
+                "Probation": _probation_status_value_to_label(meta.get("probation_status")),
+                "Monitoring": _monitoring_status_value_to_label(meta.get("monitoring_status")),
                 "Shortlist Next": meta.get("shortlist_next_step"),
                 "Guardrail Triggers": meta.get("underperformance_guardrail_trigger_count"),
                 "DD Guardrail Triggers": meta.get("drawdown_guardrail_trigger_count"),
@@ -3922,6 +3993,13 @@ def _render_compare_results() -> None:
                     "strategy_family": meta.get("strategy_family"),
                     "shortlist_status": meta.get("shortlist_status"),
                     "shortlist_next_step": meta.get("shortlist_next_step"),
+                    "probation_status": meta.get("probation_status"),
+                    "probation_stage": meta.get("probation_stage"),
+                    "probation_review_frequency": meta.get("probation_review_frequency"),
+                    "probation_next_step": meta.get("probation_next_step"),
+                    "monitoring_status": meta.get("monitoring_status"),
+                    "monitoring_review_frequency": meta.get("monitoring_review_frequency"),
+                    "monitoring_next_step": meta.get("monitoring_next_step"),
                     "underperformance_guardrail_enabled": meta.get("underperformance_guardrail_enabled"),
                     "underperformance_guardrail_window_months": meta.get("underperformance_guardrail_window_months"),
                     "underperformance_guardrail_threshold": meta.get("underperformance_guardrail_threshold"),
@@ -4856,6 +4934,26 @@ def _shortlist_status_value_to_label(value: str | None) -> str:
         "paper_probation": "Paper Probation",
         "small_capital_trial": "Small Capital Trial",
         "hold": "Hold",
+    }
+    return mapping.get(str(value or "").strip().lower(), "-")
+
+
+def _probation_status_value_to_label(value: str | None) -> str:
+    mapping = {
+        "not_ready": "Not Ready",
+        "watchlist_review": "Watchlist Review",
+        "paper_tracking": "Paper Tracking",
+        "small_capital_live_trial": "Small Capital Trial",
+    }
+    return mapping.get(str(value or "").strip().lower(), "-")
+
+
+def _monitoring_status_value_to_label(value: str | None) -> str:
+    mapping = {
+        "blocked": "Blocked",
+        "routine_review": "Routine Review",
+        "heightened_review": "Heightened Review",
+        "breach_watch": "Breach Watch",
     }
     return mapping.get(str(value or "").strip().lower(), "-")
 

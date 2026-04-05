@@ -6220,3 +6220,40 @@ Do not copy full chat transcripts. Keep only the durable result.
   - the ETF second-pass guardrail item is now implemented as a first pass
   - ETF current-operability remains a current-snapshot overlay, not PIT operability history
   - actual AUM/spread block rules remain later-pass backlog
+
+### 2026-04-05 - Phase 13 should turn shortlist into a probation and monitoring workflow before adding more ETF operability rules
+
+- Request topic:
+  - continue into the next Phase 13 step after ETF guardrail second pass
+- Interpreted goal:
+  - make deployment-readiness operational by telling us not only whether a strategy is shortlisted, but how it should now be observed and reviewed
+- Result:
+  - added a probation / monitoring workflow layer on top of the existing shortlist contract
+  - new runtime meta now includes:
+    - `probation_status`
+    - `probation_stage`
+    - `probation_review_frequency`
+    - `probation_next_step`
+    - `monitoring_status`
+    - `monitoring_focus`
+    - `monitoring_breach_signals`
+    - `monitoring_review_frequency`
+    - `monitoring_next_step`
+  - first-pass probation mapping was fixed as:
+    - `hold -> not_ready`
+    - `watchlist -> watchlist_review`
+    - `paper_probation -> paper_tracking`
+    - `small_capital_trial -> small_capital_live_trial`
+  - monitoring status is derived conservatively from existing validation / policy states and actual guardrail trigger counts, producing:
+    - `blocked`
+    - `routine_review`
+    - `heightened_review`
+    - `breach_watch`
+  - UI surface now shows the new workflow state in:
+    - single `Real-Money`
+    - `Execution Context`
+    - compare `Strategy Highlights`
+    - compare meta table
+- Durable implication:
+  - Phase 13 can now express "what to do next" as an operational review workflow, not only as a static shortlist label
+  - this keeps the project conservative: it adds deployment-readiness guidance without turning current-snapshot ETF operability data into a look-ahead-prone actual block rule

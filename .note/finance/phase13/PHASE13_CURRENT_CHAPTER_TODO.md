@@ -44,16 +44,16 @@
 
 ## 4. Probation And Monitoring Workflow
 
-- `pending` probation workflow contract 초안 작성
+- `completed` probation workflow contract 초안 작성
   - paper tracking
   - small-capital trial
   - monthly review
-- `pending` monitoring note / warning contract 초안 작성
+- `completed` monitoring note / warning contract 초안 작성
   - drawdown
   - underperformance
   - policy breach
-- `pending` later UI / history surface 필요 범위 정리
-  - 어디까지 product에 넣고 어디까지 문서로 둘지 결정
+- `completed` later UI / history surface 필요 범위 정리
+  - single `Real-Money`, `Execution Context`, compare `Strategy Highlights`, compare meta table까지 first pass로 연결
 
 ## 5. Out-Of-Sample / Rolling Validation
 
@@ -82,3 +82,6 @@
   shortlist language로 다시 읽는 layer까지 연결한 상태다.
 - ETF second pass는 now optional actual guardrail rule까지 연결된 상태다.
   다만 operability actual block rule과 PIT operability history는 아직 backlog다.
+- probation / monitoring workflow first pass도 now connected 상태다.
+  현재는 strategy rule이 아니라 deployment-readiness / monthly review contract를
+  single / compare surface에서 읽는 layer로 구현되어 있다.
