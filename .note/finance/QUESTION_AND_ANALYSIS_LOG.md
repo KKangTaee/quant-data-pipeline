@@ -5845,3 +5845,36 @@ Do not copy full chat transcripts. Keep only the durable result.
     - liquidity filter exists
     - liquidity exclusions are actually rare enough for promotion
   - this makes real-money promotion less optimistic when the strategy keeps running into liquidity limits at rebalance time
+
+### 2026-04-05 - Quality/value strategy logic should stay in finance layers while the Backtest UI surface is simplified
+
+- Request topic:
+  - review whether `backtest.py` should keep holding every strategy surface directly
+  - clarify how quality/value strategies are currently managed
+  - simplify the visible strategy list into `Quality`, `Value`, `Quality + Value`
+- Interpreted goal:
+  - make the strategy surface easier to manage without destabilizing already-working runtime code
+- Result:
+  - confirmed the current ownership boundary is:
+    - `finance/strategy.py` = simulation / decision logic
+    - `finance/sample.py` = DB-backed snapshot / factor assembly
+    - `app/web/runtime/backtest.py` = runtime wrapper / bundle contract
+    - `app/web/pages/backtest.py` = Streamlit UI / compare / history orchestration
+  - added `app/web/pages/backtest_strategy_catalog.py` to hold:
+    - family labels
+    - variant labels
+    - concrete display names
+    - concrete strategy keys
+  - simplified the user-facing top-level strategy surface in both single and compare to:
+    - `Quality`
+    - `Value`
+    - `Quality + Value`
+  - kept concrete runtime keys unchanged so:
+    - history records
+    - `Load Into Form`
+    - compare prefill
+    - runtime dispatch
+    remain backward-compatible
+- Durable implication:
+  - this was a safe first-pass UI/orchestration refactor, not a strategy-logic rewrite
+  - future work can still split large quality/value form renderers into more files, but the family/variant contract is now centralized first

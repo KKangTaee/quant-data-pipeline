@@ -16,6 +16,19 @@
   - research-only
   로 혼동 없이 읽히는지 확인
 - quarterly strict prototype family가 여전히 hold / research-only로 읽히는지 확인
+- `Single Strategy`와 `Compare & Portfolio Builder`의 top-level strategy 목록이
+  - `Quality`
+  - `Value`
+  - `Quality + Value`
+  family 중심으로 정리되어 있는지 확인
+- family 선택 후 내부 variant selector에서
+  - `Research`
+  - `Strict Annual`
+  - `Strict Quarterly Prototype`
+  같은 세부 variant를 고를 수 있는지 확인
+- `History -> Load Into Form`으로 기존 quality/value 계열 실행 기록을 불러왔을 때
+  concrete strategy key가 깨지지 않고
+  family + variant UI로 자연스럽게 복원되는지 확인
 
 ## 2. ETF Strategy Real-Money Contract
 

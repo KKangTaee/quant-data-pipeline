@@ -214,6 +214,16 @@
   - promotion decision이 liquidity policy 상태를 함께 반영
   - single / compare / history / meta surface까지 contract 연결
   - `PHASE12_STRICT_ANNUAL_LIQUIDITY_POLICY_AND_PROMOTION_REINFORCEMENT_LATER_PASS.md`
+- `completed` backtest strategy surface consolidation first pass 구현
+  - 새 `app/web/pages/backtest_strategy_catalog.py`에 family / variant / concrete strategy key 매핑 분리
+  - `Single Strategy` top-level 목록을
+    - `Quality`
+    - `Value`
+    - `Quality + Value`
+    family 중심으로 정리
+  - `Compare & Portfolio Builder`도 같은 family surface를 사용하도록 정리
+  - history / `Load Into Form`는 기존 concrete strategy key를 유지하면서 family + variant UI로 복원
+  - `PHASE12_BACKTEST_STRATEGY_SURFACE_CONSOLIDATION_FIRST_PASS.md`
 - `in_progress` investability / turnover / benchmark / guardrail 보강
   - investability / turnover / benchmark는 first pass 완료
   - validation surface second pass 완료
@@ -246,6 +256,12 @@
 - ETF 전략군은 now `real-money hardening first pass completed` 상태이고,
   strict annual family도 now `real-money hardening first pass completed` 상태다.
 - GTAA는 이번 턴에서 더 밀지 않고, 이후 다시 다루기로 정리했다.
+- quality/value 전략의 실제 계산 로직은 계속
+  - `finance/strategy.py`
+  - `finance/sample.py`
+  - `app/web/runtime/backtest.py`
+  에 있고,
+  이번 턴에서 정리한 것은 주로 `app/web/pages/backtest.py`의 strategy surface / orchestration 구조다.
 - next active implementation target은
   strict annual broader benchmark contract / broader promotion robustness 쪽이다.
 - GTAA 쪽에서는 current default contract 기준으로

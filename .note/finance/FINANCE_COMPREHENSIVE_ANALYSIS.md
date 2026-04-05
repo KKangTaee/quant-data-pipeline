@@ -157,6 +157,29 @@ Analysis / Presentation
   first-pass real-money hardening이 추가되어,
   `Minimum Price`, `Transaction Cost (bps)`, `Benchmark Ticker`를 입력할 수 있고,
   결과도 gross/net/cost/benchmark 기준으로 같이 읽을 수 있게 되었다.
+- 이후 Backtest strategy surface도 first-pass 수준으로 재정리되어,
+  `Single Strategy`와 `Compare & Portfolio Builder`의 top-level 목록은
+  - `Quality`
+  - `Value`
+  - `Quality + Value`
+  family 중심으로 단순화되었고,
+  각 family 안에서
+  - `Research`
+  - `Strict Annual`
+  - `Strict Quarterly Prototype`
+  같은 variant를 고르는 구조로 바뀌었다.
+- 이 변경은 UI/orchestration surface 정리이지,
+  quality/value 계산 로직을 `backtest.py`로 이동시킨 것은 아니다.
+  현재 역할은 그대로:
+  - `finance/strategy.py` = simulation / decision layer
+  - `finance/sample.py` = DB-backed factor / snapshot assembly layer
+  - `app/web/runtime/backtest.py` = runtime wrapper / bundle assembly layer
+  - `app/web/pages/backtest.py` = Streamlit form / compare / history orchestration
+  이다.
+- 또한 family / variant / concrete strategy key 매핑은
+  새 `app/web/pages/backtest_strategy_catalog.py`로 분리되어,
+  history / `Load Into Form` / compare prefill도 기존 concrete strategy key를 유지한 채
+  family UI로 복원된다.
 - 같은 Phase 12에서 `Strict Annual Family`
   (`Quality Snapshot (Strict Annual)`, `Value Snapshot (Strict Annual)`, `Quality + Value Snapshot (Strict Annual)`)
   도 first-pass real-money hardening이 추가되어,

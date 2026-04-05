@@ -4,14 +4,28 @@ import numpy as np
 from abc import ABC, abstractmethod
 
 """
-    3️⃣ strategy.py — Decision & Simulation Layer
-    📌 역할
-        * 투자 의사결정
-        * 시간 흐름을 따라가는 시뮬레이션
+3️⃣ strategy.py — Decision & Simulation Layer
 
-    📦 포함 함수
-        * equal_weight_strategy
-        * gtaa3
+이 파일은 현재도 finance 전략의 핵심 simulation / decision 레이어다.
+
+역할:
+    * 투자 의사결정
+    * 시간 흐름을 따라가는 시뮬레이션
+    * rebalance 결과를 result dataframe으로 전개
+
+현재 구조에서의 경계:
+    * `finance/sample.py`
+        - DB / factor / snapshot 데이터를 strategy 입력 형태로 조립
+    * `finance/strategy.py`
+        - 실제 strategy simulation 수행
+    * `app/web/runtime/backtest.py`
+        - 웹앱에서 쓰는 runtime wrapper / bundle / meta 조립
+    * `app/web/pages/backtest.py`
+        - Streamlit UI / compare / history orchestration
+
+즉 quality / value / quality+value 계열도
+UI는 `backtest.py`에서 열리지만,
+실제 strategy simulation 경로는 여전히 이 레이어와 sample/runtime 조합에 있다.
 """
 
 

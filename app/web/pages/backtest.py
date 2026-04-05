@@ -43,6 +43,15 @@ from app.web.runtime.backtest import (
     STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE,
     STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD,
 )
+from app.web.pages.backtest_strategy_catalog import (
+    COMPARE_STRATEGY_OPTIONS,
+    SINGLE_STRATEGY_OPTIONS,
+    display_name_to_selection,
+    family_variant_options,
+    resolve_concrete_strategy_display_name,
+    strategy_key_to_display_name as catalog_strategy_key_to_display_name,
+    strategy_key_to_selection,
+)
 from finance.sample import (
     GTAA_DEFAULT_CRASH_GUARDRAIL_DRAWDOWN_THRESHOLD,
     GTAA_DEFAULT_CRASH_GUARDRAIL_ENABLED,
@@ -271,21 +280,17 @@ QUALITY_STRICT_PRESETS = _load_managed_strict_annual_presets()
 
 VALUE_STRICT_PRESETS = QUALITY_STRICT_PRESETS
 
-COMPARE_STRATEGY_OPTIONS = [
-    "Equal Weight",
-    "GTAA",
-    "Risk Parity Trend",
-    "Dual Momentum",
-    "Quality Snapshot",
-    "Quality Snapshot (Strict Annual)",
-    "Quality Snapshot (Strict Quarterly Prototype)",
-    "Value Snapshot (Strict Annual)",
-    "Value Snapshot (Strict Quarterly Prototype)",
-    "Quality + Value Snapshot (Strict Annual)",
-    "Quality + Value Snapshot (Strict Quarterly Prototype)",
-]
+SINGLE_FAMILY_VARIANT_SESSION_KEYS = {
+    "Quality": "single_quality_variant",
+    "Value": "single_value_variant",
+    "Quality + Value": "single_quality_value_variant",
+}
 
-SINGLE_STRATEGY_OPTIONS = COMPARE_STRATEGY_OPTIONS
+COMPARE_FAMILY_VARIANT_SESSION_KEYS = {
+    "Quality": "compare_quality_variant",
+    "Value": "compare_value_variant",
+    "Quality + Value": "compare_quality_value_variant",
+}
 
 
 @lru_cache(maxsize=128)
@@ -505,6 +510,8 @@ def _init_backtest_state() -> None:
         st.session_state.backtest_operator_bridge_notice = None
     if "backtest_prefill_strategy_choice" not in st.session_state:
         st.session_state.backtest_prefill_strategy_choice = None
+    if "backtest_prefill_strategy_variant" not in st.session_state:
+        st.session_state.backtest_prefill_strategy_variant = None
     if "backtest_compare_prefill_payload" not in st.session_state:
         st.session_state.backtest_compare_prefill_payload = None
     if "backtest_compare_prefill_pending" not in st.session_state:
@@ -3869,32 +3876,71 @@ def _build_history_payload(record: dict[str, Any]) -> dict[str, Any] | None:
 
 
 def _strategy_key_to_display_name(strategy_key: str | None) -> str | None:
-    mapping = {
-        "equal_weight": "Equal Weight",
-        "gtaa": "GTAA",
-        "risk_parity_trend": "Risk Parity Trend",
-        "dual_momentum": "Dual Momentum",
-        "quality_snapshot": "Quality Snapshot",
-        "quality_snapshot_strict_annual": "Quality Snapshot (Strict Annual)",
-        "quality_snapshot_strict_quarterly_prototype": "Quality Snapshot (Strict Quarterly Prototype)",
-        "value_snapshot_strict_annual": "Value Snapshot (Strict Annual)",
-        "value_snapshot_strict_quarterly_prototype": "Value Snapshot (Strict Quarterly Prototype)",
-        "quality_value_snapshot_strict_annual": "Quality + Value Snapshot (Strict Annual)",
-        "quality_value_snapshot_strict_quarterly_prototype": "Quality + Value Snapshot (Strict Quarterly Prototype)",
-    }
-    return mapping.get(strategy_key)
+    return catalog_strategy_key_to_display_name(strategy_key)
+
+
+def _family_strategy_summary_label(strategy_key: str | None) -> str | None:
+    family_name, variant_name = strategy_key_to_selection(strategy_key)
+    if family_name is None:
+        return None
+    if variant_name:
+        return f"{family_name} / {variant_name}"
+    return family_name
+
+
+def _single_family_variant_session_key(strategy_choice: str) -> str | None:
+    return SINGLE_FAMILY_VARIANT_SESSION_KEYS.get(strategy_choice)
+
+
+def _compare_family_variant_session_key(strategy_choice: str) -> str | None:
+    return COMPARE_FAMILY_VARIANT_SESSION_KEYS.get(strategy_choice)
+
+
+def _render_single_strategy_family_form(strategy_choice: str) -> None:
+    variant_key = _single_family_variant_session_key(strategy_choice)
+    variant_options = family_variant_options(strategy_choice)
+    if not variant_key or not variant_options:
+        return
+
+    st.caption("이 카테고리 안에서 실행 variant를 선택합니다.")
+    selected_variant = st.selectbox(
+        f"{strategy_choice} Variant",
+        options=variant_options,
+        key=variant_key,
+    )
+    concrete_strategy_name = resolve_concrete_strategy_display_name(strategy_choice, selected_variant)
+
+    if concrete_strategy_name == "Quality Snapshot":
+        _render_quality_snapshot_form()
+    elif concrete_strategy_name == "Quality Snapshot (Strict Annual)":
+        _render_quality_snapshot_strict_annual_form()
+    elif concrete_strategy_name == "Quality Snapshot (Strict Quarterly Prototype)":
+        _render_quality_snapshot_strict_quarterly_prototype_form()
+    elif concrete_strategy_name == "Value Snapshot (Strict Annual)":
+        _render_value_snapshot_strict_annual_form()
+    elif concrete_strategy_name == "Value Snapshot (Strict Quarterly Prototype)":
+        _render_value_snapshot_strict_quarterly_prototype_form()
+    elif concrete_strategy_name == "Quality + Value Snapshot (Strict Annual)":
+        _render_quality_value_snapshot_strict_annual_form()
+    elif concrete_strategy_name == "Quality + Value Snapshot (Strict Quarterly Prototype)":
+        _render_quality_value_snapshot_strict_quarterly_prototype_form()
 
 
 def _load_history_into_form(record: dict[str, Any]) -> bool:
     payload = _build_history_payload(record)
-    strategy_name = _strategy_key_to_display_name(record.get("strategy_key"))
-    if payload is None or strategy_name is None:
+    strategy_key = record.get("strategy_key")
+    strategy_name = _strategy_key_to_display_name(strategy_key)
+    strategy_choice, strategy_variant = strategy_key_to_selection(strategy_key)
+    if payload is None or strategy_name is None or strategy_choice is None:
         return False
 
     st.session_state.backtest_prefill_payload = payload
     st.session_state.backtest_prefill_pending = True
-    st.session_state.backtest_prefill_notice = f"히스토리에서 `{strategy_name}` 입력값을 불러왔습니다."
-    st.session_state.backtest_prefill_strategy_choice = strategy_name
+    st.session_state.backtest_prefill_notice = (
+        f"히스토리에서 `{_family_strategy_summary_label(strategy_key) or strategy_name}` 입력값을 불러왔습니다."
+    )
+    st.session_state.backtest_prefill_strategy_choice = strategy_choice
+    st.session_state.backtest_prefill_strategy_variant = strategy_variant
     st.session_state.backtest_requested_panel = "Single Strategy"
     return True
 
@@ -3904,8 +3950,12 @@ def _build_prefill_summary_lines(payload: dict[str, Any] | None) -> list[str]:
         return []
 
     lines: list[str] = []
-    strategy_name = _strategy_key_to_display_name(payload.get("strategy_key"))
-    if strategy_name:
+    strategy_key = payload.get("strategy_key")
+    strategy_name = _strategy_key_to_display_name(strategy_key)
+    strategy_summary_label = _family_strategy_summary_label(strategy_key)
+    if strategy_summary_label:
+        lines.append(f"전략: `{strategy_summary_label}`")
+    elif strategy_name:
         lines.append(f"전략: `{strategy_name}`")
 
     start = payload.get("start")
@@ -4322,8 +4372,17 @@ def _apply_compare_prefill() -> None:
         return
 
     selected_strategies = list(payload.get("selected_strategies") or [])
-    if selected_strategies:
-        st.session_state["compare_selected_strategies"] = selected_strategies
+    selected_strategy_categories: list[str] = []
+    for strategy_name in selected_strategies:
+        strategy_choice, strategy_variant = display_name_to_selection(strategy_name)
+        resolved_choice = strategy_choice or strategy_name
+        if resolved_choice not in selected_strategy_categories:
+            selected_strategy_categories.append(resolved_choice)
+        variant_key = _compare_family_variant_session_key(resolved_choice)
+        if variant_key and strategy_variant:
+            st.session_state[variant_key] = strategy_variant
+    if selected_strategy_categories:
+        st.session_state["compare_selected_strategies"] = selected_strategy_categories
     if payload.get("start"):
         st.session_state["compare_start"] = pd.to_datetime(payload.get("start")).date()
     if payload.get("end"):
@@ -7448,9 +7507,28 @@ def render_backtest_tab() -> None:
             st.session_state.backtest_prefill_notice = None
 
         pending_strategy_choice = st.session_state.get("backtest_prefill_strategy_choice")
+        pending_strategy_variant = st.session_state.get("backtest_prefill_strategy_variant")
+        if pending_strategy_choice not in SINGLE_STRATEGY_OPTIONS:
+            remapped_choice, remapped_variant = display_name_to_selection(pending_strategy_choice)
+            if remapped_choice in SINGLE_STRATEGY_OPTIONS:
+                pending_strategy_choice = remapped_choice
+                pending_strategy_variant = pending_strategy_variant or remapped_variant
         if pending_strategy_choice in SINGLE_STRATEGY_OPTIONS:
             st.session_state.backtest_strategy_choice = pending_strategy_choice
+            variant_key = _single_family_variant_session_key(pending_strategy_choice)
+            if variant_key and pending_strategy_variant in family_variant_options(pending_strategy_choice):
+                st.session_state[variant_key] = pending_strategy_variant
             st.session_state.backtest_prefill_strategy_choice = None
+            st.session_state.backtest_prefill_strategy_variant = None
+
+        current_strategy_choice = st.session_state.get("backtest_strategy_choice")
+        if current_strategy_choice not in SINGLE_STRATEGY_OPTIONS:
+            remapped_choice, remapped_variant = display_name_to_selection(current_strategy_choice)
+            if remapped_choice in SINGLE_STRATEGY_OPTIONS:
+                st.session_state.backtest_strategy_choice = remapped_choice
+                variant_key = _single_family_variant_session_key(remapped_choice)
+                if variant_key and remapped_variant in family_variant_options(remapped_choice):
+                    st.session_state[variant_key] = remapped_variant
 
         strategy_choice = st.selectbox(
             "Strategy",
@@ -7469,32 +7547,33 @@ def render_backtest_tab() -> None:
             _render_risk_parity_form()
         elif strategy_choice == "Dual Momentum":
             _render_dual_momentum_form()
-        elif strategy_choice == "Quality Snapshot":
-            _render_quality_snapshot_form()
-        elif strategy_choice == "Quality Snapshot (Strict Annual)":
-            _render_quality_snapshot_strict_annual_form()
-        elif strategy_choice == "Quality Snapshot (Strict Quarterly Prototype)":
-            _render_quality_snapshot_strict_quarterly_prototype_form()
-        elif strategy_choice == "Value Snapshot (Strict Quarterly Prototype)":
-            _render_value_snapshot_strict_quarterly_prototype_form()
-        elif strategy_choice == "Value Snapshot (Strict Annual)":
-            _render_value_snapshot_strict_annual_form()
-        elif strategy_choice == "Quality + Value Snapshot (Strict Quarterly Prototype)":
-            _render_quality_value_snapshot_strict_quarterly_prototype_form()
         else:
-            _render_quality_value_snapshot_strict_annual_form()
+            _render_single_strategy_family_form(strategy_choice)
         st.divider()
         _render_last_run()
 
     elif active_panel == "Compare & Portfolio Builder":
         st.markdown("### Compare Strategies")
-        st.caption("Start with a shared date range and compare up to four strategies chosen from eight DB-backed strategies. This section then feeds directly into a weighted portfolio builder.")
+        st.caption("Start with a shared date range and compare up to four strategies chosen from the current DB-backed strategy surface. This section then feeds directly into a weighted portfolio builder.")
         _apply_compare_prefill()
 
         compare_prefill_notice = st.session_state.get("backtest_compare_prefill_notice")
         if compare_prefill_notice:
             st.info(compare_prefill_notice)
             st.session_state.backtest_compare_prefill_notice = None
+
+        current_compare_selection = list(st.session_state.get("compare_selected_strategies") or [])
+        normalized_compare_selection: list[str] = []
+        for strategy_name in current_compare_selection:
+            resolved_choice, resolved_variant = display_name_to_selection(strategy_name)
+            normalized_choice = resolved_choice or strategy_name
+            if normalized_choice in COMPARE_STRATEGY_OPTIONS and normalized_choice not in normalized_compare_selection:
+                normalized_compare_selection.append(normalized_choice)
+            variant_key = _compare_family_variant_session_key(normalized_choice)
+            if variant_key and resolved_variant in family_variant_options(normalized_choice):
+                st.session_state[variant_key] = resolved_variant
+        if normalized_compare_selection and normalized_compare_selection != current_compare_selection:
+            st.session_state["compare_selected_strategies"] = normalized_compare_selection
 
         selected_strategies = st.multiselect(
             "Strategies",
@@ -7527,6 +7606,48 @@ def render_backtest_tab() -> None:
                 st.markdown("##### Strategy-Specific Advanced Inputs")
 
                 compare_strategy_overrides: dict[str, dict] = {}
+                quality_compare_strategy_name: str | None = None
+                value_compare_strategy_name: str | None = None
+                quality_value_compare_strategy_name: str | None = None
+
+                if "Quality" in selected_strategies:
+                    with st.expander("Quality Family", expanded=True):
+                        quality_compare_variant = st.selectbox(
+                            "Quality Variant",
+                            options=family_variant_options("Quality"),
+                            key="compare_quality_variant",
+                        )
+                        quality_compare_strategy_name = resolve_concrete_strategy_display_name(
+                            "Quality",
+                            quality_compare_variant,
+                        )
+                        st.caption(f"현재 compare 실행 variant: `{quality_compare_strategy_name}`")
+
+                if "Value" in selected_strategies:
+                    with st.expander("Value Family", expanded=True):
+                        value_compare_variant = st.selectbox(
+                            "Value Variant",
+                            options=family_variant_options("Value"),
+                            key="compare_value_variant",
+                        )
+                        value_compare_strategy_name = resolve_concrete_strategy_display_name(
+                            "Value",
+                            value_compare_variant,
+                        )
+                        st.caption(f"현재 compare 실행 variant: `{value_compare_strategy_name}`")
+
+                if "Quality + Value" in selected_strategies:
+                    with st.expander("Quality + Value Family", expanded=True):
+                        quality_value_compare_variant = st.selectbox(
+                            "Quality + Value Variant",
+                            options=family_variant_options("Quality + Value"),
+                            key="compare_quality_value_variant",
+                        )
+                        quality_value_compare_strategy_name = resolve_concrete_strategy_display_name(
+                            "Quality + Value",
+                            quality_value_compare_variant,
+                        )
+                        st.caption(f"현재 compare 실행 variant: `{quality_value_compare_strategy_name}`")
 
                 if "Equal Weight" in selected_strategies:
                     with st.expander("Equal Weight", expanded=True):
@@ -7678,7 +7799,7 @@ def render_backtest_tab() -> None:
                         "benchmark_ticker": benchmark_ticker,
                     }
 
-                if "Quality Snapshot" in selected_strategies:
+                if quality_compare_strategy_name == "Quality Snapshot":
                     st.markdown("**Quality Snapshot**")
                     compare_strategy_overrides["Quality Snapshot"] = {
                         "top_n": int(
@@ -7702,7 +7823,7 @@ def render_backtest_tab() -> None:
                         "snapshot_mode": "broad_research",
                     }
 
-                if "Quality Snapshot (Strict Annual)" in selected_strategies:
+                if quality_compare_strategy_name == "Quality Snapshot (Strict Annual)":
                     with st.expander("Quality Snapshot (Strict Annual)", expanded=False):
                         st.caption("Compare mode keeps the strict annual default lighter with `US Statement Coverage 100` so multi-strategy runs stay responsive.")
                         qss_compare_preset = st.selectbox(
@@ -7817,7 +7938,7 @@ def render_backtest_tab() -> None:
                             label_prefix="Strict Annual Quality ",
                         )
 
-                if "Quality Snapshot (Strict Quarterly Prototype)" in selected_strategies:
+                if quality_compare_strategy_name == "Quality Snapshot (Strict Quarterly Prototype)":
                     with st.expander("Quality Snapshot (Strict Quarterly Prototype)", expanded=False):
                         st.caption("Research-only compare path. Default preset stays at `US Statement Coverage 100` to keep quarterly family validation tractable.")
                         qsqp_compare_preset = st.selectbox(
@@ -7905,7 +8026,7 @@ def render_backtest_tab() -> None:
                             label_prefix="Strict Quarterly Quality ",
                         )
 
-                if "Value Snapshot (Strict Annual)" in selected_strategies:
+                if value_compare_strategy_name == "Value Snapshot (Strict Annual)":
                     with st.expander("Value Snapshot (Strict Annual)", expanded=False):
                         st.caption("Compare mode keeps the strict annual value default lighter with `US Statement Coverage 100` for responsiveness.")
                         vss_compare_preset = st.selectbox(
@@ -8020,7 +8141,7 @@ def render_backtest_tab() -> None:
                             label_prefix="Strict Annual Value ",
                         )
 
-                if "Value Snapshot (Strict Quarterly Prototype)" in selected_strategies:
+                if value_compare_strategy_name == "Value Snapshot (Strict Quarterly Prototype)":
                     with st.expander("Value Snapshot (Strict Quarterly Prototype)", expanded=False):
                         st.caption("Research-only compare path. Default preset stays at `US Statement Coverage 100` while quarterly value history is being validated.")
                         vsqp_compare_preset = st.selectbox(
@@ -8108,7 +8229,7 @@ def render_backtest_tab() -> None:
                             label_prefix="Strict Quarterly Value ",
                         )
 
-                if "Quality + Value Snapshot (Strict Annual)" in selected_strategies:
+                if quality_value_compare_strategy_name == "Quality + Value Snapshot (Strict Annual)":
                     with st.expander("Quality + Value Snapshot (Strict Annual)", expanded=False):
                         st.caption("Compare mode keeps the strict annual multi-factor default lighter with `US Statement Coverage 100` so multi-strategy runs stay responsive.")
                         qvss_compare_preset = st.selectbox(
@@ -8229,7 +8350,7 @@ def render_backtest_tab() -> None:
                             label_prefix="Strict Annual Multi-Factor ",
                         )
 
-                if "Quality + Value Snapshot (Strict Quarterly Prototype)" in selected_strategies:
+                if quality_value_compare_strategy_name == "Quality + Value Snapshot (Strict Quarterly Prototype)":
                     with st.expander("Quality + Value Snapshot (Strict Quarterly Prototype)", expanded=False):
                         st.caption("Research-only compare path. Default preset stays at `US Statement Coverage 100` while quarterly blended history is being validated.")
                         qvqp_compare_preset = st.selectbox(
@@ -8325,6 +8446,20 @@ def render_backtest_tab() -> None:
 
             compare_submitted = st.form_submit_button("Run Strategy Comparison", use_container_width=True)
 
+        selected_strategy_execution_names: list[str] = []
+        for strategy_name in selected_strategies:
+            if strategy_name == "Quality":
+                if quality_compare_strategy_name:
+                    selected_strategy_execution_names.append(quality_compare_strategy_name)
+            elif strategy_name == "Value":
+                if value_compare_strategy_name:
+                    selected_strategy_execution_names.append(value_compare_strategy_name)
+            elif strategy_name == "Quality + Value":
+                if quality_value_compare_strategy_name:
+                    selected_strategy_execution_names.append(quality_value_compare_strategy_name)
+            else:
+                selected_strategy_execution_names.append(strategy_name)
+
         if compare_submitted:
             if not selected_strategies:
                 st.session_state.backtest_compare_bundles = None
@@ -8359,7 +8494,7 @@ def render_backtest_tab() -> None:
                 try:
                     bundles = []
                     with st.spinner("Running multi-strategy comparison from DB..."):
-                        for strategy_name in selected_strategies:
+                        for strategy_name in selected_strategy_execution_names:
                             bundles.append(
                                 _run_compare_strategy(
                                     strategy_name,
@@ -8380,7 +8515,7 @@ def render_backtest_tab() -> None:
                                 "strategy_key": "strategy_comparison",
                                 "execution_mode": "db",
                                 "data_mode": "db_backed_compare",
-                                "tickers": selected_strategies,
+                                "tickers": selected_strategy_execution_names,
                                 "start": compare_start.isoformat(),
                                 "end": compare_end.isoformat(),
                                 "timeframe": compare_timeframe,
@@ -8391,7 +8526,8 @@ def render_backtest_tab() -> None:
                         },
                         run_kind="strategy_compare",
                         context={
-                            "selected_strategies": selected_strategies,
+                            "selected_strategies": selected_strategy_execution_names,
+                            "selected_strategy_categories": selected_strategies,
                             "strategy_overrides": compare_strategy_overrides,
                             "strategy_summaries": [
                                 row

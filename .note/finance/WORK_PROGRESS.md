@@ -3335,3 +3335,25 @@ Keep entries append-only and concise.
   - comprehensive analysis
   - doc index
   - glossary
+
+### 2026-04-05 - Backtest strategy surface was consolidated around strategy families
+
+- Reviewed the current ownership boundary for quality/value strategies and kept the runtime layers unchanged:
+  - `finance/strategy.py` remains the simulation / decision layer
+  - `finance/sample.py` remains the DB-backed factor / snapshot assembly layer
+  - `app/web/runtime/backtest.py` remains the runtime wrapper / bundle layer
+- Added a new surface-level catalog module:
+  - `app/web/pages/backtest_strategy_catalog.py`
+- Simplified the user-facing top-level strategy list in both `Single Strategy` and `Compare & Portfolio Builder` to:
+  - `Quality`
+  - `Value`
+  - `Quality + Value`
+- Moved family / variant / concrete strategy-key mapping into the catalog module and kept concrete runtime keys stable for:
+  - history
+  - `Load Into Form`
+  - compare prefill
+- Added a dedicated Phase 12 implementation note and refreshed:
+  - current TODO board
+  - Phase 12 checklist
+  - comprehensive analysis
+  - doc index
