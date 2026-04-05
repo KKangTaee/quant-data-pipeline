@@ -390,3 +390,120 @@ ETF 전략은 단순 수익률뿐 아니라,
   - AUM/spread 기준 위반이 뚜렷해서 승격 보류가 맞음
 - `unavailable`
   - 현재 snapshot 정보가 부족해서 판단 근거가 약함
+
+---
+
+## Real-Money Tab
+
+### 기본 설명
+백테스트 실행 후 결과 영역에서, 실전 투자 관점의 해석 정보를 모아 보여주는 탭이다.
+
+### 왜 사용되는지
+일반 summary만 보면 수익률 숫자는 보이지만,
+실전형 승격 판단에 필요한 benchmark, policy, checklist 상태까지 한 번에 보기 어렵기 때문이다.
+
+### 예시 / 필요 상황
+- `Backtest > Single Strategy`에서 전략 실행 후
+  결과 상단 탭 중 `Real-Money`를 열면
+  `Promotion Decision`, `Candidate Shortlist`, `Deployment Readiness Checklist` 같은 섹션을 볼 수 있다.
+
+---
+
+## Promotion Decision
+
+### 기본 설명
+현재 백테스트 결과를 기준으로,
+이 전략을 실전형 후보로 어느 정도까지 해석할 수 있는지를 요약한 상위 판단값이다.
+
+### 왜 사용되는지
+전략이 존재하고 백테스트가 돌아간다고 해서
+곧바로 실전 투자 후보가 되는 것은 아니기 때문이다.
+benchmark, validation, liquidity, guardrail 같은 조건을 먼저 함께 보고 큰 방향을 정해야 한다.
+
+### 예시 / 필요 상황
+- `real_money_candidate`
+  - 현재 계약 기준에서는 실전형 후보로 읽을 수 있는 상태
+- `production_candidate`
+  - 아직 robustness review가 더 필요한 상태
+- `hold`
+  - 지금은 보류하고 validation gap이나 contract issue를 먼저 해결해야 하는 상태
+
+---
+
+## Candidate Shortlist
+
+### 기본 설명
+`Promotion Decision`보다 한 단계 더 운영에 가까운 후보 관리 상태다.
+즉 "좋은 전략인가?"보다 "지금 어떤 후보 상태로 관리할 것인가?"를 말한다.
+
+### 왜 사용되는지
+실제 운용에서는 전략을 바로 투자하지 않고,
+watchlist, paper probation, small-capital trial 같은 단계로 나눠 관리하는 편이 현실적이기 때문이다.
+
+### 예시 / 필요 상황
+- 어떤 전략이 `real_money_candidate`여도
+  바로 live가 아니라 `paper_probation`으로 먼저 둘 수 있다.
+- annual strict 중 조건이 더 잘 맞는 전략은 `small_capital_trial`까지 검토할 수 있다.
+
+---
+
+## Shortlist Status
+
+### 기본 설명
+현재 전략이 shortlist 안에서 어느 운영 단계에 있는지를 나타내는 값이다.
+
+### 왜 사용되는지
+같은 후보 전략이라도
+지금은 단순 감시 대상인지,
+paper tracking 대상인지,
+소액 trial 대상인지가 다르기 때문이다.
+
+### 예시 / 필요 상황
+- `watchlist`
+  - 아직은 후보 감시 단계
+- `paper_probation`
+  - paper tracking으로 먼저 봐야 하는 단계
+- `small_capital_trial`
+  - 소액 실전 trial까지 검토 가능한 단계
+- `hold`
+  - 지금은 shortlist로 올리기보다 보류가 맞는 단계
+
+---
+
+## Shortlist Next Step
+
+### 기본 설명
+현재 shortlist 상태에서 다음으로 해야 할 실무 행동을 짧게 적어둔 값이다.
+
+### 왜 사용되는지
+상태만 보면 "그래서 지금 뭘 해야 하지?"가 애매할 수 있기 때문이다.
+다음 review action을 같이 보여주면 운영 판단이 빨라진다.
+
+### 예시 / 필요 상황
+- `manual_review_then_paper_probation_gate`
+  - 먼저 수동 검토를 하고, 그다음 paper probation으로 올릴지 본다
+- `start_paper_probation_and_monitor_monthly`
+  - 이제 paper tracking을 시작하고 월별로 review한다
+- `start_small_capital_trial_with_monthly_review`
+  - 소액 trial을 시작하되 월별 점검을 같이 한다
+
+---
+
+## Execution Context
+
+### 기본 설명
+이번 run이 어떤 계약과 상태로 실행되었는지를 한 번에 요약해서 보여주는 결과 영역이다.
+
+### 왜 사용되는지
+`Real-Money` 탭은 해석 중심이고,
+`Execution Context`는 "이번 run이 어떤 입력/정책/상태로 계산되었는지"를 한 곳에서 재확인하는 용도이기 때문이다.
+
+### 예시 / 필요 상황
+- 실행 후
+  - `Universe Contract`
+  - `Promotion Decision`
+  - `Shortlist Status`
+  - `Probation Status`
+  - `Deployment Readiness`
+  - `Rolling Review`
+  를 한 곳에서 같이 확인할 수 있다.

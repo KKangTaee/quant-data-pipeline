@@ -19,6 +19,8 @@
 
 - `Backtest > Single Strategy`
 - `Quality / Value / Quality + Value > Strict Annual`
+- 실행 후 결과 영역 상단 탭 중 `Real-Money` 탭으로 이동
+- 같은 내용이 `Execution Context`에도 요약되어 있는지 같이 확인
 - 확인:
   - `Promotion Decision`
   - `Candidate Shortlist`

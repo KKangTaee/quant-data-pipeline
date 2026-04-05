@@ -6343,3 +6343,26 @@ Do not copy full chat transcripts. Keep only the durable result.
 - Durable implication:
   - Phase 13 is no longer the active implementation phase
   - the project now has deployment-readiness / probation / monitoring / rolling review / checklist layers in place, and the next decision is about which live deployment or PIT execution-readiness direction to open next
+
+### 2026-04-05 - The Phase 13 checklist should explicitly point users to the Real-Money tab, and shortlist terms should live in the glossary
+
+- Request topic:
+  - the user could not find `Promotion Decision`, `Candidate Shortlist`, `Shortlist Status`, `Shortlist Next Step` while reading the Phase 13 checklist
+- Interpreted goal:
+  - make the checklist location more concrete and store the related terms in the shared glossary so future Phase 13 testing is easier to follow
+- Result:
+  - clarified the checklist wording so `Candidate Shortlist Surface` explicitly points to:
+    - `Backtest > Single Strategy`
+    - run result area
+    - `Real-Money` tab
+    - `Execution Context`
+  - added glossary entries for:
+    - `Real-Money Tab`
+    - `Promotion Decision`
+    - `Candidate Shortlist`
+    - `Shortlist Status`
+    - `Shortlist Next Step`
+    - `Execution Context`
+- Durable implication:
+  - Phase 13 manual QA now has a clearer UI path
+  - the core operational terms are no longer only explained in chat and can be reused across later phases

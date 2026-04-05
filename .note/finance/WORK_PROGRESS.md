@@ -3725,3 +3725,18 @@ Keep entries append-only and concise.
   - roadmap
   - finance doc index
   - question and analysis log
+
+### 2026-04-05 - Phase 13 checklist location wording and glossary terms were clarified
+
+- Clarified the Phase 13 checklist so that `Candidate Shortlist Surface` explicitly points to:
+  - `Backtest > Single Strategy`
+  - run result area
+  - `Real-Money` tab
+  - `Execution Context`
+- Added glossary entries for:
+  - `Real-Money Tab`
+  - `Promotion Decision`
+  - `Candidate Shortlist`
+  - `Shortlist Status`
+  - `Shortlist Next Step`
+  - `Execution Context`
