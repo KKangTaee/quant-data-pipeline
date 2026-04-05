@@ -144,6 +144,7 @@ def append_backtest_run_history(
         "crash_guardrail_drawdown_threshold": meta.get("crash_guardrail_drawdown_threshold"),
         "crash_guardrail_lookback_months": meta.get("crash_guardrail_lookback_months"),
         "min_price_filter": meta.get("min_price_filter"),
+        "min_history_months_filter": meta.get("min_history_months_filter"),
         "transaction_cost_bps": meta.get("transaction_cost_bps"),
         "benchmark_ticker": meta.get("benchmark_ticker"),
         "snapshot_source": meta.get("snapshot_source"),

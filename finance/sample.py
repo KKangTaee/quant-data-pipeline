@@ -83,6 +83,7 @@ STRICT_MARKET_REGIME_DEFAULT_ENABLED = False
 STRICT_MARKET_REGIME_DEFAULT_WINDOW = 200
 STRICT_MARKET_REGIME_DEFAULT_BENCHMARK = "SPY"
 STRICT_MARKET_REGIME_BENCHMARK_OPTIONS = ["SPY", "QQQ", "VTI", "IWM"]
+STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS = 0
 STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED = False
 STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS = 12
 STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD = -0.10
@@ -982,6 +983,69 @@ def _get_cached_snapshot_strategy_price_dfs(
 
 
 @lru_cache(maxsize=12)
+def _cached_snapshot_strategy_price_first_dates(
+    symbols_key: tuple[str, ...],
+    option: str,
+    start: str | None,
+    end: str | None,
+    timeframe: str,
+    trend_filter_window: int | None,
+    min_history_months: int,
+) -> dict[str, pd.Timestamp | None]:
+    history_buffer_years = max(
+        2 if trend_filter_window else 0,
+        int(np.ceil(float(max(min_history_months, 0)) / 12.0)),
+    )
+    engine = _build_price_only_engine(
+        list(symbols_key),
+        option=option,
+        start=start,
+        end=end,
+        timeframe=timeframe,
+        from_db=True,
+        history_buffer_years=history_buffer_years,
+    )
+    if trend_filter_window:
+        engine = engine.add_ma(trend_filter_window)
+
+    engine = engine.filter_by_period()
+    first_dates: dict[str, pd.Timestamp | None] = {}
+    for symbol, df in engine.dfs.items():
+        working = df.copy()
+        working["Date"] = pd.to_datetime(working["Date"], errors="coerce")
+        working["Close"] = pd.to_numeric(working.get("Close"), errors="coerce")
+        valid = working.dropna(subset=["Date", "Close"])
+        first_dates[str(symbol).strip().upper()] = (
+            pd.Timestamp(valid["Date"].iloc[0]).normalize() if not valid.empty else None
+        )
+    return first_dates
+
+
+def _get_cached_snapshot_strategy_price_first_dates(
+    *,
+    symbols,
+    option: str,
+    start: str | None,
+    end: str | None,
+    timeframe: str,
+    trend_filter_window: int | None,
+    min_history_months: int,
+) -> dict[str, pd.Timestamp | None]:
+    symbols_key = tuple(_normalize_symbol_list(symbols))
+    return dict(
+        _cached_snapshot_strategy_price_first_dates(
+            symbols_key,
+            option,
+            start,
+            end,
+            timeframe,
+            trend_filter_window,
+            int(min_history_months),
+        )
+    )
+
+
+@lru_cache(maxsize=12)
 def _cached_statement_factors_shadow(
     symbols_key: tuple[str, ...],
     freq: str,
@@ -1426,6 +1490,7 @@ def _run_statement_shadow_snapshot_from_db(
     top_n=2,
     rebalance_interval=1,
     min_price: float = 0.0,
+    min_history_months: int = STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS,
     lower_is_better_factors: list[str] | None = None,
     trend_filter_enabled=False,
     trend_filter_window=STRICT_TREND_FILTER_DEFAULT_WINDOW,
@@ -1460,6 +1525,15 @@ def _run_statement_shadow_snapshot_from_db(
         end=end,
         timeframe=timeframe,
         trend_filter_window=(trend_filter_window if trend_filter_enabled else None),
+    )
+    first_valid_price_dates = _get_cached_snapshot_strategy_price_first_dates(
+        symbols=candidate_tickers,
+        option=option,
+        start=start,
+        end=end,
+        timeframe=timeframe,
+        trend_filter_window=(trend_filter_window if trend_filter_enabled else None),
+        min_history_months=int(min_history_months or 0),
     )
 
     rebalance_dates = pd.to_datetime(next(iter(price_dfs.values()))["Date"]).tolist()
@@ -1544,6 +1618,8 @@ def _run_statement_shadow_snapshot_from_db(
         quality_factors=factor_names,
         top_n=top_n,
         min_price=min_price,
+        min_history_months=min_history_months,
+        first_valid_price_dates=first_valid_price_dates,
         lower_is_better_factors=lower_is_better_factors,
         rebalance_interval=rebalance_interval,
         trend_filter_enabled=trend_filter_enabled,
@@ -1591,6 +1667,7 @@ def get_statement_quality_snapshot_shadow_from_db(
     top_n=2,
     rebalance_interval=1,
     min_price: float = 0.0,
+    min_history_months: int = STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS,
     trend_filter_enabled=False,
     trend_filter_window=STRICT_TREND_FILTER_DEFAULT_WINDOW,
     market_regime_enabled=False,
@@ -1618,6 +1695,7 @@ def get_statement_quality_snapshot_shadow_from_db(
         factor_names=quality_factors,
         top_n=top_n,
         min_price=min_price,
+        min_history_months=min_history_months,
         lower_is_better_factors=["debt_ratio", "debt_to_assets", "net_debt_to_equity"],
         rebalance_interval=rebalance_interval,
         trend_filter_enabled=trend_filter_enabled,
@@ -1648,6 +1726,7 @@ def get_statement_value_snapshot_shadow_from_db(
     top_n=10,
     rebalance_interval=1,
     min_price: float = 0.0,
+    min_history_months: int = STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS,
     trend_filter_enabled=False,
     trend_filter_window=STRICT_TREND_FILTER_DEFAULT_WINDOW,
     market_regime_enabled=False,
@@ -1675,6 +1754,7 @@ def get_statement_value_snapshot_shadow_from_db(
         factor_names=value_factors,
         top_n=top_n,
         min_price=min_price,
+        min_history_months=min_history_months,
         rebalance_interval=rebalance_interval,
         lower_is_better_factors=["per", "pbr", "psr", "pcr", "pfcr", "ev_ebit", "por"],
         trend_filter_enabled=trend_filter_enabled,
@@ -1706,6 +1786,7 @@ def get_statement_quality_value_snapshot_shadow_from_db(
     top_n=10,
     rebalance_interval=1,
     min_price: float = 0.0,
+    min_history_months: int = STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS,
     trend_filter_enabled=False,
     trend_filter_window=STRICT_TREND_FILTER_DEFAULT_WINDOW,
     market_regime_enabled=False,
@@ -1741,6 +1822,7 @@ def get_statement_quality_value_snapshot_shadow_from_db(
         factor_names=combined_factors,
         top_n=top_n,
         min_price=min_price,
+        min_history_months=min_history_months,
         rebalance_interval=rebalance_interval,
         lower_is_better_factors=[
             "per",

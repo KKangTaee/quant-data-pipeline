@@ -99,6 +99,7 @@
 구체 확인:
 - `Single Strategy`의 annual strict 3종 form에
   - `Minimum Price`
+  - `Minimum History (Months)`
   - `Transaction Cost (bps)`
   - `Benchmark Ticker`
   가 보이는지
@@ -126,6 +127,7 @@
   `Real-Money Contract` 섹션이 보이는지
 - `Meta`에
   - `Minimum Price`
+  - `Minimum History`
   - `Transaction Cost`
   - `Benchmark`
   - `Average Turnover`
@@ -141,6 +143,8 @@
   - `Trigger Count`
   - `Strategy Max Drawdown`
   - `Benchmark Max Drawdown`
+  - `Benchmark CAGR`
+  - `Net CAGR Spread`
   - `Underperformance Share`
   - `Current Underperf Streak`
   - `Worst Rolling Excess`
@@ -149,9 +153,15 @@
   - validation 요약
   - `Promotion Decision`
   - `Promotion Rationale`
+  - `Minimum History`
+  - `Benchmark Coverage`
+  - `Benchmark CAGR`
+  - `Net CAGR Spread`
   - guardrail contract와 trigger summary
   가 같이 보이는지
 - `Compare > Strategy Highlights`에도
+  - `Min History (M)`
+  - `Net CAGR Spread`
   - `Validation`
   - `Promotion`
   - `Guardrail Triggers`
@@ -161,6 +171,7 @@
 - `History -> Load Into Form` 또는 compare prefill에서
   annual strict의
   - `min_price_filter`
+  - `min_history_months_filter`
   - `transaction_cost_bps`
   - `benchmark_ticker`
   - `underperformance_guardrail_enabled`
@@ -172,10 +183,11 @@
 - annual strict는 now `real-money hardening first pass completed` 상태다.
 - benchmark-relative validation surface second pass도 now 추가되었다.
 - underperformance guardrail actual-rule first pass도 now 추가되었다.
+- minimum-history investability proxy / benchmark spread / coverage first pass도 now 추가되었다.
 - 다만 아래는 아직 later pass다.
   - stronger portfolio guardrail
-  - stronger investability proxy
-  - richer benchmark contract
+  - stronger liquidity / volume investability proxy
+  - richer benchmark policy
 
 ## 4. Static vs Dynamic Contract Boundary
 

@@ -3221,3 +3221,25 @@ Keep entries append-only and concise.
   - compare prefill
   - execution context
 - Added AGENTS guidance that finished implementation units should be committed in coherent groups with descriptive commit logs.
+
+### 2026-04-05 - Strict annual minimum-history filter and richer benchmark surface were added
+
+- Extended the strict annual family (`Quality`, `Value`, `Quality+Value`) with a stronger first-pass investability proxy:
+  - `Minimum History (Months)`
+- The new filter now travels through:
+  - single-strategy form
+  - compare override
+  - runtime bundle meta
+  - history / `Load Into Form`
+- Strategy/runtime behavior now also exposes richer benchmark-relative metrics:
+  - `Benchmark CAGR`
+  - `Net CAGR Spread`
+  - `Benchmark Coverage`
+- Result rows now preserve history-specific diagnostics:
+  - `Minimum History Months`
+  - `History Excluded Count`
+- Added a dedicated Phase 12 implementation note and refreshed:
+  - current TODO board
+  - Phase 12 checklist
+  - comprehensive analysis
+  - doc index

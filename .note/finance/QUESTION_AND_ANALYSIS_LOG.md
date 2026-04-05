@@ -5699,3 +5699,34 @@ Do not copy full chat transcripts. Keep only the durable result.
     - stronger investability proxy
     - richer benchmark contract
     - broader promotion robustness
+
+### 2026-04-05 - Strict annual stronger investability proxy should start with history-length, not full liquidity modeling
+
+- Request topic:
+  - continue the next Phase 12 step after guardrail work
+- Interpreted goal:
+  - make annual strict real-money review less fragile by filtering out symbols that technically exist in the universe but do not yet have enough usable price history
+  - also make benchmark comparison easier to interpret than raw end-balance overlay alone
+- Result:
+  - added `Minimum History (Months)` as the first stricter investability proxy for annual strict family
+  - added richer benchmark summary fields:
+    - `Benchmark CAGR`
+    - `Net CAGR Spread`
+    - `Benchmark Coverage`
+  - connected the new contract to:
+    - single
+    - compare
+    - history / prefill
+    - runtime metadata
+- Durable implication:
+  - current Phase 12 annual strict contract now has:
+    - minimum price
+    - minimum history
+    - turnover / cost
+    - benchmark-relative validation
+    - optional underperformance guardrail
+  - but this is still not the final liquidity model
+  - later passes should add:
+    - volume / spread / AUM-aware investability
+    - richer benchmark policy
+    - stricter promotion reinforcement

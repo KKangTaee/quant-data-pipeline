@@ -667,6 +667,22 @@ def _rank_quality_snapshot(
     return ranked.sort_values(["Quality Score", "symbol"], ascending=[False, True]).reset_index(drop=True)
 
 
+def _passes_min_history_months(
+    first_valid_date: pd.Timestamp | None,
+    current_date: pd.Timestamp,
+    min_history_months: int,
+) -> bool:
+    if min_history_months <= 0:
+        return True
+    if first_valid_date is None or pd.isna(first_valid_date):
+        return False
+    months_delta = (
+        (int(current_date.year) - int(first_valid_date.year)) * 12
+        + (int(current_date.month) - int(first_valid_date.month))
+    )
+    return months_delta >= int(min_history_months)
+
+
 def quality_snapshot_equal_weight(
     price_dfs: dict,
     snapshot_by_date: dict,
@@ -677,6 +693,7 @@ def quality_snapshot_equal_weight(
     lower_is_better_factors: list[str] | None = None,
     rebalance_interval: int = 1,
     min_price: float = 0.0,
+    min_history_months: int = 0,
     trend_filter_enabled: bool = False,
     trend_filter_window: int = 200,
     trend_filter_col: str | None = None,
@@ -690,6 +707,7 @@ def quality_snapshot_equal_weight(
     underperformance_guardrail_threshold: float = -0.10,
     underperformance_guardrail_benchmark: str | None = None,
     underperformance_guardrail_df: pd.DataFrame | None = None,
+    first_valid_price_dates: dict[str, pd.Timestamp | None] | None = None,
 ) -> pd.DataFrame:
     """
     Monthly snapshot-based quality strategy.
@@ -709,6 +727,8 @@ def quality_snapshot_equal_weight(
         raise ValueError("rebalance_interval must be positive.")
     if min_price < 0:
         raise ValueError("min_price must be non-negative.")
+    if min_history_months < 0:
+        raise ValueError("min_history_months must be non-negative.")
     if trend_filter_enabled and trend_filter_window <= 0:
         raise ValueError("trend_filter_window must be positive when trend filter is enabled.")
     if market_regime_enabled and market_regime_window <= 0:
@@ -723,6 +743,16 @@ def quality_snapshot_equal_weight(
     tickers = list(price_dfs.keys())
     base_df = price_dfs[tickers[0]].sort_values("Date").reset_index(drop=True)
     dates = pd.to_datetime(base_df["Date"]).tolist()
+    effective_first_valid_dates = dict(first_valid_price_dates or {})
+    if not effective_first_valid_dates:
+        for ticker in tickers:
+            working = price_dfs[ticker][["Date", "Close"]].copy()
+            working["Date"] = pd.to_datetime(working["Date"], errors="coerce")
+            working["Close"] = pd.to_numeric(working["Close"], errors="coerce")
+            valid = working.dropna(subset=["Date", "Close"])
+            effective_first_valid_dates[ticker] = (
+                pd.Timestamp(valid["Date"].iloc[0]).normalize() if not valid.empty else None
+            )
     active_trend_col = trend_filter_col or f"MA{trend_filter_window}"
     active_regime_col = market_regime_col or f"MA{market_regime_window}"
 
@@ -800,6 +830,7 @@ def quality_snapshot_equal_weight(
         overlay_rejected_tickers: list[str] = []
         regime_blocked_tickers: list[str] = []
         underperformance_blocked_tickers: list[str] = []
+        history_excluded_tickers: list[str] = []
 
         regime_state = "off"
         regime_close_now = np.nan
@@ -865,11 +896,21 @@ def quality_snapshot_equal_weight(
                 lower_is_better_factors=lower_is_better_factors,
             )
             if not ranked.empty:
-                available_tickers = {
-                    ticker for ticker in tickers
-                    if pd.notna(close_now.get(ticker))
-                    and _passes_min_price(float(close_now.get(ticker)), min_price)
-                }
+                available_tickers = set()
+                for ticker in tickers:
+                    current_close = close_now.get(ticker)
+                    if pd.isna(current_close):
+                        continue
+                    if not _passes_min_price(float(current_close), min_price):
+                        continue
+                    if not _passes_min_history_months(
+                        effective_first_valid_dates.get(ticker),
+                        snapshot_key,
+                        int(min_history_months),
+                    ):
+                        history_excluded_tickers.append(ticker)
+                        continue
+                    available_tickers.add(ticker)
                 ranked = ranked[ranked["symbol"].isin(available_tickers)].reset_index(drop=True)
 
             if ranked.empty:
@@ -945,6 +986,9 @@ def quality_snapshot_equal_weight(
                 "Underperformance Guardrail Threshold": (
                     -abs(float(underperformance_guardrail_threshold)) if underperformance_guardrail_enabled else np.nan
                 ),
+                "Minimum History Months": int(min_history_months or 0),
+                "History Excluded Ticker": history_excluded_tickers,
+                "History Excluded Count": len(history_excluded_tickers),
                 "Underperformance Guardrail State": guardrail_state,
                 "Underperformance Guardrail Triggered": guardrail_triggered,
                 "Underperformance Guardrail Benchmark Close": guardrail_benchmark_close_now,
