@@ -190,6 +190,10 @@
   - GTAA manual universe를 더 넓게 확장하고 `top / interval / score horizon`을 재조정해, `CAGR >= 9%`와 `MDD >= -16%`를 동시에 만족하는 실전형 candidate를 찾은 분석 문서
 - `.note/finance/phase12/PHASE12_TEST_CHECKLIST.md`
   - Phase 12 real-money hardening 결과를 later batch review로 검수하기 위한 checklist 문서
+- `.note/finance/phase13/PHASE13_DEPLOYMENT_READINESS_AND_PROBATION_PLAN.md`
+  - Phase 12 이후 후보 전략을 shortlist / probation / monitoring 계약으로 다시 좁히기 위한 Phase 13 상위 계획 문서
+- `.note/finance/phase13/PHASE13_CURRENT_CHAPTER_TODO.md`
+  - Phase 13 현재 실행 보드로, candidate shortlist / ETF second-pass / monitoring / rolling validation 작업 상태를 관리하는 문서
 
 ---
 

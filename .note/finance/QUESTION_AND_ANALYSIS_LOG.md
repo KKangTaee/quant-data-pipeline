@@ -6115,3 +6115,31 @@ Do not copy full chat transcripts. Keep only the durable result.
     - promotion-side drawdown policy
     - actual strategy-side drawdown guardrail
   - this makes annual strict real-money review materially closer to a true operating contract instead of a read-only interpretation layer
+
+### 2026-04-05 - Phase 13 should start as deployment-readiness and probation, not as a new strategy expansion phase
+
+- Request topic:
+  - start Phase 13 after Phase 12 practical closeout
+- Interpreted goal:
+  - open the next finance phase in a way that narrows real-money candidates into actual deployment candidates, instead of immediately adding many new strategies
+- Result:
+  - opened Phase 13 as:
+    - deployment-readiness
+    - probation
+    - monitoring
+    - rolling / out-of-sample review
+  - created:
+    - `.note/finance/phase13/PHASE13_DEPLOYMENT_READINESS_AND_PROBATION_PLAN.md`
+    - `.note/finance/phase13/PHASE13_CURRENT_CHAPTER_TODO.md`
+  - synced:
+    - master roadmap
+    - finance doc index
+    - work progress log
+- Durable implication:
+  - the project should now interpret strategy work in this order:
+    1. Phase 12 established real-money candidate contracts
+    2. Phase 13 narrows those candidates into shortlist / probation states
+    3. backlog items like ETF second-pass guardrails belong to Phase 13 only insofar as they improve deployment-readiness
+  - current operating state should be read as:
+    - `Phase 12`: implementation closed / manual_validation_pending
+    - `Phase 13`: active phase

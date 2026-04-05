@@ -3531,3 +3531,23 @@ Keep entries append-only and concise.
   - Phase 12 checklist
   - comprehensive analysis
   - doc index
+
+### 2026-04-05 - Phase 13 deployment-readiness and probation phase was opened
+
+- Opened `Phase 13` as the next active finance phase after Phase 12 practical closeout
+- Fixed the new phase direction as:
+  - candidate shortlist contract
+  - ETF second-pass hardening
+  - probation / monitoring workflow
+  - out-of-sample / rolling validation
+  - deployment-readiness checklist
+- Recorded the current operating status as:
+  - `Phase 12`: implementation closed / manual_validation_pending
+  - `Phase 13`: active planning and implementation
+- Added the initial Phase 13 documents:
+  - `.note/finance/phase13/PHASE13_DEPLOYMENT_READINESS_AND_PROBATION_PLAN.md`
+  - `.note/finance/phase13/PHASE13_CURRENT_CHAPTER_TODO.md`
+- Synced:
+  - master phase roadmap
+  - finance doc index
+  - question and analysis log
