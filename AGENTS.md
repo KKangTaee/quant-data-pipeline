@@ -35,6 +35,17 @@
   - completion status
 - Keep entries concise, dated, and implementation-focused.
 - Do not overwrite history; append new entries.
+- Treat `.note/finance/WORK_PROGRESS.md` as the canonical active work log, not as an unbounded dump of every detail forever.
+- Prefer keeping the root work log as:
+  - current active workstream progress
+  - high-signal milestones
+  - durable handoff notes
+- If the root work log becomes too large or a phase closes with substantial history, prefer archiving detailed history by phase rather than by month.
+- Preferred archive shape:
+  - keep `.note/finance/WORK_PROGRESS.md` as the top-level current log
+  - move older detailed phase history into `.note/finance/phase*/PHASE*_WORKLOG.md`
+  - leave a short summary/pointer in the root log instead of deleting past context
+- Do not split work logs by month unless the work is genuinely month-scoped and not phase-scoped. This repository is phase-managed, so phase-based archives are the default.
 
 ## Question and Analysis Logging Rules
 - When the user asks for analysis, design guidance, architecture review, or feature planning related to `finance`, record the durable outcome in `.note/finance/QUESTION_AND_ANALYSIS_LOG.md`.
@@ -141,6 +152,7 @@
 - Commit messages should make the change easy to understand later:
   - use a short subject line
   - and include a concrete description of what changed and why in the commit log when appropriate
+- For this repository, prefer Korean commit descriptions and commit-body explanations unless the user explicitly asks for another language.
 - Do not include generated artifacts, run histories, local experiment CSVs, notebook scratch files, or other machine-local outputs unless the user explicitly asks for them.
 
 ## Change Review Checklist

@@ -14,6 +14,8 @@
   - `finance` 패키지 전체 구조와 DB/기능 종합 분석
 - `.note/finance/WORK_PROGRESS.md`
   - 구현 진행 로그
+- `.note/finance/FINANCE_WORK_PROGRESS_POLICY.md`
+  - root `WORK_PROGRESS.md`를 유지하되, 로그가 커질 때는 월별이 아니라 phase별 worklog/archive로 분리하는 운영 기준 문서
 - `.note/finance/QUESTION_AND_ANALYSIS_LOG.md`
   - 질의/설계/분석 결과 로그
 - `.note/finance/FINANCE_TERM_GLOSSARY.md`

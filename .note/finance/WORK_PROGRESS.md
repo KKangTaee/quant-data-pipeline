@@ -3243,3 +3243,17 @@ Keep entries append-only and concise.
   - Phase 12 checklist
   - comprehensive analysis
   - doc index
+
+### 2026-04-05 - Refreshed finance work-log operating guidance
+
+- Reviewed whether `.note/finance/WORK_PROGRESS.md` should keep growing as a single file or be split.
+- Chosen direction:
+  - keep the root `WORK_PROGRESS.md` as the canonical active log
+  - do not split by month
+  - when detail volume grows, archive by phase instead
+- Added repo guidance so future turns follow:
+  - root summary log + phase-specific detailed worklog/archive
+- Added commit-language guidance:
+  - future commit descriptions for this repository should prefer Korean unless explicitly requested otherwise
+- Added a new reference note:
+  - `.note/finance/FINANCE_WORK_PROGRESS_POLICY.md`

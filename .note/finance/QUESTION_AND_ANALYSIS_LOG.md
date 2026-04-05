@@ -5730,3 +5730,23 @@ Do not copy full chat transcripts. Keep only the durable result.
     - volume / spread / AUM-aware investability
     - richer benchmark policy
     - stricter promotion reinforcement
+
+### 2026-04-05 - WORK_PROGRESS should stay canonical, but future archive should be phase-based rather than month-based
+
+- Request topic:
+  - review whether `WORK_PROGRESS` should remain one file, or be split monthly / by phase
+  - refresh current guidance/reference docs based on how the repository is actually being used now
+- Interpreted goal:
+  - reduce future note sprawl without losing the convenience of a single top-level progress log
+- Result:
+  - keep `.note/finance/WORK_PROGRESS.md` as the canonical active log
+  - do not adopt monthly splitting as the default
+  - when the log grows too large or a phase accumulates heavy detail, archive by phase instead
+  - preferred structure:
+    - root `WORK_PROGRESS.md` for active/high-signal summary
+    - `phase*/PHASE*_WORKLOG.md` for detailed archive when needed
+  - also refreshed repo guidance so future commit descriptions default to Korean for this repository
+- Durable implication:
+  - the repository remains easy to open from one top-level log
+  - but future cleanup should happen by phase, not by calendar month
+  - workflow guidance now matches the actual phase-managed operating model of the project
