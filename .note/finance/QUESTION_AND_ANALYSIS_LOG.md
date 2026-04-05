@@ -6485,3 +6485,34 @@ Do not copy full chat transcripts. Keep only the durable result.
     - then inspect `검토 근거` and `실행 부담` to find which policy block is `caution` or `unavailable`
 - Durable implication:
   - users can now interpret `resolve_validation_gaps_before_promotion` as a concrete validation/debugging to-do rather than a vague status label
+
+### 2026-04-06 - Deployment-readiness checklist `blocked` does not itself recalculate promotion to `hold`
+
+- Request topic:
+  - the user asked whether failing the checklist rows under deployment readiness means the strategy automatically becomes `hold`
+- Interpreted goal:
+  - clarify the relationship between promotion-level status and the later deployment-readiness summary layer
+- Result:
+  - confirmed that `promotion_decision` is calculated earlier from:
+    - benchmark availability
+    - validation status
+    - benchmark / liquidity / validation / guardrail policy status
+    - ETF operability status
+    - price freshness
+    - universe contract
+  - confirmed that `deployment_readiness_status` is calculated later as a downstream operational summary using:
+    - shortlist
+    - probation
+    - monitoring
+    - rolling / out-of-sample review
+    - policy check rows
+  - therefore:
+    - checklist failure does **not** directly recalculate promotion to `hold`
+    - but a strategy that is already `hold` usually causes checklist rows like `Shortlist = fail` and `Probation = fail`, which often leads deployment readiness to `blocked`
+  - also clarified:
+    - not all non-pass checklist rows imply `hold`
+    - `watch` / `unavailable` can still lead to `paper_only`, `watchlist_only`, or `small_capital_ready_with_review`
+    - `fail` rows can lead to either `blocked` or `review_required` depending on shortlist/probation stage
+- Durable implication:
+  - users should read promotion as the earlier "can this strategy be promoted?" gate
+  - users should read deployment readiness as the later "can we actually move toward paper/live operation?" checklist layer
