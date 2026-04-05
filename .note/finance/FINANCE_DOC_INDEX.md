@@ -194,6 +194,8 @@
   - Phase 12 이후 후보 전략을 shortlist / probation / monitoring 계약으로 다시 좁히기 위한 Phase 13 상위 계획 문서
 - `.note/finance/phase13/PHASE13_CURRENT_CHAPTER_TODO.md`
   - Phase 13 현재 실행 보드로, candidate shortlist / ETF second-pass / monitoring / rolling validation 작업 상태를 관리하는 문서
+- `.note/finance/phase13/PHASE13_CANDIDATE_SHORTLIST_CONTRACT_FIRST_PASS.md`
+  - Phase 12의 `promotion_decision`을 `watchlist / paper_probation / small_capital_trial / hold` shortlist language로 다시 읽고, single / compare / execution context surface까지 연결한 Phase 13 first-pass 문서
 
 ---
 

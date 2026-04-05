@@ -2370,6 +2370,15 @@ def _render_last_run() -> None:
                 st.markdown(f"- `Promotion Decision`: `{meta['promotion_decision']}`")
             if meta.get("promotion_next_step"):
                 st.markdown(f"- `Promotion Next Step`: `{meta['promotion_next_step']}`")
+            if meta.get("shortlist_status"):
+                st.markdown(
+                    f"- `Shortlist Status`: `{meta['shortlist_status']}` "
+                    f"(`{_shortlist_status_value_to_label(meta.get('shortlist_status'))}`)"
+                )
+            if meta.get("shortlist_next_step"):
+                st.markdown(f"- `Shortlist Next Step`: `{meta['shortlist_next_step']}`")
+            if meta.get("shortlist_family"):
+                st.markdown(f"- `Shortlist Family`: `{meta['shortlist_family']}`")
             if meta.get("strategy_max_drawdown") is not None:
                 st.markdown(f"- `Strategy Max Drawdown`: `{float(meta['strategy_max_drawdown']):.2%}`")
             if meta.get("benchmark_max_drawdown") is not None:
@@ -3441,6 +3450,39 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
                     "validation gap 또는 contract issue를 먼저 정리하는 것이 좋습니다."
                 )
 
+        if meta.get("shortlist_status"):
+            st.markdown("##### Candidate Shortlist")
+            shortlist_status = str(meta.get("shortlist_status") or "-")
+            shortlist_next_step = str(meta.get("shortlist_next_step") or "-")
+            shortlist_family = str(meta.get("shortlist_family") or meta.get("strategy_family") or "-")
+            shortlist_cols = st.columns(3, gap="small")
+            shortlist_cols[0].metric("Family", shortlist_family)
+            shortlist_cols[1].metric("Status", _shortlist_status_value_to_label(shortlist_status))
+            shortlist_cols[2].metric("Next Step", shortlist_next_step)
+            shortlist_rationale = list(meta.get("shortlist_rationale") or [])
+            if shortlist_rationale:
+                st.caption("Shortlist rationale: " + ", ".join(f"`{item}`" for item in shortlist_rationale))
+            if shortlist_status == "small_capital_trial":
+                st.success(
+                    "현재 계약 기준에서는 소액 실전 trial까지 검토할 수 있는 shortlist 상태입니다. "
+                    "다만 월별 review와 probation 기록은 계속 남기는 편이 맞습니다."
+                )
+            elif shortlist_status == "paper_probation":
+                st.info(
+                    "현재 run은 paper probation으로 먼저 관찰하는 편이 가장 자연스럽습니다. "
+                    "ETF 전략군 second-pass 또는 annual strict monitoring review 이후 소액 trial을 검토하면 됩니다."
+                )
+            elif shortlist_status == "watchlist":
+                st.info(
+                    "지금은 shortlist watchlist로 두고, 추가 robustness / monitoring review를 거친 뒤 "
+                    "paper probation으로 올리는 편이 맞습니다."
+                )
+            elif shortlist_status == "hold":
+                st.warning(
+                    "현재 run은 shortlist 단계로 올리기보다 hold로 두는 편이 맞습니다. "
+                    "promotion / policy gap을 먼저 정리한 뒤 다시 보는 것이 좋습니다."
+                )
+
     if benchmark_chart_df is not None and result_df is not None:
         strategy_line = (
             bundle["chart_df"][["Date", "Total Balance"]]
@@ -3536,6 +3578,8 @@ def _build_compare_highlight_rows(bundles: list[dict]) -> pd.DataFrame:
                 "Net CAGR Spread": meta.get("net_cagr_spread"),
                 "Validation": meta.get("validation_status"),
                 "Promotion": meta.get("promotion_decision"),
+                "Shortlist": _shortlist_status_value_to_label(meta.get("shortlist_status")),
+                "Shortlist Next": meta.get("shortlist_next_step"),
                 "Guardrail Triggers": meta.get("underperformance_guardrail_trigger_count"),
                 "DD Guardrail Triggers": meta.get("drawdown_guardrail_trigger_count"),
                 "Strategy Max DD": meta.get("strategy_max_drawdown"),
@@ -3827,6 +3871,9 @@ def _render_compare_results() -> None:
                     "promotion_min_worst_rolling_excess_return": meta.get("promotion_min_worst_rolling_excess_return"),
                     "promotion_max_strategy_drawdown": meta.get("promotion_max_strategy_drawdown"),
                     "promotion_max_drawdown_gap_vs_benchmark": meta.get("promotion_max_drawdown_gap_vs_benchmark"),
+                    "strategy_family": meta.get("strategy_family"),
+                    "shortlist_status": meta.get("shortlist_status"),
+                    "shortlist_next_step": meta.get("shortlist_next_step"),
                     "underperformance_guardrail_enabled": meta.get("underperformance_guardrail_enabled"),
                     "underperformance_guardrail_window_months": meta.get("underperformance_guardrail_window_months"),
                     "underperformance_guardrail_threshold": meta.get("underperformance_guardrail_threshold"),
@@ -4753,6 +4800,16 @@ def _benchmark_contract_value_to_label(value: str | None) -> str:
         if contract_value == value:
             return label
     return "Ticker Benchmark"
+
+
+def _shortlist_status_value_to_label(value: str | None) -> str:
+    mapping = {
+        "watchlist": "Watchlist",
+        "paper_probation": "Paper Probation",
+        "small_capital_trial": "Small Capital Trial",
+        "hold": "Hold",
+    }
+    return mapping.get(str(value or "").strip().lower(), "-")
 
 
 def _bundle_to_saved_strategy_override(bundle: dict[str, Any]) -> dict[str, Any]:

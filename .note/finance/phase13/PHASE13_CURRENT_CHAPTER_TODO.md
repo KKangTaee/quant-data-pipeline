@@ -18,16 +18,16 @@
 
 ## 2. Candidate Shortlist Contract
 
-- `pending` shortlist status language first pass 고정
+- `completed` shortlist status language first pass 고정
   - `watchlist`
   - `paper_probation`
   - `small_capital_trial`
   - `hold`
-- `pending` candidate shortlist metadata surface 초안 작성
+- `completed` candidate shortlist metadata surface 초안 작성
   - strategy family
   - benchmark/guardrail/policy status
   - current recommendation
-- `pending` shortlist document first pass 작성
+- `completed` shortlist document first pass 작성
   - 실전형 후보를 운영용 shortlist로 다시 묶는다
 
 ## 3. ETF Second-Pass Hardening
@@ -63,8 +63,8 @@
 
 ## 6. Documentation And Validation
 
-- `pending` Phase 13 문서 인덱스 반영
-- `pending` roadmap / progress / analysis log 동기화
+- `completed` Phase 13 문서 인덱스 반영
+- `completed` roadmap / progress / analysis log 동기화
 - `pending` phase closeout checklist skeleton 준비
 
 ## 현재 메모
@@ -76,3 +76,5 @@
 - 이번 phase의 핵심은 새 전략 추가가 아니라
   **실전형 후보를 실제 운용 후보로 더 좁히는 운영 계약**
   이다.
+- Phase 13 first pass는 현재 `promotion_decision`을
+  shortlist language로 다시 읽는 layer까지 연결한 상태다.

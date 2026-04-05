@@ -6166,3 +6166,34 @@ Do not copy full chat transcripts. Keep only the durable result.
   - the annual strict family is sufficiently implemented to enter Phase 13 shortlist / probation review
   - but it is still not the same thing as “safe to deploy live immediately”
   - Phase 13 exists exactly because deployment-readiness, probation, monitoring, and rolling/out-of-sample review are still needed after Phase 12
+
+### 2026-04-05 - Phase 13 first pass should reinterpret promotion into shortlist language
+
+- Request topic:
+  - start actual Phase 13 implementation after confirming that strict annual is only at candidate stage, not full live-deployment stage
+- Interpreted goal:
+  - make the existing promotion surface operationally useful by translating it into shortlist states that map to actual next actions
+- Result:
+  - added a shortlist layer on top of `promotion_decision`
+  - runtime now records:
+    - `strategy_family`
+    - `shortlist_family`
+    - `shortlist_status`
+    - `shortlist_next_step`
+    - `shortlist_rationale`
+  - first-pass shortlist mapping was fixed as:
+    - `hold -> hold`
+    - `production_candidate -> watchlist`
+    - `real_money_candidate -> paper_probation`
+    - annual strict `real_money_candidate` with actual guardrails and candidate-equal-weight benchmark -> `small_capital_trial`
+  - UI surface now shows shortlist state in:
+    - single / focused `Real-Money`
+    - `Execution Context`
+    - compare `Strategy Highlights`
+    - compare meta table
+- Durable implication:
+  - Phase 13 no longer starts from raw backtest winner interpretation
+  - it now starts from an operational shortlist language that separates:
+    - candidate quality
+    - immediate next action
+    - whether the strategy should stay on watchlist, go to paper probation, or be considered for small-capital trial

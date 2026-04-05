@@ -80,6 +80,25 @@ REAL_MONEY_CASH_LABEL = "__CASH__"
 ETF_OPERABILITY_STRATEGY_KEYS = {"gtaa", "risk_parity_trend", "dual_momentum"}
 
 
+def _infer_strategy_family(strategy_key: str, strategy_name: str) -> str:
+    key = str(strategy_key or "").strip().lower()
+    if key.startswith("quality_value"):
+        return "Quality + Value"
+    if key.startswith("quality"):
+        return "Quality"
+    if key.startswith("value"):
+        return "Value"
+    if key == "gtaa":
+        return "GTAA"
+    if key == "dual_momentum":
+        return "Dual Momentum"
+    if key == "risk_parity_trend":
+        return "Risk Parity Trend"
+    if key == "equal_weight":
+        return "Equal Weight"
+    return strategy_name
+
+
 def _normalize_tickers(tickers: Sequence[str] | None) -> list[str]:
     if tickers is None:
         return ["VIG", "SCHD", "DGRO", "GLD"]
@@ -697,6 +716,68 @@ def _build_promotion_decision(meta: dict[str, Any]) -> dict[str, Any]:
         "promotion_decision": decision,
         "promotion_rationale": rationale,
         "promotion_next_step": next_step,
+    }
+
+
+def _build_shortlist_contract(meta: dict[str, Any]) -> dict[str, Any]:
+    decision = str(meta.get("promotion_decision") or "").strip().lower()
+    strategy_key = str(meta.get("strategy_key") or "").strip().lower()
+    strategy_family = str(meta.get("strategy_family") or meta.get("strategy_name") or "").strip()
+    universe_contract = str(meta.get("universe_contract") or "").strip().lower()
+    benchmark_contract = str(meta.get("benchmark_contract") or "").strip().lower()
+    benchmark_available = bool(meta.get("benchmark_available"))
+    drawdown_guardrail_enabled = bool(meta.get("drawdown_guardrail_enabled"))
+    underperformance_guardrail_enabled = bool(meta.get("underperformance_guardrail_enabled"))
+
+    if not decision:
+        return {}
+
+    rationale: list[str] = []
+    status: str
+    next_step: str
+
+    if decision == "hold":
+        status = "hold"
+        next_step = "resolve_contract_gaps_before_shortlist"
+        rationale.append("promotion_hold")
+    elif decision == "production_candidate":
+        status = "watchlist"
+        next_step = "manual_review_then_paper_probation_gate"
+        rationale.append("promotion_production_candidate")
+    else:
+        is_etf_strategy = strategy_key in ETF_OPERABILITY_STRATEGY_KEYS
+        annual_small_capital_ready = (
+            not is_etf_strategy
+            and drawdown_guardrail_enabled
+            and underperformance_guardrail_enabled
+            and benchmark_available
+            and universe_contract != STATIC_MANAGED_RESEARCH_UNIVERSE
+            and benchmark_contract == STRICT_BENCHMARK_CONTRACT_CANDIDATE_EQUAL_WEIGHT
+        )
+        if annual_small_capital_ready:
+            status = "small_capital_trial"
+            next_step = "start_small_capital_trial_with_monthly_review"
+            rationale.extend(
+                [
+                    "promotion_real_money_candidate",
+                    "annual_guardrails_enabled",
+                    "candidate_equal_weight_benchmark",
+                ]
+            )
+        else:
+            status = "paper_probation"
+            next_step = "start_paper_probation_and_monitor_monthly"
+            rationale.append("promotion_real_money_candidate")
+            if is_etf_strategy:
+                rationale.append("etf_second_pass_pending")
+            else:
+                rationale.append("paper_probation_first")
+
+    return {
+        "shortlist_status": status,
+        "shortlist_next_step": next_step,
+        "shortlist_rationale": rationale,
+        "shortlist_family": strategy_family,
     }
 
 
@@ -1388,6 +1469,7 @@ def _apply_real_money_hardening(
             meta["guardrail_policy_watch_signals"] = guardrail_policy_signals
 
     meta.update(_build_promotion_decision(meta))
+    meta.update(_build_shortlist_contract(meta))
     bundle["meta"] = meta
     return bundle
 
@@ -1762,6 +1844,8 @@ def build_backtest_result_bundle(
         "execution_mode": execution_mode,
         "data_mode": data_mode,
         "strategy_key": strategy_key,
+        "strategy_name": strategy_name,
+        "strategy_family": _infer_strategy_family(strategy_key, strategy_name),
         "tickers": input_params.get("tickers", []),
         "start": input_params.get("start"),
         "end": input_params.get("end"),

@@ -226,6 +226,22 @@ Analysis / Presentation
   `promotion_decision`에 함께 반영된다.
   이 변경은 actual strategy-side drawdown rule을 더한 것은 아니고,
   drawdown-based promotion review를 더 엄격하게 만든 쪽에 가깝다.
+- Phase 13 first pass부터는 이 `promotion_decision` 위에
+  candidate shortlist contract가 추가되어,
+  결과 surface가
+  - `watchlist`
+  - `paper_probation`
+  - `small_capital_trial`
+  - `hold`
+  상태로도 다시 읽히게 되었다.
+  현재 first pass는
+  - `hold -> hold`
+  - `production_candidate -> watchlist`
+  - `real_money_candidate -> paper_probation`
+  을 기본으로 두고,
+  strict annual 계열 중 actual guardrail과 candidate-equal-weight benchmark contract가 함께 맞는 경우에만
+  보수적으로 `small_capital_trial`을 추천한다.
+  이 상태는 single `Real-Money`, `Execution Context`, compare `Strategy Highlights`와 meta 표에도 같이 남는다.
 - 이와 함께 `GTAA`의 현재 기본 preset/sample universe는
   commodity sleeve에서 `DBC` 대신 `PDBC`를 사용하도록 조정되었다.
 - GTAA preset surface는 현재 기본 preset과,

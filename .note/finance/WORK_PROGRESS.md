@@ -3551,3 +3551,32 @@ Keep entries append-only and concise.
   - master phase roadmap
   - finance doc index
   - question and analysis log
+
+### 2026-04-05 - Phase 13 candidate shortlist contract first pass was added
+
+- Added a new Phase 13 shortlist layer on top of the existing `promotion_decision`
+- Runtime now records:
+  - `strategy_family`
+  - `shortlist_family`
+  - `shortlist_status`
+  - `shortlist_next_step`
+  - `shortlist_rationale`
+- First-pass shortlist mapping was fixed as:
+  - `hold -> hold`
+  - `production_candidate -> watchlist`
+  - `real_money_candidate -> paper_probation`
+  - strict annual `real_money_candidate` with actual guardrails and candidate-equal-weight benchmark -> `small_capital_trial`
+- Connected shortlist readout through:
+  - single / focused `Real-Money`
+  - `Execution Context`
+  - compare `Strategy Highlights`
+  - compare meta table
+- Verified:
+  - `py_compile`
+  - DB-backed smoke for strict annual and GTAA shortlist meta linkage
+  - helper-level smoke for `hold / watchlist / paper_probation / small_capital_trial`
+- Added a dedicated Phase 13 implementation note and refreshed:
+  - current TODO board
+  - finance doc index
+  - comprehensive analysis
+  - question and analysis log
