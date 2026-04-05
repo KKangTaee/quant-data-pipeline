@@ -3116,428 +3116,39 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
     result_df = bundle.get("result_df")
     benchmark_chart_df = bundle.get("benchmark_chart_df")
     benchmark_summary_df = bundle.get("benchmark_summary_df")
+    def _render_value_list_caption(prefix: str, values: list[Any] | tuple[Any, ...] | None) -> None:
+        if values:
+            st.caption(prefix + ": " + ", ".join(f"`{value}`" for value in list(values)))
 
-    st.caption(
-        "실전형 first pass에서는 `Minimum Price`, `Minimum History (Months)`, turnover 기반 `Transaction Cost`, "
-        "`Benchmark Contract`, `Benchmark Ticker`, `Benchmark Policy`, `Liquidity Policy`, "
-        "ETF 전략군의 경우 `AUM / bid-ask spread` current-operability policy까지 같이 반영합니다. "
-        "요약/차트는 비용 반영 후 `net` 기준이고, 결과 표에는 `gross`와 `net`이 같이 남습니다."
+    st.info(
+        "이 탭은 실전형 해석을 한 번에 보기 위한 화면입니다. "
+        "먼저 `현재 판단`에서 지금 상태를 보고, "
+        "그다음 `검토 근거`에서 왜 그런 판단이 나왔는지 확인하고, "
+        "`실행 부담`에서 비용/유동성/ETF 운용 가능성을 본 뒤, "
+        "마지막 `상세 데이터`에서 원자료를 확인하면 됩니다."
     )
 
-    top_cols = st.columns(6, gap="small")
-    top_cols[0].metric("Minimum Price", f"{float(meta.get('min_price_filter') or 0.0):.2f}")
-    top_cols[1].metric("Minimum History", f"{int(meta.get('min_history_months_filter') or 0)}M")
-    top_cols[2].metric("Min Avg Dollar Volume 20D", f"{float(meta.get('min_avg_dollar_volume_20d_m_filter') or 0.0):.1f}M")
-    top_cols[3].metric("Transaction Cost", f"{float(meta.get('transaction_cost_bps') or 0.0):.1f} bps")
-    top_cols[4].metric("Avg Turnover", f"{float(meta.get('avg_turnover') or 0.0):.2%}")
-    top_cols[5].metric("Estimated Cost Total", f"{float(meta.get('estimated_cost_total') or 0.0):,.1f}")
-    if meta.get("liquidity_excluded_total") is not None:
+    summary_cols = st.columns(6, gap="small")
+    summary_cols[0].metric("Promotion", str(meta.get("promotion_decision") or "-").upper())
+    summary_cols[1].metric("Shortlist", _shortlist_status_value_to_label(meta.get("shortlist_status")))
+    summary_cols[2].metric("Probation", _probation_status_value_to_label(meta.get("probation_status")))
+    summary_cols[3].metric("Deployment", _deployment_readiness_status_value_to_label(meta.get("deployment_readiness_status")))
+    summary_cols[4].metric("Rolling Review", _review_status_value_to_label(meta.get("rolling_review_status")))
+    summary_cols[5].metric("Validation", _review_status_value_to_label(meta.get("validation_status")))
+
+    overview_tab, review_tab, execution_tab, detail_tab = st.tabs(
+        ["현재 판단", "검토 근거", "실행 부담", "상세 데이터"]
+    )
+
+    with overview_tab:
         st.caption(
-            "Liquidity excluded candidates: "
-            f"`{int(meta.get('liquidity_excluded_total') or 0)}` total, "
-            f"`{int(meta.get('liquidity_excluded_active_rows') or 0)}` rows."
+            "이 섹션은 이 전략을 지금 어떤 단계로 해석해야 하는지 보여줍니다. "
+            "즉 `당장 보류할지`, `paper probation으로 둘지`, `소액 trial까지 볼지`를 먼저 판단하는 곳입니다."
         )
-    if meta.get("liquidity_clean_coverage") is not None:
-        st.caption(
-            "Liquidity clean coverage on rebalance rows: "
-            f"`{float(meta.get('liquidity_clean_coverage') or 0.0):.2%}`"
-        )
-    if (
-        meta.get("promotion_min_etf_aum_b") is not None
-        or meta.get("promotion_max_bid_ask_spread_pct") is not None
-        or meta.get("etf_operability_status")
-    ):
-        st.markdown("##### ETF Operability Policy")
-        etf_cols = st.columns(5, gap="small")
-        etf_cols[0].metric("Policy Status", str(meta.get("etf_operability_status") or "unavailable").upper())
-        if meta.get("promotion_min_etf_aum_b") is not None:
-            etf_cols[1].metric("Min ETF AUM", f"${float(meta.get('promotion_min_etf_aum_b') or 0.0):.1f}B")
-        if meta.get("promotion_max_bid_ask_spread_pct") is not None:
-            etf_cols[2].metric(
-                "Max Bid-Ask Spread",
-                f"{float(meta.get('promotion_max_bid_ask_spread_pct') or 0.0):.2%}",
-            )
-        if meta.get("etf_operability_clean_coverage") is not None:
-            etf_cols[3].metric(
-                "Clean Coverage",
-                f"{float(meta.get('etf_operability_clean_coverage') or 0.0):.2%}",
-            )
-        if meta.get("etf_operability_clean_pass_count") is not None:
-            etf_cols[4].metric(
-                "Clean Pass",
-                f"{int(meta.get('etf_operability_clean_pass_count') or 0)} / {int(meta.get('etf_symbol_count') or 0)}",
-            )
-        if meta.get("etf_operability_data_coverage") is not None:
-            st.caption(
-                f"ETF operability data coverage: `{float(meta.get('etf_operability_data_coverage') or 0.0):.2%}`"
-            )
-        if meta.get("etf_aum_pass_count") is not None or meta.get("etf_spread_pass_count") is not None:
-            st.caption(
-                "Pass counts: "
-                f"AUM `{int(meta.get('etf_aum_pass_count') or 0)}` / `{int(meta.get('etf_symbol_count') or 0)}`, "
-                f"Spread `{int(meta.get('etf_spread_pass_count') or 0)}` / `{int(meta.get('etf_symbol_count') or 0)}`"
-            )
-        if meta.get("etf_aum_failed_symbols"):
-            st.caption(
-                "AUM-below-policy ETF: "
-                + ", ".join(f"`{symbol}`" for symbol in list(meta.get("etf_aum_failed_symbols") or []))
-            )
-        if meta.get("etf_spread_failed_symbols"):
-            st.caption(
-                "Spread-above-policy ETF: "
-                + ", ".join(f"`{symbol}`" for symbol in list(meta.get("etf_spread_failed_symbols") or []))
-            )
-        if meta.get("etf_operability_missing_data_symbols"):
-            st.caption(
-                "Missing ETF operability fields: "
-                + ", ".join(
-                    f"`{symbol}`" for symbol in list(meta.get("etf_operability_missing_data_symbols") or [])
-                )
-            )
-        etf_signals = list(meta.get("etf_operability_watch_signals") or [])
-        if etf_signals:
-            st.caption("ETF operability signals: " + ", ".join(f"`{signal}`" for signal in etf_signals))
-        etf_status = str(meta.get("etf_operability_status") or "unavailable").lower()
-        if etf_status == "caution":
-            st.warning(
-                "현재 ETF operability policy 기준에서는 자산 규모나 bid-ask spread가 충분히 안정적이지 않습니다. "
-                "실전 승격 전 ETF universe를 다시 점검하는 편이 맞습니다."
-            )
-        elif etf_status == "watch":
-            st.info(
-                "ETF operability policy 기준에서 일부 watch 신호가 있습니다. "
-                "현재 AUM과 bid-ask spread를 한 번 더 점검하는 편이 좋습니다."
-            )
-        elif etf_status == "unavailable":
-            st.info(
-                "ETF operability policy는 현재 unavailable 상태입니다. "
-                "ETF asset profile을 새로 수집한 뒤 다시 해석하는 편이 맞습니다."
-            )
-
-    if meta.get("benchmark_available") or meta.get("benchmark_contract") or meta.get("benchmark_ticker"):
-        benchmark_cols = st.columns(6, gap="small")
-        benchmark_cols[0].metric("Benchmark Contract", _benchmark_contract_value_to_label(meta.get("benchmark_contract")))
-        benchmark_cols[1].metric(
-            "Benchmark",
-            str(
-                meta.get("benchmark_label")
-                if meta.get("benchmark_contract") == STRICT_BENCHMARK_CONTRACT_CANDIDATE_EQUAL_WEIGHT
-                else meta.get("benchmark_ticker") or meta.get("benchmark_label") or "-"
-            ),
-        )
-        benchmark_cols[2].metric("Benchmark Available", "Yes" if meta.get("benchmark_available") else "No")
-        if meta.get("benchmark_symbol_count") is not None:
-            benchmark_cols[3].metric("Benchmark Universe", str(int(meta.get("benchmark_symbol_count") or 0)))
-        if meta.get("benchmark_eligible_symbol_count") is not None:
-            benchmark_cols[4].metric("Benchmark Eligible", str(int(meta.get("benchmark_eligible_symbol_count") or 0)))
-        if meta.get("benchmark_end_balance") is not None:
-            benchmark_cols[5].metric("Benchmark End Balance", f"{float(meta.get('benchmark_end_balance')):,.1f}")
-        if meta.get("benchmark_cagr") is not None:
-            st.caption(f"Benchmark CAGR: `{float(meta.get('benchmark_cagr')):.2%}`")
-        if meta.get("net_cagr_spread") is not None:
-            st.caption(f"Net CAGR Spread: `{float(meta.get('net_cagr_spread')):.2%}`")
-        if meta.get("net_excess_end_balance") is not None:
-            st.caption(f"Net Excess End Balance: `{float(meta.get('net_excess_end_balance')):,.1f}`")
-        if meta.get("benchmark_row_coverage") is not None:
-            st.caption(f"Benchmark coverage on aligned rows: `{float(meta.get('benchmark_row_coverage')):.2%}`")
-        if meta.get("benchmark_contract") == STRICT_BENCHMARK_CONTRACT_CANDIDATE_EQUAL_WEIGHT:
-            st.caption(
-                "Candidate-universe equal-weight benchmark는 같은 후보 universe를 단순히 균등 보유했을 때의 reference curve입니다."
-            )
-        if meta.get("promotion_min_benchmark_coverage") is not None or meta.get("promotion_min_net_cagr_spread") is not None:
-            st.caption(
-                "Benchmark policy: "
-                f"coverage >= `{float(meta.get('promotion_min_benchmark_coverage') or 0.0):.0%}`, "
-                f"net CAGR spread >= `{float(meta.get('promotion_min_net_cagr_spread') or 0.0):.0%}`"
-            )
-    if meta.get("promotion_min_liquidity_clean_coverage") is not None:
-        st.caption(
-            "Liquidity policy: "
-            f"clean coverage >= `{float(meta.get('promotion_min_liquidity_clean_coverage') or 0.0):.0%}`"
-        )
-    if (
-        meta.get("promotion_max_underperformance_share") is not None
-        or meta.get("promotion_min_worst_rolling_excess_return") is not None
-    ):
-        st.caption(
-            "Validation policy: "
-            f"underperformance share <= `{float(meta.get('promotion_max_underperformance_share') or 0.0):.0%}`, "
-            f"worst rolling excess >= `{float(meta.get('promotion_min_worst_rolling_excess_return') or 0.0):.0%}`"
-        )
-    if (
-        meta.get("promotion_max_strategy_drawdown") is not None
-        or meta.get("promotion_max_drawdown_gap_vs_benchmark") is not None
-    ):
-        st.caption(
-            "Portfolio guardrail policy: "
-            f"strategy max drawdown >= `{float(meta.get('promotion_max_strategy_drawdown') or 0.0):.0%}`, "
-            f"drawdown gap <= `{float(meta.get('promotion_max_drawdown_gap_vs_benchmark') or 0.0):.0%}`"
-        )
-
-    if meta.get("benchmark_available"):
-        st.markdown("##### Validation Surface")
-        validation_cols = st.columns(4, gap="small")
-        validation_cols[0].metric("Validation Status", str(meta.get("validation_status") or "normal").upper())
-        if meta.get("strategy_max_drawdown") is not None:
-            validation_cols[1].metric("Strategy Max Drawdown", f"{float(meta.get('strategy_max_drawdown')):.2%}")
-        if meta.get("benchmark_max_drawdown") is not None:
-            validation_cols[2].metric("Benchmark Max Drawdown", f"{float(meta.get('benchmark_max_drawdown')):.2%}")
-        validation_cols[3].metric("Rolling Window", str(meta.get("validation_window_label") or "-"))
-
-        rolling_cols = st.columns(4, gap="small")
-        if meta.get("rolling_underperformance_share") is not None:
-            rolling_cols[0].metric("Underperformance Share", f"{float(meta.get('rolling_underperformance_share')):.2%}")
-        rolling_cols[1].metric("Current Underperf Streak", str(int(meta.get("rolling_underperformance_current_streak") or 0)))
-        rolling_cols[2].metric("Longest Underperf Streak", str(int(meta.get("rolling_underperformance_longest_streak") or 0)))
-        if meta.get("rolling_underperformance_worst_excess_return") is not None:
-            rolling_cols[3].metric(
-                "Worst Rolling Excess",
-                f"{float(meta.get('rolling_underperformance_worst_excess_return')):.2%}",
-            )
-
-        watch_signals = list(meta.get("validation_watch_signals") or [])
-        if watch_signals:
-            st.caption("Validation watch signals: " + ", ".join(f"`{signal}`" for signal in watch_signals))
-        status = str(meta.get("validation_status") or "normal")
-        if status == "caution":
-            st.warning(
-                "Benchmark-relative drawdown 또는 rolling underperformance 진단이 높게 나왔습니다. "
-                "실전 승격 전 재검토가 필요한 상태로 보는 편이 맞습니다."
-            )
-        elif status == "watch":
-            st.info(
-                "일부 benchmark-relative validation 지표가 watch 상태입니다. "
-                "추가 구간 검증이나 contract robustness 확인이 권장됩니다."
-            )
-
-        if meta.get("benchmark_policy_status"):
-            st.markdown("##### Benchmark Policy")
-            policy_cols = st.columns(5, gap="small")
-            policy_cols[0].metric("Policy Status", str(meta.get("benchmark_policy_status") or "normal").upper())
-            if meta.get("promotion_min_benchmark_coverage") is not None:
-                policy_cols[1].metric(
-                    "Min Coverage",
-                    f"{float(meta.get('promotion_min_benchmark_coverage') or 0.0):.0%}",
-                )
-            if meta.get("benchmark_row_coverage") is not None:
-                policy_cols[2].metric(
-                    "Actual Coverage",
-                    f"{float(meta.get('benchmark_row_coverage') or 0.0):.2%}",
-                )
-            if meta.get("promotion_min_net_cagr_spread") is not None:
-                policy_cols[3].metric(
-                    "Min Net CAGR Spread",
-                    f"{float(meta.get('promotion_min_net_cagr_spread') or 0.0):.0%}",
-                )
-            if meta.get("net_cagr_spread") is not None:
-                policy_cols[4].metric(
-                    "Actual Net CAGR Spread",
-                    f"{float(meta.get('net_cagr_spread') or 0.0):.2%}",
-                )
-            policy_signals = list(meta.get("benchmark_policy_watch_signals") or [])
-            if policy_signals:
-                st.caption("Benchmark policy signals: " + ", ".join(f"`{signal}`" for signal in policy_signals))
-            policy_status = str(meta.get("benchmark_policy_status") or "normal").lower()
-            if policy_status == "caution":
-                st.warning(
-                    "현재 benchmark policy 기준에서는 coverage 또는 상대 CAGR이 충분하지 않습니다. "
-                    "승격 전 추가 검토가 필요한 상태입니다."
-                )
-            elif policy_status == "watch":
-                st.info(
-                    "Benchmark policy 기준에서 일부 watch 신호가 있습니다. "
-                    "실전 승격 전 robustness 확인을 더 하는 편이 좋습니다."
-                )
-
-        if meta.get("liquidity_policy_status"):
-            st.markdown("##### Liquidity Policy")
-            liquidity_policy_cols = st.columns(4, gap="small")
-            liquidity_policy_cols[0].metric("Policy Status", str(meta.get("liquidity_policy_status") or "normal").upper())
-            if meta.get("promotion_min_liquidity_clean_coverage") is not None:
-                liquidity_policy_cols[1].metric(
-                    "Min Clean Coverage",
-                    f"{float(meta.get('promotion_min_liquidity_clean_coverage') or 0.0):.0%}",
-                )
-            if meta.get("liquidity_clean_coverage") is not None:
-                liquidity_policy_cols[2].metric(
-                    "Actual Clean Coverage",
-                    f"{float(meta.get('liquidity_clean_coverage') or 0.0):.2%}",
-                )
-            if meta.get("liquidity_excluded_active_rows") is not None:
-                liquidity_policy_cols[3].metric(
-                    "Liquidity Excluded Rows",
-                    str(int(meta.get("liquidity_excluded_active_rows") or 0)),
-                )
-            liquidity_policy_signals = list(meta.get("liquidity_policy_watch_signals") or [])
-            if liquidity_policy_signals:
-                st.caption("Liquidity policy signals: " + ", ".join(f"`{signal}`" for signal in liquidity_policy_signals))
-            liquidity_policy_status = str(meta.get("liquidity_policy_status") or "normal").lower()
-            if liquidity_policy_status == "caution":
-                st.warning(
-                    "현재 liquidity policy 기준에서는 유동성 제외가 너무 자주 발생했습니다. "
-                    "실전 승격 전 후보군 또는 investability 계약을 다시 점검하는 편이 맞습니다."
-                )
-            elif liquidity_policy_status == "watch":
-                st.info(
-                    "Liquidity policy 기준에서 watch 신호가 있습니다. "
-                    "유동성 제외 빈도와 후보군 구성을 한 번 더 검토하는 편이 좋습니다."
-                )
-            elif liquidity_policy_status == "unavailable":
-                st.info(
-                    "Liquidity policy는 현재 unavailable 상태입니다. "
-                    "실전 승격 기준으로 보려면 `Min Avg Dollar Volume 20D` 필터를 함께 사용하는 편이 좋습니다."
-                )
-
-        if meta.get("validation_policy_status"):
-            st.markdown("##### Validation Policy")
-            validation_policy_cols = st.columns(5, gap="small")
-            validation_policy_cols[0].metric(
-                "Policy Status",
-                str(meta.get("validation_policy_status") or "normal").upper(),
-            )
-            if meta.get("promotion_max_underperformance_share") is not None:
-                validation_policy_cols[1].metric(
-                    "Max Underperf Share",
-                    f"{float(meta.get('promotion_max_underperformance_share') or 0.0):.0%}",
-                )
-            if meta.get("rolling_underperformance_share") is not None:
-                validation_policy_cols[2].metric(
-                    "Actual Underperf Share",
-                    f"{float(meta.get('rolling_underperformance_share') or 0.0):.2%}",
-                )
-            if meta.get("promotion_min_worst_rolling_excess_return") is not None:
-                validation_policy_cols[3].metric(
-                    "Min Worst Excess",
-                    f"{float(meta.get('promotion_min_worst_rolling_excess_return') or 0.0):.0%}",
-                )
-            if meta.get("rolling_underperformance_worst_excess_return") is not None:
-                validation_policy_cols[4].metric(
-                    "Actual Worst Excess",
-                    f"{float(meta.get('rolling_underperformance_worst_excess_return') or 0.0):.2%}",
-                )
-            validation_policy_signals = list(meta.get("validation_policy_watch_signals") or [])
-            if validation_policy_signals:
-                st.caption(
-                    "Validation policy signals: "
-                    + ", ".join(f"`{signal}`" for signal in validation_policy_signals)
-                )
-            validation_policy_status = str(meta.get("validation_policy_status") or "normal").lower()
-            if validation_policy_status == "caution":
-                st.warning(
-                    "현재 validation policy 기준에서는 rolling underperformance robustness가 충분하지 않습니다. "
-                    "실전 승격 전 계약을 더 보수적으로 보는 편이 맞습니다."
-                )
-            elif validation_policy_status == "watch":
-                st.info(
-                    "Validation policy 기준에서 watch 신호가 있습니다. "
-                    "추가 구간 robustness 검증을 더 하는 편이 좋습니다."
-                )
-            elif validation_policy_status == "unavailable":
-                st.info(
-                    "Validation policy는 현재 unavailable 상태입니다. "
-                    "aligned benchmark validation history가 있어야 승격 기준으로 해석할 수 있습니다."
-                )
-
-        if meta.get("guardrail_policy_status"):
-            st.markdown("##### Portfolio Guardrail Policy")
-            guardrail_policy_cols = st.columns(5, gap="small")
-            guardrail_policy_cols[0].metric(
-                "Policy Status",
-                str(meta.get("guardrail_policy_status") or "normal").upper(),
-            )
-            if meta.get("promotion_max_strategy_drawdown") is not None:
-                guardrail_policy_cols[1].metric(
-                    "Max Strategy DD",
-                    f"{float(meta.get('promotion_max_strategy_drawdown') or 0.0):.0%}",
-                )
-            if meta.get("strategy_max_drawdown") is not None:
-                guardrail_policy_cols[2].metric(
-                    "Actual Strategy DD",
-                    f"{float(meta.get('strategy_max_drawdown') or 0.0):.2%}",
-                )
-            if meta.get("promotion_max_drawdown_gap_vs_benchmark") is not None:
-                guardrail_policy_cols[3].metric(
-                    "Max DD Gap",
-                    f"{float(meta.get('promotion_max_drawdown_gap_vs_benchmark') or 0.0):.0%}",
-                )
-            if meta.get("drawdown_gap_vs_benchmark") is not None:
-                guardrail_policy_cols[4].metric(
-                    "Actual DD Gap",
-                    f"{float(meta.get('drawdown_gap_vs_benchmark') or 0.0):.2%}",
-                )
-            guardrail_policy_signals = list(meta.get("guardrail_policy_watch_signals") or [])
-            if guardrail_policy_signals:
-                st.caption(
-                    "Guardrail policy signals: "
-                    + ", ".join(f"`{signal}`" for signal in guardrail_policy_signals)
-                )
-            guardrail_policy_status = str(meta.get("guardrail_policy_status") or "normal").lower()
-            if guardrail_policy_status == "caution":
-                st.warning(
-                    "현재 portfolio guardrail policy 기준에서는 낙폭 방어가 충분하지 않습니다. "
-                    "실전 승격 전 drawdown contract를 더 보수적으로 보는 편이 맞습니다."
-                )
-            elif guardrail_policy_status == "watch":
-                st.info(
-                    "Portfolio guardrail policy 기준에서 watch 신호가 있습니다. "
-                    "최대 낙폭과 benchmark 대비 drawdown gap을 한 번 더 점검하는 편이 좋습니다."
-                )
-            elif guardrail_policy_status == "unavailable":
-                st.info(
-                    "Portfolio guardrail policy는 현재 unavailable 상태입니다. "
-                    "실전 승격 기준으로 보려면 usable benchmark drawdown history가 필요합니다."
-                )
-
-        if meta.get("underperformance_guardrail_enabled"):
-            st.markdown("##### Guardrail Contract")
-            guardrail_cols = st.columns(4, gap="small")
-            guardrail_cols[0].metric("Guardrail", "ON")
-            guardrail_cols[1].metric(
-                "Window",
-                f"{int(meta.get('underperformance_guardrail_window_months') or STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS)}M",
-            )
-            guardrail_cols[2].metric(
-                "Threshold",
-                f"{float(meta.get('underperformance_guardrail_threshold') or STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD):.0%}",
-            )
-            guardrail_cols[3].metric(
-                "Trigger Count",
-                str(int(meta.get("underperformance_guardrail_trigger_count") or 0)),
-            )
-            if meta.get("underperformance_guardrail_trigger_share") is not None:
-                st.caption(
-                    "Guardrail triggered on "
-                    f"`{float(meta.get('underperformance_guardrail_trigger_share')):.2%}` of recorded rows."
-                )
-
-        if meta.get("drawdown_guardrail_enabled"):
-            st.markdown("##### Drawdown Guardrail Contract")
-            drawdown_guardrail_cols = st.columns(5, gap="small")
-            drawdown_guardrail_cols[0].metric("Guardrail", "ON")
-            drawdown_guardrail_cols[1].metric(
-                "Window",
-                f"{int(meta.get('drawdown_guardrail_window_months') or STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_WINDOW_MONTHS)}M",
-            )
-            drawdown_guardrail_cols[2].metric(
-                "Strategy DD Threshold",
-                f"{float(meta.get('drawdown_guardrail_strategy_threshold') or STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD):.0%}",
-            )
-            drawdown_guardrail_cols[3].metric(
-                "DD Gap Threshold",
-                f"{float(meta.get('drawdown_guardrail_gap_threshold') or STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD):.0%}",
-            )
-            drawdown_guardrail_cols[4].metric(
-                "Trigger Count",
-                str(int(meta.get("drawdown_guardrail_trigger_count") or 0)),
-            )
-            if meta.get("drawdown_guardrail_trigger_share") is not None:
-                st.caption(
-                    "Drawdown guardrail triggered on "
-                    f"`{float(meta.get('drawdown_guardrail_trigger_share')):.2%}` of recorded rows."
-                )
 
         if meta.get("promotion_decision"):
-            st.markdown("##### Promotion Decision")
+            st.markdown("##### 전략 승격 판단")
+            st.caption("이 전략이 현재 계약 기준에서 어느 정도까지 올라왔는지 보여줍니다.")
             decision = str(meta.get("promotion_decision") or "-")
             next_step = str(meta.get("promotion_next_step") or "-")
             promotion_cols = st.columns(2, gap="small")
@@ -3545,15 +3156,15 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
             promotion_cols[1].metric("Next Step", next_step)
             rationale = list(meta.get("promotion_rationale") or [])
             if rationale:
-                st.caption("Promotion rationale: " + ", ".join(f"`{item}`" for item in rationale))
+                st.caption("왜 이렇게 판단했는지: " + ", ".join(f"`{item}`" for item in rationale))
             if decision == "real_money_candidate":
                 st.success(
                     "현재 계약 기준에서는 실전형 후보로 읽을 수 있는 상태입니다. "
-                    "다음 단계는 paper trading 또는 소액 probation 쪽이 자연스럽습니다."
+                    "다음 단계는 paper tracking 또는 소액 probation이 자연스럽습니다."
                 )
             elif decision == "production_candidate":
                 st.info(
-                    "지금은 hardening은 되었지만, 더 강한 robustness / guardrail 검토 전까지는 "
+                    "지금은 많이 정리된 상태이지만, 더 강한 robustness 검토 전까지는 "
                     "production candidate로 두는 편이 맞습니다."
                 )
             elif decision == "hold":
@@ -3563,7 +3174,8 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
                 )
 
         if meta.get("shortlist_status"):
-            st.markdown("##### Candidate Shortlist")
+            st.markdown("##### 후보 전략 숏리스트")
+            st.caption("실전 후보 목록 안에서 현재 어느 단계인지 보여줍니다.")
             shortlist_status = str(meta.get("shortlist_status") or "-")
             shortlist_next_step = str(meta.get("shortlist_next_step") or "-")
             shortlist_family = str(meta.get("shortlist_family") or meta.get("strategy_family") or "-")
@@ -3573,16 +3185,16 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
             shortlist_cols[2].metric("Next Step", shortlist_next_step)
             shortlist_rationale = list(meta.get("shortlist_rationale") or [])
             if shortlist_rationale:
-                st.caption("Shortlist rationale: " + ", ".join(f"`{item}`" for item in shortlist_rationale))
+                st.caption("숏리스트 판단 근거: " + ", ".join(f"`{item}`" for item in shortlist_rationale))
             if shortlist_status == "small_capital_trial":
                 st.success(
                     "현재 계약 기준에서는 소액 실전 trial까지 검토할 수 있는 shortlist 상태입니다. "
-                    "다만 월별 review와 probation 기록은 계속 남기는 편이 맞습니다."
+                    "다만 월별 review 기록은 계속 남기는 편이 맞습니다."
                 )
             elif shortlist_status == "paper_probation":
                 st.info(
                     "현재 run은 paper probation으로 먼저 관찰하는 편이 가장 자연스럽습니다. "
-                    "ETF 전략군 second-pass 또는 annual strict monitoring review 이후 소액 trial을 검토하면 됩니다."
+                    "다음 review를 통과하면 소액 trial을 검토할 수 있습니다."
                 )
             elif shortlist_status == "watchlist":
                 st.info(
@@ -3596,7 +3208,11 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
                 )
 
         if meta.get("probation_status") or meta.get("monitoring_status"):
-            st.markdown("##### Probation And Monitoring")
+            st.markdown("##### Probation / Monitoring")
+            st.caption(
+                "이 섹션은 실제 운용 전 관찰 단계를 뜻합니다. "
+                "paper tracking 중인지, routine review로 충분한지, breach 신호가 있는지를 봅니다."
+            )
             probation_status = str(meta.get("probation_status") or "-")
             probation_stage = str(meta.get("probation_stage") or "-")
             probation_review_frequency = str(meta.get("probation_review_frequency") or "-")
@@ -3609,16 +3225,16 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
             probation_cols[3].metric("Monitoring", _monitoring_status_value_to_label(monitoring_status))
             probation_cols[4].metric("Monitoring Review", monitoring_review_frequency)
             if meta.get("probation_next_step"):
-                st.caption(f"Probation next step: `{meta.get('probation_next_step')}`")
+                st.caption(f"다음 probation 액션: `{meta.get('probation_next_step')}`")
             probation_rationale = list(meta.get("probation_rationale") or [])
             if probation_rationale:
-                st.caption("Probation rationale: " + ", ".join(f"`{item}`" for item in probation_rationale))
+                st.caption("Probation 판단 근거: " + ", ".join(f"`{item}`" for item in probation_rationale))
             monitoring_focus = list(meta.get("monitoring_focus") or [])
             if monitoring_focus:
-                st.caption("Monitoring focus: " + ", ".join(f"`{item}`" for item in monitoring_focus))
+                st.caption("지켜볼 항목: " + ", ".join(f"`{item}`" for item in monitoring_focus))
             monitoring_breach_signals = list(meta.get("monitoring_breach_signals") or [])
             if monitoring_breach_signals:
-                st.caption("Monitoring breach signals: " + ", ".join(f"`{item}`" for item in monitoring_breach_signals))
+                st.caption("경고 신호: " + ", ".join(f"`{item}`" for item in monitoring_breach_signals))
 
             if monitoring_status == "breach_watch":
                 st.warning(
@@ -3630,12 +3246,14 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
                     "지금은 monitoring watch signal이 있어서, routine review보다 조금 더 보수적으로 월별 확인을 이어가는 편이 좋습니다."
                 )
             elif monitoring_status == "routine_review":
-                st.success(
-                    "현재 기준에서는 routine monthly review로 probation을 이어갈 수 있는 상태입니다."
-                )
+                st.success("현재 기준에서는 routine monthly review로 probation을 이어갈 수 있는 상태입니다.")
 
         if meta.get("deployment_readiness_status"):
-            st.markdown("##### Deployment Readiness Checklist")
+            st.markdown("##### Deployment Readiness")
+            st.caption(
+                "이 섹션은 실제 배치 직전 체크리스트입니다. "
+                "pass / watch / fail / unavailable 개수를 보고 지금 배치를 열어도 되는지 판단합니다."
+            )
             deployment_status = str(meta.get("deployment_readiness_status") or "-")
             deployment_next_step = str(meta.get("deployment_readiness_next_step") or "-")
             deployment_cols = st.columns(6, gap="small")
@@ -3646,71 +3264,127 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
             deployment_cols[4].metric("Fail", str(int(meta.get("deployment_check_fail_count") or 0)))
             deployment_cols[5].metric("Unavailable", str(int(meta.get("deployment_check_unavailable_count") or 0)))
 
-            checklist_rows = list(meta.get("deployment_checklist_rows") or [])
-            if checklist_rows:
-                st.dataframe(pd.DataFrame(checklist_rows), use_container_width=True, hide_index=True)
-
             deployment_rationale = list(meta.get("deployment_readiness_rationale") or [])
             if deployment_rationale:
-                st.caption("Deployment rationale: " + ", ".join(f"`{item}`" for item in deployment_rationale))
+                st.caption("Deployment 판단 근거: " + ", ".join(f"`{item}`" for item in deployment_rationale))
+
+            checklist_rows = list(meta.get("deployment_checklist_rows") or [])
+            if checklist_rows:
+                with st.expander("Checklist 상세 보기", expanded=deployment_status in {"review_required", "blocked"}):
+                    st.dataframe(pd.DataFrame(checklist_rows), use_container_width=True, hide_index=True)
 
             if deployment_status == "small_capital_ready":
-                st.success(
-                    "현재 checklist 기준에서는 small-capital trial까지 비교적 자연스럽게 볼 수 있는 상태입니다."
-                )
+                st.success("현재 checklist 기준에서는 small-capital trial까지 비교적 자연스럽게 볼 수 있는 상태입니다.")
             elif deployment_status == "small_capital_ready_with_review":
                 st.info(
                     "현재 checklist 기준에서는 소액 trial은 가능하지만, watch / unavailable 항목을 같이 보면서 더 보수적으로 운용하는 편이 맞습니다."
                 )
             elif deployment_status == "paper_only":
-                st.info(
-                    "지금은 deployment-ready보다는 paper probation 단계로 두는 편이 맞습니다."
-                )
+                st.info("지금은 deployment-ready보다는 paper probation 단계로 두는 편이 맞습니다.")
             elif deployment_status == "review_required":
-                st.warning(
-                    "failed checklist 항목이 있어, 수동 review 없이 바로 비중을 늘리는 것은 보수적이지 않습니다."
-                )
+                st.warning("failed checklist 항목이 있어, 수동 review 없이 바로 비중을 늘리는 것은 보수적이지 않습니다.")
             elif deployment_status == "blocked":
+                st.warning("현재 checklist 기준에서는 deployment를 열기보다 blocker를 먼저 해결하는 편이 맞습니다.")
+
+    with review_tab:
+        st.caption(
+            "이 섹션은 왜 이런 결론이 나왔는지 보여줍니다. "
+            "benchmark 대비 성과, 최근 구간 consistency, 정책 기준 통과 여부를 함께 보시면 됩니다."
+        )
+
+        if meta.get("benchmark_available") or meta.get("benchmark_contract") or meta.get("benchmark_ticker"):
+            st.markdown("##### Benchmark / Validation 요약")
+            benchmark_cols = st.columns(6, gap="small")
+            benchmark_cols[0].metric("Benchmark Contract", _benchmark_contract_value_to_label(meta.get("benchmark_contract")))
+            benchmark_cols[1].metric(
+                "Benchmark",
+                str(
+                    meta.get("benchmark_label")
+                    if meta.get("benchmark_contract") == STRICT_BENCHMARK_CONTRACT_CANDIDATE_EQUAL_WEIGHT
+                    else meta.get("benchmark_ticker") or meta.get("benchmark_label") or "-"
+                ),
+            )
+            benchmark_cols[2].metric("Benchmark Available", "Yes" if meta.get("benchmark_available") else "No")
+            if meta.get("benchmark_symbol_count") is not None:
+                benchmark_cols[3].metric("Benchmark Universe", str(int(meta.get("benchmark_symbol_count") or 0)))
+            if meta.get("benchmark_eligible_symbol_count") is not None:
+                benchmark_cols[4].metric("Benchmark Eligible", str(int(meta.get("benchmark_eligible_symbol_count") or 0)))
+            if meta.get("benchmark_end_balance") is not None:
+                benchmark_cols[5].metric("Benchmark End Balance", f"{float(meta.get('benchmark_end_balance')):,.1f}")
+            summary_lines: list[str] = []
+            if meta.get("benchmark_cagr") is not None:
+                summary_lines.append(f"Benchmark CAGR `{float(meta.get('benchmark_cagr')):.2%}`")
+            if meta.get("net_cagr_spread") is not None:
+                summary_lines.append(f"Net CAGR Spread `{float(meta.get('net_cagr_spread')):.2%}`")
+            if meta.get("net_excess_end_balance") is not None:
+                summary_lines.append(f"Net Excess End Balance `{float(meta.get('net_excess_end_balance')):,.1f}`")
+            if meta.get("benchmark_row_coverage") is not None:
+                summary_lines.append(f"Coverage `{float(meta.get('benchmark_row_coverage')):.2%}`")
+            if summary_lines:
+                st.caption(" | ".join(summary_lines))
+            if meta.get("benchmark_contract") == STRICT_BENCHMARK_CONTRACT_CANDIDATE_EQUAL_WEIGHT:
+                st.caption(
+                    "Candidate-universe equal-weight benchmark는 같은 후보 universe를 단순히 균등 보유했을 때의 reference curve입니다."
+                )
+
+        if meta.get("benchmark_available"):
+            st.markdown("##### Validation Surface")
+            st.caption(
+                "이 값들은 benchmark 대비 최근 구간에서 얼마나 자주 뒤처졌는지, 낙폭이 얼마나 깊었는지를 요약합니다."
+            )
+            validation_cols = st.columns(4, gap="small")
+            validation_cols[0].metric("Validation Status", str(meta.get("validation_status") or "normal").upper())
+            if meta.get("strategy_max_drawdown") is not None:
+                validation_cols[1].metric("Strategy Max Drawdown", f"{float(meta.get('strategy_max_drawdown')):.2%}")
+            if meta.get("benchmark_max_drawdown") is not None:
+                validation_cols[2].metric("Benchmark Max Drawdown", f"{float(meta.get('benchmark_max_drawdown')):.2%}")
+            validation_cols[3].metric("Rolling Window", str(meta.get("validation_window_label") or "-"))
+
+            rolling_cols = st.columns(4, gap="small")
+            if meta.get("rolling_underperformance_share") is not None:
+                rolling_cols[0].metric("Underperformance Share", f"{float(meta.get('rolling_underperformance_share')):.2%}")
+            rolling_cols[1].metric("Current Underperf Streak", str(int(meta.get("rolling_underperformance_current_streak") or 0)))
+            rolling_cols[2].metric("Longest Underperf Streak", str(int(meta.get("rolling_underperformance_longest_streak") or 0)))
+            if meta.get("rolling_underperformance_worst_excess_return") is not None:
+                rolling_cols[3].metric(
+                    "Worst Rolling Excess",
+                    f"{float(meta.get('rolling_underperformance_worst_excess_return')):.2%}",
+                )
+            _render_value_list_caption("Validation watch signals", meta.get("validation_watch_signals"))
+
+            status = str(meta.get("validation_status") or "normal")
+            if status == "caution":
                 st.warning(
-                    "현재 checklist 기준에서는 deployment를 열기보다 blocker를 먼저 해결하는 편이 맞습니다."
+                    "Benchmark-relative drawdown 또는 rolling underperformance 진단이 높게 나왔습니다. "
+                    "실전 승격 전 재검토가 필요한 상태로 보는 편이 맞습니다."
+                )
+            elif status == "watch":
+                st.info(
+                    "일부 benchmark-relative validation 지표가 watch 상태입니다. "
+                    "추가 구간 검증이나 contract robustness 확인이 권장됩니다."
                 )
 
         if meta.get("rolling_review_status") or meta.get("out_of_sample_review_status"):
-            st.markdown("##### Rolling / Out-Of-Sample Review")
+            st.markdown("##### 최근 구간 / Out-of-Sample Review")
+            st.caption(
+                "최근 구간과 전후반 구간을 따로 봐서, 특정 시기 우연인지 아니면 비교적 꾸준한지 확인하는 섹션입니다."
+            )
             review_cols = st.columns(5, gap="small")
             review_cols[0].metric("Rolling Review", _review_status_value_to_label(meta.get("rolling_review_status")))
             review_cols[1].metric("Rolling Window", str(meta.get("rolling_review_window_label") or "-"))
             if meta.get("rolling_review_recent_excess_return") is not None:
-                review_cols[2].metric(
-                    "Recent Excess",
-                    f"{float(meta.get('rolling_review_recent_excess_return')):.2%}",
-                )
+                review_cols[2].metric("Recent Excess", f"{float(meta.get('rolling_review_recent_excess_return')):.2%}")
             if meta.get("rolling_review_recent_drawdown_gap") is not None:
-                review_cols[3].metric(
-                    "Recent DD Gap",
-                    f"{float(meta.get('rolling_review_recent_drawdown_gap')):.2%}",
-                )
-            review_cols[4].metric(
-                "OOS Review",
-                _review_status_value_to_label(meta.get("out_of_sample_review_status")),
-            )
+                review_cols[3].metric("Recent DD Gap", f"{float(meta.get('rolling_review_recent_drawdown_gap')):.2%}")
+            review_cols[4].metric("OOS Review", _review_status_value_to_label(meta.get("out_of_sample_review_status")))
 
             split_cols = st.columns(3, gap="small")
             if meta.get("out_of_sample_in_sample_excess_return") is not None:
-                split_cols[0].metric(
-                    "In-Sample Excess",
-                    f"{float(meta.get('out_of_sample_in_sample_excess_return')):.2%}",
-                )
+                split_cols[0].metric("In-Sample Excess", f"{float(meta.get('out_of_sample_in_sample_excess_return')):.2%}")
             if meta.get("out_of_sample_out_sample_excess_return") is not None:
-                split_cols[1].metric(
-                    "Out-Sample Excess",
-                    f"{float(meta.get('out_of_sample_out_sample_excess_return')):.2%}",
-                )
+                split_cols[1].metric("Out-Sample Excess", f"{float(meta.get('out_of_sample_out_sample_excess_return')):.2%}")
             if meta.get("out_of_sample_excess_change") is not None:
-                split_cols[2].metric(
-                    "Excess Change",
-                    f"{float(meta.get('out_of_sample_excess_change')):.2%}",
-                )
+                split_cols[2].metric("Excess Change", f"{float(meta.get('out_of_sample_excess_change')):.2%}")
 
             if meta.get("rolling_review_recent_start") is not None and meta.get("rolling_review_recent_end") is not None:
                 st.caption(
@@ -3728,9 +3402,7 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
                 )
             out_of_sample_review_rationale = list(meta.get("out_of_sample_review_rationale") or [])
             if out_of_sample_review_rationale:
-                st.caption(
-                    "Out-of-sample rationale: " + ", ".join(f"`{item}`" for item in out_of_sample_review_rationale)
-                )
+                st.caption("Out-of-sample rationale: " + ", ".join(f"`{item}`" for item in out_of_sample_review_rationale))
 
             if str(meta.get("rolling_review_status") or "").strip().lower() == "caution" or str(
                 meta.get("out_of_sample_review_status") or ""
@@ -3746,56 +3418,259 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
                     "최근 구간 review는 완전히 깨지진 않았지만, current regime robustness를 조금 더 보수적으로 해석하는 편이 좋습니다."
                 )
 
-    if benchmark_chart_df is not None and result_df is not None:
-        strategy_line = (
-            bundle["chart_df"][["Date", "Total Balance"]]
-            .rename(columns={"Total Balance": bundle["strategy_name"]})
-            .set_index("Date")
-        )
-        benchmark_line = (
-            benchmark_chart_df[["Date", "Benchmark Total Balance"]]
-            .rename(
-                columns={
-                    "Benchmark Total Balance": str(
-                        meta.get("benchmark_label") or meta.get("benchmark_ticker") or "Benchmark"
-                    )
-                }
+        if (
+            meta.get("benchmark_policy_status")
+            or meta.get("liquidity_policy_status")
+            or meta.get("validation_policy_status")
+            or meta.get("guardrail_policy_status")
+        ):
+            with st.expander("세부 정책 기준 보기", expanded=False):
+                st.caption(
+                    "아래 항목은 승격 판단에 사용된 세부 정책 기준입니다. "
+                    "평소에는 summary만 보고, 정책이 왜 `watch`나 `caution`인지 확인할 때만 펼쳐 보면 됩니다."
+                )
+
+                if meta.get("benchmark_policy_status"):
+                    st.markdown("##### Benchmark Policy")
+                    policy_cols = st.columns(5, gap="small")
+                    policy_cols[0].metric("Policy Status", str(meta.get("benchmark_policy_status") or "normal").upper())
+                    if meta.get("promotion_min_benchmark_coverage") is not None:
+                        policy_cols[1].metric("Min Coverage", f"{float(meta.get('promotion_min_benchmark_coverage') or 0.0):.0%}")
+                    if meta.get("benchmark_row_coverage") is not None:
+                        policy_cols[2].metric("Actual Coverage", f"{float(meta.get('benchmark_row_coverage') or 0.0):.2%}")
+                    if meta.get("promotion_min_net_cagr_spread") is not None:
+                        policy_cols[3].metric("Min Net CAGR Spread", f"{float(meta.get('promotion_min_net_cagr_spread') or 0.0):.0%}")
+                    if meta.get("net_cagr_spread") is not None:
+                        policy_cols[4].metric("Actual Net CAGR Spread", f"{float(meta.get('net_cagr_spread') or 0.0):.2%}")
+                    _render_value_list_caption("Benchmark policy signals", meta.get("benchmark_policy_watch_signals"))
+                    policy_status = str(meta.get("benchmark_policy_status") or "normal").lower()
+                    if policy_status == "caution":
+                        st.warning("현재 benchmark policy 기준에서는 coverage 또는 상대 CAGR이 충분하지 않습니다. 승격 전 추가 검토가 필요한 상태입니다.")
+                    elif policy_status == "watch":
+                        st.info("Benchmark policy 기준에서 일부 watch 신호가 있습니다. 실전 승격 전 robustness 확인을 더 하는 편이 좋습니다.")
+
+                if meta.get("liquidity_policy_status"):
+                    st.markdown("##### Liquidity Policy")
+                    liquidity_policy_cols = st.columns(4, gap="small")
+                    liquidity_policy_cols[0].metric("Policy Status", str(meta.get("liquidity_policy_status") or "normal").upper())
+                    if meta.get("promotion_min_liquidity_clean_coverage") is not None:
+                        liquidity_policy_cols[1].metric("Min Clean Coverage", f"{float(meta.get('promotion_min_liquidity_clean_coverage') or 0.0):.0%}")
+                    if meta.get("liquidity_clean_coverage") is not None:
+                        liquidity_policy_cols[2].metric("Actual Clean Coverage", f"{float(meta.get('liquidity_clean_coverage') or 0.0):.2%}")
+                    if meta.get("liquidity_excluded_active_rows") is not None:
+                        liquidity_policy_cols[3].metric("Liquidity Excluded Rows", str(int(meta.get("liquidity_excluded_active_rows") or 0)))
+                    _render_value_list_caption("Liquidity policy signals", meta.get("liquidity_policy_watch_signals"))
+                    liquidity_policy_status = str(meta.get("liquidity_policy_status") or "normal").lower()
+                    if liquidity_policy_status == "caution":
+                        st.warning("현재 liquidity policy 기준에서는 유동성 제외가 너무 자주 발생했습니다. 실전 승격 전 후보군 또는 investability 계약을 다시 점검하는 편이 맞습니다.")
+                    elif liquidity_policy_status == "watch":
+                        st.info("Liquidity policy 기준에서 watch 신호가 있습니다. 유동성 제외 빈도와 후보군 구성을 한 번 더 검토하는 편이 좋습니다.")
+                    elif liquidity_policy_status == "unavailable":
+                        st.info("Liquidity policy는 현재 unavailable 상태입니다. 실전 승격 기준으로 보려면 `Min Avg Dollar Volume 20D` 필터를 함께 사용하는 편이 좋습니다.")
+
+                if meta.get("validation_policy_status"):
+                    st.markdown("##### Validation Policy")
+                    validation_policy_cols = st.columns(5, gap="small")
+                    validation_policy_cols[0].metric("Policy Status", str(meta.get("validation_policy_status") or "normal").upper())
+                    if meta.get("promotion_max_underperformance_share") is not None:
+                        validation_policy_cols[1].metric("Max Underperf Share", f"{float(meta.get('promotion_max_underperformance_share') or 0.0):.0%}")
+                    if meta.get("rolling_underperformance_share") is not None:
+                        validation_policy_cols[2].metric("Actual Underperf Share", f"{float(meta.get('rolling_underperformance_share') or 0.0):.2%}")
+                    if meta.get("promotion_min_worst_rolling_excess_return") is not None:
+                        validation_policy_cols[3].metric("Min Worst Excess", f"{float(meta.get('promotion_min_worst_rolling_excess_return') or 0.0):.0%}")
+                    if meta.get("rolling_underperformance_worst_excess_return") is not None:
+                        validation_policy_cols[4].metric("Actual Worst Excess", f"{float(meta.get('rolling_underperformance_worst_excess_return') or 0.0):.2%}")
+                    _render_value_list_caption("Validation policy signals", meta.get("validation_policy_watch_signals"))
+                    validation_policy_status = str(meta.get("validation_policy_status") or "normal").lower()
+                    if validation_policy_status == "caution":
+                        st.warning("현재 validation policy 기준에서는 rolling underperformance robustness가 충분하지 않습니다. 실전 승격 전 계약을 더 보수적으로 보는 편이 맞습니다.")
+                    elif validation_policy_status == "watch":
+                        st.info("Validation policy 기준에서 watch 신호가 있습니다. 추가 구간 robustness 검증을 더 하는 편이 좋습니다.")
+                    elif validation_policy_status == "unavailable":
+                        st.info("Validation policy는 현재 unavailable 상태입니다. aligned benchmark validation history가 있어야 승격 기준으로 해석할 수 있습니다.")
+
+                if meta.get("guardrail_policy_status"):
+                    st.markdown("##### Portfolio Guardrail Policy")
+                    guardrail_policy_cols = st.columns(5, gap="small")
+                    guardrail_policy_cols[0].metric("Policy Status", str(meta.get("guardrail_policy_status") or "normal").upper())
+                    if meta.get("promotion_max_strategy_drawdown") is not None:
+                        guardrail_policy_cols[1].metric("Max Strategy DD", f"{float(meta.get('promotion_max_strategy_drawdown') or 0.0):.0%}")
+                    if meta.get("strategy_max_drawdown") is not None:
+                        guardrail_policy_cols[2].metric("Actual Strategy DD", f"{float(meta.get('strategy_max_drawdown') or 0.0):.2%}")
+                    if meta.get("promotion_max_drawdown_gap_vs_benchmark") is not None:
+                        guardrail_policy_cols[3].metric("Max DD Gap", f"{float(meta.get('promotion_max_drawdown_gap_vs_benchmark') or 0.0):.0%}")
+                    if meta.get("drawdown_gap_vs_benchmark") is not None:
+                        guardrail_policy_cols[4].metric("Actual DD Gap", f"{float(meta.get('drawdown_gap_vs_benchmark') or 0.0):.2%}")
+                    _render_value_list_caption("Guardrail policy signals", meta.get("guardrail_policy_watch_signals"))
+                    guardrail_policy_status = str(meta.get("guardrail_policy_status") or "normal").lower()
+                    if guardrail_policy_status == "caution":
+                        st.warning("현재 portfolio guardrail policy 기준에서는 낙폭 방어가 충분하지 않습니다. 실전 승격 전 drawdown contract를 더 보수적으로 보는 편이 맞습니다.")
+                    elif guardrail_policy_status == "watch":
+                        st.info("Portfolio guardrail policy 기준에서 watch 신호가 있습니다. 최대 낙폭과 benchmark 대비 drawdown gap을 한 번 더 점검하는 편이 좋습니다.")
+                    elif guardrail_policy_status == "unavailable":
+                        st.info("Portfolio guardrail policy는 현재 unavailable 상태입니다. 실전 승격 기준으로 보려면 usable benchmark drawdown history가 필요합니다.")
+
+        if benchmark_chart_df is not None and result_df is not None:
+            st.markdown("##### Strategy vs Benchmark Chart")
+            st.caption("전략의 net 곡선과 benchmark reference curve를 겹쳐서 봅니다. 최근 구간에서 벌어지는 방향을 읽을 때 유용합니다.")
+            strategy_line = (
+                bundle["chart_df"][["Date", "Total Balance"]]
+                .rename(columns={"Total Balance": bundle["strategy_name"]})
+                .set_index("Date")
             )
-            .set_index("Date")
-        )
-        overlay_df = pd.concat([strategy_line, benchmark_line], axis=1).sort_index()
-        _render_compare_altair_chart(
-            overlay_df,
-            title="Net Strategy vs Benchmark",
-            y_title="Total Balance",
-            show_end_markers=True,
-        )
+            benchmark_line = (
+                benchmark_chart_df[["Date", "Benchmark Total Balance"]]
+                .rename(
+                    columns={
+                        "Benchmark Total Balance": str(
+                            meta.get("benchmark_label") or meta.get("benchmark_ticker") or "Benchmark"
+                        )
+                    }
+                )
+                .set_index("Date")
+            )
+            overlay_df = pd.concat([strategy_line, benchmark_line], axis=1).sort_index()
+            _render_compare_altair_chart(
+                overlay_df,
+                title="Net Strategy vs Benchmark",
+                y_title="Total Balance",
+                show_end_markers=True,
+            )
+            st.caption("전략은 비용 반영 후 `net` 곡선이고, benchmark는 비용을 반영하지 않은 단순 reference curve입니다.")
+
+    with execution_tab:
         st.caption(
-            "전략은 비용 반영 후 `net` 곡선이고, benchmark는 비용을 반영하지 않은 단순 reference curve입니다."
+            "이 섹션은 이 전략을 실제로 운용할 때 드는 부담을 봅니다. "
+            "가격/유동성/turnover/비용/ETF 운용 가능성, 그리고 실제 방어 규칙이 여기에 모여 있습니다."
         )
 
-    detail_cols = []
-    if result_df is not None and "Estimated Cost" in result_df.columns:
-        detail_cols.append("Date")
-        detail_cols.extend(
-            [
-                column
-                for column in [
-                    "Gross Total Balance",
-                    "Total Balance",
-                    "Turnover",
-                    "Estimated Cost",
-                    "Cumulative Estimated Cost",
+        st.markdown("##### 실행 계약 요약")
+        top_cols = st.columns(6, gap="small")
+        top_cols[0].metric("Minimum Price", f"{float(meta.get('min_price_filter') or 0.0):.2f}")
+        top_cols[1].metric("Minimum History", f"{int(meta.get('min_history_months_filter') or 0)}M")
+        top_cols[2].metric("Min Avg Dollar Volume 20D", f"{float(meta.get('min_avg_dollar_volume_20d_m_filter') or 0.0):.1f}M")
+        top_cols[3].metric("Transaction Cost", f"{float(meta.get('transaction_cost_bps') or 0.0):.1f} bps")
+        top_cols[4].metric("Avg Turnover", f"{float(meta.get('avg_turnover') or 0.0):.2%}")
+        top_cols[5].metric("Estimated Cost Total", f"{float(meta.get('estimated_cost_total') or 0.0):,.1f}")
+        if meta.get("liquidity_excluded_total") is not None:
+            st.caption(
+                "Liquidity excluded candidates: "
+                f"`{int(meta.get('liquidity_excluded_total') or 0)}` total, "
+                f"`{int(meta.get('liquidity_excluded_active_rows') or 0)}` rows."
+            )
+        if meta.get("liquidity_clean_coverage") is not None:
+            st.caption("Liquidity clean coverage on rebalance rows: " f"`{float(meta.get('liquidity_clean_coverage') or 0.0):.2%}`")
+
+        if (
+            meta.get("promotion_min_etf_aum_b") is not None
+            or meta.get("promotion_max_bid_ask_spread_pct") is not None
+            or meta.get("etf_operability_status")
+        ):
+            st.markdown("##### ETF 운용 가능성")
+            st.caption("ETF 전략에서만 보이는 항목입니다. 현재 시점 기준으로 ETF 규모와 bid-ask spread가 너무 불안정하지 않은지 확인합니다.")
+            etf_cols = st.columns(5, gap="small")
+            etf_cols[0].metric("Policy Status", str(meta.get("etf_operability_status") or "unavailable").upper())
+            if meta.get("promotion_min_etf_aum_b") is not None:
+                etf_cols[1].metric("Min ETF AUM", f"${float(meta.get('promotion_min_etf_aum_b') or 0.0):.1f}B")
+            if meta.get("promotion_max_bid_ask_spread_pct") is not None:
+                etf_cols[2].metric("Max Bid-Ask Spread", f"{float(meta.get('promotion_max_bid_ask_spread_pct') or 0.0):.2%}")
+            if meta.get("etf_operability_clean_coverage") is not None:
+                etf_cols[3].metric("Clean Coverage", f"{float(meta.get('etf_operability_clean_coverage') or 0.0):.2%}")
+            if meta.get("etf_operability_clean_pass_count") is not None:
+                etf_cols[4].metric("Clean Pass", f"{int(meta.get('etf_operability_clean_pass_count') or 0)} / {int(meta.get('etf_symbol_count') or 0)}")
+            if meta.get("etf_operability_data_coverage") is not None:
+                st.caption(f"ETF operability data coverage: `{float(meta.get('etf_operability_data_coverage') or 0.0):.2%}`")
+            if meta.get("etf_aum_pass_count") is not None or meta.get("etf_spread_pass_count") is not None:
+                st.caption(
+                    "Pass counts: "
+                    f"AUM `{int(meta.get('etf_aum_pass_count') or 0)}` / `{int(meta.get('etf_symbol_count') or 0)}`, "
+                    f"Spread `{int(meta.get('etf_spread_pass_count') or 0)}` / `{int(meta.get('etf_symbol_count') or 0)}`"
+                )
+            with st.expander("문제 ETF / 누락 데이터 보기", expanded=False):
+                _render_value_list_caption("AUM-below-policy ETF", meta.get("etf_aum_failed_symbols"))
+                _render_value_list_caption("Spread-above-policy ETF", meta.get("etf_spread_failed_symbols"))
+                _render_value_list_caption("Missing ETF operability fields", meta.get("etf_operability_missing_data_symbols"))
+                _render_value_list_caption("ETF operability signals", meta.get("etf_operability_watch_signals"))
+            etf_status = str(meta.get("etf_operability_status") or "unavailable").lower()
+            if etf_status == "caution":
+                st.warning("현재 ETF operability policy 기준에서는 자산 규모나 bid-ask spread가 충분히 안정적이지 않습니다. 실전 승격 전 ETF universe를 다시 점검하는 편이 맞습니다.")
+            elif etf_status == "watch":
+                st.info("ETF operability policy 기준에서 일부 watch 신호가 있습니다. 현재 AUM과 bid-ask spread를 한 번 더 점검하는 편이 좋습니다.")
+            elif etf_status == "unavailable":
+                st.info("ETF operability policy는 현재 unavailable 상태입니다. ETF asset profile을 새로 수집한 뒤 다시 해석하는 편이 맞습니다.")
+
+        if meta.get("underperformance_guardrail_enabled") or meta.get("drawdown_guardrail_enabled"):
+            st.markdown("##### 실제 방어 규칙")
+            st.caption(
+                "이 섹션은 경고만 보여주는 것이 아니라, 조건이 깨지면 실제 rebalance를 더 보수적으로 만들 수 있는 규칙입니다."
+            )
+            if meta.get("underperformance_guardrail_enabled"):
+                guardrail_cols = st.columns(4, gap="small")
+                guardrail_cols[0].metric("Underperformance Guardrail", "ON")
+                guardrail_cols[1].metric(
+                    "Window",
+                    f"{int(meta.get('underperformance_guardrail_window_months') or STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS)}M",
+                )
+                guardrail_cols[2].metric(
+                    "Threshold",
+                    f"{float(meta.get('underperformance_guardrail_threshold') or STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD):.0%}",
+                )
+                guardrail_cols[3].metric("Trigger Count", str(int(meta.get("underperformance_guardrail_trigger_count") or 0)))
+                if meta.get("underperformance_guardrail_trigger_share") is not None:
+                    st.caption(
+                        "Guardrail triggered on "
+                        f"`{float(meta.get('underperformance_guardrail_trigger_share')):.2%}` of recorded rows."
+                    )
+            if meta.get("drawdown_guardrail_enabled"):
+                drawdown_guardrail_cols = st.columns(5, gap="small")
+                drawdown_guardrail_cols[0].metric("Drawdown Guardrail", "ON")
+                drawdown_guardrail_cols[1].metric(
+                    "Window",
+                    f"{int(meta.get('drawdown_guardrail_window_months') or STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_WINDOW_MONTHS)}M",
+                )
+                drawdown_guardrail_cols[2].metric(
+                    "Strategy DD Threshold",
+                    f"{float(meta.get('drawdown_guardrail_strategy_threshold') or STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD):.0%}",
+                )
+                drawdown_guardrail_cols[3].metric(
+                    "DD Gap Threshold",
+                    f"{float(meta.get('drawdown_guardrail_gap_threshold') or STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD):.0%}",
+                )
+                drawdown_guardrail_cols[4].metric("Trigger Count", str(int(meta.get("drawdown_guardrail_trigger_count") or 0)))
+                if meta.get("drawdown_guardrail_trigger_share") is not None:
+                    st.caption(
+                        "Drawdown guardrail triggered on "
+                        f"`{float(meta.get('drawdown_guardrail_trigger_share')):.2%}` of recorded rows."
+                    )
+
+    with detail_tab:
+        st.caption(
+            "이 섹션은 원자료 확인용입니다. "
+            "요약 판단은 앞의 세 탭에서 끝내고, 여기서는 세부 숫자나 표를 다시 확인할 때만 보시면 됩니다."
+        )
+
+        detail_cols: list[str] = []
+        if result_df is not None and "Estimated Cost" in result_df.columns:
+            detail_cols.append("Date")
+            detail_cols.extend(
+                [
+                    column
+                    for column in [
+                        "Gross Total Balance",
+                        "Total Balance",
+                        "Turnover",
+                        "Estimated Cost",
+                        "Cumulative Estimated Cost",
+                    ]
+                    if column in result_df.columns
                 ]
-                if column in result_df.columns
-            ]
-        )
-        st.markdown("##### Cost Detail Preview")
-        st.dataframe(result_df[detail_cols].head(12), use_container_width=True, hide_index=True)
+            )
+            st.markdown("##### Cost Detail Preview")
+            st.dataframe(result_df[detail_cols].head(12), use_container_width=True, hide_index=True)
 
-    if benchmark_summary_df is not None:
-        st.markdown("##### Benchmark Summary")
-        st.dataframe(benchmark_summary_df, use_container_width=True, hide_index=True)
+        if benchmark_summary_df is not None:
+            st.markdown("##### Benchmark Summary")
+            st.dataframe(benchmark_summary_df, use_container_width=True, hide_index=True)
 
 
 def _build_compare_highlight_rows(bundles: list[dict]) -> pd.DataFrame:

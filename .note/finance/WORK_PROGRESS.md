@@ -3740,3 +3740,19 @@ Keep entries append-only and concise.
   - `Shortlist Status`
   - `Shortlist Next Step`
   - `Execution Context`
+
+### 2026-04-05 - Real-Money 탭 UX를 판단 순서 중심으로 재구성
+
+- Reorganized the single-strategy `Real-Money` tab into four clearer groups:
+  - `현재 판단`
+  - `검토 근거`
+  - `실행 부담`
+  - `상세 데이터`
+- Added a top-level reading guide so users can understand:
+  - what to look at first
+  - what explains the current decision
+  - what belongs to operability / cost burden
+- Moved lower-signal details into:
+  - collapsed policy/detail areas
+  - the final detail tab
+- Updated the Phase 13 checklist wording so it points to the new `Real-Money` internal tab structure.

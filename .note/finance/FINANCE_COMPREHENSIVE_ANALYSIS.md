@@ -291,6 +291,19 @@ Analysis / Presentation
   single `Real-Money`, `Execution Context`, compare `Strategy Highlights`, compare meta table까지 같이 연결된다.
   현재는 deployment를 자동 승인하는 rule이 아니라,
   실제 운용 전 점검표를 product surface에서 읽는 summary layer다.
+- 이후 `Real-Money` 탭 UX도 한 번 더 정리되어,
+  결과 surface는 이제
+  - `현재 판단`
+  - `검토 근거`
+  - `실행 부담`
+  - `상세 데이터`
+  네 묶음으로 읽히게 되었다.
+  이 변경은 runtime/meta 계산을 바꾼 것이 아니라,
+  `Promotion / Shortlist / Probation / Deployment`를 먼저 보게 하고,
+  benchmark / rolling / policy는 이유 확인용으로,
+  cost / liquidity / ETF operability는 실행 부담 확인용으로 다시 배치한 UI-layer 정리다.
+  낮은 신호의 raw detail은 expander나 마지막 상세 탭으로 내려가서,
+  사용자가 "지금 상태가 뭔지"를 먼저 판단하기 쉬운 구조가 되었다.
 - 이와 함께 `GTAA`의 현재 기본 preset/sample universe는
   commodity sleeve에서 `DBC` 대신 `PDBC`를 사용하도록 조정되었다.
 - GTAA preset surface는 현재 기본 preset과,

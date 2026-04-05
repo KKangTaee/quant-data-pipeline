@@ -20,6 +20,7 @@
 - `Backtest > Single Strategy`
 - `Quality / Value / Quality + Value > Strict Annual`
 - 실행 후 결과 영역 상단 탭 중 `Real-Money` 탭으로 이동
+- `Real-Money` 내부의 `현재 판단` 탭에서 먼저 확인
 - 같은 내용이 `Execution Context`에도 요약되어 있는지 같이 확인
 - 확인:
   - `Promotion Decision`
@@ -31,6 +32,7 @@
 ## 2. ETF Second-Pass Guardrail Surface
 
 - `GTAA`, `Risk Parity Trend`, `Dual Momentum`
+- `Real-Money > 실행 부담`
 - 확인:
   - `Underperformance Guardrail`
   - `Drawdown Guardrail`
@@ -39,7 +41,7 @@
 
 ## 3. Probation And Monitoring Workflow
 
-- single `Real-Money`
+- single `Real-Money > 현재 판단`
 - 확인:
   - `Probation`
   - `Stage`
@@ -56,6 +58,7 @@
 ## 4. Rolling / Out-Of-Sample Review
 
 - benchmark가 있는 strict annual 또는 ETF run
+- `Real-Money > 검토 근거`
 - 확인:
   - `Rolling Review`
   - `Rolling Window`
@@ -70,13 +73,13 @@
 
 ## 5. Deployment-Readiness Checklist
 
-- single `Real-Money`
+- single `Real-Money > 현재 판단`
 - 확인:
-  - `Deployment Readiness Checklist` 섹션이 보이는지
+  - `Deployment Readiness` 섹션이 보이는지
   - `Status`
   - `Next Step`
   - `Pass / Watch / Fail / Unavailable`
-  - checklist row table
+  - `Checklist 상세 보기` expander 안의 checklist row table
   - rationale가 보이는지
 
 ## 6. Compare & Portfolio Builder Surface

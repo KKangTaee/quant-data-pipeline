@@ -6366,3 +6366,30 @@ Do not copy full chat transcripts. Keep only the durable result.
 - Durable implication:
   - Phase 13 manual QA now has a clearer UI path
   - the core operational terms are no longer only explained in chat and can be reused across later phases
+
+### 2026-04-05 - The Real-Money tab should be reorganized around user decision flow rather than raw policy order
+
+- Request topic:
+  - the user felt that the `Real-Money` result tab contained too much information in a fragmented order and wanted a more intuitive UX with short explanations
+- Interpreted goal:
+  - keep the same runtime/meta semantics, but restructure the UI so users can judge the current state more quickly without reading every policy block linearly
+- Result:
+  - reorganized the `Real-Money` tab into four internal tabs:
+    - `현재 판단`
+    - `검토 근거`
+    - `실행 부담`
+    - `상세 데이터`
+  - added a short reading guide at the top of the tab
+  - moved lower-signal detail to:
+    - a collapsed policy expander
+    - the final detail tab
+  - kept core status blocks first:
+    - promotion
+    - shortlist
+    - probation / monitoring
+    - deployment readiness
+  - placed benchmark / rolling / out-of-sample review into the evidence layer
+  - placed cost / liquidity / ETF operability / actual guardrails into the operability layer
+- Durable implication:
+  - the `Real-Money` tab now follows the operator’s decision order rather than the implementation order
+  - future checklist wording should reference the internal `Real-Money` tabs when guiding manual QA
