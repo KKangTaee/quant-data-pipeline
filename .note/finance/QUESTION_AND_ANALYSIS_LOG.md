@@ -6257,3 +6257,32 @@ Do not copy full chat transcripts. Keep only the durable result.
 - Durable implication:
   - Phase 13 can now express "what to do next" as an operational review workflow, not only as a static shortlist label
   - this keeps the project conservative: it adds deployment-readiness guidance without turning current-snapshot ETF operability data into a look-ahead-prone actual block rule
+
+### 2026-04-05 - The next Phase 13 step should add rolling and out-of-sample review before any stronger ETF operability block rule
+
+- Request topic:
+  - continue Phase 13 after shortlist, ETF guardrails, and probation / monitoring workflow
+- Interpreted goal:
+  - add a more realistic deployment-readiness review layer that checks whether the strategy still behaves acceptably in recent regimes and in later-period split samples
+- Result:
+  - added a rolling / out-of-sample validation workflow first pass
+  - new runtime meta now includes:
+    - `rolling_review_status`
+    - `rolling_review_recent_excess_return`
+    - `rolling_review_recent_drawdown_gap`
+    - `out_of_sample_review_status`
+    - `out_of_sample_in_sample_excess_return`
+    - `out_of_sample_out_sample_excess_return`
+    - `out_of_sample_excess_change`
+  - recent regime review now reads the latest `12M` or `252D` window against the benchmark and compares it with the previous window when available
+  - split-period review now compares the aligned first half and second half so that later-period deterioration is explicit
+  - this first pass does not change `promotion_decision`; instead it makes `probation / monitoring` interpretation more conservative
+  - UI surface now shows the new review state in:
+    - single `Real-Money`
+    - `Execution Context`
+    - compare `Strategy Highlights`
+    - compare meta table
+- Durable implication:
+  - Phase 13 is no longer only about shortlist and monthly monitoring
+  - it now includes a lightweight current-regime and split-period consistency check before capital increases
+  - this remains safer than turning current-snapshot ETF operability data into a hard actual block rule too early

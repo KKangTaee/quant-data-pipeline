@@ -57,10 +57,10 @@
 
 ## 5. Out-Of-Sample / Rolling Validation
 
-- `pending` rolling validation contract 초안 작성
+- `completed` rolling validation contract 초안 작성
   - recent regime review
   - rolling window 비교
-- `pending` out-of-sample review checklist 초안 작성
+- `completed` out-of-sample review checklist 초안 작성
   - fixed long-period 결과와 분리해서 본다
 
 ## 6. Documentation And Validation
@@ -85,3 +85,7 @@
 - probation / monitoring workflow first pass도 now connected 상태다.
   현재는 strategy rule이 아니라 deployment-readiness / monthly review contract를
   single / compare surface에서 읽는 layer로 구현되어 있다.
+- rolling / out-of-sample validation workflow first pass도 now connected 상태다.
+  현재는 promotion을 직접 바꾸는 규칙이 아니라,
+  recent regime review와 split-period consistency를
+  monitoring / deployment-readiness 언어로 같이 읽는 layer다.

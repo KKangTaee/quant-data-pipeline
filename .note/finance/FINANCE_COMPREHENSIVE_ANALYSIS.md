@@ -266,6 +266,16 @@ Analysis / Presentation
   이 layer는 새 전략 규칙을 더 추가한 것이 아니라,
   기존 `validation / benchmark / liquidity / guardrail / freshness` 정책 상태와
   actual guardrail trigger count를 운영 언어로 다시 해석한 것이다.
+- 그리고 Phase 13 다음 pass에서는 rolling / out-of-sample validation workflow도 추가되어,
+  이제 결과 surface가 최근 `12M` 또는 `252D` validation window와
+  전체 aligned 기간의 앞/뒤 절반 split-period를 따로 읽을 수 있게 되었다.
+  이 layer는
+  - `rolling_review_status = normal / watch / caution / unavailable`
+  - `out_of_sample_review_status = normal / watch / caution / unavailable`
+  를 만들고,
+  최근 window excess return, recent drawdown gap, split-period excess deterioration를 같이 남긴다.
+  현재 first pass는 이를 promotion을 직접 바꾸는 rule이 아니라,
+  probation / monitoring을 더 보수적으로 읽게 하는 deployment-readiness review layer로 사용한다.
 - 이와 함께 `GTAA`의 현재 기본 preset/sample universe는
   commodity sleeve에서 `DBC` 대신 `PDBC`를 사용하도록 조정되었다.
 - GTAA preset surface는 현재 기본 preset과,

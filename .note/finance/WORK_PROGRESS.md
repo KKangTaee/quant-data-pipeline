@@ -3648,3 +3648,27 @@ Keep entries append-only and concise.
   - finance doc index
   - comprehensive analysis
   - question and analysis log
+
+### 2026-04-05 - Phase 13 rolling and out-of-sample validation workflow first pass was added
+
+- Added a new review layer on top of the existing benchmark-aligned validation surface:
+  - `rolling_review_status`
+  - `rolling_review_recent_excess_return`
+  - `rolling_review_recent_drawdown_gap`
+  - `out_of_sample_review_status`
+  - `out_of_sample_in_sample_excess_return`
+  - `out_of_sample_out_sample_excess_return`
+  - `out_of_sample_excess_change`
+- Recent regime review now reads the latest `12M` / `252D` window and compares it with the previous window when available.
+- Split-period review now reads the aligned history as first-half vs second-half and flags later-period deterioration.
+- This first pass does not change `promotion_decision`; instead it feeds:
+  - single strategy `Real-Money`
+  - `Execution Context`
+  - compare `Strategy Highlights`
+  - compare meta table
+  - probation / monitoring review interpretation
+- Added a dedicated Phase 13 implementation note and refreshed:
+  - current TODO board
+  - finance doc index
+  - comprehensive analysis
+  - question and analysis log

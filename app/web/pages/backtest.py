@@ -2457,6 +2457,26 @@ def _render_last_run() -> None:
                     "- `Monitoring Breach Signals`: "
                     + ", ".join(f"`{item}`" for item in list(meta.get("monitoring_breach_signals") or []))
                 )
+            if meta.get("rolling_review_status"):
+                st.markdown(
+                    f"- `Rolling Review`: `{meta['rolling_review_status']}` "
+                    f"(`{_review_status_value_to_label(meta.get('rolling_review_status'))}`)"
+                )
+            if meta.get("rolling_review_window_label"):
+                st.markdown(f"- `Rolling Review Window`: `{meta['rolling_review_window_label']}`")
+            if meta.get("rolling_review_recent_excess_return") is not None:
+                st.markdown(
+                    f"- `Recent Window Excess`: `{float(meta.get('rolling_review_recent_excess_return') or 0.0):.2%}`"
+                )
+            if meta.get("out_of_sample_review_status"):
+                st.markdown(
+                    f"- `Out-Of-Sample Review`: `{meta['out_of_sample_review_status']}` "
+                    f"(`{_review_status_value_to_label(meta.get('out_of_sample_review_status'))}`)"
+                )
+            if meta.get("out_of_sample_out_sample_excess_return") is not None:
+                st.markdown(
+                    f"- `Out-Of-Sample Excess`: `{float(meta.get('out_of_sample_out_sample_excess_return') or 0.0):.2%}`"
+                )
             if meta.get("strategy_max_drawdown") is not None:
                 st.markdown(f"- `Strategy Max Drawdown`: `{float(meta['strategy_max_drawdown']):.2%}`")
             if meta.get("benchmark_max_drawdown") is not None:
@@ -3600,6 +3620,77 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
                     "현재 기준에서는 routine monthly review로 probation을 이어갈 수 있는 상태입니다."
                 )
 
+        if meta.get("rolling_review_status") or meta.get("out_of_sample_review_status"):
+            st.markdown("##### Rolling / Out-Of-Sample Review")
+            review_cols = st.columns(5, gap="small")
+            review_cols[0].metric("Rolling Review", _review_status_value_to_label(meta.get("rolling_review_status")))
+            review_cols[1].metric("Rolling Window", str(meta.get("rolling_review_window_label") or "-"))
+            if meta.get("rolling_review_recent_excess_return") is not None:
+                review_cols[2].metric(
+                    "Recent Excess",
+                    f"{float(meta.get('rolling_review_recent_excess_return')):.2%}",
+                )
+            if meta.get("rolling_review_recent_drawdown_gap") is not None:
+                review_cols[3].metric(
+                    "Recent DD Gap",
+                    f"{float(meta.get('rolling_review_recent_drawdown_gap')):.2%}",
+                )
+            review_cols[4].metric(
+                "OOS Review",
+                _review_status_value_to_label(meta.get("out_of_sample_review_status")),
+            )
+
+            split_cols = st.columns(3, gap="small")
+            if meta.get("out_of_sample_in_sample_excess_return") is not None:
+                split_cols[0].metric(
+                    "In-Sample Excess",
+                    f"{float(meta.get('out_of_sample_in_sample_excess_return')):.2%}",
+                )
+            if meta.get("out_of_sample_out_sample_excess_return") is not None:
+                split_cols[1].metric(
+                    "Out-Sample Excess",
+                    f"{float(meta.get('out_of_sample_out_sample_excess_return')):.2%}",
+                )
+            if meta.get("out_of_sample_excess_change") is not None:
+                split_cols[2].metric(
+                    "Excess Change",
+                    f"{float(meta.get('out_of_sample_excess_change')):.2%}",
+                )
+
+            if meta.get("rolling_review_recent_start") is not None and meta.get("rolling_review_recent_end") is not None:
+                st.caption(
+                    "Recent review window: "
+                    f"`{meta.get('rolling_review_recent_start')}` -> `{meta.get('rolling_review_recent_end')}`"
+                )
+            rolling_review_rationale = list(meta.get("rolling_review_rationale") or [])
+            if rolling_review_rationale:
+                st.caption("Rolling review rationale: " + ", ".join(f"`{item}`" for item in rolling_review_rationale))
+            if meta.get("out_of_sample_in_sample_start") is not None and meta.get("out_of_sample_out_sample_end") is not None:
+                st.caption(
+                    "Split-period review: "
+                    f"in-sample `{meta.get('out_of_sample_in_sample_start')}` -> `{meta.get('out_of_sample_in_sample_end')}`, "
+                    f"out-sample `{meta.get('out_of_sample_out_sample_start')}` -> `{meta.get('out_of_sample_out_sample_end')}`"
+                )
+            out_of_sample_review_rationale = list(meta.get("out_of_sample_review_rationale") or [])
+            if out_of_sample_review_rationale:
+                st.caption(
+                    "Out-of-sample rationale: " + ", ".join(f"`{item}`" for item in out_of_sample_review_rationale)
+                )
+
+            if str(meta.get("rolling_review_status") or "").strip().lower() == "caution" or str(
+                meta.get("out_of_sample_review_status") or ""
+            ).strip().lower() == "caution":
+                st.warning(
+                    "최근 구간 또는 split-period review에서 caution이 잡혔습니다. "
+                    "지금은 비중 확대보다 recent regime robustness review를 먼저 하는 편이 맞습니다."
+                )
+            elif str(meta.get("rolling_review_status") or "").strip().lower() == "watch" or str(
+                meta.get("out_of_sample_review_status") or ""
+            ).strip().lower() == "watch":
+                st.info(
+                    "최근 구간 review는 완전히 깨지진 않았지만, current regime robustness를 조금 더 보수적으로 해석하는 편이 좋습니다."
+                )
+
     if benchmark_chart_df is not None and result_df is not None:
         strategy_line = (
             bundle["chart_df"][["Date", "Total Balance"]]
@@ -3698,6 +3789,10 @@ def _build_compare_highlight_rows(bundles: list[dict]) -> pd.DataFrame:
                 "Shortlist": _shortlist_status_value_to_label(meta.get("shortlist_status")),
                 "Probation": _probation_status_value_to_label(meta.get("probation_status")),
                 "Monitoring": _monitoring_status_value_to_label(meta.get("monitoring_status")),
+                "Rolling Review": _review_status_value_to_label(meta.get("rolling_review_status")),
+                "Recent Excess": meta.get("rolling_review_recent_excess_return"),
+                "OOS Review": _review_status_value_to_label(meta.get("out_of_sample_review_status")),
+                "OOS Excess": meta.get("out_of_sample_out_sample_excess_return"),
                 "Shortlist Next": meta.get("shortlist_next_step"),
                 "Guardrail Triggers": meta.get("underperformance_guardrail_trigger_count"),
                 "DD Guardrail Triggers": meta.get("drawdown_guardrail_trigger_count"),
@@ -4000,6 +4095,11 @@ def _render_compare_results() -> None:
                     "monitoring_status": meta.get("monitoring_status"),
                     "monitoring_review_frequency": meta.get("monitoring_review_frequency"),
                     "monitoring_next_step": meta.get("monitoring_next_step"),
+                    "rolling_review_status": meta.get("rolling_review_status"),
+                    "rolling_review_window_label": meta.get("rolling_review_window_label"),
+                    "rolling_review_recent_excess_return": meta.get("rolling_review_recent_excess_return"),
+                    "out_of_sample_review_status": meta.get("out_of_sample_review_status"),
+                    "out_of_sample_out_sample_excess_return": meta.get("out_of_sample_out_sample_excess_return"),
                     "underperformance_guardrail_enabled": meta.get("underperformance_guardrail_enabled"),
                     "underperformance_guardrail_window_months": meta.get("underperformance_guardrail_window_months"),
                     "underperformance_guardrail_threshold": meta.get("underperformance_guardrail_threshold"),
@@ -4954,6 +5054,16 @@ def _monitoring_status_value_to_label(value: str | None) -> str:
         "routine_review": "Routine Review",
         "heightened_review": "Heightened Review",
         "breach_watch": "Breach Watch",
+    }
+    return mapping.get(str(value or "").strip().lower(), "-")
+
+
+def _review_status_value_to_label(value: str | None) -> str:
+    mapping = {
+        "normal": "Normal",
+        "watch": "Watch",
+        "caution": "Caution",
+        "unavailable": "Unavailable",
     }
     return mapping.get(str(value or "").strip().lower(), "-")
 

@@ -535,6 +535,17 @@ def _compute_drawdown_stats(balance_series: pd.Series) -> tuple[float | None, fl
     return float(drawdown.iloc[-1]), float(drawdown.min())
 
 
+def _compute_total_return(balance_series: pd.Series) -> float | None:
+    series = pd.to_numeric(balance_series, errors="coerce").dropna()
+    if len(series) < 2:
+        return None
+    base_value = float(series.iloc[0])
+    end_value = float(series.iloc[-1])
+    if base_value <= 0:
+        return None
+    return float((end_value / base_value) - 1.0)
+
+
 def _rolling_validation_window(summary_freq: str) -> tuple[int, str]:
     normalized = str(summary_freq or "M").strip().upper()
     if normalized == "D":
@@ -625,6 +636,209 @@ def _build_real_money_validation_surface(
         "rolling_underperformance_latest_excess_return": latest_excess,
         "validation_watch_signals": watch_signals,
     }
+
+
+def _build_rolling_and_out_of_sample_review_surface(
+    *,
+    strategy_df: pd.DataFrame,
+    benchmark_df: pd.DataFrame,
+    summary_freq: str,
+) -> dict[str, Any]:
+    aligned = pd.merge(
+        strategy_df[["Date", "Total Balance", "Total Return"]].copy(),
+        benchmark_df[["Date", "Benchmark Total Balance", "Benchmark Total Return"]].copy(),
+        on="Date",
+        how="inner",
+    ).dropna(subset=["Total Balance", "Benchmark Total Balance"])
+    if aligned.empty:
+        return {}
+
+    aligned = aligned.sort_values("Date").reset_index(drop=True)
+    window_size, window_label = _rolling_validation_window(summary_freq)
+    observations = int(len(aligned))
+
+    review: dict[str, Any] = {
+        "rolling_review_window_periods": int(window_size),
+        "rolling_review_window_label": window_label,
+        "rolling_review_observations": observations,
+        "out_of_sample_review_observations": observations,
+    }
+
+    if observations < window_size:
+        review.update(
+            {
+                "rolling_review_status": "unavailable",
+                "rolling_review_rationale": ["insufficient_recent_window_history"],
+            }
+        )
+    else:
+        recent = aligned.tail(window_size).copy()
+        previous = aligned.iloc[-(window_size * 2) : -window_size].copy() if observations >= (window_size * 2) else pd.DataFrame()
+
+        recent_strategy_return = _compute_total_return(recent["Total Balance"])
+        recent_benchmark_return = _compute_total_return(recent["Benchmark Total Balance"])
+        recent_excess = (
+            float(recent_strategy_return - recent_benchmark_return)
+            if recent_strategy_return is not None and recent_benchmark_return is not None
+            else None
+        )
+        _, recent_strategy_max_dd = _compute_drawdown_stats(recent["Total Balance"])
+        _, recent_benchmark_max_dd = _compute_drawdown_stats(recent["Benchmark Total Balance"])
+        recent_drawdown_gap = (
+            float(recent_strategy_max_dd - recent_benchmark_max_dd)
+            if recent_strategy_max_dd is not None and recent_benchmark_max_dd is not None
+            else None
+        )
+
+        previous_excess = None
+        if not previous.empty:
+            previous_strategy_return = _compute_total_return(previous["Total Balance"])
+            previous_benchmark_return = _compute_total_return(previous["Benchmark Total Balance"])
+            if previous_strategy_return is not None and previous_benchmark_return is not None:
+                previous_excess = float(previous_strategy_return - previous_benchmark_return)
+
+        rolling_signals: list[str] = []
+        rolling_severe_signals = 0
+        if recent_excess is not None:
+            if recent_excess < 0:
+                rolling_signals.append("recent_window_underperformance")
+            if recent_excess <= -0.10:
+                rolling_severe_signals += 1
+        if recent_drawdown_gap is not None:
+            if recent_drawdown_gap < -0.05:
+                rolling_signals.append("recent_window_drawdown_gap")
+            if recent_drawdown_gap <= -0.10:
+                rolling_severe_signals += 1
+        if previous_excess is not None and recent_excess is not None:
+            deterioration = float(recent_excess - previous_excess)
+            if deterioration <= -0.10:
+                rolling_signals.append("recent_window_deterioration")
+            if deterioration <= -0.15:
+                rolling_severe_signals += 1
+            review["rolling_review_recent_vs_previous_excess_change"] = deterioration
+
+        if rolling_severe_signals > 0 or len(rolling_signals) >= 2:
+            rolling_status = "caution"
+        elif rolling_signals:
+            rolling_status = "watch"
+        else:
+            rolling_status = "normal"
+
+        review.update(
+            {
+                "rolling_review_status": rolling_status,
+                "rolling_review_rationale": rolling_signals,
+                "rolling_review_recent_excess_return": recent_excess,
+                "rolling_review_previous_excess_return": previous_excess,
+                "rolling_review_recent_strategy_max_drawdown": recent_strategy_max_dd,
+                "rolling_review_recent_benchmark_max_drawdown": recent_benchmark_max_dd,
+                "rolling_review_recent_drawdown_gap": recent_drawdown_gap,
+                "rolling_review_recent_start": recent["Date"].iloc[0],
+                "rolling_review_recent_end": recent["Date"].iloc[-1],
+            }
+        )
+
+    if observations < 6:
+        review.update(
+            {
+                "out_of_sample_review_status": "unavailable",
+                "out_of_sample_review_rationale": ["insufficient_split_sample_history"],
+            }
+        )
+        return review
+
+    split_index = max(1, observations // 2)
+    if split_index >= observations:
+        review.update(
+            {
+                "out_of_sample_review_status": "unavailable",
+                "out_of_sample_review_rationale": ["insufficient_split_sample_history"],
+            }
+        )
+        return review
+
+    in_sample = aligned.iloc[:split_index].copy()
+    out_of_sample = aligned.iloc[split_index:].copy()
+    if len(in_sample) < 2 or len(out_of_sample) < 2:
+        review.update(
+            {
+                "out_of_sample_review_status": "unavailable",
+                "out_of_sample_review_rationale": ["insufficient_split_sample_history"],
+            }
+        )
+        return review
+
+    in_strategy_return = _compute_total_return(in_sample["Total Balance"])
+    in_benchmark_return = _compute_total_return(in_sample["Benchmark Total Balance"])
+    out_strategy_return = _compute_total_return(out_of_sample["Total Balance"])
+    out_benchmark_return = _compute_total_return(out_of_sample["Benchmark Total Balance"])
+
+    in_excess = (
+        float(in_strategy_return - in_benchmark_return)
+        if in_strategy_return is not None and in_benchmark_return is not None
+        else None
+    )
+    out_excess = (
+        float(out_strategy_return - out_benchmark_return)
+        if out_strategy_return is not None and out_benchmark_return is not None
+        else None
+    )
+    _, in_max_dd = _compute_drawdown_stats(in_sample["Total Balance"])
+    _, in_benchmark_max_dd = _compute_drawdown_stats(in_sample["Benchmark Total Balance"])
+    _, out_max_dd = _compute_drawdown_stats(out_of_sample["Total Balance"])
+    _, out_benchmark_max_dd = _compute_drawdown_stats(out_of_sample["Benchmark Total Balance"])
+
+    out_drawdown_gap = (
+        float(out_max_dd - out_benchmark_max_dd)
+        if out_max_dd is not None and out_benchmark_max_dd is not None
+        else None
+    )
+    excess_change = float(out_excess - in_excess) if out_excess is not None and in_excess is not None else None
+
+    out_signals: list[str] = []
+    out_severe_signals = 0
+    if out_excess is not None:
+        if out_excess < 0:
+            out_signals.append("out_of_sample_underperformance")
+        if out_excess <= -0.10:
+            out_severe_signals += 1
+    if out_drawdown_gap is not None:
+        if out_drawdown_gap < -0.05:
+            out_signals.append("out_of_sample_drawdown_gap")
+        if out_drawdown_gap <= -0.10:
+            out_severe_signals += 1
+    if excess_change is not None:
+        if excess_change <= -0.10:
+            out_signals.append("split_period_deterioration")
+        if excess_change <= -0.15:
+            out_severe_signals += 1
+
+    if out_severe_signals > 0 or len(out_signals) >= 2:
+        out_status = "caution"
+    elif out_signals:
+        out_status = "watch"
+    else:
+        out_status = "normal"
+
+    review.update(
+        {
+            "out_of_sample_review_status": out_status,
+            "out_of_sample_review_rationale": out_signals,
+            "out_of_sample_in_sample_excess_return": in_excess,
+            "out_of_sample_out_sample_excess_return": out_excess,
+            "out_of_sample_excess_change": excess_change,
+            "out_of_sample_in_sample_start": in_sample["Date"].iloc[0],
+            "out_of_sample_in_sample_end": in_sample["Date"].iloc[-1],
+            "out_of_sample_out_sample_start": out_of_sample["Date"].iloc[0],
+            "out_of_sample_out_sample_end": out_of_sample["Date"].iloc[-1],
+            "out_of_sample_in_sample_strategy_max_drawdown": in_max_dd,
+            "out_of_sample_in_sample_benchmark_max_drawdown": in_benchmark_max_dd,
+            "out_of_sample_out_sample_strategy_max_drawdown": out_max_dd,
+            "out_of_sample_out_sample_benchmark_max_drawdown": out_benchmark_max_dd,
+            "out_of_sample_out_sample_drawdown_gap": out_drawdown_gap,
+        }
+    )
+    return review
 
 
 def _build_promotion_decision(meta: dict[str, Any]) -> dict[str, Any]:
@@ -830,6 +1044,10 @@ def _build_probation_and_monitoring_contract(meta: dict[str, Any]) -> dict[str, 
         monitoring_focus.append("rolling_underperformance")
     if meta.get("drawdown_guardrail_enabled") or meta.get("strategy_max_drawdown") is not None:
         monitoring_focus.append("drawdown_control")
+    if meta.get("rolling_review_status"):
+        monitoring_focus.append("recent_regime_review")
+    if meta.get("out_of_sample_review_status"):
+        monitoring_focus.append("split_period_consistency")
     if meta.get("liquidity_policy_status"):
         monitoring_focus.append("liquidity_cleanliness")
     if strategy_key in ETF_OPERABILITY_STRATEGY_KEYS or str(meta.get("etf_operability_status") or "").strip():
@@ -854,6 +1072,18 @@ def _build_probation_and_monitoring_contract(meta: dict[str, Any]) -> dict[str, 
     _register_policy_signal("validation_policy", meta.get("validation_policy_status"))
     _register_policy_signal("guardrail_policy", meta.get("guardrail_policy_status"))
     _register_policy_signal("price_freshness", freshness_status)
+
+    rolling_review_status = str(meta.get("rolling_review_status") or "").strip().lower()
+    if rolling_review_status == "caution":
+        severe_signals.append("rolling_review_caution")
+    elif rolling_review_status in {"watch", "unavailable"}:
+        watch_signals.append(f"rolling_review_{rolling_review_status}")
+
+    out_of_sample_review_status = str(meta.get("out_of_sample_review_status") or "").strip().lower()
+    if out_of_sample_review_status == "caution":
+        severe_signals.append("out_of_sample_review_caution")
+    elif out_of_sample_review_status in {"watch", "unavailable"}:
+        watch_signals.append(f"out_of_sample_review_{out_of_sample_review_status}")
 
     under_trigger_count = int(meta.get("underperformance_guardrail_trigger_count") or 0)
     drawdown_trigger_count = int(meta.get("drawdown_guardrail_trigger_count") or 0)
@@ -1492,6 +1722,38 @@ def _apply_real_money_hardening(
                 )
             if watch_signals:
                 meta["validation_watch_signals"] = watch_signals
+
+        rolling_review_surface = _build_rolling_and_out_of_sample_review_surface(
+            strategy_df=hardened_df,
+            benchmark_df=benchmark_df,
+            summary_freq=summary_freq,
+        )
+        if rolling_review_surface:
+            meta.update(rolling_review_surface)
+            rolling_status = rolling_review_surface.get("rolling_review_status")
+            out_of_sample_status = rolling_review_surface.get("out_of_sample_review_status")
+            rolling_signals = rolling_review_surface.get("rolling_review_rationale") or []
+            out_of_sample_signals = rolling_review_surface.get("out_of_sample_review_rationale") or []
+            if rolling_status == "caution":
+                warnings.append(
+                    "Rolling review caution: the recent validation window shows materially weaker benchmark-relative behavior than the preferred deployment-readiness contract."
+                )
+            elif rolling_status == "watch":
+                warnings.append(
+                    "Rolling review watch: recent regime behavior is softer than the preferred deployment-readiness contract."
+                )
+            if out_of_sample_status == "caution":
+                warnings.append(
+                    "Out-of-sample review caution: the later split-period underperformed the benchmark materially or deteriorated sharply versus the earlier sample."
+                )
+            elif out_of_sample_status == "watch":
+                warnings.append(
+                    "Out-of-sample review watch: the later split-period is weaker than the earlier sample and needs review before capital increases."
+                )
+            if rolling_signals:
+                meta["rolling_review_signals"] = rolling_signals
+            if out_of_sample_signals:
+                meta["out_of_sample_review_signals"] = out_of_sample_signals
     else:
         meta["benchmark_available"] = False
         benchmark_contract = str(meta.get("benchmark_contract") or STRICT_DEFAULT_BENCHMARK_CONTRACT).strip().lower()
