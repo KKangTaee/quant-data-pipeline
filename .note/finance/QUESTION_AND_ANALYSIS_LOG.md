@@ -5878,3 +5878,64 @@ Do not copy full chat transcripts. Keep only the durable result.
 - Durable implication:
   - this was a safe first-pass UI/orchestration refactor, not a strategy-logic rewrite
   - future work can still split large quality/value form renderers into more files, but the family/variant contract is now centralized first
+
+### 2026-04-05 - `backtest.py` size and strategy code organization should move toward family-level composition, not per-strategy inheritance
+
+- Request topic:
+  - ask whether current `app/web/pages/backtest.py` size is acceptable
+  - ask whether strategy management should stay centralized or split into separate files
+  - ask whether a base/abstract-class inheritance model would be the right direction
+- Interpreted goal:
+  - choose a maintenance direction that improves readability without destabilizing already-working backtest code
+- Result:
+  - current file sizes were checked:
+    - `app/web/pages/backtest.py`: `8563` lines
+    - `app/web/runtime/backtest.py`: `2971` lines
+    - `finance/sample.py`: `2075` lines
+    - `finance/strategy.py`: `1182` lines
+  - judgement:
+    - `backtest.py` is now beyond a comfortable long-term maintenance size
+    - it is still workable today because roles are known, but it is large enough that future changes will become slower and riskier if left as-is
+  - recommended direction:
+    - keep `backtest.py` as the page orchestrator
+    - keep strategy simulation logic in finance layers
+    - split UI/orchestration by family and shared helper units, not by one-file-per-strategy blindly
+  - concrete recommendation:
+    - `app/web/pages/backtest.py`
+      - page composition / top-level routing only
+    - `app/web/pages/backtest_strategy_catalog.py`
+      - family / variant / concrete strategy mapping
+    - future good split units:
+      - quality family UI module
+      - value family UI module
+      - quality+value family UI module
+      - shared compare helpers
+      - shared history/prefill helpers
+  - strategy-code recommendation:
+    - do **not** move quality/value simulation logic into `backtest.py`
+    - keep the current functional boundary:
+      - `finance/sample.py` = DB-backed input assembly
+      - `finance/strategy.py` = simulation / decision logic
+      - `app/web/runtime/backtest.py` = runtime wrapper / result bundle
+  - inheritance judgement:
+    - a heavy base-class / abstract-class hierarchy is **not** the best next step for the current codebase
+    - current strategies differ mainly in:
+      - input contract
+      - loader/runtime wrapper
+      - factor configuration
+      - UI surface
+    - they do not yet benefit enough from deep OO inheritance to justify the complexity
+    - better near-term pattern:
+      - composition
+      - small shared helpers
+      - strategy/family catalog
+      - possibly light `dataclass` or spec objects later
+- Durable implication:
+  - next refactor should be:
+    - `large page -> family modules + shared helpers`
+  - not:
+    - `every strategy -> subclass hierarchy`
+  - if `finance/strategy.py` grows further, a later split by domain is reasonable:
+    - price-only strategies
+    - statement/factor strategies
+    - shared simulation helpers

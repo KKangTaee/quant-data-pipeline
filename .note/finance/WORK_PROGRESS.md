@@ -3357,3 +3357,17 @@ Keep entries append-only and concise.
   - Phase 12 checklist
   - comprehensive analysis
   - doc index
+
+### 2026-04-05 - Reviewed next-step architecture direction for `backtest.py` and strategy ownership
+
+- Checked current file sizes:
+  - `app/web/pages/backtest.py`: `8563` lines
+  - `app/web/runtime/backtest.py`: `2971` lines
+  - `finance/sample.py`: `2075` lines
+  - `finance/strategy.py`: `1182` lines
+- Confirmed the recommended next-step direction is:
+  - keep `backtest.py` as the page orchestrator
+  - keep strategy simulation in finance layers
+  - split by family/shared helper modules rather than forcing a deep inheritance hierarchy
+- Logged the durable guidance in:
+  - `QUESTION_AND_ANALYSIS_LOG.md`
