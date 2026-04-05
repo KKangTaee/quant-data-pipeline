@@ -304,6 +304,14 @@ Analysis / Presentation
   cost / liquidity / ETF operability는 실행 부담 확인용으로 다시 배치한 UI-layer 정리다.
   낮은 신호의 raw detail은 expander나 마지막 상세 탭으로 내려가서,
   사용자가 "지금 상태가 뭔지"를 먼저 판단하기 쉬운 구조가 되었다.
+- 그리고 single run 결과 헤더인 `Latest Backtest Run` 아래도 다시 정리되어,
+  이제는
+  - 결과 읽는 순서
+  - 이번 실행에 포함된 보기
+  - 이번 실행의 주의 사항
+  이 세 가지를 먼저 한국어로 묶어서 보여준다.
+  기존처럼 caption과 warning이 흩어져 있는 방식보다,
+  사용자가 어떤 탭부터 보면 되는지와 어떤 주의문을 함께 봐야 하는지를 더 빨리 파악할 수 있게 되었다.
 - 이와 함께 `GTAA`의 현재 기본 preset/sample universe는
   commodity sleeve에서 `DBC` 대신 `PDBC`를 사용하도록 조정되었다.
 - GTAA preset surface는 현재 기본 preset과,

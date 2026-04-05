@@ -2189,15 +2189,9 @@ def _render_last_run() -> None:
     chart_df = bundle["chart_df"]
     result_df = bundle["result_df"]
     meta = bundle["meta"]
+    warnings = list(meta.get("warnings") or [])
 
     st.markdown("### Latest Backtest Run")
-    st.caption("First-pass result view. Summary, equity curve, preview table, and execution meta are separated so the screen reads more like a product surface.")
-    for warning in meta.get("warnings") or []:
-        st.warning(warning)
-
-    st.markdown(f"#### {bundle['strategy_name']}")
-    _render_summary_metrics(summary_df)
-
     strategy_key = meta.get("strategy_key")
     has_selection_history = strategy_key in {
         "quality_snapshot",
@@ -2217,6 +2211,40 @@ def _render_last_run() -> None:
         or meta.get("universe_contract") == HISTORICAL_DYNAMIC_PIT_UNIVERSE
     )
     has_real_money_details = bool(meta.get("real_money_hardening"))
+
+    st.info(
+        "가장 최근 실행한 백테스트 결과입니다. "
+        "먼저 `Summary`에서 핵심 숫자를 보고, `Equity Curve`에서 흐름을 확인한 뒤, "
+        "`Real-Money`와 `Meta`에서 실전형 해석과 실행 조건을 읽으면 가장 자연스럽습니다."
+    )
+
+    guide_left, guide_right = st.columns([1.4, 1.0], gap="small")
+    with guide_left:
+        st.markdown("##### 결과 읽는 순서")
+        st.markdown(
+            "- `Summary`: 수익률과 위험의 핵심 숫자 확인\n"
+            "- `Equity Curve`: 전략 흐름과 회복 구간 확인\n"
+            "- `Real-Money`: 실전 후보 해석, 검토 근거, 실행 부담 확인\n"
+            "- `Meta`: 이번 실행의 계약과 세부 설정 재확인"
+        )
+    with guide_right:
+        st.markdown("##### 이번 실행에 포함된 보기")
+        availability_lines = [
+            f"- `Selection History`: {'있음' if has_selection_history else '없음'}",
+            f"- `Dynamic Universe`: {'있음' if has_dynamic_details else '없음'}",
+            f"- `Real-Money`: {'있음' if has_real_money_details else '없음'}",
+        ]
+        st.markdown("\n".join(availability_lines))
+
+    if warnings:
+        warning_lines = "\n".join(f"- {warning}" for warning in warnings)
+        st.warning(
+            "이번 실행에서 같이 봐야 할 주의 사항이 있습니다.\n\n"
+            + warning_lines
+        )
+
+    st.markdown(f"#### {bundle['strategy_name']}")
+    _render_summary_metrics(summary_df)
 
     tab_labels = ["Summary", "Equity Curve", "Balance Extremes", "Period Extremes"]
     if has_selection_history:
@@ -2247,7 +2275,10 @@ def _render_last_run() -> None:
             result_df=result_df,
             title="Equity Curve",
         )
-        st.caption("High / Low / End plus Best / Worst period markers are shown so the equity curve is easier to interpret than a plain line chart.")
+        st.caption(
+            "고점 / 저점 / 마지막 지점과 최고 / 최저 기간 마커를 같이 보여줘서, "
+            "단순 선 그래프보다 전략 흐름을 더 쉽게 읽을 수 있습니다."
+        )
 
     with balance_tab:
         high_df, low_df = _build_balance_extremes_tables(chart_df, top_n=3)

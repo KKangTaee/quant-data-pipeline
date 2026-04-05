@@ -6414,3 +6414,19 @@ Do not copy full chat transcripts. Keep only the durable result.
     - example / use case
 - Durable implication:
   - future manual QA and result interpretation can point to the glossary directly when users ask what these policy layers mean
+
+### 2026-04-05 - The Latest Backtest Run header should be easier to scan and read in Korean
+
+- Request topic:
+  - the user felt that the multiple guidance lines shown under `Latest Backtest Run` were not visually organized and wanted them reworked into a clearer Korean UX
+- Interpreted goal:
+  - keep the same result content, but make the top of the single-run result screen easier to scan before the user dives into the tabs
+- Result:
+  - added a grouped Korean guidance block explaining:
+    - how to read the result
+    - which surfaces are available in this run
+    - what warnings should be reviewed together
+  - merged scattered per-run warning lines into one consolidated warning block
+  - replaced the old English first-pass caption with Korean operator-facing copy
+- Durable implication:
+  - users can now orient themselves faster at the top of the result surface before moving into `Summary`, `Equity Curve`, `Real-Money`, or `Meta`

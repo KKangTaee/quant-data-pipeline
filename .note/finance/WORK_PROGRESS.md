@@ -3770,3 +3770,12 @@ Keep entries append-only and concise.
   - `Liquidity Policy`
   - `Portfolio Guardrail`
   entries and aligned the new terms around the same explanation structure.
+
+### 2026-04-05 - Latest Backtest Run 안내 영역을 한국어 중심으로 재구성
+
+- Reorganized the header area under `Latest Backtest Run` so the user sees:
+  - how to read the result
+  - which result surfaces are available in this run
+  - what warnings should be reviewed together
+- Replaced scattered English guidance with grouped Korean guidance.
+- Merged per-run warnings into one clearer warning block instead of rendering them as disconnected lines.
