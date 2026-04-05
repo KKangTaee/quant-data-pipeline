@@ -60,6 +60,9 @@ class BacktestDataError(ValueError):
 ETF_REAL_MONEY_DEFAULT_MIN_PRICE = 5.0
 ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS = 10.0
 ETF_REAL_MONEY_DEFAULT_BENCHMARK = "SPY"
+STRICT_BENCHMARK_CONTRACT_TICKER = "ticker"
+STRICT_BENCHMARK_CONTRACT_CANDIDATE_EQUAL_WEIGHT = "candidate_universe_equal_weight"
+STRICT_DEFAULT_BENCHMARK_CONTRACT = STRICT_BENCHMARK_CONTRACT_TICKER
 STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE = 0.95
 STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD = -0.02
 STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE = 0.90
@@ -307,18 +310,132 @@ def _apply_transaction_cost_postprocess(
     return working, diagnostics
 
 
-def _build_benchmark_result_df(
+def _build_candidate_universe_equal_weight_benchmark_df(
     *,
-    benchmark_ticker: str | None,
+    benchmark_universe_tickers: Sequence[str] | None,
     dates: pd.Series,
     start: str | None,
     end: str | None,
     timeframe: str,
     initial_balance: float,
-) -> pd.DataFrame | None:
+) -> tuple[pd.DataFrame | None, dict[str, Any]]:
+    tickers = _normalize_tickers(benchmark_universe_tickers)
+    history = load_price_history(
+        symbols=tickers,
+        start=start,
+        end=end,
+        timeframe=timeframe,
+    )
+    if history.empty:
+        return None, {
+            "benchmark_label": "Candidate Universe EW Benchmark",
+            "benchmark_symbol_count": len(tickers),
+            "benchmark_eligible_symbol_count": 0,
+        }
+
+    working = history.loc[:, ["date", "symbol", "close"]].copy()
+    working["date"] = pd.to_datetime(working["date"], errors="coerce")
+    working["symbol"] = working["symbol"].astype(str).str.upper()
+    working["close"] = pd.to_numeric(working["close"], errors="coerce")
+    working = working.dropna(subset=["date", "symbol", "close"])
+    if working.empty:
+        return None, {
+            "benchmark_label": "Candidate Universe EW Benchmark",
+            "benchmark_symbol_count": len(tickers),
+            "benchmark_eligible_symbol_count": 0,
+        }
+
+    pivot = (
+        working.pivot_table(index="date", columns="symbol", values="close", aggfunc="last")
+        .sort_index()
+    )
+    if pivot.empty:
+        return None, {
+            "benchmark_label": "Candidate Universe EW Benchmark",
+            "benchmark_symbol_count": len(tickers),
+            "benchmark_eligible_symbol_count": 0,
+        }
+
+    target_index = pd.Index(pd.to_datetime(dates).sort_values().unique(), name="Date")
+    expanded_index = pivot.index.union(target_index)
+    aligned_prices = pivot.reindex(expanded_index).sort_index().ffill().reindex(target_index)
+    if aligned_prices.empty:
+        return None, {
+            "benchmark_label": "Candidate Universe EW Benchmark",
+            "benchmark_symbol_count": len(tickers),
+            "benchmark_eligible_symbol_count": 0,
+        }
+
+    first_row = aligned_prices.iloc[0]
+    eligible_symbols = [
+        str(symbol)
+        for symbol, value in first_row.items()
+        if pd.notna(value) and float(value) > 0.0
+    ]
+    if not eligible_symbols:
+        return None, {
+            "benchmark_label": "Candidate Universe EW Benchmark",
+            "benchmark_symbol_count": len(tickers),
+            "benchmark_eligible_symbol_count": 0,
+        }
+
+    eligible_prices = aligned_prices.loc[:, eligible_symbols].copy()
+    base_prices = pd.to_numeric(eligible_prices.iloc[0], errors="coerce")
+    eligible_prices = eligible_prices.loc[:, base_prices.notna() & (base_prices > 0.0)]
+    if eligible_prices.empty:
+        return None, {
+            "benchmark_label": "Candidate Universe EW Benchmark",
+            "benchmark_symbol_count": len(tickers),
+            "benchmark_eligible_symbol_count": 0,
+        }
+
+    base_prices = pd.to_numeric(eligible_prices.iloc[0], errors="coerce")
+    per_symbol_balance = float(initial_balance) / float(len(eligible_prices.columns))
+    balance_matrix = eligible_prices.divide(base_prices, axis=1) * per_symbol_balance
+    total_balance = balance_matrix.sum(axis=1, min_count=1)
+    benchmark_df = pd.DataFrame(
+        {
+            "Date": target_index,
+            "Benchmark Total Balance": total_balance.values,
+        }
+    )
+    benchmark_df["Benchmark Total Return"] = benchmark_df["Benchmark Total Balance"].pct_change()
+    return benchmark_df.reset_index(drop=True), {
+        "benchmark_label": "Candidate Universe EW Benchmark",
+        "benchmark_symbol_count": len(tickers),
+        "benchmark_eligible_symbol_count": int(len(eligible_prices.columns)),
+    }
+
+
+def _build_benchmark_result_df(
+    *,
+    benchmark_contract: str | None,
+    benchmark_ticker: str | None,
+    benchmark_universe_tickers: Sequence[str] | None,
+    dates: pd.Series,
+    start: str | None,
+    end: str | None,
+    timeframe: str,
+    initial_balance: float,
+) -> tuple[pd.DataFrame | None, dict[str, Any]]:
+    contract = str(benchmark_contract or STRICT_DEFAULT_BENCHMARK_CONTRACT).strip().lower()
+    if contract == STRICT_BENCHMARK_CONTRACT_CANDIDATE_EQUAL_WEIGHT:
+        return _build_candidate_universe_equal_weight_benchmark_df(
+            benchmark_universe_tickers=benchmark_universe_tickers,
+            dates=dates,
+            start=start,
+            end=end,
+            timeframe=timeframe,
+            initial_balance=initial_balance,
+        )
+
     symbol = str(benchmark_ticker or "").strip().upper()
     if not symbol:
-        return None
+        return None, {
+            "benchmark_label": None,
+            "benchmark_symbol_count": 1 if symbol else 0,
+            "benchmark_eligible_symbol_count": 0,
+        }
 
     history = load_price_history(
         symbols=[symbol],
@@ -327,7 +444,11 @@ def _build_benchmark_result_df(
         timeframe=timeframe,
     )
     if history.empty:
-        return None
+        return None, {
+            "benchmark_label": f"{symbol} Benchmark",
+            "benchmark_symbol_count": 1,
+            "benchmark_eligible_symbol_count": 0,
+        }
 
     benchmark_history = (
         history.loc[history["symbol"].astype(str).str.upper() == symbol, ["date", "close"]]
@@ -337,7 +458,11 @@ def _build_benchmark_result_df(
         .reset_index(drop=True)
     )
     if benchmark_history.empty:
-        return None
+        return None, {
+            "benchmark_label": f"{symbol} Benchmark",
+            "benchmark_symbol_count": 1,
+            "benchmark_eligible_symbol_count": 0,
+        }
 
     target_dates = pd.DataFrame({"Date": pd.to_datetime(dates).sort_values().unique()})
     aligned = pd.merge_asof(
@@ -348,17 +473,29 @@ def _build_benchmark_result_df(
         direction="backward",
     ).dropna(subset=["Benchmark Close"])
     if aligned.empty:
-        return None
+        return None, {
+            "benchmark_label": f"{symbol} Benchmark",
+            "benchmark_symbol_count": 1,
+            "benchmark_eligible_symbol_count": 0,
+        }
 
     base_price = float(aligned.iloc[0]["Benchmark Close"])
     if base_price <= 0:
-        return None
+        return None, {
+            "benchmark_label": f"{symbol} Benchmark",
+            "benchmark_symbol_count": 1,
+            "benchmark_eligible_symbol_count": 0,
+        }
 
     aligned["Benchmark Total Balance"] = float(initial_balance) * (
         aligned["Benchmark Close"].astype(float) / base_price
     )
     aligned["Benchmark Total Return"] = aligned["Benchmark Total Balance"].pct_change()
-    return aligned.reset_index(drop=True)
+    return aligned.reset_index(drop=True), {
+        "benchmark_label": f"{symbol} Benchmark",
+        "benchmark_symbol_count": 1,
+        "benchmark_eligible_symbol_count": 1,
+    }
 
 
 def _compute_drawdown_stats(balance_series: pd.Series) -> tuple[float | None, float | None]:
@@ -720,7 +857,9 @@ def _apply_real_money_hardening(
     summary_freq: str,
     min_price_filter: float,
     transaction_cost_bps: float,
+    benchmark_contract: str | None,
     benchmark_ticker: str | None,
+    benchmark_universe_tickers: Sequence[str] | None = None,
     promotion_min_benchmark_coverage: float | None = None,
     promotion_min_net_cagr_spread: float | None = None,
     promotion_min_liquidity_clean_coverage: float | None = None,
@@ -753,6 +892,7 @@ def _apply_real_money_hardening(
             "real_money_hardening": True,
             "min_price_filter": float(min_price_filter or 0.0),
             "transaction_cost_bps": float(transaction_cost_bps or 0.0),
+            "benchmark_contract": str(benchmark_contract or STRICT_DEFAULT_BENCHMARK_CONTRACT).strip().lower(),
             "benchmark_ticker": str(benchmark_ticker or "").strip().upper() or None,
             "promotion_min_benchmark_coverage": (
                 float(promotion_min_benchmark_coverage) if promotion_min_benchmark_coverage is not None else None
@@ -810,14 +950,20 @@ def _apply_real_money_hardening(
             else None
         )
 
-    benchmark_df = _build_benchmark_result_df(
+    benchmark_df, benchmark_info = _build_benchmark_result_df(
+        benchmark_contract=meta.get("benchmark_contract"),
         benchmark_ticker=benchmark_ticker,
+        benchmark_universe_tickers=benchmark_universe_tickers,
         dates=hardened_df["Date"],
         start=meta.get("start"),
         end=meta.get("end"),
         timeframe=meta.get("timeframe") or "1d",
         initial_balance=float(hardened_df["Gross Total Balance"].iloc[0]),
     )
+    if benchmark_info:
+        meta["benchmark_label"] = benchmark_info.get("benchmark_label")
+        meta["benchmark_symbol_count"] = benchmark_info.get("benchmark_symbol_count")
+        meta["benchmark_eligible_symbol_count"] = benchmark_info.get("benchmark_eligible_symbol_count")
     if benchmark_df is not None:
         benchmark_summary_input = benchmark_df.rename(
             columns={
@@ -828,7 +974,7 @@ def _apply_real_money_hardening(
         bundle["benchmark_chart_df"] = benchmark_df
         benchmark_summary_df = portfolio_performance_summary(
             benchmark_summary_input,
-            name=f"{meta.get('benchmark_ticker')} Benchmark",
+            name=str(meta.get("benchmark_label") or meta.get("benchmark_ticker") or "Benchmark"),
             freq=summary_freq,
         )
         bundle["benchmark_summary_df"] = benchmark_summary_df
@@ -861,7 +1007,13 @@ def _apply_real_money_hardening(
                 meta["validation_watch_signals"] = watch_signals
     else:
         meta["benchmark_available"] = False
-        if meta.get("benchmark_ticker"):
+        benchmark_contract = str(meta.get("benchmark_contract") or STRICT_DEFAULT_BENCHMARK_CONTRACT).strip().lower()
+        if benchmark_contract == STRICT_BENCHMARK_CONTRACT_CANDIDATE_EQUAL_WEIGHT:
+            warnings.append(
+                "Benchmark overlay could not be built because candidate-universe equal-weight price history "
+                "was not sufficiently available on the requested dates."
+            )
+        elif meta.get("benchmark_ticker"):
             warnings.append(
                 f"Benchmark overlay could not be built because DB price history for `{meta['benchmark_ticker']}` "
                 "was not available on the requested dates."
@@ -1571,7 +1723,9 @@ def run_gtaa_backtest_from_db(
         summary_freq=_summary_frequency(option, timeframe),
         min_price_filter=min_price_filter,
         transaction_cost_bps=transaction_cost_bps,
+        benchmark_contract=STRICT_DEFAULT_BENCHMARK_CONTRACT,
         benchmark_ticker=benchmark_ticker,
+        benchmark_universe_tickers=normalized_tickers,
     )
 
 
@@ -1635,7 +1789,9 @@ def run_risk_parity_trend_backtest_from_db(
         summary_freq=_summary_frequency(option, timeframe),
         min_price_filter=min_price_filter,
         transaction_cost_bps=transaction_cost_bps,
+        benchmark_contract=STRICT_DEFAULT_BENCHMARK_CONTRACT,
         benchmark_ticker=benchmark_ticker,
+        benchmark_universe_tickers=normalized_tickers,
     )
 
 
@@ -1699,7 +1855,9 @@ def run_dual_momentum_backtest_from_db(
         summary_freq=_summary_frequency(option, timeframe),
         min_price_filter=min_price_filter,
         transaction_cost_bps=transaction_cost_bps,
+        benchmark_contract=STRICT_DEFAULT_BENCHMARK_CONTRACT,
         benchmark_ticker=benchmark_ticker,
+        benchmark_universe_tickers=normalized_tickers,
     )
 
 
@@ -1812,6 +1970,7 @@ def _run_statement_quality_bundle(
     min_history_months_filter: int = STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS,
     min_avg_dollar_volume_20d_m_filter: float = STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M,
     transaction_cost_bps: float = ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
+    benchmark_contract: str = STRICT_DEFAULT_BENCHMARK_CONTRACT,
     benchmark_ticker: str = ETF_REAL_MONEY_DEFAULT_BENCHMARK,
     promotion_min_benchmark_coverage: float = STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE,
     promotion_min_net_cagr_spread: float = STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD,
@@ -2023,6 +2182,8 @@ def _run_statement_quality_bundle(
         input_params["min_avg_dollar_volume_20d_m_filter"] = float(min_avg_dollar_volume_20d_m_filter or 0.0)
     if transaction_cost_bps is not None:
         input_params["transaction_cost_bps"] = transaction_cost_bps
+    if benchmark_contract is not None:
+        input_params["benchmark_contract"] = str(benchmark_contract or STRICT_DEFAULT_BENCHMARK_CONTRACT).strip().lower()
     if benchmark_ticker is not None:
         input_params["benchmark_ticker"] = benchmark_ticker
     if promotion_min_benchmark_coverage is not None:
@@ -2081,6 +2242,7 @@ def run_quality_snapshot_strict_annual_backtest_from_db(
     min_history_months_filter: int = STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS,
     min_avg_dollar_volume_20d_m_filter: float = STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M,
     transaction_cost_bps: float = ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
+    benchmark_contract: str = STRICT_DEFAULT_BENCHMARK_CONTRACT,
     benchmark_ticker: str = ETF_REAL_MONEY_DEFAULT_BENCHMARK,
     promotion_min_benchmark_coverage: float = STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE,
     promotion_min_net_cagr_spread: float = STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD,
@@ -2117,6 +2279,7 @@ def run_quality_snapshot_strict_annual_backtest_from_db(
         min_history_months_filter=min_history_months_filter,
         min_avg_dollar_volume_20d_m_filter=min_avg_dollar_volume_20d_m_filter,
         transaction_cost_bps=transaction_cost_bps,
+        benchmark_contract=benchmark_contract,
         benchmark_ticker=benchmark_ticker,
         promotion_min_benchmark_coverage=promotion_min_benchmark_coverage,
         promotion_min_net_cagr_spread=promotion_min_net_cagr_spread,
@@ -2146,7 +2309,9 @@ def run_quality_snapshot_strict_annual_backtest_from_db(
         summary_freq=_summary_frequency(option, timeframe),
         min_price_filter=min_price_filter,
         transaction_cost_bps=transaction_cost_bps,
+        benchmark_contract=benchmark_contract,
         benchmark_ticker=benchmark_ticker,
+        benchmark_universe_tickers=_normalize_tickers(dynamic_candidate_tickers or tickers),
         promotion_min_benchmark_coverage=promotion_min_benchmark_coverage,
         promotion_min_net_cagr_spread=promotion_min_net_cagr_spread,
         promotion_min_liquidity_clean_coverage=promotion_min_liquidity_clean_coverage,
@@ -2214,6 +2379,7 @@ def run_value_snapshot_strict_annual_backtest_from_db(
     min_history_months_filter: int = STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS,
     min_avg_dollar_volume_20d_m_filter: float = STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M,
     transaction_cost_bps: float = ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
+    benchmark_contract: str = STRICT_DEFAULT_BENCHMARK_CONTRACT,
     benchmark_ticker: str = ETF_REAL_MONEY_DEFAULT_BENCHMARK,
     promotion_min_benchmark_coverage: float = STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE,
     promotion_min_net_cagr_spread: float = STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD,
@@ -2379,6 +2545,7 @@ def run_value_snapshot_strict_annual_backtest_from_db(
             "min_history_months_filter": int(min_history_months_filter or 0),
             "min_avg_dollar_volume_20d_m_filter": float(min_avg_dollar_volume_20d_m_filter or 0.0),
             "transaction_cost_bps": transaction_cost_bps,
+            "benchmark_contract": benchmark_contract,
             "benchmark_ticker": benchmark_ticker,
             "promotion_min_benchmark_coverage": float(promotion_min_benchmark_coverage),
             "promotion_min_net_cagr_spread": float(promotion_min_net_cagr_spread),
@@ -2434,7 +2601,9 @@ def run_value_snapshot_strict_annual_backtest_from_db(
         summary_freq=_summary_frequency(option, timeframe),
         min_price_filter=min_price_filter,
         transaction_cost_bps=transaction_cost_bps,
+        benchmark_contract=benchmark_contract,
         benchmark_ticker=benchmark_ticker,
+        benchmark_universe_tickers=universe_input_tickers,
         promotion_min_benchmark_coverage=promotion_min_benchmark_coverage,
         promotion_min_net_cagr_spread=promotion_min_net_cagr_spread,
         promotion_min_liquidity_clean_coverage=promotion_min_liquidity_clean_coverage,
@@ -2633,6 +2802,7 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
     min_history_months_filter: int = STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS,
     min_avg_dollar_volume_20d_m_filter: float = STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M,
     transaction_cost_bps: float = ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
+    benchmark_contract: str = STRICT_DEFAULT_BENCHMARK_CONTRACT,
     benchmark_ticker: str = ETF_REAL_MONEY_DEFAULT_BENCHMARK,
     promotion_min_benchmark_coverage: float = STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE,
     promotion_min_net_cagr_spread: float = STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD,
@@ -2809,6 +2979,7 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
             "min_history_months_filter": int(min_history_months_filter or 0),
             "min_avg_dollar_volume_20d_m_filter": float(min_avg_dollar_volume_20d_m_filter or 0.0),
             "transaction_cost_bps": transaction_cost_bps,
+            "benchmark_contract": benchmark_contract,
             "benchmark_ticker": benchmark_ticker,
             "promotion_min_benchmark_coverage": float(promotion_min_benchmark_coverage),
             "promotion_min_net_cagr_spread": float(promotion_min_net_cagr_spread),
@@ -2865,7 +3036,9 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
         summary_freq=_summary_frequency(option, timeframe),
         min_price_filter=min_price_filter,
         transaction_cost_bps=transaction_cost_bps,
+        benchmark_contract=benchmark_contract,
         benchmark_ticker=benchmark_ticker,
+        benchmark_universe_tickers=universe_input_tickers,
         promotion_min_benchmark_coverage=promotion_min_benchmark_coverage,
         promotion_min_net_cagr_spread=promotion_min_net_cagr_spread,
         promotion_min_liquidity_clean_coverage=promotion_min_liquidity_clean_coverage,

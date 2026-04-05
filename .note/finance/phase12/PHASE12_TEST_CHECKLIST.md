@@ -277,7 +277,17 @@
 - benchmark policy later pass는 구현되었음
 - liquidity policy later pass는 구현되었음
 - validation policy later pass도 구현되었음
-- broader benchmark contract 자체를 더 늘리는 건 still later pass
+- broader benchmark contract later pass도 구현되었음
+
+추가 확인:
+- strict annual 3종에서 `Benchmark Contract`가 보이는지 확인
+- `Ticker Benchmark`와 `Candidate Universe Equal-Weight`를 각각 선택해 실행 가능한지 확인
+- candidate benchmark일 때
+  - `Benchmark Universe`
+  - `Benchmark Eligible`
+  - `Benchmark Contract`
+  가 `Real-Money`와 `Execution Context`에 보이는지 확인
+- history `Load Into Form` 후 benchmark contract가 복원되는지 확인
 
 ## 8. History / Metadata / Handoff
 

@@ -5990,3 +5990,25 @@ Do not copy full chat transcripts. Keep only the durable result.
 - Durable implication:
   - strict annual promotion is no longer based only on benchmark spread/coverage and liquidity cleanliness
   - rolling-underperformance robustness is now part of the actual promotion contract
+
+### 2026-04-05 - Strict annual benchmark review should go beyond a single ticker benchmark
+
+- Request topic:
+  - continue Phase 12 after validation / liquidity / promotion policy later passes were already connected
+- Interpreted goal:
+  - widen strict annual benchmark interpretation so promotion-grade review can compare not only against a broad ETF like `SPY`, but also against a simple baseline built from the same candidate universe
+- Result:
+  - added `Benchmark Contract` for strict annual family:
+    - `Ticker Benchmark`
+    - `Candidate Universe Equal-Weight`
+  - runtime now records:
+    - `benchmark_contract`
+    - `benchmark_label`
+    - `benchmark_symbol_count`
+    - `benchmark_eligible_symbol_count`
+  - single / compare / history / `Load Into Form` all preserve the chosen benchmark contract
+- Durable implication:
+  - strict annual review can now answer two different questions:
+    1. is the strategy better than a broad reference ticker like `SPY`?
+    2. is the strategy better than simply holding the same candidate universe equally?
+  - underperformance guardrail actual-rule still uses `benchmark_ticker` in this first pass, so the broader benchmark contract currently widens validation/promotion interpretation more than execution rules

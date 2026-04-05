@@ -241,7 +241,7 @@
   - richer benchmark policy / stricter promotion reinforcement later pass도 now 완료
   - liquidity policy / later-pass investability reinforcement도 now 완료
   - validation-policy 기반 broader promotion robustness도 now 완료
-  - broader benchmark contract는 still later pass
+  - broader benchmark contract later pass도 now 완료
 - `completed` annual strict promotion checklist baseline refresh
   - `PHASE12_TEST_CHECKLIST.md`에 strict annual real-money surface 항목 반영
 

@@ -3395,3 +3395,30 @@ Keep entries append-only and concise.
   - Phase 12 checklist
   - comprehensive analysis
   - doc index
+
+### 2026-04-05 - Strict annual broader benchmark contract later pass was added
+
+- Added `Benchmark Contract` to strict annual family:
+  - `Ticker Benchmark`
+  - `Candidate Universe Equal-Weight`
+- Connected the new benchmark contract through:
+  - strict annual single strategy forms
+  - compare overrides
+  - history / `Load Into Form`
+  - runtime meta
+  - `Real-Money`
+  - `Execution Context`
+  - compare `Strategy Highlights`
+- Candidate benchmark now records:
+  - `benchmark_label`
+  - `benchmark_symbol_count`
+  - `benchmark_eligible_symbol_count`
+- Verified:
+  - `py_compile`
+  - page import smoke
+  - DB-backed strict annual smoke for both benchmark contracts
+- Added a dedicated Phase 12 implementation note and refreshed:
+  - current TODO board
+  - Phase 12 checklist
+  - comprehensive analysis
+  - doc index

@@ -147,6 +147,7 @@ def append_backtest_run_history(
         "min_history_months_filter": meta.get("min_history_months_filter"),
         "min_avg_dollar_volume_20d_m_filter": meta.get("min_avg_dollar_volume_20d_m_filter"),
         "transaction_cost_bps": meta.get("transaction_cost_bps"),
+        "benchmark_contract": meta.get("benchmark_contract"),
         "benchmark_ticker": meta.get("benchmark_ticker"),
         "promotion_min_benchmark_coverage": meta.get("promotion_min_benchmark_coverage"),
         "promotion_min_net_cagr_spread": meta.get("promotion_min_net_cagr_spread"),

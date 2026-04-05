@@ -39,6 +39,9 @@ from app.web.runtime.backtest import (
     GTAA_DEFAULT_SIGNAL_INTERVAL,
     ETF_REAL_MONEY_DEFAULT_MIN_PRICE,
     ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
+    STRICT_BENCHMARK_CONTRACT_CANDIDATE_EQUAL_WEIGHT,
+    STRICT_BENCHMARK_CONTRACT_TICKER,
+    STRICT_DEFAULT_BENCHMARK_CONTRACT,
     STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE,
     STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE,
     STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD,
@@ -193,6 +196,10 @@ HISTORICAL_DYNAMIC_PIT_UNIVERSE = "historical_dynamic_pit"
 STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS = {
     "Static Managed Research Universe": STATIC_MANAGED_RESEARCH_UNIVERSE,
     "Historical Dynamic PIT Universe": HISTORICAL_DYNAMIC_PIT_UNIVERSE,
+}
+STRICT_BENCHMARK_CONTRACT_LABELS = {
+    "Ticker Benchmark": STRICT_BENCHMARK_CONTRACT_TICKER,
+    "Candidate Universe Equal-Weight": STRICT_BENCHMARK_CONTRACT_CANDIDATE_EQUAL_WEIGHT,
 }
 
 QUALITY_STRICT_TOP300_TICKERS = [
@@ -576,6 +583,8 @@ def _init_backtest_state() -> None:
         st.session_state["qss_min_history_months_filter"] = STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS
     if "qss_min_avg_dollar_volume_20d_m_filter" not in st.session_state:
         st.session_state["qss_min_avg_dollar_volume_20d_m_filter"] = STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M
+    if "qss_benchmark_contract" not in st.session_state:
+        st.session_state["qss_benchmark_contract"] = "Ticker Benchmark"
     if "qss_promotion_min_benchmark_coverage" not in st.session_state:
         st.session_state["qss_promotion_min_benchmark_coverage"] = STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE * 100.0
     if "qss_promotion_min_net_cagr_spread" not in st.session_state:
@@ -612,6 +621,8 @@ def _init_backtest_state() -> None:
         st.session_state["vss_min_history_months_filter"] = STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS
     if "vss_min_avg_dollar_volume_20d_m_filter" not in st.session_state:
         st.session_state["vss_min_avg_dollar_volume_20d_m_filter"] = STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M
+    if "vss_benchmark_contract" not in st.session_state:
+        st.session_state["vss_benchmark_contract"] = "Ticker Benchmark"
     if "vss_promotion_min_benchmark_coverage" not in st.session_state:
         st.session_state["vss_promotion_min_benchmark_coverage"] = STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE * 100.0
     if "vss_promotion_min_net_cagr_spread" not in st.session_state:
@@ -648,6 +659,8 @@ def _init_backtest_state() -> None:
         st.session_state["qvss_min_history_months_filter"] = STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS
     if "qvss_min_avg_dollar_volume_20d_m_filter" not in st.session_state:
         st.session_state["qvss_min_avg_dollar_volume_20d_m_filter"] = STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M
+    if "qvss_benchmark_contract" not in st.session_state:
+        st.session_state["qvss_benchmark_contract"] = "Ticker Benchmark"
     if "qvss_promotion_min_benchmark_coverage" not in st.session_state:
         st.session_state["qvss_promotion_min_benchmark_coverage"] = STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE * 100.0
     if "qvss_promotion_min_net_cagr_spread" not in st.session_state:
@@ -1046,6 +1059,8 @@ def _summarize_params(meta: dict[str, Any]) -> str:
         parts.append(f"regime_window={meta.get('market_regime_window') or STRICT_MARKET_REGIME_DEFAULT_WINDOW}")
     if meta.get("min_avg_dollar_volume_20d_m_filter") is not None:
         parts.append(f"min_adv20d_m={float(meta.get('min_avg_dollar_volume_20d_m_filter') or 0.0):.1f}")
+    if meta.get("benchmark_contract"):
+        parts.append(f"benchmark_contract={meta.get('benchmark_contract')}")
     if meta.get("promotion_min_benchmark_coverage") is not None:
         parts.append(f"min_benchmark_coverage={float(meta.get('promotion_min_benchmark_coverage') or 0.0):.0%}")
     if meta.get("promotion_min_net_cagr_spread") is not None:
@@ -1409,20 +1424,21 @@ def _render_strict_annual_real_money_inputs(
     default_min_history_months: int = STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS,
     default_min_avg_dollar_volume_20d_m: float = STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M,
     default_transaction_cost_bps: float = ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
+    default_benchmark_contract: str = STRICT_DEFAULT_BENCHMARK_CONTRACT,
     default_benchmark: str = ETF_REAL_MONEY_DEFAULT_BENCHMARK,
     default_promotion_min_benchmark_coverage: float = STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE,
     default_promotion_min_net_cagr_spread: float = STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD,
     default_promotion_min_liquidity_clean_coverage: float = STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE,
     default_promotion_max_underperformance_share: float = STRICT_PROMOTION_DEFAULT_MAX_UNDERPERFORMANCE_SHARE,
     default_promotion_min_worst_rolling_excess_return: float = STRICT_PROMOTION_DEFAULT_MIN_WORST_ROLLING_EXCESS_RETURN,
-) -> tuple[float, int, float, float, str, float, float, float, float, float]:
+) -> tuple[str, float, int, float, float, str, float, float, float, float, float]:
     st.markdown("##### Real-Money Contract")
     st.caption(
         "실전형 annual strict contract에서는 `Minimum Price`, `Minimum History (Months)`, "
-        "`Minimum Avg Dollar Volume 20D`, `Transaction Cost`, `Benchmark Ticker`, "
+        "`Minimum Avg Dollar Volume 20D`, `Transaction Cost`, `Benchmark Contract`, `Benchmark Ticker`, "
         "`Benchmark Policy`를 같이 사용합니다."
     )
-    col1, col2, col3, col4, col5 = st.columns(5, gap="small")
+    col1, col2, col3, col4, col5, col6 = st.columns(6, gap="small")
     with col1:
         min_price_filter = float(
             st.number_input(
@@ -1472,12 +1488,25 @@ def _render_strict_annual_real_money_inputs(
             )
         )
     with col5:
+        benchmark_contract_label = st.selectbox(
+            "Benchmark Contract",
+            options=list(STRICT_BENCHMARK_CONTRACT_LABELS.keys()),
+            index=list(STRICT_BENCHMARK_CONTRACT_LABELS.values()).index(
+                str(default_benchmark_contract or STRICT_DEFAULT_BENCHMARK_CONTRACT).strip().lower()
+                if str(default_benchmark_contract or "").strip().lower() in STRICT_BENCHMARK_CONTRACT_LABELS.values()
+                else STRICT_DEFAULT_BENCHMARK_CONTRACT
+            ),
+            key=f"{key_prefix}_benchmark_contract",
+            help="Ticker benchmark는 `SPY` 같은 기준 ETF와 직접 비교합니다. Candidate Universe Equal-Weight는 같은 후보군을 단순 균등 보유했을 때와 비교합니다.",
+        )
+        benchmark_contract = STRICT_BENCHMARK_CONTRACT_LABELS[benchmark_contract_label]
+    with col6:
         benchmark_ticker = str(
             st.text_input(
                 "Benchmark Ticker",
                 value=default_benchmark,
                 key=f"{key_prefix}_benchmark_ticker",
-                help="전략 결과를 비교할 기준 ETF ticker입니다. 기본값은 `SPY`입니다.",
+                help="Ticker benchmark 또는 underperformance guardrail에서 사용할 기준 ETF ticker입니다. 기본값은 `SPY`입니다.",
             )
         ).strip().upper()
 
@@ -1532,6 +1561,11 @@ def _render_strict_annual_real_money_inputs(
         "`Benchmark Policy`는 benchmark overlay가 있더라도 커버리지와 상대 CAGR이 너무 약하면 "
         "바로 `real_money_candidate`로 올리지 않도록 하는 승격 기준입니다."
     )
+    if benchmark_contract == STRICT_BENCHMARK_CONTRACT_CANDIDATE_EQUAL_WEIGHT:
+        st.caption(
+            "`Candidate Universe Equal-Weight`는 같은 후보 universe를 단순 균등 보유했을 때와 비교하는 benchmark입니다. "
+            "현재 first pass에서는 validation / promotion overlay에 사용되고, actual underperformance guardrail rule은 여전히 `Benchmark Ticker`를 기준으로 동작합니다."
+        )
     st.caption(
         "`Liquidity Clean Coverage`는 리밸런싱 행 대부분이 유동성 제외 없이 지나가야 "
         "실전 승격 후보로 인정하겠다는 later-pass 기준입니다."
@@ -1566,6 +1600,7 @@ def _render_strict_annual_real_money_inputs(
         "`Underperformance Share`와 `Worst Rolling Excess`를 실제 승격 판단 기준으로 연결한 later-pass rule입니다."
     )
     return (
+        benchmark_contract,
         min_price_filter,
         min_history_months_filter,
         min_avg_dollar_volume_20d_m_filter,
@@ -2052,8 +2087,16 @@ def _render_last_run() -> None:
                     )
             if meta.get("transaction_cost_bps") is not None:
                 st.markdown(f"- `Transaction Cost`: `{float(meta['transaction_cost_bps']):.1f} bps`")
+            if meta.get("benchmark_contract"):
+                st.markdown(
+                    f"- `Benchmark Contract`: `{_benchmark_contract_value_to_label(meta.get('benchmark_contract'))}`"
+                )
             if meta.get("benchmark_ticker"):
                 st.markdown(f"- `Benchmark`: `{meta['benchmark_ticker']}`")
+            if meta.get("benchmark_symbol_count") is not None:
+                st.markdown(f"- `Benchmark Universe`: `{int(meta.get('benchmark_symbol_count') or 0)}`")
+            if meta.get("benchmark_eligible_symbol_count") is not None:
+                st.markdown(f"- `Benchmark Eligible`: `{int(meta.get('benchmark_eligible_symbol_count') or 0)}`")
             if meta.get("benchmark_cagr") is not None:
                 st.markdown(f"- `Benchmark CAGR`: `{float(meta['benchmark_cagr']):.2%}`")
             if meta.get("net_cagr_spread") is not None:
@@ -2702,7 +2745,7 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
 
     st.caption(
         "실전형 first pass에서는 `Minimum Price`, `Minimum History (Months)`, turnover 기반 `Transaction Cost`, "
-        "`Benchmark Ticker`, `Benchmark Policy`, `Liquidity Policy`를 같이 반영합니다. "
+        "`Benchmark Contract`, `Benchmark Ticker`, `Benchmark Policy`, `Liquidity Policy`를 같이 반영합니다. "
         "요약/차트는 비용 반영 후 `net` 기준이고, 결과 표에는 `gross`와 `net`이 같이 남습니다."
     )
 
@@ -2725,20 +2768,36 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
             f"`{float(meta.get('liquidity_clean_coverage') or 0.0):.2%}`"
         )
 
-    if meta.get("benchmark_ticker"):
-        benchmark_cols = st.columns(5, gap="small")
-        benchmark_cols[0].metric("Benchmark", str(meta.get("benchmark_ticker")))
-        benchmark_cols[1].metric("Benchmark Available", "Yes" if meta.get("benchmark_available") else "No")
+    if meta.get("benchmark_available") or meta.get("benchmark_contract") or meta.get("benchmark_ticker"):
+        benchmark_cols = st.columns(6, gap="small")
+        benchmark_cols[0].metric("Benchmark Contract", _benchmark_contract_value_to_label(meta.get("benchmark_contract")))
+        benchmark_cols[1].metric(
+            "Benchmark",
+            str(
+                meta.get("benchmark_label")
+                if meta.get("benchmark_contract") == STRICT_BENCHMARK_CONTRACT_CANDIDATE_EQUAL_WEIGHT
+                else meta.get("benchmark_ticker") or meta.get("benchmark_label") or "-"
+            ),
+        )
+        benchmark_cols[2].metric("Benchmark Available", "Yes" if meta.get("benchmark_available") else "No")
+        if meta.get("benchmark_symbol_count") is not None:
+            benchmark_cols[3].metric("Benchmark Universe", str(int(meta.get("benchmark_symbol_count") or 0)))
+        if meta.get("benchmark_eligible_symbol_count") is not None:
+            benchmark_cols[4].metric("Benchmark Eligible", str(int(meta.get("benchmark_eligible_symbol_count") or 0)))
         if meta.get("benchmark_end_balance") is not None:
-            benchmark_cols[2].metric("Benchmark End Balance", f"{float(meta.get('benchmark_end_balance')):,.1f}")
+            benchmark_cols[5].metric("Benchmark End Balance", f"{float(meta.get('benchmark_end_balance')):,.1f}")
         if meta.get("benchmark_cagr") is not None:
-            benchmark_cols[3].metric("Benchmark CAGR", f"{float(meta.get('benchmark_cagr')):.2%}")
+            st.caption(f"Benchmark CAGR: `{float(meta.get('benchmark_cagr')):.2%}`")
         if meta.get("net_cagr_spread") is not None:
-            benchmark_cols[4].metric("Net CAGR Spread", f"{float(meta.get('net_cagr_spread')):.2%}")
+            st.caption(f"Net CAGR Spread: `{float(meta.get('net_cagr_spread')):.2%}`")
         if meta.get("net_excess_end_balance") is not None:
             st.caption(f"Net Excess End Balance: `{float(meta.get('net_excess_end_balance')):,.1f}`")
         if meta.get("benchmark_row_coverage") is not None:
             st.caption(f"Benchmark coverage on aligned rows: `{float(meta.get('benchmark_row_coverage')):.2%}`")
+        if meta.get("benchmark_contract") == STRICT_BENCHMARK_CONTRACT_CANDIDATE_EQUAL_WEIGHT:
+            st.caption(
+                "Candidate-universe equal-weight benchmark는 같은 후보 universe를 단순히 균등 보유했을 때의 reference curve입니다."
+            )
         if meta.get("promotion_min_benchmark_coverage") is not None or meta.get("promotion_min_net_cagr_spread") is not None:
             st.caption(
                 "Benchmark policy: "
@@ -2980,7 +3039,13 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
         )
         benchmark_line = (
             benchmark_chart_df[["Date", "Benchmark Total Balance"]]
-            .rename(columns={"Benchmark Total Balance": f"{meta.get('benchmark_ticker')} Benchmark"})
+            .rename(
+                columns={
+                    "Benchmark Total Balance": str(
+                        meta.get("benchmark_label") or meta.get("benchmark_ticker") or "Benchmark"
+                    )
+                }
+            )
             .set_index("Date")
         )
         overlay_df = pd.concat([strategy_line, benchmark_line], axis=1).sort_index()
@@ -3045,7 +3110,8 @@ def _build_compare_highlight_rows(bundles: list[dict]) -> pd.DataFrame:
                 "Min ADV20D ($M)": meta.get("min_avg_dollar_volume_20d_m_filter"),
                 "Cost (bps)": meta.get("transaction_cost_bps"),
                 "Avg Turnover": meta.get("avg_turnover"),
-                "Benchmark": meta.get("benchmark_ticker"),
+                "Benchmark Contract": _benchmark_contract_value_to_label(meta.get("benchmark_contract")),
+                "Benchmark": meta.get("benchmark_ticker") or meta.get("benchmark_label"),
                 "Benchmark Policy": meta.get("benchmark_policy_status"),
                 "Liquidity Policy": meta.get("liquidity_policy_status"),
                 "Validation Policy": meta.get("validation_policy_status"),
@@ -3991,6 +4057,10 @@ def _build_history_payload(record: dict[str, Any]) -> dict[str, Any] | None:
         )
     if record.get("transaction_cost_bps") is not None:
         payload["transaction_cost_bps"] = float(record.get("transaction_cost_bps") or 0.0)
+    if record.get("benchmark_contract") is not None:
+        payload["benchmark_contract"] = str(
+            record.get("benchmark_contract") or STRICT_DEFAULT_BENCHMARK_CONTRACT
+        ).strip().lower()
     if record.get("benchmark_ticker") is not None:
         payload["benchmark_ticker"] = str(record.get("benchmark_ticker") or "").strip().upper() or ETF_REAL_MONEY_DEFAULT_BENCHMARK
     if record.get("promotion_min_benchmark_coverage") is not None:
@@ -4133,6 +4203,8 @@ def _build_prefill_summary_lines(payload: dict[str, Any] | None) -> list[str]:
         lines.append(f"Min Avg Dollar Volume 20D: `{payload.get('min_avg_dollar_volume_20d_m_filter')}M`")
     if payload.get("transaction_cost_bps") is not None:
         lines.append(f"Transaction Cost: `{payload.get('transaction_cost_bps')}` bps")
+    if payload.get("benchmark_contract"):
+        lines.append(f"Benchmark Contract: `{_benchmark_contract_value_to_label(payload.get('benchmark_contract'))}`")
     if payload.get("benchmark_ticker"):
         lines.append(f"Benchmark: `{payload.get('benchmark_ticker')}`")
     if payload.get("promotion_min_benchmark_coverage") is not None:
@@ -4191,6 +4263,13 @@ def _universe_contract_value_to_label(value: str | None) -> str:
         if contract_value == value:
             return label
     return "Static Managed Research Universe"
+
+
+def _benchmark_contract_value_to_label(value: str | None) -> str:
+    for label, contract_value in STRICT_BENCHMARK_CONTRACT_LABELS.items():
+        if contract_value == value:
+            return label
+    return "Ticker Benchmark"
 
 
 def _bundle_to_saved_strategy_override(bundle: dict[str, Any]) -> dict[str, Any]:
@@ -4285,6 +4364,8 @@ def _bundle_to_saved_strategy_override(bundle: dict[str, Any]) -> dict[str, Any]
         override["min_avg_dollar_volume_20d_m_filter"] = float(meta.get("min_avg_dollar_volume_20d_m_filter"))
     if meta.get("transaction_cost_bps") is not None:
         override["transaction_cost_bps"] = float(meta.get("transaction_cost_bps"))
+    if meta.get("benchmark_contract") is not None:
+        override["benchmark_contract"] = meta.get("benchmark_contract")
     if meta.get("benchmark_ticker") is not None:
         override["benchmark_ticker"] = meta.get("benchmark_ticker")
     if meta.get("promotion_min_benchmark_coverage") is not None:
@@ -4508,6 +4589,9 @@ def _apply_compare_strategy_prefill(strategy_name: str, override: dict[str, Any]
     )
     st.session_state[f"compare_{key_prefix}_transaction_cost_bps"] = float(
         override.get("transaction_cost_bps") or ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS
+    )
+    st.session_state[f"compare_{key_prefix}_benchmark_contract"] = _benchmark_contract_value_to_label(
+        override.get("benchmark_contract") or STRICT_DEFAULT_BENCHMARK_CONTRACT
     )
     st.session_state[f"compare_{key_prefix}_benchmark_ticker"] = str(
         override.get("benchmark_ticker") or ETF_REAL_MONEY_DEFAULT_BENCHMARK
@@ -4779,6 +4863,9 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
             payload.get("min_avg_dollar_volume_20d_m_filter") or STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M
         )
         st.session_state["qss_transaction_cost_bps"] = float(payload.get("transaction_cost_bps") or ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS)
+        st.session_state["qss_benchmark_contract"] = _benchmark_contract_value_to_label(
+            payload.get("benchmark_contract") or STRICT_DEFAULT_BENCHMARK_CONTRACT
+        )
         st.session_state["qss_benchmark_ticker"] = str(payload.get("benchmark_ticker") or ETF_REAL_MONEY_DEFAULT_BENCHMARK).strip().upper()
         st.session_state["qss_promotion_min_benchmark_coverage"] = float(
             (payload.get("promotion_min_benchmark_coverage") or STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE) * 100.0
@@ -4854,6 +4941,9 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
             payload.get("min_avg_dollar_volume_20d_m_filter") or STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M
         )
         st.session_state["vss_transaction_cost_bps"] = float(payload.get("transaction_cost_bps") or ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS)
+        st.session_state["vss_benchmark_contract"] = _benchmark_contract_value_to_label(
+            payload.get("benchmark_contract") or STRICT_DEFAULT_BENCHMARK_CONTRACT
+        )
         st.session_state["vss_benchmark_ticker"] = str(payload.get("benchmark_ticker") or ETF_REAL_MONEY_DEFAULT_BENCHMARK).strip().upper()
         st.session_state["vss_promotion_min_benchmark_coverage"] = float(
             (payload.get("promotion_min_benchmark_coverage") or STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE) * 100.0
@@ -4930,6 +5020,9 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
             payload.get("min_avg_dollar_volume_20d_m_filter") or STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M
         )
         st.session_state["qvss_transaction_cost_bps"] = float(payload.get("transaction_cost_bps") or ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS)
+        st.session_state["qvss_benchmark_contract"] = _benchmark_contract_value_to_label(
+            payload.get("benchmark_contract") or STRICT_DEFAULT_BENCHMARK_CONTRACT
+        )
         st.session_state["qvss_benchmark_ticker"] = str(payload.get("benchmark_ticker") or ETF_REAL_MONEY_DEFAULT_BENCHMARK).strip().upper()
         st.session_state["qvss_promotion_min_benchmark_coverage"] = float(
             (payload.get("promotion_min_benchmark_coverage") or STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE) * 100.0
@@ -5802,6 +5895,7 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> None:
                     min_history_months_filter=payload.get("min_history_months_filter", STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS),
                     min_avg_dollar_volume_20d_m_filter=payload.get("min_avg_dollar_volume_20d_m_filter", STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M),
                     transaction_cost_bps=payload.get("transaction_cost_bps", ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS),
+                    benchmark_contract=payload.get("benchmark_contract", STRICT_DEFAULT_BENCHMARK_CONTRACT),
                     benchmark_ticker=payload.get("benchmark_ticker", ETF_REAL_MONEY_DEFAULT_BENCHMARK),
                     promotion_min_benchmark_coverage=payload.get("promotion_min_benchmark_coverage", STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE),
                     promotion_min_net_cagr_spread=payload.get("promotion_min_net_cagr_spread", STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD),
@@ -5857,6 +5951,7 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> None:
                     min_history_months_filter=payload.get("min_history_months_filter", STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS),
                     min_avg_dollar_volume_20d_m_filter=payload.get("min_avg_dollar_volume_20d_m_filter", STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M),
                     transaction_cost_bps=payload.get("transaction_cost_bps", ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS),
+                    benchmark_contract=payload.get("benchmark_contract", STRICT_DEFAULT_BENCHMARK_CONTRACT),
                     benchmark_ticker=payload.get("benchmark_ticker", ETF_REAL_MONEY_DEFAULT_BENCHMARK),
                     promotion_min_benchmark_coverage=payload.get("promotion_min_benchmark_coverage", STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE),
                     promotion_min_net_cagr_spread=payload.get("promotion_min_net_cagr_spread", STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD),
@@ -5913,6 +6008,7 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> None:
                     min_history_months_filter=payload.get("min_history_months_filter", STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS),
                     min_avg_dollar_volume_20d_m_filter=payload.get("min_avg_dollar_volume_20d_m_filter", STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M),
                     transaction_cost_bps=payload.get("transaction_cost_bps", ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS),
+                    benchmark_contract=payload.get("benchmark_contract", STRICT_DEFAULT_BENCHMARK_CONTRACT),
                     benchmark_ticker=payload.get("benchmark_ticker", ETF_REAL_MONEY_DEFAULT_BENCHMARK),
                     promotion_min_benchmark_coverage=payload.get("promotion_min_benchmark_coverage", STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE),
                     promotion_min_net_cagr_spread=payload.get("promotion_min_net_cagr_spread", STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD),
@@ -6604,6 +6700,7 @@ def _render_quality_snapshot_strict_annual_form() -> None:
                 label_prefix="",
             )
             (
+                benchmark_contract,
                 min_price_filter,
                 min_history_months_filter,
                 min_avg_dollar_volume_20d_m_filter,
@@ -6665,6 +6762,7 @@ def _render_quality_snapshot_strict_annual_form() -> None:
         "min_history_months_filter": int(min_history_months_filter),
         "min_avg_dollar_volume_20d_m_filter": float(min_avg_dollar_volume_20d_m_filter),
         "transaction_cost_bps": float(transaction_cost_bps),
+        "benchmark_contract": benchmark_contract,
         "benchmark_ticker": benchmark_ticker,
         "promotion_min_benchmark_coverage": float(promotion_min_benchmark_coverage),
         "promotion_min_net_cagr_spread": float(promotion_min_net_cagr_spread),
@@ -7179,6 +7277,7 @@ def _render_value_snapshot_strict_annual_form() -> None:
                 label_prefix="",
             )
             (
+                benchmark_contract,
                 min_price_filter,
                 min_history_months_filter,
                 min_avg_dollar_volume_20d_m_filter,
@@ -7241,6 +7340,7 @@ def _render_value_snapshot_strict_annual_form() -> None:
         "min_history_months_filter": int(min_history_months_filter),
         "min_avg_dollar_volume_20d_m_filter": float(min_avg_dollar_volume_20d_m_filter),
         "transaction_cost_bps": float(transaction_cost_bps),
+        "benchmark_contract": benchmark_contract,
         "benchmark_ticker": benchmark_ticker,
         "promotion_min_benchmark_coverage": float(promotion_min_benchmark_coverage),
         "promotion_min_net_cagr_spread": float(promotion_min_net_cagr_spread),
@@ -7589,6 +7689,7 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
                 label_prefix="",
             )
             (
+                benchmark_contract,
                 min_price_filter,
                 min_history_months_filter,
                 min_avg_dollar_volume_20d_m_filter,
@@ -7654,6 +7755,7 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
         "min_history_months_filter": int(min_history_months_filter),
         "min_avg_dollar_volume_20d_m_filter": float(min_avg_dollar_volume_20d_m_filter),
         "transaction_cost_bps": float(transaction_cost_bps),
+        "benchmark_contract": benchmark_contract,
         "benchmark_ticker": benchmark_ticker,
         "promotion_min_benchmark_coverage": float(promotion_min_benchmark_coverage),
         "promotion_min_net_cagr_spread": float(promotion_min_net_cagr_spread),
@@ -8116,6 +8218,7 @@ def render_backtest_tab() -> None:
                             label_prefix="Strict Annual Quality ",
                         )
                         (
+                            benchmark_contract,
                             min_price_filter,
                             min_history_months_filter,
                             min_avg_dollar_volume_20d_m_filter,
@@ -8133,6 +8236,7 @@ def render_backtest_tab() -> None:
                         compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["min_history_months_filter"] = int(min_history_months_filter)
                         compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["min_avg_dollar_volume_20d_m_filter"] = float(min_avg_dollar_volume_20d_m_filter)
                         compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["transaction_cost_bps"] = float(transaction_cost_bps)
+                        compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["benchmark_contract"] = benchmark_contract
                         compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["benchmark_ticker"] = benchmark_ticker
                         compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["promotion_min_benchmark_coverage"] = float(promotion_min_benchmark_coverage)
                         compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["promotion_min_net_cagr_spread"] = float(promotion_min_net_cagr_spread)
@@ -8323,6 +8427,7 @@ def render_backtest_tab() -> None:
                             label_prefix="Strict Annual Value ",
                         )
                         (
+                            benchmark_contract,
                             min_price_filter,
                             min_history_months_filter,
                             min_avg_dollar_volume_20d_m_filter,
@@ -8340,6 +8445,7 @@ def render_backtest_tab() -> None:
                         compare_strategy_overrides["Value Snapshot (Strict Annual)"]["min_history_months_filter"] = int(min_history_months_filter)
                         compare_strategy_overrides["Value Snapshot (Strict Annual)"]["min_avg_dollar_volume_20d_m_filter"] = float(min_avg_dollar_volume_20d_m_filter)
                         compare_strategy_overrides["Value Snapshot (Strict Annual)"]["transaction_cost_bps"] = float(transaction_cost_bps)
+                        compare_strategy_overrides["Value Snapshot (Strict Annual)"]["benchmark_contract"] = benchmark_contract
                         compare_strategy_overrides["Value Snapshot (Strict Annual)"]["benchmark_ticker"] = benchmark_ticker
                         compare_strategy_overrides["Value Snapshot (Strict Annual)"]["promotion_min_benchmark_coverage"] = float(promotion_min_benchmark_coverage)
                         compare_strategy_overrides["Value Snapshot (Strict Annual)"]["promotion_min_net_cagr_spread"] = float(promotion_min_net_cagr_spread)
@@ -8536,6 +8642,7 @@ def render_backtest_tab() -> None:
                             label_prefix="Strict Annual Multi-Factor ",
                         )
                         (
+                            benchmark_contract,
                             min_price_filter,
                             min_history_months_filter,
                             min_avg_dollar_volume_20d_m_filter,
@@ -8553,6 +8660,7 @@ def render_backtest_tab() -> None:
                         compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["min_history_months_filter"] = int(min_history_months_filter)
                         compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["min_avg_dollar_volume_20d_m_filter"] = float(min_avg_dollar_volume_20d_m_filter)
                         compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["transaction_cost_bps"] = float(transaction_cost_bps)
+                        compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["benchmark_contract"] = benchmark_contract
                         compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["benchmark_ticker"] = benchmark_ticker
                         compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["promotion_min_benchmark_coverage"] = float(promotion_min_benchmark_coverage)
                         compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["promotion_min_net_cagr_spread"] = float(promotion_min_net_cagr_spread)
