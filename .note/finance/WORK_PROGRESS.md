@@ -3281,3 +3281,29 @@ Keep entries append-only and concise.
   - Phase 12 checklist
   - comprehensive analysis
   - doc index
+
+### 2026-04-05 - Strict annual benchmark policy / promotion reinforcement later pass was added
+
+- Extended the strict annual family (`Quality`, `Value`, `Quality+Value`) with two promotion-policy inputs:
+  - `Min Benchmark Coverage (%)`
+  - `Min Net CAGR Spread (%)`
+- Added benchmark-policy evaluation to the shared real-money helper:
+  - `benchmark_policy_status = normal / watch / caution / unavailable`
+  - `benchmark_policy_watch_signals`
+  - coverage/spread pass flags
+- Promotion decision now considers benchmark policy together with:
+  - validation status
+  - universe contract
+  - price freshness
+- The new contract now travels through:
+  - single-strategy form
+  - compare override
+  - runtime metadata
+  - real-money tab
+  - execution context
+  - history / `Load Into Form`
+- Added a dedicated Phase 12 implementation note and refreshed:
+  - current TODO board
+  - Phase 12 checklist
+  - comprehensive analysis
+  - doc index

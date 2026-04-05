@@ -5785,3 +5785,33 @@ Do not copy full chat transcripts. Keep only the durable result.
     - spread-aware liquidity
     - richer benchmark policy
     - broader promotion robustness
+
+### 2026-04-05 - Strict annual promotion should treat benchmark quality as a policy gate, not just a readout
+
+- Request topic:
+  - continue the next Phase 12 strict annual hardening step after liquidity proxy first pass
+- Interpreted goal:
+  - make promotion decisions more trustworthy by checking whether the benchmark comparison itself is strong enough to rely on
+- Result:
+  - added two strict annual promotion-policy inputs:
+    - `Min Benchmark Coverage (%)`
+    - `Min Net CAGR Spread (%)`
+  - runtime now evaluates:
+    - `benchmark_policy_status = normal / watch / caution / unavailable`
+    - `benchmark_policy_watch_signals`
+    - coverage/spread pass state
+  - `promotion_decision` now uses benchmark policy status together with:
+    - `validation_status`
+    - `universe_contract`
+    - `price_freshness`
+  - UI/history surface now shows and restores the new policy fields across:
+    - single
+    - compare
+    - history / `Load Into Form`
+    - execution context
+- Durable implication:
+  - strict annual no longer treats benchmark overlay as "present vs absent" only
+  - it now distinguishes:
+    - benchmark exists but is policy-weak
+    - benchmark exists and is promotion-usable
+  - this makes `hold / production_candidate / real_money_candidate` more explainable before real-money promotion

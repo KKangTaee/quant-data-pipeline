@@ -60,6 +60,8 @@ class BacktestDataError(ValueError):
 ETF_REAL_MONEY_DEFAULT_MIN_PRICE = 5.0
 ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS = 10.0
 ETF_REAL_MONEY_DEFAULT_BENCHMARK = "SPY"
+STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE = 0.95
+STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD = -0.02
 REAL_MONEY_CASH_LABEL = "__CASH__"
 
 
@@ -460,6 +462,7 @@ def _build_real_money_validation_surface(
 def _build_promotion_decision(meta: dict[str, Any]) -> dict[str, Any]:
     benchmark_available = bool(meta.get("benchmark_available"))
     validation_status = str(meta.get("validation_status") or "").strip().lower()
+    benchmark_policy_status = str(meta.get("benchmark_policy_status") or "").strip().lower()
     universe_contract = meta.get("universe_contract")
     price_freshness = meta.get("price_freshness") or {}
     freshness_status = str(price_freshness.get("status") or "").strip().lower()
@@ -471,6 +474,10 @@ def _build_promotion_decision(meta: dict[str, Any]) -> dict[str, Any]:
         rationale.append("validation_caution")
     elif validation_status == "watch":
         rationale.append("validation_watch")
+    if benchmark_policy_status == "caution":
+        rationale.append("benchmark_policy_caution")
+    elif benchmark_policy_status == "watch":
+        rationale.append("benchmark_policy_watch")
     if universe_contract == STATIC_MANAGED_RESEARCH_UNIVERSE:
         rationale.append("static_universe_contract")
     if freshness_status == "warning":
@@ -481,6 +488,7 @@ def _build_promotion_decision(meta: dict[str, Any]) -> dict[str, Any]:
     if (
         benchmark_available
         and validation_status == "normal"
+        and benchmark_policy_status in {"", "normal"}
         and universe_contract != STATIC_MANAGED_RESEARCH_UNIVERSE
         and freshness_status not in {"warning", "error"}
     ):
@@ -489,6 +497,7 @@ def _build_promotion_decision(meta: dict[str, Any]) -> dict[str, Any]:
     elif (
         not benchmark_available
         or validation_status == "caution"
+        or benchmark_policy_status == "caution"
         or freshness_status == "error"
     ):
         decision = "hold"
@@ -504,6 +513,72 @@ def _build_promotion_decision(meta: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _build_benchmark_policy_surface(meta: dict[str, Any]) -> dict[str, Any]:
+    min_coverage_raw = meta.get("promotion_min_benchmark_coverage")
+    min_spread_raw = meta.get("promotion_min_net_cagr_spread")
+    if min_coverage_raw is None and min_spread_raw is None:
+        return {}
+
+    benchmark_available = bool(meta.get("benchmark_available"))
+    coverage = meta.get("benchmark_row_coverage")
+    spread = meta.get("net_cagr_spread")
+    min_coverage = float(min_coverage_raw) if min_coverage_raw is not None else None
+    min_spread = float(min_spread_raw) if min_spread_raw is not None else None
+
+    watch_signals: list[str] = []
+    severe_signals = 0
+    coverage_pass: bool | None = None
+    spread_pass: bool | None = None
+
+    if not benchmark_available:
+        return {
+            "benchmark_policy_status": "unavailable",
+            "benchmark_policy_watch_signals": ["benchmark_unavailable"],
+            "benchmark_policy_coverage_pass": coverage_pass,
+            "benchmark_policy_spread_pass": spread_pass,
+        }
+
+    if min_coverage is not None:
+        if coverage is None:
+            coverage_pass = None
+            watch_signals.append("benchmark_coverage_missing")
+            severe_signals += 1
+        else:
+            coverage_value = float(coverage)
+            coverage_pass = coverage_value >= min_coverage
+            if not coverage_pass:
+                watch_signals.append("benchmark_coverage_below_policy")
+                if coverage_value < max(0.0, min_coverage - 0.10):
+                    severe_signals += 1
+
+    if min_spread is not None:
+        if spread is None:
+            spread_pass = None
+            watch_signals.append("net_cagr_spread_missing")
+            severe_signals += 1
+        else:
+            spread_value = float(spread)
+            spread_pass = spread_value >= min_spread
+            if not spread_pass:
+                watch_signals.append("net_cagr_spread_below_policy")
+                if spread_value < (min_spread - 0.05):
+                    severe_signals += 1
+
+    if severe_signals > 0:
+        status = "caution"
+    elif watch_signals:
+        status = "watch"
+    else:
+        status = "normal"
+
+    return {
+        "benchmark_policy_status": status,
+        "benchmark_policy_watch_signals": watch_signals,
+        "benchmark_policy_coverage_pass": coverage_pass,
+        "benchmark_policy_spread_pass": spread_pass,
+    }
+
+
 def _apply_real_money_hardening(
     bundle: dict[str, Any],
     *,
@@ -511,6 +586,8 @@ def _apply_real_money_hardening(
     min_price_filter: float,
     transaction_cost_bps: float,
     benchmark_ticker: str | None,
+    promotion_min_benchmark_coverage: float | None = None,
+    promotion_min_net_cagr_spread: float | None = None,
 ) -> dict[str, Any]:
     result_df = bundle["result_df"].copy()
     hardened_df, turnover_stats = _apply_transaction_cost_postprocess(
@@ -539,6 +616,12 @@ def _apply_real_money_hardening(
             "min_price_filter": float(min_price_filter or 0.0),
             "transaction_cost_bps": float(transaction_cost_bps or 0.0),
             "benchmark_ticker": str(benchmark_ticker or "").strip().upper() or None,
+            "promotion_min_benchmark_coverage": (
+                float(promotion_min_benchmark_coverage) if promotion_min_benchmark_coverage is not None else None
+            ),
+            "promotion_min_net_cagr_spread": (
+                float(promotion_min_net_cagr_spread) if promotion_min_net_cagr_spread is not None else None
+            ),
             "avg_turnover": turnover_stats["avg_turnover"],
             "max_turnover": turnover_stats["max_turnover"],
             "estimated_cost_total": turnover_stats["estimated_cost_total"],
@@ -616,6 +699,22 @@ def _apply_real_money_hardening(
                 f"Benchmark overlay could not be built because DB price history for `{meta['benchmark_ticker']}` "
                 "was not available on the requested dates."
             )
+
+    benchmark_policy_surface = _build_benchmark_policy_surface(meta)
+    if benchmark_policy_surface:
+        meta.update(benchmark_policy_surface)
+        policy_status = benchmark_policy_surface.get("benchmark_policy_status")
+        policy_signals = benchmark_policy_surface.get("benchmark_policy_watch_signals") or []
+        if policy_status == "caution":
+            warnings.append(
+                "Benchmark policy caution: aligned benchmark coverage or net CAGR spread fell materially below the current promotion contract."
+            )
+        elif policy_status == "watch":
+            warnings.append(
+                "Benchmark policy watch: benchmark coverage or net CAGR spread is below the preferred promotion contract."
+            )
+        if policy_signals:
+            meta["benchmark_policy_watch_signals"] = policy_signals
 
     meta.update(_build_promotion_decision(meta))
     bundle["meta"] = meta
@@ -1036,6 +1135,10 @@ def build_backtest_result_bundle(
         meta["transaction_cost_bps"] = input_params.get("transaction_cost_bps")
     if input_params.get("benchmark_ticker") is not None:
         meta["benchmark_ticker"] = input_params.get("benchmark_ticker")
+    if input_params.get("promotion_min_benchmark_coverage") is not None:
+        meta["promotion_min_benchmark_coverage"] = input_params.get("promotion_min_benchmark_coverage")
+    if input_params.get("promotion_min_net_cagr_spread") is not None:
+        meta["promotion_min_net_cagr_spread"] = input_params.get("promotion_min_net_cagr_spread")
     if input_params.get("underperformance_guardrail_enabled") is not None:
         meta["underperformance_guardrail_enabled"] = input_params.get("underperformance_guardrail_enabled")
     if input_params.get("underperformance_guardrail_window_months") is not None:
@@ -1497,6 +1600,8 @@ def _run_statement_quality_bundle(
     min_avg_dollar_volume_20d_m_filter: float = STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M,
     transaction_cost_bps: float = ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
     benchmark_ticker: str = ETF_REAL_MONEY_DEFAULT_BENCHMARK,
+    promotion_min_benchmark_coverage: float = STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE,
+    promotion_min_net_cagr_spread: float = STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD,
     trend_filter_enabled: bool = False,
     trend_filter_window: int = 200,
     market_regime_enabled: bool = False,
@@ -1704,6 +1809,10 @@ def _run_statement_quality_bundle(
         input_params["transaction_cost_bps"] = transaction_cost_bps
     if benchmark_ticker is not None:
         input_params["benchmark_ticker"] = benchmark_ticker
+    if promotion_min_benchmark_coverage is not None:
+        input_params["promotion_min_benchmark_coverage"] = float(promotion_min_benchmark_coverage)
+    if promotion_min_net_cagr_spread is not None:
+        input_params["promotion_min_net_cagr_spread"] = float(promotion_min_net_cagr_spread)
 
     bundle = build_backtest_result_bundle(
         result_df,
@@ -1751,6 +1860,8 @@ def run_quality_snapshot_strict_annual_backtest_from_db(
     min_avg_dollar_volume_20d_m_filter: float = STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M,
     transaction_cost_bps: float = ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
     benchmark_ticker: str = ETF_REAL_MONEY_DEFAULT_BENCHMARK,
+    promotion_min_benchmark_coverage: float = STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE,
+    promotion_min_net_cagr_spread: float = STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD,
     trend_filter_enabled: bool = False,
     trend_filter_window: int = 200,
     market_regime_enabled: bool = False,
@@ -1782,6 +1893,8 @@ def run_quality_snapshot_strict_annual_backtest_from_db(
         min_avg_dollar_volume_20d_m_filter=min_avg_dollar_volume_20d_m_filter,
         transaction_cost_bps=transaction_cost_bps,
         benchmark_ticker=benchmark_ticker,
+        promotion_min_benchmark_coverage=promotion_min_benchmark_coverage,
+        promotion_min_net_cagr_spread=promotion_min_net_cagr_spread,
         trend_filter_enabled=trend_filter_enabled,
         trend_filter_window=trend_filter_window,
         market_regime_enabled=market_regime_enabled,
@@ -1806,6 +1919,8 @@ def run_quality_snapshot_strict_annual_backtest_from_db(
         min_price_filter=min_price_filter,
         transaction_cost_bps=transaction_cost_bps,
         benchmark_ticker=benchmark_ticker,
+        promotion_min_benchmark_coverage=promotion_min_benchmark_coverage,
+        promotion_min_net_cagr_spread=promotion_min_net_cagr_spread,
     )
 
 
@@ -1869,6 +1984,8 @@ def run_value_snapshot_strict_annual_backtest_from_db(
     min_avg_dollar_volume_20d_m_filter: float = STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M,
     transaction_cost_bps: float = ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
     benchmark_ticker: str = ETF_REAL_MONEY_DEFAULT_BENCHMARK,
+    promotion_min_benchmark_coverage: float = STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE,
+    promotion_min_net_cagr_spread: float = STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD,
     trend_filter_enabled: bool = False,
     trend_filter_window: int = 200,
     market_regime_enabled: bool = False,
@@ -2029,6 +2146,8 @@ def run_value_snapshot_strict_annual_backtest_from_db(
             "min_avg_dollar_volume_20d_m_filter": float(min_avg_dollar_volume_20d_m_filter or 0.0),
             "transaction_cost_bps": transaction_cost_bps,
             "benchmark_ticker": benchmark_ticker,
+            "promotion_min_benchmark_coverage": float(promotion_min_benchmark_coverage),
+            "promotion_min_net_cagr_spread": float(promotion_min_net_cagr_spread),
             "factor_freq": "annual",
             "value_factors": normalized_factors,
             "trend_filter_enabled": trend_filter_enabled,
@@ -2079,6 +2198,8 @@ def run_value_snapshot_strict_annual_backtest_from_db(
         min_price_filter=min_price_filter,
         transaction_cost_bps=transaction_cost_bps,
         benchmark_ticker=benchmark_ticker,
+        promotion_min_benchmark_coverage=promotion_min_benchmark_coverage,
+        promotion_min_net_cagr_spread=promotion_min_net_cagr_spread,
     )
 
 
@@ -2273,6 +2394,8 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
     min_avg_dollar_volume_20d_m_filter: float = STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M,
     transaction_cost_bps: float = ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
     benchmark_ticker: str = ETF_REAL_MONEY_DEFAULT_BENCHMARK,
+    promotion_min_benchmark_coverage: float = STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE,
+    promotion_min_net_cagr_spread: float = STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD,
     trend_filter_enabled: bool = False,
     trend_filter_window: int = 200,
     market_regime_enabled: bool = False,
@@ -2444,6 +2567,8 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
             "min_avg_dollar_volume_20d_m_filter": float(min_avg_dollar_volume_20d_m_filter or 0.0),
             "transaction_cost_bps": transaction_cost_bps,
             "benchmark_ticker": benchmark_ticker,
+            "promotion_min_benchmark_coverage": float(promotion_min_benchmark_coverage),
+            "promotion_min_net_cagr_spread": float(promotion_min_net_cagr_spread),
             "factor_freq": "annual",
             "quality_factors": normalized_quality_factors,
             "value_factors": normalized_value_factors,
@@ -2495,6 +2620,8 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
         min_price_filter=min_price_filter,
         transaction_cost_bps=transaction_cost_bps,
         benchmark_ticker=benchmark_ticker,
+        promotion_min_benchmark_coverage=promotion_min_benchmark_coverage,
+        promotion_min_net_cagr_spread=promotion_min_net_cagr_spread,
     )
 
 

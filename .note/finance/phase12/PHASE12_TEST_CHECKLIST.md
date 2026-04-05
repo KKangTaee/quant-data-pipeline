@@ -179,10 +179,21 @@
   - `min_avg_dollar_volume_20d_m_filter`
   - `transaction_cost_bps`
   - `benchmark_ticker`
+  - `promotion_min_benchmark_coverage`
+  - `promotion_min_net_cagr_spread`
   - `underperformance_guardrail_enabled`
   - `underperformance_guardrail_window_months`
   - `underperformance_guardrail_threshold`
   가 복원되는지
+- `Real-Money` 탭에서
+  - `Benchmark Policy`
+  - `Policy Status`
+  - `Min Coverage`
+  - `Actual Coverage`
+  - `Min Net CAGR Spread`
+  - `Actual Net CAGR Spread`
+  - `Benchmark Policy Signals`
+  가 보이는지
 
 현재 상태 설명:
 - annual strict는 now `real-money hardening first pass completed` 상태다.
@@ -190,10 +201,10 @@
 - underperformance guardrail actual-rule first pass도 now 추가되었다.
 - minimum-history investability proxy / benchmark spread / coverage first pass도 now 추가되었다.
 - 20D average dollar volume liquidity proxy first pass도 now 추가되었다.
+- richer benchmark policy / stricter promotion reinforcement later pass도 now 추가되었다.
 - 다만 아래는 아직 later pass다.
   - stronger portfolio guardrail
   - richer liquidity / spread / AUM policy
-  - richer benchmark policy
 
 ## 4. Static vs Dynamic Contract Boundary
 
@@ -235,7 +246,8 @@
 - drawdown은 기존 summary / compare surface로 읽음
 - rolling underperformance validation surface는 구현되었음
 - annual strict underperformance guardrail actual-rule first pass도 구현되었음
-- richer benchmark contract와 stronger policy reinforcement는 아직 later pass
+- benchmark policy later pass는 구현되었음
+- broader benchmark contract 자체를 더 늘리는 건 still later pass
 
 ## 8. History / Metadata / Handoff
 
