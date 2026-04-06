@@ -4222,3 +4222,33 @@ Keep entries append-only and concise.
 - Practical implication:
   - the remaining blocker is not the raw return/drawdown pair alone
   - it is the validation layer that still keeps the best numeric candidate in `hold`
+
+### 2026-04-06 - Value Strict Annual hold-free exact hit는 benchmark / cadence / trend / regime를 바꿔도 끝내 못 찾았음
+
+- Follow-up exploration after the user asked to isolate the `hold` reason and then search again for a non-hold candidate under the same numeric target.
+- Fixed constraints:
+  - `Value > Strict Annual`
+  - `Universe Contract = Historical Dynamic PIT Universe`
+  - `start = 2016-01-01`
+  - `top_n <= 10`
+  - target:
+    - `promotion != hold`
+    - `CAGR >= 15%`
+    - `MDD >= -20%`
+- Practical UI-exposed dimensions checked:
+  - benchmark contract / ticker
+  - factor combinations
+  - `top_n` in the `7~10` range
+  - cadence with `rebalance_interval = 1 / 3`
+  - `trend_filter` on/off
+  - `market_regime` on/off
+- Result:
+  - the best numeric candidate remained the same `Value Strict Annual` exact-hit setup:
+    - `CAGR = 15.84%`
+    - `MDD = -17.42%`
+    - `promotion = hold`
+    - `reason = validation_caution + validation_policy_caution`
+  - no non-hold exact hit was found in the tested grid
+- Practical implication:
+  - benchmark / cadence / trend-regime tuning did not structurally resolve the hold
+  - the remaining next lever is the validation / promotion policy layer, not the raw return profile

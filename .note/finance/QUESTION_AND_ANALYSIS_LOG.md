@@ -6972,3 +6972,32 @@ Do not copy full chat transcripts. Keep only the durable result.
 - Durable implication:
   - when the comparison target is explicitly `SPY`, `Value Strict Annual` is the strongest of the tested families under the current search constraints
   - but the current validation / promotion contract is still too strict for those candidates to escape `hold`
+
+### 2026-04-06 - Value Strict Annual의 hold 원인을 validation layer로 좁혔고, benchmark / cadence / trend / regime 조정만으로는 hold-free exact hit를 못 찾았다
+
+- Request topic:
+  - the user asked to diagnose why the best `Value Strict Annual` candidate was still `hold`, then search again for a non-hold candidate under the same numeric target
+- Interpreted goal:
+  - keep the existing practical UI constraints:
+    - `Value Strict Annual`
+    - `Historical Dynamic PIT Universe`
+    - `start = 2016-01-01`
+    - `top_n <= 10`
+  - vary benchmark contract / ticker, factor set, cadence, and trend/regime switches
+  - only after that, decide whether validation thresholds themselves need to be relaxed
+- Result:
+  - the exact-hit candidate remained:
+    - `earnings_yield`, `ocf_yield`, `operating_income_yield`, `fcf_yield`
+    - `month_end / interval 1 / top_n 9`
+    - `benchmark = SPY`
+    - `CAGR = 15.84%`
+    - `MDD = -17.42%`
+    - `promotion = hold`
+  - the blocking reasons stayed:
+    - `validation_status = caution`
+    - `validation_policy_status = caution`
+    - `rolling_review_status = caution`
+  - no non-hold exact hit was found in the tested practical grid
+- Durable implication:
+  - benchmark / cadence / trend-regime changes were not enough to structurally resolve the hold
+  - if the user wants the same numeric envelope but a non-hold state, the next useful lever is the validation / promotion threshold layer

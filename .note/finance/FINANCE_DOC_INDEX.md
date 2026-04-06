@@ -216,6 +216,8 @@
   - 서브 에이전트 병렬 탐색 후 메인 환경 재검증으로, `Value > Strict Annual`에서 `CAGR 15% 이상 + MDD 20% 이내`를 만족한 exact-hit 조합을 정리한 분석 문서
 - `.note/finance/phase13/PHASE13_HOLD_DIAGNOSTIC_AND_NONHOLD_NEAR_MISS_SEARCH.md`
   - `Value` exact-hit 후보의 `hold` 원인을 `validation` 계층에서 진단하고, `Quality` 및 `Quality + Value` strict annual family에서 non-hold exact hit가 가능한지 다시 탐색한 분석 문서
+- `.note/finance/phase13/PHASE13_VALUE_STRICT_HOLD_FREE_SEARCH.md`
+  - `Value Strict Annual` exact-hit 후보의 `hold` 원인을 유지한 채, benchmark / factor / cadence / trend / regime를 바꿔 `hold`가 풀리면서도 `CAGR >= 15%`와 `MDD >= -20%`를 동시에 만족하는 후보가 존재하는지 다시 탐색한 분석 문서
 - `.note/finance/phase13/PHASE13_VALUE_STRICT_SPY_TARGET_SEARCH.md`
   - `Value Strict Annual`을 중심으로 `SPY`보다 `CAGR`와 `MDD`가 동시에 나은 후보를 찾기 위해 `2016-01-01` 시작, `Historical Dynamic PIT Universe`, `top_n <= 10` 조건에서 수행한 탐색 문서
 - `.note/finance/phase13/PHASE13_SPY_OUTPERFORMANCE_AND_MDD20_SEARCH.md`
