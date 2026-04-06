@@ -13,6 +13,7 @@
 
 ## 현재 전략 허브
 
+- `GTAA.md`
 - `QUALITY_STRICT_ANNUAL.md`
 - `VALUE_STRICT_ANNUAL.md`
 - `QUALITY_VALUE_STRICT_ANNUAL.md`

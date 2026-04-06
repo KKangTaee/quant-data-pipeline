@@ -4447,6 +4447,28 @@ Keep entries append-only and concise.
   - `app/web/pages/backtest.py`
   - GTAA payload now uses `_universe_mode` directly, consistent with the equal-weight path and helper return contract
 
+### 2026-04-07 - GTAA non-hold / SPY outperformance 후보를 다시 탐색해 backtest report로 정리함
+
+- The user clarified that the actual ask was not a category explanation, but a GTAA search that finds a portfolio satisfying:
+  - `promotion != hold`
+  - `deployment_readiness_status != blocked`
+  - better `CAGR` than `SPY`
+  - better `MDD` than `SPY`
+- Used sub-agent parallel search across DB-backed ETF candidates with 2016+ history.
+- Practical final candidate:
+  - `SPY, QQQ, GLD, LQD`
+  - `top = 2`
+  - `interval = 3`
+  - `score horizons = 1M / 3M`
+  - `benchmark = SPY`
+  - `promotion = production_candidate`
+  - `deployment = watchlist_only`
+  - `CAGR = 14.7671%`
+  - `MDD = -11.5626%`
+- Created:
+  - `.note/finance/backtest_reports/phase13/PHASE13_GTAA_NONHOLD_SPY_OUTPERFORMANCE_SEARCH.md`
+  - `.note/finance/backtest_reports/strategies/GTAA.md`
+
 ### 2026-04-06 - Phase 13 테스트 체크리스트를 실제 수정 이력 기준으로 다시 정리함
 
 - During manual-test-driven Phase 13 follow-up work, several UX surfaces changed:

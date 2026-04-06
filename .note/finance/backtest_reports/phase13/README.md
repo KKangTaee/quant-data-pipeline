@@ -18,6 +18,7 @@
 - `SPY` 비교 탐색
 - coverage 확장 탐색
 - strongest winner 재현 가이드
+- GTAA non-hold candidate 탐색
 
 ## 먼저 볼 문서
 
@@ -26,6 +27,7 @@
 - [QUALITY_STRICT_ANNUAL.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/QUALITY_STRICT_ANNUAL.md)
 - [VALUE_STRICT_ANNUAL.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL.md)
 - [QUALITY_VALUE_STRICT_ANNUAL.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL.md)
+- [GTAA.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/GTAA.md)
 
 ## 호환성 메모
 

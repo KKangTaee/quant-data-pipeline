@@ -7229,6 +7229,36 @@ Do not copy full chat transcripts. Keep only the durable result.
   - GTAA single-form payload is now aligned with the helper return contract
   - this closes a regression introduced during the universe-input surface refactor
 
+### 2026-04-07 - GTAA에서 non-hold이면서 SPY보다 좋은 practical candidate를 다시 찾았다
+
+- Request topic:
+  - the user clarified that the real ask was to search the `GTAA` strategy itself and save the result in the backtest-report folder
+- Interpreted goal:
+  - use sub-agents to search multiple GTAA ETF combinations from the DB-backed ETF list
+  - find a candidate that satisfies:
+    - `promotion != hold`
+    - `deployment_readiness_status != blocked`
+    - `CAGR > SPY`
+    - `MDD better than SPY`
+    - `2016-01-01` start
+- Result:
+  - practical final candidate:
+    - tickers: `SPY, QQQ, GLD, LQD`
+    - `top = 2`
+    - `interval = 3`
+    - `score horizons = 1M / 3M`
+    - `risk_off_mode = cash_only`
+    - `benchmark = SPY`
+    - `CAGR = 14.7671%`
+    - `MDD = -11.5626%`
+    - `promotion = production_candidate`
+    - `deployment = watchlist_only`
+  - created:
+    - `.note/finance/backtest_reports/phase13/PHASE13_GTAA_NONHOLD_SPY_OUTPERFORMANCE_SEARCH.md`
+    - `.note/finance/backtest_reports/strategies/GTAA.md`
+- Durable implication:
+  - GTAA now has one documented practical reference candidate that both beats `SPY` on raw `CAGR / MDD` and avoids the `hold / blocked` state
+
 ### 2026-04-06 - Phase 13 테스트 체크리스트를 수정 이력과 현재 UI 기준으로 다시 맞췄다
 
 - Request topic:

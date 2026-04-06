@@ -8,6 +8,8 @@
 
 - `strategies/README.md`
   - 전략별 허브 문서 안내
+- `strategies/GTAA.md`
+  - `GTAA` 결과 허브
 - `strategies/QUALITY_STRICT_ANNUAL.md`
   - `Quality > Strict Annual` 결과 허브
 - `strategies/VALUE_STRICT_ANNUAL.md`

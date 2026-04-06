@@ -246,6 +246,10 @@
   - `Value > Strict Annual` family의 strongest raw winner, balanced near-miss, hold 병목을 전략 기준으로 다시 읽기 위한 허브 문서
 - `.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL.md`
   - `Quality + Value > Strict Annual` family의 low-drawdown 탐색과 family positioning을 전략 기준으로 다시 읽기 위한 허브 문서
+- `.note/finance/backtest_reports/strategies/GTAA.md`
+  - `GTAA` family의 current practical candidate와 관련 탐색 문서를 전략 기준으로 다시 읽기 위한 허브 문서
+- `.note/finance/backtest_reports/phase13/PHASE13_GTAA_NONHOLD_SPY_OUTPERFORMANCE_SEARCH.md`
+  - DB에 가격이 존재하는 ETF 후보군을 기반으로 GTAA를 다시 탐색해, `Promotion != hold`, `Deployment != blocked`, `SPY` 대비 `CAGR / MDD` 우위를 동시에 만족하는 practical candidate를 찾은 분석 문서
 
 ---
 
