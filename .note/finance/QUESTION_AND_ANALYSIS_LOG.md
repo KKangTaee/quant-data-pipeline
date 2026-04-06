@@ -7078,3 +7078,31 @@ Do not copy full chat transcripts. Keep only the durable result.
     - the common blocker across the strongest candidates was still the `validation / promotion` layer, especially rolling underperformance
 - Durable implication:
   - future strict annual family discussions can now start from the new summary doc instead of reopening each search note one by one
+
+### 2026-04-06 - Coverage 300/500/1000까지 넓혀도 strict annual target exact-hit는 확인되지 않았다
+
+- Request topic:
+  - the user asked to rerun the strict annual target search with wider presets after confirming the earlier search had effectively fixed `Coverage 100`
+- Interpreted goal:
+  - test whether `US Statement Coverage 300`, `500`, or `1000` could unlock a portfolio that satisfies:
+    - `Historical Dynamic PIT Universe`
+    - `2016-01-01 ~ 2026-04-01`
+    - `top_n <= 10`
+    - `CAGR >= 15%`
+    - `Maximum Drawdown >= -20%`
+    - `promotion != hold`
+- Result:
+  - `Coverage 300`: no exact-hit found
+  - `Coverage 500`: no exact-hit found
+  - `Coverage 1000`: no exact-hit surfaced within the current search window; strongest candidate remained inconclusive
+  - strongest confirmed `Coverage 500` candidate:
+    - `Value > Strict Annual`
+    - `earnings_yield`, `ocf_yield`, `operating_income_yield`, `fcf_yield`
+    - `month_end / interval 1 / top_n 9`
+    - `benchmark = SPY`
+    - `CAGR = 7.66%`
+    - `MDD = -20.58%`
+    - `promotion = hold`
+- Durable implication:
+  - widening statement coverage by itself did not resolve the target search
+  - the next meaningful lever remains the validation / promotion / liquidity / benchmark-policy layer rather than coverage breadth alone

@@ -4334,3 +4334,24 @@ Keep entries append-only and concise.
 - Also updated:
   - `.note/finance/FINANCE_DOC_INDEX.md`
   - `.note/finance/QUESTION_AND_ANALYSIS_LOG.md`
+
+### 2026-04-06 - strict annual family target search를 Coverage 300/500/1000까지 넓혀 다시 확인함
+
+- The user asked to retry the target search with wider strict annual presets:
+  - `US Statement Coverage 300`
+  - `US Statement Coverage 500`
+  - `US Statement Coverage 1000`
+- Target stayed fixed:
+  - `Historical Dynamic PIT Universe`
+  - `2016-01-01 ~ 2026-04-01`
+  - `top_n <= 10`
+  - `CAGR >= 15%`
+  - `Maximum Drawdown >= -20%`
+  - `promotion != hold`
+- Used sub-agent parallel search by coverage and consolidated the result in:
+  - `.note/finance/phase13/PHASE13_STRICT_ANNUAL_COVERAGE300_500_1000_TARGET_SEARCH.md`
+- Practical result:
+  - no exact-hit was confirmed for `Coverage 300` or `Coverage 500`
+  - `Coverage 1000` did not surface an exact-hit within the current exploratory window and remained inconclusive
+  - widening coverage alone did not solve the target search
+  - wider coverage exposed more `validation`, `liquidity`, and `benchmark policy` friction
