@@ -7140,3 +7140,27 @@ Do not copy full chat transcripts. Keep only the durable result.
   - under the current strict annual contract, the family search still splits into two separate winners:
     - a raw `real_money_candidate` with drawdown too deep
     - a balanced numeric candidate that remains blocked by `validation`
+
+### 2026-04-06 - strongest Value raw winner를 다시 넣는 방법을 별도 backtest 가이드로 정리했다
+
+- Request topic:
+  - the user asked for a Markdown guide that explains how to configure the strongest `Value` portfolio in the backtest UI
+- Interpreted goal:
+  - leave one durable reproduction guide for the `Value > Strict Annual` raw winner
+  - make the result easier to rerun without reopening multiple phase13 analysis notes
+- Result:
+  - created `.note/finance/phase13/PHASE13_VALUE_RAW_WINNER_BACKTEST_GUIDE.md`
+  - the guide records:
+    - `Value > Strict Annual`
+    - `US Statement Coverage 100`
+    - `Historical Dynamic PIT Universe`
+    - default value factors
+    - `month_end / rebalance_interval = 1 / top_n = 10`
+    - `Trend Filter = off`
+    - `Market Regime = off`
+    - expected result:
+      - `CAGR = 29.89%`
+      - `MDD = -29.15%`
+      - `promotion = real_money_candidate`
+- Durable implication:
+  - the strongest raw `Value` candidate can now be rerun directly from one guide document instead of being reconstructed from multiple search notes

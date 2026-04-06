@@ -4382,3 +4382,19 @@ Keep entries append-only and concise.
     - `CAGR = 15.84%`
     - `MDD = -17.42%`
     - but `promotion = hold`
+
+### 2026-04-06 - Value raw winner를 백테스트 UI에서 다시 넣을 수 있는 가이드 문서 추가
+
+- The user asked for a backtest-facing Markdown guide that explains how to reproduce the strongest `Value` raw winner.
+- Created:
+  - `.note/finance/phase13/PHASE13_VALUE_RAW_WINNER_BACKTEST_GUIDE.md`
+- The guide records:
+  - which family / variant to pick
+  - which preset and universe contract to use
+  - the exact factor set
+  - rebalance / top_n / risk overlay settings
+  - the expected result:
+    - `CAGR = 29.89%`
+    - `MDD = -29.15%`
+    - `promotion = real_money_candidate`
+- Also documented the balanced near-miss so the user can compare “raw strongest” vs “safer but still hold”.

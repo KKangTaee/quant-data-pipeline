@@ -216,6 +216,8 @@
   - `Coverage 100`에서 못 찾은 exact-hit를 `US Statement Coverage 300 / 500 / 1000`까지 넓혀 다시 탐색하고, wider coverage가 실제로도 strict annual family의 hold-free target을 해결해주는지 점검한 분석 문서
 - `.note/finance/phase13/PHASE13_REAL_MONEY_CANDIDATE_SPY_MDD25_SEARCH.md`
   - `Quality / Value / Quality + Value` strict annual family를 대상으로 `promotion = real_money_candidate`, `SPY` 초과 CAGR, `MDD 25% 이내` 조건을 동시에 만족하는 포트폴리오가 존재하는지 서브 에이전트 병렬 탐색으로 다시 확인한 분석 문서
+- `.note/finance/phase13/PHASE13_VALUE_RAW_WINNER_BACKTEST_GUIDE.md`
+  - `Value > Strict Annual` raw winner(`CAGR 29.89% / MDD -29.15% / promotion = real_money_candidate`)를 backtest UI에서 다시 재현하기 위한 입력값 중심 가이드 문서
 - `.note/finance/phase13/PHASE13_QUALITY_VALUE_2016_LOW_DRAWDOWN_FACTOR_OPTION_SEARCH.md`
   - `Quality + Value > Strict Annual`를 `Historical Dynamic PIT Universe`와 `2016-01-01` 시작 조건으로 고정한 뒤, factor 조합과 benchmark / cadence를 바꿔 `hold 아님 + MDD 15% 이내` 가능성을 다시 탐색한 분석 문서
 - `.note/finance/phase13/PHASE13_VALUE_STRICT_CAGR15_MDD20_SEARCH.md`
