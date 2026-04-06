@@ -28,6 +28,8 @@
   - `Shortlist Status`
   - `Shortlist Next Step`
   - rationale가 보이는지
+  - `Promotion Decision = hold`일 때 `Hold 해결 가이드`가 같이 보이는지
+  - guide 안에 `막히는 항목 / 먼저 볼 위치 / 권장 조치`가 함께 보이는지
 
 ## 2. ETF Second-Pass Guardrail Surface
 

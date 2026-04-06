@@ -3210,6 +3210,23 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
                         "현재 run은 바로 승격하기보다 hold로 보는 편이 맞습니다. "
                         "validation gap 또는 contract issue를 먼저 정리하는 것이 좋습니다."
                     )
+                    hold_guidance_rows = _build_hold_resolution_guidance_rows(meta)
+                    with st.container(border=True):
+                        st.markdown("##### Hold 해결 가이드")
+                        st.caption(
+                            "이 전략이 무조건 나쁘다는 뜻은 아닙니다. "
+                            "지금은 승격 전에 먼저 풀어야 하는 검증 blocker가 있다는 뜻입니다."
+                        )
+                        if hold_guidance_rows:
+                            st.dataframe(
+                                pd.DataFrame(hold_guidance_rows),
+                                use_container_width=True,
+                                hide_index=True,
+                            )
+                        st.info(
+                            "먼저 `검토 근거`에서 막히는 항목을 확인하고, "
+                            "필요하면 `실행 부담`에서 유동성 / 비용 / ETF 운용 가능성까지 같이 점검하면 가장 빠릅니다."
+                        )
 
         if meta.get("shortlist_status"):
             with _section_header("후보 전략 숏리스트", "실전 후보 목록 안에서 현재 어느 단계인지 보여줍니다."):
@@ -5066,6 +5083,99 @@ def _deployment_readiness_status_value_to_label(value: str | None) -> str:
         "small_capital_ready_with_review": "Small Capital Ready (Review)",
     }
     return mapping.get(str(value or "").strip().lower(), "-")
+
+
+def _build_hold_resolution_guidance_rows(meta: dict[str, Any]) -> list[dict[str, str]]:
+    guidance_specs = {
+        "benchmark_unavailable": {
+            "막히는 항목": "벤치마크 비교 없음",
+            "먼저 볼 위치": "검토 근거 > Benchmark / Validation 요약",
+            "권장 조치": "Benchmark Contract와 Benchmark Ticker를 설정하고 benchmark curve가 실제로 생성되는지 다시 실행합니다.",
+        },
+        "validation_caution": {
+            "막히는 항목": "검증 상태가 caution",
+            "먼저 볼 위치": "검토 근거 > Validation Surface",
+            "권장 조치": "Underperformance Share, Worst Rolling Excess, Drawdown 지표를 확인하고 benchmark 또는 전략 계약을 다시 검토합니다.",
+        },
+        "benchmark_policy_caution": {
+            "막히는 항목": "벤치마크 정책 미통과",
+            "먼저 볼 위치": "검토 근거 > 세부 정책 기준 보기 > Benchmark Policy",
+            "권장 조치": "Benchmark Coverage와 Net CAGR Spread가 기준을 넘는지 확인하고 benchmark contract 또는 기간을 조정합니다.",
+        },
+        "benchmark_policy_unavailable": {
+            "막히는 항목": "벤치마크 정책 판단 불가",
+            "먼저 볼 위치": "검토 근거 > 세부 정책 기준 보기 > Benchmark Policy",
+            "권장 조치": "usable benchmark history가 충분한지 확인하고, benchmark contract를 먼저 안정적으로 연결합니다.",
+        },
+        "liquidity_policy_caution": {
+            "막히는 항목": "유동성 정책 미통과",
+            "먼저 볼 위치": "실행 부담 > 실행 계약 요약 / Liquidity Policy",
+            "권장 조치": "Min Avg Dollar Volume 20D 기준이나 후보군을 조정하고, 거래가 너무 얇은 종목이 자주 제외되는지 확인합니다.",
+        },
+        "liquidity_policy_unavailable": {
+            "막히는 항목": "유동성 정책 판단 불가",
+            "먼저 볼 위치": "실행 부담 > 실행 계약 요약 / Liquidity Policy",
+            "권장 조치": "유동성 필터를 켜고 usable liquidity history가 있는지 확인한 뒤 다시 실행합니다.",
+        },
+        "validation_policy_caution": {
+            "막히는 항목": "승격 검증 정책 미통과",
+            "먼저 볼 위치": "검토 근거 > 세부 정책 기준 보기 > Validation Policy",
+            "권장 조치": "Max Underperformance Share와 Min Worst Rolling Excess 기준을 확인하고 robustness를 다시 검토합니다.",
+        },
+        "validation_policy_unavailable": {
+            "막히는 항목": "승격 검증 정책 판단 불가",
+            "먼저 볼 위치": "검토 근거 > 세부 정책 기준 보기 > Validation Policy",
+            "권장 조치": "aligned benchmark validation history가 충분한지 확인하고 benchmark/기간 계약을 다시 점검합니다.",
+        },
+        "guardrail_policy_caution": {
+            "막히는 항목": "가드레일 정책 미통과",
+            "먼저 볼 위치": "검토 근거 > 세부 정책 기준 보기 > Portfolio Guardrail Policy",
+            "권장 조치": "Strategy Max Drawdown과 Drawdown Gap이 기준을 넘는지 확인하고 drawdown contract를 더 보수적으로 재검토합니다.",
+        },
+        "guardrail_policy_unavailable": {
+            "막히는 항목": "가드레일 정책 판단 불가",
+            "먼저 볼 위치": "검토 근거 > 세부 정책 기준 보기 > Portfolio Guardrail Policy",
+            "권장 조치": "usable benchmark drawdown history가 있는지 확인하고 guardrail 계산에 필요한 benchmark 연결을 먼저 안정화합니다.",
+        },
+        "etf_operability_caution": {
+            "막히는 항목": "ETF 운용 가능성 이슈",
+            "먼저 볼 위치": "실행 부담 > ETF Operability",
+            "권장 조치": "ETF AUM, bid-ask spread, asset profile freshness를 확인하고 운용이 불리한 ETF는 교체를 검토합니다.",
+        },
+        "etf_operability_unavailable": {
+            "막히는 항목": "ETF 운용 가능성 판단 불가",
+            "먼저 볼 위치": "실행 부담 > ETF Operability",
+            "권장 조치": "ETF asset profile과 spread/AUM 데이터가 충분한지 확인하고 operability metadata를 먼저 안정화합니다.",
+        },
+        "price_freshness_error": {
+            "막히는 항목": "가격 데이터 최신성 오류",
+            "먼저 볼 위치": "결과 상단 안내 / Execution Context",
+            "권장 조치": "Daily Market Update 또는 targeted refresh를 실행한 뒤 다시 백테스트합니다.",
+        },
+    }
+
+    rows: list[dict[str, str]] = []
+    seen_blockers: set[str] = set()
+    for rationale_code in list(meta.get("promotion_rationale") or []):
+        spec = guidance_specs.get(str(rationale_code or "").strip())
+        if not spec:
+            continue
+        blocker = spec["막히는 항목"]
+        if blocker in seen_blockers:
+            continue
+        rows.append(spec)
+        seen_blockers.add(blocker)
+
+    if not rows and str(meta.get("promotion_next_step") or "").strip() == "resolve_validation_gaps_before_promotion":
+        rows.append(
+            {
+                "막히는 항목": "승격 검증 기준 미통과",
+                "먼저 볼 위치": "검토 근거 / 실행 부담",
+                "권장 조치": "Validation, Benchmark, Liquidity, Guardrail 섹션 중 `caution` 또는 `unavailable` 항목부터 먼저 확인합니다.",
+            }
+        )
+
+    return rows
 
 
 def _bundle_to_saved_strategy_override(bundle: dict[str, Any]) -> dict[str, Any]:

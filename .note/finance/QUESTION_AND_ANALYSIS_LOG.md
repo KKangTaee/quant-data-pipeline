@@ -6516,3 +6516,26 @@ Do not copy full chat transcripts. Keep only the durable result.
 - Durable implication:
   - users should read promotion as the earlier "can this strategy be promoted?" gate
   - users should read deployment readiness as the later "can we actually move toward paper/live operation?" checklist layer
+
+### 2026-04-06 - When promotion is `hold`, the UI should show a concrete fix guide rather than only raw rationale codes
+
+- Request topic:
+  - the user confirmed that the real goal is to eventually get a portfolio into a usable state rather than leaving it at `hold`, and asked whether the product can briefly explain what to change when `hold` appears
+- Interpreted goal:
+  - turn `resolve_validation_gaps_before_promotion` from a technical status into an actionable operator guide inside the result UI
+- Result:
+  - added a `Hold 해결 가이드` block to `Real-Money > 현재 판단`
+  - the guide appears when `promotion_decision = hold`
+  - it translates blocking rationale codes into a short table with:
+    - `막히는 항목`
+    - `먼저 볼 위치`
+    - `권장 조치`
+  - the mapped blockers currently include:
+    - benchmark unavailable
+    - validation caution
+    - benchmark / liquidity / validation / guardrail policy caution or unavailable
+    - ETF operability caution or unavailable
+    - price freshness error
+- Durable implication:
+  - users no longer need to infer the debugging path from raw rationale codes alone
+  - Phase 13 manual QA should explicitly verify that hold cases show this guide

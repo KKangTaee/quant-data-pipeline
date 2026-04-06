@@ -313,6 +313,14 @@ Analysis / Presentation
   그래서 같은 탭 안에서도 `승격`, `숏리스트`, `probation`, `deployment`,
   `benchmark`, `validation`, `ETF operability`, `guardrail`
   같은 묶음을 서로 더 쉽게 구분할 수 있다.
+  그리고 `Promotion Decision = hold`일 때는
+  `Real-Money > 현재 판단` 안에 별도의 `Hold 해결 가이드`가 같이 나타난다.
+  이 가이드는 raw rationale code를 그대로 노출하는 대신,
+  - 막히는 항목
+  - 먼저 볼 위치
+  - 권장 조치
+  형태로 다시 정리해서,
+  사용자가 `resolve_validation_gaps_before_promotion`을 실제 수정 액션으로 바로 읽을 수 있게 한다.
 - 그리고 single run 결과 헤더인 `Latest Backtest Run` 아래도 다시 정리되어,
   이제는
   - 결과 읽는 순서

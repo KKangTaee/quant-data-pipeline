@@ -3788,3 +3788,12 @@ Keep entries append-only and concise.
   - short explanation
   - metrics / rationale / status message
 - Kept the same underlying runtime/meta semantics while making section boundaries easier to scan.
+
+### 2026-04-06 - Hold 상태 해결 가이드를 Real-Money 탭에 추가
+
+- Added a `Hold 해결 가이드` block under `Real-Money > 현재 판단` when `Promotion Decision = hold`.
+- Mapped promotion rationale codes into operator-friendly Korean guidance rows:
+  - `막히는 항목`
+  - `먼저 볼 위치`
+  - `권장 조치`
+- Updated the Phase 13 checklist so manual QA explicitly checks that this guide appears for hold cases.
