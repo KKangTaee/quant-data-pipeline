@@ -4317,3 +4317,20 @@ Keep entries append-only and concise.
 - Practical implication:
   - relaxing the drawdown target to `25%` was not sufficient by itself to unlock a non-hold candidate with `CAGR >= 20%`
   - the next lever is still the validation / promotion threshold layer, not just raw factor or cadence tuning
+
+### 2026-04-06 - strict annual family 백테스트 탐색 결과를 Quality / Value / Quality+Value 기준으로 통합 정리함
+
+- The user asked for one summary document that organizes the backtests run so far across:
+  - `Quality`
+  - `Value`
+  - `Quality + Value`
+- Created:
+  - `.note/finance/phase13/PHASE13_STRICT_ANNUAL_FAMILY_BACKTEST_SUMMARY.md`
+- Consolidated practical conclusions:
+  - `Value Strict Annual` was the strongest family overall
+  - `Quality Strict Annual` could produce useful raw candidates, but full hardening often still ended in `hold`
+  - `Quality + Value Strict Annual` was best for lowering drawdown, but usually sacrificed too much CAGR
+  - the most common remaining blocker across the strongest candidates was the `validation / promotion` layer rather than benchmark or liquidity alone
+- Also updated:
+  - `.note/finance/FINANCE_DOC_INDEX.md`
+  - `.note/finance/QUESTION_AND_ANALYSIS_LOG.md`

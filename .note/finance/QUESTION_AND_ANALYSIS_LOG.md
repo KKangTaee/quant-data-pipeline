@@ -7057,3 +7057,24 @@ Do not copy full chat transcripts. Keep only the durable result.
 - Durable implication:
   - increasing the drawdown tolerance to `25%` does not automatically unlock a usable non-hold portfolio
   - in the current contract, the main blocker is still the validation / promotion layer rather than the raw performance envelope
+
+### 2026-04-06 - strict annual family 백테스트를 Quality / Value / Quality+Value 기준으로 한 장에 정리했다
+
+- Request topic:
+  - the user asked for one Markdown summary that organizes the backtests run so far across `Quality`, `Value`, and `Quality + Value`
+- Interpreted goal:
+  - reduce the need to reopen many phase13 search notes
+  - leave one durable document that shows:
+    - strongest family
+    - strongest candidate by family
+    - best defensive candidate
+    - the common reason `hold` keeps appearing
+- Result:
+  - created `.note/finance/phase13/PHASE13_STRICT_ANNUAL_FAMILY_BACKTEST_SUMMARY.md`
+  - the summary records that:
+    - `Value Strict Annual` was the strongest family overall
+    - `Quality Strict Annual` had meaningful raw candidates but stayed conservative under full hardening
+    - `Quality + Value Strict Annual` was better for lowering drawdown than for maximizing CAGR
+    - the common blocker across the strongest candidates was still the `validation / promotion` layer, especially rolling underperformance
+- Durable implication:
+  - future strict annual family discussions can now start from the new summary doc instead of reopening each search note one by one
