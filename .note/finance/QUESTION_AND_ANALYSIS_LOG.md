@@ -6690,3 +6690,25 @@ Do not copy full chat transcripts. Keep only the durable result.
   - under the same 2016-start and MDD constraint, the `SPY` benchmark runs that were checked tended to stay in `hold` because `validation = caution`
 - Durable implication:
   - when a strict drawdown target is imposed over a long 2016-start window, a usable candidate may exist only under a more defensive benchmark frame, so benchmark choice must be disclosed clearly when sharing “usable” portfolio examples
+
+### 2026-04-06 - Quality + Value dynamic PIT에 2016 시작과 MDD 15% 이내를 동시에 요구하면 현재 구현 범위에선 비현실적이다
+
+- Request topic:
+  - the user corrected the previous request and fixed the strategy family to `Quality + Value` with `Historical Dynamic PIT Universe`
+- Interpreted goal:
+  - find one `Quality + Value` portfolio configuration that starts in January 2016 and still keeps `Maximum Drawdown` within `15%`
+- Result:
+  - interpreted `MDD 15 이하` as `Maximum Drawdown >= -15%`
+  - re-ran `Quality + Value > Strict Annual` across practical UI-reproducible variations:
+    - `top_n`
+    - rebalance cadence
+    - benchmark contract / benchmark ticker
+    - trend filter, market regime, guardrail combinations
+  - did not find a convincing `hold 아님` configuration that also stayed within the `-15%` MDD target over the full `2016-01-01 ~ 2026-04-01` window
+  - the previously found stronger non-hold configuration for this family remained around `MDD ≈ -28%`
+- Durable implication:
+  - for the current strict-annual `Quality + Value` implementation, a long 2016-start window plus a `-15%` drawdown ceiling is too strict to be a realistic operator target
+  - if the user wants to stay within this family, the next practical levers are:
+    - relax the MDD target
+    - shorten the start window
+    - or accept `hold` and use a stronger defensive overlay as a research-only experiment rather than a production-ready reference

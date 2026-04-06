@@ -3905,3 +3905,27 @@ Keep entries append-only and concise.
   - `deployment_readiness_status = paper_only`
   - `validation / rolling / out_of_sample = normal`
   - summary: `CAGR 15.04%`, `MDD -9.82%`
+
+### 2026-04-06 - Quality + Value dynamic PIT에 2016 시작과 MDD 15% 이내를 동시에 요구하면 현실적인 비보류 후보가 잘 나오지 않음
+
+- Re-ran `Quality + Value > Strict Annual` with the user's corrected fixed constraints:
+  - strategy family fixed to `Quality + Value`
+  - `Universe Contract = Historical Dynamic PIT Universe`
+  - `start = 2016-01-01`
+  - target interpreted as `Maximum Drawdown >= -15%`
+- Searched across practical UI-reproducible settings:
+  - `top_n` variations
+  - monthly / slower rebalance cadence
+  - `Candidate Universe Equal-Weight` and defensive ticker benchmarks
+  - trend/regime on/off and guardrail combinations
+- Result:
+  - did not find a convincing non-hold candidate that also stayed within the `-15%` MDD target
+  - the stronger previously found non-hold `Quality + Value` candidate still sat closer to `MDD ≈ -28%`
+  - more defensive trend/regime configurations often reduced activity but still did not get both:
+    - `hold 아님`
+    - `MDD -15% 이내`
+- Practical implication:
+  - under the full 2016-start window, the current `Quality + Value` strict annual family appears too equity-exposed to satisfy that drawdown target without either:
+    - shortening the start window
+    - relaxing the drawdown target
+    - or moving to a different strategy family
