@@ -214,6 +214,8 @@
   - `Quality + Value > Strict Annual`를 `Historical Dynamic PIT Universe`와 `2016-01-01` 시작 조건으로 고정한 뒤, factor 조합과 benchmark / cadence를 바꿔 `hold 아님 + MDD 15% 이내` 가능성을 다시 탐색한 분석 문서
 - `.note/finance/phase13/PHASE13_VALUE_STRICT_CAGR15_MDD20_SEARCH.md`
   - 서브 에이전트 병렬 탐색 후 메인 환경 재검증으로, `Value > Strict Annual`에서 `CAGR 15% 이상 + MDD 20% 이내`를 만족한 exact-hit 조합을 정리한 분석 문서
+- `.note/finance/phase13/PHASE13_CAGR20_MDD25_HOLD_FREE_SEARCH.md`
+  - `hold 아님 + CAGR 20% 이상 + MDD 25% 이내`를 strict annual family 전체에서 다시 탐색했지만 exact hit가 없었고, `Value > Strict Annual`의 near-miss 조합이 가장 가까웠음을 정리한 분석 문서
 - `.note/finance/phase13/PHASE13_HOLD_DIAGNOSTIC_AND_NONHOLD_NEAR_MISS_SEARCH.md`
   - `Value` exact-hit 후보의 `hold` 원인을 `validation` 계층에서 진단하고, `Quality` 및 `Quality + Value` strict annual family에서 non-hold exact hit가 가능한지 다시 탐색한 분석 문서
 - `.note/finance/phase13/PHASE13_VALUE_STRICT_HOLD_FREE_SEARCH.md`

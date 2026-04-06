@@ -6786,6 +6786,35 @@ Do not copy full chat transcripts. Keep only the durable result.
     - return/risk numbers are good enough for the user's target
     - but the product's operator policy still keeps the strategy in `hold`
 
+### 2026-04-06 - `hold 아님 + CAGR 20% 이상 + MDD 25% 이내` 조건은 current strict annual 범위에선 exact hit가 없었다
+
+- Request topic:
+  - the user asked for another sub-agent search with:
+    - `promotion != hold`
+    - `CAGR >= 20%`
+    - `Maximum Drawdown >= -25%`
+- Interpreted goal:
+  - determine whether a truly operator-acceptable candidate exists under a tougher return target while preserving a still-defensive drawdown ceiling
+- Result:
+  - sub-agents explored `Quality`, `Value`, and `Quality + Value` strict annual families
+  - no exact-hit candidate was found in the searched practical setting space
+  - the strongest near-miss again came from `Value > Strict Annual`
+    - default value factor set
+    - `month_end / rebalance_interval 1 / top_n 10`
+    - `Benchmark = SPY`
+    - `Trend Filter = on`
+    - `Market Regime = on`
+    - `Underperformance Guardrail = on`
+    - `Drawdown Guardrail = on`
+    - `CAGR = 18.81%`
+    - `MDD = -23.71%`
+    - `promotion = hold`
+- Durable implication:
+  - current strict annual families can approach the requested numeric band, but not while also clearing the current promotion contract
+  - the practical bottleneck remains:
+    - validation / promotion policy
+    - not simple factor/universe/cadence tuning alone
+
 ### 2026-04-06 - hold의 직접 원인은 validation caution이었고, requested family 내 non-hold exact hit는 아직 못 찾았다
 
 - Request topic:

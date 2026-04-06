@@ -4044,6 +4044,37 @@ Keep entries append-only and concise.
     - a strong research/selection reference
     - not yet a promotion-cleared operating candidate
 
+### 2026-04-06 - `hold 아님 + CAGR 20% 이상 + MDD 25% 이내` 조건은 strict annual 범위에서 exact hit가 없었음
+
+- The user asked for another sub-agent search with a stricter return target:
+  - `promotion != hold`
+  - `CAGR >= 20%`
+  - `Maximum Drawdown >= -25%`
+  - `start = 2016-01-01`
+  - `Universe Contract = Historical Dynamic PIT Universe`
+  - `top_n <= 10`
+- `Quality`, `Value`, `Quality + Value` strict annual families were explored in parallel.
+- Result:
+  - no exact-hit candidate was found in the searched practical setting space
+  - the search again converged on `Value > Strict Annual`
+- Best near-miss:
+  - default value factor set
+  - `month_end`
+  - `rebalance_interval = 1`
+  - `top_n = 10`
+  - `benchmark = SPY`
+  - `trend_filter = on`
+  - `market_regime = on`
+  - `underperformance_guardrail = on`
+  - `drawdown_guardrail = on`
+  - `CAGR = 18.81%`
+  - `MDD = -23.71%`
+  - `promotion = hold`
+- Practical implication:
+  - current strict annual implementation can get close to the requested return/risk band
+  - but not while also escaping `hold`
+  - this suggests the next binding constraint is the validation/promotion contract, not simple universe/cadence tuning
+
 ### 2026-04-06 - SPY 대비 성과와 저낙폭을 동시에 만족하는 Value Strict Annual 후보를 찾음
 
 - New search goal:
