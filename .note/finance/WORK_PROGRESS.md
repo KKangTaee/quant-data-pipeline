@@ -3865,3 +3865,16 @@ Keep entries append-only and concise.
   - `promotion_rationale = []`
   - summary: `CAGR 32.44%`, `MDD -28.35%`
 - Compared to the static contract version, the practical difference was that `dynamic PIT` removed the lingering `static_universe_contract` blocker while leaving the other policy surfaces healthy.
+
+### 2026-04-06 - 실전형 입력 항목 설명을 용어 사전에 보강
+
+- Added glossary entries for:
+  - `Minimum Price`
+  - `Minimum History`
+  - `Trend Filter`
+  - `Market Regime`
+  - `Underperformance Guardrail`
+  - `Drawdown Guardrail`
+- Also strengthened the existing `Transaction Cost` entry with a simple `bps` interpretation example.
+- Purpose:
+  - make real-money input controls easier to understand without re-explaining them ad hoc in chat each time.

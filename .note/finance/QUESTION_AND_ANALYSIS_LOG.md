@@ -6643,3 +6643,18 @@ Do not copy full chat transcripts. Keep only the durable result.
     - summary stats: approximately `CAGR 32.44%`, `MDD -28.35%`
 - Durable implication:
   - for strict annual factor families, a monthly rebalance cadence plus `Historical Dynamic PIT Universe` can materially improve promotion readiness because it removes the `static_universe_contract` blocker while keeping the other policy surfaces evaluable
+
+### 2026-04-06 - Real-money 입력 항목은 의미와 목적을 같이 설명해야 혼란이 줄어든다
+
+- Request topic:
+  - the user asked what `Minimum Price`, `Minimum History`, `Min Avg Dollar Volume 20D`, `Transaction Cost`, `Trend Filter`, `Market Regime`, `Underperformance Guardrail`, and `Drawdown Guardrail` mean and why they are used
+- Interpreted goal:
+  - make the real-money controls understandable in operator language, not just raw parameter labels
+- Result:
+  - documented the missing terms in the glossary and strengthened the cost explanation with a `bps` example
+  - clarified that these inputs fall into a few operator categories:
+    - investability: `Minimum Price`, `Minimum History`, `Min Avg Dollar Volume 20D`
+    - execution realism: `Transaction Cost`
+    - risk control: `Trend Filter`, `Market Regime`, `Underperformance Guardrail`, `Drawdown Guardrail`
+- Durable implication:
+  - future UX around real-money forms should explain inputs by purpose group, not just by field name, because operators naturally ask both “what is this?” and “why do I need it?”
