@@ -7106,3 +7106,37 @@ Do not copy full chat transcripts. Keep only the durable result.
 - Durable implication:
   - widening statement coverage by itself did not resolve the target search
   - the next meaningful lever remains the validation / promotion / liquidity / benchmark-policy layer rather than coverage breadth alone
+
+### 2026-04-06 - strict annual family에서 `real_money_candidate + SPY 초과 CAGR + MDD 25% 이내` exact-hit는 없었다
+
+- Request topic:
+  - the user asked to use sub-agents and find one portfolio across `Quality`, `Value`, and `Quality + Value` that satisfies:
+    - `promotion = real_money_candidate`
+    - `CAGR > SPY`
+    - `Maximum Drawdown >= -25%`
+- Interpreted goal:
+  - keep the search inside the strict annual family surface
+  - compare the three families fairly under:
+    - `Historical Dynamic PIT Universe`
+    - `2016-01-01 ~ 2026-04-01`
+    - practical UI-reproducible settings
+    - `top_n <= 10` first
+- Result:
+  - `Quality`: no exact-hit
+  - `Value`: no exact-hit, but strongest family overall
+  - `Quality + Value`: no exact-hit
+  - strongest raw `real_money_candidate`:
+    - `Value > Strict Annual`
+    - default value factors
+    - `CAGR = 29.89%`
+    - `MDD = -29.15%`
+  - strongest balanced near-miss:
+    - `Value > Strict Annual`
+    - `earnings_yield`, `ocf_yield`, `operating_income_yield`, `fcf_yield`
+    - `CAGR = 15.84%`
+    - `MDD = -17.42%`
+    - but `promotion = hold`
+- Durable implication:
+  - under the current strict annual contract, the family search still splits into two separate winners:
+    - a raw `real_money_candidate` with drawdown too deep
+    - a balanced numeric candidate that remains blocked by `validation`

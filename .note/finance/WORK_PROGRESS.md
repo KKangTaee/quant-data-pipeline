@@ -4355,3 +4355,30 @@ Keep entries append-only and concise.
   - `Coverage 1000` did not surface an exact-hit within the current exploratory window and remained inconclusive
   - widening coverage alone did not solve the target search
   - wider coverage exposed more `validation`, `liquidity`, and `benchmark policy` friction
+
+### 2026-04-06 - strict annual family에서 `real_money_candidate + SPY 초과 CAGR + MDD 25% 이내` exact-hit를 다시 탐색함
+
+- The user asked for one practical strict annual portfolio from:
+  - `Quality`
+  - `Value`
+  - `Quality + Value`
+- Target:
+  - `promotion = real_money_candidate`
+  - raw `CAGR > SPY`
+  - `Maximum Drawdown >= -25%`
+  - `2016-01-01 ~ 2026-04-01`
+  - `Historical Dynamic PIT Universe`
+- Used sub-agent parallel search by family and consolidated the result in:
+  - `.note/finance/phase13/PHASE13_REAL_MONEY_CANDIDATE_SPY_MDD25_SEARCH.md`
+- Practical result:
+  - no family produced an exact-hit under the tested practical grid
+  - `Value` remained the strongest family
+  - strongest raw `real_money_candidate`:
+    - default value factors
+    - `CAGR = 29.89%`
+    - `MDD = -29.15%`
+  - strongest balanced near-miss:
+    - `earnings_yield / ocf_yield / operating_income_yield / fcf_yield`
+    - `CAGR = 15.84%`
+    - `MDD = -17.42%`
+    - but `promotion = hold`

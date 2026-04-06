@@ -214,6 +214,8 @@
   - Phase 13 동안 진행한 `Quality / Value / Quality + Value` strict annual family 백테스트 결과를 family별로 한 장에 요약하고, 가장 강한 후보와 반복된 hold 원인을 빠르게 다시 보기 위한 정리 문서
 - `.note/finance/phase13/PHASE13_STRICT_ANNUAL_COVERAGE300_500_1000_TARGET_SEARCH.md`
   - `Coverage 100`에서 못 찾은 exact-hit를 `US Statement Coverage 300 / 500 / 1000`까지 넓혀 다시 탐색하고, wider coverage가 실제로도 strict annual family의 hold-free target을 해결해주는지 점검한 분석 문서
+- `.note/finance/phase13/PHASE13_REAL_MONEY_CANDIDATE_SPY_MDD25_SEARCH.md`
+  - `Quality / Value / Quality + Value` strict annual family를 대상으로 `promotion = real_money_candidate`, `SPY` 초과 CAGR, `MDD 25% 이내` 조건을 동시에 만족하는 포트폴리오가 존재하는지 서브 에이전트 병렬 탐색으로 다시 확인한 분석 문서
 - `.note/finance/phase13/PHASE13_QUALITY_VALUE_2016_LOW_DRAWDOWN_FACTOR_OPTION_SEARCH.md`
   - `Quality + Value > Strict Annual`를 `Historical Dynamic PIT Universe`와 `2016-01-01` 시작 조건으로 고정한 뒤, factor 조합과 benchmark / cadence를 바꿔 `hold 아님 + MDD 15% 이내` 가능성을 다시 탐색한 분석 문서
 - `.note/finance/phase13/PHASE13_VALUE_STRICT_CAGR15_MDD20_SEARCH.md`
