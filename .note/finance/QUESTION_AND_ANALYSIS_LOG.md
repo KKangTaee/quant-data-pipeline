@@ -7275,3 +7275,19 @@ Do not copy full chat transcripts. Keep only the durable result.
     - glossary-to-UI terminology consistency
 - Durable implication:
   - future Phase 13 manual validation can now follow the actual current UI flow more directly
+
+### 2026-04-07 - SPY drawdown 수치가 `-15%`인지 `-30%`인지 검증했다
+
+- Request topic:
+  - the user questioned whether `SPY` from January 2016 to the current window could really have only about `-15%` maximum drawdown and asked for confirmation
+- Interpreted goal:
+  - verify whether the previously quoted `-15.9042%` was a true daily `SPY` buy-and-hold drawdown or a sampled benchmark statistic inside a GTAA run
+- Result:
+  - raw daily `SPY` from DB price history (`2016-01-04 ~ 2026-04-02`) has `Maximum Drawdown = -33.72%`
+  - the previously quoted `-15.9042%` came from `benchmark_summary_df` inside the documented GTAA candidate run
+  - that GTAA benchmark used only `42` benchmark points from `2016-01-29 ~ 2026-04-02` because the strategy was configured with `option = month_end` and `interval = 3`
+  - this means the earlier `-15.9042%` was a quarterly-sampled benchmark drawdown, not a full daily buy-and-hold drawdown
+- Durable implication:
+  - future comparisons against `SPY` should explicitly distinguish:
+    - raw daily `SPY` buy-and-hold metrics
+    - strategy-window sampled benchmark metrics inside a backtest result bundle

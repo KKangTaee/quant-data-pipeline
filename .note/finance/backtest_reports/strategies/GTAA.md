@@ -41,6 +41,8 @@
 
 - `real_money_candidate`까지 올라간 것은 아니고
 - 운영 언어로는 `watchlist_only` 단계다
+- 문서 안에서 비교되는 `SPY benchmark MDD`는 raw daily `SPY`가 아니라
+  `GTAA` 설정(`month_end`, `interval = 3`)에 맞춰 샘플링된 benchmark 기준이라는 점을 같이 봐야 한다
 
 ## 관련 문서
 

@@ -83,6 +83,11 @@ DB에서 다음 조건을 먼저 확인했다.
 - `CAGR = 12.7345%`
 - `MDD = -15.9042%`
 
+> 주의:
+> 위 `SPY benchmark` 수치는 raw daily buy-and-hold `SPY`가 아니라,
+> `GTAA` 결과 bundle 안에서 `month_end + interval 3` 기준으로 샘플링된 benchmark surface다.
+> 같은 DB 기준 raw daily `SPY` (`2016-01-04 ~ 2026-04-02`) `MDD`는 약 `-33.72%`다.
+
 ## 조건 충족 여부
 
 - `Promotion != hold`: 충족

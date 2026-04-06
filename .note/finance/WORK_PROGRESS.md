@@ -4479,3 +4479,13 @@ Keep entries append-only and concise.
   - `.note/finance/phase13/PHASE13_TEST_CHECKLIST.md`
 - Practical result:
   - the checklist now follows the current UI reading order instead of the original Phase 13 first-pass layout
+
+### 2026-04-07 - SPY MDD 수치 차이의 원인을 확인함
+
+- Verified that the earlier `-15.9042%` figure was not raw daily `SPY` buy-and-hold drawdown.
+- Confirmed with DB-backed price history:
+  - raw daily `SPY` (`2016-01-04 ~ 2026-04-02`) `Maximum Drawdown = -33.72%`
+  - month-end sampled `SPY` over the same broad window `Maximum Drawdown = -23.93%`
+  - GTAA candidate benchmark surface (`2016-01-29 ~ 2026-04-02`, 42 rows, `interval = 3`) `Maximum Drawdown = -15.90%`
+- Practical result:
+  - the `-15.9%` value should be read as `GTAA internal quarterly-sampled benchmark MDD`, not as full daily `SPY` drawdown
