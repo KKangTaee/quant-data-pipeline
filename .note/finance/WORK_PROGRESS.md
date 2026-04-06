@@ -3816,3 +3816,23 @@ Keep entries append-only and concise.
   - that it means recent 20-day average dollar trading volume
   - why it is used as a simple liquidity filter
   - that `0.0M` effectively means the liquidity filter is off
+
+### 2026-04-06 - Hold를 벗어나는 현실적인 Phase 13 후보 설정을 한 번 더 탐색
+
+- Ran a targeted search for a non-hold example the user can actually use as a reference.
+- A practical example was found with:
+  - `GTAA Universe (U1 Offensive Candidate Base)`
+  - benchmark `SPY`
+  - `top=2`
+  - `rebalance interval=3`
+  - score horizons `1/3/6/12`
+  - `risk_off_mode=cash_only`
+  - ETF operability policy disabled for this run (`promotion_min_etf_aum_b=None`, `promotion_max_bid_ask_spread_pct=None`)
+- Outcome for that configuration:
+  - `promotion_decision = production_candidate`
+  - `shortlist_status = watchlist`
+  - `deployment_readiness_status = review_required`
+  - `validation_status = watch`
+  - summary: `CAGR 16.24%`, `MDD -10.59%`
+- Also observed that some bond benchmarks (`TLT`, `IEF`, `LQD`) could push the same GTAA candidate to `real_money_candidate`,
+  but that path was considered less operator-honest as a default example because the benchmark is less aligned with the user's likely broad-equity comparison frame.

@@ -6577,3 +6577,30 @@ Do not copy full chat transcripts. Keep only the durable result.
   - clarified that `0.0M` effectively means the liquidity filter is off, which often leads `Liquidity Policy` to `unavailable`
 - Durable implication:
   - future UI explanations and hold-resolution flows can refer users to a glossary-backed meaning instead of re-explaining the metric ad hoc
+
+### 2026-04-06 - A practical non-hold example should prefer a realistic benchmark over an artificially easy benchmark
+
+- Request topic:
+  - the user asked whether we could run several backtests from different angles and find one portfolio setup that does not land in `hold`
+- Interpreted goal:
+  - provide one concrete configuration the user can copy, so they can see what a usable non-hold run looks like in practice
+- Result:
+  - a practical non-hold case was found with:
+    - strategy: `GTAA`
+    - preset: `GTAA Universe (U1 Offensive Candidate Base)`
+    - benchmark: `SPY`
+    - `top=2`
+    - `rebalance interval=3`
+    - score horizons: `1/3/6/12`
+    - `risk_off_mode=cash_only`
+    - ETF operability policy disabled for that run
+  - resulting state:
+    - `promotion_decision = production_candidate`
+    - `shortlist_status = watchlist`
+    - `deployment_readiness_status = review_required`
+    - `validation_status = watch`
+    - summary stats: approximately `CAGR 16.24%`, `MDD -10.59%`
+  - also found that the same GTAA candidate can become `real_money_candidate` with bond benchmarks such as `TLT`, `IEF`, or `LQD`
+  - however, that was not recommended as the main example because it makes the comparison frame too easy and is less aligned with a broad-equity operator reference frame like `SPY`
+- Durable implication:
+  - when showing users a non-hold reference run, prefer a realistic benchmark-aligned example even if it lands at `production_candidate` rather than forcing `real_money_candidate` through a weaker comparison contract
