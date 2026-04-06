@@ -7228,3 +7228,20 @@ Do not copy full chat transcripts. Keep only the durable result.
 - Durable implication:
   - GTAA single-form payload is now aligned with the helper return contract
   - this closes a regression introduced during the universe-input surface refactor
+
+### 2026-04-06 - Phase 13 테스트 체크리스트를 수정 이력과 현재 UI 기준으로 다시 맞췄다
+
+- Request topic:
+  - after several test-driven UX improvements during Phase 13 validation, the user asked to refresh the manual checklist based on the modified history
+- Interpreted goal:
+  - make the checklist match the current product surface rather than the earlier Phase 13 closeout snapshot
+- Result:
+  - updated `.note/finance/phase13/PHASE13_TEST_CHECKLIST.md`
+  - added explicit checks for:
+    - `Latest Backtest Run` guidance area
+    - `Real-Money` internal tab structure
+    - `Hold 해결 가이드 -> Liquidity Policy` connection
+    - Korean explanatory copy for `Min Avg Dollar Volume 20D = 0.0M`
+    - glossary-to-UI terminology consistency
+- Durable implication:
+  - future Phase 13 manual validation can now follow the actual current UI flow more directly

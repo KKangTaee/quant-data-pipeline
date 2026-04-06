@@ -4446,3 +4446,14 @@ Keep entries append-only and concise.
 - Fixed:
   - `app/web/pages/backtest.py`
   - GTAA payload now uses `_universe_mode` directly, consistent with the equal-weight path and helper return contract
+
+### 2026-04-06 - Phase 13 테스트 체크리스트를 실제 수정 이력 기준으로 다시 정리함
+
+- During manual-test-driven Phase 13 follow-up work, several UX surfaces changed:
+  - `Latest Backtest Run` guidance became more structured and Korean-first
+  - `Real-Money` was reorganized into clearer internal tabs and grouped sections
+  - `Hold 해결 가이드` and `Liquidity Policy` became more directly connected
+- Updated:
+  - `.note/finance/phase13/PHASE13_TEST_CHECKLIST.md`
+- Practical result:
+  - the checklist now follows the current UI reading order instead of the original Phase 13 first-pass layout
