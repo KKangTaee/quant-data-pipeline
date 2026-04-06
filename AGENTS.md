@@ -20,6 +20,13 @@
 - For `finance` work, prefer `.note/finance/` as the canonical note location.
 - Store durable analysis, architecture notes, question summaries, and implementation progress as Markdown files in `.note/finance/`.
 - Keep cross-phase documents at `.note/finance/` root.
+- For durable backtest result reports whose primary purpose is to record:
+  - tested strategy settings
+  - result summaries
+  - portfolio search outcomes
+  - reproducible backtest guides
+  prefer `.note/finance/backtest_reports/` as the canonical home.
+- Keep phase execution documents in `.note/finance/phase*/`, but if a result-oriented backtest note becomes reusable beyond that phase, prefer creating or moving the durable report into `.note/finance/backtest_reports/` and linking it from the phase document.
 - Prefer phase-specific execution/planning docs under:
   - `.note/finance/phase1/`
   - `.note/finance/phase2/`
@@ -65,6 +72,7 @@
 - Use `.note/finance/MASTER_PHASE_ROADMAP.md` as the top-level phase roadmap.
 - Use `.note/finance/FINANCE_DOC_INDEX.md` as the top-level index into finance documents.
 - Use `.note/finance/FINANCE_TERM_GLOSSARY.md` as the shared glossary for recurring quant / backtest / real-money terminology.
+- Use `.note/finance/backtest_reports/BACKTEST_REPORT_INDEX.md` as the dedicated index for durable backtest-result Markdown reports.
 - For phase plans, policy documents, validation rules, or real-money guidance documents, do not leave key terms as compressed jargon only.
 - When a document introduces important operator-facing concepts such as universe contract, investability, turnover/cost, guardrails, or promotion criteria, add short plain-language explanations.
 - Prefer a structure like:

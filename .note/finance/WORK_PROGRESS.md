@@ -4398,3 +4398,14 @@ Keep entries append-only and concise.
     - `MDD = -29.15%`
     - `promotion = real_money_candidate`
 - Also documented the balanced near-miss so the user can compare “raw strongest” vs “safer but still hold”.
+
+### 2026-04-06 - backtest 결과 문서 전용 폴더와 인덱스 운영 기준을 추가함
+
+- The user suggested separating result-oriented backtest Markdown files from phase execution docs.
+- Created:
+  - `.note/finance/backtest_reports/README.md`
+  - `.note/finance/backtest_reports/BACKTEST_REPORT_INDEX.md`
+- Updated guidance so future durable result notes can be managed separately from phase planning / TODO / checklist documents.
+- Practical decision:
+  - existing phase docs stay where they are for now
+  - new result-centered backtest docs should gradually move toward `.note/finance/backtest_reports/`

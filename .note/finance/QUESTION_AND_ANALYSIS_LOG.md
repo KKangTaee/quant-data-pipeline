@@ -7164,3 +7164,20 @@ Do not copy full chat transcripts. Keep only the durable result.
       - `promotion = real_money_candidate`
 - Durable implication:
   - the strongest raw `Value` candidate can now be rerun directly from one guide document instead of being reconstructed from multiple search notes
+
+### 2026-04-06 - phase 문서와 분리된 backtest 결과 전용 폴더를 도입하기로 했다
+
+- Request topic:
+  - the user suggested creating a separate folder that stores only Markdown files for backtest results and strategy/backtest summaries
+- Interpreted goal:
+  - reduce mixing between:
+    - phase execution documents
+    - durable backtest outcome reports
+  - make past portfolio searches easier to find later
+- Result:
+  - created `.note/finance/backtest_reports/README.md`
+  - created `.note/finance/backtest_reports/BACKTEST_REPORT_INDEX.md`
+  - updated `AGENTS.md` and `FINANCE_DOC_INDEX.md` so future turns know to store reusable backtest result reports in the new folder
+- Durable implication:
+  - phase folders remain the home for execution management
+  - the new backtest-reports folder becomes the home for reusable result summaries and rerun guides
