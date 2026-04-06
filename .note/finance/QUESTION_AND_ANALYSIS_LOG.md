@@ -7181,3 +7181,19 @@ Do not copy full chat transcripts. Keep only the durable result.
 - Durable implication:
   - phase folders remain the home for execution management
   - the new backtest-reports folder becomes the home for reusable result summaries and rerun guides
+
+### 2026-04-06 - Phase 13 backtest 결과 문서를 backtest_reports/phase13으로 재배치했다
+
+- Request topic:
+  - after agreeing with the separate backtest-results folder approach, the user asked to organize the Phase 13 backtest results there
+- Interpreted goal:
+  - keep Phase 13 execution documents in place
+  - move reusable result reports to a dedicated result folder
+  - avoid breaking the old paths immediately
+- Result:
+  - moved the main Phase 13 backtest-result documents into `.note/finance/backtest_reports/phase13/`
+  - left short redirect stubs at the old `.note/finance/phase13/` paths
+  - updated the report index and finance document index to point at the new canonical locations
+- Durable implication:
+  - future Phase 13 result review should start from `backtest_reports/phase13/`
+  - old phase13 paths are now compatibility pointers rather than the canonical storage location

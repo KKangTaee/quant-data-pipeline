@@ -4409,3 +4409,17 @@ Keep entries append-only and concise.
 - Practical decision:
   - existing phase docs stay where they are for now
   - new result-centered backtest docs should gradually move toward `.note/finance/backtest_reports/`
+
+### 2026-04-06 - Phase 13 backtest 결과 문서를 전용 폴더로 실제 이동함
+
+- Moved the major Phase 13 result-oriented Markdown reports into:
+  - `.note/finance/backtest_reports/phase13/`
+- Left short compatibility stubs in:
+  - `.note/finance/phase13/`
+  so existing references do not immediately break.
+- Updated:
+  - `.note/finance/backtest_reports/BACKTEST_REPORT_INDEX.md`
+  - `.note/finance/FINANCE_DOC_INDEX.md`
+- Practical implication:
+  - Phase 13 execution docs remain in `phase13/`
+  - Phase 13 backtest result docs now have a dedicated canonical home under `backtest_reports/phase13/`

@@ -214,31 +214,31 @@
   - Phase 13 이후 다음 phase를 live deployment workflow 또는 PIT execution-readiness 방향으로 어떻게 열지 정리한 handoff 문서
 - `.note/finance/phase13/PHASE13_TEST_CHECKLIST.md`
   - Phase 13 manual validation checklist로, shortlist / probation / rolling review / deployment checklist surface를 현재 UI에서 검수하기 위한 문서
-- `.note/finance/phase13/PHASE13_STRICT_ANNUAL_FAMILY_BACKTEST_SUMMARY.md`
+- `.note/finance/backtest_reports/phase13/PHASE13_STRICT_ANNUAL_FAMILY_BACKTEST_SUMMARY.md`
   - Phase 13 동안 진행한 `Quality / Value / Quality + Value` strict annual family 백테스트 결과를 family별로 한 장에 요약하고, 가장 강한 후보와 반복된 hold 원인을 빠르게 다시 보기 위한 정리 문서
-- `.note/finance/phase13/PHASE13_STRICT_ANNUAL_COVERAGE300_500_1000_TARGET_SEARCH.md`
+- `.note/finance/backtest_reports/phase13/PHASE13_STRICT_ANNUAL_COVERAGE300_500_1000_TARGET_SEARCH.md`
   - `Coverage 100`에서 못 찾은 exact-hit를 `US Statement Coverage 300 / 500 / 1000`까지 넓혀 다시 탐색하고, wider coverage가 실제로도 strict annual family의 hold-free target을 해결해주는지 점검한 분석 문서
-- `.note/finance/phase13/PHASE13_REAL_MONEY_CANDIDATE_SPY_MDD25_SEARCH.md`
+- `.note/finance/backtest_reports/phase13/PHASE13_REAL_MONEY_CANDIDATE_SPY_MDD25_SEARCH.md`
   - `Quality / Value / Quality + Value` strict annual family를 대상으로 `promotion = real_money_candidate`, `SPY` 초과 CAGR, `MDD 25% 이내` 조건을 동시에 만족하는 포트폴리오가 존재하는지 서브 에이전트 병렬 탐색으로 다시 확인한 분석 문서
-- `.note/finance/phase13/PHASE13_VALUE_RAW_WINNER_BACKTEST_GUIDE.md`
+- `.note/finance/backtest_reports/phase13/PHASE13_VALUE_RAW_WINNER_BACKTEST_GUIDE.md`
   - `Value > Strict Annual` raw winner(`CAGR 29.89% / MDD -29.15% / promotion = real_money_candidate`)를 backtest UI에서 다시 재현하기 위한 입력값 중심 가이드 문서
-- `.note/finance/phase13/PHASE13_QUALITY_VALUE_2016_LOW_DRAWDOWN_FACTOR_OPTION_SEARCH.md`
+- `.note/finance/backtest_reports/phase13/PHASE13_QUALITY_VALUE_2016_LOW_DRAWDOWN_FACTOR_OPTION_SEARCH.md`
   - `Quality + Value > Strict Annual`를 `Historical Dynamic PIT Universe`와 `2016-01-01` 시작 조건으로 고정한 뒤, factor 조합과 benchmark / cadence를 바꿔 `hold 아님 + MDD 15% 이내` 가능성을 다시 탐색한 분석 문서
-- `.note/finance/phase13/PHASE13_VALUE_STRICT_CAGR15_MDD20_SEARCH.md`
+- `.note/finance/backtest_reports/phase13/PHASE13_VALUE_STRICT_CAGR15_MDD20_SEARCH.md`
   - 서브 에이전트 병렬 탐색 후 메인 환경 재검증으로, `Value > Strict Annual`에서 `CAGR 15% 이상 + MDD 20% 이내`를 만족한 exact-hit 조합을 정리한 분석 문서
-- `.note/finance/phase13/PHASE13_CAGR20_MDD25_HOLD_FREE_SEARCH.md`
+- `.note/finance/backtest_reports/phase13/PHASE13_CAGR20_MDD25_HOLD_FREE_SEARCH.md`
   - `hold 아님 + CAGR 20% 이상 + MDD 25% 이내`를 strict annual family 전체에서 다시 탐색했지만 exact hit가 없었고, `Value > Strict Annual`의 near-miss 조합이 가장 가까웠음을 정리한 분석 문서
-- `.note/finance/phase13/PHASE13_HOLD_DIAGNOSTIC_AND_NONHOLD_NEAR_MISS_SEARCH.md`
+- `.note/finance/backtest_reports/phase13/PHASE13_HOLD_DIAGNOSTIC_AND_NONHOLD_NEAR_MISS_SEARCH.md`
   - `Value` exact-hit 후보의 `hold` 원인을 `validation` 계층에서 진단하고, `Quality` 및 `Quality + Value` strict annual family에서 non-hold exact hit가 가능한지 다시 탐색한 분석 문서
-- `.note/finance/phase13/PHASE13_VALUE_STRICT_HOLD_FREE_SEARCH.md`
+- `.note/finance/backtest_reports/phase13/PHASE13_VALUE_STRICT_HOLD_FREE_SEARCH.md`
   - `Value Strict Annual` exact-hit 후보의 `hold` 원인을 유지한 채, benchmark / factor / cadence / trend / regime를 바꿔 `hold`가 풀리면서도 `CAGR >= 15%`와 `MDD >= -20%`를 동시에 만족하는 후보가 존재하는지 다시 탐색한 분석 문서
-- `.note/finance/phase13/PHASE13_VALUE_STRICT_SPY_TARGET_SEARCH.md`
+- `.note/finance/backtest_reports/phase13/PHASE13_VALUE_STRICT_SPY_TARGET_SEARCH.md`
   - `Value Strict Annual`을 중심으로 `SPY`보다 `CAGR`와 `MDD`가 동시에 나은 후보를 찾기 위해 `2016-01-01` 시작, `Historical Dynamic PIT Universe`, `top_n <= 10` 조건에서 수행한 탐색 문서
-- `.note/finance/phase13/PHASE13_SPY_OUTPERFORMANCE_AND_MDD20_SEARCH.md`
+- `.note/finance/backtest_reports/phase13/PHASE13_SPY_OUTPERFORMANCE_AND_MDD20_SEARCH.md`
   - `Quality / Value / Quality + Value` strict annual family를 대상으로 `SPY` 대비 CAGR/MDD 우위와 `CAGR >= 15%`, `MDD >= -20%` 교집합 후보를 다시 탐색한 분석 문서
-- `.note/finance/phase13/PHASE13_QUALITY_STRICT_SPY_DOMINANCE_SEARCH.md`
+- `.note/finance/backtest_reports/phase13/PHASE13_QUALITY_STRICT_SPY_DOMINANCE_SEARCH.md`
   - `Quality Snapshot (Strict Annual)`만으로 `SPY` baseline을 동시에 이기는 raw candidate를 찾는 탐색 문서로, factor set / cadence / top_n를 바꿔 실전형 UI 설정에서의 dominance 여부를 정리한 분석 문서
-- `.note/finance/phase13/PHASE13_SPY_OUTPERFORMANCE_SEARCH.md`
+- `.note/finance/backtest_reports/phase13/PHASE13_SPY_OUTPERFORMANCE_SEARCH.md`
   - `Quality`, `Value`, `Quality + Value` strict annual family를 `SPY` 기준선과 직접 비교해, `2016-01-01` 시작 / `Historical Dynamic PIT Universe` / `top_n <= 10` 조건에서 `SPY`보다 CAGR과 MDD가 모두 나은 후보를 찾은 분석 문서
 
 ---
