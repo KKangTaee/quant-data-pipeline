@@ -6746,6 +6746,46 @@ Do not copy full chat transcripts. Keep only the durable result.
     - `2016 시작 dynamic PIT`
     as a simultaneously difficult constraint set for this family under the current implementation
 
+### 2026-04-06 - SPY 대비 우위 + `CAGR >= 15%` + `MDD >= -20%`를 만족하는 후보를 family별로 다시 탐색했지만 교집합은 없었다
+
+- Request topic:
+  - the user asked to search, via sub-agents, for a portfolio that beats `SPY` while also meeting:
+    - `start = 2016-01-01`
+    - `Historical Dynamic PIT Universe`
+    - `top_n <= 10`
+    - `CAGR >= 15%`
+    - `Maximum Drawdown >= -20%`
+- Interpreted goal:
+  - find the strongest practical candidate across `Quality`, `Value`, and `Quality + Value` strict annual families
+- Result:
+  - family-level search was completed
+  - `Value Strict Annual` was the strongest family overall
+  - best raw value candidate:
+    - `v_default`
+    - `month_end / interval=1 / top_n=10`
+    - `CAGR 29.89%`
+    - `MDD -29.15%`
+    - `promotion = real_money_candidate`
+  - best low-drawdown value near-miss:
+    - `v_profit_cashflow`
+    - `month_end / interval=1 / top_n=5`
+    - `benchmark = LQD`
+    - `CAGR 13.16%`
+    - `MDD -19.18%`
+    - `promotion = hold`
+  - `Quality Strict Annual` had `SPY`-beating raw candidates, but they remained `hold`
+  - `Quality + Value Strict Annual` could lower drawdown, but not while keeping CAGR above the target
+- Durable implication:
+  - in the tested grid, there is no clean intersection of:
+    - `SPY` outperformance
+    - `CAGR >= 15%`
+    - `MDD >= -20%`
+    - `top_n <= 10`
+    - `Historical Dynamic PIT Universe`
+  - the nearest practical choices are either:
+    - accept `CAGR >= 15%` with higher drawdown
+    - or accept lower CAGR with drawdown near the target
+
 ### 2026-04-06 - Quality Strict Annual는 SPY를 이기는 raw candidate가 있으나 full hardening까지는 아직 부족하다
 
 - Request topic:

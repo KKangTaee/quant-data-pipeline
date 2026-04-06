@@ -4004,6 +4004,42 @@ Keep entries append-only and concise.
       - `hold 아님`
       - `2016 시작 + MDD 15% 이내`
 
+### 2026-04-06 - SPY 대비 우위와 `CAGR >= 15%`, `MDD >= -20%`를 동시에 만족하는 후보를 family별로 다시 탐색했지만, 최종 교집합은 찾지 못함
+
+- Follow-up exploration requested by the user:
+  - search for a portfolio that beats `SPY` on both CAGR and drawdown
+  - fixed constraints:
+    - start `2016-01-01`
+    - end `2026-04-01`
+    - `Universe Contract = Historical Dynamic PIT Universe`
+    - `top_n <= 10`
+    - `CAGR >= 15%`
+    - `Maximum Drawdown >= -20%`
+- Search coverage:
+  - `Quality Strict Annual`
+  - `Value Strict Annual`
+  - `Quality + Value Strict Annual`
+- Useful findings:
+  - `Value Strict Annual` was the strongest family in this search
+  - best raw candidate:
+    - `v_default`
+    - `month_end / interval=1 / top_n=10`
+    - `CAGR 29.89%`
+    - `MDD -29.15%`
+    - `promotion = real_money_candidate`
+  - best low-drawdown candidate:
+    - `v_profit_cashflow`
+    - `month_end / interval=1 / top_n=5`
+    - `benchmark = LQD`
+    - `CAGR 13.16%`
+    - `MDD -19.18%`
+    - `promotion = hold`
+- Practical implication:
+  - within the tested practical settings, the user’s target set remains a hard trade-off:
+    - when CAGR is high enough, drawdown stays above the requested floor
+    - when drawdown is below the requested floor, CAGR falls below the requested floor
+  - no family produced a clean `CAGR >= 15%` and `MDD >= -20%` intersection in the tested grid
+
 ### 2026-04-06 - Quality Strict Annual는 SPY를 이기는 raw candidate가 있지만 full hardening을 켜면 edge가 사라짐
 
 - Ran a SPY-dominance search for `Quality Snapshot (Strict Annual)` with:
