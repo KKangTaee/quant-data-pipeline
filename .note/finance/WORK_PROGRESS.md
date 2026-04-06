@@ -3836,3 +3836,32 @@ Keep entries append-only and concise.
   - summary: `CAGR 16.24%`, `MDD -10.59%`
 - Also observed that some bond benchmarks (`TLT`, `IEF`, `LQD`) could push the same GTAA candidate to `real_money_candidate`,
   but that path was considered less operator-honest as a default example because the benchmark is less aligned with the user's likely broad-equity comparison frame.
+
+### 2026-04-06 - Quality + Value strict annual에서도 hold를 벗어나는 재현 가능한 예시를 확보
+
+- Ran a focused search for a `Quality + Value > Strict Annual` configuration that the user can reproduce directly from the UI without hidden/disabled policy toggles.
+- A stronger example than expected was found with:
+  - preset: `US Statement Coverage 100`
+  - universe contract: `Historical Dynamic PIT Universe`
+  - benchmark contract: `Candidate Universe Equal-Weight`
+  - benchmark ticker: `SPY`
+  - start: `2020-01-01`
+  - rebalance option: `month_end`
+  - rebalance interval: `1`
+  - `top_n = 10`
+  - `Minimum Price = 5.0`
+  - `Minimum History = 12M`
+  - `Min Avg Dollar Volume 20D = 5.0M`
+  - `Transaction Cost = 10 bps`
+  - `trend_filter = off`
+  - `market_regime = off`
+  - `underperformance_guardrail = on`
+  - `drawdown_guardrail = on`
+- Outcome for that configuration:
+  - `promotion_decision = real_money_candidate`
+  - `shortlist_status = small_capital_trial`
+  - `deployment_readiness_status = review_required`
+  - `validation / benchmark / liquidity / validation policy / guardrail policy / rolling / out_of_sample = normal`
+  - `promotion_rationale = []`
+  - summary: `CAGR 32.44%`, `MDD -28.35%`
+- Compared to the static contract version, the practical difference was that `dynamic PIT` removed the lingering `static_universe_contract` blocker while leaving the other policy surfaces healthy.

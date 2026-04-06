@@ -6604,3 +6604,42 @@ Do not copy full chat transcripts. Keep only the durable result.
   - however, that was not recommended as the main example because it makes the comparison frame too easy and is less aligned with a broad-equity operator reference frame like `SPY`
 - Durable implication:
   - when showing users a non-hold reference run, prefer a realistic benchmark-aligned example even if it lands at `production_candidate` rather than forcing `real_money_candidate` through a weaker comparison contract
+
+### 2026-04-06 - Quality + Value strict annual can reach real-money-candidate when the contract is monthly and dynamic PIT
+
+- Request topic:
+  - the user asked whether we could make and share a similar non-hold example for the `Quality + Value` strategy family
+- Interpreted goal:
+  - provide one concrete `Quality + Value > Strict Annual` setup the user can copy to understand what a usable non-hold configuration looks like
+- Result:
+  - a UI-reproducible example was found with:
+    - strategy family: `Quality + Value`
+    - variant: `Strict Annual`
+    - preset: `US Statement Coverage 100`
+    - universe contract: `Historical Dynamic PIT Universe`
+    - benchmark contract: `Candidate Universe Equal-Weight`
+    - benchmark ticker: `SPY`
+    - start: `2020-01-01`
+    - rebalance option: `month_end`
+    - rebalance interval: `1`
+    - `top_n = 10`
+    - `Minimum Price = 5.0`
+    - `Minimum History = 12M`
+    - `Min Avg Dollar Volume 20D = 5.0M`
+    - `Transaction Cost = 10 bps`
+    - trend filter off, market regime off, underperformance guardrail on, drawdown guardrail on
+  - resulting state:
+    - `promotion_decision = real_money_candidate`
+    - `shortlist_status = small_capital_trial`
+    - `deployment_readiness_status = review_required`
+    - `validation_status = normal`
+    - `benchmark_policy_status = normal`
+    - `liquidity_policy_status = normal`
+    - `validation_policy_status = normal`
+    - `guardrail_policy_status = normal`
+    - `rolling_review_status = normal`
+    - `out_of_sample_review_status = normal`
+    - `promotion_rationale = []`
+    - summary stats: approximately `CAGR 32.44%`, `MDD -28.35%`
+- Durable implication:
+  - for strict annual factor families, a monthly rebalance cadence plus `Historical Dynamic PIT Universe` can materially improve promotion readiness because it removes the `static_universe_contract` blocker while keeping the other policy surfaces evaluable
