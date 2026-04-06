@@ -3217,6 +3217,11 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
                             "이 전략이 무조건 나쁘다는 뜻은 아닙니다. "
                             "지금은 승격 전에 먼저 풀어야 하는 검증 blocker가 있다는 뜻입니다."
                         )
+                        st.caption(
+                            "아래 표에서 `현재 상태`는 지금 막히는 정도를, "
+                            "`상태를 보는 위치`는 실제 화면 위치를, "
+                            "`바로 해볼 일`은 가장 먼저 손댈 설정이나 데이터를 뜻합니다."
+                        )
                         if hold_guidance_rows:
                             st.dataframe(
                                 pd.DataFrame(hold_guidance_rows),
@@ -5179,6 +5184,114 @@ def _liquidity_policy_signal_to_korean_label(value: str | None) -> str:
     return mapping.get(key, key or "-")
 
 
+def _issue_status_to_korean_label(value: str | None) -> str:
+    mapping = {
+        "watch": "Watch",
+        "caution": "Caution",
+        "unavailable": "Unavailable",
+        "warning": "Warning",
+        "error": "Error",
+        "missing": "Missing",
+    }
+    key = str(value or "").strip().lower()
+    return mapping.get(key, key or "-")
+
+
+def _issue_status_meaning(item_label: str, status: str) -> str:
+    normalized = str(status or "").strip().lower()
+    if normalized == "watch":
+        return f"{item_label}에 주의 신호가 있어 추가 검토가 권장되는 상태입니다."
+    if normalized == "caution":
+        return f"{item_label}가 현재 승격 판단을 직접 막고 있는 강한 경고 상태입니다."
+    if normalized == "unavailable":
+        return f"{item_label}를 판단할 데이터나 계약이 부족해 승격 해석을 할 수 없는 상태입니다."
+    if normalized == "warning":
+        return f"{item_label}에 경고가 있어 보수적으로 해석해야 하는 상태입니다."
+    if normalized == "error":
+        return f"{item_label} 관련 데이터나 계산에 오류가 있어 현재 상태로는 신뢰하기 어렵습니다."
+    if normalized == "missing":
+        return f"{item_label}가 연결되지 않아 비교나 정책 판단을 할 수 없는 상태입니다."
+    return "상태 의미를 확인하려면 관련 섹션의 상세 값을 함께 보는 편이 좋습니다."
+
+
+def _build_stage_issue_resolution_rows(meta: dict[str, Any]) -> list[dict[str, str]]:
+    rows: list[dict[str, str]] = []
+
+    def add_row(
+        item_label: str,
+        status: str | None,
+        location: str,
+        action: str,
+    ) -> None:
+        normalized = str(status or "").strip().lower()
+        if normalized not in {"watch", "caution", "unavailable", "warning", "error", "missing"}:
+            return
+        rows.append(
+            {
+                "항목": item_label,
+                "현재 상태": _issue_status_to_korean_label(normalized),
+                "상태를 보는 위치": location,
+                "이 상태의 뜻": _issue_status_meaning(item_label, normalized),
+                "바로 해볼 일": action,
+            }
+        )
+
+    benchmark_available = bool(meta.get("benchmark_available"))
+    if not benchmark_available:
+        add_row(
+            "Benchmark 비교",
+            "missing",
+            "검토 근거 > Benchmark / Validation 요약",
+            "Benchmark Contract와 Benchmark Ticker를 먼저 연결하고 benchmark curve가 실제로 생성되는지 다시 실행합니다.",
+        )
+
+    add_row(
+        "Validation",
+        meta.get("validation_status"),
+        "검토 근거 > Validation Surface",
+        "Underperformance Share, Worst Rolling Excess, Drawdown 지표를 확인하고 benchmark 또는 전략 계약을 다시 검토합니다.",
+    )
+    add_row(
+        "Benchmark Policy",
+        meta.get("benchmark_policy_status"),
+        "검토 근거 > 세부 정책 기준 보기 > Benchmark Policy",
+        "Coverage와 Net CAGR Spread를 확인하고 benchmark contract, benchmark ticker, 기간을 다시 점검합니다.",
+    )
+    add_row(
+        "Liquidity Policy",
+        meta.get("liquidity_policy_status"),
+        "실행 부담 > Liquidity Policy",
+        "Min Avg Dollar Volume 20D, Clean Coverage, Liquidity Excluded Rows를 보고 유동성 필터나 후보군을 조정합니다.",
+    )
+    add_row(
+        "Validation Policy",
+        meta.get("validation_policy_status"),
+        "검토 근거 > 세부 정책 기준 보기 > Validation Policy",
+        "Max Underperformance Share, Min Worst Excess, Actual 값을 비교해 robustness 계약을 다시 확인합니다.",
+    )
+    add_row(
+        "Portfolio Guardrail Policy",
+        meta.get("guardrail_policy_status"),
+        "검토 근거 > 세부 정책 기준 보기 > Portfolio Guardrail Policy",
+        "Strategy Max Drawdown과 Drawdown Gap이 기준을 넘는지 확인하고 낙폭 계약을 더 보수적으로 검토합니다.",
+    )
+    add_row(
+        "ETF Operability",
+        meta.get("etf_operability_status"),
+        "실행 부담 > ETF 운용 가능성",
+        "AUM, bid-ask spread, 누락 프로필 데이터를 확인하고 문제가 큰 ETF는 교체하거나 metadata를 보강합니다.",
+    )
+
+    freshness_status = str((meta.get("price_freshness") or {}).get("status") or "").strip().lower()
+    add_row(
+        "Price Freshness",
+        freshness_status,
+        "결과 상단 안내 / Execution Context",
+        "Daily Market Update 또는 targeted refresh로 최신 가격을 다시 채우고 재실행합니다.",
+    )
+    return rows
+
+
 def _build_hold_resolution_guidance_rows(meta: dict[str, Any]) -> list[dict[str, str]]:
     guidance_specs = {
         "benchmark_unavailable": {
@@ -5259,6 +5372,10 @@ def _build_hold_resolution_guidance_rows(meta: dict[str, Any]) -> list[dict[str,
             continue
         rows.append(spec)
         seen_blockers.add(blocker)
+
+    richer_rows = _build_stage_issue_resolution_rows(meta)
+    if richer_rows:
+        return richer_rows
 
     if not rows and str(meta.get("promotion_next_step") or "").strip() == "resolve_validation_gaps_before_promotion":
         rows.append(

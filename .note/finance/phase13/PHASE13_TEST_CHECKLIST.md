@@ -51,7 +51,7 @@
   - `Shortlist Next Step`
   - rationale가 보이는지
   - `Promotion Decision = hold`일 때 `Hold 해결 가이드`가 같이 보이는지
-  - guide 안에 `막히는 항목 / 먼저 볼 위치 / 권장 조치`가 함께 보이는지
+  - guide 안에 `항목 / 현재 상태 / 상태를 보는 위치 / 이 상태의 뜻 / 바로 해볼 일`이 함께 보이는지
 
 ## 4. ETF Second-Pass Guardrail Surface
 
@@ -80,6 +80,16 @@
   - 특히 `Min Avg Dollar Volume 20D = 0.0M`일 때
     - 유동성 필터가 사실상 꺼져 있다는 설명이 나오는지
     - 그래서 `Liquidity Policy = unavailable`처럼 읽힐 수 있다는 안내가 보이는지
+
+## 5-1. Guides 승격 해석 보강
+
+- `Guides > 실전 승격 흐름 빠른 설명 > 어떻게 다음 단계로 가나`
+- 확인:
+  - `Promotion이 올라가려면` / `Shortlist가 올라가려면`이 분리된 카드로 보이는지
+  - `상태는 어디에서 보나` 섹션이 있는지
+  - `Validation`, `Benchmark Policy`, `Liquidity Policy`, `Validation Policy`, `Portfolio Guardrail Policy`, `ETF Operability`, `Price Freshness`의 화면 위치가 보이는지
+  - `Watch / Caution / Unavailable / Error`가 각각 무엇을 뜻하는지 한 줄 설명이 보이는지
+  - `Hold 해결 가이드`에서 보이는 표와 Guides 설명이 서로 연결되어 읽히는지
 
 ## 6. Probation And Monitoring Workflow
 

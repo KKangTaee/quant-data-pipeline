@@ -2448,6 +2448,39 @@ def _render_guides_page() -> None:
                 "실무적으로는 먼저 `Promotion != hold`, `Deployment != blocked`를 만드는 것이 최소 목표입니다."
             )
 
+            with st.container(border=True):
+                st.markdown("#### 상태는 어디에서 보나")
+                st.caption("`caution`, `unavailable`, `error`, `warning` 같은 상태는 아래 위치에서 직접 확인할 수 있습니다.")
+                st.markdown(
+                    """
+                    - `Validation`
+                      `Real-Money > 검토 근거 > Validation Surface`
+                    - `Benchmark Policy`
+                      `Real-Money > 검토 근거 > 세부 정책 기준 보기 > Benchmark Policy`
+                    - `Liquidity Policy`
+                      `Real-Money > 실행 부담 > Liquidity Policy`
+                    - `Validation Policy`
+                      `Real-Money > 검토 근거 > 세부 정책 기준 보기 > Validation Policy`
+                    - `Portfolio Guardrail Policy`
+                      `Real-Money > 검토 근거 > 세부 정책 기준 보기 > Portfolio Guardrail Policy`
+                    - `ETF Operability`
+                      `Real-Money > 실행 부담 > ETF 운용 가능성`
+                    - `Price Freshness`
+                      결과 상단 안내 / `Execution Context`
+                    """
+                )
+
+            with st.container(border=True):
+                st.markdown("#### 상태가 뜻하는 바")
+                status_cols = st.columns(4, gap="small")
+                status_cols[0].metric("Watch", "추가 검토 권장")
+                status_cols[1].metric("Caution", "승격을 강하게 막는 경고")
+                status_cols[2].metric("Unavailable", "판단 데이터/계약 부족")
+                status_cols[3].metric("Error", "데이터/계산 오류")
+                st.caption(
+                    "`Hold 해결 가이드` 표에서는 각 항목마다 `현재 상태`, `상태를 보는 위치`, `이 상태의 뜻`, `바로 해볼 일`을 같이 보여줍니다."
+                )
+
     st.markdown("### 지금 먼저 보면 좋은 문서")
     st.markdown(
         """

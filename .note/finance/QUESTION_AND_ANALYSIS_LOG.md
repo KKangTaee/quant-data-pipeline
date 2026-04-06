@@ -7364,3 +7364,24 @@ Do not copy full chat transcripts. Keep only the durable result.
   - reduced the amount of long wrapped markdown under a single heading
 - Durable implication:
   - the operator guide now better supports quick scanning during Phase 13 validation and real-money review
+
+### 2026-04-07 - 상태값이 어디에 보이고 무엇을 바꿔야 하는지 UX를 더 직접적으로 보강했다
+
+- Request topic:
+  - the user pointed out that even after the stage explanation improved, it was still unclear:
+    - where each `caution / unavailable / error` state is exposed
+    - what concrete action should reduce each issue
+- Interpreted goal:
+  - turn the current guidance from "what to read" into "where to look and what to change"
+- Result:
+  - upgraded `Hold 해결 가이드` from a simple blocker/location/action table into a richer table with:
+    - `항목`
+    - `현재 상태`
+    - `상태를 보는 위치`
+    - `이 상태의 뜻`
+    - `바로 해볼 일`
+  - added a `상태는 어디에서 보나` section to `Guides`
+  - added a `상태가 뜻하는 바` summary for `Watch / Caution / Unavailable / Error`
+  - refreshed the Phase 13 checklist so this richer guidance is now part of manual validation
+- Durable implication:
+  - users can now trace a blocked promotion from result state -> exact UI location -> recommended fix without relying on inferred terminology

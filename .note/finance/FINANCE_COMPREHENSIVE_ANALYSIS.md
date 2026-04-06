@@ -124,6 +124,10 @@ Analysis / Presentation
   최근 `Guides` 페이지는 단순 문서 링크 모음뿐 아니라,
   `Promotion / Shortlist` 승격 흐름과 단계별 해석을 한국어 요약으로 먼저 보여주는
   operator-facing quick reference 역할도 함께 갖는다.
+  이후에는 `어떻게 다음 단계로 가나` 안에
+  - 상태가 실제로 어디에 보이는지
+  - `Watch / Caution / Unavailable / Error`가 각각 무엇을 뜻하는지
+  까지 같이 설명해, 실제 결과 탭과 가이드 문서 사이의 연결을 더 직접적으로 만들었다.
 - 첫 public runtime boundary는 `app/web/runtime/backtest.py`의
   `run_equal_weight_backtest_from_db(...)`와 `build_backtest_result_bundle(...)` 조합으로 열렸다.
 - 즉 UI는 `sample.py`나 `BacktestEngine` 체인을 직접 호출하지 않고,
@@ -319,9 +323,11 @@ Analysis / Presentation
   그리고 `Promotion Decision = hold`일 때는
   `Real-Money > 현재 판단` 안에 별도의 `Hold 해결 가이드`가 같이 나타난다.
   이 가이드는 raw rationale code를 그대로 노출하는 대신,
-  - 막히는 항목
-  - 먼저 볼 위치
-  - 권장 조치
+  - 항목
+  - 현재 상태
+  - 상태를 보는 위치
+  - 이 상태의 뜻
+  - 바로 해볼 일
   형태로 다시 정리해서,
   사용자가 `resolve_validation_gaps_before_promotion`을 실제 수정 액션으로 바로 읽을 수 있게 한다.
   이후 `실행 부담` 탭도 한 번 더 보강되어,

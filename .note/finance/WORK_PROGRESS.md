@@ -4508,3 +4508,16 @@ Keep entries append-only and concise.
   - `Shortlist가 올라가려면`
 - Practical result:
   - transition conditions are now split into short steps instead of one merged paragraph-heavy list
+
+### 2026-04-07 - Hold 해결 가이드와 Guides에 상태 위치/해결 액션 설명을 더 보강함
+
+- Users still needed more direct guidance on:
+  - where `caution / unavailable / error / warning` actually appear
+  - what they should change to reduce each issue
+- Updated:
+  - `Real-Money > 현재 판단 > Hold 해결 가이드`
+  - `Guides > 실전 승격 흐름 빠른 설명`
+  - `.note/finance/phase13/PHASE13_TEST_CHECKLIST.md`
+- Practical result:
+  - hold guidance now shows `항목 / 현재 상태 / 상태를 보는 위치 / 이 상태의 뜻 / 바로 해볼 일`
+  - guides now explain where each status is exposed and how to interpret it before changing settings
