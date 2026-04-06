@@ -3797,3 +3797,14 @@ Keep entries append-only and concise.
   - `먼저 볼 위치`
   - `권장 조치`
 - Updated the Phase 13 checklist so manual QA explicitly checks that this guide appears for hold cases.
+
+### 2026-04-06 - 실행 부담 탭의 Liquidity Policy 노출을 강화
+
+- Added a dedicated `Liquidity Policy` section inside `Real-Money > 실행 부담`.
+- Surfaced the key metrics together:
+  - `Policy Status`
+  - `Min Avg Dollar Volume 20D`
+  - `Min Clean Coverage`
+  - `Actual Clean Coverage`
+  - `Liquidity Excluded Rows`
+- Added direct Korean explanations for why `unavailable / watch / caution` appears and what the user should change next.

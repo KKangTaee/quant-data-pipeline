@@ -41,6 +41,21 @@
   - trigger count / trigger share
   - `Real-Money` 탭과 `Execution Context`에 guardrail 상태가 같이 보이는지
 
+## 추가 확인 - Hold 해결 가이드와 실행 부담 연결
+
+- `Promotion Decision = hold`
+- `Hold 해결 가이드`에서 `실행 부담 > Liquidity Policy` 같은 위치 안내가 나온 경우
+- `Real-Money > 실행 부담`으로 이동
+- 확인:
+  - `Liquidity Policy`가 별도 섹션으로 보이는지
+  - `Policy Status`
+  - `Min Avg Dollar Volume 20D`
+  - `Min Clean Coverage`
+  - `Actual Clean Coverage`
+  - `Liquidity Excluded Rows`
+  - 왜 `unavailable / watch / caution`인지 설명 문구가 같이 보이는지
+  - `무엇을 바꾸면 되는지`가 한국어 안내로 바로 보이는지
+
 ## 3. Probation And Monitoring Workflow
 
 - single `Real-Money > 현재 판단`

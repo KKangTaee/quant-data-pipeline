@@ -321,6 +321,18 @@ Analysis / Presentation
   - 권장 조치
   형태로 다시 정리해서,
   사용자가 `resolve_validation_gaps_before_promotion`을 실제 수정 액션으로 바로 읽을 수 있게 한다.
+  이후 `실행 부담` 탭도 한 번 더 보강되어,
+  특히 `Liquidity Policy`는 이제 별도 섹션에서
+  - Policy Status
+  - Min Avg Dollar Volume 20D
+  - Min Clean Coverage
+  - Actual Clean Coverage
+  - Liquidity Excluded Rows
+  를 같이 보여준다.
+  그리고 `unavailable / watch / caution` 상태일 때는
+  왜 그 상태가 떴는지와
+  무엇을 바꾸면 되는지를 한국어 안내문으로 바로 붙여서,
+  `Hold 해결 가이드 -> 실행 부담` 이동이 실제 수정 액션으로 이어지게 했다.
 - 그리고 single run 결과 헤더인 `Latest Backtest Run` 아래도 다시 정리되어,
   이제는
   - 결과 읽는 순서

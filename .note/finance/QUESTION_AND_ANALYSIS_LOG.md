@@ -6539,3 +6539,28 @@ Do not copy full chat transcripts. Keep only the durable result.
 - Durable implication:
   - users no longer need to infer the debugging path from raw rationale codes alone
   - Phase 13 manual QA should explicitly verify that hold cases show this guide
+
+### 2026-04-06 - The execution-burden tab should explain liquidity-policy blockers directly where the hold guide points
+
+- Request topic:
+  - after seeing `Hold 해결 가이드`, the user followed the pointer to `실행 부담 > 실행 계약 요약 / Liquidity Policy` and found that the execution tab still showed only raw liquidity metrics without enough explanation
+- Interpreted goal:
+  - make the execution-burden surface self-explanatory enough that users can actually resolve `liquidity_policy_unavailable` or related issues without guessing
+- Result:
+  - added a dedicated `Liquidity Policy` section inside `Real-Money > 실행 부담`
+  - the section now surfaces:
+    - `Policy Status`
+    - `Min Avg Dollar Volume 20D`
+    - `Min Clean Coverage`
+    - `Actual Clean Coverage`
+    - `Liquidity Excluded Rows`
+  - also added direct Korean explanations for:
+    - why `unavailable / watch / caution` is currently shown
+    - what the user should change next
+  - specifically, when `Min Avg Dollar Volume 20D = 0`, the UI now explains that the liquidity filter is effectively disabled and that promotion-grade liquidity review cannot run until the value is set above zero
+- Durable implication:
+  - the hold-resolution flow is now connected end-to-end:
+    - hold reason
+    - where to go
+    - why that section is blocking
+    - what to modify next

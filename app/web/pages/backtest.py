@@ -3621,6 +3621,90 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
             if meta.get("liquidity_clean_coverage") is not None:
                 st.caption("Liquidity clean coverage on rebalance rows: " f"`{float(meta.get('liquidity_clean_coverage') or 0.0):.2%}`")
 
+        if meta.get("liquidity_policy_status") or meta.get("promotion_min_liquidity_clean_coverage") is not None:
+            with _section_header(
+                "Liquidity Policy",
+                "유동성 때문에 실제 운용 해석이 가능한지 보는 섹션입니다. "
+                "특히 `unavailable`이면 현재 설정만으로는 유동성 검증을 아예 하지 못하고 있다는 뜻입니다.",
+            ):
+                liquidity_policy_status = str(meta.get("liquidity_policy_status") or "unavailable").lower()
+                liquidity_policy_cols = st.columns(5, gap="small")
+                liquidity_policy_cols[0].metric("Policy Status", liquidity_policy_status.upper())
+                liquidity_policy_cols[1].metric(
+                    "Min Avg Dollar Volume 20D",
+                    f"{float(meta.get('min_avg_dollar_volume_20d_m_filter') or 0.0):.1f}M",
+                )
+                liquidity_policy_cols[2].metric(
+                    "Min Clean Coverage",
+                    f"{float(meta.get('promotion_min_liquidity_clean_coverage') or 0.0):.0%}",
+                )
+                liquidity_policy_cols[3].metric(
+                    "Actual Clean Coverage",
+                    (
+                        f"{float(meta.get('liquidity_clean_coverage')):.2%}"
+                        if meta.get("liquidity_clean_coverage") is not None
+                        else "-"
+                    ),
+                )
+                liquidity_policy_cols[4].metric(
+                    "Liquidity Excluded Rows",
+                    str(int(meta.get("liquidity_excluded_active_rows") or 0)),
+                )
+
+                st.caption(
+                    "`Min Avg Dollar Volume 20D`는 최근 20거래일 평균 거래대금 기준이고, "
+                    "`Liquidity Clean Coverage`는 리밸런싱 시점 중 유동성 제외 없이 지나간 비율입니다."
+                )
+
+                liquidity_policy_signals = [
+                    _liquidity_policy_signal_to_korean_label(item)
+                    for item in list(meta.get("liquidity_policy_watch_signals") or [])
+                ]
+                _render_value_list_caption("Liquidity policy signals", liquidity_policy_signals)
+
+                min_avg_dollar_volume = float(meta.get("min_avg_dollar_volume_20d_m_filter") or 0.0)
+                clean_coverage = meta.get("liquidity_clean_coverage")
+
+                if liquidity_policy_status == "normal":
+                    st.success(
+                        "현재 유동성 정책 기준에서는 특별한 blocker가 없습니다. "
+                        "실전 해석에서 유동성 쪽은 비교적 안정적으로 통과한 상태입니다."
+                    )
+                elif liquidity_policy_status == "watch":
+                    st.info(
+                        "현재 유동성 정책은 watch 상태입니다. "
+                        "당장 막히는 수준은 아니지만, 유동성 제외 빈도가 기준에 가까워서 후보군을 조금 더 점검하는 편이 좋습니다."
+                    )
+                elif liquidity_policy_status == "caution":
+                    st.warning(
+                        "현재 유동성 정책은 caution 상태입니다. "
+                        "리밸런싱 시점에서 유동성 제외가 너무 자주 발생해 실전 승격을 바로 열기 어렵습니다."
+                    )
+                    st.info(
+                        "먼저 `Min Avg Dollar Volume 20D` 기준을 확인하고, 거래가 얇은 종목이 자주 걸리는지 후보군을 다시 점검해보세요."
+                    )
+                elif liquidity_policy_status == "unavailable":
+                    if min_avg_dollar_volume <= 0.0:
+                        st.warning(
+                            "현재는 `Min Avg Dollar Volume 20D`가 `0.0M`이라 유동성 정책을 실제로 판정하지 못했습니다."
+                        )
+                        st.info(
+                            "해결 방법: `Advanced Inputs`에서 `Min Avg Dollar Volume 20D`를 `0`보다 큰 값으로 설정한 뒤 다시 실행하세요. "
+                            "즉 지금은 유동성 필터를 꺼둔 상태라, 승격 판단용 liquidity review가 비활성화된 것입니다."
+                        )
+                    elif clean_coverage is None:
+                        st.warning(
+                            "유동성 필터 값은 있지만, `Liquidity Clean Coverage`가 계산되지 않아 정책 판단을 못 하고 있습니다."
+                        )
+                        st.info(
+                            "해결 방법: 결과 데이터에 유동성 제외/coverage가 실제로 계산됐는지 확인하고, 필요하면 기간이나 universe contract를 다시 점검하세요."
+                        )
+                    else:
+                        st.info(
+                            "현재 설정만으로는 유동성 정책을 충분히 해석하기 어렵습니다. "
+                            "유동성 필터 값과 clean coverage 계산 여부를 함께 확인하는 편이 좋습니다."
+                        )
+
         if (
             meta.get("promotion_min_etf_aum_b") is not None
             or meta.get("promotion_max_bid_ask_spread_pct") is not None
@@ -5085,6 +5169,16 @@ def _deployment_readiness_status_value_to_label(value: str | None) -> str:
     return mapping.get(str(value or "").strip().lower(), "-")
 
 
+def _liquidity_policy_signal_to_korean_label(value: str | None) -> str:
+    mapping = {
+        "liquidity_filter_disabled": "유동성 필터가 꺼져 있음",
+        "liquidity_coverage_missing": "유동성 coverage 계산 데이터 없음",
+        "liquidity_clean_coverage_below_policy": "리밸런싱 시점 clean coverage가 기준보다 낮음",
+    }
+    key = str(value or "").strip().lower()
+    return mapping.get(key, key or "-")
+
+
 def _build_hold_resolution_guidance_rows(meta: dict[str, Any]) -> list[dict[str, str]]:
     guidance_specs = {
         "benchmark_unavailable": {
@@ -5109,12 +5203,12 @@ def _build_hold_resolution_guidance_rows(meta: dict[str, Any]) -> list[dict[str,
         },
         "liquidity_policy_caution": {
             "막히는 항목": "유동성 정책 미통과",
-            "먼저 볼 위치": "실행 부담 > 실행 계약 요약 / Liquidity Policy",
+            "먼저 볼 위치": "실행 부담 > Liquidity Policy",
             "권장 조치": "Min Avg Dollar Volume 20D 기준이나 후보군을 조정하고, 거래가 너무 얇은 종목이 자주 제외되는지 확인합니다.",
         },
         "liquidity_policy_unavailable": {
             "막히는 항목": "유동성 정책 판단 불가",
-            "먼저 볼 위치": "실행 부담 > 실행 계약 요약 / Liquidity Policy",
+            "먼저 볼 위치": "실행 부담 > Liquidity Policy",
             "권장 조치": "유동성 필터를 켜고 usable liquidity history가 있는지 확인한 뒤 다시 실행합니다.",
         },
         "validation_policy_caution": {
