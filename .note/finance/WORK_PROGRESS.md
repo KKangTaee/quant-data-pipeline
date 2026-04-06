@@ -4004,6 +4004,46 @@ Keep entries append-only and concise.
       - `hold 아님`
       - `2016 시작 + MDD 15% 이내`
 
+### 2026-04-06 - 서브 에이전트 병렬 탐색으로 `CAGR 15% 이상 + MDD 20% 이내` exact hit를 찾았고, Value Strict Annual이 최종 승자였음
+
+- The user asked for another search, explicitly requesting sub-agents.
+- Fixed constraints used:
+  - `start = 2016-01-01`
+  - `end = 2026-04-01`
+  - `Universe Contract = Historical Dynamic PIT Universe`
+  - `top_n <= 10`
+  - target:
+    - `CAGR >= 15%`
+    - `Maximum Drawdown >= -20%`
+- `Quality`, `Value`, `Quality + Value` strict annual families were explored in parallel by sub-agents, then the best candidate was re-checked in the main environment.
+- Final exact-hit candidate:
+  - family: `Value > Strict Annual`
+  - factors:
+    - `earnings_yield`
+    - `ocf_yield`
+    - `operating_income_yield`
+    - `fcf_yield`
+  - `month_end`
+  - `rebalance_interval = 1`
+  - `top_n = 9`
+  - `Benchmark = SPY`
+  - `Trend Filter = on`
+  - `Market Regime = on`
+  - `Underperformance Guardrail = on`
+  - `Drawdown Guardrail = on`
+- Main-environment revalidation:
+  - `CAGR = 15.84%`
+  - `MDD = -17.42%`
+  - `promotion = hold`
+  - `shortlist = hold`
+  - `deployment = blocked`
+- Practical implication:
+  - this candidate satisfies the user's numeric target
+  - but still does not clear the current promotion/deployment contract
+  - so it is best interpreted as:
+    - a strong research/selection reference
+    - not yet a promotion-cleared operating candidate
+
 ### 2026-04-06 - SPY 대비 성과와 저낙폭을 동시에 만족하는 Value Strict Annual 후보를 찾음
 
 - New search goal:

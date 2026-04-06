@@ -6746,6 +6746,46 @@ Do not copy full chat transcripts. Keep only the durable result.
     - `2016 시작 dynamic PIT`
     as a simultaneously difficult constraint set for this family under the current implementation
 
+### 2026-04-06 - `CAGR 15% 이상 + MDD 20% 이내` 조건에서는 Value Strict Annual이 exact hit를 만들었다
+
+- Request topic:
+  - after the earlier long-window/SPY comparison work, the user asked for another search using sub-agents
+- Interpreted goal:
+  - find one portfolio under:
+    - `start = 2016-01-01`
+    - `Universe Contract = Historical Dynamic PIT Universe`
+    - `top_n <= 10`
+    - `CAGR >= 15%`
+    - `Maximum Drawdown >= -20%`
+- Result:
+  - `Quality`, `Value`, and `Quality + Value` strict annual families were explored in parallel
+  - the best exact hit came from `Value Strict Annual`
+  - main-environment revalidation confirmed:
+    - factors:
+      - `earnings_yield`
+      - `ocf_yield`
+      - `operating_income_yield`
+      - `fcf_yield`
+    - `month_end`
+    - `rebalance_interval = 1`
+    - `top_n = 9`
+    - `Benchmark = SPY`
+    - `Trend Filter = on`
+    - `Market Regime = on`
+    - `Underperformance Guardrail = on`
+    - `Drawdown Guardrail = on`
+    - `CAGR = 15.84%`
+    - `MDD = -17.42%`
+    - `promotion = hold`
+    - `shortlist = hold`
+    - `deployment = blocked`
+- Durable implication:
+  - the project can now point to one exact-hit configuration for the requested numeric target
+  - however, this configuration still fails the current promotion/deployment contract
+  - this is a clear example where:
+    - return/risk numbers are good enough for the user's target
+    - but the product's operator policy still keeps the strategy in `hold`
+
 ### 2026-04-06 - SPY 대비 CAGR/MDD를 동시에 만족하는 Value Strict Annual 후보를 찾았다
 
 - Request topic:

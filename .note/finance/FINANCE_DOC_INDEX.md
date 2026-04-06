@@ -212,6 +212,8 @@
   - Phase 13 manual validation checklist로, shortlist / probation / rolling review / deployment checklist surface를 현재 UI에서 검수하기 위한 문서
 - `.note/finance/phase13/PHASE13_QUALITY_VALUE_2016_LOW_DRAWDOWN_FACTOR_OPTION_SEARCH.md`
   - `Quality + Value > Strict Annual`를 `Historical Dynamic PIT Universe`와 `2016-01-01` 시작 조건으로 고정한 뒤, factor 조합과 benchmark / cadence를 바꿔 `hold 아님 + MDD 15% 이내` 가능성을 다시 탐색한 분석 문서
+- `.note/finance/phase13/PHASE13_VALUE_STRICT_CAGR15_MDD20_SEARCH.md`
+  - 서브 에이전트 병렬 탐색 후 메인 환경 재검증으로, `Value > Strict Annual`에서 `CAGR 15% 이상 + MDD 20% 이내`를 만족한 exact-hit 조합을 정리한 분석 문서
 - `.note/finance/phase13/PHASE13_VALUE_STRICT_SPY_TARGET_SEARCH.md`
   - `Value Strict Annual`을 중심으로 `SPY`보다 `CAGR`와 `MDD`가 동시에 나은 후보를 찾기 위해 `2016-01-01` 시작, `Historical Dynamic PIT Universe`, `top_n <= 10` 조건에서 수행한 탐색 문서
 - `.note/finance/phase13/PHASE13_SPY_OUTPERFORMANCE_AND_MDD20_SEARCH.md`
