@@ -6745,3 +6745,32 @@ Do not copy full chat transcripts. Keep only the durable result.
     - `hold 아님`
     - `2016 시작 dynamic PIT`
     as a simultaneously difficult constraint set for this family under the current implementation
+
+### 2026-04-06 - SPY를 기준으로 보면 Value Strict Annual family가 Quality보다 낫지만, 승자는 아직 hold였다
+
+- Request topic:
+  - the user asked for a portfolio that beats `SPY` on both `CAGR` and `MDD`, under `start=2016-01-01`, `top_n <= 10`, and `Historical Dynamic PIT Universe`
+- Interpreted goal:
+  - compare `Quality`, `Value`, and `Quality + Value` families, but prioritize whichever family produces the best `SPY`-beating result
+- Result:
+  - `SPY` baseline over the effective comparison window:
+    - `CAGR = 14.0899%`
+    - `MDD = -33.7172%`
+  - `Quality Strict Annual`:
+    - no tested candidate beat `SPY` on both `CAGR` and `MDD`
+  - `Value Strict Annual`:
+    - produced the best candidates
+    - top three winners all beat `SPY` on both metrics but still had `promotion = hold`
+    - best three:
+      - `v_default / month_end / interval 1 / top_n 10`
+        - `CAGR = 18.81%`
+        - `MDD = -23.71%`
+      - `v_default / month_end / interval 1 / top_n 5`
+        - `CAGR = 17.20%`
+        - `MDD = -29.62%`
+      - `v_profit_cashflow / month_end / interval 1 / top_n 10`
+        - `CAGR = 14.61%`
+        - `MDD = -15.16%`
+- Durable implication:
+  - when the comparison target is explicitly `SPY`, `Value Strict Annual` is the strongest of the tested families under the current search constraints
+  - but the current validation / promotion contract is still too strict for those candidates to escape `hold`

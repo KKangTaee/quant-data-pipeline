@@ -3971,3 +3971,34 @@ Keep entries append-only and concise.
     - within practical UI-reproducible settings, no `Quality + Value` configuration met both:
       - `hold 아님`
       - `2016 시작 + MDD 15% 이내`
+
+### 2026-04-06 - SPY 기준 outperformance 탐색에서는 Value Strict Annual family가 Quality보다 우세했지만, 승자들도 hold를 벗어나지 못함
+
+- Request:
+  - find a portfolio that beats SPY on both CAGR and MDD under:
+    - `start = 2016-01-01`
+    - `Universe Contract = Historical Dynamic PIT Universe`
+    - `top_n <= 10`
+  - strategy family could be `Quality`, `Value`, or `Quality + Value`, but the best option should be reported
+- Search scope:
+  - `Quality Strict Annual`
+  - `Value Strict Annual`
+  - practical UI-reproducible settings only
+  - `trend_filter`, `market_regime`, `underperformance_guardrail`, `drawdown_guardrail` all on
+- Result:
+  - `Quality` family did not produce any candidate that beat SPY on both CAGR and MDD
+  - `Value` family produced the best candidates
+  - top winners were all still `hold`
+  - best three value candidates:
+    - `v_default / month_end / interval 1 / top_n 10`
+      - `CAGR = 18.81%`
+      - `MDD = -23.71%`
+    - `v_default / month_end / interval 1 / top_n 5`
+      - `CAGR = 17.20%`
+      - `MDD = -29.62%`
+    - `v_profit_cashflow / month_end / interval 1 / top_n 10`
+      - `CAGR = 14.61%`
+      - `MDD = -15.16%`
+- Practical implication:
+  - if the user wants a strict `SPY` outperformance filter, `Value Strict Annual` is the best of the tested families
+  - however, within the current validation contract, even the best SPY-beating `Value` candidates still remained `hold`
