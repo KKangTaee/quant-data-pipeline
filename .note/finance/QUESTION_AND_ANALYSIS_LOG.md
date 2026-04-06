@@ -7001,3 +7001,30 @@ Do not copy full chat transcripts. Keep only the durable result.
 - Durable implication:
   - benchmark / cadence / trend-regime changes were not enough to structurally resolve the hold
   - if the user wants the same numeric envelope but a non-hold state, the next useful lever is the validation / promotion threshold layer
+
+### 2026-04-06 - `CAGR 20% 이상 + MDD 25% 이내 + hold 아님` exact hit는 이번 탐색 범위에서도 없었다
+
+- Request topic:
+  - the user relaxed the drawdown target to `25%` and raised the CAGR target to `20%`, while still requiring `hold` to be avoided
+- Interpreted goal:
+  - search practical UI-reproducible `Quality / Value / Quality+Value` strict annual candidates under:
+    - `start = 2016-01-01`
+    - `end = 2026-04-01`
+    - `Historical Dynamic PIT Universe`
+    - `top_n <= 10`
+    - `CAGR >= 20%`
+    - `Maximum Drawdown >= -25%`
+    - `promotion != hold`
+- Result:
+  - the tested grid still did not produce a non-hold exact hit
+  - the best raw candidate remained the earlier `Value Strict Annual` exact-hit shape, but it still sat at:
+    - `CAGR = 15.84%`
+    - `MDD = -17.42%`
+    - `promotion = hold`
+  - the blocking signals remained validation-driven:
+    - `validation_status = caution`
+    - `validation_policy_status = caution`
+    - `rolling_review_status = caution`
+- Durable implication:
+  - increasing the drawdown tolerance to `25%` does not automatically unlock a usable non-hold portfolio
+  - in the current contract, the main blocker is still the validation / promotion layer rather than the raw performance envelope

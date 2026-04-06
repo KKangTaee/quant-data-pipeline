@@ -4252,3 +4252,37 @@ Keep entries append-only and concise.
 - Practical implication:
   - benchmark / cadence / trend-regime tuning did not structurally resolve the hold
   - the remaining next lever is the validation / promotion policy layer, not the raw return profile
+
+### 2026-04-06 - `CAGR 20% 이상 + MDD 25% 이내 + hold 아님` exact hit는 이번 탐색 범위에서도 찾지 못함
+
+- Follow-up search after the user relaxed the drawdown target and raised the CAGR target.
+- Fixed constraints kept:
+  - `start = 2016-01-01`
+  - `end = 2026-04-01`
+  - `Universe Contract = Historical Dynamic PIT Universe`
+  - `top_n <= 10`
+  - target interpreted as:
+    - `CAGR >= 20%`
+    - `Maximum Drawdown >= -25%`
+    - `promotion != hold`
+- Searched practical UI-reproducible spaces across:
+  - `Quality Strict Annual`
+  - `Value Strict Annual`
+  - `Quality + Value Strict Annual`
+  - factor combinations
+  - benchmark contract/ticker variants
+  - cadence / top_n
+  - trend and market regime toggles
+- Result:
+  - no non-hold exact hit was found in the tested grid
+  - the strongest candidate in the space remained the `Value Strict Annual` exact-hit setup around:
+    - `CAGR = 15.84%`
+    - `MDD = -17.42%`
+    - `promotion = hold`
+  - the blocker remained:
+    - `validation_status = caution`
+    - `validation_policy_status = caution`
+    - `rolling_review_status = caution`
+- Practical implication:
+  - relaxing the drawdown target to `25%` was not sufficient by itself to unlock a non-hold candidate with `CAGR >= 20%`
+  - the next lever is still the validation / promotion threshold layer, not just raw factor or cadence tuning
