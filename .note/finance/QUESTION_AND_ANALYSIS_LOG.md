@@ -6786,6 +6786,29 @@ Do not copy full chat transcripts. Keep only the durable result.
     - return/risk numbers are good enough for the user's target
     - but the product's operator policy still keeps the strategy in `hold`
 
+### 2026-04-06 - hold의 직접 원인은 validation caution이었고, requested family 내 non-hold exact hit는 아직 못 찾았다
+
+- Request topic:
+  - the user asked to identify why the current best candidate was held and then find a non-hold portfolio satisfying the same numeric target
+- Interpreted goal:
+  - diagnose the hold reason for the `Value Strict Annual` exact-hit candidate
+  - search `Quality` and `Quality + Value` strict annual families for a non-hold candidate under:
+    - `CAGR >= 15%`
+    - `MDD >= -20%`
+    - `start = 2016-01-01`
+    - `Historical Dynamic PIT Universe`
+    - `top_n <= 10`
+- Result:
+  - exact-hit `Value Strict Annual` candidate remained `hold` because:
+    - `validation_status = caution`
+    - `validation_policy_status = caution`
+    - `rolling_review_status = caution`
+  - requested-family search did not produce a non-hold exact hit
+  - the closest non-hold Q+V candidates all achieved `production_candidate` but at much lower CAGR
+- Durable implication:
+  - the blocking issue is now clearly identified as the validation layer, not just the raw return/risk envelope
+  - if the user wants a true non-hold candidate, the next useful work is to relax or reinterpret the validation policy, or to accept a weaker return target
+
 ### 2026-04-06 - SPY 대비 CAGR/MDD를 동시에 만족하는 Value Strict Annual 후보를 찾았다
 
 - Request topic:

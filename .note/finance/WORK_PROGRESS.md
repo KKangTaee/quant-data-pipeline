@@ -4197,3 +4197,28 @@ Keep entries append-only and concise.
 - Practical implication:
   - if the user wants a strict `SPY` outperformance filter, `Value Strict Annual` is the best of the tested families
   - however, within the current validation contract, even the best SPY-beating `Value` candidates still remained `hold`
+
+### 2026-04-06 - hold 원인은 validation caution이었고, requested family 내 non-hold exact hit는 아직 못 찾음
+
+- Re-checked the strongest numeric candidate:
+  - `Value > Strict Annual`
+  - factors:
+    - `earnings_yield`
+    - `ocf_yield`
+    - `operating_income_yield`
+    - `fcf_yield`
+  - `month_end / interval 1 / top_n 9`
+  - `benchmark = SPY`
+  - `CAGR = 15.84%`
+  - `MDD = -17.42%`
+- Hold cause:
+  - `validation_status = caution`
+  - `validation_policy_status = caution`
+  - `rolling_review_status = caution`
+  - `promotion_rationale = ['validation_caution', 'validation_policy_caution']`
+- Follow-up search across `Quality` and `Quality + Value` strict annual families:
+  - no non-hold exact hit found for the requested `CAGR >= 15%` and `MDD >= -20%` target
+  - the best non-hold near-misses were Q+V production-candidate configurations with much lower CAGR
+- Practical implication:
+  - the remaining blocker is not the raw return/drawdown pair alone
+  - it is the validation layer that still keeps the best numeric candidate in `hold`
