@@ -3930,6 +3930,38 @@ Keep entries append-only and concise.
     - relaxing the drawdown target
     - or moving to a different strategy family
 
+### 2026-04-06 - `Quality` 단독 strict annual은 SPY를 이기는 후보를 만들 수 있지만 현재 검증 계약에선 hold가 남음
+
+- Search goal:
+  - find a portfolio with `start = 2016-01-01`, `Universe Contract = Historical Dynamic PIT Universe`, `top_n <= 10` that beats the `SPY` baseline on both `CAGR` and `MDD`
+- Search focus:
+  - `Quality Snapshot (Strict Annual)` family
+  - default quality factor set
+  - `month_end`, `rebalance_interval = 1`
+  - `trend_filter = off`
+  - `market_regime = off`
+  - underperformance / drawdown guardrails on
+- Best confirmed candidates:
+  - `top_n = 2`
+    - `CAGR = 29.69%`
+    - `MDD = -25.19%`
+  - `top_n = 1`
+    - `CAGR = 21.09%`
+    - `MDD = -27.08%`
+  - `top_n = 5`
+    - `CAGR = 21.20%`
+    - `MDD = -29.56%`
+- Comparison against SPY baseline:
+  - all three beat `SPY` on both `CAGR` and `MDD`
+  - however, they still remained in `hold` under the current validation contract
+- Practical implication:
+  - `quality-only` strict annual is currently the best confirmed family for the user's "beat SPY" criterion
+  - but within the tested practical UI settings, it does not yet convert into a non-hold deployment candidate
+  - next levers are:
+    - refine the quality factor set further
+    - test a slightly different benchmark contract only for promotion interpretation
+    - or widen the search window around `top_n = 1 / 2 / 5`
+
 ### 2026-04-06 - Quality + Value factor 및 option 자체를 바꿔도 2016 시작에서 `hold 아님 + MDD 15% 이내`는 끝내 못 맞춤
 
 - Follow-up exploration after the user explicitly asked whether factor changes had been tested.

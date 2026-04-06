@@ -6746,6 +6746,30 @@ Do not copy full chat transcripts. Keep only the durable result.
     - `2016 시작 dynamic PIT`
     as a simultaneously difficult constraint set for this family under the current implementation
 
+### 2026-04-06 - `Quality` 단독 strict annual은 SPY 기준선을 넘는 후보를 찾았지만 아직 non-hold는 못 찾았다
+
+- Request topic:
+  - the user asked for a portfolio that beats `SPY` on both return and drawdown, with `start = 2016-01-01`, `Universe Contract = Historical Dynamic PIT Universe`, and `top_n <= 10`
+- Interpreted goal:
+  - search `Quality`, `Value`, and `Quality + Value` strict annual families for a practical UI-reproducible portfolio that dominates the `SPY` baseline
+- Result:
+  - the best confirmed winners came from the `Quality Snapshot (Strict Annual)` family using the default quality factor set:
+    - `month_end`, `rebalance_interval = 1`, `top_n = 2`
+      - `CAGR = 29.69%`
+      - `MDD = -25.19%`
+    - `month_end`, `rebalance_interval = 1`, `top_n = 1`
+      - `CAGR = 21.09%`
+      - `MDD = -27.08%`
+    - `month_end`, `rebalance_interval = 1`, `top_n = 5`
+      - `CAGR = 21.20%`
+      - `MDD = -29.56%`
+  - all three beat the SPY baseline on both `CAGR` and `MDD`
+  - however, under the current validation contract they still stayed in `hold`
+  - value-only was not competitive in the checked grid, and `Quality + Value` remained weaker than the best quality-only result for this specific objective
+- Durable implication:
+  - if the user's only hard requirement is "must beat SPY", then `Quality` strict annual is the best confirmed family so far
+  - if the user also requires `hold` to clear, the next step is to keep the same family but search a smaller factor/risk-contract neighborhood around the `q_default` quality-only candidate
+
 ### 2026-04-06 - SPY를 기준으로 보면 Value Strict Annual family가 Quality보다 낫지만, 승자는 아직 hold였다
 
 - Request topic:
