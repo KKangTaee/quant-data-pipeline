@@ -4521,3 +4521,9 @@ Keep entries append-only and concise.
 - Practical result:
   - hold guidance now shows `항목 / 현재 상태 / 상태를 보는 위치 / 이 상태의 뜻 / 바로 해볼 일`
   - guides now explain where each status is exposed and how to interpret it before changing settings
+
+### 2026-04-07 - Guides 상태 위치 목록의 구분자를 더 명확히 정리함
+
+- Adjusted the `상태는 어디에서 보나` list so the term and the UI path are separated with `:`.
+- Practical result:
+  - the scan pattern is now more consistent and easier to read at a glance

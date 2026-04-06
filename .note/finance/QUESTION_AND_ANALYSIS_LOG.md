@@ -7385,3 +7385,14 @@ Do not copy full chat transcripts. Keep only the durable result.
   - refreshed the Phase 13 checklist so this richer guidance is now part of manual validation
 - Durable implication:
   - users can now trace a blocked promotion from result state -> exact UI location -> recommended fix without relying on inferred terminology
+
+### 2026-04-07 - Guides의 상태 위치 목록 표기를 더 읽기 쉽게 다듬었다
+
+- Request topic:
+  - the user wanted the `상태는 어디에서 보나` list to show a clearer separator between the item name and the path
+- Interpreted goal:
+  - improve quick scanning without changing the underlying content
+- Result:
+  - changed the list formatting so each line reads as `단어: 확인 경로`
+- Durable implication:
+  - the guides page now uses a clearer visual rhythm for state-location mapping

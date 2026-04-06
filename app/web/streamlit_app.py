@@ -2453,20 +2453,13 @@ def _render_guides_page() -> None:
                 st.caption("`caution`, `unavailable`, `error`, `warning` 같은 상태는 아래 위치에서 직접 확인할 수 있습니다.")
                 st.markdown(
                     """
-                    - `Validation`
-                      `Real-Money > 검토 근거 > Validation Surface`
-                    - `Benchmark Policy`
-                      `Real-Money > 검토 근거 > 세부 정책 기준 보기 > Benchmark Policy`
-                    - `Liquidity Policy`
-                      `Real-Money > 실행 부담 > Liquidity Policy`
-                    - `Validation Policy`
-                      `Real-Money > 검토 근거 > 세부 정책 기준 보기 > Validation Policy`
-                    - `Portfolio Guardrail Policy`
-                      `Real-Money > 검토 근거 > 세부 정책 기준 보기 > Portfolio Guardrail Policy`
-                    - `ETF Operability`
-                      `Real-Money > 실행 부담 > ETF 운용 가능성`
-                    - `Price Freshness`
-                      결과 상단 안내 / `Execution Context`
+                    - `Validation`: `Real-Money > 검토 근거 > Validation Surface`
+                    - `Benchmark Policy`: `Real-Money > 검토 근거 > 세부 정책 기준 보기 > Benchmark Policy`
+                    - `Liquidity Policy`: `Real-Money > 실행 부담 > Liquidity Policy`
+                    - `Validation Policy`: `Real-Money > 검토 근거 > 세부 정책 기준 보기 > Validation Policy`
+                    - `Portfolio Guardrail Policy`: `Real-Money > 검토 근거 > 세부 정책 기준 보기 > Portfolio Guardrail Policy`
+                    - `ETF Operability`: `Real-Money > 실행 부담 > ETF 운용 가능성`
+                    - `Price Freshness`: 결과 상단 안내 / `Execution Context`
                     """
                 )
 
