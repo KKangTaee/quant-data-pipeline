@@ -210,6 +210,8 @@
   - Phase 13 이후 다음 phase를 live deployment workflow 또는 PIT execution-readiness 방향으로 어떻게 열지 정리한 handoff 문서
 - `.note/finance/phase13/PHASE13_TEST_CHECKLIST.md`
   - Phase 13 manual validation checklist로, shortlist / probation / rolling review / deployment checklist surface를 현재 UI에서 검수하기 위한 문서
+- `.note/finance/phase13/PHASE13_QUALITY_VALUE_2016_LOW_DRAWDOWN_FACTOR_OPTION_SEARCH.md`
+  - `Quality + Value > Strict Annual`를 `Historical Dynamic PIT Universe`와 `2016-01-01` 시작 조건으로 고정한 뒤, factor 조합과 benchmark / cadence를 바꿔 `hold 아님 + MDD 15% 이내` 가능성을 다시 탐색한 분석 문서
 
 ---
 

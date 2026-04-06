@@ -3929,3 +3929,45 @@ Keep entries append-only and concise.
     - shortening the start window
     - relaxing the drawdown target
     - or moving to a different strategy family
+
+### 2026-04-06 - Quality + Value factor 및 option 자체를 바꿔도 2016 시작에서 `hold 아님 + MDD 15% 이내`는 끝내 못 맞춤
+
+- Follow-up exploration after the user explicitly asked whether factor changes had been tested.
+- Fixed constraints kept:
+  - `Quality + Value > Strict Annual`
+  - `Universe Contract = Historical Dynamic PIT Universe`
+  - `start = 2016-01-01`
+  - target interpreted as `Maximum Drawdown >= -15%`
+- Re-ran with defensive factor sets plus slower cadence:
+  - quality:
+    - `q_balance_sheet = current_ratio, cash_ratio, debt_to_assets, debt_ratio`
+    - `q_capital_discipline = roe, roa, cash_ratio, debt_to_assets`
+    - `q_profitability = roe, roa, net_margin, operating_margin, gross_margin`
+  - value:
+    - `v_cashflow_only = ocf_yield, fcf_yield, pcr, pfcr`
+    - `v_asset_earnings = book_to_market, earnings_yield, operating_income_yield`
+- Best low-drawdown case:
+  - `q_balance_sheet + v_cashflow_only`
+  - `month_end`, `rebalance_interval = 6`, `top_n = 30`
+  - `Candidate Universe Equal-Weight` benchmark
+  - result:
+    - `promotion = hold`
+    - `CAGR = 2.40%`
+    - `MDD = -13.57%`
+- Best non-hold case after benchmark retune:
+  - same defensive factor set with `benchmark = LQD`
+  - `month_end`, `rebalance_interval = 6`, `top_n = 40` or `50`
+  - result:
+    - `promotion = production_candidate`
+    - `shortlist = watchlist`
+    - `deployment = review_required`
+    - `CAGR ≈ 5.48%`
+    - `MDD ≈ -18.91%`
+- Practical implication:
+  - factor changes do help, but in the current implementation there is still a trade-off:
+    - `MDD 15% 이내`까지 낮추면 `hold`가 남고
+    - `hold`를 벗어나면 `MDD`가 다시 `-19%` 안팎으로 커짐
+  - current conclusion remains:
+    - within practical UI-reproducible settings, no `Quality + Value` configuration met both:
+      - `hold 아님`
+      - `2016 시작 + MDD 15% 이내`

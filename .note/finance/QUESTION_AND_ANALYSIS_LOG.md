@@ -6712,3 +6712,36 @@ Do not copy full chat transcripts. Keep only the durable result.
     - relax the MDD target
     - shorten the start window
     - or accept `hold` and use a stronger defensive overlay as a research-only experiment rather than a production-ready reference
+
+### 2026-04-06 - factor 자체를 바꿔도 `Quality + Value`는 2016 시작 저낙폭 목표와 비보류 상태를 동시에 맞추지 못했다
+
+- Request topic:
+  - after learning that the earlier search did not vary factors, the user asked to explore again by changing other options and factor composition
+- Interpreted goal:
+  - determine whether `Quality + Value > Strict Annual` can escape `hold` while also keeping `Maximum Drawdown >= -15%` under:
+    - `Historical Dynamic PIT Universe`
+    - `start = 2016-01-01`
+- Result:
+  - re-ran with defensive factor sets and slower cadence
+  - factor changes did materially affect drawdown
+  - best low-drawdown case reached about `MDD = -13.57%`, but stayed in `hold`
+    - quality: `current_ratio, cash_ratio, debt_to_assets, debt_ratio`
+    - value: `ocf_yield, fcf_yield, pcr, pfcr`
+    - `month_end / interval 6 / top_n 30`
+    - `Candidate Universe Equal-Weight` benchmark
+  - retuning benchmark to `LQD` produced a usable non-hold candidate, but drawdown worsened again
+    - best non-hold near-miss:
+      - same defensive factor set
+      - `month_end / interval 6 / top_n 40 or 50`
+      - `benchmark = LQD`
+      - `promotion = production_candidate`
+      - `MDD ≈ -18.91%`
+- Durable implication:
+  - within practical UI-reproducible settings, the current `Quality + Value` strict annual family still exhibits a hard trade-off:
+    - defensive factor sets can push drawdown under the target, but then validation keeps the strategy in `hold`
+    - benchmark choices that lift the strategy out of `hold` push drawdown back above the `-15%` target
+  - the user should treat:
+    - `MDD 15% 이내`
+    - `hold 아님`
+    - `2016 시작 dynamic PIT`
+    as a simultaneously difficult constraint set for this family under the current implementation
