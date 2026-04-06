@@ -4489,3 +4489,13 @@ Keep entries append-only and concise.
   - GTAA candidate benchmark surface (`2016-01-29 ~ 2026-04-02`, 42 rows, `interval = 3`) `Maximum Drawdown = -15.90%`
 - Practical result:
   - the `-15.9%` value should be read as `GTAA internal quarterly-sampled benchmark MDD`, not as full daily `SPY` drawdown
+
+### 2026-04-07 - Guides 페이지에 Promotion/Shortlist 승격 설명을 추가함
+
+- Added a new Korean-first explainer section to `Guides` so users can understand:
+  - `Promotion`
+  - `Shortlist`
+  - what must improve for those stages to move upward
+- Also promoted `PHASE13_TEST_CHECKLIST.md` into the top recommended document list on the same page.
+- Practical result:
+  - users can now read the stage meanings and transition logic directly from `Guides` without opening the glossary first

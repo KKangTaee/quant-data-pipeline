@@ -7334,3 +7334,20 @@ Do not copy full chat transcripts. Keep only the durable result.
     - `promotion != hold`
     - `deployment != blocked`
   - but reaching `small_capital_trial` requires stricter shortlist preconditions than simply clearing `hold`
+
+### 2026-04-07 - Guides 페이지에 Promotion/Shortlist 설명을 사용자 친화적으로 추가했다
+
+- Request topic:
+  - the user wanted the promotion and shortlist explanation surfaced directly in `Guides`
+- Interpreted goal:
+  - reduce the need to jump between glossary, checklist, and result tabs when understanding the real-money stage model
+- Result:
+  - added a new `실전 승격 흐름 빠른 설명` section to `Guides`
+  - included:
+    - `Promotion` stages
+    - `Shortlist` stages
+    - practical transition rules for moving upward
+    - a direct UI reading path: `Backtest 결과 -> Real-Money -> 현재 판단`
+  - also elevated `PHASE13_TEST_CHECKLIST.md` in the recommended document list
+- Durable implication:
+  - users now have an on-screen operator guide for stage interpretation without needing to infer the rules from glossary entries alone

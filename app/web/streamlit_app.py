@@ -2337,6 +2337,81 @@ def _render_guides_page() -> None:
     st.caption("현재 운영 기준과 phase 문서를 빠르게 찾는 참고 페이지입니다.")
     _render_runtime_build_indicator()
 
+    with st.container(border=True):
+        st.markdown("### 실전 승격 흐름 빠른 설명")
+        st.caption("Backtest 결과 화면의 `Real-Money > 현재 판단`에서 보이는 값을 먼저 이해하기 위한 요약입니다.")
+        st.code("Backtest 결과 -> Real-Money -> 현재 판단", language="text")
+
+        stage_tabs = st.tabs(["Promotion", "Shortlist", "어떻게 다음 단계로 가나"])
+
+        with stage_tabs[0]:
+            st.markdown(
+                """
+                `Promotion`은 이 전략을 실전형 후보로 어디까지 올릴 수 있는지 보는 상위 판단입니다.
+
+                - `hold`
+                  아직 실전형 후보로 올리지 않습니다. 연구용/추가 검토용 상태입니다.
+                - `production_candidate`
+                  운영 후보로는 볼 수 있지만, 아직 보수적인 검토가 더 필요합니다.
+                - `real_money_candidate`
+                  실전형 후보까지 올라온 상태입니다. 다음은 `paper probation`이나 `small capital trial` 단계입니다.
+                """
+            )
+            st.info(
+                "한 줄로 보면 `hold -> production_candidate -> real_money_candidate` 순서로 승격됩니다."
+            )
+
+        with stage_tabs[1]:
+            st.markdown(
+                """
+                `Shortlist`는 promotion 결과를 실제 운용 후보 상태로 번역한 값입니다.
+
+                - `hold`
+                  아직 운용 후보군에 올리지 않습니다.
+                - `watchlist`
+                  관찰 후보입니다. 버릴 전략은 아니지만, 아직 한 단계 더 검토가 필요합니다.
+                - `paper_probation`
+                  paper tracking / 종이매매 추적 단계까지 올릴 수 있습니다.
+                - `small_capital_trial`
+                  아주 작은 실전 자금 시험까지 고려 가능한 상태입니다.
+                """
+            )
+            st.info(
+                "한 줄로 보면 `hold -> watchlist -> paper_probation -> small_capital_trial` 흐름으로 읽으면 됩니다."
+            )
+
+        with stage_tabs[2]:
+            st.markdown("#### Promotion이 올라가려면")
+            st.markdown(
+                """
+                - `hold -> production_candidate`
+                  `Validation`, `Benchmark Policy`, `Liquidity Policy`, `Validation Policy`,
+                  `Portfolio Guardrail Policy`, ETF 전략이면 `ETF Operability`, 그리고 `Price Freshness`
+                  중 `caution`, `unavailable`, `error` 상태를 먼저 줄여야 합니다.
+                - `production_candidate -> real_money_candidate`
+                  위 항목들이 대부분 `normal`이어야 하고,
+                  benchmark가 있어야 하며,
+                  static universe가 아니어야 하고,
+                  freshness도 `warning/error`가 아니어야 합니다.
+                """
+            )
+            st.markdown("#### Shortlist가 올라가려면")
+            st.markdown(
+                """
+                - `shortlist = hold`
+                  보통 `promotion = hold`에서 같이 나옵니다. 먼저 promotion 쪽 blocker를 푸는 것이 우선입니다.
+                - `watchlist -> paper_probation`
+                  보통 `promotion`이 `real_money_candidate`까지 올라가야 자연스럽게 이동합니다.
+                - `paper_probation -> small_capital_trial`
+                  stricter 조건입니다. 현재 기준으로는 non-ETF strict annual family에서,
+                  guardrail이 켜져 있고, benchmark가 있으며, static universe가 아니고,
+                  `Candidate Universe Equal-Weight` benchmark contract까지 맞아야 가능합니다.
+                """
+            )
+            st.warning(
+                "실무적으로는 먼저 `Promotion != hold`, `Deployment != blocked`를 만드는 것이 최소 목표입니다."
+            )
+
     st.markdown("### 지금 먼저 보면 좋은 문서")
     st.markdown(
         """
@@ -2344,6 +2419,8 @@ def _render_guides_page() -> None:
           현재 finance 구조와 runtime/data/strategy 흐름 종합 문서
         - `MASTER_PHASE_ROADMAP.md`
           전체 phase 흐름과 현재 위치를 보여주는 상위 로드맵
+        - `PHASE13_TEST_CHECKLIST.md`
+          현재 수동 검수와 UX 확인을 진행할 때 가장 먼저 보는 체크리스트
         - `PHASE12_TEST_CHECKLIST.md`
           방금 closeout된 Phase 12 수동 검수 기준
         - `FINANCE_TERM_GLOSSARY.md`
@@ -2359,6 +2436,7 @@ def _render_guides_page() -> None:
             [
                 ".note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md",
                 ".note/finance/MASTER_PHASE_ROADMAP.md",
+                ".note/finance/phase13/PHASE13_TEST_CHECKLIST.md",
                 ".note/finance/phase12/PHASE12_TEST_CHECKLIST.md",
                 ".note/finance/FINANCE_TERM_GLOSSARY.md",
                 ".note/finance/WORK_PROGRESS.md",

@@ -121,6 +121,9 @@ Analysis / Presentation
   로 나뉘고,
   helper 모듈은 더 이상 Streamlit `pages/` auto-discovery에 섞이지 않도록
   실제 페이지 경로 밖으로 분리했다.
+  최근 `Guides` 페이지는 단순 문서 링크 모음뿐 아니라,
+  `Promotion / Shortlist` 승격 흐름과 단계별 해석을 한국어 요약으로 먼저 보여주는
+  operator-facing quick reference 역할도 함께 갖는다.
 - 첫 public runtime boundary는 `app/web/runtime/backtest.py`의
   `run_equal_weight_backtest_from_db(...)`와 `build_backtest_result_bundle(...)` 조합으로 열렸다.
 - 즉 UI는 `sample.py`나 `BacktestEngine` 체인을 직접 호출하지 않고,
