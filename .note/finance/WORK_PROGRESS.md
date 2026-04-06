@@ -3808,3 +3808,11 @@ Keep entries append-only and concise.
   - `Actual Clean Coverage`
   - `Liquidity Excluded Rows`
 - Added direct Korean explanations for why `unavailable / watch / caution` appears and what the user should change next.
+
+### 2026-04-06 - `Min Avg Dollar Volume 20D` 용어를 glossary에 명시적으로 추가
+
+- Added a dedicated glossary entry for `Min Avg Dollar Volume 20D`.
+- Clarified:
+  - that it means recent 20-day average dollar trading volume
+  - why it is used as a simple liquidity filter
+  - that `0.0M` effectively means the liquidity filter is off

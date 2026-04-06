@@ -6564,3 +6564,16 @@ Do not copy full chat transcripts. Keep only the durable result.
     - where to go
     - why that section is blocking
     - what to modify next
+
+### 2026-04-06 - `Min Avg Dollar Volume 20D` should be explained as an explicit glossary term
+
+- Request topic:
+  - the user asked what `Min Avg Dollar Volume 20D` means exactly
+- Interpreted goal:
+  - explain the metric in plain language and preserve the explanation as durable project terminology
+- Result:
+  - clarified that it means recent 20-trading-day average dollar trading volume
+  - explained that it is a simple liquidity filter used to avoid candidates that are too hard to trade in practice
+  - clarified that `0.0M` effectively means the liquidity filter is off, which often leads `Liquidity Policy` to `unavailable`
+- Durable implication:
+  - future UI explanations and hold-resolution flows can refer users to a glossary-backed meaning instead of re-explaining the metric ad hoc
