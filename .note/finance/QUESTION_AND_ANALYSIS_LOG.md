@@ -6658,3 +6658,35 @@ Do not copy full chat transcripts. Keep only the durable result.
     - risk control: `Trend Filter`, `Market Regime`, `Underperformance Guardrail`, `Drawdown Guardrail`
 - Durable implication:
   - future UX around real-money forms should explain inputs by purpose group, not just by field name, because operators naturally ask both “what is this?” and “why do I need it?”
+
+### 2026-04-06 - 2016년 시작과 MDD 15% 이내를 동시에 만족하는 비보류 포트폴리오 후보 탐색
+
+- Request topic:
+  - the user asked whether we could construct a portfolio that starts in January 2016 and keeps `MDD` within `15%`
+- Interpreted goal:
+  - find one concrete, non-hold backtest configuration that is practical to inspect and copy
+- Result:
+  - interpreted `MDD 15 이하` as `Maximum Drawdown >= -15%`
+  - the cleaner candidate found was:
+    - strategy: `GTAA`
+    - preset family: `U1 Offensive Candidate Base`
+    - benchmark: `TLT`
+    - `top=2`
+    - `rebalance interval=3`
+    - score horizons: `1/3/6/12`
+    - start: `2016-01-01`
+    - no extra trend/regime overlay
+    - ETF operability policy disabled for the search path
+  - resulting state:
+    - `promotion_decision = real_money_candidate`
+    - `shortlist_status = paper_probation`
+    - `deployment_readiness_status = paper_only`
+    - `validation_status = normal`
+    - `rolling_review_status = normal`
+    - `out_of_sample_review_status = normal`
+    - summary stats: approximately `CAGR 15.04%`, `MDD -9.82%`
+- Important caveat:
+  - this candidate met the condition with a bond benchmark (`TLT`), not with `SPY`
+  - under the same 2016-start and MDD constraint, the `SPY` benchmark runs that were checked tended to stay in `hold` because `validation = caution`
+- Durable implication:
+  - when a strict drawdown target is imposed over a long 2016-start window, a usable candidate may exist only under a more defensive benchmark frame, so benchmark choice must be disclosed clearly when sharing “usable” portfolio examples

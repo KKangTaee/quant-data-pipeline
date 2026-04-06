@@ -3878,3 +3878,30 @@ Keep entries append-only and concise.
 - Also strengthened the existing `Transaction Cost` entry with a simple `bps` interpretation example.
 - Purpose:
   - make real-money input controls easier to understand without re-explaining them ad hoc in chat each time.
+
+### 2026-04-06 - 2016년 시작, MDD 15% 이내 조건에서 비보류 포트폴리오 후보를 재탐색
+
+- Interpreted the user's `MDD 15 이하` request as `Maximum Drawdown >= -15%`.
+- Re-ran practical candidates with `start='2016-01-01'` across:
+  - GTAA candidate universes
+  - ETF strategy candidates
+  - `Quality + Value > Strict Annual`
+- Observed:
+  - with `SPY` as benchmark, several GTAA candidates met the MDD target but still remained `hold` because `validation = caution`
+  - `Quality + Value > Strict Annual` met non-hold in some contracts, but did not satisfy the stricter `MDD <= 15%` target for the full 2016-start window
+- A usable candidate was found with:
+  - strategy: `GTAA`
+  - preset base: `U1 Offensive Candidate Base`
+  - benchmark: `TLT` (also `IEF`/`LQD` worked similarly)
+  - `top=2`
+  - `rebalance interval=3`
+  - score horizons `1/3/6/12`
+  - `start='2016-01-01'`
+  - no extra trend/regime overlay
+  - ETF operability policy disabled for this search path
+- Outcome:
+  - `promotion_decision = real_money_candidate`
+  - `shortlist_status = paper_probation`
+  - `deployment_readiness_status = paper_only`
+  - `validation / rolling / out_of_sample = normal`
+  - summary: `CAGR 15.04%`, `MDD -9.82%`
