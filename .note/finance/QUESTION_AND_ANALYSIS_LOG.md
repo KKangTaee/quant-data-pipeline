@@ -7291,3 +7291,46 @@ Do not copy full chat transcripts. Keep only the durable result.
   - future comparisons against `SPY` should explicitly distinguish:
     - raw daily `SPY` buy-and-hold metrics
     - strategy-window sampled benchmark metrics inside a backtest result bundle
+
+### 2026-04-07 - Promotion과 Shortlist 단계 및 승격 조건을 다시 정리했다
+
+- Request topic:
+  - the user asked for a clean explanation of the `promotion` and `shortlist` stages and what must change for a strategy to be promoted between those states
+- Interpreted goal:
+  - explain the current runtime contract using the actual code rules rather than only UI wording
+- Result:
+  - `promotion` has three stages:
+    - `hold`
+    - `production_candidate`
+    - `real_money_candidate`
+  - promotion is primarily determined by:
+    - `benchmark_available`
+    - `validation_status`
+    - `benchmark_policy_status`
+    - `etf_operability_status`
+    - `liquidity_policy_status`
+    - `validation_policy_status`
+    - `guardrail_policy_status`
+    - `universe_contract`
+    - `price_freshness.status`
+  - promotion transition rules:
+    - `hold -> production_candidate`:
+      remove `caution` / `unavailable` / `error` blockers, but `watch`, static-universe usage, or freshness warning may still remain
+    - `production_candidate -> real_money_candidate`:
+      benchmark must be available, validation/policy surfaces must all be `normal`, ETF operability must be `normal` for ETF strategies, universe must not be `static_managed_research`, and price freshness must not be warning/error
+  - `shortlist` is downstream from promotion:
+    - `promotion = hold` -> `shortlist = hold`
+    - `promotion = production_candidate` -> `shortlist = watchlist`
+    - `promotion = real_money_candidate` -> usually `paper_probation`
+    - `promotion = real_money_candidate` -> `small_capital_trial` only when:
+      - strategy is not ETF-family
+      - drawdown guardrail is enabled
+      - underperformance guardrail is enabled
+      - benchmark is available
+      - universe is not static managed research
+      - `benchmark_contract = candidate_universe_equal_weight`
+- Durable implication:
+  - the practical minimum for a strategy to stop being "blocked for real use" is usually:
+    - `promotion != hold`
+    - `deployment != blocked`
+  - but reaching `small_capital_trial` requires stricter shortlist preconditions than simply clearing `hold`
