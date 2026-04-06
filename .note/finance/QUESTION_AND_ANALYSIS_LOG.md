@@ -7215,3 +7215,16 @@ Do not copy full chat transcripts. Keep only the durable result.
 - Durable implication:
   - future backtest-result reading should start from strategy hubs
   - phase folders remain useful as raw chronological archives, not as the primary reading surface
+
+### 2026-04-06 - GTAA single form에서 universe payload 변수명이 어긋나던 regression을 수정했다
+
+- Request topic:
+  - running `GTAA` from the backtest page raised `NameError: name 'universe_mode' is not defined`
+- Interpreted goal:
+  - restore the GTAA single-strategy execution path without changing the new universe-input helper contract
+- Result:
+  - confirmed that `_render_gtaa_universe_inputs()` returns `_universe_mode`
+  - fixed `_render_gtaa_form()` so the payload uses `_universe_mode` instead of the stale `universe_mode` name
+- Durable implication:
+  - GTAA single-form payload is now aligned with the helper return contract
+  - this closes a regression introduced during the universe-input surface refactor

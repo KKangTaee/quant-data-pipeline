@@ -7630,7 +7630,7 @@ def _render_gtaa_form() -> None:
         "drawdown_guardrail_window_months": int(drawdown_guardrail_window_months),
         "drawdown_guardrail_strategy_threshold": float(drawdown_guardrail_strategy_threshold),
         "drawdown_guardrail_gap_threshold": float(drawdown_guardrail_gap_threshold),
-        "universe_mode": "preset" if universe_mode == "Preset" else "manual_tickers",
+        "universe_mode": _universe_mode,
         "preset_name": preset_name,
     }
 

@@ -4436,3 +4436,13 @@ Keep entries append-only and concise.
   - `.note/finance/backtest_reports/README.md`
   - `.note/finance/backtest_reports/phase13/README.md`
   so reading now starts from strategy hubs, while phase13 remains the raw archive layer.
+
+### 2026-04-06 - GTAA single backtest form의 universe payload regression을 수정함
+
+- The GTAA form raised `NameError: name 'universe_mode' is not defined` when the user tried to run a single GTAA backtest.
+- Root cause:
+  - the form now receives `_universe_mode` from `_render_gtaa_universe_inputs()`
+  - but the payload builder still referenced the removed `universe_mode` local name
+- Fixed:
+  - `app/web/pages/backtest.py`
+  - GTAA payload now uses `_universe_mode` directly, consistent with the equal-weight path and helper return contract
