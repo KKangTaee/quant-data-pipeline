@@ -4499,3 +4499,12 @@ Keep entries append-only and concise.
 - Also promoted `PHASE13_TEST_CHECKLIST.md` into the top recommended document list on the same page.
 - Practical result:
   - users can now read the stage meanings and transition logic directly from `Guides` without opening the glossary first
+
+### 2026-04-07 - Guides의 단계 상승 설명 탭을 더 읽기 쉽게 재구성함
+
+- The `어떻게 다음 단계로 가나` tab previously rendered as one long markdown block and felt visually dense.
+- Reworked the section into two side-by-side bordered cards:
+  - `Promotion이 올라가려면`
+  - `Shortlist가 올라가려면`
+- Practical result:
+  - transition conditions are now split into short steps instead of one merged paragraph-heavy list

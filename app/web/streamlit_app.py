@@ -2381,33 +2381,69 @@ def _render_guides_page() -> None:
             )
 
         with stage_tabs[2]:
-            st.markdown("#### Promotion이 올라가려면")
-            st.markdown(
-                """
-                - `hold -> production_candidate`
-                  `Validation`, `Benchmark Policy`, `Liquidity Policy`, `Validation Policy`,
-                  `Portfolio Guardrail Policy`, ETF 전략이면 `ETF Operability`, 그리고 `Price Freshness`
-                  중 `caution`, `unavailable`, `error` 상태를 먼저 줄여야 합니다.
-                - `production_candidate -> real_money_candidate`
-                  위 항목들이 대부분 `normal`이어야 하고,
-                  benchmark가 있어야 하며,
-                  static universe가 아니어야 하고,
-                  freshness도 `warning/error`가 아니어야 합니다.
-                """
-            )
-            st.markdown("#### Shortlist가 올라가려면")
-            st.markdown(
-                """
-                - `shortlist = hold`
-                  보통 `promotion = hold`에서 같이 나옵니다. 먼저 promotion 쪽 blocker를 푸는 것이 우선입니다.
-                - `watchlist -> paper_probation`
-                  보통 `promotion`이 `real_money_candidate`까지 올라가야 자연스럽게 이동합니다.
-                - `paper_probation -> small_capital_trial`
-                  stricter 조건입니다. 현재 기준으로는 non-ETF strict annual family에서,
-                  guardrail이 켜져 있고, benchmark가 있으며, static universe가 아니고,
-                  `Candidate Universe Equal-Weight` benchmark contract까지 맞아야 가능합니다.
-                """
-            )
+            promo_col, shortlist_col = st.columns(2)
+
+            with promo_col:
+                with st.container(border=True):
+                    st.markdown("#### Promotion이 올라가려면")
+                    st.caption("먼저 `hold`를 벗기고, 그 다음 `real_money_candidate`까지 올리는 흐름입니다.")
+                    st.markdown("**1. `hold -> production_candidate`**")
+                    st.markdown(
+                        """
+                        아래 항목들에서 `caution`, `unavailable`, `error`를 먼저 줄여야 합니다.
+
+                        - `Validation`
+                        - `Benchmark Policy`
+                        - `Liquidity Policy`
+                        - `Validation Policy`
+                        - `Portfolio Guardrail Policy`
+                        - ETF 전략이면 `ETF Operability`
+                        - `Price Freshness`
+                        """
+                    )
+                    st.markdown("**2. `production_candidate -> real_money_candidate`**")
+                    st.markdown(
+                        """
+                        이 단계는 더 엄격합니다.
+
+                        - 핵심 정책 상태가 대부분 `normal`이어야 합니다.
+                        - benchmark가 있어야 합니다.
+                        - static universe가 아니어야 합니다.
+                        - freshness가 `warning`이나 `error`가 아니어야 합니다.
+                        """
+                    )
+
+            with shortlist_col:
+                with st.container(border=True):
+                    st.markdown("#### Shortlist가 올라가려면")
+                    st.caption("Promotion 결과를 실제 운용 후보 상태로 번역하는 단계입니다.")
+                    st.markdown("**1. `shortlist = hold`**")
+                    st.markdown(
+                        """
+                        보통 `promotion = hold`에서 같이 나옵니다.
+
+                        - 먼저 promotion 쪽 blocker를 푸는 것이 우선입니다.
+                        """
+                    )
+                    st.markdown("**2. `watchlist -> paper_probation`**")
+                    st.markdown(
+                        """
+                        보통 `promotion`이 `real_money_candidate`까지 올라가야 자연스럽게 이동합니다.
+                        """
+                    )
+                    st.markdown("**3. `paper_probation -> small_capital_trial`**")
+                    st.markdown(
+                        """
+                        이 단계는 조건이 더 엄격합니다.
+
+                        - 현재 기준으로는 non-ETF strict annual family가 유리합니다.
+                        - guardrail이 켜져 있어야 합니다.
+                        - benchmark가 있어야 합니다.
+                        - static universe가 아니어야 합니다.
+                        - `Candidate Universe Equal-Weight` benchmark contract까지 맞아야 합니다.
+                        """
+                    )
+
             st.warning(
                 "실무적으로는 먼저 `Promotion != hold`, `Deployment != blocked`를 만드는 것이 최소 목표입니다."
             )

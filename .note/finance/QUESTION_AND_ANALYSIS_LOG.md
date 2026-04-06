@@ -7351,3 +7351,16 @@ Do not copy full chat transcripts. Keep only the durable result.
   - also elevated `PHASE13_TEST_CHECKLIST.md` in the recommended document list
 - Durable implication:
   - users now have an on-screen operator guide for stage interpretation without needing to infer the rules from glossary entries alone
+
+### 2026-04-07 - Guides의 단계 상승 설명 탭 가독성을 다시 손봤다
+
+- Request topic:
+  - the user felt the `어떻게 다음 단계로 가나` section in `Guides` was not rendering cleanly enough and remained hard to read
+- Interpreted goal:
+  - keep the same content but make the transition logic visually easier to scan
+- Result:
+  - split the tab into two bordered sections for `Promotion` and `Shortlist`
+  - broke the transition rules into shorter numbered step blocks
+  - reduced the amount of long wrapped markdown under a single heading
+- Durable implication:
+  - the operator guide now better supports quick scanning during Phase 13 validation and real-money review
