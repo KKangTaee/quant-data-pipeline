@@ -6746,6 +6746,41 @@ Do not copy full chat transcripts. Keep only the durable result.
     - `2016 시작 dynamic PIT`
     as a simultaneously difficult constraint set for this family under the current implementation
 
+### 2026-04-06 - Quality Strict Annual는 SPY를 이기는 raw candidate가 있으나 full hardening까지는 아직 부족하다
+
+- Request topic:
+  - the user asked to search the `Quality Strict Annual` family only and to find portfolios that beat the SPY baseline on both CAGR and drawdown
+- Interpreted goal:
+  - find practical UI-reproducible `Quality Snapshot (Strict Annual)` settings with:
+    - `start = 2016-01-01`
+    - `end = 2026-04-01`
+    - `Universe Contract = Historical Dynamic PIT Universe`
+    - `top_n <= 10`
+    - `CAGR > 14.09%`
+    - `MDD > -33.72%`
+- Result:
+  - a broad factor screen showed that `Quality` alone can beat SPY on raw performance
+  - best SPY-dominance candidates found under a practical UI pass with `trend_filter = on` and `market_regime = on` were:
+    - `capital_discipline`:
+      - `roe, roa, cash_ratio, debt_to_assets`
+      - `month_end / interval 1 / top_n 10`
+      - `CAGR = 15.80%`
+      - `MDD = -27.97%`
+    - `balance_sheet`:
+      - `current_ratio, cash_ratio, debt_to_assets, debt_ratio`
+      - `month_end / interval 1 / top_n 5`
+      - `CAGR = 15.71%`
+      - `MDD = -33.20%`
+    - `balance_sheet`:
+      - same factor set
+      - `month_end / interval 1 / top_n 10`
+      - `CAGR = 14.46%`
+      - `MDD = -26.83%`
+  - when full real-money hardening was re-enabled (`underperformance_guardrail` + `drawdown_guardrail`), the edge disappeared and the same family moved back toward `hold`
+- Durable implication:
+  - `Quality` family has a genuine SPY-dominance path in raw backtest terms
+  - however, current full hardening still needs additional refinement before the family can be treated as a clean deployment-ready reference
+
 ### 2026-04-06 - `Quality` 단독 strict annual은 SPY 기준선을 넘는 후보를 찾았지만 아직 non-hold는 못 찾았다
 
 - Request topic:

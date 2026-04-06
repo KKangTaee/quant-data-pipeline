@@ -4004,6 +4004,56 @@ Keep entries append-only and concise.
       - `hold 아님`
       - `2016 시작 + MDD 15% 이내`
 
+### 2026-04-06 - Quality Strict Annual는 SPY를 이기는 raw candidate가 있지만 full hardening을 켜면 edge가 사라짐
+
+- Ran a SPY-dominance search for `Quality Snapshot (Strict Annual)` with:
+  - `start = 2016-01-01`
+  - `end = 2026-04-01`
+  - `Universe Contract = Historical Dynamic PIT Universe`
+  - `top_n <= 10`
+- 1st pass screen:
+  - factor sets compared:
+    - `default`
+    - `legacy`
+    - `profitability`
+    - `balance_sheet`
+    - `capital_discipline`
+    - `efficiency`
+  - base settings:
+    - `month_end`
+    - `rebalance_interval = 1`
+    - `top_n = 2 / 5 / 10`
+    - `trend_filter = off`
+    - `market_regime = off`
+    - `underperformance_guardrail = off`
+    - `drawdown_guardrail = off`
+    - `benchmark = SPY`
+- 2nd pass verification:
+  - re-tested the top candidates with `trend_filter = on`, `market_regime = on`
+  - left `underperformance_guardrail` and `drawdown_guardrail` off to keep the signal visible
+- Best SPY-dominance candidates:
+  - `capital_discipline`
+    - `roe, roa, cash_ratio, debt_to_assets`
+    - `month_end / interval 1 / top_n 10`
+    - `trend_filter = on`, `market_regime = on`
+    - `CAGR = 15.80%`
+    - `MDD = -27.97%`
+  - `balance_sheet`
+    - `current_ratio, cash_ratio, debt_to_assets, debt_ratio`
+    - `month_end / interval 1 / top_n 5`
+    - `trend_filter = on`, `market_regime = on`
+    - `CAGR = 15.71%`
+    - `MDD = -33.20%`
+  - `balance_sheet`
+    - same factor set
+    - `month_end / interval 1 / top_n 10`
+    - `trend_filter = on`, `market_regime = on`
+    - `CAGR = 14.46%`
+    - `MDD = -26.83%`
+- Important follow-up:
+  - when `underperformance_guardrail` and `drawdown_guardrail` are both turned on, the edge disappears again and the candidates fall back to `hold`
+  - this means the family can beat SPY on raw return/risk, but the full operational contract still requires more work
+
 ### 2026-04-06 - SPY 기준 outperformance 탐색에서는 Value Strict Annual family가 Quality보다 우세했지만, 승자들도 hold를 벗어나지 못함
 
 - Request:

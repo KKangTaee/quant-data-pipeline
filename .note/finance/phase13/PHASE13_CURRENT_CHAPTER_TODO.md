@@ -79,6 +79,8 @@
 - `completed` phase closeout checklist skeleton 준비
 - `completed` phase manual test checklist 작성
 - `completed` phase closeout summary / next-phase preparation 작성
+- `completed` Quality Strict Annual SPY-dominance 탐색
+  - raw candidate는 존재하지만, full hardening까지 켜면 edge가 사라지는 점을 확인했다
 
 ## 현재 메모
 

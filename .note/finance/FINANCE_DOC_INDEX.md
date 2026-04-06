@@ -212,6 +212,8 @@
   - Phase 13 manual validation checklist로, shortlist / probation / rolling review / deployment checklist surface를 현재 UI에서 검수하기 위한 문서
 - `.note/finance/phase13/PHASE13_QUALITY_VALUE_2016_LOW_DRAWDOWN_FACTOR_OPTION_SEARCH.md`
   - `Quality + Value > Strict Annual`를 `Historical Dynamic PIT Universe`와 `2016-01-01` 시작 조건으로 고정한 뒤, factor 조합과 benchmark / cadence를 바꿔 `hold 아님 + MDD 15% 이내` 가능성을 다시 탐색한 분석 문서
+- `.note/finance/phase13/PHASE13_QUALITY_STRICT_SPY_DOMINANCE_SEARCH.md`
+  - `Quality Snapshot (Strict Annual)`만으로 `SPY` baseline을 동시에 이기는 raw candidate를 찾는 탐색 문서로, factor set / cadence / top_n를 바꿔 실전형 UI 설정에서의 dominance 여부를 정리한 분석 문서
 - `.note/finance/phase13/PHASE13_SPY_OUTPERFORMANCE_SEARCH.md`
   - `Quality`, `Value`, `Quality + Value` strict annual family를 `SPY` 기준선과 직접 비교해, `2016-01-01` 시작 / `Historical Dynamic PIT Universe` / `top_n <= 10` 조건에서 `SPY`보다 CAGR과 MDD가 모두 나은 후보를 찾은 분석 문서
 
