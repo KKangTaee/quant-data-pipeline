@@ -4004,6 +4004,43 @@ Keep entries append-only and concise.
       - `hold 아님`
       - `2016 시작 + MDD 15% 이내`
 
+### 2026-04-06 - SPY 대비 성과와 저낙폭을 동시에 만족하는 Value Strict Annual 후보를 찾음
+
+- New search goal:
+  - find a portfolio with
+    - `CAGR >= 15%`
+    - `Maximum Drawdown >= -20%`
+    - `start = 2016-01-01`
+    - `Universe Contract = Historical Dynamic PIT Universe`
+    - `top_n <= 10`
+    - benchmark compared against `SPY`
+- Family search summary:
+  - `Quality Strict Annual`:
+    - found SPY-beating candidates on raw CAGR/MDD, but none met the tighter `-20%` drawdown target
+  - `Quality + Value Strict Annual`:
+    - explored, but no strong candidate surfaced within the practical settings checked so far
+  - `Value Strict Annual`:
+    - best fit for the user's target
+- Best exact candidate:
+  - factor set:
+    - `earnings_yield`
+    - `ocf_yield`
+    - `operating_income_yield`
+    - `fcf_yield`
+  - `month_end`, `rebalance_interval = 1`, `top_n = 9`
+  - `trend_filter = on`
+  - `market_regime = on`
+  - `underperformance_guardrail = on`
+  - `drawdown_guardrail = on`
+  - `benchmark = SPY`
+  - result:
+    - `CAGR = 15.84%`
+    - `MDD = -17.42%`
+    - `promotion = hold`
+- Practical implication:
+  - this is currently the clearest `SPY`-beating candidate that also satisfies the user's `CAGR / MDD` thresholds
+  - if the user wants to remove `hold`, the next step is to relax or retune the policy layer, not the raw return profile
+
 ### 2026-04-06 - SPY 대비 우위와 `CAGR >= 15%`, `MDD >= -20%`를 동시에 만족하는 후보를 family별로 다시 탐색했지만, 최종 교집합은 찾지 못함
 
 - Follow-up exploration requested by the user:

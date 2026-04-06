@@ -6746,6 +6746,42 @@ Do not copy full chat transcripts. Keep only the durable result.
     - `2016 시작 dynamic PIT`
     as a simultaneously difficult constraint set for this family under the current implementation
 
+### 2026-04-06 - SPY 대비 CAGR/MDD를 동시에 만족하는 Value Strict Annual 후보를 찾았다
+
+- Request topic:
+  - the user asked for a portfolio that beats `SPY` on both return and drawdown, with `start = 2016-01-01`, `top_n <= 10`, and `Historical Dynamic PIT Universe`
+- Interpreted goal:
+  - search across `Quality`, `Value`, and `Quality + Value` strict annual families and find a candidate that satisfies:
+    - `CAGR >= 15%`
+    - `Maximum Drawdown >= -20%`
+    - relative to `SPY`
+- Result:
+  - after family-by-family search, `Value Strict Annual` produced the clearest match
+  - best exact candidate:
+    - factor set: `earnings_yield`, `ocf_yield`, `operating_income_yield`, `fcf_yield`
+    - `month_end`
+    - `rebalance_interval = 1`
+    - `top_n = 9`
+    - `trend_filter = on`
+    - `market_regime = on`
+    - `underperformance_guardrail = on`
+    - `drawdown_guardrail = on`
+    - benchmark: `SPY`
+    - result:
+      - `CAGR = 15.84%`
+      - `MDD = -17.42%`
+      - `promotion = hold`
+  - near misses:
+    - same factor set with `top_n = 7`
+      - `CAGR = 15.24%`
+      - `MDD = -19.57%`
+    - same factor set with `top_n = 10`
+      - `CAGR = 14.61%`
+      - `MDD = -15.16%`
+- Durable implication:
+  - if the user's main requirement is beating `SPY` on both CAGR and MDD, the current best reference is the `Value Strict Annual` setup above
+  - if the user also insists on `hold` being cleared, the next improvement has to come from the validation/policy layer rather than the raw return series
+
 ### 2026-04-06 - SPY 대비 우위 + `CAGR >= 15%` + `MDD >= -20%`를 만족하는 후보를 family별로 다시 탐색했지만 교집합은 없었다
 
 - Request topic:
