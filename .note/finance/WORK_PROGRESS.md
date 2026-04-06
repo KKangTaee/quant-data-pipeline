@@ -4423,3 +4423,16 @@ Keep entries append-only and concise.
 - Practical implication:
   - Phase 13 execution docs remain in `phase13/`
   - Phase 13 backtest result docs now have a dedicated canonical home under `backtest_reports/phase13/`
+
+### 2026-04-06 - backtest_reports를 전략 허브 중심 구조로 다시 정리함
+
+- The user pointed out that phase-based raw report files are not the most comfortable reading surface.
+- Created strategy hub documents:
+  - `.note/finance/backtest_reports/strategies/QUALITY_STRICT_ANNUAL.md`
+  - `.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL.md`
+  - `.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL.md`
+- Updated:
+  - `.note/finance/backtest_reports/BACKTEST_REPORT_INDEX.md`
+  - `.note/finance/backtest_reports/README.md`
+  - `.note/finance/backtest_reports/phase13/README.md`
+  so reading now starts from strategy hubs, while phase13 remains the raw archive layer.

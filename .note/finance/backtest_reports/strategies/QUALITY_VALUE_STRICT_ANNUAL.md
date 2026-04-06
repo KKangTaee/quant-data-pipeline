@@ -1,0 +1,54 @@
+# Quality + Value Strict Annual Backtest Hub
+
+## 전략
+
+- family: `Quality + Value`
+- variant: `Strict Annual`
+- 관련 phase: `Phase 13`
+
+## 한 줄 요약
+
+`Quality + Value`는 Phase 13 탐색에서 가장 공격적인 family는 아니었지만, 방어적 조합과 low-drawdown 탐색을 해볼 때 가장 자주 검토된 family였다.
+
+다만:
+
+- `MDD` 방어는 상대적으로 나았지만
+- `SPY`를 확실히 이길 만큼의 `CAGR`가 부족한 경우가 많았다
+
+## 지금 어떻게 읽으면 되는가
+
+1. low-drawdown 탐색 문서를 먼저 본다
+2. family summary에서 `Value`와 비교한다
+3. 필요하면 `SPY` 비교 문서로 넘어간다
+
+## 대표 결과
+
+- strongest theme:
+  - low-drawdown / defensive factor blend 탐색
+- current takeaway:
+  - 방어형 실험에는 의미가 있지만
+  - 현재 strict annual family의 대표 승자라고 보긴 어렵다
+
+## 관련 결과 문서
+
+- [PHASE13_QUALITY_VALUE_2016_LOW_DRAWDOWN_FACTOR_OPTION_SEARCH.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase13/PHASE13_QUALITY_VALUE_2016_LOW_DRAWDOWN_FACTOR_OPTION_SEARCH.md)
+  - `Quality + Value` low-drawdown 핵심 탐색 문서
+- [PHASE13_SPY_OUTPERFORMANCE_SEARCH.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase13/PHASE13_SPY_OUTPERFORMANCE_SEARCH.md)
+  - family 전체 `SPY` 초과 탐색
+- [PHASE13_SPY_OUTPERFORMANCE_AND_MDD20_SEARCH.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase13/PHASE13_SPY_OUTPERFORMANCE_AND_MDD20_SEARCH.md)
+  - `CAGR 15% / MDD 20%` 조건 교집합 탐색
+- [PHASE13_REAL_MONEY_CANDIDATE_SPY_MDD25_SEARCH.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase13/PHASE13_REAL_MONEY_CANDIDATE_SPY_MDD25_SEARCH.md)
+  - `real_money_candidate + SPY 초과 + MDD 25% 이내` 탐색
+- [PHASE13_STRICT_ANNUAL_COVERAGE300_500_1000_TARGET_SEARCH.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase13/PHASE13_STRICT_ANNUAL_COVERAGE300_500_1000_TARGET_SEARCH.md)
+  - wider coverage가 방어형 family에 주는 효과를 같이 확인한 문서
+- [PHASE13_STRICT_ANNUAL_FAMILY_BACKTEST_SUMMARY.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase13/PHASE13_STRICT_ANNUAL_FAMILY_BACKTEST_SUMMARY.md)
+  - family 전체 summary 문서
+
+## 실무 해석
+
+지금 시점의 `Quality + Value Strict Annual`은:
+
+- low-drawdown 연구 reference
+- 방어형 factor blend 실험용 family
+
+로 보는 편이 맞고, raw winner 기준으로는 아직 `Value`보다 뒤에 있다.

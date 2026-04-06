@@ -240,6 +240,12 @@
   - `Quality Snapshot (Strict Annual)`만으로 `SPY` baseline을 동시에 이기는 raw candidate를 찾는 탐색 문서로, factor set / cadence / top_n를 바꿔 실전형 UI 설정에서의 dominance 여부를 정리한 분석 문서
 - `.note/finance/backtest_reports/phase13/PHASE13_SPY_OUTPERFORMANCE_SEARCH.md`
   - `Quality`, `Value`, `Quality + Value` strict annual family를 `SPY` 기준선과 직접 비교해, `2016-01-01` 시작 / `Historical Dynamic PIT Universe` / `top_n <= 10` 조건에서 `SPY`보다 CAGR과 MDD가 모두 나은 후보를 찾은 분석 문서
+- `.note/finance/backtest_reports/strategies/QUALITY_STRICT_ANNUAL.md`
+  - `Quality > Strict Annual` family의 Phase 13 결과를 전략 기준으로 다시 읽기 위한 허브 문서로, 관련 raw report와 현재 해석을 한 곳에 모아둔 문서
+- `.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL.md`
+  - `Value > Strict Annual` family의 strongest raw winner, balanced near-miss, hold 병목을 전략 기준으로 다시 읽기 위한 허브 문서
+- `.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL.md`
+  - `Quality + Value > Strict Annual` family의 low-drawdown 탐색과 family positioning을 전략 기준으로 다시 읽기 위한 허브 문서
 
 ---
 

@@ -7197,3 +7197,21 @@ Do not copy full chat transcripts. Keep only the durable result.
 - Durable implication:
   - future Phase 13 result review should start from `backtest_reports/phase13/`
   - old phase13 paths are now compatibility pointers rather than the canonical storage location
+
+### 2026-04-06 - phase 기준 raw report보다 전략별 허브 문서가 더 낫다는 방향으로 backtest report 구조를 보강했다
+
+- Request topic:
+  - the user found the phase-based moved files awkward to browse and suggested strategy-specific report entry points
+- Interpreted goal:
+  - make backtest results easier to consume by strategy first
+  - still preserve phase association and raw evidence documents
+- Result:
+  - created strategy hub Markdown files for:
+    - `Quality > Strict Annual`
+    - `Value > Strict Annual`
+    - `Quality + Value > Strict Annual`
+  - repositioned `phase13/` as the raw archive layer
+  - updated the backtest report index so the recommended reading order starts from strategy hubs
+- Durable implication:
+  - future backtest-result reading should start from strategy hubs
+  - phase folders remain useful as raw chronological archives, not as the primary reading surface
