@@ -118,6 +118,7 @@ Analysis / Presentation
   - `Backtest`
   - `Ops Review`
   - `Guides`
+  - `Glossary`
   로 나뉘고,
   helper 모듈은 더 이상 Streamlit `pages/` auto-discovery에 섞이지 않도록
   실제 페이지 경로 밖으로 분리했다.
@@ -128,6 +129,9 @@ Analysis / Presentation
   - 상태가 실제로 어디에 보이는지
   - `Watch / Caution / Unavailable / Error`가 각각 무엇을 뜻하는지
   까지 같이 설명해, 실제 결과 탭과 가이드 문서 사이의 연결을 더 직접적으로 만들었다.
+  같은 `Reference` 그룹 안의 `Glossary` 페이지는
+  `.note/finance/FINANCE_TERM_GLOSSARY.md`를 그대로 source로 사용하면서,
+  제목/본문 검색이 가능한 operator-facing 용어 사전 UI를 제공한다.
 - 첫 public runtime boundary는 `app/web/runtime/backtest.py`의
   `run_equal_weight_backtest_from_db(...)`와 `build_backtest_result_bundle(...)` 조합으로 열렸다.
 - 즉 UI는 `sample.py`나 `BacktestEngine` 체인을 직접 호출하지 않고,

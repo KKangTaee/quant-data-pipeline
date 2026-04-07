@@ -7463,3 +7463,16 @@ Do not copy full chat transcripts. Keep only the durable result.
   - preserved legacy `quality_snapshot` display labeling for older records
 - Durable implication:
   - the current active Quality family should now be read as strict-only from the UI perspective, while the old broad quality path remains legacy code rather than an active product surface
+
+### 2026-04-07 - Reference 그룹에 검색 가능한 Glossary 페이지를 추가했다
+
+- Request topic:
+  - the user wanted a page separate from `Guides` where current quant-program terms could be organized and searched more easily
+- Interpreted goal:
+  - keep `.note/finance/FINANCE_TERM_GLOSSARY.md` as the single durable source, but expose it inside the app as a searchable reference UI
+- Result:
+  - added `Reference > Glossary`
+  - the page loads glossary sections from the Markdown file, separates document meta sections from term entries, and supports title/body search
+  - related overview text, finance analysis doc, doc index, and Phase 13 checklist were updated to reflect the new surface
+- Durable implication:
+  - term definitions can keep living in one Markdown file while users browse them inside the product without leaving the app

@@ -194,7 +194,11 @@
 
 - `Candidate Shortlist Surface`를 보면서
 - glossary와 화면 용어가 자연스럽게 이어지는지 확인
+- `Reference > Glossary`
 - 확인:
+  - 검색어를 넣으면 제목/본문 기준으로 관련 용어가 걸리는지
+  - 검색어가 없으면 전체 용어가 보이는지
+  - source가 `.note/finance/FINANCE_TERM_GLOSSARY.md`로 안내되는지
   - `Promotion`
   - `Shortlist`
   - `Validation`

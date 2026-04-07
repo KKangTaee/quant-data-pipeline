@@ -50,6 +50,8 @@ from finance.loaders import load_statement_coverage_summary, load_statement_timi
 JobResult = dict[str, Any]
 LOG_DIR = PROJECT_ROOT / "logs"
 CSV_DIR = PROJECT_ROOT / "csv"
+GLOSSARY_DOC_PATH = PROJECT_ROOT / ".note" / "finance" / "FINANCE_TERM_GLOSSARY.md"
+GLOSSARY_META_SECTION_TITLES = {"목적", "사용 원칙"}
 APP_RUNTIME_LOADED_AT = datetime.now()
 
 
@@ -100,6 +102,65 @@ SYMBOL_SOURCE_OPTIONS = [
     "Profile Filtered ETFs",
     "Profile Filtered Stocks + ETFs",
 ]
+
+
+@st.cache_data(show_spinner=False)
+def _load_glossary_sections() -> tuple[list[dict[str, str]], list[dict[str, str]]]:
+    if not GLOSSARY_DOC_PATH.exists():
+        return [], []
+
+    text = GLOSSARY_DOC_PATH.read_text(encoding="utf-8")
+    sections: list[dict[str, str]] = []
+    current_title: str | None = None
+    current_lines: list[str] = []
+
+    for line in text.splitlines():
+        if line.startswith("## "):
+            if current_title is not None:
+                sections.append(
+                    {
+                        "title": current_title,
+                        "body": "\n".join(current_lines).strip(),
+                    }
+                )
+            current_title = line[3:].strip()
+            current_lines = []
+            continue
+        if current_title is not None:
+            current_lines.append(line)
+
+    if current_title is not None:
+        sections.append(
+            {
+                "title": current_title,
+                "body": "\n".join(current_lines).strip(),
+            }
+        )
+
+    meta_sections = [section for section in sections if section["title"] in GLOSSARY_META_SECTION_TITLES]
+    term_sections = [section for section in sections if section["title"] not in GLOSSARY_META_SECTION_TITLES]
+    return meta_sections, term_sections
+
+
+def _filter_glossary_sections(
+    sections: list[dict[str, str]],
+    query: str,
+    *,
+    search_body: bool,
+) -> list[dict[str, str]]:
+    normalized_query = query.strip().lower()
+    if not normalized_query:
+        return sections
+
+    matched: list[dict[str, str]] = []
+    for section in sections:
+        title = str(section.get("title") or "")
+        body = str(section.get("body") or "")
+        title_hit = normalized_query in title.lower()
+        body_hit = search_body and normalized_query in body.lower()
+        if title_hit or body_hit:
+            matched.append(section)
+    return matched
 
 
 def _init_state() -> None:
@@ -2286,7 +2347,8 @@ def _render_overview_page() -> None:
         - `Ingestion`: 일별 업데이트, statement refresh, 진단 작업을 실행합니다.
         - `Backtest`: 전략 실행, compare, history, saved portfolio workflow를 다룹니다.
         - `Ops Review`: 최근 실행 결과, persistent history, logs, failure CSV를 한 번에 봅니다.
-        - `Guides`: 현재 phase 문서, 체크리스트, glossary 같은 기준 문서를 빠르게 찾습니다.
+        - `Guides`: 현재 phase 문서, 체크리스트, 승격 해석 가이드를 빠르게 찾습니다.
+        - `Glossary`: 현재 퀀트 프로그램에서 쓰는 용어를 검색하면서 다시 확인합니다.
         """
     )
 
@@ -2509,6 +2571,69 @@ def _render_guides_page() -> None:
     )
 
 
+def _render_glossary_page() -> None:
+    st.title("Glossary")
+    st.caption("현재 퀀트 프로그램에서 쓰는 용어를 검색하고 다시 확인하는 reference 페이지입니다.")
+    _render_runtime_build_indicator()
+
+    meta_sections, term_sections = _load_glossary_sections()
+    if not term_sections and not meta_sections:
+        st.error("`FINANCE_TERM_GLOSSARY.md`를 읽지 못했습니다. 문서 경로를 먼저 확인해 주세요.")
+        st.code(str(GLOSSARY_DOC_PATH), language="text")
+        return
+
+    with st.container(border=True):
+        st.markdown("### 용어 검색")
+        st.caption("용어 제목만 검색할 수도 있고, 본문까지 같이 검색해서 관련 설명을 더 넓게 찾을 수도 있습니다.")
+        query = st.text_input(
+            "검색어",
+            value="",
+            key="reference_glossary_query",
+            placeholder="예: promotion, shortlist, liquidity, universe",
+        )
+        search_body = st.checkbox(
+            "본문까지 함께 검색",
+            value=True,
+            key="reference_glossary_search_body",
+        )
+
+        matched_sections = _filter_glossary_sections(term_sections, query, search_body=search_body)
+        metric_cols = st.columns(3)
+        metric_cols[0].metric("총 용어 수", len(term_sections))
+        metric_cols[1].metric("검색 결과", len(matched_sections))
+        metric_cols[2].metric("검색 범위", "제목+본문" if search_body else "제목만")
+        st.caption("source: `.note/finance/FINANCE_TERM_GLOSSARY.md`")
+
+    if meta_sections:
+        with st.expander("이 reference를 어떻게 읽으면 되나", expanded=False):
+            for section in meta_sections:
+                with st.container(border=True):
+                    st.markdown(f"#### {section['title']}")
+                    st.markdown(section["body"])
+
+    if query.strip() and not matched_sections:
+        st.warning("검색 결과가 없습니다. 검색어를 조금 줄이거나 영어/한글 핵심 단어만 넣어 다시 확인해 주세요.")
+        st.caption("예: `promotion`, `guardrail`, `유동성`, `benchmark`, `PIT`")
+        return
+
+    st.markdown("### 용어 목록")
+    if not query.strip():
+        st.caption("검색어가 없어서 전체 용어를 보여주고 있습니다.")
+    elif len(matched_sections) <= 5:
+        st.caption("검색 결과가 적어서 관련 용어를 바로 펼쳐 보여줍니다.")
+    else:
+        st.caption("검색 결과가 많아서 제목 순서대로 정리했습니다. 필요한 항목만 펼쳐서 보시면 됩니다.")
+
+    preview_titles = ", ".join(section["title"] for section in matched_sections[:8])
+    if preview_titles:
+        st.caption(f"빠른 훑어보기: {preview_titles}")
+
+    auto_expand = bool(query.strip() and len(matched_sections) <= 5)
+    for section in matched_sections:
+        with st.expander(section["title"], expanded=auto_expand):
+            st.markdown(section["body"])
+
+
 def main() -> None:
     st.set_page_config(
         page_title="Finance Console",
@@ -2530,6 +2655,7 @@ def main() -> None:
             ],
             "Reference": [
                 st.Page(_render_guides_page, title="Guides", icon="📚", url_path="guides"),
+                st.Page(_render_glossary_page, title="Glossary", icon="📖", url_path="glossary"),
             ],
         },
         position="top",

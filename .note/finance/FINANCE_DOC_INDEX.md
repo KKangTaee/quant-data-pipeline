@@ -20,6 +20,7 @@
   - 질의/설계/분석 결과 로그
 - `.note/finance/FINANCE_TERM_GLOSSARY.md`
   - 퀀트 / 백테스트 / 실전형 전략 관련 반복 용어를 `기본 설명 / 왜 사용되는지 / 예시 / 필요 상황` 구조로 정리하는 공통 용어 사전
+  - 앱에서는 `Reference > Glossary`에서 검색형 UI로 바로 다시 볼 수 있다
 - `.note/finance/backtest_reports/README.md`
   - phase 문서와 분리해서, 결과 중심 backtest Markdown 문서를 어디에 두고 어떻게 관리할지 정리한 운영 안내 문서
 - `.note/finance/backtest_reports/BACKTEST_REPORT_INDEX.md`

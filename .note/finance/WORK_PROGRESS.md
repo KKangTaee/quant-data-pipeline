@@ -4566,3 +4566,13 @@ Keep entries append-only and concise.
   - kept the legacy `quality_snapshot` display-name mapping so older records still have a readable label
 - Durable implication:
   - the active Quality family now starts at strict candidates only, which better matches the current backtest and QA workflow
+
+### 2026-04-07 - Reference 그룹에 검색 가능한 Glossary 페이지를 추가함
+
+- The user wanted a separate reference page, beyond `Guides`, where current quant-program terms could be browsed and searched more easily.
+- Updated:
+  - added `Reference > Glossary` page to the top navigation
+  - the page now reads `.note/finance/FINANCE_TERM_GLOSSARY.md` directly and exposes title/body search
+  - overview text, finance analysis doc, doc index, and Phase 13 checklist were aligned to the new page
+- Practical result:
+  - glossary remains single-source as Markdown, while the app now provides a searchable operator-facing reference UI
