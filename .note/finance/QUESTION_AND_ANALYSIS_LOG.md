@@ -7396,3 +7396,33 @@ Do not copy full chat transcripts. Keep only the durable result.
   - changed the list formatting so each line reads as `단어: 확인 경로`
 - Durable implication:
   - the guides page now uses a clearer visual rhythm for state-location mapping
+
+### 2026-04-07 - real-money gate가 너무 빡빡한지와 통과 후 상태가 최종인지 다시 정리했다
+
+- Request topic:
+  - while reflecting on the Phase 12/13 work, the user asked whether repeated difficulty finding `promotion` / `shortlist` passing portfolios means the current real-money gate may be too strict, and whether passing those stages should be treated as the final state for real investing
+- Interpreted goal:
+  - distinguish between:
+    - "the gate is so strict that no future search will ever pass"
+    - "the system is doing its job, but more development and calibration are still needed before true live use"
+- Result:
+  - not finding many passing candidates does **not** mean no future backtest can pass
+  - it does mean at least one of the following is likely true:
+    - the current search space or family constraints are narrow
+    - the current promotion / validation policy is conservative by design
+    - some policy surfaces are still transitional and not yet the final live-deployment contract
+  - in practice, repeated near-misses are a signal to study the blocker distribution, not to conclude the framework is broken immediately
+  - current real-money interpretation is best read as:
+    - `promotion / shortlist` = candidate gate
+    - `probation / monitoring / deployment` = operating-readiness gate
+  - therefore clearing `promotion != hold` and `shortlist` is important, but it is **not** the same thing as "ready for real capital at full confidence"
+- Recommended framing:
+  - if many strong portfolios repeatedly fail on the same validation/policy item, the next task should be gate calibration analysis rather than endless brute-force backtest search
+  - the product is not yet at "fully finished live-investing platform" status
+  - remaining work still naturally includes:
+    - execution / portfolio action workflow
+    - probation logging and monthly review workflow
+    - richer PIT operability and execution-readiness policy
+    - live deployment safeguards and actual capital-handling workflow
+- Durable implication:
+  - the current system should be understood as a strong candidate-evaluation and readiness-screening layer, not yet the final fully automated live-investment endpoint

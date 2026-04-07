@@ -4527,3 +4527,13 @@ Keep entries append-only and concise.
 - Adjusted the `상태는 어디에서 보나` list so the term and the UI path are separated with `:`.
 - Practical result:
   - the scan pattern is now more consistent and easier to read at a glance
+
+### 2026-04-07 - real-money gate 해석과 남은 개발 범위를 다시 정리함
+
+- Revisited the current meaning of repeated `hold` / `watchlist` outcomes during Phase 12/13 backtest exploration.
+- Clarified that:
+  - repeated non-pass results do not automatically mean the framework is broken
+  - but they can indicate that gate calibration analysis is now as important as more brute-force backtests
+- Also clarified that:
+  - `promotion / shortlist` passing is not the same thing as final live-investment readiness
+  - additional deployment workflow and execution-readiness work still remains after the current Phase 13 surface
