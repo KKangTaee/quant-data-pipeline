@@ -13,7 +13,6 @@ NON_FAMILY_STRATEGY_OPTIONS = [
 STRATEGY_FAMILY_VARIANTS = {
     "Quality": OrderedDict(
         [
-            ("Research", {"display_name": "Quality Snapshot", "strategy_key": "quality_snapshot"}),
             (
                 "Strict Annual",
                 {
@@ -76,6 +75,7 @@ STRATEGY_KEY_TO_DISPLAY_NAME = {
     "gtaa": "GTAA",
     "risk_parity_trend": "Risk Parity Trend",
     "dual_momentum": "Dual Momentum",
+    "quality_snapshot": "Quality Snapshot",
 }
 for family_variants in STRATEGY_FAMILY_VARIANTS.values():
     for variant_config in family_variants.values():

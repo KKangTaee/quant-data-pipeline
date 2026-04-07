@@ -195,11 +195,14 @@ Analysis / Presentation
   - `Value`
   - `Quality + Value`
   family 중심으로 단순화되었고,
-  각 family 안에서
-  - `Research`
-  - `Strict Annual`
-  - `Strict Quarterly Prototype`
-  같은 variant를 고르는 구조로 바뀌었다.
+  각 family 안에서 strict variant를 고르는 구조로 바뀌었다.
+  현재 active family surface는
+  - `Quality`: `Strict Annual`, `Strict Quarterly Prototype`
+  - `Value`: `Strict Annual`, `Strict Quarterly Prototype`
+  - `Quality + Value`: `Strict Annual`, `Strict Quarterly Prototype`
+  이다.
+  broad `Quality Snapshot` research path는 코드에 남아 있지만,
+  현재 active family variant에서는 노출하지 않는다.
 - 이 변경은 UI/orchestration surface 정리이지,
   quality/value 계산 로직을 `backtest.py`로 이동시킨 것은 아니다.
   현재 역할은 그대로:

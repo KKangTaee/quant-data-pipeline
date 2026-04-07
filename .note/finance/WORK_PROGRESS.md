@@ -4557,3 +4557,12 @@ Keep entries append-only and concise.
   - compare strategy-specific inputs were also regrouped for the same ETF and strict annual strategy families
 - Durable implication:
   - future advanced options should be added to grouped sections instead of extending each form linearly
+
+### 2026-04-07 - Quality family에서 Research variant를 active UI에서 제거함
+
+- The user no longer wanted the broad `Quality Snapshot` research variant exposed in the `Quality` family because it is not being used in current workflow.
+- Updated:
+  - removed `Research` from the active `Quality` family variant list
+  - kept the legacy `quality_snapshot` display-name mapping so older records still have a readable label
+- Durable implication:
+  - the active Quality family now starts at strict candidates only, which better matches the current backtest and QA workflow

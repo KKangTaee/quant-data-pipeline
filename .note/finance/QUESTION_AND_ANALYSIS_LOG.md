@@ -7451,3 +7451,15 @@ Do not copy full chat transcripts. Keep only the durable result.
   - compare strategy-specific inputs were aligned to the same grouped structure for the same strategy families
 - Durable implication:
   - future strategy UI growth should follow the grouped advanced-input pattern rather than adding more flat rows to each form
+
+### 2026-04-07 - Quality family에서 Research variant를 active UI에서 제거했다
+
+- Request topic:
+  - the user wanted the unused `Research` variant removed from the `Quality` family surface
+- Interpreted goal:
+  - simplify the active Quality family so the UI focuses on currently used strict strategies instead of leaving an extra unused branch
+- Result:
+  - removed `Research` from the active `Quality` family variant catalog
+  - preserved legacy `quality_snapshot` display labeling for older records
+- Durable implication:
+  - the current active Quality family should now be read as strict-only from the UI perspective, while the old broad quality path remains legacy code rather than an active product surface
