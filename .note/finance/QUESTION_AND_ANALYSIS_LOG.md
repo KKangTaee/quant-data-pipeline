@@ -7426,3 +7426,16 @@ Do not copy full chat transcripts. Keep only the durable result.
     - live deployment safeguards and actual capital-handling workflow
 - Durable implication:
   - the current system should be understood as a strong candidate-evaluation and readiness-screening layer, not yet the final fully automated live-investment endpoint
+
+### 2026-04-07 - ETF guardrail이 안 보이는 QA 이슈를 수정했다
+
+- Request topic:
+  - during Phase 13 checklist QA, the user found that `Underperformance Guardrail`, `Drawdown Guardrail`, and trigger metrics were not visible in `Real-Money > 실행 부담`, even though nearby sections such as `실행 계약 요약` and `ETF 운용 가능성` were visible
+- Interpreted goal:
+  - make the ETF guardrail surface visible and testable regardless of whether the guardrails are enabled or disabled
+- Result:
+  - changed the ETF guardrail surface so it is shown for ETF strategies even when both guardrails are disabled
+  - `Execution Context` now also displays guardrail state as `ON/OFF`
+  - trigger count / trigger share are shown consistently instead of disappearing with the whole section
+- Durable implication:
+  - Phase 13 checklist can now treat ETF guardrails as a stable visible contract rather than a conditional UI element that vanishes when disabled

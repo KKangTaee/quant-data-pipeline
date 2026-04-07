@@ -62,6 +62,7 @@
   - `Drawdown Guardrail`
   - trigger count / trigger share
   - `Real-Money` 탭과 `Execution Context`에 guardrail 상태가 같이 보이는지
+  - guardrail이 꺼져 있어도 `OFF` 상태로 계속 보이는지
 
 ## 5. Hold 해결 가이드와 실행 부담 연결
 

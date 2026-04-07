@@ -129,6 +129,8 @@ DUAL_MOMENTUM_PRESETS = {
     "Dual Momentum Universe": ["QQQ", "SPY", "IWM", "SOXX", "BIL"],
 }
 
+ETF_GUARDRAIL_STRATEGY_KEYS = {"gtaa", "risk_parity_trend", "dual_momentum"}
+
 QUALITY_BROAD_PRESETS = {
     "Big Tech Quality Trial": ["AAPL", "MSFT", "GOOG"],
 }
@@ -2412,25 +2414,32 @@ def _render_last_run() -> None:
                 )
             if meta.get("etf_operability_status"):
                 st.markdown(f"- `ETF Operability Status`: `{meta.get('etf_operability_status')}`")
-            if meta.get("underperformance_guardrail_enabled"):
+            if _should_show_guardrail_surface(meta):
+                under_enabled = bool(meta.get("underperformance_guardrail_enabled"))
+                draw_enabled = bool(meta.get("drawdown_guardrail_enabled"))
                 st.markdown(
-                    f"- `Underperformance Guardrail`: `{int(meta.get('underperformance_guardrail_window_months') or STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS)}M`, "
+                    f"- `Underperformance Guardrail`: "
+                    f"`{'ON' if under_enabled else 'OFF'}`, "
+                    f"`{int(meta.get('underperformance_guardrail_window_months') or STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS)}M`, "
                     f"`{float(meta.get('underperformance_guardrail_threshold') or STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD):.0%}`"
                 )
-                if meta.get("underperformance_guardrail_trigger_count") is not None:
-                    st.markdown(
-                        f"- `Guardrail Trigger Count`: `{int(meta.get('underperformance_guardrail_trigger_count') or 0)}`"
-                    )
-            if meta.get("drawdown_guardrail_enabled"):
                 st.markdown(
-                    f"- `Drawdown Guardrail`: `{int(meta.get('drawdown_guardrail_window_months') or STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_WINDOW_MONTHS)}M`, "
+                    f"- `Underperformance Trigger`: "
+                    f"`{int(meta.get('underperformance_guardrail_trigger_count') or 0)}` / "
+                    f"`{float(meta.get('underperformance_guardrail_trigger_share') or 0.0):.2%}`"
+                )
+                st.markdown(
+                    f"- `Drawdown Guardrail`: "
+                    f"`{'ON' if draw_enabled else 'OFF'}`, "
+                    f"`{int(meta.get('drawdown_guardrail_window_months') or STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_WINDOW_MONTHS)}M`, "
                     f"`{float(meta.get('drawdown_guardrail_strategy_threshold') or STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD):.0%}`, "
                     f"`gap {float(meta.get('drawdown_guardrail_gap_threshold') or STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD):.0%}`"
                 )
-                if meta.get("drawdown_guardrail_trigger_count") is not None:
-                    st.markdown(
-                        f"- `Drawdown Trigger Count`: `{int(meta.get('drawdown_guardrail_trigger_count') or 0)}`"
-                    )
+                st.markdown(
+                    f"- `Drawdown Trigger`: "
+                    f"`{int(meta.get('drawdown_guardrail_trigger_count') or 0)}` / "
+                    f"`{float(meta.get('drawdown_guardrail_trigger_share') or 0.0):.2%}`"
+                )
             if meta.get("avg_turnover") is not None:
                 st.markdown(f"- `Average Turnover`: `{float(meta['avg_turnover']):.2%}`")
             if meta.get("estimated_cost_total") is not None:
@@ -3750,49 +3759,61 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
                 elif etf_status == "unavailable":
                     st.info("ETF operability policy는 현재 unavailable 상태입니다. ETF asset profile을 새로 수집한 뒤 다시 해석하는 편이 맞습니다.")
 
-        if meta.get("underperformance_guardrail_enabled") or meta.get("drawdown_guardrail_enabled"):
+        if _should_show_guardrail_surface(meta):
             with _section_header(
                 "실제 방어 규칙",
                 "경고만 보여주는 것이 아니라, 조건이 깨지면 실제 rebalance를 더 보수적으로 만들 수 있는 규칙입니다.",
             ):
-                if meta.get("underperformance_guardrail_enabled"):
-                    guardrail_cols = st.columns(4, gap="small")
-                    guardrail_cols[0].metric("Underperformance Guardrail", "ON")
-                    guardrail_cols[1].metric(
-                        "Window",
-                        f"{int(meta.get('underperformance_guardrail_window_months') or STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS)}M",
+                under_enabled = bool(meta.get("underperformance_guardrail_enabled"))
+                draw_enabled = bool(meta.get("drawdown_guardrail_enabled"))
+
+                guardrail_cols = st.columns(5, gap="small")
+                guardrail_cols[0].metric("Underperformance Guardrail", "ON" if under_enabled else "OFF")
+                guardrail_cols[1].metric(
+                    "Underperf Window",
+                    f"{int(meta.get('underperformance_guardrail_window_months') or STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS)}M",
+                )
+                guardrail_cols[2].metric(
+                    "Underperf Threshold",
+                    f"{float(meta.get('underperformance_guardrail_threshold') or STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD):.0%}",
+                )
+                guardrail_cols[3].metric(
+                    "Underperf Trigger Count",
+                    str(int(meta.get("underperformance_guardrail_trigger_count") or 0)),
+                )
+                guardrail_cols[4].metric(
+                    "Underperf Trigger Share",
+                    f"{float(meta.get('underperformance_guardrail_trigger_share') or 0.0):.2%}",
+                )
+
+                drawdown_guardrail_cols = st.columns(5, gap="small")
+                drawdown_guardrail_cols[0].metric("Drawdown Guardrail", "ON" if draw_enabled else "OFF")
+                drawdown_guardrail_cols[1].metric(
+                    "Drawdown Window",
+                    f"{int(meta.get('drawdown_guardrail_window_months') or STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_WINDOW_MONTHS)}M",
+                )
+                drawdown_guardrail_cols[2].metric(
+                    "Strategy DD Threshold",
+                    f"{float(meta.get('drawdown_guardrail_strategy_threshold') or STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD):.0%}",
+                )
+                drawdown_guardrail_cols[3].metric(
+                    "DD Gap Threshold",
+                    f"{float(meta.get('drawdown_guardrail_gap_threshold') or STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD):.0%}",
+                )
+                drawdown_guardrail_cols[4].metric(
+                    "Drawdown Trigger Count",
+                    str(int(meta.get("drawdown_guardrail_trigger_count") or 0)),
+                )
+                st.caption(
+                    "Drawdown trigger share: "
+                    f"`{float(meta.get('drawdown_guardrail_trigger_share') or 0.0):.2%}`"
+                )
+
+                if not under_enabled and not draw_enabled:
+                    st.info(
+                        "현재 run에서는 두 guardrail이 꺼져 있습니다. "
+                        "그래도 여기서 기본 계약과 trigger 수를 확인할 수 있게 계속 노출합니다."
                     )
-                    guardrail_cols[2].metric(
-                        "Threshold",
-                        f"{float(meta.get('underperformance_guardrail_threshold') or STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD):.0%}",
-                    )
-                    guardrail_cols[3].metric("Trigger Count", str(int(meta.get("underperformance_guardrail_trigger_count") or 0)))
-                    if meta.get("underperformance_guardrail_trigger_share") is not None:
-                        st.caption(
-                            "Guardrail triggered on "
-                            f"`{float(meta.get('underperformance_guardrail_trigger_share')):.2%}` of recorded rows."
-                        )
-                if meta.get("drawdown_guardrail_enabled"):
-                    drawdown_guardrail_cols = st.columns(5, gap="small")
-                    drawdown_guardrail_cols[0].metric("Drawdown Guardrail", "ON")
-                    drawdown_guardrail_cols[1].metric(
-                        "Window",
-                        f"{int(meta.get('drawdown_guardrail_window_months') or STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_WINDOW_MONTHS)}M",
-                    )
-                    drawdown_guardrail_cols[2].metric(
-                        "Strategy DD Threshold",
-                        f"{float(meta.get('drawdown_guardrail_strategy_threshold') or STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD):.0%}",
-                    )
-                    drawdown_guardrail_cols[3].metric(
-                        "DD Gap Threshold",
-                        f"{float(meta.get('drawdown_guardrail_gap_threshold') or STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD):.0%}",
-                    )
-                    drawdown_guardrail_cols[4].metric("Trigger Count", str(int(meta.get("drawdown_guardrail_trigger_count") or 0)))
-                    if meta.get("drawdown_guardrail_trigger_share") is not None:
-                        st.caption(
-                            "Drawdown guardrail triggered on "
-                            f"`{float(meta.get('drawdown_guardrail_trigger_share')):.2%}` of recorded rows."
-                        )
 
     with detail_tab:
         st.caption(
@@ -5387,6 +5408,18 @@ def _build_hold_resolution_guidance_rows(meta: dict[str, Any]) -> list[dict[str,
         )
 
     return rows
+
+
+def _should_show_guardrail_surface(meta: dict[str, Any]) -> bool:
+    strategy_key = str(meta.get("strategy_key") or "").strip().lower()
+    if strategy_key in ETF_GUARDRAIL_STRATEGY_KEYS:
+        return True
+    return (
+        meta.get("underperformance_guardrail_enabled") is not None
+        or meta.get("drawdown_guardrail_enabled") is not None
+        or meta.get("underperformance_guardrail_trigger_count") is not None
+        or meta.get("drawdown_guardrail_trigger_count") is not None
+    )
 
 
 def _bundle_to_saved_strategy_override(bundle: dict[str, Any]) -> dict[str, Any]:

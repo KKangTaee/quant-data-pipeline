@@ -4537,3 +4537,14 @@ Keep entries append-only and concise.
 - Also clarified that:
   - `promotion / shortlist` passing is not the same thing as final live-investment readiness
   - additional deployment workflow and execution-readiness work still remains after the current Phase 13 surface
+
+### 2026-04-07 - ETF guardrail surface를 OFF 상태도 보이도록 보강함
+
+- During Phase 13 checklist QA, the user reported that `Underperformance Guardrail` / `Drawdown Guardrail` were not visible in `Real-Money > 실행 부담` or `Execution Context` for ETF strategies.
+- Root cause:
+  - the UI only rendered the section when the guardrail booleans were truthy
+  - disabled ETF runs therefore looked as if the feature did not exist
+- Updated:
+  - ETF strategies now show the guardrail section even when disabled
+  - `Execution Context` also shows guardrail state as `ON/OFF`
+  - trigger count / trigger share stay visible with zero/default values when disabled
