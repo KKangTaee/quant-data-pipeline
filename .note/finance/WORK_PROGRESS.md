@@ -4548,3 +4548,12 @@ Keep entries append-only and concise.
   - ETF strategies now show the guardrail section even when disabled
   - `Execution Context` also shows guardrail state as `ON/OFF`
   - trigger count / trigger share stay visible with zero/default values when disabled
+
+### 2026-04-07 - 전략 Advanced Inputs를 핵심 계약과 추가 계약으로 그룹화함
+
+- The user pointed out that strategy `Advanced Inputs` were becoming too long and uneven as new overlay / real-money / guardrail controls were added.
+- Updated:
+  - single strategy ETF and strict annual forms now keep core execution inputs visible while grouping overlays, real-money contract, and guardrails into expanders
+  - compare strategy-specific inputs were also regrouped for the same ETF and strict annual strategy families
+- Durable implication:
+  - future advanced options should be added to grouped sections instead of extending each form linearly

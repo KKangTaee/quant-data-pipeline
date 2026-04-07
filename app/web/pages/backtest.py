@@ -1440,6 +1440,10 @@ def _render_market_regime_overlay_inputs(
     return regime_enabled, regime_window, regime_benchmark
 
 
+def _render_advanced_group_caption(message: str) -> None:
+    st.caption(message)
+
+
 def _render_etf_real_money_inputs(
     *,
     key_prefix: str,
@@ -7704,30 +7708,33 @@ def _render_gtaa_form() -> None:
                 help="현재 기본값은 1입니다. 1이면 매월, 2면 격월로 신호를 계산합니다.",
                 key="gtaa_interval",
             )
-            st.divider()
-            (
-                min_price_filter,
-                transaction_cost_bps,
-                benchmark_ticker,
-                promotion_min_etf_aum_b,
-                promotion_max_bid_ask_spread_pct,
-            ) = _render_etf_real_money_inputs(
-                key_prefix="gtaa",
-            )
-            (
-                underperformance_guardrail_enabled,
-                underperformance_guardrail_window_months,
-                underperformance_guardrail_threshold,
-                drawdown_guardrail_enabled,
-                drawdown_guardrail_window_months,
-                drawdown_guardrail_strategy_threshold,
-                drawdown_guardrail_gap_threshold,
-            ) = _render_etf_guardrail_inputs(
-                key_prefix="gtaa",
-                label_prefix="GTAA ",
-            )
             score_lookback_months, score_weights = _render_gtaa_score_weight_inputs(key_prefix="gtaa")
-            risk_off_contract = _render_gtaa_risk_off_contract_inputs(key_prefix="gtaa")
+            _render_advanced_group_caption("핵심 실행 계약은 위에 두고, 추가 overlay / 실전 계약 / guardrail은 아래 그룹으로 분리했습니다.")
+            with st.expander("Risk-Off Overlay", expanded=False):
+                risk_off_contract = _render_gtaa_risk_off_contract_inputs(key_prefix="gtaa")
+            with st.expander("Real-Money Contract", expanded=False):
+                (
+                    min_price_filter,
+                    transaction_cost_bps,
+                    benchmark_ticker,
+                    promotion_min_etf_aum_b,
+                    promotion_max_bid_ask_spread_pct,
+                ) = _render_etf_real_money_inputs(
+                    key_prefix="gtaa",
+                )
+            with st.expander("ETF Guardrails", expanded=False):
+                (
+                    underperformance_guardrail_enabled,
+                    underperformance_guardrail_window_months,
+                    underperformance_guardrail_threshold,
+                    drawdown_guardrail_enabled,
+                    drawdown_guardrail_window_months,
+                    drawdown_guardrail_strategy_threshold,
+                    drawdown_guardrail_gap_threshold,
+                ) = _render_etf_guardrail_inputs(
+                    key_prefix="gtaa",
+                    label_prefix="GTAA ",
+                )
 
         submitted = st.form_submit_button("Run GTAA Backtest", use_container_width=True)
 
@@ -7851,28 +7858,30 @@ def _render_risk_parity_form() -> None:
                     key="rp_vol_window",
                 )
             )
-            st.divider()
-            (
-                min_price_filter,
-                transaction_cost_bps,
-                benchmark_ticker,
-                promotion_min_etf_aum_b,
-                promotion_max_bid_ask_spread_pct,
-            ) = _render_etf_real_money_inputs(
-                key_prefix="rp",
-            )
-            (
-                underperformance_guardrail_enabled,
-                underperformance_guardrail_window_months,
-                underperformance_guardrail_threshold,
-                drawdown_guardrail_enabled,
-                drawdown_guardrail_window_months,
-                drawdown_guardrail_strategy_threshold,
-                drawdown_guardrail_gap_threshold,
-            ) = _render_etf_guardrail_inputs(
-                key_prefix="rp",
-                label_prefix="Risk Parity ",
-            )
+            _render_advanced_group_caption("핵심 실행 계약은 위에 두고, 실전 계약과 guardrail은 아래 그룹으로 분리했습니다.")
+            with st.expander("Real-Money Contract", expanded=False):
+                (
+                    min_price_filter,
+                    transaction_cost_bps,
+                    benchmark_ticker,
+                    promotion_min_etf_aum_b,
+                    promotion_max_bid_ask_spread_pct,
+                ) = _render_etf_real_money_inputs(
+                    key_prefix="rp",
+                )
+            with st.expander("ETF Guardrails", expanded=False):
+                (
+                    underperformance_guardrail_enabled,
+                    underperformance_guardrail_window_months,
+                    underperformance_guardrail_threshold,
+                    drawdown_guardrail_enabled,
+                    drawdown_guardrail_window_months,
+                    drawdown_guardrail_strategy_threshold,
+                    drawdown_guardrail_gap_threshold,
+                ) = _render_etf_guardrail_inputs(
+                    key_prefix="rp",
+                    label_prefix="Risk Parity ",
+                )
 
         submitted = st.form_submit_button("Run Risk Parity Trend Backtest", use_container_width=True)
 
@@ -7982,28 +7991,30 @@ def _render_dual_momentum_form() -> None:
                     key="dm_rebalance_interval",
                 )
             )
-            st.divider()
-            (
-                min_price_filter,
-                transaction_cost_bps,
-                benchmark_ticker,
-                promotion_min_etf_aum_b,
-                promotion_max_bid_ask_spread_pct,
-            ) = _render_etf_real_money_inputs(
-                key_prefix="dm",
-            )
-            (
-                underperformance_guardrail_enabled,
-                underperformance_guardrail_window_months,
-                underperformance_guardrail_threshold,
-                drawdown_guardrail_enabled,
-                drawdown_guardrail_window_months,
-                drawdown_guardrail_strategy_threshold,
-                drawdown_guardrail_gap_threshold,
-            ) = _render_etf_guardrail_inputs(
-                key_prefix="dm",
-                label_prefix="Dual Momentum ",
-            )
+            _render_advanced_group_caption("핵심 실행 계약은 위에 두고, 실전 계약과 guardrail은 아래 그룹으로 분리했습니다.")
+            with st.expander("Real-Money Contract", expanded=False):
+                (
+                    min_price_filter,
+                    transaction_cost_bps,
+                    benchmark_ticker,
+                    promotion_min_etf_aum_b,
+                    promotion_max_bid_ask_spread_pct,
+                ) = _render_etf_real_money_inputs(
+                    key_prefix="dm",
+                )
+            with st.expander("ETF Guardrails", expanded=False):
+                (
+                    underperformance_guardrail_enabled,
+                    underperformance_guardrail_window_months,
+                    underperformance_guardrail_threshold,
+                    drawdown_guardrail_enabled,
+                    drawdown_guardrail_window_months,
+                    drawdown_guardrail_strategy_threshold,
+                    drawdown_guardrail_gap_threshold,
+                ) = _render_etf_guardrail_inputs(
+                    key_prefix="dm",
+                    label_prefix="Dual Momentum ",
+                )
 
         submitted = st.form_submit_button("Run Dual Momentum Backtest", use_container_width=True)
 
@@ -8279,64 +8290,68 @@ def _render_quality_snapshot_strict_annual_form() -> None:
                 key="qss_quality_factors",
                 help="기본은 coverage-first 팩터 조합입니다. 필요하면 예전 quality factor도 다시 포함할 수 있습니다.",
             )
-            trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
-            with trend_title_col:
-                st.markdown("##### Trend Filter Overlay")
-            with trend_help_col:
-                _render_trend_filter_help_popover()
-            trend_filter_enabled = st.checkbox(
-                "Enable",
-                value=STRICT_TREND_FILTER_DEFAULT_ENABLED,
-                key="qss_trend_filter_enabled",
-            )
-            trend_filter_window = int(
-                st.number_input(
-                    "Trend Filter Window",
-                    min_value=20,
-                    max_value=400,
-                    value=STRICT_TREND_FILTER_DEFAULT_WINDOW,
-                    step=10,
-                    key="qss_trend_filter_window",
+            _render_advanced_group_caption("핵심 factor / universe 계약은 위에 두고, overlay와 실전형 정책은 아래 펼쳐보기로 묶었습니다.")
+            with st.expander("Overlay & Defensive Rules", expanded=False):
+                trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
+                with trend_title_col:
+                    st.markdown("##### Trend Filter Overlay")
+                with trend_help_col:
+                    _render_trend_filter_help_popover()
+                trend_filter_enabled = st.checkbox(
+                    "Enable",
+                    value=STRICT_TREND_FILTER_DEFAULT_ENABLED,
+                    key="qss_trend_filter_enabled",
                 )
-            )
-            market_regime_enabled, market_regime_window, market_regime_benchmark = _render_market_regime_overlay_inputs(
-                key_prefix="qss",
-                label_prefix="",
-            )
-            (
-                benchmark_contract,
-                min_price_filter,
-                min_history_months_filter,
-                min_avg_dollar_volume_20d_m_filter,
-                transaction_cost_bps,
-                benchmark_ticker,
-                promotion_min_benchmark_coverage,
-                promotion_min_net_cagr_spread,
-                promotion_min_liquidity_clean_coverage,
-                promotion_max_underperformance_share,
-                promotion_min_worst_rolling_excess_return,
-                promotion_max_strategy_drawdown,
-                promotion_max_drawdown_gap_vs_benchmark,
-            ) = _render_strict_annual_real_money_inputs(
-                key_prefix="qss",
-            )
-            (
-                underperformance_guardrail_enabled,
-                underperformance_guardrail_window_months,
-                underperformance_guardrail_threshold,
-            ) = _render_underperformance_guardrail_inputs(
-                key_prefix="qss",
-                label_prefix="Strict Annual Quality ",
-            )
-            (
-                drawdown_guardrail_enabled,
-                drawdown_guardrail_window_months,
-                drawdown_guardrail_strategy_threshold,
-                drawdown_guardrail_gap_threshold,
-            ) = _render_drawdown_guardrail_inputs(
-                key_prefix="qss",
-                label_prefix="Strict Annual Quality ",
-            )
+                trend_filter_window = int(
+                    st.number_input(
+                        "Trend Filter Window",
+                        min_value=20,
+                        max_value=400,
+                        value=STRICT_TREND_FILTER_DEFAULT_WINDOW,
+                        step=10,
+                        key="qss_trend_filter_window",
+                    )
+                )
+                market_regime_enabled, market_regime_window, market_regime_benchmark = _render_market_regime_overlay_inputs(
+                    key_prefix="qss",
+                    label_prefix="",
+                )
+            with st.expander("Real-Money Contract", expanded=False):
+                (
+                    benchmark_contract,
+                    min_price_filter,
+                    min_history_months_filter,
+                    min_avg_dollar_volume_20d_m_filter,
+                    transaction_cost_bps,
+                    benchmark_ticker,
+                    promotion_min_benchmark_coverage,
+                    promotion_min_net_cagr_spread,
+                    promotion_min_liquidity_clean_coverage,
+                    promotion_max_underperformance_share,
+                    promotion_min_worst_rolling_excess_return,
+                    promotion_max_strategy_drawdown,
+                    promotion_max_drawdown_gap_vs_benchmark,
+                ) = _render_strict_annual_real_money_inputs(
+                    key_prefix="qss",
+                )
+            with st.expander("Guardrails", expanded=False):
+                (
+                    underperformance_guardrail_enabled,
+                    underperformance_guardrail_window_months,
+                    underperformance_guardrail_threshold,
+                ) = _render_underperformance_guardrail_inputs(
+                    key_prefix="qss",
+                    label_prefix="Strict Annual Quality ",
+                )
+                (
+                    drawdown_guardrail_enabled,
+                    drawdown_guardrail_window_months,
+                    drawdown_guardrail_strategy_threshold,
+                    drawdown_guardrail_gap_threshold,
+                ) = _render_drawdown_guardrail_inputs(
+                    key_prefix="qss",
+                    label_prefix="Strict Annual Quality ",
+                )
 
         submitted = st.form_submit_button("Run Strict Annual Quality Backtest", use_container_width=True)
 
@@ -8873,64 +8888,68 @@ def _render_value_snapshot_strict_annual_form() -> None:
                 key="vss_value_factors",
                 help="높을수록 좋은 yield / book-to-market 계열과 낮을수록 좋은 inverse multiple 계열을 함께 지원합니다.",
             )
-            trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
-            with trend_title_col:
-                st.markdown("##### Trend Filter Overlay")
-            with trend_help_col:
-                _render_trend_filter_help_popover()
-            trend_filter_enabled = st.checkbox(
-                "Enable",
-                value=STRICT_TREND_FILTER_DEFAULT_ENABLED,
-                key="vss_trend_filter_enabled",
-            )
-            trend_filter_window = int(
-                st.number_input(
-                    "Trend Filter Window",
-                    min_value=20,
-                    max_value=400,
-                    value=STRICT_TREND_FILTER_DEFAULT_WINDOW,
-                    step=10,
-                    key="vss_trend_filter_window",
+            _render_advanced_group_caption("핵심 factor / universe 계약은 위에 두고, overlay와 실전형 정책은 아래 펼쳐보기로 묶었습니다.")
+            with st.expander("Overlay & Defensive Rules", expanded=False):
+                trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
+                with trend_title_col:
+                    st.markdown("##### Trend Filter Overlay")
+                with trend_help_col:
+                    _render_trend_filter_help_popover()
+                trend_filter_enabled = st.checkbox(
+                    "Enable",
+                    value=STRICT_TREND_FILTER_DEFAULT_ENABLED,
+                    key="vss_trend_filter_enabled",
                 )
-            )
-            market_regime_enabled, market_regime_window, market_regime_benchmark = _render_market_regime_overlay_inputs(
-                key_prefix="vss",
-                label_prefix="",
-            )
-            (
-                benchmark_contract,
-                min_price_filter,
-                min_history_months_filter,
-                min_avg_dollar_volume_20d_m_filter,
-                transaction_cost_bps,
-                benchmark_ticker,
-                promotion_min_benchmark_coverage,
-                promotion_min_net_cagr_spread,
-                promotion_min_liquidity_clean_coverage,
-                promotion_max_underperformance_share,
-                promotion_min_worst_rolling_excess_return,
-                promotion_max_strategy_drawdown,
-                promotion_max_drawdown_gap_vs_benchmark,
-            ) = _render_strict_annual_real_money_inputs(
-                key_prefix="vss",
-            )
-            (
-                underperformance_guardrail_enabled,
-                underperformance_guardrail_window_months,
-                underperformance_guardrail_threshold,
-            ) = _render_underperformance_guardrail_inputs(
-                key_prefix="vss",
-                label_prefix="Strict Annual Value ",
-            )
-            (
-                drawdown_guardrail_enabled,
-                drawdown_guardrail_window_months,
-                drawdown_guardrail_strategy_threshold,
-                drawdown_guardrail_gap_threshold,
-            ) = _render_drawdown_guardrail_inputs(
-                key_prefix="vss",
-                label_prefix="Strict Annual Value ",
-            )
+                trend_filter_window = int(
+                    st.number_input(
+                        "Trend Filter Window",
+                        min_value=20,
+                        max_value=400,
+                        value=STRICT_TREND_FILTER_DEFAULT_WINDOW,
+                        step=10,
+                        key="vss_trend_filter_window",
+                    )
+                )
+                market_regime_enabled, market_regime_window, market_regime_benchmark = _render_market_regime_overlay_inputs(
+                    key_prefix="vss",
+                    label_prefix="",
+                )
+            with st.expander("Real-Money Contract", expanded=False):
+                (
+                    benchmark_contract,
+                    min_price_filter,
+                    min_history_months_filter,
+                    min_avg_dollar_volume_20d_m_filter,
+                    transaction_cost_bps,
+                    benchmark_ticker,
+                    promotion_min_benchmark_coverage,
+                    promotion_min_net_cagr_spread,
+                    promotion_min_liquidity_clean_coverage,
+                    promotion_max_underperformance_share,
+                    promotion_min_worst_rolling_excess_return,
+                    promotion_max_strategy_drawdown,
+                    promotion_max_drawdown_gap_vs_benchmark,
+                ) = _render_strict_annual_real_money_inputs(
+                    key_prefix="vss",
+                )
+            with st.expander("Guardrails", expanded=False):
+                (
+                    underperformance_guardrail_enabled,
+                    underperformance_guardrail_window_months,
+                    underperformance_guardrail_threshold,
+                ) = _render_underperformance_guardrail_inputs(
+                    key_prefix="vss",
+                    label_prefix="Strict Annual Value ",
+                )
+                (
+                    drawdown_guardrail_enabled,
+                    drawdown_guardrail_window_months,
+                    drawdown_guardrail_strategy_threshold,
+                    drawdown_guardrail_gap_threshold,
+                ) = _render_drawdown_guardrail_inputs(
+                    key_prefix="vss",
+                    label_prefix="Strict Annual Value ",
+                )
 
         submitted = st.form_submit_button("Run Strict Annual Value Backtest", use_container_width=True)
 
@@ -9302,64 +9321,68 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
                 default=VALUE_STRICT_DEFAULT_FACTORS,
                 key="qvss_value_factors",
             )
-            trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
-            with trend_title_col:
-                st.markdown("##### Trend Filter Overlay")
-            with trend_help_col:
-                _render_trend_filter_help_popover()
-            trend_filter_enabled = st.checkbox(
-                "Enable",
-                value=STRICT_TREND_FILTER_DEFAULT_ENABLED,
-                key="qvss_trend_filter_enabled",
-            )
-            trend_filter_window = int(
-                st.number_input(
-                    "Trend Filter Window",
-                    min_value=20,
-                    max_value=400,
-                    value=STRICT_TREND_FILTER_DEFAULT_WINDOW,
-                    step=10,
-                    key="qvss_trend_filter_window",
+            _render_advanced_group_caption("핵심 factor / universe 계약은 위에 두고, overlay와 실전형 정책은 아래 펼쳐보기로 묶었습니다.")
+            with st.expander("Overlay & Defensive Rules", expanded=False):
+                trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
+                with trend_title_col:
+                    st.markdown("##### Trend Filter Overlay")
+                with trend_help_col:
+                    _render_trend_filter_help_popover()
+                trend_filter_enabled = st.checkbox(
+                    "Enable",
+                    value=STRICT_TREND_FILTER_DEFAULT_ENABLED,
+                    key="qvss_trend_filter_enabled",
                 )
-            )
-            market_regime_enabled, market_regime_window, market_regime_benchmark = _render_market_regime_overlay_inputs(
-                key_prefix="qvss",
-                label_prefix="",
-            )
-            (
-                benchmark_contract,
-                min_price_filter,
-                min_history_months_filter,
-                min_avg_dollar_volume_20d_m_filter,
-                transaction_cost_bps,
-                benchmark_ticker,
-                promotion_min_benchmark_coverage,
-                promotion_min_net_cagr_spread,
-                promotion_min_liquidity_clean_coverage,
-                promotion_max_underperformance_share,
-                promotion_min_worst_rolling_excess_return,
-                promotion_max_strategy_drawdown,
-                promotion_max_drawdown_gap_vs_benchmark,
-            ) = _render_strict_annual_real_money_inputs(
-                key_prefix="qvss",
-            )
-            (
-                underperformance_guardrail_enabled,
-                underperformance_guardrail_window_months,
-                underperformance_guardrail_threshold,
-            ) = _render_underperformance_guardrail_inputs(
-                key_prefix="qvss",
-                label_prefix="Strict Annual Multi-Factor ",
-            )
-            (
-                drawdown_guardrail_enabled,
-                drawdown_guardrail_window_months,
-                drawdown_guardrail_strategy_threshold,
-                drawdown_guardrail_gap_threshold,
-            ) = _render_drawdown_guardrail_inputs(
-                key_prefix="qvss",
-                label_prefix="Strict Annual Multi-Factor ",
-            )
+                trend_filter_window = int(
+                    st.number_input(
+                        "Trend Filter Window",
+                        min_value=20,
+                        max_value=400,
+                        value=STRICT_TREND_FILTER_DEFAULT_WINDOW,
+                        step=10,
+                        key="qvss_trend_filter_window",
+                    )
+                )
+                market_regime_enabled, market_regime_window, market_regime_benchmark = _render_market_regime_overlay_inputs(
+                    key_prefix="qvss",
+                    label_prefix="",
+                )
+            with st.expander("Real-Money Contract", expanded=False):
+                (
+                    benchmark_contract,
+                    min_price_filter,
+                    min_history_months_filter,
+                    min_avg_dollar_volume_20d_m_filter,
+                    transaction_cost_bps,
+                    benchmark_ticker,
+                    promotion_min_benchmark_coverage,
+                    promotion_min_net_cagr_spread,
+                    promotion_min_liquidity_clean_coverage,
+                    promotion_max_underperformance_share,
+                    promotion_min_worst_rolling_excess_return,
+                    promotion_max_strategy_drawdown,
+                    promotion_max_drawdown_gap_vs_benchmark,
+                ) = _render_strict_annual_real_money_inputs(
+                    key_prefix="qvss",
+                )
+            with st.expander("Guardrails", expanded=False):
+                (
+                    underperformance_guardrail_enabled,
+                    underperformance_guardrail_window_months,
+                    underperformance_guardrail_threshold,
+                ) = _render_underperformance_guardrail_inputs(
+                    key_prefix="qvss",
+                    label_prefix="Strict Annual Multi-Factor ",
+                )
+                (
+                    drawdown_guardrail_enabled,
+                    drawdown_guardrail_window_months,
+                    drawdown_guardrail_strategy_threshold,
+                    drawdown_guardrail_gap_threshold,
+                ) = _render_drawdown_guardrail_inputs(
+                    key_prefix="qvss",
+                    label_prefix="Strict Annual Multi-Factor ",
+                )
 
         submitted = st.form_submit_button("Run Strict Annual Quality + Value Backtest", use_container_width=True)
 
@@ -9652,31 +9675,7 @@ def render_backtest_tab() -> None:
                             preset_label="GTAA Preset",
                             ticker_label="GTAA Tickers",
                         )
-                        (
-                            min_price_filter,
-                            transaction_cost_bps,
-                            benchmark_ticker,
-                            promotion_min_etf_aum_b,
-                            promotion_max_bid_ask_spread_pct,
-                        ) = _render_etf_real_money_inputs(
-                            key_prefix="compare_gtaa",
-                        )
-                        (
-                            underperformance_guardrail_enabled,
-                            underperformance_guardrail_window_months,
-                            underperformance_guardrail_threshold,
-                            drawdown_guardrail_enabled,
-                            drawdown_guardrail_window_months,
-                            drawdown_guardrail_strategy_threshold,
-                            drawdown_guardrail_gap_threshold,
-                        ) = _render_etf_guardrail_inputs(
-                            key_prefix="compare_gtaa",
-                            label_prefix="GTAA ",
-                        )
-                        compare_gtaa_score_lookback_months, compare_gtaa_score_weights = _render_gtaa_score_weight_inputs(
-                            key_prefix="compare_gtaa"
-                        )
-                        risk_off_contract = _render_gtaa_risk_off_contract_inputs(key_prefix="compare_gtaa")
+                        _render_advanced_group_caption("핵심 GTAA 계약은 위에 두고, overlay / 실전 계약 / guardrail은 아래 그룹으로 분리했습니다.")
                         compare_strategy_overrides["GTAA"] = {
                             "tickers": list(compare_gtaa_tickers),
                             "preset_name": compare_gtaa_preset_name,
@@ -9701,147 +9700,183 @@ def render_backtest_tab() -> None:
                                     key="compare_gtaa_interval",
                                 )
                             ),
-                            "score_lookback_months": list(compare_gtaa_score_lookback_months),
-                            "score_return_columns": [_gtaa_return_col_from_months(months) for months in compare_gtaa_score_lookback_months],
-                            "score_weights": compare_gtaa_score_weights,
-                            "trend_filter_window": int(risk_off_contract["trend_filter_window"]),
-                            "risk_off_mode": risk_off_contract["risk_off_mode"],
-                            "defensive_tickers": list(risk_off_contract["defensive_tickers"]),
-                            "market_regime_enabled": bool(risk_off_contract["market_regime_enabled"]),
-                            "market_regime_window": int(risk_off_contract["market_regime_window"]),
-                            "market_regime_benchmark": risk_off_contract["market_regime_benchmark"],
-                            "crash_guardrail_enabled": bool(risk_off_contract["crash_guardrail_enabled"]),
-                            "crash_guardrail_drawdown_threshold": float(risk_off_contract["crash_guardrail_drawdown_threshold"]),
-                            "crash_guardrail_lookback_months": int(risk_off_contract["crash_guardrail_lookback_months"]),
-                            "min_price_filter": float(min_price_filter),
-                            "transaction_cost_bps": float(transaction_cost_bps),
-                            "benchmark_ticker": benchmark_ticker,
-                            "promotion_min_etf_aum_b": float(promotion_min_etf_aum_b),
-                            "promotion_max_bid_ask_spread_pct": float(promotion_max_bid_ask_spread_pct),
-                            "underperformance_guardrail_enabled": bool(underperformance_guardrail_enabled),
-                            "underperformance_guardrail_window_months": int(underperformance_guardrail_window_months),
-                            "underperformance_guardrail_threshold": float(underperformance_guardrail_threshold),
-                            "drawdown_guardrail_enabled": bool(drawdown_guardrail_enabled),
-                            "drawdown_guardrail_window_months": int(drawdown_guardrail_window_months),
-                            "drawdown_guardrail_strategy_threshold": float(drawdown_guardrail_strategy_threshold),
-                            "drawdown_guardrail_gap_threshold": float(drawdown_guardrail_gap_threshold),
                         }
+                        compare_gtaa_score_lookback_months, compare_gtaa_score_weights = _render_gtaa_score_weight_inputs(
+                            key_prefix="compare_gtaa"
+                        )
+                        compare_strategy_overrides["GTAA"]["score_lookback_months"] = list(compare_gtaa_score_lookback_months)
+                        compare_strategy_overrides["GTAA"]["score_return_columns"] = [
+                            _gtaa_return_col_from_months(months) for months in compare_gtaa_score_lookback_months
+                        ]
+                        compare_strategy_overrides["GTAA"]["score_weights"] = compare_gtaa_score_weights
+                        with st.expander("Risk-Off Overlay", expanded=False):
+                            risk_off_contract = _render_gtaa_risk_off_contract_inputs(key_prefix="compare_gtaa")
+                        compare_strategy_overrides["GTAA"]["trend_filter_window"] = int(risk_off_contract["trend_filter_window"])
+                        compare_strategy_overrides["GTAA"]["risk_off_mode"] = risk_off_contract["risk_off_mode"]
+                        compare_strategy_overrides["GTAA"]["defensive_tickers"] = list(risk_off_contract["defensive_tickers"])
+                        compare_strategy_overrides["GTAA"]["market_regime_enabled"] = bool(risk_off_contract["market_regime_enabled"])
+                        compare_strategy_overrides["GTAA"]["market_regime_window"] = int(risk_off_contract["market_regime_window"])
+                        compare_strategy_overrides["GTAA"]["market_regime_benchmark"] = risk_off_contract["market_regime_benchmark"]
+                        compare_strategy_overrides["GTAA"]["crash_guardrail_enabled"] = bool(risk_off_contract["crash_guardrail_enabled"])
+                        compare_strategy_overrides["GTAA"]["crash_guardrail_drawdown_threshold"] = float(risk_off_contract["crash_guardrail_drawdown_threshold"])
+                        compare_strategy_overrides["GTAA"]["crash_guardrail_lookback_months"] = int(risk_off_contract["crash_guardrail_lookback_months"])
+                        with st.expander("Real-Money Contract", expanded=False):
+                            (
+                                min_price_filter,
+                                transaction_cost_bps,
+                                benchmark_ticker,
+                                promotion_min_etf_aum_b,
+                                promotion_max_bid_ask_spread_pct,
+                            ) = _render_etf_real_money_inputs(
+                                key_prefix="compare_gtaa",
+                            )
+                        compare_strategy_overrides["GTAA"]["min_price_filter"] = float(min_price_filter)
+                        compare_strategy_overrides["GTAA"]["transaction_cost_bps"] = float(transaction_cost_bps)
+                        compare_strategy_overrides["GTAA"]["benchmark_ticker"] = benchmark_ticker
+                        compare_strategy_overrides["GTAA"]["promotion_min_etf_aum_b"] = float(promotion_min_etf_aum_b)
+                        compare_strategy_overrides["GTAA"]["promotion_max_bid_ask_spread_pct"] = float(promotion_max_bid_ask_spread_pct)
+                        with st.expander("ETF Guardrails", expanded=False):
+                            (
+                                underperformance_guardrail_enabled,
+                                underperformance_guardrail_window_months,
+                                underperformance_guardrail_threshold,
+                                drawdown_guardrail_enabled,
+                                drawdown_guardrail_window_months,
+                                drawdown_guardrail_strategy_threshold,
+                                drawdown_guardrail_gap_threshold,
+                            ) = _render_etf_guardrail_inputs(
+                                key_prefix="compare_gtaa",
+                                label_prefix="GTAA ",
+                            )
+                        compare_strategy_overrides["GTAA"]["underperformance_guardrail_enabled"] = bool(underperformance_guardrail_enabled)
+                        compare_strategy_overrides["GTAA"]["underperformance_guardrail_window_months"] = int(underperformance_guardrail_window_months)
+                        compare_strategy_overrides["GTAA"]["underperformance_guardrail_threshold"] = float(underperformance_guardrail_threshold)
+                        compare_strategy_overrides["GTAA"]["drawdown_guardrail_enabled"] = bool(drawdown_guardrail_enabled)
+                        compare_strategy_overrides["GTAA"]["drawdown_guardrail_window_months"] = int(drawdown_guardrail_window_months)
+                        compare_strategy_overrides["GTAA"]["drawdown_guardrail_strategy_threshold"] = float(drawdown_guardrail_strategy_threshold)
+                        compare_strategy_overrides["GTAA"]["drawdown_guardrail_gap_threshold"] = float(drawdown_guardrail_gap_threshold)
 
                 if "Risk Parity Trend" in selected_strategies:
-                    st.markdown("**Risk Parity Trend**")
-                    (
-                        min_price_filter,
-                        transaction_cost_bps,
-                        benchmark_ticker,
-                        promotion_min_etf_aum_b,
-                        promotion_max_bid_ask_spread_pct,
-                    ) = _render_etf_real_money_inputs(
-                        key_prefix="compare_rp",
-                    )
-                    (
-                        underperformance_guardrail_enabled,
-                        underperformance_guardrail_window_months,
-                        underperformance_guardrail_threshold,
-                        drawdown_guardrail_enabled,
-                        drawdown_guardrail_window_months,
-                        drawdown_guardrail_strategy_threshold,
-                        drawdown_guardrail_gap_threshold,
-                    ) = _render_etf_guardrail_inputs(
-                        key_prefix="compare_rp",
-                        label_prefix="Risk Parity ",
-                    )
-                    compare_strategy_overrides["Risk Parity Trend"] = {
-                        "rebalance_interval": int(
-                            st.number_input(
-                                "Risk Parity Rebalance Interval",
-                                min_value=1,
-                                max_value=12,
-                                value=1,
-                                step=1,
-                                key="compare_rp_interval",
+                    with st.expander("Risk Parity Trend", expanded=False):
+                        _render_advanced_group_caption("핵심 실행 계약은 위에 두고, 실전 계약과 guardrail은 아래 그룹으로 분리했습니다.")
+                        compare_strategy_overrides["Risk Parity Trend"] = {
+                            "rebalance_interval": int(
+                                st.number_input(
+                                    "Risk Parity Rebalance Interval",
+                                    min_value=1,
+                                    max_value=12,
+                                    value=1,
+                                    step=1,
+                                    key="compare_rp_interval",
+                                )
+                            ),
+                            "vol_window": int(
+                                st.number_input(
+                                    "Risk Parity Vol Window (months)",
+                                    min_value=1,
+                                    max_value=24,
+                                    value=6,
+                                    step=1,
+                                    key="compare_rp_vol_window",
+                                )
+                            ),
+                        }
+                        with st.expander("Real-Money Contract", expanded=False):
+                            (
+                                min_price_filter,
+                                transaction_cost_bps,
+                                benchmark_ticker,
+                                promotion_min_etf_aum_b,
+                                promotion_max_bid_ask_spread_pct,
+                            ) = _render_etf_real_money_inputs(
+                                key_prefix="compare_rp",
                             )
-                        ),
-                        "vol_window": int(
-                            st.number_input(
-                                "Risk Parity Vol Window (months)",
-                                min_value=1,
-                                max_value=24,
-                                value=6,
-                                step=1,
-                                key="compare_rp_vol_window",
+                        compare_strategy_overrides["Risk Parity Trend"]["min_price_filter"] = float(min_price_filter)
+                        compare_strategy_overrides["Risk Parity Trend"]["transaction_cost_bps"] = float(transaction_cost_bps)
+                        compare_strategy_overrides["Risk Parity Trend"]["benchmark_ticker"] = benchmark_ticker
+                        compare_strategy_overrides["Risk Parity Trend"]["promotion_min_etf_aum_b"] = float(promotion_min_etf_aum_b)
+                        compare_strategy_overrides["Risk Parity Trend"]["promotion_max_bid_ask_spread_pct"] = float(promotion_max_bid_ask_spread_pct)
+                        with st.expander("ETF Guardrails", expanded=False):
+                            (
+                                underperformance_guardrail_enabled,
+                                underperformance_guardrail_window_months,
+                                underperformance_guardrail_threshold,
+                                drawdown_guardrail_enabled,
+                                drawdown_guardrail_window_months,
+                                drawdown_guardrail_strategy_threshold,
+                                drawdown_guardrail_gap_threshold,
+                            ) = _render_etf_guardrail_inputs(
+                                key_prefix="compare_rp",
+                                label_prefix="Risk Parity ",
                             )
-                        ),
-                        "min_price_filter": float(min_price_filter),
-                        "transaction_cost_bps": float(transaction_cost_bps),
-                        "benchmark_ticker": benchmark_ticker,
-                        "promotion_min_etf_aum_b": float(promotion_min_etf_aum_b),
-                        "promotion_max_bid_ask_spread_pct": float(promotion_max_bid_ask_spread_pct),
-                        "underperformance_guardrail_enabled": bool(underperformance_guardrail_enabled),
-                        "underperformance_guardrail_window_months": int(underperformance_guardrail_window_months),
-                        "underperformance_guardrail_threshold": float(underperformance_guardrail_threshold),
-                        "drawdown_guardrail_enabled": bool(drawdown_guardrail_enabled),
-                        "drawdown_guardrail_window_months": int(drawdown_guardrail_window_months),
-                        "drawdown_guardrail_strategy_threshold": float(drawdown_guardrail_strategy_threshold),
-                        "drawdown_guardrail_gap_threshold": float(drawdown_guardrail_gap_threshold),
-                    }
+                        compare_strategy_overrides["Risk Parity Trend"]["underperformance_guardrail_enabled"] = bool(underperformance_guardrail_enabled)
+                        compare_strategy_overrides["Risk Parity Trend"]["underperformance_guardrail_window_months"] = int(underperformance_guardrail_window_months)
+                        compare_strategy_overrides["Risk Parity Trend"]["underperformance_guardrail_threshold"] = float(underperformance_guardrail_threshold)
+                        compare_strategy_overrides["Risk Parity Trend"]["drawdown_guardrail_enabled"] = bool(drawdown_guardrail_enabled)
+                        compare_strategy_overrides["Risk Parity Trend"]["drawdown_guardrail_window_months"] = int(drawdown_guardrail_window_months)
+                        compare_strategy_overrides["Risk Parity Trend"]["drawdown_guardrail_strategy_threshold"] = float(drawdown_guardrail_strategy_threshold)
+                        compare_strategy_overrides["Risk Parity Trend"]["drawdown_guardrail_gap_threshold"] = float(drawdown_guardrail_gap_threshold)
 
                 if "Dual Momentum" in selected_strategies:
-                    st.markdown("**Dual Momentum**")
-                    (
-                        min_price_filter,
-                        transaction_cost_bps,
-                        benchmark_ticker,
-                        promotion_min_etf_aum_b,
-                        promotion_max_bid_ask_spread_pct,
-                    ) = _render_etf_real_money_inputs(
-                        key_prefix="compare_dm",
-                    )
-                    (
-                        underperformance_guardrail_enabled,
-                        underperformance_guardrail_window_months,
-                        underperformance_guardrail_threshold,
-                        drawdown_guardrail_enabled,
-                        drawdown_guardrail_window_months,
-                        drawdown_guardrail_strategy_threshold,
-                        drawdown_guardrail_gap_threshold,
-                    ) = _render_etf_guardrail_inputs(
-                        key_prefix="compare_dm",
-                        label_prefix="Dual Momentum ",
-                    )
-                    compare_strategy_overrides["Dual Momentum"] = {
-                        "top": int(
-                            st.number_input(
-                                "Dual Momentum Top Assets",
-                                min_value=1,
-                                max_value=5,
-                                value=1,
-                                step=1,
-                                key="compare_dm_top",
+                    with st.expander("Dual Momentum", expanded=False):
+                        _render_advanced_group_caption("핵심 실행 계약은 위에 두고, 실전 계약과 guardrail은 아래 그룹으로 분리했습니다.")
+                        compare_strategy_overrides["Dual Momentum"] = {
+                            "top": int(
+                                st.number_input(
+                                    "Dual Momentum Top Assets",
+                                    min_value=1,
+                                    max_value=5,
+                                    value=1,
+                                    step=1,
+                                    key="compare_dm_top",
+                                )
+                            ),
+                            "rebalance_interval": int(
+                                st.number_input(
+                                    "Dual Momentum Rebalance Interval",
+                                    min_value=1,
+                                    max_value=12,
+                                    value=1,
+                                    step=1,
+                                    key="compare_dm_interval",
+                                )
+                            ),
+                        }
+                        with st.expander("Real-Money Contract", expanded=False):
+                            (
+                                min_price_filter,
+                                transaction_cost_bps,
+                                benchmark_ticker,
+                                promotion_min_etf_aum_b,
+                                promotion_max_bid_ask_spread_pct,
+                            ) = _render_etf_real_money_inputs(
+                                key_prefix="compare_dm",
                             )
-                        ),
-                        "rebalance_interval": int(
-                            st.number_input(
-                                "Dual Momentum Rebalance Interval",
-                                min_value=1,
-                                max_value=12,
-                                value=1,
-                                step=1,
-                                key="compare_dm_interval",
+                        compare_strategy_overrides["Dual Momentum"]["min_price_filter"] = float(min_price_filter)
+                        compare_strategy_overrides["Dual Momentum"]["transaction_cost_bps"] = float(transaction_cost_bps)
+                        compare_strategy_overrides["Dual Momentum"]["benchmark_ticker"] = benchmark_ticker
+                        compare_strategy_overrides["Dual Momentum"]["promotion_min_etf_aum_b"] = float(promotion_min_etf_aum_b)
+                        compare_strategy_overrides["Dual Momentum"]["promotion_max_bid_ask_spread_pct"] = float(promotion_max_bid_ask_spread_pct)
+                        with st.expander("ETF Guardrails", expanded=False):
+                            (
+                                underperformance_guardrail_enabled,
+                                underperformance_guardrail_window_months,
+                                underperformance_guardrail_threshold,
+                                drawdown_guardrail_enabled,
+                                drawdown_guardrail_window_months,
+                                drawdown_guardrail_strategy_threshold,
+                                drawdown_guardrail_gap_threshold,
+                            ) = _render_etf_guardrail_inputs(
+                                key_prefix="compare_dm",
+                                label_prefix="Dual Momentum ",
                             )
-                        ),
-                        "min_price_filter": float(min_price_filter),
-                        "transaction_cost_bps": float(transaction_cost_bps),
-                        "benchmark_ticker": benchmark_ticker,
-                        "promotion_min_etf_aum_b": float(promotion_min_etf_aum_b),
-                        "promotion_max_bid_ask_spread_pct": float(promotion_max_bid_ask_spread_pct),
-                        "underperformance_guardrail_enabled": bool(underperformance_guardrail_enabled),
-                        "underperformance_guardrail_window_months": int(underperformance_guardrail_window_months),
-                        "underperformance_guardrail_threshold": float(underperformance_guardrail_threshold),
-                        "drawdown_guardrail_enabled": bool(drawdown_guardrail_enabled),
-                        "drawdown_guardrail_window_months": int(drawdown_guardrail_window_months),
-                        "drawdown_guardrail_strategy_threshold": float(drawdown_guardrail_strategy_threshold),
-                        "drawdown_guardrail_gap_threshold": float(drawdown_guardrail_gap_threshold),
-                    }
+                        compare_strategy_overrides["Dual Momentum"]["underperformance_guardrail_enabled"] = bool(underperformance_guardrail_enabled)
+                        compare_strategy_overrides["Dual Momentum"]["underperformance_guardrail_window_months"] = int(underperformance_guardrail_window_months)
+                        compare_strategy_overrides["Dual Momentum"]["underperformance_guardrail_threshold"] = float(underperformance_guardrail_threshold)
+                        compare_strategy_overrides["Dual Momentum"]["drawdown_guardrail_enabled"] = bool(drawdown_guardrail_enabled)
+                        compare_strategy_overrides["Dual Momentum"]["drawdown_guardrail_window_months"] = int(drawdown_guardrail_window_months)
+                        compare_strategy_overrides["Dual Momentum"]["drawdown_guardrail_strategy_threshold"] = float(drawdown_guardrail_strategy_threshold)
+                        compare_strategy_overrides["Dual Momentum"]["drawdown_guardrail_gap_threshold"] = float(drawdown_guardrail_gap_threshold)
 
                 if quality_compare_strategy_name == "Quality Snapshot":
                     st.markdown("**Quality Snapshot**")
@@ -9925,51 +9960,54 @@ def render_backtest_tab() -> None:
                                 key="compare_qss_factors",
                             ),
                         }
-                        trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
-                        with trend_title_col:
-                            st.markdown("##### Strict Annual Quality Trend Filter")
-                        with trend_help_col:
-                            _render_trend_filter_help_popover()
-                        compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["trend_filter_enabled"] = st.checkbox(
-                            "Enable",
-                            value=STRICT_TREND_FILTER_DEFAULT_ENABLED,
-                            key="compare_qss_trend_filter_enabled",
-                        )
-                        compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["trend_filter_window"] = int(
-                            st.number_input(
-                                "Strict Annual Quality Trend Filter Window",
-                                min_value=20,
-                                max_value=400,
-                                value=STRICT_TREND_FILTER_DEFAULT_WINDOW,
-                                step=10,
-                                key="compare_qss_trend_filter_window",
+                        _render_advanced_group_caption("핵심 factor / universe 계약은 위에 두고, overlay와 실전형 정책은 아래 펼쳐보기로 묶었습니다.")
+                        with st.expander("Overlay & Defensive Rules", expanded=False):
+                            trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
+                            with trend_title_col:
+                                st.markdown("##### Strict Annual Quality Trend Filter")
+                            with trend_help_col:
+                                _render_trend_filter_help_popover()
+                            compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["trend_filter_enabled"] = st.checkbox(
+                                "Enable",
+                                value=STRICT_TREND_FILTER_DEFAULT_ENABLED,
+                                key="compare_qss_trend_filter_enabled",
                             )
-                        )
-                        (
-                            compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["market_regime_enabled"],
-                            compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["market_regime_window"],
-                            compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["market_regime_benchmark"],
-                        ) = _render_market_regime_overlay_inputs(
-                            key_prefix="compare_qss",
-                            label_prefix="Strict Annual Quality ",
-                        )
-                        (
-                            benchmark_contract,
-                            min_price_filter,
-                            min_history_months_filter,
-                            min_avg_dollar_volume_20d_m_filter,
-                            transaction_cost_bps,
-                            benchmark_ticker,
-                            promotion_min_benchmark_coverage,
-                            promotion_min_net_cagr_spread,
-                            promotion_min_liquidity_clean_coverage,
-                            promotion_max_underperformance_share,
-                            promotion_min_worst_rolling_excess_return,
-                            promotion_max_strategy_drawdown,
-                            promotion_max_drawdown_gap_vs_benchmark,
-                        ) = _render_strict_annual_real_money_inputs(
-                            key_prefix="compare_qss",
-                        )
+                            compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["trend_filter_window"] = int(
+                                st.number_input(
+                                    "Strict Annual Quality Trend Filter Window",
+                                    min_value=20,
+                                    max_value=400,
+                                    value=STRICT_TREND_FILTER_DEFAULT_WINDOW,
+                                    step=10,
+                                    key="compare_qss_trend_filter_window",
+                                )
+                            )
+                            (
+                                compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["market_regime_enabled"],
+                                compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["market_regime_window"],
+                                compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["market_regime_benchmark"],
+                            ) = _render_market_regime_overlay_inputs(
+                                key_prefix="compare_qss",
+                                label_prefix="Strict Annual Quality ",
+                            )
+                        with st.expander("Real-Money Contract", expanded=False):
+                            (
+                                benchmark_contract,
+                                min_price_filter,
+                                min_history_months_filter,
+                                min_avg_dollar_volume_20d_m_filter,
+                                transaction_cost_bps,
+                                benchmark_ticker,
+                                promotion_min_benchmark_coverage,
+                                promotion_min_net_cagr_spread,
+                                promotion_min_liquidity_clean_coverage,
+                                promotion_max_underperformance_share,
+                                promotion_min_worst_rolling_excess_return,
+                                promotion_max_strategy_drawdown,
+                                promotion_max_drawdown_gap_vs_benchmark,
+                            ) = _render_strict_annual_real_money_inputs(
+                                key_prefix="compare_qss",
+                            )
                         compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["min_price_filter"] = float(min_price_filter)
                         compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["min_history_months_filter"] = int(min_history_months_filter)
                         compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["min_avg_dollar_volume_20d_m_filter"] = float(min_avg_dollar_volume_20d_m_filter)
@@ -9983,23 +10021,24 @@ def render_backtest_tab() -> None:
                         compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["promotion_min_worst_rolling_excess_return"] = float(promotion_min_worst_rolling_excess_return)
                         compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["promotion_max_strategy_drawdown"] = float(promotion_max_strategy_drawdown)
                         compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["promotion_max_drawdown_gap_vs_benchmark"] = float(promotion_max_drawdown_gap_vs_benchmark)
-                        (
-                            compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["underperformance_guardrail_enabled"],
-                            compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["underperformance_guardrail_window_months"],
-                            compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["underperformance_guardrail_threshold"],
-                        ) = _render_underperformance_guardrail_inputs(
-                            key_prefix="compare_qss",
-                            label_prefix="Strict Annual Quality ",
-                        )
-                        (
-                            compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["drawdown_guardrail_enabled"],
-                            compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["drawdown_guardrail_window_months"],
-                            compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["drawdown_guardrail_strategy_threshold"],
-                            compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["drawdown_guardrail_gap_threshold"],
-                        ) = _render_drawdown_guardrail_inputs(
-                            key_prefix="compare_qss",
-                            label_prefix="Strict Annual Quality ",
-                        )
+                        with st.expander("Guardrails", expanded=False):
+                            (
+                                compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["underperformance_guardrail_enabled"],
+                                compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["underperformance_guardrail_window_months"],
+                                compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["underperformance_guardrail_threshold"],
+                            ) = _render_underperformance_guardrail_inputs(
+                                key_prefix="compare_qss",
+                                label_prefix="Strict Annual Quality ",
+                            )
+                            (
+                                compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["drawdown_guardrail_enabled"],
+                                compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["drawdown_guardrail_window_months"],
+                                compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["drawdown_guardrail_strategy_threshold"],
+                                compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["drawdown_guardrail_gap_threshold"],
+                            ) = _render_drawdown_guardrail_inputs(
+                                key_prefix="compare_qss",
+                                label_prefix="Strict Annual Quality ",
+                            )
 
                 if quality_compare_strategy_name == "Quality Snapshot (Strict Quarterly Prototype)":
                     with st.expander("Quality Snapshot (Strict Quarterly Prototype)", expanded=False):
@@ -10147,51 +10186,54 @@ def render_backtest_tab() -> None:
                                 key="compare_vss_factors",
                             ),
                         }
-                        trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
-                        with trend_title_col:
-                            st.markdown("##### Strict Annual Value Trend Filter")
-                        with trend_help_col:
-                            _render_trend_filter_help_popover()
-                        compare_strategy_overrides["Value Snapshot (Strict Annual)"]["trend_filter_enabled"] = st.checkbox(
-                            "Enable",
-                            value=STRICT_TREND_FILTER_DEFAULT_ENABLED,
-                            key="compare_vss_trend_filter_enabled",
-                        )
-                        compare_strategy_overrides["Value Snapshot (Strict Annual)"]["trend_filter_window"] = int(
-                            st.number_input(
-                                "Strict Annual Value Trend Filter Window",
-                                min_value=20,
-                                max_value=400,
-                                value=STRICT_TREND_FILTER_DEFAULT_WINDOW,
-                                step=10,
-                                key="compare_vss_trend_filter_window",
+                        _render_advanced_group_caption("핵심 factor / universe 계약은 위에 두고, overlay와 실전형 정책은 아래 펼쳐보기로 묶었습니다.")
+                        with st.expander("Overlay & Defensive Rules", expanded=False):
+                            trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
+                            with trend_title_col:
+                                st.markdown("##### Strict Annual Value Trend Filter")
+                            with trend_help_col:
+                                _render_trend_filter_help_popover()
+                            compare_strategy_overrides["Value Snapshot (Strict Annual)"]["trend_filter_enabled"] = st.checkbox(
+                                "Enable",
+                                value=STRICT_TREND_FILTER_DEFAULT_ENABLED,
+                                key="compare_vss_trend_filter_enabled",
                             )
-                        )
-                        (
-                            compare_strategy_overrides["Value Snapshot (Strict Annual)"]["market_regime_enabled"],
-                            compare_strategy_overrides["Value Snapshot (Strict Annual)"]["market_regime_window"],
-                            compare_strategy_overrides["Value Snapshot (Strict Annual)"]["market_regime_benchmark"],
-                        ) = _render_market_regime_overlay_inputs(
-                            key_prefix="compare_vss",
-                            label_prefix="Strict Annual Value ",
-                        )
-                        (
-                            benchmark_contract,
-                            min_price_filter,
-                            min_history_months_filter,
-                            min_avg_dollar_volume_20d_m_filter,
-                            transaction_cost_bps,
-                            benchmark_ticker,
-                            promotion_min_benchmark_coverage,
-                            promotion_min_net_cagr_spread,
-                            promotion_min_liquidity_clean_coverage,
-                            promotion_max_underperformance_share,
-                            promotion_min_worst_rolling_excess_return,
-                            promotion_max_strategy_drawdown,
-                            promotion_max_drawdown_gap_vs_benchmark,
-                        ) = _render_strict_annual_real_money_inputs(
-                            key_prefix="compare_vss",
-                        )
+                            compare_strategy_overrides["Value Snapshot (Strict Annual)"]["trend_filter_window"] = int(
+                                st.number_input(
+                                    "Strict Annual Value Trend Filter Window",
+                                    min_value=20,
+                                    max_value=400,
+                                    value=STRICT_TREND_FILTER_DEFAULT_WINDOW,
+                                    step=10,
+                                    key="compare_vss_trend_filter_window",
+                                )
+                            )
+                            (
+                                compare_strategy_overrides["Value Snapshot (Strict Annual)"]["market_regime_enabled"],
+                                compare_strategy_overrides["Value Snapshot (Strict Annual)"]["market_regime_window"],
+                                compare_strategy_overrides["Value Snapshot (Strict Annual)"]["market_regime_benchmark"],
+                            ) = _render_market_regime_overlay_inputs(
+                                key_prefix="compare_vss",
+                                label_prefix="Strict Annual Value ",
+                            )
+                        with st.expander("Real-Money Contract", expanded=False):
+                            (
+                                benchmark_contract,
+                                min_price_filter,
+                                min_history_months_filter,
+                                min_avg_dollar_volume_20d_m_filter,
+                                transaction_cost_bps,
+                                benchmark_ticker,
+                                promotion_min_benchmark_coverage,
+                                promotion_min_net_cagr_spread,
+                                promotion_min_liquidity_clean_coverage,
+                                promotion_max_underperformance_share,
+                                promotion_min_worst_rolling_excess_return,
+                                promotion_max_strategy_drawdown,
+                                promotion_max_drawdown_gap_vs_benchmark,
+                            ) = _render_strict_annual_real_money_inputs(
+                                key_prefix="compare_vss",
+                            )
                         compare_strategy_overrides["Value Snapshot (Strict Annual)"]["min_price_filter"] = float(min_price_filter)
                         compare_strategy_overrides["Value Snapshot (Strict Annual)"]["min_history_months_filter"] = int(min_history_months_filter)
                         compare_strategy_overrides["Value Snapshot (Strict Annual)"]["min_avg_dollar_volume_20d_m_filter"] = float(min_avg_dollar_volume_20d_m_filter)
@@ -10205,23 +10247,24 @@ def render_backtest_tab() -> None:
                         compare_strategy_overrides["Value Snapshot (Strict Annual)"]["promotion_min_worst_rolling_excess_return"] = float(promotion_min_worst_rolling_excess_return)
                         compare_strategy_overrides["Value Snapshot (Strict Annual)"]["promotion_max_strategy_drawdown"] = float(promotion_max_strategy_drawdown)
                         compare_strategy_overrides["Value Snapshot (Strict Annual)"]["promotion_max_drawdown_gap_vs_benchmark"] = float(promotion_max_drawdown_gap_vs_benchmark)
-                        (
-                            compare_strategy_overrides["Value Snapshot (Strict Annual)"]["underperformance_guardrail_enabled"],
-                            compare_strategy_overrides["Value Snapshot (Strict Annual)"]["underperformance_guardrail_window_months"],
-                            compare_strategy_overrides["Value Snapshot (Strict Annual)"]["underperformance_guardrail_threshold"],
-                        ) = _render_underperformance_guardrail_inputs(
-                            key_prefix="compare_vss",
-                            label_prefix="Strict Annual Value ",
-                        )
-                        (
-                            compare_strategy_overrides["Value Snapshot (Strict Annual)"]["drawdown_guardrail_enabled"],
-                            compare_strategy_overrides["Value Snapshot (Strict Annual)"]["drawdown_guardrail_window_months"],
-                            compare_strategy_overrides["Value Snapshot (Strict Annual)"]["drawdown_guardrail_strategy_threshold"],
-                            compare_strategy_overrides["Value Snapshot (Strict Annual)"]["drawdown_guardrail_gap_threshold"],
-                        ) = _render_drawdown_guardrail_inputs(
-                            key_prefix="compare_vss",
-                            label_prefix="Strict Annual Value ",
-                        )
+                        with st.expander("Guardrails", expanded=False):
+                            (
+                                compare_strategy_overrides["Value Snapshot (Strict Annual)"]["underperformance_guardrail_enabled"],
+                                compare_strategy_overrides["Value Snapshot (Strict Annual)"]["underperformance_guardrail_window_months"],
+                                compare_strategy_overrides["Value Snapshot (Strict Annual)"]["underperformance_guardrail_threshold"],
+                            ) = _render_underperformance_guardrail_inputs(
+                                key_prefix="compare_vss",
+                                label_prefix="Strict Annual Value ",
+                            )
+                            (
+                                compare_strategy_overrides["Value Snapshot (Strict Annual)"]["drawdown_guardrail_enabled"],
+                                compare_strategy_overrides["Value Snapshot (Strict Annual)"]["drawdown_guardrail_window_months"],
+                                compare_strategy_overrides["Value Snapshot (Strict Annual)"]["drawdown_guardrail_strategy_threshold"],
+                                compare_strategy_overrides["Value Snapshot (Strict Annual)"]["drawdown_guardrail_gap_threshold"],
+                            ) = _render_drawdown_guardrail_inputs(
+                                key_prefix="compare_vss",
+                                label_prefix="Strict Annual Value ",
+                            )
 
                 if value_compare_strategy_name == "Value Snapshot (Strict Quarterly Prototype)":
                     with st.expander("Value Snapshot (Strict Quarterly Prototype)", expanded=False):
@@ -10375,51 +10418,54 @@ def render_backtest_tab() -> None:
                                 key="compare_qvss_value_factors",
                             ),
                         }
-                        trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
-                        with trend_title_col:
-                            st.markdown("##### Strict Annual Multi-Factor Trend Filter")
-                        with trend_help_col:
-                            _render_trend_filter_help_popover()
-                        compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["trend_filter_enabled"] = st.checkbox(
-                            "Enable",
-                            value=STRICT_TREND_FILTER_DEFAULT_ENABLED,
-                            key="compare_qvss_trend_filter_enabled",
-                        )
-                        compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["trend_filter_window"] = int(
-                            st.number_input(
-                                "Strict Annual Multi-Factor Trend Filter Window",
-                                min_value=20,
-                                max_value=400,
-                                value=STRICT_TREND_FILTER_DEFAULT_WINDOW,
-                                step=10,
-                                key="compare_qvss_trend_filter_window",
+                        _render_advanced_group_caption("핵심 factor / universe 계약은 위에 두고, overlay와 실전형 정책은 아래 펼쳐보기로 묶었습니다.")
+                        with st.expander("Overlay & Defensive Rules", expanded=False):
+                            trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
+                            with trend_title_col:
+                                st.markdown("##### Strict Annual Multi-Factor Trend Filter")
+                            with trend_help_col:
+                                _render_trend_filter_help_popover()
+                            compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["trend_filter_enabled"] = st.checkbox(
+                                "Enable",
+                                value=STRICT_TREND_FILTER_DEFAULT_ENABLED,
+                                key="compare_qvss_trend_filter_enabled",
                             )
-                        )
-                        (
-                            compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["market_regime_enabled"],
-                            compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["market_regime_window"],
-                            compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["market_regime_benchmark"],
-                        ) = _render_market_regime_overlay_inputs(
-                            key_prefix="compare_qvss",
-                            label_prefix="Strict Annual Multi-Factor ",
-                        )
-                        (
-                            benchmark_contract,
-                            min_price_filter,
-                            min_history_months_filter,
-                            min_avg_dollar_volume_20d_m_filter,
-                            transaction_cost_bps,
-                            benchmark_ticker,
-                            promotion_min_benchmark_coverage,
-                            promotion_min_net_cagr_spread,
-                            promotion_min_liquidity_clean_coverage,
-                            promotion_max_underperformance_share,
-                            promotion_min_worst_rolling_excess_return,
-                            promotion_max_strategy_drawdown,
-                            promotion_max_drawdown_gap_vs_benchmark,
-                        ) = _render_strict_annual_real_money_inputs(
-                            key_prefix="compare_qvss",
-                        )
+                            compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["trend_filter_window"] = int(
+                                st.number_input(
+                                    "Strict Annual Multi-Factor Trend Filter Window",
+                                    min_value=20,
+                                    max_value=400,
+                                    value=STRICT_TREND_FILTER_DEFAULT_WINDOW,
+                                    step=10,
+                                    key="compare_qvss_trend_filter_window",
+                                )
+                            )
+                            (
+                                compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["market_regime_enabled"],
+                                compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["market_regime_window"],
+                                compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["market_regime_benchmark"],
+                            ) = _render_market_regime_overlay_inputs(
+                                key_prefix="compare_qvss",
+                                label_prefix="Strict Annual Multi-Factor ",
+                            )
+                        with st.expander("Real-Money Contract", expanded=False):
+                            (
+                                benchmark_contract,
+                                min_price_filter,
+                                min_history_months_filter,
+                                min_avg_dollar_volume_20d_m_filter,
+                                transaction_cost_bps,
+                                benchmark_ticker,
+                                promotion_min_benchmark_coverage,
+                                promotion_min_net_cagr_spread,
+                                promotion_min_liquidity_clean_coverage,
+                                promotion_max_underperformance_share,
+                                promotion_min_worst_rolling_excess_return,
+                                promotion_max_strategy_drawdown,
+                                promotion_max_drawdown_gap_vs_benchmark,
+                            ) = _render_strict_annual_real_money_inputs(
+                                key_prefix="compare_qvss",
+                            )
                         compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["min_price_filter"] = float(min_price_filter)
                         compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["min_history_months_filter"] = int(min_history_months_filter)
                         compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["min_avg_dollar_volume_20d_m_filter"] = float(min_avg_dollar_volume_20d_m_filter)
@@ -10433,23 +10479,24 @@ def render_backtest_tab() -> None:
                         compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["promotion_min_worst_rolling_excess_return"] = float(promotion_min_worst_rolling_excess_return)
                         compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["promotion_max_strategy_drawdown"] = float(promotion_max_strategy_drawdown)
                         compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["promotion_max_drawdown_gap_vs_benchmark"] = float(promotion_max_drawdown_gap_vs_benchmark)
-                        (
-                            compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["underperformance_guardrail_enabled"],
-                            compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["underperformance_guardrail_window_months"],
-                            compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["underperformance_guardrail_threshold"],
-                        ) = _render_underperformance_guardrail_inputs(
-                            key_prefix="compare_qvss",
-                            label_prefix="Strict Annual Multi-Factor ",
-                        )
-                        (
-                            compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["drawdown_guardrail_enabled"],
-                            compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["drawdown_guardrail_window_months"],
-                            compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["drawdown_guardrail_strategy_threshold"],
-                            compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["drawdown_guardrail_gap_threshold"],
-                        ) = _render_drawdown_guardrail_inputs(
-                            key_prefix="compare_qvss",
-                            label_prefix="Strict Annual Multi-Factor ",
-                        )
+                        with st.expander("Guardrails", expanded=False):
+                            (
+                                compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["underperformance_guardrail_enabled"],
+                                compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["underperformance_guardrail_window_months"],
+                                compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["underperformance_guardrail_threshold"],
+                            ) = _render_underperformance_guardrail_inputs(
+                                key_prefix="compare_qvss",
+                                label_prefix="Strict Annual Multi-Factor ",
+                            )
+                            (
+                                compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["drawdown_guardrail_enabled"],
+                                compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["drawdown_guardrail_window_months"],
+                                compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["drawdown_guardrail_strategy_threshold"],
+                                compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["drawdown_guardrail_gap_threshold"],
+                            ) = _render_drawdown_guardrail_inputs(
+                                key_prefix="compare_qvss",
+                                label_prefix="Strict Annual Multi-Factor ",
+                            )
 
                 if quality_value_compare_strategy_name == "Quality + Value Snapshot (Strict Quarterly Prototype)":
                     with st.expander("Quality + Value Snapshot (Strict Quarterly Prototype)", expanded=False):

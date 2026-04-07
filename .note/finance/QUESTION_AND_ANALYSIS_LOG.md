@@ -7439,3 +7439,15 @@ Do not copy full chat transcripts. Keep only the durable result.
   - trigger count / trigger share are shown consistently instead of disappearing with the whole section
 - Durable implication:
   - Phase 13 checklist can now treat ETF guardrails as a stable visible contract rather than a conditional UI element that vanishes when disabled
+
+### 2026-04-07 - 전략 Advanced Inputs를 그룹형 UX로 정리했다
+
+- Request topic:
+  - the user wanted strategy `Advanced Inputs` to keep basic contracts visible while grouping newer overlays and real-money controls so the UI would stay readable as more features are added
+- Interpreted goal:
+  - create a stable UX pattern that separates core strategy setup from optional overlays / execution contracts / guardrails and prevents future asymmetry between strategies
+- Result:
+  - single strategy ETF and strict annual forms now group additional controls into expanders such as `Overlay & Defensive Rules`, `Real-Money Contract`, and `Guardrails`
+  - compare strategy-specific inputs were aligned to the same grouped structure for the same strategy families
+- Durable implication:
+  - future strategy UI growth should follow the grouped advanced-input pattern rather than adding more flat rows to each form

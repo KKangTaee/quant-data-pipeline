@@ -338,6 +338,14 @@ Analysis / Presentation
   - Actual Clean Coverage
   - Liquidity Excluded Rows
   를 같이 보여준다.
+  전략 입력 UX도 같은 원칙으로 한 번 더 정리되어,
+  `Advanced Inputs`는 이제 "핵심 실행 계약"과 "추가 정책"을 분리해서 읽게 되었다.
+  ETF 전략과 strict annual family에서는
+  - 핵심 계약: timeframe / option / rebalance / universe / factors / top N
+  - 추가 정책: overlay / real-money contract / guardrails
+  구조를 기본 패턴으로 사용한다.
+  이 변경은 strategy logic을 바꾼 것이 아니라,
+  앞으로 옵션이 더 늘어나도 각 전략 form이 한 줄씩 길어지지 않도록 정리한 UI-layer 개선이다.
   그리고 `unavailable / watch / caution` 상태일 때는
   왜 그 상태가 떴는지와
   무엇을 바꾸면 되는지를 한국어 안내문으로 바로 붙여서,
