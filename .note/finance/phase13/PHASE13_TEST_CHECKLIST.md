@@ -91,6 +91,10 @@
   - `Validation`, `Benchmark Policy`, `Liquidity Policy`, `Validation Policy`, `Portfolio Guardrail Policy`, `ETF Operability`, `Price Freshness`의 화면 위치가 보이는지
   - `Watch / Caution / Unavailable / Error`가 각각 무엇을 뜻하는지 한 줄 설명이 보이는지
   - `Hold 해결 가이드`에서 보이는 표와 Guides 설명이 서로 연결되어 읽히는지
+  - `Hold 해결 가이드`가 실제로는
+    `Backtest 결과 > Real-Money > 현재 판단 > 전략 승격 판단`
+    에서 `Promotion Decision = hold`일 때만 보인다는 설명이 있는지
+  - `Strategy Highlights`가 compare 전용 surface이고 single run의 `Real-Money` 탭과 다른 위치라는 설명이 있는지
 
 ## 6. Probation And Monitoring Workflow
 
@@ -107,6 +111,7 @@
   - `hold`면 보통 `not_ready / blocked`
   - `paper_probation`이면 `paper_tracking`
   - `small_capital_trial`이면 `small_capital_live_trial`
+  - glossary에서 `Probation`, `Probation Review`, `Monitoring`, `Monitoring Review`, `Monitoring Focus`, `Monitoring Breach Signals`를 다시 찾을 수 있는지
 
 ## 7. Rolling / Out-Of-Sample Review
 
@@ -123,6 +128,7 @@
   - `Excess Change`
 - 기대:
   - `normal / watch / caution / unavailable` 상태가 label과 함께 읽히는지
+  - glossary에서 `Rolling Review`, `Out-of-Sample Review`, `Recent Excess`, `Recent DD Gap`, `In-Sample Excess`, `Out-Sample Excess`, `Excess Change` 설명을 다시 찾을 수 있는지
 
 ## 8. Deployment-Readiness Checklist
 
@@ -134,10 +140,12 @@
   - `Pass / Watch / Fail / Unavailable`
   - `Checklist 상세 보기` expander 안의 checklist row table
   - rationale가 보이는지
+  - glossary에서 `Deployment Readiness`, `Deployment Checklist Status Count` 설명을 다시 찾을 수 있는지
 
 ## 9. Compare & Portfolio Builder Surface
 
 - strict annual 1개 + ETF 1개 이상 선택
+- `Compare 결과 > Strategy Comparison > Strategy Highlights`
 - 확인:
   - `Strategy Highlights`에
     - `Shortlist`
@@ -147,6 +155,7 @@
     - `Rolling Review`
     - `OOS Review`
     가 보이는지
+  - 이 표면이 compare 전용 요약이고 single run의 `Real-Money` 탭과는 다른 역할이라는 설명이 읽히는지
   - focused strategy의 `Real-Money Contract`에도 같은 정보가 보이는지
 
 ## 10. Compare Meta Table

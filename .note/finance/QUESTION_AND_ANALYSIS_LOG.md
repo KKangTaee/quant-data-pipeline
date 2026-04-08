@@ -7494,3 +7494,21 @@ Do not copy full chat transcripts. Keep only the durable result.
   - updated `AGENTS.md` so materially user-facing changes must review and update `README.md`
 - Durable implication:
   - project overview drift should now be caught as part of normal implementation review rather than only after the README falls behind
+
+### 2026-04-09 - Phase 13 QA 피드백에 맞춰 Guides와 glossary 설명을 더 보강했다
+
+- Request topic:
+  - the user felt the current Guide explanations were still too weak around:
+    - what `Watch / Caution / Unavailable / Error` concretely mean
+    - where `Hold 해결 가이드` actually appears
+    - how to interpret `Probation / Monitoring`, `Rolling / Out-of-Sample Review`, `Deployment Readiness`, and `Strategy Highlights`
+- Interpreted goal:
+  - make the product explain not just labels, but also source location, common cause, and practical meaning so QA can continue without guesswork
+- Result:
+  - expanded the `상태가 뜻하는 바` section in `Guides` into a richer status table with meaning, common cause, and first action
+  - added explicit path explanations for `Hold 해결 가이드` and compare-only `Strategy Highlights`
+  - clarified the compare `Strategy Highlights` caption inside the product
+  - added missing glossary entries for probation/monitoring/review/deployment surface terms and deployment checklist counts
+  - updated the Phase 13 checklist to test these exact paths and glossary links
+- Durable implication:
+  - the operator-facing explanation layer is now much closer to the actual screen structure, reducing the gap between checklist language and runtime UI

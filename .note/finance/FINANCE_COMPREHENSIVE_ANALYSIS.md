@@ -129,6 +129,10 @@ Analysis / Presentation
   - 상태가 실제로 어디에 보이는지
   - `Watch / Caution / Unavailable / Error`가 각각 무엇을 뜻하는지
   까지 같이 설명해, 실제 결과 탭과 가이드 문서 사이의 연결을 더 직접적으로 만들었다.
+  최근 보강으로는
+  - `Hold 해결 가이드`가 정확히 어디에 나타나는지
+  - `Probation / Monitoring`, `최근 구간 / Out-of-Sample Review`, `Deployment Readiness`, `Strategy Highlights`가 각각 어떤 화면 surface인지
+  까지 `Guides`에서 바로 확인할 수 있게 정리됐다.
   같은 `Reference` 그룹 안의 `Glossary` 페이지는
   `.note/finance/FINANCE_TERM_GLOSSARY.md`를 그대로 source로 사용하면서,
   제목/본문 검색이 가능한 operator-facing 용어 사전 UI를 제공한다.

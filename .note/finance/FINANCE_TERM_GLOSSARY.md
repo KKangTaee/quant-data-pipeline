@@ -724,3 +724,339 @@ paper tracking 대상인지,
   - `Deployment Readiness`
   - `Rolling Review`
   를 한 곳에서 같이 확인할 수 있다.
+
+---
+
+## Watch
+
+### 기본 설명
+오류나 강한 실패는 아니지만, 추가 검토가 권장되는 경계 상태다.
+
+### 왜 사용되는지
+전략을 너무 일찍 보류하지 않으면서도,
+지금 단계에서 더 보수적으로 읽어야 하는 신호를 구분하기 위해서다.
+
+### 예시 / 필요 상황
+- 최근 구간 성과가 조금 흔들리는 경우
+- liquidity나 validation 지표가 기준선 근처에서 약한 경우
+
+---
+
+## Caution
+
+### 기본 설명
+현재 승격 판단을 직접 막고 있는 강한 경고 상태다.
+
+### 왜 사용되는지
+단순 주의 신호와, 실제로 승격/배치를 멈춰야 하는 상태를 분리해야 하기 때문이다.
+
+### 예시 / 필요 상황
+- `Validation = caution`
+- `Liquidity Policy = caution`
+- `Portfolio Guardrail Policy = caution`
+
+---
+
+## Unavailable
+
+### 기본 설명
+판단에 필요한 데이터나 계약이 부족해서 상태를 확정할 수 없는 상태다.
+
+### 왜 사용되는지
+실패와 데이터 부족은 원인이 다르기 때문에,
+무조건 나쁜 전략으로 해석하지 않고 먼저 근거를 채우도록 하기 위해서다.
+
+### 예시 / 필요 상황
+- benchmark가 연결되지 않음
+- liquidity filter가 꺼져 있음
+- aligned history가 부족함
+
+---
+
+## Error
+
+### 기본 설명
+데이터 또는 계산 오류 때문에 현재 결과를 신뢰하기 어려운 상태다.
+
+### 왜 사용되는지
+단순 성능 문제와 달리,
+오류 상태는 먼저 데이터/계산 문제를 해결해야 하기 때문이다.
+
+### 예시 / 필요 상황
+- `Price Freshness = error`
+- 계산에 필요한 series가 비어 있음
+- refresh 없이 오래된 가격을 사용함
+
+---
+
+## Hold 해결 가이드
+
+### 기본 설명
+`Promotion Decision = hold`일 때, 지금 막히는 항목과 바로 해볼 일을 표로 안내하는 결과 섹션이다.
+
+### 왜 사용되는지
+`hold`라는 결과만 보면 사용자가 “그래서 무엇을 수정해야 하지?”에서 멈추기 쉽기 때문이다.
+
+### 예시 / 필요 상황
+- 위치:
+  - `Backtest 결과 > Real-Money > 현재 판단 > 전략 승격 판단`
+- 이 표에서는 보통
+  - `항목`
+  - `현재 상태`
+  - `상태를 보는 위치`
+  - `이 상태의 뜻`
+  - `바로 해볼 일`
+  을 같이 본다.
+
+---
+
+## Probation
+
+### 기본 설명
+실제 자금 투입 전, 전략을 일정 기간 관찰하고 검증하는 운영 단계다.
+
+### 왜 사용되는지
+좋아 보이는 전략도 바로 live로 올리기보다,
+paper tracking이나 소액 trial을 거쳐 검증하는 편이 현실적이기 때문이다.
+
+### 예시 / 필요 상황
+- `not_ready`
+- `watchlist_review`
+- `paper_tracking`
+- `small_capital_live_trial`
+
+---
+
+## Probation Review
+
+### 기본 설명
+probation 상태를 어떤 주기로 다시 점검할지 보여주는 review 주기다.
+
+### 왜 사용되는지
+관찰 단계는 방치가 아니라 정해진 cadence로 review해야 의미가 있기 때문이다.
+
+### 예시 / 필요 상황
+- `monthly`
+- `biweekly`
+- `quarterly`
+
+---
+
+## Monitoring
+
+### 기본 설명
+probation 중인 전략을 어떤 강도로 모니터링해야 하는지 보여주는 상태다.
+
+### 왜 사용되는지
+같은 probation 전략이라도 routine review면 충분한지,
+아니면 더 강한 경고 감시가 필요한지 구분해야 하기 때문이다.
+
+### 예시 / 필요 상황
+- `routine_review`
+- `heightened_review`
+- `breach_watch`
+- `blocked`
+
+---
+
+## Monitoring Review
+
+### 기본 설명
+monitoring 상태를 어떤 주기로 확인해야 하는지 보여주는 review cadence다.
+
+### 왜 사용되는지
+monitoring 강도가 높을수록 더 자주 확인해야 할 수 있기 때문이다.
+
+### 예시 / 필요 상황
+- `monthly`
+- `biweekly`
+- `weekly`
+
+---
+
+## Monitoring Focus
+
+### 기본 설명
+현재 전략을 모니터링할 때 특히 유심히 봐야 하는 핵심 항목 목록이다.
+
+### 왜 사용되는지
+모든 지표를 같은 강도로 보는 대신,
+지금 가장 취약한 부분을 집중적으로 추적하기 위해서다.
+
+### 예시 / 필요 상황
+- `validation`
+- `liquidity`
+- `drawdown_gap`
+- `benchmark_relative_consistency`
+
+---
+
+## Monitoring Breach Signals
+
+### 기본 설명
+probation 중 “이 조건이 다시 깨지면 더 보수적으로 봐야 한다”는 경고 신호 목록이다.
+
+### 왜 사용되는지
+실전 관찰 단계에서는 어떤 신호가 재발하면 비중 확대를 멈출지 미리 정해두는 편이 안전하기 때문이다.
+
+### 예시 / 필요 상황
+- rolling underperformance 재악화
+- drawdown gap 확대
+- liquidity clean coverage 급락
+
+---
+
+## Rolling Review
+
+### 기본 설명
+최근 일정 구간에서 benchmark 대비 consistency가 어떤지 따로 보는 검토다.
+
+### 왜 사용되는지
+전체 기간 성과만 좋고 최근 구간은 무너지는 전략을 걸러내기 위해서다.
+
+### 예시 / 필요 상황
+- 최근 12개월 excess return
+- 최근 구간 drawdown gap
+- `normal / watch / caution / unavailable`
+
+---
+
+## Out-of-Sample Review
+
+### 기본 설명
+전후반 구간을 나눠서 성과가 특정 시기 우연에 크게 의존하지 않았는지 보는 검토다.
+
+### 왜 사용되는지
+한 구간에서만 좋았던 전략을 더 보수적으로 해석하기 위해서다.
+
+### 예시 / 필요 상황
+- `In-Sample Excess`
+- `Out-Sample Excess`
+- `Excess Change`
+
+---
+
+## Recent Excess
+
+### 기본 설명
+최근 rolling review 구간에서 benchmark 대비 얼마나 초과 수익이 났는지를 뜻한다.
+
+### 왜 사용되는지
+최근 구간 robustness를 빠르게 읽기 위한 핵심 지표 중 하나이기 때문이다.
+
+### 예시 / 필요 상황
+- 값이 음수면 최근 구간에서 benchmark보다 뒤처졌다는 뜻이다.
+
+---
+
+## Recent DD Gap
+
+### 기본 설명
+최근 rolling review 구간에서 전략 drawdown이 benchmark보다 얼마나 더 깊었는지 보여주는 값이다.
+
+### 왜 사용되는지
+최근 구간 downside behavior가 benchmark보다 악화됐는지 빠르게 보려면 필요하기 때문이다.
+
+### 예시 / 필요 상황
+- 값이 크게 음수면 최근 구간에서 benchmark보다 더 큰 낙폭을 겪었다는 뜻이다.
+
+---
+
+## In-Sample Excess
+
+### 기본 설명
+전반부 구간에서 benchmark 대비 초과 성과가 얼마나 났는지 보여주는 값이다.
+
+### 왜 사용되는지
+후반부 구간과 비교해 성과 안정성을 보기 위해서다.
+
+### 예시 / 필요 상황
+- 전반부는 매우 좋고 후반부는 급격히 나빠졌다면 OOS 해석이 더 보수적일 수 있다.
+
+---
+
+## Out-Sample Excess
+
+### 기본 설명
+후반부 구간에서 benchmark 대비 초과 성과가 얼마나 났는지 보여주는 값이다.
+
+### 왜 사용되는지
+최근에 가까운 구간에서도 전략 강점이 유지됐는지 확인하기 위해서다.
+
+### 예시 / 필요 상황
+- 후반부 excess가 급격히 악화되면 OOS review가 `watch` 또는 `caution`으로 읽힐 수 있다.
+
+---
+
+## Excess Change
+
+### 기본 설명
+전반부 excess와 후반부 excess의 차이를 뜻한다.
+
+### 왜 사용되는지
+성과 체질이 얼마나 달라졌는지 한 값으로 빠르게 읽을 수 있기 때문이다.
+
+### 예시 / 필요 상황
+- 값이 크게 나쁘면 과거에는 좋았지만 최근에는 강점이 약해졌을 가능성이 있다.
+
+---
+
+## Deployment Readiness
+
+### 기본 설명
+실제 배치 직전 checklist를 요약해, 지금 배치를 열 수 있는지 보여주는 운영 상태다.
+
+### 왜 사용되는지
+`Promotion`과 `Shortlist`는 후보 평가에 가깝고,
+`Deployment Readiness`는 실제 운영 직전 상태를 더 직접적으로 보기 위해서다.
+
+### 예시 / 필요 상황
+- `blocked`
+- `review_required`
+- `watchlist_only`
+- `paper_only`
+- `small_capital_ready`
+
+---
+
+## Deployment Checklist Status Count
+
+### 기본 설명
+deployment checklist 안에서 `Pass / Watch / Fail / Unavailable`가 각각 몇 개인지 세어 보여주는 요약이다.
+
+### 왜 사용되는지
+한 항목씩 다 읽기 전에,
+현재 배치 준비 상태가 전체적으로 어느 정도인지 빠르게 스캔할 수 있기 때문이다.
+
+### 예시 / 필요 상황
+- `Pass`
+  - 기준을 무난하게 충족한 항목 수
+- `Watch`
+  - 배치는 가능할 수 있지만 더 보수적으로 봐야 하는 항목 수
+- `Fail`
+  - 현재 배치를 직접 막는 항목 수
+- `Unavailable`
+  - 판단 근거가 부족한 항목 수
+
+---
+
+## Strategy Highlights
+
+### 기본 설명
+compare 결과에서 여러 전략의 핵심 상태를 한 번에 훑기 위한 compare 전용 요약 표면이다.
+
+### 왜 사용되는지
+single run의 `Real-Money` 탭은 한 전략을 깊게 읽는 용도이고,
+compare에서는 여러 전략을 빠르게 스캔하는 표면이 따로 필요하기 때문이다.
+
+### 예시 / 필요 상황
+- 위치:
+  - `Compare 결과 > Strategy Comparison > Strategy Highlights`
+- 여기서는 보통
+  - `Shortlist`
+  - `Probation`
+  - `Monitoring`
+  - `Deployment`
+  - `Rolling Review`
+  - `OOS Review`
+  같은 상태를 전략별로 한 줄씩 비교한다.

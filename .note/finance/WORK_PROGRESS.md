@@ -4585,3 +4585,17 @@ Keep entries append-only and concise.
   - updated `AGENTS.md` so future work that changes the top-level product surface or startup/navigation flow must also review and update `README.md`
 - Practical result:
   - the Git landing page now explains the project coherently, and README maintenance is now part of the durable workflow guidance
+
+### 2026-04-09 - Guides와 glossary를 Phase 13 QA 피드백 기준으로 더 보강함
+
+- The user needed clearer guidance on:
+  - what `Watch / Caution / Unavailable / Error` actually mean
+  - where `Hold 해결 가이드` really lives
+  - how to interpret `Probation / Monitoring`, `Rolling / Out-of-Sample Review`, `Deployment Readiness`, and `Strategy Highlights`
+- Updated:
+  - `Guides > 실전 승격 흐름 빠른 설명` now includes richer status meaning rows plus explicit source paths for `Hold 해결 가이드` and compare-only `Strategy Highlights`
+  - compare `Strategy Highlights` tab caption was clarified so users do not confuse it with single-run `Real-Money`
+  - glossary now includes the missing operator-facing terms for probation, monitoring, rolling/OOS review, deployment checklist counts, and compare highlights
+  - Phase 13 checklist and finance analysis doc were synced to the new UX wording
+- Practical result:
+  - users can now move from checklist -> guide -> actual result surface with much less ambiguity

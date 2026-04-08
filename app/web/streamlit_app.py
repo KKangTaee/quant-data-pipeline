@@ -2527,14 +2527,107 @@ def _render_guides_page() -> None:
 
             with st.container(border=True):
                 st.markdown("#### 상태가 뜻하는 바")
-                status_cols = st.columns(4, gap="small")
-                status_cols[0].metric("Watch", "추가 검토 권장")
-                status_cols[1].metric("Caution", "승격을 강하게 막는 경고")
-                status_cols[2].metric("Unavailable", "판단 데이터/계약 부족")
-                status_cols[3].metric("Error", "데이터/계산 오류")
                 st.caption(
-                    "`Hold 해결 가이드` 표에서는 각 항목마다 `현재 상태`, `상태를 보는 위치`, `이 상태의 뜻`, `바로 해볼 일`을 같이 보여줍니다."
+                    "아래 상태는 주로 `Validation`, `Benchmark Policy`, `Liquidity Policy`, "
+                    "`Validation Policy`, `Portfolio Guardrail Policy`, `ETF Operability`, `Price Freshness` 같은 항목에서 보입니다."
                 )
+                status_rows = pd.DataFrame(
+                    [
+                        {
+                            "상태": "Watch",
+                            "이 상태의 의미": "지금 바로 승격을 막는다고 단정하긴 어렵지만, 추가 검토가 권장되는 상태입니다.",
+                            "자주 나오는 경우": "최근 구간이 조금 흔들리거나, 일부 policy 지표가 기준선 근처에서 약한 경우",
+                            "먼저 해볼 일": "해당 섹션의 실제 값과 rationale을 먼저 확인하고, benchmark/기간/계약이 자연스러운지 다시 봅니다.",
+                        },
+                        {
+                            "상태": "Caution",
+                            "이 상태의 의미": "현재 승격 판단을 직접 막고 있는 강한 경고 상태입니다.",
+                            "자주 나오는 경우": "underperformance share가 높거나, liquidity clean coverage가 낮거나, drawdown gap이 큰 경우",
+                            "먼저 해볼 일": "해당 항목의 threshold와 actual 값을 비교해 보고, universe/benchmark/guardrail/유동성 계약을 먼저 재검토합니다.",
+                        },
+                        {
+                            "상태": "Unavailable",
+                            "이 상태의 의미": "판단에 필요한 데이터나 계약이 부족해서 지금은 해석 자체를 확정하기 어려운 상태입니다.",
+                            "자주 나오는 경우": "benchmark가 없거나, 유동성 필터가 꺼져 있거나, aligned history가 부족한 경우",
+                            "먼저 해볼 일": "benchmark 연결, liquidity filter, profile/coverage 데이터처럼 판단 근거를 먼저 채웁니다.",
+                        },
+                        {
+                            "상태": "Warning",
+                            "이 상태의 의미": "오류는 아니지만 보수적으로 읽어야 하는 경고 상태입니다.",
+                            "자주 나오는 경우": "price freshness가 조금 늦거나, 부분적인 품질 신호가 약한 경우",
+                            "먼저 해볼 일": "관련 최신성/품질 값을 먼저 확인한 뒤, 바로 승격보다 재실행 또는 추가 review를 우선합니다.",
+                        },
+                        {
+                            "상태": "Error",
+                            "이 상태의 의미": "데이터 또는 계산 오류라서 현재 결과를 신뢰하기 어렵다는 뜻입니다.",
+                            "자주 나오는 경우": "freshness 오류, 계산 실패, 필요한 series 부재 같은 경우",
+                            "먼저 해볼 일": "데이터 refresh나 실패 원인 해결을 먼저 하고, 그 다음 다시 백테스트합니다.",
+                        },
+                    ]
+                )
+                st.dataframe(status_rows, use_container_width=True, hide_index=True)
+                st.info(
+                    "`Hold 해결 가이드`는 별도 탭이 아니라, "
+                    "`Backtest 결과 > Real-Money > 현재 판단 > 전략 승격 판단` 안에서 "
+                    "`Promotion Decision = hold`일 때만 함께 보이는 표입니다."
+                )
+
+            with st.container(border=True):
+                st.markdown("#### 결과 surface는 어디에 있나")
+                st.caption("아래 항목들은 이름이 비슷해 보여도 서로 다른 위치와 역할을 가집니다.")
+                st.markdown(
+                    """
+                    - `Hold 해결 가이드`: `Backtest 결과 > Real-Money > 현재 판단 > 전략 승격 판단`
+                      `Promotion Decision = hold`일 때만 나타나며, 지금 막는 항목과 바로 해볼 일을 보여줍니다.
+                    - `Probation / Monitoring`: `Backtest 결과 > Real-Money > 현재 판단 > Probation / Monitoring`
+                      shortlist 이후의 관찰/점검 단계를 보여줍니다.
+                    - `최근 구간 / Out-of-Sample Review`: `Backtest 결과 > Real-Money > 검토 근거 > 최근 구간 / Out-of-Sample Review`
+                      최근 구간 consistency와 전후반 구간 robustness를 따로 봅니다.
+                    - `Deployment Readiness`: `Backtest 결과 > Real-Money > 현재 판단 > Deployment Readiness`
+                      실제 배치 직전 checklist 결과를 요약합니다.
+                    - `Strategy Highlights`: `Compare 결과 > Strategy Comparison > Strategy Highlights`
+                      compare 전용 요약 표면이며, single run의 `Real-Money` 탭과는 다른 위치입니다.
+                    """
+                )
+
+            with st.container(border=True):
+                st.markdown("#### 운영 해석 용어 빠른 연결")
+                st.caption("Phase 13 체크리스트에서 자주 보는 용어를 어디서 읽고 어떻게 해석할지 먼저 연결해 둡니다.")
+                ops_rows = pd.DataFrame(
+                    [
+                        {
+                            "항목": "Probation",
+                            "어디에 보이나": "Real-Money > 현재 판단 > Probation / Monitoring",
+                            "짧은 해석": "paper tracking 또는 소액 trial 전 관찰 단계",
+                        },
+                        {
+                            "항목": "Monitoring",
+                            "어디에 보이나": "Real-Money > 현재 판단 > Probation / Monitoring",
+                            "짧은 해석": "지금 review 강도가 routine인지, heightened인지, breach watch인지 보여줌",
+                        },
+                        {
+                            "항목": "Rolling Review",
+                            "어디에 보이나": "Real-Money > 검토 근거 > 최근 구간 / Out-of-Sample Review",
+                            "짧은 해석": "최근 구간에서 benchmark 대비 consistency가 어떤지 보여줌",
+                        },
+                        {
+                            "항목": "Out-of-Sample Review",
+                            "어디에 보이나": "Real-Money > 검토 근거 > 최근 구간 / Out-of-Sample Review",
+                            "짧은 해석": "전후반 구간의 상대 성과가 크게 무너지지 않았는지 봄",
+                        },
+                        {
+                            "항목": "Deployment Readiness",
+                            "어디에 보이나": "Real-Money > 현재 판단 > Deployment Readiness",
+                            "짧은 해석": "실제 배치 직전 checklist를 pass/watch/fail/unavailable 개수로 요약함",
+                        },
+                        {
+                            "항목": "Strategy Highlights",
+                            "어디에 보이나": "Compare 결과 > Strategy Comparison > Strategy Highlights",
+                            "짧은 해석": "여러 전략을 한 번에 훑는 compare 전용 요약 표면",
+                        },
+                    ]
+                )
+                st.dataframe(ops_rows, use_container_width=True, hide_index=True)
 
     st.markdown("### 지금 먼저 보면 좋은 문서")
     st.markdown(

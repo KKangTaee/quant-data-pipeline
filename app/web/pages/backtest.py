@@ -4099,7 +4099,11 @@ def _render_compare_results() -> None:
         st.caption("This view helps compare period-by-period aggressiveness and recovery, not just end balance. End markers show the current total-return position of each strategy.")
 
     with highlights_tab:
-        st.caption("This table is a compact compare-level summary of each strategy's high / low / end state plus best / worst period.")
+        st.caption(
+            "이 표는 compare 전용 요약 surface입니다. "
+            "single run의 `Real-Money` 탭과 같은 것이 아니라, 여러 전략의 high / low / end state와 best / worst period를 한 번에 훑기 위한 표입니다. "
+            "한 전략을 더 자세히 보려면 `Focused Strategy` 안의 `Real-Money Contract`로 내려가면 됩니다."
+        )
         st.dataframe(highlight_df, use_container_width=True, hide_index=True)
 
     with focus_tab:
