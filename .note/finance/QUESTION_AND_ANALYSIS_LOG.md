@@ -7533,3 +7533,21 @@ Do not copy full chat transcripts. Keep only the durable result.
   - updated Phase 13 checklist, finance analysis doc, and README wording to reference the new stepwise guide
 - Durable implication:
   - `Guides` is now not only a glossary/interpretation surface but also a lightweight in-product operator runbook
+
+### 2026-04-09 - Phase 14 kickoff 준비와 보류 논의 재등록
+
+- Request topic:
+  - the user wanted to finish Phase 13 and prepare the project for Phase 14, while checking whether the previously deferred discussion was still remembered
+- Interpreted goal:
+  - open the next phase explicitly and anchor it around the deferred real-money gate calibration discussion instead of letting that concern remain only in chat
+- Result:
+  - confirmed the deferred topic:
+    - repeated `promotion / shortlist` non-pass outcomes and whether the current real-money gate is too conservative
+  - created Phase 14 planning documents focused on:
+    - gate blocker distribution audit
+    - promotion / shortlist calibration review
+    - deployment workflow bridge
+    - ETF PIT operability later-pass planning
+  - updated roadmap, doc index, and top-level overview status to reflect Phase 14 kickoff
+- Durable implication:
+  - Phase 14 should now be read as the point where the project shifts from building interpretation surfaces to calibrating them and connecting them to actual operator workflow

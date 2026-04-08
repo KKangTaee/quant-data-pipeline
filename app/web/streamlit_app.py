@@ -2337,7 +2337,7 @@ def _render_overview_page() -> None:
     recent_results = st.session_state.get("recent_results") or []
 
     col1, col2, col3 = st.columns(3)
-    col1.metric("현재 상태", "Phase 12 Closeout")
+    col1.metric("현재 상태", "Phase 14 Kickoff")
     col2.metric("Recent Results", len(recent_results))
     col3.metric("Git SHA", CURRENT_GIT_SHORT_SHA or "unknown")
 

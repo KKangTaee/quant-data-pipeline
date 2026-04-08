@@ -4617,3 +4617,18 @@ Keep entries append-only and concise.
   - synced Phase 13 checklist, finance analysis doc, and README wording to the new guide
 - Practical result:
   - users now have a single in-product path for "what do we do next?" from first refresh to paper probation / small-capital-trial interpretation
+
+### 2026-04-09 - Phase 14 준비 문서를 열고 현재 상태를 갱신함
+
+- The user wanted to close Phase 13 and prepare for Phase 14, while explicitly revisiting the previously deferred discussion about real-money gate calibration.
+- Updated:
+  - created Phase 14 plan doc:
+    - `.note/finance/phase14/PHASE14_REAL_MONEY_GATE_CALIBRATION_AND_DEPLOYMENT_WORKFLOW_PLAN.md`
+  - created Phase 14 TODO board:
+    - `.note/finance/phase14/PHASE14_CURRENT_CHAPTER_TODO.md`
+  - updated:
+    - `.note/finance/MASTER_PHASE_ROADMAP.md`
+    - `.note/finance/FINANCE_DOC_INDEX.md`
+    - `app/web/streamlit_app.py` overview status metric
+- Practical result:
+  - Phase 14 is now opened as a real-money gate calibration and deployment-workflow-bridge phase instead of leaving the next direction implicit
