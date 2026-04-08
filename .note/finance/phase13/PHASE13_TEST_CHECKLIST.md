@@ -96,6 +96,22 @@
     에서 `Promotion Decision = hold`일 때만 보인다는 설명이 있는지
   - `Strategy Highlights`가 compare 전용 surface이고 single run의 `Real-Money` 탭과 다른 위치라는 설명이 있는지
 
+## 5-2. Guides 프로그램 사용 흐름 가이드
+
+- `Guides > 테스트에서 상용화 후보 검토까지 사용하는 흐름`
+- 확인:
+  - `1단계 ~ 8단계` 형태로 흐름이 순서대로 보이는지
+  - `Ingestion -> Single Strategy -> Real-Money -> Hold 해결 -> Compare -> History -> Probation -> 상용화 후보 판단`
+    순서가 자연스럽게 이어지는지
+  - 각 단계마다
+    - `위치`
+    - `무엇을 하는 단계인가`
+    - `이 단계에서 볼 것`
+    - `다음 단계`
+    가 같이 보이는지
+  - “상용화”가 곧바로 full live가 아니라
+    `paper probation -> small capital trial` 중심의 보수적 흐름이라는 설명이 있는지
+
 ## 6. Probation And Monitoring Workflow
 
 - single `Real-Money > 현재 판단`

@@ -133,6 +133,16 @@ Analysis / Presentation
   - `Hold 해결 가이드`가 정확히 어디에 나타나는지
   - `Probation / Monitoring`, `최근 구간 / Out-of-Sample Review`, `Deployment Readiness`, `Strategy Highlights`가 각각 어떤 화면 surface인지
   까지 `Guides`에서 바로 확인할 수 있게 정리됐다.
+  이어서 `Guides`에는
+  - 데이터 최신화
+  - single strategy 확인
+  - real-money 해석
+  - hold blocker 해결
+  - compare
+  - history / backtest report 정리
+  - probation / monitoring
+  - 소액 trial 직전 판단
+  까지를 `1단계 ~ 8단계` 형태로 읽는 operator runbook도 추가됐다.
   같은 `Reference` 그룹 안의 `Glossary` 페이지는
   `.note/finance/FINANCE_TERM_GLOSSARY.md`를 그대로 source로 사용하면서,
   제목/본문 검색이 가능한 operator-facing 용어 사전 UI를 제공한다.

@@ -7512,3 +7512,24 @@ Do not copy full chat transcripts. Keep only the durable result.
   - updated the Phase 13 checklist to test these exact paths and glossary links
 - Durable implication:
   - the operator-facing explanation layer is now much closer to the actual screen structure, reducing the gap between checklist language and runtime UI
+
+### 2026-04-09 - Guides에 단계형 프로그램 사용 가이드를 추가했다
+
+- Request topic:
+  - the user wanted a practical step-by-step guide inside `Guides` explaining how the program should be used from testing toward commercialization-ready candidate review
+- Interpreted goal:
+  - move beyond term explanation and provide an operator runbook that answers "what do we do first, next, and last?"
+- Result:
+  - added a numbered `1단계 ~ 8단계` guide to `Guides`
+  - the flow now explicitly covers:
+    - refresh
+    - single backtest
+    - real-money interpretation
+    - hold resolution
+    - compare
+    - history/reporting
+    - probation/monitoring
+    - final commercialization-candidate judgment
+  - updated Phase 13 checklist, finance analysis doc, and README wording to reference the new stepwise guide
+- Durable implication:
+  - `Guides` is now not only a glossary/interpretation surface but also a lightweight in-product operator runbook

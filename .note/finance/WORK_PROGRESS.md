@@ -4599,3 +4599,21 @@ Keep entries append-only and concise.
   - Phase 13 checklist and finance analysis doc were synced to the new UX wording
 - Practical result:
   - users can now move from checklist -> guide -> actual result surface with much less ambiguity
+
+### 2026-04-09 - Guides에 단계형 프로그램 사용 가이드를 추가함
+
+- The user wanted a more practical "how to use this program for testing and commercialization review" guide in `Guides`, written as a numbered step flow.
+- Updated:
+  - added a new step-by-step operator runbook to `Guides`
+  - the flow now covers:
+    - ingestion refresh
+    - single strategy baseline
+    - real-money interpretation
+    - hold blocker resolution
+    - compare
+    - history / backtest report handoff
+    - probation / monitoring
+    - final commercialization-candidate judgment
+  - synced Phase 13 checklist, finance analysis doc, and README wording to the new guide
+- Practical result:
+  - users now have a single in-product path for "what do we do next?" from first refresh to paper probation / small-capital-trial interpretation

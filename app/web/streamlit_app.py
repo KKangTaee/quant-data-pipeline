@@ -2629,6 +2629,118 @@ def _render_guides_page() -> None:
                 )
                 st.dataframe(ops_rows, use_container_width=True, hide_index=True)
 
+    with st.container(border=True):
+        st.markdown("### 테스트에서 상용화 후보 검토까지 사용하는 흐름")
+        st.caption(
+            "이 프로그램은 단순 백테스트 숫자 확인을 넘어서, "
+            "실전 후보를 어떻게 좁히고 어떤 단계에서 멈춰야 하는지까지 읽는 데 초점을 둡니다."
+        )
+        st.warning(
+            "여기서 말하는 `상용화`는 곧바로 큰 자금을 live로 넣는다는 뜻이 아니라, "
+            "`실전 후보 검토 -> paper probation -> 소액 trial`까지 이어지는 운영 흐름을 말합니다."
+        )
+
+        step_rows = [
+            {
+                "title": "1단계. 데이터 최신화부터 시작",
+                "path": "Ingestion",
+                "goal": "가격, 재무제표, factor, profile 같은 기본 데이터를 먼저 최신 상태로 맞춥니다.",
+                "check": [
+                    "`Daily Market Update`로 가격 최신화",
+                    "필요하면 statement / factor refresh 실행",
+                    "`Price Freshness`가 warning/error가 아닌지 확인",
+                ],
+                "next_step": "데이터 최신화가 끝나면 single backtest로 전략 하나를 먼저 읽습니다.",
+            },
+            {
+                "title": "2단계. Single Strategy로 전략 하나를 먼저 읽기",
+                "path": "Backtest > Single Strategy",
+                "goal": "전략 하나의 기본 성과, 계약, meta를 먼저 이해합니다.",
+                "check": [
+                    "`Summary`, `Equity Curve`, `Execution Context`를 먼저 확인",
+                    "필요한 universe / factor / overlay / real-money contract를 입력",
+                    "single run 기준으로 숫자와 meta가 자연스러운지 확인",
+                ],
+                "next_step": "single run이 이상 없으면 `Real-Money` 탭으로 내려가 운영 해석을 시작합니다.",
+            },
+            {
+                "title": "3단계. Real-Money에서 운영 해석 시작",
+                "path": "Backtest 결과 > Real-Money",
+                "goal": "이 전략이 지금 hold인지, 후보인지, 배치 직전 상태인지 해석합니다.",
+                "check": [
+                    "`현재 판단`: Promotion / Shortlist / Probation / Deployment 확인",
+                    "`검토 근거`: Validation / Benchmark / Rolling / OOS 확인",
+                    "`실행 부담`: Liquidity / ETF Operability / Guardrail 상태 확인",
+                ],
+                "next_step": "`Promotion != hold`, `Deployment != blocked`가 최소 목표입니다.",
+            },
+            {
+                "title": "4단계. Hold면 먼저 막히는 항목 해결",
+                "path": "Real-Money > 현재 판단 > 전략 승격 판단 > Hold 해결 가이드",
+                "goal": "왜 막혔는지 추측하지 말고, 실제 blocker와 화면 위치를 보고 해결합니다.",
+                "check": [
+                    "`항목 / 현재 상태 / 상태를 보는 위치 / 바로 해볼 일` 확인",
+                    "`caution / unavailable / error` 항목부터 먼저 정리",
+                    "필요하면 `검토 근거`와 `실행 부담`으로 바로 이동해서 실제 값을 비교",
+                ],
+                "next_step": "hold를 벗긴 뒤 다시 실행해서 promotion과 shortlist가 올라가는지 확인합니다.",
+            },
+            {
+                "title": "5단계. Compare로 후보를 서로 비교",
+                "path": "Backtest > Compare & Portfolio Builder",
+                "goal": "여러 전략을 한 번에 놓고 shortlist / deployment 상태를 비교합니다.",
+                "check": [
+                    "`Strategy Highlights`에서 전략별 상태를 한 줄씩 비교",
+                    "`Focused Strategy > Real-Money Contract`로 한 전략씩 깊게 읽기",
+                    "single run에서 괜찮아 보이던 전략이 compare에서도 유지되는지 확인",
+                ],
+                "next_step": "여기서 shortlist 후보를 1~3개 정도로 좁히는 흐름이 자연스럽습니다.",
+            },
+            {
+                "title": "6단계. History와 backtest report로 재현 가능하게 남기기",
+                "path": "Backtest > History / .note/finance/backtest_reports/",
+                "goal": "좋았던 run을 다시 재현할 수 있게 남깁니다.",
+                "check": [
+                    "`Load Into Form`으로 입력값이 잘 복원되는지 확인",
+                    "좋은 후보는 backtest report 문서로 남기기",
+                    "phase 문서와 결과 문서를 혼동하지 않고 정리하기",
+                ],
+                "next_step": "재현 가능한 run만 다음 probation 후보로 넘기는 편이 안전합니다.",
+            },
+            {
+                "title": "7단계. Probation과 Monitoring으로 운영 후보 관리",
+                "path": "Real-Money > 현재 판단 > Probation / Monitoring",
+                "goal": "좋아 보이는 전략을 바로 live로 넣지 않고 paper tracking 또는 소액 trial로 검증합니다.",
+                "check": [
+                    "`Shortlist = watchlist / paper_probation / small_capital_trial` 확인",
+                    "`Monitoring Focus`, `Monitoring Breach Signals` 확인",
+                    "`Rolling Review`, `Out-of-Sample Review`, `Deployment Readiness`가 같이 버티는지 확인",
+                ],
+                "next_step": "여기서도 먼저 `paper probation`을 거치고, 그 다음 `small capital trial`로 가는 편이 기본 흐름입니다.",
+            },
+            {
+                "title": "8단계. 상용화 후보 판단은 마지막에 보수적으로",
+                "path": "Promotion / Shortlist / Deployment Readiness 종합",
+                "goal": "좋은 숫자보다, 실제 운용 후보로 읽어도 되는지를 마지막으로 종합 판단합니다.",
+                "check": [
+                    "`Promotion = real_money_candidate`에 가까운지",
+                    "`Shortlist`가 `paper_probation` 이상인지",
+                    "`Deployment Readiness`가 `blocked`가 아닌지",
+                ],
+                "next_step": "조건이 좋더라도 바로 full live가 아니라, 소액 trial과 정기 review를 붙이는 것이 기본입니다.",
+            },
+        ]
+
+        for row in step_rows:
+            with st.container(border=True):
+                st.markdown(f"#### {row['title']}")
+                st.caption(f"위치: {row['path']}")
+                st.markdown(f"**무엇을 하는 단계인가**  \n{row['goal']}")
+                st.markdown("**이 단계에서 볼 것**")
+                for item in row["check"]:
+                    st.markdown(f"- {item}")
+                st.info(row["next_step"])
+
     st.markdown("### 지금 먼저 보면 좋은 문서")
     st.markdown(
         """

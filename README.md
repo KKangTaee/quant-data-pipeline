@@ -23,7 +23,7 @@ DB-backed market data ingestion, factor generation, and strategy backtesting wor
 - `Ops Review`
   - 최근 실행 결과, persistent history, logs, failure artifact 검토
 - `Guides`
-  - 현재 phase 문서, 체크리스트, 승격 해석 가이드
+  - 현재 phase 문서, 체크리스트, 승격 해석 가이드, 단계형 운영 흐름 안내
 - `Glossary`
   - 퀀트/백테스트/real-money 관련 용어를 검색하며 확인하는 reference 페이지
 
