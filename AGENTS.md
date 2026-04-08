@@ -64,6 +64,13 @@
 - Summarize the durable result, not the full conversation transcript.
 
 ## Documentation Rules
+- Keep the repository root `README.md` aligned with the current top-level product surface and real entry points.
+- When a feature or workflow change materially affects:
+  - what the project does
+  - how the main console is navigated
+  - how the app is started
+  - which user-facing capabilities are now available
+  update `README.md` in the same work unit rather than leaving the summary stale.
 - When a `finance` feature is added, changed, or finalized, update `.note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md`.
 - If the change is narrow and localized, update only the affected sections instead of rewriting the full document.
 - If a change affects package purpose, data flow, DB tables, strategy behavior, or architectural boundaries, reflect that explicitly in the document.
@@ -164,6 +171,7 @@
 - Do not include generated artifacts, run histories, local experiment CSVs, notebook scratch files, or other machine-local outputs unless the user explicitly asks for them.
 
 ## Change Review Checklist
+- Does this change affect the project-level overview, setup flow, or main UI surface described in `README.md`?
 - Does this change affect data source boundaries?
 - Does this change affect DB schema or table meaning?
 - Does this change alter strategy inputs, outputs, or assumptions?

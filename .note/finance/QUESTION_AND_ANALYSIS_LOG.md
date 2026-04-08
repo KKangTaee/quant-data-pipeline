@@ -7476,3 +7476,21 @@ Do not copy full chat transcripts. Keep only the durable result.
   - related overview text, finance analysis doc, doc index, and Phase 13 checklist were updated to reflect the new surface
 - Durable implication:
   - term definitions can keep living in one Markdown file while users browse them inside the product without leaving the app
+
+### 2026-04-08 - 저장소 README와 README 유지 규칙을 추가했다
+
+- Request topic:
+  - the user wanted a Git-visible repository README and also wanted future implementation work to update that README as part of the normal workflow
+- Interpreted goal:
+  - give the repository a clear first-screen explanation for future collaborators while making README maintenance a durable project rule instead of a one-off task
+- Result:
+  - created a root `README.md` covering:
+    - finance-centered scope
+    - current console pages
+    - implemented ingestion / backtest surfaces
+    - project layout
+    - quick-start commands
+    - key finance reference docs
+  - updated `AGENTS.md` so materially user-facing changes must review and update `README.md`
+- Durable implication:
+  - project overview drift should now be caught as part of normal implementation review rather than only after the README falls behind

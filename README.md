@@ -1,0 +1,143 @@
+# Quant Data Pipeline
+
+DB-backed market data ingestion, factor generation, and strategy backtesting workspace for quant research and operator review.
+
+이 저장소의 현재 중심은 `finance` 패키지입니다.  
+주요 목표는 아래 두 가지입니다.
+
+- 데이터 수집과 정규화
+- 전략 백테스트와 실전형 해석
+
+`financial_advisor` 디렉터리는 저장소 안에 남아 있지만, 현재 활성 개발 범위의 중심은 아닙니다.
+
+## 현재 제품 표면
+
+현재 메인 진입점은 Streamlit 기반 `Finance Console`입니다.
+
+- `Overview`
+  - 현재 상태, 최근 실행 결과, 빠른 진입 가이드
+- `Ingestion`
+  - 일별 업데이트, statement refresh, 진단 작업
+- `Backtest`
+  - 단일 전략 실행, compare, history, saved portfolio workflow
+- `Ops Review`
+  - 최근 실행 결과, persistent history, logs, failure artifact 검토
+- `Guides`
+  - 현재 phase 문서, 체크리스트, 승격 해석 가이드
+- `Glossary`
+  - 퀀트/백테스트/real-money 관련 용어를 검색하며 확인하는 reference 페이지
+
+## 현재 구현 범위
+
+### Data / Ingestion
+
+- OHLCV 수집 및 DB 적재
+- fundamentals / financial statements 수집
+- asset profile / ETF 운용 가능성 관련 메타데이터 수집
+- factor 계산 파이프라인
+- 진단 작업
+  - stale price
+  - statement coverage
+  - source payload inspection
+
+### Backtest / Research
+
+- ETF 전략
+  - `Equal Weight`
+  - `GTAA`
+  - `Risk Parity Trend`
+  - `Dual Momentum`
+- Strict annual factor family
+  - `Quality`
+  - `Value`
+  - `Quality + Value`
+- 실전형 해석 surface
+  - `Promotion`
+  - `Shortlist`
+  - `Probation`
+  - `Monitoring`
+  - `Deployment Readiness`
+  - `Validation / Rolling / Out-of-Sample Review`
+
+## 프로젝트 구조
+
+```text
+app/
+  jobs/                  # ingestion jobs, diagnostics, run history
+  web/
+    streamlit_app.py     # Finance Console entry point
+    pages/backtest.py    # Backtest UI
+    runtime/             # UI-facing runtime wrappers
+finance/
+  data/                  # ingestion, DB schema, loaders, factors
+  strategy.py            # strategy simulation logic
+  transform.py           # reusable preprocessing
+  engine.py              # orchestration
+  performance.py         # performance summaries
+.note/finance/
+  FINANCE_COMPREHENSIVE_ANALYSIS.md
+  MASTER_PHASE_ROADMAP.md
+  WORK_PROGRESS.md
+  QUESTION_AND_ANALYSIS_LOG.md
+  FINANCE_TERM_GLOSSARY.md
+  backtest_reports/
+```
+
+## 빠른 시작
+
+### 1. 환경 준비
+
+이 프로젝트는 Python `3.12+` 기준입니다.
+
+```bash
+uv sync
+```
+
+또는 기존 가상환경이 이미 있다면 그대로 사용해도 됩니다.
+
+### 2. 콘솔 실행
+
+```bash
+.venv/bin/streamlit run app/web/streamlit_app.py
+```
+
+앱이 열리면 상단 navigation에서 `Ingestion`, `Backtest`, `Ops Review`, `Guides`, `Glossary`를 이동하며 사용합니다.
+
+## 참고 문서
+
+가장 먼저 보면 좋은 문서는 아래입니다.
+
+- `.note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md`
+  - 현재 finance 구조와 runtime/data/strategy 흐름 종합 문서
+- `.note/finance/MASTER_PHASE_ROADMAP.md`
+  - 전체 phase 흐름과 현재 위치
+- `.note/finance/FINANCE_DOC_INDEX.md`
+  - finance 문서 인덱스
+- `.note/finance/FINANCE_TERM_GLOSSARY.md`
+  - 반복 용어 사전
+- `.note/finance/backtest_reports/BACKTEST_REPORT_INDEX.md`
+  - 결과 중심 백테스트 리포트 인덱스
+
+## 개발 원칙
+
+- Point-in-time correctness를 항상 우선합니다.
+- Look-ahead bias와 survivorship bias를 명시적으로 경계합니다.
+- 전략 추가 시에는 가능하면:
+  - `finance/transform.py`에 전처리
+  - `finance/strategy.py`에 시뮬레이션
+  - `finance/engine.py`에 orchestration
+  구조를 유지합니다.
+- generated artifact, run history, temp CSV, notebook scratch 파일은 기본적으로 커밋하지 않습니다.
+
+## 현재 상태에 대한 메모
+
+이 저장소는 “백테스트가 되는 연구 코드”를 넘어서,  
+실전형 승격과 운영 준비도를 함께 읽는 쪽으로 계속 발전 중입니다.
+
+즉 지금의 핵심은:
+
+- 좋은 전략을 찾는 것
+- 그 전략이 실전형 후보인지 구분하는 것
+- operator가 그 상태를 UI에서 바로 해석할 수 있게 만드는 것
+
+입니다.

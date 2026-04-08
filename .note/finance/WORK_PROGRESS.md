@@ -4576,3 +4576,12 @@ Keep entries append-only and concise.
   - overview text, finance analysis doc, doc index, and Phase 13 checklist were aligned to the new page
 - Practical result:
   - glossary remains single-source as Markdown, while the app now provides a searchable operator-facing reference UI
+
+### 2026-04-08 - 저장소 README와 README 유지 지침을 추가함
+
+- The user wanted a repository-level README that explains the current project surface on GitHub, plus a rule to keep it updated when features or workflows change.
+- Updated:
+  - created a root `README.md` that summarizes the finance-centered scope, current Finance Console pages, implemented ingestion/backtest surfaces, project layout, quick-start commands, and key reference docs
+  - updated `AGENTS.md` so future work that changes the top-level product surface or startup/navigation flow must also review and update `README.md`
+- Practical result:
+  - the Git landing page now explains the project coherently, and README maintenance is now part of the durable workflow guidance
