@@ -7748,3 +7748,15 @@ Do not copy full chat transcripts. Keep only the durable result.
     - ETF family likely needs closer review around operability thresholds and validation watch/caution boundary
 - Durable implication:
   - Phase 14 should continue as a calibration phase, not as a blanket relaxation phase
+
+### 2026-04-10 - Gate Calibration 용어를 glossary에 추가했다
+
+- Request topic:
+  - add `gate calibration` itself to the glossary after clarifying what the Phase 14 workstream means
+- Interpreted goal:
+  - make the core Phase 14 concept discoverable from the UI reference layer instead of leaving it only in chat
+- Result:
+  - added `Gate Calibration` to `.note/finance/FINANCE_TERM_GLOSSARY.md`
+  - defined it as the work of tuning pass/hold thresholds so they are neither universally too strict nor too loose
+- Durable implication:
+  - the app glossary can now explain the Phase 14 core term directly to operators

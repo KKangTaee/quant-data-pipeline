@@ -1277,3 +1277,24 @@ compare에서는 여러 전략을 빠르게 스캔하는 표면이 따로 필요
   - `Rolling Review`
   - `OOS Review`
   같은 상태를 전략별로 한 줄씩 비교한다.
+
+---
+
+## Gate Calibration
+
+### 기본 설명
+전략을 통과시키거나 보류시키는 기준선이 지금 적절한지 다시 맞추는 작업이다.
+
+### 왜 사용되는지
+기준이 너무 빡빡하면 좋은 전략도 계속 `hold`가 되고,
+너무 느슨하면 실전에서 위험한 전략도 통과할 수 있기 때문이다.
+
+### 예시 / 필요 상황
+- `Validation = caution`이 너무 자주 `hold`를 만든다면
+  그 기준이 실제로 적절한지 다시 본다.
+- strict annual과 ETF family에 같은 문턱을 쓰는 게 맞는지도 calibration 대상이 될 수 있다.
+- 예를 들어
+  - `Min Worst Rolling Excess`
+  - `Min ETF AUM`
+  - `Max Drawdown Gap vs Benchmark`
+  같은 threshold를 family별로 다시 보는 작업이 여기에 들어간다.

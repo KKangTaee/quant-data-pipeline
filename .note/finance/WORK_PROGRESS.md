@@ -4729,3 +4729,12 @@ Keep entries append-only and concise.
     - added `Rolling Window`
 - Durable implication:
   - users can now understand the strict robustness thresholds at the point of input without having to infer what `rolling` means
+
+### 2026-04-10 - Gate Calibration 용어를 glossary에 추가함
+
+- The user asked to add `gate calibration` itself as a glossary term after discussing what Phase 14 is actually trying to do.
+- Updated:
+  - `.note/finance/FINANCE_TERM_GLOSSARY.md`
+    - added `Gate Calibration`
+- Durable implication:
+  - `Reference > Glossary` can now explain the core Phase 14 term directly inside the app.
