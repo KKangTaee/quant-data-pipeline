@@ -4652,6 +4652,22 @@ Keep entries append-only and concise.
   - the next Phase 14 workstream should focus on threshold inventory and calibration review, not on widening search space blindly
   - `rolling / out_of_sample` should be read as downstream deployment pressure more than a direct promotion gate because the current `Value` raw winner still reaches `real_money_candidate` with `rolling = watch`, `oos = caution`
 
+### 2026-04-09 - Phase 14 calibration review first pass에서 factor 부족 가설을 분리함
+
+- The user asked whether repeated `hold` outcomes might be happening simply because the current strategy families do not expose enough factors yet, and whether adding more factors plus broader backtests would be the right next move.
+- Updated:
+  - created:
+    - `.note/finance/phase14/PHASE14_PROMOTION_SHORTLIST_CALIBRATION_REVIEW_FIRST_PASS.md`
+  - documented the current threshold inventory that actually drives `promotion / shortlist`
+  - separated two questions:
+    - is the current gate too conservative?
+    - is the current factor surface too narrow?
+  - recorded the first-pass conclusion:
+    - current repeated `hold` is more directly explained by `validation / validation_policy / ETF operability`
+    - factor expansion is still valuable, but should follow calibration as a controlled search workstream
+- Durable implication:
+  - Phase 14 should now treat factor expansion as a later bounded experiment, not as the first lever to pull for every repeated `hold`
+
 ### 2026-04-09 - Phase 14 gate blocker audit first pass와 history gate snapshot persistence를 추가함
 
 - The user wanted to start Phase 14 proper, and the first concrete workstream was the `real-money gate blocker audit`.

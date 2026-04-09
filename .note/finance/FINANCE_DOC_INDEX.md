@@ -221,6 +221,8 @@
   - Phase 14 현재 실행 보드로, gate blocker audit / calibration review / deployment workflow bridge 진행 상태를 관리하는 문서
 - `.note/finance/phase14/PHASE14_GATE_BLOCKER_DISTRIBUTION_AUDIT_FIRST_PASS.md`
   - representative candidate와 current code gate logic을 기준으로 repeated `hold / blocked` blocker를 first-pass로 분류하고, backtest history `gate_snapshot` persistence 필요성을 함께 정리한 문서
+- `.note/finance/phase14/PHASE14_PROMOTION_SHORTLIST_CALIBRATION_REVIEW_FIRST_PASS.md`
+  - current promotion threshold inventory를 정리하고, repeated hold의 1차 원인이 factor 부족인지 gate calibration인지 분리해 본 Phase 14 calibration review first-pass 문서
 - `.note/finance/backtest_reports/phase13/PHASE13_STRICT_ANNUAL_FAMILY_BACKTEST_SUMMARY.md`
   - Phase 13 동안 진행한 `Quality / Value / Quality + Value` strict annual family 백테스트 결과를 family별로 한 장에 요약하고, 가장 강한 후보와 반복된 hold 원인을 빠르게 다시 보기 위한 정리 문서
 - `.note/finance/backtest_reports/phase13/PHASE13_STRICT_ANNUAL_COVERAGE300_500_1000_TARGET_SEARCH.md`

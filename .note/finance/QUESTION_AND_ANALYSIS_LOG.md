@@ -7574,6 +7574,39 @@ Do not copy full chat transcripts. Keep only the durable result.
     - ETF `etf_operability_status`
   - and it should treat `promotion` vs `deployment` as distinct gates rather than one flat pass/fail ladder
 
+### 2026-04-09 - factor 부족이 repeated hold의 원인인지 calibration review에서 분리했다
+
+- Request topic:
+  - continue Phase 14 and assess whether repeated `hold` outcomes might be happening because the current program exposes too few factors, and whether broader factor expansion plus more backtests would be a better next move
+- Interpreted goal:
+  - avoid overfitting the wrong problem by separating:
+    - current gate calibration issues
+    - current strategy search-space limits
+- Result:
+  - reviewed the current strict factor surface and factor storage scope
+  - confirmed current strict UI already exposes:
+    - `Quality` options: `10`
+    - `Value` options: `13`
+  - confirmed current factor storage is broader than the active UI and already contains additional candidates such as:
+    - `interest_coverage`
+    - `ocf_margin`
+    - `fcf_margin`
+    - `gross_profit_growth`
+    - `op_income_growth`
+    - `net_income_growth`
+    - `asset_growth`
+    - `debt_growth`
+    - `fcf_growth`
+    - `shares_growth`
+    - `liquidation_value`
+    - `net_debt_to_equity`
+    - `gpa`
+  - but concluded that factor scarcity is not the first-order explanation for current repeated `hold`, because:
+    - current factor sets already produce `real_money_candidate` and `production_candidate` cases
+    - repeated `hold` aligns much more directly with `validation_status`, `validation_policy_status`, and ETF `etf_operability_status`
+- Durable implication:
+  - factor expansion remains worthwhile, but it should be treated as a later controlled workstream after calibration, not as the first universal fix for repeated `hold`
+
 ### 2026-04-09 - Phase 14 first-pass blocker audit should use representative reports plus richer future history records
 
 - Request topic:
