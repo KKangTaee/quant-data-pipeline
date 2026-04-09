@@ -4633,6 +4633,25 @@ Keep entries append-only and concise.
 - Practical result:
   - Phase 14 is now opened as a real-money gate calibration and deployment-workflow-bridge phase instead of leaving the next direction implicit
 
+### 2026-04-09 - Phase 14 gate blocker audit 문서를 representative rerun evidence 기준으로 보강함
+
+- The existing Phase 14 first-pass audit already identified the high-level blocker families, but we wanted the document to reflect current rerun evidence instead of staying at a mostly report-derived summary.
+- Updated:
+  - re-ran a representative `9`-case set across:
+    - strict annual `Quality / Value / Quality + Value`
+    - ETF family `GTAA / Risk Parity Trend / Dual Momentum`
+  - refreshed the audit doc with concrete outcome counts:
+    - `real_money_candidate = 1`
+    - `production_candidate = 2`
+    - `hold = 6`
+  - tightened the blocker distribution summary:
+    - `validation_caution` dominated strict annual and ETF hold cases
+    - `validation_policy_caution` repeated mainly in strict annual near-miss cases
+    - `etf_operability_caution` concentrated in aggressive ETF candidates
+- Durable implication:
+  - the next Phase 14 workstream should focus on threshold inventory and calibration review, not on widening search space blindly
+  - `rolling / out_of_sample` should be read as downstream deployment pressure more than a direct promotion gate because the current `Value` raw winner still reaches `real_money_candidate` with `rolling = watch`, `oos = caution`
+
 ### 2026-04-09 - Phase 14 gate blocker audit first pass와 history gate snapshot persistence를 추가함
 
 - The user wanted to start Phase 14 proper, and the first concrete workstream was the `real-money gate blocker audit`.

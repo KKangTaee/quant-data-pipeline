@@ -7552,6 +7552,28 @@ Do not copy full chat transcripts. Keep only the durable result.
 - Durable implication:
   - Phase 14 should now be read as the point where the project shifts from building interpretation surfaces to calibrating them and connecting them to actual operator workflow
 
+### 2026-04-09 - Phase 14 representative rerun evidence로 gate blocker 분포를 다시 고정했다
+
+- Request topic:
+  - start Phase 14 proper and proceed with the `real-money gate calibration` workstream, using sub-agents if helpful
+- Interpreted goal:
+  - move from a qualitative Phase 13 impression ("good candidates still become hold") to a first-pass evidence set that shows which blockers actually recur under current code
+- Result:
+  - used the current runtime gate logic plus a representative `9`-case rerun set across strict annual and ETF families
+  - confirmed the first-pass blocker distribution more concretely:
+    - `hold` cases were dominated by `validation_status = caution`
+    - strict annual near-miss cases repeatedly added `validation_policy_status = caution`
+    - ETF aggressive near-miss cases were additionally blocked by `etf_operability_status = caution`
+  - confirmed an important layer split:
+    - `Value` raw winner still reaches `real_money_candidate` even with `rolling = watch` and `out_of_sample = caution`
+    - this means current promotion logic is driven more directly by `validation / validation_policy / benchmark/liquidity/operability` than by rolling/OOS review alone
+- Durable implication:
+  - Phase 14 calibration should focus first on:
+    - `validation_status`
+    - `validation_policy_status`
+    - ETF `etf_operability_status`
+  - and it should treat `promotion` vs `deployment` as distinct gates rather than one flat pass/fail ladder
+
 ### 2026-04-09 - Phase 14 first-pass blocker audit should use representative reports plus richer future history records
 
 - Request topic:

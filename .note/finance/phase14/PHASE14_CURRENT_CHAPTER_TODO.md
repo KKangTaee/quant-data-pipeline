@@ -79,3 +79,8 @@
 - first-pass audit 결과,
   strict annual repeated hold의 핵심 blocker는 `validation / validation_policy`,
   ETF family practical blocker는 `ETF operability + validation 해석` 쪽으로 좁혀졌다.
+- representative rerun `9`건 기준 current outcome은
+  - `real_money_candidate = 1`
+  - `production_candidate = 2`
+  - `hold = 6`
+  이며, 다음 active step은 threshold inventory와 family별 calibration review다.
