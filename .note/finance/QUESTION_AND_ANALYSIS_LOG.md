@@ -7660,3 +7660,28 @@ Do not copy full chat transcripts. Keep only the durable result.
     - `Max Bid-Ask Spread (%)`
 - Durable implication:
   - the program now explains not just status outputs, but also the meaning and effect of the real-money input contract that produces those outputs
+
+### 2026-04-10 - strict annual 유동성 판단은 close x volume 기반 20일 평균 거래대금으로 한다
+
+- Request topic:
+  - clarify exactly how liquidity is checked in the current program and whether it uses OHLCV `close * volume`
+- Interpreted goal:
+  - make the strict annual liquidity rule concrete enough that the operator understands what data is being used and how the policy status is produced
+- Result:
+  - confirmed that strict annual liquidity filtering uses DB-backed price history and computes:
+    - `dollar_volume = close * volume`
+    - `avg_dollar_volume_20d = rolling_mean(dollar_volume, 20 trading days)`
+  - this series is built in:
+    - `finance/sample.py`
+  - each rebalance snapshot then checks whether the symbol's trailing 20-day average dollar volume is at least:
+    - `Min Avg Dollar Volume 20D ($M) * 1,000,000`
+  - symbols that fail are excluded at rebalance time and counted as:
+    - `Liquidity Excluded Ticker`
+    - `Liquidity Excluded Count`
+  - the later `Liquidity Policy` status is not based on raw OHLCV alone, but on how often the strategy passes this filter across rebalance rows:
+    - `liquidity_clean_coverage`
+    - compared against `promotion_min_liquidity_clean_coverage`
+- Durable implication:
+  - strict annual liquidity is currently a two-step contract:
+    - candidate-level screen using `close * volume` 20-day average dollar volume
+    - strategy-level promotion interpretation using liquidity clean coverage
