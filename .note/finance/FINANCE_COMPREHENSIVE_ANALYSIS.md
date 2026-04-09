@@ -155,6 +155,10 @@ Analysis / Presentation
   Quality family는 `interest_coverage`, `ocf_margin`, `fcf_margin`, `net_debt_to_equity`,
   Value family는 `liquidation_value`를 추가로 고를 수 있게 됐다.
   이 first pass는 default factor를 바꾸지 않고, sign 해석이 비교적 명확한 후보만 옵션으로 여는 보수적 widening이다.
+  이어서 representative near-miss case study first pass도 정리되어,
+  strict annual은 `validation / validation_policy`,
+  ETF family는 `operability + validation watch/caution boundary`
+  를 family별 calibration의 다음 active 질문으로 좁혀 읽는 기준점이 생겼다.
   이어서 `Guides`에는
   - 데이터 최신화
   - single strategy 확인

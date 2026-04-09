@@ -7761,6 +7761,26 @@ Do not copy full chat transcripts. Keep only the durable result.
 - Durable implication:
   - the app glossary can now explain the Phase 14 core term directly to operators
 
+### 2026-04-10 - near-miss candidate case study로 Phase 14 calibration 질문을 더 좁혔다
+
+- Request topic:
+  - continue Phase 14 after the controlled factor expansion shortlist and proceed with the next concrete workstream
+- Interpreted goal:
+  - move from blocker distribution counts to representative candidate case reading so the next calibration experiment can be chosen more precisely
+- Result:
+  - created:
+    - `.note/finance/phase14/PHASE14_NEAR_MISS_CANDIDATE_CASE_STUDY_FIRST_PASS.md`
+  - re-read representative cases:
+    - `Value` balanced exact-hit hold
+    - `Quality` SPY-dominance near miss
+    - `GTAA` practical non-hold
+    - `GTAA` aggressive near miss
+  - concluded:
+    - strict annual near-miss is still mainly a `validation / validation_policy` calibration problem
+    - ETF near-miss is more about `operability` plus the practical `watch/caution` boundary
+- Durable implication:
+  - the next Phase 14 experiment should be family-specific sensitivity review rather than blanket threshold relaxation
+
 ### 2026-04-10 - controlled factor expansion first pass에서는 sign 해석이 비교적 명확한 small-set만 먼저 연다
 
 - Request topic:

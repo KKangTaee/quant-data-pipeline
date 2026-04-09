@@ -45,10 +45,14 @@
   - factor 부족이 현재 repeated hold의 1차 원인인지 분리해서 본다
 - `completed` controlled factor expansion shortlist
   - existing factor DB 안에서 UI에 아직 안 연 후보를 small-set으로 추린다
-- `pending` near-miss candidate case study
+- `completed` near-miss candidate case study
   - strongest raw winner
   - strongest balanced near-miss
   - repeated watchlist candidate
+- `pending` strict annual validation-policy sensitivity review
+  - exact-hit hold 케이스를 기준으로 validation / validation_policy threshold를 좁혀 본다
+- `pending` ETF operability sensitivity review
+  - practical non-hold와 aggressive near-miss 경계를 기준으로 operability threshold를 다시 본다
 
 ## 4. Deployment Workflow Bridge
 
@@ -95,3 +99,8 @@
   - Quality: `interest_coverage`, `ocf_margin`, `fcf_margin`, `net_debt_to_equity`
   - Value: `liquidation_value`
   만 small-set으로 먼저 열었다.
+- near-miss case study first pass 기준,
+  다음 calibration 실험은 blanket relaxation보다
+  - strict annual: `validation / validation_policy`
+  - ETF: `operability watch/caution boundary`
+  를 family별로 좁혀 보는 쪽이 더 적절하다.

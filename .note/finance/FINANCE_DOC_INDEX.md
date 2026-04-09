@@ -225,6 +225,8 @@
   - current promotion threshold inventory를 정리하고, repeated hold의 1차 원인이 factor 부족인지 gate calibration인지 분리해 본 Phase 14 calibration review first-pass 문서
 - `.note/finance/phase14/PHASE14_CONTROLLED_FACTOR_EXPANSION_SHORTLIST_FIRST_PASS.md`
   - strict annual UI에 현재 안 열려 있는 stored factor 후보 중 sign 해석과 operator 설명이 비교적 명확한 small-set만 먼저 추려서 Phase 14 controlled expansion 대상으로 정리한 문서
+- `.note/finance/phase14/PHASE14_NEAR_MISS_CANDIDATE_CASE_STUDY_FIRST_PASS.md`
+  - representative strict annual / ETF near-miss candidate를 케이스 단위로 다시 읽고, family별 calibration 질문을 좁힌 Phase 14 case-study 문서
 - `.note/finance/backtest_reports/phase13/PHASE13_STRICT_ANNUAL_FAMILY_BACKTEST_SUMMARY.md`
   - Phase 13 동안 진행한 `Quality / Value / Quality + Value` strict annual family 백테스트 결과를 family별로 한 장에 요약하고, 가장 강한 후보와 반복된 hold 원인을 빠르게 다시 보기 위한 정리 문서
 - `.note/finance/backtest_reports/phase13/PHASE13_STRICT_ANNUAL_COVERAGE300_500_1000_TARGET_SEARCH.md`

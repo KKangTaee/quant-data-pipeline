@@ -4739,6 +4739,26 @@ Keep entries append-only and concise.
 - Durable implication:
   - `Reference > Glossary` can now explain the core Phase 14 term directly inside the app.
 
+### 2026-04-10 - Phase 14 near-miss candidate case study first pass를 정리함
+
+- After finishing the controlled factor expansion shortlist, the next active Phase 14 step was to read representative near-miss candidates case-by-case instead of only through aggregate blocker counts.
+- Updated:
+  - created:
+    - `.note/finance/phase14/PHASE14_NEAR_MISS_CANDIDATE_CASE_STUDY_FIRST_PASS.md`
+  - compared four representative cases:
+    - `Value` balanced exact-hit hold
+    - `Quality` SPY-dominance near miss
+    - `GTAA` practical non-hold
+    - `GTAA` aggressive near miss
+  - updated:
+    - `.note/finance/phase14/PHASE14_CURRENT_CHAPTER_TODO.md`
+    - `.note/finance/FINANCE_DOC_INDEX.md`
+    - `.note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md`
+- Durable implication:
+  - Phase 14 calibration is now narrowed further:
+    - strict annual next experiment should focus on `validation / validation_policy`
+    - ETF next experiment should focus on `operability` sensitivity and the `watch/caution` boundary
+
 ### 2026-04-10 - Phase 14 controlled factor expansion shortlist first pass를 적용함
 
 - The user asked to proceed with Phase 14, and the next active workstream was the controlled factor expansion shortlist.
