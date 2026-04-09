@@ -10,7 +10,7 @@ from typing import Any
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 BACKTEST_HISTORY_FILE = PROJECT_ROOT / ".note" / "finance" / "BACKTEST_RUN_HISTORY.jsonl"
 BACKTEST_ARTIFACT_DIR = PROJECT_ROOT / ".note" / "finance" / "backtest_artifacts"
-BACKTEST_HISTORY_SCHEMA_VERSION = 1
+BACKTEST_HISTORY_SCHEMA_VERSION = 2
 _SAFE_CHARS = re.compile(r"[^A-Za-z0-9_.-]+")
 
 
@@ -110,6 +110,36 @@ def append_backtest_run_history(
             list((meta.get("universe_debug") or {}).get("per_date_rows") or [])[:24],
         )
 
+    gate_snapshot = {
+        "promotion_decision": meta.get("promotion_decision"),
+        "promotion_next_step": meta.get("promotion_next_step"),
+        "promotion_rationale": meta.get("promotion_rationale"),
+        "shortlist_status": meta.get("shortlist_status"),
+        "shortlist_next_step": meta.get("shortlist_next_step"),
+        "shortlist_rationale": meta.get("shortlist_rationale"),
+        "probation_status": meta.get("probation_status"),
+        "probation_stage": meta.get("probation_stage"),
+        "probation_next_step": meta.get("probation_next_step"),
+        "monitoring_status": meta.get("monitoring_status"),
+        "monitoring_next_step": meta.get("monitoring_next_step"),
+        "deployment_readiness_status": meta.get("deployment_readiness_status"),
+        "deployment_readiness_next_step": meta.get("deployment_readiness_next_step"),
+        "deployment_readiness_rationale": meta.get("deployment_readiness_rationale"),
+        "deployment_check_pass_count": meta.get("deployment_check_pass_count"),
+        "deployment_check_watch_count": meta.get("deployment_check_watch_count"),
+        "deployment_check_fail_count": meta.get("deployment_check_fail_count"),
+        "deployment_check_unavailable_count": meta.get("deployment_check_unavailable_count"),
+        "validation_status": meta.get("validation_status"),
+        "benchmark_policy_status": meta.get("benchmark_policy_status"),
+        "liquidity_policy_status": meta.get("liquidity_policy_status"),
+        "validation_policy_status": meta.get("validation_policy_status"),
+        "guardrail_policy_status": meta.get("guardrail_policy_status"),
+        "etf_operability_status": meta.get("etf_operability_status"),
+        "rolling_review_status": meta.get("rolling_review_status"),
+        "out_of_sample_review_status": meta.get("out_of_sample_review_status"),
+        "price_freshness_status": (meta.get("price_freshness") or {}).get("status"),
+    }
+
     record = {
         "schema_version": BACKTEST_HISTORY_SCHEMA_VERSION,
         "recorded_at": recorded_at,
@@ -171,7 +201,13 @@ def append_backtest_run_history(
         "ui_elapsed_seconds": meta.get("ui_elapsed_seconds"),
         "universe_mode": meta.get("universe_mode"),
         "preset_name": meta.get("preset_name"),
+        "promotion_decision": meta.get("promotion_decision"),
+        "shortlist_status": meta.get("shortlist_status"),
+        "probation_status": meta.get("probation_status"),
+        "monitoring_status": meta.get("monitoring_status"),
+        "deployment_readiness_status": meta.get("deployment_readiness_status"),
         "warnings": meta.get("warnings", []),
+        "gate_snapshot": gate_snapshot,
         "summary": _extract_primary_summary(bundle),
         "context": merged_context,
     }

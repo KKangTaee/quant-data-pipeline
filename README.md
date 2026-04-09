@@ -58,6 +58,9 @@ DB-backed market data ingestion, factor generation, and strategy backtesting wor
   - `Monitoring`
   - `Deployment Readiness`
   - `Validation / Rolling / Out-of-Sample Review`
+- persistent backtest history
+  - 실행 입력/요약뿐 아니라 `gate snapshot`도 함께 저장하는 history v2
+  - 이후 blocker audit, candidate review, rerun drilldown에 활용
 
 ## 프로젝트 구조
 

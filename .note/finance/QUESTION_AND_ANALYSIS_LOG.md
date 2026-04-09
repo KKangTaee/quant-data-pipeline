@@ -7551,3 +7551,27 @@ Do not copy full chat transcripts. Keep only the durable result.
   - updated roadmap, doc index, and top-level overview status to reflect Phase 14 kickoff
 - Durable implication:
   - Phase 14 should now be read as the point where the project shifts from building interpretation surfaces to calibrating them and connecting them to actual operator workflow
+
+### 2026-04-09 - Phase 14 first-pass blocker audit should use representative reports plus richer future history records
+
+- Request topic:
+  - the user asked to actually begin Phase 14 work
+- Interpreted goal:
+  - move from planning into a concrete first work unit that explains repeated `hold / blocked` outcomes and sets up better evidence collection for later calibration work
+- Result:
+  - audited the current real-money gate logic and documented the first-pass blocker pattern in:
+    - `.note/finance/phase14/PHASE14_GATE_BLOCKER_DISTRIBUTION_AUDIT_FIRST_PASS.md`
+  - the strongest repeated blocker in strict annual family was recorded as:
+    - `validation`
+    - `validation_policy`
+    - related rolling underperformance review
+  - the more distinct ETF-family blocker was recorded as:
+    - `ETF operability`
+    - plus practical validation interpretation
+  - identified a structural evidence gap:
+    - persisted backtest history did not keep gate states, so later aggregate audit would remain weaker than necessary
+  - fixed that by upgrading new history records to carry a `gate_snapshot`
+- Durable implication:
+  - Phase 14 calibration discussion should now be based on two layers:
+    - representative candidate case studies from Phase 13 reports
+    - newly accumulated history records that persist gate-status snapshots for later aggregate analysis

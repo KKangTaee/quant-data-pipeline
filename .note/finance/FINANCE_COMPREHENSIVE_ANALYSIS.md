@@ -188,6 +188,13 @@ Analysis / Presentation
   single-strategy `Load Into Form`,
   stored input의 current form prefill
   까지 지원하게 되었다.
+- Phase 14 first pass에서는 여기서 한 단계 더 나아가,
+  새로운 history record(schema v2)가
+  `promotion / shortlist / probation / monitoring / deployment` 상태와
+  `validation / benchmark policy / liquidity policy / validation policy / guardrail policy / ETF operability / rolling / out-of-sample / price freshness`
+  를 `gate_snapshot`으로 함께 저장하도록 보강되었다.
+  즉 이후 blocker audit는 report 문서만이 아니라
+  persistent history record 기준으로도 다시 집계할 수 있게 됐다.
 - Phase 12부터는 ETF 전략군(`GTAA`, `Risk Parity Trend`, `Dual Momentum`)에
   first-pass real-money hardening이 추가되어,
   `Minimum Price`, `Transaction Cost (bps)`, `Benchmark Ticker`를 입력할 수 있고,
@@ -451,6 +458,10 @@ Analysis / Presentation
   per-strategy summary row와
   strategy별 override / trend / market regime 설정을
   context 표로 확인할 수 있게 되었다.
+- 또한 history detail drilldown도 Phase 14 first pass에서 보강되어,
+  schema v2 record가 있을 경우
+  `Promotion / Shortlist / Probation / Monitoring / Deployment`와
+  policy 상태를 `Gate Snapshot` 표로 바로 다시 읽을 수 있다.
 - 또한 single-strategy 결과는 최고점/최저점/end marker와 `Best / Worst Period` marker,
   top/bottom period 표까지 볼 수 있고,
   compare view에서는 total return overlay, overlay end marker, strategy highlight table, focused strategy drilldown까지,

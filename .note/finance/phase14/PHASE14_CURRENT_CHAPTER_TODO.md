@@ -18,11 +18,11 @@
 
 ## 2. Gate Blocker Distribution Audit
 
-- `pending` representative run set 정의
+- `completed` representative run set 정의
   - strict annual family
   - ETF family
   - repeated near-miss candidate
-- `pending` blocker distribution 집계
+- `completed` blocker distribution 집계
   - `validation`
   - `benchmark policy`
   - `liquidity policy`
@@ -30,8 +30,10 @@
   - `guardrail policy`
   - `ETF operability`
   - `price freshness`
-- `pending` repeated hold 원인 문서화
+- `completed` repeated hold 원인 문서화
   - “전략 quality 문제”와 “gate threshold 문제”를 분리해서 정리
+- `completed` history evidence gap 보강
+  - future audit를 위해 backtest history에 `gate_snapshot`을 같이 저장한다
 
 ## 3. Promotion / Shortlist Calibration Review
 
@@ -59,18 +61,21 @@
 
 ## 6. Documentation And Validation
 
-- `pending` Phase 14 분석 문서 인덱스 반영
-- `pending` roadmap / progress / analysis log 동기화
+- `completed` Phase 14 분석 문서 인덱스 반영
+- `completed` roadmap / progress / analysis log 동기화
 - `pending` Phase 14 manual test checklist 준비
 
 ## 현재 메모
 
 - `Phase 12`: implementation closed / manual_validation_pending
 - `Phase 13`: practical closeout / manual_validation_pending
-- `Phase 14`: kickoff / planning in progress
+- `Phase 14`: gate blocker audit first pass 완료 / calibration review 대기
 
 - 이번 phase의 핵심은 새 전략 추가보다
   **현재 real-money gate가 어떻게 막히는지 설명 가능한 상태로 만드는 것**
   이다.
 - 사용자 보류 항목이었던 `promotion / shortlist gate calibration` 논의를
   이제 Phase 14의 정식 workstream으로 다룬다.
+- first-pass audit 결과,
+  strict annual repeated hold의 핵심 blocker는 `validation / validation_policy`,
+  ETF family practical blocker는 `ETF operability + validation 해석` 쪽으로 좁혀졌다.

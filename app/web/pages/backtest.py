@@ -4746,6 +4746,10 @@ def _build_backtest_history_rows(history: list[dict[str, Any]]) -> tuple[pd.Data
     for item in history:
         summary = item.get("summary") or {}
         context = item.get("context") or {}
+        gate_snapshot = item.get("gate_snapshot") or {}
+        promotion_decision = item.get("promotion_decision") or gate_snapshot.get("promotion_decision")
+        shortlist_status = item.get("shortlist_status") or gate_snapshot.get("shortlist_status")
+        deployment_status = item.get("deployment_readiness_status") or gate_snapshot.get("deployment_readiness_status")
         strategy_name = summary.get("strategy_name") or item.get("strategy_key") or "Comparison"
         selected_strategies = context.get("selected_strategies", [])
         search_text = " ".join(
@@ -4755,6 +4759,9 @@ def _build_backtest_history_rows(history: list[dict[str, Any]]) -> tuple[pd.Data
                 " ".join(item.get("tickers", [])),
                 " ".join(selected_strategies),
                 str(item.get("preset_name", "")),
+                str(promotion_decision or ""),
+                str(shortlist_status or ""),
+                str(deployment_status or ""),
             ]
         ).lower()
 
@@ -4769,6 +4776,9 @@ def _build_backtest_history_rows(history: list[dict[str, Any]]) -> tuple[pd.Data
                 "cagr": summary.get("cagr"),
                 "sharpe_ratio": summary.get("sharpe_ratio"),
                 "drawdown": summary.get("maximum_drawdown"),
+                "promotion": promotion_decision,
+                "shortlist": shortlist_status,
+                "deployment": deployment_status,
                 "tickers": ", ".join(item.get("tickers", [])),
                 "params": _summarize_params(item),
                 "selected_strategies": ", ".join(selected_strategies),
@@ -7197,6 +7207,36 @@ def _render_persistent_backtest_history() -> None:
             )
         with right:
             st.markdown("##### Context")
+            gate_snapshot = selected_record.get("gate_snapshot") or {}
+            if gate_snapshot:
+                st.caption(
+                    "Schema v2 history record는 실행 시점의 real-money gate snapshot을 같이 남깁니다. "
+                    "이 값으로 이후 blocker audit이나 candidate review를 더 빠르게 다시 읽을 수 있습니다."
+                )
+                gate_rows = [
+                    {"항목": "Promotion", "상태": gate_snapshot.get("promotion_decision"), "다음 단계": gate_snapshot.get("promotion_next_step")},
+                    {"항목": "Shortlist", "상태": gate_snapshot.get("shortlist_status"), "다음 단계": gate_snapshot.get("shortlist_next_step")},
+                    {"항목": "Probation", "상태": gate_snapshot.get("probation_status"), "다음 단계": gate_snapshot.get("probation_next_step")},
+                    {"항목": "Monitoring", "상태": gate_snapshot.get("monitoring_status"), "다음 단계": gate_snapshot.get("monitoring_next_step")},
+                    {
+                        "항목": "Deployment",
+                        "상태": gate_snapshot.get("deployment_readiness_status"),
+                        "다음 단계": gate_snapshot.get("deployment_readiness_next_step"),
+                    },
+                    {"항목": "Validation", "상태": gate_snapshot.get("validation_status"), "다음 단계": None},
+                    {"항목": "Benchmark Policy", "상태": gate_snapshot.get("benchmark_policy_status"), "다음 단계": None},
+                    {"항목": "Liquidity Policy", "상태": gate_snapshot.get("liquidity_policy_status"), "다음 단계": None},
+                    {"항목": "Validation Policy", "상태": gate_snapshot.get("validation_policy_status"), "다음 단계": None},
+                    {"항목": "Guardrail Policy", "상태": gate_snapshot.get("guardrail_policy_status"), "다음 단계": None},
+                    {"항목": "ETF Operability", "상태": gate_snapshot.get("etf_operability_status"), "다음 단계": None},
+                    {"항목": "Rolling Review", "상태": gate_snapshot.get("rolling_review_status"), "다음 단계": None},
+                    {"항목": "Out-Of-Sample Review", "상태": gate_snapshot.get("out_of_sample_review_status"), "다음 단계": None},
+                    {"항목": "Price Freshness", "상태": gate_snapshot.get("price_freshness_status"), "다음 단계": None},
+                ]
+                gate_df = pd.DataFrame(gate_rows).dropna(how="all")
+                gate_df = gate_df[gate_df["상태"].notna() | gate_df["다음 단계"].notna()]
+                if not gate_df.empty:
+                    st.dataframe(gate_df, use_container_width=True, hide_index=True)
             if selected_record.get("run_kind") == "strategy_compare":
                 compare_overrides = context.get("strategy_overrides") or {}
                 if compare_overrides:

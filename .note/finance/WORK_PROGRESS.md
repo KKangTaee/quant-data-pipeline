@@ -4632,3 +4632,22 @@ Keep entries append-only and concise.
     - `app/web/streamlit_app.py` overview status metric
 - Practical result:
   - Phase 14 is now opened as a real-money gate calibration and deployment-workflow-bridge phase instead of leaving the next direction implicit
+
+### 2026-04-09 - Phase 14 gate blocker audit first pass와 history gate snapshot persistence를 추가함
+
+- The user wanted to start Phase 14 proper, and the first concrete workstream was the `real-money gate blocker audit`.
+- Implemented:
+  - reviewed current gate logic in `app/web/runtime/backtest.py`
+  - documented a first-pass blocker audit at:
+    - `.note/finance/phase14/PHASE14_GATE_BLOCKER_DISTRIBUTION_AUDIT_FIRST_PASS.md`
+  - updated:
+    - `.note/finance/phase14/PHASE14_CURRENT_CHAPTER_TODO.md`
+    - `.note/finance/MASTER_PHASE_ROADMAP.md`
+    - `.note/finance/FINANCE_DOC_INDEX.md`
+    - `.note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md`
+  - upgraded backtest history persistence to schema v2 so new records now store a compact `gate_snapshot`
+    with promotion / shortlist / probation / monitoring / deployment / policy states
+  - exposed that `gate_snapshot` in backtest history drilldown and added promotion / shortlist / deployment columns
+- Practical result:
+  - Phase 14 now has a documented first-pass answer for “what is actually blocking promotion?”
+  - future blocker audits no longer need to depend only on phase report docs because new history records will carry gate status snapshots
