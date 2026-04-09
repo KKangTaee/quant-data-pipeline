@@ -7760,3 +7760,28 @@ Do not copy full chat transcripts. Keep only the durable result.
   - defined it as the work of tuning pass/hold thresholds so they are neither universally too strict nor too loose
 - Durable implication:
   - the app glossary can now explain the Phase 14 core term directly to operators
+
+### 2026-04-10 - controlled factor expansion first pass에서는 sign 해석이 비교적 명확한 small-set만 먼저 연다
+
+- Request topic:
+  - proceed with Phase 14 after calibration review and move into the next active workstream
+- Interpreted goal:
+  - widen the strict annual search space carefully without mixing calibration review with a large uncontrolled factor explosion
+- Result:
+  - created a controlled shortlist document at:
+    - `.note/finance/phase14/PHASE14_CONTROLLED_FACTOR_EXPANSION_SHORTLIST_FIRST_PASS.md`
+  - opened only a small first-pass set in the strict annual UI:
+    - Quality:
+      - `interest_coverage`
+      - `ocf_margin`
+      - `fcf_margin`
+      - `net_debt_to_equity`
+    - Value:
+      - `liquidation_value`
+  - deliberately deferred harder candidates such as:
+    - `dividend_payout`
+    - `gpa`
+    - growth family factors
+  - because their sign semantics or family placement are more ambiguous and would mix calibration with a broader strategy redesign
+- Durable implication:
+  - Phase 14 factor expansion is now a controlled widening step, not a blanket release of every stored factor

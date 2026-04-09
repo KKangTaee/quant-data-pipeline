@@ -43,7 +43,7 @@
   - strict annual vs ETF family
 - `completed` factor expansion necessity review
   - factor 부족이 현재 repeated hold의 1차 원인인지 분리해서 본다
-- `pending` controlled factor expansion shortlist
+- `completed` controlled factor expansion shortlist
   - existing factor DB 안에서 UI에 아직 안 연 후보를 small-set으로 추린다
 - `pending` near-miss candidate case study
   - strongest raw winner
@@ -87,7 +87,11 @@
   - `real_money_candidate = 1`
   - `production_candidate = 2`
   - `hold = 6`
-  이며, 다음 active step은 controlled factor expansion shortlist와 near-miss candidate case study다.
+  이며, 다음 active step은 near-miss candidate case study다.
 - calibration review first pass 기준,
   factor 부족은 repeated hold의 1차 원인으로 보이지 않았고,
   factor expansion은 이후 controlled search workstream으로 여는 것이 더 적절하다.
+- controlled factor expansion first pass에서는
+  - Quality: `interest_coverage`, `ocf_margin`, `fcf_margin`, `net_debt_to_equity`
+  - Value: `liquidation_value`
+  만 small-set으로 먼저 열었다.

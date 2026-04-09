@@ -151,6 +151,10 @@ Analysis / Presentation
   `Max Strategy Drawdown`, `Max Drawdown Gap vs Benchmark`
   가 각각 무엇을 막기 위한 기준인지와
   `rolling 구간`이 moving comparison window라는 뜻을 field 주변에서 바로 읽을 수 있게 됐다.
+  Phase 14 controlled factor expansion first pass에서는 strict annual UI factor surface도 small-set으로 넓어져,
+  Quality family는 `interest_coverage`, `ocf_margin`, `fcf_margin`, `net_debt_to_equity`,
+  Value family는 `liquidation_value`를 추가로 고를 수 있게 됐다.
+  이 first pass는 default factor를 바꾸지 않고, sign 해석이 비교적 명확한 후보만 옵션으로 여는 보수적 widening이다.
   이어서 `Guides`에는
   - 데이터 최신화
   - single strategy 확인

@@ -4738,3 +4738,25 @@ Keep entries append-only and concise.
     - added `Gate Calibration`
 - Durable implication:
   - `Reference > Glossary` can now explain the core Phase 14 term directly inside the app.
+
+### 2026-04-10 - Phase 14 controlled factor expansion shortlist first pass를 적용함
+
+- The user asked to proceed with Phase 14, and the next active workstream was the controlled factor expansion shortlist.
+- Updated:
+  - created:
+    - `.note/finance/phase14/PHASE14_CONTROLLED_FACTOR_EXPANSION_SHORTLIST_FIRST_PASS.md`
+  - updated strict annual UI factor options in `app/web/pages/backtest.py`
+    - Quality additions:
+      - `interest_coverage`
+      - `ocf_margin`
+      - `fcf_margin`
+      - `net_debt_to_equity`
+    - Value additions:
+      - `liquidation_value`
+  - kept defaults unchanged and only widened the selectable option set
+  - updated:
+    - `.note/finance/phase14/PHASE14_CURRENT_CHAPTER_TODO.md`
+    - `.note/finance/FINANCE_DOC_INDEX.md`
+    - `.note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md`
+- Durable implication:
+  - Phase 14 now has a first-pass, low-risk factor expansion path that widens search space without immediately mixing in harder-to-interpret growth candidates
