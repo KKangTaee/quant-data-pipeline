@@ -7716,3 +7716,35 @@ Do not copy full chat transcripts. Keep only the durable result.
   - added `Rolling Window` to the glossary as a durable operator-facing term
 - Durable implication:
   - users can now read the robustness contract directly in the form and understand how those thresholds connect to promotion interpretation
+
+### 2026-04-10 - current real-money default는 완전히 과보수적이라기보다 validation/operability 중심의 보수적 gate로 해석하는 편이 맞다
+
+- Request topic:
+  - assess whether the current default `Real-Money Contract` values are too conservative, and whether Phase 14 work is already considering that possibility
+- Interpreted goal:
+  - separate two questions:
+    - are the defaults so strict that almost no strategy can pass?
+    - or are they reasonable first-pass defaults that still need family-specific calibration review?
+- Result:
+  - current evidence does **not** support the claim that the defaults are universally too conservative
+  - reasons:
+    - representative rerun set still produced
+      - `real_money_candidate = 1`
+      - `production_candidate = 2`
+    - so the gate is not structurally impossible to pass
+    - repeated `hold` aligned more with
+      - `validation_status`
+      - `validation_policy_status`
+      - ETF `etf_operability_status`
+      than with every threshold simply being globally too tight
+  - practical reading:
+    - current defaults are better described as
+      - `benchmark-relative consistency` oriented
+      - `operability-aware`
+      - intentionally conservative first-pass values
+    - not obviously "too conservative everywhere"
+  - but family-level calibration still remains necessary:
+    - strict annual likely needs closer review around validation / validation-policy interpretation
+    - ETF family likely needs closer review around operability thresholds and validation watch/caution boundary
+- Durable implication:
+  - Phase 14 should continue as a calibration phase, not as a blanket relaxation phase
