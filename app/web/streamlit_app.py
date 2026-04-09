@@ -2630,6 +2630,151 @@ def _render_guides_page() -> None:
                 st.dataframe(ops_rows, use_container_width=True, hide_index=True)
 
     with st.container(border=True):
+        st.markdown("### Real-Money Contract 값 해설")
+        st.caption(
+            "전략 폼의 `Advanced Inputs > Real-Money Contract`에 보이는 값이 "
+            "무엇을 뜻하고, 왜 필요한지, 결과에서 어디에 영향을 주는지 빠르게 정리합니다."
+        )
+        st.code("Backtest > 전략 선택 > Advanced Inputs > Real-Money Contract", language="text")
+
+        contract_tabs = st.tabs(["공통 입력", "Strict Annual 전용", "ETF 전용", "읽는 순서"])
+
+        with contract_tabs[0]:
+            common_rows = pd.DataFrame(
+                [
+                    {
+                        "값": "Minimum Price",
+                        "무엇을 뜻하나": "너무 낮은 가격의 종목/ETF를 후보에서 제외하는 최소 가격선",
+                        "왜 필요한가": "낮은 가격 자산은 스프레드와 체결 품질이 나쁠 가능성이 커서 실전성이 떨어질 수 있음",
+                        "결과에 주는 영향": "해당 값보다 싼 자산은 그 날짜 후보에서 빠지고, 너무 높이면 후보 수가 줄어듦",
+                    },
+                    {
+                        "값": "Transaction Cost (bps)",
+                        "무엇을 뜻하나": "리밸런싱 turnover에 곱하는 왕복 거래비용 가정",
+                        "왜 필요한가": "gross 성과만 보면 실전 비용이 반영되지 않기 때문",
+                        "결과에 주는 영향": "`net` 성과, `Estimated Cost`, `Cumulative Estimated Cost`에 직접 반영됨",
+                    },
+                    {
+                        "값": "Benchmark Ticker",
+                        "무엇을 뜻하나": "전략을 비교할 기준 ETF 또는 지수형 ETF",
+                        "왜 필요한가": "절대 수익뿐 아니라 기준 대비로도 이 전략을 쓸 이유가 있는지 보기 위해서",
+                        "결과에 주는 영향": "`Validation`, `Benchmark Policy`, 일부 guardrail, `Execution Context` 해석의 기준이 됨",
+                    },
+                ]
+            )
+            st.dataframe(common_rows, use_container_width=True, hide_index=True)
+
+        with contract_tabs[1]:
+            strict_rows = pd.DataFrame(
+                [
+                    {
+                        "값": "Minimum History (Months)",
+                        "무엇을 뜻하나": "후보 자산이 최소 몇 개월 가격 이력을 가져야 하는지",
+                        "왜 필요한가": "이력이 너무 짧으면 모멘텀/낙폭/benchmark 비교가 불안정해짐",
+                        "결과에 주는 영향": "이력이 짧은 자산이 후보에서 빠지고, `History Excluded Count` 같은 해석에 연결됨",
+                    },
+                    {
+                        "값": "Min Avg Dollar Volume 20D ($M)",
+                        "무엇을 뜻하나": "최근 20거래일 평균 하루 거래대금의 최소 기준",
+                        "왜 필요한가": "거래가 너무 얇은 종목을 실전 후보에서 걸러내기 위해서",
+                        "결과에 주는 영향": "`Liquidity Policy`, `Liquidity Clean Coverage`, 유동성 제외 count에 직접 영향",
+                    },
+                    {
+                        "값": "Benchmark Contract",
+                        "무엇을 뜻하나": "`SPY` 같은 ticker benchmark로 볼지, 후보군 equal-weight로 볼지 정하는 비교 계약",
+                        "왜 필요한가": "무엇과 비교할지에 따라 validation과 승격 해석이 달라지기 때문",
+                        "결과에 주는 영향": "`Benchmark Policy`, `Validation`, `Promotion` 해석의 기준 자체를 바꿈",
+                    },
+                    {
+                        "값": "Min Benchmark Coverage / Min Net CAGR Spread",
+                        "무엇을 뜻하나": "benchmark와 충분히 겹쳐 비교됐는지, net 기준으로 얼마나 앞서야 하는지 정하는 승격 기준",
+                        "왜 필요한가": "benchmark가 있어도 비교 구간이 약하거나 상대 성과가 너무 약하면 굳이 이 전략을 쓸 이유가 약해짐",
+                        "결과에 주는 영향": "`Benchmark Policy`가 `normal/watch/caution`으로 갈리는 핵심 기준",
+                    },
+                    {
+                        "값": "Min Liquidity Clean Coverage",
+                        "무엇을 뜻하나": "리밸런싱 행 대부분이 유동성 제외 없이 지나가야 한다는 later-pass 기준",
+                        "왜 필요한가": "유동성 필터가 켜져 있다는 사실보다, 실제로 얼마나 자주 막히는지가 더 중요하기 때문",
+                        "결과에 주는 영향": "`Liquidity Policy`와 `Promotion` 해석에 직접 연결됨",
+                    },
+                    {
+                        "값": "Max Underperformance Share / Min Worst Rolling Excess",
+                        "무엇을 뜻하나": "benchmark 대비로 얼마나 자주, 얼마나 크게 밀릴 수 있는지를 제한하는 기준",
+                        "왜 필요한가": "전체 CAGR이 좋아도 rolling 구간 consistency가 너무 나쁘면 실전형 승격을 보수적으로 봐야 하기 때문",
+                        "결과에 주는 영향": "`Validation Policy`와 repeated `hold`의 핵심 blocker로 자주 작동함",
+                    },
+                    {
+                        "값": "Max Strategy Drawdown / Max Drawdown Gap vs Benchmark",
+                        "무엇을 뜻하나": "전략 자체 최대낙폭과 benchmark 대비 낙폭 열세 허용 범위",
+                        "왜 필요한가": "수익률이 좋아도 손실 구간이 너무 깊으면 실전 해석이 달라지기 때문",
+                        "결과에 주는 영향": "`Portfolio Guardrail Policy`, `Promotion`, `Deployment` 해석에 영향",
+                    },
+                ]
+            )
+            st.dataframe(strict_rows, use_container_width=True, hide_index=True)
+
+        with contract_tabs[2]:
+            etf_rows = pd.DataFrame(
+                [
+                    {
+                        "값": "Min ETF AUM ($B)",
+                        "무엇을 뜻하나": "현재 ETF 운용자산 규모의 최소 기준",
+                        "왜 필요한가": "너무 작은 ETF는 거래가 얇거나 상품 안정성이 떨어질 가능성이 높음",
+                        "결과에 주는 영향": "`ETF Operability` 상태를 결정하는 핵심 입력 중 하나",
+                    },
+                    {
+                        "값": "Max Bid-Ask Spread (%)",
+                        "무엇을 뜻하나": "현재 호가 스프레드의 최대 허용치",
+                        "왜 필요한가": "spread가 넓으면 실제 체결 비용이 커져 백테스트보다 실전 성과가 나빠질 수 있음",
+                        "결과에 주는 영향": "`ETF Operability`와 `Promotion` 해석에 직접 반영됨",
+                    },
+                    {
+                        "값": "ETF Real-Money Contract 전체",
+                        "무엇을 뜻하나": "가격/비용/benchmark/current operability를 함께 읽는 ETF 전용 계약",
+                        "왜 필요한가": "ETF 전략은 수익률뿐 아니라 현재 상품 규모와 거래 상태까지 같이 봐야 하기 때문",
+                        "결과에 주는 영향": "`실행 부담 > ETF 운용 가능성`, `Execution Context`, `Promotion`에서 같이 읽힘",
+                    },
+                ]
+            )
+            st.dataframe(etf_rows, use_container_width=True, hide_index=True)
+
+        with contract_tabs[3]:
+            st.markdown(
+                """
+                1. **먼저 investability filter부터 읽습니다.**
+                - `Minimum Price`, `Minimum History`, `Min Avg Dollar Volume 20D`는
+                  "후보 자산이 애초에 실전형 후보로 들어올 수 있나?"를 정하는 1차 필터입니다.
+
+                2. **그 다음 benchmark 계약을 읽습니다.**
+                - `Benchmark Ticker`, `Benchmark Contract`, `Min Benchmark Coverage`, `Min Net CAGR Spread`는
+                  "무엇과 비교하고, 어느 정도는 이겨야 하는가?"를 정합니다.
+
+                3. **그 다음 robustness / guardrail 기준을 읽습니다.**
+                - `Max Underperformance Share`, `Min Worst Rolling Excess`,
+                  `Max Strategy Drawdown`, `Max Drawdown Gap vs Benchmark`는
+                  "좋아 보여도 너무 흔들리면 보수적으로 본다"는 later-pass 승격 기준입니다.
+
+                4. **ETF 전략이면 current operability를 따로 읽습니다.**
+                - `Min ETF AUM`, `Max Bid-Ask Spread`는
+                  "지금 이 ETF를 실제로 쓰기 무난한가?"를 보는 현재 시점 기준입니다.
+
+                5. **실행 후에는 아래 순서로 결과를 다시 봅니다.**
+                - `Real-Money > 실행 부담`
+                - `Real-Money > 검토 근거`
+                - `Real-Money > 현재 판단`
+
+                `Real-Money Contract`는 raw 성과를 직접 바꾸는 값과
+                승격/배치 해석을 바꾸는 값이 섞여 있습니다.
+                예를 들어 `Transaction Cost`는 `net` 성과를 바꾸고,
+                benchmark / policy threshold는 주로 `Promotion`, `Shortlist`, `Deployment` 해석을 바꿉니다.
+                """
+            )
+            st.info(
+                "값이 많아 보여도 읽는 순서는 단순합니다. "
+                "`후보 진입 조건 -> benchmark 비교 계약 -> robustness 기준 -> ETF operability -> 실행 후 Real-Money 해석` 순서로 보면 됩니다."
+            )
+
+    with st.container(border=True):
         st.markdown("### 테스트에서 상용화 후보 검토까지 사용하는 흐름")
         st.caption(
             "이 프로그램은 단순 백테스트 숫자 확인을 넘어서, "

@@ -4686,3 +4686,19 @@ Keep entries append-only and concise.
 - Practical result:
   - Phase 14 now has a documented first-pass answer for “what is actually blocking promotion?”
   - future blocker audits no longer need to depend only on phase report docs because new history records will carry gate status snapshots
+
+### 2026-04-10 - Real-Money Contract 값 설명을 Guides와 Glossary에 보강함
+
+- The user said they still did not have a clear mental model for what the values inside `Real-Money Contract` mean, why they are needed, and how they affect the result interpretation.
+- Updated:
+  - `app/web/streamlit_app.py`
+    - added a new `Guides > Real-Money Contract 값 해설` section
+    - organized it into common inputs / strict annual / ETF / reading order
+  - `app/web/pages/backtest.py`
+    - added a direct pointer from each `Real-Money Contract` form block to `Reference > Guides` and `Reference > Glossary`
+  - `.note/finance/FINANCE_TERM_GLOSSARY.md`
+    - added missing terms for benchmark contract and real-money threshold inputs
+  - `.note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md`
+    - synced the new operator-facing guide behavior
+- Durable implication:
+  - users can now learn the real-money contract in-app instead of having to infer it only from raw labels or result surfaces

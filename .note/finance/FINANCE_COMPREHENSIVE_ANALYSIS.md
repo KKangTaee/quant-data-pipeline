@@ -135,6 +135,13 @@ Analysis / Presentation
   - `Hold 해결 가이드`가 정확히 어디에 나타나는지
   - `Probation / Monitoring`, `최근 구간 / Out-of-Sample Review`, `Deployment Readiness`, `Strategy Highlights`가 각각 어떤 화면 surface인지
   까지 `Guides`에서 바로 확인할 수 있게 정리됐다.
+  이어서 `Guides`에는 `Real-Money Contract 값 해설` 섹션도 추가되어,
+  `Advanced Inputs > Real-Money Contract`에 나오는
+  `Minimum Price`, `Transaction Cost`, `Benchmark Ticker`,
+  strict annual의 benchmark / liquidity / validation / guardrail threshold,
+  ETF의 `Min ETF AUM`, `Max Bid-Ask Spread`
+  가 각각 무엇을 뜻하고 왜 필요한지, 결과의 어느 surface에 영향을 주는지까지
+  operator가 UI 안에서 바로 다시 읽을 수 있게 됐다.
   이어서 `Guides`에는
   - 데이터 최신화
   - single strategy 확인

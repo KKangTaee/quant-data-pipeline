@@ -1454,6 +1454,7 @@ def _render_etf_real_money_inputs(
     default_max_bid_ask_spread_pct: float = ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT,
 ) -> tuple[float, float, str, float, float]:
     st.markdown("##### Real-Money Contract")
+    st.caption("설명은 `Reference > Guides > Real-Money Contract 값 해설` 또는 `Reference > Glossary`에서 다시 볼 수 있습니다.")
     st.caption(
         "실전형 first pass에서는 너무 낮은 가격 ETF를 걸러내는 `Minimum Price`, "
         "리밸런싱 turnover에 적용할 `Transaction Cost`, 비교 기준이 되는 `Benchmark Ticker`, "
@@ -1587,6 +1588,7 @@ def _render_strict_annual_real_money_inputs(
     default_promotion_max_drawdown_gap_vs_benchmark: float = STRICT_PROMOTION_DEFAULT_MAX_DRAWDOWN_GAP_VS_BENCHMARK,
 ) -> tuple[str, float, int, float, float, str, float, float, float, float, float, float, float]:
     st.markdown("##### Real-Money Contract")
+    st.caption("설명은 `Reference > Guides > Real-Money Contract 값 해설` 또는 `Reference > Glossary`에서 다시 볼 수 있습니다.")
     st.caption(
         "실전형 annual strict contract에서는 `Minimum Price`, `Minimum History (Months)`, "
         "`Minimum Avg Dollar Volume 20D`, `Transaction Cost`, `Benchmark Contract`, `Benchmark Ticker`, "

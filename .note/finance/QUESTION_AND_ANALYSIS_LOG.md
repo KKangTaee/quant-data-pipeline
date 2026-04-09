@@ -7630,3 +7630,33 @@ Do not copy full chat transcripts. Keep only the durable result.
   - Phase 14 calibration discussion should now be based on two layers:
     - representative candidate case studies from Phase 13 reports
     - newly accumulated history records that persist gate-status snapshots for later aggregate analysis
+
+### 2026-04-10 - real-money contract 값의 의미와 영향 설명을 UI reference에 추가했다
+
+- Request topic:
+  - explain what the values inside `Real-Money Contract` mean, why they are necessary, and how they affect interpretation, and expose that explanation in the UI through `Reference`, `Guides`, or `Glossary`
+- Interpreted goal:
+  - reduce operator confusion around real-money inputs by moving from raw field labels to an in-app explanation layer
+- Result:
+  - added `Guides > Real-Money Contract 값 해설`
+  - grouped the explanation by:
+    - common inputs
+    - strict annual-specific inputs
+    - ETF-specific inputs
+    - recommended reading order
+  - added form-level pointers so each `Real-Money Contract` block now tells the user where to find the explanation again
+  - expanded glossary coverage to include:
+    - `Real-Money Contract`
+    - `Benchmark Ticker`
+    - `Benchmark Contract`
+    - `Min Benchmark Coverage`
+    - `Min Net CAGR Spread`
+    - `Min Liquidity Clean Coverage`
+    - `Max Underperformance Share`
+    - `Min Worst Rolling Excess`
+    - `Max Strategy Drawdown`
+    - `Max Drawdown Gap vs Benchmark`
+    - `Min ETF AUM ($B)`
+    - `Max Bid-Ask Spread (%)`
+- Durable implication:
+  - the program now explains not just status outputs, but also the meaning and effect of the real-money input contract that produces those outputs
