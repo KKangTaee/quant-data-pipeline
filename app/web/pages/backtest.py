@@ -1628,7 +1628,10 @@ def _render_strict_annual_real_money_inputs(
                 value=float(default_min_avg_dollar_volume_20d_m),
                 step=1.0,
                 key=f"{key_prefix}_min_avg_dollar_volume_20d_m_filter",
-                help="최근 20거래일 평균 거래대금이 이 값보다 낮은 종목은 해당 날짜 후보에서 제외합니다. 단위는 백만 달러입니다.",
+                help=(
+                    "OHLCV의 `close × volume`으로 하루 거래대금을 만든 뒤, 최근 20거래일 평균을 계산합니다. "
+                    "그 평균이 이 값보다 낮은 종목은 해당 날짜 후보에서 제외합니다. 단위는 백만 달러입니다."
+                ),
             )
         )
     with col4:
@@ -1700,7 +1703,11 @@ def _render_strict_annual_real_money_inputs(
             value=float(default_promotion_min_liquidity_clean_coverage) * 100.0,
             step=1.0,
             key=f"{key_prefix}_promotion_min_liquidity_clean_coverage",
-            help="리밸런싱 행 중 유동성 제외가 발생하지 않아야 하는 최소 비율입니다.",
+            help=(
+                "먼저 각 종목이 `Min Avg Dollar Volume 20D` 기준을 통과하는지 보고, "
+                "그 다음 리밸런싱 행 중 유동성 제외 없이 지나간 비율이 이 값 이상이어야 "
+                "`Liquidity Policy`를 정상에 가깝게 읽습니다."
+            ),
         )
     )
 

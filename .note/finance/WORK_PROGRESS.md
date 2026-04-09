@@ -4702,3 +4702,14 @@ Keep entries append-only and concise.
     - synced the new operator-facing guide behavior
 - Durable implication:
   - users can now learn the real-money contract in-app instead of having to infer it only from raw labels or result surfaces
+
+### 2026-04-10 - strict annual 유동성 tooltip을 계산식과 해석 순서 중심으로 보강함
+
+- The user wanted the small help bubble on the strict annual liquidity inputs to explain the actual calculation and interpretation flow more directly.
+- Updated:
+  - `app/web/pages/backtest.py`
+    - `Min Avg Dollar Volume 20D ($M)` help text now explicitly says it uses OHLCV `close × volume` and a trailing 20-day average
+    - `Min Liquidity Clean Coverage (%)` help text now explains the two-step contract:
+      candidate-level liquidity screen first, then strategy-level clean coverage interpretation
+- Durable implication:
+  - operators can understand the strict annual liquidity contract directly from the field tooltip without jumping out to Guides first

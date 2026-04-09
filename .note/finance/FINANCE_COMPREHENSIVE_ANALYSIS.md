@@ -142,6 +142,10 @@ Analysis / Presentation
   ETF의 `Min ETF AUM`, `Max Bid-Ask Spread`
   가 각각 무엇을 뜻하고 왜 필요한지, 결과의 어느 surface에 영향을 주는지까지
   operator가 UI 안에서 바로 다시 읽을 수 있게 됐다.
+  이후 strict annual 유동성 입력 tooltip도 보강되어,
+  `Min Avg Dollar Volume 20D ($M)`는 OHLCV `close × volume` 기반 trailing 20-day average dollar volume 계산을,
+  `Min Liquidity Clean Coverage (%)`는 그 후보 필터가 전략-level `Liquidity Policy` 해석으로 이어지는 구조를
+  field help에서 직접 설명한다.
   이어서 `Guides`에는
   - 데이터 최신화
   - single strategy 확인

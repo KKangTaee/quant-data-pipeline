@@ -7685,3 +7685,19 @@ Do not copy full chat transcripts. Keep only the durable result.
   - strict annual liquidity is currently a two-step contract:
     - candidate-level screen using `close * volume` 20-day average dollar volume
     - strategy-level promotion interpretation using liquidity clean coverage
+
+### 2026-04-10 - strict annual 유동성 field tooltip에 계산식과 clean coverage 의미를 넣었다
+
+- Request topic:
+  - put the actual liquidity explanation into the small field tooltip/help bubble in the strict annual form
+- Interpreted goal:
+  - let the operator understand the liquidity rule at the point of input, not only later in guides or result interpretation
+- Result:
+  - updated the `Min Avg Dollar Volume 20D ($M)` tooltip to say it uses:
+    - OHLCV `close × volume`
+    - trailing 20-day average dollar volume
+  - updated the `Min Liquidity Clean Coverage (%)` tooltip to explain:
+    - symbol-level liquidity screen first
+    - then strategy-level `Liquidity Policy` interpretation using clean coverage
+- Durable implication:
+  - the strict annual liquidity contract is now described directly at the field where the user sets it
