@@ -4713,3 +4713,19 @@ Keep entries append-only and concise.
       candidate-level liquidity screen first, then strategy-level clean coverage interpretation
 - Durable implication:
   - operators can understand the strict annual liquidity contract directly from the field tooltip without jumping out to Guides first
+
+### 2026-04-10 - strict annual robustness threshold tooltip에 rolling 구간 설명을 추가함
+
+- The user then asked for the same tooltip-level explanation for:
+  - `Max Underperformance Share`
+  - `Min Worst Rolling Excess`
+  - `Max Strategy Drawdown`
+  - `Max Drawdown Gap vs Benchmark`
+- Updated:
+  - `app/web/pages/backtest.py`
+    - expanded those help texts to explain the actual interpretation in plain language
+    - added an inline caption that defines `rolling 구간` right under the robustness inputs
+  - `.note/finance/FINANCE_TERM_GLOSSARY.md`
+    - added `Rolling Window`
+- Durable implication:
+  - users can now understand the strict robustness thresholds at the point of input without having to infer what `rolling` means

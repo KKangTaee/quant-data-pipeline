@@ -146,6 +146,11 @@ Analysis / Presentation
   `Min Avg Dollar Volume 20D ($M)`는 OHLCV `close × volume` 기반 trailing 20-day average dollar volume 계산을,
   `Min Liquidity Clean Coverage (%)`는 그 후보 필터가 전략-level `Liquidity Policy` 해석으로 이어지는 구조를
   field help에서 직접 설명한다.
+  같은 strict annual `Real-Money Contract` 안의 robustness threshold tooltip도 한 번 더 보강되어,
+  `Max Underperformance Share`, `Min Worst Rolling Excess`,
+  `Max Strategy Drawdown`, `Max Drawdown Gap vs Benchmark`
+  가 각각 무엇을 막기 위한 기준인지와
+  `rolling 구간`이 moving comparison window라는 뜻을 field 주변에서 바로 읽을 수 있게 됐다.
   이어서 `Guides`에는
   - 데이터 최신화
   - single strategy 확인

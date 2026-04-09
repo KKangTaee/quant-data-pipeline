@@ -1743,7 +1743,11 @@ def _render_strict_annual_real_money_inputs(
                 value=float(default_promotion_max_underperformance_share) * 100.0,
                 step=1.0,
                 key=f"{key_prefix}_promotion_max_underperformance_share",
-                help="rolling window 중 benchmark를 밑돈 비율이 이 값보다 높으면 승격을 보수적으로 봅니다.",
+                help=(
+                    "rolling 구간은 일정 길이의 비교 창을 한 칸씩 옮겨가며 보는 구간입니다. "
+                    "그 rolling 구간들 중 benchmark보다 뒤처진 비율이 이 값보다 높으면 "
+                    '\"너무 자주 benchmark에 진다\"고 보고 승격을 보수적으로 해석합니다.'
+                ),
             )
         )
     with robustness_right:
@@ -1755,9 +1759,17 @@ def _render_strict_annual_real_money_inputs(
                 value=float(default_promotion_min_worst_rolling_excess_return) * 100.0,
                 step=1.0,
                 key=f"{key_prefix}_promotion_min_worst_rolling_excess_return",
-                help="rolling excess return 최악 구간이 이 값보다 더 낮으면 승격을 보수적으로 봅니다.",
+                help=(
+                    "rolling 구간들 중 benchmark 대비 상대 성과가 가장 나빴던 구간을 봅니다. "
+                    "그 최악 구간의 excess return이 이 값보다 더 낮으면 "
+                    '\"특정 시기에 너무 크게 무너졌다\"고 보고 승격을 보수적으로 해석합니다.'
+                ),
             )
         )
+    st.caption(
+        "여기서 `rolling 구간`은 전체 기간을 한 번에 보지 않고, "
+        "일정 길이의 비교 창(window)을 한 칸씩 옮겨가며 반복해서 보는 작은 평가 구간을 뜻합니다."
+    )
     st.caption(
         "`Validation Policy`는 benchmark-relative validation 지표 중 "
         "`Underperformance Share`와 `Worst Rolling Excess`를 실제 승격 판단 기준으로 연결한 later-pass rule입니다."
@@ -1772,7 +1784,10 @@ def _render_strict_annual_real_money_inputs(
                 value=float(default_promotion_max_strategy_drawdown) * 100.0,
                 step=1.0,
                 key=f"{key_prefix}_promotion_max_strategy_drawdown",
-                help="전략의 최대 낙폭이 이 값보다 더 깊으면 승격을 보수적으로 봅니다.",
+                help=(
+                    "전략 자체 최대 낙폭이 이 값보다 더 깊으면 "
+                    '\"수익률이 좋아도 손실 구간이 너무 깊다\"고 보고 승격을 보수적으로 해석합니다.'
+                ),
             )
         )
     with guardrail_right:
@@ -1784,7 +1799,10 @@ def _render_strict_annual_real_money_inputs(
                 value=float(default_promotion_max_drawdown_gap_vs_benchmark) * 100.0,
                 step=1.0,
                 key=f"{key_prefix}_promotion_max_drawdown_gap_vs_benchmark",
-                help="전략의 최대 낙폭이 benchmark보다 이 값 이상 더 나쁘면 승격을 보수적으로 봅니다.",
+                help=(
+                    "전략 최대 낙폭이 benchmark보다 이 값 이상 더 나쁘면 "
+                    '\"benchmark 대비 downside behavior가 너무 약하다\"고 보고 승격을 보수적으로 해석합니다.'
+                ),
             )
         )
     st.caption(

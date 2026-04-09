@@ -7701,3 +7701,18 @@ Do not copy full chat transcripts. Keep only the durable result.
     - then strategy-level `Liquidity Policy` interpretation using clean coverage
 - Durable implication:
   - the strict annual liquidity contract is now described directly at the field where the user sets it
+
+### 2026-04-10 - strict annual robustness threshold tooltip에 rolling 개념과 해석을 넣었다
+
+- Request topic:
+  - improve the tooltip/help text for `Max Underperformance Share`, `Min Worst Rolling Excess`, `Max Strategy Drawdown`, and `Max Drawdown Gap vs Benchmark`, and clarify what `rolling` means
+- Interpreted goal:
+  - make the robustness thresholds understandable at the point of input instead of forcing the operator to infer the semantics from labels alone
+- Result:
+  - updated the strict annual form tooltips so each threshold now explains:
+    - what is being measured
+    - what kind of weakness it is trying to prevent
+  - added an inline caption that defines `rolling 구간` as a moving comparison window
+  - added `Rolling Window` to the glossary as a durable operator-facing term
+- Durable implication:
+  - users can now read the robustness contract directly in the form and understand how those thresholds connect to promotion interpretation
