@@ -11,6 +11,8 @@
 - Treat this project as a quant research workspace with two connected domains:
   - data ingestion and persistence
   - strategy research and backtesting
+- When a workstream can be split into independent investigation tracks, use available sub-agents to explore them in parallel.
+- If sub-agents are unnecessary for the current task, or the current session/tooling does not make them practical, continue directly instead of blocking work.
 - Before changing code, identify which domain the task belongs to:
   - `finance/data/*`, `finance/data/db/*`: ingestion, schema, persistence
   - `finance/engine.py`, `finance/transform.py`, `finance/strategy.py`, `finance/performance.py`, `finance/display.py`, `finance/visualize.py`: backtest and analysis

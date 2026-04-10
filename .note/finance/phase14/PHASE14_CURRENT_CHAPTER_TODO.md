@@ -49,9 +49,9 @@
   - strongest raw winner
   - strongest balanced near-miss
   - repeated watchlist candidate
-- `pending` strict annual validation-policy sensitivity review
+- `completed` strict annual validation-policy sensitivity review
   - exact-hit hold 케이스를 기준으로 validation / validation_policy threshold를 좁혀 본다
-- `pending` ETF operability sensitivity review
+- `completed` ETF operability sensitivity review
   - practical non-hold와 aggressive near-miss 경계를 기준으로 operability threshold를 다시 본다
 
 ## 4. Deployment Workflow Bridge
@@ -104,3 +104,10 @@
   - strict annual: `validation / validation_policy`
   - ETF: `operability watch/caution boundary`
   를 family별로 좁혀 보는 쪽이 더 적절하다.
+- sensitivity review first pass 기준,
+  strict annual exact-hit hold는 `validation_policy` 완화만으로는 잘 풀리지 않았고,
+  ETF aggressive near-miss는 AUM/spread 완화보다 `partial data coverage` 해석이 더 직접적인 blocker였다.
+- 따라서 next active step은
+  - strict annual: `validation_status` fixed threshold review
+  - ETF: `operability data coverage interpretation review`
+  쪽으로 가는 것이 더 맞다.

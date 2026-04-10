@@ -4780,3 +4780,30 @@ Keep entries append-only and concise.
     - `.note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md`
 - Durable implication:
   - Phase 14 now has a first-pass, low-risk factor expansion path that widens search space without immediately mixing in harder-to-interpret growth candidates
+
+### 2026-04-10 - Phase 14 sensitivity review first pass로 strict annual과 ETF blocker를 더 좁힘
+
+- The user wanted Phase 14 to keep moving and also asked that our working guidance explicitly say to use sub-agents when they help, without forcing them when they do not.
+- Updated:
+  - created:
+    - `.note/finance/phase14/PHASE14_STRICT_ANNUAL_VALIDATION_POLICY_SENSITIVITY_REVIEW_FIRST_PASS.md`
+    - `.note/finance/phase14/PHASE14_ETF_OPERABILITY_SENSITIVITY_REVIEW_FIRST_PASS.md`
+  - updated:
+    - `AGENTS.md`
+    - `.note/finance/phase14/PHASE14_CURRENT_CHAPTER_TODO.md`
+    - `.note/finance/FINANCE_DOC_INDEX.md`
+- Key evidence fixed in this work unit:
+  - strict annual exact-hit hold:
+    - relaxing `promotion_min_worst_rolling_excess_return` to `-40%` turned `validation_policy` to `normal`
+    - but `promotion` stayed `hold` because `validation_status = caution` still remained
+  - quality strict near-miss:
+    - the same pattern repeated; policy normalized, promotion still held because fixed internal validation stayed `caution`
+  - GTAA practical candidate:
+    - remained `production_candidate / watchlist_only` across default, mid, and effectively-disabled AUM/spread thresholds
+  - GTAA aggressive near-miss:
+    - remained `hold / blocked` across the same threshold sweep
+    - blocker stayed `etf_operability_partial_data_coverage`, not AUM/spread threshold failure
+- Durable implication:
+  - Phase 14 should now move from first-pass threshold inventory to:
+    - strict annual `validation_status` fixed-threshold review
+    - ETF `partial data coverage` interpretation review

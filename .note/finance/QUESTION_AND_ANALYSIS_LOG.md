@@ -7805,3 +7805,29 @@ Do not copy full chat transcripts. Keep only the durable result.
   - because their sign semantics or family placement are more ambiguous and would mix calibration with a broader strategy redesign
 - Durable implication:
   - Phase 14 factor expansion is now a controlled widening step, not a blanket release of every stored factor
+
+### 2026-04-10 - Phase 14 sensitivity review는 strict annual과 ETF에서 서로 다른 blocker를 보여줬다
+
+- Request topic:
+  - continue Phase 14, keep work moving efficiently, and explicitly record that sub-agents should be used when they help but are not mandatory
+- Interpreted goal:
+  - progress from the general calibration review into evidence-backed sensitivity work, while also updating repo guidance for future parallel investigation
+- Result:
+  - added AGENTS guidance:
+    - use sub-agents when a workstream can be split into independent tracks
+    - proceed directly when sub-agents are unnecessary or the current session does not make them practical
+  - created:
+    - `.note/finance/phase14/PHASE14_STRICT_ANNUAL_VALIDATION_POLICY_SENSITIVITY_REVIEW_FIRST_PASS.md`
+    - `.note/finance/phase14/PHASE14_ETF_OPERABILITY_SENSITIVITY_REVIEW_FIRST_PASS.md`
+  - strict annual rerun evidence showed:
+    - relaxing `promotion_min_worst_rolling_excess_return` can normalize `validation_policy_status`
+    - but exact-hit hold and quality near-miss still stay `hold` because fixed internal `validation_status` remains `caution`
+  - ETF rerun evidence showed:
+    - practical GTAA is stable across AUM/spread threshold sweeps
+    - aggressive GTAA remains `hold` even when AUM/spread are effectively disabled
+    - its repeated blocker is `etf_operability_partial_data_coverage`
+- Durable implication:
+  - next calibration work should target:
+    - strict annual `validation_status` fixed thresholds
+    - ETF partial-data coverage interpretation
+  - not blanket relaxation of every configurable threshold
