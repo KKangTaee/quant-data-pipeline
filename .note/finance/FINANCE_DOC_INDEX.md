@@ -235,6 +235,18 @@
   - strict annual repeated hold에서 `validation_policy`보다 internal `validation_status` fixed threshold가 더 직접적인 blocker임을, severe / caution 규칙 중심으로 다시 읽은 Phase 14 문서
 - `.note/finance/phase14/PHASE14_ETF_OPERABILITY_DATA_COVERAGE_INTERPRETATION_REVIEW_FIRST_PASS.md`
   - ETF repeated hold에서 AUM / spread threshold보다 partial data coverage 해석이 더 직접적인 blocker임을, coverage boundary와 missing-data semantics 중심으로 다시 읽은 Phase 14 문서
+- `.note/finance/phase14/PHASE14_FAMILY_SPECIFIC_THRESHOLD_EXPERIMENT_DESIGN_FIRST_PASS.md`
+  - strict annual과 ETF를 같은 blanket 완화 대상으로 보지 않고, 다음 phase에서 실제로 실행할 threshold experiment를 family별로 좁혀 설계한 Phase 14 문서
+- `.note/finance/phase14/PHASE14_DEPLOYMENT_WORKFLOW_BRIDGE_FIRST_PASS.md`
+  - shortlist / probation / monitoring / deployment surface가 현재 어디까지 operator workflow를 설명하고, 어디서부터 operator log / action persistence가 비는지 정리한 Phase 14 bridge 문서
+- `.note/finance/phase14/PHASE14_PIT_OPERABILITY_LATER_PASS_DECISION.md`
+  - ETF operability가 왜 아직 current snapshot diagnostic으로만 읽혀야 하고, PIT/history 없이는 actual block rule로 승격하기 이르다는 점을 정리한 Phase 14 문서
+- `.note/finance/phase14/PHASE14_TEST_CHECKLIST.md`
+  - Phase 14 manual validation checklist로, gate calibration 설명 surface / tooltip / glossary / history gate snapshot을 현재 UI에서 검수하기 위한 문서
+- `.note/finance/phase14/PHASE14_COMPLETION_SUMMARY.md`
+  - Phase 14 real-money gate calibration work를 practical closeout 기준으로 정리하고, 완료 범위와 다음 phase backlog를 분명히 남긴 문서
+- `.note/finance/phase14/PHASE14_NEXT_PHASE_PREPARATION.md`
+  - Phase 14 이후 다음 phase를 threshold execution / operator workflow persistence / PIT operability 방향으로 어떻게 여는 것이 자연스러운지 정리한 handoff 문서
 - `.note/finance/backtest_reports/phase13/PHASE13_STRICT_ANNUAL_FAMILY_BACKTEST_SUMMARY.md`
   - Phase 13 동안 진행한 `Quality / Value / Quality + Value` strict annual family 백테스트 결과를 family별로 한 장에 요약하고, 가장 강한 후보와 반복된 hold 원인을 빠르게 다시 보기 위한 정리 문서
 - `.note/finance/backtest_reports/phase13/PHASE13_STRICT_ANNUAL_COVERAGE300_500_1000_TARGET_SEARCH.md`

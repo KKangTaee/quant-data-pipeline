@@ -57,34 +57,35 @@
   - repeated hold를 만드는 internal validation severe / caution 규칙을 별도로 좁혀 본다
 - `completed` ETF operability data coverage interpretation review
   - repeated hold를 고정시키는 partial data coverage 해석 규칙을 별도로 읽는다
-- `pending` family-specific threshold experiment design
+- `completed` family-specific threshold experiment design
   - strict annual은 internal validation core 실험 후보를 정리한다
   - ETF는 coverage interpretation 실험 후보를 정리한다
 
 ## 4. Deployment Workflow Bridge
 
-- `pending` shortlist -> paper probation handoff 흐름 정리
-- `pending` monthly review note / operator log 필요 범위 정리
-- `pending` small-capital trial readiness interpretation 정리
-- `pending` backtest result와 operator action 문서 연결점 정의
+- `completed` shortlist -> paper probation handoff 흐름 정리
+- `completed` monthly review note / operator log 필요 범위 정리
+- `completed` small-capital trial readiness interpretation 정리
+- `completed` backtest result와 operator action 문서 연결점 정의
 
 ## 5. PIT Operability Later Pass
 
-- `pending` ETF PIT operability dependency 정리
-- `pending` actual block rule 승격 조건 정의
-- `pending` snapshot overlay와 PIT contract boundary 문서화
+- `completed` ETF PIT operability dependency 정리
+- `completed` actual block rule 승격 조건 정의
+- `completed` snapshot overlay와 PIT contract boundary 문서화
 
 ## 6. Documentation And Validation
 
 - `completed` Phase 14 분석 문서 인덱스 반영
 - `completed` roadmap / progress / analysis log 동기화
-- `pending` Phase 14 manual test checklist 준비
+- `completed` Phase 14 manual test checklist 준비
+- `completed` Phase 14 closeout / next-phase prep 문서 정리
 
 ## 현재 메모
 
 - `Phase 12`: implementation closed / manual_validation_pending
 - `Phase 13`: practical closeout / manual_validation_pending
-- `Phase 14`: gate blocker audit / calibration review / interpretation review first pass 완료
+- `Phase 14`: practical closeout / manual_validation_pending
 
 - 이번 phase의 핵심은 새 전략 추가보다
   **현재 real-money gate가 어떻게 막히는지 설명 가능한 상태로 만드는 것**
@@ -98,7 +99,7 @@
   - `real_money_candidate = 1`
   - `production_candidate = 2`
   - `hold = 6`
-  이며, 다음 active step은 near-miss candidate case study다.
+  였고, 이 rerun set이 이후 calibration review와 threshold design의 기준 케이스가 되었다.
 - calibration review first pass 기준,
   factor 부족은 repeated hold의 1차 원인으로 보이지 않았고,
   factor expansion은 이후 controlled search workstream으로 여는 것이 더 적절하다.
@@ -119,6 +120,7 @@
   - strict annual: `worst_excess severe boundary`, `single severe -> caution` 규칙
   - ETF: `data_coverage 75% boundary`, `missing-data semantics`, `coverage denominator`
   를 family별로 설계하는 쪽이 더 맞다.
-- 따라서 next active step은
-  **family-specific threshold experiment design**
-  으로 읽는 것이 더 자연스럽다.
+- family-specific threshold experiment design까지 완료되면서,
+  다음 phase는 blanket relaxation이 아니라
+  **bounded threshold execution + operator workflow persistence + PIT operability implementation**
+  중 무엇을 먼저 열지 결정하는 단계로 넘어간다.

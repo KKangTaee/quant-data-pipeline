@@ -7854,3 +7854,28 @@ Do not copy full chat transcripts. Keep only the durable result.
       - so the next useful experiment is not another threshold sweep, but reviewing `data_coverage < 75%`, missing-data semantics, and denominator choice
 - Durable implication:
   - Phase 14 is now ready to move into a family-specific threshold experiment design step instead of another generic relaxation pass
+
+### 2026-04-10 - Phase 14 closeout은 threshold 실행이 아니라 bounded next-step 정의까지로 보는 것이 맞다
+
+- Request topic:
+  - carry Phase 14 through to the end and share the checklist at completion
+- Interpreted goal:
+  - close Phase 14 in a way that leaves the real-money gate workstream understandable, bounded, and ready for the next implementation phase
+- Result:
+  - created:
+    - `.note/finance/phase14/PHASE14_FAMILY_SPECIFIC_THRESHOLD_EXPERIMENT_DESIGN_FIRST_PASS.md`
+    - `.note/finance/phase14/PHASE14_DEPLOYMENT_WORKFLOW_BRIDGE_FIRST_PASS.md`
+    - `.note/finance/phase14/PHASE14_PIT_OPERABILITY_LATER_PASS_DECISION.md`
+    - `.note/finance/phase14/PHASE14_TEST_CHECKLIST.md`
+    - `.note/finance/phase14/PHASE14_COMPLETION_SUMMARY.md`
+    - `.note/finance/phase14/PHASE14_NEXT_PHASE_PREPARATION.md`
+  - updated the active TODO board, roadmap, and doc index so Phase 14 now reads as `practical closeout / manual_validation_pending`
+  - fixed the main handoff decision:
+    - next work should be one of:
+      - family-specific threshold experiment execution
+      - operator workflow persistence
+      - PIT operability implementation
+    - not another blanket threshold discussion
+- Durable implication:
+  - Phase 14 should now be read as the phase that made the real-money gate explainable and bounded
+  - the next phase should implement selected calibration or workflow changes, not rediscover where the blockers are

@@ -113,7 +113,7 @@ Analysis / Presentation
   수집 탭과 백테스트 탭을 분리하는 방향으로 시작했다.
 - 이후 UI가 커지면서 현재 구현 기준의 메인 앱은 explicit top navigation을 사용한다.
   `Overview`의 상단 상태 metric은 현재 active phase의 준비/closeout 상태를 짧게 보여주는 용도로 쓰이며,
-  현재 기준 값은 `Phase 14 Kickoff`다.
+  현재 기준 값은 `Phase 14 Practical Closeout`다.
   상단 페이지는 현재:
   - `Overview`
   - `Ingestion`
