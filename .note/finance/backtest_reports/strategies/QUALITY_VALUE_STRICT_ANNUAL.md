@@ -4,7 +4,7 @@
 
 - family: `Quality + Value`
 - variant: `Strict Annual`
-- 관련 phase: `Phase 13`
+- 관련 phase: `Phase 13`, `Phase 14`
 
 ## 한 줄 요약
 
@@ -14,6 +14,8 @@
 
 - `MDD` 방어는 상대적으로 나았지만
 - `SPY`를 확실히 이길 만큼의 `CAGR`가 부족한 경우가 많았다
+- current runtime refresh에서는 default blend + candidate equal-weight benchmark 조합이
+  `production_candidate / watchlist / review_required`까지 올라가는 stronger non-hold candidate로 확인됐다
 
 ## 지금 어떻게 읽으면 되는가
 
@@ -26,8 +28,13 @@
 - strongest theme:
   - low-drawdown / defensive factor blend 탐색
 - current takeaway:
-  - 방어형 실험에는 의미가 있지만
-  - 현재 strict annual family의 대표 승자라고 보긴 어렵다
+  - 방어형 실험에는 여전히 의미가 있다
+  - current best non-hold:
+    - default blend
+    - `candidate_universe_equal_weight` benchmark
+    - `promotion = production_candidate`
+    - `shortlist = watchlist`
+    - `deployment = review_required`
 
 ## 관련 결과 문서
 
@@ -43,6 +50,8 @@
   - wider coverage가 방어형 family에 주는 효과를 같이 확인한 문서
 - [PHASE13_STRICT_ANNUAL_FAMILY_BACKTEST_SUMMARY.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase13/PHASE13_STRICT_ANNUAL_FAMILY_BACKTEST_SUMMARY.md)
   - family 전체 summary 문서
+- [PHASE14_STRICT_ANNUAL_NONHOLD_CANDIDATE_REFRESH.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase14/PHASE14_STRICT_ANNUAL_NONHOLD_CANDIDATE_REFRESH.md)
+  - current runtime 기준으로 `Quality + Value` strongest non-hold candidate를 다시 고정한 refresh 문서
 
 ## 실무 해석
 
@@ -50,5 +59,7 @@
 
 - low-drawdown 연구 reference
 - 방어형 factor blend 실험용 family
+- 그리고 current runtime 기준으로는
+  `watchlist / review_required`까지 올라가는 non-hold blended candidate family
 
 로 보는 편이 맞고, raw winner 기준으로는 아직 `Value`보다 뒤에 있다.

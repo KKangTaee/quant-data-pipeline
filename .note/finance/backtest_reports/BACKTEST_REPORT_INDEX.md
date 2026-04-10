@@ -23,6 +23,15 @@
   - Phase 13 raw report archive 안내 문서
   - 전략 허브에서 연결된 세부 report를 phase 기준으로 모아둔 위치
 
+## Phase 14 Raw Archive
+
+- `phase14/README.md`
+  - Phase 14 current-runtime refresh archive 안내 문서
+  - calibration 이후 strict annual family를 다시 돌려본 결과 문서 위치
+- `phase14/PHASE14_STRICT_ANNUAL_NONHOLD_CANDIDATE_REFRESH.md`
+  - Phase 14 calibration 이후 `Quality / Value / Quality + Value` strict annual family를 current practical contract로 다시 돌려,
+    각 family의 strongest non-hold current candidate를 고정한 refresh 문서
+
 ## 운영 메모
 
 앞으로 새 report를 만들 때는:

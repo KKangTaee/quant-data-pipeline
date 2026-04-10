@@ -247,6 +247,9 @@
   - Phase 14 real-money gate calibration work를 practical closeout 기준으로 정리하고, 완료 범위와 다음 phase backlog를 분명히 남긴 문서
 - `.note/finance/phase14/PHASE14_NEXT_PHASE_PREPARATION.md`
   - Phase 14 이후 다음 phase를 threshold execution / operator workflow persistence / PIT operability 방향으로 어떻게 여는 것이 자연스러운지 정리한 handoff 문서
+- `.note/finance/backtest_reports/phase14/PHASE14_STRICT_ANNUAL_NONHOLD_CANDIDATE_REFRESH.md`
+  - Phase 14 calibration 이후 `Quality / Value / Quality + Value` strict annual family를 current practical contract로 다시 돌려,
+    family별 strongest non-hold candidate와 현재 승격 근접도를 고정한 refresh 문서
 - `.note/finance/backtest_reports/phase13/PHASE13_STRICT_ANNUAL_FAMILY_BACKTEST_SUMMARY.md`
   - Phase 13 동안 진행한 `Quality / Value / Quality + Value` strict annual family 백테스트 결과를 family별로 한 장에 요약하고, 가장 강한 후보와 반복된 hold 원인을 빠르게 다시 보기 위한 정리 문서
 - `.note/finance/backtest_reports/phase13/PHASE13_STRICT_ANNUAL_COVERAGE300_500_1000_TARGET_SEARCH.md`

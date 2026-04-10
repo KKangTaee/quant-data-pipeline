@@ -4,7 +4,7 @@
 
 - family: `Value`
 - variant: `Strict Annual`
-- 관련 phase: `Phase 13`
+- 관련 phase: `Phase 13`, `Phase 14`
 
 ## 한 줄 요약
 
@@ -52,6 +52,8 @@
   - family 전체 `SPY` 초과 탐색
 - [PHASE13_STRICT_ANNUAL_FAMILY_BACKTEST_SUMMARY.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase13/PHASE13_STRICT_ANNUAL_FAMILY_BACKTEST_SUMMARY.md)
   - family 전체 summary
+- [PHASE14_STRICT_ANNUAL_NONHOLD_CANDIDATE_REFRESH.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase14/PHASE14_STRICT_ANNUAL_NONHOLD_CANDIDATE_REFRESH.md)
+  - current runtime practical contract 기준으로 `Value` strongest exact candidate와 주변 near-miss를 다시 고정한 refresh 문서
 
 ## 실무 해석
 
@@ -59,5 +61,8 @@
 
 - strict annual 3개 family 중 가장 강한 성과 축
 - 다만 validation / promotion 병목이 같이 따라오는 family
+- 그리고 current runtime refresh에서도
+  `real_money_candidate / paper_probation / review_required`
+  exact candidate가 다시 재현되는 family
 
 로 읽는 편이 맞다.

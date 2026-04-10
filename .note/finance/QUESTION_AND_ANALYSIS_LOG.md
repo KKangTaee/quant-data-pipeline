@@ -7879,3 +7879,43 @@ Do not copy full chat transcripts. Keep only the durable result.
 - Durable implication:
   - Phase 14 should now be read as the phase that made the real-money gate explainable and bounded
   - the next phase should implement selected calibration or workflow changes, not rediscover where the blockers are
+
+### 2026-04-10 - Phase 14 이후 current runtime strict annual family를 다시 돌리면 strongest candidate는 여전히 Value다
+
+- Request topic:
+  - after the Phase 14 improvements, rerun `Quality`, `Value`, and `Quality + Value` strict annual families and organize which strategies are now closest to practical use
+- Interpreted goal:
+  - check whether current runtime has moved any strict annual family closer to
+    - `promotion = real_money_candidate`
+    - `shortlist >= paper_probation`
+    - `deployment != blocked`
+  - and leave a durable backtest report rather than only a chat answer
+- Result:
+  - created:
+    - `.note/finance/backtest_reports/phase14/PHASE14_STRICT_ANNUAL_NONHOLD_CANDIDATE_REFRESH.md`
+  - main rerun conclusions:
+    - `Value`:
+      - current best candidate is still the default value factor set with `SPY` benchmark
+      - `promotion = real_money_candidate`
+      - `shortlist = paper_probation`
+      - `deployment = review_required`
+      - `CAGR = 29.89%`
+      - `MDD = -29.15%`
+    - `Quality + Value`:
+      - current strongest non-hold is default blend with `candidate_universe_equal_weight` benchmark
+      - `promotion = production_candidate`
+      - `shortlist = watchlist`
+      - `deployment = review_required`
+      - `CAGR = 28.51%`
+      - `MDD = -28.35%`
+    - `Quality`:
+      - current strongest non-hold is `capital_discipline` with `LQD` benchmark
+      - `promotion = production_candidate`
+      - `shortlist = watchlist`
+      - `deployment = review_required`
+      - `CAGR = 14.84%`
+      - `MDD = -27.97%`
+- Durable implication:
+  - Phase 14 improvements did not change the strongest strict annual family ordering:
+    - `Value` remains the only current exact candidate that reaches `real_money_candidate / paper_probation`
+    - `Quality` and `Quality + Value` can be documented as current non-hold families, but still stop at `production_candidate / watchlist`

@@ -4858,3 +4858,41 @@ Keep entries append-only and concise.
     - threshold execution
     - operator workflow persistence
     - PIT operability implementation
+
+### 2026-04-10 - strict annual family current candidate refresh를 backtest report로 정리함
+
+- The user wanted to verify, after the Phase 14 gate-calibration work, which current `Quality`, `Value`, and `Quality + Value` strict annual candidates are now closest to practical use.
+- Updated:
+  - created:
+    - `.note/finance/backtest_reports/phase14/README.md`
+    - `.note/finance/backtest_reports/phase14/PHASE14_STRICT_ANNUAL_NONHOLD_CANDIDATE_REFRESH.md`
+  - updated:
+    - `.note/finance/backtest_reports/BACKTEST_REPORT_INDEX.md`
+    - `.note/finance/backtest_reports/strategies/QUALITY_STRICT_ANNUAL.md`
+    - `.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL.md`
+    - `.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL.md`
+    - `.note/finance/FINANCE_DOC_INDEX.md`
+- Key rerun evidence fixed in this work unit:
+  - `Value` strongest exact candidate:
+    - `promotion = real_money_candidate`
+    - `shortlist = paper_probation`
+    - `deployment = review_required`
+    - `CAGR = 29.89%`
+    - `MDD = -29.15%`
+  - `Quality + Value` strongest current non-hold:
+    - `promotion = production_candidate`
+    - `shortlist = watchlist`
+    - `deployment = review_required`
+    - `CAGR = 28.51%`
+    - `MDD = -28.35%`
+  - `Quality` strongest current non-hold:
+    - `promotion = production_candidate`
+    - `shortlist = watchlist`
+    - `deployment = review_required`
+    - `CAGR = 14.84%`
+    - `MDD = -27.97%`
+- Durable implication:
+  - after the Phase 14 calibration / UX work, `Value` still remains the only strict annual family that currently reaches
+    `real_money_candidate / paper_probation`
+  - `Quality` and `Quality + Value` can now be documented as current non-hold families in bounded practical search,
+    but they still stop at `production_candidate / watchlist`

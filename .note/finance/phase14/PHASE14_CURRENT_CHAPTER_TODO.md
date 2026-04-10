@@ -124,3 +124,9 @@
   다음 phase는 blanket relaxation이 아니라
   **bounded threshold execution + operator workflow persistence + PIT operability implementation**
   중 무엇을 먼저 열지 결정하는 단계로 넘어간다.
+- post-closeout current-runtime refresh 기준,
+  strict annual family strongest candidate ordering은
+  - `Value`: `real_money_candidate / paper_probation / review_required`
+  - `Quality + Value`: `production_candidate / watchlist / review_required`
+  - `Quality`: `production_candidate / watchlist / review_required`
+  로 다시 고정되었다.
