@@ -7831,3 +7831,26 @@ Do not copy full chat transcripts. Keep only the durable result.
     - strict annual `validation_status` fixed thresholds
     - ETF partial-data coverage interpretation
   - not blanket relaxation of every configurable threshold
+
+### 2026-04-10 - Phase 14 다음 calibration은 threshold 완화가 아니라 family별 해석 규칙 설계에 더 가깝다
+
+- Request topic:
+  - continue Phase 14 again after the sensitivity review
+- Interpreted goal:
+  - take the next concrete step so the phase moves from broad threshold discussion into more precise family-specific experiment planning
+- Result:
+  - created:
+    - `.note/finance/phase14/PHASE14_STRICT_ANNUAL_VALIDATION_STATUS_FIXED_THRESHOLD_REVIEW_FIRST_PASS.md`
+    - `.note/finance/phase14/PHASE14_ETF_OPERABILITY_DATA_COVERAGE_INTERPRETATION_REVIEW_FIRST_PASS.md`
+  - main analysis result:
+    - strict annual:
+      - the most direct current blocker is the internal `worst rolling excess <= -15%` severe boundary
+      - because a single severe signal already makes `validation = caution`
+      - so the next useful experiment is not policy relaxation alone, but reviewing the fixed severe / caution rule itself
+    - ETF:
+      - the most direct current blocker is `partial data coverage` interpretation
+      - practical GTAA already passes operability cleanly
+      - aggressive GTAA remains `hold` even when AUM/spread thresholds are effectively disabled
+      - so the next useful experiment is not another threshold sweep, but reviewing `data_coverage < 75%`, missing-data semantics, and denominator choice
+- Durable implication:
+  - Phase 14 is now ready to move into a family-specific threshold experiment design step instead of another generic relaxation pass

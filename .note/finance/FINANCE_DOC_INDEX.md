@@ -231,6 +231,10 @@
   - strict annual exact-hit hold와 quality near-miss를 current runtime으로 다시 돌려, `validation_policy` 완화만으로는 `hold`가 잘 풀리지 않고 fixed internal `validation_status` threshold가 더 직접적인 gate임을 정리한 Phase 14 sensitivity review 문서
 - `.note/finance/phase14/PHASE14_ETF_OPERABILITY_SENSITIVITY_REVIEW_FIRST_PASS.md`
   - practical GTAA와 aggressive GTAA near-miss를 AUM / spread threshold sweep으로 다시 돌려, ETF operability blocker가 threshold 자체보다 partial data coverage 해석에 더 가깝다는 점을 정리한 Phase 14 sensitivity review 문서
+- `.note/finance/phase14/PHASE14_STRICT_ANNUAL_VALIDATION_STATUS_FIXED_THRESHOLD_REVIEW_FIRST_PASS.md`
+  - strict annual repeated hold에서 `validation_policy`보다 internal `validation_status` fixed threshold가 더 직접적인 blocker임을, severe / caution 규칙 중심으로 다시 읽은 Phase 14 문서
+- `.note/finance/phase14/PHASE14_ETF_OPERABILITY_DATA_COVERAGE_INTERPRETATION_REVIEW_FIRST_PASS.md`
+  - ETF repeated hold에서 AUM / spread threshold보다 partial data coverage 해석이 더 직접적인 blocker임을, coverage boundary와 missing-data semantics 중심으로 다시 읽은 Phase 14 문서
 - `.note/finance/backtest_reports/phase13/PHASE13_STRICT_ANNUAL_FAMILY_BACKTEST_SUMMARY.md`
   - Phase 13 동안 진행한 `Quality / Value / Quality + Value` strict annual family 백테스트 결과를 family별로 한 장에 요약하고, 가장 강한 후보와 반복된 hold 원인을 빠르게 다시 보기 위한 정리 문서
 - `.note/finance/backtest_reports/phase13/PHASE13_STRICT_ANNUAL_COVERAGE300_500_1000_TARGET_SEARCH.md`

@@ -53,6 +53,13 @@
   - exact-hit hold 케이스를 기준으로 validation / validation_policy threshold를 좁혀 본다
 - `completed` ETF operability sensitivity review
   - practical non-hold와 aggressive near-miss 경계를 기준으로 operability threshold를 다시 본다
+- `completed` strict annual validation_status fixed-threshold review
+  - repeated hold를 만드는 internal validation severe / caution 규칙을 별도로 좁혀 본다
+- `completed` ETF operability data coverage interpretation review
+  - repeated hold를 고정시키는 partial data coverage 해석 규칙을 별도로 읽는다
+- `pending` family-specific threshold experiment design
+  - strict annual은 internal validation core 실험 후보를 정리한다
+  - ETF는 coverage interpretation 실험 후보를 정리한다
 
 ## 4. Deployment Workflow Bridge
 
@@ -77,7 +84,7 @@
 
 - `Phase 12`: implementation closed / manual_validation_pending
 - `Phase 13`: practical closeout / manual_validation_pending
-- `Phase 14`: gate blocker audit first pass 완료 / calibration review 대기
+- `Phase 14`: gate blocker audit / calibration review / interpretation review first pass 완료
 
 - 이번 phase의 핵심은 새 전략 추가보다
   **현재 real-money gate가 어떻게 막히는지 설명 가능한 상태로 만드는 것**
@@ -107,7 +114,11 @@
 - sensitivity review first pass 기준,
   strict annual exact-hit hold는 `validation_policy` 완화만으로는 잘 풀리지 않았고,
   ETF aggressive near-miss는 AUM/spread 완화보다 `partial data coverage` 해석이 더 직접적인 blocker였다.
+- fixed-threshold / interpretation review first pass 기준,
+  다음 calibration 실험은
+  - strict annual: `worst_excess severe boundary`, `single severe -> caution` 규칙
+  - ETF: `data_coverage 75% boundary`, `missing-data semantics`, `coverage denominator`
+  를 family별로 설계하는 쪽이 더 맞다.
 - 따라서 next active step은
-  - strict annual: `validation_status` fixed threshold review
-  - ETF: `operability data coverage interpretation review`
-  쪽으로 가는 것이 더 맞다.
+  **family-specific threshold experiment design**
+  으로 읽는 것이 더 자연스럽다.

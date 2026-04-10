@@ -4807,3 +4807,25 @@ Keep entries append-only and concise.
   - Phase 14 should now move from first-pass threshold inventory to:
     - strict annual `validation_status` fixed-threshold review
     - ETF `partial data coverage` interpretation review
+
+### 2026-04-10 - Phase 14 fixed-threshold / data-coverage interpretation review로 다음 실험 후보를 더 좁힘
+
+- The next active Phase 14 step was to take the sensitivity review one level deeper and separate:
+  - strict annual internal `validation_status` fixed thresholds
+  - ETF `partial data coverage` interpretation rules
+- Updated:
+  - created:
+    - `.note/finance/phase14/PHASE14_STRICT_ANNUAL_VALIDATION_STATUS_FIXED_THRESHOLD_REVIEW_FIRST_PASS.md`
+    - `.note/finance/phase14/PHASE14_ETF_OPERABILITY_DATA_COVERAGE_INTERPRETATION_REVIEW_FIRST_PASS.md`
+  - updated:
+    - `.note/finance/phase14/PHASE14_CURRENT_CHAPTER_TODO.md`
+    - `.note/finance/FINANCE_DOC_INDEX.md`
+- Durable implication:
+  - strict annual next experiment is now narrowed to:
+    - `worst_excess` severe boundary
+    - `single severe -> caution` rule
+    - drawdown-gap fixed threshold as a secondary follow-up
+  - ETF next experiment is now narrowed to:
+    - `data_coverage < 75%` caution boundary
+    - missing-data semantics
+    - coverage denominator choice
