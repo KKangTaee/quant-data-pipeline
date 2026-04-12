@@ -63,7 +63,6 @@ Do not copy full chat transcripts. Keep only the durable result.
     - `Guides`
 - Durable output:
   - `app/web/streamlit_app.py`
-  - `app/web/backtest_strategy_catalog.py`
 
 ### 2026-03-11 - Finance package structure analysis
 - Request topic:
@@ -8100,3 +8099,28 @@ Do not copy full chat transcripts. Keep only the durable result.
     - keep every meaningful run in strategy-specific backtest logs so the search becomes cumulative rather than ad hoc
 - Durable implication:
   - the project should prioritize better practical candidate generation before relaxing real-money gate thresholds again
+
+### 2026-04-13 - Phase 15 first pass에서는 overlay보다 Top N diversification이 Value downside 개선에 더 유효했다
+
+- Request topic:
+  - proceed with the next workstream after confirming the strongest `Value` candidate now reproduces correctly
+- Interpreted goal:
+  - start Phase 15 as a candidate-quality-improvement phase and find a more balanced `Value` candidate with lower `MDD` while keeping `real_money_candidate / paper_probation`
+- Result:
+  - confirmed that strict annual single-strategy `Real-Money Contract` percentage inputs still convert correctly from UI percentages to runtime decimals
+  - reran representative `Value > Strict Annual` cases under the same practical contract and found:
+    - `Top N = 14` keeps
+      - `Promotion = real_money_candidate`
+      - `Shortlist = paper_probation`
+      - `Deployment = review_required`
+    - while improving
+      - `CAGR 29.89% -> 27.48%`
+      - `MDD -29.15% -> -24.55%`
+  - practical conclusion:
+    - in this family, overlay / slower cadence was not the best first downside lever because those paths tended to fall back to `hold`
+    - `Top N diversification` is the cleanest first-pass lever for improving candidate quality without losing the non-hold gate state
+- Durable output:
+  - `.note/finance/phase15/PHASE15_CANDIDATE_QUALITY_IMPROVEMENT_PLAN.md`
+  - `.note/finance/phase15/PHASE15_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/backtest_reports/phase15/PHASE15_VALUE_DOWNSIDE_IMPROVEMENT_SEARCH_FIRST_PASS.md`
+  - `.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL_DOWNSIDE_IMPROVED_CURRENT_CANDIDATE.md`

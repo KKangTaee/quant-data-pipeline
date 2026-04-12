@@ -707,3 +707,18 @@ Phase 4 시작 시:
 7. `PHASE4_UI_STRUCTURE_DECISION.md`
 8. `PHASE4_RUNTIME_WRAPPER_SIGNATURES.md`
 9. `PHASE4_CURRENT_CHAPTER_TODO.md`
+
+---
+
+## Latest Additions
+
+- `.note/finance/phase15/PHASE15_CANDIDATE_QUALITY_IMPROVEMENT_PLAN.md`
+  - Phase 15 candidate quality improvement 상위 계획 문서
+- `.note/finance/phase15/PHASE15_CURRENT_CHAPTER_TODO.md`
+  - Phase 15 현재 실행 보드
+- `.note/finance/backtest_reports/phase15/README.md`
+  - Phase 15 backtest archive 안내 문서
+- `.note/finance/backtest_reports/phase15/PHASE15_VALUE_DOWNSIDE_IMPROVEMENT_SEARCH_FIRST_PASS.md`
+  - strongest `Value` baseline에서 `MDD`를 낮추는 방향으로 practical candidate quality를 개선할 수 있는지 본 first-pass backtest report
+- `.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL_DOWNSIDE_IMPROVED_CURRENT_CANDIDATE.md`
+  - strongest `Value` baseline보다 `MDD`를 낮춘 downside-improved current candidate one-pager

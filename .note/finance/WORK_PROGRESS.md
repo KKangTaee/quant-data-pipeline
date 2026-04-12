@@ -5033,3 +5033,34 @@ Keep entries append-only and concise.
   - cumulative logging of meaningful runs in strategy backtest logs
 - Durable implication:
   - the next major phase should optimize for better practical candidates, not only easier pass conditions
+
+### 2026-04-13 - Phase 15 first pass로 Value downside-improved current candidate를 고정함
+
+- After confirming that the strongest `Value` candidate now reproduces correctly under the fixed dynamic PIT preset semantics, the next agreed workstream was Phase 15 candidate quality improvement.
+- We first verified that strict annual single-strategy real-money percent fields still convert correctly from UI percentages to runtime decimals, so the next search could safely be documented as a practical UI-facing result instead of a hidden-script-only result.
+- We then reran representative `Value > Strict Annual` cases under the same practical contract and compared:
+  - `Top N = 10`
+  - `Top N = 13`
+  - `Top N = 14`
+  - `Top N = 15`
+- The first-pass result was:
+  - `Top N = 14` is the best downside-improved current candidate
+  - it keeps
+    - `Promotion = real_money_candidate`
+    - `Shortlist = paper_probation`
+    - `Deployment = review_required`
+  - while improving
+    - `CAGR 29.89% -> 27.48%`
+    - `MDD -29.15% -> -24.55%`
+- The phase/reporting layer was updated to reflect this new candidate:
+  - created Phase 15 backtest archive README
+  - created the first Phase 15 report
+  - created a one-pager for the downside-improved current candidate
+  - appended the `Value` strategy backtest log
+  - updated the `Value` strategy hub snapshot
+- Durable outputs:
+  - `.note/finance/backtest_reports/phase15/README.md`
+  - `.note/finance/backtest_reports/phase15/PHASE15_VALUE_DOWNSIDE_IMPROVEMENT_SEARCH_FIRST_PASS.md`
+  - `.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL_DOWNSIDE_IMPROVED_CURRENT_CANDIDATE.md`
+  - `.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL_BACKTEST_LOG.md`
+  - `.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL.md`

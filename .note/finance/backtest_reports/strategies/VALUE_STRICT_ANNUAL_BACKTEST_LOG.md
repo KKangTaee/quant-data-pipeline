@@ -20,6 +20,53 @@
 
 ## 기록
 
+### 2026-04-13 - downside-improved current candidate first pass
+
+- 목표:
+  - strongest baseline의 `Promotion / Shortlist / Deployment`를 유지하면서
+    `MDD`를 낮출 수 있는 practical candidate를 찾는다
+- 전략:
+  - `Value > Strict Annual`
+- 기간 / universe:
+  - `2016-01-01 ~ 2026-04-01`
+  - `US Statement Coverage 100`
+  - `Historical Dynamic PIT Universe`
+- 핵심 설정:
+  - strongest baseline과 동일
+  - 차이점은 `Top N = 14`
+  - `Rebalance Interval = 1`
+  - `Benchmark = SPY`
+  - `Trend Filter = off`
+  - `Market Regime = off`
+  - practical `Real-Money Contract` 유지
+  - underperformance / drawdown guardrail 유지
+- factor / ticker:
+  - `book_to_market`
+  - `earnings_yield`
+  - `sales_yield`
+  - `ocf_yield`
+  - `operating_income_yield`
+- 결과:
+  - `CAGR = 27.48%`
+  - `MDD = -24.55%`
+  - `Promotion = real_money_candidate`
+  - `Shortlist = paper_probation`
+  - `Deployment = review_required`
+  - `Rolling Review = watch`
+  - `Out-of-Sample Review = caution`
+- 해석:
+  - strongest baseline보다 `CAGR`는 `2.41%p` 낮지만
+    `MDD`는 `4.60%p` 개선된다
+  - `Promotion / Shortlist / Deployment` 상태를 그대로 유지한 채
+    downside를 가장 깔끔하게 낮춘 first-pass candidate다
+  - 이번 first pass에서는 overlay보다 `Top N diversification`이 더 효과적인 레버였다
+- 다음 액션:
+  - factor subset / controlled addition으로
+    `Top N = 14`보다 더 나은 downside-improved candidate가 가능한지 본다
+- 관련 문서:
+  - [VALUE_STRICT_ANNUAL_DOWNSIDE_IMPROVED_CURRENT_CANDIDATE.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL_DOWNSIDE_IMPROVED_CURRENT_CANDIDATE.md)
+  - [PHASE15_VALUE_DOWNSIDE_IMPROVEMENT_SEARCH_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase15/PHASE15_VALUE_DOWNSIDE_IMPROVEMENT_SEARCH_FIRST_PASS.md)
+
 ### 2026-04-10 - strongest current candidate
 
 - 목표:

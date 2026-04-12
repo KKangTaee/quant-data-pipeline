@@ -20,6 +20,8 @@
 - [VALUE_STRICT_ANNUAL_STRONGEST_CURRENT_CANDIDATE.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL_STRONGEST_CURRENT_CANDIDATE.md)
   - strongest current candidate 하나를 전략 구성 중심으로 바로 읽는 one-pager
   - 관련 문서 링크가 아니라, 실제 입력값 / factor / overlay / 기대 결과를 한 장에 모은 문서
+- [VALUE_STRICT_ANNUAL_DOWNSIDE_IMPROVED_CURRENT_CANDIDATE.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL_DOWNSIDE_IMPROVED_CURRENT_CANDIDATE.md)
+  - strongest baseline보다 `MDD`를 낮춘 downside-improved current candidate one-pager
 
 ## 전략 log
 
@@ -38,6 +40,10 @@
   - `CAGR = 29.89%`
   - `MDD = -29.15%`
   - `promotion = real_money_candidate`
+- downside-improved current candidate:
+  - `CAGR = 27.48%`
+  - `MDD = -24.55%`
+  - `promotion = real_money_candidate`
 - strongest balanced exact hit:
   - `CAGR = 15.84%`
   - `MDD = -17.42%`
@@ -46,22 +52,22 @@
 ## 최근 backtest log snapshot
 
 - 최근 기록:
-  - `2026-04-10 - strongest current candidate`
+  - `2026-04-13 - downside-improved current candidate first pass`
 - 핵심 설정:
   - default value factors
   - `Benchmark = SPY`
-  - `Top N = 10`
+  - `Top N = 14`
   - `Rebalance Interval = 1`
   - `Trend Filter = off`
   - `Market Regime = off`
 - 결과:
-  - `CAGR = 29.89%`
-  - `MDD = -29.15%`
+  - `CAGR = 27.48%`
+  - `MDD = -24.55%`
   - `Promotion = real_money_candidate`
   - `Shortlist = paper_probation`
   - `Deployment = review_required`
 - 다음에 볼 것:
-  - balanced near-miss와 같이 보면서 drawdown / consistency tradeoff 판단
+  - factor subset / addition으로 downside를 더 줄일 수 있는지 확인
 
 ## 관련 결과 문서
 
@@ -85,6 +91,8 @@
   - family 전체 summary
 - [PHASE14_STRICT_ANNUAL_NONHOLD_CANDIDATE_REFRESH.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase14/PHASE14_STRICT_ANNUAL_NONHOLD_CANDIDATE_REFRESH.md)
   - current runtime practical contract 기준으로 `Value` strongest exact candidate와 주변 near-miss를 다시 고정한 refresh 문서
+- [PHASE15_VALUE_DOWNSIDE_IMPROVEMENT_SEARCH_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase15/PHASE15_VALUE_DOWNSIDE_IMPROVEMENT_SEARCH_FIRST_PASS.md)
+  - strongest baseline에서 `MDD`를 낮추는 방향으로 본 first-pass downside improvement search 문서
 
 ## 실무 해석
 
@@ -95,5 +103,7 @@
 - 그리고 current runtime refresh에서도
   `real_money_candidate / paper_probation / review_required`
   exact candidate가 다시 재현되는 family
+- Phase 15 first pass에서는
+  `Top N = 14`로 downside를 낮춘 more balanced current candidate도 확보한 family
 
 로 읽는 편이 맞다.

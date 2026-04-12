@@ -24,6 +24,8 @@
   - `Value > Strict Annual` 전략 run 기록 누적 문서
 - `strategies/VALUE_STRICT_ANNUAL_STRONGEST_CURRENT_CANDIDATE.md`
   - strongest `Value > Strict Annual` 후보 하나를 전략 구성 중심으로 바로 읽는 one-pager
+- `strategies/VALUE_STRICT_ANNUAL_DOWNSIDE_IMPROVED_CURRENT_CANDIDATE.md`
+  - strongest baseline보다 `MDD`를 낮춘 downside-improved `Value > Strict Annual` 후보 one-pager
 - `strategies/QUALITY_VALUE_STRICT_ANNUAL.md`
   - `Quality + Value > Strict Annual` 결과 허브
 - `strategies/QUALITY_VALUE_STRICT_ANNUAL_BACKTEST_LOG.md`
@@ -43,6 +45,13 @@
 - `phase14/PHASE14_STRICT_ANNUAL_NONHOLD_CANDIDATE_REFRESH.md`
   - Phase 14 calibration 이후 `Quality / Value / Quality + Value` strict annual family를 current practical contract로 다시 돌려,
     각 family의 strongest non-hold current candidate를 고정한 refresh 문서
+
+## Phase 15 Raw Archive
+
+- `phase15/README.md`
+  - Phase 15 candidate quality improvement archive 안내 문서
+- `phase15/PHASE15_VALUE_DOWNSIDE_IMPROVEMENT_SEARCH_FIRST_PASS.md`
+  - strongest `Value` baseline에서 `MDD`를 낮추는 방향으로 practical candidate quality를 개선할 수 있는지 본 first-pass 문서
 
 ## 운영 메모
 
