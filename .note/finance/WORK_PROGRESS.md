@@ -4915,3 +4915,26 @@ Keep entries append-only and concise.
     - real-money contract
     - benchmark / overlay
     - expected promotion / shortlist / deployment / performance
+
+### 2026-04-13 - 전략별 backtest log 문서를 만들고 이후 기록 규칙을 고정함
+
+- The user wanted a durable way to manage repeated backtests by strategy, so future runs are not left scattered across chat and phase archives.
+- Updated:
+  - created:
+    - `.note/finance/backtest_reports/strategies/BACKTEST_LOG_TEMPLATE.md`
+    - `.note/finance/backtest_reports/strategies/GTAA_BACKTEST_LOG.md`
+    - `.note/finance/backtest_reports/strategies/QUALITY_STRICT_ANNUAL_BACKTEST_LOG.md`
+    - `.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL_BACKTEST_LOG.md`
+    - `.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL_BACKTEST_LOG.md`
+  - updated:
+    - `AGENTS.md`
+    - `.note/finance/backtest_reports/README.md`
+    - `.note/finance/backtest_reports/strategies/README.md`
+    - `.note/finance/backtest_reports/BACKTEST_REPORT_INDEX.md`
+    - `.note/finance/FINANCE_DOC_INDEX.md`
+- Durable implication:
+  - future meaningful backtests should now be recorded in the strategy-specific log as well as any broader phase/search report
+  - the canonical strategy-log shape is now:
+    - strategy hub
+    - strategy backtest log
+    - phase archive reports when deeper context is needed

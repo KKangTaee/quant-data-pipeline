@@ -13,6 +13,8 @@
 
 ## 지금 먼저 볼 문서
 
+- [GTAA_BACKTEST_LOG.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/GTAA_BACKTEST_LOG.md)
+  - `GTAA`를 어떤 세팅으로 돌렸고 결과가 어땠는지 누적 관리하는 전략 log
 - [PHASE13_GTAA_NONHOLD_SPY_OUTPERFORMANCE_SEARCH.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase13/PHASE13_GTAA_NONHOLD_SPY_OUTPERFORMANCE_SEARCH.md)
   - 현재 가장 실용적인 GTAA non-hold 후보를 정리한 문서
 

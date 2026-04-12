@@ -44,13 +44,45 @@
 
 1. phase 작업 중 백테스트를 많이 돌린다
 2. 결과가 durable하면 이 폴더에 report 문서를 만든다
-3. 먼저 전략별 허브 문서를 만든다
-4. phase 문서에는 그 report를 링크만 남긴다
+3. 전략별 허브 문서를 만든다
+4. 동시에 해당 전략의 `*_BACKTEST_LOG.md`에 run 기록을 append 한다
+5. phase 문서에는 그 report를 링크만 남긴다
 
 이렇게 하면:
 
 - phase 문서는 작업 흐름을 보기 좋고
 - backtest report 폴더는 전략 기준으로 결과 검색이 쉬워진다
+- 전략별 log 문서를 보면
+  - 어떤 세팅으로 돌렸는지
+  - 결과가 어땠는지
+  - 다음에 무엇을 다시 봐야 하는지
+  를 빠르게 추적할 수 있다
+
+## 전략별 backtest log 운영 원칙
+
+앞으로는 전략별 허브만 두는 것이 아니라,
+각 전략마다 `*_BACKTEST_LOG.md`를 같이 유지하는 것을 기본으로 한다.
+
+기본 목적은 이거다.
+
+- “어떤 전략을 어떤 설정으로 돌렸는가”
+- “결과가 어땠는가”
+- “왜 의미가 있었는가”
+
+를 전략 단위로 누적 관리하는 것
+
+권장 규칙:
+
+1. 의미 있는 backtest를 하나 완료하면 해당 전략 log에 append 한다
+2. 기록은 지우지 않고 누적한다
+3. 최소한 아래 항목은 남긴다
+   - 목표
+   - 기간 / universe
+   - 핵심 설정
+   - factor 또는 ticker
+   - CAGR / MDD / Promotion / Shortlist / Deployment
+   - 해석과 다음 액션
+4. 공통 형식은 `strategies/BACKTEST_LOG_TEMPLATE.md`를 기준으로 맞춘다
 
 ## 파일명 권장 규칙
 

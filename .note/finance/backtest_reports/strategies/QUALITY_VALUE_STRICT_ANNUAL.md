@@ -23,6 +23,11 @@
 2. family summary에서 `Value`와 비교한다
 3. 필요하면 `SPY` 비교 문서로 넘어간다
 
+## 전략 log
+
+- [QUALITY_VALUE_STRICT_ANNUAL_BACKTEST_LOG.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL_BACKTEST_LOG.md)
+  - `Quality + Value > Strict Annual`를 어떤 세팅으로 돌렸고 결과가 어땠는지 누적 관리하는 전략 log
+
 ## 대표 결과
 
 - strongest theme:

@@ -24,6 +24,11 @@
 - non-hold로 올라갈 수 있는지 확인
 - 안 되면 `Value` 또는 `Quality + Value`와 비교
 
+## 전략 log
+
+- [QUALITY_STRICT_ANNUAL_BACKTEST_LOG.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/QUALITY_STRICT_ANNUAL_BACKTEST_LOG.md)
+  - `Quality > Strict Annual`를 어떤 세팅으로 돌렸고 결과가 어땠는지 누적 관리하는 전략 log
+
 ## 대표 결과
 
 - strongest search theme:

@@ -29,6 +29,18 @@
   - reproducible backtest guides
   prefer `.note/finance/backtest_reports/` as the canonical home.
 - Keep phase execution documents in `.note/finance/phase*/`, but if a result-oriented backtest note becomes reusable beyond that phase, prefer creating or moving the durable report into `.note/finance/backtest_reports/` and linking it from the phase document.
+- For repeated strategy experimentation, maintain strategy-specific backtest logs under `.note/finance/backtest_reports/strategies/`.
+- Preferred shape:
+  - strategy hub: `STRATEGY.md`
+  - strategy run log: `STRATEGY_BACKTEST_LOG.md`
+- When a backtest result is meaningful enough to revisit later, append it to the matching strategy backtest log instead of leaving it only in chat.
+- A strategy backtest log entry should capture at minimum:
+  - goal
+  - time period / universe
+  - key settings
+  - factor set or ticker set
+  - result summary
+  - interpretation / next action
 - Prefer phase-specific execution/planning docs under:
   - `.note/finance/phase1/`
   - `.note/finance/phase2/`

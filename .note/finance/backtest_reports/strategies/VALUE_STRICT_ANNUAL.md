@@ -21,6 +21,11 @@
   - strongest current candidate 하나를 전략 구성 중심으로 바로 읽는 one-pager
   - 관련 문서 링크가 아니라, 실제 입력값 / factor / overlay / 기대 결과를 한 장에 모은 문서
 
+## 전략 log
+
+- [VALUE_STRICT_ANNUAL_BACKTEST_LOG.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL_BACKTEST_LOG.md)
+  - `Value > Strict Annual`를 어떤 세팅으로 돌렸고 결과가 어땠는지 누적 관리하는 전략 log
+
 ## 지금 어떻게 읽으면 되는가
 
 1. strongest raw winner를 먼저 본다

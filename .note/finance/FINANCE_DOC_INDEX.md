@@ -25,6 +25,16 @@
   - phase 문서와 분리해서, 결과 중심 backtest Markdown 문서를 어디에 두고 어떻게 관리할지 정리한 운영 안내 문서
 - `.note/finance/backtest_reports/BACKTEST_REPORT_INDEX.md`
   - durable backtest 결과 리포트 전용 인덱스로, 앞으로 결과 중심 Markdown 문서를 따로 모아 관리하기 위한 문서
+- `.note/finance/backtest_reports/strategies/BACKTEST_LOG_TEMPLATE.md`
+  - 전략별 backtest log를 같은 형식으로 append하기 위한 공통 템플릿 문서
+- `.note/finance/backtest_reports/strategies/GTAA_BACKTEST_LOG.md`
+  - `GTAA` 전략 run 기록을 전략 기준으로 누적 관리하는 backtest log 문서
+- `.note/finance/backtest_reports/strategies/QUALITY_STRICT_ANNUAL_BACKTEST_LOG.md`
+  - `Quality > Strict Annual` 전략 run 기록을 전략 기준으로 누적 관리하는 backtest log 문서
+- `.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL_BACKTEST_LOG.md`
+  - `Value > Strict Annual` 전략 run 기록을 전략 기준으로 누적 관리하는 backtest log 문서
+- `.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL_BACKTEST_LOG.md`
+  - `Quality + Value > Strict Annual` 전략 run 기록을 전략 기준으로 누적 관리하는 backtest log 문서
 - `.note/finance/OVERLAY_CASH_POLICY_RESEARCH.md`
   - strict factor overlay의 partial rejection을 survivor reweighting으로 볼지, cash retention으로 볼지에 대한 실무 관행 조사와 현재 프로젝트 권고 문서
 - `.note/finance/DAILY_MARKET_UPDATE_RATE_LIMIT_ANALYSIS_20260328.md`

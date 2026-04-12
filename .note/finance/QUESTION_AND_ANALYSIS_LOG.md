@@ -7938,3 +7938,24 @@ Do not copy full chat transcripts. Keep only the durable result.
     - current expected statuses and performance
 - Durable implication:
   - strongest `Value` candidate is now documented in a form that is immediately reusable for portfolio reconstruction, not only for report navigation
+
+### 2026-04-13 - 반복 백테스트는 전략별 backtest log로 관리하는 편이 가장 실용적이다
+
+- Request topic:
+  - create per-strategy documents to record repeated backtests, including settings used and outcomes, and add this as a durable repo instruction
+- Interpreted goal:
+  - prevent repeated backtest work from being scattered across chat, phase reports, and memory
+  - make it easy to look up “what settings did we use last time and what happened”
+- Result:
+  - created strategy-specific backtest logs for:
+    - `GTAA`
+    - `Quality > Strict Annual`
+    - `Value > Strict Annual`
+    - `Quality + Value > Strict Annual`
+  - also created a shared `BACKTEST_LOG_TEMPLATE.md`
+  - updated `AGENTS.md` and backtest report README/index docs so future work records meaningful backtests in the strategy log by default
+- Durable implication:
+  - future backtest work should now have three layers:
+    - strategy hub for overview
+    - strategy backtest log for cumulative run history
+    - phase archive report for deeper one-off searches and analyses

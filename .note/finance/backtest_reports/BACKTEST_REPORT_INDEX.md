@@ -8,16 +8,26 @@
 
 - `strategies/README.md`
   - 전략별 허브 문서 안내
+- `strategies/BACKTEST_LOG_TEMPLATE.md`
+  - 전략별 backtest log를 append할 때 공통으로 쓰는 템플릿
 - `strategies/GTAA.md`
   - `GTAA` 결과 허브
+- `strategies/GTAA_BACKTEST_LOG.md`
+  - `GTAA` 전략 run 기록 누적 문서
 - `strategies/QUALITY_STRICT_ANNUAL.md`
   - `Quality > Strict Annual` 결과 허브
+- `strategies/QUALITY_STRICT_ANNUAL_BACKTEST_LOG.md`
+  - `Quality > Strict Annual` 전략 run 기록 누적 문서
 - `strategies/VALUE_STRICT_ANNUAL.md`
   - `Value > Strict Annual` 결과 허브
+- `strategies/VALUE_STRICT_ANNUAL_BACKTEST_LOG.md`
+  - `Value > Strict Annual` 전략 run 기록 누적 문서
 - `strategies/VALUE_STRICT_ANNUAL_STRONGEST_CURRENT_CANDIDATE.md`
   - strongest `Value > Strict Annual` 후보 하나를 전략 구성 중심으로 바로 읽는 one-pager
 - `strategies/QUALITY_VALUE_STRICT_ANNUAL.md`
   - `Quality + Value > Strict Annual` 결과 허브
+- `strategies/QUALITY_VALUE_STRICT_ANNUAL_BACKTEST_LOG.md`
+  - `Quality + Value > Strict Annual` 전략 run 기록 누적 문서
 
 ## Phase 13 Raw Archive
 
