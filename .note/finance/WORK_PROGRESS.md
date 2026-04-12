@@ -4938,3 +4938,20 @@ Keep entries append-only and concise.
     - strategy hub
     - strategy backtest log
     - phase archive reports when deeper context is needed
+
+### 2026-04-13 - 전략 허브에서 최근 backtest log snapshot이 바로 보이도록 정리함
+
+- The next natural follow-up after creating strategy-specific logs was to make the hub pages themselves more useful at a glance.
+- Updated:
+  - `.note/finance/backtest_reports/strategies/GTAA.md`
+  - `.note/finance/backtest_reports/strategies/QUALITY_STRICT_ANNUAL.md`
+  - `.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL.md`
+  - `.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL.md`
+  - `.note/finance/backtest_reports/strategies/README.md`
+- Durable implication:
+  - opening a strategy hub is now enough to see:
+    - latest meaningful run title
+    - key settings
+    - latest result summary
+    - next thing to inspect
+  - this reduces the need to bounce between hub and log for everyday review

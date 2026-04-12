@@ -41,6 +41,26 @@
     - `shortlist = watchlist`
     - `deployment = review_required`
 
+## 최근 backtest log snapshot
+
+- 최근 기록:
+  - `2026-04-10 - current strongest non-hold blend`
+- 핵심 설정:
+  - default blend
+  - `Benchmark Contract = Candidate Universe Equal-Weight`
+  - `Top N = 10`
+  - `Rebalance Interval = 1`
+  - `Trend Filter = off`
+  - `Market Regime = off`
+- 결과:
+  - `CAGR = 28.51%`
+  - `MDD = -28.35%`
+  - `Promotion = production_candidate`
+  - `Shortlist = watchlist`
+  - `Deployment = review_required`
+- 다음에 볼 것:
+  - validation consistency를 더 개선할 수 있는 blend / benchmark 조합 탐색
+
 ## 관련 결과 문서
 
 - [PHASE13_QUALITY_VALUE_2016_LOW_DRAWDOWN_FACTOR_OPTION_SEARCH.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase13/PHASE13_QUALITY_VALUE_2016_LOW_DRAWDOWN_FACTOR_OPTION_SEARCH.md)

@@ -7959,3 +7959,23 @@ Do not copy full chat transcripts. Keep only the durable result.
     - strategy hub for overview
     - strategy backtest log for cumulative run history
     - phase archive report for deeper one-off searches and analyses
+
+### 2026-04-13 - 전략 허브도 최근 backtest 결과를 바로 보여줘야 실제로 자주 쓰기 편하다
+
+- Request topic:
+  - continue the next follow-up work after introducing strategy-specific backtest logs
+- Interpreted goal:
+  - make the new log structure more practical by ensuring the strategy hub itself exposes the latest meaningful run without requiring another click first
+- Result:
+  - added `최근 backtest log snapshot` sections to:
+    - `GTAA`
+    - `Quality > Strict Annual`
+    - `Value > Strict Annual`
+    - `Quality + Value > Strict Annual`
+  - each hub now shows:
+    - latest log title
+    - key settings
+    - result summary
+    - next inspection focus
+- Durable implication:
+  - strategy hub pages now function as genuine landing pages, not only as link directories

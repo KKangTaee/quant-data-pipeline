@@ -43,6 +43,26 @@
   - `MDD = -17.42%`
   - 문제: `promotion = hold`
 
+## 최근 backtest log snapshot
+
+- 최근 기록:
+  - `2026-04-10 - strongest current candidate`
+- 핵심 설정:
+  - default value factors
+  - `Benchmark = SPY`
+  - `Top N = 10`
+  - `Rebalance Interval = 1`
+  - `Trend Filter = off`
+  - `Market Regime = off`
+- 결과:
+  - `CAGR = 29.89%`
+  - `MDD = -29.15%`
+  - `Promotion = real_money_candidate`
+  - `Shortlist = paper_probation`
+  - `Deployment = review_required`
+- 다음에 볼 것:
+  - balanced near-miss와 같이 보면서 drawdown / consistency tradeoff 판단
+
 ## 관련 결과 문서
 
 - [PHASE13_VALUE_RAW_WINNER_BACKTEST_GUIDE.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase13/PHASE13_VALUE_RAW_WINNER_BACKTEST_GUIDE.md)

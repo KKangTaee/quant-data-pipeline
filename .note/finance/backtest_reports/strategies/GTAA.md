@@ -31,6 +31,28 @@
 - `Promotion = production_candidate`
 - `Deployment = watchlist_only`
 
+## 최근 backtest log snapshot
+
+- 최근 기록:
+  - `2026-04-10 - practical non-hold reference`
+- 핵심 설정:
+  - `month_end`
+  - `Top = 2`
+  - `Interval = 3`
+  - `Score Horizons = 1M / 3M`
+  - `Benchmark = SPY`
+  - `Risk-Off Mode = cash_only`
+  - `Min ETF AUM = 0.0`
+  - `Max Bid-Ask Spread = 100.0`
+- 결과:
+  - `CAGR = 14.7671%`
+  - `MDD = -11.5626%`
+  - `Promotion = production_candidate`
+  - `Shortlist = watchlist`
+  - `Deployment = watchlist_only`
+- 다음에 볼 것:
+  - ETF operability / coverage interpretation이 풀리면 더 공격형 universe와 다시 비교
+
 ## 현재 해석
 
 이 후보는:

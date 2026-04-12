@@ -43,6 +43,26 @@
     - `shortlist = watchlist`
     - `deployment = review_required`
 
+## 최근 backtest log snapshot
+
+- 최근 기록:
+  - `2026-04-10 - current best non-hold candidate`
+- 핵심 설정:
+  - `capital_discipline`
+  - `Benchmark = LQD`
+  - `Top N = 10`
+  - `Rebalance Interval = 1`
+  - `Trend Filter = on`
+  - `Market Regime = on`
+- 결과:
+  - `CAGR = 14.84%`
+  - `MDD = -27.97%`
+  - `Promotion = production_candidate`
+  - `Shortlist = watchlist`
+  - `Deployment = review_required`
+- 다음에 볼 것:
+  - `validation = watch`를 더 깨끗하게 만들 factor / benchmark 조합 탐색
+
 ## 관련 결과 문서
 
 - [PHASE13_QUALITY_STRICT_SPY_DOMINANCE_SEARCH.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase13/PHASE13_QUALITY_STRICT_SPY_DOMINANCE_SEARCH.md)
