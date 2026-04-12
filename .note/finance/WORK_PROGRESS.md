@@ -5003,3 +5003,20 @@ Keep entries append-only and concise.
     - `US Statement Coverage 100`
     - practical investability / promotion thresholds
     - exact underperformance / drawdown guardrail window and threshold values
+
+### 2026-04-13 - strict annual dynamic PIT preset이 hidden `1000 -> target membership`로 확장되던 UI 계약을 바로잡음
+
+- The user correctly pointed out that the current UI behavior was inconsistent with the documented reproduction flow.
+- Before this fix:
+  - `Preset = US Statement Coverage 100`
+  - `Universe Contract = Historical Dynamic PIT Universe`
+  still expanded the dynamic candidate pool to `US Statement Coverage 1000` and then rebuilt membership to target `100`.
+- This was originally a Phase 10 first-pass approximation to widen the PIT candidate pool, but it made:
+  - preset semantics confusing
+  - strongest-candidate reports hard to reproduce directly from the UI
+- Updated:
+  - strict annual dynamic PIT now uses the selected preset/manual ticker set itself as the candidate pool
+  - the UI note now says this explicitly
+- Durable implication:
+  - `Coverage 100 + dynamic PIT` now means candidate pool `100`, target membership `100`
+  - preset semantics are now aligned with user expectation and report reproducibility

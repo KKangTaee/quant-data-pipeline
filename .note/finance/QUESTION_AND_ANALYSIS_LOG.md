@@ -8049,3 +8049,24 @@ Do not copy full chat transcripts. Keep only the durable result.
   - when a backtest result is sensitive to practical-contract settings, reports should state both:
     - the non-default preset / universe choice
     - the exact guardrail window / threshold values
+
+### 2026-04-13 - strict annual dynamic PIT의 hidden `1000 -> 100` preset 확장은 UI 의미를 흐려서 수정하는 편이 맞다
+
+- Request topic:
+  - the user asked whether the current dynamic PIT preset behavior should be fixed because the UI looked like `Coverage 100` but actually behaved like `1000 -> 100 membership`
+- Interpreted goal:
+  - clarify why the behavior existed and whether it still makes sense for operator-facing UI
+- Result:
+  - the old behavior came from an earlier first-pass attempt to approximate PIT market-cap membership from a broader managed pool
+  - however, in the current product it created a more important problem:
+    - selected preset semantics became misleading
+    - strongest-candidate reports were not directly reproducible from the visible UI choices
+  - therefore the better operator contract is:
+    - selected preset/manual ticker set = dynamic candidate pool
+    - target membership = selected preset size
+- Durable implication:
+  - strict annual dynamic PIT UI should be read literally again
+  - `US Statement Coverage 100` with dynamic PIT now means:
+    - candidate pool `100`
+    - target membership `100`
+  - if a broader `1000 -> 100` approximation is ever needed again, it should return as an explicit operator option, not as a hidden preset rewrite

@@ -110,6 +110,10 @@ raw return edge를 가장 강하게 드러낸 strict annual value 전략이다.
 - 즉 위 strongest candidate는
   **기본 UI 상태를 그대로 돌린 값이 아니라**
   `Real-Money Contract`를 practical하게 맞춘 뒤 다시 돌린 결과다.
+- 현재 UI에서는 `Preset = US Statement Coverage 100`과
+  `Universe Contract = Historical Dynamic PIT Universe`를 같이 선택하면,
+  selected preset `100`개가 그대로 dynamic candidate pool로 사용된다.
+  즉 hidden `1000 -> 100` membership 확장을 따로 가정하지 않아도 된다.
 
 ## Benchmark / Overlay / Guardrail
 

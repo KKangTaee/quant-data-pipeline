@@ -1122,10 +1122,15 @@ Analysis / Presentation
     annual strict + quarterly strict prototype
     single-strategy + compare first pass를 포함한다
   - dynamic PIT membership first/second pass는
-    - managed candidate pool
+    - selected preset/manual candidate pool
     - rebalance-date close
     - `latest_available_at <= rebalance_date`인 최신 statement `shares_outstanding`
     를 사용해 `approx_market_cap`을 계산하고 top-N membership를 다시 구성한다
+  - strict annual UI에서는 `Historical Dynamic PIT Universe`를 선택해도
+    selected preset 자체가 candidate pool로 유지된다
+    - 예: `US Statement Coverage 100` + dynamic PIT면
+      candidate pool도 `100`, target membership도 `100`
+    - 이전처럼 hidden `1000 -> 100` 확장은 더 이상 기본 동작이 아니다
   - dynamic first pass는 candidate pool 전체의 full-range price history를 강제하지 않는다
     - selected end까지 DB price history가 확인된 candidate만 natural inclusion된다
     - 따라서 `dynamic_candidate_count`와 실제 `candidate_pool_count`는 다를 수 있다

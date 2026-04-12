@@ -985,10 +985,7 @@ def _resolve_strict_dynamic_universe_inputs(
         return [], None
 
     target_size = STRICT_ANNUAL_MANAGED_PRESET_SPECS.get(preset_name or "", len(tickers))
-    if preset_name in STRICT_ANNUAL_MANAGED_PRESET_SPECS and "US Statement Coverage 1000" in QUALITY_STRICT_PRESETS:
-        candidate_tickers = QUALITY_STRICT_PRESETS["US Statement Coverage 1000"]
-    else:
-        candidate_tickers = tickers
+    candidate_tickers = tickers
 
     return candidate_tickers, int(target_size)
 
@@ -1010,13 +1007,13 @@ def _render_strict_dynamic_universe_contract_note(
     if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE:
         freq_label = str(statement_freq).strip().lower()
         st.info(
-            "Phase 10 first pass dynamic PIT mode입니다. 현재 managed candidate pool 안에서 "
+            "Phase 10 first pass dynamic PIT mode입니다. 현재 선택한 candidate pool 안에서 "
             f"각 리밸런싱 날짜 기준 `price * latest-known {freq_label} shares_outstanding`로 top-N 모집군을 다시 구성합니다."
         )
         st.caption(
             f"Dynamic candidate pool: `{len(dynamic_candidate_tickers)}` symbols | "
             f"target membership: `{dynamic_target_size}` | "
-            f"현재는 `{freq_label}` strict family first pass, approximate PIT market-cap mode입니다."
+            f"현재는 `{freq_label}` strict family first pass이며, 선택한 preset/manual candidate pool을 기준으로 membership를 다시 계산합니다."
         )
 
     return dynamic_candidate_tickers, dynamic_target_size
