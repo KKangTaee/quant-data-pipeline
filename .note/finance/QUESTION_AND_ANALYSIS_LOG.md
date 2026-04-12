@@ -8070,3 +8070,33 @@ Do not copy full chat transcripts. Keep only the durable result.
     - candidate pool `100`
     - target membership `100`
   - if a broader `1000 -> 100` approximation is ever needed again, it should return as an explicit operator option, not as a hidden preset rewrite
+
+### 2026-04-13 - strongest Value 재현 확인 이후의 자연스러운 다음 단계는 gate 완화보다 candidate quality 개선이다
+
+- Request topic:
+  - after confirming the strongest `Value` candidate now reproduces correctly, decide what the next improvement step should be given:
+    - `Quality` / `Quality + Value` still do not reach the desired practical candidate state
+    - `Value` still has relatively deep drawdown
+- Interpreted goal:
+  - choose the next workstream that best improves practical strategy quality rather than only making the gate easier to pass
+- Result:
+  - the better next step is not a blanket gate relaxation first
+  - the better order is:
+    - keep the current strongest `Value` candidate as the anchor baseline
+    - run a downside-improvement search for `Value`
+    - run controlled factor-expansion / defensive-combination searches for `Quality` and `Quality + Value`
+    - only then revisit whether any gate threshold still looks mis-calibrated
+- Recommended next workstream shape:
+  - `Track A - Value downside improvement`
+    - aim to reduce MDD while keeping `Promotion != hold`
+    - primary levers:
+      - more defensive factor subsets
+      - `Trend Filter` / `Market Regime` overlays
+      - `Top N` / `Rebalance Interval` tradeoff
+  - `Track B - Quality / Quality+Value candidate improvement`
+    - use the controlled factor expansion shortlist and search for non-hold candidates first
+    - only after a reasonable candidate appears, compare practical contract / deployment state
+  - `Track C - Reported target search`
+    - keep every meaningful run in strategy-specific backtest logs so the search becomes cumulative rather than ad hoc
+- Durable implication:
+  - the project should prioritize better practical candidate generation before relaxing real-money gate thresholds again

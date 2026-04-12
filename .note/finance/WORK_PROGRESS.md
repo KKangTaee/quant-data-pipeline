@@ -5020,3 +5020,16 @@ Keep entries append-only and concise.
 - Durable implication:
   - `Coverage 100 + dynamic PIT` now means candidate pool `100`, target membership `100`
   - preset semantics are now aligned with user expectation and report reproducibility
+
+### 2026-04-13 - strongest Value 재현 이후의 다음 workstream 방향을 candidate quality improvement로 정리함
+
+- After confirming the strongest `Value` candidate reproduces correctly, the next decision was whether to continue with gate relaxation or with strategy-quality improvement.
+- Chosen direction:
+  - improve candidates first
+  - relax gates later only if needed
+- Recommended workstreams:
+  - `Value` downside-improvement search
+  - `Quality` / `Quality + Value` candidate-improvement search
+  - cumulative logging of meaningful runs in strategy backtest logs
+- Durable implication:
+  - the next major phase should optimize for better practical candidates, not only easier pass conditions
