@@ -23,9 +23,17 @@
     - overlay / cadence는 `hold`로 돌아가기 쉬웠다
     - `Top N = 14`가 downside-improved current candidate로 가장 균형이 좋았다
 
-- `pending` factor subset / addition downside search
+- `completed` factor subset / addition downside search
   - baseline 5-factor를 중심으로
     more defensive subset / addition 후보를 탐색
+  - first added-factor result:
+    - `psr` addition이 current best balanced candidate였다
+    - `CAGR = 28.13%`
+    - `MDD = -24.55%`
+
+- `pending` Quality / Quality + Value candidate improvement로 확장
+  - same bounded addition approach를
+    `Quality` / `Quality + Value` family에 적용한다
 
 - `completed` strongest baseline 대비 비교 정리
   - `CAGR`
@@ -63,6 +71,13 @@
   - `Promotion = real_money_candidate`
   - `Shortlist = paper_probation`
   - `Deployment = review_required`
+- best addition candidate:
+  - `Top N = 14 + psr`
+  - `CAGR = 28.13%`
+  - `MDD = -24.55%`
+  - `Promotion = real_money_candidate`
+  - `Shortlist = paper_probation`
+  - `Deployment = review_required`
 
 ## 현재 판단
 
@@ -70,5 +85,7 @@
   먼저 후보 전략 품질을 높이는 방향이 맞다.
 - Phase 15 first pass에서는
   `Value downside-improvement search`의 첫 practical candidate를 확보했다.
+- Phase 15 second pass에서는
+  `psr` addition이 current best balanced candidate가 되었다.
 - 다음 active step은
-  `factor subset / controlled addition downside search`다.
+  `Quality` / `Quality + Value` family에 같은 bounded addition search를 적용하는 것이다.

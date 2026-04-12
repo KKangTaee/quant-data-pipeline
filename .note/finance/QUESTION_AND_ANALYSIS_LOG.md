@@ -8124,3 +8124,28 @@ Do not copy full chat transcripts. Keep only the durable result.
   - `.note/finance/phase15/PHASE15_CURRENT_CHAPTER_TODO.md`
   - `.note/finance/backtest_reports/phase15/PHASE15_VALUE_DOWNSIDE_IMPROVEMENT_SEARCH_FIRST_PASS.md`
   - `.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL_DOWNSIDE_IMPROVED_CURRENT_CANDIDATE.md`
+
+### 2026-04-13 - Phase 15 second pass에서는 psr addition이 Value best current candidate였다
+
+- Request topic:
+  - continue the Value candidate-quality-improvement work with a bounded one-factor addition search around the downside-improved anchor
+- Interpreted goal:
+  - keep the improved `Value` family in a non-hold state while testing whether one extra factor can improve return without reintroducing deeper drawdown or gate regression
+- Result:
+  - ran bounded one-factor additions on top of the `Top N = 14` downside-improved anchor
+  - the best balanced candidate was `psr` addition
+  - that candidate kept
+    - `Promotion = real_money_candidate`
+    - `Shortlist = paper_probation`
+    - `Deployment = review_required`
+  - and improved
+    - `CAGR 27.48% -> 28.13%`
+    - `MDD` stayed at `-24.55%`
+- Practical conclusion:
+  - `psr` is the current best addition candidate for the `Value` family
+  - the controlled addition search confirmed that we should keep widening the search space in a bounded way rather than relaxing gates again
+- Durable output:
+  - `.note/finance/phase15/PHASE15_VALUE_FACTOR_ADDITION_SECOND_PASS.md`
+  - `.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL_FACTOR_ADDITION_BEST_CURRENT_CANDIDATE.md`
+  - `.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL_BACKTEST_LOG.md`
+  - `.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL.md`

@@ -110,6 +110,8 @@
 현재는 새로 만드는 결과 중심 문서는 이 폴더에 두는 것을 기본으로 하고, 많이 참조되는 기존 결과 문서도 점진적으로 이 폴더로 옮긴다.
 
 Phase 13 결과 문서는 이미 `.note/finance/backtest_reports/phase13/`로 정리했고, 기존 phase 경로에는 호환용 안내 stub를 남겨두었다.
+Phase 14 결과 문서는 `.note/finance/backtest_reports/phase14/`에 두고,
+Phase 15 candidate-quality-improvement 결과는 `.note/finance/backtest_reports/phase15/`에 모은다.
 
 또한 실제로 다시 찾아볼 때는:
 

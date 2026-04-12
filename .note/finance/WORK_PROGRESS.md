@@ -5064,3 +5064,31 @@ Keep entries append-only and concise.
   - `.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL_DOWNSIDE_IMPROVED_CURRENT_CANDIDATE.md`
   - `.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL_BACKTEST_LOG.md`
   - `.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL.md`
+
+### 2026-04-13 - Phase 15 second pass로 Value factor addition best candidate를 고정함
+
+- Using the downside-improved `Top N = 14` anchor, we ran a bounded one-factor addition search across:
+  - `fcf_yield`
+  - `liquidation_value`
+  - `pcr`
+  - `pfcr`
+  - `ev_ebit`
+  - `por`
+  - `per`
+  - `pbr`
+  - `psr`
+- Best result:
+  - add `psr`
+  - keep the `Top N = 14` anchor
+  - maintain
+    - `Promotion = real_money_candidate`
+    - `Shortlist = paper_probation`
+    - `Deployment = review_required`
+  - while improving
+    - `CAGR 27.48% -> 28.13%`
+    - `MDD` remains `-24.55%`
+- Durable outputs:
+  - `.note/finance/backtest_reports/phase15/PHASE15_VALUE_FACTOR_ADDITION_SECOND_PASS.md`
+  - `.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL_FACTOR_ADDITION_BEST_CURRENT_CANDIDATE.md`
+  - `.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL_BACKTEST_LOG.md`
+  - `.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL.md`

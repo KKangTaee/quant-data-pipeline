@@ -26,6 +26,8 @@
   - strongest `Value > Strict Annual` 후보 하나를 전략 구성 중심으로 바로 읽는 one-pager
 - `strategies/VALUE_STRICT_ANNUAL_DOWNSIDE_IMPROVED_CURRENT_CANDIDATE.md`
   - strongest baseline보다 `MDD`를 낮춘 downside-improved `Value > Strict Annual` 후보 one-pager
+- `strategies/VALUE_STRICT_ANNUAL_FACTOR_ADDITION_BEST_CURRENT_CANDIDATE.md`
+  - downside-improved anchor에 one-factor addition을 붙인 best current `Value > Strict Annual` 후보 one-pager
 - `strategies/QUALITY_VALUE_STRICT_ANNUAL.md`
   - `Quality + Value > Strict Annual` 결과 허브
 - `strategies/QUALITY_VALUE_STRICT_ANNUAL_BACKTEST_LOG.md`
@@ -52,6 +54,8 @@
   - Phase 15 candidate quality improvement archive 안내 문서
 - `phase15/PHASE15_VALUE_DOWNSIDE_IMPROVEMENT_SEARCH_FIRST_PASS.md`
   - strongest `Value` baseline에서 `MDD`를 낮추는 방향으로 practical candidate quality를 개선할 수 있는지 본 first-pass 문서
+- `phase15/PHASE15_VALUE_FACTOR_ADDITION_SECOND_PASS.md`
+  - downside-improved `Value` anchor에 one-factor addition을 붙여 current best candidate를 다시 본 second-pass 문서
 
 ## 운영 메모
 

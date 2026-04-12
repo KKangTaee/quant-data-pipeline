@@ -20,6 +20,54 @@
 
 ## 기록
 
+### 2026-04-13 - factor addition second pass에서 psr candidate를 고정함
+
+- 목표:
+  - Phase 15 downside-improvement first pass(`Top N = 14`) 위에
+    one-factor addition만 붙여서 더 나은 practical candidate를 찾는다
+- 전략:
+  - `Value > Strict Annual`
+- 기간 / universe:
+  - `2016-01-01 ~ 2026-04-01`
+  - `US Statement Coverage 100`
+  - `Historical Dynamic PIT Universe`
+- 핵심 설정:
+  - `Top N = 14`
+  - `Rebalance Interval = 1`
+  - `Benchmark = SPY`
+  - `Trend Filter = off`
+  - `Market Regime = off`
+  - practical `Real-Money Contract` 유지
+  - underperformance / drawdown guardrail 유지
+- factor / ticker:
+  - base factors:
+    - `book_to_market`
+    - `earnings_yield`
+    - `sales_yield`
+    - `ocf_yield`
+    - `operating_income_yield`
+  - additional factor:
+    - `psr`
+- 결과:
+  - `CAGR = 28.13%`
+  - `MDD = -24.55%`
+  - `Promotion = real_money_candidate`
+  - `Shortlist = paper_probation`
+  - `Deployment = review_required`
+  - `Validation = normal`
+  - `Validation Policy = normal`
+  - `Rolling Review = watch`
+  - `Out-of-Sample Review = caution`
+- 해석:
+  - first-pass `Top N = 14`와 같은 drawdown 수준을 유지하면서
+    CAGR를 조금 더 끌어올린 best addition candidate다
+  - `psr` addition이 이번 bounded search에서 가장 균형이 좋았다
+- 다음 액션:
+  - `Quality` / `Quality + Value` family에도 같은 controlled addition search를 적용한다
+- 관련 문서:
+  - [VALUE_STRICT_ANNUAL_FACTOR_ADDITION_BEST_CURRENT_CANDIDATE.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL_FACTOR_ADDITION_BEST_CURRENT_CANDIDATE.md)
+  - [PHASE15_VALUE_FACTOR_ADDITION_SECOND_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase15/PHASE15_VALUE_FACTOR_ADDITION_SECOND_PASS.md)
+
 ### 2026-04-13 - downside-improved current candidate first pass
 
 - 목표:
