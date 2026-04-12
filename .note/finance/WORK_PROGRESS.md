@@ -4975,3 +4975,31 @@ Keep entries append-only and concise.
     than to the strongest candidate contract
 - Durable implication:
   - future backtest writeups should record the full practical contract whenever a result depends on more than the visible high-level toggles
+
+### 2026-04-13 - strongest Value 후보를 현재 코드/DB 기준으로 다시 직접 재현해 상태값과 핵심 수치를 확인함
+
+- To separate a documentation issue from a runtime regression, reran the documented strongest `Value > Strict Annual` candidate with the exact practical contract and guardrail thresholds.
+- Verified on current code:
+  - `promotion_decision = real_money_candidate`
+  - `shortlist_status = paper_probation`
+  - `deployment_readiness_status = review_required`
+  - `validation_status = normal`
+  - `validation_policy_status = normal`
+  - `benchmark_policy_status = normal`
+  - `liquidity_policy_status = normal`
+  - `guardrail_policy_status = normal`
+  - `rolling_review_status = watch`
+  - `out_of_sample_review_status = caution`
+  - `strategy_cagr = 29.89%`
+  - `strategy_max_drawdown = -29.15%`
+- Important clarification:
+  - the documented result is currently reproducible
+  - one common mismatch source is that strict annual single-strategy UI still defaults to:
+    - `US Statement Coverage 300`
+    - `Minimum History = 0M`
+    - `Min Avg Dollar Volume 20D = 0.0M`
+    - guardrails `off`
+  - while the strongest candidate requires:
+    - `US Statement Coverage 100`
+    - practical investability / promotion thresholds
+    - exact underperformance / drawdown guardrail window and threshold values

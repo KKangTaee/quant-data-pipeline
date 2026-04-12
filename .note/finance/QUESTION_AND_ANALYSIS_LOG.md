@@ -8015,3 +8015,37 @@ Do not copy full chat transcripts. Keep only the durable result.
     - guardrails `off`
 - Durable implication:
   - for future strongest-candidate writeups, the full practical contract must be written explicitly when a result is not reproducible from visible top-level toggles alone
+
+### 2026-04-13 - strongest Value 후보는 현재 코드 기준으로 실제 재현되며 가장 흔한 오차 원인은 preset/contract mismatch다
+
+- Request topic:
+  - the user questioned whether the documented strongest `Value` candidate really produces:
+    - `CAGR = 29.89%`
+    - `MDD = -29.15%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = paper_probation`
+    - `Deployment = review_required`
+- Interpreted goal:
+  - distinguish between:
+    - an outdated or incorrect report
+    - a current runtime regression
+    - a user-side reproduction mismatch caused by hidden defaults
+- Result:
+  - reran the candidate on current code / DB with the exact documented practical contract and confirmed:
+    - `promotion_decision = real_money_candidate`
+    - `shortlist_status = paper_probation`
+    - `deployment_readiness_status = review_required`
+    - `strategy_cagr = 29.8913%`
+    - `strategy_max_drawdown = -29.1457%`
+  - the result is therefore currently real and reproducible
+  - the most likely mismatch sources are:
+    - strict annual single-strategy UI default preset is still `US Statement Coverage 300`, while the candidate uses `US Statement Coverage 100`
+    - strict annual defaults are still closer to:
+      - `Minimum History = 0M`
+      - `Min Avg Dollar Volume 20D = 0.0M`
+      - guardrails `off`
+    - `guardrail on` alone is insufficient; the exact window and threshold values also matter
+- Durable implication:
+  - when a backtest result is sensitive to practical-contract settings, reports should state both:
+    - the non-default preset / universe choice
+    - the exact guardrail window / threshold values
