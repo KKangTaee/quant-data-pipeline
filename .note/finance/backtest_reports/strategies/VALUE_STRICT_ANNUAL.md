@@ -15,6 +15,12 @@
 - strongest raw winner는 `MDD`가 깊고
 - 더 균형 잡힌 후보는 `hold`가 남는 패턴이 반복됐다
 
+## 가장 먼저 볼 단일 문서
+
+- [VALUE_STRICT_ANNUAL_STRONGEST_CURRENT_CANDIDATE.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL_STRONGEST_CURRENT_CANDIDATE.md)
+  - strongest current candidate 하나를 전략 구성 중심으로 바로 읽는 one-pager
+  - 관련 문서 링크가 아니라, 실제 입력값 / factor / overlay / 기대 결과를 한 장에 모은 문서
+
 ## 지금 어떻게 읽으면 되는가
 
 1. strongest raw winner를 먼저 본다

@@ -14,6 +14,8 @@
   - `Quality > Strict Annual` 결과 허브
 - `strategies/VALUE_STRICT_ANNUAL.md`
   - `Value > Strict Annual` 결과 허브
+- `strategies/VALUE_STRICT_ANNUAL_STRONGEST_CURRENT_CANDIDATE.md`
+  - strongest `Value > Strict Annual` 후보 하나를 전략 구성 중심으로 바로 읽는 one-pager
 - `strategies/QUALITY_VALUE_STRICT_ANNUAL.md`
   - `Quality + Value > Strict Annual` 결과 허브
 

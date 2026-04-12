@@ -7919,3 +7919,22 @@ Do not copy full chat transcripts. Keep only the durable result.
   - Phase 14 improvements did not change the strongest strict annual family ordering:
     - `Value` remains the only current exact candidate that reaches `real_money_candidate / paper_probation`
     - `Quality` and `Quality + Value` can be documented as current non-hold families, but still stop at `production_candidate / watchlist`
+
+### 2026-04-13 - strongest Value 후보는 허브 문서보다 전략 구성 one-pager가 더 읽기 쉽다
+
+- Request topic:
+  - ask whether there is a single concrete strategy-summary document for the strongest `Value` portfolio, not just linked related documents
+- Interpreted goal:
+  - make the strongest `Value` candidate understandable in one place without requiring the user to jump across hub/search/archive docs
+- Result:
+  - created:
+    - `.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL_STRONGEST_CURRENT_CANDIDATE.md`
+  - the new one-pager fixes:
+    - exact family / variant
+    - universe / period
+    - factor set
+    - real-money contract inputs
+    - benchmark / overlay settings
+    - current expected statuses and performance
+- Durable implication:
+  - strongest `Value` candidate is now documented in a form that is immediately reusable for portfolio reconstruction, not only for report navigation

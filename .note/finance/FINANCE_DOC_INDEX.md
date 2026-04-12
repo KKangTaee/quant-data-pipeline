@@ -280,6 +280,8 @@
   - `Quality > Strict Annual` family의 Phase 13 결과를 전략 기준으로 다시 읽기 위한 허브 문서로, 관련 raw report와 현재 해석을 한 곳에 모아둔 문서
 - `.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL.md`
   - `Value > Strict Annual` family의 strongest raw winner, balanced near-miss, hold 병목을 전략 기준으로 다시 읽기 위한 허브 문서
+- `.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL_STRONGEST_CURRENT_CANDIDATE.md`
+  - `Value > Strict Annual` strongest current candidate 하나를 링크 모음이 아니라 실제 전략 구성, 입력값, factor, overlay, 기대 결과 중심으로 바로 읽기 위한 one-pager 문서
 - `.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL.md`
   - `Quality + Value > Strict Annual` family의 low-drawdown 탐색과 family positioning을 전략 기준으로 다시 읽기 위한 허브 문서
 - `.note/finance/backtest_reports/strategies/GTAA.md`

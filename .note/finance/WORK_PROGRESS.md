@@ -4896,3 +4896,22 @@ Keep entries append-only and concise.
     `real_money_candidate / paper_probation`
   - `Quality` and `Quality + Value` can now be documented as current non-hold families in bounded practical search,
     but they still stop at `production_candidate / watchlist`
+
+### 2026-04-13 - strongest Value candidate를 전략 구성 중심 one-pager로 분리함
+
+- The user wanted a single document that explains the strongest `Value` portfolio itself, not just a hub page with related links.
+- Updated:
+  - created:
+    - `.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL_STRONGEST_CURRENT_CANDIDATE.md`
+  - updated:
+    - `.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL.md`
+    - `.note/finance/backtest_reports/BACKTEST_REPORT_INDEX.md`
+    - `.note/finance/FINANCE_DOC_INDEX.md`
+- Durable implication:
+  - `Value` strongest candidate can now be read as a standalone strategy summary:
+    - family / variant
+    - universe / period
+    - factor set
+    - real-money contract
+    - benchmark / overlay
+    - expected promotion / shortlist / deployment / performance
