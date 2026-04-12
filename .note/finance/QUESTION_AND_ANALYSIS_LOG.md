@@ -7979,3 +7979,39 @@ Do not copy full chat transcripts. Keep only the durable result.
     - next inspection focus
 - Durable implication:
   - strategy hub pages now function as genuine landing pages, not only as link directories
+
+### 2026-04-13 - strongest Value 후보 재현 실패는 guardrail 토글보다 세부 contract 누락 영향이 더 컸다
+
+- Request topic:
+  - the user reran the strongest `Value` portfolio and got a completely different result, asking whether `underperformance / drawdown guardrail on` requires more specific settings
+- Interpreted goal:
+  - identify whether the mismatch came from the code, from hidden defaults, or from missing reproduction details in the report
+- Result:
+  - the main issue is not a code bug but missing reproduction detail in the docs
+  - current strongest `Value` candidate depends on:
+    - practical `Real-Money Contract` values:
+      - `Minimum History = 12M`
+      - `Min Avg Dollar Volume 20D = 5.0M`
+      - `Min Benchmark Coverage = 95%`
+      - `Min Net CAGR Spread = -2%`
+      - `Min Liquidity Clean Coverage = 90%`
+      - `Max Underperformance Share = 55%`
+      - `Min Worst Rolling Excess = -15%`
+      - `Max Strategy Drawdown = -35%`
+      - `Max Drawdown Gap vs Benchmark = 8%`
+    - exact guardrail settings:
+      - underperformance guardrail:
+        - `on`
+        - `12M`
+        - `-10%`
+      - drawdown guardrail:
+        - `on`
+        - `12M`
+        - `-35%`
+        - `8%`
+  - this matters because strict annual UI defaults are still closer to:
+    - `Minimum History = 0M`
+    - `Min Avg Dollar Volume 20D = 0.0M`
+    - guardrails `off`
+- Durable implication:
+  - for future strongest-candidate writeups, the full practical contract must be written explicitly when a result is not reproducible from visible top-level toggles alone

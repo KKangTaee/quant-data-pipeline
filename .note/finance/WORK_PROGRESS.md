@@ -4955,3 +4955,23 @@ Keep entries append-only and concise.
     - latest result summary
     - next thing to inspect
   - this reduces the need to bounce between hub and log for everyday review
+
+### 2026-04-13 - strongest Value 후보 재현 문서에 real-money contract와 guardrail 세부값을 보강함
+
+- The user reran the documented strongest `Value` portfolio and got a very different result, which exposed that the docs were still too compressed around the practical contract.
+- Updated:
+  - `.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL_STRONGEST_CURRENT_CANDIDATE.md`
+  - `.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL_BACKTEST_LOG.md`
+- Key clarification fixed:
+  - `guardrail on` alone is not enough to reproduce the candidate
+  - the practical rerun also depended on:
+    - benchmark / validation / liquidity / drawdown promotion thresholds
+    - exact underperformance guardrail window / threshold
+    - exact drawdown guardrail window / strategy-dd / gap thresholds
+  - and the strict annual UI defaults are still closer to:
+    - `Minimum History = 0M`
+    - `Min Avg Dollar Volume 20D = 0.0M`
+    - guardrails `off`
+    than to the strongest candidate contract
+- Durable implication:
+  - future backtest writeups should record the full practical contract whenever a result depends on more than the visible high-level toggles

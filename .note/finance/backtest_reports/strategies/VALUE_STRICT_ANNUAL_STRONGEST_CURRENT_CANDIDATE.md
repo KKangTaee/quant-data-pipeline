@@ -82,6 +82,15 @@ raw return edge를 가장 강하게 드러낸 strict annual value 전략이다.
 - `Minimum History`: `12M`
 - `Min Avg Dollar Volume 20D`: `5.0M`
 - `Transaction Cost`: `10 bps`
+- `Benchmark Contract`: `Ticker Benchmark`
+- `Benchmark Ticker`: `SPY`
+- `Min Benchmark Coverage`: `95%`
+- `Min Net CAGR Spread`: `-2%`
+- `Min Liquidity Clean Coverage`: `90%`
+- `Max Underperformance Share`: `55%`
+- `Min Worst Rolling Excess`: `-15%`
+- `Max Strategy Drawdown`: `-35%`
+- `Max Drawdown Gap vs Benchmark`: `8%`
 
 쉽게 말하면:
 
@@ -89,6 +98,18 @@ raw return edge를 가장 강하게 드러낸 strict annual value 전략이다.
 - 최소 12개월 가격 이력이 있어야 하며
 - 최근 20거래일 평균 거래대금이 너무 낮은 종목은 빼고
 - 매매 비용은 0.10%로 가정한다.
+- 그리고 benchmark / validation / liquidity / guardrail 승격 기준도 같이 켠 상태다.
+
+중요:
+
+- strict annual UI 기본값은 원래
+  - `Minimum History = 0M`
+  - `Min Avg Dollar Volume 20D = 0.0M`
+  - underperformance / drawdown guardrail `off`
+  쪽에 더 가깝다.
+- 즉 위 strongest candidate는
+  **기본 UI 상태를 그대로 돌린 값이 아니라**
+  `Real-Money Contract`를 practical하게 맞춘 뒤 다시 돌린 결과다.
 
 ## Benchmark / Overlay / Guardrail
 
@@ -99,6 +120,14 @@ raw return edge를 가장 강하게 드러낸 strict annual value 전략이다.
 - `Underperformance Guardrail`: `on`
 - `Drawdown Guardrail`: `on`
 
+guardrail 세부값은 아래와 같다.
+
+- `Underperformance Guardrail Window`: `12M`
+- `Underperformance Worst Excess Threshold`: `-10%`
+- `Drawdown Guardrail Window`: `12M`
+- `Drawdown Guardrail Strategy DD Threshold`: `-35%`
+- `Drawdown Guardrail Gap Threshold`: `8%`
+
 핵심 포인트는 이거다.
 
 - `Trend Filter`와 `Market Regime`를 끄면 더 공격적으로 간다
@@ -108,6 +137,9 @@ raw return edge를 가장 강하게 드러낸 strict annual value 전략이다.
 
 - 실제 factor edge는 최대한 살리고
 - 결과 해석은 실전형 기준으로 계속 읽는 조합이다.
+
+즉 `guardrail on`은 단순한 체크만이 아니라,
+위 `window / threshold`까지 포함한 계약이라고 보는 편이 맞다.
 
 ## 현재 strongest candidate로 보는 이유
 

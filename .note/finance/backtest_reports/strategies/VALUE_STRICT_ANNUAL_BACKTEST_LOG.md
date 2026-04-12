@@ -41,7 +41,22 @@
   - `Minimum History = 12M`
   - `Min Avg Dollar Volume 20D = 5.0M`
   - `Transaction Cost = 10 bps`
-  - underperformance / drawdown guardrail `on`
+  - `Min Benchmark Coverage = 95%`
+  - `Min Net CAGR Spread = -2%`
+  - `Min Liquidity Clean Coverage = 90%`
+  - `Max Underperformance Share = 55%`
+  - `Min Worst Rolling Excess = -15%`
+  - `Max Strategy Drawdown = -35%`
+  - `Max Drawdown Gap vs Benchmark = 8%`
+  - underperformance guardrail:
+    - `on`
+    - `Window = 12M`
+    - `Worst Excess Threshold = -10%`
+  - drawdown guardrail:
+    - `on`
+    - `Window = 12M`
+    - `Strategy DD Threshold = -35%`
+    - `Gap Threshold = 8%`
 - factor / ticker:
   - `book_to_market`
   - `earnings_yield`
@@ -58,6 +73,8 @@
   - strict annual 3개 family 중 유일한 current exact candidate다
   - raw return edge가 강하지만 drawdown은 깊다
   - `Deployment = review_required`이므로 바로 live-ready로 읽는 건 아니다
+  - 단순히 `guardrail on`만 맞춘다고 재현되는 값은 아니고,
+    practical `Real-Money Contract` 전체와 세부 threshold를 같이 맞춰야 한다
 - 다음 액션:
   - balanced near-miss와 함께 비교하면서 drawdown / consistency tradeoff를 판단
 - 관련 문서:
