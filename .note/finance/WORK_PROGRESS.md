@@ -60,3 +60,5 @@ Detailed historical logs were archived on `2026-04-13`.
     - `plugins/quant-finance-workflow`
   - repo-local skill draft:
     - `finance-backtest-candidate-refinement`
+  - first practical plugin script:
+    - `plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py`

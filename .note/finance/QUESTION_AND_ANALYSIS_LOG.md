@@ -81,3 +81,7 @@ Detailed historical analysis was archived on `2026-04-13`.
     와 draft skill
     `finance-backtest-candidate-refinement`
     을 만드는 것이 실용적이라고 판단했다
+  - 첫 practical script로
+    `check_finance_refinement_hygiene.py`
+    를 붙여,
+    refinement 이후 문서/산출물 정리가 빠진 곳을 빠르게 점검할 수 있게 하는 방향이 적절하다고 봤다

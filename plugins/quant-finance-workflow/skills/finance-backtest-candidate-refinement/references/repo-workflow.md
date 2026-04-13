@@ -28,6 +28,21 @@
 6. `WORK_PROGRESS.md`
 7. `QUESTION_AND_ANALYSIS_LOG.md`
 
+## Quick hygiene command
+
+After a refinement pass, run:
+
+```bash
+python3 plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py
+```
+
+This script checks the current git diff and highlights:
+
+- changed phase docs
+- changed strategy hubs / one-pagers / backtest logs
+- whether root concise logs were touched
+- whether generated artifacts are still present
+
 ## Candidate language rules
 
 - distinguish:

@@ -96,3 +96,18 @@ If detailed history grows too much, archive older root logs and keep only:
 The repo-specific reading order and update targets live in:
 
 - `references/repo-workflow.md`
+
+## Practical Script
+
+For a quick post-refinement hygiene pass, run:
+
+```bash
+python3 plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py
+```
+
+Use this after a bounded search or document-sync work unit to see:
+
+- which finance docs changed
+- whether backtest logs and root concise logs were touched
+- whether index docs were updated
+- whether generated artifacts are still sitting in git status

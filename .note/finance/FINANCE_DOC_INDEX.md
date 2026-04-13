@@ -33,6 +33,8 @@
   - run history, artifacts, temp csv, scratch notebook 같은 runtime 산출물을 어떻게 해석하고 관리해야 하는지 정리한 운영 문서
 - `.note/finance/CODEX_PLUGIN_AND_SKILL_APPLICATION_REVIEW_20260413.md`
   - Codex plugin/skill을 현재 프로젝트 workflow에 적용할 가치가 있는지와 repo-local draft 구성 판단을 정리한 문서
+- `plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py`
+  - current git diff를 기준으로 phase 문서, strategy hub / one-pager / backtest log, root concise logs, generated artifacts 상태를 한 번에 점검하는 repo-local checklist script
 - `.note/finance/backtest_reports/README.md`
   - phase 문서와 분리해서, 결과 중심 backtest Markdown 문서를 어디에 두고 어떻게 관리할지 정리한 운영 안내 문서
 - `.note/finance/backtest_reports/BACKTEST_REPORT_INDEX.md`

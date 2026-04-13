@@ -74,10 +74,22 @@ repo-local draft skill:
 
 - `plugins/quant-finance-workflow/skills/finance-backtest-candidate-refinement`
 
+repo-local first practical script:
+
+- `plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py`
+  - current git diff를 기준으로
+    - phase docs
+    - strategy hub / one-pager / backtest log
+    - root concise logs
+    - generated artifacts
+    상태를 한 번에 점검하는 checklist runner
+
 이 초안은:
 
 - 지금 프로젝트의 backtest refinement 흐름을 재사용 가능한 skill로 묶고
 - 향후 Codex plugin으로 실험할 수 있게 repo-local scaffold를 만든 상태다
+- 그리고 첫 practical script까지 붙여서
+  단순 scaffold가 아니라 실제 workflow에 바로 써볼 수 있는 상태가 됐다
 
 ## 이 프로젝트에서 plugin이 특히 효과적일 수 있는 이유
 
@@ -109,6 +121,6 @@ repo-local draft skill:
 ## 권장 다음 단계
 
 1. draft skill 내용을 프로젝트 workflow에 맞게 채우기
-2. cleanup/checklist script가 실제로 반복되면 plugin scripts에 추가
+2. 이 script를 실제 refinement closeout에서 몇 번 써보며 false positive/negative를 줄이기
 3. plugin manifest는 local test에 필요한 수준까지 점진적으로 채우기
 4. 실제로 몇 턴 써본 뒤 team-facing plugin으로 넓힐지 판단
