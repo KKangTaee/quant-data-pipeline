@@ -20,6 +20,66 @@
 
 ## 기록
 
+### 2026-04-13 - post-PIT semantics 기준 controlled addition review
+
+- 목표:
+  - strict annual dynamic PIT preset semantics fix 이후
+    `Quality` family가 current literal preset semantics에서도 non-hold candidate를 만들 수 있는지 재점검
+- 전략:
+  - `Quality > Strict Annual`
+- 기간 / universe:
+  - `2016-01-01 ~ 2026-04-01`
+  - `US Statement Coverage 100`
+  - `Historical Dynamic PIT Universe`
+- 핵심 설정:
+  - `Option = month_end`
+  - `Top N = 10`
+  - `Rebalance Interval = 1`
+  - `Benchmark = LQD`
+  - `Trend Filter = on`
+  - `Market Regime = on`
+  - `Minimum Price = 5.0`
+  - `Minimum History = 12M`
+  - `Min Avg Dollar Volume 20D = 5.0M`
+  - `Transaction Cost = 10 bps`
+  - underperformance / drawdown guardrail `on`
+- factor / ticker:
+  - anchor:
+    - `roe`
+    - `roa`
+    - `cash_ratio`
+    - `debt_to_assets`
+  - additions:
+    - `interest_coverage`
+    - `ocf_margin`
+    - `fcf_margin`
+    - `net_debt_to_equity`
+- 결과:
+  - baseline:
+    - `CAGR = 13.26%`
+    - `MDD = -32.59%`
+    - `Promotion = hold`
+    - `Shortlist = hold`
+    - `Deployment = blocked`
+  - best near-miss:
+    - `+ net_debt_to_equity`
+    - `CAGR = 13.51%`
+    - `MDD = -23.84%`
+    - `Promotion = hold`
+    - `Shortlist = hold`
+    - `Deployment = blocked`
+- 해석:
+  - current literal preset semantics 기준으로는
+    single-factor addition만으로 non-hold candidate를 회복하지 못했다
+  - `net_debt_to_equity`가 drawdown은 가장 잘 낮췄지만
+    `validation = caution`이 남아 `hold`를 못 벗어났다
+- 다음 액션:
+  - factor one-addition보다
+    `benchmark / overlay / top_n / factor replacement` 구조 탐색이 더 우선이다
+- 관련 문서:
+  - [QUALITY_STRICT_ANNUAL.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/QUALITY_STRICT_ANNUAL.md)
+  - [PHASE15_QUALITY_CANDIDATE_IMPROVEMENT_SEARCH_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase15/PHASE15_QUALITY_CANDIDATE_IMPROVEMENT_SEARCH_FIRST_PASS.md)
+
 ### 2026-04-10 - current best non-hold candidate
 
 - 목표:

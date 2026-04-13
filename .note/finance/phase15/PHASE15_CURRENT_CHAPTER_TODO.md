@@ -31,7 +31,7 @@
     - `CAGR = 28.13%`
     - `MDD = -24.55%`
 
-- `pending` Quality / Quality + Value candidate improvement로 확장
+- `completed` Quality / Quality + Value candidate improvement로 확장
   - same bounded addition approach를
     `Quality` / `Quality + Value` family에 적용한다
 
@@ -44,13 +44,18 @@
 
 ## Workstream B. Quality Candidate Improvement
 
-- `pending` controlled factor expansion 기준 재탐색
-- `pending` non-hold / production_candidate 근접 후보 정리
+- `completed` controlled factor expansion 기준 재탐색
+- `completed` current literal preset semantics 기준 rerun 정리
+  - single-factor addition만으로는 non-hold candidate를 회복하지 못했다
+- `pending` benchmark / overlay / factor replacement rescue search
 
 ## Workstream C. Quality + Value Candidate Improvement
 
-- `pending` blend family defensive 탐색
-- `pending` strongest practical candidate refresh
+- `completed` bounded blend addition 탐색
+- `completed` best raw addition candidate 정리
+  - value-side addition까지 넓혀 보니 `per`가 current best practical candidate가 되었다
+  - `real_money_candidate / small_capital_trial / review_required`까지 올라갔다
+- `pending` benchmark / top_n / factor replacement search
 
 ## Workstream D. Reporting
 
@@ -78,6 +83,20 @@
   - `Promotion = real_money_candidate`
   - `Shortlist = paper_probation`
   - `Deployment = review_required`
+- Quality current state:
+  - bounded single-factor addition 기준 current non-hold candidate 없음
+  - best near-miss:
+    - `+ net_debt_to_equity`
+    - `CAGR = 13.51%`
+    - `MDD = -23.84%`
+    - `Promotion = hold`
+- Quality + Value best raw addition:
+  - `+ per`
+  - `CAGR = 29.43%`
+  - `MDD = -27.43%`
+  - `Promotion = real_money_candidate`
+  - `Shortlist = small_capital_trial`
+  - `Deployment = review_required`
 
 ## 현재 판단
 
@@ -87,5 +106,13 @@
   `Value downside-improvement search`의 첫 practical candidate를 확보했다.
 - Phase 15 second pass에서는
   `psr` addition이 current best balanced candidate가 되었다.
+- `Quality`는 current literal preset semantics 기준으로
+  bounded single-factor addition만으로는 recovery가 안 된다.
+- `Quality + Value`는 value-side controlled addition까지 넓혀 보니
+  `per`가 gate tier를 실제로 끌어올렸다.
 - 다음 active step은
-  `Quality` / `Quality + Value` family에 같은 bounded addition search를 적용하는 것이다.
+  - `Quality`:
+    - `benchmark / overlay / factor replacement` rescue search
+  - `Quality + Value`:
+    - `per` anchor 기준 `top_n / downside / factor replacement` search
+  쪽이다.

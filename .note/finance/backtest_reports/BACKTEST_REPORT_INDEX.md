@@ -32,6 +32,8 @@
   - `Quality + Value > Strict Annual` 결과 허브
 - `strategies/QUALITY_VALUE_STRICT_ANNUAL_BACKTEST_LOG.md`
   - `Quality + Value > Strict Annual` 전략 run 기록 누적 문서
+- `strategies/QUALITY_VALUE_STRICT_ANNUAL_BEST_ADDITION_CURRENT_CANDIDATE.md`
+  - `Quality + Value > Strict Annual` bounded addition search에서 가장 좋은 raw addition candidate one-pager
 
 ## Phase 13 Raw Archive
 
@@ -56,6 +58,10 @@
   - strongest `Value` baseline에서 `MDD`를 낮추는 방향으로 practical candidate quality를 개선할 수 있는지 본 first-pass 문서
 - `phase15/PHASE15_VALUE_FACTOR_ADDITION_SECOND_PASS.md`
   - downside-improved `Value` anchor에 one-factor addition을 붙여 current best candidate를 다시 본 second-pass 문서
+- `phase15/PHASE15_QUALITY_CANDIDATE_IMPROVEMENT_SEARCH_FIRST_PASS.md`
+  - `Quality` family에서 controlled addition이 current literal preset semantics 기준으로 왜 non-hold를 회복하지 못했는지 정리한 문서
+- `phase15/PHASE15_QUALITY_VALUE_CANDIDATE_IMPROVEMENT_SEARCH_FIRST_PASS.md`
+  - `Quality + Value` family baseline blend에 controlled addition을 붙여 best raw addition candidate를 다시 정리한 문서
 
 ## 운영 메모
 

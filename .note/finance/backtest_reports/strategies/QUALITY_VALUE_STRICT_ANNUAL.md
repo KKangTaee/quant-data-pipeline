@@ -4,7 +4,7 @@
 
 - family: `Quality + Value`
 - variant: `Strict Annual`
-- 관련 phase: `Phase 13`, `Phase 14`
+- 관련 phase: `Phase 13`, `Phase 14`, `Phase 15`
 
 ## 한 줄 요약
 
@@ -34,32 +34,38 @@
   - low-drawdown / defensive factor blend 탐색
 - current takeaway:
   - 방어형 실험에는 여전히 의미가 있다
-  - current best non-hold:
-    - default blend
-    - `candidate_universe_equal_weight` benchmark
-    - `promotion = production_candidate`
-    - `shortlist = watchlist`
-    - `deployment = review_required`
+  - baseline default blend 위에 value-side addition을 붙이면
+    gate를 실제로 더 올릴 수 있다
+  - bounded one-factor addition 중에서는 `per`가 current best practical candidate였다
 
 ## 최근 backtest log snapshot
 
 - 최근 기록:
-  - `2026-04-10 - current strongest non-hold blend`
+  - `2026-04-13 - bounded addition review`
 - 핵심 설정:
-  - default blend
+  - baseline default blend
   - `Benchmark Contract = Candidate Universe Equal-Weight`
   - `Top N = 10`
   - `Rebalance Interval = 1`
   - `Trend Filter = off`
   - `Market Regime = off`
 - 결과:
-  - `CAGR = 28.51%`
-  - `MDD = -28.35%`
-  - `Promotion = production_candidate`
-  - `Shortlist = watchlist`
-  - `Deployment = review_required`
+  - baseline:
+    - `CAGR = 28.51%`
+    - `MDD = -28.35%`
+    - `Promotion = production_candidate`
+    - `Shortlist = watchlist`
+    - `Deployment = review_required`
+  - best addition:
+    - `+ per`
+    - `CAGR = 29.43%`
+    - `MDD = -27.43%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = small_capital_trial`
+    - `Deployment = review_required`
 - 다음에 볼 것:
-  - validation consistency를 더 개선할 수 있는 blend / benchmark 조합 탐색
+  - `per` anchor 기준으로
+    `top_n / downside / factor replacement` 조합 탐색
 
 ## 관련 결과 문서
 
@@ -77,6 +83,10 @@
   - family 전체 summary 문서
 - [PHASE14_STRICT_ANNUAL_NONHOLD_CANDIDATE_REFRESH.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase14/PHASE14_STRICT_ANNUAL_NONHOLD_CANDIDATE_REFRESH.md)
   - current runtime 기준으로 `Quality + Value` strongest non-hold candidate를 다시 고정한 refresh 문서
+- [PHASE15_QUALITY_VALUE_CANDIDATE_IMPROVEMENT_SEARCH_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase15/PHASE15_QUALITY_VALUE_CANDIDATE_IMPROVEMENT_SEARCH_FIRST_PASS.md)
+  - baseline blend anchor에 controlled factor addition을 붙여 current best addition candidate를 다시 본 문서
+- [QUALITY_VALUE_STRICT_ANNUAL_BEST_ADDITION_CURRENT_CANDIDATE.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL_BEST_ADDITION_CURRENT_CANDIDATE.md)
+  - `per` addition candidate를 전략 구성 중심으로 바로 읽는 one-pager
 
 ## 실무 해석
 
@@ -85,6 +95,9 @@
 - low-drawdown 연구 reference
 - 방어형 factor blend 실험용 family
 - 그리고 current runtime 기준으로는
-  `watchlist / review_required`까지 올라가는 non-hold blended candidate family
+`watchlist / review_required`까지 올라가는 non-hold blended candidate family
 
 로 보는 편이 맞고, raw winner 기준으로는 아직 `Value`보다 뒤에 있다.
+Phase 15 bounded addition search 기준으로는
+`per`가 `real_money_candidate / small_capital_trial / review_required`까지 올라가며
+current strongest practical blended candidate가 되었다.

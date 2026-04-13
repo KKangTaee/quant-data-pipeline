@@ -8149,3 +8149,42 @@ Do not copy full chat transcripts. Keep only the durable result.
   - `.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL_FACTOR_ADDITION_BEST_CURRENT_CANDIDATE.md`
   - `.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL_BACKTEST_LOG.md`
   - `.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL.md`
+
+### 2026-04-13 - Phase 15에서 Quality / Quality+Value controlled addition을 current literal preset semantics 기준으로 다시 본 결과
+
+- Request topic:
+  - continue Phase 15 after the `Value` family work and extend the same bounded addition approach to `Quality` and `Quality + Value`
+- Interpreted goal:
+  - determine whether those two strict annual families can also produce better practical candidates without relaxing gates again
+- Result:
+  - `Quality > Strict Annual`
+    - under current literal dynamic PIT preset semantics, the anchor itself did not stay non-hold
+    - bounded single-factor additions did not recover a practical candidate
+    - best near-miss was `+ net_debt_to_equity`
+      - `CAGR = 13.51%`
+      - `MDD = -23.84%`
+      - still `hold / blocked`
+  - `Quality + Value > Strict Annual`
+    - widening the bounded search to value-side additions did improve the gate tier
+    - `+ per` was the best practical addition candidate
+      - `CAGR = 29.43%`
+      - `MDD = -27.43%`
+      - upgraded gate tier:
+        - `real_money_candidate`
+        - `small_capital_trial`
+        - `review_required`
+- Practical conclusion:
+  - `Quality` should move next to a rescue-style search:
+    - benchmark
+    - overlay
+    - factor replacement
+    - top_n
+  - `Quality + Value` should move next to structural blend search:
+    - `per` anchor downside improvement
+    - top_n
+    - replacement
+  - simple one-factor additions are no longer the highest-value next lever for either family
+- Durable output:
+  - `.note/finance/backtest_reports/phase15/PHASE15_QUALITY_CANDIDATE_IMPROVEMENT_SEARCH_FIRST_PASS.md`
+  - `.note/finance/backtest_reports/phase15/PHASE15_QUALITY_VALUE_CANDIDATE_IMPROVEMENT_SEARCH_FIRST_PASS.md`
+  - `.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL_BEST_ADDITION_CURRENT_CANDIDATE.md`

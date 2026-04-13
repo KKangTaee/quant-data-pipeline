@@ -112,6 +112,14 @@
 Phase 13 결과 문서는 이미 `.note/finance/backtest_reports/phase13/`로 정리했고, 기존 phase 경로에는 호환용 안내 stub를 남겨두었다.
 Phase 14 결과 문서는 `.note/finance/backtest_reports/phase14/`에 두고,
 Phase 15 candidate-quality-improvement 결과는 `.note/finance/backtest_reports/phase15/`에 모은다.
+현재 Phase 15에는
+
+- `Value` downside-improvement
+- `Value` factor-addition
+- `Quality` controlled addition review
+- `Quality + Value` controlled addition review
+
+가 누적되고 있다.
 
 또한 실제로 다시 찾아볼 때는:
 
