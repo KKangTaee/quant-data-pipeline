@@ -1,10 +1,60 @@
 # Value Strict Annual Backtest Hub
 
+## 이 문서는 무엇인가
+
+이 문서는 `Value > Strict Annual` 전략을 위한
+**전략 허브 문서**다.
+
+쉽게 말하면:
+
+- 이 전략으로 지금까지 어떤 백테스트를 했는지
+- 그중에서 지금 다시 볼 만한 후보가 무엇인지
+- 먼저 어떤 문서를 열어야 하는지
+
+를 한 페이지에서 안내하는 문서다.
+
+즉 이 문서는:
+
+- 실행 가이드 한 장
+- 결과 요약
+- 관련 문서 안내
+
+를 한데 모아 둔 `입구 페이지`에 가깝다.
+
+## 이 문서는 무엇을 하는가
+
+이 문서를 보면 바로 알 수 있는 것은:
+
+- 이 전략이 대체 어떤 전략인지
+- 지금 가장 강한 후보가 무엇인지
+- 더 균형 잡힌 후보가 무엇인지
+- 다음에 어떤 문서를 보면 되는지
+
+이다.
+
+## 이 문서는 무엇을 하지 않는가
+
+이 문서는:
+
+- 모든 실험 과정을 처음부터 끝까지 자세히 설명하는 문서가 아니다
+- 백테스트 엔진 구현 문서도 아니다
+- 세부 실험 로그 원문 자체도 아니다
+
+세부 실험 과정은 phase별 report 문서에서 보고,
+실제 실행 기록 누적은 backtest log 문서에서 본다.
+
 ## 전략
 
 - family: `Value`
 - variant: `Strict Annual`
 - 관련 phase: `Phase 13`, `Phase 14`
+
+## 이 전략 허브를 어떻게 읽으면 되는가
+
+1. 이 문서에서 현재 strongest candidate와 balanced candidate를 먼저 본다
+2. 더 구체적인 입력값이 필요하면 one-pager를 연다
+3. 과거 실험 흐름이 궁금하면 phase report를 연다
+4. 실제 run 기록 누적을 보려면 backtest log를 연다
 
 ## 한 줄 요약
 
@@ -15,26 +65,20 @@
 - strongest raw winner는 `MDD`가 깊고
 - 더 균형 잡힌 후보는 `hold`가 남는 패턴이 반복됐다
 
-## 가장 먼저 볼 단일 문서
+## 가장 먼저 볼 문서
 
 - [VALUE_STRICT_ANNUAL_STRONGEST_CURRENT_CANDIDATE.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL_STRONGEST_CURRENT_CANDIDATE.md)
-  - strongest current candidate 하나를 전략 구성 중심으로 바로 읽는 one-pager
-  - 관련 문서 링크가 아니라, 실제 입력값 / factor / overlay / 기대 결과를 한 장에 모은 문서
+  - strongest current candidate를 바로 보는 one-pager
+  - 실제 입력값 / factor / overlay / 기대 결과를 한 장에 모은 문서
 - [VALUE_STRICT_ANNUAL_DOWNSIDE_IMPROVED_CURRENT_CANDIDATE.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL_DOWNSIDE_IMPROVED_CURRENT_CANDIDATE.md)
-  - strongest baseline보다 `MDD`를 낮춘 downside-improved current candidate one-pager
+  - strongest baseline보다 `MDD`를 낮춘 더 균형 잡힌 후보 문서
 - [VALUE_STRICT_ANNUAL_FACTOR_ADDITION_BEST_CURRENT_CANDIDATE.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL_FACTOR_ADDITION_BEST_CURRENT_CANDIDATE.md)
-  - downside-improved anchor에 one-factor addition을 붙인 best current candidate one-pager
+  - downside-improved 후보를 조금 더 개선한 best-addition 후보 문서
 
 ## 전략 log
 
 - [VALUE_STRICT_ANNUAL_BACKTEST_LOG.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL_BACKTEST_LOG.md)
   - `Value > Strict Annual`를 어떤 세팅으로 돌렸고 결과가 어땠는지 누적 관리하는 전략 log
-
-## 지금 어떻게 읽으면 되는가
-
-1. strongest raw winner를 먼저 본다
-2. `CAGR 15 / MDD 20` exact hit를 본다
-3. 왜 `hold`가 남는지 진단 문서를 같이 본다
 
 ## 대표 결과
 

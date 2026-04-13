@@ -1,10 +1,53 @@
 # Quality + Value Strict Annual Backtest Hub
 
+## 이 문서는 무엇인가
+
+이 문서는 `Quality + Value > Strict Annual` 전략을 위한
+**전략 허브 문서**다.
+
+쉽게 말하면:
+
+- blended 전략인 `Quality + Value`가
+  지금 어떤 후보까지 올라왔는지
+- 어떤 조합이 현재 가장 강한 practical candidate인지
+- 어떤 세부 문서를 먼저 열어야 하는지
+
+를 정리한 안내 페이지다.
+
+## 이 문서는 무엇을 하는가
+
+이 문서를 보면 바로 알 수 있는 것은:
+
+- 현재 strongest practical candidate가 무엇인지
+- 왜 그 후보가 strongest로 읽히는지
+- 더 낮은 `MDD`지만 gate가 약한 대안이 있는지
+- 관련 one-pager / log / phase report를 어디서 봐야 하는지
+
+이다.
+
+## 이 문서는 무엇을 하지 않는가
+
+이 문서는:
+
+- 모든 factor replacement 실험 과정을 하나하나 설명하는 문서가 아니다
+- 세부 수치 검증 원문 전체를 대신하는 문서도 아니다
+- 구현 코드 설명 문서도 아니다
+
+세부 pass별 변화는 phase report에서,
+실제 run 누적은 backtest log에서 보는 구조다.
+
 ## 전략
 
 - family: `Quality + Value`
 - variant: `Strict Annual`
 - 관련 phase: `Phase 13`, `Phase 14`, `Phase 15`
+
+## 이 전략 허브를 어떻게 읽으면 되는가
+
+1. strongest practical candidate가 무엇인지 먼저 본다
+2. 그 다음 previous anchor와 lower-drawdown alternative를 비교한다
+3. 더 자세한 변경 과정을 보고 싶으면 third/fourth/fifth/sixth pass report를 연다
+4. 실제 run 누적은 backtest log에서 본다
 
 ## 한 줄 요약
 
@@ -16,12 +59,6 @@
 - `SPY`를 확실히 이길 만큼의 `CAGR`가 부족한 경우가 많았다
 - current runtime refresh에서는 default blend + candidate equal-weight benchmark 조합이
   `production_candidate / watchlist / review_required`까지 올라가는 stronger non-hold candidate로 확인됐다
-
-## 지금 어떻게 읽으면 되는가
-
-1. low-drawdown 탐색 문서를 먼저 본다
-2. family summary에서 `Value`와 비교한다
-3. 필요하면 `SPY` 비교 문서로 넘어간다
 
 ## 전략 log
 

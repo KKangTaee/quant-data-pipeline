@@ -13,6 +13,29 @@ Do not copy full chat transcripts. Keep only the durable result.
 
 ## Entries
 
+### 2026-04-13 - Strategy hub 문서 역할 설명 보강
+- Request topic:
+  - strategy hub 문서 3개를 직접 읽어봤는데 문서 역할과 읽는 방법이 잘 보이지 않아 더 쉽게 설명해달라는 요청
+- Interpreted goal:
+  - `VALUE / QUALITY / QUALITY+VALUE` strategy hub가
+    결과 dump처럼 보이지 않도록,
+    문서의 용도와 읽는 순서를 plain language로 먼저 드러내기
+- Result:
+  - 각 strategy hub 문서 맨 앞에
+    - 이 문서는 무엇인가
+    - 이 문서는 무엇을 하는가
+    - 이 문서는 무엇을 하지 않는가
+    - 이 전략 허브를 어떻게 읽으면 되는가
+    섹션을 추가했다
+  - `strategies/README.md`에도
+    strategy hub 문서가 세부 실험 원문이 아니라
+    관련 문서로 들어가기 전 방향을 잡아주는 안내 페이지라는 설명을 추가했다
+- Durable output:
+  - `.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL.md`
+  - `.note/finance/backtest_reports/strategies/QUALITY_STRICT_ANNUAL.md`
+  - `.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL.md`
+  - `.note/finance/backtest_reports/strategies/README.md`
+
 ### 2026-04-13 - Phase 15 closeout judgment
 - Request topic:
   - finish Phase 15 and leave a clear checklist / handoff

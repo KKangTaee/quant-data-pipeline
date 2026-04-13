@@ -14,6 +14,19 @@ Keep entries append-only and concise.
 ## Entries
 
 ### 2026-04-13
+- Clarified strategy hub docs so they read as operator-friendly landing pages rather than dense result dumps.
+- Updated:
+  - `VALUE_STRICT_ANNUAL.md`
+  - `QUALITY_STRICT_ANNUAL.md`
+  - `QUALITY_VALUE_STRICT_ANNUAL.md`
+  - `strategies/README.md`
+- Added plain-language sections for:
+  - what this file is
+  - what it is for
+  - what it does not do
+  - recommended reading order
+
+### 2026-04-13
 - Closed Phase 15 to `practical closeout / manual_validation_pending`.
 - Added:
   - `PHASE15_COMPLETION_SUMMARY.md`
