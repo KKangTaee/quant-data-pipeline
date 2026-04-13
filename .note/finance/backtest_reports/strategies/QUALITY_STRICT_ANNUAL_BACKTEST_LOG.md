@@ -20,6 +20,73 @@
 
 ## 기록
 
+### 2026-04-13 - rescued anchor alternate contract search third pass
+
+- 목표:
+  - current downside-improved rescued anchor를 유지한 채
+    `benchmark / overlay` 계약을 조금 바꿔
+    더 깨끗한 validation surface나 더 실전적인 deployment 해석이 가능한지 확인
+- 전략:
+  - `Quality > Strict Annual`
+- 기간 / universe:
+  - `2016-01-01 ~ 2026-04-01`
+  - `US Statement Coverage 100`
+  - `Historical Dynamic PIT Universe`
+- 핵심 설정:
+  - factor:
+    - `roe`
+    - `roa`
+    - `cash_ratio`
+    - `debt_to_assets`
+  - `Option = month_end`
+  - `Top N = 12`
+  - `Rebalance Interval = 1`
+  - `Minimum Price = 5.0`
+  - `Minimum History = 12M`
+  - `Min Avg Dollar Volume 20D = 5.0M`
+  - `Transaction Cost = 10 bps`
+  - underperformance / drawdown guardrail `on`
+- 결과:
+  - strongest practical point:
+    - `Benchmark = LQD`
+    - `Trend Filter = on`
+    - `Market Regime = off`
+    - `CAGR = 26.02%`
+    - `MDD = -25.57%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = paper_probation`
+    - `Deployment = review_required`
+    - `Validation / Rolling / OOS = normal / watch / normal`
+  - cleaner alternative:
+    - `Benchmark = SPY`
+    - `Trend Filter = on`
+    - `Market Regime = off`
+    - `CAGR = 25.18%`
+    - `MDD = -25.57%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = paper_probation`
+    - `Deployment = paper_only`
+    - `Validation / Rolling / OOS = normal / normal / normal`
+  - rejected defensive variant:
+    - `Benchmark = LQD`
+    - `Trend Filter = off`
+    - `Market Regime = off`
+    - `CAGR = 17.30%`
+    - `MDD = -35.84%`
+    - `Promotion = hold`
+    - `Shortlist = hold`
+    - `Deployment = blocked`
+- 해석:
+  - current strongest practical point는 여전히 `LQD + trend on + regime off` baseline이다
+  - `SPY`는 cleaner surface를 주지만 deployment는 더 보수적으로 내려간다
+  - 더 방어적인 overlay는 이번 anchor에서 오히려 `hold`로 후퇴했다
+- 다음 액션:
+  - `Quality`는 current baseline을 유지하고
+    Phase 15 리소스는 `Quality + Value` new anchor follow-up에 더 싣는다
+- 관련 문서:
+  - [PHASE15_QUALITY_ALTERNATE_CONTRACT_SEARCH_THIRD_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase15/PHASE15_QUALITY_ALTERNATE_CONTRACT_SEARCH_THIRD_PASS.md)
+  - [QUALITY_STRICT_ANNUAL_DOWNSIDE_IMPROVED_CURRENT_CANDIDATE.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/QUALITY_STRICT_ANNUAL_DOWNSIDE_IMPROVED_CURRENT_CANDIDATE.md)
+
 ### 2026-04-13 - rescued anchor factor search second pass
 
 - 목표:

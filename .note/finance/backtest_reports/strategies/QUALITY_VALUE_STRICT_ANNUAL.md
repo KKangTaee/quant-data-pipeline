@@ -43,35 +43,57 @@
   - 하지만 value-side third pass에서는
     `ocf_yield -> pcr` replacement가 same gate / same MDD로 `CAGR`를 더 올리며
     current strongest practical point가 됐다
+  - replacement-anchor follow-up fourth pass까지 보면
+    그 practical point 위에서도 `Top N = 10 + Candidate Universe Equal-Weight`가 그대로 strongest였다
+  - 그리고 quality-side fifth pass에서는
+    `net_margin -> operating_margin` replacement가
+    same gate를 유지하면서 `CAGR`와 `MDD`를 같이 더 개선했다
+  - sixth pass에서 new anchor 기준 `Top N`을 다시 봐도
+    `Top N = 10`이 strongest practical point로 유지됐다
 
 ## 최근 backtest log snapshot
 
 - 최근 기록:
-  - `2026-04-13 - value-side search third pass`
+  - `2026-04-13 - strongest-anchor top-n search sixth pass`
 - 핵심 설정:
-  - baseline default blend + `per`
+  - quality replacement:
+    - `net_margin -> operating_margin`
+  - value replacement:
+    - `ocf_yield -> pcr`
   - `Top N = 10`
   - `Rebalance Interval = 1`
   - `Trend Filter = off`
   - `Market Regime = off`
 - 결과:
   - strongest practical candidate:
-    - `ocf_yield -> pcr`
+    - quality:
+      - `net_margin -> operating_margin`
+    - value:
+      - `ocf_yield -> pcr`
     - `Benchmark Contract = Candidate Universe Equal-Weight`
+    - `Top N = 10`
+    - `CAGR = 31.25%`
+    - `MDD = -26.63%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = small_capital_trial`
+    - `Deployment = review_required`
+  - previous practical anchor:
+    - `Top N = 10`
     - `CAGR = 30.05%`
     - `MDD = -27.43%`
     - `Promotion = real_money_candidate`
     - `Shortlist = small_capital_trial`
-    - `Deployment = review_required`
-  - prior baseline:
-    - default value side + `per`
-    - `CAGR = 29.43%`
-    - `MDD = -27.43%`
-  - removal takeaway:
-    - value-side removal variants는 gate tier를 `production_candidate / watchlist`까지 낮췄다
+  - lower-MDD but weaker gate:
+    - `current_ratio -> operating_margin`
+    - `CAGR = 30.84%`
+    - `MDD = -24.09%`
+    - `Promotion = production_candidate`
+    - `Shortlist = watchlist`
 - 다음에 볼 것:
-  - new replacement anchor 기준
-    `downside / benchmark / one-more replacement`
+  - strongest practical point와 lower-drawdown weaker-gate 대안을
+    Phase 15 checklist 기준으로 다시 검수
+  - next phase에서
+    candidate consolidation 또는 downside follow-up 중 무엇을 먼저 할지 결정
 
 ## 관련 결과 문서
 
@@ -99,8 +121,18 @@
   - `per` strongest candidate를 anchor로 benchmark sensitivity와 quality-side pruning을 다시 본 문서
 - [PHASE15_QUALITY_VALUE_VALUE_SIDE_SEARCH_THIRD_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase15/PHASE15_QUALITY_VALUE_VALUE_SIDE_SEARCH_THIRD_PASS.md)
   - value-side removal / replacement를 다시 보고 `ocf_yield -> pcr` current strongest practical candidate를 고정한 문서
+- [PHASE15_QUALITY_VALUE_REPLACEMENT_ANCHOR_FOLLOWUP_FOURTH_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase15/PHASE15_QUALITY_VALUE_REPLACEMENT_ANCHOR_FOLLOWUP_FOURTH_PASS.md)
+  - `ocf_yield -> pcr` current strongest practical point 위에서 `Top N / benchmark` follow-up을 다시 본 문서
+- [PHASE15_QUALITY_VALUE_QUALITY_SIDE_SEARCH_FIFTH_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase15/PHASE15_QUALITY_VALUE_QUALITY_SIDE_SEARCH_FIFTH_PASS.md)
+  - `ocf_yield -> pcr` anchor 위 quality-side replacement를 다시 보고,
+    `net_margin -> operating_margin`가 strongest practical point를 갱신했는지 정리한 문서
+- [PHASE15_QUALITY_VALUE_STRONGEST_ANCHOR_TOPN_SEARCH_SIXTH_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase15/PHASE15_QUALITY_VALUE_STRONGEST_ANCHOR_TOPN_SEARCH_SIXTH_PASS.md)
+  - new strongest practical point 위에서 `Top N` follow-up을 다시 보고,
+    `Top N = 10`이 그대로 strongest인지 정리한 문서
 - [QUALITY_VALUE_STRICT_ANNUAL_VALUE_REPLACEMENT_CURRENT_CANDIDATE.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL_VALUE_REPLACEMENT_CURRENT_CANDIDATE.md)
   - `ocf_yield -> pcr` replacement candidate를 전략 구성 중심으로 바로 읽는 one-pager
+- [QUALITY_VALUE_STRICT_ANNUAL_STRONGEST_CURRENT_CANDIDATE.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL_STRONGEST_CURRENT_CANDIDATE.md)
+  - quality/value replacement를 함께 반영한 current strongest practical candidate one-pager
 
 ## 실무 해석
 
@@ -109,7 +141,8 @@
 - low-drawdown 연구 reference
 - 방어형 factor blend 실험용 family
 - 그리고 current runtime 기준으로는
-`watchlist / review_required`까지 올라가는 non-hold blended candidate family
+  `real_money_candidate / small_capital_trial / review_required`
+  까지 올라가는 strongest blended candidate family
 
 로 보는 편이 맞고, raw winner 기준으로는 아직 `Value`보다 뒤에 있다.
 Phase 15 bounded addition search 기준으로는
@@ -117,4 +150,17 @@ Phase 15 bounded addition search 기준으로는
 current strongest practical blended candidate가 되었다.
 그리고 value-side third pass까지 보면
 현재 strongest practical point는
-`Top N = 10 + per`, 단 `ocf_yield -> pcr` replacement를 적용한 조합이다.
+`Top N = 10 + per`, 단 `ocf_yield -> pcr` replacement를 적용한 조합이었다.
+그리고 replacement-anchor follow-up fourth pass까지 보면
+그 point 위에서 `Top N`이나 benchmark를 다시 바꿔도 stronger practical point는 나오지 않았다.
+다만 quality-side fifth pass에서는
+`net_margin -> operating_margin` replacement가
+`CAGR = 31.25% / MDD = -26.63% / real_money_candidate / small_capital_trial / review_required`
+로 same gate를 유지하면서 더 나은 tradeoff를 만들어,
+현재 strongest practical point는
+quality-side `net_margin -> operating_margin`,
+value-side `ocf_yield -> pcr`,
+`Top N = 10 + Candidate Universe Equal-Weight`
+조합으로 읽는 편이 맞다.
+그리고 sixth pass에서 `Top N`을 8~12까지 다시 흔들어봐도,
+`Top N = 10`이 여전히 strongest practical point로 유지됐다.

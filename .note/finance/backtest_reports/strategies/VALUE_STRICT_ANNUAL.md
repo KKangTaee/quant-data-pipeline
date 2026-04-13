@@ -73,7 +73,10 @@
   - `Shortlist = paper_probation`
   - `Deployment = review_required`
 - 다음에 볼 것:
-  - `Quality` / `Quality + Value` family에 같은 controlled addition search를 적용
+  - strongest raw / downside-improved / best-addition 후보를
+    Phase 15 checklist 기준으로 다시 검수
+  - next phase에서
+    candidate consolidation 또는 추가 downside follow-up 중 무엇을 먼저 할지 결정
 
 ## 관련 결과 문서
 

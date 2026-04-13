@@ -30,4 +30,9 @@
 - rescued-anchor downside search
 - benchmark / pruning sensitivity search
 - rescued-anchor bounded factor search
+- rescued-anchor alternate contract search
 - value-side removal / replacement search
+- replacement-anchor follow-up search
+- quality-side one-more bounded replacement search
+- strongest-anchor `Top N` follow-up search
+- completion summary / next-phase preparation / test checklist

@@ -58,6 +58,10 @@
 
 - `phase15/README.md`
   - Phase 15 candidate quality improvement archive 안내 문서
+- `../phase15/PHASE15_COMPLETION_SUMMARY.md`
+  - Phase 15 candidate quality improvement closeout 요약 문서
+- `../phase15/PHASE15_TEST_CHECKLIST.md`
+  - Phase 15 strongest/current candidate 검수 checklist 문서
 - `phase15/PHASE15_VALUE_DOWNSIDE_IMPROVEMENT_SEARCH_FIRST_PASS.md`
   - strongest `Value` baseline에서 `MDD`를 낮추는 방향으로 practical candidate quality를 개선할 수 있는지 본 first-pass 문서
 - `phase15/PHASE15_VALUE_FACTOR_ADDITION_SECOND_PASS.md`
@@ -70,6 +74,9 @@
   - rescued `Quality` anchor 기준 `Top N / Rebalance Interval` downside search를 다시 본 문서
 - `phase15/PHASE15_QUALITY_RESCUED_ANCHOR_FACTOR_SEARCH_SECOND_PASS.md`
   - rescued `Quality` anchor 위 bounded factor addition / replacement를 다시 붙였지만 baseline을 못 넘었다는 점을 정리한 문서
+- `phase15/PHASE15_QUALITY_ALTERNATE_CONTRACT_SEARCH_THIRD_PASS.md`
+  - rescued `Quality` downside-improved anchor를 유지한 채 `benchmark / overlay` alternate contract를 다시 보고,
+    strongest practical point와 cleaner alternative를 함께 정리한 문서
 - `phase15/PHASE15_QUALITY_VALUE_CANDIDATE_IMPROVEMENT_SEARCH_FIRST_PASS.md`
   - `Quality + Value` family baseline blend에 controlled addition을 붙여 best raw addition candidate를 다시 정리한 문서
 - `phase15/PHASE15_QUALITY_VALUE_PER_DOWNSIDE_SEARCH_FIRST_PASS.md`
@@ -78,8 +85,19 @@
   - `Quality + Value + per` strongest candidate를 anchor로 benchmark sensitivity와 quality-side pruning을 다시 본 문서
 - `phase15/PHASE15_QUALITY_VALUE_VALUE_SIDE_SEARCH_THIRD_PASS.md`
   - `Quality + Value + per` strongest candidate에서 value-side removal / replacement를 다시 보고 `ocf_yield -> pcr` current strongest practical candidate를 고정한 문서
+- `phase15/PHASE15_QUALITY_VALUE_REPLACEMENT_ANCHOR_FOLLOWUP_FOURTH_PASS.md`
+  - `ocf_yield -> pcr` current strongest practical point 위에서 `Top N / benchmark` follow-up을 다시 보고,
+    strongest practical point가 그대로 유지되는지 정리한 문서
+- `phase15/PHASE15_QUALITY_VALUE_QUALITY_SIDE_SEARCH_FIFTH_PASS.md`
+  - `ocf_yield -> pcr` anchor 위 quality-side replacement를 다시 보고,
+    `net_margin -> operating_margin`가 strongest practical point를 갱신했는지 정리한 문서
+- `phase15/PHASE15_QUALITY_VALUE_STRONGEST_ANCHOR_TOPN_SEARCH_SIXTH_PASS.md`
+  - new strongest practical point 위에서 `Top N` follow-up을 다시 보고,
+    `Top N = 10`이 strongest practical point로 유지되는지 정리한 문서
 - `strategies/QUALITY_VALUE_STRICT_ANNUAL_VALUE_REPLACEMENT_CURRENT_CANDIDATE.md`
   - `ocf_yield -> pcr` replacement 기반 current strongest practical blended candidate one-pager
+- `strategies/QUALITY_VALUE_STRICT_ANNUAL_STRONGEST_CURRENT_CANDIDATE.md`
+  - quality/value replacement를 함께 반영한 current strongest practical blended candidate one-pager
 
 ## 운영 메모
 

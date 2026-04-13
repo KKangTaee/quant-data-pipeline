@@ -35,6 +35,9 @@
   - `Quality > Strict Annual` structural rescue search에서 current rescued candidate를 전략 구성 중심으로 정리한 one-pager
 - `.note/finance/backtest_reports/strategies/QUALITY_STRICT_ANNUAL_DOWNSIDE_IMPROVED_CURRENT_CANDIDATE.md`
   - rescued `Quality > Strict Annual` anchor보다 `MDD`를 크게 낮춘 downside-improved current candidate를 전략 구성 중심으로 정리한 one-pager
+- `.note/finance/backtest_reports/phase15/PHASE15_QUALITY_ALTERNATE_CONTRACT_SEARCH_THIRD_PASS.md`
+  - rescued `Quality > Strict Annual` downside-improved anchor 위에서 `benchmark / overlay` alternate contract를 다시 보고,
+    strongest practical point와 cleaner alternative를 같이 고정한 문서
 - `.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL_BACKTEST_LOG.md`
   - `Value > Strict Annual` 전략 run 기록을 전략 기준으로 누적 관리하는 backtest log 문서
 - `.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL_BACKTEST_LOG.md`
@@ -720,6 +723,12 @@ Phase 4 시작 시:
   - Phase 15 candidate quality improvement 상위 계획 문서
 - `.note/finance/phase15/PHASE15_CURRENT_CHAPTER_TODO.md`
   - Phase 15 현재 실행 보드
+- `.note/finance/phase15/PHASE15_COMPLETION_SUMMARY.md`
+  - Phase 15 candidate quality improvement를 practical closeout 기준으로 정리한 요약 문서
+- `.note/finance/phase15/PHASE15_NEXT_PHASE_PREPARATION.md`
+  - Phase 15 이후 다음 phase를 candidate consolidation / downside follow-up / operator workflow persistence 관점에서 정리한 handoff 문서
+- `.note/finance/phase15/PHASE15_TEST_CHECKLIST.md`
+  - Phase 15 strongest/current candidate 문서와 전략 로그를 수동으로 검수하기 위한 checklist 문서
 - `.note/finance/backtest_reports/phase15/README.md`
   - Phase 15 backtest archive 안내 문서
 - `.note/finance/backtest_reports/phase15/PHASE15_VALUE_DOWNSIDE_IMPROVEMENT_SEARCH_FIRST_PASS.md`
@@ -742,7 +751,18 @@ Phase 4 시작 시:
   - `Quality + Value + per` strongest candidate를 anchor로 benchmark sensitivity와 quality-side pruning을 다시 봤고, baseline candidate-equal-weight contract가 여전히 strongest practical point임을 고정한 report
 - `.note/finance/backtest_reports/phase15/PHASE15_QUALITY_VALUE_VALUE_SIDE_SEARCH_THIRD_PASS.md`
   - `Quality + Value + per` strongest candidate에서 value-side removal / replacement를 다시 봤고, `ocf_yield -> pcr`가 same gate / same MDD로 `CAGR`를 더 높인 current strongest practical candidate가 되었음을 정리한 report
+- `.note/finance/backtest_reports/phase15/PHASE15_QUALITY_VALUE_REPLACEMENT_ANCHOR_FOLLOWUP_FOURTH_PASS.md`
+  - `Quality + Value > Strict Annual` current strongest practical point(`ocf_yield -> pcr`) 위에서
+    `Top N / benchmark` follow-up을 다시 보고 strongest practical point가 유지되는지 정리한 report
+- `.note/finance/backtest_reports/phase15/PHASE15_QUALITY_VALUE_QUALITY_SIDE_SEARCH_FIFTH_PASS.md`
+  - `Quality + Value > Strict Annual` replacement anchor 위 quality-side bounded replacement를 다시 보고,
+    `net_margin -> operating_margin`가 strongest practical point를 갱신했는지 정리한 report
+- `.note/finance/backtest_reports/phase15/PHASE15_QUALITY_VALUE_STRONGEST_ANCHOR_TOPN_SEARCH_SIXTH_PASS.md`
+  - `Quality + Value > Strict Annual` new strongest practical point 위에서 `Top N` follow-up을 다시 보고,
+    `Top N = 10`이 strongest practical point로 유지되는지 정리한 report
 - `.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL_BEST_ADDITION_CURRENT_CANDIDATE.md`
   - `per` addition 기반 current best raw addition candidate one-pager
+- `.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL_STRONGEST_CURRENT_CANDIDATE.md`
+  - quality/value replacement를 함께 반영한 current strongest practical blended candidate one-pager
 - `.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL_VALUE_REPLACEMENT_CURRENT_CANDIDATE.md`
   - `ocf_yield -> pcr` replacement를 적용한 current strongest practical blended candidate one-pager

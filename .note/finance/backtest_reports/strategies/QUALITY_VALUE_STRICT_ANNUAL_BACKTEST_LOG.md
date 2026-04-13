@@ -20,6 +20,202 @@
 
 ## 기록
 
+### 2026-04-13 - strongest anchor top-n search sixth pass
+
+- 목표:
+  - new strongest practical point를 anchor로 두고
+    `Top N`만 다시 흔들어도 더 좋은 practical candidate가 나오는지 확인
+- 전략:
+  - `Quality + Value > Strict Annual`
+- 기간 / universe:
+  - `2016-01-01 ~ 2026-04-01`
+  - `US Statement Coverage 100`
+  - `Historical Dynamic PIT Universe`
+- 핵심 설정:
+  - quality:
+    - `roe`
+    - `roa`
+    - `operating_margin`
+    - `asset_turnover`
+    - `current_ratio`
+  - value:
+    - `book_to_market`
+    - `earnings_yield`
+    - `sales_yield`
+    - `pcr`
+    - `operating_income_yield`
+    - `per`
+  - `Benchmark Contract = Candidate Universe Equal-Weight`
+  - `Trend Filter = off`
+  - `Market Regime = off`
+  - underperformance / drawdown guardrail `on`
+- 결과:
+  - strongest practical point 유지:
+    - `Top N = 10`
+    - `CAGR = 31.25%`
+    - `MDD = -26.63%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = small_capital_trial`
+    - `Deployment = review_required`
+  - lower-drawdown but weaker gate:
+    - `Top N = 9`
+    - `CAGR = 31.08%`
+    - `MDD = -25.61%`
+    - `Promotion = production_candidate`
+    - `Shortlist = watchlist`
+  - high-CAGR but weaker gate:
+    - `Top N = 8`
+    - `CAGR = 32.47%`
+    - `MDD = -30.79%`
+    - `Promotion = production_candidate`
+    - `Shortlist = watchlist`
+  - collapse point:
+    - `Top N = 12`
+    - `CAGR = 27.17%`
+    - `MDD = -27.40%`
+    - `Promotion = hold`
+    - `Shortlist = hold`
+    - `Deployment = blocked`
+- 해석:
+  - new strongest anchor 위에서도 `Top N = 10`이 gate와 성과를 같이 만족하는 가장 좋은 practical point였다
+  - `Top N = 9`는 숫자상 attractive하지만 gate가 `watchlist`로 낮아졌다
+- 다음 액션:
+  - current strongest point를 유지하고 Phase 15 closeout 준비로 넘긴다
+- 관련 문서:
+  - [PHASE15_QUALITY_VALUE_STRONGEST_ANCHOR_TOPN_SEARCH_SIXTH_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase15/PHASE15_QUALITY_VALUE_STRONGEST_ANCHOR_TOPN_SEARCH_SIXTH_PASS.md)
+  - [QUALITY_VALUE_STRICT_ANNUAL_STRONGEST_CURRENT_CANDIDATE.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL_STRONGEST_CURRENT_CANDIDATE.md)
+
+### 2026-04-13 - quality-side search fifth pass
+
+- 목표:
+  - `ocf_yield -> pcr` replacement current strongest practical point를 anchor로 두고,
+    quality factor 쪽 one-more bounded replacement가 실제로 더 좋은 practical candidate를 만드는지 확인
+- 전략:
+  - `Quality + Value > Strict Annual`
+- 기간 / universe:
+  - `2016-01-01 ~ 2026-04-01`
+  - `US Statement Coverage 100`
+  - `Historical Dynamic PIT Universe`
+- 핵심 설정:
+  - anchor value:
+    - `book_to_market`
+    - `earnings_yield`
+    - `sales_yield`
+    - `pcr`
+    - `operating_income_yield`
+    - `per`
+  - anchor quality:
+    - `roe`
+    - `roa`
+    - `net_margin`
+    - `asset_turnover`
+    - `current_ratio`
+  - `Option = month_end`
+  - `Top N = 10`
+  - `Rebalance Interval = 1`
+  - `Benchmark Contract = Candidate Universe Equal-Weight`
+  - `Trend Filter = off`
+  - `Market Regime = off`
+  - underperformance / drawdown guardrail `on`
+- 결과:
+  - previous anchor:
+    - `CAGR = 30.05%`
+    - `MDD = -27.43%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = small_capital_trial`
+    - `Deployment = review_required`
+  - strongest replacement:
+    - `net_margin -> operating_margin`
+    - `CAGR = 31.25%`
+    - `MDD = -26.63%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = small_capital_trial`
+    - `Deployment = review_required`
+  - notable defensive but weaker-gate alternative:
+    - `current_ratio -> operating_margin`
+    - `CAGR = 30.84%`
+    - `MDD = -24.09%`
+    - `Promotion = production_candidate`
+    - `Shortlist = watchlist`
+    - `Deployment = review_required`
+- 해석:
+  - `net_margin -> operating_margin`은
+    same gate를 유지하면서 `CAGR`와 `MDD`를 같이 개선한 bounded replacement였다
+  - 따라서 current strongest practical point는
+    이제 quality-side에서도 replacement가 들어간 조합으로 읽는 편이 맞다
+- 다음 액션:
+  - new strongest practical point를 hub와 one-pager에 반영하고,
+    필요하면 다음에는 new anchor 기준 `Top N`만 다시 좁게 본다
+- 관련 문서:
+  - [PHASE15_QUALITY_VALUE_QUALITY_SIDE_SEARCH_FIFTH_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase15/PHASE15_QUALITY_VALUE_QUALITY_SIDE_SEARCH_FIFTH_PASS.md)
+  - [QUALITY_VALUE_STRICT_ANNUAL_STRONGEST_CURRENT_CANDIDATE.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL_STRONGEST_CURRENT_CANDIDATE.md)
+
+### 2026-04-13 - replacement-anchor follow-up fourth pass
+
+- 목표:
+  - `ocf_yield -> pcr` replacement current strongest practical point를 anchor로 두고
+    `Top N / benchmark`를 다시 흔들어도 더 좋은 practical candidate가 나오는지 확인
+- 전략:
+  - `Quality + Value > Strict Annual`
+- 기간 / universe:
+  - `2016-01-01 ~ 2026-04-01`
+  - `US Statement Coverage 100`
+  - `Historical Dynamic PIT Universe`
+- 핵심 설정:
+  - quality:
+    - `roe`
+    - `roa`
+    - `net_margin`
+    - `asset_turnover`
+    - `current_ratio`
+  - value:
+    - `book_to_market`
+    - `earnings_yield`
+    - `sales_yield`
+    - `pcr`
+    - `operating_income_yield`
+    - `per`
+  - `Option = month_end`
+  - `Rebalance Interval = 1`
+  - `Trend Filter = off`
+  - `Market Regime = off`
+  - underperformance / drawdown guardrail `on`
+- 결과:
+  - strongest practical point 유지:
+    - `Top N = 10`
+    - `Benchmark Contract = Candidate Universe Equal-Weight`
+    - `CAGR = 30.05%`
+    - `MDD = -27.43%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = small_capital_trial`
+    - `Deployment = review_required`
+  - high-CAGR but weaker gate:
+    - `Top N = 8`
+    - `CAGR = 31.69%`
+    - `MDD = -27.64%`
+    - `Promotion = production_candidate`
+    - `Shortlist = watchlist`
+  - benchmark alternative:
+    - `Top N = 10`
+    - `Ticker Benchmark = SPY`
+    - `CAGR = 30.05%`
+    - `MDD = -27.43%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = paper_probation`
+    - `Deployment = review_required`
+  - downside search takeaway:
+    - `Top N >= 12` variants were all `hold / blocked`
+- 해석:
+  - new replacement anchor 위에서도 `Top N = 10 + Candidate Universe Equal-Weight`가 strongest practical point로 유지됐다
+  - `Top N = 8`은 수익률은 더 높지만 gate tier가 낮아졌다
+  - `SPY` benchmark는 same return / same drawdown이지만 shortlist를 한 단계 낮췄다
+- 다음 액션:
+  - current strongest practical point를 유지하고,
+    필요하면 다음에는 one-more bounded replacement만 좁게 시도한다
+- 관련 문서:
+  - [PHASE15_QUALITY_VALUE_REPLACEMENT_ANCHOR_FOLLOWUP_FOURTH_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase15/PHASE15_QUALITY_VALUE_REPLACEMENT_ANCHOR_FOLLOWUP_FOURTH_PASS.md)
+  - [QUALITY_VALUE_STRICT_ANNUAL_VALUE_REPLACEMENT_CURRENT_CANDIDATE.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL_VALUE_REPLACEMENT_CURRENT_CANDIDATE.md)
+
 ### 2026-04-13 - value-side search third pass
 
 - 목표:

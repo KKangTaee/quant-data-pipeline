@@ -13,6 +13,50 @@ Keep entries append-only and concise.
 
 ## Entries
 
+### 2026-04-13
+- Closed Phase 15 to `practical closeout / manual_validation_pending`.
+- Added:
+  - `PHASE15_COMPLETION_SUMMARY.md`
+  - `PHASE15_NEXT_PHASE_PREPARATION.md`
+  - `PHASE15_TEST_CHECKLIST.md`
+- Synced Phase 15 TODO, roadmap, finance doc index, and backtest report index to the closeout state.
+
+### 2026-04-13
+- Continued Phase 15 `Quality + Value` strongest-anchor follow-up with a direct `Top N` rerun on the new blended strongest point.
+- Confirmed `Top N = 10` still remains the strongest practical point after the quality/value replacement upgrades.
+- Recorded a notable lower-drawdown alternative:
+  - `Top N = 9`
+  - `CAGR = 31.08%`
+  - `MDD = -25.61%`
+  - but `production_candidate / watchlist`
+- Synced the new sixth-pass report, strategy hub, backtest log, and TODO/index documents.
+
+### 2026-04-13
+- Continued Phase 15 `Quality + Value` follow-up with a quality-side one-more bounded replacement search on top of the `ocf_yield -> pcr` anchor.
+- Confirmed `net_margin -> operating_margin` as the new strongest practical blended point:
+  - `CAGR = 31.25%`
+  - `MDD = -26.63%`
+  - `real_money_candidate / small_capital_trial / review_required`
+- Confirmed `current_ratio -> operating_margin` as a lower-drawdown but weaker-gate alternative:
+  - `CAGR = 30.84%`
+  - `MDD = -24.09%`
+  - `production_candidate / watchlist / review_required`
+- Synced the new Phase 15 report, strategy hub, backtest log, and index/TODO documents to reflect the updated strongest practical point.
+
+### 2026-04-13
+- Continued Phase 15 candidate-quality work with verified `Quality > Strict Annual` alternate-contract reruns around the rescued downside-improved anchor.
+- Confirmed the current strongest practical `Quality` point still remains:
+  - `LQD + trend on + regime off + Top N 12`
+  - `CAGR = 26.02%`
+  - `MDD = -25.57%`
+  - `real_money_candidate / paper_probation / review_required`
+- Confirmed a cleaner but more conservative alternative:
+  - `SPY + trend on + regime off + Top N 12`
+  - `CAGR = 25.18%`
+  - `MDD = -25.57%`
+  - `real_money_candidate / paper_probation / paper_only`
+- Recorded that more defensive overlay variants fell back to `hold / blocked`, so the next active Phase 15 focus should move toward `Quality + Value` follow-up rather than further widening `Quality` alternates.
+
 ### 2026-03-11
 - Initialized `.note/finance` as the top-level note location for `finance` work.
 - Moved the comprehensive finance analysis document from `finance/docs/` to `.note/finance/`.
@@ -5233,6 +5277,28 @@ Keep entries append-only and concise.
   - `.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL_VALUE_REPLACEMENT_CURRENT_CANDIDATE.md`
   - `.note/finance/backtest_reports/strategies/QUALITY_STRICT_ANNUAL_BACKTEST_LOG.md`
   - `.note/finance/backtest_reports/strategies/QUALITY_STRICT_ANNUAL.md`
+  - `.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL_BACKTEST_LOG.md`
+  - `.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL.md`
+  - `.note/finance/phase15/PHASE15_CURRENT_CHAPTER_TODO.md`
+
+### 2026-04-13 - Phase 15에서 Quality + Value replacement-anchor follow-up을 정리함
+
+- We continued Phase 15 with a direct rerun around the current strongest practical `Quality + Value` point:
+  - `ocf_yield -> pcr`
+  - `Top N = 10`
+  - `Candidate Universe Equal-Weight`
+- Confirmed the current strongest practical point still remains:
+  - `CAGR = 30.05%`
+  - `MDD = -27.43%`
+  - `real_money_candidate / small_capital_trial / review_required`
+- Confirmed two important alternatives:
+  - `Top N = 8` raises CAGR to `31.69%` but drops to `production_candidate / watchlist`
+  - `Ticker Benchmark = SPY` keeps the same return/drawdown but lowers shortlist to `paper_probation`
+- Recorded a durable operator note for direct runtime verification:
+  - strict annual UI `%` inputs are normalized to runtime ratio values
+  - direct Python reruns must pass ratio-scale thresholds (`0.95`, `0.90`, `0.55`, etc.) to reproduce UI-equivalent results
+- Durable outputs:
+  - `.note/finance/backtest_reports/phase15/PHASE15_QUALITY_VALUE_REPLACEMENT_ANCHOR_FOLLOWUP_FOURTH_PASS.md`
   - `.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL_BACKTEST_LOG.md`
   - `.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL.md`
   - `.note/finance/phase15/PHASE15_CURRENT_CHAPTER_TODO.md`

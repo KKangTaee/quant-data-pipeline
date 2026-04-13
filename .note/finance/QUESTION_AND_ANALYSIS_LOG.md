@@ -13,6 +13,92 @@ Do not copy full chat transcripts. Keep only the durable result.
 
 ## Entries
 
+### 2026-04-13 - Phase 15 closeout judgment
+- Request topic:
+  - finish Phase 15 and leave a clear checklist / handoff
+- Interpreted goal:
+  - decide whether Phase 15 has reached a practical stopping point and record what should happen next
+- Result:
+  - judged that Phase 15 core goal was already achieved:
+    - family-specific candidate quality improvement completed
+    - strongest/current candidates fixed for `Value`, `Quality`, `Quality + Value`
+    - strategy hub / one-pager / backtest-log workflow established
+  - decided that remaining work belongs to next-phase backlog rather than being a closeout blocker
+  - recommended the next-phase question as:
+    - candidate consolidation
+    - downside follow-up
+    - operator workflow persistence
+- Durable output:
+  - `.note/finance/phase15/PHASE15_COMPLETION_SUMMARY.md`
+  - `.note/finance/phase15/PHASE15_NEXT_PHASE_PREPARATION.md`
+  - `.note/finance/phase15/PHASE15_TEST_CHECKLIST.md`
+
+### 2026-04-13 - Phase 15 Quality+Value strongest-anchor Top N follow-up
+- Request topic:
+  - continue the next Phase 15 step after identifying the new strongest practical blended point
+- Interpreted goal:
+  - verify whether the new strongest practical `Quality + Value` point still holds when only `Top N` is varied
+- Result:
+  - confirmed `Top N = 10` still remains the strongest practical point
+  - identified a notable lower-drawdown alternative:
+    - `Top N = 9`
+    - `CAGR = 31.08%`
+    - `MDD = -25.61%`
+    - but `production_candidate / watchlist`
+  - confirmed that `Top N = 12` already falls back to `hold / blocked`
+- Durable output:
+  - `.note/finance/backtest_reports/phase15/PHASE15_QUALITY_VALUE_STRONGEST_ANCHOR_TOPN_SEARCH_SIXTH_PASS.md`
+
+### 2026-04-13 - Phase 15 Quality+Value next-step follow-up
+- Request topic:
+  - continue the next Phase 15 step
+- Interpreted goal:
+  - test whether `Quality + Value` current strongest practical point can be improved by one more bounded quality-side replacement
+- Result:
+  - confirmed that `net_margin -> operating_margin` beats the previous anchor while preserving the same practical gate tier
+  - new strongest practical point:
+    - quality-side:
+      - `net_margin -> operating_margin`
+    - value-side:
+      - `ocf_yield -> pcr`
+    - `Top N = 10`
+    - `Candidate Universe Equal-Weight`
+    - `CAGR = 31.25%`
+    - `MDD = -26.63%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = small_capital_trial`
+    - `Deployment = review_required`
+  - also identified a lower-drawdown but weaker-gate alternative:
+    - `current_ratio -> operating_margin`
+    - `CAGR = 30.84%`
+    - `MDD = -24.09%`
+    - `production_candidate / watchlist / review_required`
+- Durable output:
+  - `.note/finance/backtest_reports/phase15/PHASE15_QUALITY_VALUE_QUALITY_SIDE_SEARCH_FIFTH_PASS.md`
+
+### 2026-04-13 - Quality rescued anchor alternate-contract interpretation
+- Request topic:
+  - continue the next Phase 15 search step after the rescued-anchor factor pass
+- Interpreted goal:
+  - determine whether `Quality > Strict Annual` could improve practical quality by changing `benchmark / overlay` contract around the rescued downside-improved anchor
+- Result:
+  - confirmed the strongest practical point still remains:
+    - `LQD + trend on + regime off + Top N 12`
+    - `CAGR = 26.02%`
+    - `MDD = -25.57%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = paper_probation`
+    - `Deployment = review_required`
+  - identified a cleaner but more conservative alternative:
+    - `SPY + trend on + regime off + Top N 12`
+    - same `MDD`
+    - slightly lower `CAGR`
+    - `Validation / Rolling / OOS = normal / normal / normal`
+    - but `Deployment = paper_only`
+  - concluded that more defensive overlay variants were not helpful because they reverted to `hold / blocked`
+- Durable output:
+  - `.note/finance/backtest_reports/phase15/PHASE15_QUALITY_ALTERNATE_CONTRACT_SEARCH_THIRD_PASS.md`
+
 ### 2026-04-05 - ETF AUM/spread operability policy placement
 - Request topic:
   - continue Phase 12 hardening with the next practical real-money step
@@ -8333,3 +8419,35 @@ Do not copy full chat transcripts. Keep only the durable result.
   - `.note/finance/backtest_reports/phase15/PHASE15_QUALITY_RESCUED_ANCHOR_FACTOR_SEARCH_SECOND_PASS.md`
   - `.note/finance/backtest_reports/phase15/PHASE15_QUALITY_VALUE_VALUE_SIDE_SEARCH_THIRD_PASS.md`
   - `.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL_VALUE_REPLACEMENT_CURRENT_CANDIDATE.md`
+
+### 2026-04-13 - Quality + Value replacement-anchor follow-up interpretation
+
+- Request topic:
+  - continue the next Phase 15 step after fixing the current strongest practical `Quality + Value` point with `ocf_yield -> pcr`
+- Interpreted goal:
+  - determine whether the new replacement anchor could be improved further by `Top N` or benchmark changes without losing practical gate tier
+- Result:
+  - confirmed the strongest practical point still remains:
+    - `Top N = 10`
+    - `Candidate Universe Equal-Weight`
+    - `CAGR = 30.05%`
+    - `MDD = -27.43%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = small_capital_trial`
+    - `Deployment = review_required`
+  - identified a higher-CAGR but weaker-gate variant:
+    - `Top N = 8`
+    - `CAGR = 31.69%`
+    - `MDD = -27.64%`
+    - `Promotion = production_candidate`
+    - `Shortlist = watchlist`
+  - identified a cleaner human-readable benchmark alternative:
+    - `Ticker Benchmark = SPY`
+    - same `CAGR / MDD`
+    - same `Promotion = real_money_candidate`
+    - but `Shortlist = paper_probation`
+  - also recorded a durable operator note:
+    - strict annual UI percentage fields are normalized to runtime ratio values
+    - direct runtime verification must pass ratio-scale thresholds to reproduce UI-equivalent results
+- Durable output:
+  - `.note/finance/backtest_reports/phase15/PHASE15_QUALITY_VALUE_REPLACEMENT_ANCHOR_FOLLOWUP_FOURTH_PASS.md`

@@ -2,11 +2,12 @@
 
 ## 상태 요약
 
-- `in_progress` Phase 15 kickoff
+- `completed` Phase 15 practical closeout 준비
 - 현재 phase 목적:
   - candidate quality improvement
   - downside improvement search
   - strategy-specific cumulative backtest logging
+  - strongest/current candidate closeout 정리
 
 ## Workstream A. Value Downside Improvement
 
@@ -60,6 +61,13 @@
   - baseline을 넘는 bounded factor change는 없었다
   - `+ net_debt_to_equity`만 non-hold를 유지했지만
     `CAGR`와 `MDD`가 baseline보다 둘 다 나빠졌다
+- `completed` rescued anchor alternate contract search
+  - `LQD + trend on + regime off + Top N 12`
+    가 여전히 strongest practical point로 남았다
+  - `SPY + trend on + regime off + Top N 12`
+    는 same `MDD`와 cleaner `Validation / Rolling / OOS`
+    를 주지만 `Deployment = paper_only`로 더 보수적이었다
+  - 더 방어적인 overlay는 오히려 `hold / blocked`로 후퇴했다
 
 ## Workstream C. Quality + Value Candidate Improvement
 
@@ -78,12 +86,39 @@
   - value-side removal은 gate tier를 낮췄다
   - `ocf_yield -> pcr` replacement는
     same gate / same MDD를 유지하면서 `CAGR`를 `29.43% -> 30.05%`로 올렸다
+- `completed` replacement-anchor follow-up search
+  - `ocf_yield -> pcr` new anchor에서도
+    `Top N = 10 + Candidate Universe Equal-Weight`
+    가 strongest practical point로 유지됐다
+  - `Top N = 8`은 수익률은 더 높았지만
+    `production_candidate / watchlist`로 내려갔다
+  - `Ticker Benchmark = SPY`는
+    same return / same drawdown이지만
+    shortlist를 `paper_probation`으로 한 단계 낮췄다
+- `completed` quality-side one-more bounded replacement search
+  - `ocf_yield -> pcr` anchor 위에서 quality-side replacement를 다시 본 결과
+    `net_margin -> operating_margin`
+    가 same gate를 유지하면서
+    `CAGR = 31.25% / MDD = -26.63%`
+    로 current strongest practical point를 갱신했다
+  - `current_ratio -> operating_margin`은
+    더 낮은 `MDD`를 줬지만
+    `production_candidate / watchlist`로 내려가 strongest point를 넘진 못했다
+- `completed` new strongest anchor `Top N` follow-up search
+  - new anchor 위에서 `Top N = 8, 9, 10, 11, 12`를 다시 본 결과
+    `Top N = 10`이 여전히 strongest practical point로 유지됐다
+  - `Top N = 9`는
+    `CAGR = 31.08% / MDD = -25.61%`
+    로 숫자는 attractive했지만
+    `production_candidate / watchlist`로 내려갔다
+  - `Top N = 12`부터는 `hold / blocked`로 무너졌다
 
 ## Workstream D. Reporting
 
 - `completed` phase15 backtest report 첫 문서 작성
 - `completed` 전략별 backtest log append
 - `completed` strategy hub snapshot 갱신
+- `completed` Phase 15 closeout 문서 / handoff / checklist 정리
 
 ## 현재 추천 후보
 
@@ -138,11 +173,43 @@
   - `Top N = 10 + per`
   - with value replacement:
     - `ocf_yield -> pcr`
-  - `CAGR = 30.05%`
-  - `MDD = -27.43%`
+  - with quality replacement:
+    - `net_margin -> operating_margin`
+  - `CAGR = 31.25%`
+  - `MDD = -26.63%`
   - `Promotion = real_money_candidate`
   - `Shortlist = small_capital_trial`
   - `Deployment = review_required`
+- Quality + Value notable alternatives:
+  - previous anchor:
+    - `Top N = 10`
+    - value-side only:
+      - `ocf_yield -> pcr`
+    - `CAGR = 30.05%`
+    - `MDD = -27.43%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = small_capital_trial`
+  - lower-MDD but weaker gate:
+    - `Top N = 10`
+    - `current_ratio -> operating_margin`
+    - `CAGR = 30.84%`
+    - `MDD = -24.09%`
+    - `Promotion = production_candidate`
+    - `Shortlist = watchlist`
+  - higher-CAGR but weaker gate:
+    - `Top N = 8`
+    - `CAGR = 31.69%`
+    - `MDD = -27.64%`
+    - `Promotion = production_candidate`
+    - `Shortlist = watchlist`
+  - cleaner human-readable benchmark:
+    - `Top N = 10`
+    - `Ticker Benchmark = SPY`
+    - `CAGR = 30.05%`
+    - `MDD = -27.43%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = paper_probation`
+    - `Deployment = review_required`
 
 ## 현재 판단
 
@@ -160,11 +227,18 @@
 - 그리고 `Top N` downside search와 benchmark / pruning second pass까지 보면
   `Top N = 10 + per`가 strongest practical point였고,
   value-side third pass에서는 `ocf_yield -> pcr`가 그 practical point를 한 단계 더 개선했다.
+- replacement-anchor follow-up fourth pass까지 보면
+  `Top N = 10 + Candidate Universe Equal-Weight`가 그대로 strongest practical point였고,
+  `Top N = 8`과 `Ticker Benchmark = SPY`는 각각
+  higher-CAGR / cleaner-benchmark 대안이지만 strongest practical point를 넘지는 못했다.
+- 그 다음 quality-side fifth pass에서는
+  `net_margin -> operating_margin`
+  replacement가 current strongest practical point를 실제로 갱신했다.
+- 그리고 sixth pass에서 new anchor 기준 `Top N`을 다시 봐도
+  `Top N = 10`이 strongest practical point로 유지됐다.
 - 다음 active step은
-  - `Quality`:
-    - rescued anchor 기준
-      `weighting / alternate overlay contract` search
-  - `Quality + Value`:
-    - new value replacement anchor 기준
-      `downside / benchmark / one-more replacement` search
-  쪽이다.
+  - manual validation checklist 기준으로
+    current strongest candidates 문서와 log 체계를 확인한다
+  - next phase 방향은
+    candidate consolidation / downside follow-up / operator workflow persistence
+    중 어느 쪽으로 열지 사용자와 다시 정한다
