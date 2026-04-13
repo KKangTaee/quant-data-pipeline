@@ -81,19 +81,20 @@
 ## 지금 상태에 대한 판단
 
 - 현재 `.note/finance/WORK_PROGRESS.md`는 이미 길이가 충분히 커졌다.
-- 하지만 지금 당장 과거 로그를 대규모로 재배치하는 것은 우선순위가 아니다.
-- 따라서 현재 권고는:
-  - **지금 파일은 유지**
-  - **다음부터는 새 phase 또는 로그가 큰 phase부터 phase worklog를 병행**
-  - 필요 시 later cleanup에서 이전 phase를 archive
+- 그래서 first-pass로는:
+  - root에는 concise current context만 남기고
+  - 이전 full log는 archive snapshot으로 먼저 분리하는 것도 허용한다
+- 이후 필요할 때,
+  phase별 worklog로 더 세밀하게 다시 나누는 것이 자연스럽다
 
 ## 실무 권고
 
 - 당장 가장 좋은 운영은:
-  - root `WORK_PROGRESS.md` 유지
+  - root `WORK_PROGRESS.md`는 current summary/pointer로 유지
+  - full history는 archive snapshot으로 먼저 안전하게 분리
   - active phase에 로그가 많이 쌓이면 `PHASE*_WORKLOG.md` 추가
-  - root에는 summary/pointer만 남기기
+  - 필요 시 archive snapshot을 phase별 worklog로 later split
 
 즉 정리하면:
 - **단일 파일 완전 유지**보다
-- **루트 summary + phase archive** 구조가 가장 효율적이다.
+- **루트 summary + archive + 필요 시 phase worklog** 구조가 가장 효율적이다.

@@ -13,18 +13,32 @@
 - `.note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md`
   - `finance` 패키지 전체 구조와 DB/기능 종합 분석
 - `.note/finance/WORK_PROGRESS.md`
-  - 구현 진행 로그
+  - 현재 active workstream만 남긴 concise 구현 진행 로그
 - `.note/finance/FINANCE_WORK_PROGRESS_POLICY.md`
   - root `WORK_PROGRESS.md`를 유지하되, 로그가 커질 때는 월별이 아니라 phase별 worklog/archive로 분리하는 운영 기준 문서
 - `.note/finance/QUESTION_AND_ANALYSIS_LOG.md`
-  - 질의/설계/분석 결과 로그
+  - 현재 active 설계 판단만 남긴 concise 질의/설계/분석 로그
+- `.note/finance/archive/README.md`
+  - root 로그를 압축한 뒤, full archive를 어디서 봐야 하는지 정리한 안내 문서
+- `.note/finance/archive/WORK_PROGRESS_ARCHIVE_20260413.md`
+  - 2026-04-13 시점까지의 full work progress archive
+- `.note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md`
+  - 2026-04-13 시점까지의 full question/analysis archive
 - `.note/finance/FINANCE_TERM_GLOSSARY.md`
   - 퀀트 / 백테스트 / 실전형 전략 관련 반복 용어를 `기본 설명 / 왜 사용되는지 / 예시 / 필요 상황` 구조로 정리하는 공통 용어 사전
   - 앱에서는 `Reference > Glossary`에서 검색형 UI로 바로 다시 볼 수 있다
+- `.note/finance/BACKTEST_REFINEMENT_CODE_FLOW_GUIDE.md`
+  - Streamlit UI, runtime adapter, finance engine, strategy 문서 흐름까지 backtest refinement code path를 한 장으로 정리한 안내 문서
+- `.note/finance/RUNTIME_ARTIFACT_HYGIENE.md`
+  - run history, artifacts, temp csv, scratch notebook 같은 runtime 산출물을 어떻게 해석하고 관리해야 하는지 정리한 운영 문서
+- `.note/finance/CODEX_PLUGIN_AND_SKILL_APPLICATION_REVIEW_20260413.md`
+  - Codex plugin/skill을 현재 프로젝트 workflow에 적용할 가치가 있는지와 repo-local draft 구성 판단을 정리한 문서
 - `.note/finance/backtest_reports/README.md`
   - phase 문서와 분리해서, 결과 중심 backtest Markdown 문서를 어디에 두고 어떻게 관리할지 정리한 운영 안내 문서
 - `.note/finance/backtest_reports/BACKTEST_REPORT_INDEX.md`
   - durable backtest 결과 리포트 전용 인덱스로, 앞으로 결과 중심 Markdown 문서를 따로 모아 관리하기 위한 문서
+- `.note/finance/backtest_reports/strategies/CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md`
+  - 현재 `Value / Quality / Quality + Value` family에서 다시 볼 practical candidate를 한 장으로 요약한 문서
 - `.note/finance/backtest_reports/strategies/BACKTEST_LOG_TEMPLATE.md`
   - 전략별 backtest log를 같은 형식으로 append하기 위한 공통 템플릿 문서
 - `.note/finance/backtest_reports/strategies/GTAA_BACKTEST_LOG.md`

@@ -1,0 +1,20 @@
+{
+  "name": "quant-data-pipeline-local",
+  "interface": {
+    "displayName": "Quant Data Pipeline Local Plugins"
+  },
+  "plugins": [
+    {
+      "name": "quant-finance-workflow",
+      "source": {
+        "source": "local",
+        "path": "./plugins/quant-finance-workflow"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

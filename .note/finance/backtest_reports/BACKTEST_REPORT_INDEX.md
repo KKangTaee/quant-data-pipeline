@@ -36,6 +36,8 @@
   - `Quality + Value > Strict Annual` 결과 허브
 - `strategies/QUALITY_VALUE_STRICT_ANNUAL_BACKTEST_LOG.md`
   - `Quality + Value > Strict Annual` 전략 run 기록 누적 문서
+- `strategies/CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md`
+  - 현재 `Value / Quality / Quality + Value` family에서 다시 볼 practical candidate를 한 장으로 요약한 문서
 - `strategies/QUALITY_VALUE_STRICT_ANNUAL_BEST_ADDITION_CURRENT_CANDIDATE.md`
   - `Quality + Value > Strict Annual` bounded addition search에서 가장 좋은 raw addition candidate one-pager
 

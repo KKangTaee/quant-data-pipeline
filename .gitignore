@@ -16,3 +16,11 @@ AGENTS.md
 # Project runtime artifacts
 tmp/
 logs/
+.DS_Store
+.note/finance/.DS_Store
+.note/finance/SAVED_PORTFOLIOS.jsonl
+.note/finance/backtest_artifacts/
+.note/finance/run_artifacts/
+.note/finance/phase12/_tmp_gtaa_*.csv
+csv/*daily_market_update_failures.csv
+test*.ipynb
