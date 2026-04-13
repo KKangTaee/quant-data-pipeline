@@ -56,7 +56,10 @@
     - `MDD = -25.57%`
     - `real_money_candidate / paper_probation / review_required`
     로 current recommended downside-improved candidate를 확보했다
-- `pending` rescued anchor 기준 bounded factor addition / replacement search
+- `completed` rescued anchor 기준 bounded factor addition / replacement search
+  - baseline을 넘는 bounded factor change는 없었다
+  - `+ net_debt_to_equity`만 non-hold를 유지했지만
+    `CAGR`와 `MDD`가 baseline보다 둘 다 나빠졌다
 
 ## Workstream C. Quality + Value Candidate Improvement
 
@@ -71,7 +74,10 @@
     여전히 strongest practical point로 남았다
   - `Ticker Benchmark = SPY`는 same return이어도 shortlist tier가 낮아졌다
   - quality-side pruning은 전부 `hold / blocked`였다
-- `pending` value-side replacement / bounded removal search
+- `completed` value-side replacement / bounded removal search
+  - value-side removal은 gate tier를 낮췄다
+  - `ocf_yield -> pcr` replacement는
+    same gate / same MDD를 유지하면서 `CAGR`를 `29.43% -> 30.05%`로 올렸다
 
 ## Workstream D. Reporting
 
@@ -130,7 +136,9 @@
   - `Deployment = review_required`
 - Quality + Value current strongest practical point:
   - `Top N = 10 + per`
-  - `CAGR = 29.43%`
+  - with value replacement:
+    - `ocf_yield -> pcr`
+  - `CAGR = 30.05%`
   - `MDD = -27.43%`
   - `Promotion = real_money_candidate`
   - `Shortlist = small_capital_trial`
@@ -150,11 +158,13 @@
 - `Quality + Value`는 value-side controlled addition까지 넓혀 보니
   `per`가 gate tier를 실제로 끌어올렸다.
 - 그리고 `Top N` downside search와 benchmark / pruning second pass까지 보면
-  `Top N = 10 + per`가 그대로 strongest practical point였다.
+  `Top N = 10 + per`가 strongest practical point였고,
+  value-side third pass에서는 `ocf_yield -> pcr`가 그 practical point를 한 단계 더 개선했다.
 - 다음 active step은
   - `Quality`:
     - rescued anchor 기준
-      `bounded factor addition / replacement` search
+      `weighting / alternate overlay contract` search
   - `Quality + Value`:
-    - `per` anchor 기준 `value-side replacement / bounded removal` search
+    - new value replacement anchor 기준
+      `downside / benchmark / one-more replacement` search
   쪽이다.

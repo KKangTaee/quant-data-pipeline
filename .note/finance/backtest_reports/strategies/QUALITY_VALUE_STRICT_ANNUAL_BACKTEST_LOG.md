@@ -20,6 +20,84 @@
 
 ## 기록
 
+### 2026-04-13 - value-side search third pass
+
+- 목표:
+  - `+ per` baseline candidate에서
+    value factor를 제거하거나 교체했을 때 더 좋은 practical candidate가 나오는지 확인
+- 전략:
+  - `Quality + Value > Strict Annual`
+- 기간 / universe:
+  - `2016-01-01 ~ 2026-04-01`
+  - `US Statement Coverage 100`
+  - `Historical Dynamic PIT Universe`
+- 핵심 설정:
+  - `Option = month_end`
+  - `Top N = 10`
+  - `Rebalance Interval = 1`
+  - `Benchmark Contract = Candidate Universe Equal-Weight`
+  - `Trend Filter = off`
+  - `Market Regime = off`
+  - `Minimum Price = 5.0`
+  - `Minimum History = 12M`
+  - `Min Avg Dollar Volume 20D = 5.0M`
+  - `Transaction Cost = 10 bps`
+  - underperformance / drawdown guardrail `on`
+- factor / ticker:
+  - quality baseline:
+    - `roe`
+    - `roa`
+    - `net_margin`
+    - `asset_turnover`
+    - `current_ratio`
+  - value baseline:
+    - `book_to_market`
+    - `earnings_yield`
+    - `sales_yield`
+    - `ocf_yield`
+    - `operating_income_yield`
+    - `per`
+  - best replacement:
+    - `ocf_yield -> pcr`
+- 결과:
+  - baseline:
+    - `CAGR = 29.43%`
+    - `MDD = -27.43%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = small_capital_trial`
+    - `Deployment = review_required`
+  - strongest replacement:
+    - `ocf_yield -> pcr`
+    - `CAGR = 30.05%`
+    - `MDD = -27.43%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = small_capital_trial`
+    - `Deployment = review_required`
+  - notable removals:
+    - `remove book_to_market`
+      - `CAGR = 29.18%`
+      - `MDD = -27.25%`
+      - `Promotion = production_candidate`
+      - `Shortlist = watchlist`
+    - `remove earnings_yield`
+      - `CAGR = 28.57%`
+      - `MDD = -27.77%`
+      - `Promotion = production_candidate`
+      - `Shortlist = watchlist`
+- 해석:
+  - value-side removal은 gate tier를 낮추는 방향으로 작동했다
+  - 반대로 `ocf_yield -> pcr`는
+    same gate / same MDD를 유지하면서 `CAGR`만 소폭 올렸다
+  - 따라서 current strongest practical blended candidate는
+    이제 `ocf_yield -> pcr` replacement로 읽는 편이 맞다
+- 다음 액션:
+  - new replacement anchor 기준
+    `downside / benchmark / one-more replacement`
+    중 무엇을 먼저 볼지 결정
+- 관련 문서:
+  - [PHASE15_QUALITY_VALUE_VALUE_SIDE_SEARCH_THIRD_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase15/PHASE15_QUALITY_VALUE_VALUE_SIDE_SEARCH_THIRD_PASS.md)
+  - [QUALITY_VALUE_STRICT_ANNUAL_VALUE_REPLACEMENT_CURRENT_CANDIDATE.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL_VALUE_REPLACEMENT_CURRENT_CANDIDATE.md)
+
 ### 2026-04-13 - per anchor benchmark and pruning search second pass
 
 - 목표:

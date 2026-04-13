@@ -5201,3 +5201,38 @@ Keep entries append-only and concise.
   - `.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL_BACKTEST_LOG.md`
   - `.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL.md`
   - `.note/finance/phase15/PHASE15_CURRENT_CHAPTER_TODO.md`
+
+### 2026-04-13 - Phase 15에서 Quality rescued anchor bounded factor search와 Quality + Value value-side search를 정리함
+
+- We continued Phase 15 with the next two narrow searches.
+- `Quality > Strict Annual` rescued-anchor factor search:
+  - baseline:
+    - `Top N = 12`
+    - `roe, roa, cash_ratio, debt_to_assets`
+    - `CAGR = 26.02%`
+    - `MDD = -25.57%`
+    - `real_money_candidate / paper_probation / review_required`
+  - best addition:
+    - `+ net_debt_to_equity`
+    - still non-hold
+    - but `CAGR = 20.25%`, `MDD = -30.32%`, `OOS = caution`
+  - conclusion:
+    - no bounded factor addition/replacement beat the baseline rescued candidate
+- `Quality + Value > Strict Annual` value-side search:
+  - removals weakened gate tier to `production_candidate / watchlist`
+  - strongest replacement:
+    - `ocf_yield -> pcr`
+    - `CAGR = 30.05%`
+    - `MDD = -27.43%`
+    - `real_money_candidate / small_capital_trial / review_required`
+  - conclusion:
+    - this replacement became the new current strongest practical blended candidate
+- Durable outputs:
+  - `.note/finance/backtest_reports/phase15/PHASE15_QUALITY_RESCUED_ANCHOR_FACTOR_SEARCH_SECOND_PASS.md`
+  - `.note/finance/backtest_reports/phase15/PHASE15_QUALITY_VALUE_VALUE_SIDE_SEARCH_THIRD_PASS.md`
+  - `.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL_VALUE_REPLACEMENT_CURRENT_CANDIDATE.md`
+  - `.note/finance/backtest_reports/strategies/QUALITY_STRICT_ANNUAL_BACKTEST_LOG.md`
+  - `.note/finance/backtest_reports/strategies/QUALITY_STRICT_ANNUAL.md`
+  - `.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL_BACKTEST_LOG.md`
+  - `.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL.md`
+  - `.note/finance/phase15/PHASE15_CURRENT_CHAPTER_TODO.md`

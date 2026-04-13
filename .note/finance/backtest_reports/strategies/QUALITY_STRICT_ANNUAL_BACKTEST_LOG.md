@@ -20,6 +20,72 @@
 
 ## 기록
 
+### 2026-04-13 - rescued anchor factor search second pass
+
+- 목표:
+  - downside-improved rescued anchor 위에 factor addition / replacement를 다시 붙였을 때
+    baseline보다 더 좋은 practical candidate가 나오는지 확인
+- 전략:
+  - `Quality > Strict Annual`
+- 기간 / universe:
+  - `2016-01-01 ~ 2026-04-01`
+  - `US Statement Coverage 100`
+  - `Historical Dynamic PIT Universe`
+- 핵심 설정:
+  - `Option = month_end`
+  - `Top N = 12`
+  - `Rebalance Interval = 1`
+  - `Benchmark = LQD`
+  - `Trend Filter = on`
+  - `Market Regime = off`
+  - `Minimum Price = 5.0`
+  - `Minimum History = 12M`
+  - `Min Avg Dollar Volume 20D = 5.0M`
+  - `Transaction Cost = 10 bps`
+  - underperformance / drawdown guardrail `on`
+- factor / ticker:
+  - baseline:
+    - `roe`
+    - `roa`
+    - `cash_ratio`
+    - `debt_to_assets`
+  - best addition:
+    - `+ net_debt_to_equity`
+  - best replacement near-miss:
+    - `debt_to_assets -> net_debt_to_equity`
+- 결과:
+  - baseline:
+    - `CAGR = 26.02%`
+    - `MDD = -25.57%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = paper_probation`
+    - `Deployment = review_required`
+  - best addition:
+    - `+ net_debt_to_equity`
+    - `CAGR = 20.25%`
+    - `MDD = -30.32%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = paper_probation`
+    - `Deployment = review_required`
+    - `OOS = caution`
+  - best replacement near-miss:
+    - `debt_to_assets -> net_debt_to_equity`
+    - `CAGR = 16.86%`
+    - `MDD = -29.49%`
+    - `Promotion = hold`
+- 해석:
+  - 이번 pass에서는 baseline을 넘는 bounded factor change가 없었다
+  - `+ net_debt_to_equity`만 non-hold를 유지했지만,
+    수익률과 낙폭이 모두 baseline보다 나빠졌다
+  - 따라서 current best practical point는 여전히 rescued-anchor baseline이다
+- 다음 액션:
+  - factor 변화보다
+    weighting / structural overlay / alternate contract
+    쪽으로 다음 레버를 옮긴다
+- 관련 문서:
+  - [PHASE15_QUALITY_RESCUED_ANCHOR_FACTOR_SEARCH_SECOND_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase15/PHASE15_QUALITY_RESCUED_ANCHOR_FACTOR_SEARCH_SECOND_PASS.md)
+  - [QUALITY_STRICT_ANNUAL_DOWNSIDE_IMPROVED_CURRENT_CANDIDATE.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/QUALITY_STRICT_ANNUAL_DOWNSIDE_IMPROVED_CURRENT_CANDIDATE.md)
+
 ### 2026-04-13 - rescued anchor downside search first pass
 
 - 목표:

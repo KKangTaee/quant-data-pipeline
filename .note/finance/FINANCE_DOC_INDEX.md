@@ -732,11 +732,17 @@ Phase 4 시작 시:
   - `Quality` family에서 `benchmark / overlay` 구조를 조정해 current rescued candidate를 다시 확보한 report
 - `.note/finance/backtest_reports/phase15/PHASE15_QUALITY_RESCUED_ANCHOR_DOWNSIDE_SEARCH_FIRST_PASS.md`
   - rescued `Quality` anchor 기준 `Top N / Rebalance Interval` downside search를 다시 돌려, recommended downside-improved candidate와 conservative clean candidate를 함께 고정한 report
+- `.note/finance/backtest_reports/phase15/PHASE15_QUALITY_RESCUED_ANCHOR_FACTOR_SEARCH_SECOND_PASS.md`
+  - rescued `Quality` anchor 위 bounded factor addition / replacement를 다시 붙였지만 baseline을 넘는 practical candidate가 없었다는 점을 정리한 report
 - `.note/finance/backtest_reports/phase15/PHASE15_QUALITY_VALUE_CANDIDATE_IMPROVEMENT_SEARCH_FIRST_PASS.md`
   - `Quality + Value` family baseline blend에 controlled addition을 붙여 best raw addition candidate를 정리한 report
 - `.note/finance/backtest_reports/phase15/PHASE15_QUALITY_VALUE_PER_DOWNSIDE_SEARCH_FIRST_PASS.md`
   - `Quality + Value + per` strongest candidate를 anchor로 `Top N` downside search를 다시 본 report
 - `.note/finance/backtest_reports/phase15/PHASE15_QUALITY_VALUE_PER_BENCHMARK_AND_PRUNING_SEARCH_SECOND_PASS.md`
   - `Quality + Value + per` strongest candidate를 anchor로 benchmark sensitivity와 quality-side pruning을 다시 봤고, baseline candidate-equal-weight contract가 여전히 strongest practical point임을 고정한 report
+- `.note/finance/backtest_reports/phase15/PHASE15_QUALITY_VALUE_VALUE_SIDE_SEARCH_THIRD_PASS.md`
+  - `Quality + Value + per` strongest candidate에서 value-side removal / replacement를 다시 봤고, `ocf_yield -> pcr`가 same gate / same MDD로 `CAGR`를 더 높인 current strongest practical candidate가 되었음을 정리한 report
 - `.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL_BEST_ADDITION_CURRENT_CANDIDATE.md`
   - `per` addition 기반 current best raw addition candidate one-pager
+- `.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL_VALUE_REPLACEMENT_CURRENT_CANDIDATE.md`
+  - `ocf_yield -> pcr` replacement를 적용한 current strongest practical blended candidate one-pager

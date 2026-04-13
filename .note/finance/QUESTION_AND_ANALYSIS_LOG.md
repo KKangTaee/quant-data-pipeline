@@ -8292,3 +8292,44 @@ Do not copy full chat transcripts. Keep only the durable result.
   - `.note/finance/backtest_reports/phase15/PHASE15_QUALITY_RESCUED_ANCHOR_DOWNSIDE_SEARCH_FIRST_PASS.md`
   - `.note/finance/backtest_reports/phase15/PHASE15_QUALITY_VALUE_PER_BENCHMARK_AND_PRUNING_SEARCH_SECOND_PASS.md`
   - `.note/finance/backtest_reports/strategies/QUALITY_STRICT_ANNUAL_DOWNSIDE_IMPROVED_CURRENT_CANDIDATE.md`
+
+### 2026-04-13 - rescued `Quality` contract 위 bounded factor change는 baseline을 못 넘었고, `Quality + Value`는 `ocf_yield -> pcr`로 current strongest practical point가 더 좋아짐
+
+- Request topic:
+  - continue the next Phase 15 step after the rescued-anchor downside and benchmark/pruning passes
+- Interpreted goal:
+  - check whether rescued `Quality` can still improve through narrow factor changes
+  - check whether `Quality + Value + per` can improve through value-side removal or replacement
+- Result:
+  - `Quality` rescued-anchor factor search:
+    - baseline:
+      - `Top N = 12`
+      - `roe, roa, cash_ratio, debt_to_assets`
+      - `CAGR = 26.02%`
+      - `MDD = -25.57%`
+      - `real_money_candidate / paper_probation / review_required`
+    - best addition:
+      - `+ net_debt_to_equity`
+      - `CAGR = 20.25%`
+      - `MDD = -30.32%`
+      - still non-hold
+      - but practical quality worsened
+    - conclusion:
+      - no bounded factor addition / replacement beat the rescued baseline
+  - `Quality + Value` value-side search:
+    - removals such as `remove book_to_market` and `remove earnings_yield` weakened gate tier to `production_candidate / watchlist`
+    - best replacement:
+      - `ocf_yield -> pcr`
+      - `CAGR = 30.05%`
+      - `MDD = -27.43%`
+      - `real_money_candidate / small_capital_trial / review_required`
+      - same gate tier, better CAGR
+- Practical conclusion:
+  - `Quality` should stop trying bounded factor tweaks on this rescued contract and move to structural or weighting levers
+  - `Quality + Value` now has a refined strongest practical candidate:
+    - `+ per`
+    - plus `ocf_yield -> pcr`
+- Durable output:
+  - `.note/finance/backtest_reports/phase15/PHASE15_QUALITY_RESCUED_ANCHOR_FACTOR_SEARCH_SECOND_PASS.md`
+  - `.note/finance/backtest_reports/phase15/PHASE15_QUALITY_VALUE_VALUE_SIDE_SEARCH_THIRD_PASS.md`
+  - `.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL_VALUE_REPLACEMENT_CURRENT_CANDIDATE.md`

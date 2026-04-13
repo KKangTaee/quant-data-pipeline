@@ -68,12 +68,18 @@
   - `Quality` family에서 `benchmark / overlay` 구조를 조정해 current rescued candidate를 다시 확보한 문서
 - `phase15/PHASE15_QUALITY_RESCUED_ANCHOR_DOWNSIDE_SEARCH_FIRST_PASS.md`
   - rescued `Quality` anchor 기준 `Top N / Rebalance Interval` downside search를 다시 본 문서
+- `phase15/PHASE15_QUALITY_RESCUED_ANCHOR_FACTOR_SEARCH_SECOND_PASS.md`
+  - rescued `Quality` anchor 위 bounded factor addition / replacement를 다시 붙였지만 baseline을 못 넘었다는 점을 정리한 문서
 - `phase15/PHASE15_QUALITY_VALUE_CANDIDATE_IMPROVEMENT_SEARCH_FIRST_PASS.md`
   - `Quality + Value` family baseline blend에 controlled addition을 붙여 best raw addition candidate를 다시 정리한 문서
 - `phase15/PHASE15_QUALITY_VALUE_PER_DOWNSIDE_SEARCH_FIRST_PASS.md`
   - `Quality + Value + per` strongest candidate를 anchor로 `Top N` downside search를 다시 본 문서
 - `phase15/PHASE15_QUALITY_VALUE_PER_BENCHMARK_AND_PRUNING_SEARCH_SECOND_PASS.md`
   - `Quality + Value + per` strongest candidate를 anchor로 benchmark sensitivity와 quality-side pruning을 다시 본 문서
+- `phase15/PHASE15_QUALITY_VALUE_VALUE_SIDE_SEARCH_THIRD_PASS.md`
+  - `Quality + Value + per` strongest candidate에서 value-side removal / replacement를 다시 보고 `ocf_yield -> pcr` current strongest practical candidate를 고정한 문서
+- `strategies/QUALITY_VALUE_STRICT_ANNUAL_VALUE_REPLACEMENT_CURRENT_CANDIDATE.md`
+  - `ocf_yield -> pcr` replacement 기반 current strongest practical blended candidate one-pager
 
 ## 운영 메모
 

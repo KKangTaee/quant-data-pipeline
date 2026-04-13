@@ -29,3 +29,5 @@
 - bounded structural rescue search
 - rescued-anchor downside search
 - benchmark / pruning sensitivity search
+- rescued-anchor bounded factor search
+- value-side removal / replacement search
