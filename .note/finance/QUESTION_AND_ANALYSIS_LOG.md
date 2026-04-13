@@ -100,3 +100,28 @@ Detailed historical analysis was archived on `2026-04-13`.
     2. commit 직전
     3. phase closeout 직전
   - 이 기준을 `AGENTS.md`와 runtime hygiene 문서에 반영한다
+
+### 2026-04-13 - Phase 16 closeout 결과, bounded downside refinement는 끝났고 다음 질문은 구조 문제로 이동함
+- Request topic:
+  - `Value` lower-MDD rescue와 `Quality + Value` strongest-point downside follow-up을 마무리하고 closeout까지 정리
+- Interpreted goal:
+  - bounded `Top N / one-factor / overlay / benchmark` 범위 안에서
+    lower-MDD practical candidate가 더 가능한지 확인하고,
+    다음 phase 질문을 분명히 남기기
+- Result:
+  - `Value`:
+    - current best practical point는 여전히 `Top N = 14 + psr`
+    - `+ pfcr`는 `MDD`를 `-21.16%`까지 낮췄지만
+      `production_candidate / watchlist`를 넘지 못했다
+    - `Top N = 15 + psr + pfcr`는 gate를 회복했지만 downside edge를 잃었다
+  - `Quality + Value`:
+    - strongest practical point는 여전히
+      `operating_margin + pcr + por + per + Top N 10 + Candidate Universe Equal-Weight`
+    - `Top N = 9`와 `current_ratio -> cash_ratio`는 더 낮은 `MDD`를 보였지만
+      `production_candidate / watchlist`로 내려갔다
+    - `Ticker Benchmark = SPY`는 same `CAGR / MDD`를 유지하지만
+      `small_capital_trial -> paper_probation`으로 한 단계 내려간다
+  - 결론:
+    - Phase 16 범위 안에서는 lower-MDD exact rescue가 없었다
+    - 다음 phase는 bounded tweak 반복보다
+      구조적인 downside improvement를 다루는 편이 맞다

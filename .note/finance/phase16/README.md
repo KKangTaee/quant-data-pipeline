@@ -16,8 +16,16 @@ Phase 16 current chapter 문서들을 모아두는 곳이다.
 먼저 볼 문서:
 
 - `PHASE16_CURRENT_CHAPTER_TODO.md`
-  - 현재 진행 보드
+  - current board이자 closeout 상태 요약
 - `PHASE16_VALUE_DOWNSIDE_REFINEMENT_FIRST_PASS.md`
   - `Value > Strict Annual` current anchor 주변 bounded downside refinement first pass
+- `PHASE16_VALUE_DOWNSIDE_RESCUE_SEARCH_SECOND_PASS.md`
+  - `Value > Strict Annual` lower-MDD near-miss rescue를 다시 본 second-pass pointer 문서
 - `PHASE16_QUALITY_VALUE_DOWNSIDE_REFINEMENT_FIRST_PASS.md`
   - `Quality + Value > Strict Annual` current strongest point 주변 bounded downside refinement first pass
+- `PHASE16_COMPLETION_SUMMARY.md`
+  - Phase 16 closeout 요약
+- `PHASE16_NEXT_PHASE_PREPARATION.md`
+  - 다음 phase handoff 문서
+- `PHASE16_TEST_CHECKLIST.md`
+  - manual validation checklist

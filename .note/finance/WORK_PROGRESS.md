@@ -72,3 +72,19 @@ Detailed historical logs were archived on `2026-04-13`.
   - after meaningful refinement/doc-sync units
   - before commit
   - before phase closeout
+
+### 2026-04-13
+- Closed Phase 16 as a bounded downside-refinement phase.
+- `Value`:
+  - current best practical point remains `Top N = 14 + psr`
+  - `28.13% / -24.55% / real_money_candidate / paper_probation / review_required`
+  - lower-MDD near-miss `+ pfcr` improved `MDD` to `-21.16%` but only reached `production_candidate / watchlist`
+- `Quality + Value`:
+  - current strongest practical point remains
+    `operating_margin + pcr + por + per + Top N 10 + Candidate Universe Equal-Weight`
+  - `31.82% / -26.63% / real_money_candidate / small_capital_trial / review_required`
+  - lower-MDD alternatives existed, but all weakened gate quality
+- Synced:
+  - Phase 16 closeout docs
+  - strategy hubs / backtest logs
+  - roadmap / doc indexes

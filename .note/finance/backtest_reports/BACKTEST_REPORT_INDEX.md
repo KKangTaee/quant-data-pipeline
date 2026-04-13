@@ -107,8 +107,13 @@
   - Phase 16 current execution board
 - `phase16/PHASE16_VALUE_DOWNSIDE_REFINEMENT_FIRST_PASS.md`
   - `Value > Strict Annual` current practical anchor를 기준으로 bounded downside refinement를 다시 본 first-pass 문서
+- `phase16/PHASE16_VALUE_DOWNSIDE_RESCUE_SEARCH_SECOND_PASS.md`
+  - `Value > Strict Annual` lower-MDD near-miss를 rescue할 수 있는지 다시 본 second-pass 문서
 - `phase16/PHASE16_QUALITY_VALUE_DOWNSIDE_REFINEMENT_FIRST_PASS.md`
   - `Quality + Value > Strict Annual` strongest practical anchor를 기준으로 bounded downside refinement를 다시 본 first-pass 문서
+- `phase16/PHASE16_QUALITY_VALUE_STRONGEST_POINT_DOWNSIDE_FOLLOWUP_SECOND_PASS.md`
+  - `Quality + Value > Strict Annual` strongest practical point를 current code 기준으로 다시 확인하고,
+    lower-MDD but weaker-gate 대안과 `SPY` benchmark 대안을 같이 본 second-pass 문서
 - `strategies/QUALITY_VALUE_STRICT_ANNUAL_STRONGEST_CURRENT_CANDIDATE.md`
   - quality/value replacement를 함께 반영한 current strongest practical blended candidate one-pager
 - `strategies/QUALITY_VALUE_STRICT_ANNUAL_POR_REPLACEMENT_CURRENT_CANDIDATE.md`

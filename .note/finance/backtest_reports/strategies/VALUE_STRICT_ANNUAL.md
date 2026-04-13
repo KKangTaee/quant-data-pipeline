@@ -156,46 +156,47 @@
 - 최근 기록:
   - `2026-04-13 - Phase 16 rescue search second pass`
 - 핵심 설정:
-  - `Top N = 13 / 14 / 15 / 16`
-  - bounded additions:
-    - `pfcr`
-    - `pcr`
-    - `por`
-    - `per`
-    - `pbr`
-  - bounded replacements:
-    - `pfcr` / `pcr` on `sales_yield`
-    - `pfcr` / `pcr` on `ocf_yield`
-    - `por` on `ocf_yield`
-  - benchmark sensitivity:
-    - `Ticker Benchmark`
+  - baseline reconfirm:
+    - `Top N = 14 + psr`
+  - lower-MDD rescue probe:
+    - `Top N = 14 + psr + pfcr`
+    - `Top N = 15 + psr + pfcr`
+  - sensitivity:
     - `Candidate Universe Equal-Weight`
+    - `Trend Filter`
+    - `Market Regime`
+  - replacement recap:
+    - `sales_yield -> pfcr`
 - current code re-eval:
-  - anchor `Top N = 14 + psr` no longer reproduces the earlier practical gate state
-  - ticker benchmark rerun:
+  - current best practical point still reproduces:
+    - `Top N = 14 + psr`
     - `CAGR = 28.13%`
     - `MDD = -24.55%`
-    - `Promotion = hold`
-    - `Shortlist = hold`
-    - `Deployment = blocked`
-  - best lower-MDD near-miss among ticker benchmark cases:
-    - `pfcr_add_t13`
-    - `CAGR = 24.82%`
-    - `MDD = -22.13%`
-    - `Promotion = hold`
-    - `Shortlist = hold`
-    - `Deployment = blocked`
-  - candidate-universe-equal-weight sensitivity also stayed blocked
+    - `Promotion = real_money_candidate`
+    - `Shortlist = paper_probation`
+    - `Deployment = review_required`
+  - strongest lower-MDD near-miss:
+    - `Top N = 14 + psr + pfcr`
+    - `CAGR = 27.22%`
+    - `MDD = -21.16%`
+    - `Promotion = production_candidate`
+    - `Shortlist = watchlist`
+    - `Deployment = review_required`
+  - same-gate but no rescue:
+    - `Top N = 15 + psr + pfcr`
+    - `CAGR = 25.95%`
+    - `MDD = -27.59%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = paper_probation`
+    - `Deployment = review_required`
+  - equal-weight benchmark와 overlay sensitivity는 rescue를 만들지 못했다
 - 결과:
-  - same-gate rescue failure:
-    - `MDD`를 조금 낮춘 near-miss는 있었지만
-      `Promotion = real_money_candidate`
-      `Shortlist >= paper_probation`
-      `Deployment != blocked`
-      를 동시에 만족하는 후보는 없었다
+  - bounded rescue failure:
+    - lower-MDD near-miss는 있었지만
+      same gate를 유지하는 exact rescue는 없었다
 - 다음에 볼 것:
-  - `Value` family는 current code 기준 failed rescue로 closeout
-  - 이후 `Quality + Value` current code re-evaluation으로 넘긴다
+  - `Value` family는 current best practical point를 유지한 채 closeout
+  - 이후엔 구조적인 downside improvement phase로 넘긴다
 
 ## 관련 결과 문서
 
@@ -238,9 +239,8 @@
 - 즉 “좋은 숫자가 한 번 나온 전략”이 아니라,
   실제로 비교 가능한 후보군이 정리된 family다
 - Phase 16 first pass까지 보면
-  historical practical anchor는 여전히 문서상으로 남아 있지만,
-  current code re-eval 기준으로는 same-gate rescue가 실패했다
-  즉, 이번 second pass에서는 더 낮은 `MDD` near-miss만 확인됐고
+  historical practical anchor가 current code에서도 그대로 재현되고,
+  이번 second pass에서는 더 낮은 `MDD` near-miss만 확인됐으며
   실전형 gate를 유지하는 bounded rescue는 못 찾았다
 
 지금 다시 볼 우선순위를 한 줄로 정리하면:
@@ -249,8 +249,8 @@
    - strongest raw winner
 2. 수익률과 낙폭의 균형을 보려면
    - downside-improved current candidate
-3. current code 기준 rescue를 보려면
-   - `pfcr_add_t13` 같은 lower-MDD but weaker-gate near-miss
+3. current code 기준 rescue 한계를 보려면
+   - `Top N = 14 + psr + pfcr` 같은 lower-MDD but weaker-gate near-miss
 
 즉 현재 `Value`는
 “가장 강한 family이면서,

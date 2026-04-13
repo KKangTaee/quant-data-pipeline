@@ -748,11 +748,24 @@ Phase 4 시작 시:
 - `.note/finance/phase16/README.md`
   - Phase 16 downside-focused practical refinement current chapter 안내 문서
 - `.note/finance/phase16/PHASE16_CURRENT_CHAPTER_TODO.md`
-  - Phase 16 current execution board
+  - Phase 16 current board이자 closeout 상태 요약 문서
 - `.note/finance/phase16/PHASE16_VALUE_DOWNSIDE_REFINEMENT_FIRST_PASS.md`
   - `Value > Strict Annual` current practical anchor를 기준으로 bounded downside refinement를 다시 본 first-pass 문서
+- `.note/finance/phase16/PHASE16_VALUE_DOWNSIDE_RESCUE_SEARCH_SECOND_PASS.md`
+  - 결과 중심 report는 backtest archive를 canonical로 사용하고,
+    phase 폴더에서는 `Value` rescue second pass 결론을 pointer로 남긴 문서
 - `.note/finance/phase16/PHASE16_QUALITY_VALUE_DOWNSIDE_REFINEMENT_FIRST_PASS.md`
   - `Quality + Value > Strict Annual` strongest practical anchor를 기준으로 bounded downside refinement를 다시 본 first-pass 문서
+- `.note/finance/phase16/PHASE16_COMPLETION_SUMMARY.md`
+  - Phase 16 downside-focused practical refinement를 practical closeout 기준으로 정리한 요약 문서
+- `.note/finance/phase16/PHASE16_NEXT_PHASE_PREPARATION.md`
+  - Phase 16 이후 structural downside improvement 방향으로 handoff하기 위한 준비 문서
+- `.note/finance/phase16/PHASE16_TEST_CHECKLIST.md`
+  - Phase 16 strongest point / lower-MDD near-miss / closeout 문서를 수동으로 검수하기 위한 checklist 문서
+- `.note/finance/backtest_reports/phase16/PHASE16_VALUE_DOWNSIDE_RESCUE_SEARCH_SECOND_PASS.md`
+  - `Value > Strict Annual` lower-MDD near-miss rescue second pass canonical backtest report
+- `.note/finance/backtest_reports/phase16/PHASE16_QUALITY_VALUE_STRONGEST_POINT_DOWNSIDE_FOLLOWUP_SECOND_PASS.md`
+  - `Quality + Value > Strict Annual` strongest practical point를 current code 기준으로 다시 확인한 second-pass backtest report
 - `.note/finance/backtest_reports/phase15/README.md`
   - Phase 15 backtest archive 안내 문서
 - `.note/finance/backtest_reports/phase15/PHASE15_VALUE_DOWNSIDE_IMPROVEMENT_SEARCH_FIRST_PASS.md`

@@ -20,6 +20,76 @@
 
 ## 기록
 
+### 2026-04-13 - Phase 16 strongest point downside follow-up second pass
+
+- 목표:
+  - current strongest practical point를 current code 기준으로 다시 확인하고,
+    same gate를 유지하면서 더 낮은 `MDD` candidate가 있는지 본다
+- 전략:
+  - `Quality + Value > Strict Annual`
+- 기간 / universe:
+  - `2016-01-01 ~ 2026-04-01`
+  - `US Statement Coverage 100`
+  - `Historical Dynamic PIT Universe`
+- 핵심 설정:
+  - strongest point:
+    - quality:
+      - `roe`
+      - `roa`
+      - `operating_margin`
+      - `asset_turnover`
+      - `current_ratio`
+    - value:
+      - `book_to_market`
+      - `earnings_yield`
+      - `sales_yield`
+      - `pcr`
+      - `por`
+      - `per`
+    - `Top N = 10`
+    - `Benchmark Contract = Candidate Universe Equal-Weight`
+  - follow-up:
+    - `Top N = 9`
+    - `current_ratio -> cash_ratio`
+    - `Trend Filter = on`
+    - `Ticker Benchmark = SPY`
+- 결과:
+  - strongest point reconfirmed:
+    - `CAGR = 31.82%`
+    - `MDD = -26.63%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = small_capital_trial`
+    - `Deployment = review_required`
+  - lower-MDD but weaker gate:
+    - `Top N = 9`
+    - `CAGR = 32.21%`
+    - `MDD = -25.61%`
+    - `Promotion = production_candidate`
+    - `Shortlist = watchlist`
+    - `Deployment = review_required`
+  - another lower-MDD but weaker gate:
+    - `Top N = 10`
+    - `current_ratio -> cash_ratio`
+    - `CAGR = 31.83%`
+    - `MDD = -25.79%`
+    - `Promotion = production_candidate`
+    - `Shortlist = watchlist`
+    - `Deployment = review_required`
+  - human-readable benchmark alternative:
+    - `Ticker Benchmark = SPY`
+    - `CAGR = 31.82%`
+    - `MDD = -26.63%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = paper_probation`
+    - `Deployment = review_required`
+- 해석:
+  - strongest practical point는 current code에서도 그대로 유지된다
+  - lower-MDD exact hit는 없었고,
+    더 방어적인 대안은 모두 gate를 조금 양보해야 했다
+- 다음 액션:
+  - `Quality + Value` strongest point는 current anchor로 유지
+  - deeper downside improvement는 다음 phase의 structural work로 넘긴다
+
 ### 2026-04-13 - Phase 16 bounded downside refinement first pass
 
 - 목표:

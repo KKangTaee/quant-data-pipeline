@@ -2,8 +2,8 @@
 
 ## 목적
 
-`Value > Strict Annual`의 current practical anchor로 알려졌던
-`Top N = 14 + psr`를 current runtime 기준으로 다시 돌려보고,
+`Value > Strict Annual`의 current practical anchor인
+`Top N = 14 + psr`를 기준으로 다시 돌려보고,
 같은 gate를 유지하면서 `MDD`를 더 낮출 수 있는 bounded rescue 후보가 있는지 확인한다.
 
 이번 pass는 다음을 동시에 확인하는 데 초점을 둔다.
@@ -38,71 +38,69 @@
 
 ## 탐색 범위
 
-### Top N narrow band
+### baseline reconfirm
 
-- `13`
-- `14`
-- `15`
-- `16`
+- `Top N = 14 + psr`
 
-### one-factor bounded addition / replacement
+### lower-MDD rescue probe
 
-- addition:
-  - `pfcr`
-  - `pcr`
-  - `por`
-  - `per`
-  - `pbr`
-- replacement probe:
-  - `pfcr` / `pcr` on `sales_yield`
-  - `pfcr` / `pcr` on `ocf_yield`
-  - `por` on `ocf_yield`
+- `Top N = 14 + psr + pfcr`
+- `Top N = 15 + psr + pfcr`
 
-### minimal benchmark sensitivity
+### benchmark / overlay sensitivity
 
-- `Ticker Benchmark`
 - `Candidate Universe Equal-Weight`
+- `Trend Filter on`
+- `Market Regime on`
+
+### bounded replacement recap
+
+- `sales_yield -> pfcr`
 
 ## current code rerun summary
 
-### ticker benchmark rerun
-
 | Case | Top N | CAGR | MDD | Promotion | Shortlist | Deployment | Validation | Rolling | OOS |
 | --- | ---: | ---: | ---: | --- | --- | --- | --- | --- | --- |
-| `anchor_psr_t14` | 14 | 28.13% | -24.55% | `hold` | `hold` | `blocked` | `normal` | `watch` | `caution` |
-| `pfcr_add_t13` | 13 | 24.82% | -22.13% | `hold` | `hold` | `blocked` | `watch` | `caution` | `caution` |
-| `pfcr_add_t14` | 14 | 23.73% | -28.21% | `hold` | `hold` | `blocked` | `normal` | `caution` | `caution` |
-| `pfcr_add_t15` | 15 | 25.45% | -27.05% | `hold` | `hold` | `blocked` | `normal` | `caution` | `caution` |
-| `pfcr_add_t16` | 16 | 25.55% | -26.44% | `hold` | `hold` | `blocked` | `normal` | `caution` | `caution` |
-| `pcr_add_t14` | 14 | 24.58% | -31.86% | `hold` | `hold` | `blocked` | `caution` | `caution` | `caution` |
-| `por_add_t14` | 14 | 26.88% | -25.06% | `hold` | `hold` | `blocked` | `normal` | `watch` | `caution` |
-| `per_add_t14` | 14 | 27.49% | -25.55% | `hold` | `hold` | `blocked` | `normal` | `caution` | `caution` |
-| `pbr_add_t14` | 14 | 25.83% | -25.67% | `hold` | `hold` | `blocked` | `normal` | `caution` | `caution` |
-| `pfcr_replace_sales_t14` | 14 | 23.15% | -21.73% | `hold` | `hold` | `blocked` | `watch` | `caution` | `caution` |
-| `pfcr_replace_ocf_t14` | 14 | 24.38% | -23.76% | `hold` | `hold` | `blocked` | `caution` | `caution` | `caution` |
-| `pcr_replace_sales_t14` | 14 | 24.25% | -30.77% | `hold` | `hold` | `blocked` | `watch` | `caution` | `caution` |
-| `por_replace_ocf_t14` | 14 | 27.47% | -25.48% | `hold` | `hold` | `blocked` | `normal` | `caution` | `caution` |
-
-### benchmark sensitivity
-
-| Case | Benchmark Contract | CAGR | MDD | Promotion | Shortlist | Deployment | Validation | Rolling | OOS |
-| --- | --- | ---: | ---: | --- | --- | --- | --- | --- | --- |
-| `anchor_psr_t14` | `Ticker Benchmark` | 28.13% | -24.55% | `hold` | `hold` | `blocked` | `caution` | `caution` | `caution` |
-| `anchor_psr_t14` | `Candidate Universe Equal-Weight` | 28.13% | -24.55% | `hold` | `hold` | `blocked` | `caution` | `caution` | `caution` |
+| `anchor_psr_t14` | 14 | 28.13% | -24.55% | `real_money_candidate` | `paper_probation` | `review_required` | `normal` | `watch` | `caution` |
+| `pfcr_add_t14` | 14 | 27.22% | -21.16% | `production_candidate` | `watchlist` | `review_required` | `watch` | `caution` | `caution` |
+| `pfcr_add_t15` | 15 | 25.95% | -27.59% | `real_money_candidate` | `paper_probation` | `review_required` | `normal` | `caution` | `caution` |
+| `pfcr_add_t14_eqw` | 14 | 27.22% | -21.16% | `hold` | `hold` | `blocked` | `caution` | `caution` | `caution` |
+| `pfcr_add_t14_trend` | 14 | 24.49% | -28.72% | `hold` | `hold` | `blocked` | `caution` | `normal` | `caution` |
+| `pfcr_add_t14_regime` | 14 | 17.54% | -16.16% | `hold` | `hold` | `blocked` | `caution` | `caution` | `caution` |
+| `sales_yield -> pfcr` | 14 | 23.80% | -28.21% | `hold` | `hold` | `blocked` | `caution` | `caution` | `caution` |
 
 ## 결론
 
-- current code 기준으로는 `Top N = 14 + psr`를 포함한 bounded rescue 후보가 same gate를 유지하지 못했다.
-- `pfcr` 계열과 `por`, `per`, `pbr` 계열은 일부 `MDD`를 낮추거나 비슷한 수준을 만들었지만, `Promotion`과 `Shortlist`가 `hold` 또는 `blocked`에 머물렀다.
-- benchmark sensitivity도 rescue를 만들지 못했다.
-- 따라서 current code 기준 `Value` rescue는 실패이며, historical practical anchor는 reference로만 남기는 것이 맞다.
+- current best practical point는 여전히 `Top N = 14 + psr`다.
+- 이번 second pass의 핵심 lower-MDD near-miss는
+  `Top N = 14 + psr + pfcr`였다.
+  - `CAGR = 27.22%`
+  - `MDD = -21.16%`
+  - 하지만 `production_candidate / watchlist`라서
+    same gate rescue는 아니다.
+- `Top N = 15 + psr + pfcr`는
+  `real_money_candidate / paper_probation`을 회복했지만,
+  `MDD = -27.59%`로 baseline보다 더 나빠져 rescue 의미를 잃었다.
+- `Candidate Universe Equal-Weight`, `Trend Filter`, `Market Regime` sensitivity도
+  same-gate lower-MDD rescue를 만들지 못했다.
+- 따라서 current code 기준 결론은:
+  - `Value` current best practical point 유지
+  - lower-MDD but weaker-gate near-miss는 reference로만 보관
+  - deeper downside improvement는 다음 phase의 structural work로 넘기는 것이 맞다
 
 ## 읽는 법
 
-이 문서는 historical current candidate를 current runtime으로 재검증했을 때
-same-gate rescue가 가능한지 확인한 second pass 기록이다.
+이 문서는
+`Value > Strict Annual` current practical point 위에서
+한 단계 더 bounded하게 rescue를 시도했을 때
 
-만약 이 문서를 읽고 있다면, 결론은 간단하다.
+- 무엇이 lower-MDD near-miss였고
+- 왜 same-gate rescue가 아니었는지
 
-- `MDD`만 더 낮춘 near-miss는 있다
-- 하지만 실전형 gate를 같이 만족하는 bounded rescue는 아직 없다
+를 정리한 second-pass report다.
+
+실무 해석은 간단하다.
+
+- `Value`는 아직 강한 family다
+- 하지만 이번 범위 안에서는
+  `MDD`를 더 낮추면서 same gate를 지키는 exact rescue는 못 찾았다

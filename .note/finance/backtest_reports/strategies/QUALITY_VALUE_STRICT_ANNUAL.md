@@ -131,48 +131,60 @@
 ## 최근 backtest log snapshot
 
 - 최근 기록:
-  - `2026-04-13 - Phase 16 bounded downside refinement first pass`
+  - `2026-04-13 - Phase 16 strongest point downside follow-up second pass`
 - 핵심 설정:
-  - quality replacement:
-    - `net_margin -> operating_margin`
-  - value replacement:
-    - `ocf_yield -> pcr`
-    - `operating_income_yield -> por`
-  - `Top N = 10`
-  - `Rebalance Interval = 1`
-  - `Trend Filter = off`
-  - `Market Regime = off`
-- 결과:
-  - strongest practical candidate:
+  - strongest point reconfirm:
     - quality:
-      - `net_margin -> operating_margin`
+      - `roe`
+      - `roa`
+      - `operating_margin`
+      - `asset_turnover`
+      - `current_ratio`
     - value:
-      - `ocf_yield -> pcr`
-      - `operating_income_yield -> por`
-    - `Benchmark Contract = Candidate Universe Equal-Weight`
+      - `book_to_market`
+      - `earnings_yield`
+      - `sales_yield`
+      - `pcr`
+      - `por`
+      - `per`
     - `Top N = 10`
+    - `Benchmark Contract = Candidate Universe Equal-Weight`
+  - lower-MDD probe:
+    - `Top N = 9`
+    - `current_ratio -> cash_ratio`
+  - sensitivity:
+    - `Trend Filter = on`
+    - `Ticker Benchmark = SPY`
+- 결과:
+  - strongest practical candidate remains:
     - `CAGR = 31.82%`
     - `MDD = -26.63%`
     - `Promotion = real_money_candidate`
     - `Shortlist = small_capital_trial`
     - `Deployment = review_required`
-  - previous practical anchor:
-    - `Top N = 10`
-    - `CAGR = 31.25%`
-    - `MDD = -26.63%`
-    - `Promotion = real_money_candidate`
-    - `Shortlist = small_capital_trial`
   - lower-MDD but weaker gate:
     - `Top N = 9`
-    - `CAGR = 31.08%`
+    - `CAGR = 32.21%`
     - `MDD = -25.61%`
     - `Promotion = production_candidate`
     - `Shortlist = watchlist`
+  - another lower-MDD but weaker-gate alternative:
+    - `Top N = 10`
+    - `current_ratio -> cash_ratio`
+    - `CAGR = 31.83%`
+    - `MDD = -25.79%`
+    - `Promotion = production_candidate`
+    - `Shortlist = watchlist`
+  - human-readable benchmark alternative:
+    - `Ticker Benchmark = SPY`
+    - `CAGR = 31.82%`
+    - `MDD = -26.63%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = paper_probation`
 - 다음에 볼 것:
-  - stronger gate를 유지한 채 `MDD`를 더 낮추는 rescue path가 있는지
-    별도 구조 레버가 필요한지 판단
-  - current strongest practical point를
-    실제 manual rerun 기준으로 다시 검수
+  - stronger gate를 유지한 채 `MDD`를 더 낮추려면
+    구조적인 downside lever가 필요한지 본다
+  - current strongest practical point는 유지한 채 closeout한다
 
 ## 관련 결과 문서
 
@@ -218,9 +230,9 @@
 - raw winner만 놓고 보면 아직 `Value`가 더 공격적일 수 있지만,
   “성과와 gate를 같이 본 practical tradeoff”로는
   지금 `Quality + Value`가 매우 강한 위치에 있다
-- Phase 16 first pass까지 반영하면
-  같은 gate / 같은 `MDD`에서 `CAGR`를 더 높이는 방향으로도
-  한 단계 더 정리된 상태다
+- Phase 16 second pass까지 반영하면
+  strongest practical point는 current code에서도 그대로 유지되고,
+  lower-MDD but weaker-gate 대안과 `SPY` benchmark 대안의 tradeoff까지 정리된 상태다
 
 지금 다시 볼 우선순위를 한 줄로 정리하면:
 

@@ -107,15 +107,20 @@ lower-MDD but weaker-gate near-miss:
 - [QUALITY_VALUE_STRICT_ANNUAL_STRONGEST_CURRENT_CANDIDATE.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL_STRONGEST_CURRENT_CANDIDATE.md)
 - [QUALITY_VALUE_STRICT_ANNUAL_POR_REPLACEMENT_CURRENT_CANDIDATE.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL_POR_REPLACEMENT_CURRENT_CANDIDATE.md)
 
-## 지금 다음으로 자연스러운 탐색
+## 현재 handoff 해석
 
 1. `Value`
-   - `+ pfcr` 같은 lower-MDD near-miss를 same gate로 rescue할 수 있는지 보기
+   - current best practical point는 여전히 `Top N = 14 + psr`
+   - `+ pfcr` 같은 lower-MDD near-miss는 current code second pass에서도
+     `production_candidate / watchlist`를 넘지 못했다
 2. `Quality + Value`
-   - 새 strongest practical point 기준으로
-     더 낮은 `MDD` same-gate follow-up이 가능한지 보기
-3. `Quality`
-   - main winner라기보다 reference track으로 유지
+   - current strongest practical point는 여전히
+     `operating_margin + pcr + por + per + Top N 10 + Candidate Universe Equal-Weight`
+   - `Top N = 9`와 `cash_ratio` 대안은 더 낮은 `MDD`를 보였지만
+     `production_candidate / watchlist`로 내려갔다
+3. 다음 phase 방향
+   - bounded `Top N / one-factor / overlay`보다
+     더 구조적인 downside improvement가 우선순위가 된다
 
 ## 관련 문서
 
