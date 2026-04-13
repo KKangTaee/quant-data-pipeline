@@ -88,3 +88,13 @@ Detailed historical logs were archived on `2026-04-13`.
   - Phase 16 closeout docs
   - strategy hubs / backtest logs
   - roadmap / doc indexes
+
+### 2026-04-14
+- Clarified compare / weighted portfolio / saved portfolio workflow semantics.
+- Current reading:
+  - `Compare` = research surface for side-by-side strategy inspection
+  - `Weighted Portfolio` = monthly composite of compared strategies
+  - `Saved Portfolio` = replayable research artifact for compare -> builder -> rerun
+- Durable note:
+  - weighted bundles do not create new real-money / promotion / shortlist / deployment semantics on their own
+  - Phase 17 should document them as operator bridges, not as independent candidate gates

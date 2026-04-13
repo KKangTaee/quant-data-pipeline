@@ -94,7 +94,15 @@ real-money 해석 핵심 구간:
    - [WORK_PROGRESS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/WORK_PROGRESS.md)
    - [QUESTION_AND_ANALYSIS_LOG.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/QUESTION_AND_ANALYSIS_LOG.md)
 
-## 6. 지금 다시 볼 때 가장 중요한 문서
+## 6. compare / weighted / saved portfolio 해석
+
+- `Compare`는 여러 전략의 개별 후보를 나란히 보는 연구용 표면이다.
+- `Weighted Portfolio`는 compare 결과를 월별 composite로 합치는 포트폴리오 합성 표면이다.
+- `Saved Portfolio`는 compare + weights + date policy를 저장해 rerun할 수 있게 만든 재현용 연구 아티팩트다.
+- 이 셋은 실전 후보의 `promotion / shortlist / deployment` semantics를 새로 부여하는 계층이 아니라,
+  이미 선택된 후보를 더 잘 비교하고 묶는 operator bridge로 읽는 것이 맞다.
+
+## 7. 지금 다시 볼 때 가장 중요한 문서
 
 - [CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md)
   - 지금 어떤 후보를 기준점으로 삼아야 하는지

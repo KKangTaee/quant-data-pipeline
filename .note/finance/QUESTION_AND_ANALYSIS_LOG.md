@@ -125,3 +125,19 @@ Detailed historical analysis was archived on `2026-04-13`.
     - Phase 16 범위 안에서는 lower-MDD exact rescue가 없었다
     - 다음 phase는 bounded tweak 반복보다
       구조적인 downside improvement를 다루는 편이 맞다
+
+### 2026-04-14 - compare / weighted / saved portfolio는 실전 승격 semantics가 아니라 candidate bridge로 읽는 것이 맞다
+- Request topic:
+  - compare / weighted portfolio / saved portfolio workflow가 current practical candidates의 structural downside-improvement path로 쓸 수 있는지 검토
+- Interpreted goal:
+  - weighted bundle가 real-money / promotion / shortlist / deployment 의미를 자체적으로 갖는지,
+    그리고 어떤 operator bridge가 이미 있는지 분리해서 확인
+- Result:
+  - `Compare`는 개별 전략의 backtest 결과를 나란히 보는 연구용 surface다
+  - `Weighted Portfolio`는 compare 결과를 월별 composite로 합치는 포트폴리오 합성 surface다
+  - `Saved Portfolio`는 compare context + weights + date policy를 저장하고 rerun할 수 있게 하는 재현용 연구 아티팩트다
+  - weighted bundle 자체에는 별도의 `promotion / shortlist / deployment` semantics가 새로 붙지 않는다
+  - 실전 후보 해석은 여전히 각 구성 전략의 real-money surface에서 읽는 것이 맞다
+  - Phase 17에서는 compare -> weighted builder -> saved portfolio -> rerun bridge를
+    "후보 개선을 묶는 operator workflow"로 설명하되,
+    실전 gate를 대체하는 계층으로 쓰면 안 된다는 점을 명시해야 한다

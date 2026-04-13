@@ -491,6 +491,11 @@ Analysis / Presentation
   compare view에서는 total return overlay, overlay end marker, strategy highlight table, focused strategy drilldown까지,
   weighted portfolio 결과에서도 같은 marker / balance-extremes / period-extremes 읽기 흐름과
   strategy contribution amount/share view까지 확인할 수 있게 되었다.
+- 다만 의미를 분리해서 보면,
+  compare 결과는 각 전략의 own backtest에 붙는 `promotion / shortlist / deployment` 해석을 그대로 보여주는 반면,
+  weighted portfolio 결과는 여러 compare 결과를 monthly composite로 합친 연구용 포트폴리오 표면이다.
+  즉 weighted bundle 자체에는 별도의 real-money semantics가 새로 생기지 않고,
+  실제 승격 판단은 여전히 구성 전략 단위에서 읽는 것이 맞다.
 - 이후 Phase 11 first pass에서는
   `Compare & Portfolio Builder` 아래에 `Saved Portfolios` surface가 추가되어,
   현재 compare 결과와 weighted portfolio 구성을
@@ -506,6 +511,10 @@ Analysis / Presentation
   - `portfolio_context`
   - `source_context`
   구조를 사용한다.
+- 따라서 saved portfolio는 실전 운용 객체라기보다,
+  compare -> weighted builder -> rerun을 다시 열 수 있는 재현용 연구 아티팩트에 가깝다.
+  Phase 17에서 다루어야 할 것은 이 객체에 새로운 승격 의미를 부여하는 것이 아니라,
+  후보 개선 작업을 반복 재현할 수 있는 operator bridge로서의 역할을 명확히 적는 것이다.
 - 또한 weighted portfolio 결과에도 `Meta` 탭이 추가되어
   `portfolio_name`, `portfolio_id`, `portfolio_source_kind`, `date_policy`,
   `selected_strategies`, `input_weights_percent`
