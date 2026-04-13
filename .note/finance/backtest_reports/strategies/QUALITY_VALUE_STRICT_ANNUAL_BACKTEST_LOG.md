@@ -20,6 +20,76 @@
 
 ## 기록
 
+### 2026-04-13 - per anchor benchmark and pruning search second pass
+
+- 목표:
+  - `Quality + Value + per` strongest practical candidate anchor에서
+    benchmark를 바꾸거나 quality-side pruning을 하면 더 나은 practical tradeoff가 생기는지 확인
+- 전략:
+  - `Quality + Value > Strict Annual`
+- 기간 / universe:
+  - `2016-01-01 ~ 2026-04-01`
+  - `US Statement Coverage 100`
+  - `Historical Dynamic PIT Universe`
+- 핵심 설정:
+  - `Option = month_end`
+  - `Top N = 10`
+  - `Rebalance Interval = 1`
+  - `Trend Filter = off`
+  - `Market Regime = off`
+  - `Minimum Price = 5.0`
+  - `Minimum History = 12M`
+  - `Min Avg Dollar Volume 20D = 5.0M`
+  - `Transaction Cost = 10 bps`
+  - underperformance / drawdown guardrail `on`
+- factor / ticker:
+  - value anchor:
+    - `book_to_market`
+    - `earnings_yield`
+    - `sales_yield`
+    - `ocf_yield`
+    - `operating_income_yield`
+    - `per`
+  - quality baseline:
+    - `roe`
+    - `roa`
+    - `net_margin`
+    - `asset_turnover`
+    - `current_ratio`
+  - pruning variants:
+    - remove `current_ratio`
+    - remove `asset_turnover`
+    - remove `net_margin`
+- 결과:
+  - current strongest practical baseline:
+    - `Benchmark Contract = Candidate Universe Equal-Weight`
+    - `CAGR = 29.43%`
+    - `MDD = -27.43%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = small_capital_trial`
+    - `Deployment = review_required`
+  - ticker benchmark alternative:
+    - `Benchmark Contract = Ticker Benchmark`
+    - `Benchmark Ticker = SPY`
+    - `CAGR = 29.43%`
+    - `MDD = -27.43%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = paper_probation`
+    - `Deployment = review_required`
+  - pruning variants:
+    - all fell back to `hold / blocked`
+- 해석:
+  - `Candidate Universe Equal-Weight` baseline이 여전히 strongest practical point였다
+  - `Ticker Benchmark = SPY`는 same strategy performance라도 shortlist tier가 한 단계 낮았다
+  - quality-side pruning은 이번 pass에서 useful upside/downside lever가 아니었다
+- 다음 액션:
+  - `quality pruning`보다
+    `value-side replacement / bounded removal`
+    쪽으로 다음 레버를 옮긴다
+- 관련 문서:
+  - [PHASE15_QUALITY_VALUE_PER_BENCHMARK_AND_PRUNING_SEARCH_SECOND_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase15/PHASE15_QUALITY_VALUE_PER_BENCHMARK_AND_PRUNING_SEARCH_SECOND_PASS.md)
+  - [QUALITY_VALUE_STRICT_ANNUAL_BEST_ADDITION_CURRENT_CANDIDATE.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL_BEST_ADDITION_CURRENT_CANDIDATE.md)
+
 ### 2026-04-13 - per strongest blended candidate downside search
 
 - 목표:

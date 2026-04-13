@@ -5164,3 +5164,40 @@ Keep entries append-only and concise.
   - `.note/finance/backtest_reports/strategies/QUALITY_STRICT_ANNUAL_BACKTEST_LOG.md`
   - `.note/finance/backtest_reports/strategies/QUALITY_STRICT_ANNUAL.md`
   - `.note/finance/phase15/PHASE15_CURRENT_CHAPTER_TODO.md`
+
+### 2026-04-13 - Phase 15에서 Quality rescued anchor downside search와 Quality + Value benchmark/pruning search를 정리함
+
+- We continued Phase 15 with current-code reruns plus reused subagents.
+- `Quality > Strict Annual` rescued anchor search result:
+  - only `Rebalance Interval = 1` kept non-hold status
+  - recommended downside-improved candidate:
+    - `capital_discipline`
+    - `Benchmark = LQD`
+    - `Trend Filter = on`
+    - `Market Regime = off`
+    - `Top N = 12`
+    - `CAGR = 26.02%`
+    - `MDD = -25.57%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = paper_probation`
+    - `Deployment = review_required`
+  - conservative clean alternative:
+    - `Top N = 16`
+    - `CAGR = 20.23%`
+    - `MDD = -25.73%`
+    - `Validation / Rolling / OOS = normal / normal / normal`
+- `Quality + Value + per` benchmark/pruning search result:
+  - `Candidate Universe Equal-Weight` baseline remained the strongest practical point
+  - `Ticker Benchmark = SPY` preserved
+    `real_money_candidate`
+    but lowered `Shortlist` from `small_capital_trial` to `paper_probation`
+  - quality-side pruning variants all fell back to `hold / blocked`
+- Durable outputs:
+  - `.note/finance/backtest_reports/phase15/PHASE15_QUALITY_RESCUED_ANCHOR_DOWNSIDE_SEARCH_FIRST_PASS.md`
+  - `.note/finance/backtest_reports/phase15/PHASE15_QUALITY_VALUE_PER_BENCHMARK_AND_PRUNING_SEARCH_SECOND_PASS.md`
+  - `.note/finance/backtest_reports/strategies/QUALITY_STRICT_ANNUAL_DOWNSIDE_IMPROVED_CURRENT_CANDIDATE.md`
+  - `.note/finance/backtest_reports/strategies/QUALITY_STRICT_ANNUAL_BACKTEST_LOG.md`
+  - `.note/finance/backtest_reports/strategies/QUALITY_STRICT_ANNUAL.md`
+  - `.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL_BACKTEST_LOG.md`
+  - `.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL.md`
+  - `.note/finance/phase15/PHASE15_CURRENT_CHAPTER_TODO.md`

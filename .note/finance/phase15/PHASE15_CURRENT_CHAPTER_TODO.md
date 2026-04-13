@@ -50,7 +50,13 @@
 - `completed` benchmark / overlay structural rescue search
   - `capital_discipline + LQD + trend on + regime off + Top N 10`
     조합에서 `real_money_candidate / paper_probation / review_required`를 회복했다
-- `pending` rescued anchor 기준 downside / bounded addition search
+- `completed` rescued anchor 기준 downside / top-N search
+  - `Top N = 12`
+    - `CAGR = 26.02%`
+    - `MDD = -25.57%`
+    - `real_money_candidate / paper_probation / review_required`
+    로 current recommended downside-improved candidate를 확보했다
+- `pending` rescued anchor 기준 bounded factor addition / replacement search
 
 ## Workstream C. Quality + Value Candidate Improvement
 
@@ -60,7 +66,12 @@
   - `real_money_candidate / small_capital_trial / review_required`까지 올라갔다
 - `completed` `per` anchor 기준 top_n downside search
   - `Top N = 10`이 여전히 strongest practical point로 남았다
-- `pending` benchmark / factor replacement / quality-side pruning search
+- `completed` benchmark / quality-side pruning search
+  - `Candidate Universe Equal-Weight + per` baseline이
+    여전히 strongest practical point로 남았다
+  - `Ticker Benchmark = SPY`는 same return이어도 shortlist tier가 낮아졌다
+  - quality-side pruning은 전부 `hold / blocked`였다
+- `pending` value-side replacement / bounded removal search
 
 ## Workstream D. Reporting
 
@@ -96,6 +107,20 @@
     - `Promotion = real_money_candidate`
     - `Shortlist = paper_probation`
     - `Deployment = review_required`
+- Quality downside-improved current candidate:
+  - `capital_discipline + LQD + trend on + regime off + Top N 12`
+    - `CAGR = 26.02%`
+    - `MDD = -25.57%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = paper_probation`
+    - `Deployment = review_required`
+- Quality conservative clean alternative:
+  - `capital_discipline + LQD + trend on + regime off + Top N 16`
+    - `CAGR = 20.23%`
+    - `MDD = -25.73%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = paper_probation`
+    - `Deployment = review_required`
 - Quality + Value best raw addition:
   - `+ per`
   - `CAGR = 29.43%`
@@ -124,12 +149,12 @@
   structural rescue search에서는 current candidate를 다시 회복했다.
 - `Quality + Value`는 value-side controlled addition까지 넓혀 보니
   `per`가 gate tier를 실제로 끌어올렸다.
-- 그리고 `Top N` downside search까지 보면
+- 그리고 `Top N` downside search와 benchmark / pruning second pass까지 보면
   `Top N = 10 + per`가 그대로 strongest practical point였다.
 - 다음 active step은
   - `Quality`:
     - rescued anchor 기준
-      `top_n / downside / bounded factor addition` search
+      `bounded factor addition / replacement` search
   - `Quality + Value`:
-    - `per` anchor 기준 `factor replacement / quality-side pruning / benchmark` search
+    - `per` anchor 기준 `value-side replacement / bounded removal` search
   쪽이다.

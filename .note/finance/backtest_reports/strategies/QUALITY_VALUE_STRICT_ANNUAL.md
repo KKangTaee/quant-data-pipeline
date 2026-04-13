@@ -38,14 +38,15 @@
     gate를 실제로 더 올릴 수 있다
   - bounded one-factor addition 중에서는 `per`가 current best practical candidate였다
   - `Top N` downside search까지 보면, 현재도 `Top N = 10 + per`가 strongest practical point로 남는다
+  - benchmark / quality-side pruning second pass까지 봐도
+    baseline candidate-equal-weight 계약이 strongest practical point로 유지됐다
 
 ## 최근 backtest log snapshot
 
 - 최근 기록:
-  - `2026-04-13 - per strongest blended candidate downside search`
+  - `2026-04-13 - per anchor benchmark and pruning search second pass`
 - 핵심 설정:
-  - baseline default blend
-  - `Benchmark Contract = Candidate Universe Equal-Weight`
+  - baseline default blend + `per`
   - `Top N = 10`
   - `Rebalance Interval = 1`
   - `Trend Filter = off`
@@ -53,15 +54,22 @@
 - 결과:
   - strongest practical candidate:
     - `+ per`
+    - `Benchmark Contract = Candidate Universe Equal-Weight`
     - `CAGR = 29.43%`
     - `MDD = -27.43%`
     - `Promotion = real_money_candidate`
     - `Shortlist = small_capital_trial`
     - `Deployment = review_required`
+  - same-return but lower-tier alternative:
+    - `Benchmark Contract = Ticker Benchmark`
+    - `Benchmark Ticker = SPY`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = paper_probation`
+  - pruning takeaway:
+    - quality-side pruning variants는 전부 `hold / blocked`
 - 다음에 볼 것:
-  - `Top N` search 결과
-    `10`이 그대로 strongest practical point로 남았으므로
-    다음은 `factor replacement / quality-side pruning / benchmark sensitivity`
+  - `quality-side pruning / benchmark sensitivity`는 정리됐으므로
+    다음은 `value-side replacement / bounded removal`
 
 ## 관련 결과 문서
 
@@ -85,6 +93,8 @@
   - `per` addition candidate를 전략 구성 중심으로 바로 읽는 one-pager
 - [PHASE15_QUALITY_VALUE_PER_DOWNSIDE_SEARCH_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase15/PHASE15_QUALITY_VALUE_PER_DOWNSIDE_SEARCH_FIRST_PASS.md)
   - `per` strongest candidate를 anchor로 `Top N` downside search를 다시 본 문서
+- [PHASE15_QUALITY_VALUE_PER_BENCHMARK_AND_PRUNING_SEARCH_SECOND_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase15/PHASE15_QUALITY_VALUE_PER_BENCHMARK_AND_PRUNING_SEARCH_SECOND_PASS.md)
+  - `per` strongest candidate를 anchor로 benchmark sensitivity와 quality-side pruning을 다시 본 문서
 
 ## 실무 해석
 
@@ -99,5 +109,5 @@
 Phase 15 bounded addition search 기준으로는
 `per`가 `real_money_candidate / small_capital_trial / review_required`까지 올라가며
 current strongest practical blended candidate가 되었다.
-그리고 `Top N` downside search까지 보면
+그리고 `Top N` downside search와 benchmark / pruning second pass까지 보면
 현재도 `Top N = 10 + per`가 strongest practical point로 남는다.

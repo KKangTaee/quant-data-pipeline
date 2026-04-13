@@ -20,6 +20,70 @@
 
 ## 기록
 
+### 2026-04-13 - rescued anchor downside search first pass
+
+- 목표:
+  - rescued current candidate를 anchor로 두고
+    `Top N / Rebalance Interval`만 바꿔도 더 좋은 downside / gate tradeoff가 나오는지 확인
+- 전략:
+  - `Quality > Strict Annual`
+- 기간 / universe:
+  - `2016-01-01 ~ 2026-04-01`
+  - `US Statement Coverage 100`
+  - `Historical Dynamic PIT Universe`
+- 핵심 설정:
+  - `Option = month_end`
+  - `Rebalance Interval = 1`
+  - `Benchmark = LQD`
+  - `Trend Filter = on`
+  - `Market Regime = off`
+  - `Minimum Price = 5.0`
+  - `Minimum History = 12M`
+  - `Min Avg Dollar Volume 20D = 5.0M`
+  - `Transaction Cost = 10 bps`
+  - underperformance / drawdown guardrail `on`
+- factor / ticker:
+  - rescued anchor:
+    - `roe`
+    - `roa`
+    - `cash_ratio`
+    - `debt_to_assets`
+- 결과:
+  - rescued anchor baseline:
+    - `Top N = 10`
+    - `CAGR = 24.28%`
+    - `MDD = -31.48%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = paper_probation`
+    - `Deployment = review_required`
+  - recommended downside-improved candidate:
+    - `Top N = 12`
+    - `CAGR = 26.02%`
+    - `MDD = -25.57%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = paper_probation`
+    - `Deployment = review_required`
+    - `Rolling = watch`
+  - conservative clean alternative:
+    - `Top N = 16`
+    - `CAGR = 20.23%`
+    - `MDD = -25.73%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = paper_probation`
+    - `Deployment = review_required`
+    - `Validation / Rolling / OOS = normal / normal / normal`
+- 해석:
+  - rescued anchor에서는 cadence보다 `Top N diversification`이 더 유효한 downside lever였다
+  - `Top N = 12`는 수익률과 낙폭을 동시에 개선한 strongest downside-improved candidate다
+  - `Top N = 16`은 수익률을 조금 더 포기하는 대신 consistency surface가 더 깨끗한 conservative alternative다
+- 다음 액션:
+  - rescued contract 기준
+    `bounded factor addition / replacement`
+    를 다시 붙여도 `real_money_candidate`를 유지하는지 확인
+- 관련 문서:
+  - [QUALITY_STRICT_ANNUAL_DOWNSIDE_IMPROVED_CURRENT_CANDIDATE.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/QUALITY_STRICT_ANNUAL_DOWNSIDE_IMPROVED_CURRENT_CANDIDATE.md)
+  - [PHASE15_QUALITY_RESCUED_ANCHOR_DOWNSIDE_SEARCH_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase15/PHASE15_QUALITY_RESCUED_ANCHOR_DOWNSIDE_SEARCH_FIRST_PASS.md)
+
 ### 2026-04-13 - structural rescue second pass
 
 - 목표:
