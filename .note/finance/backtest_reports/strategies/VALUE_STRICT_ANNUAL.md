@@ -65,6 +65,16 @@
 - strongest raw winner는 `MDD`가 깊고
 - 더 균형 잡힌 후보는 `hold`가 남는 패턴이 반복됐다
 
+쉽게 말하면:
+
+- 수익률만 보면 가장 강했던 family는 `Value`였다
+- 하지만 실전에 더 가깝게 보려면 낙폭(`MDD`)이 부담스러울 수 있었다
+- 그래서 Phase 15에서는
+  - 수익률이 가장 센 후보
+  - 낙폭을 줄인 후보
+  - 그 균형형 후보를 조금 더 개선한 후보
+  를 나눠서 정리하게 됐다
+
 ## 가장 먼저 볼 문서
 
 - [VALUE_STRICT_ANNUAL_STRONGEST_CURRENT_CANDIDATE.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL_STRONGEST_CURRENT_CANDIDATE.md)
@@ -80,24 +90,61 @@
 - [VALUE_STRICT_ANNUAL_BACKTEST_LOG.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL_BACKTEST_LOG.md)
   - `Value > Strict Annual`를 어떤 세팅으로 돌렸고 결과가 어땠는지 누적 관리하는 전략 log
 
-## 대표 결과
+## 대표 결과를 쉽게 읽으면
 
-- strongest raw winner:
-  - `CAGR = 29.89%`
-  - `MDD = -29.15%`
-  - `promotion = real_money_candidate`
-- downside-improved current candidate:
-  - `CAGR = 27.48%`
-  - `MDD = -24.55%`
-  - `promotion = real_money_candidate`
-- best addition candidate:
-  - `CAGR = 28.13%`
-  - `MDD = -24.55%`
-  - `promotion = real_money_candidate`
-- strongest balanced exact hit:
-  - `CAGR = 15.84%`
-  - `MDD = -17.42%`
-  - 문제: `promotion = hold`
+### 1. 수익률이 가장 강한 후보
+
+- strongest raw winner
+- `CAGR = 29.89%`
+- `MDD = -29.15%`
+- `Promotion = real_money_candidate`
+
+해석:
+
+- 가장 공격적인 후보다
+- 수익률은 가장 좋지만
+- 낙폭이 깊어서 그대로 쓰기엔 부담이 있을 수 있다
+
+### 2. 더 균형 잡힌 후보
+
+- downside-improved current candidate
+- `CAGR = 27.48%`
+- `MDD = -24.55%`
+- `Promotion = real_money_candidate`
+
+해석:
+
+- strongest raw winner보다 수익률은 조금 낮다
+- 대신 낙폭을 꽤 줄였다
+- “실제로 다시 돌려볼 균형형 후보”로 보면 가장 이해가 쉽다
+
+### 3. 균형형 후보를 한 번 더 개선한 버전
+
+- best addition candidate
+- `CAGR = 28.13%`
+- `MDD = -24.55%`
+- `Promotion = real_money_candidate`
+
+해석:
+
+- 낙폭은 균형형 후보와 거의 같고
+- 수익률은 조금 더 높다
+- 그래서 지금 Phase 15 기준으로는
+  가장 실무적으로 다시 보기 좋은 `Value` 후보라고 볼 수 있다
+
+### 4. 숫자는 깔끔하지만 승격은 못한 후보
+
+- strongest balanced exact hit
+- `CAGR = 15.84%`
+- `MDD = -17.42%`
+- 문제:
+  - `Promotion = hold`
+
+해석:
+
+- 숫자 조건만 보면 보기 좋다
+- 하지만 real-money gate를 통과하지 못해서
+  지금의 핵심 후보로 보지는 않는다
 
 ## 최근 backtest log snapshot
 
@@ -151,16 +198,25 @@
 
 ## 실무 해석
 
-지금 시점의 `Value Strict Annual`은:
+쉽게 정리하면 지금 `Value Strict Annual`은:
 
-- strict annual 3개 family 중 가장 강한 성과 축
-- 다만 validation / promotion 병목이 같이 따라오는 family
-- 그리고 current runtime refresh에서도
-  `real_money_candidate / paper_probation / review_required`
-  exact candidate가 다시 재현되는 family
-- Phase 15 first pass에서는
-  `Top N = 14`로 downside를 낮춘 more balanced current candidate도 확보한 family
-- Phase 15 second pass에서는
-  `psr` addition으로 같은 drawdown을 유지하면서 CAGR를 조금 더 끌어올린 current best addition candidate도 확보한 family
+- 세 family 중에서 가장 강한 성과 축이다
+- strongest raw winner도 있고,
+  더 균형 잡힌 후보도 있고,
+  그 균형형을 조금 더 개선한 후보도 있다
+- 즉 “좋은 숫자가 한 번 나온 전략”이 아니라,
+  실제로 비교 가능한 후보군이 정리된 family다
 
-로 읽는 편이 맞다.
+지금 다시 볼 우선순위를 한 줄로 정리하면:
+
+1. 수익률이 가장 강한 것을 보려면
+   - strongest raw winner
+2. 수익률과 낙폭의 균형을 보려면
+   - downside-improved current candidate
+3. 지금 Phase 15 기준으로 가장 실무적으로 추천할 한 개를 고르라면
+   - best addition candidate
+
+즉 현재 `Value`는
+“가장 강한 family이면서,
+실제로 다시 돌려볼 후보도 여러 단계로 정리된 상태”
+라고 이해하면 가장 자연스럽다.

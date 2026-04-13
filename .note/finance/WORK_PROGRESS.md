@@ -14,6 +14,14 @@ Keep entries append-only and concise.
 ## Entries
 
 ### 2026-04-13
+- Rewrote the strategy-hub `대표 결과` and `실무 해석` sections in plainer Korean.
+- Focused on helping the reader answer:
+  - which candidate is strongest
+  - which one is more balanced
+  - which one is only an alternative
+  - how to interpret each family right now
+
+### 2026-04-13
 - Expanded glossary and simplified the Phase 15 checklist wording around strategy-hub reading.
 - Added plain-language glossary entries for:
   - strongest practical point

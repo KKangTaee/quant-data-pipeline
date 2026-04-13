@@ -13,6 +13,25 @@ Do not copy full chat transcripts. Keep only the durable result.
 
 ## Entries
 
+### 2026-04-13 - Strategy hub 대표 결과 / 실무 해석 쉬운 문장화
+- Request topic:
+  - strategy hub 문서의 `대표 결과`와 `실무 해석`이 여전히 어렵게 읽히니 더 쉬운 표현으로 풀어달라는 요청
+- Interpreted goal:
+  - 숫자와 상태는 유지하되,
+    각 family를 “지금 어떻게 이해하면 되는지”가 더 빠르게 잡히도록 문장 자체를 쉬운 한국어로 바꾸기
+- Result:
+  - `Value`는
+    strongest raw / balanced / best-addition 후보를 역할 중심으로 다시 설명했다
+  - `Quality`는
+    왜 structural rescue가 필요했는지와
+    왜 `LQD + trend on + regime off + capital_discipline`이 기준점이 되는지를 더 쉬운 말로 풀었다
+  - `Quality + Value`는
+    strongest practical point / previous anchor / lower-drawdown alternative를 역할 중심으로 다시 설명했다
+- Durable output:
+  - `.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL.md`
+  - `.note/finance/backtest_reports/strategies/QUALITY_STRICT_ANNUAL.md`
+  - `.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL.md`
+
 ### 2026-04-13 - Strategy hub reading 용어 보강
 - Request topic:
   - strategy hub/checklist를 읽을 때 나오는 용어들이 어렵고,
