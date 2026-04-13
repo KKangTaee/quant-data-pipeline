@@ -13,6 +13,37 @@ Do not copy full chat transcripts. Keep only the durable result.
 
 ## Entries
 
+### 2026-04-13 - Phase 15가 구현 phase인지 실험 phase인지에 대한 정리
+- Request topic:
+  - Phase 15는 백테스트 위주의 테스트만 한 것처럼 보이는데,
+    프로그램 개선/기능 추가가 없는 이유가 무엇인지 질문
+- Interpreted goal:
+  - Phase 15의 성격이 “더 이상 개발할 것이 없어서 실험만 한 것”인지,
+    아니면 의도적으로 candidate quality improvement에 집중한 phase인지 분명히 정리
+- Result:
+  - Phase 15는 의도적으로 `candidate quality improvement`에 집중한 phase로 보는 것이 맞다
+  - 앞선 phase들에서:
+    - backtest UI
+    - real-money contract
+    - promotion / shortlist / deployment surface
+    - strategy hub / one-pager / backtest log
+    같은 product surface와 operator workflow first pass가 이미 열려 있었다
+  - 그래서 Phase 15의 질문은
+    “기능을 더 붙일까?”보다는
+    “지금 있는 전략 family에서 실제로 더 나은 후보를 만들 수 있는가?”
+    에 가까웠다
+  - 즉 기능 개발이 끝나서 멈춘 것이 아니라,
+    개발 우선순위를 product surface 확장보다
+    strategy/candidate quality improvement로 둔 phase였다
+  - 다음 phase부터는 다시
+    - candidate consolidation
+    - operator workflow persistence
+    - 추가 downside follow-up
+    같은 구현 성격의 작업으로 이어지는 것이 자연스럽다
+- Durable output:
+  - `.note/finance/phase15/PHASE15_COMPLETION_SUMMARY.md`
+  - `.note/finance/phase15/PHASE15_NEXT_PHASE_PREPARATION.md`
+
 ### 2026-04-13 - Strategy hub 대표 결과 / 실무 해석 쉬운 문장화
 - Request topic:
   - strategy hub 문서의 `대표 결과`와 `실무 해석`이 여전히 어렵게 읽히니 더 쉬운 표현으로 풀어달라는 요청
