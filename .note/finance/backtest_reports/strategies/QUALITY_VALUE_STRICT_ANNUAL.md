@@ -131,9 +131,9 @@
 ## 최근 backtest log snapshot
 
 - 최근 기록:
-  - `2026-04-13 - Phase 16 strongest point downside follow-up second pass`
+  - `2026-04-14 - partial cash retention representative rerun first pass`
 - 핵심 설정:
-  - strongest point reconfirm:
+  - strongest point structural probe:
     - quality:
       - `roe`
       - `roa`
@@ -149,42 +149,32 @@
       - `per`
     - `Top N = 10`
     - `Benchmark Contract = Candidate Universe Equal-Weight`
-  - lower-MDD probe:
-    - `Top N = 9`
-    - `current_ratio -> cash_ratio`
-  - sensitivity:
     - `Trend Filter = on`
-    - `Ticker Benchmark = SPY`
+    - `Market Regime = off`
+    - `cash retention = off/on`
 - 결과:
-  - strongest practical candidate remains:
-    - `CAGR = 31.82%`
-    - `MDD = -26.63%`
-    - `Promotion = real_money_candidate`
-    - `Shortlist = small_capital_trial`
-    - `Deployment = review_required`
-  - lower-MDD but weaker gate:
-    - `Top N = 9`
-    - `CAGR = 32.21%`
-    - `MDD = -25.61%`
-    - `Promotion = production_candidate`
-    - `Shortlist = watchlist`
-  - another lower-MDD but weaker-gate alternative:
-    - `Top N = 10`
-    - `current_ratio -> cash_ratio`
-    - `CAGR = 31.83%`
-    - `MDD = -25.79%`
-    - `Promotion = production_candidate`
-    - `Shortlist = watchlist`
-  - human-readable benchmark alternative:
-    - `Ticker Benchmark = SPY`
-    - `CAGR = 31.82%`
-    - `MDD = -26.63%`
-    - `Promotion = real_money_candidate`
-    - `Shortlist = paper_probation`
+  - `cash retention off`:
+    - `CAGR = 30.01%`
+    - `MDD = -29.72%`
+    - `Promotion = hold`
+    - `Shortlist = hold`
+    - `Deployment = blocked`
+  - `cash retention on`:
+    - `CAGR = 20.03%`
+    - `MDD = -15.07%`
+    - `Promotion = hold`
+    - `Shortlist = hold`
+    - `Deployment = blocked`
+    - `Partial Cash Retention Active Rows = 90`
+- 실무 해석:
+  - blended strongest point에서도 downside reduction은 분명했다
+  - 하지만 current strongest practical point를 대체할 정도의 gate rescue는 없었다
+  - 즉 이번 first pass는
+    “cash retention은 작동하지만 단독 구조 레버로는 부족함”을 보여주는 결과다
 - 다음에 볼 것:
-  - stronger gate를 유지한 채 `MDD`를 더 낮추려면
-    구조적인 downside lever가 필요한지 본다
-  - current strongest practical point는 유지한 채 closeout한다
+  - 다음 structural lever:
+    - `defensive sleeve risk-off`
+  - current strongest practical point는 그대로 유지
 
 ## 관련 결과 문서
 

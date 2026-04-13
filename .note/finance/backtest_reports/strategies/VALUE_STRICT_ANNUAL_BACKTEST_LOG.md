@@ -20,6 +20,46 @@
 
 ## 기록
 
+### 2026-04-14 - partial cash retention representative rerun first pass
+
+- 목표:
+  - Phase 17 first structural lever인 `partial cash retention`이
+    current `Value` practical anchor에서
+    same-gate lower-MDD rescue로 이어지는지 확인한다
+- 실행 범위:
+  - baseline structural probe:
+    - `Top N = 14 + psr`
+    - `Trend Filter = on`
+    - `Market Regime = off`
+    - `cash retention = off/on`
+- current code rerun 결과:
+  - `cash retention off`:
+    - `CAGR = 25.92%`
+    - `MDD = -29.25%`
+    - `Promotion = hold`
+    - `Shortlist = hold`
+    - `Deployment = blocked`
+    - `Validation = caution`
+  - `cash retention on`:
+    - `CAGR = 20.11%`
+    - `MDD = -15.85%`
+    - `Promotion = hold`
+    - `Shortlist = hold`
+    - `Deployment = blocked`
+    - `Validation = watch`
+    - `Partial Cash Retention Active Rows = 113`
+    - `Average Cash Share = 31.14%`
+- 해석:
+  - `partial cash retention`은 실제로 작동했고
+    `MDD`를 크게 낮췄다
+  - 하지만 현금 비중이 많이 남으면서 `CAGR`가 크게 낮아졌고
+    `benchmark_policy / liquidity_policy = caution`이 남아
+    same-gate rescue로 이어지진 못했다
+- 다음 액션:
+  - `Value` current anchor는 그대로 유지
+  - 다음 structural lever는
+    idle cash drag를 줄일 수 있는 `defensive sleeve risk-off` 쪽이 더 유력하다
+
 ### 2026-04-13 - rescue search second pass에서 lower-MDD exact rescue는 없었음
 
 - 목표:

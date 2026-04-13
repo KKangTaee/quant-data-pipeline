@@ -37,9 +37,10 @@
 
 구현 이후 다음 active step:
 
-- [ ] `Value` strongest / lower-MDD near-miss에 partial cash retention representative rerun 적용
-- [ ] `Quality + Value` strongest practical point에 partial cash retention representative rerun 적용
-- [ ] same-gate lower-MDD rescue 여부를 기준으로 next structural lever 우선순위 재판단
+- [x] `Value` strongest / lower-MDD near-miss에 partial cash retention representative rerun 적용
+- [x] `Quality + Value` strongest practical point에 partial cash retention representative rerun 적용
+- [x] same-gate lower-MDD rescue 여부를 기준으로 next structural lever 우선순위 재판단
+- [ ] next structural lever로 `defensive sleeve risk-off` contract 설계/구현 시작
 
 ## 현재 판단
 
@@ -53,8 +54,16 @@
 - bounded tweak phase는 이미 끝났다
 - current code를 기준으로 보면,
   `partial cash retention` first slice는 구현 완료 상태다
-- 다음 active question은
-  이 contract가 실제 `Value / Quality + Value` strongest anchor에서
-  same-gate lower-MDD rescue로 이어지는지 representative rerun으로 다시 확인하는 것이다
+- representative rerun 결과,
+  `partial cash retention`은 `Value / Quality + Value` 모두에서
+  `MDD`를 크게 낮췄지만
+  current practical gate를 rescue하진 못했다
+- 공통 패턴:
+  - downside protection은 분명했다
+  - 하지만 현금 비중이 많이 남으면서 `CAGR` drag가 커졌다
+  - `benchmark_policy` / `liquidity_policy` caution도 함께 남았다
+- 따라서 다음 active question은
+  idle cash drag를 줄이면서 downside를 보완할 수 있는
+  `defensive sleeve risk-off` contract를 여는 것이다
 - weighted portfolio / saved portfolio는 지금도 유용하지만,
   real-money gate surface가 직접 붙지 않아 immediate replacement는 아니다

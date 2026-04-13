@@ -210,3 +210,33 @@ Detailed historical analysis was archived on `2026-04-13`.
   - UI single / compare, runtime wrapper, sample helper, core strategy, selection interpretation, warning/meta surface까지 같이 동기화했다
   - synthetic smoke에서는 expected behavior가 확인됐고,
     DB-backed live rerun은 현재 로컬 shadow-factor data preflight 상태에 따라 추가 데이터 준비가 필요할 수 있다
+
+### 2026-04-14 - partial cash retention first pass는 downside lever로는 유효하지만 same-gate practical rescue까지는 못 갔다
+- Request topic:
+  - Phase 17 다음 단계로
+    `partial cash retention`을 실제 `Value` / `Quality + Value` anchor에 적용해 representative rerun 진행
+- Interpreted goal:
+  - 새 구조 레버가 실제 strongest/current candidate를 바꿀 정도로 충분한지 확인하고,
+    다음 구현 우선순위를 결정
+- Result:
+  - `Value` current anchor(`Top N = 14 + psr`, `Trend Filter = on`)에서
+    `cash retention on`은
+    `MDD = -29.25% -> -15.85%`
+    로 큰 개선을 만들었지만,
+    `CAGR = 25.92% -> 20.11%`로 내려가고
+    `hold / blocked`를 벗어나지 못했다
+  - `Quality + Value` strongest point에서도
+    `MDD = -29.72% -> -15.07%`
+    로 큰 개선이 있었지만,
+    `CAGR = 30.01% -> 20.03%`로 크게 내려가고
+    역시 `hold / blocked`에 머물렀다
+  - 공통 해석:
+    - `partial cash retention`은 기능적으로는 분명히 유효한 downside lever다
+    - 하지만 current first pass에서는
+      cash 비중 증가로 인한 return drag가 너무 커서
+      same-gate practical rescue lever로는 부족하다
+  - follow-up decision:
+    - next structural lever priority는
+      idle cash drag를 줄일 수 있는
+      `defensive sleeve risk-off`
+      쪽이 더 자연스럽다

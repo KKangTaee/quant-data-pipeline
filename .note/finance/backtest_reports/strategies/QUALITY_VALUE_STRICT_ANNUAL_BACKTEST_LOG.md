@@ -20,6 +20,64 @@
 
 ## 기록
 
+### 2026-04-14 - partial cash retention representative rerun first pass
+
+- 목표:
+  - Phase 17 first structural lever인 `partial cash retention`이
+    current strongest practical blended point에서
+    same-gate lower-MDD rescue로 이어지는지 확인한다
+- 전략:
+  - `Quality + Value > Strict Annual`
+- 실행 범위:
+  - strongest practical point:
+    - quality:
+      - `roe`
+      - `roa`
+      - `operating_margin`
+      - `asset_turnover`
+      - `current_ratio`
+    - value:
+      - `book_to_market`
+      - `earnings_yield`
+      - `sales_yield`
+      - `pcr`
+      - `por`
+      - `per`
+    - `Top N = 10`
+    - `Benchmark Contract = Candidate Universe Equal-Weight`
+    - `Trend Filter = on`
+    - `Market Regime = off`
+    - `cash retention = off/on`
+- 결과:
+  - `cash retention off`:
+    - `CAGR = 30.01%`
+    - `MDD = -29.72%`
+    - `Promotion = hold`
+    - `Shortlist = hold`
+    - `Deployment = blocked`
+    - `Validation = caution`
+  - `cash retention on`:
+    - `CAGR = 20.03%`
+    - `MDD = -15.07%`
+    - `Promotion = hold`
+    - `Shortlist = hold`
+    - `Deployment = blocked`
+    - `Validation = caution`
+    - `Partial Cash Retention Active Rows = 90`
+    - `Average Cash Share = 41.41%`
+- 해석:
+  - `partial cash retention`은 blended strongest point에서도 실제로 작동했고
+    `MDD`를 크게 낮췄다
+  - 하지만 `CAGR` 손실이 커서
+    current strongest practical point를 대체하진 못했다
+  - 즉 이번 first pass에서는
+    downside lever로는 유효하지만
+    same-gate practical rescue lever는 아니었다
+- 다음 액션:
+  - current strongest practical point는 그대로 유지
+  - 다음 structural lever는
+    cash drag를 줄일 수 있는 `defensive sleeve risk-off`를 우선 검토한다
+
 ### 2026-04-13 - Phase 16 strongest point downside follow-up second pass
 
 - 목표:

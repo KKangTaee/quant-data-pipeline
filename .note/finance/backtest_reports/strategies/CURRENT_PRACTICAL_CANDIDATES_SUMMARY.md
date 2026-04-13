@@ -44,6 +44,11 @@ lower-MDD near-miss:
 
 - 숫자는 더 방어적으로 좋아졌지만
 - gate가 한 단계 내려가서 current anchor를 대체하진 못했다.
+- Phase 17 structural note:
+  - `Trend Filter = on`에서 `partial cash retention`을 붙이면
+    `MDD = -15.85%`까지 크게 내려가지만
+    `CAGR = 20.11%`, `hold / blocked`로 남아서
+    current anchor를 바꾸진 못했다
 
 바로 열 문서:
 
@@ -100,6 +105,11 @@ lower-MDD but weaker-gate near-miss:
 
 - 지금은 strongest practical point가 분명하고
 - 그보다 더 방어적인 대안도 있지만 gate가 약하다.
+- Phase 17 structural note:
+  - strongest point에 `Trend Filter = on + partial cash retention`을 붙이면
+    `MDD = -15.07%`까지 크게 낮아지지만
+    `CAGR = 20.03%`, `hold / blocked`로 남아서
+    current strongest point를 바꾸진 못했다
 
 바로 열 문서:
 
@@ -121,6 +131,9 @@ lower-MDD but weaker-gate near-miss:
 3. 다음 phase 방향
    - bounded `Top N / one-factor / overlay`보다
      더 구조적인 downside improvement가 우선순위가 된다
+   - Phase 17 first pass 기준으로는
+     `partial cash retention`보다
+     `defensive sleeve risk-off`가 다음 구현 후보로 더 유력하다
 
 ## 관련 문서
 

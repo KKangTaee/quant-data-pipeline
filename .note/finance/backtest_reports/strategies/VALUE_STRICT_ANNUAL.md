@@ -154,49 +154,38 @@
 ## 최근 backtest log snapshot
 
 - 최근 기록:
-  - `2026-04-13 - Phase 16 rescue search second pass`
+  - `2026-04-14 - partial cash retention representative rerun first pass`
 - 핵심 설정:
-  - baseline reconfirm:
+  - structural probe:
     - `Top N = 14 + psr`
-  - lower-MDD rescue probe:
-    - `Top N = 14 + psr + pfcr`
-    - `Top N = 15 + psr + pfcr`
-  - sensitivity:
-    - `Candidate Universe Equal-Weight`
     - `Trend Filter`
-    - `Market Regime`
-  - replacement recap:
-    - `sales_yield -> pfcr`
-- current code re-eval:
-  - current best practical point still reproduces:
-    - `Top N = 14 + psr`
-    - `CAGR = 28.13%`
-    - `MDD = -24.55%`
-    - `Promotion = real_money_candidate`
-    - `Shortlist = paper_probation`
-    - `Deployment = review_required`
-  - strongest lower-MDD near-miss:
-    - `Top N = 14 + psr + pfcr`
-    - `CAGR = 27.22%`
-    - `MDD = -21.16%`
-    - `Promotion = production_candidate`
-    - `Shortlist = watchlist`
-    - `Deployment = review_required`
-  - same-gate but no rescue:
-    - `Top N = 15 + psr + pfcr`
-    - `CAGR = 25.95%`
-    - `MDD = -27.59%`
-    - `Promotion = real_money_candidate`
-    - `Shortlist = paper_probation`
-    - `Deployment = review_required`
-  - equal-weight benchmark와 overlay sensitivity는 rescue를 만들지 못했다
+    - `Market Regime = off`
+    - `cash retention = off/on`
 - 결과:
-  - bounded rescue failure:
-    - lower-MDD near-miss는 있었지만
-      same gate를 유지하는 exact rescue는 없었다
+  - `cash retention off`:
+    - `CAGR = 25.92%`
+    - `MDD = -29.25%`
+    - `Promotion = hold`
+    - `Shortlist = hold`
+    - `Deployment = blocked`
+  - `cash retention on`:
+    - `CAGR = 20.11%`
+    - `MDD = -15.85%`
+    - `Promotion = hold`
+    - `Shortlist = hold`
+    - `Deployment = blocked`
+    - `Partial Cash Retention Active Rows = 113`
+- 실무 해석:
+  - `partial cash retention`은 실제로 downside를 크게 줄였지만
+    현금 비중이 커져 return drag가 커졌다
+  - 이번 first pass에서는
+    same-gate rescue가 아니라
+    “유효한 downside lever지만 단독으로는 부족함”에 가깝다
 - 다음에 볼 것:
-  - `Value` family는 current best practical point를 유지한 채 closeout
-  - 이후엔 구조적인 downside improvement phase로 넘긴다
+  - 다음 structural lever:
+    - `defensive sleeve risk-off`
+  - 이유:
+    - idle cash drag를 줄이면서 downside를 보완할 가능성이 더 크기 때문이다
 
 ## 관련 결과 문서
 

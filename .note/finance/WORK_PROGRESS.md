@@ -146,3 +146,29 @@ Detailed historical logs were archived on `2026-04-13`.
     - `off` = survivor reweighting
     - `on` = rejected slots retained as cash
   - representative DB-backed rerun is still gated by local shadow-factor data availability
+
+### 2026-04-14
+- Ran the first Phase 17 representative rerun on real current anchors.
+- Cases:
+  - `Value` current practical anchor:
+    - `Top N = 14 + psr`
+    - `Trend Filter = on`
+    - `cash retention off/on`
+  - `Quality + Value` strongest practical point:
+    - strongest factor set
+    - `Trend Filter = on`
+    - `cash retention off/on`
+- Result:
+  - `partial cash retention` worked and materially lowered `MDD` in both families
+  - but both cases still stayed `hold / blocked`
+  - main pattern:
+    - downside improved strongly
+    - cash share rose materially
+    - return drag remained too large for practical gate rescue
+- Updated:
+  - Phase 17 representative rerun report
+  - strategy hubs
+  - strategy backtest logs
+  - current candidate summary
+- Next priority:
+  - `defensive sleeve risk-off` over another cash-only follow-up

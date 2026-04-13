@@ -119,6 +119,14 @@
 - `strategies/QUALITY_VALUE_STRICT_ANNUAL_POR_REPLACEMENT_CURRENT_CANDIDATE.md`
   - `operating_income_yield -> por` replacement를 더한 Phase 16 strongest practical blended candidate one-pager
 
+## Phase 17 Raw Archive
+
+- `phase17/README.md`
+  - Phase 17 structural downside-improvement archive 안내 문서
+- `phase17/PHASE17_PARTIAL_CASH_RETENTION_REPRESENTATIVE_RERUN_FIRST_PASS.md`
+  - strict annual `partial cash retention`을 실제 `Value` / `Quality + Value` anchor에 적용해
+    same-gate lower-MDD rescue가 가능한지 본 first-pass representative rerun 문서
+
 ## 운영 메모
 
 앞으로 새 report를 만들 때는:
