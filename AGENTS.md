@@ -46,6 +46,14 @@
   - `.note/finance/phase2/`
   - `.note/finance/phase3/`
   and continue the same pattern for later phases.
+- For repeated `finance` backtest-refinement work, use the repo-local hygiene helper when it is relevant:
+  - `python3 plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py`
+- Default moments to run it:
+  - after a meaningful refinement/document-sync unit
+  - before commit
+  - before phase closeout handoff
+- Treat it as a support tool, not a blocker:
+  - if the script is unavailable or not informative for the current diff, continue with manual review
 
 ## Progress Logging Rules
 - For non-trivial `finance` work, update `.note/finance/WORK_PROGRESS.md` as work progresses.
@@ -185,6 +193,7 @@
 - Do not include generated artifacts, run histories, local experiment CSVs, notebook scratch files, or other machine-local outputs unless the user explicitly asks for them.
 
 ## Change Review Checklist
+- For finance backtest refinement work, was `check_finance_refinement_hygiene.py` run when it would materially help?
 - Does this change affect the project-level overview, setup flow, or main UI surface described in `README.md`?
 - Does this change affect data source boundaries?
 - Does this change affect DB schema or table meaning?

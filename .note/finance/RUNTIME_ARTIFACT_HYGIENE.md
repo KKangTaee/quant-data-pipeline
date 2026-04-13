@@ -77,3 +77,15 @@ git 상태를 지저분하게 만들기 쉽다.
 4. git에 runtime artifact만 남아 있는지
 
 를 같이 본다.
+
+가능하면 이 점검은 아래 helper로 먼저 확인한다.
+
+```bash
+python3 plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py
+```
+
+현재 운영 기준으로는 Codex가 아래 시점에 이 스크립트를 우선적으로 돌리는 것이 권장된다.
+
+1. refinement 결과를 문서에 반영한 직후
+2. commit 직전
+3. phase closeout 직전

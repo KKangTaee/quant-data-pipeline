@@ -62,3 +62,13 @@ Detailed historical logs were archived on `2026-04-13`.
     - `finance-backtest-candidate-refinement`
   - first practical plugin script:
     - `plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py`
+
+### 2026-04-13
+- Promoted the finance refinement hygiene script into an explicit operating rule.
+- Synced:
+  - `AGENTS.md`
+  - `RUNTIME_ARTIFACT_HYGIENE.md`
+- Default usage points are now:
+  - after meaningful refinement/doc-sync units
+  - before commit
+  - before phase closeout

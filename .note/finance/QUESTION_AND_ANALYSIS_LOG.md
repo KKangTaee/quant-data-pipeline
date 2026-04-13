@@ -85,3 +85,18 @@ Detailed historical analysis was archived on `2026-04-13`.
     `check_finance_refinement_hygiene.py`
     를 붙여,
     refinement 이후 문서/산출물 정리가 빠진 곳을 빠르게 점검할 수 있게 하는 방향이 적절하다고 봤다
+
+### 2026-04-13 - finance refinement hygiene script는 앞으로 Codex가 필요 시 우선적으로 호출하는 운영 보조 도구로 본다
+- Request topic:
+  - 방금 만든 checklist script를 앞으로 어떻게 사용할지,
+    사용자 직접 호출용인지 Codex 자동 사용용인지 정리 요청
+- Interpreted goal:
+  - script를 일회성 도구가 아니라 운영 규칙으로 올릴지 결정
+- Result:
+  - 이 script는 사용자가 직접 실행할 수도 있지만,
+    기본 해석은 Codex가 refinement work unit 중 필요할 때 먼저 호출하는 운영 보조 도구로 두는 것이 맞다
+  - 권장 호출 시점은:
+    1. refinement 결과 문서 반영 직후
+    2. commit 직전
+    3. phase closeout 직전
+  - 이 기준을 `AGENTS.md`와 runtime hygiene 문서에 반영한다
