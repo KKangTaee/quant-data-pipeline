@@ -13,6 +13,30 @@ Do not copy full chat transcripts. Keep only the durable result.
 
 ## Entries
 
+### 2026-04-13 - 다음 우선순위는 기능 추가보다 downside-focused practical candidate refinement
+- Request topic:
+  - 지금 시점에서 무엇을 하는 것이 좋은지,
+    특히 더 낮은 `MDD`와 높은 수익률을 가지면서 실전 사용 가능한 전략을 찾는 것이 핵심이라는 방향 확인 요청
+- Interpreted goal:
+  - next phase 우선순위를
+    기능 확장보다 downside-focused practical candidate refinement로 두는 것이 맞는지 정리
+- Result:
+  - 현재 우선순위는 새로운 UI/기능 확장보다
+    `real_money_candidate` 또는 최소 `paper_probation` 이상을 유지하면서
+    `MDD`를 더 낮추는 bounded strategy refinement가 맞다고 판단했다
+  - 추천 순서는:
+    1. `Value` current balanced candidate (`Top N = 14 + psr`) downside follow-up
+    2. `Quality + Value` strongest practical point downside follow-up
+    3. `Quality`는 main winner라기보다 supporting/reference track으로 유지
+  - 현재 시점에서 피해야 할 방향은:
+    - blanket gate relaxation
+    - 새로운 대형 strategy family 추가
+    - operator workflow implementation을 최우선으로 올리는 것
+  - 먼저 stronger practical candidate를 더 확보한 뒤,
+    그 다음 consolidation / persistence를 여는 순서가 더 자연스럽다
+- Durable output:
+  - this analysis should guide the next phase direction after Phase 15 closeout
+
 ### 2026-04-13 - Phase 15가 구현 phase인지 실험 phase인지에 대한 정리
 - Request topic:
   - Phase 15는 백테스트 위주의 테스트만 한 것처럼 보이는데,
