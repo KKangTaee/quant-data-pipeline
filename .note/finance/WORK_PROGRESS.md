@@ -14,6 +14,12 @@ Keep entries append-only and concise.
 ## Entries
 
 ### 2026-04-13
+- Started Phase 16 `Value downside refinement` as a bounded follow-up from the Phase 15 closeout.
+- Ran a current-code grid around the `Top N = 14 + psr` anchor and confirmed it remains the best practical point.
+- Confirmed that overlay sensitivity is not a useful downside lever for this family because it degrades gate quality.
+- Added Phase 16 archive docs, current chapter TODO, and roadmap/index pointers so the bounded refinement can continue cleanly.
+
+### 2026-04-13
 - Rewrote the strategy-hub `대표 결과` and `실무 해석` sections in plainer Korean.
 - Focused on helping the reader answer:
   - which candidate is strongest

@@ -13,6 +13,18 @@ Do not copy full chat transcripts. Keep only the durable result.
 
 ## Entries
 
+### 2026-04-13 - Value downside refinement should stay bounded around the current practical anchor
+- Request topic:
+  - continue the next phase with a `Value`-first downside search, bounded by `Top N`, one-factor addition/replacement, and minimal overlay sensitivity
+- Interpreted goal:
+  - determine whether `Value > Strict Annual` can lower `MDD` further without losing `real_money_candidate / paper_probation / review_required`
+- Result:
+  - the bounded follow-up confirmed that `Top N = 14 + psr` remains the best current practical `Value` anchor
+  - one-factor additions/replacements such as `per`, `pbr`, `por`, `ev_ebit`, `fcf_yield`, and the bounded replacements tested did not improve the practical anchor
+  - minimal overlay sensitivity (`trend` / `market regime`) was not a useful downside lever because it quickly degraded gate quality
+- Durable output:
+  - Phase 16 should be treated as a bounded downside refinement track, not as a blanket gate-relaxation track
+
 ### 2026-04-13 - 다음 우선순위는 기능 추가보다 downside-focused practical candidate refinement
 - Request topic:
   - 지금 시점에서 무엇을 하는 것이 좋은지,

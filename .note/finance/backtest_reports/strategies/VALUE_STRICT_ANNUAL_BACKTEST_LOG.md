@@ -20,6 +20,55 @@
 
 ## 기록
 
+### 2026-04-13 - Phase 16 bounded downside refinement first pass
+
+- 목표:
+  - `Value > Strict Annual` current practical anchor(`Top N = 14 + psr`)를 기준으로
+    bounded하게 다시 탐색해서 `MDD`를 더 낮추되
+    `Promotion = real_money_candidate`, `Shortlist >= paper_probation`, `Deployment != blocked`
+    를 유지할 수 있는지 확인한다
+- 전략:
+  - `Value > Strict Annual`
+- 기간 / universe:
+  - `2016-01-01 ~ 2026-04-01`
+  - `US Statement Coverage 100`
+  - `Historical Dynamic PIT Universe`
+- bounded lever:
+  - `Top N = 12 / 13 / 14 / 15 / 16`
+  - one-factor addition:
+    - `psr`
+    - `per`
+    - `pbr`
+    - `por`
+    - `ev_ebit`
+    - `fcf_yield`
+  - replacement probe:
+    - `replace_sales_with_psr`
+    - `replace_ocf_with_psr`
+  - overlay sensitivity:
+    - `Trend Filter on/off`
+    - `Market Regime on/off`
+- 결과:
+  - best practical point remains `Top N = 14 + psr`
+  - `CAGR = 28.13%`
+  - `MDD = -24.55%`
+  - `Promotion = real_money_candidate`
+  - `Shortlist = paper_probation`
+  - `Deployment = review_required`
+  - `Validation = normal`
+  - `Rolling Review = watch`
+  - `Out-of-Sample Review = caution`
+- near alternatives:
+  - `replace_sales_with_psr_t14` matched `MDD = -24.55%` but lowered CAGR and weakened rolling quality
+  - `per`, `por`, `pbr`, `ev_ebit`, `fcf_yield` were all weaker on either drawdown or gate quality
+  - overlay on the anchor degraded gate quality and did not produce a better practical candidate
+- 해석:
+  - bounded follow-up did not find a better practical candidate than `psr` addition at `Top N = 14`
+  - current `Value` best practical anchor remains unchanged
+- 다음 액션:
+  - if needed, move the same downside refinement pattern to `Quality + Value`
+  - otherwise close the phase with `Top N = 14 + psr` as the current best practical point
+
 ### 2026-04-13 - factor addition second pass에서 psr candidate를 고정함
 
 - 목표:
