@@ -79,7 +79,7 @@ real-money 해석 핵심 구간:
 전략 refinement 결과를 남길 때는 보통 아래 순서로 간다.
 
 1. active phase 문서
-   - 예: [PHASE16_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase16/PHASE16_CURRENT_CHAPTER_TODO.md)
+   - 예: [PHASE17_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase17/PHASE17_CURRENT_CHAPTER_TODO.md)
 2. phase raw report
    - 예: `PHASE16_*_FIRST_PASS.md`
 3. strategy hub
@@ -106,11 +106,29 @@ real-money 해석 핵심 구간:
 
 - [CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md)
   - 지금 어떤 후보를 기준점으로 삼아야 하는지
-- [PHASE16_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase16/PHASE16_CURRENT_CHAPTER_TODO.md)
-  - 지금 active refinement가 어디까지 왔는지
+- [PHASE17_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase17/PHASE17_CURRENT_CHAPTER_TODO.md)
+  - 지금 active structural refinement가 어디까지 왔는지
 - [VALUE_STRICT_ANNUAL.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL.md)
 - [QUALITY_STRICT_ANNUAL.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/QUALITY_STRICT_ANNUAL.md)
 - [QUALITY_VALUE_STRICT_ANNUAL.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL.md)
+
+## 8. Phase 17에서 보는 구조 레버
+
+Phase 17부터는 bounded `Top N` / one-factor tweak을 반복하기보다
+아래 구조 레버를 먼저 본다.
+
+- partial overlay rejection을
+  `survivor reweighting`으로 둘지
+  `cash retention`으로 바꿀지
+- risk-off를
+  `cash only`로 둘지
+  defensive sleeve로 바꿀지
+- equal-weight top-N을
+  concentration-aware weighting으로 바꿀지
+
+그리고 `Compare / Weighted Portfolio / Saved Portfolio`는
+즉시 새 `promotion / shortlist / deployment`를 만드는 계층이 아니라,
+이미 살아 있는 후보를 비교하고 묶는 operator bridge로 읽는다.
 
 ## 한 줄 요약
 

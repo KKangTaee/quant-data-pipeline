@@ -13,7 +13,7 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Active Pointers
 
 - current phase board:
-  - [PHASE16_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase16/PHASE16_CURRENT_CHAPTER_TODO.md)
+  - [PHASE17_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase17/PHASE17_CURRENT_CHAPTER_TODO.md)
 - current candidate summary:
   - [CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md)
 - historical full archive:
@@ -98,3 +98,20 @@ Detailed historical logs were archived on `2026-04-13`.
 - Durable note:
   - weighted bundles do not create new real-money / promotion / shortlist / deployment semantics on their own
   - Phase 17 should document them as operator bridges, not as independent candidate gates
+
+### 2026-04-14
+- Opened Phase 17 as a structural downside-improvement phase.
+- Synced:
+  - phase kickoff plan
+  - current board
+  - structural lever inventory first pass
+  - candidate consolidation fit review first pass
+  - code-flow guide
+  - repo-local refinement skill reference
+- Current reading:
+  - immediate main track:
+    - strict annual structural downside levers
+  - secondary/supporting track:
+    - weighted portfolio / saved portfolio as operator bridge
+- Current first-slice recommendation:
+  - `partial cash retention` before broader defensive-sleeve or weighting redesign

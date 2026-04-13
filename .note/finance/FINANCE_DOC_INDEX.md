@@ -735,6 +735,16 @@ Phase 4 시작 시:
 
 ## Latest Additions
 
+- `.note/finance/phase17/README.md`
+  - Phase 17 structural downside improvement current chapter 안내 문서
+- `.note/finance/phase17/PHASE17_STRUCTURAL_DOWNSIDE_IMPROVEMENT_PLAN.md`
+  - Phase 17 structural downside improvement kickoff plan 문서
+- `.note/finance/phase17/PHASE17_CURRENT_CHAPTER_TODO.md`
+  - Phase 17 current board 문서
+- `.note/finance/phase17/PHASE17_STRUCTURAL_LEVER_INVENTORY_FIRST_PASS.md`
+  - strict annual 구조 레버를 current code 기준으로 inventory한 first-pass 문서
+- `.note/finance/phase17/PHASE17_CANDIDATE_CONSOLIDATION_FIT_REVIEW_FIRST_PASS.md`
+  - weighted portfolio / saved portfolio를 operator bridge로 읽어야 하는지 정리한 first-pass 문서
 - `.note/finance/phase15/PHASE15_CANDIDATE_QUALITY_IMPROVEMENT_PLAN.md`
   - Phase 15 candidate quality improvement 상위 계획 문서
 - `.note/finance/phase15/PHASE15_CURRENT_CHAPTER_TODO.md`
@@ -766,6 +776,16 @@ Phase 4 시작 시:
   - `Value > Strict Annual` lower-MDD near-miss rescue second pass canonical backtest report
 - `.note/finance/backtest_reports/phase16/PHASE16_QUALITY_VALUE_STRONGEST_POINT_DOWNSIDE_FOLLOWUP_SECOND_PASS.md`
   - `Quality + Value > Strict Annual` strongest practical point를 current code 기준으로 다시 확인한 second-pass backtest report
+- `.note/finance/phase17/README.md`
+  - Phase 17 structural downside improvement current chapter 안내 문서
+- `.note/finance/phase17/PHASE17_STRUCTURAL_DOWNSIDE_IMPROVEMENT_PLAN.md`
+  - Phase 17 structural downside improvement kickoff plan 문서
+- `.note/finance/phase17/PHASE17_CURRENT_CHAPTER_TODO.md`
+  - Phase 17 current board 문서
+- `.note/finance/phase17/PHASE17_STRUCTURAL_LEVER_INVENTORY_FIRST_PASS.md`
+  - strict annual 구조 레버를 current code 기준으로 inventory한 first-pass 문서
+- `.note/finance/phase17/PHASE17_CANDIDATE_CONSOLIDATION_FIT_REVIEW_FIRST_PASS.md`
+  - weighted portfolio / saved portfolio를 operator bridge로 읽어야 하는지 정리한 first-pass 문서
 - `.note/finance/backtest_reports/phase15/README.md`
   - Phase 15 backtest archive 안내 문서
 - `.note/finance/backtest_reports/phase15/PHASE15_VALUE_DOWNSIDE_IMPROVEMENT_SEARCH_FIRST_PASS.md`

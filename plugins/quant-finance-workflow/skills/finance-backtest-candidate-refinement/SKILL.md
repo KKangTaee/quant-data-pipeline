@@ -17,6 +17,7 @@ Use this skill when the task is one of:
 - bounded `Top N` follow-up
 - one-factor addition or replacement around a current anchor
 - downside-focused candidate refinement
+- structural downside-improvement kickoff or follow-up
 - same-gate vs weaker-gate near-miss comparison
 - updating phase report + strategy hub + one-pager + backtest log together
 - re-establishing repo context before the next refinement cycle
@@ -50,6 +51,13 @@ Prefer narrow follow-ups such as:
 - benchmark sensitivity
 - minimal overlay sensitivity
 - rescue attempt for a lower-MDD weaker-gate near-miss
+
+When bounded refinement has already closed out, switch to
+`structural downside-improvement` framing:
+
+- identify current architectural levers first
+- separate immediate candidate work from operator-bridge work
+- choose one implementation slice before reopening broad search
 
 Do not jump to blanket gate relaxation or large family redesign unless the user explicitly asks.
 

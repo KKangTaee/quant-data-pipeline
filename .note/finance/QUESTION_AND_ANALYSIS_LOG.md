@@ -13,7 +13,7 @@ Detailed historical analysis was archived on `2026-04-13`.
 ## Active Pointers
 
 - current phase board:
-  - [PHASE16_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase16/PHASE16_CURRENT_CHAPTER_TODO.md)
+  - [PHASE17_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase17/PHASE17_CURRENT_CHAPTER_TODO.md)
 - current candidate summary:
   - [CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md)
 - historical full archive:
@@ -141,3 +141,24 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Phase 17에서는 compare -> weighted builder -> saved portfolio -> rerun bridge를
     "후보 개선을 묶는 operator workflow"로 설명하되,
     실전 gate를 대체하는 계층으로 쓰면 안 된다는 점을 명시해야 한다
+
+### 2026-04-14 - Phase 17은 bounded tweak 이후 structural downside improvement를 current code 기준으로 좁히는 phase로 여는 것이 맞다
+- Request topic:
+  - Phase 16 closeout 이후 다음 단계 진행
+- Interpreted goal:
+  - 지금부터는 어떤 구조 레버를 우선순위로 볼지와,
+    candidate consolidation을 메인/보조 중 어디에 둘지 정리
+- Result:
+  - strict annual current code 기준으로 가장 먼저 볼 구조 레버는:
+    - `partial cash retention`
+    - `defensive sleeve risk-off`
+    - `concentration-aware weighting`
+  - 이 중 first implementation slice 추천은
+    `partial cash retention`이다
+    - 이유:
+      - current architecture와 가장 가깝고
+      - `Value`와 `Quality + Value` 둘 다에 공통 적용 가능하며
+      - lower-MDD same-gate rescue와 직접 맞닿아 있다
+  - weighted portfolio / saved portfolio는 유용하지만
+    immediate practical-candidate work의 메인 트랙은 아니고
+    operator bridge 보조 트랙으로 두는 편이 맞다
