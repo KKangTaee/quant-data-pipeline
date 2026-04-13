@@ -77,6 +77,7 @@ from finance.sample import (
     STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD,
     STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD,
     STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
+    STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
     STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED,
     STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD,
     STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
@@ -582,6 +583,8 @@ def _init_backtest_state() -> None:
         st.session_state["qss_trend_filter_enabled"] = STRICT_TREND_FILTER_DEFAULT_ENABLED
     if "qss_trend_filter_window" not in st.session_state:
         st.session_state["qss_trend_filter_window"] = STRICT_TREND_FILTER_DEFAULT_WINDOW
+    if "qss_partial_cash_retention_enabled" not in st.session_state:
+        st.session_state["qss_partial_cash_retention_enabled"] = STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED
     if "qss_market_regime_enabled" not in st.session_state:
         st.session_state["qss_market_regime_enabled"] = STRICT_MARKET_REGIME_DEFAULT_ENABLED
     if "qss_market_regime_window" not in st.session_state:
@@ -640,6 +643,8 @@ def _init_backtest_state() -> None:
         st.session_state["vss_trend_filter_enabled"] = STRICT_TREND_FILTER_DEFAULT_ENABLED
     if "vss_trend_filter_window" not in st.session_state:
         st.session_state["vss_trend_filter_window"] = STRICT_TREND_FILTER_DEFAULT_WINDOW
+    if "vss_partial_cash_retention_enabled" not in st.session_state:
+        st.session_state["vss_partial_cash_retention_enabled"] = STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED
     if "vss_market_regime_enabled" not in st.session_state:
         st.session_state["vss_market_regime_enabled"] = STRICT_MARKET_REGIME_DEFAULT_ENABLED
     if "vss_market_regime_window" not in st.session_state:
@@ -698,6 +703,8 @@ def _init_backtest_state() -> None:
         st.session_state["qvss_trend_filter_enabled"] = STRICT_TREND_FILTER_DEFAULT_ENABLED
     if "qvss_trend_filter_window" not in st.session_state:
         st.session_state["qvss_trend_filter_window"] = STRICT_TREND_FILTER_DEFAULT_WINDOW
+    if "qvss_partial_cash_retention_enabled" not in st.session_state:
+        st.session_state["qvss_partial_cash_retention_enabled"] = STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED
     if "qvss_market_regime_enabled" not in st.session_state:
         st.session_state["qvss_market_regime_enabled"] = STRICT_MARKET_REGIME_DEFAULT_ENABLED
     if "qvss_market_regime_window" not in st.session_state:
@@ -1173,7 +1180,14 @@ def _render_inline_help_popover(title: str, body: str) -> None:
 def _render_trend_filter_help_popover() -> None:
     _render_inline_help_popover(
         "추세 필터 오버레이",
-        "월말 리밸런싱 시점에만 확인하는 1차 버전입니다. 예를 들어 랭킹으로 A와 B가 뽑혔는데, 리밸런싱 당일 A는 200일 이동평균선 아래이고 B는 위에 있으면 A 비중은 현금으로 두고 B만 다음 리밸런싱까지 보유합니다. 일별로 중간 점검하는 구조는 아닙니다.",
+        "월말 리밸런싱 시점에만 확인하는 1차 버전입니다. 예를 들어 랭킹으로 A와 B가 뽑혔는데, 리밸런싱 당일 A는 200일 이동평균선 아래이고 B는 위에 있으면 A는 제외됩니다. strict annual form에서는 `Partial Cash Retention` 옵션으로 A 자리 비중을 현금으로 남길지, 아니면 살아남은 종목들에 다시 100% 재배분할지 고를 수 있습니다. 일별로 중간 점검하는 구조는 아닙니다.",
+    )
+
+
+def _render_partial_cash_retention_help_popover() -> None:
+    _render_inline_help_popover(
+        "부분 현금 유지",
+        "Strict annual 1차 구조 레버입니다. Trend Filter가 일부 종목만 탈락시켰을 때, 탈락한 슬롯 비중을 현금으로 남길지 여부를 정합니다. 예를 들어 Top N이 10이고 그중 2개가 추세 필터에서 탈락하면, 이 옵션을 켰을 때는 20%를 현금으로 두고 8개만 보유합니다. 끄면 살아남은 8개에 다시 100% 재배분합니다. 현재는 Trend Filter의 부분 탈락에만 적용되고, market regime나 guardrail의 전체 risk-off는 여전히 전부 현금 처리합니다.",
     )
 
 
@@ -2719,6 +2733,7 @@ def _strategy_compare_defaults(strategy_name: str) -> dict:
             "extra": {
                 "quality_factors": QUALITY_STRICT_DEFAULT_FACTORS,
                 "top_n": 2,
+                "partial_cash_retention_enabled": STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
                 "min_price_filter": ETF_REAL_MONEY_DEFAULT_MIN_PRICE,
                 "min_history_months_filter": STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS,
                 "min_avg_dollar_volume_20d_m_filter": STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M,
@@ -2758,6 +2773,7 @@ def _strategy_compare_defaults(strategy_name: str) -> dict:
             "extra": {
                 "value_factors": VALUE_STRICT_DEFAULT_FACTORS,
                 "top_n": 10,
+                "partial_cash_retention_enabled": STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
                 "min_price_filter": ETF_REAL_MONEY_DEFAULT_MIN_PRICE,
                 "min_history_months_filter": STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS,
                 "min_avg_dollar_volume_20d_m_filter": STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M,
@@ -2798,6 +2814,7 @@ def _strategy_compare_defaults(strategy_name: str) -> dict:
                 "quality_factors": QUALITY_STRICT_DEFAULT_FACTORS,
                 "value_factors": VALUE_STRICT_DEFAULT_FACTORS,
                 "top_n": 10,
+                "partial_cash_retention_enabled": STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
                 "min_price_filter": ETF_REAL_MONEY_DEFAULT_MIN_PRICE,
                 "min_history_months_filter": STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS,
                 "min_avg_dollar_volume_20d_m_filter": STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M,
@@ -6307,6 +6324,9 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         )
         st.session_state["qss_trend_filter_enabled"] = bool(payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED))
         st.session_state["qss_trend_filter_window"] = int(payload.get("trend_filter_window") or STRICT_TREND_FILTER_DEFAULT_WINDOW)
+        st.session_state["qss_partial_cash_retention_enabled"] = bool(
+            payload.get("partial_cash_retention_enabled", STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED)
+        )
         st.session_state["qss_market_regime_enabled"] = bool(payload.get("market_regime_enabled", STRICT_MARKET_REGIME_DEFAULT_ENABLED))
         st.session_state["qss_market_regime_window"] = int(payload.get("market_regime_window") or STRICT_MARKET_REGIME_DEFAULT_WINDOW)
         st.session_state["qss_market_regime_benchmark"] = payload.get("market_regime_benchmark") or STRICT_MARKET_REGIME_DEFAULT_BENCHMARK
@@ -6403,6 +6423,9 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         )
         st.session_state["vss_trend_filter_enabled"] = bool(payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED))
         st.session_state["vss_trend_filter_window"] = int(payload.get("trend_filter_window") or STRICT_TREND_FILTER_DEFAULT_WINDOW)
+        st.session_state["vss_partial_cash_retention_enabled"] = bool(
+            payload.get("partial_cash_retention_enabled", STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED)
+        )
         st.session_state["vss_market_regime_enabled"] = bool(payload.get("market_regime_enabled", STRICT_MARKET_REGIME_DEFAULT_ENABLED))
         st.session_state["vss_market_regime_window"] = int(payload.get("market_regime_window") or STRICT_MARKET_REGIME_DEFAULT_WINDOW)
         st.session_state["vss_market_regime_benchmark"] = payload.get("market_regime_benchmark") or STRICT_MARKET_REGIME_DEFAULT_BENCHMARK
@@ -6500,6 +6523,9 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         )
         st.session_state["qvss_trend_filter_enabled"] = bool(payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED))
         st.session_state["qvss_trend_filter_window"] = int(payload.get("trend_filter_window") or STRICT_TREND_FILTER_DEFAULT_WINDOW)
+        st.session_state["qvss_partial_cash_retention_enabled"] = bool(
+            payload.get("partial_cash_retention_enabled", STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED)
+        )
         st.session_state["qvss_market_regime_enabled"] = bool(payload.get("market_regime_enabled", STRICT_MARKET_REGIME_DEFAULT_ENABLED))
         st.session_state["qvss_market_regime_window"] = int(payload.get("market_regime_window") or STRICT_MARKET_REGIME_DEFAULT_WINDOW)
         st.session_state["qvss_market_regime_benchmark"] = payload.get("market_regime_benchmark") or STRICT_MARKET_REGIME_DEFAULT_BENCHMARK
@@ -6702,9 +6728,14 @@ def _build_snapshot_selection_history(result_df: pd.DataFrame) -> pd.DataFrame:
         if selected_count <= 0 and rejected_count > 0:
             return f"Trend overlay rejected all {raw_count} raw candidates, so the portfolio moved fully to cash."
         if rejected_count > 0:
+            partial_cash_retention_active = bool(row.get("Partial Cash Retention Active") or False)
             return (
-                f"Trend overlay kept {selected_count} of {raw_count} raw candidates and sent "
-                f"{rejected_count} name(s) to cash. Cash share after rebalance: {cash_share_text}."
+                f"Trend overlay kept {selected_count} of {raw_count} raw candidates and "
+                + (
+                    f"left {rejected_count} rejected slot(s) in cash. Cash share after rebalance: {cash_share_text}."
+                    if partial_cash_retention_active
+                    else f"reweighted the survivors after rejecting {rejected_count} name(s). Cash share after rebalance: {cash_share_text}."
+                )
             )
         if pd.notna(cash_share) and float(cash_share) > 0:
             return (
@@ -7488,6 +7519,7 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> None:
                     promotion_max_drawdown_gap_vs_benchmark=payload.get("promotion_max_drawdown_gap_vs_benchmark", STRICT_PROMOTION_DEFAULT_MAX_DRAWDOWN_GAP_VS_BENCHMARK),
                     trend_filter_enabled=payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED),
                     trend_filter_window=payload.get("trend_filter_window", STRICT_TREND_FILTER_DEFAULT_WINDOW),
+                    partial_cash_retention_enabled=payload.get("partial_cash_retention_enabled", STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED),
                     market_regime_enabled=payload.get("market_regime_enabled", STRICT_MARKET_REGIME_DEFAULT_ENABLED),
                     market_regime_window=payload.get("market_regime_window", STRICT_MARKET_REGIME_DEFAULT_WINDOW),
                     market_regime_benchmark=payload.get("market_regime_benchmark", STRICT_MARKET_REGIME_DEFAULT_BENCHMARK),
@@ -7550,6 +7582,7 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> None:
                     promotion_max_drawdown_gap_vs_benchmark=payload.get("promotion_max_drawdown_gap_vs_benchmark", STRICT_PROMOTION_DEFAULT_MAX_DRAWDOWN_GAP_VS_BENCHMARK),
                     trend_filter_enabled=payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED),
                     trend_filter_window=payload.get("trend_filter_window", STRICT_TREND_FILTER_DEFAULT_WINDOW),
+                    partial_cash_retention_enabled=payload.get("partial_cash_retention_enabled", STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED),
                     market_regime_enabled=payload.get("market_regime_enabled", STRICT_MARKET_REGIME_DEFAULT_ENABLED),
                     market_regime_window=payload.get("market_regime_window", STRICT_MARKET_REGIME_DEFAULT_WINDOW),
                     market_regime_benchmark=payload.get("market_regime_benchmark", STRICT_MARKET_REGIME_DEFAULT_BENCHMARK),
@@ -7613,6 +7646,7 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> None:
                     promotion_max_drawdown_gap_vs_benchmark=payload.get("promotion_max_drawdown_gap_vs_benchmark", STRICT_PROMOTION_DEFAULT_MAX_DRAWDOWN_GAP_VS_BENCHMARK),
                     trend_filter_enabled=payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED),
                     trend_filter_window=payload.get("trend_filter_window", STRICT_TREND_FILTER_DEFAULT_WINDOW),
+                    partial_cash_retention_enabled=payload.get("partial_cash_retention_enabled", STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED),
                     market_regime_enabled=payload.get("market_regime_enabled", STRICT_MARKET_REGIME_DEFAULT_ENABLED),
                     market_regime_window=payload.get("market_regime_window", STRICT_MARKET_REGIME_DEFAULT_WINDOW),
                     market_regime_benchmark=payload.get("market_regime_benchmark", STRICT_MARKET_REGIME_DEFAULT_BENCHMARK),
@@ -8385,6 +8419,13 @@ def _render_quality_snapshot_strict_annual_form() -> None:
                         key="qss_trend_filter_window",
                     )
                 )
+                partial_cash_retention_enabled = st.checkbox(
+                    "Retain Rejected Slots As Cash",
+                    value=STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
+                    key="qss_partial_cash_retention_enabled",
+                    help="Trend Filter가 일부 종목만 탈락시켰을 때, 탈락한 슬롯 비중을 현금으로 남깁니다. 끄면 살아남은 종목들에 다시 100% 재배분합니다.",
+                )
+                _render_partial_cash_retention_help_popover()
                 market_regime_enabled, market_regime_window, market_regime_benchmark = _render_market_regime_overlay_inputs(
                     key_prefix="qss",
                     label_prefix="",
@@ -8458,6 +8499,7 @@ def _render_quality_snapshot_strict_annual_form() -> None:
         "quality_factors": quality_factors,
         "trend_filter_enabled": bool(trend_filter_enabled),
         "trend_filter_window": int(trend_filter_window),
+        "partial_cash_retention_enabled": bool(partial_cash_retention_enabled),
         "market_regime_enabled": bool(market_regime_enabled),
         "market_regime_window": int(market_regime_window),
         "market_regime_benchmark": market_regime_benchmark,
@@ -8983,6 +9025,13 @@ def _render_value_snapshot_strict_annual_form() -> None:
                         key="vss_trend_filter_window",
                     )
                 )
+                partial_cash_retention_enabled = st.checkbox(
+                    "Retain Rejected Slots As Cash",
+                    value=STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
+                    key="vss_partial_cash_retention_enabled",
+                    help="Trend Filter가 일부 종목만 탈락시켰을 때, 탈락한 슬롯 비중을 현금으로 남깁니다. 끄면 살아남은 종목들에 다시 100% 재배분합니다.",
+                )
+                _render_partial_cash_retention_help_popover()
                 market_regime_enabled, market_regime_window, market_regime_benchmark = _render_market_regime_overlay_inputs(
                     key_prefix="vss",
                     label_prefix="",
@@ -9057,6 +9106,7 @@ def _render_value_snapshot_strict_annual_form() -> None:
         "value_factors": value_factors,
         "trend_filter_enabled": bool(trend_filter_enabled),
         "trend_filter_window": int(trend_filter_window),
+        "partial_cash_retention_enabled": bool(partial_cash_retention_enabled),
         "market_regime_enabled": bool(market_regime_enabled),
         "market_regime_window": int(market_regime_window),
         "market_regime_benchmark": market_regime_benchmark,
@@ -9416,6 +9466,13 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
                         key="qvss_trend_filter_window",
                     )
                 )
+                partial_cash_retention_enabled = st.checkbox(
+                    "Retain Rejected Slots As Cash",
+                    value=STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
+                    key="qvss_partial_cash_retention_enabled",
+                    help="Trend Filter가 일부 종목만 탈락시켰을 때, 탈락한 슬롯 비중을 현금으로 남깁니다. 끄면 살아남은 종목들에 다시 100% 재배분합니다.",
+                )
+                _render_partial_cash_retention_help_popover()
                 market_regime_enabled, market_regime_window, market_regime_benchmark = _render_market_regime_overlay_inputs(
                     key_prefix="qvss",
                     label_prefix="",
@@ -9493,6 +9550,7 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
         "value_factors": value_factors,
         "trend_filter_enabled": bool(trend_filter_enabled),
         "trend_filter_window": int(trend_filter_window),
+        "partial_cash_retention_enabled": bool(partial_cash_retention_enabled),
         "market_regime_enabled": bool(market_regime_enabled),
         "market_regime_window": int(market_regime_window),
         "market_regime_benchmark": market_regime_benchmark,
@@ -10055,6 +10113,12 @@ def render_backtest_tab() -> None:
                                     key="compare_qss_trend_filter_window",
                                 )
                             )
+                            compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["partial_cash_retention_enabled"] = st.checkbox(
+                                "Retain Rejected Slots As Cash",
+                                value=STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
+                                key="compare_qss_partial_cash_retention_enabled",
+                                help="Trend Filter가 일부 종목만 탈락시켰을 때, 탈락한 슬롯 비중을 현금으로 남깁니다.",
+                            )
                             (
                                 compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["market_regime_enabled"],
                                 compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["market_regime_window"],
@@ -10280,6 +10344,12 @@ def render_backtest_tab() -> None:
                                     step=10,
                                     key="compare_vss_trend_filter_window",
                                 )
+                            )
+                            compare_strategy_overrides["Value Snapshot (Strict Annual)"]["partial_cash_retention_enabled"] = st.checkbox(
+                                "Retain Rejected Slots As Cash",
+                                value=STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
+                                key="compare_vss_partial_cash_retention_enabled",
+                                help="Trend Filter가 일부 종목만 탈락시켰을 때, 탈락한 슬롯 비중을 현금으로 남깁니다.",
                             )
                             (
                                 compare_strategy_overrides["Value Snapshot (Strict Annual)"]["market_regime_enabled"],
@@ -10512,6 +10582,12 @@ def render_backtest_tab() -> None:
                                     step=10,
                                     key="compare_qvss_trend_filter_window",
                                 )
+                            )
+                            compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["partial_cash_retention_enabled"] = st.checkbox(
+                                "Retain Rejected Slots As Cash",
+                                value=STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
+                                key="compare_qvss_partial_cash_retention_enabled",
+                                help="Trend Filter가 일부 종목만 탈락시켰을 때, 탈락한 슬롯 비중을 현금으로 남깁니다.",
                             )
                             (
                                 compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["market_regime_enabled"],

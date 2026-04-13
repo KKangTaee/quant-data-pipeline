@@ -128,6 +128,8 @@ Phase 17부터는 bounded `Top N` / one-factor tweak을 반복하기보다
 
 그리고 `Compare / Weighted Portfolio / Saved Portfolio`는
 즉시 새 `promotion / shortlist / deployment`를 만드는 계층이 아니라,
+first slice가 이미 구현된 레버는 `partial cash retention`이고,
+다음 active question은 이것이 strongest/current anchor에서 실제로 same-gate lower-MDD rescue로 이어지는지 representative rerun으로 다시 확인하는 것이다.
 이미 살아 있는 후보를 비교하고 묶는 operator bridge로 읽는다.
 
 ## 한 줄 요약

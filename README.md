@@ -51,6 +51,8 @@ DB-backed market data ingestion, factor generation, and strategy backtesting wor
   - `Quality`
   - `Value`
   - `Quality + Value`
+  - strict annual trend overlay는 now optional `partial cash retention`을 받아,
+    일부 추세 탈락 슬롯을 survivor reweighting 대신 현금으로 남기는 구조 실험이 가능
 - 실전형 해석 surface
   - `Promotion`
   - `Shortlist`

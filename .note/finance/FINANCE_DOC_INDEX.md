@@ -218,6 +218,16 @@
   - `DBC`를 완전히 제외한 GTAA 10개 변형을 `Signal Interval = 1` 계약으로 비교하고, no-DBC 환경에서 더 나은 `CAGR`/`MDD` 조합과 개선 방향을 정리한 분석 문서
 - `.note/finance/phase12/PHASE12_GTAA_DB_ETF_GROUP_SEARCH.md`
   - 현재 GTAA 기본 계약(`top=3`, `interval=2`, `month_end`, `10 bps`)을 유지한 채 DB-backed ETF 그룹 18개를 비교하고, `QQQ + IAU + XLE` 중심의 개선 방향을 도출한 분석 문서
+- `.note/finance/phase17/PHASE17_STRUCTURAL_DOWNSIDE_IMPROVEMENT_PLAN.md`
+  - Phase 17 전체 structural downside-improvement 상위 계획 문서
+- `.note/finance/phase17/PHASE17_CURRENT_CHAPTER_TODO.md`
+  - Phase 17 현재 실행 보드로, structural lever inventory / implementation slice / representative rerun 다음 단계를 관리하는 문서
+- `.note/finance/phase17/PHASE17_STRUCTURAL_LEVER_INVENTORY_FIRST_PASS.md`
+  - strict annual current code 기준 구조 레버를 inventory 형태로 정리한 first-pass 문서
+- `.note/finance/phase17/PHASE17_CANDIDATE_CONSOLIDATION_FIT_REVIEW_FIRST_PASS.md`
+  - compare / weighted portfolio / saved portfolio가 immediate practical-candidate work의 메인 트랙인지 보조 트랙인지 판단한 문서
+- `.note/finance/phase17/PHASE17_PARTIAL_CASH_RETENTION_IMPLEMENTATION_FIRST_SLICE.md`
+  - strict annual family에 partial cash retention contract를 실제 코드로 연결한 first implementation slice 문서
 - `.note/finance/phase12/PHASE12_GTAA_INTERVAL1_DEFAULT_REBASE_ANALYSIS.md`
   - GTAA 기본 `Signal Interval`을 `1`로 rebased 한 뒤, 주요 preset과 상위 후보군을 공통 시작점에서 다시 비교해 현재 default cadence 기준의 우선순위를 정리한 문서
 - `.note/finance/phase12/PHASE12_GTAA_SCORE_WEIGHT_AND_RISK_OFF_FIRST_PASS.md`
@@ -745,6 +755,8 @@ Phase 4 시작 시:
   - strict annual 구조 레버를 current code 기준으로 inventory한 first-pass 문서
 - `.note/finance/phase17/PHASE17_CANDIDATE_CONSOLIDATION_FIT_REVIEW_FIRST_PASS.md`
   - weighted portfolio / saved portfolio를 operator bridge로 읽어야 하는지 정리한 first-pass 문서
+- `.note/finance/phase17/PHASE17_PARTIAL_CASH_RETENTION_IMPLEMENTATION_FIRST_SLICE.md`
+  - strict annual partial cash retention contract를 실제 코드에 연결한 first implementation slice 문서
 - `.note/finance/phase15/PHASE15_CANDIDATE_QUALITY_IMPROVEMENT_PLAN.md`
   - Phase 15 candidate quality improvement 상위 계획 문서
 - `.note/finance/phase15/PHASE15_CURRENT_CHAPTER_TODO.md`

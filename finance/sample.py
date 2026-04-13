@@ -80,6 +80,7 @@ VALUE_STRICT_DEFAULT_FACTORS = [
 
 STRICT_TREND_FILTER_DEFAULT_ENABLED = False
 STRICT_TREND_FILTER_DEFAULT_WINDOW = 200
+STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED = False
 STRICT_MARKET_REGIME_DEFAULT_ENABLED = False
 STRICT_MARKET_REGIME_DEFAULT_WINDOW = 200
 STRICT_MARKET_REGIME_DEFAULT_BENCHMARK = "SPY"
@@ -1667,6 +1668,7 @@ def _run_statement_shadow_snapshot_from_db(
     lower_is_better_factors: list[str] | None = None,
     trend_filter_enabled=False,
     trend_filter_window=STRICT_TREND_FILTER_DEFAULT_WINDOW,
+    partial_cash_retention_enabled: bool = STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
     market_regime_enabled=False,
     market_regime_window=STRICT_MARKET_REGIME_DEFAULT_WINDOW,
     market_regime_benchmark=STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
@@ -1811,6 +1813,7 @@ def _run_statement_shadow_snapshot_from_db(
         rebalance_interval=rebalance_interval,
         trend_filter_enabled=trend_filter_enabled,
         trend_filter_window=trend_filter_window,
+        partial_cash_retention_enabled=partial_cash_retention_enabled,
         market_regime_enabled=market_regime_enabled,
         market_regime_window=market_regime_window,
         market_regime_benchmark=market_regime_benchmark,
@@ -1864,6 +1867,7 @@ def get_statement_quality_snapshot_shadow_from_db(
     min_avg_dollar_volume_20d_m: float = STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M,
     trend_filter_enabled=False,
     trend_filter_window=STRICT_TREND_FILTER_DEFAULT_WINDOW,
+    partial_cash_retention_enabled: bool = STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
     market_regime_enabled=False,
     market_regime_window=STRICT_MARKET_REGIME_DEFAULT_WINDOW,
     market_regime_benchmark=STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
@@ -1899,6 +1903,7 @@ def get_statement_quality_snapshot_shadow_from_db(
         rebalance_interval=rebalance_interval,
         trend_filter_enabled=trend_filter_enabled,
         trend_filter_window=trend_filter_window,
+        partial_cash_retention_enabled=partial_cash_retention_enabled,
         market_regime_enabled=market_regime_enabled,
         market_regime_window=market_regime_window,
         market_regime_benchmark=market_regime_benchmark,
@@ -1933,6 +1938,7 @@ def get_statement_value_snapshot_shadow_from_db(
     min_avg_dollar_volume_20d_m: float = STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M,
     trend_filter_enabled=False,
     trend_filter_window=STRICT_TREND_FILTER_DEFAULT_WINDOW,
+    partial_cash_retention_enabled: bool = STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
     market_regime_enabled=False,
     market_regime_window=STRICT_MARKET_REGIME_DEFAULT_WINDOW,
     market_regime_benchmark=STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
@@ -1968,6 +1974,7 @@ def get_statement_value_snapshot_shadow_from_db(
         lower_is_better_factors=["per", "pbr", "psr", "pcr", "pfcr", "ev_ebit", "por"],
         trend_filter_enabled=trend_filter_enabled,
         trend_filter_window=trend_filter_window,
+        partial_cash_retention_enabled=partial_cash_retention_enabled,
         market_regime_enabled=market_regime_enabled,
         market_regime_window=market_regime_window,
         market_regime_benchmark=market_regime_benchmark,
@@ -2003,6 +2010,7 @@ def get_statement_quality_value_snapshot_shadow_from_db(
     min_avg_dollar_volume_20d_m: float = STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M,
     trend_filter_enabled=False,
     trend_filter_window=STRICT_TREND_FILTER_DEFAULT_WINDOW,
+    partial_cash_retention_enabled: bool = STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
     market_regime_enabled=False,
     market_regime_window=STRICT_MARKET_REGIME_DEFAULT_WINDOW,
     market_regime_benchmark=STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
@@ -2057,6 +2065,7 @@ def get_statement_quality_value_snapshot_shadow_from_db(
         ],
         trend_filter_enabled=trend_filter_enabled,
         trend_filter_window=trend_filter_window,
+        partial_cash_retention_enabled=partial_cash_retention_enabled,
         market_regime_enabled=market_regime_enabled,
         market_regime_window=market_regime_window,
         market_regime_benchmark=market_regime_benchmark,

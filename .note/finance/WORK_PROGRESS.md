@@ -128,3 +128,21 @@ Detailed historical logs were archived on `2026-04-13`.
 - Durable takeaway:
   - new strategy work is still planned,
     but it is intentionally behind the current `Value / Quality + Value` structural downside-improvement track
+
+### 2026-04-14
+- Implemented the first Phase 17 structural lever slice:
+  - strict annual `partial cash retention`
+- Wired through:
+  - `finance.strategy.quality_snapshot_equal_weight(...)`
+  - strict annual DB-backed sample/runtime wrappers
+  - strict annual single / compare forms
+  - selection interpretation / warnings / input params
+- Current rule:
+  - applies only when `Trend Filter` partially rejects raw selected names
+  - does not replace full-cash `market regime` / guardrail risk-off behavior
+- Verification:
+  - `py_compile` passed
+  - synthetic smoke confirmed
+    - `off` = survivor reweighting
+    - `on` = rejected slots retained as cash
+  - representative DB-backed rerun is still gated by local shadow-factor data availability

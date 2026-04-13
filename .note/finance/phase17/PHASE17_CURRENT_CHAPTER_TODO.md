@@ -19,7 +19,7 @@
 - [x] current code 기준 구조 레버 inventory first pass
 - [x] overlay / guardrail / weighting / benchmark contract 구분
 - [x] strict annual current architecture에서 무엇이 already-implemented인지 정리
-- [ ] first implementation slice 하나로 축소
+- [x] first implementation slice 하나로 축소
 
 ## Workstream B. Candidate Consolidation Fit Review
 
@@ -31,9 +31,15 @@
 
 후보:
 
-- [ ] strict annual partial cash retention contract
+- [x] strict annual partial cash retention contract
 - [ ] strict annual defensive sleeve risk-off contract
 - [ ] strict annual concentration-aware weighting contract
+
+구현 이후 다음 active step:
+
+- [ ] `Value` strongest / lower-MDD near-miss에 partial cash retention representative rerun 적용
+- [ ] `Quality + Value` strongest practical point에 partial cash retention representative rerun 적용
+- [ ] same-gate lower-MDD rescue 여부를 기준으로 next structural lever 우선순위 재판단
 
 ## 현재 판단
 
@@ -46,7 +52,9 @@
 
 - bounded tweak phase는 이미 끝났다
 - current code를 기준으로 보면,
-  가장 먼저 구현 후보로 검토할 만한 것은
-  `partial cash retention`과 `defensive sleeve risk-off`다
+  `partial cash retention` first slice는 구현 완료 상태다
+- 다음 active question은
+  이 contract가 실제 `Value / Quality + Value` strongest anchor에서
+  same-gate lower-MDD rescue로 이어지는지 representative rerun으로 다시 확인하는 것이다
 - weighted portfolio / saved portfolio는 지금도 유용하지만,
   real-money gate surface가 직접 붙지 않아 immediate replacement는 아니다

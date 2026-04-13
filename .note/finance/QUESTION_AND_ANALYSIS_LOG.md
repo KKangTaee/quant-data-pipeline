@@ -188,3 +188,25 @@ Detailed historical analysis was archived on `2026-04-13`.
     1. existing core strategy structural refinement
     2. practical candidate consolidation / operator bridge 정리
     3. 그 다음 필요하면 새 전략 또는 더 넓은 확장
+
+### 2026-04-14 - Phase 17 first implementation slice로 strict annual partial cash retention을 연결했다
+- Request topic:
+  - Phase 17 실제 구현 시작
+- Interpreted goal:
+  - existing strict annual strongest/current candidate를 더 낮은 `MDD`로 개선할 수 있는
+    첫 구조 레버를 코드에 연결하고,
+    이후 representative rerun이 가능하도록 public UI/runtime contract까지 같이 열기
+- Result:
+  - strict annual family 3종에 `partial_cash_retention_enabled` contract를 추가했다
+  - 현재 동작은:
+    - trend filter partial rejection 시
+      - `off`:
+        survivors reweighted
+      - `on`:
+        rejected slot share retained as cash
+  - 적용 범위는 첫 slice 기준으로
+    `Trend Filter`의 부분 탈락에 한정되고,
+    `market regime`와 guardrail의 전체 risk-off는 그대로 full cash다
+  - UI single / compare, runtime wrapper, sample helper, core strategy, selection interpretation, warning/meta surface까지 같이 동기화했다
+  - synthetic smoke에서는 expected behavior가 확인됐고,
+    DB-backed live rerun은 현재 로컬 shadow-factor data preflight 상태에 따라 추가 데이터 준비가 필요할 수 있다

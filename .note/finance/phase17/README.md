@@ -26,3 +26,5 @@ Phase 17 current chapter 문서들을 모아두는 곳이다.
   - strict annual 구조 레버가 현재 코드에서 어디까지 열려 있는지 정리한 문서
 - `PHASE17_CANDIDATE_CONSOLIDATION_FIT_REVIEW_FIRST_PASS.md`
   - weighted portfolio / saved portfolio 흐름이 지금 메인 트랙인지 보조 트랙인지 정리한 문서
+- `PHASE17_PARTIAL_CASH_RETENTION_IMPLEMENTATION_FIRST_SLICE.md`
+  - strict annual first structural lever로 partial cash retention contract를 실제 코드에 연결한 구현 문서

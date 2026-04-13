@@ -1301,6 +1301,30 @@ compare에서는 여러 전략을 빠르게 스캔하는 표면이 따로 필요
 
 ---
 
+## Partial Cash Retention
+
+### 기본 설명
+Trend Filter가 raw selected top-N 중 일부만 탈락시켰을 때,
+탈락한 슬롯 비중을 현금으로 남기는 strict annual 구조 옵션이다.
+
+### 왜 사용되는지
+기존 survivor reweighting은 살아남은 종목에 다시 100%를 몰아주기 때문에,
+실제 노출을 조금 더 보수적으로 낮춰서 `MDD`를 줄여보려는 구조 실험이 어려웠다.
+이 옵션은 같은 factor / same gate 후보에서
+부분 risk-off를 더 직접적으로 실험하기 위한 레버다.
+
+### 예시 / 필요 상황
+- `Top N = 10`인데 trend filter에서 2개가 탈락한 경우
+  - `off`:
+    남은 8개에 100% 재배분
+  - `on`:
+    8개만 보유하고 20%는 현금 유지
+- 현재 first slice는
+  `Trend Filter`의 **부분 탈락**에만 적용된다.
+  `market regime`나 guardrail의 전체 risk-off는 여전히 전부 현금 처리다.
+
+---
+
 ## Strategy Hub
 
 ### 기본 설명

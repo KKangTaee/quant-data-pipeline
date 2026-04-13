@@ -36,6 +36,7 @@ from finance.sample import (
     STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS,
     STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
     STRICT_MARKET_REGIME_DEFAULT_WINDOW,
+    STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
     QUALITY_STRICT_DEFAULT_FACTORS,
     STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED,
     STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD,
@@ -3086,6 +3087,7 @@ def _run_statement_quality_bundle(
     promotion_max_drawdown_gap_vs_benchmark: float = STRICT_PROMOTION_DEFAULT_MAX_DRAWDOWN_GAP_VS_BENCHMARK,
     trend_filter_enabled: bool = False,
     trend_filter_window: int = 200,
+    partial_cash_retention_enabled: bool = STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
     market_regime_enabled: bool = False,
     market_regime_window: int = STRICT_MARKET_REGIME_DEFAULT_WINDOW,
     market_regime_benchmark: str = STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
@@ -3182,6 +3184,7 @@ def _run_statement_quality_bundle(
             min_avg_dollar_volume_20d_m=float(min_avg_dollar_volume_20d_m_filter or 0.0),
             trend_filter_enabled=trend_filter_enabled,
             trend_filter_window=trend_filter_window,
+            partial_cash_retention_enabled=partial_cash_retention_enabled,
             market_regime_enabled=market_regime_enabled,
             market_regime_window=market_regime_window,
             market_regime_benchmark=market_regime_benchmark,
@@ -3275,6 +3278,7 @@ def _run_statement_quality_bundle(
         "quality_factors": normalized_factors,
         "trend_filter_enabled": trend_filter_enabled,
         "trend_filter_window": trend_filter_window,
+        "partial_cash_retention_enabled": partial_cash_retention_enabled,
         "market_regime_enabled": market_regime_enabled,
         "market_regime_window": market_regime_window,
         "market_regime_benchmark": market_regime_benchmark,
@@ -3342,9 +3346,14 @@ def _run_statement_quality_bundle(
     )
     bundle["meta"]["price_freshness"] = price_freshness
     if trend_filter_enabled:
-        bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
-            f"Trend Filter Overlay enabled: month-end selections with `Close < MA{trend_filter_window}` move to cash until the next rebalance."
-        ]
+        trend_warning = (
+            f"Trend Filter Overlay enabled: month-end selections with `Close < MA{trend_filter_window}` "
+            "keep rejected slots as cash until the next rebalance."
+            if partial_cash_retention_enabled
+            else f"Trend Filter Overlay enabled: month-end selections with `Close < MA{trend_filter_window}` "
+            "are removed and survivors are reweighted until the next rebalance."
+        )
+        bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [trend_warning]
     if market_regime_enabled:
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
             f"Market Regime Overlay enabled: month-end selections move fully to cash when `{market_regime_benchmark}` closes below `MA{market_regime_window}`."
@@ -3393,6 +3402,7 @@ def run_quality_snapshot_strict_annual_backtest_from_db(
     promotion_max_drawdown_gap_vs_benchmark: float = STRICT_PROMOTION_DEFAULT_MAX_DRAWDOWN_GAP_VS_BENCHMARK,
     trend_filter_enabled: bool = False,
     trend_filter_window: int = 200,
+    partial_cash_retention_enabled: bool = STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
     market_regime_enabled: bool = False,
     market_regime_window: int = STRICT_MARKET_REGIME_DEFAULT_WINDOW,
     market_regime_benchmark: str = STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
@@ -3436,6 +3446,7 @@ def run_quality_snapshot_strict_annual_backtest_from_db(
         promotion_max_drawdown_gap_vs_benchmark=promotion_max_drawdown_gap_vs_benchmark,
         trend_filter_enabled=trend_filter_enabled,
         trend_filter_window=trend_filter_window,
+        partial_cash_retention_enabled=partial_cash_retention_enabled,
         market_regime_enabled=market_regime_enabled,
         market_regime_window=market_regime_window,
         market_regime_benchmark=market_regime_benchmark,
@@ -3544,6 +3555,7 @@ def run_value_snapshot_strict_annual_backtest_from_db(
     promotion_max_drawdown_gap_vs_benchmark: float = STRICT_PROMOTION_DEFAULT_MAX_DRAWDOWN_GAP_VS_BENCHMARK,
     trend_filter_enabled: bool = False,
     trend_filter_window: int = 200,
+    partial_cash_retention_enabled: bool = STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
     market_regime_enabled: bool = False,
     market_regime_window: int = STRICT_MARKET_REGIME_DEFAULT_WINDOW,
     market_regime_benchmark: str = STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
@@ -3637,6 +3649,7 @@ def run_value_snapshot_strict_annual_backtest_from_db(
         min_avg_dollar_volume_20d_m=min_avg_dollar_volume_20d_m_filter,
         trend_filter_enabled=trend_filter_enabled,
         trend_filter_window=trend_filter_window,
+        partial_cash_retention_enabled=partial_cash_retention_enabled,
         market_regime_enabled=market_regime_enabled,
         market_regime_window=market_regime_window,
         market_regime_benchmark=market_regime_benchmark,
@@ -3729,6 +3742,7 @@ def run_value_snapshot_strict_annual_backtest_from_db(
             "value_factors": normalized_factors,
             "trend_filter_enabled": trend_filter_enabled,
             "trend_filter_window": trend_filter_window,
+            "partial_cash_retention_enabled": partial_cash_retention_enabled,
             "market_regime_enabled": market_regime_enabled,
             "market_regime_window": market_regime_window,
             "market_regime_benchmark": market_regime_benchmark,
@@ -3756,9 +3770,14 @@ def run_value_snapshot_strict_annual_backtest_from_db(
     )
     bundle["meta"]["price_freshness"] = price_freshness
     if trend_filter_enabled:
-        bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
-            f"Trend Filter Overlay enabled: month-end selections with `Close < MA{trend_filter_window}` move to cash until the next rebalance."
-        ]
+        trend_warning = (
+            f"Trend Filter Overlay enabled: month-end selections with `Close < MA{trend_filter_window}` "
+            "keep rejected slots as cash until the next rebalance."
+            if partial_cash_retention_enabled
+            else f"Trend Filter Overlay enabled: month-end selections with `Close < MA{trend_filter_window}` "
+            "are removed and survivors are reweighted until the next rebalance."
+        )
+        bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [trend_warning]
     if market_regime_enabled:
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
             f"Market Regime Overlay enabled: month-end selections move fully to cash when `{market_regime_benchmark}` closes below `MA{market_regime_window}`."
@@ -3998,6 +4017,7 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
     promotion_max_drawdown_gap_vs_benchmark: float = STRICT_PROMOTION_DEFAULT_MAX_DRAWDOWN_GAP_VS_BENCHMARK,
     trend_filter_enabled: bool = False,
     trend_filter_window: int = 200,
+    partial_cash_retention_enabled: bool = STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
     market_regime_enabled: bool = False,
     market_regime_window: int = STRICT_MARKET_REGIME_DEFAULT_WINDOW,
     market_regime_benchmark: str = STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
@@ -4102,6 +4122,7 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
         min_avg_dollar_volume_20d_m=min_avg_dollar_volume_20d_m_filter,
         trend_filter_enabled=trend_filter_enabled,
         trend_filter_window=trend_filter_window,
+        partial_cash_retention_enabled=partial_cash_retention_enabled,
         market_regime_enabled=market_regime_enabled,
         market_regime_window=market_regime_window,
         market_regime_benchmark=market_regime_benchmark,
@@ -4195,6 +4216,7 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
             "value_factors": normalized_value_factors,
             "trend_filter_enabled": trend_filter_enabled,
             "trend_filter_window": trend_filter_window,
+            "partial_cash_retention_enabled": partial_cash_retention_enabled,
             "market_regime_enabled": market_regime_enabled,
             "market_regime_window": market_regime_window,
             "market_regime_benchmark": market_regime_benchmark,
@@ -4222,9 +4244,14 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
     )
     bundle["meta"]["price_freshness"] = price_freshness
     if trend_filter_enabled:
-        bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
-            f"Trend Filter Overlay enabled: month-end selections with `Close < MA{trend_filter_window}` move to cash until the next rebalance."
-        ]
+        trend_warning = (
+            f"Trend Filter Overlay enabled: month-end selections with `Close < MA{trend_filter_window}` "
+            "keep rejected slots as cash until the next rebalance."
+            if partial_cash_retention_enabled
+            else f"Trend Filter Overlay enabled: month-end selections with `Close < MA{trend_filter_window}` "
+            "are removed and survivors are reweighted until the next rebalance."
+        )
+        bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [trend_warning]
     if market_regime_enabled:
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
             f"Market Regime Overlay enabled: month-end selections move fully to cash when `{market_regime_benchmark}` closes below `MA{market_regime_window}`."

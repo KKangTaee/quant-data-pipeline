@@ -1038,6 +1038,7 @@ def quality_snapshot_equal_weight(
     trend_filter_enabled: bool = False,
     trend_filter_window: int = 200,
     trend_filter_col: str | None = None,
+    partial_cash_retention_enabled: bool = False,
     market_regime_enabled: bool = False,
     market_regime_window: int = 200,
     market_regime_benchmark: str | None = None,
@@ -1203,6 +1204,8 @@ def quality_snapshot_equal_weight(
         drawdown_blocked_tickers: list[str] = []
         history_excluded_tickers: list[str] = []
         liquidity_excluded_tickers: list[str] = []
+        partial_cash_retention_active = False
+        partial_cash_retention_base_count = np.nan
 
         regime_state = "off"
         regime_close_now = np.nan
@@ -1378,7 +1381,17 @@ def quality_snapshot_equal_weight(
                     next_balances = []
                     cash = base_balance
                 else:
-                    allocation = base_balance / len(held_tickers)
+                    allocation_base_count = len(held_tickers)
+                    if (
+                        partial_cash_retention_enabled
+                        and trend_filter_enabled
+                        and overlay_rejected_tickers
+                        and raw_selected_tickers
+                    ):
+                        allocation_base_count = len(raw_selected_tickers)
+                        partial_cash_retention_active = allocation_base_count > len(held_tickers)
+                        partial_cash_retention_base_count = float(allocation_base_count)
+                    allocation = base_balance / allocation_base_count
                     next_balances = [allocation] * len(held_tickers)
                     cash = base_balance - sum(next_balances)
 
@@ -1394,6 +1407,9 @@ def quality_snapshot_equal_weight(
                 "Overlay Rejected Count": len(overlay_rejected_tickers),
                 "Trend Filter Enabled": trend_filter_enabled,
                 "Trend Filter Column": (active_trend_col if trend_filter_enabled else np.nan),
+                "Partial Cash Retention Enabled": partial_cash_retention_enabled,
+                "Partial Cash Retention Active": partial_cash_retention_active,
+                "Partial Cash Retention Base Count": partial_cash_retention_base_count,
                 "Market Regime Enabled": market_regime_enabled,
                 "Market Regime Benchmark": (market_regime_benchmark if market_regime_enabled else np.nan),
                 "Market Regime Column": (active_regime_col if market_regime_enabled else np.nan),
