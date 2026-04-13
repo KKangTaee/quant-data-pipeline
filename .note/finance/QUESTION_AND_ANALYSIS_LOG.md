@@ -162,3 +162,29 @@ Detailed historical analysis was archived on `2026-04-13`.
   - weighted portfolio / saved portfolio는 유용하지만
     immediate practical-candidate work의 메인 트랙은 아니고
     operator bridge 보조 트랙으로 두는 편이 맞다
+
+### 2026-04-14 - 새로운 전략과 기존 전략 고도화는 둘 다 예정이지만, 우선순위는 기존 핵심 전략 고도화가 먼저다
+- Request topic:
+  - 지금은 새로운 기능이나 새 전략을 만드는 단계인지,
+    기존 `Value / Quality / Quality + Value` 전략을 고도화하는 단계인지
+    그리고 새로운 전략 및 추가 고도화는 언제 할 예정인지 질문
+- Interpreted goal:
+  - 앞으로의 개발 우선순위를
+    기존 전략 고도화 / 구조 개선 / 새 전략 확장
+    순서로 분명히 이해하고 싶음
+- Result:
+  - 현재 Phase 17의 메인 목표는
+    새 전략 family를 여는 것이 아니라
+    기존 핵심 전략(`Value`, `Quality + Value`, 보조로 `Quality`)을
+    실전형 관점에서 더 고도화하는 것이다
+  - 특히 지금은
+    lower-MDD same-gate practical candidate를 만들기 위한
+    구조 레버를 여는 것이 우선순위다
+  - 새로운 전략이나 더 넓은 전략 확장은 예정에서 빠진 것이 아니라
+    **현재 strongest/current candidates가 충분히 정리된 뒤**
+    또는 structural downside-improvement first slice가 안정된 뒤
+    다음 우선순위로 다시 열 가능성이 높다
+  - 즉 현재 순서는:
+    1. existing core strategy structural refinement
+    2. practical candidate consolidation / operator bridge 정리
+    3. 그 다음 필요하면 새 전략 또는 더 넓은 확장

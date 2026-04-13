@@ -115,3 +115,16 @@ Detailed historical logs were archived on `2026-04-13`.
     - weighted portfolio / saved portfolio as operator bridge
 - Current first-slice recommendation:
   - `partial cash retention` before broader defensive-sleeve or weighting redesign
+
+### 2026-04-14
+- Clarified near-term development order before Phase 17 implementation.
+- Current order:
+  - first:
+    - existing core strategy structural refinement
+  - second:
+    - candidate consolidation / operator bridge cleanup
+  - later:
+    - new strategy or wider expansion work
+- Durable takeaway:
+  - new strategy work is still planned,
+    but it is intentionally behind the current `Value / Quality + Value` structural downside-improvement track
