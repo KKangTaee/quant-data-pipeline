@@ -14,6 +14,20 @@ Keep entries append-only and concise.
 ## Entries
 
 ### 2026-04-13
+- Expanded glossary and simplified the Phase 15 checklist wording around strategy-hub reading.
+- Added plain-language glossary entries for:
+  - strongest practical point
+  - downside-improved candidate
+  - structural rescue
+  - strategy hub / one-pager / backtest log
+  - candidate snapshot
+  - alternate contract report
+  - capital_discipline
+  - trend on/off
+  - regime on/off
+- Reworded checklist lines so the user can tell what to actually confirm when reading strategy hubs.
+
+### 2026-04-13
 - Clarified strategy hub docs so they read as operator-friendly landing pages rather than dense result dumps.
 - Updated:
   - `VALUE_STRICT_ANNUAL.md`

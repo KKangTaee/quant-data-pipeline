@@ -26,8 +26,11 @@
   - [QUALITY_STRICT_ANNUAL.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/QUALITY_STRICT_ANNUAL.md)
   - [QUALITY_VALUE_STRICT_ANNUAL.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL.md)
 - 확인:
-  - 최근 strongest/current candidate snapshot이 바로 보이는지
-  - hub에서 one-pager와 backtest log로 자연스럽게 이동되는지
+  - 이 전략에서 지금 먼저 봐야 할 후보 요약이 문서 안에 바로 보이는지
+  - 허브 문서에서
+    - 상세 후보 설명 문서(one-pager)
+    - 실행 기록 문서(backtest log)
+    로 바로 이동할 수 있는지
 
 ## 2. Value strongest / balanced candidate 확인
 
@@ -47,7 +50,10 @@
     - `CAGR ≈ 28.13%`
     - `MDD ≈ -24.55%`
 - 확인:
-  - strongest / balanced / addition 후보가 서로 다른 역할로 읽히는지
+  - 가장 강한 후보
+  - 낙폭을 줄인 더 균형 잡힌 후보
+  - 그 위에 factor를 하나 더 붙여 개선한 후보
+  가 서로 다른 역할로 읽히는지
 
 ## 3. Quality downside-improved candidate 확인
 
@@ -61,6 +67,8 @@
   - `Quality`가 단순 rescue 상태가 아니라,
     actual current candidate까지 확보된 것으로 읽히는지
   - `Rolling Review = watch` 주의점이 문서에 보이는지
+  - 왜 이 후보가 나왔는지 더 자세히 보고 싶을 때
+    structural rescue / downside / alternate contract report로 이어지는지
 
 ## 4. Quality + Value strongest candidate 확인
 
@@ -112,3 +120,20 @@
   가 아니라,
   **family별 strongest/current candidate가 실제로 문서와 로그 체계 안에 정리됐는지**
   를 보는 checklist다.
+
+## 참고할 glossary 용어
+
+- `Strategy Hub`
+- `One-Pager`
+- `Backtest Log`
+- `Strongest Practical Point`
+- `Current Candidate`
+- `Current Candidate Snapshot`
+- `Downside-Improved Candidate`
+- `Structural Rescue`
+- `Structural Rescue Report`
+- `Downside Report`
+- `Alternate Contract Report`
+- `Capital Discipline`
+- `Trend On / Trend Off`
+- `Regime On / Regime Off`

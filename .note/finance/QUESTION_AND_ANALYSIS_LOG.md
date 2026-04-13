@@ -13,6 +13,36 @@ Do not copy full chat transcripts. Keep only the durable result.
 
 ## Entries
 
+### 2026-04-13 - Strategy hub reading 용어 보강
+- Request topic:
+  - strategy hub/checklist를 읽을 때 나오는 용어들이 어렵고,
+    무엇을 확인하라는 뜻인지 잘 모르겠으니 glossary에 정리해달라는 요청
+- Interpreted goal:
+  - strategy hub 문서와 Phase 15 checklist를 읽을 때 자주 막히는 표현을
+    plain-language glossary 항목으로 정리하고,
+    checklist 문장도 행동 중심으로 더 쉽게 바꾸기
+- Result:
+  - glossary에 아래 용어를 추가했다:
+    - `Strategy Hub`
+    - `One-Pager`
+    - `Backtest Log`
+    - `Strongest Practical Point`
+    - `Current Candidate`
+    - `Current Candidate Snapshot`
+    - `Downside-Improved Candidate`
+    - `Structural Rescue`
+    - `Structural Rescue Report`
+    - `Downside Report`
+    - `Alternate Contract Report`
+    - `Capital Discipline`
+    - `Trend On / Trend Off`
+    - `Regime On / Regime Off`
+  - Phase 15 checklist의 확인 문장도
+    “무엇을 확인하라는 뜻인지”가 바로 읽히도록 풀어 썼다
+- Durable output:
+  - `.note/finance/FINANCE_TERM_GLOSSARY.md`
+  - `.note/finance/phase15/PHASE15_TEST_CHECKLIST.md`
+
 ### 2026-04-13 - Strategy hub 문서 역할 설명 보강
 - Request topic:
   - strategy hub 문서 3개를 직접 읽어봤는데 문서 역할과 읽는 방법이 잘 보이지 않아 더 쉽게 설명해달라는 요청

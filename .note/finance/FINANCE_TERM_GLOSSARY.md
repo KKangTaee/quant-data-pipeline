@@ -1298,3 +1298,259 @@ compare에서는 여러 전략을 빠르게 스캔하는 표면이 따로 필요
   - `Min ETF AUM`
   - `Max Drawdown Gap vs Benchmark`
   같은 threshold를 family별로 다시 보는 작업이 여기에 들어간다.
+
+---
+
+## Strategy Hub
+
+### 기본 설명
+전략 하나에 대한 핵심 결과와 관련 문서를 한 곳에서 안내하는 요약 허브 문서다.
+
+### 왜 사용되는지
+같은 전략에 대해 결과 문서, 세부 실험 문서, 실행 기록 문서가 여러 개 생기기 때문에
+무엇부터 봐야 하는지 먼저 알려주는 입구 페이지가 필요하기 때문이다.
+
+### 예시 / 필요 상황
+- `VALUE_STRICT_ANNUAL.md`
+- `QUALITY_STRICT_ANNUAL.md`
+- `QUALITY_VALUE_STRICT_ANNUAL.md`
+- 보통 이 문서에서는
+  - 현재 다시 볼 만한 후보
+  - 관련 one-pager
+  - backtest log
+  - 세부 phase report
+  로 이동한다.
+
+---
+
+## One-Pager
+
+### 기본 설명
+후보 전략 하나를 한 장에서 빠르게 읽을 수 있게 정리한 단일 요약 문서다.
+
+### 왜 사용되는지
+전략 허브는 여러 결과를 묶는 문서이고,
+실제 후보 하나를 다시 실행하거나 설명할 때는
+입력값과 결과가 한 장에 모여 있는 문서가 더 편하기 때문이다.
+
+### 예시 / 필요 상황
+- strongest candidate
+- downside-improved candidate
+- value replacement candidate
+- 보통
+  - 전략 구성
+  - factor
+  - contract
+  - 기대 결과
+  를 함께 적는다.
+
+---
+
+## Backtest Log
+
+### 기본 설명
+같은 전략을 어떤 세팅으로 여러 번 돌렸는지 시간순으로 누적 기록하는 문서다.
+
+### 왜 사용되는지
+좋은 run과 실패한 run을 같이 남겨야,
+나중에 왜 지금 후보가 이렇게 정리됐는지 추적할 수 있기 때문이다.
+
+### 예시 / 필요 상황
+- `VALUE_STRICT_ANNUAL_BACKTEST_LOG.md`
+- 각 entry에는 보통
+  - 목표
+  - 기간 / universe
+  - 핵심 설정
+  - 결과
+  - 해석 / 다음 액션
+  이 들어간다.
+
+---
+
+## Strongest Practical Point
+
+### 기본 설명
+현재까지 실험한 후보들 중에서,
+성과와 gate 상태를 함께 봤을 때 가장 실무적으로 강하다고 판단한 기준점이다.
+
+### 왜 사용되는지
+수익률만 가장 높은 후보와
+실제로 다시 써볼 만한 후보는 다를 수 있기 때문이다.
+
+### 예시 / 필요 상황
+- `CAGR`는 아주 높지만 `hold`면 strongest practical point가 아닐 수 있다.
+- gate는 좋지만 수익률이 너무 약하면 strongest practical point가 아닐 수 있다.
+- 그래서 보통
+  - `CAGR`
+  - `MDD`
+  - `Promotion`
+  - `Shortlist`
+  - `Deployment`
+  를 같이 보고 정한다.
+
+---
+
+## Current Candidate
+
+### 기본 설명
+지금 시점에서 다시 참고하거나 재현할 가치가 있다고 판단한 현재 기준 후보다.
+
+### 왜 사용되는지
+모든 과거 실험을 같은 강도로 다시 볼 필요는 없고,
+현재 운영/검토 기준에서 다시 볼 후보를 분리해 두는 편이 효율적이기 때문이다.
+
+### 예시 / 필요 상황
+- strongest current candidate
+- downside-improved current candidate
+- cleaner alternative current candidate
+
+---
+
+## Current Candidate Snapshot
+
+### 기본 설명
+전략 허브 문서 안에서 현재 가장 중요한 후보를 짧게 다시 보여주는 요약 구간이다.
+
+### 왜 사용되는지
+문서 처음부터 끝까지 다 읽지 않아도
+“지금 무엇을 먼저 보면 되는지”를 빠르게 잡을 수 있어야 하기 때문이다.
+
+### 예시 / 필요 상황
+- strongest candidate 요약
+- balanced candidate 요약
+- lower-drawdown alternative 요약
+
+---
+
+## Downside-Improved Candidate
+
+### 기본 설명
+기존 strongest 후보보다 낙폭(`MDD`)을 줄이는 방향으로 조정한 후보다.
+
+### 왜 사용되는지
+raw 수익률이 아주 강한 후보라도 낙폭이 너무 깊으면
+실전에서는 부담이 커질 수 있기 때문이다.
+
+### 예시 / 필요 상황
+- strongest baseline:
+  - `CAGR = 29.89%`
+  - `MDD = -29.15%`
+- downside-improved candidate:
+  - `CAGR`는 조금 낮아져도
+  - `MDD`를 `-24%`대까지 줄인 후보
+
+---
+
+## Structural Rescue
+
+### 기본 설명
+같은 family 안에서 factor를 조금 바꾸는 정도로는 안 풀릴 때,
+benchmark, overlay, top-N 같은 구조를 바꿔 실제 후보를 다시 살리는 탐색이다.
+
+### 왜 사용되는지
+어떤 전략은 factor 자체보다
+비교 기준이나 구조 계약 때문에 `hold`에 머무를 수 있기 때문이다.
+
+### 예시 / 필요 상황
+- `Quality`에서 bounded factor addition만으로는 안 풀렸지만,
+  `LQD + trend on + regime off` 구조 조정으로
+  `real_money_candidate`를 회복한 경우
+
+---
+
+## Structural Rescue Report
+
+### 기본 설명
+전략을 다시 usable candidate 상태로 살리기 위해
+benchmark, overlay, cadence, top-N 같은 구조 조정을 탐색한 보고서다.
+
+### 왜 사용되는지
+단순 factor 실험과
+구조 자체를 바꾸는 실험은 성격이 다르기 때문에 따로 구분해 읽는 편이 명확하기 때문이다.
+
+### 예시 / 필요 상황
+- `PHASE15_QUALITY_STRUCTURAL_RESCUE_SEARCH_SECOND_PASS.md`
+
+---
+
+## Downside Report
+
+### 기본 설명
+현재 후보에서 `MDD`를 줄일 수 있는지 중심으로 다시 본 세부 탐색 보고서다.
+
+### 왜 사용되는지
+수익률을 조금 희생하더라도 drawdown을 줄이는 대안이 실전적으로 더 매력적일 수 있기 때문이다.
+
+### 예시 / 필요 상황
+- `Top N`을 늘리거나
+- factor를 조금 더 방어적으로 바꾸거나
+- overlay를 조정해 더 낮은 낙폭을 노리는 문서
+
+---
+
+## Alternate Contract Report
+
+### 기본 설명
+같은 전략 anchor를 유지한 채,
+benchmark나 overlay 같은 계약만 바꿨을 때 해석이 어떻게 달라지는지 본 보고서다.
+
+### 왜 사용되는지
+같은 전략이라도 어떤 benchmark를 쓰는지,
+어떤 overlay를 켜는지에 따라
+`Promotion`, `Deployment`, `Validation` 해석이 달라질 수 있기 때문이다.
+
+### 예시 / 필요 상황
+- `LQD benchmark`는 strongest practical point였지만
+- `SPY benchmark`는 cleaner but more conservative alternative였는지 비교하는 경우
+
+---
+
+## Capital Discipline
+
+### 기본 설명
+`Quality > Strict Annual` 쪽에서 자본 효율과 재무 건전성을 같이 보려는 quality factor 묶음 이름이다.
+
+### 왜 사용되는지
+quality factor가 많을 때
+어떤 조합을 중심 테마로 묶어 읽는지 이름을 붙여두면
+실험 결과를 다시 비교하기 쉬워지기 때문이다.
+
+### 예시 / 필요 상황
+- 보통 아래와 같은 factor 묶음을 뜻했다:
+  - `roe`
+  - `roa`
+  - `cash_ratio`
+  - `debt_to_assets`
+
+---
+
+## Trend On / Trend Off
+
+### 기본 설명
+`Trend Filter`를 켠 상태인지(`on`), 끈 상태인지(`off`)를 뜻하는 짧은 표기다.
+
+### 왜 사용되는지
+전략 조합을 짧게 요약할 때
+overlay 사용 여부를 빠르게 적기 위해서다.
+
+### 예시 / 필요 상황
+- `trend on`
+  - 추세 필터를 적용한 상태
+- `trend off`
+  - 추세 필터 없이 순수 전략만 본 상태
+
+---
+
+## Regime On / Regime Off
+
+### 기본 설명
+`Market Regime` overlay를 켠 상태인지(`on`), 끈 상태인지(`off`)를 뜻하는 짧은 표기다.
+
+### 왜 사용되는지
+시장 환경 해석을 후보 비교에 반영했는지 여부를 짧게 표시하기 위해서다.
+
+### 예시 / 필요 상황
+- `regime on`
+  - market regime overlay 적용
+- `regime off`
+  - market regime overlay 없이 순수 전략 비교
