@@ -40,13 +40,13 @@
 
 - family: `Quality + Value`
 - variant: `Strict Annual`
-- 관련 phase: `Phase 13`, `Phase 14`, `Phase 15`
+- 관련 phase: `Phase 13`, `Phase 14`, `Phase 15`, `Phase 16`
 
 ## 이 전략 허브를 어떻게 읽으면 되는가
 
 1. strongest practical candidate가 무엇인지 먼저 본다
 2. 그 다음 previous anchor와 lower-drawdown alternative를 비교한다
-3. 더 자세한 변경 과정을 보고 싶으면 third/fourth/fifth/sixth pass report를 연다
+3. 더 자세한 변경 과정을 보고 싶으면 fifth/sixth pass와 Phase 16 follow-up report를 연다
 4. 실제 run 누적은 backtest log에서 본다
 
 ## 한 줄 요약
@@ -65,6 +65,9 @@
 - 처음엔 “방어적이지만 조금 심심한 전략”처럼 보였던 family다
 - 그런데 Phase 15에서 factor replacement를 차근차근 붙여보니
   결국 세 family 중 가장 좋은 practical blended candidate까지 올라왔다
+- 그리고 Phase 16 follow-up에서는
+  더 낮은 `MDD` same-gate candidate는 못 찾았지만,
+  같은 `MDD`에서 `CAGR`를 더 높이는 strongest point까지 갱신됐다
 - 그래서 지금은
   “생각보다 강한 blended family”
   로 읽는 편이 더 맞다
@@ -83,9 +86,10 @@
   - `net_margin -> operating_margin`
 - value:
   - `ocf_yield -> pcr`
+  - `operating_income_yield -> por`
 - `Top N = 10`
 - `Benchmark Contract = Candidate Universe Equal-Weight`
-- `CAGR = 31.25%`
+- `CAGR = 31.82%`
 - `MDD = -26.63%`
 - `Promotion = real_money_candidate`
 - `Shortlist = small_capital_trial`
@@ -100,21 +104,21 @@
 ### 2. 그 직전 기준점
 
 - previous practical anchor
-- `CAGR = 30.05%`
-- `MDD = -27.43%`
+- `CAGR = 31.25%`
+- `MDD = -26.63%`
 
 해석:
 
 - 이미 좋은 후보였지만
-- quality-side replacement를 한 번 더 하면서
+- value-side replacement를 한 번 더 하면서
   strongest practical point가 더 좋아졌다
 
 ### 3. 낙폭은 더 좋지만 gate가 약한 대안
 
 - lower-MDD but weaker gate
-- `current_ratio -> operating_margin`
-- `CAGR = 30.84%`
-- `MDD = -24.09%`
+- `Top N = 9`
+- `CAGR = 31.08%`
+- `MDD = -25.61%`
 - `Promotion = production_candidate`
 - `Shortlist = watchlist`
 
@@ -127,12 +131,13 @@
 ## 최근 backtest log snapshot
 
 - 최근 기록:
-  - `2026-04-13 - strongest-anchor top-n search sixth pass`
+  - `2026-04-13 - Phase 16 bounded downside refinement first pass`
 - 핵심 설정:
   - quality replacement:
     - `net_margin -> operating_margin`
   - value replacement:
     - `ocf_yield -> pcr`
+    - `operating_income_yield -> por`
   - `Top N = 10`
   - `Rebalance Interval = 1`
   - `Trend Filter = off`
@@ -143,30 +148,31 @@
       - `net_margin -> operating_margin`
     - value:
       - `ocf_yield -> pcr`
+      - `operating_income_yield -> por`
     - `Benchmark Contract = Candidate Universe Equal-Weight`
     - `Top N = 10`
-    - `CAGR = 31.25%`
+    - `CAGR = 31.82%`
     - `MDD = -26.63%`
     - `Promotion = real_money_candidate`
     - `Shortlist = small_capital_trial`
     - `Deployment = review_required`
   - previous practical anchor:
     - `Top N = 10`
-    - `CAGR = 30.05%`
-    - `MDD = -27.43%`
+    - `CAGR = 31.25%`
+    - `MDD = -26.63%`
     - `Promotion = real_money_candidate`
     - `Shortlist = small_capital_trial`
   - lower-MDD but weaker gate:
-    - `current_ratio -> operating_margin`
-    - `CAGR = 30.84%`
-    - `MDD = -24.09%`
+    - `Top N = 9`
+    - `CAGR = 31.08%`
+    - `MDD = -25.61%`
     - `Promotion = production_candidate`
     - `Shortlist = watchlist`
 - 다음에 볼 것:
-  - strongest practical point와 lower-drawdown weaker-gate 대안을
-    Phase 15 checklist 기준으로 다시 검수
-  - next phase에서
-    candidate consolidation 또는 downside follow-up 중 무엇을 먼저 할지 결정
+  - stronger gate를 유지한 채 `MDD`를 더 낮추는 rescue path가 있는지
+    별도 구조 레버가 필요한지 판단
+  - current strongest practical point를
+    실제 manual rerun 기준으로 다시 검수
 
 ## 관련 결과 문서
 
@@ -178,32 +184,27 @@
   - `CAGR 15% / MDD 20%` 조건 교집합 탐색
 - [PHASE13_REAL_MONEY_CANDIDATE_SPY_MDD25_SEARCH.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase13/PHASE13_REAL_MONEY_CANDIDATE_SPY_MDD25_SEARCH.md)
   - `real_money_candidate + SPY 초과 + MDD 25% 이내` 탐색
-- [PHASE13_STRICT_ANNUAL_COVERAGE300_500_1000_TARGET_SEARCH.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase13/PHASE13_STRICT_ANNUAL_COVERAGE300_500_1000_TARGET_SEARCH.md)
-  - wider coverage가 방어형 family에 주는 효과를 같이 확인한 문서
 - [PHASE13_STRICT_ANNUAL_FAMILY_BACKTEST_SUMMARY.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase13/PHASE13_STRICT_ANNUAL_FAMILY_BACKTEST_SUMMARY.md)
   - family 전체 summary 문서
 - [PHASE14_STRICT_ANNUAL_NONHOLD_CANDIDATE_REFRESH.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase14/PHASE14_STRICT_ANNUAL_NONHOLD_CANDIDATE_REFRESH.md)
   - current runtime 기준으로 `Quality + Value` strongest non-hold candidate를 다시 고정한 refresh 문서
 - [PHASE15_QUALITY_VALUE_CANDIDATE_IMPROVEMENT_SEARCH_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase15/PHASE15_QUALITY_VALUE_CANDIDATE_IMPROVEMENT_SEARCH_FIRST_PASS.md)
   - baseline blend anchor에 controlled factor addition을 붙여 current best addition candidate를 다시 본 문서
-- [QUALITY_VALUE_STRICT_ANNUAL_BEST_ADDITION_CURRENT_CANDIDATE.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL_BEST_ADDITION_CURRENT_CANDIDATE.md)
-  - `per` addition candidate를 전략 구성 중심으로 바로 읽는 one-pager
-- [PHASE15_QUALITY_VALUE_PER_DOWNSIDE_SEARCH_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase15/PHASE15_QUALITY_VALUE_PER_DOWNSIDE_SEARCH_FIRST_PASS.md)
-  - `per` strongest candidate를 anchor로 `Top N` downside search를 다시 본 문서
-- [PHASE15_QUALITY_VALUE_PER_BENCHMARK_AND_PRUNING_SEARCH_SECOND_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase15/PHASE15_QUALITY_VALUE_PER_BENCHMARK_AND_PRUNING_SEARCH_SECOND_PASS.md)
-  - `per` strongest candidate를 anchor로 benchmark sensitivity와 quality-side pruning을 다시 본 문서
 - [PHASE15_QUALITY_VALUE_VALUE_SIDE_SEARCH_THIRD_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase15/PHASE15_QUALITY_VALUE_VALUE_SIDE_SEARCH_THIRD_PASS.md)
   - value-side removal / replacement를 다시 보고 `ocf_yield -> pcr` current strongest practical candidate를 고정한 문서
-- [PHASE15_QUALITY_VALUE_REPLACEMENT_ANCHOR_FOLLOWUP_FOURTH_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase15/PHASE15_QUALITY_VALUE_REPLACEMENT_ANCHOR_FOLLOWUP_FOURTH_PASS.md)
-  - `ocf_yield -> pcr` current strongest practical point 위에서 `Top N / benchmark` follow-up을 다시 본 문서
 - [PHASE15_QUALITY_VALUE_QUALITY_SIDE_SEARCH_FIFTH_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase15/PHASE15_QUALITY_VALUE_QUALITY_SIDE_SEARCH_FIFTH_PASS.md)
   - `ocf_yield -> pcr` anchor 위 quality-side replacement를 다시 보고,
     `net_margin -> operating_margin`가 strongest practical point를 갱신했는지 정리한 문서
 - [PHASE15_QUALITY_VALUE_STRONGEST_ANCHOR_TOPN_SEARCH_SIXTH_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase15/PHASE15_QUALITY_VALUE_STRONGEST_ANCHOR_TOPN_SEARCH_SIXTH_PASS.md)
   - new strongest practical point 위에서 `Top N` follow-up을 다시 보고,
     `Top N = 10`이 그대로 strongest인지 정리한 문서
+- [PHASE16_QUALITY_VALUE_DOWNSIDE_REFINEMENT_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase16/PHASE16_QUALITY_VALUE_DOWNSIDE_REFINEMENT_FIRST_PASS.md)
+  - same gate를 유지하면서 더 낮은 `MDD`를 만들 수 있는지,
+    그리고 same `MDD`에서 `CAGR`를 더 높일 수 있는지를 본 follow-up 문서
 - [QUALITY_VALUE_STRICT_ANNUAL_VALUE_REPLACEMENT_CURRENT_CANDIDATE.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL_VALUE_REPLACEMENT_CURRENT_CANDIDATE.md)
   - `ocf_yield -> pcr` replacement candidate를 전략 구성 중심으로 바로 읽는 one-pager
+- [QUALITY_VALUE_STRICT_ANNUAL_POR_REPLACEMENT_CURRENT_CANDIDATE.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL_POR_REPLACEMENT_CURRENT_CANDIDATE.md)
+  - `operating_income_yield -> por` replacement를 반영한 current strongest practical candidate one-pager
 - [QUALITY_VALUE_STRICT_ANNUAL_STRONGEST_CURRENT_CANDIDATE.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL_STRONGEST_CURRENT_CANDIDATE.md)
   - quality/value replacement를 함께 반영한 current strongest practical candidate one-pager
 
@@ -217,6 +218,9 @@
 - raw winner만 놓고 보면 아직 `Value`가 더 공격적일 수 있지만,
   “성과와 gate를 같이 본 practical tradeoff”로는
   지금 `Quality + Value`가 매우 강한 위치에 있다
+- Phase 16 first pass까지 반영하면
+  같은 gate / 같은 `MDD`에서 `CAGR`를 더 높이는 방향으로도
+  한 단계 더 정리된 상태다
 
 지금 다시 볼 우선순위를 한 줄로 정리하면:
 

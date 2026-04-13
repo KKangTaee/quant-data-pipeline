@@ -730,11 +730,13 @@ Phase 4 시작 시:
 - `.note/finance/phase15/PHASE15_TEST_CHECKLIST.md`
   - Phase 15 strongest/current candidate 문서와 전략 로그를 수동으로 검수하기 위한 checklist 문서
 - `.note/finance/phase16/README.md`
-  - Phase 16 value downside refinement current chapter 안내 문서
+  - Phase 16 downside-focused practical refinement current chapter 안내 문서
 - `.note/finance/phase16/PHASE16_CURRENT_CHAPTER_TODO.md`
   - Phase 16 current execution board
 - `.note/finance/phase16/PHASE16_VALUE_DOWNSIDE_REFINEMENT_FIRST_PASS.md`
   - `Value > Strict Annual` current practical anchor를 기준으로 bounded downside refinement를 다시 본 first-pass 문서
+- `.note/finance/phase16/PHASE16_QUALITY_VALUE_DOWNSIDE_REFINEMENT_FIRST_PASS.md`
+  - `Quality + Value > Strict Annual` strongest practical anchor를 기준으로 bounded downside refinement를 다시 본 first-pass 문서
 - `.note/finance/backtest_reports/phase15/README.md`
   - Phase 15 backtest archive 안내 문서
 - `.note/finance/backtest_reports/phase15/PHASE15_VALUE_DOWNSIDE_IMPROVEMENT_SEARCH_FIRST_PASS.md`
@@ -770,6 +772,8 @@ Phase 4 시작 시:
   - `per` addition 기반 current best raw addition candidate one-pager
 - `.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL_STRONGEST_CURRENT_CANDIDATE.md`
   - quality/value replacement를 함께 반영한 current strongest practical blended candidate one-pager
+- `.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL_POR_REPLACEMENT_CURRENT_CANDIDATE.md`
+  - `operating_income_yield -> por` replacement를 더한 Phase 16 strongest practical blended candidate one-pager
 - `.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL_VALUE_REPLACEMENT_CURRENT_CANDIDATE.md`
   - `ocf_yield -> pcr` replacement를 적용한 current strongest practical blended candidate one-pager
 - `.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL_BACKTEST_LOG.md`

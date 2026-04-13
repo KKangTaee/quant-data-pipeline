@@ -100,13 +100,17 @@
 ## Phase 16 Raw Archive
 
 - `phase16/README.md`
-  - Phase 16 value downside refinement archive 안내 문서
+  - Phase 16 downside-focused practical refinement archive 안내 문서
 - `phase16/PHASE16_CURRENT_CHAPTER_TODO.md`
   - Phase 16 current execution board
 - `phase16/PHASE16_VALUE_DOWNSIDE_REFINEMENT_FIRST_PASS.md`
   - `Value > Strict Annual` current practical anchor를 기준으로 bounded downside refinement를 다시 본 first-pass 문서
+- `phase16/PHASE16_QUALITY_VALUE_DOWNSIDE_REFINEMENT_FIRST_PASS.md`
+  - `Quality + Value > Strict Annual` strongest practical anchor를 기준으로 bounded downside refinement를 다시 본 first-pass 문서
 - `strategies/QUALITY_VALUE_STRICT_ANNUAL_STRONGEST_CURRENT_CANDIDATE.md`
   - quality/value replacement를 함께 반영한 current strongest practical blended candidate one-pager
+- `strategies/QUALITY_VALUE_STRICT_ANNUAL_POR_REPLACEMENT_CURRENT_CANDIDATE.md`
+  - `operating_income_yield -> por` replacement를 더한 Phase 16 strongest practical blended candidate one-pager
 
 ## 운영 메모
 

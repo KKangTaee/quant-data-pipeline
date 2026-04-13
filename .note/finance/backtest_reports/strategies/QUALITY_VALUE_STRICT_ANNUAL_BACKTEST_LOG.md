@@ -20,6 +20,80 @@
 
 ## 기록
 
+### 2026-04-13 - Phase 16 bounded downside refinement first pass
+
+- 목표:
+  - current strongest practical point를 기준으로
+    `MDD`를 더 낮추되
+    `real_money_candidate / small_capital_trial / review_required`
+    를 유지할 수 있는지 확인한다
+  - same gate / same `MDD`에서 `CAGR`를 더 높일 수 있는지도 같이 본다
+- 전략:
+  - `Quality + Value > Strict Annual`
+- 기간 / universe:
+  - `2016-01-01 ~ 2026-04-01`
+  - `US Statement Coverage 100`
+  - `Historical Dynamic PIT Universe`
+- 핵심 설정:
+  - quality anchor:
+    - `roe`
+    - `roa`
+    - `operating_margin`
+    - `asset_turnover`
+    - `current_ratio`
+  - value anchor:
+    - `book_to_market`
+    - `earnings_yield`
+    - `sales_yield`
+    - `pcr`
+    - `operating_income_yield`
+    - `per`
+  - `Top N = 10`
+  - `Benchmark Contract = Candidate Universe Equal-Weight`
+  - `Trend Filter = off`
+  - `Market Regime = off`
+  - underperformance / drawdown guardrail `on`
+- 결과:
+  - new strongest practical point:
+    - `operating_income_yield -> por`
+    - `CAGR = 31.82%`
+    - `MDD = -26.63%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = small_capital_trial`
+    - `Deployment = review_required`
+  - previous anchor:
+    - `CAGR = 31.25%`
+    - `MDD = -26.63%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = small_capital_trial`
+    - `Deployment = review_required`
+  - lower-MDD but weaker gate:
+    - `Top N = 9`
+    - `CAGR = 31.08%`
+    - `MDD = -25.61%`
+    - `Promotion = production_candidate`
+    - `Shortlist = watchlist`
+    - `Deployment = review_required`
+  - another lower-MDD but weaker-gate alternative:
+    - `current_ratio -> cash_ratio`
+    - `CAGR = 30.96%`
+    - `MDD = -25.79%`
+    - `Promotion = production_candidate`
+    - `Shortlist = watchlist`
+    - `Deployment = review_required`
+- 해석:
+  - 이번 bounded search에서는 same gate를 유지하면서 `MDD`를 더 낮춘 후보는 나오지 않았다
+  - 대신 same gate / same `MDD`를 유지하면서 `CAGR`를 더 높인 strongest point가 나왔다
+  - 따라서 current strongest practical point는
+    `operating_income_yield -> por` 조합으로 갱신된다
+- 다음 액션:
+  - lower-MDD weaker-gate candidate를 rescue할지
+  - 아니면 current strongest point 기준으로 closeout 준비로 갈지
+  판단한다
+- 관련 문서:
+  - [PHASE16_QUALITY_VALUE_DOWNSIDE_REFINEMENT_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase16/PHASE16_QUALITY_VALUE_DOWNSIDE_REFINEMENT_FIRST_PASS.md)
+  - [QUALITY_VALUE_STRICT_ANNUAL_POR_REPLACEMENT_CURRENT_CANDIDATE.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL_POR_REPLACEMENT_CURRENT_CANDIDATE.md)
+
 ### 2026-04-13 - strongest anchor top-n search sixth pass
 
 - 목표:

@@ -13,6 +13,34 @@ Do not copy full chat transcripts. Keep only the durable result.
 
 ## Entries
 
+### 2026-04-13 - Phase 16 first pass에서는 `Value`보다 `Quality + Value` 쪽 practical improvement가 더 크게 나타남
+- Request topic:
+  - downside-focused practical refinement를 계속 진행하면서
+    `Value`와 `Quality + Value`에서 더 낮은 `MDD` 또는 더 좋은 practical point를 찾고,
+    문서 체계도 함께 정리
+- Interpreted goal:
+  - blanket gate relaxation 없이
+    current practical anchor 주위 bounded search로
+    더 실전적인 후보를 확보할 수 있는지 확인
+- Result:
+  - `Value`에서는 `Top N = 14 + psr`가 여전히 current best practical point로 유지됐다
+  - `+ pfcr`가 `MDD = -21.16%`로 더 낮은 near-miss였지만
+    `production_candidate / watchlist`로 gate가 내려가 exact replacement는 되지 못했다
+  - `Quality + Value`에서는 기존 `ocf_yield -> pcr` anchor 위에
+    `operating_income_yield -> por` replacement를 더한 조합이
+    `CAGR = 31.82% / MDD = -26.63% / real_money_candidate / small_capital_trial / review_required`
+    로 current strongest practical point가 됐다
+  - 즉 Phase 16 first pass에서는
+    `Value`는 “더 낮은 MDD near-miss 발견”
+    `Quality + Value`는 “같은 gate tier를 유지한 stronger practical point 발견”
+    으로 정리하는 것이 맞다
+- Durable output:
+  - Phase 16은 `Value`와 `Quality + Value`를 함께 보는 downside-focused practical refinement track으로 이해해야 한다
+  - 다음 follow-up은
+    - `Value`: lower-MDD near-miss를 same-gate exact candidate로 끌어올릴 수 있는지
+    - `Quality + Value`: 새 strongest point 기준 downside/benchmark follow-up
+    로 나누는 것이 자연스럽다
+
 ### 2026-04-13 - Value downside refinement should stay bounded around the current practical anchor
 - Request topic:
   - continue the next phase with a `Value`-first downside search, bounded by `Top N`, one-factor addition/replacement, and minimal overlay sensitivity

@@ -14,6 +14,25 @@ Keep entries append-only and concise.
 ## Entries
 
 ### 2026-04-13
+- Broadened Phase 16 from a `Value`-only downside follow-up into a downside-focused practical refinement track for `Value` and `Quality + Value`.
+- Kept the `Value` conclusion intact:
+  - current best practical point remains `Top N = 14 + psr`
+  - `CAGR = 28.13%`
+  - `MDD = -24.55%`
+  - `real_money_candidate / paper_probation / review_required`
+- Recorded the most useful lower-MDD `Value` near-miss:
+  - `+ pfcr`
+  - `CAGR = 27.22%`
+  - `MDD = -21.16%`
+  - but `production_candidate / watchlist`
+- Added the `Quality + Value` Phase 16 first-pass report and new strongest practical one-pager:
+  - `operating_income_yield -> por` on top of the prior replacement anchor
+  - `CAGR = 31.82%`
+  - `MDD = -26.63%`
+  - `real_money_candidate / small_capital_trial / review_required`
+- Synced the roadmap, finance doc index, backtest report index, strategy hub, and strategy backtest log to the broader Phase 16 meaning.
+
+### 2026-04-13
 - Started Phase 16 `Value downside refinement` as a bounded follow-up from the Phase 15 closeout.
 - Ran a current-code grid around the `Top N = 14 + psr` anchor and confirmed it remains the best practical point.
 - Confirmed that overlay sensitivity is not a useful downside lever for this family because it degrades gate quality.

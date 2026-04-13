@@ -47,7 +47,7 @@
 
 - family: `Value`
 - variant: `Strict Annual`
-- 관련 phase: `Phase 13`, `Phase 14`
+- 관련 phase: `Phase 13`, `Phase 14`, `Phase 15`, `Phase 16`
 
 ## 이 전략 허브를 어떻게 읽으면 되는가
 
@@ -149,7 +149,7 @@
 ## 최근 backtest log snapshot
 
 - 최근 기록:
-  - `2026-04-13 - factor addition second pass에서 psr candidate를 고정함`
+  - `2026-04-13 - Phase 16 bounded downside refinement first pass`
 - 핵심 설정:
   - default value factors + `psr`
   - `Benchmark = SPY`
@@ -158,16 +158,21 @@
   - `Trend Filter = off`
   - `Market Regime = off`
 - 결과:
-  - `CAGR = 28.13%`
-  - `MDD = -24.55%`
-  - `Promotion = real_money_candidate`
-  - `Shortlist = paper_probation`
-  - `Deployment = review_required`
+  - current best practical point 유지:
+    - `CAGR = 28.13%`
+    - `MDD = -24.55%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = paper_probation`
+    - `Deployment = review_required`
+  - lower-MDD but weaker gate:
+    - `+ pfcr`
+    - `CAGR = 27.22%`
+    - `MDD = -21.16%`
+    - `Promotion = production_candidate`
+    - `Shortlist = watchlist`
 - 다음에 볼 것:
-  - strongest raw / downside-improved / best-addition 후보를
-    Phase 15 checklist 기준으로 다시 검수
-  - next phase에서
-    candidate consolidation 또는 추가 downside follow-up 중 무엇을 먼저 할지 결정
+  - lower-MDD weaker-gate near-miss를 rescue할지
+    아니면 current anchor를 유지한 채 closeout 할지 결정
 
 ## 관련 결과 문서
 
@@ -195,6 +200,9 @@
   - strongest baseline에서 `MDD`를 낮추는 방향으로 본 first-pass downside improvement search 문서
 - [PHASE15_VALUE_FACTOR_ADDITION_SECOND_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase15/PHASE15_VALUE_FACTOR_ADDITION_SECOND_PASS.md)
   - first-pass downside-improved anchor에 one-factor addition을 붙여 다시 본 second-pass 문서
+- [PHASE16_VALUE_DOWNSIDE_REFINEMENT_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase16/PHASE16_VALUE_DOWNSIDE_REFINEMENT_FIRST_PASS.md)
+  - `Top N = 14 + psr` current practical point 위에서
+    bounded downside follow-up을 다시 본 문서
 
 ## 실무 해석
 
@@ -206,6 +214,11 @@
   그 균형형을 조금 더 개선한 후보도 있다
 - 즉 “좋은 숫자가 한 번 나온 전략”이 아니라,
   실제로 비교 가능한 후보군이 정리된 family다
+- Phase 16 first pass까지 보면
+  current best practical point는 여전히
+  `Top N = 14 + psr`
+  이고,
+  더 낮은 `MDD` same-gate candidate는 아직 못 찾은 상태다
 
 지금 다시 볼 우선순위를 한 줄로 정리하면:
 
