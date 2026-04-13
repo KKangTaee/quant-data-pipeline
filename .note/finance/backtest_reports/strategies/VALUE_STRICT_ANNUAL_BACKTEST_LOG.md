@@ -20,6 +20,58 @@
 
 ## 기록
 
+### 2026-04-13 - rescue search second pass에서 same-gate 후보를 못 찾음
+
+- 목표:
+  - `Value > Strict Annual` current practical anchor로 알려진 `Top N = 14 + psr`를
+    current runtime으로 다시 돌려서
+    `Promotion = real_money_candidate`, `Shortlist >= paper_probation`, `Deployment != blocked`
+    를 유지하는 lower-MDD rescue 후보가 있는지 확인한다
+- 실행 범위:
+  - `Top N = 13 / 14 / 15 / 16`
+  - bounded additions:
+    - `pfcr`
+    - `pcr`
+    - `por`
+    - `per`
+    - `pbr`
+  - bounded replacements:
+    - `pfcr` / `pcr` on `sales_yield`
+    - `pfcr` / `pcr` on `ocf_yield`
+    - `por` on `ocf_yield`
+  - minimal benchmark sensitivity:
+    - `Ticker Benchmark`
+    - `Candidate Universe Equal-Weight`
+- current code rerun 결과:
+  - `anchor_psr_t14`:
+    - `CAGR = 28.13%`
+    - `MDD = -24.55%`
+    - `Promotion = hold`
+    - `Shortlist = hold`
+    - `Deployment = blocked`
+  - best lower-MDD near-miss among ticker benchmark cases:
+    - `pfcr_add_t13`
+    - `CAGR = 24.82%`
+    - `MDD = -22.13%`
+    - `Promotion = hold`
+    - `Shortlist = hold`
+    - `Deployment = blocked`
+  - benchmark sensitivity to `Candidate Universe Equal-Weight` did not rescue the anchor either:
+    - `anchor_psr_t14`
+    - `CAGR = 28.13%`
+    - `MDD = -24.55%`
+    - `Promotion = hold`
+    - `Shortlist = hold`
+    - `Deployment = blocked`
+- 해석:
+  - current code 기준으로는 same-gate rescue 후보를 못 찾았다
+  - bounded addition / replacement은 `MDD`를 조금 바꾸는 정도였고
+    `Promotion`과 `Shortlist`를 동시에 유지하지 못했다
+  - 따라서 historical practical anchor는 current runtime 기준 reference로만 남기는 것이 맞다
+- 다음 액션:
+  - `Quality + Value` rescue search로 넘어가거나
+  - `Value`는 current code 기준 failed rescue로 closeout 한다
+
 ### 2026-04-13 - Phase 16 bounded downside refinement first pass
 
 - 목표:

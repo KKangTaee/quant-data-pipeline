@@ -92,6 +92,11 @@
 
 ## 대표 결과를 쉽게 읽으면
 
+주의:
+
+- 아래 1-4는 이전 phase에서 문서화한 historical result다
+- current runtime 기준 판단은 바로 아래 `최근 backtest log snapshot`을 우선해서 읽는다
+
 ### 1. 수익률이 가장 강한 후보
 
 - strongest raw winner
@@ -149,30 +154,48 @@
 ## 최근 backtest log snapshot
 
 - 최근 기록:
-  - `2026-04-13 - Phase 16 bounded downside refinement first pass`
+  - `2026-04-13 - Phase 16 rescue search second pass`
 - 핵심 설정:
-  - default value factors + `psr`
-  - `Benchmark = SPY`
-  - `Top N = 14`
-  - `Rebalance Interval = 1`
-  - `Trend Filter = off`
-  - `Market Regime = off`
-- 결과:
-  - current best practical point 유지:
+  - `Top N = 13 / 14 / 15 / 16`
+  - bounded additions:
+    - `pfcr`
+    - `pcr`
+    - `por`
+    - `per`
+    - `pbr`
+  - bounded replacements:
+    - `pfcr` / `pcr` on `sales_yield`
+    - `pfcr` / `pcr` on `ocf_yield`
+    - `por` on `ocf_yield`
+  - benchmark sensitivity:
+    - `Ticker Benchmark`
+    - `Candidate Universe Equal-Weight`
+- current code re-eval:
+  - anchor `Top N = 14 + psr` no longer reproduces the earlier practical gate state
+  - ticker benchmark rerun:
     - `CAGR = 28.13%`
     - `MDD = -24.55%`
-    - `Promotion = real_money_candidate`
-    - `Shortlist = paper_probation`
-    - `Deployment = review_required`
-  - lower-MDD but weaker gate:
-    - `+ pfcr`
-    - `CAGR = 27.22%`
-    - `MDD = -21.16%`
-    - `Promotion = production_candidate`
-    - `Shortlist = watchlist`
+    - `Promotion = hold`
+    - `Shortlist = hold`
+    - `Deployment = blocked`
+  - best lower-MDD near-miss among ticker benchmark cases:
+    - `pfcr_add_t13`
+    - `CAGR = 24.82%`
+    - `MDD = -22.13%`
+    - `Promotion = hold`
+    - `Shortlist = hold`
+    - `Deployment = blocked`
+  - candidate-universe-equal-weight sensitivity also stayed blocked
+- 결과:
+  - same-gate rescue failure:
+    - `MDD`를 조금 낮춘 near-miss는 있었지만
+      `Promotion = real_money_candidate`
+      `Shortlist >= paper_probation`
+      `Deployment != blocked`
+      를 동시에 만족하는 후보는 없었다
 - 다음에 볼 것:
-  - lower-MDD weaker-gate near-miss를 rescue할지
-    아니면 current anchor를 유지한 채 closeout 할지 결정
+  - `Value` family는 current code 기준 failed rescue로 closeout
+  - 이후 `Quality + Value` current code re-evaluation으로 넘긴다
 
 ## 관련 결과 문서
 
@@ -215,10 +238,10 @@
 - 즉 “좋은 숫자가 한 번 나온 전략”이 아니라,
   실제로 비교 가능한 후보군이 정리된 family다
 - Phase 16 first pass까지 보면
-  current best practical point는 여전히
-  `Top N = 14 + psr`
-  이고,
-  더 낮은 `MDD` same-gate candidate는 아직 못 찾은 상태다
+  historical practical anchor는 여전히 문서상으로 남아 있지만,
+  current code re-eval 기준으로는 same-gate rescue가 실패했다
+  즉, 이번 second pass에서는 더 낮은 `MDD` near-miss만 확인됐고
+  실전형 gate를 유지하는 bounded rescue는 못 찾았다
 
 지금 다시 볼 우선순위를 한 줄로 정리하면:
 
@@ -226,8 +249,8 @@
    - strongest raw winner
 2. 수익률과 낙폭의 균형을 보려면
    - downside-improved current candidate
-3. 지금 Phase 15 기준으로 가장 실무적으로 추천할 한 개를 고르라면
-   - best addition candidate
+3. current code 기준 rescue를 보려면
+   - `pfcr_add_t13` 같은 lower-MDD but weaker-gate near-miss
 
 즉 현재 `Value`는
 “가장 강한 family이면서,
