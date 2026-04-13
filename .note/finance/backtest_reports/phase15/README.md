@@ -24,3 +24,5 @@
 - candidate quality improvement
 - strongest baseline 대비 tradeoff 정리
 - current literal preset semantics 기준 rerun 정리
+- family-specific strongest candidate anchor 재검토
+- bounded structural rescue search

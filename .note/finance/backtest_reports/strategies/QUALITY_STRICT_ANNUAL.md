@@ -9,23 +9,26 @@
 ## 한 줄 요약
 
 `Quality` 단독 family는 Phase 13 탐색에서는 `SPY` dominance와 non-hold exact-hit를 동시에 만족시키는 대표 후보를 만들지 못했다.
-Phase 14 refresh에서는 한때 `production_candidate / watchlist / review_required` 후보가 보였지만,
-Phase 15에서 strict annual dynamic PIT preset semantics를 literal하게 맞춘 뒤 다시 보면
-current bounded addition pass에서는 다시 `hold` 상태로 돌아왔다.
+Phase 14 refresh에서는 한때 `production_candidate / watchlist / review_required` 후보가 보였고,
+Phase 15 first pass에서는 bounded addition만으로는 다시 `hold`를 못 벗어났다.
+하지만 Phase 15 structural rescue second pass에서는
+`LQD + trend on + regime off + capital_discipline` 조합이
+`real_money_candidate / paper_probation / review_required`까지 회복됐다.
 
 즉:
 
 - 품질 factor 조합 실험의 reference로는 의미가 있고
 - strict annual family 중 최강 후보는 아니지만
-- current literal preset semantics 기준으로는
-  아직 stable non-hold candidate를 다시 확보하지 못한 family다
+- current practical contract 기준으로도
+  다시 살릴 수 있는 구조 조합이 확인된 family다
 
 ## 지금 어떻게 읽으면 되는가
 
-- `SPY` 대비 우위가 가능한지 먼저 확인
-- current literal preset semantics에서도 non-hold가 나오는지 확인
-- 안 되면 `Value` 또는 `Quality + Value`와 비교하고,
-  `benchmark / overlay / factor replacement`로 넘어간다
+- current rescued candidate를 먼저 확인
+- 그 다음 `SPY` 대비 우위와 `MDD` tradeoff를 본다
+- 이후에는 rescued anchor 기준
+  `downside / factor addition / top_n`
+  으로 이어간다
 
 ## 전략 log
 
@@ -35,19 +38,19 @@ current bounded addition pass에서는 다시 `hold` 상태로 돌아왔다.
 ## 대표 결과
 
 - strongest search theme:
-  - `SPY` dominance 탐색
+  - `capital_discipline` structural rescue 탐색
 - current takeaway:
-  - exact-hit 없음
-  - family 단독으로는 `Value`보다 약하다
-  - Phase 15 current literal preset semantics 기준으로는
-    controlled one-factor addition만으로 `hold`를 못 벗어났다
+  - current strongest practical candidate는 다시 확보됐다
+  - family 단독으로는 여전히 `Value`보다 약하지만
+  - `Quality`도 current practical contract에서
+    `real_money_candidate / paper_probation`까지 올라갈 수 있다
 
 ## 최근 backtest log snapshot
 
 - 최근 기록:
-  - `2026-04-13 - post-PIT semantics controlled addition review`
+  - `2026-04-13 - structural rescue second pass`
 - 핵심 설정:
-  - anchor:
+  - `capital_discipline`:
     - `roe`
     - `roa`
     - `cash_ratio`
@@ -56,24 +59,22 @@ current bounded addition pass에서는 다시 `hold` 상태로 돌아왔다.
   - `Top N = 10`
   - `Rebalance Interval = 1`
   - `Trend Filter = on`
-  - `Market Regime = on`
+  - `Market Regime = off`
 - 결과:
-  - baseline:
-    - `CAGR = 13.26%`
-    - `MDD = -32.59%`
-    - `Promotion = hold`
-    - `Shortlist = hold`
-    - `Deployment = blocked`
-  - best near-miss:
+  - rescued current candidate:
+    - `CAGR = 24.28%`
+    - `MDD = -31.48%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = paper_probation`
+    - `Deployment = review_required`
+  - notable near-miss:
     - `+ net_debt_to_equity`
-    - `CAGR = 13.51%`
-    - `MDD = -23.84%`
+    - `CAGR = 20.48%`
+    - `MDD = -23.52%`
     - `Promotion = hold`
-    - `Shortlist = hold`
-    - `Deployment = blocked`
 - 다음에 볼 것:
-  - single-factor addition보다
-    `benchmark / overlay / factor replacement / top_n` 구조 탐색
+  - rescued anchor 기준
+    `top_n / downside / bounded factor addition`
 
 ## 관련 결과 문서
 
@@ -94,6 +95,10 @@ current bounded addition pass에서는 다시 `hold` 상태로 돌아왔다.
 - [PHASE15_QUALITY_CANDIDATE_IMPROVEMENT_SEARCH_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase15/PHASE15_QUALITY_CANDIDATE_IMPROVEMENT_SEARCH_FIRST_PASS.md)
   - strict annual dynamic PIT preset semantics를 literal하게 맞춘 뒤,
     `Quality` bounded addition search가 왜 non-hold를 못 회복했는지 정리한 문서
+- [PHASE15_QUALITY_STRUCTURAL_RESCUE_SEARCH_SECOND_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase15/PHASE15_QUALITY_STRUCTURAL_RESCUE_SEARCH_SECOND_PASS.md)
+  - `benchmark / overlay` 구조를 조정해 `Quality` current rescued candidate를 다시 확보한 문서
+- [QUALITY_STRICT_ANNUAL_RESCUED_CURRENT_CANDIDATE.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/QUALITY_STRICT_ANNUAL_RESCUED_CURRENT_CANDIDATE.md)
+  - current rescued candidate를 전략 구성 중심으로 바로 읽는 one-pager
 
 ## 실무 해석
 
@@ -102,7 +107,7 @@ current bounded addition pass에서는 다시 `hold` 상태로 돌아왔다.
 - 단독 운영 exact winner보다는
 - factor 비교 기준점
 - `Value`와 `Quality + Value`를 해석할 때의 reference family
-- 그리고 current literal preset semantics 기준으로는
-  recovery search가 더 필요한 family
+- 그리고 current practical contract 기준으로는
+  rescued structural candidate가 확인된 family
 
 로 읽는 편이 맞다.

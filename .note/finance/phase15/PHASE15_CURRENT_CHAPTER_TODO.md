@@ -47,7 +47,10 @@
 - `completed` controlled factor expansion 기준 재탐색
 - `completed` current literal preset semantics 기준 rerun 정리
   - single-factor addition만으로는 non-hold candidate를 회복하지 못했다
-- `pending` benchmark / overlay / factor replacement rescue search
+- `completed` benchmark / overlay structural rescue search
+  - `capital_discipline + LQD + trend on + regime off + Top N 10`
+    조합에서 `real_money_candidate / paper_probation / review_required`를 회복했다
+- `pending` rescued anchor 기준 downside / bounded addition search
 
 ## Workstream C. Quality + Value Candidate Improvement
 
@@ -55,7 +58,9 @@
 - `completed` best raw addition candidate 정리
   - value-side addition까지 넓혀 보니 `per`가 current best practical candidate가 되었다
   - `real_money_candidate / small_capital_trial / review_required`까지 올라갔다
-- `pending` benchmark / top_n / factor replacement search
+- `completed` `per` anchor 기준 top_n downside search
+  - `Top N = 10`이 여전히 strongest practical point로 남았다
+- `pending` benchmark / factor replacement / quality-side pruning search
 
 ## Workstream D. Reporting
 
@@ -84,14 +89,22 @@
   - `Shortlist = paper_probation`
   - `Deployment = review_required`
 - Quality current state:
-  - bounded single-factor addition 기준 current non-hold candidate 없음
-  - best near-miss:
-    - `+ net_debt_to_equity`
-    - `CAGR = 13.51%`
-    - `MDD = -23.84%`
-    - `Promotion = hold`
+  - rescued current candidate 확보
+  - `capital_discipline + LQD + trend on + regime off + Top N 10`
+    - `CAGR = 24.28%`
+    - `MDD = -31.48%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = paper_probation`
+    - `Deployment = review_required`
 - Quality + Value best raw addition:
   - `+ per`
+  - `CAGR = 29.43%`
+  - `MDD = -27.43%`
+  - `Promotion = real_money_candidate`
+  - `Shortlist = small_capital_trial`
+  - `Deployment = review_required`
+- Quality + Value current strongest practical point:
+  - `Top N = 10 + per`
   - `CAGR = 29.43%`
   - `MDD = -27.43%`
   - `Promotion = real_money_candidate`
@@ -107,12 +120,16 @@
 - Phase 15 second pass에서는
   `psr` addition이 current best balanced candidate가 되었다.
 - `Quality`는 current literal preset semantics 기준으로
-  bounded single-factor addition만으로는 recovery가 안 된다.
+  bounded single-factor addition만으로는 recovery가 안 됐지만,
+  structural rescue search에서는 current candidate를 다시 회복했다.
 - `Quality + Value`는 value-side controlled addition까지 넓혀 보니
   `per`가 gate tier를 실제로 끌어올렸다.
+- 그리고 `Top N` downside search까지 보면
+  `Top N = 10 + per`가 그대로 strongest practical point였다.
 - 다음 active step은
   - `Quality`:
-    - `benchmark / overlay / factor replacement` rescue search
+    - rescued anchor 기준
+      `top_n / downside / bounded factor addition` search
   - `Quality + Value`:
-    - `per` anchor 기준 `top_n / downside / factor replacement` search
+    - `per` anchor 기준 `factor replacement / quality-side pruning / benchmark` search
   쪽이다.

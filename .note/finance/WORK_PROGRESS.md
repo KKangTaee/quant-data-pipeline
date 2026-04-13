@@ -5122,3 +5122,45 @@ Keep entries append-only and concise.
   - `.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL_BACKTEST_LOG.md`
   - `.note/finance/backtest_reports/strategies/QUALITY_STRICT_ANNUAL.md`
   - `.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL.md`
+
+### 2026-04-13 - Phase 15에서 Quality + Value `per` anchor downside search를 정리함
+
+- We extended the new `Quality + Value + per` strongest candidate with a bounded `Top N` downside search.
+- Result:
+  - `Top N = 10 + per` remained the strongest practical point.
+  - narrower `Top N` improved raw CAGR but downgraded the gate tier.
+  - wider `Top N` improved `MDD` but fell back to `hold`.
+- Durable outputs:
+  - `.note/finance/backtest_reports/phase15/PHASE15_QUALITY_VALUE_PER_DOWNSIDE_SEARCH_FIRST_PASS.md`
+  - `.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL_BACKTEST_LOG.md`
+  - `.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL.md`
+
+### 2026-04-13 - Phase 15에서 Quality structural rescue search second pass를 정리함
+
+- After the bounded addition pass, we moved `Quality > Strict Annual` to a structural rescue search:
+  - `benchmark`
+  - `overlay`
+  - `Top N`
+- Current-code rerun confirmed that `Quality` is not locked in `hold`.
+  - best rescued candidate:
+    - `capital_discipline`
+    - `Benchmark = LQD`
+    - `Trend Filter = on`
+    - `Market Regime = off`
+    - `Top N = 10`
+    - `CAGR = 24.28%`
+    - `MDD = -31.48%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = paper_probation`
+    - `Deployment = review_required`
+- A meaningful near-miss also emerged:
+  - `+ net_debt_to_equity`
+  - `CAGR = 20.48%`
+  - `MDD = -23.52%`
+  - but it fell back to `hold` because `validation = caution`.
+- Durable outputs:
+  - `.note/finance/backtest_reports/phase15/PHASE15_QUALITY_STRUCTURAL_RESCUE_SEARCH_SECOND_PASS.md`
+  - `.note/finance/backtest_reports/strategies/QUALITY_STRICT_ANNUAL_RESCUED_CURRENT_CANDIDATE.md`
+  - `.note/finance/backtest_reports/strategies/QUALITY_STRICT_ANNUAL_BACKTEST_LOG.md`
+  - `.note/finance/backtest_reports/strategies/QUALITY_STRICT_ANNUAL.md`
+  - `.note/finance/phase15/PHASE15_CURRENT_CHAPTER_TODO.md`

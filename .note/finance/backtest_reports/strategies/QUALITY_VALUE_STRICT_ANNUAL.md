@@ -37,11 +37,12 @@
   - baseline default blend 위에 value-side addition을 붙이면
     gate를 실제로 더 올릴 수 있다
   - bounded one-factor addition 중에서는 `per`가 current best practical candidate였다
+  - `Top N` downside search까지 보면, 현재도 `Top N = 10 + per`가 strongest practical point로 남는다
 
 ## 최근 backtest log snapshot
 
 - 최근 기록:
-  - `2026-04-13 - bounded addition review`
+  - `2026-04-13 - per strongest blended candidate downside search`
 - 핵심 설정:
   - baseline default blend
   - `Benchmark Contract = Candidate Universe Equal-Weight`
@@ -50,13 +51,7 @@
   - `Trend Filter = off`
   - `Market Regime = off`
 - 결과:
-  - baseline:
-    - `CAGR = 28.51%`
-    - `MDD = -28.35%`
-    - `Promotion = production_candidate`
-    - `Shortlist = watchlist`
-    - `Deployment = review_required`
-  - best addition:
+  - strongest practical candidate:
     - `+ per`
     - `CAGR = 29.43%`
     - `MDD = -27.43%`
@@ -64,8 +59,9 @@
     - `Shortlist = small_capital_trial`
     - `Deployment = review_required`
 - 다음에 볼 것:
-  - `per` anchor 기준으로
-    `top_n / downside / factor replacement` 조합 탐색
+  - `Top N` search 결과
+    `10`이 그대로 strongest practical point로 남았으므로
+    다음은 `factor replacement / quality-side pruning / benchmark sensitivity`
 
 ## 관련 결과 문서
 
@@ -87,6 +83,8 @@
   - baseline blend anchor에 controlled factor addition을 붙여 current best addition candidate를 다시 본 문서
 - [QUALITY_VALUE_STRICT_ANNUAL_BEST_ADDITION_CURRENT_CANDIDATE.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL_BEST_ADDITION_CURRENT_CANDIDATE.md)
   - `per` addition candidate를 전략 구성 중심으로 바로 읽는 one-pager
+- [PHASE15_QUALITY_VALUE_PER_DOWNSIDE_SEARCH_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase15/PHASE15_QUALITY_VALUE_PER_DOWNSIDE_SEARCH_FIRST_PASS.md)
+  - `per` strongest candidate를 anchor로 `Top N` downside search를 다시 본 문서
 
 ## 실무 해석
 
@@ -101,3 +99,5 @@
 Phase 15 bounded addition search 기준으로는
 `per`가 `real_money_candidate / small_capital_trial / review_required`까지 올라가며
 current strongest practical blended candidate가 되었다.
+그리고 `Top N` downside search까지 보면
+현재도 `Top N = 10 + per`가 strongest practical point로 남는다.

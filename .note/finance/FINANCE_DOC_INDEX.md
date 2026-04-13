@@ -31,6 +31,8 @@
   - `GTAA` 전략 run 기록을 전략 기준으로 누적 관리하는 backtest log 문서
 - `.note/finance/backtest_reports/strategies/QUALITY_STRICT_ANNUAL_BACKTEST_LOG.md`
   - `Quality > Strict Annual` 전략 run 기록을 전략 기준으로 누적 관리하는 backtest log 문서
+- `.note/finance/backtest_reports/strategies/QUALITY_STRICT_ANNUAL_RESCUED_CURRENT_CANDIDATE.md`
+  - `Quality > Strict Annual` structural rescue search에서 current rescued candidate를 전략 구성 중심으로 정리한 one-pager
 - `.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL_BACKTEST_LOG.md`
   - `Value > Strict Annual` 전략 run 기록을 전략 기준으로 누적 관리하는 backtest log 문서
 - `.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL_BACKTEST_LOG.md`
@@ -724,7 +726,11 @@ Phase 4 시작 시:
   - strongest `Value` baseline보다 `MDD`를 낮춘 downside-improved current candidate one-pager
 - `.note/finance/backtest_reports/phase15/PHASE15_QUALITY_CANDIDATE_IMPROVEMENT_SEARCH_FIRST_PASS.md`
   - `Quality` family에서 controlled addition이 current literal preset semantics 기준으로 왜 non-hold를 회복하지 못했는지 정리한 report
+- `.note/finance/backtest_reports/phase15/PHASE15_QUALITY_STRUCTURAL_RESCUE_SEARCH_SECOND_PASS.md`
+  - `Quality` family에서 `benchmark / overlay` 구조를 조정해 current rescued candidate를 다시 확보한 report
 - `.note/finance/backtest_reports/phase15/PHASE15_QUALITY_VALUE_CANDIDATE_IMPROVEMENT_SEARCH_FIRST_PASS.md`
   - `Quality + Value` family baseline blend에 controlled addition을 붙여 best raw addition candidate를 정리한 report
+- `.note/finance/backtest_reports/phase15/PHASE15_QUALITY_VALUE_PER_DOWNSIDE_SEARCH_FIRST_PASS.md`
+  - `Quality + Value + per` strongest candidate를 anchor로 `Top N` downside search를 다시 본 report
 - `.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL_BEST_ADDITION_CURRENT_CANDIDATE.md`
-  - `gpa` addition 기반 current best raw addition candidate one-pager
+  - `per` addition 기반 current best raw addition candidate one-pager

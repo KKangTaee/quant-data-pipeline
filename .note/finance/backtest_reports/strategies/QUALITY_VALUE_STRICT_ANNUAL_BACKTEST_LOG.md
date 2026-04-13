@@ -20,6 +20,71 @@
 
 ## 기록
 
+### 2026-04-13 - per strongest blended candidate downside search
+
+- 목표:
+  - `per` addition current strongest blended candidate를 anchor로 두고
+    `Top N`만 바꿔도 더 좋은 downside / gate tradeoff가 생기는지 확인
+- 전략:
+  - `Quality + Value > Strict Annual`
+- 기간 / universe:
+  - `2016-01-01 ~ 2026-04-01`
+  - `US Statement Coverage 100`
+  - `Historical Dynamic PIT Universe`
+- 핵심 설정:
+  - `Option = month_end`
+  - `Rebalance Interval = 1`
+  - `Benchmark Contract = Candidate Universe Equal-Weight`
+  - `Trend Filter = off`
+  - `Market Regime = off`
+  - `Minimum Price = 5.0`
+  - `Minimum History = 12M`
+  - `Min Avg Dollar Volume 20D = 5.0M`
+  - `Transaction Cost = 10 bps`
+  - underperformance / drawdown guardrail `on`
+- factor / ticker:
+  - quality:
+    - `roe`
+    - `roa`
+    - `net_margin`
+    - `asset_turnover`
+    - `current_ratio`
+  - value:
+    - `book_to_market`
+    - `earnings_yield`
+    - `sales_yield`
+    - `ocf_yield`
+    - `operating_income_yield`
+    - `per`
+- 결과:
+  - baseline anchor:
+    - `Top N = 10`
+    - `CAGR = 29.43%`
+    - `MDD = -27.43%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = small_capital_trial`
+    - `Deployment = review_required`
+  - notable alternatives:
+    - `Top N = 8`
+      - `CAGR = 31.69%`
+      - `MDD = -27.64%`
+      - `Promotion = production_candidate`
+    - `Top N = 18`
+      - `CAGR = 24.46%`
+      - `MDD = -24.73%`
+      - `Promotion = hold`
+- 해석:
+  - `Top N = 10`이 이번 pass에서도 가장 좋은 practical point였다
+  - 더 좁히면 수익률은 높아도 gate가 낮아졌고
+  - 더 넓히면 `MDD`는 낮아져도 validation이 `caution`이 되어 `hold`로 떨어졌다
+- 다음 액션:
+  - `Top N`보다
+    `factor replacement / quality-side pruning / benchmark sensitivity`
+    쪽이 다음 레버다
+- 관련 문서:
+  - [QUALITY_VALUE_STRICT_ANNUAL_BEST_ADDITION_CURRENT_CANDIDATE.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL_BEST_ADDITION_CURRENT_CANDIDATE.md)
+  - [PHASE15_QUALITY_VALUE_PER_DOWNSIDE_SEARCH_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase15/PHASE15_QUALITY_VALUE_PER_DOWNSIDE_SEARCH_FIRST_PASS.md)
+
 ### 2026-04-13 - bounded addition review with current strongest blend anchor
 
 - 목표:

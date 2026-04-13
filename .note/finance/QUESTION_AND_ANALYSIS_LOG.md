@@ -8188,3 +8188,64 @@ Do not copy full chat transcripts. Keep only the durable result.
   - `.note/finance/backtest_reports/phase15/PHASE15_QUALITY_CANDIDATE_IMPROVEMENT_SEARCH_FIRST_PASS.md`
   - `.note/finance/backtest_reports/phase15/PHASE15_QUALITY_VALUE_CANDIDATE_IMPROVEMENT_SEARCH_FIRST_PASS.md`
   - `.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL_BEST_ADDITION_CURRENT_CANDIDATE.md`
+
+### 2026-04-13 - `Quality + Value + per` strongest candidate는 `Top N = 10`이 그대로 strongest practical point로 남음
+
+- Request topic:
+  - continue Phase 15 after finding `per` as the strongest bounded addition for `Quality + Value`
+- Interpreted goal:
+  - determine whether simple `Top N` diversification can lower drawdown without losing the upgraded gate tier
+- Result:
+  - `Top N = 10 + per`
+    - `CAGR = 29.43%`
+    - `MDD = -27.43%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = small_capital_trial`
+    - `Deployment = review_required`
+  - narrower `Top N` improved raw CAGR but usually dropped to `production_candidate`
+  - wider `Top N` reduced drawdown somewhat but fell back to `hold`
+- Practical conclusion:
+  - for this family, `Top N` is not the best downside-improvement lever
+  - the next lever should move to:
+    - factor replacement
+    - quality-side pruning
+    - benchmark sensitivity
+- Durable output:
+  - `.note/finance/backtest_reports/phase15/PHASE15_QUALITY_VALUE_PER_DOWNSIDE_SEARCH_FIRST_PASS.md`
+
+### 2026-04-13 - Quality structural rescue search 결과 `real_money_candidate / paper_probation` 회복 가능성이 확인됨
+
+- Request topic:
+  - continue the next Phase 15 step after the `Quality + Value + per` downside pass
+- Interpreted goal:
+  - determine whether `Quality > Strict Annual` can recover a practical candidate through structural changes instead of more single-factor additions
+- Result:
+  - bounded structural search showed that `Quality` is not locked in `hold`
+  - best current rescued candidate:
+    - factor set:
+      - `roe`
+      - `roa`
+      - `cash_ratio`
+      - `debt_to_assets`
+    - `Benchmark = LQD`
+    - `Trend Filter = on`
+    - `Market Regime = off`
+    - `Top N = 10`
+    - `CAGR = 24.28%`
+    - `MDD = -31.48%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = paper_probation`
+    - `Deployment = review_required`
+  - meaningful near-miss:
+    - `+ net_debt_to_equity`
+    - `CAGR = 20.48%`
+    - `MDD = -23.52%`
+    - still `hold`
+- Practical conclusion:
+  - for `Quality`, the next lever is more clearly:
+    - rescued-anchor downside search
+    - bounded additions on top of the rescued anchor
+  - not another blind one-factor addition pass from the older hold baseline
+- Durable output:
+  - `.note/finance/backtest_reports/phase15/PHASE15_QUALITY_STRUCTURAL_RESCUE_SEARCH_SECOND_PASS.md`
+  - `.note/finance/backtest_reports/strategies/QUALITY_STRICT_ANNUAL_RESCUED_CURRENT_CANDIDATE.md`
