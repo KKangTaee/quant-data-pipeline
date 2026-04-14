@@ -18,7 +18,9 @@
 
 - `completed` trend filter help 문구를 explicit handling contract 기준으로 정리
 - `completed` runtime warning을 explicit handling mode 기준으로 통일
-- `pending` history / selection interpretation 문구를 더 operator-friendly하게 정리
+- `completed` history / selection interpretation 문구를 더 operator-friendly하게 정리
+  - selection history에 `Rejected Slot Handling` / `Filled Count`를 노출
+  - interpretation summary에 `Filled Events` / `Cash-Retained Events`를 추가
 
 ## 3. Validation
 
@@ -32,5 +34,6 @@
 ## 4. Documentation Sync
 
 - `completed` phase19 kickoff / first slice 문서 생성
+- `completed` phase19 history / interpretation cleanup second slice 문서 생성
 - `completed` roadmap / doc index / work log / question log sync
 - `completed` finance comprehensive analysis sync

@@ -1266,7 +1266,7 @@ def _render_market_regime_help_popover() -> None:
 def _render_interpretation_summary_help_popover() -> None:
     _render_inline_help_popover(
         "해석 요약",
-        "Raw Candidate Events는 각 리밸런싱에서 팩터 랭킹으로 최종 후보(top N)까지 올라온 종목 수의 총합입니다. Final Selected Events는 오버레이까지 반영한 뒤 실제 보유 후보로 남은 종목 수의 총합입니다. 이 값들은 전체 모집군 크기를 뜻하지 않습니다. 오버레이가 꺼져 있으면 보통 Raw와 Final이 같고, 오버레이가 켜져 있으면 Raw와 Final의 차이만큼 추가 필터가 개입한 것으로 해석하면 됩니다. Overlay Rejections는 개별 종목 추세 필터로 제외된 횟수 합계이고, Filled Events가 있으면 제외된 자리 일부를 다음 순위 종목으로 보충했다는 뜻입니다. Regime Blocked Events / Regime Cash Rebalances는 시장 상태 오버레이 때문에 포트폴리오 전체가 현금으로 이동한 흔적을 요약합니다.",
+        "Raw Candidate Events는 각 리밸런싱에서 팩터 랭킹으로 최종 후보(top N)까지 올라온 종목 수의 총합입니다. Final Selected Events는 오버레이까지 반영한 뒤 실제 보유 후보로 남은 종목 수의 총합입니다. 이 값들은 전체 모집군 크기를 뜻하지 않습니다. 오버레이가 꺼져 있으면 보통 Raw와 Final이 같고, 오버레이가 켜져 있으면 Raw와 Final의 차이만큼 추가 필터가 개입한 것으로 해석하면 됩니다. `Rejected Slot Handling`은 trend rejection 이후 빈 슬롯을 어떻게 처리하도록 계약했는지의 현재 실행 언어입니다. Filled Events는 제외된 자리 일부를 다음 순위 종목으로 보충한 횟수, Cash-Retained Events는 부분 rejection 이후 빈 슬롯 일부를 현금으로 남긴 횟수입니다. Regime Blocked Events / Regime Cash Rebalances는 시장 상태 오버레이 때문에 포트폴리오 전체가 현금으로 이동한 흔적을 요약합니다.",
     )
 
 
@@ -2102,6 +2102,20 @@ def _strict_rejection_handling_mode_value_to_label(value: str | None) -> str:
         if mode_value == resolved_mode:
             return label
     return "Reweight Survivors"
+
+
+def _strict_rejection_handling_label_from_flags(
+    *,
+    rejected_slot_fill_enabled: bool,
+    partial_cash_retention_enabled: bool,
+) -> str:
+    return _strict_rejection_handling_mode_value_to_label(
+        resolve_strict_rejection_handling_mode(
+            None,
+            rejected_slot_fill_enabled=rejected_slot_fill_enabled,
+            partial_cash_retention_enabled=partial_cash_retention_enabled,
+        )
+    )
 
 
 def _render_gtaa_risk_off_contract_inputs(*, key_prefix: str) -> dict[str, Any]:
@@ -6923,6 +6937,14 @@ def _build_snapshot_selection_history(result_df: pd.DataFrame) -> pd.DataFrame:
     if selection_df.empty:
         return pd.DataFrame()
 
+    selection_df["Rejected Slot Handling"] = selection_df.apply(
+        lambda row: _strict_rejection_handling_label_from_flags(
+            rejected_slot_fill_enabled=bool(row.get("Rejected Slot Fill Enabled") or False),
+            partial_cash_retention_enabled=bool(row.get("Partial Cash Retention Enabled") or False),
+        ),
+        axis=1,
+    )
+
     keep_columns = [
         "Date",
         "Raw Selected Ticker",
@@ -6930,6 +6952,13 @@ def _build_snapshot_selection_history(result_df: pd.DataFrame) -> pd.DataFrame:
         "Raw Selected Score",
         "Overlay Rejected Ticker",
         "Overlay Rejected Count",
+        "Rejected Slot Handling",
+        "Rejected Slot Fill Enabled",
+        "Rejected Slot Fill Active",
+        "Rejected Slot Fill Ticker",
+        "Rejected Slot Fill Count",
+        "Partial Cash Retention Enabled",
+        "Partial Cash Retention Active",
         "Regime Blocked Ticker",
         "Regime Blocked Count",
         "Next Ticker",
@@ -6937,6 +6966,7 @@ def _build_snapshot_selection_history(result_df: pd.DataFrame) -> pd.DataFrame:
         "Selected Score",
         "Trend Filter Enabled",
         "Trend Filter Column",
+        "Weighting Mode",
         "Market Regime Enabled",
         "Market Regime Benchmark",
         "Market Regime Column",
@@ -6954,6 +6984,7 @@ def _build_snapshot_selection_history(result_df: pd.DataFrame) -> pd.DataFrame:
         "Raw Selected Score": "Raw Selection Score",
         "Overlay Rejected Ticker": "Overlay Rejected Tickers",
         "Rejected Slot Fill Ticker": "Filled Tickers",
+        "Rejected Slot Fill Count": "Filled Count",
         "Regime Blocked Ticker": "Regime Blocked Tickers",
     }
     selection_df = selection_df.rename(columns=rename_map).reset_index(drop=True)
@@ -7011,15 +7042,20 @@ def _build_snapshot_selection_history(result_df: pd.DataFrame) -> pd.DataFrame:
                 f"was in risk-off state at this rebalance. It blocked {regime_blocked_count} post-filter candidate(s)."
             )
         if selected_count <= 0 and rejected_count > 0:
-            return f"Trend overlay rejected all {raw_count} raw candidates, so the portfolio moved fully to cash."
+            handling_label = str(row.get("Rejected Slot Handling") or "current rejection handling")
+            return (
+                f"Trend overlay rejected all {raw_count} raw candidates under `{handling_label}`, "
+                "so the portfolio moved fully to cash."
+            )
         if rejected_count > 0:
+            handling_label = str(row.get("Rejected Slot Handling") or "current rejection handling")
             fill_count = int(row.get("Rejected Slot Fill Count") or 0)
             fill_active = bool(row.get("Rejected Slot Fill Active") or False)
             partial_cash_retention_active = bool(row.get("Partial Cash Retention Active") or False)
             if fill_active and fill_count > 0:
                 unfilled_count = max(rejected_count - fill_count, 0)
                 fill_text = (
-                    f"refilled {fill_count} rejected slot(s) with next-ranked eligible names"
+                    f"`{handling_label}` refilled {fill_count} rejected slot(s) with next-ranked eligible names"
                     + (
                         f" and left {unfilled_count} slot(s) in cash. Cash share after rebalance: {cash_share_text}."
                         if partial_cash_retention_active and unfilled_count > 0
@@ -7028,7 +7064,7 @@ def _build_snapshot_selection_history(result_df: pd.DataFrame) -> pd.DataFrame:
                 )
                 if not partial_cash_retention_active and selected_count < raw_count:
                     fill_text = (
-                        f"refilled {fill_count} rejected slot(s), then reweighted the final survivors after "
+                        f"`{handling_label}` refilled {fill_count} rejected slot(s), then reweighted the final survivors after "
                         f"{rejected_count} original rejection(s). Cash share after rebalance: {cash_share_text}."
                     )
                 return (
@@ -7037,9 +7073,9 @@ def _build_snapshot_selection_history(result_df: pd.DataFrame) -> pd.DataFrame:
             return (
                 f"Trend overlay kept {selected_count} of {raw_count} raw candidates and "
                 + (
-                    f"left {rejected_count} rejected slot(s) in cash. Cash share after rebalance: {cash_share_text}."
+                    f"`{handling_label}` left {rejected_count} rejected slot(s) in cash. Cash share after rebalance: {cash_share_text}."
                     if partial_cash_retention_active
-                    else f"reweighted the survivors after rejecting {rejected_count} name(s). Cash share after rebalance: {cash_share_text}."
+                    else f"`{handling_label}` reweighted the survivors after rejecting {rejected_count} name(s). Cash share after rebalance: {cash_share_text}."
                 )
             )
         if pd.notna(cash_share) and float(cash_share) > 0:
@@ -7119,6 +7155,20 @@ def _build_selection_interpretation_summary(selection_df: pd.DataFrame) -> pd.Da
     raw_candidate_events = int(pd.to_numeric(selection_df.get("Raw Selected Count"), errors="coerce").fillna(0).sum())
     final_selected_events = int(pd.to_numeric(selection_df.get("Selected Count"), errors="coerce").fillna(0).sum())
     overlay_rejections = int(pd.to_numeric(selection_df.get("Overlay Rejected Count"), errors="coerce").fillna(0).sum())
+    filled_events = int(
+        (
+            pd.to_numeric(selection_df.get("Rejected Slot Fill Count"), errors="coerce")
+            .fillna(0)
+            .gt(0)
+        ).sum()
+    )
+    cash_retained_events = int(
+        (
+            selection_df.get("Partial Cash Retention Active", pd.Series(dtype=bool))
+            .fillna(False)
+            .astype(bool)
+        ).sum()
+    )
     regime_rejections = int(pd.to_numeric(selection_df.get("Regime Blocked Count"), errors="coerce").fillna(0).sum())
     regime_cash_rebalances = int(
         (
@@ -7136,6 +7186,13 @@ def _build_selection_interpretation_summary(selection_df: pd.DataFrame) -> pd.Da
     )
     cash_share_series = pd.to_numeric(selection_df.get("Cash Share Ratio"), errors="coerce")
     avg_cash_share = float(cash_share_series.fillna(0).mean()) if cash_share_series is not None else 0.0
+    handling_values = [
+        str(value).strip()
+        for value in selection_df.get("Rejected Slot Handling", pd.Series(dtype=object)).tolist()
+        if str(value).strip()
+    ]
+    unique_handling = sorted(dict.fromkeys(handling_values))
+    handling_summary = ", ".join(unique_handling) if unique_handling else "n/a"
 
     return pd.DataFrame(
         [
@@ -7143,6 +7200,9 @@ def _build_selection_interpretation_summary(selection_df: pd.DataFrame) -> pd.Da
                 "Raw Candidate Events": raw_candidate_events,
                 "Final Selected Events": final_selected_events,
                 "Overlay Rejections": overlay_rejections,
+                "Rejected Slot Handling": handling_summary,
+                "Filled Events": filled_events,
+                "Cash-Retained Events": cash_retained_events,
                 "Regime Blocked Events": regime_rejections,
                 "Regime Cash Rebalances": regime_cash_rebalances,
                 "Cash-Only Rebalances": cash_only_rebalances,
@@ -7304,7 +7364,20 @@ def _render_snapshot_selection_history(
             st.caption("`Cash Share`는 각 리밸런싱 직후 포트폴리오에서 현금으로 남아 있는 비중입니다.")
         with cash_help_col:
             _render_cash_share_help_popover()
-        st.dataframe(selection_df.drop(columns=["Cash Share Ratio"], errors="ignore"), use_container_width=True, hide_index=True)
+        st.dataframe(
+            selection_df.drop(
+                columns=[
+                    "Cash Share Ratio",
+                    "Rejected Slot Fill Enabled",
+                    "Rejected Slot Fill Active",
+                    "Partial Cash Retention Enabled",
+                    "Partial Cash Retention Active",
+                ],
+                errors="ignore",
+            ),
+            use_container_width=True,
+            hide_index=True,
+        )
     with interpretation_tab:
         interpretation_summary_df = _build_selection_interpretation_summary(selection_df)
         if not interpretation_summary_df.empty:

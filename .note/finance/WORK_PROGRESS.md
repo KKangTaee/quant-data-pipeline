@@ -361,3 +361,19 @@ Detailed historical logs were archived on `2026-04-13`.
   - finance comprehensive analysis
 - Durable takeaway:
   - Phase 19 first slice favors contract clarity and legacy compatibility over broad rerun coverage
+
+### 2026-04-14
+- Completed `Phase 19` second slice for history / interpretation cleanup.
+- Changed:
+  - strict annual selection history now preserves rejected-slot fill / cash-retention execution details for interpretation
+  - interpretation summary now shows `Rejected Slot Handling`, `Filled Events`, `Cash-Retained Events`
+  - history table hides internal booleans and shows operator-facing contract language instead
+- Validation:
+  - `python3 -m py_compile app/web/pages/backtest.py`
+  - `.venv/bin/python` import smoke for `app.web.pages.backtest`
+- Synced:
+  - phase19 TODO/doc
+  - finance comprehensive analysis
+  - finance doc index
+- Durable takeaway:
+  - Phase 19 now covers not only form/runtime contract clarity but also history/interpretation readability for the same handling semantics

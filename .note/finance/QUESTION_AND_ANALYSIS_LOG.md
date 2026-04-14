@@ -526,3 +526,22 @@ Detailed historical analysis was archived on `2026-04-13`.
   - compatibility rule:
     - new payload는 explicit mode와 legacy booleans를 같이 남긴다
     - old payload는 booleans만 있어도 explicit mode로 복원한다
+
+### 2026-04-14 - Phase 19 second slice는 history와 interpretation도 같은 contract 언어로 정리해야 한다
+- Request topic:
+  - `Phase 19` 다음 작업 진행
+- Interpreted goal:
+  - first slice에서 정리한 `Rejected Slot Handling Contract`가
+    form / warning뿐 아니라 history와 interpretation에서도 같은 언어로 읽히게 만들고 싶음
+- Result:
+  - selection history row가 이제
+    `Rejected Slot Handling`, `Filled Count`, `Filled Tickers`
+    를 같이 보존한다
+  - interpretation summary가 이제
+    `Rejected Slot Handling`, `Filled Events`, `Cash-Retained Events`
+    를 함께 보여준다
+  - row-level interpretation 문구도
+    “fill했는지 / 현금으로 남겼는지 / 생존 종목 재배분이었는지”를
+    explicit handling contract 기준으로 직접 설명한다
+  - history display에서는 internal boolean column을 계속 숨겨
+    operator는 contract 언어 중심으로 읽게 유지했다

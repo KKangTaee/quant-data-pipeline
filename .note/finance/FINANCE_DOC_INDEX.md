@@ -18,6 +18,8 @@
   - `Phase 19` 현재 챕터 TODO 보드
 - `.note/finance/phase19/PHASE19_REJECTED_SLOT_HANDLING_CONTRACT_FIRST_SLICE.md`
   - strict annual rejected-slot handling semantics를 explicit contract로 정리한 first-slice 구현 문서
+- `.note/finance/phase19/PHASE19_HISTORY_AND_INTERPRETATION_CLEANUP_SECOND_SLICE.md`
+  - strict annual selection history와 interpretation summary를 explicit handling contract 언어로 다시 정리한 second-slice 문서
 - `.note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md`
   - `finance` 패키지 전체 구조와 DB/기능 종합 분석
 - `.note/finance/WORK_PROGRESS.md`
