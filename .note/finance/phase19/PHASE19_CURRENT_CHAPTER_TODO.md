@@ -31,6 +31,13 @@
   - `Risk-Off Contract` 설명에서
     `보수 모드` / `full risk-off` 표현을 줄이고,
     "factor 포트폴리오 전체를 멈추고 현금 또는 방어 ETF로 전환" 언어로 다시 정리
+  - `Backtest > History`에서는
+    `history run = 저장된 실행 기록 1건`이라는 안내를 추가하고,
+    strict annual selection history / interpretation 상세는
+    `Run Again` 또는 `Load Into Form` 후 latest result에서 확인하는 흐름을 더 직접적으로 설명
+  - latest result의 nested selection tabs를
+    `Selection History Table`, `Interpretation Summary`, `Selection Frequency`
+    로 바꿔 찾기 쉽게 정리
 
 ## 3. Validation
 

@@ -530,3 +530,25 @@ Detailed historical logs were archived on `2026-04-13`.
   - finance refinement hygiene script
 - Durable takeaway:
   - users can now read `Risk-Off Contract` as a portfolio-wide transition rule without having to infer what `보수 모드` means
+
+### 2026-04-14
+- Tightened History / Selection History UX after Phase 19 checklist confusion.
+- Changed:
+  - `Backtest > History` now explains that a `history run` means one saved backtest record
+  - selected history record drilldown now uses clearer labels like `Selected History Run`, `Saved Run Summary`, `Saved Input & Context`
+  - strict annual history drilldown now explicitly says detailed `Selection History` / `Interpretation Summary` are checked after `Run Again` or `Load Into Form`
+  - latest result selection tabs now read
+    - `Selection History Table`
+    - `Interpretation Summary`
+    - `Selection Frequency`
+  - `Selection History Table` now states that the `Interpretation` column is the row-level explanation
+  - `Interpretation Summary` now states which contract / event fields should be checked first
+- Synced:
+  - `FINANCE_TERM_GLOSSARY.md`
+  - `FINANCE_COMPREHENSIVE_ANALYSIS.md`
+- Validation:
+  - `python3 -m py_compile app/web/pages/backtest.py`
+  - `.venv/bin/python` import smoke for `app.web.pages.backtest`
+  - finance refinement hygiene script
+- Durable takeaway:
+  - users can now find the correct history surface faster and distinguish saved-record review from live selection-history drilldown

@@ -158,6 +158,15 @@ STRICT_REJECTION_HANDLING_MODE_EXPLANATIONS = {
     STRICT_REJECTION_HANDLING_MODE_FILL_REWEIGHT: "먼저 다음 순위의 추세 통과 종목으로 빈 슬롯을 채우고, 그래도 남은 슬롯은 생존 종목들끼리 다시 재배분합니다.",
     STRICT_REJECTION_HANDLING_MODE_FILL_RETAIN_CASH: "먼저 다음 순위의 추세 통과 종목으로 빈 슬롯을 채우고, 그래도 남은 슬롯은 현금으로 남깁니다.",
 }
+SNAPSHOT_SELECTION_HISTORY_STRATEGY_KEYS = {
+    "quality_snapshot",
+    "quality_snapshot_strict_annual",
+    "quality_snapshot_strict_quarterly_prototype",
+    "value_snapshot_strict_annual",
+    "value_snapshot_strict_quarterly_prototype",
+    "quality_value_snapshot_strict_annual",
+    "quality_value_snapshot_strict_quarterly_prototype",
+}
 GTAA_SCORE_WEIGHT_LABELS = [
     ("1MReturn", "1M"),
     ("3MReturn", "3M"),
@@ -2598,15 +2607,7 @@ def _render_last_run() -> None:
 
     st.markdown("### Latest Backtest Run")
     strategy_key = meta.get("strategy_key")
-    has_selection_history = strategy_key in {
-        "quality_snapshot",
-        "quality_snapshot_strict_annual",
-        "quality_snapshot_strict_quarterly_prototype",
-        "value_snapshot_strict_annual",
-        "value_snapshot_strict_quarterly_prototype",
-        "quality_value_snapshot_strict_annual",
-        "quality_value_snapshot_strict_quarterly_prototype",
-    }
+    has_selection_history = strategy_key in SNAPSHOT_SELECTION_HISTORY_STRATEGY_KEYS
 
     dynamic_snapshot_rows = bundle.get("dynamic_universe_snapshot_rows") or []
     dynamic_candidate_status_rows = bundle.get("dynamic_candidate_status_rows") or []
@@ -2629,6 +2630,7 @@ def _render_last_run() -> None:
         st.markdown(
             "- `Summary`: 수익률과 위험의 핵심 숫자 확인\n"
             "- `Equity Curve`: 전략 흐름과 회복 구간 확인\n"
+            "- `Selection History`: 각 리밸런싱에서 실제로 어떤 종목이 선택되고 어떻게 처리됐는지 확인\n"
             "- `Real-Money`: 실전 후보 해석, 검토 근거, 실행 부담 확인\n"
             "- `Meta`: 이번 실행의 계약과 세부 설정 재확인"
         )
@@ -4564,17 +4566,9 @@ def _render_compare_results() -> None:
             st.markdown("##### Top 3 Worst Periods")
             st.dataframe(worst_df, use_container_width=True, hide_index=True)
 
-        if focused_bundle["meta"].get("strategy_key") in {
-            "quality_snapshot",
-            "quality_snapshot_strict_annual",
-            "quality_snapshot_strict_quarterly_prototype",
-            "value_snapshot_strict_annual",
-            "value_snapshot_strict_quarterly_prototype",
-            "quality_value_snapshot_strict_annual",
-            "quality_value_snapshot_strict_quarterly_prototype",
-        }:
+        if focused_bundle["meta"].get("strategy_key") in SNAPSHOT_SELECTION_HISTORY_STRATEGY_KEYS:
             st.divider()
-            st.markdown("##### Selection Interpretation")
+            st.markdown("##### Selection History & Interpretation")
             _render_snapshot_selection_history(
                 focused_result_df,
                 strategy_name=focused_bundle["strategy_name"],
@@ -7632,8 +7626,13 @@ def _render_snapshot_selection_history(
             "Market Regime은 개별 종목 필터가 아니라 시장 전체 상태를 보는 상위 오버레이입니다. risk-off로 판정된 리밸런싱에서는 strict factor 후보가 있어도 포트폴리오 전체가 현금으로 이동할 수 있습니다."
         )
 
-    history_tab, interpretation_tab, frequency_tab = st.tabs(["History", "Interpretation", "Selection Frequency"])
+    history_tab, interpretation_tab, frequency_tab = st.tabs(["Selection History Table", "Interpretation Summary", "Selection Frequency"])
     with history_tab:
+        st.caption(
+            "이 표는 각 리밸런싱 날짜별 실제 선택 결과입니다. "
+            "`Rejected Slot Handling`, `Weighting Contract`, `Risk-Off Contract`와 함께 "
+            "`Interpretation` 열을 보면 그 날짜에 무슨 일이 있었는지 한 줄로 읽을 수 있습니다."
+        )
         cash_title_col, cash_help_col = st.columns([0.92, 0.08], gap="small")
         with cash_title_col:
             st.caption("`Cash Share`는 각 리밸런싱 직후 포트폴리오에서 현금으로 남아 있는 비중입니다.")
@@ -7664,6 +7663,11 @@ def _render_snapshot_selection_history(
                 st.markdown("##### Interpretation Summary")
             with summary_help_col:
                 _render_interpretation_summary_help_popover()
+            st.caption(
+                "이 표는 행별 문장이 아니라 실행 전체 요약입니다. "
+                "`Rejected Slot Handling`, `Weighting Contract`, `Risk-Off Contract`, "
+                "`Filled Events`, `Cash-Retained Events`, `Defensive Sleeve Activations`를 먼저 보면 됩니다."
+            )
             st.caption("참고: 이 표의 Raw / Final 값은 전체 모집군 크기가 아니라 리밸런싱별 선택 이벤트의 누적 합계입니다.")
             st.dataframe(interpretation_summary_df, use_container_width=True, hide_index=True)
         rejection_df = _build_overlay_rejection_frequency_view(selection_df)
@@ -7695,6 +7699,11 @@ def _render_snapshot_selection_history(
 
 def _render_persistent_backtest_history() -> None:
     st.markdown("### Persistent Backtest History")
+    st.info(
+        "여기서 말하는 `history run`은 예전에 저장된 백테스트 실행 기록 1건입니다. "
+        "먼저 아래 목록에서 기록 1개를 고른 뒤, `Saved Run Summary`와 `Saved Input & Context`를 보고, "
+        "필요하면 `Run Again` 또는 `Load Into Form`으로 다시 열어 확인합니다."
+    )
     history = load_backtest_run_history(limit=100)
     if not history:
         st.info("No persisted backtest history found yet.")
@@ -7852,7 +7861,7 @@ def _render_persistent_backtest_history() -> None:
     display_df = filtered_df.drop(columns=["_search_text", "_record_index", "_recorded_at_dt"])
     st.dataframe(display_df, use_container_width=True, hide_index=True)
 
-    st.markdown("#### History Drilldown")
+    st.markdown("#### Selected History Run")
     selected_label = st.selectbox(
         "Inspect Record",
         options=[_format_history_record_label(record) for record in filtered_records],
@@ -7865,7 +7874,14 @@ def _render_persistent_backtest_history() -> None:
 
     summary = selected_record.get("summary") or {}
     context = selected_record.get("context") or {}
-    detail_tabs = st.tabs(["Summary", "Input & Context", "Raw Record"])
+    if selected_record.get("strategy_key") in SNAPSHOT_SELECTION_HISTORY_STRATEGY_KEYS:
+        st.caption(
+            "이 저장 기록은 compact summary 중심이라 `Selection History`와 `Interpretation Summary` 전체 표를 그대로 담고 있지는 않습니다. "
+            "이 전략의 행별 선택 기록과 해석을 다시 보려면 아래 `Run Again` 또는 `Load Into Form`을 사용한 뒤, "
+            "새로 열린 결과의 `Selection History` 탭을 확인하면 됩니다."
+        )
+
+    detail_tabs = st.tabs(["Saved Run Summary", "Saved Input & Context", "Raw Record"])
 
     with detail_tabs[0]:
         if summary:
@@ -8010,7 +8026,7 @@ def _render_persistent_backtest_history() -> None:
     with detail_tabs[2]:
         st.json(selected_record)
 
-    st.markdown("#### Actions")
+    st.markdown("#### Actions For This History Run")
     payload = _build_history_payload(selected_record)
     if payload is None:
         st.caption("This record type is not rerunnable yet. `Run Again` and `Load Into Form` are currently supported for single-strategy records only.")

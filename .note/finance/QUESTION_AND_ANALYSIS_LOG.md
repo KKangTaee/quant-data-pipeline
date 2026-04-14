@@ -787,3 +787,29 @@ Detailed historical analysis was archived on `2026-04-13`.
     `Risk-Off Contract`는 포트폴리오 전체를 전환하는 상황이라는 구분도 더 직접적으로 남겼다
   - glossary와 package analysis도 같은 표현으로 맞춰,
     UI와 문서가 서로 다른 언어를 쓰지 않게 정리했다
+
+### 2026-04-14 - `History` 화면은 "저장된 실행 기록"과 "live selection-history drilldown"을 구분해서 안내하는 편이 더 낫다
+- Request topic:
+  - `history run`이 무엇인지 모르겠고,
+    `Backtest > History > strict annual run > Selection History / Interpretation`
+    위치를 찾기 어렵다는 피드백
+- Interpreted goal:
+  - 사용자가
+    - 저장된 실행 기록 1건을 다시 읽는 화면
+    - 최신 실행 결과에서 row-level selection history를 읽는 화면
+    을 혼동하지 않게 만들고 싶음
+- Result:
+  - `Backtest > History` 상단에
+    `history run = 저장된 백테스트 실행 기록 1건`
+    이라는 설명을 추가했다
+  - selected history drilldown은
+    `Selected History Run`, `Saved Run Summary`, `Saved Input & Context`
+    같은 이름으로 바꿔 목적이 더 분명해지게 했다
+  - strict annual record에서는
+    자세한 `Selection History`와 `Interpretation Summary`는
+    compact history record 안이 아니라
+    `Run Again` 또는 `Load Into Form` 후 latest result의 `Selection History` 탭에서 본다는 안내를 추가했다
+  - latest result selection tabs도
+    `Selection History Table`, `Interpretation Summary`, `Selection Frequency`
+    로 직접적으로 보이게 바꿨고,
+    `Interpretation` 열이 row-level interpretation이라는 안내를 추가했다
