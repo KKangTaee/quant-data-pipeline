@@ -303,6 +303,31 @@ Detailed historical analysis was archived on `2026-04-13`.
       same-gate lower-MDD rescue를 만들지 못했다
     - 즉 current `Value` / `Quality + Value` anchor는 그대로 유지된다
 
+### 2026-04-14 - Phase 17 closeout 결과, first three structural levers는 다 구현됐지만 current anchor를 바꾸진 못했다
+- Request topic:
+  - concentration-aware weighting까지 포함한 current structural pass를 마무리하고
+    next-phase 방향을 정리
+- Interpreted goal:
+  - Phase 17을 closeout할 수준인지,
+    그리고 다음엔 structural redesign과 candidate consolidation 중 무엇을 더 앞세워야 하는지 판단
+- Result:
+  - Phase 17은 practical closeout으로 닫는 것이 맞다
+  - 이유:
+    - `partial cash retention`
+    - `defensive sleeve risk-off`
+    - `concentration-aware weighting`
+    first three structural levers가 모두 구현되고 representative rerun까지 완료됐기 때문이다
+  - current common conclusion:
+    - `Value` current anchor 유지
+    - `Quality + Value` current strongest practical point 유지
+    - same-gate lower-MDD exact rescue는 아직 없다
+  - next-phase reading:
+    - 메인 트랙:
+      `larger structural redesign`
+    - 보조 트랙:
+      `candidate consolidation / operator bridge`
+  - 새 major phase는 이 방향을 사용자와 다시 확인한 뒤 여는 것이 맞다
+
 ### 2026-04-14 - strict annual에 재사용할 concentration-aware weighting 패턴 탐색
 - Request topic:
   - strict annual에 붙일 수 있는 재사용 가능한 weighting pattern과 safe insertion point 확인

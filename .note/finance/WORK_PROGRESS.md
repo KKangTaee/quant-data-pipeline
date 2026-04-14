@@ -229,3 +229,20 @@ Detailed historical logs were archived on `2026-04-13`.
   - but it did not produce a same-gate lower-MDD rescue on the current anchors
   - next active question moves to
     Phase 17 closeout vs next structural lever reprioritization
+
+### 2026-04-14
+- Closed Phase 17 as a structural downside-improvement phase.
+- Practical closeout reading:
+  - `partial cash retention`
+  - `defensive sleeve risk-off`
+  - `concentration-aware weighting`
+  first three slices are now implemented and representative-rerun verified
+- Common conclusion:
+  - no same-gate lower-MDD exact rescue was found for
+    current `Value` / `Quality + Value` anchors
+  - current practical anchors remain unchanged
+- Synced:
+  - Phase 17 completion summary
+  - next-phase preparation
+  - manual test checklist
+  - roadmap / finance doc index

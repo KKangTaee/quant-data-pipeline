@@ -12,7 +12,7 @@
 
 ## 상태
 
-- `in_progress`
+- `completed`
 
 ## Workstream A. Structural Lever Inventory
 
@@ -25,7 +25,7 @@
 
 - [x] weighted portfolio / saved portfolio 흐름이 이미 어디까지 열려 있는지 정리
 - [x] 이것이 immediate practical-candidate work에 메인 트랙인지 보조 트랙인지 판단
-- [ ] operator workflow bridge를 다음 phase에서 병행할지 결정
+- [x] operator workflow bridge를 다음 phase 보조 트랙으로 넘기기로 정리
 
 ## Workstream C. Phase 17 First Implementation Slice
 
@@ -42,7 +42,7 @@
 - [x] same-gate lower-MDD rescue 여부를 기준으로 next structural lever 우선순위 재판단
 - [x] `Value` / `Quality + Value` anchor에 defensive sleeve representative rerun 적용
 - [x] `Value` / `Quality + Value` anchor에 concentration-aware weighting representative rerun 적용
-- [ ] current 3개 structural lever 결과를 묶어 closeout / next-step 우선순위 정리
+- [x] current 3개 structural lever 결과를 묶어 closeout / next-step 우선순위 정리
 
 ## 현재 판단
 
@@ -68,9 +68,13 @@
 - 공통 패턴:
   - same-gate lower-MDD exact rescue는 아직 없다
   - `Value`와 `Quality + Value` current anchor는 그대로 유지된다
-- 따라서 다음 active question은
-  current 3개 structural lever 결과를 기준으로
-  Phase 17을 closeout할지,
-  아니면 더 큰 구조 레버를 추가로 설계할지 재판단하는 것이다
+- closeout 판단:
+  - first three slices는 practical 기준으로 충분히 확인됐다
+  - 따라서 Phase 17은 closeout하고,
+    다음 phase에서는
+    `larger structural redesign`
+    또는
+    `candidate consolidation / operator bridge`
+    방향을 다시 확인하는 편이 자연스럽다
 - weighted portfolio / saved portfolio는 지금도 유용하지만,
   real-money gate surface가 직접 붙지 않아 immediate replacement는 아니다

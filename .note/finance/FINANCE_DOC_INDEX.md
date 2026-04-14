@@ -232,6 +232,12 @@
   - strict annual family에 defensive sleeve risk-off contract를 실제 코드로 연결한 second implementation slice 문서
 - `.note/finance/phase17/PHASE17_CONCENTRATION_AWARE_WEIGHTING_IMPLEMENTATION_THIRD_SLICE.md`
   - strict annual family에 concentration-aware weighting contract를 실제 코드로 연결한 third implementation slice 문서
+- `.note/finance/phase17/PHASE17_COMPLETION_SUMMARY.md`
+  - Phase 17 structural downside-improvement closeout을 practical 기준으로 정리한 요약 문서
+- `.note/finance/phase17/PHASE17_NEXT_PHASE_PREPARATION.md`
+  - Phase 17 이후 next phase 방향을 larger structural redesign / candidate consolidation 기준으로 정리한 handoff 문서
+- `.note/finance/phase17/PHASE17_TEST_CHECKLIST.md`
+  - Phase 17 manual validation checklist
 - `.note/finance/backtest_reports/phase17/README.md`
   - Phase 17 결과 중심 backtest report archive 안내 문서
 - `.note/finance/backtest_reports/phase17/PHASE17_PARTIAL_CASH_RETENTION_REPRESENTATIVE_RERUN_FIRST_PASS.md`
