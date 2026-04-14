@@ -489,3 +489,14 @@ Detailed historical logs were archived on `2026-04-13`.
   - finance refinement hygiene script
 - Durable takeaway:
   - contract UI now answers both "what does this option mean?" and "is this always active?" directly from the form
+
+### 2026-04-14
+- Reorganized strict annual advanced inputs into separate overlay and handling sections.
+- Changed:
+  - single / compare strict annual forms now split
+    - `Overlay`
+    - `Portfolio Handling & Defensive Rules`
+  - `Trend Filter` / `Market Regime` stay in `Overlay`
+  - `Rejected Slot Handling Contract` / `Weighting Contract` / `Risk-Off Contract` / `Defensive Sleeve Tickers` move into `Portfolio Handling & Defensive Rules`
+- Durable takeaway:
+  - overlay trigger logic and post-overlay portfolio handling are now easier to distinguish from the form structure itself

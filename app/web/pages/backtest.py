@@ -1373,17 +1373,25 @@ def _render_strict_weighting_contract_help_popover() -> None:
     )
 
 
-def _render_strict_overlay_contracts_intro() -> None:
+def _render_strict_overlay_section_intro() -> None:
     st.caption(
-        "이 영역 안에 `Trend Filter`, `Rejected Slot Handling Contract`, "
-        "`Weighting Contract`, `Risk-Off Contract`가 함께 있습니다. "
-        "Trend Filter는 부분 제외, Rejected Slot Handling은 그 빈 슬롯 처리, "
-        "Weighting은 최종 비중 규칙, Risk-Off는 전체 포트폴리오 보수 모드를 뜻합니다."
+        "이 영역은 overlay 자체를 켜고 해석하는 곳입니다. "
+        "`Trend Filter`는 개별 종목 일부를 제외할 수 있고, "
+        "`Market Regime`은 필요하면 포트폴리오 전체를 보수 모드로 돌릴 수 있습니다."
+    )
+
+
+def _render_strict_portfolio_handling_contracts_intro() -> None:
+    st.caption(
+        "이 영역은 overlay 결과를 실제 포트폴리오에서 어떻게 처리할지 정하는 곳입니다. "
+        "`Rejected Slot Handling Contract`는 일부 종목만 빠졌을 때의 빈 슬롯 처리, "
+        "`Risk-Off Contract`는 포트폴리오 전체가 risk-off일 때의 fallback, "
+        "`Weighting Contract`는 최종 비중 규칙을 뜻합니다."
     )
     st.caption(
-        "참고로 `Weighting Contract`, `Rejected Slot Handling Contract`, `Risk-Off Contract`는 "
-        "토글형 on/off 기능이 아니라, 백테스트를 돌릴 때 항상 저장되는 기본 처리 규칙입니다. "
-        "다만 각 규칙은 관련 상황이 실제로 발생할 때만 결과에 눈에 띄는 영향을 줍니다."
+        "참고로 이 세 contract는 토글형 on/off 기능이 아니라, "
+        "백테스트를 돌릴 때 항상 저장되는 기본 처리 규칙입니다. "
+        "다만 관련 상황이 실제로 발생할 때만 결과에 눈에 띄는 영향을 줍니다."
     )
 
 
@@ -2340,7 +2348,7 @@ def _render_strict_defensive_sleeve_contract_inputs(
     with help_col:
         _render_strict_risk_off_contract_help_popover()
     st.caption(
-        "위치: `Advanced Inputs > Overlay & Defensive Rules`. "
+        "위치: `Advanced Inputs > Portfolio Handling & Defensive Rules`. "
         "Market Regime나 Guardrail이 포트폴리오 전체를 risk-off로 만들었을 때, "
         "현금만 둘지 방어 ETF sleeve로 이동할지 정합니다. "
         "부분 trend rejection에는 적용되지 않습니다."
@@ -2387,7 +2395,7 @@ def _render_strict_weighting_contract_inputs(
     with help_col:
         _render_strict_weighting_contract_help_popover()
     st.caption(
-        "위치: `Advanced Inputs > Overlay & Defensive Rules`. "
+        "위치: `Advanced Inputs > Portfolio Handling & Defensive Rules`. "
         "최종 선택된 종목에 비중을 어떻게 나눌지 정합니다. "
         "strict annual 기본은 `Equal Weight`이고, `Rank-Tapered`는 상위 rank에 조금 더 무게를 두는 실험적 옵션입니다."
     )
@@ -2417,7 +2425,7 @@ def _render_strict_rejected_slot_handling_contract_inputs(
     with help_col:
         _render_rejected_slot_handling_help_popover()
     st.caption(
-        "위치: `Advanced Inputs > Overlay & Defensive Rules`. "
+        "위치: `Advanced Inputs > Portfolio Handling & Defensive Rules`. "
         "Trend Filter가 raw top-N 일부를 탈락시킨 뒤, 빈 슬롯을 다음 순위 이름으로 보충할지 "
         "혹은 최종적으로 현금/재배분으로 처리할지를 명시적으로 고릅니다."
     )
@@ -9043,9 +9051,9 @@ def _render_quality_snapshot_strict_annual_form() -> None:
                 key="qss_quality_factors",
                 help="기본은 coverage-first 팩터 조합입니다. 필요하면 예전 quality factor도 다시 포함할 수 있습니다.",
             )
-            _render_advanced_group_caption("핵심 factor / universe 계약은 위에 두고, overlay와 실전형 정책은 아래 펼쳐보기로 묶었습니다.")
-            with st.expander("Overlay & Defensive Rules", expanded=False):
-                _render_strict_overlay_contracts_intro()
+            _render_advanced_group_caption("핵심 factor / universe 계약은 위에 두고, overlay와 포트폴리오 처리 규칙은 아래 펼쳐보기로 묶었습니다.")
+            with st.expander("Overlay", expanded=False):
+                _render_strict_overlay_section_intro()
                 trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
                 with trend_title_col:
                     st.markdown("##### Trend Filter Overlay")
@@ -9066,6 +9074,12 @@ def _render_quality_snapshot_strict_annual_form() -> None:
                         key="qss_trend_filter_window",
                     )
                 )
+                market_regime_enabled, market_regime_window, market_regime_benchmark = _render_market_regime_overlay_inputs(
+                    key_prefix="qss",
+                    label_prefix="",
+                )
+            with st.expander("Portfolio Handling & Defensive Rules", expanded=False):
+                _render_strict_portfolio_handling_contracts_intro()
                 weighting_mode = _render_strict_weighting_contract_inputs(
                     key_prefix="qss",
                     label_prefix="Strict Annual Quality",
@@ -9080,10 +9094,6 @@ def _render_quality_snapshot_strict_annual_form() -> None:
                 risk_off_mode, defensive_tickers = _render_strict_defensive_sleeve_contract_inputs(
                     key_prefix="qss",
                     label_prefix="Strict Annual Quality",
-                )
-                market_regime_enabled, market_regime_window, market_regime_benchmark = _render_market_regime_overlay_inputs(
-                    key_prefix="qss",
-                    label_prefix="",
                 )
             with st.expander("Real-Money Contract", expanded=False):
                 (
@@ -9663,9 +9673,9 @@ def _render_value_snapshot_strict_annual_form() -> None:
                 key="vss_value_factors",
                 help="높을수록 좋은 yield / book-to-market 계열과 낮을수록 좋은 inverse multiple 계열을 함께 지원합니다.",
             )
-            _render_advanced_group_caption("핵심 factor / universe 계약은 위에 두고, overlay와 실전형 정책은 아래 펼쳐보기로 묶었습니다.")
-            with st.expander("Overlay & Defensive Rules", expanded=False):
-                _render_strict_overlay_contracts_intro()
+            _render_advanced_group_caption("핵심 factor / universe 계약은 위에 두고, overlay와 포트폴리오 처리 규칙은 아래 펼쳐보기로 묶었습니다.")
+            with st.expander("Overlay", expanded=False):
+                _render_strict_overlay_section_intro()
                 trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
                 with trend_title_col:
                     st.markdown("##### Trend Filter Overlay")
@@ -9686,6 +9696,12 @@ def _render_value_snapshot_strict_annual_form() -> None:
                         key="vss_trend_filter_window",
                     )
                 )
+                market_regime_enabled, market_regime_window, market_regime_benchmark = _render_market_regime_overlay_inputs(
+                    key_prefix="vss",
+                    label_prefix="",
+                )
+            with st.expander("Portfolio Handling & Defensive Rules", expanded=False):
+                _render_strict_portfolio_handling_contracts_intro()
                 weighting_mode = _render_strict_weighting_contract_inputs(
                     key_prefix="vss",
                     label_prefix="Strict Annual Value",
@@ -9700,10 +9716,6 @@ def _render_value_snapshot_strict_annual_form() -> None:
                 risk_off_mode, defensive_tickers = _render_strict_defensive_sleeve_contract_inputs(
                     key_prefix="vss",
                     label_prefix="Strict Annual Value",
-                )
-                market_regime_enabled, market_regime_window, market_regime_benchmark = _render_market_regime_overlay_inputs(
-                    key_prefix="vss",
-                    label_prefix="",
                 )
             with st.expander("Real-Money Contract", expanded=False):
                 (
@@ -10118,9 +10130,9 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
                 default=VALUE_STRICT_DEFAULT_FACTORS,
                 key="qvss_value_factors",
             )
-            _render_advanced_group_caption("핵심 factor / universe 계약은 위에 두고, overlay와 실전형 정책은 아래 펼쳐보기로 묶었습니다.")
-            with st.expander("Overlay & Defensive Rules", expanded=False):
-                _render_strict_overlay_contracts_intro()
+            _render_advanced_group_caption("핵심 factor / universe 계약은 위에 두고, overlay와 포트폴리오 처리 규칙은 아래 펼쳐보기로 묶었습니다.")
+            with st.expander("Overlay", expanded=False):
+                _render_strict_overlay_section_intro()
                 trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
                 with trend_title_col:
                     st.markdown("##### Trend Filter Overlay")
@@ -10141,6 +10153,12 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
                         key="qvss_trend_filter_window",
                     )
                 )
+                market_regime_enabled, market_regime_window, market_regime_benchmark = _render_market_regime_overlay_inputs(
+                    key_prefix="qvss",
+                    label_prefix="",
+                )
+            with st.expander("Portfolio Handling & Defensive Rules", expanded=False):
+                _render_strict_portfolio_handling_contracts_intro()
                 weighting_mode = _render_strict_weighting_contract_inputs(
                     key_prefix="qvss",
                     label_prefix="Strict Annual Multi-Factor",
@@ -10155,10 +10173,6 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
                 risk_off_mode, defensive_tickers = _render_strict_defensive_sleeve_contract_inputs(
                     key_prefix="qvss",
                     label_prefix="Strict Annual Multi-Factor",
-                )
-                market_regime_enabled, market_regime_window, market_regime_benchmark = _render_market_regime_overlay_inputs(
-                    key_prefix="qvss",
-                    label_prefix="",
                 )
             with st.expander("Real-Money Contract", expanded=False):
                 (
@@ -10779,9 +10793,9 @@ def render_backtest_tab() -> None:
                                 key="compare_qss_factors",
                             ),
                         }
-                        _render_advanced_group_caption("핵심 factor / universe 계약은 위에 두고, overlay와 실전형 정책은 아래 펼쳐보기로 묶었습니다.")
-                        with st.expander("Overlay & Defensive Rules", expanded=False):
-                            _render_strict_overlay_contracts_intro()
+                        _render_advanced_group_caption("핵심 factor / universe 계약은 위에 두고, overlay와 포트폴리오 처리 규칙은 아래 펼쳐보기로 묶었습니다.")
+                        with st.expander("Overlay", expanded=False):
+                            _render_strict_overlay_section_intro()
                             trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
                             with trend_title_col:
                                 st.markdown("##### Strict Annual Quality Trend Filter")
@@ -10802,6 +10816,16 @@ def render_backtest_tab() -> None:
                                     key="compare_qss_trend_filter_window",
                                 )
                             )
+                            (
+                                compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["market_regime_enabled"],
+                                compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["market_regime_window"],
+                                compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["market_regime_benchmark"],
+                            ) = _render_market_regime_overlay_inputs(
+                                key_prefix="compare_qss",
+                                label_prefix="Strict Annual Quality ",
+                            )
+                        with st.expander("Portfolio Handling & Defensive Rules", expanded=False):
+                            _render_strict_portfolio_handling_contracts_intro()
                             compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["rejected_slot_handling_mode"] = _render_strict_rejected_slot_handling_contract_inputs(
                                 key_prefix="compare_qss",
                                 label_prefix="Strict Annual Quality",
@@ -10822,14 +10846,6 @@ def render_backtest_tab() -> None:
                             ) = _render_strict_defensive_sleeve_contract_inputs(
                                 key_prefix="compare_qss",
                                 label_prefix="Strict Annual Quality",
-                            )
-                            (
-                                compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["market_regime_enabled"],
-                                compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["market_regime_window"],
-                                compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["market_regime_benchmark"],
-                            ) = _render_market_regime_overlay_inputs(
-                                key_prefix="compare_qss",
-                                label_prefix="Strict Annual Quality ",
                             )
                         with st.expander("Real-Money Contract", expanded=False):
                             (
@@ -11027,9 +11043,9 @@ def render_backtest_tab() -> None:
                                 key="compare_vss_factors",
                             ),
                         }
-                        _render_advanced_group_caption("핵심 factor / universe 계약은 위에 두고, overlay와 실전형 정책은 아래 펼쳐보기로 묶었습니다.")
-                        with st.expander("Overlay & Defensive Rules", expanded=False):
-                            _render_strict_overlay_contracts_intro()
+                        _render_advanced_group_caption("핵심 factor / universe 계약은 위에 두고, overlay와 포트폴리오 처리 규칙은 아래 펼쳐보기로 묶었습니다.")
+                        with st.expander("Overlay", expanded=False):
+                            _render_strict_overlay_section_intro()
                             trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
                             with trend_title_col:
                                 st.markdown("##### Strict Annual Value Trend Filter")
@@ -11050,6 +11066,16 @@ def render_backtest_tab() -> None:
                                     key="compare_vss_trend_filter_window",
                                 )
                             )
+                            (
+                                compare_strategy_overrides["Value Snapshot (Strict Annual)"]["market_regime_enabled"],
+                                compare_strategy_overrides["Value Snapshot (Strict Annual)"]["market_regime_window"],
+                                compare_strategy_overrides["Value Snapshot (Strict Annual)"]["market_regime_benchmark"],
+                            ) = _render_market_regime_overlay_inputs(
+                                key_prefix="compare_vss",
+                                label_prefix="Strict Annual Value ",
+                            )
+                        with st.expander("Portfolio Handling & Defensive Rules", expanded=False):
+                            _render_strict_portfolio_handling_contracts_intro()
                             compare_strategy_overrides["Value Snapshot (Strict Annual)"]["rejected_slot_handling_mode"] = _render_strict_rejected_slot_handling_contract_inputs(
                                 key_prefix="compare_vss",
                                 label_prefix="Strict Annual Value",
@@ -11070,14 +11096,6 @@ def render_backtest_tab() -> None:
                             ) = _render_strict_defensive_sleeve_contract_inputs(
                                 key_prefix="compare_vss",
                                 label_prefix="Strict Annual Value",
-                            )
-                            (
-                                compare_strategy_overrides["Value Snapshot (Strict Annual)"]["market_regime_enabled"],
-                                compare_strategy_overrides["Value Snapshot (Strict Annual)"]["market_regime_window"],
-                                compare_strategy_overrides["Value Snapshot (Strict Annual)"]["market_regime_benchmark"],
-                            ) = _render_market_regime_overlay_inputs(
-                                key_prefix="compare_vss",
-                                label_prefix="Strict Annual Value ",
                             )
                         with st.expander("Real-Money Contract", expanded=False):
                             (
@@ -11281,9 +11299,9 @@ def render_backtest_tab() -> None:
                                 key="compare_qvss_value_factors",
                             ),
                         }
-                        _render_advanced_group_caption("핵심 factor / universe 계약은 위에 두고, overlay와 실전형 정책은 아래 펼쳐보기로 묶었습니다.")
-                        with st.expander("Overlay & Defensive Rules", expanded=False):
-                            _render_strict_overlay_contracts_intro()
+                        _render_advanced_group_caption("핵심 factor / universe 계약은 위에 두고, overlay와 포트폴리오 처리 규칙은 아래 펼쳐보기로 묶었습니다.")
+                        with st.expander("Overlay", expanded=False):
+                            _render_strict_overlay_section_intro()
                             trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
                             with trend_title_col:
                                 st.markdown("##### Strict Annual Multi-Factor Trend Filter")
@@ -11304,6 +11322,16 @@ def render_backtest_tab() -> None:
                                     key="compare_qvss_trend_filter_window",
                                 )
                             )
+                            (
+                                compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["market_regime_enabled"],
+                                compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["market_regime_window"],
+                                compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["market_regime_benchmark"],
+                            ) = _render_market_regime_overlay_inputs(
+                                key_prefix="compare_qvss",
+                                label_prefix="Strict Annual Multi-Factor ",
+                            )
+                        with st.expander("Portfolio Handling & Defensive Rules", expanded=False):
+                            _render_strict_portfolio_handling_contracts_intro()
                             compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["rejected_slot_handling_mode"] = _render_strict_rejected_slot_handling_contract_inputs(
                                 key_prefix="compare_qvss",
                                 label_prefix="Strict Annual Multi-Factor",
@@ -11324,14 +11352,6 @@ def render_backtest_tab() -> None:
                             ) = _render_strict_defensive_sleeve_contract_inputs(
                                 key_prefix="compare_qvss",
                                 label_prefix="Strict Annual Multi-Factor",
-                            )
-                            (
-                                compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["market_regime_enabled"],
-                                compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["market_regime_window"],
-                                compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["market_regime_benchmark"],
-                            ) = _render_market_regime_overlay_inputs(
-                                key_prefix="compare_qvss",
-                                label_prefix="Strict Annual Multi-Factor ",
                             )
                         with st.expander("Real-Money Contract", expanded=False):
                             (

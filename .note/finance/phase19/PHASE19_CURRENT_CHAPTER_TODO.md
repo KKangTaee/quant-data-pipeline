@@ -26,6 +26,8 @@
   - interpretation summary에 `Defensive Sleeve Activations`를 추가
   - single / compare strict annual form에서
     `Weighting Contract`, `Risk-Off Contract`, `Defensive Sleeve Tickers` 위치와 뜻을 더 직접적으로 읽을 수 있게 보강
+  - strict annual advanced inputs를 `Overlay`와 `Portfolio Handling & Defensive Rules`로 분리해
+    overlay trigger와 post-overlay handling contract를 구조적으로 구분
 
 ## 3. Validation
 

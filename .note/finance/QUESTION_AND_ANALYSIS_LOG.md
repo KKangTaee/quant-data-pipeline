@@ -696,3 +696,54 @@ Detailed historical analysis was archived on `2026-04-13`.
     enable/disable 토글이 아니라
     백테스트 실행 시 항상 저장되는 기본 처리 규칙이고,
     관련 상황이 실제로 발생할 때 결과에 영향을 준다는 설명을 추가했다
+
+### 2026-04-14 - Overlay & Defensive Rules는 top-level tab보다 내부 section 분리가 더 적합하다
+- Request topic:
+  - strict annual `Overlay & Defensive Rules` 안에 contract가 늘어난 상황에서,
+    별도 탭/섹션으로 분리하는 것이 좋은지 검토 요청
+  - `partial trend rejection`, `portfolio-wide risk-off` 표현이 어렵다는 추가 질문
+- Interpreted goal:
+  - 사용자가 설정 화면에서 길을 잃지 않으면서도,
+    `Rejected Slot Handling`과 `Risk-Off`의 역할 차이를 더 쉽게 이해하게 만들고 싶음
+- Result:
+  - 현재 단계에서는 **top-level tab 분리보다 same expander 안의 내부 section 분리**가 더 적합하다고 판단했다
+  - 이유:
+    - 이 옵션들은 모두 strict annual 전략의 `Overlay & Defensive Rules`라는 같은 문맥 안에서 읽히는 것이 자연스럽다
+    - top-level tab으로 분리하면 설정 위치는 찾기 쉬워질 수 있지만,
+      trend filter / partial rejection / full risk-off / weighting의 실행 순서 관계는 오히려 덜 보일 수 있다
+    - 대신 내부를 아래처럼 3~4개 section으로 나누면 UX가 가장 좋다
+      - `Trend Filter Overlay`
+      - `Partial Rejection Handling`
+      - `Full Risk-Off Handling`
+      - `Weighting Contract`
+  - easy explanation 정리:
+    - `partial trend rejection`
+      - top N 후보 중 일부 종목만 trend filter에 걸려 빠지는 상황
+      - 이때 빈 슬롯을 어떻게 처리할지가 `Rejected Slot Handling Contract`
+    - `portfolio-wide risk-off`
+      - 개별 종목 몇 개가 빠지는 것이 아니라,
+        `Market Regime` 또는 guardrail 때문에 그 리밸런싱 시점 포트폴리오 전체를 보수 모드로 돌리는 상황
+      - 이때 현금으로 갈지, defensive sleeve로 갈지를 정하는 것이 `Risk-Off Contract`
+
+### 2026-04-14 - strict annual UI는 `Overlay`와 `Portfolio Handling & Defensive Rules`로 실제 분리하는 것이 가장 합리적이다
+- Request topic:
+  - 위 판단을 기준으로 가장 합리적이고 효율적인 방향으로 UI를 실제 수정해 달라는 요청
+- Interpreted goal:
+  - 사용자가 overlay trigger와 post-overlay portfolio handling을 화면 구조만 봐도 구분할 수 있게 만들고 싶음
+- Result:
+  - strict annual single / compare form에서 기존 `Overlay & Defensive Rules`를
+    - `Overlay`
+    - `Portfolio Handling & Defensive Rules`
+    로 실제 분리했다
+  - `Overlay`
+    - `Trend Filter`
+    - `Market Regime`
+  - `Portfolio Handling & Defensive Rules`
+    - `Rejected Slot Handling Contract`
+    - `Weighting Contract`
+    - `Risk-Off Contract`
+    - `Defensive Sleeve Tickers`
+  - 이 구조로 바뀌면서
+    overlay를 켜는 규칙과,
+    overlay / risk-off가 발생한 뒤 포트폴리오를 어떻게 처리할지를
+    다른 층위의 설정으로 읽게 했다
