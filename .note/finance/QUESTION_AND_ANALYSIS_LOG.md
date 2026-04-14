@@ -421,3 +421,39 @@ Detailed historical analysis was archived on `2026-04-13`.
       structural redesign implementation
     - support track:
       candidate consolidation / operator bridge implementation
+
+### 2026-04-14 - Phase 18 이후는 구현 우선 -> deep validation 재개 -> 확장 순서로 보는 것이 자연스럽다
+- Request topic:
+  - 현재 Phase 18까지의 흐름을 다시 보고,
+    `Phase 25`까지의 큰 그림과 방향성을 재정리해 보여달라는 요청
+- Interpreted goal:
+  - 지금 phase가 어디쯤인지와,
+    앞으로 구현 / deep backtest / 확장을 어떤 순서로 진행하는 것이 가장 자연스러운지
+    상위 roadmap 수준에서 다시 맞추고 싶음
+- Result:
+  - 현재 reading:
+    - `Phase 18`
+      larger structural redesign / implementation-first
+  - 추천 future sequence:
+    1. `Phase 19`
+       structural contract expansion and interpretation cleanup
+    2. `Phase 20`
+       candidate consolidation and operator workflow hardening
+    3. `Phase 21`
+       research automation and experiment persistence
+    4. `Phase 22`
+       integrated deep backtest validation
+    5. `Phase 23`
+       portfolio-level candidate construction
+    6. `Phase 24`
+       new strategy expansion
+    7. `Phase 25`
+       pre-live operating system and deployment readiness
+  - 핵심 reasoning:
+    - 지금은 구현이 먼저 더 쌓여야 deep rerun도 의미가 커진다
+    - deep validation은 기능이 더 열린 뒤 다시 여는 편이 낫다
+    - portfolio / new strategy / pre-live workflow는 그 다음에 여는 편이 흔들림이 적다
+  - therefore:
+    - current recommended order는
+      **implement first -> validate deeply later -> expand after validation**
+      이다

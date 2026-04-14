@@ -311,3 +311,20 @@ Detailed historical logs were archived on `2026-04-13`.
 - Durable takeaway:
   - next active work is not another broad rerun cycle
   - it is selecting and implementing the Phase 18 second slice first
+
+### 2026-04-14
+- Rebased the upper roadmap from current `Phase 18` status through a new `Phase 25` draft.
+- Current reading:
+  - `Phase 18~21`
+    - implementation / operator / automation backlog
+  - `Phase 22`
+    - integrated deep backtest validation restart
+  - `Phase 23~25`
+    - portfolio candidate / new strategy / pre-live operator workflow expansion
+- Synced:
+  - master roadmap
+  - roadmap rebase draft
+  - finance doc index
+- Durable takeaway:
+  - current discussion point is no longer just the next slice,
+    but whether this `Phase 19~25` sequence matches the user's desired long-term direction
