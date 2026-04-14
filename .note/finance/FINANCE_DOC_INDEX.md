@@ -30,7 +30,7 @@
 - `.note/finance/phase19/PHASE19_RISK_OFF_AND_WEIGHTING_INTERPRETATION_CLEANUP_THIRD_SLICE.md`
   - strict annual history / interpretation surface에서 risk-off contract와 weighting contract까지 같은 operator-facing 언어로 정리한 세 번째 작업 문서
 - `.note/finance/phase19/PHASE19_COMPLETION_SUMMARY.md`
-  - `Phase 19`가 실제로 무엇을 정리했고 왜 practical closeout으로 볼 수 있는지 요약한 closeout 문서
+  - `Phase 19`가 실제로 무엇을 정리했고 왜 검수 완료 기준으로 닫을 수 있는지 요약한 closeout 문서
 - `.note/finance/phase19/PHASE19_NEXT_PHASE_PREPARATION.md`
   - `Phase 19` 이후 다음 phase 방향을 어떤 질문으로 이어가면 좋은지 정리한 handoff 문서
 - `.note/finance/phase19/PHASE19_TEST_CHECKLIST.md`

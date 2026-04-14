@@ -1,7 +1,7 @@
 # Phase 19 Current Chapter TODO
 
 ## 상태
-- `practical closeout / manual_validation_in_progress`
+- `phase complete / manual_validation_completed`
 
 ## 1. Structural Contract Expansion
 
@@ -47,12 +47,12 @@
 - `completed` `py_compile`
 - `completed` `.venv` import smoke
 - `completed` manual UI validation checklist 문서 생성
-- `in_progress` manual UI validation actual run
+- `completed` manual UI validation actual run
   - single strict annual 3 family
   - compare strict annual 3 family
   - history prefill / load-into-form
-  - 체크리스트를 사용자가 실제로 확인 중이므로,
-    구현 누락이 아니라 검수 진행 상태로 본다
+  - 사용자가 checklist 기준 검수를 마쳤으므로,
+    Phase 19의 manual validation gate도 통과한 상태로 본다
 
 ## 4. Documentation Sync
 

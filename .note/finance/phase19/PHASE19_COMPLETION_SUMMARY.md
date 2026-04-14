@@ -115,15 +115,14 @@
 
 ## 아직 남아 있지만 closeout blocker는 아닌 것
 
-- manual UI validation checklist 계속 수행
 - 필요하면 risk-off reason wording 추가 polish
 - 다음 phase에서 candidate consolidation / operator workflow hardening으로 이어갈지 결정
 
 쉽게 말하면:
 
-- 지금 남아 있는 일은 "기능을 더 만들기"가 아니라
-  이미 만든 것을 실제 화면에서 차분히 확인하는 일에 가깝다.
-- 즉 핵심 구현은 끝났고, 남은 것은 사용자 검수 마무리다.
+- 지금 남아 있는 일은 "Phase 19를 끝내기 위한 필수 확인"이 아니라
+  다음 phase에서 더 다듬어도 되는 후속 정리 작업에 가깝다.
+- 즉 핵심 구현도 끝났고, 사용자 검수도 끝난 상태다.
 
 ## guidance / reference review 결과
 
@@ -155,7 +154,7 @@ closeout 시점에 아래를 다시 확인했다.
 - future phase-plan template/workflow sync:
   - `completed`
 - manual UI validation:
-  - `in_progress`
+  - `completed`
 
 즉 Phase 19는
-**practical closeout / manual_validation_in_progress** 상태로 닫는 것이 맞다.
+**phase complete / manual_validation_completed** 상태로 닫는 것이 맞다.

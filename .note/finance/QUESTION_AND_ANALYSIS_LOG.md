@@ -844,3 +844,14 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `PHASE19_COMPLETION_SUMMARY.md`는 각 `쉽게 말하면` 섹션을 더 쉬운 문장으로 다시 풀어썼다
   - `PHASE_PLAN_TEMPLATE.md`는 `첫 구현 단위` 대신 `이번 phase의 주요 작업 단위`를 쓰도록 바꿨다
   - `AGENTS.md`에도 future phase plan 문서에서 `slice`보다 `작업 단위`, `첫 번째 작업`, `다음 작업` 같은 표현을 우선 쓰도록 반영했다
+
+### 2026-04-15 - Phase 19 checklist 완료 시점에는 manual validation 상태도 완료로 닫아야 한다
+- Request topic:
+  - 사용자가 `Phase 19` checklist 완료를 선언함
+- Interpreted goal:
+  - 문서상으로도 `Phase 19`가 더 이상 validation 진행 중이 아니라,
+    검수까지 마친 상태라는 점을 분명히 남기고 싶음
+- Result:
+  - `PHASE19_CURRENT_CHAPTER_TODO.md`에서 manual UI validation actual run을 `completed`로 바꿨다
+  - `PHASE19_COMPLETION_SUMMARY.md`도 `manual_validation_completed` 상태로 정리했다
+  - 이후에는 `Phase 19`를 fully closed phase로 보고 다음 phase 논의를 이어가면 된다
