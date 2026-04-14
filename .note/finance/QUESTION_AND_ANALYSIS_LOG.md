@@ -569,3 +569,16 @@ Detailed historical analysis was archived on `2026-04-13`.
       - `structural redesign lane`
   - glossary에도 같은 용어를 추가해,
     이후 phase 문서에서도 반복 설명을 줄이고 공통 해석 기준으로 재사용할 수 있게 했다
+
+### 2026-04-14 - 앞으로 phase plan 문서는 쉬운 설명 섹션을 기본으로 포함해야 한다
+- Request topic:
+  - 앞으로 phase plan 문서를 만들 때
+    `쉽게 말하면`, `왜 필요한가`, `이 phase가 끝나면 좋은 점`
+    같은 설명 섹션을 기본 규칙으로 넣어 달라는 요청
+- Interpreted goal:
+  - phase plan이 내부 구현 메모가 아니라,
+    사용자가 방향과 이유를 바로 이해할 수 있는 안내 문서가 되게 하고 싶음
+- Result:
+  - `AGENTS.md`에 phase plan 문서 작성 규칙을 추가했다
+  - `Phase 19` kickoff 문서도 같은 기준에 맞춰
+    현재 구현 우선순위에서 쓰는 용어를 inline 설명 형태로 보강했다

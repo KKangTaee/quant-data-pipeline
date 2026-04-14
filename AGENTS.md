@@ -103,6 +103,11 @@
 - Use `.note/finance/FINANCE_TERM_GLOSSARY.md` as the shared glossary for recurring quant / backtest / real-money terminology.
 - Use `.note/finance/backtest_reports/BACKTEST_REPORT_INDEX.md` as the dedicated index for durable backtest-result Markdown reports.
 - For phase plans, policy documents, validation rules, or real-money guidance documents, do not leave key terms as compressed jargon only.
+- When creating or substantially rewriting a phase plan document, include at minimum:
+  - `쉽게 말하면`
+  - `왜 필요한가`
+  - `이 phase가 끝나면 좋은 점`
+  so the plan reads as an explanation of purpose and value, not only as an internal task memo.
 - When a document introduces important operator-facing concepts such as universe contract, investability, turnover/cost, guardrails, or promotion criteria, add short plain-language explanations.
 - Prefer a structure like:
   - what this means
@@ -121,6 +126,8 @@
 - Maintain:
   - one top-level roadmap document for the whole project
   - one or more phase/chapter TODO board documents for current execution
+- Treat each phase plan document as a user-facing orientation aid as well as an engineering kickoff.
+- If a phase plan contains priority items or workstreams with unfamiliar names, explain those terms inline or add them to the glossary instead of leaving the meaning implicit.
 - When a phase is active, keep its TODO board updated with:
   - grouped work areas
   - `pending` / `in_progress` / `completed` status

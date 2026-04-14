@@ -389,3 +389,14 @@ Detailed historical logs were archived on `2026-04-13`.
   - `FINANCE_TERM_GLOSSARY.md`
 - Durable takeaway:
   - the Phase 19 plan now reads as an operator-facing explanation, not just an internal engineering memo
+
+### 2026-04-14
+- Updated future phase-plan writing guidance.
+- Changed:
+  - `AGENTS.md` now requires new or heavily rewritten phase plan docs to include
+    - `쉽게 말하면`
+    - `왜 필요한가`
+    - `이 phase가 끝나면 좋은 점`
+  - `Phase 19` kickoff doc now explains the current priority-item jargon inline
+- Durable takeaway:
+  - future phase plans should be readable as orientation documents, not just compressed planning notes
