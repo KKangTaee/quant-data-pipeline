@@ -855,3 +855,15 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `PHASE19_CURRENT_CHAPTER_TODO.md`에서 manual UI validation actual run을 `completed`로 바꿨다
   - `PHASE19_COMPLETION_SUMMARY.md`도 `manual_validation_completed` 상태로 정리했다
   - 이후에는 `Phase 19`를 fully closed phase로 보고 다음 phase 논의를 이어가면 된다
+
+### 2026-04-15 - Phase 20은 current candidate를 다시 쓰는 operator workflow 정리에 초점을 두는 것이 자연스럽다
+- Request topic:
+  - `Phase 19` 완료 후 `Phase 20`을 진행해달라는 요청
+- Interpreted goal:
+  - deep rerun을 다시 크게 열기 전에,
+    strongest / near-miss candidate를 다시 보고 비교하고 저장하는 흐름을 먼저 정리하고 싶음
+- Result:
+  - `Phase 20`을 `Candidate Consolidation And Operator Workflow Hardening`으로 열었다
+  - kickoff plan, current TODO, operator workflow inventory first pass를 만들었다
+  - 현재 strongest candidate는 이미 잘 문서화되어 있지만,
+    compare / weighted portfolio / saved portfolio 재진입 흐름은 여전히 더 다듬을 여지가 있다는 점을 phase kickoff 수준에서 고정했다

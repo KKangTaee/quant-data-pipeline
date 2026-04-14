@@ -36,6 +36,12 @@
 - `.note/finance/phase19/PHASE19_TEST_CHECKLIST.md`
   - `Phase 19` contract language 정리가 UI / history / interpretation / 문서에서 일관되게 읽히는지,
     그리고 `Advanced Inputs > Overlay`, `Advanced Inputs > Portfolio Handling & Defensive Rules` 안에서 각 contract 위치, 뜻, tooltip 가독성, always-on 처리 규칙을 다시 이해할 수 있는지 확인하기 위한 manual checklist
+- `.note/finance/phase20/PHASE20_CANDIDATE_CONSOLIDATION_AND_OPERATOR_WORKFLOW_HARDENING_PLAN.md`
+  - `Phase 20`가 무엇을 하는 phase인지, 왜 지금 필요한지, 현재 후보 관리 흐름을 왜 정리해야 하는지 설명하는 kickoff 문서
+- `.note/finance/phase20/PHASE20_CURRENT_CHAPTER_TODO.md`
+  - `Phase 20` 현재 챕터 TODO 보드
+- `.note/finance/phase20/PHASE20_OPERATOR_WORKFLOW_INVENTORY_FIRST_PASS.md`
+  - strongest candidate, compare, weighted portfolio, saved portfolio 흐름에서 실제로 어디가 불편한지 first-pass로 정리한 workflow inventory 문서
 - `.note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md`
   - `finance` 패키지 전체 구조와 DB/기능 종합 분석
 - `.note/finance/WORK_PROGRESS.md`

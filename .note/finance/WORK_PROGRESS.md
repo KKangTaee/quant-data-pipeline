@@ -587,3 +587,14 @@ Detailed historical logs were archived on `2026-04-13`.
   - `PHASE19_COMPLETION_SUMMARY.md` now reflects `manual_validation_completed`
 - Durable takeaway:
   - Phase 19 can now be treated as fully closed from a user-verification standpoint, and the next phase discussion can proceed without leaving the validation gate ambiguous
+
+### 2026-04-15
+- Opened Phase 20 as the next active workstream after Phase 19 closeout.
+- Changed:
+  - created `PHASE20_CANDIDATE_CONSOLIDATION_AND_OPERATOR_WORKFLOW_HARDENING_PLAN.md`
+  - created `PHASE20_CURRENT_CHAPTER_TODO.md`
+  - created `PHASE20_OPERATOR_WORKFLOW_INVENTORY_FIRST_PASS.md`
+  - updated `MASTER_PHASE_ROADMAP.md` phase20 status to `in_progress`
+  - synced `FINANCE_DOC_INDEX.md`
+- Durable takeaway:
+  - the project is now treating candidate reuse, compare-to-portfolio flow, and saved-portfolio re-entry as the main active operator workflow problem
