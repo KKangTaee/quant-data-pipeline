@@ -444,3 +444,22 @@ Detailed historical logs were archived on `2026-04-13`.
   - `PHASE19_CURRENT_CHAPTER_TODO.md`
 - Durable takeaway:
   - future phase plan documents now have a reusable default shape instead of being rewritten ad hoc each time
+
+### 2026-04-14
+- Tightened `Phase 19` strict annual contract UX based on checklist feedback.
+- Changed:
+  - `Weighting Contract`, `Risk-Off Contract`, `Rejected Slot Handling Contract` now use clearer section titles and labels in strict annual single/compare forms
+  - each contract now shows a plain-language "current selection" explanation
+  - `Defensive Sleeve Tickers` now explains that it is only used for `Defensive Sleeve Preference` during full risk-off
+- Synced:
+  - `PHASE19_TEST_CHECKLIST.md`
+  - `PHASE19_CURRENT_CHAPTER_TODO.md`
+  - `FINANCE_TERM_GLOSSARY.md`
+  - `FINANCE_COMPREHENSIVE_ANALYSIS.md`
+  - `FINANCE_DOC_INDEX.md`
+- Validation:
+  - `python3 -m py_compile app/web/pages/backtest.py`
+  - `.venv/bin/python` import smoke for `app.web.pages.backtest`
+  - finance refinement hygiene script
+- Durable takeaway:
+  - Phase 19 contract language is now easier to find and read from the form itself, not only from history or docs

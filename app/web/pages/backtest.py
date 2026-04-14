@@ -144,6 +144,20 @@ STRICT_REJECTION_HANDLING_MODE_LABELS = {
     "Fill Then Reweight Survivors": STRICT_REJECTION_HANDLING_MODE_FILL_REWEIGHT,
     "Fill Then Retain Unfilled Slots As Cash": STRICT_REJECTION_HANDLING_MODE_FILL_RETAIN_CASH,
 }
+STRICT_RISK_OFF_MODE_EXPLANATIONS = {
+    STRICT_RISK_OFF_MODE_CASH: "전체 포트폴리오가 full risk-off가 되면 100% 현금으로 둡니다.",
+    STRICT_RISK_OFF_MODE_DEFENSIVE: "전체 포트폴리오가 full risk-off가 되면 현금 대신 지정한 방어 ETF sleeve로 이동합니다.",
+}
+STRICT_WEIGHTING_MODE_EXPLANATIONS = {
+    STRICT_WEIGHTING_MODE_EQUAL: "최종 선택된 종목을 동일 비중으로 나눠 담습니다.",
+    STRICT_WEIGHTING_MODE_RANK_TAPERED: "최종 선택된 종목 중 상위 rank에 조금 더 높은 비중을 주되 과도한 집중은 피합니다.",
+}
+STRICT_REJECTION_HANDLING_MODE_EXPLANATIONS = {
+    STRICT_REJECTION_HANDLING_MODE_REWEIGHT: "Trend Filter로 일부 종목이 탈락하면, 남은 생존 종목들끼리 다시 100% 재배분합니다.",
+    STRICT_REJECTION_HANDLING_MODE_RETAIN_CASH: "Trend Filter로 일부 종목이 탈락하면, 비어 있는 슬롯 비중만큼 현금으로 남깁니다.",
+    STRICT_REJECTION_HANDLING_MODE_FILL_REWEIGHT: "먼저 다음 순위의 추세 통과 종목으로 빈 슬롯을 채우고, 그래도 남은 슬롯은 생존 종목들끼리 다시 재배분합니다.",
+    STRICT_REJECTION_HANDLING_MODE_FILL_RETAIN_CASH: "먼저 다음 순위의 추세 통과 종목으로 빈 슬롯을 채우고, 그래도 남은 슬롯은 현금으로 남깁니다.",
+}
 GTAA_SCORE_WEIGHT_LABELS = [
     ("1MReturn", "1M"),
     ("3MReturn", "3M"),
@@ -1252,7 +1266,7 @@ def _render_trend_filter_help_popover() -> None:
 def _render_rejected_slot_handling_help_popover() -> None:
     _render_inline_help_popover(
         "Rejected Slot Handling Contract",
-        "Strict annual Phase 19 계약 정리입니다. Trend Filter가 raw top-N 일부를 탈락시킨 뒤 그 빈 슬롯을 어떻게 처리할지 명시적으로 고릅니다. `Reweight Survivors`는 최종 생존 종목에 다시 100% 재배분하고, `Retain Unfilled Slots As Cash`는 빈 슬롯을 현금으로 남깁니다. `Fill Then ...` 모드는 먼저 다음 순위의 추세 통과 종목으로 채운 뒤, 그래도 남은 슬롯만 재배분 또는 현금 처리합니다. market regime나 guardrail의 전체 risk-off에는 적용되지 않습니다.",
+        "Trend Filter가 raw top-N 일부를 탈락시킨 뒤 빈 슬롯을 어떻게 처리할지 정하는 계약입니다. `Reweight Survivors`는 남은 생존 종목에 다시 100% 재배분합니다. `Retain Unfilled Slots As Cash`는 빈 슬롯 비중을 현금으로 남깁니다. `Fill Then Reweight Survivors`는 먼저 다음 순위의 추세 통과 종목으로 채우고, 그래도 비면 생존 종목에 다시 재배분합니다. `Fill Then Retain Unfilled Slots As Cash`는 먼저 채우고, 그래도 비면 현금으로 남깁니다. 이 계약은 partial trend rejection용이며, market regime나 guardrail의 full risk-off에는 적용되지 않습니다.",
     )
 
 
@@ -1288,6 +1302,29 @@ def _render_cash_share_help_popover() -> None:
     _render_inline_help_popover(
         "현금 비중",
         "Cash Share는 해당 리밸런싱 직후 포트폴리오에서 현금으로 남아 있는 비중입니다. 오버레이로 일부 종목이 제외되거나, 투자 가능한 종목 수가 목표 Top N보다 적을 때 현금 비중이 생길 수 있습니다. 오버레이가 꺼져 있고 투자 가능한 종목 수가 충분하면 보통 0%에 가깝습니다.",
+    )
+
+
+def _render_strict_risk_off_contract_help_popover() -> None:
+    _render_inline_help_popover(
+        "Risk-Off Contract",
+        "full risk-off가 발생했을 때 포트폴리오를 어떻게 둘지 정합니다. `Cash Only`는 100% 현금으로 두고, `Defensive Sleeve Preference`는 `Defensive Sleeve Tickers`에 적은 ETF 묶음으로 동일가중 이동합니다. 이것은 portfolio-wide risk-off 계약이며, Trend Filter의 부분 제외 처리와는 별개입니다.",
+    )
+
+
+def _render_strict_weighting_contract_help_popover() -> None:
+    _render_inline_help_popover(
+        "Weighting Contract",
+        "최종 선택된 종목들 사이에 비중을 어떻게 나눌지 정합니다. `Equal Weight`는 동일 비중, `Rank-Tapered`는 상위 rank에 조금 더 높은 비중을 주는 완만한 가중 방식입니다.",
+    )
+
+
+def _render_strict_overlay_contracts_intro() -> None:
+    st.caption(
+        "이 영역 안에 `Trend Filter`, `Rejected Slot Handling Contract`, "
+        "`Weighting Contract`, `Risk-Off Contract`가 함께 있습니다. "
+        "Trend Filter는 부분 제외, Rejected Slot Handling은 그 빈 슬롯 처리, "
+        "Weighting은 최종 비중 규칙, Risk-Off는 전체 포트폴리오 보수 모드를 뜻합니다."
     )
 
 
@@ -2238,27 +2275,42 @@ def _render_strict_defensive_sleeve_contract_inputs(
 ) -> tuple[str, list[str]]:
     prefix = label_prefix.strip()
     label_base = f"{prefix} " if prefix else ""
-    st.markdown("##### Defensive Sleeve Risk-Off")
+    title_col, help_col = st.columns([0.92, 0.08], gap="small")
+    with title_col:
+        st.markdown("##### Risk-Off Contract")
+    with help_col:
+        _render_strict_risk_off_contract_help_popover()
     st.caption(
-        "Market Regime나 Guardrail이 전체 risk-off를 만들었을 때, "
+        "위치: `Advanced Inputs > Overlay & Defensive Rules`. "
+        "Market Regime나 Guardrail이 포트폴리오 전체를 risk-off로 만들었을 때, "
         "현금만 둘지 방어 ETF sleeve로 이동할지 정합니다. "
         "부분 trend rejection에는 적용되지 않습니다."
     )
     risk_off_mode_label = st.selectbox(
-        f"{label_base}Risk-Off Fallback",
+        f"{label_base}Risk-Off Contract",
         options=list(STRICT_RISK_OFF_MODE_LABELS.keys()),
         index=list(STRICT_RISK_OFF_MODE_LABELS.values()).index(STRICT_DEFAULT_RISK_OFF_MODE),
         key=f"{key_prefix}_risk_off_mode",
-        help="full risk-off 상태에서 현금만 들고 있을지, 방어 ETF를 동일가중으로 담을지 정합니다.",
+        help="full risk-off 상태에서 `Cash Only`로 둘지, `Defensive Sleeve Preference`로 방어 ETF sleeve를 담을지 정합니다.",
+    )
+    risk_off_mode = STRICT_RISK_OFF_MODE_LABELS[risk_off_mode_label]
+    st.caption(f"현재 선택: {STRICT_RISK_OFF_MODE_EXPLANATIONS[risk_off_mode]}")
+    st.caption(
+        "`Defensive Sleeve Risk-Off`는 위 `Risk-Off Contract`에서 "
+        "`Defensive Sleeve Preference`를 골랐을 때 사용하는 방어 ETF fallback입니다."
     )
     defensive_tickers_text = st.text_input(
         f"{label_base}Defensive Sleeve Tickers",
         value=",".join(STRICT_DEFAULT_DEFENSIVE_TICKERS),
         key=f"{key_prefix}_defensive_tickers",
-        help="Fallback이 `Defensive Sleeve Preference`일 때 사용할 방어 ETF 목록입니다. 예: `BIL,SHY,LQD`",
+        help="`Risk-Off Contract = Defensive Sleeve Preference`일 때 full risk-off에서 동일가중으로 담을 방어 ETF 목록입니다. 예: `BIL,SHY,LQD`. `Cash Only`면 저장은 되지만 실제로는 사용되지 않습니다.",
+    )
+    st.caption(
+        "`Defensive Sleeve Tickers`는 full risk-off에서 현금 대신 잠시 담을 방어 ETF 목록입니다. "
+        "예를 들어 `BIL, SHY, LQD`를 넣으면 risk-off 시 이 세 ETF를 동일가중으로 사용합니다."
     )
     return (
-        STRICT_RISK_OFF_MODE_LABELS[risk_off_mode_label],
+        risk_off_mode,
         _parse_manual_tickers(defensive_tickers_text),
     )
 
@@ -2270,21 +2322,27 @@ def _render_strict_weighting_contract_inputs(
 ) -> str:
     prefix = label_prefix.strip()
     label_base = f"{prefix} " if prefix else ""
-    st.markdown("##### Concentration-Aware Weighting")
+    title_col, help_col = st.columns([0.92, 0.08], gap="small")
+    with title_col:
+        st.markdown("##### Weighting Contract")
+    with help_col:
+        _render_strict_weighting_contract_help_popover()
     st.caption(
-        "strict annual 기본은 equal-weight입니다. "
-        "실험적으로 상위 rank에 조금 더 무게를 두는 `rank_tapered`를 열어, "
-        "same-gate lower-MDD 가능성을 비교합니다."
+        "위치: `Advanced Inputs > Overlay & Defensive Rules`. "
+        "최종 선택된 종목에 비중을 어떻게 나눌지 정합니다. "
+        "strict annual 기본은 `Equal Weight`이고, `Rank-Tapered`는 상위 rank에 조금 더 무게를 두는 실험적 옵션입니다."
     )
     weighting_mode_label = st.selectbox(
-        f"{label_base}Weighting Mode",
+        f"{label_base}Weighting Contract",
         options=list(STRICT_WEIGHTING_MODE_LABELS.keys()),
         index=list(STRICT_WEIGHTING_MODE_LABELS.values()).index(STRICT_DEFAULT_WEIGHTING_MODE),
         key=f"{key_prefix}_weighting_mode",
         help="`Equal Weight`는 모든 선택 종목을 동일 비중으로 보유합니다. "
         "`Rank-Tapered`는 상위 rank 종목을 약간 더 비중 있게 담되, 과도한 집중은 피하는 완만한 taper를 씁니다.",
     )
-    return STRICT_WEIGHTING_MODE_LABELS[weighting_mode_label]
+    weighting_mode = STRICT_WEIGHTING_MODE_LABELS[weighting_mode_label]
+    st.caption(f"현재 선택: {STRICT_WEIGHTING_MODE_EXPLANATIONS[weighting_mode]}")
+    return weighting_mode
 
 
 def _render_strict_rejected_slot_handling_contract_inputs(
@@ -2294,21 +2352,27 @@ def _render_strict_rejected_slot_handling_contract_inputs(
 ) -> str:
     prefix = label_prefix.strip()
     label_base = f"{prefix} " if prefix else ""
-    st.markdown("##### Rejected Slot Handling Contract")
+    title_col, help_col = st.columns([0.92, 0.08], gap="small")
+    with title_col:
+        st.markdown("##### Rejected Slot Handling Contract")
+    with help_col:
+        _render_rejected_slot_handling_help_popover()
     st.caption(
+        "위치: `Advanced Inputs > Overlay & Defensive Rules`. "
         "Trend Filter가 raw top-N 일부를 탈락시킨 뒤, 빈 슬롯을 다음 순위 이름으로 보충할지 "
         "혹은 최종적으로 현금/재배분으로 처리할지를 명시적으로 고릅니다."
     )
     handling_mode_label = st.selectbox(
-        f"{label_base}Rejected Slot Handling",
+        f"{label_base}Rejected Slot Handling Contract",
         options=list(STRICT_REJECTION_HANDLING_MODE_LABELS.keys()),
         index=list(STRICT_REJECTION_HANDLING_MODE_LABELS.values()).index(STRICT_DEFAULT_REJECTION_HANDLING_MODE),
         key=f"{key_prefix}_rejected_slot_handling_mode",
         help="`Fill Then ...`은 먼저 다음 순위의 추세 통과 종목으로 채우고, 남는 슬롯만 현금 유지 또는 재배분합니다. "
         "`Retain ... Cash`는 trend rejection 이후 남은 빈 슬롯 비중을 현금으로 남깁니다.",
     )
-    _render_rejected_slot_handling_help_popover()
-    return STRICT_REJECTION_HANDLING_MODE_LABELS[handling_mode_label]
+    handling_mode = STRICT_REJECTION_HANDLING_MODE_LABELS[handling_mode_label]
+    st.caption(f"현재 선택: {STRICT_REJECTION_HANDLING_MODE_EXPLANATIONS[handling_mode]}")
+    return handling_mode
 
 
 def _render_strict_price_freshness_preflight(
@@ -8922,6 +8986,7 @@ def _render_quality_snapshot_strict_annual_form() -> None:
             )
             _render_advanced_group_caption("핵심 factor / universe 계약은 위에 두고, overlay와 실전형 정책은 아래 펼쳐보기로 묶었습니다.")
             with st.expander("Overlay & Defensive Rules", expanded=False):
+                _render_strict_overlay_contracts_intro()
                 trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
                 with trend_title_col:
                     st.markdown("##### Trend Filter Overlay")
@@ -9541,6 +9606,7 @@ def _render_value_snapshot_strict_annual_form() -> None:
             )
             _render_advanced_group_caption("핵심 factor / universe 계약은 위에 두고, overlay와 실전형 정책은 아래 펼쳐보기로 묶었습니다.")
             with st.expander("Overlay & Defensive Rules", expanded=False):
+                _render_strict_overlay_contracts_intro()
                 trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
                 with trend_title_col:
                     st.markdown("##### Trend Filter Overlay")
@@ -9995,6 +10061,7 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
             )
             _render_advanced_group_caption("핵심 factor / universe 계약은 위에 두고, overlay와 실전형 정책은 아래 펼쳐보기로 묶었습니다.")
             with st.expander("Overlay & Defensive Rules", expanded=False):
+                _render_strict_overlay_contracts_intro()
                 trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
                 with trend_title_col:
                     st.markdown("##### Trend Filter Overlay")
@@ -10655,6 +10722,7 @@ def render_backtest_tab() -> None:
                         }
                         _render_advanced_group_caption("핵심 factor / universe 계약은 위에 두고, overlay와 실전형 정책은 아래 펼쳐보기로 묶었습니다.")
                         with st.expander("Overlay & Defensive Rules", expanded=False):
+                            _render_strict_overlay_contracts_intro()
                             trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
                             with trend_title_col:
                                 st.markdown("##### Strict Annual Quality Trend Filter")
@@ -10902,6 +10970,7 @@ def render_backtest_tab() -> None:
                         }
                         _render_advanced_group_caption("핵심 factor / universe 계약은 위에 두고, overlay와 실전형 정책은 아래 펼쳐보기로 묶었습니다.")
                         with st.expander("Overlay & Defensive Rules", expanded=False):
+                            _render_strict_overlay_contracts_intro()
                             trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
                             with trend_title_col:
                                 st.markdown("##### Strict Annual Value Trend Filter")
@@ -11155,6 +11224,7 @@ def render_backtest_tab() -> None:
                         }
                         _render_advanced_group_caption("핵심 factor / universe 계약은 위에 두고, overlay와 실전형 정책은 아래 펼쳐보기로 묶었습니다.")
                         with st.expander("Overlay & Defensive Rules", expanded=False):
+                            _render_strict_overlay_contracts_intro()
                             trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
                             with trend_title_col:
                                 st.markdown("##### Strict Annual Multi-Factor Trend Filter")

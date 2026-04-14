@@ -24,6 +24,8 @@
 - `completed` risk-off / weighting interpretation cleanup
   - selection history에 `Weighting Contract` / `Risk-Off Contract` / `Risk-Off Reasons`를 노출
   - interpretation summary에 `Defensive Sleeve Activations`를 추가
+  - single / compare strict annual form에서
+    `Weighting Contract`, `Risk-Off Contract`, `Defensive Sleeve Tickers` 위치와 뜻을 더 직접적으로 읽을 수 있게 보강
 
 ## 3. Validation
 
@@ -46,3 +48,4 @@
 - `completed` phase19 completion / next-phase / checklist 문서 생성
 - `completed` roadmap / doc index / work log / question log sync
 - `completed` finance comprehensive analysis sync
+- `completed` phase19 checklist 피드백 기준 UI 설명 / glossary 보강

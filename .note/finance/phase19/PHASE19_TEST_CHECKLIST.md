@@ -20,21 +20,43 @@
 
 - 확인 위치:
   - `Backtest > Single Strategy > Quality / Value / Quality + Value > Strict Annual`
+  - `Advanced Inputs > Overlay & Defensive Rules`
 - 확인:
+  - `Overlay & Defensive Rules` 안에
+    - `Rejected Slot Handling Contract`
+    - `Weighting Contract`
+    - `Risk-Off Contract`
+    가 같이 보이는지
+  - 각 contract 아래에
+    - "위치 / 역할" 설명
+    - 현재 선택이 무슨 뜻인지 보여주는 짧은 설명
+    이 같이 보이는지
   - `Rejected Slot Handling Contract`가 보이는지
   - 아래 mode를 고를 수 있는지
     - `Reweight Survivors`
     - `Retain Unfilled Slots As Cash`
     - `Fill Then Reweight Survivors`
     - `Fill Then Retain Unfilled Slots As Cash`
+  - 각 option이
+    - 생존 종목 재배분인지
+    - 현금 유지인지
+    - 먼저 다음 순위 종목으로 채우는지
+    를 설명하는 도움말/현재 선택 설명과 함께 읽히는지
   - `Weighting Contract`에서
     - `Equal Weight`
     - `Rank-Tapered`
     를 고를 수 있는지
+  - `Weighting Contract`가 최종 선택 종목의 비중 규칙을 뜻한다는 설명이 보이는지
   - `Risk-Off Contract`에서
     - `Cash Only`
     - `Defensive Sleeve Preference`
     를 고를 수 있는지
+  - `Risk-Off Contract`가
+    - partial trend rejection이 아니라
+    - `Market Regime` 또는 guardrail 때문에 전체 포트폴리오가 risk-off일 때 쓰인다는 설명이 보이는지
+  - `Defensive Sleeve Tickers`가
+    - `Defensive Sleeve Preference`일 때만 쓰이는 방어 ETF 목록
+    이라는 설명과 함께 보이는지
 
 ## 2. compare / history / load-into-form 흐름 확인
 

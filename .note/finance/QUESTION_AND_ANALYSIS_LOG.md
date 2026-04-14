@@ -637,3 +637,26 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `.note/finance/PHASE_PLAN_TEMPLATE.md`를 새로 만들어,
     이후 phase plan도 같은 설명 구조를 기본으로 쓰도록 준비했다
   - `AGENTS.md`에도 해당 template를 기본 출발점으로 사용하라는 규칙을 추가했다
+
+### 2026-04-14 - Phase 19 checklist 기준으로 strict annual contract UI를 더 쉽게 읽히게 정리했다
+- Request topic:
+  - `Phase 19` test checklist를 보다가
+    `Rejected Slot Handling Contract`, `Weighting Contract`, `Risk-Off Contract`,
+    `Defensive Sleeve Tickers`의 뜻과 위치가 화면에서 바로 이해되지 않는다는 피드백
+- Interpreted goal:
+  - strict annual single/compare form에서
+    사용자가 contract를 "찾을 수 있고", "현재 선택이 무슨 뜻인지 바로 읽을 수 있게" 만들고 싶음
+- Result:
+  - `Advanced Inputs > Overlay & Defensive Rules` 안에
+    contract 위치를 직접 설명하는 안내 문구를 추가했다
+  - section 제목을 사용자가 찾는 이름에 맞춰
+    - `Weighting Contract`
+    - `Risk-Off Contract`
+    - `Rejected Slot Handling Contract`
+    로 정리했다
+  - 각 contract 아래에
+    현재 선택이 뜻하는 바를 plain language로 바로 읽을 수 있는 설명을 추가했다
+  - `Defensive Sleeve Tickers`는
+    `Risk-Off Contract = Defensive Sleeve Preference`일 때만
+    full risk-off에서 쓰이는 방어 ETF 목록이라는 설명을 보강했다
+  - glossary와 Phase 19 checklist도 같은 관점으로 같이 정리했다

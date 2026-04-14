@@ -31,7 +31,8 @@
 - `.note/finance/phase19/PHASE19_NEXT_PHASE_PREPARATION.md`
   - `Phase 19` 이후 다음 phase 방향을 어떤 질문으로 이어가면 좋은지 정리한 handoff 문서
 - `.note/finance/phase19/PHASE19_TEST_CHECKLIST.md`
-  - `Phase 19` contract language 정리가 UI / history / interpretation / 문서에서 일관되게 읽히는지 확인하기 위한 manual checklist
+  - `Phase 19` contract language 정리가 UI / history / interpretation / 문서에서 일관되게 읽히는지,
+    그리고 `Advanced Inputs > Overlay & Defensive Rules` 안에서 각 contract 위치와 뜻을 다시 이해할 수 있는지 확인하기 위한 manual checklist
 - `.note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md`
   - `finance` 패키지 전체 구조와 DB/기능 종합 분석
 - `.note/finance/WORK_PROGRESS.md`

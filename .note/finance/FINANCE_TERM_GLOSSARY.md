@@ -1677,6 +1677,85 @@ full risk-off가 발생했을 때
 
 ---
 
+## Risk-Off Contract
+
+### 기본 설명
+strict annual에서
+포트폴리오 전체가 risk-off가 되었을 때
+현금으로 둘지, 방어 ETF sleeve로 옮길지를 정하는 계약이다.
+
+### 왜 사용되는지
+부분 trend rejection 처리와
+포트폴리오 전체 보수 모드를 구분해서 읽기 위해서다.
+
+### 예시 / 필요 상황
+- `Cash Only`
+  - full risk-off 시 100% 현금
+- `Defensive Sleeve Preference`
+  - full risk-off 시 `BIL, SHY, LQD` 같은 방어 ETF sleeve 사용
+
+---
+
+## Defensive Sleeve Tickers
+
+### 기본 설명
+`Risk-Off Contract = Defensive Sleeve Preference`일 때
+full risk-off 상태에서 현금 대신 담을 방어 ETF 목록이다.
+
+### 왜 사용되는지
+현금만 두는 대신
+짧은 채권/우량 채권/초단기 ETF 같은 방어 자산으로
+임시 회전할 수 있게 하기 위해서다.
+
+### 예시 / 필요 상황
+- `BIL, SHY, LQD`
+  - risk-off 시 이 세 ETF를 동일가중으로 담는 경우
+
+---
+
+## Weighting Contract
+
+### 기본 설명
+최종 선택된 종목들 사이에
+비중을 어떻게 나눌지 정하는 계약이다.
+
+### 왜 사용되는지
+같은 종목을 고르더라도
+비중 규칙에 따라 수익률과 MDD가 달라질 수 있기 때문이다.
+
+### 예시 / 필요 상황
+- `Equal Weight`
+  - 모든 선택 종목을 동일 비중으로 담는다
+- `Rank-Tapered`
+  - 상위 rank 종목에 조금 더 높은 비중을 준다
+
+---
+
+## Rejected Slot Handling Contract
+
+### 기본 설명
+Trend Filter 때문에 raw top-N 일부가 탈락한 뒤
+빈 슬롯을 어떻게 처리할지 정하는 계약이다.
+
+### 왜 사용되는지
+부분 rejection 이후에
+- 생존 종목에 다시 재배분할지
+- 현금으로 남길지
+- 다음 순위 종목으로 먼저 채울지
+를 명시적으로 구분해 읽기 위해서다.
+
+### 예시 / 필요 상황
+- `Reweight Survivors`
+  - 남은 생존 종목에 다시 100% 재배분
+- `Retain Unfilled Slots As Cash`
+  - 빈 슬롯만큼 현금 유지
+- `Fill Then Reweight Survivors`
+  - 먼저 다음 순위 종목으로 채운 뒤, 남는 슬롯은 재배분
+- `Fill Then Retain Unfilled Slots As Cash`
+  - 먼저 다음 순위 종목으로 채운 뒤, 남는 슬롯은 현금 유지
+
+---
+
 ## Contract
 
 ### 기본 설명
