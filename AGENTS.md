@@ -108,6 +108,7 @@
   - `왜 필요한가`
   - `이 phase가 끝나면 좋은 점`
   so the plan reads as an explanation of purpose and value, not only as an internal task memo.
+- Use `.note/finance/PHASE_PLAN_TEMPLATE.md` as the default starting shape for new `finance` phase plan documents unless there is a strong reason to deviate.
 - When a document introduces important operator-facing concepts such as universe contract, investability, turnover/cost, guardrails, or promotion criteria, add short plain-language explanations.
 - Prefer a structure like:
   - what this means
