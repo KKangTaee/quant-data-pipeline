@@ -20,6 +20,55 @@
 
 ## 기록
 
+### 2026-04-14 - next-ranked eligible fill representative rerun first pass
+
+- 목표:
+  - Phase 18 first larger-redesign slice인
+    `Fill Rejected Slots With Next Ranked Names`
+    contract가 `Value` trend-on structural probe를
+    meaningful rescue 또는 anchor replacement로 만들 수 있는지 확인한다
+- 실행 범위:
+  - current structural probe:
+    - `Top N = 14 + psr`
+    - `Trend Filter = on`
+    - `Market Regime = off`
+    - underperformance / drawdown guardrail `on`
+    - `partial_cash_retention_enabled = false`
+    - `risk_off_mode = cash_only`
+    - `rejected_slot_fill_enabled = off / on`
+- current code rerun 결과:
+  - `fill off`:
+    - `CAGR = 25.92%`
+    - `MDD = -29.25%`
+    - `Promotion = hold`
+    - `Shortlist = hold`
+    - `Deployment = blocked`
+    - `Validation = caution`
+    - `Average Cash Share = 11.38%`
+  - `fill on`:
+    - `CAGR = 25.23%`
+    - `MDD = -28.37%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = paper_probation`
+    - `Deployment = paper_only`
+    - `Validation = normal`
+    - `Filled Rows = 117`
+    - `Filled Tickers = 466`
+    - `Average Cash Share = 0.00%`
+- 해석:
+  - 이 redesign은 `Value` trend-on probe에서 실제로 의미가 있었다
+  - fill을 켜면 cash drag가 사라지고
+    `hold / blocked`가
+    `real_money_candidate / paper_probation / paper_only`
+    까지 회복됐다
+  - 다만 current best practical anchor(`28.13% / -24.55%`)보다
+    `MDD`가 더 낮아진 것은 아니어서
+    anchor replacement로 보지는 않는다
+- 다음 액션:
+  - current practical anchor는 그대로 유지
+  - `next-ranked eligible fill`은
+    larger redesign lane에서 더 밀어볼 가치가 있는 rescue contract로 남긴다
+
 ### 2026-04-14 - defensive sleeve risk-off representative rerun first pass
 
 - 목표:

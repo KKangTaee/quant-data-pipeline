@@ -83,6 +83,7 @@ STRICT_TREND_FILTER_DEFAULT_WINDOW = 200
 STRICT_WEIGHTING_MODE_EQUAL = "equal_weight"
 STRICT_WEIGHTING_MODE_RANK_TAPERED = "rank_tapered"
 STRICT_DEFAULT_WEIGHTING_MODE = STRICT_WEIGHTING_MODE_EQUAL
+STRICT_REJECTED_SLOT_FILL_DEFAULT_ENABLED = False
 STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED = False
 STRICT_RISK_OFF_MODE_CASH = "cash_only"
 STRICT_RISK_OFF_MODE_DEFENSIVE = "defensive_sleeve_preference"
@@ -1676,6 +1677,7 @@ def _run_statement_shadow_snapshot_from_db(
     trend_filter_enabled=False,
     trend_filter_window=STRICT_TREND_FILTER_DEFAULT_WINDOW,
     weighting_mode: str = STRICT_DEFAULT_WEIGHTING_MODE,
+    rejected_slot_fill_enabled: bool = STRICT_REJECTED_SLOT_FILL_DEFAULT_ENABLED,
     partial_cash_retention_enabled: bool = STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
     risk_off_mode: str = STRICT_DEFAULT_RISK_OFF_MODE,
     defensive_tickers=None,
@@ -1855,6 +1857,7 @@ def _run_statement_shadow_snapshot_from_db(
         trend_filter_enabled=trend_filter_enabled,
         trend_filter_window=trend_filter_window,
         weighting_mode=weighting_mode,
+        rejected_slot_fill_enabled=rejected_slot_fill_enabled,
         partial_cash_retention_enabled=partial_cash_retention_enabled,
         risk_off_mode=risk_off_mode,
         defensive_tickers=effective_defensive_tickers,
@@ -1912,6 +1915,7 @@ def get_statement_quality_snapshot_shadow_from_db(
     trend_filter_enabled=False,
     trend_filter_window=STRICT_TREND_FILTER_DEFAULT_WINDOW,
     weighting_mode: str = STRICT_DEFAULT_WEIGHTING_MODE,
+    rejected_slot_fill_enabled: bool = STRICT_REJECTED_SLOT_FILL_DEFAULT_ENABLED,
     partial_cash_retention_enabled: bool = STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
     risk_off_mode: str = STRICT_DEFAULT_RISK_OFF_MODE,
     defensive_tickers=None,
@@ -1951,6 +1955,7 @@ def get_statement_quality_snapshot_shadow_from_db(
         trend_filter_enabled=trend_filter_enabled,
         trend_filter_window=trend_filter_window,
         weighting_mode=weighting_mode,
+        rejected_slot_fill_enabled=rejected_slot_fill_enabled,
         partial_cash_retention_enabled=partial_cash_retention_enabled,
         risk_off_mode=risk_off_mode,
         defensive_tickers=defensive_tickers,
@@ -1989,6 +1994,7 @@ def get_statement_value_snapshot_shadow_from_db(
     trend_filter_enabled=False,
     trend_filter_window=STRICT_TREND_FILTER_DEFAULT_WINDOW,
     weighting_mode: str = STRICT_DEFAULT_WEIGHTING_MODE,
+    rejected_slot_fill_enabled: bool = STRICT_REJECTED_SLOT_FILL_DEFAULT_ENABLED,
     partial_cash_retention_enabled: bool = STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
     risk_off_mode: str = STRICT_DEFAULT_RISK_OFF_MODE,
     defensive_tickers=None,
@@ -2028,6 +2034,7 @@ def get_statement_value_snapshot_shadow_from_db(
         trend_filter_enabled=trend_filter_enabled,
         trend_filter_window=trend_filter_window,
         weighting_mode=weighting_mode,
+        rejected_slot_fill_enabled=rejected_slot_fill_enabled,
         partial_cash_retention_enabled=partial_cash_retention_enabled,
         risk_off_mode=risk_off_mode,
         defensive_tickers=defensive_tickers,
@@ -2067,6 +2074,7 @@ def get_statement_quality_value_snapshot_shadow_from_db(
     trend_filter_enabled=False,
     trend_filter_window=STRICT_TREND_FILTER_DEFAULT_WINDOW,
     weighting_mode: str = STRICT_DEFAULT_WEIGHTING_MODE,
+    rejected_slot_fill_enabled: bool = STRICT_REJECTED_SLOT_FILL_DEFAULT_ENABLED,
     partial_cash_retention_enabled: bool = STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
     risk_off_mode: str = STRICT_DEFAULT_RISK_OFF_MODE,
     defensive_tickers=None,
@@ -2125,6 +2133,7 @@ def get_statement_quality_value_snapshot_shadow_from_db(
         trend_filter_enabled=trend_filter_enabled,
         trend_filter_window=trend_filter_window,
         weighting_mode=weighting_mode,
+        rejected_slot_fill_enabled=rejected_slot_fill_enabled,
         partial_cash_retention_enabled=partial_cash_retention_enabled,
         risk_off_mode=risk_off_mode,
         defensive_tickers=defensive_tickers,

@@ -47,7 +47,7 @@
 
 - family: `Value`
 - variant: `Strict Annual`
-- 관련 phase: `Phase 13`, `Phase 14`, `Phase 15`, `Phase 16`
+- 관련 phase: `Phase 13`, `Phase 14`, `Phase 15`, `Phase 16`, `Phase 17`, `Phase 18`
 
 ## 이 전략 허브를 어떻게 읽으면 되는가
 
@@ -154,37 +154,42 @@
 ## 최근 backtest log snapshot
 
 - 최근 기록:
-  - `2026-04-14 - concentration-aware weighting representative rerun first pass`
+  - `2026-04-14 - next-ranked eligible fill representative rerun first pass`
 - 핵심 설정:
-  - current practical anchor:
+  - trend-on structural probe:
     - `Top N = 14 + psr`
+    - `Trend Filter = on`
     - `Market Regime = off`
     - underperformance / drawdown guardrail `on`
-    - `weighting_mode = equal_weight / rank_tapered`
+    - `rejected_slot_fill_enabled = off / on`
 - 결과:
-  - `equal_weight`:
-    - `CAGR = 28.13%`
-    - `MDD = -24.55%`
+  - `fill off`:
+    - `CAGR = 25.92%`
+    - `MDD = -29.25%`
+    - `Promotion = hold`
+    - `Shortlist = hold`
+    - `Deployment = blocked`
+  - `fill on`:
+    - `CAGR = 25.23%`
+    - `MDD = -28.37%`
     - `Promotion = real_money_candidate`
     - `Shortlist = paper_probation`
-    - `Deployment = review_required`
-  - `rank_tapered`:
-    - `CAGR = 27.71%`
-    - `MDD = -25.87%`
-    - `Promotion = real_money_candidate`
-    - `Shortlist = paper_probation`
-    - `Deployment = review_required`
-    - `Rolling Review = caution`
+    - `Deployment = paper_only`
+    - `Validation = normal`
+    - `Filled Rows = 117`
 - 실무 해석:
-  - `rank_tapered`는 gate를 깨지 않고 representative rerun을 통과했다
-  - 하지만 이번 anchor에서는 `MDD`를 더 낮추지 못했고
-    `Rolling Review`도 `watch -> caution`으로 한 단계 약해졌다
-  - 즉 `equal_weight` current anchor를 대체하는 새 기준점은 아니었다
+  - 이 redesign은 `Value` trend-on probe에서 실제로 의미가 있었다
+  - fill을 켜면 cash drag가 사라지고
+    `hold / blocked`가
+    `real_money_candidate / paper_probation / paper_only`
+    까지 회복됐다
+  - 다만 current practical anchor(`28.13% / -24.55%`)보다
+    `MDD`가 더 낮아진 것은 아니어서
+    anchor replacement로 읽지는 않는다
 - 다음에 볼 것:
-  - 현재는
-    `partial cash retention`, `defensive sleeve`, `concentration-aware weighting`
-    3개 structural lever 결과를 묶어
-    Phase 17 closeout 또는 next lever 우선순위를 정리하는 단계다
+  - 지금은 `next-ranked eligible fill`을
+    larger structural redesign의 첫 meaningful lane으로 보고,
+    current anchor replacement까지 갈 수 있는 follow-up을 설계하는 단계다
 
 ## 관련 결과 문서
 
@@ -221,6 +226,10 @@
 - [PHASE17_CONCENTRATION_AWARE_WEIGHTING_REPRESENTATIVE_RERUN_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase17/PHASE17_CONCENTRATION_AWARE_WEIGHTING_REPRESENTATIVE_RERUN_FIRST_PASS.md)
   - `concentration-aware weighting`을 current `Value` anchor에 적용해
     same-gate lower-MDD rescue가 가능한지 본 문서
+- [PHASE18_NEXT_RANKED_FILL_REPRESENTATIVE_RERUN_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase18/PHASE18_NEXT_RANKED_FILL_REPRESENTATIVE_RERUN_FIRST_PASS.md)
+  - `Fill Rejected Slots With Next Ranked Names` redesign을
+    `Value` trend-on probe에 적용해
+    meaningful rescue까지는 가능한지 본 first-pass 문서
 
 ## 실무 해석
 
@@ -234,9 +243,12 @@
   실제로 비교 가능한 후보군이 정리된 family다
 - Phase 16 first pass까지 보면
   historical practical anchor가 current code에서도 그대로 재현되고,
-  Phase 17 structural rerun까지 반영하면
+  Phase 17 structural rerun과 Phase 18 first redesign slice까지 반영하면
   `partial cash retention`, `defensive sleeve`, `concentration-aware weighting`
   어느 쪽도 current anchor를 대체하는 same-gate lower-MDD rescue는 만들지 못했다
+  - 다만 Phase 18 `next-ranked eligible fill`은
+    trend-on probe를 non-hold로 회복시키는 데는 성공했기 때문에
+    “의미 있는 redesign lane”으로는 분명히 남는다
 
 지금 다시 볼 우선순위를 한 줄로 정리하면:
 

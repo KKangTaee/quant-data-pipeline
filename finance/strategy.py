@@ -1057,6 +1057,7 @@ def quality_snapshot_equal_weight(
     trend_filter_window: int = 200,
     trend_filter_col: str | None = None,
     weighting_mode: str = "equal_weight",
+    rejected_slot_fill_enabled: bool = False,
     partial_cash_retention_enabled: bool = False,
     risk_off_mode: str = "cash_only",
     defensive_tickers: list[str] | None = None,
@@ -1236,6 +1237,7 @@ def quality_snapshot_equal_weight(
         raw_selected_tickers: list[str] = []
         raw_selected_scores: list[float] = []
         overlay_rejected_tickers: list[str] = []
+        rejected_slot_fill_tickers: list[str] = []
         defensive_sleeve_tickers: list[str] = []
         regime_blocked_tickers: list[str] = []
         underperformance_blocked_tickers: list[str] = []
@@ -1245,6 +1247,7 @@ def quality_snapshot_equal_weight(
         risk_off_reasons: list[str] = []
         partial_cash_retention_active = False
         partial_cash_retention_base_count = np.nan
+        rejected_slot_fill_active = False
 
         regime_state = "off"
         regime_close_now = np.nan
@@ -1364,6 +1367,15 @@ def quality_snapshot_equal_weight(
                 candidates.append(normalized_ticker)
             return candidates
 
+        def _passes_trend_overlay(symbol: str) -> bool:
+            current_close = close_now.get(symbol)
+            current_trend = trend_now.get(symbol)
+            return (
+                pd.notna(current_close)
+                and pd.notna(current_trend)
+                and float(current_close) >= float(current_trend)
+            )
+
         if rebalancing:
             snapshot_df = snapshot_by_date.get(snapshot_key)
             ranked = _rank_quality_snapshot(
@@ -1405,20 +1417,37 @@ def quality_snapshot_equal_weight(
                 raw_selected_scores = selected_snapshot["Quality Score"].astype(float).tolist()
 
                 if trend_filter_enabled:
-                    passed_mask = []
-                    for symbol in raw_selected_tickers:
-                        current_close = close_now.get(symbol)
-                        current_trend = trend_now.get(symbol)
-                        passed_mask.append(
-                            pd.notna(current_close)
-                            and pd.notna(current_trend)
-                            and float(current_close) >= float(current_trend)
-                        )
+                    passed_mask = [_passes_trend_overlay(symbol) for symbol in raw_selected_tickers]
                     filtered_snapshot = selected_snapshot[passed_mask].reset_index(drop=True)
                     overlay_rejected_tickers = [
                         symbol for symbol, passed in zip(raw_selected_tickers, passed_mask) if not passed
                     ]
-                    selected_snapshot = filtered_snapshot
+                    if rejected_slot_fill_enabled and overlay_rejected_tickers:
+                        replacement_rows: list[dict[str, object]] = []
+                        reserved_symbols = set(raw_selected_tickers)
+                        target_count = len(raw_selected_tickers)
+                        for _, candidate_row in ranked.iloc[len(raw_selected_tickers):].iterrows():
+                            candidate_symbol = str(candidate_row.get("symbol") or "").strip().upper()
+                            if not candidate_symbol or candidate_symbol in reserved_symbols:
+                                continue
+                            if not _passes_trend_overlay(candidate_symbol):
+                                continue
+                            replacement_rows.append(candidate_row.to_dict())
+                            reserved_symbols.add(candidate_symbol)
+                            if len(filtered_snapshot) + len(replacement_rows) >= target_count:
+                                break
+                        if replacement_rows:
+                            replacement_snapshot = pd.DataFrame(replacement_rows)
+                            rejected_slot_fill_tickers = replacement_snapshot["symbol"].astype(str).tolist()
+                            rejected_slot_fill_active = True
+                            selected_snapshot = pd.concat(
+                                [filtered_snapshot, replacement_snapshot],
+                                ignore_index=True,
+                            )
+                        else:
+                            selected_snapshot = filtered_snapshot
+                    else:
+                        selected_snapshot = filtered_snapshot
 
                 if market_regime_enabled and not selected_snapshot.empty and regime_state == "risk_off":
                     regime_blocked_tickers = selected_snapshot["symbol"].tolist()
@@ -1479,6 +1508,10 @@ def quality_snapshot_equal_weight(
                 "Overlay Rejected Ticker": overlay_rejected_tickers,
                 "Overlay Rejected Count": len(overlay_rejected_tickers),
                 "Weighting Mode": weighting_mode,
+                "Rejected Slot Fill Enabled": rejected_slot_fill_enabled,
+                "Rejected Slot Fill Active": rejected_slot_fill_active,
+                "Rejected Slot Fill Ticker": rejected_slot_fill_tickers,
+                "Rejected Slot Fill Count": len(rejected_slot_fill_tickers),
                 "Risk-Off Mode": risk_off_mode,
                 "Risk-Off Reason": risk_off_reasons,
                 "Defensive Sleeve Ticker": defensive_sleeve_tickers,

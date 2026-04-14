@@ -193,6 +193,29 @@
 
 ---
 
+## Rejected Slot Fill / Next-Ranked Eligible Fill
+
+### 기본 설명
+`Trend Filter` 때문에 raw top-N 중 일부가 탈락했을 때,
+그 빈 슬롯을 현금으로 비워 두거나 survivor만 다시 가중하기 전에
+랭킹의 다음 후보 중 trend를 통과하는 종목으로 먼저 채우는 방식이다.
+
+### 왜 사용되는지
+부분 탈락이 생길 때 cash drag가 너무 크면
+`CAGR`가 빠르게 낮아질 수 있다.
+그래서 “빈 슬롯을 그대로 둘 것인가”가 아니라
+“같은 ranking universe 안에서 다음 후보로 메울 것인가”를
+별도 contract로 분리해서 검증한다.
+
+### 예시 / 필요 상황
+- raw top-10 중 3개가 `Trend Filter`에 걸리면,
+  다음 ranked 후보들 중 trend를 통과하는 이름으로
+  그 3자리를 먼저 메운다.
+- 그래도 채울 수 없으면 그때
+  `partial cash retention` 또는 survivor reweighting이 남은 shortfall을 처리한다.
+
+---
+
 ## Minimum Price
 
 ### 기본 설명

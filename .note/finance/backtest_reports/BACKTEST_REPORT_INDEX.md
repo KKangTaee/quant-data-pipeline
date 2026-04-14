@@ -133,6 +133,15 @@
   - strict annual `concentration-aware weighting`을 같은 anchor에 적용해
     same-gate lower-MDD rescue가 가능한지 본 first-pass representative rerun 문서
 
+## Phase 18 Raw Archive
+
+- `phase18/README.md`
+  - Phase 18 larger structural redesign archive 안내 문서
+- `phase18/PHASE18_NEXT_RANKED_FILL_REPRESENTATIVE_RERUN_FIRST_PASS.md`
+  - strict annual `Fill Rejected Slots With Next Ranked Names` redesign을
+    current `Value` / `Quality + Value` structural probe에 적용해
+    meaningful rescue 또는 anchor replacement가 가능한지 본 first-pass representative rerun 문서
+
 ## 운영 메모
 
 앞으로 새 report를 만들 때는:

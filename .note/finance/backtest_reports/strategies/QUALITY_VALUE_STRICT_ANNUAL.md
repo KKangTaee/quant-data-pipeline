@@ -40,7 +40,7 @@
 
 - family: `Quality + Value`
 - variant: `Strict Annual`
-- 관련 phase: `Phase 13`, `Phase 14`, `Phase 15`, `Phase 16`
+- 관련 phase: `Phase 13`, `Phase 14`, `Phase 15`, `Phase 16`, `Phase 17`, `Phase 18`
 
 ## 이 전략 허브를 어떻게 읽으면 되는가
 
@@ -131,9 +131,9 @@
 ## 최근 backtest log snapshot
 
 - 최근 기록:
-  - `2026-04-14 - concentration-aware weighting representative rerun first pass`
+  - `2026-04-14 - next-ranked eligible fill representative rerun first pass`
 - 핵심 설정:
-  - strongest point structural probe:
+  - strongest point trend-on structural probe:
     - quality:
       - `roe`
       - `roa`
@@ -149,34 +149,35 @@
       - `per`
     - `Top N = 10`
     - `Benchmark Contract = Candidate Universe Equal-Weight`
+    - `Trend Filter = on`
     - `Market Regime = off`
     - underperformance / drawdown guardrail `on`
-    - `weighting_mode = equal_weight / rank_tapered`
+    - `rejected_slot_fill_enabled = off / on`
 - 결과:
-  - `equal_weight`:
-    - `CAGR = 31.82%`
-    - `MDD = -26.63%`
-    - `Promotion = real_money_candidate`
-    - `Shortlist = small_capital_trial`
-    - `Deployment = review_required`
-  - `rank_tapered`:
-    - `CAGR = 32.92%`
-    - `MDD = -27.60%`
-    - `Promotion = real_money_candidate`
-    - `Shortlist = small_capital_trial`
-    - `Deployment = review_required`
+  - `fill off`:
+    - `CAGR = 30.01%`
+    - `MDD = -29.72%`
+    - `Promotion = hold`
+    - `Shortlist = hold`
+    - `Deployment = blocked`
+  - `fill on`:
+    - `CAGR = 26.64%`
+    - `MDD = -28.05%`
+    - `Promotion = hold`
+    - `Shortlist = hold`
+    - `Deployment = blocked`
+    - `Average Cash Share = 8.09%`
+    - `Filled Rows = 111`
 - 실무 해석:
-  - `rank_tapered`는 blended strongest point에서도 gate를 유지했다
-  - `CAGR`는 더 좋아졌지만 이번 질문은 downside 개선이었고,
-    `MDD`는 오히려 더 나빠졌다
-  - 즉 weighting 구조 레버로는 열렸지만,
-    current strongest practical point를 갱신하는 lower-MDD rescue는 아니었다
+  - 이 redesign은 blended strongest point에서도
+    cash share와 `MDD`를 개선하는 방향으로는 작동했다
+  - 하지만 first pass 기준으로는
+    `hold / blocked`를 넘을 만큼의 gate recovery가 없어서
+    current strongest practical point를 갱신하는 rescue는 아니었다
 - 다음에 볼 것:
   - current strongest practical point는 그대로 유지
-  - 현재는
-    `partial cash retention`, `defensive sleeve`, `concentration-aware weighting`
-    3개 structural lever 결과를 묶어
-    Phase 17 closeout 또는 next lever 우선순위를 정리하는 단계다
+  - 현재는 `next-ranked eligible fill`을 포함한 larger structural redesign lane을
+    더 밀어야 blended family에도 gate recovery가 가능한지 보는 단계다
 
 ## 관련 결과 문서
 
@@ -217,6 +218,10 @@
 - [PHASE17_CONCENTRATION_AWARE_WEIGHTING_REPRESENTATIVE_RERUN_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase17/PHASE17_CONCENTRATION_AWARE_WEIGHTING_REPRESENTATIVE_RERUN_FIRST_PASS.md)
   - `concentration-aware weighting`을 strongest blended point에 적용해
     same-gate lower-MDD rescue가 가능한지 본 문서
+- [PHASE18_NEXT_RANKED_FILL_REPRESENTATIVE_RERUN_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase18/PHASE18_NEXT_RANKED_FILL_REPRESENTATIVE_RERUN_FIRST_PASS.md)
+  - `Fill Rejected Slots With Next Ranked Names` redesign을
+    strongest blended point에 적용해
+    meaningful rescue 또는 gate recovery가 가능한지 본 문서
 
 ## 실무 해석
 
@@ -234,6 +239,13 @@
 - Phase 17 structural rerun까지 반영하면
   `partial cash retention`, `defensive sleeve`, `concentration-aware weighting`
   어느 쪽도 current strongest practical point를 대체하는 lower-MDD exact rescue는 아니었다
+- Phase 18 first redesign slice까지 반영하면
+  `next-ranked eligible fill`도 blended strongest point를
+  non-hold까지 회복시키지는 못했다
+- 즉 지금 `Quality + Value`는
+  strongest practical point가 분명하고,
+  larger redesign은 계속 시도할 가치가 있지만
+  current first slice만으로는 anchor replacement까지는 아직 아니다
 
 지금 다시 볼 우선순위를 한 줄로 정리하면:
 

@@ -338,3 +338,42 @@ Detailed historical analysis was archived on `2026-04-13`.
   - quality/value strict annual family는 현재 selection 이후 `top N -> equal weight`만 사용하고 있어, rank-based taper/capped weight는 별도 구현이 없었다
   - 가장 안전한 삽입점은 `finance.strategy.quality_snapshot_equal_weight(...)`의 rebalancing 블록에서 `selected_snapshot` 확정 직후, `allocation = base_balance / allocation_base_count` 이전이다
   - UI/runtime 쪽 기존 contract는 `strategy_key`, `snapshot_mode`, `snapshot_source`, `factor_freq`, `universe_contract`, `dynamic_candidate_tickers`, `dynamic_target_size` 조합을 그대로 재사용하는 쪽이 가장 자연스럽다
+
+### 2026-04-14 - strict annual trend rejection slot-fill redesign first-slice review
+- Request topic:
+  - trend rejection된 raw top-N slot을 next-ranked eligible name으로 채우는 구조의 first slice 후보 검토
+- Interpreted goal:
+  - strict annual current architecture를 유지하면서 cash drag를 줄일 수 있는 가장 안전한 slot-fill redesign 위치와 충돌 지점을 정리
+- Result:
+  - insertion point는 `finance/strategy.py`의 `quality_snapshot_equal_weight(...)` rebalancing block에서 `selected_snapshot = ranked.head(top_n)` 직후가 1차 후보다
+  - 현재 result surface는 `Raw Selected Ticker/Count`, `Overlay Rejected Ticker/Count`, `Selected Count`, `Cash`, `Partial Cash Retention Active/Base Count`, `Defensive Sleeve Ticker/Count`, `Weighting Mode`, `Next Weight`를 함께 읽어야 한다
+  - slot-fill redesign은 `partial cash retention`과 직접 충돌하지 않지만, 같은 trend rejection 이벤트를 서로 다른 철학으로 읽게 만들므로 둘을 동시에 켤 때 해석 문구를 분리해야 한다
+  - `defensive sleeve risk-off`와는 부분 reject lane과 full risk-off lane이 다르므로 구조적으로는 분리 가능하지만, full reject를 재채움으로 바꾸지 않도록 조건 분기가 필요하다
+  - `rank_tapered`와는 rank 기반 selection/weighting이 겹치므로, slot-fill이 들어가면 `equal_weight`/`rank_tapered`보다 먼저 hold set을 재구성하는 contract로 봐야 한다
+
+### 2026-04-14 - Phase 18 first larger-redesign slice는 의미 있는 rescue lane이지만 current anchor replacement는 아니다
+- Request topic:
+  - `larger structural redesign` 방향으로 실제 구현과 representative rerun을 진행
+- Interpreted goal:
+  - Phase 17의 first three levers보다 더 큰 구조 변경으로
+    same-gate lower-MDD rescue 또는 gate recovery가 가능한지 확인
+- Result:
+  - strict annual family 3종에
+    `Fill Rejected Slots With Next Ranked Names`
+    contract를 연결했다
+  - 이 contract는
+    raw top-N 일부가 `Trend Filter`에 걸릴 때
+    현금 유지나 survivor reweighting 전에
+    next-ranked eligible name으로 빈 슬롯을 채우는 redesign이다
+  - representative rerun first pass 기준:
+    - `Value` trend-on probe:
+      `hold / blocked`에서
+      `real_money_candidate / paper_probation / paper_only`
+      로 회복
+    - `Quality + Value` trend-on probe:
+      `CAGR`, `MDD`, cash share는 개선되지만
+      still `hold / blocked`
+  - 결론:
+    - `next-ranked eligible fill`은 meaningful larger-redesign lane이다
+    - 특히 `Value`에서는 실제 rescue evidence가 있다
+    - 다만 current practical anchor 자체를 교체하는 결과는 아직 아니다

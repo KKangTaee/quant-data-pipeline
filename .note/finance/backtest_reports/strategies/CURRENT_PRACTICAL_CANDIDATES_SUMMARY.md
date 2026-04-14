@@ -58,6 +58,13 @@ lower-MDD near-miss:
     `MDD = -25.87%`로 더 나빠지고
     `Rolling Review = caution`으로 약해져
     역시 current anchor를 바꾸진 못했다
+  - Phase 18 larger-redesign note:
+    - `Trend Filter = on + next-ranked eligible fill`을 붙이면
+      `25.23% / -28.37% / real_money_candidate / paper_probation / paper_only`
+      로 trend-on probe를 non-hold까지 회복시켰다
+    - 다만 current practical anchor(`28.13% / -24.55%`)보다
+      `MDD`가 더 낮아지진 않아
+      current anchor replacement로 보진 않는다
 
 바로 열 문서:
 
@@ -127,6 +134,11 @@ lower-MDD but weaker-gate near-miss:
     `CAGR = 32.92%`로 더 올라가지만
     `MDD = -27.60%`로 더 나빠져
     current strongest point를 대체하지 못했다
+  - Phase 18 larger-redesign note:
+    - `Trend Filter = on + next-ranked eligible fill`을 붙이면
+      `26.64% / -28.05%`까지 개선되지만
+      여전히 `hold / blocked`라서
+      strongest practical point를 바꾸진 못했다
 
 바로 열 문서:
 
@@ -152,8 +164,13 @@ lower-MDD but weaker-gate near-miss:
      `partial cash retention`, `defensive sleeve risk-off`,
      `concentration-aware weighting` 모두
      current anchor를 바꾸지 못했다
+   - Phase 18 first slice 기준으로는
+     `next-ranked eligible fill`이
+     적어도 `Value` trend-on probe를 non-hold로 회복시키는
+     meaningful redesign lane임을 확인했다
    - 즉 다음 단계는
-     Phase 17 closeout 또는 더 큰 구조 레버 재설계 쪽이 더 자연스럽다
+     Phase 18 larger structural redesign을 계속 밀면서
+     anchor replacement 조건까지 갈 수 있는지 보는 쪽이 더 자연스럽다
 
 ## 관련 문서
 

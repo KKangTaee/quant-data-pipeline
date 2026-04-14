@@ -80,6 +80,7 @@ from finance.sample import (
     STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD,
     STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD,
     STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
+    STRICT_REJECTED_SLOT_FILL_DEFAULT_ENABLED,
     STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
     STRICT_WEIGHTING_MODE_EQUAL,
     STRICT_WEIGHTING_MODE_RANK_TAPERED,
@@ -600,6 +601,8 @@ def _init_backtest_state() -> None:
         st.session_state["qss_trend_filter_window"] = STRICT_TREND_FILTER_DEFAULT_WINDOW
     if "qss_weighting_mode" not in st.session_state:
         st.session_state["qss_weighting_mode"] = _strict_weighting_mode_value_to_label(STRICT_DEFAULT_WEIGHTING_MODE)
+    if "qss_rejected_slot_fill_enabled" not in st.session_state:
+        st.session_state["qss_rejected_slot_fill_enabled"] = STRICT_REJECTED_SLOT_FILL_DEFAULT_ENABLED
     if "qss_partial_cash_retention_enabled" not in st.session_state:
         st.session_state["qss_partial_cash_retention_enabled"] = STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED
     if "qss_risk_off_mode" not in st.session_state:
@@ -666,6 +669,8 @@ def _init_backtest_state() -> None:
         st.session_state["vss_trend_filter_window"] = STRICT_TREND_FILTER_DEFAULT_WINDOW
     if "vss_weighting_mode" not in st.session_state:
         st.session_state["vss_weighting_mode"] = _strict_weighting_mode_value_to_label(STRICT_DEFAULT_WEIGHTING_MODE)
+    if "vss_rejected_slot_fill_enabled" not in st.session_state:
+        st.session_state["vss_rejected_slot_fill_enabled"] = STRICT_REJECTED_SLOT_FILL_DEFAULT_ENABLED
     if "vss_partial_cash_retention_enabled" not in st.session_state:
         st.session_state["vss_partial_cash_retention_enabled"] = STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED
     if "vss_risk_off_mode" not in st.session_state:
@@ -732,6 +737,8 @@ def _init_backtest_state() -> None:
         st.session_state["qvss_trend_filter_window"] = STRICT_TREND_FILTER_DEFAULT_WINDOW
     if "qvss_weighting_mode" not in st.session_state:
         st.session_state["qvss_weighting_mode"] = _strict_weighting_mode_value_to_label(STRICT_DEFAULT_WEIGHTING_MODE)
+    if "qvss_rejected_slot_fill_enabled" not in st.session_state:
+        st.session_state["qvss_rejected_slot_fill_enabled"] = STRICT_REJECTED_SLOT_FILL_DEFAULT_ENABLED
     if "qvss_partial_cash_retention_enabled" not in st.session_state:
         st.session_state["qvss_partial_cash_retention_enabled"] = STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED
     if "qvss_risk_off_mode" not in st.session_state:
@@ -1213,14 +1220,21 @@ def _render_inline_help_popover(title: str, body: str) -> None:
 def _render_trend_filter_help_popover() -> None:
     _render_inline_help_popover(
         "추세 필터 오버레이",
-        "월말 리밸런싱 시점에만 확인하는 1차 버전입니다. 예를 들어 랭킹으로 A와 B가 뽑혔는데, 리밸런싱 당일 A는 200일 이동평균선 아래이고 B는 위에 있으면 A는 제외됩니다. strict annual form에서는 `Partial Cash Retention` 옵션으로 A 자리 비중을 현금으로 남길지, 아니면 살아남은 종목들에 다시 100% 재배분할지 고를 수 있습니다. 일별로 중간 점검하는 구조는 아닙니다.",
+        "월말 리밸런싱 시점에만 확인하는 1차 버전입니다. 예를 들어 랭킹으로 A와 B가 뽑혔는데, 리밸런싱 당일 A는 200일 이동평균선 아래이고 B는 위에 있으면 A는 제외됩니다. strict annual form에서는 먼저 `Fill Rejected Slots With Next Ranked Names`로 A 자리를 다음 순위 종목으로 보충할지 고르고, 그래도 빈 슬롯이 남으면 `Partial Cash Retention`으로 그 자리를 현금으로 남길지, 아니면 살아남은 종목들에 다시 100% 재배분할지 선택할 수 있습니다. 일별로 중간 점검하는 구조는 아닙니다.",
     )
 
 
 def _render_partial_cash_retention_help_popover() -> None:
     _render_inline_help_popover(
         "부분 현금 유지",
-        "Strict annual 1차 구조 레버입니다. Trend Filter가 일부 종목만 탈락시켰을 때, 탈락한 슬롯 비중을 현금으로 남길지 여부를 정합니다. 예를 들어 Top N이 10이고 그중 2개가 추세 필터에서 탈락하면, 이 옵션을 켰을 때는 20%를 현금으로 두고 8개만 보유합니다. 끄면 살아남은 8개에 다시 100% 재배분합니다. 현재는 Trend Filter의 부분 탈락에만 적용되고, market regime나 guardrail의 전체 risk-off는 여전히 전부 현금 처리합니다.",
+        "Strict annual 1차 구조 레버입니다. Trend Filter가 일부 종목만 탈락시켰을 때, 최종적으로 채워지지 않은 슬롯 비중을 현금으로 남길지 여부를 정합니다. 예를 들어 Top N이 10이고 2개가 추세 필터에서 탈락한 뒤에도 대체 종목으로 다 못 채우면, 이 옵션을 켰을 때는 남은 슬롯 비중만큼 현금을 유지합니다. 끄면 최종 생존 종목들에 다시 100% 재배분합니다. 현재는 Trend Filter의 부분 탈락에만 적용되고, market regime나 guardrail의 전체 risk-off는 여전히 전부 현금 처리합니다.",
+    )
+
+
+def _render_rejected_slot_fill_help_popover() -> None:
+    _render_inline_help_popover(
+        "다음 순위 보충",
+        "Strict annual larger redesign 1차 구조 레버입니다. Trend Filter가 raw top-N 안의 일부 종목을 탈락시키면, 탈락한 자리를 비워두지 않고 랭킹 아래쪽의 다음 종목 중 추세 필터까지 통과한 이름으로 먼저 보충합니다. 충분히 보충되지 않은 나머지 슬롯만 기존 partial cash retention 또는 survivor reweighting 규칙으로 처리합니다. market regime나 guardrail의 전체 risk-off에는 적용되지 않습니다.",
     )
 
 
@@ -1234,7 +1248,7 @@ def _render_market_regime_help_popover() -> None:
 def _render_interpretation_summary_help_popover() -> None:
     _render_inline_help_popover(
         "해석 요약",
-        "Raw Candidate Events는 각 리밸런싱에서 팩터 랭킹으로 최종 후보(top N)까지 올라온 종목 수의 총합입니다. Final Selected Events는 오버레이까지 반영한 뒤 실제 보유 후보로 남은 종목 수의 총합입니다. 이 값들은 전체 모집군 크기를 뜻하지 않습니다. 오버레이가 꺼져 있으면 보통 Raw와 Final이 같고, 오버레이가 켜져 있으면 Raw와 Final의 차이만큼 추가 필터가 개입한 것으로 해석하면 됩니다. Overlay Rejections는 개별 종목 추세 필터로 제외된 횟수 합계이고, Regime Blocked Events / Regime Cash Rebalances는 시장 상태 오버레이 때문에 포트폴리오 전체가 현금으로 이동한 흔적을 요약합니다.",
+        "Raw Candidate Events는 각 리밸런싱에서 팩터 랭킹으로 최종 후보(top N)까지 올라온 종목 수의 총합입니다. Final Selected Events는 오버레이까지 반영한 뒤 실제 보유 후보로 남은 종목 수의 총합입니다. 이 값들은 전체 모집군 크기를 뜻하지 않습니다. 오버레이가 꺼져 있으면 보통 Raw와 Final이 같고, 오버레이가 켜져 있으면 Raw와 Final의 차이만큼 추가 필터가 개입한 것으로 해석하면 됩니다. Overlay Rejections는 개별 종목 추세 필터로 제외된 횟수 합계이고, Filled Events가 있으면 제외된 자리 일부를 다음 순위 종목으로 보충했다는 뜻입니다. Regime Blocked Events / Regime Cash Rebalances는 시장 상태 오버레이 때문에 포트폴리오 전체가 현금으로 이동한 흔적을 요약합니다.",
     )
 
 
@@ -2837,6 +2851,7 @@ def _strategy_compare_defaults(strategy_name: str) -> dict:
                 "quality_factors": QUALITY_STRICT_DEFAULT_FACTORS,
                 "top_n": 2,
                 "weighting_mode": STRICT_DEFAULT_WEIGHTING_MODE,
+                "rejected_slot_fill_enabled": STRICT_REJECTED_SLOT_FILL_DEFAULT_ENABLED,
                 "partial_cash_retention_enabled": STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
                 "risk_off_mode": STRICT_DEFAULT_RISK_OFF_MODE,
                 "defensive_tickers": STRICT_DEFAULT_DEFENSIVE_TICKERS,
@@ -2880,6 +2895,7 @@ def _strategy_compare_defaults(strategy_name: str) -> dict:
                 "value_factors": VALUE_STRICT_DEFAULT_FACTORS,
                 "top_n": 10,
                 "weighting_mode": STRICT_DEFAULT_WEIGHTING_MODE,
+                "rejected_slot_fill_enabled": STRICT_REJECTED_SLOT_FILL_DEFAULT_ENABLED,
                 "partial_cash_retention_enabled": STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
                 "risk_off_mode": STRICT_DEFAULT_RISK_OFF_MODE,
                 "defensive_tickers": STRICT_DEFAULT_DEFENSIVE_TICKERS,
@@ -2924,6 +2940,7 @@ def _strategy_compare_defaults(strategy_name: str) -> dict:
                 "value_factors": VALUE_STRICT_DEFAULT_FACTORS,
                 "top_n": 10,
                 "weighting_mode": STRICT_DEFAULT_WEIGHTING_MODE,
+                "rejected_slot_fill_enabled": STRICT_REJECTED_SLOT_FILL_DEFAULT_ENABLED,
                 "partial_cash_retention_enabled": STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
                 "risk_off_mode": STRICT_DEFAULT_RISK_OFF_MODE,
                 "defensive_tickers": STRICT_DEFAULT_DEFENSIVE_TICKERS,
@@ -6063,6 +6080,12 @@ def _apply_compare_strategy_prefill(strategy_name: str, override: dict[str, Any]
     st.session_state[f"compare_{key_prefix}_weighting_mode"] = _strict_weighting_mode_value_to_label(
         override.get("weighting_mode") or STRICT_DEFAULT_WEIGHTING_MODE
     )
+    st.session_state[f"compare_{key_prefix}_rejected_slot_fill_enabled"] = bool(
+        override.get("rejected_slot_fill_enabled", STRICT_REJECTED_SLOT_FILL_DEFAULT_ENABLED)
+    )
+    st.session_state[f"compare_{key_prefix}_partial_cash_retention_enabled"] = bool(
+        override.get("partial_cash_retention_enabled", STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED)
+    )
     st.session_state[f"compare_{key_prefix}_risk_off_mode"] = _strict_risk_off_mode_value_to_label(
         override.get("risk_off_mode") or STRICT_DEFAULT_RISK_OFF_MODE
     )
@@ -6454,6 +6477,9 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         st.session_state["qss_weighting_mode"] = _strict_weighting_mode_value_to_label(
             payload.get("weighting_mode") or STRICT_DEFAULT_WEIGHTING_MODE
         )
+        st.session_state["qss_rejected_slot_fill_enabled"] = bool(
+            payload.get("rejected_slot_fill_enabled", STRICT_REJECTED_SLOT_FILL_DEFAULT_ENABLED)
+        )
         st.session_state["qss_partial_cash_retention_enabled"] = bool(
             payload.get("partial_cash_retention_enabled", STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED)
         )
@@ -6561,6 +6587,9 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         st.session_state["vss_trend_filter_window"] = int(payload.get("trend_filter_window") or STRICT_TREND_FILTER_DEFAULT_WINDOW)
         st.session_state["vss_weighting_mode"] = _strict_weighting_mode_value_to_label(
             payload.get("weighting_mode") or STRICT_DEFAULT_WEIGHTING_MODE
+        )
+        st.session_state["vss_rejected_slot_fill_enabled"] = bool(
+            payload.get("rejected_slot_fill_enabled", STRICT_REJECTED_SLOT_FILL_DEFAULT_ENABLED)
         )
         st.session_state["vss_partial_cash_retention_enabled"] = bool(
             payload.get("partial_cash_retention_enabled", STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED)
@@ -6670,6 +6699,9 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         st.session_state["qvss_trend_filter_window"] = int(payload.get("trend_filter_window") or STRICT_TREND_FILTER_DEFAULT_WINDOW)
         st.session_state["qvss_weighting_mode"] = _strict_weighting_mode_value_to_label(
             payload.get("weighting_mode") or STRICT_DEFAULT_WEIGHTING_MODE
+        )
+        st.session_state["qvss_rejected_slot_fill_enabled"] = bool(
+            payload.get("rejected_slot_fill_enabled", STRICT_REJECTED_SLOT_FILL_DEFAULT_ENABLED)
         )
         st.session_state["qvss_partial_cash_retention_enabled"] = bool(
             payload.get("partial_cash_retention_enabled", STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED)
@@ -6824,6 +6856,7 @@ def _build_snapshot_selection_history(result_df: pd.DataFrame) -> pd.DataFrame:
         "Raw Selected Ticker": "Raw Selected Tickers",
         "Raw Selected Score": "Raw Selection Score",
         "Overlay Rejected Ticker": "Overlay Rejected Tickers",
+        "Rejected Slot Fill Ticker": "Filled Tickers",
         "Regime Blocked Ticker": "Regime Blocked Tickers",
     }
     selection_df = selection_df.rename(columns=rename_map).reset_index(drop=True)
@@ -6831,6 +6864,7 @@ def _build_snapshot_selection_history(result_df: pd.DataFrame) -> pd.DataFrame:
     list_columns = [
         "Raw Selected Tickers",
         "Overlay Rejected Tickers",
+        "Filled Tickers",
         "Regime Blocked Tickers",
         "Selected Tickers",
     ]
@@ -6882,7 +6916,27 @@ def _build_snapshot_selection_history(result_df: pd.DataFrame) -> pd.DataFrame:
         if selected_count <= 0 and rejected_count > 0:
             return f"Trend overlay rejected all {raw_count} raw candidates, so the portfolio moved fully to cash."
         if rejected_count > 0:
+            fill_count = int(row.get("Rejected Slot Fill Count") or 0)
+            fill_active = bool(row.get("Rejected Slot Fill Active") or False)
             partial_cash_retention_active = bool(row.get("Partial Cash Retention Active") or False)
+            if fill_active and fill_count > 0:
+                unfilled_count = max(rejected_count - fill_count, 0)
+                fill_text = (
+                    f"refilled {fill_count} rejected slot(s) with next-ranked eligible names"
+                    + (
+                        f" and left {unfilled_count} slot(s) in cash. Cash share after rebalance: {cash_share_text}."
+                        if partial_cash_retention_active and unfilled_count > 0
+                        else f". Cash share after rebalance: {cash_share_text}."
+                    )
+                )
+                if not partial_cash_retention_active and selected_count < raw_count:
+                    fill_text = (
+                        f"refilled {fill_count} rejected slot(s), then reweighted the final survivors after "
+                        f"{rejected_count} original rejection(s). Cash share after rebalance: {cash_share_text}."
+                    )
+                return (
+                    f"Trend overlay kept {selected_count} of {raw_count} raw candidates and {fill_text}"
+                )
             return (
                 f"Trend overlay kept {selected_count} of {raw_count} raw candidates and "
                 + (
@@ -7139,7 +7193,7 @@ def _render_snapshot_selection_history(
     st.dataframe(meta_df, use_container_width=True, hide_index=True)
     if overlay_active:
         st.caption(
-            "Raw Selected는 팩터 랭킹으로 뽑힌 1차 후보이고, Final Selected는 오버레이까지 통과한 실제 보유 후보입니다. Overlay Rejected는 월말 추세 필터를 통과하지 못해 해당 리밸런싱에서 현금으로 전환된 종목입니다."
+            "Raw Selected는 팩터 랭킹으로 뽑힌 1차 후보이고, Final Selected는 오버레이까지 반영한 실제 보유 후보입니다. Overlay Rejected는 월말 추세 필터를 통과하지 못한 원래 후보이고, Filled Tickers가 있으면 그 자리를 다음 순위의 추세 통과 종목으로 보충했다는 뜻입니다."
         )
     if regime_active:
         st.caption(
@@ -7674,6 +7728,7 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> None:
                     trend_filter_enabled=payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED),
                     trend_filter_window=payload.get("trend_filter_window", STRICT_TREND_FILTER_DEFAULT_WINDOW),
                     weighting_mode=payload.get("weighting_mode", STRICT_DEFAULT_WEIGHTING_MODE),
+                    rejected_slot_fill_enabled=payload.get("rejected_slot_fill_enabled", STRICT_REJECTED_SLOT_FILL_DEFAULT_ENABLED),
                     partial_cash_retention_enabled=payload.get("partial_cash_retention_enabled", STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED),
                     risk_off_mode=payload.get("risk_off_mode", STRICT_DEFAULT_RISK_OFF_MODE),
                     defensive_tickers=payload.get("defensive_tickers", STRICT_DEFAULT_DEFENSIVE_TICKERS),
@@ -7740,6 +7795,7 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> None:
                     trend_filter_enabled=payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED),
                     trend_filter_window=payload.get("trend_filter_window", STRICT_TREND_FILTER_DEFAULT_WINDOW),
                     weighting_mode=payload.get("weighting_mode", STRICT_DEFAULT_WEIGHTING_MODE),
+                    rejected_slot_fill_enabled=payload.get("rejected_slot_fill_enabled", STRICT_REJECTED_SLOT_FILL_DEFAULT_ENABLED),
                     partial_cash_retention_enabled=payload.get("partial_cash_retention_enabled", STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED),
                     risk_off_mode=payload.get("risk_off_mode", STRICT_DEFAULT_RISK_OFF_MODE),
                     defensive_tickers=payload.get("defensive_tickers", STRICT_DEFAULT_DEFENSIVE_TICKERS),
@@ -7807,6 +7863,7 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> None:
                     trend_filter_enabled=payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED),
                     trend_filter_window=payload.get("trend_filter_window", STRICT_TREND_FILTER_DEFAULT_WINDOW),
                     weighting_mode=payload.get("weighting_mode", STRICT_DEFAULT_WEIGHTING_MODE),
+                    rejected_slot_fill_enabled=payload.get("rejected_slot_fill_enabled", STRICT_REJECTED_SLOT_FILL_DEFAULT_ENABLED),
                     partial_cash_retention_enabled=payload.get("partial_cash_retention_enabled", STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED),
                     risk_off_mode=payload.get("risk_off_mode", STRICT_DEFAULT_RISK_OFF_MODE),
                     defensive_tickers=payload.get("defensive_tickers", STRICT_DEFAULT_DEFENSIVE_TICKERS),
@@ -8586,6 +8643,13 @@ def _render_quality_snapshot_strict_annual_form() -> None:
                     key_prefix="qss",
                     label_prefix="Strict Annual Quality",
                 )
+                rejected_slot_fill_enabled = st.checkbox(
+                    "Fill Rejected Slots With Next Ranked Names",
+                    value=STRICT_REJECTED_SLOT_FILL_DEFAULT_ENABLED,
+                    key="qss_rejected_slot_fill_enabled",
+                    help="Trend Filter로 raw top-N 안에서 일부 종목이 탈락하면, 그 자리를 다음 순위의 추세 통과 종목으로 먼저 보충합니다.",
+                )
+                _render_rejected_slot_fill_help_popover()
                 partial_cash_retention_enabled = st.checkbox(
                     "Retain Rejected Slots As Cash",
                     value=STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
@@ -8671,6 +8735,7 @@ def _render_quality_snapshot_strict_annual_form() -> None:
         "trend_filter_enabled": bool(trend_filter_enabled),
         "trend_filter_window": int(trend_filter_window),
         "weighting_mode": weighting_mode,
+        "rejected_slot_fill_enabled": bool(rejected_slot_fill_enabled),
         "partial_cash_retention_enabled": bool(partial_cash_retention_enabled),
         "risk_off_mode": risk_off_mode,
         "defensive_tickers": defensive_tickers,
@@ -9203,6 +9268,13 @@ def _render_value_snapshot_strict_annual_form() -> None:
                     key_prefix="vss",
                     label_prefix="Strict Annual Value",
                 )
+                rejected_slot_fill_enabled = st.checkbox(
+                    "Fill Rejected Slots With Next Ranked Names",
+                    value=STRICT_REJECTED_SLOT_FILL_DEFAULT_ENABLED,
+                    key="vss_rejected_slot_fill_enabled",
+                    help="Trend Filter로 raw top-N 안에서 일부 종목이 탈락하면, 그 자리를 다음 순위의 추세 통과 종목으로 먼저 보충합니다.",
+                )
+                _render_rejected_slot_fill_help_popover()
                 partial_cash_retention_enabled = st.checkbox(
                     "Retain Rejected Slots As Cash",
                     value=STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
@@ -9289,6 +9361,7 @@ def _render_value_snapshot_strict_annual_form() -> None:
         "trend_filter_enabled": bool(trend_filter_enabled),
         "trend_filter_window": int(trend_filter_window),
         "weighting_mode": weighting_mode,
+        "rejected_slot_fill_enabled": bool(rejected_slot_fill_enabled),
         "partial_cash_retention_enabled": bool(partial_cash_retention_enabled),
         "risk_off_mode": risk_off_mode,
         "defensive_tickers": defensive_tickers,
@@ -9655,6 +9728,13 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
                     key_prefix="qvss",
                     label_prefix="Strict Annual Multi-Factor",
                 )
+                rejected_slot_fill_enabled = st.checkbox(
+                    "Fill Rejected Slots With Next Ranked Names",
+                    value=STRICT_REJECTED_SLOT_FILL_DEFAULT_ENABLED,
+                    key="qvss_rejected_slot_fill_enabled",
+                    help="Trend Filter로 raw top-N 안에서 일부 종목이 탈락하면, 그 자리를 다음 순위의 추세 통과 종목으로 먼저 보충합니다.",
+                )
+                _render_rejected_slot_fill_help_popover()
                 partial_cash_retention_enabled = st.checkbox(
                     "Retain Rejected Slots As Cash",
                     value=STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
@@ -9744,6 +9824,7 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
         "trend_filter_enabled": bool(trend_filter_enabled),
         "trend_filter_window": int(trend_filter_window),
         "weighting_mode": weighting_mode,
+        "rejected_slot_fill_enabled": bool(rejected_slot_fill_enabled),
         "partial_cash_retention_enabled": bool(partial_cash_retention_enabled),
         "risk_off_mode": risk_off_mode,
         "defensive_tickers": defensive_tickers,
@@ -10309,6 +10390,13 @@ def render_backtest_tab() -> None:
                                     key="compare_qss_trend_filter_window",
                                 )
                             )
+                            compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["rejected_slot_fill_enabled"] = st.checkbox(
+                                "Fill Rejected Slots With Next Ranked Names",
+                                value=STRICT_REJECTED_SLOT_FILL_DEFAULT_ENABLED,
+                                key="compare_qss_rejected_slot_fill_enabled",
+                                help="Trend Filter로 raw top-N 안에서 일부 종목이 탈락하면, 그 자리를 다음 순위의 추세 통과 종목으로 먼저 보충합니다.",
+                            )
+                            _render_rejected_slot_fill_help_popover()
                             compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["partial_cash_retention_enabled"] = st.checkbox(
                                 "Retain Rejected Slots As Cash",
                                 value=STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
@@ -10552,6 +10640,13 @@ def render_backtest_tab() -> None:
                                     key="compare_vss_trend_filter_window",
                                 )
                             )
+                            compare_strategy_overrides["Value Snapshot (Strict Annual)"]["rejected_slot_fill_enabled"] = st.checkbox(
+                                "Fill Rejected Slots With Next Ranked Names",
+                                value=STRICT_REJECTED_SLOT_FILL_DEFAULT_ENABLED,
+                                key="compare_vss_rejected_slot_fill_enabled",
+                                help="Trend Filter로 raw top-N 안에서 일부 종목이 탈락하면, 그 자리를 다음 순위의 추세 통과 종목으로 먼저 보충합니다.",
+                            )
+                            _render_rejected_slot_fill_help_popover()
                             compare_strategy_overrides["Value Snapshot (Strict Annual)"]["partial_cash_retention_enabled"] = st.checkbox(
                                 "Retain Rejected Slots As Cash",
                                 value=STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
@@ -10801,6 +10896,13 @@ def render_backtest_tab() -> None:
                                     key="compare_qvss_trend_filter_window",
                                 )
                             )
+                            compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["rejected_slot_fill_enabled"] = st.checkbox(
+                                "Fill Rejected Slots With Next Ranked Names",
+                                value=STRICT_REJECTED_SLOT_FILL_DEFAULT_ENABLED,
+                                key="compare_qvss_rejected_slot_fill_enabled",
+                                help="Trend Filter로 raw top-N 안에서 일부 종목이 탈락하면, 그 자리를 다음 순위의 추세 통과 종목으로 먼저 보충합니다.",
+                            )
+                            _render_rejected_slot_fill_help_popover()
                             compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["partial_cash_retention_enabled"] = st.checkbox(
                                 "Retain Rejected Slots As Cash",
                                 value=STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,

@@ -249,6 +249,17 @@
 - `.note/finance/backtest_reports/phase17/PHASE17_CONCENTRATION_AWARE_WEIGHTING_REPRESENTATIVE_RERUN_FIRST_PASS.md`
   - strict annual `concentration-aware weighting`이 같은 anchor에서
     same-gate lower-MDD rescue를 만들 수 있는지 representative rerun으로 확인한 문서
+- `.note/finance/phase18/PHASE18_LARGER_STRUCTURAL_REDESIGN_PLAN.md`
+  - Phase 18 larger structural redesign 상위 계획 문서
+- `.note/finance/phase18/PHASE18_CURRENT_CHAPTER_TODO.md`
+  - Phase 18 current execution board
+- `.note/finance/phase18/PHASE18_NEXT_RANKED_FILL_IMPLEMENTATION_FIRST_SLICE.md`
+  - strict annual family에 `Fill Rejected Slots With Next Ranked Names` contract를 연결한 first implementation slice 문서
+- `.note/finance/backtest_reports/phase18/README.md`
+  - Phase 18 larger structural redesign archive 안내 문서
+- `.note/finance/backtest_reports/phase18/PHASE18_NEXT_RANKED_FILL_REPRESENTATIVE_RERUN_FIRST_PASS.md`
+  - next-ranked eligible fill이 current `Value` / `Quality + Value` structural probe에서
+    meaningful rescue 또는 anchor replacement로 이어지는지 representative rerun으로 확인한 문서
 - `.note/finance/phase12/PHASE12_GTAA_INTERVAL1_DEFAULT_REBASE_ANALYSIS.md`
   - GTAA 기본 `Signal Interval`을 `1`로 rebased 한 뒤, 주요 preset과 상위 후보군을 공통 시작점에서 다시 비교해 현재 default cadence 기준의 우선순위를 정리한 문서
 - `.note/finance/phase12/PHASE12_GTAA_SCORE_WEIGHT_AND_RISK_OFF_FIRST_PASS.md`

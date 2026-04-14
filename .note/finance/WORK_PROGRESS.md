@@ -246,3 +246,35 @@ Detailed historical logs were archived on `2026-04-13`.
   - next-phase preparation
   - manual test checklist
   - roadmap / finance doc index
+- Follow-up review:
+  - examined a possible first slice for filling trend-rejected raw top-N slots with next-ranked eligible names
+  - safest candidate insertion point is still the strict annual rebalancing block in `finance/strategy.py`
+  - this redesign should be treated as a separate interpretation lane from `partial cash retention` and `rank_tapered`, not as a cosmetic tweak to either one
+
+### 2026-04-14
+- Opened Phase 18 as `Larger Structural Redesign`.
+- Implemented first slice:
+  - strict annual `Fill Rejected Slots With Next Ranked Names`
+- Wired through:
+  - `finance.strategy.quality_snapshot_equal_weight(...)`
+  - strict annual DB-backed sample/runtime wrappers
+  - strict annual single / compare forms
+  - history / rerun / interpretation surface
+- New durable result/meta fields:
+  - `Rejected Slot Fill Enabled`
+  - `Rejected Slot Fill Active`
+  - `Rejected Slot Fill Ticker`
+  - `Rejected Slot Fill Count`
+  - `rejected_slot_fill_enabled`
+- Representative rerun first pass:
+  - `Value` trend-on probe:
+    - `hold / blocked` -> `real_money_candidate / paper_probation / paper_only`
+    - meaningful rescue confirmed
+    - but current practical anchor replacement failed
+  - `Quality + Value` trend-on probe:
+    - `CAGR`, `MDD`, cash share improved
+    - but still `hold / blocked`
+- Durable takeaway:
+  - next-ranked eligible fill is a meaningful larger-redesign lane
+  - first pass does not replace the current practical anchors
+  - next follow-up should stay in Phase 18 rather than reopening bounded tweak work

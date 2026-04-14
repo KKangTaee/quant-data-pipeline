@@ -20,6 +20,67 @@
 
 ## 기록
 
+### 2026-04-14 - next-ranked eligible fill representative rerun first pass
+
+- 목표:
+  - Phase 18 first larger-redesign slice인
+    `Fill Rejected Slots With Next Ranked Names`
+    contract가 current strongest practical blended point를
+    non-hold 또는 stronger rescue로 끌어올릴 수 있는지 확인한다
+- 전략:
+  - `Quality + Value > Strict Annual`
+- 실행 범위:
+  - strongest point trend-on structural probe:
+    - quality:
+      - `roe`
+      - `roa`
+      - `operating_margin`
+      - `asset_turnover`
+      - `current_ratio`
+    - value:
+      - `book_to_market`
+      - `earnings_yield`
+      - `sales_yield`
+      - `pcr`
+      - `por`
+      - `per`
+    - `Top N = 10`
+    - `Benchmark Contract = Candidate Universe Equal-Weight`
+    - `Trend Filter = on`
+    - `Market Regime = off`
+    - underperformance / drawdown guardrail `on`
+    - `partial_cash_retention_enabled = false`
+    - `rejected_slot_fill_enabled = off / on`
+- 결과:
+  - `fill off`:
+    - `CAGR = 30.01%`
+    - `MDD = -29.72%`
+    - `Promotion = hold`
+    - `Shortlist = hold`
+    - `Deployment = blocked`
+    - `Validation = caution`
+    - `Average Cash Share = 11.40%`
+  - `fill on`:
+    - `CAGR = 26.64%`
+    - `MDD = -28.05%`
+    - `Promotion = hold`
+    - `Shortlist = hold`
+    - `Deployment = blocked`
+    - `Validation = caution`
+    - `Filled Rows = 111`
+    - `Filled Tickers = 328`
+    - `Average Cash Share = 8.09%`
+- 해석:
+  - fill contract는 blended strongest point에서도 실제로 작동했고
+    cash share와 `MDD`를 줄였다
+  - 하지만 이번 first pass에서는
+    gate recovery가 충분하지 않아
+    current strongest practical point를 대체하는 rescue는 아니었다
+- 다음 액션:
+  - current strongest practical point는 그대로 유지
+  - larger redesign lane을 계속 밀되,
+    blended family에서 gate recovery까지 같이 만드는 follow-up이 필요하다
+
 ### 2026-04-14 - defensive sleeve risk-off representative rerun first pass
 
 - 목표:
