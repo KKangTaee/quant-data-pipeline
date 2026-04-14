@@ -26,6 +26,12 @@
   - strict annual selection history와 interpretation summary를 explicit handling contract 언어로 다시 정리한 second-slice 문서
 - `.note/finance/phase19/PHASE19_RISK_OFF_AND_WEIGHTING_INTERPRETATION_CLEANUP_THIRD_SLICE.md`
   - strict annual history / interpretation surface에서 risk-off contract와 weighting contract까지 같은 operator-facing 언어로 정리한 third-slice 문서
+- `.note/finance/phase19/PHASE19_COMPLETION_SUMMARY.md`
+  - `Phase 19`가 실제로 무엇을 정리했고 왜 practical closeout으로 볼 수 있는지 요약한 closeout 문서
+- `.note/finance/phase19/PHASE19_NEXT_PHASE_PREPARATION.md`
+  - `Phase 19` 이후 다음 phase 방향을 어떤 질문으로 이어가면 좋은지 정리한 handoff 문서
+- `.note/finance/phase19/PHASE19_TEST_CHECKLIST.md`
+  - `Phase 19` contract language 정리가 UI / history / interpretation / 문서에서 일관되게 읽히는지 확인하기 위한 manual checklist
 - `.note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md`
   - `finance` 패키지 전체 구조와 DB/기능 종합 분석
 - `.note/finance/WORK_PROGRESS.md`

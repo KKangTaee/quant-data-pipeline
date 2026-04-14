@@ -1,7 +1,7 @@
 # Phase 19 Current Chapter TODO
 
 ## 상태
-- `in_progress`
+- `practical closeout / manual_validation_pending`
 
 ## 1. Structural Contract Expansion
 
@@ -29,7 +29,8 @@
 
 - `completed` `py_compile`
 - `completed` `.venv` import smoke
-- `pending` manual UI validation checklist
+- `completed` manual UI validation checklist 문서 생성
+- `pending` manual UI validation actual run
   - single strict annual 3 family
   - compare strict annual 3 family
   - history prefill / load-into-form
@@ -42,5 +43,6 @@
 - `completed` phase19 kickoff plan을 쉬운 설명 중심으로 재작성
 - `completed` future phase plan 작성 규칙에 쉬운 설명 섹션을 반영
 - `completed` future phase에서 재사용할 phase plan template 문서 생성
+- `completed` phase19 completion / next-phase / checklist 문서 생성
 - `completed` roadmap / doc index / work log / question log sync
 - `completed` finance comprehensive analysis sync
