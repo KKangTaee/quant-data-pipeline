@@ -500,3 +500,18 @@ Detailed historical logs were archived on `2026-04-13`.
   - `Rejected Slot Handling Contract` / `Weighting Contract` / `Risk-Off Contract` / `Defensive Sleeve Tickers` move into `Portfolio Handling & Defensive Rules`
 - Durable takeaway:
   - overlay trigger logic and post-overlay portfolio handling are now easier to distinguish from the form structure itself
+
+### 2026-04-14
+- Simplified strict annual handling-contract captions after live UX feedback.
+- Changed:
+  - removed repetitive `위치:` phrasing from contract captions
+  - rewrote `Rejected Slot Handling Contract`, `Risk-Off Contract`, `Weighting Contract` captions around
+    - what situation each contract handles
+    - easy plain-language summary
+    - how it differs from neighboring contracts
+  - portfolio handling intro now uses bullet-style role summary instead of compressed inline prose
+- Validation:
+  - `python3 -m py_compile app/web/pages/backtest.py`
+  - `.venv/bin/python` import smoke for `app.web.pages.backtest`
+- Durable takeaway:
+  - the form now explains contract purpose directly, without relying on repeated location hints

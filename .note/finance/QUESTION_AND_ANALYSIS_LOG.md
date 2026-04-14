@@ -747,3 +747,21 @@ Detailed historical analysis was archived on `2026-04-13`.
     overlay를 켜는 규칙과,
     overlay / risk-off가 발생한 뒤 포트폴리오를 어떻게 처리할지를
     다른 층위의 설정으로 읽게 했다
+
+### 2026-04-14 - contract caption은 반복 위치 안내보다 역할과 적용 상황을 설명하는 편이 더 낫다
+- Request topic:
+  - `Portfolio Handling & Defensive Rules` 안의 각 항목에서
+    `위치: ...` 문구를 제거하고,
+    항목 정보와 기능을 UX/UI 관점에서 더 잘 정리해 달라는 요청
+- Interpreted goal:
+  - 사용자가 이미 해당 section 안에 들어와 있을 때는
+    위치 반복보다 "이 계약이 정확히 어떤 상황을 처리하는가"를 더 빨리 이해하게 만들고 싶음
+- Result:
+  - `Rejected Slot Handling Contract`
+    - "상위 후보 중 일부 종목만 빠졌을 때 빈 자리를 어떻게 처리하는가" 중심으로 설명을 정리했다
+  - `Risk-Off Contract`
+    - "이번 리밸런싱에서 포트폴리오 전체를 쉬게 하거나 방어 ETF로 돌릴지" 중심으로 설명을 정리했다
+  - `Weighting Contract`
+    - "무엇을 살지 정한 뒤 얼마씩 담을지" 중심으로 설명을 정리했다
+  - section intro도 bullet-style 역할 요약으로 바꿔,
+    각 contract의 차이를 위에서 먼저 읽고 아래 세부 항목으로 내려가게 했다

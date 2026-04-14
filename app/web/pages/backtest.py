@@ -1275,6 +1275,10 @@ def _render_rejected_slot_handling_help_popover() -> None:
         """
 이 계약은 **Trend Filter 때문에 raw top-N 일부가 탈락했을 때** 빈 슬롯을 어떻게 처리할지 정합니다.
 
+쉽게 말하면:
+- `Top 10` 중 `2개`만 trend filter에 걸려 빠졌을 때
+- 그 비어 있는 `2자리`를 어떻게 처리할지 정하는 규칙입니다.
+
 - `Reweight Survivors`
   - 남은 생존 종목들끼리 다시 100% 재배분합니다.
 
@@ -1289,8 +1293,8 @@ def _render_rejected_slot_handling_help_popover() -> None:
   - 먼저 다음 순위의 추세 통과 종목으로 채웁니다.
   - 그래도 빈 슬롯이 남으면 그 비중은 현금으로 남깁니다.
 
-이 계약은 **부분적인 종목 제외(partial trend rejection)** 용도입니다.  
-`Market Regime`이나 guardrail 때문에 **포트폴리오 전체가 risk-off** 되는 상황에는 적용되지 않습니다.
+이 계약은 **일부 종목만 빠졌을 때** 쓰는 규칙입니다.  
+`Market Regime`이나 guardrail 때문에 **포트폴리오 전체를 보수 모드로 돌리는 상황**은 아래 `Risk-Off Contract`가 담당합니다.
         """.strip(),
     )
 
@@ -1336,6 +1340,10 @@ def _render_strict_risk_off_contract_help_popover() -> None:
         """
 이 계약은 **포트폴리오 전체가 full risk-off** 되었을 때 무엇을 할지 정합니다.
 
+쉽게 말하면:
+- 일부 종목 몇 개만 빠진 상황이 아니라
+- 이번 리밸런싱에서 **포트폴리오 전체를 현금 또는 방어 ETF 쪽으로 돌릴지** 정하는 규칙입니다.
+
 `포트폴리오 전체 risk-off`란:
 - 개별 종목 몇 개만 빠지는 것이 아니라
 - `Market Regime` 또는 guardrail 때문에
@@ -1349,8 +1357,8 @@ def _render_strict_risk_off_contract_help_popover() -> None:
 - `Defensive Sleeve Preference`
   - full risk-off가 오면 `Defensive Sleeve Tickers`에 적은 방어 ETF 묶음으로 이동합니다.
 
-즉 이것은 **portfolio-wide risk-off 계약**이고,  
-`Trend Filter` 때문에 일부 종목만 빠졌을 때 쓰는 `Rejected Slot Handling Contract`와는 별개입니다.
+즉 이것은 **포트폴리오 전체 보수 모드 계약**이고,  
+`Trend Filter` 때문에 일부 종목만 빠졌을 때 쓰는 `Rejected Slot Handling Contract`와는 다른 역할입니다.
         """.strip(),
     )
 
@@ -1383,10 +1391,12 @@ def _render_strict_overlay_section_intro() -> None:
 
 def _render_strict_portfolio_handling_contracts_intro() -> None:
     st.caption(
-        "이 영역은 overlay 결과를 실제 포트폴리오에서 어떻게 처리할지 정하는 곳입니다. "
-        "`Rejected Slot Handling Contract`는 일부 종목만 빠졌을 때의 빈 슬롯 처리, "
-        "`Risk-Off Contract`는 포트폴리오 전체가 risk-off일 때의 fallback, "
-        "`Weighting Contract`는 최종 비중 규칙을 뜻합니다."
+        "이 영역은 overlay 결과를 실제 포트폴리오에서 어떻게 처리할지 정하는 곳입니다."
+    )
+    st.markdown(
+        "- `Rejected Slot Handling Contract`: Trend Filter로 일부 종목만 빠졌을 때 빈 슬롯을 어떻게 처리할지 정합니다.\n"
+        "- `Risk-Off Contract`: `Market Regime`이나 guardrail 때문에 포트폴리오 전체를 보수 모드로 돌릴 때 무엇을 할지 정합니다.\n"
+        "- `Weighting Contract`: 최종적으로 보유하게 된 종목 사이에 비중을 어떻게 나눌지 정합니다."
     )
     st.caption(
         "참고로 이 세 contract는 토글형 on/off 기능이 아니라, "
@@ -2348,10 +2358,12 @@ def _render_strict_defensive_sleeve_contract_inputs(
     with help_col:
         _render_strict_risk_off_contract_help_popover()
     st.caption(
-        "위치: `Advanced Inputs > Portfolio Handling & Defensive Rules`. "
-        "Market Regime나 Guardrail이 포트폴리오 전체를 risk-off로 만들었을 때, "
-        "현금만 둘지 방어 ETF sleeve로 이동할지 정합니다. "
-        "부분 trend rejection에는 적용되지 않습니다."
+        "`Market Regime`이나 guardrail 때문에 포트폴리오 전체를 보수 모드로 돌려야 할 때, "
+        "현금만 둘지 방어 ETF sleeve로 이동할지 정합니다."
+    )
+    st.caption(
+        "쉽게 말해, 일부 종목 몇 개만 빠지는 상황이 아니라 "
+        "이번 리밸런싱에서 포트폴리오 전체를 쉬게 하거나 방어 ETF로 돌리는 규칙입니다."
     )
     risk_off_mode_label = st.selectbox(
         f"{label_base}Risk-Off Contract",
@@ -2395,9 +2407,11 @@ def _render_strict_weighting_contract_inputs(
     with help_col:
         _render_strict_weighting_contract_help_popover()
     st.caption(
-        "위치: `Advanced Inputs > Portfolio Handling & Defensive Rules`. "
         "최종 선택된 종목에 비중을 어떻게 나눌지 정합니다. "
         "strict annual 기본은 `Equal Weight`이고, `Rank-Tapered`는 상위 rank에 조금 더 무게를 두는 실험적 옵션입니다."
+    )
+    st.caption(
+        "쉽게 말해, 무엇을 살지 정한 뒤 그 종목들을 얼마씩 담을지를 정하는 기본 비중 규칙입니다."
     )
     weighting_mode_label = st.selectbox(
         f"{label_base}Weighting Contract",
@@ -2425,9 +2439,11 @@ def _render_strict_rejected_slot_handling_contract_inputs(
     with help_col:
         _render_rejected_slot_handling_help_popover()
     st.caption(
-        "위치: `Advanced Inputs > Portfolio Handling & Defensive Rules`. "
         "Trend Filter가 raw top-N 일부를 탈락시킨 뒤, 빈 슬롯을 다음 순위 이름으로 보충할지 "
-        "혹은 최종적으로 현금/재배분으로 처리할지를 명시적으로 고릅니다."
+        "혹은 최종적으로 현금/재배분으로 처리할지를 정합니다."
+    )
+    st.caption(
+        "쉽게 말해, 상위 후보 중 일부 종목만 빠졌을 때 그 빈 자리를 어떻게 처리할지 정하는 규칙입니다."
     )
     handling_mode_label = st.selectbox(
         f"{label_base}Rejected Slot Handling Contract",
