@@ -154,38 +154,39 @@
 ## 최근 backtest log snapshot
 
 - 최근 기록:
-  - `2026-04-14 - partial cash retention representative rerun first pass`
+  - `2026-04-14 - defensive sleeve risk-off representative rerun first pass`
 - 핵심 설정:
-  - structural probe:
+  - current practical anchor:
     - `Top N = 14 + psr`
-    - `Trend Filter`
     - `Market Regime = off`
-    - `cash retention = off/on`
+    - underperformance / drawdown guardrail `on`
+    - `risk_off_mode = cash_only / defensive_sleeve_preference`
+    - `defensive_tickers = BIL, SHY, LQD`
 - 결과:
-  - `cash retention off`:
-    - `CAGR = 25.92%`
-    - `MDD = -29.25%`
-    - `Promotion = hold`
-    - `Shortlist = hold`
-    - `Deployment = blocked`
-  - `cash retention on`:
-    - `CAGR = 20.11%`
-    - `MDD = -15.85%`
-    - `Promotion = hold`
-    - `Shortlist = hold`
-    - `Deployment = blocked`
-    - `Partial Cash Retention Active Rows = 113`
+  - `cash_only`:
+    - `CAGR = 28.21%`
+    - `MDD = -24.55%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = paper_probation`
+    - `Deployment = review_required`
+  - `defensive sleeve`:
+    - `CAGR = 28.11%`
+    - `MDD = -25.14%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = paper_probation`
+    - `Deployment = review_required`
+    - `Defensive Sleeve Active Rows = 2`
 - 실무 해석:
-  - `partial cash retention`은 실제로 downside를 크게 줄였지만
-    현금 비중이 커져 return drag가 커졌다
-  - 이번 first pass에서는
-    same-gate rescue가 아니라
-    “유효한 downside lever지만 단독으로는 부족함”에 가깝다
+  - `defensive sleeve`는 gate를 깨지 않고 representative rerun을 통과했다
+  - 하지만 이번 anchor에서는 `MDD`를 더 낮추지 못했고
+    오히려 drawdown guardrail active month에서 소폭 더 나빠졌다
+  - 즉 `cash_only`를 대체하는 새 current anchor는 아니었다
 - 다음에 볼 것:
   - 다음 structural lever:
-    - `defensive sleeve risk-off`
+    - `concentration-aware weighting`
   - 이유:
-    - idle cash drag를 줄이면서 downside를 보완할 가능성이 더 크기 때문이다
+    - `partial cash retention`도, `defensive sleeve`도
+      same-gate lower-MDD exact rescue를 만들진 못했기 때문이다
 
 ## 관련 결과 문서
 
@@ -216,6 +217,9 @@
 - [PHASE16_VALUE_DOWNSIDE_REFINEMENT_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase16/PHASE16_VALUE_DOWNSIDE_REFINEMENT_FIRST_PASS.md)
   - `Top N = 14 + psr` current practical point 위에서
     bounded downside follow-up을 다시 본 문서
+- [PHASE17_DEFENSIVE_SLEEVE_RISK_OFF_REPRESENTATIVE_RERUN_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase17/PHASE17_DEFENSIVE_SLEEVE_RISK_OFF_REPRESENTATIVE_RERUN_FIRST_PASS.md)
+  - `defensive sleeve risk-off`를 current `Value` anchor에 적용해
+    same-gate lower-MDD rescue가 가능한지 본 문서
 
 ## 실무 해석
 

@@ -127,10 +127,22 @@ Phase 17부터는 bounded `Top N` / one-factor tweak을 반복하기보다
   concentration-aware weighting으로 바꿀지
 
 그리고 `Compare / Weighted Portfolio / Saved Portfolio`는
-즉시 새 `promotion / shortlist / deployment`를 만드는 계층이 아니라,
-first slice가 이미 구현된 레버는 `partial cash retention`이고,
-다음 active question은 이것이 strongest/current anchor에서 실제로 same-gate lower-MDD rescue로 이어지는지 representative rerun으로 다시 확인하는 것이다.
+즉시 새 `promotion / shortlist / deployment`를 만드는 계층이 아니라
 이미 살아 있는 후보를 비교하고 묶는 operator bridge로 읽는다.
+
+현재 상태:
+
+- 구현 완료:
+  - `partial cash retention`
+  - `defensive sleeve risk-off`
+- representative rerun 결론:
+  - `partial cash retention`
+    - downside는 크게 줄였지만 cash drag가 컸다
+  - `defensive sleeve risk-off`
+    - gate는 유지했지만 same-gate lower-MDD rescue는 만들지 못했다
+- 다음 active question:
+  - `concentration-aware weighting`이
+    current anchor를 더 부드럽게 만들 수 있는가
 
 ## 한 줄 요약
 

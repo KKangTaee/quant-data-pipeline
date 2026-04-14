@@ -240,3 +240,34 @@ Detailed historical analysis was archived on `2026-04-13`.
       idle cash drag를 줄일 수 있는
       `defensive sleeve risk-off`
       쪽이 더 자연스럽다
+
+### 2026-04-14 - defensive sleeve risk-off는 구현 가치가 있었지만 current anchor를 더 좋게 만들진 못했다
+- Request topic:
+  - Phase 17 다음 단계로
+    strict annual `defensive sleeve risk-off`를 구현하고
+    `Value` / `Quality + Value` current anchor에 representative rerun 적용
+- Interpreted goal:
+  - `cash_only`보다 return drag를 덜 만들면서
+    same-gate lower-MDD rescue가 가능한지 확인
+- Result:
+  - strict annual family 3종에
+    `risk_off_mode = cash_only | defensive_sleeve_preference`
+    와 `defensive_tickers` contract를 연결했다
+  - 구현 중 defensive sleeve ticker가 candidate-liquidity 계산에 섞여
+    false `Liquidity Excluded Count`를 만드는 회귀가 있었고,
+    candidate universe와 sleeve ticker를 분리해 수정했다
+  - 회귀 수정 후 representative rerun 기준:
+    - `Value` current anchor:
+      - `cash_only` = `28.21% / -24.55% / real_money_candidate / paper_probation / review_required`
+      - `defensive sleeve` = `28.11% / -25.14% / real_money_candidate / paper_probation / review_required`
+    - `Quality + Value` strongest point:
+      - `cash_only` = `31.82% / -26.63% / real_money_candidate / small_capital_trial / review_required`
+      - `defensive sleeve` = `31.79% / -27.19% / real_money_candidate / small_capital_trial / review_required`
+  - 해석:
+    - gate는 유지됐다
+    - 하지만 `MDD`를 더 낮추진 못했고 오히려 소폭 더 나빠졌다
+    - activation도 적어서 current anchor를 바꿀 정도의 구조 변화는 아니었다
+  - follow-up decision:
+    - next structural lever priority는
+      `concentration-aware weighting`
+      으로 넘어가는 편이 더 자연스럽다

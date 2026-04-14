@@ -20,6 +20,59 @@
 
 ## 기록
 
+### 2026-04-14 - defensive sleeve risk-off representative rerun first pass
+
+- 목표:
+  - Phase 17 second structural lever인 `defensive sleeve risk-off`가
+    current strongest practical blended point에서
+    same-gate lower-MDD rescue로 이어지는지 확인한다
+- 전략:
+  - `Quality + Value > Strict Annual`
+- 실행 범위:
+  - strongest practical point:
+    - quality:
+      - `roe`
+      - `roa`
+      - `operating_margin`
+      - `asset_turnover`
+      - `current_ratio`
+    - value:
+      - `book_to_market`
+      - `earnings_yield`
+      - `sales_yield`
+      - `pcr`
+      - `por`
+      - `per`
+    - `Top N = 10`
+    - `Benchmark Contract = Candidate Universe Equal-Weight`
+    - `Market Regime = off`
+    - underperformance / drawdown guardrail `on`
+    - `risk_off_mode = cash_only / defensive_sleeve_preference`
+    - `defensive_tickers = BIL, SHY, LQD`
+- 결과:
+  - `cash_only`:
+    - `CAGR = 31.82%`
+    - `MDD = -26.63%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = small_capital_trial`
+    - `Deployment = review_required`
+  - `defensive sleeve`:
+    - `CAGR = 31.79%`
+    - `MDD = -27.19%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = small_capital_trial`
+    - `Deployment = review_required`
+    - `Defensive Sleeve Active Rows = 3`
+- 해석:
+  - `defensive sleeve`는 blended strongest point에서도 gate를 유지했다
+  - 하지만 이번 first pass에서는 `MDD`를 더 낮추지 못했고,
+    strongest practical point를 갱신하지도 못했다
+  - activation row가 적고 전부 `drawdown_guardrail` 기반이라
+    current strongest point를 바꿀 정도의 구조 변화는 아니었다
+- 다음 액션:
+  - current strongest practical point는 그대로 유지
+  - 다음 structural lever는 `concentration-aware weighting`으로 넘긴다
+
 ### 2026-04-14 - partial cash retention representative rerun first pass
 
 - 목표:

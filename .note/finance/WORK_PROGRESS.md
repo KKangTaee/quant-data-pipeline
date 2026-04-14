@@ -172,3 +172,26 @@ Detailed historical logs were archived on `2026-04-13`.
   - current candidate summary
 - Next priority:
   - `defensive sleeve risk-off` over another cash-only follow-up
+
+### 2026-04-14
+- Implemented the second Phase 17 structural lever slice:
+  - strict annual `defensive sleeve risk-off`
+- Wired through:
+  - `finance.strategy.quality_snapshot_equal_weight(...)`
+  - strict annual DB-backed sample/runtime wrappers
+  - strict annual single / compare forms
+  - warning / meta / interpretation surface
+- Important correction:
+  - defensive sleeve ticker was separated from strict annual candidate-universe filtering
+  - this removed the false `Liquidity Excluded Count` inflation that appeared in the first rerun
+- Representative rerun result after the correction:
+  - `Value` current anchor:
+    - gate unchanged
+    - `MDD` slightly worse
+  - `Quality + Value` current strongest point:
+    - gate unchanged
+    - `MDD` slightly worse
+- Durable takeaway:
+  - `defensive sleeve risk-off` is now implemented and verifiable
+  - but it did not produce a same-gate lower-MDD rescue on the current anchors
+  - next structural lever priority moves to `concentration-aware weighting`

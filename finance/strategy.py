@@ -1035,10 +1035,13 @@ def quality_snapshot_equal_weight(
     min_price: float = 0.0,
     min_history_months: int = 0,
     min_avg_dollar_volume_20d_m: float = 0.0,
+    candidate_tickers: list[str] | None = None,
     trend_filter_enabled: bool = False,
     trend_filter_window: int = 200,
     trend_filter_col: str | None = None,
     partial_cash_retention_enabled: bool = False,
+    risk_off_mode: str = "cash_only",
+    defensive_tickers: list[str] | None = None,
     market_regime_enabled: bool = False,
     market_regime_window: int = 200,
     market_regime_benchmark: str | None = None,
@@ -1096,8 +1099,21 @@ def quality_snapshot_equal_weight(
         raise ValueError("drawdown_guardrail_df is required when the guardrail is enabled.")
     if drawdown_guardrail_enabled and drawdown_guardrail_gap_threshold < 0:
         raise ValueError("drawdown_guardrail_gap_threshold must be non-negative when the guardrail is enabled.")
+    if risk_off_mode not in {"cash_only", "defensive_sleeve_preference"}:
+        raise ValueError("risk_off_mode must be one of {'cash_only', 'defensive_sleeve_preference'}.")
 
     tickers = list(price_dfs.keys())
+    selection_tickers = [
+        str(ticker).strip().upper()
+        for ticker in (candidate_tickers or tickers)
+        if str(ticker).strip() and str(ticker).strip().upper() in price_dfs
+    ]
+    if not selection_tickers:
+        selection_tickers = list(tickers)
+    defensive_set = {
+        ticker for ticker in (defensive_tickers or [])
+        if ticker in tickers
+    }
     base_df = price_dfs[tickers[0]].sort_values("Date").reset_index(drop=True)
     dates = pd.to_datetime(base_df["Date"]).tolist()
     effective_first_valid_dates = dict(first_valid_price_dates or {})
@@ -1199,11 +1215,13 @@ def quality_snapshot_equal_weight(
         raw_selected_tickers: list[str] = []
         raw_selected_scores: list[float] = []
         overlay_rejected_tickers: list[str] = []
+        defensive_sleeve_tickers: list[str] = []
         regime_blocked_tickers: list[str] = []
         underperformance_blocked_tickers: list[str] = []
         drawdown_blocked_tickers: list[str] = []
         history_excluded_tickers: list[str] = []
         liquidity_excluded_tickers: list[str] = []
+        risk_off_reasons: list[str] = []
         partial_cash_retention_active = False
         partial_cash_retention_base_count = np.nan
 
@@ -1221,6 +1239,8 @@ def quality_snapshot_equal_weight(
                     regime_state = "risk_on" if float(regime_close_now) >= float(regime_trend_now) else "risk_off"
                 else:
                     regime_state = "unknown"
+                if regime_state == "risk_off":
+                    risk_off_reasons.append("market_regime")
 
         guardrail_state = "off"
         guardrail_triggered = False
@@ -1256,6 +1276,7 @@ def quality_snapshot_equal_weight(
                         if float(guardrail_excess_return) <= -abs(float(underperformance_guardrail_threshold)):
                             guardrail_state = "risk_off"
                             guardrail_triggered = True
+                            risk_off_reasons.append("underperformance_guardrail")
                         else:
                             guardrail_state = "risk_on"
                     else:
@@ -1302,10 +1323,25 @@ def quality_snapshot_equal_weight(
                 if breached_strategy or breached_gap:
                     drawdown_guardrail_state = "risk_off"
                     drawdown_guardrail_triggered = True
+                    risk_off_reasons.append("drawdown_guardrail")
                 elif pd.notna(drawdown_guardrail_strategy_drawdown):
                     drawdown_guardrail_state = "risk_on"
                 else:
                     drawdown_guardrail_state = "unknown"
+
+        def _build_defensive_sleeve_candidates() -> list[str]:
+            if not defensive_set:
+                return []
+            candidates: list[str] = []
+            for ticker in defensive_tickers or []:
+                normalized_ticker = str(ticker).strip().upper()
+                if normalized_ticker not in defensive_set:
+                    continue
+                current_close = close_now.get(normalized_ticker)
+                if pd.isna(current_close) or not _passes_min_price(float(current_close), min_price):
+                    continue
+                candidates.append(normalized_ticker)
+            return candidates
 
         if rebalancing:
             snapshot_df = snapshot_by_date.get(snapshot_key)
@@ -1316,7 +1352,7 @@ def quality_snapshot_equal_weight(
             )
             if not ranked.empty:
                 available_tickers = set()
-                for ticker in tickers:
+                for ticker in selection_tickers:
                     current_close = close_now.get(ticker)
                     if pd.isna(current_close):
                         continue
@@ -1377,6 +1413,10 @@ def quality_snapshot_equal_weight(
 
                 held_tickers = selected_snapshot["symbol"].tolist()
                 selected_scores = selected_snapshot["Quality Score"].astype(float).tolist()
+                if risk_off_reasons and risk_off_mode == "defensive_sleeve_preference":
+                    defensive_sleeve_tickers = _build_defensive_sleeve_candidates()
+                    held_tickers = list(defensive_sleeve_tickers)
+                    selected_scores = []
                 if not held_tickers:
                     next_balances = []
                     cash = base_balance
@@ -1405,6 +1445,10 @@ def quality_snapshot_equal_weight(
                 "Raw Selected Score": raw_selected_scores,
                 "Overlay Rejected Ticker": overlay_rejected_tickers,
                 "Overlay Rejected Count": len(overlay_rejected_tickers),
+                "Risk-Off Mode": risk_off_mode,
+                "Risk-Off Reason": risk_off_reasons,
+                "Defensive Sleeve Ticker": defensive_sleeve_tickers,
+                "Defensive Sleeve Count": len(defensive_sleeve_tickers),
                 "Trend Filter Enabled": trend_filter_enabled,
                 "Trend Filter Column": (active_trend_col if trend_filter_enabled else np.nan),
                 "Partial Cash Retention Enabled": partial_cash_retention_enabled,

@@ -81,6 +81,10 @@ VALUE_STRICT_DEFAULT_FACTORS = [
 STRICT_TREND_FILTER_DEFAULT_ENABLED = False
 STRICT_TREND_FILTER_DEFAULT_WINDOW = 200
 STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED = False
+STRICT_RISK_OFF_MODE_CASH = "cash_only"
+STRICT_RISK_OFF_MODE_DEFENSIVE = "defensive_sleeve_preference"
+STRICT_DEFAULT_RISK_OFF_MODE = STRICT_RISK_OFF_MODE_CASH
+STRICT_DEFAULT_DEFENSIVE_TICKERS = ["BIL", "SHY", "LQD"]
 STRICT_MARKET_REGIME_DEFAULT_ENABLED = False
 STRICT_MARKET_REGIME_DEFAULT_WINDOW = 200
 STRICT_MARKET_REGIME_DEFAULT_BENCHMARK = "SPY"
@@ -1669,6 +1673,8 @@ def _run_statement_shadow_snapshot_from_db(
     trend_filter_enabled=False,
     trend_filter_window=STRICT_TREND_FILTER_DEFAULT_WINDOW,
     partial_cash_retention_enabled: bool = STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
+    risk_off_mode: str = STRICT_DEFAULT_RISK_OFF_MODE,
+    defensive_tickers=None,
     market_regime_enabled=False,
     market_regime_window=STRICT_MARKET_REGIME_DEFAULT_WINDOW,
     market_regime_benchmark=STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
@@ -1697,7 +1703,21 @@ def _run_statement_shadow_snapshot_from_db(
         if not candidate_tickers:
             candidate_tickers = requested_tickers
 
-    price_dfs = _get_cached_snapshot_strategy_price_dfs(
+    if risk_off_mode not in {STRICT_RISK_OFF_MODE_CASH, STRICT_RISK_OFF_MODE_DEFENSIVE}:
+        raise ValueError(
+            "risk_off_mode must be one of "
+            f"{{'{STRICT_RISK_OFF_MODE_CASH}', '{STRICT_RISK_OFF_MODE_DEFENSIVE}'}}."
+        )
+
+    effective_defensive_tickers = _normalize_symbol_list(
+        defensive_tickers if defensive_tickers is not None else STRICT_DEFAULT_DEFENSIVE_TICKERS
+    )
+    if risk_off_mode != STRICT_RISK_OFF_MODE_DEFENSIVE:
+        effective_defensive_tickers = []
+
+    price_symbols = _normalize_symbol_list([*candidate_tickers, *effective_defensive_tickers])
+
+    candidate_price_dfs = _get_cached_snapshot_strategy_price_dfs(
         symbols=candidate_tickers,
         option=option,
         start=start,
@@ -1705,8 +1725,19 @@ def _run_statement_shadow_snapshot_from_db(
         timeframe=timeframe,
         trend_filter_window=(trend_filter_window if trend_filter_enabled else None),
     )
+    price_dfs = dict(candidate_price_dfs)
+    if effective_defensive_tickers:
+        defensive_price_dfs = _get_cached_snapshot_strategy_price_dfs(
+            symbols=effective_defensive_tickers,
+            option=option,
+            start=start,
+            end=end,
+            timeframe=timeframe,
+            trend_filter_window=None,
+        )
+        price_dfs.update(defensive_price_dfs)
     first_valid_price_dates = _get_cached_snapshot_strategy_price_first_dates(
-        symbols=candidate_tickers,
+        symbols=price_symbols,
         option=option,
         start=start,
         end=end,
@@ -1723,9 +1754,9 @@ def _run_statement_shadow_snapshot_from_db(
             timeframe=timeframe,
         )
 
-    rebalance_dates = pd.to_datetime(next(iter(price_dfs.values()))["Date"]).tolist()
+    rebalance_dates = pd.to_datetime(next(iter(candidate_price_dfs.values()))["Date"]).tolist()
     factor_history = _get_cached_statement_factors_shadow(
-        symbols=list(price_dfs.keys()),
+        symbols=list(candidate_price_dfs.keys()),
         freq=statement_freq,
         end=end,
     )
@@ -1738,7 +1769,7 @@ def _run_statement_shadow_snapshot_from_db(
     universe_debug: dict[str, object] = {
         "contract": universe_contract,
         "requested_count": len(requested_tickers),
-        "candidate_pool_count": len(price_dfs),
+        "candidate_pool_count": len(candidate_price_dfs),
         "target_size": len(requested_tickers),
         "membership_dates": len(rebalance_dates),
     }
@@ -1757,7 +1788,7 @@ def _run_statement_shadow_snapshot_from_db(
             symbols=list(price_dfs.keys())
         )
         membership_map, universe_debug, universe_snapshot_rows, candidate_status_rows = _build_dynamic_pit_membership_map(
-            price_dfs=price_dfs,
+            price_dfs=candidate_price_dfs,
             statement_shadow=statement_shadow,
             rebalance_dates=rebalance_dates,
             target_size=int(dynamic_target_size or len(requested_tickers)),
@@ -1807,6 +1838,7 @@ def _run_statement_shadow_snapshot_from_db(
         min_price=min_price,
         min_history_months=min_history_months,
         min_avg_dollar_volume_20d_m=min_avg_dollar_volume_20d_m,
+        candidate_tickers=list(candidate_price_dfs.keys()),
         first_valid_price_dates=first_valid_price_dates,
         avg_dollar_volume_20d_by_date=avg_dollar_volume_20d_by_date,
         lower_is_better_factors=lower_is_better_factors,
@@ -1814,6 +1846,8 @@ def _run_statement_shadow_snapshot_from_db(
         trend_filter_enabled=trend_filter_enabled,
         trend_filter_window=trend_filter_window,
         partial_cash_retention_enabled=partial_cash_retention_enabled,
+        risk_off_mode=risk_off_mode,
+        defensive_tickers=effective_defensive_tickers,
         market_regime_enabled=market_regime_enabled,
         market_regime_window=market_regime_window,
         market_regime_benchmark=market_regime_benchmark,
@@ -1868,6 +1902,8 @@ def get_statement_quality_snapshot_shadow_from_db(
     trend_filter_enabled=False,
     trend_filter_window=STRICT_TREND_FILTER_DEFAULT_WINDOW,
     partial_cash_retention_enabled: bool = STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
+    risk_off_mode: str = STRICT_DEFAULT_RISK_OFF_MODE,
+    defensive_tickers=None,
     market_regime_enabled=False,
     market_regime_window=STRICT_MARKET_REGIME_DEFAULT_WINDOW,
     market_regime_benchmark=STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
@@ -1904,6 +1940,8 @@ def get_statement_quality_snapshot_shadow_from_db(
         trend_filter_enabled=trend_filter_enabled,
         trend_filter_window=trend_filter_window,
         partial_cash_retention_enabled=partial_cash_retention_enabled,
+        risk_off_mode=risk_off_mode,
+        defensive_tickers=defensive_tickers,
         market_regime_enabled=market_regime_enabled,
         market_regime_window=market_regime_window,
         market_regime_benchmark=market_regime_benchmark,
@@ -1939,6 +1977,8 @@ def get_statement_value_snapshot_shadow_from_db(
     trend_filter_enabled=False,
     trend_filter_window=STRICT_TREND_FILTER_DEFAULT_WINDOW,
     partial_cash_retention_enabled: bool = STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
+    risk_off_mode: str = STRICT_DEFAULT_RISK_OFF_MODE,
+    defensive_tickers=None,
     market_regime_enabled=False,
     market_regime_window=STRICT_MARKET_REGIME_DEFAULT_WINDOW,
     market_regime_benchmark=STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
@@ -1975,6 +2015,8 @@ def get_statement_value_snapshot_shadow_from_db(
         trend_filter_enabled=trend_filter_enabled,
         trend_filter_window=trend_filter_window,
         partial_cash_retention_enabled=partial_cash_retention_enabled,
+        risk_off_mode=risk_off_mode,
+        defensive_tickers=defensive_tickers,
         market_regime_enabled=market_regime_enabled,
         market_regime_window=market_regime_window,
         market_regime_benchmark=market_regime_benchmark,
@@ -2011,6 +2053,8 @@ def get_statement_quality_value_snapshot_shadow_from_db(
     trend_filter_enabled=False,
     trend_filter_window=STRICT_TREND_FILTER_DEFAULT_WINDOW,
     partial_cash_retention_enabled: bool = STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
+    risk_off_mode: str = STRICT_DEFAULT_RISK_OFF_MODE,
+    defensive_tickers=None,
     market_regime_enabled=False,
     market_regime_window=STRICT_MARKET_REGIME_DEFAULT_WINDOW,
     market_regime_benchmark=STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
@@ -2066,6 +2110,8 @@ def get_statement_quality_value_snapshot_shadow_from_db(
         trend_filter_enabled=trend_filter_enabled,
         trend_filter_window=trend_filter_window,
         partial_cash_retention_enabled=partial_cash_retention_enabled,
+        risk_off_mode=risk_off_mode,
+        defensive_tickers=defensive_tickers,
         market_regime_enabled=market_regime_enabled,
         market_regime_window=market_regime_window,
         market_regime_benchmark=market_regime_benchmark,

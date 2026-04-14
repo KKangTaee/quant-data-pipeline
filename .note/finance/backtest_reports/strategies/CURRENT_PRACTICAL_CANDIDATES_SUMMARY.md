@@ -49,6 +49,10 @@ lower-MDD near-miss:
     `MDD = -15.85%`까지 크게 내려가지만
     `CAGR = 20.11%`, `hold / blocked`로 남아서
     current anchor를 바꾸진 못했다
+  - `defensive sleeve risk-off(BIL, SHY, LQD)`를 붙이면
+    gate는 유지되지만
+    `MDD = -25.14%`로 소폭 더 나빠져
+    역시 current anchor를 바꾸진 못했다
 
 바로 열 문서:
 
@@ -110,6 +114,10 @@ lower-MDD but weaker-gate near-miss:
     `MDD = -15.07%`까지 크게 낮아지지만
     `CAGR = 20.03%`, `hold / blocked`로 남아서
     current strongest point를 바꾸진 못했다
+  - `defensive sleeve risk-off(BIL, SHY, LQD)`를 붙이면
+    gate는 유지되지만
+    `MDD = -27.19%`로 소폭 더 나빠져
+    strongest point를 대체하지 못했다
 
 바로 열 문서:
 
@@ -131,9 +139,10 @@ lower-MDD but weaker-gate near-miss:
 3. 다음 phase 방향
    - bounded `Top N / one-factor / overlay`보다
      더 구조적인 downside improvement가 우선순위가 된다
-   - Phase 17 first pass 기준으로는
-     `partial cash retention`보다
-     `defensive sleeve risk-off`가 다음 구현 후보로 더 유력하다
+   - Phase 17 current pass 기준으로는
+     `partial cash retention`과 `defensive sleeve risk-off` 모두
+     current anchor를 바꾸지 못했기 때문에
+     다음 구현 후보는 `concentration-aware weighting`이 더 자연스럽다
 
 ## 관련 문서
 

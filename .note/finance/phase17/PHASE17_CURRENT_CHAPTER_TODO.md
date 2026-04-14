@@ -32,7 +32,7 @@
 후보:
 
 - [x] strict annual partial cash retention contract
-- [ ] strict annual defensive sleeve risk-off contract
+- [x] strict annual defensive sleeve risk-off contract
 - [ ] strict annual concentration-aware weighting contract
 
 구현 이후 다음 active step:
@@ -40,7 +40,8 @@
 - [x] `Value` strongest / lower-MDD near-miss에 partial cash retention representative rerun 적용
 - [x] `Quality + Value` strongest practical point에 partial cash retention representative rerun 적용
 - [x] same-gate lower-MDD rescue 여부를 기준으로 next structural lever 우선순위 재판단
-- [ ] next structural lever로 `defensive sleeve risk-off` contract 설계/구현 시작
+- [x] `Value` / `Quality + Value` anchor에 defensive sleeve representative rerun 적용
+- [ ] next structural lever로 `concentration-aware weighting` contract 설계/구현 시작
 
 ## 현재 판단
 
@@ -53,17 +54,18 @@
 
 - bounded tweak phase는 이미 끝났다
 - current code를 기준으로 보면,
-  `partial cash retention` first slice는 구현 완료 상태다
-- representative rerun 결과,
-  `partial cash retention`은 `Value / Quality + Value` 모두에서
-  `MDD`를 크게 낮췄지만
-  current practical gate를 rescue하진 못했다
+  `partial cash retention`, `defensive sleeve risk-off`
+  first slice는 구현 완료 상태다
+- representative rerun 결과:
+  - `partial cash retention`은
+    `MDD`를 크게 낮췄지만 return drag가 너무 컸다
+  - `defensive sleeve risk-off`는
+    gate는 유지했지만 `MDD`를 더 낮추지 못했다
 - 공통 패턴:
-  - downside protection은 분명했다
-  - 하지만 현금 비중이 많이 남으면서 `CAGR` drag가 커졌다
-  - `benchmark_policy` / `liquidity_policy` caution도 함께 남았다
+  - same-gate lower-MDD exact rescue는 아직 없다
+  - `Value`와 `Quality + Value` current anchor는 그대로 유지된다
 - 따라서 다음 active question은
-  idle cash drag를 줄이면서 downside를 보완할 수 있는
-  `defensive sleeve risk-off` contract를 여는 것이다
+  equal-weight top-N 구조 자체를 더 부드럽게 만들 수 있는
+  `concentration-aware weighting` contract를 여는 것이다
 - weighted portfolio / saved portfolio는 지금도 유용하지만,
   real-money gate surface가 직접 붙지 않아 immediate replacement는 아니다

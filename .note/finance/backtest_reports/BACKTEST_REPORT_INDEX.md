@@ -126,6 +126,9 @@
 - `phase17/PHASE17_PARTIAL_CASH_RETENTION_REPRESENTATIVE_RERUN_FIRST_PASS.md`
   - strict annual `partial cash retention`을 실제 `Value` / `Quality + Value` anchor에 적용해
     same-gate lower-MDD rescue가 가능한지 본 first-pass representative rerun 문서
+- `phase17/PHASE17_DEFENSIVE_SLEEVE_RISK_OFF_REPRESENTATIVE_RERUN_FIRST_PASS.md`
+  - strict annual `defensive sleeve risk-off`를 같은 anchor에 적용해
+    same-gate lower-MDD rescue가 가능한지 본 first-pass representative rerun 문서
 
 ## 운영 메모
 

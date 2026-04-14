@@ -1578,3 +1578,30 @@ overlay 사용 여부를 빠르게 적기 위해서다.
   - market regime overlay 적용
 - `regime off`
   - market regime overlay 없이 순수 전략 비교
+
+---
+
+## Defensive Sleeve Risk-Off
+
+### 기본 설명
+full risk-off가 발생했을 때
+포트폴리오를 전부 현금으로 두는 대신,
+미리 정한 방어 자산 묶음으로 옮기는 contract다.
+
+### 왜 사용되는지
+`cash only`는 downside를 막는 데는 강하지만
+현금 비중이 커지면 수익률 drag가 커질 수 있다.
+
+그래서:
+
+- risk-off를 유지하되
+- idle cash를 조금 줄이고
+- 더 부드러운 downside profile을 만들 수 있는지
+
+보려는 목적에서 사용된다.
+
+### 예시 / 필요 상황
+- `BIL, SHY, LQD`
+  같은 defensive sleeve를 두고
+  `drawdown guardrail`이나 `market regime`가 full risk-off를 만들었을 때
+  현금 대신 그 sleeve로 이동하는 경우

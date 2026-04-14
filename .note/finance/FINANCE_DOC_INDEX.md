@@ -228,10 +228,15 @@
   - compare / weighted portfolio / saved portfolio가 immediate practical-candidate work의 메인 트랙인지 보조 트랙인지 판단한 문서
 - `.note/finance/phase17/PHASE17_PARTIAL_CASH_RETENTION_IMPLEMENTATION_FIRST_SLICE.md`
   - strict annual family에 partial cash retention contract를 실제 코드로 연결한 first implementation slice 문서
+- `.note/finance/phase17/PHASE17_DEFENSIVE_SLEEVE_RISK_OFF_IMPLEMENTATION_SECOND_SLICE.md`
+  - strict annual family에 defensive sleeve risk-off contract를 실제 코드로 연결한 second implementation slice 문서
 - `.note/finance/backtest_reports/phase17/README.md`
   - Phase 17 결과 중심 backtest report archive 안내 문서
 - `.note/finance/backtest_reports/phase17/PHASE17_PARTIAL_CASH_RETENTION_REPRESENTATIVE_RERUN_FIRST_PASS.md`
   - strict annual `partial cash retention`이 실제 `Value` / `Quality + Value` anchor에서
+    same-gate lower-MDD rescue를 만들 수 있는지 representative rerun으로 확인한 문서
+- `.note/finance/backtest_reports/phase17/PHASE17_DEFENSIVE_SLEEVE_RISK_OFF_REPRESENTATIVE_RERUN_FIRST_PASS.md`
+  - strict annual `defensive sleeve risk-off`가 같은 anchor에서
     same-gate lower-MDD rescue를 만들 수 있는지 representative rerun으로 확인한 문서
 - `.note/finance/phase12/PHASE12_GTAA_INTERVAL1_DEFAULT_REBASE_ANALYSIS.md`
   - GTAA 기본 `Signal Interval`을 `1`로 rebased 한 뒤, 주요 preset과 상위 후보군을 공통 시작점에서 다시 비교해 현재 default cadence 기준의 우선순위를 정리한 문서
@@ -762,6 +767,10 @@ Phase 4 시작 시:
   - weighted portfolio / saved portfolio를 operator bridge로 읽어야 하는지 정리한 first-pass 문서
 - `.note/finance/phase17/PHASE17_PARTIAL_CASH_RETENTION_IMPLEMENTATION_FIRST_SLICE.md`
   - strict annual partial cash retention contract를 실제 코드에 연결한 first implementation slice 문서
+- `.note/finance/phase17/PHASE17_DEFENSIVE_SLEEVE_RISK_OFF_IMPLEMENTATION_SECOND_SLICE.md`
+  - strict annual defensive sleeve risk-off contract를 실제 코드에 연결한 second implementation slice 문서
+- `.note/finance/backtest_reports/phase17/PHASE17_DEFENSIVE_SLEEVE_RISK_OFF_REPRESENTATIVE_RERUN_FIRST_PASS.md`
+  - strict annual defensive sleeve risk-off rerun 결과를 current anchor 기준으로 정리한 문서
 - `.note/finance/phase15/PHASE15_CANDIDATE_QUALITY_IMPROVEMENT_PLAN.md`
   - Phase 15 candidate quality improvement 상위 계획 문서
 - `.note/finance/phase15/PHASE15_CURRENT_CHAPTER_TODO.md`

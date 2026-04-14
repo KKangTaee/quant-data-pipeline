@@ -66,6 +66,8 @@ from finance.sample import (
     GTAA_DEFAULT_CRASH_GUARDRAIL_ENABLED,
     GTAA_DEFAULT_CRASH_GUARDRAIL_LOOKBACK_MONTHS,
     GTAA_DEFAULT_DEFENSIVE_TICKERS,
+    STRICT_DEFAULT_DEFENSIVE_TICKERS,
+    STRICT_DEFAULT_RISK_OFF_MODE,
     GTAA_DEFAULT_SCORE_LOOKBACK_MONTHS,
     GTAA_DEFAULT_RISK_OFF_MODE,
     GTAA_SCORE_RETURN_COLUMNS,
@@ -78,6 +80,8 @@ from finance.sample import (
     STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD,
     STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
     STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
+    STRICT_RISK_OFF_MODE_CASH,
+    STRICT_RISK_OFF_MODE_DEFENSIVE,
     STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED,
     STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD,
     STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
@@ -114,6 +118,10 @@ GTAA_PRESETS = {
 GTAA_RISK_OFF_MODE_LABELS = {
     "Cash Only": "cash_only",
     "Defensive Bond Preference": "defensive_bond_preference",
+}
+STRICT_RISK_OFF_MODE_LABELS = {
+    "Cash Only": STRICT_RISK_OFF_MODE_CASH,
+    "Defensive Sleeve Preference": STRICT_RISK_OFF_MODE_DEFENSIVE,
 }
 GTAA_SCORE_WEIGHT_LABELS = [
     ("1MReturn", "1M"),
@@ -585,6 +593,10 @@ def _init_backtest_state() -> None:
         st.session_state["qss_trend_filter_window"] = STRICT_TREND_FILTER_DEFAULT_WINDOW
     if "qss_partial_cash_retention_enabled" not in st.session_state:
         st.session_state["qss_partial_cash_retention_enabled"] = STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED
+    if "qss_risk_off_mode" not in st.session_state:
+        st.session_state["qss_risk_off_mode"] = _strict_risk_off_mode_value_to_label(STRICT_DEFAULT_RISK_OFF_MODE)
+    if "qss_defensive_tickers" not in st.session_state:
+        st.session_state["qss_defensive_tickers"] = ",".join(STRICT_DEFAULT_DEFENSIVE_TICKERS)
     if "qss_market_regime_enabled" not in st.session_state:
         st.session_state["qss_market_regime_enabled"] = STRICT_MARKET_REGIME_DEFAULT_ENABLED
     if "qss_market_regime_window" not in st.session_state:
@@ -645,6 +657,10 @@ def _init_backtest_state() -> None:
         st.session_state["vss_trend_filter_window"] = STRICT_TREND_FILTER_DEFAULT_WINDOW
     if "vss_partial_cash_retention_enabled" not in st.session_state:
         st.session_state["vss_partial_cash_retention_enabled"] = STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED
+    if "vss_risk_off_mode" not in st.session_state:
+        st.session_state["vss_risk_off_mode"] = _strict_risk_off_mode_value_to_label(STRICT_DEFAULT_RISK_OFF_MODE)
+    if "vss_defensive_tickers" not in st.session_state:
+        st.session_state["vss_defensive_tickers"] = ",".join(STRICT_DEFAULT_DEFENSIVE_TICKERS)
     if "vss_market_regime_enabled" not in st.session_state:
         st.session_state["vss_market_regime_enabled"] = STRICT_MARKET_REGIME_DEFAULT_ENABLED
     if "vss_market_regime_window" not in st.session_state:
@@ -705,6 +721,10 @@ def _init_backtest_state() -> None:
         st.session_state["qvss_trend_filter_window"] = STRICT_TREND_FILTER_DEFAULT_WINDOW
     if "qvss_partial_cash_retention_enabled" not in st.session_state:
         st.session_state["qvss_partial_cash_retention_enabled"] = STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED
+    if "qvss_risk_off_mode" not in st.session_state:
+        st.session_state["qvss_risk_off_mode"] = _strict_risk_off_mode_value_to_label(STRICT_DEFAULT_RISK_OFF_MODE)
+    if "qvss_defensive_tickers" not in st.session_state:
+        st.session_state["qvss_defensive_tickers"] = ",".join(STRICT_DEFAULT_DEFENSIVE_TICKERS)
     if "qvss_market_regime_enabled" not in st.session_state:
         st.session_state["qvss_market_regime_enabled"] = STRICT_MARKET_REGIME_DEFAULT_ENABLED
     if "qvss_market_regime_window" not in st.session_state:
@@ -2017,6 +2037,13 @@ def _risk_off_mode_value_to_label(value: str | None) -> str:
     return "Cash Only"
 
 
+def _strict_risk_off_mode_value_to_label(value: str | None) -> str:
+    for label, mode_value in STRICT_RISK_OFF_MODE_LABELS.items():
+        if mode_value == value:
+            return label
+    return "Cash Only"
+
+
 def _render_gtaa_risk_off_contract_inputs(*, key_prefix: str) -> dict[str, Any]:
     st.markdown("##### Risk-Off Contract")
     st.caption(
@@ -2101,6 +2128,38 @@ def _render_gtaa_risk_off_contract_inputs(*, key_prefix: str) -> dict[str, Any]:
         "crash_guardrail_drawdown_threshold": float(crash_guardrail_drawdown_threshold) / 100.0,
         "crash_guardrail_lookback_months": int(crash_guardrail_lookback_months),
     }
+
+
+def _render_strict_defensive_sleeve_contract_inputs(
+    *,
+    key_prefix: str,
+    label_prefix: str = "",
+) -> tuple[str, list[str]]:
+    prefix = label_prefix.strip()
+    label_base = f"{prefix} " if prefix else ""
+    st.markdown("##### Defensive Sleeve Risk-Off")
+    st.caption(
+        "Market Regime나 Guardrail이 전체 risk-off를 만들었을 때, "
+        "현금만 둘지 방어 ETF sleeve로 이동할지 정합니다. "
+        "부분 trend rejection에는 적용되지 않습니다."
+    )
+    risk_off_mode_label = st.selectbox(
+        f"{label_base}Risk-Off Fallback",
+        options=list(STRICT_RISK_OFF_MODE_LABELS.keys()),
+        index=list(STRICT_RISK_OFF_MODE_LABELS.values()).index(STRICT_DEFAULT_RISK_OFF_MODE),
+        key=f"{key_prefix}_risk_off_mode",
+        help="full risk-off 상태에서 현금만 들고 있을지, 방어 ETF를 동일가중으로 담을지 정합니다.",
+    )
+    defensive_tickers_text = st.text_input(
+        f"{label_base}Defensive Sleeve Tickers",
+        value=",".join(STRICT_DEFAULT_DEFENSIVE_TICKERS),
+        key=f"{key_prefix}_defensive_tickers",
+        help="Fallback이 `Defensive Sleeve Preference`일 때 사용할 방어 ETF 목록입니다. 예: `BIL,SHY,LQD`",
+    )
+    return (
+        STRICT_RISK_OFF_MODE_LABELS[risk_off_mode_label],
+        _parse_manual_tickers(defensive_tickers_text),
+    )
 
 
 def _render_strict_price_freshness_preflight(
@@ -2734,6 +2793,8 @@ def _strategy_compare_defaults(strategy_name: str) -> dict:
                 "quality_factors": QUALITY_STRICT_DEFAULT_FACTORS,
                 "top_n": 2,
                 "partial_cash_retention_enabled": STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
+                "risk_off_mode": STRICT_DEFAULT_RISK_OFF_MODE,
+                "defensive_tickers": STRICT_DEFAULT_DEFENSIVE_TICKERS,
                 "min_price_filter": ETF_REAL_MONEY_DEFAULT_MIN_PRICE,
                 "min_history_months_filter": STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS,
                 "min_avg_dollar_volume_20d_m_filter": STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M,
@@ -2774,6 +2835,8 @@ def _strategy_compare_defaults(strategy_name: str) -> dict:
                 "value_factors": VALUE_STRICT_DEFAULT_FACTORS,
                 "top_n": 10,
                 "partial_cash_retention_enabled": STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
+                "risk_off_mode": STRICT_DEFAULT_RISK_OFF_MODE,
+                "defensive_tickers": STRICT_DEFAULT_DEFENSIVE_TICKERS,
                 "min_price_filter": ETF_REAL_MONEY_DEFAULT_MIN_PRICE,
                 "min_history_months_filter": STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS,
                 "min_avg_dollar_volume_20d_m_filter": STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M,
@@ -2815,6 +2878,8 @@ def _strategy_compare_defaults(strategy_name: str) -> dict:
                 "value_factors": VALUE_STRICT_DEFAULT_FACTORS,
                 "top_n": 10,
                 "partial_cash_retention_enabled": STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
+                "risk_off_mode": STRICT_DEFAULT_RISK_OFF_MODE,
+                "defensive_tickers": STRICT_DEFAULT_DEFENSIVE_TICKERS,
                 "min_price_filter": ETF_REAL_MONEY_DEFAULT_MIN_PRICE,
                 "min_history_months_filter": STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS,
                 "min_avg_dollar_volume_20d_m_filter": STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M,
@@ -5639,6 +5704,10 @@ def _bundle_to_saved_strategy_override(bundle: dict[str, Any]) -> dict[str, Any]
         override["trend_filter_enabled"] = bool(meta.get("trend_filter_enabled"))
     if meta.get("trend_filter_window") is not None:
         override["trend_filter_window"] = int(meta.get("trend_filter_window"))
+    if meta.get("risk_off_mode") is not None:
+        override["risk_off_mode"] = meta.get("risk_off_mode")
+    if meta.get("defensive_tickers") is not None:
+        override["defensive_tickers"] = list(meta.get("defensive_tickers") or [])
     if meta.get("market_regime_enabled") is not None:
         override["market_regime_enabled"] = bool(meta.get("market_regime_enabled"))
     if meta.get("market_regime_window") is not None:
@@ -5941,6 +6010,12 @@ def _apply_compare_strategy_prefill(strategy_name: str, override: dict[str, Any]
     )
     st.session_state[f"compare_{key_prefix}_trend_filter_window"] = int(
         override.get("trend_filter_window") or STRICT_TREND_FILTER_DEFAULT_WINDOW
+    )
+    st.session_state[f"compare_{key_prefix}_risk_off_mode"] = _strict_risk_off_mode_value_to_label(
+        override.get("risk_off_mode") or STRICT_DEFAULT_RISK_OFF_MODE
+    )
+    st.session_state[f"compare_{key_prefix}_defensive_tickers"] = ",".join(
+        list(override.get("defensive_tickers") or STRICT_DEFAULT_DEFENSIVE_TICKERS)
     )
     st.session_state[f"compare_{key_prefix}_market_regime_enabled"] = bool(
         override.get("market_regime_enabled", STRICT_MARKET_REGIME_DEFAULT_ENABLED)
@@ -6327,6 +6402,12 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         st.session_state["qss_partial_cash_retention_enabled"] = bool(
             payload.get("partial_cash_retention_enabled", STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED)
         )
+        st.session_state["qss_risk_off_mode"] = _strict_risk_off_mode_value_to_label(
+            payload.get("risk_off_mode") or STRICT_DEFAULT_RISK_OFF_MODE
+        )
+        st.session_state["qss_defensive_tickers"] = ",".join(
+            list(payload.get("defensive_tickers") or STRICT_DEFAULT_DEFENSIVE_TICKERS)
+        )
         st.session_state["qss_market_regime_enabled"] = bool(payload.get("market_regime_enabled", STRICT_MARKET_REGIME_DEFAULT_ENABLED))
         st.session_state["qss_market_regime_window"] = int(payload.get("market_regime_window") or STRICT_MARKET_REGIME_DEFAULT_WINDOW)
         st.session_state["qss_market_regime_benchmark"] = payload.get("market_regime_benchmark") or STRICT_MARKET_REGIME_DEFAULT_BENCHMARK
@@ -6425,6 +6506,12 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         st.session_state["vss_trend_filter_window"] = int(payload.get("trend_filter_window") or STRICT_TREND_FILTER_DEFAULT_WINDOW)
         st.session_state["vss_partial_cash_retention_enabled"] = bool(
             payload.get("partial_cash_retention_enabled", STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED)
+        )
+        st.session_state["vss_risk_off_mode"] = _strict_risk_off_mode_value_to_label(
+            payload.get("risk_off_mode") or STRICT_DEFAULT_RISK_OFF_MODE
+        )
+        st.session_state["vss_defensive_tickers"] = ",".join(
+            list(payload.get("defensive_tickers") or STRICT_DEFAULT_DEFENSIVE_TICKERS)
         )
         st.session_state["vss_market_regime_enabled"] = bool(payload.get("market_regime_enabled", STRICT_MARKET_REGIME_DEFAULT_ENABLED))
         st.session_state["vss_market_regime_window"] = int(payload.get("market_regime_window") or STRICT_MARKET_REGIME_DEFAULT_WINDOW)
@@ -6525,6 +6612,12 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         st.session_state["qvss_trend_filter_window"] = int(payload.get("trend_filter_window") or STRICT_TREND_FILTER_DEFAULT_WINDOW)
         st.session_state["qvss_partial_cash_retention_enabled"] = bool(
             payload.get("partial_cash_retention_enabled", STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED)
+        )
+        st.session_state["qvss_risk_off_mode"] = _strict_risk_off_mode_value_to_label(
+            payload.get("risk_off_mode") or STRICT_DEFAULT_RISK_OFF_MODE
+        )
+        st.session_state["qvss_defensive_tickers"] = ",".join(
+            list(payload.get("defensive_tickers") or STRICT_DEFAULT_DEFENSIVE_TICKERS)
         )
         st.session_state["qvss_market_regime_enabled"] = bool(payload.get("market_regime_enabled", STRICT_MARKET_REGIME_DEFAULT_ENABLED))
         st.session_state["qvss_market_regime_window"] = int(payload.get("market_regime_window") or STRICT_MARKET_REGIME_DEFAULT_WINDOW)
@@ -7520,6 +7613,8 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> None:
                     trend_filter_enabled=payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED),
                     trend_filter_window=payload.get("trend_filter_window", STRICT_TREND_FILTER_DEFAULT_WINDOW),
                     partial_cash_retention_enabled=payload.get("partial_cash_retention_enabled", STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED),
+                    risk_off_mode=payload.get("risk_off_mode", STRICT_DEFAULT_RISK_OFF_MODE),
+                    defensive_tickers=payload.get("defensive_tickers", STRICT_DEFAULT_DEFENSIVE_TICKERS),
                     market_regime_enabled=payload.get("market_regime_enabled", STRICT_MARKET_REGIME_DEFAULT_ENABLED),
                     market_regime_window=payload.get("market_regime_window", STRICT_MARKET_REGIME_DEFAULT_WINDOW),
                     market_regime_benchmark=payload.get("market_regime_benchmark", STRICT_MARKET_REGIME_DEFAULT_BENCHMARK),
@@ -7583,6 +7678,8 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> None:
                     trend_filter_enabled=payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED),
                     trend_filter_window=payload.get("trend_filter_window", STRICT_TREND_FILTER_DEFAULT_WINDOW),
                     partial_cash_retention_enabled=payload.get("partial_cash_retention_enabled", STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED),
+                    risk_off_mode=payload.get("risk_off_mode", STRICT_DEFAULT_RISK_OFF_MODE),
+                    defensive_tickers=payload.get("defensive_tickers", STRICT_DEFAULT_DEFENSIVE_TICKERS),
                     market_regime_enabled=payload.get("market_regime_enabled", STRICT_MARKET_REGIME_DEFAULT_ENABLED),
                     market_regime_window=payload.get("market_regime_window", STRICT_MARKET_REGIME_DEFAULT_WINDOW),
                     market_regime_benchmark=payload.get("market_regime_benchmark", STRICT_MARKET_REGIME_DEFAULT_BENCHMARK),
@@ -7647,6 +7744,8 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> None:
                     trend_filter_enabled=payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED),
                     trend_filter_window=payload.get("trend_filter_window", STRICT_TREND_FILTER_DEFAULT_WINDOW),
                     partial_cash_retention_enabled=payload.get("partial_cash_retention_enabled", STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED),
+                    risk_off_mode=payload.get("risk_off_mode", STRICT_DEFAULT_RISK_OFF_MODE),
+                    defensive_tickers=payload.get("defensive_tickers", STRICT_DEFAULT_DEFENSIVE_TICKERS),
                     market_regime_enabled=payload.get("market_regime_enabled", STRICT_MARKET_REGIME_DEFAULT_ENABLED),
                     market_regime_window=payload.get("market_regime_window", STRICT_MARKET_REGIME_DEFAULT_WINDOW),
                     market_regime_benchmark=payload.get("market_regime_benchmark", STRICT_MARKET_REGIME_DEFAULT_BENCHMARK),
@@ -8426,6 +8525,10 @@ def _render_quality_snapshot_strict_annual_form() -> None:
                     help="Trend Filter가 일부 종목만 탈락시켰을 때, 탈락한 슬롯 비중을 현금으로 남깁니다. 끄면 살아남은 종목들에 다시 100% 재배분합니다.",
                 )
                 _render_partial_cash_retention_help_popover()
+                risk_off_mode, defensive_tickers = _render_strict_defensive_sleeve_contract_inputs(
+                    key_prefix="qss",
+                    label_prefix="Strict Annual Quality",
+                )
                 market_regime_enabled, market_regime_window, market_regime_benchmark = _render_market_regime_overlay_inputs(
                     key_prefix="qss",
                     label_prefix="",
@@ -8500,6 +8603,8 @@ def _render_quality_snapshot_strict_annual_form() -> None:
         "trend_filter_enabled": bool(trend_filter_enabled),
         "trend_filter_window": int(trend_filter_window),
         "partial_cash_retention_enabled": bool(partial_cash_retention_enabled),
+        "risk_off_mode": risk_off_mode,
+        "defensive_tickers": defensive_tickers,
         "market_regime_enabled": bool(market_regime_enabled),
         "market_regime_window": int(market_regime_window),
         "market_regime_benchmark": market_regime_benchmark,
@@ -9032,6 +9137,10 @@ def _render_value_snapshot_strict_annual_form() -> None:
                     help="Trend Filter가 일부 종목만 탈락시켰을 때, 탈락한 슬롯 비중을 현금으로 남깁니다. 끄면 살아남은 종목들에 다시 100% 재배분합니다.",
                 )
                 _render_partial_cash_retention_help_popover()
+                risk_off_mode, defensive_tickers = _render_strict_defensive_sleeve_contract_inputs(
+                    key_prefix="vss",
+                    label_prefix="Strict Annual Value",
+                )
                 market_regime_enabled, market_regime_window, market_regime_benchmark = _render_market_regime_overlay_inputs(
                     key_prefix="vss",
                     label_prefix="",
@@ -9107,6 +9216,8 @@ def _render_value_snapshot_strict_annual_form() -> None:
         "trend_filter_enabled": bool(trend_filter_enabled),
         "trend_filter_window": int(trend_filter_window),
         "partial_cash_retention_enabled": bool(partial_cash_retention_enabled),
+        "risk_off_mode": risk_off_mode,
+        "defensive_tickers": defensive_tickers,
         "market_regime_enabled": bool(market_regime_enabled),
         "market_regime_window": int(market_regime_window),
         "market_regime_benchmark": market_regime_benchmark,
@@ -9473,6 +9584,10 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
                     help="Trend Filter가 일부 종목만 탈락시켰을 때, 탈락한 슬롯 비중을 현금으로 남깁니다. 끄면 살아남은 종목들에 다시 100% 재배분합니다.",
                 )
                 _render_partial_cash_retention_help_popover()
+                risk_off_mode, defensive_tickers = _render_strict_defensive_sleeve_contract_inputs(
+                    key_prefix="qvss",
+                    label_prefix="Strict Annual Multi-Factor",
+                )
                 market_regime_enabled, market_regime_window, market_regime_benchmark = _render_market_regime_overlay_inputs(
                     key_prefix="qvss",
                     label_prefix="",
@@ -9551,6 +9666,8 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
         "trend_filter_enabled": bool(trend_filter_enabled),
         "trend_filter_window": int(trend_filter_window),
         "partial_cash_retention_enabled": bool(partial_cash_retention_enabled),
+        "risk_off_mode": risk_off_mode,
+        "defensive_tickers": defensive_tickers,
         "market_regime_enabled": bool(market_regime_enabled),
         "market_regime_window": int(market_regime_window),
         "market_regime_benchmark": market_regime_benchmark,
@@ -10120,6 +10237,13 @@ def render_backtest_tab() -> None:
                                 help="Trend Filter가 일부 종목만 탈락시켰을 때, 탈락한 슬롯 비중을 현금으로 남깁니다.",
                             )
                             (
+                                compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["risk_off_mode"],
+                                compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["defensive_tickers"],
+                            ) = _render_strict_defensive_sleeve_contract_inputs(
+                                key_prefix="compare_qss",
+                                label_prefix="Strict Annual Quality",
+                            )
+                            (
                                 compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["market_regime_enabled"],
                                 compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["market_regime_window"],
                                 compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["market_regime_benchmark"],
@@ -10350,6 +10474,13 @@ def render_backtest_tab() -> None:
                                 value=STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
                                 key="compare_vss_partial_cash_retention_enabled",
                                 help="Trend Filter가 일부 종목만 탈락시켰을 때, 탈락한 슬롯 비중을 현금으로 남깁니다.",
+                            )
+                            (
+                                compare_strategy_overrides["Value Snapshot (Strict Annual)"]["risk_off_mode"],
+                                compare_strategy_overrides["Value Snapshot (Strict Annual)"]["defensive_tickers"],
+                            ) = _render_strict_defensive_sleeve_contract_inputs(
+                                key_prefix="compare_vss",
+                                label_prefix="Strict Annual Value",
                             )
                             (
                                 compare_strategy_overrides["Value Snapshot (Strict Annual)"]["market_regime_enabled"],
@@ -10588,6 +10719,13 @@ def render_backtest_tab() -> None:
                                 value=STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
                                 key="compare_qvss_partial_cash_retention_enabled",
                                 help="Trend Filter가 일부 종목만 탈락시켰을 때, 탈락한 슬롯 비중을 현금으로 남깁니다.",
+                            )
+                            (
+                                compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["risk_off_mode"],
+                                compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["defensive_tickers"],
+                            ) = _render_strict_defensive_sleeve_contract_inputs(
+                                key_prefix="compare_qvss",
+                                label_prefix="Strict Annual Multi-Factor",
                             )
                             (
                                 compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["market_regime_enabled"],

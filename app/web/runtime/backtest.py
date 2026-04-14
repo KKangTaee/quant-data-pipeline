@@ -36,7 +36,10 @@ from finance.sample import (
     STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS,
     STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
     STRICT_MARKET_REGIME_DEFAULT_WINDOW,
+    STRICT_DEFAULT_DEFENSIVE_TICKERS,
+    STRICT_DEFAULT_RISK_OFF_MODE,
     STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
+    STRICT_RISK_OFF_MODE_DEFENSIVE,
     QUALITY_STRICT_DEFAULT_FACTORS,
     STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED,
     STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD,
@@ -3088,6 +3091,8 @@ def _run_statement_quality_bundle(
     trend_filter_enabled: bool = False,
     trend_filter_window: int = 200,
     partial_cash_retention_enabled: bool = STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
+    risk_off_mode: str = STRICT_DEFAULT_RISK_OFF_MODE,
+    defensive_tickers: Sequence[str] | None = None,
     market_regime_enabled: bool = False,
     market_regime_window: int = STRICT_MARKET_REGIME_DEFAULT_WINDOW,
     market_regime_benchmark: str = STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
@@ -3148,6 +3153,20 @@ def _run_statement_quality_bundle(
             end=end,
             timeframe=timeframe,
         )
+    effective_defensive_tickers = (
+        _normalize_tickers(defensive_tickers or STRICT_DEFAULT_DEFENSIVE_TICKERS)
+        if risk_off_mode == STRICT_RISK_OFF_MODE_DEFENSIVE
+        else []
+    )
+    if effective_defensive_tickers:
+        defensive_only = [ticker for ticker in effective_defensive_tickers if ticker not in universe_input_tickers]
+        if defensive_only:
+            _preflight_price_strategy_data(
+                tickers=defensive_only,
+                start=start,
+                end=end,
+                timeframe=timeframe,
+            )
     if underperformance_guardrail_enabled and benchmark_ticker:
         _preflight_price_strategy_data(
             tickers=[benchmark_ticker],
@@ -3185,6 +3204,8 @@ def _run_statement_quality_bundle(
             trend_filter_enabled=trend_filter_enabled,
             trend_filter_window=trend_filter_window,
             partial_cash_retention_enabled=partial_cash_retention_enabled,
+            risk_off_mode=risk_off_mode,
+            defensive_tickers=effective_defensive_tickers,
             market_regime_enabled=market_regime_enabled,
             market_regime_window=market_regime_window,
             market_regime_benchmark=market_regime_benchmark,
@@ -3279,6 +3300,8 @@ def _run_statement_quality_bundle(
         "trend_filter_enabled": trend_filter_enabled,
         "trend_filter_window": trend_filter_window,
         "partial_cash_retention_enabled": partial_cash_retention_enabled,
+        "risk_off_mode": risk_off_mode,
+        "defensive_tickers": effective_defensive_tickers,
         "market_regime_enabled": market_regime_enabled,
         "market_regime_window": market_regime_window,
         "market_regime_benchmark": market_regime_benchmark,
@@ -3345,6 +3368,12 @@ def _run_statement_quality_bundle(
         warnings=warnings,
     )
     bundle["meta"]["price_freshness"] = price_freshness
+    if "Defensive Sleeve Count" in result_df.columns:
+        defensive_sleeve_active = result_df["Defensive Sleeve Count"].fillna(0).astype(float) > 0
+        bundle["meta"]["defensive_sleeve_active_count"] = int(defensive_sleeve_active.sum())
+        bundle["meta"]["defensive_sleeve_active_share"] = (
+            float(defensive_sleeve_active.mean()) if not defensive_sleeve_active.empty else 0.0
+        )
     if trend_filter_enabled:
         trend_warning = (
             f"Trend Filter Overlay enabled: month-end selections with `Close < MA{trend_filter_window}` "
@@ -3354,22 +3383,43 @@ def _run_statement_quality_bundle(
             "are removed and survivors are reweighted until the next rebalance."
         )
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [trend_warning]
-    if market_regime_enabled:
+    if risk_off_mode == STRICT_RISK_OFF_MODE_DEFENSIVE and effective_defensive_tickers:
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
-            f"Market Regime Overlay enabled: month-end selections move fully to cash when `{market_regime_benchmark}` closes below `MA{market_regime_window}`."
+            "Strict annual defensive sleeve contract enabled: full risk-off states "
+            f"rotate into `{', '.join(effective_defensive_tickers)}` instead of staying fully in cash."
         ]
+    if market_regime_enabled:
+        regime_warning = (
+            f"Market Regime Overlay enabled: month-end selections rotate into `{', '.join(effective_defensive_tickers)}` "
+            f"when `{market_regime_benchmark}` closes below `MA{market_regime_window}`."
+            if risk_off_mode == STRICT_RISK_OFF_MODE_DEFENSIVE and effective_defensive_tickers
+            else f"Market Regime Overlay enabled: month-end selections move fully to cash when `{market_regime_benchmark}` closes below `MA{market_regime_window}`."
+        )
+        bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [regime_warning]
     if underperformance_guardrail_enabled:
-        bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
-            "Underperformance Guardrail enabled: rebalance candidates move to cash when trailing strategy excess return "
+        under_warning = (
+            "Underperformance Guardrail enabled: rebalance candidates rotate into "
+            f"`{', '.join(effective_defensive_tickers)}` when trailing strategy excess return "
             f"vs `{benchmark_ticker}` over `{underperformance_guardrail_window_months}M` falls below "
             f"`{underperformance_guardrail_threshold:.0%}`."
-        ]
+            if risk_off_mode == STRICT_RISK_OFF_MODE_DEFENSIVE and effective_defensive_tickers
+            else "Underperformance Guardrail enabled: rebalance candidates move to cash when trailing strategy excess return "
+            f"vs `{benchmark_ticker}` over `{underperformance_guardrail_window_months}M` falls below "
+            f"`{underperformance_guardrail_threshold:.0%}`."
+        )
+        bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [under_warning]
     if drawdown_guardrail_enabled:
-        bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
-            "Drawdown Guardrail enabled: rebalance candidates move to cash when trailing strategy drawdown over "
+        drawdown_warning = (
+            "Drawdown Guardrail enabled: rebalance candidates rotate into "
+            f"`{', '.join(effective_defensive_tickers)}` when trailing strategy drawdown over "
             f"`{drawdown_guardrail_window_months}M` falls below `{drawdown_guardrail_strategy_threshold:.0%}` "
             f"or drawdown gap vs `{benchmark_ticker}` rises above `{drawdown_guardrail_gap_threshold:.0%}`."
-        ]
+            if risk_off_mode == STRICT_RISK_OFF_MODE_DEFENSIVE and effective_defensive_tickers
+            else "Drawdown Guardrail enabled: rebalance candidates move to cash when trailing strategy drawdown over "
+            f"`{drawdown_guardrail_window_months}M` falls below `{drawdown_guardrail_strategy_threshold:.0%}` "
+            f"or drawdown gap vs `{benchmark_ticker}` rises above `{drawdown_guardrail_gap_threshold:.0%}`."
+        )
+        bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [drawdown_warning]
     if dynamic_universe_snapshot_rows:
         bundle["dynamic_universe_snapshot_rows"] = dynamic_universe_snapshot_rows
     if dynamic_candidate_status_rows:
@@ -3403,6 +3453,8 @@ def run_quality_snapshot_strict_annual_backtest_from_db(
     trend_filter_enabled: bool = False,
     trend_filter_window: int = 200,
     partial_cash_retention_enabled: bool = STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
+    risk_off_mode: str = STRICT_DEFAULT_RISK_OFF_MODE,
+    defensive_tickers: Sequence[str] | None = None,
     market_regime_enabled: bool = False,
     market_regime_window: int = STRICT_MARKET_REGIME_DEFAULT_WINDOW,
     market_regime_benchmark: str = STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
@@ -3447,6 +3499,8 @@ def run_quality_snapshot_strict_annual_backtest_from_db(
         trend_filter_enabled=trend_filter_enabled,
         trend_filter_window=trend_filter_window,
         partial_cash_retention_enabled=partial_cash_retention_enabled,
+        risk_off_mode=risk_off_mode,
+        defensive_tickers=defensive_tickers,
         market_regime_enabled=market_regime_enabled,
         market_regime_window=market_regime_window,
         market_regime_benchmark=market_regime_benchmark,
@@ -3556,6 +3610,8 @@ def run_value_snapshot_strict_annual_backtest_from_db(
     trend_filter_enabled: bool = False,
     trend_filter_window: int = 200,
     partial_cash_retention_enabled: bool = STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
+    risk_off_mode: str = STRICT_DEFAULT_RISK_OFF_MODE,
+    defensive_tickers: Sequence[str] | None = None,
     market_regime_enabled: bool = False,
     market_regime_window: int = STRICT_MARKET_REGIME_DEFAULT_WINDOW,
     market_regime_benchmark: str = STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
@@ -3613,6 +3669,20 @@ def run_value_snapshot_strict_annual_backtest_from_db(
             end=end,
             timeframe=timeframe,
         )
+    effective_defensive_tickers = (
+        _normalize_tickers(defensive_tickers or STRICT_DEFAULT_DEFENSIVE_TICKERS)
+        if risk_off_mode == STRICT_RISK_OFF_MODE_DEFENSIVE
+        else []
+    )
+    if effective_defensive_tickers:
+        defensive_only = [ticker for ticker in effective_defensive_tickers if ticker not in universe_input_tickers]
+        if defensive_only:
+            _preflight_price_strategy_data(
+                tickers=defensive_only,
+                start=start,
+                end=end,
+                timeframe=timeframe,
+            )
     if underperformance_guardrail_enabled and benchmark_ticker:
         _preflight_price_strategy_data(
             tickers=[benchmark_ticker],
@@ -3650,6 +3720,8 @@ def run_value_snapshot_strict_annual_backtest_from_db(
         trend_filter_enabled=trend_filter_enabled,
         trend_filter_window=trend_filter_window,
         partial_cash_retention_enabled=partial_cash_retention_enabled,
+        risk_off_mode=risk_off_mode,
+        defensive_tickers=defensive_tickers,
         market_regime_enabled=market_regime_enabled,
         market_regime_window=market_regime_window,
         market_regime_benchmark=market_regime_benchmark,
@@ -3769,6 +3841,12 @@ def run_value_snapshot_strict_annual_backtest_from_db(
         warnings=warnings,
     )
     bundle["meta"]["price_freshness"] = price_freshness
+    if "Defensive Sleeve Count" in result_df.columns:
+        defensive_sleeve_active = result_df["Defensive Sleeve Count"].fillna(0).astype(float) > 0
+        bundle["meta"]["defensive_sleeve_active_count"] = int(defensive_sleeve_active.sum())
+        bundle["meta"]["defensive_sleeve_active_share"] = (
+            float(defensive_sleeve_active.mean()) if not defensive_sleeve_active.empty else 0.0
+        )
     if trend_filter_enabled:
         trend_warning = (
             f"Trend Filter Overlay enabled: month-end selections with `Close < MA{trend_filter_window}` "
@@ -3782,15 +3860,30 @@ def run_value_snapshot_strict_annual_backtest_from_db(
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
             f"Market Regime Overlay enabled: month-end selections move fully to cash when `{market_regime_benchmark}` closes below `MA{market_regime_window}`."
         ]
+    if risk_off_mode == STRICT_RISK_OFF_MODE_DEFENSIVE and effective_defensive_tickers:
+        bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
+            "Strict annual defensive sleeve contract enabled: full risk-off states "
+            f"rotate into `{', '.join(effective_defensive_tickers)}` instead of staying fully in cash."
+        ]
     if underperformance_guardrail_enabled:
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
             "Underperformance Guardrail enabled: rebalance candidates move to cash when trailing strategy excess return "
+            f"vs `{benchmark_ticker}` over `{underperformance_guardrail_window_months}M` falls below "
+            f"`{underperformance_guardrail_threshold:.0%}`."
+            if risk_off_mode != STRICT_RISK_OFF_MODE_DEFENSIVE or not effective_defensive_tickers
+            else "Underperformance Guardrail enabled: rebalance candidates rotate into "
+            f"`{', '.join(effective_defensive_tickers)}` when trailing strategy excess return "
             f"vs `{benchmark_ticker}` over `{underperformance_guardrail_window_months}M` falls below "
             f"`{underperformance_guardrail_threshold:.0%}`."
         ]
     if drawdown_guardrail_enabled:
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
             "Drawdown Guardrail enabled: rebalance candidates move to cash when trailing strategy drawdown over "
+            f"`{drawdown_guardrail_window_months}M` falls below `{drawdown_guardrail_strategy_threshold:.0%}` "
+            f"or drawdown gap vs `{benchmark_ticker}` rises above `{drawdown_guardrail_gap_threshold:.0%}`."
+            if risk_off_mode != STRICT_RISK_OFF_MODE_DEFENSIVE or not effective_defensive_tickers
+            else "Drawdown Guardrail enabled: rebalance candidates rotate into "
+            f"`{', '.join(effective_defensive_tickers)}` when trailing strategy drawdown over "
             f"`{drawdown_guardrail_window_months}M` falls below `{drawdown_guardrail_strategy_threshold:.0%}` "
             f"or drawdown gap vs `{benchmark_ticker}` rises above `{drawdown_guardrail_gap_threshold:.0%}`."
         ]
@@ -4018,6 +4111,8 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
     trend_filter_enabled: bool = False,
     trend_filter_window: int = 200,
     partial_cash_retention_enabled: bool = STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
+    risk_off_mode: str = STRICT_DEFAULT_RISK_OFF_MODE,
+    defensive_tickers: Sequence[str] | None = None,
     market_regime_enabled: bool = False,
     market_regime_window: int = STRICT_MARKET_REGIME_DEFAULT_WINDOW,
     market_regime_benchmark: str = STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
@@ -4085,6 +4180,20 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
             end=end,
             timeframe=timeframe,
         )
+    effective_defensive_tickers = (
+        _normalize_tickers(defensive_tickers or STRICT_DEFAULT_DEFENSIVE_TICKERS)
+        if risk_off_mode == STRICT_RISK_OFF_MODE_DEFENSIVE
+        else []
+    )
+    if effective_defensive_tickers:
+        defensive_only = [ticker for ticker in effective_defensive_tickers if ticker not in universe_input_tickers]
+        if defensive_only:
+            _preflight_price_strategy_data(
+                tickers=defensive_only,
+                start=start,
+                end=end,
+                timeframe=timeframe,
+            )
     if underperformance_guardrail_enabled and benchmark_ticker:
         _preflight_price_strategy_data(
             tickers=[benchmark_ticker],
@@ -4123,6 +4232,8 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
         trend_filter_enabled=trend_filter_enabled,
         trend_filter_window=trend_filter_window,
         partial_cash_retention_enabled=partial_cash_retention_enabled,
+        risk_off_mode=risk_off_mode,
+        defensive_tickers=defensive_tickers,
         market_regime_enabled=market_regime_enabled,
         market_regime_window=market_regime_window,
         market_regime_benchmark=market_regime_benchmark,
@@ -4243,6 +4354,12 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
         warnings=warnings,
     )
     bundle["meta"]["price_freshness"] = price_freshness
+    if "Defensive Sleeve Count" in result_df.columns:
+        defensive_sleeve_active = result_df["Defensive Sleeve Count"].fillna(0).astype(float) > 0
+        bundle["meta"]["defensive_sleeve_active_count"] = int(defensive_sleeve_active.sum())
+        bundle["meta"]["defensive_sleeve_active_share"] = (
+            float(defensive_sleeve_active.mean()) if not defensive_sleeve_active.empty else 0.0
+        )
     if trend_filter_enabled:
         trend_warning = (
             f"Trend Filter Overlay enabled: month-end selections with `Close < MA{trend_filter_window}` "
@@ -4256,15 +4373,30 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
             f"Market Regime Overlay enabled: month-end selections move fully to cash when `{market_regime_benchmark}` closes below `MA{market_regime_window}`."
         ]
+    if risk_off_mode == STRICT_RISK_OFF_MODE_DEFENSIVE and effective_defensive_tickers:
+        bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
+            "Strict annual defensive sleeve contract enabled: full risk-off states "
+            f"rotate into `{', '.join(effective_defensive_tickers)}` instead of staying fully in cash."
+        ]
     if underperformance_guardrail_enabled:
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
             "Underperformance Guardrail enabled: rebalance candidates move to cash when trailing strategy excess return "
+            f"vs `{benchmark_ticker}` over `{underperformance_guardrail_window_months}M` falls below "
+            f"`{underperformance_guardrail_threshold:.0%}`."
+            if risk_off_mode != STRICT_RISK_OFF_MODE_DEFENSIVE or not effective_defensive_tickers
+            else "Underperformance Guardrail enabled: rebalance candidates rotate into "
+            f"`{', '.join(effective_defensive_tickers)}` when trailing strategy excess return "
             f"vs `{benchmark_ticker}` over `{underperformance_guardrail_window_months}M` falls below "
             f"`{underperformance_guardrail_threshold:.0%}`."
         ]
     if drawdown_guardrail_enabled:
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
             "Drawdown Guardrail enabled: rebalance candidates move to cash when trailing strategy drawdown over "
+            f"`{drawdown_guardrail_window_months}M` falls below `{drawdown_guardrail_strategy_threshold:.0%}` "
+            f"or drawdown gap vs `{benchmark_ticker}` rises above `{drawdown_guardrail_gap_threshold:.0%}`."
+            if risk_off_mode != STRICT_RISK_OFF_MODE_DEFENSIVE or not effective_defensive_tickers
+            else "Drawdown Guardrail enabled: rebalance candidates rotate into "
+            f"`{', '.join(effective_defensive_tickers)}` when trailing strategy drawdown over "
             f"`{drawdown_guardrail_window_months}M` falls below `{drawdown_guardrail_strategy_threshold:.0%}` "
             f"or drawdown gap vs `{benchmark_ticker}` rises above `{drawdown_guardrail_gap_threshold:.0%}`."
         ]

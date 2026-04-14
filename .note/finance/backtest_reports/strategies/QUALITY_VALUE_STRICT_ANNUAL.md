@@ -131,7 +131,7 @@
 ## 최근 backtest log snapshot
 
 - 최근 기록:
-  - `2026-04-14 - partial cash retention representative rerun first pass`
+  - `2026-04-14 - defensive sleeve risk-off representative rerun first pass`
 - 핵심 설정:
   - strongest point structural probe:
     - quality:
@@ -149,31 +149,33 @@
       - `per`
     - `Top N = 10`
     - `Benchmark Contract = Candidate Universe Equal-Weight`
-    - `Trend Filter = on`
     - `Market Regime = off`
-    - `cash retention = off/on`
+    - underperformance / drawdown guardrail `on`
+    - `risk_off_mode = cash_only / defensive_sleeve_preference`
+    - `defensive_tickers = BIL, SHY, LQD`
 - 결과:
-  - `cash retention off`:
-    - `CAGR = 30.01%`
-    - `MDD = -29.72%`
-    - `Promotion = hold`
-    - `Shortlist = hold`
-    - `Deployment = blocked`
-  - `cash retention on`:
-    - `CAGR = 20.03%`
-    - `MDD = -15.07%`
-    - `Promotion = hold`
-    - `Shortlist = hold`
-    - `Deployment = blocked`
-    - `Partial Cash Retention Active Rows = 90`
+  - `cash_only`:
+    - `CAGR = 31.82%`
+    - `MDD = -26.63%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = small_capital_trial`
+    - `Deployment = review_required`
+  - `defensive sleeve`:
+    - `CAGR = 31.79%`
+    - `MDD = -27.19%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = small_capital_trial`
+    - `Deployment = review_required`
+    - `Defensive Sleeve Active Rows = 3`
 - 실무 해석:
-  - blended strongest point에서도 downside reduction은 분명했다
-  - 하지만 current strongest practical point를 대체할 정도의 gate rescue는 없었다
-  - 즉 이번 first pass는
-    “cash retention은 작동하지만 단독 구조 레버로는 부족함”을 보여주는 결과다
+  - `defensive sleeve`는 blended strongest point에서도 gate를 유지했다
+  - 하지만 이번 representative rerun에서는 `MDD`를 더 낮추지 못했고
+    strongest practical point를 대체하지 못했다
+  - 즉 downside 구조 레버로는 열렸지만,
+    current anchor를 갱신하는 exact rescue는 아니었다
 - 다음에 볼 것:
   - 다음 structural lever:
-    - `defensive sleeve risk-off`
+    - `concentration-aware weighting`
   - current strongest practical point는 그대로 유지
 
 ## 관련 결과 문서
@@ -209,6 +211,9 @@
   - `operating_income_yield -> por` replacement를 반영한 current strongest practical candidate one-pager
 - [QUALITY_VALUE_STRICT_ANNUAL_STRONGEST_CURRENT_CANDIDATE.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL_STRONGEST_CURRENT_CANDIDATE.md)
   - quality/value replacement를 함께 반영한 current strongest practical candidate one-pager
+- [PHASE17_DEFENSIVE_SLEEVE_RISK_OFF_REPRESENTATIVE_RERUN_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase17/PHASE17_DEFENSIVE_SLEEVE_RISK_OFF_REPRESENTATIVE_RERUN_FIRST_PASS.md)
+  - `defensive sleeve risk-off`를 strongest blended point에 적용해
+    same-gate lower-MDD rescue가 가능한지 본 문서
 
 ## 실무 해석
 

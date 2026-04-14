@@ -20,6 +20,44 @@
 
 ## 기록
 
+### 2026-04-14 - defensive sleeve risk-off representative rerun first pass
+
+- 목표:
+  - Phase 17 second structural lever인 `defensive sleeve risk-off`가
+    current `Value` practical anchor에서
+    same-gate lower-MDD rescue로 이어지는지 확인한다
+- 실행 범위:
+  - current practical anchor:
+    - `Top N = 14 + psr`
+    - `Market Regime = off`
+    - underperformance / drawdown guardrail `on`
+    - `risk_off_mode = cash_only / defensive_sleeve_preference`
+    - `defensive_tickers = BIL, SHY, LQD`
+- current code rerun 결과:
+  - `cash_only`:
+    - `CAGR = 28.21%`
+    - `MDD = -24.55%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = paper_probation`
+    - `Deployment = review_required`
+  - `defensive sleeve`:
+    - `CAGR = 28.11%`
+    - `MDD = -25.14%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = paper_probation`
+    - `Deployment = review_required`
+    - `Defensive Sleeve Active Rows = 2`
+- 해석:
+  - 구현 회귀로 sleeve ETF가 candidate-liquidity 계산에 섞이던 문제를 먼저 고쳤다
+  - 회귀 수정 후 representative rerun 기준으로
+    `defensive sleeve`는 gate를 깨지 않았지만
+    `MDD`를 더 낮추지도 못했다
+  - 이번 anchor에서는
+    `cash_only`를 대체하는 stronger downside contract가 아니었다
+- 다음 액션:
+  - `Value` current anchor는 그대로 유지
+  - 다음 structural lever는 `concentration-aware weighting` 쪽으로 넘긴다
+
 ### 2026-04-14 - partial cash retention representative rerun first pass
 
 - 목표:
