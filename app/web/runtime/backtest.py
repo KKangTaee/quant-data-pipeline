@@ -37,8 +37,12 @@ from finance.sample import (
     STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
     STRICT_MARKET_REGIME_DEFAULT_WINDOW,
     STRICT_DEFAULT_DEFENSIVE_TICKERS,
+    STRICT_DEFAULT_REJECTION_HANDLING_MODE,
     STRICT_DEFAULT_RISK_OFF_MODE,
     STRICT_DEFAULT_WEIGHTING_MODE,
+    STRICT_REJECTION_HANDLING_MODE_FILL_RETAIN_CASH,
+    STRICT_REJECTION_HANDLING_MODE_FILL_REWEIGHT,
+    STRICT_REJECTION_HANDLING_MODE_RETAIN_CASH,
     STRICT_REJECTED_SLOT_FILL_DEFAULT_ENABLED,
     STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
     STRICT_RISK_OFF_MODE_DEFENSIVE,
@@ -58,6 +62,8 @@ from finance.sample import (
     get_statement_quality_value_snapshot_shadow_from_db,
     get_statement_quality_snapshot_shadow_from_db,
     get_statement_value_snapshot_shadow_from_db,
+    resolve_strict_rejection_handling_mode,
+    strict_rejection_handling_mode_to_flags,
 )
 
 
@@ -133,6 +139,33 @@ def _summary_frequency(option: str, timeframe: str) -> str:
     if timeframe == "1d":
         return "D"
     return "M"
+
+
+def _build_strict_rejected_slot_handling_warning(
+    *,
+    trend_filter_window: int,
+    rejected_slot_handling_mode: str | None,
+) -> str:
+    resolved_mode = resolve_strict_rejection_handling_mode(rejected_slot_handling_mode)
+    if resolved_mode == STRICT_REJECTION_HANDLING_MODE_FILL_RETAIN_CASH:
+        return (
+            f"Trend Filter Overlay enabled: month-end selections with `Close < MA{trend_filter_window}` "
+            "try to refill rejected slots with next-ranked eligible names first, then keep any still-unfilled slots as cash."
+        )
+    if resolved_mode == STRICT_REJECTION_HANDLING_MODE_FILL_REWEIGHT:
+        return (
+            f"Trend Filter Overlay enabled: month-end selections with `Close < MA{trend_filter_window}` "
+            "try to refill rejected slots with next-ranked eligible names first, then reweight the final survivors."
+        )
+    if resolved_mode == STRICT_REJECTION_HANDLING_MODE_RETAIN_CASH:
+        return (
+            f"Trend Filter Overlay enabled: month-end selections with `Close < MA{trend_filter_window}` "
+            "leave rejected slots as cash until the next rebalance."
+        )
+    return (
+        f"Trend Filter Overlay enabled: month-end selections with `Close < MA{trend_filter_window}` "
+        "are removed and survivors are reweighted until the next rebalance."
+    )
 
 
 def _validate_backtest_date_range(start: str | None, end: str | None) -> tuple[pd.Timestamp | None, pd.Timestamp | None]:
@@ -3095,6 +3128,7 @@ def _run_statement_quality_bundle(
     trend_filter_enabled: bool = False,
     trend_filter_window: int = 200,
     weighting_mode: str = STRICT_DEFAULT_WEIGHTING_MODE,
+    rejected_slot_handling_mode: str | None = None,
     rejected_slot_fill_enabled: bool = STRICT_REJECTED_SLOT_FILL_DEFAULT_ENABLED,
     partial_cash_retention_enabled: bool = STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
     risk_off_mode: str = STRICT_DEFAULT_RISK_OFF_MODE,
@@ -3119,6 +3153,14 @@ def _run_statement_quality_bundle(
 ) -> dict[str, Any]:
     normalized_tickers = _normalize_tickers(tickers)
     _validate_backtest_date_range(start, end)
+    rejected_slot_handling_mode = resolve_strict_rejection_handling_mode(
+        rejected_slot_handling_mode,
+        rejected_slot_fill_enabled=rejected_slot_fill_enabled,
+        partial_cash_retention_enabled=partial_cash_retention_enabled,
+    )
+    rejected_slot_fill_enabled, partial_cash_retention_enabled = strict_rejection_handling_mode_to_flags(
+        rejected_slot_handling_mode
+    )
     strict_label = f"strict {statement_freq}"
     universe_input_tickers = normalized_tickers
     if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE:
@@ -3308,6 +3350,7 @@ def _run_statement_quality_bundle(
         "trend_filter_enabled": trend_filter_enabled,
         "trend_filter_window": trend_filter_window,
         "weighting_mode": weighting_mode,
+        "rejected_slot_handling_mode": rejected_slot_handling_mode,
         "rejected_slot_fill_enabled": rejected_slot_fill_enabled,
         "partial_cash_retention_enabled": partial_cash_retention_enabled,
         "risk_off_mode": risk_off_mode,
@@ -3385,21 +3428,10 @@ def _run_statement_quality_bundle(
             float(defensive_sleeve_active.mean()) if not defensive_sleeve_active.empty else 0.0
         )
     if trend_filter_enabled:
-        if rejected_slot_fill_enabled:
-            trend_warning = (
-                f"Trend Filter Overlay enabled: month-end selections with `Close < MA{trend_filter_window}` "
-                "try to refill rejected slots with the next-ranked eligible names before any remaining gap is handled."
-            )
-        elif partial_cash_retention_enabled:
-            trend_warning = (
-                f"Trend Filter Overlay enabled: month-end selections with `Close < MA{trend_filter_window}` "
-                "keep rejected slots as cash until the next rebalance."
-            )
-        else:
-            trend_warning = (
-                f"Trend Filter Overlay enabled: month-end selections with `Close < MA{trend_filter_window}` "
-                "are removed and survivors are reweighted until the next rebalance."
-            )
+        trend_warning = _build_strict_rejected_slot_handling_warning(
+            trend_filter_window=trend_filter_window,
+            rejected_slot_handling_mode=rejected_slot_handling_mode,
+        )
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [trend_warning]
     if weighting_mode == STRICT_WEIGHTING_MODE_RANK_TAPERED:
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
@@ -3475,6 +3507,7 @@ def run_quality_snapshot_strict_annual_backtest_from_db(
     trend_filter_enabled: bool = False,
     trend_filter_window: int = 200,
     weighting_mode: str = STRICT_DEFAULT_WEIGHTING_MODE,
+    rejected_slot_handling_mode: str | None = None,
     rejected_slot_fill_enabled: bool = STRICT_REJECTED_SLOT_FILL_DEFAULT_ENABLED,
     partial_cash_retention_enabled: bool = STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
     risk_off_mode: str = STRICT_DEFAULT_RISK_OFF_MODE,
@@ -3523,6 +3556,7 @@ def run_quality_snapshot_strict_annual_backtest_from_db(
         trend_filter_enabled=trend_filter_enabled,
         trend_filter_window=trend_filter_window,
         weighting_mode=weighting_mode,
+        rejected_slot_handling_mode=rejected_slot_handling_mode,
         rejected_slot_fill_enabled=rejected_slot_fill_enabled,
         partial_cash_retention_enabled=partial_cash_retention_enabled,
         risk_off_mode=risk_off_mode,
@@ -3636,6 +3670,7 @@ def run_value_snapshot_strict_annual_backtest_from_db(
     trend_filter_enabled: bool = False,
     trend_filter_window: int = 200,
     weighting_mode: str = STRICT_DEFAULT_WEIGHTING_MODE,
+    rejected_slot_handling_mode: str | None = None,
     rejected_slot_fill_enabled: bool = STRICT_REJECTED_SLOT_FILL_DEFAULT_ENABLED,
     partial_cash_retention_enabled: bool = STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
     risk_off_mode: str = STRICT_DEFAULT_RISK_OFF_MODE,
@@ -3658,6 +3693,14 @@ def run_value_snapshot_strict_annual_backtest_from_db(
 ) -> dict[str, Any]:
     normalized_tickers = _normalize_tickers(tickers)
     _validate_backtest_date_range(start, end)
+    rejected_slot_handling_mode = resolve_strict_rejection_handling_mode(
+        rejected_slot_handling_mode,
+        rejected_slot_fill_enabled=rejected_slot_fill_enabled,
+        partial_cash_retention_enabled=partial_cash_retention_enabled,
+    )
+    rejected_slot_fill_enabled, partial_cash_retention_enabled = strict_rejection_handling_mode_to_flags(
+        rejected_slot_handling_mode
+    )
     universe_input_tickers = normalized_tickers
     if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE:
         universe_input_tickers = _normalize_tickers(dynamic_candidate_tickers or normalized_tickers)
@@ -3748,6 +3791,7 @@ def run_value_snapshot_strict_annual_backtest_from_db(
         trend_filter_enabled=trend_filter_enabled,
         trend_filter_window=trend_filter_window,
         weighting_mode=weighting_mode,
+        rejected_slot_handling_mode=rejected_slot_handling_mode,
         rejected_slot_fill_enabled=rejected_slot_fill_enabled,
         partial_cash_retention_enabled=partial_cash_retention_enabled,
         risk_off_mode=risk_off_mode,
@@ -3845,6 +3889,7 @@ def run_value_snapshot_strict_annual_backtest_from_db(
             "trend_filter_enabled": trend_filter_enabled,
             "trend_filter_window": trend_filter_window,
             "weighting_mode": weighting_mode,
+            "rejected_slot_handling_mode": rejected_slot_handling_mode,
             "rejected_slot_fill_enabled": rejected_slot_fill_enabled,
             "partial_cash_retention_enabled": partial_cash_retention_enabled,
             "market_regime_enabled": market_regime_enabled,
@@ -3880,21 +3925,10 @@ def run_value_snapshot_strict_annual_backtest_from_db(
             float(defensive_sleeve_active.mean()) if not defensive_sleeve_active.empty else 0.0
         )
     if trend_filter_enabled:
-        if rejected_slot_fill_enabled:
-            trend_warning = (
-                f"Trend Filter Overlay enabled: month-end selections with `Close < MA{trend_filter_window}` "
-                "try to refill rejected slots with the next-ranked eligible names before any remaining gap is handled."
-            )
-        elif partial_cash_retention_enabled:
-            trend_warning = (
-                f"Trend Filter Overlay enabled: month-end selections with `Close < MA{trend_filter_window}` "
-                "keep rejected slots as cash until the next rebalance."
-            )
-        else:
-            trend_warning = (
-                f"Trend Filter Overlay enabled: month-end selections with `Close < MA{trend_filter_window}` "
-                "are removed and survivors are reweighted until the next rebalance."
-            )
+        trend_warning = _build_strict_rejected_slot_handling_warning(
+            trend_filter_window=trend_filter_window,
+            rejected_slot_handling_mode=rejected_slot_handling_mode,
+        )
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [trend_warning]
     if weighting_mode == STRICT_WEIGHTING_MODE_RANK_TAPERED:
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
@@ -4155,6 +4189,7 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
     trend_filter_enabled: bool = False,
     trend_filter_window: int = 200,
     weighting_mode: str = STRICT_DEFAULT_WEIGHTING_MODE,
+    rejected_slot_handling_mode: str | None = None,
     rejected_slot_fill_enabled: bool = STRICT_REJECTED_SLOT_FILL_DEFAULT_ENABLED,
     partial_cash_retention_enabled: bool = STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
     risk_off_mode: str = STRICT_DEFAULT_RISK_OFF_MODE,
@@ -4177,6 +4212,14 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
 ) -> dict[str, Any]:
     normalized_tickers = _normalize_tickers(tickers)
     _validate_backtest_date_range(start, end)
+    rejected_slot_handling_mode = resolve_strict_rejection_handling_mode(
+        rejected_slot_handling_mode,
+        rejected_slot_fill_enabled=rejected_slot_fill_enabled,
+        partial_cash_retention_enabled=partial_cash_retention_enabled,
+    )
+    rejected_slot_fill_enabled, partial_cash_retention_enabled = strict_rejection_handling_mode_to_flags(
+        rejected_slot_handling_mode
+    )
     universe_input_tickers = normalized_tickers
     if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE:
         universe_input_tickers = _normalize_tickers(dynamic_candidate_tickers or normalized_tickers)
@@ -4278,6 +4321,7 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
         trend_filter_enabled=trend_filter_enabled,
         trend_filter_window=trend_filter_window,
         weighting_mode=weighting_mode,
+        rejected_slot_handling_mode=rejected_slot_handling_mode,
         rejected_slot_fill_enabled=rejected_slot_fill_enabled,
         partial_cash_retention_enabled=partial_cash_retention_enabled,
         risk_off_mode=risk_off_mode,
@@ -4376,6 +4420,7 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
             "trend_filter_enabled": trend_filter_enabled,
             "trend_filter_window": trend_filter_window,
             "weighting_mode": weighting_mode,
+            "rejected_slot_handling_mode": rejected_slot_handling_mode,
             "rejected_slot_fill_enabled": rejected_slot_fill_enabled,
             "partial_cash_retention_enabled": partial_cash_retention_enabled,
             "market_regime_enabled": market_regime_enabled,
@@ -4411,21 +4456,10 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
             float(defensive_sleeve_active.mean()) if not defensive_sleeve_active.empty else 0.0
         )
     if trend_filter_enabled:
-        if rejected_slot_fill_enabled:
-            trend_warning = (
-                f"Trend Filter Overlay enabled: month-end selections with `Close < MA{trend_filter_window}` "
-                "try to refill rejected slots with the next-ranked eligible names before any remaining gap is handled."
-            )
-        elif partial_cash_retention_enabled:
-            trend_warning = (
-                f"Trend Filter Overlay enabled: month-end selections with `Close < MA{trend_filter_window}` "
-                "keep rejected slots as cash until the next rebalance."
-            )
-        else:
-            trend_warning = (
-                f"Trend Filter Overlay enabled: month-end selections with `Close < MA{trend_filter_window}` "
-                "are removed and survivors are reweighted until the next rebalance."
-            )
+        trend_warning = _build_strict_rejected_slot_handling_warning(
+            trend_filter_window=trend_filter_window,
+            rejected_slot_handling_mode=rejected_slot_handling_mode,
+        )
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [trend_warning]
     if weighting_mode == STRICT_WEIGHTING_MODE_RANK_TAPERED:
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [

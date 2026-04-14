@@ -501,3 +501,28 @@ Detailed historical analysis was archived on `2026-04-13`.
       annual strict family 중심 구현 (`Phase 19~21`)
     - later:
       deep validation 재개 이후 quarterly production-readiness 재평가
+
+### 2026-04-14 - Phase 19 first slice는 rejected-slot handling semantics를 explicit contract로 정리하는 것이 맞다
+- Request topic:
+  - `Phase 19`를 바로 시작
+- Interpreted goal:
+  - `Phase 18`에서 늘어난 strict annual structural levers 중
+    먼저 operator가 헷갈리기 쉬운 rejection semantics를 usable contract로 정리하고 싶음
+- Result:
+  - 첫 slice는 `Rejected Slot Handling Contract`로 확정했다
+  - 이유:
+    1. current UI는
+       `rejected_slot_fill_enabled + partial_cash_retention_enabled`
+       두 boolean을 사용자가 직접 조합해서 읽어야 했다
+    2. same semantics가 form / payload / history / warning에서 분산되어 있어
+       이후 deep validation 해석도 더 흔들릴 수 있었다
+    3. 따라서 `Phase 19`의 성격인
+       structural contract expansion + interpretation cleanup에 가장 잘 맞는 첫 구현이었다
+  - implemented contract:
+    - `reweight_survivors`
+    - `retain_unfilled_as_cash`
+    - `fill_then_reweight`
+    - `fill_then_retain_cash`
+  - compatibility rule:
+    - new payload는 explicit mode와 legacy booleans를 같이 남긴다
+    - old payload는 booleans만 있어도 explicit mode로 복원한다

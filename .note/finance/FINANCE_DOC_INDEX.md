@@ -12,6 +12,12 @@
   - 전체 Phase 구조와 상위 진행 방향
 - `.note/finance/ROADMAP_REBASE_PHASE18_TO_PHASE25_20260414.md`
   - `Phase 18` 진행 중 시점에서 `Phase 19~25` 큰 그림을 다시 정리한 논의용 상위 로드맵 초안
+- `.note/finance/phase19/PHASE19_STRUCTURAL_CONTRACT_EXPANSION_PLAN.md`
+  - `Phase 19`의 목적, 운영 원칙, 현재 구현 우선순위를 정리한 kickoff 문서
+- `.note/finance/phase19/PHASE19_CURRENT_CHAPTER_TODO.md`
+  - `Phase 19` 현재 챕터 TODO 보드
+- `.note/finance/phase19/PHASE19_REJECTED_SLOT_HANDLING_CONTRACT_FIRST_SLICE.md`
+  - strict annual rejected-slot handling semantics를 explicit contract로 정리한 first-slice 구현 문서
 - `.note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md`
   - `finance` 패키지 전체 구조와 DB/기능 종합 분석
 - `.note/finance/WORK_PROGRESS.md`

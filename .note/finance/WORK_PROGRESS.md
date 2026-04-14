@@ -341,3 +341,23 @@ Detailed historical logs were archived on `2026-04-13`.
 - Durable takeaway:
   - the roadmap now reads less like a phase title list
     and more like an execution narrative the user can review before deciding direction
+
+### 2026-04-14
+- Started `Phase 19` in implementation-first mode.
+- First slice:
+  - strict annual `Rejected Slot Handling Contract`
+  - replaces the operator-facing two-checkbox reading with one explicit handling mode
+- Implemented:
+  - new explicit mode constants/helpers in `finance.sample`
+  - runtime compatibility bridge in `app/web/runtime/backtest.py`
+  - single / compare / history / prefill sync in `app/web/pages/backtest.py`
+- Validation:
+  - `python3 -m py_compile finance/sample.py app/web/runtime/backtest.py app/web/pages/backtest.py`
+  - `.venv/bin/python` import smoke for the same modules
+- Synced:
+  - phase19 kickoff docs
+  - roadmap
+  - finance doc index
+  - finance comprehensive analysis
+- Durable takeaway:
+  - Phase 19 first slice favors contract clarity and legacy compatibility over broad rerun coverage

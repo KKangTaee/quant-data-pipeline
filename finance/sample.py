@@ -85,6 +85,17 @@ STRICT_WEIGHTING_MODE_RANK_TAPERED = "rank_tapered"
 STRICT_DEFAULT_WEIGHTING_MODE = STRICT_WEIGHTING_MODE_EQUAL
 STRICT_REJECTED_SLOT_FILL_DEFAULT_ENABLED = False
 STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED = False
+STRICT_REJECTION_HANDLING_MODE_REWEIGHT = "reweight_survivors"
+STRICT_REJECTION_HANDLING_MODE_RETAIN_CASH = "retain_unfilled_as_cash"
+STRICT_REJECTION_HANDLING_MODE_FILL_REWEIGHT = "fill_then_reweight"
+STRICT_REJECTION_HANDLING_MODE_FILL_RETAIN_CASH = "fill_then_retain_cash"
+STRICT_REJECTION_HANDLING_MODE_OPTIONS = (
+    STRICT_REJECTION_HANDLING_MODE_REWEIGHT,
+    STRICT_REJECTION_HANDLING_MODE_RETAIN_CASH,
+    STRICT_REJECTION_HANDLING_MODE_FILL_REWEIGHT,
+    STRICT_REJECTION_HANDLING_MODE_FILL_RETAIN_CASH,
+)
+STRICT_DEFAULT_REJECTION_HANDLING_MODE = STRICT_REJECTION_HANDLING_MODE_REWEIGHT
 STRICT_RISK_OFF_MODE_CASH = "cash_only"
 STRICT_RISK_OFF_MODE_DEFENSIVE = "defensive_sleeve_preference"
 STRICT_DEFAULT_RISK_OFF_MODE = STRICT_RISK_OFF_MODE_CASH
@@ -123,6 +134,37 @@ GTAA_DEFAULT_CRASH_GUARDRAIL_ENABLED = False
 GTAA_DEFAULT_CRASH_GUARDRAIL_DRAWDOWN_THRESHOLD = 0.15
 GTAA_DEFAULT_CRASH_GUARDRAIL_LOOKBACK_MONTHS = 12
 GTAA_DEFAULT_TICKERS = ["SPY", "IWD", "IWM", "IWN", "MTUM", "EFA", "TLT", "IEF", "LQD", "PDBC", "VNQ", "GLD"]
+
+
+def resolve_strict_rejection_handling_mode(
+    rejected_slot_handling_mode: str | None = None,
+    *,
+    rejected_slot_fill_enabled: bool = STRICT_REJECTED_SLOT_FILL_DEFAULT_ENABLED,
+    partial_cash_retention_enabled: bool = STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
+) -> str:
+    normalized_mode = str(rejected_slot_handling_mode or "").strip().lower()
+    if normalized_mode in STRICT_REJECTION_HANDLING_MODE_OPTIONS:
+        return normalized_mode
+    if bool(rejected_slot_fill_enabled) and bool(partial_cash_retention_enabled):
+        return STRICT_REJECTION_HANDLING_MODE_FILL_RETAIN_CASH
+    if bool(rejected_slot_fill_enabled):
+        return STRICT_REJECTION_HANDLING_MODE_FILL_REWEIGHT
+    if bool(partial_cash_retention_enabled):
+        return STRICT_REJECTION_HANDLING_MODE_RETAIN_CASH
+    return STRICT_REJECTION_HANDLING_MODE_REWEIGHT
+
+
+def strict_rejection_handling_mode_to_flags(
+    rejected_slot_handling_mode: str | None = None,
+) -> tuple[bool, bool]:
+    resolved_mode = resolve_strict_rejection_handling_mode(rejected_slot_handling_mode)
+    if resolved_mode == STRICT_REJECTION_HANDLING_MODE_FILL_RETAIN_CASH:
+        return True, True
+    if resolved_mode == STRICT_REJECTION_HANDLING_MODE_FILL_REWEIGHT:
+        return True, False
+    if resolved_mode == STRICT_REJECTION_HANDLING_MODE_RETAIN_CASH:
+        return False, True
+    return False, False
 
 
 def _score_return_col_from_months(months: int) -> str:
