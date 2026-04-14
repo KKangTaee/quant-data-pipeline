@@ -472,3 +472,20 @@ Detailed historical logs were archived on `2026-04-13`.
   - active `PHASE19_TEST_CHECKLIST.md` converted to checkbox-style verification items
 - Durable takeaway:
   - future phase handoffs now have a clearer "user checks items directly, then we move on" workflow
+
+### 2026-04-14
+- Refined strict annual contract help text based on live Phase 19 checklist feedback.
+- Changed:
+  - `Rejected Slot Handling Contract` tooltip now explains each option as separate bullet-style items instead of one long sentence
+  - `Risk-Off Contract` tooltip now explains what `portfolio-wide risk-off` means in plain Korean
+  - overlay contract intro now states that `Weighting Contract`, `Rejected Slot Handling Contract`, and `Risk-Off Contract` are always-on handling rules, not enable/disable toggles
+- Synced:
+  - `PHASE19_TEST_CHECKLIST.md`
+  - `FINANCE_TERM_GLOSSARY.md`
+  - `FINANCE_COMPREHENSIVE_ANALYSIS.md`
+- Validation:
+  - `python3 -m py_compile app/web/pages/backtest.py`
+  - `.venv/bin/python` import smoke for `app.web.pages.backtest`
+  - finance refinement hygiene script
+- Durable takeaway:
+  - contract UI now answers both "what does this option mean?" and "is this always active?" directly from the form

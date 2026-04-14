@@ -675,3 +675,24 @@ Detailed historical analysis was archived on `2026-04-13`.
     - 특별한 override가 없으면 checklist 완료를 다음 major phase 이동의 기본 gate로 삼을 것
     을 반영했다
   - active `PHASE19_TEST_CHECKLIST.md`도 같은 형식으로 바로 바꿨다
+
+### 2026-04-14 - strict annual contract tooltip은 옵션별 bullet 설명과 always-on 의미를 같이 보여줘야 한다
+- Request topic:
+  - `Phase 19` test checklist를 보며
+    - `Rejected Slot Handling Contract` tooltip이 한 줄 설명으로 이어져 가독성이 떨어진다는 피드백
+    - `Risk-Off Contract`의 "portfolio-wide risk-off" 문장이 어렵다는 질문
+    - `Weighting / Rejected Slot Handling / Risk-Off Contract`가 토글 없는 always-on 규칙인지 궁금하다는 질문
+- Interpreted goal:
+  - contract 설명을 화면만 보고도 이해할 수 있게 만들고,
+    사용자가 "이 기능은 토글이 없는데 항상 작동하는가?"를 헷갈리지 않게 하고 싶음
+- Result:
+  - `Rejected Slot Handling Contract` tooltip을 option별 bullet 설명으로 다시 정리했다
+  - `Risk-Off Contract` tooltip에
+    `portfolio-wide risk-off`가
+    개별 종목 몇 개 제외가 아니라
+    `Market Regime` 또는 guardrail 때문에 포트폴리오 전체가 보수 모드로 가는 상황이라는 뜻을 plain language로 보강했다
+  - overlay contracts intro에
+    `Weighting Contract`, `Rejected Slot Handling Contract`, `Risk-Off Contract`는
+    enable/disable 토글이 아니라
+    백테스트 실행 시 항상 저장되는 기본 처리 규칙이고,
+    관련 상황이 실제로 발생할 때 결과에 영향을 준다는 설명을 추가했다

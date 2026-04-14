@@ -28,15 +28,16 @@
   - `Backtest > Single Strategy > Quality / Value / Quality + Value > Strict Annual`
   - `Advanced Inputs > Overlay & Defensive Rules`
 - 체크 항목:
-  - [ ] `Overlay & Defensive Rules` 안에 `Rejected Slot Handling Contract`, `Weighting Contract`, `Risk-Off Contract`가 같이 보이는지
-  - [ ] 각 contract 아래에 "위치 / 역할" 설명과 현재 선택이 무슨 뜻인지 보여주는 짧은 설명이 같이 보이는지
-  - [ ] `Rejected Slot Handling Contract`에서 `Reweight Survivors`, `Retain Unfilled Slots As Cash`, `Fill Then Reweight Survivors`, `Fill Then Retain Unfilled Slots As Cash`를 고를 수 있는지
-  - [ ] `Rejected Slot Handling Contract`의 각 option이 생존 종목 재배분인지, 현금 유지인지, 먼저 다음 순위 종목으로 채우는지 설명과 함께 읽히는지
-  - [ ] `Weighting Contract`에서 `Equal Weight`, `Rank-Tapered`를 고를 수 있는지
-  - [ ] `Weighting Contract`가 최종 선택 종목의 비중 규칙을 뜻한다는 설명이 보이는지
-  - [ ] `Risk-Off Contract`에서 `Cash Only`, `Defensive Sleeve Preference`를 고를 수 있는지
-  - [ ] `Risk-Off Contract`가 partial trend rejection이 아니라 `Market Regime` 또는 guardrail 때문에 전체 포트폴리오가 risk-off일 때 쓰인다는 설명이 보이는지
+  - [x] `Overlay & Defensive Rules` 안에 `Rejected Slot Handling Contract`, `Weighting Contract`, `Risk-Off Contract`가 같이 보이는지
+  - [x] 각 contract 아래에 "위치 / 역할" 설명과 현재 선택이 무슨 뜻인지 보여주는 짧은 설명이 같이 보이는지
+  - [x] `Rejected Slot Handling Contract`에서 `Reweight Survivors`, `Retain Unfilled Slots As Cash`, `Fill Then Reweight Survivors`, `Fill Then Retain Unfilled Slots As Cash`를 고를 수 있는지
+  - [?] `Rejected Slot Handling Contract`의 각 option이 생존 종목 재배분인지, 현금 유지인지, 먼저 다음 순위 종목으로 채우는지 툴팁 안에서 줄바꿈/항목 구분과 함께 읽기 쉽게 보이는지
+  - [x] `Weighting Contract`에서 `Equal Weight`, `Rank-Tapered`를 고를 수 있는지
+  - [x] `Weighting Contract`가 최종 선택 종목의 비중 규칙을 뜻한다는 설명이 보이는지
+  - [x] `Risk-Off Contract`에서 `Cash Only`, `Defensive Sleeve Preference`를 고를 수 있는지
+  - [?] `Risk-Off Contract`가 개별 종목 일부 제외가 아니라 `Market Regime` 또는 guardrail 때문에 포트폴리오 전체가 risk-off일 때 쓰인다는 설명이 쉽게 읽히는지
   - [ ] `Defensive Sleeve Tickers`가 `Defensive Sleeve Preference`일 때만 쓰이는 방어 ETF 목록이라는 설명과 함께 보이는지
+  - [ ] `Weighting Contract`, `Rejected Slot Handling Contract`, `Risk-Off Contract`가 토글형 on/off 기능이 아니라 "항상 저장되는 기본 처리 규칙"이라는 설명이 보이는지
 
 ## 2. compare / history / load-into-form 흐름 확인
 

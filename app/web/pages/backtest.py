@@ -1256,6 +1256,12 @@ def _render_inline_help_popover(title: str, body: str) -> None:
         st.caption(body)
 
 
+def _render_inline_help_markdown_popover(title: str, body: str) -> None:
+    with st.popover("?", help=title, use_container_width=False):
+        st.markdown(f"**{title}**")
+        st.markdown(body)
+
+
 def _render_trend_filter_help_popover() -> None:
     _render_inline_help_popover(
         "추세 필터 오버레이",
@@ -1264,9 +1270,28 @@ def _render_trend_filter_help_popover() -> None:
 
 
 def _render_rejected_slot_handling_help_popover() -> None:
-    _render_inline_help_popover(
+    _render_inline_help_markdown_popover(
         "Rejected Slot Handling Contract",
-        "Trend Filter가 raw top-N 일부를 탈락시킨 뒤 빈 슬롯을 어떻게 처리할지 정하는 계약입니다. `Reweight Survivors`는 남은 생존 종목에 다시 100% 재배분합니다. `Retain Unfilled Slots As Cash`는 빈 슬롯 비중을 현금으로 남깁니다. `Fill Then Reweight Survivors`는 먼저 다음 순위의 추세 통과 종목으로 채우고, 그래도 비면 생존 종목에 다시 재배분합니다. `Fill Then Retain Unfilled Slots As Cash`는 먼저 채우고, 그래도 비면 현금으로 남깁니다. 이 계약은 partial trend rejection용이며, market regime나 guardrail의 full risk-off에는 적용되지 않습니다.",
+        """
+이 계약은 **Trend Filter 때문에 raw top-N 일부가 탈락했을 때** 빈 슬롯을 어떻게 처리할지 정합니다.
+
+- `Reweight Survivors`
+  - 남은 생존 종목들끼리 다시 100% 재배분합니다.
+
+- `Retain Unfilled Slots As Cash`
+  - 비어 있는 슬롯 비중만큼 현금으로 남깁니다.
+
+- `Fill Then Reweight Survivors`
+  - 먼저 다음 순위의 추세 통과 종목으로 채웁니다.
+  - 그래도 빈 슬롯이 남으면 생존 종목들끼리 다시 재배분합니다.
+
+- `Fill Then Retain Unfilled Slots As Cash`
+  - 먼저 다음 순위의 추세 통과 종목으로 채웁니다.
+  - 그래도 빈 슬롯이 남으면 그 비중은 현금으로 남깁니다.
+
+이 계약은 **부분적인 종목 제외(partial trend rejection)** 용도입니다.  
+`Market Regime`이나 guardrail 때문에 **포트폴리오 전체가 risk-off** 되는 상황에는 적용되지 않습니다.
+        """.strip(),
     )
 
 
@@ -1306,16 +1331,45 @@ def _render_cash_share_help_popover() -> None:
 
 
 def _render_strict_risk_off_contract_help_popover() -> None:
-    _render_inline_help_popover(
+    _render_inline_help_markdown_popover(
         "Risk-Off Contract",
-        "full risk-off가 발생했을 때 포트폴리오를 어떻게 둘지 정합니다. `Cash Only`는 100% 현금으로 두고, `Defensive Sleeve Preference`는 `Defensive Sleeve Tickers`에 적은 ETF 묶음으로 동일가중 이동합니다. 이것은 portfolio-wide risk-off 계약이며, Trend Filter의 부분 제외 처리와는 별개입니다.",
+        """
+이 계약은 **포트폴리오 전체가 full risk-off** 되었을 때 무엇을 할지 정합니다.
+
+`포트폴리오 전체 risk-off`란:
+- 개별 종목 몇 개만 빠지는 것이 아니라
+- `Market Regime` 또는 guardrail 때문에
+- 그 시점의 포트폴리오 전체를 보수 모드로 돌리는 상황을 뜻합니다.
+
+옵션 설명:
+
+- `Cash Only`
+  - full risk-off가 오면 100% 현금으로 둡니다.
+
+- `Defensive Sleeve Preference`
+  - full risk-off가 오면 `Defensive Sleeve Tickers`에 적은 방어 ETF 묶음으로 이동합니다.
+
+즉 이것은 **portfolio-wide risk-off 계약**이고,  
+`Trend Filter` 때문에 일부 종목만 빠졌을 때 쓰는 `Rejected Slot Handling Contract`와는 별개입니다.
+        """.strip(),
     )
 
 
 def _render_strict_weighting_contract_help_popover() -> None:
-    _render_inline_help_popover(
+    _render_inline_help_markdown_popover(
         "Weighting Contract",
-        "최종 선택된 종목들 사이에 비중을 어떻게 나눌지 정합니다. `Equal Weight`는 동일 비중, `Rank-Tapered`는 상위 rank에 조금 더 높은 비중을 주는 완만한 가중 방식입니다.",
+        """
+이 계약은 **최종 선택된 종목들 사이에 비중을 어떻게 나눌지** 정합니다.
+
+- `Equal Weight`
+  - 모든 선택 종목을 동일 비중으로 담습니다.
+
+- `Rank-Tapered`
+  - 상위 rank 종목에 조금 더 높은 비중을 주되, 과도한 집중은 피합니다.
+
+토글형 기능이라기보다,  
+백테스트를 돌릴 때 항상 함께 저장되는 **기본 비중 규칙**이라고 보면 됩니다.
+        """.strip(),
     )
 
 
@@ -1325,6 +1379,11 @@ def _render_strict_overlay_contracts_intro() -> None:
         "`Weighting Contract`, `Risk-Off Contract`가 함께 있습니다. "
         "Trend Filter는 부분 제외, Rejected Slot Handling은 그 빈 슬롯 처리, "
         "Weighting은 최종 비중 규칙, Risk-Off는 전체 포트폴리오 보수 모드를 뜻합니다."
+    )
+    st.caption(
+        "참고로 `Weighting Contract`, `Rejected Slot Handling Contract`, `Risk-Off Contract`는 "
+        "토글형 on/off 기능이 아니라, 백테스트를 돌릴 때 항상 저장되는 기본 처리 규칙입니다. "
+        "다만 각 규칙은 관련 상황이 실제로 발생할 때만 결과에 눈에 띄는 영향을 줍니다."
     )
 
 
