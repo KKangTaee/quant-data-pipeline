@@ -28,6 +28,9 @@
     `Weighting Contract`, `Risk-Off Contract`, `Defensive Sleeve Tickers` 위치와 뜻을 더 직접적으로 읽을 수 있게 보강
   - strict annual advanced inputs를 `Overlay`와 `Portfolio Handling & Defensive Rules`로 분리해
     overlay trigger와 post-overlay handling contract를 구조적으로 구분
+  - `Risk-Off Contract` 설명에서
+    `보수 모드` / `full risk-off` 표현을 줄이고,
+    "factor 포트폴리오 전체를 멈추고 현금 또는 방어 ETF로 전환" 언어로 다시 정리
 
 ## 3. Validation
 

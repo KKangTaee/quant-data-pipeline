@@ -765,3 +765,25 @@ Detailed historical analysis was archived on `2026-04-13`.
     - "무엇을 살지 정한 뒤 얼마씩 담을지" 중심으로 설명을 정리했다
   - section intro도 bullet-style 역할 요약으로 바꿔,
     각 contract의 차이를 위에서 먼저 읽고 아래 세부 항목으로 내려가게 했다
+
+### 2026-04-14 - `Risk-Off Contract`는 "포트폴리오 전체를 현금 또는 방어 ETF로 전환하는 규칙"으로 설명하는 편이 더 이해하기 쉽다
+- Request topic:
+  - `포트폴리오 전체를 보수 모드로 돌릴 때`가
+    전체 현금 전환을 뜻하는지 헷갈린다는 질문과,
+    그 설명을 UI 문구에 더 직접적으로 반영해 달라는 요청
+- Interpreted goal:
+  - 사용자가 `Risk-Off Contract`를
+    추상적인 `보수 모드` 표현 없이,
+    "factor 포트폴리오 전체를 멈추고 현금 또는 방어 ETF로 전환하는 규칙"
+    으로 바로 이해하게 만들고 싶음
+- Result:
+  - strict annual form에서
+    `보수 모드`, `full risk-off` 중심 문구를 줄이고
+    `포트폴리오 전체를 쉬어야 할 때`,
+    `현금 또는 방어 ETF 쪽으로 전체 전환`
+    언어로 재정리했다
+  - `Rejected Slot Handling Contract`는
+    일부 종목만 빠지는 상황,
+    `Risk-Off Contract`는 포트폴리오 전체를 전환하는 상황이라는 구분도 더 직접적으로 남겼다
+  - glossary와 package analysis도 같은 표현으로 맞춰,
+    UI와 문서가 서로 다른 언어를 쓰지 않게 정리했다

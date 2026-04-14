@@ -515,3 +515,18 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.venv/bin/python` import smoke for `app.web.pages.backtest`
 - Durable takeaway:
   - the form now explains contract purpose directly, without relying on repeated location hints
+
+### 2026-04-14
+- Clarified strict annual `Risk-Off Contract` wording after additional UX feedback.
+- Changed:
+  - replaced vague `보수 모드` / `full risk-off` phrasing in strict annual form help with
+    - "factor 포트폴리오 전체를 멈추고 현금 또는 방어 ETF로 전환"
+    - "포트폴리오 전체를 쉬어야 할 때"
+  - aligned `Risk-Off Contract`, `Defensive Sleeve Tickers`, overlay intro, and interpretation summary around the same plain-language meaning
+  - synced glossary/comprehensive analysis wording to the same concept
+- Validation:
+  - `python3 -m py_compile app/web/pages/backtest.py`
+  - `.venv/bin/python` import smoke for `app.web.pages.backtest`
+  - finance refinement hygiene script
+- Durable takeaway:
+  - users can now read `Risk-Off Contract` as a portfolio-wide transition rule without having to infer what `보수 모드` means

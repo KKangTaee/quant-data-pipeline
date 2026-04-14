@@ -145,8 +145,8 @@ STRICT_REJECTION_HANDLING_MODE_LABELS = {
     "Fill Then Retain Unfilled Slots As Cash": STRICT_REJECTION_HANDLING_MODE_FILL_RETAIN_CASH,
 }
 STRICT_RISK_OFF_MODE_EXPLANATIONS = {
-    STRICT_RISK_OFF_MODE_CASH: "전체 포트폴리오가 full risk-off가 되면 100% 현금으로 둡니다.",
-    STRICT_RISK_OFF_MODE_DEFENSIVE: "전체 포트폴리오가 full risk-off가 되면 현금 대신 지정한 방어 ETF sleeve로 이동합니다.",
+    STRICT_RISK_OFF_MODE_CASH: "포트폴리오 전체를 쉬어야 할 때 100% 현금으로 둡니다.",
+    STRICT_RISK_OFF_MODE_DEFENSIVE: "포트폴리오 전체를 쉬어야 할 때 현금 대신 지정한 방어 ETF sleeve로 이동합니다.",
 }
 STRICT_WEIGHTING_MODE_EXPLANATIONS = {
     STRICT_WEIGHTING_MODE_EQUAL: "최종 선택된 종목을 동일 비중으로 나눠 담습니다.",
@@ -1294,7 +1294,7 @@ def _render_rejected_slot_handling_help_popover() -> None:
   - 그래도 빈 슬롯이 남으면 그 비중은 현금으로 남깁니다.
 
 이 계약은 **일부 종목만 빠졌을 때** 쓰는 규칙입니다.  
-`Market Regime`이나 guardrail 때문에 **포트폴리오 전체를 보수 모드로 돌리는 상황**은 아래 `Risk-Off Contract`가 담당합니다.
+`Market Regime`이나 guardrail 때문에 **원래 factor 포트폴리오 전체를 멈추고 현금 또는 방어 ETF로 전체 전환하는 상황**은 아래 `Risk-Off Contract`가 담당합니다.
         """.strip(),
     )
 
@@ -1309,7 +1309,7 @@ def _render_market_regime_help_popover() -> None:
 def _render_interpretation_summary_help_popover() -> None:
     _render_inline_help_popover(
         "해석 요약",
-        "Raw Candidate Events는 각 리밸런싱에서 팩터 랭킹으로 최종 후보(top N)까지 올라온 종목 수의 총합입니다. Final Selected Events는 오버레이까지 반영한 뒤 실제 보유 후보로 남은 종목 수의 총합입니다. 이 값들은 전체 모집군 크기를 뜻하지 않습니다. 오버레이가 꺼져 있으면 보통 Raw와 Final이 같고, 오버레이가 켜져 있으면 Raw와 Final의 차이만큼 추가 필터가 개입한 것으로 해석하면 됩니다. `Rejected Slot Handling`은 trend rejection 이후 빈 슬롯을 어떻게 처리하도록 계약했는지의 현재 실행 언어입니다. `Weighting Contract`는 최종 선택 종목에 어떤 비중 규칙을 썼는지, `Risk-Off Contract`는 전체 risk-off 시 현금으로 갈지 방어 sleeve로 갈지를 뜻합니다. Filled Events는 제외된 자리 일부를 다음 순위 종목으로 보충한 횟수, Cash-Retained Events는 부분 rejection 이후 빈 슬롯 일부를 현금으로 남긴 횟수입니다. Defensive Sleeve Activations는 full risk-off 상태에서 실제 방어 sleeve가 동작한 횟수입니다. Regime Blocked Events / Regime Cash Rebalances는 시장 상태 오버레이 때문에 포트폴리오 전체가 보수 모드로 이동한 흔적을 요약합니다.",
+        "Raw Candidate Events는 각 리밸런싱에서 팩터 랭킹으로 최종 후보(top N)까지 올라온 종목 수의 총합입니다. Final Selected Events는 오버레이까지 반영한 뒤 실제 보유 후보로 남은 종목 수의 총합입니다. 이 값들은 전체 모집군 크기를 뜻하지 않습니다. 오버레이가 꺼져 있으면 보통 Raw와 Final이 같고, 오버레이가 켜져 있으면 Raw와 Final의 차이만큼 추가 필터가 개입한 것으로 해석하면 됩니다. `Rejected Slot Handling`은 trend rejection 이후 빈 슬롯을 어떻게 처리하도록 계약했는지의 현재 실행 언어입니다. `Weighting Contract`는 최종 선택 종목에 어떤 비중 규칙을 썼는지, `Risk-Off Contract`는 포트폴리오 전체를 쉬어야 할 때 현금으로 갈지 방어 sleeve로 갈지를 뜻합니다. Filled Events는 제외된 자리 일부를 다음 순위 종목으로 보충한 횟수, Cash-Retained Events는 부분 rejection 이후 빈 슬롯 일부를 현금으로 남긴 횟수입니다. Defensive Sleeve Activations는 포트폴리오 전체를 방어 ETF sleeve로 전환한 횟수입니다. Regime Blocked Events / Regime Cash Rebalances는 시장 상태 오버레이 때문에 factor 포트폴리오 전체가 멈춘 흔적을 요약합니다.",
     )
 
 
@@ -1338,26 +1338,27 @@ def _render_strict_risk_off_contract_help_popover() -> None:
     _render_inline_help_markdown_popover(
         "Risk-Off Contract",
         """
-이 계약은 **포트폴리오 전체가 full risk-off** 되었을 때 무엇을 할지 정합니다.
+이 계약은 **포트폴리오 전체를 쉬어야 할 때** 무엇을 할지 정합니다.
 
 쉽게 말하면:
 - 일부 종목 몇 개만 빠진 상황이 아니라
-- 이번 리밸런싱에서 **포트폴리오 전체를 현금 또는 방어 ETF 쪽으로 돌릴지** 정하는 규칙입니다.
+- 이번 리밸런싱에서 **원래 factor 포트폴리오 전체를 멈추고 현금 또는 방어 ETF 쪽으로 옮길지** 정하는 규칙입니다.
 
-`포트폴리오 전체 risk-off`란:
+`포트폴리오 전체를 쉰다`는 뜻은:
 - 개별 종목 몇 개만 빠지는 것이 아니라
 - `Market Regime` 또는 guardrail 때문에
-- 그 시점의 포트폴리오 전체를 보수 모드로 돌리는 상황을 뜻합니다.
+- 그 시점의 factor 포트폴리오 전체를 그대로 쓰지 않고
+- 현금 또는 방어 ETF 쪽으로 전체 전환하는 상황을 뜻합니다.
 
 옵션 설명:
 
 - `Cash Only`
-  - full risk-off가 오면 100% 현금으로 둡니다.
+  - 포트폴리오 전체를 쉬어야 하면 100% 현금으로 둡니다.
 
 - `Defensive Sleeve Preference`
-  - full risk-off가 오면 `Defensive Sleeve Tickers`에 적은 방어 ETF 묶음으로 이동합니다.
+  - 포트폴리오 전체를 쉬어야 하면 `Defensive Sleeve Tickers`에 적은 방어 ETF 묶음으로 이동합니다.
 
-즉 이것은 **포트폴리오 전체 보수 모드 계약**이고,  
+즉 이것은 **포트폴리오 전체 전환 계약**이고,  
 `Trend Filter` 때문에 일부 종목만 빠졌을 때 쓰는 `Rejected Slot Handling Contract`와는 다른 역할입니다.
         """.strip(),
     )
@@ -1385,7 +1386,7 @@ def _render_strict_overlay_section_intro() -> None:
     st.caption(
         "이 영역은 overlay 자체를 켜고 해석하는 곳입니다. "
         "`Trend Filter`는 개별 종목 일부를 제외할 수 있고, "
-        "`Market Regime`은 필요하면 포트폴리오 전체를 보수 모드로 돌릴 수 있습니다."
+        "`Market Regime`은 필요하면 factor 포트폴리오 전체를 멈추고 현금 또는 방어 ETF 쪽으로 전환할 수 있습니다."
     )
 
 
@@ -1395,7 +1396,7 @@ def _render_strict_portfolio_handling_contracts_intro() -> None:
     )
     st.markdown(
         "- `Rejected Slot Handling Contract`: Trend Filter로 일부 종목만 빠졌을 때 빈 슬롯을 어떻게 처리할지 정합니다.\n"
-        "- `Risk-Off Contract`: `Market Regime`이나 guardrail 때문에 포트폴리오 전체를 보수 모드로 돌릴 때 무엇을 할지 정합니다.\n"
+        "- `Risk-Off Contract`: `Market Regime`이나 guardrail 때문에 factor 포트폴리오 전체를 현금 또는 방어 ETF 쪽으로 전환해야 할 때 무엇을 할지 정합니다.\n"
         "- `Weighting Contract`: 최종적으로 보유하게 된 종목 사이에 비중을 어떻게 나눌지 정합니다."
     )
     st.caption(
@@ -2358,19 +2359,19 @@ def _render_strict_defensive_sleeve_contract_inputs(
     with help_col:
         _render_strict_risk_off_contract_help_popover()
     st.caption(
-        "`Market Regime`이나 guardrail 때문에 포트폴리오 전체를 보수 모드로 돌려야 할 때, "
-        "현금만 둘지 방어 ETF sleeve로 이동할지 정합니다."
+        "`Market Regime`이나 guardrail 때문에 factor 포트폴리오 전체를 그대로 두지 못할 때, "
+        "현금으로 쉴지 방어 ETF sleeve로 옮길지 정합니다."
     )
     st.caption(
         "쉽게 말해, 일부 종목 몇 개만 빠지는 상황이 아니라 "
-        "이번 리밸런싱에서 포트폴리오 전체를 쉬게 하거나 방어 ETF로 돌리는 규칙입니다."
+        "이번 리밸런싱에서 포트폴리오 전체를 현금 또는 방어 ETF 쪽으로 전환하는 규칙입니다."
     )
     risk_off_mode_label = st.selectbox(
         f"{label_base}Risk-Off Contract",
         options=list(STRICT_RISK_OFF_MODE_LABELS.keys()),
         index=list(STRICT_RISK_OFF_MODE_LABELS.values()).index(STRICT_DEFAULT_RISK_OFF_MODE),
         key=f"{key_prefix}_risk_off_mode",
-        help="full risk-off 상태에서 `Cash Only`로 둘지, `Defensive Sleeve Preference`로 방어 ETF sleeve를 담을지 정합니다.",
+        help="포트폴리오 전체를 쉬어야 할 때 `Cash Only`로 둘지, `Defensive Sleeve Preference`로 방어 ETF sleeve를 담을지 정합니다.",
     )
     risk_off_mode = STRICT_RISK_OFF_MODE_LABELS[risk_off_mode_label]
     st.caption(f"현재 선택: {STRICT_RISK_OFF_MODE_EXPLANATIONS[risk_off_mode]}")
@@ -2382,11 +2383,11 @@ def _render_strict_defensive_sleeve_contract_inputs(
         f"{label_base}Defensive Sleeve Tickers",
         value=",".join(STRICT_DEFAULT_DEFENSIVE_TICKERS),
         key=f"{key_prefix}_defensive_tickers",
-        help="`Risk-Off Contract = Defensive Sleeve Preference`일 때 full risk-off에서 동일가중으로 담을 방어 ETF 목록입니다. 예: `BIL,SHY,LQD`. `Cash Only`면 저장은 되지만 실제로는 사용되지 않습니다.",
+        help="`Risk-Off Contract = Defensive Sleeve Preference`일 때 포트폴리오 전체를 쉬어야 하는 구간에서 동일가중으로 담을 방어 ETF 목록입니다. 예: `BIL,SHY,LQD`. `Cash Only`면 저장은 되지만 실제로는 사용되지 않습니다.",
     )
     st.caption(
-        "`Defensive Sleeve Tickers`는 full risk-off에서 현금 대신 잠시 담을 방어 ETF 목록입니다. "
-        "예를 들어 `BIL, SHY, LQD`를 넣으면 risk-off 시 이 세 ETF를 동일가중으로 사용합니다."
+        "`Defensive Sleeve Tickers`는 포트폴리오 전체를 쉬어야 할 때 현금 대신 잠시 담을 방어 ETF 목록입니다. "
+        "예를 들어 `BIL, SHY, LQD`를 넣으면 해당 구간에 이 세 ETF를 동일가중으로 사용합니다."
     )
     return (
         risk_off_mode,

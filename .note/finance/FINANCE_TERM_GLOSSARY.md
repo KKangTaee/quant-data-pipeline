@@ -1653,7 +1653,7 @@ overlay 사용 여부를 빠르게 적기 위해서다.
 ## Defensive Sleeve Risk-Off
 
 ### 기본 설명
-full risk-off가 발생했을 때
+포트폴리오 전체를 쉬어야 할 때
 포트폴리오를 전부 현금으로 두는 대신,
 미리 정한 방어 자산 묶음으로 옮기는 contract다.
 
@@ -1672,7 +1672,8 @@ full risk-off가 발생했을 때
 ### 예시 / 필요 상황
 - `BIL, SHY, LQD`
   같은 defensive sleeve를 두고
-  `drawdown guardrail`이나 `market regime`가 full risk-off를 만들었을 때
+  `drawdown guardrail`이나 `market regime`가
+  factor 포트폴리오 전체를 멈추게 했을 때
   현금 대신 그 sleeve로 이동하는 경우
 
 ---
@@ -1681,23 +1682,24 @@ full risk-off가 발생했을 때
 
 ### 기본 설명
 strict annual에서
-포트폴리오 전체가 risk-off가 되었을 때
+포트폴리오 전체를 쉬어야 할 때
 현금으로 둘지, 방어 ETF sleeve로 옮길지를 정하는 계약이다.
 
 ### 왜 사용되는지
 부분 trend rejection 처리와
-포트폴리오 전체 보수 모드를 구분해서 읽기 위해서다.
+포트폴리오 전체 전환 상황을 구분해서 읽기 위해서다.
 
-여기서 `포트폴리오 전체 risk-off`란
+여기서 `포트폴리오 전체를 쉰다`는 말은
 개별 종목 몇 개만 빠지는 것이 아니라,
 `Market Regime` 또는 guardrail 때문에
-그 시점 포트폴리오 전체를 보수 모드로 돌리는 상황을 뜻한다.
+그 시점 factor 포트폴리오 전체를 그대로 쓰지 않고
+현금 또는 방어 ETF로 전체 전환하는 상황을 뜻한다.
 
 ### 예시 / 필요 상황
 - `Cash Only`
-  - full risk-off 시 100% 현금
+  - 포트폴리오 전체를 쉬어야 할 때 100% 현금
 - `Defensive Sleeve Preference`
-  - full risk-off 시 `BIL, SHY, LQD` 같은 방어 ETF sleeve 사용
+  - 포트폴리오 전체를 쉬어야 할 때 `BIL, SHY, LQD` 같은 방어 ETF sleeve 사용
 
 ---
 
@@ -1705,7 +1707,7 @@ strict annual에서
 
 ### 기본 설명
 `Risk-Off Contract = Defensive Sleeve Preference`일 때
-full risk-off 상태에서 현금 대신 담을 방어 ETF 목록이다.
+포트폴리오 전체를 쉬어야 하는 구간에서 현금 대신 담을 방어 ETF 목록이다.
 
 ### 왜 사용되는지
 현금만 두는 대신
