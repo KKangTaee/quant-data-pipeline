@@ -1674,3 +1674,128 @@ full risk-off가 발생했을 때
   같은 defensive sleeve를 두고
   `drawdown guardrail`이나 `market regime`가 full risk-off를 만들었을 때
   현금 대신 그 sleeve로 이동하는 경우
+
+---
+
+## Contract
+
+### 기본 설명
+이 프로젝트에서 `contract`는
+사용자가 화면에서 고르는 "명시적인 동작 규칙"을 뜻한다.
+
+### 왜 사용되는지
+체크박스 여러 개를 머릿속으로 조합해서 해석하는 대신,
+"이 전략은 이런 방식으로 동작한다"를 이름 있는 규칙으로 고정해
+history와 rerun에서 다시 읽기 쉽게 만들기 위해 사용한다.
+
+### 예시 / 필요 상황
+- `Rejected Slot Handling Contract`
+- `Risk-Off Contract`
+- `Weighting Contract`
+
+---
+
+## Usable Contract
+
+### 기본 설명
+코드 내부 규칙이 아니라,
+사용자가 UI, history, interpretation에서 다시 읽어도
+뜻이 바로 이해되는 형태로 정리된 contract를 뜻한다.
+
+### 왜 사용되는지
+전략 구조 옵션이 늘어나면
+기능이 "있다"는 것만으로는 부족하고,
+실제로 다시 읽고 비교할 수 있어야 하기 때문이다.
+
+### 예시 / 필요 상황
+- checkbox 두 개 조합으로 읽던 동작을
+  하나의 named contract로 바꾸는 경우
+
+---
+
+## Payload
+
+### 기본 설명
+한 번의 백테스트 실행에 사용된 설정값 묶음을 뜻한다.
+
+### 왜 사용되는지
+history에서 다시 불러오거나,
+같은 설정으로 rerun할 때
+당시 입력값을 복원해야 하기 때문이다.
+
+### 예시 / 필요 상황
+- benchmark, top N, factor set, contract mode 등이 같이 저장된다.
+
+---
+
+## Boolean Combination
+
+### 기본 설명
+`true/false`, `on/off` 값 여러 개를
+사용자가 직접 조합해서 뜻을 해석해야 하는 상태를 뜻한다.
+
+### 왜 사용되는지
+현재 문제를 설명할 때 자주 쓰인다.
+`Phase 19`는 이런 조합 중심 해석을 줄이고,
+더 직접적인 contract 언어로 바꾸려는 phase다.
+
+### 예시 / 필요 상황
+- `rejected_slot_fill_enabled = true`
+- `partial_cash_retention_enabled = false`
+를 사용자가 스스로 조합해 뜻을 읽어야 하는 경우
+
+---
+
+## Slice
+
+### 기본 설명
+phase 전체 작업을 한 번에 다 하지 않고,
+작고 안전한 구현 단위로 나눠서 진행하는 한 조각 작업을 뜻한다.
+
+### 왜 사용되는지
+큰 구조 변경을 한 번에 넣으면
+회귀 위험과 해석 혼란이 커지기 때문에,
+작은 단위로 끊어서 구현하고 검증하기 위해 사용한다.
+
+### 예시 / 필요 상황
+- first slice:
+  `Rejected Slot Handling Contract`
+- second slice:
+  history / interpretation cleanup
+
+---
+
+## Minimal Validation
+
+### 기본 설명
+deep backtest 대신,
+우선 코드가 깨지지 않았는지와 기본 연결이 맞는지만 확인하는 최소 검증을 뜻한다.
+
+### 왜 사용되는지
+구현 우선 phase에서는
+새 기능을 하나 넣을 때마다 큰 rerun을 반복하기보다,
+먼저 안정적으로 연결되었는지를 빠르게 확인하는 편이 효율적이기 때문이다.
+
+### 예시 / 필요 상황
+- `py_compile`
+- import smoke
+- 아주 작은 representative check
+
+---
+
+## Structural Redesign Lane
+
+### 기본 설명
+기존 factor나 top N만 조금 바꾸는 수준이 아니라,
+전략이 실제로 포지션을 채우고 줄이고 위험을 처리하는 구조 자체를 바꾸는 실험 흐름을 뜻한다.
+
+### 왜 사용되는지
+bounded tweak만으로는
+same-gate lower-MDD 후보를 만들기 어려웠기 때문에,
+더 큰 구조 변경 실험을 따로 묶어 관리하기 위해 사용한다.
+
+### 예시 / 필요 상황
+- partial cash retention
+- defensive sleeve risk-off
+- next-ranked fill
+- concentration-aware weighting

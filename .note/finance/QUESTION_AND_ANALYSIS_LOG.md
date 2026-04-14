@@ -545,3 +545,27 @@ Detailed historical analysis was archived on `2026-04-13`.
     explicit handling contract 기준으로 직접 설명한다
   - history display에서는 internal boolean column을 계속 숨겨
     operator는 contract 언어 중심으로 읽게 유지했다
+
+### 2026-04-14 - Phase 19 kickoff 문서는 용어와 목적을 더 쉽게 풀어써야 한다
+- Request topic:
+  - `PHASE19_STRUCTURAL_CONTRACT_EXPANSION_PLAN.md`가 너무 어려워서
+    무엇을 하는 phase인지, 왜 필요한지 이해하기 어렵다는 피드백
+- Interpreted goal:
+  - phase kickoff 문서를
+    내부자용 압축 메모가 아니라
+    operator도 읽을 수 있는 설명 문서로 바꾸고 싶음
+- Result:
+  - 문서에 아래를 추가했다
+    - 이 phase가 무엇을 하는지
+    - 왜 지금 필요한지
+    - 끝나면 무엇이 좋아지는지
+    - 어려운 표현 짧은 해설
+      - `contract`
+      - `usable contract`
+      - `payload`
+      - `boolean combination`
+      - `slice`
+      - `minimal validation`
+      - `structural redesign lane`
+  - glossary에도 같은 용어를 추가해,
+    이후 phase 문서에서도 반복 설명을 줄이고 공통 해석 기준으로 재사용할 수 있게 했다

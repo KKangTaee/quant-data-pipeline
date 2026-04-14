@@ -13,7 +13,7 @@
 - `.note/finance/ROADMAP_REBASE_PHASE18_TO_PHASE25_20260414.md`
   - `Phase 18` 진행 중 시점에서 `Phase 19~25` 큰 그림을 다시 정리한 논의용 상위 로드맵 초안
 - `.note/finance/phase19/PHASE19_STRUCTURAL_CONTRACT_EXPANSION_PLAN.md`
-  - `Phase 19`의 목적, 운영 원칙, 현재 구현 우선순위를 정리한 kickoff 문서
+  - `Phase 19`가 무엇을 하는 phase인지, 왜 지금 필요한지, 어려운 용어가 무엇을 뜻하는지까지 쉽게 풀어쓴 kickoff 문서
 - `.note/finance/phase19/PHASE19_CURRENT_CHAPTER_TODO.md`
   - `Phase 19` 현재 챕터 TODO 보드
 - `.note/finance/phase19/PHASE19_REJECTED_SLOT_HANDLING_CONTRACT_FIRST_SLICE.md`
