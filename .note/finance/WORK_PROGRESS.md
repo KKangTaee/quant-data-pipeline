@@ -566,3 +566,16 @@ Detailed historical logs were archived on `2026-04-13`.
   - finance refinement hygiene script
 - Durable takeaway:
   - history actions now better match user expectation: rerun shows refreshed results, while load-into-form is explicitly framed as input prefill only
+
+### 2026-04-15
+- Refined Phase 19 closeout docs to better match the user's actual checklist progress and reading flow.
+- Changed:
+  - `PHASE19_CURRENT_CHAPTER_TODO.md` now marks manual UI validation as `in_progress` instead of `pending`
+  - `PHASE19_COMPLETION_SUMMARY.md` now explains completed work in plainer language under `쉽게 말하면`
+  - `PHASE_PLAN_TEMPLATE.md` now uses `작업 단위` language instead of `slice`
+  - `AGENTS.md` now explicitly prefers plain-language work-unit labels in future phase plan documents
+  - `PHASE19_STRUCTURAL_CONTRACT_EXPANSION_PLAN.md` was aligned to the same `작업 단위` wording
+- Validation:
+  - finance refinement hygiene script
+- Durable takeaway:
+  - phase plan and closeout docs now better match user-facing review flow and avoid internal jargon where it is not helpful

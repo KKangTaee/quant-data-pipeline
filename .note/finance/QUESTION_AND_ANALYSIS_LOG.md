@@ -830,3 +830,17 @@ Detailed historical analysis was archived on `2026-04-13`.
     최신 결과는 아직 이전 run 기준일 수 있으니 form을 다시 실행해야 한다는 설명을 넣었다
   - `Single Strategy`로 이동한 뒤 바로 `Back To History` 버튼도 제공해,
     돌아가는 경로가 불분명한 느낌을 줄였다
+
+### 2026-04-15 - Phase closeout 문서는 실제 검수 상태와 쉬운 설명을 더 분명히 드러내야 한다
+- Request topic:
+  - `PHASE19_CURRENT_CHAPTER_TODO.md`에 manual validation이 아직 `pending`으로 보이는 점,
+    `PHASE19_COMPLETION_SUMMARY.md`의 `쉬운 뜻`이 아직 딱딱하다는 점,
+    `PHASE_PLAN_TEMPLATE.md`의 `slice` 표현이 사용자 입장에서 불필요하게 내부 용어처럼 느껴진다는 피드백
+- Interpreted goal:
+  - closeout 문서와 phase plan template가 실제 진행 상태와 사용자의 읽기 흐름에 더 잘 맞도록 정리하고 싶음
+- Result:
+  - `PHASE19_CURRENT_CHAPTER_TODO.md`는 manual validation을 `in_progress`로 바꾸고,
+    사용자가 실제 체크리스트를 진행 중이라는 점을 같이 적었다
+  - `PHASE19_COMPLETION_SUMMARY.md`는 각 `쉽게 말하면` 섹션을 더 쉬운 문장으로 다시 풀어썼다
+  - `PHASE_PLAN_TEMPLATE.md`는 `첫 구현 단위` 대신 `이번 phase의 주요 작업 단위`를 쓰도록 바꿨다
+  - `AGENTS.md`에도 future phase plan 문서에서 `slice`보다 `작업 단위`, `첫 번째 작업`, `다음 작업` 같은 표현을 우선 쓰도록 반영했다

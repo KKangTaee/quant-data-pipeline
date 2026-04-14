@@ -123,9 +123,9 @@
   - `on/off` 값 여러 개를 사용자가 직접 조합해서 뜻을 해석해야 하는 상태
 - `Interpretation`
   - 결과 숫자 아래에서 "이 run에서 무슨 일이 있었는지"를 설명하는 영역
-- `Slice`
+- `작업 단위`
   - phase 전체를 한 번에 다 하지 않고,
-    작고 안전한 구현 단위로 나눠 진행하는 조각 작업
+    작고 안전한 구현 단위로 나눠 진행하는 한 묶음의 일
 - `Minimal Validation`
   - `py_compile`, import smoke, 작은 representative check 같은 최소 검증
 - `Structural Redesign Lane`
@@ -146,7 +146,7 @@
   - 새 방식은 더 읽기 쉽게 만들되
   - 예전 저장값도 계속 복원 가능하게 유지하는 쪽으로 구현한다.
 
-## 첫 구현 단위
+## 이번 phase의 주요 작업 단위
 - `Rejected Slot Handling Contract`
 - 목표:
   - 기존 `rejected_slot_fill_enabled + partial_cash_retention_enabled` 조합을

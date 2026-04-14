@@ -1,18 +1,18 @@
 # Phase 19 Current Chapter TODO
 
 ## 상태
-- `practical closeout / manual_validation_pending`
+- `practical closeout / manual_validation_in_progress`
 
 ## 1. Structural Contract Expansion
 
-- `completed` rejected-slot handling explicit contract first slice
+- `completed` rejected-slot handling explicit contract 첫 작업 단위
   - strict annual single / compare에서 두 개 checkbox 대신 명시적 mode contract로 노출
   - mode를 payload / runtime input params에도 같이 기록
 - `completed` legacy compatibility bridge
   - old boolean payload만 있어도 explicit mode를 복원
   - new mode payload에서도 legacy booleans를 계속 함께 남김
 - `completed` next contract cleanup candidate shortlist
-  - risk-off / weighting / interpretation cleanup을 다음 slice로 선택
+  - risk-off / weighting / interpretation cleanup을 다음 작업으로 선택
 
 ## 2. Interpretation Cleanup
 
@@ -47,16 +47,18 @@
 - `completed` `py_compile`
 - `completed` `.venv` import smoke
 - `completed` manual UI validation checklist 문서 생성
-- `pending` manual UI validation actual run
+- `in_progress` manual UI validation actual run
   - single strict annual 3 family
   - compare strict annual 3 family
   - history prefill / load-into-form
+  - 체크리스트를 사용자가 실제로 확인 중이므로,
+    구현 누락이 아니라 검수 진행 상태로 본다
 
 ## 4. Documentation Sync
 
-- `completed` phase19 kickoff / first slice 문서 생성
-- `completed` phase19 history / interpretation cleanup second slice 문서 생성
-- `completed` phase19 risk-off / weighting interpretation cleanup third slice 문서 생성
+- `completed` phase19 kickoff / 첫 작업 단위 문서 생성
+- `completed` phase19 history / interpretation cleanup 두 번째 작업 문서 생성
+- `completed` phase19 risk-off / weighting interpretation cleanup 세 번째 작업 문서 생성
 - `completed` phase19 kickoff plan을 쉬운 설명 중심으로 재작성
 - `completed` future phase plan 작성 규칙에 쉬운 설명 섹션을 반영
 - `completed` future phase에서 재사용할 phase plan template 문서 생성

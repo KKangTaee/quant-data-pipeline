@@ -12,6 +12,7 @@
   - 앞으로 phase plan 문서를 만들 때 포함해야 하는 설명 섹션과 finance 작업 운영 규칙을 담은 저장소 기준 문서
 - `.note/finance/PHASE_PLAN_TEMPLATE.md`
   - 앞으로 `finance` phase plan 문서를 만들 때 기본으로 따를 설명형 템플릿 문서
+  - `slice` 같은 내부 표현보다 `작업 단위`, `첫 번째 작업`, `다음 작업`처럼 바로 이해되는 문장을 기본으로 쓰는 출발점이다
 - `.note/finance/PHASE_TEST_CHECKLIST_TEMPLATE.md`
   - 앞으로 `finance` phase test checklist 문서를 만들 때 기본으로 따를 checkbox 중심 템플릿 문서
 - `.note/finance/MASTER_PHASE_ROADMAP.md`
@@ -23,11 +24,11 @@
 - `.note/finance/phase19/PHASE19_CURRENT_CHAPTER_TODO.md`
   - `Phase 19` 현재 챕터 TODO 보드
 - `.note/finance/phase19/PHASE19_REJECTED_SLOT_HANDLING_CONTRACT_FIRST_SLICE.md`
-  - strict annual rejected-slot handling semantics를 explicit contract로 정리한 first-slice 구현 문서
+  - strict annual rejected-slot handling semantics를 explicit contract로 정리한 첫 번째 작업 문서
 - `.note/finance/phase19/PHASE19_HISTORY_AND_INTERPRETATION_CLEANUP_SECOND_SLICE.md`
-  - strict annual selection history와 interpretation summary를 explicit handling contract 언어로 다시 정리한 second-slice 문서
+  - strict annual selection history와 interpretation summary를 explicit handling contract 언어로 다시 정리한 두 번째 작업 문서
 - `.note/finance/phase19/PHASE19_RISK_OFF_AND_WEIGHTING_INTERPRETATION_CLEANUP_THIRD_SLICE.md`
-  - strict annual history / interpretation surface에서 risk-off contract와 weighting contract까지 같은 operator-facing 언어로 정리한 third-slice 문서
+  - strict annual history / interpretation surface에서 risk-off contract와 weighting contract까지 같은 operator-facing 언어로 정리한 세 번째 작업 문서
 - `.note/finance/phase19/PHASE19_COMPLETION_SUMMARY.md`
   - `Phase 19`가 실제로 무엇을 정리했고 왜 practical closeout으로 볼 수 있는지 요약한 closeout 문서
 - `.note/finance/phase19/PHASE19_NEXT_PHASE_PREPARATION.md`

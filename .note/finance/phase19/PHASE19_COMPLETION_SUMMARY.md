@@ -13,7 +13,7 @@
   - `rejected_slot_fill_enabled`
   - `partial_cash_retention_enabled`
   두 boolean 조합을 사용자가 직접 해석해야 했다.
-- Phase 19 first slice 이후:
+- Phase 19 첫 작업 단위 이후:
   - `Reweight Survivors`
   - `Retain Unfilled Slots As Cash`
   - `Fill Then Reweight Survivors`
@@ -21,10 +21,14 @@
   로 하나의 명시적 contract를 고를 수 있게 됐다.
 - old payload와 history도 계속 읽히도록 compatibility bridge를 유지했다.
 
-쉬운 뜻:
+쉽게 말하면:
 
-- 예전에는 체크박스 조합을 머릿속으로 번역해야 했지만,
-  이제는 "이 run은 어떤 처리 규칙으로 동작했는가"를 이름으로 바로 읽을 수 있다.
+- 예전에는 체크박스 두 개를 보고
+  "그래서 실제로는 어떻게 동작하는 거지?"를 사용자가 스스로 해석해야 했다.
+- 이제는 그 해석을 사용자가 직접 하지 않아도 된다.
+- 백테스트를 열면
+  "거절된 종목을 남은 종목에 다시 나눴는지, 현금으로 남겼는지, 다음 순위 종목으로 채웠는지"
+  를 이름으로 바로 읽을 수 있다.
 
 ### 2. history / interpretation에서 rejected-slot handling을 사람 언어로 다시 읽을 수 있게 정리
 
@@ -41,10 +45,15 @@
 - row-level interpretation도
   fill / cash retention / survivor reweighting을 contract 기준으로 설명하게 바꿨다.
 
-쉬운 뜻:
+쉽게 말하면:
 
-- 결과 숫자만 보는 게 아니라,
-  trend rejection 뒤에 실제로 어떤 처리가 일어났는지 다시 읽기 쉬워졌다.
+- 이제는 단순히 수익률 숫자만 보는 것이 아니라,
+  "일부 종목이 빠진 뒤 실제로 무슨 일이 일어났는지"를 표에서 다시 읽기 쉬워졌다.
+- 즉,
+  "빈 자리를 채웠는지"
+  "현금으로 남겼는지"
+  "남은 종목만 다시 나눠 담았는지"
+  를 사람이 바로 이해할 수 있는 문장으로 확인할 수 있다.
 
 ### 3. risk-off / weighting도 같은 수준으로 interpretation contract 언어로 정리
 
@@ -65,11 +74,14 @@
   - final weighting contract
   를 더 직접적으로 설명하게 바뀌었다.
 
-쉬운 뜻:
+쉽게 말하면:
 
-- 이제 사용자는
-  "이 전략이 왜 현금으로 갔는지, 왜 방어 sleeve가 켜졌는지, 어떤 비중 규칙을 썼는지"
-  를 history / interpretation에서 한 번에 더 읽기 쉬워졌다.
+- 이제는 사용자가
+  "왜 이번에는 현금으로 갔지?"
+  "왜 방어 ETF로 돌았지?"
+  "최종 비중은 균등비중이었는지, 순위 기반이었는지"
+  를 한 군데에서 더 쉽게 읽을 수 있다.
+- 즉 risk-off와 weighting도 숫자 뒤에 숨은 처리 방식을 다시 설명해 주는 상태가 됐다.
 
 ### 4. phase plan UX 기준과 template를 고정
 
@@ -80,10 +92,12 @@
   섹션을 포함하도록 규칙을 추가했다.
 - [PHASE_PLAN_TEMPLATE.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/PHASE_PLAN_TEMPLATE.md)를 새로 만들었다.
 
-쉬운 뜻:
+쉽게 말하면:
 
-- 이후 phase 문서는 내부 메모처럼 보이기보다,
-  사용자도 읽고 방향을 이해할 수 있는 문서로 시작하게 된다.
+- 이후 phase 문서는 개발자 메모처럼 딱딱하게 시작하지 않고,
+  "지금 왜 이 일을 하는지"를 먼저 설명하는 문서가 된다.
+- 그래서 다음 phase부터는 문서를 처음 보는 사람도
+  목적, 필요성, 기대 효과를 더 빨리 이해할 수 있다.
 
 ## 이번 phase를 practical closeout으로 보는 이유
 
@@ -101,14 +115,15 @@
 
 ## 아직 남아 있지만 closeout blocker는 아닌 것
 
-- manual UI validation checklist 수행
+- manual UI validation checklist 계속 수행
 - 필요하면 risk-off reason wording 추가 polish
 - 다음 phase에서 candidate consolidation / operator workflow hardening으로 이어갈지 결정
 
-쉬운 뜻:
+쉽게 말하면:
 
-- 확인할 것은 남아 있지만,
-  이번 phase의 중심 구현과 문서 정리는 이미 끝난 상태다.
+- 지금 남아 있는 일은 "기능을 더 만들기"가 아니라
+  이미 만든 것을 실제 화면에서 차분히 확인하는 일에 가깝다.
+- 즉 핵심 구현은 끝났고, 남은 것은 사용자 검수 마무리다.
 
 ## guidance / reference review 결과
 
@@ -140,7 +155,7 @@ closeout 시점에 아래를 다시 확인했다.
 - future phase-plan template/workflow sync:
   - `completed`
 - manual UI validation:
-  - `pending`
+  - `in_progress`
 
 즉 Phase 19는
-**practical closeout / manual_validation_pending** 상태로 닫는 것이 맞다.
+**practical closeout / manual_validation_in_progress** 상태로 닫는 것이 맞다.
