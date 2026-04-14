@@ -18,6 +18,8 @@ phase 기준으로 기록한 위치다.
 
 - `PHASE18_NEXT_RANKED_FILL_REPRESENTATIVE_RERUN_FIRST_PASS.md`
   - `Fill Rejected Slots With Next Ranked Names` first slice 대표 rerun 결과
+- `PHASE18_VALUE_FILL_ANCHOR_NEAR_FOLLOWUP_SECOND_PASS.md`
+  - `Value` current practical anchor 근처에서 fill contract를 좁게 다시 본 follow-up 문서
 
 ## 읽는 순서
 

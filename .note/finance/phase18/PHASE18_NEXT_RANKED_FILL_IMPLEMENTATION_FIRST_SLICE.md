@@ -62,10 +62,9 @@
 ## 현재 first-pass 결과 요약
 
 - `Value`
-  - trend-on probe가
-    `hold / blocked`에서
-    `real_money_candidate / paper_probation / paper_only`
-    로 회복됨
+  - trend-on probe에서
+    cash share와 `MDD`는 개선되지만
+    still `hold / blocked`
 - `Quality + Value`
   - `CAGR`, `MDD`, cash share는 개선
   - 그러나 `hold / blocked` 유지
@@ -73,6 +72,6 @@
 ## 현재 결론
 
 - 이 contract는 구현 가치가 충분하다
-- 특히 `Value`에서는 “의미 있는 rescue lane”으로 확인됐다
+- 특히 `Value`에서는 cash drag를 줄이는 selection-structure lane으로는 의미가 있다
 - 다만 first pass 기준으로는
-  current practical anchor 자체를 교체하는 결과는 아니다
+  `Value`, `Quality + Value` 모두 current practical anchor 자체를 교체하는 결과는 아니다

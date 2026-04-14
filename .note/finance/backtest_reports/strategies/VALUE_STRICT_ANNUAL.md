@@ -172,24 +172,28 @@
   - `fill on`:
     - `CAGR = 25.23%`
     - `MDD = -28.37%`
-    - `Promotion = real_money_candidate`
-    - `Shortlist = paper_probation`
-    - `Deployment = paper_only`
+    - `Promotion = hold`
+    - `Shortlist = hold`
+    - `Deployment = blocked`
     - `Validation = normal`
     - `Filled Rows = 117`
 - 실무 해석:
-  - 이 redesign은 `Value` trend-on probe에서 실제로 의미가 있었다
-  - fill을 켜면 cash drag가 사라지고
-    `hold / blocked`가
-    `real_money_candidate / paper_probation / paper_only`
-    까지 회복됐다
+  - 이 redesign은 `Value` trend-on probe에서
+    cash drag와 validation을 개선하는 방향으로는 의미가 있었다
+  - 하지만 current runtime meta 기준으로는
+    여전히 `hold / blocked`였다
   - 다만 current practical anchor(`28.13% / -24.55%`)보다
     `MDD`가 더 낮아진 것은 아니어서
     anchor replacement로 읽지는 않는다
 - 다음에 볼 것:
-  - 지금은 `next-ranked eligible fill`을
-    larger structural redesign의 첫 meaningful lane으로 보고,
-    current anchor replacement까지 갈 수 있는 follow-up을 설계하는 단계다
+  - anchor-near second pass까지 보면
+    `base + psr + pfcr`, `Top N = 13`
+    의 `24.47% / -24.89% / hold / blocked`
+    가 best lower-MDD near-miss였다
+  - 즉 지금은
+    `next-ranked eligible fill`을
+    larger structural redesign 참고 lane으로 남기고,
+    second slice 후보 우선순위를 다시 정하는 단계다
 
 ## 관련 결과 문서
 
@@ -230,6 +234,10 @@
   - `Fill Rejected Slots With Next Ranked Names` redesign을
     `Value` trend-on probe에 적용해
     meaningful rescue까지는 가능한지 본 first-pass 문서
+- [PHASE18_VALUE_FILL_ANCHOR_NEAR_FOLLOWUP_SECOND_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase18/PHASE18_VALUE_FILL_ANCHOR_NEAR_FOLLOWUP_SECOND_PASS.md)
+  - `Value` current practical anchor 근처에서
+    fill contract를 좁게 다시 보고
+    same-gate lower-MDD rescue가 실제로 있는지 본 second-pass 문서
 
 ## 실무 해석
 
@@ -246,9 +254,10 @@
   Phase 17 structural rerun과 Phase 18 first redesign slice까지 반영하면
   `partial cash retention`, `defensive sleeve`, `concentration-aware weighting`
   어느 쪽도 current anchor를 대체하는 same-gate lower-MDD rescue는 만들지 못했다
-  - 다만 Phase 18 `next-ranked eligible fill`은
-    trend-on probe를 non-hold로 회복시키는 데는 성공했기 때문에
-    “의미 있는 redesign lane”으로는 분명히 남는다
+  - Phase 18 `next-ranked eligible fill`은
+    cash drag와 validation 개선 방향으로는 의미가 있었지만,
+    anchor-near second pass까지 포함하면
+    same-gate lower-MDD rescue는 아직 만들지 못했다
 
 지금 다시 볼 우선순위를 한 줄로 정리하면:
 

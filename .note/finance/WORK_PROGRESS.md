@@ -278,3 +278,20 @@ Detailed historical logs were archived on `2026-04-13`.
   - next-ranked eligible fill is a meaningful larger-redesign lane
   - first pass does not replace the current practical anchors
   - next follow-up should stay in Phase 18 rather than reopening bounded tweak work
+
+### 2026-04-14
+- Re-ran Phase 18 `next-ranked eligible fill` around the actual `Value` practical anchor.
+- Scope:
+  - `base + psr`, `Top N = 12~16`
+  - `base + psr + pfcr`, `Top N = 12~16`
+  - `Trend Filter = on`, `rejected_slot_fill_enabled = on`
+- Result:
+  - no same-gate lower-MDD rescue was found
+  - all anchor-near candidates remained `hold / blocked`
+  - best lower-MDD near-miss was:
+    - `base + psr + pfcr`, `Top N = 13`
+    - `24.47% / -24.89% / hold / blocked`
+- Durable takeaway:
+  - Phase 18 first slice should be kept as a meaningful redesign reference,
+    not as a rescued replacement candidate
+  - next work should shift to Phase 18 second-slice prioritization

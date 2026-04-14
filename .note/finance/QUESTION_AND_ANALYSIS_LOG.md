@@ -375,5 +375,26 @@ Detailed historical analysis was archived on `2026-04-13`.
       still `hold / blocked`
   - 결론:
     - `next-ranked eligible fill`은 meaningful larger-redesign lane이다
-    - 특히 `Value`에서는 실제 rescue evidence가 있다
     - 다만 current practical anchor 자체를 교체하는 결과는 아직 아니다
+
+### 2026-04-14 - Value anchor-near follow-up second pass에서도 fill contract rescue는 없었다
+- Request topic:
+  - Phase 18 first slice 이후
+    `Value` current practical anchor 근처에서
+    fill contract를 더 직접 적용
+- Interpreted goal:
+  - first structural probe가 아니라
+    실제 current best practical point 근처에서
+    same-gate lower-MDD rescue가 가능한지 확인
+- Result:
+  - `base + psr`, `Top N = 12~16`
+  - `base + psr + pfcr`, `Top N = 12~16`
+  를 current practical contract로 다시 돌렸다
+  - 공통 결론:
+    - 모든 candidate가 still `hold / blocked`
+    - best lower-MDD near-miss는
+      `base + psr + pfcr`, `Top N = 13`
+      의 `24.47% / -24.89% / hold / blocked`
+  - therefore:
+    - Phase 18 first slice는 meaningful redesign reference이긴 하지만
+    - current `Value` practical anchor를 교체하는 rescue contract로 보긴 어렵다

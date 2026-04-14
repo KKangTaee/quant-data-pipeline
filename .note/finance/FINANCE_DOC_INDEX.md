@@ -260,6 +260,10 @@
 - `.note/finance/backtest_reports/phase18/PHASE18_NEXT_RANKED_FILL_REPRESENTATIVE_RERUN_FIRST_PASS.md`
   - next-ranked eligible fill이 current `Value` / `Quality + Value` structural probe에서
     meaningful rescue 또는 anchor replacement로 이어지는지 representative rerun으로 확인한 문서
+- `.note/finance/backtest_reports/phase18/PHASE18_VALUE_FILL_ANCHOR_NEAR_FOLLOWUP_SECOND_PASS.md`
+  - `Value` current practical anchor 근처에서
+    fill contract를 좁게 다시 보고
+    same-gate lower-MDD rescue가 실제로 있는지 확인한 문서
 - `.note/finance/phase12/PHASE12_GTAA_INTERVAL1_DEFAULT_REBASE_ANALYSIS.md`
   - GTAA 기본 `Signal Interval`을 `1`로 rebased 한 뒤, 주요 preset과 상위 후보군을 공통 시작점에서 다시 비교해 현재 default cadence 기준의 우선순위를 정리한 문서
 - `.note/finance/phase12/PHASE12_GTAA_SCORE_WEIGHT_AND_RISK_OFF_FIRST_PASS.md`

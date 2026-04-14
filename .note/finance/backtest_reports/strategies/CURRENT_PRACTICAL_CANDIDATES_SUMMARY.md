@@ -60,11 +60,14 @@ lower-MDD near-miss:
     역시 current anchor를 바꾸진 못했다
   - Phase 18 larger-redesign note:
     - `Trend Filter = on + next-ranked eligible fill`을 붙이면
-      `25.23% / -28.37% / real_money_candidate / paper_probation / paper_only`
-      로 trend-on probe를 non-hold까지 회복시켰다
-    - 다만 current practical anchor(`28.13% / -24.55%`)보다
-      `MDD`가 더 낮아지진 않아
-      current anchor replacement로 보진 않는다
+      `25.23% / -28.37% / hold / blocked`
+      로 cash drag와 validation은 개선되지만,
+      gate recovery까지는 못 갔다
+    - anchor-near second pass에서도
+      `base + psr + pfcr`, `Top N = 13`
+      의 `24.47% / -24.89% / hold / blocked`
+      가 best lower-MDD near-miss였고,
+      current anchor replacement는 없었다
 
 바로 열 문서:
 
@@ -166,8 +169,10 @@ lower-MDD but weaker-gate near-miss:
      current anchor를 바꾸지 못했다
    - Phase 18 first slice 기준으로는
      `next-ranked eligible fill`이
-     적어도 `Value` trend-on probe를 non-hold로 회복시키는
-     meaningful redesign lane임을 확인했다
+     cash drag와 validation을 개선하는
+     meaningful redesign lane임은 확인했지만,
+     `Value` anchor-near second pass까지 포함하면
+     same-gate lower-MDD rescue는 아직 없다
    - 즉 다음 단계는
      Phase 18 larger structural redesign을 계속 밀면서
      anchor replacement 조건까지 갈 수 있는지 보는 쪽이 더 자연스럽다

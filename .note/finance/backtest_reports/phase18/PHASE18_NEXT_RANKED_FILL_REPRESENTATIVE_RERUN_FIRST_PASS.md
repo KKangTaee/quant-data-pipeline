@@ -62,9 +62,9 @@
 - `fill on`
   - `CAGR = 25.23%`
   - `MDD = -28.37%`
-  - `Promotion = real_money_candidate`
-  - `Shortlist = paper_probation`
-  - `Deployment = paper_only`
+  - `Promotion = hold`
+  - `Shortlist = hold`
+  - `Deployment = blocked`
   - `Validation = normal`
   - `Filled Rows = 117`
   - `Filled Tickers = 466`
@@ -72,14 +72,13 @@
 
 해석:
 
-- `Value`에서는 이 redesign이 분명히 의미가 있었다
-- cash drag를 없애면서
-  `hold / blocked`를
-  `real_money_candidate / paper_probation / paper_only`
-  로 회복시켰다
+- `Value`에서는 이 redesign이 selection-structure 개선으로는 의미가 있었다
+- cash drag를 없애고 `MDD`를 일부 줄였으며
+  `Validation = caution -> normal`까지는 회복시켰다
 - 다만 current practical anchor
   (`28.13% / -24.55% / real_money_candidate / paper_probation / review_required`)
-  보다 더 좋은 downside point는 아니므로,
+  보다 더 좋은 downside point도 아니고,
+  gate recovery도 만들지 못했으므로
   current anchor replacement로 보진 않는다
 
 ## 2. Quality + Value probe
@@ -137,7 +136,7 @@
 이번 first pass는 이렇게 정리할 수 있다.
 
 1. `next-ranked eligible fill`은 의미 있는 new lane이다
-2. `Value`에서는 trend-on probe를 non-hold까지 회복시켰다
+2. `Value`에서는 cash drag, `MDD`, validation을 개선했지만 still hold였다
 3. `Quality + Value`에서는 개선은 있었지만 still hold였다
 4. current practical anchor replacement는 아직 아니다
 

@@ -63,7 +63,7 @@
 - `in_progress`
 - first slice 구현과 representative rerun first pass는 완료
 - current first-pass reading:
-  - `Value`: meaningful rescue 있음
+  - `Value`: cash drag와 `MDD`는 개선되지만 still hold
   - `Quality + Value`: 개선은 있으나 still hold
 
 ## 주요 산출물
@@ -74,3 +74,4 @@
   - `.note/finance/phase18/PHASE18_NEXT_RANKED_FILL_IMPLEMENTATION_FIRST_SLICE.md`
 - representative rerun report
   - `.note/finance/backtest_reports/phase18/PHASE18_NEXT_RANKED_FILL_REPRESENTATIVE_RERUN_FIRST_PASS.md`
+  - `.note/finance/backtest_reports/phase18/PHASE18_VALUE_FILL_ANCHOR_NEAR_FOLLOWUP_SECOND_PASS.md`

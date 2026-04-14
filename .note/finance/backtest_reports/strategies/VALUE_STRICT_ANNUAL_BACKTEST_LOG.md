@@ -48,26 +48,55 @@
   - `fill on`:
     - `CAGR = 25.23%`
     - `MDD = -28.37%`
-    - `Promotion = real_money_candidate`
-    - `Shortlist = paper_probation`
-    - `Deployment = paper_only`
+    - `Promotion = hold`
+    - `Shortlist = hold`
+    - `Deployment = blocked`
     - `Validation = normal`
     - `Filled Rows = 117`
     - `Filled Tickers = 466`
     - `Average Cash Share = 0.00%`
 - 해석:
-  - 이 redesign은 `Value` trend-on probe에서 실제로 의미가 있었다
-  - fill을 켜면 cash drag가 사라지고
-    `hold / blocked`가
-    `real_money_candidate / paper_probation / paper_only`
-    까지 회복됐다
+  - 이 redesign은 `Value` trend-on probe에서
+    cash drag를 없애고 validation을 개선하는 방향으로는 의미가 있었다
   - 다만 current best practical anchor(`28.13% / -24.55%`)보다
-    `MDD`가 더 낮아진 것은 아니어서
+    `MDD`가 더 낮아진 것도 아니고,
+    gate recovery까지 만든 것도 아니어서
     anchor replacement로 보지는 않는다
 - 다음 액션:
   - current practical anchor는 그대로 유지
   - `next-ranked eligible fill`은
-    larger redesign lane에서 더 밀어볼 가치가 있는 rescue contract로 남긴다
+    larger redesign lane에서 더 밀어볼 가치가 있는 reference contract로 남긴다
+
+### 2026-04-14 - value fill anchor-near follow-up second pass
+
+- 목표:
+  - `Value` current practical anchor 근처에서
+    fill contract가 same-gate lower-MDD rescue를 만들 수 있는지
+    좁게 다시 확인한다
+- 실행 범위:
+  - `base + psr`, `Top N = 12~16`
+  - `base + psr + pfcr`, `Top N = 12~16`
+  - 공통:
+    - `Trend Filter = on`
+    - `rejected_slot_fill_enabled = on`
+    - `partial_cash_retention_enabled = false`
+- current code rerun 결과:
+  - best lower-MDD near-miss:
+    - `base + psr + pfcr`
+    - `Top N = 13`
+    - `CAGR = 24.47%`
+    - `MDD = -24.89%`
+    - `Promotion = hold`
+    - `Shortlist = hold`
+    - `Deployment = blocked`
+  - current anchor-near candidates 전체가
+    still `hold / blocked`였다
+- 해석:
+  - fill contract를 current anchor 근처에 직접 적용해도
+    same-gate lower-MDD rescue는 아직 없었다
+  - current practical anchor는 그대로 유지한다
+- 다음 액션:
+  - Phase 18 second slice 후보 우선순위를 다시 정한다
 
 ### 2026-04-14 - defensive sleeve risk-off representative rerun first pass
 

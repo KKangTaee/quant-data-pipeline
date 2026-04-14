@@ -141,6 +141,10 @@
   - strict annual `Fill Rejected Slots With Next Ranked Names` redesign을
     current `Value` / `Quality + Value` structural probe에 적용해
     meaningful rescue 또는 anchor replacement가 가능한지 본 first-pass representative rerun 문서
+- `phase18/PHASE18_VALUE_FILL_ANCHOR_NEAR_FOLLOWUP_SECOND_PASS.md`
+  - `Value` current practical anchor 근처에서
+    fill contract를 좁게 다시 보고
+    same-gate lower-MDD rescue가 실제로 있는지 본 second-pass 문서
 
 ## 운영 메모
 
