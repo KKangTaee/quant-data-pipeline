@@ -474,3 +474,30 @@ Detailed historical analysis was archived on `2026-04-13`.
     - 왜 지금 순서가 그런지
     - 이 phase를 건너뛰면 무엇이 비는지
     를 더 쉽게 읽을 수 있게 됐다
+
+### 2026-04-14 - quarterly strict family를 prototype에서 실전형으로 키우는 일은 지금 immediate priority로 당기지 않는 편이 맞다
+- Request topic:
+  - annual strict family는 많이 다듬어졌는데,
+    quarterly strict family는 아직 prototype 성격이 강하므로
+    이를 지금 바로 실전형 트랙으로 올릴지 질문
+- Interpreted goal:
+  - quarterly productionization을 `Phase 19` 전후 immediate main track으로 당길지,
+    아니면 later phase에서 다시 여는 편이 자연스러운지 판단
+- Result:
+  - 현재 기준으로는 **later phase로 두는 것이 맞다**
+  - 이유:
+    1. immediate bottleneck은 quarterly family 부재가 아니라
+       annual strongest/current candidates의 same-gate lower-MDD rescue와
+       structural/operator backlog다
+    2. quarterly는 data/coverage/PIT foundation은 많이 복구됐지만,
+       current reading은 여전히 prototype / research-oriented family에 더 가깝다
+    3. quarterly productionization을 지금 당기면
+       `Phase 19~21`의 structural contract / operator workflow / automation 우선순위와 충돌한다
+    4. quarterly production-readiness는
+       integrated deep validation 이후나
+       new strategy expansion phase에서 다시 여는 편이 더 자연스럽다
+  - recommended order:
+    - near term:
+      annual strict family 중심 구현 (`Phase 19~21`)
+    - later:
+      deep validation 재개 이후 quarterly production-readiness 재평가
