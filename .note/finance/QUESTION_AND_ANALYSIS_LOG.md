@@ -813,3 +813,20 @@ Detailed historical analysis was archived on `2026-04-13`.
     `Selection History Table`, `Interpretation Summary`, `Selection Frequency`
     로 직접적으로 보이게 바꿨고,
     `Interpretation` 열이 row-level interpretation이라는 안내를 추가했다
+
+### 2026-04-14 - `Run Again`과 `Load Into Form`은 같은 버튼이 아니므로 후속 화면도 다르게 안내하는 편이 더 낫다
+- Request topic:
+  - `Run Again`을 눌러도 변화가 없는 것처럼 느껴지고,
+    `Load Into Form`은 `Single Strategy`로 바로 이동하는데 되돌아가기 UX가 약하다는 피드백
+- Interpreted goal:
+  - 사용자가
+    - `Run Again`은 결과를 다시 계산하는 버튼
+    - `Load Into Form`은 입력만 다시 채우는 버튼
+    이라는 차이를 실제 동선에서도 느끼게 만들고 싶음
+- Result:
+  - `Run Again`은 실행 성공 후 자동으로 `Single Strategy` 패널로 이동하고,
+    새 `Latest Backtest Run`을 바로 보게 했다
+  - `Load Into Form`은 입력만 불러온다는 안내를 더 분명히 추가했고,
+    최신 결과는 아직 이전 run 기준일 수 있으니 form을 다시 실행해야 한다는 설명을 넣었다
+  - `Single Strategy`로 이동한 뒤 바로 `Back To History` 버튼도 제공해,
+    돌아가는 경로가 불분명한 느낌을 줄였다

@@ -5446,6 +5446,15 @@ def _load_history_into_form(record: dict[str, Any]) -> bool:
     return True
 
 
+def _set_single_strategy_target_from_strategy_key(strategy_key: str | None) -> None:
+    strategy_choice, strategy_variant = strategy_key_to_selection(strategy_key)
+    if strategy_choice is None:
+        return
+
+    st.session_state.backtest_prefill_strategy_choice = strategy_choice
+    st.session_state.backtest_prefill_strategy_variant = strategy_variant
+
+
 def _build_prefill_summary_lines(payload: dict[str, Any] | None) -> list[str]:
     if not payload:
         return []
@@ -7876,9 +7885,9 @@ def _render_persistent_backtest_history() -> None:
     context = selected_record.get("context") or {}
     if selected_record.get("strategy_key") in SNAPSHOT_SELECTION_HISTORY_STRATEGY_KEYS:
         st.caption(
-            "이 저장 기록은 compact summary 중심이라 `Selection History`와 `Interpretation Summary` 전체 표를 그대로 담고 있지는 않습니다. "
+            "이 저장 기록은 compact summary 중심이라 `Selection History Table`과 `Interpretation Summary` 전체 표를 그대로 담고 있지는 않습니다. "
             "이 전략의 행별 선택 기록과 해석을 다시 보려면 아래 `Run Again` 또는 `Load Into Form`을 사용한 뒤, "
-            "새로 열린 결과의 `Selection History` 탭을 확인하면 됩니다."
+            "새로 열린 결과의 `Selection History Table` 탭을 확인하면 됩니다."
         )
 
     detail_tabs = st.tabs(["Saved Run Summary", "Saved Input & Context", "Raw Record"])
@@ -8039,16 +8048,20 @@ def _render_persistent_backtest_history() -> None:
                 st.rerun()
     with action_cols[1]:
         if st.button("Run Again", key="backtest_history_run_again", use_container_width=True):
-            _handle_backtest_run(payload, strategy_name=_history_strategy_display_name(selected_record))
+            rerun_ok = _handle_backtest_run(payload, strategy_name=_history_strategy_display_name(selected_record))
+            if rerun_ok:
+                _set_single_strategy_target_from_strategy_key(selected_record.get("strategy_key"))
+                st.session_state.backtest_requested_panel = "Single Strategy"
+                st.rerun()
     with action_cols[2]:
         st.caption(
-            "`Load Into Form`을 누르면 저장된 입력값을 `Single Strategy` 화면으로 불러오고, "
-            "화면도 자동으로 그쪽으로 이동합니다. "
-            "`Run Again`은 저장된 payload를 즉시 다시 실행합니다."
+            "`Load Into Form`은 저장된 입력값만 `Single Strategy` 화면으로 불러옵니다. "
+            "이후 form에서 다시 실행해야 최신 결과가 갱신됩니다. "
+            "`Run Again`은 저장된 payload를 즉시 다시 실행하고, 최신 결과 화면으로 자동 이동합니다."
         )
 
 
-def _handle_backtest_run(payload: dict, *, strategy_name: str) -> None:
+def _handle_backtest_run(payload: dict, *, strategy_name: str) -> bool:
     st.markdown("#### Runtime Payload")
     st.json(payload)
 
@@ -8378,17 +8391,17 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> None:
         st.session_state.backtest_last_bundle = None
         st.session_state.backtest_last_error_kind = "input"
         st.session_state.backtest_last_error = f"Backtest input issue: {exc}"
-        return
+        return False
     except BacktestDataError as exc:
         st.session_state.backtest_last_bundle = None
         st.session_state.backtest_last_error_kind = "data"
         st.session_state.backtest_last_error = f"Backtest data issue: {exc}"
-        return
+        return False
     except Exception as exc:
         st.session_state.backtest_last_bundle = None
         st.session_state.backtest_last_error_kind = "system"
         st.session_state.backtest_last_error = f"Backtest execution failed: {exc}"
-        return
+        return False
 
     elapsed_seconds = time.perf_counter() - started_at
     bundle = dict(bundle)
@@ -8401,6 +8414,7 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> None:
     st.session_state.backtest_last_error_kind = None
     append_backtest_run_history(bundle=bundle, run_kind="single_strategy")
     st.success(f"{strategy_name} backtest execution completed in {elapsed_seconds:.3f}s.")
+    return True
 
 
 def _render_equal_weight_form() -> None:
@@ -10356,6 +10370,15 @@ def render_backtest_tab() -> None:
             if prefill_lines:
                 st.caption("이번에 불러온 입력값 요약")
                 st.markdown("\n".join(f"- {line}" for line in prefill_lines))
+            st.caption(
+                "참고: `Load Into Form`은 입력값만 불러옵니다. "
+                "아래 form에서 다시 실행해야 `Latest Backtest Run`과 `Selection History Table`이 이 입력값 기준으로 갱신됩니다."
+            )
+            prefill_action_cols = st.columns([0.22, 0.78], gap="small")
+            with prefill_action_cols[0]:
+                if st.button("Back To History", key="backtest_prefill_back_to_history", use_container_width=True):
+                    st.session_state.backtest_requested_panel = "History"
+                    st.rerun()
             st.session_state.backtest_prefill_notice = None
 
         pending_strategy_choice = st.session_state.get("backtest_prefill_strategy_choice")

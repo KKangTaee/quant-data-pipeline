@@ -38,6 +38,9 @@
   - latest result의 nested selection tabs를
     `Selection History Table`, `Interpretation Summary`, `Selection Frequency`
     로 바꿔 찾기 쉽게 정리
+  - history action flow도 보강해
+    `Run Again`은 rerun 후 `Single Strategy`로 자동 이동하고,
+    `Load Into Form`은 입력만 불러오는 동작이라는 점과 `Back To History` 동선을 더 직접적으로 안내
 
 ## 3. Validation
 

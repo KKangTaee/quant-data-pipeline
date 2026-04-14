@@ -552,3 +552,17 @@ Detailed historical logs were archived on `2026-04-13`.
   - finance refinement hygiene script
 - Durable takeaway:
   - users can now find the correct history surface faster and distinguish saved-record review from live selection-history drilldown
+
+### 2026-04-14
+- Fixed confusing `History` action flow for strict annual records.
+- Changed:
+  - `Run Again` from `Backtest > History` now reruns immediately, then moves the UI to `Single Strategy` so the refreshed `Latest Backtest Run` is visible right away
+  - `Load Into Form` still moves to `Single Strategy`, but now clearly says it only loads inputs and does not refresh results until the user runs the form
+  - added `Back To History` shortcut after `Load Into Form` so the user is not left without an obvious way back
+  - updated history warning copy to reference `Selection History Table` / `Interpretation Summary` with current labels
+- Validation:
+  - `python3 -m py_compile app/web/pages/backtest.py`
+  - `.venv/bin/python` import smoke for `app.web.pages.backtest`
+  - finance refinement hygiene script
+- Durable takeaway:
+  - history actions now better match user expectation: rerun shows refreshed results, while load-into-form is explicitly framed as input prefill only
