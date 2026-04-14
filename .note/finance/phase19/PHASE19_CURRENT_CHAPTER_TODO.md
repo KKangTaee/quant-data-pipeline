@@ -49,3 +49,4 @@
 - `completed` roadmap / doc index / work log / question log sync
 - `completed` finance comprehensive analysis sync
 - `completed` phase19 checklist 피드백 기준 UI 설명 / glossary 보강
+- `completed` active phase checklist를 checkbox 기반 검수 형식으로 정리

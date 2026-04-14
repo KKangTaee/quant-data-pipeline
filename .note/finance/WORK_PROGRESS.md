@@ -463,3 +463,12 @@ Detailed historical logs were archived on `2026-04-13`.
   - finance refinement hygiene script
 - Durable takeaway:
   - Phase 19 contract language is now easier to find and read from the form itself, not only from history or docs
+
+### 2026-04-14
+- Standardized future phase test checklist workflow.
+- Changed:
+  - `AGENTS.md` now requires user-facing phase test checklists to prefer Markdown task checkboxes like `[ ]`
+  - new `.note/finance/PHASE_TEST_CHECKLIST_TEMPLATE.md` added as the default checklist template
+  - active `PHASE19_TEST_CHECKLIST.md` converted to checkbox-style verification items
+- Durable takeaway:
+  - future phase handoffs now have a clearer "user checks items directly, then we move on" workflow

@@ -660,3 +660,18 @@ Detailed historical analysis was archived on `2026-04-13`.
     `Risk-Off Contract = Defensive Sleeve Preference`일 때만
     full risk-off에서 쓰이는 방어 ETF 목록이라는 설명을 보강했다
   - glossary와 Phase 19 checklist도 같은 관점으로 같이 정리했다
+
+### 2026-04-14 - 앞으로 phase test checklist는 checkbox 기반으로 운영하고, 완료 후 다음 단계로 넘어가기로 정했다
+- Request topic:
+  - 앞으로 test checklist 문서에 사용자가 직접 체크할 수 있는 `[ ]`를 넣고,
+    모든 체크가 끝나면 다음 단계로 넘어가는 흐름으로 맞추고 싶다는 요청
+- Interpreted goal:
+  - phase handoff 이후의 검수 과정을 더 눈에 보이게 만들고,
+    "무엇을 확인했는지"를 문서 안에서 바로 남기고 싶음
+- Result:
+  - `AGENTS.md`에
+    - phase test checklist는 checkbox 형식을 기본으로 쓸 것
+    - `.note/finance/PHASE_TEST_CHECKLIST_TEMPLATE.md`를 기본 템플릿으로 사용할 것
+    - 특별한 override가 없으면 checklist 완료를 다음 major phase 이동의 기본 gate로 삼을 것
+    을 반영했다
+  - active `PHASE19_TEST_CHECKLIST.md`도 같은 형식으로 바로 바꿨다

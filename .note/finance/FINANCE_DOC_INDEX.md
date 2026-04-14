@@ -12,6 +12,8 @@
   - 앞으로 phase plan 문서를 만들 때 포함해야 하는 설명 섹션과 finance 작업 운영 규칙을 담은 저장소 기준 문서
 - `.note/finance/PHASE_PLAN_TEMPLATE.md`
   - 앞으로 `finance` phase plan 문서를 만들 때 기본으로 따를 설명형 템플릿 문서
+- `.note/finance/PHASE_TEST_CHECKLIST_TEMPLATE.md`
+  - 앞으로 `finance` phase test checklist 문서를 만들 때 기본으로 따를 checkbox 중심 템플릿 문서
 - `.note/finance/MASTER_PHASE_ROADMAP.md`
   - 전체 Phase 구조와 상위 진행 방향
 - `.note/finance/ROADMAP_REBASE_PHASE18_TO_PHASE25_20260414.md`

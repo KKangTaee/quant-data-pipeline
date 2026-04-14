@@ -137,6 +137,9 @@
 - Before opening a new major phase, confirm the new phase direction with the user.
 - When a phase reaches a practical completion point, create a phase-specific manual test checklist document under `.note/finance/phase*/`.
 - The checklist should be written for user-facing verification and should cover the major features, UI paths, and validation points added during that phase.
+- Prefer checklist items to use Markdown task checkboxes such as `[ ]` so the user can mark progress directly inside the document.
+- Use `.note/finance/PHASE_TEST_CHECKLIST_TEMPLATE.md` as the default starting shape for new `finance` phase test checklist documents unless there is a strong reason to deviate.
+- When handing off a checklist for user verification, treat "all checklist items checked" as the default gate before moving to the next major phase, unless the user explicitly asks to skip or defer some items.
 - When sharing phase completion, include the checklist document in the final handoff so the user has a concrete test plan.
 - When a phase reaches practical completion, also review the project’s durable workflow guidance and references for staleness.
 - At minimum, check whether newly implemented behavior should update:
