@@ -546,6 +546,25 @@ Detailed historical analysis was archived on `2026-04-13`.
   - history display에서는 internal boolean column을 계속 숨겨
     operator는 contract 언어 중심으로 읽게 유지했다
 
+### 2026-04-14 - Phase 19 세 번째 slice는 risk-off와 weighting도 interpretation contract 언어로 정리해야 한다
+- Request topic:
+  - `Phase 19` 다음 단계 진행
+- Interpreted goal:
+  - previous slice에서 정리한 rejected-slot handling과 같은 수준으로
+    `Risk-Off`와 `Weighting`도 history / interpretation에서 읽기 쉽게 만들고 싶음
+- Result:
+  - selection history에
+    `Weighting Contract`, `Risk-Off Contract`, `Risk-Off Reasons`, `Defensive Sleeve Tickers`
+    를 추가했다
+  - interpretation summary에
+    `Weighting Contract`, `Risk-Off Contract`, `Defensive Sleeve Activations`
+    를 추가했다
+  - row-level interpretation 문구가 이제
+    - market regime 때문에 full cash로 갔는지
+    - defensive sleeve로 회전했는지
+    - 최종 weighting contract가 무엇이었는지
+    를 더 직접적으로 설명한다
+
 ### 2026-04-14 - Phase 19 kickoff 문서는 용어와 목적을 더 쉽게 풀어써야 한다
 - Request topic:
   - `PHASE19_STRUCTURAL_CONTRACT_EXPANSION_PLAN.md`가 너무 어려워서

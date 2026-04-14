@@ -24,6 +24,8 @@
   - strict annual rejected-slot handling semantics를 explicit contract로 정리한 first-slice 구현 문서
 - `.note/finance/phase19/PHASE19_HISTORY_AND_INTERPRETATION_CLEANUP_SECOND_SLICE.md`
   - strict annual selection history와 interpretation summary를 explicit handling contract 언어로 다시 정리한 second-slice 문서
+- `.note/finance/phase19/PHASE19_RISK_OFF_AND_WEIGHTING_INTERPRETATION_CLEANUP_THIRD_SLICE.md`
+  - strict annual history / interpretation surface에서 risk-off contract와 weighting contract까지 같은 operator-facing 언어로 정리한 third-slice 문서
 - `.note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md`
   - `finance` 패키지 전체 구조와 DB/기능 종합 분석
 - `.note/finance/WORK_PROGRESS.md`

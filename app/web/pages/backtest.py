@@ -1266,7 +1266,7 @@ def _render_market_regime_help_popover() -> None:
 def _render_interpretation_summary_help_popover() -> None:
     _render_inline_help_popover(
         "해석 요약",
-        "Raw Candidate Events는 각 리밸런싱에서 팩터 랭킹으로 최종 후보(top N)까지 올라온 종목 수의 총합입니다. Final Selected Events는 오버레이까지 반영한 뒤 실제 보유 후보로 남은 종목 수의 총합입니다. 이 값들은 전체 모집군 크기를 뜻하지 않습니다. 오버레이가 꺼져 있으면 보통 Raw와 Final이 같고, 오버레이가 켜져 있으면 Raw와 Final의 차이만큼 추가 필터가 개입한 것으로 해석하면 됩니다. `Rejected Slot Handling`은 trend rejection 이후 빈 슬롯을 어떻게 처리하도록 계약했는지의 현재 실행 언어입니다. Filled Events는 제외된 자리 일부를 다음 순위 종목으로 보충한 횟수, Cash-Retained Events는 부분 rejection 이후 빈 슬롯 일부를 현금으로 남긴 횟수입니다. Regime Blocked Events / Regime Cash Rebalances는 시장 상태 오버레이 때문에 포트폴리오 전체가 현금으로 이동한 흔적을 요약합니다.",
+        "Raw Candidate Events는 각 리밸런싱에서 팩터 랭킹으로 최종 후보(top N)까지 올라온 종목 수의 총합입니다. Final Selected Events는 오버레이까지 반영한 뒤 실제 보유 후보로 남은 종목 수의 총합입니다. 이 값들은 전체 모집군 크기를 뜻하지 않습니다. 오버레이가 꺼져 있으면 보통 Raw와 Final이 같고, 오버레이가 켜져 있으면 Raw와 Final의 차이만큼 추가 필터가 개입한 것으로 해석하면 됩니다. `Rejected Slot Handling`은 trend rejection 이후 빈 슬롯을 어떻게 처리하도록 계약했는지의 현재 실행 언어입니다. `Weighting Contract`는 최종 선택 종목에 어떤 비중 규칙을 썼는지, `Risk-Off Contract`는 전체 risk-off 시 현금으로 갈지 방어 sleeve로 갈지를 뜻합니다. Filled Events는 제외된 자리 일부를 다음 순위 종목으로 보충한 횟수, Cash-Retained Events는 부분 rejection 이후 빈 슬롯 일부를 현금으로 남긴 횟수입니다. Defensive Sleeve Activations는 full risk-off 상태에서 실제 방어 sleeve가 동작한 횟수입니다. Regime Blocked Events / Regime Cash Rebalances는 시장 상태 오버레이 때문에 포트폴리오 전체가 보수 모드로 이동한 흔적을 요약합니다.",
     )
 
 
@@ -2116,6 +2116,33 @@ def _strict_rejection_handling_label_from_flags(
             partial_cash_retention_enabled=partial_cash_retention_enabled,
         )
     )
+
+
+def _strict_risk_off_reason_to_label(reason: str | None) -> str:
+    normalized = str(reason or "").strip().lower()
+    mapping = {
+        "market_regime": "Market Regime",
+        "underperformance_guardrail": "Underperformance Guardrail",
+        "drawdown_guardrail": "Drawdown Guardrail",
+        "crash_guardrail": "Crash Guardrail",
+    }
+    return mapping.get(normalized, normalized or "Unknown")
+
+
+def _stringify_label_list(value: Any, *, label_fn: Callable[[str | None], str] | None = None) -> str:
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return ""
+    if isinstance(value, (list, tuple, set)):
+        labels = [
+            (label_fn(item) if label_fn else str(item).strip())
+            for item in value
+        ]
+        labels = [label for label in labels if str(label).strip()]
+        return ", ".join(labels)
+    text = str(value).strip()
+    if not text:
+        return ""
+    return label_fn(text) if label_fn else text
 
 
 def _render_gtaa_risk_off_contract_inputs(*, key_prefix: str) -> dict[str, Any]:
@@ -6944,6 +6971,11 @@ def _build_snapshot_selection_history(result_df: pd.DataFrame) -> pd.DataFrame:
         ),
         axis=1,
     )
+    selection_df["Weighting Contract"] = selection_df["Weighting Mode"].apply(_strict_weighting_mode_value_to_label)
+    selection_df["Risk-Off Contract"] = selection_df["Risk-Off Mode"].apply(_strict_risk_off_mode_value_to_label)
+    selection_df["Risk-Off Reasons"] = selection_df["Risk-Off Reason"].apply(
+        lambda value: _stringify_label_list(value, label_fn=_strict_risk_off_reason_to_label)
+    )
 
     keep_columns = [
         "Date",
@@ -6959,6 +6991,12 @@ def _build_snapshot_selection_history(result_df: pd.DataFrame) -> pd.DataFrame:
         "Rejected Slot Fill Count",
         "Partial Cash Retention Enabled",
         "Partial Cash Retention Active",
+        "Risk-Off Contract",
+        "Risk-Off Mode",
+        "Risk-Off Reason",
+        "Risk-Off Reasons",
+        "Defensive Sleeve Ticker",
+        "Defensive Sleeve Count",
         "Regime Blocked Ticker",
         "Regime Blocked Count",
         "Next Ticker",
@@ -6966,6 +7004,7 @@ def _build_snapshot_selection_history(result_df: pd.DataFrame) -> pd.DataFrame:
         "Selected Score",
         "Trend Filter Enabled",
         "Trend Filter Column",
+        "Weighting Contract",
         "Weighting Mode",
         "Market Regime Enabled",
         "Market Regime Benchmark",
@@ -6985,6 +7024,7 @@ def _build_snapshot_selection_history(result_df: pd.DataFrame) -> pd.DataFrame:
         "Overlay Rejected Ticker": "Overlay Rejected Tickers",
         "Rejected Slot Fill Ticker": "Filled Tickers",
         "Rejected Slot Fill Count": "Filled Count",
+        "Defensive Sleeve Ticker": "Defensive Sleeve Tickers",
         "Regime Blocked Ticker": "Regime Blocked Tickers",
     }
     selection_df = selection_df.rename(columns=rename_map).reset_index(drop=True)
@@ -6993,6 +7033,7 @@ def _build_snapshot_selection_history(result_df: pd.DataFrame) -> pd.DataFrame:
         "Raw Selected Tickers",
         "Overlay Rejected Tickers",
         "Filled Tickers",
+        "Defensive Sleeve Tickers",
         "Regime Blocked Tickers",
         "Selected Tickers",
     ]
@@ -7027,6 +7068,11 @@ def _build_snapshot_selection_history(result_df: pd.DataFrame) -> pd.DataFrame:
         selected_count = int(row.get("Selected Count") or 0)
         regime_state = str(row.get("Market Regime State") or "").strip().lower()
         regime_benchmark = str(row.get("Market Regime Benchmark") or "").strip() or "benchmark"
+        risk_off_contract = str(row.get("Risk-Off Contract") or "Cash Only").strip()
+        risk_off_reasons = str(row.get("Risk-Off Reasons") or "").strip()
+        weighting_contract = str(row.get("Weighting Contract") or "Equal Weight").strip()
+        defensive_sleeve_count = int(row.get("Defensive Sleeve Count") or 0)
+        defensive_sleeve_tickers = str(row.get("Defensive Sleeve Tickers") or "").strip()
         cash_share = row.get("Cash Share Ratio")
         cash_share_text = (
             f"{float(cash_share) * 100:.1f}%"
@@ -7037,9 +7083,25 @@ def _build_snapshot_selection_history(result_df: pd.DataFrame) -> pd.DataFrame:
         if raw_count <= 0:
             return "No usable ranked candidates were available at this rebalance, so the portfolio stayed in cash."
         if regime_blocked_count > 0 and regime_state == "risk_off":
+            if risk_off_contract == "Defensive Sleeve Preference" and defensive_sleeve_count > 0:
+                return (
+                    f"Market regime overlay moved the portfolio into defensive sleeve `{defensive_sleeve_tickers}` "
+                    f"because `{regime_benchmark}` was in risk-off state at this rebalance. "
+                    f"It blocked {regime_blocked_count} post-filter candidate(s)."
+                )
             return (
                 f"Market regime overlay moved the portfolio fully to cash because `{regime_benchmark}` "
                 f"was in risk-off state at this rebalance. It blocked {regime_blocked_count} post-filter candidate(s)."
+            )
+        if selected_count <= 0 and risk_off_reasons:
+            destination_text = (
+                f"rotated into defensive sleeve `{defensive_sleeve_tickers}`"
+                if risk_off_contract == "Defensive Sleeve Preference" and defensive_sleeve_count > 0
+                else "moved fully to cash"
+            )
+            return (
+                f"Portfolio-wide risk-off rule (`{risk_off_contract}`) {destination_text} because "
+                f"`{risk_off_reasons}` triggered after candidate selection."
             )
         if selected_count <= 0 and rejected_count > 0:
             handling_label = str(row.get("Rejected Slot Handling") or "current rejection handling")
@@ -7068,22 +7130,27 @@ def _build_snapshot_selection_history(result_df: pd.DataFrame) -> pd.DataFrame:
                         f"{rejected_count} original rejection(s). Cash share after rebalance: {cash_share_text}."
                     )
                 return (
-                    f"Trend overlay kept {selected_count} of {raw_count} raw candidates and {fill_text}"
+                    f"Trend overlay kept {selected_count} of {raw_count} raw candidates and {fill_text} "
+                    f"Final weighting contract: `{weighting_contract}`."
                 )
             return (
                 f"Trend overlay kept {selected_count} of {raw_count} raw candidates and "
                 + (
-                    f"`{handling_label}` left {rejected_count} rejected slot(s) in cash. Cash share after rebalance: {cash_share_text}."
+                    f"`{handling_label}` left {rejected_count} rejected slot(s) in cash. Cash share after rebalance: {cash_share_text}. Final weighting contract: `{weighting_contract}`."
                     if partial_cash_retention_active
-                    else f"`{handling_label}` reweighted the survivors after rejecting {rejected_count} name(s). Cash share after rebalance: {cash_share_text}."
+                    else f"`{handling_label}` reweighted the survivors after rejecting {rejected_count} name(s). Cash share after rebalance: {cash_share_text}. Final weighting contract: `{weighting_contract}`."
                 )
             )
         if pd.notna(cash_share) and float(cash_share) > 0:
             return (
                 f"All final candidates passed the current filters, but the portfolio still kept "
-                f"{cash_share_text} in cash because fewer names were investable than the nominal top-N."
+                f"{cash_share_text} in cash because fewer names were investable than the nominal top-N. "
+                f"Final weighting contract: `{weighting_contract}`."
             )
-        return "All selected candidates passed the current rules and the portfolio remained fully invested."
+        return (
+            "All selected candidates passed the current rules and the portfolio remained fully invested. "
+            f"Final weighting contract: `{weighting_contract}`."
+        )
 
     selection_df["Interpretation"] = selection_df.apply(_build_interpretation, axis=1)
     if "Cash Share Ratio" in selection_df.columns:
@@ -7186,6 +7253,27 @@ def _build_selection_interpretation_summary(selection_df: pd.DataFrame) -> pd.Da
     )
     cash_share_series = pd.to_numeric(selection_df.get("Cash Share Ratio"), errors="coerce")
     avg_cash_share = float(cash_share_series.fillna(0).mean()) if cash_share_series is not None else 0.0
+    weighting_values = [
+        str(value).strip()
+        for value in selection_df.get("Weighting Contract", pd.Series(dtype=object)).tolist()
+        if str(value).strip()
+    ]
+    unique_weighting = sorted(dict.fromkeys(weighting_values))
+    weighting_summary = ", ".join(unique_weighting) if unique_weighting else "n/a"
+    risk_off_values = [
+        str(value).strip()
+        for value in selection_df.get("Risk-Off Contract", pd.Series(dtype=object)).tolist()
+        if str(value).strip()
+    ]
+    unique_risk_off = sorted(dict.fromkeys(risk_off_values))
+    risk_off_summary = ", ".join(unique_risk_off) if unique_risk_off else "n/a"
+    defensive_sleeve_activations = int(
+        (
+            pd.to_numeric(selection_df.get("Defensive Sleeve Count"), errors="coerce")
+            .fillna(0)
+            .gt(0)
+        ).sum()
+    )
     handling_values = [
         str(value).strip()
         for value in selection_df.get("Rejected Slot Handling", pd.Series(dtype=object)).tolist()
@@ -7201,8 +7289,11 @@ def _build_selection_interpretation_summary(selection_df: pd.DataFrame) -> pd.Da
                 "Final Selected Events": final_selected_events,
                 "Overlay Rejections": overlay_rejections,
                 "Rejected Slot Handling": handling_summary,
+                "Weighting Contract": weighting_summary,
+                "Risk-Off Contract": risk_off_summary,
                 "Filled Events": filled_events,
                 "Cash-Retained Events": cash_retained_events,
+                "Defensive Sleeve Activations": defensive_sleeve_activations,
                 "Regime Blocked Events": regime_rejections,
                 "Regime Cash Rebalances": regime_cash_rebalances,
                 "Cash-Only Rebalances": cash_only_rebalances,
@@ -7336,6 +7427,42 @@ def _render_snapshot_selection_history(
                     if overlay_active and "Trend Filter Column" in selection_df.columns
                     else "off"
                 ),
+                "Rejected Slot Handling": (
+                    ", ".join(
+                        sorted(
+                            dict.fromkeys(
+                                str(value).strip()
+                                for value in selection_df.get("Rejected Slot Handling", pd.Series(dtype=object)).tolist()
+                                if str(value).strip()
+                            )
+                        )
+                    )
+                    or "n/a"
+                ),
+                "Weighting Contract": (
+                    ", ".join(
+                        sorted(
+                            dict.fromkeys(
+                                str(value).strip()
+                                for value in selection_df.get("Weighting Contract", pd.Series(dtype=object)).tolist()
+                                if str(value).strip()
+                            )
+                        )
+                    )
+                    or "n/a"
+                ),
+                "Risk-Off Contract": (
+                    ", ".join(
+                        sorted(
+                            dict.fromkeys(
+                                str(value).strip()
+                                for value in selection_df.get("Risk-Off Contract", pd.Series(dtype=object)).tolist()
+                                if str(value).strip()
+                            )
+                        )
+                    )
+                    or "n/a"
+                ),
                 "Market Regime Overlay": (
                     (
                         f"{selection_df.loc[selection_df['Market Regime Enabled'].fillna(False), 'Market Regime Benchmark'].iloc[0]} / "
@@ -7372,6 +7499,9 @@ def _render_snapshot_selection_history(
                     "Rejected Slot Fill Active",
                     "Partial Cash Retention Enabled",
                     "Partial Cash Retention Active",
+                    "Weighting Mode",
+                    "Risk-Off Mode",
+                    "Risk-Off Reason",
                 ],
                 errors="ignore",
             ),

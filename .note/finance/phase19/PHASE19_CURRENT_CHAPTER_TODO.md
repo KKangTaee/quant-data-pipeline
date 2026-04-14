@@ -11,8 +11,8 @@
 - `completed` legacy compatibility bridge
   - old boolean payload만 있어도 explicit mode를 복원
   - new mode payload에서도 legacy booleans를 계속 함께 남김
-- `pending` next contract cleanup candidate shortlist
-  - risk-off / weighting / interpretation 중 다음 cleanup slice 선택
+- `completed` next contract cleanup candidate shortlist
+  - risk-off / weighting / interpretation cleanup을 다음 slice로 선택
 
 ## 2. Interpretation Cleanup
 
@@ -21,6 +21,9 @@
 - `completed` history / selection interpretation 문구를 더 operator-friendly하게 정리
   - selection history에 `Rejected Slot Handling` / `Filled Count`를 노출
   - interpretation summary에 `Filled Events` / `Cash-Retained Events`를 추가
+- `completed` risk-off / weighting interpretation cleanup
+  - selection history에 `Weighting Contract` / `Risk-Off Contract` / `Risk-Off Reasons`를 노출
+  - interpretation summary에 `Defensive Sleeve Activations`를 추가
 
 ## 3. Validation
 
@@ -35,6 +38,7 @@
 
 - `completed` phase19 kickoff / first slice 문서 생성
 - `completed` phase19 history / interpretation cleanup second slice 문서 생성
+- `completed` phase19 risk-off / weighting interpretation cleanup third slice 문서 생성
 - `completed` phase19 kickoff plan을 쉬운 설명 중심으로 재작성
 - `completed` future phase plan 작성 규칙에 쉬운 설명 섹션을 반영
 - `completed` future phase에서 재사용할 phase plan template 문서 생성

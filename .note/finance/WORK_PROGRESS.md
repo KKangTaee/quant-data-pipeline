@@ -379,6 +379,26 @@ Detailed historical logs were archived on `2026-04-13`.
   - Phase 19 now covers not only form/runtime contract clarity but also history/interpretation readability for the same handling semantics
 
 ### 2026-04-14
+- Completed `Phase 19` third slice for risk-off / weighting interpretation cleanup.
+- Changed:
+  - strict annual selection history now shows `Weighting Contract`, `Risk-Off Contract`, `Risk-Off Reasons`
+  - interpretation summary now shows `Weighting Contract`, `Risk-Off Contract`, `Defensive Sleeve Activations`
+  - row-level interpretation now distinguishes
+    - full cash risk-off
+    - defensive sleeve rotation
+    - final weighting contract
+- Validation:
+  - `python3 -m py_compile app/web/pages/backtest.py`
+  - `.venv/bin/python` import smoke for `app.web.pages.backtest`
+- Synced:
+  - phase19 TODO/doc
+  - finance comprehensive analysis
+  - finance doc index
+- Durable takeaway:
+  - Phase 19 interpretation cleanup now covers the three main structural contract lanes:
+    rejected-slot handling, weighting, and risk-off
+
+### 2026-04-14
 - Rewrote the `Phase 19` kickoff plan in much plainer language.
 - Focus:
   - what this phase is doing
