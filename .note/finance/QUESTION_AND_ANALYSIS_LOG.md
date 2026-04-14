@@ -260,7 +260,7 @@ Detailed historical analysis was archived on `2026-04-13`.
     - `Value` current anchor:
       - `cash_only` = `28.21% / -24.55% / real_money_candidate / paper_probation / review_required`
       - `defensive sleeve` = `28.11% / -25.14% / real_money_candidate / paper_probation / review_required`
-    - `Quality + Value` strongest point:
+    - `Quality + Value` current strongest point:
       - `cash_only` = `31.82% / -26.63% / real_money_candidate / small_capital_trial / review_required`
       - `defensive sleeve` = `31.79% / -27.19% / real_money_candidate / small_capital_trial / review_required`
   - 해석:
@@ -271,3 +271,45 @@ Detailed historical analysis was archived on `2026-04-13`.
     - next structural lever priority는
       `concentration-aware weighting`
       으로 넘어가는 편이 더 자연스럽다
+
+### 2026-04-14 - concentration-aware weighting은 구현 가치가 있었지만 current anchor의 lower-MDD rescue까지는 못 갔다
+- Request topic:
+  - Phase 17 다음 단계로
+    strict annual `concentration-aware weighting`을 구현하고
+    `Value` / `Quality + Value` current anchor에 representative rerun 적용
+- Interpreted goal:
+  - equal-weight top-N을 조금 더 부드럽게 만들어
+    same-gate lower-MDD practical candidate가 가능한지 확인
+- Result:
+  - strict annual family 3종에
+    `weighting_mode = equal_weight | rank_tapered`
+    contract를 연결했다
+  - current first slice의 `rank_tapered`는
+    optimizer가 아니라
+    ranked top-N에 mild taper를 주는 bounded weighting mode다
+  - representative rerun 기준:
+    - `Value` current anchor:
+      `rank_tapered`가 gate는 유지했지만
+      `MDD = -24.55% -> -25.87%`로 더 나빠졌고
+      `Rolling Review = watch -> caution`으로 약해졌다
+    - `Quality + Value` current strongest point:
+      `rank_tapered`가 gate는 유지했고
+      `CAGR = 31.82% -> 32.92%`로 높아졌지만
+      `MDD = -26.63% -> -27.60%`로 더 나빠졌다
+  - 결론:
+    - `concentration-aware weighting`은
+      유효한 structural lever로 구현 가치가 있었다
+    - 하지만 current first pass에서는
+      same-gate lower-MDD rescue를 만들지 못했다
+    - 즉 current `Value` / `Quality + Value` anchor는 그대로 유지된다
+
+### 2026-04-14 - strict annual에 재사용할 concentration-aware weighting 패턴 탐색
+- Request topic:
+  - strict annual에 붙일 수 있는 재사용 가능한 weighting pattern과 safe insertion point 확인
+- Interpreted goal:
+  - equal-weight 외의 기존 allocation logic, rank-based taper/cap 여부, 그리고 UI/runtime contract를 빠르게 분류
+- Result:
+  - position-level non-equal weighting은 `risk_parity_trend`의 `1/vol` 정규화가 가장 명확한 기존 패턴이었다
+  - quality/value strict annual family는 현재 selection 이후 `top N -> equal weight`만 사용하고 있어, rank-based taper/capped weight는 별도 구현이 없었다
+  - 가장 안전한 삽입점은 `finance.strategy.quality_snapshot_equal_weight(...)`의 rebalancing 블록에서 `selected_snapshot` 확정 직후, `allocation = base_balance / allocation_base_count` 이전이다
+  - UI/runtime 쪽 기존 contract는 `strategy_key`, `snapshot_mode`, `snapshot_source`, `factor_freq`, `universe_contract`, `dynamic_candidate_tickers`, `dynamic_target_size` 조합을 그대로 재사용하는 쪽이 가장 자연스럽다

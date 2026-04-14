@@ -1325,6 +1325,52 @@ Trend Filter가 raw selected top-N 중 일부만 탈락시켰을 때,
 
 ---
 
+## Concentration-Aware Weighting
+
+### 기본 설명
+strict annual top-N을 pure equal-weight로만 두지 않고,
+상위 ranked 종목에 조금 더 높은 비중을 주는 weighting contract다.
+
+### 왜 사용되는지
+동일한 factor / same gate 후보에서도
+equal-weight가 너무 평평한 노출을 만들 수 있기 때문에,
+순위 신호를 조금 더 살리면서
+`MDD`와 `CAGR`의 tradeoff를 다시 보려는 구조 레버로 사용된다.
+
+### 예시 / 필요 상황
+- `equal_weight`
+  - 선택된 종목을 모두 같은 비중으로 보유
+- `rank_tapered`
+  - 상위 ranked 종목을 조금 더 크게,
+    하위 ranked 종목을 조금 더 작게 보유
+- Phase 17 first pass에서는
+  `Value`와 `Quality + Value` current anchor에 적용했지만
+  same-gate lower-MDD rescue는 만들지 못했다.
+
+---
+
+## Rank-Tapered Weighting
+
+### 기본 설명
+`Concentration-Aware Weighting`의 current first-slice 구현으로,
+top-ranked 종목에서 lower-ranked 종목으로 갈수록
+비중이 완만하게 줄어드는 weighting mode다.
+
+### 왜 사용되는지
+optimizer나 volatility targeting처럼 무거운 구조를 바로 도입하지 않고도,
+equal-weight보다 덜 평평한 포지션 구조를 bounded하게 실험할 수 있기 때문이다.
+
+### 예시 / 필요 상황
+- strict annual UI에서
+  `Weighting Contract = Rank-Tapered`
+  로 선택할 수 있다.
+- current first slice는
+  mild linear taper를 normalize해서 사용한다.
+- same gate는 유지할 수 있지만,
+  lower-MDD rescue를 보장하는 contract는 아니다.
+
+---
+
 ## Strategy Hub
 
 ### 기본 설명

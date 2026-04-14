@@ -195,3 +195,37 @@ Detailed historical logs were archived on `2026-04-13`.
   - `defensive sleeve risk-off` is now implemented and verifiable
   - but it did not produce a same-gate lower-MDD rescue on the current anchors
   - next structural lever priority moves to `concentration-aware weighting`
+
+### 2026-04-14
+- Reviewed strict annual reuse points for `concentration-aware weighting`.
+- Key finding:
+  - no existing rank-based taper/capped position-weight contract was found in the strict annual family
+  - the safest first slice remains the `quality_snapshot_equal_weight(...)` rebalancing block after top-N selection
+- Reusable runtime contract:
+  - keep `strategy_key` / `snapshot_mode` / `snapshot_source` / `factor_freq` / `universe_contract` / dynamic universe fields aligned with the current strict annual wrappers
+
+### 2026-04-14
+- Implemented the third Phase 17 structural lever slice:
+  - strict annual `concentration-aware weighting`
+- Wired through:
+  - `finance.strategy.quality_snapshot_equal_weight(...)`
+  - strict annual DB-backed sample/runtime wrappers
+  - strict annual single / compare forms
+  - warning / meta / interpretation surface
+- Current contract:
+  - `equal_weight`
+  - `rank_tapered`
+- Representative rerun result:
+  - `Value` current anchor:
+    - gate unchanged
+    - `MDD` worse
+    - `Rolling Review` also weakened
+  - `Quality + Value` current strongest point:
+    - gate unchanged
+    - `CAGR` higher
+    - but `MDD` worse
+- Durable takeaway:
+  - `concentration-aware weighting` is now implemented and verifiable
+  - but it did not produce a same-gate lower-MDD rescue on the current anchors
+  - next active question moves to
+    Phase 17 closeout vs next structural lever reprioritization

@@ -807,3 +807,65 @@
 - 관련 문서:
   - [QUALITY_VALUE_STRICT_ANNUAL.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL.md)
   - [PHASE14_STRICT_ANNUAL_NONHOLD_CANDIDATE_REFRESH.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase14/PHASE14_STRICT_ANNUAL_NONHOLD_CANDIDATE_REFRESH.md)
+
+### 2026-04-14 - concentration-aware weighting representative rerun first pass
+
+- 목표:
+  - `Quality + Value` current strongest practical point에서
+    equal-weight top-N을 mild rank taper로 바꾸면
+    same-gate lower-MDD rescue가 가능한지 확인
+- 전략:
+  - `Quality + Value > Strict Annual`
+- 기간 / universe:
+  - `2016-01-01 ~ 2026-04-01`
+  - `US Statement Coverage 100`
+  - `Historical Dynamic PIT Universe`
+- 핵심 설정:
+  - current strongest point:
+    - quality:
+      - `roe`
+      - `roa`
+      - `operating_margin`
+      - `asset_turnover`
+      - `current_ratio`
+    - value:
+      - `book_to_market`
+      - `earnings_yield`
+      - `sales_yield`
+      - `pcr`
+      - `por`
+      - `per`
+    - `Top N = 10`
+    - `Benchmark Contract = Candidate Universe Equal-Weight`
+    - `Trend Filter = off`
+    - `Market Regime = off`
+    - practical `Real-Money Contract` 유지
+    - underperformance / drawdown guardrail 유지
+  - weighting contract:
+    - `equal_weight`
+    - `rank_tapered`
+- 결과:
+  - `equal_weight`:
+    - `CAGR = 31.82%`
+    - `MDD = -26.63%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = small_capital_trial`
+    - `Deployment = review_required`
+  - `rank_tapered`:
+    - `CAGR = 32.92%`
+    - `MDD = -27.60%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = small_capital_trial`
+    - `Deployment = review_required`
+- 해석:
+  - `rank_tapered`는 gate를 유지한 채 strongest blended point에 잘 적용됐다
+  - `CAGR`는 더 좋아졌지만
+    이번 질문인 downside 개선에는 답을 주지 못했고
+    `MDD`는 오히려 더 나빠졌다
+  - 즉 strongest current point를 대체하는 lower-MDD rescue는 아니었다
+- 다음 액션:
+  - Phase 17 first three structural lever 결과를 묶어
+    closeout 또는 next structural lever 우선순위를 정리한다
+- 관련 문서:
+  - [PHASE17_CONCENTRATION_AWARE_WEIGHTING_REPRESENTATIVE_RERUN_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase17/PHASE17_CONCENTRATION_AWARE_WEIGHTING_REPRESENTATIVE_RERUN_FIRST_PASS.md)
+  - [QUALITY_VALUE_STRICT_ANNUAL.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL.md)

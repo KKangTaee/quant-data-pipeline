@@ -857,6 +857,23 @@ def _rank_quality_snapshot(
     return ranked.sort_values(["Quality Score", "symbol"], ascending=[False, True]).reset_index(drop=True)
 
 
+def _build_strict_annual_weights(
+    *,
+    tickers: list[str],
+    weighting_mode: str,
+) -> list[float]:
+    count = len(tickers)
+    if count <= 0:
+        return []
+    if weighting_mode == "equal_weight":
+        return [1.0 / float(count)] * count
+    if weighting_mode == "rank_tapered":
+        raw = np.linspace(1.0, 0.5, count, dtype="float64")
+        normalized = raw / raw.sum()
+        return [float(weight) for weight in normalized]
+    raise ValueError("weighting_mode must be one of {'equal_weight', 'rank_tapered'}.")
+
+
 def _passes_min_history_months(
     first_valid_date: pd.Timestamp | None,
     current_date: pd.Timestamp,
@@ -1039,6 +1056,7 @@ def quality_snapshot_equal_weight(
     trend_filter_enabled: bool = False,
     trend_filter_window: int = 200,
     trend_filter_col: str | None = None,
+    weighting_mode: str = "equal_weight",
     partial_cash_retention_enabled: bool = False,
     risk_off_mode: str = "cash_only",
     defensive_tickers: list[str] | None = None,
@@ -1099,6 +1117,8 @@ def quality_snapshot_equal_weight(
         raise ValueError("drawdown_guardrail_df is required when the guardrail is enabled.")
     if drawdown_guardrail_enabled and drawdown_guardrail_gap_threshold < 0:
         raise ValueError("drawdown_guardrail_gap_threshold must be non-negative when the guardrail is enabled.")
+    if weighting_mode not in {"equal_weight", "rank_tapered"}:
+        raise ValueError("weighting_mode must be one of {'equal_weight', 'rank_tapered'}.")
     if risk_off_mode not in {"cash_only", "defensive_sleeve_preference"}:
         raise ValueError("risk_off_mode must be one of {'cash_only', 'defensive_sleeve_preference'}.")
 
@@ -1170,6 +1190,7 @@ def quality_snapshot_equal_weight(
     prev_total_balance = None
     held_tickers: list[str] = []
     next_balances: list[float] = []
+    next_weights: list[float] = []
     cash = 0.0
     total_balance_history: list[float] = []
     guardrail_close_history: list[float] = []
@@ -1419,6 +1440,7 @@ def quality_snapshot_equal_weight(
                     selected_scores = []
                 if not held_tickers:
                     next_balances = []
+                    next_weights = []
                     cash = base_balance
                 else:
                     allocation_base_count = len(held_tickers)
@@ -1431,8 +1453,19 @@ def quality_snapshot_equal_weight(
                         allocation_base_count = len(raw_selected_tickers)
                         partial_cash_retention_active = allocation_base_count > len(held_tickers)
                         partial_cash_retention_base_count = float(allocation_base_count)
-                    allocation = base_balance / allocation_base_count
-                    next_balances = [allocation] * len(held_tickers)
+                    invested_fraction = float(len(held_tickers)) / float(allocation_base_count)
+                    invested_balance = float(base_balance) * invested_fraction
+                    if risk_off_reasons and risk_off_mode == "defensive_sleeve_preference":
+                        next_weights = _build_strict_annual_weights(
+                            tickers=held_tickers,
+                            weighting_mode="equal_weight",
+                        )
+                    else:
+                        next_weights = _build_strict_annual_weights(
+                            tickers=held_tickers,
+                            weighting_mode=weighting_mode,
+                        )
+                    next_balances = [float(invested_balance) * float(weight) for weight in next_weights]
                     cash = base_balance - sum(next_balances)
 
         rows.append(
@@ -1445,6 +1478,7 @@ def quality_snapshot_equal_weight(
                 "Raw Selected Score": raw_selected_scores,
                 "Overlay Rejected Ticker": overlay_rejected_tickers,
                 "Overlay Rejected Count": len(overlay_rejected_tickers),
+                "Weighting Mode": weighting_mode,
                 "Risk-Off Mode": risk_off_mode,
                 "Risk-Off Reason": risk_off_reasons,
                 "Defensive Sleeve Ticker": defensive_sleeve_tickers,
@@ -1509,6 +1543,7 @@ def quality_snapshot_equal_weight(
                 "Drawdown Blocked Count": len(drawdown_blocked_tickers),
                 "End Balance": (np.nan if i == 0 else end_balances),
                 "Next Balance": next_balances,
+                "Next Weight": next_weights,
                 "Cash": float(cash),
                 "Selected Count": len(held_tickers),
                 "Selected Score": selected_scores,

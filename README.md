@@ -55,6 +55,8 @@ DB-backed market data ingestion, factor generation, and strategy backtesting wor
     일부 추세 탈락 슬롯을 survivor reweighting 대신 현금으로 남기는 구조 실험이 가능
   - strict annual full risk-off는 now optional `defensive sleeve risk-off`를 받아,
     `BIL / SHY / LQD` 같은 방어 sleeve로 회전하는 구조 실험이 가능
+  - strict annual weighting은 now optional `concentration-aware weighting`을 받아,
+    pure equal-weight 대신 mild `rank-tapered` top-N 배분을 실험할 수 있음
 - 실전형 해석 surface
   - `Promotion`
   - `Shortlist`

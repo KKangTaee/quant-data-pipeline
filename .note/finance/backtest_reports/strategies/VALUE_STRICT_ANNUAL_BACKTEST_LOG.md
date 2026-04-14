@@ -353,3 +353,62 @@
   - [VALUE_STRICT_ANNUAL.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL.md)
   - [VALUE_STRICT_ANNUAL_STRONGEST_CURRENT_CANDIDATE.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL_STRONGEST_CURRENT_CANDIDATE.md)
   - [PHASE14_STRICT_ANNUAL_NONHOLD_CANDIDATE_REFRESH.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase14/PHASE14_STRICT_ANNUAL_NONHOLD_CANDIDATE_REFRESH.md)
+
+### 2026-04-14 - concentration-aware weighting representative rerun first pass
+
+- 목표:
+  - `Value` current practical anchor에서
+    equal-weight top-N을 mild rank taper로 바꾸면
+    same-gate lower-MDD rescue가 가능한지 확인
+- 전략:
+  - `Value > Strict Annual`
+- 기간 / universe:
+  - `2016-01-01 ~ 2026-04-01`
+  - `US Statement Coverage 100`
+  - `Historical Dynamic PIT Universe`
+- 핵심 설정:
+  - current anchor:
+    - `Top N = 14`
+    - `psr` added
+    - `Benchmark = SPY`
+    - `Trend Filter = off`
+    - `Market Regime = off`
+    - practical `Real-Money Contract` 유지
+    - underperformance / drawdown guardrail 유지
+  - weighting contract:
+    - `equal_weight`
+    - `rank_tapered`
+- factor / ticker:
+  - `book_to_market`
+  - `earnings_yield`
+  - `sales_yield`
+  - `ocf_yield`
+  - `operating_income_yield`
+  - `psr`
+- 결과:
+  - `equal_weight`:
+    - `CAGR = 28.13%`
+    - `MDD = -24.55%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = paper_probation`
+    - `Deployment = review_required`
+    - `Rolling Review = watch`
+  - `rank_tapered`:
+    - `CAGR = 27.71%`
+    - `MDD = -25.87%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = paper_probation`
+    - `Deployment = review_required`
+    - `Rolling Review = caution`
+- 해석:
+  - `rank_tapered`는 gate를 유지한 채 current anchor에 잘 적용됐다
+  - 하지만 이번 representative rerun에서는
+    `MDD`를 더 낮추지 못했고
+    rolling consistency도 한 단계 약해졌다
+  - 즉 `equal_weight` current anchor를 대체하는 lower-MDD rescue는 아니었다
+- 다음 액션:
+  - Phase 17 first three structural lever 결과를 묶어
+    closeout 또는 next structural lever 우선순위를 정리한다
+- 관련 문서:
+  - [PHASE17_CONCENTRATION_AWARE_WEIGHTING_REPRESENTATIVE_RERUN_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase17/PHASE17_CONCENTRATION_AWARE_WEIGHTING_REPRESENTATIVE_RERUN_FIRST_PASS.md)
+  - [VALUE_STRICT_ANNUAL.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL.md)

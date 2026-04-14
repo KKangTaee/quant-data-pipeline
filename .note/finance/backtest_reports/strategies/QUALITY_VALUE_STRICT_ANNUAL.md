@@ -131,7 +131,7 @@
 ## 최근 backtest log snapshot
 
 - 최근 기록:
-  - `2026-04-14 - defensive sleeve risk-off representative rerun first pass`
+  - `2026-04-14 - concentration-aware weighting representative rerun first pass`
 - 핵심 설정:
   - strongest point structural probe:
     - quality:
@@ -151,32 +151,32 @@
     - `Benchmark Contract = Candidate Universe Equal-Weight`
     - `Market Regime = off`
     - underperformance / drawdown guardrail `on`
-    - `risk_off_mode = cash_only / defensive_sleeve_preference`
-    - `defensive_tickers = BIL, SHY, LQD`
+    - `weighting_mode = equal_weight / rank_tapered`
 - 결과:
-  - `cash_only`:
+  - `equal_weight`:
     - `CAGR = 31.82%`
     - `MDD = -26.63%`
     - `Promotion = real_money_candidate`
     - `Shortlist = small_capital_trial`
     - `Deployment = review_required`
-  - `defensive sleeve`:
-    - `CAGR = 31.79%`
-    - `MDD = -27.19%`
+  - `rank_tapered`:
+    - `CAGR = 32.92%`
+    - `MDD = -27.60%`
     - `Promotion = real_money_candidate`
     - `Shortlist = small_capital_trial`
     - `Deployment = review_required`
-    - `Defensive Sleeve Active Rows = 3`
 - 실무 해석:
-  - `defensive sleeve`는 blended strongest point에서도 gate를 유지했다
-  - 하지만 이번 representative rerun에서는 `MDD`를 더 낮추지 못했고
-    strongest practical point를 대체하지 못했다
-  - 즉 downside 구조 레버로는 열렸지만,
-    current anchor를 갱신하는 exact rescue는 아니었다
+  - `rank_tapered`는 blended strongest point에서도 gate를 유지했다
+  - `CAGR`는 더 좋아졌지만 이번 질문은 downside 개선이었고,
+    `MDD`는 오히려 더 나빠졌다
+  - 즉 weighting 구조 레버로는 열렸지만,
+    current strongest practical point를 갱신하는 lower-MDD rescue는 아니었다
 - 다음에 볼 것:
-  - 다음 structural lever:
-    - `concentration-aware weighting`
   - current strongest practical point는 그대로 유지
+  - 현재는
+    `partial cash retention`, `defensive sleeve`, `concentration-aware weighting`
+    3개 structural lever 결과를 묶어
+    Phase 17 closeout 또는 next lever 우선순위를 정리하는 단계다
 
 ## 관련 결과 문서
 
@@ -214,6 +214,9 @@
 - [PHASE17_DEFENSIVE_SLEEVE_RISK_OFF_REPRESENTATIVE_RERUN_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase17/PHASE17_DEFENSIVE_SLEEVE_RISK_OFF_REPRESENTATIVE_RERUN_FIRST_PASS.md)
   - `defensive sleeve risk-off`를 strongest blended point에 적용해
     same-gate lower-MDD rescue가 가능한지 본 문서
+- [PHASE17_CONCENTRATION_AWARE_WEIGHTING_REPRESENTATIVE_RERUN_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase17/PHASE17_CONCENTRATION_AWARE_WEIGHTING_REPRESENTATIVE_RERUN_FIRST_PASS.md)
+  - `concentration-aware weighting`을 strongest blended point에 적용해
+    same-gate lower-MDD rescue가 가능한지 본 문서
 
 ## 실무 해석
 
@@ -228,6 +231,9 @@
 - Phase 16 second pass까지 반영하면
   strongest practical point는 current code에서도 그대로 유지되고,
   lower-MDD but weaker-gate 대안과 `SPY` benchmark 대안의 tradeoff까지 정리된 상태다
+- Phase 17 structural rerun까지 반영하면
+  `partial cash retention`, `defensive sleeve`, `concentration-aware weighting`
+  어느 쪽도 current strongest practical point를 대체하는 lower-MDD exact rescue는 아니었다
 
 지금 다시 볼 우선순위를 한 줄로 정리하면:
 

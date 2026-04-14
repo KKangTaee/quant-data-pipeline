@@ -33,7 +33,7 @@
 
 - [x] strict annual partial cash retention contract
 - [x] strict annual defensive sleeve risk-off contract
-- [ ] strict annual concentration-aware weighting contract
+- [x] strict annual concentration-aware weighting contract
 
 구현 이후 다음 active step:
 
@@ -41,7 +41,8 @@
 - [x] `Quality + Value` strongest practical point에 partial cash retention representative rerun 적용
 - [x] same-gate lower-MDD rescue 여부를 기준으로 next structural lever 우선순위 재판단
 - [x] `Value` / `Quality + Value` anchor에 defensive sleeve representative rerun 적용
-- [ ] next structural lever로 `concentration-aware weighting` contract 설계/구현 시작
+- [x] `Value` / `Quality + Value` anchor에 concentration-aware weighting representative rerun 적용
+- [ ] current 3개 structural lever 결과를 묶어 closeout / next-step 우선순위 정리
 
 ## 현재 판단
 
@@ -55,17 +56,21 @@
 - bounded tweak phase는 이미 끝났다
 - current code를 기준으로 보면,
   `partial cash retention`, `defensive sleeve risk-off`
-  first slice는 구현 완료 상태다
+  와 `concentration-aware weighting`
+  first three slices는 구현 완료 상태다
 - representative rerun 결과:
   - `partial cash retention`은
     `MDD`를 크게 낮췄지만 return drag가 너무 컸다
   - `defensive sleeve risk-off`는
     gate는 유지했지만 `MDD`를 더 낮추지 못했다
+  - `concentration-aware weighting`은
+    gate는 유지했지만 current anchor에서 `MDD`를 더 낮추지 못했다
 - 공통 패턴:
   - same-gate lower-MDD exact rescue는 아직 없다
   - `Value`와 `Quality + Value` current anchor는 그대로 유지된다
 - 따라서 다음 active question은
-  equal-weight top-N 구조 자체를 더 부드럽게 만들 수 있는
-  `concentration-aware weighting` contract를 여는 것이다
+  current 3개 structural lever 결과를 기준으로
+  Phase 17을 closeout할지,
+  아니면 더 큰 구조 레버를 추가로 설계할지 재판단하는 것이다
 - weighted portfolio / saved portfolio는 지금도 유용하지만,
   real-money gate surface가 직접 붙지 않아 immediate replacement는 아니다

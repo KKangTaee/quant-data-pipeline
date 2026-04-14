@@ -38,8 +38,11 @@ from finance.sample import (
     STRICT_MARKET_REGIME_DEFAULT_WINDOW,
     STRICT_DEFAULT_DEFENSIVE_TICKERS,
     STRICT_DEFAULT_RISK_OFF_MODE,
+    STRICT_DEFAULT_WEIGHTING_MODE,
     STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
     STRICT_RISK_OFF_MODE_DEFENSIVE,
+    STRICT_WEIGHTING_MODE_EQUAL,
+    STRICT_WEIGHTING_MODE_RANK_TAPERED,
     QUALITY_STRICT_DEFAULT_FACTORS,
     STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED,
     STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD,
@@ -3090,6 +3093,7 @@ def _run_statement_quality_bundle(
     promotion_max_drawdown_gap_vs_benchmark: float = STRICT_PROMOTION_DEFAULT_MAX_DRAWDOWN_GAP_VS_BENCHMARK,
     trend_filter_enabled: bool = False,
     trend_filter_window: int = 200,
+    weighting_mode: str = STRICT_DEFAULT_WEIGHTING_MODE,
     partial_cash_retention_enabled: bool = STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
     risk_off_mode: str = STRICT_DEFAULT_RISK_OFF_MODE,
     defensive_tickers: Sequence[str] | None = None,
@@ -3203,6 +3207,7 @@ def _run_statement_quality_bundle(
             min_avg_dollar_volume_20d_m=float(min_avg_dollar_volume_20d_m_filter or 0.0),
             trend_filter_enabled=trend_filter_enabled,
             trend_filter_window=trend_filter_window,
+            weighting_mode=weighting_mode,
             partial_cash_retention_enabled=partial_cash_retention_enabled,
             risk_off_mode=risk_off_mode,
             defensive_tickers=effective_defensive_tickers,
@@ -3299,6 +3304,7 @@ def _run_statement_quality_bundle(
         "quality_factors": normalized_factors,
         "trend_filter_enabled": trend_filter_enabled,
         "trend_filter_window": trend_filter_window,
+        "weighting_mode": weighting_mode,
         "partial_cash_retention_enabled": partial_cash_retention_enabled,
         "risk_off_mode": risk_off_mode,
         "defensive_tickers": effective_defensive_tickers,
@@ -3383,6 +3389,10 @@ def _run_statement_quality_bundle(
             "are removed and survivors are reweighted until the next rebalance."
         )
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [trend_warning]
+    if weighting_mode == STRICT_WEIGHTING_MODE_RANK_TAPERED:
+        bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
+            "Concentration-Aware Weighting enabled: selected holdings use a mild rank taper instead of pure equal weight."
+        ]
     if risk_off_mode == STRICT_RISK_OFF_MODE_DEFENSIVE and effective_defensive_tickers:
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
             "Strict annual defensive sleeve contract enabled: full risk-off states "
@@ -3452,6 +3462,7 @@ def run_quality_snapshot_strict_annual_backtest_from_db(
     promotion_max_drawdown_gap_vs_benchmark: float = STRICT_PROMOTION_DEFAULT_MAX_DRAWDOWN_GAP_VS_BENCHMARK,
     trend_filter_enabled: bool = False,
     trend_filter_window: int = 200,
+    weighting_mode: str = STRICT_DEFAULT_WEIGHTING_MODE,
     partial_cash_retention_enabled: bool = STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
     risk_off_mode: str = STRICT_DEFAULT_RISK_OFF_MODE,
     defensive_tickers: Sequence[str] | None = None,
@@ -3498,6 +3509,7 @@ def run_quality_snapshot_strict_annual_backtest_from_db(
         promotion_max_drawdown_gap_vs_benchmark=promotion_max_drawdown_gap_vs_benchmark,
         trend_filter_enabled=trend_filter_enabled,
         trend_filter_window=trend_filter_window,
+        weighting_mode=weighting_mode,
         partial_cash_retention_enabled=partial_cash_retention_enabled,
         risk_off_mode=risk_off_mode,
         defensive_tickers=defensive_tickers,
@@ -3609,6 +3621,7 @@ def run_value_snapshot_strict_annual_backtest_from_db(
     promotion_max_drawdown_gap_vs_benchmark: float = STRICT_PROMOTION_DEFAULT_MAX_DRAWDOWN_GAP_VS_BENCHMARK,
     trend_filter_enabled: bool = False,
     trend_filter_window: int = 200,
+    weighting_mode: str = STRICT_DEFAULT_WEIGHTING_MODE,
     partial_cash_retention_enabled: bool = STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
     risk_off_mode: str = STRICT_DEFAULT_RISK_OFF_MODE,
     defensive_tickers: Sequence[str] | None = None,
@@ -3719,6 +3732,7 @@ def run_value_snapshot_strict_annual_backtest_from_db(
         min_avg_dollar_volume_20d_m=min_avg_dollar_volume_20d_m_filter,
         trend_filter_enabled=trend_filter_enabled,
         trend_filter_window=trend_filter_window,
+        weighting_mode=weighting_mode,
         partial_cash_retention_enabled=partial_cash_retention_enabled,
         risk_off_mode=risk_off_mode,
         defensive_tickers=defensive_tickers,
@@ -3814,6 +3828,7 @@ def run_value_snapshot_strict_annual_backtest_from_db(
             "value_factors": normalized_factors,
             "trend_filter_enabled": trend_filter_enabled,
             "trend_filter_window": trend_filter_window,
+            "weighting_mode": weighting_mode,
             "partial_cash_retention_enabled": partial_cash_retention_enabled,
             "market_regime_enabled": market_regime_enabled,
             "market_regime_window": market_regime_window,
@@ -3856,6 +3871,10 @@ def run_value_snapshot_strict_annual_backtest_from_db(
             "are removed and survivors are reweighted until the next rebalance."
         )
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [trend_warning]
+    if weighting_mode == STRICT_WEIGHTING_MODE_RANK_TAPERED:
+        bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
+            "Concentration-Aware Weighting enabled: selected holdings use a mild rank taper instead of pure equal weight."
+        ]
     if market_regime_enabled:
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
             f"Market Regime Overlay enabled: month-end selections move fully to cash when `{market_regime_benchmark}` closes below `MA{market_regime_window}`."
@@ -4110,6 +4129,7 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
     promotion_max_drawdown_gap_vs_benchmark: float = STRICT_PROMOTION_DEFAULT_MAX_DRAWDOWN_GAP_VS_BENCHMARK,
     trend_filter_enabled: bool = False,
     trend_filter_window: int = 200,
+    weighting_mode: str = STRICT_DEFAULT_WEIGHTING_MODE,
     partial_cash_retention_enabled: bool = STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
     risk_off_mode: str = STRICT_DEFAULT_RISK_OFF_MODE,
     defensive_tickers: Sequence[str] | None = None,
@@ -4231,6 +4251,7 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
         min_avg_dollar_volume_20d_m=min_avg_dollar_volume_20d_m_filter,
         trend_filter_enabled=trend_filter_enabled,
         trend_filter_window=trend_filter_window,
+        weighting_mode=weighting_mode,
         partial_cash_retention_enabled=partial_cash_retention_enabled,
         risk_off_mode=risk_off_mode,
         defensive_tickers=defensive_tickers,
@@ -4327,6 +4348,7 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
             "value_factors": normalized_value_factors,
             "trend_filter_enabled": trend_filter_enabled,
             "trend_filter_window": trend_filter_window,
+            "weighting_mode": weighting_mode,
             "partial_cash_retention_enabled": partial_cash_retention_enabled,
             "market_regime_enabled": market_regime_enabled,
             "market_regime_window": market_regime_window,
@@ -4369,6 +4391,10 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
             "are removed and survivors are reweighted until the next rebalance."
         )
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [trend_warning]
+    if weighting_mode == STRICT_WEIGHTING_MODE_RANK_TAPERED:
+        bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
+            "Concentration-Aware Weighting enabled: selected holdings use a mild rank taper instead of pure equal weight."
+        ]
     if market_regime_enabled:
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
             f"Market Regime Overlay enabled: month-end selections move fully to cash when `{market_regime_benchmark}` closes below `MA{market_regime_window}`."

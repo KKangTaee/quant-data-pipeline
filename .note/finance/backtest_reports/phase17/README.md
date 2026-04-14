@@ -20,3 +20,6 @@
 - [PHASE17_DEFENSIVE_SLEEVE_RISK_OFF_REPRESENTATIVE_RERUN_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase17/PHASE17_DEFENSIVE_SLEEVE_RISK_OFF_REPRESENTATIVE_RERUN_FIRST_PASS.md)
   - strict annual `defensive sleeve risk-off` contract를 같은 anchor에 적용해
     same-gate lower-MDD rescue가 가능한지 본 representative rerun 문서
+- [PHASE17_CONCENTRATION_AWARE_WEIGHTING_REPRESENTATIVE_RERUN_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase17/PHASE17_CONCENTRATION_AWARE_WEIGHTING_REPRESENTATIVE_RERUN_FIRST_PASS.md)
+  - strict annual `concentration-aware weighting`을 같은 anchor에 적용해
+    same-gate lower-MDD rescue가 가능한지 본 representative rerun 문서

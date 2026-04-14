@@ -80,6 +80,9 @@ VALUE_STRICT_DEFAULT_FACTORS = [
 
 STRICT_TREND_FILTER_DEFAULT_ENABLED = False
 STRICT_TREND_FILTER_DEFAULT_WINDOW = 200
+STRICT_WEIGHTING_MODE_EQUAL = "equal_weight"
+STRICT_WEIGHTING_MODE_RANK_TAPERED = "rank_tapered"
+STRICT_DEFAULT_WEIGHTING_MODE = STRICT_WEIGHTING_MODE_EQUAL
 STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED = False
 STRICT_RISK_OFF_MODE_CASH = "cash_only"
 STRICT_RISK_OFF_MODE_DEFENSIVE = "defensive_sleeve_preference"
@@ -1672,6 +1675,7 @@ def _run_statement_shadow_snapshot_from_db(
     lower_is_better_factors: list[str] | None = None,
     trend_filter_enabled=False,
     trend_filter_window=STRICT_TREND_FILTER_DEFAULT_WINDOW,
+    weighting_mode: str = STRICT_DEFAULT_WEIGHTING_MODE,
     partial_cash_retention_enabled: bool = STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
     risk_off_mode: str = STRICT_DEFAULT_RISK_OFF_MODE,
     defensive_tickers=None,
@@ -1707,6 +1711,11 @@ def _run_statement_shadow_snapshot_from_db(
         raise ValueError(
             "risk_off_mode must be one of "
             f"{{'{STRICT_RISK_OFF_MODE_CASH}', '{STRICT_RISK_OFF_MODE_DEFENSIVE}'}}."
+        )
+    if weighting_mode not in {STRICT_WEIGHTING_MODE_EQUAL, STRICT_WEIGHTING_MODE_RANK_TAPERED}:
+        raise ValueError(
+            "weighting_mode must be one of "
+            f"{{'{STRICT_WEIGHTING_MODE_EQUAL}', '{STRICT_WEIGHTING_MODE_RANK_TAPERED}'}}."
         )
 
     effective_defensive_tickers = _normalize_symbol_list(
@@ -1845,6 +1854,7 @@ def _run_statement_shadow_snapshot_from_db(
         rebalance_interval=rebalance_interval,
         trend_filter_enabled=trend_filter_enabled,
         trend_filter_window=trend_filter_window,
+        weighting_mode=weighting_mode,
         partial_cash_retention_enabled=partial_cash_retention_enabled,
         risk_off_mode=risk_off_mode,
         defensive_tickers=effective_defensive_tickers,
@@ -1901,6 +1911,7 @@ def get_statement_quality_snapshot_shadow_from_db(
     min_avg_dollar_volume_20d_m: float = STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M,
     trend_filter_enabled=False,
     trend_filter_window=STRICT_TREND_FILTER_DEFAULT_WINDOW,
+    weighting_mode: str = STRICT_DEFAULT_WEIGHTING_MODE,
     partial_cash_retention_enabled: bool = STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
     risk_off_mode: str = STRICT_DEFAULT_RISK_OFF_MODE,
     defensive_tickers=None,
@@ -1939,6 +1950,7 @@ def get_statement_quality_snapshot_shadow_from_db(
         rebalance_interval=rebalance_interval,
         trend_filter_enabled=trend_filter_enabled,
         trend_filter_window=trend_filter_window,
+        weighting_mode=weighting_mode,
         partial_cash_retention_enabled=partial_cash_retention_enabled,
         risk_off_mode=risk_off_mode,
         defensive_tickers=defensive_tickers,
@@ -1976,6 +1988,7 @@ def get_statement_value_snapshot_shadow_from_db(
     min_avg_dollar_volume_20d_m: float = STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M,
     trend_filter_enabled=False,
     trend_filter_window=STRICT_TREND_FILTER_DEFAULT_WINDOW,
+    weighting_mode: str = STRICT_DEFAULT_WEIGHTING_MODE,
     partial_cash_retention_enabled: bool = STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
     risk_off_mode: str = STRICT_DEFAULT_RISK_OFF_MODE,
     defensive_tickers=None,
@@ -2014,6 +2027,7 @@ def get_statement_value_snapshot_shadow_from_db(
         lower_is_better_factors=["per", "pbr", "psr", "pcr", "pfcr", "ev_ebit", "por"],
         trend_filter_enabled=trend_filter_enabled,
         trend_filter_window=trend_filter_window,
+        weighting_mode=weighting_mode,
         partial_cash_retention_enabled=partial_cash_retention_enabled,
         risk_off_mode=risk_off_mode,
         defensive_tickers=defensive_tickers,
@@ -2052,6 +2066,7 @@ def get_statement_quality_value_snapshot_shadow_from_db(
     min_avg_dollar_volume_20d_m: float = STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M,
     trend_filter_enabled=False,
     trend_filter_window=STRICT_TREND_FILTER_DEFAULT_WINDOW,
+    weighting_mode: str = STRICT_DEFAULT_WEIGHTING_MODE,
     partial_cash_retention_enabled: bool = STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
     risk_off_mode: str = STRICT_DEFAULT_RISK_OFF_MODE,
     defensive_tickers=None,
@@ -2109,6 +2124,7 @@ def get_statement_quality_value_snapshot_shadow_from_db(
         ],
         trend_filter_enabled=trend_filter_enabled,
         trend_filter_window=trend_filter_window,
+        weighting_mode=weighting_mode,
         partial_cash_retention_enabled=partial_cash_retention_enabled,
         risk_off_mode=risk_off_mode,
         defensive_tickers=defensive_tickers,

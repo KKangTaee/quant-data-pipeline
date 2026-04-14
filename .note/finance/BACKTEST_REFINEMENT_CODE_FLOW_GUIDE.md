@@ -135,14 +135,18 @@ Phase 17부터는 bounded `Top N` / one-factor tweak을 반복하기보다
 - 구현 완료:
   - `partial cash retention`
   - `defensive sleeve risk-off`
+  - `concentration-aware weighting`
 - representative rerun 결론:
   - `partial cash retention`
     - downside는 크게 줄였지만 cash drag가 컸다
   - `defensive sleeve risk-off`
     - gate는 유지했지만 same-gate lower-MDD rescue는 만들지 못했다
+  - `concentration-aware weighting`
+    - gate는 유지했지만 current anchor에서 `MDD`를 더 낮추지 못했다
 - 다음 active question:
-  - `concentration-aware weighting`이
-    current anchor를 더 부드럽게 만들 수 있는가
+  - Phase 17 closeout 기준으로
+    current 3개 structural lever 결과를 묶어
+    next structural lever를 더 설계할지 정리한다
 
 ## 한 줄 요약
 

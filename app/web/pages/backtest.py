@@ -66,6 +66,7 @@ from finance.sample import (
     GTAA_DEFAULT_CRASH_GUARDRAIL_ENABLED,
     GTAA_DEFAULT_CRASH_GUARDRAIL_LOOKBACK_MONTHS,
     GTAA_DEFAULT_DEFENSIVE_TICKERS,
+    STRICT_DEFAULT_WEIGHTING_MODE,
     STRICT_DEFAULT_DEFENSIVE_TICKERS,
     STRICT_DEFAULT_RISK_OFF_MODE,
     GTAA_DEFAULT_SCORE_LOOKBACK_MONTHS,
@@ -80,6 +81,8 @@ from finance.sample import (
     STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD,
     STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
     STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
+    STRICT_WEIGHTING_MODE_EQUAL,
+    STRICT_WEIGHTING_MODE_RANK_TAPERED,
     STRICT_RISK_OFF_MODE_CASH,
     STRICT_RISK_OFF_MODE_DEFENSIVE,
     STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED,
@@ -122,6 +125,10 @@ GTAA_RISK_OFF_MODE_LABELS = {
 STRICT_RISK_OFF_MODE_LABELS = {
     "Cash Only": STRICT_RISK_OFF_MODE_CASH,
     "Defensive Sleeve Preference": STRICT_RISK_OFF_MODE_DEFENSIVE,
+}
+STRICT_WEIGHTING_MODE_LABELS = {
+    "Equal Weight": STRICT_WEIGHTING_MODE_EQUAL,
+    "Rank-Tapered": STRICT_WEIGHTING_MODE_RANK_TAPERED,
 }
 GTAA_SCORE_WEIGHT_LABELS = [
     ("1MReturn", "1M"),
@@ -591,6 +598,8 @@ def _init_backtest_state() -> None:
         st.session_state["qss_trend_filter_enabled"] = STRICT_TREND_FILTER_DEFAULT_ENABLED
     if "qss_trend_filter_window" not in st.session_state:
         st.session_state["qss_trend_filter_window"] = STRICT_TREND_FILTER_DEFAULT_WINDOW
+    if "qss_weighting_mode" not in st.session_state:
+        st.session_state["qss_weighting_mode"] = _strict_weighting_mode_value_to_label(STRICT_DEFAULT_WEIGHTING_MODE)
     if "qss_partial_cash_retention_enabled" not in st.session_state:
         st.session_state["qss_partial_cash_retention_enabled"] = STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED
     if "qss_risk_off_mode" not in st.session_state:
@@ -655,6 +664,8 @@ def _init_backtest_state() -> None:
         st.session_state["vss_trend_filter_enabled"] = STRICT_TREND_FILTER_DEFAULT_ENABLED
     if "vss_trend_filter_window" not in st.session_state:
         st.session_state["vss_trend_filter_window"] = STRICT_TREND_FILTER_DEFAULT_WINDOW
+    if "vss_weighting_mode" not in st.session_state:
+        st.session_state["vss_weighting_mode"] = _strict_weighting_mode_value_to_label(STRICT_DEFAULT_WEIGHTING_MODE)
     if "vss_partial_cash_retention_enabled" not in st.session_state:
         st.session_state["vss_partial_cash_retention_enabled"] = STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED
     if "vss_risk_off_mode" not in st.session_state:
@@ -719,6 +730,8 @@ def _init_backtest_state() -> None:
         st.session_state["qvss_trend_filter_enabled"] = STRICT_TREND_FILTER_DEFAULT_ENABLED
     if "qvss_trend_filter_window" not in st.session_state:
         st.session_state["qvss_trend_filter_window"] = STRICT_TREND_FILTER_DEFAULT_WINDOW
+    if "qvss_weighting_mode" not in st.session_state:
+        st.session_state["qvss_weighting_mode"] = _strict_weighting_mode_value_to_label(STRICT_DEFAULT_WEIGHTING_MODE)
     if "qvss_partial_cash_retention_enabled" not in st.session_state:
         st.session_state["qvss_partial_cash_retention_enabled"] = STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED
     if "qvss_risk_off_mode" not in st.session_state:
@@ -2044,6 +2057,13 @@ def _strict_risk_off_mode_value_to_label(value: str | None) -> str:
     return "Cash Only"
 
 
+def _strict_weighting_mode_value_to_label(value: str | None) -> str:
+    for label, mode_value in STRICT_WEIGHTING_MODE_LABELS.items():
+        if mode_value == value:
+            return label
+    return "Equal Weight"
+
+
 def _render_gtaa_risk_off_contract_inputs(*, key_prefix: str) -> dict[str, Any]:
     st.markdown("##### Risk-Off Contract")
     st.caption(
@@ -2160,6 +2180,30 @@ def _render_strict_defensive_sleeve_contract_inputs(
         STRICT_RISK_OFF_MODE_LABELS[risk_off_mode_label],
         _parse_manual_tickers(defensive_tickers_text),
     )
+
+
+def _render_strict_weighting_contract_inputs(
+    *,
+    key_prefix: str,
+    label_prefix: str = "",
+) -> str:
+    prefix = label_prefix.strip()
+    label_base = f"{prefix} " if prefix else ""
+    st.markdown("##### Concentration-Aware Weighting")
+    st.caption(
+        "strict annual 기본은 equal-weight입니다. "
+        "실험적으로 상위 rank에 조금 더 무게를 두는 `rank_tapered`를 열어, "
+        "same-gate lower-MDD 가능성을 비교합니다."
+    )
+    weighting_mode_label = st.selectbox(
+        f"{label_base}Weighting Mode",
+        options=list(STRICT_WEIGHTING_MODE_LABELS.keys()),
+        index=list(STRICT_WEIGHTING_MODE_LABELS.values()).index(STRICT_DEFAULT_WEIGHTING_MODE),
+        key=f"{key_prefix}_weighting_mode",
+        help="`Equal Weight`는 모든 선택 종목을 동일 비중으로 보유합니다. "
+        "`Rank-Tapered`는 상위 rank 종목을 약간 더 비중 있게 담되, 과도한 집중은 피하는 완만한 taper를 씁니다.",
+    )
+    return STRICT_WEIGHTING_MODE_LABELS[weighting_mode_label]
 
 
 def _render_strict_price_freshness_preflight(
@@ -2792,6 +2836,7 @@ def _strategy_compare_defaults(strategy_name: str) -> dict:
             "extra": {
                 "quality_factors": QUALITY_STRICT_DEFAULT_FACTORS,
                 "top_n": 2,
+                "weighting_mode": STRICT_DEFAULT_WEIGHTING_MODE,
                 "partial_cash_retention_enabled": STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
                 "risk_off_mode": STRICT_DEFAULT_RISK_OFF_MODE,
                 "defensive_tickers": STRICT_DEFAULT_DEFENSIVE_TICKERS,
@@ -2834,6 +2879,7 @@ def _strategy_compare_defaults(strategy_name: str) -> dict:
             "extra": {
                 "value_factors": VALUE_STRICT_DEFAULT_FACTORS,
                 "top_n": 10,
+                "weighting_mode": STRICT_DEFAULT_WEIGHTING_MODE,
                 "partial_cash_retention_enabled": STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
                 "risk_off_mode": STRICT_DEFAULT_RISK_OFF_MODE,
                 "defensive_tickers": STRICT_DEFAULT_DEFENSIVE_TICKERS,
@@ -2877,6 +2923,7 @@ def _strategy_compare_defaults(strategy_name: str) -> dict:
                 "quality_factors": QUALITY_STRICT_DEFAULT_FACTORS,
                 "value_factors": VALUE_STRICT_DEFAULT_FACTORS,
                 "top_n": 10,
+                "weighting_mode": STRICT_DEFAULT_WEIGHTING_MODE,
                 "partial_cash_retention_enabled": STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
                 "risk_off_mode": STRICT_DEFAULT_RISK_OFF_MODE,
                 "defensive_tickers": STRICT_DEFAULT_DEFENSIVE_TICKERS,
@@ -5704,6 +5751,8 @@ def _bundle_to_saved_strategy_override(bundle: dict[str, Any]) -> dict[str, Any]
         override["trend_filter_enabled"] = bool(meta.get("trend_filter_enabled"))
     if meta.get("trend_filter_window") is not None:
         override["trend_filter_window"] = int(meta.get("trend_filter_window"))
+    if meta.get("weighting_mode") is not None:
+        override["weighting_mode"] = meta.get("weighting_mode")
     if meta.get("risk_off_mode") is not None:
         override["risk_off_mode"] = meta.get("risk_off_mode")
     if meta.get("defensive_tickers") is not None:
@@ -6010,6 +6059,9 @@ def _apply_compare_strategy_prefill(strategy_name: str, override: dict[str, Any]
     )
     st.session_state[f"compare_{key_prefix}_trend_filter_window"] = int(
         override.get("trend_filter_window") or STRICT_TREND_FILTER_DEFAULT_WINDOW
+    )
+    st.session_state[f"compare_{key_prefix}_weighting_mode"] = _strict_weighting_mode_value_to_label(
+        override.get("weighting_mode") or STRICT_DEFAULT_WEIGHTING_MODE
     )
     st.session_state[f"compare_{key_prefix}_risk_off_mode"] = _strict_risk_off_mode_value_to_label(
         override.get("risk_off_mode") or STRICT_DEFAULT_RISK_OFF_MODE
@@ -6399,6 +6451,9 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         )
         st.session_state["qss_trend_filter_enabled"] = bool(payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED))
         st.session_state["qss_trend_filter_window"] = int(payload.get("trend_filter_window") or STRICT_TREND_FILTER_DEFAULT_WINDOW)
+        st.session_state["qss_weighting_mode"] = _strict_weighting_mode_value_to_label(
+            payload.get("weighting_mode") or STRICT_DEFAULT_WEIGHTING_MODE
+        )
         st.session_state["qss_partial_cash_retention_enabled"] = bool(
             payload.get("partial_cash_retention_enabled", STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED)
         )
@@ -6504,6 +6559,9 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         )
         st.session_state["vss_trend_filter_enabled"] = bool(payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED))
         st.session_state["vss_trend_filter_window"] = int(payload.get("trend_filter_window") or STRICT_TREND_FILTER_DEFAULT_WINDOW)
+        st.session_state["vss_weighting_mode"] = _strict_weighting_mode_value_to_label(
+            payload.get("weighting_mode") or STRICT_DEFAULT_WEIGHTING_MODE
+        )
         st.session_state["vss_partial_cash_retention_enabled"] = bool(
             payload.get("partial_cash_retention_enabled", STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED)
         )
@@ -6610,6 +6668,9 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         )
         st.session_state["qvss_trend_filter_enabled"] = bool(payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED))
         st.session_state["qvss_trend_filter_window"] = int(payload.get("trend_filter_window") or STRICT_TREND_FILTER_DEFAULT_WINDOW)
+        st.session_state["qvss_weighting_mode"] = _strict_weighting_mode_value_to_label(
+            payload.get("weighting_mode") or STRICT_DEFAULT_WEIGHTING_MODE
+        )
         st.session_state["qvss_partial_cash_retention_enabled"] = bool(
             payload.get("partial_cash_retention_enabled", STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED)
         )
@@ -7612,6 +7673,7 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> None:
                     promotion_max_drawdown_gap_vs_benchmark=payload.get("promotion_max_drawdown_gap_vs_benchmark", STRICT_PROMOTION_DEFAULT_MAX_DRAWDOWN_GAP_VS_BENCHMARK),
                     trend_filter_enabled=payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED),
                     trend_filter_window=payload.get("trend_filter_window", STRICT_TREND_FILTER_DEFAULT_WINDOW),
+                    weighting_mode=payload.get("weighting_mode", STRICT_DEFAULT_WEIGHTING_MODE),
                     partial_cash_retention_enabled=payload.get("partial_cash_retention_enabled", STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED),
                     risk_off_mode=payload.get("risk_off_mode", STRICT_DEFAULT_RISK_OFF_MODE),
                     defensive_tickers=payload.get("defensive_tickers", STRICT_DEFAULT_DEFENSIVE_TICKERS),
@@ -7677,6 +7739,7 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> None:
                     promotion_max_drawdown_gap_vs_benchmark=payload.get("promotion_max_drawdown_gap_vs_benchmark", STRICT_PROMOTION_DEFAULT_MAX_DRAWDOWN_GAP_VS_BENCHMARK),
                     trend_filter_enabled=payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED),
                     trend_filter_window=payload.get("trend_filter_window", STRICT_TREND_FILTER_DEFAULT_WINDOW),
+                    weighting_mode=payload.get("weighting_mode", STRICT_DEFAULT_WEIGHTING_MODE),
                     partial_cash_retention_enabled=payload.get("partial_cash_retention_enabled", STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED),
                     risk_off_mode=payload.get("risk_off_mode", STRICT_DEFAULT_RISK_OFF_MODE),
                     defensive_tickers=payload.get("defensive_tickers", STRICT_DEFAULT_DEFENSIVE_TICKERS),
@@ -7743,6 +7806,7 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> None:
                     promotion_max_drawdown_gap_vs_benchmark=payload.get("promotion_max_drawdown_gap_vs_benchmark", STRICT_PROMOTION_DEFAULT_MAX_DRAWDOWN_GAP_VS_BENCHMARK),
                     trend_filter_enabled=payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED),
                     trend_filter_window=payload.get("trend_filter_window", STRICT_TREND_FILTER_DEFAULT_WINDOW),
+                    weighting_mode=payload.get("weighting_mode", STRICT_DEFAULT_WEIGHTING_MODE),
                     partial_cash_retention_enabled=payload.get("partial_cash_retention_enabled", STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED),
                     risk_off_mode=payload.get("risk_off_mode", STRICT_DEFAULT_RISK_OFF_MODE),
                     defensive_tickers=payload.get("defensive_tickers", STRICT_DEFAULT_DEFENSIVE_TICKERS),
@@ -8394,7 +8458,7 @@ def _render_quality_snapshot_form() -> None:
 
 def _render_quality_snapshot_strict_annual_form() -> None:
     st.markdown("### Quality Snapshot (Strict Annual)")
-    st.caption("Strict annual statement-driven quality strategy. This public candidate ranks annual statement shadow factors, then holds the top names equally between monthly rebalances.")
+    st.caption("Strict annual statement-driven quality strategy. This public candidate ranks annual statement shadow factors, then by default holds the top names equally between monthly rebalances.")
     _render_quality_family_guide("quality_strict")
     with st.expander("Data Requirements", expanded=False):
         st.markdown(
@@ -8462,7 +8526,7 @@ def _render_quality_snapshot_strict_annual_form() -> None:
                 key="qss_top_n",
             )
 
-        st.caption("Hidden defaults in this first pass: `annual statement snapshots`, `monthly rebalance`, `equal-weight holding`.")
+        st.caption("Hidden defaults in this first pass: `annual statement snapshots`, `monthly rebalance`, `equal-weight holding by default`.")
 
         with st.expander("Advanced Inputs", expanded=False):
             timeframe = st.selectbox("Timeframe", options=["1d"], index=0, key="qss_timeframe")
@@ -8517,6 +8581,10 @@ def _render_quality_snapshot_strict_annual_form() -> None:
                         step=10,
                         key="qss_trend_filter_window",
                     )
+                )
+                weighting_mode = _render_strict_weighting_contract_inputs(
+                    key_prefix="qss",
+                    label_prefix="Strict Annual Quality",
                 )
                 partial_cash_retention_enabled = st.checkbox(
                     "Retain Rejected Slots As Cash",
@@ -8602,6 +8670,7 @@ def _render_quality_snapshot_strict_annual_form() -> None:
         "quality_factors": quality_factors,
         "trend_filter_enabled": bool(trend_filter_enabled),
         "trend_filter_window": int(trend_filter_window),
+        "weighting_mode": weighting_mode,
         "partial_cash_retention_enabled": bool(partial_cash_retention_enabled),
         "risk_off_mode": risk_off_mode,
         "defensive_tickers": defensive_tickers,
@@ -9006,7 +9075,7 @@ def _render_value_snapshot_strict_quarterly_prototype_form() -> None:
 
 def _render_value_snapshot_strict_annual_form() -> None:
     st.markdown("### Value Snapshot (Strict Annual)")
-    st.caption("Strict annual statement-driven value strategy. This public candidate ranks precomputed annual statement shadow factors and holds the cheapest names equally between monthly rebalances.")
+    st.caption("Strict annual statement-driven value strategy. This public candidate ranks precomputed annual statement shadow factors and by default holds the cheapest names equally between monthly rebalances.")
     _render_quality_family_guide("value_strict")
     with st.expander("Data Requirements", expanded=False):
         st.markdown(
@@ -9074,7 +9143,7 @@ def _render_value_snapshot_strict_annual_form() -> None:
                 key="vss_top_n",
             )
 
-        st.caption("Hidden defaults in this first pass: `annual statement shadow factors`, `monthly rebalance`, `equal-weight holding`.")
+        st.caption("Hidden defaults in this first pass: `annual statement shadow factors`, `monthly rebalance`, `equal-weight holding by default`.")
 
         with st.expander("Advanced Inputs", expanded=False):
             timeframe = st.selectbox("Timeframe", options=["1d"], index=0, key="vss_timeframe")
@@ -9129,6 +9198,10 @@ def _render_value_snapshot_strict_annual_form() -> None:
                         step=10,
                         key="vss_trend_filter_window",
                     )
+                )
+                weighting_mode = _render_strict_weighting_contract_inputs(
+                    key_prefix="vss",
+                    label_prefix="Strict Annual Value",
                 )
                 partial_cash_retention_enabled = st.checkbox(
                     "Retain Rejected Slots As Cash",
@@ -9215,6 +9288,7 @@ def _render_value_snapshot_strict_annual_form() -> None:
         "value_factors": value_factors,
         "trend_filter_enabled": bool(trend_filter_enabled),
         "trend_filter_window": int(trend_filter_window),
+        "weighting_mode": weighting_mode,
         "partial_cash_retention_enabled": bool(partial_cash_retention_enabled),
         "risk_off_mode": risk_off_mode,
         "defensive_tickers": defensive_tickers,
@@ -9447,7 +9521,7 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
     st.markdown("### Quality + Value Snapshot (Strict Annual)")
     st.caption(
         "Strict annual multi-factor strategy. This public candidate blends coverage-first quality signals "
-        "with annual statement-driven valuation factors, then holds the combined top names equally between monthly rebalances."
+        "with annual statement-driven valuation factors, then by default holds the combined top names equally between monthly rebalances."
     )
     _render_quality_family_guide("quality_value_strict")
     with st.expander("Data Requirements", expanded=False):
@@ -9516,7 +9590,7 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
                 key="qvss_top_n",
             )
 
-        st.caption("Hidden defaults in this first pass: `annual statement shadow factors`, `monthly rebalance`, `equal-weight holding`.")
+        st.caption("Hidden defaults in this first pass: `annual statement shadow factors`, `monthly rebalance`, `equal-weight holding by default`.")
 
         with st.expander("Advanced Inputs", expanded=False):
             timeframe = st.selectbox("Timeframe", options=["1d"], index=0, key="qvss_timeframe")
@@ -9576,6 +9650,10 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
                         step=10,
                         key="qvss_trend_filter_window",
                     )
+                )
+                weighting_mode = _render_strict_weighting_contract_inputs(
+                    key_prefix="qvss",
+                    label_prefix="Strict Annual Multi-Factor",
                 )
                 partial_cash_retention_enabled = st.checkbox(
                     "Retain Rejected Slots As Cash",
@@ -9665,6 +9743,7 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
         "value_factors": value_factors,
         "trend_filter_enabled": bool(trend_filter_enabled),
         "trend_filter_window": int(trend_filter_window),
+        "weighting_mode": weighting_mode,
         "partial_cash_retention_enabled": bool(partial_cash_retention_enabled),
         "risk_off_mode": risk_off_mode,
         "defensive_tickers": defensive_tickers,
@@ -10236,6 +10315,10 @@ def render_backtest_tab() -> None:
                                 key="compare_qss_partial_cash_retention_enabled",
                                 help="Trend Filter가 일부 종목만 탈락시켰을 때, 탈락한 슬롯 비중을 현금으로 남깁니다.",
                             )
+                            compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["weighting_mode"] = _render_strict_weighting_contract_inputs(
+                                key_prefix="compare_qss",
+                                label_prefix="Strict Annual Quality",
+                            )
                             (
                                 compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["risk_off_mode"],
                                 compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["defensive_tickers"],
@@ -10474,6 +10557,10 @@ def render_backtest_tab() -> None:
                                 value=STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
                                 key="compare_vss_partial_cash_retention_enabled",
                                 help="Trend Filter가 일부 종목만 탈락시켰을 때, 탈락한 슬롯 비중을 현금으로 남깁니다.",
+                            )
+                            compare_strategy_overrides["Value Snapshot (Strict Annual)"]["weighting_mode"] = _render_strict_weighting_contract_inputs(
+                                key_prefix="compare_vss",
+                                label_prefix="Strict Annual Value",
                             )
                             (
                                 compare_strategy_overrides["Value Snapshot (Strict Annual)"]["risk_off_mode"],
@@ -10719,6 +10806,10 @@ def render_backtest_tab() -> None:
                                 value=STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
                                 key="compare_qvss_partial_cash_retention_enabled",
                                 help="Trend Filter가 일부 종목만 탈락시켰을 때, 탈락한 슬롯 비중을 현금으로 남깁니다.",
+                            )
+                            compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["weighting_mode"] = _render_strict_weighting_contract_inputs(
+                                key_prefix="compare_qvss",
+                                label_prefix="Strict Annual Multi-Factor",
                             )
                             (
                                 compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["risk_off_mode"],

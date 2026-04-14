@@ -53,6 +53,11 @@ lower-MDD near-miss:
     gate는 유지되지만
     `MDD = -25.14%`로 소폭 더 나빠져
     역시 current anchor를 바꾸진 못했다
+  - `concentration-aware weighting(rank_tapered)`을 붙이면
+    gate는 유지되지만
+    `MDD = -25.87%`로 더 나빠지고
+    `Rolling Review = caution`으로 약해져
+    역시 current anchor를 바꾸진 못했다
 
 바로 열 문서:
 
@@ -118,6 +123,10 @@ lower-MDD but weaker-gate near-miss:
     gate는 유지되지만
     `MDD = -27.19%`로 소폭 더 나빠져
     strongest point를 대체하지 못했다
+  - `concentration-aware weighting(rank_tapered)`을 붙이면
+    `CAGR = 32.92%`로 더 올라가지만
+    `MDD = -27.60%`로 더 나빠져
+    current strongest point를 대체하지 못했다
 
 바로 열 문서:
 
@@ -140,9 +149,11 @@ lower-MDD but weaker-gate near-miss:
    - bounded `Top N / one-factor / overlay`보다
      더 구조적인 downside improvement가 우선순위가 된다
    - Phase 17 current pass 기준으로는
-     `partial cash retention`과 `defensive sleeve risk-off` 모두
-     current anchor를 바꾸지 못했기 때문에
-     다음 구현 후보는 `concentration-aware weighting`이 더 자연스럽다
+     `partial cash retention`, `defensive sleeve risk-off`,
+     `concentration-aware weighting` 모두
+     current anchor를 바꾸지 못했다
+   - 즉 다음 단계는
+     Phase 17 closeout 또는 더 큰 구조 레버 재설계 쪽이 더 자연스럽다
 
 ## 관련 문서
 
