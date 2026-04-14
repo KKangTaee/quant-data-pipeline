@@ -328,3 +328,16 @@ Detailed historical logs were archived on `2026-04-13`.
 - Durable takeaway:
   - current discussion point is no longer just the next slice,
     but whether this `Phase 19~25` sequence matches the user's desired long-term direction
+
+### 2026-04-14
+- Rewrote the `Phase 19~25` roadmap explanation in plainer language.
+- Focus:
+  - what each future phase means
+  - why it should happen
+  - why the proposed order is natural
+- Synced:
+  - `MASTER_PHASE_ROADMAP.md`
+  - `ROADMAP_REBASE_PHASE18_TO_PHASE25_20260414.md`
+- Durable takeaway:
+  - the roadmap now reads less like a phase title list
+    and more like an execution narrative the user can review before deciding direction

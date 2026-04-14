@@ -66,6 +66,29 @@
   rejection / risk-off / weighting contract를
   operator가 읽기 쉽게 정리한다
 
+### 쉽게 말하면
+
+- 지금까지는 구조 레버를 하나씩 열어보는 단계였다
+- `Phase 19`는 그 레버들을
+  **“실제로 계속 쓸 수 있는 기능”**
+  으로 다듬는 단계다
+- 즉:
+  - 옵션은 있는데 의미가 헷갈리는 상태
+  - 구현은 됐는데 surface가 덜 정리된 상태
+  를 줄이는 phase다
+
+### 왜 해야 하는가
+
+- 지금 바로 deep backtest를 더 크게 돌려도,
+  기능이 덜 정리된 상태면 결과 해석이 흔들린다
+- 특히 strict annual family는 이제
+  rejection / cash / sleeve / weighting 같은 계약이 많아졌기 때문에,
+  **먼저 읽기 쉬운 contract로 정리**해야
+  나중에 돌린 큰 검증도 의미가 커진다
+- 이 phase를 건너뛰면:
+  - 결과는 많이 쌓이는데
+  - “어떤 설정이 왜 그렇게 동작했는지”가 흐려질 수 있다
+
 ### 핵심 질문
 
 - second slice는 무엇이 가장 타당한가
@@ -83,6 +106,12 @@
 
 `Phase 19`는 **구조 레버를 실제 usable contract로 다듬는 phase**다.
 
+### 이 phase가 끝나면 좋은 점
+
+- 새 구조 옵션을 더 자신 있게 켜고 끌 수 있다
+- 나중에 deep rerun을 돌릴 때 해석 혼선이 줄어든다
+- strongest / near-miss 후보 비교도 더 안정적이 된다
+
 ---
 
 ### Phase 20. Candidate Consolidation And Operator Workflow Hardening
@@ -92,6 +121,26 @@
 - strongest / near-miss 후보를
   compare -> weighted -> saved portfolio 흐름과 더 자연스럽게 연결한다
 - single-strategy refinement와 portfolio bridge 사이의 운영 gap을 줄인다
+
+### 쉽게 말하면
+
+- 좋은 후보를 찾는 것만으로는 부족하고,
+  **그 후보를 다시 꺼내 보고, 비교하고, 저장하고, 조합하는 흐름**
+  도 편해야 한다
+- `Phase 20`은 그 운영 흐름을 정리하는 단계다
+
+### 왜 해야 하는가
+
+- 지금도 strongest candidate는 있지만,
+  다시 보려면 여러 문서와 탭을 오가야 한다
+- 후보가 늘어날수록
+  “무슨 후보를 지금 보고 있는지”
+  “어떤 조합을 전에 봤는지”
+  관리가 더 중요해진다
+- 이 phase를 건너뛰면:
+  - 연구는 계속 되는데
+  - 후보 관리와 비교 workflow가 점점 피곤해진다
+  - 결국 좋은 후보를 놓치거나 중복 실험이 늘어날 수 있다
 
 ### 핵심 질문
 
@@ -112,6 +161,12 @@
 `Phase 20`은 **좋은 후보를 찾는 것만이 아니라,
 그 후보를 다시 쓰고 비교하고 저장하는 흐름을 정리하는 phase**다.
 
+### 이 phase가 끝나면 좋은 점
+
+- strongest / near-miss 후보를 더 빠르게 다시 볼 수 있다
+- compare -> weighted -> saved workflow가 더 실용적으로 변한다
+- 이후 portfolio-level 실험으로 넘어갈 준비가 된다
+
 ---
 
 ### Phase 21. Research Automation And Experiment Persistence
@@ -122,6 +177,26 @@
   더 자동화한다
 - 현재 plugin / skill / checklist script를
   더 실무적으로 쓸 수 있게 만든다
+
+### 쉽게 말하면
+
+- 지금은 좋은 흐름이 생겨도
+  사람이 손으로 반복하는 부분이 여전히 많다
+- `Phase 21`은
+  **반복 작업을 줄이고, 재현성을 높이는 phase**
+  다
+
+### 왜 해야 하는가
+
+- 구현과 전략 탐색이 계속 커질수록
+  문서 업데이트, 체크리스트 확인, rerun scenario 관리도 늘어난다
+- 이걸 매번 수동으로 하면:
+  - 속도가 느려지고
+  - 빠뜨리는 문서가 생기고
+  - 같은 검증을 여러 번 하게 될 수 있다
+- 이 phase를 건너뛰면:
+  - deep validation 단계에서
+    실험 관리 비용이 너무 커질 수 있다
 
 ### 핵심 질문
 
@@ -139,6 +214,12 @@
 
 `Phase 21`은 **반복 연구를 더 빠르고 덜 흔들리게 만드는 자동화 phase**다.
 
+### 이 phase가 끝나면 좋은 점
+
+- rerun과 문서화가 더 일관된다
+- plugin / skill / script를 실제 작업 리듬에 맞게 쓸 수 있다
+- Phase 22 deep validation을 훨씬 안정적으로 돌릴 수 있다
+
 ---
 
 ### Phase 22. Integrated Deep Backtest Validation
@@ -149,6 +230,26 @@
   다시 넓고 깊은 백테스트를 공식적으로 재개한다
 - strongest / near-miss / redesigned contract를
   같은 기준으로 다시 검증한다
+
+### 쉽게 말하면
+
+- 여기서부터가 다시
+  **“깊게 돌려서 진짜 누가 strongest인지 다시 판정하는 단계”**
+  다
+- 단, 예전처럼 기능이 덜 닫힌 상태에서 돌리는 게 아니라
+  충분히 갖춰진 구조 위에서 돌린다는 점이 다르다
+
+### 왜 해야 하는가
+
+- 지금은 구현을 먼저 쌓는 게 맞지만,
+  결국 실전형 후보를 다시 고르는 큰 검증은 반드시 필요하다
+- `Phase 22`는 그 검증을
+  더 좋은 조건에서 다시 여는 phase다
+- 이 phase를 해야만:
+  - current strongest candidate가 여전히 strongest인지
+  - 새 구조가 실제 rescue를 만드는지
+  - family별로 어떤 redesign이 가장 유효한지
+  를 다시 확정할 수 있다
 
 ### 핵심 질문
 
@@ -166,6 +267,12 @@
 
 `Phase 22`는 **구현을 충분히 쌓아둔 뒤 다시 여는 본격 deep validation phase**다.
 
+### 이 phase가 끝나면 좋은 점
+
+- strongest / near-miss / redesign 결과를 한 번에 다시 정리할 수 있다
+- 이후 portfolio-level 후보나 new strategy expansion도 더 안정적으로 연다
+- “지금 무엇이 정말 좋은 후보인가”가 다시 선명해진다
+
 ---
 
 ### Phase 23. Portfolio-Level Candidate Construction
@@ -176,6 +283,23 @@
   portfolio-level candidate를 만들 수 있는지 본다
 - weighted bundle이 단순 연구용 조합인지,
   더 실전적인 portfolio candidate로 읽을 수 있는지 검토한다
+
+### 쉽게 말하면
+
+- 여기서부터는
+  “전략 하나가 좋은가?”를 넘어서
+  **“좋은 전략들을 묶으면 더 좋은 포트폴리오가 되는가?”**
+  를 본다
+
+### 왜 해야 하는가
+
+- 실제 실전 운용은 전략 하나만 쓰는 것보다
+  여러 후보를 묶는 방식이 더 자연스러울 수 있다
+- 지금까지는 single-strategy candidate를 고도화하는 데 집중했으니,
+  그 다음에는 portfolio-level construction을 볼 차례다
+- 이 phase를 건너뛰면:
+  - strongest candidate는 있어도
+  - “묶어서 더 나은가”라는 질문은 계속 비어 있게 된다
 
 ### 핵심 질문
 
@@ -193,6 +317,12 @@
 
 `Phase 23`은 **전략 하나를 넘어서 포트폴리오 단위 후보를 다루기 시작하는 phase**다.
 
+### 이 phase가 끝나면 좋은 점
+
+- strategy-level에서 portfolio-level로 시야가 넓어진다
+- weighted portfolio가 연구용을 넘어서 candidate construction 도구가 될 수 있다
+- 이후 pre-live 운영 문서도 더 현실적으로 쓸 수 있다
+
 ---
 
 ### Phase 24. New Strategy Expansion
@@ -202,6 +332,22 @@
 - 기존 strongest family 고도화가 어느 정도 닫힌 뒤,
   다시 새로운 전략 family를 연다
 - `quant-research`와 `quant-data-pipeline`을 더 명시적으로 연결한다
+
+### 쉽게 말하면
+
+- 지금은 기존 핵심 전략을 다듬는 게 우선이었고,
+  여기서부터는 다시
+  **“새로운 전략을 늘릴 타이밍”**
+  이다
+
+### 왜 해야 하는가
+
+- 새로운 전략은 계속 중요하지만,
+  너무 일찍 열면 기존 strongest family 정리가 덜 된 상태에서 범위만 커진다
+- 반대로 이 시점 이후에 열면:
+  - 현재 stack이 충분히 성숙했고
+  - research-to-implementation bridge도 더 잘 정리된 상태라
+  새 전략을 붙여도 덜 흔들린다
 
 ### 핵심 질문
 
@@ -219,6 +365,12 @@
 `Phase 24`는 **새 전략을 다시 늘리는 phase**지만,
 기존 기반이 충분히 정리된 뒤에 연다.
 
+### 이 phase가 끝나면 좋은 점
+
+- 전략 라이브러리가 다시 넓어진다
+- `quant-research`에서 발굴한 아이디어를 더 자연스럽게 구현할 수 있다
+- 기존 strongest family와 새 family를 같은 validation frame에서 비교할 수 있다
+
 ---
 
 ### Phase 25. Pre-Live Operating System And Deployment Readiness
@@ -229,6 +381,26 @@
 - 지금까지 만든
   `promotion / shortlist / probation / deployment`
   surface를 실제 operator workflow로 묶는다
+
+### 쉽게 말하면
+
+- 여기서는 드디어
+  **“좋은 후보를 실제로 어떻게 관리하고 운용 준비할 것인가”**
+  를 문서와 흐름으로 정리한다
+- 즉 연구와 구현의 끝이 아니라,
+  pre-live 운영 체계의 시작이다
+
+### 왜 해야 하는가
+
+- 좋은 전략을 찾는 것만으로는 실전에 바로 못 간다
+- paper tracking, review cadence, probation, deployment readiness 같은
+  운영 루틴이 같이 있어야
+  진짜 실전형 시스템이 된다
+- 이 phase를 해야:
+  - 후보를 어떻게 review할지
+  - 언제 probation으로 올릴지
+  - 무엇이 live 전 마지막 체크인지
+  를 일관되게 정할 수 있다
 
 ### 핵심 질문
 
@@ -248,6 +420,12 @@
 
 `Phase 25`는 **실전 직전 운영 체계를 정리하는 pre-live phase**다.
 
+### 이 phase가 끝나면 좋은 점
+
+- 후보 평가 시스템이 실제 운영 준비 시스템으로 연결된다
+- paper / small-capital trial workflow가 더 분명해진다
+- 프로젝트의 long-term goal과 가장 가까운 문서/흐름이 생긴다
+
 ## 왜 이 순서가 맞는가
 
 이 순서는 아래 이유 때문에 자연스럽다.
@@ -260,6 +438,23 @@
    portfolio-level candidate와 new strategy expansion도 덜 흔들린다
 4. 마지막에야
    pre-live operator workflow가 현실적인 문서가 된다
+
+## 아주 짧은 버전
+
+- `Phase 19`
+  - 구조 옵션을 더 usable하게 만든다
+- `Phase 20`
+  - 후보를 관리하고 다시 보는 흐름을 정리한다
+- `Phase 21`
+  - 반복 연구를 자동화한다
+- `Phase 22`
+  - 그 뒤에 다시 깊게 검증한다
+- `Phase 23`
+  - 전략을 포트폴리오 단위로 본다
+- `Phase 24`
+  - 새 전략을 다시 늘린다
+- `Phase 25`
+  - 실전 직전 운영 체계를 정리한다
 
 ## 현재 추천
 

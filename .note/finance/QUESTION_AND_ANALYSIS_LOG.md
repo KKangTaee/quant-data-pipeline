@@ -457,3 +457,20 @@ Detailed historical analysis was archived on `2026-04-13`.
     - current recommended order는
       **implement first -> validate deeply later -> expand after validation**
       이다
+
+### 2026-04-14 - Phase 19~25는 기술 제목만이 아니라 왜 필요한지까지 같이 설명되어야 한다
+- Request topic:
+  - `Phase 19~25` 설명을 더 쉽고, 왜 해야 하는지가 드러나게 다시 문서화 요청
+- Interpreted goal:
+  - future roadmap을 단순한 기술 phase 목록이 아니라,
+    사용자가 보고 방향을 판단할 수 있는 설명 문서로 바꾸고 싶음
+- Result:
+  - roadmap draft와 master roadmap에
+    각 phase마다 아래 설명 층을 추가했다:
+    - 쉽게 말하면
+    - 왜 필요한가
+  - 이로써 future roadmap은:
+    - 무엇을 하는 phase인지
+    - 왜 지금 순서가 그런지
+    - 이 phase를 건너뛰면 무엇이 비는지
+    를 더 쉽게 읽을 수 있게 됐다
