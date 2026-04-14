@@ -253,6 +253,8 @@
   - Phase 18 larger structural redesign 상위 계획 문서
 - `.note/finance/phase18/PHASE18_CURRENT_CHAPTER_TODO.md`
   - Phase 18 current execution board
+- `.note/finance/phase18/PHASE18_IMPLEMENTATION_FIRST_REPRIORITIZATION.md`
+  - Phase 18을 deep-backtest-first가 아니라 implementation-first로 재정렬한 운영 기준 문서
 - `.note/finance/phase18/PHASE18_NEXT_RANKED_FILL_IMPLEMENTATION_FIRST_SLICE.md`
   - strict annual family에 `Fill Rejected Slots With Next Ranked Names` contract를 연결한 first implementation slice 문서
 - `.note/finance/backtest_reports/phase18/README.md`

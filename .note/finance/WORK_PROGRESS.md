@@ -13,7 +13,7 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Active Pointers
 
 - current phase board:
-  - [PHASE17_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase17/PHASE17_CURRENT_CHAPTER_TODO.md)
+  - [PHASE18_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase18/PHASE18_CURRENT_CHAPTER_TODO.md)
 - current candidate summary:
   - [CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md)
 - historical full archive:
@@ -268,9 +268,10 @@ Detailed historical logs were archived on `2026-04-13`.
   - `rejected_slot_fill_enabled`
 - Representative rerun first pass:
   - `Value` trend-on probe:
-    - `hold / blocked` -> `real_money_candidate / paper_probation / paper_only`
-    - meaningful rescue confirmed
-    - but current practical anchor replacement failed
+    - cash drag와 downside 개선 방향은 확인됐지만
+      still `hold / blocked`
+    - meaningful redesign reference로는 남지만
+      current practical anchor replacement는 아니었다
   - `Quality + Value` trend-on probe:
     - `CAGR`, `MDD`, cash share improved
     - but still `hold / blocked`
@@ -295,3 +296,18 @@ Detailed historical logs were archived on `2026-04-13`.
   - Phase 18 first slice should be kept as a meaningful redesign reference,
     not as a rescued replacement candidate
   - next work should shift to Phase 18 second-slice prioritization
+
+### 2026-04-14
+- User direction changed Phase 18 from rerun-first to implementation-first.
+- Current rule:
+  - broader deep backtest / wider rescue search is paused
+  - new implementation slices should be followed only by
+    compile / import smoke and minimal representative validation
+- Synced:
+  - Phase 18 plan
+  - current board
+  - roadmap
+  - finance doc index
+- Durable takeaway:
+  - next active work is not another broad rerun cycle
+  - it is selecting and implementing the Phase 18 second slice first

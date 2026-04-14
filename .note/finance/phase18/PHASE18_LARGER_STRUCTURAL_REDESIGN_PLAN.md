@@ -11,6 +11,17 @@
   **기존 strongest family를 더 실전적으로 만들 수 있는 더 큰 구조가 있는가**
   이다.
 
+## 현재 진행 모드
+
+- `implementation_first`
+- broad deep backtest와 wider rescue search는 잠시 뒤로 미룬다
+- 새 구현 slice마다:
+  - compile / import smoke
+  - minimal representative rerun
+  정도만 수행한다
+- integrated deeper rerun은
+  remaining implementation backlog가 더 닫힌 뒤 다시 여는 것이 현재 원칙이다
+
 ## 이번 phase의 핵심 질문
 
 1. trend rejection으로 비는 raw top-N slot을
@@ -61,15 +72,26 @@
 ## 현재 상태
 
 - `in_progress`
-- first slice 구현과 representative rerun first pass는 완료
+- first slice 구현과 correction follow-up은 완료
 - current first-pass reading:
-  - `Value`: cash drag와 `MDD`는 개선되지만 still hold
-  - `Quality + Value`: 개선은 있으나 still hold
+  - `Value`
+    - initial structural probe와 anchor-near second pass 모두
+      still `hold / blocked`
+    - meaningful redesign reference이지만
+      current practical anchor replacement는 아니다
+  - `Quality + Value`
+    - 개선은 있으나 still `hold / blocked`
+    - blended strongest point replacement는 아니다
+- current phase reading:
+  - 지금은 deeper rerun expansion보다
+    remaining structural/operator implementation을 먼저 정리하는 편이 맞다
 
 ## 주요 산출물
 
 - current board
   - `.note/finance/phase18/PHASE18_CURRENT_CHAPTER_TODO.md`
+- reprioritization note
+  - `.note/finance/phase18/PHASE18_IMPLEMENTATION_FIRST_REPRIORITIZATION.md`
 - implementation note
   - `.note/finance/phase18/PHASE18_NEXT_RANKED_FILL_IMPLEMENTATION_FIRST_SLICE.md`
 - representative rerun report

@@ -13,7 +13,7 @@ Detailed historical analysis was archived on `2026-04-13`.
 ## Active Pointers
 
 - current phase board:
-  - [PHASE17_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase17/PHASE17_CURRENT_CHAPTER_TODO.md)
+  - [PHASE18_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase18/PHASE18_CURRENT_CHAPTER_TODO.md)
 - current candidate summary:
   - [CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md)
 - historical full archive:
@@ -367,9 +367,8 @@ Detailed historical analysis was archived on `2026-04-13`.
     next-ranked eligible name으로 빈 슬롯을 채우는 redesign이다
   - representative rerun first pass 기준:
     - `Value` trend-on probe:
-      `hold / blocked`에서
-      `real_money_candidate / paper_probation / paper_only`
-      로 회복
+      cash drag와 downside는 개선되지만
+      still `hold / blocked`
     - `Quality + Value` trend-on probe:
       `CAGR`, `MDD`, cash share는 개선되지만
       still `hold / blocked`
@@ -398,3 +397,27 @@ Detailed historical analysis was archived on `2026-04-13`.
   - therefore:
     - Phase 18 first slice는 meaningful redesign reference이긴 하지만
     - current `Value` practical anchor를 교체하는 rescue contract로 보긴 어렵다
+
+### 2026-04-14 - Phase 18은 당분간 deep backtest보다 implementation-first로 운영하는 것이 맞다
+- Request topic:
+  - 일단 전체적인 기능/구현을 더 만든 뒤 다시 깊게 백테스트하는 편이 낫다는 방향 전환 요청
+- Interpreted goal:
+  - Phase 18 진행 방식을 rerun-first에서 implementation-first로 재정렬하고,
+    남은 구현 항목을 먼저 닫는 쪽으로 execution mode를 바꾸고 싶음
+- Result:
+  - 현재 기준으로 이 판단이 맞다
+  - 이유:
+    - Phase 17과 Phase 18 first slice까지의 깊은 rerun은
+      bounded/first larger-redesign 질문에는 충분한 근거를 이미 남겼다
+    - 지금 더 필요한 것은
+      remaining structural redesign slice와 operator support backlog를 먼저 구현해
+      strategy space를 더 넓힌 뒤 다시 integrated deep rerun으로 들어가는 것이다
+  - 따라서 current operating rule은:
+    1. broad deep backtest pause
+    2. 새 구현 slice마다 minimal validation만 수행
+    3. remaining implementation backlog가 닫힌 뒤 integrated deeper rerun 재개
+  - Phase 18 current reading:
+    - main track:
+      structural redesign implementation
+    - support track:
+      candidate consolidation / operator bridge implementation
