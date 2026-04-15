@@ -1184,3 +1184,25 @@ Detailed historical analysis was archived on `2026-04-13`.
     - benchmark baseline과
     - guardrail reference
     를 같은 필드의 다른 해석으로 보지 않고, 처음부터 별도 operator decision으로 다루는 것이다
+
+### 2026-04-15 - `Ticker Benchmark`일 때는 guardrail ticker를 선택 입력처럼 읽히게 하고, `Candidate Universe Equal-Weight`일 때는 benchmark ticker를 숨기는 쪽이 더 직관적이다
+- Request topic:
+  - 사용자가 실제 UX 관점에서
+    - `Ticker Benchmark`일 때는 `Benchmark Ticker`만 필수처럼 보이고
+    - `Candidate Universe Equal-Weight`일 때는 `Guardrail / Reference Ticker`만 핵심처럼 보이게 만들 수 있는지 요청함
+- Interpreted goal:
+  - benchmark contract에 따라 어떤 입력이 핵심인지 화면 자체가 먼저 말해주게 만들고 싶음
+- Result:
+  - `Ticker Benchmark` 모드에서는
+    - `Benchmark Ticker`
+    - `Guardrail / Reference Ticker (Optional)`
+    구조로 정리했고, 비워두면 benchmark와 동일하게 쓴다는 설명을 붙였다
+  - `Candidate Universe Equal-Weight` 모드에서는 benchmark ticker 입력을 숨기고,
+    benchmark curve가 후보군 equal-weight로 자동 생성된다는 안내와 함께
+    `Guardrail / Reference Ticker`만 보이게 정리했다
+  - compare form update, prefill summary, history/meta surface에서는
+    별도 guardrail ticker를 입력하지 않은 경우 `Same as Benchmark Ticker`로 보여주도록 바꿨다
+  - 따라서 현재 UX rule은
+    - `Ticker Benchmark`: benchmark ticker 중심 + optional separate guardrail ticker
+    - `Candidate Universe Equal-Weight`: auto-built benchmark + explicit guardrail/reference ticker
+    로 이해하면 된다
