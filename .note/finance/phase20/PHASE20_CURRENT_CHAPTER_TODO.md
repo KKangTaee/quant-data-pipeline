@@ -14,6 +14,7 @@
 - `completed` current candidate compare re-entry first work unit
   - `Compare & Portfolio Builder` 안에서 current anchor / near-miss를 바로 compare로 다시 보내는 surface 추가
   - current candidate registry를 quick action과 custom bundle selection에 연결
+  - QA feedback 기준으로 quick action 의미, registry source, load 이후 무엇이 바뀌는지 더 직접적으로 설명하도록 보강
 
 ## 2. Compare And Portfolio Workflow Hardening
 
@@ -35,6 +36,10 @@
   - registry row가 compare prefill contract로 변환되는지 확인
 - `completed` compare source context helper smoke
   - current candidate / saved portfolio source context가 weighted/saved workflow와 연결되는지 확인
+- `completed` current candidate re-entry UX clarification fix
+  - `Load Current Anchors`, `Load Lower-MDD Near Misses` 의미 설명 추가
+  - current candidate list가 자동 누적이 아니라 curated registry라는 설명 추가
+  - load 직후 `What Changed In Compare` 요약 카드가 보이도록 보강
 - `completed` strict annual shadow sample contract parity bugfix
   - manual validation 중 `rejected_slot_handling_mode` 인자 mismatch를 발견
   - quality / value / quality+value strict annual shadow sample entrypoint가 explicit contract argument를 받도록 정리

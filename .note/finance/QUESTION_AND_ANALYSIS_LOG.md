@@ -21,6 +21,28 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-04-15 - Phase 20 QA에서 current candidate re-entry는 기능 자체보다 "무엇이 바뀌었는지"를 보여주는 UX가 더 중요하다는 점이 드러났다
+- Request topic:
+  - `Current Candidate Re-entry` QA 진행 중
+    quick action 뜻, registry source, load 이후 무엇이 바뀌는지 이해하기 어렵다는 피드백
+- Interpreted goal:
+  - 기능 설명을 늘리는 것에 그치지 않고,
+    사용자가 버튼을 누른 뒤 compare form 어디가 바뀌었는지 바로 확인할 수 있게 만들기
+- Result:
+  - `Current Candidate Re-entry`는
+    compare를 즉시 실행하는 기능이 아니라
+    compare form의 전략/기간/override를 다시 채우는 기능이라는 점을 UI에서 먼저 설명하도록 바꿨다
+  - `Load Current Anchors`, `Load Lower-MDD Near Misses`의 뜻도 quick action 수준에서 바로 읽히게 보강했다
+  - candidate list는 모든 백테스트 결과가 자동으로 쌓이는 것이 아니라,
+    `CURRENT_CANDIDATE_REGISTRY.jsonl`에 curate된 active 후보만 보여준다는 점을 명시했다
+  - 그리고 load 직후에는
+    `What Changed In Compare` card를 띄워
+    - selected strategies
+    - date range
+    - 핵심 override 요약
+    - 어디를 확인하면 되는지
+    를 바로 보여주게 만들었다
+
 ### 2026-04-15 - Quality Strict Annual에서 Coverage 300 + Historical Dynamic + default contract 조합이 높은 CAGR을 보여도, 최근 phase에서 의도치 않게 느슨해진 것은 아니다
 - Request topic:
   - `Quality Snapshot (Strict Annual)`에서

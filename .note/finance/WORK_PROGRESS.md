@@ -22,6 +22,14 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-04-15
+- Applied a Phase 20 QA-driven UX clarification pass to `Current Candidate Re-entry`.
+- Added:
+  - clearer explanation that current candidate re-entry fills the compare form rather than running compare immediately
+  - clearer explanation for `Load Current Anchors` and `Load Lower-MDD Near Misses`
+  - registry-source explanation that the list is curated from `CURRENT_CANDIDATE_REGISTRY.jsonl`, not auto-filled by every run
+  - a `What Changed In Compare` summary card that shows selected strategies, period, and key overrides after load
+
+### 2026-04-15
 - Fixed a strict-annual shadow sample parity bug found during manual backtest validation.
 - Cause:
   - strict annual runtime wrappers started passing `rejected_slot_handling_mode`

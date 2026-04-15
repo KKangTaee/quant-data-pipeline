@@ -4964,9 +4964,25 @@ def _render_current_candidate_bundle_workspace() -> None:
 
     st.markdown("#### Current Candidate Re-entry")
     st.caption(
-        "문서에 정리된 strongest candidate와 near-miss를 다시 compare 쪽으로 보내는 빠른 동선입니다. "
-        "같은 family 후보는 한 번에 하나만 선택할 수 있습니다."
+        "문서에 정리된 current candidate를 compare 화면으로 다시 채우는 빠른 동선입니다. "
+        "이 기능은 compare를 바로 실행하는 버튼이 아니라, 아래 compare form의 전략/기간/override를 먼저 채우는 기능입니다."
     )
+    st.info(
+        "이 목록은 모든 백테스트 결과가 자동으로 쌓이는 공간이 아닙니다. "
+        "`.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`에 active 상태로 기록된 "
+        "strongest candidate / near miss / cleaner alternative만 보여줍니다."
+    )
+    helper_cols = st.columns(2, gap="small")
+    with helper_cols[0]:
+        st.markdown(
+            "- `Load Current Anchors`: 각 family의 지금 기준 strongest practical candidate를 compare form에 채웁니다.\n"
+            "- `Load Lower-MDD Near Misses`: MDD는 더 낮지만 gate는 약해진 near-miss 후보를 compare form에 채웁니다."
+        )
+    with helper_cols[1]:
+        st.markdown(
+            "- `Inspect Current Candidate Bundle Options`: 현재 registry에 등록된 후보를 직접 보고 고르는 표입니다.\n"
+            "- 같은 family 후보는 한 번에 하나만 선택할 수 있습니다."
+        )
     quick_action_cols = st.columns([0.34, 0.34, 0.32], gap="small")
     with quick_action_cols[0]:
         if st.button("Load Current Anchors", key="load_current_candidate_anchors", use_container_width=True):
@@ -4986,6 +5002,10 @@ def _render_current_candidate_bundle_workspace() -> None:
         st.caption("빠른 버튼 대신 아래에서 후보를 직접 고를 수도 있습니다.")
 
     with st.expander("Inspect Current Candidate Bundle Options", expanded=False):
+        st.caption(
+            "여기 보이는 후보는 current candidate registry에서 읽어온 active 후보입니다. "
+            "백테스트를 한 번 돌릴 때마다 자동으로 추가되는 리스트는 아닙니다."
+        )
         st.dataframe(display_df, use_container_width=True, hide_index=True)
         selected_labels = st.multiselect(
             "Candidates To Load Into Compare",
@@ -5001,6 +5021,76 @@ def _render_current_candidate_bundle_workspace() -> None:
                 st.rerun()
             except Exception as exc:
                 st.error(str(exc))
+
+
+def _build_compare_prefill_summary_rows(payload: dict[str, Any]) -> pd.DataFrame:
+    strategy_overrides = dict(payload.get("strategy_overrides") or {})
+    rows: list[dict[str, Any]] = []
+    for strategy_name in list(payload.get("selected_strategies") or []):
+        override = dict(strategy_overrides.get(strategy_name) or {})
+        strategy_choice, strategy_variant = display_name_to_selection(strategy_name)
+        benchmark_contract = override.get("benchmark_contract")
+        benchmark_ticker = override.get("benchmark_ticker")
+        benchmark_text = "-"
+        if benchmark_contract or benchmark_ticker:
+            benchmark_text = (
+                f"{_benchmark_contract_value_to_label(benchmark_contract)}"
+                + (f" / {benchmark_ticker}" if benchmark_ticker else "")
+            )
+        rows.append(
+            {
+                "Strategy": strategy_name,
+                "Variant": strategy_variant or "-",
+                "Top N": override.get("top_n") or override.get("top") or "-",
+                "Universe Contract": _universe_contract_value_to_label(override.get("universe_contract")),
+                "Benchmark": benchmark_text,
+                "Trend Filter": "On" if override.get("trend_filter_enabled") else "Off",
+                "Market Regime": "On" if override.get("market_regime_enabled") else "Off",
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def _render_compare_prefill_applied_card(payload: dict[str, Any] | None, source_context: dict[str, Any] | None) -> None:
+    payload = dict(payload or {})
+    source_context = dict(source_context or {})
+    if not payload:
+        return
+
+    selected_strategies = list(payload.get("selected_strategies") or [])
+    if not selected_strategies:
+        return
+
+    start = payload.get("start") or "-"
+    end = payload.get("end") or "-"
+    option = payload.get("option") or "-"
+    timeframe = payload.get("timeframe") or "-"
+    source_label = str(source_context.get("source_label") or "-").strip()
+
+    st.markdown("##### What Changed In Compare")
+    st.caption(
+        "방금 `Load ... Into Compare`로 바뀐 내용 요약입니다. "
+        "이 단계는 compare를 실행한 것이 아니라, 아래 compare form을 다시 채운 것입니다."
+    )
+    top_cols = st.columns(3, gap="small")
+    with top_cols[0]:
+        st.markdown(f"- `Source`: `{_compare_source_kind_label(source_context.get('source_kind'))}`")
+    with top_cols[1]:
+        st.markdown(f"- `Label`: `{source_label or '-'}`")
+    with top_cols[2]:
+        st.markdown(f"- `Period`: `{start} -> {end}`")
+    st.caption(
+        f"현재 compare form에는 `{', '.join(selected_strategies)}` 전략이 선택되어 있고, "
+        f"`Timeframe = {timeframe}`, `Option = {option}`으로 채워졌습니다."
+    )
+    summary_df = _build_compare_prefill_summary_rows(payload)
+    if not summary_df.empty:
+        st.dataframe(summary_df, use_container_width=True, hide_index=True)
+    st.markdown(
+        "- 확인 위치 1: 바로 아래 `Strategies` multiselect와 `Start Date / End Date`\n"
+        "- 확인 위치 2: `Advanced Inputs > Strategy-Specific Advanced Inputs` 안의 각 family expander\n"
+        "- 다음 행동: 값을 확인한 뒤 `Run Compare`를 눌러 실제 compare 결과를 다시 실행"
+    )
 
 
 def _render_saved_portfolio_workspace() -> None:
@@ -10876,6 +10966,10 @@ def render_backtest_tab() -> None:
         if compare_prefill_notice:
             st.info(compare_prefill_notice)
             st.session_state.backtest_compare_prefill_notice = None
+            _render_compare_prefill_applied_card(
+                st.session_state.get("backtest_compare_prefill_payload"),
+                st.session_state.get("backtest_compare_source_context"),
+            )
 
         _render_current_candidate_bundle_workspace()
         st.divider()

@@ -526,6 +526,13 @@ Analysis / Presentation
   를 한 표로 다시 보여주고,
   `Load Current Anchors` 또는 custom bundle selection으로
   current candidate를 compare form에 바로 다시 채울 수 있게 한다.
+- 그리고 이 candidate list는
+  매번 백테스트 결과가 자동으로 쌓이는 공간이 아니라,
+  `CURRENT_CANDIDATE_REGISTRY.jsonl`에 curate된 active candidate만 보여주는 ingress로 해석하는 것이 맞다.
+- QA feedback 이후에는
+  이 surface가 compare를 즉시 실행하는 기능이 아니라
+  compare form의 전략/기간/override를 다시 채우는 기능이라는 점도
+  화면에서 먼저 읽히게 보강되었다.
 - 즉 현재 compare surface는
   - manual strategy selection
   - saved portfolio compare re-entry
@@ -535,6 +542,10 @@ Analysis / Presentation
   - `Weighted Portfolio Builder` 위에
     `Current Compare Bundle` summary가 추가되어,
     current compare가 어디서 왔는지와 다음 행동을 바로 볼 수 있다.
+  - current candidate 또는 saved portfolio에서 compare를 다시 불러온 직후에는
+    `What Changed In Compare` summary가 함께 보여서,
+    어떤 전략/기간/override가 방금 compare form에 채워졌는지와
+    어디를 확인하면 되는지 바로 알 수 있게 되었다.
   - weighted portfolio meta와 history context에도 compare source context가 남도록 보강되어,
     later rerun 시 compare bundle 출처를 다시 읽기 쉬워졌다.
   - saved portfolio는 source context를 같이 저장하고,
