@@ -1036,3 +1036,22 @@ Detailed historical analysis was archived on `2026-04-13`.
     왜 버튼이 둘인지와 어떤 후보 묶음을 불러오는지 바로 읽히게 했다
   - custom picker도 `Pick Specific Candidates Manually`로 바꿔,
     빠른 불러오기와 직접 선택을 더 쉽게 구분하게 했다
+
+### 2026-04-15 - Current candidate re-entry 후보 목록은 문서 생성만으로 자동 노출되지 않는다
+- Request topic:
+  - 사용자가 current candidate 재진입 UX가 여전히 잘 안 읽히고,
+    `Pick Specific Candidates Manually` 목록이 문서만 만들면 자동으로 생기는지,
+    아니면 별도 후보 등록이 필요한지 물어봄
+- Interpreted goal:
+  - UI는 더 단순하게 읽히게 만들고,
+    후보 리스트의 source-of-truth가 무엇인지도 사용자 입장에서 분명히 알고 싶음
+- Result:
+  - current candidate 재진입 surface를
+    `Quick Bundles`와 `Pick Manually` 두 탭으로 분리했다
+  - `Pick Manually` 탭 안에서 이 목록은
+    새 백테스트 실행이나 Markdown 문서 생성만으로 자동 누적되지 않고,
+    `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`의 active row를 읽는다고 명시했다
+  - 따라서 현재 구조에서는 문서만 만든다고 자동 노출되지 않는다
+  - 다만 사용자가 별도로 “노출용 문서”를 하나 더 만들 필요는 없고,
+    후보를 UI에 다시 쓰고 싶다면 registry가 갱신되어야 한다.
+    이 저장은 앞으로 candidate closeout 작업에서 같이 맞추는 것이 기본 흐름이다

@@ -554,6 +554,15 @@ Analysis / Presentation
   - 아니면 아래 표에서 직접 고르는 흐름인지
   한 줄 설명을 붙여,
   왜 버튼이 두 개 있는지 화면에서 바로 이해할 수 있게 했다.
+- 이후 한 번 더 UX를 다듬으면서,
+  current candidate 재진입은
+  - `Quick Bundles`
+  - `Pick Manually`
+  두 탭으로 나눠 읽히게 정리했다.
+- 이때 `Pick Manually` 탭에는
+  현재 목록이 새 백테스트 실행이나 Markdown 문서 생성만으로 자동 누적되는 것이 아니라,
+  `CURRENT_CANDIDATE_REGISTRY.jsonl`의 active row를 읽는 구조라는 점도
+  화면 안에서 바로 설명하도록 보강했다.
 - 이후 QA에서는 compare / weighted / saved portfolio 사이의 divider가 과하다는 피드백이 나와,
   top-level divider는 제거하고 각 섹션의 `###` 제목만으로 구분하도록 정리했다.
 - `Saved Portfolios`는 별도 top-level 탭으로 빼지 않고
