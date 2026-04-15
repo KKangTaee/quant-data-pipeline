@@ -1206,3 +1206,14 @@ Detailed historical analysis was archived on `2026-04-13`.
     - `Ticker Benchmark`: benchmark ticker 중심 + optional separate guardrail ticker
     - `Candidate Universe Equal-Weight`: auto-built benchmark + explicit guardrail/reference ticker
     로 이해하면 된다
+
+### 2026-04-15 - `Benchmark Contract`를 바꿔도 입력이 즉시 숨겨지지 않는 것은 현재 form 구조 제약 때문이었다
+- Request topic:
+  - 사용자가 `Benchmark Contract`를 변경해도 `Benchmark Ticker` / `Guardrail / Reference Ticker` 입력이 바로 숨겨지지 않는다고 확인 요청함
+- Interpreted goal:
+  - 현재 UI가 실제로 버그인지, 아니면 Streamlit form 구조상 즉시 반영되지 않는 것인지 파악하고 싶음
+- Result:
+  - 원인은 현재 strict annual `Real-Money Contract`가 `st.form` 안에 있기 때문이었다
+  - 이 구조에서는 dropdown 값을 바꾸는 것만으로는 즉시 rerun되지 않아, contract-dependent hide/show가 바로 반영되지 않는다
+  - 그래서 현재는 `Apply Contract Layout` 버튼을 추가해, 사용자가 contract를 바꾼 뒤 그 섹션 레이아웃만 다시 반영할 수 있게 정리했다
+  - full backtest 실행 버튼과 별도로 레이아웃 반영 버튼을 둔 이유는, 단지 입력 구성을 바꾸고 싶을 때 전체 실행이 걸리지 않게 하기 위해서다

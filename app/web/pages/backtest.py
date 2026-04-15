@@ -1877,6 +1877,20 @@ def _render_strict_annual_real_money_inputs(
             ),
         )
         benchmark_contract = STRICT_BENCHMARK_CONTRACT_LABELS[benchmark_contract_label]
+    layout_note_col, layout_button_col = st.columns([0.72, 0.28], gap="small")
+    with layout_note_col:
+        st.caption(
+            "`Benchmark Contract`를 바꾼 뒤 입력 구성이 바로 안 바뀌면, 오른쪽 버튼으로 "
+            "이 섹션 레이아웃을 다시 반영할 수 있습니다."
+        )
+    with layout_button_col:
+        contract_layout_refresh_requested = st.form_submit_button(
+            "Apply Contract Layout",
+            use_container_width=True,
+            help="현재 선택한 Benchmark Contract 기준으로 아래 입력 구성을 다시 반영합니다.",
+        )
+    if contract_layout_refresh_requested:
+        st.success("현재 선택한 Benchmark Contract 기준으로 입력 구성을 다시 반영했습니다.")
     default_benchmark = str(default_benchmark or ETF_REAL_MONEY_DEFAULT_BENCHMARK).strip().upper()
     raw_guardrail_default = str(default_guardrail_reference_ticker or "").strip().upper()
     optional_guardrail_default = raw_guardrail_default if raw_guardrail_default and raw_guardrail_default != default_benchmark else ""

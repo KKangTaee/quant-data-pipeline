@@ -62,6 +62,9 @@
 - `completed` benchmark contract별 입력 강조 UX 정리
   - `Ticker Benchmark`일 때는 `Benchmark Ticker`를 중심으로, `Guardrail / Reference Ticker`는 optional 분리 입력으로 읽히게 정리
   - `Candidate Universe Equal-Weight`일 때는 benchmark ticker 입력을 숨기고, guardrail/reference ticker만 핵심 입력으로 남겨 더 직관적으로 보이게 정리
+- `completed` benchmark contract layout refresh 보강
+  - strict annual `Real-Money Contract`가 form 안에 있어 contract 변경만으로 즉시 rerun되지 않는 제약을 확인
+  - `Apply Contract Layout` 버튼을 추가해, full run 없이도 contract별 입력 숨김/노출을 다시 반영할 수 있게 정리
 - `completed` current candidate re-entry plain-language labeling cleanup
   - `Load Current Anchors` / `Load Lower-MDD Near Misses` 같은 내부자 표현을 더 직접적인 버튼 이름으로 정리
   - 빠른 버튼 2개와 직접 선택 1개의 차이를 각 버튼 아래 설명으로 바로 읽히게 보강

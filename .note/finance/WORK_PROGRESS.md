@@ -841,3 +841,15 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.venv/bin/python -c "import app.web.pages.backtest"`
 - Durable takeaway:
   - the operator now reads benchmark baseline and guardrail reference as separate decisions, with the optional/same-as-benchmark case made explicit in the UI
+
+### 2026-04-15
+- Phase 20 QA then reported that changing `Benchmark Contract` still did not hide/show the dependent inputs immediately.
+- Changed:
+  - confirmed the root cause was the current `st.form` structure: changing a widget inside the form does not immediately rerun the section
+  - added `Apply Contract Layout` next to `Benchmark Contract`
+  - this lets the user refresh only the contract-specific input layout without accidentally running the full backtest/compare action
+- Validation:
+  - `python3 -m py_compile app/web/pages/backtest.py`
+  - `.venv/bin/python -c "import app.web.pages.backtest"`
+- Durable takeaway:
+  - within the current form architecture, an explicit layout-refresh submit is the safest way to make contract-dependent inputs feel responsive without a larger form refactor

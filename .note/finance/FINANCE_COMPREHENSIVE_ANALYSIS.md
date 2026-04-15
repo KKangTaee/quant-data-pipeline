@@ -629,6 +629,10 @@ Analysis / Presentation
   - `Guardrail / Reference Ticker`만 guardrail 기준 입력으로 남긴다.
   이 구조는 "무엇과 직접 비교하나"와 "guardrail이 무엇을 기준으로 멈추나"를
   operator가 서로 다른 질문으로 읽게 만들려는 의도다.
+  다만 이 strict annual surface는 현재 `st.form` 기반이기 때문에,
+  `Benchmark Contract`를 바꿨을 때 해당 입력칸 숨김/노출이 즉시 rerun되지 않을 수 있다.
+  그래서 현재 UI에는 `Apply Contract Layout` 버튼도 같이 두어,
+  사용자가 contract를 바꾼 뒤 이 섹션 레이아웃만 다시 반영할 수 있게 했다.
 - 이후 QA에서는 compare / weighted / saved portfolio 사이의 divider가 과하다는 피드백이 나와,
   top-level divider는 제거하고 각 섹션의 `###` 제목만으로 구분하도록 정리했다.
 - `Saved Portfolios`는 별도 top-level 탭으로 빼지 않고
