@@ -1217,3 +1217,14 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 이 구조에서는 dropdown 값을 바꾸는 것만으로는 즉시 rerun되지 않아, contract-dependent hide/show가 바로 반영되지 않는다
   - 그래서 현재는 `Apply Contract Layout` 버튼을 추가해, 사용자가 contract를 바꾼 뒤 그 섹션 레이아웃만 다시 반영할 수 있게 정리했다
   - full backtest 실행 버튼과 별도로 레이아웃 반영 버튼을 둔 이유는, 단지 입력 구성을 바꾸고 싶을 때 전체 실행이 걸리지 않게 하기 위해서다
+
+### 2026-04-15 - shared strict-annual helper 안의 submit button은 form마다 고유 key가 필요했다
+- Request topic:
+  - 사용자가 compare strict-annual 경로에서 `StreamlitDuplicateElementKey` 에러를 보고 수정 요청함
+- Interpreted goal:
+  - 새로 추가한 `Apply Contract Layout` 버튼이 single/compare 여러 form에서 재사용되어도 충돌 없이 동작하게 만들고 싶음
+- Result:
+  - 원인은 shared helper `_render_strict_annual_real_money_inputs(...)` 안의 `st.form_submit_button("Apply Contract Layout")`이
+    여러 form instance에서 같은 내부 key로 등록된 것이었다
+  - 버튼 key를 `key_prefix` 기반의 고유 값으로 바꿔 충돌을 제거했다
+  - 따라서 현재는 single/compare strict-annual form이 동시에 존재해도 layout refresh 버튼이 서로 키를 공유하지 않는다

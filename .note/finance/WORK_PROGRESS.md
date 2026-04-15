@@ -853,3 +853,14 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.venv/bin/python -c "import app.web.pages.backtest"`
 - Durable takeaway:
   - within the current form architecture, an explicit layout-refresh submit is the safest way to make contract-dependent inputs feel responsive without a larger form refactor
+
+### 2026-04-15
+- Phase 20 QA then hit a `StreamlitDuplicateElementKey` error in compare strict-annual forms.
+- Changed:
+  - gave each `Apply Contract Layout` form submit button a unique key derived from `key_prefix`
+  - this removes the collision between single and compare strict-annual form instances
+- Validation:
+  - `python3 -m py_compile app/web/pages/backtest.py`
+  - `.venv/bin/python -c "import app.web.pages.backtest"`
+- Durable takeaway:
+  - helper buttons reused across strict-annual forms need explicit per-surface keys, especially when they live inside shared form-render helpers

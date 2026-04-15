@@ -1886,6 +1886,7 @@ def _render_strict_annual_real_money_inputs(
     with layout_button_col:
         contract_layout_refresh_requested = st.form_submit_button(
             "Apply Contract Layout",
+            key=f"{key_prefix}_apply_contract_layout",
             use_container_width=True,
             help="현재 선택한 Benchmark Contract 기준으로 아래 입력 구성을 다시 반영합니다.",
         )

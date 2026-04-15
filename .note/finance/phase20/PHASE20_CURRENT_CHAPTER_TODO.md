@@ -65,6 +65,9 @@
 - `completed` benchmark contract layout refresh 보강
   - strict annual `Real-Money Contract`가 form 안에 있어 contract 변경만으로 즉시 rerun되지 않는 제약을 확인
   - `Apply Contract Layout` 버튼을 추가해, full run 없이도 contract별 입력 숨김/노출을 다시 반영할 수 있게 정리
+- `completed` shared layout-refresh button key collision fix
+  - compare strict-annual form에서 `Apply Contract Layout` 버튼이 duplicate key를 일으키는 문제를 확인
+  - shared helper 안 submit button key를 `key_prefix` 기반으로 분리해 single/compare form 충돌을 제거
 - `completed` current candidate re-entry plain-language labeling cleanup
   - `Load Current Anchors` / `Load Lower-MDD Near Misses` 같은 내부자 표현을 더 직접적인 버튼 이름으로 정리
   - 빠른 버튼 2개와 직접 선택 1개의 차이를 각 버튼 아래 설명으로 바로 읽히게 보강
