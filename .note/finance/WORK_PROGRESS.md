@@ -22,6 +22,21 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-04-15
+- Fixed a strict-annual shadow sample parity bug found during manual backtest validation.
+- Cause:
+  - strict annual runtime wrappers started passing `rejected_slot_handling_mode`
+    to the shadow DB sample entrypoints,
+    but the three shadow helpers in `finance/sample.py`
+    still only accepted the older boolean pair.
+- Applied the fix to:
+  - quality strict annual shadow path
+  - value strict annual shadow path
+  - quality+value strict annual shadow path
+- Result:
+  - the shadow sample entrypoints now accept the explicit rejected-slot handling contract
+    and normalize it back into legacy flags before execution.
+
+### 2026-04-15
 - Continued Phase 20 through practical closeout.
 - Added the second operator-workflow hardening unit:
   - compare source context now carries into weighted portfolio and saved portfolio flows

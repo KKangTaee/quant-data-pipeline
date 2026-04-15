@@ -1957,6 +1957,7 @@ def get_statement_quality_snapshot_shadow_from_db(
     trend_filter_enabled=False,
     trend_filter_window=STRICT_TREND_FILTER_DEFAULT_WINDOW,
     weighting_mode: str = STRICT_DEFAULT_WEIGHTING_MODE,
+    rejected_slot_handling_mode: str | None = None,
     rejected_slot_fill_enabled: bool = STRICT_REJECTED_SLOT_FILL_DEFAULT_ENABLED,
     partial_cash_retention_enabled: bool = STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
     risk_off_mode: str = STRICT_DEFAULT_RISK_OFF_MODE,
@@ -1979,6 +1980,14 @@ def get_statement_quality_snapshot_shadow_from_db(
 ):
     if quality_factors is None:
         quality_factors = QUALITY_STRICT_DEFAULT_FACTORS.copy()
+    rejected_slot_handling_mode = resolve_strict_rejection_handling_mode(
+        rejected_slot_handling_mode,
+        rejected_slot_fill_enabled=rejected_slot_fill_enabled,
+        partial_cash_retention_enabled=partial_cash_retention_enabled,
+    )
+    rejected_slot_fill_enabled, partial_cash_retention_enabled = strict_rejection_handling_mode_to_flags(
+        rejected_slot_handling_mode
+    )
 
     return _run_statement_shadow_snapshot_from_db(
         start=start,
@@ -2036,6 +2045,7 @@ def get_statement_value_snapshot_shadow_from_db(
     trend_filter_enabled=False,
     trend_filter_window=STRICT_TREND_FILTER_DEFAULT_WINDOW,
     weighting_mode: str = STRICT_DEFAULT_WEIGHTING_MODE,
+    rejected_slot_handling_mode: str | None = None,
     rejected_slot_fill_enabled: bool = STRICT_REJECTED_SLOT_FILL_DEFAULT_ENABLED,
     partial_cash_retention_enabled: bool = STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
     risk_off_mode: str = STRICT_DEFAULT_RISK_OFF_MODE,
@@ -2058,6 +2068,14 @@ def get_statement_value_snapshot_shadow_from_db(
 ):
     if value_factors is None:
         value_factors = VALUE_STRICT_DEFAULT_FACTORS.copy()
+    rejected_slot_handling_mode = resolve_strict_rejection_handling_mode(
+        rejected_slot_handling_mode,
+        rejected_slot_fill_enabled=rejected_slot_fill_enabled,
+        partial_cash_retention_enabled=partial_cash_retention_enabled,
+    )
+    rejected_slot_fill_enabled, partial_cash_retention_enabled = strict_rejection_handling_mode_to_flags(
+        rejected_slot_handling_mode
+    )
 
     return _run_statement_shadow_snapshot_from_db(
         start=start,
@@ -2116,6 +2134,7 @@ def get_statement_quality_value_snapshot_shadow_from_db(
     trend_filter_enabled=False,
     trend_filter_window=STRICT_TREND_FILTER_DEFAULT_WINDOW,
     weighting_mode: str = STRICT_DEFAULT_WEIGHTING_MODE,
+    rejected_slot_handling_mode: str | None = None,
     rejected_slot_fill_enabled: bool = STRICT_REJECTED_SLOT_FILL_DEFAULT_ENABLED,
     partial_cash_retention_enabled: bool = STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
     risk_off_mode: str = STRICT_DEFAULT_RISK_OFF_MODE,
@@ -2140,6 +2159,14 @@ def get_statement_quality_value_snapshot_shadow_from_db(
         quality_factors = QUALITY_STRICT_DEFAULT_FACTORS.copy()
     if value_factors is None:
         value_factors = VALUE_STRICT_DEFAULT_FACTORS.copy()
+    rejected_slot_handling_mode = resolve_strict_rejection_handling_mode(
+        rejected_slot_handling_mode,
+        rejected_slot_fill_enabled=rejected_slot_fill_enabled,
+        partial_cash_retention_enabled=partial_cash_retention_enabled,
+    )
+    rejected_slot_fill_enabled, partial_cash_retention_enabled = strict_rejection_handling_mode_to_flags(
+        rejected_slot_handling_mode
+    )
 
     combined_factors = []
     for factor_name in [*quality_factors, *value_factors]:

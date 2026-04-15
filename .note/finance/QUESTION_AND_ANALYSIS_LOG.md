@@ -21,6 +21,28 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-04-15 - strict annual quality backtest error was caused by shadow sample entrypoints lagging behind the new contract argument
+- Request topic:
+  - `Quality Snapshot (Strict Annual)` backtest raised
+    `get_statement_value_snapshot_shadow_from_db() got an unexpected keyword argument 'rejected_slot_handling_mode'`
+- Interpreted goal:
+  - identify the real mismatch and fix it without changing intended strategy behavior
+- Result:
+  - the bug was not in the strategy logic itself,
+    but in the handoff between runtime wrappers and `finance/sample.py` shadow DB helpers
+  - runtime wrappers had already moved to the explicit contract argument
+    `rejected_slot_handling_mode`
+  - but the three shadow sample entrypoints for
+    quality / value / quality+value strict annual
+    still only accepted the older boolean pair
+    `rejected_slot_fill_enabled` and `partial_cash_retention_enabled`
+  - fix:
+    - add `rejected_slot_handling_mode` to those sample entrypoints
+    - normalize it back into the legacy booleans internally
+  - expected outcome:
+    - strict annual shadow paths now accept the same contract language as the runtime/UI path,
+      so the quality backtest should run again without this argument mismatch
+
 ### 2026-04-15 - Phase 20의 핵심은 후보를 더 찾는 일이 아니라, 현재 후보를 다시 쓰는 operator workflow를 다듬는 일이었다
 - Request topic:
   - Phase 20을 중간에 끊지 않고 끝까지 진행하고 checklist까지 정리

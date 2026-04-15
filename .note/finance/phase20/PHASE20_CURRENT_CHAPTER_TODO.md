@@ -35,6 +35,9 @@
   - registry row가 compare prefill contract로 변환되는지 확인
 - `completed` compare source context helper smoke
   - current candidate / saved portfolio source context가 weighted/saved workflow와 연결되는지 확인
+- `completed` strict annual shadow sample contract parity bugfix
+  - manual validation 중 `rejected_slot_handling_mode` 인자 mismatch를 발견
+  - quality / value / quality+value strict annual shadow sample entrypoint가 explicit contract argument를 받도록 정리
 - `pending` targeted UI validation
   - current candidate re-entry -> compare
   - compare -> weighted portfolio
