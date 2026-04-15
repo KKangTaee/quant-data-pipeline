@@ -871,3 +871,15 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.venv/bin/python -c "import app.web.pages.backtest"`
 - Durable takeaway:
   - the benchmark baseline and the guardrail reference now live in the same places as their actual behavioral meaning, which is much easier to understand in the UI
+
+### 2026-04-15
+- Phase 20 QA then pointed out that `Compare Form Updated` should hide values that are not actually used by the loaded contract.
+- Changed:
+  - when `Benchmark Contract = Candidate Universe Equal-Weight`, the compare summary now leaves `Benchmark Ticker` blank
+  - when both underperformance and drawdown guardrails are off, the compare summary now leaves `Guardrail / Reference Ticker` blank
+  - kept `Same as Benchmark Ticker` only for cases where a guardrail is on but no separate reference ticker was explicitly entered
+- Validation:
+  - `python3 -m py_compile app/web/pages/backtest.py`
+  - `.venv/bin/python -c "import app.web.pages.backtest"`
+- Durable takeaway:
+  - the compare summary is now closer to a true "active settings" view: unused values stay empty instead of looking meaningful

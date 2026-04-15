@@ -66,6 +66,9 @@
   - form 제약 때문에 contract별 hide/show나 별도 레이아웃 반영 버튼은 최종안에서 제거
   - `Real-Money Contract`에는 benchmark baseline 관련 입력만 남기고,
     `Guardrail / Reference Ticker (Optional)`는 `Guardrails` 탭으로 옮겨 실제 역할과 같은 위치에서 읽히게 정리
+- `completed` compare summary active-setting cleanup
+  - `Candidate Universe Equal-Weight`일 때 `Compare Form Updated`의 `Benchmark Ticker`는 빈칸으로 보여 실제 미사용 값을 드러내지 않도록 정리
+  - guardrail이 둘 다 꺼져 있을 때는 `Guardrail / Reference Ticker`도 빈칸으로 보여, 실제 활성화된 설정만 읽히게 정리
 - `completed` current candidate re-entry plain-language labeling cleanup
   - `Load Current Anchors` / `Load Lower-MDD Near Misses` 같은 내부자 표현을 더 직접적인 버튼 이름으로 정리
   - 빠른 버튼 2개와 직접 선택 1개의 차이를 각 버튼 아래 설명으로 바로 읽히게 보강

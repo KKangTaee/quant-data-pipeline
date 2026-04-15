@@ -5132,8 +5132,8 @@ def _build_compare_prefill_summary_rows(payload: dict[str, Any]) -> pd.DataFrame
                 "Top N": override.get("top_n") or override.get("top") or "-",
                 "Universe Contract": _universe_contract_value_to_label(override.get("universe_contract")),
                 "Benchmark Contract": benchmark_contract_text,
-                "Benchmark Ticker": benchmark_ticker or "-",
-                "Guardrail / Reference Ticker": _guardrail_reference_display_value(override),
+                "Benchmark Ticker": _compare_summary_benchmark_ticker_value(override),
+                "Guardrail / Reference Ticker": _compare_summary_guardrail_reference_value(override),
                 "Trend Filter": "On" if override.get("trend_filter_enabled") else "Off",
                 "Market Regime": "On" if override.get("market_regime_enabled") else "Off",
                 "Weighting Contract": _strict_weighting_mode_value_to_label(
@@ -5189,7 +5189,7 @@ def _render_compare_prefill_applied_card(payload: dict[str, Any] | None, source_
         if "Candidate Universe Equal-Weight" in summary_df.get("Benchmark Contract", pd.Series(dtype=str)).astype(str).tolist():
             st.caption(
                 "여기서 `Candidate Universe Equal-Weight`는 benchmark contract 자체를 뜻합니다. "
-                "`Benchmark Ticker`는 외부 ETF benchmark를 직접 쓰는 경우에 더 중요하고, "
+                "이 경우 표의 `Benchmark Ticker`가 빈칸이면 direct benchmark ticker가 실제로 쓰이지 않는다는 뜻이고, "
                 "`Guardrail / Reference Ticker`는 equal-weight contract에서도 underperformance / drawdown guardrail이 "
                 "참고하는 별도 기준 ticker입니다."
             )
@@ -5197,6 +5197,11 @@ def _render_compare_prefill_applied_card(payload: dict[str, Any] | None, source_
             st.caption(
                 "`Same as Benchmark Ticker`는 별도 guardrail ticker를 따로 넣지 않았다는 뜻입니다. "
                 "이 경우 guardrail은 `Benchmark Ticker`를 그대로 기준으로 같이 사용합니다."
+            )
+        if not summary_df.get("Guardrail / Reference Ticker", pd.Series(dtype=str)).astype(str).str.strip().any():
+            st.caption(
+                "`Guardrail / Reference Ticker`가 빈칸이면 현재 compare에 불러온 전략들에서 "
+                "underperformance / drawdown guardrail이 실제로 켜져 있지 않다는 뜻입니다."
             )
     st.markdown("**어디서 확인하면 되나**")
     st.markdown(
@@ -5810,6 +5815,27 @@ def _guardrail_reference_display_value(data: dict[str, Any] | None) -> str:
     if benchmark_ticker:
         return "Same as Benchmark Ticker"
     return "-"
+
+
+def _compare_summary_benchmark_ticker_value(data: dict[str, Any] | None) -> str:
+    data = dict(data or {})
+    if data.get("benchmark_contract") == STRICT_BENCHMARK_CONTRACT_CANDIDATE_EQUAL_WEIGHT:
+        return ""
+    return str(data.get("benchmark_ticker") or "").strip().upper()
+
+
+def _compare_summary_guardrail_reference_value(data: dict[str, Any] | None) -> str:
+    data = dict(data or {})
+    guardrail_used = bool(data.get("underperformance_guardrail_enabled") or data.get("drawdown_guardrail_enabled"))
+    if not guardrail_used:
+        return ""
+    raw_ticker = _raw_guardrail_reference_ticker_value(data)
+    if raw_ticker:
+        return raw_ticker
+    benchmark_ticker = str(data.get("benchmark_ticker") or "").strip().upper()
+    if benchmark_ticker:
+        return "Same as Benchmark Ticker"
+    return ""
 
 
 def _build_prefill_summary_lines(payload: dict[str, Any] | None) -> list[str]:

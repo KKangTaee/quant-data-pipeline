@@ -1243,3 +1243,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 따라서 현재 durable interpretation은:
     - `Benchmark Contract` / `Benchmark Ticker` = 무엇과 직접 비교하는가
     - `Guardrail / Reference Ticker (Optional)` = guardrail이 무엇을 기준으로 쉬는가
+
+### 2026-04-15 - compare summary에서는 실제로 쓰이지 않는 ticker 값은 빈칸으로 두는 편이 더 합리적이다
+- Request topic:
+  - 사용자가 `Compare Form Updated` 표에서
+    - `Candidate Universe Equal-Weight`일 때는 `Benchmark Ticker`가 사실상 안 쓰이고
+    - guardrail이 꺼져 있을 때는 `Guardrail / Reference Ticker`도 의미가 없으니
+    빈칸으로 처리하는 편이 더 낫다고 제안함
+- Interpreted goal:
+  - compare summary를 "실제로 활성화된 설정" 중심으로 읽히게 만들고 싶음
+- Result:
+  - `Benchmark Contract = Candidate Universe Equal-Weight`이면 compare summary의 `Benchmark Ticker`는 빈칸으로 보이게 바꿨다
+  - underperformance / drawdown guardrail이 둘 다 꺼져 있으면 `Guardrail / Reference Ticker`도 빈칸으로 보이게 바꿨다
+  - 단, guardrail이 켜져 있고 별도 reference ticker를 입력하지 않은 경우에는 `Same as Benchmark Ticker`를 유지해 fallback 의미를 드러내도록 했다

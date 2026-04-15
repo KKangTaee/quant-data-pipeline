@@ -631,6 +631,10 @@ Analysis / Presentation
   - `Real-Money Contract`: 무엇과 직접 비교하나
   - `Guardrails`: guardrail이 무엇을 기준으로 멈추나
   를 화면 구조 자체로 분리해서 읽게 만드는 쪽으로 정리됐다.
+  그리고 compare prefill 요약 카드에서는
+  - `Candidate Universe Equal-Weight`일 때 `Benchmark Ticker`를 빈칸으로 두고
+  - guardrail이 실제로 꺼져 있으면 `Guardrail / Reference Ticker`도 빈칸으로 두어
+  "실제로 활성화된 설정만 보여주는 표"에 더 가깝게 읽히게 만들었다.
 - 이후 QA에서는 compare / weighted / saved portfolio 사이의 divider가 과하다는 피드백이 나와,
   top-level divider는 제거하고 각 섹션의 `###` 제목만으로 구분하도록 정리했다.
 - `Saved Portfolios`는 별도 top-level 탭으로 빼지 않고
