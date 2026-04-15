@@ -57,15 +57,15 @@
   - `Candidate Universe Equal-Weight / SPY`가 하나의 benchmark처럼 읽히지 않도록 compare summary와 current candidate contract summary에서 contract와 reference ticker를 분리 표기
   - equal-weight benchmark일 때 `SPY`가 benchmark 자체가 아니라 reference ticker일 수 있다는 설명을 compare 카드 안에서도 보강
 - `completed` benchmark ticker와 guardrail/reference ticker 역할 분리
-  - strict annual `Real-Money Contract`에서 `Benchmark Ticker`와 `Guardrail / Reference Ticker`를 별도 입력으로 분리
-  - `Comparison Baseline`과 `Guardrail / Reference`를 따로 읽게 만들어, equal-weight benchmark와 SPY reference를 같은 값으로 오해하지 않도록 정리
+  - strict annual UI에서 `Benchmark Ticker`와 `Guardrail / Reference Ticker`의 역할을 분리
+  - equal-weight benchmark와 SPY reference를 같은 값으로 오해하지 않도록 정리
 - `completed` benchmark contract별 입력 강조 UX 정리
   - `Ticker Benchmark`일 때는 `Benchmark Ticker`를 중심으로, `Guardrail / Reference Ticker`는 optional 분리 입력으로 읽히게 정리
   - `Candidate Universe Equal-Weight`일 때는 benchmark ticker가 직접 baseline 계산에는 쓰이지 않는다는 설명을 함께 보여주도록 정리
 - `completed` benchmark / guardrail 설명 중심 UX로 최종 정리
   - form 제약 때문에 contract별 hide/show나 별도 레이아웃 반영 버튼은 최종안에서 제거
-  - 대신 `Benchmark Contract`, `Benchmark Ticker`, `Guardrail / Reference Ticker (Optional)`를 항상 같이 보여주고,
-    각 contract에서 무엇이 직접 비교 기준이고 무엇이 guardrail 기준인지 설명 문구로 구분하도록 정리
+  - `Real-Money Contract`에는 benchmark baseline 관련 입력만 남기고,
+    `Guardrail / Reference Ticker (Optional)`는 `Guardrails` 탭으로 옮겨 실제 역할과 같은 위치에서 읽히게 정리
 - `completed` current candidate re-entry plain-language labeling cleanup
   - `Load Current Anchors` / `Load Lower-MDD Near Misses` 같은 내부자 표현을 더 직접적인 버튼 이름으로 정리
   - 빠른 버튼 2개와 직접 선택 1개의 차이를 각 버튼 아래 설명으로 바로 읽히게 보강

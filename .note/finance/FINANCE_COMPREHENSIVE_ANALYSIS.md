@@ -137,7 +137,7 @@ Analysis / Presentation
   까지 `Guides`에서 바로 확인할 수 있게 정리됐다.
   이어서 `Guides`에는 `Real-Money Contract 값 해설` 섹션도 추가되어,
   `Advanced Inputs > Real-Money Contract`에 나오는
-  `Minimum Price`, `Transaction Cost`, `Benchmark Ticker`, `Guardrail / Reference Ticker`,
+  `Minimum Price`, `Transaction Cost`, `Benchmark Ticker`,
   strict annual의 benchmark / liquidity / validation / guardrail threshold,
   ETF의 `Min ETF AUM`, `Max Bid-Ask Spread`
   가 각각 무엇을 뜻하고 왜 필요한지, 결과의 어느 surface에 영향을 주는지까지
@@ -271,7 +271,7 @@ Analysis / Presentation
   도 first-pass real-money hardening이 추가되어,
   annual strict single/compare/history 경로에서도
   `Minimum Price`, `Minimum History (Months)`, `Transaction Cost (bps)`, `Benchmark Ticker`,
-  `Guardrail / Reference Ticker`와
+  그리고 guardrail용 reference ticker를 포함한
   gross/net/cost/benchmark surface를 같은 계약으로 읽을 수 있게 되었다.
 - 이어서 same shared real-money helper에 second-pass validation surface가 추가되어,
   annual strict와 ETF 전략군 모두 benchmark-relative
@@ -622,14 +622,15 @@ Analysis / Presentation
 - 같은 QA 흐름에서 한 번 더 정리된 최종 UX는,
   `Ticker Benchmark`일 때는
   - `Benchmark Ticker`를 직접 비교 기준으로 먼저 보여주고
-  - `Guardrail / Reference Ticker`는 비워두면 benchmark와 동일하게 쓰는 선택 입력으로 읽히게 하는 방식이다.
+  - `Guardrail / Reference Ticker`는 `Guardrails` 탭에서 비워두면 benchmark와 동일하게 쓰는 선택 입력으로 읽히게 하는 방식이다.
   반대로 `Candidate Universe Equal-Weight`일 때는
   - benchmark curve가 후보군 equal-weight로 자동 생성된다는 설명을 함께 보여주고
   - `Benchmark Ticker`는 "직접 비교 baseline에는 쓰이지 않는다"는 안내와 같이 계속 보이며
-  - `Guardrail / Reference Ticker`는 guardrail 기준 입력으로 읽히게 한다.
-  즉 현재 UI는 세 입력을 항상 같이 보여주되,
-  `무엇과 직접 비교하나`와 `guardrail이 무엇을 기준으로 멈추나`를
-  설명 문구로 분리해서 읽게 만드는 쪽으로 정리됐다.
+  - `Guardrail / Reference Ticker`는 `Guardrails` 탭 안에서만 guardrail 기준 입력으로 읽히게 한다.
+  즉 현재 UI는
+  - `Real-Money Contract`: 무엇과 직접 비교하나
+  - `Guardrails`: guardrail이 무엇을 기준으로 멈추나
+  를 화면 구조 자체로 분리해서 읽게 만드는 쪽으로 정리됐다.
 - 이후 QA에서는 compare / weighted / saved portfolio 사이의 divider가 과하다는 피드백이 나와,
   top-level divider는 제거하고 각 섹션의 `###` 제목만으로 구분하도록 정리했다.
 - `Saved Portfolios`는 별도 top-level 탭으로 빼지 않고

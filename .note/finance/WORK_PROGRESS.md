@@ -857,3 +857,17 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.venv/bin/python -c "import app.web.pages.backtest"`
 - Durable takeaway:
   - within the current form architecture, "always visible + clearer explanation" is less frustrating than contract-dependent hide/show
+
+### 2026-04-15
+- Phase 20 QA then pushed one step further: `Guardrail / Reference Ticker` should not live in `Real-Money Contract` at all because it conceptually belongs to guardrails, not benchmark comparison.
+- Changed:
+  - moved `Guardrail / Reference Ticker (Optional)` out of `Real-Money Contract` and into the `Guardrails` expander
+  - kept `Benchmark Contract` and `Benchmark Ticker` inside `Real-Money Contract`
+  - updated the copy so the screen now reads as:
+    - `Real-Money Contract` = comparison baseline
+    - `Guardrails` = underperformance / drawdown stop rules plus their reference ticker
+- Validation:
+  - `python3 -m py_compile app/web/pages/backtest.py`
+  - `.venv/bin/python -c "import app.web.pages.backtest"`
+- Durable takeaway:
+  - the benchmark baseline and the guardrail reference now live in the same places as their actual behavioral meaning, which is much easier to understand in the UI

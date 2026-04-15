@@ -1223,3 +1223,23 @@ Detailed historical analysis was archived on `2026-04-13`.
     - `Ticker Benchmark`: `Benchmark Ticker`가 직접 비교 baseline
     - `Candidate Universe Equal-Weight`: equal-weight benchmark는 자동 생성되므로 `Benchmark Ticker`는 직접 baseline 계산에는 쓰이지 않음
     - `Guardrail / Reference Ticker (Optional)`: contract와 무관하게 underperformance / drawdown guardrail 기준과 연결됨
+
+### 2026-04-15 - `Guardrail / Reference Ticker`는 결국 `Real-Money Contract`가 아니라 `Guardrails` 탭에 두는 편이 더 자연스럽다
+- Request topic:
+  - 사용자가 `Guardrail / Reference Ticker (Optional)`는 benchmark와 직접 관련이 없고, 오히려 guardrail 처리와만 연결되는 값처럼 보인다고 지적함
+- Interpreted goal:
+  - benchmark baseline 설정과 guardrail 기준 설정을 화면 구조 차원에서 분리해 더 직관적으로 만들고 싶음
+- Result:
+  - 최종적으로 `Guardrail / Reference Ticker (Optional)`를 `Real-Money Contract`에서 제거하고 `Guardrails` 탭으로 옮겼다
+  - `Real-Money Contract`에는
+    - `Benchmark Contract`
+    - `Benchmark Ticker`
+    만 남겼다
+  - `Guardrails` 탭에서는
+    - `Underperformance Guardrail`
+    - `Drawdown Guardrail`
+    - `Guardrail / Reference Ticker (Optional)`
+    를 함께 읽게 정리했다
+  - 따라서 현재 durable interpretation은:
+    - `Benchmark Contract` / `Benchmark Ticker` = 무엇과 직접 비교하는가
+    - `Guardrail / Reference Ticker (Optional)` = guardrail이 무엇을 기준으로 쉬는가
