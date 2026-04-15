@@ -159,6 +159,18 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 대신 compare 결과가 보인 뒤에 divider를 넣어 `Strategy Comparison -> Weighted Portfolio Builder`를 나누고,
     weighted builder 뒤에 한 번 더 divider를 넣어 `Weighted Portfolio Builder -> Saved Portfolios`를 구분하도록 바꿨다
   - 따라서 현재 divider는 보조 ingress가 아니라 세 main workflow stage를 구분하는 역할로 읽히게 되었다
+
+### 2026-04-16 - Phase 20 checklist는 현재 UI 이름 기준으로 다시 써야 테스트 문서 역할을 제대로 한다
+- Request topic:
+  - 사용자가 영어/한국어 UI 이름이 중간에 바뀌면서 `PHASE20_TEST_CHECKLIST.md`를 따라 테스트하기 어려워졌다고 지적함
+- Interpreted goal:
+  - checklist를 "예전 대화에서 쓰던 이름"이 아니라 "현재 화면에 실제로 보이는 이름" 기준으로 다시 정리하고 싶음
+- Result:
+  - checklist 상단에 예전 이름 -> 현재 UI 이름 대응표를 추가했다
+  - `Current Candidate Re-entry`, `Current Compare Bundle` 같은 예전 표현 대신
+    `Quick Re-entry From Current Candidates`, `What You Are Combining`, `Compare Form Updated`
+    같은 현재 화면 기준 이름으로 다시 썼다
+  - 각 섹션에 `확인 위치`를 더 구체적으로 적어, tester가 어느 제목/구획을 찾아야 하는지 바로 보이게 정리했다
   - saved portfolio는 `Edit In Compare`, `Replay Saved Portfolio`, `Source & Next Step` 기준으로
     다시 수정할지 그대로 재실행할지 판단이 더 쉬워졌다
   - 따라서 `Phase 20`은

@@ -926,3 +926,13 @@ Detailed historical logs were archived on `2026-04-13`.
   - `python3 plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py`
 - Durable takeaway:
   - dividers now separate the three main operator stages instead of splitting the compare entry tools from the compare form.
+
+### 2026-04-16
+- Phase 20 QA then showed that the checklist itself had started lagging behind the renamed UI labels.
+- Changed:
+  - updated `PHASE20_TEST_CHECKLIST.md` to use current on-screen names first
+  - added an old-name -> current-UI-name mapping block
+  - made each section more explicit about where the tester should look on screen
+  - aligned the weighted/saved divider checks with the current layout
+- Durable takeaway:
+  - once UI wording starts changing during QA, the checklist should follow the current labels quickly or it stops being a good test guide.

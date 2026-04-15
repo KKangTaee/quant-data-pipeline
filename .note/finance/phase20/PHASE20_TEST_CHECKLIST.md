@@ -15,6 +15,31 @@
 - 특별한 사유가 없으면, 주요 체크 항목이 모두 완료된 뒤 다음 major phase로 넘어간다.
 - 일부 항목을 보류하면 그 이유를 이 문서나 handoff에 짧게 남긴다.
 
+## 현재 UI 이름 기준
+
+- 이 checklist는 **현재 화면에 실제로 보이는 이름** 기준으로 읽는다.
+- 예전 대화에서 쓰던 이름과 현재 UI 이름이 다를 수 있으니, 아래 대응표를 먼저 보고 테스트하면 덜 헷갈린다.
+
+| 예전 표현 | 현재 UI에서 볼 이름 |
+| --- | --- |
+| `Current Candidate Re-entry` | `Quick Re-entry From Current Candidates` |
+| `Load Current Anchors` | `Load Recommended Candidates` |
+| `Load Lower-MDD Near Misses` | `Load Lower-MDD Alternatives` |
+| `Inspect Current Candidate Bundle Options` | `Pick Manually` 탭 안의 후보 목록 |
+| `Load Selected Candidates Into Compare` | `Load Selected Candidates Into Compare` |
+| `What Changed In Compare` | `Compare Form Updated` |
+| `Current Compare Bundle` | `What You Are Combining` |
+
+## 테스트할 때 보는 순서
+
+1. 먼저 **현재 화면에 보이는 제목 이름**을 기준으로 찾는다.
+2. 예전 이름이 기억나면 바로 위 대응표에서 현재 이름으로 바꿔 읽는다.
+3. 버튼을 눌렀을 때
+   - 화면 상단 안내 카드 이름
+   - section 제목
+   - 표 제목
+   이 현재 checklist와 같은지 확인한다.
+
 ## 추천 실행 순서
 
 1. current candidate를 compare로 다시 불러오는 흐름 확인
@@ -25,33 +50,40 @@
 ## 1. current candidate re-entry 확인
 
 - 확인 위치:
-  - `Backtest > Compare & Portfolio Builder > Current Candidate Re-entry`
+  - `Backtest > Compare & Portfolio Builder`
+  - `Strategies` 바로 아래 `Quick Re-entry From Current Candidates`
 - 체크 항목:
-  - [x] `Current Candidate Re-entry` 섹션이 보이는지
-  - [x] `Load Current Anchors`와 `Load Lower-MDD Near Misses` quick action이 보이는지
-  - [x] `Inspect Current Candidate Bundle Options` 안에서 후보 제목, family, 역할, contract 요약이 읽기 쉽게 보이는지
+  - [x] `Quick Re-entry From Current Candidates` 섹션이 보이는지
+  - [x] `Quick Bundles` 탭과 `Pick Manually` 탭이 보이는지
+  - [x] `Load Recommended Candidates`와 `Load Lower-MDD Alternatives` quick action이 보이는지
+  - [x] `Pick Manually` 탭 안에서 후보 제목, family, 역할, contract 요약이 읽기 쉽게 보이는지
   - [x] 여러 후보를 직접 선택해서 `Load Selected Candidates Into Compare`를 누를 수 있는지
   - [x] 불가능한 조합일 때 왜 막히는지 안내 문구가 이해되게 보이는지
-  - [ ] current candidate를 불러온 뒤 compare form에 strategy/period/override가 자연스럽게 채워지는지
+  - [ ] current candidate를 불러온 뒤 `Compare Form Updated`가 보이고, compare form에 strategy/period/override가 자연스럽게 채워지는지
+  - [ ] `Compare Form Updated` 카드에서 무엇이 바뀌었는지와 어디를 확인하면 되는지가 이해되는지
 
 ## 2. compare -> weighted portfolio 흐름 확인
 
 - 확인 위치:
   - `Backtest > Compare & Portfolio Builder`
-  - compare 실행 후 `Weighted Portfolio Builder`
+  - compare 실행 후 `Strategy Comparison` 아래
+  - divider 아래 `Weighted Portfolio Builder`
 - 체크 항목:
   - [ ] compare를 실행한 뒤 `Weighted Portfolio Builder` 위에 `What You Are Combining` 요약이 보이는지
   - [ ] `What You Are Combining`에서 `들어온 경로`, `묶음 이름`, `비교 기간`, `조합할 전략 수`가 현재 compare 맥락과 맞게 보이는지
   - [ ] 그 아래 전략 표에서 `Strategy`, `Period`, `CAGR`, `MDD`, `Promotion`이 보여서 지금 무엇을 섞는지 한 번에 이해되는지
   - [ ] registry 기반 current candidate를 compare로 불러왔을 때 registry ids 또는 source 정보가 요약에 보이는지
+  - [ ] `Strategy Comparison`과 `Weighted Portfolio Builder` 사이에 divider가 보여 두 단계가 시각적으로 나뉘는지
   - [ ] weighted portfolio를 만들 때 compare source 맥락을 잃지 않고 바로 이어서 저장할 수 있는지
   - [ ] weighted portfolio 결과가 생성된 뒤 다음 행동이 자연스럽게 이해되는지
 
 ## 3. saved portfolio 재진입 흐름 확인
 
 - 확인 위치:
-  - `Backtest > Compare & Portfolio Builder > Saved Portfolios`
+  - `Backtest > Compare & Portfolio Builder`
+  - `Weighted Portfolio Builder` 아래 divider 다음 `Saved Portfolios`
 - 체크 항목:
+  - [ ] `Weighted Portfolio Builder`와 `Saved Portfolios` 사이에 divider가 보여 두 단계가 시각적으로 나뉘는지
   - [ ] 현재 weighted portfolio를 저장할 때 이름 placeholder가 source label 또는 strategy 조합 기준으로 자연스럽게 보이는지
   - [ ] 저장된 포트폴리오 목록에 `Source` 컬럼이 보이는지
   - [ ] 저장된 포트폴리오 상세에서 `Source & Next Step` 탭이 보이는지
