@@ -47,6 +47,9 @@
 - `completed` compare surface divider cleanup and saved-portfolio placement review
   - compare / weighted / saved portfolio 사이의 top-level divider를 제거해 line 과밀도를 낮춤
   - `Saved Portfolios`는 별도 top-level 탭으로 분리하지 않고, 같은 operator workflow의 마지막 단계로 유지
+- `completed` family-variant compare layout unification
+  - compare `Strategy-Specific Advanced Inputs`에서 `Quality / Value / Quality + Value`를 GTAA처럼 한 섹션으로 읽히게 정리
+  - family variant selector와 선택된 variant 세부 설정을 같은 expander 안에 이어서 보이게 보강
 - `completed` current candidate re-entry plain-language labeling cleanup
   - `Load Current Anchors` / `Load Lower-MDD Near Misses` 같은 내부자 표현을 더 직접적인 버튼 이름으로 정리
   - 빠른 버튼 2개와 직접 선택 1개의 차이를 각 버튼 아래 설명으로 바로 읽히게 보강

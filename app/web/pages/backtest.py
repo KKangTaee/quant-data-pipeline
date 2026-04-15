@@ -11048,11 +11048,14 @@ def render_backtest_tab() -> None:
                 quality_compare_strategy_name: str | None = None
                 value_compare_strategy_name: str | None = None
                 quality_value_compare_strategy_name: str | None = None
+                quality_compare_settings_container = None
+                value_compare_settings_container = None
+                quality_value_compare_settings_container = None
 
                 if "Quality" in selected_strategies:
-                    with st.expander("Quality Family", expanded=True):
+                    with st.expander("Quality", expanded=True):
                         quality_compare_variant = st.selectbox(
-                            "Quality Variant",
+                            "Variant",
                             options=family_variant_options("Quality"),
                             key="compare_quality_variant",
                         )
@@ -11061,11 +11064,13 @@ def render_backtest_tab() -> None:
                             quality_compare_variant,
                         )
                         st.caption(f"현재 compare 실행 variant: `{quality_compare_strategy_name}`")
+                        st.caption("선택한 variant의 세부 설정이 바로 아래에 이어집니다.")
+                        quality_compare_settings_container = st.container()
 
                 if "Value" in selected_strategies:
-                    with st.expander("Value Family", expanded=True):
+                    with st.expander("Value", expanded=True):
                         value_compare_variant = st.selectbox(
-                            "Value Variant",
+                            "Variant",
                             options=family_variant_options("Value"),
                             key="compare_value_variant",
                         )
@@ -11074,11 +11079,13 @@ def render_backtest_tab() -> None:
                             value_compare_variant,
                         )
                         st.caption(f"현재 compare 실행 variant: `{value_compare_strategy_name}`")
+                        st.caption("선택한 variant의 세부 설정이 바로 아래에 이어집니다.")
+                        value_compare_settings_container = st.container()
 
                 if "Quality + Value" in selected_strategies:
-                    with st.expander("Quality + Value Family", expanded=True):
+                    with st.expander("Quality + Value", expanded=True):
                         quality_value_compare_variant = st.selectbox(
-                            "Quality + Value Variant",
+                            "Variant",
                             options=family_variant_options("Quality + Value"),
                             key="compare_quality_value_variant",
                         )
@@ -11087,6 +11094,8 @@ def render_backtest_tab() -> None:
                             quality_value_compare_variant,
                         )
                         st.caption(f"현재 compare 실행 variant: `{quality_value_compare_strategy_name}`")
+                        st.caption("선택한 variant의 세부 설정이 바로 아래에 이어집니다.")
+                        quality_value_compare_settings_container = st.container()
 
                 if "Equal Weight" in selected_strategies:
                     with st.expander("Equal Weight", expanded=True):
@@ -11331,32 +11340,34 @@ def render_backtest_tab() -> None:
                         compare_strategy_overrides["Dual Momentum"]["drawdown_guardrail_strategy_threshold"] = float(drawdown_guardrail_strategy_threshold)
                         compare_strategy_overrides["Dual Momentum"]["drawdown_guardrail_gap_threshold"] = float(drawdown_guardrail_gap_threshold)
 
-                if quality_compare_strategy_name == "Quality Snapshot":
-                    st.markdown("**Quality Snapshot**")
-                    compare_strategy_overrides["Quality Snapshot"] = {
-                        "top_n": int(
-                            st.number_input(
-                                "Quality Top N",
-                                min_value=1,
-                                max_value=20,
-                                value=2,
-                                step=1,
-                                key="compare_qs_top_n",
-                            )
-                        ),
-                        "quality_factors": st.multiselect(
-                            "Quality Factors",
-                            options=["roe", "gross_margin", "operating_margin", "debt_ratio"],
-                            default=["roe", "gross_margin", "operating_margin", "debt_ratio"],
-                            key="compare_qs_factors",
-                        ),
-                        "factor_freq": "annual",
-                        "rebalance_freq": "monthly",
-                        "snapshot_mode": "broad_research",
-                    }
+                if quality_compare_strategy_name == "Quality Snapshot" and quality_compare_settings_container is not None:
+                    with quality_compare_settings_container:
+                        st.markdown("##### Quality Snapshot")
+                        compare_strategy_overrides["Quality Snapshot"] = {
+                            "top_n": int(
+                                st.number_input(
+                                    "Quality Top N",
+                                    min_value=1,
+                                    max_value=20,
+                                    value=2,
+                                    step=1,
+                                    key="compare_qs_top_n",
+                                )
+                            ),
+                            "quality_factors": st.multiselect(
+                                "Quality Factors",
+                                options=["roe", "gross_margin", "operating_margin", "debt_ratio"],
+                                default=["roe", "gross_margin", "operating_margin", "debt_ratio"],
+                                key="compare_qs_factors",
+                            ),
+                            "factor_freq": "annual",
+                            "rebalance_freq": "monthly",
+                            "snapshot_mode": "broad_research",
+                        }
 
-                if quality_compare_strategy_name == "Quality Snapshot (Strict Annual)":
-                    with st.expander("Quality Snapshot (Strict Annual)", expanded=False):
+                if quality_compare_strategy_name == "Quality Snapshot (Strict Annual)" and quality_compare_settings_container is not None:
+                    with quality_compare_settings_container:
+                        st.markdown("##### Quality Snapshot (Strict Annual)")
                         st.caption("Compare mode keeps the strict annual default lighter with `US Statement Coverage 100` so multi-strategy runs stay responsive.")
                         qss_compare_preset = st.selectbox(
                             "Strict Annual Quality Preset",
@@ -11517,8 +11528,9 @@ def render_backtest_tab() -> None:
                                 label_prefix="Strict Annual Quality ",
                             )
 
-                if quality_compare_strategy_name == "Quality Snapshot (Strict Quarterly Prototype)":
-                    with st.expander("Quality Snapshot (Strict Quarterly Prototype)", expanded=False):
+                if quality_compare_strategy_name == "Quality Snapshot (Strict Quarterly Prototype)" and quality_compare_settings_container is not None:
+                    with quality_compare_settings_container:
+                        st.markdown("##### Quality Snapshot (Strict Quarterly Prototype)")
                         st.caption("Research-only compare path. Default preset stays at `US Statement Coverage 100` to keep quarterly family validation tractable.")
                         qsqp_compare_preset = st.selectbox(
                             "Strict Quarterly Quality Preset",
@@ -11605,8 +11617,9 @@ def render_backtest_tab() -> None:
                             label_prefix="Strict Quarterly Quality ",
                         )
 
-                if value_compare_strategy_name == "Value Snapshot (Strict Annual)":
-                    with st.expander("Value Snapshot (Strict Annual)", expanded=False):
+                if value_compare_strategy_name == "Value Snapshot (Strict Annual)" and value_compare_settings_container is not None:
+                    with value_compare_settings_container:
+                        st.markdown("##### Value Snapshot (Strict Annual)")
                         st.caption("Compare mode keeps the strict annual value default lighter with `US Statement Coverage 100` for responsiveness.")
                         vss_compare_preset = st.selectbox(
                             "Strict Annual Value Preset",
@@ -11767,8 +11780,9 @@ def render_backtest_tab() -> None:
                                 label_prefix="Strict Annual Value ",
                             )
 
-                if value_compare_strategy_name == "Value Snapshot (Strict Quarterly Prototype)":
-                    with st.expander("Value Snapshot (Strict Quarterly Prototype)", expanded=False):
+                if value_compare_strategy_name == "Value Snapshot (Strict Quarterly Prototype)" and value_compare_settings_container is not None:
+                    with value_compare_settings_container:
+                        st.markdown("##### Value Snapshot (Strict Quarterly Prototype)")
                         st.caption("Research-only compare path. Default preset stays at `US Statement Coverage 100` while quarterly value history is being validated.")
                         vsqp_compare_preset = st.selectbox(
                             "Strict Quarterly Value Preset",
@@ -11855,8 +11869,9 @@ def render_backtest_tab() -> None:
                             label_prefix="Strict Quarterly Value ",
                         )
 
-                if quality_value_compare_strategy_name == "Quality + Value Snapshot (Strict Annual)":
-                    with st.expander("Quality + Value Snapshot (Strict Annual)", expanded=False):
+                if quality_value_compare_strategy_name == "Quality + Value Snapshot (Strict Annual)" and quality_value_compare_settings_container is not None:
+                    with quality_value_compare_settings_container:
+                        st.markdown("##### Quality + Value Snapshot (Strict Annual)")
                         st.caption("Compare mode keeps the strict annual multi-factor default lighter with `US Statement Coverage 100` so multi-strategy runs stay responsive.")
                         qvss_compare_preset = st.selectbox(
                             "Strict Annual Multi-Factor Preset",
@@ -12023,8 +12038,9 @@ def render_backtest_tab() -> None:
                                 label_prefix="Strict Annual Multi-Factor ",
                             )
 
-                if quality_value_compare_strategy_name == "Quality + Value Snapshot (Strict Quarterly Prototype)":
-                    with st.expander("Quality + Value Snapshot (Strict Quarterly Prototype)", expanded=False):
+                if quality_value_compare_strategy_name == "Quality + Value Snapshot (Strict Quarterly Prototype)" and quality_value_compare_settings_container is not None:
+                    with quality_value_compare_settings_container:
+                        st.markdown("##### Quality + Value Snapshot (Strict Quarterly Prototype)")
                         st.caption("Research-only compare path. Default preset stays at `US Statement Coverage 100` while quarterly blended history is being validated.")
                         qvqp_compare_preset = st.selectbox(
                             "Strict Quarterly Multi-Factor Preset",

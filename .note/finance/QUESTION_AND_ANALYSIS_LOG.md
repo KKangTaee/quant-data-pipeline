@@ -1085,3 +1085,15 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 즉 현재 코드 기준으로는 핵심 값이 자동으로 풀린 정황은 확인되지 않았다
   - 다만 카드 표가 너무 적은 열만 보여서 오해를 만들 수 있었기 때문에
     `Weighting Contract`, `Risk-Off Contract`도 같이 표기하도록 보강했다
+
+### 2026-04-15 - Compare 고급 설정은 family 선택과 selected variant 설정을 한 섹션으로 읽히게 두는 편이 더 직관적이다
+- Request topic:
+  - 사용자가 compare `Strategy-Specific Advanced Inputs`에서 family selector와 snapshot 설정이 분리되어 있는 구조가 GTAA 등 다른 전략보다 덜 직관적이라고 피드백함
+- Interpreted goal:
+  - `Quality`, `Value`, `Quality + Value`도 GTAA처럼 한 섹션 안에서 variant를 고르고 바로 그 variant 설정을 이어서 조정할 수 있게 만들고 싶음
+- Result:
+  - compare advanced inputs에서 `Quality Family`, `Value Family`, `Quality + Value Family`를 각각 `Quality`, `Value`, `Quality + Value` 섹션으로 정리했다
+  - 각 섹션 안에 variant selector를 두고,
+    선택된 variant의 세부 설정이 같은 expander 안에 바로 이어서 보이도록 바꿨다
+  - 이로써 family를 먼저 고른 뒤 아래 다른 위치에서 snapshot expander를 다시 찾는 흐름이 사라졌고,
+    compare form이 GTAA / Equal Weight 등과 더 비슷한 “한 전략(또는 한 family) 한 덩어리” 구조로 읽히게 되었다

@@ -55,7 +55,8 @@
 - `.note/finance/phase20/PHASE20_NEXT_PHASE_PREPARATION.md`
   - `Phase 20` 이후 어떤 질문으로 다음 phase를 여는 것이 자연스러운지 정리한 handoff 문서
 - `.note/finance/phase20/PHASE20_TEST_CHECKLIST.md`
-  - current candidate 재진입, compare -> weighted 흐름, saved portfolio 재진입, phase closeout 문서가 실제로 더 자연스럽게 읽히는지 확인하는 manual checklist
+  - current candidate 재진입, compare -> weighted 흐름, saved portfolio 재진입,
+    그리고 compare `Strategy-Specific Advanced Inputs`에서 family/variant 설정이 한 섹션으로 더 자연스럽게 읽히는지 확인하는 manual checklist
 - `.note/finance/CURRENT_CANDIDATE_REGISTRY_GUIDE.md`
   - `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`가 무엇인지, 왜 필요한지, script로 어떻게 읽고 검증하는지 정리한 안내 문서
 - `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`

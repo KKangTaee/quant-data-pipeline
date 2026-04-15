@@ -752,3 +752,17 @@ Detailed historical logs were archived on `2026-04-13`.
   - finance refinement hygiene script
 - Durable takeaway:
   - the current candidate compare prefill path does not appear to be silently loosening key strict-annual settings, and the confirmation table now exposes more of the actual loaded contract
+
+### 2026-04-15
+- Phase 20 QA then pointed out that compare `Strategy-Specific Advanced Inputs` still split family selection from the actual selected snapshot settings.
+- Changed:
+  - turned `Quality Family`, `Value Family`, `Quality + Value Family` into `Quality`, `Value`, `Quality + Value`
+  - kept the variant selector at the top of each family section
+  - rendered the selected variant's actual settings directly inside the same family expander instead of in a separate snapshot expander lower in the form
+  - synced `FINANCE_COMPREHENSIVE_ANALYSIS.md`
+- Validation:
+  - `python3 -m py_compile app/web/pages/backtest.py`
+  - `.venv/bin/python -c "import app.web.pages.backtest"`
+  - finance refinement hygiene script
+- Durable takeaway:
+  - compare advanced inputs now read more like GTAA and other strategies: choose the family variant once, then adjust that variant immediately in the same section
