@@ -1156,8 +1156,12 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal:
   - 입력 단계부터 `SPY`의 역할을 더 정확히 보여주고 싶음
 - Result:
-  - strict annual `Real-Money Contract`에서 ticker 입력 필드 이름을 contract에 따라 다르게 보이게 바꿨다
-    - `Ticker Benchmark`면 `Benchmark Ticker`
-    - `Candidate Universe Equal-Weight`면 `Guardrail / Reference Ticker`
-  - helper text와 prefill summary line도 같은 언어로 맞췄다
-  - 따라서 이제 사용자는 equal-weight contract를 고른 상태에서 `SPY`를 benchmark 자체로 오해할 가능성이 줄었다
+  - 처음에는 contract에 따라 필드 이름을 다르게 보이게 바꾸려 했지만,
+    현재 Streamlit submit-form 구조에서는 이 라벨이 사용자가 기대하는 방식으로 즉시 바뀌지 않았다
+  - 그래서 최종적으로는 입력 필드 이름을
+    `Benchmark / Guardrail / Reference Ticker`
+    로 고정하고,
+    바로 아래 캡션과 help text에서 contract별 의미를 설명하는 방식으로 정리했다
+  - prefill summary line은 계속 equal-weight 케이스에서 `Reference Ticker` 언어를 사용하도록 유지했다
+  - 결과적으로 입력 단계에서 오해를 줄이면서도,
+    form 특성 때문에 생기는 "왜 라벨이 안 바뀌지?" 문제를 피할 수 있게 되었다

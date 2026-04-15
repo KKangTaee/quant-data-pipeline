@@ -1876,25 +1876,19 @@ def _render_strict_annual_real_money_inputs(
             ),
         )
         benchmark_contract = STRICT_BENCHMARK_CONTRACT_LABELS[benchmark_contract_label]
-    benchmark_ticker_label = (
-        "Guardrail / Reference Ticker"
-        if benchmark_contract == STRICT_BENCHMARK_CONTRACT_CANDIDATE_EQUAL_WEIGHT
-        else "Benchmark Ticker"
-    )
-    benchmark_ticker_help = (
-        "이 ticker는 candidate equal-weight benchmark 자체를 만드는 종목이 아닙니다. "
-        "현재는 underperformance / drawdown guardrail과 별도 reference 비교에 사용할 기준 ticker입니다. "
-        "기본값은 `SPY`입니다."
-        if benchmark_contract == STRICT_BENCHMARK_CONTRACT_CANDIDATE_EQUAL_WEIGHT
-        else "Ticker benchmark 또는 underperformance guardrail에서 사용할 기준 ETF ticker입니다. 기본값은 `SPY`입니다."
-    )
     with col6:
         benchmark_ticker = str(
             st.text_input(
-                benchmark_ticker_label,
+                "Benchmark / Guardrail / Reference Ticker",
                 value=default_benchmark,
                 key=f"{key_prefix}_benchmark_ticker",
-                help=benchmark_ticker_help,
+                help=(
+                    "이 입력란은 contract에 따라 의미가 달라집니다.\n\n"
+                    "- `Ticker Benchmark`일 때: benchmark로 직접 비교할 ETF ticker입니다.\n"
+                    "- `Candidate Universe Equal-Weight`일 때: equal-weight benchmark 자체가 아니라 "
+                    "underperformance / drawdown guardrail과 별도 reference 비교에 쓰는 ticker입니다.\n\n"
+                    "기본값은 `SPY`입니다."
+                ),
             )
         ).strip().upper()
 
@@ -1953,6 +1947,11 @@ def _render_strict_annual_real_money_inputs(
         "`Benchmark Policy`는 benchmark overlay가 있더라도 커버리지와 상대 CAGR이 너무 약하면 "
         "바로 `real_money_candidate`로 올리지 않도록 하는 승격 기준입니다."
     )
+    st.caption(
+        "`Benchmark / Guardrail / Reference Ticker`는 contract에 따라 뜻이 달라집니다. "
+        "`Ticker Benchmark`일 때는 실제 benchmark ticker이고, "
+        "`Candidate Universe Equal-Weight`일 때는 guardrail / reference ticker로 읽으면 됩니다."
+    )
     if benchmark_contract == STRICT_BENCHMARK_CONTRACT_CANDIDATE_EQUAL_WEIGHT:
         st.caption(
             "`Candidate Universe Equal-Weight`는 같은 후보 universe에서 그 시점에 투자 가능했던 종목들을 "
@@ -1961,7 +1960,7 @@ def _render_strict_annual_real_money_inputs(
             "현재 first pass에서는 validation / promotion overlay에 사용되고, actual underperformance guardrail rule은 여전히 별도 reference ticker를 기준으로 동작합니다."
         )
         st.caption(
-            f"`{benchmark_ticker_label}`는 equal-weight benchmark 자체가 아니라, "
+            "`Benchmark / Guardrail / Reference Ticker`는 equal-weight benchmark 자체가 아니라, "
             "underperformance / drawdown guardrail과 별도 reference 비교에 남아 있는 ticker입니다."
         )
     st.caption(

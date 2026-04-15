@@ -798,14 +798,13 @@ Detailed historical logs were archived on `2026-04-13`.
 ### 2026-04-15
 - Phase 20 QA asked to make the strict-annual input field itself reflect that distinction too.
 - Changed:
-  - strict annual `Real-Money Contract` now labels the ticker input dynamically
-    - `Benchmark Ticker` when the contract is `Ticker Benchmark`
-    - `Guardrail / Reference Ticker` when the contract is `Candidate Universe Equal-Weight`
-  - aligned the nearby helper captions so they no longer imply that equal-weight benchmark itself is built from the ticker
-  - updated prefill summary lines to use `Reference Ticker` wording for equal-weight cases
+  - initially tried contract-dependent field naming, but this was not reliable inside the current submit-based Streamlit form
+  - switched to a more robust fixed label: `Benchmark / Guardrail / Reference Ticker`
+  - added a plain-language caption explaining how to read the field under each benchmark contract
+  - kept prefill summary lines using `Reference Ticker` wording for equal-weight cases
 - Validation:
   - `python3 -m py_compile app/web/pages/backtest.py`
   - `.venv/bin/python -c "import app.web.pages.backtest"`
   - finance refinement hygiene script
 - Durable takeaway:
-  - the strict-annual form now tells the user at input time whether `SPY` is acting as the benchmark itself or as a separate guardrail/reference ticker
+  - in the current form architecture, a stable neutral field label plus contract-dependent explanation is less confusing than trying to live-swap the field name

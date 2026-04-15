@@ -608,13 +608,17 @@ Analysis / Presentation
   `Candidate Universe Equal-Weight`일 때는 ticker가 benchmark 자체가 아니라
   guardrail/reference용 ticker라는 점을 카드 아래 설명으로 다시 보여주도록 정리했다.
 - 이후 한 번 더 UX를 다듬으면서,
-  strict annual `Real-Money Contract` 입력 필드도
-  contract에 따라 이름이 달라지도록 바꿨다.
-  - `Ticker Benchmark`일 때는 `Benchmark Ticker`
-  - `Candidate Universe Equal-Weight`일 때는 `Guardrail / Reference Ticker`
-- 이 변경으로 사용자는
-  equal-weight benchmark contract를 고른 상태에서 `SPY`가 benchmark 자체인지,
-  아니면 별도 reference ticker인지 입력 단계부터 구분해 읽을 수 있게 되었다.
+  strict annual `Real-Money Contract` 입력 필드는
+  실시간 라벨 교체 대신 중립적인 고정 이름으로 정리했다.
+  - 입력 필드 이름: `Benchmark / Guardrail / Reference Ticker`
+  - 바로 아래 캡션에서
+    - `Ticker Benchmark`일 때는 실제 benchmark ticker
+    - `Candidate Universe Equal-Weight`일 때는 guardrail / reference ticker
+    로 읽으라고 설명한다.
+- 이렇게 바꾼 이유는 현재 Streamlit form 구조에서는
+  contract를 바꿨을 때 필드 라벨이 그 자리에서 자연스럽게 바뀌지 않기 때문이다.
+  따라서 고정된 중립 이름 + contract별 해석 안내가
+  실제 UX에서는 더 안정적이라고 판단했다.
 - 이후 QA에서는 compare / weighted / saved portfolio 사이의 divider가 과하다는 피드백이 나와,
   top-level divider는 제거하고 각 섹션의 `###` 제목만으로 구분하도록 정리했다.
 - `Saved Portfolios`는 별도 top-level 탭으로 빼지 않고
