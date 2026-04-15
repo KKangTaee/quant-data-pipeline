@@ -843,24 +843,17 @@ Detailed historical logs were archived on `2026-04-13`.
   - the operator now reads benchmark baseline and guardrail reference as separate decisions, with the optional/same-as-benchmark case made explicit in the UI
 
 ### 2026-04-15
-- Phase 20 QA then reported that changing `Benchmark Contract` still did not hide/show the dependent inputs immediately.
+- Phase 20 QA then reported that trying to make fields hide/show based on `Benchmark Contract` still felt awkward in practice.
 - Changed:
   - confirmed the root cause was the current `st.form` structure: changing a widget inside the form does not immediately rerun the section
-  - added `Apply Contract Layout` next to `Benchmark Contract`
-  - this lets the user refresh only the contract-specific input layout without accidentally running the full backtest/compare action
+  - removed the experimental layout-refresh button approach
+  - returned to a simpler UX where `Benchmark Contract`, `Benchmark Ticker`, and `Guardrail / Reference Ticker (Optional)` are always visible together
+  - rewrote the captions so the user can understand:
+    - `Ticker Benchmark`: benchmark ticker is the direct comparison baseline
+    - `Candidate Universe Equal-Weight`: benchmark ticker is not used for the equal-weight baseline itself
+    - `Guardrail / Reference Ticker (Optional)`: tied to underperformance / drawdown guardrails regardless of benchmark contract
 - Validation:
   - `python3 -m py_compile app/web/pages/backtest.py`
   - `.venv/bin/python -c "import app.web.pages.backtest"`
 - Durable takeaway:
-  - within the current form architecture, an explicit layout-refresh submit is the safest way to make contract-dependent inputs feel responsive without a larger form refactor
-
-### 2026-04-15
-- Phase 20 QA then hit a `StreamlitDuplicateElementKey` error in compare strict-annual forms.
-- Changed:
-  - gave each `Apply Contract Layout` form submit button a unique key derived from `key_prefix`
-  - this removes the collision between single and compare strict-annual form instances
-- Validation:
-  - `python3 -m py_compile app/web/pages/backtest.py`
-  - `.venv/bin/python -c "import app.web.pages.backtest"`
-- Durable takeaway:
-  - helper buttons reused across strict-annual forms need explicit per-surface keys, especially when they live inside shared form-render helpers
+  - within the current form architecture, "always visible + clearer explanation" is less frustrating than contract-dependent hide/show

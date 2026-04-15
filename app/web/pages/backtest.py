@@ -1877,79 +1877,53 @@ def _render_strict_annual_real_money_inputs(
             ),
         )
         benchmark_contract = STRICT_BENCHMARK_CONTRACT_LABELS[benchmark_contract_label]
-    layout_note_col, layout_button_col = st.columns([0.72, 0.28], gap="small")
-    with layout_note_col:
-        st.caption(
-            "`Benchmark Contract`를 바꾼 뒤 입력 구성이 바로 안 바뀌면, 오른쪽 버튼으로 "
-            "이 섹션 레이아웃을 다시 반영할 수 있습니다."
-        )
-    with layout_button_col:
-        contract_layout_refresh_requested = st.form_submit_button(
-            "Apply Contract Layout",
-            key=f"{key_prefix}_apply_contract_layout",
-            use_container_width=True,
-            help="현재 선택한 Benchmark Contract 기준으로 아래 입력 구성을 다시 반영합니다.",
-        )
-    if contract_layout_refresh_requested:
-        st.success("현재 선택한 Benchmark Contract 기준으로 입력 구성을 다시 반영했습니다.")
     default_benchmark = str(default_benchmark or ETF_REAL_MONEY_DEFAULT_BENCHMARK).strip().upper()
     raw_guardrail_default = str(default_guardrail_reference_ticker or "").strip().upper()
     optional_guardrail_default = raw_guardrail_default if raw_guardrail_default and raw_guardrail_default != default_benchmark else ""
-
-    if benchmark_contract == STRICT_BENCHMARK_CONTRACT_TICKER:
-        comparison_col, reference_col = st.columns(2, gap="small")
-        with comparison_col:
-            benchmark_ticker = str(
-                st.text_input(
-                    "Benchmark Ticker",
-                    value=default_benchmark,
-                    key=f"{key_prefix}_benchmark_ticker",
-                    help=(
-                        "전략 결과를 직접 비교할 benchmark ticker입니다.\n\n"
-                        "쉽게 말하면, 이 전략이 `SPY` 같은 기준 ETF 1개보다 실제로 더 나은지 볼 때 쓰는 입력값입니다."
-                    ),
-                )
-            ).strip().upper()
-        with reference_col:
-            guardrail_reference_ticker = str(
-                st.text_input(
-                    "Guardrail / Reference Ticker (Optional)",
-                    value=optional_guardrail_default,
-                    key=f"{key_prefix}_guardrail_reference_ticker",
-                    placeholder="비워두면 Benchmark Ticker와 동일하게 사용",
-                    help=(
-                        "underperformance / drawdown guardrail이 따로 참고하는 기준 ticker입니다.\n\n"
-                        "비워두면 `Benchmark Ticker`를 그대로 guardrail 기준으로 같이 사용합니다.\n"
-                        "즉 benchmark는 `SPY`, guardrail도 `SPY`로 같이 볼 거면 비워둬도 됩니다."
-                    ),
-                )
-            ).strip().upper()
-        st.caption(
-            "`Ticker Benchmark`에서는 `Benchmark Ticker`가 직접 비교 기준입니다. "
-            "`Guardrail / Reference Ticker`는 guardrail 기준을 따로 두고 싶을 때만 넣으면 되고, "
-            "비워두면 `Benchmark Ticker`를 그대로 같이 사용합니다."
-        )
-    else:
-        benchmark_ticker = ""
-        st.info(
-            "`Candidate Universe Equal-Weight`에서는 benchmark curve가 같은 후보군 equal-weight로 자동 생성됩니다. "
-            "그래서 이 모드에서는 `Benchmark Ticker`를 따로 입력하지 않습니다."
-        )
-        guardrail_reference_ticker = str(
+    comparison_col, reference_col = st.columns(2, gap="small")
+    with comparison_col:
+        benchmark_ticker = str(
             st.text_input(
-                "Guardrail / Reference Ticker",
-                value=raw_guardrail_default or default_benchmark,
-                key=f"{key_prefix}_guardrail_reference_ticker",
+                "Benchmark Ticker",
+                value=default_benchmark,
+                key=f"{key_prefix}_benchmark_ticker",
                 help=(
-                    "underperformance / drawdown guardrail이 따로 참고하는 기준 ticker입니다.\n\n"
-                    "이 모드에서는 benchmark curve가 자동 생성되므로, 이 입력값이 guardrail/reference 쪽 핵심 기준이 됩니다."
+                    "전략 결과를 직접 비교할 benchmark ticker입니다.\n\n"
+                    "- `Ticker Benchmark`일 때: 이 입력값을 그대로 benchmark curve로 사용합니다.\n"
+                    "- `Candidate Universe Equal-Weight`일 때: benchmark curve는 후보군 equal-weight로 자동 생성되므로, "
+                    "이 입력값은 직접 비교 baseline 계산에는 쓰이지 않습니다."
                 ),
             )
         ).strip().upper()
-        st.caption(
-            "`Candidate Universe Equal-Weight`에서는 `Benchmark Ticker`가 필요하지 않고, "
-            "`Guardrail / Reference Ticker`가 underperformance / drawdown guardrail 기준 ticker 역할을 합니다."
-        )
+    with reference_col:
+        guardrail_reference_ticker = str(
+            st.text_input(
+                "Guardrail / Reference Ticker (Optional)",
+                value=optional_guardrail_default,
+                key=f"{key_prefix}_guardrail_reference_ticker",
+                placeholder="비워두면 Benchmark Ticker와 동일하게 사용",
+                help=(
+                    "underperformance / drawdown guardrail이 따로 참고하는 기준 ticker입니다.\n\n"
+                    "비워두면 기본적으로 `Benchmark Ticker`를 그대로 같이 사용합니다.\n"
+                    "즉 benchmark와 guardrail을 같은 ticker로 볼 거면 비워둬도 됩니다."
+                ),
+            )
+        ).strip().upper()
+    st.caption(
+        "세 입력은 항상 같이 보이지만 역할은 다릅니다. "
+        "`Benchmark Contract`는 비교 방식, `Benchmark Ticker`는 직접 비교 대상, "
+        "`Guardrail / Reference Ticker (Optional)`는 underperformance / drawdown guardrail 참고 기준입니다."
+    )
+    st.caption(
+        "`Ticker Benchmark`에서는 `Benchmark Ticker`가 직접 비교 기준입니다. "
+        "`Guardrail / Reference Ticker (Optional)`는 guardrail 기준을 따로 두고 싶을 때만 넣으면 되고, "
+        "비워두면 `Benchmark Ticker`를 그대로 같이 사용합니다."
+    )
+    st.caption(
+        "`Candidate Universe Equal-Weight`에서는 benchmark curve가 후보군 equal-weight로 자동 생성됩니다. "
+        "그래서 이 경우 `Benchmark Ticker`는 직접 비교 baseline 계산에는 쓰이지 않고, "
+        "guardrail을 켜는 경우에는 `Guardrail / Reference Ticker (Optional)`가 더 중요합니다."
+    )
 
     policy_left, policy_right = st.columns(2, gap="small")
     with policy_left:

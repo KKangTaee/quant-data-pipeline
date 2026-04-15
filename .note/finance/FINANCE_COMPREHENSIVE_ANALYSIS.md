@@ -624,15 +624,12 @@ Analysis / Presentation
   - `Benchmark Ticker`를 직접 비교 기준으로 먼저 보여주고
   - `Guardrail / Reference Ticker`는 비워두면 benchmark와 동일하게 쓰는 선택 입력으로 읽히게 하는 방식이다.
   반대로 `Candidate Universe Equal-Weight`일 때는
-  - benchmark curve가 후보군 equal-weight로 자동 생성된다는 안내를 먼저 보여주고
-  - `Benchmark Ticker` 입력은 숨기며
-  - `Guardrail / Reference Ticker`만 guardrail 기준 입력으로 남긴다.
-  이 구조는 "무엇과 직접 비교하나"와 "guardrail이 무엇을 기준으로 멈추나"를
-  operator가 서로 다른 질문으로 읽게 만들려는 의도다.
-  다만 이 strict annual surface는 현재 `st.form` 기반이기 때문에,
-  `Benchmark Contract`를 바꿨을 때 해당 입력칸 숨김/노출이 즉시 rerun되지 않을 수 있다.
-  그래서 현재 UI에는 `Apply Contract Layout` 버튼도 같이 두어,
-  사용자가 contract를 바꾼 뒤 이 섹션 레이아웃만 다시 반영할 수 있게 했다.
+  - benchmark curve가 후보군 equal-weight로 자동 생성된다는 설명을 함께 보여주고
+  - `Benchmark Ticker`는 "직접 비교 baseline에는 쓰이지 않는다"는 안내와 같이 계속 보이며
+  - `Guardrail / Reference Ticker`는 guardrail 기준 입력으로 읽히게 한다.
+  즉 현재 UI는 세 입력을 항상 같이 보여주되,
+  `무엇과 직접 비교하나`와 `guardrail이 무엇을 기준으로 멈추나`를
+  설명 문구로 분리해서 읽게 만드는 쪽으로 정리됐다.
 - 이후 QA에서는 compare / weighted / saved portfolio 사이의 divider가 과하다는 피드백이 나와,
   top-level divider는 제거하고 각 섹션의 `###` 제목만으로 구분하도록 정리했다.
 - `Saved Portfolios`는 별도 top-level 탭으로 빼지 않고

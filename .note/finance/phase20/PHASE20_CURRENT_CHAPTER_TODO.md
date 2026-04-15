@@ -61,13 +61,11 @@
   - `Comparison Baseline`과 `Guardrail / Reference`를 따로 읽게 만들어, equal-weight benchmark와 SPY reference를 같은 값으로 오해하지 않도록 정리
 - `completed` benchmark contract별 입력 강조 UX 정리
   - `Ticker Benchmark`일 때는 `Benchmark Ticker`를 중심으로, `Guardrail / Reference Ticker`는 optional 분리 입력으로 읽히게 정리
-  - `Candidate Universe Equal-Weight`일 때는 benchmark ticker 입력을 숨기고, guardrail/reference ticker만 핵심 입력으로 남겨 더 직관적으로 보이게 정리
-- `completed` benchmark contract layout refresh 보강
-  - strict annual `Real-Money Contract`가 form 안에 있어 contract 변경만으로 즉시 rerun되지 않는 제약을 확인
-  - `Apply Contract Layout` 버튼을 추가해, full run 없이도 contract별 입력 숨김/노출을 다시 반영할 수 있게 정리
-- `completed` shared layout-refresh button key collision fix
-  - compare strict-annual form에서 `Apply Contract Layout` 버튼이 duplicate key를 일으키는 문제를 확인
-  - shared helper 안 submit button key를 `key_prefix` 기반으로 분리해 single/compare form 충돌을 제거
+  - `Candidate Universe Equal-Weight`일 때는 benchmark ticker가 직접 baseline 계산에는 쓰이지 않는다는 설명을 함께 보여주도록 정리
+- `completed` benchmark / guardrail 설명 중심 UX로 최종 정리
+  - form 제약 때문에 contract별 hide/show나 별도 레이아웃 반영 버튼은 최종안에서 제거
+  - 대신 `Benchmark Contract`, `Benchmark Ticker`, `Guardrail / Reference Ticker (Optional)`를 항상 같이 보여주고,
+    각 contract에서 무엇이 직접 비교 기준이고 무엇이 guardrail 기준인지 설명 문구로 구분하도록 정리
 - `completed` current candidate re-entry plain-language labeling cleanup
   - `Load Current Anchors` / `Load Lower-MDD Near Misses` 같은 내부자 표현을 더 직접적인 버튼 이름으로 정리
   - 빠른 버튼 2개와 직접 선택 1개의 차이를 각 버튼 아래 설명으로 바로 읽히게 보강
