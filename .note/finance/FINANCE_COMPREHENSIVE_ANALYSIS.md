@@ -588,6 +588,16 @@ Analysis / Presentation
   - family를 고른 뒤 다른 위치로 내려가 다시 snapshot을 찾는 흐름이 줄었고
   - GTAA / Equal Weight / Risk Parity / Dual Momentum처럼
     한 전략(또는 한 family)을 한 덩어리로 읽는 경험에 더 가까워졌다.
+- 이후 QA에서는 strict annual `Real-Money Contract`의
+  `Benchmark Contract` 설명이 아직 축약되어 있어서
+  `Candidate Universe Equal-Weight`가 무엇인지 바로 이해하기 어렵다는 피드백이 나왔다.
+- 그래서 현재 UI에서는 `Benchmark Contract` tooltip을
+  - `Ticker Benchmark`
+  - `Candidate Universe Equal-Weight`
+  두 방식이 각각 무엇을 비교하는지 plain language로 설명하도록 보강했다.
+- 또한 `Candidate Universe Equal-Weight`를 선택했을 때는
+  이것이 "같은 후보군 안에서 복잡한 ranking 없이 그냥 동일 비중으로 담은 기준선"이라는 점을
+  캡션으로 한 번 더 보여주도록 정리했다.
 - 이후 QA에서는 compare / weighted / saved portfolio 사이의 divider가 과하다는 피드백이 나와,
   top-level divider는 제거하고 각 섹션의 `###` 제목만으로 구분하도록 정리했다.
 - `Saved Portfolios`는 별도 top-level 탭으로 빼지 않고

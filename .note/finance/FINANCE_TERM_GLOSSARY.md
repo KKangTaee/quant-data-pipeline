@@ -472,6 +472,25 @@ validation과 승격 해석이 달라지기 때문이다.
 
 ---
 
+## Candidate Universe Equal-Weight
+
+### 기본 설명
+같은 후보 universe 안에서 그 시점에 투자 가능했던 종목들을
+그냥 동일 비중으로 담았다고 가정한 기준 benchmark다.
+
+### 왜 사용되는지
+`SPY` 같은 외부 ETF와 비교하는 것과는 다른 질문을 보기 위해서다.
+즉, "같은 후보군 안에서 복잡한 ranking 전략을 쓰는 것이
+그냥 고르게 사는 것보다 실제로 더 낫나?"를 확인할 수 있다.
+
+### 예시 / 필요 상황
+- strict annual quality/value 전략
+  - `SPY`와 비교하면 시장 ETF 대비 성과를 보는 의미가 강하다
+  - `Candidate Universe Equal-Weight`와 비교하면
+    같은 후보군 안에서 단순 equal-weight보다 전략 selection이 더 나은지 볼 수 있다
+
+---
+
 ## Min Benchmark Coverage
 
 ### 기본 설명

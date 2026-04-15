@@ -1867,7 +1867,13 @@ def _render_strict_annual_real_money_inputs(
                 else STRICT_DEFAULT_BENCHMARK_CONTRACT
             ),
             key=f"{key_prefix}_benchmark_contract",
-            help="Ticker benchmark는 `SPY` 같은 기준 ETF와 직접 비교합니다. Candidate Universe Equal-Weight는 같은 후보군을 단순 균등 보유했을 때와 비교합니다.",
+            help=(
+                "이 전략을 무엇과 비교할지 정하는 기준입니다.\n\n"
+                "- `Ticker Benchmark`: `SPY` 같은 기준 ETF 1개와 직접 비교합니다.\n"
+                "- `Candidate Universe Equal-Weight`: 같은 후보 universe에서 그 시점에 투자 가능했던 종목들을 단순 균등 비중으로 담은 기준선과 비교합니다.\n\n"
+                "쉽게 말하면, `Ticker Benchmark`는 외부 기준 ETF와 비교하는 방식이고, "
+                "`Candidate Universe Equal-Weight`는 같은 후보군 안에서 '복잡한 전략 없이 그냥 고르게 샀을 때'와 비교하는 방식입니다."
+            ),
         )
         benchmark_contract = STRICT_BENCHMARK_CONTRACT_LABELS[benchmark_contract_label]
     with col6:
@@ -1937,7 +1943,9 @@ def _render_strict_annual_real_money_inputs(
     )
     if benchmark_contract == STRICT_BENCHMARK_CONTRACT_CANDIDATE_EQUAL_WEIGHT:
         st.caption(
-            "`Candidate Universe Equal-Weight`는 같은 후보 universe를 단순 균등 보유했을 때와 비교하는 benchmark입니다. "
+            "`Candidate Universe Equal-Weight`는 같은 후보 universe에서 그 시점에 투자 가능했던 종목들을 "
+            "복잡한 ranking 없이 그냥 똑같이 나눠 담았을 때의 기준선입니다. "
+            "즉 `SPY` 같은 외부 ETF와 비교하는 대신, 같은 후보군 안에서 단순하게 투자했을 때보다 전략이 실제로 더 나은지 보려는 목적입니다. "
             "현재 first pass에서는 validation / promotion overlay에 사용되고, actual underperformance guardrail rule은 여전히 `Benchmark Ticker`를 기준으로 동작합니다."
         )
     st.caption(

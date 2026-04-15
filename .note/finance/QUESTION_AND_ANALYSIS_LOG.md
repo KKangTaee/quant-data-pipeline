@@ -1097,3 +1097,20 @@ Detailed historical analysis was archived on `2026-04-13`.
     선택된 variant의 세부 설정이 같은 expander 안에 바로 이어서 보이도록 바꿨다
   - 이로써 family를 먼저 고른 뒤 아래 다른 위치에서 snapshot expander를 다시 찾는 흐름이 사라졌고,
     compare form이 GTAA / Equal Weight 등과 더 비슷한 “한 전략(또는 한 family) 한 덩어리” 구조로 읽히게 되었다
+
+### 2026-04-15 - Benchmark Contract는 옵션 이름보다 비교 의미를 먼저 설명해야 이해가 빠르다
+- Request topic:
+  - 사용자가 `Candidate Universe Equal-Weight`가 무엇인지 간단히 설명해 달라고 요청했고,
+    strict annual `Real-Money Contract`의 `Benchmark Contract` tooltip 보강도 함께 요청함
+- Interpreted goal:
+  - operator가 `Benchmark Contract`를 볼 때 용어 자체보다
+    "무엇과 비교하는 방식인가"를 먼저 이해하게 만들고 싶음
+- Result:
+  - `Benchmark Contract` tooltip을
+    - `Ticker Benchmark`: `SPY` 같은 기준 ETF 1개와 비교
+    - `Candidate Universe Equal-Weight`: 같은 후보 universe에서 투자 가능 종목을 단순 equal-weight로 담은 기준선과 비교
+    로 다시 작성했다
+  - `Candidate Universe Equal-Weight` 선택 시 캡션도
+    "같은 후보군 안에서 복잡한 ranking 없이 그냥 고르게 샀을 때"와 비교하는 의미라는 점이 드러나도록 보강했다
+  - glossary에는 `Candidate Universe Equal-Weight` 항목을 별도로 추가해,
+    이후 다른 화면이나 문서에서도 같은 용어를 재사용할 수 있게 했다
