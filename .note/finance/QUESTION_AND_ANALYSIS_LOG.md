@@ -1165,3 +1165,22 @@ Detailed historical analysis was archived on `2026-04-13`.
   - prefill summary line은 계속 equal-weight 케이스에서 `Reference Ticker` 언어를 사용하도록 유지했다
   - 결과적으로 입력 단계에서 오해를 줄이면서도,
     form 특성 때문에 생기는 "왜 라벨이 안 바뀌지?" 문제를 피할 수 있게 되었다
+
+### 2026-04-15 - 최종적으로는 benchmark ticker와 guardrail/reference ticker를 실제 입력 단계에서 분리하는 편이 더 직관적이었다
+- Request topic:
+  - 사용자가 중립적인 단일 ticker 필드도 여전히 직관적이지 않다고 판단했고,
+    UX 관점에서는 benchmark와 guardrail reference를 아예 별도 입력으로 나누는 편이 더 낫지 않은지 검토를 요청함
+- Interpreted goal:
+  - `무엇과 직접 비교하는가`와 `guardrail이 무엇을 기준으로 쉬는가`를 입력 단계에서부터 혼동 없이 읽히게 만들고 싶음
+- Result:
+  - final implementation에서는 strict annual `Real-Money Contract`를
+    - `Benchmark Ticker`
+    - `Guardrail / Reference Ticker`
+    두 필드로 실제 분리했다
+  - `Candidate Universe Equal-Weight`일 때도 benchmark curve는 후보군 equal-weight로 생성되고,
+    `Guardrail / Reference Ticker`는 underperformance / drawdown guardrail이 따로 참고하는 기준 ticker로 남는다
+  - 이 분리는 single strategy, compare prefill, history/meta, runtime bundle input, shadow sample entrypoint까지 같이 반영되었다
+  - 따라서 현재의 durable rule은
+    - benchmark baseline과
+    - guardrail reference
+    를 같은 필드의 다른 해석으로 보지 않고, 처음부터 별도 operator decision으로 다루는 것이다

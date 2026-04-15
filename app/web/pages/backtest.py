@@ -1790,6 +1790,7 @@ def _render_strict_annual_real_money_inputs(
     default_transaction_cost_bps: float = ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
     default_benchmark_contract: str = STRICT_DEFAULT_BENCHMARK_CONTRACT,
     default_benchmark: str = ETF_REAL_MONEY_DEFAULT_BENCHMARK,
+    default_guardrail_reference_ticker: str | None = None,
     default_promotion_min_benchmark_coverage: float = STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE,
     default_promotion_min_net_cagr_spread: float = STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD,
     default_promotion_min_liquidity_clean_coverage: float = STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE,
@@ -1797,15 +1798,15 @@ def _render_strict_annual_real_money_inputs(
     default_promotion_min_worst_rolling_excess_return: float = STRICT_PROMOTION_DEFAULT_MIN_WORST_ROLLING_EXCESS_RETURN,
     default_promotion_max_strategy_drawdown: float = STRICT_PROMOTION_DEFAULT_MAX_STRATEGY_DRAWDOWN,
     default_promotion_max_drawdown_gap_vs_benchmark: float = STRICT_PROMOTION_DEFAULT_MAX_DRAWDOWN_GAP_VS_BENCHMARK,
-) -> tuple[str, float, int, float, float, str, float, float, float, float, float, float, float]:
+) -> tuple[str, float, int, float, float, str, str, float, float, float, float, float, float, float]:
     st.markdown("##### Real-Money Contract")
     st.caption("설명은 `Reference > Guides > Real-Money Contract 값 해설` 또는 `Reference > Glossary`에서 다시 볼 수 있습니다.")
     st.caption(
         "실전형 annual strict contract에서는 `Minimum Price`, `Minimum History (Months)`, "
-        "`Minimum Avg Dollar Volume 20D`, `Transaction Cost`, `Benchmark Contract`, `Benchmark / Reference Ticker`, "
-        "`Benchmark Policy`, `Validation Policy`, `Portfolio Guardrail Policy`를 같이 사용합니다."
+        "`Minimum Avg Dollar Volume 20D`, `Transaction Cost`, `Benchmark Contract`, `Benchmark Ticker`, "
+        "`Guardrail / Reference Ticker`, `Benchmark Policy`, `Validation Policy`, `Portfolio Guardrail Policy`를 같이 사용합니다."
     )
-    col1, col2, col3, col4, col5, col6 = st.columns(6, gap="small")
+    col1, col2, col3, col4, col5 = st.columns(5, gap="small")
     with col1:
         min_price_filter = float(
             st.number_input(
@@ -1876,18 +1877,34 @@ def _render_strict_annual_real_money_inputs(
             ),
         )
         benchmark_contract = STRICT_BENCHMARK_CONTRACT_LABELS[benchmark_contract_label]
-    with col6:
+    comparison_col, reference_col = st.columns(2, gap="small")
+    with comparison_col:
         benchmark_ticker = str(
             st.text_input(
-                "Benchmark / Guardrail / Reference Ticker",
+                "Benchmark Ticker",
                 value=default_benchmark,
                 key=f"{key_prefix}_benchmark_ticker",
                 help=(
-                    "이 입력란은 contract에 따라 의미가 달라집니다.\n\n"
-                    "- `Ticker Benchmark`일 때: benchmark로 직접 비교할 ETF ticker입니다.\n"
-                    "- `Candidate Universe Equal-Weight`일 때: equal-weight benchmark 자체가 아니라 "
-                    "underperformance / drawdown guardrail과 별도 reference 비교에 쓰는 ticker입니다.\n\n"
-                    "기본값은 `SPY`입니다."
+                    "전략 결과를 직접 비교할 benchmark ticker입니다.\n\n"
+                    "- `Ticker Benchmark`일 때: 이 입력값을 그대로 benchmark curve로 사용합니다.\n"
+                    "- `Candidate Universe Equal-Weight`일 때: benchmark curve는 후보군 equal-weight로 자동 생성되고, "
+                    "이 입력값은 실제 계산에 쓰이지 않습니다.\n\n"
+                    "즉 `Candidate Universe Equal-Weight`를 고른 경우에는 아래 `Guardrail / Reference Ticker`를 더 중요하게 보면 됩니다."
+                ),
+            )
+        ).strip().upper()
+    with reference_col:
+        guardrail_reference_ticker = str(
+            st.text_input(
+                "Guardrail / Reference Ticker",
+                value=default_guardrail_reference_ticker or default_benchmark,
+                key=f"{key_prefix}_guardrail_reference_ticker",
+                help=(
+                    "underperformance / drawdown guardrail이 따로 참고하는 기준 ticker입니다.\n\n"
+                    "- `Ticker Benchmark`일 때도 guardrail 기준을 별도로 두고 싶으면 여기서 분리할 수 있습니다.\n"
+                    "- `Candidate Universe Equal-Weight`일 때는 이 입력값이 사실상 guardrail/reference 쪽 핵심 기준입니다.\n\n"
+                    "쉽게 말하면, `무엇과 직접 비교하나`는 `Benchmark Ticker`, "
+                    "`guardrail이 무엇을 기준으로 꺼지나`는 `Guardrail / Reference Ticker`입니다."
                 ),
             )
         ).strip().upper()
@@ -1948,20 +1965,23 @@ def _render_strict_annual_real_money_inputs(
         "바로 `real_money_candidate`로 올리지 않도록 하는 승격 기준입니다."
     )
     st.caption(
-        "`Benchmark / Guardrail / Reference Ticker`는 contract에 따라 뜻이 달라집니다. "
-        "`Ticker Benchmark`일 때는 실제 benchmark ticker이고, "
-        "`Candidate Universe Equal-Weight`일 때는 guardrail / reference ticker로 읽으면 됩니다."
+        "`Comparison Baseline`은 이 전략을 무엇과 직접 비교할지 정하는 부분이고, "
+        "`Guardrail / Reference Ticker`는 underperformance / drawdown guardrail이 어떤 ticker를 기준으로 작동할지 정하는 부분입니다."
     )
     if benchmark_contract == STRICT_BENCHMARK_CONTRACT_CANDIDATE_EQUAL_WEIGHT:
         st.caption(
             "`Candidate Universe Equal-Weight`는 같은 후보 universe에서 그 시점에 투자 가능했던 종목들을 "
             "복잡한 ranking 없이 그냥 똑같이 나눠 담았을 때의 기준선입니다. "
-            "즉 `SPY` 같은 외부 ETF와 비교하는 대신, 같은 후보군 안에서 단순하게 투자했을 때보다 전략이 실제로 더 나은지 보려는 목적입니다. "
-            "현재 first pass에서는 validation / promotion overlay에 사용되고, actual underperformance guardrail rule은 여전히 별도 reference ticker를 기준으로 동작합니다."
+            "즉 `SPY` 같은 외부 ETF와 비교하는 대신, 같은 후보군 안에서 단순하게 투자했을 때보다 전략이 실제로 더 나은지 보려는 목적입니다."
         )
         st.caption(
-            "`Benchmark / Guardrail / Reference Ticker`는 equal-weight benchmark 자체가 아니라, "
-            "underperformance / drawdown guardrail과 별도 reference 비교에 남아 있는 ticker입니다."
+            "이 모드에서는 `Benchmark Ticker`는 benchmark curve 계산에 쓰이지 않고, "
+            "`Guardrail / Reference Ticker`가 underperformance / drawdown guardrail의 기준 ticker가 됩니다."
+        )
+    else:
+        st.caption(
+            "`Ticker Benchmark` 모드에서는 `Benchmark Ticker`가 직접 비교 curve를 만들고, "
+            "`Guardrail / Reference Ticker`는 guardrail 기준을 같은 ticker로 둘지 별도로 둘지 정하는 입력값입니다."
         )
     st.caption(
         "`Liquidity Clean Coverage`는 리밸런싱 행 대부분이 유동성 제외 없이 지나가야 "
@@ -2050,6 +2070,7 @@ def _render_strict_annual_real_money_inputs(
         min_avg_dollar_volume_20d_m_filter,
         transaction_cost_bps,
         benchmark_ticker,
+        guardrail_reference_ticker,
         promotion_min_benchmark_coverage / 100.0,
         promotion_min_net_cagr_spread / 100.0,
         promotion_min_liquidity_clean_coverage / 100.0,
@@ -2807,7 +2828,11 @@ def _render_last_run() -> None:
                     f"- `Benchmark Contract`: `{_benchmark_contract_value_to_label(meta.get('benchmark_contract'))}`"
                 )
             if meta.get("benchmark_ticker"):
-                st.markdown(f"- `Benchmark`: `{meta['benchmark_ticker']}`")
+                st.markdown(f"- `Benchmark Ticker`: `{meta['benchmark_ticker']}`")
+            if _resolve_guardrail_reference_ticker_value(meta):
+                st.markdown(
+                    f"- `Guardrail / Reference Ticker`: `{_resolve_guardrail_reference_ticker_value(meta)}`"
+                )
             if meta.get("benchmark_symbol_count") is not None:
                 st.markdown(f"- `Benchmark Universe`: `{int(meta.get('benchmark_symbol_count') or 0)}`")
             if meta.get("benchmark_eligible_symbol_count") is not None:
@@ -3818,20 +3843,24 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
                 benchmark_cols = st.columns(6, gap="small")
                 benchmark_cols[0].metric("Benchmark Contract", _benchmark_contract_value_to_label(meta.get("benchmark_contract")))
                 benchmark_cols[1].metric(
-                    "Benchmark",
+                    "Benchmark Baseline",
                     str(
                         meta.get("benchmark_label")
                         if meta.get("benchmark_contract") == STRICT_BENCHMARK_CONTRACT_CANDIDATE_EQUAL_WEIGHT
                         else meta.get("benchmark_ticker") or meta.get("benchmark_label") or "-"
                     ),
                 )
-                benchmark_cols[2].metric("Benchmark Available", "Yes" if meta.get("benchmark_available") else "No")
+                benchmark_cols[2].metric(
+                    "Guardrail Reference",
+                    _resolve_guardrail_reference_ticker_value(meta) or "-",
+                )
+                benchmark_cols[3].metric("Benchmark Available", "Yes" if meta.get("benchmark_available") else "No")
                 if meta.get("benchmark_symbol_count") is not None:
-                    benchmark_cols[3].metric("Benchmark Universe", str(int(meta.get("benchmark_symbol_count") or 0)))
+                    benchmark_cols[4].metric("Benchmark Universe", str(int(meta.get("benchmark_symbol_count") or 0)))
                 if meta.get("benchmark_eligible_symbol_count") is not None:
-                    benchmark_cols[4].metric("Benchmark Eligible", str(int(meta.get("benchmark_eligible_symbol_count") or 0)))
+                    benchmark_cols[5].metric("Benchmark Eligible", str(int(meta.get("benchmark_eligible_symbol_count") or 0)))
                 if meta.get("benchmark_end_balance") is not None:
-                    benchmark_cols[5].metric("Benchmark End Balance", f"{float(meta.get('benchmark_end_balance')):,.1f}")
+                    st.caption(f"Benchmark End Balance `{float(meta.get('benchmark_end_balance')):,.1f}`")
                 summary_lines: list[str] = []
                 if meta.get("benchmark_cagr") is not None:
                     summary_lines.append(f"Benchmark CAGR `{float(meta.get('benchmark_cagr')):.2%}`")
@@ -3846,6 +3875,9 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
                 if meta.get("benchmark_contract") == STRICT_BENCHMARK_CONTRACT_CANDIDATE_EQUAL_WEIGHT:
                     st.caption(
                         "Candidate-universe equal-weight benchmark는 같은 후보 universe를 단순히 균등 보유했을 때의 reference curve입니다."
+                    )
+                    st.caption(
+                        "이 경우 `Guardrail Reference`는 benchmark curve 자체가 아니라 underperformance / drawdown guardrail이 따로 참고하는 ticker입니다."
                     )
 
         if meta.get("benchmark_available"):
@@ -4337,7 +4369,8 @@ def _build_compare_highlight_rows(bundles: list[dict]) -> pd.DataFrame:
                 ),
                 "Avg Turnover": meta.get("avg_turnover"),
                 "Benchmark Contract": _benchmark_contract_value_to_label(meta.get("benchmark_contract")),
-                "Benchmark": meta.get("benchmark_ticker") or meta.get("benchmark_label"),
+                "Benchmark": meta.get("benchmark_label") if meta.get("benchmark_contract") == STRICT_BENCHMARK_CONTRACT_CANDIDATE_EQUAL_WEIGHT else meta.get("benchmark_ticker") or meta.get("benchmark_label"),
+                "Guardrail Ref": _resolve_guardrail_reference_ticker_value(meta),
                 "ETF Operability": meta.get("etf_operability_status"),
                 "Benchmark Policy": meta.get("benchmark_policy_status"),
                 "Liquidity Policy": meta.get("liquidity_policy_status"),
@@ -5054,19 +5087,12 @@ def _build_compare_prefill_summary_rows(payload: dict[str, Any]) -> pd.DataFrame
         strategy_choice, strategy_variant = display_name_to_selection(strategy_name)
         benchmark_contract = override.get("benchmark_contract")
         benchmark_ticker = override.get("benchmark_ticker")
+        guardrail_reference_ticker = _resolve_guardrail_reference_ticker_value(override)
         benchmark_contract_text = (
             _benchmark_contract_value_to_label(benchmark_contract)
             if benchmark_contract
             else "-"
         )
-        if benchmark_contract == STRICT_BENCHMARK_CONTRACT_CANDIDATE_EQUAL_WEIGHT:
-            benchmark_reference_text = (
-                f"{benchmark_ticker} (reference ticker)"
-                if benchmark_ticker
-                else "-"
-            )
-        else:
-            benchmark_reference_text = benchmark_ticker or "-"
         rows.append(
             {
                 "Strategy": strategy_name,
@@ -5074,7 +5100,8 @@ def _build_compare_prefill_summary_rows(payload: dict[str, Any]) -> pd.DataFrame
                 "Top N": override.get("top_n") or override.get("top") or "-",
                 "Universe Contract": _universe_contract_value_to_label(override.get("universe_contract")),
                 "Benchmark Contract": benchmark_contract_text,
-                "Benchmark Ticker / Reference": benchmark_reference_text,
+                "Benchmark Ticker": benchmark_ticker or "-",
+                "Guardrail / Reference Ticker": guardrail_reference_ticker or "-",
                 "Trend Filter": "On" if override.get("trend_filter_enabled") else "Off",
                 "Market Regime": "On" if override.get("market_regime_enabled") else "Off",
                 "Weighting Contract": _strict_weighting_mode_value_to_label(
@@ -5129,9 +5156,10 @@ def _render_compare_prefill_applied_card(payload: dict[str, Any] | None, source_
         st.dataframe(summary_df, use_container_width=True, hide_index=True)
         if "Candidate Universe Equal-Weight" in summary_df.get("Benchmark Contract", pd.Series(dtype=str)).astype(str).tolist():
             st.caption(
-                "여기서 `Candidate Universe Equal-Weight`는 benchmark contract 자체를 뜻하고, "
-                "`Benchmark Ticker / Reference` 열의 ticker는 equal-weight benchmark를 만드는 종목이 아니라 "
-                "guardrail/reference 비교에 남아 있는 별도 ticker입니다."
+                "여기서 `Candidate Universe Equal-Weight`는 benchmark contract 자체를 뜻합니다. "
+                "`Benchmark Ticker`는 외부 ETF benchmark를 직접 쓰는 경우에 더 중요하고, "
+                "`Guardrail / Reference Ticker`는 equal-weight contract에서도 underperformance / drawdown guardrail이 "
+                "참고하는 별도 기준 ticker입니다."
             )
     st.markdown("**어디서 확인하면 되나**")
     st.markdown(
@@ -5593,6 +5621,12 @@ def _build_history_payload(record: dict[str, Any]) -> dict[str, Any] | None:
         ).strip().lower()
     if record.get("benchmark_ticker") is not None:
         payload["benchmark_ticker"] = str(record.get("benchmark_ticker") or "").strip().upper() or ETF_REAL_MONEY_DEFAULT_BENCHMARK
+    if record.get("guardrail_reference_ticker") is not None:
+        payload["guardrail_reference_ticker"] = (
+            str(record.get("guardrail_reference_ticker") or "").strip().upper()
+            or payload.get("benchmark_ticker")
+            or ETF_REAL_MONEY_DEFAULT_BENCHMARK
+        )
     if record.get("promotion_min_benchmark_coverage") is not None:
         payload["promotion_min_benchmark_coverage"] = float(
             record.get("promotion_min_benchmark_coverage") or STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE
@@ -5715,6 +5749,16 @@ def _set_single_strategy_target_from_strategy_key(strategy_key: str | None) -> N
     st.session_state.backtest_prefill_strategy_variant = strategy_variant
 
 
+def _resolve_guardrail_reference_ticker_value(data: dict[str, Any] | None) -> str | None:
+    data = dict(data or {})
+    ticker = str(
+        data.get("guardrail_reference_ticker")
+        or data.get("benchmark_ticker")
+        or ""
+    ).strip().upper()
+    return ticker or None
+
+
 def _build_prefill_summary_lines(payload: dict[str, Any] | None) -> list[str]:
     if not payload:
         return []
@@ -5760,12 +5804,10 @@ def _build_prefill_summary_lines(payload: dict[str, Any] | None) -> list[str]:
     if payload.get("benchmark_contract"):
         lines.append(f"Benchmark Contract: `{_benchmark_contract_value_to_label(payload.get('benchmark_contract'))}`")
     if payload.get("benchmark_ticker"):
-        ticker_label = (
-            "Reference Ticker"
-            if payload.get("benchmark_contract") == STRICT_BENCHMARK_CONTRACT_CANDIDATE_EQUAL_WEIGHT
-            else "Benchmark Ticker"
-        )
-        lines.append(f"{ticker_label}: `{payload.get('benchmark_ticker')}`")
+        lines.append(f"Benchmark Ticker: `{payload.get('benchmark_ticker')}`")
+    guardrail_reference_ticker = _resolve_guardrail_reference_ticker_value(payload)
+    if guardrail_reference_ticker:
+        lines.append(f"Guardrail / Reference Ticker: `{guardrail_reference_ticker}`")
     if payload.get("promotion_min_benchmark_coverage") is not None:
         lines.append(
             f"Min Benchmark Coverage: `{float(payload.get('promotion_min_benchmark_coverage')):.0%}`"
@@ -6302,6 +6344,8 @@ def _bundle_to_saved_strategy_override(bundle: dict[str, Any]) -> dict[str, Any]
         override["benchmark_contract"] = meta.get("benchmark_contract")
     if meta.get("benchmark_ticker") is not None:
         override["benchmark_ticker"] = meta.get("benchmark_ticker")
+    if meta.get("guardrail_reference_ticker") is not None:
+        override["guardrail_reference_ticker"] = meta.get("guardrail_reference_ticker")
     if meta.get("promotion_min_benchmark_coverage") is not None:
         override["promotion_min_benchmark_coverage"] = float(meta.get("promotion_min_benchmark_coverage"))
     if meta.get("promotion_min_net_cagr_spread") is not None:
@@ -6460,12 +6504,13 @@ def _current_candidate_registry_contract_summary(row: dict[str, Any]) -> str:
         parts.append(f"Top N {int(top_n)}")
     benchmark_contract = contract.get("benchmark_contract")
     benchmark_ticker = contract.get("benchmark_ticker")
+    guardrail_reference_ticker = _resolve_guardrail_reference_ticker_value(contract)
     if benchmark_contract == STRICT_BENCHMARK_CONTRACT_CANDIDATE_EQUAL_WEIGHT:
         parts.append("Benchmark Candidate Equal-Weight")
-        if benchmark_ticker:
-            parts.append(f"Reference Ticker {benchmark_ticker}")
     elif benchmark_ticker:
         parts.append(f"Benchmark Ticker {benchmark_ticker}")
+    if guardrail_reference_ticker:
+        parts.append(f"Guardrail Ref {guardrail_reference_ticker}")
     factor_adjustment = contract.get("factor_adjustment")
     if factor_adjustment:
         parts.append(str(factor_adjustment))
@@ -6614,6 +6659,10 @@ def _current_candidate_registry_row_to_compare_prefill(row: dict[str, Any]) -> d
         strategy_override = _current_candidate_registry_default_compare_override(row) or {}
     if not strategy_override:
         return None
+    if not strategy_override.get("guardrail_reference_ticker"):
+        strategy_override["guardrail_reference_ticker"] = _resolve_guardrail_reference_ticker_value(
+            strategy_override
+        ) or ETF_REAL_MONEY_DEFAULT_BENCHMARK
 
     return {
         "strategy_name": strategy_name,
@@ -6942,6 +6991,9 @@ def _apply_compare_strategy_prefill(strategy_name: str, override: dict[str, Any]
     st.session_state[f"compare_{key_prefix}_benchmark_ticker"] = str(
         override.get("benchmark_ticker") or ETF_REAL_MONEY_DEFAULT_BENCHMARK
     ).strip().upper()
+    st.session_state[f"compare_{key_prefix}_guardrail_reference_ticker"] = (
+        _resolve_guardrail_reference_ticker_value(override) or ETF_REAL_MONEY_DEFAULT_BENCHMARK
+    )
     st.session_state[f"compare_{key_prefix}_promotion_min_benchmark_coverage"] = float(
         (override.get("promotion_min_benchmark_coverage") or STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE) * 100.0
     )
@@ -7383,6 +7435,9 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
             payload.get("benchmark_contract") or STRICT_DEFAULT_BENCHMARK_CONTRACT
         )
         st.session_state["qss_benchmark_ticker"] = str(payload.get("benchmark_ticker") or ETF_REAL_MONEY_DEFAULT_BENCHMARK).strip().upper()
+        st.session_state["qss_guardrail_reference_ticker"] = (
+            _resolve_guardrail_reference_ticker_value(payload) or ETF_REAL_MONEY_DEFAULT_BENCHMARK
+        )
         st.session_state["qss_promotion_min_benchmark_coverage"] = float(
             (payload.get("promotion_min_benchmark_coverage") or STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE) * 100.0
         )
@@ -7505,6 +7560,9 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
             payload.get("benchmark_contract") or STRICT_DEFAULT_BENCHMARK_CONTRACT
         )
         st.session_state["vss_benchmark_ticker"] = str(payload.get("benchmark_ticker") or ETF_REAL_MONEY_DEFAULT_BENCHMARK).strip().upper()
+        st.session_state["vss_guardrail_reference_ticker"] = (
+            _resolve_guardrail_reference_ticker_value(payload) or ETF_REAL_MONEY_DEFAULT_BENCHMARK
+        )
         st.session_state["vss_promotion_min_benchmark_coverage"] = float(
             (payload.get("promotion_min_benchmark_coverage") or STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE) * 100.0
         )
@@ -7628,6 +7686,9 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
             payload.get("benchmark_contract") or STRICT_DEFAULT_BENCHMARK_CONTRACT
         )
         st.session_state["qvss_benchmark_ticker"] = str(payload.get("benchmark_ticker") or ETF_REAL_MONEY_DEFAULT_BENCHMARK).strip().upper()
+        st.session_state["qvss_guardrail_reference_ticker"] = (
+            _resolve_guardrail_reference_ticker_value(payload) or ETF_REAL_MONEY_DEFAULT_BENCHMARK
+        )
         st.session_state["qvss_promotion_min_benchmark_coverage"] = float(
             (payload.get("promotion_min_benchmark_coverage") or STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE) * 100.0
         )
@@ -8794,6 +8855,7 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> bool:
                     transaction_cost_bps=payload.get("transaction_cost_bps", ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS),
                     benchmark_contract=payload.get("benchmark_contract", STRICT_DEFAULT_BENCHMARK_CONTRACT),
                     benchmark_ticker=payload.get("benchmark_ticker", ETF_REAL_MONEY_DEFAULT_BENCHMARK),
+                    guardrail_reference_ticker=payload.get("guardrail_reference_ticker", payload.get("benchmark_ticker", ETF_REAL_MONEY_DEFAULT_BENCHMARK)),
                     promotion_min_benchmark_coverage=payload.get("promotion_min_benchmark_coverage", STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE),
                     promotion_min_net_cagr_spread=payload.get("promotion_min_net_cagr_spread", STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD),
                     promotion_min_liquidity_clean_coverage=payload.get("promotion_min_liquidity_clean_coverage", STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE),
@@ -8862,6 +8924,7 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> bool:
                     transaction_cost_bps=payload.get("transaction_cost_bps", ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS),
                     benchmark_contract=payload.get("benchmark_contract", STRICT_DEFAULT_BENCHMARK_CONTRACT),
                     benchmark_ticker=payload.get("benchmark_ticker", ETF_REAL_MONEY_DEFAULT_BENCHMARK),
+                    guardrail_reference_ticker=payload.get("guardrail_reference_ticker", payload.get("benchmark_ticker", ETF_REAL_MONEY_DEFAULT_BENCHMARK)),
                     promotion_min_benchmark_coverage=payload.get("promotion_min_benchmark_coverage", STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE),
                     promotion_min_net_cagr_spread=payload.get("promotion_min_net_cagr_spread", STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD),
                     promotion_min_liquidity_clean_coverage=payload.get("promotion_min_liquidity_clean_coverage", STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE),
@@ -8931,6 +8994,7 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> bool:
                     transaction_cost_bps=payload.get("transaction_cost_bps", ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS),
                     benchmark_contract=payload.get("benchmark_contract", STRICT_DEFAULT_BENCHMARK_CONTRACT),
                     benchmark_ticker=payload.get("benchmark_ticker", ETF_REAL_MONEY_DEFAULT_BENCHMARK),
+                    guardrail_reference_ticker=payload.get("guardrail_reference_ticker", payload.get("benchmark_ticker", ETF_REAL_MONEY_DEFAULT_BENCHMARK)),
                     promotion_min_benchmark_coverage=payload.get("promotion_min_benchmark_coverage", STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE),
                     promotion_min_net_cagr_spread=payload.get("promotion_min_net_cagr_spread", STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD),
                     promotion_min_liquidity_clean_coverage=payload.get("promotion_min_liquidity_clean_coverage", STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE),
@@ -9749,6 +9813,7 @@ def _render_quality_snapshot_strict_annual_form() -> None:
                     min_avg_dollar_volume_20d_m_filter,
                     transaction_cost_bps,
                     benchmark_ticker,
+                    guardrail_reference_ticker,
                     promotion_min_benchmark_coverage,
                     promotion_min_net_cagr_spread,
                     promotion_min_liquidity_clean_coverage,
@@ -9825,6 +9890,7 @@ def _render_quality_snapshot_strict_annual_form() -> None:
         "transaction_cost_bps": float(transaction_cost_bps),
         "benchmark_contract": benchmark_contract,
         "benchmark_ticker": benchmark_ticker,
+        "guardrail_reference_ticker": guardrail_reference_ticker,
         "promotion_min_benchmark_coverage": float(promotion_min_benchmark_coverage),
         "promotion_min_net_cagr_spread": float(promotion_min_net_cagr_spread),
         "promotion_min_liquidity_clean_coverage": float(promotion_min_liquidity_clean_coverage),
@@ -10371,6 +10437,7 @@ def _render_value_snapshot_strict_annual_form() -> None:
                     min_avg_dollar_volume_20d_m_filter,
                     transaction_cost_bps,
                     benchmark_ticker,
+                    guardrail_reference_ticker,
                     promotion_min_benchmark_coverage,
                     promotion_min_net_cagr_spread,
                     promotion_min_liquidity_clean_coverage,
@@ -10448,6 +10515,7 @@ def _render_value_snapshot_strict_annual_form() -> None:
         "transaction_cost_bps": float(transaction_cost_bps),
         "benchmark_contract": benchmark_contract,
         "benchmark_ticker": benchmark_ticker,
+        "guardrail_reference_ticker": guardrail_reference_ticker,
         "promotion_min_benchmark_coverage": float(promotion_min_benchmark_coverage),
         "promotion_min_net_cagr_spread": float(promotion_min_net_cagr_spread),
         "promotion_min_liquidity_clean_coverage": float(promotion_min_liquidity_clean_coverage),
@@ -10828,6 +10896,7 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
                     min_avg_dollar_volume_20d_m_filter,
                     transaction_cost_bps,
                     benchmark_ticker,
+                    guardrail_reference_ticker,
                     promotion_min_benchmark_coverage,
                     promotion_min_net_cagr_spread,
                     promotion_min_liquidity_clean_coverage,
@@ -10908,6 +10977,7 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
         "transaction_cost_bps": float(transaction_cost_bps),
         "benchmark_contract": benchmark_contract,
         "benchmark_ticker": benchmark_ticker,
+        "guardrail_reference_ticker": guardrail_reference_ticker,
         "promotion_min_benchmark_coverage": float(promotion_min_benchmark_coverage),
         "promotion_min_net_cagr_spread": float(promotion_min_net_cagr_spread),
         "promotion_min_liquidity_clean_coverage": float(promotion_min_liquidity_clean_coverage),
@@ -11530,6 +11600,7 @@ def render_backtest_tab() -> None:
                                 min_avg_dollar_volume_20d_m_filter,
                                 transaction_cost_bps,
                                 benchmark_ticker,
+                                guardrail_reference_ticker,
                                 promotion_min_benchmark_coverage,
                                 promotion_min_net_cagr_spread,
                                 promotion_min_liquidity_clean_coverage,
@@ -11546,6 +11617,7 @@ def render_backtest_tab() -> None:
                         compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["transaction_cost_bps"] = float(transaction_cost_bps)
                         compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["benchmark_contract"] = benchmark_contract
                         compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["benchmark_ticker"] = benchmark_ticker
+                        compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["guardrail_reference_ticker"] = guardrail_reference_ticker
                         compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["promotion_min_benchmark_coverage"] = float(promotion_min_benchmark_coverage)
                         compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["promotion_min_net_cagr_spread"] = float(promotion_min_net_cagr_spread)
                         compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["promotion_min_liquidity_clean_coverage"] = float(promotion_min_liquidity_clean_coverage)
@@ -11782,6 +11854,7 @@ def render_backtest_tab() -> None:
                                 min_avg_dollar_volume_20d_m_filter,
                                 transaction_cost_bps,
                                 benchmark_ticker,
+                                guardrail_reference_ticker,
                                 promotion_min_benchmark_coverage,
                                 promotion_min_net_cagr_spread,
                                 promotion_min_liquidity_clean_coverage,
@@ -11798,6 +11871,7 @@ def render_backtest_tab() -> None:
                         compare_strategy_overrides["Value Snapshot (Strict Annual)"]["transaction_cost_bps"] = float(transaction_cost_bps)
                         compare_strategy_overrides["Value Snapshot (Strict Annual)"]["benchmark_contract"] = benchmark_contract
                         compare_strategy_overrides["Value Snapshot (Strict Annual)"]["benchmark_ticker"] = benchmark_ticker
+                        compare_strategy_overrides["Value Snapshot (Strict Annual)"]["guardrail_reference_ticker"] = guardrail_reference_ticker
                         compare_strategy_overrides["Value Snapshot (Strict Annual)"]["promotion_min_benchmark_coverage"] = float(promotion_min_benchmark_coverage)
                         compare_strategy_overrides["Value Snapshot (Strict Annual)"]["promotion_min_net_cagr_spread"] = float(promotion_min_net_cagr_spread)
                         compare_strategy_overrides["Value Snapshot (Strict Annual)"]["promotion_min_liquidity_clean_coverage"] = float(promotion_min_liquidity_clean_coverage)
@@ -12040,6 +12114,7 @@ def render_backtest_tab() -> None:
                                 min_avg_dollar_volume_20d_m_filter,
                                 transaction_cost_bps,
                                 benchmark_ticker,
+                                guardrail_reference_ticker,
                                 promotion_min_benchmark_coverage,
                                 promotion_min_net_cagr_spread,
                                 promotion_min_liquidity_clean_coverage,
@@ -12056,6 +12131,7 @@ def render_backtest_tab() -> None:
                         compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["transaction_cost_bps"] = float(transaction_cost_bps)
                         compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["benchmark_contract"] = benchmark_contract
                         compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["benchmark_ticker"] = benchmark_ticker
+                        compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["guardrail_reference_ticker"] = guardrail_reference_ticker
                         compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["promotion_min_benchmark_coverage"] = float(promotion_min_benchmark_coverage)
                         compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["promotion_min_net_cagr_spread"] = float(promotion_min_net_cagr_spread)
                         compare_strategy_overrides["Quality + Value Snapshot (Strict Annual)"]["promotion_min_liquidity_clean_coverage"] = float(promotion_min_liquidity_clean_coverage)

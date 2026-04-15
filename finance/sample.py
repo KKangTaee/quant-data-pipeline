@@ -1701,6 +1701,17 @@ def _apply_universe_membership_to_snapshot_map(
     return filtered_map
 
 
+def _resolve_guardrail_reference_ticker(
+    benchmark_ticker: str | None,
+    guardrail_reference_ticker: str | None,
+) -> str:
+    return str(
+        guardrail_reference_ticker
+        or benchmark_ticker
+        or STRICT_MARKET_REGIME_DEFAULT_BENCHMARK
+    ).strip().upper()
+
+
 def _run_statement_shadow_snapshot_from_db(
     *,
     start=None,
@@ -1727,6 +1738,7 @@ def _run_statement_shadow_snapshot_from_db(
     market_regime_window=STRICT_MARKET_REGIME_DEFAULT_WINDOW,
     market_regime_benchmark=STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
     benchmark_ticker=STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
+    guardrail_reference_ticker=None,
     underperformance_guardrail_enabled=STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED,
     underperformance_guardrail_window_months=STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
     underperformance_guardrail_threshold=STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD,
@@ -1761,6 +1773,11 @@ def _run_statement_shadow_snapshot_from_db(
             "weighting_mode must be one of "
             f"{{'{STRICT_WEIGHTING_MODE_EQUAL}', '{STRICT_WEIGHTING_MODE_RANK_TAPERED}'}}."
         )
+
+    effective_guardrail_reference_ticker = _resolve_guardrail_reference_ticker(
+        benchmark_ticker,
+        guardrail_reference_ticker,
+    )
 
     effective_defensive_tickers = _normalize_symbol_list(
         defensive_tickers if defensive_tickers is not None else STRICT_DEFAULT_DEFENSIVE_TICKERS
@@ -1874,7 +1891,7 @@ def _run_statement_shadow_snapshot_from_db(
     guardrail_benchmark_df = None
     if underperformance_guardrail_enabled or drawdown_guardrail_enabled:
         guardrail_benchmark_df = _build_underperformance_guardrail_df(
-            benchmark_ticker,
+            effective_guardrail_reference_ticker,
             option=option,
             start=start,
             end=end,
@@ -1910,13 +1927,13 @@ def _run_statement_shadow_snapshot_from_db(
         underperformance_guardrail_enabled=underperformance_guardrail_enabled,
         underperformance_guardrail_window_months=underperformance_guardrail_window_months,
         underperformance_guardrail_threshold=underperformance_guardrail_threshold,
-        underperformance_guardrail_benchmark=benchmark_ticker,
+        underperformance_guardrail_benchmark=effective_guardrail_reference_ticker,
         underperformance_guardrail_df=guardrail_benchmark_df if underperformance_guardrail_enabled else None,
         drawdown_guardrail_enabled=drawdown_guardrail_enabled,
         drawdown_guardrail_window_months=drawdown_guardrail_window_months,
         drawdown_guardrail_strategy_threshold=drawdown_guardrail_strategy_threshold,
         drawdown_guardrail_gap_threshold=drawdown_guardrail_gap_threshold,
-        drawdown_guardrail_benchmark=benchmark_ticker,
+        drawdown_guardrail_benchmark=effective_guardrail_reference_ticker,
         drawdown_guardrail_df=guardrail_benchmark_df if drawdown_guardrail_enabled else None,
     )
 
@@ -1966,6 +1983,7 @@ def get_statement_quality_snapshot_shadow_from_db(
     market_regime_window=STRICT_MARKET_REGIME_DEFAULT_WINDOW,
     market_regime_benchmark=STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
     benchmark_ticker=STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
+    guardrail_reference_ticker=None,
     underperformance_guardrail_enabled=STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED,
     underperformance_guardrail_window_months=STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
     underperformance_guardrail_threshold=STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD,
@@ -2014,6 +2032,7 @@ def get_statement_quality_snapshot_shadow_from_db(
         market_regime_window=market_regime_window,
         market_regime_benchmark=market_regime_benchmark,
         benchmark_ticker=benchmark_ticker,
+        guardrail_reference_ticker=guardrail_reference_ticker,
         underperformance_guardrail_enabled=underperformance_guardrail_enabled,
         underperformance_guardrail_window_months=underperformance_guardrail_window_months,
         underperformance_guardrail_threshold=underperformance_guardrail_threshold,
@@ -2054,6 +2073,7 @@ def get_statement_value_snapshot_shadow_from_db(
     market_regime_window=STRICT_MARKET_REGIME_DEFAULT_WINDOW,
     market_regime_benchmark=STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
     benchmark_ticker=STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
+    guardrail_reference_ticker=None,
     underperformance_guardrail_enabled=STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED,
     underperformance_guardrail_window_months=STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
     underperformance_guardrail_threshold=STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD,
@@ -2102,6 +2122,7 @@ def get_statement_value_snapshot_shadow_from_db(
         market_regime_window=market_regime_window,
         market_regime_benchmark=market_regime_benchmark,
         benchmark_ticker=benchmark_ticker,
+        guardrail_reference_ticker=guardrail_reference_ticker,
         underperformance_guardrail_enabled=underperformance_guardrail_enabled,
         underperformance_guardrail_window_months=underperformance_guardrail_window_months,
         underperformance_guardrail_threshold=underperformance_guardrail_threshold,
@@ -2143,6 +2164,7 @@ def get_statement_quality_value_snapshot_shadow_from_db(
     market_regime_window=STRICT_MARKET_REGIME_DEFAULT_WINDOW,
     market_regime_benchmark=STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
     benchmark_ticker=STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
+    guardrail_reference_ticker=None,
     underperformance_guardrail_enabled=STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED,
     underperformance_guardrail_window_months=STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
     underperformance_guardrail_threshold=STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD,
@@ -2210,6 +2232,7 @@ def get_statement_quality_value_snapshot_shadow_from_db(
         market_regime_window=market_regime_window,
         market_regime_benchmark=market_regime_benchmark,
         benchmark_ticker=benchmark_ticker,
+        guardrail_reference_ticker=guardrail_reference_ticker,
         underperformance_guardrail_enabled=underperformance_guardrail_enabled,
         underperformance_guardrail_window_months=underperformance_guardrail_window_months,
         underperformance_guardrail_threshold=underperformance_guardrail_threshold,

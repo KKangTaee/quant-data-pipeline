@@ -56,9 +56,9 @@
 - `completed` benchmark contract vs reference ticker display disambiguation
   - `Candidate Universe Equal-Weight / SPY`가 하나의 benchmark처럼 읽히지 않도록 compare summary와 current candidate contract summary에서 contract와 reference ticker를 분리 표기
   - equal-weight benchmark일 때 `SPY`가 benchmark 자체가 아니라 reference ticker일 수 있다는 설명을 compare 카드 안에서도 보강
-- `completed` dynamic benchmark ticker field labeling
-  - strict annual `Real-Money Contract`에서 ticker 입력 필드를 `Benchmark / Guardrail / Reference Ticker`라는 중립 표현으로 정리
-  - contract별 의미는 바로 아래 caption / help text에서 설명해, equal-weight contract일 때 ticker가 benchmark 구성 종목이 아니라 별도 reference ticker라는 점을 입력 단계에서 읽히게 보강
+- `completed` benchmark ticker와 guardrail/reference ticker 역할 분리
+  - strict annual `Real-Money Contract`에서 `Benchmark Ticker`와 `Guardrail / Reference Ticker`를 별도 입력으로 분리
+  - `Comparison Baseline`과 `Guardrail / Reference`를 따로 읽게 만들어, equal-weight benchmark와 SPY reference를 같은 값으로 오해하지 않도록 정리
 - `completed` current candidate re-entry plain-language labeling cleanup
   - `Load Current Anchors` / `Load Lower-MDD Near Misses` 같은 내부자 표현을 더 직접적인 버튼 이름으로 정리
   - 빠른 버튼 2개와 직접 선택 1개의 차이를 각 버튼 아래 설명으로 바로 읽히게 보강

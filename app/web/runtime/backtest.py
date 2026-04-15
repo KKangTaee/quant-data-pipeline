@@ -567,6 +567,17 @@ def _build_benchmark_result_df(
     }
 
 
+def _resolve_guardrail_reference_ticker(
+    benchmark_ticker: str | None,
+    guardrail_reference_ticker: str | None,
+) -> str:
+    return str(
+        guardrail_reference_ticker
+        or benchmark_ticker
+        or STRICT_MARKET_REGIME_DEFAULT_BENCHMARK
+    ).strip().upper()
+
+
 def _compute_drawdown_stats(balance_series: pd.Series) -> tuple[float | None, float | None]:
     series = pd.to_numeric(balance_series, errors="coerce").dropna()
     if series.empty:
@@ -1734,6 +1745,7 @@ def _apply_real_money_hardening(
     transaction_cost_bps: float,
     benchmark_contract: str | None,
     benchmark_ticker: str | None,
+    guardrail_reference_ticker: str | None = None,
     benchmark_universe_tickers: Sequence[str] | None = None,
     promotion_min_etf_aum_b: float | None = None,
     promotion_max_bid_ask_spread_pct: float | None = None,
@@ -1773,6 +1785,7 @@ def _apply_real_money_hardening(
             "transaction_cost_bps": float(transaction_cost_bps or 0.0),
             "benchmark_contract": str(benchmark_contract or STRICT_DEFAULT_BENCHMARK_CONTRACT).strip().lower(),
             "benchmark_ticker": str(benchmark_ticker or "").strip().upper() or None,
+            "guardrail_reference_ticker": str(guardrail_reference_ticker or "").strip().upper() or None,
             "promotion_min_etf_aum_b": (
                 float(promotion_min_etf_aum_b) if promotion_min_etf_aum_b is not None else None
             ),
@@ -2475,6 +2488,8 @@ def build_backtest_result_bundle(
         meta["promotion_max_bid_ask_spread_pct"] = input_params.get("promotion_max_bid_ask_spread_pct")
     if input_params.get("benchmark_ticker") is not None:
         meta["benchmark_ticker"] = input_params.get("benchmark_ticker")
+    if input_params.get("guardrail_reference_ticker") is not None:
+        meta["guardrail_reference_ticker"] = input_params.get("guardrail_reference_ticker")
     if input_params.get("promotion_min_benchmark_coverage") is not None:
         meta["promotion_min_benchmark_coverage"] = input_params.get("promotion_min_benchmark_coverage")
     if input_params.get("promotion_min_net_cagr_spread") is not None:
@@ -3118,6 +3133,7 @@ def _run_statement_quality_bundle(
     transaction_cost_bps: float = ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
     benchmark_contract: str = STRICT_DEFAULT_BENCHMARK_CONTRACT,
     benchmark_ticker: str = ETF_REAL_MONEY_DEFAULT_BENCHMARK,
+    guardrail_reference_ticker: str = ETF_REAL_MONEY_DEFAULT_BENCHMARK,
     promotion_min_benchmark_coverage: float = STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE,
     promotion_min_net_cagr_spread: float = STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD,
     promotion_min_liquidity_clean_coverage: float = STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE,
@@ -3160,6 +3176,10 @@ def _run_statement_quality_bundle(
     )
     rejected_slot_fill_enabled, partial_cash_retention_enabled = strict_rejection_handling_mode_to_flags(
         rejected_slot_handling_mode
+    )
+    effective_guardrail_reference_ticker = _resolve_guardrail_reference_ticker(
+        benchmark_ticker,
+        guardrail_reference_ticker,
     )
     strict_label = f"strict {statement_freq}"
     universe_input_tickers = normalized_tickers
@@ -3215,16 +3235,16 @@ def _run_statement_quality_bundle(
                 end=end,
                 timeframe=timeframe,
             )
-    if underperformance_guardrail_enabled and benchmark_ticker:
+    if underperformance_guardrail_enabled and effective_guardrail_reference_ticker:
         _preflight_price_strategy_data(
-            tickers=[benchmark_ticker],
+            tickers=[effective_guardrail_reference_ticker],
             start=start,
             end=end,
             timeframe=timeframe,
         )
-    if drawdown_guardrail_enabled and benchmark_ticker:
+    if drawdown_guardrail_enabled and effective_guardrail_reference_ticker:
         _preflight_price_strategy_data(
-            tickers=[benchmark_ticker],
+            tickers=[effective_guardrail_reference_ticker],
             start=start,
             end=end,
             timeframe=timeframe,
@@ -3260,6 +3280,7 @@ def _run_statement_quality_bundle(
             market_regime_window=market_regime_window,
             market_regime_benchmark=market_regime_benchmark,
             benchmark_ticker=benchmark_ticker,
+            guardrail_reference_ticker=effective_guardrail_reference_ticker,
             underperformance_guardrail_enabled=underperformance_guardrail_enabled,
             underperformance_guardrail_window_months=underperformance_guardrail_window_months,
             underperformance_guardrail_threshold=underperformance_guardrail_threshold,
@@ -3388,6 +3409,8 @@ def _run_statement_quality_bundle(
         input_params["benchmark_contract"] = str(benchmark_contract or STRICT_DEFAULT_BENCHMARK_CONTRACT).strip().lower()
     if benchmark_ticker is not None:
         input_params["benchmark_ticker"] = benchmark_ticker
+    if effective_guardrail_reference_ticker:
+        input_params["guardrail_reference_ticker"] = effective_guardrail_reference_ticker
     if promotion_min_benchmark_coverage is not None:
         input_params["promotion_min_benchmark_coverage"] = float(promotion_min_benchmark_coverage)
     if promotion_min_net_cagr_spread is not None:
@@ -3454,11 +3477,11 @@ def _run_statement_quality_bundle(
         under_warning = (
             "Underperformance Guardrail enabled: rebalance candidates rotate into "
             f"`{', '.join(effective_defensive_tickers)}` when trailing strategy excess return "
-            f"vs `{benchmark_ticker}` over `{underperformance_guardrail_window_months}M` falls below "
+            f"vs `{effective_guardrail_reference_ticker}` over `{underperformance_guardrail_window_months}M` falls below "
             f"`{underperformance_guardrail_threshold:.0%}`."
             if risk_off_mode == STRICT_RISK_OFF_MODE_DEFENSIVE and effective_defensive_tickers
             else "Underperformance Guardrail enabled: rebalance candidates move to cash when trailing strategy excess return "
-            f"vs `{benchmark_ticker}` over `{underperformance_guardrail_window_months}M` falls below "
+            f"vs `{effective_guardrail_reference_ticker}` over `{underperformance_guardrail_window_months}M` falls below "
             f"`{underperformance_guardrail_threshold:.0%}`."
         )
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [under_warning]
@@ -3467,11 +3490,11 @@ def _run_statement_quality_bundle(
             "Drawdown Guardrail enabled: rebalance candidates rotate into "
             f"`{', '.join(effective_defensive_tickers)}` when trailing strategy drawdown over "
             f"`{drawdown_guardrail_window_months}M` falls below `{drawdown_guardrail_strategy_threshold:.0%}` "
-            f"or drawdown gap vs `{benchmark_ticker}` rises above `{drawdown_guardrail_gap_threshold:.0%}`."
+            f"or drawdown gap vs `{effective_guardrail_reference_ticker}` rises above `{drawdown_guardrail_gap_threshold:.0%}`."
             if risk_off_mode == STRICT_RISK_OFF_MODE_DEFENSIVE and effective_defensive_tickers
             else "Drawdown Guardrail enabled: rebalance candidates move to cash when trailing strategy drawdown over "
             f"`{drawdown_guardrail_window_months}M` falls below `{drawdown_guardrail_strategy_threshold:.0%}` "
-            f"or drawdown gap vs `{benchmark_ticker}` rises above `{drawdown_guardrail_gap_threshold:.0%}`."
+            f"or drawdown gap vs `{effective_guardrail_reference_ticker}` rises above `{drawdown_guardrail_gap_threshold:.0%}`."
         )
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [drawdown_warning]
     if dynamic_universe_snapshot_rows:
@@ -3497,6 +3520,7 @@ def run_quality_snapshot_strict_annual_backtest_from_db(
     transaction_cost_bps: float = ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
     benchmark_contract: str = STRICT_DEFAULT_BENCHMARK_CONTRACT,
     benchmark_ticker: str = ETF_REAL_MONEY_DEFAULT_BENCHMARK,
+    guardrail_reference_ticker: str = ETF_REAL_MONEY_DEFAULT_BENCHMARK,
     promotion_min_benchmark_coverage: float = STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE,
     promotion_min_net_cagr_spread: float = STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD,
     promotion_min_liquidity_clean_coverage: float = STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE,
@@ -3546,6 +3570,7 @@ def run_quality_snapshot_strict_annual_backtest_from_db(
         transaction_cost_bps=transaction_cost_bps,
         benchmark_contract=benchmark_contract,
         benchmark_ticker=benchmark_ticker,
+        guardrail_reference_ticker=guardrail_reference_ticker,
         promotion_min_benchmark_coverage=promotion_min_benchmark_coverage,
         promotion_min_net_cagr_spread=promotion_min_net_cagr_spread,
         promotion_min_liquidity_clean_coverage=promotion_min_liquidity_clean_coverage,
@@ -3588,6 +3613,10 @@ def run_quality_snapshot_strict_annual_backtest_from_db(
         transaction_cost_bps=transaction_cost_bps,
         benchmark_contract=benchmark_contract,
         benchmark_ticker=benchmark_ticker,
+        guardrail_reference_ticker=_resolve_guardrail_reference_ticker(
+            benchmark_ticker,
+            guardrail_reference_ticker,
+        ),
         benchmark_universe_tickers=_normalize_tickers(dynamic_candidate_tickers or tickers),
         promotion_min_benchmark_coverage=promotion_min_benchmark_coverage,
         promotion_min_net_cagr_spread=promotion_min_net_cagr_spread,
@@ -3660,6 +3689,7 @@ def run_value_snapshot_strict_annual_backtest_from_db(
     transaction_cost_bps: float = ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
     benchmark_contract: str = STRICT_DEFAULT_BENCHMARK_CONTRACT,
     benchmark_ticker: str = ETF_REAL_MONEY_DEFAULT_BENCHMARK,
+    guardrail_reference_ticker: str = ETF_REAL_MONEY_DEFAULT_BENCHMARK,
     promotion_min_benchmark_coverage: float = STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE,
     promotion_min_net_cagr_spread: float = STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD,
     promotion_min_liquidity_clean_coverage: float = STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE,
@@ -3700,6 +3730,10 @@ def run_value_snapshot_strict_annual_backtest_from_db(
     )
     rejected_slot_fill_enabled, partial_cash_retention_enabled = strict_rejection_handling_mode_to_flags(
         rejected_slot_handling_mode
+    )
+    effective_guardrail_reference_ticker = _resolve_guardrail_reference_ticker(
+        benchmark_ticker,
+        guardrail_reference_ticker,
     )
     universe_input_tickers = normalized_tickers
     if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE:
@@ -3754,16 +3788,16 @@ def run_value_snapshot_strict_annual_backtest_from_db(
                 end=end,
                 timeframe=timeframe,
             )
-    if underperformance_guardrail_enabled and benchmark_ticker:
+    if underperformance_guardrail_enabled and effective_guardrail_reference_ticker:
         _preflight_price_strategy_data(
-            tickers=[benchmark_ticker],
+            tickers=[effective_guardrail_reference_ticker],
             start=start,
             end=end,
             timeframe=timeframe,
         )
-    if drawdown_guardrail_enabled and benchmark_ticker:
+    if drawdown_guardrail_enabled and effective_guardrail_reference_ticker:
         _preflight_price_strategy_data(
-            tickers=[benchmark_ticker],
+            tickers=[effective_guardrail_reference_ticker],
             start=start,
             end=end,
             timeframe=timeframe,
@@ -3800,6 +3834,7 @@ def run_value_snapshot_strict_annual_backtest_from_db(
         market_regime_window=market_regime_window,
         market_regime_benchmark=market_regime_benchmark,
         benchmark_ticker=benchmark_ticker,
+        guardrail_reference_ticker=effective_guardrail_reference_ticker,
         underperformance_guardrail_enabled=underperformance_guardrail_enabled,
         underperformance_guardrail_window_months=underperformance_guardrail_window_months,
         underperformance_guardrail_threshold=underperformance_guardrail_threshold,
@@ -3877,6 +3912,7 @@ def run_value_snapshot_strict_annual_backtest_from_db(
             "transaction_cost_bps": transaction_cost_bps,
             "benchmark_contract": benchmark_contract,
             "benchmark_ticker": benchmark_ticker,
+            "guardrail_reference_ticker": effective_guardrail_reference_ticker,
             "promotion_min_benchmark_coverage": float(promotion_min_benchmark_coverage),
             "promotion_min_net_cagr_spread": float(promotion_min_net_cagr_spread),
             "promotion_min_liquidity_clean_coverage": float(promotion_min_liquidity_clean_coverage),
@@ -3946,24 +3982,24 @@ def run_value_snapshot_strict_annual_backtest_from_db(
     if underperformance_guardrail_enabled:
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
             "Underperformance Guardrail enabled: rebalance candidates move to cash when trailing strategy excess return "
-            f"vs `{benchmark_ticker}` over `{underperformance_guardrail_window_months}M` falls below "
+            f"vs `{effective_guardrail_reference_ticker}` over `{underperformance_guardrail_window_months}M` falls below "
             f"`{underperformance_guardrail_threshold:.0%}`."
             if risk_off_mode != STRICT_RISK_OFF_MODE_DEFENSIVE or not effective_defensive_tickers
             else "Underperformance Guardrail enabled: rebalance candidates rotate into "
             f"`{', '.join(effective_defensive_tickers)}` when trailing strategy excess return "
-            f"vs `{benchmark_ticker}` over `{underperformance_guardrail_window_months}M` falls below "
+            f"vs `{effective_guardrail_reference_ticker}` over `{underperformance_guardrail_window_months}M` falls below "
             f"`{underperformance_guardrail_threshold:.0%}`."
         ]
     if drawdown_guardrail_enabled:
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
             "Drawdown Guardrail enabled: rebalance candidates move to cash when trailing strategy drawdown over "
             f"`{drawdown_guardrail_window_months}M` falls below `{drawdown_guardrail_strategy_threshold:.0%}` "
-            f"or drawdown gap vs `{benchmark_ticker}` rises above `{drawdown_guardrail_gap_threshold:.0%}`."
+            f"or drawdown gap vs `{effective_guardrail_reference_ticker}` rises above `{drawdown_guardrail_gap_threshold:.0%}`."
             if risk_off_mode != STRICT_RISK_OFF_MODE_DEFENSIVE or not effective_defensive_tickers
             else "Drawdown Guardrail enabled: rebalance candidates rotate into "
             f"`{', '.join(effective_defensive_tickers)}` when trailing strategy drawdown over "
             f"`{drawdown_guardrail_window_months}M` falls below `{drawdown_guardrail_strategy_threshold:.0%}` "
-            f"or drawdown gap vs `{benchmark_ticker}` rises above `{drawdown_guardrail_gap_threshold:.0%}`."
+            f"or drawdown gap vs `{effective_guardrail_reference_ticker}` rises above `{drawdown_guardrail_gap_threshold:.0%}`."
         ]
     if dynamic_universe_snapshot_rows:
         bundle["dynamic_universe_snapshot_rows"] = dynamic_universe_snapshot_rows
@@ -3976,6 +4012,7 @@ def run_value_snapshot_strict_annual_backtest_from_db(
         transaction_cost_bps=transaction_cost_bps,
         benchmark_contract=benchmark_contract,
         benchmark_ticker=benchmark_ticker,
+        guardrail_reference_ticker=effective_guardrail_reference_ticker,
         benchmark_universe_tickers=universe_input_tickers,
         promotion_min_benchmark_coverage=promotion_min_benchmark_coverage,
         promotion_min_net_cagr_spread=promotion_min_net_cagr_spread,
@@ -4179,6 +4216,7 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
     transaction_cost_bps: float = ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
     benchmark_contract: str = STRICT_DEFAULT_BENCHMARK_CONTRACT,
     benchmark_ticker: str = ETF_REAL_MONEY_DEFAULT_BENCHMARK,
+    guardrail_reference_ticker: str = ETF_REAL_MONEY_DEFAULT_BENCHMARK,
     promotion_min_benchmark_coverage: float = STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE,
     promotion_min_net_cagr_spread: float = STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD,
     promotion_min_liquidity_clean_coverage: float = STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE,
@@ -4219,6 +4257,10 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
     )
     rejected_slot_fill_enabled, partial_cash_retention_enabled = strict_rejection_handling_mode_to_flags(
         rejected_slot_handling_mode
+    )
+    effective_guardrail_reference_ticker = _resolve_guardrail_reference_ticker(
+        benchmark_ticker,
+        guardrail_reference_ticker,
     )
     universe_input_tickers = normalized_tickers
     if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE:
@@ -4283,16 +4325,16 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
                 end=end,
                 timeframe=timeframe,
             )
-    if underperformance_guardrail_enabled and benchmark_ticker:
+    if underperformance_guardrail_enabled and effective_guardrail_reference_ticker:
         _preflight_price_strategy_data(
-            tickers=[benchmark_ticker],
+            tickers=[effective_guardrail_reference_ticker],
             start=start,
             end=end,
             timeframe=timeframe,
         )
-    if drawdown_guardrail_enabled and benchmark_ticker:
+    if drawdown_guardrail_enabled and effective_guardrail_reference_ticker:
         _preflight_price_strategy_data(
-            tickers=[benchmark_ticker],
+            tickers=[effective_guardrail_reference_ticker],
             start=start,
             end=end,
             timeframe=timeframe,
@@ -4330,6 +4372,7 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
         market_regime_window=market_regime_window,
         market_regime_benchmark=market_regime_benchmark,
         benchmark_ticker=benchmark_ticker,
+        guardrail_reference_ticker=effective_guardrail_reference_ticker,
         underperformance_guardrail_enabled=underperformance_guardrail_enabled,
         underperformance_guardrail_window_months=underperformance_guardrail_window_months,
         underperformance_guardrail_threshold=underperformance_guardrail_threshold,
@@ -4407,6 +4450,7 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
             "transaction_cost_bps": transaction_cost_bps,
             "benchmark_contract": benchmark_contract,
             "benchmark_ticker": benchmark_ticker,
+            "guardrail_reference_ticker": effective_guardrail_reference_ticker,
             "promotion_min_benchmark_coverage": float(promotion_min_benchmark_coverage),
             "promotion_min_net_cagr_spread": float(promotion_min_net_cagr_spread),
             "promotion_min_liquidity_clean_coverage": float(promotion_min_liquidity_clean_coverage),
@@ -4477,24 +4521,24 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
     if underperformance_guardrail_enabled:
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
             "Underperformance Guardrail enabled: rebalance candidates move to cash when trailing strategy excess return "
-            f"vs `{benchmark_ticker}` over `{underperformance_guardrail_window_months}M` falls below "
+            f"vs `{effective_guardrail_reference_ticker}` over `{underperformance_guardrail_window_months}M` falls below "
             f"`{underperformance_guardrail_threshold:.0%}`."
             if risk_off_mode != STRICT_RISK_OFF_MODE_DEFENSIVE or not effective_defensive_tickers
             else "Underperformance Guardrail enabled: rebalance candidates rotate into "
             f"`{', '.join(effective_defensive_tickers)}` when trailing strategy excess return "
-            f"vs `{benchmark_ticker}` over `{underperformance_guardrail_window_months}M` falls below "
+            f"vs `{effective_guardrail_reference_ticker}` over `{underperformance_guardrail_window_months}M` falls below "
             f"`{underperformance_guardrail_threshold:.0%}`."
         ]
     if drawdown_guardrail_enabled:
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
             "Drawdown Guardrail enabled: rebalance candidates move to cash when trailing strategy drawdown over "
             f"`{drawdown_guardrail_window_months}M` falls below `{drawdown_guardrail_strategy_threshold:.0%}` "
-            f"or drawdown gap vs `{benchmark_ticker}` rises above `{drawdown_guardrail_gap_threshold:.0%}`."
+            f"or drawdown gap vs `{effective_guardrail_reference_ticker}` rises above `{drawdown_guardrail_gap_threshold:.0%}`."
             if risk_off_mode != STRICT_RISK_OFF_MODE_DEFENSIVE or not effective_defensive_tickers
             else "Drawdown Guardrail enabled: rebalance candidates rotate into "
             f"`{', '.join(effective_defensive_tickers)}` when trailing strategy drawdown over "
             f"`{drawdown_guardrail_window_months}M` falls below `{drawdown_guardrail_strategy_threshold:.0%}` "
-            f"or drawdown gap vs `{benchmark_ticker}` rises above `{drawdown_guardrail_gap_threshold:.0%}`."
+            f"or drawdown gap vs `{effective_guardrail_reference_ticker}` rises above `{drawdown_guardrail_gap_threshold:.0%}`."
         ]
     if dynamic_universe_snapshot_rows:
         bundle["dynamic_universe_snapshot_rows"] = dynamic_universe_snapshot_rows
@@ -4507,6 +4551,7 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
         transaction_cost_bps=transaction_cost_bps,
         benchmark_contract=benchmark_contract,
         benchmark_ticker=benchmark_ticker,
+        guardrail_reference_ticker=effective_guardrail_reference_ticker,
         benchmark_universe_tickers=universe_input_tickers,
         promotion_min_benchmark_coverage=promotion_min_benchmark_coverage,
         promotion_min_net_cagr_spread=promotion_min_net_cagr_spread,

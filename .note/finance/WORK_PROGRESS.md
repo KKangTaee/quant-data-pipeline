@@ -808,3 +808,21 @@ Detailed historical logs were archived on `2026-04-13`.
   - finance refinement hygiene script
 - Durable takeaway:
   - in the current form architecture, a stable neutral field label plus contract-dependent explanation is less confusing than trying to live-swap the field name
+
+### 2026-04-15
+- Phase 20 QA then confirmed that the neutral single-field approach still felt indirect in practice.
+- Changed:
+  - separated strict-annual `Real-Money Contract` into two explicit inputs:
+    - `Benchmark Ticker`
+    - `Guardrail / Reference Ticker`
+  - kept `Comparison Baseline` and `Guardrail / Reference` as separate concepts in the form so the user can read
+    "what do we compare against?" and "what does the guardrail watch?" independently
+  - propagated the same split through single strategy, compare prefill, history/meta, runtime bundle input params, and shadow sample entrypoints
+  - updated compare summary copy so equal-weight benchmark rows explain the split using the new two-column wording
+- Validation:
+  - `python3 -m py_compile finance/sample.py app/web/runtime/backtest.py app/web/pages/backtest.py`
+  - `.venv/bin/python -c "import finance.sample; import app.web.runtime.backtest; import app.web.pages.backtest"`
+- Reviewed:
+  - `FINANCE_DOC_INDEX.md`는 새 durable 문서가 추가된 턴이 아니라서 이번 작업 단위에서는 별도 갱신이 필요하지 않다고 판단
+- Durable takeaway:
+  - the final UX model is no longer "one ticker field with two meanings"; benchmark baseline and guardrail reference are now first-class separate inputs
