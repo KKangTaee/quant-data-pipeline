@@ -666,3 +666,17 @@ Detailed historical logs were archived on `2026-04-13`.
   - finance refinement hygiene script
 - Durable takeaway:
   - the repo now has a reusable automation baseline for phase kickoff and current-candidate persistence, which lowers repeated setup cost before later deep validation phases
+
+### 2026-04-15
+- Phase 20 QA feedback led to another compare-surface UX cleanup.
+- Changed:
+  - moved current candidate re-entry out of the space between the compare title and the main `Strategies` control
+  - kept strategy selection as the first visible compare action
+  - reorganized the current candidate helper into a secondary expander with a smaller `What This Does` explanation block
+  - synced `FINANCE_COMPREHENSIVE_ANALYSIS.md`
+- Validation:
+  - `python3 -m py_compile app/web/pages/backtest.py`
+  - `.venv/bin/python -c "import importlib; import app.web.pages.backtest"`
+  - finance refinement hygiene script
+- Durable takeaway:
+  - compare now reads as a primary strategy-selection surface first, while current candidate re-entry behaves like a supporting shortcut instead of competing for top-of-screen attention

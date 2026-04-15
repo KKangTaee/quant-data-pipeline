@@ -516,7 +516,8 @@ Analysis / Presentation
   Phase 17에서 다루어야 할 것은 이 객체에 새로운 승격 의미를 부여하는 것이 아니라,
   후보 개선 작업을 반복 재현할 수 있는 operator bridge로서의 역할을 명확히 적는 것이다.
 - Phase 20 first work unit에서는 이 흐름 앞단도 보강되어,
-  `Compare & Portfolio Builder` 상단에
+  `Compare & Portfolio Builder`에서
+  현재 문서화된 candidate를 compare form으로 다시 불러오는
   `Current Candidate Re-entry` surface가 추가되었다.
 - 이 surface는
   current candidate registry를 읽어
@@ -533,6 +534,13 @@ Analysis / Presentation
   이 surface가 compare를 즉시 실행하는 기능이 아니라
   compare form의 전략/기간/override를 다시 채우는 기능이라는 점도
   화면에서 먼저 읽히게 보강되었다.
+- 이어서 compare의 기본 동선을 먼저 보이도록,
+  `Strategies` 선택은 상단에 그대로 두고
+  current candidate 재진입은 그 아래의 secondary expander인
+  `Quick Re-entry From Current Candidates` 안으로 이동했다.
+- 설명도 늘 펼쳐진 줄글 대신
+  `What This Does` expander 안으로 정리되어,
+  compare의 기본 사용 흐름을 가리지 않게 되었다.
 - 즉 현재 compare surface는
   - manual strategy selection
   - saved portfolio compare re-entry

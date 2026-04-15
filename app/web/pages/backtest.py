@@ -4962,26 +4962,18 @@ def _render_current_candidate_bundle_workspace() -> None:
         for row in rows
     }
 
-    st.markdown("#### Current Candidate Re-entry")
     st.caption(
-        "문서에 정리된 current candidate를 compare 화면으로 다시 채우는 빠른 동선입니다. "
-        "이 기능은 compare를 바로 실행하는 버튼이 아니라, 아래 compare form의 전략/기간/override를 먼저 채우는 기능입니다."
+        "문서에 정리된 대표 후보를 compare form에 다시 채워 넣는 보조 도구입니다. "
+        "바로 compare를 실행하는 버튼은 아니고, 아래 form의 전략/기간/override를 먼저 채웁니다."
     )
-    st.info(
-        "이 목록은 모든 백테스트 결과가 자동으로 쌓이는 공간이 아닙니다. "
-        "`.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`에 active 상태로 기록된 "
-        "strongest candidate / near miss / cleaner alternative만 보여줍니다."
-    )
-    helper_cols = st.columns(2, gap="small")
-    with helper_cols[0]:
+    with st.expander("What This Does", expanded=False):
         st.markdown(
-            "- `Load Current Anchors`: 각 family의 지금 기준 strongest practical candidate를 compare form에 채웁니다.\n"
-            "- `Load Lower-MDD Near Misses`: MDD는 더 낮지만 gate는 약해진 near-miss 후보를 compare form에 채웁니다."
-        )
-    with helper_cols[1]:
-        st.markdown(
-            "- `Inspect Current Candidate Bundle Options`: 현재 registry에 등록된 후보를 직접 보고 고르는 표입니다.\n"
-            "- 같은 family 후보는 한 번에 하나만 선택할 수 있습니다."
+            "- `Load Current Anchors`: 각 family의 현재 기준 strongest practical candidate를 compare form에 채웁니다.\n"
+            "- `Load Lower-MDD Near Misses`: MDD는 더 낮지만 gate는 약해진 near-miss 후보를 compare form에 채웁니다.\n"
+            "- `Inspect Current Candidate Bundle Options`: 현재 registry에 기록된 후보를 직접 보고 골라 compare form에 채웁니다.\n"
+            "- 이 목록은 모든 백테스트 결과가 자동으로 쌓이는 공간이 아닙니다.\n"
+            "- 현재는 `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`에 active 상태로 기록된 strongest candidate / near miss / cleaner alternative만 보여줍니다.\n"
+            "- 같은 family 후보는 한 번에 하나만 compare form으로 불러올 수 있습니다."
         )
     quick_action_cols = st.columns([0.34, 0.34, 0.32], gap="small")
     with quick_action_cols[0]:
@@ -4999,13 +4991,9 @@ def _render_current_candidate_bundle_workspace() -> None:
             except Exception as exc:
                 st.error(str(exc))
     with quick_action_cols[2]:
-        st.caption("빠른 버튼 대신 아래에서 후보를 직접 고를 수도 있습니다.")
+        st.caption("빠른 버튼 대신 아래에서 후보를 직접 고를 수 있습니다.")
 
     with st.expander("Inspect Current Candidate Bundle Options", expanded=False):
-        st.caption(
-            "여기 보이는 후보는 current candidate registry에서 읽어온 active 후보입니다. "
-            "백테스트를 한 번 돌릴 때마다 자동으로 추가되는 리스트는 아닙니다."
-        )
         st.dataframe(display_df, use_container_width=True, hide_index=True)
         selected_labels = st.multiselect(
             "Candidates To Load Into Compare",
@@ -10971,9 +10959,6 @@ def render_backtest_tab() -> None:
                 st.session_state.get("backtest_compare_source_context"),
             )
 
-        _render_current_candidate_bundle_workspace()
-        st.divider()
-
         current_compare_selection = list(st.session_state.get("compare_selected_strategies") or [])
         normalized_compare_selection: list[str] = []
         for strategy_name in current_compare_selection:
@@ -10996,6 +10981,11 @@ def render_backtest_tab() -> None:
             key="compare_selected_strategies",
         )
         st.caption("Strategy selection is outside the form so the strategy-specific sections update immediately.")
+        if _load_current_candidate_registry_latest():
+            st.caption("문서에 정리된 대표 후보를 바로 가져오려면 아래 `Quick Re-entry From Current Candidates`를 펼치면 됩니다.")
+            with st.expander("Quick Re-entry From Current Candidates", expanded=False):
+                _render_current_candidate_bundle_workspace()
+            st.divider()
 
         compare_eq_universe_mode = "preset"
         compare_eq_preset_name: str | None = "Dividend ETFs"

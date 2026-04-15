@@ -990,3 +990,19 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`와 `manage_current_candidate_registry.py`를 추가해 current candidate를 machine-readable하게 남기고 다시 읽을 수 있게 했다
   - `check_finance_refinement_hygiene.py`, plugin/skill docs, roadmap, doc index, runtime guidance도 새 workflow에 맞게 갱신했다
   - 현재 판단은 `Phase 21 = practical closeout / manual_validation_pending`이며, 이후에는 `Phase 20` operator workflow hardening 또는 `Phase 22` deep validation 준비로 더 자연스럽게 이어질 수 있다
+
+### 2026-04-15 - Phase 20 compare 화면에서는 current candidate 재진입보다 기본 compare 조작이 먼저 보여야 한다
+- Request topic:
+  - 사용자가 `Compare Strategies` 제목과 `Strategies` 사이에 있는 `Current Candidate Re-entry`가 UX상 어색하고, 바로 아래 용어 설명도 답답하다고 피드백함
+- Interpreted goal:
+  - compare 화면의 첫 인상은 전략 선택과 기간 확인이 먼저 보이게 하고,
+    current candidate 재진입은 보조 도구처럼 덜 방해되게 두고 싶음
+- Result:
+  - `Current Candidate Re-entry`를 compare 상단 고정 블록에서 내려서
+    `Strategies` 선택 아래의 secondary expander
+    `Quick Re-entry From Current Candidates`로 이동했다
+  - 설명도 늘 펼쳐진 줄글 대신 `What This Does` expander 안으로 접어,
+    필요할 때만 읽을 수 있게 정리했다
+  - 현재 판단은 이 흐름이 operator 관점에서 더 자연스럽다.
+    compare는 먼저 전략을 고르는 화면이고,
+    current candidate 재진입은 그 과정을 빠르게 돕는 shortcut으로 읽히는 편이 맞다

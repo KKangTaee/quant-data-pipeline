@@ -40,6 +40,10 @@
   - `Load Current Anchors`, `Load Lower-MDD Near Misses` 의미 설명 추가
   - current candidate list가 자동 누적이 아니라 curated registry라는 설명 추가
   - load 직후 `What Changed In Compare` 요약 카드가 보이도록 보강
+- `completed` current candidate re-entry layout cleanup
+  - compare 화면의 기본 흐름이 먼저 보이도록 `Strategies` 선택을 상단에 유지
+  - current candidate 재진입은 secondary expander로 내려서 보조 도구처럼 읽히게 정리
+  - 긴 설명은 `What This Does` expander 안으로 접어 compare 첫 화면의 혼잡도를 줄임
 - `completed` strict annual shadow sample contract parity bugfix
   - manual validation 중 `rejected_slot_handling_mode` 인자 mismatch를 발견
   - quality / value / quality+value strict annual shadow sample entrypoint가 explicit contract argument를 받도록 정리
