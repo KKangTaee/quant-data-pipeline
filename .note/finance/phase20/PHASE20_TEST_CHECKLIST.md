@@ -27,11 +27,11 @@
 - 확인 위치:
   - `Backtest > Compare & Portfolio Builder > Current Candidate Re-entry`
 - 체크 항목:
-  - [ ] `Current Candidate Re-entry` 섹션이 보이는지
-  - [ ] `Load Current Anchors`와 `Load Lower-MDD Near Misses` quick action이 보이는지
-  - [ ] `Inspect Current Candidate Bundle Options` 안에서 후보 제목, family, 역할, contract 요약이 읽기 쉽게 보이는지
-  - [ ] 여러 후보를 직접 선택해서 `Load Selected Candidates Into Compare`를 누를 수 있는지
-  - [ ] 불가능한 조합일 때 왜 막히는지 안내 문구가 이해되게 보이는지
+  - [x] `Current Candidate Re-entry` 섹션이 보이는지
+  - [x] `Load Current Anchors`와 `Load Lower-MDD Near Misses` quick action이 보이는지
+  - [x] `Inspect Current Candidate Bundle Options` 안에서 후보 제목, family, 역할, contract 요약이 읽기 쉽게 보이는지
+  - [x] 여러 후보를 직접 선택해서 `Load Selected Candidates Into Compare`를 누를 수 있는지
+  - [x] 불가능한 조합일 때 왜 막히는지 안내 문구가 이해되게 보이는지
   - [ ] current candidate를 불러온 뒤 compare form에 strategy/period/override가 자연스럽게 채워지는지
 
 ## 2. compare -> weighted portfolio 흐름 확인
@@ -40,8 +40,9 @@
   - `Backtest > Compare & Portfolio Builder`
   - compare 실행 후 `Weighted Portfolio Builder`
 - 체크 항목:
-  - [ ] compare를 실행한 뒤 `Weighted Portfolio Builder` 위에 `Current Compare Bundle` 요약이 보이는지
-  - [ ] `Current Compare Bundle`에서 `Source`, `Label`, `Strategies`가 현재 compare 맥락과 맞게 보이는지
+  - [ ] compare를 실행한 뒤 `Weighted Portfolio Builder` 위에 `What You Are Combining` 요약이 보이는지
+  - [ ] `What You Are Combining`에서 `들어온 경로`, `묶음 이름`, `비교 기간`, `조합할 전략 수`가 현재 compare 맥락과 맞게 보이는지
+  - [ ] 그 아래 전략 표에서 `Strategy`, `Period`, `CAGR`, `MDD`, `Promotion`이 보여서 지금 무엇을 섞는지 한 번에 이해되는지
   - [ ] registry 기반 current candidate를 compare로 불러왔을 때 registry ids 또는 source 정보가 요약에 보이는지
   - [ ] weighted portfolio를 만들 때 compare source 맥락을 잃지 않고 바로 이어서 저장할 수 있는지
   - [ ] weighted portfolio 결과가 생성된 뒤 다음 행동이 자연스럽게 이해되는지
