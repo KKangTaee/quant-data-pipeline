@@ -70,7 +70,7 @@
 - UI만 바뀐 게 아니라,
   문서도 같은 흐름을 설명하게 맞춰서 다음 세션에서 다시 봐도 덜 헷갈리게 했다.
 
-## 이번 phase를 practical closeout으로 보는 이유
+## 이번 phase를 practical closeout으로 보고, 이제 검수까지 끝났다고 보는 이유
 
 - current candidate 재진입 입구가 실제로 생겼다.
 - compare source context가 weighted portfolio와 saved portfolio까지 이어진다.
@@ -83,12 +83,6 @@
 
 ## 아직 남아 있지만 closeout blocker는 아닌 것
 
-- manual UI validation으로
-  - current candidate -> compare
-  - compare -> weighted
-  - weighted -> save
-  - saved -> replay / edit-in-compare
-  흐름을 실제로 다시 확인하는 일
 - compare bundle을 더 세밀하게 분류하는 polish
 - saved portfolio surface를 더 팀용 operator panel처럼 다듬는 확장
 
@@ -113,7 +107,7 @@
 - saved portfolio usability hardening:
   - `completed`
 - manual workflow validation:
-  - `pending`
+  - `completed`
 
 즉 `Phase 20`은
-**practical closeout / manual_validation_pending** 상태로 닫는 것이 맞다.
+**phase complete / manual_validation_completed** 상태로 닫는 것이 맞다.

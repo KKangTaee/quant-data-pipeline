@@ -104,7 +104,7 @@
 - saved portfolio를 다시 열었을 때 "다음에 무엇을 해야 하는지"가 더 분명해졌는가
 
 ## 현재 상태
-- `practical closeout / manual_validation_pending`
+- `phase complete / manual_validation_completed`
 
 ## 현재 상태 요약
 - first work unit에서 current candidate를 compare로 바로 다시 보내는 입구를 열었다.

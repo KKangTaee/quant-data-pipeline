@@ -21,6 +21,22 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-04-16 - Phase 20은 manual checklist까지 끝났으므로 operator workflow hardening phase로 닫아도 된다
+- Request topic:
+  - 사용자가 `Phase 20` checklist 완료 확인을 요청함
+- Interpreted goal:
+  - `manual_validation_pending`으로 남아 있던 상태를 실제 검수 완료 기준으로 올릴지 판단하고,
+    관련 phase 문서와 roadmap을 같은 상태로 맞추고 싶음
+- Result:
+  - `PHASE20_TEST_CHECKLIST.md` 기준의 user-facing 검수가 완료된 것으로 본다
+  - 따라서 `Phase 20` 상태는
+    `phase complete / manual_validation_completed`
+    로 올리는 것이 맞다
+  - `CURRENT_CHAPTER_TODO`, `COMPLETION_SUMMARY`, `phase plan`, `roadmap`, `doc index`, root logs를 이 상태로 함께 동기화했다
+  - 의미:
+    - `Phase 20`은 current candidate -> compare -> weighted -> saved -> replay/load-back workflow를
+      이제 문서상으로도 완료된 operator hardening phase로 다룰 수 있다
+
 ### 2026-04-16 - Saved portfolio replay는 저장 record를 그대로 실행하되, 현재 runtime이 받지 않는 legacy compare key는 걸러주는 편이 더 안전하다
 - Request topic:
   - `Replay Saved Portfolio`를 눌렀을 때

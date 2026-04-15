@@ -59,8 +59,8 @@
   - [x] `Pick Manually` 탭 안에서 후보 제목, family, 역할, contract 요약이 읽기 쉽게 보이는지
   - [x] 여러 후보를 직접 선택해서 `Load Selected Candidates Into Compare`를 누를 수 있는지
   - [x] 불가능한 조합일 때 왜 막히는지 안내 문구가 이해되게 보이는지
-  - [ ] current candidate를 불러온 뒤 `Compare Form Updated`가 보이고, compare form에 strategy/period/override가 자연스럽게 채워지는지
-  - [ ] `Compare Form Updated` 카드에서 무엇이 바뀌었는지와 어디를 확인하면 되는지가 이해되는지
+  - [x] current candidate를 불러온 뒤 `Compare Form Updated`가 보이고, compare form에 strategy/period/override가 자연스럽게 채워지는지
+  - [x] `Compare Form Updated` 카드에서 무엇이 바뀌었는지와 어디를 확인하면 되는지가 이해되는지
 
 ## 2. compare -> weighted portfolio 흐름 확인
 
@@ -84,13 +84,13 @@
   - `Weighted Portfolio Builder` 아래 divider 다음 `Saved Portfolios`
 - 체크 항목:
   - [x] `Weighted Portfolio Builder`와 `Saved Portfolios` 사이에 divider가 보여 두 단계가 시각적으로 나뉘는지
-  - [ ] `Save This Weighted Portfolio`를 열었을 때 `Portfolio Name`이 추천 이름과 함께 자연스럽게 보이고, 그 이름이 source label 또는 strategy 조합 기준으로 이해되는지
-  - [ ] 저장된 포트폴리오 목록에 `Source` 컬럼이 보이는지
-  - [ ] 저장된 포트폴리오 상세에서 `Source & Next Step` 탭이 보이는지
-  - [ ] `Source & Next Step` 탭에서 이 포트폴리오가 어디서 왔는지와 다음 행동이 쉽게 읽히는지
-  - [ ] `Load Saved Setup Into Compare`를 누르면 compare 화면 상단으로 이동하고, `Compare Form Updated`와 `Weighted Portfolio Builder`에서 전략 조합/기간/세부 설정/weights/date alignment가 다시 채워진 것을 확인할 수 있는지
-  - [ ] `Replay Saved Portfolio`를 누르면 저장된 compare context와 weighted portfolio 구성을 그대로 다시 실행하는지
-  - [ ] saved portfolio를 다시 열었을 때 "수정할지 / 그대로 재실행할지" 판단이 더 쉬워졌는지
+  - [x] `Save This Weighted Portfolio`를 열었을 때 `Portfolio Name`이 추천 이름과 함께 자연스럽게 보이고, 그 이름이 source label 또는 strategy 조합 기준으로 이해되는지
+  - [x] 저장된 포트폴리오 목록에 `Source` 컬럼이 보이는지
+  - [x] 저장된 포트폴리오 상세에서 `Source & Next Step` 탭이 보이는지
+  - [x] `Source & Next Step` 탭에서 이 포트폴리오가 어디서 왔는지와 다음 행동이 쉽게 읽히는지
+  - [x] `Load Saved Setup Into Compare`를 누르면 compare 화면 상단으로 이동하고, `Compare Form Updated`와 `Weighted Portfolio Builder`에서 전략 조합/기간/세부 설정/weights/date alignment가 다시 채워진 것을 확인할 수 있는지
+  - [x] `Replay Saved Portfolio`를 누르면 저장된 compare context와 weighted portfolio 구성을 그대로 다시 실행하는지
+  - [x] saved portfolio를 다시 열었을 때 "수정할지 / 그대로 재실행할지" 판단이 더 쉬워졌는지
 
 ## 4. phase closeout 문서와 index 확인
 
@@ -104,11 +104,11 @@
   - [FINANCE_DOC_INDEX.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/FINANCE_DOC_INDEX.md)
   - [MASTER_PHASE_ROADMAP.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/MASTER_PHASE_ROADMAP.md)
 - 체크 항목:
-  - [ ] Phase 20 상태가 `practical closeout / manual_validation_pending`으로 보이는지
-  - [ ] Phase 20 first/second work-unit, completion summary, next preparation, checklist 문서를 index에서 바로 찾을 수 있는지
-  - [ ] roadmap에 Phase 20가 operator workflow hardening closeout 기준으로 반영됐는지
-  - [ ] completion summary가 "무엇이 쉬워졌는지"를 쉽게 설명하는지
-  - [ ] next phase preparation 문서가 다음 질문을 이해하기 쉽게 정리하는지
+  - [x] Phase 20 상태가 `phase complete / manual_validation_completed`로 보이는지
+  - [x] Phase 20 first/second work-unit, completion summary, next preparation, checklist 문서를 index에서 바로 찾을 수 있는지
+  - [x] roadmap에 Phase 20가 operator workflow hardening closeout 기준으로 반영됐는지
+  - [x] completion summary가 "무엇이 쉬워졌는지"를 쉽게 설명하는지
+  - [x] next phase preparation 문서가 다음 질문을 이해하기 쉽게 정리하는지
 
 ## 한 줄 판단 기준
 

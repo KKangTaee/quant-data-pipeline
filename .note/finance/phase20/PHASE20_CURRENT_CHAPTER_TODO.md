@@ -1,7 +1,7 @@
 # Phase 20 Current Chapter TODO
 
 ## 상태
-- `practical closeout / manual_validation_pending`
+- `phase complete / manual_validation_completed`
 
 ## 1. Candidate Inventory And Bundle Organization
 
@@ -97,11 +97,11 @@
 - `completed` compare / weighted / saved divider placement cleanup
   - `Quick Re-entry From Current Candidates` 아래 divider는 제거
   - `Strategy Comparison`, `Weighted Portfolio Builder`, `Saved Portfolios` 세 메인 단계 사이에만 divider가 보이도록 정리
-- `pending` targeted UI validation
+- `completed` targeted UI validation
   - current candidate re-entry -> compare
   - compare -> weighted portfolio
   - weighted -> saved portfolio
-  - saved portfolio -> replay / edit-in-compare / compare re-entry
+  - saved portfolio -> replay / saved-setup-into-compare / compare re-entry
 
 ## 4. Documentation Sync
 

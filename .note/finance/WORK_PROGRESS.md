@@ -22,6 +22,15 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-04-16
+- User-facing Phase 20 checklist confirmation is now complete.
+- Closed:
+  - `PHASE20_CURRENT_CHAPTER_TODO.md` -> `phase complete / manual_validation_completed`
+  - `PHASE20_COMPLETION_SUMMARY.md` -> reflects checklist completion
+  - `PHASE20_CANDIDATE_CONSOLIDATION_AND_OPERATOR_WORKFLOW_HARDENING_PLAN.md` -> status synced to completion
+- Meaning:
+  - current candidate -> compare -> weighted -> saved -> replay/load-back workflow is now considered closed at the manual validation level
+
+### 2026-04-16
 - Phase 20 saved-portfolio QA exposed one real replay bug and one lingering UX gap.
 - Fixed:
   - `Replay Saved Portfolio` could fail when stored compare overrides still contained legacy keys such as `factor_freq`

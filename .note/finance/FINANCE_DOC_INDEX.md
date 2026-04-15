@@ -51,9 +51,9 @@
 - `.note/finance/phase20/PHASE20_CURRENT_CHAPTER_TODO.md`
   - current candidate re-entry QA 중 발견된 설명/재진입 UX 보강, strict annual compare regression bugfix,
     weighted builder 상단 context summary UX 정리, saved portfolio replay legacy-key bugfix,
-    save / edit / replay 의미 보강까지 반영된 현재 execution board
+    save / load / replay 의미 보강과 manual validation 완료까지 반영된 현재 execution board
 - `.note/finance/phase20/PHASE20_COMPLETION_SUMMARY.md`
-  - `Phase 20`이 실제로 무엇을 더 쉽게 만들었는지와 왜 practical closeout으로 볼 수 있는지 정리한 closeout 문서
+  - `Phase 20`이 실제로 무엇을 더 쉽게 만들었는지와 왜 검수 완료 기준으로 닫을 수 있는지 정리한 closeout 문서
 - `.note/finance/phase20/PHASE20_NEXT_PHASE_PREPARATION.md`
   - `Phase 20` 이후 어떤 질문으로 다음 phase를 여는 것이 자연스러운지 정리한 handoff 문서
 - `.note/finance/phase20/PHASE20_TEST_CHECKLIST.md`
