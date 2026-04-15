@@ -1055,3 +1055,17 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 다만 사용자가 별도로 “노출용 문서”를 하나 더 만들 필요는 없고,
     후보를 UI에 다시 쓰고 싶다면 registry가 갱신되어야 한다.
     이 저장은 앞으로 candidate closeout 작업에서 같이 맞추는 것이 기본 흐름이다
+
+### 2026-04-15 - Compare prefill confirmation은 source/label 같은 짧은 용어보다 행동 중심 설명이 더 낫다
+- Request topic:
+  - 사용자가 `Load Recommended Candidates` 이후 뜨는 `What Changed In Compare` 카드에서
+    표는 괜찮지만 `Source`, `Label`, `확인 위치` 같은 설명은 여전히 잘 정리되지 않았다고 피드백함
+- Interpreted goal:
+  - compare prefill 이후 사용자가 “방금 뭐가 바뀌었고, 어디를 보면 되고, 다음에 뭘 누르면 되는지”를 더 빨리 이해하게 만들고 싶음
+- Result:
+  - 카드 제목을 `Compare Form Updated`로 바꾸고,
+    `불러온 방식 / 불러온 묶음 이름 / 자동으로 맞춰진 기간`처럼 더 직접적인 표현으로 재구성했다
+  - 후보 title이 있으면 카드 안에 바로 보여주고,
+    표 위에는 “각 전략에 어떤 핵심 설정이 채워졌는지 요약한 것”이라는 설명을 붙였다
+  - 마지막에는 `어디서 확인하면 되나`와 `Run Strategy Comparison` 안내를 분리해,
+    다음 행동이 더 분명하게 읽히도록 정리했다

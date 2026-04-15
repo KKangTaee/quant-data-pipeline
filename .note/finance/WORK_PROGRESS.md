@@ -723,3 +723,17 @@ Detailed historical logs were archived on `2026-04-13`.
   - finance refinement hygiene script
 - Durable takeaway:
   - current candidate re-entry now reads as two clearer modes: quick bundle load vs manual pick, and the registry source rule is visible in the UI instead of only in supporting docs
+
+### 2026-04-15
+- Phase 20 QA then pointed out that the post-load `What Changed In Compare` card still felt too abstract.
+- Changed:
+  - changed the card title/phrasing so it reads as a form-update guide instead of an internal status block
+  - replaced `Source`, `Label`, `Period` wording with more direct phrases about how the bundle was loaded and what period was auto-filled
+  - added a short “where to check” section and a clearer next-step instruction
+  - synced `FINANCE_COMPREHENSIVE_ANALYSIS.md`
+- Validation:
+  - `python3 -m py_compile app/web/pages/backtest.py`
+  - `.venv/bin/python -c "import app.web.pages.backtest"`
+  - finance refinement hygiene script
+- Durable takeaway:
+  - the compare prefill confirmation card now explains the loaded bundle in task-oriented language instead of assuming the user already understands source/label terminology

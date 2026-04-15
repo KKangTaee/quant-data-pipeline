@@ -5066,31 +5066,37 @@ def _render_compare_prefill_applied_card(payload: dict[str, Any] | None, source_
     option = payload.get("option") or "-"
     timeframe = payload.get("timeframe") or "-"
     source_label = str(source_context.get("source_label") or "-").strip()
+    candidate_titles = [str(value).strip() for value in list(source_context.get("candidate_titles") or []) if str(value).strip()]
 
-    st.markdown("##### What Changed In Compare")
+    st.markdown("##### Compare Form Updated")
     st.caption(
-        "방금 `Load ... Into Compare`로 바뀐 내용 요약입니다. "
-        "이 단계는 compare를 실행한 것이 아니라, 아래 compare form을 다시 채운 것입니다."
+        "방금 불러온 후보 묶음 기준으로 compare form이 다시 채워졌습니다. "
+        "아직 compare를 실행한 것은 아니고, 아래 입력값이 바뀐 상태입니다."
     )
     top_cols = st.columns(3, gap="small")
     with top_cols[0]:
-        st.markdown(f"- `Source`: `{_compare_source_kind_label(source_context.get('source_kind'))}`")
+        st.markdown(f"**불러온 방식**  \n`{_compare_source_kind_plain_text(source_context.get('source_kind'))}`")
     with top_cols[1]:
-        st.markdown(f"- `Label`: `{source_label or '-'}`")
+        st.markdown(f"**불러온 묶음 이름**  \n`{source_label or '-'}`")
     with top_cols[2]:
-        st.markdown(f"- `Period`: `{start} -> {end}`")
+        st.markdown(f"**자동으로 맞춰진 기간**  \n`{start} -> {end}`")
+    if candidate_titles:
+        st.caption(f"이번에 불러온 후보: `{', '.join(candidate_titles)}`")
     st.caption(
         f"현재 compare form에는 `{', '.join(selected_strategies)}` 전략이 선택되어 있고, "
-        f"`Timeframe = {timeframe}`, `Option = {option}`으로 채워졌습니다."
+        f"`Timeframe = {timeframe}`, `Option = {option}`으로 채워져 있습니다."
     )
     summary_df = _build_compare_prefill_summary_rows(payload)
     if not summary_df.empty:
+        st.caption("아래 표는 각 전략에 어떤 핵심 설정이 채워졌는지 요약한 것입니다.")
         st.dataframe(summary_df, use_container_width=True, hide_index=True)
+    st.markdown("**어디서 확인하면 되나**")
     st.markdown(
-        "- 확인 위치 1: 바로 아래 `Strategies` multiselect와 `Start Date / End Date`\n"
-        "- 확인 위치 2: `Advanced Inputs > Strategy-Specific Advanced Inputs` 안의 각 family expander\n"
-        "- 다음 행동: 값을 확인한 뒤 `Run Compare`를 눌러 실제 compare 결과를 다시 실행"
+        "- 바로 아래 `Strategies`에서 어떤 전략이 선택됐는지 확인\n"
+        "- `Start Date / End Date`에서 기간이 어떻게 채워졌는지 확인\n"
+        "- `Advanced Inputs > Strategy-Specific Advanced Inputs`에서 strategy별 override를 확인"
     )
+    st.info("값이 맞으면 `Run Strategy Comparison`을 눌러 실제 compare를 실행하면 됩니다.")
 
 
 def _render_saved_portfolio_workspace() -> None:
@@ -6972,6 +6978,15 @@ def _compare_source_kind_label(source_kind: str | None) -> str:
         "manual_compare_selection": "Manual Compare Selection",
     }
     return mapping.get(str(source_kind or "").strip(), str(source_kind or "Manual Compare Selection"))
+
+
+def _compare_source_kind_plain_text(source_kind: str | None) -> str:
+    mapping = {
+        "current_candidate_bundle": "Current candidate 후보 묶음에서 불러옴",
+        "saved_portfolio": "저장된 포트폴리오에서 다시 불러옴",
+        "manual_compare_selection": "직접 선택한 compare 설정",
+    }
+    return mapping.get(str(source_kind or "").strip(), "직접 선택한 compare 설정")
 
 
 def _render_compare_source_context_card(source_context: dict[str, Any] | None) -> None:

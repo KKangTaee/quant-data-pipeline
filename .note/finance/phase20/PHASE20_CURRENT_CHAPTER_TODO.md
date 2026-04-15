@@ -53,6 +53,9 @@
 - `completed` current candidate re-entry tabbed layout and registry-source clarification
   - 재진입 surface를 `Quick Bundles` / `Pick Manually` 두 탭으로 분리
   - 문서 생성이나 새 백테스트만으로 자동 노출되는 구조가 아니라 registry 기반이라는 점을 UI에서 바로 설명
+- `completed` compare prefill confirmation card plain-language cleanup
+  - `What Changed In Compare`의 추상적 용어를 더 직접적인 문장으로 정리
+  - 무엇이 불러와졌는지 / 어디서 확인하는지 / 다음에 무엇을 누르는지 중심으로 다시 구성
 - `completed` strict annual shadow sample contract parity bugfix
   - manual validation 중 `rejected_slot_handling_mode` 인자 mismatch를 발견
   - quality / value / quality+value strict annual shadow sample entrypoint가 explicit contract argument를 받도록 정리
