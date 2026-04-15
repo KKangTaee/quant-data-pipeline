@@ -21,6 +21,41 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-04-16 - Saved portfolio replay는 저장 record를 그대로 실행하되, 현재 runtime이 받지 않는 legacy compare key는 걸러주는 편이 더 안전하다
+- Request topic:
+  - `Replay Saved Portfolio`를 눌렀을 때
+    `run_quality_value_snapshot_strict_annual_backtest_from_db() got an unexpected keyword argument 'factor_freq'`
+    오류가 발생함
+- Interpreted goal:
+  - 저장된 포트폴리오의 compare context를 최대한 그대로 재사용하되,
+    과거 record 형식 때문에 현재 runtime wrapper가 죽지 않도록 replay 경로를 안전하게 만들기
+- Result:
+  - 원인은 saved portfolio compare context에 남아 있던 legacy strict-annual override key였다
+  - `factor_freq` 같은 값은 예전 record에는 들어 있을 수 있지만,
+    현재 strict-annual runtime wrapper 시그니처는 받지 않는다
+  - 해결:
+    - compare runner 호출 직전에 현재 runner signature를 보고,
+      지원하지 않는 kwargs는 걸러서 넘기도록 정리했다
+  - 의미:
+    - saved portfolio replay는 "현재 runtime이 이해할 수 있는 저장 설정"만 사용해 다시 실행되는 경로로 읽는 것이 맞다
+    - 따라서 과거 record와 현재 runtime 사이의 얇은 schema drift가 replay 자체를 막지 않게 되었다
+
+### 2026-04-16 - Saved portfolio 재진입 UX에서는 "화면 이동"보다 "무엇이 다시 채워졌는지"를 먼저 알려줘야 이해가 쉬워진다
+- Request topic:
+  - 사용자가 `Save This Weighted Portfolio`, `Edit In Compare`, `Replay Saved Portfolio`의 역할이 헷갈린다고 피드백함
+- Interpreted goal:
+  - save / edit / replay의 차이를 버튼 이름만이 아니라, 저장 시점과 재진입 시점의 설명 문구에서 더 명확히 구분하고 싶음
+- Result:
+  - `Save This Weighted Portfolio`에서는
+    `Portfolio Name`이 source label 또는 strategy 조합 기준 추천 이름으로 먼저 채워지고,
+    `Description`은 "왜 저장하는지"를 남기는 메모라는 점을 더 직접적으로 설명하게 바꿨다
+  - `Edit In Compare`는 단순히 compare 화면 상단으로 이동하는 버튼이 아니라,
+    compare 전략/기간/세부 설정과 weighted portfolio의 weight/date alignment를 다시 채우는 동선으로 설명을 수정했다
+  - `Replay Saved Portfolio`는
+    저장 당시 compare context와 weighted portfolio 구성을 그대로 다시 실행하는 버튼이라는 점을 더 직접적으로 정리했다
+  - checklist도 현재 UI 이름과 실제 동작 기준으로 다시 써서,
+    saved portfolio QA 항목이 추상적 문장보다 실제 확인 행동에 가깝게 읽히도록 보강했다
+
 ### 2026-04-15 - Phase 20 QA에서 current candidate re-entry는 기능 자체보다 "무엇이 바뀌었는지"를 보여주는 UX가 더 중요하다는 점이 드러났다
 - Request topic:
   - `Current Candidate Re-entry` QA 진행 중

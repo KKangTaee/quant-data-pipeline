@@ -27,6 +27,7 @@
 - `completed` saved portfolio usability hardening shortlist
   - 저장된 포트폴리오에 source context를 같이 남기도록 보강
   - `Edit In Compare`, `Replay Saved Portfolio`, `Source & Next Step` 탭으로 다음 행동이 더 직접적으로 보이게 정리
+  - `Save This Weighted Portfolio`에서 추천 이름과 description 의미를 먼저 설명해 save 시점의 의도를 더 쉽게 읽히게 정리
 
 ## 3. Validation
 
@@ -87,6 +88,9 @@
 - `completed` compare strict annual guardrail-reference regression bugfix
   - `Guardrail / Reference Ticker`를 `Guardrails`로 옮긴 뒤 compare quality path에 예전 변수 대입이 한 줄 남아 있던 회귀를 제거
   - compare strict annual도 single strict annual과 같은 ownership 구조로 다시 맞춤
+- `completed` saved portfolio replay legacy-override compatibility bugfix
+  - 저장된 compare context에 남아 있는 legacy strict-annual 키 때문에 `Replay Saved Portfolio`가 실패할 수 있는 경로를 점검
+  - compare runner 호출 전에 현재 runtime signature가 받지 않는 kwargs는 걸러 replay가 안전하게 이어지도록 보강
 - `completed` weighted builder context card UX cleanup
   - `Current Compare Bundle` 느낌의 내부자 카드 대신, "지금 무엇을 섞는가" 중심의 summary로 재구성
   - source / period / strategy count / strategy performance table / next action 흐름으로 재배치

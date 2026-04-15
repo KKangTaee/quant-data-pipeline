@@ -21,6 +21,18 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-04-16
+- Phase 20 saved-portfolio QA exposed one real replay bug and one lingering UX gap.
+- Fixed:
+  - `Replay Saved Portfolio` could fail when stored compare overrides still contained legacy keys such as `factor_freq`
+    that the current strict-annual runtime wrappers no longer accept
+  - compare replay now filters unsupported kwargs against the current runner signature before execution
+- Clarified:
+  - `Save This Weighted Portfolio` now explains what `Portfolio Name` and `Description` are for
+  - `Portfolio Name` starts from the current source label or strategy combination so the saved name reads less like an empty form
+  - `Edit In Compare` now reads as "restore compare settings + weighted weights/date alignment",
+    not just "jump to the compare page"
+
 ### 2026-04-15
 - Applied a Phase 20 QA-driven UX clarification pass to `Current Candidate Re-entry`.
 - Added:

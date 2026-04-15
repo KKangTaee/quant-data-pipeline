@@ -669,7 +669,7 @@ Analysis / Presentation
     `Strategy Comparison -> Weighted Portfolio Builder -> Saved Portfolios`
     세 단계 사이에만 보이도록 바뀌었다.
   - current candidate 또는 saved portfolio에서 compare를 다시 불러온 직후에는
-    `What Changed In Compare` summary가 함께 보여서,
+    `Compare Form Updated` summary가 함께 보여서,
     어떤 전략/기간/override가 방금 compare form에 채워졌는지와
     어디를 확인하면 되는지 바로 알 수 있게 되었다.
   - weighted portfolio meta와 history context에도 compare source context가 남도록 보강되어,
@@ -679,11 +679,23 @@ Analysis / Presentation
     "이 포트폴리오가 어디서 왔는지"와
     "지금 다음에 무엇을 하면 되는지"
     를 더 직접적으로 보여주게 되었다.
+  - `Save This Weighted Portfolio`에서는
+    `Portfolio Name`이 현재 source label 또는 strategy 조합 기준의 추천 이름으로 먼저 채워지고,
+    `Description`은 이 저장 포트폴리오를 왜 남기는지 메모하는 칸으로 설명되어
+    save 시점의 의미가 더 직접적으로 읽히게 되었다.
   - action label도
     - `Load Into Compare` -> `Edit In Compare`
     - `Run Saved Portfolio` -> `Replay Saved Portfolio`
     로 정리되어,
     operator가 저장된 포트폴리오를 수정하려는지 그대로 재실행하려는지 더 빠르게 이해할 수 있다.
+  - `Edit In Compare`는
+    저장된 전략 조합/기간만 다시 넣는 버튼이 아니라,
+    compare 세부 설정과 weighted portfolio의 weight/date alignment까지 다시 채우는 흐름으로 정리되었다.
+  - `Replay Saved Portfolio`는
+    저장 당시 compare context를 그대로 다시 실행하는데,
+    이 경로에서는 저장 record 안의 legacy compare override가
+    현재 runtime signature에 없는 키를 포함해도
+    compare runner가 지원하지 않는 kwargs를 걸러 주도록 보강되었다.
 - 또한 weighted portfolio 결과에도 `Meta` 탭이 추가되어
   `portfolio_name`, `portfolio_id`, `portfolio_source_kind`, `date_policy`,
   `selected_strategies`, `input_weights_percent`

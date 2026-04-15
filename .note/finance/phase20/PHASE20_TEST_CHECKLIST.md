@@ -69,13 +69,13 @@
   - compare 실행 후 `Strategy Comparison` 아래
   - divider 아래 `Weighted Portfolio Builder`
 - 체크 항목:
-  - [ ] compare를 실행한 뒤 `Weighted Portfolio Builder` 위에 `What You Are Combining` 요약이 보이는지
-  - [ ] `What You Are Combining`에서 `들어온 경로`, `묶음 이름`, `비교 기간`, `조합할 전략 수`가 현재 compare 맥락과 맞게 보이는지
-  - [ ] 그 아래 전략 표에서 `Strategy`, `Period`, `CAGR`, `MDD`, `Promotion`이 보여서 지금 무엇을 섞는지 한 번에 이해되는지
-  - [ ] registry 기반 current candidate를 compare로 불러왔을 때 registry ids 또는 source 정보가 요약에 보이는지
-  - [ ] `Strategy Comparison`과 `Weighted Portfolio Builder` 사이에 divider가 보여 두 단계가 시각적으로 나뉘는지
-  - [ ] weighted portfolio를 만들 때 compare source 맥락을 잃지 않고 바로 이어서 저장할 수 있는지
-  - [ ] weighted portfolio 결과가 생성된 뒤 다음 행동이 자연스럽게 이해되는지
+  - [x] compare를 실행한 뒤 `Weighted Portfolio Builder` 위에 `What You Are Combining` 요약이 보이는지
+  - [x] `What You Are Combining`에서 `들어온 경로`, `묶음 이름`, `비교 기간`, `조합할 전략 수`가 현재 compare 맥락과 맞게 보이는지
+  - [x] 그 아래 전략 표에서 `Strategy`, `Period`, `CAGR`, `MDD`, `Promotion`이 보여서 지금 무엇을 섞는지 한 번에 이해되는지
+  - [x] registry 기반 current candidate를 compare로 불러왔을 때 registry ids 또는 source 정보가 요약에 보이는지
+  - [x] `Strategy Comparison`과 `Weighted Portfolio Builder` 사이에 divider가 보여 두 단계가 시각적으로 나뉘는지
+  - [x] weighted portfolio를 만들 때 compare source 맥락을 잃지 않고 바로 이어서 저장할 수 있는지
+  - [x] weighted portfolio 결과가 생성된 뒤 다음 행동이 자연스럽게 이해되는지
 
 ## 3. saved portfolio 재진입 흐름 확인
 
@@ -83,13 +83,13 @@
   - `Backtest > Compare & Portfolio Builder`
   - `Weighted Portfolio Builder` 아래 divider 다음 `Saved Portfolios`
 - 체크 항목:
-  - [ ] `Weighted Portfolio Builder`와 `Saved Portfolios` 사이에 divider가 보여 두 단계가 시각적으로 나뉘는지
-  - [ ] 현재 weighted portfolio를 저장할 때 이름 placeholder가 source label 또는 strategy 조합 기준으로 자연스럽게 보이는지
+  - [x] `Weighted Portfolio Builder`와 `Saved Portfolios` 사이에 divider가 보여 두 단계가 시각적으로 나뉘는지
+  - [ ] `Save This Weighted Portfolio`를 열었을 때 `Portfolio Name`이 추천 이름과 함께 자연스럽게 보이고, 그 이름이 source label 또는 strategy 조합 기준으로 이해되는지
   - [ ] 저장된 포트폴리오 목록에 `Source` 컬럼이 보이는지
   - [ ] 저장된 포트폴리오 상세에서 `Source & Next Step` 탭이 보이는지
   - [ ] `Source & Next Step` 탭에서 이 포트폴리오가 어디서 왔는지와 다음 행동이 쉽게 읽히는지
-  - [ ] `Edit In Compare`가 저장된 전략 조합과 weights를 compare 화면으로 다시 채워주는지
-  - [ ] `Replay Saved Portfolio`가 저장된 compare context와 weights를 그대로 다시 실행하는지
+  - [ ] `Edit In Compare`를 누르면 compare 화면 상단으로 이동하고, `Compare Form Updated`와 `Weighted Portfolio Builder`에서 전략 조합/기간/세부 설정/weights/date alignment가 다시 채워진 것을 확인할 수 있는지
+  - [ ] `Replay Saved Portfolio`를 누르면 저장된 compare context와 weighted portfolio 구성을 그대로 다시 실행하는지
   - [ ] saved portfolio를 다시 열었을 때 "수정할지 / 그대로 재실행할지" 판단이 더 쉬워졌는지
 
 ## 4. phase closeout 문서와 index 확인

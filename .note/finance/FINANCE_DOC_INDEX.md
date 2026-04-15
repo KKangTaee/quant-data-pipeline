@@ -50,14 +50,15 @@
     compare 결과의 출처와 다음 행동이 더 직접적으로 보이게 만든 두 번째 구현 문서
 - `.note/finance/phase20/PHASE20_CURRENT_CHAPTER_TODO.md`
   - current candidate re-entry QA 중 발견된 설명/재진입 UX 보강, strict annual compare regression bugfix,
-    weighted builder 상단 context summary UX 정리와 compare/weighted/saved divider 위치 정리까지 반영된 현재 execution board
+    weighted builder 상단 context summary UX 정리, saved portfolio replay legacy-key bugfix,
+    save / edit / replay 의미 보강까지 반영된 현재 execution board
 - `.note/finance/phase20/PHASE20_COMPLETION_SUMMARY.md`
   - `Phase 20`이 실제로 무엇을 더 쉽게 만들었는지와 왜 practical closeout으로 볼 수 있는지 정리한 closeout 문서
 - `.note/finance/phase20/PHASE20_NEXT_PHASE_PREPARATION.md`
   - `Phase 20` 이후 어떤 질문으로 다음 phase를 여는 것이 자연스러운지 정리한 handoff 문서
 - `.note/finance/phase20/PHASE20_TEST_CHECKLIST.md`
   - current candidate 재진입, compare -> weighted 흐름, saved portfolio 재진입,
-    그리고 compare `Strategy-Specific Advanced Inputs`에서 family/variant 설정이 한 섹션으로 더 자연스럽게 읽히는지 확인하는 manual checklist
+    `Save This Weighted Portfolio`, `Edit In Compare`, `Replay Saved Portfolio`가 현재 UI 이름과 실제 동작 기준으로 자연스럽게 읽히는지 확인하는 manual checklist
 - `.note/finance/CURRENT_CANDIDATE_REGISTRY_GUIDE.md`
   - `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`가 무엇인지, 왜 필요한지, script로 어떻게 읽고 검증하는지 정리한 안내 문서
 - `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`

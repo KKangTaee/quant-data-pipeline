@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import json
 import time
 from datetime import date
@@ -3388,6 +3389,17 @@ def _run_compare_strategy(
         )
         universe_mode = params.pop("universe_mode", "preset")
 
+    runner_signature = inspect.signature(runner)
+    if not any(
+        parameter.kind == inspect.Parameter.VAR_KEYWORD
+        for parameter in runner_signature.parameters.values()
+    ):
+        params = {
+            key: value
+            for key, value in params.items()
+            if key in runner_signature.parameters
+        }
+
     return runner(
         tickers=tickers,
         start=start,
@@ -5220,7 +5232,7 @@ def _render_saved_portfolio_workspace() -> None:
     st.caption(
         "이 영역은 `Compare Strategies -> Weighted Portfolio Builder` 다음 단계입니다. "
         "현재 compare 결과와 weighted portfolio 구성을 저장해두고, 나중에 다시 "
-        "`Load Into Compare` 또는 `Run Saved Portfolio`로 이어갈 수 있습니다."
+        "`Edit In Compare` 또는 `Replay Saved Portfolio`로 이어갈 수 있습니다."
     )
 
     saved_notice = st.session_state.get("backtest_saved_portfolio_notice")
@@ -5232,22 +5244,31 @@ def _render_saved_portfolio_workspace() -> None:
     weighted_bundle = st.session_state.backtest_weighted_bundle
     compare_source_context = dict(st.session_state.get("backtest_compare_source_context") or {})
     if compare_bundles and weighted_bundle:
-        with st.expander("Save Current Weighted Portfolio", expanded=False):
-            st.caption("현재 compare 결과 + weighted portfolio 구성(weight/date policy)을 저장합니다. 이후에는 저장된 포트폴리오를 바로 다시 실행하거나 compare 화면으로 불러와 수정할 수 있습니다.")
+        with st.expander("Save This Weighted Portfolio", expanded=False):
+            st.caption(
+                "지금 보고 있는 compare 결과 + weighted portfolio 구성(weight/date policy)을 저장합니다. "
+                "저장한 뒤에는 그대로 다시 실행하거나, compare 화면으로 다시 불러와 수정할 수 있습니다."
+            )
             suggested_name = str(compare_source_context.get("source_label") or "").strip()
             if not suggested_name:
                 suggested_name = " / ".join(list(weighted_bundle.get("component_strategy_names") or []))
             with st.form("save_saved_portfolio_form", clear_on_submit=False):
+                st.markdown(
+                    "- `Portfolio Name`: 저장 목록에 보일 실제 이름입니다.\n"
+                    "- 추천 이름은 현재 source label 또는 strategy 조합을 기준으로 자동 채워집니다."
+                )
                 portfolio_name = st.text_input(
                     "Portfolio Name",
-                    value="",
-                    placeholder=suggested_name or "예: Annual Strict Blend 60/40",
+                    value=suggested_name or "",
+                    placeholder="예: Annual Strict Blend 60/40",
+                    help="이 이름이 저장 목록과 replay/edit 화면에 그대로 보입니다.",
                     key="saved_portfolio_name_input",
                 )
                 portfolio_description = st.text_area(
                     "Description",
                     value="",
-                    placeholder="이 포트폴리오를 어떻게 쓰려는지 간단히 메모합니다.",
+                    placeholder="이 포트폴리오를 왜 저장하는지, 이후 어떻게 쓸지 간단히 적습니다.",
+                    help="나중에 저장된 포트폴리오를 다시 열었을 때 용도를 빠르게 떠올릴 수 있게 해줍니다.",
                     key="saved_portfolio_description_input",
                 )
                 save_submitted = st.form_submit_button("Save Portfolio", use_container_width=True)
@@ -5325,8 +5346,13 @@ def _render_saved_portfolio_workspace() -> None:
             }
         )
         st.markdown("##### Next Action")
-        st.markdown("- `Edit In Compare`: 저장된 전략 조합/기간/weights를 compare 화면으로 다시 불러와 수정합니다.")
-        st.markdown("- `Replay Saved Portfolio`: 저장된 compare context와 weights를 그대로 다시 실행합니다.")
+        st.markdown(
+            "- `Edit In Compare`: 저장된 전략 조합, compare 기간, strategy-specific 설정, "
+            "weighted portfolio의 weight/date alignment를 다시 채워 수정합니다."
+        )
+        st.markdown(
+            "- `Replay Saved Portfolio`: 저장 당시의 compare context와 weighted portfolio 구성을 그대로 다시 실행합니다."
+        )
         st.markdown("- `Delete Portfolio`: 더 이상 쓰지 않는 저장 포트폴리오를 정리합니다.")
     with detail_tabs[2]:
         left, right = st.columns(2, gap="large")
@@ -5366,8 +5392,9 @@ def _render_saved_portfolio_workspace() -> None:
                 st.error("Saved portfolio delete failed.")
     with action_cols[3]:
         st.caption(
-            "`Edit In Compare`는 저장된 전략 조합/기간/weights를 비교 화면으로 다시 채웁니다. "
-            "`Replay Saved Portfolio`는 compare부터 weighted portfolio 결과까지 한 번에 다시 실행합니다."
+            "`Edit In Compare`는 저장된 compare 전략/기간/세부 설정과 weighted portfolio "
+            "weight/date alignment를 다시 채웁니다. "
+            "`Replay Saved Portfolio`는 저장 당시의 compare부터 weighted portfolio 결과까지 한 번에 다시 실행합니다."
         )
 
 
@@ -6513,7 +6540,9 @@ def _queue_saved_portfolio_compare_prefill(saved_portfolio: dict[str, Any]) -> N
     st.session_state.backtest_compare_prefill_payload = compare_context
     st.session_state.backtest_compare_prefill_pending = True
     st.session_state.backtest_compare_prefill_notice = (
-        f"저장된 포트폴리오 `{saved_portfolio.get('name')}` 설정을 `Compare & Portfolio Builder`로 불러왔습니다."
+        f"저장된 포트폴리오 `{saved_portfolio.get('name')}`의 compare 전략/기간/세부 설정과 "
+        "weighted portfolio weight/date alignment를 다시 채웠습니다. "
+        "상단 `Compare Form Updated`와 아래 `Weighted Portfolio Builder`를 확인하세요."
     )
     st.session_state.backtest_compare_source_context = {
         "source_kind": "saved_portfolio",
