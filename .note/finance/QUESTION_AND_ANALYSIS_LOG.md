@@ -1133,3 +1133,31 @@ Detailed historical analysis was archived on `2026-04-13`.
     처럼 읽히도록 정리했다
   - 따라서 `Candidate Universe Equal-Weight / SPY == Ticker Benchmark / SPY`는 아니며,
     전자는 "후보군 equal-weight benchmark + SPY reference ticker"에 가깝다
+
+### 2026-04-15 - Candidate Universe Equal-Weight를 고르면 SPY는 benchmark가 아니라 별도 reference ticker일 수 있다
+- Request topic:
+  - 사용자가 `Benchmark Contract = Candidate Universe Equal-Weight`일 때 `Benchmark Ticker = SPY`를 신경 안 써도 되는지 질문함
+- Interpreted goal:
+  - equal-weight benchmark와 `SPY`의 역할을 실전 설정 관점에서 구분해 이해하고 싶음
+- Result:
+  - runtime code 기준으로 `Benchmark Contract = Candidate Universe Equal-Weight`이면
+    benchmark curve 자체는 후보군 종목들로 equal-weight benchmark를 생성한다
+  - 즉 이 경우 `SPY`가 equal-weight benchmark를 만드는 재료는 아니다
+  - 다만 underperformance guardrail / drawdown guardrail이 켜져 있으면
+    `Benchmark Ticker = SPY`는 여전히 별도 reference ticker로 사용될 수 있다
+  - 따라서 실무적으로는
+    - benchmark curve 관점에서는 `SPY`를 덜 신경 써도 되지만
+    - guardrail을 쓰는 경우에는 `SPY`를 계속 의미 있는 설정값으로 봐야 한다
+
+### 2026-04-15 - Equal-weight benchmark일 때는 입력 필드 이름도 `Benchmark Ticker` 대신 `Guardrail / Reference Ticker`가 더 적합하다
+- Request topic:
+  - 사용자가 equal-weight benchmark contract를 고른 경우 `SPY`가 benchmark 자체가 아니라는 설명을 보고,
+    필드 이름도 그렇게 바꾸는 편이 덜 헷갈린다고 피드백함
+- Interpreted goal:
+  - 입력 단계부터 `SPY`의 역할을 더 정확히 보여주고 싶음
+- Result:
+  - strict annual `Real-Money Contract`에서 ticker 입력 필드 이름을 contract에 따라 다르게 보이게 바꿨다
+    - `Ticker Benchmark`면 `Benchmark Ticker`
+    - `Candidate Universe Equal-Weight`면 `Guardrail / Reference Ticker`
+  - helper text와 prefill summary line도 같은 언어로 맞췄다
+  - 따라서 이제 사용자는 equal-weight contract를 고른 상태에서 `SPY`를 benchmark 자체로 오해할 가능성이 줄었다

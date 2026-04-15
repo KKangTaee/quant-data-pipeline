@@ -93,6 +93,7 @@
   - 퀀트 / 백테스트 / 실전형 전략 관련 반복 용어를 `기본 설명 / 왜 사용되는지 / 예시 / 필요 상황` 구조로 정리하는 공통 용어 사전
   - 최근 strict annual UI QA에서 자주 물었던 `Benchmark Contract`, `Candidate Universe Equal-Weight` 같은 operator-facing 용어도 여기에서 다시 확인할 수 있다
   - `Candidate Universe Equal-Weight / SPY`처럼 contract와 reference ticker가 같이 보일 때의 의미도 이 glossary 기준으로 다시 읽을 수 있다
+  - equal-weight contract에서 왜 입력 필드명이 `Guardrail / Reference Ticker`로 보일 수 있는지도 여기 용어 기준으로 다시 이해할 수 있다
   - 앱에서는 `Reference > Glossary`에서 검색형 UI로 바로 다시 볼 수 있다
 - `.note/finance/BACKTEST_REFINEMENT_CODE_FLOW_GUIDE.md`
   - Streamlit UI, runtime adapter, finance engine, strategy 문서 흐름까지 backtest refinement code path를 한 장으로 정리한 안내 문서

@@ -794,3 +794,18 @@ Detailed historical logs were archived on `2026-04-13`.
   - finance refinement hygiene script
 - Durable takeaway:
   - the UI now shows that equal-weight benchmark and SPY are not the same object: one is the benchmark contract, the other can remain a separate reference ticker
+
+### 2026-04-15
+- Phase 20 QA asked to make the strict-annual input field itself reflect that distinction too.
+- Changed:
+  - strict annual `Real-Money Contract` now labels the ticker input dynamically
+    - `Benchmark Ticker` when the contract is `Ticker Benchmark`
+    - `Guardrail / Reference Ticker` when the contract is `Candidate Universe Equal-Weight`
+  - aligned the nearby helper captions so they no longer imply that equal-weight benchmark itself is built from the ticker
+  - updated prefill summary lines to use `Reference Ticker` wording for equal-weight cases
+- Validation:
+  - `python3 -m py_compile app/web/pages/backtest.py`
+  - `.venv/bin/python -c "import app.web.pages.backtest"`
+  - finance refinement hygiene script
+- Durable takeaway:
+  - the strict-annual form now tells the user at input time whether `SPY` is acting as the benchmark itself or as a separate guardrail/reference ticker

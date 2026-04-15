@@ -1802,7 +1802,7 @@ def _render_strict_annual_real_money_inputs(
     st.caption("설명은 `Reference > Guides > Real-Money Contract 값 해설` 또는 `Reference > Glossary`에서 다시 볼 수 있습니다.")
     st.caption(
         "실전형 annual strict contract에서는 `Minimum Price`, `Minimum History (Months)`, "
-        "`Minimum Avg Dollar Volume 20D`, `Transaction Cost`, `Benchmark Contract`, `Benchmark Ticker`, "
+        "`Minimum Avg Dollar Volume 20D`, `Transaction Cost`, `Benchmark Contract`, `Benchmark / Reference Ticker`, "
         "`Benchmark Policy`, `Validation Policy`, `Portfolio Guardrail Policy`를 같이 사용합니다."
     )
     col1, col2, col3, col4, col5, col6 = st.columns(6, gap="small")
@@ -1876,13 +1876,25 @@ def _render_strict_annual_real_money_inputs(
             ),
         )
         benchmark_contract = STRICT_BENCHMARK_CONTRACT_LABELS[benchmark_contract_label]
+    benchmark_ticker_label = (
+        "Guardrail / Reference Ticker"
+        if benchmark_contract == STRICT_BENCHMARK_CONTRACT_CANDIDATE_EQUAL_WEIGHT
+        else "Benchmark Ticker"
+    )
+    benchmark_ticker_help = (
+        "이 ticker는 candidate equal-weight benchmark 자체를 만드는 종목이 아닙니다. "
+        "현재는 underperformance / drawdown guardrail과 별도 reference 비교에 사용할 기준 ticker입니다. "
+        "기본값은 `SPY`입니다."
+        if benchmark_contract == STRICT_BENCHMARK_CONTRACT_CANDIDATE_EQUAL_WEIGHT
+        else "Ticker benchmark 또는 underperformance guardrail에서 사용할 기준 ETF ticker입니다. 기본값은 `SPY`입니다."
+    )
     with col6:
         benchmark_ticker = str(
             st.text_input(
-                "Benchmark Ticker",
+                benchmark_ticker_label,
                 value=default_benchmark,
                 key=f"{key_prefix}_benchmark_ticker",
-                help="Ticker benchmark 또는 underperformance guardrail에서 사용할 기준 ETF ticker입니다. 기본값은 `SPY`입니다.",
+                help=benchmark_ticker_help,
             )
         ).strip().upper()
 
@@ -1946,7 +1958,11 @@ def _render_strict_annual_real_money_inputs(
             "`Candidate Universe Equal-Weight`는 같은 후보 universe에서 그 시점에 투자 가능했던 종목들을 "
             "복잡한 ranking 없이 그냥 똑같이 나눠 담았을 때의 기준선입니다. "
             "즉 `SPY` 같은 외부 ETF와 비교하는 대신, 같은 후보군 안에서 단순하게 투자했을 때보다 전략이 실제로 더 나은지 보려는 목적입니다. "
-            "현재 first pass에서는 validation / promotion overlay에 사용되고, actual underperformance guardrail rule은 여전히 `Benchmark Ticker`를 기준으로 동작합니다."
+            "현재 first pass에서는 validation / promotion overlay에 사용되고, actual underperformance guardrail rule은 여전히 별도 reference ticker를 기준으로 동작합니다."
+        )
+        st.caption(
+            f"`{benchmark_ticker_label}`는 equal-weight benchmark 자체가 아니라, "
+            "underperformance / drawdown guardrail과 별도 reference 비교에 남아 있는 ticker입니다."
         )
     st.caption(
         "`Liquidity Clean Coverage`는 리밸런싱 행 대부분이 유동성 제외 없이 지나가야 "
@@ -5745,7 +5761,12 @@ def _build_prefill_summary_lines(payload: dict[str, Any] | None) -> list[str]:
     if payload.get("benchmark_contract"):
         lines.append(f"Benchmark Contract: `{_benchmark_contract_value_to_label(payload.get('benchmark_contract'))}`")
     if payload.get("benchmark_ticker"):
-        lines.append(f"Benchmark: `{payload.get('benchmark_ticker')}`")
+        ticker_label = (
+            "Reference Ticker"
+            if payload.get("benchmark_contract") == STRICT_BENCHMARK_CONTRACT_CANDIDATE_EQUAL_WEIGHT
+            else "Benchmark Ticker"
+        )
+        lines.append(f"{ticker_label}: `{payload.get('benchmark_ticker')}`")
     if payload.get("promotion_min_benchmark_coverage") is not None:
         lines.append(
             f"Min Benchmark Coverage: `{float(payload.get('promotion_min_benchmark_coverage')):.0%}`"
