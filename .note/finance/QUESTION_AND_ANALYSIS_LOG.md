@@ -147,6 +147,18 @@ Detailed historical analysis was archived on `2026-04-13`.
     `Strategy / Period / CAGR / MDD / Promotion`
     표를 배치해, 실제로 어떤 compare 결과를 섞는지 한 번에 보이게 했다
   - 마지막에는 "위 전략 표 확인 -> weight 입력 -> date alignment 선택 -> build" 순서의 다음 행동을 명시했다
+
+### 2026-04-16 - `Compare & Portfolio Builder`에서는 divider가 진입 도구 아래가 아니라 각 메인 단계 사이에 있는 편이 더 자연스럽다
+- Request topic:
+  - 사용자가 `Quick Re-entry From Current Candidates` 아래 line은 빼고,
+    `Strategy Comparison`, `Weighted Portfolio Builder`, `Saved Portfolios` 사이에는 line을 넣어달라고 요청함
+- Interpreted goal:
+  - compare 진입 보조 도구와 실제 주요 작업 단계의 시각적 구분을 더 자연스럽게 만들고 싶음
+- Result:
+  - `Quick Re-entry From Current Candidates` 바로 아래 divider는 제거했다
+  - 대신 compare 결과가 보인 뒤에 divider를 넣어 `Strategy Comparison -> Weighted Portfolio Builder`를 나누고,
+    weighted builder 뒤에 한 번 더 divider를 넣어 `Weighted Portfolio Builder -> Saved Portfolios`를 구분하도록 바꿨다
+  - 따라서 현재 divider는 보조 ingress가 아니라 세 main workflow stage를 구분하는 역할로 읽히게 되었다
   - saved portfolio는 `Edit In Compare`, `Replay Saved Portfolio`, `Source & Next Step` 기준으로
     다시 수정할지 그대로 재실행할지 판단이 더 쉬워졌다
   - 따라서 `Phase 20`은

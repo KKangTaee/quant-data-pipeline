@@ -913,3 +913,16 @@ Detailed historical logs were archived on `2026-04-13`.
   - `python3 plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py`
 - Durable takeaway:
   - weighted-builder context now starts from "what we are combining" instead of "what internal compare bundle object exists," which is easier to read during QA and normal operator use.
+
+### 2026-04-16
+- Phase 20 QA then requested that divider placement in `Compare & Portfolio Builder` match the visual grouping more naturally.
+- Changed:
+  - removed the divider directly under `Quick Re-entry From Current Candidates`
+  - added a divider between `Strategy Comparison` and `Weighted Portfolio Builder`
+  - added a divider between `Weighted Portfolio Builder` and `Saved Portfolios`
+- Validation:
+  - `python3 -m py_compile app/web/pages/backtest.py`
+  - `.venv/bin/python -c "import app.web.pages.backtest"`
+  - `python3 plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py`
+- Durable takeaway:
+  - dividers now separate the three main operator stages instead of splitting the compare entry tools from the compare form.

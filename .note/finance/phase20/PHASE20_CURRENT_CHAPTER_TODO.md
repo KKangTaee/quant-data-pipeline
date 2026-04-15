@@ -90,6 +90,9 @@
 - `completed` weighted builder context card UX cleanup
   - `Current Compare Bundle` 느낌의 내부자 카드 대신, "지금 무엇을 섞는가" 중심의 summary로 재구성
   - source / period / strategy count / strategy performance table / next action 흐름으로 재배치
+- `completed` compare / weighted / saved divider placement cleanup
+  - `Quick Re-entry From Current Candidates` 아래 divider는 제거
+  - `Strategy Comparison`, `Weighted Portfolio Builder`, `Saved Portfolios` 세 메인 단계 사이에만 divider가 보이도록 정리
 - `pending` targeted UI validation
   - current candidate re-entry -> compare
   - compare -> weighted portfolio

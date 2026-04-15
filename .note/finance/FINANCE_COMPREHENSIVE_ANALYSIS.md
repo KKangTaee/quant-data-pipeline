@@ -664,6 +664,10 @@ Analysis / Presentation
     그 아래에
     `Strategy / Period / CAGR / MDD / Promotion`
     표를 붙여 실제 조합 대상 전략을 바로 읽게 만든다.
+  - divider도 같은 QA 흐름에서 다시 정리되어,
+    `Quick Re-entry From Current Candidates` 아래 line은 제거하고
+    `Strategy Comparison -> Weighted Portfolio Builder -> Saved Portfolios`
+    세 단계 사이에만 보이도록 바뀌었다.
   - current candidate 또는 saved portfolio에서 compare를 다시 불러온 직후에는
     `What Changed In Compare` summary가 함께 보여서,
     어떤 전략/기간/override가 방금 compare form에 채워졌는지와

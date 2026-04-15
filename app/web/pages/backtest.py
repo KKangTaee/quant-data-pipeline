@@ -11278,7 +11278,6 @@ def render_backtest_tab() -> None:
             st.caption("문서에 정리된 대표 후보를 바로 가져오려면 아래 `Quick Re-entry From Current Candidates`를 펼치면 됩니다.")
             with st.expander("Quick Re-entry From Current Candidates", expanded=False):
                 _render_current_candidate_bundle_workspace()
-            st.divider()
 
         compare_eq_universe_mode = "preset"
         compare_eq_preset_name: str | None = "Dividend ETFs"
@@ -12517,7 +12516,11 @@ def render_backtest_tab() -> None:
                     st.session_state.backtest_compare_error = f"Comparison execution failed: {exc}"
 
         _render_compare_results()
+        if st.session_state.backtest_compare_bundles:
+            st.divider()
         _render_weighted_portfolio_builder()
+        if st.session_state.backtest_compare_bundles and len(st.session_state.backtest_compare_bundles) >= 2:
+            st.divider()
         _render_saved_portfolio_workspace()
 
     else:

@@ -50,7 +50,7 @@
     compare 결과의 출처와 다음 행동이 더 직접적으로 보이게 만든 두 번째 구현 문서
 - `.note/finance/phase20/PHASE20_CURRENT_CHAPTER_TODO.md`
   - current candidate re-entry QA 중 발견된 설명/재진입 UX 보강, strict annual compare regression bugfix,
-    weighted builder 상단 context summary UX 정리까지 반영된 현재 execution board
+    weighted builder 상단 context summary UX 정리와 compare/weighted/saved divider 위치 정리까지 반영된 현재 execution board
 - `.note/finance/phase20/PHASE20_COMPLETION_SUMMARY.md`
   - `Phase 20`이 실제로 무엇을 더 쉽게 만들었는지와 왜 practical closeout으로 볼 수 있는지 정리한 closeout 문서
 - `.note/finance/phase20/PHASE20_NEXT_PHASE_PREPARATION.md`
