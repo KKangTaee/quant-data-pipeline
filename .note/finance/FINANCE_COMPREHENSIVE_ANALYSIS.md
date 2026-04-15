@@ -572,6 +572,10 @@ Analysis / Presentation
   - 어디에서 값을 다시 확인하면 되는지
   - 다음에 무엇을 눌러야 하는지
   를 더 직접적으로 읽히게 정리했다.
+- 이후 QA에서는
+  이 카드 표가 `Trend Filter`, `Market Regime`만 보여서
+  실제 prefill된 핵심 계약과 비교하기에 부족하다는 피드백이 나와,
+  표에 `Weighting Contract`, `Risk-Off Contract`도 같이 보이게 보강했다.
 - 이후 QA에서는 compare / weighted / saved portfolio 사이의 divider가 과하다는 피드백이 나와,
   top-level divider는 제거하고 각 섹션의 `###` 제목만으로 구분하도록 정리했다.
 - `Saved Portfolios`는 별도 top-level 탭으로 빼지 않고

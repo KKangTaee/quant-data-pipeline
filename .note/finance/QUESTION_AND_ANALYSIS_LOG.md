@@ -1069,3 +1069,19 @@ Detailed historical analysis was archived on `2026-04-13`.
     표 위에는 “각 전략에 어떤 핵심 설정이 채워졌는지 요약한 것”이라는 설명을 붙였다
   - 마지막에는 `어디서 확인하면 되나`와 `Run Strategy Comparison` 안내를 분리해,
     다음 행동이 더 분명하게 읽히도록 정리했다
+
+### 2026-04-15 - Current candidate compare prefill은 핵심 strict-annual 계약값과 어긋나지 않는지 같이 점검해야 한다
+- Request topic:
+  - 사용자가 `Load Recommended Candidates` 이후 `Trend Filter`, `Market Regime` 표기가 실제 전략 설정과 다른 것 같다고 피드백하고, 다른 핵심 값도 차이가 없는지 검토를 요청함
+- Interpreted goal:
+  - current candidate registry에서 compare form으로 넘어갈 때 핵심 strict-annual 계약값이 중간에 느슨해지거나 잘못 표기되지 않는지 확인하고 싶음
+- Result:
+  - registry -> compare prefill override -> summary table 경로를 직접 재현해 확인했다
+  - 현재 active `current_candidate` 기준으로
+    - `Value current anchor`: trend off / regime off
+    - `Quality current anchor`: trend on / regime off
+    - `Quality + Value current anchor`: trend off / regime off
+    가 코드상 일관되게 매핑되고 있었다
+  - 즉 현재 코드 기준으로는 핵심 값이 자동으로 풀린 정황은 확인되지 않았다
+  - 다만 카드 표가 너무 적은 열만 보여서 오해를 만들 수 있었기 때문에
+    `Weighting Contract`, `Risk-Off Contract`도 같이 표기하도록 보강했다

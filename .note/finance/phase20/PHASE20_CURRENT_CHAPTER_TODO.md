@@ -56,6 +56,9 @@
 - `completed` compare prefill confirmation card plain-language cleanup
   - `What Changed In Compare`의 추상적 용어를 더 직접적인 문장으로 정리
   - 무엇이 불러와졌는지 / 어디서 확인하는지 / 다음에 무엇을 누르는지 중심으로 다시 구성
+- `completed` current candidate compare-prefill contract audit and summary expansion
+  - registry -> compare prefill 경로에서 핵심 strict-annual 값이 어긋나지 않는지 점검
+  - summary table에 `Weighting Contract`, `Risk-Off Contract`를 추가해 loaded contract를 더 직접적으로 보이게 정리
 - `completed` strict annual shadow sample contract parity bugfix
   - manual validation 중 `rejected_slot_handling_mode` 인자 mismatch를 발견
   - quality / value / quality+value strict annual shadow sample entrypoint가 explicit contract argument를 받도록 정리

@@ -5046,6 +5046,12 @@ def _build_compare_prefill_summary_rows(payload: dict[str, Any]) -> pd.DataFrame
                 "Benchmark": benchmark_text,
                 "Trend Filter": "On" if override.get("trend_filter_enabled") else "Off",
                 "Market Regime": "On" if override.get("market_regime_enabled") else "Off",
+                "Weighting Contract": _strict_weighting_mode_value_to_label(
+                    override.get("weighting_mode") or STRICT_DEFAULT_WEIGHTING_MODE
+                ),
+                "Risk-Off Contract": _strict_risk_off_mode_value_to_label(
+                    override.get("risk_off_mode") or STRICT_DEFAULT_RISK_OFF_MODE
+                ),
             }
         )
     return pd.DataFrame(rows)

@@ -737,3 +737,18 @@ Detailed historical logs were archived on `2026-04-13`.
   - finance refinement hygiene script
 - Durable takeaway:
   - the compare prefill confirmation card now explains the loaded bundle in task-oriented language instead of assuming the user already understands source/label terminology
+
+### 2026-04-15
+- Phase 20 QA also asked whether the compare prefill summary was drifting from the actual candidate settings.
+- Changed:
+  - checked the current-candidate registry -> compare prefill override mapping for top N, benchmark, trend filter, market regime, weighting, risk-off, and universe contract
+  - confirmed the current code maps those core fields consistently for the active candidate rows
+  - expanded the `Compare Form Updated` table to show `Weighting Contract` and `Risk-Off Contract` alongside `Trend Filter` and `Market Regime`
+  - synced `FINANCE_COMPREHENSIVE_ANALYSIS.md`
+- Validation:
+  - `.venv/bin/python` registry-to-prefill smoke check for current candidate rows
+  - `python3 -m py_compile app/web/pages/backtest.py`
+  - `.venv/bin/python -c "import app.web.pages.backtest"`
+  - finance refinement hygiene script
+- Durable takeaway:
+  - the current candidate compare prefill path does not appear to be silently loosening key strict-annual settings, and the confirmation table now exposes more of the actual loaded contract
