@@ -1006,3 +1006,17 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 현재 판단은 이 흐름이 operator 관점에서 더 자연스럽다.
     compare는 먼저 전략을 고르는 화면이고,
     current candidate 재진입은 그 과정을 빠르게 돕는 shortcut으로 읽히는 편이 맞다
+
+### 2026-04-15 - Saved Portfolios는 현재 별도 top-level 탭보다 Compare workflow 안에 두는 편이 더 자연스럽다
+- Request topic:
+  - 사용자가 `Compare & Portfolio Builder` 안에 line이 많고, `Saved Portfolios`가 이 탭에 있는 것이 맞는지 검토를 요청함
+- Interpreted goal:
+  - compare 화면이 덜 조각나 보이게 만들고,
+    `Saved Portfolios`의 위치가 workflow 관점에서 타당한지 다시 확인하고 싶음
+- Result:
+  - top-level divider는 제거하고 각 섹션의 제목으로만 구분하도록 정리했다
+  - 현재 판단은 `Saved Portfolios`를 별도 top-level 탭으로 빼기보다
+    `Compare & Portfolio Builder` 안에 유지하는 편이 더 맞다
+  - 이유는 saved portfolio가 독립 기능이라기보다
+    `compare -> weighted portfolio -> save / replay / edit-in-compare`
+    흐름의 마지막 operator 단계이기 때문이다

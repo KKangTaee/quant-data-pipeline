@@ -680,3 +680,16 @@ Detailed historical logs were archived on `2026-04-13`.
   - finance refinement hygiene script
 - Durable takeaway:
   - compare now reads as a primary strategy-selection surface first, while current candidate re-entry behaves like a supporting shortcut instead of competing for top-of-screen attention
+
+### 2026-04-15
+- Phase 20 QA also surfaced excessive divider usage inside `Compare & Portfolio Builder`.
+- Changed:
+  - removed top-level dividers between compare results, weighted portfolio builder, and saved portfolios
+  - clarified in the saved-portfolio caption that this area is the next step after compare and weighted builder, not a separate top-level workflow
+  - synced `FINANCE_COMPREHENSIVE_ANALYSIS.md`
+- Validation:
+  - `python3 -m py_compile app/web/pages/backtest.py`
+  - `.venv/bin/python -c "import app.web.pages.backtest"`
+  - finance refinement hygiene script
+- Durable takeaway:
+  - the compare page now relies on section headings instead of repeated horizontal lines, and saved portfolios remains in the same tab because it still behaves like the final step of the same operator workflow

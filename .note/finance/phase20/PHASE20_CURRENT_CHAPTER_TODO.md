@@ -44,6 +44,9 @@
   - compare 화면의 기본 흐름이 먼저 보이도록 `Strategies` 선택을 상단에 유지
   - current candidate 재진입은 secondary expander로 내려서 보조 도구처럼 읽히게 정리
   - 긴 설명은 `What This Does` expander 안으로 접어 compare 첫 화면의 혼잡도를 줄임
+- `completed` compare surface divider cleanup and saved-portfolio placement review
+  - compare / weighted / saved portfolio 사이의 top-level divider를 제거해 line 과밀도를 낮춤
+  - `Saved Portfolios`는 별도 top-level 탭으로 분리하지 않고, 같은 operator workflow의 마지막 단계로 유지
 - `completed` strict annual shadow sample contract parity bugfix
   - manual validation 중 `rejected_slot_handling_mode` 인자 mismatch를 발견
   - quality / value / quality+value strict annual shadow sample entrypoint가 explicit contract argument를 받도록 정리

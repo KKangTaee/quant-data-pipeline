@@ -5083,7 +5083,11 @@ def _render_compare_prefill_applied_card(payload: dict[str, Any] | None, source_
 
 def _render_saved_portfolio_workspace() -> None:
     st.markdown("### Saved Portfolios")
-    st.caption("현재 compare 결과와 weighted portfolio 구성을 저장해두고, 나중에 다시 `Load Into Compare` 또는 `Run Saved Portfolio`로 이어갈 수 있습니다.")
+    st.caption(
+        "이 영역은 `Compare Strategies -> Weighted Portfolio Builder` 다음 단계입니다. "
+        "현재 compare 결과와 weighted portfolio 구성을 저장해두고, 나중에 다시 "
+        "`Load Into Compare` 또는 `Run Saved Portfolio`로 이어갈 수 있습니다."
+    )
 
     saved_notice = st.session_state.get("backtest_saved_portfolio_notice")
     if saved_notice:
@@ -12186,11 +12190,8 @@ def render_backtest_tab() -> None:
                     st.session_state.backtest_compare_error_kind = "system"
                     st.session_state.backtest_compare_error = f"Comparison execution failed: {exc}"
 
-        st.divider()
         _render_compare_results()
-        st.divider()
         _render_weighted_portfolio_builder()
-        st.divider()
         _render_saved_portfolio_workspace()
 
     else:

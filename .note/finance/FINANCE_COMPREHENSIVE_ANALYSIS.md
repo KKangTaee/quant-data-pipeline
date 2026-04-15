@@ -541,6 +541,13 @@ Analysis / Presentation
 - 설명도 늘 펼쳐진 줄글 대신
   `What This Does` expander 안으로 정리되어,
   compare의 기본 사용 흐름을 가리지 않게 되었다.
+- 이후 QA에서는 compare / weighted / saved portfolio 사이의 divider가 과하다는 피드백이 나와,
+  top-level divider는 제거하고 각 섹션의 `###` 제목만으로 구분하도록 정리했다.
+- `Saved Portfolios`는 별도 top-level 탭으로 빼지 않고
+  `Compare & Portfolio Builder` 안에 유지했다.
+  현재 판단은 이 기능이 독립 모듈이라기보다
+  `compare -> weighted portfolio -> save / replay / edit-in-compare`
+  흐름의 마지막 operator 단계에 가깝기 때문이다.
 - 즉 현재 compare surface는
   - manual strategy selection
   - saved portfolio compare re-entry
