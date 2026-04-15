@@ -13,7 +13,7 @@ Detailed historical analysis was archived on `2026-04-13`.
 ## Active Pointers
 
 - current phase board:
-  - [PHASE18_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase18/PHASE18_CURRENT_CHAPTER_TODO.md)
+  - [PHASE20_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase20/PHASE20_CURRENT_CHAPTER_TODO.md)
 - current candidate summary:
   - [CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md)
 - historical full archive:
@@ -238,6 +238,23 @@ Detailed historical analysis was archived on `2026-04-13`.
   - follow-up decision:
     - next structural lever priority는
       idle cash drag를 줄일 수 있는
+
+### 2026-04-15 - Phase 20 첫 구현은 current candidate를 compare로 다시 보내는 재진입 동선이 가장 효과적이다
+- Request topic:
+  - `Phase 20` 메인 작업 진행
+- Interpreted goal:
+  - strongest / near-miss candidate를 문서 중심 재참조에서 UI workflow 재진입으로 옮기는 첫 실제 구현 단위를 만든다
+- Result:
+  - `Compare & Portfolio Builder` 안에 `Current Candidate Re-entry` surface를 추가하는 것이
+    Phase 20 첫 work unit으로 가장 자연스럽다고 판단했다
+  - 이유:
+    - current candidate는 문서화는 잘 되어 있지만 UI 재진입 동선이 길었고
+    - compare는 이후 weighted portfolio / saved portfolio로 이어지는 가장 중요한 operator ingress이기 때문이다
+  - 현재 구현 결과:
+    - `Load Current Anchors`
+    - `Load Lower-MDD Near Misses`
+    - custom candidate bundle selection
+    으로 strict annual current candidate를 compare form으로 바로 불러올 수 있게 되었다
       `defensive sleeve risk-off`
       쪽이 더 자연스럽다
 

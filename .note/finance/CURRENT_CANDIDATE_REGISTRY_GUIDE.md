@@ -34,6 +34,14 @@
 - `CURRENT_CANDIDATE_REGISTRY.jsonl`
   - script, automation, plugin이 읽는 machine-readable persistence
 
+## 현재 UI 연결
+- `Phase 20` 기준으로
+  `Backtest > Compare & Portfolio Builder > Current Candidate Re-entry`
+  surface가 이 registry를 읽는다.
+- 즉 현재 strongest candidate와 near-miss는
+  문서에서만 다시 찾는 것이 아니라,
+  compare workflow로 다시 보내는 UI ingress로도 쓰이기 시작했다.
+
 ## 기본 사용 방법
 
 ### 1. 현재 seed 상태 확인

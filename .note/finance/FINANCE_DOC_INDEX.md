@@ -42,6 +42,9 @@
   - `Phase 20` 현재 챕터 TODO 보드
 - `.note/finance/phase20/PHASE20_OPERATOR_WORKFLOW_INVENTORY_FIRST_PASS.md`
   - strongest candidate, compare, weighted portfolio, saved portfolio 흐름에서 실제로 어디가 불편한지 first-pass로 정리한 workflow inventory 문서
+- `.note/finance/phase20/PHASE20_CURRENT_CANDIDATE_COMPARE_REENTRY_FIRST_WORK_UNIT.md`
+  - current candidate registry를 `Compare & Portfolio Builder`로 다시 연결해,
+    strongest candidate와 near-miss를 UI에서 바로 compare로 보내는 첫 실제 구현 단위를 정리한 문서
 - `.note/finance/CURRENT_CANDIDATE_REGISTRY_GUIDE.md`
   - `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`가 무엇인지, 왜 필요한지, script로 어떻게 읽고 검증하는지 정리한 안내 문서
 - `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`

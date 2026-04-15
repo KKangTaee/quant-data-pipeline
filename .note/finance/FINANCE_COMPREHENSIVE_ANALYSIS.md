@@ -515,6 +515,22 @@ Analysis / Presentation
   compare -> weighted builder -> rerun을 다시 열 수 있는 재현용 연구 아티팩트에 가깝다.
   Phase 17에서 다루어야 할 것은 이 객체에 새로운 승격 의미를 부여하는 것이 아니라,
   후보 개선 작업을 반복 재현할 수 있는 operator bridge로서의 역할을 명확히 적는 것이다.
+- Phase 20 first work unit에서는 이 흐름 앞단도 보강되어,
+  `Compare & Portfolio Builder` 상단에
+  `Current Candidate Re-entry` surface가 추가되었다.
+- 이 surface는
+  current candidate registry를 읽어
+  - current anchor
+  - lower-MDD near miss
+  - cleaner alternative
+  를 한 표로 다시 보여주고,
+  `Load Current Anchors` 또는 custom bundle selection으로
+  current candidate를 compare form에 바로 다시 채울 수 있게 한다.
+- 즉 현재 compare surface는
+  - manual strategy selection
+  - saved portfolio compare re-entry
+  - current candidate compare re-entry
+  세 가지 operator ingress를 함께 가지게 되었다.
 - 또한 weighted portfolio 결과에도 `Meta` 탭이 추가되어
   `portfolio_name`, `portfolio_id`, `portfolio_source_kind`, `date_policy`,
   `selected_strategies`, `input_weights_percent`

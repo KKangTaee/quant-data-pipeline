@@ -13,7 +13,7 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Active Pointers
 
 - current phase board:
-  - [PHASE18_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase18/PHASE18_CURRENT_CHAPTER_TODO.md)
+  - [PHASE20_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase20/PHASE20_CURRENT_CHAPTER_TODO.md)
 - current candidate summary:
   - [CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md)
 - historical full archive:
@@ -218,6 +218,20 @@ Detailed historical logs were archived on `2026-04-13`.
 - Representative rerun result:
   - `Value` current anchor:
     - gate unchanged
+
+### 2026-04-15
+- Started the first real Phase 20 implementation unit.
+- Added a `Current Candidate Re-entry` surface inside `Compare & Portfolio Builder`.
+- Current anchors and lower-MDD near-misses can now be sent back into compare without manually rebuilding the full strict annual contract.
+- Synced:
+  - Phase 20 first work-unit document
+  - phase TODO board
+  - roadmap / doc index
+  - finance comprehensive analysis
+- Validation:
+  - `py_compile`
+  - `.venv` import smoke
+  - current candidate registry helper smoke
     - `MDD` worse
     - `Rolling Review` also weakened
   - `Quality + Value` current strongest point:

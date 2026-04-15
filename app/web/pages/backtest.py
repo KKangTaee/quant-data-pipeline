@@ -4,6 +4,7 @@ import json
 import time
 from datetime import date
 from functools import lru_cache
+from pathlib import Path
 from typing import Any
 
 import altair as alt
@@ -259,6 +260,9 @@ STRICT_MARKET_REGIME_DEFAULT_WINDOW = 200
 STRICT_MARKET_REGIME_DEFAULT_BENCHMARK = "SPY"
 STRICT_MARKET_REGIME_BENCHMARK_OPTIONS = ["SPY", "QQQ", "VTI", "IWM"]
 DEFAULT_BACKTEST_END_DATE = date.today()
+CURRENT_CANDIDATE_COMPARE_DEFAULT_START = date(2016, 1, 1)
+CURRENT_CANDIDATE_COMPARE_DEFAULT_END = date(2026, 4, 1)
+CURRENT_CANDIDATE_REGISTRY_FILE = Path(".note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl")
 STATIC_MANAGED_RESEARCH_UNIVERSE = "static_managed_research"
 HISTORICAL_DYNAMIC_PIT_UNIVERSE = "historical_dynamic_pit"
 STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS = {
@@ -4905,6 +4909,60 @@ def _render_weighted_portfolio_builder() -> None:
     _render_weighted_portfolio_result(weighted_bundle)
 
 
+def _render_current_candidate_bundle_workspace() -> None:
+    rows = _load_current_candidate_registry_latest()
+    if not rows:
+        return
+
+    display_df = _build_current_candidate_registry_rows_for_display(rows)
+    anchor_rows = [row for row in rows if str(row.get("record_type") or "") == "current_candidate"]
+    near_miss_rows = [row for row in rows if str(row.get("record_type") or "") == "near_miss"]
+    label_to_row = {
+        f"{str(row.get('strategy_family') or '').replace('_', ' ').title()} | {_current_candidate_registry_role_label(row)} | {row.get('title')}": row
+        for row in rows
+    }
+
+    st.markdown("#### Current Candidate Re-entry")
+    st.caption(
+        "문서에 정리된 strongest candidate와 near-miss를 다시 compare 쪽으로 보내는 빠른 동선입니다. "
+        "같은 family 후보는 한 번에 하나만 선택할 수 있습니다."
+    )
+    quick_action_cols = st.columns([0.34, 0.34, 0.32], gap="small")
+    with quick_action_cols[0]:
+        if st.button("Load Current Anchors", key="load_current_candidate_anchors", use_container_width=True):
+            try:
+                _queue_current_candidate_compare_prefill(anchor_rows)
+                st.rerun()
+            except Exception as exc:
+                st.error(str(exc))
+    with quick_action_cols[1]:
+        if st.button("Load Lower-MDD Near Misses", key="load_current_candidate_near_misses", use_container_width=True):
+            try:
+                _queue_current_candidate_compare_prefill(near_miss_rows)
+                st.rerun()
+            except Exception as exc:
+                st.error(str(exc))
+    with quick_action_cols[2]:
+        st.caption("빠른 버튼 대신 아래에서 후보를 직접 고를 수도 있습니다.")
+
+    with st.expander("Inspect Current Candidate Bundle Options", expanded=False):
+        st.dataframe(display_df, use_container_width=True, hide_index=True)
+        selected_labels = st.multiselect(
+            "Candidates To Load Into Compare",
+            options=list(label_to_row.keys()),
+            max_selections=4,
+            help="최소 2개 후보를 고르면 compare form으로 바로 불러올 수 있습니다. 같은 family 후보는 한 번에 하나만 지원합니다.",
+            key="current_candidate_bundle_selection",
+        )
+        if st.button("Load Selected Candidates Into Compare", key="load_selected_candidate_bundle", use_container_width=True):
+            try:
+                selected_rows = [label_to_row[label] for label in selected_labels]
+                _queue_current_candidate_compare_prefill(selected_rows)
+                st.rerun()
+            except Exception as exc:
+                st.error(str(exc))
+
+
 def _render_saved_portfolio_workspace() -> None:
     st.markdown("### Saved Portfolios")
     st.caption("현재 compare 결과와 weighted portfolio 구성을 저장해두고, 나중에 다시 `Load Into Compare` 또는 `Run Saved Portfolio`로 이어갈 수 있습니다.")
@@ -6126,6 +6184,268 @@ def _queue_saved_portfolio_compare_prefill(saved_portfolio: dict[str, Any]) -> N
         "weights_percent": list(portfolio_context.get("weights_percent") or []),
         "date_policy": portfolio_context.get("date_policy") or "intersection",
     }
+    st.session_state.backtest_requested_panel = "Compare & Portfolio Builder"
+
+
+def _load_current_candidate_registry_latest() -> list[dict[str, Any]]:
+    if not CURRENT_CANDIDATE_REGISTRY_FILE.exists():
+        return []
+
+    latest: dict[str, dict[str, Any]] = {}
+    for line in CURRENT_CANDIDATE_REGISTRY_FILE.read_text(encoding="utf-8", errors="ignore").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        registry_id = str(row.get("registry_id") or "").strip()
+        if not registry_id:
+            continue
+        previous = latest.get(registry_id)
+        if previous is None or str(row.get("recorded_at") or "") >= str(previous.get("recorded_at") or ""):
+            latest[registry_id] = row
+
+    family_order = {"value": 0, "quality": 1, "quality_value": 2}
+    role_order = {"current_candidate": 0, "near_miss": 1, "scenario": 2}
+    return sorted(
+        [
+            row
+            for row in latest.values()
+            if str(row.get("status") or "active").strip().lower() == "active"
+        ],
+        key=lambda row: (
+            family_order.get(str(row.get("strategy_family") or ""), 99),
+            role_order.get(str(row.get("record_type") or ""), 99),
+            str(row.get("title") or ""),
+        ),
+    )
+
+
+def _current_candidate_registry_role_label(row: dict[str, Any]) -> str:
+    record_type = str(row.get("record_type") or "").strip().lower()
+    candidate_role = str(row.get("candidate_role") or "").strip().lower()
+    if record_type == "current_candidate":
+        return "current anchor"
+    if record_type == "near_miss":
+        return "lower-MDD near miss"
+    if candidate_role == "cleaner_alternative":
+        return "cleaner alternative"
+    return candidate_role or record_type or "candidate"
+
+
+def _current_candidate_registry_contract_summary(row: dict[str, Any]) -> str:
+    contract = dict(row.get("contract") or {})
+    parts: list[str] = []
+    top_n = contract.get("top_n")
+    if top_n is not None:
+        parts.append(f"Top N {int(top_n)}")
+    benchmark_ticker = contract.get("benchmark_ticker")
+    if benchmark_ticker:
+        parts.append(f"Benchmark {benchmark_ticker}")
+    benchmark_contract = contract.get("benchmark_contract")
+    if benchmark_contract == STRICT_BENCHMARK_CONTRACT_CANDIDATE_EQUAL_WEIGHT:
+        parts.append("Candidate Equal-Weight")
+    factor_adjustment = contract.get("factor_adjustment")
+    if factor_adjustment:
+        parts.append(str(factor_adjustment))
+    quality_adjustment = contract.get("quality_adjustment")
+    value_adjustment = contract.get("value_adjustment")
+    if quality_adjustment:
+        parts.append(f"quality {quality_adjustment}")
+    if value_adjustment:
+        parts.append(f"value {value_adjustment}")
+    return " / ".join(parts) if parts else "-"
+
+
+def _build_current_candidate_registry_rows_for_display(rows: list[dict[str, Any]]) -> pd.DataFrame:
+    display_rows: list[dict[str, Any]] = []
+    for row in rows:
+        result = dict(row.get("result") or {})
+        display_rows.append(
+            {
+                "Family": str(row.get("strategy_family") or "").replace("_", " ").title(),
+                "Role": _current_candidate_registry_role_label(row),
+                "Title": row.get("title"),
+                "Contract": _current_candidate_registry_contract_summary(row),
+                "CAGR": result.get("cagr"),
+                "MDD": result.get("mdd"),
+                "Promotion": result.get("promotion"),
+                "Shortlist": result.get("shortlist"),
+                "Registry ID": row.get("registry_id"),
+            }
+        )
+    return pd.DataFrame(display_rows)
+
+
+def _current_candidate_registry_default_compare_override(row: dict[str, Any]) -> dict[str, Any] | None:
+    registry_id = str(row.get("registry_id") or "").strip()
+    strategy_name = str(row.get("strategy_name") or "").strip()
+    if not registry_id or not strategy_name:
+        return None
+
+    rejected_slot_fill_enabled, partial_cash_retention_enabled = strict_rejection_handling_mode_to_flags(
+        STRICT_DEFAULT_REJECTION_HANDLING_MODE
+    )
+    common_override: dict[str, Any] = {
+        "preset_name": STRICT_ANNUAL_COMPARE_DEFAULT_PRESET,
+        "tickers": list(QUALITY_STRICT_PRESETS[STRICT_ANNUAL_COMPARE_DEFAULT_PRESET]),
+        "universe_mode": "preset",
+        "universe_contract": HISTORICAL_DYNAMIC_PIT_UNIVERSE,
+        "rebalance_interval": 1,
+        "trend_filter_window": STRICT_TREND_FILTER_DEFAULT_WINDOW,
+        "market_regime_enabled": False,
+        "market_regime_window": STRICT_MARKET_REGIME_DEFAULT_WINDOW,
+        "market_regime_benchmark": STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
+        "rejected_slot_handling_mode": STRICT_DEFAULT_REJECTION_HANDLING_MODE,
+        "rejected_slot_fill_enabled": rejected_slot_fill_enabled,
+        "partial_cash_retention_enabled": partial_cash_retention_enabled,
+        "weighting_mode": STRICT_DEFAULT_WEIGHTING_MODE,
+        "risk_off_mode": STRICT_DEFAULT_RISK_OFF_MODE,
+        "defensive_tickers": list(STRICT_DEFAULT_DEFENSIVE_TICKERS),
+        "min_price_filter": ETF_REAL_MONEY_DEFAULT_MIN_PRICE,
+        "min_history_months_filter": STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS,
+        "min_avg_dollar_volume_20d_m_filter": STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M,
+        "transaction_cost_bps": ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
+        "promotion_min_benchmark_coverage": STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE,
+        "promotion_min_net_cagr_spread": STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD,
+        "promotion_min_liquidity_clean_coverage": STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE,
+        "promotion_max_underperformance_share": STRICT_PROMOTION_DEFAULT_MAX_UNDERPERFORMANCE_SHARE,
+        "promotion_min_worst_rolling_excess_return": STRICT_PROMOTION_DEFAULT_MIN_WORST_ROLLING_EXCESS_RETURN,
+        "promotion_max_strategy_drawdown": STRICT_PROMOTION_DEFAULT_MAX_STRATEGY_DRAWDOWN,
+        "promotion_max_drawdown_gap_vs_benchmark": STRICT_PROMOTION_DEFAULT_MAX_DRAWDOWN_GAP_VS_BENCHMARK,
+        "underperformance_guardrail_enabled": True,
+        "underperformance_guardrail_window_months": STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
+        "underperformance_guardrail_threshold": STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD,
+        "drawdown_guardrail_enabled": True,
+        "drawdown_guardrail_window_months": STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
+        "drawdown_guardrail_strategy_threshold": STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD,
+        "drawdown_guardrail_gap_threshold": STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD,
+    }
+
+    if registry_id == "value_current_anchor_top14_psr":
+        return {
+            **common_override,
+            "top_n": 14,
+            "benchmark_contract": STRICT_BENCHMARK_CONTRACT_TICKER,
+            "benchmark_ticker": "SPY",
+            "trend_filter_enabled": False,
+            "value_factors": VALUE_STRICT_DEFAULT_FACTORS + ["psr"],
+        }
+    if registry_id == "value_lower_mdd_near_miss_pfcr":
+        return {
+            **common_override,
+            "top_n": 14,
+            "benchmark_contract": STRICT_BENCHMARK_CONTRACT_TICKER,
+            "benchmark_ticker": "SPY",
+            "trend_filter_enabled": False,
+            "value_factors": VALUE_STRICT_DEFAULT_FACTORS + ["psr", "pfcr"],
+        }
+    if registry_id == "quality_current_anchor_top12_lqd":
+        return {
+            **common_override,
+            "top_n": 12,
+            "benchmark_contract": STRICT_BENCHMARK_CONTRACT_TICKER,
+            "benchmark_ticker": "LQD",
+            "trend_filter_enabled": True,
+            "quality_factors": ["roe", "roa", "cash_ratio", "debt_to_assets"],
+        }
+    if registry_id == "quality_cleaner_alternative_top12_spy":
+        return {
+            **common_override,
+            "top_n": 12,
+            "benchmark_contract": STRICT_BENCHMARK_CONTRACT_TICKER,
+            "benchmark_ticker": "SPY",
+            "trend_filter_enabled": True,
+            "quality_factors": ["roe", "roa", "cash_ratio", "debt_to_assets"],
+        }
+    if registry_id == "quality_value_current_anchor_top10_por":
+        return {
+            **common_override,
+            "top_n": 10,
+            "benchmark_contract": STRICT_BENCHMARK_CONTRACT_CANDIDATE_EQUAL_WEIGHT,
+            "benchmark_ticker": "SPY",
+            "trend_filter_enabled": False,
+            "quality_factors": ["roe", "roa", "operating_margin", "asset_turnover", "current_ratio"],
+            "value_factors": ["book_to_market", "earnings_yield", "sales_yield", "pcr", "por", "per"],
+        }
+    if registry_id == "quality_value_lower_mdd_near_miss_top9":
+        return {
+            **common_override,
+            "top_n": 9,
+            "benchmark_contract": STRICT_BENCHMARK_CONTRACT_CANDIDATE_EQUAL_WEIGHT,
+            "benchmark_ticker": "SPY",
+            "trend_filter_enabled": False,
+            "quality_factors": ["roe", "roa", "operating_margin", "asset_turnover", "current_ratio"],
+            "value_factors": ["book_to_market", "earnings_yield", "sales_yield", "pcr", "por", "per"],
+        }
+    return None
+
+
+def _current_candidate_registry_row_to_compare_prefill(row: dict[str, Any]) -> dict[str, Any] | None:
+    compare_prefill = dict(row.get("compare_prefill") or {})
+    strategy_name = str(compare_prefill.get("strategy_name") or row.get("strategy_name") or "").strip()
+    if not strategy_name:
+        return None
+
+    execution_context = dict(row.get("execution_context") or {})
+    strategy_override = dict(compare_prefill.get("strategy_override") or {})
+    if not strategy_override:
+        strategy_override = _current_candidate_registry_default_compare_override(row) or {}
+    if not strategy_override:
+        return None
+
+    return {
+        "strategy_name": strategy_name,
+        "start": execution_context.get("start") or CURRENT_CANDIDATE_COMPARE_DEFAULT_START.isoformat(),
+        "end": execution_context.get("end") or CURRENT_CANDIDATE_COMPARE_DEFAULT_END.isoformat(),
+        "timeframe": execution_context.get("timeframe") or "1d",
+        "option": execution_context.get("option") or "month_end",
+        "strategy_override": strategy_override,
+    }
+
+
+def _queue_current_candidate_compare_prefill(rows: list[dict[str, Any]]) -> None:
+    compare_ready_items: list[dict[str, Any]] = []
+    seen_categories: set[str] = set()
+    for row in rows:
+        item = _current_candidate_registry_row_to_compare_prefill(row)
+        if not item:
+            raise ValueError(f"후보 `{row.get('title')}`는 아직 compare prefill contract가 준비되지 않았습니다.")
+        strategy_choice, _ = display_name_to_selection(item["strategy_name"])
+        normalized_choice = strategy_choice or item["strategy_name"]
+        if normalized_choice in seen_categories:
+            raise ValueError("같은 strategy family 후보는 한 번에 하나만 compare로 보낼 수 있습니다.")
+        seen_categories.add(normalized_choice)
+        compare_ready_items.append(item)
+
+    if len(compare_ready_items) < 2:
+        raise ValueError("Compare로 보내려면 최소 2개의 후보를 선택해야 합니다.")
+    if len(compare_ready_items) > 4:
+        raise ValueError("Compare bundle은 최대 4개 후보까지만 지원합니다.")
+
+    starts = {str(item["start"]) for item in compare_ready_items}
+    ends = {str(item["end"]) for item in compare_ready_items}
+    timeframes = {str(item["timeframe"]) for item in compare_ready_items}
+    options = {str(item["option"]) for item in compare_ready_items}
+
+    payload = {
+        "selected_strategies": [item["strategy_name"] for item in compare_ready_items],
+        "start": min(starts) if starts else CURRENT_CANDIDATE_COMPARE_DEFAULT_START.isoformat(),
+        "end": max(ends) if ends else CURRENT_CANDIDATE_COMPARE_DEFAULT_END.isoformat(),
+        "timeframe": next(iter(timeframes), "1d"),
+        "option": next(iter(options), "month_end"),
+        "strategy_overrides": {
+            item["strategy_name"]: item["strategy_override"] for item in compare_ready_items
+        },
+    }
+    titles = ", ".join(str(row.get("title") or row.get("registry_id") or "") for row in rows)
+    st.session_state.backtest_compare_prefill_payload = payload
+    st.session_state.backtest_compare_prefill_pending = True
+    st.session_state.backtest_compare_prefill_notice = (
+        f"current candidate bundle `{titles}`를 `Compare & Portfolio Builder`로 불러왔습니다."
+    )
     st.session_state.backtest_requested_panel = "Compare & Portfolio Builder"
 
 
@@ -7370,64 +7690,72 @@ def _build_selection_interpretation_summary(selection_df: pd.DataFrame) -> pd.Da
     if selection_df.empty:
         return pd.DataFrame()
 
-    raw_candidate_events = int(pd.to_numeric(selection_df.get("Raw Selected Count"), errors="coerce").fillna(0).sum())
-    final_selected_events = int(pd.to_numeric(selection_df.get("Selected Count"), errors="coerce").fillna(0).sum())
-    overlay_rejections = int(pd.to_numeric(selection_df.get("Overlay Rejected Count"), errors="coerce").fillna(0).sum())
+    def _series_or_default(column: str, *, default: Any, dtype: str | None = None) -> pd.Series:
+        if column in selection_df.columns:
+            value = selection_df[column]
+            if isinstance(value, pd.DataFrame):
+                value = value.iloc[:, 0]
+            return value
+        return pd.Series([default] * len(selection_df), index=selection_df.index, dtype=dtype)
+
+    raw_candidate_events = int(pd.to_numeric(_series_or_default("Raw Selected Count", default=0), errors="coerce").fillna(0).sum())
+    final_selected_events = int(pd.to_numeric(_series_or_default("Selected Count", default=0), errors="coerce").fillna(0).sum())
+    overlay_rejections = int(pd.to_numeric(_series_or_default("Overlay Rejected Count", default=0), errors="coerce").fillna(0).sum())
     filled_events = int(
         (
-            pd.to_numeric(selection_df.get("Rejected Slot Fill Count"), errors="coerce")
+            pd.to_numeric(_series_or_default("Filled Count", default=0), errors="coerce")
             .fillna(0)
             .gt(0)
         ).sum()
     )
     cash_retained_events = int(
         (
-            selection_df.get("Partial Cash Retention Active", pd.Series(dtype=bool))
+            _series_or_default("Partial Cash Retention Active", default=False, dtype=bool)
             .fillna(False)
             .astype(bool)
         ).sum()
     )
-    regime_rejections = int(pd.to_numeric(selection_df.get("Regime Blocked Count"), errors="coerce").fillna(0).sum())
+    regime_rejections = int(pd.to_numeric(_series_or_default("Regime Blocked Count", default=0), errors="coerce").fillna(0).sum())
     regime_cash_rebalances = int(
         (
-            selection_df.get("Market Regime State", pd.Series(dtype=str))
+            _series_or_default("Market Regime State", default="", dtype=object)
             .astype(str)
             .str.lower()
             .eq("risk_off")
         ).sum()
     )
     cash_only_rebalances = int(
-        (pd.to_numeric(selection_df.get("Selected Count"), errors="coerce").fillna(0) <= 0).sum()
+        (pd.to_numeric(_series_or_default("Selected Count", default=0), errors="coerce").fillna(0) <= 0).sum()
     )
     avg_selected_count = float(
-        pd.to_numeric(selection_df.get("Selected Count"), errors="coerce").fillna(0).mean()
+        pd.to_numeric(_series_or_default("Selected Count", default=0), errors="coerce").fillna(0).mean()
     )
-    cash_share_series = pd.to_numeric(selection_df.get("Cash Share Ratio"), errors="coerce")
-    avg_cash_share = float(cash_share_series.fillna(0).mean()) if cash_share_series is not None else 0.0
+    cash_share_series = pd.to_numeric(_series_or_default("Cash Share Ratio", default=np.nan), errors="coerce")
+    avg_cash_share = float(cash_share_series.fillna(0).mean())
     weighting_values = [
         str(value).strip()
-        for value in selection_df.get("Weighting Contract", pd.Series(dtype=object)).tolist()
+        for value in _series_or_default("Weighting Contract", default="", dtype=object).tolist()
         if str(value).strip()
     ]
     unique_weighting = sorted(dict.fromkeys(weighting_values))
     weighting_summary = ", ".join(unique_weighting) if unique_weighting else "n/a"
     risk_off_values = [
         str(value).strip()
-        for value in selection_df.get("Risk-Off Contract", pd.Series(dtype=object)).tolist()
+        for value in _series_or_default("Risk-Off Contract", default="", dtype=object).tolist()
         if str(value).strip()
     ]
     unique_risk_off = sorted(dict.fromkeys(risk_off_values))
     risk_off_summary = ", ".join(unique_risk_off) if unique_risk_off else "n/a"
     defensive_sleeve_activations = int(
         (
-            pd.to_numeric(selection_df.get("Defensive Sleeve Count"), errors="coerce")
+            pd.to_numeric(_series_or_default("Defensive Sleeve Count", default=0), errors="coerce")
             .fillna(0)
             .gt(0)
         ).sum()
     )
     handling_values = [
         str(value).strip()
-        for value in selection_df.get("Rejected Slot Handling", pd.Series(dtype=object)).tolist()
+        for value in _series_or_default("Rejected Slot Handling", default="", dtype=object).tolist()
         if str(value).strip()
     ]
     unique_handling = sorted(dict.fromkeys(handling_values))
@@ -10436,6 +10764,9 @@ def render_backtest_tab() -> None:
         if compare_prefill_notice:
             st.info(compare_prefill_notice)
             st.session_state.backtest_compare_prefill_notice = None
+
+        _render_current_candidate_bundle_workspace()
+        st.divider()
 
         current_compare_selection = list(st.session_state.get("compare_selected_strategies") or [])
         normalized_compare_selection: list[str] = []
