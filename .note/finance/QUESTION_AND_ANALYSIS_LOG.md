@@ -1114,3 +1114,22 @@ Detailed historical analysis was archived on `2026-04-13`.
     "같은 후보군 안에서 복잡한 ranking 없이 그냥 고르게 샀을 때"와 비교하는 의미라는 점이 드러나도록 보강했다
   - glossary에는 `Candidate Universe Equal-Weight` 항목을 별도로 추가해,
     이후 다른 화면이나 문서에서도 같은 용어를 재사용할 수 있게 했다
+
+### 2026-04-15 - `Candidate Universe Equal-Weight / SPY`는 하나의 benchmark가 아니라 contract와 reference ticker가 같이 보인 상태다
+- Request topic:
+  - 사용자가 `Candidate Universe Equal-Weight / SPY`를 `Ticker Benchmark / SPY`와 같은 뜻으로 이해해도 되는지 물었고, 그 표기가 UX상 혼동을 준다고 지적함
+- Interpreted goal:
+  - equal-weight benchmark contract와 `SPY` reference ticker를 화면에서 구분해 보이게 만들어,
+    둘을 같은 benchmark로 오해하지 않게 하고 싶음
+- Result:
+  - runtime code를 확인한 결과, `Candidate Universe Equal-Weight`는 실제로는 후보군 종목들의 equal-weight benchmark를 생성하고,
+    `SPY`는 그 benchmark 자체가 아니라 separate benchmark/reference ticker로 남는다
+  - compare prefill summary는
+    - `Benchmark Contract`
+    - `Benchmark Ticker / Reference`
+    두 열로 분리했다
+  - current candidate registry summary도
+    `Benchmark Candidate Equal-Weight | Reference Ticker SPY`
+    처럼 읽히도록 정리했다
+  - 따라서 `Candidate Universe Equal-Weight / SPY == Ticker Benchmark / SPY`는 아니며,
+    전자는 "후보군 equal-weight benchmark + SPY reference ticker"에 가깝다

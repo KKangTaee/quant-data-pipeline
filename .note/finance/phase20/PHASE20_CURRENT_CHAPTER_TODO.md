@@ -53,6 +53,9 @@
 - `completed` strict annual benchmark tooltip clarification
   - `Benchmark Contract` tooltip에서 `Ticker Benchmark`와 `Candidate Universe Equal-Weight`가 각각 무엇을 비교하는지 plain language로 설명
   - `Candidate Universe Equal-Weight` 선택 시 의미를 화면 안에서 바로 이해할 수 있도록 상태 캡션 보강
+- `completed` benchmark contract vs reference ticker display disambiguation
+  - `Candidate Universe Equal-Weight / SPY`가 하나의 benchmark처럼 읽히지 않도록 compare summary와 current candidate contract summary에서 contract와 reference ticker를 분리 표기
+  - equal-weight benchmark일 때 `SPY`가 benchmark 자체가 아니라 reference ticker일 수 있다는 설명을 compare 카드 안에서도 보강
 - `completed` current candidate re-entry plain-language labeling cleanup
   - `Load Current Anchors` / `Load Lower-MDD Near Misses` 같은 내부자 표현을 더 직접적인 버튼 이름으로 정리
   - 빠른 버튼 2개와 직접 선택 1개의 차이를 각 버튼 아래 설명으로 바로 읽히게 보강

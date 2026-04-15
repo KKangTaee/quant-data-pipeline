@@ -598,6 +598,15 @@ Analysis / Presentation
 - 또한 `Candidate Universe Equal-Weight`를 선택했을 때는
   이것이 "같은 후보군 안에서 복잡한 ranking 없이 그냥 동일 비중으로 담은 기준선"이라는 점을
   캡션으로 한 번 더 보여주도록 정리했다.
+- 이어서 QA에서는
+  compare 요약 카드와 current candidate registry 표에서
+  `Candidate Universe Equal-Weight / SPY`가 하나의 benchmark처럼 읽혀 혼동된다는 피드백이 나왔다.
+- 그래서 현재는
+  - `Benchmark Contract`
+  - `Benchmark Ticker / Reference`
+  를 분리해 보여주고,
+  `Candidate Universe Equal-Weight`일 때는 ticker가 benchmark 자체가 아니라
+  guardrail/reference용 ticker라는 점을 카드 아래 설명으로 다시 보여주도록 정리했다.
 - 이후 QA에서는 compare / weighted / saved portfolio 사이의 divider가 과하다는 피드백이 나와,
   top-level divider는 제거하고 각 섹션의 `###` 제목만으로 구분하도록 정리했다.
 - `Saved Portfolios`는 별도 top-level 탭으로 빼지 않고

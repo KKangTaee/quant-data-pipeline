@@ -780,3 +780,17 @@ Detailed historical logs were archived on `2026-04-13`.
   - finance refinement hygiene script
 - Durable takeaway:
   - strict annual benchmark choice is now easier to read as an operator decision: external ETF reference vs simple equal-weight baseline from the same candidate pool
+
+### 2026-04-15
+- Phase 20 QA then found that `Candidate Universe Equal-Weight / SPY` still looked like a single mixed benchmark label in compare summaries.
+- Changed:
+  - split compare prefill summary output into `Benchmark Contract` and `Benchmark Ticker / Reference`
+  - changed current candidate registry contract summary so equal-weight cases read as
+    `Benchmark Candidate Equal-Weight | Reference Ticker SPY`
+    instead of an ambiguous slash-joined label
+  - added an explanatory caption in the compare update card when equal-weight benchmark contract is active
+- Validation:
+  - `python3 -m py_compile app/web/pages/backtest.py`
+  - finance refinement hygiene script
+- Durable takeaway:
+  - the UI now shows that equal-weight benchmark and SPY are not the same object: one is the benchmark contract, the other can remain a separate reference ticker

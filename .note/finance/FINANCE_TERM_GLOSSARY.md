@@ -488,6 +488,9 @@ validation과 승격 해석이 달라지기 때문이다.
   - `SPY`와 비교하면 시장 ETF 대비 성과를 보는 의미가 강하다
   - `Candidate Universe Equal-Weight`와 비교하면
     같은 후보군 안에서 단순 equal-weight보다 전략 selection이 더 나은지 볼 수 있다
+- 화면에서 `SPY`가 같이 보일 때
+  - 그것이 항상 benchmark 자체를 뜻하는 것은 아니다
+  - `Candidate Universe Equal-Weight` 계약에서는 `SPY`가 guardrail/reference ticker로 남아 있을 수 있다
 
 ---
 

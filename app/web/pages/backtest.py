@@ -5039,19 +5039,27 @@ def _build_compare_prefill_summary_rows(payload: dict[str, Any]) -> pd.DataFrame
         strategy_choice, strategy_variant = display_name_to_selection(strategy_name)
         benchmark_contract = override.get("benchmark_contract")
         benchmark_ticker = override.get("benchmark_ticker")
-        benchmark_text = "-"
-        if benchmark_contract or benchmark_ticker:
-            benchmark_text = (
-                f"{_benchmark_contract_value_to_label(benchmark_contract)}"
-                + (f" / {benchmark_ticker}" if benchmark_ticker else "")
+        benchmark_contract_text = (
+            _benchmark_contract_value_to_label(benchmark_contract)
+            if benchmark_contract
+            else "-"
+        )
+        if benchmark_contract == STRICT_BENCHMARK_CONTRACT_CANDIDATE_EQUAL_WEIGHT:
+            benchmark_reference_text = (
+                f"{benchmark_ticker} (reference ticker)"
+                if benchmark_ticker
+                else "-"
             )
+        else:
+            benchmark_reference_text = benchmark_ticker or "-"
         rows.append(
             {
                 "Strategy": strategy_name,
                 "Variant": strategy_variant or "-",
                 "Top N": override.get("top_n") or override.get("top") or "-",
                 "Universe Contract": _universe_contract_value_to_label(override.get("universe_contract")),
-                "Benchmark": benchmark_text,
+                "Benchmark Contract": benchmark_contract_text,
+                "Benchmark Ticker / Reference": benchmark_reference_text,
                 "Trend Filter": "On" if override.get("trend_filter_enabled") else "Off",
                 "Market Regime": "On" if override.get("market_regime_enabled") else "Off",
                 "Weighting Contract": _strict_weighting_mode_value_to_label(
@@ -5104,6 +5112,12 @@ def _render_compare_prefill_applied_card(payload: dict[str, Any] | None, source_
     if not summary_df.empty:
         st.caption("아래 표는 각 전략에 어떤 핵심 설정이 채워졌는지 요약한 것입니다.")
         st.dataframe(summary_df, use_container_width=True, hide_index=True)
+        if "Candidate Universe Equal-Weight" in summary_df.get("Benchmark Contract", pd.Series(dtype=str)).astype(str).tolist():
+            st.caption(
+                "여기서 `Candidate Universe Equal-Weight`는 benchmark contract 자체를 뜻하고, "
+                "`Benchmark Ticker / Reference` 열의 ticker는 equal-weight benchmark를 만드는 종목이 아니라 "
+                "guardrail/reference 비교에 남아 있는 별도 ticker입니다."
+            )
     st.markdown("**어디서 확인하면 되나**")
     st.markdown(
         "- 바로 아래 `Strategies`에서 어떤 전략이 선택됐는지 확인\n"
@@ -6424,12 +6438,14 @@ def _current_candidate_registry_contract_summary(row: dict[str, Any]) -> str:
     top_n = contract.get("top_n")
     if top_n is not None:
         parts.append(f"Top N {int(top_n)}")
-    benchmark_ticker = contract.get("benchmark_ticker")
-    if benchmark_ticker:
-        parts.append(f"Benchmark {benchmark_ticker}")
     benchmark_contract = contract.get("benchmark_contract")
+    benchmark_ticker = contract.get("benchmark_ticker")
     if benchmark_contract == STRICT_BENCHMARK_CONTRACT_CANDIDATE_EQUAL_WEIGHT:
-        parts.append("Candidate Equal-Weight")
+        parts.append("Benchmark Candidate Equal-Weight")
+        if benchmark_ticker:
+            parts.append(f"Reference Ticker {benchmark_ticker}")
+    elif benchmark_ticker:
+        parts.append(f"Benchmark Ticker {benchmark_ticker}")
     factor_adjustment = contract.get("factor_adjustment")
     if factor_adjustment:
         parts.append(str(factor_adjustment))
@@ -6439,7 +6455,7 @@ def _current_candidate_registry_contract_summary(row: dict[str, Any]) -> str:
         parts.append(f"quality {quality_adjustment}")
     if value_adjustment:
         parts.append(f"value {value_adjustment}")
-    return " / ".join(parts) if parts else "-"
+    return " | ".join(parts) if parts else "-"
 
 
 def _build_current_candidate_registry_rows_for_display(rows: list[dict[str, Any]]) -> pd.DataFrame:
