@@ -693,3 +693,18 @@ Detailed historical logs were archived on `2026-04-13`.
   - finance refinement hygiene script
 - Durable takeaway:
   - the compare page now relies on section headings instead of repeated horizontal lines, and saved portfolios remains in the same tab because it still behaves like the final step of the same operator workflow
+
+### 2026-04-15
+- Phase 20 QA found that current candidate re-entry button labels still read too much like internal jargon.
+- Changed:
+  - renamed `Load Current Anchors` to `Load Recommended Candidates`
+  - renamed `Load Lower-MDD Near Misses` to `Load Lower-MDD Alternatives`
+  - renamed the custom picker expander to `Pick Specific Candidates Manually`
+  - added one-line explanations under each quick action so users can tell why there are two buttons and when to use each
+  - synced `FINANCE_COMPREHENSIVE_ANALYSIS.md`
+- Validation:
+  - `python3 -m py_compile app/web/pages/backtest.py`
+  - `.venv/bin/python -c "import app.web.pages.backtest"`
+  - finance refinement hygiene script
+- Durable takeaway:
+  - current candidate re-entry now explains “대표 후보 불러오기 / 더 낮은 MDD 대안 불러오기 / 직접 선택” in plain language instead of forcing users to decode internal portfolio-search terms

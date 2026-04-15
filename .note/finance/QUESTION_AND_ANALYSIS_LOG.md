@@ -1020,3 +1020,19 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 이유는 saved portfolio가 독립 기능이라기보다
     `compare -> weighted portfolio -> save / replay / edit-in-compare`
     흐름의 마지막 operator 단계이기 때문이다
+
+### 2026-04-15 - Current candidate re-entry는 버튼 이름만 봐도 역할이 읽혀야 한다
+- Request topic:
+  - 사용자가 `Load Current Anchors`, `Load Lower-MDD Near Misses`가 무엇인지,
+    왜 버튼이 두 개인지, 아래 직접 선택 문구는 또 무엇인지 잘 모르겠다고 피드백함
+- Interpreted goal:
+  - current candidate 재진입 도구가 내부 용어를 알아야만 쓸 수 있는 화면이 아니라,
+    버튼 이름만 보고도 “대표 후보를 불러오는지 / 더 방어적인 대안을 불러오는지 / 직접 고르는지”
+    구분되게 만들고 싶음
+- Result:
+  - quick action 버튼 이름을 `Load Recommended Candidates`,
+    `Load Lower-MDD Alternatives`로 더 직접적으로 바꿨다
+  - 각 버튼 아래에 한 줄 설명을 넣어,
+    왜 버튼이 둘인지와 어떤 후보 묶음을 불러오는지 바로 읽히게 했다
+  - custom picker도 `Pick Specific Candidates Manually`로 바꿔,
+    빠른 불러오기와 직접 선택을 더 쉽게 구분하게 했다

@@ -541,6 +541,19 @@ Analysis / Presentation
 - 설명도 늘 펼쳐진 줄글 대신
   `What This Does` expander 안으로 정리되어,
   compare의 기본 사용 흐름을 가리지 않게 되었다.
+- 이후 QA에서는
+  `Load Current Anchors`, `Load Lower-MDD Near Misses` 같은 용어가
+  operator 외 사용자에게 다소 내부자 언어처럼 보인다는 피드백이 나와,
+  버튼 이름을
+  `Load Recommended Candidates`,
+  `Load Lower-MDD Alternatives`
+  처럼 더 직접적인 표현으로 바꿨다.
+- 각 버튼 아래에는
+  - 대표 후보를 한 번에 불러오는 버튼인지
+  - 더 방어적인 대안 후보를 불러오는 버튼인지
+  - 아니면 아래 표에서 직접 고르는 흐름인지
+  한 줄 설명을 붙여,
+  왜 버튼이 두 개 있는지 화면에서 바로 이해할 수 있게 했다.
 - 이후 QA에서는 compare / weighted / saved portfolio 사이의 divider가 과하다는 피드백이 나와,
   top-level divider는 제거하고 각 섹션의 `###` 제목만으로 구분하도록 정리했다.
 - `Saved Portfolios`는 별도 top-level 탭으로 빼지 않고

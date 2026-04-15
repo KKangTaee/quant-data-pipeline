@@ -4966,37 +4966,48 @@ def _render_current_candidate_bundle_workspace() -> None:
         "문서에 정리된 대표 후보를 compare form에 다시 채워 넣는 보조 도구입니다. "
         "바로 compare를 실행하는 버튼은 아니고, 아래 form의 전략/기간/override를 먼저 채웁니다."
     )
+    st.caption("빠르게 불러오는 방법 2개와, 특정 후보를 직접 고르는 방법 1개가 있습니다.")
     with st.expander("What This Does", expanded=False):
         st.markdown(
-            "- `Load Current Anchors`: 각 family의 현재 기준 strongest practical candidate를 compare form에 채웁니다.\n"
-            "- `Load Lower-MDD Near Misses`: MDD는 더 낮지만 gate는 약해진 near-miss 후보를 compare form에 채웁니다.\n"
-            "- `Inspect Current Candidate Bundle Options`: 현재 registry에 기록된 후보를 직접 보고 골라 compare form에 채웁니다.\n"
+            "- `Load Recommended Candidates`: 각 family에서 지금 기준점으로 쓰는 대표 후보를 compare form에 채웁니다.\n"
+            "- `Load Lower-MDD Alternatives`: 수익 단계는 조금 약하지만 낙폭은 더 낮았던 대안 후보를 compare form에 채웁니다.\n"
+            "- `Pick Specific Candidates Manually`: 현재 registry에 기록된 후보를 직접 보고 골라 compare form에 채웁니다.\n"
             "- 이 목록은 모든 백테스트 결과가 자동으로 쌓이는 공간이 아닙니다.\n"
-            "- 현재는 `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`에 active 상태로 기록된 strongest candidate / near miss / cleaner alternative만 보여줍니다.\n"
+            "- 현재는 `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`에 active 상태로 기록된 대표 후보와 대안 후보만 보여줍니다.\n"
             "- 같은 family 후보는 한 번에 하나만 compare form으로 불러올 수 있습니다."
         )
     quick_action_cols = st.columns([0.34, 0.34, 0.32], gap="small")
     with quick_action_cols[0]:
-        if st.button("Load Current Anchors", key="load_current_candidate_anchors", use_container_width=True):
+        if st.button("Load Recommended Candidates", key="load_current_candidate_anchors", use_container_width=True):
             try:
                 _queue_current_candidate_compare_prefill(anchor_rows)
                 st.rerun()
             except Exception as exc:
                 st.error(str(exc))
+        st.caption(
+            f"현재 기준점으로 쓰는 대표 후보 `{len(anchor_rows)}`개를 한 번에 불러옵니다. "
+            "예: Value / Quality / Quality + Value의 현재 main candidate."
+        )
     with quick_action_cols[1]:
-        if st.button("Load Lower-MDD Near Misses", key="load_current_candidate_near_misses", use_container_width=True):
+        if st.button("Load Lower-MDD Alternatives", key="load_current_candidate_near_misses", use_container_width=True):
             try:
                 _queue_current_candidate_compare_prefill(near_miss_rows)
                 st.rerun()
             except Exception as exc:
                 st.error(str(exc))
+        st.caption(
+            f"낙폭은 더 낮았지만 승격 단계는 조금 약했던 대안 후보 `{len(near_miss_rows)}`개를 불러옵니다."
+        )
     with quick_action_cols[2]:
-        st.caption("빠른 버튼 대신 아래에서 후보를 직접 고를 수 있습니다.")
+        st.caption(
+            "특정 후보만 골라 비교하고 싶다면 아래 목록에서 직접 선택하면 됩니다. "
+            "빠른 버튼은 미리 정해둔 대표 묶음을 한 번에 넣는 용도입니다."
+        )
 
-    with st.expander("Inspect Current Candidate Bundle Options", expanded=False):
+    with st.expander("Pick Specific Candidates Manually", expanded=False):
         st.dataframe(display_df, use_container_width=True, hide_index=True)
         selected_labels = st.multiselect(
-            "Candidates To Load Into Compare",
+            "Choose Specific Candidates To Load Into Compare",
             options=list(label_to_row.keys()),
             max_selections=4,
             help="최소 2개 후보를 고르면 compare form으로 바로 불러올 수 있습니다. 같은 family 후보는 한 번에 하나만 지원합니다.",
