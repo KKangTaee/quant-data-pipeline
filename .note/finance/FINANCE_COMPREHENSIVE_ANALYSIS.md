@@ -684,11 +684,11 @@ Analysis / Presentation
     `Description`은 이 저장 포트폴리오를 왜 남기는지 메모하는 칸으로 설명되어
     save 시점의 의미가 더 직접적으로 읽히게 되었다.
   - action label도
-    - `Load Into Compare` -> `Edit In Compare`
+    - `Load Into Compare` -> `Load Saved Setup Into Compare`
     - `Run Saved Portfolio` -> `Replay Saved Portfolio`
     로 정리되어,
     operator가 저장된 포트폴리오를 수정하려는지 그대로 재실행하려는지 더 빠르게 이해할 수 있다.
-  - `Edit In Compare`는
+  - `Load Saved Setup Into Compare`는
     저장된 전략 조합/기간만 다시 넣는 버튼이 아니라,
     compare 세부 설정과 weighted portfolio의 weight/date alignment까지 다시 채우는 흐름으로 정리되었다.
   - `Replay Saved Portfolio`는

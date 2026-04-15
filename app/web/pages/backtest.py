@@ -5232,7 +5232,7 @@ def _render_saved_portfolio_workspace() -> None:
     st.caption(
         "이 영역은 `Compare Strategies -> Weighted Portfolio Builder` 다음 단계입니다. "
         "현재 compare 결과와 weighted portfolio 구성을 저장해두고, 나중에 다시 "
-        "`Edit In Compare` 또는 `Replay Saved Portfolio`로 이어갈 수 있습니다."
+        "`Load Saved Setup Into Compare` 또는 `Replay Saved Portfolio`로 이어갈 수 있습니다."
     )
 
     saved_notice = st.session_state.get("backtest_saved_portfolio_notice")
@@ -5347,7 +5347,7 @@ def _render_saved_portfolio_workspace() -> None:
         )
         st.markdown("##### Next Action")
         st.markdown(
-            "- `Edit In Compare`: 저장된 전략 조합, compare 기간, strategy-specific 설정, "
+            "- `Load Saved Setup Into Compare`: 저장된 전략 조합, compare 기간, strategy-specific 설정, "
             "weighted portfolio의 weight/date alignment를 다시 채워 수정합니다."
         )
         st.markdown(
@@ -5367,7 +5367,7 @@ def _render_saved_portfolio_workspace() -> None:
 
     action_cols = st.columns([0.24, 0.24, 0.20, 0.32], gap="small")
     with action_cols[0]:
-        if st.button("Edit In Compare", key="saved_portfolio_load_into_compare", use_container_width=True):
+        if st.button("Load Saved Setup Into Compare", key="saved_portfolio_load_into_compare", use_container_width=True):
             _queue_saved_portfolio_compare_prefill(selected_record)
             st.rerun()
     with action_cols[1]:
@@ -5392,7 +5392,7 @@ def _render_saved_portfolio_workspace() -> None:
                 st.error("Saved portfolio delete failed.")
     with action_cols[3]:
         st.caption(
-            "`Edit In Compare`는 저장된 compare 전략/기간/세부 설정과 weighted portfolio "
+            "`Load Saved Setup Into Compare`는 저장된 compare 전략/기간/세부 설정과 weighted portfolio "
             "weight/date alignment를 다시 채웁니다. "
             "`Replay Saved Portfolio`는 저장 당시의 compare부터 weighted portfolio 결과까지 한 번에 다시 실행합니다."
         )

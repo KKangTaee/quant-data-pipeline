@@ -30,8 +30,8 @@ Detailed historical logs were archived on `2026-04-13`.
 - Clarified:
   - `Save This Weighted Portfolio` now explains what `Portfolio Name` and `Description` are for
   - `Portfolio Name` starts from the current source label or strategy combination so the saved name reads less like an empty form
-  - `Edit In Compare` now reads as "restore compare settings + weighted weights/date alignment",
-    not just "jump to the compare page"
+  - the saved-portfolio re-entry button now reads as `Load Saved Setup Into Compare`
+    so it feels more like "restore settings" than "edit this record in place"
 
 ### 2026-04-15
 - Applied a Phase 20 QA-driven UX clarification pass to `Current Candidate Re-entry`.

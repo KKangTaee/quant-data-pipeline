@@ -26,7 +26,7 @@
   - compare -> weighted -> saved 흐름이 같은 작업 맥락으로 이어지게 정리
 - `completed` saved portfolio usability hardening shortlist
   - 저장된 포트폴리오에 source context를 같이 남기도록 보강
-  - `Edit In Compare`, `Replay Saved Portfolio`, `Source & Next Step` 탭으로 다음 행동이 더 직접적으로 보이게 정리
+  - `Load Saved Setup Into Compare`, `Replay Saved Portfolio`, `Source & Next Step` 탭으로 다음 행동이 더 직접적으로 보이게 정리
   - `Save This Weighted Portfolio`에서 추천 이름과 description 의미를 먼저 설명해 save 시점의 의도를 더 쉽게 읽히게 정리
 
 ## 3. Validation

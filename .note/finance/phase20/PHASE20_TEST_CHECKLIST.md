@@ -88,7 +88,7 @@
   - [ ] 저장된 포트폴리오 목록에 `Source` 컬럼이 보이는지
   - [ ] 저장된 포트폴리오 상세에서 `Source & Next Step` 탭이 보이는지
   - [ ] `Source & Next Step` 탭에서 이 포트폴리오가 어디서 왔는지와 다음 행동이 쉽게 읽히는지
-  - [ ] `Edit In Compare`를 누르면 compare 화면 상단으로 이동하고, `Compare Form Updated`와 `Weighted Portfolio Builder`에서 전략 조합/기간/세부 설정/weights/date alignment가 다시 채워진 것을 확인할 수 있는지
+  - [ ] `Load Saved Setup Into Compare`를 누르면 compare 화면 상단으로 이동하고, `Compare Form Updated`와 `Weighted Portfolio Builder`에서 전략 조합/기간/세부 설정/weights/date alignment가 다시 채워진 것을 확인할 수 있는지
   - [ ] `Replay Saved Portfolio`를 누르면 저장된 compare context와 weighted portfolio 구성을 그대로 다시 실행하는지
   - [ ] saved portfolio를 다시 열었을 때 "수정할지 / 그대로 재실행할지" 판단이 더 쉬워졌는지
 

@@ -40,7 +40,7 @@ Detailed historical analysis was archived on `2026-04-13`.
     - saved portfolio replay는 "현재 runtime이 이해할 수 있는 저장 설정"만 사용해 다시 실행되는 경로로 읽는 것이 맞다
     - 따라서 과거 record와 현재 runtime 사이의 얇은 schema drift가 replay 자체를 막지 않게 되었다
 
-### 2026-04-16 - Saved portfolio 재진입 UX에서는 "화면 이동"보다 "무엇이 다시 채워졌는지"를 먼저 알려줘야 이해가 쉬워진다
+### 2026-04-16 - Saved portfolio 재진입 버튼은 "edit"보다 "saved setup을 compare로 다시 불러온다"는 뜻이 먼저 읽혀야 덜 헷갈린다
 - Request topic:
   - 사용자가 `Save This Weighted Portfolio`, `Edit In Compare`, `Replay Saved Portfolio`의 역할이 헷갈린다고 피드백함
 - Interpreted goal:
@@ -49,7 +49,10 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `Save This Weighted Portfolio`에서는
     `Portfolio Name`이 source label 또는 strategy 조합 기준 추천 이름으로 먼저 채워지고,
     `Description`은 "왜 저장하는지"를 남기는 메모라는 점을 더 직접적으로 설명하게 바꿨다
-  - `Edit In Compare`는 단순히 compare 화면 상단으로 이동하는 버튼이 아니라,
+  - `Edit In Compare`는 이름 자체가 "저장 record를 여기서 직접 수정한다"는 느낌을 줘서 혼동을 만들었다
+  - 그래서 버튼 이름을 `Load Saved Setup Into Compare`로 바꿔,
+    "저장된 설정을 compare 화면으로 다시 채운다"는 뜻이 먼저 읽히게 정리했다
+  - `Load Saved Setup Into Compare`는 단순히 compare 화면 상단으로 이동하는 버튼이 아니라,
     compare 전략/기간/세부 설정과 weighted portfolio의 weight/date alignment를 다시 채우는 동선으로 설명을 수정했다
   - `Replay Saved Portfolio`는
     저장 당시 compare context와 weighted portfolio 구성을 그대로 다시 실행하는 버튼이라는 점을 더 직접적으로 정리했다

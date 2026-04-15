@@ -58,7 +58,7 @@
   - `Phase 20` 이후 어떤 질문으로 다음 phase를 여는 것이 자연스러운지 정리한 handoff 문서
 - `.note/finance/phase20/PHASE20_TEST_CHECKLIST.md`
   - current candidate 재진입, compare -> weighted 흐름, saved portfolio 재진입,
-    `Save This Weighted Portfolio`, `Edit In Compare`, `Replay Saved Portfolio`가 현재 UI 이름과 실제 동작 기준으로 자연스럽게 읽히는지 확인하는 manual checklist
+    `Save This Weighted Portfolio`, `Load Saved Setup Into Compare`, `Replay Saved Portfolio`가 현재 UI 이름과 실제 동작 기준으로 자연스럽게 읽히는지 확인하는 manual checklist
 - `.note/finance/CURRENT_CANDIDATE_REGISTRY_GUIDE.md`
   - `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`가 무엇인지, 왜 필요한지, script로 어떻게 읽고 검증하는지 정리한 안내 문서
 - `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`
