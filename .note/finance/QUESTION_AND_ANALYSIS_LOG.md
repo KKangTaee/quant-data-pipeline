@@ -21,6 +21,40 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-04-15 - Quality Strict Annual에서 Coverage 300 + Historical Dynamic + default contract 조합이 높은 CAGR을 보여도, 최근 phase에서 의도치 않게 느슨해진 것은 아니다
+- Request topic:
+  - `Quality Snapshot (Strict Annual)`에서
+    `US Statement Coverage 300` + `Historical Dynamic PIT Universe` + 대부분 default 값으로 실행했을 때
+    `CAGR 42%대 / MDD -24%대`가 나온 것이 유효한지, 최근 phase 작업 중 무언가 느슨해진 것은 아닌지 검토 요청
+- Interpreted goal:
+  - 현재 높은 수익률 결과가 회귀나 unintended loosening 때문인지,
+    아니면 원래 이 research-mode contract에서 나올 수 있는 값인지 구분
+- Result:
+  - 현재 코드 기준 default contract는 여전히 loose research-mode 성격이다
+    - `Quality Strict Annual` 기본 `Top N = 2`
+    - `Minimum History = 0M`
+    - `Min Avg Dollar Volume 20D = 0.0M`
+    - underperformance / drawdown guardrail `off`
+    - trend filter / market regime도 기본 `off`
+  - 여기에 `Historical Dynamic PIT Universe`를 켜면
+    wide preset + dynamic membership + concentrated `Top N = 2`
+    조합이 되어, 높은 CAGR이 나와도 이상하지 않다
+  - 실제로 과거 문서에도 비슷한 계열 결과가 이미 있다:
+    `Phase 5` wide-preset sanity check에서
+    `Quality Snapshot (Strict Annual)` + `Coverage 300` + overlay off가
+    `CAGR 44.43% / MDD -23.93%`로 기록돼 있다
+  - 따라서 이번 결과는 "최근 phase에서 몰래 loosened 됐다"기보다,
+    원래 loose default research contract에서 나올 수 있는 결과로 보는 것이 맞다
+  - 주의할 점:
+    - 이 결과가 높게 보여도 promotion이 `hold`인 이유는
+      practical contract와 validation/promotion 기준을 통과하지 못하기 때문이며,
+      practical candidate one-pager에서 쓰는 계약과는 다르다
+  - 정리:
+    - 현재 결과는 유효한 research result로 볼 수 있다
+    - 다만 실전형 candidate와 직접 비교하면 안 되고,
+      apples-to-apples 비교를 하려면
+      `12M history`, `5M liquidity`, guardrail `on`, chosen benchmark / trend contract 같은 practical setting을 같이 맞춰야 한다
+
 ### 2026-04-15 - strict annual quality backtest error was caused by shadow sample entrypoints lagging behind the new contract argument
 - Request topic:
   - `Quality Snapshot (Strict Annual)` backtest raised
