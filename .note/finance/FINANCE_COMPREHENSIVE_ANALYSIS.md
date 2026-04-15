@@ -652,9 +652,18 @@ Analysis / Presentation
   - current candidate compare re-entry
   세 가지 operator ingress를 함께 가지게 되었다.
 - Phase 20 second work unit에서는 이 흐름이 weighted portfolio와 saved portfolio까지 더 직접적으로 이어지도록 보강되었다.
-  - `Weighted Portfolio Builder` 위에
-    `Current Compare Bundle` summary가 추가되어,
-    current compare가 어디서 왔는지와 다음 행동을 바로 볼 수 있다.
+  - `Weighted Portfolio Builder` 위에는
+    현재 compare 결과를 내부 bundle 이름보다
+    "지금 무엇을 섞는가" 중심으로 읽히게 하는 summary가 추가되었다.
+    이 summary는
+    - 들어온 경로
+    - 묶음 이름
+    - 비교 기간
+    - 조합할 전략 수
+    를 먼저 보여주고,
+    그 아래에
+    `Strategy / Period / CAGR / MDD / Promotion`
+    표를 붙여 실제 조합 대상 전략을 바로 읽게 만든다.
   - current candidate 또는 saved portfolio에서 compare를 다시 불러온 직후에는
     `What Changed In Compare` summary가 함께 보여서,
     어떤 전략/기간/override가 방금 compare form에 채워졌는지와

@@ -19,7 +19,7 @@
 ## 2. Compare And Portfolio Workflow Hardening
 
 - `completed` compare-to-weighted bridge friction cleanup
-  - compare 결과가 어떤 후보 묶음에서 왔는지 `Current Compare Bundle`로 바로 보이게 정리
+  - compare 결과가 어떤 후보 묶음에서 왔는지 weighted builder 상단 summary로 바로 보이게 정리
   - weighted portfolio builder가 compare source context를 같이 들고 가도록 보강
 - `completed` weighted result re-entry flow 정리
   - weighted portfolio meta와 history context에 compare source context가 남도록 연결
@@ -87,6 +87,9 @@
 - `completed` compare strict annual guardrail-reference regression bugfix
   - `Guardrail / Reference Ticker`를 `Guardrails`로 옮긴 뒤 compare quality path에 예전 변수 대입이 한 줄 남아 있던 회귀를 제거
   - compare strict annual도 single strict annual과 같은 ownership 구조로 다시 맞춤
+- `completed` weighted builder context card UX cleanup
+  - `Current Compare Bundle` 느낌의 내부자 카드 대신, "지금 무엇을 섞는가" 중심의 summary로 재구성
+  - source / period / strategy count / strategy performance table / next action 흐름으로 재배치
 - `pending` targeted UI validation
   - current candidate re-entry -> compare
   - compare -> weighted portfolio

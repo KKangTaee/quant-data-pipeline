@@ -895,3 +895,21 @@ Detailed historical logs were archived on `2026-04-13`.
   - `python3 plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py`
 - Durable takeaway:
   - the compare strict-annual UI now uses the same guardrail-reference ownership model as the single-strategy UI, so the late `NameError` regression is removed.
+
+### 2026-04-16
+- Phase 20 QA then pointed out that the information block above `Weighted Portfolio Builder` still read like an internal context card instead of an operator-friendly "what am I combining?" view.
+- Changed:
+  - rewrote the builder intro copy in plain language so the section reads as "compare에서 본 전략을 어떤 비중으로 섞는 단계"
+  - replaced the old `Current Compare Bundle` style card with a clearer `What You Are Combining` summary
+  - the summary now shows:
+    - where this compare result came from
+    - which period is being combined
+    - how many strategies are in scope
+    - a compact strategy table with `Strategy / Period / CAGR / MDD / Promotion`
+  - kept saved-portfolio re-entry weights visible only when they actually exist, as context rather than as the main headline
+- Validation:
+  - `python3 -m py_compile app/web/pages/backtest.py`
+  - `.venv/bin/python -c "import app.web.pages.backtest"`
+  - `python3 plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py`
+- Durable takeaway:
+  - weighted-builder context now starts from "what we are combining" instead of "what internal compare bundle object exists," which is easier to read during QA and normal operator use.

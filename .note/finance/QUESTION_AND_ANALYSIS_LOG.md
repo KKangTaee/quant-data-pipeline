@@ -124,6 +124,29 @@ Detailed historical analysis was archived on `2026-04-13`.
     single strict annual과 동일하게
     `Guardrails` expander 안에서만 guardrail reference ticker를 다루도록 정리했다
   - `Missing Submit Button` 경고는 form 전체가 이 예외로 중간에 끊기면서 따라 나온 2차 증상으로 해석하는 것이 맞다
+
+### 2026-04-16 - `Weighted Portfolio Builder` 상단 정보는 compare 메타정보보다 "지금 무엇을 섞는가"를 먼저 보여주는 편이 더 이해하기 쉽다
+- Request topic:
+  - 사용자가 `Weighted Portfolio Builder`의 `current compare bundle` 및 기타 정보가 UX/UI적으로 잘 읽히지 않는다고 지적함
+- Interpreted goal:
+  - weighted builder에 들어왔을 때
+    - 지금 어떤 compare 결과를 조합하려는지
+    - 어떤 전략들을 실제로 섞게 되는지
+    - 다음에 무엇을 해야 하는지
+    를 먼저 읽히게 만들고 싶음
+- Result:
+  - 기존의 `Current Compare Bundle` 느낌의 내부 맥락 카드 대신,
+    `What You Are Combining` 구조로 다시 정리했다
+  - 상단에는
+    - 들어온 경로
+    - 묶음 이름
+    - 비교 기간
+    - 조합할 전략 수
+    를 보여주고
+  - 그 아래에는
+    `Strategy / Period / CAGR / MDD / Promotion`
+    표를 배치해, 실제로 어떤 compare 결과를 섞는지 한 번에 보이게 했다
+  - 마지막에는 "위 전략 표 확인 -> weight 입력 -> date alignment 선택 -> build" 순서의 다음 행동을 명시했다
   - saved portfolio는 `Edit In Compare`, `Replay Saved Portfolio`, `Source & Next Step` 기준으로
     다시 수정할지 그대로 재실행할지 판단이 더 쉬워졌다
   - 따라서 `Phase 20`은

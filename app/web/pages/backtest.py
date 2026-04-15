@@ -4967,8 +4967,11 @@ def _render_weighted_portfolio_builder() -> None:
     _apply_weighted_portfolio_prefill(strategy_names)
 
     st.markdown("### Weighted Portfolio Builder")
-    st.caption("Combine already-compared strategies into one monthly weighted portfolio. This is the first UI path for cases like `Dual Momentum 50 + GTAA 50`.")
-    _render_compare_source_context_card(compare_source_context)
+    st.caption(
+        "방금 compare에서 확인한 전략들을 어떤 비중으로 섞을지 정하는 단계입니다. "
+        "예: `Dual Momentum 50 + GTAA 50` 같은 월간 혼합 포트폴리오."
+    )
+    _render_compare_source_context_card(compare_source_context, bundles)
 
     with st.form("weighted_portfolio_builder_form", clear_on_submit=False):
         weight_cols = st.columns(min(len(strategy_names), 4))
@@ -7175,31 +7178,74 @@ def _compare_source_kind_plain_text(source_kind: str | None) -> str:
     return mapping.get(str(source_kind or "").strip(), "직접 선택한 compare 설정")
 
 
-def _render_compare_source_context_card(source_context: dict[str, Any] | None) -> None:
+def _build_weighted_builder_compare_rows(bundles: list[dict[str, Any]]) -> pd.DataFrame:
+    rows: list[dict[str, Any]] = []
+    for bundle in bundles:
+        summary_df = bundle.get("summary_df")
+        meta = dict(bundle.get("meta") or {})
+        summary_row = summary_df.iloc[0] if summary_df is not None and not summary_df.empty else None
+        rows.append(
+            {
+                "Strategy": bundle.get("strategy_name") or "-",
+                "Period": f"{meta.get('start') or '-'} -> {meta.get('end') or '-'}",
+                "CAGR": _format_percent(float(summary_row["CAGR"])) if summary_row is not None and pd.notna(summary_row.get("CAGR")) else "-",
+                "MDD": _format_percent(float(summary_row["Maximum Drawdown"])) if summary_row is not None and pd.notna(summary_row.get("Maximum Drawdown")) else "-",
+                "Promotion": meta.get("promotion_label") or meta.get("promotion_status") or meta.get("promotion") or "-",
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def _render_compare_source_context_card(source_context: dict[str, Any] | None, bundles: list[dict[str, Any]]) -> None:
     source_context = dict(source_context or {})
-    if not source_context:
+    if not source_context and not bundles:
         return
 
+    first_meta = dict((bundles[0].get("meta") or {}) if bundles else {})
     source_kind = _compare_source_kind_label(source_context.get("source_kind"))
     source_label = str(source_context.get("source_label") or "-").strip()
-    selected_strategies = list(source_context.get("selected_strategies") or [])
+    selected_strategies = list(source_context.get("selected_strategies") or [bundle.get("strategy_name") for bundle in bundles])
     registry_ids = list(source_context.get("registry_ids") or [])
     weights_percent = list(source_context.get("weights_percent") or [])
+    compare_period = f"{first_meta.get('start') or '-'} -> {first_meta.get('end') or '-'}"
+    timeframe = first_meta.get("timeframe") or "-"
+    option = first_meta.get("option") or "-"
+    strategy_rows_df = _build_weighted_builder_compare_rows(bundles)
 
-    st.markdown("##### Current Compare Bundle")
-    st.caption("지금 보고 있는 compare run이 어디서 왔는지와, 다음에 weighted portfolio로 이어갈 때 어떤 묶음인지 보여주는 요약입니다.")
-    summary_cols = st.columns(3, gap="small")
+    st.markdown("##### What You Are Combining")
+    st.caption(
+        "지금 `Weighted Portfolio Builder`는 가장 최근 compare 결과를 기준으로 동작합니다. "
+        "즉 아래에 보이는 전략들을 어떤 비중으로 섞을지 정하는 단계입니다."
+    )
+    summary_cols = st.columns(4, gap="small")
     with summary_cols[0]:
-        st.markdown(f"- `Source`: `{source_kind}`")
+        st.markdown(f"**들어온 경로**  \n`{_compare_source_kind_plain_text(source_context.get('source_kind'))}`")
     with summary_cols[1]:
-        st.markdown(f"- `Label`: `{source_label or '-'}`")
+        st.markdown(f"**묶음 이름**  \n`{source_label or '-'}`")
     with summary_cols[2]:
-        st.markdown(f"- `Strategies`: `{', '.join(selected_strategies) or '-'}`")
+        st.markdown(f"**비교 기간**  \n`{compare_period}`")
+    with summary_cols[3]:
+        st.markdown(f"**조합할 전략 수**  \n`{len([name for name in selected_strategies if name])}`")
+    st.caption(
+        f"현재 compare 결과는 `Timeframe = {timeframe}`, `Option = {option}` 기준입니다. "
+        "이 설정 위에서 아래 가중 조합을 만들게 됩니다."
+    )
+    if not strategy_rows_df.empty:
+        st.markdown("**이번에 섞게 되는 전략**")
+        st.dataframe(strategy_rows_df, use_container_width=True, hide_index=True)
     if registry_ids:
         st.caption(f"Registry IDs: {', '.join(registry_ids)}")
     if weights_percent:
-        st.caption(f"Stored Weights (%): {', '.join(f'{float(weight):.1f}' for weight in weights_percent)}")
-    st.info("권장 흐름: compare 결과를 확인한 뒤 바로 아래 `Weighted Portfolio Builder`에서 조합을 만들고, 필요하면 `Saved Portfolios`로 이어가면 됩니다.")
+        st.caption(
+            "이 compare는 이전에 저장된 비중을 함께 갖고 들어왔습니다: "
+            + ", ".join(f"{float(weight):.1f}%" for weight in weights_percent)
+        )
+    st.info(
+        "권장 흐름: 1) 위 전략 표를 보고 무엇을 섞는지 확인하고, "
+        "2) 바로 아래에서 strategy별 weight를 넣고, "
+        "3) `Date Alignment`를 고른 뒤, "
+        "4) `Build Weighted Portfolio`를 눌러 결과를 만듭니다."
+    )
 
 
 def _resolve_saved_portfolio_dynamic_inputs(
