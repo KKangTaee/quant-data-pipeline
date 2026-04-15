@@ -1,0 +1,68 @@
+# Current Candidate Registry Guide
+
+## 이 문서는 무엇인가
+- `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl` 파일이 무엇인지, 왜 만들었는지, 어떻게 쓰는지 설명하는 안내 문서다.
+
+## 목적
+- current candidate와 near-miss를 사람이 읽는 Markdown 문서만이 아니라,
+  기계가 다시 읽을 수 있는 형태로도 남긴다.
+- 이후 automation, plugin workflow, scenario persistence가 같은 후보를 더 안정적으로 다시 참조할 수 있게 만든다.
+
+## 쉽게 말하면
+- 지금까지는 current candidate가 주로 Markdown 문서에 있었다.
+- 이제는 같은 후보를 JSONL 파일에도 같이 남겨서,
+  script나 plugin이 "현재 anchor가 무엇인지"를 더 쉽게 다시 읽을 수 있게 만든다.
+
+## 왜 필요한가
+- strongest candidate, lower-MDD near-miss, cleaner alternative는 자주 다시 참조된다.
+- 그런데 이 정보가 문서에만 있으면:
+  - script가 쓰기 어렵고
+  - plugin workflow에서 재사용하기 어렵고
+  - future automation에서 source-of-truth가 흐려질 수 있다.
+- 그래서 사람용 요약 문서와 별도로,
+  machine-readable registry를 같이 두는 것이 자연스럽다.
+
+## 파일 위치
+- registry:
+  - `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`
+- human-facing summary:
+  - `.note/finance/backtest_reports/strategies/CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md`
+
+## 역할 분리
+- `CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md`
+  - 사람이 읽는 front door 문서
+- `CURRENT_CANDIDATE_REGISTRY.jsonl`
+  - script, automation, plugin이 읽는 machine-readable persistence
+
+## 기본 사용 방법
+
+### 1. 현재 seed 상태 확인
+```bash
+python3 plugins/quant-finance-workflow/scripts/manage_current_candidate_registry.py list
+```
+
+### 2. 특정 후보 상세 확인
+```bash
+python3 plugins/quant-finance-workflow/scripts/manage_current_candidate_registry.py show value_current_anchor_top14_psr
+```
+
+### 3. registry 무결성 확인
+```bash
+python3 plugins/quant-finance-workflow/scripts/manage_current_candidate_registry.py validate
+```
+
+### 4. 새 registry row 추가
+```bash
+python3 plugins/quant-finance-workflow/scripts/manage_current_candidate_registry.py append --json-file path/to/row.json
+```
+
+## 현재 기준 record 예시
+- `current_candidate`
+  - 지금 다시 봐야 하는 strongest practical point
+- `near_miss`
+  - MDD는 더 좋지만 gate가 약해진 후보
+- `scenario`
+  - cleaner alternative나 future revisit 후보
+
+## 한 줄 정리
+- current candidate registry는 **사람이 읽는 current candidate summary를, script와 plugin도 다시 읽을 수 있게 만든 JSONL 기반 persistence layer**다.

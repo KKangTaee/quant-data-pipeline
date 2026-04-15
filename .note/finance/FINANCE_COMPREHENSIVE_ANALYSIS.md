@@ -2490,3 +2490,39 @@ DB 적재 계층은 실제 운영용 파이프라인처럼 보이지만, 전략 
 4. 팩터 문제면 `fundamentals -> factors -> point-in-time 이슈`를 같이 본다
 
 즉, 이 문서는 단순 설명 문서가 아니라 이후 분석과 설계 대화의 기준 좌표다.
+
+---
+
+## 18. 현재 반복 연구를 돕는 automation / persistence baseline
+
+최근 phase 진행을 거치며,
+반복 연구를 덜 수동적으로 하기 위한 repo-local baseline도 함께 정리되었다.
+
+핵심은 아래 세 가지다.
+
+1. phase 문서 bootstrap
+- `plugins/quant-finance-workflow/scripts/bootstrap_finance_phase_bundle.py`
+- 새 phase를 열 때
+  - plan
+  - current TODO
+  - completion summary
+  - next phase preparation
+  - test checklist
+  를 한 번에 만드는 script다.
+
+2. current candidate registry
+- `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`
+- strongest candidate와 near-miss를 machine-readable하게 남기는 append-only registry다.
+- 사람용 요약 문서인
+  `.note/finance/backtest_reports/strategies/CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md`
+  와 역할을 나눠 가진다.
+
+3. refinement hygiene helper
+- `plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py`
+- 문서, index, root logs, generated artifacts, current candidate registry까지
+  refinement closeout 상태를 함께 점검하는 script다.
+
+즉 현재 `finance` 프로젝트는
+단순히 백테스트를 실행하는 수준을 넘어,
+**phase 문서 운영과 current candidate persistence까지 포함한 반복 연구 workflow**
+를 점점 더 정리해 가고 있는 상태라고 볼 수 있다.

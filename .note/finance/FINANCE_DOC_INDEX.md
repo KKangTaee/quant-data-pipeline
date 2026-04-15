@@ -42,6 +42,24 @@
   - `Phase 20` 현재 챕터 TODO 보드
 - `.note/finance/phase20/PHASE20_OPERATOR_WORKFLOW_INVENTORY_FIRST_PASS.md`
   - strongest candidate, compare, weighted portfolio, saved portfolio 흐름에서 실제로 어디가 불편한지 first-pass로 정리한 workflow inventory 문서
+- `.note/finance/CURRENT_CANDIDATE_REGISTRY_GUIDE.md`
+  - `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`가 무엇인지, 왜 필요한지, script로 어떻게 읽고 검증하는지 정리한 안내 문서
+- `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`
+  - current strongest candidate와 near-miss를 machine-readable하게 남기는 append-only registry 파일
+- `.note/finance/phase21/PHASE21_RESEARCH_AUTOMATION_AND_EXPERIMENT_PERSISTENCE_PLAN.md`
+  - `Phase 21`가 무엇을 하는 phase인지, 왜 지금 automation과 persistence baseline이 필요한지 설명하는 kickoff 문서
+- `.note/finance/phase21/PHASE21_CURRENT_CHAPTER_TODO.md`
+  - `Phase 21` 현재 챕터 TODO 보드
+- `.note/finance/phase21/PHASE21_PHASE_BUNDLE_AUTOMATION_FIRST_WORK_UNIT.md`
+  - phase 문서 묶음을 자동 생성하는 script를 추가한 첫 번째 작업 문서
+- `.note/finance/phase21/PHASE21_CURRENT_CANDIDATE_REGISTRY_AND_WORKFLOW_AUTOMATION_SECOND_WORK_UNIT.md`
+  - current candidate registry와 hygiene/script integration을 정리한 두 번째 작업 문서
+- `.note/finance/phase21/PHASE21_COMPLETION_SUMMARY.md`
+  - `Phase 21`이 실제로 무엇을 자동화했고 왜 practical closeout으로 볼 수 있는지 요약한 문서
+- `.note/finance/phase21/PHASE21_NEXT_PHASE_PREPARATION.md`
+  - `Phase 21` 이후 어떤 질문으로 다음 phase를 여는 것이 자연스러운지 정리한 handoff 문서
+- `.note/finance/phase21/PHASE21_TEST_CHECKLIST.md`
+  - `Phase 21` automation/persistence baseline을 script와 문서 기준으로 확인하기 위한 manual checklist
 - `.note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md`
   - `finance` 패키지 전체 구조와 DB/기능 종합 분석
 - `.note/finance/WORK_PROGRESS.md`
@@ -67,6 +85,10 @@
   - Codex plugin/skill을 현재 프로젝트 workflow에 적용할 가치가 있는지와 repo-local draft 구성 판단을 정리한 문서
 - `plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py`
   - current git diff를 기준으로 phase 문서, strategy hub / one-pager / backtest log, root concise logs, generated artifacts 상태를 한 번에 점검하는 repo-local checklist script
+- `plugins/quant-finance-workflow/scripts/bootstrap_finance_phase_bundle.py`
+  - 새 phase plan / TODO / completion / next-phase / checklist 문서 묶음을 한 번에 생성하는 repo-local automation script
+- `plugins/quant-finance-workflow/scripts/manage_current_candidate_registry.py`
+  - current candidate registry를 seed, list, show, append, validate 하는 repo-local persistence helper
 - `.note/finance/backtest_reports/README.md`
   - phase 문서와 분리해서, 결과 중심 backtest Markdown 문서를 어디에 두고 어떻게 관리할지 정리한 운영 안내 문서
 - `.note/finance/backtest_reports/BACKTEST_REPORT_INDEX.md`

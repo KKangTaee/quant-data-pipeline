@@ -598,3 +598,19 @@ Detailed historical logs were archived on `2026-04-13`.
   - synced `FINANCE_DOC_INDEX.md`
 - Durable takeaway:
   - the project is now treating candidate reuse, compare-to-portfolio flow, and saved-portfolio re-entry as the main active operator workflow problem
+
+### 2026-04-15
+- Completed a practical Phase 21 automation/persistence baseline in one work unit.
+- Changed:
+  - added `bootstrap_finance_phase_bundle.py` to open a new phase document bundle from the repo templates
+  - added `manage_current_candidate_registry.py` and seeded `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`
+  - updated `check_finance_refinement_hygiene.py` so candidate-facing doc work can also review the machine-readable candidate registry
+  - created `PHASE21` kickoff, work-unit, closeout, next-phase, and checklist documents
+  - synced `AGENTS.md`, plugin/skill docs, roadmap, doc index, registry guide, runtime artifact guidance, and finance comprehensive analysis
+- Validation:
+  - `python3 -m py_compile plugins/quant-finance-workflow/scripts/bootstrap_finance_phase_bundle.py plugins/quant-finance-workflow/scripts/manage_current_candidate_registry.py plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py`
+  - `python3 plugins/quant-finance-workflow/scripts/manage_current_candidate_registry.py validate`
+  - `python3 plugins/quant-finance-workflow/scripts/bootstrap_finance_phase_bundle.py --phase 99 --title "Automation Smoke Example" --dry-run`
+  - finance refinement hygiene script
+- Durable takeaway:
+  - the repo now has a reusable automation baseline for phase kickoff and current-candidate persistence, which lowers repeated setup cost before later deep validation phases

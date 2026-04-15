@@ -22,6 +22,7 @@
 - For `finance` work, prefer `.note/finance/` as the canonical note location.
 - Store durable analysis, architecture notes, question summaries, and implementation progress as Markdown files in `.note/finance/`.
 - Keep cross-phase documents at `.note/finance/` root.
+- For machine-readable persistence of current strongest candidates and important near-miss scenarios, prefer `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl` as the default append-only registry unless the scope clearly expands into a broader experiment registry.
 - For durable backtest result reports whose primary purpose is to record:
   - tested strategy settings
   - result summaries
@@ -48,6 +49,9 @@
   and continue the same pattern for later phases.
 - For repeated `finance` backtest-refinement work, use the repo-local hygiene helper when it is relevant:
   - `python3 plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py`
+- For current-candidate persistence or review, use the repo-local registry helper when it is relevant:
+  - `python3 plugins/quant-finance-workflow/scripts/manage_current_candidate_registry.py list`
+  - `python3 plugins/quant-finance-workflow/scripts/manage_current_candidate_registry.py validate`
 - Default moments to run it:
   - after a meaningful refinement/document-sync unit
   - before commit
@@ -109,6 +113,9 @@
   - `이 phase가 끝나면 좋은 점`
   so the plan reads as an explanation of purpose and value, not only as an internal task memo.
 - Use `.note/finance/PHASE_PLAN_TEMPLATE.md` as the default starting shape for new `finance` phase plan documents unless there is a strong reason to deviate.
+- When opening a new `finance` phase and the work would benefit from consistent boilerplate, prefer:
+  - `python3 plugins/quant-finance-workflow/scripts/bootstrap_finance_phase_bundle.py --phase <N> --title "<Phase Title>"`
+  before writing the phase documents manually.
 - In phase plan documents, prefer plain-language labels such as
   - `작업 단위`
   - `첫 번째 작업`

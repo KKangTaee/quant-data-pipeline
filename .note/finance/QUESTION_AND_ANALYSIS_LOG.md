@@ -867,3 +867,15 @@ Detailed historical analysis was archived on `2026-04-13`.
   - kickoff plan, current TODO, operator workflow inventory first pass를 만들었다
   - 현재 strongest candidate는 이미 잘 문서화되어 있지만,
     compare / weighted portfolio / saved portfolio 재진입 흐름은 여전히 더 다듬을 여지가 있다는 점을 phase kickoff 수준에서 고정했다
+
+### 2026-04-15 - Phase 21은 phase 문서 bootstrap과 current candidate registry를 practical baseline으로 먼저 여는 것이 가장 효율적이다
+- Request topic:
+  - `Phase 21`을 중간에 끊지 않고 끝까지 진행하고, 마지막에 checklist를 공유해달라는 요청
+- Interpreted goal:
+  - research automation과 experiment persistence를 막연한 계획이 아니라 실제로 바로 쓸 수 있는 baseline까지 올리고 싶음
+- Result:
+  - `Phase 21`을 `Research Automation And Experiment Persistence`로 열었다
+  - `bootstrap_finance_phase_bundle.py`를 추가해 새 phase 문서를 template 기준으로 한 번에 생성할 수 있게 했다
+  - `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`와 `manage_current_candidate_registry.py`를 추가해 current candidate를 machine-readable하게 남기고 다시 읽을 수 있게 했다
+  - `check_finance_refinement_hygiene.py`, plugin/skill docs, roadmap, doc index, runtime guidance도 새 workflow에 맞게 갱신했다
+  - 현재 판단은 `Phase 21 = practical closeout / manual_validation_pending`이며, 이후에는 `Phase 20` operator workflow hardening 또는 `Phase 22` deep validation 준비로 더 자연스럽게 이어질 수 있다

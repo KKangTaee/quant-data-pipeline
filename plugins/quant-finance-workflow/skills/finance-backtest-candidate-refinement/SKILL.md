@@ -119,3 +119,16 @@ Use this after a bounded search or document-sync work unit to see:
 - whether backtest logs and root concise logs were touched
 - whether index docs were updated
 - whether generated artifacts are still sitting in git status
+
+For machine-readable current-candidate persistence, run:
+
+```bash
+python3 plugins/quant-finance-workflow/scripts/manage_current_candidate_registry.py list
+python3 plugins/quant-finance-workflow/scripts/manage_current_candidate_registry.py validate
+```
+
+For a new phase kickoff bundle, run:
+
+```bash
+python3 plugins/quant-finance-workflow/scripts/bootstrap_finance_phase_bundle.py --phase 99 --title "Example Phase"
+```

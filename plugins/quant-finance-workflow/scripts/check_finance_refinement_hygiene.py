@@ -33,6 +33,11 @@ INDEX_DOCS = {
     ".note/finance/backtest_reports/BACKTEST_REPORT_INDEX.md",
 }
 
+REGISTRY_DOCS = {
+    ".note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl",
+    ".note/finance/EXPERIMENT_REGISTRY.jsonl",
+}
+
 
 def _git_status() -> list[dict[str, str]]:
     proc = subprocess.run(
@@ -67,6 +72,7 @@ def _classify(paths: list[str]) -> dict[str, list[str]]:
         "one_pagers": [],
         "root_logs": [],
         "indexes": [],
+        "registries": [],
         "other_docs": [],
         "other_files": [],
     }
@@ -77,6 +83,8 @@ def _classify(paths: list[str]) -> dict[str, list[str]]:
             out["root_logs"].append(path)
         elif path in INDEX_DOCS:
             out["indexes"].append(path)
+        elif path in REGISTRY_DOCS:
+            out["registries"].append(path)
         elif path.startswith(".note/finance/phase") and path.endswith(".md"):
             out["phase_docs"].append(path)
         elif path.startswith(".note/finance/backtest_reports/strategies/") and path.endswith("_BACKTEST_LOG.md"):
@@ -124,6 +132,7 @@ def _build_checks(groups: dict[str, list[str]]) -> list[dict[str, str]]:
     generated = groups["generated"]
     other_docs = groups["other_docs"]
     indexes = groups["indexes"]
+    registries = groups["registries"]
 
     if phase_docs:
         has_todo = any("CURRENT_CHAPTER_TODO" in path for path in phase_docs)
@@ -176,6 +185,18 @@ def _build_checks(groups: dict[str, list[str]]) -> list[dict[str, str]]:
             }
         )
 
+    if changed_strategy_families or any("CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md" in path for path in other_docs):
+        has_candidate_registry = ".note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl" in registries
+        checks.append(
+            {
+                "name": "current candidate registry reviewed",
+                "ok": "yes" if has_candidate_registry else "no",
+                "detail": "machine-readable current candidate registry touched"
+                if has_candidate_registry
+                else "candidate-facing docs changed but CURRENT_CANDIDATE_REGISTRY.jsonl was not touched",
+            }
+        )
+
     if phase_docs or strategy_hubs or one_pagers:
         checks.append(
             {
@@ -214,6 +235,7 @@ def _render_text(status_rows: list[dict[str, str]], groups: dict[str, list[str]]
         ("backtest_logs", "Backtest logs"),
         ("root_logs", "Root concise logs"),
         ("indexes", "Index docs"),
+        ("registries", "Registries"),
         ("other_docs", "Other docs"),
         ("generated", "Generated artifacts"),
         ("other_files", "Other files"),

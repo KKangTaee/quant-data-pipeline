@@ -3,9 +3,10 @@
 ## Read first
 
 - `.note/finance/backtest_reports/strategies/CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md`
-- `.note/finance/phase17/PHASE17_CURRENT_CHAPTER_TODO.md`
-- `.note/finance/phase17/PHASE17_STRUCTURAL_LEVER_INVENTORY_FIRST_PASS.md`
-- `.note/finance/phase17/PHASE17_CANDIDATE_CONSOLIDATION_FIT_REVIEW_FIRST_PASS.md`
+- `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`
+- `.note/finance/phase20/PHASE20_CURRENT_CHAPTER_TODO.md`
+- `.note/finance/phase20/PHASE20_OPERATOR_WORKFLOW_INVENTORY_FIRST_PASS.md`
+- `.note/finance/phase21/PHASE21_CURRENT_CHAPTER_TODO.md`
 - relevant strategy hub:
   - `VALUE_STRICT_ANNUAL.md`
   - `QUALITY_STRICT_ANNUAL.md`
@@ -45,6 +46,13 @@ This script checks the current git diff and highlights:
 - whether root concise logs were touched
 - whether generated artifacts are still present
 
+For current-candidate persistence, run:
+
+```bash
+python3 plugins/quant-finance-workflow/scripts/manage_current_candidate_registry.py list
+python3 plugins/quant-finance-workflow/scripts/manage_current_candidate_registry.py validate
+```
+
 ## Candidate language rules
 
 - distinguish:
@@ -60,9 +68,9 @@ This script checks the current git diff and highlights:
 
 ## Current priority
 
-1. `Value`
-   - structural lower-MDD rescue slice 결정
-2. `Quality + Value`
-   - strongest practical point를 해치지 않는 구조 레버 확인
-3. candidate consolidation
-   - weighted/saved portfolio를 operator bridge로 유지
+1. candidate consolidation
+   - current candidate를 compare / weighted / saved workflow와 더 잘 연결
+2. current candidate persistence
+   - registry와 summary를 같이 유지
+3. automation baseline
+   - phase bundle / hygiene / registry helper를 다음 세션에서도 다시 쓰기 쉽게 유지

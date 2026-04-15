@@ -34,6 +34,7 @@ git 상태를 지저분하게 만들기 쉽다.
 - strategy backtest log
 - current candidate summary
 - glossary / roadmap / index
+- current candidate registry (`CURRENT_CANDIDATE_REGISTRY.jsonl`)
 
 ### runtime artifact
 
@@ -54,6 +55,11 @@ git 상태를 지저분하게 만들기 쉽다.
 2. 다시 볼 가치가 있는 결과는 strategy backtest log에 append한다
 3. runtime file은 기본적으로 generated state로 취급한다
 4. commit 전에는 `git status`에서 artifact가 섞이지 않았는지 먼저 본다
+
+단, 아래 파일은 generated artifact가 아니라
+의도적으로 유지하는 durable registry로 본다.
+
+- `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`
 
 ## 지금 프로젝트에서 특히 조심할 것
 

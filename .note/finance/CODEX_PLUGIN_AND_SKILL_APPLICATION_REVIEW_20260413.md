@@ -84,6 +84,15 @@ repo-local first practical script:
     - generated artifacts
     상태를 한 번에 점검하는 checklist runner
 
+Phase 21 practical baseline:
+
+- `plugins/quant-finance-workflow/scripts/bootstrap_finance_phase_bundle.py`
+  - 새 phase 문서를 template 기준으로 한 번에 여는 automation script
+- `plugins/quant-finance-workflow/scripts/manage_current_candidate_registry.py`
+  - current strongest candidate와 near-miss를 machine-readable registry로 남기고 다시 읽는 persistence helper
+- `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`
+  - current candidate automation baseline을 위한 append-only registry
+
 이 초안은:
 
 - 지금 프로젝트의 backtest refinement 흐름을 재사용 가능한 skill로 묶고
