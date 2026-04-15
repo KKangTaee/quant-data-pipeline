@@ -21,6 +21,22 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-04-15 - Phase 20의 핵심은 후보를 더 찾는 일이 아니라, 현재 후보를 다시 쓰는 operator workflow를 다듬는 일이었다
+- Request topic:
+  - Phase 20을 중간에 끊지 않고 끝까지 진행하고 checklist까지 정리
+- Interpreted goal:
+  - current candidate -> compare -> weighted portfolio -> saved portfolio 재진입 흐름을 practical closeout 기준으로 정리
+- Result:
+  - `Phase 20` first work unit에서 current candidate를 compare로 다시 보내는 UI ingress를 열었다
+  - second work unit에서 compare source context를 weighted portfolio와 saved portfolio까지 이어,
+    현재 compare bundle의 출처와 다음 행동을 더 직접적으로 보이게 만들었다
+  - saved portfolio는 `Edit In Compare`, `Replay Saved Portfolio`, `Source & Next Step` 기준으로
+    다시 수정할지 그대로 재실행할지 판단이 더 쉬워졌다
+  - 따라서 `Phase 20`은
+    "새 후보 탐색"보다
+    "현재 후보를 operator workflow 안에서 더 쉽게 다시 쓰는 일"
+    을 practical closeout 수준으로 정리한 phase로 보는 것이 맞다
+
 ### 2026-04-13 - 현재 우선순위는 기능 확장보다 downside-focused practical refinement
 - Request topic:
   - 낮은 `MDD`, 높은 수익률, 그리고 실전 사용 가능 전략을 찾는 것이 지금 핵심인지 확인

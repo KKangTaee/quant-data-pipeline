@@ -41,6 +41,9 @@
 - 즉 현재 strongest candidate와 near-miss는
   문서에서만 다시 찾는 것이 아니라,
   compare workflow로 다시 보내는 UI ingress로도 쓰이기 시작했다.
+- 그리고 compare로 다시 불러온 뒤에는
+  `Current Compare Bundle` 요약을 통해
+  weighted portfolio와 saved portfolio까지 같은 출처 맥락을 이어갈 수 있게 됐다.
 
 ## 기본 사용 방법
 

@@ -103,5 +103,16 @@
 - compare 결과에서 weighted / saved portfolio로 넘어갈 때 불필요한 단계가 줄었는가
 - saved portfolio를 다시 열었을 때 "다음에 무엇을 해야 하는지"가 더 분명해졌는가
 
+## 현재 상태
+- `practical closeout / manual_validation_pending`
+
+## 현재 상태 요약
+- first work unit에서 current candidate를 compare로 바로 다시 보내는 입구를 열었다.
+- second work unit에서 compare source context를 weighted portfolio와 saved portfolio까지 이어,
+  지금 보고 있는 compare bundle의 출처와 다음 행동이 더 직접적으로 보이게 만들었다.
+- 즉 `Phase 20`은
+  current candidate -> compare -> weighted portfolio -> saved portfolio
+  재진입 흐름을 실제 operator workflow 기준으로 더 자연스럽게 읽히게 만든 상태다.
+
 ## 한 줄 정리
 - `Phase 20`은 **좋은 후보를 더 많이 찾는 phase가 아니라, 지금 찾은 좋은 후보를 더 쉽게 다시 쓰게 만드는 phase**다.

@@ -531,6 +531,22 @@ Analysis / Presentation
   - saved portfolio compare re-entry
   - current candidate compare re-entry
   세 가지 operator ingress를 함께 가지게 되었다.
+- Phase 20 second work unit에서는 이 흐름이 weighted portfolio와 saved portfolio까지 더 직접적으로 이어지도록 보강되었다.
+  - `Weighted Portfolio Builder` 위에
+    `Current Compare Bundle` summary가 추가되어,
+    current compare가 어디서 왔는지와 다음 행동을 바로 볼 수 있다.
+  - weighted portfolio meta와 history context에도 compare source context가 남도록 보강되어,
+    later rerun 시 compare bundle 출처를 다시 읽기 쉬워졌다.
+  - saved portfolio는 source context를 같이 저장하고,
+    상세 surface에 `Source & Next Step` 탭을 추가해
+    "이 포트폴리오가 어디서 왔는지"와
+    "지금 다음에 무엇을 하면 되는지"
+    를 더 직접적으로 보여주게 되었다.
+  - action label도
+    - `Load Into Compare` -> `Edit In Compare`
+    - `Run Saved Portfolio` -> `Replay Saved Portfolio`
+    로 정리되어,
+    operator가 저장된 포트폴리오를 수정하려는지 그대로 재실행하려는지 더 빠르게 이해할 수 있다.
 - 또한 weighted portfolio 결과에도 `Meta` 탭이 추가되어
   `portfolio_name`, `portfolio_id`, `portfolio_source_kind`, `date_policy`,
   `selected_strategies`, `input_weights_percent`

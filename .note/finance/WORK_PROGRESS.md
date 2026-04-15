@@ -21,6 +21,21 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-04-15
+- Continued Phase 20 through practical closeout.
+- Added the second operator-workflow hardening unit:
+  - compare source context now carries into weighted portfolio and saved portfolio flows
+  - `Current Compare Bundle` summary now explains what the current compare run came from
+  - saved portfolio actions and detail tabs were renamed/expanded to make next actions clearer
+- Synced:
+  - Phase 20 closeout docs
+  - roadmap / doc index
+  - finance analysis
+  - current candidate registry guide
+- Current reading:
+  - Phase 20 is now `practical closeout / manual_validation_pending`
+  - main remaining step is the user-facing checklist
+
 ### 2026-04-13
 - Compressed the root work log into a concise active-context version.
 - Moved the previous full log to:

@@ -1,7 +1,7 @@
 # Phase 20 Current Chapter TODO
 
 ## 상태
-- `in_progress / current_candidate_reentry_first_unit_completed`
+- `practical closeout / manual_validation_pending`
 
 ## 1. Candidate Inventory And Bundle Organization
 
@@ -17,12 +17,15 @@
 
 ## 2. Compare And Portfolio Workflow Hardening
 
-- `in_progress` compare-to-weighted bridge friction cleanup
-  - compare 결과에서 weighted portfolio builder로 이어지는 흐름 점검
-- `pending` weighted result re-entry flow 정리
-  - weighted portfolio 결과를 저장 / 재실행 / 다시 비교하는 흐름 정리
-- `pending` saved portfolio usability hardening shortlist
-  - 저장된 포트폴리오를 다시 열었을 때 다음 행동이 더 분명하게 보이도록 개선 포인트 정리
+- `completed` compare-to-weighted bridge friction cleanup
+  - compare 결과가 어떤 후보 묶음에서 왔는지 `Current Compare Bundle`로 바로 보이게 정리
+  - weighted portfolio builder가 compare source context를 같이 들고 가도록 보강
+- `completed` weighted result re-entry flow 정리
+  - weighted portfolio meta와 history context에 compare source context가 남도록 연결
+  - compare -> weighted -> saved 흐름이 같은 작업 맥락으로 이어지게 정리
+- `completed` saved portfolio usability hardening shortlist
+  - 저장된 포트폴리오에 source context를 같이 남기도록 보강
+  - `Edit In Compare`, `Replay Saved Portfolio`, `Source & Next Step` 탭으로 다음 행동이 더 직접적으로 보이게 정리
 
 ## 3. Validation
 
@@ -30,16 +33,24 @@
 - `completed` `.venv` import smoke
 - `completed` current candidate registry helper smoke
   - registry row가 compare prefill contract로 변환되는지 확인
+- `completed` compare source context helper smoke
+  - current candidate / saved portfolio source context가 weighted/saved workflow와 연결되는지 확인
 - `pending` targeted UI validation
   - current candidate re-entry -> compare
   - compare -> weighted portfolio
   - weighted -> saved portfolio
-  - saved portfolio -> rerun / load / compare re-entry
+  - saved portfolio -> replay / edit-in-compare / compare re-entry
 
 ## 4. Documentation Sync
 
 - `completed` phase20 kickoff plan 문서 생성
 - `completed` phase20 current chapter TODO 문서 생성
-- `in_progress` roadmap / doc index / work log / question log sync
+- `completed` roadmap / doc index / work log / question log sync
 - `completed` phase20 first work-unit 문서 생성
   - `PHASE20_CURRENT_CANDIDATE_COMPARE_REENTRY_FIRST_WORK_UNIT.md`
+- `completed` phase20 second work-unit 문서 생성
+  - `PHASE20_COMPARE_WEIGHTED_AND_SAVED_REENTRY_HARDENING_SECOND_WORK_UNIT.md`
+- `completed` phase20 closeout 문서 생성
+  - completion summary
+  - next phase preparation
+  - test checklist

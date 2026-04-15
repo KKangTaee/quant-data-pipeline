@@ -45,6 +45,15 @@
 - `.note/finance/phase20/PHASE20_CURRENT_CANDIDATE_COMPARE_REENTRY_FIRST_WORK_UNIT.md`
   - current candidate registry를 `Compare & Portfolio Builder`로 다시 연결해,
     strongest candidate와 near-miss를 UI에서 바로 compare로 보내는 첫 실제 구현 단위를 정리한 문서
+- `.note/finance/phase20/PHASE20_COMPARE_WEIGHTED_AND_SAVED_REENTRY_HARDENING_SECOND_WORK_UNIT.md`
+  - compare source context를 weighted portfolio와 saved portfolio까지 이어서,
+    compare 결과의 출처와 다음 행동이 더 직접적으로 보이게 만든 두 번째 구현 문서
+- `.note/finance/phase20/PHASE20_COMPLETION_SUMMARY.md`
+  - `Phase 20`이 실제로 무엇을 더 쉽게 만들었는지와 왜 practical closeout으로 볼 수 있는지 정리한 closeout 문서
+- `.note/finance/phase20/PHASE20_NEXT_PHASE_PREPARATION.md`
+  - `Phase 20` 이후 어떤 질문으로 다음 phase를 여는 것이 자연스러운지 정리한 handoff 문서
+- `.note/finance/phase20/PHASE20_TEST_CHECKLIST.md`
+  - current candidate 재진입, compare -> weighted 흐름, saved portfolio 재진입, phase closeout 문서가 실제로 더 자연스럽게 읽히는지 확인하는 manual checklist
 - `.note/finance/CURRENT_CANDIDATE_REGISTRY_GUIDE.md`
   - `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`가 무엇인지, 왜 필요한지, script로 어떻게 읽고 검증하는지 정리한 안내 문서
 - `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`

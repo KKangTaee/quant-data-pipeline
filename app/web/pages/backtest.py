@@ -599,6 +599,8 @@ def _init_backtest_state() -> None:
         st.session_state.backtest_compare_prefill_pending = False
     if "backtest_compare_prefill_notice" not in st.session_state:
         st.session_state.backtest_compare_prefill_notice = None
+    if "backtest_compare_source_context" not in st.session_state:
+        st.session_state.backtest_compare_source_context = None
     if "backtest_weighted_portfolio_prefill" not in st.session_state:
         st.session_state.backtest_weighted_portfolio_prefill = None
     if "backtest_saved_portfolio_notice" not in st.session_state:
@@ -4666,6 +4668,7 @@ def _build_weighted_portfolio_bundle(
     portfolio_name: str | None = None,
     portfolio_id: str | None = None,
     source_kind: str = "weighted_builder",
+    compare_source_context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     strategy_names = [bundle["strategy_name"] for bundle in bundles]
     total_weight = sum(float(weight) for weight in weights_percent)
@@ -4720,6 +4723,7 @@ def _build_weighted_portfolio_bundle(
             "date_policy": date_policy,
             "input_weights_percent": [float(weight) for weight in weights_percent],
             "normalized_weights": normalized_weights,
+            "compare_source_context": dict(compare_source_context or {}),
         }
     )
     return weighted_bundle
@@ -4730,6 +4734,7 @@ def _build_saved_portfolio_display_rows(saved_portfolios: list[dict[str, Any]]) 
     for item in saved_portfolios:
         compare_context = item.get("compare_context") or {}
         portfolio_context = item.get("portfolio_context") or {}
+        source_context = item.get("source_context") or {}
         strategy_names = list(portfolio_context.get("strategy_names") or compare_context.get("selected_strategies") or [])
         weights_percent = list(portfolio_context.get("weights_percent") or [])
         weight_pairs = [
@@ -4744,6 +4749,7 @@ def _build_saved_portfolio_display_rows(saved_portfolios: list[dict[str, Any]]) 
                 "Weights": " | ".join(weight_pairs),
                 "Date Policy": portfolio_context.get("date_policy"),
                 "Period": f"{compare_context.get('start')} -> {compare_context.get('end')}",
+                "Source": source_context.get("source_label") or _compare_source_kind_label(source_context.get("source_kind")),
                 "Description": item.get("description"),
             }
         )
@@ -4752,6 +4758,7 @@ def _build_saved_portfolio_display_rows(saved_portfolios: list[dict[str, Any]]) 
 
 def _run_saved_portfolio_record(record: dict[str, Any]) -> None:
     compare_context = dict(record.get("compare_context") or {})
+    source_context = dict(record.get("source_context") or {})
     selected_strategies = list(compare_context.get("selected_strategies") or [])
     if not selected_strategies:
         raise BacktestInputError("Saved portfolio does not contain selected strategies.")
@@ -4785,6 +4792,14 @@ def _run_saved_portfolio_record(record: dict[str, Any]) -> None:
         portfolio_name=str(record.get("name") or ""),
         portfolio_id=str(record.get("portfolio_id") or ""),
         source_kind="saved_portfolio",
+        compare_source_context={
+            "source_kind": "saved_portfolio",
+            "source_label": record.get("name"),
+            "saved_portfolio_id": record.get("portfolio_id"),
+            "selected_strategies": selected_strategies,
+            "weights_percent": weights_percent,
+            "upstream_source_context": source_context,
+        },
     )
 
     st.session_state.backtest_compare_bundles = bundles
@@ -4792,6 +4807,14 @@ def _run_saved_portfolio_record(record: dict[str, Any]) -> None:
     st.session_state.backtest_compare_error_kind = None
     st.session_state.backtest_weighted_bundle = weighted_bundle
     st.session_state.backtest_weighted_error = None
+    st.session_state.backtest_compare_source_context = {
+        "source_kind": "saved_portfolio",
+        "source_label": record.get("name"),
+        "saved_portfolio_id": record.get("portfolio_id"),
+        "selected_strategies": selected_strategies,
+        "weights_percent": weights_percent,
+        "upstream_source_context": source_context,
+    }
     st.session_state.backtest_requested_panel = "Compare & Portfolio Builder"
 
     append_backtest_run_history(
@@ -4816,6 +4839,11 @@ def _run_saved_portfolio_record(record: dict[str, Any]) -> None:
             "strategy_overrides": strategy_overrides,
             "saved_portfolio_id": record.get("portfolio_id"),
             "saved_portfolio_name": record.get("name"),
+            "compare_source_context": {
+                "source_kind": "saved_portfolio",
+                "source_label": record.get("name"),
+                "saved_portfolio_id": record.get("portfolio_id"),
+            },
             "strategy_summaries": [
                 row
                 for bundle in bundles
@@ -4831,6 +4859,11 @@ def _run_saved_portfolio_record(record: dict[str, Any]) -> None:
             "date_policy": portfolio_context.get("date_policy"),
             "saved_portfolio_id": record.get("portfolio_id"),
             "saved_portfolio_name": record.get("name"),
+            "compare_source_context": {
+                "source_kind": "saved_portfolio",
+                "source_label": record.get("name"),
+                "saved_portfolio_id": record.get("portfolio_id"),
+            },
         },
     )
 
@@ -4841,11 +4874,13 @@ def _render_weighted_portfolio_builder() -> None:
         return
 
     strategy_names = [bundle["strategy_name"] for bundle in bundles]
+    compare_source_context = dict(st.session_state.get("backtest_compare_source_context") or {})
     default_weight = round(100 / len(strategy_names), 2)
     _apply_weighted_portfolio_prefill(strategy_names)
 
     st.markdown("### Weighted Portfolio Builder")
     st.caption("Combine already-compared strategies into one monthly weighted portfolio. This is the first UI path for cases like `Dual Momentum 50 + GTAA 50`.")
+    _render_compare_source_context_card(compare_source_context)
 
     with st.form("weighted_portfolio_builder_form", clear_on_submit=False):
         weight_cols = st.columns(min(len(strategy_names), 4))
@@ -4891,6 +4926,7 @@ def _render_weighted_portfolio_builder() -> None:
             weights_percent=weights,
             date_policy=date_policy,
             source_kind="weighted_builder",
+            compare_source_context=compare_source_context,
         )
     except Exception as exc:
         st.session_state.backtest_weighted_bundle = None
@@ -4903,7 +4939,11 @@ def _render_weighted_portfolio_builder() -> None:
     append_backtest_run_history(
         bundle=weighted_bundle,
         run_kind="weighted_portfolio",
-        context={"selected_strategies": strategy_names, "date_policy": date_policy},
+        context={
+            "selected_strategies": strategy_names,
+            "date_policy": date_policy,
+            "compare_source_context": compare_source_context,
+        },
     )
     st.success("Weighted portfolio created.")
     _render_weighted_portfolio_result(weighted_bundle)
@@ -4974,14 +5014,18 @@ def _render_saved_portfolio_workspace() -> None:
 
     compare_bundles = st.session_state.backtest_compare_bundles
     weighted_bundle = st.session_state.backtest_weighted_bundle
+    compare_source_context = dict(st.session_state.get("backtest_compare_source_context") or {})
     if compare_bundles and weighted_bundle:
         with st.expander("Save Current Weighted Portfolio", expanded=False):
             st.caption("현재 compare 결과 + weighted portfolio 구성(weight/date policy)을 저장합니다. 이후에는 저장된 포트폴리오를 바로 다시 실행하거나 compare 화면으로 불러와 수정할 수 있습니다.")
+            suggested_name = str(compare_source_context.get("source_label") or "").strip()
+            if not suggested_name:
+                suggested_name = " / ".join(list(weighted_bundle.get("component_strategy_names") or []))
             with st.form("save_saved_portfolio_form", clear_on_submit=False):
                 portfolio_name = st.text_input(
                     "Portfolio Name",
                     value="",
-                    placeholder="예: Annual Strict Blend 60/40",
+                    placeholder=suggested_name or "예: Annual Strict Blend 60/40",
                     key="saved_portfolio_name_input",
                 )
                 portfolio_description = st.text_area(
@@ -5004,6 +5048,7 @@ def _render_saved_portfolio_workspace() -> None:
                         source_context={
                             "created_from": "weighted_portfolio_builder",
                             "source_strategy_names": [bundle["strategy_name"] for bundle in compare_bundles],
+                            "compare_source_context": compare_source_context,
                         },
                     )
                     st.session_state.backtest_saved_portfolio_notice = (
@@ -5038,7 +5083,8 @@ def _render_saved_portfolio_workspace() -> None:
 
     compare_context = selected_record.get("compare_context") or {}
     portfolio_context = selected_record.get("portfolio_context") or {}
-    detail_tabs = st.tabs(["Summary", "Compare Context", "Raw Record"])
+    source_context = selected_record.get("source_context") or {}
+    detail_tabs = st.tabs(["Summary", "Source & Next Step", "Compare Context", "Raw Record"])
     with detail_tabs[0]:
         st.json(
             {
@@ -5054,6 +5100,19 @@ def _render_saved_portfolio_workspace() -> None:
             }
         )
     with detail_tabs[1]:
+        st.markdown("##### Source")
+        st.json(
+            {
+                "source_kind": source_context.get("compare_source_context", {}).get("source_kind") or source_context.get("created_from"),
+                "source_label": source_context.get("compare_source_context", {}).get("source_label"),
+                "source_strategy_names": source_context.get("source_strategy_names"),
+            }
+        )
+        st.markdown("##### Next Action")
+        st.markdown("- `Edit In Compare`: 저장된 전략 조합/기간/weights를 compare 화면으로 다시 불러와 수정합니다.")
+        st.markdown("- `Replay Saved Portfolio`: 저장된 compare context와 weights를 그대로 다시 실행합니다.")
+        st.markdown("- `Delete Portfolio`: 더 이상 쓰지 않는 저장 포트폴리오를 정리합니다.")
+    with detail_tabs[2]:
         left, right = st.columns(2, gap="large")
         with left:
             st.markdown("##### Compare Context")
@@ -5061,16 +5120,16 @@ def _render_saved_portfolio_workspace() -> None:
         with right:
             st.markdown("##### Portfolio Context")
             st.json(portfolio_context)
-    with detail_tabs[2]:
+    with detail_tabs[3]:
         st.json(selected_record)
 
     action_cols = st.columns([0.24, 0.24, 0.20, 0.32], gap="small")
     with action_cols[0]:
-        if st.button("Load Into Compare", key="saved_portfolio_load_into_compare", use_container_width=True):
+        if st.button("Edit In Compare", key="saved_portfolio_load_into_compare", use_container_width=True):
             _queue_saved_portfolio_compare_prefill(selected_record)
             st.rerun()
     with action_cols[1]:
-        if st.button("Run Saved Portfolio", key="saved_portfolio_run", use_container_width=True):
+        if st.button("Replay Saved Portfolio", key="saved_portfolio_run", use_container_width=True):
             try:
                 with st.spinner("Running saved portfolio from stored compare context..."):
                     _run_saved_portfolio_record(selected_record)
@@ -5091,8 +5150,8 @@ def _render_saved_portfolio_workspace() -> None:
                 st.error("Saved portfolio delete failed.")
     with action_cols[3]:
         st.caption(
-            "`Load Into Compare`는 저장된 전략 조합/기간/weights를 비교 화면으로 다시 채웁니다. "
-            "`Run Saved Portfolio`는 compare부터 weighted portfolio 결과까지 한 번에 다시 실행합니다."
+            "`Edit In Compare`는 저장된 전략 조합/기간/weights를 비교 화면으로 다시 채웁니다. "
+            "`Replay Saved Portfolio`는 compare부터 weighted portfolio 결과까지 한 번에 다시 실행합니다."
         )
 
 
@@ -6174,11 +6233,21 @@ def _build_saved_portfolio_context(
 def _queue_saved_portfolio_compare_prefill(saved_portfolio: dict[str, Any]) -> None:
     compare_context = dict(saved_portfolio.get("compare_context") or {})
     portfolio_context = dict(saved_portfolio.get("portfolio_context") or {})
+    source_context = dict(saved_portfolio.get("source_context") or {})
     st.session_state.backtest_compare_prefill_payload = compare_context
     st.session_state.backtest_compare_prefill_pending = True
     st.session_state.backtest_compare_prefill_notice = (
         f"저장된 포트폴리오 `{saved_portfolio.get('name')}` 설정을 `Compare & Portfolio Builder`로 불러왔습니다."
     )
+    st.session_state.backtest_compare_source_context = {
+        "source_kind": "saved_portfolio",
+        "source_label": saved_portfolio.get("name"),
+        "saved_portfolio_id": saved_portfolio.get("portfolio_id"),
+        "saved_portfolio_name": saved_portfolio.get("name"),
+        "selected_strategies": list(compare_context.get("selected_strategies") or []),
+        "weights_percent": list(portfolio_context.get("weights_percent") or []),
+        "upstream_source_context": source_context,
+    }
     st.session_state.backtest_weighted_portfolio_prefill = {
         "strategy_names": list(portfolio_context.get("strategy_names") or []),
         "weights_percent": list(portfolio_context.get("weights_percent") or []),
@@ -6446,6 +6515,13 @@ def _queue_current_candidate_compare_prefill(rows: list[dict[str, Any]]) -> None
     st.session_state.backtest_compare_prefill_notice = (
         f"current candidate bundle `{titles}`를 `Compare & Portfolio Builder`로 불러왔습니다."
     )
+    st.session_state.backtest_compare_source_context = {
+        "source_kind": "current_candidate_bundle",
+        "source_label": titles,
+        "registry_ids": [str(row.get("registry_id") or "") for row in rows],
+        "candidate_titles": [str(row.get("title") or "") for row in rows],
+        "selected_strategies": payload["selected_strategies"],
+    }
     st.session_state.backtest_requested_panel = "Compare & Portfolio Builder"
 
 
@@ -6793,6 +6869,42 @@ def _apply_weighted_portfolio_prefill(strategy_names: list[str]) -> None:
         st.session_state[f"weight_{strategy_name}"] = float(weight)
     st.session_state["weighted_portfolio_date_policy"] = payload.get("date_policy") or "intersection"
     st.session_state.backtest_weighted_portfolio_prefill = None
+
+
+def _compare_source_kind_label(source_kind: str | None) -> str:
+    mapping = {
+        "current_candidate_bundle": "Current Candidate Bundle",
+        "saved_portfolio": "Saved Portfolio Re-entry",
+        "manual_compare_selection": "Manual Compare Selection",
+    }
+    return mapping.get(str(source_kind or "").strip(), str(source_kind or "Manual Compare Selection"))
+
+
+def _render_compare_source_context_card(source_context: dict[str, Any] | None) -> None:
+    source_context = dict(source_context or {})
+    if not source_context:
+        return
+
+    source_kind = _compare_source_kind_label(source_context.get("source_kind"))
+    source_label = str(source_context.get("source_label") or "-").strip()
+    selected_strategies = list(source_context.get("selected_strategies") or [])
+    registry_ids = list(source_context.get("registry_ids") or [])
+    weights_percent = list(source_context.get("weights_percent") or [])
+
+    st.markdown("##### Current Compare Bundle")
+    st.caption("지금 보고 있는 compare run이 어디서 왔는지와, 다음에 weighted portfolio로 이어갈 때 어떤 묶음인지 보여주는 요약입니다.")
+    summary_cols = st.columns(3, gap="small")
+    with summary_cols[0]:
+        st.markdown(f"- `Source`: `{source_kind}`")
+    with summary_cols[1]:
+        st.markdown(f"- `Label`: `{source_label or '-'}`")
+    with summary_cols[2]:
+        st.markdown(f"- `Strategies`: `{', '.join(selected_strategies) or '-'}`")
+    if registry_ids:
+        st.caption(f"Registry IDs: {', '.join(registry_ids)}")
+    if weights_percent:
+        st.caption(f"Stored Weights (%): {', '.join(f'{float(weight):.1f}' for weight in weights_percent)}")
+    st.info("권장 흐름: compare 결과를 확인한 뒤 바로 아래 `Weighted Portfolio Builder`에서 조합을 만들고, 필요하면 `Saved Portfolios`로 이어가면 됩니다.")
 
 
 def _resolve_saved_portfolio_dynamic_inputs(
