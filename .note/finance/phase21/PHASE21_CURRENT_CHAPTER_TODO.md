@@ -40,3 +40,6 @@
 - `completed` completion / next-phase / checklist 문서 생성
 - `completed` roadmap / doc index / work log / question log sync
 - `completed` plugin review / skill reference sync
+- `completed` phase20 완료 상태를 반영한 phase21 QA 문맥 정리
+  - phase21 checklist는 script / registry 중심이라 phase20 UI rename의 직접 영향이 작다는 점을 명시
+  - next-phase handoff는 phase20 완료 상태를 반영해 phase22 deep validation 준비 쪽으로 다시 정리

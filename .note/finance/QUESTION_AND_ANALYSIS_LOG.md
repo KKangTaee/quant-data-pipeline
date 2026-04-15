@@ -21,6 +21,24 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-04-16 - Phase 21 QA 문서는 Phase 20 UI rename 영향은 작고, 오히려 next-phase handoff 문맥을 업데이트하는 편이 더 중요했다
+- Request topic:
+  - 사용자가 `Phase 21` QA를 진행하겠다고 하며,
+    `Phase 20`에서 수정된 항목이 `Phase 21` checklist에도 영향을 주는지 확인을 요청함
+- Interpreted goal:
+  - `Phase 21` checklist가 현재 UI/문서 상태와 어긋나지 않는지 확인하고,
+    꼭 필요한 부분만 업데이트해서 QA 중 혼선을 줄이고 싶음
+- Result:
+  - `PHASE21_TEST_CHECKLIST.md`의 핵심 검증 대상은
+    script / registry / workflow 문서 재사용성이라서,
+    `Phase 20`의 버튼 이름 변경이 직접 테스트 대상을 바꾸지는 않았다
+  - 다만 사용자 혼선을 줄이기 위해
+    "Phase 20 버튼 이름 변경은 이번 checklist의 핵심 검증 대상이 아니다"라는 안내를 추가했다
+  - 반면 `PHASE21_NEXT_PHASE_PREPARATION.md`에는
+    아직 `Phase 20` operator workflow가 미해결 질문처럼 남아 있었기 때문에,
+    `Phase 20` manual validation completed 상태를 반영해
+    다음 자연스러운 방향이 `Phase 22` deep validation 준비라는 쪽으로 handoff를 정리했다
+
 ### 2026-04-16 - Phase 20은 manual checklist까지 끝났으므로 operator workflow hardening phase로 닫아도 된다
 - Request topic:
   - 사용자가 `Phase 20` checklist 완료 확인을 요청함

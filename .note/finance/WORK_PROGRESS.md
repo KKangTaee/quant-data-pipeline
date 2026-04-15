@@ -22,6 +22,13 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-04-16
+- Reviewed Phase 21 QA documents after Phase 20 workflow naming/validation changes.
+- Outcome:
+  - `PHASE21_TEST_CHECKLIST.md` itself did not need major target changes because it validates scripts, registry, and docs rather than Phase 20 UI buttons
+  - added one explicit note so future QA readers know the Phase 20 button rename is not the core Phase 21 test target
+  - updated `PHASE21_NEXT_PHASE_PREPARATION.md` so it no longer assumes Phase 20 operator workflow is still the main open question
+
+### 2026-04-16
 - User-facing Phase 20 checklist confirmation is now complete.
 - Closed:
   - `PHASE20_CURRENT_CHAPTER_TODO.md` -> `phase complete / manual_validation_completed`

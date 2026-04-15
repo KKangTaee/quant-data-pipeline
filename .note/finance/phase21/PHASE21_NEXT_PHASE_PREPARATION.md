@@ -18,10 +18,13 @@
 
 ## 다음 phase에서 더 중요한 질문
 
-### 1. operator workflow를 실제 UI에서 더 짧게 만들 것인가
+### 1. automation baseline을 deep validation과 later-phase persistence에 어떻게 연결할 것인가
 
-- current candidate registry는 생겼지만,
-  실제 compare / weighted / saved portfolio re-entry UX는 아직 `Phase 20`의 메인 질문으로 남아 있다.
+- `Phase 20`에서 compare / weighted / saved portfolio re-entry UX는 manual checklist 기준으로 닫혔다.
+- 그래서 이제 더 중요한 질문은,
+  current candidate registry와 phase bundle automation을
+  later-phase deep validation, scenario persistence, documentation sync에
+  어떻게 더 직접적으로 연결할 것인가 쪽이다.
 
 ### 2. scenario persistence를 current candidate 밖으로 더 넓힐 것인가
 
@@ -34,17 +37,19 @@
 
 ## 추천 다음 방향
 
-### 추천 1. `Phase 20` operator workflow hardening 재집중
+### 추천 1. `Phase 22` integrated deep validation 준비
 
 - 이유:
-  - `Phase 21`에서 automation baseline은 생겼고,
-    이제 그 자동화가 실제로 도움 되는 UI/operator 동선 쪽을 다시 밀어주는 것이 자연스럽다.
+  - `Phase 20` operator workflow는 이미 usable + manually validated 상태다.
+  - `Phase 21`에서 automation baseline도 생겼으니,
+    이제는 그 기반 위에서 deep rerun / validation을 다시 여는 쪽이 더 자연스럽다.
 
-### 추천 2. 그 다음 `Phase 22` deep validation 준비
+### 추천 2. 그 다음 scenario persistence 확장 검토
 
 - 이유:
-  - 현재는 candidate persistence와 phase 문서 automation이 더 좋아졌기 때문에,
-    deep rerun을 다시 열 때도 정리 비용이 줄어든다.
+  - current candidate registry baseline은 생겼지만,
+    compare bundle / weighted scenario / saved portfolio bridge까지 같은 persistence layer로 넓힐 여지는 아직 남아 있다.
+  - 다만 이건 deep validation보다 한 단계 뒤의 확장 질문으로 보는 편이 더 자연스럽다.
 
 ## handoff 메모
 

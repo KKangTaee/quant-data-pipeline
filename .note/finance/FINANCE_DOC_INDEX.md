@@ -74,9 +74,9 @@
 - `.note/finance/phase21/PHASE21_COMPLETION_SUMMARY.md`
   - `Phase 21`이 실제로 무엇을 자동화했고 왜 practical closeout으로 볼 수 있는지 요약한 문서
 - `.note/finance/phase21/PHASE21_NEXT_PHASE_PREPARATION.md`
-  - `Phase 21` 이후 어떤 질문으로 다음 phase를 여는 것이 자연스러운지 정리한 handoff 문서
+  - `Phase 20` manual validation 완료를 반영해, `Phase 21` 이후에는 `Phase 22` deep validation 준비가 더 자연스럽다는 쪽으로 정리한 handoff 문서
 - `.note/finance/phase21/PHASE21_TEST_CHECKLIST.md`
-  - `Phase 21` automation/persistence baseline을 script와 문서 기준으로 확인하기 위한 manual checklist
+  - `Phase 20` UI 이름 변경과 직접 엮이지 않는 범위에서, `Phase 21` automation/persistence baseline을 script와 문서 기준으로 확인하기 위한 manual checklist
 - `.note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md`
   - `finance` 패키지 전체 구조와 DB/기능 종합 분석
 - `.note/finance/WORK_PROGRESS.md`

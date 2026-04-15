@@ -10,6 +10,8 @@
 - 아래 항목은 사용자가 직접 `[ ]`를 `[x]`로 바꾸며 확인한다.
 - 특별한 사유가 없으면, 모든 주요 체크 항목이 완료된 뒤 다음 major phase로 넘어간다.
 - 일부 항목을 나중으로 미루면 그 이유를 문서나 handoff에 짧게 남긴다.
+- `Phase 20`에서 바뀐 compare / saved portfolio 버튼 이름은 이 checklist의 핵심 검증 대상이 아니다.
+  이번 checklist는 UI polish보다 script / registry / workflow 문서 재사용성이 실제로 동작하는지 확인하는 데 더 가깝다.
 
 ## 추천 실행 순서
 
