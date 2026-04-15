@@ -84,6 +84,9 @@
 - `completed` strict annual shadow sample contract parity bugfix
   - manual validation 중 `rejected_slot_handling_mode` 인자 mismatch를 발견
   - quality / value / quality+value strict annual shadow sample entrypoint가 explicit contract argument를 받도록 정리
+- `completed` compare strict annual guardrail-reference regression bugfix
+  - `Guardrail / Reference Ticker`를 `Guardrails`로 옮긴 뒤 compare quality path에 예전 변수 대입이 한 줄 남아 있던 회귀를 제거
+  - compare strict annual도 single strict annual과 같은 ownership 구조로 다시 맞춤
 - `pending` targeted UI validation
   - current candidate re-entry -> compare
   - compare -> weighted portfolio

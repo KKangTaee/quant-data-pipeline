@@ -635,6 +635,10 @@ Analysis / Presentation
   - `Candidate Universe Equal-Weight`일 때 `Benchmark Ticker`를 빈칸으로 두고
   - guardrail이 실제로 꺼져 있으면 `Guardrail / Reference Ticker`도 빈칸으로 두어
   "실제로 활성화된 설정만 보여주는 표"에 더 가깝게 읽히게 만들었다.
+  이후 QA 중 compare strict annual 렌더 경로에서
+  예전 `guardrail_reference_ticker` 대입문이 한 줄 남아 있던 회귀도 발견되었고,
+  현재는 compare strict annual도 single strict annual과 동일하게
+  `Guardrails` expander 안에서만 guardrail reference를 생성/보관하는 구조로 다시 맞춰져 있다.
 - 이후 QA에서는 compare / weighted / saved portfolio 사이의 divider가 과하다는 피드백이 나와,
   top-level divider는 제거하고 각 섹션의 `###` 제목만으로 구분하도록 정리했다.
 - `Saved Portfolios`는 별도 top-level 탭으로 빼지 않고

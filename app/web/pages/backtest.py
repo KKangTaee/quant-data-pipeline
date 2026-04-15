@@ -11712,7 +11712,6 @@ def render_backtest_tab() -> None:
                         compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["transaction_cost_bps"] = float(transaction_cost_bps)
                         compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["benchmark_contract"] = benchmark_contract
                         compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["benchmark_ticker"] = benchmark_ticker
-                        compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["guardrail_reference_ticker"] = guardrail_reference_ticker
                         compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["promotion_min_benchmark_coverage"] = float(promotion_min_benchmark_coverage)
                         compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["promotion_min_net_cagr_spread"] = float(promotion_min_net_cagr_spread)
                         compare_strategy_overrides["Quality Snapshot (Strict Annual)"]["promotion_min_liquidity_clean_coverage"] = float(promotion_min_liquidity_clean_coverage)

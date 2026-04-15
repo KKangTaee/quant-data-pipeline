@@ -108,6 +108,22 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `Phase 20` first work unit에서 current candidate를 compare로 다시 보내는 UI ingress를 열었다
   - second work unit에서 compare source context를 weighted portfolio와 saved portfolio까지 이어,
     현재 compare bundle의 출처와 다음 행동을 더 직접적으로 보이게 만들었다
+
+### 2026-04-15 - compare strict annual에서는 `Guardrail / Reference Ticker` 이동 후 남은 예전 변수 참조가 실제 런타임 에러를 만들 수 있었다
+- Request topic:
+  - compare strict annual 화면에서
+    `NameError: name 'guardrail_reference_ticker' is not defined`
+    와 함께 form 경고가 발생함
+- Interpreted goal:
+  - `Guardrail / Reference Ticker`를 `Guardrails`로 옮긴 뒤 compare path에도 같은 ownership이 끝까지 맞는지 확인하고 에러를 없애고 싶음
+- Result:
+  - 원인은 compare `Quality Snapshot (Strict Annual)` 경로에 남아 있던 예전 변수 대입 한 줄이었다
+  - `Real-Money Contract`에서는 더 이상 `guardrail_reference_ticker`를 직접 만들지 않는데,
+    compare quality block만 예전 대입문이 남아 있어 렌더 중 `NameError`가 났다
+  - 해당 stale assignment를 제거해 compare strict annual도
+    single strict annual과 동일하게
+    `Guardrails` expander 안에서만 guardrail reference ticker를 다루도록 정리했다
+  - `Missing Submit Button` 경고는 form 전체가 이 예외로 중간에 끊기면서 따라 나온 2차 증상으로 해석하는 것이 맞다
   - saved portfolio는 `Edit In Compare`, `Replay Saved Portfolio`, `Source & Next Step` 기준으로
     다시 수정할지 그대로 재실행할지 판단이 더 쉬워졌다
   - 따라서 `Phase 20`은

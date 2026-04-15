@@ -883,3 +883,15 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.venv/bin/python -c "import app.web.pages.backtest"`
 - Durable takeaway:
   - the compare summary is now closer to a true "active settings" view: unused values stay empty instead of looking meaningful
+
+### 2026-04-15
+- Phase 20 QA then hit a follow-up compare strict-annual runtime error after the `Guardrail / Reference Ticker` field was moved into `Guardrails`.
+- Changed:
+  - removed one stale `guardrail_reference_ticker` assignment that still lived in the compare `Quality Snapshot (Strict Annual)` path
+  - kept the compare strict-annual guardrail reference flow fully inside the `Guardrails` expander, matching the single-strategy path
+- Validation:
+  - `python3 -m py_compile app/web/pages/backtest.py`
+  - `.venv/bin/python -c "import app.web.pages.backtest"`
+  - `python3 plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py`
+- Durable takeaway:
+  - the compare strict-annual UI now uses the same guardrail-reference ownership model as the single-strategy UI, so the late `NameError` regression is removed.
