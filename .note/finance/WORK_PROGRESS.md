@@ -1053,3 +1053,18 @@ Detailed historical logs were archived on `2026-04-13`.
   - fixed phase21 report and strategy-log naming rules before actual reruns
 - Durable takeaway:
   - `Phase 21` is now in a true execution-ready state: the next step is no longer "define the frame" but "run the pack."
+
+### 2026-04-16
+- Ran the first actual `Phase 21` rerun pack for `Value`.
+- Changed:
+  - reran:
+    - current anchor `Top N = 14 + psr`
+    - lower-MDD alternative `Top N = 14 + psr + pfcr`
+  - confirmed in the shared `Phase 21` frame that:
+    - current anchor stays `real_money_candidate / paper_probation / review_required`
+    - lower-MDD alternative still remains `production_candidate / watchlist / review_required`
+  - created `backtest_reports/phase21/PHASE21_VALUE_ANCHOR_AND_ALTERNATIVE_RERUN_FIRST_PASS.md`
+  - created `backtest_reports/phase21/README.md`
+  - synced `VALUE_STRICT_ANNUAL.md`, `VALUE_STRICT_ANNUAL_BACKTEST_LOG.md`, `CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md`, phase21 TODO, and the report indexes
+- Durable takeaway:
+  - `Value` does not need a candidate replacement right now; the current anchor remains the practical reference point even in the integrated validation frame.

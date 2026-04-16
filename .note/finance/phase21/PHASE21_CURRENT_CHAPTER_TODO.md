@@ -24,9 +24,9 @@
 
 ## 2. Annual Strict Family Integrated Rerun
 
-- `pending` rerun pack execution order 고정
+- `completed` rerun pack execution order 고정
   - `Value -> Quality -> Quality + Value -> portfolio bridge`
-- `pending` `Value` current anchor / lower-MDD alternative rerun
+- `completed` `Value` current anchor / lower-MDD alternative rerun
   - current practical point 유지 여부 확인
   - lower-MDD rescue 가능성 재점검
 - `pending` `Quality` current anchor / cleaner alternative rerun
@@ -46,10 +46,12 @@
 
 ## 4. Reporting And Candidate Decision
 
-- `pending` strategy hub / backtest log sync
-  - meaningful rerun 결과를 durable report로 남김
-- `pending` current candidate summary refresh
-  - 유지 / 교체 / 보류 결과 반영
+- `in_progress` strategy hub / backtest log sync
+  - `Value` first-pass rerun 결과를 durable report와 strategy log에 반영
+  - 나머지 family는 rerun 이후 이어서 반영
+- `in_progress` current candidate summary refresh
+  - `Value` first-pass 기준 current anchor 유지 / alternative weaker-gate 판단 반영
+  - 전체 summary closeout refresh는 remaining family rerun 이후 수행
 - `pending` phase21 closeout 판단 문서화
   - 다음 phase가 portfolio-level construction인지
   - quarterly productionization인지

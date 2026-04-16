@@ -1595,3 +1595,28 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 정리하면:
     - 지금은 `Phase 21` 본작업 실행 단계
     - QA는 rerun 결과가 나온 뒤 진행
+
+### 2026-04-16 - `Phase 21` first actual rerun pack에서 `Value` current anchor 유지가 다시 확인되었다
+- Request topic:
+  - `Phase 21` next step으로 actual rerun pack execution을 시작함
+- Interpreted goal:
+  - first family인 `Value`를 current anchor와 lower-MDD alternative 기준으로 같은 frame에서 다시 돌려,
+    current candidate 유지 여부를 먼저 확인하고 싶음
+- Result:
+  - `Value` current anchor `Top N = 14 + psr`는
+    `28.13% / -24.55% / real_money_candidate / paper_probation / review_required`
+    로 current practical point를 그대로 유지했다
+  - lower-MDD alternative `Top N = 14 + psr + pfcr`는
+    `27.22% / -21.16% / production_candidate / watchlist / review_required`
+    로 이번 frame에서도 더 낮은 drawdown을 보였지만,
+    여전히 weaker-gate alternative로 남았다
+  - 즉 `Value` family first-pass conclusion은:
+    - current anchor 유지
+    - lower-MDD alternative는 still near-miss
+    - same-gate replacement는 없음
+  - 이 결과를
+    - `PHASE21_VALUE_ANCHOR_AND_ALTERNATIVE_RERUN_FIRST_PASS.md`
+    - `VALUE_STRICT_ANNUAL_BACKTEST_LOG.md`
+    - `VALUE_STRICT_ANNUAL.md`
+    - `CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md`
+    에 반영했다

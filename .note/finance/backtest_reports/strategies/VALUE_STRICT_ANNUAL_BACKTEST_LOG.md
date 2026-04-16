@@ -20,6 +20,70 @@
 
 ## 기록
 
+### 2026-04-16 - phase21 integrated validation first pass (value)
+
+- 목표:
+  - `Value > Strict Annual` current anchor와 lower-MDD alternative를
+    `Phase 21` 공통 validation frame에서 다시 확인한다
+- 전략:
+  - `Value > Strict Annual`
+- 기간 / universe:
+  - `2016-01-01 ~ 2026-04-01`
+  - `US Statement Coverage 100`
+  - `Historical Dynamic PIT Universe`
+- 공통 contract:
+  - `Option = month_end`
+  - `Top N = 14`
+  - `Rebalance Interval = 1`
+  - `Minimum Price = 5.0`
+  - `Minimum History = 12M`
+  - `Min Avg Dollar Volume 20D = 5.0M`
+  - `Transaction Cost = 10 bps`
+  - `Benchmark = SPY`
+  - `Trend Filter = off`
+  - `Market Regime = off`
+  - underperformance / drawdown guardrail `on`
+- factor / ticker:
+  - current anchor:
+    - `book_to_market`
+    - `earnings_yield`
+    - `sales_yield`
+    - `ocf_yield`
+    - `operating_income_yield`
+    - `psr`
+  - lower-MDD alternative:
+    - current anchor + `pfcr`
+- 결과:
+  - current anchor:
+    - `CAGR = 28.13%`
+    - `MDD = -24.55%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = paper_probation`
+    - `Deployment = review_required`
+    - `Validation = normal`
+    - `Rolling Review = watch`
+    - `Out-of-Sample Review = caution`
+  - lower-MDD alternative:
+    - `CAGR = 27.22%`
+    - `MDD = -21.16%`
+    - `Promotion = production_candidate`
+    - `Shortlist = watchlist`
+    - `Deployment = review_required`
+    - `Validation = watch`
+    - `Rolling Review = caution`
+    - `Out-of-Sample Review = caution`
+- 해석:
+  - `Value` current anchor는 `Phase 21` frame에서도 그대로 유지된다
+  - `+ pfcr`는 여전히 더 낮은 `MDD`를 보여주는 near-miss지만,
+    gate는 한 단계 약한 대안으로 남는다
+  - 즉 same-gate replacement나 actual rescue까지는 아니다
+- 다음 액션:
+  - `Quality` rerun pack을 같은 frame에서 진행
+  - 이후 `Quality + Value`, portfolio bridge까지 묶어 integrated 판단을 이어간다
+- 관련 문서:
+  - [PHASE21_VALUE_ANCHOR_AND_ALTERNATIVE_RERUN_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase21/PHASE21_VALUE_ANCHOR_AND_ALTERNATIVE_RERUN_FIRST_PASS.md)
+  - [PHASE21_VALIDATION_FRAME_DEFINITION_FIRST_WORK_UNIT.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase21/PHASE21_VALIDATION_FRAME_DEFINITION_FIRST_WORK_UNIT.md)
+
 ### 2026-04-14 - next-ranked eligible fill representative rerun first pass
 
 - 목표:

@@ -146,6 +146,14 @@
     fill contract를 좁게 다시 보고
     same-gate lower-MDD rescue가 실제로 있는지 본 second-pass 문서
 
+## Phase 21 Raw Archive
+
+- `phase21/README.md`
+  - Phase 21 integrated deep validation archive 안내 문서
+- `phase21/PHASE21_VALUE_ANCHOR_AND_ALTERNATIVE_RERUN_FIRST_PASS.md`
+  - `Value` current anchor와 lower-MDD alternative를 같은 validation frame에서 다시 돌려,
+    current anchor 유지 여부와 alternative의 weaker-gate status가 그대로인지 확인한 first-pass 문서
+
 ## 운영 메모
 
 앞으로 새 report를 만들 때는:

@@ -44,6 +44,12 @@ lower-MDD near-miss:
 
 - 숫자는 더 방어적으로 좋아졌지만
 - gate가 한 단계 내려가서 current anchor를 대체하진 못했다.
+- Phase 21 integrated validation first pass에서도
+  이 해석은 그대로 유지되었다.
+  - current anchor:
+    - `28.13% / -24.55% / real_money_candidate / paper_probation / review_required`
+  - lower-MDD alternative:
+    - `27.22% / -21.16% / production_candidate / watchlist / review_required`
 - Phase 17 structural note:
   - `Trend Filter = on`에서 `partial cash retention`을 붙이면
     `MDD = -15.85%`까지 크게 내려가지만

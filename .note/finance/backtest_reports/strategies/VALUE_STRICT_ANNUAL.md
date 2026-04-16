@@ -154,46 +154,40 @@
 ## 최근 backtest log snapshot
 
 - 최근 기록:
-  - `2026-04-14 - next-ranked eligible fill representative rerun first pass`
+  - `2026-04-16 - phase21 integrated validation first pass (value)`
 - 핵심 설정:
-  - trend-on structural probe:
+  - current anchor:
     - `Top N = 14 + psr`
-    - `Trend Filter = on`
+    - `Trend Filter = off`
     - `Market Regime = off`
-    - underperformance / drawdown guardrail `on`
-    - `rejected_slot_fill_enabled = off / on`
+    - practical `Real-Money Contract` 유지
+  - lower-MDD alternative:
+    - `Top N = 14 + psr + pfcr`
+    - same practical contract
 - 결과:
-  - `fill off`:
-    - `CAGR = 25.92%`
-    - `MDD = -29.25%`
-    - `Promotion = hold`
-    - `Shortlist = hold`
-    - `Deployment = blocked`
-  - `fill on`:
-    - `CAGR = 25.23%`
-    - `MDD = -28.37%`
-    - `Promotion = hold`
-    - `Shortlist = hold`
-    - `Deployment = blocked`
+  - current anchor:
+    - `CAGR = 28.13%`
+    - `MDD = -24.55%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = paper_probation`
+    - `Deployment = review_required`
     - `Validation = normal`
-    - `Filled Rows = 117`
+    - `Rolling Review = watch`
+  - lower-MDD alternative:
+    - `CAGR = 27.22%`
+    - `MDD = -21.16%`
+    - `Promotion = production_candidate`
+    - `Shortlist = watchlist`
+    - `Deployment = review_required`
+    - `Validation = watch`
+    - `Rolling Review = caution`
 - 실무 해석:
-  - 이 redesign은 `Value` trend-on probe에서
-    cash drag와 validation을 개선하는 방향으로는 의미가 있었다
-  - 하지만 current runtime meta 기준으로는
-    여전히 `hold / blocked`였다
-  - 다만 current practical anchor(`28.13% / -24.55%`)보다
-    `MDD`가 더 낮아진 것은 아니어서
-    anchor replacement로 읽지는 않는다
+  - `Value` current anchor는 `Phase 21` validation frame에서도 그대로 유지된다
+  - `+ pfcr`는 여전히 더 낮은 `MDD`를 보여주는 대안이지만,
+    current anchor를 실제로 교체하는 rescue candidate까지는 아니다
 - 다음에 볼 것:
-  - anchor-near second pass까지 보면
-    `base + psr + pfcr`, `Top N = 13`
-    의 `24.47% / -24.89% / hold / blocked`
-    가 best lower-MDD near-miss였다
-  - 즉 지금은
-    `next-ranked eligible fill`을
-    larger structural redesign 참고 lane으로 남기고,
-    second slice 후보 우선순위를 다시 정하는 단계다
+  - `Quality` current anchor / cleaner alternative rerun
+  - 그 다음 `Quality + Value` strongest point / lower-MDD alternative rerun
 
 ## 관련 결과 문서
 
