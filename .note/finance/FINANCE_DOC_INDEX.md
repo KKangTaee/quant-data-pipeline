@@ -79,6 +79,8 @@
   - `Phase 18` remaining structural backlog를 immediate blocker가 아니라 future option으로 defer했다는 문맥도 함께 반영되어 있다
 - `.note/finance/phase21/PHASE21_CURRENT_CHAPTER_TODO.md`
   - 현재 main `Phase 21` execution board로, validation frame definition과 integrated rerun pack 진행 상태를 관리하는 문서
+- `.note/finance/phase21/PHASE21_VALIDATION_FRAME_DEFINITION_FIRST_WORK_UNIT.md`
+  - `Phase 21` 첫 실제 작업으로, 공통 기간 / universe frame / family별 rerun pack / portfolio bridge frame / report naming을 먼저 고정한 문서
 - `.note/finance/phase21/PHASE21_COMPLETION_SUMMARY.md`
   - 새 main `Phase 21` closeout 시 어떤 deep validation 결과를 남길지 위한 draft summary 문서
 - `.note/finance/phase21/PHASE21_NEXT_PHASE_PREPARATION.md`

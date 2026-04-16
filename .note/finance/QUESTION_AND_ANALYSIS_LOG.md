@@ -1543,3 +1543,34 @@ Detailed historical analysis was archived on `2026-04-13`.
     - `PHASE18_TEST_CHECKLIST.md`
     를 만들고,
     `Phase 21` plan / TODO / roadmap / doc index를 새 상태에 맞춰 동기화했다
+
+### 2026-04-16 - `Phase 21` 첫 작업은 deep rerun보다 validation frame을 먼저 고정하는 편이 맞다
+- Request topic:
+  - 사용자가 `Phase 21` 진행을 요청했고, 다음 실제 작업으로 무엇을 먼저 해야 하는지 정리할 필요가 생김
+- Interpreted goal:
+  - annual strict family와 portfolio bridge를 다시 돌리기 전에,
+    같은 phase 안에서 무엇을 어떤 이름으로 검증할지 먼저 고정하고 싶음
+- Result:
+  - `Phase 21`의 first work unit은 actual rerun보다 먼저
+    **validation frame definition**
+    으로 정리하는 것이 맞다고 판단했다
+  - 고정한 공통 기준은 아래와 같다:
+    - 기간:
+      - `2016-01-01 ~ 2026-04-01`
+    - universe frame:
+      - `US Statement Coverage 100`
+      - `Historical Dynamic PIT Universe`
+    - family rerun pack:
+      - `Value`: `value_current_anchor_top14_psr`, `value_lower_mdd_near_miss_pfcr`
+      - `Quality`: `quality_current_anchor_top12_lqd`, `quality_cleaner_alternative_top12_spy`
+      - `Quality + Value`: `quality_value_current_anchor_top10_por`, `quality_value_lower_mdd_near_miss_top9`
+    - representative bridge frame:
+      - `Load Recommended Candidates`
+      - near-equal weighted bundle
+      - representative saved portfolio replay
+  - 또한 rerun report와 strategy log의 naming도 먼저 고정해,
+    phase 결과가 다시 phase별 임시 문맥으로 흩어지지 않게 했다
+  - 이 판단은
+    `PHASE21_VALIDATION_FRAME_DEFINITION_FIRST_WORK_UNIT.md`
+    에 문서화했고,
+    `Phase 21` plan / TODO / checklist / roadmap / doc index에도 반영했다

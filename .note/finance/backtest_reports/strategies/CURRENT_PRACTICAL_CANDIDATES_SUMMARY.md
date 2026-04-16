@@ -161,21 +161,16 @@ lower-MDD but weaker-gate near-miss:
    - `Top N = 9`와 `cash_ratio` 대안은 더 낮은 `MDD`를 보였지만
      `production_candidate / watchlist`로 내려갔다
 3. 다음 phase 방향
-   - bounded `Top N / one-factor / overlay`보다
-     더 구조적인 downside improvement가 우선순위가 된다
-   - Phase 17 current pass 기준으로는
-     `partial cash retention`, `defensive sleeve risk-off`,
-     `concentration-aware weighting` 모두
-     current anchor를 바꾸지 못했다
-   - Phase 18 first slice 기준으로는
-     `next-ranked eligible fill`이
-     cash drag와 validation을 개선하는
-     meaningful redesign lane임은 확인했지만,
-     `Value` anchor-near second pass까지 포함하면
-     same-gate lower-MDD rescue는 아직 없다
-   - 즉 다음 단계는
-     Phase 18 larger structural redesign을 계속 밀면서
-     anchor replacement 조건까지 갈 수 있는지 보는 쪽이 더 자연스럽다
+   - bounded `Top N / one-factor / overlay`와 structural redesign first slice까지는 이미 충분히 봤다
+   - `partial cash retention`, `defensive sleeve risk-off`,
+     `concentration-aware weighting`,
+     `next-ranked eligible fill`
+     모두 meaningful evidence는 남겼지만
+     current anchor replacement까지는 못 갔다
+   - 따라서 지금 다음 단계는
+     구조 실험을 하나 더 여는 것보다
+     **이 current candidate와 lower-MDD alternative를 같은 frame에서 다시 검증하는 `Phase 21` integrated deep validation**
+     쪽이 더 자연스럽다
 
 ## 관련 문서
 

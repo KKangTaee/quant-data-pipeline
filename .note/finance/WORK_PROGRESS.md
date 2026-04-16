@@ -1033,3 +1033,23 @@ Detailed historical logs were archived on `2026-04-13`.
     - `Phase 21` = in progress
 - Durable takeaway:
   - the main track is now clearer: we are not opening more structural redesign first, we are validating the current annual-strict candidates and portfolio bridge in one shared frame.
+
+### 2026-04-16
+- Continued `Phase 21` with the first real work unit: validation frame definition.
+- Changed:
+  - created `PHASE21_VALIDATION_FRAME_DEFINITION_FIRST_WORK_UNIT.md`
+  - fixed the common rerun frame to:
+    - `2016-01-01 ~ 2026-04-01`
+    - `US Statement Coverage 100`
+    - `Historical Dynamic PIT Universe`
+  - fixed the family rerun packs to the current registry-backed candidates:
+    - `Value` current anchor / lower-MDD near-miss
+    - `Quality` current anchor / cleaner alternative
+    - `Quality + Value` current anchor / lower-MDD weaker-gate alternative
+  - fixed the representative bridge frame to:
+    - `Load Recommended Candidates`
+    - near-equal weighted bundle
+    - representative saved portfolio replay
+  - fixed phase21 report and strategy-log naming rules before actual reruns
+- Durable takeaway:
+  - `Phase 21` is now in a true execution-ready state: the next step is no longer "define the frame" but "run the pack."

@@ -114,6 +114,9 @@
     - deep rerun 결과가 많아질수록 먼저 frame이 고정되어 있어야 한다.
   - 끝나면 좋은 점:
     - 이후 rerun이 phase 전체에서 같은 기준으로 읽힌다.
+  - 현재 상태:
+    - first work unit 문서에서
+      공통 기간 / universe / candidate pack / report naming / representative bridge frame까지 고정했다.
 - 두 번째 작업:
   - annual strict family rerun pack을 실행한다.
   - 무엇을 바꾸는가:
@@ -136,6 +139,39 @@
 - lower-MDD alternative 중 실제 rescue candidate가 생기는지
 - saved / weighted portfolio가 `Phase 22`의 메인 대상이 될 만큼 의미 있는지
 - quarterly prototype productionization을 언제 여는 것이 타당한지
+
+## 이번 phase의 현재 상태 요약
+
+- `Phase 18` closeout 이후
+  `Phase 21` main kickoff는 실제로 시작된 상태다.
+- 지금까지 고정된 것은:
+  - 공통 validation period:
+    - `2016-01-01 ~ 2026-04-01`
+  - 공통 universe frame:
+    - `US Statement Coverage 100`
+    - `Historical Dynamic PIT Universe`
+  - candidate rerun pack:
+    - `Value` current anchor / lower-MDD near-miss
+    - `Quality` current anchor / cleaner alternative
+    - `Quality + Value` current anchor / lower-MDD weaker-gate alternative
+  - representative bridge frame:
+    - `Load Recommended Candidates`
+    - near-equal weighted bundle
+    - representative saved portfolio replay
+- 즉 지금부터의 next active step은
+  frame discussion이 아니라
+  **actual rerun pack execution**이다.
+
+## 주요 산출물
+
+- kickoff / phase plan
+  - `.note/finance/phase21/PHASE21_INTEGRATED_DEEP_BACKTEST_VALIDATION_PLAN.md`
+- current board
+  - `.note/finance/phase21/PHASE21_CURRENT_CHAPTER_TODO.md`
+- first work unit
+  - `.note/finance/phase21/PHASE21_VALIDATION_FRAME_DEFINITION_FIRST_WORK_UNIT.md`
+- manual checklist
+  - `.note/finance/phase21/PHASE21_TEST_CHECKLIST.md`
 
 ## 한 줄 정리
 - `Phase 21`은 **지금까지 만든 annual strict 후보와 portfolio bridge를 한 기준에서 다시 검증해, 다음 확장 phase의 기준점을 확정하는 deep validation phase**다.

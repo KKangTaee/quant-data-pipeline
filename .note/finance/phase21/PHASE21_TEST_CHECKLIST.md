@@ -26,9 +26,12 @@
 - 확인 위치:
   - [PHASE21_INTEGRATED_DEEP_BACKTEST_VALIDATION_PLAN.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase21/PHASE21_INTEGRATED_DEEP_BACKTEST_VALIDATION_PLAN.md)
   - [PHASE21_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase21/PHASE21_CURRENT_CHAPTER_TODO.md)
+  - [PHASE21_VALIDATION_FRAME_DEFINITION_FIRST_WORK_UNIT.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase21/PHASE21_VALIDATION_FRAME_DEFINITION_FIRST_WORK_UNIT.md)
 - 체크 항목:
   - [ ] 이번 phase에서 다시 볼 family와 candidate 범위가 문서에 분명히 적혀 있는지
+  - [ ] 공통 기간(`2016-01-01 ~ 2026-04-01`)과 공통 universe frame(`US Statement Coverage 100`, `Historical Dynamic PIT Universe`)이 분명히 적혀 있는지
   - [ ] current anchor / lower-MDD alternative / portfolio bridge가 무엇인지 용어 설명이 충분한지
+  - [ ] family별 rerun report 이름과 strategy log entry naming rule이 먼저 정리되어 있는지
   - [ ] rerun 결과를 어디에 남길지(strategy hub / backtest log / candidate summary) 기준이 보이는지
 
 ## 2. family별 integrated rerun 결과 확인
@@ -50,6 +53,7 @@
   - weighted portfolio / saved portfolio rerun report
 - 체크 항목:
   - [ ] representative weighted portfolio rerun이 single-strategy rerun과 같은 phase frame에서 읽히는지
+  - [ ] representative bridge가 `Load Recommended Candidates -> near-equal weighted bundle -> saved portfolio replay` 흐름으로 분명히 고정되어 있는지
   - [ ] saved portfolio replay 결과가 portfolio-level candidate 해석에 도움이 되는지
   - [ ] portfolio bridge가 다음 phase의 메인 대상이 될지 판단할 재료가 충분한지
 
