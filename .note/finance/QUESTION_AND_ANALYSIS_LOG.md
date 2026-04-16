@@ -1712,3 +1712,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Phase 21 plan에서 `Phase 18`의 남은 구조 실험은 지금 당장 막고 있는 필수 작업이 아니라 나중 선택지로 둔다는 뜻으로 풀어썼다
   - `current anchor 유지 / 교체`는 대표 후보를 계속 기준점으로 둘지 바꿀지 판단한다는 의미로 정리했다
   - `rescue candidate`는 낙폭이 낮은 대안이 실제 대체 후보인지, 단순 참고 후보인지 구분하는 표현으로 정리했다
+
+### 2026-04-17 - `Phase 21` family별 integrated rerun 확인 위치를 checklist에 명확히 표시했다
+- Request topic:
+  - Phase 21 checklist의 `family별 integrated rerun 결과 확인`을 어디서 해야 하는지 모르겠다고 문의함
+- Interpreted goal:
+  - 사용자가 체크리스트를 보며 바로 클릭해서 검수할 수 있도록 확인 위치와 읽는 순서를 명확히 하고 싶음
+- Result:
+  - 확인 시작점은 `.note/finance/backtest_reports/phase21/README.md`로 정리했다
+  - 실제 family별 결과는 아래 3개 report에서 확인하도록 명시했다
+    - `PHASE21_VALUE_ANCHOR_AND_ALTERNATIVE_RERUN_FIRST_PASS.md`
+    - `PHASE21_QUALITY_ANCHOR_AND_ALTERNATIVE_RERUN_FIRST_PASS.md`
+    - `PHASE21_QUALITY_VALUE_ANCHOR_AND_ALTERNATIVE_RERUN_FIRST_PASS.md`
+  - strategy hub와 strategy backtest log는 장기 기록 동기화 확인용 보조 위치로 설명했다

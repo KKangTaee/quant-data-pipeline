@@ -87,6 +87,7 @@
   - main `Phase 21` 이후 `Phase 22` portfolio-level candidate construction으로 넘어가는 것이 왜 자연스러운지 정리한 handoff 문서
 - `.note/finance/phase21/PHASE21_TEST_CHECKLIST.md`
   - 새 main `Phase 21` integrated deep validation이 같은 frame에서 수행되는지 확인하기 위한 manual checklist
+  - family별 rerun 결과 확인 위치도 phase21 archive / rerun report / strategy hub / backtest log 링크 기준으로 바로 따라갈 수 있게 정리되어 있다
 - `.note/finance/backtest_reports/phase21/README.md`
   - `Phase 21` integrated deep validation에서 나온 family rerun report와 portfolio bridge validation report를 모아 두는 archive 안내 문서
 - `.note/finance/backtest_reports/phase21/PHASE21_VALUE_ANCHOR_AND_ALTERNATIVE_RERUN_FIRST_PASS.md`

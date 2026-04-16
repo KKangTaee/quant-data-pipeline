@@ -76,3 +76,5 @@
 - `completed` manual QA terminology cleanup
   - `Validation Frame`을 shared glossary에 추가
   - Phase 21 plan의 current anchor / rescue candidate / deferred Phase 18 backlog 설명을 사용자 검수용 문장으로 정리
+- `completed` manual QA rerun location clarification
+  - Phase 21 checklist에서 family별 integrated rerun 확인 위치를 phase21 archive / family별 report / strategy hub / backtest log 링크로 명확히 정리

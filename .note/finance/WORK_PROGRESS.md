@@ -1121,3 +1121,11 @@ Detailed historical logs were archived on `2026-04-13`.
   - updated the Phase 21 checklist so validation frame verification points directly to the glossary
 - Durable takeaway:
   - Phase 21 manual QA should now read as a user-facing validation guide rather than an internal shorthand memo.
+
+### 2026-04-17
+- Clarified where to verify `Phase 21` family-level integrated rerun results during manual QA.
+- Changed:
+  - expanded `PHASE21_TEST_CHECKLIST.md` section 2 with direct links to the phase21 archive, the three family rerun reports, and the strategy hub / backtest log documents
+  - recorded the clarification in the Phase 21 TODO board
+- Durable takeaway:
+  - family-level rerun QA should start from `.note/finance/backtest_reports/phase21/README.md`, then inspect the `Value`, `Quality`, and `Quality + Value` rerun reports.

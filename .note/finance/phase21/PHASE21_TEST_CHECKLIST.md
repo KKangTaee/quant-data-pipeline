@@ -39,9 +39,23 @@
 ## 2. family별 integrated rerun 결과 확인
 
 - 확인 위치:
-  - family별 rerun report
-  - strategy hub
-  - strategy backtest log
+  - 먼저 아래 archive 안내 문서를 연다.
+    - [phase21/README.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase21/README.md)
+  - 그다음 family별 rerun report 3개를 확인한다.
+    - [Value rerun report](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase21/PHASE21_VALUE_ANCHOR_AND_ALTERNATIVE_RERUN_FIRST_PASS.md)
+    - [Quality rerun report](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase21/PHASE21_QUALITY_ANCHOR_AND_ALTERNATIVE_RERUN_FIRST_PASS.md)
+    - [Quality + Value rerun report](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase21/PHASE21_QUALITY_VALUE_ANCHOR_AND_ALTERNATIVE_RERUN_FIRST_PASS.md)
+  - 같은 결론이 전략별 장기 문서에도 반영되었는지 확인하려면 아래 문서를 본다.
+    - [VALUE_STRICT_ANNUAL.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL.md)
+    - [VALUE_STRICT_ANNUAL_BACKTEST_LOG.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL_BACKTEST_LOG.md)
+    - [QUALITY_STRICT_ANNUAL.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/QUALITY_STRICT_ANNUAL.md)
+    - [QUALITY_STRICT_ANNUAL_BACKTEST_LOG.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/QUALITY_STRICT_ANNUAL_BACKTEST_LOG.md)
+    - [QUALITY_VALUE_STRICT_ANNUAL.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL.md)
+    - [QUALITY_VALUE_STRICT_ANNUAL_BACKTEST_LOG.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL_BACKTEST_LOG.md)
+- 읽는 방법:
+  - `phase21/README.md`는 전체 목차다.
+  - family별 rerun report는 이번 Phase 21에서 실제로 다시 돌린 결과다.
+  - strategy hub와 strategy backtest log는 이번 결과가 장기 기록에 제대로 반영되었는지 확인하는 보조 위치다.
 - 체크 항목:
   - [ ] `Value` current anchor와 lower-MDD alternative rerun 결과를 같은 frame에서 비교할 수 있는지
   - [ ] `Quality` current anchor와 alternative rerun 결과를 같은 frame에서 비교할 수 있는지
