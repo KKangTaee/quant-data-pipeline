@@ -1574,3 +1574,24 @@ Detailed historical analysis was archived on `2026-04-13`.
     `PHASE21_VALIDATION_FRAME_DEFINITION_FIRST_WORK_UNIT.md`
     에 문서화했고,
     `Phase 21` plan / TODO / checklist / roadmap / doc index에도 반영했다
+
+### 2026-04-16 - 지금 바로 `Phase 21 QA`를 시작하는 것보다 actual rerun pack execution이 먼저다
+- Request topic:
+  - 사용자가 validation frame 정의 이후, 이제 바로 `Phase 21 QA`를 진행하면 되는지 질문함
+- Interpreted goal:
+  - 현재 `Phase 21`이 QA-ready 상태인지, 아니면 아직 본 작업이 더 남아 있는지 분명히 알고 싶음
+- Result:
+  - 현재 시점에서는 **바로 full `Phase 21 QA`로 들어가는 것은 아직 이르다**고 판단했다
+  - 이유:
+    - 지금까지 완료된 것은 `validation frame definition first work unit`이다
+    - 즉 무엇을 어떤 기준으로 다시 볼지 정리한 상태이지,
+      family별 integrated rerun 결과와 portfolio bridge validation 결과가 아직 쌓이지 않았다
+  - 따라서 지금 순서는:
+    1. `Value -> Quality -> Quality + Value -> portfolio bridge` actual rerun pack execution
+    2. family report / strategy hub / backtest log / candidate summary sync
+    3. 그 다음 `PHASE21_TEST_CHECKLIST.md` 기준으로 phase QA 진행
+  - 다만 checklist의 `1. validation frame 정의 확인` 섹션은
+    지금 시점에서도 부분적으로 미리 확인할 수 있다
+  - 정리하면:
+    - 지금은 `Phase 21` 본작업 실행 단계
+    - QA는 rerun 결과가 나온 뒤 진행
