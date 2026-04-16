@@ -32,6 +32,9 @@
 - 이 상태로 바로 portfolio-level candidate나 새 전략으로 넘어가면,
   **현재 annual strict family의 기준점이 정말 유지되는지**
   다시 큰 프레임에서 확인하지 못한 채 다음 단계로 가게 된다.
+- 또한 `Phase 18`의 remaining second-slice structural backlog는
+  immediate blocker보다 future option에 가깝다고 정리되었기 때문에,
+  지금은 추가 구조 구현보다 integrated validation이 더 우선이다.
 
 ## 이 phase가 끝나면 좋은 점
 - `Value / Quality / Quality + Value`의 current anchor를 더 자신 있게 유지하거나 교체할 수 있다.
@@ -98,6 +101,9 @@
 - support tooling is secondary
   - plugin / skill / agent automation은 필요하면 쓰되,
     main phase의 산출물로 세지 않는다.
+- phase18 structural backlog is deferred
+  - `Phase 18` second slice 후보는 버린 것이 아니라 future option으로 남겨둔다.
+  - 다만 이번 phase에서는 그것을 immediate workstream으로 끌고 오지 않는다.
 
 ## 이번 phase의 주요 작업 단위
 - 첫 번째 작업:

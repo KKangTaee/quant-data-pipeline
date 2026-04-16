@@ -75,9 +75,10 @@
 - `.note/finance/support_tracks/RESEARCH_AUTOMATION_CURRENT_CANDIDATE_REGISTRY_AND_WORKFLOW_AUTOMATION_SECOND_WORK_UNIT_20260416.md`
   - support track 두 번째 작업으로 current candidate registry와 workflow integration을 정리한 기록 문서
 - `.note/finance/phase21/PHASE21_INTEGRATED_DEEP_BACKTEST_VALIDATION_PLAN.md`
-  - 새 main `Phase 21`가 무엇을 검증하는 phase인지, 왜 지금 deep validation이 필요한지 설명하는 kickoff 문서
+  - 현재 진행 중인 main `Phase 21`가 무엇을 검증하는 phase인지, 왜 지금 deep validation이 필요한지 설명하는 kickoff 문서
+  - `Phase 18` remaining structural backlog를 immediate blocker가 아니라 future option으로 defer했다는 문맥도 함께 반영되어 있다
 - `.note/finance/phase21/PHASE21_CURRENT_CHAPTER_TODO.md`
-  - 새 main `Phase 21` 현재 챕터 TODO 보드
+  - 현재 main `Phase 21` execution board로, validation frame definition과 integrated rerun pack 진행 상태를 관리하는 문서
 - `.note/finance/phase21/PHASE21_COMPLETION_SUMMARY.md`
   - 새 main `Phase 21` closeout 시 어떤 deep validation 결과를 남길지 위한 draft summary 문서
 - `.note/finance/phase21/PHASE21_NEXT_PHASE_PREPARATION.md`
@@ -339,6 +340,13 @@
   - Phase 18을 deep-backtest-first가 아니라 implementation-first로 재정렬한 운영 기준 문서
 - `.note/finance/phase18/PHASE18_NEXT_RANKED_FILL_IMPLEMENTATION_FIRST_SLICE.md`
   - strict annual family에 `Fill Rejected Slots With Next Ranked Names` contract를 연결한 first implementation slice 문서
+- `.note/finance/phase18/PHASE18_COMPLETION_SUMMARY.md`
+  - `Phase 18` larger structural redesign가 왜 practical closeout으로 읽히는지,
+    first slice 구현 / representative rerun / second-slice defer 판단을 함께 정리한 closeout 문서
+- `.note/finance/phase18/PHASE18_NEXT_PHASE_PREPARATION.md`
+  - `Phase 18` 이후 next main phase를 왜 `Phase 21` integrated deep validation으로 여는 편이 자연스러운지 설명하는 handoff 문서
+- `.note/finance/phase18/PHASE18_TEST_CHECKLIST.md`
+  - next-ranked fill first slice와 `Phase 18` closeout 판단을 later manual review 기준으로 검수하기 위한 checklist 문서
 - `.note/finance/backtest_reports/phase18/README.md`
   - Phase 18 larger structural redesign archive 안내 문서
 - `.note/finance/backtest_reports/phase18/PHASE18_NEXT_RANKED_FILL_REPRESENTATIVE_RERUN_FIRST_PASS.md`

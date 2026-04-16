@@ -1521,3 +1521,25 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `Benchmark Contract = Candidate Universe Equal-Weight`이면 compare summary의 `Benchmark Ticker`는 빈칸으로 보이게 바꿨다
   - underperformance / drawdown guardrail이 둘 다 꺼져 있으면 `Guardrail / Reference Ticker`도 빈칸으로 보이게 바꿨다
   - 단, guardrail이 켜져 있고 별도 reference ticker를 입력하지 않은 경우에는 `Same as Benchmark Ticker`를 유지해 fallback 의미를 드러내도록 했다
+
+### 2026-04-16 - 남아 있는 `Phase 18`을 더 진행할지, 아니면 `Phase 21`로 넘어갈지 판단
+- Request topic:
+  - 사용자가 refreshed roadmap 기준으로 현재는 `Phase 18`을 더 마무리해야 하는지, 아니면 `Phase 21`로 가야 하는지 판단을 요청함
+- Interpreted goal:
+  - phase 상태를 다시 정리한 뒤, 다음 main track을 문서와 실제 진행 모두에서 일관되게 맞추고 싶음
+- Result:
+  - `Phase 18`은 larger structural redesign first slice까지는 충분히 수행되었고,
+    remaining second-slice idea는 current blocker보다 future structural backlog로 읽는 편이 맞다고 판단했다
+  - 이유:
+    - next-ranked fill first slice는 meaningful redesign evidence를 남겼다
+    - 하지만 current anchor replacement나 same-gate rescue까지는 아니었다
+    - `Phase 19`, `Phase 20`에서 contract language와 operator workflow도 이미 practical 기준으로 정리되었다
+  - 따라서 권고 방향은:
+    - `Phase 18`은 `practical_closeout / manual_validation_pending`으로 정리
+    - immediate next main phase는 `Phase 21` integrated deep validation으로 전환
+  - 이 판단에 맞춰:
+    - `PHASE18_COMPLETION_SUMMARY.md`
+    - `PHASE18_NEXT_PHASE_PREPARATION.md`
+    - `PHASE18_TEST_CHECKLIST.md`
+    를 만들고,
+    `Phase 21` plan / TODO / roadmap / doc index를 새 상태에 맞춰 동기화했다

@@ -11,7 +11,7 @@
 
 ## 상태
 
-- `in_progress`
+- `practical_closeout / manual_validation_pending`
 
 ## Workstream A. Implementation-First Reprioritization
 
@@ -35,19 +35,18 @@
 - [x] actual rescue / anchor replacement / still-hold를 분리해서 기록
 - [x] `Value` current practical anchor 근처(`+psr`, `+psr+pfcr`, `Top N 12~16`) follow-up second pass 수행
 
-## Workstream D. Remaining Implementation Backlog
+## Workstream D. Remaining Implementation Backlog Closeout Decision
 
-- [ ] Phase 18 second slice 후보 shortlist
-- [ ] second slice 설계 문서 작성
-- [ ] second slice 실제 코드 연결
-- [ ] single / compare / history / prefill / interpretation sync
-- [ ] minimal representative validation 수행
+- [x] Phase 18 second slice 후보 backlog를 current closeout 시점에 다시 검토
+- [x] second slice는 current phase blocker가 아니라 future structural backlog로 defer
+- [x] deep rerun 재개 조건은 "second slice 구현"이 아니라 Phase 21 integrated validation frame으로 재정리
+- [x] next structural backlog는 Phase 21 validation 이후 다시 열지 판단하도록 정리
 
-## Workstream E. Candidate Consolidation / Operator Bridge Support
+## Workstream E. Candidate Consolidation / Operator Bridge Support Decision
 
-- [ ] current strongest / near-miss candidate를 compare -> weighted -> saved 흐름으로 다시 읽을 때의 gap inventory 정리
-- [ ] immediate bridge polish 후보 1개 선정
-- [ ] main track을 방해하지 않는 범위에서 보조 구현 순서 정리
+- [x] current strongest / near-miss candidate를 compare -> weighted -> saved 흐름으로 다시 읽는 gap inventory의 필요성을 재검토
+- [x] operator bridge support 성격의 후속 작업은 Phase 20에서 실질적으로 다뤄졌음을 반영
+- [x] main track을 방해하지 않는 범위의 bridge polish는 별도 closeout blocker로 보지 않기로 결정
 
 ## 현재 판단
 
@@ -60,11 +59,14 @@
     still `hold / blocked`
   - blended strongest point를 교체하는 결과는 아니다
 - 공통:
-  - 지금은 더 깊은 rerun을 넓히기보다
-    remaining implementation slice를 먼저 닫는 것이 맞다
+  - next-ranked fill first slice는 meaningful redesign evidence로는 남지만
+    current anchor replacement까지는 아니다
+  - remaining second-slice idea를 더 미는 것보다,
+    지금까지 정리된 후보를 같은 frame에서 다시 검증하는 Phase 21이 더 우선이다
 
 ## 다음 active step
 
-- [ ] Phase 18 second slice 후보 우선순위 정리
-- [ ] second slice를 구현 관점에서 먼저 설계
-- [ ] deep rerun은 second slice 코드가 붙은 뒤 최소 범위로 재개
+- [x] Phase 18 practical closeout 문서 작성
+- [x] Phase 18 next-phase handoff 문서 작성
+- [x] Phase 18 manual checklist 문서 작성
+- [ ] Phase 21 integrated validation frame first pass 시작

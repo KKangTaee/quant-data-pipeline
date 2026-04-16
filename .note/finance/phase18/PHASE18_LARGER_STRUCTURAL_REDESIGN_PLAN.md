@@ -71,7 +71,7 @@
 
 ## 현재 상태
 
-- `in_progress`
+- `practical_closeout / manual_validation_pending`
 - first slice 구현과 correction follow-up은 완료
 - current first-pass reading:
   - `Value`
@@ -83,8 +83,13 @@
     - 개선은 있으나 still `hold / blocked`
     - blended strongest point replacement는 아니다
 - current phase reading:
-  - 지금은 deeper rerun expansion보다
-    remaining structural/operator implementation을 먼저 정리하는 편이 맞다
+  - 처음에는 remaining structural/operator implementation을 더 정리하는 편이 맞다고 봤다
+  - 하지만 현재 closeout 판단 기준에서는
+    next-ranked fill first slice가 이미 meaningful redesign evidence로 남아 있고,
+    남은 second-slice idea는 immediate blocker보다 future backlog 성격이 더 강하다
+  - 따라서 현재는
+    `Phase 18`을 practical closeout으로 정리하고
+    `Phase 21` integrated deep validation으로 넘어가는 편이 더 자연스럽다
 
 ## 주요 산출물
 
@@ -97,3 +102,7 @@
 - representative rerun report
   - `.note/finance/backtest_reports/phase18/PHASE18_NEXT_RANKED_FILL_REPRESENTATIVE_RERUN_FIRST_PASS.md`
   - `.note/finance/backtest_reports/phase18/PHASE18_VALUE_FILL_ANCHOR_NEAR_FOLLOWUP_SECOND_PASS.md`
+- closeout / handoff
+  - `.note/finance/phase18/PHASE18_COMPLETION_SUMMARY.md`
+  - `.note/finance/phase18/PHASE18_NEXT_PHASE_PREPARATION.md`
+  - `.note/finance/phase18/PHASE18_TEST_CHECKLIST.md`

@@ -1011,3 +1011,25 @@ Detailed historical logs were archived on `2026-04-13`.
   - aligned the weighted/saved divider checks with the current layout
 - Durable takeaway:
   - once UI wording starts changing during QA, the checklist should follow the current labels quickly or it stops being a good test guide.
+
+### 2026-04-16
+- Closed `Phase 18` as `practical_closeout / manual_validation_pending` instead of keeping the remaining structural backlog open as an active blocker.
+- Changed:
+  - created `PHASE18_COMPLETION_SUMMARY.md`
+  - created `PHASE18_NEXT_PHASE_PREPARATION.md`
+  - created `PHASE18_TEST_CHECKLIST.md`
+  - updated `PHASE18_CURRENT_CHAPTER_TODO.md` so the remaining second-slice idea is now treated as deferred backlog rather than current active work
+  - updated `PHASE18_LARGER_STRUCTURAL_REDESIGN_PLAN.md` so the current phase reading points toward closeout and handoff
+- Durable takeaway:
+  - `Phase 18` already produced meaningful redesign evidence, but not anchor replacement evidence, so the right next step is closeout plus handoff rather than one more structural slice.
+
+### 2026-04-16
+- Started the new main `Phase 21` reading as `in_progress` and aligned the top-level roadmap/doc index to that state.
+- Changed:
+  - updated `PHASE21_INTEGRATED_DEEP_BACKTEST_VALIDATION_PLAN.md` to explicitly treat `Phase 18` remaining structural ideas as future options
+  - updated `PHASE21_CURRENT_CHAPTER_TODO.md` to reflect kickoff progress and the `Phase 18` closeout decision
+  - synced `MASTER_PHASE_ROADMAP.md` and `FINANCE_DOC_INDEX.md` so they now read as:
+    - `Phase 18` = practical closeout / manual validation pending
+    - `Phase 21` = in progress
+- Durable takeaway:
+  - the main track is now clearer: we are not opening more structural redesign first, we are validating the current annual-strict candidates and portfolio bridge in one shared frame.
