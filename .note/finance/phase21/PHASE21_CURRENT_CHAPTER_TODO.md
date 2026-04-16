@@ -1,7 +1,7 @@
 # Phase 21 Current Chapter TODO
 
 ## 상태
-- `in_progress`
+- `practical_closeout / manual_validation_pending`
 
 ## 1. Validation Frame Definition
 
@@ -37,26 +37,26 @@
 
 ## 3. Portfolio Bridge Validation
 
-- `pending` representative compare -> weighted portfolio rerun
+- `completed` representative compare -> weighted portfolio rerun
   - weighted bundle가 candidate lane인지, 단순 operator artifact인지 재판단
-- `pending` saved portfolio replay validation
+- `completed` saved portfolio replay validation
   - representative saved portfolio scenario를 다시 확인
-- `pending` portfolio-level interpretation 초안
+- `completed` portfolio-level interpretation 초안
   - 이후 phase에서 promotion / shortlist semantics를 어떻게 읽을지 메모
 
 ## 4. Reporting And Candidate Decision
 
-- `in_progress` strategy hub / backtest log sync
+- `completed` strategy hub / backtest log sync
   - `Value` first-pass rerun 결과를 durable report와 strategy log에 반영
   - `Quality` first-pass rerun 결과도 durable report와 strategy log에 반영
   - `Quality + Value` first-pass rerun 결과도 durable report와 strategy log에 반영
-  - portfolio bridge는 validation 이후 이어서 반영
-- `in_progress` current candidate summary refresh
+  - portfolio bridge validation 결과도 phase21 archive와 summary에 반영
+- `completed` current candidate summary refresh
   - `Value` first-pass 기준 current anchor 유지 / alternative weaker-gate 판단 반영
   - `Quality` first-pass 기준 current anchor 유지 / cleaner alternative comparison-only 판단 반영
   - `Quality + Value` first-pass 기준 current anchor 유지 / `Top N 9` weaker-gate 판단 반영
-  - 전체 summary closeout refresh는 portfolio bridge validation 이후 수행
-- `pending` phase21 closeout 판단 문서화
+  - portfolio bridge validation 기준 Phase 22 portfolio-level candidate construction 필요성 반영
+- `completed` phase21 closeout 판단 문서화
   - 다음 phase가 portfolio-level construction인지
   - quarterly productionization인지
   - new strategy expansion인지 판단 근거 남김
@@ -71,3 +71,5 @@
 - `completed` phase21 plan / TODO / checklist 기준 정리
 - `completed` phase18 closeout과 phase21 kickoff 연결 문맥 반영
 - `completed` validation frame first work unit 문서화
+- `completed` annual strict family rerun 3종 문서화
+- `completed` portfolio bridge validation first pass 문서화

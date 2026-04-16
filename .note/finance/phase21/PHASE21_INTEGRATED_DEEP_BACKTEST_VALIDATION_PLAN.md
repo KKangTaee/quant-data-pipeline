@@ -168,9 +168,12 @@
   - `Quality + Value`:
     - current strongest point 유지
     - `Top N 9` alternative는 numerically strong but still weaker-gate
+  - portfolio bridge:
+    - representative weighted portfolio는 `28.66% / -25.42% / Sharpe 1.51`
+    - saved portfolio replay는 summary를 exact match로 재현
 - 즉 지금부터의 next active step은
-  frame discussion이 아니라
-  **portfolio bridge validation**이다.
+  추가 rerun이 아니라
+  **manual validation checklist와 next-phase handoff**다.
 
 ## 주요 산출물
 

@@ -29,13 +29,20 @@
 
 ## 현재 기준 추천 해석
 
-- 지금은 `Phase 21`을 먼저 끝내고,
-  그 결과를 기준으로
+- `Phase 21` 결과를 보면,
+  다음 main phase는 `Phase 22` portfolio-level candidate construction이 가장 자연스럽다.
+- 이유:
+  - annual strict family current anchor는 모두 유지됐다.
+  - lower-MDD alternative들은 의미 있지만 아직 representative replacement는 아니다.
+  - representative weighted portfolio는 `28.66% / -25.42% / Sharpe 1.51`로 의미 있는 조합 결과를 냈다.
+  - saved portfolio replay도 exact match로 재현되어 workflow 신뢰성이 확인됐다.
+- 따라서 다음 순서는 아래처럼 읽는 것이 좋다.
   - `Phase 22` portfolio-level candidate construction
   - `Phase 23` quarterly / alternate cadence productionization
   - `Phase 24` new strategy expansion
   - `Phase 25` pre-live operating system
-  순으로 가는 그림이 가장 자연스럽다.
 
 ## 한 줄 정리
-- `Phase 21`이 끝나면, 그 다음은 "무엇을 더 만들까"보다 **무엇을 실제 후보로 올릴 수 있나**를 기준으로 다음 phase를 고르는 것이 맞다.
+- `Phase 21` 이후에는, 새 단일 전략을 더 찾기보다
+  **검증된 annual strict 후보들을 portfolio-level candidate로 어떻게 올릴지**
+  를 먼저 보는 것이 맞다.

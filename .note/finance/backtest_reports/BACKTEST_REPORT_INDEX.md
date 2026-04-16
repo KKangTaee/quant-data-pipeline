@@ -159,6 +159,9 @@
 - `phase21/PHASE21_QUALITY_VALUE_ANCHOR_AND_ALTERNATIVE_RERUN_FIRST_PASS.md`
   - `Quality + Value` current strongest point와 lower-MDD alternative를 같은 validation frame에서 다시 돌려,
     current anchor 유지 여부와 `Top N 9` alternative의 weaker-gate status가 그대로인지 확인한 first-pass 문서
+- `phase21/PHASE21_PORTFOLIO_BRIDGE_VALIDATION_FIRST_PASS.md`
+  - `Load Recommended Candidates -> 33/33/34 weighted portfolio -> saved portfolio replay` 흐름을 검증하고,
+    portfolio bridge가 Phase 22 candidate construction 대상으로 적합한지 확인한 first-pass 문서
 
 ## 운영 메모
 

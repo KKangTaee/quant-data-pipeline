@@ -189,18 +189,20 @@ lower-MDD but weaker-gate near-miss:
    - `Top N = 9` 대안은 `CAGR`와 `MDD`가 모두 매력적이지만
      `production_candidate / watchlist`로 내려가서 representative anchor는 아니다
 4. 다음 phase 방향
-   - bounded `Top N / one-factor / overlay`와 structural redesign first slice까지는 이미 충분히 봤다
-   - `partial cash retention`, `defensive sleeve risk-off`,
-     `concentration-aware weighting`,
-     `next-ranked eligible fill`
-     모두 meaningful evidence는 남겼지만
-     current anchor replacement까지는 못 갔다
+   - Phase 21 integrated validation에서 annual strict family current anchor 3개는 모두 유지됐다
+   - lower-MDD alternative들은 의미 있지만,
+     representative anchor replacement까지는 아니었다
+   - representative portfolio bridge는
+     `33 / 33 / 34` weighted bundle에서
+     `28.66% / -25.42% / Sharpe 1.51`을 기록했고,
+     saved replay도 exact match로 재현됐다
    - 따라서 지금 다음 단계는
      구조 실험을 하나 더 여는 것보다
-     **이 current candidate와 lower-MDD alternative를 같은 frame에서 다시 검증하는 `Phase 21` integrated deep validation**
+     **portfolio-level candidate construction을 여는 `Phase 22`**
      쪽이 더 자연스럽다
 
 ## 관련 문서
 
 - [PHASE16_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase16/PHASE16_CURRENT_CHAPTER_TODO.md)
 - [BACKTEST_REPORT_INDEX.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/BACKTEST_REPORT_INDEX.md)
+- [PHASE21_PORTFOLIO_BRIDGE_VALIDATION_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase21/PHASE21_PORTFOLIO_BRIDGE_VALIDATION_FIRST_PASS.md)

@@ -1096,3 +1096,19 @@ Detailed historical logs were archived on `2026-04-13`.
   - synced `QUALITY_VALUE_STRICT_ANNUAL.md`, `QUALITY_VALUE_STRICT_ANNUAL_BACKTEST_LOG.md`, `CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md`, phase21 TODO, and the report indexes
 - Durable takeaway:
   - `Quality + Value` remains the strongest blended representative anchor, but the very attractive `Top N 9` alternative still needs weaker-gate handling before it can replace the anchor.
+
+### 2026-04-17
+- Ran the `Phase 21` representative portfolio bridge validation.
+- Changed:
+  - rebuilt the `Load Recommended Candidates` source bundle from:
+    - `Value` current anchor
+    - `Quality` current anchor
+    - `Quality + Value` current anchor
+  - built the representative weighted portfolio with:
+    - `33 / 33 / 34`
+    - `Date Alignment = intersection`
+  - validated saved portfolio replay by reconstructing the saved compare context and portfolio context
+  - created `backtest_reports/phase21/PHASE21_PORTFOLIO_BRIDGE_VALIDATION_FIRST_PASS.md`
+  - updated Phase 21 completion / next-phase docs and candidate summary
+- Durable takeaway:
+  - the portfolio bridge is reproducible and meaningful enough for Phase 22 portfolio-level candidate construction, but portfolio-level promotion semantics still need to be designed before treating it as a production candidate.

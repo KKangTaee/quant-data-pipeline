@@ -1673,3 +1673,31 @@ Detailed historical analysis was archived on `2026-04-13`.
     - `QUALITY_VALUE_STRICT_ANNUAL.md`
     - `CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md`
     에 반영했다
+
+### 2026-04-17 - `Phase 21` portfolio bridge validation에서 Phase 22 방향이 portfolio-level construction으로 정리되었다
+- Request topic:
+  - annual strict family rerun 3종 이후, representative portfolio bridge validation을 진행함
+- Interpreted goal:
+  - `Load Recommended Candidates -> weighted portfolio -> saved portfolio replay` 흐름이
+    실제 다음 phase의 후보 construction 대상으로 볼 만큼 의미 있는지 확인하고 싶음
+- Result:
+  - representative weighted portfolio는
+    `Value / Quality / Quality + Value` current anchor를
+    `33 / 33 / 34`, `intersection`으로 섞어 만들었다
+  - 결과는:
+    - `CAGR = 28.66%`
+    - `MDD = -25.42%`
+    - `Sharpe = 1.51`
+    - `End Balance = $132,063.56`
+  - saved portfolio replay는
+    `CAGR`, `MDD`, `End Balance` 모두 exact match로 재현됐다
+  - 해석:
+    - bridge는 단순 UI artifact가 아니라 재현 가능한 portfolio construction lane이다
+    - 단, portfolio-level promotion / shortlist / deployment semantics는 아직 없기 때문에
+      production candidate로 바로 승격하기보다 Phase 22에서 별도 설계하는 것이 맞다
+  - 이 결과를
+    - `PHASE21_PORTFOLIO_BRIDGE_VALIDATION_FIRST_PASS.md`
+    - `PHASE21_COMPLETION_SUMMARY.md`
+    - `PHASE21_NEXT_PHASE_PREPARATION.md`
+    - `CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md`
+    에 반영했다

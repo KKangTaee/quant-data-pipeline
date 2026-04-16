@@ -75,16 +75,16 @@
 - `.note/finance/support_tracks/RESEARCH_AUTOMATION_CURRENT_CANDIDATE_REGISTRY_AND_WORKFLOW_AUTOMATION_SECOND_WORK_UNIT_20260416.md`
   - support track 두 번째 작업으로 current candidate registry와 workflow integration을 정리한 기록 문서
 - `.note/finance/phase21/PHASE21_INTEGRATED_DEEP_BACKTEST_VALIDATION_PLAN.md`
-  - 현재 진행 중인 main `Phase 21`가 무엇을 검증하는 phase인지, 왜 지금 deep validation이 필요한지 설명하는 kickoff 문서
+  - main `Phase 21`가 무엇을 검증하는 phase인지, 왜 deep validation이 필요했는지 설명하는 kickoff 문서
   - `Phase 18` remaining structural backlog를 immediate blocker가 아니라 future option으로 defer했다는 문맥도 함께 반영되어 있다
 - `.note/finance/phase21/PHASE21_CURRENT_CHAPTER_TODO.md`
-  - 현재 main `Phase 21` execution board로, validation frame definition과 integrated rerun pack 진행 상태를 관리하는 문서
+  - main `Phase 21` execution board로, annual strict family rerun 3종과 portfolio bridge validation 완료 상태를 관리하는 문서
 - `.note/finance/phase21/PHASE21_VALIDATION_FRAME_DEFINITION_FIRST_WORK_UNIT.md`
   - `Phase 21` 첫 실제 작업으로, 공통 기간 / universe frame / family별 rerun pack / portfolio bridge frame / report naming을 먼저 고정한 문서
 - `.note/finance/phase21/PHASE21_COMPLETION_SUMMARY.md`
-  - 새 main `Phase 21` closeout 시 어떤 deep validation 결과를 남길지 위한 draft summary 문서
+  - main `Phase 21`이 어떤 deep validation 결과를 남겼고 왜 practical closeout으로 볼 수 있는지 정리한 summary 문서
 - `.note/finance/phase21/PHASE21_NEXT_PHASE_PREPARATION.md`
-  - 새 main `Phase 21` 이후 `Phase 22 ~ 25`를 어떤 순서로 여는 것이 자연스러운지 정리한 handoff 문서
+  - main `Phase 21` 이후 `Phase 22` portfolio-level candidate construction으로 넘어가는 것이 왜 자연스러운지 정리한 handoff 문서
 - `.note/finance/phase21/PHASE21_TEST_CHECKLIST.md`
   - 새 main `Phase 21` integrated deep validation이 같은 frame에서 수행되는지 확인하기 위한 manual checklist
 - `.note/finance/backtest_reports/phase21/README.md`
@@ -98,6 +98,9 @@
 - `.note/finance/backtest_reports/phase21/PHASE21_QUALITY_VALUE_ANCHOR_AND_ALTERNATIVE_RERUN_FIRST_PASS.md`
   - `Quality + Value` current strongest point와 lower-MDD alternative를 같은 validation frame에서 다시 돌려,
     current anchor 유지 여부와 `Top N 9` alternative의 weaker-gate status를 확인한 first-pass report
+- `.note/finance/backtest_reports/phase21/PHASE21_PORTFOLIO_BRIDGE_VALIDATION_FIRST_PASS.md`
+  - `Load Recommended Candidates -> 33/33/34 weighted portfolio -> saved portfolio replay` 흐름을 검증하고,
+    portfolio bridge가 Phase 22 candidate construction 대상으로 적합한지 확인한 first-pass report
 - `.note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md`
   - `finance` 패키지 전체 구조와 DB/기능 종합 분석
 - `.note/finance/WORK_PROGRESS.md`

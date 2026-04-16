@@ -54,7 +54,7 @@
 - 체크 항목:
   - [ ] representative weighted portfolio rerun이 single-strategy rerun과 같은 phase frame에서 읽히는지
   - [ ] representative bridge가 `Load Recommended Candidates -> near-equal weighted bundle -> saved portfolio replay` 흐름으로 분명히 고정되어 있는지
-  - [ ] saved portfolio replay 결과가 portfolio-level candidate 해석에 도움이 되는지
+  - [ ] saved portfolio replay 결과가 `CAGR / MDD / End Balance` exact match 기준으로 재현되는지
   - [ ] portfolio bridge가 다음 phase의 메인 대상이 될지 판단할 재료가 충분한지
 
 ## 4. 문서와 closeout 확인

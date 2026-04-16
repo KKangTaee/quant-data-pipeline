@@ -22,3 +22,6 @@
 - [PHASE21_QUALITY_VALUE_ANCHOR_AND_ALTERNATIVE_RERUN_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase21/PHASE21_QUALITY_VALUE_ANCHOR_AND_ALTERNATIVE_RERUN_FIRST_PASS.md)
   - `Quality + Value` current strongest point와 lower-MDD alternative를 같은 validation frame에서 다시 돌려,
     current anchor 유지와 `Top N 9` alternative의 weaker-gate status를 다시 확인한 first-pass 문서
+- [PHASE21_PORTFOLIO_BRIDGE_VALIDATION_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase21/PHASE21_PORTFOLIO_BRIDGE_VALIDATION_FIRST_PASS.md)
+  - `Load Recommended Candidates -> near-equal weighted bundle -> saved portfolio replay` 흐름을 대표 frame으로 검증하고,
+    portfolio bridge가 다음 phase의 candidate construction 대상이 될 만큼 의미 있는지 정리한 first-pass 문서
