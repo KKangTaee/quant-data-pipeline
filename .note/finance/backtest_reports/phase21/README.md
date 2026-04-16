@@ -19,3 +19,6 @@
 - [PHASE21_QUALITY_ANCHOR_AND_ALTERNATIVE_RERUN_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase21/PHASE21_QUALITY_ANCHOR_AND_ALTERNATIVE_RERUN_FIRST_PASS.md)
   - `Quality` current anchor와 cleaner alternative를 같은 validation frame에서 다시 돌려,
     current anchor 유지와 cleaner alternative의 comparison-only status를 다시 확인한 first-pass 문서
+- [PHASE21_QUALITY_VALUE_ANCHOR_AND_ALTERNATIVE_RERUN_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase21/PHASE21_QUALITY_VALUE_ANCHOR_AND_ALTERNATIVE_RERUN_FIRST_PASS.md)
+  - `Quality + Value` current strongest point와 lower-MDD alternative를 같은 validation frame에서 다시 돌려,
+    current anchor 유지와 `Top N 9` alternative의 weaker-gate status를 다시 확인한 first-pass 문서

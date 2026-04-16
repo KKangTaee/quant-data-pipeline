@@ -1082,3 +1082,17 @@ Detailed historical logs were archived on `2026-04-13`.
   - synced `QUALITY_STRICT_ANNUAL.md`, `QUALITY_STRICT_ANNUAL_BACKTEST_LOG.md`, `CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md`, phase21 TODO, and the report indexes
 - Durable takeaway:
   - `Quality` also does not need a candidate replacement right now; the `LQD` anchor remains the practical point, and the `SPY` version remains useful mainly as a cleaner comparison surface.
+
+### 2026-04-17
+- Ran the third actual `Phase 21` rerun pack for `Quality + Value`.
+- Changed:
+  - reran:
+    - current strongest point `operating_margin + pcr + por + per + Top N 10`
+    - lower-MDD alternative with the same factor set and `Top N 9`
+  - confirmed in the shared `Phase 21` frame that:
+    - current strongest point remains `real_money_candidate / small_capital_trial / review_required`
+    - `Top N 9` has stronger raw metrics but still drops to `production_candidate / watchlist / review_required`
+  - created `backtest_reports/phase21/PHASE21_QUALITY_VALUE_ANCHOR_AND_ALTERNATIVE_RERUN_FIRST_PASS.md`
+  - synced `QUALITY_VALUE_STRICT_ANNUAL.md`, `QUALITY_VALUE_STRICT_ANNUAL_BACKTEST_LOG.md`, `CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md`, phase21 TODO, and the report indexes
+- Durable takeaway:
+  - `Quality + Value` remains the strongest blended representative anchor, but the very attractive `Top N 9` alternative still needs weaker-gate handling before it can replace the anchor.

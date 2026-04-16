@@ -1647,3 +1647,29 @@ Detailed historical analysis was archived on `2026-04-13`.
     - `QUALITY_STRICT_ANNUAL.md`
     - `CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md`
     에 반영했다
+
+### 2026-04-17 - `Phase 21` third actual rerun pack에서 `Quality + Value` current strongest point 유지가 다시 확인되었다
+- Request topic:
+  - `Phase 21` next step으로 `Quality + Value` family rerun pack execution을 이어감
+- Interpreted goal:
+  - blended family의 current strongest point와 `Top N 9` lower-MDD alternative를 같은 frame에서 다시 돌려,
+    current representative anchor를 유지할지 확인하고 싶음
+- Result:
+  - `Quality + Value` current strongest point
+    `operating_margin + pcr + por + per + Top N 10`
+    은 `31.82% / -26.63% / real_money_candidate / small_capital_trial / review_required`
+    로 current representative anchor를 유지했다
+  - lower-MDD alternative `Top N 9`는
+    `32.21% / -25.61% / production_candidate / watchlist / review_required`
+    로 수익률과 낙폭은 모두 매력적이지만,
+    gate가 한 단계 내려가서 replacement candidate로 보긴 어렵다
+  - 즉 `Quality + Value` family third-pass conclusion은:
+    - current strongest point 유지
+    - `Top N 9`는 very strong but weaker-gate alternative
+    - actual representative replacement는 없음
+  - 이 결과를
+    - `PHASE21_QUALITY_VALUE_ANCHOR_AND_ALTERNATIVE_RERUN_FIRST_PASS.md`
+    - `QUALITY_VALUE_STRICT_ANNUAL_BACKTEST_LOG.md`
+    - `QUALITY_VALUE_STRICT_ANNUAL.md`
+    - `CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md`
+    에 반영했다

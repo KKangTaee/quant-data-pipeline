@@ -20,6 +20,69 @@
 
 ## 기록
 
+### 2026-04-17 - phase21 integrated validation first pass
+
+- 목표:
+  - `Quality + Value` current strongest point와 lower-MDD alternative를
+    `Phase 21` 공통 validation frame에서 다시 돌려,
+    current representative anchor 유지 여부와 `Top N 9` alternative의 후보성을 재확인
+- 전략:
+  - `Quality + Value > Strict Annual`
+- 기간 / universe:
+  - `2016-01-01 ~ 2026-04-01`
+  - `US Statement Coverage 100`
+  - `Historical Dynamic PIT Universe`
+- 핵심 설정:
+  - quality:
+    - `roe`
+    - `roa`
+    - `operating_margin`
+    - `asset_turnover`
+    - `current_ratio`
+  - value:
+    - `book_to_market`
+    - `earnings_yield`
+    - `sales_yield`
+    - `pcr`
+    - `por`
+    - `per`
+  - `Option = month_end`
+  - `Rebalance Interval = 1`
+  - `Minimum Price = 5.0`
+  - `Minimum History = 12M`
+  - `Min Avg Dollar Volume 20D = 5.0M`
+  - `Transaction Cost = 10 bps`
+  - `Benchmark Contract = Candidate Universe Equal-Weight`
+  - `Trend Filter = off`
+  - `Market Regime = off`
+  - underperformance / drawdown guardrail `on`
+- 결과:
+  - current strongest point:
+    - `Top N = 10`
+    - `CAGR = 31.82%`
+    - `MDD = -26.63%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = small_capital_trial`
+    - `Deployment = review_required`
+    - `Validation / Rolling / OOS = normal / normal / normal`
+  - lower-MDD alternative:
+    - `Top N = 9`
+    - `CAGR = 32.21%`
+    - `MDD = -25.61%`
+    - `Promotion = production_candidate`
+    - `Shortlist = watchlist`
+    - `Deployment = review_required`
+    - `Validation / Rolling / OOS = watch / normal / normal`
+- 해석:
+  - `Top N = 9`는 `CAGR`와 `MDD`가 모두 좋아 보여도
+    `small_capital_trial` gate를 유지하지 못한다
+  - 따라서 current representative anchor는 여전히 `Top N = 10` strongest point다
+- 다음 액션:
+  - representative portfolio bridge validation으로 이동한다
+- 관련 문서:
+  - [PHASE21_QUALITY_VALUE_ANCHOR_AND_ALTERNATIVE_RERUN_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase21/PHASE21_QUALITY_VALUE_ANCHOR_AND_ALTERNATIVE_RERUN_FIRST_PASS.md)
+  - [QUALITY_VALUE_STRICT_ANNUAL_STRONGEST_CURRENT_CANDIDATE.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL_STRONGEST_CURRENT_CANDIDATE.md)
+
 ### 2026-04-14 - next-ranked eligible fill representative rerun first pass
 
 - 목표:

@@ -68,6 +68,9 @@
 - 그리고 Phase 16 follow-up에서는
   더 낮은 `MDD` same-gate candidate는 못 찾았지만,
   같은 `MDD`에서 `CAGR`를 더 높이는 strongest point까지 갱신됐다
+- Phase 21 integrated validation first pass에서도
+  current strongest point는 유지됐고,
+  `Top N = 9` alternative는 숫자는 더 좋아 보이지만 gate가 한 단계 약하다는 점이 다시 확인됐다
 - 그래서 지금은
   “생각보다 강한 blended family”
   로 읽는 편이 더 맞다
@@ -117,7 +120,7 @@
 
 - lower-MDD but weaker gate
 - `Top N = 9`
-- `CAGR = 31.08%`
+- `CAGR = 32.21%`
 - `MDD = -25.61%`
 - `Promotion = production_candidate`
 - `Shortlist = watchlist`
@@ -125,59 +128,55 @@
 해석:
 
 - 숫자만 보면 꽤 매력적이다
+- Phase 21 frame에서는 current strongest보다 `CAGR`도 높고 `MDD`도 낮게 나왔다
 - 하지만 strongest candidate보다 gate tier가 내려간다
 - 그래서 “대안 후보”로는 좋지만 대표 후보를 대체하진 못한다
 
 ## 최근 backtest log snapshot
 
 - 최근 기록:
-  - `2026-04-14 - next-ranked eligible fill representative rerun first pass`
+  - `2026-04-17 - phase21 integrated validation first pass`
 - 핵심 설정:
-  - strongest point trend-on structural probe:
-    - quality:
-      - `roe`
-      - `roa`
-      - `operating_margin`
-      - `asset_turnover`
-      - `current_ratio`
-    - value:
-      - `book_to_market`
-      - `earnings_yield`
-      - `sales_yield`
-      - `pcr`
-      - `por`
-      - `per`
-    - `Top N = 10`
-    - `Benchmark Contract = Candidate Universe Equal-Weight`
-    - `Trend Filter = on`
-    - `Market Regime = off`
-    - underperformance / drawdown guardrail `on`
-    - `rejected_slot_fill_enabled = off / on`
+  - quality:
+    - `roe`
+    - `roa`
+    - `operating_margin`
+    - `asset_turnover`
+    - `current_ratio`
+  - value:
+    - `book_to_market`
+    - `earnings_yield`
+    - `sales_yield`
+    - `pcr`
+    - `por`
+    - `per`
+  - `Benchmark Contract = Candidate Universe Equal-Weight`
+  - `Trend Filter = off`
+  - `Market Regime = off`
+  - underperformance / drawdown guardrail `on`
 - 결과:
-  - `fill off`:
-    - `CAGR = 30.01%`
-    - `MDD = -29.72%`
-    - `Promotion = hold`
-    - `Shortlist = hold`
-    - `Deployment = blocked`
-  - `fill on`:
-    - `CAGR = 26.64%`
-    - `MDD = -28.05%`
-    - `Promotion = hold`
-    - `Shortlist = hold`
-    - `Deployment = blocked`
-    - `Average Cash Share = 8.09%`
-    - `Filled Rows = 111`
+  - current strongest point:
+    - `Top N = 10`
+    - `CAGR = 31.82%`
+    - `MDD = -26.63%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = small_capital_trial`
+    - `Deployment = review_required`
+    - `Validation / Rolling / OOS = normal / normal / normal`
+  - lower-MDD alternative:
+    - `Top N = 9`
+    - `CAGR = 32.21%`
+    - `MDD = -25.61%`
+    - `Promotion = production_candidate`
+    - `Shortlist = watchlist`
+    - `Deployment = review_required`
+    - `Validation / Rolling / OOS = watch / normal / normal`
 - 실무 해석:
-  - 이 redesign은 blended strongest point에서도
-    cash share와 `MDD`를 개선하는 방향으로는 작동했다
-  - 하지만 first pass 기준으로는
-    `hold / blocked`를 넘을 만큼의 gate recovery가 없어서
-    current strongest practical point를 갱신하는 rescue는 아니었다
+  - `Top N = 9`는 숫자만 보면 매우 강하다
+  - 하지만 `small_capital_trial` gate를 유지하지 못하므로
+    current representative anchor는 여전히 `Top N = 10`이다
 - 다음에 볼 것:
-  - current strongest practical point는 그대로 유지
-  - 현재는 `next-ranked eligible fill`을 포함한 larger structural redesign lane을
-    더 밀어야 blended family에도 gate recovery가 가능한지 보는 단계다
+  - representative portfolio bridge validation으로 이동한다
 
 ## 관련 결과 문서
 
@@ -236,6 +235,10 @@
 - Phase 16 second pass까지 반영하면
   strongest practical point는 current code에서도 그대로 유지되고,
   lower-MDD but weaker-gate 대안과 `SPY` benchmark 대안의 tradeoff까지 정리된 상태다
+- Phase 21 integrated validation까지 반영하면
+  `Top N = 9`는 `CAGR`와 `MDD`가 모두 매력적이지만
+  gate가 `production_candidate / watchlist`로 내려가므로
+  current anchor replacement는 아니다
 - Phase 17 structural rerun까지 반영하면
   `partial cash retention`, `defensive sleeve`, `concentration-aware weighting`
   어느 쪽도 current strongest practical point를 대체하는 lower-MDD exact rescue는 아니었다

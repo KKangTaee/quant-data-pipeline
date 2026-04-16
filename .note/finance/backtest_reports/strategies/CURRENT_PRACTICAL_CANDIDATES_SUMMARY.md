@@ -131,7 +131,7 @@ cleaner alternative:
 lower-MDD but weaker-gate near-miss:
 
 - `Top N = 9`
-- `CAGR = 31.08%`
+- `CAGR = 32.21%`
 - `MDD = -25.61%`
 - `production_candidate / watchlist / review_required`
 
@@ -139,6 +139,14 @@ lower-MDD but weaker-gate near-miss:
 
 - 지금은 strongest practical point가 분명하고
 - 그보다 더 방어적인 대안도 있지만 gate가 약하다.
+- Phase 21 integrated validation first pass에서도
+  이 해석은 그대로 유지되었다.
+  - current strongest point:
+    - `31.82% / -26.63% / real_money_candidate / small_capital_trial / review_required`
+  - lower-MDD alternative:
+    - `32.21% / -25.61% / production_candidate / watchlist / review_required`
+- 즉 `Top N = 9`는 숫자만 보면 매우 강하지만,
+  current anchor를 교체하려면 아직 gate 해석이 부족하다.
 - Phase 17 structural note:
   - strongest point에 `Trend Filter = on + partial cash retention`을 붙이면
     `MDD = -15.07%`까지 크게 낮아지지만
@@ -178,8 +186,8 @@ lower-MDD but weaker-gate near-miss:
 3. `Quality + Value`
    - current strongest practical point는 여전히
      `operating_margin + pcr + por + per + Top N 10 + Candidate Universe Equal-Weight`
-   - `Top N = 9`와 `cash_ratio` 대안은 더 낮은 `MDD`를 보였지만
-     `production_candidate / watchlist`로 내려갔다
+   - `Top N = 9` 대안은 `CAGR`와 `MDD`가 모두 매력적이지만
+     `production_candidate / watchlist`로 내려가서 representative anchor는 아니다
 4. 다음 phase 방향
    - bounded `Top N / one-factor / overlay`와 structural redesign first slice까지는 이미 충분히 봤다
    - `partial cash retention`, `defensive sleeve risk-off`,

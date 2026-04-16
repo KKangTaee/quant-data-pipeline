@@ -165,9 +165,12 @@
   - `Quality`:
     - current anchor 유지
     - cleaner alternative는 still comparison-only
+  - `Quality + Value`:
+    - current strongest point 유지
+    - `Top N 9` alternative는 numerically strong but still weaker-gate
 - 즉 지금부터의 next active step은
   frame discussion이 아니라
-  **remaining rerun pack execution**이다.
+  **portfolio bridge validation**이다.
 
 ## 주요 산출물
 

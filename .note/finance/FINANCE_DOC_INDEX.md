@@ -95,6 +95,9 @@
 - `.note/finance/backtest_reports/phase21/PHASE21_QUALITY_ANCHOR_AND_ALTERNATIVE_RERUN_FIRST_PASS.md`
   - `Quality` current anchor와 cleaner alternative를 같은 validation frame에서 다시 돌려,
     current anchor 유지 여부와 cleaner alternative의 comparison-only status를 확인한 first-pass report
+- `.note/finance/backtest_reports/phase21/PHASE21_QUALITY_VALUE_ANCHOR_AND_ALTERNATIVE_RERUN_FIRST_PASS.md`
+  - `Quality + Value` current strongest point와 lower-MDD alternative를 같은 validation frame에서 다시 돌려,
+    current anchor 유지 여부와 `Top N 9` alternative의 weaker-gate status를 확인한 first-pass report
 - `.note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md`
   - `finance` 패키지 전체 구조와 DB/기능 종합 분석
 - `.note/finance/WORK_PROGRESS.md`
