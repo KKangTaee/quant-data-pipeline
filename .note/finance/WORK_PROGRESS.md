@@ -1139,3 +1139,16 @@ Detailed historical logs were archived on `2026-04-13`.
   - updated the shared backtest log template and indexes so future logs follow the same pattern
 - Durable takeaway:
   - manual QA should use report interpretation plus gate status, not raw CAGR/MDD alone, when checking whether a candidate is maintained, replaced, or deferred.
+
+### 2026-04-17
+- Clarified `Phase 21` portfolio bridge validation locations during manual QA.
+- Changed:
+  - updated `PHASE21_TEST_CHECKLIST.md` section 3 to point to `PHASE21_PORTFOLIO_BRIDGE_VALIDATION_FIRST_PASS.md` as the official rerun report
+  - separated the document report from the UI verification path:
+    - `Weighted Portfolio Builder`
+    - `Weighted Portfolio Result`
+    - `Saved Portfolios`
+    - `Replay Saved Portfolio`
+  - recorded the clarification in the Phase 21 TODO board
+- Durable takeaway:
+  - `weighted portfolio / saved portfolio rerun report` should be read as the Phase 21 Markdown report, while the Streamlit UI is the optional replay/visual verification path.

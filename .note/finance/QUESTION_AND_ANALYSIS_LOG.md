@@ -1738,3 +1738,14 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `Value`, `Quality`, `Quality + Value` annual strict backtest log 3종에 최신 날짜순 기록 규칙과 `최근 판단 요약표`를 추가했다
   - `Value`, `Quality + Value` 로그에서 뒤쪽에 있던 `2026-04-14` concentration-aware weighting 항목을 날짜순 위치로 옮겼다
   - `BACKTEST_LOG_TEMPLATE.md`, `FINANCE_DOC_INDEX.md`, `BACKTEST_REPORT_INDEX.md`에도 앞으로 같은 방식으로 관리한다는 기준을 반영했다
+
+### 2026-04-17 - `Phase 21` portfolio bridge validation의 문서 report와 UI 확인 위치를 분리했다
+- Request topic:
+  - Phase 21 checklist의 `weighted portfolio / saved portfolio rerun report`가 `Weighted Portfolio Result`인지, `Weighted Portfolio Builder`인지, 다른 위치인지 문의함
+- Interpreted goal:
+  - 공식 검증 문서와 UI 재현 위치를 구분해서 사용자가 체크리스트를 보며 바로 확인할 수 있게 만들고 싶음
+- Result:
+  - 공식 rerun report는 `PHASE21_PORTFOLIO_BRIDGE_VALIDATION_FIRST_PASS.md`로 명시했다
+  - UI 확인 경로는 `Backtest > Compare & Portfolio Builder` 아래의
+    `Load Recommended Candidates -> Strategy Comparison -> Weighted Portfolio Builder -> Weighted Portfolio Result -> Saved Portfolios -> Replay Saved Portfolio`로 정리했다
+  - `Weighted Portfolio Builder`는 구성 입력 영역, `Weighted Portfolio Result`는 결과 표시 영역, `Saved Portfolios / Replay Saved Portfolio`는 저장된 구성 재실행 영역으로 설명했다

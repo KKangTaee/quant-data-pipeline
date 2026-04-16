@@ -82,3 +82,6 @@
   - Phase 21 checklist에 유지 / 교체 / 보류 판단 기준 추가
   - annual strict family backtest log 3종에 최신 날짜순 기록 규칙과 최근 판단 요약표 반영
   - `Value`, `Quality + Value` 로그에서 뒤쪽에 밀려 있던 `2026-04-14` concentration-aware weighting 항목을 날짜순 위치로 이동
+- `completed` manual QA portfolio bridge report location clarification
+  - Phase 21 checklist에서 portfolio bridge 공식 rerun report와 UI 확인 위치를 분리해 설명
+  - `Weighted Portfolio Builder`, `Weighted Portfolio Result`, `Saved Portfolios / Replay Saved Portfolio`의 역할을 체크리스트에 명시

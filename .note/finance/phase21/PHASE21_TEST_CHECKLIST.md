@@ -89,8 +89,23 @@
 ## 3. portfolio bridge validation 확인
 
 - 확인 위치:
-  - `Compare & Portfolio Builder`
-  - weighted portfolio / saved portfolio rerun report
+  - 문서에서 확인:
+    - [PHASE21_PORTFOLIO_BRIDGE_VALIDATION_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase21/PHASE21_PORTFOLIO_BRIDGE_VALIDATION_FIRST_PASS.md)
+  - UI에서 같은 흐름을 다시 확인하려면:
+    - `Backtest > Compare & Portfolio Builder`
+    - `Quick Re-entry From Current Candidates`
+    - `Load Recommended Candidates`
+    - `Strategy Comparison`
+    - `Weighted Portfolio Builder`
+    - `Weighted Portfolio Result`
+    - `Saved Portfolios`
+    - `Replay Saved Portfolio`
+- 읽는 방법:
+  - `PHASE21_PORTFOLIO_BRIDGE_VALIDATION_FIRST_PASS.md`가 공식 rerun report다.
+  - `Weighted Portfolio Builder`는 weight와 date alignment를 넣어 portfolio를 만드는 UI 영역이다.
+  - `Weighted Portfolio Result`는 방금 만든 weighted portfolio 결과가 화면에 표시되는 UI 영역이다.
+  - `Saved Portfolios`의 `Replay Saved Portfolio`는 저장된 compare + weighted portfolio 구성을 다시 실행하는 UI 동선이다.
+  - 따라서 checklist에서 말하는 `weighted portfolio / saved portfolio rerun report`는 UI 이름이 아니라 위 문서 report를 뜻한다.
 - 체크 항목:
   - [ ] representative weighted portfolio rerun이 single-strategy rerun과 같은 phase frame에서 읽히는지
   - [ ] representative bridge가 `Load Recommended Candidates -> near-equal weighted bundle -> saved portfolio replay` 흐름으로 분명히 고정되어 있는지
