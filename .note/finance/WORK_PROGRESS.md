@@ -1129,3 +1129,13 @@ Detailed historical logs were archived on `2026-04-13`.
   - recorded the clarification in the Phase 21 TODO board
 - Durable takeaway:
   - family-level rerun QA should start from `.note/finance/backtest_reports/phase21/README.md`, then inspect the `Value`, `Quality`, and `Quality + Value` rerun reports.
+
+### 2026-04-17
+- Refined `Phase 21` manual QA decision guidance and annual strict backtest log readability.
+- Changed:
+  - added 유지 / 교체 / 보류 판단 기준 to `PHASE21_TEST_CHECKLIST.md`
+  - standardized the three annual strict backtest logs to read newest-first and end with a compact recent decision summary table
+  - moved misplaced `2026-04-14` concentration-aware weighting entries in `Value` and `Quality + Value` logs back into date order
+  - updated the shared backtest log template and indexes so future logs follow the same pattern
+- Durable takeaway:
+  - manual QA should use report interpretation plus gate status, not raw CAGR/MDD alone, when checking whether a candidate is maintained, replaced, or deferred.

@@ -10,6 +10,7 @@
 ## 작성 규칙
 
 - 의미 있는 `Quality > Strict Annual` run만 append 한다
+- 기록은 최신 날짜가 위로 오도록 정리한다
 - 목표, factor, benchmark, overlay를 같이 남긴다
 - 결과는 최소한 아래를 포함한다
   - `CAGR`
@@ -17,6 +18,7 @@
   - `Promotion`
   - `Shortlist`
   - `Deployment`
+- 문서 마지막에는 최근 핵심 run을 한눈에 보는 요약표를 유지한다
 
 ## 기록
 
@@ -444,3 +446,15 @@
 - 관련 문서:
   - [QUALITY_STRICT_ANNUAL.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/QUALITY_STRICT_ANNUAL.md)
   - [PHASE14_STRICT_ANNUAL_NONHOLD_CANDIDATE_REFRESH.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase14/PHASE14_STRICT_ANNUAL_NONHOLD_CANDIDATE_REFRESH.md)
+
+## 최근 판단 요약표
+
+| 날짜 | run | 핵심 결과 | 판단 |
+| --- | --- | --- | --- |
+| 2026-04-16 | Phase 21 integrated validation | current anchor `26.02% / -25.57%`, cleaner alternative `25.18% / -25.57%` | current anchor 유지, cleaner alternative는 comparison-only |
+| 2026-04-13 | alternate contract search | LQD anchor `26.02% / -25.57%`, SPY cleaner alternative `25.18% / -25.57%` | LQD + trend on + regime off 유지 |
+| 2026-04-13 | rescued anchor factor search | baseline `26.02% / -25.57%`, best addition `20.25% / -30.32%` | factor addition으로 교체하지 않음 |
+| 2026-04-13 | rescued anchor downside search | `Top N 12` `26.02% / -25.57%`, `Top N 16` `20.23% / -25.73%` | `Top N 12` downside-improved anchor 채택 |
+| 2026-04-13 | structural rescue second pass | rescued current `24.28% / -31.48%`, prior reference `14.84% / -27.97%` | Market Regime off 구조로 practical candidate 회복 |
+| 2026-04-13 | controlled addition review | best near-miss `13.51% / -23.84%`, `hold / blocked` | single-factor addition만으로는 회복 실패 |
+| 2026-04-10 | current best non-hold candidate | `14.84% / -27.97%`, `production_candidate / watchlist` | 이후 rescue search baseline |

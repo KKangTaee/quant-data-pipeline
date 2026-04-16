@@ -144,10 +144,12 @@
   - 현재 `Value / Quality / Quality + Value` family에서 다시 볼 practical candidate를 한 장으로 요약한 문서
 - `.note/finance/backtest_reports/strategies/BACKTEST_LOG_TEMPLATE.md`
   - 전략별 backtest log를 같은 형식으로 append하기 위한 공통 템플릿 문서
+  - 최신 날짜가 위에 오도록 기록하고, 문서 마지막에 `최근 판단 요약표`를 유지하는 기준을 담고 있다
 - `.note/finance/backtest_reports/strategies/GTAA_BACKTEST_LOG.md`
   - `GTAA` 전략 run 기록을 전략 기준으로 누적 관리하는 backtest log 문서
 - `.note/finance/backtest_reports/strategies/QUALITY_STRICT_ANNUAL_BACKTEST_LOG.md`
   - `Quality > Strict Annual` 전략 run 기록을 전략 기준으로 누적 관리하는 backtest log 문서
+  - 최신 날짜순 기록과 최근 판단 요약표로 current anchor 유지 / 교체 / 보류 판단을 빠르게 확인할 수 있다
 - `.note/finance/backtest_reports/strategies/QUALITY_STRICT_ANNUAL_RESCUED_CURRENT_CANDIDATE.md`
   - `Quality > Strict Annual` structural rescue search에서 current rescued candidate를 전략 구성 중심으로 정리한 one-pager
 - `.note/finance/backtest_reports/strategies/QUALITY_STRICT_ANNUAL_DOWNSIDE_IMPROVED_CURRENT_CANDIDATE.md`
@@ -157,8 +159,10 @@
     strongest practical point와 cleaner alternative를 같이 고정한 문서
 - `.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL_BACKTEST_LOG.md`
   - `Value > Strict Annual` 전략 run 기록을 전략 기준으로 누적 관리하는 backtest log 문서
+  - 최신 날짜순 기록과 최근 판단 요약표로 current anchor 유지 / 교체 / 보류 판단을 빠르게 확인할 수 있다
 - `.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL_BACKTEST_LOG.md`
   - `Quality + Value > Strict Annual` 전략 run 기록을 전략 기준으로 누적 관리하는 backtest log 문서
+  - 최신 날짜순 기록과 최근 판단 요약표로 current anchor 유지 / 교체 / 보류 판단을 빠르게 확인할 수 있다
 - `.note/finance/OVERLAY_CASH_POLICY_RESEARCH.md`
   - strict factor overlay의 partial rejection을 survivor reweighting으로 볼지, cash retention으로 볼지에 대한 실무 관행 조사와 현재 프로젝트 권고 문서
 - `.note/finance/DAILY_MARKET_UPDATE_RATE_LIMIT_ANALYSIS_20260328.md`

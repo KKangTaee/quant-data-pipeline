@@ -10,6 +10,7 @@
 ## 작성 규칙
 
 - 의미 있는 `Value > Strict Annual` run만 append 한다
+- 기록은 최신 날짜가 위로 오도록 정리한다
 - strongest raw winner, balanced near-miss, hold diagnostic run을 구분해서 적는다
 - 결과는 최소한 아래를 포함한다
   - `CAGR`
@@ -17,6 +18,7 @@
   - `Promotion`
   - `Shortlist`
   - `Deployment`
+- 문서 마지막에는 최근 핵심 run을 한눈에 보는 요약표를 유지한다
 
 ## 기록
 
@@ -239,6 +241,65 @@
   - `Value` current anchor는 그대로 유지
   - 다음 structural lever는
     idle cash drag를 줄일 수 있는 `defensive sleeve risk-off` 쪽이 더 유력하다
+
+### 2026-04-14 - concentration-aware weighting representative rerun first pass
+
+- 목표:
+  - `Value` current practical anchor에서
+    equal-weight top-N을 mild rank taper로 바꾸면
+    same-gate lower-MDD rescue가 가능한지 확인
+- 전략:
+  - `Value > Strict Annual`
+- 기간 / universe:
+  - `2016-01-01 ~ 2026-04-01`
+  - `US Statement Coverage 100`
+  - `Historical Dynamic PIT Universe`
+- 핵심 설정:
+  - current anchor:
+    - `Top N = 14`
+    - `psr` added
+    - `Benchmark = SPY`
+    - `Trend Filter = off`
+    - `Market Regime = off`
+    - practical `Real-Money Contract` 유지
+    - underperformance / drawdown guardrail 유지
+  - weighting contract:
+    - `equal_weight`
+    - `rank_tapered`
+- factor / ticker:
+  - `book_to_market`
+  - `earnings_yield`
+  - `sales_yield`
+  - `ocf_yield`
+  - `operating_income_yield`
+  - `psr`
+- 결과:
+  - `equal_weight`:
+    - `CAGR = 28.13%`
+    - `MDD = -24.55%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = paper_probation`
+    - `Deployment = review_required`
+    - `Rolling Review = watch`
+  - `rank_tapered`:
+    - `CAGR = 27.71%`
+    - `MDD = -25.87%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = paper_probation`
+    - `Deployment = review_required`
+    - `Rolling Review = caution`
+- 해석:
+  - `rank_tapered`는 gate를 유지한 채 current anchor에 잘 적용됐다
+  - 하지만 이번 representative rerun에서는
+    `MDD`를 더 낮추지 못했고
+    rolling consistency도 한 단계 약해졌다
+  - 즉 `equal_weight` current anchor를 대체하는 lower-MDD rescue는 아니었다
+- 다음 액션:
+  - Phase 17 first three structural lever 결과를 묶어
+    closeout 또는 next structural lever 우선순위를 정리한다
+- 관련 문서:
+  - [PHASE17_CONCENTRATION_AWARE_WEIGHTING_REPRESENTATIVE_RERUN_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase17/PHASE17_CONCENTRATION_AWARE_WEIGHTING_REPRESENTATIVE_RERUN_FIRST_PASS.md)
+  - [VALUE_STRICT_ANNUAL.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL.md)
 
 ### 2026-04-13 - rescue search second pass에서 lower-MDD exact rescue는 없었음
 
@@ -496,61 +557,18 @@
   - [VALUE_STRICT_ANNUAL_STRONGEST_CURRENT_CANDIDATE.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL_STRONGEST_CURRENT_CANDIDATE.md)
   - [PHASE14_STRICT_ANNUAL_NONHOLD_CANDIDATE_REFRESH.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase14/PHASE14_STRICT_ANNUAL_NONHOLD_CANDIDATE_REFRESH.md)
 
-### 2026-04-14 - concentration-aware weighting representative rerun first pass
+## 최근 판단 요약표
 
-- 목표:
-  - `Value` current practical anchor에서
-    equal-weight top-N을 mild rank taper로 바꾸면
-    same-gate lower-MDD rescue가 가능한지 확인
-- 전략:
-  - `Value > Strict Annual`
-- 기간 / universe:
-  - `2016-01-01 ~ 2026-04-01`
-  - `US Statement Coverage 100`
-  - `Historical Dynamic PIT Universe`
-- 핵심 설정:
-  - current anchor:
-    - `Top N = 14`
-    - `psr` added
-    - `Benchmark = SPY`
-    - `Trend Filter = off`
-    - `Market Regime = off`
-    - practical `Real-Money Contract` 유지
-    - underperformance / drawdown guardrail 유지
-  - weighting contract:
-    - `equal_weight`
-    - `rank_tapered`
-- factor / ticker:
-  - `book_to_market`
-  - `earnings_yield`
-  - `sales_yield`
-  - `ocf_yield`
-  - `operating_income_yield`
-  - `psr`
-- 결과:
-  - `equal_weight`:
-    - `CAGR = 28.13%`
-    - `MDD = -24.55%`
-    - `Promotion = real_money_candidate`
-    - `Shortlist = paper_probation`
-    - `Deployment = review_required`
-    - `Rolling Review = watch`
-  - `rank_tapered`:
-    - `CAGR = 27.71%`
-    - `MDD = -25.87%`
-    - `Promotion = real_money_candidate`
-    - `Shortlist = paper_probation`
-    - `Deployment = review_required`
-    - `Rolling Review = caution`
-- 해석:
-  - `rank_tapered`는 gate를 유지한 채 current anchor에 잘 적용됐다
-  - 하지만 이번 representative rerun에서는
-    `MDD`를 더 낮추지 못했고
-    rolling consistency도 한 단계 약해졌다
-  - 즉 `equal_weight` current anchor를 대체하는 lower-MDD rescue는 아니었다
-- 다음 액션:
-  - Phase 17 first three structural lever 결과를 묶어
-    closeout 또는 next structural lever 우선순위를 정리한다
-- 관련 문서:
-  - [PHASE17_CONCENTRATION_AWARE_WEIGHTING_REPRESENTATIVE_RERUN_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase17/PHASE17_CONCENTRATION_AWARE_WEIGHTING_REPRESENTATIVE_RERUN_FIRST_PASS.md)
-  - [VALUE_STRICT_ANNUAL.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL.md)
+| 날짜 | run | 핵심 결과 | 판단 |
+| --- | --- | --- | --- |
+| 2026-04-16 | Phase 21 integrated validation | current anchor `28.13% / -24.55%`, lower-MDD alternative `27.22% / -21.16%` | current anchor 유지, `+ pfcr`는 weaker-gate near-miss |
+| 2026-04-14 | next-ranked fill | fill on `25.23% / -28.37%`, validation은 개선됐지만 gate는 `hold / blocked` | replacement 아님, reference contract로 보류 |
+| 2026-04-14 | fill anchor-near follow-up | best lower-MDD near-miss `24.47% / -24.89%`, `hold / blocked` | current anchor 유지 |
+| 2026-04-14 | defensive sleeve risk-off | cash-only `28.21% / -24.55%`, sleeve `28.11% / -25.14%` | sleeve로 교체하지 않음 |
+| 2026-04-14 | partial cash retention | cash retention on `20.11% / -15.85%`, drawdown은 개선됐지만 CAGR와 gate가 약함 | downside lever로만 보류 |
+| 2026-04-14 | concentration-aware weighting | equal-weight `28.13% / -24.55%`, rank-tapered `27.71% / -25.87%` | equal-weight current anchor 유지 |
+| 2026-04-13 | rescue search second pass | current anchor `28.13% / -24.55%`, best near-miss `27.22% / -21.16%` | lower-MDD exact rescue 없음 |
+| 2026-04-13 | bounded downside refinement | best practical point remains `Top N 14 + psr`, `28.13% / -24.55%` | current anchor 유지 |
+| 2026-04-13 | factor addition second pass | `psr` addition `28.13% / -24.55%` | current best addition으로 고정 |
+| 2026-04-13 | downside-improved first pass | `Top N 14`, `27.48% / -24.55%` | first-pass downside-improved candidate |
+| 2026-04-10 | strongest current candidate | `Top N 10`, `29.89% / -29.15%` | 이후 downside 개선 탐색의 baseline |

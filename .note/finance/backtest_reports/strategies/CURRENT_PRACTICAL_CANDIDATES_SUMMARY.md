@@ -174,6 +174,11 @@ lower-MDD but weaker-gate near-miss:
 
 ## 현재 handoff 해석
 
+2026-04-17 log readability review:
+
+- annual strict backtest log 3종은 최신 날짜순과 `최근 판단 요약표` 기준으로 정리했다.
+- 이번 정리는 기록 가독성 개선이며, 아래 current anchor / lower-MDD alternative / portfolio bridge 판단은 변경하지 않는다.
+
 1. `Value`
    - current best practical point는 여전히 `Top N = 14 + psr`
    - `+ pfcr` 같은 lower-MDD near-miss는 current code second pass에서도

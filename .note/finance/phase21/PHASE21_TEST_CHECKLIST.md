@@ -56,6 +56,30 @@
   - `phase21/README.md`는 전체 목차다.
   - family별 rerun report는 이번 Phase 21에서 실제로 다시 돌린 결과다.
   - strategy hub와 strategy backtest log는 이번 결과가 장기 기록에 제대로 반영되었는지 확인하는 보조 위치다.
+- 유지 / 교체 / 보류 판단 기준:
+  - `유지`:
+    - 현재 대표 후보가 여전히 가장 안정적인 기준점일 때 선택한다.
+    - 확인할 것:
+      - `CAGR / MDD`가 여전히 경쟁력 있는지
+      - `Promotion / Shortlist / Deployment`가 대안보다 약해지지 않는지
+      - `Validation / Rolling Review / Out-of-Sample Review`가 크게 나빠지지 않는지
+      - report의 `해석`, annual 문서의 `실무해석`, backtest log의 `다음 액션`이 current anchor 유지로 읽히는지
+  - `교체`:
+    - 대안이 현재 대표 후보보다 명확히 좋아졌고, 실전 gate도 같거나 더 강할 때 선택한다.
+    - 예:
+      - `MDD`가 낮아졌는데 `CAGR` 손실이 과하지 않음
+      - `Promotion / Shortlist / Deployment`가 current anchor와 같거나 더 좋음
+      - validation이 약해지지 않음
+      - report가 replacement 또는 actual rescue로 해석함
+  - `보류`:
+    - 대안이 일부 지표는 좋아 보이지만 아직 대표 후보를 바꾸기에는 부족할 때 선택한다.
+    - 예:
+      - `MDD`는 낮지만 `Promotion`이나 `Shortlist`가 약해짐
+      - `CAGR` 손실이 큼
+      - `Deployment = blocked` 또는 `hold`가 남음
+      - report가 near-miss, comparison-only, weaker-gate alternative로 해석함
+  - 즉 이 항목은 사용자가 원자료를 새로 계산하라는 뜻이 아니라,
+    각 report와 annual 문서의 해석이 위 기준에 맞게 충분히 적혀 있는지 확인하는 항목이다.
 - 체크 항목:
   - [ ] `Value` current anchor와 lower-MDD alternative rerun 결과를 같은 frame에서 비교할 수 있는지
   - [ ] `Quality` current anchor와 alternative rerun 결과를 같은 frame에서 비교할 수 있는지

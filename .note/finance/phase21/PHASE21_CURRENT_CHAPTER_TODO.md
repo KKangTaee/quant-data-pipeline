@@ -78,3 +78,7 @@
   - Phase 21 plan의 current anchor / rescue candidate / deferred Phase 18 backlog 설명을 사용자 검수용 문장으로 정리
 - `completed` manual QA rerun location clarification
   - Phase 21 checklist에서 family별 integrated rerun 확인 위치를 phase21 archive / family별 report / strategy hub / backtest log 링크로 명확히 정리
+- `completed` manual QA decision criteria and backtest log readability cleanup
+  - Phase 21 checklist에 유지 / 교체 / 보류 판단 기준 추가
+  - annual strict family backtest log 3종에 최신 날짜순 기록 규칙과 최근 판단 요약표 반영
+  - `Value`, `Quality + Value` 로그에서 뒤쪽에 밀려 있던 `2026-04-14` concentration-aware weighting 항목을 날짜순 위치로 이동

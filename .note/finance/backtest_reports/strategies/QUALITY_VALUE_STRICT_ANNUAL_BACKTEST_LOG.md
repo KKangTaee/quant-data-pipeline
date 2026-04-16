@@ -10,6 +10,7 @@
 ## 작성 규칙
 
 - 의미 있는 `Quality + Value > Strict Annual` run만 append 한다
+- 기록은 최신 날짜가 위로 오도록 정리한다
 - 방어형 blend와 default blend를 구분해서 적는다
 - 결과는 최소한 아래를 포함한다
   - `CAGR`
@@ -17,6 +18,7 @@
   - `Promotion`
   - `Shortlist`
   - `Deployment`
+- 문서 마지막에는 최근 핵심 run을 한눈에 보는 요약표를 유지한다
 
 ## 기록
 
@@ -254,6 +256,68 @@
   - current strongest practical point는 그대로 유지
   - 다음 structural lever는
     cash drag를 줄일 수 있는 `defensive sleeve risk-off`를 우선 검토한다
+
+### 2026-04-14 - concentration-aware weighting representative rerun first pass
+
+- 목표:
+  - `Quality + Value` current strongest practical point에서
+    equal-weight top-N을 mild rank taper로 바꾸면
+    same-gate lower-MDD rescue가 가능한지 확인
+- 전략:
+  - `Quality + Value > Strict Annual`
+- 기간 / universe:
+  - `2016-01-01 ~ 2026-04-01`
+  - `US Statement Coverage 100`
+  - `Historical Dynamic PIT Universe`
+- 핵심 설정:
+  - current strongest point:
+    - quality:
+      - `roe`
+      - `roa`
+      - `operating_margin`
+      - `asset_turnover`
+      - `current_ratio`
+    - value:
+      - `book_to_market`
+      - `earnings_yield`
+      - `sales_yield`
+      - `pcr`
+      - `por`
+      - `per`
+    - `Top N = 10`
+    - `Benchmark Contract = Candidate Universe Equal-Weight`
+    - `Trend Filter = off`
+    - `Market Regime = off`
+    - practical `Real-Money Contract` 유지
+    - underperformance / drawdown guardrail 유지
+  - weighting contract:
+    - `equal_weight`
+    - `rank_tapered`
+- 결과:
+  - `equal_weight`:
+    - `CAGR = 31.82%`
+    - `MDD = -26.63%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = small_capital_trial`
+    - `Deployment = review_required`
+  - `rank_tapered`:
+    - `CAGR = 32.92%`
+    - `MDD = -27.60%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = small_capital_trial`
+    - `Deployment = review_required`
+- 해석:
+  - `rank_tapered`는 gate를 유지한 채 strongest blended point에 잘 적용됐다
+  - `CAGR`는 더 좋아졌지만
+    이번 질문인 downside 개선에는 답을 주지 못했고
+    `MDD`는 오히려 더 나빠졌다
+  - 즉 strongest current point를 대체하는 lower-MDD rescue는 아니었다
+- 다음 액션:
+  - Phase 17 first three structural lever 결과를 묶어
+    closeout 또는 next structural lever 우선순위를 정리한다
+- 관련 문서:
+  - [PHASE17_CONCENTRATION_AWARE_WEIGHTING_REPRESENTATIVE_RERUN_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase17/PHASE17_CONCENTRATION_AWARE_WEIGHTING_REPRESENTATIVE_RERUN_FIRST_PASS.md)
+  - [QUALITY_VALUE_STRICT_ANNUAL.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL.md)
 
 ### 2026-04-13 - Phase 16 strongest point downside follow-up second pass
 
@@ -932,64 +996,17 @@
   - [QUALITY_VALUE_STRICT_ANNUAL.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL.md)
   - [PHASE14_STRICT_ANNUAL_NONHOLD_CANDIDATE_REFRESH.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase14/PHASE14_STRICT_ANNUAL_NONHOLD_CANDIDATE_REFRESH.md)
 
-### 2026-04-14 - concentration-aware weighting representative rerun first pass
+## 최근 판단 요약표
 
-- 목표:
-  - `Quality + Value` current strongest practical point에서
-    equal-weight top-N을 mild rank taper로 바꾸면
-    same-gate lower-MDD rescue가 가능한지 확인
-- 전략:
-  - `Quality + Value > Strict Annual`
-- 기간 / universe:
-  - `2016-01-01 ~ 2026-04-01`
-  - `US Statement Coverage 100`
-  - `Historical Dynamic PIT Universe`
-- 핵심 설정:
-  - current strongest point:
-    - quality:
-      - `roe`
-      - `roa`
-      - `operating_margin`
-      - `asset_turnover`
-      - `current_ratio`
-    - value:
-      - `book_to_market`
-      - `earnings_yield`
-      - `sales_yield`
-      - `pcr`
-      - `por`
-      - `per`
-    - `Top N = 10`
-    - `Benchmark Contract = Candidate Universe Equal-Weight`
-    - `Trend Filter = off`
-    - `Market Regime = off`
-    - practical `Real-Money Contract` 유지
-    - underperformance / drawdown guardrail 유지
-  - weighting contract:
-    - `equal_weight`
-    - `rank_tapered`
-- 결과:
-  - `equal_weight`:
-    - `CAGR = 31.82%`
-    - `MDD = -26.63%`
-    - `Promotion = real_money_candidate`
-    - `Shortlist = small_capital_trial`
-    - `Deployment = review_required`
-  - `rank_tapered`:
-    - `CAGR = 32.92%`
-    - `MDD = -27.60%`
-    - `Promotion = real_money_candidate`
-    - `Shortlist = small_capital_trial`
-    - `Deployment = review_required`
-- 해석:
-  - `rank_tapered`는 gate를 유지한 채 strongest blended point에 잘 적용됐다
-  - `CAGR`는 더 좋아졌지만
-    이번 질문인 downside 개선에는 답을 주지 못했고
-    `MDD`는 오히려 더 나빠졌다
-  - 즉 strongest current point를 대체하는 lower-MDD rescue는 아니었다
-- 다음 액션:
-  - Phase 17 first three structural lever 결과를 묶어
-    closeout 또는 next structural lever 우선순위를 정리한다
-- 관련 문서:
-  - [PHASE17_CONCENTRATION_AWARE_WEIGHTING_REPRESENTATIVE_RERUN_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase17/PHASE17_CONCENTRATION_AWARE_WEIGHTING_REPRESENTATIVE_RERUN_FIRST_PASS.md)
-  - [QUALITY_VALUE_STRICT_ANNUAL.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL.md)
+| 날짜 | run | 핵심 결과 | 판단 |
+| --- | --- | --- | --- |
+| 2026-04-17 | Phase 21 integrated validation | current strongest `31.82% / -26.63%`, `Top N 9` alternative `32.21% / -25.61%` | current strongest 유지, `Top N 9`는 weaker-gate alternative |
+| 2026-04-14 | next-ranked fill | fill on `26.64% / -28.05%`, cash share와 MDD는 줄었지만 gate는 `hold / blocked` | replacement 아님, reference contract로 보류 |
+| 2026-04-14 | defensive sleeve risk-off | cash-only `31.82% / -26.63%`, sleeve `31.79% / -27.19%` | sleeve로 교체하지 않음 |
+| 2026-04-14 | partial cash retention | cash retention on `20.03% / -15.07%`, drawdown은 개선됐지만 CAGR와 gate가 약함 | downside lever로만 보류 |
+| 2026-04-14 | concentration-aware weighting | equal-weight `31.82% / -26.63%`, rank-tapered `32.92% / -27.60%` | CAGR는 좋지만 lower-MDD rescue 아님 |
+| 2026-04-13 | strongest point downside follow-up | current strongest `31.82% / -26.63%`, `Top N 9` `32.21% / -25.61%` | lower-MDD weaker-gate alternative로 보류 |
+| 2026-04-13 | bounded downside refinement | strongest practical point remains current blend | current strongest 유지 |
+| 2026-04-13 | strongest anchor top-n search | `Top N 10` strongest point fixed | current representative anchor로 고정 |
+| 2026-04-13 | quality-side / replacement / value-side searches | 여러 factor replacement/addition 후보 검토 | final blend 후보 압축에 사용 |
+| 2026-04-10 | current strongest non-hold blend | default blend `28.51% / -28.35%` | 이후 blended search baseline |

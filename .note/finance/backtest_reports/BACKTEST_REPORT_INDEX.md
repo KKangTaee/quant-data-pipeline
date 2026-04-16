@@ -10,6 +10,7 @@
   - 전략별 허브 문서 안내
 - `strategies/BACKTEST_LOG_TEMPLATE.md`
   - 전략별 backtest log를 append할 때 공통으로 쓰는 템플릿
+  - 최신 날짜순 기록과 마지막 `최근 판단 요약표` 운영 기준을 포함한다
 - `strategies/GTAA.md`
   - `GTAA` 결과 허브
 - `strategies/GTAA_BACKTEST_LOG.md`
@@ -18,6 +19,7 @@
   - `Quality > Strict Annual` 결과 허브
 - `strategies/QUALITY_STRICT_ANNUAL_BACKTEST_LOG.md`
   - `Quality > Strict Annual` 전략 run 기록 누적 문서
+  - 최신 날짜순으로 읽고, 마지막 요약표에서 유지 / 교체 / 보류 판단을 빠르게 확인한다
 - `strategies/QUALITY_STRICT_ANNUAL_RESCUED_CURRENT_CANDIDATE.md`
   - `Quality > Strict Annual` structural rescue search에서 다시 확보한 current candidate one-pager
 - `strategies/QUALITY_STRICT_ANNUAL_DOWNSIDE_IMPROVED_CURRENT_CANDIDATE.md`
@@ -26,6 +28,7 @@
   - `Value > Strict Annual` 결과 허브
 - `strategies/VALUE_STRICT_ANNUAL_BACKTEST_LOG.md`
   - `Value > Strict Annual` 전략 run 기록 누적 문서
+  - 최신 날짜순으로 읽고, 마지막 요약표에서 유지 / 교체 / 보류 판단을 빠르게 확인한다
 - `strategies/VALUE_STRICT_ANNUAL_STRONGEST_CURRENT_CANDIDATE.md`
   - strongest `Value > Strict Annual` 후보 하나를 전략 구성 중심으로 바로 읽는 one-pager
 - `strategies/VALUE_STRICT_ANNUAL_DOWNSIDE_IMPROVED_CURRENT_CANDIDATE.md`
@@ -36,6 +39,7 @@
   - `Quality + Value > Strict Annual` 결과 허브
 - `strategies/QUALITY_VALUE_STRICT_ANNUAL_BACKTEST_LOG.md`
   - `Quality + Value > Strict Annual` 전략 run 기록 누적 문서
+  - 최신 날짜순으로 읽고, 마지막 요약표에서 유지 / 교체 / 보류 판단을 빠르게 확인한다
 - `strategies/CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md`
   - 현재 `Value / Quality / Quality + Value` family에서 다시 볼 practical candidate를 한 장으로 요약한 문서
 - `strategies/QUALITY_VALUE_STRICT_ANNUAL_BEST_ADDITION_CURRENT_CANDIDATE.md`

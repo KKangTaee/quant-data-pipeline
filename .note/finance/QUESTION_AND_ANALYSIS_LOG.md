@@ -1725,3 +1725,16 @@ Detailed historical analysis was archived on `2026-04-13`.
     - `PHASE21_QUALITY_ANCHOR_AND_ALTERNATIVE_RERUN_FIRST_PASS.md`
     - `PHASE21_QUALITY_VALUE_ANCHOR_AND_ALTERNATIVE_RERUN_FIRST_PASS.md`
   - strategy hub와 strategy backtest log는 장기 기록 동기화 확인용 보조 위치로 설명했다
+
+### 2026-04-17 - `Phase 21` QA에서 유지 / 교체 / 보류 판단 기준과 backtest log 관리 방식을 명확히 했다
+- Request topic:
+  - `결과를 보고 유지 / 교체 / 보류 판단이 가능한 정도로 해석이 적혀 있는지`를 무엇을 보고 체크해야 하는지 문의함
+  - annual strict backtest log가 날짜순으로 읽히지 않고, 마지막에 간단한 표가 있으면 좋겠다고 요청함
+- Interpreted goal:
+  - 사용자가 raw 수익률만 보고 판단하지 않고, gate와 해석까지 포함해 current anchor 유지 / 대체 / 보류 여부를 확인할 수 있게 만들고 싶음
+- Result:
+  - `PHASE21_TEST_CHECKLIST.md`에 유지 / 교체 / 보류 판단 기준을 추가했다
+  - 유지 판단은 `CAGR / MDD`, `Promotion / Shortlist / Deployment`, `Validation / Rolling / OOS`, report 해석과 다음 액션을 함께 보는 것으로 정리했다
+  - `Value`, `Quality`, `Quality + Value` annual strict backtest log 3종에 최신 날짜순 기록 규칙과 `최근 판단 요약표`를 추가했다
+  - `Value`, `Quality + Value` 로그에서 뒤쪽에 있던 `2026-04-14` concentration-aware weighting 항목을 날짜순 위치로 옮겼다
+  - `BACKTEST_LOG_TEMPLATE.md`, `FINANCE_DOC_INDEX.md`, `BACKTEST_REPORT_INDEX.md`에도 앞으로 같은 방식으로 관리한다는 기준을 반영했다
