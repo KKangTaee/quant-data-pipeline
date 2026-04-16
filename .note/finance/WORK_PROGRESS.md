@@ -22,6 +22,14 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-04-16
+- Clarified roadmap semantics after user review:
+  - `Phase 18` is still in-progress from a backlog perspective
+  - `Phase 19` and `Phase 20` are fully manual-validation completed
+  - `Phase 5 first chapter` was a historical chapter label, not a hidden active second chapter
+  - `support track` remains a parallel tooling lane, not a main finance phase
+- Updated the roadmap so these distinctions read more directly.
+
+### 2026-04-16
 - Refreshed `MASTER_PHASE_ROADMAP.md` after the user pointed out that the reading order had become awkward.
 - Reordered:
   - `Phase 6` and `Phase 16` back into their natural chronological positions

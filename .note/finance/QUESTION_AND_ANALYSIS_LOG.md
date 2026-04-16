@@ -21,6 +21,40 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-04-16 - `Phase 18 ~ 20`은 같은 묶음으로 읽히더라도 완료 상태는 다르고, global chapter layer를 phase 위에 또 만드는 것은 과하다
+- Request topic:
+  - 사용자가 roadmap을 읽다가
+    `Phase 18 ~ 20`이 다 끝난 것인지,
+    `support track`이 정확히 무엇인지,
+    `Phase 5 first chapter`가 implying 하는 `second chapter`가 실제로 있는지,
+    phase 위에 chapter 구조를 한 번 더 두는 것이 맞는지 질문함
+- Interpreted goal:
+  - roadmap을 읽는 사람이 상태를 오해하지 않도록 정리하고,
+    앞으로 프로젝트 구조를 phase / chapter / support track 기준으로 어디까지 계층화할지 기준을 세우고 싶음
+- Result:
+  - `Phase 18`은 아직 fully closed가 아니다
+    - `PHASE18_CURRENT_CHAPTER_TODO.md` 기준으로 remaining implementation backlog가 남아 있다
+  - `Phase 19`, `Phase 20`은 manual checklist까지 완료된 상태다
+  - 따라서 roadmap에서는
+    - `Phase 18 = 진행형`
+    - `Phase 19 = 완료`
+    - `Phase 20 = 완료`
+    로 읽히게 구분을 더 직접적으로 적는 것이 맞다
+  - `support track`은
+    - plugin / registry / bootstrap / hygiene 같은 repo-local 지원 tooling 묶음이며
+    - main finance feature phase와는 분리해서 보는 것이 맞다
+  - `Phase 5 first chapter`는 historical 표현이다
+    - 실제 `second chapter`가 formal하게 이어진 것이 아니라,
+      후속 큰 흐름은 `Phase 6`으로 분리되었다
+  - 구조화 원칙:
+    - phase 위에 global chapter layer를 또 만드는 것은 과하다
+    - 기본 축은
+      - roadmap = phase
+      - active long phase 안의 세부 실행 = chapter / workstream
+      - main product work가 아닌 repo-local tooling = support track
+    - 즉 chapter는 phase 내부에서만 선택적으로 쓰고,
+      phase 전체를 다시 chapter 상위 계층으로 감싸는 구조는 권장하지 않는다
+
 ### 2026-04-16 - `MASTER_PHASE_ROADMAP.md`는 phase 문서가 쌓일수록 순서와 현재 위치를 다시 정리해 주지 않으면 읽기 난도가 급격히 올라간다
 - Request topic:
   - 사용자가 `MASTER_PHASE_ROADMAP.md`를 읽다가,
