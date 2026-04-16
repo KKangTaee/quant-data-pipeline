@@ -13,13 +13,24 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Active Pointers
 
 - current phase board:
-  - [PHASE20_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase20/PHASE20_CURRENT_CHAPTER_TODO.md)
+  - [PHASE21_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase21/PHASE21_CURRENT_CHAPTER_TODO.md)
 - current candidate summary:
   - [CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md)
 - historical full archive:
   - [WORK_PROGRESS_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/archive/WORK_PROGRESS_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-04-16
+- Refreshed `MASTER_PHASE_ROADMAP.md` after the user pointed out that the reading order had become awkward.
+- Reordered:
+  - `Phase 6` and `Phase 16` back into their natural chronological positions
+  - `현재 위치` / `Phase 18~25 Draft Big Picture` / `앞으로의 운영 방식` into a cleaner tail structure
+- Synced:
+  - `Phase 19` status now reads as `phase complete / manual_validation_completed`
+  - active pointer now follows `Phase 21` as the next main phase board
+- Result:
+  - the roadmap now reads as a real phase sequence again instead of a mix of historical notes and later inserts
 
 ### 2026-04-16
 - Rebased the roadmap after the user pointed out that the old `Phase 21` was not really product work.

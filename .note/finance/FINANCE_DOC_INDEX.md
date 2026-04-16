@@ -16,7 +16,8 @@
 - `.note/finance/PHASE_TEST_CHECKLIST_TEMPLATE.md`
   - 앞으로 `finance` phase test checklist 문서를 만들 때 기본으로 따를 checkbox 중심 템플릿 문서
 - `.note/finance/MASTER_PHASE_ROADMAP.md`
-  - 전체 Phase 구조와 상위 진행 방향
+  - 전체 Phase 구조와 상위 진행 방향을 정리한 최상위 로드맵 문서
+  - 최근 refresh 기준으로 `Phase 6`, `Phase 16`, `현재 위치`, support track, `Phase 21~25` reading order까지 다시 정리되어 있다
 - `.note/finance/ROADMAP_REBASE_PHASE18_TO_PHASE25_20260414.md`
   - `Phase 18` 진행 중 시점에서 `Phase 19~25` 큰 그림을 다시 정리한 논의용 상위 로드맵 초안
 - `.note/finance/phase19/PHASE19_STRUCTURAL_CONTRACT_EXPANSION_PLAN.md`

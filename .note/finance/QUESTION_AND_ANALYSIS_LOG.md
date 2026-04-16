@@ -13,13 +13,37 @@ Detailed historical analysis was archived on `2026-04-13`.
 ## Active Pointers
 
 - current phase board:
-  - [PHASE20_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase20/PHASE20_CURRENT_CHAPTER_TODO.md)
+  - [PHASE21_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase21/PHASE21_CURRENT_CHAPTER_TODO.md)
 - current candidate summary:
   - [CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md)
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-04-16 - `MASTER_PHASE_ROADMAP.md`는 phase 문서가 쌓일수록 순서와 현재 위치를 다시 정리해 주지 않으면 읽기 난도가 급격히 올라간다
+- Request topic:
+  - 사용자가 `MASTER_PHASE_ROADMAP.md`를 읽다가,
+    phase 순서가 뒤섞여 있고 원활한 작업을 위해 한 번 refresh가 필요하다고 요청함
+- Interpreted goal:
+  - 단순 문구 수정이 아니라
+    현재 기준의 phase 순서, support track 위치, current reading order를 다시 읽기 좋게 만들고 싶음
+- Result:
+  - roadmap의 실제 문제는 `Phase 6`, `Phase 16`, `현재 위치`가 뒤쪽에 늦게 밀려 있어
+    phase 흐름이 순차적으로 읽히지 않는 것이었다
+  - 그래서
+    - `Phase 6`을 `Phase 5` 뒤로
+    - `Phase 16`을 `Phase 15` 뒤로
+    - `현재 위치`, `Phase 18~25 Draft Big Picture`, `앞으로의 운영 방식`
+      을 tail summary 영역으로 다시 정리했다
+  - 추가로
+    - `빠른 읽기`
+    - 현재 추천 reading order
+    - support track은 main phase가 아니라는 점
+    도 같이 드러나게 정리했다
+  - 의미:
+    - roadmap은 phase가 많아질수록 “문서 누적본”이 아니라
+      **현재 기준의 읽기 경로를 다시 안내하는 문서**로 주기적으로 refresh해야 한다
 
 ### 2026-04-16 - 기존 `Phase 21` automation 묶음은 main phase가 아니라 support track으로 빼고, 새 `Phase 21`은 deep validation으로 다시 잡는 것이 맞다
 - Request topic:
