@@ -22,6 +22,15 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-04-16
+- Split the roadmap tail into two clearer roles:
+  - `현재 위치` now behaves like a status board
+  - `지금부터의 큰 흐름` now behaves like a next-step guide
+- Removed:
+  - duplicated reading-order guidance that overlapped between the two sections
+- Result:
+  - the roadmap reads more like a single coherent document and less like two overlapping summaries
+
+### 2026-04-16
 - Reworked the roadmap summary section that used to read as a special `Phase 18~25 Draft Big Picture`.
 - Changed it into:
   - `다음 단계 한눈에 보기 (Phase 18 ~ 25)`

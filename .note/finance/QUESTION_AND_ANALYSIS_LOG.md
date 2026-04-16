@@ -41,6 +41,30 @@ Detailed historical analysis was archived on `2026-04-13`.
     특정 구간만 따로 떠 있는 느낌보다
     "현재 이후 구간을 빠르게 다시 읽는 안내판"처럼 보이게 정리했다
 
+### 2026-04-16 - roadmap tail에서는 `현재 위치`와 `그 다음 큰 흐름`의 역할을 분리해야 덜 겹친다
+- Request topic:
+  - 사용자가 `현재 위치` 아래 내용과
+    `Phase 18 ~ 25` 요약 섹션이 서로 겹친다고 지적함
+- Interpreted goal:
+  - roadmap tail을 상태 설명과 next-step 설명으로 나눠,
+    한 번 읽을 때 역할이 바로 구분되게 만들고 싶음
+- Result:
+  - `현재 위치`는
+    phase status snapshot과 한 줄 현재 판단만 남기는 것이 맞다고 봤다
+  - 별도 summary 섹션은
+    `지금부터의 큰 흐름`
+    으로 바꿔,
+    - 방금 정리된 구현 구간 (`Phase 18 ~ 20`)
+    - 병행 보조 트랙 (`Support Track`)
+    - 다음 main phase (`Phase 21`)
+    - 그 다음 확장 구간 (`Phase 22 ~ 25`)
+    을 설명하는 역할로 정리했다
+  - 의미:
+    - 이제 roadmap tail은
+      - `현재 위치` = 상태판
+      - `지금부터의 큰 흐름` = 다음 진행 안내판
+      으로 읽는 것이 자연스럽다
+
 ### 2026-04-16 - `Phase 18 ~ 20`은 같은 묶음으로 읽히더라도 완료 상태는 다르고, global chapter layer를 phase 위에 또 만드는 것은 과하다
 - Request topic:
   - 사용자가 roadmap을 읽다가
