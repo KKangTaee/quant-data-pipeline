@@ -153,6 +153,9 @@
 - `phase21/PHASE21_VALUE_ANCHOR_AND_ALTERNATIVE_RERUN_FIRST_PASS.md`
   - `Value` current anchor와 lower-MDD alternative를 같은 validation frame에서 다시 돌려,
     current anchor 유지 여부와 alternative의 weaker-gate status가 그대로인지 확인한 first-pass 문서
+- `phase21/PHASE21_QUALITY_ANCHOR_AND_ALTERNATIVE_RERUN_FIRST_PASS.md`
+  - `Quality` current anchor와 cleaner alternative를 같은 validation frame에서 다시 돌려,
+    current anchor 유지 여부와 cleaner alternative의 comparison-only status가 그대로인지 확인한 first-pass 문서
 
 ## 운영 메모
 

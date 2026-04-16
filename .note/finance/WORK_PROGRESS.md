@@ -1068,3 +1068,17 @@ Detailed historical logs were archived on `2026-04-13`.
   - synced `VALUE_STRICT_ANNUAL.md`, `VALUE_STRICT_ANNUAL_BACKTEST_LOG.md`, `CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md`, phase21 TODO, and the report indexes
 - Durable takeaway:
   - `Value` does not need a candidate replacement right now; the current anchor remains the practical reference point even in the integrated validation frame.
+
+### 2026-04-16
+- Ran the second actual `Phase 21` rerun pack for `Quality`.
+- Changed:
+  - reran:
+    - current anchor `capital_discipline + LQD + trend on + regime off + Top N 12`
+    - cleaner alternative `capital_discipline + SPY + trend on + regime off + Top N 12`
+  - confirmed in the shared `Phase 21` frame that:
+    - current anchor still remains the practical reference point
+    - cleaner alternative still remains a comparison-only surface rather than a replacement
+  - created `backtest_reports/phase21/PHASE21_QUALITY_ANCHOR_AND_ALTERNATIVE_RERUN_FIRST_PASS.md`
+  - synced `QUALITY_STRICT_ANNUAL.md`, `QUALITY_STRICT_ANNUAL_BACKTEST_LOG.md`, `CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md`, phase21 TODO, and the report indexes
+- Durable takeaway:
+  - `Quality` also does not need a candidate replacement right now; the `LQD` anchor remains the practical point, and the `SPY` version remains useful mainly as a cleaner comparison surface.

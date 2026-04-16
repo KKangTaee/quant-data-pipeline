@@ -29,8 +29,8 @@
 - `completed` `Value` current anchor / lower-MDD alternative rerun
   - current practical point 유지 여부 확인
   - lower-MDD rescue 가능성 재점검
-- `pending` `Quality` current anchor / cleaner alternative rerun
-  - current contract 유지 여부와 hold 이유 재확인
+- `completed` `Quality` current anchor / cleaner alternative rerun
+  - current practical point 유지 여부와 cleaner alternative의 comparator 성격 재확인
 - `pending` `Quality + Value` strongest practical point / lower-MDD alternative rerun
   - strongest point 유지 여부
   - lower-MDD alternative의 실제 후보성 재판단
@@ -48,9 +48,11 @@
 
 - `in_progress` strategy hub / backtest log sync
   - `Value` first-pass rerun 결과를 durable report와 strategy log에 반영
-  - 나머지 family는 rerun 이후 이어서 반영
+  - `Quality` first-pass rerun 결과도 durable report와 strategy log에 반영
+  - `Quality + Value`와 portfolio bridge는 rerun 이후 이어서 반영
 - `in_progress` current candidate summary refresh
   - `Value` first-pass 기준 current anchor 유지 / alternative weaker-gate 판단 반영
+  - `Quality` first-pass 기준 current anchor 유지 / cleaner alternative comparison-only 판단 반영
   - 전체 summary closeout refresh는 remaining family rerun 이후 수행
 - `pending` phase21 closeout 판단 문서화
   - 다음 phase가 portfolio-level construction인지

@@ -101,6 +101,15 @@ cleaner alternative:
 
 - `LQD` 버전은 practical point
 - `SPY` 버전은 더 읽기 쉬운 cleaner alternative
+- Phase 21 integrated validation first pass에서도
+  이 해석이 그대로 유지되었다.
+  - current anchor:
+    - `26.02% / -25.57% / real_money_candidate / paper_probation / review_required`
+  - cleaner alternative:
+    - `25.18% / -25.57% / real_money_candidate / paper_probation / paper_only`
+- 즉 `SPY` 버전은
+  validation/rolling surface는 더 깔끔하지만,
+  여전히 comparison-only alternative로 읽는 것이 맞다.
 
 바로 열 문서:
 
@@ -161,12 +170,17 @@ lower-MDD but weaker-gate near-miss:
    - current best practical point는 여전히 `Top N = 14 + psr`
    - `+ pfcr` 같은 lower-MDD near-miss는 current code second pass에서도
      `production_candidate / watchlist`를 넘지 못했다
-2. `Quality + Value`
+2. `Quality`
+   - current practical point는 여전히
+     `capital_discipline + LQD + trend on + regime off + Top N 12`
+   - `SPY` cleaner alternative는 이번 frame에서도
+     `paper_only`라서 replacement가 아니라 comparison surface로 남았다
+3. `Quality + Value`
    - current strongest practical point는 여전히
      `operating_margin + pcr + por + per + Top N 10 + Candidate Universe Equal-Weight`
    - `Top N = 9`와 `cash_ratio` 대안은 더 낮은 `MDD`를 보였지만
      `production_candidate / watchlist`로 내려갔다
-3. 다음 phase 방향
+4. 다음 phase 방향
    - bounded `Top N / one-factor / overlay`와 structural redesign first slice까지는 이미 충분히 봤다
    - `partial cash retention`, `defensive sleeve risk-off`,
      `concentration-aware weighting`,

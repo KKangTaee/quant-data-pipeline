@@ -1620,3 +1620,30 @@ Detailed historical analysis was archived on `2026-04-13`.
     - `VALUE_STRICT_ANNUAL.md`
     - `CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md`
     에 반영했다
+
+### 2026-04-16 - `Phase 21` second actual rerun pack에서 `Quality` current anchor 유지가 다시 확인되었다
+- Request topic:
+  - `Phase 21` next step으로 `Quality` family rerun pack execution을 이어감
+- Interpreted goal:
+  - `Quality` current anchor와 cleaner alternative를 같은 frame에서 다시 돌려,
+    current practical point를 유지할지 아니면 cleaner alternative 쪽으로 읽어야 할지 정리하고 싶음
+- Result:
+  - `Quality` current anchor
+    `capital_discipline + LQD + trend on + regime off + Top N 12`
+    는 `26.02% / -25.57% / real_money_candidate / paper_probation / review_required`
+    로 그대로 current practical point를 유지했다
+  - cleaner alternative
+    `capital_discipline + SPY + trend on + regime off + Top N 12`
+    는 `25.18% / -25.57% / real_money_candidate / paper_probation / paper_only`
+    로 validation/rolling surface는 더 깨끗했지만,
+    deployment가 `paper_only`라서 replacement candidate로 올라오지는 않았다
+  - 즉 `Quality` family second-pass conclusion은:
+    - current anchor 유지
+    - cleaner alternative는 still comparison surface
+    - actual replacement는 없음
+  - 이 결과를
+    - `PHASE21_QUALITY_ANCHOR_AND_ALTERNATIVE_RERUN_FIRST_PASS.md`
+    - `QUALITY_STRICT_ANNUAL_BACKTEST_LOG.md`
+    - `QUALITY_STRICT_ANNUAL.md`
+    - `CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md`
+    에 반영했다

@@ -20,6 +20,64 @@
 
 ## 기록
 
+### 2026-04-16 - phase21 integrated validation first pass
+
+- 목표:
+  - `Quality` current anchor와 cleaner alternative를
+    `Phase 21` 공통 validation frame에서 다시 돌려,
+    current practical point 유지 여부와 comparison alternative의 현재 위치를 재확인
+- 전략:
+  - `Quality > Strict Annual`
+- 기간 / universe:
+  - `2016-01-01 ~ 2026-04-01`
+  - `US Statement Coverage 100`
+  - `Historical Dynamic PIT Universe`
+- 핵심 설정:
+  - factor:
+    - `roe`
+    - `roa`
+    - `cash_ratio`
+    - `debt_to_assets`
+  - `Option = month_end`
+  - `Top N = 12`
+  - `Rebalance Interval = 1`
+  - `Minimum Price = 5.0`
+  - `Minimum History = 12M`
+  - `Min Avg Dollar Volume 20D = 5.0M`
+  - `Transaction Cost = 10 bps`
+  - underperformance / drawdown guardrail `on`
+- 결과:
+  - current anchor:
+    - `Benchmark = LQD`
+    - `Trend Filter = on`
+    - `Market Regime = off`
+    - `CAGR = 26.02%`
+    - `MDD = -25.57%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = paper_probation`
+    - `Deployment = review_required`
+    - `Validation / Rolling / OOS = normal / watch / normal`
+  - cleaner alternative:
+    - `Benchmark = SPY`
+    - `Trend Filter = on`
+    - `Market Regime = off`
+    - `CAGR = 25.18%`
+    - `MDD = -25.57%`
+    - `Promotion = real_money_candidate`
+    - `Shortlist = paper_probation`
+    - `Deployment = paper_only`
+    - `Validation / Rolling / OOS = normal / normal / normal`
+- 해석:
+  - current anchor는 `Phase 21` validation frame에서도 그대로 practical reference point로 유지된다
+  - `SPY` cleaner alternative는 여전히 comparison surface로는 의미가 있지만,
+    `paper_only`라서 replacement candidate는 아니다
+- 다음 액션:
+  - `Quality + Value` rerun pack을 같은 frame에서 실행
+  - portfolio bridge validation까지 이어서 integrated comparison을 완성
+- 관련 문서:
+  - [PHASE21_QUALITY_ANCHOR_AND_ALTERNATIVE_RERUN_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase21/PHASE21_QUALITY_ANCHOR_AND_ALTERNATIVE_RERUN_FIRST_PASS.md)
+  - [QUALITY_STRICT_ANNUAL_DOWNSIDE_IMPROVED_CURRENT_CANDIDATE.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/QUALITY_STRICT_ANNUAL_DOWNSIDE_IMPROVED_CURRENT_CANDIDATE.md)
+
 ### 2026-04-13 - rescued anchor alternate contract search third pass
 
 - 목표:

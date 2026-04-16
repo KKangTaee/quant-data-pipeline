@@ -158,9 +158,16 @@
     - `Load Recommended Candidates`
     - near-equal weighted bundle
     - representative saved portfolio replay
+- 지금까지 실제로 다시 확인된 것은:
+  - `Value`:
+    - current anchor 유지
+    - lower-MDD alternative는 still weaker-gate
+  - `Quality`:
+    - current anchor 유지
+    - cleaner alternative는 still comparison-only
 - 즉 지금부터의 next active step은
   frame discussion이 아니라
-  **actual rerun pack execution**이다.
+  **remaining rerun pack execution**이다.
 
 ## 주요 산출물
 
