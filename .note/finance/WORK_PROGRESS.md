@@ -22,6 +22,16 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-04-16
+- Rebased the roadmap after the user pointed out that the old `Phase 21` was not really product work.
+- Applied:
+  - previous `Research Automation And Experiment Persistence` work is now treated as a support track, not a main finance phase
+  - the main roadmap was redesigned so the new `Phase 21` is `Integrated Deep Backtest Validation`
+  - new `Phase 21` plan / TODO / checklist / next-phase docs now reflect deep validation instead of agent/plugin setup
+- Result:
+  - the project phase sequence is back on the product path:
+    validation -> portfolio-level construction -> quarterly productionization -> new strategy expansion -> pre-live readiness
+
+### 2026-04-16
 - Reviewed Phase 21 QA documents after Phase 20 workflow naming/validation changes.
 - Outcome:
   - `PHASE21_TEST_CHECKLIST.md` itself did not need major target changes because it validates scripts, registry, and docs rather than Phase 20 UI buttons

@@ -21,6 +21,34 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-04-16 - 기존 `Phase 21` automation 묶음은 main phase가 아니라 support track으로 빼고, 새 `Phase 21`은 deep validation으로 다시 잡는 것이 맞다
+- Request topic:
+  - 사용자가 기존 `Phase 21` checklist를 보고,
+    이건 quant project 자체의 개발이 아니라 agent / plugin / skill 환경 정리에 가깝다고 지적함
+- Interpreted goal:
+  - old automation work는 버리지 않되 main phase sequence에서 빼고,
+    roadmap 문서를 기준으로 현재 product에 맞는 새 `Phase 21`을 다시 설계하고 싶음
+- Result:
+  - 기존 `Research Automation And Experiment Persistence` 묶음은
+    main finance phase가 아니라 support track으로 재분류하는 것이 맞다고 판단했다
+  - 그 작업은
+    - phase bundle bootstrap
+    - current candidate registry
+    - hygiene / plugin / skill sync
+    같은 repo-local support tooling이므로,
+    product roadmap 번호를 차지하지 않게 정리했다
+  - main roadmap의 새 `Phase 21`은
+    `Integrated Deep Backtest Validation`
+    으로 다시 설계했다
+  - 그 다음 큰 흐름도 다시 정리했다:
+    - `Phase 21` deep validation
+    - `Phase 22` portfolio-level candidate construction
+    - `Phase 23` quarterly / alternate cadence productionization
+    - `Phase 24` new strategy expansion
+    - `Phase 25` pre-live operating system and deployment readiness
+  - 의미:
+    - 이제 roadmap이 다시 "이 프로젝트 안에서 실제로 만들어야 할 것" 중심으로 읽히게 되었다
+
 ### 2026-04-16 - Phase 21 QA 문서는 Phase 20 UI rename 영향은 작고, 오히려 next-phase handoff 문맥을 업데이트하는 편이 더 중요했다
 - Request topic:
   - 사용자가 `Phase 21` QA를 진행하겠다고 하며,

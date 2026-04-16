@@ -2,71 +2,72 @@
 
 ## 목적
 
-- 이번 checklist는 `Phase 21`에서 추가한 automation과 persistence baseline이 실제로 다시 쓸 수 있는지 확인하는 문서다.
-- 숫자 검증보다 script / workflow / 문서 재사용성 검증에 더 가깝다.
+- 이번 checklist는 `Phase 21` integrated deep validation이
+  실제로 같은 frame에서 다시 검증되고 있는지 확인하는 문서다.
+- UI polish보다
+  **rerun 대상, validation frame, 결과 기록, candidate decision이 일관되게 정리되는가**
+  를 보는 checklist다.
 
 ## 사용 방법
 
 - 아래 항목은 사용자가 직접 `[ ]`를 `[x]`로 바꾸며 확인한다.
-- 특별한 사유가 없으면, 모든 주요 체크 항목이 완료된 뒤 다음 major phase로 넘어간다.
+- 특별한 사유가 없으면, 주요 체크 항목이 모두 완료된 뒤 다음 major phase로 넘어간다.
 - 일부 항목을 나중으로 미루면 그 이유를 문서나 handoff에 짧게 남긴다.
-- `Phase 20`에서 바뀐 compare / saved portfolio 버튼 이름은 이 checklist의 핵심 검증 대상이 아니다.
-  이번 checklist는 UI polish보다 script / registry / workflow 문서 재사용성이 실제로 동작하는지 확인하는 데 더 가깝다.
 
 ## 추천 실행 순서
 
-1. phase bundle automation 확인
-2. current candidate registry 확인
-3. plugin / skill / 문서 연결 확인
+1. validation frame 정의 확인
+2. family별 integrated rerun 결과 확인
+3. portfolio bridge validation 확인
+4. 문서와 closeout 확인
 
-## 1. phase bundle automation 확인
-
-- 확인 위치:
-  - terminal
-  - `plugins/quant-finance-workflow/scripts/bootstrap_finance_phase_bundle.py`
-- 체크 항목:
-  - [ ] `--dry-run`으로 새 phase 문서 묶음 경로가 예상대로 나오는지
-  - [ ] 실제 실행 시 phase plan / TODO / completion / next-phase / checklist가 한 번에 생성되는지
-  - [ ] 생성된 문서가 `PHASE_PLAN_TEMPLATE.md`, `PHASE_TEST_CHECKLIST_TEMPLATE.md` 구조를 잘 따르는지
-
-## 2. current candidate registry 확인
+## 1. validation frame 정의 확인
 
 - 확인 위치:
-  - terminal
-  - `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`
-  - `plugins/quant-finance-workflow/scripts/manage_current_candidate_registry.py`
+  - [PHASE21_INTEGRATED_DEEP_BACKTEST_VALIDATION_PLAN.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase21/PHASE21_INTEGRATED_DEEP_BACKTEST_VALIDATION_PLAN.md)
+  - [PHASE21_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase21/PHASE21_CURRENT_CHAPTER_TODO.md)
 - 체크 항목:
-  - [ ] `seed-current-practical` 후 current candidate row가 생성되는지
-  - [ ] `list`에서 `Value`, `Quality`, `Quality + Value` 후보가 보이는지
-  - [ ] `show <registry_id>`로 특정 후보 상세를 다시 읽을 수 있는지
-  - [ ] `validate`가 필수 필드와 문서 경로를 점검하는지
+  - [ ] 이번 phase에서 다시 볼 family와 candidate 범위가 문서에 분명히 적혀 있는지
+  - [ ] current anchor / lower-MDD alternative / portfolio bridge가 무엇인지 용어 설명이 충분한지
+  - [ ] rerun 결과를 어디에 남길지(strategy hub / backtest log / candidate summary) 기준이 보이는지
 
-## 3. plugin / skill / workflow 연결 확인
+## 2. family별 integrated rerun 결과 확인
 
 - 확인 위치:
-  - `plugins/quant-finance-workflow/skills/finance-backtest-candidate-refinement/SKILL.md`
-  - `plugins/quant-finance-workflow/skills/finance-backtest-candidate-refinement/references/repo-workflow.md`
-  - `plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py`
+  - family별 rerun report
+  - strategy hub
+  - strategy backtest log
 - 체크 항목:
-  - [ ] skill 문서에서 새 script와 registry 흐름이 설명되는지
-  - [ ] hygiene script가 current candidate registry를 같이 점검하는지
-  - [ ] candidate-facing 문서를 바꿀 때 registry도 같이 보라는 흐름이 문서에 드러나는지
+  - [ ] `Value` current anchor와 lower-MDD alternative rerun 결과를 같은 frame에서 비교할 수 있는지
+  - [ ] `Quality` current anchor와 alternative rerun 결과를 같은 frame에서 비교할 수 있는지
+  - [ ] `Quality + Value` strongest point와 alternative rerun 결과를 같은 frame에서 비교할 수 있는지
+  - [ ] 결과를 보고 유지 / 교체 / 보류 판단이 가능한 정도로 해석이 적혀 있는지
+
+## 3. portfolio bridge validation 확인
+
+- 확인 위치:
+  - `Compare & Portfolio Builder`
+  - weighted portfolio / saved portfolio rerun report
+- 체크 항목:
+  - [ ] representative weighted portfolio rerun이 single-strategy rerun과 같은 phase frame에서 읽히는지
+  - [ ] saved portfolio replay 결과가 portfolio-level candidate 해석에 도움이 되는지
+  - [ ] portfolio bridge가 다음 phase의 메인 대상이 될지 판단할 재료가 충분한지
 
 ## 4. 문서와 closeout 확인
 
 - 확인 문서:
-  - `PHASE21_CURRENT_CHAPTER_TODO.md`
-  - `PHASE21_COMPLETION_SUMMARY.md`
-  - `PHASE21_NEXT_PHASE_PREPARATION.md`
-  - `MASTER_PHASE_ROADMAP.md`
-  - `FINANCE_DOC_INDEX.md`
+  - [PHASE21_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase21/PHASE21_CURRENT_CHAPTER_TODO.md)
+  - [PHASE21_COMPLETION_SUMMARY.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase21/PHASE21_COMPLETION_SUMMARY.md)
+  - [PHASE21_NEXT_PHASE_PREPARATION.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase21/PHASE21_NEXT_PHASE_PREPARATION.md)
+  - [MASTER_PHASE_ROADMAP.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/MASTER_PHASE_ROADMAP.md)
+  - [FINANCE_DOC_INDEX.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/FINANCE_DOC_INDEX.md)
 - 체크 항목:
-  - [ ] phase 상태가 현재 구현 상태와 맞는지
-  - [ ] 새 문서가 index에서 바로 찾히는지
-  - [ ] 다음 단계로 넘어가기 위한 설명이 충분한지
+  - [ ] phase 상태가 현재 실제 진행 상태와 맞는지
+  - [ ] 새 phase21 plan / TODO / closeout / next-phase 문서를 index에서 바로 찾을 수 있는지
+  - [ ] next-phase preparation이 phase22 이후 방향을 이해하기 쉽게 정리하는지
 
 ## 한 줄 판단 기준
 
 - 이번 checklist는
-  **"이제 반복 문서 작업과 current candidate 관리가 이전보다 덜 수동적으로 가능한가"**
+  **"이제 current annual strict 후보와 portfolio bridge를 같은 검증 frame에서 다시 보고, 다음 확장 phase로 넘어갈 만큼 판단이 정리됐는가"**
   를 확인하는 문서다.

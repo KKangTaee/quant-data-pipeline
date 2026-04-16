@@ -169,113 +169,83 @@
 
 ---
 
-### Phase 21. Research Automation And Experiment Persistence
+### Support Track. Research Automation And Experiment Persistence
 
 ### 목적
 
-- 반복되는 refinement / validation / documentation 흐름을
-  더 자동화한다
-- 현재 plugin / skill / checklist script를
-  더 실무적으로 쓸 수 있게 만든다
+- repo-local script / registry / plugin / skill 같은 지원 tooling을 유지한다
+- 다만 이것은 main finance product phase가 아니라
+  **support track**으로 관리한다
 
 ### 쉽게 말하면
 
-- 지금은 좋은 흐름이 생겨도
-  사람이 손으로 반복하는 부분이 여전히 많다
-- `Phase 21`은
-  **반복 작업을 줄이고, 재현성을 높이는 phase**
-  다
+- 현재 desktop agent 환경과 repo-local tooling을 더 편하게 쓰기 위한 작업이다
+- 유용하지만,
+  전략 / 백테스트 / 후보 검증 자체를 한 단계 진전시키는 main phase로 세지는 않는다
 
-### 왜 해야 하는가
+### 왜 이렇게 바꾸는가
 
-- 구현과 전략 탐색이 계속 커질수록
-  문서 업데이트, 체크리스트 확인, rerun scenario 관리도 늘어난다
-- 이걸 매번 수동으로 하면:
-  - 속도가 느려지고
-  - 빠뜨리는 문서가 생기고
-  - 같은 검증을 여러 번 하게 될 수 있다
-- 이 phase를 건너뛰면:
-  - deep validation 단계에서
-    실험 관리 비용이 너무 커질 수 있다
-
-### 핵심 질문
-
-- 실험 조합과 결과 기록을 더 자동으로 남길 수 있는가
-- rerun pack / preset / candidate scenario를 더 재현 가능하게 만들 수 있는가
-- Codex workflow를 현재 프로젝트 리듬에 맞게 더 붙일 수 있는가
-
-### 주요 산출물
-
-- experiment preset / scenario persistence
-- documentation/checklist automation 보강
-- repo-local plugin/skill practical upgrade
+- 이 automation 묶음은 도움이 되었지만,
+  main roadmap 안에서 한 phase를 차지하면
+  quant project 자체의 개발과 agent 환경 정리가 섞여 버린다
 
 ### 한 줄 역할
 
-`Phase 21`은 **반복 연구를 더 빠르고 덜 흔들리게 만드는 자동화 phase**다.
-
-### 이 phase가 끝나면 좋은 점
-
-- rerun과 문서화가 더 일관된다
-- plugin / skill / script를 실제 작업 리듬에 맞게 쓸 수 있다
-- Phase 22 deep validation을 훨씬 안정적으로 돌릴 수 있다
+- 이 support track은 **버리는 것이 아니라, main phase 밖에서 병행 관리하는 보조 작업**이다.
 
 ---
 
-### Phase 22. Integrated Deep Backtest Validation
+### Phase 21. Integrated Deep Backtest Validation
 
 ### 목적
 
-- `Phase 19 ~ 21`에서 구현을 더 붙인 뒤,
-  다시 넓고 깊은 백테스트를 공식적으로 재개한다
-- strongest / near-miss / redesigned contract를
-  같은 기준으로 다시 검증한다
+- `Value`, `Quality`, `Quality + Value` current candidate를
+  같은 validation frame에서 다시 크게 검증한다
+- strongest / lower-MDD alternative / portfolio bridge를
+  유지 / 교체 / 보류 기준으로 다시 판단한다
 
 ### 쉽게 말하면
 
 - 여기서부터가 다시
-  **“깊게 돌려서 진짜 누가 strongest인지 다시 판정하는 단계”**
+  **“지금까지 만든 후보를 한 판에서 다시 크게 검증하는 단계”**
   다
-- 단, 예전처럼 기능이 덜 닫힌 상태에서 돌리는 게 아니라
-  충분히 갖춰진 구조 위에서 돌린다는 점이 다르다
 
 ### 왜 해야 하는가
 
-- 지금은 구현을 먼저 쌓는 게 맞지만,
-  결국 실전형 후보를 다시 고르는 큰 검증은 반드시 필요하다
-- `Phase 22`는 그 검증을
-  더 좋은 조건에서 다시 여는 phase다
+- `Phase 15 ~ 20` 동안 candidate와 workflow는 충분히 쌓였다
+- 하지만 current anchor를 같은 frame에서 다시 확인하는 integrated deep validation은 아직 남아 있다
 - 이 phase를 해야만:
   - current strongest candidate가 여전히 strongest인지
-  - 새 구조가 실제 rescue를 만드는지
-  - family별로 어떤 redesign이 가장 유효한지
+  - lower-MDD alternative가 실제 rescue candidate인지
+  - weighted / saved portfolio bridge가 다음 phase 대상이 될 만큼 의미 있는지
   를 다시 확정할 수 있다
 
 ### 핵심 질문
 
-- 새 구조가 실제로 same-gate lower-MDD rescue를 만드는가
-- current strongest candidate가 여전히 strongest인가
-- family별로 어느 redesign이 가장 유효한가
+- annual strict current anchor를 그대로 유지해도 되는가
+- lower-MDD alternative 중 rescue candidate가 생기는가
+- portfolio bridge를 별도 candidate lane으로 볼 수 있는가
 
 ### 주요 산출물
 
 - integrated rerun matrix
 - family별 comparative validation
-- anchor replacement 여부 정리
+- anchor replacement / rescue / defer 여부 정리
+- portfolio bridge validation note
 
 ### 한 줄 역할
 
-`Phase 22`는 **구현을 충분히 쌓아둔 뒤 다시 여는 본격 deep validation phase**다.
+`Phase 21`은 **지금까지 만든 annual strict 후보와 portfolio bridge를 한 기준에서 다시 검증하는 deep validation phase**다.
 
 ### 이 phase가 끝나면 좋은 점
 
-- strongest / near-miss / redesign 결과를 한 번에 다시 정리할 수 있다
-- 이후 portfolio-level 후보나 new strategy expansion도 더 안정적으로 연다
-- “지금 무엇이 정말 좋은 후보인가”가 다시 선명해진다
+- strongest / near-miss / bridge 결과를 한 번에 다시 정리할 수 있다
+- 이후 portfolio-level 후보나 cadence expansion도 더 안정적으로 연다
+- “지금 무엇이 정말 유지할 candidate인가”가 다시 선명해진다
 
 ---
 
-### Phase 23. Portfolio-Level Candidate Construction
+### Phase 22. Portfolio-Level Candidate Construction
 
 ### 목적
 
@@ -315,13 +285,56 @@
 
 ### 한 줄 역할
 
-`Phase 23`은 **전략 하나를 넘어서 포트폴리오 단위 후보를 다루기 시작하는 phase**다.
+`Phase 22`는 **전략 하나를 넘어서 포트폴리오 단위 후보를 다루기 시작하는 phase**다.
 
 ### 이 phase가 끝나면 좋은 점
 
 - strategy-level에서 portfolio-level로 시야가 넓어진다
 - weighted portfolio가 연구용을 넘어서 candidate construction 도구가 될 수 있다
 - 이후 pre-live 운영 문서도 더 현실적으로 쓸 수 있다
+
+---
+
+### Phase 23. Quarterly And Alternate Cadence Productionization
+
+### 목적
+
+- annual strict family와 별도로,
+  quarterly prototype과 alternate cadence 전략을 practical lane으로 올릴지 검토한다
+
+### 쉽게 말하면
+
+- 예전에는 prototype이었던 quarterly 쪽을
+  이제 실제 후보 lane으로 키울지 판단하는 단계다
+
+### 왜 해야 하는가
+
+- annual strict family와 portfolio bridge가 어느 정도 고정된 뒤에야
+  quarterly / alternate cadence를 production-readiness 관점에서 볼 수 있기 때문이다
+- 이 phase를 건너뛰면:
+  - quarterly는 계속 "나중에 볼 prototype"으로만 남고
+  - 실제 practical lane으로 올릴 기회를 계속 미루게 된다
+
+### 핵심 질문
+
+- quarterly prototype을 practical candidate lane으로 올릴 수 있는가
+- annual 대비 quarterly의 장단점은 무엇인가
+- alternate cadence validation을 따로 관리해야 하는가
+
+### 주요 산출물
+
+- quarterly production-readiness review
+- alternate cadence validation note
+- annual vs quarterly practical fit comparison
+
+### 한 줄 역할
+
+`Phase 23`은 **quarterly / alternate cadence를 prototype에서 practical lane으로 올릴지 판단하는 phase**다.
+
+### 이 phase가 끝나면 좋은 점
+
+- annual family와 quarterly family의 역할 분담이 더 분명해진다
+- 이후 new strategy expansion도 cadence 기준이 더 선명한 상태에서 진행할 수 있다
 
 ---
 
@@ -445,12 +458,14 @@
   - 구조 옵션을 더 usable하게 만든다
 - `Phase 20`
   - 후보를 관리하고 다시 보는 흐름을 정리한다
+- support track
+  - automation / registry / agent tooling을 따로 유지한다
 - `Phase 21`
-  - 반복 연구를 자동화한다
-- `Phase 22`
   - 그 뒤에 다시 깊게 검증한다
-- `Phase 23`
+- `Phase 22`
   - 전략을 포트폴리오 단위로 본다
+- `Phase 23`
+  - quarterly / alternate cadence를 practical lane으로 볼지 정리한다
 - `Phase 24`
   - 새 전략을 다시 늘린다
 - `Phase 25`
@@ -463,22 +478,23 @@
 1. `Phase 18` implementation-first 유지
 2. `Phase 19` structural contract expansion
 3. `Phase 20` operator workflow hardening
-4. `Phase 21` research automation / persistence
-5. 그 다음 `Phase 22`에서 deep backtest 재개
+4. support track은 phase 밖에서 유지
+5. 그 다음 `Phase 21`에서 deep backtest validation 재개
 
 ## discussion 포인트
 
 아래 3가지는 사용자 확인 후 고정하는 것이 좋다.
 
-1. `Phase 19`를 strict annual structural redesign에 집중할지
-2. `Phase 20` operator workflow를 메인으로 더 당길지
-3. `Phase 24`의 new strategy expansion을
-   어느 시점부터 다시 열지
+1. `Phase 21`을 annual strict family deep validation에 얼마나 집중할지
+2. `Phase 22` portfolio-level candidate construction을 언제 바로 이어 열지
+3. `Phase 23` quarterly / alternate cadence productionization을
+   어느 시점부터 다시 올릴지
 
 ## 한 줄 결론
 
 지금 기준 가장 자연스러운 큰 그림은:
 
-**Phase 18~21에서 구현과 운영 구조를 더 만든 뒤,
-Phase 22에서 deep backtest를 다시 열고,
-Phase 23~25에서 portfolio / new strategy / pre-live 운영 체계로 넓혀가는 흐름**이다.
+**Phase 18~20에서 구현과 운영 구조를 정리하고,
+support tooling은 phase 밖으로 유지한 뒤,
+Phase 21에서 deep validation을 다시 열고,
+Phase 22~25에서 portfolio / cadence / new strategy / pre-live 운영 체계로 넓혀가는 흐름**이다.

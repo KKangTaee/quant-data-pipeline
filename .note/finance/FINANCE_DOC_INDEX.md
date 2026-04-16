@@ -63,20 +63,24 @@
   - `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`가 무엇인지, 왜 필요한지, script로 어떻게 읽고 검증하는지 정리한 안내 문서
 - `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`
   - current strongest candidate와 near-miss를 machine-readable하게 남기는 append-only registry 파일
-- `.note/finance/phase21/PHASE21_RESEARCH_AUTOMATION_AND_EXPERIMENT_PERSISTENCE_PLAN.md`
-  - `Phase 21`가 무엇을 하는 phase인지, 왜 지금 automation과 persistence baseline이 필요한지 설명하는 kickoff 문서
+- `.note/finance/support_tracks/RESEARCH_AUTOMATION_AND_EXPERIMENT_PERSISTENCE_SUPPORT_TRACK_20260416.md`
+  - 기존 automation / plugin / registry 묶음을 main phase가 아닌 support track으로 재분류한 설명 문서
+- `.note/finance/support_tracks/RESEARCH_AUTOMATION_AND_EXPERIMENT_PERSISTENCE_SUPPORT_PLAN_20260416.md`
+  - support track으로 분리된 기존 automation / persistence kickoff 문서
+- `.note/finance/support_tracks/RESEARCH_AUTOMATION_PHASE_BUNDLE_AUTOMATION_FIRST_WORK_UNIT_20260416.md`
+  - support track 첫 번째 작업으로 phase bundle bootstrap script를 추가한 기록 문서
+- `.note/finance/support_tracks/RESEARCH_AUTOMATION_CURRENT_CANDIDATE_REGISTRY_AND_WORKFLOW_AUTOMATION_SECOND_WORK_UNIT_20260416.md`
+  - support track 두 번째 작업으로 current candidate registry와 workflow integration을 정리한 기록 문서
+- `.note/finance/phase21/PHASE21_INTEGRATED_DEEP_BACKTEST_VALIDATION_PLAN.md`
+  - 새 main `Phase 21`가 무엇을 검증하는 phase인지, 왜 지금 deep validation이 필요한지 설명하는 kickoff 문서
 - `.note/finance/phase21/PHASE21_CURRENT_CHAPTER_TODO.md`
-  - `Phase 21` 현재 챕터 TODO 보드
-- `.note/finance/phase21/PHASE21_PHASE_BUNDLE_AUTOMATION_FIRST_WORK_UNIT.md`
-  - phase 문서 묶음을 자동 생성하는 script를 추가한 첫 번째 작업 문서
-- `.note/finance/phase21/PHASE21_CURRENT_CANDIDATE_REGISTRY_AND_WORKFLOW_AUTOMATION_SECOND_WORK_UNIT.md`
-  - current candidate registry와 hygiene/script integration을 정리한 두 번째 작업 문서
+  - 새 main `Phase 21` 현재 챕터 TODO 보드
 - `.note/finance/phase21/PHASE21_COMPLETION_SUMMARY.md`
-  - `Phase 21`이 실제로 무엇을 자동화했고 왜 practical closeout으로 볼 수 있는지 요약한 문서
+  - 새 main `Phase 21` closeout 시 어떤 deep validation 결과를 남길지 위한 draft summary 문서
 - `.note/finance/phase21/PHASE21_NEXT_PHASE_PREPARATION.md`
-  - `Phase 20` manual validation 완료를 반영해, `Phase 21` 이후에는 `Phase 22` deep validation 준비가 더 자연스럽다는 쪽으로 정리한 handoff 문서
+  - 새 main `Phase 21` 이후 `Phase 22 ~ 25`를 어떤 순서로 여는 것이 자연스러운지 정리한 handoff 문서
 - `.note/finance/phase21/PHASE21_TEST_CHECKLIST.md`
-  - `Phase 20` UI 이름 변경과 직접 엮이지 않는 범위에서, `Phase 21` automation/persistence baseline을 script와 문서 기준으로 확인하기 위한 manual checklist
+  - 새 main `Phase 21` integrated deep validation이 같은 frame에서 수행되는지 확인하기 위한 manual checklist
 - `.note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md`
   - `finance` 패키지 전체 구조와 DB/기능 종합 분석
 - `.note/finance/WORK_PROGRESS.md`

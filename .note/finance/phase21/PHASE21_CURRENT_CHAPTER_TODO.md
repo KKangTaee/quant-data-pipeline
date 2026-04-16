@@ -1,45 +1,55 @@
 # Phase 21 Current Chapter TODO
 
 ## 상태
-- `practical closeout / manual_validation_pending`
+- `planned / not_started`
 
-## 1. Research Automation
+## 1. Validation Frame Definition
 
-- `completed` phase bundle automation 첫 번째 작업 단위
-  - `bootstrap_finance_phase_bundle.py` 추가
-  - phase plan / TODO / completion / next-phase / checklist 문서 묶음을 한 번에 생성 가능
+- `pending` integrated validation scope 확정
+  - `Value`, `Quality`, `Quality + Value`에서 어떤 current anchor / alternative를 다시 볼지 고정
+- `pending` 공통 validation frame 확정
+  - 기간
+  - benchmark / guardrail interpretation
+  - 결과 기록 위치
+- `pending` rerun pack naming 정리
+  - family별 rerun report와 strategy log entry 이름을 통일
 
-## 2. Experiment Persistence
+## 2. Annual Strict Family Integrated Rerun
 
-- `completed` current candidate registry 두 번째 작업 단위
-  - `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl` seed 생성
-  - `manage_current_candidate_registry.py` 추가
-  - `list / show / append / validate` command 제공
+- `pending` `Value` current anchor / lower-MDD alternative rerun
+  - current practical point 유지 여부 확인
+  - lower-MDD rescue 가능성 재점검
+- `pending` `Quality` current anchor / cleaner alternative rerun
+  - current contract 유지 여부와 hold 이유 재확인
+- `pending` `Quality + Value` strongest practical point / lower-MDD alternative rerun
+  - strongest point 유지 여부
+  - lower-MDD alternative의 실제 후보성 재판단
 
-## 3. Workflow Integration
+## 3. Portfolio Bridge Validation
 
-- `completed` hygiene script registry integration
-  - candidate-facing 문서가 바뀔 때 registry도 같이 점검하도록 보강
-- `completed` plugin / skill / reference 문서 sync
-- `completed` registry guide 문서 생성
+- `pending` representative compare -> weighted portfolio rerun
+  - weighted bundle가 candidate lane인지, 단순 operator artifact인지 재판단
+- `pending` saved portfolio replay validation
+  - representative saved portfolio scenario를 다시 확인
+- `pending` portfolio-level interpretation 초안
+  - 이후 phase에서 promotion / shortlist semantics를 어떻게 읽을지 메모
 
-## 4. Validation
+## 4. Reporting And Candidate Decision
 
-- `completed` `py_compile`
-- `completed` `.venv` import smoke
-- `completed` script smoke validation
-  - phase bundle bootstrap actual run
-  - current candidate registry seed / list / validate
-- `pending` manual workflow validation checklist
+- `pending` strategy hub / backtest log sync
+  - meaningful rerun 결과를 durable report로 남김
+- `pending` current candidate summary refresh
+  - 유지 / 교체 / 보류 결과 반영
+- `pending` phase21 closeout 판단 문서화
+  - 다음 phase가 portfolio-level construction인지
+  - quarterly productionization인지
+  - new strategy expansion인지 판단 근거 남김
 
 ## 5. Documentation Sync
 
-- `completed` phase21 kickoff plan 문서 생성
-- `completed` phase21 current chapter TODO 문서 생성
-- `completed` first work-unit / second work-unit 문서 생성
-- `completed` completion / next-phase / checklist 문서 생성
-- `completed` roadmap / doc index / work log / question log sync
-- `completed` plugin review / skill reference sync
-- `completed` phase20 완료 상태를 반영한 phase21 QA 문맥 정리
-  - phase21 checklist는 script / registry 중심이라 phase20 UI rename의 직접 영향이 작다는 점을 명시
-  - next-phase handoff는 phase20 완료 상태를 반영해 phase22 deep validation 준비 쪽으로 다시 정리
+- `completed` phase21 redesign kickoff
+  - 기존 automation/plugin work를 main phase가 아닌 support track으로 재분류
+  - main roadmap의 새 `Phase 21`을 integrated deep validation으로 재설계
+- `pending` roadmap / doc index sync
+- `pending` work log / question log sync
+- `pending` phase21 plan / TODO / checklist 기준 정리
