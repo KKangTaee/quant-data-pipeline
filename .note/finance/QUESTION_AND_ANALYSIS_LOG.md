@@ -21,6 +21,26 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-04-16 - `Phase 18~25 Draft Big Picture` 같은 이름은 roadmap 안에서 별도 특수 구간처럼 읽혀서, quick summary 섹션으로 바꾸는 편이 더 자연스럽다
+- Request topic:
+  - 사용자가 `MASTER_PHASE_ROADMAP.md`의
+    `Phase 18~25 Draft Big Picture` 섹션이
+    특정 부분만 특별하게 있는 느낌이라 애매하다고 피드백함
+- Interpreted goal:
+  - `Phase 18~25` 구간을 계속 요약해 주되,
+    phase 본문과 별도 roadmap처럼 보이지 않게 만들고 싶음
+- Result:
+  - 해당 섹션은 없애기보다
+    **요약 섹션이라는 성격을 더 분명하게 드러내는 방향**이 맞다고 판단했다
+  - 그래서 이름을
+    `다음 단계 한눈에 보기 (Phase 18 ~ 25)`
+    로 바꾸고,
+    이 섹션이 "위 phase 설명을 대체하지 않는 quick-reading summary"라는 점을 먼저 적었다
+  - 또한 `Phase 18 ~ 25`를
+    각 phase별로 한 줄씩 다시 설명해,
+    특정 구간만 따로 떠 있는 느낌보다
+    "현재 이후 구간을 빠르게 다시 읽는 안내판"처럼 보이게 정리했다
+
 ### 2026-04-16 - `Phase 18 ~ 20`은 같은 묶음으로 읽히더라도 완료 상태는 다르고, global chapter layer를 phase 위에 또 만드는 것은 과하다
 - Request topic:
   - 사용자가 roadmap을 읽다가

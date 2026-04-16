@@ -19,6 +19,7 @@
   - 전체 Phase 구조와 상위 진행 방향을 정리한 최상위 로드맵 문서
   - 최근 refresh 기준으로 `Phase 6`, `Phase 16`, `현재 위치`, support track, `Phase 21~25` reading order까지 다시 정리되어 있다
   - 또한 `Phase 18 = 진행형`, `Phase 19/20 = 완료`, `Phase 5 first chapter = historical label`이라는 해석도 함께 반영되어 있다
+  - `Phase 18~25` 구간도 별도 특수 roadmap이 아니라, `다음 단계 한눈에 보기` 형태의 quick summary로 다시 정리되어 있다
 - `.note/finance/ROADMAP_REBASE_PHASE18_TO_PHASE25_20260414.md`
   - `Phase 18` 진행 중 시점에서 `Phase 19~25` 큰 그림을 다시 정리한 논의용 상위 로드맵 초안
 - `.note/finance/phase19/PHASE19_STRUCTURAL_CONTRACT_EXPANSION_PLAN.md`

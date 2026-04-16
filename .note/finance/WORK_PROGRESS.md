@@ -22,6 +22,15 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-04-16
+- Reworked the roadmap summary section that used to read as a special `Phase 18~25 Draft Big Picture`.
+- Changed it into:
+  - `다음 단계 한눈에 보기 (Phase 18 ~ 25)`
+  - a quick-reading summary that clearly says it does not replace the actual phase descriptions above
+- Result:
+  - the roadmap now feels less like it has a second special roadmap embedded inside it
+  - `Phase 18 ~ 25` is easier to read as a continuation of the same master roadmap
+
+### 2026-04-16
 - Clarified roadmap semantics after user review:
   - `Phase 18` is still in-progress from a backlog perspective
   - `Phase 19` and `Phase 20` are fully manual-validation completed
