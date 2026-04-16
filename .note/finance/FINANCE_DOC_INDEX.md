@@ -117,6 +117,7 @@
   - 2026-04-13 시점까지의 full question/analysis archive
 - `.note/finance/FINANCE_TERM_GLOSSARY.md`
   - 퀀트 / 백테스트 / 실전형 전략 관련 반복 용어를 `기본 설명 / 왜 사용되는지 / 예시 / 필요 상황` 구조로 정리하는 공통 용어 사전
+  - `Phase 21` manual QA에서 쓰는 `Validation Frame`도 여기에서 "여러 후보를 같은 조건에서 비교하기 위한 검증 기준표"로 다시 확인할 수 있다
   - 최근 strict annual UI QA에서 자주 물었던 `Benchmark Contract`, `Candidate Universe Equal-Weight` 같은 operator-facing 용어도 여기에서 다시 확인할 수 있다
   - `Candidate Universe Equal-Weight / SPY`처럼 contract와 reference ticker가 같이 보일 때의 의미도 이 glossary 기준으로 다시 읽을 수 있다
   - equal-weight contract에서 왜 입력 필드명이 `Guardrail / Reference Ticker`로 보일 수 있는지도 여기 용어 기준으로 다시 이해할 수 있다

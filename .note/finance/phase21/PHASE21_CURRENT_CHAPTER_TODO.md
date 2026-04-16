@@ -73,3 +73,6 @@
 - `completed` validation frame first work unit 문서화
 - `completed` annual strict family rerun 3종 문서화
 - `completed` portfolio bridge validation first pass 문서화
+- `completed` manual QA terminology cleanup
+  - `Validation Frame`을 shared glossary에 추가
+  - Phase 21 plan의 current anchor / rescue candidate / deferred Phase 18 backlog 설명을 사용자 검수용 문장으로 정리

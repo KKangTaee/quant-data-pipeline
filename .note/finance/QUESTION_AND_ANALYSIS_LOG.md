@@ -1701,3 +1701,14 @@ Detailed historical analysis was archived on `2026-04-13`.
     - `PHASE21_NEXT_PHASE_PREPARATION.md`
     - `CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md`
     에 반영했다
+
+### 2026-04-17 - `Phase 21` QA에서 validation frame과 후보 판단 용어를 더 쉽게 정리했다
+- Request topic:
+  - Phase 21 checklist를 보며 `validation frame`, `current anchor`, `rescue candidate`, Phase 18 backlog 관련 표현이 이해하기 어렵다고 지적함
+- Interpreted goal:
+  - Phase 21 문서가 내부 개발자 메모가 아니라 사용자가 직접 QA를 진행할 수 있는 설명 문서처럼 읽히도록 용어와 문장을 정리하고 싶음
+- Result:
+  - `Validation Frame`을 "여러 후보를 같은 조건에서 비교하기 위해 미리 고정해 두는 검증 기준표"로 glossary에 추가했다
+  - Phase 21 plan에서 `Phase 18`의 남은 구조 실험은 지금 당장 막고 있는 필수 작업이 아니라 나중 선택지로 둔다는 뜻으로 풀어썼다
+  - `current anchor 유지 / 교체`는 대표 후보를 계속 기준점으로 둘지 바꿀지 판단한다는 의미로 정리했다
+  - `rescue candidate`는 낙폭이 낮은 대안이 실제 대체 후보인지, 단순 참고 후보인지 구분하는 표현으로 정리했다

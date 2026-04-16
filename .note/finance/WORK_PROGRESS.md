@@ -1112,3 +1112,12 @@ Detailed historical logs were archived on `2026-04-13`.
   - updated Phase 21 completion / next-phase docs and candidate summary
 - Durable takeaway:
   - the portfolio bridge is reproducible and meaningful enough for Phase 22 portfolio-level candidate construction, but portfolio-level promotion semantics still need to be designed before treating it as a production candidate.
+
+### 2026-04-17
+- Refined `Phase 21` QA wording after checklist review.
+- Changed:
+  - added `Validation Frame` to the shared finance glossary
+  - rewrote the Phase 21 plan wording around deferred Phase 18 structural backlog, current anchors, and lower-MDD rescue candidates in plainer language
+  - updated the Phase 21 checklist so validation frame verification points directly to the glossary
+- Durable takeaway:
+  - Phase 21 manual QA should now read as a user-facing validation guide rather than an internal shorthand memo.

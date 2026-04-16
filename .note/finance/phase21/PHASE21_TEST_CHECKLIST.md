@@ -24,10 +24,12 @@
 ## 1. validation frame 정의 확인
 
 - 확인 위치:
+  - [FINANCE_TERM_GLOSSARY.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/FINANCE_TERM_GLOSSARY.md)
   - [PHASE21_INTEGRATED_DEEP_BACKTEST_VALIDATION_PLAN.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase21/PHASE21_INTEGRATED_DEEP_BACKTEST_VALIDATION_PLAN.md)
   - [PHASE21_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase21/PHASE21_CURRENT_CHAPTER_TODO.md)
   - [PHASE21_VALIDATION_FRAME_DEFINITION_FIRST_WORK_UNIT.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase21/PHASE21_VALIDATION_FRAME_DEFINITION_FIRST_WORK_UNIT.md)
 - 체크 항목:
+  - [ ] `Validation Frame`이 "여러 후보를 같은 조건에서 비교하기 위해 미리 고정해 두는 검증 기준표"라는 뜻으로 이해되는지
   - [ ] 이번 phase에서 다시 볼 family와 candidate 범위가 문서에 분명히 적혀 있는지
   - [ ] 공통 기간(`2016-01-01 ~ 2026-04-01`)과 공통 universe frame(`US Statement Coverage 100`, `Historical Dynamic PIT Universe`)이 분명히 적혀 있는지
   - [ ] current anchor / lower-MDD alternative / portfolio bridge가 무엇인지 용어 설명이 충분한지

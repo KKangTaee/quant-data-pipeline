@@ -32,13 +32,17 @@
 - 이 상태로 바로 portfolio-level candidate나 새 전략으로 넘어가면,
   **현재 annual strict family의 기준점이 정말 유지되는지**
   다시 큰 프레임에서 확인하지 못한 채 다음 단계로 가게 된다.
-- 또한 `Phase 18`의 remaining second-slice structural backlog는
-  immediate blocker보다 future option에 가깝다고 정리되었기 때문에,
-  지금은 추가 구조 구현보다 integrated validation이 더 우선이다.
+- `Phase 18`에서 남겨 둔 추가 구조 실험 아이디어는
+  지금 당장 막고 있는 필수 작업이 아니라,
+  나중에 다시 꺼내 볼 수 있는 선택지에 가깝다.
+- 그래서 이번 `Phase 21`에서는 새 구조를 하나 더 만들기보다,
+  이미 있는 후보들을 같은 검증 기준표에서 다시 비교하는 일을 먼저 한다.
 
 ## 이 phase가 끝나면 좋은 점
-- `Value / Quality / Quality + Value`의 current anchor를 더 자신 있게 유지하거나 교체할 수 있다.
-- lower-MDD alternative가 실제 rescue candidate인지 더 분명해진다.
+- `Value / Quality / Quality + Value`에서 지금 대표 후보로 보고 있는 설정을
+  계속 기준점으로 둘지, 아니면 다른 후보로 바꿔야 할지 더 분명하게 판단할 수 있다.
+- 낙폭이 낮은 대안이 단순 참고용인지,
+  아니면 대표 후보를 실제로 대체할 만큼 좋은 후보인지 더 분명하게 구분할 수 있다.
 - saved / weighted portfolio bridge가 portfolio-level candidate로 넘어갈 준비가 되었는지 판단하기 쉬워진다.
 - 다음 phase가 "또 검증"이 아니라,
   **검증된 후보 위에서 확장하는 단계**가 된다.
@@ -55,6 +59,7 @@
 1. validation frame definition
    - 쉽게 말하면:
      - 어떤 후보를 어떤 기간 / 기준 / report 형식으로 다시 볼지 먼저 고정한다.
+     - 이 기준표가 `Validation Frame`이다.
    - 왜 먼저 하는가:
      - deep validation은 결과보다 frame이 흔들리면 해석이 다시 흐려지기 때문이다.
    - 기대 효과:
@@ -82,10 +87,18 @@
      - 이후 phase가 validation 결과를 확정된 기준처럼 다시 사용할 수 있다.
 
 ## 이 문서에서 자주 쓰는 용어
+- `Validation Frame`
+  - 여러 후보를 같은 조건에서 비교하기 위해 미리 고정해 두는 검증 기준표
+  - 예:
+    - 기간
+    - universe
+    - candidate pack
+    - benchmark / guardrail
+    - report naming
 - `Integrated Deep Validation`
-  - strongest / alternative / portfolio bridge를 같은 validation frame에서 다시 검증하는 것
+  - strongest / alternative / portfolio bridge를 같은 `Validation Frame`에서 다시 검증하는 것
 - `Current Anchor`
-  - 현재 practical 기준에서 대표 후보로 쓰고 있는 설정
+  - 지금 대표 후보로 보고 있고, 다음 비교의 기준점으로 쓰는 설정
 - `Lower-MDD Alternative`
   - 낙폭은 더 낮지만 현재 gate나 해석 면에서 anchor를 바로 대체하진 못한 후보
 - `Portfolio Bridge`
@@ -95,15 +108,15 @@
 - validation first
   - 이번 phase는 새 기능 확장보다 검증과 해석 정리에 우선순위를 둔다.
 - same-frame comparison
-  - family별 strongest / alternative / bridge 결과를 가능한 한 같은 frame에서 비교한다.
+  - family별 strongest / alternative / bridge 결과를 가능한 한 같은 validation frame에서 비교한다.
 - durable reporting
   - 의미 있는 결과는 strategy hub / backtest log / candidate summary에 남긴다.
 - support tooling is secondary
   - plugin / skill / agent automation은 필요하면 쓰되,
     main phase의 산출물로 세지 않는다.
 - phase18 structural backlog is deferred
-  - `Phase 18` second slice 후보는 버린 것이 아니라 future option으로 남겨둔다.
-  - 다만 이번 phase에서는 그것을 immediate workstream으로 끌고 오지 않는다.
+  - `Phase 18`에서 남겨 둔 추가 구조 실험 아이디어는 버린 것이 아니라 나중 선택지로 남겨둔다.
+  - 다만 이번 phase에서는 그것을 지금 당장 해야 하는 필수 작업으로 끌고 오지 않는다.
 
 ## 이번 phase의 주요 작업 단위
 - 첫 번째 작업:
