@@ -134,13 +134,13 @@ UI에서 같은 흐름을 확인하려면 아래 순서로 본다.
 
 ### 체크 항목
 
-- [ ] report가 "최종 portfolio winner 선정"이 아니라 "portfolio workflow 첫 검증"이라는 목적을 분명히 설명하는지
-- [ ] 왜 `Value / Quality / Quality + Value` 3개를 묶었는지와 이 조합의 한계가 함께 설명되어 있는지
-- [ ] `Load Recommended Candidates -> Weighted Portfolio Builder -> Save Portfolio -> Replay Saved Portfolio` 검증 흐름이 이해되는지
-- [ ] representative weighted portfolio 결과가 single-strategy rerun과 같은 phase frame에서 읽히는지
-- [ ] saved portfolio replay 결과가 `CAGR / MDD / End Balance` exact match 기준으로 재현되는지
-- [ ] 이번 결과가 아직 확인하지 않은 것과 `Phase 22`로 넘길 질문이 분리되어 있는지
-- [ ] portfolio bridge가 다음 phase의 메인 대상이 될지 판단할 재료가 충분한지
+- [x] report가 "최종 portfolio winner 선정"이 아니라 "portfolio workflow 첫 검증"이라는 목적을 분명히 설명하는지
+- [x] 왜 `Value / Quality / Quality + Value` 3개를 묶었는지와 이 조합의 한계가 함께 설명되어 있는지
+- [x] `Load Recommended Candidates -> Weighted Portfolio Builder -> Save Portfolio -> Replay Saved Portfolio` 검증 흐름이 이해되는지
+- [x] representative weighted portfolio 결과가 single-strategy rerun과 같은 phase frame에서 읽히는지
+- [x] saved portfolio replay 결과가 `CAGR / MDD / End Balance` exact match 기준으로 재현되는지
+- [x] 이번 결과가 아직 확인하지 않은 것과 `Phase 22`로 넘길 질문이 분리되어 있는지
+- [x] portfolio bridge가 다음 phase의 메인 대상이 될지 판단할 재료가 충분한지
 
 ---
 
@@ -162,10 +162,10 @@ UI에서 같은 흐름을 확인하려면 아래 순서로 본다.
 
 ### 체크 항목
 
-- [ ] phase 상태가 현재 실제 진행 상태와 맞는지
-- [ ] Phase 21 plan / TODO / closeout / next-phase 문서를 index에서 바로 찾을 수 있는지
-- [ ] next-phase preparation이 Phase 22 방향을 이해하기 쉽게 정리하는지
-- [ ] Phase 21에서 확인한 annual strict anchors와 portfolio bridge 결과가 다음 phase의 출발점으로 충분히 설명되어 있는지
+- [x] phase 상태가 현재 실제 진행 상태와 맞는지
+- [x] Phase 21 plan / TODO / closeout / next-phase 문서를 index에서 바로 찾을 수 있는지
+- [x] next-phase preparation이 Phase 22 방향을 이해하기 쉽게 정리하는지
+- [x] Phase 21에서 확인한 annual strict anchors와 portfolio bridge 결과가 다음 phase의 출발점으로 충분히 설명되어 있는지
 
 ## 한 줄 판단 기준
 

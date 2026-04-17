@@ -5,7 +5,14 @@
   무엇을 검증했고 어떤 candidate decision이 남았는지 정리하는 closeout 문서다.
 
 ## 현재 상태
-- `practical_closeout / manual_validation_pending`
+- `phase_complete / manual_validation_completed`
+
+## manual validation closeout
+
+- `PHASE21_TEST_CHECKLIST.md` 기준 사용자 QA가 완료되었다.
+- 따라서 `Phase 21`은 practical closeout이 아니라
+  `phase_complete / manual_validation_completed` 상태로 닫는다.
+- 다음 main phase는 `Phase 22 Portfolio-Level Candidate Construction`으로 진행한다.
 
 ## 쉽게 말하면
 

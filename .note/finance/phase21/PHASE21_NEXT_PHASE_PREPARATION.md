@@ -4,6 +4,13 @@
 - `Phase 21` deep validation이 끝난 뒤,
   어떤 질문으로 다음 phase를 여는 것이 자연스러운지 정리하는 handoff 문서다.
 
+## handoff 상태
+
+- `Phase 21` manual validation은 완료되었다.
+- `Phase 22`는 proposal이 아니라 active main phase로 열어도 되는 상태다.
+- 다음 작업은 portfolio-level candidate를 무엇으로 정의할지 먼저 정리한 뒤,
+  representative weighted portfolio를 실제 candidate pack으로 다시 다루는 것이다.
+
 ## 현재 기준에서 예상되는 다음 질문
 
 ### 1. portfolio-level candidate construction을 바로 열 것인가

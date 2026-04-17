@@ -1195,3 +1195,15 @@ Detailed historical logs were archived on `2026-04-13`.
   - synced the Phase 21 TODO board and finance doc index
 - Durable takeaway:
   - Phase 21 QA should now be executable from top to bottom without asking where each evidence item lives.
+
+### 2026-04-17
+- Closed `Phase 21` after user checklist completion and opened `Phase 22`.
+- Changed:
+  - marked `PHASE21_CURRENT_CHAPTER_TODO.md` and `PHASE21_COMPLETION_SUMMARY.md` as `phase_complete / manual_validation_completed`
+  - created the `Phase 22 Portfolio-Level Candidate Construction` phase bundle with the repo-local bootstrap helper
+  - rewrote the Phase 22 plan from template text into a plain-language kickoff document
+  - created `PHASE22_PORTFOLIO_LEVEL_CANDIDATE_SEMANTICS_FIRST_WORK_UNIT.md`
+  - added `Portfolio-Level Candidate`, `Portfolio Bridge`, `Saved Portfolio Replay`, and `Date Alignment` to the shared glossary
+  - synced `MASTER_PHASE_ROADMAP.md` and `FINANCE_DOC_INDEX.md`
+- Durable takeaway:
+  - Phase 22 is now active, and the immediate next work is to turn the Phase 21 `33 / 33 / 34` portfolio bridge into a controlled baseline portfolio candidate pack rather than treating it as a final winner.

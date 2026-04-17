@@ -1,7 +1,7 @@
 # Phase 21 Current Chapter TODO
 
 ## 상태
-- `practical_closeout / manual_validation_pending`
+- `phase_complete / manual_validation_completed`
 
 ## 1. Validation Frame Definition
 
@@ -94,3 +94,6 @@
 - `completed` full checklist readability cleanup
   - `PHASE21_TEST_CHECKLIST.md` 전체를 `무엇을 확인하나 / 어디서 확인하나 / 체크 항목` 구조로 재정리
   - section 3의 공식 report, UI 재현 경로, 읽는 순서, 체크 항목을 표와 순서형 안내로 정리
+- `completed` manual validation closeout
+  - 사용자가 `PHASE21_TEST_CHECKLIST.md`의 모든 주요 확인 항목을 완료했다
+  - Phase 21 상태를 `phase_complete / manual_validation_completed`로 닫고, 다음 main phase를 `Phase 22` portfolio-level candidate construction으로 연다

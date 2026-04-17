@@ -17,7 +17,7 @@
   - 앞으로 `finance` phase test checklist 문서를 만들 때 기본으로 따를 checkbox 중심 템플릿 문서
 - `.note/finance/MASTER_PHASE_ROADMAP.md`
   - 전체 Phase 구조와 상위 진행 방향을 정리한 최상위 로드맵 문서
-  - 최근 refresh 기준으로 `Phase 6`, `Phase 16`, `현재 위치`, support track, `Phase 21~25` reading order까지 다시 정리되어 있다
+  - 최근 refresh 기준으로 `Phase 21 = 완료`, `Phase 22 = active`, `현재 위치`, support track, `Phase 22~25` reading order까지 다시 정리되어 있다
   - 또한 `Phase 18 = 진행형`, `Phase 19/20 = 완료`, `Phase 5 first chapter = historical label`이라는 해석도 함께 반영되어 있다
   - roadmap tail도 `현재 위치 = 상태판`, `지금부터의 큰 흐름 = 다음 진행 안내판` 구조로 다시 정리되어 있다
 - `.note/finance/ROADMAP_REBASE_PHASE18_TO_PHASE25_20260414.md`
@@ -82,7 +82,7 @@
 - `.note/finance/phase21/PHASE21_VALIDATION_FRAME_DEFINITION_FIRST_WORK_UNIT.md`
   - `Phase 21` 첫 실제 작업으로, 공통 기간 / universe frame / family별 rerun pack / portfolio bridge frame / report naming을 먼저 고정한 문서
 - `.note/finance/phase21/PHASE21_COMPLETION_SUMMARY.md`
-  - main `Phase 21`이 어떤 deep validation 결과를 남겼고 왜 practical closeout으로 볼 수 있는지 정리한 summary 문서
+  - main `Phase 21`이 어떤 deep validation 결과를 남겼고 왜 manual validation completed 상태로 닫혔는지 정리한 summary 문서
 - `.note/finance/phase21/PHASE21_NEXT_PHASE_PREPARATION.md`
   - main `Phase 21` 이후 `Phase 22` portfolio-level candidate construction으로 넘어가는 것이 왜 자연스러운지 정리한 handoff 문서
 - `.note/finance/phase21/PHASE21_TEST_CHECKLIST.md`
@@ -90,6 +90,23 @@
   - 각 section이 `무엇을 확인하나 / 어디서 확인하나 / 체크 항목` 구조로 정리되어 있다
   - family별 rerun, portfolio bridge, closeout 확인 위치를 표와 순서형 안내로 바로 따라갈 수 있다
   - portfolio bridge는 최종 portfolio winner 선정이 아니라 workflow 첫 검증인지까지 확인하도록 section 3 체크 항목이 보강되어 있다
+  - 사용자 QA 완료 기준으로 모든 주요 항목이 `[x]` 처리되어 있다
+- `.note/finance/phase22/PHASE22_PORTFOLIO_LEVEL_CANDIDATE_CONSTRUCTION_PLAN.md`
+  - `Phase 22`가 왜 portfolio-level candidate construction phase인지,
+    단일 전략 후보와 portfolio 후보를 왜 분리해서 봐야 하는지 쉽게 설명하는 kickoff 문서
+- `.note/finance/phase22/PHASE22_CURRENT_CHAPTER_TODO.md`
+  - `Phase 22` active execution board로,
+    portfolio 후보 기준 정의 완료와 baseline portfolio candidate pack / saved replay validation pending 상태를 관리하는 문서
+- `.note/finance/phase22/PHASE22_PORTFOLIO_LEVEL_CANDIDATE_SEMANTICS_FIRST_WORK_UNIT.md`
+  - `Phase 22` 첫 번째 작업 단위로,
+    `Portfolio-Level Candidate`, `Portfolio Bridge`, component strategy, date alignment, saved replay의 의미와 후보 최소 기록 항목을 정리한 문서
+- `.note/finance/phase22/PHASE22_COMPLETION_SUMMARY.md`
+  - `Phase 22` closeout 때 채워야 할 요약 항목을 먼저 잡아둔 summary 초안
+- `.note/finance/phase22/PHASE22_NEXT_PHASE_PREPARATION.md`
+  - `Phase 22` 이후 `Phase 23` quarterly / alternate cadence productionization으로 넘어갈지 판단하기 위한 handoff 초안
+- `.note/finance/phase22/PHASE22_TEST_CHECKLIST.md`
+  - `Phase 22` practical closeout 때 사용할 manual checklist 초안
+  - 현재는 portfolio-level validation report 생성 전이므로, 앞으로 채워질 검수 기준을 먼저 잡아둔 상태다
 - `.note/finance/backtest_reports/phase21/README.md`
   - `Phase 21` integrated deep validation에서 나온 family rerun report와 portfolio bridge validation report를 모아 두는 archive 안내 문서
 - `.note/finance/backtest_reports/phase21/PHASE21_VALUE_ANCHOR_AND_ALTERNATIVE_RERUN_FIRST_PASS.md`
@@ -121,6 +138,7 @@
 - `.note/finance/FINANCE_TERM_GLOSSARY.md`
   - 퀀트 / 백테스트 / 실전형 전략 관련 반복 용어를 `기본 설명 / 왜 사용되는지 / 예시 / 필요 상황` 구조로 정리하는 공통 용어 사전
   - `Phase 21` manual QA에서 쓰는 `Validation Frame`도 여기에서 "여러 후보를 같은 조건에서 비교하기 위한 검증 기준표"로 다시 확인할 수 있다
+  - `Phase 22`에서 쓰는 `Portfolio-Level Candidate`, `Portfolio Bridge`, `Saved Portfolio Replay`, `Date Alignment`도 여기에서 확인할 수 있다
   - 최근 strict annual UI QA에서 자주 물었던 `Benchmark Contract`, `Candidate Universe Equal-Weight` 같은 operator-facing 용어도 여기에서 다시 확인할 수 있다
   - `Candidate Universe Equal-Weight / SPY`처럼 contract와 reference ticker가 같이 보일 때의 의미도 이 glossary 기준으로 다시 읽을 수 있다
   - equal-weight contract에서 왜 입력 필드명이 `Guardrail / Reference Ticker`로 보일 수 있는지도 여기 용어 기준으로 다시 이해할 수 있다

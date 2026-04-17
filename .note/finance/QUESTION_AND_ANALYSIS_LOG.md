@@ -1785,3 +1785,15 @@ Detailed historical analysis was archived on `2026-04-13`.
   - validation frame, family rerun, portfolio bridge, closeout 확인 위치를 표로 정리했다
   - portfolio bridge section은 공식 Markdown report와 UI 재현 경로를 분리하고, UI 순서도 별도 순서형 안내로 정리했다
   - 기존 사용자가 표시한 `[x]` QA 진행 상태는 유지했다
+
+### 2026-04-17 - `Phase 21`을 검수 완료로 닫고 `Phase 22`를 portfolio-level candidate construction으로 열었다
+- Request topic:
+  - 사용자가 `Phase 21` checklist 완료를 알리고, Phase 21 마무리 후 Phase 22 진행을 요청함
+- Interpreted goal:
+  - Phase 21을 실제 완료 상태로 정리하고, 다음 main phase를 빈 템플릿이 아니라 실행 가능한 계획과 첫 작업 단위로 시작하고 싶음
+- Result:
+  - Phase 21 상태를 `phase_complete / manual_validation_completed`로 업데이트했다
+  - Phase 22를 `Portfolio-Level Candidate Construction`으로 열었다
+  - Phase 22의 핵심은 "weighted portfolio 결과를 바로 최종 후보라고 부르지 않고, source / weight / date alignment / saved replay / 해석이 남은 재현 가능한 portfolio-level candidate로 관리할 기준을 세우는 것"으로 정리했다
+  - 첫 작업 단위에서는 `Portfolio-Level Candidate`, `Portfolio Bridge`, `Component Strategy`, `Date Alignment`, `Saved Portfolio Replay`를 정의했다
+  - 다음 작업은 Phase 21의 `33 / 33 / 34` bridge를 baseline portfolio candidate pack으로 다시 검증할지 확정하고, 첫 portfolio-level validation report를 만드는 것이다
