@@ -91,3 +91,6 @@
 - `completed` portfolio bridge checklist alignment
   - Phase 21 checklist section 3을 새 portfolio bridge report 흐름에 맞춰 조정
   - 최종 winner 선정이 아니라 workflow 첫 검증인지, 3개 전략을 묶은 이유와 한계가 함께 설명되는지 확인하도록 체크 항목 보강
+- `completed` full checklist readability cleanup
+  - `PHASE21_TEST_CHECKLIST.md` 전체를 `무엇을 확인하나 / 어디서 확인하나 / 체크 항목` 구조로 재정리
+  - section 3의 공식 report, UI 재현 경로, 읽는 순서, 체크 항목을 표와 순서형 안내로 정리

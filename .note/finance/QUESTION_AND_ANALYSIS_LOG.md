@@ -1774,3 +1774,14 @@ Detailed historical analysis was archived on `2026-04-13`.
     - 왜 3개 annual strict 전략을 묶었는지와 그 한계가 같이 설명되는지
     - `Load Recommended Candidates -> Weighted Portfolio Builder -> Save Portfolio -> Replay Saved Portfolio` 흐름이 이해되는지
     - 아직 확인하지 않은 것과 `Phase 22` 질문이 분리되어 있는지
+
+### 2026-04-17 - `Phase 21` checklist 전체를 처음부터 끝까지 다시 읽기 쉽게 정리했다
+- Request topic:
+  - `PHASE21_TEST_CHECKLIST.md`의 section 3이 확인 위치와 UI 경로가 섞여 난잡하므로, 전체 checklist를 다시 깔끔하게 정리해 달라고 요청함
+- Interpreted goal:
+  - 사용자가 QA를 할 때 "무엇을 확인하면 되는지"와 "어디서 확인하면 되는지"를 문서만 보고 바로 따라갈 수 있게 만들고 싶음
+- Result:
+  - checklist 전체를 `무엇을 확인하나 / 어디서 확인하나 / 체크 항목` 구조로 재작성했다
+  - validation frame, family rerun, portfolio bridge, closeout 확인 위치를 표로 정리했다
+  - portfolio bridge section은 공식 Markdown report와 UI 재현 경로를 분리하고, UI 순서도 별도 순서형 안내로 정리했다
+  - 기존 사용자가 표시한 `[x]` QA 진행 상태는 유지했다

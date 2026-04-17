@@ -1182,3 +1182,16 @@ Detailed historical logs were archived on `2026-04-13`.
   - recorded the checklist alignment in the Phase 21 TODO board
 - Durable takeaway:
   - portfolio bridge QA now checks whether the report is clearly framed as workflow validation, not as final portfolio winner selection.
+
+### 2026-04-17
+- Reorganized the full `Phase 21` test checklist for readability.
+- Changed:
+  - rewrote `PHASE21_TEST_CHECKLIST.md` around a consistent structure:
+    - what to verify
+    - where to verify it
+    - concrete checkbox items
+  - converted scattered location notes into tables for validation frame, family reruns, portfolio bridge, and closeout
+  - kept existing user QA checkmarks while making section 3 less noisy and easier to follow
+  - synced the Phase 21 TODO board and finance doc index
+- Durable takeaway:
+  - Phase 21 QA should now be executable from top to bottom without asking where each evidence item lives.
