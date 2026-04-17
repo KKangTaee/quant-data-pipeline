@@ -85,3 +85,6 @@
 - `completed` manual QA portfolio bridge report location clarification
   - Phase 21 checklist에서 portfolio bridge 공식 rerun report와 UI 확인 위치를 분리해 설명
   - `Weighted Portfolio Builder`, `Weighted Portfolio Result`, `Saved Portfolios / Replay Saved Portfolio`의 역할을 체크리스트에 명시
+- `completed` portfolio bridge report readability rewrite
+  - `PHASE21_PORTFOLIO_BRIDGE_VALIDATION_FIRST_PASS.md`를 결론 / 용어 / 왜 이 조합을 썼는지 / 검증 흐름 / 결과 / 한계 / Phase 22 질문 순서로 재정리
+  - `first pass`를 첫 검증으로 풀어 설명하고, 최종 포트폴리오 후보 확정 문서가 아니라 workflow 재현성 검증 문서라는 점을 명확히 반영

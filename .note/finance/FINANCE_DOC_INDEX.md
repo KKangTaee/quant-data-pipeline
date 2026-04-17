@@ -101,8 +101,8 @@
   - `Quality + Value` current strongest point와 lower-MDD alternative를 같은 validation frame에서 다시 돌려,
     current anchor 유지 여부와 `Top N 9` alternative의 weaker-gate status를 확인한 first-pass report
 - `.note/finance/backtest_reports/phase21/PHASE21_PORTFOLIO_BRIDGE_VALIDATION_FIRST_PASS.md`
-  - `Load Recommended Candidates -> 33/33/34 weighted portfolio -> saved portfolio replay` 흐름을 검증하고,
-    portfolio bridge가 Phase 22 candidate construction 대상으로 적합한지 확인한 first-pass report
+  - `Load Recommended Candidates -> 33/33/34 weighted portfolio -> saved portfolio replay` 흐름을 검증한 portfolio bridge 보고서
+  - 이 조합을 최종 포트폴리오 후보로 확정하는 문서가 아니라, weighted / saved portfolio workflow가 재현 가능하게 작동하는지 확인한 첫 검증 문서로 읽는다
 - `.note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md`
   - `finance` 패키지 전체 구조와 DB/기능 종합 분석
 - `.note/finance/WORK_PROGRESS.md`

@@ -165,7 +165,8 @@
     current anchor 유지 여부와 `Top N 9` alternative의 weaker-gate status가 그대로인지 확인한 first-pass 문서
 - `phase21/PHASE21_PORTFOLIO_BRIDGE_VALIDATION_FIRST_PASS.md`
   - `Load Recommended Candidates -> 33/33/34 weighted portfolio -> saved portfolio replay` 흐름을 검증하고,
-    portfolio bridge가 Phase 22 candidate construction 대상으로 적합한지 확인한 first-pass 문서
+    portfolio bridge가 Phase 22 candidate construction 대상으로 적합한지 확인한 첫 검증 보고서
+  - 최종 포트폴리오 후보 확정보다는 weighted / saved portfolio workflow 재현성 확인에 초점을 둔다
 
 ## 운영 메모
 

@@ -1152,3 +1152,20 @@ Detailed historical logs were archived on `2026-04-13`.
   - recorded the clarification in the Phase 21 TODO board
 - Durable takeaway:
   - `weighted portfolio / saved portfolio rerun report` should be read as the Phase 21 Markdown report, while the Streamlit UI is the optional replay/visual verification path.
+
+### 2026-04-17
+- Rewrote the `Phase 21` portfolio bridge validation report for readability.
+- Changed:
+  - restructured `PHASE21_PORTFOLIO_BRIDGE_VALIDATION_FIRST_PASS.md` around:
+    - what the document is
+    - the conclusion first
+    - plain-language terms
+    - why the three annual strict strategies were used
+    - validation flow
+    - weighted / saved replay results
+    - what the result does and does not prove
+    - Phase 22 questions
+  - clarified that `FIRST_PASS` means first validation, not final portfolio recommendation
+  - synced the Phase 21 archive README, report index, finance doc index, and TODO board
+- Durable takeaway:
+  - the portfolio bridge report should now read as a workflow validation report rather than an AI-looking result dump.

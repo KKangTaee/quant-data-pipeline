@@ -1749,3 +1749,15 @@ Detailed historical analysis was archived on `2026-04-13`.
   - UI 확인 경로는 `Backtest > Compare & Portfolio Builder` 아래의
     `Load Recommended Candidates -> Strategy Comparison -> Weighted Portfolio Builder -> Weighted Portfolio Result -> Saved Portfolios -> Replay Saved Portfolio`로 정리했다
   - `Weighted Portfolio Builder`는 구성 입력 영역, `Weighted Portfolio Result`는 결과 표시 영역, `Saved Portfolios / Replay Saved Portfolio`는 저장된 구성 재실행 영역으로 설명했다
+
+### 2026-04-17 - `Phase 21` portfolio bridge report를 읽기 쉬운 검증 보고서 흐름으로 재정리했다
+- Request topic:
+  - `PHASE21_PORTFOLIO_BRIDGE_VALIDATION_FIRST_PASS.md`가 내용은 괜찮지만, 용어와 흐름이 AI가 만든 문서처럼 딱딱하고 `first pass` 표현도 어렵다고 지적함
+- Interpreted goal:
+  - 문서가 "결과표 모음"이 아니라, 왜 이 검증을 했고 무엇을 확인했으며 무엇을 아직 확인하지 않았는지 자연스럽게 읽히도록 정리하고 싶음
+- Result:
+  - 문서 제목을 본문상 `Phase 21 Portfolio Bridge Validation Report`로 바꾸고, 파일명에 남은 `FIRST_PASS`는 "첫 검증"이라는 뜻으로 풀어썼다
+  - 앞부분에 "최종 포트폴리오 후보 확정 문서가 아니라 workflow 재현성 검증 문서"라는 결론을 먼저 배치했다
+  - `Portfolio Bridge`, `Weighted Portfolio`, `Saved Portfolio Replay`, `First Pass` 용어를 문서 안에서 설명했다
+  - `Value / Quality / Quality + Value` 3개를 묶은 이유와 한계를 분리해 설명했다
+  - 결과 해석을 Phase 22에서 다룰 portfolio-level candidate construction 질문으로 자연스럽게 연결했다

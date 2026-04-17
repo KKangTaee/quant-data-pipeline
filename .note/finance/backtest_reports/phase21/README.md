@@ -23,5 +23,5 @@
   - `Quality + Value` current strongest point와 lower-MDD alternative를 같은 validation frame에서 다시 돌려,
     current anchor 유지와 `Top N 9` alternative의 weaker-gate status를 다시 확인한 first-pass 문서
 - [PHASE21_PORTFOLIO_BRIDGE_VALIDATION_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase21/PHASE21_PORTFOLIO_BRIDGE_VALIDATION_FIRST_PASS.md)
-  - `Load Recommended Candidates -> near-equal weighted bundle -> saved portfolio replay` 흐름을 대표 frame으로 검증하고,
-    portfolio bridge가 다음 phase의 candidate construction 대상이 될 만큼 의미 있는지 정리한 first-pass 문서
+  - `Load Recommended Candidates -> near-equal weighted bundle -> saved portfolio replay` 흐름을 대표 frame으로 검증한 문서
+  - 최종 포트폴리오 후보를 고른 문서가 아니라, weighted / saved portfolio workflow가 재현 가능하게 작동하는지 확인한 첫 검증 보고서
