@@ -605,6 +605,69 @@ validation과 승격 해석이 달라지기 때문이다.
 
 ---
 
+## Portfolio-Level Benchmark
+
+### 기본 설명
+여러 전략을 섞은 portfolio 후보를 비교할 때 쓰는 기준점이다.
+
+단일 전략의 benchmark와 다르게,
+portfolio-level benchmark는 "이 portfolio 조합이 다른 portfolio 조합보다 나은가"를 보기 위해 쓰는 경우가 많다.
+
+### 왜 사용되는지
+portfolio 후보는 여러 component strategy가 섞여 있기 때문에,
+component마다 쓰던 benchmark를 그대로 하나로 합치면 해석이 꼬일 수 있다.
+
+그래서 `Phase 22`에서는 portfolio 후보의 1차 benchmark를 `SPY`가 아니라
+`phase22_annual_strict_equal_third_baseline_v1`으로 둔다.
+
+### 예시 / 필요 상황
+- equal-third baseline:
+  - `Value / Quality / Quality + Value`를 각각 1/3씩 섞은 기준 portfolio
+- weight alternative:
+  - `25 / 25 / 50`이나 `40 / 40 / 20`이 baseline보다 나은지 비교할 때 사용
+
+---
+
+## Portfolio-Level Guardrail
+
+### 기본 설명
+portfolio 후보가 너무 위험하거나, 재현성이 없거나, 특정 component에 과도하게 쏠렸는지 보는 경고 기준이다.
+
+### 왜 사용되는지
+portfolio 후보는 단일 전략보다 좋아 보일 수 있지만,
+실제로는 한 component가 대부분의 성과를 만들거나,
+저장 후 replay가 안 되거나,
+baseline보다 낙폭이 더 깊어지는 경우가 있다.
+
+이런 경우를 숫자만 보고 지나치지 않기 위해 portfolio-level guardrail을 둔다.
+
+### 예시 / 필요 상황
+- saved replay가 재현되지 않으면 후보가 아니라 일회성 결과로 본다.
+- MDD가 baseline보다 2~3%p 이상 깊어지면 `watch / caution`으로 읽는다.
+- 한 component contribution이 50%를 넘으면 concentration risk를 따로 확인한다.
+
+---
+
+## Weight Alternative
+
+### 기본 설명
+같은 component strategy를 쓰되, 포트폴리오 안에서 각 component 비중만 다르게 준 대안 조합이다.
+
+### 왜 사용되는지
+equal-weight가 항상 최선은 아니다.
+strongest component를 조금 더 키우거나, drawdown이 낮은 component를 더 키우면
+수익 / 낙폭 / Sharpe tradeoff가 달라질 수 있다.
+
+### 예시 / 필요 상황
+- `quality_value_tilt`
+  - `25 / 25 / 50`
+  - strongest blended component를 더 키우는 조합
+- `value_quality_defensive_tilt`
+  - `40 / 40 / 20`
+  - blended component 편중을 줄이고 Value / Quality를 더 키우는 조합
+
+---
+
 ## Min Benchmark Coverage
 
 ### 기본 설명

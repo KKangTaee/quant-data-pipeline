@@ -177,6 +177,8 @@
     saved portfolio definition 기준 equal-third baseline portfolio candidate pack으로 다시 정의한 첫 report
   - `33 / 33 / 34` 표현과 `[33.33, 33.33, 33.33]` 저장 weight의 차이를 정리하고,
     현재 status를 `baseline_candidate / portfolio_watchlist / not_deployment_ready`로 고정한다
+  - 이후 second work unit에서 portfolio-level primary benchmark는 이 equal-third baseline으로 두고,
+    guardrail은 report-level warning으로 해석하기로 정리했다
 
 ## 운영 메모
 

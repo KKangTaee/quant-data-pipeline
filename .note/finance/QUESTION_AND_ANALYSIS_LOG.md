@@ -1809,3 +1809,15 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Phase 21 문서의 `33 / 33 / 34`는 near-equal shorthand로 정리하고, Phase 22에서는 `equal-third baseline` 표현을 쓰기로 했다
   - 현재 status는 `baseline_candidate / portfolio_watchlist / not_deployment_ready`로 정리했다
   - 다음 질문은 portfolio-level benchmark / guardrail policy와 weight alternative 비교 범위다
+
+### 2026-04-17 - `Phase 22` portfolio-level benchmark와 guardrail은 baseline 비교 중심으로 정리했다
+- Request topic:
+  - Phase 22 다음 작업으로 portfolio-level benchmark / guardrail interpretation과 weight alternative 범위를 정리함
+- Interpreted goal:
+  - weight 대안을 돌리기 전에 무엇과 비교하고 어떤 기준으로 보수적으로 읽을지 고정하고 싶음
+- Result:
+  - Phase 22 primary portfolio benchmark는 `SPY`가 아니라 `phase22_annual_strict_equal_third_baseline_v1`로 정했다
+  - `SPY`는 market context로만 두고, component benchmark는 component 품질 해석으로만 유지한다
+  - portfolio-level guardrail은 아직 actual trading rule이 아니라 report-level warning으로 둔다
+  - 다음 weight alternative는 넓은 brute-force가 아니라 `25 / 25 / 50`, `40 / 40 / 20` 두 개로 좁혔다
+  - 따라서 다음 실제 validation report는 equal-third baseline과 이 두 weight alternative를 같은 frame에서 비교하는 방식으로 진행한다

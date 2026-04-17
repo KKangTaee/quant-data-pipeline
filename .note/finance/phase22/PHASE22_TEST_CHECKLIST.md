@@ -4,7 +4,7 @@
 
 - 이 checklist는 `Phase 22`가 practical closeout에 가까워졌을 때 사용자가 직접 QA하기 위한 초안이다.
 - 현재 Phase 22는 첫 baseline candidate pack report까지 작성된 상태다.
-- 아직 weight alternative와 portfolio-level benchmark / guardrail policy가 남아 있으므로,
+- 아직 weight alternative actual rerun report가 남아 있으므로,
   이 문서는 closeout 최종본이 아니라 진행 중 checklist다.
 
 ## 사용 방법
@@ -61,7 +61,21 @@
 - [ ] report에서 "최종 후보"가 아니라 `baseline_candidate / portfolio_watchlist / not_deployment_ready`라는 해석이 분명한지
 - [ ] 아직 확인하지 않은 한계가 report에 따로 적혀 있는지
 
-## 4. Closeout / Handoff 확인
+## 4. Portfolio Benchmark / Guardrail / Weight Scope 확인
+
+### 확인 위치
+
+- [PHASE22_PORTFOLIO_BENCHMARK_GUARDRAIL_AND_WEIGHT_SCOPE_SECOND_WORK_UNIT.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase22/PHASE22_PORTFOLIO_BENCHMARK_GUARDRAIL_AND_WEIGHT_SCOPE_SECOND_WORK_UNIT.md)
+- [FINANCE_TERM_GLOSSARY.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/FINANCE_TERM_GLOSSARY.md)
+
+### 체크 항목
+
+- [ ] portfolio 후보의 1차 benchmark가 `SPY`가 아니라 equal-third baseline이라는 설명이 이해되는지
+- [ ] `SPY`는 market context이고, component benchmark는 component 품질 해석으로만 남는다는 점이 보이는지
+- [ ] portfolio-level guardrail이 아직 actual trading rule이 아니라 report-level warning이라는 점이 이해되는지
+- [ ] 다음 weight alternative가 `25 / 25 / 50`과 `40 / 40 / 20` 두 개로 좁혀진 이유가 보이는지
+
+## 5. Closeout / Handoff 확인
 
 ### 확인 문서
 

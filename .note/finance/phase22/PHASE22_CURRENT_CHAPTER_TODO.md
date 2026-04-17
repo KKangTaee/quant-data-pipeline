@@ -2,7 +2,7 @@
 
 ## 상태
 
-- `active / baseline_candidate_pack_completed`
+- `active / benchmark_guardrail_scope_completed`
 
 ## 1. Portfolio-Level Candidate Semantics
 
@@ -30,8 +30,12 @@
   - normalized 기준 `[1/3, 1/3, 1/3]`
   - `Phase 21`의 `33 / 33 / 34` 표현은 near-equal shorthand로 정리하고,
     Phase 22에서는 `equal-third baseline`으로 부르기로 결정
-- `pending` portfolio-level benchmark / guardrail interpretation 정리
+- `completed` portfolio-level benchmark / guardrail interpretation 정리
   - single strategy benchmark와 portfolio benchmark가 어떻게 연결되는지 기록
+  - Phase 22 primary portfolio benchmark는 `phase22_annual_strict_equal_third_baseline_v1`
+  - `SPY`는 primary gate가 아니라 market context로만 유지
+  - component benchmark는 component 품질 해석으로만 유지
+  - portfolio-level guardrail은 actual trading rule이 아니라 report-level warning으로 고정
 
 ## 3. Portfolio-Level Validation Execution
 
@@ -46,6 +50,10 @@
   - weight
   - result metrics
   - interpretation
+- `completed` weight alternative comparison scope 확정
+  - `quality_value_tilt`: `25 / 25 / 50`
+  - `value_quality_defensive_tilt`: `40 / 40 / 20`
+  - broad brute-force search / risk parity / volatility targeting은 이번 work unit 밖으로 defer
 
 ## 4. Documentation And QA
 
@@ -59,10 +67,13 @@
   - portfolio-level registry schema가 필요하면 이후 별도 작업으로 정의
 - `completed` phase22 checklist first report alignment
   - 실제 report 위치와 확인 항목을 checklist에 반영
+- `completed` benchmark / guardrail / weight scope doc sync
+  - `PHASE22_PORTFOLIO_BENCHMARK_GUARDRAIL_AND_WEIGHT_SCOPE_SECOND_WORK_UNIT.md`
+  - `Portfolio-Level Benchmark`, `Portfolio-Level Guardrail`, `Weight Alternative` glossary 추가
 - `pending` phase22 checklist finalization
   - weight alternative / benchmark policy 작업 이후 closeout용 checklist로 다시 정리
 
 ## 다음 작업
 
 - `Phase 22`의 다음 작업은
-  **portfolio-level benchmark / guardrail interpretation과 weight alternative 비교 범위를 정하는 것**이다.
+  **두 weight alternative를 같은 frame에서 rerun하고 baseline 대비 유지 / 교체 / 보류 판단을 report로 남기는 것**이다.

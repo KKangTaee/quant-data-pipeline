@@ -1219,3 +1219,17 @@ Detailed historical logs were archived on `2026-04-13`.
   - synced Phase 22 TODO/checklist, roadmap, finance doc index, backtest report index, and current practical candidate summary
 - Durable takeaway:
   - `phase22_annual_strict_equal_third_baseline_v1` is now the first portfolio-level baseline candidate pack, but not a final portfolio winner.
+
+### 2026-04-17
+- Completed the second `Phase 22` benchmark / guardrail / weight-scope work unit.
+- Changed:
+  - created `PHASE22_PORTFOLIO_BENCHMARK_GUARDRAIL_AND_WEIGHT_SCOPE_SECOND_WORK_UNIT.md`
+  - set the primary portfolio benchmark to `phase22_annual_strict_equal_third_baseline_v1`
+  - kept `SPY` as market context rather than the Phase 22 primary gate
+  - clarified that component benchmarks remain component-level quality checks, not portfolio-level benchmarks
+  - defined portfolio-level guardrail as report-level warning, not an actual trading rule
+  - narrowed next weight alternatives to `25 / 25 / 50` and `40 / 40 / 20`
+  - added `Portfolio-Level Benchmark`, `Portfolio-Level Guardrail`, and `Weight Alternative` to the glossary
+  - synced Phase 22 TODO/checklist, roadmap, finance doc index, and backtest report index
+- Durable takeaway:
+  - the next actual validation step is no longer open-ended; rerun only the two scoped weight alternatives against the equal-third baseline.

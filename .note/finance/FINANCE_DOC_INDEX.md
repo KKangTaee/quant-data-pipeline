@@ -97,10 +97,15 @@
 - `.note/finance/phase22/PHASE22_CURRENT_CHAPTER_TODO.md`
   - `Phase 22` active execution board로,
     portfolio 후보 기준 정의와 baseline portfolio candidate pack 완료,
-    benchmark policy / weight alternative pending 상태를 관리하는 문서
+    benchmark policy / weight alternative scope 완료 상태를 관리하는 문서
 - `.note/finance/phase22/PHASE22_PORTFOLIO_LEVEL_CANDIDATE_SEMANTICS_FIRST_WORK_UNIT.md`
   - `Phase 22` 첫 번째 작업 단위로,
     `Portfolio-Level Candidate`, `Portfolio Bridge`, component strategy, date alignment, saved replay의 의미와 후보 최소 기록 항목을 정리한 문서
+- `.note/finance/phase22/PHASE22_PORTFOLIO_BENCHMARK_GUARDRAIL_AND_WEIGHT_SCOPE_SECOND_WORK_UNIT.md`
+  - `Phase 22` 두 번째 작업 단위로,
+    portfolio 후보의 primary benchmark를 equal-third baseline으로 두고,
+    guardrail은 actual trading rule이 아니라 report-level warning으로 읽는 기준을 정리한 문서
+  - 다음 weight alternative를 `25 / 25 / 50`, `40 / 40 / 20` 두 개로 좁혀 둔다
 - `.note/finance/phase22/PHASE22_COMPLETION_SUMMARY.md`
   - `Phase 22` closeout 때 채워야 할 요약 항목을 먼저 잡아둔 summary 초안
 - `.note/finance/phase22/PHASE22_NEXT_PHASE_PREPARATION.md`
@@ -147,6 +152,7 @@
   - 퀀트 / 백테스트 / 실전형 전략 관련 반복 용어를 `기본 설명 / 왜 사용되는지 / 예시 / 필요 상황` 구조로 정리하는 공통 용어 사전
   - `Phase 21` manual QA에서 쓰는 `Validation Frame`도 여기에서 "여러 후보를 같은 조건에서 비교하기 위한 검증 기준표"로 다시 확인할 수 있다
   - `Phase 22`에서 쓰는 `Portfolio-Level Candidate`, `Portfolio Bridge`, `Saved Portfolio Replay`, `Date Alignment`도 여기에서 확인할 수 있다
+  - `Portfolio-Level Benchmark`, `Portfolio-Level Guardrail`, `Weight Alternative`도 여기에서 확인할 수 있다
   - 최근 strict annual UI QA에서 자주 물었던 `Benchmark Contract`, `Candidate Universe Equal-Weight` 같은 operator-facing 용어도 여기에서 다시 확인할 수 있다
   - `Candidate Universe Equal-Weight / SPY`처럼 contract와 reference ticker가 같이 보일 때의 의미도 이 glossary 기준으로 다시 읽을 수 있다
   - equal-weight contract에서 왜 입력 필드명이 `Guardrail / Reference Ticker`로 보일 수 있는지도 여기 용어 기준으로 다시 이해할 수 있다

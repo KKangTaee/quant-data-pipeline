@@ -121,7 +121,7 @@ candidate pack 관점으로 다시 정리한다.
 | universe frame | `ok` | `US Statement Coverage 100`, `Historical Dynamic PIT Universe` |
 | weight | `ok` | equal-third baseline |
 | date alignment | `ok` | `intersection` |
-| benchmark / guardrail interpretation | `partial` | portfolio-level benchmark policy는 별도 정리 필요 |
+| benchmark / guardrail interpretation | `ok` | Phase 22 second work unit에서 baseline portfolio benchmark / report-level guardrail 기준 정의 |
 | key metrics | `ok` | CAGR / MDD / Sharpe / End Balance |
 | saved replay result | `ok` | exact match |
 | interpretation / next action | `ok` | baseline 유지, deployment 보류 |
@@ -139,7 +139,8 @@ candidate pack 관점으로 다시 정리한다.
 ### 바로 최종 후보로 승격하지 않는 이유
 
 - 세 component가 모두 annual strict factor family라 전략 독립성이 충분히 검증되지 않았다.
-- portfolio-level benchmark / guardrail policy가 아직 확정되지 않았다.
+- portfolio-level benchmark / guardrail policy는 second work unit에서 초안이 잡혔지만,
+  actual weight alternative 검증은 아직 남아 있다.
 - portfolio-level promotion / shortlist / deployment 기준이 아직 초안 단계다.
 - `Quality + Value` contribution이 시간이 지나며 커지는 구조라,
   최종적으로는 blended anchor 편중 여부를 따로 봐야 한다.
@@ -168,7 +169,7 @@ candidate pack 관점으로 다시 정리한다.
 ## Phase 22 다음 작업으로 넘길 질문
 
 - equal-third baseline보다 명확히 나은 weight alternative가 있는가
-- portfolio-level benchmark를 무엇으로 둘 것인가
+- portfolio-level benchmark는 equal-third baseline으로 두는 것이 실제 rerun에서도 해석 가능한가
 - component strategy의 promotion status를 portfolio status에 어떻게 반영할 것인가
 - annual strict family끼리만 묶은 후보를 어디까지 portfolio candidate로 인정할 것인가
 - GTAA, treasury, defensive, momentum 계열을 언제 추가 비교할 것인가

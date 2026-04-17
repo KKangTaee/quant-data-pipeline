@@ -168,6 +168,14 @@
   `[33.33, 33.33, 33.33]` equal-third baseline pack으로 다시 정리했다.
 - 다음에는 portfolio-level benchmark / guardrail interpretation을 정리하고,
   equal-third baseline과 비교할 weight alternative 범위를 결정한다.
+- 두 번째 작업 단위에서 이 기준은 아래처럼 고정했다.
+  - primary portfolio benchmark:
+    - `phase22_annual_strict_equal_third_baseline_v1`
+  - context reference:
+    - `SPY`
+  - next weight alternatives:
+    - `25 / 25 / 50`
+    - `40 / 40 / 20`
 
 ## 한 줄 정리
 
