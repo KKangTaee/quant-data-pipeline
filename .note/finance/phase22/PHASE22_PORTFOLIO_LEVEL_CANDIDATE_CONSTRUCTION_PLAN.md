@@ -163,9 +163,11 @@
 
 ## 다음에 확인할 것
 
-- 첫 번째로는 portfolio 후보를 후보라고 부를 최소 조건을 확정한다.
-- 그 다음 `Phase 21`의 `33 / 33 / 34` bridge를 baseline portfolio candidate pack으로 다시 정리할지 확인한다.
-- 이후 equal-weight, near-equal, risk-aware weight 중 어떤 비교를 이번 phase 안에서 볼지 결정한다.
+- portfolio 후보를 후보라고 부를 최소 조건은 first work unit에서 확정했다.
+- `Phase 21`의 `33 / 33 / 34` bridge는 저장 definition 기준
+  `[33.33, 33.33, 33.33]` equal-third baseline pack으로 다시 정리했다.
+- 다음에는 portfolio-level benchmark / guardrail interpretation을 정리하고,
+  equal-third baseline과 비교할 weight alternative 범위를 결정한다.
 
 ## 한 줄 정리
 

@@ -1207,3 +1207,15 @@ Detailed historical logs were archived on `2026-04-13`.
   - synced `MASTER_PHASE_ROADMAP.md` and `FINANCE_DOC_INDEX.md`
 - Durable takeaway:
   - Phase 22 is now active, and the immediate next work is to turn the Phase 21 `33 / 33 / 34` portfolio bridge into a controlled baseline portfolio candidate pack rather than treating it as a final winner.
+
+### 2026-04-17
+- Completed the first `Phase 22` baseline portfolio candidate pack report.
+- Changed:
+  - created `backtest_reports/phase22/README.md`
+  - created `backtest_reports/phase22/PHASE22_BASELINE_PORTFOLIO_CANDIDATE_PACK_FIRST_PASS.md`
+  - clarified that the `Phase 21` `33 / 33 / 34` label is a near-equal shorthand, while the saved definition is `[33.33, 33.33, 33.33]` normalized to equal thirds
+  - fixed the baseline portfolio status as `baseline_candidate / portfolio_watchlist / not_deployment_ready`
+  - reviewed `CURRENT_CANDIDATE_REGISTRY.jsonl`; validation passes, but no append was made because portfolio-level candidate registry semantics are not defined yet
+  - synced Phase 22 TODO/checklist, roadmap, finance doc index, backtest report index, and current practical candidate summary
+- Durable takeaway:
+  - `phase22_annual_strict_equal_third_baseline_v1` is now the first portfolio-level baseline candidate pack, but not a final portfolio winner.

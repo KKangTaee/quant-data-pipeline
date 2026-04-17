@@ -3,12 +3,13 @@
 ## 목적
 
 - 이 checklist는 `Phase 22`가 practical closeout에 가까워졌을 때 사용자가 직접 QA하기 위한 초안이다.
-- 현재 Phase 22는 막 시작된 상태이므로,
-  아래 항목은 최종 체크리스트가 아니라 앞으로 채워질 검수 기준이다.
+- 현재 Phase 22는 첫 baseline candidate pack report까지 작성된 상태다.
+- 아직 weight alternative와 portfolio-level benchmark / guardrail policy가 남아 있으므로,
+  이 문서는 closeout 최종본이 아니라 진행 중 checklist다.
 
 ## 사용 방법
 
-- 실제 portfolio-level validation report가 만들어진 뒤 이 checklist를 다시 정리한다.
+- 새 portfolio-level validation report가 추가될 때마다 이 checklist를 같이 정리한다.
 - 사용자는 최종 handoff 때 아래 항목을 `[ ]`에서 `[x]`로 바꾸며 확인한다.
 - 모든 주요 항목이 완료되기 전에는 다음 major phase로 넘어가지 않는 것을 기본으로 한다.
 
@@ -32,7 +33,8 @@
 
 ### 확인 위치
 
-- 추후 생성될 Phase 22 portfolio-level validation report
+- [PHASE22_BASELINE_PORTFOLIO_CANDIDATE_PACK_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase22/PHASE22_BASELINE_PORTFOLIO_CANDIDATE_PACK_FIRST_PASS.md)
+- [phase22/README.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase22/README.md)
 - `Backtest > Compare & Portfolio Builder`
 - `Weighted Portfolio Builder`
 - `Saved Portfolios > Replay Saved Portfolio`
@@ -40,21 +42,23 @@
 ### 체크 항목
 
 - [ ] 어떤 component strategy가 portfolio candidate에 들어갔는지 보이는지
-- [ ] weight와 date alignment가 명확히 기록되어 있는지
-- [ ] baseline portfolio와 대안 portfolio를 같은 frame에서 비교했는지
+- [ ] `33 / 33 / 34` 표현과 저장된 `[33.33, 33.33, 33.33]` weight의 차이가 헷갈리지 않게 설명되어 있는지
+- [ ] baseline weight policy가 `equal-third baseline`으로 명확히 기록되어 있는지
+- [ ] date alignment가 `intersection`으로 명확히 기록되어 있는지
+- [ ] baseline portfolio는 확정됐지만, 대안 portfolio 비교는 아직 다음 작업이라는 점이 보이는지
 
 ## 3. Saved Replay와 Report 확인
 
 ### 확인 위치
 
-- 추후 생성될 Phase 22 portfolio-level validation report
+- [PHASE22_BASELINE_PORTFOLIO_CANDIDATE_PACK_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase22/PHASE22_BASELINE_PORTFOLIO_CANDIDATE_PACK_FIRST_PASS.md)
 - `.note/finance/backtest_reports/` index
 - `.note/finance/phase22/PHASE22_CURRENT_CHAPTER_TODO.md`
 
 ### 체크 항목
 
 - [ ] saved portfolio replay가 주요 결과를 재현하는지
-- [ ] report에서 "최종 후보", "baseline", "watchlist", "comparison-only" 같은 해석이 분명한지
+- [ ] report에서 "최종 후보"가 아니라 `baseline_candidate / portfolio_watchlist / not_deployment_ready`라는 해석이 분명한지
 - [ ] 아직 확인하지 않은 한계가 report에 따로 적혀 있는지
 
 ## 4. Closeout / Handoff 확인

@@ -2,7 +2,7 @@
 
 ## 상태
 
-- `active / first_work_unit_completed`
+- `active / baseline_candidate_pack_completed`
 
 ## 1. Portfolio-Level Candidate Semantics
 
@@ -22,39 +22,47 @@
 
 ## 2. Representative Portfolio Candidate Pack
 
-- `pending` baseline portfolio candidate pack 확정
+- `completed` baseline portfolio candidate pack 확정
   - `Phase 21`의 `Value / Quality / Quality + Value` current anchor 3종을
-    Phase 22 baseline으로 다시 정의할지 확인
-- `pending` baseline weight policy 결정
-  - `33 / 33 / 34` near-equal 유지
-  - pure equal-weight
-  - risk-aware / drawdown-aware alternative 중 이번 phase에서 볼 범위 결정
+    Phase 22 baseline portfolio candidate pack으로 다시 정의
+- `completed` baseline weight policy 결정
+  - saved portfolio definition 기준 `[33.33, 33.33, 33.33]`
+  - normalized 기준 `[1/3, 1/3, 1/3]`
+  - `Phase 21`의 `33 / 33 / 34` 표현은 near-equal shorthand로 정리하고,
+    Phase 22에서는 `equal-third baseline`으로 부르기로 결정
 - `pending` portfolio-level benchmark / guardrail interpretation 정리
   - single strategy benchmark와 portfolio benchmark가 어떻게 연결되는지 기록
 
 ## 3. Portfolio-Level Validation Execution
 
-- `pending` representative portfolio rerun
+- `completed` baseline portfolio candidate report 작성
+  - `.note/finance/backtest_reports/phase22/PHASE22_BASELINE_PORTFOLIO_CANDIDATE_PACK_FIRST_PASS.md`
+  - `phase22_annual_strict_equal_third_baseline_v1`을 baseline 후보 pack으로 등록
+- `completed` saved replay evidence 반영
+  - `Phase 21` exact replay evidence를 Phase 22 baseline candidate pack의 재현성 근거로 연결
+- `pending` weight alternative rerun
   - source bundle
   - date alignment
   - weight
   - result metrics
   - interpretation
-- `pending` saved portfolio replay validation
-  - 저장된 portfolio 구성으로 replay했을 때 주요 결과가 재현되는지 확인
-- `pending` portfolio-level report 작성
-  - 유지 / 교체 / 보류 판단을 보고서에 명시
 
 ## 4. Documentation And QA
 
 - `completed` phase22 plan / TODO / checklist bundle 생성
 - `completed` roadmap / doc index / work log / question log sync
-- `pending` backtest report index sync
-  - 실제 portfolio-level validation report가 만들어진 뒤 반영
+- `completed` backtest report index sync
+  - Phase 22 archive README와 baseline candidate report를 등록
+- `completed` current candidate registry review
+  - `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl` validate 정상 확인
+  - 이번 baseline은 portfolio-level candidate pack 초안이므로 기존 single-strategy registry에는 append하지 않음
+  - portfolio-level registry schema가 필요하면 이후 별도 작업으로 정의
+- `completed` phase22 checklist first report alignment
+  - 실제 report 위치와 확인 항목을 checklist에 반영
 - `pending` phase22 checklist finalization
-  - 실제 구현과 report가 생긴 뒤 사용자 QA용 checklist로 다시 정리
+  - weight alternative / benchmark policy 작업 이후 closeout용 checklist로 다시 정리
 
 ## 다음 작업
 
 - `Phase 22`의 다음 작업은
-  **baseline portfolio candidate pack을 확정하고 첫 portfolio-level validation report를 만드는 것**이다.
+  **portfolio-level benchmark / guardrail interpretation과 weight alternative 비교 범위를 정하는 것**이다.

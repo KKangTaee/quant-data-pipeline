@@ -168,6 +168,16 @@
     portfolio bridge가 Phase 22 candidate construction 대상으로 적합한지 확인한 첫 검증 보고서
   - 최종 포트폴리오 후보 확정보다는 weighted / saved portfolio workflow 재현성 확인에 초점을 둔다
 
+## Phase 22 Raw Archive
+
+- `phase22/README.md`
+  - Phase 22 portfolio-level candidate construction archive 안내 문서
+- `phase22/PHASE22_BASELINE_PORTFOLIO_CANDIDATE_PACK_FIRST_PASS.md`
+  - `Value / Quality / Quality + Value` current anchor 3개를
+    saved portfolio definition 기준 equal-third baseline portfolio candidate pack으로 다시 정의한 첫 report
+  - `33 / 33 / 34` 표현과 `[33.33, 33.33, 33.33]` 저장 weight의 차이를 정리하고,
+    현재 status를 `baseline_candidate / portfolio_watchlist / not_deployment_ready`로 고정한다
+
 ## 운영 메모
 
 앞으로 새 report를 만들 때는:

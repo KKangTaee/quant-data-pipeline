@@ -1797,3 +1797,15 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Phase 22의 핵심은 "weighted portfolio 결과를 바로 최종 후보라고 부르지 않고, source / weight / date alignment / saved replay / 해석이 남은 재현 가능한 portfolio-level candidate로 관리할 기준을 세우는 것"으로 정리했다
   - 첫 작업 단위에서는 `Portfolio-Level Candidate`, `Portfolio Bridge`, `Component Strategy`, `Date Alignment`, `Saved Portfolio Replay`를 정의했다
   - 다음 작업은 Phase 21의 `33 / 33 / 34` bridge를 baseline portfolio candidate pack으로 다시 검증할지 확정하고, 첫 portfolio-level validation report를 만드는 것이다
+
+### 2026-04-17 - `Phase 22` 첫 portfolio baseline은 equal-third candidate pack으로 정리했다
+- Request topic:
+  - Phase 22 다음 단계로 baseline portfolio candidate pack 작업을 진행함
+- Interpreted goal:
+  - Phase 21 portfolio bridge 결과를 최종 winner가 아니라 Phase 22에서 비교 기준으로 쓸 baseline 후보 pack으로 정리하고 싶음
+- Result:
+  - `PHASE22_BASELINE_PORTFOLIO_CANDIDATE_PACK_FIRST_PASS.md`를 작성했다
+  - 저장된 portfolio definition은 `[33.33, 33.33, 33.33]`이며 normalized 기준으로 정확한 equal-third라는 점을 확인했다
+  - Phase 21 문서의 `33 / 33 / 34`는 near-equal shorthand로 정리하고, Phase 22에서는 `equal-third baseline` 표현을 쓰기로 했다
+  - 현재 status는 `baseline_candidate / portfolio_watchlist / not_deployment_ready`로 정리했다
+  - 다음 질문은 portfolio-level benchmark / guardrail policy와 weight alternative 비교 범위다

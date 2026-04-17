@@ -205,9 +205,18 @@ lower-MDD but weaker-gate near-miss:
      구조 실험을 하나 더 여는 것보다
      **portfolio-level candidate construction을 여는 `Phase 22`**
      쪽이 더 자연스럽다
+   - Phase 22 first baseline note:
+     - `33 / 33 / 34` shorthand는 saved definition 기준
+       `[33.33, 33.33, 33.33]` equal-third baseline으로 정리했다
+     - `phase22_annual_strict_equal_third_baseline_v1`은
+       `baseline_candidate / portfolio_watchlist / not_deployment_ready`
+       상태로 유지한다
+     - 즉 최종 portfolio winner가 아니라,
+       이후 weight alternative와 diversified component를 비교할 기준점이다
 
 ## 관련 문서
 
 - [PHASE16_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase16/PHASE16_CURRENT_CHAPTER_TODO.md)
 - [BACKTEST_REPORT_INDEX.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/BACKTEST_REPORT_INDEX.md)
 - [PHASE21_PORTFOLIO_BRIDGE_VALIDATION_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase21/PHASE21_PORTFOLIO_BRIDGE_VALIDATION_FIRST_PASS.md)
+- [PHASE22_BASELINE_PORTFOLIO_CANDIDATE_PACK_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase22/PHASE22_BASELINE_PORTFOLIO_CANDIDATE_PACK_FIRST_PASS.md)

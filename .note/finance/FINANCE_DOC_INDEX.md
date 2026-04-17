@@ -96,7 +96,8 @@
     단일 전략 후보와 portfolio 후보를 왜 분리해서 봐야 하는지 쉽게 설명하는 kickoff 문서
 - `.note/finance/phase22/PHASE22_CURRENT_CHAPTER_TODO.md`
   - `Phase 22` active execution board로,
-    portfolio 후보 기준 정의 완료와 baseline portfolio candidate pack / saved replay validation pending 상태를 관리하는 문서
+    portfolio 후보 기준 정의와 baseline portfolio candidate pack 완료,
+    benchmark policy / weight alternative pending 상태를 관리하는 문서
 - `.note/finance/phase22/PHASE22_PORTFOLIO_LEVEL_CANDIDATE_SEMANTICS_FIRST_WORK_UNIT.md`
   - `Phase 22` 첫 번째 작업 단위로,
     `Portfolio-Level Candidate`, `Portfolio Bridge`, component strategy, date alignment, saved replay의 의미와 후보 최소 기록 항목을 정리한 문서
@@ -106,7 +107,14 @@
   - `Phase 22` 이후 `Phase 23` quarterly / alternate cadence productionization으로 넘어갈지 판단하기 위한 handoff 초안
 - `.note/finance/phase22/PHASE22_TEST_CHECKLIST.md`
   - `Phase 22` practical closeout 때 사용할 manual checklist 초안
-  - 현재는 portfolio-level validation report 생성 전이므로, 앞으로 채워질 검수 기준을 먼저 잡아둔 상태다
+  - 현재는 첫 baseline candidate pack report 위치와 확인 항목까지 반영된 진행 중 checklist다
+- `.note/finance/backtest_reports/phase22/README.md`
+  - `Phase 22` portfolio-level candidate construction report archive 안내 문서
+- `.note/finance/backtest_reports/phase22/PHASE22_BASELINE_PORTFOLIO_CANDIDATE_PACK_FIRST_PASS.md`
+  - `Value / Quality / Quality + Value` annual strict current anchor 3개를
+    equal-third baseline portfolio candidate pack으로 다시 정의한 첫 Phase 22 report
+  - `33 / 33 / 34`는 near-equal shorthand이고,
+    저장 definition은 `[33.33, 33.33, 33.33]` normalized equal-third라는 점을 명확히 정리한다
 - `.note/finance/backtest_reports/phase21/README.md`
   - `Phase 21` integrated deep validation에서 나온 family rerun report와 portfolio bridge validation report를 모아 두는 archive 안내 문서
 - `.note/finance/backtest_reports/phase21/PHASE21_VALUE_ANCHOR_AND_ALTERNATIVE_RERUN_FIRST_PASS.md`

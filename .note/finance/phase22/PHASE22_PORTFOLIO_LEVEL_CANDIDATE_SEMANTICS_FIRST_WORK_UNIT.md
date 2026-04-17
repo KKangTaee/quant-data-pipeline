@@ -114,11 +114,13 @@
 
 ## 다음 작업
 
-- 다음 작업은 `Representative Portfolio Candidate Pack`을 구성하는 것이다.
-- 우선 검토할 후보:
-  - `33 / 33 / 34` near-equal baseline
-  - `1 / 1 / 1` pure equal-weight equivalent
-  - drawdown-aware alternative weight, 단 이번 phase 범위 안에서 과도한 탐색은 피한다
+- `Representative Portfolio Candidate Pack` first pass는
+  `phase22_annual_strict_equal_third_baseline_v1`로 작성했다.
+- 다음 작업은 아래 두 가지다.
+  - portfolio-level benchmark / guardrail interpretation 정리
+  - equal-third baseline과 비교할 weight alternative 범위 확정
+- weight alternative는 넓게 brute-force하지 않고,
+  `Quality + Value` tilt, `Value / Quality` defensive tilt처럼 해석 가능한 소수 조합만 본다.
 
 ## 한 줄 정리
 

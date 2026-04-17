@@ -2,7 +2,7 @@
 
 ## 현재 상태
 
-- `active / not_closeout_ready`
+- `active / baseline_candidate_pack_completed`
 
 ## 이 문서는 무엇인가
 
@@ -20,11 +20,12 @@
 
 ## 아직 남아 있는 것
 
-- baseline portfolio candidate pack 확정
+- portfolio-level benchmark / guardrail interpretation 정리
+- weight alternative 비교 범위 결정
 - portfolio-level validation report 작성
-- saved replay 검증
 - Phase 22 checklist finalization
 
 ## 한 줄 현재 판단
 
-- `Phase 22`는 이제 열렸고, 첫 번째 작업으로 portfolio 후보의 의미와 최소 기준을 정리한 상태다.
+- `Phase 22`는 첫 baseline portfolio candidate pack까지 만들었고,
+  아직 portfolio-level benchmark policy와 weight alternative 검증이 남아 있다.
