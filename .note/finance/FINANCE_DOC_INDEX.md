@@ -17,7 +17,7 @@
   - 앞으로 `finance` phase test checklist 문서를 만들 때 기본으로 따를 checkbox 중심 템플릿 문서
 - `.note/finance/MASTER_PHASE_ROADMAP.md`
   - 전체 Phase 구조와 상위 진행 방향을 정리한 최상위 로드맵 문서
-  - 최근 refresh 기준으로 `Phase 21 = 완료`, `Phase 22 = active`, `현재 위치`, support track, `Phase 22~25` reading order까지 다시 정리되어 있다
+  - 최근 refresh 기준으로 `Phase 21 = 완료`, `Phase 22 = manual validation ready`, `현재 위치`, support track, `Phase 22~25` reading order까지 다시 정리되어 있다
   - 또한 `Phase 18 = 진행형`, `Phase 19/20 = 완료`, `Phase 5 first chapter = historical label`이라는 해석도 함께 반영되어 있다
   - roadmap tail도 `현재 위치 = 상태판`, `지금부터의 큰 흐름 = 다음 진행 안내판` 구조로 다시 정리되어 있다
 - `.note/finance/ROADMAP_REBASE_PHASE18_TO_PHASE25_20260414.md`
@@ -95,9 +95,10 @@
   - `Phase 22`가 왜 portfolio-level candidate construction phase인지,
     단일 전략 후보와 portfolio 후보를 왜 분리해서 봐야 하는지 쉽게 설명하는 kickoff 문서
 - `.note/finance/phase22/PHASE22_CURRENT_CHAPTER_TODO.md`
-  - `Phase 22` active execution board로,
+  - `Phase 22` execution board로,
     portfolio 후보 기준 정의와 baseline portfolio candidate pack 완료,
-    benchmark policy / weight alternative scope와 first-pass rerun 완료 상태를 관리하는 문서
+    benchmark policy / weight alternative scope, first-pass rerun,
+    manual validation ready 상태를 관리하는 문서
 - `.note/finance/phase22/PHASE22_PORTFOLIO_LEVEL_CANDIDATE_SEMANTICS_FIRST_WORK_UNIT.md`
   - `Phase 22` 첫 번째 작업 단위로,
     `Portfolio-Level Candidate`, `Portfolio Bridge`, component strategy, date alignment, saved replay의 의미와 후보 최소 기록 항목을 정리한 문서
@@ -113,7 +114,7 @@
 - `.note/finance/phase22/PHASE22_NEXT_PHASE_PREPARATION.md`
   - `Phase 22` 이후 `Phase 23` quarterly / alternate cadence productionization으로 넘어갈지 판단하기 위한 handoff 초안
 - `.note/finance/phase22/PHASE22_TEST_CHECKLIST.md`
-  - `Phase 22` practical closeout 때 사용할 manual checklist 초안
+  - `Phase 22` practical closeout 때 사용할 manual checklist
   - 현재는 baseline candidate pack, benchmark / guardrail policy,
     weight alternative rerun 확인 항목까지 반영되어 있다
 - `.note/finance/backtest_reports/phase22/README.md`

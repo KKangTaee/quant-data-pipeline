@@ -1244,3 +1244,12 @@ Detailed historical logs were archived on `2026-04-13`.
   - updated the Phase 22 TODO, checklist, completion summary, next-phase prep, roadmap, finance doc index, and backtest report index
 - Durable takeaway:
   - `25 / 25 / 50` improves raw return but creates `Quality + Value` concentration, while `40 / 40 / 20` lowers drawdown only slightly while giving up CAGR; equal-third remains the Phase 22 primary portfolio baseline.
+
+### 2026-04-17
+- Prepared `Phase 22` for manual validation.
+- Changed:
+  - marked the Phase 22 TODO board as `manual_validation_ready`
+  - finalized the Phase 22 checklist around portfolio candidate semantics, baseline report, saved replay, benchmark / guardrail policy, and weight alternative rerun
+  - synced the completion summary, next-phase preparation, roadmap, and finance doc index with the manual QA handoff state
+- Durable takeaway:
+  - Phase 22 implementation/reporting work is ready for user checklist QA; the next decision is closeout vs one more diversified-component portfolio check.

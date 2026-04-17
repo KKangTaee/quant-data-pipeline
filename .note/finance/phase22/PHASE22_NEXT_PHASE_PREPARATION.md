@@ -2,7 +2,8 @@
 
 ## 현재 상태
 
-- `Phase 22`는 active 상태이며, weight alternative first-pass rerun까지 완료했다.
+- `Phase 22`는 manual validation ready 상태이며,
+  baseline / benchmark / guardrail / weight alternative first-pass 문서와 checklist가 준비되어 있다.
 - 이 문서는 Phase 22가 끝난 뒤 `Phase 23`으로 갈지 판단하기 위한 handoff 초안이다.
 
 ## Phase 22가 끝날 때 물어볼 질문
@@ -20,6 +21,8 @@
   quarterly prototype을 "추가할 가치가 있는가"라는 질문으로 비교할 수 있기 때문이다.
 - 현재 weight alternative rerun에서는 equal-third baseline을 교체할 만큼 명확한 대안은 나오지 않았다.
 - 따라서 Phase 22 closeout 후 Phase 23으로 넘어가는 방향이 점점 자연스러워지고 있다.
+- 단, 사용자가 checklist QA에서 annual strict family끼리만 묶은 점이 너무 제한적이라고 판단하면,
+  Phase 22 안에서 diversified component 추가 검증을 한 번 더 열 수 있다.
 
 ## 아직 확정하지 않은 것
 

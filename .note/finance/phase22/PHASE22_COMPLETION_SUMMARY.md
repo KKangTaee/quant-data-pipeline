@@ -2,13 +2,13 @@
 
 ## 현재 상태
 
-- `active / weight_alternative_first_pass_completed`
+- `manual_validation_ready`
 
 ## 이 문서는 무엇인가
 
-- 이 문서는 `Phase 22`가 끝날 때 closeout 기준으로 업데이트할 summary 문서다.
-- 지금은 kickoff 직후이므로 완료 요약이 아니라,
-  closeout 때 무엇이 채워져야 하는지 남겨둔다.
+- 이 문서는 `Phase 22`의 현재 closeout 준비 상태를 요약하는 문서다.
+- 아직 사용자 manual QA가 끝난 것은 아니므로,
+  최종 완료 문서가 아니라 manual validation handoff 문서로 읽는다.
 
 ## closeout 때 채워야 할 내용
 
@@ -28,7 +28,6 @@
 
 ## 아직 남아 있는 것
 
-- Phase 22 checklist finalization
 - 사용자의 manual QA
 - Phase 22를 닫고 Phase 23으로 갈지,
   diversified component 추가 검증을 한 번 더 볼지 결정
@@ -39,3 +38,4 @@
   portfolio-level benchmark / guardrail policy와 weight alternative rerun도 정리했다.
   현재 결론은 equal-third baseline 유지이며,
   `Quality + Value tilt`와 `Value / Quality defensive tilt`는 baseline 교체 후보가 아니라 참고 후보로 보류한다.
+  이제 남은 것은 사용자의 checklist QA다.

@@ -2,7 +2,7 @@
 
 ## 상태
 
-- `active / weight_alternative_first_pass_completed`
+- `manual_validation_ready`
 
 ## 1. Portfolio-Level Candidate Semantics
 
@@ -75,11 +75,11 @@
 - `completed` benchmark / guardrail / weight scope doc sync
   - `PHASE22_PORTFOLIO_BENCHMARK_GUARDRAIL_AND_WEIGHT_SCOPE_SECOND_WORK_UNIT.md`
   - `Portfolio-Level Benchmark`, `Portfolio-Level Guardrail`, `Weight Alternative` glossary 추가
-- `pending` phase22 checklist finalization
+- `completed` phase22 checklist finalization
   - weight alternative / benchmark policy 작업 이후 closeout용 checklist로 다시 정리
 
 ## 다음 작업
 
 - `Phase 22`의 다음 작업은
-  **weight alternative report를 기준으로 closeout checklist를 최종 정리하고,
-  Phase 22를 닫을지 diversified component 추가를 한 번 더 볼지 판단하는 것**이다.
+  **사용자가 `PHASE22_TEST_CHECKLIST.md`를 기준으로 manual QA를 진행하고,
+  모두 확인되면 Phase 22를 닫을지 diversified component 추가를 한 번 더 볼지 결정하는 것**이다.
