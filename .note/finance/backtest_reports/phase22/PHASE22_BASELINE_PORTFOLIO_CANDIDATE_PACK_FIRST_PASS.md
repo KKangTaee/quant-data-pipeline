@@ -95,7 +95,19 @@ candidate pack 관점으로 다시 정리한다.
 
 | portfolio | CAGR | MDD | Sharpe | End Balance | Rows |
 |---|---:|---:|---:|---:|---:|
-| `phase22_annual_strict_equal_third_baseline_v1` | `28.66%` | `-25.42%` | `1.51` | `$132,063.56` | `124` |
+| `phase22_annual_strict_equal_third_baseline_v1` | `28.63%` | `-25.41%` | `1.51` | `$131,721.23` | `124` |
+
+## metric note
+
+`Phase 21` portfolio bridge report의 `$132,063.56` 결과는
+사람이 입력한 `33 / 33 / 34` near-equal weight 결과다.
+
+`Phase 22`에서 공식 baseline으로 고정한 saved portfolio definition은
+`[33.33, 33.33, 33.33]`이므로,
+Phase 22의 weight alternative 비교에서는 `$131,721.23` 결과를 기준으로 쓴다.
+
+두 결과의 방향성은 거의 같지만, weight 정의가 다르기 때문에
+Phase 22 문서에서는 섞어 쓰지 않는다.
 
 ## saved replay evidence
 
@@ -139,8 +151,8 @@ candidate pack 관점으로 다시 정리한다.
 ### 바로 최종 후보로 승격하지 않는 이유
 
 - 세 component가 모두 annual strict factor family라 전략 독립성이 충분히 검증되지 않았다.
-- portfolio-level benchmark / guardrail policy는 second work unit에서 초안이 잡혔지만,
-  actual weight alternative 검증은 아직 남아 있다.
+- portfolio-level benchmark / guardrail policy와 first-pass weight alternative 검증은 끝났지만,
+  아직 annual strict family 밖의 diversified component 검증은 남아 있다.
 - portfolio-level promotion / shortlist / deployment 기준이 아직 초안 단계다.
 - `Quality + Value` contribution이 시간이 지나며 커지는 구조라,
   최종적으로는 blended anchor 편중 여부를 따로 봐야 한다.
@@ -157,7 +169,7 @@ candidate pack 관점으로 다시 정리한다.
 
 ## 다음에 비교할 후보
 
-이번 report의 다음 단계에서는 아래 후보를 넓게가 아니라 좁게 비교하는 것이 좋다.
+후속 rerun에서는 아래 후보를 넓게가 아니라 좁게 비교했다.
 
 | 후보 | 왜 보는가 |
 |---|---|
@@ -166,10 +178,12 @@ candidate pack 관점으로 다시 정리한다.
 | `Value / Quality` defensive tilt | blended anchor 편중을 줄이고 drawdown tradeoff 확인 |
 | future diversified component 추가 | annual strict family끼리만 묶는 한계를 줄일 가능성 확인 |
 
+rerun 결과는 [PHASE22_WEIGHT_ALTERNATIVE_RERUN_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase22/PHASE22_WEIGHT_ALTERNATIVE_RERUN_FIRST_PASS.md)에 따로 정리했다.
+
 ## Phase 22 다음 작업으로 넘길 질문
 
-- equal-third baseline보다 명확히 나은 weight alternative가 있는가
-- portfolio-level benchmark는 equal-third baseline으로 두는 것이 실제 rerun에서도 해석 가능한가
+- first-pass weight alternative 기준으로는 equal-third baseline을 유지해도 되는가
+- portfolio-level benchmark를 equal-third baseline으로 두는 현재 해석이 충분히 명확한가
 - component strategy의 promotion status를 portfolio status에 어떻게 반영할 것인가
 - annual strict family끼리만 묶은 후보를 어디까지 portfolio candidate로 인정할 것인가
 - GTAA, treasury, defensive, momentum 계열을 언제 추가 비교할 것인가

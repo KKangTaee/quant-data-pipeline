@@ -179,6 +179,11 @@
     현재 status를 `baseline_candidate / portfolio_watchlist / not_deployment_ready`로 고정한다
   - 이후 second work unit에서 portfolio-level primary benchmark는 이 equal-third baseline으로 두고,
     guardrail은 report-level warning으로 해석하기로 정리했다
+- `phase22/PHASE22_WEIGHT_ALTERNATIVE_RERUN_FIRST_PASS.md`
+  - official equal-third baseline과 `25 / 25 / 50`, `40 / 40 / 20` weight alternative를
+    saved compare context 기준으로 다시 계산한 Phase 22 rerun report
+  - `33 / 33 / 34` Phase 21 near-equal 수치와 `[33.33, 33.33, 33.33]` Phase 22 official baseline 수치를 분리하고,
+    현재 결론을 `baseline 유지 / alternative 보류 / immediate replacement 없음`으로 정리한다
 
 ## 운영 메모
 

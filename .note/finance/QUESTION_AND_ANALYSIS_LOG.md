@@ -1821,3 +1821,17 @@ Detailed historical analysis was archived on `2026-04-13`.
   - portfolio-level guardrail은 아직 actual trading rule이 아니라 report-level warning으로 둔다
   - 다음 weight alternative는 넓은 brute-force가 아니라 `25 / 25 / 50`, `40 / 40 / 20` 두 개로 좁혔다
   - 따라서 다음 실제 validation report는 equal-third baseline과 이 두 weight alternative를 같은 frame에서 비교하는 방식으로 진행한다
+
+### 2026-04-17 - `Phase 22` weight alternative first-pass에서는 baseline 교체를 하지 않기로 정리했다
+- Request topic:
+  - Phase 22 다음 단계로, 정해 둔 weight alternative를 실제로 비교하고 다음 판단을 진행함
+- Interpreted goal:
+  - portfolio-level candidate construction에서 baseline을 유지할지,
+    `Quality + Value` tilt 또는 defensive tilt로 교체할지 숫자와 해석을 함께 남기고 싶음
+- Result:
+  - saved portfolio compare context를 code runner로 다시 실행해 세 component와 세 portfolio weight를 같은 frame에서 계산했다
+  - Phase 21의 `$132,063.56`은 `33 / 33 / 34` near-equal 입력 결과이고,
+    Phase 22 official baseline `[33.33, 33.33, 33.33]` 결과는 `$131,721.23`임을 분리했다
+  - `25 / 25 / 50`은 CAGR과 End Balance가 좋아졌지만 Sharpe가 약간 낮고 `Quality + Value` contribution이 50%를 넘으므로 watch alternative로 보류했다
+  - `40 / 40 / 20`은 MDD가 조금 낮아졌지만 CAGR / End Balance를 포기하므로 comparison-only defensive alternative로 보류했다
+  - 결론은 `equal-third baseline 유지 / immediate replacement 없음`이다

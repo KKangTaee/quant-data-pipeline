@@ -1233,3 +1233,14 @@ Detailed historical logs were archived on `2026-04-13`.
   - synced Phase 22 TODO/checklist, roadmap, finance doc index, and backtest report index
 - Durable takeaway:
   - the next actual validation step is no longer open-ended; rerun only the two scoped weight alternatives against the equal-third baseline.
+
+### 2026-04-17
+- Completed the `Phase 22` weight alternative first-pass rerun.
+- Changed:
+  - reran the saved portfolio compare context for `Value / Quality / Quality + Value` strict annual anchors
+  - compared official equal-third baseline `[33.33, 33.33, 33.33]` against `25 / 25 / 50` and `40 / 40 / 20`
+  - created `PHASE22_WEIGHT_ALTERNATIVE_RERUN_FIRST_PASS.md`
+  - reconciled the earlier `33 / 33 / 34` Phase 21 near-equal metric with the Phase 22 official equal-third baseline metric
+  - updated the Phase 22 TODO, checklist, completion summary, next-phase prep, roadmap, finance doc index, and backtest report index
+- Durable takeaway:
+  - `25 / 25 / 50` improves raw return but creates `Quality + Value` concentration, while `40 / 40 / 20` lowers drawdown only slightly while giving up CAGR; equal-third remains the Phase 22 primary portfolio baseline.

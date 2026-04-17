@@ -97,7 +97,7 @@
 - `.note/finance/phase22/PHASE22_CURRENT_CHAPTER_TODO.md`
   - `Phase 22` active execution board로,
     portfolio 후보 기준 정의와 baseline portfolio candidate pack 완료,
-    benchmark policy / weight alternative scope 완료 상태를 관리하는 문서
+    benchmark policy / weight alternative scope와 first-pass rerun 완료 상태를 관리하는 문서
 - `.note/finance/phase22/PHASE22_PORTFOLIO_LEVEL_CANDIDATE_SEMANTICS_FIRST_WORK_UNIT.md`
   - `Phase 22` 첫 번째 작업 단위로,
     `Portfolio-Level Candidate`, `Portfolio Bridge`, component strategy, date alignment, saved replay의 의미와 후보 최소 기록 항목을 정리한 문서
@@ -108,11 +108,14 @@
   - 다음 weight alternative를 `25 / 25 / 50`, `40 / 40 / 20` 두 개로 좁혀 둔다
 - `.note/finance/phase22/PHASE22_COMPLETION_SUMMARY.md`
   - `Phase 22` closeout 때 채워야 할 요약 항목을 먼저 잡아둔 summary 초안
+  - 현재는 weight alternative first-pass 결과까지 반영되어,
+    equal-third baseline 유지와 두 alternative 보류 판단이 기록되어 있다
 - `.note/finance/phase22/PHASE22_NEXT_PHASE_PREPARATION.md`
   - `Phase 22` 이후 `Phase 23` quarterly / alternate cadence productionization으로 넘어갈지 판단하기 위한 handoff 초안
 - `.note/finance/phase22/PHASE22_TEST_CHECKLIST.md`
   - `Phase 22` practical closeout 때 사용할 manual checklist 초안
-  - 현재는 첫 baseline candidate pack report 위치와 확인 항목까지 반영된 진행 중 checklist다
+  - 현재는 baseline candidate pack, benchmark / guardrail policy,
+    weight alternative rerun 확인 항목까지 반영되어 있다
 - `.note/finance/backtest_reports/phase22/README.md`
   - `Phase 22` portfolio-level candidate construction report archive 안내 문서
 - `.note/finance/backtest_reports/phase22/PHASE22_BASELINE_PORTFOLIO_CANDIDATE_PACK_FIRST_PASS.md`
@@ -120,6 +123,13 @@
     equal-third baseline portfolio candidate pack으로 다시 정의한 첫 Phase 22 report
   - `33 / 33 / 34`는 near-equal shorthand이고,
     저장 definition은 `[33.33, 33.33, 33.33]` normalized equal-third라는 점을 명확히 정리한다
+  - Phase 22 official baseline metric은 `[33.33, 33.33, 33.33]` scripted rerun 기준으로 정정되어 있다
+- `.note/finance/backtest_reports/phase22/PHASE22_WEIGHT_ALTERNATIVE_RERUN_FIRST_PASS.md`
+  - equal-third baseline과 `25 / 25 / 50`, `40 / 40 / 20` portfolio weight alternative를
+    같은 saved compare context에서 다시 계산한 Phase 22 report
+  - 현재 결론은 equal-third baseline 유지,
+    `Quality + Value tilt`는 watch alternative,
+    `Value / Quality defensive tilt`는 comparison-only defensive alternative다
 - `.note/finance/backtest_reports/phase21/README.md`
   - `Phase 21` integrated deep validation에서 나온 family rerun report와 portfolio bridge validation report를 모아 두는 archive 안내 문서
 - `.note/finance/backtest_reports/phase21/PHASE21_VALUE_ANCHOR_AND_ALTERNATIVE_RERUN_FIRST_PASS.md`

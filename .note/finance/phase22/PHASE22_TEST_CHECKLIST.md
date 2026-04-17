@@ -2,10 +2,9 @@
 
 ## 목적
 
-- 이 checklist는 `Phase 22`가 practical closeout에 가까워졌을 때 사용자가 직접 QA하기 위한 초안이다.
-- 현재 Phase 22는 첫 baseline candidate pack report까지 작성된 상태다.
-- 아직 weight alternative actual rerun report가 남아 있으므로,
-  이 문서는 closeout 최종본이 아니라 진행 중 checklist다.
+- 이 checklist는 `Phase 22`의 portfolio-level candidate construction 결과를 사용자가 직접 QA하기 위한 문서다.
+- 현재 Phase 22는 baseline candidate pack, benchmark / guardrail policy, weight alternative rerun까지 작성된 상태다.
+- 사용자는 아래 항목을 보며 문서와 UI 흐름이 이해되는지 확인하면 된다.
 
 ## 사용 방법
 
@@ -44,8 +43,9 @@
 - [ ] 어떤 component strategy가 portfolio candidate에 들어갔는지 보이는지
 - [ ] `33 / 33 / 34` 표현과 저장된 `[33.33, 33.33, 33.33]` weight의 차이가 헷갈리지 않게 설명되어 있는지
 - [ ] baseline weight policy가 `equal-third baseline`으로 명확히 기록되어 있는지
+- [ ] Phase 21의 `33 / 33 / 34` 결과와 Phase 22의 `[33.33, 33.33, 33.33]` 공식 baseline 수치가 구분되어 있는지
 - [ ] date alignment가 `intersection`으로 명확히 기록되어 있는지
-- [ ] baseline portfolio는 확정됐지만, 대안 portfolio 비교는 아직 다음 작업이라는 점이 보이는지
+- [ ] baseline portfolio는 유지됐지만, 최종 deployment 후보가 아니라 `portfolio_watchlist`라는 점이 보이는지
 
 ## 3. Saved Replay와 Report 확인
 
@@ -75,7 +75,22 @@
 - [ ] portfolio-level guardrail이 아직 actual trading rule이 아니라 report-level warning이라는 점이 이해되는지
 - [ ] 다음 weight alternative가 `25 / 25 / 50`과 `40 / 40 / 20` 두 개로 좁혀진 이유가 보이는지
 
-## 5. Closeout / Handoff 확인
+## 5. Weight Alternative Rerun 확인
+
+### 확인 위치
+
+- [PHASE22_WEIGHT_ALTERNATIVE_RERUN_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase22/PHASE22_WEIGHT_ALTERNATIVE_RERUN_FIRST_PASS.md)
+- [PHASE22_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase22/PHASE22_CURRENT_CHAPTER_TODO.md)
+
+### 체크 항목
+
+- [ ] `equal-third baseline`, `25 / 25 / 50`, `40 / 40 / 20` 세 후보가 같은 frame에서 비교되는지
+- [ ] `25 / 25 / 50`은 CAGR은 높지만 `Quality + Value` 편중이 커서 baseline 교체가 아니라 watch alternative로 남긴 이유가 이해되는지
+- [ ] `40 / 40 / 20`은 MDD가 조금 낮아지지만 CAGR을 포기해서 baseline 교체가 아닌 comparison-only 후보로 남긴 이유가 이해되는지
+- [ ] 현재 결론이 `baseline 유지 / alternative 보류 / immediate replacement 없음`으로 분명한지
+- [ ] 두 weight alternative는 아직 별도 saved portfolio UI replay까지 한 것이 아니라, saved compare context를 code runner로 재실행한 scripted rerun이라는 점이 보이는지
+
+## 6. Closeout / Handoff 확인
 
 ### 확인 문서
 

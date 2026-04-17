@@ -2,7 +2,7 @@
 
 ## 상태
 
-- `active / benchmark_guardrail_scope_completed`
+- `active / weight_alternative_first_pass_completed`
 
 ## 1. Portfolio-Level Candidate Semantics
 
@@ -44,12 +44,17 @@
   - `phase22_annual_strict_equal_third_baseline_v1`을 baseline 후보 pack으로 등록
 - `completed` saved replay evidence 반영
   - `Phase 21` exact replay evidence를 Phase 22 baseline candidate pack의 재현성 근거로 연결
-- `pending` weight alternative rerun
+- `completed` weight alternative rerun
   - source bundle
   - date alignment
   - weight
   - result metrics
   - interpretation
+- `completed` baseline metric reconciliation
+  - `33 / 33 / 34` Phase 21 near-equal result와
+    `[33.33, 33.33, 33.33]` Phase 22 official equal-third baseline 수치를 분리
+  - Phase 22 weight alternative 비교 기준은
+    `phase22_annual_strict_equal_third_baseline_v1` scripted rerun 값으로 고정
 - `completed` weight alternative comparison scope 확정
   - `quality_value_tilt`: `25 / 25 / 50`
   - `value_quality_defensive_tilt`: `40 / 40 / 20`
@@ -76,4 +81,5 @@
 ## 다음 작업
 
 - `Phase 22`의 다음 작업은
-  **두 weight alternative를 같은 frame에서 rerun하고 baseline 대비 유지 / 교체 / 보류 판단을 report로 남기는 것**이다.
+  **weight alternative report를 기준으로 closeout checklist를 최종 정리하고,
+  Phase 22를 닫을지 diversified component 추가를 한 번 더 볼지 판단하는 것**이다.

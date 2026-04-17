@@ -2,7 +2,7 @@
 
 ## 현재 상태
 
-- `Phase 22`는 active 상태이며 아직 closeout 전이다.
+- `Phase 22`는 active 상태이며, weight alternative first-pass rerun까지 완료했다.
 - 이 문서는 Phase 22가 끝난 뒤 `Phase 23`으로 갈지 판단하기 위한 handoff 초안이다.
 
 ## Phase 22가 끝날 때 물어볼 질문
@@ -18,6 +18,8 @@
   다음 main phase는 `Phase 23 Quarterly And Alternate Cadence Productionization`이 자연스럽다.
 - 이유는 annual strict baseline과 portfolio baseline이 있어야
   quarterly prototype을 "추가할 가치가 있는가"라는 질문으로 비교할 수 있기 때문이다.
+- 현재 weight alternative rerun에서는 equal-third baseline을 교체할 만큼 명확한 대안은 나오지 않았다.
+- 따라서 Phase 22 closeout 후 Phase 23으로 넘어가는 방향이 점점 자연스러워지고 있다.
 
 ## 아직 확정하지 않은 것
 
@@ -25,3 +27,5 @@
   Phase 23으로 바로 넘어가지 않고 portfolio construction을 한 번 더 볼 수 있다.
 - 특히 annual strict family끼리의 상관 / 유사성이 너무 크면,
   new strategy나 cadence diversification을 더 빨리 열어야 할 수도 있다.
+- 만약 Phase 22 안에서 한 번 더 본다면,
+  broad weight search가 아니라 GTAA / treasury / defensive 같은 diversified component를 붙일지 여부만 좁게 논의하는 편이 낫다.
