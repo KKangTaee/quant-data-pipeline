@@ -88,3 +88,6 @@
 - `completed` portfolio bridge report readability rewrite
   - `PHASE21_PORTFOLIO_BRIDGE_VALIDATION_FIRST_PASS.md`를 결론 / 용어 / 왜 이 조합을 썼는지 / 검증 흐름 / 결과 / 한계 / Phase 22 질문 순서로 재정리
   - `first pass`를 첫 검증으로 풀어 설명하고, 최종 포트폴리오 후보 확정 문서가 아니라 workflow 재현성 검증 문서라는 점을 명확히 반영
+- `completed` portfolio bridge checklist alignment
+  - Phase 21 checklist section 3을 새 portfolio bridge report 흐름에 맞춰 조정
+  - 최종 winner 선정이 아니라 workflow 첫 검증인지, 3개 전략을 묶은 이유와 한계가 함께 설명되는지 확인하도록 체크 항목 보강

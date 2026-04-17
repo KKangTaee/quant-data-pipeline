@@ -1169,3 +1169,16 @@ Detailed historical logs were archived on `2026-04-13`.
   - synced the Phase 21 archive README, report index, finance doc index, and TODO board
 - Durable takeaway:
   - the portfolio bridge report should now read as a workflow validation report rather than an AI-looking result dump.
+
+### 2026-04-17
+- Aligned the `Phase 21` manual checklist with the rewritten portfolio bridge report.
+- Changed:
+  - updated `PHASE21_TEST_CHECKLIST.md` section 3 so QA follows the new report flow:
+    - conclusion first
+    - why the three strategies were grouped
+    - validation flow
+    - what the result does and does not prove
+    - Phase 22 questions
+  - recorded the checklist alignment in the Phase 21 TODO board
+- Durable takeaway:
+  - portfolio bridge QA now checks whether the report is clearly framed as workflow validation, not as final portfolio winner selection.

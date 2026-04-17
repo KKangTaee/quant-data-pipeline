@@ -102,14 +102,20 @@
     - `Replay Saved Portfolio`
 - 읽는 방법:
   - `PHASE21_PORTFOLIO_BRIDGE_VALIDATION_FIRST_PASS.md`가 공식 rerun report다.
+  - 이 문서는 최종 포트폴리오 후보를 고른 문서가 아니라,
+    weighted / saved portfolio workflow가 재현 가능하게 작동하는지 확인한 첫 검증 보고서다.
+  - 먼저 `결론 먼저`, `왜 이 3개 전략을 묶었나`, `이 결과가 의미하는 것`, `Phase 22로 넘길 질문`을 읽는다.
   - `Weighted Portfolio Builder`는 weight와 date alignment를 넣어 portfolio를 만드는 UI 영역이다.
   - `Weighted Portfolio Result`는 방금 만든 weighted portfolio 결과가 화면에 표시되는 UI 영역이다.
   - `Saved Portfolios`의 `Replay Saved Portfolio`는 저장된 compare + weighted portfolio 구성을 다시 실행하는 UI 동선이다.
   - 따라서 checklist에서 말하는 `weighted portfolio / saved portfolio rerun report`는 UI 이름이 아니라 위 문서 report를 뜻한다.
 - 체크 항목:
+  - [ ] report가 "최종 portfolio winner 선정"이 아니라 "portfolio workflow 첫 검증"이라는 목적을 분명히 설명하는지
+  - [ ] 왜 `Value / Quality / Quality + Value` 3개를 묶었는지와, 이 조합의 한계가 함께 설명되어 있는지
+  - [ ] `Load Recommended Candidates -> Weighted Portfolio Builder -> Save Portfolio -> Replay Saved Portfolio` 검증 흐름이 이해되는지
   - [ ] representative weighted portfolio rerun이 single-strategy rerun과 같은 phase frame에서 읽히는지
-  - [ ] representative bridge가 `Load Recommended Candidates -> near-equal weighted bundle -> saved portfolio replay` 흐름으로 분명히 고정되어 있는지
   - [ ] saved portfolio replay 결과가 `CAGR / MDD / End Balance` exact match 기준으로 재현되는지
+  - [ ] 이번 결과가 아직 확인하지 않은 것과 `Phase 22`로 넘길 질문이 분리되어 있는지
   - [ ] portfolio bridge가 다음 phase의 메인 대상이 될지 판단할 재료가 충분한지
 
 ## 4. 문서와 closeout 확인

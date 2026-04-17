@@ -1761,3 +1761,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `Portfolio Bridge`, `Weighted Portfolio`, `Saved Portfolio Replay`, `First Pass` 용어를 문서 안에서 설명했다
   - `Value / Quality / Quality + Value` 3개를 묶은 이유와 한계를 분리해 설명했다
   - 결과 해석을 Phase 22에서 다룰 portfolio-level candidate construction 질문으로 자연스럽게 연결했다
+
+### 2026-04-17 - portfolio bridge report 리라이트에 맞춰 Phase 21 checklist도 조정했다
+- Request topic:
+  - portfolio bridge report를 크게 정리했으니 checklist도 수정이 필요한지 문의함
+- Interpreted goal:
+  - checklist가 이전 문서 구조가 아니라 새 보고서 흐름을 기준으로 QA할 수 있게 맞추고 싶음
+- Result:
+  - `PHASE21_TEST_CHECKLIST.md` section 3의 읽는 방법을 보강했다
+  - 새 체크 항목은 다음을 확인하도록 정리했다
+    - 최종 portfolio winner 선정이 아니라 workflow 첫 검증인지
+    - 왜 3개 annual strict 전략을 묶었는지와 그 한계가 같이 설명되는지
+    - `Load Recommended Candidates -> Weighted Portfolio Builder -> Save Portfolio -> Replay Saved Portfolio` 흐름이 이해되는지
+    - 아직 확인하지 않은 것과 `Phase 22` 질문이 분리되어 있는지
