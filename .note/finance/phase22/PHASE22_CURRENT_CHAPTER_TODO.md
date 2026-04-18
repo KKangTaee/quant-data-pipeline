@@ -89,4 +89,7 @@
 
 - `Phase 22`의 다음 작업은
   **사용자가 `PHASE22_TEST_CHECKLIST.md`를 기준으로 manual QA를 진행하고,
-  모두 확인되면 Phase 22를 닫을지 diversified component 추가를 한 번 더 볼지 결정하는 것**이다.
+  모두 확인되면 Phase 22를 닫고
+  `Phase 23 Quarterly And Alternate Cadence Productionization`을 열지 결정하는 것**이다.
+- 사용자가 명시적으로 portfolio 분석을 요청하지 않는 한,
+  Phase 22 안에서 broad weight search나 diversified component optimization은 더 열지 않는다.

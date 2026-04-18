@@ -130,7 +130,9 @@
 
 - [ ] Phase 22 상태가 실제 진행 상태와 맞는지
 - [ ] 새 Phase 22 문서들이 index에서 바로 찾히는지
-- [ ] 다음 phase로 갈지, Phase 22에서 portfolio construction을 더 볼지 판단 근거가 남아 있는지
+- [ ] 다음 기본 방향이 portfolio optimization 확대가 아니라 Phase 23 core implementation이라는 점이 보이는지
+- [ ] 사용자가 별도로 분석을 요청할 경우에는 백테스트 / 분석을 수행할 수 있지만,
+      기본 phase 방향은 개발 검증이라는 점이 구분되어 있는지
 
 ## 한 줄 판단 기준
 

@@ -20,6 +20,12 @@
   - 최근 refresh 기준으로 `Phase 21 = 완료`, `Phase 22 = manual validation ready`, `현재 위치`, support track, `Phase 22~25` reading order까지 다시 정리되어 있다
   - 또한 `Phase 18 = 진행형`, `Phase 19/20 = 완료`, `Phase 5 first chapter = historical label`이라는 해석도 함께 반영되어 있다
   - roadmap tail도 `현재 위치 = 상태판`, `지금부터의 큰 흐름 = 다음 진행 안내판` 구조로 다시 정리되어 있다
+  - 최신 기준으로 이 프로젝트가 투자 분석을 기본으로 하는 것이 아니라
+    `데이터 수집 + 백테스트 제품 개발`을 중심으로 진행된다는 product development direction을 명시한다
+  - `Phase 23~25`도 portfolio optimization 확대가 아니라
+    quarterly / alternate cadence productionization,
+    new strategy implementation bridge,
+    validation / pre-live scaffolding 순서로 다시 정렬되어 있다
 - `.note/finance/ROADMAP_REBASE_PHASE18_TO_PHASE25_20260414.md`
   - `Phase 18` 진행 중 시점에서 `Phase 19~25` 큰 그림을 다시 정리한 논의용 상위 로드맵 초안
 - `.note/finance/phase19/PHASE19_STRUCTURAL_CONTRACT_EXPANSION_PLAN.md`
@@ -115,12 +121,18 @@
   - `Phase 22` closeout 때 채워야 할 요약 항목을 먼저 잡아둔 summary 초안
   - 현재는 weight alternative first-pass 결과까지 반영되어,
     equal-third baseline 유지와 두 alternative 보류 판단이 기록되어 있다
+  - 또한 이 판단이 투자 포트폴리오 승인 판단이 아니라
+    portfolio workflow 개발 검증 판단이라는 경계가 반영되어 있다
 - `.note/finance/phase22/PHASE22_NEXT_PHASE_PREPARATION.md`
   - `Phase 22` 이후 `Phase 23` quarterly / alternate cadence productionization으로 넘어갈지 판단하기 위한 handoff 초안
+  - 최신 기준으로 Phase 22 이후 기본 방향은 portfolio optimization 확대가 아니라
+    core implementation roadmap으로 돌아가는 것으로 정리되어 있다
 - `.note/finance/phase22/PHASE22_TEST_CHECKLIST.md`
   - `Phase 22` practical closeout 때 사용할 manual checklist
   - 현재는 baseline candidate pack, benchmark / guardrail policy,
     weight alternative rerun 확인 항목까지 반영되어 있다
+  - closeout 확인 항목에는 Phase 23 core implementation으로 돌아가는 방향과
+    사용자가 명시적으로 요청한 분석은 별도 분석으로 다룬다는 기준도 포함되어 있다
 - `.note/finance/backtest_reports/phase22/README.md`
   - `Phase 22` portfolio-level candidate construction report archive 안내 문서
 - `.note/finance/backtest_reports/phase22/PHASE22_BASELINE_PORTFOLIO_CANDIDATE_PACK_FIRST_PASS.md`
@@ -173,6 +185,8 @@
   - equal-weight contract에서 왜 입력 필드명이 `Guardrail / Reference Ticker`로 보일 수 있는지도 여기 용어 기준으로 다시 이해할 수 있다
   - 현재는 submit-form 특성 때문에 ticker 입력 필드 이름을 중립적으로 `Benchmark / Guardrail / Reference Ticker`로 두고, contract별 의미를 캡션으로 설명하는 이유도 여기 문맥으로 이어서 이해할 수 있다
   - 앱에서는 `Reference > Glossary`에서 검색형 UI로 바로 다시 볼 수 있다
+  - 최신 기준으로 `Development Validation`, `Fixture`, `User-Requested Analysis`가 추가되어,
+    개발 검증과 투자 분석 요청을 구분해서 읽을 수 있다
 - `.note/finance/BACKTEST_REFINEMENT_CODE_FLOW_GUIDE.md`
   - Streamlit UI, runtime adapter, finance engine, strategy 문서 흐름까지 backtest refinement code path를 한 장으로 정리한 안내 문서
 - `.note/finance/RUNTIME_ARTIFACT_HYGIENE.md`

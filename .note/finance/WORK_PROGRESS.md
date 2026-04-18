@@ -1273,3 +1273,14 @@ Detailed historical logs were archived on `2026-04-13`.
   - updated the Phase 22 baseline report and checklist with the same boundary
 - Durable takeaway:
   - Phase 22 should be read as portfolio-construction workflow validation for the quant program, not as final portfolio research or live-deployment approval.
+
+### 2026-04-18
+- Refreshed the master roadmap after the user identified phase drift risk.
+- Changed:
+  - added a product development direction section to `MASTER_PHASE_ROADMAP.md`
+  - fixed the default roadmap stance as development-first, not investment-analysis-first
+  - clarified that user-requested backtests / analysis can still be run during QA, but should be recorded as explicit analysis rather than phase direction drift
+  - realigned `Phase 23~25` toward quarterly / alternate cadence productionization, new strategy implementation bridge, and validation / pre-live scaffolding
+  - synced Phase 22 next-phase prep, completion summary, TODO, checklist, doc index, and glossary terms
+- Durable takeaway:
+  - After Phase 22 QA, the default next move is to close the portfolio workflow development-validation phase and return to core product implementation, starting with quarterly / alternate cadence productionization.

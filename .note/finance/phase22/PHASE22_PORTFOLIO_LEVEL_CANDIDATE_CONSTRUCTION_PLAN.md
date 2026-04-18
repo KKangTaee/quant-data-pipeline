@@ -90,8 +90,8 @@ source, component, weight, date alignment, replay, 해석이 남아야
 - 단일 전략 후보와 포트폴리오 후보를 구분해서 읽을 수 있다.
 - weighted portfolio 결과가 단순 화면 결과인지, 재현 가능한 후보 기록인지 구분할 수 있다.
 - 개발 검증용 baseline portfolio와 weight alternative를 같은 기준으로 비교할 수 있다.
-- Phase 23에서 quarterly / alternate cadence를 볼 때,
-  annual strict portfolio fixture와 비교하기 쉬워진다.
+- Phase 23에서 quarterly / alternate cadence를 구현할 때,
+  기존 annual strict workflow fixture와 실행 / 저장 / replay 품질을 비교하기 쉬워진다.
 - 사용자가 checklist를 보며 "무엇을 어디서 확인해야 하는지" 따라갈 수 있다.
 
 ## 이번 phase에서 확인한 질문

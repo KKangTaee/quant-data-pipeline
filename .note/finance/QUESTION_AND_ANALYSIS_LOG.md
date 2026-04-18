@@ -1862,3 +1862,20 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 단일 포트폴리오 실전 투자 기능이 완료됐거나 live deployment 가능한 상태라고 해석하면 안 된다고 정리했다
   - Phase 22 문서의 QA 기준도 "투자해도 되는가"가 아니라
     "프로그램이 portfolio workflow를 재현 가능하게 다루는가"로 수정했다
+
+### 2026-04-18 - master roadmap을 개발 중심 방향으로 다시 정렬했다
+- Request topic:
+  - 사용자가 phase가 포트폴리오 분석 쪽으로 벗어나는 것 같다고 보고,
+    먼저 master roadmap을 수정해 `Phase 25`까지의 구현 방향과 "투자 분석 아님" 경계를 문서화하자고 요청함
+- Interpreted goal:
+  - 프로젝트의 기본 방향을 `투자 후보 분석`이 아니라
+    `데이터 수집 + 백테스트 제품 개발`로 다시 고정하고,
+    사용자가 명시적으로 요청한 분석은 예외적으로 수행하되 phase 방향 자체와 구분하고 싶음
+- Result:
+  - `MASTER_PHASE_ROADMAP.md`에 product development direction을 추가했다
+  - 제품 레이어를 data, engine, strategy library, UX, portfolio workflow, validation/review, paper/pre-live, live trading으로 분리했다
+  - `Phase 22` 이후 기본 방향을 portfolio optimization 확대가 아니라
+    `Phase 23 Quarterly And Alternate Cadence Productionization`으로 되돌렸다
+  - `Phase 24`는 new strategy implementation bridge,
+    `Phase 25`는 live trading이 아닌 validation / review / paper-readiness scaffolding으로 재정리했다
+  - `Development Validation`, `Fixture`, `User-Requested Analysis` 용어를 glossary에 추가했다

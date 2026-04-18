@@ -12,11 +12,11 @@
 
 ## closeout 때 채워야 할 내용
 
-- portfolio-level candidate 기준이 확정됐는가
-- representative portfolio candidate pack을 실제로 검증했는가
-- saved portfolio replay가 재현됐는가
-- portfolio-level report가 durable하게 남았는가
-- Phase 23으로 넘어갈지, Phase 22에서 portfolio construction을 더 볼지 판단됐는가
+- portfolio workflow가 source / weight / date alignment / replay를 재현 가능하게 다루는지 확인됐는가
+- Phase 22 문서가 개발 검증과 투자 분석을 명확히 구분하는가
+- baseline / weight alternative report가 durable하게 남았는가
+- manual checklist가 완료됐는가
+- 다음 main phase를 core implementation 방향으로 다시 열지 결정됐는가
 
 ## 현재까지 완료된 것
 
@@ -25,12 +25,16 @@
 - portfolio-level benchmark / guardrail / weight alternative scope 정리
 - `25 / 25 / 50`, `40 / 40 / 20` weight alternative rerun
 - `33 / 33 / 34` near-equal result와 official equal-third baseline metric 분리
+- Phase 22가 실전 투자 포트폴리오 선정이 아니라
+  portfolio workflow 개발 검증 phase라는 경계 정리
 
 ## 아직 남아 있는 것
 
 - 사용자의 manual QA
-- Phase 22를 닫고 Phase 23으로 갈지,
-  diversified component 추가 검증을 한 번 더 볼지 결정
+- Phase 22를 닫고
+  `Phase 23 Quarterly And Alternate Cadence Productionization`으로 넘어갈지 결정
+- 사용자가 별도로 요청하지 않는 한,
+  Phase 22 안에서 portfolio optimization을 더 넓히지는 않는다
 
 ## 한 줄 현재 판단
 
@@ -38,4 +42,6 @@
   portfolio-level benchmark / guardrail policy와 weight alternative rerun도 정리했다.
   현재 결론은 equal-third baseline 유지이며,
   `Quality + Value tilt`와 `Value / Quality defensive tilt`는 baseline 교체 후보가 아니라 참고 후보로 보류한다.
-  이제 남은 것은 사용자의 checklist QA다.
+  다만 이 판단은 투자 포트폴리오 승인 판단이 아니라,
+  portfolio workflow가 재현 가능하게 작동하는지 확인하기 위한 개발 검증 판단이다.
+  이제 남은 것은 사용자의 checklist QA와 Phase 23 scope 확정이다.

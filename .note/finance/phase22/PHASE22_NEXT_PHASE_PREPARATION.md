@@ -4,31 +4,56 @@
 
 - `Phase 22`는 manual validation ready 상태이며,
   baseline / benchmark / guardrail / weight alternative first-pass 문서와 checklist가 준비되어 있다.
-- 이 문서는 Phase 22가 끝난 뒤 `Phase 23`으로 갈지 판단하기 위한 handoff 초안이다.
+- 이 문서는 Phase 22가 끝난 뒤
+  portfolio 분석을 더 넓힐지,
+  아니면 core product implementation으로 돌아갈지 판단하기 위한 handoff 초안이다.
+
+## 중요한 경계
+
+`Phase 22`는 투자 포트폴리오를 고르는 phase가 아니다.
+
+이번 phase에서 `Value / Quality / Quality + Value` 조합을 본 이유는
+이 3개가 최종 투자 조합이라서가 아니라,
+이미 같은 validation frame에서 확인된 대표 전략들이라
+portfolio 구성 / 저장 / replay / 비교 workflow를 검증하기 좋은 fixture였기 때문이다.
+
+따라서 Phase 22 이후 기본 방향은
+portfolio weight 분석을 계속 넓히는 것이 아니라,
+아직 product 기능으로 덜 성숙한 부분으로 돌아가는 것이다.
+
+단, 사용자가 QA 중 특정 portfolio 분석이나 백테스트 비교를 명시적으로 요청하면
+그 분석은 수행한다.
+다만 그 경우에도 기본 phase 방향이 투자 분석으로 바뀐 것은 아니며,
+`사용자 요청 분석`으로 별도 기록한다.
 
 ## Phase 22가 끝날 때 물어볼 질문
 
-1. portfolio-level candidate 기준이 충분히 명확한가
-2. representative annual strict portfolio candidate가 baseline으로 쓸 만큼 재현 가능한가
-3. annual strict끼리 묶은 portfolio만으로 충분한가, 아니면 quarterly / alternate cadence를 추가해야 하는가
+1. portfolio workflow가 source / weight / date alignment / replay를 재현 가능하게 다루는가
+2. Phase 22 문서가 "개발 검증"과 "투자 분석"을 명확히 구분하는가
+3. manual checklist가 완료되어 Phase 22를 닫을 수 있는가
 4. 다음 main phase를 `Quarterly And Alternate Cadence Productionization`으로 열어도 되는가
 
 ## 현재 예상되는 다음 방향
 
-- Phase 22에서 portfolio-level baseline이 안정적으로 잡히면,
-  다음 main phase는 `Phase 23 Quarterly And Alternate Cadence Productionization`이 자연스럽다.
-- 이유는 annual strict baseline과 portfolio baseline이 있어야
-  quarterly prototype을 "추가할 가치가 있는가"라는 질문으로 비교할 수 있기 때문이다.
-- 현재 weight alternative rerun에서는 equal-third baseline을 교체할 만큼 명확한 대안은 나오지 않았다.
-- 따라서 Phase 22 closeout 후 Phase 23으로 넘어가는 방향이 점점 자연스러워지고 있다.
-- 단, 사용자가 checklist QA에서 annual strict family끼리만 묶은 점이 너무 제한적이라고 판단하면,
-  Phase 22 안에서 diversified component 추가 검증을 한 번 더 열 수 있다.
+- Phase 22 manual QA가 완료되면,
+  다음 main phase는 `Phase 23 Quarterly And Alternate Cadence Productionization`으로 여는 것이 자연스럽다.
+- 이유는 portfolio 기능을 더 분석하기 전에,
+  아직 prototype 성격이 남아 있는 quarterly / alternate cadence를
+  실제 백테스트 제품 기능으로 올리는 것이 더 중요한 개발 과제이기 때문이다.
+- 현재 weight alternative rerun에서는
+  equal-third fixture baseline을 교체해야 할 만큼의 기능상 이유가 나오지 않았다.
+- 따라서 Phase 22 closeout 후에는
+  portfolio optimization을 계속 넓히기보다,
+  quarterly / alternate cadence runtime, UI, report, history 흐름을 production 수준으로 올리는 편이 맞다.
 
 ## 아직 확정하지 않은 것
 
-- Phase 22 결과가 약하면,
-  Phase 23으로 바로 넘어가지 않고 portfolio construction을 한 번 더 볼 수 있다.
-- 특히 annual strict family끼리의 상관 / 유사성이 너무 크면,
-  new strategy나 cadence diversification을 더 빨리 열어야 할 수도 있다.
-- 만약 Phase 22 안에서 한 번 더 본다면,
-  broad weight search가 아니라 GTAA / treasury / defensive 같은 diversified component를 붙일지 여부만 좁게 논의하는 편이 낫다.
+- 사용자가 Phase 22 QA 중 추가 portfolio 분석을 요청하면,
+  narrow rerun이나 comparison report를 만들 수 있다.
+- 그러나 기본 로드맵 기준으로는
+  Phase 22 안에서 broad weight search,
+  diversified component optimization,
+  live portfolio candidate selection을 더 열지 않는다.
+- Phase 23의 정확한 scope는
+  quarterly prototype을 어디까지 productionize할지,
+  alternate cadence를 어떤 UI / report contract로 연결할지에 맞춰 다시 확정한다.
