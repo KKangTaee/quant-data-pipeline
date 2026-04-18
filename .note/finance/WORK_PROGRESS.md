@@ -1263,3 +1263,13 @@ Detailed historical logs were archived on `2026-04-13`.
   - synced the Phase 22 TODO board and finance doc index
 - Durable takeaway:
   - Phase 22 QA should now start from a clearer orientation document, not a phase memo that expects prior chat context.
+
+### 2026-04-18
+- Clarified the `Phase 22` development-validation boundary during manual QA.
+- Changed:
+  - updated the Phase 22 plan to state that the phase is not selecting a live investment portfolio
+  - clarified that `Value / Quality / Quality + Value` are representative fixtures for portfolio workflow validation, not a final recommended allocation
+  - clarified that the equal-third baseline is a development-validation comparison baseline, not an investment benchmark
+  - updated the Phase 22 baseline report and checklist with the same boundary
+- Durable takeaway:
+  - Phase 22 should be read as portfolio-construction workflow validation for the quant program, not as final portfolio research or live-deployment approval.

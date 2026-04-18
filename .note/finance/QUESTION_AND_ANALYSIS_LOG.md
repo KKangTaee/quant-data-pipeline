@@ -1847,3 +1847,18 @@ Detailed historical analysis was archived on `2026-04-13`.
   - plan 문서를 현재 상태, 왜 필요한가, 이 phase가 끝나면 좋은 점, 확인한 질문, portfolio 후보 최소 조건, 실제 진행 순서, checklist에서 확인하는 방법 중심으로 재작성했다
   - checklist 1번에는 각 문서의 어느 섹션을 보면 되는지와 체크 방법을 명시했다
   - 핵심 확인 기준은 "weighted result는 후보가 아니며, source / weight / date alignment / replay / 해석이 남아야 portfolio-level candidate"라는 점이다
+
+### 2026-04-18 - `Phase 22`는 투자 분석 phase가 아니라 portfolio workflow 개발 검증 phase로 다시 경계 설정했다
+- Request topic:
+  - 사용자가 Phase 22가 갑자기 `Value / Quality / Quality + Value` 3개를 실제 포트폴리오 분석 대상으로 삼는 것처럼 보이고,
+    현재 프로젝트 목적이 퀀트 프로그램 개발인지 투자 후보 선정인지 흐려졌다고 지적함
+- Interpreted goal:
+  - Phase 22의 목적을 "실전 투자 포트폴리오 선정"이 아니라
+    "포트폴리오 구성 / 저장 / replay / 비교 기능을 검증하는 개발 phase"로 다시 명확히 해야 함
+- Result:
+  - `equal-third baseline`은 투자 benchmark가 아니라 개발 검증용 fixture baseline이라고 정리했다
+  - `Value / Quality / Quality + Value` 3개는 최종 투자 조합이 아니라,
+    Phase 21에서 같은 frame으로 검증된 대표 전략이라 portfolio workflow 테스트 fixture로 쓴 것이라고 명시했다
+  - 단일 포트폴리오 실전 투자 기능이 완료됐거나 live deployment 가능한 상태라고 해석하면 안 된다고 정리했다
+  - Phase 22 문서의 QA 기준도 "투자해도 되는가"가 아니라
+    "프로그램이 portfolio workflow를 재현 가능하게 다루는가"로 수정했다

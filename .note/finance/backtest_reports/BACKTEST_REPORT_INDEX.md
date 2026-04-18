@@ -174,11 +174,12 @@
   - Phase 22 portfolio-level candidate construction archive 안내 문서
 - `phase22/PHASE22_BASELINE_PORTFOLIO_CANDIDATE_PACK_FIRST_PASS.md`
   - `Value / Quality / Quality + Value` current anchor 3개를
-    saved portfolio definition 기준 equal-third baseline portfolio candidate pack으로 다시 정의한 첫 report
+    saved portfolio definition 기준 개발 검증용 equal-third baseline portfolio candidate pack으로 다시 정의한 첫 report
   - `33 / 33 / 34` 표현과 `[33.33, 33.33, 33.33]` 저장 weight의 차이를 정리하고,
     현재 status를 `baseline_candidate / portfolio_watchlist / not_deployment_ready`로 고정한다
   - 이후 second work unit에서 portfolio-level primary benchmark는 이 equal-third baseline으로 두고,
     guardrail은 report-level warning으로 해석하기로 정리했다
+  - 이 baseline은 투자 기준이 아니라 portfolio 구성 / 저장 / replay / 비교 workflow를 검증하기 위한 fixture 기준이다
 - `phase22/PHASE22_WEIGHT_ALTERNATIVE_RERUN_FIRST_PASS.md`
   - official equal-third baseline과 `25 / 25 / 50`, `40 / 40 / 20` weight alternative를
     saved compare context 기준으로 다시 계산한 Phase 22 rerun report

@@ -6,23 +6,45 @@
 
 쉽게 말하면, `Phase 21`에서 workflow 검증용으로 확인했던
 `Value / Quality / Quality + Value` 조합을
-`Phase 22`의 **baseline portfolio candidate pack**으로 다시 읽어도 되는지 정리한다.
+`Phase 22`의 **개발 검증용 baseline portfolio candidate pack**으로 다시 읽어도 되는지 정리한다.
 
 여기서 중요한 점은 하나다.
 
 - 이 문서는 최종 portfolio winner 확정 문서가 아니다.
-- 대신 앞으로 portfolio 후보를 비교할 때 기준점으로 쓸 **baseline 후보 pack**을 고정하는 문서다.
+- 이 문서는 실전 투자 승인 문서도 아니다.
+- 대신 프로그램이 portfolio 구성 / 저장 / replay / 비교 workflow를 제대로 다루는지 확인하기 위한
+  **개발 검증용 baseline 후보 pack**을 고정하는 문서다.
 
 ## 결론 먼저
 
 - `Value / Quality / Quality + Value` current anchor 3개는 `Phase 22` baseline portfolio candidate pack의 출발점으로 적합하다.
 - 다만 이 조합은 모두 annual strict factor family라서, 완성된 분산 포트폴리오라고 보기는 이르다.
+- 따라서 이 baseline은 "투자 기준"이 아니라 "포트폴리오 기능 검증 기준"이다.
 - 따라서 현재 상태는:
   - `Portfolio Status`: `baseline_candidate`
   - `Shortlist`: `portfolio_watchlist`
   - `Deployment`: `not_deployment_ready`
   - `Next Action`: weight alternative와 diversified component 추가 가능성 검토
 - 즉 이 조합은 "계속 볼 기준점"이지, "바로 실전 투입할 최종 포트폴리오"가 아니다.
+
+## 왜 이 3개 전략을 썼나
+
+`Value / Quality / Quality + Value` 3개를 쓴 이유는
+이 조합이 최종 투자 후보라서가 아니다.
+
+이 3개는 Phase 21에서 이미 같은 validation frame으로 다시 검증된 대표 strict annual strategy들이었다.
+그래서 포트폴리오 기능을 테스트하기 위한 fixture로 쓰기 좋았다.
+
+이번 phase의 질문은:
+
+- "이 3개를 실전 투자 포트폴리오로 확정할 것인가?"
+
+가 아니라:
+
+- "이 프로그램이 검증된 단일 전략 결과들을 묶어 portfolio로 만들고,
+  그 결과를 저장 / replay / 비교할 수 있는가?"
+
+이다.
 
 ## 왜 이 report를 따로 만들었나
 
@@ -38,8 +60,8 @@
 반면 `Phase 22`에서는 질문이 달라진다.
 
 - 이 조합을 portfolio 후보로 부를 수 있는가
-- 후보로 부른다면 어떤 status를 줄 것인가
-- 앞으로 어떤 조합과 비교할 기준점으로 둘 것인가
+- 후보로 부른다면 개발 검증상 어떤 status를 줄 것인가
+- 앞으로 같은 fixture 기반 weight 조합과 비교할 기준점으로 둘 수 있는가
 
 그래서 같은 결과를 그대로 반복하지 않고,
 candidate pack 관점으로 다시 정리한다.
@@ -140,6 +162,16 @@ Phase 22 문서에서는 섞어 쓰지 않는다.
 
 ## 유지 / 교체 / 보류 판단
 
+여기서 `유지`는 실전 투자 유지가 아니다.
+
+뜻은:
+
+- 개발 검증용 기준 포트폴리오로 계속 사용한다
+- 다음 weight alternative나 diversified component 테스트의 비교 기준으로 쓴다
+- 아직 live deployment 후보로 승격하지 않는다
+
+이다.
+
 ### 유지하는 이유
 
 - component 3개가 모두 `Phase 21`에서 current anchor로 유지됐다.
@@ -193,7 +225,7 @@ rerun 결과는 [PHASE22_WEIGHT_ALTERNATIVE_RERUN_FIRST_PASS.md](/Users/taeho/Pr
 ## 한 줄 결론
 
 `phase22_annual_strict_equal_third_baseline_v1`은 최종 포트폴리오 후보가 아니라,
-**앞으로 portfolio-level candidate를 비교하기 위한 첫 baseline 후보 pack**으로 유지한다.
+**portfolio 구성 기능을 검증하고 이후 후보를 비교하기 위한 첫 개발 검증용 baseline 후보 pack**으로 유지한다.
 
 ## 같이 보면 좋은 문서
 

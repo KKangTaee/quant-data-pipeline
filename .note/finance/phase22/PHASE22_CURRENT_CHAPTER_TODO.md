@@ -80,6 +80,10 @@
 - `completed` phase22 plan readability polish
   - kickoff plan을 목적 / 필요성 / 최소 후보 조건 / 실제 진행 순서 / checklist 확인 방법 중심으로 재정리
   - checklist 1번을 어느 문서의 어느 섹션에서 무엇을 확인하면 되는지 따라갈 수 있게 보강
+- `completed` development-vs-investment boundary clarification
+  - Phase 22는 실전 투자 포트폴리오 확정 phase가 아니라
+    portfolio 구성 / 저장 / replay / 비교 workflow를 검증하는 개발 phase임을 plan / checklist / baseline report에 명시
+  - equal-third baseline은 투자 benchmark가 아니라 개발 검증용 fixture benchmark임을 명시
 
 ## 다음 작업
 

@@ -8,9 +8,39 @@
 - 이제 사용자는 `PHASE22_TEST_CHECKLIST.md`를 보며
   문서가 이해되는지, 판단 근거가 충분한지 확인하면 된다.
 
+## 중요한 경계
+
+`Phase 22`는 **실전 투자 포트폴리오를 고르는 phase가 아니다.**
+
+이번 phase의 목적은 퀀트 프로그램 안에서 아래 기능이 제대로 작동하는지 확인하는 것이다.
+
+- 여러 전략 결과를 하나의 weighted portfolio로 묶을 수 있는가
+- 그 포트폴리오의 source, weight, date alignment를 기록할 수 있는가
+- 저장한 portfolio를 다시 replay했을 때 결과를 재현할 수 있는가
+- 결과를 보고 사용자가 유지 / 교체 / 보류 같은 해석을 남길 수 있는가
+
+따라서 여기서 말하는 `baseline`은 투자 기준점이 아니라
+**개발 검증용 기준 포트폴리오**다.
+
+`Value / Quality / Quality + Value` 3개를 쓴 이유도
+"이 3개가 최종 투자 조합이라서"가 아니다.
+
+이미 Phase 21에서 같은 기간, 같은 universe, 같은 strict annual runtime으로 검증된 대표 전략들이라
+포트폴리오 기능을 테스트하기 좋은 fixture였기 때문이다.
+
+즉 이번 phase의 진짜 질문은:
+
+- "이 포트폴리오가 실전 투자할 만큼 좋은가?"
+
+가 아니라:
+
+- "이 프로그램이 여러 전략을 섞고, 저장하고, 다시 검증하는 workflow를 신뢰할 수 있게 제공하는가?"
+
+이다.
+
 ## 목적: 쉽게 말하면
 
-`Phase 22`의 목적은 **전략 여러 개를 섞은 포트폴리오를 하나의 후보로 관리할 기준을 만드는 것**이다.
+`Phase 22`의 목적은 **전략 여러 개를 섞은 포트폴리오 결과를 프로그램 안에서 안전하게 기록하고 다시 검증할 수 있는 구조를 만드는 것**이다.
 
 지금까지는 주로 아래 질문을 봤다.
 
@@ -18,18 +48,18 @@
 - `Quality` 전략 하나가 좋은가
 - `Quality + Value` 전략 하나가 좋은가
 
-`Phase 22`에서는 질문이 조금 바뀐다.
+`Phase 22`에서는 개발 관점의 질문으로 바뀐다.
 
-- 좋은 전략 3개를 섞으면 더 나은 포트폴리오 후보가 되는가
-- 그 포트폴리오 후보를 나중에 다시 재현할 수 있는가
-- baseline보다 나은 weight 조합이 있는가
-- 숫자가 좋아 보여도 최종 후보로 올려도 되는가
+- 전략 3개를 섞은 결과가 프로그램 안에서 일관되게 계산되는가
+- 그 포트폴리오 구성을 나중에 다시 재현할 수 있는가
+- 비중을 바꿔도 같은 frame에서 비교할 수 있는가
+- 숫자가 좋아 보여도 개발 검증 단계와 투자 판단 단계를 구분할 수 있는가
 
 즉, 단순히 화면에서 만든 weighted portfolio 결과를 보고
 "좋다"라고 끝내는 phase가 아니다.
 
 source, component, weight, date alignment, replay, 해석이 남아야
-비로소 `Portfolio-Level Candidate`라고 부른다.
+프로그램 안에서 다시 다룰 수 있는 `Portfolio-Level Candidate` 기록으로 볼 수 있다.
 
 ## 왜 필요한가
 
@@ -51,15 +81,17 @@ source, component, weight, date alignment, replay, 해석이 남아야
 - portfolio-level benchmark와 guardrail은 단일 전략 기준과 어떻게 달라야 하는가
 
 기준 없이 포트폴리오 백테스트를 더 돌리면 숫자는 늘어나지만,
-나중에 어떤 결과를 믿고 유지할지 판단하기 어려워진다.
+나중에 어떤 결과가 같은 조건에서 나온 것인지,
+어떤 결과가 단순 화면 실험인지,
+어떤 결과가 다시 재현 가능한지 판단하기 어려워진다.
 
 ## 이 phase가 끝나면 좋은 점
 
 - 단일 전략 후보와 포트폴리오 후보를 구분해서 읽을 수 있다.
 - weighted portfolio 결과가 단순 화면 결과인지, 재현 가능한 후보 기록인지 구분할 수 있다.
-- baseline portfolio와 weight alternative를 같은 기준으로 비교할 수 있다.
+- 개발 검증용 baseline portfolio와 weight alternative를 같은 기준으로 비교할 수 있다.
 - Phase 23에서 quarterly / alternate cadence를 볼 때,
-  annual strict portfolio baseline과 비교하기 쉬워진다.
+  annual strict portfolio fixture와 비교하기 쉬워진다.
 - 사용자가 checklist를 보며 "무엇을 어디서 확인해야 하는지" 따라갈 수 있다.
 
 ## 이번 phase에서 확인한 질문
@@ -67,7 +99,7 @@ source, component, weight, date alignment, replay, 해석이 남아야
 | 질문 | 확인 위치 | 현재 판단 |
 |---|---|---|
 | portfolio 후보란 무엇인가 | `PHASE22_PORTFOLIO_LEVEL_CANDIDATE_SEMANTICS_FIRST_WORK_UNIT.md` | source / weight / replay / 해석이 남아야 후보 |
-| baseline portfolio는 무엇인가 | `PHASE22_BASELINE_PORTFOLIO_CANDIDATE_PACK_FIRST_PASS.md` | equal-third baseline 유지 |
+| baseline portfolio는 무엇인가 | `PHASE22_BASELINE_PORTFOLIO_CANDIDATE_PACK_FIRST_PASS.md` | 개발 검증용 equal-third baseline 유지 |
 | benchmark는 무엇으로 둘 것인가 | `PHASE22_PORTFOLIO_BENCHMARK_GUARDRAIL_AND_WEIGHT_SCOPE_SECOND_WORK_UNIT.md` | `SPY`가 아니라 equal-third baseline |
 | guardrail은 어떻게 읽을 것인가 | `PHASE22_PORTFOLIO_BENCHMARK_GUARDRAIL_AND_WEIGHT_SCOPE_SECOND_WORK_UNIT.md` | actual trading rule이 아니라 report-level warning |
 | weight 대안은 baseline을 교체했는가 | `PHASE22_WEIGHT_ALTERNATIVE_RERUN_FIRST_PASS.md` | 교체 없음, 두 대안은 보류 |
@@ -109,7 +141,7 @@ portfolio 후보는 "전략을 섞은 결과표"만으로는 부족하다.
 - 문서:
   - `PHASE22_BASELINE_PORTFOLIO_CANDIDATE_PACK_FIRST_PASS.md`
 - 확인한 것:
-  - `Value / Quality / Quality + Value` current anchor 3개를 baseline pack으로 정리
+  - `Value / Quality / Quality + Value` current anchor 3개를 개발 검증용 baseline pack으로 정리
   - `33 / 33 / 34`는 Phase 21의 near-equal 입력이고,
     Phase 22 공식 baseline은 `[33.33, 33.33, 33.33]`임을 분리
   - 현재 status는 `baseline_candidate / portfolio_watchlist / not_deployment_ready`
@@ -119,7 +151,7 @@ portfolio 후보는 "전략을 섞은 결과표"만으로는 부족하다.
 - 문서:
   - `PHASE22_PORTFOLIO_BENCHMARK_GUARDRAIL_AND_WEIGHT_SCOPE_SECOND_WORK_UNIT.md`
 - 확인한 것:
-  - portfolio 후보의 primary benchmark는 `SPY`가 아니라 equal-third baseline
+  - 같은 fixture 조합의 weight alternative를 비교할 때 primary benchmark는 `SPY`가 아니라 equal-third baseline
   - `SPY`는 market context로만 유지
   - portfolio-level guardrail은 actual trading rule이 아니라 report-level warning
   - weight 대안은 `25 / 25 / 50`, `40 / 40 / 20` 두 개만 먼저 보기로 결정
@@ -146,7 +178,10 @@ portfolio 후보는 "전략을 섞은 결과표"만으로는 부족하다.
 
 이것들을 지금 다 열면 Phase 22의 질문이 흐려진다.
 
-이번 phase의 핵심은 **annual strict current anchors로 만든 첫 portfolio baseline을 재현 가능한 후보 기록으로 정리하는 것**이다.
+이번 phase의 핵심은 **annual strict current anchors로 만든 첫 개발 검증용 portfolio baseline을 재현 가능한 후보 기록으로 정리하는 것**이다.
+
+다시 말해, 실전 투자를 승인하는 것이 아니라
+프로그램이 포트폴리오 구성 workflow를 제대로 다룰 수 있는지 확인하는 단계다.
 
 ## checklist에서 확인하는 방법
 
@@ -162,4 +197,4 @@ portfolio 후보는 "전략을 섞은 결과표"만으로는 부족하다.
 ## 한 줄 정리
 
 `Phase 22`는 좋은 전략 3개를 섞은 결과를 바로 최종 포트폴리오라고 부르지 않고,
-**재현 가능한 portfolio-level candidate로 관리할 기준과 첫 baseline을 만든 phase**다.
+**포트폴리오 구성 기능을 개발 검증용 baseline과 재현 가능한 기록으로 관리할 수 있게 만든 phase**다.
