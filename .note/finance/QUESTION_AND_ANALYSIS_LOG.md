@@ -1895,3 +1895,20 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `Phase 24`는 new strategy implementation bridge,
     `Phase 25`는 live trading이 아닌 validation / review / paper-readiness scaffolding으로 재정리했다
   - `Development Validation`, `Fixture`, `User-Requested Analysis` 용어를 glossary에 추가했다
+
+### 2026-04-19 - master roadmap에는 특정 phase 경계보다 전체 제품 방향을 먼저 둬야 한다
+- Request topic:
+  - 사용자가 `MASTER_PHASE_ROADMAP.md`의 `지금 중요한 경계`가 Phase 22 중심으로 되어 있는 것이 상위 로드맵 문서상 적절한지,
+    그리고 Phase 25까지면 프로그램 완성에 충분한지 질문함
+- Interpreted goal:
+  - master roadmap을 단기 phase memo가 아니라 전체 제품 개발 방향을 읽을 수 있는 문서로 유지하고 싶음
+- Result:
+  - master roadmap에는 특정 phase의 상세 설명을 오래 남기기보다
+    전체 원칙과 제품 레이어, 현재 상태, 다음 3~5개 phase 방향만 두는 것이 더 적절하다고 판단했다
+  - 현재 `지금 중요한 경계`는 Phase 22 드리프트를 바로잡기 위한 임시 성격이 강하므로,
+    다음 문서 정리 때는 `투자 분석과 개발 검증의 구분` 같은 일반 원칙으로 승격하고
+    Phase 22 상세는 phase22 문서로 내리는 편이 좋다
+  - Phase 25는 전체 프로그램 완성이 아니라
+    `pre-live readiness`까지의 1차 로드맵으로 보는 것이 맞다
+  - 완성형 프로그램에는 Phase 26 이후로 production hardening, broader strategy library, portfolio/risk analytics,
+    data quality monitoring, paper/live operations, user workflow polish 같은 추가 축이 필요할 가능성이 높다
