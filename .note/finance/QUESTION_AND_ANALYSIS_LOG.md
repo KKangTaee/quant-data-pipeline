@@ -1810,6 +1810,22 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 현재 status는 `baseline_candidate / portfolio_watchlist / not_deployment_ready`로 정리했다
   - 다음 질문은 portfolio-level benchmark / guardrail policy와 weight alternative 비교 범위다
 
+### 2026-04-18 - `GTAA` 실전형 후보를 current runtime 기준으로 다시 찾았다
+- Request topic:
+  - 사용자가 `GTAA` 전략으로 preset에 국한되지 않은 ETF 조합을 다양하게 백테스트하고,
+    `promotion`이 `hold`가 아닌 실제 투자 가능 후보를 추천해 Markdown으로 저장해 달라고 요청함
+- Interpreted goal:
+  - 단순 raw CAGR 상위 조합이 아니라 current DB/runtime의 ETF operability, validation, promotion, deployment gate를 유지한 채
+    `real_money_candidate`까지 올라갈 수 있는 GTAA 후보를 찾는 것
+- Result:
+  - 서브에이전트 3개를 사용해 실행 경로, 보수형 universe, 공격형 universe를 나눠 탐색했다
+  - broader universe는 raw 성과가 좋아도 ETF profile / AUM / spread coverage 부족 때문에 `hold / blocked`가 반복됐다
+  - main runtime 재검증에서 `SPY, QQQ, GLD, IEF`, `Top = 2`, `Interval = 4`, `Score = 1M / 3M`, `Risk-Off = defensive_bond_preference` 후보를 추천 기본 후보로 정했다
+  - 결과는 `CAGR = 17.46%`, `MDD = -8.39%`, `Promotion = real_money_candidate`, `Shortlist = paper_probation`, `Deployment = paper_only`
+  - durable report는 `.note/finance/backtest_reports/strategies/GTAA_REAL_MONEY_CANDIDATE_SEARCH_20260418.md`에 저장했다
+- Follow-up:
+  - 이 후보는 `hold`가 아니지만 deployment가 `paper_only`이므로, 실제 live allocation 전에는 월별 paper tracking과 quote/profile refresh가 필요하다
+
 ### 2026-04-17 - `Phase 22` portfolio-level benchmark와 guardrail은 baseline 비교 중심으로 정리했다
 - Request topic:
   - Phase 22 다음 작업으로 portfolio-level benchmark / guardrail interpretation과 weight alternative 범위를 정리함

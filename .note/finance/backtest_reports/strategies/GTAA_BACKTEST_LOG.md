@@ -21,6 +21,55 @@
 
 ## 기록
 
+### 2026-04-18 - real-money candidate compact ETF search
+
+- 목표:
+  - 기존 preset에 국한하지 않고 GTAA ETF universe를 다시 탐색해 `Promotion = hold`가 아닌 실제 투자 가능 후보를 찾는다.
+  - current runtime의 ETF operability / validation / deployment metadata를 유지한 채 `real_money_candidate`가 나오는지 확인한다.
+- 전략:
+  - `GTAA`
+- 기간 / universe:
+  - `2016-01-01 ~ latest DB`
+  - effective result window: `2016-01-29 ~ 2026-03-31`
+  - manual ETF universe search
+- 핵심 설정:
+  - `Option = month_end`
+  - `Benchmark = SPY`
+  - `Minimum Price = 5.0`
+  - `Transaction Cost = 10 bps`
+  - `Min ETF AUM = 1.0B`
+  - `Max Bid-Ask Spread = 0.50%`
+  - `Market Regime = off`
+- 추천 후보:
+  - `SPY, QQQ, GLD, IEF`
+  - `Top Assets = 2`
+  - `Signal Interval = 4`
+  - `Score Horizons = 1M / 3M`
+  - `Risk-Off Mode = defensive_bond_preference`
+- 결과:
+  - `CAGR = 17.4612%`
+  - `MDD = -8.3917%`
+  - `Sharpe = 3.0717`
+  - `Benchmark CAGR = 12.6486%`
+  - `Net CAGR Spread = +4.8126%p`
+  - `Promotion = real_money_candidate`
+  - `Shortlist = paper_probation`
+  - `Deployment = paper_only`
+  - `ETF Operability = normal`
+  - `Validation = normal`
+  - `Rolling Review = normal`
+  - `Out-Of-Sample Review = normal`
+- 대안:
+  - 공격형: `SPY, QQQ, GLD, LQD`, `Top = 1`, `Interval = 4`, `1M / 3M / 6M`, `CAGR = 20.6161%`, `MDD = -10.6744%`, `real_money_candidate`
+  - 낮은 MDD: `SPY, QQQ, GLD, IEF, LQD`, `Top = 2`, `Interval = 6`, `1M / 3M`, `CAGR = 15.9664%`, `MDD = -4.7476%`, `real_money_candidate`
+- 해석:
+  - 기존 Phase 13 reference는 `production_candidate / watchlist_only`였지만,
+    이번 compact ETF 변형은 `Validation = normal`을 회복해 `real_money_candidate`까지 올라갔다.
+  - broader universe는 raw CAGR이 높아도 ETF profile / AUM / spread coverage 때문에 `hold`가 반복되어 최종 추천에서 제외했다.
+  - 현재 deployment는 여전히 `paper_only`이므로 바로 live allocation이 아니라 paper probation 후보로 본다.
+- 관련 문서:
+  - [GTAA_REAL_MONEY_CANDIDATE_SEARCH_20260418.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/GTAA_REAL_MONEY_CANDIDATE_SEARCH_20260418.md)
+
 ### 2026-04-10 - practical non-hold reference
 
 - 목표:

@@ -21,6 +21,19 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-04-18
+- Started a user-requested GTAA investable portfolio search outside the current presets.
+- Used sub-agents for:
+  - GTAA runtime / promotion metadata path discovery
+  - conservative ETF universe exploration
+  - offensive ETF universe exploration
+- Re-ran the strongest ideas in the main environment with `.venv/bin/python` and current DB-backed `run_gtaa_backtest_from_db`.
+- Result:
+  - compact ETF sleeves produced `real_money_candidate` GTAA candidates without relaxing ETF AUM/spread gates
+  - broader high-CAGR universes were rejected because current ETF operability/profile coverage pushed them back to `hold`
+  - saved the durable report at `.note/finance/backtest_reports/strategies/GTAA_REAL_MONEY_CANDIDATE_SEARCH_20260418.md`
+  - appended the result to the GTAA strategy log and candidate registry
+
 ### 2026-04-16
 - Split the roadmap tail into two clearer roles:
   - `현재 위치` now behaves like a status board
