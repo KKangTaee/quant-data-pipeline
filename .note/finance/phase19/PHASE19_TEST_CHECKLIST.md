@@ -38,8 +38,8 @@
   - [x] `Weighting Contract`가 최종 선택 종목의 비중 규칙을 뜻한다는 설명이 보이는지
   - [x] `Risk-Off Contract`에서 `Cash Only`, `Defensive Sleeve Preference`를 고를 수 있는지
   - [x] `Risk-Off Contract`가 개별 종목 일부 제외가 아니라 `Market Regime` 또는 guardrail 때문에 포트폴리오 전체가 risk-off일 때 쓰인다는 설명이 쉽게 읽히는지
-  - [ ] `Defensive Sleeve Tickers`가 `Defensive Sleeve Preference`일 때만 쓰이는 방어 ETF 목록이라는 설명과 함께 보이는지
-  - [ ] `Weighting Contract`, `Rejected Slot Handling Contract`, `Risk-Off Contract`가 토글형 on/off 기능이 아니라 "항상 저장되는 기본 처리 규칙"이라는 설명이 보이는지
+  - [x] `Defensive Sleeve Tickers`가 `Defensive Sleeve Preference`일 때만 쓰이는 방어 ETF 목록이라는 설명과 함께 보이는지
+  - [x] `Weighting Contract`, `Rejected Slot Handling Contract`, `Risk-Off Contract`가 토글형 on/off 기능이 아니라 "항상 저장되는 기본 처리 규칙"이라는 설명이 보이는지
 
 ## 2. compare / history / load-into-form 흐름 확인
 
@@ -47,18 +47,18 @@
   - `Backtest > Compare > strict annual family override`
   - `Backtest > History`
 - 체크 항목:
-  - [ ] strict annual compare override에서도 위 contract가 같은 이름으로 보이는지
-  - [ ] history run을 다시 열었을 때 `Rejected Slot Handling`, `Weighting Contract`, `Risk-Off Contract` 값이 자연스럽게 복원되는지
-  - [ ] `Load Into Form` 이후 single/compare 폼에서도 같은 설정이 다시 보이는지
+  - [x] strict annual compare override에서도 위 contract가 같은 이름으로 보이는지
+  - [x] history run을 다시 열었을 때 `Rejected Slot Handling`, `Weighting Contract`, `Risk-Off Contract` 값이 자연스럽게 복원되는지
+  - [x] `Load Into Form` 이후 single/compare 폼에서도 같은 설정이 다시 보이는지
 
 ## 3. interpretation summary / selection history 문구 확인
 
 - 확인 위치:
   - `Backtest > History > strict annual run > Selection History / Interpretation`
 - 체크 항목:
-  - [ ] history 표에 `Rejected Slot Handling`, `Weighting Contract`, `Risk-Off Contract`, `Risk-Off Reasons`, `Filled Count` 같은 컬럼이 읽기 쉬운 이름으로 보이는지
-  - [ ] interpretation summary에 `Rejected Slot Handling`, `Weighting Contract`, `Risk-Off Contract`, `Filled Events`, `Cash-Retained Events`, `Defensive Sleeve Activations`가 보이는지
-  - [ ] row-level interpretation 문구가 trend rejection 처리, full cash risk-off, defensive sleeve rotation, final weighting contract를 구분해서 설명하는지
+  - [x] history 표에 `Rejected Slot Handling`, `Weighting Contract`, `Risk-Off Contract`, `Risk-Off Reasons`, `Filled Count` 같은 컬럼이 읽기 쉬운 이름으로 보이는지
+  - [x] interpretation summary에 `Rejected Slot Handling`, `Weighting Contract`, `Risk-Off Contract`, `Filled Events`, `Cash-Retained Events`, `Defensive Sleeve Activations`가 보이는지
+  - [x] row-level interpretation 문구가 trend rejection 처리, full cash risk-off, defensive sleeve rotation, final weighting contract를 구분해서 설명하는지
 
 ## 4. phase closeout 문서와 index 확인
 
@@ -72,11 +72,11 @@
   - [FINANCE_DOC_INDEX.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/FINANCE_DOC_INDEX.md)
   - [MASTER_PHASE_ROADMAP.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/MASTER_PHASE_ROADMAP.md)
 - 체크 항목:
-  - [ ] Phase 19 상태가 closeout 기준으로 보이는지
-  - [ ] new slice / closeout / checklist 문서가 index에서 바로 찾히는지
-  - [ ] roadmap에 Phase 19가 closeout 기준으로 반영됐는지
-  - [ ] 앞으로 phase plan 문서 template가 안내 문서로 보이는지
-  - [ ] 앞으로 test checklist 문서도 checkbox 중심 template로 이어갈 수 있게 정리됐는지
+  - [x] Phase 19 상태가 closeout 기준으로 보이는지
+  - [x] new slice / closeout / checklist 문서가 index에서 바로 찾히는지
+  - [x] roadmap에 Phase 19가 closeout 기준으로 반영됐는지
+  - [x] 앞으로 phase plan 문서 template가 안내 문서로 보이는지
+  - [x] 앞으로 test checklist 문서도 checkbox 중심 template로 이어갈 수 있게 정리됐는지
 
 ## 한 줄 판단 기준
 
