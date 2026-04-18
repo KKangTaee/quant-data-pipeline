@@ -1253,3 +1253,13 @@ Detailed historical logs were archived on `2026-04-13`.
   - synced the completion summary, next-phase preparation, roadmap, and finance doc index with the manual QA handoff state
 - Durable takeaway:
   - Phase 22 implementation/reporting work is ready for user checklist QA; the next decision is closeout vs one more diversified-component portfolio check.
+
+### 2026-04-18
+- Polished the `Phase 22` plan and checklist entry point during manual QA.
+- Changed:
+  - rewrote `PHASE22_PORTFOLIO_LEVEL_CANDIDATE_CONSTRUCTION_PLAN.md` around purpose, necessity, minimum candidate conditions, actual execution order, and checklist usage
+  - removed the duplicated feel between `목적` and `쉽게 말하면` by combining the explanation into `목적: 쉽게 말하면`
+  - updated `PHASE22_TEST_CHECKLIST.md` section 1 so the user can see exactly which document sections to read and what each checkbox means
+  - synced the Phase 22 TODO board and finance doc index
+- Durable takeaway:
+  - Phase 22 QA should now start from a clearer orientation document, not a phase memo that expects prior chat context.

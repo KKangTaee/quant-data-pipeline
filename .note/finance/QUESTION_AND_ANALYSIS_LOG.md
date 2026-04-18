@@ -1835,3 +1835,15 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `25 / 25 / 50`은 CAGR과 End Balance가 좋아졌지만 Sharpe가 약간 낮고 `Quality + Value` contribution이 50%를 넘으므로 watch alternative로 보류했다
   - `40 / 40 / 20`은 MDD가 조금 낮아졌지만 CAGR / End Balance를 포기하므로 comparison-only defensive alternative로 보류했다
   - 결론은 `equal-third baseline 유지 / immediate replacement 없음`이다
+
+### 2026-04-18 - `Phase 22` plan 문서를 QA 관점에서 다시 읽기 쉽게 정리했다
+- Request topic:
+  - 사용자가 `PHASE22_PORTFOLIO_LEVEL_CANDIDATE_CONSTRUCTION_PLAN.md`의 섹션이 많고 중복되어 보이며,
+    checklist 1번을 무엇을 보고 어떻게 확인해야 할지 모르겠다고 지적함
+- Interpreted goal:
+  - phase plan을 내부 task memo가 아니라 사용자가 checklist QA를 시작할 수 있는 orientation 문서로 바꾸고 싶음
+- Result:
+  - `목적`과 `쉽게 말하면`을 분리된 반복 섹션처럼 두지 않고 `목적: 쉽게 말하면`으로 통합했다
+  - plan 문서를 현재 상태, 왜 필요한가, 이 phase가 끝나면 좋은 점, 확인한 질문, portfolio 후보 최소 조건, 실제 진행 순서, checklist에서 확인하는 방법 중심으로 재작성했다
+  - checklist 1번에는 각 문서의 어느 섹션을 보면 되는지와 체크 방법을 명시했다
+  - 핵심 확인 기준은 "weighted result는 후보가 아니며, source / weight / date alignment / replay / 해석이 남아야 portfolio-level candidate"라는 점이다

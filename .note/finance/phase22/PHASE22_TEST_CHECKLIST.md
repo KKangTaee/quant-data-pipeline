@@ -14,19 +14,30 @@
 
 ## 1. Portfolio-Level Candidate 기준 확인
 
+### 이 항목에서 확인하려는 것
+
+여기서는 "포트폴리오 후보"라는 말이 그냥 weighted portfolio 결과표를 뜻하는지,
+아니면 source / weight / replay / 해석이 남은 재현 가능한 후보 기록을 뜻하는지 확인한다.
+
 ### 확인 위치
 
 | 문서 | 확인할 내용 |
 |---|---|
-| [PHASE22_PORTFOLIO_LEVEL_CANDIDATE_CONSTRUCTION_PLAN.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase22/PHASE22_PORTFOLIO_LEVEL_CANDIDATE_CONSTRUCTION_PLAN.md) | Phase 22 목적과 범위 |
-| [PHASE22_PORTFOLIO_LEVEL_CANDIDATE_SEMANTICS_FIRST_WORK_UNIT.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase22/PHASE22_PORTFOLIO_LEVEL_CANDIDATE_SEMANTICS_FIRST_WORK_UNIT.md) | portfolio 후보의 정의와 최소 기록 항목 |
-| [FINANCE_TERM_GLOSSARY.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/FINANCE_TERM_GLOSSARY.md) | 반복 용어 설명 |
+| [PHASE22_PORTFOLIO_LEVEL_CANDIDATE_CONSTRUCTION_PLAN.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase22/PHASE22_PORTFOLIO_LEVEL_CANDIDATE_CONSTRUCTION_PLAN.md) | `목적: 쉽게 말하면`, `왜 필요한가`, `Portfolio-Level Candidate로 인정하는 최소 조건` |
+| [PHASE22_PORTFOLIO_LEVEL_CANDIDATE_SEMANTICS_FIRST_WORK_UNIT.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase22/PHASE22_PORTFOLIO_LEVEL_CANDIDATE_SEMANTICS_FIRST_WORK_UNIT.md) | `기본 정의`, `Portfolio-Level Candidate 최소 기록 항목`, `후보 판단 규칙 초안` |
+| [FINANCE_TERM_GLOSSARY.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/FINANCE_TERM_GLOSSARY.md) | `Portfolio-Level Candidate`, `Portfolio Bridge`, `Saved Portfolio Replay`, `Date Alignment` 용어 |
+
+### 체크 방법
+
+1. plan 문서에서 Phase 22가 "전략 3개를 섞은 결과를 바로 최종 후보로 정하는 phase가 아니다"라고 설명하는지 본다.
+2. first work unit 문서에서 portfolio 후보가 되려면 `component`, `source`, `period`, `universe`, `weight`, `date alignment`, `replay`, `interpretation`이 필요하다고 설명하는지 본다.
+3. 유지 / 교체 / 보류 판단이 단순히 CAGR이 높은 순서가 아니라, 재현성과 위험 해석까지 같이 보는 구조인지 확인한다.
 
 ### 체크 항목
 
-- [ ] `Portfolio-Level Candidate`가 단순 weighted result가 아니라 재현 가능한 후보 기록이라는 점이 이해되는지
-- [ ] component strategy, weight, date alignment, saved replay가 왜 필요한지 설명되어 있는지
-- [ ] 유지 / 교체 / 보류 판단 기준이 숫자만이 아니라 해석까지 포함하는지
+- [ ] `Portfolio-Level Candidate`가 단순 weighted result가 아니라 재현 가능한 후보 기록이라는 점이 plan 문서에서 이해되는지
+- [ ] first work unit의 최소 기록 항목을 보면 component strategy, weight, date alignment, saved replay가 왜 필요한지 확인할 수 있는지
+- [ ] 유지 / 교체 / 보류 판단 기준이 숫자만이 아니라 재현성, component status, 위험 해석까지 포함하는지
 
 ## 2. Representative Portfolio Candidate Pack 확인
 

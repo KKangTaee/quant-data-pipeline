@@ -94,6 +94,8 @@
 - `.note/finance/phase22/PHASE22_PORTFOLIO_LEVEL_CANDIDATE_CONSTRUCTION_PLAN.md`
   - `Phase 22`가 왜 portfolio-level candidate construction phase인지,
     단일 전략 후보와 portfolio 후보를 왜 분리해서 봐야 하는지 쉽게 설명하는 kickoff 문서
+  - manual QA 중 plan 문서가 읽기 어렵다는 피드백을 반영해,
+    목적 / 필요성 / 최소 후보 조건 / 실제 진행 순서 / checklist 확인 방법 중심으로 다시 정리되어 있다
 - `.note/finance/phase22/PHASE22_CURRENT_CHAPTER_TODO.md`
   - `Phase 22` execution board로,
     portfolio 후보 기준 정의와 baseline portfolio candidate pack 완료,

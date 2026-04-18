@@ -77,6 +77,9 @@
   - `Portfolio-Level Benchmark`, `Portfolio-Level Guardrail`, `Weight Alternative` glossary 추가
 - `completed` phase22 checklist finalization
   - weight alternative / benchmark policy 작업 이후 closeout용 checklist로 다시 정리
+- `completed` phase22 plan readability polish
+  - kickoff plan을 목적 / 필요성 / 최소 후보 조건 / 실제 진행 순서 / checklist 확인 방법 중심으로 재정리
+  - checklist 1번을 어느 문서의 어느 섹션에서 무엇을 확인하면 되는지 따라갈 수 있게 보강
 
 ## 다음 작업
 
