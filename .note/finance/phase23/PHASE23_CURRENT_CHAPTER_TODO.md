@@ -36,6 +36,10 @@
     기존 `Advanced Inputs` form wrapper 없이 `Strategy-Specific Advanced Inputs`가 바로 갱신되게 했다.
   - strategy-level expander는 border box로 바꾸고,
     `Overlay`, `Portfolio Handling & Defensive Rules`, `Real-Money Contract`, `Guardrails` 같은 하위 그룹은 기존 접기/펼치기로 유지했다.
+- `completed` quarterly compare overlay / history QA wording cleanup
+  - quarterly prototype compare 경로에서도 annual strict처럼 `Overlay` 하위 접기 그룹 안에 trend filter와 market regime 설정이 들어가게 맞췄다.
+  - `Back To History` shortcut이 더 확실히 History panel로 돌아가도록 active panel state도 직접 갱신하게 했다.
+  - checklist section 3의 saved compare, saved portfolio, history run, load-into-form, run-again, saved replay 확인 위치를 다시 풀어 썼다.
 - `pending` saved replay UI-level manual 확인
   - saved replay가 같은 contract 값을 유지하는지 실제 UI에서 확인한다.
 
@@ -65,6 +69,7 @@
 
 Phase 23은 quarterly portfolio handling contract first pass, representative DB-backed smoke run,
 history / saved replay contract roundtrip code check,
-compare variant immediate refresh와 compare 입력 구조 정리까지 완료했다.
+compare variant immediate refresh, compare 입력 구조 정리,
+quarterly compare overlay parity와 checklist clarification까지 완료했다.
 현재는 사용자의 Phase 23 checklist QA 피드백을 반영하는 중이며,
 다음 확인은 수정된 Compare strategy box / shared-input UI와 checklist 문구가 실제 QA에 충분한지 보는 것이다.

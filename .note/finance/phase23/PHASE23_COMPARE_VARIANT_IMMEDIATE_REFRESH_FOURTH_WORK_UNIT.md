@@ -98,6 +98,10 @@ variant 선택과 실제 전략 설정이 서로 떨어져 있으면,
 즉 최상위 전략 구분은 box,
 전략 안의 세부 설정 묶음은 기존 expander 구조다.
 
+추가 QA 피드백 후에는 quarterly prototype compare 경로도 annual strict와 맞춰
+trend filter와 market regime 설정을 `Overlay` expander 안에 넣었다.
+따라서 quarterly에서도 `Overlay`와 `Portfolio Handling & Defensive Rules`가 같은 레벨의 하위 그룹으로 읽힌다.
+
 ### 5. Apply / Refresh 버튼은 만들지 않음
 
 이번 구조에서도 별도 `Apply`나 `Refresh` 버튼을 두지 않았다.
@@ -124,6 +128,7 @@ variant 선택은 “어떤 입력 UI를 보여줄지”를 결정하는 상위 
 - 각 전략별 border box
 - 각 family box 안의 Annual / Quarterly variant selector
 - 하위 `Overlay`, `Portfolio Handling & Defensive Rules`, `Real-Money Contract`, `Guardrails`
+- `History`의 `Run Again` / `Load Into Form`과 `Saved Portfolios`의 `Replay Saved Portfolio` 차이
 
 ## 한 줄 정리
 

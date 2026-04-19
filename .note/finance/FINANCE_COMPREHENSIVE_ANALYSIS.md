@@ -1183,6 +1183,8 @@ Analysis / Presentation
     - 별도 Apply 버튼 없이 variant 변경 즉시 같은 box 안의 strategy-specific inputs가 해당 annual/quarterly 경로로 갱신된다.
     - `Start Date`, `End Date`, `Timeframe`, `Option`은 `Compare Period & Shared Inputs`로 모으고,
       전략별 세부 옵션은 `Strategy-Specific Advanced Inputs` 아래 border box로 분리했다.
+    - quarterly prototype compare 경로도 annual strict처럼 `Overlay`와 `Portfolio Handling & Defensive Rules`를 하위 접기 그룹으로 보여준다.
+    - `Load Into Form` 후 `Back To History` shortcut은 `History` panel로 직접 돌아가도록 보강되었다.
   - compare 기본 preset은
     `US Statement Coverage 100`
     으로 고정되어 quarterly validation 비용을 낮춘다

@@ -43,6 +43,9 @@
   전략별 옵션은 `Strategy-Specific Advanced Inputs`로 분리했다.
 - strategy-level expander는 border box로 바꾸고,
   `Overlay`, `Portfolio Handling & Defensive Rules`, `Real-Money Contract`, `Guardrails` 같은 하위 그룹은 기존 접기/펼치기로 유지했다.
+- quarterly prototype compare 경로에서도 `Overlay`가 하위 접기 그룹으로 보이도록 맞췄다.
+  따라서 quarterly의 trend filter와 market regime 설정도 annual strict와 같은 화면 구조로 읽힌다.
+- `Load Into Form` 후 표시되는 `Back To History` shortcut이 더 확실히 `History` panel로 돌아가도록 보강했다.
 
 ### 3. representative validation과 checklist handoff
 
@@ -64,6 +67,7 @@
 - 아직 Phase 23 manual QA는 완료되지 않았다.
 - 현재 closeout blocker는 사용자가 `PHASE23_TEST_CHECKLIST.md`를 기준으로
   Compare variant 즉시 갱신, strategy box layout, 공용 입력 / 전략별 입력 분리,
+  quarterly overlay expander,
   saved replay UI 확인,
   history load-into-form UI 확인을 완료하는 것이다.
 

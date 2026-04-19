@@ -1451,6 +1451,8 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
   - 이어서 `Start Date`, `End Date`, `Timeframe`, `Option`을
     `Compare Period & Shared Inputs`로 묶고,
     전략별 세부 옵션은 `Strategy-Specific Advanced Inputs` 아래의 border box로 분리했다
+  - quarterly prototype compare 경로도 annual strict처럼
+    `Overlay`와 `Portfolio Handling & Defensive Rules`를 하위 접기 그룹으로 읽히게 맞췄다
 - `Phase 24`
   - research-to-implementation bridge를 통해 새 전략 family를 추가한다
 - `Phase 25`

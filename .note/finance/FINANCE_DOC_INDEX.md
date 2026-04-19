@@ -173,6 +173,8 @@
   - compare QA는 `Compare Period & Shared Inputs`,
     strategy-level border box, 각 family box 안의 Annual / Quarterly variant selector를
     실제 화면 위치 기준으로 확인하도록 정리되어 있다
+  - section 3은 `History`의 `Run Again` / `Load Into Form`과
+    `Saved Portfolios`의 `Replay Saved Portfolio`를 구분해서 확인하도록 보강되어 있다
 - `.note/finance/backtest_reports/phase23/README.md`
   - `Phase 23` quarterly / alternate cadence productionization report archive 안내 문서
 - `.note/finance/backtest_reports/phase23/PHASE23_QUARTERLY_CONTRACT_SMOKE_VALIDATION_FIRST_PASS.md`

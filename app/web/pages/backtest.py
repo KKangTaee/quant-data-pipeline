@@ -11464,6 +11464,7 @@ def render_backtest_tab() -> None:
             prefill_action_cols = st.columns([0.22, 0.78], gap="small")
             with prefill_action_cols[0]:
                 if st.button("Back To History", key="backtest_prefill_back_to_history", use_container_width=True):
+                    st.session_state.backtest_active_panel = "History"
                     st.session_state.backtest_requested_panel = "History"
                     st.rerun()
             st.session_state.backtest_prefill_notice = None
@@ -12161,34 +12162,37 @@ def render_backtest_tab() -> None:
                                 key="compare_qsqp_factors",
                             ),
                         }
-                        trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
-                        with trend_title_col:
-                            st.markdown("##### Strict Quarterly Quality Trend Filter")
-                        with trend_help_col:
-                            _render_trend_filter_help_popover()
-                        compare_strategy_overrides["Quality Snapshot (Strict Quarterly Prototype)"]["trend_filter_enabled"] = st.checkbox(
-                            "Enable",
-                            value=STRICT_TREND_FILTER_DEFAULT_ENABLED,
-                            key="compare_qsqp_trend_filter_enabled",
-                        )
-                        compare_strategy_overrides["Quality Snapshot (Strict Quarterly Prototype)"]["trend_filter_window"] = int(
-                            st.number_input(
-                                "Strict Quarterly Quality Trend Filter Window",
-                                min_value=20,
-                                max_value=400,
-                                value=STRICT_TREND_FILTER_DEFAULT_WINDOW,
-                                step=10,
-                                key="compare_qsqp_trend_filter_window",
+                        _render_advanced_group_caption("핵심 factor / universe 계약은 위에 두고, overlay와 포트폴리오 처리 규칙은 아래 펼쳐보기로 묶었습니다.")
+                        with st.expander("Overlay", expanded=False):
+                            _render_strict_overlay_section_intro()
+                            trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
+                            with trend_title_col:
+                                st.markdown("##### Strict Quarterly Quality Trend Filter")
+                            with trend_help_col:
+                                _render_trend_filter_help_popover()
+                            compare_strategy_overrides["Quality Snapshot (Strict Quarterly Prototype)"]["trend_filter_enabled"] = st.checkbox(
+                                "Enable",
+                                value=STRICT_TREND_FILTER_DEFAULT_ENABLED,
+                                key="compare_qsqp_trend_filter_enabled",
                             )
-                        )
-                        (
-                            compare_strategy_overrides["Quality Snapshot (Strict Quarterly Prototype)"]["market_regime_enabled"],
-                            compare_strategy_overrides["Quality Snapshot (Strict Quarterly Prototype)"]["market_regime_window"],
-                            compare_strategy_overrides["Quality Snapshot (Strict Quarterly Prototype)"]["market_regime_benchmark"],
-                        ) = _render_market_regime_overlay_inputs(
-                            key_prefix="compare_qsqp",
-                            label_prefix="Strict Quarterly Quality ",
-                        )
+                            compare_strategy_overrides["Quality Snapshot (Strict Quarterly Prototype)"]["trend_filter_window"] = int(
+                                st.number_input(
+                                    "Strict Quarterly Quality Trend Filter Window",
+                                    min_value=20,
+                                    max_value=400,
+                                    value=STRICT_TREND_FILTER_DEFAULT_WINDOW,
+                                    step=10,
+                                    key="compare_qsqp_trend_filter_window",
+                                )
+                            )
+                            (
+                                compare_strategy_overrides["Quality Snapshot (Strict Quarterly Prototype)"]["market_regime_enabled"],
+                                compare_strategy_overrides["Quality Snapshot (Strict Quarterly Prototype)"]["market_regime_window"],
+                                compare_strategy_overrides["Quality Snapshot (Strict Quarterly Prototype)"]["market_regime_benchmark"],
+                            ) = _render_market_regime_overlay_inputs(
+                                key_prefix="compare_qsqp",
+                                label_prefix="Strict Quarterly Quality ",
+                            )
                         with st.expander("Portfolio Handling & Defensive Rules", expanded=False):
                             _render_strict_portfolio_handling_contracts_intro()
                             compare_strategy_overrides["Quality Snapshot (Strict Quarterly Prototype)"]["rejected_slot_handling_mode"] = _render_strict_rejected_slot_handling_contract_inputs(
@@ -12443,34 +12447,37 @@ def render_backtest_tab() -> None:
                                 key="compare_vsqp_factors",
                             ),
                         }
-                        trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
-                        with trend_title_col:
-                            st.markdown("##### Strict Quarterly Value Trend Filter")
-                        with trend_help_col:
-                            _render_trend_filter_help_popover()
-                        compare_strategy_overrides["Value Snapshot (Strict Quarterly Prototype)"]["trend_filter_enabled"] = st.checkbox(
-                            "Enable",
-                            value=STRICT_TREND_FILTER_DEFAULT_ENABLED,
-                            key="compare_vsqp_trend_filter_enabled",
-                        )
-                        compare_strategy_overrides["Value Snapshot (Strict Quarterly Prototype)"]["trend_filter_window"] = int(
-                            st.number_input(
-                                "Strict Quarterly Value Trend Filter Window",
-                                min_value=20,
-                                max_value=400,
-                                value=STRICT_TREND_FILTER_DEFAULT_WINDOW,
-                                step=10,
-                                key="compare_vsqp_trend_filter_window",
+                        _render_advanced_group_caption("핵심 factor / universe 계약은 위에 두고, overlay와 포트폴리오 처리 규칙은 아래 펼쳐보기로 묶었습니다.")
+                        with st.expander("Overlay", expanded=False):
+                            _render_strict_overlay_section_intro()
+                            trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
+                            with trend_title_col:
+                                st.markdown("##### Strict Quarterly Value Trend Filter")
+                            with trend_help_col:
+                                _render_trend_filter_help_popover()
+                            compare_strategy_overrides["Value Snapshot (Strict Quarterly Prototype)"]["trend_filter_enabled"] = st.checkbox(
+                                "Enable",
+                                value=STRICT_TREND_FILTER_DEFAULT_ENABLED,
+                                key="compare_vsqp_trend_filter_enabled",
                             )
-                        )
-                        (
-                            compare_strategy_overrides["Value Snapshot (Strict Quarterly Prototype)"]["market_regime_enabled"],
-                            compare_strategy_overrides["Value Snapshot (Strict Quarterly Prototype)"]["market_regime_window"],
-                            compare_strategy_overrides["Value Snapshot (Strict Quarterly Prototype)"]["market_regime_benchmark"],
-                        ) = _render_market_regime_overlay_inputs(
-                            key_prefix="compare_vsqp",
-                            label_prefix="Strict Quarterly Value ",
-                        )
+                            compare_strategy_overrides["Value Snapshot (Strict Quarterly Prototype)"]["trend_filter_window"] = int(
+                                st.number_input(
+                                    "Strict Quarterly Value Trend Filter Window",
+                                    min_value=20,
+                                    max_value=400,
+                                    value=STRICT_TREND_FILTER_DEFAULT_WINDOW,
+                                    step=10,
+                                    key="compare_vsqp_trend_filter_window",
+                                )
+                            )
+                            (
+                                compare_strategy_overrides["Value Snapshot (Strict Quarterly Prototype)"]["market_regime_enabled"],
+                                compare_strategy_overrides["Value Snapshot (Strict Quarterly Prototype)"]["market_regime_window"],
+                                compare_strategy_overrides["Value Snapshot (Strict Quarterly Prototype)"]["market_regime_benchmark"],
+                            ) = _render_market_regime_overlay_inputs(
+                                key_prefix="compare_vsqp",
+                                label_prefix="Strict Quarterly Value ",
+                            )
                         with st.expander("Portfolio Handling & Defensive Rules", expanded=False):
                             _render_strict_portfolio_handling_contracts_intro()
                             compare_strategy_overrides["Value Snapshot (Strict Quarterly Prototype)"]["rejected_slot_handling_mode"] = _render_strict_rejected_slot_handling_contract_inputs(
@@ -12737,34 +12744,37 @@ def render_backtest_tab() -> None:
                                 key="compare_qvqp_value_factors",
                             ),
                         }
-                        trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
-                        with trend_title_col:
-                            st.markdown("##### Strict Quarterly Multi-Factor Trend Filter")
-                        with trend_help_col:
-                            _render_trend_filter_help_popover()
-                        compare_strategy_overrides["Quality + Value Snapshot (Strict Quarterly Prototype)"]["trend_filter_enabled"] = st.checkbox(
-                            "Enable",
-                            value=STRICT_TREND_FILTER_DEFAULT_ENABLED,
-                            key="compare_qvqp_trend_filter_enabled",
-                        )
-                        compare_strategy_overrides["Quality + Value Snapshot (Strict Quarterly Prototype)"]["trend_filter_window"] = int(
-                            st.number_input(
-                                "Strict Quarterly Multi-Factor Trend Filter Window",
-                                min_value=20,
-                                max_value=400,
-                                value=STRICT_TREND_FILTER_DEFAULT_WINDOW,
-                                step=10,
-                                key="compare_qvqp_trend_filter_window",
+                        _render_advanced_group_caption("핵심 factor / universe 계약은 위에 두고, overlay와 포트폴리오 처리 규칙은 아래 펼쳐보기로 묶었습니다.")
+                        with st.expander("Overlay", expanded=False):
+                            _render_strict_overlay_section_intro()
+                            trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
+                            with trend_title_col:
+                                st.markdown("##### Strict Quarterly Multi-Factor Trend Filter")
+                            with trend_help_col:
+                                _render_trend_filter_help_popover()
+                            compare_strategy_overrides["Quality + Value Snapshot (Strict Quarterly Prototype)"]["trend_filter_enabled"] = st.checkbox(
+                                "Enable",
+                                value=STRICT_TREND_FILTER_DEFAULT_ENABLED,
+                                key="compare_qvqp_trend_filter_enabled",
                             )
-                        )
-                        (
-                            compare_strategy_overrides["Quality + Value Snapshot (Strict Quarterly Prototype)"]["market_regime_enabled"],
-                            compare_strategy_overrides["Quality + Value Snapshot (Strict Quarterly Prototype)"]["market_regime_window"],
-                            compare_strategy_overrides["Quality + Value Snapshot (Strict Quarterly Prototype)"]["market_regime_benchmark"],
-                        ) = _render_market_regime_overlay_inputs(
-                            key_prefix="compare_qvqp",
-                            label_prefix="Strict Quarterly Multi-Factor ",
-                        )
+                            compare_strategy_overrides["Quality + Value Snapshot (Strict Quarterly Prototype)"]["trend_filter_window"] = int(
+                                st.number_input(
+                                    "Strict Quarterly Multi-Factor Trend Filter Window",
+                                    min_value=20,
+                                    max_value=400,
+                                    value=STRICT_TREND_FILTER_DEFAULT_WINDOW,
+                                    step=10,
+                                    key="compare_qvqp_trend_filter_window",
+                                )
+                            )
+                            (
+                                compare_strategy_overrides["Quality + Value Snapshot (Strict Quarterly Prototype)"]["market_regime_enabled"],
+                                compare_strategy_overrides["Quality + Value Snapshot (Strict Quarterly Prototype)"]["market_regime_window"],
+                                compare_strategy_overrides["Quality + Value Snapshot (Strict Quarterly Prototype)"]["market_regime_benchmark"],
+                            ) = _render_market_regime_overlay_inputs(
+                                key_prefix="compare_qvqp",
+                                label_prefix="Strict Quarterly Multi-Factor ",
+                            )
                         with st.expander("Portfolio Handling & Defensive Rules", expanded=False):
                             _render_strict_portfolio_handling_contracts_intro()
                             compare_strategy_overrides["Quality + Value Snapshot (Strict Quarterly Prototype)"]["rejected_slot_handling_mode"] = _render_strict_rejected_slot_handling_contract_inputs(

@@ -2048,3 +2048,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 실제 실행은 `Run Strategy Comparison` 버튼 하나로 유지하고,
     별도 Apply / Refresh 버튼은 만들지 않았다
   - Phase 23 checklist와 관련 문서도 새 화면 구조 기준으로 정리했다
+
+### 2026-04-19 - Phase 23 QA 용어는 history와 saved portfolio를 분리해서 설명해야 한다
+- Request topic:
+  - 사용자가 Phase 23 checklist section 3에서 saved compare / saved portfolio context,
+    history run, load-into-form, rerun, saved replay가 각각 어디서 무엇을 확인하라는 말인지 헷갈린다고 지적함
+- Interpreted goal:
+  - 실제 UI 위치와 버튼 의미를 기준으로 QA checklist를 다시 써야 함
+- Result:
+  - quarterly compare prototype도 annual strict처럼 `Overlay` expander 안에 trend filter와 market regime 설정을 넣었다
+  - `Portfolio Handling & Defensive Rules`는 quarterly rejected-slot handling, weighting, risk-off / defensive tickers를 확인하는 곳으로 설명했다
+  - `Backtest > History`의 `Run Again` / `Load Into Form`과
+    `Saved Portfolios`의 `Replay Saved Portfolio`는 서로 다른 흐름이라고 checklist에 분리해 적었다
+  - `Load Into Form` 후 `Back To History`가 더 확실히 History panel로 돌아가도록 active panel state를 직접 설정했다
