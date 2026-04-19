@@ -1986,3 +1986,18 @@ Detailed historical analysis was archived on `2026-04-13`.
     portfolio workflow development validation phase로 닫았다
   - 다음 기본 방향은 portfolio optimization 확대가 아니라
     `Phase 23 Quarterly And Alternate Cadence Productionization`으로 정리했다
+
+### 2026-04-19 - Phase 23 quarterly smoke validation에서 meta 보존이 핵심 검증 지점임을 확인했다
+- Request topic:
+  - 사용자가 Phase 23 다음 작업 진행을 요청했고, quarterly strict family의 실제 실행 검증을 이어감
+- Interpreted goal:
+  - quarterly portfolio handling contract가 UI/payload에만 붙은 것이 아니라
+    실제 DB-backed runtime과 history/load-into-form에 필요한 result meta까지 이어지는지 확인해야 함
+- Result:
+  - `Quality / Value / Quality + Value` quarterly prototype 3개 family를
+    `AAPL / MSFT / GOOG`, 2021-01-01~2024-12-31, non-default contract 조합으로 smoke run했다
+  - 계산은 통과했지만 초기 확인에서 `weighting_mode`, `rejected_slot_handling_mode`,
+    `rejected_slot_fill_enabled`, `partial_cash_retention_enabled`가 result bundle meta에 빠져 있었다
+  - 공통 bundle builder를 수정해 해당 meta를 보존하도록 했고,
+    재실행 결과 세 family 모두 contract meta가 남는 것을 확인했다
+  - 이 결과는 투자 분석이 아니라 quarterly 기능의 개발 검증 결과로 기록했다

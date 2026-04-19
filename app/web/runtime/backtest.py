@@ -2468,6 +2468,14 @@ def build_backtest_result_bundle(
         meta["trend_filter_enabled"] = input_params.get("trend_filter_enabled")
     if input_params.get("trend_filter_window") is not None:
         meta["trend_filter_window"] = input_params.get("trend_filter_window")
+    if input_params.get("weighting_mode") is not None:
+        meta["weighting_mode"] = input_params.get("weighting_mode")
+    if input_params.get("rejected_slot_handling_mode") is not None:
+        meta["rejected_slot_handling_mode"] = input_params.get("rejected_slot_handling_mode")
+    if input_params.get("rejected_slot_fill_enabled") is not None:
+        meta["rejected_slot_fill_enabled"] = input_params.get("rejected_slot_fill_enabled")
+    if input_params.get("partial_cash_retention_enabled") is not None:
+        meta["partial_cash_retention_enabled"] = input_params.get("partial_cash_retention_enabled")
     if input_params.get("market_regime_enabled") is not None:
         meta["market_regime_enabled"] = input_params.get("market_regime_enabled")
     if input_params.get("market_regime_window") is not None:

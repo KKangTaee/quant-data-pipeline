@@ -2,7 +2,7 @@
 
 ## 상태
 
-- `active / portfolio_handling_contract_first_pass_completed`
+- `active / representative_smoke_completed`
 
 ## 현재 목표
 
@@ -34,7 +34,9 @@
 
 - `completed` targeted `py_compile`
 - `completed` `.venv` import smoke
-- `pending` representative quarterly smoke run
+- `completed` representative quarterly smoke run
+  - `AAPL / MSFT / GOOG`, 2021-01-01~2024-12-31, non-default portfolio handling contract 조합으로 quarterly 3개 family를 실제 DB-backed runtime에서 실행했다.
+  - smoke run 중 공통 result bundle meta에 `weighting_mode`, `rejected_slot_handling_mode`, `rejected_slot_fill_enabled`, `partial_cash_retention_enabled`가 빠지는 문제를 발견하고 수정했다.
 - `pending` manual UI validation checklist handoff
 
 ## 4. Documentation Sync
@@ -44,9 +46,10 @@
 - `completed` first work-unit 문서 생성
 - `completed` glossary / roadmap / doc index / work log / question log sync
 - `completed` second work-unit 문서 생성
+- `completed` representative smoke report 생성
 - `pending` phase closeout summary 업데이트
 
 ## 현재 판단
 
-Phase 23은 quarterly portfolio handling contract first pass까지 완료했다.
-아직 구현 완료 phase는 아니며, 다음 작업은 대표 quarterly smoke run과 saved replay 흐름 검증이다.
+Phase 23은 quarterly portfolio handling contract first pass와 representative DB-backed smoke run까지 완료했다.
+아직 구현 완료 phase는 아니며, 다음 작업은 saved replay / history load-into-form의 실제 UI 흐름 검증과 manual checklist handoff다.

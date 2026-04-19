@@ -1170,6 +1170,12 @@ Analysis / Presentation
     - compare
     - history rerun / prefill
     까지 연결되어 있다
+  - 2026-04-19 representative DB-backed smoke run에서
+    `Quality / Value / Quality + Value` quarterly prototype 3개 family가
+    non-default portfolio handling contract 조합으로 실제 실행되는 것을 확인했다.
+    - smoke 중 공통 result bundle meta에 `weighting_mode`, `rejected_slot_handling_mode`,
+      `rejected_slot_fill_enabled`, `partial_cash_retention_enabled`가 빠지는 문제를 발견해 수정했다.
+    - 따라서 history / load-into-form 복원에 필요한 portfolio handling contract meta가 result bundle에 남는다.
   - compare 기본 preset은
     `US Statement Coverage 100`
     으로 고정되어 quarterly validation 비용을 낮춘다

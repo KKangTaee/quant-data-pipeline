@@ -188,6 +188,16 @@
   - `33 / 33 / 34` Phase 21 near-equal 수치와 `[33.33, 33.33, 33.33]` Phase 22 official baseline 수치를 분리하고,
     현재 결론을 `baseline 유지 / alternative 보류 / immediate replacement 없음`으로 정리한다
 
+## Phase 23 Raw Archive
+
+- `phase23/README.md`
+  - Phase 23 quarterly / alternate cadence productionization report archive 안내 문서
+- `phase23/PHASE23_QUARTERLY_CONTRACT_SMOKE_VALIDATION_FIRST_PASS.md`
+  - quarterly strict 3개 family가 non-default portfolio handling contract를 받은 상태로
+    실제 DB-backed runtime에서 실행되는지 확인한 smoke validation report
+  - `Weighting`, `Rejected Slot Handling`, `Risk-Off`, `Defensive Tickers` 값이
+    result bundle meta에 보존되는지도 함께 확인한다
+
 ## 운영 메모
 
 앞으로 새 report를 만들 때는:

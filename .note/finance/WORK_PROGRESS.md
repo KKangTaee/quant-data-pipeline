@@ -1328,3 +1328,14 @@ Detailed historical logs were archived on `2026-04-13`.
   - synced `MASTER_PHASE_ROADMAP.md` and `FINANCE_DOC_INDEX.md`
 - Durable takeaway:
   - Phase 22 is now closed as portfolio workflow development validation, not as investment portfolio approval. The next default main phase is `Phase 23 Quarterly And Alternate Cadence Productionization`.
+
+### 2026-04-19
+- Advanced `Phase 23` representative quarterly smoke validation.
+- Changed:
+  - ran DB-backed smoke runs for `Quality / Value / Quality + Value` strict quarterly prototypes with `AAPL / MSFT / GOOG`, 2021-01-01~2024-12-31, and non-default portfolio handling contracts
+  - found that common result bundle meta did not preserve `weighting_mode`, `rejected_slot_handling_mode`, `rejected_slot_fill_enabled`, and `partial_cash_retention_enabled`
+  - fixed `build_backtest_result_bundle()` so portfolio handling contract meta is preserved for history / load-into-form workflows
+  - created `PHASE23_QUARTERLY_CONTRACT_SMOKE_VALIDATION_FIRST_PASS.md`
+  - synced Phase 23 TODO, completion summary, checklist, finance analysis, and backtest report index
+- Durable takeaway:
+  - quarterly strict family now passes DB-backed smoke validation for portfolio handling contract delivery and meta preservation; remaining Phase 23 validation is UI-level history / saved replay confirmation.
