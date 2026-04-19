@@ -15,6 +15,7 @@
   - `slice` 같은 내부 표현보다 `작업 단위`, `첫 번째 작업`, `다음 작업`처럼 바로 이해되는 문장을 기본으로 쓰는 출발점이다
 - `.note/finance/PHASE_TEST_CHECKLIST_TEMPLATE.md`
   - 앞으로 `finance` phase test checklist 문서를 만들 때 기본으로 따를 checkbox 중심 템플릿 문서
+  - 별도 `용어 기준` 섹션보다 각 체크 항목 안에 실제 UI / 문서 확인 위치를 직접 적는 원칙을 포함한다
 - `.note/finance/MASTER_PHASE_ROADMAP.md`
   - 전체 Phase 구조와 상위 진행 방향을 정리한 최상위 로드맵 문서
   - 최근 refresh 기준으로 `Phase 21 = 완료`, `Phase 22 = manual validation completed`, `Phase 23 = manual validation feedback in progress`, `현재 위치`, support track, `Phase 23~25` 흐름까지 다시 정리되어 있다

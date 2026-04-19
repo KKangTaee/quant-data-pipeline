@@ -40,6 +40,8 @@
   - quarterly prototype compare 경로에서도 annual strict처럼 `Overlay` 하위 접기 그룹 안에 trend filter와 market regime 설정이 들어가게 맞췄다.
   - `Back To History` shortcut이 History panel로 돌아가도록 radio widget 렌더 전에 panel request를 세팅하는 callback 방식으로 보강했다.
   - checklist section 3의 saved compare, saved portfolio, history run, load-into-form, run-again, saved replay 확인 위치를 다시 풀어 썼다.
+- `completed` checklist location-first wording cleanup
+  - checklist에서 별도 `용어 기준` 섹션을 제거하고, 각 체크 항목 안에 실제 확인 위치를 직접 넣는 방식으로 정리했다.
 - `pending` saved replay UI-level manual 확인
   - saved replay가 같은 contract 값을 유지하는지 실제 UI에서 확인한다.
 
@@ -72,4 +74,4 @@ history / saved replay contract roundtrip code check,
 compare variant immediate refresh, compare 입력 구조 정리,
 quarterly compare overlay parity와 checklist clarification까지 완료했다.
 현재는 사용자의 Phase 23 checklist QA 피드백을 반영하는 중이며,
-다음 확인은 수정된 Compare strategy box / shared-input UI와 checklist 문구가 실제 QA에 충분한지 보는 것이다.
+다음 확인은 수정된 Compare strategy box / shared-input UI와 saved replay 흐름이 실제 QA에 충분한지 보는 것이다.

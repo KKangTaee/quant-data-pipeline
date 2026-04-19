@@ -2062,3 +2062,15 @@ Detailed historical analysis was archived on `2026-04-13`.
     `Saved Portfolios`의 `Replay Saved Portfolio`는 서로 다른 흐름이라고 checklist에 분리해 적었다
   - `Load Into Form` 후 `Back To History`가 더 확실히 History panel로 돌아가도록
     radio widget 렌더 전에 panel request를 세팅하는 callback 방식으로 수정했다
+
+### 2026-04-19 - 체크리스트는 별도 용어 블록보다 항목별 확인 위치를 우선한다
+- Request topic:
+  - 사용자가 checklist에 `용어 기준` 블록을 따로 넣지 말고,
+    각 체크 항목에 어디서 확인해야 하는지를 더 자세히 적는 방식으로 지침을 요청함
+- Interpreted goal:
+  - checklist를 읽을 때 별도 용어 설명을 먼저 해석하지 않고,
+    각 checkbox만 보고 바로 UI에서 확인할 수 있어야 함
+- Result:
+  - `PHASE23_TEST_CHECKLIST.md` section 3에서 `용어 기준` 블록을 제거했다
+  - 각 체크 항목에 `Backtest > History > ...`, `Saved Portfolios > ...` 같은 실제 화면 경로를 직접 넣었다
+  - `PHASE_TEST_CHECKLIST_TEMPLATE.md`와 `FINANCE_DOC_INDEX.md`에도 future checklist 작성 지침으로 반영했다

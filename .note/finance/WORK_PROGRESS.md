@@ -1385,3 +1385,14 @@ Detailed historical logs were archived on `2026-04-13`.
   - rewrote Phase 23 checklist section 3 to explain where to verify saved compare context, saved portfolio context, history run, load-into-form, run-again, and replay saved portfolio
 - Durable takeaway:
   - Quarterly compare QA now has the same top-level section rhythm as annual strict, and the checklist distinguishes history rerun from saved portfolio replay.
+
+### 2026-04-19
+- Refined the finance phase checklist writing rule after Phase 23 QA feedback.
+- Changed:
+  - removed the standalone `용어 기준` block from `PHASE23_TEST_CHECKLIST.md`
+  - moved the relevant screen paths directly into each section 3 checkbox
+  - updated `PHASE_TEST_CHECKLIST_TEMPLATE.md` so future checklists avoid separate glossary-like blocks and instead write exact UI paths inside checklist items
+  - updated `FINANCE_DOC_INDEX.md` so the checklist-template entry mentions the same location-first rule
+  - synced `PHASE23_CURRENT_CHAPTER_TODO.md` with the checklist wording cleanup
+- Durable takeaway:
+  - Future finance checklists should be action/location-first: each checkbox should say where to go and what to verify.
