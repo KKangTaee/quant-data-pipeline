@@ -2,7 +2,7 @@
 
 ## 상태
 
-- `manual_validation_ready`
+- `phase complete / manual_validation_completed`
 
 ## 1. Portfolio-Level Candidate Semantics
 
@@ -87,9 +87,9 @@
 
 ## 다음 작업
 
-- `Phase 22`의 다음 작업은
-  **사용자가 `PHASE22_TEST_CHECKLIST.md`를 기준으로 manual QA를 진행하고,
-  모두 확인되면 Phase 22를 닫고
-  `Phase 23 Quarterly And Alternate Cadence Productionization`을 열지 결정하는 것**이다.
+- `Phase 22`는 사용자 checklist QA까지 완료되어 closeout 기준을 통과했다.
+- 다음 기본 작업은
+  **`Phase 23 Quarterly And Alternate Cadence Productionization`을 열고,
+  quarterly / alternate cadence를 실제 백테스트 제품 기능으로 끌어올리는 것**이다.
 - 사용자가 명시적으로 portfolio 분석을 요청하지 않는 한,
   Phase 22 안에서 broad weight search나 diversified component optimization은 더 열지 않는다.

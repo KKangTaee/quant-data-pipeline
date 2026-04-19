@@ -108,7 +108,7 @@
   - `Phase 22` execution board로,
     portfolio 후보 기준 정의와 baseline portfolio candidate pack 완료,
     benchmark policy / weight alternative scope, first-pass rerun,
-    manual validation ready 상태를 관리하는 문서
+    manual validation completed 상태를 관리하는 문서
 - `.note/finance/phase22/PHASE22_PORTFOLIO_LEVEL_CANDIDATE_SEMANTICS_FIRST_WORK_UNIT.md`
   - `Phase 22` 첫 번째 작업 단위로,
     `Portfolio-Level Candidate`, `Portfolio Bridge`, component strategy, date alignment, saved replay의 의미와 후보 최소 기록 항목을 정리한 문서
@@ -118,13 +118,14 @@
     guardrail은 actual trading rule이 아니라 report-level warning으로 읽는 기준을 정리한 문서
   - 다음 weight alternative를 `25 / 25 / 50`, `40 / 40 / 20` 두 개로 좁혀 둔다
 - `.note/finance/phase22/PHASE22_COMPLETION_SUMMARY.md`
-  - `Phase 22` closeout 때 채워야 할 요약 항목을 먼저 잡아둔 summary 초안
+  - `Phase 22` closeout 결과를 정리한 summary 문서
   - 현재는 weight alternative first-pass 결과까지 반영되어,
     equal-third baseline 유지와 두 alternative 보류 판단이 기록되어 있다
   - 또한 이 판단이 투자 포트폴리오 승인 판단이 아니라
     portfolio workflow 개발 검증 판단이라는 경계가 반영되어 있다
+  - 사용자 checklist QA 완료 기준으로 `phase complete / manual_validation_completed` 상태가 반영되어 있다
 - `.note/finance/phase22/PHASE22_NEXT_PHASE_PREPARATION.md`
-  - `Phase 22` 이후 `Phase 23` quarterly / alternate cadence productionization으로 넘어갈지 판단하기 위한 handoff 초안
+  - `Phase 22` 이후 `Phase 23` quarterly / alternate cadence productionization으로 넘어가기 위한 handoff 문서
   - 최신 기준으로 Phase 22 이후 기본 방향은 portfolio optimization 확대가 아니라
     core implementation roadmap으로 돌아가는 것으로 정리되어 있다
 - `.note/finance/phase22/PHASE22_TEST_CHECKLIST.md`
@@ -133,6 +134,7 @@
     weight alternative rerun 확인 항목까지 반영되어 있다
   - closeout 확인 항목에는 Phase 23 core implementation으로 돌아가는 방향과
     사용자가 명시적으로 요청한 분석은 별도 분석으로 다룬다는 기준도 포함되어 있다
+  - 사용자 QA 완료 기준으로 모든 주요 항목이 `[x]` 처리되어 있다
 - `.note/finance/backtest_reports/phase22/README.md`
   - `Phase 22` portfolio-level candidate construction report archive 안내 문서
 - `.note/finance/backtest_reports/phase22/PHASE22_BASELINE_PORTFOLIO_CANDIDATE_PACK_FIRST_PASS.md`

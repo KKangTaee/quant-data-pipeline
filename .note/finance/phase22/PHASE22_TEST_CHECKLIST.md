@@ -51,7 +51,7 @@
 - [x] `Portfolio-Level Candidate`가 단순 weighted result가 아니라 재현 가능한 후보 기록이라는 점이 plan 문서에서 이해되는지
 - [x] first work unit의 최소 기록 항목을 보면 component strategy, weight, date alignment, saved replay가 왜 필요한지 확인할 수 있는지
 - [x] 유지 / 교체 / 보류 판단 기준이 숫자만이 아니라 재현성, component status, 위험 해석까지 포함하는지
-- [ ] Phase 22가 실전 투자 포트폴리오 확정이 아니라 개발 검증용 portfolio workflow 정리라는 점이 명확히 보이는지
+- [x] Phase 22가 실전 투자 포트폴리오 확정이 아니라 개발 검증용 portfolio workflow 정리라는 점이 명확히 보이는지
 
 ## 2. Representative Portfolio Candidate Pack 확인
 
@@ -68,7 +68,7 @@
 - [x] 어떤 component strategy가 portfolio candidate에 들어갔는지 보이는지
 - [x] `33 / 33 / 34` 표현과 저장된 `[33.33, 33.33, 33.33]` weight의 차이가 헷갈리지 않게 설명되어 있는지
 - [x] baseline weight policy가 `equal-third baseline`으로 명확히 기록되어 있는지
-- [ ] `equal-third baseline`이 투자 기준이 아니라 개발 검증용 비교 기준이라는 점이 명확히 보이는지
+- [x] `equal-third baseline`이 투자 기준이 아니라 개발 검증용 비교 기준이라는 점이 명확히 보이는지
 - [x] Phase 21의 `33 / 33 / 34` 결과와 Phase 22의 `[33.33, 33.33, 33.33]` 공식 baseline 수치가 구분되어 있는지
 - [x] date alignment가 `intersection`으로 명확히 기록되어 있는지
 - [x] baseline portfolio는 유지됐지만, 최종 deployment 후보가 아니라 `portfolio_watchlist`라는 점이 보이는지
@@ -83,9 +83,9 @@
 
 ### 체크 항목
 
-- [ ] saved portfolio replay가 주요 결과를 재현하는지
-- [ ] report에서 "최종 후보"가 아니라 `baseline_candidate / portfolio_watchlist / not_deployment_ready`라는 해석이 분명한지
-- [ ] 아직 확인하지 않은 한계가 report에 따로 적혀 있는지
+- [x] saved portfolio replay가 주요 결과를 재현하는지
+- [x] report에서 "최종 후보"가 아니라 `baseline_candidate / portfolio_watchlist / not_deployment_ready`라는 해석이 분명한지
+- [x] 아직 확인하지 않은 한계가 report에 따로 적혀 있는지
 
 ## 4. Portfolio Benchmark / Guardrail / Weight Scope 확인
 
@@ -96,10 +96,10 @@
 
 ### 체크 항목
 
-- [ ] portfolio 후보의 1차 benchmark가 `SPY`가 아니라 equal-third baseline이라는 설명이 이해되는지
-- [ ] `SPY`는 market context이고, component benchmark는 component 품질 해석으로만 남는다는 점이 보이는지
-- [ ] portfolio-level guardrail이 아직 actual trading rule이 아니라 report-level warning이라는 점이 이해되는지
-- [ ] 다음 weight alternative가 `25 / 25 / 50`과 `40 / 40 / 20` 두 개로 좁혀진 이유가 보이는지
+- [x] portfolio 후보의 1차 benchmark가 `SPY`가 아니라 equal-third baseline이라는 설명이 이해되는지
+- [x] `SPY`는 market context이고, component benchmark는 component 품질 해석으로만 남는다는 점이 보이는지
+- [x] portfolio-level guardrail이 아직 actual trading rule이 아니라 report-level warning이라는 점이 이해되는지
+- [x] 다음 weight alternative가 `25 / 25 / 50`과 `40 / 40 / 20` 두 개로 좁혀진 이유가 보이는지
 
 ## 5. Weight Alternative Rerun 확인
 
@@ -110,11 +110,11 @@
 
 ### 체크 항목
 
-- [ ] `equal-third baseline`, `25 / 25 / 50`, `40 / 40 / 20` 세 후보가 같은 frame에서 비교되는지
-- [ ] `25 / 25 / 50`은 CAGR은 높지만 `Quality + Value` 편중이 커서 baseline 교체가 아니라 watch alternative로 남긴 이유가 이해되는지
-- [ ] `40 / 40 / 20`은 MDD가 조금 낮아지지만 CAGR을 포기해서 baseline 교체가 아닌 comparison-only 후보로 남긴 이유가 이해되는지
-- [ ] 현재 결론이 `baseline 유지 / alternative 보류 / immediate replacement 없음`으로 분명한지
-- [ ] 두 weight alternative는 아직 별도 saved portfolio UI replay까지 한 것이 아니라, saved compare context를 code runner로 재실행한 scripted rerun이라는 점이 보이는지
+- [x] `equal-third baseline`, `25 / 25 / 50`, `40 / 40 / 20` 세 후보가 같은 frame에서 비교되는지
+- [x] `25 / 25 / 50`은 CAGR은 높지만 `Quality + Value` 편중이 커서 baseline 교체가 아니라 watch alternative로 남긴 이유가 이해되는지
+- [x] `40 / 40 / 20`은 MDD가 조금 낮아지지만 CAGR을 포기해서 baseline 교체가 아닌 comparison-only 후보로 남긴 이유가 이해되는지
+- [x] 현재 결론이 `baseline 유지 / alternative 보류 / immediate replacement 없음`으로 분명한지
+- [x] 두 weight alternative는 아직 별도 saved portfolio UI replay까지 한 것이 아니라, saved compare context를 code runner로 재실행한 scripted rerun이라는 점이 보이는지
 
 ## 6. Closeout / Handoff 확인
 
@@ -128,10 +128,10 @@
 
 ### 체크 항목
 
-- [ ] Phase 22 상태가 실제 진행 상태와 맞는지
-- [ ] 새 Phase 22 문서들이 index에서 바로 찾히는지
-- [ ] 다음 기본 방향이 portfolio optimization 확대가 아니라 Phase 23 core implementation이라는 점이 보이는지
-- [ ] 사용자가 별도로 분석을 요청할 경우에는 백테스트 / 분석을 수행할 수 있지만,
+- [x] Phase 22 상태가 실제 진행 상태와 맞는지
+- [x] 새 Phase 22 문서들이 index에서 바로 찾히는지
+- [x] 다음 기본 방향이 portfolio optimization 확대가 아니라 Phase 23 core implementation이라는 점이 보이는지
+- [x] 사용자가 별도로 분석을 요청할 경우에는 백테스트 / 분석을 수행할 수 있지만,
       기본 phase 방향은 개발 검증이라는 점이 구분되어 있는지
 
 ## 한 줄 판단 기준

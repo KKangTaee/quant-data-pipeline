@@ -1195,7 +1195,7 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 - saved portfolio replay validation
 
 ### 상태
-- `manual_validation_ready`
+- `phase complete / manual_validation_completed`
 
 ### 현재 상태 요약
 - `Phase 22` phase bundle을 생성했다
@@ -1222,9 +1222,11 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
   - `25 / 25 / 50`은 CAGR은 좋아졌지만 `Quality + Value` 편중이 커져 watch alternative로 보류했다
   - `40 / 40 / 20`은 MDD는 조금 낮아졌지만 CAGR을 포기해 comparison-only 후보로 보류했다
   - 따라서 equal-third baseline을 primary portfolio benchmark로 유지한다
-- Phase 22 checklist를 manual QA용으로 정리했으므로,
-  다음 작업은 사용자가 checklist를 확인한 뒤 Phase 22를 닫고
-  개발 중심 다음 phase로 넘어가는 것이다
+- Phase 22 checklist QA까지 완료되었으므로,
+  Phase 22는 `phase complete / manual_validation_completed` 상태로 닫는다
+- 다음 기본 작업은
+  `Phase 23 Quarterly And Alternate Cadence Productionization`을 열어
+  quarterly / alternate cadence를 제품 기능 수준으로 끌어올리는 것이다
 - 단, 사용자가 명시적으로 portfolio 분석을 요청하면
   추가 백테스트 / 분석을 수행할 수 있다.
   이 경우에도 그것은 기본 phase 방향 변경이 아니라
@@ -1368,14 +1370,15 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 - `Phase 21`
   - phase complete / manual validation completed
 - `Phase 22`
-  - manual validation ready
+  - phase complete / manual validation completed
 - `Phase 23 ~ 25`
   - proposed
 
 한 줄 현재 판단:
 - current annual strict candidate와 portfolio bridge를 같은 frame에서 다시 본 `Phase 21`은 manual validation까지 완료되었고,
-  현재는 `Phase 22`에서 portfolio workflow 개발 검증을 마무리하고
-  manual QA 이후 core implementation roadmap으로 돌아가야 하는 상태다
+  `Phase 22`도 portfolio workflow 개발 검증과 manual QA까지 완료되었다.
+  이제 다음 기본 작업은 core implementation roadmap으로 돌아가
+  `Phase 23` quarterly / alternate cadence productionization을 여는 것이다
 
 ---
 
@@ -1422,13 +1425,14 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 ### 4. 현재 main phase와 그 다음 확장 구간: `Phase 22 ~ 25`
 - `Phase 22`
   - portfolio-level candidate construction
-  - 현재 manual validation ready 상태다
+  - manual validation까지 완료된 상태다
   - weighted portfolio를 재현 가능한 후보로 부를 기준을 고정했고,
     official equal-third baseline을 유지하는 first-pass 판단까지 마쳤다
   - 다만 이 phase의 의미는 투자 포트폴리오 선정이 아니라
     portfolio workflow 개발 검증이다
 - `Phase 23`
-  - quarterly / alternate cadence를 prototype에서 제품 기능으로 올린다
+  - 다음 main phase 후보이며,
+    quarterly / alternate cadence를 prototype에서 제품 기능으로 올린다
 - `Phase 24`
   - research-to-implementation bridge를 통해 새 전략 family를 추가한다
 - `Phase 25`
