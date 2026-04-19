@@ -1927,3 +1927,19 @@ Detailed historical analysis was archived on `2026-04-13`.
     quarterly prototype과 alternate cadence를 practical lane으로 올릴지 검토하는 흐름이었다
   - 다만 이 연결은 portfolio baseline을 투자 benchmark처럼 읽히게 만들 위험이 있었고,
     현재는 Phase 22를 portfolio workflow 개발 검증으로 제한하고 Phase 23을 quarterly / alternate cadence 제품 기능화로 재정렬했다
+
+### 2026-04-19 - portfolio workflow 개발은 취소가 아니라 우선순위와 의미가 재정렬된 것이다
+- Request topic:
+  - 사용자가 원래는 portfolio 검증 기능을 만들 생각이었는데,
+    이후 요청 때문에 방향이 반대로 바뀐 것인지,
+    아니면 지금도 이 개발을 이어가는 것인지 질문함
+- Interpreted goal:
+  - portfolio workflow layer가 폐기된 것인지,
+    아니면 투자 분석으로 확대하지 않도록 범위를 제한한 것인지 명확히 알고 싶음
+- Result:
+  - portfolio workflow 개발 자체는 취소되지 않았다
+  - 바뀐 것은 `지금 바로 portfolio 투자 가능성 분석을 확장한다`는 해석을 멈추고,
+    portfolio workflow를 제품 기능 layer로 유지하되 다음 main implementation 우선순위는 quarterly / alternate cadence productionization으로 돌리는 것이다
+  - 따라서 Phase 22의 산출물은 이후에도 portfolio 저장 / replay / 비교 / 후보 기록 기준으로 재사용된다
+  - 다만 본격적인 portfolio 투자 가능성 검토나 diversified portfolio construction은
+    전략/cadence 기능이 더 성숙한 뒤 별도 phase에서 여는 것이 맞다
