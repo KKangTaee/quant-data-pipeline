@@ -95,7 +95,7 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 
 우선순위는 아래 순서가 더 자연스럽다.
 
-1. `Phase 22` manual QA 후 closeout
+1. `Phase 22` closeout 완료
 2. `Phase 23` quarterly / alternate cadence productionization
 3. `Phase 24` new strategy expansion과 research-to-implementation bridge
 4. `Phase 25` validation / review / paper-readiness 운영 체계 정리
