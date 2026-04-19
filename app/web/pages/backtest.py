@@ -5248,8 +5248,8 @@ def _render_compare_prefill_applied_card(payload: dict[str, Any] | None, source_
     st.markdown("**어디서 확인하면 되나**")
     st.markdown(
         "- 바로 아래 `Strategies`에서 어떤 전략이 선택됐는지 확인\n"
-        "- `Start Date / End Date`에서 기간이 어떻게 채워졌는지 확인\n"
-        "- `Advanced Inputs > Strategy-Specific Advanced Inputs`에서 strategy별 override를 확인"
+        "- `Compare Period & Shared Inputs`에서 기간, timeframe, option이 어떻게 채워졌는지 확인\n"
+        "- `Strategy-Specific Advanced Inputs`에서 strategy별 override를 확인"
     )
     st.info("값이 맞으면 `Run Strategy Comparison`을 눌러 실제 compare를 실행하면 됩니다.")
 
@@ -11549,7 +11549,7 @@ def render_backtest_tab() -> None:
             help="Up to four strategies can be compared at once in the first pass.",
             key="compare_selected_strategies",
         )
-        st.caption("Strategy selection is outside the form so the strategy-specific sections update immediately.")
+        st.caption("Strategy selection updates the strategy-specific sections immediately.")
         if _load_current_candidate_registry_latest():
             st.caption("문서에 정리된 대표 후보를 바로 가져오려면 아래 `Quick Re-entry From Current Candidates`를 펼치면 됩니다.")
             with st.expander("Quick Re-entry From Current Candidates", expanded=False):
@@ -11566,8 +11566,7 @@ def render_backtest_tab() -> None:
         if selected_compare_families:
             st.markdown("#### Strategy Variants")
             st.caption(
-                "Variant 선택은 form 밖에 둡니다. "
-                "그래야 Annual / Quarterly를 바꾸는 즉시 아래 strategy-specific 입력 섹션이 함께 바뀝니다."
+                "Annual / Quarterly를 바꾸면 아래 strategy-specific 입력 섹션이 즉시 함께 바뀝니다."
             )
             variant_cols = st.columns(len(selected_compare_families), gap="large")
             for col, family_name in zip(variant_cols, selected_compare_families):
@@ -11600,17 +11599,28 @@ def render_backtest_tab() -> None:
         compare_gtaa_preset_name: str | None = "GTAA Universe"
         compare_gtaa_tickers = list(GTAA_DEFAULT_TICKERS)
 
-        with st.form("compare_backtests_form", clear_on_submit=False):
-            col1, col2 = st.columns(2)
+        st.markdown("#### Compare Period & Shared Inputs")
+        st.caption(
+            "모든 compare 전략이 함께 사용하는 기간과 실행 옵션입니다. "
+            "`Timeframe`과 `Option`은 특정 전략 전용 설정이 아니므로 날짜 입력과 같은 공용 영역에서 관리합니다."
+        )
+        with st.container():
+            col1, col2, col3, col4 = st.columns(4)
             with col1:
                 compare_start = st.date_input("Start Date", value=date(2016, 1, 1), key="compare_start")
             with col2:
                 compare_end = st.date_input("End Date", value=DEFAULT_BACKTEST_END_DATE, key="compare_end")
-
-            with st.expander("Advanced Inputs", expanded=True):
+            with col3:
                 compare_timeframe = st.selectbox("Timeframe", options=["1d"], index=0, key="compare_timeframe")
+            with col4:
                 compare_option = st.selectbox("Option", options=["month_end"], index=0, key="compare_option")
-                st.markdown("##### Strategy-Specific Advanced Inputs")
+
+            st.markdown("#### Strategy-Specific Advanced Inputs")
+            st.caption(
+                "아래 섹션은 선택된 전략과 variant에 맞춰 다시 구성됩니다. "
+                "Annual / Quarterly를 바꾸면 별도 적용 버튼 없이 이 영역이 즉시 갱신됩니다."
+            )
+            with st.container():
                 if selected_compare_families:
                     st.caption(
                         "Annual / Quarterly variant는 위 `Strategy Variants`에서 선택합니다. "
@@ -12766,7 +12776,11 @@ def render_backtest_tab() -> None:
                                 label_prefix="Strict Quarterly Multi-Factor",
                             )
 
-            compare_submitted = st.form_submit_button("Run Strategy Comparison", use_container_width=True)
+            compare_submitted = st.button(
+                "Run Strategy Comparison",
+                key="compare_run_strategy_comparison",
+                use_container_width=True,
+            )
 
         selected_strategy_execution_names: list[str] = []
         for strategy_name in selected_strategies:

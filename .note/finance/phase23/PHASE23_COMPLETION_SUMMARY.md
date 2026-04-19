@@ -38,6 +38,9 @@
 - 공통 result bundle meta에 `Weighting`, `Rejected Slot Handling` 관련 contract 값이 남도록 수정했다.
 - history record, history payload, saved portfolio strategy override에도 quarterly portfolio handling contract 값이 남도록 보강했다.
 - Compare 화면에서 Annual / Quarterly variant 선택이 즉시 하단 입력 UI를 갱신하도록 variant selector를 form 밖으로 이동했다.
+- Compare 화면의 `Advanced Inputs` form wrapper를 제거하고,
+  `Start Date`, `End Date`, `Timeframe`, `Option`은 `Compare Period & Shared Inputs`로,
+  전략별 옵션은 `Strategy-Specific Advanced Inputs`로 분리했다.
 
 ### 3. representative validation과 checklist handoff
 
@@ -58,11 +61,13 @@
 
 - 아직 Phase 23 manual QA는 완료되지 않았다.
 - 현재 closeout blocker는 사용자가 `PHASE23_TEST_CHECKLIST.md`를 기준으로
-  Compare variant 즉시 갱신, saved replay UI 확인,
+  Compare variant 즉시 갱신, 공용 입력 / 전략별 입력 분리,
+  saved replay UI 확인,
   history load-into-form UI 확인을 완료하는 것이다.
 
 ## closeout 판단
 
 아직 closeout 전이다.
 Phase 23은 manual validation feedback 반영 중이며,
-다음 작업은 실제 UI에서 Compare variant 갱신과 quarterly history / saved replay 경로를 확인하는 것이다.
+다음 작업은 실제 UI에서 Compare variant 갱신, shared-input layout,
+quarterly history / saved replay 경로를 확인하는 것이다.

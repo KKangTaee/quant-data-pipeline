@@ -2028,3 +2028,20 @@ Detailed historical analysis was archived on `2026-04-13`.
     `Quality / Value / Quality + Value` variant selector를 그곳으로 이동했다
   - `Advanced Inputs > Strategy-Specific Advanced Inputs`는 현재 선택된 variant의 세부 입력만 보여주는 영역으로 정리했다
   - Phase 23 checklist의 모호한 문구도 실제 화면 위치 기준으로 수정했다
+
+### 2026-04-19 - Compare 공용 입력과 전략별 입력은 분리해서 보여주는 것이 더 자연스럽다
+- Request topic:
+  - 사용자가 `Strategy Variants`를 form 밖에 둔 방식은 좋지만,
+    `Timeframe`, `Option`, 전략별 세부 입력이 여전히 분산되어 보여 UX가 아쉽다고 지적함
+- Interpreted goal:
+  - 버튼을 추가하지 않고,
+    공용 실행 입력과 전략별 세부 입력을 화면 구조상 명확히 나누어
+    Annual / Quarterly 변경 즉시 하단 옵션이 갱신되게 만들고 싶음
+- Result:
+  - `Start Date`, `End Date`, `Timeframe`, `Option`은 모든 compare 전략이 공유하는 값이므로
+    `Compare Period & Shared Inputs`로 묶는 것이 맞다고 판단했다
+  - 기존 `Advanced Inputs` expander / compare form wrapper는 제거하고,
+    전략별 옵션은 `Strategy-Specific Advanced Inputs` 섹션으로 분리했다
+  - 실제 실행은 `Run Strategy Comparison` 버튼 하나로 유지하고,
+    별도 Apply / Refresh 버튼은 만들지 않았다
+  - Phase 23 checklist와 관련 문서도 새 화면 구조 기준으로 정리했다

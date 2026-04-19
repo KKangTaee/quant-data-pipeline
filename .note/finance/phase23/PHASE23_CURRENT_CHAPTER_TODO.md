@@ -31,6 +31,9 @@
   - result bundle meta, history record, history payload, saved portfolio strategy override가 quarterly portfolio handling contract 값을 보존하는지 확인했다.
 - `completed` compare variant immediate refresh 보강
   - compare family variant 선택을 form 밖으로 이동해 Annual / Quarterly 변경 시 세부 입력 UI가 즉시 갱신되게 했다.
+- `completed` compare 공용 입력 / 전략별 입력 구조 정리
+  - `Start Date`, `End Date`, `Timeframe`, `Option`을 `Compare Period & Shared Inputs`로 모으고,
+    기존 `Advanced Inputs` form wrapper 없이 `Strategy-Specific Advanced Inputs`가 바로 갱신되게 했다.
 - `pending` saved replay UI-level manual 확인
   - saved replay가 같은 contract 값을 유지하는지 실제 UI에서 확인한다.
 
@@ -60,6 +63,6 @@
 
 Phase 23은 quarterly portfolio handling contract first pass, representative DB-backed smoke run,
 history / saved replay contract roundtrip code check,
-compare variant immediate refresh 보강까지 완료했다.
+compare variant immediate refresh와 compare 입력 구조 정리까지 완료했다.
 현재는 사용자의 Phase 23 checklist QA 피드백을 반영하는 중이며,
-다음 확인은 수정된 Compare variant UI와 checklist 문구가 실제 QA에 충분한지 보는 것이다.
+다음 확인은 수정된 Compare variant / shared-input UI와 checklist 문구가 실제 QA에 충분한지 보는 것이다.

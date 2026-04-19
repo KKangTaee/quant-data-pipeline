@@ -156,8 +156,9 @@
     saved portfolio strategy override까지 보존되는지 확인하고 보강한 문서
 - `.note/finance/phase23/PHASE23_COMPARE_VARIANT_IMMEDIATE_REFRESH_FOURTH_WORK_UNIT.md`
   - `Phase 23` 네 번째 작업 단위로,
-    Compare 화면의 Annual / Quarterly variant 선택을 form 밖으로 이동해
-    별도 버튼 없이 strategy-specific advanced inputs가 즉시 갱신되게 한 문서
+    Compare 화면의 Annual / Quarterly variant 선택을 form 밖으로 이동하고,
+    `Compare Period & Shared Inputs`와 `Strategy-Specific Advanced Inputs`로 입력 구조를 나누어
+    별도 버튼 없이 strategy-specific inputs가 즉시 갱신되게 한 문서
 - `.note/finance/phase23/PHASE23_COMPLETION_SUMMARY.md`
   - `Phase 23` closeout 때 무엇이 완료되어야 하는지 미리 정리한 summary 문서
   - 현재는 portfolio handling contract first pass, representative smoke validation,
@@ -169,6 +170,8 @@
 - `.note/finance/phase23/PHASE23_TEST_CHECKLIST.md`
   - `Phase 23` manual QA 때 사용할 checklist
   - quarterly 성과가 좋은지보다, quarterly / alternate cadence 기능이 제품 안에서 다시 찾고 재현 가능한지 확인한다
+  - compare QA는 `Strategy Variants`, `Compare Period & Shared Inputs`,
+    `Strategy-Specific Advanced Inputs`를 실제 화면 위치 기준으로 확인하도록 정리되어 있다
 - `.note/finance/backtest_reports/phase23/README.md`
   - `Phase 23` quarterly / alternate cadence productionization report archive 안내 문서
 - `.note/finance/backtest_reports/phase23/PHASE23_QUARTERLY_CONTRACT_SMOKE_VALIDATION_FIRST_PASS.md`

@@ -430,8 +430,7 @@ Analysis / Presentation
   preset을 바꿀 때 `Selected tickers` preview가 즉시 다시 그려지도록 조정되었다.
 - 같은 GTAA universe selector가 `Compare & Portfolio Builder`에도 확장되어,
   compare에서도 `Preset` / `Manual`을 고를 수 있고,
-  현재는 `Advanced Inputs > Strategy-Specific Advanced Inputs` 안에서
-  해당 전략 블록과 같이 관리되며,
+  현재는 `Strategy-Specific Advanced Inputs`의 해당 전략 블록에서 관리되며,
   `History` / saved portfolio prefill도 같은 universe contract를 복원한다.
 - `Equal Weight`도 compare에서 같은 `Preset` / `Manual` universe selector를 지원하게 되어,
   `Dividend ETFs` preset 또는 직접 입력한 ticker set을 compare 실행 / prefill / saved portfolio 경로에서 일관되게 유지한다.
@@ -581,14 +580,15 @@ Analysis / Presentation
   `Strategy-Specific Advanced Inputs`에서
   family selector와 실제 snapshot 설정이 떨어져 보여
   GTAA처럼 한 섹션으로 읽히지 않는다는 피드백이 나왔다.
-- 그래서 현재는
-  `Quality`, `Value`, `Quality + Value` expander 안에서
-  variant를 먼저 고르고,
-  선택한 variant의 실제 설정이 같은 expander 안에 바로 이어서 보이도록 정리했다.
+- 이후 Phase 23에서 Annual / Quarterly variant 즉시 갱신 문제가 확인되어,
+  현재 compare 화면은 아래 구조로 정리되어 있다.
+  - `Strategies`: compare에 넣을 전략 family 선택
+  - `Strategy Variants`: `Quality / Value / Quality + Value`의 Annual / Quarterly variant 선택
+  - `Compare Period & Shared Inputs`: `Start Date`, `End Date`, `Timeframe`, `Option`
+  - `Strategy-Specific Advanced Inputs`: 선택된 전략과 variant에 맞는 세부 옵션
 - 이 변경으로 compare 화면에서
-  - family를 고른 뒤 다른 위치로 내려가 다시 snapshot을 찾는 흐름이 줄었고
-  - GTAA / Equal Weight / Risk Parity / Dual Momentum처럼
-    한 전략(또는 한 family)을 한 덩어리로 읽는 경험에 더 가까워졌다.
+  - Annual / Quarterly를 바꾸면 별도 Apply 버튼 없이 하단 입력 UI가 즉시 바뀌고
+  - 공용 실행 입력과 전략별 세부 입력을 분리해서 읽을 수 있게 되었다.
 - 이후 QA에서는 strict annual `Real-Money Contract`의
   `Benchmark Contract` 설명이 아직 축약되어 있어서
   `Candidate Universe Equal-Weight`가 무엇인지 바로 이해하기 어렵다는 피드백이 나왔다.
@@ -1181,6 +1181,8 @@ Analysis / Presentation
     quarterly portfolio handling contract 값이 보존되는 것을 확인했다.
   - Compare 화면에서는 `Quality / Value / Quality + Value` family의 Annual / Quarterly variant 선택을 form 밖으로 이동했다.
     - 별도 Apply 버튼 없이 variant 변경 즉시 strategy-specific advanced inputs가 해당 annual/quarterly 경로로 갱신된다.
+    - `Start Date`, `End Date`, `Timeframe`, `Option`은 `Compare Period & Shared Inputs`로 모으고,
+      전략별 세부 옵션은 `Strategy-Specific Advanced Inputs`로 분리했다.
   - compare 기본 preset은
     `US Statement Coverage 100`
     으로 고정되어 quarterly validation 비용을 낮춘다
