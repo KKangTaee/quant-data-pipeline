@@ -1912,3 +1912,18 @@ Detailed historical analysis was archived on `2026-04-13`.
     `pre-live readiness`까지의 1차 로드맵으로 보는 것이 맞다
   - 완성형 프로그램에는 Phase 26 이후로 production hardening, broader strategy library, portfolio/risk analytics,
     data quality monitoring, paper/live operations, user workflow polish 같은 추가 축이 필요할 가능성이 높다
+
+### 2026-04-19 - 방향 변경 전 Phase 22와 Phase 23의 원래 연결 의도를 정리했다
+- Request topic:
+  - 사용자가 방향 변경 전에는 Phase 22를 마친 뒤 Phase 23에서 무엇을 하려 했는지,
+    그리고 Phase 22가 `portfolio-level candidate report`를 통해 포트폴리오 검증 기준을 만들려던 phase가 맞는지 질문함
+- Interpreted goal:
+  - Phase 22가 투자 분석으로 흐른 것인지,
+    아니면 포트폴리오 workflow와 후보 기준을 만들기 위한 개발 검증이었는지 구분하고 싶음
+- Result:
+  - 방향 변경 전 Phase 22의 의도는 `portfolio-level candidate` 기준을 만들고,
+    equal-third baseline / benchmark / guardrail / weight alternative를 통해 포트폴리오 후보를 어떻게 기록하고 비교할지 정하는 것이었다
+  - 방향 변경 전 Phase 23은 이 portfolio baseline을 바탕으로
+    quarterly prototype과 alternate cadence를 practical lane으로 올릴지 검토하는 흐름이었다
+  - 다만 이 연결은 portfolio baseline을 투자 benchmark처럼 읽히게 만들 위험이 있었고,
+    현재는 Phase 22를 portfolio workflow 개발 검증으로 제한하고 Phase 23을 quarterly / alternate cadence 제품 기능화로 재정렬했다
