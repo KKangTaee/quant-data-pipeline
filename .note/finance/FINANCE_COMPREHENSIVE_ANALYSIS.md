@@ -1176,6 +1176,9 @@ Analysis / Presentation
     - smoke 중 공통 result bundle meta에 `weighting_mode`, `rejected_slot_handling_mode`,
       `rejected_slot_fill_enabled`, `partial_cash_retention_enabled`가 빠지는 문제를 발견해 수정했다.
     - 따라서 history / load-into-form 복원에 필요한 portfolio handling contract meta가 result bundle에 남는다.
+  - 추가 code-level roundtrip check에서
+    result bundle meta -> history record -> history payload -> saved portfolio strategy override까지
+    quarterly portfolio handling contract 값이 보존되는 것을 확인했다.
   - compare 기본 preset은
     `US Statement Coverage 100`
     으로 고정되어 quarterly validation 비용을 낮춘다

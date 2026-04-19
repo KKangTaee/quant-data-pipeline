@@ -2001,3 +2001,17 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 공통 bundle builder를 수정해 해당 meta를 보존하도록 했고,
     재실행 결과 세 family 모두 contract meta가 남는 것을 확인했다
   - 이 결과는 투자 분석이 아니라 quarterly 기능의 개발 검증 결과로 기록했다
+
+### 2026-04-19 - Phase 23 manual QA 전 history / saved replay contract roundtrip을 보강했다
+- Request topic:
+  - 사용자가 Phase 23 다음 단계 진행을 요청했고,
+    남은 history / saved replay 흐름을 manual QA 전에 더 안전하게 만들 필요가 있었음
+- Interpreted goal:
+  - quarterly portfolio handling contract가 result bundle에만 남는 것이 아니라
+    history record, history payload, saved portfolio replay override까지 유지되어야 함
+- Result:
+  - `append_backtest_run_history()`가 `weighting_mode`, `rejected_slot_handling_mode`,
+    `rejected_slot_fill_enabled`, `partial_cash_retention_enabled`를 저장하도록 보강했다
+  - `Run Again` / `Load Into Form` payload rebuild와 saved portfolio strategy override에도 같은 값을 연결했다
+  - representative quarterly smoke bundle로 roundtrip을 검증했고,
+    Phase 23을 `manual_validation_ready` 상태로 정리했다

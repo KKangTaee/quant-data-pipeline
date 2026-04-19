@@ -1274,7 +1274,7 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 - 최소 representative smoke rerun과 manual checklist 작성
 
 ### 상태
-- `active / representative_smoke_completed`
+- `manual_validation_ready`
 
 ---
 
@@ -1381,7 +1381,8 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
   `Phase 22`도 portfolio workflow 개발 검증과 manual QA까지 완료되었다.
   현재는 core implementation roadmap으로 돌아가
   `Phase 23` quarterly / alternate cadence productionization을 진행 중이며,
-  quarterly portfolio handling contract first pass와 대표 DB-backed smoke validation까지 완료했다
+  quarterly portfolio handling contract first pass, 대표 DB-backed smoke validation,
+  history / saved replay contract roundtrip code check까지 완료했다
 
 ---
 
@@ -1440,6 +1441,8 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
     UI / payload / compare / history 재진입 흐름에 연결한 first pass까지 완료했다
   - 또한 `AAPL / MSFT / GOOG` representative smoke run으로
     DB-backed runtime 실행과 contract meta 보존을 확인했다
+  - history / saved replay roundtrip도 코드 레벨로 확인되어,
+    현재는 manual checklist QA를 기다리는 상태다
 - `Phase 24`
   - research-to-implementation bridge를 통해 새 전략 family를 추가한다
 - `Phase 25`

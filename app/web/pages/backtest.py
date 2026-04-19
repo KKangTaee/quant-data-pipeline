@@ -5650,6 +5650,14 @@ def _build_history_payload(record: dict[str, Any]) -> dict[str, Any] | None:
         payload["trend_filter_enabled"] = bool(record.get("trend_filter_enabled"))
     if record.get("trend_filter_window") is not None:
         payload["trend_filter_window"] = int(record.get("trend_filter_window") or STRICT_TREND_FILTER_DEFAULT_WINDOW)
+    if record.get("weighting_mode") is not None:
+        payload["weighting_mode"] = str(record.get("weighting_mode") or STRICT_DEFAULT_WEIGHTING_MODE).strip()
+    if record.get("rejected_slot_handling_mode") is not None:
+        payload["rejected_slot_handling_mode"] = str(record.get("rejected_slot_handling_mode") or "").strip()
+    if record.get("rejected_slot_fill_enabled") is not None:
+        payload["rejected_slot_fill_enabled"] = bool(record.get("rejected_slot_fill_enabled"))
+    if record.get("partial_cash_retention_enabled") is not None:
+        payload["partial_cash_retention_enabled"] = bool(record.get("partial_cash_retention_enabled"))
     if record.get("market_regime_enabled") is not None:
         payload["market_regime_enabled"] = bool(record.get("market_regime_enabled"))
     if record.get("market_regime_window") is not None:
@@ -6460,6 +6468,12 @@ def _bundle_to_saved_strategy_override(bundle: dict[str, Any]) -> dict[str, Any]
         override["trend_filter_window"] = int(meta.get("trend_filter_window"))
     if meta.get("weighting_mode") is not None:
         override["weighting_mode"] = meta.get("weighting_mode")
+    if meta.get("rejected_slot_handling_mode") is not None:
+        override["rejected_slot_handling_mode"] = meta.get("rejected_slot_handling_mode")
+    if meta.get("rejected_slot_fill_enabled") is not None:
+        override["rejected_slot_fill_enabled"] = bool(meta.get("rejected_slot_fill_enabled"))
+    if meta.get("partial_cash_retention_enabled") is not None:
+        override["partial_cash_retention_enabled"] = bool(meta.get("partial_cash_retention_enabled"))
     if meta.get("risk_off_mode") is not None:
         override["risk_off_mode"] = meta.get("risk_off_mode")
     if meta.get("defensive_tickers") is not None:
@@ -8846,6 +8860,10 @@ def _render_persistent_backtest_history() -> None:
                     "value_factors": selected_record.get("value_factors"),
                     "trend_filter_enabled": selected_record.get("trend_filter_enabled"),
                     "trend_filter_window": selected_record.get("trend_filter_window"),
+                    "weighting_mode": selected_record.get("weighting_mode"),
+                    "rejected_slot_handling_mode": selected_record.get("rejected_slot_handling_mode"),
+                    "rejected_slot_fill_enabled": selected_record.get("rejected_slot_fill_enabled"),
+                    "partial_cash_retention_enabled": selected_record.get("partial_cash_retention_enabled"),
                     "market_regime_enabled": selected_record.get("market_regime_enabled"),
                     "market_regime_window": selected_record.get("market_regime_window"),
                     "market_regime_benchmark": selected_record.get("market_regime_benchmark"),
@@ -8909,12 +8927,19 @@ def _render_persistent_backtest_history() -> None:
                                 "Rebalance Interval": overrides.get("rebalance_interval"),
                                 "Trend Filter": overrides.get("trend_filter_enabled"),
                                 "Trend Window": overrides.get("trend_filter_window"),
+                                "Weighting": overrides.get("weighting_mode"),
+                                "Rejected Slot Handling": overrides.get("rejected_slot_handling_mode"),
+                                "Slot Fill": overrides.get("rejected_slot_fill_enabled"),
+                                "Cash Retention": overrides.get("partial_cash_retention_enabled"),
                                 "Market Regime": overrides.get("market_regime_enabled"),
                                 "Regime Window": overrides.get("market_regime_window"),
                                 "Regime Benchmark": overrides.get("market_regime_benchmark"),
                             }
                         )
-                    st.caption("Compare 기록은 전략별 override가 context에 저장됩니다. 아래 표에서 trend/regime 설정을 바로 확인할 수 있습니다.")
+                    st.caption(
+                        "Compare 기록은 전략별 override가 context에 저장됩니다. "
+                        "아래 표에서 trend/regime과 portfolio handling contract 설정을 바로 확인할 수 있습니다."
+                    )
                     st.dataframe(pd.DataFrame(override_rows), use_container_width=True, hide_index=True)
             dynamic_universe_preview_rows = context.get("dynamic_universe_preview_rows") or []
             if dynamic_universe_preview_rows:

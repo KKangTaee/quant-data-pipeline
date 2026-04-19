@@ -4,7 +4,7 @@
 
 이 문서는 `Phase 23` 이후 어떤 질문으로 다음 phase를 여는 것이 자연스러운지 미리 정리하는 handoff 문서다.
 
-현재는 Phase 23 representative smoke validation까지 진행된 상태이므로,
+현재는 Phase 23 representative smoke validation과 history / saved replay roundtrip code check까지 진행된 상태이므로,
 최종 handoff가 아니라 남은 UI QA와 다음 phase 방향을 함께 보는 메모로 읽는다.
 
 ## 현재 handoff 상태
@@ -19,6 +19,7 @@ Phase 23이 끝나면 다음이 고정되어 있어야 한다.
 현재까지는 quarterly 3개 family가 non-default portfolio handling contract를 받은 상태로
 실제 DB-backed runtime에서 실행되고,
 result bundle meta에 contract 값이 남는 것까지 확인했다.
+또한 history record, history payload, saved portfolio strategy override까지 같은 contract 값이 보존되는 것을 코드 레벨에서 확인했다.
 
 ## 다음 phase에서 더 중요한 질문
 

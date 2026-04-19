@@ -1339,3 +1339,15 @@ Detailed historical logs were archived on `2026-04-13`.
   - synced Phase 23 TODO, completion summary, checklist, finance analysis, and backtest report index
 - Durable takeaway:
   - quarterly strict family now passes DB-backed smoke validation for portfolio handling contract delivery and meta preservation; remaining Phase 23 validation is UI-level history / saved replay confirmation.
+
+### 2026-04-19
+- Prepared `Phase 23` for manual validation.
+- Changed:
+  - added quarterly portfolio handling contract fields to persisted backtest history records
+  - updated history payload rebuild so `Run Again` and `Load Into Form` preserve `weighting_mode`, `rejected_slot_handling_mode`, and related flags
+  - updated saved portfolio strategy overrides so `Replay Saved Portfolio` preserves quarterly rejected-slot handling semantics
+  - verified result bundle meta -> history record -> history payload -> saved portfolio override roundtrip with a representative quarterly smoke bundle
+  - created `PHASE23_HISTORY_AND_SAVED_REPLAY_CONTRACT_ROUNDTRIP_THIRD_WORK_UNIT.md`
+  - synced Phase 23 TODO, checklist, completion summary, next-phase prep, roadmap, finance analysis, and doc index
+- Durable takeaway:
+  - Phase 23 code-level work is now manual-validation-ready; the remaining gate is user UI QA through `PHASE23_TEST_CHECKLIST.md`.

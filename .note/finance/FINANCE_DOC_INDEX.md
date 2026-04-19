@@ -150,9 +150,14 @@
 - `.note/finance/phase23/PHASE23_QUARTERLY_PORTFOLIO_HANDLING_CONTRACT_PARITY_SECOND_WORK_UNIT.md`
   - `Phase 23` 두 번째 작업 단위로,
     quarterly 3개 family에 `Portfolio Handling & Defensive Rules`를 UI / payload / compare / history 재진입 흐름까지 연결한 구현 기록 문서
+- `.note/finance/phase23/PHASE23_HISTORY_AND_SAVED_REPLAY_CONTRACT_ROUNDTRIP_THIRD_WORK_UNIT.md`
+  - `Phase 23` 세 번째 작업 단위로,
+    quarterly portfolio handling contract 값이 result bundle, history record, history payload,
+    saved portfolio strategy override까지 보존되는지 확인하고 보강한 문서
 - `.note/finance/phase23/PHASE23_COMPLETION_SUMMARY.md`
   - `Phase 23` closeout 때 무엇이 완료되어야 하는지 미리 정리한 summary 문서
-  - 현재는 portfolio handling contract first pass와 representative smoke validation까지 반영되어 있지만 최종 완료 문서는 아니다
+  - 현재는 portfolio handling contract first pass, representative smoke validation,
+    history / saved replay roundtrip code check까지 반영되어 있지만 최종 완료 문서는 아니다
 - `.note/finance/phase23/PHASE23_NEXT_PHASE_PREPARATION.md`
   - `Phase 23` 이후 `Phase 24 New Strategy Expansion`으로 넘어가기 전,
     cadence별 실행 경로가 고정되어야 하는 이유를 정리한 handoff 문서
