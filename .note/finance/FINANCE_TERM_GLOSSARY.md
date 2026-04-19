@@ -145,6 +145,50 @@
 
 ---
 
+## Cadence
+
+### 기본 설명
+백테스트에서 리밸런싱과 factor 계산을 어떤 주기로 할지 정한 실행 리듬이다.
+
+### 왜 사용되는지
+같은 전략이라도 annual, quarterly, monthly처럼 주기가 달라지면
+사용하는 데이터와 리밸런싱 날짜가 달라지고 결과 해석도 달라지기 때문이다.
+
+### 예시 / 필요 상황
+- `Strict Annual`은 연간 재무제표와 연간 리밸런싱 흐름에 가깝다.
+- `Strict Quarterly`는 분기 재무제표와 더 잦은 업데이트를 반영하려는 흐름이다.
+
+---
+
+## Productionization
+
+### 기본 설명
+이미 동작하는 prototype 기능을 사용자가 반복해서 쓸 수 있는 제품 기능으로 다듬는 작업이다.
+
+### 왜 사용되는지
+한 번 실행되는 것과, 나중에 다시 불러오고 비교하고 저장해도 같은 의미로 재현되는 것은 다르기 때문이다.
+
+### 예시 / 필요 상황
+- quarterly strict family가 single strategy에서만 실행되는 수준을 넘어,
+  compare, history, saved replay에서도 설정과 해석이 유지되도록 만드는 작업
+
+---
+
+## Alternate Cadence
+
+### 기본 설명
+annual 또는 quarterly 외에 추가될 수 있는 다른 실행 주기다.
+
+### 왜 사용되는지
+전략마다 가장 자연스러운 데이터 갱신 주기와 리밸런싱 주기가 다를 수 있기 때문이다.
+
+### 예시 / 필요 상황
+- 반기 리밸런싱
+- 월간 리밸런싱
+- annual factor를 쓰되 quarterly로 risk rule만 확인하는 혼합형 실행
+
+---
+
 ## Hardening
 
 ### 기본 설명
