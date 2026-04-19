@@ -2015,3 +2015,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `Run Again` / `Load Into Form` payload rebuild와 saved portfolio strategy override에도 같은 값을 연결했다
   - representative quarterly smoke bundle로 roundtrip을 검증했고,
     Phase 23을 `manual_validation_ready` 상태로 정리했다
+
+### 2026-04-19 - Compare 화면의 Annual / Quarterly variant 변경은 form 밖에서 처리해야 한다
+- Request topic:
+  - 사용자가 Phase 23 checklist QA 중 Compare 화면에서 Annual -> Quarterly variant를 바꿔도
+    아래 advanced option UI가 즉시 바뀌지 않는다고 지적함
+- Interpreted goal:
+  - 버튼을 추가하지 않고, variant 변경 즉시 하단 옵션 UI가 해당 annual/quarterly 경로로 바뀌어야 함
+- Result:
+  - 원인은 variant selectbox가 `st.form()` 안에 있어 Streamlit이 submit 전까지 widget tree를 즉시 재구성하지 않는 구조였다고 판단했다
+  - `Strategy Variants` 섹션을 form 밖에 만들고,
+    `Quality / Value / Quality + Value` variant selector를 그곳으로 이동했다
+  - `Advanced Inputs > Strategy-Specific Advanced Inputs`는 현재 선택된 variant의 세부 입력만 보여주는 영역으로 정리했다
+  - Phase 23 checklist의 모호한 문구도 실제 화면 위치 기준으로 수정했다

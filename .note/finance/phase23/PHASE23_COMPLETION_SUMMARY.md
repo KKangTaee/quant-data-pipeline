@@ -4,12 +4,12 @@
 
 이 문서는 `Phase 23 Quarterly And Alternate Cadence Productionization`이 closeout 단계에 도달했을 때 무엇이 완료되었는지 정리하기 위한 문서다.
 
-현재는 구현과 코드 레벨 검증이 끝났고 manual QA handoff 상태다.
+현재는 구현과 코드 레벨 검증 후 manual QA 피드백을 반영하는 중이다.
 사용자 checklist 완료 전이므로 completion summary는 아직 최종 완료 문서가 아니다.
 
 ## 현재 상태
 
-- `manual_validation_ready`
+- `manual_validation_feedback_in_progress`
 
 ## 이번 phase에서 완료해야 할 것
 
@@ -37,6 +37,7 @@
 - compare form과 history load-into-form 흐름에서 quarterly portfolio handling contract가 복원되도록 연결했다.
 - 공통 result bundle meta에 `Weighting`, `Rejected Slot Handling` 관련 contract 값이 남도록 수정했다.
 - history record, history payload, saved portfolio strategy override에도 quarterly portfolio handling contract 값이 남도록 보강했다.
+- Compare 화면에서 Annual / Quarterly variant 선택이 즉시 하단 입력 UI를 갱신하도록 variant selector를 form 밖으로 이동했다.
 
 ### 3. representative validation과 checklist handoff
 
@@ -57,10 +58,11 @@
 
 - 아직 Phase 23 manual QA는 완료되지 않았다.
 - 현재 closeout blocker는 사용자가 `PHASE23_TEST_CHECKLIST.md`를 기준으로
-  saved replay UI 확인과 history load-into-form UI 확인을 완료하는 것이다.
+  Compare variant 즉시 갱신, saved replay UI 확인,
+  history load-into-form UI 확인을 완료하는 것이다.
 
 ## closeout 판단
 
 아직 closeout 전이다.
-Phase 23은 manual validation ready 상태이며,
-다음 작업은 실제 UI에서 quarterly history / saved replay 경로를 확인하는 것이다.
+Phase 23은 manual validation feedback 반영 중이며,
+다음 작업은 실제 UI에서 Compare variant 갱신과 quarterly history / saved replay 경로를 확인하는 것이다.

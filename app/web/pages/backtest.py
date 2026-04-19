@@ -11555,6 +11555,43 @@ def render_backtest_tab() -> None:
             with st.expander("Quick Re-entry From Current Candidates", expanded=False):
                 _render_current_candidate_bundle_workspace()
 
+        quality_compare_strategy_name: str | None = None
+        value_compare_strategy_name: str | None = None
+        quality_value_compare_strategy_name: str | None = None
+        selected_compare_families = [
+            strategy_name
+            for strategy_name in ["Quality", "Value", "Quality + Value"]
+            if strategy_name in selected_strategies
+        ]
+        if selected_compare_families:
+            st.markdown("#### Strategy Variants")
+            st.caption(
+                "Variant 선택은 form 밖에 둡니다. "
+                "그래야 Annual / Quarterly를 바꾸는 즉시 아래 strategy-specific 입력 섹션이 함께 바뀝니다."
+            )
+            variant_cols = st.columns(len(selected_compare_families), gap="large")
+            for col, family_name in zip(variant_cols, selected_compare_families):
+                with col:
+                    variant_key = _compare_family_variant_session_key(family_name)
+                    if not variant_key:
+                        continue
+                    selected_variant = st.selectbox(
+                        f"{family_name} Variant",
+                        options=family_variant_options(family_name),
+                        key=variant_key,
+                    )
+                    concrete_strategy_name = resolve_concrete_strategy_display_name(
+                        family_name,
+                        selected_variant,
+                    )
+                    st.caption(f"현재 compare 실행 variant: `{concrete_strategy_name}`")
+                    if family_name == "Quality":
+                        quality_compare_strategy_name = concrete_strategy_name
+                    elif family_name == "Value":
+                        value_compare_strategy_name = concrete_strategy_name
+                    elif family_name == "Quality + Value":
+                        quality_value_compare_strategy_name = concrete_strategy_name
+
         compare_eq_universe_mode = "preset"
         compare_eq_preset_name: str | None = "Dividend ETFs"
         compare_eq_tickers = list(EQUAL_WEIGHT_PRESETS["Dividend ETFs"])
@@ -11574,58 +11611,33 @@ def render_backtest_tab() -> None:
                 compare_timeframe = st.selectbox("Timeframe", options=["1d"], index=0, key="compare_timeframe")
                 compare_option = st.selectbox("Option", options=["month_end"], index=0, key="compare_option")
                 st.markdown("##### Strategy-Specific Advanced Inputs")
+                if selected_compare_families:
+                    st.caption(
+                        "Annual / Quarterly variant는 위 `Strategy Variants`에서 선택합니다. "
+                        "이 안쪽은 현재 선택된 variant에 맞는 세부 입력만 보여줍니다."
+                    )
 
                 compare_strategy_overrides: dict[str, dict] = {}
-                quality_compare_strategy_name: str | None = None
-                value_compare_strategy_name: str | None = None
-                quality_value_compare_strategy_name: str | None = None
                 quality_compare_settings_container = None
                 value_compare_settings_container = None
                 quality_value_compare_settings_container = None
 
                 if "Quality" in selected_strategies:
                     with st.expander("Quality", expanded=True):
-                        quality_compare_variant = st.selectbox(
-                            "Variant",
-                            options=family_variant_options("Quality"),
-                            key="compare_quality_variant",
-                        )
-                        quality_compare_strategy_name = resolve_concrete_strategy_display_name(
-                            "Quality",
-                            quality_compare_variant,
-                        )
                         st.caption(f"현재 compare 실행 variant: `{quality_compare_strategy_name}`")
-                        st.caption("선택한 variant의 세부 설정이 바로 아래에 이어집니다.")
+                        st.caption("선택한 variant의 세부 설정이 아래에 이어집니다.")
                         quality_compare_settings_container = st.container()
 
                 if "Value" in selected_strategies:
                     with st.expander("Value", expanded=True):
-                        value_compare_variant = st.selectbox(
-                            "Variant",
-                            options=family_variant_options("Value"),
-                            key="compare_value_variant",
-                        )
-                        value_compare_strategy_name = resolve_concrete_strategy_display_name(
-                            "Value",
-                            value_compare_variant,
-                        )
                         st.caption(f"현재 compare 실행 variant: `{value_compare_strategy_name}`")
-                        st.caption("선택한 variant의 세부 설정이 바로 아래에 이어집니다.")
+                        st.caption("선택한 variant의 세부 설정이 아래에 이어집니다.")
                         value_compare_settings_container = st.container()
 
                 if "Quality + Value" in selected_strategies:
                     with st.expander("Quality + Value", expanded=True):
-                        quality_value_compare_variant = st.selectbox(
-                            "Variant",
-                            options=family_variant_options("Quality + Value"),
-                            key="compare_quality_value_variant",
-                        )
-                        quality_value_compare_strategy_name = resolve_concrete_strategy_display_name(
-                            "Quality + Value",
-                            quality_value_compare_variant,
-                        )
                         st.caption(f"현재 compare 실행 variant: `{quality_value_compare_strategy_name}`")
-                        st.caption("선택한 variant의 세부 설정이 바로 아래에 이어집니다.")
+                        st.caption("선택한 variant의 세부 설정이 아래에 이어집니다.")
                         quality_value_compare_settings_container = st.container()
 
                 if "Equal Weight" in selected_strategies:

@@ -1351,3 +1351,15 @@ Detailed historical logs were archived on `2026-04-13`.
   - synced Phase 23 TODO, checklist, completion summary, next-phase prep, roadmap, finance analysis, and doc index
 - Durable takeaway:
   - Phase 23 code-level work is now manual-validation-ready; the remaining gate is user UI QA through `PHASE23_TEST_CHECKLIST.md`.
+
+### 2026-04-19
+- Refined `Phase 23` compare QA UX after user checklist feedback.
+- Changed:
+  - confirmed the Compare variant refresh issue came from `Variant` selectboxes living inside `st.form()`
+  - moved `Quality / Value / Quality + Value` compare variant selectors outside the form into a dedicated `Strategy Variants` section
+  - kept `Advanced Inputs > Strategy-Specific Advanced Inputs` as the detailed settings area for the currently selected variant
+  - avoided the previously rejected Apply/Refresh button pattern
+  - rewrote unclear Phase 23 checklist items around concrete screen locations: `Data Requirements`, `Statement Shadow Coverage Preview`, `Universe Contract`, and `Strategy Variants`
+  - created `PHASE23_COMPARE_VARIANT_IMMEDIATE_REFRESH_FOURTH_WORK_UNIT.md`
+- Durable takeaway:
+  - Annual / Quarterly changes in Compare should now immediately refresh the lower advanced option UI without extra buttons, and the checklist is more directly testable.

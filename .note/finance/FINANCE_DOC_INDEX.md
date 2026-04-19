@@ -17,7 +17,7 @@
   - 앞으로 `finance` phase test checklist 문서를 만들 때 기본으로 따를 checkbox 중심 템플릿 문서
 - `.note/finance/MASTER_PHASE_ROADMAP.md`
   - 전체 Phase 구조와 상위 진행 방향을 정리한 최상위 로드맵 문서
-  - 최근 refresh 기준으로 `Phase 21 = 완료`, `Phase 22 = manual validation completed`, `Phase 23 = active / representative smoke completed`, `현재 위치`, support track, `Phase 23~25` 흐름까지 다시 정리되어 있다
+  - 최근 refresh 기준으로 `Phase 21 = 완료`, `Phase 22 = manual validation completed`, `Phase 23 = manual validation feedback in progress`, `현재 위치`, support track, `Phase 23~25` 흐름까지 다시 정리되어 있다
   - 또한 `Phase 18 = 진행형`, `Phase 19/20 = 완료`, `Phase 5 first chapter = historical label`이라는 해석도 함께 반영되어 있다
   - roadmap tail도 `현재 위치 = 상태판`, `지금부터의 큰 흐름 = 다음 진행 안내판` 구조로 다시 정리되어 있다
   - 최신 기준으로 이 프로젝트가 투자 분석을 기본으로 하는 것이 아니라
@@ -154,10 +154,15 @@
   - `Phase 23` 세 번째 작업 단위로,
     quarterly portfolio handling contract 값이 result bundle, history record, history payload,
     saved portfolio strategy override까지 보존되는지 확인하고 보강한 문서
+- `.note/finance/phase23/PHASE23_COMPARE_VARIANT_IMMEDIATE_REFRESH_FOURTH_WORK_UNIT.md`
+  - `Phase 23` 네 번째 작업 단위로,
+    Compare 화면의 Annual / Quarterly variant 선택을 form 밖으로 이동해
+    별도 버튼 없이 strategy-specific advanced inputs가 즉시 갱신되게 한 문서
 - `.note/finance/phase23/PHASE23_COMPLETION_SUMMARY.md`
   - `Phase 23` closeout 때 무엇이 완료되어야 하는지 미리 정리한 summary 문서
   - 현재는 portfolio handling contract first pass, representative smoke validation,
-    history / saved replay roundtrip code check까지 반영되어 있지만 최종 완료 문서는 아니다
+    history / saved replay roundtrip code check,
+    compare variant immediate refresh 보강까지 반영되어 있지만 최종 완료 문서는 아니다
 - `.note/finance/phase23/PHASE23_NEXT_PHASE_PREPARATION.md`
   - `Phase 23` 이후 `Phase 24 New Strategy Expansion`으로 넘어가기 전,
     cadence별 실행 경로가 고정되어야 하는 이유를 정리한 handoff 문서

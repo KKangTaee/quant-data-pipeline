@@ -1179,6 +1179,8 @@ Analysis / Presentation
   - 추가 code-level roundtrip check에서
     result bundle meta -> history record -> history payload -> saved portfolio strategy override까지
     quarterly portfolio handling contract 값이 보존되는 것을 확인했다.
+  - Compare 화면에서는 `Quality / Value / Quality + Value` family의 Annual / Quarterly variant 선택을 form 밖으로 이동했다.
+    - 별도 Apply 버튼 없이 variant 변경 즉시 strategy-specific advanced inputs가 해당 annual/quarterly 경로로 갱신된다.
   - compare 기본 preset은
     `US Statement Coverage 100`
     으로 고정되어 quarterly validation 비용을 낮춘다
