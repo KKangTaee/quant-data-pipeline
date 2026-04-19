@@ -8,7 +8,7 @@
 
 ## 현재 상태
 
-- `active / first_work_unit_completed`
+- `active / portfolio_handling_contract_first_pass_completed`
 
 ## 이번 phase에서 완료해야 할 것
 
@@ -29,6 +29,12 @@
 
 - 한 번 실행한 quarterly 결과를 나중에 다시 열어도 설정과 의미가 유지되게 만든다.
 
+현재까지 완료:
+
+- quarterly 3개 family single strategy UI에 `Portfolio Handling & Defensive Rules`를 추가했다.
+- quarterly runtime이 `Weighting`, `Rejected Slot Handling`, `Risk-Off`, `Defensive Tickers` contract 값을 받을 수 있게 했다.
+- compare form과 history load-into-form 흐름에서 quarterly portfolio handling contract가 복원되도록 연결했다.
+
 ### 3. representative validation과 checklist handoff
 
 - 대표 실행 조합으로 기능이 깨지지 않는지 확인하고, 사용자가 직접 검수할 checklist를 남긴다.
@@ -40,9 +46,9 @@
 ## 아직 남아 있는 것
 
 - 아직 Phase 23 구현과 manual QA는 완료되지 않았다.
-- 현재 closeout blocker는 quarterly inventory, UI/payload/replay hardening, representative validation이다.
+- 현재 closeout blocker는 representative quarterly smoke run, saved replay UI 확인, manual validation checklist handoff다.
 
 ## closeout 판단
 
 아직 closeout 전이다.
-Phase 23은 방금 열린 active phase이며, 다음 작업은 quarterly productionization frame을 문서와 코드 기준으로 확정하는 것이다.
+Phase 23은 active phase이며, 다음 작업은 실제 quarterly smoke run과 saved replay 경로 검증이다.

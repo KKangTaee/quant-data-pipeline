@@ -4036,6 +4036,12 @@ def run_value_snapshot_strict_quarterly_prototype_backtest_from_db(
     rebalance_interval: int = 1,
     trend_filter_enabled: bool = False,
     trend_filter_window: int = 200,
+    weighting_mode: str = STRICT_DEFAULT_WEIGHTING_MODE,
+    rejected_slot_handling_mode: str | None = None,
+    rejected_slot_fill_enabled: bool = STRICT_REJECTED_SLOT_FILL_DEFAULT_ENABLED,
+    partial_cash_retention_enabled: bool = STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
+    risk_off_mode: str = STRICT_DEFAULT_RISK_OFF_MODE,
+    defensive_tickers: Sequence[str] | None = None,
     market_regime_enabled: bool = False,
     market_regime_window: int = STRICT_MARKET_REGIME_DEFAULT_WINDOW,
     market_regime_benchmark: str = STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
@@ -4047,6 +4053,14 @@ def run_value_snapshot_strict_quarterly_prototype_backtest_from_db(
 ) -> dict[str, Any]:
     normalized_tickers = _normalize_tickers(tickers)
     _validate_backtest_date_range(start, end)
+    rejected_slot_handling_mode = resolve_strict_rejection_handling_mode(
+        rejected_slot_handling_mode,
+        rejected_slot_fill_enabled=rejected_slot_fill_enabled,
+        partial_cash_retention_enabled=partial_cash_retention_enabled,
+    )
+    rejected_slot_fill_enabled, partial_cash_retention_enabled = strict_rejection_handling_mode_to_flags(
+        rejected_slot_handling_mode
+    )
     universe_input_tickers = normalized_tickers
     if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE:
         universe_input_tickers = _normalize_tickers(dynamic_candidate_tickers or normalized_tickers)
@@ -4086,6 +4100,20 @@ def run_value_snapshot_strict_quarterly_prototype_backtest_from_db(
             end=end,
             timeframe=timeframe,
         )
+    effective_defensive_tickers = (
+        _normalize_tickers(defensive_tickers or STRICT_DEFAULT_DEFENSIVE_TICKERS)
+        if risk_off_mode == STRICT_RISK_OFF_MODE_DEFENSIVE
+        else []
+    )
+    if effective_defensive_tickers:
+        defensive_only = [ticker for ticker in effective_defensive_tickers if ticker not in universe_input_tickers]
+        if defensive_only:
+            _preflight_price_strategy_data(
+                tickers=defensive_only,
+                start=start,
+                end=end,
+                timeframe=timeframe,
+            )
     _preflight_statement_quality_shadow_data(
         tickers=universe_input_tickers,
         end=end,
@@ -4103,6 +4131,12 @@ def run_value_snapshot_strict_quarterly_prototype_backtest_from_db(
         value_factors=normalized_factors,
         top_n=top_n,
         rebalance_interval=rebalance_interval,
+        weighting_mode=weighting_mode,
+        rejected_slot_handling_mode=rejected_slot_handling_mode,
+        rejected_slot_fill_enabled=rejected_slot_fill_enabled,
+        partial_cash_retention_enabled=partial_cash_retention_enabled,
+        risk_off_mode=risk_off_mode,
+        defensive_tickers=effective_defensive_tickers,
         trend_filter_enabled=trend_filter_enabled,
         trend_filter_window=trend_filter_window,
         market_regime_enabled=market_regime_enabled,
@@ -4165,6 +4199,12 @@ def run_value_snapshot_strict_quarterly_prototype_backtest_from_db(
             "value_factors": normalized_factors,
             "trend_filter_enabled": trend_filter_enabled,
             "trend_filter_window": trend_filter_window,
+            "weighting_mode": weighting_mode,
+            "rejected_slot_handling_mode": rejected_slot_handling_mode,
+            "rejected_slot_fill_enabled": rejected_slot_fill_enabled,
+            "partial_cash_retention_enabled": partial_cash_retention_enabled,
+            "risk_off_mode": risk_off_mode,
+            "defensive_tickers": effective_defensive_tickers,
             "market_regime_enabled": market_regime_enabled,
             "market_regime_window": market_regime_window,
             "market_regime_benchmark": market_regime_benchmark,
@@ -4186,12 +4226,28 @@ def run_value_snapshot_strict_quarterly_prototype_backtest_from_db(
     bundle["meta"]["price_freshness"] = price_freshness
     if trend_filter_enabled:
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
-            f"Trend Filter Overlay enabled: month-end selections with `Close < MA{trend_filter_window}` move to cash until the next rebalance."
+            _build_strict_rejected_slot_handling_warning(
+                trend_filter_window=trend_filter_window,
+                rejected_slot_handling_mode=rejected_slot_handling_mode,
+            )
+        ]
+    if weighting_mode == STRICT_WEIGHTING_MODE_RANK_TAPERED:
+        bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
+            "Concentration-Aware Weighting enabled: selected holdings use a mild rank taper instead of pure equal weight."
+        ]
+    if risk_off_mode == STRICT_RISK_OFF_MODE_DEFENSIVE and effective_defensive_tickers:
+        bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
+            "Strict quarterly defensive sleeve contract enabled: full risk-off states "
+            f"rotate into `{', '.join(effective_defensive_tickers)}` instead of staying fully in cash."
         ]
     if market_regime_enabled:
-        bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
-            f"Market Regime Overlay enabled: month-end selections move fully to cash when `{market_regime_benchmark}` closes below `MA{market_regime_window}`."
-        ]
+        regime_warning = (
+            f"Market Regime Overlay enabled: month-end selections rotate into `{', '.join(effective_defensive_tickers)}` "
+            f"when `{market_regime_benchmark}` closes below `MA{market_regime_window}`."
+            if risk_off_mode == STRICT_RISK_OFF_MODE_DEFENSIVE and effective_defensive_tickers
+            else f"Market Regime Overlay enabled: month-end selections move fully to cash when `{market_regime_benchmark}` closes below `MA{market_regime_window}`."
+        )
+        bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [regime_warning]
     if dynamic_universe_snapshot_rows:
         bundle["dynamic_universe_snapshot_rows"] = dynamic_universe_snapshot_rows
     if dynamic_candidate_status_rows:
@@ -4576,6 +4632,12 @@ def run_quality_value_snapshot_strict_quarterly_prototype_backtest_from_db(
     rebalance_interval: int = 1,
     trend_filter_enabled: bool = False,
     trend_filter_window: int = 200,
+    weighting_mode: str = STRICT_DEFAULT_WEIGHTING_MODE,
+    rejected_slot_handling_mode: str | None = None,
+    rejected_slot_fill_enabled: bool = STRICT_REJECTED_SLOT_FILL_DEFAULT_ENABLED,
+    partial_cash_retention_enabled: bool = STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
+    risk_off_mode: str = STRICT_DEFAULT_RISK_OFF_MODE,
+    defensive_tickers: Sequence[str] | None = None,
     market_regime_enabled: bool = False,
     market_regime_window: int = STRICT_MARKET_REGIME_DEFAULT_WINDOW,
     market_regime_benchmark: str = STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
@@ -4587,6 +4649,14 @@ def run_quality_value_snapshot_strict_quarterly_prototype_backtest_from_db(
 ) -> dict[str, Any]:
     normalized_tickers = _normalize_tickers(tickers)
     _validate_backtest_date_range(start, end)
+    rejected_slot_handling_mode = resolve_strict_rejection_handling_mode(
+        rejected_slot_handling_mode,
+        rejected_slot_fill_enabled=rejected_slot_fill_enabled,
+        partial_cash_retention_enabled=partial_cash_retention_enabled,
+    )
+    rejected_slot_fill_enabled, partial_cash_retention_enabled = strict_rejection_handling_mode_to_flags(
+        rejected_slot_handling_mode
+    )
     universe_input_tickers = normalized_tickers
     if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE:
         universe_input_tickers = _normalize_tickers(dynamic_candidate_tickers or normalized_tickers)
@@ -4636,6 +4706,20 @@ def run_quality_value_snapshot_strict_quarterly_prototype_backtest_from_db(
             end=end,
             timeframe=timeframe,
         )
+    effective_defensive_tickers = (
+        _normalize_tickers(defensive_tickers or STRICT_DEFAULT_DEFENSIVE_TICKERS)
+        if risk_off_mode == STRICT_RISK_OFF_MODE_DEFENSIVE
+        else []
+    )
+    if effective_defensive_tickers:
+        defensive_only = [ticker for ticker in effective_defensive_tickers if ticker not in universe_input_tickers]
+        if defensive_only:
+            _preflight_price_strategy_data(
+                tickers=defensive_only,
+                start=start,
+                end=end,
+                timeframe=timeframe,
+            )
     _preflight_statement_quality_shadow_data(
         tickers=universe_input_tickers,
         end=end,
@@ -4654,6 +4738,12 @@ def run_quality_value_snapshot_strict_quarterly_prototype_backtest_from_db(
         value_factors=normalized_value_factors,
         top_n=top_n,
         rebalance_interval=rebalance_interval,
+        weighting_mode=weighting_mode,
+        rejected_slot_handling_mode=rejected_slot_handling_mode,
+        rejected_slot_fill_enabled=rejected_slot_fill_enabled,
+        partial_cash_retention_enabled=partial_cash_retention_enabled,
+        risk_off_mode=risk_off_mode,
+        defensive_tickers=effective_defensive_tickers,
         trend_filter_enabled=trend_filter_enabled,
         trend_filter_window=trend_filter_window,
         market_regime_enabled=market_regime_enabled,
@@ -4717,6 +4807,12 @@ def run_quality_value_snapshot_strict_quarterly_prototype_backtest_from_db(
             "value_factors": normalized_value_factors,
             "trend_filter_enabled": trend_filter_enabled,
             "trend_filter_window": trend_filter_window,
+            "weighting_mode": weighting_mode,
+            "rejected_slot_handling_mode": rejected_slot_handling_mode,
+            "rejected_slot_fill_enabled": rejected_slot_fill_enabled,
+            "partial_cash_retention_enabled": partial_cash_retention_enabled,
+            "risk_off_mode": risk_off_mode,
+            "defensive_tickers": effective_defensive_tickers,
             "market_regime_enabled": market_regime_enabled,
             "market_regime_window": market_regime_window,
             "market_regime_benchmark": market_regime_benchmark,
@@ -4738,12 +4834,28 @@ def run_quality_value_snapshot_strict_quarterly_prototype_backtest_from_db(
     bundle["meta"]["price_freshness"] = price_freshness
     if trend_filter_enabled:
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
-            f"Trend Filter Overlay enabled: month-end selections with `Close < MA{trend_filter_window}` move to cash until the next rebalance."
+            _build_strict_rejected_slot_handling_warning(
+                trend_filter_window=trend_filter_window,
+                rejected_slot_handling_mode=rejected_slot_handling_mode,
+            )
+        ]
+    if weighting_mode == STRICT_WEIGHTING_MODE_RANK_TAPERED:
+        bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
+            "Concentration-Aware Weighting enabled: selected holdings use a mild rank taper instead of pure equal weight."
+        ]
+    if risk_off_mode == STRICT_RISK_OFF_MODE_DEFENSIVE and effective_defensive_tickers:
+        bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
+            "Strict quarterly defensive sleeve contract enabled: full risk-off states "
+            f"rotate into `{', '.join(effective_defensive_tickers)}` instead of staying fully in cash."
         ]
     if market_regime_enabled:
-        bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
-            f"Market Regime Overlay enabled: month-end selections move fully to cash when `{market_regime_benchmark}` closes below `MA{market_regime_window}`."
-        ]
+        regime_warning = (
+            f"Market Regime Overlay enabled: month-end selections rotate into `{', '.join(effective_defensive_tickers)}` "
+            f"when `{market_regime_benchmark}` closes below `MA{market_regime_window}`."
+            if risk_off_mode == STRICT_RISK_OFF_MODE_DEFENSIVE and effective_defensive_tickers
+            else f"Market Regime Overlay enabled: month-end selections move fully to cash when `{market_regime_benchmark}` closes below `MA{market_regime_window}`."
+        )
+        bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [regime_warning]
     if dynamic_universe_snapshot_rows:
         bundle["dynamic_universe_snapshot_rows"] = dynamic_universe_snapshot_rows
     if dynamic_candidate_status_rows:
@@ -4763,6 +4875,12 @@ def run_quality_snapshot_strict_quarterly_prototype_backtest_from_db(
     rebalance_interval: int = 1,
     trend_filter_enabled: bool = False,
     trend_filter_window: int = 200,
+    weighting_mode: str = STRICT_DEFAULT_WEIGHTING_MODE,
+    rejected_slot_handling_mode: str | None = None,
+    rejected_slot_fill_enabled: bool = STRICT_REJECTED_SLOT_FILL_DEFAULT_ENABLED,
+    partial_cash_retention_enabled: bool = STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
+    risk_off_mode: str = STRICT_DEFAULT_RISK_OFF_MODE,
+    defensive_tickers: Sequence[str] | None = None,
     market_regime_enabled: bool = False,
     market_regime_window: int = STRICT_MARKET_REGIME_DEFAULT_WINDOW,
     market_regime_benchmark: str = STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
@@ -4786,6 +4904,12 @@ def run_quality_snapshot_strict_quarterly_prototype_backtest_from_db(
         rebalance_interval=rebalance_interval,
         trend_filter_enabled=trend_filter_enabled,
         trend_filter_window=trend_filter_window,
+        weighting_mode=weighting_mode,
+        rejected_slot_handling_mode=rejected_slot_handling_mode,
+        rejected_slot_fill_enabled=rejected_slot_fill_enabled,
+        partial_cash_retention_enabled=partial_cash_retention_enabled,
+        risk_off_mode=risk_off_mode,
+        defensive_tickers=defensive_tickers,
         market_regime_enabled=market_regime_enabled,
         market_regime_window=market_regime_window,
         market_regime_benchmark=market_regime_benchmark,

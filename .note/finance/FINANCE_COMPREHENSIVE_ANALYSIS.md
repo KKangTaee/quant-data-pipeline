@@ -1150,9 +1150,21 @@ Analysis / Presentation
   - current first pass에서 quarterly family도
     trend filter overlay,
     market regime overlay,
+    portfolio handling contract first pass,
     selection history,
     interpretation
     을 annual strict family와 같은 형태로 지원한다
+  - Phase 23 first implementation에서는 quarterly 3개 family도
+    `Portfolio Handling & Defensive Rules`를 UI / payload / compare / history prefill에 연결했다.
+    - `Weighting Contract`
+    - `Rejected Slot Handling Contract`
+    - `Risk-Off Contract`
+    - `Defensive Sleeve Tickers`
+  - 단, quarterly는 여전히 productionization 중인 path다.
+    - real-money promotion
+    - benchmark contract / liquidity promotion policy
+    - underperformance / drawdown guardrail UI
+    는 아직 annual strict 중심으로 유지한다
   - quarterly family는 이제
     - single strategy
     - compare

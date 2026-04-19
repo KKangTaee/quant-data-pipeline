@@ -638,6 +638,25 @@ def _init_backtest_state() -> None:
         st.session_state["qvqp_end"] = DEFAULT_BACKTEST_END_DATE
     if "qvqp_timeframe" not in st.session_state:
         st.session_state["qvqp_timeframe"] = "1d"
+    for quarterly_prefix in ("qsqp", "vsqp", "qvqp"):
+        if f"{quarterly_prefix}_weighting_mode" not in st.session_state:
+            st.session_state[f"{quarterly_prefix}_weighting_mode"] = _strict_weighting_mode_value_to_label(
+                STRICT_DEFAULT_WEIGHTING_MODE
+            )
+        if f"{quarterly_prefix}_rejected_slot_handling_mode" not in st.session_state:
+            st.session_state[f"{quarterly_prefix}_rejected_slot_handling_mode"] = _strict_rejection_handling_mode_value_to_label(
+                STRICT_DEFAULT_REJECTION_HANDLING_MODE
+            )
+        if f"{quarterly_prefix}_rejected_slot_fill_enabled" not in st.session_state:
+            st.session_state[f"{quarterly_prefix}_rejected_slot_fill_enabled"] = STRICT_REJECTED_SLOT_FILL_DEFAULT_ENABLED
+        if f"{quarterly_prefix}_partial_cash_retention_enabled" not in st.session_state:
+            st.session_state[f"{quarterly_prefix}_partial_cash_retention_enabled"] = STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED
+        if f"{quarterly_prefix}_risk_off_mode" not in st.session_state:
+            st.session_state[f"{quarterly_prefix}_risk_off_mode"] = _strict_risk_off_mode_value_to_label(
+                STRICT_DEFAULT_RISK_OFF_MODE
+            )
+        if f"{quarterly_prefix}_defensive_tickers" not in st.session_state:
+            st.session_state[f"{quarterly_prefix}_defensive_tickers"] = ",".join(STRICT_DEFAULT_DEFENSIVE_TICKERS)
     if "qss_trend_filter_enabled" not in st.session_state:
         st.session_state["qss_trend_filter_enabled"] = STRICT_TREND_FILTER_DEFAULT_ENABLED
     if "qss_trend_filter_window" not in st.session_state:
@@ -1419,6 +1438,14 @@ def _render_strict_portfolio_handling_contracts_intro() -> None:
         "참고로 이 세 contract는 토글형 on/off 기능이 아니라, "
         "백테스트를 돌릴 때 항상 저장되는 기본 처리 규칙입니다. "
         "다만 관련 상황이 실제로 발생할 때만 결과에 눈에 띄는 영향을 줍니다."
+    )
+
+
+def _render_strict_quarterly_productionization_note(*, family_label: str) -> None:
+    st.info(
+        f"Phase 23 기준으로 `{family_label}`는 실행 / compare / history 재현성을 제품 기능 수준으로 끌어올리는 중입니다. "
+        "아직 투자 후보 승격이나 real-money promotion 단계는 아니며, 이번 화면에서는 quarterly cadence와 portfolio handling contract가 "
+        "같은 payload로 저장되고 재실행되는지를 먼저 확인합니다."
     )
 
 
@@ -7634,6 +7661,32 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         )
         st.session_state["qsqp_trend_filter_enabled"] = bool(payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED))
         st.session_state["qsqp_trend_filter_window"] = int(payload.get("trend_filter_window") or STRICT_TREND_FILTER_DEFAULT_WINDOW)
+        st.session_state["qsqp_weighting_mode"] = _strict_weighting_mode_value_to_label(
+            payload.get("weighting_mode") or STRICT_DEFAULT_WEIGHTING_MODE
+        )
+        st.session_state["qsqp_rejected_slot_handling_mode"] = _strict_rejection_handling_mode_value_to_label(
+            resolve_strict_rejection_handling_mode(
+                payload.get("rejected_slot_handling_mode"),
+                rejected_slot_fill_enabled=bool(
+                    payload.get("rejected_slot_fill_enabled", STRICT_REJECTED_SLOT_FILL_DEFAULT_ENABLED)
+                ),
+                partial_cash_retention_enabled=bool(
+                    payload.get("partial_cash_retention_enabled", STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED)
+                ),
+            )
+        )
+        st.session_state["qsqp_rejected_slot_fill_enabled"] = bool(
+            payload.get("rejected_slot_fill_enabled", STRICT_REJECTED_SLOT_FILL_DEFAULT_ENABLED)
+        )
+        st.session_state["qsqp_partial_cash_retention_enabled"] = bool(
+            payload.get("partial_cash_retention_enabled", STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED)
+        )
+        st.session_state["qsqp_risk_off_mode"] = _strict_risk_off_mode_value_to_label(
+            payload.get("risk_off_mode") or STRICT_DEFAULT_RISK_OFF_MODE
+        )
+        st.session_state["qsqp_defensive_tickers"] = ",".join(
+            list(payload.get("defensive_tickers") or STRICT_DEFAULT_DEFENSIVE_TICKERS)
+        )
         st.session_state["qsqp_market_regime_enabled"] = bool(payload.get("market_regime_enabled", STRICT_MARKET_REGIME_DEFAULT_ENABLED))
         st.session_state["qsqp_market_regime_window"] = int(payload.get("market_regime_window") or STRICT_MARKET_REGIME_DEFAULT_WINDOW)
         st.session_state["qsqp_market_regime_benchmark"] = payload.get("market_regime_benchmark") or STRICT_MARKET_REGIME_DEFAULT_BENCHMARK
@@ -7757,6 +7810,32 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         )
         st.session_state["vsqp_trend_filter_enabled"] = bool(payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED))
         st.session_state["vsqp_trend_filter_window"] = int(payload.get("trend_filter_window") or STRICT_TREND_FILTER_DEFAULT_WINDOW)
+        st.session_state["vsqp_weighting_mode"] = _strict_weighting_mode_value_to_label(
+            payload.get("weighting_mode") or STRICT_DEFAULT_WEIGHTING_MODE
+        )
+        st.session_state["vsqp_rejected_slot_handling_mode"] = _strict_rejection_handling_mode_value_to_label(
+            resolve_strict_rejection_handling_mode(
+                payload.get("rejected_slot_handling_mode"),
+                rejected_slot_fill_enabled=bool(
+                    payload.get("rejected_slot_fill_enabled", STRICT_REJECTED_SLOT_FILL_DEFAULT_ENABLED)
+                ),
+                partial_cash_retention_enabled=bool(
+                    payload.get("partial_cash_retention_enabled", STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED)
+                ),
+            )
+        )
+        st.session_state["vsqp_rejected_slot_fill_enabled"] = bool(
+            payload.get("rejected_slot_fill_enabled", STRICT_REJECTED_SLOT_FILL_DEFAULT_ENABLED)
+        )
+        st.session_state["vsqp_partial_cash_retention_enabled"] = bool(
+            payload.get("partial_cash_retention_enabled", STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED)
+        )
+        st.session_state["vsqp_risk_off_mode"] = _strict_risk_off_mode_value_to_label(
+            payload.get("risk_off_mode") or STRICT_DEFAULT_RISK_OFF_MODE
+        )
+        st.session_state["vsqp_defensive_tickers"] = ",".join(
+            list(payload.get("defensive_tickers") or STRICT_DEFAULT_DEFENSIVE_TICKERS)
+        )
         st.session_state["vsqp_market_regime_enabled"] = bool(payload.get("market_regime_enabled", STRICT_MARKET_REGIME_DEFAULT_ENABLED))
         st.session_state["vsqp_market_regime_window"] = int(payload.get("market_regime_window") or STRICT_MARKET_REGIME_DEFAULT_WINDOW)
         st.session_state["vsqp_market_regime_benchmark"] = payload.get("market_regime_benchmark") or STRICT_MARKET_REGIME_DEFAULT_BENCHMARK
@@ -7882,6 +7961,32 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         )
         st.session_state["qvqp_trend_filter_enabled"] = bool(payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED))
         st.session_state["qvqp_trend_filter_window"] = int(payload.get("trend_filter_window") or STRICT_TREND_FILTER_DEFAULT_WINDOW)
+        st.session_state["qvqp_weighting_mode"] = _strict_weighting_mode_value_to_label(
+            payload.get("weighting_mode") or STRICT_DEFAULT_WEIGHTING_MODE
+        )
+        st.session_state["qvqp_rejected_slot_handling_mode"] = _strict_rejection_handling_mode_value_to_label(
+            resolve_strict_rejection_handling_mode(
+                payload.get("rejected_slot_handling_mode"),
+                rejected_slot_fill_enabled=bool(
+                    payload.get("rejected_slot_fill_enabled", STRICT_REJECTED_SLOT_FILL_DEFAULT_ENABLED)
+                ),
+                partial_cash_retention_enabled=bool(
+                    payload.get("partial_cash_retention_enabled", STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED)
+                ),
+            )
+        )
+        st.session_state["qvqp_rejected_slot_fill_enabled"] = bool(
+            payload.get("rejected_slot_fill_enabled", STRICT_REJECTED_SLOT_FILL_DEFAULT_ENABLED)
+        )
+        st.session_state["qvqp_partial_cash_retention_enabled"] = bool(
+            payload.get("partial_cash_retention_enabled", STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED)
+        )
+        st.session_state["qvqp_risk_off_mode"] = _strict_risk_off_mode_value_to_label(
+            payload.get("risk_off_mode") or STRICT_DEFAULT_RISK_OFF_MODE
+        )
+        st.session_state["qvqp_defensive_tickers"] = ",".join(
+            list(payload.get("defensive_tickers") or STRICT_DEFAULT_DEFENSIVE_TICKERS)
+        )
         st.session_state["qvqp_market_regime_enabled"] = bool(payload.get("market_regime_enabled", STRICT_MARKET_REGIME_DEFAULT_ENABLED))
         st.session_state["qvqp_market_regime_window"] = int(payload.get("market_regime_window") or STRICT_MARKET_REGIME_DEFAULT_WINDOW)
         st.session_state["qvqp_market_regime_benchmark"] = payload.get("market_regime_benchmark") or STRICT_MARKET_REGIME_DEFAULT_BENCHMARK
@@ -9052,6 +9157,12 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> bool:
                     rebalance_interval=payload.get("rebalance_interval", 1),
                     trend_filter_enabled=payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED),
                     trend_filter_window=payload.get("trend_filter_window", STRICT_TREND_FILTER_DEFAULT_WINDOW),
+                    weighting_mode=payload.get("weighting_mode", STRICT_DEFAULT_WEIGHTING_MODE),
+                    rejected_slot_handling_mode=payload.get("rejected_slot_handling_mode"),
+                    rejected_slot_fill_enabled=payload.get("rejected_slot_fill_enabled", STRICT_REJECTED_SLOT_FILL_DEFAULT_ENABLED),
+                    partial_cash_retention_enabled=payload.get("partial_cash_retention_enabled", STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED),
+                    risk_off_mode=payload.get("risk_off_mode", STRICT_DEFAULT_RISK_OFF_MODE),
+                    defensive_tickers=payload.get("defensive_tickers", STRICT_DEFAULT_DEFENSIVE_TICKERS),
                     market_regime_enabled=payload.get("market_regime_enabled", STRICT_MARKET_REGIME_DEFAULT_ENABLED),
                     market_regime_window=payload.get("market_regime_window", STRICT_MARKET_REGIME_DEFAULT_WINDOW),
                     market_regime_benchmark=payload.get("market_regime_benchmark", STRICT_MARKET_REGIME_DEFAULT_BENCHMARK),
@@ -9121,6 +9232,12 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> bool:
                     rebalance_interval=payload.get("rebalance_interval", 1),
                     trend_filter_enabled=payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED),
                     trend_filter_window=payload.get("trend_filter_window", STRICT_TREND_FILTER_DEFAULT_WINDOW),
+                    weighting_mode=payload.get("weighting_mode", STRICT_DEFAULT_WEIGHTING_MODE),
+                    rejected_slot_handling_mode=payload.get("rejected_slot_handling_mode"),
+                    rejected_slot_fill_enabled=payload.get("rejected_slot_fill_enabled", STRICT_REJECTED_SLOT_FILL_DEFAULT_ENABLED),
+                    partial_cash_retention_enabled=payload.get("partial_cash_retention_enabled", STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED),
+                    risk_off_mode=payload.get("risk_off_mode", STRICT_DEFAULT_RISK_OFF_MODE),
+                    defensive_tickers=payload.get("defensive_tickers", STRICT_DEFAULT_DEFENSIVE_TICKERS),
                     market_regime_enabled=payload.get("market_regime_enabled", STRICT_MARKET_REGIME_DEFAULT_ENABLED),
                     market_regime_window=payload.get("market_regime_window", STRICT_MARKET_REGIME_DEFAULT_WINDOW),
                     market_regime_benchmark=payload.get("market_regime_benchmark", STRICT_MARKET_REGIME_DEFAULT_BENCHMARK),
@@ -9192,6 +9309,12 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> bool:
                     rebalance_interval=payload.get("rebalance_interval", 1),
                     trend_filter_enabled=payload.get("trend_filter_enabled", STRICT_TREND_FILTER_DEFAULT_ENABLED),
                     trend_filter_window=payload.get("trend_filter_window", STRICT_TREND_FILTER_DEFAULT_WINDOW),
+                    weighting_mode=payload.get("weighting_mode", STRICT_DEFAULT_WEIGHTING_MODE),
+                    rejected_slot_handling_mode=payload.get("rejected_slot_handling_mode"),
+                    rejected_slot_fill_enabled=payload.get("rejected_slot_fill_enabled", STRICT_REJECTED_SLOT_FILL_DEFAULT_ENABLED),
+                    partial_cash_retention_enabled=payload.get("partial_cash_retention_enabled", STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED),
+                    risk_off_mode=payload.get("risk_off_mode", STRICT_DEFAULT_RISK_OFF_MODE),
+                    defensive_tickers=payload.get("defensive_tickers", STRICT_DEFAULT_DEFENSIVE_TICKERS),
                     market_regime_enabled=payload.get("market_regime_enabled", STRICT_MARKET_REGIME_DEFAULT_ENABLED),
                     market_regime_window=payload.get("market_regime_window", STRICT_MARKET_REGIME_DEFAULT_WINDOW),
                     market_regime_benchmark=payload.get("market_regime_benchmark", STRICT_MARKET_REGIME_DEFAULT_BENCHMARK),
@@ -10077,6 +10200,7 @@ def _render_quality_snapshot_strict_annual_form() -> None:
 def _render_quality_snapshot_strict_quarterly_prototype_form() -> None:
     st.markdown("### Quality Snapshot (Strict Quarterly Prototype)")
     st.caption("Research-only quarterly strict quality strategy. This Phase 7 path ranks quarterly statement shadow factors and keeps the top names equally between monthly rebalances.")
+    _render_strict_quarterly_productionization_note(family_label="Quality Snapshot (Strict Quarterly Prototype)")
     _apply_single_strategy_prefill("quality_snapshot_strict_quarterly_prototype")
 
     with st.expander("Data Requirements", expanded=False):
@@ -10186,30 +10310,56 @@ def _render_quality_snapshot_strict_quarterly_prototype_form() -> None:
                 key="qsqp_quality_factors",
                 help="first-pass quarterly prototype도 quality strict와 같은 coverage-first 팩터 조합을 기본값으로 사용합니다.",
             )
-            trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
-            with trend_title_col:
-                st.markdown("##### Trend Filter Overlay")
-            with trend_help_col:
-                _render_trend_filter_help_popover()
-            trend_filter_enabled = st.checkbox(
-                "Enable",
-                value=STRICT_TREND_FILTER_DEFAULT_ENABLED,
-                key="qsqp_trend_filter_enabled",
+            _render_advanced_group_caption(
+                "Phase 23에서는 quarterly도 annual strict처럼 overlay와 portfolio handling contract를 같은 payload에 저장합니다."
             )
-            trend_filter_window = int(
-                st.number_input(
-                    "Trend Filter Window",
-                    min_value=20,
-                    max_value=400,
-                    value=STRICT_TREND_FILTER_DEFAULT_WINDOW,
-                    step=10,
-                    key="qsqp_trend_filter_window",
+            with st.expander("Overlay", expanded=False):
+                _render_strict_overlay_section_intro()
+                trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
+                with trend_title_col:
+                    st.markdown("##### Trend Filter Overlay")
+                with trend_help_col:
+                    _render_trend_filter_help_popover()
+                trend_filter_enabled = st.checkbox(
+                    "Enable",
+                    value=STRICT_TREND_FILTER_DEFAULT_ENABLED,
+                    key="qsqp_trend_filter_enabled",
                 )
-            )
-            market_regime_enabled, market_regime_window, market_regime_benchmark = _render_market_regime_overlay_inputs(
-                key_prefix="qsqp",
-                label_prefix="",
-            )
+                trend_filter_window = int(
+                    st.number_input(
+                        "Trend Filter Window",
+                        min_value=20,
+                        max_value=400,
+                        value=STRICT_TREND_FILTER_DEFAULT_WINDOW,
+                        step=10,
+                        key="qsqp_trend_filter_window",
+                    )
+                )
+                market_regime_enabled, market_regime_window, market_regime_benchmark = _render_market_regime_overlay_inputs(
+                    key_prefix="qsqp",
+                    label_prefix="Strict Quarterly Quality ",
+                )
+            with st.expander("Portfolio Handling & Defensive Rules", expanded=False):
+                _render_strict_portfolio_handling_contracts_intro()
+                weighting_mode = _render_strict_weighting_contract_inputs(
+                    key_prefix="qsqp",
+                    label_prefix="Strict Quarterly Quality",
+                )
+                rejected_slot_handling_mode = _render_strict_rejected_slot_handling_contract_inputs(
+                    key_prefix="qsqp",
+                    label_prefix="Strict Quarterly Quality",
+                )
+                rejected_slot_fill_enabled, partial_cash_retention_enabled = strict_rejection_handling_mode_to_flags(
+                    rejected_slot_handling_mode
+                )
+                risk_off_mode, defensive_tickers = _render_strict_defensive_sleeve_contract_inputs(
+                    key_prefix="qsqp",
+                    label_prefix="Strict Quarterly Quality",
+                )
+                st.caption(
+                    "Phase 23 첫 구현 단위에서는 이 contract들을 quarterly payload와 replay surface에 연결합니다. "
+                    "Real-Money Contract와 Promotion 판단은 아직 annual strict 중심으로 유지합니다."
+                )
 
         submitted = st.form_submit_button("Run Strict Quarterly Quality Prototype", use_container_width=True)
 
@@ -10243,6 +10393,12 @@ def _render_quality_snapshot_strict_quarterly_prototype_form() -> None:
         "quality_factors": quality_factors,
         "trend_filter_enabled": bool(trend_filter_enabled),
         "trend_filter_window": int(trend_filter_window),
+        "weighting_mode": weighting_mode,
+        "rejected_slot_handling_mode": rejected_slot_handling_mode,
+        "rejected_slot_fill_enabled": bool(rejected_slot_fill_enabled),
+        "partial_cash_retention_enabled": bool(partial_cash_retention_enabled),
+        "risk_off_mode": risk_off_mode,
+        "defensive_tickers": defensive_tickers,
         "market_regime_enabled": bool(market_regime_enabled),
         "market_regime_window": int(market_regime_window),
         "market_regime_benchmark": market_regime_benchmark,
@@ -10261,6 +10417,7 @@ def _render_value_snapshot_strict_quarterly_prototype_form() -> None:
     st.caption(
         "Research-only quarterly strict value strategy. This Phase 8 path ranks quarterly statement shadow value factors and holds the cheapest names equally between monthly rebalances."
     )
+    _render_strict_quarterly_productionization_note(family_label="Value Snapshot (Strict Quarterly Prototype)")
     with st.expander("Data Requirements", expanded=False):
         st.markdown(
             "- `Daily Market Update` 또는 OHLCV 수집으로 **가격 데이터**를 먼저 채워야 합니다.\n"
@@ -10369,30 +10526,56 @@ def _render_value_snapshot_strict_quarterly_prototype_form() -> None:
                 key="vsqp_value_factors",
                 help="quarterly prototype도 yield / book-to-market 중심의 coverage-first 기본 조합을 사용합니다.",
             )
-            trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
-            with trend_title_col:
-                st.markdown("##### Trend Filter Overlay")
-            with trend_help_col:
-                _render_trend_filter_help_popover()
-            trend_filter_enabled = st.checkbox(
-                "Enable",
-                value=STRICT_TREND_FILTER_DEFAULT_ENABLED,
-                key="vsqp_trend_filter_enabled",
+            _render_advanced_group_caption(
+                "Phase 23에서는 quarterly도 annual strict처럼 overlay와 portfolio handling contract를 같은 payload에 저장합니다."
             )
-            trend_filter_window = int(
-                st.number_input(
-                    "Trend Filter Window",
-                    min_value=20,
-                    max_value=400,
-                    value=STRICT_TREND_FILTER_DEFAULT_WINDOW,
-                    step=10,
-                    key="vsqp_trend_filter_window",
+            with st.expander("Overlay", expanded=False):
+                _render_strict_overlay_section_intro()
+                trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
+                with trend_title_col:
+                    st.markdown("##### Trend Filter Overlay")
+                with trend_help_col:
+                    _render_trend_filter_help_popover()
+                trend_filter_enabled = st.checkbox(
+                    "Enable",
+                    value=STRICT_TREND_FILTER_DEFAULT_ENABLED,
+                    key="vsqp_trend_filter_enabled",
                 )
-            )
-            market_regime_enabled, market_regime_window, market_regime_benchmark = _render_market_regime_overlay_inputs(
-                key_prefix="vsqp",
-                label_prefix="",
-            )
+                trend_filter_window = int(
+                    st.number_input(
+                        "Trend Filter Window",
+                        min_value=20,
+                        max_value=400,
+                        value=STRICT_TREND_FILTER_DEFAULT_WINDOW,
+                        step=10,
+                        key="vsqp_trend_filter_window",
+                    )
+                )
+                market_regime_enabled, market_regime_window, market_regime_benchmark = _render_market_regime_overlay_inputs(
+                    key_prefix="vsqp",
+                    label_prefix="Strict Quarterly Value ",
+                )
+            with st.expander("Portfolio Handling & Defensive Rules", expanded=False):
+                _render_strict_portfolio_handling_contracts_intro()
+                weighting_mode = _render_strict_weighting_contract_inputs(
+                    key_prefix="vsqp",
+                    label_prefix="Strict Quarterly Value",
+                )
+                rejected_slot_handling_mode = _render_strict_rejected_slot_handling_contract_inputs(
+                    key_prefix="vsqp",
+                    label_prefix="Strict Quarterly Value",
+                )
+                rejected_slot_fill_enabled, partial_cash_retention_enabled = strict_rejection_handling_mode_to_flags(
+                    rejected_slot_handling_mode
+                )
+                risk_off_mode, defensive_tickers = _render_strict_defensive_sleeve_contract_inputs(
+                    key_prefix="vsqp",
+                    label_prefix="Strict Quarterly Value",
+                )
+                st.caption(
+                    "Phase 23 첫 구현 단위에서는 이 contract들을 quarterly payload와 replay surface에 연결합니다. "
+                    "Real-Money Contract와 Promotion 판단은 아직 annual strict 중심으로 유지합니다."
+                )
 
         submitted = st.form_submit_button("Run Strict Quarterly Value Prototype", use_container_width=True)
 
@@ -10427,6 +10610,12 @@ def _render_value_snapshot_strict_quarterly_prototype_form() -> None:
         "value_factors": value_factors,
         "trend_filter_enabled": bool(trend_filter_enabled),
         "trend_filter_window": int(trend_filter_window),
+        "weighting_mode": weighting_mode,
+        "rejected_slot_handling_mode": rejected_slot_handling_mode,
+        "rejected_slot_fill_enabled": bool(rejected_slot_fill_enabled),
+        "partial_cash_retention_enabled": bool(partial_cash_retention_enabled),
+        "risk_off_mode": risk_off_mode,
+        "defensive_tickers": defensive_tickers,
         "market_regime_enabled": bool(market_regime_enabled),
         "market_regime_window": int(market_regime_window),
         "market_regime_benchmark": market_regime_benchmark,
@@ -10710,6 +10899,7 @@ def _render_quality_value_snapshot_strict_quarterly_prototype_form() -> None:
     st.caption(
         "Research-only quarterly strict multi-factor strategy. This Phase 8 path blends quarterly quality and value shadow factors, then holds the combined top names equally between monthly rebalances."
     )
+    _render_strict_quarterly_productionization_note(family_label="Quality + Value Snapshot (Strict Quarterly Prototype)")
     with st.expander("Data Requirements", expanded=False):
         st.markdown(
             "- `Daily Market Update` 또는 OHLCV 수집으로 **가격 데이터**를 먼저 채워야 합니다.\n"
@@ -10823,30 +11013,56 @@ def _render_quality_value_snapshot_strict_quarterly_prototype_form() -> None:
                 default=VALUE_STRICT_DEFAULT_FACTORS,
                 key="qvqp_value_factors",
             )
-            trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
-            with trend_title_col:
-                st.markdown("##### Trend Filter Overlay")
-            with trend_help_col:
-                _render_trend_filter_help_popover()
-            trend_filter_enabled = st.checkbox(
-                "Enable",
-                value=STRICT_TREND_FILTER_DEFAULT_ENABLED,
-                key="qvqp_trend_filter_enabled",
+            _render_advanced_group_caption(
+                "Phase 23에서는 quarterly도 annual strict처럼 overlay와 portfolio handling contract를 같은 payload에 저장합니다."
             )
-            trend_filter_window = int(
-                st.number_input(
-                    "Trend Filter Window",
-                    min_value=20,
-                    max_value=400,
-                    value=STRICT_TREND_FILTER_DEFAULT_WINDOW,
-                    step=10,
-                    key="qvqp_trend_filter_window",
+            with st.expander("Overlay", expanded=False):
+                _render_strict_overlay_section_intro()
+                trend_title_col, trend_help_col = st.columns([0.92, 0.08], gap="small")
+                with trend_title_col:
+                    st.markdown("##### Trend Filter Overlay")
+                with trend_help_col:
+                    _render_trend_filter_help_popover()
+                trend_filter_enabled = st.checkbox(
+                    "Enable",
+                    value=STRICT_TREND_FILTER_DEFAULT_ENABLED,
+                    key="qvqp_trend_filter_enabled",
                 )
-            )
-            market_regime_enabled, market_regime_window, market_regime_benchmark = _render_market_regime_overlay_inputs(
-                key_prefix="qvqp",
-                label_prefix="",
-            )
+                trend_filter_window = int(
+                    st.number_input(
+                        "Trend Filter Window",
+                        min_value=20,
+                        max_value=400,
+                        value=STRICT_TREND_FILTER_DEFAULT_WINDOW,
+                        step=10,
+                        key="qvqp_trend_filter_window",
+                    )
+                )
+                market_regime_enabled, market_regime_window, market_regime_benchmark = _render_market_regime_overlay_inputs(
+                    key_prefix="qvqp",
+                    label_prefix="Strict Quarterly Multi-Factor ",
+                )
+            with st.expander("Portfolio Handling & Defensive Rules", expanded=False):
+                _render_strict_portfolio_handling_contracts_intro()
+                weighting_mode = _render_strict_weighting_contract_inputs(
+                    key_prefix="qvqp",
+                    label_prefix="Strict Quarterly Multi-Factor",
+                )
+                rejected_slot_handling_mode = _render_strict_rejected_slot_handling_contract_inputs(
+                    key_prefix="qvqp",
+                    label_prefix="Strict Quarterly Multi-Factor",
+                )
+                rejected_slot_fill_enabled, partial_cash_retention_enabled = strict_rejection_handling_mode_to_flags(
+                    rejected_slot_handling_mode
+                )
+                risk_off_mode, defensive_tickers = _render_strict_defensive_sleeve_contract_inputs(
+                    key_prefix="qvqp",
+                    label_prefix="Strict Quarterly Multi-Factor",
+                )
+                st.caption(
+                    "Phase 23 첫 구현 단위에서는 이 contract들을 quarterly payload와 replay surface에 연결합니다. "
+                    "Real-Money Contract와 Promotion 판단은 아직 annual strict 중심으로 유지합니다."
+                )
 
         submitted = st.form_submit_button("Run Strict Quarterly Quality + Value Prototype", use_container_width=True)
 
@@ -10884,6 +11100,12 @@ def _render_quality_value_snapshot_strict_quarterly_prototype_form() -> None:
         "value_factors": value_factors,
         "trend_filter_enabled": bool(trend_filter_enabled),
         "trend_filter_window": int(trend_filter_window),
+        "weighting_mode": weighting_mode,
+        "rejected_slot_handling_mode": rejected_slot_handling_mode,
+        "rejected_slot_fill_enabled": bool(rejected_slot_fill_enabled),
+        "partial_cash_retention_enabled": bool(partial_cash_retention_enabled),
+        "risk_off_mode": risk_off_mode,
+        "defensive_tickers": defensive_tickers,
         "market_regime_enabled": bool(market_regime_enabled),
         "market_regime_window": int(market_regime_window),
         "market_regime_benchmark": market_regime_benchmark,
@@ -11907,6 +12129,29 @@ def render_backtest_tab() -> None:
                             key_prefix="compare_qsqp",
                             label_prefix="Strict Quarterly Quality ",
                         )
+                        with st.expander("Portfolio Handling & Defensive Rules", expanded=False):
+                            _render_strict_portfolio_handling_contracts_intro()
+                            compare_strategy_overrides["Quality Snapshot (Strict Quarterly Prototype)"]["rejected_slot_handling_mode"] = _render_strict_rejected_slot_handling_contract_inputs(
+                                key_prefix="compare_qsqp",
+                                label_prefix="Strict Quarterly Quality",
+                            )
+                            (
+                                compare_strategy_overrides["Quality Snapshot (Strict Quarterly Prototype)"]["rejected_slot_fill_enabled"],
+                                compare_strategy_overrides["Quality Snapshot (Strict Quarterly Prototype)"]["partial_cash_retention_enabled"],
+                            ) = strict_rejection_handling_mode_to_flags(
+                                compare_strategy_overrides["Quality Snapshot (Strict Quarterly Prototype)"]["rejected_slot_handling_mode"]
+                            )
+                            compare_strategy_overrides["Quality Snapshot (Strict Quarterly Prototype)"]["weighting_mode"] = _render_strict_weighting_contract_inputs(
+                                key_prefix="compare_qsqp",
+                                label_prefix="Strict Quarterly Quality",
+                            )
+                            (
+                                compare_strategy_overrides["Quality Snapshot (Strict Quarterly Prototype)"]["risk_off_mode"],
+                                compare_strategy_overrides["Quality Snapshot (Strict Quarterly Prototype)"]["defensive_tickers"],
+                            ) = _render_strict_defensive_sleeve_contract_inputs(
+                                key_prefix="compare_qsqp",
+                                label_prefix="Strict Quarterly Quality",
+                            )
 
                 if value_compare_strategy_name == "Value Snapshot (Strict Annual)" and value_compare_settings_container is not None:
                     with value_compare_settings_container:
@@ -12166,6 +12411,29 @@ def render_backtest_tab() -> None:
                             key_prefix="compare_vsqp",
                             label_prefix="Strict Quarterly Value ",
                         )
+                        with st.expander("Portfolio Handling & Defensive Rules", expanded=False):
+                            _render_strict_portfolio_handling_contracts_intro()
+                            compare_strategy_overrides["Value Snapshot (Strict Quarterly Prototype)"]["rejected_slot_handling_mode"] = _render_strict_rejected_slot_handling_contract_inputs(
+                                key_prefix="compare_vsqp",
+                                label_prefix="Strict Quarterly Value",
+                            )
+                            (
+                                compare_strategy_overrides["Value Snapshot (Strict Quarterly Prototype)"]["rejected_slot_fill_enabled"],
+                                compare_strategy_overrides["Value Snapshot (Strict Quarterly Prototype)"]["partial_cash_retention_enabled"],
+                            ) = strict_rejection_handling_mode_to_flags(
+                                compare_strategy_overrides["Value Snapshot (Strict Quarterly Prototype)"]["rejected_slot_handling_mode"]
+                            )
+                            compare_strategy_overrides["Value Snapshot (Strict Quarterly Prototype)"]["weighting_mode"] = _render_strict_weighting_contract_inputs(
+                                key_prefix="compare_vsqp",
+                                label_prefix="Strict Quarterly Value",
+                            )
+                            (
+                                compare_strategy_overrides["Value Snapshot (Strict Quarterly Prototype)"]["risk_off_mode"],
+                                compare_strategy_overrides["Value Snapshot (Strict Quarterly Prototype)"]["defensive_tickers"],
+                            ) = _render_strict_defensive_sleeve_contract_inputs(
+                                key_prefix="compare_vsqp",
+                                label_prefix="Strict Quarterly Value",
+                            )
 
                 if quality_value_compare_strategy_name == "Quality + Value Snapshot (Strict Annual)" and quality_value_compare_settings_container is not None:
                     with quality_value_compare_settings_container:
@@ -12437,6 +12705,29 @@ def render_backtest_tab() -> None:
                             key_prefix="compare_qvqp",
                             label_prefix="Strict Quarterly Multi-Factor ",
                         )
+                        with st.expander("Portfolio Handling & Defensive Rules", expanded=False):
+                            _render_strict_portfolio_handling_contracts_intro()
+                            compare_strategy_overrides["Quality + Value Snapshot (Strict Quarterly Prototype)"]["rejected_slot_handling_mode"] = _render_strict_rejected_slot_handling_contract_inputs(
+                                key_prefix="compare_qvqp",
+                                label_prefix="Strict Quarterly Multi-Factor",
+                            )
+                            (
+                                compare_strategy_overrides["Quality + Value Snapshot (Strict Quarterly Prototype)"]["rejected_slot_fill_enabled"],
+                                compare_strategy_overrides["Quality + Value Snapshot (Strict Quarterly Prototype)"]["partial_cash_retention_enabled"],
+                            ) = strict_rejection_handling_mode_to_flags(
+                                compare_strategy_overrides["Quality + Value Snapshot (Strict Quarterly Prototype)"]["rejected_slot_handling_mode"]
+                            )
+                            compare_strategy_overrides["Quality + Value Snapshot (Strict Quarterly Prototype)"]["weighting_mode"] = _render_strict_weighting_contract_inputs(
+                                key_prefix="compare_qvqp",
+                                label_prefix="Strict Quarterly Multi-Factor",
+                            )
+                            (
+                                compare_strategy_overrides["Quality + Value Snapshot (Strict Quarterly Prototype)"]["risk_off_mode"],
+                                compare_strategy_overrides["Quality + Value Snapshot (Strict Quarterly Prototype)"]["defensive_tickers"],
+                            ) = _render_strict_defensive_sleeve_contract_inputs(
+                                key_prefix="compare_qvqp",
+                                label_prefix="Strict Quarterly Multi-Factor",
+                            )
 
             compare_submitted = st.form_submit_button("Run Strategy Comparison", use_container_width=True)
 

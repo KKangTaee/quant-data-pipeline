@@ -1274,7 +1274,7 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 - 최소 representative smoke rerun과 manual checklist 작성
 
 ### 상태
-- `active / kickoff_in_progress`
+- `active / portfolio_handling_contract_first_pass_completed`
 
 ---
 
@@ -1372,7 +1372,7 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 - `Phase 22`
   - phase complete / manual validation completed
 - `Phase 23`
-  - active / kickoff_in_progress
+  - active / portfolio handling contract first pass completed
 - `Phase 24 ~ 25`
   - proposed
 
@@ -1380,7 +1380,8 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 - current annual strict candidate와 portfolio bridge를 같은 frame에서 다시 본 `Phase 21`은 manual validation까지 완료되었고,
   `Phase 22`도 portfolio workflow 개발 검증과 manual QA까지 완료되었다.
   현재는 core implementation roadmap으로 돌아가
-  `Phase 23` quarterly / alternate cadence productionization을 시작한 상태다
+  `Phase 23` quarterly / alternate cadence productionization을 진행 중이며,
+  quarterly portfolio handling contract first pass까지 완료했다
 
 ---
 
@@ -1435,6 +1436,8 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 - `Phase 23`
   - 현재 active main phase이며,
     quarterly / alternate cadence를 prototype에서 제품 기능으로 올리는 중이다
+  - 현재는 quarterly 3개 family의 portfolio handling contract를
+    UI / payload / compare / history 재진입 흐름에 연결한 first pass까지 완료했다
 - `Phase 24`
   - research-to-implementation bridge를 통해 새 전략 family를 추가한다
 - `Phase 25`

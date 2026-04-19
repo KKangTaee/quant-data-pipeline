@@ -21,6 +21,20 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-04-19 - quarterly first implementation은 real-money promotion이 아니라 portfolio handling contract parity부터 붙이는 것이 맞다
+- Request topic:
+  - Phase 23 실제 작업 진행 요청
+- Interpreted goal:
+  - annual strict와 quarterly strict 사이에서 제품 기능으로 먼저 맞춰야 할 gap을 줄이기
+- Result:
+  - quarterly runner와 sample layer는 이미 strict statement shadow 실행에서 weighting / rejected-slot / risk-off 계열 contract를 처리할 수 있었다
+  - 반면 quarterly single / compare UI와 payload에는 해당 contract surface가 충분히 노출되지 않았다
+  - 따라서 첫 구현 단위는 real-money promotion이나 guardrail을 붙이는 것이 아니라
+    `Portfolio Handling & Defensive Rules`를 quarterly 3개 family에 연결하는 것으로 잡았다
+  - 결과적으로 quarterly는 아직 research-only / productionization 중인 path로 유지하되,
+    `Weighting`, `Rejected Slot Handling`, `Risk-Off`, `Defensive Tickers` 값은 UI / payload / compare / history 재진입에서 유지되게 했다
+  - 다음 판단 지점은 representative quarterly smoke run과 saved replay UI 확인이다
+
 ### 2026-04-19 - Phase 23은 quarterly 성과 분석이 아니라 cadence 실행 경로를 제품 기능으로 올리는 phase다
 - Request topic:
   - Phase 22 checklist 완료 후 다음 단계를 진행해 달라는 요청

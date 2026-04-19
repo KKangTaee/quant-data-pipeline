@@ -22,6 +22,18 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-04-19
+- Continued Phase 23 implementation with the first quarterly contract parity pass.
+- Implemented:
+  - quarterly single-strategy UI now shows `Portfolio Handling & Defensive Rules`
+  - quarterly payloads now carry weighting, rejected-slot handling, risk-off, and defensive ticker contract values
+  - quarterly compare forms now expose the same portfolio handling contract controls
+  - quarterly history load-into-form restores the same contract values
+  - quarterly runtime wrappers accept and pass these contracts to the DB-backed strict statement shadow execution path
+- Validation:
+  - `python3 -m py_compile app/web/pages/backtest.py app/web/runtime/backtest.py finance/sample.py`
+  - `.venv` import/signature smoke for the three quarterly strict prototype runners
+
+### 2026-04-19
 - Opened `Phase 23 Quarterly And Alternate Cadence Productionization`.
 - Created and rewrote the Phase 23 plan / TODO / checklist / completion / next-phase documents so the phase is clearly framed as product development, not investment analysis.
 - Added the first work-unit document:
