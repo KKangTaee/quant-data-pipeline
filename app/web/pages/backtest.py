@@ -11563,33 +11563,6 @@ def render_backtest_tab() -> None:
             for strategy_name in ["Quality", "Value", "Quality + Value"]
             if strategy_name in selected_strategies
         ]
-        if selected_compare_families:
-            st.markdown("#### Strategy Variants")
-            st.caption(
-                "Annual / Quarterly를 바꾸면 아래 strategy-specific 입력 섹션이 즉시 함께 바뀝니다."
-            )
-            variant_cols = st.columns(len(selected_compare_families), gap="large")
-            for col, family_name in zip(variant_cols, selected_compare_families):
-                with col:
-                    variant_key = _compare_family_variant_session_key(family_name)
-                    if not variant_key:
-                        continue
-                    selected_variant = st.selectbox(
-                        f"{family_name} Variant",
-                        options=family_variant_options(family_name),
-                        key=variant_key,
-                    )
-                    concrete_strategy_name = resolve_concrete_strategy_display_name(
-                        family_name,
-                        selected_variant,
-                    )
-                    st.caption(f"현재 compare 실행 variant: `{concrete_strategy_name}`")
-                    if family_name == "Quality":
-                        quality_compare_strategy_name = concrete_strategy_name
-                    elif family_name == "Value":
-                        value_compare_strategy_name = concrete_strategy_name
-                    elif family_name == "Quality + Value":
-                        quality_value_compare_strategy_name = concrete_strategy_name
 
         compare_eq_universe_mode = "preset"
         compare_eq_preset_name: str | None = "Dividend ETFs"
@@ -11623,8 +11596,8 @@ def render_backtest_tab() -> None:
             with st.container():
                 if selected_compare_families:
                     st.caption(
-                        "Annual / Quarterly variant는 위 `Strategy Variants`에서 선택합니다. "
-                        "이 안쪽은 현재 선택된 variant에 맞는 세부 입력만 보여줍니다."
+                        "Annual / Quarterly variant는 각 전략 박스 안에서 선택합니다. "
+                        "선택한 variant에 맞는 세부 입력이 같은 박스 안에 이어집니다."
                     )
 
                 compare_strategy_overrides: dict[str, dict] = {}
@@ -11633,25 +11606,62 @@ def render_backtest_tab() -> None:
                 quality_value_compare_settings_container = None
 
                 if "Quality" in selected_strategies:
-                    with st.expander("Quality", expanded=True):
+                    with st.container(border=True):
+                        st.markdown("##### Quality")
+                        quality_variant_key = _compare_family_variant_session_key("Quality")
+                        if quality_variant_key:
+                            quality_selected_variant = st.selectbox(
+                                "Quality Variant",
+                                options=family_variant_options("Quality"),
+                                key=quality_variant_key,
+                            )
+                            quality_compare_strategy_name = resolve_concrete_strategy_display_name(
+                                "Quality",
+                                quality_selected_variant,
+                            )
                         st.caption(f"현재 compare 실행 variant: `{quality_compare_strategy_name}`")
                         st.caption("선택한 variant의 세부 설정이 아래에 이어집니다.")
                         quality_compare_settings_container = st.container()
 
                 if "Value" in selected_strategies:
-                    with st.expander("Value", expanded=True):
+                    with st.container(border=True):
+                        st.markdown("##### Value")
+                        value_variant_key = _compare_family_variant_session_key("Value")
+                        if value_variant_key:
+                            value_selected_variant = st.selectbox(
+                                "Value Variant",
+                                options=family_variant_options("Value"),
+                                key=value_variant_key,
+                            )
+                            value_compare_strategy_name = resolve_concrete_strategy_display_name(
+                                "Value",
+                                value_selected_variant,
+                            )
                         st.caption(f"현재 compare 실행 variant: `{value_compare_strategy_name}`")
                         st.caption("선택한 variant의 세부 설정이 아래에 이어집니다.")
                         value_compare_settings_container = st.container()
 
                 if "Quality + Value" in selected_strategies:
-                    with st.expander("Quality + Value", expanded=True):
+                    with st.container(border=True):
+                        st.markdown("##### Quality + Value")
+                        quality_value_variant_key = _compare_family_variant_session_key("Quality + Value")
+                        if quality_value_variant_key:
+                            quality_value_selected_variant = st.selectbox(
+                                "Quality + Value Variant",
+                                options=family_variant_options("Quality + Value"),
+                                key=quality_value_variant_key,
+                            )
+                            quality_value_compare_strategy_name = resolve_concrete_strategy_display_name(
+                                "Quality + Value",
+                                quality_value_selected_variant,
+                            )
                         st.caption(f"현재 compare 실행 variant: `{quality_value_compare_strategy_name}`")
                         st.caption("선택한 variant의 세부 설정이 아래에 이어집니다.")
                         quality_value_compare_settings_container = st.container()
 
                 if "Equal Weight" in selected_strategies:
-                    with st.expander("Equal Weight", expanded=True):
+                    with st.container(border=True):
+                        st.markdown("##### Equal Weight")
                         (
                             compare_eq_universe_mode,
                             compare_eq_preset_name,
@@ -11679,7 +11689,8 @@ def render_backtest_tab() -> None:
                         }
 
                 if "GTAA" in selected_strategies:
-                    with st.expander("GTAA", expanded=True):
+                    with st.container(border=True):
+                        st.markdown("##### GTAA")
                         (
                             compare_gtaa_universe_mode,
                             compare_gtaa_preset_name,
@@ -11772,7 +11783,8 @@ def render_backtest_tab() -> None:
                         compare_strategy_overrides["GTAA"]["drawdown_guardrail_gap_threshold"] = float(drawdown_guardrail_gap_threshold)
 
                 if "Risk Parity Trend" in selected_strategies:
-                    with st.expander("Risk Parity Trend", expanded=False):
+                    with st.container(border=True):
+                        st.markdown("##### Risk Parity Trend")
                         _render_advanced_group_caption("핵심 실행 계약은 위에 두고, 실전 계약과 guardrail은 아래 그룹으로 분리했습니다.")
                         compare_strategy_overrides["Risk Parity Trend"] = {
                             "rebalance_interval": int(
@@ -11833,7 +11845,8 @@ def render_backtest_tab() -> None:
                         compare_strategy_overrides["Risk Parity Trend"]["drawdown_guardrail_gap_threshold"] = float(drawdown_guardrail_gap_threshold)
 
                 if "Dual Momentum" in selected_strategies:
-                    with st.expander("Dual Momentum", expanded=False):
+                    with st.container(border=True):
+                        st.markdown("##### Dual Momentum")
                         _render_advanced_group_caption("핵심 실행 계약은 위에 두고, 실전 계약과 guardrail은 아래 그룹으로 분리했습니다.")
                         compare_strategy_overrides["Dual Momentum"] = {
                             "top": int(

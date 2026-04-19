@@ -21,10 +21,12 @@ Phase 23이 끝나면 다음이 고정되어 있어야 한다.
 result bundle meta에 contract 값이 남는 것까지 확인했다.
 또한 history record, history payload, saved portfolio strategy override까지 같은 contract 값이 보존되는 것을 코드 레벨에서 확인했다.
 manual QA 중에는 compare 화면의 Annual / Quarterly variant 변경이 즉시 하단 입력 UI를 바꾸지 않는 문제가 발견되어,
-variant selector를 form 밖으로 이동하는 방식으로 보강했다.
+variant selector를 strategy box 안에서 즉시 갱신되게 보강했다.
 이후 공용 입력과 전략별 입력이 분산되어 보인다는 QA 피드백을 반영해,
 `Start Date`, `End Date`, `Timeframe`, `Option`은 `Compare Period & Shared Inputs`로 모으고,
-전략별 세부 옵션은 `Strategy-Specific Advanced Inputs`로 분리했다.
+전략별 세부 옵션은 `Strategy-Specific Advanced Inputs` 아래의 border box로 분리했다.
+`Quality`, `Value`, `Quality + Value`의 Annual / Quarterly variant selector도
+각 전략 box 안에 넣어 variant 선택과 세부 입력이 같은 덩어리로 읽히게 했다.
 따라서 다음 phase에서 새 전략을 붙일 때도 compare 화면은
 공용 실행 입력과 전략 전용 입력을 나누는 구조를 기본으로 삼는 것이 맞다.
 

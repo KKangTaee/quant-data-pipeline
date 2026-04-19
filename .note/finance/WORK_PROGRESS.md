@@ -1369,8 +1369,9 @@ Detailed historical logs were archived on `2026-04-13`.
 - Changed:
   - removed the compare `st.form()` wrapper and `Advanced Inputs` expander from the compare configuration area
   - moved `Start Date`, `End Date`, `Timeframe`, and `Option` into a shared `Compare Period & Shared Inputs` section
-  - kept strategy-specific options in a separate `Strategy-Specific Advanced Inputs` section that updates immediately after Annual / Quarterly variant changes
+  - moved Annual / Quarterly variant selectors into each `Quality / Value / Quality + Value` strategy box
+  - replaced strategy-level expanders with border boxes while keeping lower `Overlay`, `Portfolio Handling`, real-money, and guardrail expanders intact
   - kept a single `Run Strategy Comparison` action button and avoided the rejected Apply / Refresh pattern
   - synced the Phase 23 checklist, fourth work-unit note, TODO board, completion summary, next-phase prep, roadmap, doc index, finance analysis, and question log
 - Durable takeaway:
-  - Compare QA should now read as common execution inputs first, then per-strategy options, with no delayed form refresh behavior.
+  - Compare QA should now read as common execution inputs first, then one visible box per selected strategy, with variant selection and settings in the same box.

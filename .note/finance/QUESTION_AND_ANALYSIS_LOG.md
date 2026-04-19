@@ -2040,8 +2040,11 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Result:
   - `Start Date`, `End Date`, `Timeframe`, `Option`은 모든 compare 전략이 공유하는 값이므로
     `Compare Period & Shared Inputs`로 묶는 것이 맞다고 판단했다
-  - 기존 `Advanced Inputs` expander / compare form wrapper는 제거하고,
-    전략별 옵션은 `Strategy-Specific Advanced Inputs` 섹션으로 분리했다
+  - 기존 `Advanced Inputs` expander / compare form wrapper는 제거했다
+  - `Strategy Variants` 별도 상단 섹션도 제거하고,
+    `Quality / Value / Quality + Value` variant selector를 각 strategy box 안으로 이동했다
+  - strategy-level expander는 border box로 바꾸고,
+    하위 `Overlay`, `Portfolio Handling`, real-money, guardrail 그룹은 기존 접기/펼치기로 유지했다
   - 실제 실행은 `Run Strategy Comparison` 버튼 하나로 유지하고,
     별도 Apply / Refresh 버튼은 만들지 않았다
   - Phase 23 checklist와 관련 문서도 새 화면 구조 기준으로 정리했다

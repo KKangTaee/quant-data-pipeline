@@ -1384,7 +1384,7 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
   `Phase 23` quarterly / alternate cadence productionization을 진행 중이며,
   quarterly portfolio handling contract first pass, 대표 DB-backed smoke validation,
   history / saved replay contract roundtrip code check,
-  compare variant immediate refresh와 shared-input layout 보강까지 완료했다
+  compare variant immediate refresh와 strategy box / shared-input layout 보강까지 완료했다
 
 ---
 
@@ -1445,11 +1445,12 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
     DB-backed runtime 실행과 contract meta 보존을 확인했다
   - history / saved replay roundtrip도 코드 레벨로 확인되어,
     현재는 manual checklist QA 피드백을 반영하는 중이다
-  - Compare 화면에서는 variant selector를 form 밖으로 빼서,
-    Annual / Quarterly 변경 시 하단 입력 UI가 즉시 갱신되게 보강했다
+  - Compare 화면에서는 family별 Annual / Quarterly variant selector를
+    각 strategy box 안에 배치해,
+    variant 변경 시 같은 박스 안의 하단 입력 UI가 즉시 갱신되게 보강했다
   - 이어서 `Start Date`, `End Date`, `Timeframe`, `Option`을
     `Compare Period & Shared Inputs`로 묶고,
-    전략별 세부 옵션은 `Strategy-Specific Advanced Inputs`로 분리했다
+    전략별 세부 옵션은 `Strategy-Specific Advanced Inputs` 아래의 border box로 분리했다
 - `Phase 24`
   - research-to-implementation bridge를 통해 새 전략 family를 추가한다
 - `Phase 25`
