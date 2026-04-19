@@ -38,7 +38,7 @@
     `Overlay`, `Portfolio Handling & Defensive Rules`, `Real-Money Contract`, `Guardrails` 같은 하위 그룹은 기존 접기/펼치기로 유지했다.
 - `completed` quarterly compare overlay / history QA wording cleanup
   - quarterly prototype compare 경로에서도 annual strict처럼 `Overlay` 하위 접기 그룹 안에 trend filter와 market regime 설정이 들어가게 맞췄다.
-  - `Back To History` shortcut이 더 확실히 History panel로 돌아가도록 active panel state도 직접 갱신하게 했다.
+  - `Back To History` shortcut이 History panel로 돌아가도록 radio widget 렌더 전에 panel request를 세팅하는 callback 방식으로 보강했다.
   - checklist section 3의 saved compare, saved portfolio, history run, load-into-form, run-again, saved replay 확인 위치를 다시 풀어 썼다.
 - `pending` saved replay UI-level manual 확인
   - saved replay가 같은 contract 값을 유지하는지 실제 UI에서 확인한다.

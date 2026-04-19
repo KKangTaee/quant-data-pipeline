@@ -2060,4 +2060,5 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `Portfolio Handling & Defensive Rules`는 quarterly rejected-slot handling, weighting, risk-off / defensive tickers를 확인하는 곳으로 설명했다
   - `Backtest > History`의 `Run Again` / `Load Into Form`과
     `Saved Portfolios`의 `Replay Saved Portfolio`는 서로 다른 흐름이라고 checklist에 분리해 적었다
-  - `Load Into Form` 후 `Back To History`가 더 확실히 History panel로 돌아가도록 active panel state를 직접 설정했다
+  - `Load Into Form` 후 `Back To History`가 더 확실히 History panel로 돌아가도록
+    radio widget 렌더 전에 panel request를 세팅하는 callback 방식으로 수정했다

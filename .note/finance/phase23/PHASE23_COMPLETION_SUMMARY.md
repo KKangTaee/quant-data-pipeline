@@ -45,7 +45,7 @@
   `Overlay`, `Portfolio Handling & Defensive Rules`, `Real-Money Contract`, `Guardrails` 같은 하위 그룹은 기존 접기/펼치기로 유지했다.
 - quarterly prototype compare 경로에서도 `Overlay`가 하위 접기 그룹으로 보이도록 맞췄다.
   따라서 quarterly의 trend filter와 market regime 설정도 annual strict와 같은 화면 구조로 읽힌다.
-- `Load Into Form` 후 표시되는 `Back To History` shortcut이 더 확실히 `History` panel로 돌아가도록 보강했다.
+- `Load Into Form` 후 표시되는 `Back To History` shortcut은 radio widget 렌더 전에 panel request를 세팅하는 callback 방식으로 보강했다.
 
 ### 3. representative validation과 checklist handoff
 

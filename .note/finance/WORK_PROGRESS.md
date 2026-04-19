@@ -1381,7 +1381,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - Changed:
   - wrapped strict quarterly compare `Trend Filter` and `Market Regime` inputs inside the same `Overlay` expander used by annual strict compare paths
   - kept `Portfolio Handling & Defensive Rules` as the adjacent lower expander for quarterly rejected-slot, weighting, and risk-off settings
-  - made `Back To History` after `Load Into Form` set the active panel directly before rerun
+  - changed `Back To History` after `Load Into Form` to use a panel-switch callback so the History panel is requested before the radio widget renders
   - rewrote Phase 23 checklist section 3 to explain where to verify saved compare context, saved portfolio context, history run, load-into-form, run-again, and replay saved portfolio
 - Durable takeaway:
   - Quarterly compare QA now has the same top-level section rhythm as annual strict, and the checklist distinguishes history rerun from saved portfolio replay.

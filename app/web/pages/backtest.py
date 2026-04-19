@@ -919,6 +919,12 @@ def _init_backtest_state() -> None:
         st.session_state["compare_qvss_value_factors"] = VALUE_STRICT_DEFAULT_FACTORS.copy()
 
 
+def _request_backtest_panel(panel: str) -> None:
+    if panel not in {"Single Strategy", "Compare & Portfolio Builder", "History"}:
+        return
+    st.session_state.backtest_requested_panel = panel
+
+
 def _parse_manual_tickers(text: str) -> list[str]:
     seen: set[str] = set()
     tickers: list[str] = []
@@ -11463,10 +11469,13 @@ def render_backtest_tab() -> None:
             )
             prefill_action_cols = st.columns([0.22, 0.78], gap="small")
             with prefill_action_cols[0]:
-                if st.button("Back To History", key="backtest_prefill_back_to_history", use_container_width=True):
-                    st.session_state.backtest_active_panel = "History"
-                    st.session_state.backtest_requested_panel = "History"
-                    st.rerun()
+                st.button(
+                    "Back To History",
+                    key="backtest_prefill_back_to_history",
+                    on_click=_request_backtest_panel,
+                    args=("History",),
+                    use_container_width=True,
+                )
             st.session_state.backtest_prefill_notice = None
 
         pending_strategy_choice = st.session_state.get("backtest_prefill_strategy_choice")
