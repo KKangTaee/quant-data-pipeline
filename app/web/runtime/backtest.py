@@ -2916,10 +2916,10 @@ def run_global_relative_strength_backtest_from_db(
         if len(malformed_price_rows) > 5:
             more = f" 외 {len(malformed_price_rows) - 5}개 티커"
         warnings.append(
-            "가격 데이터에 결측 행이 있어 이동평균 계산 전 제외했습니다: "
+            "가격 데이터에 결측 행이 있어 공통 리밸런싱 날짜가 보수적으로 줄어들 수 있습니다: "
             + "; ".join(malformed_preview)
             + more
-            + ". 가격을 임의로 채운 것은 아니며, 원본 DB 가격 데이터를 점검하는 것이 좋습니다."
+            + ". 값을 임의로 채우거나 보정하지 않았으므로, 원본 DB 가격 데이터를 점검하거나 재수집하는 것이 좋습니다."
         )
 
     bundle = build_backtest_result_bundle(

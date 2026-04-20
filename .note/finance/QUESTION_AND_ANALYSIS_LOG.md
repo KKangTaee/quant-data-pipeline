@@ -21,6 +21,17 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-04-20 - 결측 가격 행은 임의 보정하지 않고 공통 날짜를 보수적으로 제한하기로 했다
+- Request topic:
+  - 사용자가 `IWM` 결측 행이 있는 상황에서 4월까지 계산하는 것이 아니라, 결측 문제를 명시하면서 2월에서 끊는 것이 맞지 않느냐고 질문함
+- Interpreted goal:
+  - 데이터 품질 문제가 있는 티커를 사용자가 놓치지 않도록, 백테스트 결과 구간을 보수적으로 유지하고 warning/meta로 문제를 노출하고 싶음
+- Result:
+  - 사용자의 판단이 맞다고 정리했다
+  - `add_ma`에서 결측 가격 행을 조용히 제거하던 변경을 되돌리고, 원본 결측이 이동평균/공통 리밸런싱 날짜에 영향을 주게 둔다
+  - 대신 `malformed_price_rows` metadata와 한국어 주의사항으로 `IWM 1건(2026-03-17)` 같은 원본 가격 품질 문제를 명시한다
+  - 따라서 원본 DB 가격 행이 재수집/수정되기 전까지 같은 실행은 `2026-02-27`에서 보수적으로 멈추는 것이 올바른 동작이다
+
 ### 2026-04-19 - quarterly first implementation은 real-money promotion이 아니라 portfolio handling contract parity부터 붙이는 것이 맞다
 - Request topic:
   - Phase 23 실제 작업 진행 요청

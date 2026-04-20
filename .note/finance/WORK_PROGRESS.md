@@ -22,6 +22,17 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-04-20
+- Corrected the `Global Relative Strength` malformed price-row handling policy after user QA feedback.
+- Decision:
+  - do not silently remove or repair a malformed price row to extend the backtest result window
+  - keep the conservative common rebalance-date behavior so `IWM`'s `2026-03-17` missing close naturally limits the run to the last clean common rebalance date
+  - surface the issue through `malformed_price_rows` metadata and a Korean warning so the operator can inspect or re-collect the source price row
+- Validation expectation:
+  - the same `2016-01-01 -> 2026-04-20` default run should end at `2026-02-27` until the malformed `IWM` source row is fixed or re-collected
+- Documentation hygiene:
+  - reviewed index impact; no new durable document was added, so `FINANCE_DOC_INDEX.md` did not need a structural update
+
+### 2026-04-20
 - Fixed a follow-up Phase 24 QA issue where `Global Relative Strength` stopped at `2026-02-27` even when the selected end date was `2026-04-20`.
 - Root cause:
   - `IWM` had one DB row on `2026-03-17` with empty OHLC values

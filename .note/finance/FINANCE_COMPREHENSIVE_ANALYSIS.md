@@ -1490,16 +1490,15 @@ engine = (
 - 전략 이전 단계에서 데이터 길이를 줄이는 함수가 여러 개 있다.
 
 예:
-- `add_ma`: 가격이 비어 있는 행을 먼저 제거한 뒤, 가장 긴 이동평균이 없는 초반 구간 제거
+- `add_ma`: 가장 긴 이동평균이 없는 초반 구간 제거
 - `add_interval_returns`: 가장 긴 구간 수익률이 없는 초반 구간 제거
 - `align_dfs_by_date_intersection`: 모든 티커 공통 날짜만 유지
 
 이 때문에 실제 전략 입력 데이터는 원본보다 훨씬 짧아질 수 있다.
-단일 결측 가격 행이 이동평균 계산 뒤의 전체 기간을 과도하게 끊지 않도록,
-이동평균 계산에서는 `Close` 같은 기준 가격이 비어 있는 행을 먼저 제외한다.
-Global Relative Strength처럼 runtime에서 이 처리가 중요한 전략은
-제외된 결측 가격 행을 `malformed_price_rows` metadata와 결과 주의사항에 남겨
-사용자가 원본 DB 가격 품질 문제를 확인할 수 있게 한다.
+Global Relative Strength처럼 여러 ETF의 공통 리밸런싱 날짜가 중요한 전략은
+원본 가격 결측 행을 임의로 채우거나 조용히 제거하지 않는다.
+대신 결측 가격 행을 `malformed_price_rows` metadata와 결과 주의사항에 남기고,
+그 결측 때문에 공통 날짜 구간이 보수적으로 짧아질 수 있음을 사용자에게 표시한다.
 
 ### `finance/performance.py`
 성과 요약 계층이다.
