@@ -1308,12 +1308,13 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 - compare / history / saved replay 연결 기준
 
 ### 상태
-- `implementation_in_progress / core_runtime_first_pass_completed`
+- `practical_closeout / manual_validation_pending`
 
 ### 현재 메모
 - 첫 구현 후보는 `Global Relative Strength`로 고정했다.
 - core strategy, DB-backed sample helper, web runtime wrapper, compile / import / DB-backed smoke validation은 완료했다.
-- 아직 `Backtest` UI, compare, history, saved replay 연결은 남아 있으므로 Phase 24는 완료 상태가 아니다.
+- `Backtest` UI, compare, history, saved replay 연결까지 완료했다.
+- 현재 남은 것은 `PHASE24_TEST_CHECKLIST.md`를 통한 사용자 manual QA다.
 
 ---
 
@@ -1380,7 +1381,7 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 - `Phase 23`
   - phase complete / manual validation completed
 - `Phase 24`
-  - implementation in progress / core runtime first pass completed
+  - practical closeout / manual validation pending
 - `Phase 25`
   - proposed
 
@@ -1389,8 +1390,8 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
   `Phase 22`도 portfolio workflow 개발 검증과 manual QA까지 완료되었다.
   `Phase 23` quarterly / alternate cadence productionization도 manual QA까지 완료되었다.
   현재는 `Phase 24`에서 `Global Relative Strength`를 첫 신규 전략 후보로 고정하고
-  core/runtime smoke까지 통과한 상태다.
-  다음 작업은 이 전략을 `Backtest` UI, compare, history, saved replay 흐름에 연결하는 것이다.
+  core/runtime smoke와 `Backtest` UI, compare, history, saved replay 연결까지 끝낸 상태다.
+  다음 작업은 사용자가 Phase 24 checklist로 실제 화면 QA를 완료하는 것이다.
 
 ---
 
@@ -1456,6 +1457,8 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
   - research-to-implementation bridge를 통해 새 전략 family를 추가한다
   - 첫 구현 후보는 `Global Relative-Strength Allocation With Trend Safety Net`이며,
     이는 성과가 가장 좋아서가 아니라 현재 DB 가격 loader와 UI/replay 구조에 가장 안전하게 붙는 후보이기 때문이다
+  - 현재는 core/runtime과 single / compare / history / saved replay 연결까지 완료했고,
+    manual checklist QA를 기다리는 상태다
 - `Phase 25`
   - live trading이 아니라 paper / review / pre-live readiness 운영 체계를 정리한다
 

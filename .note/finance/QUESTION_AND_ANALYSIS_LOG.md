@@ -2151,3 +2151,19 @@ Detailed historical analysis was archived on `2026-04-13`.
     monthly / quarterly cadence는 `hold`로 약했다
   - 결론적으로 느린 cadence 후보는 registry에 남기되, 기본 실전 후보로 바로 승격하지 않고
     월별 paper tracking과 `Interval = 4` 대안 비교를 먼저 진행하는 것이 맞다
+
+### 2026-04-20 - Phase 24 신규 전략은 UI / replay까지 연결한 뒤 manual QA로 넘긴다
+- Request topic:
+  - 사용자가 Phase 24 다음 작업 진행을 요청함
+- Interpreted goal:
+  - `Global Relative Strength`가 core/runtime 단계에서 멈추지 않고,
+    실제 `Backtest` 제품 화면에서 single 실행, compare, history, saved replay까지 이어지게 만들고 싶음
+- Result:
+  - `Global Relative Strength`를 single / compare strategy catalog에 등록했다
+  - `Backtest > Single Strategy`에 신규 전략 form을 추가했다
+  - compare strategy-specific box와 compare runner override를 연결했다
+  - history record / payload에 `cash_ticker`, `research_source`, interval, score, trend filter 설정이 보존되도록 했다
+  - saved portfolio replay가 신규 전략 override를 복원할 수 있게 했다
+  - compile, catalog/history smoke, DB-backed runtime smoke, compare runner smoke를 통과했다
+  - Phase 24 상태는 `practical_closeout / manual_validation_pending`으로 정리했고,
+    다음 단계는 사용자가 `PHASE24_TEST_CHECKLIST.md`로 실제 화면 QA를 진행하는 것이다

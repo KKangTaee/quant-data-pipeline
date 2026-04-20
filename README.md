@@ -45,6 +45,7 @@ DB-backed market data ingestion, factor generation, and strategy backtesting wor
 - ETF 전략
   - `Equal Weight`
   - `GTAA`
+  - `Global Relative Strength`
   - `Risk Parity Trend`
   - `Dual Momentum`
 - Strict annual factor family

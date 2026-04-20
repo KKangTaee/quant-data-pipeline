@@ -6,6 +6,7 @@ from collections import OrderedDict
 NON_FAMILY_STRATEGY_OPTIONS = [
     "Equal Weight",
     "GTAA",
+    "Global Relative Strength",
     "Risk Parity Trend",
     "Dual Momentum",
 ]
@@ -73,6 +74,7 @@ COMPARE_STRATEGY_OPTIONS = SINGLE_STRATEGY_OPTIONS
 STRATEGY_KEY_TO_DISPLAY_NAME = {
     "equal_weight": "Equal Weight",
     "gtaa": "GTAA",
+    "global_relative_strength": "Global Relative Strength",
     "risk_parity_trend": "Risk Parity Trend",
     "dual_momentum": "Dual Momentum",
     "quality_snapshot": "Quality Snapshot",

@@ -30,8 +30,8 @@ DB-backed result bundle까지 만들 수 있는지 확인한다.
 | DB-backed sample helper | `finance.sample.get_global_relative_strength_from_db()` 추가 |
 | Web runtime wrapper | `app.web.runtime.backtest.run_global_relative_strength_backtest_from_db()` 추가 |
 | Result bundle | `strategy_name = Global Relative Strength`, `meta.strategy_key = global_relative_strength` |
-| UI catalog / Single Strategy | 아직 미연결 |
-| Compare / History / Saved Replay | 아직 미연결 |
+| UI catalog / Single Strategy | 이 core report 작성 시점에는 미연결, 이후 UI replay smoke report에서 연결 확인 |
+| Compare / History / Saved Replay | 이 core report 작성 시점에는 미연결, 이후 UI replay smoke report에서 연결 확인 |
 
 ## 전략 규칙 요약
 
@@ -134,7 +134,8 @@ DB-backed result bundle까지 만들 수 있는지 확인한다.
 
 ## 다음 작업
 
-다음 Phase 24 구현 단위는 UI와 재진입 경로 연결이다.
+이 core report 작성 당시 다음 Phase 24 구현 단위는 UI와 재진입 경로 연결이었다.
+이후 `PHASE24_GLOBAL_RELATIVE_STRENGTH_UI_REPLAY_SMOKE_VALIDATION.md`에서 해당 연결을 검증했다.
 
 - `app.web.backtest_strategy_catalog`에 `global_relative_strength` family 등록
 - `Backtest > Single Strategy` 입력 UI 추가
@@ -145,5 +146,5 @@ DB-backed result bundle까지 만들 수 있는지 확인한다.
 
 ## 한 줄 정리
 
-`Global Relative Strength`는 core strategy와 DB-backed runtime smoke를 통과했지만,
-아직 제품 UI에 노출된 전략은 아니므로 Phase 24의 다음 작업은 UI / compare / history / replay 연결이다.
+이 report는 `Global Relative Strength`의 core strategy와 DB-backed runtime smoke 통과를 기록한다.
+제품 UI / compare / history / replay 연결 결과는 후속 UI replay smoke report에서 확인한다.

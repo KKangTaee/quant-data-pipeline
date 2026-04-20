@@ -24,6 +24,7 @@ from app.web.runtime import (
     load_saved_portfolios,
     run_dual_momentum_backtest_from_db,
     run_equal_weight_backtest_from_db,
+    run_global_relative_strength_backtest_from_db,
     run_gtaa_backtest_from_db,
     run_quality_snapshot_backtest_from_db,
     run_quality_snapshot_strict_annual_backtest_from_db,
@@ -77,6 +78,14 @@ from finance.sample import (
     GTAA_SCORE_RETURN_COLUMNS,
     GTAA_DEFAULT_SCORE_WEIGHTS,
     GTAA_DEFAULT_TREND_FILTER_WINDOW,
+    GLOBAL_RELATIVE_STRENGTH_DEFAULT_CASH_TICKER,
+    GLOBAL_RELATIVE_STRENGTH_DEFAULT_SCORE_LOOKBACK_MONTHS,
+    GLOBAL_RELATIVE_STRENGTH_DEFAULT_SCORE_WEIGHTS,
+    GLOBAL_RELATIVE_STRENGTH_DEFAULT_SIGNAL_INTERVAL,
+    GLOBAL_RELATIVE_STRENGTH_DEFAULT_TICKERS,
+    GLOBAL_RELATIVE_STRENGTH_DEFAULT_TOP,
+    GLOBAL_RELATIVE_STRENGTH_DEFAULT_TREND_FILTER_WINDOW,
+    GLOBAL_RELATIVE_STRENGTH_SCORE_RETURN_COLUMNS,
     STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M,
     STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS,
     STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_ENABLED,
@@ -126,6 +135,11 @@ GTAA_PRESETS = {
     "GTAA Universe (U3 Commodity Candidate Base)": GTAA_U3_COMMODITY_TICKERS,
     "GTAA Universe (U1 Offensive Candidate Base)": GTAA_U1_OFFENSIVE_TICKERS,
     "GTAA Universe (U5 Smallcap Value Candidate Base)": GTAA_U5_SMALLCAP_VALUE_TICKERS,
+}
+
+GLOBAL_RELATIVE_STRENGTH_PRESETS = {
+    "Global Relative Strength Core ETF Universe": list(GLOBAL_RELATIVE_STRENGTH_DEFAULT_TICKERS),
+    "Global Relative Strength Compact Smoke Universe": ["SPY", "EFA", "TLT", "GLD"],
 }
 
 GTAA_RISK_OFF_MODE_LABELS = {
@@ -1070,6 +1084,55 @@ def _render_gtaa_universe_inputs(
     return ("preset" if universe_mode_label == "Preset" else "manual_tickers"), preset_name, tickers
 
 
+def _render_global_relative_strength_preset_note(preset_name: str | None) -> None:
+    if preset_name == "Global Relative Strength Core ETF Universe":
+        st.caption(
+            "Phase 24 default universe: global equity, commodity, credit, treasury, and inflation ETF sleeves."
+        )
+    elif preset_name == "Global Relative Strength Compact Smoke Universe":
+        st.caption("Small smoke-test universe for quick UI/runtime validation.")
+
+
+def _render_global_relative_strength_universe_inputs(
+    *,
+    key_prefix: str,
+    radio_label: str = "Universe Mode",
+    preset_label: str = "Preset",
+    ticker_label: str = "Tickers",
+) -> tuple[str, str | None, list[str]]:
+    universe_mode_label = st.radio(
+        radio_label,
+        options=["Preset", "Manual"],
+        horizontal=True,
+        help="Global Relative Strength는 Phase 24 기본 ETF preset으로 시작하고, 필요하면 직접 ticker를 넣어 검증합니다.",
+        key=f"{key_prefix}_universe_mode",
+    )
+
+    preset_name: str | None = None
+    tickers: list[str] = []
+
+    if universe_mode_label == "Preset":
+        preset_name = st.selectbox(
+            preset_label,
+            options=list(GLOBAL_RELATIVE_STRENGTH_PRESETS.keys()),
+            index=0,
+            key=f"{key_prefix}_preset",
+        )
+        tickers = list(GLOBAL_RELATIVE_STRENGTH_PRESETS[preset_name])
+        _render_global_relative_strength_preset_note(preset_name)
+    else:
+        manual_tickers = st.text_input(
+            ticker_label,
+            value=",".join(GLOBAL_RELATIVE_STRENGTH_DEFAULT_TICKERS),
+            help="Comma-separated tickers. Example: SPY,EFA,EEM,IWM,VNQ,GLD,DBC,LQD,HYG,IEF,TLT,TIP",
+            key=f"{key_prefix}_manual_tickers",
+        )
+        tickers = _parse_manual_tickers(manual_tickers)
+
+    _render_ticker_preview(tickers)
+    return ("preset" if universe_mode_label == "Preset" else "manual_tickers"), preset_name, tickers
+
+
 def _render_strict_preset_status_note(preset_name: str | None) -> None:
     if preset_name == "US Statement Coverage 300":
         st.info(
@@ -1243,6 +1306,8 @@ def _summarize_params(meta: dict[str, Any]) -> str:
         parts.append(f"rebalance_interval={meta['rebalance_interval']}")
     if meta.get("top") is not None:
         parts.append(f"top={meta['top']}")
+    if meta.get("cash_ticker"):
+        parts.append(f"cash_ticker={meta['cash_ticker']}")
     if meta.get("vol_window") is not None:
         parts.append(f"vol_window={meta['vol_window']}")
     if meta.get("quality_factors"):
@@ -2293,6 +2358,27 @@ def _set_gtaa_score_selection_state(
     st.session_state[f"{key_prefix}_score_lookback_months"] = normalized
 
 
+def _set_global_relative_strength_score_selection_state(
+    *,
+    key_prefix: str,
+    score_lookback_months: list[int] | None,
+) -> None:
+    normalized: list[int] = []
+    seen: set[int] = set()
+    for value in list(score_lookback_months or GLOBAL_RELATIVE_STRENGTH_DEFAULT_SCORE_LOOKBACK_MONTHS):
+        try:
+            months = int(value)
+        except (TypeError, ValueError):
+            continue
+        if months <= 0 or months in seen:
+            continue
+        seen.add(months)
+        normalized.append(months)
+    if not normalized:
+        normalized = list(GLOBAL_RELATIVE_STRENGTH_DEFAULT_SCORE_LOOKBACK_MONTHS)
+    st.session_state[f"{key_prefix}_score_lookback_months"] = normalized
+
+
 def _render_gtaa_score_weight_inputs(*, key_prefix: str) -> tuple[list[int], dict[str, float]]:
     st.markdown("##### Score Horizons")
     st.caption(
@@ -2306,6 +2392,26 @@ def _render_gtaa_score_weight_inputs(*, key_prefix: str) -> tuple[list[int], dic
         format_func=lambda months: f"{int(months)}M",
         key=f"{key_prefix}_score_lookback_months",
         help="GTAA score 계산에 실제로 포함할 horizon입니다. 예를 들어 `1M, 3M`만 남기면 두 구간만 균등하게 사용합니다.",
+    )
+    if not score_lookback_months:
+        st.warning("Score Horizon을 최소 1개는 선택해야 합니다.")
+    score_weights = _build_equal_gtaa_score_weights(list(score_lookback_months))
+    return score_lookback_months, score_weights
+
+
+def _render_global_relative_strength_score_weight_inputs(*, key_prefix: str) -> tuple[list[int], dict[str, float]]:
+    st.markdown("##### Score Horizons")
+    st.caption(
+        "상대강도 점수를 계산할 기간입니다. 기본값은 `1M / 3M / 6M / 12M`이고, "
+        "선택된 기간은 동일 비중으로 합산합니다."
+    )
+    score_lookback_months = st.multiselect(
+        "Score Horizons",
+        options=list(GLOBAL_RELATIVE_STRENGTH_DEFAULT_SCORE_LOOKBACK_MONTHS),
+        default=list(GLOBAL_RELATIVE_STRENGTH_DEFAULT_SCORE_LOOKBACK_MONTHS),
+        format_func=lambda months: f"{int(months)}M",
+        key=f"{key_prefix}_score_lookback_months",
+        help="Global Relative Strength score에 포함할 lookback 기간입니다.",
     )
     if not score_lookback_months:
         st.warning("Score Horizon을 최소 1개는 선택해야 합니다.")
@@ -3164,6 +3270,26 @@ def _strategy_compare_defaults(strategy_name: str) -> dict:
                 "benchmark_ticker": ETF_REAL_MONEY_DEFAULT_BENCHMARK,
             },
         }
+    if strategy_name == "Global Relative Strength":
+        return {
+            "tickers": list(GLOBAL_RELATIVE_STRENGTH_DEFAULT_TICKERS),
+            "preset_name": "Global Relative Strength Core ETF Universe",
+            "runner": run_global_relative_strength_backtest_from_db,
+            "extra": {
+                "cash_ticker": GLOBAL_RELATIVE_STRENGTH_DEFAULT_CASH_TICKER,
+                "top": GLOBAL_RELATIVE_STRENGTH_DEFAULT_TOP,
+                "interval": GLOBAL_RELATIVE_STRENGTH_DEFAULT_SIGNAL_INTERVAL,
+                "score_lookback_months": list(GLOBAL_RELATIVE_STRENGTH_DEFAULT_SCORE_LOOKBACK_MONTHS),
+                "score_return_columns": list(GLOBAL_RELATIVE_STRENGTH_SCORE_RETURN_COLUMNS),
+                "score_weights": dict(GLOBAL_RELATIVE_STRENGTH_DEFAULT_SCORE_WEIGHTS),
+                "trend_filter_window": GLOBAL_RELATIVE_STRENGTH_DEFAULT_TREND_FILTER_WINDOW,
+                "min_price_filter": ETF_REAL_MONEY_DEFAULT_MIN_PRICE,
+                "transaction_cost_bps": ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
+                "promotion_min_etf_aum_b": ETF_OPERABILITY_DEFAULT_MIN_AUM_B,
+                "promotion_max_bid_ask_spread_pct": ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT,
+                "benchmark_ticker": ETF_REAL_MONEY_DEFAULT_BENCHMARK,
+            },
+        }
     if strategy_name == "Risk Parity Trend":
         return {
             "tickers": ["SPY", "TLT", "GLD", "IEF", "LQD"],
@@ -3404,6 +3530,15 @@ def _run_compare_strategy(
         tickers = list(params.pop("tickers", tickers))
         if universe_mode == "preset" and preset_name in GTAA_PRESETS:
             tickers = GTAA_PRESETS[preset_name]
+        else:
+            universe_mode = "manual_tickers"
+            preset_name = None
+    elif strategy_name == "Global Relative Strength":
+        universe_mode = params.pop("universe_mode", "preset")
+        preset_name = params.pop("preset_name", preset_name)
+        tickers = list(params.pop("tickers", tickers))
+        if universe_mode == "preset" and preset_name in GLOBAL_RELATIVE_STRENGTH_PRESETS:
+            tickers = GLOBAL_RELATIVE_STRENGTH_PRESETS[preset_name]
         else:
             universe_mode = "manual_tickers"
             preset_name = None
@@ -5182,7 +5317,7 @@ def _build_compare_prefill_summary_rows(payload: dict[str, Any]) -> pd.DataFrame
                 "Benchmark Contract": benchmark_contract_text,
                 "Benchmark Ticker": _compare_summary_benchmark_ticker_value(override),
                 "Guardrail / Reference Ticker": _compare_summary_guardrail_reference_value(override),
-                "Trend Filter": "On" if override.get("trend_filter_enabled") else "Off",
+                "Trend Filter": "On" if override.get("trend_filter_enabled") or override.get("trend_filter_window") else "Off",
                 "Market Regime": "On" if override.get("market_regime_enabled") else "Off",
                 "Weighting Contract": _strict_weighting_mode_value_to_label(
                     override.get("weighting_mode") or STRICT_DEFAULT_WEIGHTING_MODE
@@ -5613,7 +5748,13 @@ def _history_strategy_display_name(record: dict[str, Any]) -> str:
 
 def _build_history_payload(record: dict[str, Any]) -> dict[str, Any] | None:
     strategy_key = record.get("strategy_key")
-    if strategy_key not in {"equal_weight", "gtaa", "risk_parity_trend", "dual_momentum"}:
+    if strategy_key not in {
+        "equal_weight",
+        "gtaa",
+        "global_relative_strength",
+        "risk_parity_trend",
+        "dual_momentum",
+    }:
         if strategy_key not in {
             "quality_snapshot",
             "quality_snapshot_strict_annual",
@@ -5640,6 +5781,8 @@ def _build_history_payload(record: dict[str, Any]) -> dict[str, Any] | None:
         payload["rebalance_interval"] = int(record["rebalance_interval"])
     if record.get("top") is not None:
         payload["top"] = int(record["top"])
+    if record.get("cash_ticker") is not None:
+        payload["cash_ticker"] = str(record.get("cash_ticker") or "").strip().upper()
     if record.get("vol_window") is not None:
         payload["vol_window"] = int(record["vol_window"])
     if record.get("factor_freq") is not None:
@@ -5776,10 +5919,16 @@ def _build_history_payload(record: dict[str, Any]) -> dict[str, Any] | None:
         payload["universe_contract"] = record.get("universe_contract")
     if record.get("dynamic_target_size") is not None:
         payload["dynamic_target_size"] = int(record.get("dynamic_target_size"))
+    if record.get("research_source") is not None:
+        payload["research_source"] = record.get("research_source")
 
     # GTAA stores cadence in rebalance_interval for history summarization; map it back.
     if strategy_key == "gtaa":
         payload["interval"] = int(record.get("rebalance_interval") or GTAA_DEFAULT_SIGNAL_INTERVAL)
+    elif strategy_key == "global_relative_strength":
+        payload["interval"] = int(
+            record.get("rebalance_interval") or GLOBAL_RELATIVE_STRENGTH_DEFAULT_SIGNAL_INTERVAL
+        )
     return payload
 
 
@@ -5955,6 +6104,8 @@ def _build_prefill_summary_lines(payload: dict[str, Any] | None) -> list[str]:
         lines.append(f"Benchmark Contract: `{_benchmark_contract_value_to_label(payload.get('benchmark_contract'))}`")
     if payload.get("benchmark_ticker"):
         lines.append(f"Benchmark Ticker: `{payload.get('benchmark_ticker')}`")
+    if payload.get("cash_ticker"):
+        lines.append(f"Cash / Defensive Ticker: `{payload.get('cash_ticker')}`")
     guardrail_reference_ticker = _raw_guardrail_reference_ticker_value(payload)
     if guardrail_reference_ticker:
         lines.append(f"Guardrail / Reference Ticker: `{guardrail_reference_ticker}`")
@@ -6377,6 +6528,40 @@ def _bundle_to_saved_strategy_override(bundle: dict[str, Any]) -> dict[str, Any]
             "drawdown_guardrail_gap_threshold": float(
                 meta.get("drawdown_guardrail_gap_threshold") or STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD
             ),
+        }
+    if strategy_name == "Global Relative Strength":
+        return {
+            "tickers": list(meta.get("tickers") or GLOBAL_RELATIVE_STRENGTH_DEFAULT_TICKERS),
+            "preset_name": meta.get("preset_name") or "Global Relative Strength Core ETF Universe",
+            "universe_mode": meta.get("universe_mode") or "preset",
+            "cash_ticker": meta.get("cash_ticker") or GLOBAL_RELATIVE_STRENGTH_DEFAULT_CASH_TICKER,
+            "top": int(meta.get("top") or GLOBAL_RELATIVE_STRENGTH_DEFAULT_TOP),
+            "interval": int(
+                meta.get("rebalance_interval") or GLOBAL_RELATIVE_STRENGTH_DEFAULT_SIGNAL_INTERVAL
+            ),
+            "score_lookback_months": list(
+                meta.get("score_lookback_months") or GLOBAL_RELATIVE_STRENGTH_DEFAULT_SCORE_LOOKBACK_MONTHS
+            ),
+            "score_return_columns": list(
+                meta.get("score_return_columns") or GLOBAL_RELATIVE_STRENGTH_SCORE_RETURN_COLUMNS
+            ),
+            "score_weights": dict(
+                meta.get("score_weights") or GLOBAL_RELATIVE_STRENGTH_DEFAULT_SCORE_WEIGHTS
+            ),
+            "trend_filter_window": int(
+                meta.get("trend_filter_window") or GLOBAL_RELATIVE_STRENGTH_DEFAULT_TREND_FILTER_WINDOW
+            ),
+            "min_price_filter": float(meta.get("min_price_filter") or ETF_REAL_MONEY_DEFAULT_MIN_PRICE),
+            "transaction_cost_bps": float(
+                meta.get("transaction_cost_bps") or ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS
+            ),
+            "promotion_min_etf_aum_b": float(
+                meta.get("promotion_min_etf_aum_b") or ETF_OPERABILITY_DEFAULT_MIN_AUM_B
+            ),
+            "promotion_max_bid_ask_spread_pct": float(
+                meta.get("promotion_max_bid_ask_spread_pct") or ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT
+            ),
+            "benchmark_ticker": meta.get("benchmark_ticker") or ETF_REAL_MONEY_DEFAULT_BENCHMARK,
         }
     if strategy_name == "Risk Parity Trend":
         return {
@@ -6981,6 +7166,61 @@ def _apply_compare_strategy_prefill(strategy_name: str, override: dict[str, Any]
             (override.get("drawdown_guardrail_gap_threshold") or STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD) * 100.0
         )
         return
+    if strategy_name == "Global Relative Strength":
+        preset_name = override.get("preset_name")
+        universe_mode = override.get("universe_mode")
+        tickers_text = ",".join(list(override.get("tickers") or GLOBAL_RELATIVE_STRENGTH_DEFAULT_TICKERS))
+        st.session_state["compare_grs_universe_mode"] = (
+            "Preset"
+            if universe_mode == "preset" and preset_name in GLOBAL_RELATIVE_STRENGTH_PRESETS
+            else "Manual"
+        )
+        if st.session_state["compare_grs_universe_mode"] == "Preset":
+            st.session_state["compare_grs_preset"] = (
+                preset_name or "Global Relative Strength Core ETF Universe"
+            )
+        else:
+            st.session_state["compare_grs_manual_tickers"] = tickers_text
+        st.session_state["compare_grs_cash_ticker"] = str(
+            override.get("cash_ticker") or GLOBAL_RELATIVE_STRENGTH_DEFAULT_CASH_TICKER
+        ).strip().upper()
+        st.session_state["compare_grs_top"] = int(
+            override.get("top") or GLOBAL_RELATIVE_STRENGTH_DEFAULT_TOP
+        )
+        st.session_state["compare_grs_interval"] = int(
+            override.get("interval")
+            or override.get("rebalance_interval")
+            or GLOBAL_RELATIVE_STRENGTH_DEFAULT_SIGNAL_INTERVAL
+        )
+        _set_global_relative_strength_score_selection_state(
+            key_prefix="compare_grs",
+            score_lookback_months=list(
+                override.get("score_lookback_months")
+                or [
+                    _gtaa_months_from_return_col(col)
+                    for col in list(override.get("score_return_columns") or GLOBAL_RELATIVE_STRENGTH_SCORE_RETURN_COLUMNS)
+                ]
+            ),
+        )
+        st.session_state["compare_grs_trend_filter_window"] = int(
+            override.get("trend_filter_window") or GLOBAL_RELATIVE_STRENGTH_DEFAULT_TREND_FILTER_WINDOW
+        )
+        st.session_state["compare_grs_min_price_filter"] = float(
+            override.get("min_price_filter") or ETF_REAL_MONEY_DEFAULT_MIN_PRICE
+        )
+        st.session_state["compare_grs_transaction_cost_bps"] = float(
+            override.get("transaction_cost_bps") or ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS
+        )
+        st.session_state["compare_grs_promotion_min_etf_aum_b"] = float(
+            override.get("promotion_min_etf_aum_b") or ETF_OPERABILITY_DEFAULT_MIN_AUM_B
+        )
+        st.session_state["compare_grs_promotion_max_bid_ask_spread_pct"] = float(
+            (override.get("promotion_max_bid_ask_spread_pct") or ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT) * 100.0
+        )
+        st.session_state["compare_grs_benchmark_ticker"] = str(
+            override.get("benchmark_ticker") or ETF_REAL_MONEY_DEFAULT_BENCHMARK
+        ).strip().upper()
+        return
     if strategy_name == "Risk Parity Trend":
         st.session_state["compare_rp_interval"] = int(override.get("rebalance_interval") or 1)
         st.session_state["compare_rp_vol_window"] = int(override.get("vol_window") or 6)
@@ -7463,6 +7703,55 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         st.session_state["gtaa_drawdown_guardrail_gap_threshold"] = float(
             (payload.get("drawdown_guardrail_gap_threshold") or STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD) * 100.0
         )
+    elif strategy_key == "global_relative_strength":
+        st.session_state["grs_universe_mode"] = (
+            "Preset"
+            if universe_mode == "preset" and preset_name in GLOBAL_RELATIVE_STRENGTH_PRESETS
+            else "Manual"
+        )
+        if st.session_state["grs_universe_mode"] == "Preset":
+            st.session_state["grs_preset"] = preset_name or "Global Relative Strength Core ETF Universe"
+        else:
+            st.session_state["grs_manual_tickers"] = tickers_text
+        st.session_state["grs_start"] = start_date
+        st.session_state["grs_end"] = end_date
+        st.session_state["grs_timeframe"] = payload.get("timeframe") or "1d"
+        st.session_state["grs_option"] = payload.get("option") or "month_end"
+        st.session_state["grs_cash_ticker"] = str(
+            payload.get("cash_ticker") or GLOBAL_RELATIVE_STRENGTH_DEFAULT_CASH_TICKER
+        ).strip().upper()
+        st.session_state["grs_top"] = int(payload.get("top") or GLOBAL_RELATIVE_STRENGTH_DEFAULT_TOP)
+        st.session_state["grs_interval"] = int(
+            payload.get("interval")
+            or payload.get("rebalance_interval")
+            or GLOBAL_RELATIVE_STRENGTH_DEFAULT_SIGNAL_INTERVAL
+        )
+        _set_global_relative_strength_score_selection_state(
+            key_prefix="grs",
+            score_lookback_months=list(
+                payload.get("score_lookback_months")
+                or [
+                    _gtaa_months_from_return_col(col)
+                    for col in list(payload.get("score_return_columns") or GLOBAL_RELATIVE_STRENGTH_SCORE_RETURN_COLUMNS)
+                ]
+            ),
+        )
+        st.session_state["grs_trend_filter_window"] = int(
+            payload.get("trend_filter_window") or GLOBAL_RELATIVE_STRENGTH_DEFAULT_TREND_FILTER_WINDOW
+        )
+        st.session_state["grs_min_price_filter"] = float(payload.get("min_price_filter") or ETF_REAL_MONEY_DEFAULT_MIN_PRICE)
+        st.session_state["grs_transaction_cost_bps"] = float(
+            payload.get("transaction_cost_bps") or ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS
+        )
+        st.session_state["grs_promotion_min_etf_aum_b"] = float(
+            payload.get("promotion_min_etf_aum_b") or ETF_OPERABILITY_DEFAULT_MIN_AUM_B
+        )
+        st.session_state["grs_promotion_max_bid_ask_spread_pct"] = float(
+            (payload.get("promotion_max_bid_ask_spread_pct") or ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT) * 100.0
+        )
+        st.session_state["grs_benchmark_ticker"] = str(
+            payload.get("benchmark_ticker") or ETF_REAL_MONEY_DEFAULT_BENCHMARK
+        ).strip().upper()
     elif strategy_key == "risk_parity_trend":
         st.session_state["rp_universe_mode"] = "Preset" if universe_mode == "preset" and preset_name in RISK_PARITY_PRESETS else "Manual"
         if st.session_state["rp_universe_mode"] == "Preset":
@@ -9065,6 +9354,40 @@ def _handle_backtest_run(payload: dict, *, strategy_name: str) -> bool:
                     universe_mode=payload["universe_mode"],
                     preset_name=payload["preset_name"],
                 )
+            elif payload["strategy_key"] == "global_relative_strength":
+                bundle = run_global_relative_strength_backtest_from_db(
+                    tickers=payload["tickers"],
+                    cash_ticker=payload.get("cash_ticker", GLOBAL_RELATIVE_STRENGTH_DEFAULT_CASH_TICKER),
+                    start=payload["start"],
+                    end=payload["end"],
+                    timeframe=payload["timeframe"],
+                    option=payload["option"],
+                    top=payload.get("top", GLOBAL_RELATIVE_STRENGTH_DEFAULT_TOP),
+                    interval=payload.get("interval", GLOBAL_RELATIVE_STRENGTH_DEFAULT_SIGNAL_INTERVAL),
+                    score_lookback_months=payload.get("score_lookback_months"),
+                    score_return_columns=payload.get("score_return_columns"),
+                    score_weights=payload.get("score_weights"),
+                    trend_filter_window=payload.get(
+                        "trend_filter_window",
+                        GLOBAL_RELATIVE_STRENGTH_DEFAULT_TREND_FILTER_WINDOW,
+                    ),
+                    min_price_filter=payload.get("min_price_filter", ETF_REAL_MONEY_DEFAULT_MIN_PRICE),
+                    transaction_cost_bps=payload.get(
+                        "transaction_cost_bps",
+                        ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
+                    ),
+                    benchmark_ticker=payload.get("benchmark_ticker", ETF_REAL_MONEY_DEFAULT_BENCHMARK),
+                    promotion_min_etf_aum_b=payload.get(
+                        "promotion_min_etf_aum_b",
+                        ETF_OPERABILITY_DEFAULT_MIN_AUM_B,
+                    ),
+                    promotion_max_bid_ask_spread_pct=payload.get(
+                        "promotion_max_bid_ask_spread_pct",
+                        ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT,
+                    ),
+                    universe_mode=payload["universe_mode"],
+                    preset_name=payload["preset_name"],
+                )
             elif payload["strategy_key"] == "risk_parity_trend":
                 bundle = run_risk_parity_trend_backtest_from_db(
                     tickers=payload["tickers"],
@@ -9570,6 +9893,123 @@ def _render_gtaa_form() -> None:
     }
 
     _handle_backtest_run(payload, strategy_name="GTAA")
+
+
+def _render_global_relative_strength_form() -> None:
+    st.markdown("### Global Relative Strength")
+    st.caption(
+        "Phase 24 신규 ETF 전략입니다. 여러 자산군 ETF 중 최근 상대강도가 좋은 자산을 고르고, "
+        "추세가 약한 자산은 cash ticker로 피하는 구조입니다."
+    )
+    _apply_single_strategy_prefill("global_relative_strength")
+
+    _universe_mode, preset_name, tickers = _render_global_relative_strength_universe_inputs(
+        key_prefix="grs",
+    )
+
+    with st.form("global_relative_strength_backtest_form", clear_on_submit=False):
+        col1, col2 = st.columns(2)
+        with col1:
+            start_date = st.date_input("Start Date", value=date(2016, 1, 1), key="grs_start")
+        with col2:
+            end_date = st.date_input("End Date", value=DEFAULT_BACKTEST_END_DATE, key="grs_end")
+
+        with st.expander("Advanced Inputs", expanded=False):
+            timeframe = st.selectbox("Timeframe", options=["1d"], index=0, key="grs_timeframe")
+            option = st.selectbox("Option", options=["month_end"], index=0, key="grs_option")
+            cash_ticker = st.text_input(
+                "Cash / Defensive Ticker",
+                value=GLOBAL_RELATIVE_STRENGTH_DEFAULT_CASH_TICKER,
+                help="선택된 ETF가 200일선 아래에 있으면 이 ticker로 대피합니다. 기본값은 BIL입니다.",
+                key="grs_cash_ticker",
+            )
+            top = st.number_input(
+                "Top Assets",
+                min_value=1,
+                max_value=12,
+                value=GLOBAL_RELATIVE_STRENGTH_DEFAULT_TOP,
+                step=1,
+                help="상대강도 점수가 높은 ETF를 몇 개까지 보유할지 정합니다.",
+                key="grs_top",
+            )
+            interval = st.number_input(
+                "Signal Interval (months)",
+                min_value=1,
+                max_value=12,
+                value=GLOBAL_RELATIVE_STRENGTH_DEFAULT_SIGNAL_INTERVAL,
+                step=1,
+                help="1이면 매월, 3이면 3개월마다 신호를 갱신합니다.",
+                key="grs_interval",
+            )
+            score_lookback_months, score_weights = _render_global_relative_strength_score_weight_inputs(
+                key_prefix="grs"
+            )
+            trend_filter_window = st.number_input(
+                "Trend Filter Window",
+                min_value=20,
+                max_value=400,
+                value=GLOBAL_RELATIVE_STRENGTH_DEFAULT_TREND_FILTER_WINDOW,
+                step=10,
+                help="가격이 이 이동평균 아래에 있으면 cash ticker로 대피합니다.",
+                key="grs_trend_filter_window",
+            )
+            with st.expander("Real-Money Contract", expanded=False):
+                (
+                    min_price_filter,
+                    transaction_cost_bps,
+                    benchmark_ticker,
+                    promotion_min_etf_aum_b,
+                    promotion_max_bid_ask_spread_pct,
+                ) = _render_etf_real_money_inputs(
+                    key_prefix="grs",
+                )
+
+        submitted = st.form_submit_button("Run Global Relative Strength Backtest", use_container_width=True)
+
+    if not submitted:
+        return
+
+    validation_errors: list[str] = []
+    if not tickers:
+        validation_errors.append("At least one ticker is required.")
+    if start_date > end_date:
+        validation_errors.append("Start Date must be earlier than or equal to End Date.")
+    if not score_lookback_months:
+        validation_errors.append("Score Horizons must contain at least one lookback window.")
+    normalized_cash_ticker = str(cash_ticker or "").strip().upper()
+    if not normalized_cash_ticker:
+        validation_errors.append("Cash / Defensive Ticker is required.")
+
+    if validation_errors:
+        for error in validation_errors:
+            st.error(error)
+        return
+
+    payload = {
+        "strategy_key": "global_relative_strength",
+        "tickers": tickers,
+        "cash_ticker": normalized_cash_ticker,
+        "start": start_date.isoformat(),
+        "end": end_date.isoformat(),
+        "timeframe": timeframe,
+        "option": option,
+        "top": int(top),
+        "interval": int(interval),
+        "score_lookback_months": list(score_lookback_months),
+        "score_return_columns": [_gtaa_return_col_from_months(months) for months in score_lookback_months],
+        "score_weights": score_weights,
+        "trend_filter_enabled": True,
+        "trend_filter_window": int(trend_filter_window),
+        "min_price_filter": float(min_price_filter),
+        "transaction_cost_bps": float(transaction_cost_bps),
+        "benchmark_ticker": benchmark_ticker,
+        "promotion_min_etf_aum_b": float(promotion_min_etf_aum_b),
+        "promotion_max_bid_ask_spread_pct": float(promotion_max_bid_ask_spread_pct),
+        "universe_mode": _universe_mode,
+        "preset_name": preset_name,
+    }
+
+    _handle_backtest_run(payload, strategy_name="Global Relative Strength")
 
 
 def _render_risk_parity_form() -> None:
@@ -11515,6 +11955,8 @@ def render_backtest_tab() -> None:
             _render_equal_weight_form()
         elif strategy_choice == "GTAA":
             _render_gtaa_form()
+        elif strategy_choice == "Global Relative Strength":
+            _render_global_relative_strength_form()
         elif strategy_choice == "Risk Parity Trend":
             _render_risk_parity_form()
         elif strategy_choice == "Dual Momentum":
@@ -11581,6 +12023,10 @@ def render_backtest_tab() -> None:
         compare_gtaa_universe_mode = "preset"
         compare_gtaa_preset_name: str | None = "GTAA Universe"
         compare_gtaa_tickers = list(GTAA_DEFAULT_TICKERS)
+
+        compare_grs_universe_mode = "preset"
+        compare_grs_preset_name: str | None = "Global Relative Strength Core ETF Universe"
+        compare_grs_tickers = list(GLOBAL_RELATIVE_STRENGTH_DEFAULT_TICKERS)
 
         st.markdown("#### Compare Period & Shared Inputs")
         st.caption(
@@ -11791,6 +12237,96 @@ def render_backtest_tab() -> None:
                         compare_strategy_overrides["GTAA"]["drawdown_guardrail_window_months"] = int(drawdown_guardrail_window_months)
                         compare_strategy_overrides["GTAA"]["drawdown_guardrail_strategy_threshold"] = float(drawdown_guardrail_strategy_threshold)
                         compare_strategy_overrides["GTAA"]["drawdown_guardrail_gap_threshold"] = float(drawdown_guardrail_gap_threshold)
+
+                if "Global Relative Strength" in selected_strategies:
+                    with st.container(border=True):
+                        st.markdown("##### Global Relative Strength")
+                        (
+                            compare_grs_universe_mode,
+                            compare_grs_preset_name,
+                            compare_grs_tickers,
+                        ) = _render_global_relative_strength_universe_inputs(
+                            key_prefix="compare_grs",
+                            radio_label="Global Relative Strength Universe Mode",
+                            preset_label="Global Relative Strength Preset",
+                            ticker_label="Global Relative Strength Tickers",
+                        )
+                        _render_advanced_group_caption(
+                            "상대강도 선택 규칙은 위에 두고, cash fallback과 실전 계약은 같은 박스 안에서 관리합니다."
+                        )
+                        compare_strategy_overrides["Global Relative Strength"] = {
+                            "tickers": list(compare_grs_tickers),
+                            "preset_name": compare_grs_preset_name,
+                            "universe_mode": compare_grs_universe_mode,
+                            "cash_ticker": str(
+                                st.text_input(
+                                    "Global Relative Strength Cash / Defensive Ticker",
+                                    value=GLOBAL_RELATIVE_STRENGTH_DEFAULT_CASH_TICKER,
+                                    help="선택된 ETF가 trend filter를 통과하지 못하면 이 ticker로 대피합니다.",
+                                    key="compare_grs_cash_ticker",
+                                )
+                                or ""
+                            ).strip().upper(),
+                            "top": int(
+                                st.number_input(
+                                    "Global Relative Strength Top Assets",
+                                    min_value=1,
+                                    max_value=12,
+                                    value=GLOBAL_RELATIVE_STRENGTH_DEFAULT_TOP,
+                                    step=1,
+                                    key="compare_grs_top",
+                                )
+                            ),
+                            "interval": int(
+                                st.number_input(
+                                    "Global Relative Strength Signal Interval (months)",
+                                    min_value=1,
+                                    max_value=12,
+                                    value=GLOBAL_RELATIVE_STRENGTH_DEFAULT_SIGNAL_INTERVAL,
+                                    step=1,
+                                    key="compare_grs_interval",
+                                )
+                            ),
+                            "trend_filter_enabled": True,
+                            "trend_filter_window": int(
+                                st.number_input(
+                                    "Global Relative Strength Trend Filter Window",
+                                    min_value=20,
+                                    max_value=400,
+                                    value=GLOBAL_RELATIVE_STRENGTH_DEFAULT_TREND_FILTER_WINDOW,
+                                    step=10,
+                                    key="compare_grs_trend_filter_window",
+                                )
+                            ),
+                        }
+                        compare_grs_score_lookback_months, compare_grs_score_weights = (
+                            _render_global_relative_strength_score_weight_inputs(key_prefix="compare_grs")
+                        )
+                        compare_strategy_overrides["Global Relative Strength"]["score_lookback_months"] = list(
+                            compare_grs_score_lookback_months
+                        )
+                        compare_strategy_overrides["Global Relative Strength"]["score_return_columns"] = [
+                            _gtaa_return_col_from_months(months)
+                            for months in compare_grs_score_lookback_months
+                        ]
+                        compare_strategy_overrides["Global Relative Strength"]["score_weights"] = compare_grs_score_weights
+                        with st.expander("Real-Money Contract", expanded=False):
+                            (
+                                min_price_filter,
+                                transaction_cost_bps,
+                                benchmark_ticker,
+                                promotion_min_etf_aum_b,
+                                promotion_max_bid_ask_spread_pct,
+                            ) = _render_etf_real_money_inputs(
+                                key_prefix="compare_grs",
+                            )
+                        compare_strategy_overrides["Global Relative Strength"]["min_price_filter"] = float(min_price_filter)
+                        compare_strategy_overrides["Global Relative Strength"]["transaction_cost_bps"] = float(transaction_cost_bps)
+                        compare_strategy_overrides["Global Relative Strength"]["benchmark_ticker"] = benchmark_ticker
+                        compare_strategy_overrides["Global Relative Strength"]["promotion_min_etf_aum_b"] = float(promotion_min_etf_aum_b)
+                        compare_strategy_overrides["Global Relative Strength"]["promotion_max_bid_ask_spread_pct"] = float(
+                            promotion_max_bid_ask_spread_pct
+                        )
 
                 if "Risk Parity Trend" in selected_strategies:
                     with st.container(border=True):
@@ -12858,6 +13394,27 @@ def render_backtest_tab() -> None:
                 st.session_state.backtest_compare_bundles = None
                 st.session_state.backtest_compare_error_kind = "input"
                 st.session_state.backtest_compare_error = "GTAA universe must contain at least one ticker."
+            elif (
+                "Global Relative Strength" in selected_strategies
+                and not (compare_strategy_overrides.get("Global Relative Strength", {}).get("tickers") or [])
+            ):
+                st.session_state.backtest_compare_bundles = None
+                st.session_state.backtest_compare_error_kind = "input"
+                st.session_state.backtest_compare_error = "Global Relative Strength universe must contain at least one ticker."
+            elif (
+                "Global Relative Strength" in selected_strategies
+                and not (compare_strategy_overrides.get("Global Relative Strength", {}).get("cash_ticker") or "")
+            ):
+                st.session_state.backtest_compare_bundles = None
+                st.session_state.backtest_compare_error_kind = "input"
+                st.session_state.backtest_compare_error = "Global Relative Strength cash ticker is required."
+            elif (
+                "Global Relative Strength" in selected_strategies
+                and not (compare_strategy_overrides.get("Global Relative Strength", {}).get("score_lookback_months") or [])
+            ):
+                st.session_state.backtest_compare_bundles = None
+                st.session_state.backtest_compare_error_kind = "input"
+                st.session_state.backtest_compare_error = "Global Relative Strength Score Horizons must contain at least one lookback window."
             else:
                 try:
                     bundles = []

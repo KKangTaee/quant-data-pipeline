@@ -138,8 +138,9 @@
 - 첫 구현 후보는 `Global Relative-Strength Allocation With Trend Safety Net`으로 채택했다.
 - core strategy / sample helper / runtime wrapper first pass는 완료했고,
   representative DB-backed smoke run까지 통과했다.
-- 다음 확인 대상은 single / compare / history / saved replay에 필요한
-  catalog 등록, UI 입력, payload, meta 왕복이다.
+- single / compare / history / saved replay에 필요한
+  catalog 등록, UI 입력, payload, meta 왕복도 연결했다.
+- 다음 확인 대상은 사용자가 `PHASE24_TEST_CHECKLIST.md`로 실제 화면 QA를 완료하는 것이다.
 
 ## 한 줄 정리
 

@@ -208,8 +208,11 @@
 - `phase24/PHASE24_GLOBAL_RELATIVE_STRENGTH_CORE_RUNTIME_SMOKE_VALIDATION.md`
   - 첫 신규 전략 후보 `Global Relative Strength`의 core simulation, sample helper,
     DB-backed runtime wrapper가 compile / import / smoke run을 통과하는지 확인한 개발 검증 report
-  - 아직 UI catalog, single strategy 화면, compare, history, saved replay는 연결 전이며
-    다음 Phase 24 구현 단위로 남긴다
+  - core/runtime first pass 검증 report이며, UI 연결은 후속 report에서 확인한다
+- `phase24/PHASE24_GLOBAL_RELATIVE_STRENGTH_UI_REPLAY_SMOKE_VALIDATION.md`
+  - `Global Relative Strength`가 strategy catalog, single strategy UI, compare,
+    history payload, saved replay override까지 연결되는지 확인한 개발 검증 report
+  - 결과 수치는 투자 판단이 아니라 UI / replay 경로 smoke validation으로 읽는다
 
 ## 운영 메모
 

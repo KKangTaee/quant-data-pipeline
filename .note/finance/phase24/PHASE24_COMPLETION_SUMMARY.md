@@ -4,14 +4,16 @@
 
 이 문서는 `Phase 24 New Strategy Expansion And Research Implementation Bridge`를 closeout 기준으로 정리하기 위한 문서다.
 
-현재는 kickoff 직후이므로 최종 완료 문서가 아니다.
+현재는 practical closeout 기준의 handoff 문서다.
+최종 closeout은 사용자가 `PHASE24_TEST_CHECKLIST.md`를 완료한 뒤 확정한다.
 
 ## 현재 상태
 
-- `implementation_in_progress / core_runtime_first_pass_completed`
+- `practical_closeout / manual_validation_pending`
 
-현재 Phase 24는 아직 closeout 전이다.
-다만 첫 신규 전략 후보 선정과 core/runtime smoke validation은 끝났다.
+현재 Phase 24는 기능 구현 관점에서는 practical closeout 상태다.
+첫 신규 전략 후보 선정, core/runtime smoke validation,
+UI / compare / history / saved replay 연결까지 끝났다.
 
 ## 이번 phase에서 완료해야 할 것
 
@@ -49,18 +51,25 @@
 - `app.web.runtime.backtest`에 DB-backed runtime wrapper를 추가했다.
 - compile / import / synthetic smoke / DB-backed smoke validation을 통과했다.
 - smoke 결과를 `.note/finance/backtest_reports/phase24/PHASE24_GLOBAL_RELATIVE_STRENGTH_CORE_RUNTIME_SMOKE_VALIDATION.md`에 기록했다.
+- `Backtest > Single Strategy`에서 `Global Relative Strength`를 선택하고 실행할 수 있게 했다.
+- `Backtest > Compare & Portfolio Builder`에서 같은 전략을 compare에 넣을 수 있게 했다.
+- history record와 payload에 `cash_ticker`, `research_source`, cadence 값이 보존되도록 했다.
+- `Load Into Form`, `Run Again`, saved portfolio replay에서 새 전략 설정이 유지되도록 연결했다.
+- UI / replay smoke 결과를 `.note/finance/backtest_reports/phase24/PHASE24_GLOBAL_RELATIVE_STRENGTH_UI_REPLAY_SMOKE_VALIDATION.md`에 기록했다.
+- future 신규 전략 작업에서도 web product path를 빠뜨리지 않도록
+  `finance-strategy-implementation` skill guidance를 보강했다.
 
 ## 아직 남아 있는 것
 
-- UI / compare / history / replay 연결
-- Phase 24 checklist 작성 및 manual QA
+- 사용자의 manual QA checklist 확인
+- QA 중 발견되는 문구 / 화면 위치 / replay edge case 보정
 
 ## closeout 판단
 
-아직 closeout 전이다.
-Phase 24는 `core_runtime_first_pass_completed` 상태다.
+기능 구현 기준으로는 Phase 24 practical closeout 상태다.
+다만 사용자 manual QA가 끝나야 `phase complete / manual_validation_completed`로 닫는다.
 
 쉽게 말하면:
 
-- 전략 계산 엔진은 먼저 들어갔다.
-- 하지만 사용자가 화면에서 고르고 다시 여는 제품 기능은 아직 남아 있다.
+- 새 전략은 이제 화면에서 고르고 다시 열 수 있다.
+- 하지만 실제 사용자가 체크리스트로 확인하기 전까지는 Phase 25로 바로 넘어가지 않는다.

@@ -13,13 +13,32 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Active Pointers
 
 - current phase board:
-  - [PHASE23_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase23/PHASE23_CURRENT_CHAPTER_TODO.md)
+  - [PHASE24_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase24/PHASE24_CURRENT_CHAPTER_TODO.md)
 - current candidate summary:
   - [CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md)
 - historical full archive:
   - [WORK_PROGRESS_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/archive/WORK_PROGRESS_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-04-20
+- Continued Phase 24 with the UI / replay integration pass for `Global Relative Strength`.
+- Implemented:
+  - strategy catalog registration for single and compare strategy selectors
+  - `Backtest > Single Strategy` form with universe, cash ticker, top, interval, score horizons, trend filter, and ETF real-money contract inputs
+  - `Compare & Portfolio Builder` strategy-specific box and compare runner override support
+  - history payload / load-into-form / run-again roundtrip for `cash_ticker`, cadence, score, and trend settings
+  - saved portfolio replay override preservation for the new strategy
+- Validation:
+  - `python3 -m py_compile app/web/backtest_strategy_catalog.py app/web/runtime/backtest.py app/web/runtime/history.py app/web/pages/backtest.py`
+  - `.venv` catalog/history smoke
+  - `.venv` DB-backed runtime smoke
+  - `.venv` compare runner smoke
+- Status:
+  - Phase 24 is now `practical_closeout / manual_validation_pending`.
+  - Next step is user QA via `PHASE24_TEST_CHECKLIST.md`.
+- Guidance sync:
+  - refreshed `finance-strategy-implementation` skill guidance so future user-facing strategy additions include catalog / single UI / compare / history / saved replay handoff checks.
 
 ### 2026-04-19
 - Continued Phase 23 implementation with the first quarterly contract parity pass.

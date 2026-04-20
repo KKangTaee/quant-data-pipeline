@@ -4,14 +4,14 @@
 
 이 문서는 `Phase 24` 이후 어떤 질문으로 다음 phase를 여는 것이 자연스러운지 정리하기 위한 handoff 문서다.
 
-현재는 Phase 24 kickoff 단계이므로 초안으로 읽는다.
+현재는 Phase 24 practical closeout 단계의 handoff로 읽는다.
 
 ## 현재 handoff 상태
 
-- 아직 Phase 24는 완료되지 않았다.
-- 첫 신규 전략 `Global Relative Strength`는 core/runtime smoke까지 통과했다.
-- 하지만 UI catalog, single strategy, compare, history, saved replay 연결은 아직 남아 있다.
-- 따라서 지금은 Phase 25로 넘어가기보다 Phase 24의 next implementation work unit을 먼저 진행하는 것이 맞다.
+- 아직 Phase 24는 manual validation completed 상태가 아니다.
+- 첫 신규 전략 `Global Relative Strength`는 core/runtime smoke와
+  UI catalog, single strategy, compare, history, saved replay 연결까지 완료했다.
+- 따라서 지금은 Phase 25로 넘어가기 전에 `PHASE24_TEST_CHECKLIST.md`로 사용자 QA를 먼저 진행하는 것이 맞다.
 
 ## 다음 phase에서 더 중요한 질문
 
@@ -28,9 +28,9 @@ Phase 25로 바로 넘어가기보다 Phase 24 안에서 한 번 더 implementat
 
 현재 판단:
 
-- `Global Relative Strength`는 core/runtime first pass만 끝난 상태다.
-- 다음 작업은 `Backtest` UI와 재진입 흐름까지 붙이는 것이다.
-- 그 manual QA가 끝난 뒤에야 Phase 25 진입 여부를 판단한다.
+- `Global Relative Strength`는 제품 UI와 재진입 흐름까지 연결된 상태다.
+- 다음 작업은 사용자가 single / compare / history / saved replay 체크리스트를 실제 화면에서 확인하는 것이다.
+- 그 manual QA가 끝난 뒤에 Phase 25 진입 여부를 판단한다.
 
 ## handoff 메모
 

@@ -98,7 +98,12 @@ STRICT_PROMOTION_DEFAULT_MIN_WORST_ROLLING_EXCESS_RETURN = -0.15
 STRICT_PROMOTION_DEFAULT_MAX_STRATEGY_DRAWDOWN = -0.35
 STRICT_PROMOTION_DEFAULT_MAX_DRAWDOWN_GAP_VS_BENCHMARK = 0.08
 REAL_MONEY_CASH_LABEL = "__CASH__"
-ETF_OPERABILITY_STRATEGY_KEYS = {"gtaa", "risk_parity_trend", "dual_momentum"}
+ETF_OPERABILITY_STRATEGY_KEYS = {
+    "gtaa",
+    "global_relative_strength",
+    "risk_parity_trend",
+    "dual_momentum",
+}
 
 
 def _infer_strategy_family(strategy_key: str, strategy_name: str) -> str:
@@ -2459,6 +2464,8 @@ def build_backtest_result_bundle(
     }
     if input_params.get("top") is not None:
         meta["top"] = input_params.get("top")
+    if input_params.get("cash_ticker") is not None:
+        meta["cash_ticker"] = input_params.get("cash_ticker")
     if input_params.get("vol_window") is not None:
         meta["vol_window"] = input_params.get("vol_window")
     if input_params.get("factor_freq") is not None:
@@ -2563,6 +2570,8 @@ def build_backtest_result_bundle(
         meta["crash_guardrail_drawdown_threshold"] = input_params.get("crash_guardrail_drawdown_threshold")
     if input_params.get("crash_guardrail_lookback_months") is not None:
         meta["crash_guardrail_lookback_months"] = input_params.get("crash_guardrail_lookback_months")
+    if input_params.get("research_source") is not None:
+        meta["research_source"] = input_params.get("research_source")
 
     return {
         "strategy_name": strategy_name,
@@ -2899,6 +2908,7 @@ def run_global_relative_strength_backtest_from_db(
             "score_lookback_months": normalized_score_lookback_months,
             "score_return_columns": normalized_score_return_columns,
             "score_weights": normalized_score_weights,
+            "trend_filter_enabled": True,
             "trend_filter_window": trend_filter_window,
             "universe_mode": universe_mode,
             "preset_name": preset_name,

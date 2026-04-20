@@ -19,7 +19,7 @@
 - `.note/finance/MASTER_PHASE_ROADMAP.md`
   - 전체 Phase 구조와 상위 진행 방향을 정리한 최상위 로드맵 문서
   - 최근 refresh 기준으로 `Phase 21 = 완료`, `Phase 22 = manual validation completed`, `Phase 23 = manual validation completed`,
-    `Phase 24 = core runtime first pass completed / UI 연결 pending`, `현재 위치`, support track, `Phase 24~25` 흐름까지 다시 정리되어 있다
+    `Phase 24 = practical closeout / manual validation pending`, `현재 위치`, support track, `Phase 24~25` 흐름까지 다시 정리되어 있다
   - 또한 `Phase 18 = 진행형`, `Phase 19/20 = 완료`, `Phase 5 first chapter = historical label`이라는 해석도 함께 반영되어 있다
   - roadmap tail도 `현재 위치 = 상태판`, `지금부터의 큰 흐름 = 다음 진행 안내판` 구조로 다시 정리되어 있다
   - 최신 기준으로 이 프로젝트가 투자 분석을 기본으로 하는 것이 아니라
@@ -188,20 +188,30 @@
 - `.note/finance/phase24/PHASE24_RESEARCH_TO_IMPLEMENTATION_BRIDGE_FIRST_WORK_UNIT.md`
   - `Phase 24` 첫 번째 작업 단위로,
     구현 후보 선정 기준과 첫 후보 `Global Relative-Strength Allocation With Trend Safety Net`을 고른 이유를 정리한 문서
+- `.note/finance/phase24/PHASE24_UI_AND_REPLAY_INTEGRATION_SECOND_WORK_UNIT.md`
+  - `Phase 24` 두 번째 작업 단위로,
+    `Global Relative Strength`를 `Backtest` single strategy, compare, history,
+    load-into-form, run-again, saved replay 흐름에 연결한 구현 기록 문서
 - `.note/finance/phase24/PHASE24_COMPLETION_SUMMARY.md`
-  - `Phase 24` closeout 때 무엇이 완료되어야 하는지 정리하는 summary 초안
-  - 현재는 `Global Relative Strength` core/runtime first pass와 남은 UI 연결 작업을 구분해 둔다
+  - `Phase 24` practical closeout 결과를 정리하는 summary 문서
+  - 현재는 `Global Relative Strength` core/runtime과 UI / compare / history / saved replay 연결 완료,
+    manual validation pending 상태를 구분해 둔다
 - `.note/finance/phase24/PHASE24_NEXT_PHASE_PREPARATION.md`
-  - `Phase 24` 이후 `Phase 25` pre-live readiness 또는 추가 implementation hardening 여부를 판단하기 위한 handoff 초안
+  - `Phase 24` 이후 `Phase 25` pre-live readiness 또는 추가 implementation hardening 여부를 판단하기 위한 handoff 문서
 - `.note/finance/phase24/PHASE24_TEST_CHECKLIST.md`
-  - `Phase 24` manual QA 때 사용할 checklist 초안
+  - `Phase 24` manual QA 때 사용할 checklist 문서
   - 신규 전략 성과가 좋은지보다, 신규 전략이 single / compare / history / saved replay 흐름에서 재현 가능한지 확인한다
+  - 현재는 `Global Relative Strength`의 실제 UI 위치와 확인 항목을 기준으로 업데이트되어 있다
 - `.note/finance/backtest_reports/phase24/README.md`
   - `Phase 24` new strategy expansion report archive 안내 문서
 - `.note/finance/backtest_reports/phase24/PHASE24_GLOBAL_RELATIVE_STRENGTH_CORE_RUNTIME_SMOKE_VALIDATION.md`
   - `Global Relative Strength` core simulation, DB-backed sample helper, web runtime wrapper가
     compile / import / DB-backed smoke run을 통과했는지 확인한 개발 검증 report
-  - 아직 UI catalog / single strategy / compare / history / saved replay는 연결 전이라는 경계를 명확히 남긴다
+  - core/runtime first pass 시점의 검증 report이며, 후속 UI replay report와 함께 읽는다
+- `.note/finance/backtest_reports/phase24/PHASE24_GLOBAL_RELATIVE_STRENGTH_UI_REPLAY_SMOKE_VALIDATION.md`
+  - `Global Relative Strength`가 UI catalog, single strategy, compare, history payload,
+    saved replay override까지 연결되는지 확인한 개발 검증 report
+  - 수치는 투자 판단이 아니라 기능 smoke validation으로만 읽는다
 - `.note/finance/backtest_reports/phase23/README.md`
   - `Phase 23` quarterly / alternate cadence productionization report archive 안내 문서
 - `.note/finance/backtest_reports/phase23/PHASE23_QUARTERLY_CONTRACT_SMOKE_VALIDATION_FIRST_PASS.md`

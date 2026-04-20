@@ -11,4 +11,7 @@
 
 - `PHASE24_GLOBAL_RELATIVE_STRENGTH_CORE_RUNTIME_SMOKE_VALIDATION.md`
   - `Global Relative Strength` 전략의 core simulation, sample helper, runtime wrapper가 실제로 import / compile / DB-backed smoke run을 통과하는지 확인한 report
-  - 아직 `Backtest` UI, compare, history, saved replay까지 연결된 상태는 아니며, 그 작업은 다음 Phase 24 구현 단위로 남긴다
+  - 이 문서는 core/runtime first pass 검증에 집중한다
+- `PHASE24_GLOBAL_RELATIVE_STRENGTH_UI_REPLAY_SMOKE_VALIDATION.md`
+  - 같은 전략이 `Backtest` UI, compare, history payload, saved replay override까지 연결되는지 확인한 report
+  - 남은 항목은 실제 Streamlit 화면에서 사용자가 수행하는 manual QA다

@@ -2,7 +2,7 @@
 
 ## 상태
 
-- `implementation_in_progress / core_runtime_first_pass_completed`
+- `practical_closeout / manual_validation_pending`
 
 ## 현재 목표
 
@@ -25,9 +25,9 @@
   - 신규 전략 simulation 또는 기존 engine 재사용 경로를 명확히 만든다.
 - `completed` core/runtime smoke report 작성
   - `PHASE24_GLOBAL_RELATIVE_STRENGTH_CORE_RUNTIME_SMOKE_VALIDATION.md`에 compile / import / DB-backed smoke 결과를 기록한다.
-- `pending` web catalog / single strategy UI 연결
+- `completed` web catalog / single strategy UI 연결
   - 사용자가 `Backtest > Single Strategy`에서 실행할 수 있게 한다.
-- `pending` compare / history / saved replay 연결
+- `completed` compare / history / saved replay 연결
   - 새 전략이 compare와 재진입 흐름에서 끊기지 않게 한다.
 
 ## 3. Validation
@@ -35,7 +35,7 @@
 - `completed` targeted `py_compile`
 - `completed` `.venv` import smoke
 - `completed` representative DB-backed smoke run
-- `pending` manual validation checklist handoff
+- `completed` manual validation checklist handoff
 
 ## 4. Documentation Sync
 
@@ -45,11 +45,13 @@
 - `completed` roadmap / doc index / work log / question log sync
 - `completed` finance comprehensive analysis sync
 - `completed` Phase 24 completion / next-phase 문서 업데이트
+- `completed` UI / replay integration second work-unit 문서 생성
+- `completed` Phase 24 UI replay smoke report 작성
 
 ## 현재 판단
 
-Phase 24는 첫 구현 후보 선정과 core/runtime first pass까지 완료했다.
-다만 아직 제품 UI에 노출된 전략은 아니다.
+Phase 24는 첫 구현 후보 선정, core/runtime first pass,
+그리고 `Backtest` UI / compare / history / saved replay 연결까지 완료했다.
 
-다음 작업은 `Global Relative Strength`를 catalog, single strategy UI,
-compare, history, saved replay까지 연결하는 것이다.
+다음 작업은 사용자가 `PHASE24_TEST_CHECKLIST.md`로 manual QA를 진행하는 것이다.
+체크리스트가 완료되면 Phase 24 closeout 후 Phase 25 진입 여부를 판단한다.
