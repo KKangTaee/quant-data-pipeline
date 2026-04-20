@@ -1557,3 +1557,13 @@ Detailed historical logs were archived on `2026-04-13`.
   - synced Phase 24 TODO, completion draft, next-phase prep, roadmap, doc index, backtest report index, and finance analysis
 - Durable takeaway:
   - `Global Relative Strength` is now implemented at core/runtime level, but it is not yet exposed in `Backtest` UI, compare, history, or saved replay.
+
+### 2026-04-20
+- Reorganized the `FINANCE_COMPREHENSIVE_ANALYSIS.md` detailed implementation memo governance.
+- Changed:
+  - clarified that `3-3. 상세 구현 메모` is a legacy archive, not the current source of truth
+  - added a management policy for where future current-state, phase, backtest, glossary, candidate, and workflow records should live
+  - added a short future-record template with date, phase, category, affected area, source, and re-review condition
+  - added a topic index so the long legacy memo can be searched without treating every old note as current behavior
+- Durable takeaway:
+  - Future finance implementation notes should not be appended indefinitely to `3-3`; new details should be routed to the correct canonical document and only summarized in the comprehensive analysis when they affect current system behavior.

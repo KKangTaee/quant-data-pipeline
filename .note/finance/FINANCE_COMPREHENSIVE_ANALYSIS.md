@@ -238,16 +238,94 @@ web UI가 그 wrapper의 result bundle을 받아 single / compare / history / sa
 
 ### 3-3. 상세 구현 메모
 
-아래 내용은 이전 종합 분석에서 누적된 상세 구현 메모다.
-현재 구조를 빠르게 이해하려면 `3-1`, `3-2`를 먼저 읽고,
-세부 맥락이나 과거 구현 판단이 필요할 때 이 메모를 참고한다.
+이 섹션은 예전 종합 분석에서 누적된 상세 구현 기록을 보존하는 곳이다.
+다만 앞으로는 여기에 긴 변경 이력을 계속 덧붙이지 않는다.
+현재 시스템을 빠르게 이해하려면 `3-1. 현재 시스템 구조`와 `3-2. Phase별 구현 히스토리`를 먼저 읽고,
+세부 배경이나 과거 판단이 필요할 때만 아래 legacy 메모를 참고한다.
 
-과거 메모는 구현 히스토리 보존을 위해 남겨둔다.
-다만 현재 상태 판단은 `MASTER_PHASE_ROADMAP.md`, `WORK_PROGRESS.md`,
-각 phase의 `CURRENT_CHAPTER_TODO.md`와 함께 확인한다.
+#### 3-3-1. 이 메모의 역할
 
-과거 상세 메모는 아래의 단순 레이어 모델에서 시작해,
-이후 phase별 구현 내용이 누적된 형태로 남아 있다.
+`3-3`은 현재 사양 문서가 아니라 과거 구현 맥락을 보존하는 archive다.
+여기에는 phase 진행 중 쌓인 UI 변경, runtime 연결, strategy 확장, DB/ingestion 판단,
+QA 피드백, backtest 검증 메모가 섞여 있다.
+
+따라서 이 섹션을 읽을 때는 다음처럼 구분한다.
+
+- `현재 상태`: 지금 코드와 문서가 실제로 따르는 구조다. 보통 `3-1`, `4~12`, phase 문서, roadmap에서 확인한다.
+- `당시 기록`: 특정 phase 당시의 판단이나 구현 배경이다. 현재와 다를 수 있다.
+- `참고 가치`: 왜 어떤 기능이 생겼는지, 왜 어떤 UI 문구가 바뀌었는지, 어떤 위험을 고려했는지 확인할 때 유용하다.
+- `주의점`: 이 섹션만 보고 현재 기능이 그대로 동작한다고 판단하지 않는다.
+
+#### 3-3-2. 현재 3-3에 섞여 있는 내용
+
+기존 상세 메모에는 다음 내용이 한 곳에 누적되어 있었다.
+
+- 전체 architecture 그림과 data / runtime / strategy / UI 연결 설명
+- phase별 구현 기록과 practical closeout 판단
+- Backtest UI, Compare, History, Saved Portfolio, Guides, Glossary UX 변경 이력
+- GTAA, Equal Weight, Risk Parity, Dual Momentum, Global Relative Strength 구현 메모
+- Strict Annual / Quarterly Quality, Value, Quality + Value 관련 구현 메모
+- EDGAR, statement shadow table, coverage, freshness, run artifact 관련 data/DB 메모
+- PIT, survivorship, dynamic universe, promotion, pre-live, deployment readiness 관련 정책 메모
+- smoke run, backtest 결과, 후보 판단, QA 피드백, warning 문구 변경 기록
+
+이 내용들은 모두 보존 가치가 있지만, 한 문단에 계속 쌓이면 나중에 현재 상태와 과거 기록을 구분하기 어렵다.
+그래서 앞으로는 아래 관리 원칙을 따른다.
+
+#### 3-3-3. 상세 메모 관리 원칙
+
+- `3-3`에는 새 긴 구현 이력을 직접 append하지 않는다.
+- 현재 동작이 바뀌면 이 문서의 해당 주제 섹션을 짧게 수정한다.
+- phase 진행 기록은 해당 `.note/finance/phase*/` 문서와 `WORK_PROGRESS.md`에 남긴다.
+- 설계 판단이나 사용자 질문에서 나온 durable conclusion은 `QUESTION_AND_ANALYSIS_LOG.md`에 남긴다.
+- backtest 결과, 후보 비교, 실험 성과는 `.note/finance/backtest_reports/` 또는 strategy별 backtest log에 남긴다.
+- 현재 후보나 near-miss 후보처럼 기계적으로 다시 읽어야 하는 정보는 `CURRENT_CANDIDATE_REGISTRY.jsonl`을 우선한다.
+- 기존 기록을 옮기거나 요약할 때는 원문을 먼저 보존하고, 그 다음 current-state 요약을 별도로 만든다.
+- `현재`, `최근`, `나중에` 같은 표현은 가능하면 `2026-04-20 기준`, `Phase 25 기준`처럼 기준점을 붙인다.
+
+#### 3-3-4. 앞으로 새 내용을 기록하는 규칙
+
+새로운 상세 메모가 정말 필요하다면 아래 형식을 사용한다.
+단, 10~15줄을 넘는다면 이 섹션이 아니라 phase work-unit 문서, backtest report, 또는 별도 guide 문서로 분리한다.
+
+```md
+##### YYYY-MM-DD / Phase N / 짧은 제목
+- 구분: current_state | historical_note | decision | caveat | deprecated
+- 관련 영역: data | db | runtime | strategy | web_ui | history | real_money | pre_live
+- 현재 상태에 미치는 영향:
+- 근거 문서 / 코드:
+- 나중에 다시 확인할 조건:
+```
+
+기록 위치를 고르는 기준은 다음과 같다.
+
+- 제품의 현재 구조 설명이면 `FINANCE_COMPREHENSIVE_ANALYSIS.md`의 해당 주제 섹션에 반영한다.
+- phase 진행 상황이면 해당 phase TODO, completion, next-phase 문서에 반영한다.
+- 반복 가능한 테스트 결과이면 `backtest_reports/`에 남긴다.
+- 용어가 반복되면 `FINANCE_TERM_GLOSSARY.md`에 남긴다.
+- 다음 agent가 따라야 할 작업 방식이면 `AGENTS.md` 또는 active skill 문서를 검토한다.
+
+#### 3-3-5. Legacy 상세 메모 색인
+
+아래 legacy 본문을 찾을 때는 대략 다음 주제로 읽으면 된다.
+
+- `architecture / layer model`: finance package의 data, loader, strategy, UI 흐름
+- `web product surface`: Streamlit Backtest, Compare, History, Guides, Glossary, Ingestion 화면
+- `history / load into form / saved replay`: run history, saved compare, saved portfolio 재실행 흐름
+- `real-money / promotion / pre-live`: promotion, shortlist, paper, watchlist, hold, deployment readiness 구분
+- `GTAA / ETF strategies`: GTAA 후보, expanded universe, ETF 전략 QA
+- `strict annual`: Quality, Value, Quality + Value annual factor strategy 구조
+- `quarterly / dynamic PIT`: quarterly prototype, dynamic statement shadow, PIT timing
+- `data / DB / ingestion`: EDGAR, statement shadow, coverage, freshness, refresh payload
+- `runtime / smoke validation`: compile, import, DB-backed smoke, run artifact, warning metadata
+- `candidate / compare / weighted`: current candidate re-entry, compare form, weighted portfolio, saved portfolio
+- `new strategy expansion`: Phase 24 Global Relative Strength와 신규 strategy family 연결
+
+#### 3-3-6. Legacy 상세 구현 메모
+
+아래 내용은 기존 상세 메모 원문이다.
+현재 상태를 판단할 때는 먼저 `3-1`, `3-2`, roadmap, phase 문서, 최신 code를 확인하고,
+이 부분은 과거 구현 배경을 추적하는 용도로 사용한다.
 
 ```text
 외부 데이터 소스

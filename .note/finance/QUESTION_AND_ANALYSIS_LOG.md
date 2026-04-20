@@ -2262,3 +2262,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `add_ma`는 이동평균 계산 전 기준 가격 결측 행을 제거하도록 수정했다
   - 같은 조건의 runtime smoke는 최신 DB 거래일인 `2026-04-17`까지 결과가 생성되며, `IWM 1건(2026-03-17)` 결측 가격 행도 주의사항과 metadata에 표시된다
   - 주의사항 문구도 한국어 중심으로 표시된다
+
+### 2026-04-20 - `FINANCE_COMPREHENSIVE_ANALYSIS`의 상세 구현 메모는 legacy archive로 관리한다
+- Request topic:
+  - 사용자가 `FINANCE_COMPREHENSIVE_ANALYSIS.md`의 `3-3. 상세 구현 메모`가 계속 누적되면 관리되지 않는 기록 창고가 될 수 있다고 지적하고, 향후 기록 방식까지 정리해 달라고 요청함
+- Interpreted goal:
+  - 기존 상세 구현 기록은 잃지 않되, 현재 상태와 과거 기록을 구분하고 앞으로 어떤 내용을 어디에 기록할지 명확히 해야 함
+- Result:
+  - `3-3`을 현재 사양 문서가 아니라 legacy archive로 명시했다
+  - 새 긴 구현 이력은 `3-3`에 직접 append하지 않고, 현재 동작은 관련 주제 섹션, phase 진행은 phase 문서와 `WORK_PROGRESS.md`, 설계 판단은 `QUESTION_AND_ANALYSIS_LOG.md`, backtest 결과는 `backtest_reports/`, 후보 기록은 `CURRENT_CANDIDATE_REGISTRY.jsonl`로 분산 기록하도록 정리했다
+  - 기존 긴 메모는 삭제하지 않고 주제별 색인과 기록 템플릿을 붙여, future agent와 사용자가 참고 기록과 현재 상태를 혼동하지 않도록 했다
