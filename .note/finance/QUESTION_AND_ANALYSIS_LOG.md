@@ -21,6 +21,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-04-20 - Real-Money 검증 신호와 Pre-Live 운영 점검을 분리하기로 했다
+- Request topic:
+  - 사용자가 Real-Money 검증과 Phase 25에서 할 점검/운영 흐름이 비슷하게 보이므로, 사용자가 혼동하지 않게 명확히 분리해 달라고 요청함
+- Interpreted goal:
+  - Real-Money는 개별 백테스트 실행의 검증 신호로 두고, Phase 25는 그 신호를 받아 paper / watchlist / 보류 / 재검토를 기록하는 별도 운영 절차로 설계해야 함
+- Result:
+  - 용어를 `Real-Money 검증 신호`와 `Pre-Live 운영 점검`으로 분리했다
+  - `Reference > Guides > 테스트에서 상용화 후보 검토까지 사용하는 흐름`에서 두 단계를 별도로 설명하도록 업데이트했다
+  - `PHASE24_NEXT_PHASE_PREPARATION.md` handoff에도 Phase 25에서 이 경계를 유지해야 한다고 명시했다
+
 ### 2026-04-20 - 결측 가격 행은 임의 보정하지 않고 공통 날짜를 보수적으로 제한하기로 했다
 - Request topic:
   - 사용자가 `IWM` 결측 행이 있는 상황에서 4월까지 계산하는 것이 아니라, 결측 문제를 명시하면서 2월에서 끊는 것이 맞지 않느냐고 질문함

@@ -22,6 +22,18 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-04-20
+- Clarified the Phase 25 boundary between existing Real-Money validation and future pre-live operation workflow.
+- Decision:
+  - `Real-Money 검증 신호` = per-backtest diagnostic surface for transaction cost, benchmark, drawdown, liquidity, ETF operability, promotion status
+  - `Pre-Live 운영 점검` = Phase 25 workflow for paper tracking, watchlist, hold/review decisions, monitoring notes, and re-collection/re-validation actions
+- Updated:
+  - `Reference > Guides > 테스트에서 상용화 후보 검토까지 사용하는 흐름`
+  - `FINANCE_TERM_GLOSSARY.md`
+  - `PHASE24_NEXT_PHASE_PREPARATION.md`
+  - `FINANCE_COMPREHENSIVE_ANALYSIS.md`
+  - `QUESTION_AND_ANALYSIS_LOG.md`
+
+### 2026-04-20
 - Corrected the `Global Relative Strength` malformed price-row handling policy after user QA feedback.
 - Decision:
   - do not silently remove or repair a malformed price row to extend the backtest result window

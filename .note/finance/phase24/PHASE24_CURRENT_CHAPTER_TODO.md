@@ -53,6 +53,8 @@
 - `completed` Phase 24 completion / next-phase 문서 업데이트
 - `completed` UI / replay integration second work-unit 문서 생성
 - `completed` Phase 24 UI replay smoke report 작성
+- `completed` Phase 25 boundary clarification
+  - `Real-Money 검증 신호`와 `Pre-Live 운영 점검`을 Guides / Glossary / next-phase handoff에서 분리해 설명했다.
 
 ## 현재 판단
 

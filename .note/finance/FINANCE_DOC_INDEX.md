@@ -198,6 +198,8 @@
     manual validation pending 상태를 구분해 둔다
 - `.note/finance/phase24/PHASE24_NEXT_PHASE_PREPARATION.md`
   - `Phase 24` 이후 `Phase 25` pre-live readiness 또는 추가 implementation hardening 여부를 판단하기 위한 handoff 문서
+  - 최신 기준으로 `Real-Money 검증 신호`와 `Pre-Live 운영 점검`을 별도 흐름으로 구분해,
+    Phase 25가 기존 Real-Money 탭의 중복 기능처럼 보이지 않도록 설명한다
 - `.note/finance/phase24/PHASE24_TEST_CHECKLIST.md`
   - `Phase 24` manual QA 때 사용할 checklist 문서
   - 신규 전략 성과가 좋은지보다, 신규 전략이 single / compare / history / saved replay 흐름에서 재현 가능한지 확인한다
@@ -271,6 +273,8 @@
   - 앱에서는 `Reference > Glossary`에서 검색형 UI로 바로 다시 볼 수 있다
   - 최신 기준으로 `Development Validation`, `Fixture`, `User-Requested Analysis`가 추가되어,
     개발 검증과 투자 분석 요청을 구분해서 읽을 수 있다
+  - 최신 기준으로 `Real-Money 검증 신호`와 `Pre-Live 운영 점검`도 추가되어,
+    개별 백테스트 진단과 paper / watchlist / 재검토 운영 절차를 구분해서 읽을 수 있다
 - `.note/finance/BACKTEST_REFINEMENT_CODE_FLOW_GUIDE.md`
   - Streamlit UI, runtime adapter, finance engine, strategy 문서 흐름까지 backtest refinement code path를 한 장으로 정리한 안내 문서
 - `.note/finance/RUNTIME_ARTIFACT_HYGIENE.md`

@@ -159,16 +159,19 @@ Analysis / Presentation
   strict annual은 `validation / validation_policy`,
   ETF family는 `operability + validation watch/caution boundary`
   를 family별 calibration의 다음 active 질문으로 좁혀 읽는 기준점이 생겼다.
-  이어서 `Guides`에는
-  - 데이터 최신화
-  - single strategy 확인
-  - real-money 해석
-  - hold blocker 해결
-  - compare
-  - history / backtest report 정리
-  - probation / monitoring
-  - 소액 trial 직전 판단
-  까지를 `1단계 ~ 8단계` 형태로 읽는 operator runbook도 추가됐다.
+	  이어서 `Guides`에는
+	  - 데이터 최신화
+	  - single strategy 확인
+	  - Real-Money 검증 신호 확인
+	  - hold blocker 해결
+	  - compare
+	  - history / backtest report 정리
+	  - Pre-Live 운영 점검
+	  - 실전 후보 판단
+	  까지를 `1단계 ~ 8단계` 형태로 읽는 operator runbook도 추가됐다.
+	  최근에는 여기서 Real-Money를 "개별 백테스트 실행의 검증 신호"로,
+	  Phase 25 Pre-Live 운영 점검을 "paper tracking / watchlist / 보류 / 재검토를 기록하는 운영 절차"로
+	  명확히 분리해 사용자가 두 흐름을 같은 기능으로 혼동하지 않게 했다.
   같은 `Reference` 그룹 안의 `Glossary` 페이지는
   `.note/finance/FINANCE_TERM_GLOSSARY.md`를 그대로 source로 사용하면서,
   제목/본문 검색이 가능한 operator-facing 용어 사전 UI를 제공한다.

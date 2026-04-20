@@ -2784,6 +2784,11 @@ def _render_guides_page() -> None:
             "여기서 말하는 `상용화`는 곧바로 큰 자금을 live로 넣는다는 뜻이 아니라, "
             "`실전 후보 검토 -> paper probation -> 소액 trial`까지 이어지는 운영 흐름을 말합니다."
         )
+        st.info(
+            "`Real-Money`는 개별 백테스트 실행에 붙는 **검증 신호**입니다. "
+            "거래비용, benchmark, drawdown, ETF 운용 가능성 같은 위험 신호를 보여줍니다. "
+            "반면 `Pre-Live 운영 점검`은 그 신호를 보고 paper tracking, watchlist, 보류, 재검토를 어떻게 기록하고 운영할지 정하는 **별도 운영 절차**입니다."
+        )
 
         step_rows = [
             {
@@ -2809,15 +2814,15 @@ def _render_guides_page() -> None:
                 "next_step": "single run이 이상 없으면 `Real-Money` 탭으로 내려가 운영 해석을 시작합니다.",
             },
             {
-                "title": "3단계. Real-Money에서 운영 해석 시작",
+                "title": "3단계. Real-Money 검증 신호 확인",
                 "path": "Backtest 결과 > Real-Money",
-                "goal": "이 전략이 지금 hold인지, 후보인지, 배치 직전 상태인지 해석합니다.",
+                "goal": "개별 백테스트 결과에 붙은 실전 검토 신호를 읽습니다. 이 단계는 투자 실행 승인이 아니라 위험/검증 신호 확인입니다.",
                 "check": [
                     "`현재 판단`: Promotion / Shortlist / Probation / Deployment 확인",
                     "`검토 근거`: Validation / Benchmark / Rolling / OOS 확인",
                     "`실행 부담`: Liquidity / ETF Operability / Guardrail 상태 확인",
                 ],
-                "next_step": "`Promotion != hold`, `Deployment != blocked`가 최소 목표입니다.",
+                "next_step": "`Promotion != hold`, `Deployment != blocked`여도 바로 투자하지 않고, 이후 Pre-Live 운영 점검으로 넘길 수 있는지만 봅니다.",
             },
             {
                 "title": "4단계. Hold면 먼저 막히는 항목 해결",
@@ -2853,26 +2858,26 @@ def _render_guides_page() -> None:
                 "next_step": "재현 가능한 run만 다음 probation 후보로 넘기는 편이 안전합니다.",
             },
             {
-                "title": "7단계. Probation과 Monitoring으로 운영 후보 관리",
-                "path": "Real-Money > 현재 판단 > Probation / Monitoring",
-                "goal": "좋아 보이는 전략을 바로 live로 넣지 않고 paper tracking 또는 소액 trial로 검증합니다.",
+                "title": "7단계. Pre-Live 운영 점검으로 후보 관리",
+                "path": "Phase 25 / Paper Run Checklist / Monitoring Note",
+                "goal": "Real-Money 검증 신호를 바탕으로 paper tracking, watchlist, 보류, 재검토 같은 운영 행동을 기록합니다.",
                 "check": [
                     "`Shortlist = watchlist / paper_probation / small_capital_trial` 확인",
                     "`Monitoring Focus`, `Monitoring Breach Signals` 확인",
-                    "`Rolling Review`, `Out-of-Sample Review`, `Deployment Readiness`가 같이 버티는지 확인",
+                    "paper run 기간, 재검토 날짜, 중단 조건, 재수집/재검증 필요 항목 기록",
                 ],
-                "next_step": "여기서도 먼저 `paper probation`을 거치고, 그 다음 `small capital trial`로 가는 편이 기본 흐름입니다.",
+                "next_step": "이 단계는 Phase 25에서 본격화할 운영 절차입니다. Real-Money 탭의 신호를 받아서 실제 운영 기록으로 남기는 역할입니다.",
             },
             {
-                "title": "8단계. 상용화 후보 판단은 마지막에 보수적으로",
-                "path": "Promotion / Shortlist / Deployment Readiness 종합",
-                "goal": "좋은 숫자보다, 실제 운용 후보로 읽어도 되는지를 마지막으로 종합 판단합니다.",
+                "title": "8단계. 실전 후보 판단은 마지막에 보수적으로",
+                "path": "Real-Money 검증 신호 + Pre-Live 운영 점검 종합",
+                "goal": "좋은 숫자보다, 실전 후보로 계속 관찰할지 또는 보류할지를 마지막으로 종합 판단합니다.",
                 "check": [
                     "`Promotion = real_money_candidate`에 가까운지",
                     "`Shortlist`가 `paper_probation` 이상인지",
-                    "`Deployment Readiness`가 `blocked`가 아닌지",
+                    "Pre-Live 운영 기록에서 paper run / monitoring 조건이 명확한지",
                 ],
-                "next_step": "조건이 좋더라도 바로 full live가 아니라, 소액 trial과 정기 review를 붙이는 것이 기본입니다.",
+                "next_step": "조건이 좋더라도 바로 full live가 아니라, paper run과 정기 review를 먼저 붙이는 것이 기본입니다.",
             },
         ]
 

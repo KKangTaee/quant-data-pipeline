@@ -32,7 +32,36 @@ Phase 25로 바로 넘어가기보다 Phase 24 안에서 한 번 더 implementat
 - 다음 작업은 사용자가 single / compare / history / saved replay 체크리스트를 실제 화면에서 확인하는 것이다.
 - 그 manual QA가 끝난 뒤에 Phase 25 진입 여부를 판단한다.
 
+## Phase 25에서 헷갈리면 안 되는 경계
+
+### Real-Money 검증 신호
+
+- 위치:
+  - `Backtest 결과 > Real-Money`
+- 역할:
+  - 개별 백테스트 실행에 대해 거래비용, benchmark, drawdown, 유동성, ETF 운용 가능성, promotion 상태를 보여준다.
+- 한 줄로 말하면:
+  - "이 백테스트 결과를 실전 후보로 보기 전에 어떤 위험 신호가 있는가"를 보여주는 진단표다.
+
+### Pre-Live 운영 점검
+
+- 위치:
+  - Phase 25에서 만들 운영 checklist / paper-run 기록 / monitoring note
+- 역할:
+  - Real-Money 검증 신호를 보고 paper tracking, watchlist, 보류, 재검토, 데이터 재수집 같은 실제 운영 행동을 정리한다.
+- 한 줄로 말하면:
+  - "이 후보를 실제 돈 넣기 전에 어떻게 관찰하고 기록할 것인가"를 정하는 운영 절차다.
+
+### 둘의 관계
+
+- Real-Money는 `검증 신호`다.
+- Pre-Live 운영 점검은 그 신호를 받아서 움직이는 `운영 절차`다.
+- 둘은 연결되어 있지만 같은 기능으로 보지 않는다.
+- Phase 25에서는 이 둘이 UI / 문서 / checklist에서 섞여 보이지 않게 분리해서 설명해야 한다.
+
 ## handoff 메모
 
 - Phase 25는 live trading이 아니라 paper / review / pre-live readiness 운영 체계다.
 - Phase 24 결과가 투자 추천으로 자동 변환되지 않게 유지한다.
+- `Reference > Guides > 테스트에서 상용화 후보 검토까지 사용하는 흐름`도
+  Real-Money 검증 신호와 Pre-Live 운영 점검을 별도 단계로 읽도록 업데이트했다.
