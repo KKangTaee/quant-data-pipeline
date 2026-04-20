@@ -105,6 +105,9 @@
 - Keep `.note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md` as the high-level system map, and put detailed code modification flow in `.note/finance/code_analysis/`.
 - When code changes add or materially alter runtime flow, DB/loader flow, Backtest UI flow, strategy implementation flow, or repo-local automation scripts, update the matching `.note/finance/code_analysis/*.md` document.
 - Do not update code analysis documents for small copy changes, one-off backtest results, or phase status updates unless the durable code flow changed.
+- Use `.note/finance/data_architecture/` for data / DB architecture documents.
+- Keep DB and table meaning, data flow, table semantics, PIT notes, look-ahead risk, survivorship risk, and stale data interpretation under `.note/finance/data_architecture/`.
+- When a finance change adds or materially changes DB tables, schema meaning, ingestion sources, loader source-of-truth, PIT timing, or table semantics, update the matching `.note/finance/data_architecture/*.md` document.
 - If analysis documents were previously stored under `finance/docs`, prefer the `.note/finance/` location going forward.
 - Use `.note/finance/MASTER_PHASE_ROADMAP.md` as the top-level phase roadmap.
 - Use `.note/finance/FINANCE_DOC_INDEX.md` as the top-level index into finance documents.
@@ -227,6 +230,7 @@
 - Does this change alter strategy inputs, outputs, or assumptions?
 - Does this change require documentation sync in `FINANCE_COMPREHENSIVE_ANALYSIS.md`?
 - Does this change require an update to `.note/finance/code_analysis/` because a durable code flow changed?
+- Does this change require an update to `.note/finance/data_architecture/` because data / DB meaning changed?
 - If this phase is closing or handing off, does it require a phase-specific manual test checklist document?
 - If this phase is closing or handing off, do `AGENTS.md`, active skills, roadmap/index docs, or phase reference docs need to be refreshed to reflect the implemented workflow?
 - Does this change require an appended entry in `WORK_PROGRESS.md`?

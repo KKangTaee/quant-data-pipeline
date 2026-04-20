@@ -2293,3 +2293,14 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `FINANCE_COMPREHENSIVE_ANALYSIS.md`의 파일 역할, 중요 함수, automation baseline 섹션을 간단한 요약 / entrypoint map으로 줄였다
   - strict annual contract, ETF runtime warning, real-money / guardrail / pre-live runtime 기준은 `STRATEGY_IMPLEMENTATION_FLOW.md`와 `BACKTEST_RUNTIME_FLOW.md` 쪽에 보강했다
   - 앞으로 종합 문서는 current system map으로 읽고, 코드 수정 순서와 상세 계약은 `code_analysis/`에서 관리하는 방향으로 고정했다
+
+### 2026-04-20 - DB 구조와 데이터 흐름은 별도 `data_architecture/` 계층으로 관리한다
+- Request topic:
+  - 사용자가 `FINANCE_COMPREHENSIVE_ANALYSIS.md`의 `5. 데이터 흐름`, `6. DB 구조 요약`, `7. 테이블별 역할`도 table이 많아지기 전에 별도 체계로 관리하는 것이 좋지 않냐고 요청함
+- Interpreted goal:
+  - 종합 문서에는 데이터/DB 상위 지도만 남기고, 실제 data flow, schema map, table semantics, PIT/data-quality notes는 별도 canonical 문서로 분리해야 함
+- Result:
+  - `.note/finance/data_architecture/`를 새 canonical data / DB architecture 위치로 만들었다
+  - `DATA_FLOW_MAP.md`, `DB_SCHEMA_MAP.md`, `TABLE_SEMANTICS.md`, `DATA_QUALITY_AND_PIT_NOTES.md`, `README.md`를 추가했다
+  - `FINANCE_COMPREHENSIVE_ANALYSIS.md`의 sections 5~7은 요약과 링크 중심으로 줄였다
+  - 앞으로 DB/table/source-of-truth/PIT/data-quality 의미 변경은 `data_architecture/`를 갱신하고, 코드 수정 flow는 `code_analysis/`에서 관리하는 방향으로 분리했다

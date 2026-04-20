@@ -1732,243 +1732,65 @@ Analysis / Presentation
 
 ## 5. 현재 데이터 흐름
 
-## 5-1. 유니버스 구축 흐름
+이 섹션은 데이터 흐름의 큰 그림만 남긴다.
+상세한 source -> table -> loader -> runtime 흐름은
+`.note/finance/data_architecture/DATA_FLOW_MAP.md`에서 관리한다.
 
-```text
-NYSE 웹페이지
-  -> load_nyse_listings()
-  -> csv/nyse_stock.csv, csv/nyse_etf.csv
-  -> load_nyse_csv_to_mysql()
-  -> finance_meta.nyse_stock / finance_meta.nyse_etf
-  -> collect_and_store_asset_profiles()
-  -> finance_meta.nyse_asset_profile
-```
+핵심 흐름은 네 가지다.
 
-의미:
-- 유니버스 데이터는 "크롤링 -> CSV -> DB -> 프로파일 보강" 순서다.
+| 흐름 | 요약 | 상세 문서 |
+|---|---|---|
+| Universe | NYSE listing -> CSV -> `nyse_stock` / `nyse_etf` -> asset profile | `data_architecture/DATA_FLOW_MAP.md` |
+| Price | yfinance -> direct research path 또는 `nyse_price_history` DB path | `data_architecture/DATA_FLOW_MAP.md` |
+| Broad fundamentals / factors | yfinance statements -> `nyse_fundamentals` -> `nyse_factors` | `data_architecture/DATA_FLOW_MAP.md` |
+| Statement-driven path | EDGAR / statement values -> fundamentals shadow -> factors shadow | `data_architecture/DATA_FLOW_MAP.md` |
 
-## 5-2. 가격 데이터 흐름
+현재 중요한 구분은 아래다.
 
-```text
-yfinance
-  -> get_ohlcv()
-  -> 백테스트 직접 사용
-
-또는
-
-yfinance
-  -> store_ohlcv_to_mysql()
-  -> finance_price.nyse_price_history
-  -> load_ohlcv_many_mysql()
-```
-
-의미:
-- 가격은 "직접 사용 경로"와 "DB 적재 경로"가 둘 다 존재한다.
-- 이 이중 경로는 유연하지만, 장기적으로는 소스 일관성 문제를 만들 수 있다.
-
-## 5-3. 재무/팩터 흐름
-
-```text
-yfinance statements
-  -> upsert_fundamentals()
-  -> finance_fundamental.nyse_fundamentals
-  -> upsert_factors()
-  -> finance_fundamental.nyse_factors
-```
-
-중요 포인트:
-- 팩터 계산은 fundamentals가 먼저 채워져 있어야 한다.
-- 가격 DB도 준비돼 있어야 한다.
-
-즉, `nyse_factors`는 독립 수집 테이블이 아니라 파생 테이블이다.
-
-추가된 shadow path:
-
-```text
-nyse_financial_statement_values
-  -> upsert_statement_fundamentals_shadow()
-  -> finance_fundamental.nyse_fundamentals_statement
-  -> upsert_statement_factors_shadow()
-  -> finance_fundamental.nyse_factors_statement
-```
-
-의미:
-- broad public path와 statement-driven rebuild path를 분리
-- first-pass는 `latest_available_for_period_end` 기준 shadow history
-- strict PIT raw truth 자체는 여전히 `nyse_financial_statement_values`
-
-## 5-4. 상세 재무제표 흐름
-
-```text
-EDGAR
-  -> get_fundamental()
-  -> _iter_label_rows()
-  -> _iter_value_rows()
-  -> upsert_financial_statements()
-  -> labels / values 테이블
-```
-
-의미:
-- detailed statement 계층은 향후 커스텀 팩터 엔진의 원재료가 될 수 있다.
+- price는 direct-fetch 경로와 DB-backed 경로가 함께 존재한다.
+- broad fundamentals / factors는 빠른 research convenience layer다.
+- statement-driven shadow path는 strict annual / quarterly factor strategy에서 더 중요하다.
+- detailed financial statements의 raw truth는 `nyse_financial_statement_values`를 중심으로 본다.
 
 ---
 
 ## 6. DB 구조 요약
 
-## 6-1. DB 목록
+이 섹션은 DB와 주요 table의 큰 목록만 남긴다.
+상세 schema map과 table 성격은 아래 문서에서 관리한다.
 
-- `finance_meta`
-- `finance_price`
-- `finance_fundamental`
+- `.note/finance/data_architecture/DB_SCHEMA_MAP.md`
+- `.note/finance/data_architecture/TABLE_SEMANTICS.md`
 
-## 6-2. 테이블 목록
+| DB | 주요 table | 역할 |
+|---|---|---|
+| `finance_meta` | `nyse_stock`, `nyse_etf`, `nyse_asset_profile` | universe / listing / profile metadata |
+| `finance_price` | `nyse_price_history` | stock / ETF 공용 price ledger |
+| `finance_fundamental` | `nyse_fundamentals`, `nyse_factors`, `nyse_fundamentals_statement`, `nyse_factors_statement`, statement filings / values / labels | fundamentals, factors, detailed statement data |
 
-### `finance_meta`
-- `nyse_stock`
-- `nyse_etf`
-- `nyse_asset_profile`
-
-### `finance_price`
-- `nyse_price_history`
-
-### `finance_fundamental`
-- `nyse_fundamentals`
-- `nyse_factors`
-- `nyse_financial_statement_filings`
-- `nyse_financial_statement_values`
-- `nyse_financial_statement_labels`
+실제 schema definition은 `finance/data/db/schema.py`가 기준이다.
+이 문서는 schema SQL을 복제하지 않고, 사람이 읽는 구조 요약만 유지한다.
 
 ---
 
 ## 7. 테이블별 역할과 데이터 성격
 
-### `nyse_stock`, `nyse_etf`
-역할:
-- 전체 유니버스의 출발점
+테이블별 상세 의미는 `.note/finance/data_architecture/TABLE_SEMANTICS.md`에서 관리한다.
+여기서는 현재 시스템을 읽을 때 필요한 성격 구분만 남긴다.
 
-성격:
-- 마스터 심볼 목록
-- 상대적으로 정적 데이터
+| 성격 | 의미 | 대표 table |
+|---|---|---|
+| master | universe / symbol master | `nyse_stock`, `nyse_etf` |
+| profile | current profile snapshot | `nyse_asset_profile` |
+| raw ledger | raw source에 가까운 fact ledger | `nyse_price_history`, `nyse_financial_statement_values` |
+| filing ledger | filing 단위 metadata | `nyse_financial_statement_filings` |
+| broad summary | provider-normalized convenience summary | `nyse_fundamentals` |
+| derived | 계산된 factor table | `nyse_factors` |
+| shadow | statement raw ledger에서 재구성한 검증 / 전략용 layer | `nyse_fundamentals_statement`, `nyse_factors_statement` |
+| convenience | UI / 해석 보조 layer | `nyse_financial_statement_labels` |
 
-### `nyse_asset_profile`
-역할:
-- 유니버스 필터링
-- 섹터/산업/국가 기반 분류
-- 운영 상태 추적
-
-성격:
-- 반정적 메타데이터
-- 정제된 심볼 집합 생성에 직접 사용됨
-- 최근에는 ETF current-operability overlay를 위해
-  아래 current snapshot field도 같이 저장한다.
-  - `fund_family`
-  - `total_assets`
-  - `bid`
-  - `ask`
-  - `bid_size`
-  - `ask_size`
-- 이 값들은 현재 ETF 전략군의 AUM / bid-ask spread policy를 읽는 데 쓰이며,
-  strict annual stock 전략의 point-in-time liquidity 판단과는 다른 층위다.
-
-### `nyse_price_history`
-역할:
-- 가격 기반 백테스트의 핵심 원장
-
-성격:
-- 시계열 원천 데이터
-- OHLCV + 배당 + 분할 포함
-- stock과 ETF를 함께 저장하는 공용 price fact table
-- 자산 종류 구분은 별도 meta 테이블(`nyse_stock`, `nyse_etf`, `nyse_asset_profile`)에서 해석
-
-### `nyse_fundamentals`
-역할:
-- 핵심 재무 스냅샷 저장
-
-성격:
-- broad coverage summary layer
-- period-end 기준 provider-normalized 재무 요약
-- strict raw ledger가 아니라 factor 계산용 중간 계층
-- 핵심 필드에 대해 derivation/source 메타를 함께 저장
-
-### `nyse_fundamentals_statement`
-역할:
-- statement ledger 기반 fundamentals shadow 저장
-
-성격:
-- statement-driven shadow layer
-- `nyse_financial_statement_values`에서 strict usable row를 읽어 재구성
-- `first_available_for_period_end` 의미의 summary history
-- public broad table을 대체하지 않고 비교/검증용으로 유지
-- schema의 메타 컬럼 이름은 여전히
-  `latest_available_at`, `latest_accession_no`, `latest_form_type`
-  이지만,
-  현재 의미는 각 `period_end`에 대한 **가장 이른 usable filing snapshot**을 가리킨다
-- Phase 7에서는 quarterly builder가 더 이상 `report_date`를
-  `period_end` anchor처럼 강제하지 않도록 수정되었다.
-  즉 quarterly comparative facts도 valid `period_end` 기준으로 shadow에 남을 수 있다.
-- `shares_outstanding`은 현재 가능하면 statement-derived를 우선하고,
-  없을 때는 broad `nyse_fundamentals` nearest-period fallback을 사용할 수 있음
-
-### `nyse_factors`
-역할:
-- 파생 팩터 저장
-
-성격:
-- broad research derived layer
-- `nyse_fundamentals + as-of price` 기반 파생 팩터 테이블
-- strict PIT factor store가 아니라 research / prototype 전략 입력 후보 테이블
-- price attachment metadata와 timing 의미를 함께 저장
-
-### `nyse_factors_statement`
-역할:
-- statement-driven shadow factor 저장
-
-성격:
-- `nyse_fundamentals_statement + as-of price` 기반 파생 테이블
-- 현재는 quality / accounting 계열 검증에 더 적합하지만,
-  shares fallback이 붙은 row에서는 valuation 계열도 일부 계산 가능
-- `fundamental_available_at`, `fundamental_accession_no` 메타 포함
-- 여전히 shares 부재 시 valuation 계열은 일부 `NULL`일 수 있음
-- 현재는 `Quality Snapshot (Strict Annual)`과
-  `Value Snapshot (Strict Annual)`의 public fast runtime source로도 사용된다
-
-### `nyse_financial_statement_filings`
-역할:
-- filing 단위 공시 메타 저장
-
-성격:
-- human-inspectable filing ledger
-- `accession_no`, `filing_date`, `accepted_at`, `available_at`, `report_date` 중심
-
-### `nyse_financial_statement_values`
-역할:
-- filing / concept / period 단위 상세 재무 계정 저장
-
-성격:
-- long-format raw fact ledger
-- 실제 `period_end`와 공시 가능 시점을 함께 보존
-- strict raw ledger 방향으로 정리 중
-- `accession_no`, `unit`, `available_at`를 갖는 row를 PIT-friendly raw row로 우선 취급
-- 확장형 팩터 생성에 적합
-- Phase 7 이후 quarterly path는
-  - `10-Q`
-  - `10-Q/A`
-  - `10-K`
-  - `10-K/A`
-  를 함께 받아 year-end `FY` rows를 quarterly longer-history에 포함한다
-- statement ingestion은 이제 `periods=0`을 `all available periods`로 공식 지원한다
-- web operator UI에서 manual `Financial Statement Ingestion`은
-  `Statement Mode` 단일 입력을 노출하고,
-  내부적으로 `freq`와 `period`를 같은 값으로 맞춰 실행한다
-
-### `nyse_financial_statement_labels`
-역할:
-- 재무 계정 concept 요약 메타 저장
-
-성격:
-- operator-facing summary 계층
-- `symbol + statement_type + concept + as_of` 기준의 concept summary
-- strict loader의 source of truth가 아니라 UI/해석 보조 계층
+데이터 품질, PIT, survivorship, stale data 주의사항은
+`.note/finance/data_architecture/DATA_QUALITY_AND_PIT_NOTES.md`를 우선한다.
 
 ---
 

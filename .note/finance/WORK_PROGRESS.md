@@ -1587,3 +1587,13 @@ Detailed historical logs were archived on `2026-04-13`.
   - moved durable strategy contract and runtime interpretation details into `code_analysis/STRATEGY_IMPLEMENTATION_FLOW.md` and `code_analysis/BACKTEST_RUNTIME_FLOW.md`
 - Durable takeaway:
   - `FINANCE_COMPREHENSIVE_ANALYSIS.md` should now stay as the high-level map, while detailed developer flow should live under `.note/finance/code_analysis/`.
+
+### 2026-04-20
+- Established the first finance data architecture documentation system.
+- Changed:
+  - created `.note/finance/data_architecture/` as the place for data flow, DB schema map, table semantics, and PIT/data-quality notes
+  - moved the detailed meaning of sections 5~7 out of `FINANCE_COMPREHENSIVE_ANALYSIS.md` into dedicated data architecture documents
+  - reduced `FINANCE_COMPREHENSIVE_ANALYSIS.md` sections 5~7 to high-level flow, DB, and table-semantics summaries
+  - updated `FINANCE_DOC_INDEX.md`, `AGENTS.md`, and the active `finance-doc-sync` skill guidance to include the new data architecture update rule
+- Durable takeaway:
+  - Future DB/table/source-of-truth or PIT/data-quality meaning changes should update `data_architecture/`, while the comprehensive analysis should keep only the top-level data map.
