@@ -19,7 +19,8 @@
 - `.note/finance/MASTER_PHASE_ROADMAP.md`
   - 전체 Phase 구조와 상위 진행 방향을 정리한 최상위 로드맵 문서
   - 최근 refresh 기준으로 `Phase 21 = 완료`, `Phase 22 = manual validation completed`, `Phase 23 = manual validation completed`,
-    `Phase 24 = practical closeout / manual validation pending`, `현재 위치`, support track, `Phase 24~25` 흐름까지 다시 정리되어 있다
+    `Phase 24 = manual validation completed`, `Phase 25 = active / first work unit completed`,
+    `현재 위치`, support track, `Phase 24~25` 흐름까지 다시 정리되어 있다
   - 또한 `Phase 18 = 진행형`, `Phase 19/20 = 완료`, `Phase 5 first chapter = historical label`이라는 해석도 함께 반영되어 있다
   - roadmap tail도 `현재 위치 = 상태판`, `지금부터의 큰 흐름 = 다음 진행 안내판` 구조로 다시 정리되어 있다
   - 최신 기준으로 이 프로젝트가 투자 분석을 기본으로 하는 것이 아니라
@@ -193,9 +194,10 @@
     `Global Relative Strength`를 `Backtest` single strategy, compare, history,
     load-into-form, run-again, saved replay 흐름에 연결한 구현 기록 문서
 - `.note/finance/phase24/PHASE24_COMPLETION_SUMMARY.md`
-  - `Phase 24` practical closeout 결과를 정리하는 summary 문서
+  - `Phase 24` closeout 결과를 정리하는 summary 문서
   - 현재는 `Global Relative Strength` core/runtime과 UI / compare / history / saved replay 연결 완료,
-    manual validation pending 상태를 구분해 둔다
+    `EEM` 이력 부족 / `IWM` 결측 가격 행 QA 대응,
+    manual validation completed 상태를 반영한다
 - `.note/finance/phase24/PHASE24_NEXT_PHASE_PREPARATION.md`
   - `Phase 24` 이후 `Phase 25` pre-live readiness 또는 추가 implementation hardening 여부를 판단하기 위한 handoff 문서
   - 최신 기준으로 `Real-Money 검증 신호`와 `Pre-Live 운영 점검`을 별도 흐름으로 구분해,
@@ -204,6 +206,30 @@
   - `Phase 24` manual QA 때 사용할 checklist 문서
   - 신규 전략 성과가 좋은지보다, 신규 전략이 single / compare / history / saved replay 흐름에서 재현 가능한지 확인한다
   - 현재는 `Global Relative Strength`의 실제 UI 위치와 확인 항목을 기준으로 업데이트되어 있다
+  - 사용자 QA 완료 기준으로 모든 주요 항목이 `[x]` 처리되어 있다
+- `.note/finance/phase25/PHASE25_PRE_LIVE_OPERATING_SYSTEM_AND_DEPLOYMENT_READINESS_PLAN.md`
+  - `Phase 25` kickoff 문서
+  - live trading이나 투자 승인 단계가 아니라,
+    Real-Money 검증 신호를 보고 paper tracking / watchlist / hold / re-review를 기록하는
+    Pre-Live 운영 점검 체계를 만드는 phase라는 점을 설명한다
+- `.note/finance/phase25/PHASE25_CURRENT_CHAPTER_TODO.md`
+  - `Phase 25` execution board
+  - 현재는 첫 작업 단위인 Real-Money / Pre-Live 경계 정의를 완료했고,
+    다음 작업으로 Pre-Live 후보 기록 포맷과 저장 위치를 정하는 상태다
+- `.note/finance/phase25/PHASE25_PRE_LIVE_BOUNDARY_AND_OPERATING_FRAME_FIRST_WORK_UNIT.md`
+  - `Phase 25` 첫 번째 작업 단위 문서
+  - Real-Money는 검증 신호, Pre-Live는 운영 절차라는 차이와
+    `watchlist`, `paper tracking`, `hold`, `reject`, `re-review` 운영 상태를 설명한다
+- `.note/finance/phase25/PHASE25_COMPLETION_SUMMARY.md`
+  - `Phase 25` closeout 때 갱신할 summary draft
+  - 현재는 kickoff 직후 상태와 완료해야 할 큰 항목을 기록한다
+- `.note/finance/phase25/PHASE25_NEXT_PHASE_PREPARATION.md`
+  - `Phase 25` 이후 handoff draft
+  - Phase 25 완료 후 deployment readiness 또는 pre-live monitoring hardening으로 이어질 수 있다는 가능성을 기록하되,
+    아직 Phase 26 방향을 고정하지 않는다
+- `.note/finance/phase25/PHASE25_TEST_CHECKLIST.md`
+  - `Phase 25` manual QA checklist draft
+  - 실제 UI / 저장 기능이 붙으면 확인 위치와 항목을 더 구체적으로 갱신한다
 - `.note/finance/backtest_reports/phase24/README.md`
   - `Phase 24` new strategy expansion report archive 안내 문서
 - `.note/finance/backtest_reports/phase24/PHASE24_GLOBAL_RELATIVE_STRENGTH_CORE_RUNTIME_SMOKE_VALIDATION.md`
@@ -273,8 +299,8 @@
   - 앱에서는 `Reference > Glossary`에서 검색형 UI로 바로 다시 볼 수 있다
   - 최신 기준으로 `Development Validation`, `Fixture`, `User-Requested Analysis`가 추가되어,
     개발 검증과 투자 분석 요청을 구분해서 읽을 수 있다
-  - 최신 기준으로 `Real-Money 검증 신호`와 `Pre-Live 운영 점검`도 추가되어,
-    개별 백테스트 진단과 paper / watchlist / 재검토 운영 절차를 구분해서 읽을 수 있다
+  - 최신 기준으로 `Real-Money 검증 신호`, `Pre-Live 운영 점검`, `Pre-Live 운영 상태`도 추가되어,
+    개별 백테스트 진단과 paper / watchlist / hold / reject / re-review 운영 절차를 구분해서 읽을 수 있다
 - `.note/finance/BACKTEST_REFINEMENT_CODE_FLOW_GUIDE.md`
   - Streamlit UI, runtime adapter, finance engine, strategy 문서 흐름까지 backtest refinement code path를 한 장으로 정리한 안내 문서
 - `.note/finance/RUNTIME_ARTIFACT_HYGIENE.md`

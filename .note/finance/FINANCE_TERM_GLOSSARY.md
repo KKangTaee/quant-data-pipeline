@@ -1546,6 +1546,26 @@ Pre-Live 운영 점검은 그 진단표를 보고
 
 ---
 
+## Pre-Live 운영 상태
+
+### 기본 설명
+Pre-Live 운영 점검에서 후보를 어디에 둘지 표시하는 상태값이다.
+Phase 25 기준 대표 상태는 `watchlist`, `paper tracking`, `hold`, `reject`, `re-review`다.
+
+### 왜 사용되는지
+백테스트 결과가 좋아 보여도 모든 후보가 같은 다음 행동을 갖지는 않는다.
+어떤 후보는 관찰하고, 어떤 후보는 보류하고, 어떤 후보는 특정 날짜에 다시 봐야 한다.
+Pre-Live 운영 상태는 이 차이를 기록하기 위해 쓴다.
+
+### 예시 / 필요 상황
+- `watchlist`: 다시 볼 가치는 있지만 아직 paper tracking은 시작하지 않음
+- `paper tracking`: 실제 돈 없이 정해진 기간 동안 관찰
+- `hold`: 데이터 품질이나 risk blocker 때문에 보류
+- `reject`: 현재 기준에서는 더 추적하지 않음
+- `re-review`: 특정 날짜나 조건이 지나면 다시 확인
+
+---
+
 ## Deployment Checklist Status Count
 
 ### 기본 설명

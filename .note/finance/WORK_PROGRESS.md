@@ -13,13 +13,25 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Active Pointers
 
 - current phase board:
-  - [PHASE24_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase24/PHASE24_CURRENT_CHAPTER_TODO.md)
+  - [PHASE25_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase25/PHASE25_CURRENT_CHAPTER_TODO.md)
 - current candidate summary:
   - [CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md)
 - historical full archive:
   - [WORK_PROGRESS_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/archive/WORK_PROGRESS_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-04-20
+- Closed `Phase 24` and opened `Phase 25`.
+- Changed:
+  - accepted the completed `PHASE24_TEST_CHECKLIST.md` manual QA state
+  - marked `PHASE24_CURRENT_CHAPTER_TODO.md`, `PHASE24_COMPLETION_SUMMARY.md`, and `PHASE24_NEXT_PHASE_PREPARATION.md` as Phase 24 closeout / Phase 25 handoff documents
+  - bootstrapped the Phase 25 document bundle
+  - rewrote the Phase 25 plan, TODO, checklist, completion draft, next-phase draft, and first work-unit note around `Pre-Live Operating System And Deployment Readiness`
+  - fixed the Phase 25 boundary as `Real-Money 검증 신호 = per-run diagnostic signal` and `Pre-Live 운영 점검 = paper / watchlist / hold / re-review operating process`
+  - synced `MASTER_PHASE_ROADMAP.md`, `FINANCE_DOC_INDEX.md`, and durable analysis logs
+- Durable takeaway:
+  - Phase 24 is closed as a completed new-strategy implementation bridge, and Phase 25 is now active as a pre-live operating-system development phase, not a live trading or investment approval phase.
 
 ### 2026-04-20
 - Clarified the Phase 25 boundary between existing Real-Money validation and future pre-live operation workflow.

@@ -4,16 +4,17 @@
 
 이 문서는 `Phase 24 New Strategy Expansion And Research Implementation Bridge`를 closeout 기준으로 정리하기 위한 문서다.
 
-현재는 practical closeout 기준의 handoff 문서다.
-최종 closeout은 사용자가 `PHASE24_TEST_CHECKLIST.md`를 완료한 뒤 확정한다.
+현재는 사용자 manual QA까지 끝난 최종 closeout 문서다.
+`PHASE24_TEST_CHECKLIST.md`의 주요 항목이 모두 `[x]` 처리되었으므로
+Phase 24는 `phase complete / manual_validation_completed`로 닫는다.
 
 ## 현재 상태
 
-- `practical_closeout / manual_validation_pending`
+- `phase complete / manual_validation_completed`
 
-현재 Phase 24는 기능 구현 관점에서는 practical closeout 상태다.
+Phase 24는 기능 구현과 사용자 QA 기준을 모두 통과했다.
 첫 신규 전략 후보 선정, core/runtime smoke validation,
-UI / compare / history / saved replay 연결까지 끝났다.
+UI / compare / history / saved replay 연결, QA 중 발견된 데이터 품질 경고 처리까지 완료했다.
 
 ## 이번 phase에서 완료해야 할 것
 
@@ -58,18 +59,29 @@ UI / compare / history / saved replay 연결까지 끝났다.
 - UI / replay smoke 결과를 `.note/finance/backtest_reports/phase24/PHASE24_GLOBAL_RELATIVE_STRENGTH_UI_REPLAY_SMOKE_VALIDATION.md`에 기록했다.
 - future 신규 전략 작업에서도 web product path를 빠뜨리지 않도록
   `finance-strategy-implementation` skill guidance를 보강했다.
+- 사용자 QA 중 `Global Relative Strength` 기본 preset에서 `EEM` 이력 부족과
+  `IWM` 결측 가격 행이 발견되었다.
+- `EEM`처럼 warmup 이후 비는 risky ticker는 실행을 중단하지 않고
+  `excluded_tickers`와 한국어 주의사항에 남긴다.
+- `IWM`처럼 원본 가격 행에 결측이 있는 경우는 조용히 보정하지 않고,
+  공통 리밸런싱 날짜가 보수적으로 제한되게 둔다.
+- 결측 가격 행은 `malformed_price_rows` metadata와 결과 주의사항에 노출한다.
+- `Real-Money 검증 신호`와 `Pre-Live 운영 점검`이 섞여 보이지 않도록
+  Guides / Glossary / Phase 25 handoff 문서를 정리했다.
+- 사용자가 `PHASE24_TEST_CHECKLIST.md`의 주요 항목을 모두 확인했다.
 
 ## 아직 남아 있는 것
 
-- 사용자의 manual QA checklist 확인
-- QA 중 발견되는 문구 / 화면 위치 / replay edge case 보정
+- Phase 25에서 다룰 Pre-Live 운영 점검 체계 설계
+- 추가 신규 전략 family 구현 후보 검토
+- quarterly real-money / guardrail parity는 별도 후속 phase 또는 backlog에서 판단
 
 ## closeout 판단
 
-기능 구현 기준으로는 Phase 24 practical closeout 상태다.
-다만 사용자 manual QA가 끝나야 `phase complete / manual_validation_completed`로 닫는다.
+Phase 24는 `phase complete / manual_validation_completed` 상태로 닫는다.
 
 쉽게 말하면:
 
 - 새 전략은 이제 화면에서 고르고 다시 열 수 있다.
-- 하지만 실제 사용자가 체크리스트로 확인하기 전까지는 Phase 25로 바로 넘어가지 않는다.
+- 데이터 품질 문제가 있으면 결과를 억지로 늘리지 않고 경고로 드러낸다.
+- 사용자가 checklist QA를 완료했으므로 Phase 25로 넘어갈 수 있다.

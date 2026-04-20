@@ -172,6 +172,8 @@ Analysis / Presentation
 	  최근에는 여기서 Real-Money를 "개별 백테스트 실행의 검증 신호"로,
 	  Phase 25 Pre-Live 운영 점검을 "paper tracking / watchlist / 보류 / 재검토를 기록하는 운영 절차"로
 	  명확히 분리해 사용자가 두 흐름을 같은 기능으로 혼동하지 않게 했다.
+	  Phase 25 kickoff 기준으로 이 경계는 phase plan과 first work-unit 문서에도 반영되어,
+	  다음 구현은 pre-live 후보 기록 포맷과 저장 위치를 정하는 방향으로 진행된다.
   같은 `Reference` 그룹 안의 `Glossary` 페이지는
   `.note/finance/FINANCE_TERM_GLOSSARY.md`를 그대로 source로 사용하면서,
   제목/본문 검색이 가능한 operator-facing 용어 사전 UI를 제공한다.

@@ -13,13 +13,26 @@ Detailed historical analysis was archived on `2026-04-13`.
 ## Active Pointers
 
 - current phase board:
-  - [PHASE23_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase23/PHASE23_CURRENT_CHAPTER_TODO.md)
+  - [PHASE25_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase25/PHASE25_CURRENT_CHAPTER_TODO.md)
 - current candidate summary:
   - [CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md)
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-04-20 - Phase 24를 닫고 Phase 25를 Pre-Live 운영 체계로 시작했다
+- Request topic:
+  - 사용자가 Phase 24를 마무리하고 Phase 25 진행을 요청함
+- Interpreted goal:
+  - Phase 24의 신규 전략 구현 / QA 완료 상태를 공식 closeout하고,
+    Phase 25는 Real-Money 탭의 중복 기능이 아니라 paper / watchlist / hold / re-review를 기록하는 운영 체계로 시작해야 함
+- Result:
+  - Phase 24를 `phase complete / manual_validation_completed`로 닫았다
+  - Phase 25 plan / TODO / checklist / completion draft / next-phase draft / first work-unit 문서를 생성하고 정리했다
+  - Phase 25 첫 작업은 후보를 고르는 것이 아니라,
+    Real-Money 검증 신호와 Pre-Live 운영 점검의 경계 및 운영 상태를 고정하는 것으로 잡았다
+  - 다음 작업은 pre-live 후보 기록 포맷과 저장 위치를 정하는 것이다
 
 ### 2026-04-20 - Real-Money 검증 신호와 Pre-Live 운영 점검을 분리하기로 했다
 - Request topic:

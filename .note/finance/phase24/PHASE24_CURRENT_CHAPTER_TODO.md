@@ -2,7 +2,7 @@
 
 ## 상태
 
-- `practical_closeout / manual_validation_pending`
+- `phase complete / manual_validation_completed`
 
 ## 현재 목표
 
@@ -55,11 +55,14 @@
 - `completed` Phase 24 UI replay smoke report 작성
 - `completed` Phase 25 boundary clarification
   - `Real-Money 검증 신호`와 `Pre-Live 운영 점검`을 Guides / Glossary / next-phase handoff에서 분리해 설명했다.
+- `completed` manual QA checklist
+  - 사용자가 `PHASE24_TEST_CHECKLIST.md`의 주요 항목을 모두 확인했다.
 
 ## 현재 판단
 
 Phase 24는 첫 구현 후보 선정, core/runtime first pass,
-그리고 `Backtest` UI / compare / history / saved replay 연결까지 완료했다.
+`Backtest` UI / compare / history / saved replay 연결,
+그리고 QA 중 발견된 기본 preset 데이터 품질 경고 처리까지 완료했다.
 
-다음 작업은 사용자가 `PHASE24_TEST_CHECKLIST.md`로 manual QA를 진행하는 것이다.
-체크리스트가 완료되면 Phase 24 closeout 후 Phase 25 진입 여부를 판단한다.
+사용자 checklist QA도 완료되었으므로 Phase 24는 닫고,
+다음 작업은 Phase 25 `Pre-Live Operating System And Deployment Readiness`를 시작하는 것이다.
