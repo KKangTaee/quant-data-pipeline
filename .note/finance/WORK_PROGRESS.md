@@ -1616,3 +1616,12 @@ Detailed historical logs were archived on `2026-04-13`.
   - updated the active `finance-doc-sync` skill with the same rule
 - Durable takeaway:
   - `FINANCE_COMPREHENSIVE_ANALYSIS.md` should show the big picture of the current system, not absorb every implementation detail or experiment record.
+
+### 2026-04-20
+- Split the legacy detailed implementation memo out of `FINANCE_COMPREHENSIVE_ANALYSIS.md`.
+- Changed:
+  - moved the long former `3-3. 상세 구현 메모` into `.note/finance/archive/FINANCE_COMPREHENSIVE_ANALYSIS_LEGACY_IMPLEMENTATION_NOTES_20260420.md`
+  - replaced the root `3-3` section with a short archive pointer and future record-routing rule
+  - updated `FINANCE_DOC_INDEX.md` and `.note/finance/archive/README.md` so the archive is discoverable
+- Durable takeaway:
+  - `FINANCE_COMPREHENSIVE_ANALYSIS.md` is now much closer to a current-state map, while legacy implementation history remains preserved but out of the main reading path.

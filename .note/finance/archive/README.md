@@ -19,11 +19,14 @@ root에는 현재 active context만 남긴 concise 버전을 다시 만들었다
   - 2026-04-13 시점까지 누적된 full work log
 - `QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md`
   - 2026-04-13 시점까지 누적된 full question/analysis log
+- `FINANCE_COMPREHENSIVE_ANALYSIS_LEGACY_IMPLEMENTATION_NOTES_20260420.md`
+  - 예전 `FINANCE_COMPREHENSIVE_ANALYSIS.md`의 긴 `3-3. 상세 구현 메모` 원문 archive
 
 ## 읽는 순서
 
 1. 먼저 root `WORK_PROGRESS.md`, `QUESTION_AND_ANALYSIS_LOG.md`를 본다
-2. 과거 세부 히스토리가 필요할 때만 이 archive를 연다
+2. 현재 finance 시스템 구조는 root `FINANCE_COMPREHENSIVE_ANALYSIS.md`를 본다
+3. 과거 세부 히스토리나 legacy 구현 메모가 필요할 때만 이 archive를 연다
 
 ## 왜 이렇게 두는가
 
@@ -36,3 +39,6 @@ root에는 현재 active context만 남긴 concise 버전을 다시 만들었다
 - archive = full historical detail
 
 구조로 유지한다.
+
+`FINANCE_COMPREHENSIVE_ANALYSIS.md`는 이제 high-level current-state map으로 관리하므로,
+긴 legacy 구현 메모는 root 문서에 직접 두지 않고 archive에서 보존한다.

@@ -2326,3 +2326,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `FINANCE_COMPREHENSIVE_ANALYSIS.md`는 `finance` 시스템의 큰 그림, 제품 표면, 주요 layer, data flow, strategy family, runtime / UI workflow, Real-Money / Pre-Live 경계가 바뀔 때만 갱신하는 문서로 정리했다
   - 일회성 backtest 결과, phase checklist 상태, 상세 call flow, table별 상세 의미, 작은 UI copy, minor bug-fix 기록은 각각 `backtest_reports/`, `phase*/`, `code_analysis/`, `data_architecture/`, `WORK_PROGRESS.md` 등으로 분산 관리하기로 했다
   - `AGENTS.md`, `FINANCE_COMPREHENSIVE_ANALYSIS.md`, `FINANCE_DOC_INDEX.md`, active `finance-doc-sync` skill에 같은 기준을 반영했다
+
+### 2026-04-20 - 종합 분석 문서의 legacy 상세 메모는 archive로 분리한다
+- Request topic:
+  - 사용자가 `FINANCE_COMPREHENSIVE_ANALYSIS.md`의 `3. 현재 시스템 구조와 phase별 구현 히스토리`, 레거시 문서, 앞으로 기록될 메모를 같은 문서에서 계속 관리하는 것이 맞는지 검토하고 정리해 달라고 요청함
+- Interpreted goal:
+  - `3-1` 현재 시스템 구조와 `3-2` phase별 큰 흐름은 유지하되, 긴 legacy 상세 구현 메모는 root 문서에서 분리해 current-state map의 가독성을 회복해야 함
+- Result:
+  - 기존 `3-3. 상세 구현 메모` 원문을 `.note/finance/archive/FINANCE_COMPREHENSIVE_ANALYSIS_LEGACY_IMPLEMENTATION_NOTES_20260420.md`로 이동했다
+  - root `FINANCE_COMPREHENSIVE_ANALYSIS.md`에는 archive 위치와 앞으로의 기록 위치 기준만 짧게 남겼다
+  - archive index와 finance doc index를 갱신해 legacy 구현 메모를 찾을 수 있게 했다

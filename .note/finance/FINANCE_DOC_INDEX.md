@@ -47,7 +47,7 @@
 |---|---|
 | `AGENTS.md` | 저장소 전체 작업 규칙, finance phase 운영 규칙, 문서화 규칙 |
 | `.note/finance/MASTER_PHASE_ROADMAP.md` | 전체 phase 방향, 현재 위치, 다음 phase 흐름 |
-| `.note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md` | finance 시스템 구조와 구현 상태를 설명하는 큰 기술 문서 |
+| `.note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md` | finance 시스템의 큰 구조와 현재 상태를 설명하는 high-level map |
 | `.note/finance/code_analysis/README.md` | 코드 수정자가 보는 개발자용 flow 문서 index |
 | `.note/finance/data_architecture/README.md` | 데이터 흐름, DB 구조, table 의미를 보는 data architecture index |
 | `.note/finance/FINANCE_DOC_INDEX.md` | 지금 보고 있는 문서. finance 문서 지도 |
@@ -591,6 +591,7 @@ Support Track은 main finance feature phase가 아니라,
 | `.note/finance/archive/README.md` | archive 안내 |
 | `.note/finance/archive/WORK_PROGRESS_ARCHIVE_20260413.md` | 2026-04-13 이전 work progress full archive |
 | `.note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md` | 2026-04-13 이전 question / analysis full archive |
+| `.note/finance/archive/FINANCE_COMPREHENSIVE_ANALYSIS_LEGACY_IMPLEMENTATION_NOTES_20260420.md` | 예전 종합 분석 문서의 긴 legacy 구현 메모 원문 archive |
 
 ---
 
