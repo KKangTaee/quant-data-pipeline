@@ -22,6 +22,21 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-04-20
+- Fixed a follow-up Phase 24 QA issue where `Global Relative Strength` stopped at `2026-02-27` even when the selected end date was `2026-04-20`.
+- Root cause:
+  - `IWM` had one DB row on `2026-03-17` with empty OHLC values
+  - `add_ma` treated that empty `Close` inside the rolling window as invalid and dropped all later MA rows until the rolling window recovered
+  - month-end alignment therefore lost March/April common dates and the result stopped at February
+- Implemented:
+  - `add_ma` now removes rows with missing price values before calculating moving averages
+  - real-money warning strings shown under "이번 실행에서 같이 봐야 할 주의사항" were translated to Korean-oriented copy
+- Validation:
+  - `.venv` default `Global Relative Strength` runtime smoke for `2016-01-01 -> 2026-04-20` now ends at `2026-04-17`, the latest available DB trading date
+  - `.venv/bin/python -m py_compile finance/transform.py app/web/runtime/backtest.py finance/sample.py`
+- Documentation hygiene:
+  - reviewed index impact; no new durable document was added, so `FINANCE_DOC_INDEX.md` did not need a structural update
+
+### 2026-04-20
 - Fixed a Phase 24 QA issue in `Global Relative Strength` single-strategy execution.
 - Root cause:
   - default preset included `EEM`, but the current DB only had recent `EEM` price rows

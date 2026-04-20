@@ -2178,3 +2178,14 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `MA200`과 12개월 relative-strength score를 만들고 나면 `EEM`의 transformed DataFrame이 비어 전체 티커 `Date` 교집합이 0개가 되었다
   - 코드는 risky ticker 중 transformed history가 비는 항목을 제외하고, `excluded_tickers`와 warning에 남기도록 수정했다
   - 기본 preset smoke는 `EEM` 제외 상태로 정상 실행되며, 이 결과는 투자 판단 전에 DB 가격 보강이 필요하다는 경고를 포함한다
+
+### 2026-04-20 - Global Relative Strength 결과 종료일이 2026-02-27에서 멈춘 원인과 경고 문구를 정리했다
+- Request topic:
+  - 사용자가 `EEM` 가격 데이터를 보강한 뒤에도 `2016-01 ~ 2026-04-20` 실행 결과가 `2026-02-27`까지만 보이고, 주의사항 문구가 영어로 나온다고 보고함
+- Interpreted goal:
+  - 결과 종료일이 왜 2026년 4월까지 확장되지 않는지 확인하고, UI 주의사항을 사용자가 읽기 쉬운 한국어로 바꾸고 싶음
+- Result:
+  - 현재 DB에서 `EEM`은 2025-04-21 이후 가격만 조회되어, 2016년 시작 Global Relative Strength에는 아직 포함될 만큼의 이동평균/12개월 상대강도 이력이 부족했다
+  - 별도로 `IWM`에는 2026-03-17 하루치 `Close` 결측 행이 있었고, 기존 `add_ma`가 이 결측값 때문에 이후 이동평균 행을 과도하게 제거해 공통 월말 날짜가 `2026-02-27`에서 멈췄다
+  - `add_ma`는 이동평균 계산 전 기준 가격 결측 행을 제거하도록 수정했다
+  - 같은 조건의 runtime smoke는 최신 DB 거래일인 `2026-04-17`까지 결과가 생성되며, 주의사항 문구도 한국어 중심으로 표시된다

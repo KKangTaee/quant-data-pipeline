@@ -1786,8 +1786,8 @@ def _apply_real_money_hardening(
     meta = dict(bundle.get("meta") or {})
     warnings = list(meta.get("warnings") or [])
     warnings.append(
-        "Phase 12 real-money hardening applied: investability filters, turnover estimate, "
-        "transaction cost, and benchmark/liquidity promotion policy overlays."
+        "실전 검토용 보강이 적용되었습니다: 투자 가능성 필터, 회전율 추정, 거래비용, "
+        "벤치마크/유동성 기반 실전 후보 승격 정책을 함께 반영했습니다."
     )
     meta.update(
         {
@@ -1884,15 +1884,17 @@ def _apply_real_money_hardening(
         etf_operability_status = str(etf_operability_policy_surface.get("etf_operability_status") or "").lower()
         if etf_operability_status == "caution":
             warnings.append(
-                "ETF operability policy is caution: at least one ETF failed the AUM/spread policy or required profile data coverage is too thin."
+                "ETF 운용 가능성 정책이 주의 상태입니다: 일부 ETF가 운용자산(AUM)/스프레드 기준을 통과하지 못했거나, "
+                "필요한 ETF 기본 정보 데이터가 부족합니다."
             )
         elif etf_operability_status == "watch":
             warnings.append(
-                "ETF operability policy is watch: some ETFs are below the AUM/spread policy or current profile coverage is partial."
+                "ETF 운용 가능성 정책이 관찰 상태입니다: 일부 ETF가 운용자산(AUM)/스프레드 선호 기준보다 낮거나, "
+                "현재 기본 정보 데이터가 일부만 있습니다."
             )
         elif etf_operability_status == "unavailable":
             warnings.append(
-                "ETF operability policy is unavailable: refresh ETF asset profiles before interpreting this strategy as a real-money candidate."
+                "ETF 운용 가능성 정책을 판단할 수 없습니다: 이 전략을 실전 후보로 해석하기 전에 ETF 기본 정보를 먼저 갱신해야 합니다."
             )
 
     benchmark_df, benchmark_info = _build_benchmark_result_df(
@@ -1941,12 +1943,12 @@ def _apply_real_money_hardening(
             watch_signals = validation_surface.get("validation_watch_signals") or []
             if validation_surface.get("validation_status") == "caution":
                 warnings.append(
-                    "Validation caution: benchmark-relative drawdown / rolling underperformance diagnostics are elevated. "
-                    "Treat this as a real-money review signal before promotion."
+                    "검증 결과가 주의 상태입니다: 벤치마크 대비 낙폭 또는 반복 구간 부진 지표가 높습니다. "
+                    "실전 후보 승격 전에 검토 신호로 확인해야 합니다."
                 )
             elif validation_surface.get("validation_status") == "watch":
                 warnings.append(
-                    "Validation watch: benchmark-relative underperformance or drawdown diagnostics need review before treating this run as a strong real-money candidate."
+                    "검증 결과가 관찰 상태입니다: 이 실행을 강한 실전 후보로 보기 전에 벤치마크 대비 부진 또는 낙폭 지표를 확인해야 합니다."
                 )
             if watch_signals:
                 meta["validation_watch_signals"] = watch_signals
@@ -1964,19 +1966,19 @@ def _apply_real_money_hardening(
             out_of_sample_signals = rolling_review_surface.get("out_of_sample_review_rationale") or []
             if rolling_status == "caution":
                 warnings.append(
-                    "Rolling review caution: the recent validation window shows materially weaker benchmark-relative behavior than the preferred deployment-readiness contract."
+                    "반복 구간 검토가 주의 상태입니다: 최근 검증 구간에서 선호하는 배포 준비 기준보다 벤치마크 대비 성과가 약하게 나타났습니다."
                 )
             elif rolling_status == "watch":
                 warnings.append(
-                    "Rolling review watch: recent regime behavior is softer than the preferred deployment-readiness contract."
+                    "반복 구간 검토가 관찰 상태입니다: 최근 시장 구간의 성과가 선호하는 배포 준비 기준보다 약합니다."
                 )
             if out_of_sample_status == "caution":
                 warnings.append(
-                    "Out-of-sample review caution: the later split-period underperformed the benchmark materially or deteriorated sharply versus the earlier sample."
+                    "표본외 검토가 주의 상태입니다: 뒤쪽 검증 구간에서 벤치마크 대비 성과가 크게 낮거나, 앞쪽 구간보다 성과가 뚜렷하게 악화되었습니다."
                 )
             elif out_of_sample_status == "watch":
                 warnings.append(
-                    "Out-of-sample review watch: the later split-period is weaker than the earlier sample and needs review before capital increases."
+                    "표본외 검토가 관찰 상태입니다: 뒤쪽 검증 구간이 앞쪽 구간보다 약하므로 비중 확대 전에 확인이 필요합니다."
                 )
             if rolling_signals:
                 meta["rolling_review_signals"] = rolling_signals
@@ -1987,13 +1989,11 @@ def _apply_real_money_hardening(
         benchmark_contract = str(meta.get("benchmark_contract") or STRICT_DEFAULT_BENCHMARK_CONTRACT).strip().lower()
         if benchmark_contract == STRICT_BENCHMARK_CONTRACT_CANDIDATE_EQUAL_WEIGHT:
             warnings.append(
-                "Benchmark overlay could not be built because candidate-universe equal-weight price history "
-                "was not sufficiently available on the requested dates."
+                "후보군 동일비중 벤치마크를 만들 수 없습니다: 요청한 날짜에 필요한 가격 이력이 충분하지 않습니다."
             )
         elif meta.get("benchmark_ticker"):
             warnings.append(
-                f"Benchmark overlay could not be built because DB price history for `{meta['benchmark_ticker']}` "
-                "was not available on the requested dates."
+                f"벤치마크 비교선을 만들 수 없습니다: `{meta['benchmark_ticker']}`의 DB 가격 이력이 요청한 날짜에 충분하지 않습니다."
             )
 
     benchmark_policy_surface = _build_benchmark_policy_surface(meta)
@@ -2003,11 +2003,11 @@ def _apply_real_money_hardening(
         policy_signals = benchmark_policy_surface.get("benchmark_policy_watch_signals") or []
         if policy_status == "caution":
             warnings.append(
-                "Benchmark policy caution: aligned benchmark coverage or net CAGR spread fell materially below the current promotion contract."
+                "벤치마크 정책이 주의 상태입니다: 정렬된 벤치마크 적용 범위 또는 순 CAGR 차이가 현재 실전 후보 승격 기준보다 크게 낮습니다."
             )
         elif policy_status == "watch":
             warnings.append(
-                "Benchmark policy watch: benchmark coverage or net CAGR spread is below the preferred promotion contract."
+                "벤치마크 정책이 관찰 상태입니다: 벤치마크 적용 범위 또는 순 CAGR 차이가 선호하는 실전 후보 승격 기준보다 낮습니다."
             )
         if policy_signals:
             meta["benchmark_policy_watch_signals"] = policy_signals
@@ -2019,15 +2019,15 @@ def _apply_real_money_hardening(
         liquidity_policy_signals = liquidity_policy_surface.get("liquidity_policy_watch_signals") or []
         if liquidity_policy_status == "caution":
             warnings.append(
-                "Liquidity policy caution: too many rebalance rows required liquidity exclusions for the current promotion contract."
+                "유동성 정책이 주의 상태입니다: 현재 실전 후보 승격 기준에서 유동성 제외가 필요한 리밸런싱 행이 너무 많습니다."
             )
         elif liquidity_policy_status == "watch":
             warnings.append(
-                "Liquidity policy watch: liquidity exclusions are above the preferred promotion contract."
+                "유동성 정책이 관찰 상태입니다: 유동성 제외 비율이 선호하는 실전 후보 승격 기준보다 높습니다."
             )
         elif liquidity_policy_status == "unavailable":
             warnings.append(
-                "Liquidity policy unavailable: promotion-grade liquidity review needs an active Min Avg Dollar Volume 20D filter."
+                "유동성 정책을 판단할 수 없습니다: 실전 후보 승격 수준의 유동성 검토에는 `최근 20거래일 평균 거래대금` 필터가 필요합니다."
             )
         if liquidity_policy_signals:
             meta["liquidity_policy_watch_signals"] = liquidity_policy_signals
@@ -2039,15 +2039,15 @@ def _apply_real_money_hardening(
         validation_policy_signals = validation_policy_surface.get("validation_policy_watch_signals") or []
         if validation_policy_status == "caution":
             warnings.append(
-                "Validation policy caution: rolling underperformance share or worst rolling excess return fell materially below the current promotion contract."
+                "검증 정책이 주의 상태입니다: 반복 구간 부진 비율 또는 최악의 반복 구간 초과수익이 현재 실전 후보 승격 기준보다 크게 낮습니다."
             )
         elif validation_policy_status == "watch":
             warnings.append(
-                "Validation policy watch: rolling underperformance share or worst rolling excess return is below the preferred promotion contract."
+                "검증 정책이 관찰 상태입니다: 반복 구간 부진 비율 또는 최악의 반복 구간 초과수익이 선호하는 실전 후보 승격 기준보다 낮습니다."
             )
         elif validation_policy_status == "unavailable":
             warnings.append(
-                "Validation policy unavailable: promotion-grade robustness review needs aligned benchmark validation history."
+                "검증 정책을 판단할 수 없습니다: 실전 후보 승격 수준의 견고성 검토에는 정렬된 벤치마크 검증 이력이 필요합니다."
             )
         if validation_policy_signals:
             meta["validation_policy_watch_signals"] = validation_policy_signals
@@ -2059,15 +2059,15 @@ def _apply_real_money_hardening(
         guardrail_policy_signals = guardrail_policy_surface.get("guardrail_policy_watch_signals") or []
         if guardrail_policy_status == "caution":
             warnings.append(
-                "Guardrail policy caution: strategy drawdown or drawdown gap vs benchmark exceeded the current portfolio guardrail contract."
+                "방어 기준 정책이 주의 상태입니다: 전략 낙폭 또는 벤치마크 대비 낙폭 차이가 현재 포트폴리오 방어 기준을 초과했습니다."
             )
         elif guardrail_policy_status == "watch":
             warnings.append(
-                "Guardrail policy watch: drawdown behavior is weaker than the preferred portfolio guardrail contract."
+                "방어 기준 정책이 관찰 상태입니다: 낙폭 흐름이 선호하는 포트폴리오 방어 기준보다 약합니다."
             )
         elif guardrail_policy_status == "unavailable":
             warnings.append(
-                "Guardrail policy unavailable: promotion-grade drawdown guardrail review needs usable strategy and benchmark drawdown history."
+                "방어 기준 정책을 판단할 수 없습니다: 실전 후보 승격 수준의 낙폭 방어 기준 검토에는 사용 가능한 전략/벤치마크 낙폭 이력이 필요합니다."
             )
         if guardrail_policy_signals:
             meta["guardrail_policy_watch_signals"] = guardrail_policy_signals
@@ -2897,10 +2897,9 @@ def run_global_relative_strength_backtest_from_db(
     warnings: list[str] = []
     if excluded_tickers:
         warnings.append(
-            "Global Relative Strength excluded ticker(s) with insufficient transformed price history "
-            "after MA/relative-strength warmup: "
+            "Global Relative Strength 실행에서 이동평균/상대강도 계산에 필요한 가격 이력이 부족한 티커를 제외했습니다: "
             + ", ".join(excluded_tickers)
-            + ". Refresh DB price data or remove those tickers from the universe before interpreting the result."
+            + ". 결과를 해석하기 전에 해당 티커의 DB 가격 데이터를 보강하거나 universe에서 제외하는 것이 좋습니다."
         )
 
     bundle = build_backtest_result_bundle(

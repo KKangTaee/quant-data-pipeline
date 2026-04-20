@@ -47,6 +47,8 @@ def add_ma(
         # 안전장치: 정렬 + 타입
         d["Date"] = pd.to_datetime(d["Date"])
         d = d.sort_values("Date")
+        d[price_col] = pd.to_numeric(d[price_col], errors="coerce")
+        d = d.dropna(subset=[price_col])
 
         # 이동평균 생성
         for w in windows:
