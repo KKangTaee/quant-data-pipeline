@@ -2316,3 +2316,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 12번을 함수 나열이 아니라 `code_analysis/`와 대표 코드 진입점으로 이어지는 지도 형태로 정리했다
   - 13~18번을 투자 분석이 아닌 제품 개발 경계, Phase 25 pre-live 방향, 다음 개발 우선순위, 추가 데이터, 문서 사용법, automation / persistence baseline 중심으로 갱신했다
   - 앞으로 `FINANCE_COMPREHENSIVE_ANALYSIS.md`는 큰 지도 역할을 유지하고, 상세 code flow / DB semantics / phase execution / backtest result는 전용 문서로 관리한다
+
+### 2026-04-20 - `FINANCE_COMPREHENSIVE_ANALYSIS.md`는 큰 그림이 바뀔 때만 업데이트한다
+- Request topic:
+  - 사용자가 `FINANCE_COMPREHENSIVE_ANALYSIS.md`를 어떤 상황에 업데이트해야 하는지 기준을 먼저 확인한 뒤, 그 기준을 지침으로 추가해 달라고 요청함
+- Interpreted goal:
+  - 종합 분석 문서가 다시 상세 기록 저장소처럼 비대해지지 않도록, high-level current-state map 역할과 업데이트 조건을 명확히 고정해야 함
+- Result:
+  - `FINANCE_COMPREHENSIVE_ANALYSIS.md`는 `finance` 시스템의 큰 그림, 제품 표면, 주요 layer, data flow, strategy family, runtime / UI workflow, Real-Money / Pre-Live 경계가 바뀔 때만 갱신하는 문서로 정리했다
+  - 일회성 backtest 결과, phase checklist 상태, 상세 call flow, table별 상세 의미, 작은 UI copy, minor bug-fix 기록은 각각 `backtest_reports/`, `phase*/`, `code_analysis/`, `data_architecture/`, `WORK_PROGRESS.md` 등으로 분산 관리하기로 했다
+  - `AGENTS.md`, `FINANCE_COMPREHENSIVE_ANALYSIS.md`, `FINANCE_DOC_INDEX.md`, active `finance-doc-sync` skill에 같은 기준을 반영했다

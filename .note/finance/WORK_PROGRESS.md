@@ -1607,3 +1607,12 @@ Detailed historical logs were archived on `2026-04-13`.
   - updated sections 13~18 to reflect the current development boundary, Phase 25 pre-live direction, future data priorities, and automation / persistence baseline
 - Durable takeaway:
   - `FINANCE_COMPREHENSIVE_ANALYSIS.md` now acts as a high-level orientation map for the current product, while detailed code, DB, phase, and result records are delegated to their canonical sub-documents.
+
+### 2026-04-20
+- Tightened the update policy for `FINANCE_COMPREHENSIVE_ANALYSIS.md`.
+- Changed:
+  - updated `AGENTS.md` so `FINANCE_COMPREHENSIVE_ANALYSIS.md` is reviewed after finance changes but updated only when the high-level current-state map changes
+  - updated `FINANCE_COMPREHENSIVE_ANALYSIS.md` and `FINANCE_DOC_INDEX.md` to state that one-off results, phase progress, detailed call flows, and table-level semantics belong in the specialized docs
+  - updated the active `finance-doc-sync` skill with the same rule
+- Durable takeaway:
+  - `FINANCE_COMPREHENSIVE_ANALYSIS.md` should show the big picture of the current system, not absorb every implementation detail or experiment record.

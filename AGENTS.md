@@ -97,10 +97,18 @@
   - how the app is started
   - which user-facing capabilities are now available
   update `README.md` in the same work unit rather than leaving the summary stale.
-- When a `finance` feature is added, changed, or finalized, update `.note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md`.
-- If the change is narrow and localized, update only the affected sections instead of rewriting the full document.
-- If a change affects package purpose, data flow, DB tables, strategy behavior, or architectural boundaries, reflect that explicitly in the document.
-- Keep the document aligned with the current code, not intended future design.
+- When a `finance` feature is added, changed, or finalized, review whether `.note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md` needs an update.
+- Treat `.note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md` as the high-level current-state map for the finance system, not as an append-only implementation log.
+- Update `.note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md` only when the change alters how a future reader should understand the current system structure, for example:
+  - package purpose or product surface
+  - major system layers or architectural boundaries
+  - data flow, DB source-of-truth, or table meaning at a summary level
+  - strategy family structure, runtime behavior, or Backtest UI workflow at a summary level
+  - Real-Money, Pre-Live, promotion, guardrail, or other operator-facing concept boundaries
+  - phase results that materially change the current system map
+- Do not add one-off backtest results, phase progress notes, detailed call flows, table-by-table details, small UI copy changes, or minor bug-fix notes to `.note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md`.
+- If the change is narrow but does affect the current-state map, update only the affected sections instead of rewriting the full document.
+- Keep the document aligned with the current code and implemented workflow. Mark future plans explicitly as future work.
 - Use `.note/finance/code_analysis/` for developer-facing code flow documents.
 - Keep `.note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md` as the high-level system map, and put detailed code modification flow in `.note/finance/code_analysis/`.
 - When code changes add or materially alter runtime flow, DB/loader flow, Backtest UI flow, strategy implementation flow, or repo-local automation scripts, update the matching `.note/finance/code_analysis/*.md` document.

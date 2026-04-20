@@ -103,6 +103,7 @@
 관리 기준:
 
 - `FINANCE_COMPREHENSIVE_ANALYSIS.md`에는 큰 구조와 핵심 파일 역할만 유지한다.
+- 현재 시스템의 큰 그림이 바뀌지 않은 작은 수정, 일회성 결과, phase 진행 상태는 `FINANCE_COMPREHENSIVE_ANALYSIS.md`에 누적하지 않는다.
 - 실제 코드 수정 순서와 flow-level 상세는 `code_analysis/`에 기록한다.
 - 작은 문구 수정, 일회성 실험 결과, phase 진행 내역은 code analysis 문서에 기록하지 않는다.
 
@@ -124,6 +125,7 @@
 - `data_architecture/`는 데이터와 DB의 의미를 관리한다.
 - `code_analysis/DATA_DB_PIPELINE_FLOW.md`는 관련 코드를 어떻게 따라가고 수정할지 관리한다.
 - `FINANCE_COMPREHENSIVE_ANALYSIS.md`에는 데이터 흐름과 DB 구조의 상위 요약만 남긴다.
+- table별 상세 의미, PIT 세부 규칙, stale data 해석은 `data_architecture/`에서 관리한다.
 
 ---
 
