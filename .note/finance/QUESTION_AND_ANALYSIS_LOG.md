@@ -21,6 +21,21 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-04-20 - Finance overview / index 문서는 정보는 충분하지만 읽기 구조 개선이 필요하다
+- Request topic:
+  - 사용자가 `FINANCE_COMPREHENSIVE_ANALYSIS.md`와 `FINANCE_DOC_INDEX.md`가 너무 난잡해 보이는데,
+    현재 상태로 충분한지 아니면 읽기 쉽게 업데이트해야 하는지 질문함
+- Interpreted goal:
+  - 두 문서가 agent용 내부 참조로는 충분한지, 사용자/운영자도 읽기 쉬운 문서로 재정리해야 하는지 판단하고 싶음
+- Result:
+  - `FINANCE_COMPREHENSIVE_ANALYSIS.md`는 구현 세부 정보를 많이 담고 있어 agent context로는 유용하지만,
+    2,700줄 이상으로 커져 사용자용 entry document로는 너무 무겁다
+  - `FINANCE_DOC_INDEX.md`는 phase별 문서 위치를 찾는 목적은 맞지만,
+    상위 기준 문서 섹션이 과도하게 길고 phase별 구조가 뒤로 밀려 실제 탐색성이 떨어진다
+  - 권장 방향은 문서를 없애는 것이 아니라,
+    overview / phase index / backtest report index / archive index 역할을 더 분리하고,
+    `FINANCE_DOC_INDEX.md`는 phase별 목차 중심으로 재구성하는 것이다
+
 ### 2026-04-20 - Phase 24를 닫고 Phase 25를 Pre-Live 운영 체계로 시작했다
 - Request topic:
   - 사용자가 Phase 24를 마무리하고 Phase 25 진행을 요청함
