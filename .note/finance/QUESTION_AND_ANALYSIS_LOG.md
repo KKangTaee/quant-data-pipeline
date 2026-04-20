@@ -21,6 +21,19 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-04-20 - FINANCE_COMPREHENSIVE_ANALYSIS는 깊이를 유지하고 입구를 정리하는 방식이 맞다
+- Request topic:
+  - 사용자가 `FINANCE_COMPREHENSIVE_ANALYSIS.md`를 시각적으로 억지로 줄이기보다,
+    구현 히스토리 / 구조 정보 / DB-strategy-runtime-UI 연결 / agent deep reference 가치를 유지하면서
+    사람도 읽을 수 있게 정리할 수 있는지 질문함
+- Interpreted goal:
+  - 상세 기술 문서의 정보 손실 없이 사용자 진입성을 높이고 싶음
+- Result:
+  - 기존 본문은 유지했다
+  - 상단에 문서 역할, 빠른 읽기, 현재 시스템 한 장 요약, 읽기 기준을 추가했다
+  - 현재 문서는 deep reference 성격을 유지하되,
+    사용자가 어디부터 읽어야 하는지 알 수 있는 entry layer를 갖게 되었다
+
 ### 2026-04-20 - Finance overview / index 문서는 정보는 충분하지만 읽기 구조 개선이 필요하다
 - Request topic:
   - 사용자가 `FINANCE_COMPREHENSIVE_ANALYSIS.md`와 `FINANCE_DOC_INDEX.md`가 너무 난잡해 보이는데,

@@ -22,6 +22,16 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-04-20
+- Added a user-facing entry layer to `FINANCE_COMPREHENSIVE_ANALYSIS.md` without removing the deep technical context.
+- Changed:
+  - clarified the document's three roles: readable system map, agent deep reference, and durable implementation context
+  - added a quick reading guide by purpose
+  - added a one-page current system summary across data collection, persistence, loader/runtime, strategy engine, web UI, and review/pre-live layers
+  - added reading rules so older implementation notes are preserved as history while current state is checked against roadmap/work logs
+- Durable takeaway:
+  - `FINANCE_COMPREHENSIVE_ANALYSIS.md` remains the deep system reference, but it now has a clearer human-readable entry point.
+
+### 2026-04-20
 - Refined the `FINANCE_DOC_INDEX.md` earlier-phase section after user feedback.
 - Changed:
   - replaced the single long `Earlier Phase Detail` table with one subsection per phase for Phase 1~18

@@ -1,7 +1,16 @@
 # Finance Comprehensive Analysis
 
 ## 문서 목적
-이 문서는 아래 기존 문서들을 종합한 `finance` 패키지의 상세 분석 문서다.
+이 문서는 `finance` 패키지의 구현 히스토리, 구조 정보,
+DB / strategy / runtime / UI 연결을 한 번에 확인하기 위한 상세 분석 문서다.
+
+단순한 사용자 매뉴얼은 아니다.
+다만 사용자가 프로젝트의 현재 구조를 따라올 수 있도록,
+이제는 아래 세 가지 역할을 함께 갖는다.
+
+1. 사람도 읽을 수 있는 현재 시스템 구조 지도
+2. agent가 깊게 분석할 때 쓰는 상세 기술 reference
+3. 과거 구현 판단과 현재 구현 상태를 함께 추적하는 durable context
 
 - `finance/docs/FINANCE_PACKAGE_ANALYSIS.md`
 - `finance/docs/FINANCE_DB_DATA_AUDIT.md`
@@ -11,13 +20,74 @@
 
 - 범위 포함: `finance` 패키지 전체
 - 범위 제외: `financial_advisor`
-- 기준 시점: 2026-03-11
+- 최초 기준 시점: 2026-03-11
+- 최근 동기화 기준: 2026-04-20 / Phase 25 kickoff
+
+---
+
+## 빠른 읽기
+
+처음 이 문서를 읽는다면 처음부터 끝까지 정독하지 않아도 된다.
+목적에 따라 아래 순서로 읽는 것이 좋다.
+
+| 목적 | 먼저 볼 섹션 |
+|---|---|
+| 현재 finance 시스템이 무엇인지 빠르게 알고 싶을 때 | `현재 시스템 한 장 요약`, `1. 전체 요약`, `3. 패키지의 실질적 아키텍처` |
+| 데이터 수집 / DB 구조를 보고 싶을 때 | `5. 현재 데이터 흐름`, `6. DB 구조 요약`, `7. 테이블별 역할과 데이터 성격` |
+| 백테스트 / 전략 구조를 보고 싶을 때 | `3. 패키지의 실질적 아키텍처`, `8. 현재 전략 레이어의 성격`, `12-2. 전략 실행` |
+| Streamlit UI / runtime 연결을 보고 싶을 때 | `3. 패키지의 실질적 아키텍처`, `4-1. 핵심 실행 계층`, `12-2. 전략 실행` |
+| 현재 한계와 리팩터링 방향을 보고 싶을 때 | `10. 현재 구조의 핵심 한계`, `14. 향후 리팩터링 우선순위 제안` |
+| agent가 작업 전 깊은 맥락을 확인할 때 | 전체 문서 + `FINANCE_DOC_INDEX.md`, `WORK_PROGRESS.md`, `QUESTION_AND_ANALYSIS_LOG.md` |
+
+이 문서는 의도적으로 많은 정보를 보존한다.
+대신 자세한 phase 문서나 backtest report를 찾을 때는 이 문서가 아니라
+`.note/finance/FINANCE_DOC_INDEX.md`와
+`.note/finance/backtest_reports/BACKTEST_REPORT_INDEX.md`를 먼저 본다.
+
+---
+
+## 현재 시스템 한 장 요약
+
+현재 `finance`는 크게 여섯 개 층으로 읽는 것이 가장 쉽다.
+
+| 층 | 역할 | 대표 위치 |
+|---|---|---|
+| Data Collection | 가격, ETF/주식 universe, profile, fundamentals, statements를 수집한다 | `finance/data/*` |
+| Persistence | 수집한 데이터를 MySQL 테이블에 저장한다 | `finance/data/db/*` |
+| Loader / Runtime Read Path | DB 데이터를 백테스트용 입력으로 꺼낸다 | `finance/loaders/*`, `finance/sample.py` |
+| Strategy / Backtest Engine | 전략을 계산하고 result dataframe을 만든다 | `finance/strategy.py`, `finance/engine.py`, `finance/transform.py` |
+| Web Runtime / UI | Streamlit에서 single / compare / history / saved replay를 실행한다 | `app/web/runtime/*`, `app/web/pages/backtest.py` |
+| Review / Pre-Live | 결과를 진단하고 paper / watchlist / hold / re-review로 관리한다 | Real-Money surface, Phase 25 문서 |
+
+중요한 경계:
+
+- 이 프로젝트의 기본 방향은 `데이터 수집 + 백테스트 제품 개발`이다.
+- 강한 백테스트 결과가 곧 투자 추천이나 live trading 승인을 뜻하지 않는다.
+- `Real-Money 검증 신호`는 개별 백테스트 결과에 붙는 진단표다.
+- `Pre-Live 운영 점검`은 그 진단표를 보고 다음 행동을 기록하는 운영 절차다.
+- 실제 투자 분석은 사용자가 명시적으로 요청했을 때 별도 분석으로 수행한다.
+
+---
+
+## 이 문서의 읽기 기준
+
+본문에는 초기 구조 분석, 중간 phase에서 추가된 구현 기록,
+최근 Phase 25 기준의 운영 개념이 함께 들어 있다.
+
+따라서 아래 기준으로 읽는다.
+
+- 오래된 문장은 삭제하지 않고 구현 히스토리로 보존한다.
+- 현재 상태를 확인할 때는 최신 roadmap / work log와 함께 본다.
+- 구체적인 phase 문서는 `FINANCE_DOC_INDEX.md`에서 찾는다.
+- 반복 용어는 `FINANCE_TERM_GLOSSARY.md`에서 확인한다.
+- 자동 생성 실행 기록은 이 문서가 아니라 run history JSONL 또는 Backtest UI history에서 확인한다.
 
 ---
 
 ## 1. 전체 요약
 
-현재 `finance` 패키지는 하나의 단일 라이브러리라기보다 아래 두 축이 함께 들어 있는 초기 단계 퀀트 리서치 시스템에 가깝다.
+현재 `finance` 패키지는 하나의 단일 라이브러리라기보다
+아래 두 축이 함께 들어 있는 확장형 퀀트 리서치 / 백테스트 시스템에 가깝다.
 
 1. 데이터 인프라 축
    - NYSE 유니버스 수집
