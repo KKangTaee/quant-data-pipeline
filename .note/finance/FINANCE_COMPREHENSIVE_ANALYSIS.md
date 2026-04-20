@@ -34,9 +34,9 @@ DB / strategy / runtime / UI 연결을 한 번에 확인하기 위한 상세 분
 |---|---|
 | 현재 finance 시스템이 무엇인지 빠르게 알고 싶을 때 | `현재 시스템 한 장 요약`, `1. 전체 요약`, `3-1. 현재 시스템 구조` |
 | 데이터 수집 / DB 구조를 보고 싶을 때 | `5. 현재 데이터 흐름`, `6. DB 구조 요약`, `7. 테이블별 역할과 데이터 성격` |
-| 백테스트 / 전략 구조를 보고 싶을 때 | `3-1. 현재 시스템 구조`, `8. 현재 전략 레이어의 성격`, `12-2. 전략 실행` |
-| Streamlit UI / runtime 연결을 보고 싶을 때 | `3-1. 현재 시스템 구조`, `4-1. 핵심 실행 계층`, `12-2. 전략 실행` |
-| 현재 한계와 리팩터링 방향을 보고 싶을 때 | `10. 현재 구조의 핵심 한계`, `14. 향후 리팩터링 우선순위 제안` |
+| 백테스트 / 전략 구조를 보고 싶을 때 | `3-1. 현재 시스템 구조`, `8. 현재 제품 / 전략 레이어의 성격`, `12. 핵심 코드 진입점과 상세 문서 위치` |
+| Streamlit UI / runtime 연결을 보고 싶을 때 | `3-1. 현재 시스템 구조`, `4-1. 핵심 실행 계층`, `12. 핵심 코드 진입점과 상세 문서 위치` |
+| 현재 한계와 다음 우선순위를 보고 싶을 때 | `10. 현재 남은 한계와 주의 경계`, `14. 다음 개발 우선순위` |
 | agent가 작업 전 깊은 맥락을 확인할 때 | 전체 문서 + `FINANCE_DOC_INDEX.md`, `WORK_PROGRESS.md`, `QUESTION_AND_ANALYSIS_LOG.md` |
 
 이 문서는 의도적으로 많은 정보를 보존한다.
@@ -120,7 +120,7 @@ DB / strategy / runtime / UI 연결을 한 번에 확인하기 위한 상세 분
 - 패키지의 중심 인터페이스와 실행 순서
 - 데이터 흐름과 DB 흐름의 연결 구조
 - 현재 설계의 강점, 리스크, 구조적 갭
-- 향후 리팩터링과 확장 우선순위
+- 현재 남은 한계와 다음 개발 우선순위
 
 ---
 
@@ -1794,401 +1794,170 @@ Analysis / Presentation
 
 ---
 
-## 8. 현재 전략 레이어의 성격
+## 8. 현재 제품 / 전략 레이어의 성격
 
-현재 전략들은 전반적으로 ETF/자산배분형 전략에 더 가깝다.
+현재 `finance`는 단순한 예제 전략 모음이 아니라,
+DB-backed 데이터, 전략 실행, UI 실행, compare/history/replay, 후보 검토 문서가 연결된
+퀀트 백테스트 제품으로 확장 중이다.
 
-샘플 기준:
-- 배당 ETF 묶음
-- 글로벌 자산배분
-- 듀얼 모멘텀
-- 리스크 패리티
+전략 레이어는 크게 네 축으로 본다.
 
-즉, 개별 종목 selection 엔진보다는 "소수 자산군 로테이션/배분" 성격이 강하다.
+| 축 | 현재 의미 | 상세 기준 |
+|---|---|---|
+| Price-only ETF family | `GTAA`, `Risk Parity Trend`, `Dual Momentum`, `Global Relative Strength` 같은 ETF / 자산배분 전략 | `code_analysis/STRATEGY_IMPLEMENTATION_FLOW.md` |
+| Factor / fundamental family | `Quality`, `Value`, `Quality + Value` strict annual / quarterly 계열 | `backtest_reports/strategies/` |
+| Portfolio workflow | compare 결과를 weighted portfolio로 묶고 saved replay로 재현하는 workflow | `code_analysis/WEB_BACKTEST_UI_FLOW.md` |
+| Review / Pre-Live layer | Real-Money 진단 이후 paper / watchlist / hold / re-review를 기록하는 운영 준비 계층 | `phase25/` |
 
-이건 데이터 인프라가 향하는 방향과 약간 차이가 있다.
+중요한 경계:
 
-왜냐하면 데이터 인프라는:
-- NYSE 전체 유니버스
-- 주식 프로파일
-- 재무/팩터
-- 상세 재무제표
-
-까지 수집하고 있어서, 장기적으로는 **주식 단면(cross-sectional) 팩터 전략** 쪽으로 확장할 준비가 되어 있기 때문이다.
-
-즉, 현재 상태는 다음과 같이 볼 수 있다.
-
-- 전략: ETF 중심 리서치
-- 데이터: 주식 팩터 연구까지 고려한 인프라
-
-이 구조는 나쁘지 않지만, 두 축의 연결은 아직 초기 단계다.
+- 이 프로젝트의 기본 방향은 투자 결론을 내리는 것이 아니라 `데이터 수집 + 백테스트 제품 개발`이다.
+- 강한 백테스트 결과는 투자 승인으로 자동 해석하지 않는다.
+- 사용자가 명시적으로 분석을 요청하면 분석을 수행하되, phase roadmap 자체가 투자 분석 중심으로 바뀐 것은 아니다.
+- live trading / broker order automation은 현재 직접 범위 밖이다.
 
 ---
 
-## 9. 강점 분석
+## 9. 현재 시스템의 강점
 
-## 9-1. 역할 분리가 비교적 명확하다
-- 수집
-- 변환
-- 전략
-- 성과/표현
+현재 강점은 개별 함수가 잘 나뉘어 있다는 수준을 넘어,
+반복 가능한 research / backtest workflow가 점점 제품 형태로 연결되고 있다는 점이다.
 
-의 층이 분명하다.
+| 강점 | 현재 의미 |
+|---|---|
+| DB-backed runtime | 가격, 재무, factor, statement data를 DB / loader / runtime으로 연결하는 기준 경로가 생겼다. |
+| Backtest UI surface | Single Strategy, Compare, History, Saved Portfolio replay 흐름이 제품 화면에서 이어진다. |
+| Result metadata | result table뿐 아니라 warnings, contract, coverage, selection history, interpretation, real-money signal을 같이 남긴다. |
+| Strategy expansion path | `Global Relative Strength`를 통해 research note -> core strategy -> runtime -> UI / replay 연결 경로가 확인됐다. |
+| Data architecture split | DB/table 의미와 PIT/data-quality 기준이 `data_architecture/`로 분리됐다. |
+| Code flow split | 실제 코드 수정 흐름은 `code_analysis/`에서 따로 관리한다. |
+| Phase / report 운영 | phase docs, backtest reports, strategy logs, candidate registry, hygiene helper가 반복 연구의 기록 체계를 만든다. |
 
-특히 `transform.py`와 `strategy.py`가 분리되어 있어 전략 실험이 쉬운 편이다.
-
-## 9-2. DB 적재 계층이 이미 꽤 실용적이다
-- UPSERT 기반
-- 스키마 자동 동기화
-- 배치 처리
-- 재시도
-- 로그 파일 저장
-
-초기 프로젝트치고는 운영 감각이 들어가 있다.
-
-## 9-3. 재무 데이터 계층이 단순하지 않다
-- fundamentals 요약 계층
-- detailed financial statements 계층
-- factors 파생 계층
-
-의 3단 구조가 있다.
-
-이건 향후 팩터 연구에 유리하다.
-
-## 9-4. 전략 API가 간단하다
-`BacktestEngine(...).<transform>().run(strategy)` 패턴은 이해하기 쉽다.
-
-즉, 새로운 전략을 붙이기도 나쁘지 않다.
+즉 현재 프로젝트의 강점은
+**데이터 수집, 전략 실행, UI 재현, 결과 해석, 문서 관리가 같은 workflow 안에서 이어진다**는 점이다.
 
 ---
 
-## 10. 현재 구조의 핵심 한계
+## 10. 현재 남은 한계와 주의 경계
 
-## 10-1. DB 기반 데이터 파이프라인과 전략 파이프라인이 분리돼 있다
-현재 전략 샘플은 대부분 DB가 아닌 `yfinance` 직로딩을 사용한다.
+현재 한계는 “기본 제품 경로가 없다”가 아니라,
+더 엄격한 데이터 검증과 운영 준비 단계로 가기 전에 남아 있는 경계다.
 
-영향:
-- 재현성 저하
-- 데이터 버전 관리 어려움
-- 동일 전략이라도 실행 시점에 따라 데이터 차이 가능
+| 영역 | 현재 남은 한계 | 우선 참고 문서 |
+|---|---|---|
+| PIT / survivorship | filing-time point-in-time과 historical universe survivorship 제어는 아직 완전하지 않다. | `data_architecture/DATA_QUALITY_AND_PIT_NOTES.md` |
+| Broad factor layer | `nyse_fundamentals`, `nyse_factors`는 broad research convenience layer이지 strict filing-time source가 아니다. | `data_architecture/TABLE_SEMANTICS.md` |
+| Quarterly parity | quarterly strict lane은 제품 실행 경로가 보강됐지만 annual strict와 같은 real-money / guardrail parity는 아직 후속 과제다. | `phase23/` |
+| Pre-Live persistence | Phase 25에서 운영 상태 정의가 시작됐고, 후보 기록 포맷 / 저장 위치 / 재검토 흐름은 진행 중이다. | `phase25/` |
+| Live trading | broker order, live execution, 자동 매매는 현재 scope 밖이다. | `MASTER_PHASE_ROADMAP.md` |
+| Config / migration | DB 설정 외부화, 정식 migration, 환경 분리는 아직 더 정리할 여지가 있다. | `AGENTS.md`, `code_analysis/` |
+| Trading cost / liquidity | 일부 real-money surface는 있지만 완전한 체결비용, 슬리피지, 유동성 모델은 아니다. | `code_analysis/BACKTEST_RUNTIME_FLOW.md` |
 
-장기적으로는 아래 중 하나로 정리해야 한다.
-
-1. 백테스트 입력을 DB 기준으로 통일
-2. 또는 실험용/운영용 경로를 명시적으로 분리
-
-## 10-2. 포인트인타임 공시 시점 통제가 아직 약하다
-`nyse_fundamentals`는 기본적으로 `period_end` 중심이다.
-
-문제:
-- 백테스트에서 실제 공시 이전 시점에 해당 재무값을 사용하면 룩어헤드 바이어스가 생긴다.
-
-상세 재무제표 쪽은 2026-03-18 기준으로
-- `nyse_financial_statement_filings`
-- `nyse_financial_statement_values`
-- `nyse_financial_statement_labels`
-
-에 `filing_date`, `accepted_at`, `available_at`, `accession_no`, `report_date`를 저장한다.
-
-즉 raw ledger 차원에서는 point-in-time 기반 snapshot을 만들 수 있는 기반이 생겼다.
-다만 현재 한계는 여전히 남아 있다.
-
-- 전략/팩터 계층이 이 availability 규칙을 아직 직접 재사용하지 않는다
-- `nyse_fundamentals`, `nyse_factors`는 여전히 별도 강화가 필요하다
-- quarterly raw ledger는 provider truth를 보존하는 방향이라 Q4를 DB에서 합성하지 않는다
-- `nyse_financial_statement_values`는 strict raw ledger 방향으로 재정의되었고,
-  old mixed-state row를 PIT source로 곧바로 신뢰하지 않는 방향으로 정리됐다
-
-즉, 실전형 팩터 백테스트로 가려면 이 부분이 매우 중요하다.
-
-## 10-3. 생존편향 제어가 충분하지 않다
-현재는 `status`와 일부 휴리스틱 필터가 있지만:
-- listing_date
-- delisting_date
-- symbol change history
-- corporate action identity history
-
-가 별도 시계열 테이블로 정리돼 있지 않다.
-
-즉, 현재 유니버스 필터는 유용하지만 완전한 point-in-time universe는 아니다.
-
-## 10-4. 거래비용 모델이 없다
-전략 계산은 사실상 frictionless market을 가정한다.
-
-없는 것:
-- 수수료
-- 슬리피지
-- bid/ask spread proxy
-- 거래량 제약
-
-ETF 전략에서는 영향이 덜할 수 있지만, 개별 종목 팩터 전략으로 가면 필수다.
-
-## 10-5. 설정값이 코드에 하드코딩돼 있다
-여러 모듈에서 아래 기본값이 반복된다.
-
-- host=`localhost`
-- user=`root`
-- password=`1234`
-
-영향:
-- 보안 취약
-- 환경 분리 어려움
-- 테스트/운영 전환 불편
-
-## 10-6. 패키지 인터페이스가 아직 정리 중이다
-- `finance/__init__.py`는 일부만 re-export한다.
-- `finance/data`에는 `__init__.py`가 없다.
-- public API가 아직 안정적으로 정해진 느낌은 아니다.
-
-즉, 내부 구조는 보이지만 외부 사용 계약은 아직 약하다.
-
-## 10-7. 전략 결과 스키마가 완전히 표준화돼 있지 않다
-예:
-- 어떤 전략은 `Ticker`
-- 어떤 전략은 `End Ticker`, `Next Ticker`
-- 어떤 전략은 `Cash`, `Next Weight`
-
-이 차이는 사람이 보기엔 문제없지만, 공통 리포팅/저장/비교 시스템을 만들 때 비용이 생긴다.
+즉 현재 제품은 “못 돌아가는 상태”가 아니라,
+**개발 검증에서 더 엄격한 운영 검증으로 넘어가기 위한 경계를 정리하는 단계**다.
 
 ---
 
-## 11. 데이터 품질 관점 분석
+## 11. 데이터 품질 / PIT 해석 요약
 
-## 11-1. 가격 데이터
-좋은 점:
-- OHLCV 외에 배당과 주식분할도 저장함
-- stock과 ETF를 동일 price ledger에 넣어 mixed-asset backtest에 바로 연결 가능
-- 최근 hardening으로 Daily Market Update가 stock + ETF 공통 수집을 전제로 동작하도록 정리됨
-- Daily Market Update 기본 source가 이제 raw exchange 전체보다
-  `Profile Filtered Stocks + ETFs` 같은 managed universe 중심으로 기울어 있다
-- yfinance batch fetch 경로가 이제
-  - safer default batching
-  - provider no-data vs rate-limit diagnostics
-  - cooldown event tracking
-  - timing breakdown metrics
-  까지 포함하는 운영형 경로로 보강되었다
-- broad managed source와 raw exchange source는 이제 다른 execution profile로 동작한다
-  - managed broad source: `managed_fast`
-  - managed short-window daily refresh: `managed_refresh_short`
-  - raw broad source: `raw_heavy`
-- 특히 `Profile Filtered Stocks + ETFs`의 `1d` 또는 최근 며칠 refresh는
-  이제 long historical fetch와 다른 execution profile을 타므로,
-  short-window 운영 refresh가 별도 계약으로 분리되어 있다
+데이터 품질과 DB table 의미의 상세 기준은 `.note/finance/data_architecture/`를 우선한다.
+여기서는 현재 시스템을 읽을 때 반드시 기억할 위험만 요약한다.
 
-주의점:
-- 거래소 세션 정보 없음
-- 조정 가격 활용 규칙이 백테스트 전반에서 통일되어 있진 않음
-- 현재 전략은 주로 `Close`를 사용함
-- 대규모 전 유니버스 refresh는 여전히 외부 provider 속도에 영향을 크게 받음
-- provider failure 분류는 아직 heuristic이며,
-  `yfinance`가 structured batch error를 주지 않기 때문에 완전한 ground truth는 아니다
-- speed optimization도 현재는
-  single-worker + larger chunk 중심이라,
-  완전한 high-throughput 병렬 fetch와는 다르다
+| 데이터 영역 | 핵심 주의사항 | 상세 문서 |
+|---|---|---|
+| Price | stale / missing row는 결과 기간, excluded ticker, warning에 직접 영향을 준다. | `data_architecture/DATA_QUALITY_AND_PIT_NOTES.md` |
+| Profile / universe | `status`, `is_spac`, sector, country는 유용하지만 historical truth는 아니다. | `data_architecture/TABLE_SEMANTICS.md` |
+| Broad fundamentals | provider-normalized summary라 filing-time PIT source로 바로 쓰면 위험하다. | `data_architecture/TABLE_SEMANTICS.md` |
+| Detailed statements | raw ledger는 강력하지만 concept/unit/period 해석과 filing timing 검증이 필요하다. | `data_architecture/DATA_QUALITY_AND_PIT_NOTES.md` |
+| Factors | broad factors와 statement shadow factors의 성격을 구분해야 한다. | `data_architecture/TABLE_SEMANTICS.md` |
 
-즉, total return 정확도와 corporate action 처리 정책을 더 명확히 할 필요가 있다.
-
-## 11-2. 프로파일 데이터
-좋은 점:
-- 유니버스 필터링에 실용적
-
-주의점:
-- `status`는 추정치다
-- `is_spac`도 휴리스틱이다
-- sector/industry/country도 provider 품질에 의존한다
-
-즉, 유용하지만 절대적 ground truth로 보기엔 위험하다.
-
-## 11-3. fundamentals 데이터
-좋은 점:
-- 백테스트용 최소 항목이 잘 정리돼 있다
-- 결측 보정 로직이 있다
-- factor 계산에 필요한 base field 범위가 이전보다 넓어졌다
-- direct / derived / inferred source를 같이 추적할 수 있다
-
-주의점:
-- 보정값은 근사치다
-- shares outstanding도 일부 경우 추정
-- source가 yfinance라 계정명/coverage 일관성이 완벽하지 않을 수 있다
-- broad coverage summary layer이지 strict PIT table은 아니다
-- 전체 universe가 새 canonical 규칙으로 완전히 backfill된 상태는 아닐 수 있다
-
-즉, 실용성은 높지만 accounting-grade precision은 아니다.
-
-## 11-4. detailed financial statements 데이터
-좋은 점:
-- filing / concept 단위 세부 정보가 저장된다
-- actual `period_end`를 raw fact 기준으로 저장한다
-- `filing_date`, `accepted_at`, `available_at`, `accession_no`, `form_type`를 함께 저장한다
-- filing 메타를 사람이 직접 확인할 수 있도록 `nyse_financial_statement_filings`가 별도로 존재한다
-
-주의점:
-- 라벨 표준화 문제
-- 기업별/기간별 라벨 변형
-- 같은 개념이 다른 라벨로 나타날 가능성
-- provider의 `fiscal_year` / `fiscal_period`는 비교열 fact에서 filing 컨텍스트일 수 있어서,
-  row 정체성은 `period_end`와 `accession_no`를 우선 기준으로 봐야 한다
-- quarterly 저장은 raw truth 우선이라 10-Q의 비교 balance-sheet row와 10-K 기반 FY row가 함께 보일 수 있고,
-  DB 저장 단계에서 synthetic Q4를 만들지 않는다
-- `nyse_financial_statement_labels`는 convenience summary로 보는 것이 맞고,
-  실제 strict loader는 `values`를 중심으로 읽어야 한다
-- Phase 7에서는 사람이 raw timing을 바로 확인할 수 있도록
-  `inspect_financial_statement_source()` 출력과
-  `load_statement_timing_audit(...)` inspection path를 추가했다
-- 또한 `upsert_financial_statements(..., periods=N)`는 현재
-  raw fact `period_end`가 아니라 reported period(`report_date` 우선, 없으면 `period_end`) 기준으로
-  latest N period를 제한한다
-- 다만 `N=0`이면 source가 가진 전체 usable history를 그대로 적재한다
-- 그리고 같은 symbol/freq scope는 canonical refresh 방식으로 다시 쓰기 때문에,
-  old slicing semantics row를 유지하지 않는다
-
-즉, powerful하지만 정교한 semantic normalization이 뒤따라야 한다.
-
-## 11-5. factors 데이터
-좋은 점:
-- valuation/profitability/growth를 폭넓게 포함한다
-- price attachment metadata가 있어 해석 가능성이 좋아졌다
-- yield / margin / leverage / growth 계열이 이전보다 풍부해졌다
-
-주의점:
-- `period_end` 기준 asof 가격 매칭은 유용하지만,
-  실제 공시 시점 기반으로는 아닐 수 있다
-- point-in-time strictness는 아직 부족하다
-- 따라서 현재 `nyse_factors`는 broad research layer로 이해하는 것이 맞다
+데이터 품질 문제는 숨기지 않고
+warnings, metadata, report blocker, pre-live review reason으로 남기는 방향이 맞다.
 
 ---
 
-## 12. 현재 기준으로 가장 중요한 코드 진입점
+## 12. 핵심 코드 진입점과 상세 문서 위치
 
-이 섹션은 전체 시스템을 이해할 때 필요한 최소 진입점만 남긴다.
+이 섹션은 최소 진입점만 남긴다.
 함수별 call flow, strategy contract, UI replay, 신규 전략 추가 절차는
 `.note/finance/code_analysis/`를 우선한다.
 
-## 12-1. 데이터 / DB 진입점
+| 알고 싶은 것 | 먼저 볼 문서 |
+|---|---|
+| data ingestion / DB write path를 어떻게 고칠지 | `code_analysis/DATA_DB_PIPELINE_FLOW.md` |
+| DB table 의미와 데이터 품질 경계를 어떻게 볼지 | `data_architecture/README.md` |
+| backtest runtime wrapper와 result bundle을 어떻게 볼지 | `code_analysis/BACKTEST_RUNTIME_FLOW.md` |
+| Backtest UI, compare, history, saved replay 흐름을 어떻게 볼지 | `code_analysis/WEB_BACKTEST_UI_FLOW.md` |
+| 신규 전략을 어떻게 추가할지 | `code_analysis/STRATEGY_IMPLEMENTATION_FLOW.md` |
+| phase bootstrap, registry, hygiene helper를 어떻게 쓸지 | `code_analysis/AUTOMATION_SCRIPTS_GUIDE.md` |
 
-| 영역 | 대표 진입점 | 상세 문서 |
+대표 코드 진입점은 아래처럼 본다.
+
+| 영역 | 대표 위치 | 역할 |
 |---|---|---|
-| NYSE universe | `finance.data.nyse.load_nyse_listings`, `finance.data.nyse_db.load_nyse_csv_to_mysql` | `code_analysis/DATA_DB_PIPELINE_FLOW.md` |
-| Price data | `finance.data.data.get_ohlcv`, `finance.data.data.load_ohlcv_many_mysql` | `code_analysis/DATA_DB_PIPELINE_FLOW.md` |
-| Asset profile | `finance.data.asset_profile.collect_and_store_asset_profiles` | `code_analysis/DATA_DB_PIPELINE_FLOW.md` |
-| Fundamentals / factors | `finance.data.fundamentals.upsert_fundamentals`, `finance.data.factors.upsert_factors` | `code_analysis/DATA_DB_PIPELINE_FLOW.md` |
-| Detailed statements | `finance.data.financial_statements.upsert_financial_statements` | `code_analysis/DATA_DB_PIPELINE_FLOW.md` |
-| Loader read path | `finance/loaders/*` | `code_analysis/DATA_DB_PIPELINE_FLOW.md` |
+| DB schema / persistence | `finance/data/db/schema.py`, `finance/data/db/*` | table 생성, UPSERT, DB 저장 규칙 |
+| Data collection | `finance/data/*` | 가격, profile, fundamentals, statements 수집 |
+| Loader read path | `finance/loaders/*` | DB 데이터를 백테스트 입력으로 변환 |
+| Core strategy | `finance/strategy.py`, `finance/engine.py`, `finance/transform.py` | 전략 계산과 rebalancing / alignment |
+| Performance | `finance/performance.py` | 성과 지표와 weighted portfolio summary |
+| Web runtime | `app/web/runtime/backtest.py` | UI에서 호출하는 DB-backed runtime wrapper |
+| Web UI | `app/web/pages/backtest.py` | Single / Compare / History / Saved Portfolio 화면 |
 
-## 12-2. Backtest / Strategy 진입점
-
-| 영역 | 대표 진입점 | 상세 문서 |
-|---|---|---|
-| Price strategy orchestration | `finance.engine.BacktestEngine` | `code_analysis/BACKTEST_RUNTIME_FLOW.md` |
-| Transform / alignment | `finance.transform.add_ma`, `align_dfs_by_date_intersection`, `align_dfs_by_date_union` | `code_analysis/BACKTEST_RUNTIME_FLOW.md` |
-| Strategy simulation | `finance.strategy.*Strategy` | `code_analysis/STRATEGY_IMPLEMENTATION_FLOW.md` |
-| Web runtime wrapper | `app/web/runtime/backtest.py`의 `run_*_backtest_from_db(...)` | `code_analysis/BACKTEST_RUNTIME_FLOW.md` |
-| Web UI surface | `app/web/pages/backtest.py` | `code_analysis/WEB_BACKTEST_UI_FLOW.md` |
-| Performance summary | `finance.performance.portfolio_performance_summary`, `make_monthly_weighted_portfolio` | `code_analysis/BACKTEST_RUNTIME_FLOW.md` |
-
-## 12-3. 현재 구현을 읽는 핵심 구분
+현재 구현을 읽는 핵심 구분:
 
 - price-only ETF family는 price history, warmup, date alignment, cash fallback이 핵심이다.
 - factor / fundamental family는 rebalance date, statement snapshot, PIT handling, selection history가 핵심이다.
-- strict annual family의 real-money, guardrail, rejected-slot, weighting, risk-off contract 상세는 `code_analysis/STRATEGY_IMPLEMENTATION_FLOW.md`에서 관리한다.
-- single / compare / history / saved replay의 payload 복원 흐름은 `code_analysis/WEB_BACKTEST_UI_FLOW.md`에서 관리한다.
-- result bundle, warning, metadata, pre-live 진단 흐름은 `code_analysis/BACKTEST_RUNTIME_FLOW.md`에서 관리한다.
+- strict annual family의 real-money, guardrail, rejected-slot, weighting, risk-off contract는 strategy implementation flow에서 관리한다.
+- single / compare / history / saved replay의 payload 복원 흐름은 web UI flow에서 관리한다.
 
 ---
 
 ## 13. 지금 당장 이해해야 하는 핵심 사실
 
-### 사실 1
-이 프로젝트는 아직 "전략 백테스트 엔진"보다 "연구용 퀀트 워크벤치"에 더 가깝다.
-
-### 사실 2
-데이터 계층은 장기적으로 주식 팩터 전략을 할 준비가 꽤 되어 있다.
-
-### 사실 3
-하지만 현재 샘플 전략은 대부분 ETF 자산배분형이다.
-
-### 사실 4
-DB 적재 계층은 실제 운영용 파이프라인처럼 보이지만, 전략 계층과 완전 통합되진 않았다.
-
-### 사실 5
-향후 고도화에서 가장 중요한 축은 아래 셋이다.
-
-1. point-in-time 데이터 정합성
-2. DB 기반 전략 입력 통일
-3. 전략 결과 스키마 표준화
+1. 이 프로젝트는 투자 추천 시스템이 아니라 `데이터 수집 + 백테스트 제품 개발` 프로젝트다.
+2. 현재 제품 경로는 DB-backed runtime, Backtest UI, compare, history, saved replay까지 확장됐다.
+3. 강한 백테스트 결과가 투자 승인으로 자동 연결되지는 않는다.
+4. Real-Money 검증 신호는 개별 백테스트 결과에 붙는 진단표이고, Pre-Live 운영 점검은 그 이후의 후보 상태 기록 절차다.
+5. Phase 25는 live trading이 아니라 paper / watchlist / hold / re-review 운영 기록 체계를 준비하는 단계다.
+6. 자세한 코드 흐름은 `code_analysis/`, DB와 데이터 품질은 `data_architecture/`, 결과 기록은 `backtest_reports/`에서 관리한다.
 
 ---
 
-## 14. 향후 리팩터링 우선순위 제안
+## 14. 다음 개발 우선순위
 
-## 14-1. 1순위
-백테스트 입력 데이터 소스를 통일한다.
+향후 우선순위는 “성과가 좋은 조합을 찾는 일”보다
+제품이 안전하게 반복 실행되고, 후보를 재현 가능하게 검토할 수 있는 구조를 만드는 쪽에 둔다.
 
-권장 방향:
-- 실험용: yfinance 직로딩
-- 운영용: DB 로딩
+| 우선순위 | 왜 필요한가 | 기준 문서 |
+|---|---|---|
+| Phase 25 Pre-Live candidate record | Real-Money 진단 이후 후보를 paper / watchlist / hold / reject / re-review로 관리하기 위해 필요하다. | `phase25/` |
+| Operator review workflow | 사용자가 결과를 보고 다음 행동을 판단할 수 있어야 한다. | `phase25/PHASE25_PRE_LIVE_OPERATING_SYSTEM_AND_DEPLOYMENT_READINESS_PLAN.md` |
+| Quarterly real-money / guardrail parity | quarterly strict lane이 annual strict와 같은 수준의 검증 surface를 갖추려면 필요하다. | `phase23/` |
+| Custom PIT factor engine | broad factor layer를 넘어 filing-time 기준의 엄격한 factor research로 가기 위해 필요하다. | `data_architecture/DATA_QUALITY_AND_PIT_NOTES.md` |
+| Warning / metadata quality | missing data, stale data, excluded ticker, contract state를 사용자가 놓치지 않게 해야 한다. | `code_analysis/BACKTEST_RUNTIME_FLOW.md` |
+| Strategy expansion guardrails | 새 전략을 계속 추가하되, research note -> runtime -> UI -> replay 연결 기준을 반복 가능하게 유지해야 한다. | `code_analysis/STRATEGY_IMPLEMENTATION_FLOW.md` |
 
-둘을 명시적으로 분리하거나, 가능하면 DB 기준으로 수렴시키는 것이 좋다.
-
-## 14-2. 2순위
-공시 시점 기반 팩터 파이프라인을 만든다.
-
-필요한 연결:
-- `financial_statements.py`의 `filing_date`, `accepted_at`, `available_at`
-- `factors.py`의 계산 기준 시점
-- 백테스트 리밸런싱 시점
-
-## 14-3. 3순위
-전략 결과 공통 스키마를 정의한다.
-
-예:
-- `Date`
-- `Holdings`
-- `Weights`
-- `Cash`
-- `Total Balance`
-- `Total Return`
-- `Rebalancing`
-
-## 14-4. 4순위
-설정 관리 계층을 만든다.
-
-대상:
-- DB 연결
-- batch size
-- sleep
-- retry
-- 로그 경로
-
-## 14-5. 5순위
-리서치용 샘플과 운영 파이프라인을 분리한다.
-
-예:
-- `sample.py`는 examples로 이동
-- ingestion jobs는 별도 jobs/module화
+새 phase는 이 우선순위 안에서 사용자와 방향을 확인한 뒤 연다.
 
 ---
 
 ## 15. 퀀트 관점에서 추가되면 좋은 데이터
 
-이미 기존 감사 문서에서 제안된 항목을 현재 코드 맥락으로 다시 정리하면 아래가 핵심이다.
+추가 데이터는 “있으면 좋아 보이는 것”이 아니라,
+현재 제품의 검증 품질을 실제로 올리는 순서로 본다.
 
-## 15-1. 매우 중요
-- filing/accepted 시점 기반 point-in-time 재무 데이터
-- listing/delisting/symbol change history
-- benchmark 및 risk-free rate 시계열
-- 거래비용 근사용 유동성 데이터
-
-## 15-2. 중요
-- 섹터/산업 분류 이력
-- index membership history
-- 배당 이벤트 상세 이력
-- ETF 전용 메타 확장
-
-## 15-3. 고급 확장
-- analyst estimates / surprise
-- short interest / borrow fee
-- options implied volatility
+| 우선순위 | 데이터 | 왜 필요한가 |
+|---|---|---|
+| 높음 | listing / delisting / symbol change history | historical universe와 survivorship bias를 더 정확히 제어하기 위해 필요하다. |
+| 높음 | risk-free rate / benchmark 시계열 | Sharpe, excess return, benchmark guardrail 해석을 더 엄격하게 만들기 위해 필요하다. |
+| 높음 | ADV, volume quality, bid/ask spread proxy | turnover, capacity, liquidity risk를 추정하기 위해 필요하다. |
+| 높음 | transaction cost / slippage assumption table | frictionless backtest와 실제 운용 가능성의 차이를 줄이기 위해 필요하다. |
+| 중간 | sector / industry classification history | factor / sector bias 분석을 historical 기준으로 하기 위해 필요하다. |
+| 중간 | index membership history | benchmark-relative universe와 membership bias를 검토하기 위해 필요하다. |
+| 중간 | ETF metadata history | ETF 전략에서 asset class, inception, expense, closure risk를 더 잘 설명하기 위해 필요하다. |
+| 고급 | analyst estimates / surprise | earnings surprise, revision factor research로 확장할 때 필요하다. |
+| 고급 | short interest / borrow fee | crowded short, squeeze, short constraint 분석이 필요할 때 유용하다. |
+| 고급 | option implied volatility | volatility regime, tail risk, option-aware strategy 연구에 필요하다. |
 
 ---
 
@@ -2196,22 +1965,36 @@ DB 적재 계층은 실제 운영용 파이프라인처럼 보이지만, 전략 
 
 현재 `finance` 패키지는:
 
-"NYSE 유니버스, 가격, 재무, 팩터 데이터를 수집·저장하면서 동시에 ETF/자산배분형 전략을 빠르게 연구할 수 있게 만든 초기 단계 퀀트 리서치 패키지"
+> NYSE / ETF 데이터 수집, MySQL 기반 loader, DB-backed strategy runtime, Backtest UI compare/history/saved replay, strategy report, Pre-Live 운영 준비를 연결하는 퀀트 백테스트 워크벤치
 
 라고 정의하는 것이 가장 정확하다.
 
 ---
 
-## 17. 이후 대화에서 이 문서를 어떻게 사용할지
+## 17. 이후 이 문서를 어떻게 사용할지
 
-이후 `finance` 관련 질문에서는 이 문서를 기준으로 아래 순서로 이해하면 된다.
+이 문서는 상세 사양서가 아니라 top-level orientation 문서다.
+처음 방향을 잡을 때 이 문서를 보고, 세부 작업은 아래 문서로 내려간다.
 
-1. 지금 묻는 내용이 데이터 적재 문제인지 전략 문제인지 먼저 구분
-2. 데이터 적재면 어느 DB/테이블에 해당하는지 확인
-3. 전략 문제면 `engine -> transform -> strategy -> performance` 순서로 본다
-4. 팩터 문제면 `fundamentals -> factors -> point-in-time 이슈`를 같이 본다
+| 상황 | 우선 볼 문서 |
+|---|---|
+| 현재 phase 방향을 확인할 때 | `MASTER_PHASE_ROADMAP.md`, 해당 `phase*/` 문서 |
+| finance 문서 전체 위치를 찾을 때 | `FINANCE_DOC_INDEX.md` |
+| backtest 결과 / candidate report를 찾을 때 | `backtest_reports/BACKTEST_REPORT_INDEX.md` |
+| strategy별 run log를 볼 때 | `backtest_reports/strategies/` |
+| code flow를 따라갈 때 | `code_analysis/README.md` |
+| DB / data quality를 확인할 때 | `data_architecture/README.md` |
+| recurring term을 확인할 때 | `FINANCE_TERM_GLOSSARY.md` |
+| 작업 진행 상태를 확인할 때 | `WORK_PROGRESS.md` |
+| 사용자 질문과 설계 판단을 확인할 때 | `QUESTION_AND_ANALYSIS_LOG.md` |
 
-즉, 이 문서는 단순 설명 문서가 아니라 이후 분석과 설계 대화의 기준 좌표다.
+문서 관리 원칙:
+
+- 이 문서는 현재 구조의 큰 지도만 유지한다.
+- 긴 코드 분석은 `code_analysis/`에 둔다.
+- DB와 data flow 분석은 `data_architecture/`에 둔다.
+- phase별 계획 / QA / closeout은 각 `phase*/` 폴더에 둔다.
+- 의미 있는 backtest 결과는 `backtest_reports/`에 둔다.
 
 ---
 
@@ -2221,13 +2004,21 @@ DB 적재 계층은 실제 운영용 파이프라인처럼 보이지만, 전략 
 각 script의 사용 시점과 갱신 기준은
 `.note/finance/code_analysis/AUTOMATION_SCRIPTS_GUIDE.md`를 우선한다.
 
-핵심 baseline은 세 가지다.
-
 | 구분 | 기준 파일 / script | 역할 |
 |---|---|---|
 | phase 문서 bootstrap | `plugins/quant-finance-workflow/scripts/bootstrap_finance_phase_bundle.py` | 새 phase 기본 문서 bundle 생성 |
+| phase checklist template | `.note/finance/PHASE_TEST_CHECKLIST_TEMPLATE.md` | 사용자가 직접 체크할 QA 문서의 기본 형태 |
+| phase plan template | `.note/finance/PHASE_PLAN_TEMPLATE.md` | phase plan이 쉬운 설명, 필요성, 완료 후 장점을 포함하도록 하는 기본 형태 |
 | current candidate registry | `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl` | strongest / near-miss 후보의 machine-readable persistence |
+| backtest report index | `.note/finance/backtest_reports/BACKTEST_REPORT_INDEX.md` | durable backtest report 위치를 찾는 전용 index |
+| strategy run logs | `.note/finance/backtest_reports/strategies/*_BACKTEST_LOG.md` | 반복 strategy 실험 결과를 strategy별로 누적 |
 | refinement hygiene helper | `plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py` | 문서 / index / root log / generated artifact 상태 점검 |
+| code analysis docs | `.note/finance/code_analysis/` | 코드 흐름, UI 흐름, strategy 추가 절차, automation script 사용법 관리 |
+| data architecture docs | `.note/finance/data_architecture/` | DB schema, table semantics, data flow, PIT/data-quality 기준 관리 |
+| pre-live records | `.note/finance/phase25/` | Real-Money 이후 paper / watchlist / hold / re-review 운영 기록 체계 준비 |
 
-상세 사용 시점, 주의사항, 새 script 추가 기준은
-`.note/finance/code_analysis/AUTOMATION_SCRIPTS_GUIDE.md`에서 관리한다.
+주의:
+
+- `.note/finance/BACKTEST_RUN_HISTORY.jsonl`, `.note/finance/WEB_APP_RUN_HISTORY.jsonl` 같은 실행 기록은 유용하지만 보통 commit 대상이 아니다.
+- 자동화 script는 작업을 돕는 support tool이지, 사람이 판단해야 할 phase gate를 대체하지 않는다.
+- phase closeout 때는 roadmap, doc index, report index, glossary, skill guidance가 stale해졌는지 함께 확인한다.

@@ -2304,3 +2304,15 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `DATA_FLOW_MAP.md`, `DB_SCHEMA_MAP.md`, `TABLE_SEMANTICS.md`, `DATA_QUALITY_AND_PIT_NOTES.md`, `README.md`를 추가했다
   - `FINANCE_COMPREHENSIVE_ANALYSIS.md`의 sections 5~7은 요약과 링크 중심으로 줄였다
   - 앞으로 DB/table/source-of-truth/PIT/data-quality 의미 변경은 `data_architecture/`를 갱신하고, 코드 수정 flow는 `code_analysis/`에서 관리하는 방향으로 분리했다
+
+### 2026-04-20 - 종합 분석 문서의 8~18번은 현재 제품 지도와 문서 라우팅 역할로 정리한다
+- Request topic:
+  - 사용자가 `FINANCE_COMPREHENSIVE_ANALYSIS.md`의 8번부터 18번까지가 현재 프로젝트 상태와 맞게 업데이트 / 정리되어야 한다고 요청함
+- Interpreted goal:
+  - 종합 분석 문서 후반부가 오래된 sample-strategy / 초기 구조 설명에 머물지 않고, 현재 제품 레이어, 남은 한계, 코드 / 데이터 문서 체계, Phase 25 pre-live 방향을 한 번에 안내해야 함
+- Result:
+  - 8~9번을 현재 제품 / 전략 / portfolio / pre-live layer와 시스템 강점 중심으로 다시 썼다
+  - 10~11번을 현재 남은 한계와 데이터 품질 / PIT 요약으로 줄이고, 상세 판단은 `data_architecture/`를 우선하도록 정리했다
+  - 12번을 함수 나열이 아니라 `code_analysis/`와 대표 코드 진입점으로 이어지는 지도 형태로 정리했다
+  - 13~18번을 투자 분석이 아닌 제품 개발 경계, Phase 25 pre-live 방향, 다음 개발 우선순위, 추가 데이터, 문서 사용법, automation / persistence baseline 중심으로 갱신했다
+  - 앞으로 `FINANCE_COMPREHENSIVE_ANALYSIS.md`는 큰 지도 역할을 유지하고, 상세 code flow / DB semantics / phase execution / backtest result는 전용 문서로 관리한다

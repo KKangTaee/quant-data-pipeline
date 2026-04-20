@@ -1597,3 +1597,13 @@ Detailed historical logs were archived on `2026-04-13`.
   - updated `FINANCE_DOC_INDEX.md`, `AGENTS.md`, and the active `finance-doc-sync` skill guidance to include the new data architecture update rule
 - Durable takeaway:
   - Future DB/table/source-of-truth or PIT/data-quality meaning changes should update `data_architecture/`, while the comprehensive analysis should keep only the top-level data map.
+
+### 2026-04-20
+- Refreshed `FINANCE_COMPREHENSIVE_ANALYSIS.md` sections 8~18 using the current finance documentation set.
+- Changed:
+  - updated sections 8~9 from older ETF/sample-strategy framing to the current product / strategy / portfolio / pre-live layer view
+  - condensed sections 10~11 into current limitation and data-quality summaries that point to `data_architecture/`
+  - rewrote section 12 as a code entrypoint map that points to `code_analysis/`
+  - updated sections 13~18 to reflect the current development boundary, Phase 25 pre-live direction, future data priorities, and automation / persistence baseline
+- Durable takeaway:
+  - `FINANCE_COMPREHENSIVE_ANALYSIS.md` now acts as a high-level orientation map for the current product, while detailed code, DB, phase, and result records are delegated to their canonical sub-documents.
