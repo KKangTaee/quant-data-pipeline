@@ -2356,3 +2356,14 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 운영성 문서는 `.note/finance/operations/`, daily market update 문서는 `.note/finance/operations/daily_market_update/`, research 문서는 `.note/finance/research/`, support 논의 문서는 `.note/finance/support_tracks/`, 기존 backtest refinement flow guide는 `.note/finance/code_analysis/`로 이동했다
   - `FINANCE_DOC_INDEX.md`와 관련 링크를 새 위치로 갱신했다
   - 앞으로 root `.note/finance/`는 `FINANCE_COMPREHENSIVE_ANALYSIS.md`, `MASTER_PHASE_ROADMAP.md`, `FINANCE_DOC_INDEX.md`, glossary, active logs, phase templates 중심으로 유지한다
+
+### 2026-04-21 - phase 상태값은 구현 상태와 사용자 QA 상태를 분리해서 읽는다
+- Request topic:
+  - 사용자가 `FINANCE_DOC_INDEX.md`의 `Phase별 빠른 지도`에 `completed`, `practical closeout`, `manual validation pending` 등 여러 상태값이 섞여 있어 각각의 의미를 설명하고 정형화해 달라고 요청함
+- Interpreted goal:
+  - phase 상태값이 "구현 완료", "사용자 QA 대기", "완전 종료"를 명확히 구분하도록 문서와 지침을 정리해야 함
+- Result:
+  - `FINANCE_DOC_INDEX.md`에 `Phase 상태값 읽는 법`과 권장 상태 진행 순서를 추가했다
+  - `MASTER_PHASE_ROADMAP.md`의 현재 위치 상태 요약도 같은 표기 체계로 맞췄다
+  - `FINANCE_TERM_GLOSSARY.md`에 `Phase Status` 용어를 추가했다
+  - 앞으로 새 phase 상태는 `active / work_in_progress`, `implementation_completed / manual_validation_pending`, `practical_closeout / manual_validation_pending`, `phase_complete / manual_validation_completed` 같은 정형화된 라벨을 우선 사용한다

@@ -2302,3 +2302,38 @@ same-gate lower-MDD 후보를 만들기 어려웠기 때문에,
 - defensive sleeve risk-off
 - next-ranked fill
 - concentration-aware weighting
+
+---
+
+## Phase Status
+
+### 기본 설명
+각 phase가 지금 어느 단계에 있는지 보여주는 상태값이다.
+이 값은 "구현이 끝났는지"와 "사용자 QA가 끝났는지"를 분리해서 읽기 위해 사용한다.
+
+### 왜 사용되는지
+`completed`만 쓰면 실제로 코드 구현만 끝난 것인지,
+사용자가 checklist까지 확인한 것인지,
+아니면 다음 phase로 넘어갈 수 있는 practical closeout인지 구분하기 어렵다.
+
+### 예시 / 필요 상황
+- `active / work_in_progress`
+  - 지금 작업 중이다.
+- `active / first_work_unit_completed`
+  - 첫 번째 작업 단위는 끝났지만 phase 전체는 진행 중이다.
+- `implementation_completed / manual_validation_pending`
+  - 구현은 끝났지만 사용자 수동 QA가 남아 있다.
+- `practical_closeout / manual_validation_pending`
+  - 현재 범위는 넘길 수 있지만 사용자 수동 QA가 아직 남아 있다.
+- `phase_complete / manual_validation_completed`
+  - 구현, 문서, 사용자 수동 QA가 모두 끝난 상태다.
+
+Legacy 상태값:
+
+- `completed`
+  - 예전 phase에서 쓰던 완료 축약형이다.
+  - 사용자 QA 완료 여부가 문서에 따로 남아 있지 않을 수 있다.
+- `first_chapter_completed`
+  - phase 전체가 아니라 첫 챕터만 완료되었다는 뜻이다.
+- `completed / manual_validation_pending`
+  - 구현은 끝났지만 사용자 QA가 남은 예전 혼합 표기다.

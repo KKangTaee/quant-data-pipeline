@@ -1646,3 +1646,14 @@ Detailed historical logs were archived on `2026-04-13`.
   - updated `FINANCE_DOC_INDEX.md`, active links, and added folder README files
 - Durable takeaway:
   - `.note/finance/` root should now stay focused on top-level maps, active logs, glossary, and templates.
+
+### 2026-04-21
+- Standardized phase status terminology for finance roadmap/index documents.
+- Changed:
+  - added a `Phase 상태값 읽는 법` section to `FINANCE_DOC_INDEX.md`
+  - normalized recent phase status labels to underscore-based canonical values such as `phase_complete / manual_validation_completed`
+  - aligned the `MASTER_PHASE_ROADMAP.md` current-position status summary with the same labels
+  - added `Phase Status` to `FINANCE_TERM_GLOSSARY.md`
+  - updated `AGENTS.md` and the active `finance-doc-sync` skill so future phase indexes use the same status vocabulary
+- Durable takeaway:
+  - Future phase status should separate implementation progress from user manual QA status instead of using ambiguous `completed` shorthand.

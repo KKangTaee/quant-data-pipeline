@@ -680,7 +680,7 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
   user-side manual validation은 아직 pending이다
 - 따라서 현재 운영 기준은:
   - `Phase 12`: implementation closed / manual_validation_pending
-  - `Phase 13`: practical closeout / manual_validation_pending
+  - `Phase 13`: practical_closeout / manual_validation_pending
 - 이번 phase에서는
   - shortlisted candidate 상태 language 고정
   - ETF second-pass backlog 재정리
@@ -785,7 +785,7 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 - strongest baseline 대비 tradeoff 정리
 
 ### 상태
-- `practical closeout / manual_validation_pending`
+- `practical_closeout / manual_validation_pending`
 
 ### 현재 상태 요약
 - strongest `Value > Strict Annual` baseline은
@@ -970,7 +970,7 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 - remaining structural/operator backlog 정리 후 deeper rerun 재개
 
 ### 상태
-- `practical closeout / manual_validation_pending`
+- `practical_closeout / manual_validation_pending`
 
 ### 현재 상태 요약
 - user confirmation 기준 next direction은 `larger structural redesign`로 고정되었다
@@ -1036,7 +1036,7 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
     - legacy boolean payload도 계속 복원 가능하게 유지
 
 ### 상태
-- `phase complete / manual_validation_completed`
+- `phase_complete / manual_validation_completed`
 
 ### 현재 상태 요약
 - strict annual 구조 옵션 3축이 operator-facing contract 언어로 정리되었다.
@@ -1070,7 +1070,7 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 - saved portfolio usability hardening
 
 ### 상태
-- `phase complete / manual_validation_completed`
+- `phase_complete / manual_validation_completed`
 
 ### 현재 상태 요약
 - `Phase 19`에서 strict annual contract language를 읽기 쉽게 정리한 뒤,
@@ -1137,7 +1137,7 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 - weighted / saved portfolio bridge validation
 
 ### 상태
-- `phase complete / manual validation completed`
+- `phase_complete / manual_validation_completed`
 
 ### 현재 상태 요약
 - `Phase 18` closeout 이후 immediate next main phase로 실제 진행했다
@@ -1198,7 +1198,7 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 - saved portfolio replay validation
 
 ### 상태
-- `phase complete / manual_validation_completed`
+- `phase_complete / manual_validation_completed`
 
 ### 현재 상태 요약
 - `Phase 22` phase bundle을 생성했다
@@ -1226,7 +1226,7 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
   - `40 / 40 / 20`은 MDD는 조금 낮아졌지만 CAGR을 포기해 comparison-only 후보로 보류했다
   - 따라서 equal-third baseline을 primary portfolio benchmark로 유지한다
 - Phase 22 checklist QA까지 완료되었으므로,
-  Phase 22는 `phase complete / manual_validation_completed` 상태로 닫는다
+  Phase 22는 `phase_complete / manual_validation_completed` 상태로 닫는다
 - 다음 기본 작업은
   `Phase 23 Quarterly And Alternate Cadence Productionization`을 열어
   quarterly / alternate cadence를 제품 기능 수준으로 끌어올리는 것이다
@@ -1278,7 +1278,7 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 - 최소 representative smoke rerun과 manual checklist 작성
 
 ### 상태
-- `phase complete / manual_validation_completed`
+- `phase_complete / manual_validation_completed`
 
 ---
 
@@ -1311,7 +1311,7 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 - compare / history / saved replay 연결 기준
 
 ### 상태
-- `phase complete / manual_validation_completed`
+- `phase_complete / manual_validation_completed`
 
 ### 현재 메모
 - 첫 구현 후보는 `Global Relative Strength`로 고정했다.
@@ -1361,39 +1361,37 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 
 ## 현재 위치
 
+상태값의 자세한 뜻은 `.note/finance/FINANCE_DOC_INDEX.md`의 `Phase 상태값 읽는 법`을 따른다.
+아래 목록에서 `completed`는 오래된 phase에 남아 있는 legacy 축약형이다.
+
 현재 프로젝트는:
-- `Phase 1` 완료
-- `Phase 2` 완료
-- `Phase 3` 완료
-- `Phase 4` 완료
-- `Phase 5` first chapter 완료
-- `Phase 6` 완료
-- `Phase 7` 완료
-- `Phase 8` implementation completed / manual validation pending
-- `Phase 9` completed / manual validation pending
-- `Phase 10` completed
-- `Phase 11` completed
-- `Phase 12` completed
-- `Phase 13` completed / manual validation pending
-- `Phase 14` practical closeout / manual validation pending
-- `Phase 15` practical closeout / manual validation pending
-- `Phase 16` completed
-- `Phase 17` completed
-- `Phase 18` practical closeout / manual validation pending
-- `Phase 19` phase complete / manual validation completed
-- `Phase 20` phase complete / manual validation completed
+- `Phase 1`: `completed`
+- `Phase 2`: `completed`
+- `Phase 3`: `completed`
+- `Phase 4`: `completed`
+- `Phase 5`: `first_chapter_completed`
+- `Phase 6`: `completed`
+- `Phase 7`: `completed`
+- `Phase 8`: `implementation_completed / manual_validation_pending`
+- `Phase 9`: `completed / manual_validation_pending`
+- `Phase 10`: `completed`
+- `Phase 11`: `completed`
+- `Phase 12`: `completed`
+- `Phase 13`: `completed / manual_validation_pending`
+- `Phase 14`: `practical_closeout / manual_validation_pending`
+- `Phase 15`: `practical_closeout / manual_validation_pending`
+- `Phase 16`: `completed`
+- `Phase 17`: `completed`
+- `Phase 18`: `practical_closeout / manual_validation_pending`
+- `Phase 19`: `phase_complete / manual_validation_completed`
+- `Phase 20`: `phase_complete / manual_validation_completed`
 - `Support Track`
   - available
-- `Phase 21`
-  - phase complete / manual validation completed
-- `Phase 22`
-  - phase complete / manual validation completed
-- `Phase 23`
-  - phase complete / manual validation completed
-- `Phase 24`
-  - phase complete / manual validation completed
-- `Phase 25`
-  - active / first work unit completed
+- `Phase 21`: `phase_complete / manual_validation_completed`
+- `Phase 22`: `phase_complete / manual_validation_completed`
+- `Phase 23`: `phase_complete / manual_validation_completed`
+- `Phase 24`: `phase_complete / manual_validation_completed`
+- `Phase 25`: `active / first_work_unit_completed`
 
 한 줄 현재 판단:
 - current annual strict candidate와 portfolio bridge를 같은 frame에서 다시 본 `Phase 21`은 manual validation까지 완료되었고,

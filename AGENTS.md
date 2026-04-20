@@ -164,6 +164,13 @@
   - grouped work areas
   - `pending` / `in_progress` / `completed` status
   - short explanations for each subtask
+- For phase-level status in roadmap and index documents, prefer canonical labels:
+  - `active / work_in_progress`
+  - `active / first_work_unit_completed`
+  - `implementation_completed / manual_validation_pending`
+  - `practical_closeout / manual_validation_pending`
+  - `phase_complete / manual_validation_completed`
+- Treat older labels such as `completed`, `first_chapter_completed`, and `completed / manual_validation_pending` as legacy shorthand. Explain or normalize them when editing phase indexes.
 - If scope changes during a phase, update the phase document and TODO board rather than leaving the change only in chat.
 - Before opening a new major phase, confirm the new phase direction with the user.
 - When a phase reaches a practical completion point, create a phase-specific manual test checklist document under `.note/finance/phase*/`.
