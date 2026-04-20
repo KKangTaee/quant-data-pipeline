@@ -2336,3 +2336,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 기존 `3-3. 상세 구현 메모` 원문을 `.note/finance/archive/FINANCE_COMPREHENSIVE_ANALYSIS_LEGACY_IMPLEMENTATION_NOTES_20260420.md`로 이동했다
   - root `FINANCE_COMPREHENSIVE_ANALYSIS.md`에는 archive 위치와 앞으로의 기록 위치 기준만 짧게 남겼다
   - archive index와 finance doc index를 갱신해 legacy 구현 메모를 찾을 수 있게 했다
+
+### 2026-04-20 - finance의 최종 목표는 투자 후보 / 포트폴리오 구성 제안 프로그램이다
+- Request topic:
+  - 사용자가 `FINANCE_COMPREHENSIVE_ANALYSIS.md`의 “투자 추천 시스템이 아니라 데이터 수집 + 백테스트 제품 개발 프로젝트”라는 문구가 최종 목표를 잘못 설명한다고 지적함
+- Interpreted goal:
+  - 현재 phase는 개발 / 검증 중심이지만, 프로젝트의 최종 목표는 데이터 수집과 백테스트를 기반으로 투자 후보와 포트폴리오 구성안을 제안하는 프로그램이라는 점을 명확히 해야 함
+- Result:
+  - `FINANCE_COMPREHENSIVE_ANALYSIS.md`와 `MASTER_PHASE_ROADMAP.md`를 수정해 최종 목표와 현재 개발 단계의 경계를 분리했다
+  - `AGENTS.md`와 active `finance-doc-sync` skill도 같은 기준으로 수정했다
+  - 앞으로 “투자 추천이 아니다”라고 표현하지 않고, “강한 백테스트 결과가 자동으로 최종 투자 추천 / live deployment 승인이 되는 것은 아니다”라고 구분한다

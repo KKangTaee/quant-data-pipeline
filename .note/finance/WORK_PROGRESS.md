@@ -1625,3 +1625,12 @@ Detailed historical logs were archived on `2026-04-13`.
   - updated `FINANCE_DOC_INDEX.md` and `.note/finance/archive/README.md` so the archive is discoverable
 - Durable takeaway:
   - `FINANCE_COMPREHENSIVE_ANALYSIS.md` is now much closer to a current-state map, while legacy implementation history remains preserved but out of the main reading path.
+
+### 2026-04-20
+- Clarified the finance product goal versus current phase boundary.
+- Changed:
+  - updated `FINANCE_COMPREHENSIVE_ANALYSIS.md` so the project goal is not described as merely data collection and backtesting
+  - clarified that the long-term target is an evidence-based investment candidate recommendation and portfolio construction proposal program
+  - updated `MASTER_PHASE_ROADMAP.md`, `AGENTS.md`, and the active `finance-doc-sync` skill to separate final product target from near-term development / validation phase execution
+- Durable takeaway:
+  - Strong backtest results are not automatic live recommendations, but the product being built is intended to support investment candidate and portfolio proposal workflows after sufficient validation.

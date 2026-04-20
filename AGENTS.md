@@ -177,14 +177,18 @@
   - phase-specific reference or preparation documents
 - If newly added workflows, defaults, validation rules, or operator practices changed how work should be executed in future turns, refresh those guidance/reference documents during phase closeout rather than leaving the update only in chat.
 - If the review concludes that no skill/reference update is needed, record that outcome briefly in the phase closeout notes or progress log.
-- Keep the project centered on the two primary product goals:
+- Keep near-term phase execution centered on the build foundations:
   - data collection
   - backtesting
+  - validation / review workflow
 - Treat the long-term product target as:
+  - evidence-based investment candidate recommendation
+  - portfolio construction proposal
   - user-defined portfolio construction
   - multiple strategy implementations
   - backtest execution
   - return/risk/result visualization
+  - pre-live review before any actionable deployment
 
 ## Database Rules
 - When adding or changing persistence behavior, inspect `finance/data/db/schema.py` first.
