@@ -36,6 +36,8 @@
 - `completed` `.venv` import smoke
 - `completed` representative DB-backed smoke run
 - `completed` manual validation checklist handoff
+- `completed` QA bugfix for default `Global Relative Strength` preset
+  - DB price history가 부족해 MA/relative-strength warmup 이후 비어버리는 risky ticker는 실행 중단 대신 `excluded_tickers` / warning으로 남기고 제외한다.
 
 ## 4. Documentation Sync
 

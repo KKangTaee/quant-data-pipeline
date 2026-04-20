@@ -43,12 +43,13 @@ research note에서 온 신규 전략이 single 실행, compare, history, saved 
   - `Backtest > Single Strategy`
   - `Strategy = Global Relative Strength`
 - 체크 항목:
-  - [ ] `Backtest > Single Strategy > Strategy = Global Relative Strength`에서 전략 이름과 설명이 research note와 자연스럽게 연결되는지
-  - [ ] 같은 화면에서 `Universe Mode`, `Preset` 또는 `Tickers` 입력이 보이는지
-  - [ ] `Advanced Inputs` 안에서 `Cash / Defensive Ticker`, `Top Assets`, `Signal Interval`, `Score Horizons`, `Trend Filter Window`가 보이는지
-  - [ ] `Advanced Inputs > Real-Money Contract`에서 ETF 가격 / 거래비용 / benchmark / ETF operability 기준을 확인할 수 있는지
-  - [ ] `Run Global Relative Strength Backtest`를 실행했을 때 결과가 오류 없이 표시되는지
-  - [ ] 실행 결과의 `Meta` 또는 runtime metadata에서 `strategy_key = global_relative_strength`, `cash_ticker = BIL`이 보이는지
+  - [x] `Backtest > Single Strategy > Strategy = Global Relative Strength`에서 전략 이름과 설명이 research note와 자연스럽게 연결되는지
+  - [x] 같은 화면에서 `Universe Mode`, `Preset` 또는 `Tickers` 입력이 보이는지
+  - [x] `Advanced Inputs` 안에서 `Cash / Defensive Ticker`, `Top Assets`, `Signal Interval`, `Score Horizons`, `Trend Filter Window`가 보이는지
+  - [x] `Advanced Inputs > Real-Money Contract`에서 ETF 가격 / 거래비용 / benchmark / ETF operability 기준을 확인할 수 있는지
+  - [x] `Run Global Relative Strength Backtest`를 실행했을 때 결과가 오류 없이 표시되는지
+  - [ ] 기본 preset 실행 중 특정 ETF의 가격 이력이 부족하면 결과 warning 또는 `Meta`의 `excluded_tickers`에 해당 티커가 표시되고, 남은 ETF 묶음으로 실행이 계속되는지
+  - [x] 실행 결과의 `Meta` 또는 runtime metadata에서 `strategy_key = global_relative_strength`, `cash_ticker = BIL`이 보이는지
 
 ## 3. compare / history / saved replay 흐름 확인
 

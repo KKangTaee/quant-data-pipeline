@@ -2560,6 +2560,10 @@ def build_backtest_result_bundle(
         meta["score_lookback_months"] = input_params.get("score_lookback_months")
     if input_params.get("score_return_columns") is not None:
         meta["score_return_columns"] = input_params.get("score_return_columns")
+    if input_params.get("requested_tickers") is not None:
+        meta["requested_tickers"] = input_params.get("requested_tickers")
+    if input_params.get("excluded_tickers") is not None:
+        meta["excluded_tickers"] = input_params.get("excluded_tickers")
     if input_params.get("risk_off_mode") is not None:
         meta["risk_off_mode"] = input_params.get("risk_off_mode")
     if input_params.get("defensive_tickers") is not None:
@@ -2886,13 +2890,27 @@ def run_global_relative_strength_backtest_from_db(
         score_weights=normalized_score_weights,
         trend_filter_window=trend_filter_window,
     )
+    effective_tickers = _normalize_tickers(result_df.attrs.get("effective_tickers") or normalized_tickers)
+    requested_tickers = _normalize_tickers(result_df.attrs.get("requested_tickers") or normalized_tickers)
+    excluded_tickers_raw = result_df.attrs.get("excluded_tickers") or []
+    excluded_tickers = _normalize_tickers(excluded_tickers_raw) if excluded_tickers_raw else []
+    warnings: list[str] = []
+    if excluded_tickers:
+        warnings.append(
+            "Global Relative Strength excluded ticker(s) with insufficient transformed price history "
+            "after MA/relative-strength warmup: "
+            + ", ".join(excluded_tickers)
+            + ". Refresh DB price data or remove those tickers from the universe before interpreting the result."
+        )
 
     bundle = build_backtest_result_bundle(
         result_df,
         strategy_name="Global Relative Strength",
         strategy_key="global_relative_strength",
         input_params={
-            "tickers": normalized_tickers,
+            "tickers": effective_tickers,
+            "requested_tickers": requested_tickers,
+            "excluded_tickers": excluded_tickers,
             "cash_ticker": normalized_cash_ticker,
             "start": start,
             "end": end,
@@ -2915,6 +2933,7 @@ def run_global_relative_strength_backtest_from_db(
             "research_source": "/Users/taeho/Project/quant-research/.note/research/strategies/2026-04-15-global-relative-strength-allocation-with-trend-safety-net.md",
         },
         summary_freq=_summary_frequency(option, timeframe),
+        warnings=warnings,
     )
     return _apply_real_money_hardening(
         bundle,
@@ -2923,7 +2942,7 @@ def run_global_relative_strength_backtest_from_db(
         transaction_cost_bps=transaction_cost_bps,
         benchmark_contract=STRICT_DEFAULT_BENCHMARK_CONTRACT,
         benchmark_ticker=benchmark_ticker,
-        benchmark_universe_tickers=normalized_tickers,
+        benchmark_universe_tickers=effective_tickers,
         promotion_min_etf_aum_b=promotion_min_etf_aum_b,
         promotion_max_bid_ask_spread_pct=promotion_max_bid_ask_spread_pct,
     )

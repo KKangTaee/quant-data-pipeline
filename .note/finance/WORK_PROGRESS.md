@@ -22,6 +22,21 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-04-20
+- Fixed a Phase 24 QA issue in `Global Relative Strength` single-strategy execution.
+- Root cause:
+  - default preset included `EEM`, but the current DB only had recent `EEM` price rows
+  - after `MA200` and 12-month relative-strength warmup, `EEM` became an empty transformed series
+  - strict date intersection then failed with `공통 Date가 없습니다.`
+- Implemented:
+  - DB-backed Global Relative Strength now excludes risky tickers that have insufficient transformed price history
+  - excluded tickers are preserved in result metadata as `excluded_tickers`
+  - UI/runtime warnings explain that the ticker was excluded and that DB price data should be refreshed before interpreting the result
+- Validation:
+  - `.venv` default preset runtime smoke now succeeds with `EEM` excluded
+  - compact custom universe runtime smoke still succeeds with no excluded tickers
+  - `.venv/bin/python -m py_compile finance/sample.py app/web/runtime/backtest.py`
+
+### 2026-04-20
 - Continued Phase 24 with the UI / replay integration pass for `Global Relative Strength`.
 - Implemented:
   - strategy catalog registration for single and compare strategy selectors

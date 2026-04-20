@@ -750,7 +750,14 @@ def get_global_relative_strength_from_db(
         .add_ma(trend_filter_window)
         .filter_by_period()
         .add_interval_returns(effective_score_lookback_months)
-        .align_dates()
+    )
+    engine.dfs, excluded_tickers = _filter_global_relative_strength_usable_dfs(
+        engine.dfs,
+        risky_tickers=risky_tickers,
+        cash_ticker=effective_cash_ticker,
+    )
+    engine = (
+        engine.align_dates()
         .slice(start=start, end=end)
         .add_avg_score(return_cols=effective_score_return_columns, weights=effective_score_weights)
         .drop_columns(["High", "Low", "Open", "Volume", *effective_score_return_columns])
@@ -773,6 +780,10 @@ def get_global_relative_strength_from_db(
         .round_columns(cols=["Total Return"], decimals=3)
         .result
     )
+    effective_tickers = [ticker for ticker in risky_tickers if ticker in engine.dfs]
+    df.attrs["requested_tickers"] = list(risky_tickers)
+    df.attrs["effective_tickers"] = effective_tickers
+    df.attrs["excluded_tickers"] = excluded_tickers
     return df
 
 
@@ -1177,6 +1188,74 @@ def _normalize_symbol_list(symbols) -> list[str]:
         seen.add(symbol)
         normalized.append(symbol)
     return normalized
+
+
+def _filter_global_relative_strength_usable_dfs(
+    dfs: dict[str, pd.DataFrame],
+    *,
+    risky_tickers: list[str],
+    cash_ticker: str | None,
+) -> tuple[dict[str, pd.DataFrame], list[str]]:
+    """
+    Keep Global Relative Strength from failing on tickers that cannot produce
+    MA/relative-strength inputs for the selected DB window.
+
+    Risky assets with empty transformed data are excluded and surfaced through
+    result metadata. The cash proxy is not silently excluded because cash return
+    handling depends on it explicitly.
+    """
+    filtered: dict[str, pd.DataFrame] = {}
+    excluded_tickers: list[str] = []
+    cash_symbol = str(cash_ticker or "").strip().upper() or None
+
+    for ticker, df in dfs.items():
+        symbol = str(ticker).strip().upper()
+        if df is None or df.empty:
+            if cash_symbol and symbol == cash_symbol:
+                raise ValueError(
+                    f"Global Relative Strength cash ticker `{symbol}` has insufficient price history "
+                    "after MA/relative-strength warmup. Refresh DB price data or choose another cash ticker."
+                )
+            excluded_tickers.append(symbol)
+            continue
+        filtered[symbol] = df
+
+    effective_risky_tickers = [ticker for ticker in risky_tickers if ticker in filtered]
+    if not effective_risky_tickers:
+        raise ValueError(
+            "Global Relative Strength has no usable risky tickers after MA/relative-strength warmup. "
+            "Refresh DB price data or choose a universe with enough historical coverage."
+        )
+
+    required_tickers = list(effective_risky_tickers)
+    if cash_symbol:
+        required_tickers.append(cash_symbol)
+    missing_required = [ticker for ticker in required_tickers if ticker not in filtered]
+    if missing_required:
+        raise ValueError(
+            "Global Relative Strength is missing required transformed price data for: "
+            + ", ".join(missing_required)
+        )
+
+    date_sets = []
+    coverage_rows = []
+    for ticker in required_tickers:
+        ticker_df = filtered[ticker]
+        dates = pd.to_datetime(ticker_df["Date"], errors="coerce").dropna()
+        date_sets.append(set(dates.tolist()))
+        coverage_rows.append(
+            f"{ticker}={len(dates)} rows"
+        )
+
+    common_dates = set.intersection(*date_sets) if date_sets else set()
+    if not common_dates:
+        raise ValueError(
+            "Global Relative Strength cannot find common rebalance dates after MA/relative-strength warmup. "
+            "Coverage: "
+            + ", ".join(coverage_rows)
+        )
+
+    return filtered, excluded_tickers
 
 
 def _clone_price_df_map(price_dfs: dict[str, pd.DataFrame]) -> dict[str, pd.DataFrame]:

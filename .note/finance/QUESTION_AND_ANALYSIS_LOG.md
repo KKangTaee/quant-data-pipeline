@@ -2167,3 +2167,14 @@ Detailed historical analysis was archived on `2026-04-13`.
   - compile, catalog/history smoke, DB-backed runtime smoke, compare runner smoke를 통과했다
   - Phase 24 상태는 `practical_closeout / manual_validation_pending`으로 정리했고,
     다음 단계는 사용자가 `PHASE24_TEST_CHECKLIST.md`로 실제 화면 QA를 진행하는 것이다
+
+### 2026-04-20 - Global Relative Strength 실행 오류는 기본 preset 내 데이터 부족 티커에서 발생했다
+- Request topic:
+  - 사용자가 `Global Relative Strength` 실행 시 `Backtest execution failed: 공통 Date가 없습니다.` 오류가 발생한다고 보고함
+- Interpreted goal:
+  - 신규 전략 자체의 계산 오류인지, DB 가격 데이터 / 전처리 coverage 문제인지 확인하고 UI 실행이 중단되지 않게 만들고 싶음
+- Result:
+  - 기본 preset 중 `EEM`이 현재 DB에서 2026년 이후 일부 가격 행만 가지고 있었다
+  - `MA200`과 12개월 relative-strength score를 만들고 나면 `EEM`의 transformed DataFrame이 비어 전체 티커 `Date` 교집합이 0개가 되었다
+  - 코드는 risky ticker 중 transformed history가 비는 항목을 제외하고, `excluded_tickers`와 warning에 남기도록 수정했다
+  - 기본 preset smoke는 `EEM` 제외 상태로 정상 실행되며, 이 결과는 투자 판단 전에 DB 가격 보강이 필요하다는 경고를 포함한다
