@@ -40,6 +40,7 @@
   - DB 가격 이력이 부족해 이동평균/상대강도 계산 이후 비어버리는 risky ticker는 실행 중단 대신 `excluded_tickers` / 주의사항으로 남기고 제외한다.
 - `completed` QA bugfix for malformed price rows and warning copy
   - 단일 결측 가격 행이 이동평균 계산 뒤 날짜를 과도하게 끊지 않도록 `add_ma` 입력을 정리했다.
+  - 제거한 결측 가격 행은 `malformed_price_rows` metadata와 결과 주의사항에 남긴다.
   - 실행 결과의 "이번 실행에서 같이 봐야 할 주의사항" 문구를 한국어 중심으로 바꿨다.
 
 ## 4. Documentation Sync

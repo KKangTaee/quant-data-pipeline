@@ -1497,6 +1497,9 @@ engine = (
 이 때문에 실제 전략 입력 데이터는 원본보다 훨씬 짧아질 수 있다.
 단일 결측 가격 행이 이동평균 계산 뒤의 전체 기간을 과도하게 끊지 않도록,
 이동평균 계산에서는 `Close` 같은 기준 가격이 비어 있는 행을 먼저 제외한다.
+Global Relative Strength처럼 runtime에서 이 처리가 중요한 전략은
+제외된 결측 가격 행을 `malformed_price_rows` metadata와 결과 주의사항에 남겨
+사용자가 원본 DB 가격 품질 문제를 확인할 수 있게 한다.
 
 ### `finance/performance.py`
 성과 요약 계층이다.

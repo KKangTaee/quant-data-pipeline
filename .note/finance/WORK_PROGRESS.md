@@ -29,9 +29,11 @@ Detailed historical logs were archived on `2026-04-13`.
   - month-end alignment therefore lost March/April common dates and the result stopped at February
 - Implemented:
   - `add_ma` now removes rows with missing price values before calculating moving averages
+  - Global Relative Strength now records those removed malformed rows in `malformed_price_rows` metadata and result warnings
   - real-money warning strings shown under "이번 실행에서 같이 봐야 할 주의사항" were translated to Korean-oriented copy
 - Validation:
   - `.venv` default `Global Relative Strength` runtime smoke for `2016-01-01 -> 2026-04-20` now ends at `2026-04-17`, the latest available DB trading date
+  - the same smoke surfaces `IWM 1건(2026-03-17)` as a malformed price-row warning
   - `.venv/bin/python -m py_compile finance/transform.py app/web/runtime/backtest.py finance/sample.py`
 - Documentation hygiene:
   - reviewed index impact; no new durable document was added, so `FINANCE_DOC_INDEX.md` did not need a structural update

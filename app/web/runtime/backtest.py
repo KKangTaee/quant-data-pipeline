@@ -2564,6 +2564,8 @@ def build_backtest_result_bundle(
         meta["requested_tickers"] = input_params.get("requested_tickers")
     if input_params.get("excluded_tickers") is not None:
         meta["excluded_tickers"] = input_params.get("excluded_tickers")
+    if input_params.get("malformed_price_rows") is not None:
+        meta["malformed_price_rows"] = input_params.get("malformed_price_rows")
     if input_params.get("risk_off_mode") is not None:
         meta["risk_off_mode"] = input_params.get("risk_off_mode")
     if input_params.get("defensive_tickers") is not None:
@@ -2894,12 +2896,30 @@ def run_global_relative_strength_backtest_from_db(
     requested_tickers = _normalize_tickers(result_df.attrs.get("requested_tickers") or normalized_tickers)
     excluded_tickers_raw = result_df.attrs.get("excluded_tickers") or []
     excluded_tickers = _normalize_tickers(excluded_tickers_raw) if excluded_tickers_raw else []
+    malformed_price_rows = list(result_df.attrs.get("malformed_price_rows") or [])
     warnings: list[str] = []
     if excluded_tickers:
         warnings.append(
             "Global Relative Strength 실행에서 이동평균/상대강도 계산에 필요한 가격 이력이 부족한 티커를 제외했습니다: "
             + ", ".join(excluded_tickers)
             + ". 결과를 해석하기 전에 해당 티커의 DB 가격 데이터를 보강하거나 universe에서 제외하는 것이 좋습니다."
+        )
+    if malformed_price_rows:
+        malformed_preview = []
+        for row in malformed_price_rows[:5]:
+            ticker = str(row.get("ticker") or "").strip().upper()
+            count = int(row.get("count") or 0)
+            sample_dates = row.get("sample_dates") or []
+            sample_text = ", ".join(str(value) for value in sample_dates[:3])
+            malformed_preview.append(f"{ticker} {count}건({sample_text})")
+        more = ""
+        if len(malformed_price_rows) > 5:
+            more = f" 외 {len(malformed_price_rows) - 5}개 티커"
+        warnings.append(
+            "가격 데이터에 결측 행이 있어 이동평균 계산 전 제외했습니다: "
+            + "; ".join(malformed_preview)
+            + more
+            + ". 가격을 임의로 채운 것은 아니며, 원본 DB 가격 데이터를 점검하는 것이 좋습니다."
         )
 
     bundle = build_backtest_result_bundle(
@@ -2910,6 +2930,7 @@ def run_global_relative_strength_backtest_from_db(
             "tickers": effective_tickers,
             "requested_tickers": requested_tickers,
             "excluded_tickers": excluded_tickers,
+            "malformed_price_rows": malformed_price_rows,
             "cash_ticker": normalized_cash_ticker,
             "start": start,
             "end": end,

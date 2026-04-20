@@ -737,16 +737,18 @@ def get_global_relative_strength_from_db(
         else dict(score_weights)
     )
 
+    engine = _build_price_only_engine(
+        engine_tickers,
+        option=option,
+        start=start,
+        end=end,
+        timeframe=timeframe,
+        from_db=True,
+        history_buffer_years=3,
+    )
+    malformed_price_rows = _inspect_missing_price_rows(engine.dfs, price_col="Close")
     engine = (
-        _build_price_only_engine(
-            engine_tickers,
-            option=option,
-            start=start,
-            end=end,
-            timeframe=timeframe,
-            from_db=True,
-            history_buffer_years=3,
-        )
+        engine
         .add_ma(trend_filter_window)
         .filter_by_period()
         .add_interval_returns(effective_score_lookback_months)
@@ -784,6 +786,7 @@ def get_global_relative_strength_from_db(
     df.attrs["requested_tickers"] = list(risky_tickers)
     df.attrs["effective_tickers"] = effective_tickers
     df.attrs["excluded_tickers"] = excluded_tickers
+    df.attrs["malformed_price_rows"] = malformed_price_rows
     return df
 
 
@@ -1188,6 +1191,43 @@ def _normalize_symbol_list(symbols) -> list[str]:
         seen.add(symbol)
         normalized.append(symbol)
     return normalized
+
+
+def _inspect_missing_price_rows(
+    dfs: dict[str, pd.DataFrame],
+    *,
+    price_col: str = "Close",
+) -> list[dict[str, object]]:
+    malformed_rows: list[dict[str, object]] = []
+    for ticker, df in (dfs or {}).items():
+        if df is None or df.empty or price_col not in df.columns or "Date" not in df.columns:
+            continue
+
+        working = df.copy()
+        working["Date"] = pd.to_datetime(working["Date"], errors="coerce")
+        missing_mask = working[price_col].isna()
+        if not bool(missing_mask.any()):
+            continue
+
+        missing_dates = (
+            working.loc[missing_mask, "Date"]
+            .dropna()
+            .sort_values()
+            .dt.strftime("%Y-%m-%d")
+            .tolist()
+        )
+        malformed_rows.append(
+            {
+                "ticker": str(ticker).strip().upper(),
+                "price_col": price_col,
+                "count": int(len(missing_dates)),
+                "first_date": missing_dates[0] if missing_dates else None,
+                "last_date": missing_dates[-1] if missing_dates else None,
+                "sample_dates": missing_dates[:5],
+            }
+        )
+
+    return malformed_rows
 
 
 def _filter_global_relative_strength_usable_dfs(
