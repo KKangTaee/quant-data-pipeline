@@ -22,6 +22,16 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-04-20
+- Reorganized `FINANCE_DOC_INDEX.md` as a navigation-first finance document map.
+- Changed:
+  - reduced the index from a long explanatory list into a shorter phase-oriented guide
+  - added a "지금 먼저 볼 문서" section for Phase 25 active work
+  - split top-level docs, operating files, backtest reports, recent phases, earlier phases, support track, data/runtime references, research references, and archives
+  - moved detailed backtest result lookup guidance toward `backtest_reports/BACKTEST_REPORT_INDEX.md`
+- Durable takeaway:
+  - `FINANCE_DOC_INDEX.md` should now act as a document map, not another long explanation document.
+
+### 2026-04-20
 - Closed `Phase 24` and opened `Phase 25`.
 - Changed:
   - accepted the completed `PHASE24_TEST_CHECKLIST.md` manual QA state
