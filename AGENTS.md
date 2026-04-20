@@ -22,6 +22,10 @@
 - For `finance` work, prefer `.note/finance/` as the canonical note location.
 - Store durable analysis, architecture notes, question summaries, and implementation progress as Markdown files in `.note/finance/`.
 - Keep cross-phase documents at `.note/finance/` root.
+- Keep `.note/finance/` root focused on top-level maps, active logs, glossary, and templates.
+- Put finance operations / runtime artifact / registry / data collection operating notes under `.note/finance/operations/`.
+- Put durable finance research reference notes under `.note/finance/research/`.
+- Put support-track planning, plugin, skill, and workflow automation notes under `.note/finance/support_tracks/`.
 - For machine-readable persistence of current strongest candidates and important near-miss scenarios, prefer `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl` as the default append-only registry unless the scope clearly expands into a broader experiment registry.
 - For durable backtest result reports whose primary purpose is to record:
   - tested strategy settings

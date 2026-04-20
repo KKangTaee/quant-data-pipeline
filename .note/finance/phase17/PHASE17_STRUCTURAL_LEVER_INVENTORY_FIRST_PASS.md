@@ -61,7 +61,7 @@ trend filter가 일부 종목만 탈락시켜도,
 이다.
 
 관련 해석 문서:
-- [OVERLAY_CASH_POLICY_RESEARCH.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/OVERLAY_CASH_POLICY_RESEARCH.md)
+- [OVERLAY_CASH_POLICY_RESEARCH.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/research/OVERLAY_CASH_POLICY_RESEARCH.md)
 
 ### 4. benchmark contract는 gate에 큰 영향을 주지만, 수익률 구조 레버는 아니다
 

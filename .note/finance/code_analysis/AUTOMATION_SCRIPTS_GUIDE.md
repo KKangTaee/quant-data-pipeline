@@ -86,7 +86,7 @@ python3 plugins/quant-finance-workflow/scripts/manage_current_candidate_registry
 
 ## 관련 문서
 
-- `CURRENT_CANDIDATE_REGISTRY_GUIDE.md`
-- `RUNTIME_ARTIFACT_HYGIENE.md`
+- `../operations/CURRENT_CANDIDATE_REGISTRY_GUIDE.md`
+- `../operations/RUNTIME_ARTIFACT_HYGIENE.md`
 - `BACKTEST_REFINEMENT_CODE_FLOW_GUIDE.md`
 - `FINANCE_DOC_INDEX.md`

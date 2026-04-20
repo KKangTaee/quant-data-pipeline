@@ -1479,7 +1479,7 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 - `개발 중심 구현 -> 기능 검증 -> cadence/전략 확장 -> 요청 시 분석 -> pre-live 준비`
 
 ### 참고 문서
-- `.note/finance/ROADMAP_REBASE_PHASE18_TO_PHASE25_20260414.md`
+- `.note/finance/support_tracks/ROADMAP_REBASE_PHASE18_TO_PHASE25_20260414.md`
 
 ---
 

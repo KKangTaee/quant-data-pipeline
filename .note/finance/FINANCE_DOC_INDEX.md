@@ -56,7 +56,7 @@
 | `.note/finance/QUESTION_AND_ANALYSIS_LOG.md` | 최근 질문, 설계 판단, 방향성 결정 로그 |
 | `.note/finance/PHASE_PLAN_TEMPLATE.md` | phase plan 작성 템플릿 |
 | `.note/finance/PHASE_TEST_CHECKLIST_TEMPLATE.md` | phase QA checklist 작성 템플릿 |
-| `.note/finance/FINANCE_WORK_PROGRESS_POLICY.md` | work log를 어떻게 유지/아카이브할지 정한 정책 |
+| `.note/finance/operations/FINANCE_WORK_PROGRESS_POLICY.md` | work log를 어떻게 유지/아카이브할지 정한 정책 |
 
 읽는 기준:
 
@@ -74,12 +74,13 @@
 
 | 문서 또는 파일 | 역할 |
 |---|---|
-| `.note/finance/CURRENT_CANDIDATE_REGISTRY_GUIDE.md` | current candidate registry 사용법 |
+| `.note/finance/operations/README.md` | 운영성 문서 묶음 안내 |
+| `.note/finance/operations/CURRENT_CANDIDATE_REGISTRY_GUIDE.md` | current candidate registry 사용법 |
 | `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl` | current strongest candidate / near-miss append-only registry |
 | `.note/finance/SAVED_PORTFOLIOS.jsonl` | saved portfolio 정의 저장 파일 |
 | `.note/finance/BACKTEST_RUN_HISTORY.jsonl` | local backtest run history. 보통 commit하지 않음 |
 | `.note/finance/WEB_APP_RUN_HISTORY.jsonl` | local web app run history. 보통 commit하지 않음 |
-| `.note/finance/RUNTIME_ARTIFACT_HYGIENE.md` | runtime artifact를 어떻게 다룰지 정리한 문서 |
+| `.note/finance/operations/RUNTIME_ARTIFACT_HYGIENE.md` | runtime artifact를 어떻게 다룰지 정리한 문서 |
 
 주의:
 
@@ -98,7 +99,7 @@
 | `.note/finance/code_analysis/WEB_BACKTEST_UI_FLOW.md` | Backtest UI, Single Strategy, Compare, History, Saved Portfolio 흐름 |
 | `.note/finance/code_analysis/STRATEGY_IMPLEMENTATION_FLOW.md` | 새 strategy family를 제품에 추가할 때 따라야 하는 구현 흐름 |
 | `.note/finance/code_analysis/AUTOMATION_SCRIPTS_GUIDE.md` | phase bootstrap, hygiene, candidate registry helper script 사용 기준 |
-| `.note/finance/BACKTEST_REFINEMENT_CODE_FLOW_GUIDE.md` | 기존 backtest refinement 중심 code flow guide |
+| `.note/finance/code_analysis/BACKTEST_REFINEMENT_CODE_FLOW_GUIDE.md` | 기존 backtest refinement 중심 code flow guide |
 
 관리 기준:
 
@@ -549,10 +550,13 @@ Support Track은 main finance feature phase가 아니라,
 
 | 문서 | 역할 |
 |---|---|
+| `.note/finance/support_tracks/README.md` | support track 문서 묶음 안내 |
 | `.note/finance/support_tracks/RESEARCH_AUTOMATION_AND_EXPERIMENT_PERSISTENCE_SUPPORT_TRACK_20260416.md` | support track 설명 |
 | `.note/finance/support_tracks/RESEARCH_AUTOMATION_AND_EXPERIMENT_PERSISTENCE_SUPPORT_PLAN_20260416.md` | support track 계획 |
 | `.note/finance/support_tracks/RESEARCH_AUTOMATION_PHASE_BUNDLE_AUTOMATION_FIRST_WORK_UNIT_20260416.md` | phase bundle bootstrap 작업 |
 | `.note/finance/support_tracks/RESEARCH_AUTOMATION_CURRENT_CANDIDATE_REGISTRY_AND_WORKFLOW_AUTOMATION_SECOND_WORK_UNIT_20260416.md` | current candidate registry / workflow 자동화 작업 |
+| `.note/finance/support_tracks/CODEX_PLUGIN_AND_SKILL_APPLICATION_REVIEW_20260413.md` | Codex plugin / skill 적용 리뷰 |
+| `.note/finance/support_tracks/ROADMAP_REBASE_PHASE18_TO_PHASE25_20260414.md` | Phase 18~25 roadmap rebase 논의용 문서 |
 
 ---
 
@@ -560,15 +564,16 @@ Support Track은 main finance feature phase가 아니라,
 
 | 문서 | 역할 |
 |---|---|
-| `.note/finance/BACKTEST_REFINEMENT_CODE_FLOW_GUIDE.md` | Streamlit UI -> runtime -> finance strategy 흐름 안내 |
-| `.note/finance/CONFIG_EXTERNALIZATION_INVENTORY.md` | 설정값 외부화 inventory |
-| `.note/finance/DATA_COLLECTION_UI_STRATEGY.md` | 데이터 수집 UI 방향 |
-| `.note/finance/OHLCV_AND_FINANCIAL_INGESTION_REVIEW.md` | OHLCV / 재무 데이터 수집 리뷰 |
-| `.note/finance/DAILY_MARKET_UPDATE_RATE_LIMIT_ANALYSIS_20260328.md` | daily market update rate limit 분석 |
-| `.note/finance/DAILY_MARKET_UPDATE_RATE_LIMIT_IMPLEMENTATION_20260328.md` | daily market update rate limit 대응 구현 |
-| `.note/finance/DAILY_MARKET_UPDATE_SPEED_OPTIMIZATION_PLAN_20260328.md` | daily market update 속도 개선 계획 |
-| `.note/finance/DAILY_MARKET_UPDATE_SPEED_OPTIMIZATION_IMPLEMENTATION_20260328.md` | daily market update 속도 개선 구현 |
-| `.note/finance/DAILY_MARKET_UPDATE_SHORT_WINDOW_ACCELERATION_20260404.md` | short-window update 가속화 |
+| `.note/finance/operations/README.md` | 운영성 문서 묶음 안내 |
+| `.note/finance/code_analysis/BACKTEST_REFINEMENT_CODE_FLOW_GUIDE.md` | Streamlit UI -> runtime -> finance strategy 흐름 안내 |
+| `.note/finance/operations/CONFIG_EXTERNALIZATION_INVENTORY.md` | 설정값 외부화 inventory |
+| `.note/finance/operations/DATA_COLLECTION_UI_STRATEGY.md` | 데이터 수집 UI 방향 |
+| `.note/finance/operations/OHLCV_AND_FINANCIAL_INGESTION_REVIEW.md` | OHLCV / 재무 데이터 수집 리뷰 |
+| `.note/finance/operations/daily_market_update/DAILY_MARKET_UPDATE_RATE_LIMIT_ANALYSIS_20260328.md` | daily market update rate limit 분석 |
+| `.note/finance/operations/daily_market_update/DAILY_MARKET_UPDATE_RATE_LIMIT_IMPLEMENTATION_20260328.md` | daily market update rate limit 대응 구현 |
+| `.note/finance/operations/daily_market_update/DAILY_MARKET_UPDATE_SPEED_OPTIMIZATION_PLAN_20260328.md` | daily market update 속도 개선 계획 |
+| `.note/finance/operations/daily_market_update/DAILY_MARKET_UPDATE_SPEED_OPTIMIZATION_IMPLEMENTATION_20260328.md` | daily market update 속도 개선 구현 |
+| `.note/finance/operations/daily_market_update/DAILY_MARKET_UPDATE_SHORT_WINDOW_ACCELERATION_20260404.md` | short-window update 가속화 |
 
 ---
 
@@ -576,11 +581,10 @@ Support Track은 main finance feature phase가 아니라,
 
 | 문서 | 역할 |
 |---|---|
-| `.note/finance/OVERLAY_CASH_POLICY_RESEARCH.md` | overlay cash policy research |
-| `.note/finance/US_PUBLIC_PORTFOLIO_AND_STRATEGY_SOURCE_MAP_20260404.md` | 미국 공개 포트폴리오 / 전략 source map |
-| `.note/finance/PLAYWRIGHT_MARKET_RESEARCH_PLAYBOOK_20260331.md` | Playwright 기반 market research playbook |
-| `.note/finance/CODEX_PLUGIN_AND_SKILL_APPLICATION_REVIEW_20260413.md` | Codex plugin / skill 적용 리뷰 |
-| `.note/finance/ROADMAP_REBASE_PHASE18_TO_PHASE25_20260414.md` | Phase 18~25 roadmap rebase 논의용 문서 |
+| `.note/finance/research/README.md` | research note 묶음 안내 |
+| `.note/finance/research/OVERLAY_CASH_POLICY_RESEARCH.md` | overlay cash policy research |
+| `.note/finance/research/US_PUBLIC_PORTFOLIO_AND_STRATEGY_SOURCE_MAP_20260404.md` | 미국 공개 포트폴리오 / 전략 source map |
+| `.note/finance/research/PLAYWRIGHT_MARKET_RESEARCH_PLAYBOOK_20260331.md` | Playwright 기반 market research playbook |
 
 ---
 

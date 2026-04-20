@@ -2346,3 +2346,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `FINANCE_COMPREHENSIVE_ANALYSIS.md`와 `MASTER_PHASE_ROADMAP.md`를 수정해 최종 목표와 현재 개발 단계의 경계를 분리했다
   - `AGENTS.md`와 active `finance-doc-sync` skill도 같은 기준으로 수정했다
   - 앞으로 “투자 추천이 아니다”라고 표현하지 않고, “강한 백테스트 결과가 자동으로 최종 투자 추천 / live deployment 승인이 되는 것은 아니다”라고 구분한다
+
+### 2026-04-21 - `.note/finance/` root Markdown은 상위 문서 중심으로 유지한다
+- Request topic:
+  - 사용자가 `.note/finance/` 루트에 정리되지 않은 Markdown 파일들이 있으니, 폴더로 관리할 수 있는 파일은 폴더를 만들어 관리해 달라고 요청함
+- Interpreted goal:
+  - root에는 큰 지도 / 활성 로그 / 템플릿만 남기고, 운영성 문서, research 참고 자료, support-track 문서, developer flow 문서를 목적별 폴더로 이동해야 함
+- Result:
+  - 운영성 문서는 `.note/finance/operations/`, daily market update 문서는 `.note/finance/operations/daily_market_update/`, research 문서는 `.note/finance/research/`, support 논의 문서는 `.note/finance/support_tracks/`, 기존 backtest refinement flow guide는 `.note/finance/code_analysis/`로 이동했다
+  - `FINANCE_DOC_INDEX.md`와 관련 링크를 새 위치로 갱신했다
+  - 앞으로 root `.note/finance/`는 `FINANCE_COMPREHENSIVE_ANALYSIS.md`, `MASTER_PHASE_ROADMAP.md`, `FINANCE_DOC_INDEX.md`, glossary, active logs, phase templates 중심으로 유지한다

@@ -340,7 +340,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - Promoted the finance refinement hygiene script into an explicit operating rule.
 - Synced:
   - `AGENTS.md`
-  - `RUNTIME_ARTIFACT_HYGIENE.md`
+  - `operations/RUNTIME_ARTIFACT_HYGIENE.md`
 - Default usage points are now:
   - after meaningful refinement/doc-sync units
   - before commit
@@ -624,7 +624,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - why the proposed order is natural
 - Synced:
   - `MASTER_PHASE_ROADMAP.md`
-  - `ROADMAP_REBASE_PHASE18_TO_PHASE25_20260414.md`
+  - `support_tracks/ROADMAP_REBASE_PHASE18_TO_PHASE25_20260414.md`
 - Durable takeaway:
   - the roadmap now reads less like a phase title list
     and more like an execution narrative the user can review before deciding direction
@@ -1634,3 +1634,15 @@ Detailed historical logs were archived on `2026-04-13`.
   - updated `MASTER_PHASE_ROADMAP.md`, `AGENTS.md`, and the active `finance-doc-sync` skill to separate final product target from near-term development / validation phase execution
 - Durable takeaway:
   - Strong backtest results are not automatic live recommendations, but the product being built is intended to support investment candidate and portfolio proposal workflows after sufficient validation.
+
+### 2026-04-21
+- Organized loose root finance Markdown documents into purpose-specific folders.
+- Changed:
+  - moved operations / runtime / registry / ingestion reference docs under `.note/finance/operations/`
+  - moved daily market update notes under `.note/finance/operations/daily_market_update/`
+  - moved research reference docs under `.note/finance/research/`
+  - moved support-track discussion docs under `.note/finance/support_tracks/`
+  - moved the legacy backtest refinement flow guide under `.note/finance/code_analysis/`
+  - updated `FINANCE_DOC_INDEX.md`, active links, and added folder README files
+- Durable takeaway:
+  - `.note/finance/` root should now stay focused on top-level maps, active logs, glossary, and templates.

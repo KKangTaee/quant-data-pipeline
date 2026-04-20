@@ -13,6 +13,9 @@
 ## 상태
 
 - `completed`
+- 2026-04-21 note:
+  - finance root 문서 정리 과정에서 관련 문서 링크 경로만 새 위치로 갱신했다.
+  - phase scope, 완료 상태, 구현 판단은 변경하지 않았다.
 
 ## Workstream A. Structural Lever Inventory
 
