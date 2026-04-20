@@ -21,7 +21,7 @@ strict annual family와 별도로 다시 볼 ETF 전략 후보를 한 장으로 
 | `Value` | `Top N = 14 + psr` | `28.13%` | `-24.55%` | `real_money_candidate` | `paper_probation` | `review_required` |
 | `Quality` | `capital_discipline + LQD + trend on + regime off + Top N 12` | `26.02%` | `-25.57%` | `real_money_candidate` | `paper_probation` | `review_required` |
 | `Quality + Value` | `operating_margin + pcr + por + per + Top N 10 + Candidate Universe Equal-Weight` | `31.82%` | `-26.63%` | `real_money_candidate` | `small_capital_trial` | `review_required` |
-| `GTAA` | `SPY / QQQ / GLD / IEF, Top 2, Interval 4, 1M / 3M` | `17.46%` | `-8.39%` | `real_money_candidate` | `paper_probation` | `paper_only` |
+| `GTAA` | `SPY / QQQ / GLD / IEF, Top 2, Interval 4, 1M / 3M` | `18.09%` | `-8.39%` | `real_money_candidate` | `paper_probation` | `paper_only` |
 
 ## family별 해석
 
@@ -36,20 +36,30 @@ strict annual family와 별도로 다시 볼 ETF 전략 후보를 한 장으로 
   - `Score Horizons = 1M / 3M`
   - `Risk-Off Mode = defensive_bond_preference`
 - 결과:
-  - `CAGR = 17.46%`
+  - `CAGR = 18.09%`
   - `MDD = -8.39%`
-  - `Sharpe = 3.07`
+  - `Sharpe = 3.31`
   - `real_money_candidate / paper_probation / paper_only`
 - 해석:
   - 기존 Phase 13 GTAA reference는 `production_candidate / watchlist_only`였지만,
     이번 후보는 `Validation = normal`과 `ETF Operability = normal`을 함께 만족했다.
   - 다만 ETF 전략의 current deployment는 `paper_only`이므로,
     실전 투입 전 paper tracking 후보로 본다.
+- 2026-04-20 follow-up:
+  - ticker universe 부족을 보강하기 위해 `TLT`를 추가한
+    `SPY, QQQ, GLD, IEF, LQD, TLT` 6개 ETF 조합을 다시 테스트했다.
+  - `Top = 1`, `Interval = 8`, `1M / 3M / 6M`는
+    `21.50% / -6.49% / real_money_candidate / paper_probation / paper_only`로
+    신규 공격형 paper 후보가 되었다.
+  - 같은 6개 universe에서 `Top = 2`, `Interval = 4`, `1M / 3M / 6M`는
+    `16.79% / -8.39% / production_candidate / watchlist / watchlist_only`로 남아
+    기본 후보를 대체하지 않는다.
 
 바로 열 문서:
 
 - [GTAA.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/GTAA.md)
 - [GTAA_REAL_MONEY_CANDIDATE_SEARCH_20260418.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/GTAA_REAL_MONEY_CANDIDATE_SEARCH_20260418.md)
+- [GTAA_EXPANDED_UNIVERSE_FOLLOWUP_20260420.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/GTAA_EXPANDED_UNIVERSE_FOLLOWUP_20260420.md)
 
 ### 1. Value
 
