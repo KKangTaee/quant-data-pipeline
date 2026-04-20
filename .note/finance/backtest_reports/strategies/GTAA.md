@@ -57,6 +57,7 @@
 - `Deployment = paper_only`
 
 이 후보는 ticker universe 부족을 보강하지만 매 리밸런싱마다 1개 ETF만 보유한다.
+또한 `Interval = 8`은 tactical allocation 관점에서는 느린 cadence다.
 따라서 대표 후보 교체가 아니라 공격형 paper probation 후보로 별도 tracking한다.
 
 같은 6개 universe에서 `Top = 2`, `Interval = 4`, `1M / 3M / 6M`로 돌린 후보는

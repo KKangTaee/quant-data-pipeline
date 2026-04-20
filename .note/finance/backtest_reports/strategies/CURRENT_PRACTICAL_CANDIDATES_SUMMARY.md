@@ -51,6 +51,8 @@ strict annual family와 별도로 다시 볼 ETF 전략 후보를 한 장으로 
   - `Top = 1`, `Interval = 8`, `1M / 3M / 6M`는
     `21.50% / -6.49% / real_money_candidate / paper_probation / paper_only`로
     신규 공격형 paper 후보가 되었다.
+  - 다만 `Interval = 8`은 tactical allocation 기준으로 느린 cadence라서
+    기본 대표 후보가 아니라 저회전 공격형 paper 후보로 별도 추적한다.
   - 같은 6개 universe에서 `Top = 2`, `Interval = 4`, `1M / 3M / 6M`는
     `16.79% / -8.39% / production_candidate / watchlist / watchlist_only`로 남아
     기본 후보를 대체하지 않는다.

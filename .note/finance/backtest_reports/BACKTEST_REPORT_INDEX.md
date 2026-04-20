@@ -19,6 +19,7 @@
   - current DB/runtime 기준 `Promotion = real_money_candidate`까지 올라간 GTAA compact ETF 후보 탐색 문서
 - `strategies/GTAA_EXPANDED_UNIVERSE_FOLLOWUP_20260420.md`
   - compact GTAA 후보의 ticker 부족 문제를 보강하기 위해 `TLT`를 추가한 6개 ETF universe follow-up 백테스트 문서
+  - `Interval = 6 / 8` cadence가 느린 리밸런싱이라는 운용 해석과 sensitivity table도 포함한다
 - `strategies/QUALITY_STRICT_ANNUAL.md`
   - `Quality > Strict Annual` 결과 허브
 - `strategies/QUALITY_STRICT_ANNUAL_BACKTEST_LOG.md`

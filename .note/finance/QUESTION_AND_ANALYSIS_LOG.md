@@ -2136,3 +2136,18 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 이 결과는 투자 분석이 아니라 신규 전략 추가 경로의 개발 검증으로 기록했다
   - 아직 `Backtest` UI selector, compare, history, saved replay에는 연결하지 않았으므로
     Phase 24 다음 작업은 제품 UI surface 연결이다
+
+### 2026-04-20 - GTAA 6개월 이상 리밸런싱은 느린 cadence로 별도 경고가 필요하다
+- Request topic:
+  - 사용자가 GTAA 후보 중 `Interval = 6`처럼 반기 단위로 바꾸는 방식은 백테스트 성과가 좋아도 너무 느린 리밸런싱이 아니냐고 질문함
+- Interpreted goal:
+  - 좋은 백테스트 수치와 실제 운용 cadence 적합성을 분리해서 판단해야 함
+- Result:
+  - repo GTAA runtime에서 `option = month_end`일 때 `interval`은 score lookback이 아니라 리밸런싱 row 선택 간격이므로,
+    `6`은 반기, `8`은 약 8개월 cadence에 가깝다
+  - GTAA 문헌의 기본 구현은 월말 기준 monthly update / monthly rebalance에 가깝기 때문에,
+    `Interval = 6` 또는 `8`은 일반적인 tactical allocation보다 느린 저회전 변형으로 봐야 한다
+  - 확장 6 ETF core 민감도에서는 `Top = 1 / Interval = 4`와 `Top = 1 / Interval = 8`만 `real_money_candidate`였고,
+    monthly / quarterly cadence는 `hold`로 약했다
+  - 결론적으로 느린 cadence 후보는 registry에 남기되, 기본 실전 후보로 바로 승격하지 않고
+    월별 paper tracking과 `Interval = 4` 대안 비교를 먼저 진행하는 것이 맞다

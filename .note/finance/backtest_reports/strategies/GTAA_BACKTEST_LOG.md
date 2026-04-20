@@ -76,6 +76,11 @@
   - 다만 `Top = 2`를 유지하면 아직 `real_money_candidate`가 아니라 `watchlist_only`다.
   - 실전 기본값은 기존 `SPY / QQQ / GLD / IEF`, `Top = 2` 후보를 유지하고,
     신규 6개 universe `Top = 1`은 공격형 paper probation 후보로 추가한다.
+- cadence follow-up:
+  - 사용자 지적처럼 `Interval = 6` 또는 `8`은 tactical allocation 기준으로 느린 리밸런싱이다.
+  - 확장 6 ETF core sensitivity에서는 monthly / quarterly cadence가 `hold`였고,
+    `Top = 1 / Interval = 4`와 `Top = 1 / Interval = 8`만 `real_money_candidate`였다.
+  - 따라서 `Interval = 8` 후보는 숫자가 강해도 기본 대표 후보가 아니라 느린 저회전 공격형 paper 후보로만 본다.
 - 관련 문서:
   - [GTAA_EXPANDED_UNIVERSE_FOLLOWUP_20260420.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/GTAA_EXPANDED_UNIVERSE_FOLLOWUP_20260420.md)
 

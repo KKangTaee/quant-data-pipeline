@@ -53,12 +53,14 @@
 | Market Regime | `off` |
 | Crash Guardrail | `off` |
 | Risk-Off Defensive Tickers | `TLT, IEF, LQD, BIL` |
+| Trend Filter Window | `200 trading days` |
 
 주의할 점:
 
 - `SPY Benchmark`는 raw daily buy-and-hold가 아니라, GTAA 결과와 같은 sampled frequency surface에서 비교된다.
 - ETF operability gate는 current profile snapshot 기준이다. point-in-time AUM / spread history가 아니다.
 - 이 문서는 투자 조언이 아니라 repo runtime 기준 후보 검토 기록이다. deployment는 모두 live가 아닌 `paper_only` 또는 `watchlist_only`다.
+- `Interval = 6` 또는 `8`은 tactical 전략 치고 느린 cadence다. 좋은 백테스트 숫자를 그대로 실전 기본값으로 받아들이기 전에 cadence sensitivity를 별도 검토해야 한다.
 
 ## 기존 후보의 부족한 부분
 
@@ -269,6 +271,61 @@
 - 하지만 current promotion surface에서는 `validation_status = watch` 때문에 `real_money_candidate`가 아니다.
 - 그래서 실전 후보로 추천하지 않고 watchlist-only 개선 대상으로 둔다.
 
+## 리밸런싱 cadence 해석
+
+사용자 follow-up에서 지적한 것처럼 `Interval = 6` 또는 `8`은 일반적인 tactical allocation 관점에서는 느린 편이다.
+
+repo의 현재 GTAA runtime에서 `interval`은 score lookback이 아니라 row 선택 간격이다.
+`option = month_end`일 때:
+
+- `Interval = 1`은 매월 리밸런싱에 가깝다.
+- `Interval = 3`은 분기 리밸런싱에 가깝다.
+- `Interval = 6`은 반기 리밸런싱에 가깝다.
+- `Interval = 8`은 약 8개월마다 한 번 의사결정을 바꾸는 매우 느린 tactical cadence다.
+
+그래서 느린 interval의 성과가 좋아 보이면 두 가지를 같이 봐야 한다.
+
+- 장점:
+  - 잦은 whipsaw를 줄인다.
+  - 거래비용과 세금 이벤트를 줄일 수 있다.
+  - 큰 trend만 잡는 저회전 전략으로 읽기 쉽다.
+- 단점:
+  - regime 전환에 늦게 반응한다.
+  - `Top = 1`과 결합되면 한 ETF에 오래 집중될 수 있다.
+  - 표본 기간에서 특정 asset, 특히 최근 `GLD`, 의 긴 trend가 결과를 예쁘게 만든 것일 수 있다.
+
+확장 6 ETF core의 cadence sensitivity는 다음과 같았다.
+
+| Top | Interval | CAGR | MDD | Sharpe | Promotion | Validation |
+|---:|---:|---:|---:|---:|---|---|
+| `1` | `1` | `14.78%` | `-21.89%` | `1.04` | `hold` | `caution` |
+| `1` | `2` | `15.49%` | `-14.50%` | `1.62` | `hold` | `caution` |
+| `1` | `3` | `12.33%` | `-13.12%` | `1.65` | `hold` | `caution` |
+| `1` | `4` | `20.91%` | `-10.67%` | `3.04` | `real_money_candidate` | `normal` |
+| `1` | `5` | `11.88%` | `-30.73%` | `1.55` | `hold` | `caution` |
+| `1` | `6` | `14.27%` | `-10.49%` | `2.72` | `hold` | `caution` |
+| `1` | `8` | `21.50%` | `-6.49%` | `3.66` | `real_money_candidate` | `normal` |
+| `2` | `1` | `12.39%` | `-19.55%` | `1.05` | `hold` | `caution` |
+| `2` | `2` | `12.52%` | `-13.58%` | `1.67` | `hold` | `caution` |
+| `2` | `3` | `13.30%` | `-11.56%` | `2.13` | `hold` | `caution` |
+| `2` | `4` | `16.79%` | `-8.39%` | `3.01` | `production_candidate` | `watch` |
+| `2` | `5` | `11.04%` | `-25.97%` | `1.70` | `hold` | `caution` |
+| `2` | `6` | `14.73%` | `-4.92%` | `3.29` | `hold` | `caution` |
+| `2` | `8` | `15.17%` | `-10.43%` | `3.00` | `hold` | `caution` |
+
+해석:
+
+- 월간 또는 분기 리밸런싱이 자동으로 더 좋지는 않았다.
+- 오히려 이번 6 ETF universe에서는 `Top = 1 / Interval = 4`와 `Top = 1 / Interval = 8`만 `real_money_candidate`였다.
+- 하지만 `Interval = 8`은 너무 느린 tactical cadence라서, 실전 기본값보다는 "느린 저회전 공격형 후보"로 보는 편이 맞다.
+- 운영 후보로 더 자연스러운 방향은 `Interval = 4` 또는 `Top = 2 / Interval = 4`의 validation을 개선하는 것이다.
+
+따라서 이 report의 추천 해석을 다음처럼 보강한다.
+
+- `Interval = 8` 후보는 강한 숫자 때문에 registry에 남긴다.
+- 그러나 "실제 운용 기본 후보"로는 너무 느리고 집중도가 높다.
+- 실전 후보 승격 전에는 월별 paper tracking과 4개월 cadence 대안을 함께 비교해야 한다.
+
 ## 제외된 확장 probe
 
 | Probe | Universe | Top / Interval / Score | CAGR | MDD | Promotion | 제외 이유 |
@@ -309,6 +366,7 @@
 
 이 후보는 숫자가 강하지만, `Top = 1` concentration이 있으므로
 기본 후보를 대체하기보다는 별도 공격형 sleeve 후보로 본다.
+또한 `Interval = 8`은 느린 cadence이므로 월별 paper tracking 중 drift와 signal delay를 반드시 같이 본다.
 
 ### 3. 확장 Top-2는 다음 개선 대상
 
@@ -365,6 +423,7 @@ bundle = run_gtaa_backtest_from_db(
     transaction_cost_bps=10.0,
     benchmark_ticker="SPY",
     score_lookback_months=[1, 3, 6],
+    trend_filter_window=200,
     risk_off_mode="cash_only",
     defensive_tickers=["TLT", "IEF", "LQD", "BIL"],
     market_regime_enabled=False,
@@ -393,6 +452,7 @@ bundle = run_gtaa_backtest_from_db(
     transaction_cost_bps=10.0,
     benchmark_ticker="SPY",
     score_lookback_months=[1, 3, 6],
+    trend_filter_window=200,
     risk_off_mode="cash_only",
     defensive_tickers=["TLT", "IEF", "LQD", "BIL"],
     market_regime_enabled=False,
