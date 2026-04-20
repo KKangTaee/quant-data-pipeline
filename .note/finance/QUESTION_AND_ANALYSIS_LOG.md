@@ -2074,3 +2074,19 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `PHASE23_TEST_CHECKLIST.md` section 3에서 `용어 기준` 블록을 제거했다
   - 각 체크 항목에 `Backtest > History > ...`, `Saved Portfolios > ...` 같은 실제 화면 경로를 직접 넣었다
   - `PHASE_TEST_CHECKLIST_TEMPLATE.md`와 `FINANCE_DOC_INDEX.md`에도 future checklist 작성 지침으로 반영했다
+
+### 2026-04-20 - quarterly real-money contract / guardrails는 추후 parity 작업으로 다루는 것이 맞다
+- Request topic:
+  - 사용자가 Phase 24가 new strategy expansion으로 보이는데,
+    annual에는 `Real-Money Contract`와 `Guardrails`가 있고 quarterly prototype에는 아직 없으므로
+    이것도 추후 개발 예정인지 질문함
+- Interpreted goal:
+  - Phase 24로 넘어가기 전에 quarterly가 annual과 같은 promotion / guardrail surface를 가져야 하는지,
+    아니면 research-only 상태로 두고 나중에 별도 작업으로 다루는 것이 맞는지 확인하고 싶음
+- Result:
+  - quarterly strict family는 아직 `prototype / research-only hold`이므로,
+    annual의 real-money / guardrail 옵션을 지금 즉시 1:1 복제하는 것은 우선순위가 높지 않다
+  - Phase 23의 기본 목표는 quarterly 실행, compare, history, saved replay 재현성을 제품 기능 수준으로 끌어올리는 것이다
+  - quarterly real-money contract / guardrails parity는 추후 `quarterly promotion readiness` 또는 `pre-live readiness` 성격의 작업으로 다루는 것이 자연스럽다
+  - 다만 Phase 23 closeout 또는 Phase 24 kickoff에서는 이 차이를 명시해,
+    사용자가 quarterly에 real-money / guardrail 옵션이 없는 것을 구현 누락으로 오해하지 않게 해야 한다
