@@ -101,6 +101,10 @@
 - If the change is narrow and localized, update only the affected sections instead of rewriting the full document.
 - If a change affects package purpose, data flow, DB tables, strategy behavior, or architectural boundaries, reflect that explicitly in the document.
 - Keep the document aligned with the current code, not intended future design.
+- Use `.note/finance/code_analysis/` for developer-facing code flow documents.
+- Keep `.note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md` as the high-level system map, and put detailed code modification flow in `.note/finance/code_analysis/`.
+- When code changes add or materially alter runtime flow, DB/loader flow, Backtest UI flow, strategy implementation flow, or repo-local automation scripts, update the matching `.note/finance/code_analysis/*.md` document.
+- Do not update code analysis documents for small copy changes, one-off backtest results, or phase status updates unless the durable code flow changed.
 - If analysis documents were previously stored under `finance/docs`, prefer the `.note/finance/` location going forward.
 - Use `.note/finance/MASTER_PHASE_ROADMAP.md` as the top-level phase roadmap.
 - Use `.note/finance/FINANCE_DOC_INDEX.md` as the top-level index into finance documents.
@@ -222,6 +226,7 @@
 - Does this change affect DB schema or table meaning?
 - Does this change alter strategy inputs, outputs, or assumptions?
 - Does this change require documentation sync in `FINANCE_COMPREHENSIVE_ANALYSIS.md`?
+- Does this change require an update to `.note/finance/code_analysis/` because a durable code flow changed?
 - If this phase is closing or handing off, does it require a phase-specific manual test checklist document?
 - If this phase is closing or handing off, do `AGENTS.md`, active skills, roadmap/index docs, or phase reference docs need to be refreshed to reflect the implemented workflow?
 - Does this change require an appended entry in `WORK_PROGRESS.md`?

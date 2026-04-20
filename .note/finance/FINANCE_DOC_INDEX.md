@@ -9,8 +9,9 @@
 1. 지금 진행 중인 phase를 확인한다.
 2. 해당 phase의 `Plan`, `TODO`, `Test Checklist`를 본다.
 3. 구현 구조가 궁금하면 `FINANCE_COMPREHENSIVE_ANALYSIS.md`를 본다.
-4. 용어가 헷갈리면 `FINANCE_TERM_GLOSSARY.md`를 본다.
-5. 백테스트 결과 문서는 `backtest_reports/BACKTEST_REPORT_INDEX.md`에서 찾는다.
+4. 실제 코드 수정 흐름이 궁금하면 `code_analysis/README.md`를 본다.
+5. 용어가 헷갈리면 `FINANCE_TERM_GLOSSARY.md`를 본다.
+6. 백테스트 결과 문서는 `backtest_reports/BACKTEST_REPORT_INDEX.md`에서 찾는다.
 
 ---
 
@@ -46,6 +47,7 @@
 | `AGENTS.md` | 저장소 전체 작업 규칙, finance phase 운영 규칙, 문서화 규칙 |
 | `.note/finance/MASTER_PHASE_ROADMAP.md` | 전체 phase 방향, 현재 위치, 다음 phase 흐름 |
 | `.note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md` | finance 시스템 구조와 구현 상태를 설명하는 큰 기술 문서 |
+| `.note/finance/code_analysis/README.md` | 코드 수정자가 보는 개발자용 flow 문서 index |
 | `.note/finance/FINANCE_DOC_INDEX.md` | 지금 보고 있는 문서. finance 문서 지도 |
 | `.note/finance/FINANCE_TERM_GLOSSARY.md` | 반복 용어 사전. `Real-Money`, `Pre-Live`, `Validation Frame` 같은 용어 확인 |
 | `.note/finance/WORK_PROGRESS.md` | 최근 구현/문서 작업 로그 |
@@ -58,6 +60,7 @@
 
 - 프로젝트 전체 방향은 `MASTER_PHASE_ROADMAP.md`
 - 코드/시스템 구조는 `FINANCE_COMPREHENSIVE_ANALYSIS.md`
+- 실제 코드 수정 흐름은 `code_analysis/README.md`
 - 문서 위치는 `FINANCE_DOC_INDEX.md`
 - 용어는 `FINANCE_TERM_GLOSSARY.md`
 - 현재 작업 상태는 `WORK_PROGRESS.md`
@@ -82,7 +85,27 @@
 
 ---
 
-## 4. Backtest Report 문서
+## 4. Code Analysis / Developer Flow 문서
+
+| 문서 | 역할 |
+|---|---|
+| `.note/finance/code_analysis/README.md` | 코드 분석 문서의 기준, 갱신 조건, 읽는 순서 |
+| `.note/finance/code_analysis/BACKTEST_RUNTIME_FLOW.md` | UI payload에서 runtime, loader, strategy, result bundle까지의 실행 흐름 |
+| `.note/finance/code_analysis/DATA_DB_PIPELINE_FLOW.md` | data collection, DB persistence, loader read path 흐름 |
+| `.note/finance/code_analysis/WEB_BACKTEST_UI_FLOW.md` | Backtest UI, Single Strategy, Compare, History, Saved Portfolio 흐름 |
+| `.note/finance/code_analysis/STRATEGY_IMPLEMENTATION_FLOW.md` | 새 strategy family를 제품에 추가할 때 따라야 하는 구현 흐름 |
+| `.note/finance/code_analysis/AUTOMATION_SCRIPTS_GUIDE.md` | phase bootstrap, hygiene, candidate registry helper script 사용 기준 |
+| `.note/finance/BACKTEST_REFINEMENT_CODE_FLOW_GUIDE.md` | 기존 backtest refinement 중심 code flow guide |
+
+관리 기준:
+
+- `FINANCE_COMPREHENSIVE_ANALYSIS.md`에는 큰 구조와 핵심 파일 역할만 유지한다.
+- 실제 코드 수정 순서와 flow-level 상세는 `code_analysis/`에 기록한다.
+- 작은 문구 수정, 일회성 실험 결과, phase 진행 내역은 code analysis 문서에 기록하지 않는다.
+
+---
+
+## 5. Backtest Report 문서
 
 | 문서 | 역할 |
 |---|---|
@@ -119,7 +142,7 @@ backtest 결과를 찾을 때는 이 문서보다
 
 ---
 
-## 5. Phase별 빠른 지도
+## 6. Phase별 빠른 지도
 
 | Phase | 상태 | 핵심 목적 | 먼저 볼 문서 |
 |---|---|---|---|
@@ -151,7 +174,7 @@ backtest 결과를 찾을 때는 이 문서보다
 
 ---
 
-## 6. Recent Phase Detail
+## 7. Recent Phase Detail
 
 최근 phase는 사용자가 자주 다시 확인하므로, 핵심 문서를 바로 찾을 수 있게 따로 둔다.
 
@@ -280,7 +303,7 @@ backtest 결과를 찾을 때는 이 문서보다
 
 ---
 
-## 7. Earlier Phase Detail
+## 8. Earlier Phase Detail
 
 오래된 phase도 phase별로 찾을 수 있게 나눈다.
 다만 모든 파일을 다 넣으면 index가 다시 길어지므로,
@@ -495,7 +518,7 @@ backtest 결과를 찾을 때는 이 문서보다
 
 ---
 
-## 8. Support Track
+## 9. Support Track
 
 Support Track은 main finance feature phase가 아니라,
 작업을 돕는 자동화 / plugin / registry / workflow tooling 관리 트랙이다.
@@ -509,7 +532,7 @@ Support Track은 main finance feature phase가 아니라,
 
 ---
 
-## 9. Data Collection / Runtime / 운영 참고 문서
+## 10. Data Collection / Runtime / 운영 참고 문서
 
 | 문서 | 역할 |
 |---|---|
@@ -525,7 +548,7 @@ Support Track은 main finance feature phase가 아니라,
 
 ---
 
-## 10. Research / 참고 자료
+## 11. Research / 참고 자료
 
 | 문서 | 역할 |
 |---|---|
@@ -537,7 +560,7 @@ Support Track은 main finance feature phase가 아니라,
 
 ---
 
-## 11. Archive
+## 12. Archive
 
 | 문서 | 역할 |
 |---|---|
@@ -547,7 +570,7 @@ Support Track은 main finance feature phase가 아니라,
 
 ---
 
-## 12. 새 문서를 추가할 때
+## 13. 새 문서를 추가할 때
 
 새 phase 문서가 생기면 이 index에는 아래만 추가한다.
 

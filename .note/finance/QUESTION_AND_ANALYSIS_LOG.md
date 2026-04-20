@@ -2272,3 +2272,14 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `3-3`을 현재 사양 문서가 아니라 legacy archive로 명시했다
   - 새 긴 구현 이력은 `3-3`에 직접 append하지 않고, 현재 동작은 관련 주제 섹션, phase 진행은 phase 문서와 `WORK_PROGRESS.md`, 설계 판단은 `QUESTION_AND_ANALYSIS_LOG.md`, backtest 결과는 `backtest_reports/`, 후보 기록은 `CURRENT_CANDIDATE_REGISTRY.jsonl`로 분산 기록하도록 정리했다
   - 기존 긴 메모는 삭제하지 않고 주제별 색인과 기록 템플릿을 붙여, future agent와 사용자가 참고 기록과 현재 상태를 혼동하지 않도록 했다
+
+### 2026-04-20 - 코드 분석은 별도 `code_analysis/` 계층으로 관리한다
+- Request topic:
+  - 사용자가 `FINANCE_COMPREHENSIVE_ANALYSIS.md` 하단의 script / code analysis 내용까지 한 파일에서 계속 관리하는 것이 맞는지 묻고, 앞으로 코드 수정이나 신규 script가 생길 때 기록할 체계를 만들자고 요청함
+- Interpreted goal:
+  - 종합 분석 문서는 큰 지도 역할을 유지하고, 실제 코드 수정자가 따라야 하는 runtime / DB / UI / strategy / automation flow는 별도 developer-facing 문서로 관리해야 함
+- Result:
+  - `.note/finance/code_analysis/`를 새 canonical code flow 위치로 만들었다
+  - `BACKTEST_RUNTIME_FLOW.md`, `DATA_DB_PIPELINE_FLOW.md`, `WEB_BACKTEST_UI_FLOW.md`, `STRATEGY_IMPLEMENTATION_FLOW.md`, `AUTOMATION_SCRIPTS_GUIDE.md`, `README.md`를 추가했다
+  - `FINANCE_COMPREHENSIVE_ANALYSIS.md`는 high-level system map으로 유지하고 상세 code flow는 `code_analysis/`를 보도록 정리했다
+  - 앞으로 code analysis 문서는 모든 변경을 기록하는 history가 아니라, durable code flow가 바뀔 때만 갱신하는 evergreen 개발자 문서로 운영한다

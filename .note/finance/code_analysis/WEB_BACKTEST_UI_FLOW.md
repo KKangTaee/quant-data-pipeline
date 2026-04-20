@@ -1,0 +1,105 @@
+# Web Backtest UI Flow
+
+## 목적
+
+이 문서는 Streamlit Backtest 화면의 single strategy, compare, history, saved portfolio 흐름을 설명한다.
+UI form, payload 복원, history replay, saved portfolio replay를 수정할 때 먼저 확인한다.
+
+## 핵심 파일
+
+| 파일 | 역할 |
+|---|---|
+| `app/web/streamlit_app.py` | top navigation과 page entry |
+| `app/web/pages/backtest.py` | Backtest page 대부분의 UI / state / render logic |
+| `app/web/runtime/backtest.py` | UI payload를 실행 가능한 runtime call로 변환 |
+| `.note/finance/BACKTEST_RUN_HISTORY.jsonl` | local run history. 보통 commit하지 않음 |
+| `.note/finance/SAVED_PORTFOLIOS.jsonl` | saved portfolio persistence |
+
+## 화면 흐름
+
+Backtest page는 현재 세 panel 중심으로 본다.
+
+- `Single Strategy`: 하나의 전략을 실행하고 latest result를 확인한다.
+- `Compare & Portfolio Builder`: 여러 전략을 같은 기간으로 비교하고 weighted portfolio를 만든다.
+- `History`: 저장된 실행 기록을 inspect하고, 가능한 경우 run again 또는 load into form을 수행한다.
+
+## Single Strategy 흐름
+
+```text
+strategy 선택
+  -> strategy-specific form 입력
+  -> _handle_backtest_run(...)
+  -> app/web/runtime/backtest.py run_*_backtest_from_db(...)
+  -> latest result bundle 저장
+  -> result table / summary / selection history / real-money surface 표시
+  -> history record 저장
+```
+
+주의:
+
+- `Load Into Form`은 입력값만 복원한다.
+- 복원 후 결과를 갱신하려면 사용자가 다시 실행해야 한다.
+- selection history가 있는 전략은 latest result의 `Selection History Table` / `Interpretation Summary`에서 상세를 본다.
+
+## Compare 흐름
+
+```text
+strategy multi-select
+  -> Compare Period & Shared Inputs
+  -> strategy별 box에서 variant / advanced inputs 설정
+  -> Run Strategy Comparison
+  -> strategy별 result bundle 실행
+  -> comparison table / overlay / focused strategy 표시
+  -> Weighted Portfolio Builder로 전달
+```
+
+현재 UX 기준:
+
+- common date / timeframe / option은 공유 입력으로 둔다.
+- strategy-specific advanced inputs는 strategy별 box 안에서 보이게 한다.
+- variant 변경은 버튼 없이 즉시 아래 옵션이 바뀌는 방향이 선호된다.
+- 최대 compare 전략 수는 operator가 읽을 수 있는 범위로 유지한다.
+
+## Weighted Portfolio / Saved Portfolio 흐름
+
+```text
+compare result bundles
+  -> weight 입력
+  -> make_monthly_weighted_portfolio(...)
+  -> weighted result
+  -> optional save
+  -> Load Saved Setup Into Compare or Replay Saved Portfolio
+```
+
+구분:
+
+- `Load Saved Setup Into Compare`: 저장된 compare 구성과 weight를 form에 다시 채운다.
+- `Replay Saved Portfolio`: 저장 당시 context로 compare와 weighted portfolio를 다시 실행한다.
+
+저장된 portfolio는 live trading 승인 기록이 아니다.
+후보 조합을 다시 재현하고 검증하기 위한 operator workflow artifact다.
+
+## History 흐름
+
+History는 compact summary 중심이다.
+모든 selection history row를 그대로 저장하지 않는다.
+
+대표 action:
+
+- `Inspect`: 저장된 record를 읽는다.
+- `Run Again`: 저장된 payload로 다시 실행한다.
+- `Load Into Form`: 저장된 입력값을 single strategy form에 복원한다.
+
+## Streamlit form 주의
+
+Streamlit `st.form()` 내부 widget은 submit 전까지 app state가 즉시 rerun되지 않는다.
+따라서 variant 선택처럼 아래 UI를 즉시 바꿔야 하는 값은 form 밖에 두는 것이 낫다.
+반대로 한 번에 제출되어야 하는 detailed contract 입력은 form 내부에 유지할 수 있다.
+
+## 갱신해야 하는 경우
+
+- Backtest panel 구조가 바뀔 때
+- strategy-specific form 위치나 payload key가 바뀔 때
+- compare / weighted / saved portfolio 계약이 바뀔 때
+- history record schema나 replay 가능 범위가 바뀔 때
+- `Load Into Form`, `Run Again`, `Replay Saved Portfolio` semantics가 바뀔 때

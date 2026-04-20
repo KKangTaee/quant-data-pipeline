@@ -1567,3 +1567,13 @@ Detailed historical logs were archived on `2026-04-13`.
   - added a topic index so the long legacy memo can be searched without treating every old note as current behavior
 - Durable takeaway:
   - Future finance implementation notes should not be appended indefinitely to `3-3`; new details should be routed to the correct canonical document and only summarized in the comprehensive analysis when they affect current system behavior.
+
+### 2026-04-20
+- Established the first finance code analysis documentation system.
+- Changed:
+  - created `.note/finance/code_analysis/` as the developer-facing place for durable code flow documents
+  - added flow docs for backtest runtime, data/DB pipeline, web backtest UI, strategy implementation, and automation scripts
+  - updated `FINANCE_COMPREHENSIVE_ANALYSIS.md` so it remains the high-level map and points detailed code flow readers to `code_analysis/`
+  - updated `FINANCE_DOC_INDEX.md`, `AGENTS.md`, and the active `finance-doc-sync` skill guidance to include the new code analysis update rule
+- Durable takeaway:
+  - Future code changes should update `code_analysis/` only when the durable code flow changes; small copy edits, one-off results, and phase status updates should stay out of those developer flow documents.
