@@ -1396,3 +1396,38 @@ Detailed historical logs were archived on `2026-04-13`.
   - synced `PHASE23_CURRENT_CHAPTER_TODO.md` with the checklist wording cleanup
 - Durable takeaway:
   - Future finance checklists should be action/location-first: each checkbox should say where to go and what to verify.
+
+### 2026-04-20
+- Closed `Phase 23` and opened `Phase 24`.
+- Changed:
+  - accepted the user's Phase 23 completion signal and marked the remaining checklist item complete
+  - updated `PHASE23_CURRENT_CHAPTER_TODO.md`, `PHASE23_COMPLETION_SUMMARY.md`, and `PHASE23_NEXT_PHASE_PREPARATION.md` to `phase complete / manual_validation_completed`
+  - bootstrapped `phase24` docs from the finance phase bundle helper
+  - rewrote the Phase 24 plan, TODO, checklist, completion draft, next-phase draft, and first work-unit note for the new strategy expansion / research-to-implementation bridge
+  - selected `Global Relative-Strength Allocation With Trend Safety Net` as the first implementation candidate because it is price-only, ETF-based, monthly, and compatible with the current DB-backed strategy infrastructure
+  - synced `MASTER_PHASE_ROADMAP.md` and `FINANCE_DOC_INDEX.md`
+- Durable takeaway:
+  - Phase 24 is now active as a development phase for adding a new strategy family, not as an investment-performance analysis phase.
+
+### 2026-04-20
+- Ran a user-requested `GTAA` expanded-universe follow-up.
+- Changed:
+  - re-tested the existing compact `SPY / QQQ / GLD / IEF` `Top = 2` candidate through the latest DB date `2026-04-17`
+  - added `TLT` to form a clean 6 ETF core: `SPY / QQQ / GLD / IEF / LQD / TLT`
+  - found a new expanded `Top = 1`, `Interval = 8`, `1M / 3M / 6M` candidate with `21.50% CAGR`, `-6.49% MDD`, and `real_money_candidate / paper_probation / paper_only`
+  - confirmed the same 6 ETF core with `Top = 2`, `Interval = 4`, `1M / 3M / 6M` remains `production_candidate / watchlist / watchlist_only`
+  - documented the result in `GTAA_EXPANDED_UNIVERSE_FOLLOWUP_20260420.md` and synced the GTAA strategy hub, backtest log, report index, current candidate summary, and candidate registry
+- Durable takeaway:
+  - ticker breadth improved the aggressive GTAA paper candidate, but the balanced 2-holding representative remains the compact `SPY / QQQ / GLD / IEF` candidate until expanded `Top = 2` validation improves.
+
+### 2026-04-20
+- Advanced `Phase 24` first new strategy implementation.
+- Changed:
+  - added `Global Relative Strength` core simulation in `finance.strategy`
+  - added DB-backed helper/defaults in `finance.sample`
+  - added web runtime wrapper `run_global_relative_strength_backtest_from_db`
+  - verified targeted `py_compile`, synthetic strategy smoke, runtime import smoke, and DB-backed smoke run
+  - created `PHASE24_GLOBAL_RELATIVE_STRENGTH_CORE_RUNTIME_SMOKE_VALIDATION.md`
+  - synced Phase 24 TODO, completion draft, next-phase prep, roadmap, doc index, backtest report index, and finance analysis
+- Durable takeaway:
+  - `Global Relative Strength` is now implemented at core/runtime level, but it is not yet exposed in `Backtest` UI, compare, history, or saved replay.

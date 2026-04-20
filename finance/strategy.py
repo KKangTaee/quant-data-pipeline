@@ -809,6 +809,144 @@ def dual_momentum(
     return pd.DataFrame(rows)
 
 
+def global_relative_strength_allocation(
+    dfs: dict,
+    start_balance: float,
+    top: int = 4,
+    score_col: str = "Avg Score",
+    filter_ma: str = "MA200",
+    rebalance_interval: int = 1,
+    cash_ticker: str | None = None,
+    min_price: float = 0.0,
+) -> pd.DataFrame:
+    """
+    Global Relative-Strength Allocation with Trend Safety Net.
+
+    Rules:
+      1. Rank risky ETF universe by a precomputed relative-strength score.
+      2. Select the top N candidates.
+      3. Keep only candidates whose Close is above the trend filter.
+      4. Unfilled slots go to cash. If cash_ticker is provided, cash earns that proxy return.
+
+    The function expects dfs to be period-filtered, aligned, and enriched with:
+      - Close
+      - score_col, usually Avg Score from 1/3/6/12M returns
+      - filter_ma, usually MA200
+    """
+
+    tickers = list(dfs.keys())
+    if not tickers:
+        raise ValueError("dfs must contain at least one ticker.")
+    if top <= 0:
+        raise ValueError("top must be positive.")
+    if rebalance_interval <= 0:
+        raise ValueError("rebalance_interval must be positive.")
+    if cash_ticker is not None and cash_ticker not in tickers:
+        raise ValueError(f"cash_ticker='{cash_ticker}' is not available in dfs.")
+
+    risky_tickers = [ticker for ticker in tickers if ticker != cash_ticker]
+    if not risky_tickers:
+        raise ValueError("risky universe must contain at least one ticker.")
+
+    base_df = dfs[risky_tickers[0]].sort_values("Date").reset_index(drop=True)
+    dates = base_df["Date"].tolist()
+
+    held: list[str] = []
+    next_balances: list[float] = []
+    cash = 0.0
+    prev_total_balance: float | None = None
+    prev_close: dict[str, float | None] = {ticker: None for ticker in tickers}
+    rows: list[dict] = []
+
+    for i, date in enumerate(dates):
+        close_now: dict[str, float] = {}
+        score_now: dict[str, float] = {}
+        ma_now: dict[str, float] = {}
+
+        for ticker in tickers:
+            ticker_df = dfs[ticker].sort_values("Date").reset_index(drop=True)
+            row = ticker_df.iloc[i]
+            close_now[ticker] = float(row["Close"])
+            score_now[ticker] = float(row[score_col]) if pd.notna(row.get(score_col, np.nan)) else np.nan
+            ma_now[ticker] = float(row[filter_ma]) if pd.notna(row.get(filter_ma, np.nan)) else np.nan
+
+        if i == 0:
+            end_balances: list[float] = []
+            total_balance = float(start_balance)
+            total_return = np.nan
+        else:
+            end_balances = []
+            for ticker, balance in zip(held, next_balances):
+                previous_close = prev_close[ticker]
+                asset_return = (
+                    (close_now[ticker] / previous_close) - 1
+                    if previous_close not in (None, 0)
+                    else 0.0
+                )
+                end_balances.append(float(balance) * (1.0 + asset_return))
+
+            if cash > 0 and cash_ticker is not None and prev_close[cash_ticker] not in (None, 0):
+                cash_return = (close_now[cash_ticker] / prev_close[cash_ticker]) - 1
+                cash = float(cash) * (1.0 + cash_return)
+
+            total_balance = float(sum(end_balances) + cash)
+            total_return = np.nan if prev_total_balance is None else (total_balance / prev_total_balance) - 1
+
+        rebalancing = (i == 0) or (i % rebalance_interval == 0)
+        raw_selected_tickers: list[str] = []
+        raw_selected_scores: list[float] = []
+        trend_rejected_tickers: list[str] = []
+
+        if rebalancing:
+            ranked_candidates = [
+                (ticker, score_now[ticker])
+                for ticker in risky_tickers
+                if pd.notna(score_now[ticker]) and _passes_min_price(close_now[ticker], min_price)
+            ]
+            ranked_candidates.sort(key=lambda item: float(item[1]), reverse=True)
+            raw_selected = ranked_candidates[:top]
+            raw_selected_tickers = [ticker for ticker, _ in raw_selected]
+            raw_selected_scores = [float(score) for _, score in raw_selected]
+
+            selected = [
+                ticker
+                for ticker, _ in raw_selected
+                if pd.notna(ma_now[ticker]) and close_now[ticker] >= ma_now[ticker]
+            ]
+            trend_rejected_tickers = [ticker for ticker in raw_selected_tickers if ticker not in selected]
+
+            base_balance = float(start_balance if i == 0 else total_balance)
+            slot_balance = base_balance / float(top)
+            held = selected
+            next_balances = [slot_balance] * len(held)
+            cash = slot_balance * max(top - len(held), 0)
+
+        row = {
+            "Date": date,
+            "End Ticker": list(held),
+            "Next Ticker": list(held),
+            "Raw Selected Ticker": raw_selected_tickers,
+            "Raw Selected Score": raw_selected_scores,
+            "Trend Rejected Ticker": trend_rejected_tickers,
+            "Trend Rejected Count": len(trend_rejected_tickers),
+            "Trend Filter Column": filter_ma,
+            "Cash Ticker": cash_ticker if cash_ticker is not None else np.nan,
+            "End Balance": end_balances,
+            "Next Balance": list(next_balances),
+            "Cash": float(cash),
+            "Total Balance": total_balance,
+            "Total Return": total_return,
+            "Rebalancing": rebalancing,
+        }
+        rows.append(row)
+
+        prev_total_balance = float(total_balance)
+        for ticker in tickers:
+            prev_close[ticker] = close_now[ticker]
+
+    return pd.DataFrame(rows)
+
+
 
 #-------------------
 # 전략
@@ -1820,4 +1958,36 @@ class DualMomentumStrategy(Strategy):
             drawdown_guardrail_gap_threshold=self.drawdown_guardrail_gap_threshold,
             drawdown_guardrail_benchmark=self.drawdown_guardrail_benchmark,
             drawdown_guardrail_df=self.drawdown_guardrail_df,
+        )
+
+
+class GlobalRelativeStrengthStrategy(Strategy):
+    def __init__(
+        self,
+        start_balance: float,
+        top: int = 4,
+        score_col: str = "Avg Score",
+        filter_ma: str = "MA200",
+        rebalance_interval: int = 1,
+        cash_ticker: str | None = None,
+        min_price: float = 0.0,
+    ):
+        self.start_balance = start_balance
+        self.top = top
+        self.score_col = score_col
+        self.filter_ma = filter_ma
+        self.rebalance_interval = rebalance_interval
+        self.cash_ticker = cash_ticker
+        self.min_price = min_price
+
+    def run(self, dfs: dict) -> pd.DataFrame:
+        return global_relative_strength_allocation(
+            dfs=dfs,
+            start_balance=self.start_balance,
+            top=self.top,
+            score_col=self.score_col,
+            filter_ma=self.filter_ma,
+            rebalance_interval=self.rebalance_interval,
+            cash_ticker=self.cash_ticker,
+            min_price=self.min_price,
         )

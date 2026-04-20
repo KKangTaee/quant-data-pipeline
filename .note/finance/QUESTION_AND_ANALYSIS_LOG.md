@@ -2090,3 +2090,49 @@ Detailed historical analysis was archived on `2026-04-13`.
   - quarterly real-money contract / guardrails parity는 추후 `quarterly promotion readiness` 또는 `pre-live readiness` 성격의 작업으로 다루는 것이 자연스럽다
   - 다만 Phase 23 closeout 또는 Phase 24 kickoff에서는 이 차이를 명시해,
     사용자가 quarterly에 real-money / guardrail 옵션이 없는 것을 구현 누락으로 오해하지 않게 해야 한다
+
+### 2026-04-20 - Phase 24는 신규 전략 구현 경로를 만드는 개발 phase로 시작한다
+- Request topic:
+  - 사용자가 Phase 23 완료를 알리고 Phase 24 진행을 요청함
+- Interpreted goal:
+  - Phase 23을 manual validation completed 상태로 닫고,
+    `Phase 24 New Strategy Expansion`을 새 전략 성과 분석이 아니라
+    신규 전략을 제품에 붙이는 구현 경로로 열고 싶음
+- Result:
+  - Phase 23 checklist 완료를 closeout gate로 받아들였다
+  - Phase 24 문서 번들을 생성하고 plan / TODO / checklist / first work-unit을 실제 내용으로 정리했다
+  - 첫 구현 후보는 `Global Relative-Strength Allocation With Trend Safety Net`으로 정했다
+  - 선정 이유는 성과 우수성이 아니라,
+    ETF 가격 데이터만으로 구현 가능하고 monthly cadence / trend safety net / cash fallback 구조가
+    현재 DB-backed price strategy infrastructure와 가장 잘 맞기 때문이다
+
+### 2026-04-20 - GTAA compact 후보의 ticker 부족 문제를 확장 universe로 보강한다
+- Request topic:
+  - 사용자가 기존 GTAA 후보가 4~5개 ticker 중 2개를 고르는 방식이라 universe가 부족해 보인다고 지적하고,
+    같은 GTAA 전략 안에서 더 넓은 ticker 조합을 백테스트해 새 포트폴리오를 요청함
+- Interpreted goal:
+  - 기존 `real_money_candidate` compact 후보를 무작정 대체하지 않고,
+    ticker universe를 넓혔을 때도 investability / validation gate를 통과하는 후보가 있는지 확인한다
+- Result:
+  - `TLT`를 추가한 clean 6 ETF core `SPY / QQQ / GLD / IEF / LQD / TLT`가 가장 현실적인 확장 방향으로 확인됐다
+  - 신규 확장 `Top = 1`, `Interval = 8`, `1M / 3M / 6M` 후보는
+    `21.50% CAGR`, `-6.49% MDD`, `Sharpe 3.66`, `real_money_candidate / paper_probation / paper_only`로 등록했다
+  - 같은 6 ETF core의 `Top = 2`, `Interval = 4`, `1M / 3M / 6M` 후보는
+    `16.79% CAGR`, `-8.39% MDD`, `production_candidate / watchlist / watchlist_only`라서 현재 기본 후보를 대체하지 않는다
+  - 결론적으로 2개 보유 기본 후보는 기존 `SPY / QQQ / GLD / IEF`를 유지하고,
+    신규 확장 후보는 공격형 paper probation candidate로 별도 tracking한다
+
+### 2026-04-20 - Phase 24 첫 구현은 core/runtime과 UI 연결을 분리해서 진행한다
+- Request topic:
+  - Phase 24 신규 전략 확장 진행 중 첫 구현 후보를 실제 코드에 넣는 범위를 정리함
+- Interpreted goal:
+  - 새 전략을 한 번에 모든 UI 경로까지 붙이기보다,
+    먼저 core strategy와 DB-backed runtime이 제대로 실행되는지 확인한 뒤
+    다음 작업에서 UI / compare / history / replay를 붙이는 단계적 진행이 필요함
+- Result:
+  - `Global Relative Strength` core simulation, strategy class, DB-backed sample helper,
+    web runtime wrapper를 추가했다
+  - compile / import / synthetic smoke / DB-backed smoke를 통과했다
+  - 이 결과는 투자 분석이 아니라 신규 전략 추가 경로의 개발 검증으로 기록했다
+  - 아직 `Backtest` UI selector, compare, history, saved replay에는 연결하지 않았으므로
+    Phase 24 다음 작업은 제품 UI surface 연결이다

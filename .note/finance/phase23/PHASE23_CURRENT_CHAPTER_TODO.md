@@ -2,7 +2,7 @@
 
 ## 상태
 
-- `manual_validation_feedback_in_progress`
+- `phase complete / manual_validation_completed`
 
 ## 현재 목표
 
@@ -42,7 +42,7 @@
   - checklist section 3의 saved compare, saved portfolio, history run, load-into-form, run-again, saved replay 확인 위치를 다시 풀어 썼다.
 - `completed` checklist location-first wording cleanup
   - checklist에서 별도 `용어 기준` 섹션을 제거하고, 각 체크 항목 안에 실제 확인 위치를 직접 넣는 방식으로 정리했다.
-- `pending` saved replay UI-level manual 확인
+- `completed` saved replay UI-level manual 확인
   - saved replay가 같은 contract 값을 유지하는지 실제 UI에서 확인한다.
 
 ## 3. Validation
@@ -73,5 +73,5 @@ Phase 23은 quarterly portfolio handling contract first pass, representative DB-
 history / saved replay contract roundtrip code check,
 compare variant immediate refresh, compare 입력 구조 정리,
 quarterly compare overlay parity와 checklist clarification까지 완료했다.
-현재는 사용자의 Phase 23 checklist QA 피드백을 반영하는 중이며,
-다음 확인은 수정된 Compare strategy box / shared-input UI와 saved replay 흐름이 실제 QA에 충분한지 보는 것이다.
+사용자 manual checklist 완료 기준으로 Phase 23은 closeout 가능 상태다.
+다음 main phase는 `Phase 24 New Strategy Expansion And Research Implementation Bridge`다.

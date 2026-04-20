@@ -2,78 +2,72 @@
 
 ## 목적
 
-이 문서는 `Phase 23 Quarterly And Alternate Cadence Productionization`이 closeout 단계에 도달했을 때 무엇이 완료되었는지 정리하기 위한 문서다.
+이 문서는 `Phase 23 Quarterly And Alternate Cadence Productionization`을 closeout 기준으로 정리한다.
 
-현재는 구현과 코드 레벨 검증 후 manual QA 피드백을 반영하는 중이다.
-사용자 checklist 완료 전이므로 completion summary는 아직 최종 완료 문서가 아니다.
+Phase 23은 quarterly 성과가 좋은지 고르는 phase가 아니었다.
+목표는 quarterly / alternate cadence가 제품 안에서 실행, 비교, 저장, 재실행될 수 있는 백테스트 기능으로 읽히게 만드는 것이었다.
 
 ## 현재 상태
 
-- `manual_validation_feedback_in_progress`
+- `phase complete / manual_validation_completed`
 
-## 이번 phase에서 완료해야 할 것
+## 이번 phase에서 실제로 완료된 것
 
 ### 1. quarterly productionization 기준 고정
 
-- quarterly strict family가 어디까지 구현되어 있고 어디가 prototype인지 정리한다.
+- quarterly strict family가 어디까지 구현되어 있고 어디가 prototype인지 문서로 분리했다.
+- Phase 23의 범위를 투자 분석이 아니라 `cadence 기능 제품화`로 고정했다.
+- quarterly real-money contract / guardrails parity는 지금 즉시 복제할 항목이 아니라 future readiness backlog로 분리했다.
 
 쉽게 말하면:
 
-- quarterly 기능이 "되는 것처럼 보이지만 아직 애매한 기능"인지,
-  "사용자가 검수 가능한 제품 기능"인지 나눠 보는 기준을 만든다.
+- quarterly가 아직 annual strict와 완전히 같은 실전 후보 경로는 아니지만,
+  사용자가 백테스트 기능으로 검수할 수 있는 영역과 아직 뒤로 미룰 영역이 분명해졌다.
 
 ### 2. UI / compare / history / replay 보강
 
-- quarterly 실행 결과가 single strategy, compare, history, saved replay에서 같은 뜻으로 이어지는지 확인하고 보강한다.
-
-쉽게 말하면:
-
-- 한 번 실행한 quarterly 결과를 나중에 다시 열어도 설정과 의미가 유지되게 만든다.
-
-현재까지 완료:
-
 - quarterly 3개 family single strategy UI에 `Portfolio Handling & Defensive Rules`를 추가했다.
-- quarterly runtime이 `Weighting`, `Rejected Slot Handling`, `Risk-Off`, `Defensive Tickers` contract 값을 받을 수 있게 했다.
+- quarterly runtime이 `Weighting`, `Rejected Slot Handling`, `Risk-Off`, `Defensive Tickers` 값을 받을 수 있게 했다.
 - compare form과 history load-into-form 흐름에서 quarterly portfolio handling contract가 복원되도록 연결했다.
-- 공통 result bundle meta에 `Weighting`, `Rejected Slot Handling` 관련 contract 값이 남도록 수정했다.
-- history record, history payload, saved portfolio strategy override에도 quarterly portfolio handling contract 값이 남도록 보강했다.
-- Compare 화면에서 Annual / Quarterly variant 선택이 즉시 하단 입력 UI를 갱신하도록 variant selector를 각 strategy box 안에 배치했다.
-- Compare 화면의 `Advanced Inputs` form wrapper를 제거하고,
-  `Start Date`, `End Date`, `Timeframe`, `Option`은 `Compare Period & Shared Inputs`로,
-  전략별 옵션은 `Strategy-Specific Advanced Inputs`로 분리했다.
-- strategy-level expander는 border box로 바꾸고,
-  `Overlay`, `Portfolio Handling & Defensive Rules`, `Real-Money Contract`, `Guardrails` 같은 하위 그룹은 기존 접기/펼치기로 유지했다.
-- quarterly prototype compare 경로에서도 `Overlay`가 하위 접기 그룹으로 보이도록 맞췄다.
-  따라서 quarterly의 trend filter와 market regime 설정도 annual strict와 같은 화면 구조로 읽힌다.
-- `Load Into Form` 후 표시되는 `Back To History` shortcut은 radio widget 렌더 전에 panel request를 세팅하는 callback 방식으로 보강했다.
-
-### 3. representative validation과 checklist handoff
-
-- 대표 실행 조합으로 기능이 깨지지 않는지 확인하고, 사용자가 직접 검수할 checklist를 남긴다.
+- 공통 result bundle meta, history record, history payload, saved portfolio strategy override에 quarterly portfolio handling contract 값이 남도록 보강했다.
+- Compare 화면에서 Annual / Quarterly variant selector를 각 strategy box 안에 배치했다.
+- `Start Date`, `End Date`, `Timeframe`, `Option`은 `Compare Period & Shared Inputs`로 모으고,
+  전략별 옵션은 `Strategy-Specific Advanced Inputs`의 strategy box로 분리했다.
+- quarterly prototype compare 경로에서도 `Overlay`와 `Portfolio Handling & Defensive Rules`가 annual strict와 같은 리듬으로 읽히게 했다.
+- `Load Into Form` 후 `Back To History` shortcut이 History panel로 돌아가도록 보강했다.
 
 쉽게 말하면:
 
-- 모든 투자 조합을 찾는 것이 아니라, 기능이 제품으로 쓸 수 있는 수준인지 확인한다.
+- quarterly 결과를 한 번 실행하고 끝내는 것이 아니라,
+  compare에 넣고, history에서 다시 열고, form으로 되돌리고, saved portfolio replay까지 이어갈 수 있게 했다.
 
-현재까지 완료:
+### 3. representative validation과 manual QA 완료
 
 - `AAPL / MSFT / GOOG`, 2021-01-01~2024-12-31, non-default portfolio handling contract 조합으로 quarterly 3개 family를 실제 DB-backed runtime에서 실행했다.
 - 세 family 모두 실행에 성공했고, result bundle meta에 portfolio handling contract 값이 보존되는 것을 확인했다.
-- 결과는 `.note/finance/backtest_reports/phase23/PHASE23_QUARTERLY_CONTRACT_SMOKE_VALIDATION_FIRST_PASS.md`에 남겼다.
-- 추가로 result bundle meta -> history record -> history payload -> saved portfolio strategy override roundtrip을 코드 레벨에서 확인했다.
+- result bundle meta -> history record -> history payload -> saved portfolio strategy override roundtrip도 코드 레벨에서 확인했다.
+- 사용자가 `PHASE23_TEST_CHECKLIST.md` 기준 manual QA를 완료했다.
 
-## 아직 남아 있는 것
+쉽게 말하면:
 
-- 아직 Phase 23 manual QA는 완료되지 않았다.
-- 현재 closeout blocker는 사용자가 `PHASE23_TEST_CHECKLIST.md`를 기준으로
-  Compare variant 즉시 갱신, strategy box layout, 공용 입력 / 전략별 입력 분리,
-  quarterly overlay expander,
-  saved replay UI 확인,
-  history load-into-form UI 확인을 완료하는 것이다.
+- broad investment search는 하지 않았지만,
+  quarterly lane이 제품 안에서 반복 실행과 재현이 가능한지 확인하는 최소 검증은 통과했다.
+
+## 아직 남아 있지만 closeout blocker는 아닌 것
+
+- quarterly strict family는 여전히 `prototype / research-only hold` 성격을 가진다.
+- annual strict에 있는 `Real-Money Contract`와 `Guardrails`를 quarterly에 그대로 붙이는 작업은 아직 완료되지 않았다.
+- 이 항목은 구현 누락이 아니라, future `quarterly promotion readiness` 또는 `pre-live readiness` 작업으로 남긴다.
+
+쉽게 말하면:
+
+- quarterly는 이제 백테스트 기능으로 더 잘 쓸 수 있지만,
+  아직 실전 후보 승격 장치까지 annual과 동일하다고 보면 안 된다.
 
 ## closeout 판단
 
-아직 closeout 전이다.
-Phase 23은 manual validation feedback 반영 중이며,
-다음 작업은 실제 UI에서 Compare strategy box layout, variant 갱신, shared-input layout,
-quarterly history / saved replay 경로를 확인하는 것이다.
+Phase 23은 closeout 가능하다.
+
+다음 main phase는 `Phase 24 New Strategy Expansion And Research Implementation Bridge`다.
+Phase 24는 새 전략을 성과 분석 대상으로 바로 고르는 phase가 아니라,
+`quant-research` 전략 문서가 finance 백테스트 제품 안으로 들어오는 표준 구현 경로를 만드는 phase로 시작한다.

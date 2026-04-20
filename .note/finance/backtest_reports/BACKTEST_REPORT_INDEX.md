@@ -17,6 +17,8 @@
   - `GTAA` 전략 run 기록 누적 문서
 - `strategies/GTAA_REAL_MONEY_CANDIDATE_SEARCH_20260418.md`
   - current DB/runtime 기준 `Promotion = real_money_candidate`까지 올라간 GTAA compact ETF 후보 탐색 문서
+- `strategies/GTAA_EXPANDED_UNIVERSE_FOLLOWUP_20260420.md`
+  - compact GTAA 후보의 ticker 부족 문제를 보강하기 위해 `TLT`를 추가한 6개 ETF universe follow-up 백테스트 문서
 - `strategies/QUALITY_STRICT_ANNUAL.md`
   - `Quality > Strict Annual` 결과 허브
 - `strategies/QUALITY_STRICT_ANNUAL_BACKTEST_LOG.md`
@@ -197,6 +199,16 @@
     실제 DB-backed runtime에서 실행되는지 확인한 smoke validation report
   - `Weighting`, `Rejected Slot Handling`, `Risk-Off`, `Defensive Tickers` 값이
     result bundle meta에 보존되는지도 함께 확인한다
+
+## Phase 24 Raw Archive
+
+- `phase24/README.md`
+  - Phase 24 new strategy expansion report archive 안내 문서
+- `phase24/PHASE24_GLOBAL_RELATIVE_STRENGTH_CORE_RUNTIME_SMOKE_VALIDATION.md`
+  - 첫 신규 전략 후보 `Global Relative Strength`의 core simulation, sample helper,
+    DB-backed runtime wrapper가 compile / import / smoke run을 통과하는지 확인한 개발 검증 report
+  - 아직 UI catalog, single strategy 화면, compare, history, saved replay는 연결 전이며
+    다음 Phase 24 구현 단위로 남긴다
 
 ## 운영 메모
 

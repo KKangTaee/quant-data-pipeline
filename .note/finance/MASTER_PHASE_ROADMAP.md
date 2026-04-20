@@ -96,8 +96,8 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 우선순위는 아래 순서가 더 자연스럽다.
 
 1. `Phase 22` closeout 완료
-2. `Phase 23` quarterly / alternate cadence productionization
-3. `Phase 24` new strategy expansion과 research-to-implementation bridge
+2. `Phase 23` quarterly / alternate cadence productionization 완료
+3. `Phase 24` new strategy expansion과 research-to-implementation bridge 진행
 4. `Phase 25` validation / review / paper-readiness 운영 체계 정리
 
 ---
@@ -1275,7 +1275,7 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 - 최소 representative smoke rerun과 manual checklist 작성
 
 ### 상태
-- `manual_validation_feedback_in_progress`
+- `phase complete / manual_validation_completed`
 
 ---
 
@@ -1308,7 +1308,12 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 - compare / history / saved replay 연결 기준
 
 ### 상태
-- `proposed`
+- `implementation_in_progress / core_runtime_first_pass_completed`
+
+### 현재 메모
+- 첫 구현 후보는 `Global Relative Strength`로 고정했다.
+- core strategy, DB-backed sample helper, web runtime wrapper, compile / import / DB-backed smoke validation은 완료했다.
+- 아직 `Backtest` UI, compare, history, saved replay 연결은 남아 있으므로 Phase 24는 완료 상태가 아니다.
 
 ---
 
@@ -1373,18 +1378,19 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 - `Phase 22`
   - phase complete / manual validation completed
 - `Phase 23`
-  - active / portfolio handling contract first pass completed
-- `Phase 24 ~ 25`
+  - phase complete / manual validation completed
+- `Phase 24`
+  - implementation in progress / core runtime first pass completed
+- `Phase 25`
   - proposed
 
 한 줄 현재 판단:
 - current annual strict candidate와 portfolio bridge를 같은 frame에서 다시 본 `Phase 21`은 manual validation까지 완료되었고,
   `Phase 22`도 portfolio workflow 개발 검증과 manual QA까지 완료되었다.
-  현재는 core implementation roadmap으로 돌아가
-  `Phase 23` quarterly / alternate cadence productionization을 진행 중이며,
-  quarterly portfolio handling contract first pass, 대표 DB-backed smoke validation,
-  history / saved replay contract roundtrip code check,
-  compare variant immediate refresh와 strategy box / shared-input layout 보강까지 완료했다
+  `Phase 23` quarterly / alternate cadence productionization도 manual QA까지 완료되었다.
+  현재는 `Phase 24`에서 `Global Relative Strength`를 첫 신규 전략 후보로 고정하고
+  core/runtime smoke까지 통과한 상태다.
+  다음 작업은 이 전략을 `Backtest` UI, compare, history, saved replay 흐름에 연결하는 것이다.
 
 ---
 
@@ -1437,24 +1443,19 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
   - 다만 이 phase의 의미는 투자 포트폴리오 선정이 아니라
     portfolio workflow 개발 검증이다
 - `Phase 23`
-  - 현재 active main phase이며,
-    quarterly / alternate cadence를 prototype에서 제품 기능으로 올리는 중이다
-  - 현재는 quarterly 3개 family의 portfolio handling contract를
-    UI / payload / compare / history 재진입 흐름에 연결한 first pass까지 완료했다
-  - 또한 `AAPL / MSFT / GOOG` representative smoke run으로
+  - quarterly / alternate cadence를 prototype에서 제품 기능으로 올린 phase다
+  - quarterly 3개 family의 portfolio handling contract를
+    UI / payload / compare / history / saved replay 흐름에 연결했다
+  - `AAPL / MSFT / GOOG` representative smoke run으로
     DB-backed runtime 실행과 contract meta 보존을 확인했다
-  - history / saved replay roundtrip도 코드 레벨로 확인되어,
-    현재는 manual checklist QA 피드백을 반영하는 중이다
-  - Compare 화면에서는 family별 Annual / Quarterly variant selector를
-    각 strategy box 안에 배치해,
-    variant 변경 시 같은 박스 안의 하단 입력 UI가 즉시 갱신되게 보강했다
-  - 이어서 `Start Date`, `End Date`, `Timeframe`, `Option`을
-    `Compare Period & Shared Inputs`로 묶고,
-    전략별 세부 옵션은 `Strategy-Specific Advanced Inputs` 아래의 border box로 분리했다
-  - quarterly prototype compare 경로도 annual strict처럼
-    `Overlay`와 `Portfolio Handling & Defensive Rules`를 하위 접기 그룹으로 읽히게 맞췄다
+  - Compare 화면에서는 공용 입력과 strategy-specific 입력을 분리하고,
+    family별 Annual / Quarterly variant selector가 같은 strategy box 안에서 즉시 갱신되게 했다
+  - 사용자 manual checklist QA까지 완료되어 closeout 상태다
 - `Phase 24`
+  - 현재 active main phase다
   - research-to-implementation bridge를 통해 새 전략 family를 추가한다
+  - 첫 구현 후보는 `Global Relative-Strength Allocation With Trend Safety Net`이며,
+    이는 성과가 가장 좋아서가 아니라 현재 DB 가격 loader와 UI/replay 구조에 가장 안전하게 붙는 후보이기 때문이다
 - `Phase 25`
   - live trading이 아니라 paper / review / pre-live readiness 운영 체계를 정리한다
 

@@ -17,6 +17,7 @@ from .engine import BacktestEngine
 from .strategy import (
     EqualWeightStrategy,
     GTAA3Strategy,
+    GlobalRelativeStrengthStrategy,
     RiskParityTrendStrategy,
     DualMomentumStrategy,
     quality_snapshot_equal_weight,
@@ -134,6 +135,21 @@ GTAA_DEFAULT_CRASH_GUARDRAIL_ENABLED = False
 GTAA_DEFAULT_CRASH_GUARDRAIL_DRAWDOWN_THRESHOLD = 0.15
 GTAA_DEFAULT_CRASH_GUARDRAIL_LOOKBACK_MONTHS = 12
 GTAA_DEFAULT_TICKERS = ["SPY", "IWD", "IWM", "IWN", "MTUM", "EFA", "TLT", "IEF", "LQD", "PDBC", "VNQ", "GLD"]
+GLOBAL_RELATIVE_STRENGTH_DEFAULT_TICKERS = ["SPY", "EFA", "EEM", "IWM", "VNQ", "GLD", "DBC", "LQD", "HYG", "IEF", "TLT", "TIP"]
+GLOBAL_RELATIVE_STRENGTH_DEFAULT_CASH_TICKER = "BIL"
+GLOBAL_RELATIVE_STRENGTH_DEFAULT_TOP = 4
+GLOBAL_RELATIVE_STRENGTH_DEFAULT_SIGNAL_INTERVAL = 1
+GLOBAL_RELATIVE_STRENGTH_DEFAULT_SCORE_LOOKBACK_MONTHS = [1, 3, 6, 12]
+GLOBAL_RELATIVE_STRENGTH_SCORE_RETURN_COLUMNS = tuple(
+    f"{months}MReturn" for months in GLOBAL_RELATIVE_STRENGTH_DEFAULT_SCORE_LOOKBACK_MONTHS
+)
+GLOBAL_RELATIVE_STRENGTH_DEFAULT_SCORE_WEIGHTS = {
+    "1MReturn": 1.0,
+    "3MReturn": 1.0,
+    "6MReturn": 1.0,
+    "12MReturn": 1.0,
+}
+GLOBAL_RELATIVE_STRENGTH_DEFAULT_TREND_FILTER_WINDOW = 200
 
 
 def resolve_strict_rejection_handling_mode(
@@ -681,6 +697,82 @@ def get_gtaa3_from_db(
     )
 
     df = engine.run(strategy).round_columns().round_columns(cols=["Return", "Total Return"], decimals=3).result
+    return df
+
+
+def get_global_relative_strength_from_db(
+    option="month_end",
+    top=GLOBAL_RELATIVE_STRENGTH_DEFAULT_TOP,
+    interval=GLOBAL_RELATIVE_STRENGTH_DEFAULT_SIGNAL_INTERVAL,
+    min_price=0.0,
+    score_lookback_months=None,
+    score_return_columns=None,
+    score_weights=None,
+    trend_filter_window=GLOBAL_RELATIVE_STRENGTH_DEFAULT_TREND_FILTER_WINDOW,
+    cash_ticker=GLOBAL_RELATIVE_STRENGTH_DEFAULT_CASH_TICKER,
+    start=None,
+    end=None,
+    timeframe="1d",
+    tickers=None,
+):
+    if tickers is None:
+        tickers = GLOBAL_RELATIVE_STRENGTH_DEFAULT_TICKERS
+
+    risky_tickers = _normalize_symbol_list(tickers)
+    effective_cash_ticker = str(cash_ticker or "").strip().upper() or None
+    engine_tickers = list(risky_tickers)
+    if effective_cash_ticker and effective_cash_ticker not in engine_tickers:
+        engine_tickers.append(effective_cash_ticker)
+
+    effective_score_lookback_months = _normalize_gtaa_score_lookback_months(
+        score_lookback_months=score_lookback_months,
+        score_return_columns=score_return_columns,
+    )
+    effective_score_return_columns = tuple(
+        _score_return_col_from_months(months) for months in effective_score_lookback_months
+    )
+    effective_score_weights = (
+        {column: 1.0 for column in effective_score_return_columns}
+        if score_weights is None
+        else dict(score_weights)
+    )
+
+    engine = (
+        _build_price_only_engine(
+            engine_tickers,
+            option=option,
+            start=start,
+            end=end,
+            timeframe=timeframe,
+            from_db=True,
+            history_buffer_years=3,
+        )
+        .add_ma(trend_filter_window)
+        .filter_by_period()
+        .add_interval_returns(effective_score_lookback_months)
+        .align_dates()
+        .slice(start=start, end=end)
+        .add_avg_score(return_cols=effective_score_return_columns, weights=effective_score_weights)
+        .drop_columns(["High", "Low", "Open", "Volume", *effective_score_return_columns])
+        .interval(interval)
+    )
+
+    strategy = GlobalRelativeStrengthStrategy(
+        start_balance=10000,
+        top=top,
+        score_col="Avg Score",
+        filter_ma=f"MA{trend_filter_window}",
+        rebalance_interval=interval,
+        cash_ticker=effective_cash_ticker,
+        min_price=min_price,
+    )
+
+    df = (
+        engine.run(strategy)
+        .round_columns(cols=["Cash", "Total Balance", "End Balance", "Next Balance"], decimals=1)
+        .round_columns(cols=["Total Return"], decimals=3)
+        .result
+    )
     return df
 
 

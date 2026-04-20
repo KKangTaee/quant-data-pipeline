@@ -18,7 +18,8 @@
   - 별도 `용어 기준` 섹션보다 각 체크 항목 안에 실제 UI / 문서 확인 위치를 직접 적는 원칙을 포함한다
 - `.note/finance/MASTER_PHASE_ROADMAP.md`
   - 전체 Phase 구조와 상위 진행 방향을 정리한 최상위 로드맵 문서
-  - 최근 refresh 기준으로 `Phase 21 = 완료`, `Phase 22 = manual validation completed`, `Phase 23 = manual validation feedback in progress`, `현재 위치`, support track, `Phase 23~25` 흐름까지 다시 정리되어 있다
+  - 최근 refresh 기준으로 `Phase 21 = 완료`, `Phase 22 = manual validation completed`, `Phase 23 = manual validation completed`,
+    `Phase 24 = core runtime first pass completed / UI 연결 pending`, `현재 위치`, support track, `Phase 24~25` 흐름까지 다시 정리되어 있다
   - 또한 `Phase 18 = 진행형`, `Phase 19/20 = 완료`, `Phase 5 first chapter = historical label`이라는 해석도 함께 반영되어 있다
   - roadmap tail도 `현재 위치 = 상태판`, `지금부터의 큰 흐름 = 다음 진행 안내판` 구조로 다시 정리되어 있다
   - 최신 기준으로 이 프로젝트가 투자 분석을 기본으로 하는 것이 아니라
@@ -161,10 +162,10 @@
     `Compare Period & Shared Inputs`와 strategy-level border box로 입력 구조를 나누어
     별도 버튼 없이 strategy-specific inputs가 즉시 갱신되게 한 문서
 - `.note/finance/phase23/PHASE23_COMPLETION_SUMMARY.md`
-  - `Phase 23` closeout 때 무엇이 완료되어야 하는지 미리 정리한 summary 문서
-  - 현재는 portfolio handling contract first pass, representative smoke validation,
-    history / saved replay roundtrip code check,
-    compare variant immediate refresh 보강까지 반영되어 있지만 최종 완료 문서는 아니다
+  - `Phase 23` closeout 결과를 정리한 summary 문서
+  - 현재는 quarterly portfolio handling contract, representative smoke validation,
+    history / saved replay roundtrip, compare variant immediate refresh,
+    manual validation completed 상태까지 반영되어 있다
 - `.note/finance/phase23/PHASE23_NEXT_PHASE_PREPARATION.md`
   - `Phase 23` 이후 `Phase 24 New Strategy Expansion`으로 넘어가기 전,
     cadence별 실행 경로가 고정되어야 하는 이유를 정리한 handoff 문서
@@ -176,6 +177,31 @@
     실제 화면 위치 기준으로 확인하도록 정리되어 있다
   - section 3은 `History`의 `Run Again` / `Load Into Form`과
     `Saved Portfolios`의 `Replay Saved Portfolio`를 구분해서 확인하도록 보강되어 있다
+  - 사용자 QA 완료 기준으로 모든 주요 항목이 `[x]` 처리되어 있다
+- `.note/finance/phase24/PHASE24_NEW_STRATEGY_EXPANSION_AND_RESEARCH_IMPLEMENTATION_BRIDGE_PLAN.md`
+  - `Phase 24`가 새 전략 성과 분석이 아니라,
+    `quant-research` 전략 문서를 finance 백테스트 제품 기능으로 옮기는 표준 경로를 만드는 phase라는 점을 설명하는 kickoff 문서
+- `.note/finance/phase24/PHASE24_CURRENT_CHAPTER_TODO.md`
+  - `Phase 24` execution board로,
+    research-to-implementation bridge, first new family implementation,
+    validation, documentation sync 상태를 관리하는 문서
+- `.note/finance/phase24/PHASE24_RESEARCH_TO_IMPLEMENTATION_BRIDGE_FIRST_WORK_UNIT.md`
+  - `Phase 24` 첫 번째 작업 단위로,
+    구현 후보 선정 기준과 첫 후보 `Global Relative-Strength Allocation With Trend Safety Net`을 고른 이유를 정리한 문서
+- `.note/finance/phase24/PHASE24_COMPLETION_SUMMARY.md`
+  - `Phase 24` closeout 때 무엇이 완료되어야 하는지 정리하는 summary 초안
+  - 현재는 `Global Relative Strength` core/runtime first pass와 남은 UI 연결 작업을 구분해 둔다
+- `.note/finance/phase24/PHASE24_NEXT_PHASE_PREPARATION.md`
+  - `Phase 24` 이후 `Phase 25` pre-live readiness 또는 추가 implementation hardening 여부를 판단하기 위한 handoff 초안
+- `.note/finance/phase24/PHASE24_TEST_CHECKLIST.md`
+  - `Phase 24` manual QA 때 사용할 checklist 초안
+  - 신규 전략 성과가 좋은지보다, 신규 전략이 single / compare / history / saved replay 흐름에서 재현 가능한지 확인한다
+- `.note/finance/backtest_reports/phase24/README.md`
+  - `Phase 24` new strategy expansion report archive 안내 문서
+- `.note/finance/backtest_reports/phase24/PHASE24_GLOBAL_RELATIVE_STRENGTH_CORE_RUNTIME_SMOKE_VALIDATION.md`
+  - `Global Relative Strength` core simulation, DB-backed sample helper, web runtime wrapper가
+    compile / import / DB-backed smoke run을 통과했는지 확인한 개발 검증 report
+  - 아직 UI catalog / single strategy / compare / history / saved replay는 연결 전이라는 경계를 명확히 남긴다
 - `.note/finance/backtest_reports/phase23/README.md`
   - `Phase 23` quarterly / alternate cadence productionization report archive 안내 문서
 - `.note/finance/backtest_reports/phase23/PHASE23_QUARTERLY_CONTRACT_SMOKE_VALIDATION_FIRST_PASS.md`

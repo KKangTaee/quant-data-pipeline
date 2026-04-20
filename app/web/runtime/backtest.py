@@ -26,6 +26,12 @@ from finance.sample import (
     GTAA_DEFAULT_SIGNAL_INTERVAL,
     GTAA_DEFAULT_TREND_FILTER_WINDOW,
     GTAA_DEFAULT_SCORE_WEIGHTS,
+    GLOBAL_RELATIVE_STRENGTH_DEFAULT_CASH_TICKER,
+    GLOBAL_RELATIVE_STRENGTH_DEFAULT_SCORE_LOOKBACK_MONTHS,
+    GLOBAL_RELATIVE_STRENGTH_DEFAULT_SIGNAL_INTERVAL,
+    GLOBAL_RELATIVE_STRENGTH_DEFAULT_TICKERS,
+    GLOBAL_RELATIVE_STRENGTH_DEFAULT_TOP,
+    GLOBAL_RELATIVE_STRENGTH_DEFAULT_TREND_FILTER_WINDOW,
     HISTORICAL_DYNAMIC_PIT_UNIVERSE,
     STATIC_MANAGED_RESEARCH_UNIVERSE,
     STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_ENABLED,
@@ -55,6 +61,7 @@ from finance.sample import (
     VALUE_STRICT_DEFAULT_FACTORS,
     get_dual_momentum_from_db,
     get_equal_weight_from_db,
+    get_global_relative_strength_from_db,
     get_gtaa3_from_db,
     get_quality_snapshot_from_db,
     get_risk_parity_trend_from_db,
@@ -2794,6 +2801,122 @@ def run_gtaa_backtest_from_db(
             f"or drawdown gap vs `{benchmark_ticker}` rises above `{drawdown_guardrail_gap_threshold:.0%}`."
         ]
     return bundle
+
+
+def run_global_relative_strength_backtest_from_db(
+    *,
+    tickers: Sequence[str] | None = None,
+    cash_ticker: str | None = GLOBAL_RELATIVE_STRENGTH_DEFAULT_CASH_TICKER,
+    start: str | None = None,
+    end: str | None = None,
+    timeframe: str = "1d",
+    option: str = "month_end",
+    top: int = GLOBAL_RELATIVE_STRENGTH_DEFAULT_TOP,
+    interval: int = GLOBAL_RELATIVE_STRENGTH_DEFAULT_SIGNAL_INTERVAL,
+    min_price_filter: float | None = None,
+    transaction_cost_bps: float | None = None,
+    benchmark_ticker: str | None = None,
+    score_lookback_months: Sequence[int] | None = None,
+    score_return_columns: Sequence[str] | None = None,
+    score_weights: dict[str, float] | None = None,
+    trend_filter_window: int = GLOBAL_RELATIVE_STRENGTH_DEFAULT_TREND_FILTER_WINDOW,
+    promotion_min_etf_aum_b: float = ETF_OPERABILITY_DEFAULT_MIN_AUM_B,
+    promotion_max_bid_ask_spread_pct: float = ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT,
+    universe_mode: str = "preset",
+    preset_name: str | None = None,
+) -> dict[str, Any]:
+    normalized_tickers = _normalize_tickers(tickers or GLOBAL_RELATIVE_STRENGTH_DEFAULT_TICKERS)
+    normalized_cash_ticker = str(cash_ticker or "").strip().upper() or None
+    benchmark_ticker = str(benchmark_ticker or ETF_REAL_MONEY_DEFAULT_BENCHMARK).strip().upper()
+    _validate_backtest_date_range(start, end)
+
+    preflight_tickers = list(normalized_tickers)
+    if normalized_cash_ticker and normalized_cash_ticker not in preflight_tickers:
+        preflight_tickers.append(normalized_cash_ticker)
+    _preflight_price_strategy_data(
+        tickers=preflight_tickers,
+        start=start,
+        end=end,
+        timeframe=timeframe,
+    )
+    if benchmark_ticker and benchmark_ticker not in preflight_tickers:
+        _preflight_price_strategy_data(
+            tickers=[benchmark_ticker],
+            start=start,
+            end=end,
+            timeframe=timeframe,
+        )
+
+    normalized_score_lookback_months = [
+        int(value)
+        for value in (
+            list(score_lookback_months)
+            if score_lookback_months is not None
+            else list(GLOBAL_RELATIVE_STRENGTH_DEFAULT_SCORE_LOOKBACK_MONTHS)
+        )
+    ]
+    normalized_score_return_columns = [f"{months}MReturn" for months in normalized_score_lookback_months]
+    normalized_score_weights = (
+        {f"{months}MReturn": 1.0 for months in normalized_score_lookback_months}
+        if score_weights is None
+        else dict(score_weights)
+    )
+
+    result_df = get_global_relative_strength_from_db(
+        tickers=normalized_tickers,
+        cash_ticker=normalized_cash_ticker,
+        start=start,
+        end=end,
+        timeframe=timeframe,
+        option=option,
+        top=top,
+        interval=interval,
+        min_price=min_price_filter,
+        score_lookback_months=normalized_score_lookback_months,
+        score_return_columns=normalized_score_return_columns,
+        score_weights=normalized_score_weights,
+        trend_filter_window=trend_filter_window,
+    )
+
+    bundle = build_backtest_result_bundle(
+        result_df,
+        strategy_name="Global Relative Strength",
+        strategy_key="global_relative_strength",
+        input_params={
+            "tickers": normalized_tickers,
+            "cash_ticker": normalized_cash_ticker,
+            "start": start,
+            "end": end,
+            "timeframe": timeframe,
+            "option": option,
+            "top": top,
+            "rebalance_interval": interval,
+            "min_price_filter": min_price_filter,
+            "transaction_cost_bps": transaction_cost_bps,
+            "benchmark_ticker": benchmark_ticker,
+            "promotion_min_etf_aum_b": promotion_min_etf_aum_b,
+            "promotion_max_bid_ask_spread_pct": promotion_max_bid_ask_spread_pct,
+            "score_lookback_months": normalized_score_lookback_months,
+            "score_return_columns": normalized_score_return_columns,
+            "score_weights": normalized_score_weights,
+            "trend_filter_window": trend_filter_window,
+            "universe_mode": universe_mode,
+            "preset_name": preset_name,
+            "research_source": "/Users/taeho/Project/quant-research/.note/research/strategies/2026-04-15-global-relative-strength-allocation-with-trend-safety-net.md",
+        },
+        summary_freq=_summary_frequency(option, timeframe),
+    )
+    return _apply_real_money_hardening(
+        bundle,
+        summary_freq=_summary_frequency(option, timeframe),
+        min_price_filter=min_price_filter,
+        transaction_cost_bps=transaction_cost_bps,
+        benchmark_contract=STRICT_DEFAULT_BENCHMARK_CONTRACT,
+        benchmark_ticker=benchmark_ticker,
+        benchmark_universe_tickers=normalized_tickers,
+        promotion_min_etf_aum_b=promotion_min_etf_aum_b,
+        promotion_max_bid_ask_spread_pct=promotion_max_bid_ask_spread_pct,
+    )
 
 
 def run_risk_parity_trend_backtest_from_db(
