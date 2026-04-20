@@ -22,6 +22,17 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-04-20
+- Reorganized section 3 of `FINANCE_COMPREHENSIVE_ANALYSIS.md` so current architecture and phase history are separated.
+- Changed:
+  - renamed section 3 to `현재 시스템 구조와 phase별 구현 히스토리`
+  - added `3-1. 현재 시스템 구조` as the current architecture reading path
+  - added `3-2. Phase별 구현 히스토리` as a grouped phase timeline from Phase 1~25
+  - moved the previous mixed chronological narrative under `3-3. 상세 구현 메모`
+  - changed the old `Phase 14 Practical Closeout` UI status sentence to read as a historical note rather than current state
+- Durable takeaway:
+  - The comprehensive analysis now keeps deep implementation notes but no longer asks users to read mixed phase history as the current architecture explanation.
+
+### 2026-04-20
 - Added a user-facing entry layer to `FINANCE_COMPREHENSIVE_ANALYSIS.md` without removing the deep technical context.
 - Changed:
   - clarified the document's three roles: readable system map, agent deep reference, and durable implementation context

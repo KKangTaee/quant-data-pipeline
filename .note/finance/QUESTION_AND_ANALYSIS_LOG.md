@@ -21,6 +21,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-04-20 - FINANCE_COMPREHENSIVE_ANALYSIS는 현재 구조와 phase 히스토리를 분리해서 읽어야 한다
+- Request topic:
+  - 사용자가 `FINANCE_COMPREHENSIVE_ANALYSIS.md`에서 현재 구조 설명 중에 Phase 14, Phase 24, Phase 25 이야기가 섞여 나와 읽기 어렵다고 지적함
+- Interpreted goal:
+  - 문서의 상세 구현 히스토리는 유지하되, 현재 시스템 구조와 phase별 구현 히스토리를 분리해서 사용자도 큰 흐름을 읽을 수 있게 만들고 싶음
+- Result:
+  - section 3을 `현재 시스템 구조와 phase별 구현 히스토리`로 재구성했다
+  - `3-1`에는 현재 시스템 구조만 먼저 설명하고, `3-2`에는 Phase 1~25 구현 히스토리를 구간별 표로 정리했다
+  - 기존에 phase별 상세 메모가 섞여 있던 긴 서술은 `3-3. 상세 구현 메모`로 남겨, agent deep reference 역할은 유지했다
+
 ### 2026-04-20 - FINANCE_COMPREHENSIVE_ANALYSIS는 깊이를 유지하고 입구를 정리하는 방식이 맞다
 - Request topic:
   - 사용자가 `FINANCE_COMPREHENSIVE_ANALYSIS.md`를 시각적으로 억지로 줄이기보다,

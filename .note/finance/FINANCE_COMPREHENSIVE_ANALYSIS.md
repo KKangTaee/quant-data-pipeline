@@ -32,10 +32,10 @@ DB / strategy / runtime / UI 연결을 한 번에 확인하기 위한 상세 분
 
 | 목적 | 먼저 볼 섹션 |
 |---|---|
-| 현재 finance 시스템이 무엇인지 빠르게 알고 싶을 때 | `현재 시스템 한 장 요약`, `1. 전체 요약`, `3. 패키지의 실질적 아키텍처` |
+| 현재 finance 시스템이 무엇인지 빠르게 알고 싶을 때 | `현재 시스템 한 장 요약`, `1. 전체 요약`, `3-1. 현재 시스템 구조` |
 | 데이터 수집 / DB 구조를 보고 싶을 때 | `5. 현재 데이터 흐름`, `6. DB 구조 요약`, `7. 테이블별 역할과 데이터 성격` |
-| 백테스트 / 전략 구조를 보고 싶을 때 | `3. 패키지의 실질적 아키텍처`, `8. 현재 전략 레이어의 성격`, `12-2. 전략 실행` |
-| Streamlit UI / runtime 연결을 보고 싶을 때 | `3. 패키지의 실질적 아키텍처`, `4-1. 핵심 실행 계층`, `12-2. 전략 실행` |
+| 백테스트 / 전략 구조를 보고 싶을 때 | `3-1. 현재 시스템 구조`, `8. 현재 전략 레이어의 성격`, `12-2. 전략 실행` |
+| Streamlit UI / runtime 연결을 보고 싶을 때 | `3-1. 현재 시스템 구조`, `4-1. 핵심 실행 계층`, `12-2. 전략 실행` |
 | 현재 한계와 리팩터링 방향을 보고 싶을 때 | `10. 현재 구조의 핵심 한계`, `14. 향후 리팩터링 우선순위 제안` |
 | agent가 작업 전 깊은 맥락을 확인할 때 | 전체 문서 + `FINANCE_DOC_INDEX.md`, `WORK_PROGRESS.md`, `QUESTION_AND_ANALYSIS_LOG.md` |
 
@@ -124,9 +124,130 @@ DB / strategy / runtime / UI 연결을 한 번에 확인하기 위한 상세 분
 
 ---
 
-## 3. 패키지의 실질적 아키텍처
+## 3. 현재 시스템 구조와 phase별 구현 히스토리
+
+이 섹션은 두 가지를 분리해서 읽는다.
+
+1. 현재 시스템 구조
+   - 지금 코드가 어떤 층으로 나뉘어 작동하는지 설명한다.
+2. phase별 구현 히스토리
+   - 그 구조가 어떤 phase를 거치며 만들어졌는지 설명한다.
+
+기존에는 이 둘이 한 흐름에 섞여 있어,
+현재 UI 구조를 설명하다가 Phase 14, Phase 24, Phase 25 이야기가 갑자기 이어지는 문제가 있었다.
+이제는 먼저 현재 구조를 보고, 그 다음 phase별 히스토리를 보는 방식으로 읽는다.
+
+### 3-1. 현재 시스템 구조
 
 현재 구조를 가장 자연스럽게 표현하면 아래와 같다.
+
+```text
+외부 데이터 소스
+  - yfinance
+  - NYSE 웹페이지
+  - EDGAR
+
+      |
+      v
+
+Data Collection / Persistence
+  - finance/data/*
+  - finance/data/db/*
+  - MySQL
+
+      |
+      v
+
+Loader / Runtime Read Path
+  - finance/loaders/*
+  - finance/sample.py
+  - app/web/runtime/*
+
+      |
+      v
+
+Research / Backtest Processing
+  - finance/transform.py
+  - finance/engine.py
+  - finance/strategy.py
+
+      |
+      v
+
+Web Product Surface
+  - app/web/pages/backtest.py
+  - single strategy
+  - compare
+  - history
+  - saved portfolio replay
+
+      |
+      v
+
+Analysis / Review / Pre-Live
+  - finance/performance.py
+  - result bundle / summary
+  - Real-Money 검증 신호
+  - Pre-Live 운영 점검
+```
+
+현재 시스템은 단순히 `finance.strategy`만 호출하는 구조가 아니다.
+DB에 쌓인 데이터를 runtime wrapper가 읽고,
+web UI가 그 wrapper의 result bundle을 받아 single / compare / history / saved replay에 연결하는 구조다.
+
+핵심 경계는 아래와 같다.
+
+| 영역 | 현재 역할 |
+|---|---|
+| Data Collection | 외부 데이터 수집과 원천 데이터 보강 |
+| Persistence | MySQL 기반 저장과 재사용 가능한 DB table 유지 |
+| Loader / Runtime | DB 데이터를 백테스트 입력으로 변환하고 web runtime에 전달 |
+| Strategy / Engine | 전략 계산, 리밸런싱, 포트폴리오 시뮬레이션 |
+| Web Product Surface | 사용자가 전략 실행, 비교, 저장, 재실행을 수행하는 UI |
+| Review / Pre-Live | 결과 해석, Real-Money 진단, paper / watchlist / hold 운영 준비 |
+
+현재 구현을 읽을 때 가장 중요한 점은:
+
+- DB 적재 경로와 백테스트 실행 경로는 이제 연결되어 있지만, 모든 데이터/전략이 같은 완성도는 아니다.
+- annual strict 계열은 가장 성숙한 경로다.
+- quarterly 계열은 Phase 23에서 제품 실행 경로가 크게 보강되었지만, real-money / guardrail parity는 아직 후속 과제다.
+- `Global Relative Strength`는 Phase 24에서 새 전략 추가 경로를 검증하기 위해 붙인 첫 신규 전략이다.
+- Phase 25는 live trading이 아니라, Real-Money 진단 이후의 Pre-Live 운영 기록을 준비하는 단계다.
+
+### 3-2. Phase별 구현 히스토리
+
+아래는 현재 구조가 생긴 큰 흐름이다.
+세부 문서는 `.note/finance/FINANCE_DOC_INDEX.md`에서 phase별로 찾는다.
+
+| Phase 구간 | 무엇이 만들어졌나 | 현재 의미 |
+|---|---|---|
+| Phase 1~3 | 내부 web app 범위, PIT guideline, DB-backed loader/runtime foundation | 데이터 수집과 DB-backed 백테스트의 기반 |
+| Phase 4~5 | Backtest UI, 초기 strategy library, compare / weighted portfolio, risk overlay | 사용자가 화면에서 전략을 실행하고 비교하는 초기 제품 surface |
+| Phase 6~8 | market regime overlay, quarterly strict family, statement coverage / shadow rebuild tooling | annual 중심에서 quarterly / statement-driven 경로로 확장 |
+| Phase 9~12 | strict coverage policy, dynamic PIT universe, saved portfolio, real-money promotion surface | 후보 검증과 실전형 진단 surface의 초석 |
+| Phase 13~15 | deployment readiness, probation, gate calibration, candidate quality improvement | 후보를 유지 / 보류 / 재검토하는 정책과 분석 흐름 |
+| Phase 16~18 | downside refinement, partial cash retention, defensive sleeve, concentration-aware weighting, next-ranked fill | strict annual downside와 구조적 처리 규칙 개선 |
+| Phase 19~20 | structural contract language, current candidate re-entry, compare / weighted / saved workflow hardening | operator가 UI에서 설정과 후보를 다시 이해하고 재사용하는 흐름 |
+| Phase 21~22 | integrated deep validation, portfolio bridge / portfolio workflow development validation | 후보와 portfolio workflow를 같은 frame에서 재검증 |
+| Phase 23 | quarterly / alternate cadence productionization | quarterly prototype을 UI / payload / history / saved replay까지 제품 기능으로 보강 |
+| Phase 24 | new strategy expansion bridge, `Global Relative Strength` 추가 | research note에서 finance strategy implementation으로 이어지는 첫 신규 전략 경로 |
+| Phase 25 | Pre-Live operating system kickoff | Real-Money 진단 이후 paper / watchlist / hold / re-review 운영 기록 체계 준비 |
+
+이 히스토리는 투자 성과 순위표가 아니다.
+각 phase가 제품 기능, 검증 흐름, operator workflow를 어떤 방향으로 확장했는지 보는 지도다.
+
+### 3-3. 상세 구현 메모
+
+아래 내용은 이전 종합 분석에서 누적된 상세 구현 메모다.
+현재 구조를 빠르게 이해하려면 `3-1`, `3-2`를 먼저 읽고,
+세부 맥락이나 과거 구현 판단이 필요할 때 이 메모를 참고한다.
+
+과거 메모는 구현 히스토리 보존을 위해 남겨둔다.
+다만 현재 상태 판단은 `MASTER_PHASE_ROADMAP.md`, `WORK_PROGRESS.md`,
+각 phase의 `CURRENT_CHAPTER_TODO.md`와 함께 확인한다.
+
+과거 상세 메모는 아래의 단순 레이어 모델에서 시작해,
+이후 phase별 구현 내용이 누적된 형태로 남아 있다.
 
 ```text
 외부 데이터 소스
@@ -182,8 +303,8 @@ Analysis / Presentation
 - 초기 Phase 4에서는 메인 Streamlit 앱 하나를 유지하되,
   수집 탭과 백테스트 탭을 분리하는 방향으로 시작했다.
 - 이후 UI가 커지면서 현재 구현 기준의 메인 앱은 explicit top navigation을 사용한다.
-  `Overview`의 상단 상태 metric은 현재 active phase의 준비/closeout 상태를 짧게 보여주는 용도로 쓰이며,
-  현재 기준 값은 `Phase 14 Practical Closeout`다.
+  `Overview`의 상단 상태 metric은 active phase의 준비/closeout 상태를 짧게 보여주는 용도로 쓰였으며,
+  이 상세 메모가 작성되던 당시 기준 값은 `Phase 14 Practical Closeout`였다.
   상단 페이지는 현재:
   - `Overview`
   - `Ingestion`
