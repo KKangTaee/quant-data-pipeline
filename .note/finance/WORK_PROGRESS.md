@@ -22,6 +22,15 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-04-20
+- Refined the `FINANCE_DOC_INDEX.md` earlier-phase section after user feedback.
+- Changed:
+  - replaced the single long `Earlier Phase Detail` table with one subsection per phase for Phase 1~18
+  - added managed documents where relevant, including plan, TODO, work unit, checklist, completion, next-phase prep, decisions, gates, and validation notes
+  - kept the scope controlled by listing representative managed documents instead of every historical file
+- Durable takeaway:
+  - Both recent and earlier phases are now navigable by phase, while the index still avoids becoming a full archive dump.
+
+### 2026-04-20
 - Reorganized `FINANCE_DOC_INDEX.md` as a navigation-first finance document map.
 - Changed:
   - reduced the index from a long explanatory list into a shorter phase-oriented guide

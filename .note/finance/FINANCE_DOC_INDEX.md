@@ -282,77 +282,216 @@ backtest 결과를 찾을 때는 이 문서보다
 
 ## 7. Earlier Phase Detail
 
-오래된 phase는 문서 수가 많으므로 대표 문서만 둔다.
-상세 파일은 각 phase 폴더에서 확인한다.
+오래된 phase도 phase별로 찾을 수 있게 나눈다.
+다만 모든 파일을 다 넣으면 index가 다시 길어지므로,
+각 phase에서 계속 관리할 대표 문서와 핵심 참고 문서만 둔다.
 
-| Phase | 대표 문서 |
+### Phase 18. Larger Structural Redesign
+
+| 종류 | 문서 |
 |---|---|
-| Phase 1 | `.note/finance/phase1/PHASE1_WEB_APP_SCOPE.md` |
-| Phase 1 | `.note/finance/phase1/INTERNAL_WEB_APP_DEVELOPMENT_GUIDE.md` |
-| Phase 2 | `.note/finance/phase2/PHASE2_CURRENT_CHAPTER_TODO.md` |
-| Phase 2 | `.note/finance/phase2/PHASE2_COMPLETION_SUMMARY.md` |
-| Phase 2 | `.note/finance/phase2/BACKTEST_POINT_IN_TIME_GUIDELINES.md` |
-| Phase 3 | `.note/finance/phase3/PHASE3_CURRENT_CHAPTER_TODO.md` |
-| Phase 3 | `.note/finance/phase3/PHASE3_CHAPTER1_COMPLETION_SUMMARY.md` |
-| Phase 3 | `.note/finance/phase3/PHASE3_DB_SAMPLE_ENTRYPOINTS.md` |
-| Phase 3 | `.note/finance/phase3/PHASE3_RUNTIME_ADAPTER_PATH.md` |
-| Phase 4 | `.note/finance/phase4/PHASE4_CURRENT_CHAPTER_TODO.md` |
-| Phase 4 | `.note/finance/phase4/PHASE4_COMPLETION_SUMMARY.md` |
-| Phase 4 | `.note/finance/phase4/PHASE4_UI_AND_BACKTEST_PLAN.md` |
-| Phase 4 | `.note/finance/phase4/PHASE4_STRICT_FAMILY_COMPARISON_EVALUATION.md` |
-| Phase 5 | `.note/finance/phase5/PHASE5_STRATEGY_LIBRARY_AND_RISK_OVERLAY_PLAN.md` |
-| Phase 5 | `.note/finance/phase5/PHASE5_CURRENT_CHAPTER_TODO.md` |
-| Phase 5 | `.note/finance/phase5/PHASE5_COMPLETION_SUMMARY.md` |
-| Phase 5 | `.note/finance/phase5/PHASE5_STRICT_FAMILY_TEST_CHECKLIST.md` |
-| Phase 6 | `.note/finance/phase6/PHASE6_OVERLAY_AND_QUARTERLY_EXPANSION_PLAN.md` |
-| Phase 6 | `.note/finance/phase6/PHASE6_CURRENT_CHAPTER_TODO.md` |
-| Phase 6 | `.note/finance/phase6/PHASE6_COMPLETION_SUMMARY.md` |
-| Phase 6 | `.note/finance/phase6/PHASE6_TEST_CHECKLIST.md` |
-| Phase 7 | `.note/finance/phase7/PHASE7_QUARTERLY_COVERAGE_AND_STATEMENT_PIT_HARDENING_PLAN.md` |
-| Phase 7 | `.note/finance/phase7/PHASE7_CURRENT_CHAPTER_TODO.md` |
-| Phase 7 | `.note/finance/phase7/PHASE7_COMPLETION_SUMMARY.md` |
-| Phase 7 | `.note/finance/phase7/PHASE7_TEST_CHECKLIST.md` |
-| Phase 8 | `.note/finance/phase8/PHASE8_QUARTERLY_STRATEGY_FAMILY_EXPANSION_PLAN.md` |
-| Phase 8 | `.note/finance/phase8/PHASE8_CURRENT_CHAPTER_TODO.md` |
-| Phase 8 | `.note/finance/phase8/PHASE8_TEST_CHECKLIST.md` |
-| Phase 9 | `.note/finance/phase9/PHASE9_STRICT_COVERAGE_POLICY_AND_PROMOTION_PLAN.md` |
-| Phase 9 | `.note/finance/phase9/PHASE9_CURRENT_CHAPTER_TODO.md` |
-| Phase 9 | `.note/finance/phase9/PHASE9_TEST_CHECKLIST.md` |
-| Phase 10 | `.note/finance/phase10/PHASE10_HISTORICAL_DYNAMIC_PIT_UNIVERSE_PLAN.md` |
-| Phase 10 | `.note/finance/phase10/PHASE10_CURRENT_CHAPTER_TODO.md` |
-| Phase 10 | `.note/finance/phase10/PHASE10_COMPLETION_SUMMARY.md` |
-| Phase 10 | `.note/finance/phase10/PHASE10_TEST_CHECKLIST.md` |
-| Phase 11 | `.note/finance/phase11/PHASE11_PORTFOLIO_PRODUCTIZATION_AND_RESEARCH_WORKFLOW_PLAN.md` |
-| Phase 11 | `.note/finance/phase11/PHASE11_CURRENT_CHAPTER_TODO.md` |
-| Phase 11 | `.note/finance/phase11/PHASE11_COMPLETION_SUMMARY.md` |
-| Phase 11 | `.note/finance/phase11/PHASE11_TEST_CHECKLIST.md` |
-| Phase 12 | `.note/finance/phase12/PHASE12_REAL_MONEY_STRATEGY_PROMOTION_PLAN.md` |
-| Phase 12 | `.note/finance/phase12/PHASE12_CURRENT_CHAPTER_TODO.md` |
-| Phase 12 | `.note/finance/phase12/PHASE12_COMPLETION_SUMMARY.md` |
-| Phase 12 | `.note/finance/phase12/PHASE12_TEST_CHECKLIST.md` |
-| Phase 13 | `.note/finance/phase13/PHASE13_DEPLOYMENT_READINESS_AND_PROBATION_PLAN.md` |
-| Phase 13 | `.note/finance/phase13/PHASE13_CURRENT_CHAPTER_TODO.md` |
-| Phase 13 | `.note/finance/phase13/PHASE13_COMPLETION_SUMMARY.md` |
-| Phase 13 | `.note/finance/phase13/PHASE13_TEST_CHECKLIST.md` |
-| Phase 14 | `.note/finance/phase14/PHASE14_REAL_MONEY_GATE_CALIBRATION_AND_DEPLOYMENT_WORKFLOW_PLAN.md` |
-| Phase 14 | `.note/finance/phase14/PHASE14_CURRENT_CHAPTER_TODO.md` |
-| Phase 14 | `.note/finance/phase14/PHASE14_COMPLETION_SUMMARY.md` |
-| Phase 14 | `.note/finance/phase14/PHASE14_TEST_CHECKLIST.md` |
-| Phase 15 | `.note/finance/phase15/PHASE15_CANDIDATE_QUALITY_IMPROVEMENT_PLAN.md` |
-| Phase 15 | `.note/finance/phase15/PHASE15_CURRENT_CHAPTER_TODO.md` |
-| Phase 15 | `.note/finance/phase15/PHASE15_COMPLETION_SUMMARY.md` |
-| Phase 15 | `.note/finance/phase15/PHASE15_TEST_CHECKLIST.md` |
-| Phase 16 | `.note/finance/phase16/PHASE16_CURRENT_CHAPTER_TODO.md` |
-| Phase 16 | `.note/finance/phase16/PHASE16_COMPLETION_SUMMARY.md` |
-| Phase 16 | `.note/finance/phase16/PHASE16_TEST_CHECKLIST.md` |
-| Phase 17 | `.note/finance/phase17/PHASE17_STRUCTURAL_DOWNSIDE_IMPROVEMENT_PLAN.md` |
-| Phase 17 | `.note/finance/phase17/PHASE17_CURRENT_CHAPTER_TODO.md` |
-| Phase 17 | `.note/finance/phase17/PHASE17_COMPLETION_SUMMARY.md` |
-| Phase 17 | `.note/finance/phase17/PHASE17_TEST_CHECKLIST.md` |
-| Phase 18 | `.note/finance/phase18/PHASE18_LARGER_STRUCTURAL_REDESIGN_PLAN.md` |
-| Phase 18 | `.note/finance/phase18/PHASE18_CURRENT_CHAPTER_TODO.md` |
-| Phase 18 | `.note/finance/phase18/PHASE18_COMPLETION_SUMMARY.md` |
-| Phase 18 | `.note/finance/phase18/PHASE18_TEST_CHECKLIST.md` |
+| Plan | `.note/finance/phase18/PHASE18_LARGER_STRUCTURAL_REDESIGN_PLAN.md` |
+| TODO | `.note/finance/phase18/PHASE18_CURRENT_CHAPTER_TODO.md` |
+| Work unit | `.note/finance/phase18/PHASE18_NEXT_RANKED_FILL_IMPLEMENTATION_FIRST_SLICE.md` |
+| Test checklist | `.note/finance/phase18/PHASE18_TEST_CHECKLIST.md` |
+| Completion | `.note/finance/phase18/PHASE18_COMPLETION_SUMMARY.md` |
+| Next phase prep | `.note/finance/phase18/PHASE18_NEXT_PHASE_PREPARATION.md` |
+
+### Phase 17. Structural Downside Improvement
+
+| 종류 | 문서 |
+|---|---|
+| Plan | `.note/finance/phase17/PHASE17_STRUCTURAL_DOWNSIDE_IMPROVEMENT_PLAN.md` |
+| TODO | `.note/finance/phase17/PHASE17_CURRENT_CHAPTER_TODO.md` |
+| Work unit 1 | `.note/finance/phase17/PHASE17_PARTIAL_CASH_RETENTION_IMPLEMENTATION_FIRST_SLICE.md` |
+| Work unit 2 | `.note/finance/phase17/PHASE17_DEFENSIVE_SLEEVE_RISK_OFF_IMPLEMENTATION_SECOND_SLICE.md` |
+| Work unit 3 | `.note/finance/phase17/PHASE17_CONCENTRATION_AWARE_WEIGHTING_IMPLEMENTATION_THIRD_SLICE.md` |
+| Test checklist | `.note/finance/phase17/PHASE17_TEST_CHECKLIST.md` |
+| Completion | `.note/finance/phase17/PHASE17_COMPLETION_SUMMARY.md` |
+| Next phase prep | `.note/finance/phase17/PHASE17_NEXT_PHASE_PREPARATION.md` |
+
+### Phase 16. Downside Refinement
+
+| 종류 | 문서 |
+|---|---|
+| TODO | `.note/finance/phase16/PHASE16_CURRENT_CHAPTER_TODO.md` |
+| Work unit | `.note/finance/phase16/PHASE16_VALUE_DOWNSIDE_REFINEMENT_FIRST_PASS.md` |
+| Work unit | `.note/finance/phase16/PHASE16_QUALITY_VALUE_DOWNSIDE_REFINEMENT_FIRST_PASS.md` |
+| Work unit | `.note/finance/phase16/PHASE16_VALUE_DOWNSIDE_RESCUE_SEARCH_SECOND_PASS.md` |
+| Test checklist | `.note/finance/phase16/PHASE16_TEST_CHECKLIST.md` |
+| Completion | `.note/finance/phase16/PHASE16_COMPLETION_SUMMARY.md` |
+| Next phase prep | `.note/finance/phase16/PHASE16_NEXT_PHASE_PREPARATION.md` |
+
+### Phase 15. Candidate Quality Improvement
+
+| 종류 | 문서 |
+|---|---|
+| Plan | `.note/finance/phase15/PHASE15_CANDIDATE_QUALITY_IMPROVEMENT_PLAN.md` |
+| TODO | `.note/finance/phase15/PHASE15_CURRENT_CHAPTER_TODO.md` |
+| Test checklist | `.note/finance/phase15/PHASE15_TEST_CHECKLIST.md` |
+| Completion | `.note/finance/phase15/PHASE15_COMPLETION_SUMMARY.md` |
+| Next phase prep | `.note/finance/phase15/PHASE15_NEXT_PHASE_PREPARATION.md` |
+
+### Phase 14. Real-Money Gate Calibration
+
+| 종류 | 문서 |
+|---|---|
+| Plan | `.note/finance/phase14/PHASE14_REAL_MONEY_GATE_CALIBRATION_AND_DEPLOYMENT_WORKFLOW_PLAN.md` |
+| TODO | `.note/finance/phase14/PHASE14_CURRENT_CHAPTER_TODO.md` |
+| Key review | `.note/finance/phase14/PHASE14_PROMOTION_SHORTLIST_CALIBRATION_REVIEW_FIRST_PASS.md` |
+| Key review | `.note/finance/phase14/PHASE14_DEPLOYMENT_WORKFLOW_BRIDGE_FIRST_PASS.md` |
+| Test checklist | `.note/finance/phase14/PHASE14_TEST_CHECKLIST.md` |
+| Completion | `.note/finance/phase14/PHASE14_COMPLETION_SUMMARY.md` |
+| Next phase prep | `.note/finance/phase14/PHASE14_NEXT_PHASE_PREPARATION.md` |
+
+### Phase 13. Deployment Readiness And Probation
+
+| 종류 | 문서 |
+|---|---|
+| Plan | `.note/finance/phase13/PHASE13_DEPLOYMENT_READINESS_AND_PROBATION_PLAN.md` |
+| TODO | `.note/finance/phase13/PHASE13_CURRENT_CHAPTER_TODO.md` |
+| Key workflow | `.note/finance/phase13/PHASE13_DEPLOYMENT_READINESS_CHECKLIST_FIRST_PASS.md` |
+| Key workflow | `.note/finance/phase13/PHASE13_PROBATION_AND_MONITORING_WORKFLOW_FIRST_PASS.md` |
+| Test checklist | `.note/finance/phase13/PHASE13_TEST_CHECKLIST.md` |
+| Completion | `.note/finance/phase13/PHASE13_COMPLETION_SUMMARY.md` |
+| Next phase prep | `.note/finance/phase13/PHASE13_NEXT_PHASE_PREPARATION.md` |
+
+### Phase 12. Real-Money Strategy Promotion
+
+| 종류 | 문서 |
+|---|---|
+| Plan | `.note/finance/phase12/PHASE12_REAL_MONEY_STRATEGY_PROMOTION_PLAN.md` |
+| TODO | `.note/finance/phase12/PHASE12_CURRENT_CHAPTER_TODO.md` |
+| Contract | `.note/finance/phase12/PHASE12_REAL_MONEY_PROMOTION_CONTRACT.md` |
+| Audit matrix | `.note/finance/phase12/PHASE12_STRATEGY_PRODUCTION_AUDIT_MATRIX.md` |
+| Test checklist | `.note/finance/phase12/PHASE12_TEST_CHECKLIST.md` |
+| Completion | `.note/finance/phase12/PHASE12_COMPLETION_SUMMARY.md` |
+| Next phase prep | `.note/finance/phase12/PHASE12_NEXT_PHASE_PREPARATION.md` |
+
+### Phase 11. Portfolio Productization And Research Workflow
+
+| 종류 | 문서 |
+|---|---|
+| Plan | `.note/finance/phase11/PHASE11_PORTFOLIO_PRODUCTIZATION_AND_RESEARCH_WORKFLOW_PLAN.md` |
+| TODO | `.note/finance/phase11/PHASE11_CURRENT_CHAPTER_TODO.md` |
+| Work unit | `.note/finance/phase11/PHASE11_SAVED_PORTFOLIO_FIRST_PASS.md` |
+| Execution prep | `.note/finance/phase11/PHASE11_EXECUTION_PREPARATION.md` |
+| Test checklist | `.note/finance/phase11/PHASE11_TEST_CHECKLIST.md` |
+| Completion | `.note/finance/phase11/PHASE11_COMPLETION_SUMMARY.md` |
+| Next phase prep | `.note/finance/phase11/PHASE11_NEXT_PHASE_PREPARATION.md` |
+
+### Phase 10. Historical Dynamic PIT Universe
+
+| 종류 | 문서 |
+|---|---|
+| Plan | `.note/finance/phase10/PHASE10_HISTORICAL_DYNAMIC_PIT_UNIVERSE_PLAN.md` |
+| TODO | `.note/finance/phase10/PHASE10_CURRENT_CHAPTER_TODO.md` |
+| Work unit 1 | `.note/finance/phase10/PHASE10_ANNUAL_STRICT_DYNAMIC_PIT_FIRST_PASS.md` |
+| Work unit 2 | `.note/finance/phase10/PHASE10_DYNAMIC_PIT_SECOND_PASS_HARDENING.md` |
+| Test checklist | `.note/finance/phase10/PHASE10_TEST_CHECKLIST.md` |
+| Completion | `.note/finance/phase10/PHASE10_COMPLETION_SUMMARY.md` |
+| Next phase prep | `.note/finance/phase10/PHASE10_NEXT_PHASE_PREPARATION.md` |
+
+### Phase 9. Strict Coverage Policy And Promotion Gate
+
+| 종류 | 문서 |
+|---|---|
+| Plan | `.note/finance/phase9/PHASE9_STRICT_COVERAGE_POLICY_AND_PROMOTION_PLAN.md` |
+| TODO | `.note/finance/phase9/PHASE9_CURRENT_CHAPTER_TODO.md` |
+| Decision | `.note/finance/phase9/PHASE9_STRICT_COVERAGE_POLICY_DECISION.md` |
+| Gate | `.note/finance/phase9/PHASE9_STRICT_FAMILY_PROMOTION_GATE.md` |
+| Operator guide | `.note/finance/phase9/PHASE9_OPERATOR_DECISION_TREE.md` |
+| Test checklist | `.note/finance/phase9/PHASE9_TEST_CHECKLIST.md` |
+
+### Phase 8. Quarterly Strategy Family Expansion
+
+| 종류 | 문서 |
+|---|---|
+| Plan | `.note/finance/phase8/PHASE8_QUARTERLY_STRATEGY_FAMILY_EXPANSION_PLAN.md` |
+| TODO | `.note/finance/phase8/PHASE8_CURRENT_CHAPTER_TODO.md` |
+| Key decision | `.note/finance/phase8/PHASE8_QUARTERLY_FAMILY_SCOPE_AND_COMPARE_DECISION.md` |
+| Validation | `.note/finance/phase8/PHASE8_QUARTERLY_VALIDATION_FIRST_PASS.md` |
+| Operator tooling | `.note/finance/phase8/PHASE8_OPERATOR_RUNTIME_AND_SHADOW_REBUILD_TOOLING.md` |
+| Test checklist | `.note/finance/phase8/PHASE8_TEST_CHECKLIST.md` |
+
+### Phase 7. Quarterly Coverage And Statement PIT Hardening
+
+| 종류 | 문서 |
+|---|---|
+| Plan | `.note/finance/phase7/PHASE7_QUARTERLY_COVERAGE_AND_STATEMENT_PIT_HARDENING_PLAN.md` |
+| TODO | `.note/finance/phase7/PHASE7_CURRENT_CHAPTER_TODO.md` |
+| Work unit | `.note/finance/phase7/PHASE7_QUARTERLY_COVERAGE_HARDENING_FIRST_PASS.md` |
+| Validation | `.note/finance/phase7/PHASE7_QUARTERLY_RERUN_VALIDATION.md` |
+| Test checklist | `.note/finance/phase7/PHASE7_TEST_CHECKLIST.md` |
+| Completion | `.note/finance/phase7/PHASE7_COMPLETION_SUMMARY.md` |
+| Next phase prep | `.note/finance/phase7/PHASE7_NEXT_PHASE_PREPARATION.md` |
+
+### Phase 6. Overlay And Quarterly Expansion
+
+| 종류 | 문서 |
+|---|---|
+| Plan | `.note/finance/phase6/PHASE6_OVERLAY_AND_QUARTERLY_EXPANSION_PLAN.md` |
+| TODO | `.note/finance/phase6/PHASE6_CURRENT_CHAPTER_TODO.md` |
+| Requirement | `.note/finance/phase6/PHASE6_MARKET_REGIME_OVERLAY_REQUIREMENTS.md` |
+| Work unit | `.note/finance/phase6/PHASE6_MARKET_REGIME_OVERLAY_FIRST_PASS.md` |
+| Validation | `.note/finance/phase6/PHASE6_MARKET_REGIME_OVERLAY_VALIDATION.md` |
+| Test checklist | `.note/finance/phase6/PHASE6_TEST_CHECKLIST.md` |
+| Completion | `.note/finance/phase6/PHASE6_COMPLETION_SUMMARY.md` |
+| Next phase prep | `.note/finance/phase6/PHASE6_NEXT_PHASE_PREPARATION.md` |
+
+### Phase 5. Strategy Library And Risk Overlay
+
+| 종류 | 문서 |
+|---|---|
+| Plan | `.note/finance/phase5/PHASE5_STRATEGY_LIBRARY_AND_RISK_OVERLAY_PLAN.md` |
+| TODO | `.note/finance/phase5/PHASE5_CURRENT_CHAPTER_TODO.md` |
+| Requirement | `.note/finance/phase5/PHASE5_FIRST_OVERLAY_REQUIREMENTS_AND_SELECTION.md` |
+| Work unit | `.note/finance/phase5/PHASE5_OVERLAY_RUNTIME_FIRST_PASS.md` |
+| Test checklist | `.note/finance/phase5/PHASE5_STRICT_FAMILY_TEST_CHECKLIST.md` |
+| Completion | `.note/finance/phase5/PHASE5_COMPLETION_SUMMARY.md` |
+| Next phase prep | `.note/finance/phase5/PHASE5_NEXT_PHASE_PREPARATION.md` |
+
+### Phase 4. Backtest UI And Strategy Library Expansion
+
+| 종류 | 문서 |
+|---|---|
+| Plan | `.note/finance/phase4/PHASE4_UI_AND_BACKTEST_PLAN.md` |
+| TODO | `.note/finance/phase4/PHASE4_CURRENT_CHAPTER_TODO.md` |
+| UI scope | `.note/finance/phase4/PHASE4_FIRST_SCREEN_SCOPE.md` |
+| Strategy comparison | `.note/finance/phase4/PHASE4_STRICT_FAMILY_COMPARISON_EVALUATION.md` |
+| Weighted portfolio | `.note/finance/phase4/PHASE4_COMPARE_AND_WEIGHTED_PORTFOLIO_FIRST_PASS.md` |
+| Completion | `.note/finance/phase4/PHASE4_COMPLETION_SUMMARY.md` |
+| Next phase prep | `.note/finance/phase4/PHASE4_NEXT_PHASE_PREPARATION.md` |
+
+### Phase 3. DB-Backed Runtime Foundation
+
+| 종류 | 문서 |
+|---|---|
+| Plan | `.note/finance/phase3/PHASE3_LOADER_AND_RUNTIME_PLAN.md` |
+| TODO | `.note/finance/phase3/PHASE3_CURRENT_CHAPTER_TODO.md` |
+| Runtime adapter | `.note/finance/phase3/PHASE3_RUNTIME_ADAPTER_PATH.md` |
+| DB sample entrypoints | `.note/finance/phase3/PHASE3_DB_SAMPLE_ENTRYPOINTS.md` |
+| PIT / loader policy | `.note/finance/phase3/PHASE3_STRICT_STATEMENT_LOADER_SCOPE.md` |
+| Completion | `.note/finance/phase3/PHASE3_CHAPTER1_COMPLETION_SUMMARY.md` |
+
+### Phase 2. Backtest Loader And PIT Guidelines
+
+| 종류 | 문서 |
+|---|---|
+| Plan | `.note/finance/phase2/PHASE2_WEB_APP_AND_BACKTEST_PLAN.md` |
+| TODO | `.note/finance/phase2/PHASE2_CURRENT_CHAPTER_TODO.md` |
+| PIT guideline | `.note/finance/phase2/BACKTEST_POINT_IN_TIME_GUIDELINES.md` |
+| Loader contract | `.note/finance/phase2/BACKTEST_LOADER_INPUT_CONTRACT.md` |
+| Schema review | `.note/finance/phase2/POINT_IN_TIME_SCHEMA_REVIEW_AND_PATCH_PLAN.md` |
+| Completion | `.note/finance/phase2/PHASE2_COMPLETION_SUMMARY.md` |
+
+### Phase 1. Internal Web App Scope
+
+| 종류 | 문서 |
+|---|---|
+| Scope | `.note/finance/phase1/PHASE1_WEB_APP_SCOPE.md` |
+| Development guide | `.note/finance/phase1/INTERNAL_WEB_APP_DEVELOPMENT_GUIDE.md` |
+| Job wrapper interface | `.note/finance/phase1/PHASE1_JOB_WRAPPER_INTERFACE.md` |
 
 ---
 
