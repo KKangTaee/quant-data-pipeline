@@ -2283,3 +2283,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `BACKTEST_RUNTIME_FLOW.md`, `DATA_DB_PIPELINE_FLOW.md`, `WEB_BACKTEST_UI_FLOW.md`, `STRATEGY_IMPLEMENTATION_FLOW.md`, `AUTOMATION_SCRIPTS_GUIDE.md`, `README.md`를 추가했다
   - `FINANCE_COMPREHENSIVE_ANALYSIS.md`는 high-level system map으로 유지하고 상세 code flow는 `code_analysis/`를 보도록 정리했다
   - 앞으로 code analysis 문서는 모든 변경을 기록하는 history가 아니라, durable code flow가 바뀔 때만 갱신하는 evergreen 개발자 문서로 운영한다
+
+### 2026-04-20 - 종합 분석 문서의 코드 상세는 요약으로 줄이고 상세는 `code_analysis/`가 담당한다
+- Request topic:
+  - 사용자가 `code_analysis/`를 만든 이상 `FINANCE_COMPREHENSIVE_ANALYSIS.md` 안의 코드 관련 상세를 삭제하거나 옮겨도 되는지 확인하고, 종합 문서는 간단한 요약만 남기자고 요청함
+- Interpreted goal:
+  - 종합 문서가 다시 비대해지지 않도록 코드 세부 설명을 줄이고, 개발자용 상세 흐름은 `code_analysis/`로 일원화해야 함
+- Result:
+  - `FINANCE_COMPREHENSIVE_ANALYSIS.md`의 파일 역할, 중요 함수, automation baseline 섹션을 간단한 요약 / entrypoint map으로 줄였다
+  - strict annual contract, ETF runtime warning, real-money / guardrail / pre-live runtime 기준은 `STRATEGY_IMPLEMENTATION_FLOW.md`와 `BACKTEST_RUNTIME_FLOW.md` 쪽에 보강했다
+  - 앞으로 종합 문서는 current system map으로 읽고, 코드 수정 순서와 상세 계약은 `code_analysis/`에서 관리하는 방향으로 고정했다

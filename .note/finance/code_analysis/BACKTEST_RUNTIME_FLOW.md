@@ -58,6 +58,25 @@ app/web/streamlit_app.py
 - `warnings`: 데이터 부족, excluded ticker, stale data 같은 사용자 주의사항
 - selection history가 있는 전략은 selection row와 interpretation context
 
+## Real-Money / Guardrail / Pre-Live runtime 기준
+
+runtime은 단순 성과표만 반환하지 않는다.
+특히 실전형 후보 검토가 붙은 전략은 아래 진단 정보를 같이 남겨야 한다.
+
+- gross / net / cost result
+- turnover / cost assumption
+- benchmark overlay와 benchmark-relative diagnostics
+- investability filter 결과
+- liquidity / coverage policy status
+- underperformance / drawdown guardrail trigger state
+- promotion / shortlist / deployment 또는 pre-live review status
+
+주의:
+
+- `Real-Money`는 실제 투자 승인 자체가 아니라 실행 가능성 진단 계층이다.
+- `Pre-Live`는 real-money 진단 이후 paper / watchlist / hold / reject / re-review 같은 운영 상태를 기록하는 계층이다.
+- runtime metadata가 없으면 UI는 숫자를 보여줄 수 있어도 왜 그 결과가 나왔는지 설명하기 어렵다.
+
 ## Date alignment 주의
 
 `finance/transform.py`의 alignment 계층은 결과 기간을 크게 바꿀 수 있다.

@@ -1577,3 +1577,13 @@ Detailed historical logs were archived on `2026-04-13`.
   - updated `FINANCE_DOC_INDEX.md`, `AGENTS.md`, and the active `finance-doc-sync` skill guidance to include the new code analysis update rule
 - Durable takeaway:
   - Future code changes should update `code_analysis/` only when the durable code flow changes; small copy edits, one-off results, and phase status updates should stay out of those developer flow documents.
+
+### 2026-04-20
+- Slimmed `FINANCE_COMPREHENSIVE_ANALYSIS.md` now that `code_analysis/` exists.
+- Changed:
+  - reduced section 4 from detailed file-by-file code notes to a concise system layer table
+  - reduced section 12 from long strategy/contract implementation history to a compact code entrypoint map
+  - reduced section 18 to a short automation baseline table
+  - moved durable strategy contract and runtime interpretation details into `code_analysis/STRATEGY_IMPLEMENTATION_FLOW.md` and `code_analysis/BACKTEST_RUNTIME_FLOW.md`
+- Durable takeaway:
+  - `FINANCE_COMPREHENSIVE_ANALYSIS.md` should now stay as the high-level map, while detailed developer flow should live under `.note/finance/code_analysis/`.
