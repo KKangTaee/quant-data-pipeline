@@ -2366,4 +2366,15 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `FINANCE_DOC_INDEX.md`에 `Phase 상태값 읽는 법`과 권장 상태 진행 순서를 추가했다
   - `MASTER_PHASE_ROADMAP.md`의 현재 위치 상태 요약도 같은 표기 체계로 맞췄다
   - `FINANCE_TERM_GLOSSARY.md`에 `Phase Status` 용어를 추가했다
-  - 앞으로 새 phase 상태는 `active / work_in_progress`, `implementation_completed / manual_validation_pending`, `practical_closeout / manual_validation_pending`, `phase_complete / manual_validation_completed` 같은 정형화된 라벨을 우선 사용한다
+  - 이후 사용자 피드백에 따라 하나의 결합 상태값 대신 `진행 상태`와 `검증 상태`를 별도 column으로 나누는 방식으로 다시 정리했다
+
+### 2026-04-21 - phase 상태는 진행 상태와 검증 상태를 별도 column으로 관리한다
+- Request topic:
+  - 사용자가 phase 상태값을 하나의 긴 값으로 합치는 것보다, `completed`, `practical_closeout`, `active` 같은 진행 상태와 manual QA 여부를 별도 column으로 분리하는 것이 더 맞지 않냐고 확인함
+- Interpreted goal:
+  - phase status를 더 읽기 쉬운 운영 표로 바꾸고, `first_chapter_completed`가 실제 chapter 체계를 뜻하는지 명확히 정리해야 함
+- Result:
+  - `FINANCE_DOC_INDEX.md`의 phase quick map을 `진행 상태`, `검증 상태`, `다음 확인` column으로 분리했다
+  - `MASTER_PHASE_ROADMAP.md`의 현재 위치도 같은 구조로 바꿨다
+  - `FINANCE_TERM_GLOSSARY.md`, `AGENTS.md`, active `finance-doc-sync` skill을 split status 기준으로 갱신했다
+  - `first_chapter_completed`는 정식 chapter 체계가 아니라 legacy partial-completion 표현으로 정의했고, 새 문서에는 사용하지 않기로 했다

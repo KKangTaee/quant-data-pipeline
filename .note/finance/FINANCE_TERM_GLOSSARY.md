@@ -2309,7 +2309,8 @@ same-gate lower-MDD 후보를 만들기 어려웠기 때문에,
 
 ### 기본 설명
 각 phase가 지금 어느 단계에 있는지 보여주는 상태값이다.
-이 값은 "구현이 끝났는지"와 "사용자 QA가 끝났는지"를 분리해서 읽기 위해 사용한다.
+이 프로젝트에서는 phase 상태를 하나의 긴 문자열로 합치지 않고,
+`진행 상태`와 `검증 상태`로 나누어 읽는다.
 
 ### 왜 사용되는지
 `completed`만 쓰면 실제로 코드 구현만 끝난 것인지,
@@ -2317,23 +2318,38 @@ same-gate lower-MDD 후보를 만들기 어려웠기 때문에,
 아니면 다음 phase로 넘어갈 수 있는 practical closeout인지 구분하기 어렵다.
 
 ### 예시 / 필요 상황
-- `active / work_in_progress`
-  - 지금 작업 중이다.
-- `active / first_work_unit_completed`
-  - 첫 번째 작업 단위는 끝났지만 phase 전체는 진행 중이다.
-- `implementation_completed / manual_validation_pending`
-  - 구현은 끝났지만 사용자 수동 QA가 남아 있다.
-- `practical_closeout / manual_validation_pending`
-  - 현재 범위는 넘길 수 있지만 사용자 수동 QA가 아직 남아 있다.
-- `phase_complete / manual_validation_completed`
-  - 구현, 문서, 사용자 수동 QA가 모두 끝난 상태다.
+진행 상태:
 
-Legacy 상태값:
+- `planned`
+  - 계획만 있고 아직 본격 작업 전이다.
+- `active`
+  - 지금 진행 중이다.
+- `partial_complete`
+  - 일부 작업 단위만 끝났다.
+- `implementation_complete`
+  - 구현과 문서 1차 작업은 끝났다.
+- `practical_closeout`
+  - 현재 범위는 다음 단계로 넘길 수 있을 만큼 정리되었다.
+- `complete`
+  - phase 자체가 종료되었다.
 
-- `completed`
-  - 예전 phase에서 쓰던 완료 축약형이다.
-  - 사용자 QA 완료 여부가 문서에 따로 남아 있지 않을 수 있다.
+검증 상태:
+
+- `not_ready_for_qa`
+  - 아직 사용자 QA를 할 단계가 아니다.
+- `manual_qa_pending`
+  - 사용자 checklist 확인이 남아 있다.
+- `manual_qa_completed`
+  - 사용자 checklist 확인까지 끝났다.
+- `smoke_checked`
+  - 최소 자동/스모크 검증은 됐다.
+- `legacy_unknown`
+  - 예전 phase라 검증 상태가 명확히 분리되어 남아 있지 않다.
+- `not_applicable`
+  - phase 검증 대상이 아닌 지원 트랙이나 참고 문서다.
+
+Legacy 표현:
+
 - `first_chapter_completed`
-  - phase 전체가 아니라 첫 챕터만 완료되었다는 뜻이다.
-- `completed / manual_validation_pending`
-  - 구현은 끝났지만 사용자 QA가 남은 예전 혼합 표기다.
+  - 정식 chapter 체계가 아니라, 예전 문서에서 "첫 번째 큰 작업 묶음이 끝났다"는 뜻으로 남은 표현이다.
+  - 새 문서에서는 `partial_complete`로 바꿔 읽는다.

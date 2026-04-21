@@ -1651,9 +1651,19 @@ Detailed historical logs were archived on `2026-04-13`.
 - Standardized phase status terminology for finance roadmap/index documents.
 - Changed:
   - added a `Phase 상태값 읽는 법` section to `FINANCE_DOC_INDEX.md`
-  - normalized recent phase status labels to underscore-based canonical values such as `phase_complete / manual_validation_completed`
+  - initially normalized recent phase status labels to underscore-based canonical values such as `phase_complete / manual_validation_completed`
   - aligned the `MASTER_PHASE_ROADMAP.md` current-position status summary with the same labels
   - added `Phase Status` to `FINANCE_TERM_GLOSSARY.md`
   - updated `AGENTS.md` and the active `finance-doc-sync` skill so future phase indexes use the same status vocabulary
 - Durable takeaway:
-  - Future phase status should separate implementation progress from user manual QA status instead of using ambiguous `completed` shorthand.
+  - This was immediately refined into the split-column progress / validation model below, because that is easier to read than one combined status string.
+
+### 2026-04-21
+- Refined the phase status model to split progress status from validation status.
+- Changed:
+  - updated `FINANCE_DOC_INDEX.md` so the phase quick map now has separate `진행 상태`, `검증 상태`, and `다음 확인` columns
+  - updated `MASTER_PHASE_ROADMAP.md` current-position summary to the same split-column model
+  - updated `FINANCE_TERM_GLOSSARY.md`, `AGENTS.md`, and the active `finance-doc-sync` skill to prefer split phase status labels
+  - clarified that `first_chapter_completed` is legacy partial-completion wording, not a signal to introduce a formal chapter hierarchy
+- Durable takeaway:
+  - Future phase management should stay phase-based, not chapter-based, and should separate work progress from QA/validation status.

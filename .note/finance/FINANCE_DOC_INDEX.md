@@ -30,8 +30,10 @@
 
 현재 상태:
 
-- `Phase 24`: `phase_complete / manual_validation_completed`
-- `Phase 25`: `active / first_work_unit_completed`
+| Phase | 진행 상태 | 검증 상태 | 메모 |
+|---|---|---|---|
+| Phase 24 | `complete` | `manual_qa_completed` | 신규 전략 확장 bridge 완료 |
+| Phase 25 | `active` | `not_ready_for_qa` | 첫 작업 단위 완료, 다음 작업 진행 중 |
 
 현재 한 줄 요약:
 
@@ -171,57 +173,66 @@ backtest 결과를 찾을 때는 이 문서보다
 
 ### Phase 상태값 읽는 법
 
-Phase 상태값은 "구현이 어디까지 끝났는지"와 "사용자 QA가 끝났는지"를 함께 보여준다.
-앞으로 새 phase나 현재 phase를 갱신할 때는 아래 권장 상태값을 우선 사용한다.
+Phase 상태는 하나의 긴 문장으로 합치지 않고, 아래 두 축으로 나눠 읽는다.
 
-| 상태값 | 쉬운 뜻 | 다음 행동 / 해석 |
-|---|---|---|
-| `active / work_in_progress` | 지금 작업 중인 phase다. | 구현, 문서, QA 준비 중이다. 아직 완료로 읽지 않는다. |
-| `active / first_work_unit_completed` | 현재 phase의 첫 번째 작업 단위는 끝났지만 phase 전체는 진행 중이다. | 다음 작업 단위를 이어서 진행한다. |
-| `implementation_completed / manual_validation_pending` | 코드/문서 구현은 일단 끝났지만 사용자가 직접 QA를 완료하지 않았다. | 체크리스트 기준으로 사용자 확인이 필요하다. |
-| `practical_closeout / manual_validation_pending` | assistant 기준 구현과 기본 검증은 끝났고, 현재 범위는 넘길 수 있지만 사용자 QA는 아직 남아 있다. | 다음 phase로 넘어갈 수는 있으나, 이 phase의 수동 확인은 미완료로 본다. |
-| `phase_complete / manual_validation_completed` | 구현, 문서, 체크리스트 기반 사용자 QA가 모두 끝났다. | phase가 완전히 닫힌 상태다. |
+- `진행 상태`: phase 작업 자체가 어디까지 왔는지
+- `검증 상태`: 사용자 QA, checklist 확인, 또는 추가 확인이 필요한지
 
-예전 phase에는 아래 legacy 상태값이 남아 있을 수 있다.
-새 문서에서는 되도록 위 권장 상태값으로 바꿔 쓴다.
+진행 상태 표준값:
 
-| Legacy 상태값 | 쉬운 뜻 | 앞으로의 처리 |
-|---|---|---|
-| `completed` | 예전 문서에서 "완료"로 표시한 축약형이다. 사용자 QA 완료 여부가 따로 적혀 있지 않을 수 있다. | 과거 phase를 빠르게 읽기 위한 값으로 유지하되, 새 phase에는 가급적 쓰지 않는다. |
-| `first_chapter_completed` | 큰 phase 안의 첫 챕터만 끝났다는 뜻이다. phase 전체 완료는 아니다. | 앞으로는 phase를 더 작게 나누거나 `active / first_work_unit_completed`로 쓴다. |
-| `completed / manual_validation_pending` | 구현은 끝났지만 사용자 QA가 남아 있다는 예전 혼합 표기다. | 새 문서에서는 `implementation_completed / manual_validation_pending` 또는 `practical_closeout / manual_validation_pending`로 구분한다. |
+| 진행 상태 | 쉬운 뜻 |
+|---|---|
+| `planned` | 계획만 있고 아직 본격 작업 전이다. |
+| `active` | 지금 진행 중이다. |
+| `partial_complete` | 일부 작업 단위만 끝났다. phase 전체 완료는 아니다. |
+| `implementation_complete` | 구현과 문서 1차 작업은 끝났다. |
+| `practical_closeout` | 현재 범위는 다음 단계로 넘길 수 있을 만큼 정리되었다. |
+| `complete` | phase 자체가 종료되었다. |
 
-권장 진행 순서:
+검증 상태 표준값:
 
-`active / work_in_progress` -> `implementation_completed / manual_validation_pending` -> `practical_closeout / manual_validation_pending` -> `phase_complete / manual_validation_completed`
+| 검증 상태 | 쉬운 뜻 |
+|---|---|
+| `not_ready_for_qa` | 아직 사용자 QA를 할 단계가 아니다. |
+| `manual_qa_pending` | 사용자 checklist 확인이 남아 있다. |
+| `manual_qa_completed` | 사용자 checklist 확인까지 끝났다. |
+| `smoke_checked` | 최소 자동/스모크 검증은 됐다. 사용자 QA와는 별개다. |
+| `legacy_unknown` | 예전 phase라 검증 상태가 명확히 분리되어 남아 있지 않다. |
+| `not_applicable` | phase 검증 대상이 아닌 지원 트랙이나 참고 문서다. |
 
-| Phase | 상태 | 핵심 목적 | 먼저 볼 문서 |
-|---|---|---|---|
-| Phase 1 | completed | internal web app scope | `.note/finance/phase1/PHASE1_WEB_APP_SCOPE.md` |
-| Phase 2 | completed | backtest loader / PIT guideline | `.note/finance/phase2/PHASE2_WEB_APP_AND_BACKTEST_PLAN.md` |
-| Phase 3 | completed | DB-backed loader/runtime foundation | `.note/finance/phase3/PHASE3_CURRENT_CHAPTER_TODO.md` |
-| Phase 4 | completed | Backtest UI / first strategy library expansion | `.note/finance/phase4/PHASE4_CURRENT_CHAPTER_TODO.md` |
-| Phase 5 | first_chapter_completed | strategy library / risk overlay | `.note/finance/phase5/PHASE5_STRATEGY_LIBRARY_AND_RISK_OVERLAY_PLAN.md` |
-| Phase 6 | completed | market regime overlay / quarterly entry | `.note/finance/phase6/PHASE6_OVERLAY_AND_QUARTERLY_EXPANSION_PLAN.md` |
-| Phase 7 | completed | quarterly coverage / statement PIT hardening | `.note/finance/phase7/PHASE7_QUARTERLY_COVERAGE_AND_STATEMENT_PIT_HARDENING_PLAN.md` |
-| Phase 8 | implementation_completed / manual_validation_pending | quarterly family expansion / operator polish | `.note/finance/phase8/PHASE8_QUARTERLY_STRATEGY_FAMILY_EXPANSION_PLAN.md` |
-| Phase 9 | completed / manual_validation_pending | strict coverage policy / promotion gate | `.note/finance/phase9/PHASE9_STRICT_COVERAGE_POLICY_AND_PROMOTION_PLAN.md` |
-| Phase 10 | completed | historical dynamic PIT universe | `.note/finance/phase10/PHASE10_HISTORICAL_DYNAMIC_PIT_UNIVERSE_PLAN.md` |
-| Phase 11 | completed | portfolio productization / research workflow | `.note/finance/phase11/PHASE11_PORTFOLIO_PRODUCTIZATION_AND_RESEARCH_WORKFLOW_PLAN.md` |
-| Phase 12 | completed | strategy surface consolidation / real-money hardening | `.note/finance/phase12/PHASE12_REAL_MONEY_STRATEGY_PROMOTION_PLAN.md` |
-| Phase 13 | completed / manual_validation_pending | deployment readiness / probation | `.note/finance/phase13/PHASE13_DEPLOYMENT_READINESS_AND_PROBATION_PLAN.md` |
-| Phase 14 | practical_closeout / manual_validation_pending | gate calibration / deployment workflow bridge | `.note/finance/phase14/PHASE14_REAL_MONEY_GATE_CALIBRATION_AND_DEPLOYMENT_WORKFLOW_PLAN.md` |
-| Phase 15 | practical_closeout / manual_validation_pending | candidate quality improvement | `.note/finance/phase15/PHASE15_CANDIDATE_QUALITY_IMPROVEMENT_PLAN.md` |
-| Phase 16 | completed | downside refinement | `.note/finance/phase16/PHASE16_CURRENT_CHAPTER_TODO.md` |
-| Phase 17 | completed | structural downside improvement | `.note/finance/phase17/PHASE17_STRUCTURAL_DOWNSIDE_IMPROVEMENT_PLAN.md` |
-| Phase 18 | practical_closeout / manual_validation_pending | larger structural redesign | `.note/finance/phase18/PHASE18_LARGER_STRUCTURAL_REDESIGN_PLAN.md` |
-| Phase 19 | phase_complete / manual_validation_completed | structural contract expansion | `.note/finance/phase19/PHASE19_STRUCTURAL_CONTRACT_EXPANSION_PLAN.md` |
-| Phase 20 | phase_complete / manual_validation_completed | candidate workflow hardening | `.note/finance/phase20/PHASE20_CANDIDATE_CONSOLIDATION_AND_OPERATOR_WORKFLOW_HARDENING_PLAN.md` |
-| Phase 21 | phase_complete / manual_validation_completed | integrated deep validation | `.note/finance/phase21/PHASE21_INTEGRATED_DEEP_BACKTEST_VALIDATION_PLAN.md` |
-| Phase 22 | phase_complete / manual_validation_completed | portfolio workflow development validation | `.note/finance/phase22/PHASE22_PORTFOLIO_LEVEL_CANDIDATE_CONSTRUCTION_PLAN.md` |
-| Phase 23 | phase_complete / manual_validation_completed | quarterly / alternate cadence productionization | `.note/finance/phase23/PHASE23_QUARTERLY_AND_ALTERNATE_CADENCE_PRODUCTIONIZATION_PLAN.md` |
-| Phase 24 | phase_complete / manual_validation_completed | new strategy expansion bridge | `.note/finance/phase24/PHASE24_NEW_STRATEGY_EXPANSION_AND_RESEARCH_IMPLEMENTATION_BRIDGE_PLAN.md` |
-| Phase 25 | active / first_work_unit_completed | pre-live operating system | `.note/finance/phase25/PHASE25_PRE_LIVE_OPERATING_SYSTEM_AND_DEPLOYMENT_READINESS_PLAN.md` |
+`first_chapter_completed`는 정식 chapter 체계가 아니다.
+예전 문서에서 "첫 번째 큰 작업 묶음이 끝났다"는 뜻으로 남은 legacy 표현이며,
+앞으로 새 phase 상태값으로는 사용하지 않는다.
+일부 파일명에 남아 있는 `CURRENT_CHAPTER_TODO`도 과거 명명 관례이며,
+현재 운영 단위는 chapter가 아니라 phase다.
+
+| Phase | 진행 상태 | 검증 상태 | 다음 확인 | 핵심 목적 | 먼저 볼 문서 |
+|---|---|---|---|---|---|
+| Phase 1 | `complete` | `legacy_unknown` | 필요 시 과거 문서 확인 | internal web app scope | `.note/finance/phase1/PHASE1_WEB_APP_SCOPE.md` |
+| Phase 2 | `complete` | `legacy_unknown` | 필요 시 과거 문서 확인 | backtest loader / PIT guideline | `.note/finance/phase2/PHASE2_WEB_APP_AND_BACKTEST_PLAN.md` |
+| Phase 3 | `complete` | `legacy_unknown` | 필요 시 과거 문서 확인 | DB-backed loader/runtime foundation | `.note/finance/phase3/PHASE3_CURRENT_CHAPTER_TODO.md` |
+| Phase 4 | `complete` | `legacy_unknown` | 필요 시 과거 문서 확인 | Backtest UI / first strategy library expansion | `.note/finance/phase4/PHASE4_CURRENT_CHAPTER_TODO.md` |
+| Phase 5 | `partial_complete` | `legacy_unknown` | legacy `first_chapter_completed` 의미만 유지 | strategy library / risk overlay | `.note/finance/phase5/PHASE5_STRATEGY_LIBRARY_AND_RISK_OVERLAY_PLAN.md` |
+| Phase 6 | `complete` | `legacy_unknown` | 필요 시 과거 문서 확인 | market regime overlay / quarterly entry | `.note/finance/phase6/PHASE6_OVERLAY_AND_QUARTERLY_EXPANSION_PLAN.md` |
+| Phase 7 | `complete` | `legacy_unknown` | 필요 시 과거 문서 확인 | quarterly coverage / statement PIT hardening | `.note/finance/phase7/PHASE7_QUARTERLY_COVERAGE_AND_STATEMENT_PIT_HARDENING_PLAN.md` |
+| Phase 8 | `implementation_complete` | `manual_qa_pending` | 사용자 QA 필요 | quarterly family expansion / operator polish | `.note/finance/phase8/PHASE8_QUARTERLY_STRATEGY_FAMILY_EXPANSION_PLAN.md` |
+| Phase 9 | `implementation_complete` | `manual_qa_pending` | 사용자 QA 필요 | strict coverage policy / promotion gate | `.note/finance/phase9/PHASE9_STRICT_COVERAGE_POLICY_AND_PROMOTION_PLAN.md` |
+| Phase 10 | `complete` | `legacy_unknown` | 필요 시 과거 문서 확인 | historical dynamic PIT universe | `.note/finance/phase10/PHASE10_HISTORICAL_DYNAMIC_PIT_UNIVERSE_PLAN.md` |
+| Phase 11 | `complete` | `legacy_unknown` | 필요 시 과거 문서 확인 | portfolio productization / research workflow | `.note/finance/phase11/PHASE11_PORTFOLIO_PRODUCTIZATION_AND_RESEARCH_WORKFLOW_PLAN.md` |
+| Phase 12 | `practical_closeout` | `manual_qa_pending` | 사용자 QA 필요 | strategy surface consolidation / real-money hardening | `.note/finance/phase12/PHASE12_REAL_MONEY_STRATEGY_PROMOTION_PLAN.md` |
+| Phase 13 | `implementation_complete` | `manual_qa_pending` | 사용자 QA 필요 | deployment readiness / probation | `.note/finance/phase13/PHASE13_DEPLOYMENT_READINESS_AND_PROBATION_PLAN.md` |
+| Phase 14 | `practical_closeout` | `manual_qa_pending` | 사용자 QA 필요 | gate calibration / deployment workflow bridge | `.note/finance/phase14/PHASE14_REAL_MONEY_GATE_CALIBRATION_AND_DEPLOYMENT_WORKFLOW_PLAN.md` |
+| Phase 15 | `practical_closeout` | `manual_qa_pending` | 사용자 QA 필요 | candidate quality improvement | `.note/finance/phase15/PHASE15_CANDIDATE_QUALITY_IMPROVEMENT_PLAN.md` |
+| Phase 16 | `complete` | `legacy_unknown` | 필요 시 과거 문서 확인 | downside refinement | `.note/finance/phase16/PHASE16_CURRENT_CHAPTER_TODO.md` |
+| Phase 17 | `complete` | `legacy_unknown` | 필요 시 과거 문서 확인 | structural downside improvement | `.note/finance/phase17/PHASE17_STRUCTURAL_DOWNSIDE_IMPROVEMENT_PLAN.md` |
+| Phase 18 | `practical_closeout` | `manual_qa_pending` | 사용자 QA 필요 | larger structural redesign | `.note/finance/phase18/PHASE18_LARGER_STRUCTURAL_REDESIGN_PLAN.md` |
+| Phase 19 | `complete` | `manual_qa_completed` | 없음 | structural contract expansion | `.note/finance/phase19/PHASE19_STRUCTURAL_CONTRACT_EXPANSION_PLAN.md` |
+| Phase 20 | `complete` | `manual_qa_completed` | 없음 | candidate workflow hardening | `.note/finance/phase20/PHASE20_CANDIDATE_CONSOLIDATION_AND_OPERATOR_WORKFLOW_HARDENING_PLAN.md` |
+| Phase 21 | `complete` | `manual_qa_completed` | 없음 | integrated deep validation | `.note/finance/phase21/PHASE21_INTEGRATED_DEEP_BACKTEST_VALIDATION_PLAN.md` |
+| Phase 22 | `complete` | `manual_qa_completed` | 없음 | portfolio workflow development validation | `.note/finance/phase22/PHASE22_PORTFOLIO_LEVEL_CANDIDATE_CONSTRUCTION_PLAN.md` |
+| Phase 23 | `complete` | `manual_qa_completed` | 없음 | quarterly / alternate cadence productionization | `.note/finance/phase23/PHASE23_QUARTERLY_AND_ALTERNATE_CADENCE_PRODUCTIONIZATION_PLAN.md` |
+| Phase 24 | `complete` | `manual_qa_completed` | 없음 | new strategy expansion bridge | `.note/finance/phase24/PHASE24_NEW_STRATEGY_EXPANSION_AND_RESEARCH_IMPLEMENTATION_BRIDGE_PLAN.md` |
+| Phase 25 | `active` | `not_ready_for_qa` | 다음 작업 단위 진행 | pre-live operating system | `.note/finance/phase25/PHASE25_PRE_LIVE_OPERATING_SYSTEM_AND_DEPLOYMENT_READINESS_PLAN.md` |
 
 ---
 

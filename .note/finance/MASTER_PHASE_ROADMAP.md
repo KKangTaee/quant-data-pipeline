@@ -133,8 +133,11 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 - 실행 결과, 로그, 실패 확인
 - 기본적인 운영 UX 확보
 
-### 상태
-- `completed`
+### 진행 상태
+- `complete`
+
+### 검증 상태
+- `legacy_unknown`
 
 ### 주요 문서
 - `.note/finance/phase1/INTERNAL_WEB_APP_DEVELOPMENT_GUIDE.md`
@@ -157,12 +160,15 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 - point-in-time 보강
 - 상세 재무제표 raw ledger 정리
 
-### 상태
-- `completed`
+### 진행 상태
+- `complete`
 
-### 현재 하위 챕터
-- 일반 운영 고도화 챕터
-- point-in-time hardening 챕터
+### 검증 상태
+- `legacy_unknown`
+
+### 현재 하위 작업 묶음
+- 일반 운영 고도화 작업 묶음
+- point-in-time hardening 작업 묶음
 - 종료 요약 문서
 
 ### 주요 문서
@@ -189,17 +195,20 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 - strategy input contract 정리
 - 최소 1개 전략의 DB 기반 실행 경로 확보
 
-### 상태
-- `completed`
+### 진행 상태
+- `complete`
 
-### 주요 하위 챕터
-- loader/runtime groundwork 챕터
-- runtime generalization 챕터
-- UI structure decision 챕터
-- runtime public boundary 구체화 챕터
+### 검증 상태
+- `legacy_unknown`
+
+### 주요 하위 작업 묶음
+- loader/runtime groundwork 작업 묶음
+- runtime generalization 작업 묶음
+- UI structure decision 작업 묶음
+- runtime public boundary 구체화 작업 묶음
 
 ### 현재 상태 요약
-- 첫 loader 구현 챕터 완료
+- 첫 loader 구현 작업 묶음 완료
 - broad / strict statement loader까지 포함한 loader read-path 구현 완료
 - DB-backed sample path 확보 완료
 - 다음 포커스는 runtime 일반화와 Phase 4 handoff 준비
@@ -224,8 +233,11 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 - 백테스트 실행 버튼
 - 결과 차트 및 요약 지표 표시
 
-### 상태
-- `completed`
+### 진행 상태
+- `complete`
+
+### 검증 상태
+- `legacy_unknown`
 
 ### 중요 전제
 - loader 계층과 strategy runtime이 먼저 안정화되어야 함
@@ -271,11 +283,14 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 - first overlay candidate 구현
 - overlay-aware compare / interpretation
 
-### 상태
-- `completed`
+### 진행 상태
+- `partial_complete`
 
-### 현재 하위 챕터
-- strategy library baseline + risk overlay design 챕터
+### 검증 상태
+- `legacy_unknown`
+
+### 현재 작업 묶음
+- strategy library baseline + risk overlay design 작업 묶음
 
 ### 현재 상태 요약
 - Phase 4 closeout 후 사용자 확인을 거쳐
@@ -288,9 +303,9 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
   - quarterly strict family review
   - second overlay candidate review
   까지 진행되었고,
-  Phase 5의 chapter-based work는 여기서 closeout 되었다
+  Phase 5의 당시 작업 묶음은 여기서 closeout 되었다
 - 즉:
-  - `second chapter`가 따로 이어진 것이 아니라
+  - 정식 `second chapter`가 따로 이어진 것이 아니라
   - 후속 주요 workstream은 `Phase 6`으로 분리되어 이어졌다
 
 ### 주요 문서
@@ -315,8 +330,11 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 - quarterly strict candidate first validation
 - interpretation / checklist / closeout 문서화
 
-### 상태
-- `completed`
+### 진행 상태
+- `complete`
+
+### 검증 상태
+- `legacy_unknown`
 
 ### 현재 상태 요약
 - Phase 6에서는
@@ -362,8 +380,11 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 - quarterly shadow fundamentals / factors rebuild
 - quarterly strict prototype rerun validation
 
-### 상태
-- `completed`
+### 진행 상태
+- `complete`
+
+### 검증 상태
+- `legacy_unknown`
 
 ### 현재 상태 요약
 - source inspection 결과, EDGAR source 자체는 long-history와 timing field를 충분히 제공하고 있음이 확인되었다
@@ -412,9 +433,11 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 - quarterly compare integration 검토
 - quarterly promotion readiness criteria draft
 
-### 상태
-- `implementation_completed`
-- `manual_validation_pending`
+### 진행 상태
+- `implementation_complete`
+
+### 검증 상태
+- `manual_qa_pending`
 
 ### 현재 상태 요약
 - Phase 7에서 quarterly data foundation은 복구되었고
@@ -458,13 +481,16 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 - canonical strict preset governance
 - annual / quarterly promotion gate 정의
 
-### 상태
-- `completed`
+### 진행 상태
+- `implementation_complete`
+
+### 검증 상태
+- `manual_qa_pending`
 
 ### 현재 상태 요약
 - Phase 8까지 구현된 diagnostics / operator tooling을 이제 policy 레벨로 고정해야 하는 단계다
 - `MRSH`, `AU` 같은 exception case가 단순 operator 이슈가 아니라 strict coverage 정책의 입력으로 다뤄지기 시작했다
-- 현재 chapter는
+- 현재 작업 묶음은
   - exception inventory
   - foreign-form handling
   - public promotion gate
@@ -506,8 +532,11 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 - static vs dynamic comparison readout
 - PIT mode caution / help / interpretation 정리
 
-### 상태
-- `completed`
+### 진행 상태
+- `complete`
+
+### 검증 상태
+- `legacy_unknown`
 
 ### 현재 상태 요약
 - dynamic PIT universe contract가 current code/UI/history surface에 반영되었다
@@ -554,8 +583,11 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 - contribution / exposure / attribution readout 확장
 - user-defined research workflow 정리
 
-### 상태
-- `completed`
+### 진행 상태
+- `complete`
+
+### 검증 상태
+- `legacy_unknown`
 
 ### 권고 방향
 - Phase 11 first pass는 practical closeout 처리하고,
@@ -613,8 +645,11 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 - quarterly prototype hold rule
 - real-money strategy checklist 준비
 
-### 상태
-- `completed`
+### 진행 상태
+- `practical_closeout`
+
+### 검증 상태
+- `manual_qa_pending`
 
 ### 현재 상태 요약
 - current active priority는
@@ -672,15 +707,18 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 - out-of-sample / rolling validation workflow
 - deployment-readiness checklist
 
-### 상태
-- `completed`
+### 진행 상태
+- `implementation_complete`
+
+### 검증 상태
+- `manual_qa_pending`
 
 ### 현재 상태 요약
 - Phase 12는 practical closeout 되었지만,
   user-side manual validation은 아직 pending이다
 - 따라서 현재 운영 기준은:
-  - `Phase 12`: implementation closed / manual_validation_pending
-  - `Phase 13`: practical_closeout / manual_validation_pending
+  - `Phase 12`: `practical_closeout` / `manual_qa_pending`
+  - `Phase 13`: `implementation_complete` / `manual_qa_pending`
 - 이번 phase에서는
   - shortlisted candidate 상태 language 고정
   - ETF second-pass backlog 재정리
@@ -723,8 +761,11 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 - deployment workflow bridge
 - ETF PIT operability later-pass planning
 
-### 상태
-- `practical_closeout / manual_validation_pending`
+### 진행 상태
+- `practical_closeout`
+
+### 검증 상태
+- `manual_qa_pending`
 
 ### 현재 상태 요약
 - Phase 13 checklist QA를 통해
@@ -784,8 +825,11 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 - 전략별 backtest log 누적
 - strongest baseline 대비 tradeoff 정리
 
-### 상태
-- `practical_closeout / manual_validation_pending`
+### 진행 상태
+- `practical_closeout`
+
+### 검증 상태
+- `manual_qa_pending`
 
 ### 현재 상태 요약
 - strongest `Value > Strict Annual` baseline은
@@ -856,8 +900,11 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 - `Quality + Value` current strongest practical anchor downside follow-up second pass
 - strategy log / hub snapshot / one-pager 운영 체계 유지
 
-### 상태
-- `completed`
+### 진행 상태
+- `complete`
+
+### 검증 상태
+- `legacy_unknown`
 
 ### 현재 상태 요약
 - `Value > Strict Annual`의 current practical anchor는
@@ -907,8 +954,11 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 - `Value`와 `Quality + Value`에 공통으로 적용 가능한 first implementation slice 결정
 - phase17 current board / code-flow / skill sync
 
-### 상태
-- `completed`
+### 진행 상태
+- `complete`
+
+### 검증 상태
+- `legacy_unknown`
 
 ### 현재 상태 요약
 - `Value`와 `Quality + Value` 모두에서 bounded `Top N` / one-factor / minimal overlay tweak은 충분히 소진되었다
@@ -969,8 +1019,11 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 - implementation-first reprioritization
 - remaining structural/operator backlog 정리 후 deeper rerun 재개
 
-### 상태
-- `practical_closeout / manual_validation_pending`
+### 진행 상태
+- `practical_closeout`
+
+### 검증 상태
+- `manual_qa_pending`
 
 ### 현재 상태 요약
 - user confirmation 기준 next direction은 `larger structural redesign`로 고정되었다
@@ -1035,8 +1088,11 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
       trend rejection 처리 semantics를 explicit mode로 정리
     - legacy boolean payload도 계속 복원 가능하게 유지
 
-### 상태
-- `phase_complete / manual_validation_completed`
+### 진행 상태
+- `complete`
+
+### 검증 상태
+- `manual_qa_completed`
 
 ### 현재 상태 요약
 - strict annual 구조 옵션 3축이 operator-facing contract 언어로 정리되었다.
@@ -1069,8 +1125,11 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 - compare-to-portfolio bridge polish
 - saved portfolio usability hardening
 
-### 상태
-- `phase_complete / manual_validation_completed`
+### 진행 상태
+- `complete`
+
+### 검증 상태
+- `manual_qa_completed`
 
 ### 현재 상태 요약
 - `Phase 19`에서 strict annual contract language를 읽기 쉽게 정리한 뒤,
@@ -1103,8 +1162,11 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 - support tooling은 계속 도움이 되지만,
   이걸 main phase로 세면 실제 quant project roadmap과 agent 환경 정리가 섞여 버린다
 
-### 상태
-- `support track / available`
+### 진행 상태
+- `complete`
+
+### 검증 상태
+- `not_applicable`
 
 ### 현재 상태 요약
 - phase bundle bootstrap
@@ -1136,8 +1198,11 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 - anchor replacement / rescue / defer 여부 재판단
 - weighted / saved portfolio bridge validation
 
-### 상태
-- `phase_complete / manual_validation_completed`
+### 진행 상태
+- `complete`
+
+### 검증 상태
+- `manual_qa_completed`
 
 ### 현재 상태 요약
 - `Phase 18` closeout 이후 immediate next main phase로 실제 진행했다
@@ -1197,8 +1262,11 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 - development-validation baseline and weight alternative check
 - saved portfolio replay validation
 
-### 상태
-- `phase_complete / manual_validation_completed`
+### 진행 상태
+- `complete`
+
+### 검증 상태
+- `manual_qa_completed`
 
 ### 현재 상태 요약
 - `Phase 22` phase bundle을 생성했다
@@ -1226,7 +1294,7 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
   - `40 / 40 / 20`은 MDD는 조금 낮아졌지만 CAGR을 포기해 comparison-only 후보로 보류했다
   - 따라서 equal-third baseline을 primary portfolio benchmark로 유지한다
 - Phase 22 checklist QA까지 완료되었으므로,
-  Phase 22는 `phase_complete / manual_validation_completed` 상태로 닫는다
+  Phase 22는 `complete` / `manual_qa_completed` 상태로 닫는다
 - 다음 기본 작업은
   `Phase 23 Quarterly And Alternate Cadence Productionization`을 열어
   quarterly / alternate cadence를 제품 기능 수준으로 끌어올리는 것이다
@@ -1277,8 +1345,11 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 - compare 화면에서 공용 실행 입력과 strategy-specific 입력 분리
 - 최소 representative smoke rerun과 manual checklist 작성
 
-### 상태
-- `phase_complete / manual_validation_completed`
+### 진행 상태
+- `complete`
+
+### 검증 상태
+- `manual_qa_completed`
 
 ---
 
@@ -1310,8 +1381,11 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 - strategy template / report template alignment
 - compare / history / saved replay 연결 기준
 
-### 상태
-- `phase_complete / manual_validation_completed`
+### 진행 상태
+- `complete`
+
+### 검증 상태
+- `manual_qa_completed`
 
 ### 현재 메모
 - 첫 구현 후보는 `Global Relative Strength`로 고정했다.
@@ -1349,8 +1423,11 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 - paper-run checklist
 - pre-live dashboard or report draft
 
-### 상태
-- `active / first_work_unit_completed`
+### 진행 상태
+- `active`
+
+### 검증 상태
+- `not_ready_for_qa`
 
 ### 현재 메모
 - Phase 25는 live trading이나 투자 승인 단계가 아니다.
@@ -1361,37 +1438,38 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 
 ## 현재 위치
 
-상태값의 자세한 뜻은 `.note/finance/FINANCE_DOC_INDEX.md`의 `Phase 상태값 읽는 법`을 따른다.
-아래 목록에서 `completed`는 오래된 phase에 남아 있는 legacy 축약형이다.
+상태값은 `.note/finance/FINANCE_DOC_INDEX.md`의 `Phase 상태값 읽는 법`을 따른다.
+이 프로젝트는 별도 chapter 체계를 도입하지 않고,
+phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 
-현재 프로젝트는:
-- `Phase 1`: `completed`
-- `Phase 2`: `completed`
-- `Phase 3`: `completed`
-- `Phase 4`: `completed`
-- `Phase 5`: `first_chapter_completed`
-- `Phase 6`: `completed`
-- `Phase 7`: `completed`
-- `Phase 8`: `implementation_completed / manual_validation_pending`
-- `Phase 9`: `completed / manual_validation_pending`
-- `Phase 10`: `completed`
-- `Phase 11`: `completed`
-- `Phase 12`: `completed`
-- `Phase 13`: `completed / manual_validation_pending`
-- `Phase 14`: `practical_closeout / manual_validation_pending`
-- `Phase 15`: `practical_closeout / manual_validation_pending`
-- `Phase 16`: `completed`
-- `Phase 17`: `completed`
-- `Phase 18`: `practical_closeout / manual_validation_pending`
-- `Phase 19`: `phase_complete / manual_validation_completed`
-- `Phase 20`: `phase_complete / manual_validation_completed`
-- `Support Track`
-  - available
-- `Phase 21`: `phase_complete / manual_validation_completed`
-- `Phase 22`: `phase_complete / manual_validation_completed`
-- `Phase 23`: `phase_complete / manual_validation_completed`
-- `Phase 24`: `phase_complete / manual_validation_completed`
-- `Phase 25`: `active / first_work_unit_completed`
+| Phase | 진행 상태 | 검증 상태 | 현재 해석 |
+|---|---|---|---|
+| Phase 1 | `complete` | `legacy_unknown` | 과거 완료 phase. 필요 시 과거 문서 확인 |
+| Phase 2 | `complete` | `legacy_unknown` | 과거 완료 phase. 필요 시 과거 문서 확인 |
+| Phase 3 | `complete` | `legacy_unknown` | 과거 완료 phase. 필요 시 과거 문서 확인 |
+| Phase 4 | `complete` | `legacy_unknown` | 과거 완료 phase. 필요 시 과거 문서 확인 |
+| Phase 5 | `partial_complete` | `legacy_unknown` | legacy `first_chapter_completed` 표현을 `partial_complete`로 읽음 |
+| Phase 6 | `complete` | `legacy_unknown` | 과거 완료 phase. 필요 시 과거 문서 확인 |
+| Phase 7 | `complete` | `legacy_unknown` | 과거 완료 phase. 필요 시 과거 문서 확인 |
+| Phase 8 | `implementation_complete` | `manual_qa_pending` | 사용자 QA 필요 |
+| Phase 9 | `implementation_complete` | `manual_qa_pending` | 사용자 QA 필요 |
+| Phase 10 | `complete` | `legacy_unknown` | 과거 완료 phase. 필요 시 과거 문서 확인 |
+| Phase 11 | `complete` | `legacy_unknown` | 과거 완료 phase. 필요 시 과거 문서 확인 |
+| Phase 12 | `practical_closeout` | `manual_qa_pending` | 사용자 QA 필요 |
+| Phase 13 | `implementation_complete` | `manual_qa_pending` | 사용자 QA 필요 |
+| Phase 14 | `practical_closeout` | `manual_qa_pending` | 사용자 QA 필요 |
+| Phase 15 | `practical_closeout` | `manual_qa_pending` | 사용자 QA 필요 |
+| Phase 16 | `complete` | `legacy_unknown` | 과거 완료 phase. 필요 시 과거 문서 확인 |
+| Phase 17 | `complete` | `legacy_unknown` | 과거 완료 phase. 필요 시 과거 문서 확인 |
+| Phase 18 | `practical_closeout` | `manual_qa_pending` | 사용자 QA 필요 |
+| Phase 19 | `complete` | `manual_qa_completed` | 완료 |
+| Phase 20 | `complete` | `manual_qa_completed` | 완료 |
+| Support Track | `complete` | `not_applicable` | phase가 아닌 지원 도구 흐름 |
+| Phase 21 | `complete` | `manual_qa_completed` | 완료 |
+| Phase 22 | `complete` | `manual_qa_completed` | 완료 |
+| Phase 23 | `complete` | `manual_qa_completed` | 완료 |
+| Phase 24 | `complete` | `manual_qa_completed` | 완료 |
+| Phase 25 | `active` | `not_ready_for_qa` | 첫 작업 단위 완료, 다음 작업 진행 중 |
 
 한 줄 현재 판단:
 - current annual strict candidate와 portfolio bridge를 같은 frame에서 다시 본 `Phase 21`은 manual validation까지 완료되었고,
@@ -1486,7 +1564,7 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 앞으로는 새 작업을 시작할 때 아래 순서를 기본으로 한다.
 
 1. 이 작업이 어느 Phase에 속하는지 먼저 결정한다
-2. 그 Phase 문서 또는 챕터 TODO 보드에서 현재 위치를 먼저 확인한다
+2. 그 Phase 문서 또는 TODO 보드에서 현재 위치를 먼저 확인한다
 3. 필요하면 Phase 문서와 roadmap을 먼저 갱신한 뒤 구현이나 검증으로 들어간다
 4. 작업 중 변경사항이 생기면
    - 해당 Phase 문서

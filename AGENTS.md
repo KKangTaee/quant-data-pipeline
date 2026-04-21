@@ -157,20 +157,30 @@
 - Before starting a substantial new workstream, decide which phase it belongs to.
 - Maintain:
   - one top-level roadmap document for the whole project
-  - one or more phase/chapter TODO board documents for current execution
+  - one or more phase TODO board documents for current execution
 - Treat each phase plan document as a user-facing orientation aid as well as an engineering kickoff.
 - If a phase plan contains priority items or workstreams with unfamiliar names, explain those terms inline or add them to the glossary instead of leaving the meaning implicit.
 - When a phase is active, keep its TODO board updated with:
   - grouped work areas
   - `pending` / `in_progress` / `completed` status
   - short explanations for each subtask
-- For phase-level status in roadmap and index documents, prefer canonical labels:
-  - `active / work_in_progress`
-  - `active / first_work_unit_completed`
-  - `implementation_completed / manual_validation_pending`
-  - `practical_closeout / manual_validation_pending`
-  - `phase_complete / manual_validation_completed`
-- Treat older labels such as `completed`, `first_chapter_completed`, and `completed / manual_validation_pending` as legacy shorthand. Explain or normalize them when editing phase indexes.
+- For phase-level status in roadmap and index documents, separate progress from validation instead of combining them into one status string.
+- Preferred phase progress labels:
+  - `planned`
+  - `active`
+  - `partial_complete`
+  - `implementation_complete`
+  - `practical_closeout`
+  - `complete`
+- Preferred phase validation labels:
+  - `not_ready_for_qa`
+  - `manual_qa_pending`
+  - `manual_qa_completed`
+  - `smoke_checked`
+  - `legacy_unknown`
+  - `not_applicable`
+- Treat older labels such as `completed`, `first_chapter_completed`, `completed / manual_validation_pending`, and `phase_complete / manual_validation_completed` as legacy shorthand. Explain or normalize them when editing phase indexes.
+- Do not introduce a formal chapter hierarchy unless the user explicitly requests it; `first_chapter_completed` should be treated as a legacy partial-completion label.
 - If scope changes during a phase, update the phase document and TODO board rather than leaving the change only in chat.
 - Before opening a new major phase, confirm the new phase direction with the user.
 - When a phase reaches a practical completion point, create a phase-specific manual test checklist document under `.note/finance/phase*/`.
