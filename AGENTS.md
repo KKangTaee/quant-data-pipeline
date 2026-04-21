@@ -61,6 +61,7 @@
   - `python3 plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py draft-from-current <registry_id>`
   - `python3 plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py list`
   - `python3 plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py validate`
+- For user-facing Pre-Live review, use `Backtest > Pre-Live Review` to inspect current candidates, create Pre-Live records, and review active Pre-Live registry entries.
 - Default moments to run it:
   - after a meaningful refinement/document-sync unit
   - before commit

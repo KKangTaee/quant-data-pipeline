@@ -17,11 +17,12 @@ UI form, payload 복원, history replay, saved portfolio replay를 수정할 때
 
 ## 화면 흐름
 
-Backtest page는 현재 세 panel 중심으로 본다.
+Backtest page는 현재 네 panel 중심으로 본다.
 
 - `Single Strategy`: 하나의 전략을 실행하고 latest result를 확인한다.
 - `Compare & Portfolio Builder`: 여러 전략을 같은 기간으로 비교하고 weighted portfolio를 만든다.
 - `History`: 저장된 실행 기록을 inspect하고, 가능한 경우 run again 또는 load into form을 수행한다.
+- `Pre-Live Review`: current candidate를 실전 전 운영 상태로 기록하고 저장된 Pre-Live record를 확인한다.
 
 ## Single Strategy 흐름
 
@@ -89,6 +90,27 @@ History는 compact summary 중심이다.
 - `Inspect`: 저장된 record를 읽는다.
 - `Run Again`: 저장된 payload로 다시 실행한다.
 - `Load Into Form`: 저장된 입력값을 single strategy form에 복원한다.
+
+## Pre-Live Review 흐름
+
+```text
+CURRENT_CANDIDATE_REGISTRY.jsonl
+  -> Backtest > Pre-Live Review
+  -> current candidate 선택
+  -> Real-Money 신호와 기본 Pre-Live 상태 확인
+  -> operator reason / next action / review date 수정
+  -> 저장 전 JSON draft 확인
+  -> Save Pre-Live Record
+  -> PRE_LIVE_CANDIDATE_REGISTRY.jsonl append
+  -> Pre-Live Registry tab에서 active record 확인
+```
+
+구분:
+
+- current candidate registry는 후보 자체를 정의한다.
+- pre-live registry는 그 후보를 실전 전 어떻게 관찰하거나 보류할지 기록한다.
+- `Save Pre-Live Record`는 live trading 승인 버튼이 아니다.
+- `paper_tracking`도 실제 돈을 넣는다는 뜻이 아니라 paper 관찰 상태다.
 
 ## Streamlit form 주의
 

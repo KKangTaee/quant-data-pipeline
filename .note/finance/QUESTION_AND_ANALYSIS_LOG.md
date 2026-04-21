@@ -2402,3 +2402,15 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 기본값은 출력만 하며, 실제 `.note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl` 저장은 `--append`가 있을 때만 수행한다
   - 기본 상태 추천은 `paper_probation -> paper_tracking`, `watchlist -> watchlist`, blocker -> `hold`, reject/fail 계열 -> `reject`, 그 외 애매한 경우 -> `re_review`로 정리했다
   - Backtest UI 버튼이나 dashboard는 아직 만들지 않았고, 다음 검토 대상으로 남겼다
+
+### 2026-04-21 - Phase 25 Pre-Live Review는 Backtest UI에서 QA 가능한 상태로 만든다
+- Request topic:
+  - 사용자가 Phase 25 다음 단계 진행을 요청함
+- Interpreted goal:
+  - helper만으로는 사용자 QA가 불편하므로 Backtest 화면에서 current candidate를 골라 Pre-Live 운영 기록을 저장하고 확인할 수 있어야 함
+- Result:
+  - `Backtest` panel에 `Pre-Live Review`를 추가했다
+  - `Create From Current Candidate`에서 후보 선택, Real-Money 신호 확인, Pre-Live 상태 선택, operator reason / next action / review date 수정, 저장 전 JSON 초안 확인, 명시 저장을 지원한다
+  - `Pre-Live Registry`에서 저장된 active record를 확인할 수 있다
+  - Phase 25 상태는 `implementation_complete / manual_qa_pending`으로 전환했다
+  - 이 UI는 live trading이나 투자 승인 기능이 아니라 실전 전 운영 상태 기록 기능으로 고정했다

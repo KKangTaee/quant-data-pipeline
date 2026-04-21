@@ -3,10 +3,11 @@ from __future__ import annotations
 import inspect
 import json
 import time
-from datetime import date
+from datetime import date, datetime, timedelta
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 import altair as alt
 import numpy as np
@@ -278,6 +279,9 @@ DEFAULT_BACKTEST_END_DATE = date.today()
 CURRENT_CANDIDATE_COMPARE_DEFAULT_START = date(2016, 1, 1)
 CURRENT_CANDIDATE_COMPARE_DEFAULT_END = date(2026, 4, 1)
 CURRENT_CANDIDATE_REGISTRY_FILE = Path(".note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl")
+PRE_LIVE_CANDIDATE_REGISTRY_FILE = Path(".note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl")
+BACKTEST_PANEL_OPTIONS = ["Single Strategy", "Compare & Portfolio Builder", "History", "Pre-Live Review"]
+PRE_LIVE_STATUS_OPTIONS = ["watchlist", "paper_tracking", "hold", "reject", "re_review"]
 STATIC_MANAGED_RESEARCH_UNIVERSE = "static_managed_research"
 HISTORICAL_DYNAMIC_PIT_UNIVERSE = "historical_dynamic_pit"
 STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS = {
@@ -625,7 +629,7 @@ def _init_backtest_state() -> None:
     if "backtest_requested_panel" not in st.session_state:
         st.session_state.backtest_requested_panel = None
     requested_panel = st.session_state.get("backtest_requested_panel")
-    if requested_panel in {"Single Strategy", "Compare & Portfolio Builder", "History"}:
+    if requested_panel in set(BACKTEST_PANEL_OPTIONS):
         st.session_state.backtest_active_panel = requested_panel
         st.session_state.backtest_requested_panel = None
     if "qss_end" not in st.session_state:
@@ -934,7 +938,7 @@ def _init_backtest_state() -> None:
 
 
 def _request_backtest_panel(panel: str) -> None:
-    if panel not in {"Single Strategy", "Compare & Portfolio Builder", "History"}:
+    if panel not in set(BACKTEST_PANEL_OPTIONS):
         return
     st.session_state.backtest_requested_panel = panel
 
@@ -5294,6 +5298,159 @@ def _render_current_candidate_bundle_workspace() -> None:
                 st.error(str(exc))
 
 
+def _render_pre_live_review_workspace() -> None:
+    st.markdown("### Pre-Live Review")
+    st.caption(
+        "현재 후보를 실제 투자로 승인하는 화면이 아닙니다. "
+        "`CURRENT_CANDIDATE_REGISTRY`의 후보를 보고, 실전 전에 watchlist / paper tracking / hold / reject / re-review 중 "
+        "어떤 운영 상태로 둘지 기록하는 화면입니다."
+    )
+
+    current_rows = _load_current_candidate_registry_latest()
+    pre_live_rows = _load_pre_live_candidate_registry_latest()
+
+    summary_cols = st.columns(3, gap="small")
+    summary_cols[0].metric("Current Candidates", len(current_rows))
+    summary_cols[1].metric("Pre-Live Active Records", len(pre_live_rows))
+    summary_cols[2].metric("Live Trading", "Disabled")
+    st.caption(
+        "Pre-Live 기록은 `.note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl`에 저장됩니다. "
+        "저장 버튼을 누르기 전까지는 초안만 화면에 표시됩니다."
+    )
+
+    draft_tab, registry_tab = st.tabs(["Create From Current Candidate", "Pre-Live Registry"])
+    with draft_tab:
+        if not current_rows:
+            st.info("현재 current candidate registry에 active 후보가 없습니다.")
+            st.caption(f"Path: {CURRENT_CANDIDATE_REGISTRY_FILE}")
+            return
+
+        st.markdown("#### 1. Current Candidate 선택")
+        st.caption(
+            "아래 후보들은 `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`에 기록된 current / near-miss / scenario 후보입니다."
+        )
+        st.dataframe(_build_current_candidate_registry_rows_for_display(current_rows), use_container_width=True, hide_index=True)
+
+        label_to_row = {
+            f"{str(row.get('strategy_family') or '').replace('_', ' ').title()} | {_current_candidate_registry_role_label(row)} | {row.get('title')}": row
+            for row in current_rows
+        }
+        selected_label = st.selectbox(
+            "Candidate To Review",
+            options=list(label_to_row.keys()),
+            key="pre_live_candidate_to_review",
+            help="Pre-Live 운영 상태로 넘길 후보를 고릅니다. 이 단계는 아직 저장이 아닙니다.",
+        )
+        selected_row = label_to_row[selected_label]
+        registry_id = str(selected_row.get("registry_id") or "unknown")
+        result = dict(selected_row.get("result") or {})
+        default_status = _default_pre_live_status_from_current_candidate(selected_row)
+        existing_ids = {str(row.get("pre_live_id") or "") for row in pre_live_rows}
+        draft_pre_live_id = f"pre_live_{registry_id}"
+
+        if draft_pre_live_id in existing_ids:
+            st.warning(
+                "이미 같은 Pre-Live ID의 active 기록이 있습니다. "
+                "다시 저장하면 append-only 방식으로 새 revision이 추가되고, latest view에서는 새 기록이 보입니다."
+            )
+
+        st.markdown("#### 2. 운영 상태 확인")
+        signal_cols = st.columns(4, gap="small")
+        signal_cols[0].metric("Promotion", str(result.get("promotion") or "-"))
+        signal_cols[1].metric("Shortlist", str(result.get("shortlist") or "-"))
+        signal_cols[2].metric("Deployment", str(result.get("deployment") or "-"))
+        signal_cols[3].metric("Default Status", _pre_live_status_korean_label(default_status))
+
+        selected_status = st.selectbox(
+            "Pre-Live Status",
+            options=PRE_LIVE_STATUS_OPTIONS,
+            index=PRE_LIVE_STATUS_OPTIONS.index(default_status) if default_status in PRE_LIVE_STATUS_OPTIONS else 0,
+            format_func=_pre_live_status_korean_label,
+            key=f"pre_live_status_{registry_id}",
+            help="이 값은 투자 승인 상태가 아니라, 실전 전 운영 상태입니다.",
+        )
+        operator_reason = st.text_area(
+            "Operator Reason",
+            value=_default_pre_live_operator_reason(selected_row, selected_status),
+            key=f"pre_live_reason_{registry_id}_{selected_status}",
+            help="왜 이 후보를 이 상태로 두는지 사람이 읽을 수 있게 남깁니다.",
+        )
+        next_action = st.text_area(
+            "Next Action",
+            value=_default_pre_live_next_action(selected_status),
+            key=f"pre_live_next_action_{registry_id}_{selected_status}",
+            help="다음에 무엇을 확인하거나 실행할지 남깁니다.",
+        )
+        default_use_review_date = selected_status in {"paper_tracking", "re_review"}
+        use_review_date = st.checkbox(
+            "Review Date 지정",
+            value=default_use_review_date,
+            key=f"pre_live_use_review_date_{registry_id}_{selected_status}",
+            help="re-review는 review date가 필요합니다. paper tracking도 다음 점검일을 두는 것이 보통 더 안전합니다.",
+        )
+        review_date_value: date | None = None
+        if use_review_date or selected_status == "re_review":
+            review_date_value = st.date_input(
+                "Review Date",
+                value=date.today() + timedelta(days=30),
+                key=f"pre_live_review_date_{registry_id}_{selected_status}",
+            )
+        if selected_status == "re_review" and review_date_value is None:
+            st.error("`re_review` 상태는 review date가 필요합니다.")
+
+        draft = _build_pre_live_draft_from_current_candidate(
+            selected_row,
+            pre_live_status=selected_status,
+            operator_reason=operator_reason,
+            next_action=next_action,
+            review_date_value=review_date_value,
+        )
+
+        st.markdown("#### 3. 저장 전 초안 확인")
+        st.caption(
+            "아래 JSON은 저장 전 초안입니다. `Save Pre-Live Record`를 눌러야 실제 registry에 기록됩니다."
+        )
+        st.json(draft)
+
+        save_disabled = selected_status == "re_review" and review_date_value is None
+        action_cols = st.columns([0.32, 0.68], gap="small")
+        with action_cols[0]:
+            if st.button(
+                "Save Pre-Live Record",
+                key=f"save_pre_live_record_{registry_id}",
+                disabled=save_disabled,
+                use_container_width=True,
+            ):
+                _append_pre_live_candidate_registry_row(draft)
+                st.success(f"Pre-Live 기록 `{draft['pre_live_id']}`를 저장했습니다.")
+                st.rerun()
+        with action_cols[1]:
+            st.caption(
+                "저장해도 live trading이 열리는 것은 아닙니다. "
+                "이 기록은 실전 전 관찰 / 보류 / 재검토 상태를 남기는 운영 메모입니다."
+            )
+
+    with registry_tab:
+        st.markdown("#### Pre-Live Registry")
+        st.caption(f"Path: {PRE_LIVE_CANDIDATE_REGISTRY_FILE}")
+        if not pre_live_rows:
+            st.info("아직 저장된 Pre-Live 운영 기록이 없습니다.")
+            return
+
+        st.dataframe(_build_pre_live_registry_rows_for_display(pre_live_rows), use_container_width=True, hide_index=True)
+        record_labels = [
+            f"{row.get('pre_live_status')} | {row.get('title')} | {row.get('recorded_at')}"
+            for row in pre_live_rows
+        ]
+        selected_record_label = st.selectbox(
+            "Inspect Pre-Live Record",
+            options=record_labels,
+            key="pre_live_selected_record",
+        )
+        selected_record = pre_live_rows[record_labels.index(selected_record_label)]
+        st.json(selected_record)
+
+
 def _build_compare_prefill_summary_rows(payload: dict[str, Any]) -> pd.DataFrame:
     strategy_overrides = dict(payload.get("strategy_overrides") or {})
     rows: list[dict[str, Any]] = []
@@ -6886,6 +7043,209 @@ def _build_current_candidate_registry_rows_for_display(rows: list[dict[str, Any]
                 "Promotion": result.get("promotion"),
                 "Shortlist": result.get("shortlist"),
                 "Registry ID": row.get("registry_id"),
+            }
+        )
+    return pd.DataFrame(display_rows)
+
+
+def _load_pre_live_candidate_registry_latest() -> list[dict[str, Any]]:
+    if not PRE_LIVE_CANDIDATE_REGISTRY_FILE.exists():
+        return []
+
+    latest: dict[str, dict[str, Any]] = {}
+    for line in PRE_LIVE_CANDIDATE_REGISTRY_FILE.read_text(encoding="utf-8", errors="ignore").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        pre_live_id = str(row.get("pre_live_id") or "").strip()
+        if not pre_live_id:
+            continue
+        previous = latest.get(pre_live_id)
+        if previous is None or str(row.get("recorded_at") or "") >= str(previous.get("recorded_at") or ""):
+            latest[pre_live_id] = row
+
+    return sorted(
+        [
+            row
+            for row in latest.values()
+            if str(row.get("record_status") or "active").strip().lower() == "active"
+        ],
+        key=lambda row: (
+            str(row.get("pre_live_status") or ""),
+            str(row.get("title") or ""),
+        ),
+    )
+
+
+def _append_pre_live_candidate_registry_row(row: dict[str, Any]) -> None:
+    PRE_LIVE_CANDIDATE_REGISTRY_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with PRE_LIVE_CANDIDATE_REGISTRY_FILE.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(row, ensure_ascii=False) + "\n")
+
+
+def _default_pre_live_status_from_current_candidate(row: dict[str, Any]) -> str:
+    result = dict(row.get("result") or {})
+    promotion = str(result.get("promotion") or "").lower()
+    shortlist = str(result.get("shortlist") or "").lower()
+    deployment = str(result.get("deployment") or "").lower()
+    blockers = result.get("blockers") if isinstance(result.get("blockers"), list) else []
+
+    if any(term in promotion for term in ["reject", "fail"]) or any(term in deployment for term in ["reject", "blocked"]):
+        return "reject"
+    if blockers:
+        return "hold"
+    if shortlist in {"paper_probation", "small_capital_trial"} or deployment == "paper_only":
+        return "paper_tracking"
+    if shortlist == "watchlist":
+        return "watchlist"
+    if deployment == "review_required":
+        return "watchlist"
+    return "re_review"
+
+
+def _pre_live_status_korean_label(status: str) -> str:
+    labels = {
+        "watchlist": "Watchlist: 다시 볼 후보",
+        "paper_tracking": "Paper Tracking: 실제 돈 없이 추적",
+        "hold": "Hold: 보류",
+        "reject": "Reject: 추적 종료",
+        "re_review": "Re-Review: 정해진 날짜에 재검토",
+    }
+    return labels.get(status, status)
+
+
+def _pre_live_tracking_plan(status: str) -> dict[str, str | None]:
+    if status == "paper_tracking":
+        return {
+            "cadence": "monthly",
+            "stop_condition": "Real-Money blocker가 새로 생기거나 drawdown / benchmark gap이 크게 악화되면 중단한다.",
+            "success_condition": "정해진 관찰 기간 동안 핵심 Real-Money blocker 없이 후보 성격이 유지되면 재검토한다.",
+        }
+    if status == "watchlist":
+        return {
+            "cadence": "next_strategy_review",
+            "stop_condition": "동일 family에서 더 나은 후보가 나오거나 핵심 지표가 훼손되면 watchlist에서 내린다.",
+            "success_condition": "다음 비교에서 여전히 후보 가치가 있으면 paper tracking 전환을 검토한다.",
+        }
+    if status == "re_review":
+        return {
+            "cadence": "scheduled_review",
+            "stop_condition": "재검토 시점에도 blocker가 유지되면 hold 또는 reject로 바꾼다.",
+            "success_condition": "재검토 시점에 blocker가 해소되면 watchlist 또는 paper tracking으로 전환한다.",
+        }
+    return {"cadence": None, "stop_condition": None, "success_condition": None}
+
+
+def _default_pre_live_operator_reason(row: dict[str, Any], status: str) -> str:
+    result = dict(row.get("result") or {})
+    title = str(row.get("title") or row.get("registry_id") or "candidate")
+    signal = (
+        f"promotion={result.get('promotion') or 'unknown'}, "
+        f"shortlist={result.get('shortlist') or 'unknown'}, "
+        f"deployment={result.get('deployment') or 'unknown'}"
+    )
+    if status == "paper_tracking":
+        return f"{title}는 Real-Money 신호가 paper 관찰 후보에 가까워 실제 돈 없이 추적한다 ({signal})."
+    if status == "watchlist":
+        return f"{title}는 다시 볼 가치는 있지만 즉시 paper tracking 전 추가 비교가 필요하다 ({signal})."
+    if status == "hold":
+        return f"{title}는 blocker 또는 운영상 미확인 요소가 남아 있어 보류한다 ({signal})."
+    if status == "reject":
+        return f"{title}는 현재 기준에서 Pre-Live 추적 대상으로 유지하기 어렵다 ({signal})."
+    return f"{title}는 지금 즉시 분류하기보다 정해진 시점에 다시 확인한다 ({signal})."
+
+
+def _default_pre_live_next_action(status: str) -> str:
+    if status == "paper_tracking":
+        return "실제 돈을 넣지 않고 월 1회 기준으로 성과, MDD, benchmark gap, Real-Money blocker 변화를 기록한다."
+    if status == "watchlist":
+        return "다음 후보 비교 또는 데이터 업데이트 후 paper tracking 전환 여부를 다시 판단한다."
+    if status == "hold":
+        return "보류 사유를 해소할 수 있는 데이터, 설정, 검증 조건을 먼저 확인한다."
+    if status == "reject":
+        return "현재 기준에서는 추적을 종료하고, 같은 후보를 다시 쓰려면 새 근거가 생겼을 때 새 기록으로 검토한다."
+    return "review_date에 후보 상태와 Real-Money 신호를 다시 확인한다."
+
+
+def _build_pre_live_draft_from_current_candidate(
+    row: dict[str, Any],
+    *,
+    pre_live_status: str,
+    operator_reason: str,
+    next_action: str,
+    review_date_value: date | None,
+) -> dict[str, Any]:
+    result = dict(row.get("result") or {})
+    registry_id = str(row.get("registry_id") or "unknown_current_candidate")
+    return {
+        "schema_version": 1,
+        "pre_live_id": f"pre_live_{registry_id}",
+        "revision_id": f"rev_{uuid4().hex[:12]}",
+        "recorded_at": datetime.now().isoformat(timespec="seconds"),
+        "record_status": "active",
+        "source_kind": "current_candidate_registry",
+        "source_ref": ".note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl",
+        "source_candidate_registry_id": registry_id,
+        "title": f"{row.get('title') or registry_id} - Pre-Live review",
+        "strategy_or_bundle": {
+            "kind": "single_strategy",
+            "family": row.get("strategy_family"),
+            "name": row.get("strategy_name"),
+            "candidate_role": row.get("candidate_role"),
+        },
+        "settings_snapshot": {
+            "period": row.get("period"),
+            "contract": row.get("contract"),
+            "source_ref": row.get("source_ref"),
+        },
+        "result_snapshot": {
+            "cagr": result.get("cagr"),
+            "mdd": result.get("mdd"),
+            "sharpe": result.get("sharpe"),
+            "end_balance": result.get("end_balance"),
+        },
+        "real_money_signal": {
+            "promotion": result.get("promotion") or "unknown",
+            "shortlist": result.get("shortlist") or "unknown",
+            "deployment": result.get("deployment") or "unknown",
+            "validation_status": result.get("validation_status") or "unknown",
+            "liquidity_status": result.get("liquidity_status") or "unknown",
+            "blockers": result.get("blockers") if isinstance(result.get("blockers"), list) else [],
+        },
+        "pre_live_status": pre_live_status,
+        "operator_reason": operator_reason,
+        "next_action": next_action,
+        "review_date": review_date_value.isoformat() if review_date_value else None,
+        "tracking_plan": _pre_live_tracking_plan(pre_live_status),
+        "docs": row.get("docs") or {},
+        "notes": "Created from Backtest > Pre-Live Review. This is a pre-live operating record, not a live-trading approval.",
+    }
+
+
+def _build_pre_live_registry_rows_for_display(rows: list[dict[str, Any]]) -> pd.DataFrame:
+    display_rows: list[dict[str, Any]] = []
+    for row in rows:
+        result = dict(row.get("result_snapshot") or {})
+        signal = dict(row.get("real_money_signal") or {})
+        strategy = dict(row.get("strategy_or_bundle") or {})
+        display_rows.append(
+            {
+                "Status": row.get("pre_live_status"),
+                "Title": row.get("title"),
+                "Family": str(strategy.get("family") or "").replace("_", " ").title(),
+                "Candidate Role": strategy.get("candidate_role"),
+                "CAGR": result.get("cagr"),
+                "MDD": result.get("mdd"),
+                "Promotion": signal.get("promotion"),
+                "Shortlist": signal.get("shortlist"),
+                "Deployment": signal.get("deployment"),
+                "Next Action": row.get("next_action"),
+                "Review Date": row.get("review_date"),
+                "Pre-Live ID": row.get("pre_live_id"),
             }
         )
     return pd.DataFrame(display_rows)
@@ -11878,6 +12238,7 @@ def render_backtest_tab() -> None:
             - `Single Strategy`: 전략 1개를 실행하고 결과를 바로 확인하는 화면입니다.
             - `Compare & Portfolio Builder`: 여러 전략을 같은 기간으로 비교하는 화면입니다.
             - `History`: 저장된 실행 결과를 다시 보고, `Run Again` 또는 `Load Into Form`을 사용하는 화면입니다.
+            - `Pre-Live Review`: current candidate를 실전 전 관찰 / 보류 / 재검토 기록으로 넘기는 화면입니다.
             - `Load Into Form`을 누르면 저장된 입력값이 `Single Strategy` 화면으로 자동 이동하며 다시 채워집니다.
             - `quarterly strict prototype` 전략은 현재 **research-only** 경로입니다.
             """
@@ -11889,7 +12250,7 @@ def render_backtest_tab() -> None:
 
     active_panel = st.radio(
         "Backtest Panel",
-        options=["Single Strategy", "Compare & Portfolio Builder", "History"],
+        options=BACKTEST_PANEL_OPTIONS,
         horizontal=True,
         label_visibility="collapsed",
         key="backtest_active_panel",
@@ -13483,7 +13844,10 @@ def render_backtest_tab() -> None:
             st.divider()
         _render_saved_portfolio_workspace()
 
-    else:
+    elif active_panel == "History":
         st.markdown("### Backtest History")
         st.caption("Single-strategy runs and strategy-comparison runs share the same persistent history and drilldown surface.")
         _render_persistent_backtest_history()
+
+    else:
+        _render_pre_live_review_workspace()

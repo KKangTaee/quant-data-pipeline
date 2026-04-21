@@ -2,11 +2,11 @@
 
 ## 진행 상태
 
-- `active`
+- `implementation_complete`
 
 ## 검증 상태
 
-- `not_ready_for_qa`
+- `manual_qa_pending`
 
 ## 현재 목표
 
@@ -42,17 +42,18 @@ Pre-Live 운영 점검 체계를 만드는 것이다.
 - `completed` report/helper entry point 추가
   - `manage_pre_live_candidate_registry.py draft-from-current <registry_id>`로 current candidate에서 Pre-Live 기록 초안을 만든다.
   - 기본값은 출력만 하며, `--append`를 붙일 때만 실제 registry에 저장한다.
-- `pending` UI dashboard 또는 Backtest result entry point 검토
-  - Backtest result에서 바로 Pre-Live 기록으로 넘길지,
-    helper 기반 workflow만 유지할지 검토한다.
+- `completed` Backtest UI entry point 추가
+  - `Backtest > Pre-Live Review` 패널에서 current candidate를 선택하고 Pre-Live 기록 초안을 확인할 수 있다.
+  - `Save Pre-Live Record`를 누를 때만 `.note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl`에 저장된다.
+  - 저장된 active Pre-Live record는 같은 패널의 registry tab에서 확인할 수 있다.
 
 ## 4. Validation
 
-- `pending` 문서 기준 QA
+- `pending` manual QA
   - Phase 25 계획과 first work-unit이 사용자가 읽고 이해 가능한지 확인한다.
-- `pending` implementation validation
+- `completed` implementation validation
   - 실제 UI나 persistence를 추가한 뒤 targeted validation을 수행한다.
-- `pending` Phase 25 manual checklist handoff
+- `completed` Phase 25 manual checklist handoff
   - 구현 단위가 끝나면 `PHASE25_TEST_CHECKLIST.md`를 실제 검수 항목으로 갱신한다.
 
 ## 5. Documentation Sync
@@ -64,9 +65,10 @@ Pre-Live 운영 점검 체계를 만드는 것이다.
 - `completed` second work-unit 문서 작성
 - `completed` Pre-Live candidate registry guide 작성
 - `completed` third work-unit 문서 작성
+- `completed` fourth work-unit 문서 작성
 - `completed` Phase 24 closeout 문서 sync
 - `completed` roadmap / doc index / work log / question log sync
-- `pending` Phase 25 구현 후 completion / next-phase 문서 갱신
+- `completed` Phase 25 구현 후 completion / next-phase 문서 갱신
 
 ## 현재 판단
 
@@ -75,6 +77,8 @@ Phase 25는 시작되었고,
 두 번째 작업으로 Pre-Live 후보 기록 포맷과 저장 위치도 고정했다.
 세 번째 작업으로 current candidate에서 Pre-Live 기록 초안을 만드는
 helper 기반 operator review workflow를 추가했다.
+네 번째 작업으로 `Backtest > Pre-Live Review` 패널을 추가해
+사용자가 UI에서 후보를 검토하고 저장할 수 있게 했다.
 
-다음 작업은 UI dashboard나 Backtest result entry point가 필요한지 판단하는 것이다.
+다음 작업은 사용자가 `PHASE25_TEST_CHECKLIST.md` 기준으로 manual QA를 진행하는 것이다.
 아직 live trading이나 투자 승인 기능은 열지 않는다.

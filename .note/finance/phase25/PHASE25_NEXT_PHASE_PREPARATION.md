@@ -4,17 +4,17 @@
 
 이 문서는 `Phase 25` 이후 어떤 질문으로 다음 phase를 여는 것이 자연스러운지 정리하기 위한 draft다.
 
-현재는 Phase 25 kickoff 직후 문서다.
+현재는 Phase 25 구현 1차 완료 후 manual QA 대기 문서다.
 Phase 25가 완료되면 실제 결과에 맞춰 다시 갱신한다.
 
 ## 현재 handoff 상태
 
-- Phase 25는 방금 시작되었다.
 - 현재 고정된 것은 `Real-Money 검증 신호`와 `Pre-Live 운영 점검`의 역할 분리다.
 - Pre-Live 후보 저장소는 `.note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl`로 정했다.
 - `manage_pre_live_candidate_registry.py` helper로 template / draft-from-current / list / show / append / validate를 지원한다.
 - current candidate에서 Pre-Live 기록 초안을 만드는 report/helper workflow는 추가했다.
-- 아직 Backtest UI에서 바로 Pre-Live 기록으로 넘기는 dashboard나 버튼은 완성되지 않았다.
+- `Backtest > Pre-Live Review` 패널에서 current candidate를 선택하고 Pre-Live 기록을 저장할 수 있다.
+- 현재 남은 것은 Phase 25 manual QA다.
 
 ## 다음 phase에서 더 중요한 질문
 

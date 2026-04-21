@@ -1698,3 +1698,18 @@ Detailed historical logs were archived on `2026-04-13`.
   - `draft-from-current value_lower_mdd_near_miss_pfcr` outputs a valid `watchlist` draft
 - Durable takeaway:
   - Phase 25 now has a helper/report-based entry point for converting current candidates into Pre-Live operating drafts, without automatically approving or saving anything.
+
+### 2026-04-21
+- Added the Phase 25 Pre-Live Review UI entry point.
+- Changed:
+  - added `Pre-Live Review` as a fourth Backtest panel
+  - added a current-candidate-to-Pre-Live review UI in `app/web/pages/backtest.py`
+  - users can select a current candidate, review Real-Money signals, choose a Pre-Live status, edit operator reason / next action / review date, inspect the JSON draft, and save explicitly
+  - saved active records are shown in the same panel's `Pre-Live Registry` tab
+  - added `PHASE25_PRE_LIVE_REVIEW_UI_FOURTH_WORK_UNIT.md`
+  - updated Phase 25 TODO, checklist, completion/next docs, roadmap, doc index, comprehensive analysis, Pre-Live guide, and web UI flow docs
+- Validation:
+  - `python3 -m py_compile app/web/pages/backtest.py` passed
+  - `.venv/bin/python` import of `app.web.pages.backtest` passed
+- Durable takeaway:
+  - Phase 25 implementation is now ready for user manual QA. The UI still does not enable live trading; it only records pre-live operating state.

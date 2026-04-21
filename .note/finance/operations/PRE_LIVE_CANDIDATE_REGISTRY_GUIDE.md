@@ -38,6 +38,7 @@ Pre-Live 단계에서는 아래 내용이 남아야 한다.
 | Current candidate registry | `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl` | current anchor, near-miss, scenario 후보 저장 |
 | Pre-Live candidate registry | `.note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl` | 후보의 pre-live 운영 상태 저장 |
 | Helper script | `plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py` | template / draft-from-current / list / show / append / validate |
+| UI | `Backtest > Pre-Live Review` | current candidate 선택, Pre-Live 초안 확인, 저장 record inspect |
 
 `PRE_LIVE_CANDIDATE_REGISTRY.jsonl`은 첫 row를 append할 때 생성된다.
 아직 row가 없으면 helper의 `validate` 명령은 "empty"로 통과한다.
@@ -71,6 +72,16 @@ Pre-Live 단계에서는 아래 내용이 남아야 한다.
 | `re_review` | 특정 날짜나 조건 이후 다시 확인 | 데이터가 더 쌓인 뒤 보거나 이벤트 이후 재검토 |
 
 ## 기본 사용 방법
+
+### 0. Backtest UI에서 사용
+
+앱 화면에서는 `Backtest > Pre-Live Review`에서 사용할 수 있다.
+
+- `Create From Current Candidate`: current candidate를 골라 Pre-Live 초안을 확인하고 저장한다.
+- `Pre-Live Registry`: 저장된 active Pre-Live record를 확인한다.
+
+이 화면도 투자 승인 화면이 아니다.
+`Save Pre-Live Record`는 실전 주문이 아니라 운영 기록 저장이다.
 
 ### 1. JSON template 확인
 
