@@ -12,7 +12,8 @@ Phase 25가 완료되면 실제 결과에 맞춰 다시 갱신한다.
 - Phase 25는 방금 시작되었다.
 - 현재 고정된 것은 `Real-Money 검증 신호`와 `Pre-Live 운영 점검`의 역할 분리다.
 - Pre-Live 후보 저장소는 `.note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl`로 정했다.
-- `manage_pre_live_candidate_registry.py` helper로 template / list / show / append / validate를 지원한다.
+- `manage_pre_live_candidate_registry.py` helper로 template / draft-from-current / list / show / append / validate를 지원한다.
+- current candidate에서 Pre-Live 기록 초안을 만드는 report/helper workflow는 추가했다.
 - 아직 Backtest UI에서 바로 Pre-Live 기록으로 넘기는 dashboard나 버튼은 완성되지 않았다.
 
 ## 다음 phase에서 더 중요한 질문

@@ -2390,3 +2390,15 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `source_candidate_registry_id`로 두 registry를 연결할 수 있게 했다
   - `manage_pre_live_candidate_registry.py` helper와 `PRE_LIVE_CANDIDATE_REGISTRY_GUIDE.md`를 추가했다
   - 아직 UI entry point나 실제 seed record는 추가하지 않았다. 다음 작업은 operator review workflow와 UI/report entry point 구체화다
+
+### 2026-04-21 - Phase 25 operator review는 먼저 helper 기반 초안 생성 흐름으로 시작한다
+- Request topic:
+  - 사용자가 Phase 25의 다음 작업 진행을 요청함
+- Interpreted goal:
+  - Pre-Live registry만 만든 상태에서 멈추지 않고, current candidate를 보고 `watchlist`, `paper_tracking`, `hold`, `reject`, `re_review` 중 어떤 운영 상태로 둘지 초안을 만드는 흐름이 필요함
+- Result:
+  - `manage_pre_live_candidate_registry.py draft-from-current <registry_id>` 명령을 추가했다
+  - 이 명령은 `CURRENT_CANDIDATE_REGISTRY.jsonl`의 후보를 읽어 Pre-Live 기록 초안을 출력한다
+  - 기본값은 출력만 하며, 실제 `.note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl` 저장은 `--append`가 있을 때만 수행한다
+  - 기본 상태 추천은 `paper_probation -> paper_tracking`, `watchlist -> watchlist`, blocker -> `hold`, reject/fail 계열 -> `reject`, 그 외 애매한 경우 -> `re_review`로 정리했다
+  - Backtest UI 버튼이나 dashboard는 아직 만들지 않았고, 다음 검토 대상으로 남겼다

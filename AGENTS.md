@@ -58,6 +58,7 @@
   - `python3 plugins/quant-finance-workflow/scripts/manage_current_candidate_registry.py list`
   - `python3 plugins/quant-finance-workflow/scripts/manage_current_candidate_registry.py validate`
 - For Pre-Live candidate operating records, use the repo-local pre-live registry helper when it is relevant:
+  - `python3 plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py draft-from-current <registry_id>`
   - `python3 plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py list`
   - `python3 plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py validate`
 - Default moments to run it:

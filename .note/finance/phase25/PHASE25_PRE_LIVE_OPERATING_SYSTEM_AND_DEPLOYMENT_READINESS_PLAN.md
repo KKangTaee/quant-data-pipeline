@@ -81,6 +81,8 @@ Phase 25는 그 다음 행동을 기록하고 반복할 수 있게 만든다.
    - 쉽게 말하면: 후보를 보고 `watchlist`, `paper tracking`, `hold`, `reject`, `re-review` 중 어디로 보낼지 정한다.
    - 왜 필요한가: 좋은 결과와 실제 운영 준비 상태는 다르기 때문이다.
    - 기대 효과: 사용자가 다음 행동을 화면이나 문서에서 놓치지 않는다.
+   - 현재 결정: `draft-from-current` helper로 current candidate에서 Pre-Live 기록 초안을 만들고,
+     운영자가 확인한 뒤 `--append`로 저장하는 report/helper 기반 흐름을 먼저 사용한다.
 
 4. Pre-Live dashboard / report draft
    - 쉽게 말하면: 관찰 중인 후보들을 한곳에서 볼 수 있는 초안을 만든다.
@@ -144,6 +146,8 @@ Phase 25는 그 다음 행동을 기록하고 반복할 수 있게 만든다.
 
 - 무엇을 바꾸는가:
   - operator가 후보를 어떤 상태로 보낼지 선택하고 확인하는 흐름을 만든다.
+  - 먼저 `manage_pre_live_candidate_registry.py draft-from-current <registry_id>`로
+    current candidate에서 Pre-Live 기록 초안을 만드는 entry point를 추가했다.
 - 왜 필요한가:
   - 현재는 Real-Money 결과를 본 뒤 다음 행동이 사람 머릿속에 남기 쉽다.
 - 끝나면 좋아지는 점:
@@ -162,7 +166,8 @@ Phase 25는 그 다음 행동을 기록하고 반복할 수 있게 만든다.
 
 - Pre-Live 후보 기록은 파일 기반 registry로 먼저 둔다.
 - 기존 `CURRENT_CANDIDATE_REGISTRY.jsonl`과 새 Pre-Live 기록은 분리하고, 필요할 때 `source_candidate_registry_id`로 연결한다.
-- `Backtest` 결과 화면에서 Pre-Live로 넘기는 버튼 또는 report-only workflow가 필요한지 검토한다.
+- report/helper workflow는 먼저 추가했다.
+- 다음에는 `Backtest` 결과 화면에서 Pre-Live로 넘기는 버튼이나 dashboard가 필요한지 검토한다.
 
 ## 한 줄 정리
 

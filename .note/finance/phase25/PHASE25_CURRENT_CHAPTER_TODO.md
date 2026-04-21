@@ -37,11 +37,14 @@ Pre-Live 운영 점검 체계를 만드는 것이다.
 
 ## 3. Operator Review Workflow
 
-- `in_progress` 상태 전환 기준 정의
+- `completed` 상태 전환 기준 정의
   - `watchlist`, `paper_tracking`, `hold`, `reject`, `re_review`를 어떤 경우에 쓰는지 정한다.
-- `pending` UI 또는 report entry point 검토
+- `completed` report/helper entry point 추가
+  - `manage_pre_live_candidate_registry.py draft-from-current <registry_id>`로 current candidate에서 Pre-Live 기록 초안을 만든다.
+  - 기본값은 출력만 하며, `--append`를 붙일 때만 실제 registry에 저장한다.
+- `pending` UI dashboard 또는 Backtest result entry point 검토
   - Backtest result에서 바로 Pre-Live 기록으로 넘길지,
-    먼저 report-only workflow로 시작할지 검토한다.
+    helper 기반 workflow만 유지할지 검토한다.
 
 ## 4. Validation
 
@@ -60,6 +63,7 @@ Pre-Live 운영 점검 체계를 만드는 것이다.
 - `completed` first work-unit 문서 작성
 - `completed` second work-unit 문서 작성
 - `completed` Pre-Live candidate registry guide 작성
+- `completed` third work-unit 문서 작성
 - `completed` Phase 24 closeout 문서 sync
 - `completed` roadmap / doc index / work log / question log sync
 - `pending` Phase 25 구현 후 completion / next-phase 문서 갱신
@@ -69,6 +73,8 @@ Pre-Live 운영 점검 체계를 만드는 것이다.
 Phase 25는 시작되었고,
 첫 번째 작업인 `Pre-Live 경계와 운영 상태 정의`는 완료했다.
 두 번째 작업으로 Pre-Live 후보 기록 포맷과 저장 위치도 고정했다.
+세 번째 작업으로 current candidate에서 Pre-Live 기록 초안을 만드는
+helper 기반 operator review workflow를 추가했다.
 
-다음 작업은 operator review workflow를 구체화하는 것이다.
+다음 작업은 UI dashboard나 Backtest result entry point가 필요한지 판단하는 것이다.
 아직 live trading이나 투자 승인 기능은 열지 않는다.

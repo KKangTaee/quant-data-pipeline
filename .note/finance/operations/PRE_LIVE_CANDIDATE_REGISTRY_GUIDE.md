@@ -37,7 +37,7 @@ Pre-Live 단계에서는 아래 내용이 남아야 한다.
 |---|---|---|
 | Current candidate registry | `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl` | current anchor, near-miss, scenario 후보 저장 |
 | Pre-Live candidate registry | `.note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl` | 후보의 pre-live 운영 상태 저장 |
-| Helper script | `plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py` | list / show / append / validate / template |
+| Helper script | `plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py` | template / draft-from-current / list / show / append / validate |
 
 `PRE_LIVE_CANDIDATE_REGISTRY.jsonl`은 첫 row를 append할 때 생성된다.
 아직 row가 없으면 helper의 `validate` 명령은 "empty"로 통과한다.
@@ -101,6 +101,46 @@ python3 plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registr
 ```bash
 python3 plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py append --json-file path/to/pre_live_row.json
 ```
+
+### 6. current candidate에서 Pre-Live 초안 만들기
+
+```bash
+python3 plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py draft-from-current value_current_anchor_top14_psr
+```
+
+이 명령은 `CURRENT_CANDIDATE_REGISTRY.jsonl`의 후보를 읽어서
+Pre-Live 기록 초안을 출력한다.
+기본값은 출력만 하며, 실제 registry에는 저장하지 않는다.
+
+운영자가 초안을 확인한 뒤 실제로 저장하려면 아래처럼 `--append`를 붙인다.
+
+```bash
+python3 plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py draft-from-current value_current_anchor_top14_psr --append
+```
+
+주의:
+
+- `--append`는 실제 운영 기록을 남기는 명령이다.
+- 단순 확인이나 QA 중에는 `--append` 없이 초안만 확인한다.
+- 상태를 직접 바꾸려면 `--pre-live-status watchlist`처럼 override한다.
+
+## 상태 추천 기준
+
+`draft-from-current`는 current candidate의 Real-Money 신호를 읽어
+기본 Pre-Live 상태를 추천한다.
+
+| Real-Money 신호 | 추천 상태 | 뜻 |
+|---|---|---|
+| `shortlist = paper_probation` | `paper_tracking` | 실제 돈 없이 추적해 볼 후보 |
+| `shortlist = small_capital_trial` | `paper_tracking` | 소액 검토 전 먼저 종이 추적할 후보 |
+| `shortlist = watchlist` | `watchlist` | 다시 볼 가치는 있지만 아직 paper tracking 전 |
+| blocker가 있음 | `hold` | 문제를 풀기 전에는 진행하지 않음 |
+| reject / fail 계열 신호 | `reject` | 현재 기준에서는 추적 종료 |
+| 그 외 판단 애매한 경우 | `re_review` | 정해진 날짜에 다시 보기 |
+
+이 추천은 자동 승인이나 투자 판단이 아니다.
+초안을 빠르게 만들기 위한 운영 보조 규칙이며,
+운영자가 이유와 다음 행동을 수정할 수 있다.
 
 ## 운영 기준
 

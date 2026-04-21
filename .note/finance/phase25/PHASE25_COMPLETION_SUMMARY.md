@@ -51,6 +51,14 @@ Phase 25가 끝나면 실제 완료 내용과 남은 blocker를 기준으로 갱
 
 - 좋은 백테스트 결과를 바로 실전 투입으로 착각하지 않게 중간 운영 단계를 만든다.
 
+현재 완료된 내용:
+
+- `draft-from-current` helper entry point를 추가했다.
+- current candidate를 Pre-Live 기록 초안으로 변환할 수 있다.
+- 기본값은 초안 출력이며, `--append`를 붙일 때만 실제 registry에 저장된다.
+- 상태 추천 기준은 `paper_probation -> paper_tracking`, `watchlist -> watchlist`,
+  blocker -> `hold`, reject/fail 계열 -> `reject`, 그 외 애매한 경우 -> `re_review`로 정리했다.
+
 ## 지금까지 완료된 것
 
 - Phase 24를 `complete` / `manual_qa_completed`로 닫았다.
@@ -59,11 +67,12 @@ Phase 25가 끝나면 실제 완료 내용과 남은 blocker를 기준으로 갱
 - Real-Money 검증 신호와 Pre-Live 운영 점검의 차이를 Phase 25 문서에 반영했다.
 - Phase 25의 두 번째 작업 단위로 `Pre-Live Candidate Record Contract`를 정의했다.
 - Pre-Live candidate registry 저장 위치와 helper script를 추가했다.
+- Phase 25의 세 번째 작업 단위로 `Operator Review Workflow`를 추가했다.
+- current candidate에서 Pre-Live 운영 기록 초안을 만드는 `draft-from-current` 명령을 추가했다.
 
 ## 아직 남아 있는 것
 
-- UI 또는 report entry point 설계
-- operator review 상태 전환 기준 구현
+- Backtest UI 안에서 바로 Pre-Live 초안을 만드는 버튼이나 dashboard가 필요한지 판단
 - implementation 후 manual QA checklist 갱신
 
 ## closeout 판단
@@ -75,4 +84,5 @@ Phase 25가 끝나면 실제 완료 내용과 남은 blocker를 기준으로 갱
 
 - 이번 phase의 방향은 잡혔다.
 - 후보 기록소와 helper도 생겼다.
-- 다음부터는 그 기록을 어떤 workflow에서 생성하고 검토할지 붙여야 한다.
+- helper 기반 operator review workflow도 생겼다.
+- 다음부터는 UI dashboard가 필요한지, 아니면 helper/report workflow로 충분한지 확인해야 한다.

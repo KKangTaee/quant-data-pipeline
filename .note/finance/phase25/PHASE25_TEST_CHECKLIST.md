@@ -6,7 +6,8 @@
 사용자가 실제로 이해하고 검수할 수 있는지 확인하기 위한 문서다.
 
 현재는 kickoff 직후 draft다.
-실제 UI 또는 저장 기능이 추가되면 확인 위치와 체크 항목을 더 구체적으로 갱신한다.
+현재 확인 대상은 `helper 기반 Pre-Live 초안 생성 흐름`이다.
+Backtest UI 안의 버튼이나 dashboard는 아직 별도 QA 대상이 아니다.
 
 ## 사용 방법
 
@@ -40,11 +41,26 @@
 ## 3. operator review workflow 확인
 
 - 확인 위치:
-  - 다음 작업에서 추가될 operator review workflow 문서 또는 UI
+  - `.note/finance/phase25/PHASE25_OPERATOR_REVIEW_WORKFLOW_THIRD_WORK_UNIT.md`
+  - `.note/finance/operations/PRE_LIVE_CANDIDATE_REGISTRY_GUIDE.md`
+  - `plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py`
+- 확인 방법:
+  - current candidate 목록을 먼저 확인한다.
+    ```bash
+    python3 plugins/quant-finance-workflow/scripts/manage_current_candidate_registry.py list
+    ```
+  - 그중 하나를 골라 Pre-Live 초안을 출력한다.
+    ```bash
+    python3 plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py draft-from-current value_current_anchor_top14_psr
+    ```
+  - 실제 저장이 아니라 초안 확인만 할 때는 `--append`를 붙이지 않는다.
 - 체크 항목:
-  - [ ] 사용자가 결과를 보고 `watchlist`, `paper tracking`, `hold`, `reject`, `re-review` 중 다음 행동을 고를 수 있는지
-  - [ ] 선택한 상태가 단순 메모가 아니라 나중에 다시 찾을 수 있는 기록으로 남는지
-  - [ ] Real-Money 검증 신호와 Pre-Live 운영 상태가 화면에서 섞여 보이지 않는지
+  - [ ] `draft-from-current` 결과에서 원본 후보 id가 `source_candidate_registry_id`로 연결되는지
+  - [ ] `shortlist = paper_probation` 후보가 기본적으로 `pre_live_status = paper_tracking` 초안으로 나오는지
+  - [ ] `shortlist = watchlist` 후보가 기본적으로 `pre_live_status = watchlist` 초안으로 나오는지
+  - [ ] `operator_reason`, `next_action`, `tracking_plan`이 사람이 읽을 수 있는 설명으로 채워지는지
+  - [ ] `--append`를 붙일 때만 실제 `.note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl`에 저장된다는 점이 이해되는지
+  - [ ] Real-Money 검증 신호와 Pre-Live 운영 상태가 문서와 helper output에서 구분되어 보이는지
 
 ## 4. 문서와 closeout 확인
 

@@ -2371,6 +2371,7 @@ Real-Money 검증 신호를 본 뒤,
   - `.note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl`
 - helper:
   - `plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py`
+  - current candidate에서 초안을 만들 때는 `draft-from-current <registry_id>`를 사용한다.
 - `CURRENT_CANDIDATE_REGISTRY.jsonl`과의 차이:
   - current candidate registry는 후보 자체를 저장한다.
   - pre-live candidate registry는 그 후보의 운영 상태와 다음 행동을 저장한다.

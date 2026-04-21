@@ -1682,3 +1682,19 @@ Detailed historical logs were archived on `2026-04-13`.
   - `manage_current_candidate_registry.py validate` still passes for existing current candidate records
 - Durable takeaway:
   - `CURRENT_CANDIDATE_REGISTRY.jsonl` defines the candidate; `PRE_LIVE_CANDIDATE_REGISTRY.jsonl` records how that candidate is handled before live use.
+
+### 2026-04-21
+- Advanced Phase 25 into the operator review workflow work unit.
+- Changed:
+  - added `PHASE25_OPERATOR_REVIEW_WORKFLOW_THIRD_WORK_UNIT.md`
+  - extended `manage_pre_live_candidate_registry.py` with `draft-from-current <registry_id>`
+  - mapped current candidate Real-Money signals into default Pre-Live statuses:
+    `paper_probation -> paper_tracking`, `watchlist -> watchlist`, blockers -> `hold`, reject/fail signals -> `reject`, otherwise `re_review`
+  - kept the workflow safe by making draft output the default and requiring `--append` for actual registry writes
+  - updated Phase 25 TODO, checklist, completion draft, next-phase draft, operations guide, automation guide, doc index, comprehensive analysis, AGENTS, and active finance-doc-sync guidance
+- Validation:
+  - `py_compile` passed for `manage_pre_live_candidate_registry.py`
+  - `draft-from-current value_current_anchor_top14_psr` outputs a valid `paper_tracking` draft
+  - `draft-from-current value_lower_mdd_near_miss_pfcr` outputs a valid `watchlist` draft
+- Durable takeaway:
+  - Phase 25 now has a helper/report-based entry point for converting current candidates into Pre-Live operating drafts, without automatically approving or saving anything.

@@ -12,7 +12,7 @@
 | `plugins/quant-finance-workflow/scripts/bootstrap_finance_phase_bundle.py` | 새 phase 문서 bundle 생성 |
 | `plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py` | phase / docs / logs / generated artifact hygiene 점검 |
 | `plugins/quant-finance-workflow/scripts/manage_current_candidate_registry.py` | current candidate registry list / show / validate / append |
-| `plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py` | pre-live candidate registry template / list / show / validate / append |
+| `plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py` | pre-live candidate registry template / draft-from-current / list / show / validate / append |
 
 ## Phase bundle bootstrap
 
@@ -86,6 +86,7 @@ python3 plugins/quant-finance-workflow/scripts/manage_current_candidate_registry
 
 ```bash
 python3 plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py template
+python3 plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py draft-from-current value_current_anchor_top14_psr
 python3 plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py list
 python3 plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py validate
 ```
@@ -94,6 +95,8 @@ python3 plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registr
 
 - `manage_current_candidate_registry.py`는 후보 자체의 기준점을 관리한다.
 - `manage_pre_live_candidate_registry.py`는 그 후보를 실전 전 어떻게 관찰하거나 보류할지 관리한다.
+- `draft-from-current`는 current candidate를 Pre-Live 기록 초안으로 바꾼다.
+  기본값은 출력만 하며, `--append`를 붙일 때만 실제 registry에 저장한다.
 
 ## 새 script를 추가할 때 기록 기준
 
