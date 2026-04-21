@@ -183,6 +183,7 @@
   - `manual_qa_pending`
   - `manual_qa_completed`
   - `smoke_checked`
+  - `superseded_by_later_phase`
   - `legacy_unknown`
   - `not_applicable`
 - Treat older labels such as `completed`, `first_chapter_completed`, `completed / manual_validation_pending`, and `phase_complete / manual_validation_completed` as legacy shorthand. Explain or normalize them when editing phase indexes.

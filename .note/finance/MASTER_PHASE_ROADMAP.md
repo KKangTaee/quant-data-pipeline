@@ -1445,6 +1445,11 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 이 프로젝트는 별도 chapter 체계를 도입하지 않고,
 phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 
+주의:
+- 이 문서의 위쪽 phase별 상세 기록에는 당시 기준의 legacy 상태 표현이 남아 있을 수 있다.
+- 현재 gate 판단은 아래 `현재 위치` 표와
+  `.note/finance/phase26/PHASE26_BACKLOG_REBASE_AND_FOUNDATION_GAP_MAP.md`를 우선한다.
+
 | Phase | 진행 상태 | 검증 상태 | 현재 해석 |
 |---|---|---|---|
 | Phase 1 | `complete` | `legacy_unknown` | 과거 완료 phase. 필요 시 과거 문서 확인 |
@@ -1454,17 +1459,17 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 | Phase 5 | `partial_complete` | `legacy_unknown` | legacy `first_chapter_completed` 표현을 `partial_complete`로 읽음 |
 | Phase 6 | `complete` | `legacy_unknown` | 과거 완료 phase. 필요 시 과거 문서 확인 |
 | Phase 7 | `complete` | `legacy_unknown` | 과거 완료 phase. 필요 시 과거 문서 확인 |
-| Phase 8 | `implementation_complete` | `manual_qa_pending` | 사용자 QA 필요 |
-| Phase 9 | `implementation_complete` | `manual_qa_pending` | 사용자 QA 필요 |
+| Phase 8 | `complete` | `superseded_by_later_phase` | Phase 23 quarterly productionization에 흡수 |
+| Phase 9 | `complete` | `superseded_by_later_phase` | Phase 10/12/23/25 흐름에 흡수 |
 | Phase 10 | `complete` | `legacy_unknown` | 과거 완료 phase. 필요 시 과거 문서 확인 |
 | Phase 11 | `complete` | `legacy_unknown` | 과거 완료 phase. 필요 시 과거 문서 확인 |
-| Phase 12 | `practical_closeout` | `manual_qa_pending` | 사용자 QA 필요 |
-| Phase 13 | `implementation_complete` | `manual_qa_pending` | 사용자 QA 필요 |
-| Phase 14 | `practical_closeout` | `manual_qa_pending` | 사용자 QA 필요 |
-| Phase 15 | `practical_closeout` | `manual_qa_pending` | 사용자 QA 필요 |
+| Phase 12 | `complete` | `superseded_by_later_phase` | Real-Money first pass가 Phase 13~15/25에 흡수 |
+| Phase 13 | `complete` | `superseded_by_later_phase` | probation language가 Phase 25 Pre-Live로 재정의 |
+| Phase 14 | `complete` | `superseded_by_later_phase` | calibration 설계가 Phase 27~29 입력으로 정리 |
+| Phase 15 | `complete` | `superseded_by_later_phase` | candidate workflow가 registry/report 흐름으로 흡수 |
 | Phase 16 | `complete` | `legacy_unknown` | 과거 완료 phase. 필요 시 과거 문서 확인 |
 | Phase 17 | `complete` | `legacy_unknown` | 과거 완료 phase. 필요 시 과거 문서 확인 |
-| Phase 18 | `practical_closeout` | `manual_qa_pending` | 사용자 QA 필요 |
+| Phase 18 | `complete` | `superseded_by_later_phase` | 남은 구조 작업은 future structural option |
 | Phase 19 | `complete` | `manual_qa_completed` | 완료 |
 | Phase 20 | `complete` | `manual_qa_completed` | 완료 |
 | Support Track | `complete` | `not_applicable` | phase가 아닌 지원 도구 흐름 |
@@ -1473,7 +1478,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 | Phase 23 | `complete` | `manual_qa_completed` | 완료 |
 | Phase 24 | `complete` | `manual_qa_completed` | 완료 |
 | Phase 25 | `complete` | `manual_qa_completed` | 완료 |
-| Phase 26 | `active` | `not_ready_for_qa` | foundation backlog rebase 진행 중 |
+| Phase 26 | `implementation_complete` | `manual_qa_pending` | checklist QA 필요 |
 | Phase 27 | `planned` | `not_ready_for_qa` | data integrity / backtest trust 예정 |
 | Phase 28 | `planned` | `not_ready_for_qa` | strategy family parity 예정 |
 | Phase 29 | `planned` | `not_ready_for_qa` | candidate review workflow 예정 |
@@ -1488,7 +1493,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
   `Phase 25`는 Real-Money 검증 신호와 Pre-Live 운영 점검의 경계를 고정했고,
   Pre-Live 후보 기록 포맷, 저장 위치, helper 기반 operator review workflow, `Backtest > Pre-Live Review` UI까지 구현했다.
   사용자 manual QA까지 완료했다.
-  현재는 `Phase 26`을 열어 Phase 27~30으로 가기 전 과거 backlog와 foundation gap을 재정렬한다.
+  `Phase 26`은 과거 pending 상태와 foundation gap을 재분류했고, 이제 사용자 checklist QA가 남아 있다.
 
 ---
 
@@ -1510,7 +1515,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 
 | Phase | 이름 | 진행 상태 | 검증 상태 | 쉽게 말하면 |
 |---|---|---|---|---|
-| Phase 26 | Foundation Stabilization And Backlog Rebase | `active` | `not_ready_for_qa` | 과거 backlog와 pending 상태를 현재 제품 기준으로 다시 정리한다 |
+| Phase 26 | Foundation Stabilization And Backlog Rebase | `implementation_complete` | `manual_qa_pending` | 과거 backlog와 pending 상태를 현재 제품 기준으로 다시 정리했다 |
 | Phase 27 | Data Integrity And Backtest Trust Layer | `planned` | `not_ready_for_qa` | 백테스트 전에 데이터가 믿을 만한지, 어디까지 계산 가능한지 보여준다 |
 | Phase 28 | Strategy Family Parity And Cadence Completion | `planned` | `not_ready_for_qa` | annual / quarterly / 신규 전략이 같은 수준의 옵션과 저장 / replay 흐름을 갖게 한다 |
 | Phase 29 | Candidate Review And Recommendation Workflow | `planned` | `not_ready_for_qa` | 백테스트 결과를 후보, near miss, watchlist, pre-live 흐름으로 표준화한다 |
@@ -1527,9 +1532,9 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 - 특히 Phase 18 structural backlog와 Phase 8/9/12~15의 pending 상태가 현재도 blocker인지 먼저 봐야 한다.
 
 ### 현재 메모
-- Phase 26은 active phase다.
-- 첫 작업 단위는 `Phase Status And Backlog Rebase`다.
-- 새 전략 구현이나 deep backtest는 아직 하지 않는다.
+- Phase 26 implementation은 완료되었고 사용자 checklist QA가 남아 있다.
+- 과거 pending 상태는 immediate blocker가 아니라 Phase 27~30 입력 또는 future option으로 재분류했다.
+- 새 전략 구현이나 deep backtest는 이번 phase에서 하지 않았다.
 
 ### Phase 27. Data Integrity And Backtest Trust Layer
 

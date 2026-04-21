@@ -2372,6 +2372,9 @@ same-gate lower-MDD 후보를 만들기 어려웠기 때문에,
   - 사용자 checklist 확인까지 끝났다.
 - `smoke_checked`
   - 최소 자동/스모크 검증은 됐다.
+- `superseded_by_later_phase`
+  - 예전 checklist나 pending 상태가 이후 phase 구현 / QA / closeout에 흡수되어,
+    현재 별도 manual QA gate로 다시 열 필요가 없다.
 - `legacy_unknown`
   - 예전 phase라 검증 상태가 명확히 분리되어 남아 있지 않다.
 - `not_applicable`

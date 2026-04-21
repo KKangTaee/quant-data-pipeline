@@ -2,15 +2,16 @@
 
 ## 목적
 
-이 문서는 Phase 26 이후 어떤 질문으로 Phase 27을 여는 것이 자연스러운지 정리하기 위한 draft다.
+이 문서는 Phase 26 이후 어떤 질문으로 Phase 27을 여는 것이 자연스러운지 정리하기 위한 handoff 문서다.
 
 현재 예상되는 Phase 27은 `Data Integrity And Backtest Trust Layer`다.
 
 ## 현재 handoff 상태
 
 - Phase 25까지 Pre-Live Review workflow는 닫혔다.
-- Phase 26에서는 과거 backlog와 현재 foundation gap을 다시 정리한다.
-- Phase 26이 끝나면 가장 먼저 다룰 가능성이 큰 영역은 데이터 신뢰성과 백테스트 preflight다.
+- Phase 26에서는 과거 backlog와 현재 foundation gap을 다시 정리했다.
+- Phase 26 결과, 가장 먼저 다룰 영역은 데이터 신뢰성과 백테스트 preflight로 정리되었다.
+- Phase 27 구현은 Phase 26 checklist QA 이후 시작한다.
 
 ## 다음 phase에서 더 중요한 질문
 

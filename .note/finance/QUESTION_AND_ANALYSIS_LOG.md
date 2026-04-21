@@ -2448,3 +2448,14 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Phase 29는 `Candidate Review And Recommendation Workflow`
   - Phase 30은 `Portfolio Proposal And Pre-Live Monitoring Surface`로 정했다
   - Live Readiness / Final Approval은 Phase 30 이후 별도 phase 후보로 분리했다
+
+### 2026-04-21 - Phase 26은 과거 pending phase를 현재 기준으로 재분류한다
+- Request topic:
+  - 사용자가 Phase 26을 끝까지 진행하고 마지막에 checklist를 공유해 달라고 요청함
+- Interpreted goal:
+  - Phase 8, 9, 12~15, 18의 오래된 `manual_qa_pending` / `practical_closeout` 상태가 현재 Phase 27 진입을 막는지 재분류해야 함
+- Result:
+  - 해당 phase들은 현재 immediate blocker가 아니라 이후 phase 구현과 QA에 흡수된 historical gate로 판단했다
+  - roadmap / index에서는 `complete / superseded_by_later_phase`로 재분류했다
+  - Phase 27 입력은 data integrity / backtest trust, Phase 28 입력은 strategy family parity, Phase 29 입력은 candidate review workflow, Phase 30 입력은 portfolio proposal / pre-live monitoring으로 나눴다
+  - Live Readiness / Final Approval은 여전히 Phase 30 이후 별도 phase로 둔다

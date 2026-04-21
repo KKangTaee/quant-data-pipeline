@@ -5,8 +5,7 @@
 이 checklist는 Phase 26에서 정리한 roadmap / backlog / foundation gap이
 사용자가 읽고 다음 phase로 넘어갈 수 있을 만큼 명확한지 확인하기 위한 문서다.
 
-현재는 kickoff draft다.
-Phase 26 implementation이 끝나면 실제 확인 항목으로 다시 갱신한다.
+현재는 Phase 26 implementation 완료 후 사용자 QA를 위한 checklist다.
 
 ## 사용 방법
 
@@ -19,6 +18,7 @@ Phase 26 implementation이 끝나면 실제 확인 항목으로 다시 갱신한
 
 - 확인 위치:
   - `.note/finance/phase26/PHASE26_FOUNDATION_STABILIZATION_AND_BACKLOG_REBASE_PLAN.md`
+  - `.note/finance/phase26/PHASE26_BACKLOG_REBASE_AND_FOUNDATION_GAP_MAP.md`
 - 체크 항목:
   - [ ] Phase 26이 새 전략 구현이나 투자 분석이 아니라 backlog / foundation 정리 phase라는 점이 이해되는지
   - [ ] Live Readiness / Final Approval이 Phase 26~30 이후 과제로 분리되어 있는지
@@ -29,14 +29,17 @@ Phase 26 implementation이 끝나면 실제 확인 항목으로 다시 갱신한
 - 확인 위치:
   - `.note/finance/MASTER_PHASE_ROADMAP.md`
   - `.note/finance/FINANCE_DOC_INDEX.md`
+  - `.note/finance/phase26/PHASE26_BACKLOG_REBASE_AND_FOUNDATION_GAP_MAP.md`
 - 체크 항목:
+  - [ ] Phase 8, 9, 12~15, 18이 왜 우선 재분류 대상이었는지 이해되는지
   - [ ] 과거 phase의 pending 상태가 현재 blocker인지 future option인지 구분되어 있는지
+  - [ ] `superseded_by_later_phase`가 "무시"가 아니라 "이후 phase에 흡수됨"이라는 뜻으로 읽히는지
   - [ ] Phase 18 remaining structural backlog가 다음 개발 흐름에서 어떻게 다뤄질지 이해되는지
 
 ## 3. Foundation gap 확인
 
 - 확인 위치:
-  - Phase 26 작업 결과 문서
+  - `.note/finance/phase26/PHASE26_BACKLOG_REBASE_AND_FOUNDATION_GAP_MAP.md`
 - 체크 항목:
   - [ ] 데이터 / 백테스트 신뢰성 gap이 Phase 27 입력으로 정리되어 있는지
   - [ ] annual / quarterly / 신규 전략 parity gap이 Phase 28 입력으로 정리되어 있는지

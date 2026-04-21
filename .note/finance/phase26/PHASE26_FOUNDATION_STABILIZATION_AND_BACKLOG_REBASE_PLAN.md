@@ -124,9 +124,10 @@ Phase 26은 새 기능을 크게 붙이기 전에 책상을 한번 정리하는 
 
 ## 다음에 확인할 것
 
-- Phase 8, 9, 12~15, 18의 pending 상태가 지금도 사용자 QA blocker인지
-- Phase 18 remaining structural backlog가 Phase 28로 넘어가야 하는지, future option으로 남겨도 되는지
-- Phase 27에서 먼저 잡아야 할 데이터 신뢰성 이슈가 무엇인지
+- 재분류 결과는 `.note/finance/phase26/PHASE26_BACKLOG_REBASE_AND_FOUNDATION_GAP_MAP.md`에서 확인한다.
+- Phase 8, 9, 12~15, 18의 pending 상태는 현재 immediate blocker가 아니라 `superseded_by_later_phase`로 재분류했다.
+- Phase 18 remaining structural backlog는 Phase 28의 future structural option으로 유지한다.
+- Phase 27에서 먼저 잡아야 할 데이터 신뢰성 이슈는 common-date truncation, stale/missing ticker, malformed price row, statement coverage semantics다.
 
 ## 한 줄 정리
 

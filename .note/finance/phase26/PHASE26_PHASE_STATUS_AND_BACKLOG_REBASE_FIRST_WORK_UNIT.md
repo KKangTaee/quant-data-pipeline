@@ -42,6 +42,10 @@
 - Phase 27~30 입력으로 넘길 항목 목록
 - Live Readiness / Final Approval을 Phase 30 이후로 두는 boundary note
 
+결과 문서:
+
+- `.note/finance/phase26/PHASE26_BACKLOG_REBASE_AND_FOUNDATION_GAP_MAP.md`
+
 ## 아직 하지 않는 것
 
 - 예전 phase 전체 manual QA 재실행
