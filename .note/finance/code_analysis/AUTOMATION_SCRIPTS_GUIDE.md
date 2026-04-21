@@ -12,6 +12,7 @@
 | `plugins/quant-finance-workflow/scripts/bootstrap_finance_phase_bundle.py` | 새 phase 문서 bundle 생성 |
 | `plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py` | phase / docs / logs / generated artifact hygiene 점검 |
 | `plugins/quant-finance-workflow/scripts/manage_current_candidate_registry.py` | current candidate registry list / show / validate / append |
+| `plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py` | pre-live candidate registry template / list / show / validate / append |
 
 ## Phase bundle bootstrap
 
@@ -73,6 +74,27 @@ python3 plugins/quant-finance-workflow/scripts/manage_current_candidate_registry
 python3 plugins/quant-finance-workflow/scripts/manage_current_candidate_registry.py validate
 ```
 
+## Pre-Live candidate registry helper
+
+사용 시점:
+
+- Real-Money 검증 신호 이후 후보를 watchlist / paper tracking / hold / reject / re-review로 기록할 때
+- `.note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl` 형식이 깨지지 않았는지 확인할 때
+- current candidate와 pre-live 운영 상태를 분리해서 관리할 때
+
+대표 명령:
+
+```bash
+python3 plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py template
+python3 plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py list
+python3 plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py validate
+```
+
+역할 분리:
+
+- `manage_current_candidate_registry.py`는 후보 자체의 기준점을 관리한다.
+- `manage_pre_live_candidate_registry.py`는 그 후보를 실전 전 어떻게 관찰하거나 보류할지 관리한다.
+
 ## 새 script를 추가할 때 기록 기준
 
 새 helper script가 아래 중 하나에 해당하면 이 문서를 갱신한다.
@@ -87,6 +109,7 @@ python3 plugins/quant-finance-workflow/scripts/manage_current_candidate_registry
 ## 관련 문서
 
 - `../operations/CURRENT_CANDIDATE_REGISTRY_GUIDE.md`
+- `../operations/PRE_LIVE_CANDIDATE_REGISTRY_GUIDE.md`
 - `../operations/RUNTIME_ARTIFACT_HYGIENE.md`
 - `BACKTEST_REFINEMENT_CODE_FLOW_GUIDE.md`
 - `FINANCE_DOC_INDEX.md`

@@ -2353,3 +2353,24 @@ Legacy 표현:
 - `first_chapter_completed`
   - 정식 chapter 체계가 아니라, 예전 문서에서 "첫 번째 큰 작업 묶음이 끝났다"는 뜻으로 남은 표현이다.
   - 새 문서에서는 `partial_complete`로 바꿔 읽는다.
+
+---
+
+## Pre-Live Candidate Registry
+
+### 기본 설명
+Real-Money 검증 신호를 본 뒤,
+후보를 `watchlist`, `paper_tracking`, `hold`, `reject`, `re_review` 중 어디에 둘지 기록하는 JSONL 저장소다.
+
+### 왜 사용되는지
+좋아 보이는 백테스트 결과를 바로 투자 승인으로 넘기지 않고,
+실전 전 관찰 상태와 다음 행동을 남기기 위해 사용한다.
+
+### 예시 / 필요 상황
+- 파일 위치:
+  - `.note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl`
+- helper:
+  - `plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py`
+- `CURRENT_CANDIDATE_REGISTRY.jsonl`과의 차이:
+  - current candidate registry는 후보 자체를 저장한다.
+  - pre-live candidate registry는 그 후보의 운영 상태와 다음 행동을 저장한다.

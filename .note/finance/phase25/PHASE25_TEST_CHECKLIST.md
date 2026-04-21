@@ -28,16 +28,19 @@
 ## 2. 후보 기록 포맷 확인
 
 - 확인 위치:
-  - Phase 25에서 추가될 Pre-Live 후보 기록 문서 또는 UI
+  - `.note/finance/phase25/PHASE25_PRE_LIVE_CANDIDATE_RECORD_CONTRACT_SECOND_WORK_UNIT.md`
+  - `.note/finance/operations/PRE_LIVE_CANDIDATE_REGISTRY_GUIDE.md`
+  - `plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py`
 - 체크 항목:
-  - [ ] 후보 기록에 strategy / source run / 주요 설정 / Real-Money signal / blocker / next action / review date가 보이는지
-  - [ ] 후보가 왜 paper tracking 또는 watchlist에 들어갔는지 설명이 남는지
-  - [ ] 후보가 hold 상태라면 무엇이 해결되어야 하는지 알 수 있는지
+  - [ ] `CURRENT_CANDIDATE_REGISTRY.jsonl`은 후보 자체를 저장하고, `PRE_LIVE_CANDIDATE_REGISTRY.jsonl`은 후보의 운영 상태를 저장한다는 차이가 이해되는지
+  - [ ] 후보 기록 필드에 source / strategy_or_bundle / settings_snapshot / result_snapshot / real_money_signal / pre_live_status / operator_reason / next_action / review_date가 포함되는지
+  - [ ] `pre_live_status`가 `watchlist`, `paper_tracking`, `hold`, `reject`, `re_review` 중 하나로 정리되어 있는지
+  - [ ] helper script의 `template`, `list`, `show`, `append`, `validate` 역할이 이해되는지
 
 ## 3. operator review workflow 확인
 
 - 확인 위치:
-  - Phase 25에서 추가될 Backtest result handoff, report, 또는 Pre-Live dashboard
+  - 다음 작업에서 추가될 operator review workflow 문서 또는 UI
 - 체크 항목:
   - [ ] 사용자가 결과를 보고 `watchlist`, `paper tracking`, `hold`, `reject`, `re-review` 중 다음 행동을 고를 수 있는지
   - [ ] 선택한 상태가 단순 메모가 아니라 나중에 다시 찾을 수 있는 기록으로 남는지

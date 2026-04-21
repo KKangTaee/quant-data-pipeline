@@ -1667,3 +1667,18 @@ Detailed historical logs were archived on `2026-04-13`.
   - clarified that `first_chapter_completed` is legacy partial-completion wording, not a signal to introduce a formal chapter hierarchy
 - Durable takeaway:
   - Future phase management should stay phase-based, not chapter-based, and should separate work progress from QA/validation status.
+
+### 2026-04-21
+- Advanced Phase 25 from boundary definition into Pre-Live candidate record persistence.
+- Changed:
+  - added `plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py`
+  - defined `.note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl` as the append-only Pre-Live operating-state registry
+  - added `.note/finance/operations/PRE_LIVE_CANDIDATE_REGISTRY_GUIDE.md`
+  - added `PHASE25_PRE_LIVE_CANDIDATE_RECORD_CONTRACT_SECOND_WORK_UNIT.md`
+  - updated Phase 25 plan, TODO, checklist, completion draft, next-phase draft, roadmap, doc index, comprehensive analysis, automation guide, AGENTS, and active finance-doc-sync guidance
+- Validation:
+  - `py_compile` passed for the new pre-live registry helper and hygiene helper
+  - `manage_pre_live_candidate_registry.py validate` passes with an empty registry
+  - `manage_current_candidate_registry.py validate` still passes for existing current candidate records
+- Durable takeaway:
+  - `CURRENT_CANDIDATE_REGISTRY.jsonl` defines the candidate; `PRE_LIVE_CANDIDATE_REGISTRY.jsonl` records how that candidate is handled before live use.

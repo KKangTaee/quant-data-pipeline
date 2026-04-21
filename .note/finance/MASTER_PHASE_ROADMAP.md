@@ -1432,7 +1432,8 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 ### 현재 메모
 - Phase 25는 live trading이나 투자 승인 단계가 아니다.
 - 현재 첫 작업으로 `Real-Money 검증 신호`와 `Pre-Live 운영 점검`의 경계를 고정했다.
-- 다음 작업은 pre-live 후보 기록 포맷과 저장 위치를 정하는 것이다.
+- 두 번째 작업으로 Pre-Live 후보 기록 포맷과 `.note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl` 저장 위치를 고정했다.
+- 다음 작업은 operator review workflow와 UI/report entry point를 구체화하는 것이다.
 
 ---
 
@@ -1469,7 +1470,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 | Phase 22 | `complete` | `manual_qa_completed` | 완료 |
 | Phase 23 | `complete` | `manual_qa_completed` | 완료 |
 | Phase 24 | `complete` | `manual_qa_completed` | 완료 |
-| Phase 25 | `active` | `not_ready_for_qa` | 첫 작업 단위 완료, 다음 작업 진행 중 |
+| Phase 25 | `active` | `not_ready_for_qa` | 첫/두 번째 작업 단위 완료, operator workflow 진행 중 |
 
 한 줄 현재 판단:
 - current annual strict candidate와 portfolio bridge를 같은 frame에서 다시 본 `Phase 21`은 manual validation까지 완료되었고,
@@ -1478,7 +1479,8 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
   `Phase 24`는 `Global Relative Strength`를 첫 신규 전략 후보로 구현하고
   core/runtime smoke, `Backtest` UI, compare, history, saved replay, 사용자 QA까지 끝낸 상태다.
   현재는 `Phase 25`를 열어 Real-Money 검증 신호와 Pre-Live 운영 점검의 경계를 고정했고,
-  다음 작업은 pre-live 후보 기록 포맷과 저장 위치를 정하는 것이다.
+  Pre-Live 후보 기록 포맷과 저장 위치까지 정했다.
+  다음 작업은 operator review workflow와 UI/report entry point를 구체화하는 것이다.
 
 ---
 

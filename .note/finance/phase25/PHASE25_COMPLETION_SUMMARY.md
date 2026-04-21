@@ -8,9 +8,13 @@ closeout 시점에 정리하기 위한 문서다.
 현재는 kickoff 직후의 draft다.
 Phase 25가 끝나면 실제 완료 내용과 남은 blocker를 기준으로 갱신한다.
 
-## 현재 상태
+## 진행 상태
 
-- `active / first_work_unit_completed`
+- `active`
+
+## 검증 상태
+
+- `not_ready_for_qa`
 
 ## 이번 phase에서 완료해야 할 것
 
@@ -32,6 +36,13 @@ Phase 25가 끝나면 실제 완료 내용과 남은 blocker를 기준으로 갱
 
 - 나중에 다시 봐도 "왜 이 후보를 보고 있었는지" 잊어버리지 않게 만든다.
 
+현재 완료된 내용:
+
+- `.note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl`을 canonical 저장 위치로 정했다.
+- `CURRENT_CANDIDATE_REGISTRY.jsonl`과는 분리하고, 필요할 때 `source_candidate_registry_id`로 연결하기로 했다.
+- `manage_pre_live_candidate_registry.py` helper를 추가했다.
+- `operations/PRE_LIVE_CANDIDATE_REGISTRY_GUIDE.md`를 추가했다.
+
 ### 3. Operator review workflow
 
 - 후보를 watchlist, paper tracking, hold, reject, re-review 중 어디에 둘지 판단하는 흐름을 만든다.
@@ -42,14 +53,15 @@ Phase 25가 끝나면 실제 완료 내용과 남은 blocker를 기준으로 갱
 
 ## 지금까지 완료된 것
 
-- Phase 24를 `phase complete / manual_validation_completed`로 닫았다.
+- Phase 24를 `complete` / `manual_qa_completed`로 닫았다.
 - Phase 25 plan / TODO / checklist / next-phase draft를 생성했다.
 - Phase 25의 첫 작업 단위로 `Pre-Live Boundary And Operating Frame`을 정의했다.
 - Real-Money 검증 신호와 Pre-Live 운영 점검의 차이를 Phase 25 문서에 반영했다.
+- Phase 25의 두 번째 작업 단위로 `Pre-Live Candidate Record Contract`를 정의했다.
+- Pre-Live candidate registry 저장 위치와 helper script를 추가했다.
 
 ## 아직 남아 있는 것
 
-- 후보 기록 포맷의 실제 저장 위치 결정
 - UI 또는 report entry point 설계
 - operator review 상태 전환 기준 구현
 - implementation 후 manual QA checklist 갱신
@@ -62,4 +74,5 @@ Phase 25가 끝나면 실제 완료 내용과 남은 blocker를 기준으로 갱
 쉽게 말하면:
 
 - 이번 phase의 방향은 잡혔다.
-- 다음부터는 그 방향에 맞춰 실제 기록/운영 기능을 붙여야 한다.
+- 후보 기록소와 helper도 생겼다.
+- 다음부터는 그 기록을 어떤 workflow에서 생성하고 검토할지 붙여야 한다.

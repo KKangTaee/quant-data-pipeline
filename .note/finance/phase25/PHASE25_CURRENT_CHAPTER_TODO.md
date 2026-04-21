@@ -1,8 +1,12 @@
 # Phase 25 Current Chapter TODO
 
-## 상태
+## 진행 상태
 
-- `active / first_work_unit_completed`
+- `active`
+
+## 검증 상태
+
+- `not_ready_for_qa`
 
 ## 현재 목표
 
@@ -23,15 +27,17 @@ Pre-Live 운영 점검 체계를 만드는 것이다.
 
 ## 2. Pre-Live Candidate Record
 
-- `in_progress` 후보 기록 포맷 설계
+- `completed` 후보 기록 포맷 설계
   - source run, strategy, settings, Real-Money signal, blocker, next action, review date를 어떻게 남길지 정한다.
-- `pending` registry / report 위치 결정
-  - `CURRENT_CANDIDATE_REGISTRY.jsonl`과 별도로 둘지,
-    연결 pointer만 둘지 판단한다.
+- `completed` registry / report 위치 결정
+  - `PRE_LIVE_CANDIDATE_REGISTRY.jsonl`을 별도 운영 기록소로 둔다.
+  - `CURRENT_CANDIDATE_REGISTRY.jsonl`과는 `source_candidate_registry_id`로 연결한다.
+- `completed` helper script 추가
+  - `manage_pre_live_candidate_registry.py`로 template / list / show / append / validate를 지원한다.
 
 ## 3. Operator Review Workflow
 
-- `pending` 상태 전환 기준 정의
+- `in_progress` 상태 전환 기준 정의
   - `watchlist`, `paper_tracking`, `hold`, `reject`, `re_review`를 어떤 경우에 쓰는지 정한다.
 - `pending` UI 또는 report entry point 검토
   - Backtest result에서 바로 Pre-Live 기록으로 넘길지,
@@ -52,6 +58,8 @@ Pre-Live 운영 점검 체계를 만드는 것이다.
 - `completed` phase plan 문서 작성
 - `completed` current chapter TODO 문서 작성
 - `completed` first work-unit 문서 작성
+- `completed` second work-unit 문서 작성
+- `completed` Pre-Live candidate registry guide 작성
 - `completed` Phase 24 closeout 문서 sync
 - `completed` roadmap / doc index / work log / question log sync
 - `pending` Phase 25 구현 후 completion / next-phase 문서 갱신
@@ -60,6 +68,7 @@ Pre-Live 운영 점검 체계를 만드는 것이다.
 
 Phase 25는 시작되었고,
 첫 번째 작업인 `Pre-Live 경계와 운영 상태 정의`는 완료했다.
+두 번째 작업으로 Pre-Live 후보 기록 포맷과 저장 위치도 고정했다.
 
-다음 작업은 실제 후보 기록 포맷과 저장 위치를 정하는 것이다.
+다음 작업은 operator review workflow를 구체화하는 것이다.
 아직 live trading이나 투자 승인 기능은 열지 않는다.

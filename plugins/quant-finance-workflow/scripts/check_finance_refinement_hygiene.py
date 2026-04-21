@@ -35,6 +35,7 @@ INDEX_DOCS = {
 
 REGISTRY_DOCS = {
     ".note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl",
+    ".note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl",
     ".note/finance/EXPERIMENT_REGISTRY.jsonl",
 }
 

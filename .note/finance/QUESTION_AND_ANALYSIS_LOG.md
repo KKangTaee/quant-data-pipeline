@@ -2378,3 +2378,15 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `MASTER_PHASE_ROADMAP.md`의 현재 위치도 같은 구조로 바꿨다
   - `FINANCE_TERM_GLOSSARY.md`, `AGENTS.md`, active `finance-doc-sync` skill을 split status 기준으로 갱신했다
   - `first_chapter_completed`는 정식 chapter 체계가 아니라 legacy partial-completion 표현으로 정의했고, 새 문서에는 사용하지 않기로 했다
+
+### 2026-04-21 - Phase 25 Pre-Live 후보 기록은 current candidate와 분리된 운영 registry로 관리한다
+- Request topic:
+  - 사용자가 문서 정리가 충분하니 Phase 25를 계속 진행하자고 요청함
+- Interpreted goal:
+  - Phase 25 첫 작업의 경계 정의 다음 단계로, 후보를 실전 전 어떤 운영 상태에 둘지 기록하는 포맷과 저장 위치를 확정해야 함
+- Result:
+  - `.note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl`을 Pre-Live 운영 상태 전용 append-only registry로 정했다
+  - `CURRENT_CANDIDATE_REGISTRY.jsonl`은 후보 자체를 정의하고, Pre-Live registry는 해당 후보의 `watchlist`, `paper_tracking`, `hold`, `reject`, `re_review` 운영 상태를 기록하는 것으로 분리했다
+  - `source_candidate_registry_id`로 두 registry를 연결할 수 있게 했다
+  - `manage_pre_live_candidate_registry.py` helper와 `PRE_LIVE_CANDIDATE_REGISTRY_GUIDE.md`를 추가했다
+  - 아직 UI entry point나 실제 seed record는 추가하지 않았다. 다음 작업은 operator review workflow와 UI/report entry point 구체화다

@@ -27,6 +27,7 @@
 - Put durable finance research reference notes under `.note/finance/research/`.
 - Put support-track planning, plugin, skill, and workflow automation notes under `.note/finance/support_tracks/`.
 - For machine-readable persistence of current strongest candidates and important near-miss scenarios, prefer `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl` as the default append-only registry unless the scope clearly expands into a broader experiment registry.
+- For Pre-Live operating records after Real-Money review, use `.note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl` as the append-only registry. Keep it separate from `CURRENT_CANDIDATE_REGISTRY.jsonl`: current candidate registry defines the candidate, pre-live registry records watchlist / paper tracking / hold / reject / re-review operating state.
 - For durable backtest result reports whose primary purpose is to record:
   - tested strategy settings
   - result summaries
@@ -56,6 +57,9 @@
 - For current-candidate persistence or review, use the repo-local registry helper when it is relevant:
   - `python3 plugins/quant-finance-workflow/scripts/manage_current_candidate_registry.py list`
   - `python3 plugins/quant-finance-workflow/scripts/manage_current_candidate_registry.py validate`
+- For Pre-Live candidate operating records, use the repo-local pre-live registry helper when it is relevant:
+  - `python3 plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py list`
+  - `python3 plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py validate`
 - Default moments to run it:
   - after a meaningful refinement/document-sync unit
   - before commit
