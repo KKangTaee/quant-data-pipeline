@@ -27,9 +27,31 @@ Pre-Live 단계에서는 아래 내용이 남아야 한다.
 - 지금 상태가 watchlist인지, paper tracking인지, hold인지
 - 다음에 무엇을 해야 하는지
 - 언제 다시 볼 것인지
+- 어떤 주기로 확인할 것인지
+- 어떤 조건이면 중단하거나 다음 단계로 갈 것인지
 
 이 정보를 Markdown 문서에만 두면 나중에 자동화하거나 한눈에 모아 보기 어렵다.
 그래서 JSONL 기반 registry를 별도로 둔다.
+
+## 상태값과 다음 행동 기록의 차이
+
+`watchlist`, `paper_tracking`, `hold`, `reject`, `re_review`는 상태값이다.
+이 값만 보면 Real-Money의 promotion / shortlist 단계와 비슷하게 보일 수 있다.
+
+Pre-Live registry가 따로 필요한 이유는 상태값 때문만이 아니다.
+진짜 핵심은 아래 action package를 함께 남기는 것이다.
+
+| 항목 | 역할 |
+|---|---|
+| `operator_reason` | 왜 이 상태로 두었는지 설명한다. |
+| `next_action` | 다음에 무엇을 확인하거나 실행할지 적는다. |
+| `review_date` | 다시 볼 날짜를 남긴다. |
+| `tracking_plan.cadence` | 얼마나 자주 확인할지 정한다. |
+| `tracking_plan.stop_condition` | 어떤 조건이면 추적을 멈출지 정한다. |
+| `tracking_plan.success_condition` | 어떤 조건이면 다음 review 단계로 갈지 정한다. |
+
+즉 Real-Money는 "진단 결과"이고,
+Pre-Live는 "진단 결과를 본 뒤의 운영 계획"이다.
 
 ## 파일 위치
 

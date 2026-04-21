@@ -13,8 +13,8 @@ Phase 25는 live trading을 시작하는 단계가 아니다.
 Phase 25의 목적은 세 가지다.
 
 1. `Real-Money 검증 신호`와 `Pre-Live 운영 점검`을 화면과 문서에서 분리한다.
-2. paper tracking, watchlist, hold, re-review 같은 운영 상태를 기록할 기준을 만든다.
-3. 사용자가 후보를 다시 볼 때 "왜 이 후보를 관찰 중인지", "무엇이 아직 blocker인지"를 빠르게 이해하게 만든다.
+2. paper tracking, watchlist, hold, re-review 같은 운영 상태와 그 상태에 붙는 다음 행동 기록 기준을 만든다.
+3. 사용자가 후보를 다시 볼 때 "왜 이 후보를 관찰 중인지", "무엇을 언제 다시 확인해야 하는지", "무엇이 아직 blocker인지"를 빠르게 이해하게 만든다.
 
 ## 쉽게 말하면
 
@@ -39,10 +39,15 @@ Real-Money 검증 신호는 이런 문제를 알려주는 진단표다.
 하지만 진단표만 있으면 사용자는 다음 행동을 직접 기억해야 한다.
 Phase 25는 그 다음 행동을 기록하고 반복할 수 있게 만든다.
 
+여기서 말하는 다음 행동은 단순히 `watchlist` 같은 상태값 하나가 아니다.
+`operator_reason`, `next_action`, `review_date`, `tracking_plan`까지 포함한 운영 기록이다.
+이 정보가 있어야 Pre-Live가 Real-Money promotion 단계와 구분된다.
+
 ## 이 phase가 끝나면 좋은 점
 
 - 사용자가 Real-Money 결과를 보고 다음 행동을 더 쉽게 정한다.
 - 후보가 `watchlist`, `paper tracking`, `hold`, `re-review` 중 어디에 있는지 남길 수 있다.
+- 각 후보에 대해 무엇을 언제 다시 확인할지, 어떤 조건이면 중단하거나 다음 단계로 갈지 남길 수 있다.
 - 나중에 같은 후보를 다시 볼 때 판단 근거를 잃어버리지 않는다.
 - 실전 투입 전 점검과 투자 추천을 혼동하지 않게 된다.
 - Phase 26 이후 실제 deployment readiness나 더 강한 investability review로 넘어갈 준비가 된다.
@@ -99,7 +104,10 @@ Phase 25는 그 다음 행동을 기록하고 반복할 수 있게 만든다.
 
 - `Pre-Live 운영 점검`
   - Real-Money 검증 신호를 본 뒤 사람이 무엇을 할지 정하는 운영 절차다.
-  - paper tracking, watchlist, hold, re-review 같은 상태를 기록한다.
+  - paper tracking, watchlist, hold, re-review 같은 상태와 함께
+    `operator_reason`, `next_action`, `review_date`, `tracking_plan`을 기록한다.
+  - 상태값만 있으면 Real-Money promotion 단계와 비슷해 보이므로,
+    다음 행동 기록이 Pre-Live의 핵심이다.
 
 - `Paper Tracking`
   - 실제 돈을 넣지 않고, 정해진 기간 동안 전략 결과와 위험 신호를 관찰하는 상태다.

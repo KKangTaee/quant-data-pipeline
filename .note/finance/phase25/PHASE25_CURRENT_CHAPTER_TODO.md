@@ -20,6 +20,7 @@ Pre-Live 운영 점검 체계를 만드는 것이다.
 - `completed` Real-Money와 Pre-Live 경계 정의
   - Real-Money는 개별 백테스트 결과에 붙는 검증 신호다.
   - Pre-Live는 그 신호를 보고 다음 운영 행동을 기록하는 절차다.
+  - 사용자 QA 피드백을 반영해, Pre-Live의 핵심은 상태값 자체가 아니라 `operator_reason`, `next_action`, `review_date`, `tracking_plan`을 포함한 다음 행동 기록이라고 명확히 했다.
 - `completed` Phase 25 plan 문서 작성
   - Phase 25가 투자 승인 단계가 아니라 paper / watchlist / review 운영 준비 단계라는 점을 고정했다.
 - `completed` first work-unit 문서 작성

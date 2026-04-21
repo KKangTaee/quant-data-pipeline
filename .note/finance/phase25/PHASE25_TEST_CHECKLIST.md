@@ -24,6 +24,7 @@
   - [ ] Phase 25가 live trading이나 투자 승인 단계가 아니라 pre-live 운영 점검 단계라는 점이 이해되는지
   - [ ] `Real-Money 검증 신호`는 백테스트 결과에 붙는 진단표이고, `Pre-Live 운영 점검`은 그 다음 행동을 기록하는 절차라는 차이가 이해되는지
   - [ ] `watchlist`, `paper tracking`, `hold`, `re-review`가 후보를 관리하기 위한 상태라는 점이 이해되는지
+  - [ ] Pre-Live의 핵심이 상태값 자체가 아니라 `operator_reason`, `next_action`, `review_date`, `tracking_plan`을 함께 남기는 다음 행동 기록이라는 점이 이해되는지
 
 ## 2. 후보 기록 포맷 확인
 
@@ -35,6 +36,7 @@
   - [ ] `CURRENT_CANDIDATE_REGISTRY.jsonl`은 후보 자체를 저장하고, `PRE_LIVE_CANDIDATE_REGISTRY.jsonl`은 후보의 운영 상태를 저장한다는 차이가 이해되는지
   - [ ] 후보 기록 필드에 source / strategy_or_bundle / settings_snapshot / result_snapshot / real_money_signal / pre_live_status / operator_reason / next_action / review_date가 포함되는지
   - [ ] `pre_live_status`가 `watchlist`, `paper_tracking`, `hold`, `reject`, `re_review` 중 하나로 정리되어 있는지
+  - [ ] `tracking_plan`에 cadence / stop_condition / success_condition이 들어가며, 이것이 Real-Money 상태값과 Pre-Live를 구분하는 핵심 정보라는 점이 이해되는지
   - [ ] helper script의 `template`, `list`, `show`, `append`, `validate` 역할이 이해되는지
 
 ## 3. operator review workflow 확인

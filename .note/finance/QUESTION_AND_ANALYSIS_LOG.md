@@ -2414,3 +2414,14 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `Pre-Live Registry`에서 저장된 active record를 확인할 수 있다
   - Phase 25 상태는 `implementation_complete / manual_qa_pending`으로 전환했다
   - 이 UI는 live trading이나 투자 승인 기능이 아니라 실전 전 운영 상태 기록 기능으로 고정했다
+
+### 2026-04-21 - Pre-Live는 상태값이 아니라 다음 행동 기록으로 Real-Money와 구분한다
+- Request topic:
+  - 사용자가 Phase 25 첫 작업 문서의 `Watchlist`, `Paper Tracking`, `Hold`, `Reject`, `Re-Review`가 Real-Money의 promotion 단계와 유사해 보이며, Pre-Live에서 말하는 "다음 행동 기록"이 무엇인지 불명확하다고 지적함
+- Interpreted goal:
+  - Pre-Live를 단순 상태 label이 아니라 운영 action package로 정의해 Real-Money 검증 신호와의 차이를 문서상 명확히 해야 함
+- Result:
+  - Phase 25 첫 작업 문서에 `Real-Money와 Pre-Live의 실제 차이`와 `다음 행동 기록 정의`를 추가했다
+  - Pre-Live 다음 행동 기록은 `operator_reason`, `next_action`, `review_date`, `tracking_plan.cadence`, `tracking_plan.stop_condition`, `tracking_plan.success_condition`, `docs`를 포함하는 것으로 정의했다
+  - Phase 25 plan, Pre-Live registry guide, glossary, checklist를 같은 기준으로 갱신했다
+  - 결론적으로 `pre_live_status`는 Real-Money와 비슷해 보일 수 있지만, Pre-Live의 핵심은 "무엇을 언제 다시 확인하고, 어떤 조건이면 중단/진행할지"를 남기는 운영 기록이다

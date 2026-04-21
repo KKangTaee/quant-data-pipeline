@@ -611,6 +611,8 @@ Real-Money 검증 신호는 "이 결과를 실전 후보로 검토하기 전에 
 Real-Money 검증 신호는 **개별 실행의 진단 결과**다.
 Pre-Live 운영 점검은 그 진단 결과를 받아
 paper tracking, watchlist, 보류, 재검토를 어떻게 운영하고 기록할지 정하는 **운영 절차**다.
+Pre-Live는 상태값만 저장하는 것이 아니라
+`operator_reason`, `next_action`, `review_date`, `tracking_plan`을 함께 남긴다는 점이 핵심 차이다.
 
 ---
 
@@ -1543,6 +1545,8 @@ Real-Money 검증 신호가 좋아 보여도
 Real-Money 검증 신호는 **백테스트 결과에 붙는 진단표**다.
 Pre-Live 운영 점검은 그 진단표를 보고
 "이제 어떤 운영 행동을 할 것인가"를 정하고 남기는 **운영 기록 흐름**이다.
+여기서 운영 행동은 단순 상태값이 아니라,
+왜 그렇게 두었는지, 다음에 무엇을 볼지, 언제 다시 볼지, 어떤 조건이면 중단하거나 다음 단계로 갈지를 포함한다.
 
 ---
 
@@ -1556,6 +1560,9 @@ Phase 25 기준 대표 상태는 `watchlist`, `paper tracking`, `hold`, `reject`
 백테스트 결과가 좋아 보여도 모든 후보가 같은 다음 행동을 갖지는 않는다.
 어떤 후보는 관찰하고, 어떤 후보는 보류하고, 어떤 후보는 특정 날짜에 다시 봐야 한다.
 Pre-Live 운영 상태는 이 차이를 기록하기 위해 쓴다.
+다만 상태값만으로는 부족하다.
+`paper_tracking`이라고만 쓰면 Real-Money의 `paper_only`나 `paper_probation`과 비슷하게 읽힐 수 있다.
+따라서 Pre-Live 운영 상태는 항상 `operator_reason`, `next_action`, `review_date`, `tracking_plan`과 함께 읽는다.
 
 ### 예시 / 필요 상황
 - `watchlist`: 다시 볼 가치는 있지만 아직 paper tracking은 시작하지 않음
@@ -1563,6 +1570,28 @@ Pre-Live 운영 상태는 이 차이를 기록하기 위해 쓴다.
 - `hold`: 데이터 품질이나 risk blocker 때문에 보류
 - `reject`: 현재 기준에서는 더 추적하지 않음
 - `re-review`: 특정 날짜나 조건이 지나면 다시 확인
+
+---
+
+## Pre-Live 다음 행동 기록
+
+### 기본 설명
+Pre-Live 후보를 어떻게 관리할지 구체적으로 남기는 action package다.
+대표 구성은 `operator_reason`, `next_action`, `review_date`, `tracking_plan.cadence`,
+`tracking_plan.stop_condition`, `tracking_plan.success_condition`이다.
+
+### 왜 사용되는지
+Pre-Live 상태값만 있으면 Real-Money promotion / shortlist와 거의 비슷하게 보일 수 있다.
+다음 행동 기록이 있어야
+"왜 이 후보를 보고 있는가", "무엇을 확인해야 하는가",
+"언제 다시 판단해야 하는가"를 복원할 수 있다.
+
+### 예시 / 필요 상황
+- `operator_reason`: 최근 drawdown은 크지만 blocker가 없어 1개월 paper tracking
+- `next_action`: 월 1회 성과, MDD, benchmark gap, Real-Money blocker 변화를 확인
+- `review_date`: 다음 점검일
+- `tracking_plan.stop_condition`: drawdown이 더 악화되거나 blocker가 생기면 중단
+- `tracking_plan.success_condition`: 관찰 기간 동안 blocker 없이 후보 성격이 유지되면 재검토
 
 ---
 

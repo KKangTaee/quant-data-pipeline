@@ -1713,3 +1713,13 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.venv/bin/python` import of `app.web.pages.backtest` passed
 - Durable takeaway:
   - Phase 25 implementation is now ready for user manual QA. The UI still does not enable live trading; it only records pre-live operating state.
+
+### 2026-04-21
+- Clarified the Phase 25 Real-Money vs Pre-Live boundary after user QA feedback.
+- Changed:
+  - updated the first Phase 25 work-unit document so Pre-Live is not described as status labels only
+  - defined the Pre-Live "next action record" as an action package:
+    `operator_reason`, `next_action`, `review_date`, `tracking_plan.cadence`, `tracking_plan.stop_condition`, `tracking_plan.success_condition`, and supporting docs
+  - updated the Phase 25 plan, Pre-Live registry guide, glossary, and checklist to say that status alone is not the distinguishing feature
+- Durable takeaway:
+  - `pre_live_status` can resemble Real-Money promotion / shortlist labels. The actual Pre-Live distinction is the recorded operating plan for what to check next, when to review, and when to stop or advance.
