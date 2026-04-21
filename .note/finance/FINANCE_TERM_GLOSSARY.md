@@ -2404,3 +2404,39 @@ Real-Money 검증 신호를 본 뒤,
 - `CURRENT_CANDIDATE_REGISTRY.jsonl`과의 차이:
   - current candidate registry는 후보 자체를 저장한다.
   - pre-live candidate registry는 그 후보의 운영 상태와 다음 행동을 저장한다.
+
+---
+
+## Backlog Rebase
+
+### 기본 설명
+예전 phase에 남은 pending 항목, practical closeout 항목, remaining backlog를
+현재 제품 상태 기준으로 다시 분류하는 작업이다.
+
+### 왜 사용되는지
+프로젝트가 길어지면 과거에 중요했던 미완료 항목이
+지금도 blocker인지, 후속 phase 입력인지, future option인지 헷갈릴 수 있다.
+Backlog Rebase는 이 항목들을 다시 이름 붙여
+다음 phase가 과거 문서 혼선 없이 진행되게 만든다.
+
+### 예시 / 필요 상황
+- Phase 8, 9, 12~15, 18의 `manual_qa_pending` 상태를 현재 기준으로 다시 읽을 때
+- Phase 18 remaining structural backlog가 Phase 28 입력인지 future option인지 정할 때
+
+---
+
+## Live Readiness / Final Approval
+
+### 기본 설명
+실제 돈을 넣어도 되는지 최종 판단하는 단계다.
+현재 Phase 26~30에서는 아직 직접 다루지 않고, Phase 30 이후 별도 phase 후보로 둔다.
+
+### 왜 사용되는지
+Real-Money는 백테스트 결과의 위험 신호를 보는 진단표이고,
+Pre-Live는 후보를 관찰하고 다음 행동을 기록하는 운영 절차다.
+Live Readiness / Final Approval은 그 이후에
+paper tracking 결과, blocker 해소 여부, 최종 승인 / 보류 / 거절 판단을 다루는 단계다.
+
+### 예시 / 필요 상황
+- 후보가 충분히 관찰되었고 데이터 / 전략 / 운영 blocker가 없다고 판단될 때
+- 실제 투자 전 최종 승인 기록이 필요할 때

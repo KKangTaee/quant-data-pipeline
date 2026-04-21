@@ -1473,6 +1473,11 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 | Phase 23 | `complete` | `manual_qa_completed` | 완료 |
 | Phase 24 | `complete` | `manual_qa_completed` | 완료 |
 | Phase 25 | `complete` | `manual_qa_completed` | 완료 |
+| Phase 26 | `active` | `not_ready_for_qa` | foundation backlog rebase 진행 중 |
+| Phase 27 | `planned` | `not_ready_for_qa` | data integrity / backtest trust 예정 |
+| Phase 28 | `planned` | `not_ready_for_qa` | strategy family parity 예정 |
+| Phase 29 | `planned` | `not_ready_for_qa` | candidate review workflow 예정 |
+| Phase 30 | `planned` | `not_ready_for_qa` | portfolio proposal / pre-live monitoring 예정 |
 
 한 줄 현재 판단:
 - current annual strict candidate와 portfolio bridge를 같은 frame에서 다시 본 `Phase 21`은 manual validation까지 완료되었고,
@@ -1483,83 +1488,92 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
   `Phase 25`는 Real-Money 검증 신호와 Pre-Live 운영 점검의 경계를 고정했고,
   Pre-Live 후보 기록 포맷, 저장 위치, helper 기반 operator review workflow, `Backtest > Pre-Live Review` UI까지 구현했다.
   사용자 manual QA까지 완료했다.
+  현재는 `Phase 26`을 열어 Phase 27~30으로 가기 전 과거 backlog와 foundation gap을 재정렬한다.
 
 ---
 
-## 지금부터의 큰 흐름
+## Phase 26~30 개발 로드맵
 
 ### 이 섹션은 무엇인가
 - `현재 위치`가 지금 상태를 보여주는 상태판이라면,
-  이 섹션은 **지금 이후 어떤 흐름으로 읽고 움직이면 되는지**를 정리하는 안내판이다.
-- 즉:
-  - `현재 위치` = 지금 어디까지 끝났는가
-  - `지금부터의 큰 흐름` = 이제 무엇을 먼저 보고, 그 다음 무엇으로 넓히는가
+  이 섹션은 Phase 25 이후 어떤 순서로 제품 기반을 강화할지 보여주는 다음 구간 안내판이다.
+- 이 구간의 목적은 Live Readiness / Final Approval로 바로 가는 것이 아니라,
+  그 전에 필요한 데이터 신뢰성, 전략 parity, 후보 검토, 포트폴리오 제안 기반을 만드는 것이다.
 
-### 1. 방금 정리된 구현 구간: `Phase 18 ~ 20`
-- `Phase 18`
-  - larger structural redesign first slice를 실제 코드와 surface에 연결한 phase다
-  - 다만 아직 remaining implementation backlog가 남아 있어 fully closed는 아니다
-- `Phase 19`
-  - structural contract와 interpretation language를 operator가 읽기 쉽게 정리한 phase다
-  - manual validation까지 끝난 상태다
-- `Phase 20`
-  - current candidate -> compare -> weighted -> saved workflow를 실사용 흐름으로 다듬은 phase다
-  - manual validation까지 끝난 상태다
+### 핵심 원칙
+- 기본 흐름은 개발 / 검증 / 운영 workflow 구축이다.
+- 사용자가 명시적으로 요청할 때만 투자 분석, 후보 비교, 실전 적합성 분석을 한다.
+- 강한 백테스트 결과가 자동으로 투자 추천이나 live trading 승인으로 이어지지 않는다.
+- Live Readiness / Final Approval은 Phase 30 이후 별도 phase로 다룬다.
 
-### 2. 병행 보조 트랙: `Support Track`
-- support track은 main finance feature phase가 아니다
-- 대신 아래 같은 repo-local 지원 tooling을 관리하는 병행 트랙이다
-  - current candidate registry
-  - phase bundle bootstrap
-  - hygiene / plugin / skill sync
-- 즉 roadmap에서 support track은
-  - main phase를 대체하지 않고
-  - 필요할 때 병행 유지되는 보조 레이어로 읽는 것이 맞다
+### Phase 26~30 요약
 
-### 3. 방금 닫힌 검증 phase: `Phase 21`
-- `Phase 21`의 핵심은
-  current annual strict family와 portfolio bridge를
-  같은 validation frame에서 다시 크게 검증하는 것이다
-- 즉 지금까지 만든 후보를
-  다시 한 번 같은 기준으로 재판단하는 deep validation phase다
-- 현재는
-  annual strict family rerun 3종과 representative portfolio bridge validation까지 끝난 상태다
-- manual checklist QA도 완료되어 phase complete 상태다
+| Phase | 이름 | 진행 상태 | 검증 상태 | 쉽게 말하면 |
+|---|---|---|---|---|
+| Phase 26 | Foundation Stabilization And Backlog Rebase | `active` | `not_ready_for_qa` | 과거 backlog와 pending 상태를 현재 제품 기준으로 다시 정리한다 |
+| Phase 27 | Data Integrity And Backtest Trust Layer | `planned` | `not_ready_for_qa` | 백테스트 전에 데이터가 믿을 만한지, 어디까지 계산 가능한지 보여준다 |
+| Phase 28 | Strategy Family Parity And Cadence Completion | `planned` | `not_ready_for_qa` | annual / quarterly / 신규 전략이 같은 수준의 옵션과 저장 / replay 흐름을 갖게 한다 |
+| Phase 29 | Candidate Review And Recommendation Workflow | `planned` | `not_ready_for_qa` | 백테스트 결과를 후보, near miss, watchlist, pre-live 흐름으로 표준화한다 |
+| Phase 30 | Portfolio Proposal And Pre-Live Monitoring Surface | `planned` | `not_ready_for_qa` | 후보들을 포트폴리오 제안과 paper / pre-live monitoring 화면으로 연결한다 |
 
-### 4. 현재 main phase와 그 다음 확장 구간: `Phase 22 ~ 25`
-- `Phase 22`
-  - portfolio-level candidate construction
-  - manual validation까지 완료된 상태다
-  - weighted portfolio를 재현 가능한 후보로 부를 기준을 고정했고,
-    official equal-third baseline을 유지하는 first-pass 판단까지 마쳤다
-  - 다만 이 phase의 의미는 투자 포트폴리오 선정이 아니라
-    portfolio workflow 개발 검증이다
-- `Phase 23`
-  - quarterly / alternate cadence를 prototype에서 제품 기능으로 올린 phase다
-  - quarterly 3개 family의 portfolio handling contract를
-    UI / payload / compare / history / saved replay 흐름에 연결했다
-  - `AAPL / MSFT / GOOG` representative smoke run으로
-    DB-backed runtime 실행과 contract meta 보존을 확인했다
-  - Compare 화면에서는 공용 입력과 strategy-specific 입력을 분리하고,
-    family별 Annual / Quarterly variant selector가 같은 strategy box 안에서 즉시 갱신되게 했다
-  - 사용자 manual checklist QA까지 완료되어 closeout 상태다
-- `Phase 24`
-  - manual validation까지 완료된 신규 전략 확장 phase다
-  - research-to-implementation bridge를 통해 새 전략 family를 추가한다
-  - 첫 구현 후보는 `Global Relative-Strength Allocation With Trend Safety Net`이며,
-    이는 성과가 가장 좋아서가 아니라 현재 DB 가격 loader와 UI/replay 구조에 가장 안전하게 붙는 후보이기 때문이다
-  - core/runtime과 single / compare / history / saved replay 연결, QA bugfix,
-    manual checklist QA까지 완료했다
-- `Phase 25`
-  - live trading이 아니라 paper / review / pre-live readiness 운영 체계를 정리한다
-  - 현재는 Real-Money 검증 신호와 Pre-Live 운영 점검의 경계를 고정했고,
-    후보 기록 포맷, 저장 위치, helper 기반 초안 생성 workflow, Backtest UI entry point까지 정했다
+### Phase 26. Foundation Stabilization And Backlog Rebase
+
+### 목적
+- 오래된 `manual_qa_pending`, `practical_closeout`, remaining backlog 표현을 현재 제품 기준으로 다시 읽는다.
+- immediate blocker, next-phase input, future option, legacy note를 구분한다.
+
+### 왜 먼저 하는가
+- Phase 27 이후로 바로 기능을 늘리면 과거 phase 상태와 새 roadmap이 충돌할 수 있다.
+- 특히 Phase 18 structural backlog와 Phase 8/9/12~15의 pending 상태가 현재도 blocker인지 먼저 봐야 한다.
+
+### 현재 메모
+- Phase 26은 active phase다.
+- 첫 작업 단위는 `Phase Status And Backlog Rebase`다.
+- 새 전략 구현이나 deep backtest는 아직 하지 않는다.
+
+### Phase 27. Data Integrity And Backtest Trust Layer
+
+### 목적
+- 백테스트 실행 전에 데이터 가능 범위와 신뢰성 문제를 더 명확히 보여준다.
+- missing ticker, stale price, malformed row, common-date truncation 같은 이슈를 사용자가 놓치지 않게 만든다.
+
+### 왜 필요한가
+- Phase 24 QA에서 `EEM`, `IWM`, 공통 날짜 문제처럼 데이터 때문에 결과 범위가 달라지는 사례가 이미 드러났다.
+- 전략 성과를 판단하기 전에 결과가 어떤 데이터 조건에서 나온 것인지 알아야 한다.
+
+### Phase 28. Strategy Family Parity And Cadence Completion
+
+### 목적
+- annual strict, quarterly strict, price-only 신규 전략이 UI / payload / history / saved replay / Real-Money / Guardrail에서 어느 정도 같은 사용성을 갖게 만든다.
+
+### 왜 필요한가
+- 지금 annual strict는 가장 성숙하지만 quarterly와 신규 전략은 아직 일부 검증 surface가 다르다.
+- 전략을 더 늘리기 전에 family별 차이를 의도된 차이와 미완성 차이로 나눠야 한다.
+
+### Phase 29. Candidate Review And Recommendation Workflow
+
+### 목적
+- 백테스트 결과를 current candidate, near miss, watchlist, pre-live 후보로 넘기는 흐름을 표준화한다.
+
+### 왜 필요한가
+- 최종 목표는 투자 후보와 포트폴리오 구성안을 제안하는 프로그램이다.
+- 그러려면 좋은 결과를 볼 때마다 임시 문서로 판단하지 않고, 반복 가능한 후보 검토 절차가 필요하다.
+
+### Phase 30. Portfolio Proposal And Pre-Live Monitoring Surface
+
+### 목적
+- 후보들을 사용자 정의 포트폴리오, 제안 포트폴리오, paper tracking, pre-live monitoring 관점에서 볼 수 있게 만든다.
+
+### 왜 필요한가
+- 단일 전략 후보만으로는 최종 product goal인 포트폴리오 구성 제안까지 가기 어렵다.
+- 다만 이 phase도 live trading 승인이 아니라 proposal / monitoring surface까지를 목표로 한다.
+
+### Phase 30 이후
+- Live Readiness / Final Approval은 Phase 30 이후 별도 phase로 연다.
+- 이 단계에서는 실제 돈을 넣어도 되는지 최종 판단 기준, paper tracking 근거, blocker 해소 여부, 승인 / 보류 / 거절 기록을 다룬다.
 
 ### 한 줄 흐름
-- `개발 중심 구현 -> 기능 검증 -> cadence/전략 확장 -> 요청 시 분석 -> pre-live 준비`
-
-### 참고 문서
-- `.note/finance/support_tracks/ROADMAP_REBASE_PHASE18_TO_PHASE25_20260414.md`
+- `정리 -> 데이터 신뢰성 -> 전략 parity -> 후보 검토 -> 포트폴리오 제안 -> 이후 live readiness`
 
 ---
 
