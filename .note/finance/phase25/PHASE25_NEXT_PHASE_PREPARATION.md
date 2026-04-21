@@ -4,8 +4,7 @@
 
 이 문서는 `Phase 25` 이후 어떤 질문으로 다음 phase를 여는 것이 자연스러운지 정리하기 위한 draft다.
 
-현재는 Phase 25 구현 1차 완료 후 manual QA 대기 문서다.
-Phase 25가 완료되면 실제 결과에 맞춰 다시 갱신한다.
+현재는 Phase 25 closeout 이후 다음 phase 방향을 정하기 위한 handoff 문서다.
 
 ## 현재 handoff 상태
 
@@ -14,11 +13,11 @@ Phase 25가 완료되면 실제 결과에 맞춰 다시 갱신한다.
 - `manage_pre_live_candidate_registry.py` helper로 template / draft-from-current / list / show / append / validate를 지원한다.
 - current candidate에서 Pre-Live 기록 초안을 만드는 report/helper workflow는 추가했다.
 - `Backtest > Pre-Live Review` 패널에서 current candidate를 선택하고 Pre-Live 기록을 저장할 수 있다.
-- 현재 남은 것은 Phase 25 manual QA다.
+- Phase 25 manual QA는 완료되었다.
 
 ## 다음 phase에서 더 중요한 질문
 
-Phase 25가 끝난 뒤에는 다음 질문을 보게 될 가능성이 크다.
+Phase 25가 끝났기 때문에 다음 질문을 보게 될 가능성이 크다.
 
 1. Pre-Live 운영 기록을 기반으로 deployment readiness를 판단할 수 있는가
 2. paper tracking에서 나온 결과를 후보 promotion / demotion에 어떻게 연결할 것인가
@@ -26,11 +25,12 @@ Phase 25가 끝난 뒤에는 다음 질문을 보게 될 가능성이 크다.
 
 ## 추천 다음 방향
 
-Phase 25가 계획대로 끝나면,
+Phase 25는 계획대로 닫혔다.
 다음 phase는 `Deployment Readiness Review` 또는 `Pre-Live Monitoring Hardening` 성격이 자연스럽다.
 
-다만 이 방향은 Phase 25에서 실제로 무엇을 구현했는지에 따라 달라진다.
-현재는 Phase 26을 미리 고정하지 않는다.
+다만 현재는 Phase 26을 미리 고정하지 않는다.
+다음 phase를 열기 전에는 사용자가 원하는 우선순위가
+`Pre-Live 운영 강화`인지, `strategy / data / validation foundation 보강`인지 먼저 확인한다.
 
 ## handoff 메모
 

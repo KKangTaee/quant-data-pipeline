@@ -2,11 +2,11 @@
 
 ## 진행 상태
 
-- `implementation_complete`
+- `complete`
 
 ## 검증 상태
 
-- `manual_qa_pending`
+- `manual_qa_completed`
 
 ## 현재 목표
 
@@ -50,8 +50,8 @@ Pre-Live 운영 점검 체계를 만드는 것이다.
 
 ## 4. Validation
 
-- `pending` manual QA
-  - Phase 25 계획과 first work-unit이 사용자가 읽고 이해 가능한지 확인한다.
+- `completed` manual QA
+  - 사용자가 `PHASE25_TEST_CHECKLIST.md` 기준으로 Phase 25 Pre-Live 흐름을 검수 완료했다.
 - `completed` implementation validation
   - 실제 UI나 persistence를 추가한 뒤 targeted validation을 수행한다.
 - `completed` Phase 25 manual checklist handoff
@@ -73,13 +73,11 @@ Pre-Live 운영 점검 체계를 만드는 것이다.
 
 ## 현재 판단
 
-Phase 25는 시작되었고,
-첫 번째 작업인 `Pre-Live 경계와 운영 상태 정의`는 완료했다.
-두 번째 작업으로 Pre-Live 후보 기록 포맷과 저장 위치도 고정했다.
-세 번째 작업으로 current candidate에서 Pre-Live 기록 초안을 만드는
-helper 기반 operator review workflow를 추가했다.
-네 번째 작업으로 `Backtest > Pre-Live Review` 패널을 추가해
-사용자가 UI에서 후보를 검토하고 저장할 수 있게 했다.
+Phase 25는 구현과 사용자 manual QA가 모두 완료되었다.
+이번 phase에서 Real-Money 검증 신호와 Pre-Live 운영 점검의 경계를 고정했고,
+current candidate를 Pre-Live 기록 초안으로 바꾸는 helper와
+`Backtest > Pre-Live Review` UI까지 연결했다.
 
-다음 작업은 사용자가 `PHASE25_TEST_CHECKLIST.md` 기준으로 manual QA를 진행하는 것이다.
-아직 live trading이나 투자 승인 기능은 열지 않는다.
+아직 live trading이나 자동 투자 승인 기능은 열지 않는다.
+다음 phase는 Pre-Live 기록을 실제 운영 점검에 어떻게 더 잘 활용할지,
+또는 product foundation의 다음 빈틈을 어디부터 메울지 사용자와 방향을 확인한 뒤 연다.

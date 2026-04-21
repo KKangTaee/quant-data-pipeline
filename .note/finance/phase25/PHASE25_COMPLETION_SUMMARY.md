@@ -5,18 +5,17 @@
 이 문서는 `Phase 25 Pre-Live Operating System And Deployment Readiness`를
 closeout 시점에 정리하기 위한 문서다.
 
-현재는 kickoff 직후의 draft다.
-Phase 25가 끝나면 실제 완료 내용과 남은 blocker를 기준으로 갱신한다.
+이 문서는 Phase 25 구현과 사용자 manual QA가 끝난 뒤의 closeout 기록이다.
 
 ## 진행 상태
 
-- `implementation_complete`
+- `complete`
 
 ## 검증 상태
 
-- `manual_qa_pending`
+- `manual_qa_completed`
 
-## 이번 phase에서 완료해야 할 것
+## 이번 phase에서 완료한 것
 
 ### 1. Real-Money와 Pre-Live 경계 고정
 
@@ -82,17 +81,22 @@ Phase 25가 끝나면 실제 완료 내용과 남은 blocker를 기준으로 갱
 
 ## 아직 남아 있는 것
 
-- 사용자 manual QA
-- QA 중 발견되는 copy / UX / 저장 흐름 보정
+- Phase 25 범위 안의 필수 blocker는 없다.
+- 다음 phase에서 Pre-Live 기록을 자동 모니터링, paper tracking 결과 반영, 또는 deployment readiness review로 확장할지 결정해야 한다.
+- live trading이나 자동 투자 승인 기능은 아직 열지 않는다.
 
 ## closeout 판단
 
-Phase 25 구현은 1차 완료되었고, 사용자 manual QA가 남아 있다.
+Phase 25는 `complete` / `manual_qa_completed`로 닫는다.
 
 쉽게 말하면:
 
-- 이번 phase의 방향은 잡혔다.
-- 후보 기록소와 helper도 생겼다.
-- helper 기반 operator review workflow도 생겼다.
-- Backtest UI에서 Pre-Live review와 registry 확인도 가능해졌다.
-- 이제 사용자가 checklist 기준으로 실제 흐름을 검수하면 된다.
+- Real-Money는 백테스트 결과에 붙는 진단표로 유지한다.
+- Pre-Live는 그 진단표를 보고 후보를 어떻게 관찰하고 다시 볼지 남기는 운영 기록으로 분리했다.
+- 후보 기록소, helper, Backtest UI entry point가 모두 연결되었다.
+- 사용자가 checklist 기준으로 실제 흐름을 검수 완료했다.
+
+## guidance / reference review
+
+- `AGENTS.md`와 `finance-doc-sync` skill은 이미 Pre-Live registry와 Phase QA closeout 흐름을 반영하고 있다.
+- 이번 closeout에서 추가 skill 지침 변경은 필요하지 않다.

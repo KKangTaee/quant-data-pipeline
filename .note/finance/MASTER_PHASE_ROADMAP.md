@@ -1424,10 +1424,10 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 - pre-live dashboard or report draft
 
 ### 진행 상태
-- `implementation_complete`
+- `complete`
 
 ### 검증 상태
-- `manual_qa_pending`
+- `manual_qa_completed`
 
 ### 현재 메모
 - Phase 25는 live trading이나 투자 승인 단계가 아니다.
@@ -1435,7 +1435,7 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 - 두 번째 작업으로 Pre-Live 후보 기록 포맷과 `.note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl` 저장 위치를 고정했다.
 - 세 번째 작업으로 current candidate에서 Pre-Live 기록 초안을 만드는 `draft-from-current` helper workflow를 추가했다.
 - 네 번째 작업으로 `Backtest > Pre-Live Review` 패널을 추가했다.
-- 다음 작업은 Phase 25 manual QA다.
+- Phase 25 manual QA까지 완료했다.
 
 ---
 
@@ -1472,7 +1472,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 | Phase 22 | `complete` | `manual_qa_completed` | 완료 |
 | Phase 23 | `complete` | `manual_qa_completed` | 완료 |
 | Phase 24 | `complete` | `manual_qa_completed` | 완료 |
-| Phase 25 | `implementation_complete` | `manual_qa_pending` | 사용자 QA 필요 |
+| Phase 25 | `complete` | `manual_qa_completed` | 완료 |
 
 한 줄 현재 판단:
 - current annual strict candidate와 portfolio bridge를 같은 frame에서 다시 본 `Phase 21`은 manual validation까지 완료되었고,
@@ -1480,9 +1480,9 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
   `Phase 23` quarterly / alternate cadence productionization도 manual QA까지 완료되었다.
   `Phase 24`는 `Global Relative Strength`를 첫 신규 전략 후보로 구현하고
   core/runtime smoke, `Backtest` UI, compare, history, saved replay, 사용자 QA까지 끝낸 상태다.
-  현재는 `Phase 25`를 열어 Real-Money 검증 신호와 Pre-Live 운영 점검의 경계를 고정했고,
+  `Phase 25`는 Real-Money 검증 신호와 Pre-Live 운영 점검의 경계를 고정했고,
   Pre-Live 후보 기록 포맷, 저장 위치, helper 기반 operator review workflow, `Backtest > Pre-Live Review` UI까지 구현했다.
-  다음 작업은 사용자 manual QA다.
+  사용자 manual QA까지 완료했다.
 
 ---
 

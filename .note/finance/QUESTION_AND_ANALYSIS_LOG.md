@@ -2425,3 +2425,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Pre-Live 다음 행동 기록은 `operator_reason`, `next_action`, `review_date`, `tracking_plan.cadence`, `tracking_plan.stop_condition`, `tracking_plan.success_condition`, `docs`를 포함하는 것으로 정의했다
   - Phase 25 plan, Pre-Live registry guide, glossary, checklist를 같은 기준으로 갱신했다
   - 결론적으로 `pre_live_status`는 Real-Money와 비슷해 보일 수 있지만, Pre-Live의 핵심은 "무엇을 언제 다시 확인하고, 어떤 조건이면 중단/진행할지"를 남기는 운영 기록이다
+
+### 2026-04-21 - Phase 25는 사용자 QA 완료 후 closeout한다
+- Request topic:
+  - 사용자가 Phase 25 QA checklist를 완료했으니 phase 마무리를 진행해 달라고 요청함
+- Interpreted goal:
+  - Phase 25를 `implementation_complete / manual_qa_pending` 상태에서 `complete / manual_qa_completed`로 전환하고, roadmap / index / closeout 문서가 같은 상태를 말하도록 동기화해야 함
+- Result:
+  - Phase 25 TODO, completion summary, next-phase preparation, checklist를 closeout 상태로 갱신했다
+  - `MASTER_PHASE_ROADMAP.md`, `FINANCE_DOC_INDEX.md`, `FINANCE_COMPREHENSIVE_ANALYSIS.md`의 Phase 25 상태도 같은 기준으로 맞췄다
+  - Phase 25의 결론은 Pre-Live 운영 기록 workflow 완료이며, live trading 또는 자동 투자 승인 기능은 여전히 열지 않는 것으로 유지했다
