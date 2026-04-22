@@ -2437,6 +2437,30 @@ compare 또는 Pre-Live Review로 넘길지 판단하게 만든다.
 
 ---
 
+## Candidate Intake Draft
+
+### 기본 설명
+`Latest Backtest Run` 또는 `History` 결과를 후보 검토 화면에서 읽기 위한 임시 초안이다.
+현재 candidate registry에 저장된 후보가 아니다.
+
+### 왜 사용되는지
+좋은 백테스트 결과가 나왔다고 바로 current candidate로 저장하면
+투자 추천이나 자동 승격처럼 오해될 수 있다.
+Candidate Intake Draft는 result snapshot, Real-Money signal, data trust를 먼저 확인하게 만든다.
+
+### 예시 / 필요 상황
+- `Latest Backtest Run > Candidate Review Handoff > Review As Candidate Draft`
+- `History > Selected History Run > Review As Candidate Draft`
+- `Candidate Review > Candidate Intake Draft`
+
+중요한 경계:
+
+- current candidate registry에 자동 저장되지 않는다.
+- suggested record type은 참고용 초안 분류다.
+- 후보 등록 / near-miss 기록 / Pre-Live 저장은 별도 검토 후 진행한다.
+
+---
+
 ## Backlog Rebase
 
 ### 기본 설명

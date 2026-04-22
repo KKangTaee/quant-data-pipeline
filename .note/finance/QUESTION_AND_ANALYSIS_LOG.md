@@ -2584,3 +2584,15 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Follow-up:
   - Phase 29 QA에서는 Candidate Review가 투자 추천처럼 보이지 않고, compare / Pre-Live Review로 넘기는 중간 workflow로 읽히는지 확인한다
   - 다음 작업 후보는 Latest Backtest Run 또는 History record를 candidate review 초안으로 넘기는 handoff다
+
+### 2026-04-23 - Latest / History 결과는 후보 검토 초안으로 먼저 보낸다
+- User request:
+  - Phase 29 다음 작업 진행을 요청함
+- Interpreted goal:
+  - 새 백테스트 결과나 history run을 바로 current candidate registry에 저장하지 않고, 먼저 후보 검토 초안으로 읽는 handoff를 만든다
+- Analysis result:
+  - `Latest Backtest Run`과 `History`에 `Review As Candidate Draft`를 추가했다
+  - `Candidate Review > Candidate Intake Draft`는 suggested record type, result snapshot, Real-Money signal, data trust snapshot을 보여준다
+  - 이 draft는 `CURRENT_CANDIDATE_REGISTRY.jsonl`에 자동 저장되지 않으며, 투자 추천이나 live approval도 아니다
+- Follow-up:
+  - 다음 판단은 Candidate Intake Draft를 실제 registry row, near-miss record, scenario note 중 어디로 남길지 기준을 정하는 것이다

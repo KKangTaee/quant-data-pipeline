@@ -630,6 +630,10 @@ def _init_backtest_state() -> None:
         st.session_state.backtest_weighted_portfolio_prefill = None
     if "backtest_saved_portfolio_notice" not in st.session_state:
         st.session_state.backtest_saved_portfolio_notice = None
+    if "backtest_candidate_review_draft" not in st.session_state:
+        st.session_state.backtest_candidate_review_draft = None
+    if "backtest_candidate_review_draft_notice" not in st.session_state:
+        st.session_state.backtest_candidate_review_draft_notice = None
     if "backtest_active_panel" not in st.session_state:
         st.session_state.backtest_active_panel = "Single Strategy"
     if "backtest_requested_panel" not in st.session_state:
@@ -3060,6 +3064,22 @@ def _render_last_run() -> None:
         st.markdown("\n".join(availability_lines))
 
     _render_data_trust_summary(meta)
+
+    with st.expander("Candidate Review Handoff", expanded=False):
+        st.caption(
+            "이번 실행 결과를 후보 검토 초안으로 읽어봅니다. "
+            "이 동작은 current candidate registry에 저장하지 않으며, 투자 추천이나 live 승인도 아닙니다."
+        )
+        handoff_cols = st.columns([0.28, 0.72], gap="small")
+        with handoff_cols[0]:
+            if st.button("Review As Candidate Draft", key="latest_run_candidate_review_draft", use_container_width=True):
+                _queue_candidate_review_draft(_candidate_review_draft_from_bundle(bundle))
+                st.rerun()
+        with handoff_cols[1]:
+            st.caption(
+                "`Candidate Review`에서 suggested record type, Real-Money signal, data trust snapshot을 먼저 확인한 뒤 "
+                "후보 등록 / compare / Pre-Live 여부를 판단합니다."
+            )
 
     if warnings:
         warning_lines = "\n".join(f"- {warning}" for warning in warnings)
@@ -5880,7 +5900,9 @@ def _render_candidate_review_workspace() -> None:
         st.caption(f"Path: {CURRENT_CANDIDATE_REGISTRY_FILE}")
         return
 
-    board_tab, detail_tab, compare_tab = st.tabs(["Candidate Board", "Inspect Candidate", "Send To Compare"])
+    board_tab, draft_tab, detail_tab, compare_tab = st.tabs(
+        ["Candidate Board", "Candidate Intake Draft", "Inspect Candidate", "Send To Compare"]
+    )
     with board_tab:
         st.markdown("#### Candidate Board")
         st.caption(
@@ -5888,6 +5910,46 @@ def _render_candidate_review_workspace() -> None:
             "`Suggested Next Step`은 자동 투자 추천이 아니라 다음 작업 제안입니다."
         )
         st.dataframe(_build_candidate_review_board_rows_for_display(rows), use_container_width=True, hide_index=True)
+
+    with draft_tab:
+        st.markdown("#### Candidate Intake Draft")
+        st.caption(
+            "Latest Backtest Run 또는 History에서 보낸 후보 검토 초안을 확인합니다. "
+            "이 초안은 registry에 저장된 후보가 아니며, current candidate 승격도 아닙니다."
+        )
+        draft_notice = st.session_state.get("backtest_candidate_review_draft_notice")
+        if draft_notice:
+            st.info(draft_notice)
+            st.session_state.backtest_candidate_review_draft_notice = None
+        draft = dict(st.session_state.get("backtest_candidate_review_draft") or {})
+        if not draft:
+            st.info(
+                "아직 후보 검토 초안이 없습니다. "
+                "`Latest Backtest Run` 또는 `History > Selected History Run`에서 `Review As Candidate Draft`를 누르면 여기에 표시됩니다."
+            )
+        else:
+            result_snapshot = dict(draft.get("result_snapshot") or {})
+            signal = dict(draft.get("real_money_signal") or {})
+            data_trust = dict(draft.get("data_trust_snapshot") or {})
+            st.markdown(f"##### {draft.get('strategy_name') or draft.get('strategy_key') or 'Candidate Review Draft'}")
+            st.caption(
+                "`Suggested Record Type`은 자동 등록값이 아니라 사람이 검토할 때 참고하는 초안 분류입니다."
+            )
+            draft_metric_cols = st.columns(5, gap="small")
+            draft_metric_cols[0].metric("Suggested Type", str(draft.get("suggested_record_type_label") or "-"))
+            draft_metric_cols[1].metric("CAGR", str(result_snapshot.get("cagr") or "-"))
+            draft_metric_cols[2].metric("MDD", str(result_snapshot.get("maximum_drawdown") or "-"))
+            draft_metric_cols[3].metric("Promotion", str(signal.get("promotion") or "-"))
+            draft_metric_cols[4].metric("Shortlist", str(signal.get("shortlist") or "-"))
+            st.markdown("**Suggested Next Step**")
+            st.write(draft.get("suggested_next_step") or "-")
+            st.markdown("**Data Trust Snapshot**")
+            st.dataframe(pd.DataFrame([data_trust]), use_container_width=True, hide_index=True)
+            with st.expander("Candidate Review Draft JSON", expanded=False):
+                st.json(draft)
+            if st.button("Clear Candidate Draft", key="clear_candidate_review_draft", use_container_width=True):
+                st.session_state.backtest_candidate_review_draft = None
+                st.rerun()
 
     with detail_tab:
         st.markdown("#### Inspect Candidate")
@@ -8546,6 +8608,201 @@ def _build_candidate_review_board_rows_for_display(rows: list[dict[str, Any]]) -
     return pd.DataFrame(display_rows)
 
 
+def _candidate_review_record_type_suggestion(
+    *,
+    promotion: str | None,
+    shortlist: str | None,
+    deployment: str | None,
+) -> str:
+    promotion_value = str(promotion or "").strip().lower()
+    shortlist_value = str(shortlist or "").strip().lower()
+    deployment_value = str(deployment or "").strip().lower()
+    if promotion_value == "real_money_candidate" and shortlist_value in {"paper_probation", "small_capital_trial"}:
+        return "current_candidate_review"
+    if shortlist_value == "watchlist" or promotion_value == "production_candidate":
+        return "near_miss_review"
+    if deployment_value in {"paper_only", "review_required"}:
+        return "scenario_review"
+    return "manual_review"
+
+
+def _candidate_review_record_type_label(record_type_suggestion: str) -> str:
+    labels = {
+        "current_candidate_review": "Current candidate review",
+        "near_miss_review": "Near-miss / watchlist review",
+        "scenario_review": "Scenario review",
+        "manual_review": "Manual review",
+    }
+    return labels.get(record_type_suggestion, record_type_suggestion)
+
+
+def _candidate_review_draft_next_step(record_type_suggestion: str) -> str:
+    if record_type_suggestion == "current_candidate_review":
+        return "기존 current anchor와 비교한 뒤, 대체/유지 여부를 사람 검토로 결정합니다."
+    if record_type_suggestion == "near_miss_review":
+        return "near-miss 후보로 남길 가치가 있는지 MDD, gate, data trust를 같이 확인합니다."
+    if record_type_suggestion == "scenario_review":
+        return "설정 차이를 설명할 수 있는 scenario 후보인지 보고, 필요하면 compare에서 기존 후보와 나란히 봅니다."
+    return "후보로 남길 근거가 충분한지 먼저 검토합니다."
+
+
+def _candidate_review_summary_from_bundle(bundle: dict[str, Any]) -> dict[str, Any]:
+    summary_df = bundle.get("summary_df")
+    if isinstance(summary_df, pd.DataFrame) and not summary_df.empty:
+        row = summary_df.iloc[0]
+        return {
+            "strategy_name": row.get("Name"),
+            "start_date": str(row.get("Start Date")),
+            "end_date": str(row.get("End Date")),
+            "end_balance": row.get("End Balance"),
+            "cagr": row.get("CAGR"),
+            "sharpe_ratio": row.get("Sharpe Ratio"),
+            "maximum_drawdown": row.get("Maximum Drawdown"),
+        }
+    return {}
+
+
+def _candidate_review_draft_from_bundle(bundle: dict[str, Any]) -> dict[str, Any]:
+    meta = dict(bundle.get("meta") or {})
+    summary = _candidate_review_summary_from_bundle(bundle)
+    promotion = meta.get("promotion_decision")
+    shortlist = meta.get("shortlist_status")
+    deployment = meta.get("deployment_readiness_status")
+    record_type_suggestion = _candidate_review_record_type_suggestion(
+        promotion=promotion,
+        shortlist=shortlist,
+        deployment=deployment,
+    )
+    price_freshness = dict(meta.get("price_freshness") or {})
+    return {
+        "source_kind": "latest_backtest_run",
+        "created_at": datetime.now().isoformat(timespec="seconds"),
+        "candidate_review_status": "draft_only_not_saved",
+        "strategy_key": meta.get("strategy_key"),
+        "strategy_name": bundle.get("strategy_name") or summary.get("strategy_name"),
+        "suggested_record_type": record_type_suggestion,
+        "suggested_record_type_label": _candidate_review_record_type_label(record_type_suggestion),
+        "suggested_next_step": _candidate_review_draft_next_step(record_type_suggestion),
+        "result_snapshot": {
+            "start_date": summary.get("start_date") or meta.get("actual_result_start") or meta.get("start"),
+            "end_date": summary.get("end_date") or meta.get("actual_result_end") or meta.get("end"),
+            "end_balance": summary.get("end_balance"),
+            "cagr": summary.get("cagr"),
+            "sharpe_ratio": summary.get("sharpe_ratio"),
+            "maximum_drawdown": summary.get("maximum_drawdown"),
+        },
+        "real_money_signal": {
+            "promotion": promotion,
+            "shortlist": shortlist,
+            "deployment": deployment,
+            "validation_status": meta.get("validation_status"),
+            "monitoring_status": meta.get("monitoring_status"),
+        },
+        "data_trust_snapshot": {
+            "requested_end": meta.get("end"),
+            "actual_result_start": meta.get("actual_result_start"),
+            "actual_result_end": meta.get("actual_result_end"),
+            "result_rows": meta.get("result_rows"),
+            "price_freshness_status": price_freshness.get("status"),
+            "excluded_tickers": meta.get("excluded_tickers") or [],
+            "malformed_price_row_count": len(list(meta.get("malformed_price_rows") or [])),
+            "warning_count": len(list(meta.get("warnings") or [])),
+        },
+        "settings_snapshot": {
+            "tickers": meta.get("tickers") or [],
+            "universe_mode": meta.get("universe_mode"),
+            "preset_name": meta.get("preset_name"),
+            "universe_contract": meta.get("universe_contract"),
+            "factor_freq": meta.get("factor_freq"),
+            "rebalance_freq": meta.get("rebalance_freq"),
+            "top": meta.get("top"),
+            "benchmark_contract": meta.get("benchmark_contract"),
+            "benchmark_ticker": meta.get("benchmark_ticker"),
+        },
+        "notes": (
+            "This is a Candidate Review draft. It is not appended to "
+            "CURRENT_CANDIDATE_REGISTRY and is not an investment recommendation."
+        ),
+    }
+
+
+def _candidate_review_draft_from_history_record(record: dict[str, Any]) -> dict[str, Any]:
+    summary = dict(record.get("summary") or {})
+    gate_snapshot = dict(record.get("gate_snapshot") or {})
+    context = dict(record.get("context") or {})
+    promotion = record.get("promotion_decision") or gate_snapshot.get("promotion_decision")
+    shortlist = record.get("shortlist_status") or gate_snapshot.get("shortlist_status")
+    deployment = record.get("deployment_readiness_status") or gate_snapshot.get("deployment_readiness_status")
+    record_type_suggestion = _candidate_review_record_type_suggestion(
+        promotion=promotion,
+        shortlist=shortlist,
+        deployment=deployment,
+    )
+    price_freshness = dict(record.get("price_freshness") or {})
+    return {
+        "source_kind": "history_record",
+        "created_at": datetime.now().isoformat(timespec="seconds"),
+        "candidate_review_status": "draft_only_not_saved",
+        "recorded_at": record.get("recorded_at"),
+        "run_kind": record.get("run_kind"),
+        "strategy_key": record.get("strategy_key"),
+        "strategy_name": summary.get("strategy_name") or _history_strategy_display_name(record),
+        "suggested_record_type": record_type_suggestion,
+        "suggested_record_type_label": _candidate_review_record_type_label(record_type_suggestion),
+        "suggested_next_step": _candidate_review_draft_next_step(record_type_suggestion),
+        "result_snapshot": {
+            "start_date": summary.get("start_date") or record.get("actual_result_start") or record.get("input_start"),
+            "end_date": summary.get("end_date") or record.get("actual_result_end") or record.get("input_end"),
+            "end_balance": summary.get("end_balance"),
+            "cagr": summary.get("cagr"),
+            "sharpe_ratio": summary.get("sharpe_ratio"),
+            "maximum_drawdown": summary.get("maximum_drawdown"),
+        },
+        "real_money_signal": {
+            "promotion": promotion,
+            "shortlist": shortlist,
+            "deployment": deployment,
+            "validation_status": gate_snapshot.get("validation_status"),
+            "monitoring_status": gate_snapshot.get("monitoring_status"),
+        },
+        "data_trust_snapshot": {
+            "requested_end": record.get("input_end"),
+            "actual_result_start": record.get("actual_result_start"),
+            "actual_result_end": record.get("actual_result_end"),
+            "result_rows": record.get("result_rows"),
+            "price_freshness_status": price_freshness.get("status") or gate_snapshot.get("price_freshness_status"),
+            "excluded_tickers": record.get("excluded_tickers") or [],
+            "malformed_price_row_count": len(list(record.get("malformed_price_rows") or [])),
+            "warning_count": len(list(record.get("warnings") or [])),
+        },
+        "settings_snapshot": {
+            "tickers": record.get("tickers") or [],
+            "universe_mode": record.get("universe_mode"),
+            "preset_name": record.get("preset_name"),
+            "universe_contract": record.get("universe_contract"),
+            "factor_freq": record.get("factor_freq"),
+            "rebalance_freq": record.get("rebalance_freq"),
+            "top": record.get("top"),
+            "benchmark_contract": record.get("benchmark_contract"),
+            "benchmark_ticker": record.get("benchmark_ticker"),
+            "context_keys": sorted(context.keys()),
+        },
+        "notes": (
+            "This is a Candidate Review draft from a persisted history record. "
+            "It is not appended to CURRENT_CANDIDATE_REGISTRY and is not an investment recommendation."
+        ),
+    }
+
+
+def _queue_candidate_review_draft(draft: dict[str, Any]) -> None:
+    st.session_state.backtest_candidate_review_draft = draft
+    st.session_state.backtest_candidate_review_draft_notice = (
+        "후보 검토 초안을 Candidate Review로 보냈습니다. "
+        "아직 registry에 저장된 것이 아니며, 투자 추천이나 live 승인도 아닙니다."
+    )
+    st.session_state.backtest_requested_panel = "Candidate Review"
+
+
 def _load_pre_live_candidate_registry_latest() -> list[dict[str, Any]]:
     if not PRE_LIVE_CANDIDATE_REGISTRY_FILE.exists():
         return []
@@ -11176,7 +11433,7 @@ def _render_persistent_backtest_history() -> None:
         st.caption("This record type is not rerunnable yet. `Run Again` and `Load Into Form` are currently supported for single-strategy records only.")
         return
 
-    action_cols = st.columns([0.18, 0.18, 0.64], gap="small")
+    action_cols = st.columns([0.18, 0.18, 0.24, 0.40], gap="small")
     with action_cols[0]:
         if st.button("Load Into Form", key="backtest_history_load_into_form", use_container_width=True):
             if _load_history_into_form(selected_record):
@@ -11189,10 +11446,15 @@ def _render_persistent_backtest_history() -> None:
                 st.session_state.backtest_requested_panel = "Single Strategy"
                 st.rerun()
     with action_cols[2]:
+        if st.button("Review As Candidate Draft", key="backtest_history_candidate_review_draft", use_container_width=True):
+            _queue_candidate_review_draft(_candidate_review_draft_from_history_record(selected_record))
+            st.rerun()
+    with action_cols[3]:
         st.caption(
             "`Load Into Form`은 저장된 입력값만 `Single Strategy` 화면으로 불러옵니다. "
             "이후 form에서 다시 실행해야 최신 결과가 갱신됩니다. "
-            "`Run Again`은 저장된 payload를 즉시 다시 실행하고, 최신 결과 화면으로 자동 이동합니다."
+            "`Run Again`은 저장된 payload를 즉시 다시 실행하고, 최신 결과 화면으로 자동 이동합니다. "
+            "`Review As Candidate Draft`는 저장된 결과를 후보 검토 초안으로만 보냅니다."
         )
 
 

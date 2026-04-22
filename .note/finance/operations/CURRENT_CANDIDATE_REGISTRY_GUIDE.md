@@ -45,6 +45,16 @@
   candidate review, compare, Pre-Live Review workflow로 이어지는 source-of-truth로 사용된다.
 - 다만 이 registry row 자체가 live trading 승인이나 최종 투자 추천은 아니다.
 
+## 후보 검토 초안과의 차이
+- `Candidate Intake Draft`
+  - `Latest Backtest Run` 또는 `History` 결과를 후보처럼 검토해보는 임시 초안이다.
+  - registry에 자동 저장되지 않는다.
+- `CURRENT_CANDIDATE_REGISTRY.jsonl`
+  - 사람이 후보로 남기기로 판단한 뒤 기록되는 durable 후보 저장소다.
+
+즉 좋은 결과가 나왔다면 먼저 Candidate Intake Draft로 읽고,
+후보로 남길 근거가 충분할 때 registry row 또는 관련 report로 정리하는 흐름이 안전하다.
+
 ## 기본 사용 방법
 
 ### 1. 현재 seed 상태 확인

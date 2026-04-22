@@ -27,10 +27,10 @@ current candidate registry에 남은 후보를 검토 보드로 읽고,
 
 ## 2. 다음 작업 후보
 
-- `pending` Latest Backtest Run -> candidate review handoff 검토
-  - 새 실행 결과를 후보 검토 초안으로 남길 수 있는지 검토한다.
-- `pending` History record -> candidate review handoff 검토
-  - 과거 실행 기록에서 후보 검토로 넘기는 흐름이 필요한지 본다.
+- `completed` Latest Backtest Run -> candidate review handoff
+  - 새 실행 결과를 후보 검토 초안으로 보낼 수 있게 했다.
+- `completed` History record -> candidate review handoff
+  - 과거 실행 기록에서 후보 검토 초안으로 넘기는 버튼을 추가했다.
 - `pending` current candidate registry guide 보강
   - 후보 등록 / near miss / scenario 기록 기준을 더 쉽게 정리한다.
 
@@ -48,6 +48,7 @@ current candidate registry에 남은 후보를 검토 보드로 읽고,
 - `completed` phase kickoff plan 문서 생성
 - `completed` current chapter TODO 문서 생성
 - `completed` first work-unit 문서 생성
+- `completed` second work-unit 문서 생성
 - `completed` roadmap / doc index / work log / question log sync
 - `completed` code_analysis sync
 - `completed` glossary sync
@@ -56,5 +57,6 @@ current candidate registry에 남은 후보를 검토 보드로 읽고,
 ## 현재 판단
 
 Phase 29는 active 상태다.
-첫 번째 작업 단위인 `Candidate Review Board`는 구현됐고,
+첫 번째 작업 단위인 `Candidate Review Board`와
+두 번째 작업 단위인 `Result To Candidate Review Handoff`는 구현됐고,
 다음 단계는 `.note/finance/phase29/PHASE29_TEST_CHECKLIST.md` 기준 사용자 QA다.

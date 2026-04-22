@@ -123,10 +123,20 @@ CURRENT_CANDIDATE_REGISTRY.jsonl
   -> Open Candidate In Pre-Live Review 또는 Send To Compare
 ```
 
+Latest / History result handoff:
+
+```text
+Latest Backtest Run 또는 History selected record
+  -> Review As Candidate Draft
+  -> Backtest > Candidate Review > Candidate Intake Draft
+  -> result snapshot / Real-Money signal / data trust snapshot 확인
+```
+
 구분:
 
 - Candidate Review는 후보를 투자 추천으로 확정하는 화면이 아니다.
 - Candidate Review는 current candidate, near miss, scenario를 먼저 읽는 중간 검토 화면이다.
+- Candidate Intake Draft는 registry에 저장된 후보가 아니라 검토 초안이다.
 - `Suggested Next Step`은 다음 검토 행동 제안이지 live trading 승인이나 최종 투자 판단이 아니다.
 - Pre-Live Review로 넘겨도 저장 전 초안일 뿐이며, 실제 저장은 `Save Pre-Live Record`로 한다.
 

@@ -1912,3 +1912,17 @@ Detailed historical logs were archived on `2026-04-13`.
   - `git diff --check` passed
 - Durable takeaway:
   - Phase 29 starts by making current candidates readable as review objects before sending them to compare or Pre-Live. This is a candidate review workflow, not live approval.
+
+### 2026-04-23
+- Implemented Phase 29 result-to-candidate-review handoff.
+- Changed:
+  - added `Candidate Review Handoff` under `Latest Backtest Run`
+  - added `Review As Candidate Draft` to selected history run actions
+  - added `Candidate Intake Draft` tab under `Backtest > Candidate Review`
+  - candidate drafts now show suggested record type, result snapshot, Real-Money signal, data trust snapshot, and settings snapshot
+  - documented the second Phase 29 work unit and synced roadmap, index, glossary, web UI flow, current candidate registry guide, and README
+- Validation:
+  - `python3 -m py_compile app/web/pages/backtest.py` passed
+  - `.venv` helper smoke passed
+- Durable takeaway:
+  - Latest/history results can now be reviewed as candidate drafts without automatically writing to `CURRENT_CANDIDATE_REGISTRY.jsonl`.

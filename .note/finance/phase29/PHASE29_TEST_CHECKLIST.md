@@ -5,7 +5,7 @@
 이 checklist는 Phase 29에서 추가한 `Candidate Review` 화면이
 current candidate를 검토 보드로 읽고 compare / Pre-Live Review로 자연스럽게 넘기는지 확인하기 위한 문서다.
 
-현재는 Phase 29 first work unit QA checklist다.
+현재는 Phase 29 first / second work unit QA checklist다.
 이 문서의 항목을 확인한 뒤 다음 작업 단위로 넘어갈지 판단한다.
 
 ## 사용 방법
@@ -68,11 +68,26 @@ current candidate를 검토 보드로 읽고 compare / Pre-Live Review로 자연
   - [ ] `Pick Manually`에서 후보를 직접 고르고 `Load Selected Candidates Into Compare`를 누를 수 있는지
   - [ ] compare panel로 이동한 뒤 `Compare Form Updated`에서 어떤 후보가 채워졌는지 확인할 수 있는지
 
-## 6. 문서와 상태 확인
+## 6. Latest / History -> Candidate Intake Draft 흐름 확인
+
+- 확인 위치:
+  - `Backtest > Single Strategy > Latest Backtest Run > Candidate Review Handoff`
+  - `Backtest > History > Selected History Run > Actions For This History Run`
+  - `Backtest > Candidate Review > Candidate Intake Draft`
+- 체크 항목:
+  - [ ] 최신 백테스트 결과에서 `Review As Candidate Draft` 버튼이 보이는지
+  - [ ] 버튼을 누르면 `Candidate Review > Candidate Intake Draft`로 이동하는지
+  - [ ] 초안에 `Suggested Type`, CAGR, MDD, Promotion, Shortlist가 보이는지
+  - [ ] `Data Trust Snapshot`이 함께 보여 결과를 후보로 볼 때 데이터 조건도 같이 확인할 수 있는지
+  - [ ] History run에서도 `Review As Candidate Draft`를 누르면 후보 검토 초안으로 이동하는지
+  - [ ] 후보 검토 초안이 current candidate registry에 자동 저장된 것으로 오해되지 않는지
+
+## 7. 문서와 상태 확인
 
 - 확인 문서:
   - `.note/finance/phase29/PHASE29_CANDIDATE_REVIEW_AND_RECOMMENDATION_WORKFLOW_PLAN.md`
   - `.note/finance/phase29/PHASE29_CANDIDATE_REVIEW_BOARD_FIRST_WORK_UNIT.md`
+  - `.note/finance/phase29/PHASE29_RESULT_TO_CANDIDATE_REVIEW_HANDOFF_SECOND_WORK_UNIT.md`
   - `.note/finance/phase29/PHASE29_CURRENT_CHAPTER_TODO.md`
   - `.note/finance/MASTER_PHASE_ROADMAP.md`
   - `.note/finance/FINANCE_DOC_INDEX.md`
