@@ -1793,3 +1793,14 @@ Detailed historical logs were archived on `2026-04-13`.
   - `git diff --check` passed
 - Durable takeaway:
   - Phase 27 starts by making backtest data boundaries visible before deeper strategy work: users should see when the requested end date, actual result end date, stale ticker data, excluded tickers, or malformed rows affect the interpretation of a run.
+
+### 2026-04-22
+- Closed Phase 27 after user manual QA completion.
+- Changed:
+  - marked Phase 27 TODO, completion summary, next-phase preparation, and checklist as `complete / manual_qa_completed`
+  - synced `MASTER_PHASE_ROADMAP.md`, `FINANCE_DOC_INDEX.md`, and `FINANCE_COMPREHENSIVE_ANALYSIS.md`
+  - kept Phase 28 handoff focused on strategy family parity, cadence completion, and family-level UX / metadata consistency
+- Validation:
+  - Phase 27 checklist was completed by the user before closeout
+- Durable takeaway:
+  - Phase 27 is closed. `Data Trust Summary`, `price_freshness`, excluded ticker details, and result-window metadata are now the baseline trust-layer concepts for later strategy family parity work.

@@ -4,23 +4,23 @@
 
 이 문서는 Phase 27 `Data Integrity And Backtest Trust Layer`를 closeout 시점에 정리하기 위한 문서다.
 
-현재는 Phase 27 active 상태의 진행 summary다.
-사용자 QA 단계가 되면 실제 완료 내용과 checklist 기준으로 다시 갱신한다.
+Phase 27은 사용자 QA까지 완료된 상태다.
 
 ## 진행 상태
 
-- `active`
+- `complete`
 
 ## 검증 상태
 
-- `not_ready_for_qa`
+- `manual_qa_completed`
 
-## 이번 phase에서 현재까지 완료 / 진행한 것
+## 이번 phase에서 완료한 것
 
 ### 1. Backtest Data Trust Summary 첫 구현
 
-- result bundle meta에 실제 결과 기간과 row 수를 남기는 방향으로 구현을 시작했다.
+- result bundle meta에 실제 결과 기간과 row 수를 남긴다.
 - 최신 실행 결과 상단에 데이터 신뢰성 요약을 보여주는 UI를 추가했다.
+- `Requested End`, `Actual Result End`, `Result Rows`, `Excluded Tickers`를 결과 해석 전에 확인할 수 있게 했다.
 
 쉽게 말하면:
 
@@ -29,22 +29,31 @@
 ### 2. Global Relative Strength price freshness 연결
 
 - GRS single strategy 화면에 price freshness preflight를 연결했다.
-- GRS runtime 결과에도 price freshness metadata를 남기기 시작했다.
+- GRS runtime 결과에도 price freshness metadata를 남긴다.
+- stale / missing ticker가 있을 때 실행 전후에 같은 데이터 조건을 확인할 수 있게 했다.
 
 쉽게 말하면:
 
 - ETF universe 중 어떤 ticker의 가격 데이터가 뒤처져 있는지 실행 전후에 더 쉽게 볼 수 있다.
 
-## 아직 남아 있는 것
+### 3. Data Quality Details 확인
 
-- Global Relative Strength 화면 수동 QA
-- warning 문구 추가 한글화 / 설명 정리
-- compare / history / saved replay에서 Data Trust Summary를 어떻게 유지할지 검토
-- strict annual / quarterly preflight 표현과 Phase 27 용어 정렬
+- excluded ticker가 있으면 어떤 ticker가 제외됐는지 `Data Quality Details`에서 확인할 수 있게 했다.
+- malformed / missing price row가 있으면 ticker와 날짜 정보를 확인할 수 있게 했다.
+
+쉽게 말하면:
+
+- 결과가 이상해 보일 때, 먼저 데이터가 빠졌는지 / 제외됐는지 확인할 수 있다.
+
+## Phase 28로 넘기는 것
+
+- warning 문구 추가 한글화 / 설명 정리 확대
+- compare / history / saved replay에서 Data Trust Summary를 어느 수준까지 유지할지 검토
+- strict annual / quarterly / 신규 ETF 전략 preflight 표현 정리
 
 ## closeout 판단
 
-아직 closeout 상태가 아니다.
+Phase 27은 closeout한다.
 
-현재는 Phase 27 첫 구현 단위를 진행 중이며,
-manual QA checklist는 다음 작업 단위까지 정리한 뒤 확정하는 것이 맞다.
+사용자가 Phase 27 checklist QA를 완료했다.
+다음 phase는 `Phase 28 Strategy Family Parity And Cadence Completion`으로 여는 것이 자연스럽다.

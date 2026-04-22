@@ -8,9 +8,8 @@
 
 ## 현재 handoff 상태
 
-- Phase 27은 아직 active 상태다.
-- 따라서 이 문서는 최종 handoff가 아니라 early draft다.
-- Phase 27에서 데이터 신뢰성 표시가 안정되면, 다음 질문은 annual / quarterly / 신규 전략이 같은 수준의 UX와 metadata를 갖는지로 이동한다.
+- Phase 27은 complete / manual_qa_completed 상태다.
+- Phase 27에서 데이터 신뢰성 표시가 사용자 QA까지 통과했으므로, 다음 질문은 annual / quarterly / 신규 전략이 같은 수준의 UX와 metadata를 갖는지로 이동한다.
 
 ## 다음 phase에서 더 중요한 질문
 
@@ -47,4 +46,4 @@ Phase 28은 `Strategy Family Parity And Cadence Completion`이 자연스럽다.
 ## handoff 메모
 
 - Phase 28은 새 전략을 많이 추가하는 phase가 아니라, 이미 있는 전략 family들의 사용성과 저장 계약을 맞추는 phase다.
-- Phase 27 manual QA 완료 후 이 문서를 최종 handoff 기준으로 다시 갱신한다.
+- Phase 27에서 만든 `Data Trust Summary`와 `price_freshness` 개념은 Phase 28에서 각 전략 family에 맞게 공통화 / 차별화 범위를 정한다.

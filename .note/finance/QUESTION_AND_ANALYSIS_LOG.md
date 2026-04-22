@@ -2482,3 +2482,15 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Global Relative Strength는 Phase 24에서 stale ticker 이슈가 실제로 드러났으므로 Phase 27 price-freshness preflight의 첫 적용 대상으로 삼는다
 - Follow-up:
   - Phase 27 QA에서는 Data Trust Summary가 사용자의 실제 해석 흐름에 충분히 도움이 되는지 확인하고, 필요하면 다른 strategy family에도 같은 trust-layer 표현을 확장한다
+
+### 2026-04-22 - Phase 27 QA 완료 후 Phase 28로 넘긴다
+- User request:
+  - Phase 27 QA 완료를 선언하고 phase 마무리를 요청함
+- Interpreted goal:
+  - Phase 27을 `complete / manual_qa_completed`로 closeout하고, 다음 단계인 Phase 28로 넘어갈 수 있게 문서 상태를 맞춘다
+- Analysis result:
+  - 사용자는 Global Relative Strength preflight, Latest Backtest Run의 Data Trust Summary, Data Quality Details, Meta/history 연결을 확인했다
+  - Phase 27의 핵심 성과는 성과 개선이 아니라 "백테스트 결과가 어떤 데이터 조건에서 나온 것인지 먼저 보이는 trust layer"를 만든 것이다
+  - 남은 확장 주제는 Phase 28에서 annual / quarterly / 신규 전략의 family parity 관점으로 다룬다
+- Follow-up:
+  - Phase 28을 열 때는 `Data Trust Summary`, `price_freshness`, history/load/replay 보존, Real-Money/Guardrail parity 범위를 함께 검토한다
