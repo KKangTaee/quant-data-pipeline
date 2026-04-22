@@ -4,16 +4,16 @@
 
 이 문서는 Phase 28 `Strategy Family Parity And Cadence Completion`를 closeout 시점에 정리하기 위한 문서다.
 
-현재는 Phase 28 active 상태의 진행 summary다.
-사용자 QA 단계가 되면 실제 완료 내용과 checklist 기준으로 다시 갱신한다.
+현재는 Phase 28 implementation complete 상태의 handoff summary다.
+사용자 QA가 완료되면 manual validation 상태만 갱신한다.
 
 ## 진행 상태
 
-- `active`
+- `implementation_complete`
 
 ## 검증 상태
 
-- `not_ready_for_qa`
+- `manual_qa_pending`
 
 ## 이번 phase에서 현재까지 완료 / 진행한 것
 
@@ -66,15 +66,27 @@
 
 - 여러 전략을 비교하거나 섞기 전에, 각 전략이 실제로 어떤 데이터 기간과 품질 조건에서 계산됐는지 먼저 확인할 수 있다.
 
+### 6. Real-Money / Guardrail parity 결정
+
+- `Strategy Comparison`에 `Real-Money / Guardrail` 탭을 추가했다.
+- `History Real-Money / Guardrail Scope` 표를 추가했다.
+- `Saved Portfolio Real-Money / Guardrail Scope` 표를 추가했다.
+- quarterly prototype에는 annual strict 수준의 실전 검증 surface를 억지로 붙이지 않는다고 결정했다.
+
+쉽게 말하면:
+
+- annual strict, quarterly prototype, ETF 전략군이 각각 어떤 실전 검증 범위로 읽혀야 하는지 한 표에서 구분할 수 있다.
+
 ## 아직 남아 있는 것
 
-- Real-Money / Guardrail parity 범위 결정
 - 사용자 manual UI validation
 
 ## closeout 판단
 
-아직 closeout 상태가 아니다.
+구현 closeout 상태다.
 
 현재는 Phase 28의 첫 번째 / 두 번째 / 세 번째 구현 단위를 완료한 상태이며,
 네 번째 Data Trust 확장 단위까지 완료했다.
-남은 Real-Money / Guardrail parity 범위를 더 본 뒤 사용자 QA 단계로 넘길지 판단한다.
+다섯 번째 Real-Money / Guardrail parity 범위 결정도 완료했다.
+
+다음 단계는 `.note/finance/phase28/PHASE28_TEST_CHECKLIST.md` 기준 사용자 QA다.

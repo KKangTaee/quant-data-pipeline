@@ -8,9 +8,9 @@
 
 ## 현재 handoff 상태
 
-- Phase 28은 아직 active 상태다.
-- 따라서 이 문서는 최종 handoff가 아니라 early draft다.
-- Phase 28에서 strategy family별 실행 / 저장 / 재실행 의미가 안정되면, 다음 질문은 백테스트 결과를 어떻게 후보 검토 workflow로 넘길지로 이동한다.
+- Phase 28은 implementation complete 상태다.
+- 사용자 manual QA가 완료되면 Phase 29로 넘어갈 수 있다.
+- Phase 28에서 strategy family별 실행 / 저장 / 재실행 의미와 Real-Money / Guardrail 범위가 안정되었으므로, 다음 질문은 백테스트 결과를 어떻게 후보 검토 workflow로 넘길지다.
 
 ## 다음 phase에서 더 중요한 질문
 

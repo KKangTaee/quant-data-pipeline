@@ -2,11 +2,11 @@
 
 ## 진행 상태
 
-- `active`
+- `implementation_complete`
 
 ## 검증 상태
 
-- `not_ready_for_qa`
+- `manual_qa_pending`
 
 ## 현재 목표
 
@@ -35,8 +35,10 @@ Phase 28의 목표는 새 전략을 급하게 늘리는 것이 아니다.
   - 단일 실행 외 compare / saved replay에서 데이터 신뢰성 정보를 어디까지 보여줄지 정한다.
   - compare 결과에는 `Data Trust` 탭을, weighted portfolio 결과에는 `Component Data Trust` 탭을 추가했다.
   - strategy compare / weighted portfolio history context에도 data trust rows를 남긴다.
-- `pending` Real-Money / Guardrail parity 결정
+- `completed` Real-Money / Guardrail parity 결정
   - quarterly와 price-only ETF 전략에 어떤 검증 surface를 붙일지 정한다.
+  - 결론: quarterly prototype에는 annual strict 수준의 Real-Money / Guardrail surface를 억지로 붙이지 않는다.
+  - compare / history / saved portfolio에 `Real-Money / Guardrail Scope` 표를 추가해 annual strict, quarterly prototype, ETF first-pass 차이를 확인한다.
 
 ## 3. Validation
 
@@ -55,16 +57,18 @@ Phase 28의 목표는 새 전략을 급하게 늘리는 것이 아니다.
 - `completed` second work-unit 문서 생성
 - `completed` third work-unit 문서 생성
 - `completed` fourth work-unit 문서 생성
+- `completed` fifth work-unit 문서 생성
 - `completed` roadmap / doc index / work log / question log sync
 - `completed` code_analysis sync
 
 ## 현재 판단
 
-Phase 28은 active 상태다.
+Phase 28은 implementation complete 상태다.
 첫 작업 단위인 `Strategy Capability Snapshot`은 구현됐고,
 두 번째 작업 단위로 history record의 재실행 / form 복원 가능성을 확인하는
 `History Replay / Load Parity Snapshot`도 추가됐다.
 세 번째 작업 단위로 saved portfolio의 replay / load 가능성을 확인하는
 `Saved Portfolio Replay / Load Parity Snapshot`도 추가됐다.
 네 번째 작업 단위로 compare / weighted / saved replay에서도 component별 data trust를 볼 수 있게 했다.
-다음 판단은 Real-Money / Guardrail parity 결정을 어디까지 다룰지다.
+다섯 번째 작업 단위로 annual strict, quarterly prototype, ETF 전략군의 Real-Money / Guardrail 지원 범위를 같은 표로 구분했다.
+이제 다음 단계는 사용자 manual UI validation이다.

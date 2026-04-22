@@ -1854,3 +1854,18 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.venv` strategy data trust helper smoke passed
 - Durable takeaway:
   - Compare and weighted portfolio results now expose the component data conditions behind the result, so users can distinguish performance differences from date-window or data-quality differences.
+
+### 2026-04-23
+- Completed Phase 28 Real-Money / Guardrail parity visibility.
+- Changed:
+  - added a `Real-Money / Guardrail` tab to Strategy Comparison
+  - added `History Real-Money / Guardrail Scope` under selected history records
+  - added `Saved Portfolio Real-Money / Guardrail Scope` under saved portfolio replay/load parity
+  - documented the fifth Phase 28 work unit and moved Phase 28 to implementation complete / manual QA pending
+- Validation:
+  - `python3 -m py_compile app/web/pages/backtest.py` passed
+  - `.venv` Real-Money / Guardrail parity helper smoke passed
+  - `git diff --check` passed
+  - finance refinement hygiene check passed
+- Durable takeaway:
+  - Phase 28 does not force annual strict Real-Money / Guardrail behavior onto quarterly prototype or ETF strategies. It now shows each strategy family's intended validation scope before compare, history replay, or saved portfolio replay.

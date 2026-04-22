@@ -4949,10 +4949,11 @@ def _render_compare_results() -> None:
             "`Dynamic Candidate Pool`, `Membership Avg`, and `Membership Range` help explain why static and dynamic results diverge."
         )
 
-    summary_tab, data_trust_tab, balance_tab, drawdown_tab, return_tab, highlights_tab, focus_tab, meta_tab = st.tabs(
+    summary_tab, data_trust_tab, real_money_guardrail_tab, balance_tab, drawdown_tab, return_tab, highlights_tab, focus_tab, meta_tab = st.tabs(
         [
             "Summary Compare",
             "Data Trust",
+            "Real-Money / Guardrail",
             "Equity Overlay",
             "Drawdown Overlay",
             "Return Overlay",
@@ -4972,6 +4973,23 @@ def _render_compare_results() -> None:
             caption=(
                 "Compare 결과를 해석하기 전에 각 전략의 요청 종료일, 실제 결과 종료일, "
                 "가격 최신성, 제외 ticker, 결측 row를 함께 확인합니다."
+            ),
+        )
+
+    with real_money_guardrail_tab:
+        _render_real_money_guardrail_parity_snapshot(
+            [
+                {
+                    "strategy_name": bundle.get("strategy_name"),
+                    "strategy_key": dict(bundle.get("meta") or {}).get("strategy_key"),
+                    "data": dict(bundle.get("meta") or {}),
+                }
+                for bundle in bundles
+            ],
+            title="Compare Real-Money / Guardrail Scope",
+            caption=(
+                "이 표는 selected strategies를 같은 compare 결과 안에서 해석할 때, "
+                "어떤 전략은 full strict Real-Money 검증 대상이고 어떤 전략은 prototype 또는 ETF first-pass인지 구분합니다."
             ),
         )
 
@@ -5528,6 +5546,21 @@ def _render_saved_portfolio_replay_parity_snapshot(record: dict[str, Any]) -> No
                 "정확한 전체 payload는 `Compare Context` 또는 `Raw Record` 탭에서 확인합니다."
             )
             st.dataframe(override_df, use_container_width=True, hide_index=True)
+    _render_real_money_guardrail_parity_snapshot(
+        [
+            {
+                "strategy_name": strategy_name,
+                "strategy_key": None,
+                "data": dict((compare_context.get("strategy_overrides") or {}).get(strategy_name) or {}),
+            }
+            for strategy_name in selected_strategies
+        ],
+        title="Saved Portfolio Real-Money / Guardrail Scope",
+        caption=(
+            "저장 포트폴리오 안의 각 전략이 어떤 Real-Money / Guardrail 범위로 다시 열리는지 확인합니다. "
+            "quarterly prototype과 ETF first-pass를 annual strict full surface로 오해하지 않기 위한 표입니다."
+        ),
+    )
 
 
 def _run_saved_portfolio_record(record: dict[str, Any]) -> None:
@@ -6724,8 +6757,8 @@ def _strategy_capability_rows(strategy_name: str | None) -> list[dict[str, str]]
             },
             {
                 "확인 영역": "Real-Money / Guardrail",
-                "현재 상태": "ETF operability + Real-Money first pass 지원",
-                "확인 포인트": "annual strict와 동일한 guardrail surface는 아니며, Phase 28에서 차이를 확인합니다.",
+                "현재 상태": "ETF operability + cost/benchmark first pass 지원",
+                "확인 포인트": "AUM/spread/cost/benchmark는 보지만, ETF underperformance/drawdown guardrail은 아직 붙이지 않습니다.",
             },
             {
                 "확인 영역": "저장 / 재실행",
@@ -6861,6 +6894,180 @@ def _history_field_summary(record: dict[str, Any], fields: list[str]) -> str:
     if not pairs:
         return "-"
     return " / ".join(f"{field}={_format_history_parity_value(value)}" for field, value in pairs)
+
+
+def _real_money_guardrail_scope_for_strategy(
+    strategy_name: str | None,
+    strategy_key: str | None = None,
+) -> dict[str, str]:
+    name = str(strategy_name or "").strip()
+    key = str(strategy_key or "").strip()
+
+    annual_strict_keys = {
+        "quality_snapshot_strict_annual",
+        "value_snapshot_strict_annual",
+        "quality_value_snapshot_strict_annual",
+    }
+    quarterly_keys = {
+        "quality_snapshot_strict_quarterly_prototype",
+        "value_snapshot_strict_quarterly_prototype",
+        "quality_value_snapshot_strict_quarterly_prototype",
+    }
+
+    if name.endswith("(Strict Annual)") or key in annual_strict_keys:
+        return {
+            "real_money_scope": "Full strict equity Real-Money surface",
+            "guardrail_scope": "Underperformance / Drawdown guardrails + Guardrail Reference Ticker",
+            "interpretation": "Phase 28 기준 실전 검증 surface의 기준선입니다. history/replay에서 benchmark, investability, promotion, guardrail 입력이 유지되어야 합니다.",
+        }
+    if name.endswith("(Strict Quarterly Prototype)") or key in quarterly_keys:
+        return {
+            "real_money_scope": "Deferred: quarterly prototype은 아직 promotion 대상 아님",
+            "guardrail_scope": "Portfolio handling risk-off는 지원, Real-Money guardrail surface는 보류",
+            "interpretation": "quarterly는 cadence/replay 검증 단계입니다. annual strict와 같은 실전 승격 후보로 읽지 않습니다.",
+        }
+    if name == "Global Relative Strength" or key == "global_relative_strength":
+        return {
+            "real_money_scope": "ETF operability + cost / benchmark first pass",
+            "guardrail_scope": "Trend safety net 중심, ETF underperformance/drawdown guardrail은 아직 없음",
+            "interpretation": "가격 기반 ETF 전략입니다. AUM/spread/cost/benchmark는 보지만, annual strict식 promotion guardrail과 동일하게 보지 않습니다.",
+        }
+    if name == "GTAA" or key == "gtaa":
+        return {
+            "real_money_scope": "ETF Real-Money first pass",
+            "guardrail_scope": "ETF underperformance / drawdown guardrails + tactical risk-off / crash guardrail",
+            "interpretation": "ETF tactical 전략입니다. annual strict와 데이터 구조는 다르지만 ETF용 guardrail 입력은 replay에서 유지되어야 합니다.",
+        }
+    if name in {"Risk Parity Trend", "Dual Momentum"} or key in {"risk_parity_trend", "dual_momentum"}:
+        return {
+            "real_money_scope": "ETF Real-Money first pass",
+            "guardrail_scope": "ETF underperformance / drawdown guardrails",
+            "interpretation": "가격 기반 ETF 전략입니다. 비용, benchmark, ETF guardrail 입력이 저장 / 재실행에서 유지되어야 합니다.",
+        }
+    if name == "Equal Weight" or key == "equal_weight":
+        return {
+            "real_money_scope": "Not a promotion target",
+            "guardrail_scope": "No dedicated guardrail surface",
+            "interpretation": "비교 기준선 또는 단순 baseline입니다. 실전 후보 승격 판단 대상으로 보지 않습니다.",
+        }
+    return {
+        "real_money_scope": "개별 전략 확인 필요",
+        "guardrail_scope": "개별 전략 확인 필요",
+        "interpretation": "Phase 28 parity map에 아직 명시되지 않은 전략입니다.",
+    }
+
+
+def _real_money_guardrail_replay_fields_for_strategy(
+    strategy_name: str | None,
+    strategy_key: str | None = None,
+) -> list[str]:
+    name = str(strategy_name or "").strip()
+    key = str(strategy_key or "").strip()
+    if name.endswith("(Strict Annual)") or key in {
+        "quality_snapshot_strict_annual",
+        "value_snapshot_strict_annual",
+        "quality_value_snapshot_strict_annual",
+    }:
+        return [
+            "benchmark_contract",
+            "benchmark_ticker",
+            "guardrail_reference_ticker",
+            "min_price_filter",
+            "min_history_months_filter",
+            "min_avg_dollar_volume_20d_m_filter",
+            "transaction_cost_bps",
+            "promotion_min_benchmark_coverage",
+            "promotion_min_net_cagr_spread",
+            "promotion_max_underperformance_share",
+            "promotion_max_strategy_drawdown",
+            "underperformance_guardrail_enabled",
+            "drawdown_guardrail_enabled",
+        ]
+    if name.endswith("(Strict Quarterly Prototype)") or key in {
+        "quality_snapshot_strict_quarterly_prototype",
+        "value_snapshot_strict_quarterly_prototype",
+        "quality_value_snapshot_strict_quarterly_prototype",
+    }:
+        return [
+            "weighting_mode",
+            "rejected_slot_handling_mode",
+            "risk_off_mode",
+            "defensive_tickers",
+            "market_regime_enabled",
+            "market_regime_window",
+            "market_regime_benchmark",
+        ]
+    if name == "Global Relative Strength" or key == "global_relative_strength":
+        return [
+            "benchmark_ticker",
+            "min_price_filter",
+            "transaction_cost_bps",
+            "promotion_min_etf_aum_b",
+            "promotion_max_bid_ask_spread_pct",
+            "trend_filter_window",
+            "cash_ticker",
+        ]
+    if name == "GTAA" or key == "gtaa":
+        return [
+            "benchmark_ticker",
+            "min_price_filter",
+            "transaction_cost_bps",
+            "promotion_min_etf_aum_b",
+            "promotion_max_bid_ask_spread_pct",
+            "underperformance_guardrail_enabled",
+            "drawdown_guardrail_enabled",
+            "risk_off_mode",
+            "crash_guardrail_enabled",
+        ]
+    if name in {"Risk Parity Trend", "Dual Momentum"} or key in {"risk_parity_trend", "dual_momentum"}:
+        return [
+            "benchmark_ticker",
+            "min_price_filter",
+            "transaction_cost_bps",
+            "promotion_min_etf_aum_b",
+            "promotion_max_bid_ask_spread_pct",
+            "underperformance_guardrail_enabled",
+            "drawdown_guardrail_enabled",
+        ]
+    return ["benchmark_ticker", "min_price_filter", "transaction_cost_bps"]
+
+
+def _build_real_money_guardrail_parity_rows(items: list[dict[str, Any]]) -> pd.DataFrame:
+    rows: list[dict[str, str]] = []
+    for item in items:
+        strategy_name = str(item.get("strategy_name") or _strategy_key_to_display_name(item.get("strategy_key")) or "-")
+        strategy_key = str(item.get("strategy_key") or "").strip()
+        data = dict(item.get("data") or {})
+        scope = _real_money_guardrail_scope_for_strategy(strategy_name, strategy_key)
+        fields = _real_money_guardrail_replay_fields_for_strategy(strategy_name, strategy_key)
+        rows.append(
+            {
+                "Strategy": strategy_name,
+                "Real-Money Scope": scope["real_money_scope"],
+                "Guardrail Scope": scope["guardrail_scope"],
+                "Saved / Replay Values": _history_field_summary(data, fields),
+                "Interpretation": scope["interpretation"],
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def _render_real_money_guardrail_parity_snapshot(
+    items: list[dict[str, Any]],
+    *,
+    title: str = "Real-Money / Guardrail Scope Snapshot",
+    caption: str | None = None,
+) -> None:
+    df = _build_real_money_guardrail_parity_rows(items)
+    if df.empty:
+        return
+
+    st.markdown(f"#### {title}")
+    st.caption(
+        caption
+        or "이 표는 전략별 Real-Money와 Guardrail 지원 범위를 같은 언어로 보여줍니다. 모든 전략에 같은 실전 검증을 강제로 붙였다는 뜻은 아닙니다."
+    )
+    st.dataframe(df, use_container_width=True, hide_index=True)
 
 
 def _history_parity_row(
@@ -7139,6 +7346,20 @@ def _render_history_replay_parity_snapshot(record: dict[str, Any]) -> None:
         "`누락 가능`이 보이면 그 항목은 기본값으로 돌아갈 수 있으므로 Raw Record나 form 복원 결과를 같이 봅니다."
     )
     st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+    _render_real_money_guardrail_parity_snapshot(
+        [
+            {
+                "strategy_name": _strategy_key_to_display_name(record.get("strategy_key")),
+                "strategy_key": record.get("strategy_key"),
+                "data": record,
+            }
+        ],
+        title="History Real-Money / Guardrail Scope",
+        caption=(
+            "이 저장 기록이 annual strict 실전 검증 기록인지, quarterly prototype 기록인지, "
+            "또는 ETF first-pass 기록인지 구분합니다."
+        ),
+    )
 
 
 def _render_strategy_capability_snapshot(strategy_name: str | None) -> None:

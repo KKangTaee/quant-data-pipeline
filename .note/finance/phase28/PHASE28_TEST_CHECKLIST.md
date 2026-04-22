@@ -5,8 +5,8 @@
 이 checklist는 Phase 28에서 추가한 `Strategy Capability Snapshot`이
 사용자가 전략 family별 차이를 이해하는 데 도움이 되는지 확인하기 위한 문서다.
 
-현재는 Phase 28 active 상태의 QA 초안이다.
-Phase 28 구현 범위가 닫히면 최종 checklist로 다시 갱신한다.
+현재는 Phase 28 implementation complete 상태의 QA checklist다.
+이 문서의 주요 항목을 확인한 뒤 Phase 28 manual QA 완료 여부를 판단한다.
 
 ## 사용 방법
 
@@ -92,7 +92,24 @@ Phase 28 구현 범위가 닫히면 최종 checklist로 다시 갱신한다.
   - [ ] saved portfolio replay 후 History record에서 component별 data trust rows가 다시 보이는지
   - [ ] 이 표가 성과 비교표가 아니라 데이터 조건 확인표라는 점이 이해되는지
 
-## 7. Phase 28 작업 의도 확인
+## 7. Real-Money / Guardrail parity 확인
+
+- 확인 위치:
+  - `Backtest > Compare & Portfolio Builder`
+  - 전략 2개 이상 선택 후 `Run Strategy Comparison`
+  - `Strategy Comparison > Real-Money / Guardrail`
+  - `Backtest > History > Selected History Run > History Real-Money / Guardrail Scope`
+  - `Backtest > Compare & Portfolio Builder > Saved Portfolios > Saved Portfolio Real-Money / Guardrail Scope`
+- 체크 항목:
+  - [ ] compare 결과에 `Real-Money / Guardrail` 탭이 보이는지
+  - [ ] annual strict 전략이 `Full strict equity Real-Money surface`로 표시되는지
+  - [ ] strict quarterly prototype이 `Deferred` 또는 prototype 범위로 표시되어 annual strict와 같은 실전 검증 완료 상태로 보이지 않는지
+  - [ ] `Global Relative Strength`가 ETF operability / cost / benchmark first pass로 표시되고, dedicated ETF underperformance/drawdown guardrail은 아직 없음으로 읽히는지
+  - [ ] `GTAA`, `Risk Parity Trend`, `Dual Momentum`은 ETF Real-Money / ETF guardrail first pass로 구분되는지
+  - [ ] saved portfolio를 다시 열기 전에 strategy별 Real-Money / Guardrail 범위를 확인할 수 있는지
+  - [ ] history record에서 annual / quarterly / ETF first-pass 차이가 자연스럽게 읽히는지
+
+## 8. Phase 28 작업 의도 확인
 
 - 확인 위치:
   - `.note/finance/phase28/PHASE28_STRATEGY_FAMILY_PARITY_AND_CADENCE_COMPLETION_PLAN.md`
@@ -100,6 +117,7 @@ Phase 28 구현 범위가 닫히면 최종 checklist로 다시 갱신한다.
   - `.note/finance/phase28/PHASE28_HISTORY_REPLAY_PARITY_SECOND_WORK_UNIT.md`
   - `.note/finance/phase28/PHASE28_SAVED_PORTFOLIO_REPLAY_PARITY_THIRD_WORK_UNIT.md`
   - `.note/finance/phase28/PHASE28_COMPARE_AND_WEIGHTED_DATA_TRUST_FOURTH_WORK_UNIT.md`
+  - `.note/finance/phase28/PHASE28_REAL_MONEY_GUARDRAIL_PARITY_FIFTH_WORK_UNIT.md`
 - 체크 항목:
   - [ ] Phase 28이 새 전략 추가가 아니라 strategy family 차이 정리 phase라는 점이 이해되는지
   - [ ] `Parity`가 모든 전략을 똑같이 만드는 뜻이 아니라, 차이를 헷갈리지 않게 맞추는 뜻으로 읽히는지
@@ -108,8 +126,9 @@ Phase 28 구현 범위가 닫히면 최종 checklist로 다시 갱신한다.
   - [ ] history replay / load parity가 투자 분석이 아니라 재실행 / 복원 QA라는 점이 이해되는지
   - [ ] saved portfolio replay / load parity도 투자 분석이 아니라 compare + weighted portfolio 재현 QA라는 점이 이해되는지
   - [ ] compare / weighted Data Trust도 투자 분석이 아니라 데이터 조건 확인 QA라는 점이 이해되는지
+  - [ ] Real-Money / Guardrail parity도 모든 전략을 똑같이 만드는 작업이 아니라 전략별 검증 범위를 구분하는 작업이라는 점이 이해되는지
 
-## 8. 문서와 closeout 확인
+## 9. 문서와 closeout 확인
 
 - 확인 문서:
   - `.note/finance/phase28/PHASE28_CURRENT_CHAPTER_TODO.md`
@@ -120,7 +139,7 @@ Phase 28 구현 범위가 닫히면 최종 checklist로 다시 갱신한다.
 - 체크 항목:
   - [ ] Phase 28 상태가 현재 구현 상태와 맞는지
   - [ ] 새 문서가 index에서 바로 찾히는지
-  - [ ] 다음 작업 후보가 Real-Money / Guardrail parity 쪽으로 자연스럽게 이어지는지
+  - [ ] 다음 작업 후보가 Phase 29 candidate review workflow 쪽으로 자연스럽게 이어지는지
 
 ## 한 줄 판단 기준
 

@@ -2545,3 +2545,17 @@ Detailed historical analysis was archived on `2026-04-13`.
   - compare / weighted / saved replay history context에도 data trust rows를 남긴다
 - Follow-up:
   - 다음 Phase 28 판단은 Real-Money / Guardrail parity를 quarterly와 ETF 전략군에 어디까지 맞출지 정하는 것이다
+
+### 2026-04-23 - Phase 28 Real-Money / Guardrail parity는 같은 기능 강제 적용이 아니라 scope 구분이다
+- User request:
+  - Phase 28 다음 단계 진행을 요청함
+- Interpreted goal:
+  - annual strict, quarterly prototype, price-only ETF 전략군의 Real-Money / Guardrail 지원 차이를 사용자가 같은 화면에서 혼동하지 않게 해야 함
+- Analysis result:
+  - quarterly prototype에는 annual strict 수준의 promotion / guardrail surface를 억지로 붙이지 않는다
+  - annual strict는 full strict equity Real-Money / Guardrail 기준 surface로 유지한다
+  - Global Relative Strength는 ETF operability + cost / benchmark first pass로 보며, dedicated ETF underperformance / drawdown guardrail은 아직 없다
+  - GTAA, Risk Parity Trend, Dual Momentum은 ETF Real-Money + ETF guardrail first pass로 구분한다
+  - compare, history, saved portfolio에 `Real-Money / Guardrail Scope` 표를 추가해 replay 전에 어떤 검증 범위의 결과인지 확인하게 했다
+- Follow-up:
+  - Phase 28 checklist QA에서 compare tab, history scope table, saved portfolio scope table이 실제로 이해되는지 확인한다

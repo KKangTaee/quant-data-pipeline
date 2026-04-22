@@ -91,6 +91,16 @@ Phase 28 이후 compare / weighted portfolio history context에는 component별 
 이 값은 성과 계산 자체를 바꾸지 않고, 사용자가 compare / weighted / saved replay 결과를 읽을 때
 각 component의 실제 결과 기간과 데이터 품질 조건을 다시 확인하게 하는 metadata다.
 
+Phase 28 이후 Real-Money / Guardrail parity는 별도의 성과 계산 로직을 새로 만들지 않고,
+이미 result bundle meta나 saved portfolio override에 남아 있는 값을 읽어 scope table로 보여준다.
+
+- annual strict: benchmark / investability / promotion / guardrail 입력을 full strict surface로 해석한다.
+- strict quarterly prototype: portfolio handling과 risk-off contract는 저장하지만, promotion guardrail surface는 deferred로 해석한다.
+- ETF 전략군: ETF operability, cost, benchmark, ETF guardrail first pass를 strategy별 지원 범위로 해석한다.
+
+이 scope table은 runtime result를 바꾸지 않는다.
+사용자가 history / saved replay 전에 어떤 검증 범위의 결과인지 이해하게 하는 metadata 해석 layer다.
+
 ## Real-Money / Guardrail / Pre-Live runtime 기준
 
 runtime은 단순 성과표만 반환하지 않는다.
