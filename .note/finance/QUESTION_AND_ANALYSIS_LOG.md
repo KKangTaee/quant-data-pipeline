@@ -2508,3 +2508,15 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 이 snapshot은 Single Strategy와 Compare strategy box에서 확인하게 한다
 - Follow-up:
   - 다음 작업은 history / load-into-form / run-again / saved replay에서 strategy별 핵심 설정이 실제로 빠지지 않는지 점검하는 것이다
+
+### 2026-04-22 - Phase 28 history 재진입은 먼저 저장 상태를 보여줘야 한다
+- User request:
+  - Phase 28 다음 단계 진행을 요청함
+- Interpreted goal:
+  - annual strict, quarterly prototype, GRS 등 전략별 history record가 `Load Into Form` / `Run Again`에서 핵심 설정을 잃지 않는지 확인 가능해야 함
+- Analysis result:
+  - history 재실행 로직을 크게 바꾸기보다, selected history record에 어떤 값이 저장되어 있는지 먼저 보여주는 표가 가장 안전한 다음 단위라고 판단했다
+  - 새 `History Replay / Load Parity Snapshot`은 strategy key, 기간, universe, result window, data trust, factor cadence, overlay, portfolio handling, real-money / guardrail, GRS score 설정의 저장 여부를 보여준다
+  - 새 history record는 `guardrail_reference_ticker`, `actual_result_start/end`, `result_rows`, `price_freshness`, `excluded_tickers`, `malformed_price_rows`를 추가 보존한다
+- Follow-up:
+  - 다음 Phase 28 작업은 saved portfolio replay parity와 compare / saved replay에서 Data Trust Summary를 어디까지 확장할지 결정하는 것이다

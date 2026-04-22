@@ -25,8 +25,9 @@ Phase 28의 목표는 새 전략을 급하게 늘리는 것이 아니다.
 
 ## 2. 다음 작업 후보
 
-- `pending` history / load-into-form / run-again parity 점검
+- `completed` history / load-into-form / run-again parity 점검
   - annual, quarterly, GRS의 핵심 설정값이 다시 열었을 때 빠지지 않는지 확인한다.
+  - `History Replay / Load Parity Snapshot`으로 선택한 history record의 저장 상태를 먼저 볼 수 있게 했다.
 - `pending` saved portfolio replay parity 점검
   - compare에서 만든 strategy override가 saved replay에서 같은 의미로 복원되는지 본다.
 - `pending` Data Trust Summary 확장 범위 결정
@@ -36,8 +37,8 @@ Phase 28의 목표는 새 전략을 급하게 늘리는 것이 아니다.
 
 ## 3. Validation
 
-- `completed` `python3 -m py_compile app/web/pages/backtest.py`
-- `completed` `.venv` import smoke
+- `completed` `python3 -m py_compile app/web/pages/backtest.py app/web/runtime/history.py`
+- `completed` `.venv` import smoke + history parity helper smoke
 - `completed` finance refinement hygiene check
 - `completed` `git diff --check`
 - `pending` targeted manual UI validation
@@ -48,6 +49,7 @@ Phase 28의 목표는 새 전략을 급하게 늘리는 것이 아니다.
 - `completed` phase kickoff bundle 생성
 - `completed` Phase 28 plan / TODO 작성
 - `completed` first work-unit 문서 생성
+- `completed` second work-unit 문서 생성
 - `completed` roadmap / doc index / work log / question log sync
 - `completed` code_analysis sync
 
@@ -55,4 +57,6 @@ Phase 28의 목표는 새 전략을 급하게 늘리는 것이 아니다.
 
 Phase 28은 active 상태다.
 첫 작업 단위인 `Strategy Capability Snapshot`은 구현됐고,
-다음 판단은 사용자가 Single Strategy와 Compare에서 이 표를 보고 전략별 차이를 이해할 수 있는지 확인하는 것이다.
+두 번째 작업 단위로 history record의 재실행 / form 복원 가능성을 확인하는
+`History Replay / Load Parity Snapshot`도 추가됐다.
+다음 판단은 saved portfolio replay parity와 Data Trust Summary 확장 범위를 어디까지 다룰지다.

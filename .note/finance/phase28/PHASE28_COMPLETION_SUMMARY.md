@@ -36,9 +36,18 @@
 
 - 기능이 없는 것처럼 보이는 부분이 버그인지, 아직 의도적으로 남겨둔 차이인지 구분하기 쉬워졌다.
 
+### 3. History Replay / Load Parity Snapshot 추가
+
+- `Backtest > History > Selected History Run`에서 선택한 저장 기록의 재실행 / form 복원 관련 설정을 표로 볼 수 있게 했다.
+- 새 history record는 결과 실제 기간, price freshness, excluded ticker, malformed price row, guardrail reference ticker를 더 보존한다.
+- annual strict, quarterly prototype, GRS, GTAA, 기타 ETF 전략별로 어떤 값이 history에 남아야 하는지 구분해서 보여준다.
+
+쉽게 말하면:
+
+- 예전 백테스트를 다시 열기 전에 “이 기록으로 무엇이 복원되고 무엇은 빠질 수 있는지”를 먼저 확인할 수 있다.
+
 ## 아직 남아 있는 것
 
-- history / load-into-form / run-again parity 점검
 - saved portfolio replay parity 점검
 - Data Trust Summary를 compare / saved replay에 어디까지 확장할지 결정
 - Real-Money / Guardrail parity 범위 결정
@@ -48,5 +57,5 @@
 
 아직 closeout 상태가 아니다.
 
-현재는 Phase 28 첫 구현 단위를 완료한 상태이며,
-사용자 QA와 다음 작업 단위 진행 후 closeout 여부를 판단한다.
+현재는 Phase 28의 첫 번째 / 두 번째 구현 단위를 완료한 상태이며,
+saved portfolio replay parity와 남은 확장 범위를 더 본 뒤 사용자 QA 단계로 넘길지 판단한다.

@@ -1817,3 +1817,14 @@ Detailed historical logs were archived on `2026-04-13`.
   - `python3 -m py_compile app/web/pages/backtest.py` passed
 - Durable takeaway:
   - Phase 28 starts by making strategy family differences visible before adding or equalizing more functionality. The current focus is "what does this strategy currently support?" rather than new strategy discovery.
+
+### 2026-04-22
+- Implemented Phase 28 history replay / load parity visibility.
+- Changed:
+  - added `History Replay / Load Parity Snapshot` under `Backtest > History > Selected History Run`
+  - expanded new backtest history records with result-window, price freshness, excluded ticker, malformed price row, and guardrail reference metadata
+  - documented the second Phase 28 work unit and synced roadmap, index, comprehensive analysis, and code-flow notes
+- Validation:
+  - `python3 -m py_compile app/web/pages/backtest.py app/web/runtime/history.py` passed
+- Durable takeaway:
+  - Phase 28 now lets users inspect whether a saved history run contains the key settings needed for `Load Into Form` or `Run Again` before pressing either action.

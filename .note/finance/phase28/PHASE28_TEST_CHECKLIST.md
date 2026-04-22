@@ -36,18 +36,44 @@ Phase 28 구현 범위가 닫히면 최종 checklist로 다시 갱신한다.
   - [ ] `Equal Weight`, `GTAA`, `Risk Parity Trend`, `Dual Momentum`도 각각 지원 범위가 간단히 설명되는지
   - [ ] snapshot 표가 너무 길거나 방해되지 않고, 필요할 때 접어서 확인할 수 있는지
 
-## 3. Phase 28 첫 작업 의도 확인
+## 3. History replay / load parity 확인
+
+- 확인 위치:
+  - `Backtest > History`
+  - 저장 기록 1개 선택
+  - `Selected History Run` 아래의 `History Replay / Load Parity Snapshot`
+- 체크 항목:
+  - [ ] strict annual history record를 선택했을 때 `전략과 실행 기간`, `Universe / Ticker`, `Statement cadence / factor`, `Portfolio Handling`, `Real-Money / Guardrail` 행이 보이는지
+  - [ ] strict quarterly prototype history record를 선택했을 때 quarterly가 annual strict와 같은 Real-Money / Guardrail 완성 상태로 보이지 않는지
+  - [ ] `Global Relative Strength` history record를 선택했을 때 score, cash, trend, ETF real-money 입력이 별도 행으로 보이는지
+  - [ ] `저장 상태` 열의 `저장됨`, `누락 가능`, `없음 또는 미사용`, `prototype 범위` 표현이 이해되는지
+  - [ ] `Load Into Form` 또는 `Run Again`을 누르기 전에 어떤 값이 복원될지 대략 판단할 수 있는지
+
+## 4. History record 추가 보존값 확인
+
+- 확인 위치:
+  - `Backtest > History > Selected History Run > Saved Input & Context`
+  - `Backtest > History > Selected History Run > Raw Record`
+- 체크 항목:
+  - [ ] 새로 실행한 history record에 `actual_result_start`, `actual_result_end`, `result_rows`가 보이는지
+  - [ ] price freshness가 있는 전략에서는 `price_freshness` 또는 관련 상태가 history record에서 확인되는지
+  - [ ] strict annual guardrail 설정을 사용한 record에서 `guardrail_reference_ticker`가 사라지지 않는지
+  - [ ] GRS처럼 excluded ticker나 malformed price row가 있을 수 있는 전략에서 해당 정보가 history record에 남는지
+
+## 5. Phase 28 작업 의도 확인
 
 - 확인 위치:
   - `.note/finance/phase28/PHASE28_STRATEGY_FAMILY_PARITY_AND_CADENCE_COMPLETION_PLAN.md`
   - `.note/finance/phase28/PHASE28_STRATEGY_CAPABILITY_SNAPSHOT_FIRST_WORK_UNIT.md`
+  - `.note/finance/phase28/PHASE28_HISTORY_REPLAY_PARITY_SECOND_WORK_UNIT.md`
 - 체크 항목:
   - [ ] Phase 28이 새 전략 추가가 아니라 strategy family 차이 정리 phase라는 점이 이해되는지
   - [ ] `Parity`가 모든 전략을 똑같이 만드는 뜻이 아니라, 차이를 헷갈리지 않게 맞추는 뜻으로 읽히는지
   - [ ] quarterly prototype이 annual strict와 같은 실전 검증 수준으로 오해되지 않는지
   - [ ] GRS가 재무제표 전략이 아니라 price-only ETF 전략이라는 점이 문서와 UI에서 일관되게 보이는지
+  - [ ] history replay / load parity가 투자 분석이 아니라 재실행 / 복원 QA라는 점이 이해되는지
 
-## 4. 문서와 closeout 확인
+## 6. 문서와 closeout 확인
 
 - 확인 문서:
   - `.note/finance/phase28/PHASE28_CURRENT_CHAPTER_TODO.md`

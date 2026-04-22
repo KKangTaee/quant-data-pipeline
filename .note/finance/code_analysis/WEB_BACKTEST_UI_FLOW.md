@@ -123,6 +123,20 @@ History는 compact summary 중심이다.
 - `Run Again`: 저장된 payload로 다시 실행한다.
 - `Load Into Form`: 저장된 입력값을 single strategy form에 복원한다.
 
+Phase 28 이후 History의 selected record 영역에는
+`History Replay / Load Parity Snapshot`을 둔다.
+이 표는 선택한 record에 재실행 / form 복원에 필요한 핵심 값이 남아 있는지 보여준다.
+
+주요 확인 항목:
+
+- strategy key, 입력 기간, timeframe, option
+- universe / ticker / preset
+- actual result start / end, result row count
+- price freshness, excluded ticker, malformed price row
+- strict family factor cadence, universe contract, overlay, portfolio handling
+- annual strict real-money / guardrail / promotion settings
+- GRS score, cash ticker, trend window, ETF operability inputs
+
 ## Pre-Live Review 흐름
 
 ```text

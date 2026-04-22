@@ -6341,6 +6341,332 @@ def _strategy_capability_rows(strategy_name: str | None) -> list[dict[str, str]]
     ]
 
 
+def _history_value_is_present(value: Any) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, (float, np.floating)) and pd.isna(value):
+        return False
+    if isinstance(value, str):
+        return bool(value.strip())
+    if isinstance(value, (list, tuple, set, dict)):
+        return bool(value)
+    return True
+
+
+def _format_history_parity_value(value: Any) -> str:
+    if not _history_value_is_present(value):
+        return "-"
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, (list, tuple, set)):
+        items = [str(item) for item in list(value)]
+        preview = ", ".join(items[:8])
+        if len(items) > 8:
+            preview += f" 외 {len(items) - 8}개"
+        return preview
+    if isinstance(value, dict):
+        text = json.dumps(value, ensure_ascii=False, default=str)
+    else:
+        text = str(value)
+    if len(text) > 140:
+        return text[:137] + "..."
+    return text
+
+
+def _history_record_field_pairs(record: dict[str, Any], fields: list[str]) -> list[tuple[str, Any]]:
+    pairs: list[tuple[str, Any]] = []
+    for field in fields:
+        value = record.get(field)
+        if _history_value_is_present(value):
+            pairs.append((field, value))
+    return pairs
+
+
+def _history_field_summary(record: dict[str, Any], fields: list[str]) -> str:
+    pairs = _history_record_field_pairs(record, fields)
+    if not pairs:
+        return "-"
+    return " / ".join(f"{field}={_format_history_parity_value(value)}" for field, value in pairs)
+
+
+def _history_parity_row(
+    record: dict[str, Any],
+    *,
+    area: str,
+    fields: list[str],
+    why: str,
+    required: bool = True,
+    note: str | None = None,
+) -> dict[str, str]:
+    pairs = _history_record_field_pairs(record, fields)
+    if pairs:
+        status = "저장됨"
+    elif required:
+        status = "누락 가능"
+    else:
+        status = "없음 또는 미사용"
+    return {
+        "확인 영역": area,
+        "저장 상태": status,
+        "저장된 값": _history_field_summary(record, fields),
+        "왜 중요한가": note or why,
+    }
+
+
+def _build_history_replay_parity_rows(record: dict[str, Any]) -> list[dict[str, str]]:
+    record = dict(record)
+    summary = record.get("summary") or {}
+    gate_snapshot = record.get("gate_snapshot") or {}
+    record.setdefault("actual_result_start", summary.get("start_date"))
+    record.setdefault("actual_result_end", summary.get("end_date"))
+    if record.get("result_rows") is None:
+        record["result_rows"] = summary.get("result_rows")
+    if not record.get("price_freshness") and gate_snapshot.get("price_freshness_status"):
+        record["price_freshness_status"] = gate_snapshot.get("price_freshness_status")
+
+    strategy_key = str(record.get("strategy_key") or "").strip()
+    rows: list[dict[str, str]] = []
+
+    def add(area: str, fields: list[str], why: str, *, required: bool = True, note: str | None = None) -> None:
+        rows.append(
+            _history_parity_row(
+                record,
+                area=area,
+                fields=fields,
+                why=why,
+                required=required,
+                note=note,
+            )
+        )
+
+    add(
+        "전략과 실행 기간",
+        ["strategy_key", "input_start", "input_end", "timeframe", "option"],
+        "`Load Into Form`과 `Run Again`이 어떤 전략을 어떤 기간으로 다시 열지 결정합니다.",
+    )
+    add(
+        "Universe / Ticker",
+        ["universe_mode", "preset_name", "tickers"],
+        "저장 기록을 다시 열었을 때 같은 후보군으로 시작하는지 확인합니다.",
+    )
+    add(
+        "결과 데이터 범위",
+        ["actual_result_start", "actual_result_end", "result_rows"],
+        "요청 기간과 실제 계산 기간이 달랐는지 history에서도 다시 확인합니다.",
+        required=False,
+    )
+    add(
+        "Data Trust",
+        ["price_freshness", "price_freshness_status", "requested_tickers", "excluded_tickers", "malformed_price_rows"],
+        "결과 기간이 짧아졌을 때 데이터 문제인지 전략 문제인지 다시 구분합니다.",
+        required=False,
+    )
+
+    strict_keys = {
+        "quality_snapshot",
+        "quality_snapshot_strict_annual",
+        "quality_snapshot_strict_quarterly_prototype",
+        "value_snapshot_strict_annual",
+        "value_snapshot_strict_quarterly_prototype",
+        "quality_value_snapshot_strict_annual",
+        "quality_value_snapshot_strict_quarterly_prototype",
+    }
+    quarterly_keys = {
+        "quality_snapshot_strict_quarterly_prototype",
+        "value_snapshot_strict_quarterly_prototype",
+        "quality_value_snapshot_strict_quarterly_prototype",
+    }
+    annual_strict_keys = {
+        "quality_snapshot_strict_annual",
+        "value_snapshot_strict_annual",
+        "quality_value_snapshot_strict_annual",
+    }
+
+    if strategy_key in strict_keys:
+        add(
+            "Statement cadence / factor",
+            ["factor_freq", "rebalance_freq", "snapshot_mode", "quality_factors", "value_factors"],
+            "annual과 quarterly prototype이 서로 다른 cadence로 저장됐는지 확인합니다.",
+        )
+        add(
+            "Universe Contract",
+            ["universe_contract", "dynamic_target_size", "snapshot_source", "research_source"],
+            "static / historical dynamic universe가 load 또는 rerun에서 유지되는지 봅니다.",
+            required=False,
+        )
+        add(
+            "Overlay",
+            [
+                "trend_filter_enabled",
+                "trend_filter_window",
+                "market_regime_enabled",
+                "market_regime_window",
+                "market_regime_benchmark",
+            ],
+            "trend filter와 market regime 조건이 저장 기록에서 사라지지 않았는지 확인합니다.",
+            required=False,
+        )
+        add(
+            "Portfolio Handling",
+            [
+                "weighting_mode",
+                "rejected_slot_handling_mode",
+                "rejected_slot_fill_enabled",
+                "partial_cash_retention_enabled",
+                "risk_off_mode",
+                "defensive_tickers",
+            ],
+            "weighting, rejected slot 처리, risk-off 처리 계약이 form에 복원되는지 봅니다.",
+            required=False,
+        )
+        if strategy_key in annual_strict_keys:
+            add(
+                "Real-Money / Guardrail",
+                [
+                    "benchmark_contract",
+                    "benchmark_ticker",
+                    "guardrail_reference_ticker",
+                    "min_price_filter",
+                    "min_history_months_filter",
+                    "min_avg_dollar_volume_20d_m_filter",
+                    "transaction_cost_bps",
+                    "underperformance_guardrail_enabled",
+                    "drawdown_guardrail_enabled",
+                ],
+                "annual strict의 실전 검증 입력과 guardrail 설정이 재진입 과정에서 유지되는지 확인합니다.",
+                required=False,
+            )
+            add(
+                "Promotion 기준",
+                [
+                    "promotion_min_benchmark_coverage",
+                    "promotion_min_net_cagr_spread",
+                    "promotion_min_liquidity_clean_coverage",
+                    "promotion_max_underperformance_share",
+                    "promotion_min_worst_rolling_excess_return",
+                    "promotion_max_strategy_drawdown",
+                    "promotion_max_drawdown_gap_vs_benchmark",
+                ],
+                "승격 판단 기준을 조정한 실행인지, 기본값 실행인지 구분합니다.",
+                required=False,
+            )
+        elif strategy_key in quarterly_keys:
+            rows.append(
+                {
+                    "확인 영역": "Real-Money / Guardrail",
+                    "저장 상태": "prototype 범위",
+                    "저장된 값": "quarterly prototype은 annual strict 수준의 Real-Money / Guardrail surface가 아직 아닙니다.",
+                    "왜 중요한가": "quarterly 결과를 annual strict와 같은 실전 검증 완료 상태로 오해하지 않기 위한 구분입니다.",
+                }
+            )
+
+    elif strategy_key == "global_relative_strength":
+        add(
+            "Relative Strength score",
+            ["score_lookback_months", "score_return_columns", "score_weights"],
+            "GRS의 상대강도 산식과 기간이 다시 실행할 때 유지되는지 봅니다.",
+            required=False,
+        )
+        add(
+            "Cash / Trend",
+            ["cash_ticker", "trend_filter_window", "top", "rebalance_interval"],
+            "cash ticker, trend window, 선택 개수, 리밸런싱 cadence가 복원되는지 확인합니다.",
+        )
+        add(
+            "ETF Real-Money 입력",
+            [
+                "benchmark_ticker",
+                "min_price_filter",
+                "transaction_cost_bps",
+                "promotion_min_etf_aum_b",
+                "promotion_max_bid_ask_spread_pct",
+            ],
+            "ETF 운용 가능성 검토에 쓰는 입력이 history에 남아 있는지 봅니다.",
+            required=False,
+        )
+
+    elif strategy_key == "gtaa":
+        add(
+            "GTAA score / cadence",
+            ["score_lookback_months", "score_return_columns", "score_weights", "top", "rebalance_interval"],
+            "GTAA ranking과 리밸런싱 cadence가 저장 기록에서 유지되는지 봅니다.",
+            required=False,
+        )
+        add(
+            "Risk-Off / Defensive",
+            [
+                "trend_filter_window",
+                "risk_off_mode",
+                "defensive_tickers",
+                "market_regime_enabled",
+                "market_regime_window",
+                "market_regime_benchmark",
+                "crash_guardrail_enabled",
+            ],
+            "risk-off와 defensive sleeve 관련 설정이 재실행 때 유지되는지 확인합니다.",
+            required=False,
+        )
+        add(
+            "ETF Real-Money / Guardrail",
+            [
+                "benchmark_ticker",
+                "min_price_filter",
+                "transaction_cost_bps",
+                "underperformance_guardrail_enabled",
+                "drawdown_guardrail_enabled",
+            ],
+            "ETF 실전 검증 입력과 guardrail 설정이 저장됐는지 봅니다.",
+            required=False,
+        )
+
+    elif strategy_key in {"risk_parity_trend", "dual_momentum"}:
+        add(
+            "ETF 전략 입력",
+            ["top", "rebalance_interval", "vol_window"],
+            "전략별 핵심 입력이 load / rerun에서 유지되는지 봅니다.",
+            required=False,
+        )
+        add(
+            "ETF Real-Money / Guardrail",
+            [
+                "benchmark_ticker",
+                "min_price_filter",
+                "transaction_cost_bps",
+                "underperformance_guardrail_enabled",
+                "drawdown_guardrail_enabled",
+            ],
+            "ETF 실전 검증 입력과 guardrail 설정이 저장됐는지 봅니다.",
+            required=False,
+        )
+
+    elif strategy_key == "equal_weight":
+        add(
+            "Equal Weight 입력",
+            ["rebalance_interval", "tickers"],
+            "단순 기준선 전략을 같은 ticker와 리밸런싱 주기로 다시 열 수 있는지 봅니다.",
+        )
+
+    return rows
+
+
+def _render_history_replay_parity_snapshot(record: dict[str, Any]) -> None:
+    payload = _build_history_payload(record)
+    if payload is None:
+        return
+
+    rows = _build_history_replay_parity_rows(record)
+    if not rows:
+        return
+
+    st.markdown("#### History Replay / Load Parity Snapshot")
+    st.caption(
+        "이 표는 선택한 저장 기록을 `Load Into Form` 또는 `Run Again`으로 다시 열 때 "
+        "어떤 핵심 설정이 history에 남아 있는지 확인하는 표입니다. "
+        "`누락 가능`이 보이면 그 항목은 기본값으로 돌아갈 수 있으므로 Raw Record나 form 복원 결과를 같이 봅니다."
+    )
+    st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+
+
 def _render_strategy_capability_snapshot(strategy_name: str | None) -> None:
     rows = _strategy_capability_rows(strategy_name)
     if not rows:
@@ -9752,21 +10078,33 @@ def _render_persistent_backtest_history() -> None:
                     "option": selected_record.get("option"),
                     "rebalance_interval": selected_record.get("rebalance_interval"),
                     "top": selected_record.get("top"),
+                    "cash_ticker": selected_record.get("cash_ticker"),
                     "vol_window": selected_record.get("vol_window"),
+                    "result_rows": selected_record.get("result_rows"),
+                    "actual_result_start": selected_record.get("actual_result_start"),
+                    "actual_result_end": selected_record.get("actual_result_end"),
                     "factor_freq": selected_record.get("factor_freq"),
                     "rebalance_freq": selected_record.get("rebalance_freq"),
                     "snapshot_mode": selected_record.get("snapshot_mode"),
                     "quality_factors": selected_record.get("quality_factors"),
                     "value_factors": selected_record.get("value_factors"),
+                    "score_lookback_months": selected_record.get("score_lookback_months"),
+                    "score_return_columns": selected_record.get("score_return_columns"),
+                    "score_weights": selected_record.get("score_weights"),
                     "trend_filter_enabled": selected_record.get("trend_filter_enabled"),
                     "trend_filter_window": selected_record.get("trend_filter_window"),
                     "weighting_mode": selected_record.get("weighting_mode"),
                     "rejected_slot_handling_mode": selected_record.get("rejected_slot_handling_mode"),
                     "rejected_slot_fill_enabled": selected_record.get("rejected_slot_fill_enabled"),
                     "partial_cash_retention_enabled": selected_record.get("partial_cash_retention_enabled"),
+                    "risk_off_mode": selected_record.get("risk_off_mode"),
+                    "defensive_tickers": selected_record.get("defensive_tickers"),
                     "market_regime_enabled": selected_record.get("market_regime_enabled"),
                     "market_regime_window": selected_record.get("market_regime_window"),
                     "market_regime_benchmark": selected_record.get("market_regime_benchmark"),
+                    "crash_guardrail_enabled": selected_record.get("crash_guardrail_enabled"),
+                    "crash_guardrail_drawdown_threshold": selected_record.get("crash_guardrail_drawdown_threshold"),
+                    "crash_guardrail_lookback_months": selected_record.get("crash_guardrail_lookback_months"),
                     "underperformance_guardrail_enabled": selected_record.get("underperformance_guardrail_enabled"),
                     "underperformance_guardrail_window_months": selected_record.get("underperformance_guardrail_window_months"),
                     "underperformance_guardrail_threshold": selected_record.get("underperformance_guardrail_threshold"),
@@ -9774,9 +10112,20 @@ def _render_persistent_backtest_history() -> None:
                     "drawdown_guardrail_window_months": selected_record.get("drawdown_guardrail_window_months"),
                     "drawdown_guardrail_strategy_threshold": selected_record.get("drawdown_guardrail_strategy_threshold"),
                     "drawdown_guardrail_gap_threshold": selected_record.get("drawdown_guardrail_gap_threshold"),
+                    "benchmark_contract": selected_record.get("benchmark_contract"),
+                    "benchmark_ticker": selected_record.get("benchmark_ticker"),
+                    "guardrail_reference_ticker": selected_record.get("guardrail_reference_ticker"),
+                    "min_price_filter": selected_record.get("min_price_filter"),
+                    "min_history_months_filter": selected_record.get("min_history_months_filter"),
+                    "min_avg_dollar_volume_20d_m_filter": selected_record.get("min_avg_dollar_volume_20d_m_filter"),
+                    "transaction_cost_bps": selected_record.get("transaction_cost_bps"),
                     "snapshot_source": selected_record.get("snapshot_source"),
                     "universe_contract": selected_record.get("universe_contract"),
                     "dynamic_target_size": selected_record.get("dynamic_target_size"),
+                    "requested_tickers": selected_record.get("requested_tickers"),
+                    "excluded_tickers": selected_record.get("excluded_tickers"),
+                    "malformed_price_rows": selected_record.get("malformed_price_rows"),
+                    "price_freshness": selected_record.get("price_freshness"),
                     "ui_elapsed_seconds": selected_record.get("ui_elapsed_seconds"),
                     "universe_mode": selected_record.get("universe_mode"),
                     "preset_name": selected_record.get("preset_name"),
@@ -9877,6 +10226,8 @@ def _render_persistent_backtest_history() -> None:
 
     with detail_tabs[2]:
         st.json(selected_record)
+
+    _render_history_replay_parity_snapshot(selected_record)
 
     st.markdown("#### Actions For This History Run")
     payload = _build_history_payload(selected_record)

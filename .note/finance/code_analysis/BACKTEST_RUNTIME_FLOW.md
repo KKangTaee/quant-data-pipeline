@@ -67,6 +67,18 @@ Phase 27 이후 result bundle meta에는 Data Trust Summary가 읽을 수 있도
 - `excluded_tickers`: 실행 중 제외된 ticker
 - `malformed_price_rows`: 가격 결측 행이 있는 ticker 요약
 
+Phase 28 이후 새 backtest history record도 재실행 / form 복원 QA를 위해
+일부 result-window / data-trust 값을 같이 보존한다.
+
+- `result_rows`
+- `actual_result_start`
+- `actual_result_end`
+- `price_freshness`
+- `requested_tickers`
+- `excluded_tickers`
+- `malformed_price_rows`
+- `guardrail_reference_ticker`
+
 ## Real-Money / Guardrail / Pre-Live runtime 기준
 
 runtime은 단순 성과표만 반환하지 않는다.
