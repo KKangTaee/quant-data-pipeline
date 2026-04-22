@@ -73,6 +73,7 @@ DB-backed market data ingestion, factor generation, and strategy backtesting wor
     compare 또는 Pre-Live Review로 넘기는 흐름
   - latest backtest / history result를 registry 저장 전 후보 검토 초안으로 읽는 흐름
   - 후보 검토 초안을 바로 registry에 넣지 않고 Candidate Review Note로 판단과 다음 행동을 남기는 흐름
+  - 저장된 review note를 registry row 초안으로 확인한 뒤 명시적으로 current candidate registry에 append하는 흐름
 
 ## 프로젝트 구조
 

@@ -5,7 +5,7 @@
 이 checklist는 Phase 29에서 추가한 `Candidate Review` 화면이
 current candidate를 검토 보드로 읽고 compare / Pre-Live Review로 자연스럽게 넘기는지 확인하기 위한 문서다.
 
-현재는 Phase 29 first / second / third work unit QA checklist다.
+현재는 Phase 29 first / second / third / fourth work unit QA checklist다.
 이 문서의 항목을 확인한 뒤 다음 작업 단위로 넘어갈지 판단한다.
 
 ## 사용 방법
@@ -96,20 +96,35 @@ current candidate를 검토 보드로 읽고 compare / Pre-Live Review로 자연
   - [ ] 저장 후 `Review Notes` 탭에서 방금 저장한 기록이 표로 보이는지
   - [ ] `Inspect Candidate Review Note`에서 원본 JSON을 확인할 수 있는지
 
-## 8. 문서와 상태 확인
+## 8. Review Note -> Current Candidate Registry Draft 확인
+
+- 확인 위치:
+  - `Backtest > Candidate Review > Review Notes`
+- 체크 항목:
+  - [ ] 저장된 review note를 선택하면 `Prepare Current Candidate Registry Row` 영역이 보이는지
+  - [ ] `Registry ID`, `Record Type`, `Strategy Family`, `Strategy Name`, `Candidate Role`, `Title`이 저장 전 필수 정보처럼 읽히는지
+  - [ ] `Record Type`에서 current candidate / near miss / scenario의 차이가 이해되는지
+  - [ ] `Current Candidate Registry Row JSON Preview`에서 저장될 row를 미리 볼 수 있는지
+  - [ ] `Append To Current Candidate Registry` 버튼이 자동 승격이 아니라 명시적 append 동작으로 읽히는지
+  - [ ] `Reject For Now` review note는 registry append가 막히는지
+  - [ ] append 후 Candidate Board에서 새 후보 row가 보이는지
+  - [ ] append 후에도 투자 승인이나 live trading 승인으로 오해되지 않는지
+
+## 9. 문서와 상태 확인
 
 - 확인 문서:
   - `.note/finance/phase29/PHASE29_CANDIDATE_REVIEW_AND_RECOMMENDATION_WORKFLOW_PLAN.md`
   - `.note/finance/phase29/PHASE29_CANDIDATE_REVIEW_BOARD_FIRST_WORK_UNIT.md`
   - `.note/finance/phase29/PHASE29_RESULT_TO_CANDIDATE_REVIEW_HANDOFF_SECOND_WORK_UNIT.md`
   - `.note/finance/phase29/PHASE29_CANDIDATE_REVIEW_NOTE_THIRD_WORK_UNIT.md`
+  - `.note/finance/phase29/PHASE29_REVIEW_NOTE_TO_REGISTRY_DRAFT_FOURTH_WORK_UNIT.md`
   - `.note/finance/phase29/PHASE29_CURRENT_CHAPTER_TODO.md`
   - `.note/finance/MASTER_PHASE_ROADMAP.md`
   - `.note/finance/FINANCE_DOC_INDEX.md`
 - 체크 항목:
   - [ ] Phase 29가 최종 투자 승인 phase가 아니라 후보 검토 workflow phase로 설명되는지
   - [ ] Phase 29 상태가 `active / manual_qa_pending`으로 읽히는지
-  - [ ] 다음 작업 후보가 review note를 실제 후보 registry 기록으로 남길지 판단하는 기준 정리로 이어지는지
+  - [ ] 다음 단계가 사용자 QA 후 Phase 29 closeout 또는 Phase 30 handoff로 이어지는지
 
 ## 한 줄 판단 기준
 

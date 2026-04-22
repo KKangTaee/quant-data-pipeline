@@ -1941,5 +1941,22 @@ Detailed historical logs were archived on `2026-04-13`.
   - synced Phase 29 docs, roadmap, doc index, glossary, operations guide, web UI flow docs, comprehensive analysis, and README
 - Validation:
   - `python3 -m py_compile app/web/pages/backtest.py` passed
+  - `.venv` review note -> registry draft helper smoke passed
+  - `python3 plugins/quant-finance-workflow/scripts/manage_current_candidate_registry.py validate` passed
+  - finance refinement hygiene check passed
+  - `git diff --check` passed
 - Durable takeaway:
   - Candidate Intake Drafts now have a safe persistence step for human review decisions without automatically promoting the draft into the current candidate registry.
+
+### 2026-04-23
+- Implemented Phase 29 Review Note to Current Candidate Registry Draft workflow.
+- Changed:
+  - added `Prepare Current Candidate Registry Row` under `Backtest > Candidate Review > Review Notes`
+  - selected review notes can now generate editable current candidate registry row previews
+  - added explicit `Append To Current Candidate Registry` action
+  - disabled registry append for `Reject For Now` review notes
+  - synced Phase 29 fourth work-unit docs, checklist, roadmap, doc index, glossary, guides, web UI flow docs, comprehensive analysis, and README
+- Validation:
+  - `python3 -m py_compile app/web/pages/backtest.py` passed
+- Durable takeaway:
+  - Review notes can be promoted into candidate registry rows only through an explicit preview-and-append step. This remains candidate persistence, not investment approval or live trading readiness.

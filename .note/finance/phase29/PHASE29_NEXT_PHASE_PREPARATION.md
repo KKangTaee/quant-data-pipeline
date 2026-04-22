@@ -13,7 +13,9 @@ Phase 29 closeout 시점에 다시 갱신한다.
 - 첫 작업 단위로 `Backtest > Candidate Review` panel을 추가했다.
 - 두 번째 작업 단위로 Latest Backtest Run / History 결과를 `Candidate Intake Draft`로 넘기는 길을 만들었다.
 - 세 번째 작업 단위로 `Candidate Intake Draft`를 `Candidate Review Note`로 저장하는 길을 만들었다.
-- 현재는 review note 중 어떤 것을 실제 current candidate registry row로 남길지 기준 정리가 남아 있다.
+- 네 번째 작업 단위로 `Candidate Review Note`를 current candidate registry row 초안으로 변환하고,
+  명시적 append 버튼으로만 registry에 기록하는 길을 만들었다.
+- 현재는 사용자 QA 후 Phase 29를 닫고 Phase 30으로 넘길 수 있는지 확인하면 된다.
 
 ## Phase 30으로 넘어가기 전에 더 중요한 질문
 

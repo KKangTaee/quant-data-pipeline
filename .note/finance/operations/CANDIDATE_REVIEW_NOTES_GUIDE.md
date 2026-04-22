@@ -39,6 +39,7 @@ Candidate Review Note는 "이 백테스트 결과를 보고 사람이 어떤 판
 - `History > Selected History Run > Review As Candidate Draft`
 - `Candidate Review > Candidate Intake Draft > Save Candidate Review Note`
 - `Candidate Review > Review Notes`
+- `Candidate Review > Review Notes > Prepare Current Candidate Registry Row`
 
 ## 저장되는 주요 값
 
@@ -63,3 +64,26 @@ Candidate Review Note는 "이 백테스트 결과를 보고 사람이 어떤 판
 - Candidate Review Note는 live trading 승인이 아니다.
 - Candidate Review Note를 저장해도 current candidate registry에 자동 등록되지 않는다.
 - 실제 후보 등록은 별도 검토와 기준이 필요하다.
+
+## 후보 registry로 남기는 경우
+
+`Candidate Review > Review Notes`에서 저장된 note를 선택하면
+`Prepare Current Candidate Registry Row` 영역에서 registry row 초안을 볼 수 있다.
+
+이때 확인할 것:
+
+- `Registry ID`
+- `Record Type`
+  - current candidate
+  - near miss
+  - scenario
+- `Strategy Family`
+- `Strategy Name`
+- `Candidate Role`
+- `Title`
+- `Registry Notes`
+
+`Append To Current Candidate Registry`를 눌러야만
+`.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`에 append된다.
+
+`Reject For Now` note는 기본적으로 registry append를 막는다.

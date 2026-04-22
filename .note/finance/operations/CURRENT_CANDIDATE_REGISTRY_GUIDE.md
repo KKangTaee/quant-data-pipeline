@@ -53,6 +53,9 @@
   - `Candidate Intake Draft`를 본 뒤 운영자가 남기는 판단 메모다.
   - `.note/finance/CANDIDATE_REVIEW_NOTES.jsonl`에 저장된다.
   - 이 역시 current candidate registry 자동 등록은 아니다.
+- `Review Note -> Current Candidate Registry Draft`
+  - 저장된 review note 중 후보 목록에 남길 만한 것을 registry row 초안으로 바꾸는 단계다.
+  - `Append To Current Candidate Registry`를 눌러야만 이 파일에 append된다.
 - `CURRENT_CANDIDATE_REGISTRY.jsonl`
   - 사람이 후보로 남기기로 판단한 뒤 기록되는 durable 후보 저장소다.
 

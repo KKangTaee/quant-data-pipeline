@@ -52,19 +52,31 @@ Phase 29가 완료되면 이 문서를 closeout 기준으로 다시 갱신한다
 - 백테스트 결과를 후보로 볼지 말지 판단한 이유를 남길 수 있게 되었다.
 - 다만 이것은 current candidate 등록이나 투자 승인 기록이 아니다.
 
+### 4. Review Note -> Current Candidate Registry Draft 추가
+
+- `Candidate Review > Review Notes`에서 저장된 review note를 선택할 수 있게 했다.
+- 선택한 note를 current candidate registry row 초안으로 변환해 보여준다.
+- 사용자는 registry id, record type, strategy family, candidate role, title, notes를 확인 / 수정할 수 있다.
+- `Append To Current Candidate Registry`를 눌러야만 `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`에 append된다.
+- `Reject For Now` note는 기본적으로 registry append를 막아 reject 판단이 후보 목록에 섞이지 않게 했다.
+
+쉽게 말하면:
+
+- review note를 실제 후보 목록에 남기는 길이 생겼다.
+- 하지만 이 동작도 투자 승인이나 live trading 승인이 아니다.
+
 ## 아직 남아 있는 것
 
-- review note를 실제 current candidate registry row로 올릴 기준 정리
 - 사용자 manual UI validation
 
 쉽게 말하면:
 
 - 지금은 registry에 있는 후보를 읽고, latest/history 결과를 후보 검토 초안으로 보내는 상태다.
 - 이제 초안을 별도 review note로 남길 수 있다.
-- 다음에는 review note 중 어떤 것을 실제 후보 기록으로 승격할지 기준을 더 정리하면 된다.
+- 또한 review note 중 후보 목록에 남길 것은 명시적으로 current candidate registry row로 append할 수 있다.
 
 ## 현재 판단
 
 Phase 29는 active 상태다.
-첫 번째 / 두 번째 / 세 번째 작업 단위는 구현됐고,
+첫 번째 / 두 번째 / 세 번째 / 네 번째 작업 단위는 구현됐고,
 자동 검증과 사용자 QA를 거친 뒤 다음 작업 단위로 넘어간다.

@@ -296,6 +296,7 @@ CANDIDATE_REVIEW_DECISION_OPTIONS = [
     "needs_more_evidence",
     "reject_for_now",
 ]
+CURRENT_CANDIDATE_RECORD_TYPE_OPTIONS = ["current_candidate", "near_miss", "scenario"]
 STATIC_MANAGED_RESEARCH_UNIVERSE = "static_managed_research"
 HISTORICAL_DYNAMIC_PIT_UNIVERSE = "historical_dynamic_pit"
 STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS = {
@@ -6054,6 +6055,102 @@ def _render_candidate_review_workspace() -> None:
             )
             selected_note = review_notes[note_labels.index(selected_note_label)]
             st.json(selected_note)
+            st.markdown("#### Prepare Current Candidate Registry Row")
+            st.caption(
+                "선택한 review note를 실제 current candidate registry row로 남길지 검토합니다. "
+                "아래 저장 버튼을 눌러야만 `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`에 append됩니다."
+            )
+            review_decision = str(selected_note.get("review_decision") or "")
+            if review_decision == "reject_for_now":
+                st.warning(
+                    "`Reject For Now` review note는 보통 current candidate registry에 올리지 않습니다. "
+                    "후보로 다시 볼 근거가 생긴 뒤 새 review note를 만드는 편이 안전합니다."
+                )
+            registry_defaults = _candidate_review_note_to_registry_defaults(selected_note)
+            existing_registry_ids = {str(row.get("registry_id") or "") for row in _load_current_candidate_registry_latest()}
+            registry_key = _candidate_review_note_widget_key(selected_note)
+            registry_id = st.text_input(
+                "Registry ID",
+                value=registry_defaults["registry_id"],
+                key=f"candidate_registry_draft_id_{registry_key}",
+                help="append-only registry에서 이 후보를 다시 찾을 때 쓰는 ID입니다. 기존 ID를 쓰면 새 revision처럼 기록됩니다.",
+            )
+            if registry_id in existing_registry_ids:
+                st.warning(
+                    "같은 Registry ID가 이미 active 후보에 있습니다. "
+                    "저장하면 append-only 방식으로 새 row가 추가되고 latest view에서는 더 최근 row가 보입니다."
+                )
+            record_type = st.selectbox(
+                "Record Type",
+                options=CURRENT_CANDIDATE_RECORD_TYPE_OPTIONS,
+                index=CURRENT_CANDIDATE_RECORD_TYPE_OPTIONS.index(registry_defaults["record_type"]),
+                format_func=_current_candidate_record_type_label,
+                key=f"candidate_registry_draft_record_type_{registry_key}",
+                help="current anchor인지, near-miss 대안인지, scenario 비교 후보인지 고릅니다.",
+            )
+            input_cols = st.columns(3, gap="small")
+            with input_cols[0]:
+                strategy_family = st.text_input(
+                    "Strategy Family",
+                    value=registry_defaults["strategy_family"],
+                    key=f"candidate_registry_draft_family_{registry_key}",
+                )
+            with input_cols[1]:
+                strategy_name = st.text_input(
+                    "Strategy Name",
+                    value=registry_defaults["strategy_name"],
+                    key=f"candidate_registry_draft_strategy_{registry_key}",
+                )
+            with input_cols[2]:
+                candidate_role = st.text_input(
+                    "Candidate Role",
+                    value=registry_defaults["candidate_role"],
+                    key=f"candidate_registry_draft_role_{registry_key}",
+                )
+            title = st.text_input(
+                "Title",
+                value=registry_defaults["title"],
+                key=f"candidate_registry_draft_title_{registry_key}",
+            )
+            registry_note_text = st.text_area(
+                "Registry Notes",
+                value=registry_defaults["notes"],
+                key=f"candidate_registry_draft_notes_{registry_key}",
+                help="왜 이 review note를 후보 registry에 남기는지 설명합니다.",
+            )
+            registry_row = _build_current_candidate_registry_row_from_review_note(
+                selected_note,
+                registry_id=registry_id,
+                record_type=record_type,
+                strategy_family=strategy_family,
+                strategy_name=strategy_name,
+                candidate_role=candidate_role,
+                title=title,
+                notes=registry_note_text,
+            )
+            with st.expander("Current Candidate Registry Row JSON Preview", expanded=False):
+                st.json(registry_row)
+            save_disabled = (
+                review_decision == "reject_for_now"
+                or not str(registry_id).strip()
+                or not str(strategy_family).strip()
+                or not str(strategy_name).strip()
+                or not str(candidate_role).strip()
+            )
+            if save_disabled and review_decision != "reject_for_now":
+                st.error("Registry ID, Strategy Family, Strategy Name, Candidate Role은 필수입니다.")
+            if st.button(
+                "Append To Current Candidate Registry",
+                key=f"append_candidate_registry_row_{registry_key}",
+                disabled=save_disabled,
+                use_container_width=True,
+            ):
+                _append_current_candidate_registry_row(registry_row)
+                st.session_state.backtest_candidate_review_note_notice = (
+                    f"Current Candidate Registry row `{registry_row['registry_id']}`를 append했습니다. "
+                    "이 기록도 투자 승인이나 live trading 승인은 아닙니다."
+                )
+                st.rerun()
 
     with detail_tab:
         st.markdown("#### Inspect Candidate")
@@ -9062,6 +9159,213 @@ def _build_candidate_review_notes_rows_for_display(rows: list[dict[str, Any]]) -
             }
         )
     return pd.DataFrame(display_rows)
+
+
+def _candidate_review_note_widget_key(note: dict[str, Any]) -> str:
+    raw = "_".join(
+        [
+            str(note.get("review_note_id") or "review_note"),
+            str(note.get("strategy_key") or note.get("strategy_name") or "candidate"),
+            str(note.get("recorded_at") or "unknown"),
+        ]
+    )
+    return "".join(char if char.isalnum() else "_" for char in raw)[:96]
+
+
+def _current_candidate_record_type_label(record_type: str) -> str:
+    labels = {
+        "current_candidate": "Current Candidate: 현재 기준 후보",
+        "near_miss": "Near Miss: 아깝지만 다시 볼 대안",
+        "scenario": "Scenario: 설정 비교용 후보",
+    }
+    return labels.get(record_type, record_type)
+
+
+def _candidate_review_registry_record_type_default(note: dict[str, Any]) -> str:
+    decision = str(note.get("review_decision") or "").strip().lower()
+    if decision == "consider_registry_candidate":
+        return "current_candidate"
+    if decision == "keep_as_near_miss_review" or decision == "needs_more_evidence":
+        return "near_miss"
+    return "scenario"
+
+
+def _infer_strategy_family_from_review_note(note: dict[str, Any]) -> str:
+    strategy_key = str(note.get("strategy_key") or "").strip().lower()
+    strategy_name = str(note.get("strategy_name") or "").strip().lower()
+    combined = f"{strategy_key} {strategy_name}"
+    if "quality_value" in combined or "quality + value" in combined:
+        return "quality_value"
+    if "quality" in combined:
+        return "quality"
+    if "value" in combined:
+        return "value"
+    if "gtaa" in combined:
+        return "gtaa"
+    if "global_relative_strength" in combined or "global relative strength" in combined:
+        return "global_relative_strength"
+    if "risk_parity" in combined or "risk parity" in combined:
+        return "risk_parity_trend"
+    if "dual_momentum" in combined or "dual momentum" in combined:
+        return "dual_momentum"
+    if "equal_weight" in combined or "equal weight" in combined:
+        return "equal_weight"
+    return "manual_review"
+
+
+def _candidate_review_registry_role_default(record_type: str, note: dict[str, Any]) -> str:
+    decision = str(note.get("review_decision") or "").strip().lower()
+    if record_type == "current_candidate":
+        return "candidate_from_review_note"
+    if record_type == "near_miss":
+        if decision == "needs_more_evidence":
+            return "needs_more_evidence_near_miss"
+        return "review_note_near_miss"
+    return "review_note_scenario"
+
+
+def _slugify_registry_part(value: str) -> str:
+    slug = "".join(char.lower() if char.isalnum() else "_" for char in value)
+    while "__" in slug:
+        slug = slug.replace("__", "_")
+    return slug.strip("_") or "candidate"
+
+
+def _candidate_review_note_to_registry_defaults(note: dict[str, Any]) -> dict[str, str]:
+    record_type = _candidate_review_registry_record_type_default(note)
+    strategy_family = _infer_strategy_family_from_review_note(note)
+    strategy_name = str(note.get("strategy_name") or _strategy_key_to_display_name(note.get("strategy_key")) or note.get("strategy_key") or "")
+    role = _candidate_review_registry_role_default(record_type, note)
+    title_base = strategy_name or strategy_family.replace("_", " ").title()
+    note_suffix = str(note.get("review_note_id") or uuid4().hex[:8]).split("_")[-1]
+    registry_id = "_".join(
+        [
+            _slugify_registry_part(strategy_family),
+            _slugify_registry_part(record_type),
+            _slugify_registry_part(note_suffix),
+        ]
+    )
+    return {
+        "registry_id": registry_id,
+        "record_type": record_type,
+        "strategy_family": strategy_family,
+        "strategy_name": strategy_name,
+        "candidate_role": role,
+        "title": f"{title_base} review candidate",
+        "notes": (
+            f"Created from Candidate Review Note `{note.get('review_note_id')}`. "
+            f"Decision: {note.get('review_decision_label') or _candidate_review_decision_label(str(note.get('review_decision') or ''))}. "
+            f"Operator reason: {note.get('operator_reason') or '-'} "
+            f"Next action: {note.get('next_action') or '-'}"
+        ),
+    }
+
+
+def _compact_dict_without_empty_values(payload: dict[str, Any]) -> dict[str, Any]:
+    return {
+        key: value
+        for key, value in payload.items()
+        if value not in (None, "", [], {})
+    }
+
+
+def _candidate_review_note_contract_snapshot(note: dict[str, Any]) -> dict[str, Any]:
+    settings = dict(note.get("settings_snapshot") or {})
+    return _compact_dict_without_empty_values(
+        {
+            "tickers": settings.get("tickers"),
+            "top_n": settings.get("top_n") or settings.get("top"),
+            "preset_name": settings.get("preset_name"),
+            "universe_mode": settings.get("universe_mode"),
+            "universe_contract": settings.get("universe_contract"),
+            "factor_freq": settings.get("factor_freq"),
+            "rebalance_freq": settings.get("rebalance_freq"),
+            "benchmark_contract": settings.get("benchmark_contract"),
+            "benchmark_ticker": settings.get("benchmark_ticker"),
+        }
+    )
+
+
+def _candidate_review_note_execution_context(note: dict[str, Any]) -> dict[str, Any]:
+    result = dict(note.get("result_snapshot") or {})
+    settings = dict(note.get("settings_snapshot") or {})
+    return _compact_dict_without_empty_values(
+        {
+            "start": result.get("start_date"),
+            "end": result.get("end_date"),
+            "timeframe": settings.get("timeframe") or "1d",
+            "option": settings.get("option") or "month_end",
+        }
+    )
+
+
+def _build_current_candidate_registry_row_from_review_note(
+    note: dict[str, Any],
+    *,
+    registry_id: str,
+    record_type: str,
+    strategy_family: str,
+    strategy_name: str,
+    candidate_role: str,
+    title: str,
+    notes: str,
+) -> dict[str, Any]:
+    result = dict(note.get("result_snapshot") or {})
+    signal = dict(note.get("real_money_signal") or {})
+    contract = _candidate_review_note_contract_snapshot(note)
+    execution_context = _candidate_review_note_execution_context(note)
+    return {
+        "schema_version": 1,
+        "recorded_at": datetime.now().isoformat(timespec="seconds"),
+        "status": "active",
+        "source_kind": "candidate_review_note_registry_append",
+        "source_ref": ".note/finance/CANDIDATE_REVIEW_NOTES.jsonl",
+        "source_review_note_id": note.get("review_note_id"),
+        "registry_id": str(registry_id).strip(),
+        "revision_id": f"rev_{uuid4().hex[:12]}",
+        "record_type": record_type,
+        "strategy_family": str(strategy_family).strip(),
+        "strategy_name": str(strategy_name).strip(),
+        "candidate_role": str(candidate_role).strip(),
+        "title": str(title).strip() or str(registry_id).strip(),
+        "period": {
+            "start": result.get("start_date"),
+            "end": result.get("end_date"),
+        },
+        "contract": contract,
+        "execution_context": execution_context,
+        "compare_prefill": {
+            "strategy_name": str(strategy_name).strip(),
+            "strategy_override": contract,
+        },
+        "result": {
+            "cagr": result.get("cagr"),
+            "mdd": result.get("maximum_drawdown"),
+            "sharpe": result.get("sharpe_ratio"),
+            "end_balance": result.get("end_balance"),
+            "promotion": signal.get("promotion") or "unknown",
+            "shortlist": signal.get("shortlist") or "unknown",
+            "deployment": signal.get("deployment") or "unknown",
+            "validation_status": signal.get("validation_status") or "unknown",
+            "monitoring_status": signal.get("monitoring_status") or "unknown",
+        },
+        "docs": {},
+        "review_context": {
+            "review_decision": note.get("review_decision"),
+            "review_decision_label": note.get("review_decision_label"),
+            "operator_reason": note.get("operator_reason"),
+            "next_action": note.get("next_action"),
+            "review_date": note.get("review_date"),
+            "data_trust_snapshot": note.get("data_trust_snapshot") or {},
+        },
+        "notes": notes,
+    }
+
+
+def _append_current_candidate_registry_row(row: dict[str, Any]) -> None:
+    CURRENT_CANDIDATE_REGISTRY_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with CURRENT_CANDIDATE_REGISTRY_FILE.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(row, ensure_ascii=False) + "\n")
 
 
 def _load_pre_live_candidate_registry_latest() -> list[dict[str, Any]]:

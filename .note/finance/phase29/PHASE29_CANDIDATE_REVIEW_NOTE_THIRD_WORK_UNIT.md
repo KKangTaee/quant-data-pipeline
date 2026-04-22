@@ -53,6 +53,6 @@
 
 ## 다음에 남은 것
 
-- Candidate Review Note를 바탕으로 실제 current candidate registry에 올릴지 판단하는 기준은
-  별도 작업 단위에서 다룬다.
-- Phase 29 QA에서는 우선 review note 저장과 표시가 헷갈리지 않는지 확인한다.
+- Candidate Review Note를 실제 current candidate registry row 초안으로 변환하는 흐름은
+  네 번째 작업 단위에서 추가했다.
+- Phase 29 QA에서는 review note 저장과 registry append가 서로 다른 단계로 읽히는지 확인한다.

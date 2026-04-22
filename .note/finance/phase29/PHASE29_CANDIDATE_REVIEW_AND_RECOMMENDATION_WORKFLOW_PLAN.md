@@ -65,7 +65,11 @@ Pre-Live 관찰로 넘길지"를 정리하는 단계다.
    - 쉽게 말하면: 후보 검토 초안을 본 뒤 사람의 판단과 다음 행동을 기록으로 남긴다.
    - 왜 필요한가: 초안을 바로 current candidate registry에 넣으면 후보 승격처럼 보이고, 저장하지 않으면 판단 근거가 사라진다.
    - 기대 효과: 후보 등록 전 단계와 후보 등록 단계를 분리할 수 있다.
-4. Candidate review report / registry guide 정리
+4. Review Note -> Current Candidate Registry Draft
+   - 쉽게 말하면: 저장된 review note 중 후보 목록에 남길 만한 것을 registry row 초안으로 바꾼다.
+   - 왜 필요한가: 후보 등록은 자동 승격이 아니라 명시적 판단이어야 한다.
+   - 기대 효과: 저장 전 JSON을 확인한 뒤에만 current candidate registry에 append할 수 있다.
+5. Candidate review report / registry guide 정리
    - 쉽게 말하면: 후보 기록을 어떤 기준으로 남기는지 문서화한다.
    - 왜 필요한가: current candidate, near miss, scenario, Pre-Live record가 섞이면 사용자가 투자 추천처럼 오해할 수 있다.
    - 기대 효과: 후보 검토와 운영 기록의 경계가 유지된다.
@@ -132,7 +136,21 @@ Pre-Live 관찰로 넘길지"를 정리하는 단계다.
 - 작업이 끝나면 좋은 점:
   - "후보로 볼지", "near-miss로 둘지", "추가 근거가 필요한지", "지금은 reject할지"를 기록으로 남길 수 있다.
 
-### 네 번째 작업: 후보 검토 문서 / guide 정리
+### 네 번째 작업: Review Note -> Current Candidate Registry Draft
+
+- 무엇을 바꾸는가:
+  - `Candidate Review > Review Notes`에서 선택한 review note를 current candidate registry row 초안으로 변환한다.
+  - 사용자가 `Append To Current Candidate Registry`를 눌러야만 registry에 기록한다.
+
+- 왜 필요한가:
+  - review note와 실제 후보 registry는 역할이 다르다.
+  - 후보로 남기기로 한 경우에도 저장 전 필수 값을 확인해야 한다.
+
+- 작업이 끝나면 좋은 점:
+  - 후보 등록 전 단계와 후보 등록 단계가 UI에서 분리된다.
+  - reject 판단이 후보 목록에 섞이는 일을 줄인다.
+
+### 다섯 번째 작업: 후보 검토 문서 / guide 정리
 
 - 무엇을 바꾸는가:
   - current candidate registry guide와 glossary를 Phase 29 기준으로 보강한다.

@@ -132,6 +132,8 @@ Latest Backtest Run 또는 History selected record
   -> result snapshot / Real-Money signal / data trust snapshot 확인
   -> optional Save Candidate Review Note
   -> CANDIDATE_REVIEW_NOTES.jsonl
+  -> optional Prepare Current Candidate Registry Row
+  -> explicit Append To Current Candidate Registry
 ```
 
 구분:
@@ -141,6 +143,8 @@ Latest Backtest Run 또는 History selected record
 - Candidate Intake Draft는 registry에 저장된 후보가 아니라 검토 초안이다.
 - Candidate Review Note는 초안을 보고 남기는 operator decision 기록이다.
 - Candidate Review Note를 저장해도 current candidate registry에 자동 등록되지 않는다.
+- Review Note를 registry row로 남기려면 `Review Notes` 탭에서 row preview를 확인한 뒤
+  `Append To Current Candidate Registry`를 명시적으로 눌러야 한다.
 - `Suggested Next Step`은 다음 검토 행동 제안이지 live trading 승인이나 최종 투자 판단이 아니다.
 - Pre-Live Review로 넘겨도 저장 전 초안일 뿐이며, 실제 저장은 `Save Pre-Live Record`로 한다.
 

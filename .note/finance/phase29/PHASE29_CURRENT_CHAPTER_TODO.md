@@ -36,8 +36,9 @@ current candidate registry에 남은 후보를 검토 보드로 읽고,
     별도 review note로 operator decision / reason / next action을 남길 수 있게 했다.
 - `completed` current candidate registry guide 보강
   - 후보 등록 / near miss / scenario 기록 기준을 더 쉽게 정리한다.
-- `pending` candidate review note -> current candidate registry 등록 기준 정리
+- `completed` candidate review note -> current candidate registry 등록 기준 정리
   - review note 중 어떤 경우에 실제 후보 registry row로 남길지 후속 기준을 정한다.
+  - `Candidate Review > Review Notes`에서 registry row 초안을 확인하고 명시적으로 append할 수 있게 했다.
 
 ## 3. Validation
 
@@ -55,6 +56,7 @@ current candidate registry에 남은 후보를 검토 보드로 읽고,
 - `completed` first work-unit 문서 생성
 - `completed` second work-unit 문서 생성
 - `completed` third work-unit 문서 생성
+- `completed` fourth work-unit 문서 생성
 - `completed` roadmap / doc index / work log / question log sync
 - `completed` code_analysis sync
 - `completed` glossary sync
@@ -65,5 +67,6 @@ current candidate registry에 남은 후보를 검토 보드로 읽고,
 Phase 29는 active 상태다.
 첫 번째 작업 단위인 `Candidate Review Board`와
 두 번째 작업 단위인 `Result To Candidate Review Handoff`,
-세 번째 작업 단위인 `Candidate Review Note`는 구현됐다.
+세 번째 작업 단위인 `Candidate Review Note`,
+네 번째 작업 단위인 `Review Note To Registry Draft`는 구현됐다.
 다음 단계는 `.note/finance/phase29/PHASE29_TEST_CHECKLIST.md` 기준 사용자 QA다.

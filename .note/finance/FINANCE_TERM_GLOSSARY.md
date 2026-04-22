@@ -2486,6 +2486,29 @@ Candidate Review Note는 이 중간 판단을 안전하게 남긴다.
 
 ---
 
+## Current Candidate Registry Draft
+
+### 기본 설명
+`Candidate Review Note`를 실제 current candidate registry row로 남기기 전에 확인하는 저장 전 초안이다.
+
+### 왜 사용되는지
+review note는 판단 메모이고, current candidate registry는 후보 목록이다.
+두 파일의 역할이 다르기 때문에 후보 목록에 남기기 전에는
+record type, strategy family, candidate role, title, result snapshot을 다시 확인해야 한다.
+
+### 예시 / 필요 상황
+- `Candidate Review > Review Notes > Prepare Current Candidate Registry Row`
+- `Current Candidate Registry Row JSON Preview`
+- `Append To Current Candidate Registry`
+
+중요한 경계:
+
+- 이 초안을 보는 것만으로는 registry에 저장되지 않는다.
+- append 후에도 투자 승인이나 live trading approval이 아니다.
+- `Reject For Now` review note는 기본적으로 registry append 대상이 아니다.
+
+---
+
 ## Backlog Rebase
 
 ### 기본 설명

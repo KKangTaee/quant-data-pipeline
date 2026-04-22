@@ -2608,3 +2608,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 이 기록은 투자 추천, live approval, current candidate 자동 승격이 아니다
 - Follow-up:
   - 다음 판단은 review note 중 어떤 것을 실제 current candidate registry row로 남길지 기준을 정하는 것이다
+
+### 2026-04-23 - Review Note는 명시적 preview 후 후보 registry에 append한다
+- User request:
+  - Phase 29 다음 작업 진행을 요청함
+- Interpreted goal:
+  - 저장된 Candidate Review Note 중 후보 목록에 남길 만한 것을 current candidate registry row로 만드는 기준과 UI 흐름이 필요함
+- Analysis result:
+  - `Candidate Review > Review Notes`에 `Prepare Current Candidate Registry Row` 영역을 추가했다
+  - registry id, record type, strategy family, strategy name, candidate role, title, notes를 저장 전 확인하게 했다
+  - `Append To Current Candidate Registry`를 눌러야만 `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`에 append된다
+  - `Reject For Now` note는 registry append를 막아 거절 판단이 후보 목록에 섞이지 않게 했다
+- Follow-up:
+  - Phase 29 QA에서는 review note 저장, registry row preview, explicit append가 투자 추천이나 live approval처럼 보이지 않는지 확인한다
