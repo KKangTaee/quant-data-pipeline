@@ -11,7 +11,7 @@
 - Phase 25까지 Pre-Live Review workflow는 닫혔다.
 - Phase 26에서는 과거 backlog와 현재 foundation gap을 다시 정리했다.
 - Phase 26 결과, 가장 먼저 다룰 영역은 데이터 신뢰성과 백테스트 preflight로 정리되었다.
-- Phase 27 구현은 Phase 26 checklist QA 이후 시작한다.
+- Phase 26 checklist QA는 완료되었고, 다음 작업은 Phase 27 구현을 여는 것이다.
 
 ## 다음 phase에서 더 중요한 질문
 

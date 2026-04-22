@@ -5,7 +5,7 @@
 이 checklist는 Phase 26에서 정리한 roadmap / backlog / foundation gap이
 사용자가 읽고 다음 phase로 넘어갈 수 있을 만큼 명확한지 확인하기 위한 문서다.
 
-현재는 Phase 26 implementation 완료 후 사용자 QA를 위한 checklist다.
+현재는 Phase 26 manual QA 완료 기록이다.
 
 ## 사용 방법
 
@@ -55,9 +55,9 @@
   - `.note/finance/MASTER_PHASE_ROADMAP.md`
   - `.note/finance/FINANCE_DOC_INDEX.md`
 - 체크 항목:
-  - [ ] Phase 26 상태가 현재 구현 상태와 맞는지
-  - [ ] 새 문서가 index에서 바로 찾히는지
-  - [ ] Phase 27로 넘어가기 위한 설명이 충분한지
+  - [x] Phase 26 상태가 현재 구현 상태와 맞는지
+  - [x] 새 문서가 index에서 바로 찾히는지
+  - [x] Phase 27로 넘어가기 위한 설명이 충분한지
 
 ## 한 줄 판단 기준
 

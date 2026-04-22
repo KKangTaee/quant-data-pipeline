@@ -12,8 +12,8 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Active Pointers
 
-- current phase board:
-  - [PHASE25_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase25/PHASE25_CURRENT_CHAPTER_TODO.md)
+- latest phase board:
+  - [PHASE26_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase26/PHASE26_CURRENT_CHAPTER_TODO.md)
 - current candidate summary:
   - [CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md)
 - historical full archive:
@@ -2459,3 +2459,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - roadmap / index에서는 `complete / superseded_by_later_phase`로 재분류했다
   - Phase 27 입력은 data integrity / backtest trust, Phase 28 입력은 strategy family parity, Phase 29 입력은 candidate review workflow, Phase 30 입력은 portfolio proposal / pre-live monitoring으로 나눴다
   - Live Readiness / Final Approval은 여전히 Phase 30 이후 별도 phase로 둔다
+### 2026-04-22 - Phase 26 QA 완료 및 Phase 27 진입 준비
+- User request:
+  - Phase 26 QA 완료를 선언함
+- Interpreted goal:
+  - Phase 26을 `complete / manual_qa_completed`로 closeout하고 Phase 27로 넘어갈 수 있게 문서 상태를 동기화
+- Analysis result:
+  - Phase 26은 과거 backlog / pending 상태를 현재 제품 기준으로 재분류했고, 사용자가 checklist QA를 완료했다
+  - 다음 phase는 `Data Integrity And Backtest Trust Layer`로 여는 것이 맞다
+- Follow-up:
+  - Phase 27 시작 시 데이터 가능 범위, stale/missing ticker, malformed row, common-date truncation, backtest preflight 설명을 우선 다룬다

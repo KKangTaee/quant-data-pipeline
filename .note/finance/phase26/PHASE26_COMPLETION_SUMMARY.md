@@ -4,16 +4,15 @@
 
 이 문서는 Phase 26 `Foundation Stabilization And Backlog Rebase`를 closeout 시점에 정리하기 위한 문서다.
 
-현재는 Phase 26 implementation handoff 시점의 summary다.
-사용자 checklist QA가 끝나면 closeout 상태로 다시 갱신한다.
+현재는 Phase 26 manual QA 완료 후 closeout summary다.
 
 ## 진행 상태
 
-- `implementation_complete`
+- `complete`
 
 ## 검증 상태
 
-- `manual_qa_pending`
+- `manual_qa_completed`
 
 ## 이번 phase에서 완료한 것
 
@@ -59,17 +58,17 @@
 - Phase 27~30 순서를 roadmap과 index에 반영했다.
 - Live Readiness / Final Approval은 Phase 30 이후 별도 phase 후보로 분리했다.
 
-## 아직 남아 있는 것
+## 아직 남아 있지만 closeout blocker는 아닌 것
 
-- 사용자 manual QA
-- QA 중 발견되는 문서 표현 / 분류 기준 보정
+- Phase 27에서 실제로 다룰 데이터 / 백테스트 신뢰성 구현
+- Phase 28~30에서 이어질 strategy parity, candidate review, portfolio proposal workflow
 
 ## closeout 판단
 
-Phase 26 implementation은 완료되었고, 사용자 manual QA가 남아 있다.
+Phase 26 implementation과 사용자 manual QA는 완료되었다.
 
 쉽게 말하면:
 
 - 과거 phase의 애매한 pending 상태는 정리됐다.
 - Phase 27~30의 순서도 고정됐다.
-- 이제 사용자가 checklist를 보고 "이 분류가 이해되는지" 확인하면 된다.
+- 이제 Phase 27에서 데이터 / 백테스트 신뢰성 강화 작업을 열면 된다.

@@ -2,11 +2,11 @@
 
 ## 진행 상태
 
-- `implementation_complete`
+- `complete`
 
 ## 검증 상태
 
-- `manual_qa_pending`
+- `manual_qa_completed`
 
 ## 현재 목표
 
@@ -56,7 +56,7 @@ Phase 27~30 개발 순서를 안정적으로 고정하는 것이다.
 
 ## 현재 판단
 
-Phase 26 implementation은 완료되었고, 사용자 checklist QA가 남아 있다.
+Phase 26 implementation과 사용자 checklist QA는 완료되었다.
 과거 phase의 오래된 pending 상태는 현재 Phase 27 진입을 막는 blocker가 아니라
 이후 phase에서 다룰 주제 또는 future option으로 재분류되었다.
-Phase 27 구현은 사용자가 `PHASE26_TEST_CHECKLIST.md`를 확인한 뒤 시작한다.
+다음 작업은 Phase 27 `Data Integrity And Backtest Trust Layer`를 여는 것이다.

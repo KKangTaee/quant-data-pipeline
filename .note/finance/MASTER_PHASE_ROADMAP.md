@@ -1478,7 +1478,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 | Phase 23 | `complete` | `manual_qa_completed` | 완료 |
 | Phase 24 | `complete` | `manual_qa_completed` | 완료 |
 | Phase 25 | `complete` | `manual_qa_completed` | 완료 |
-| Phase 26 | `implementation_complete` | `manual_qa_pending` | checklist QA 필요 |
+| Phase 26 | `complete` | `manual_qa_completed` | 완료 |
 | Phase 27 | `planned` | `not_ready_for_qa` | data integrity / backtest trust 예정 |
 | Phase 28 | `planned` | `not_ready_for_qa` | strategy family parity 예정 |
 | Phase 29 | `planned` | `not_ready_for_qa` | candidate review workflow 예정 |
@@ -1493,7 +1493,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
   `Phase 25`는 Real-Money 검증 신호와 Pre-Live 운영 점검의 경계를 고정했고,
   Pre-Live 후보 기록 포맷, 저장 위치, helper 기반 operator review workflow, `Backtest > Pre-Live Review` UI까지 구현했다.
   사용자 manual QA까지 완료했다.
-  `Phase 26`은 과거 pending 상태와 foundation gap을 재분류했고, 이제 사용자 checklist QA가 남아 있다.
+  `Phase 26`은 과거 pending 상태와 foundation gap을 재분류했고, 사용자 checklist QA까지 완료했다.
 
 ---
 
@@ -1515,7 +1515,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 
 | Phase | 이름 | 진행 상태 | 검증 상태 | 쉽게 말하면 |
 |---|---|---|---|---|
-| Phase 26 | Foundation Stabilization And Backlog Rebase | `implementation_complete` | `manual_qa_pending` | 과거 backlog와 pending 상태를 현재 제품 기준으로 다시 정리했다 |
+| Phase 26 | Foundation Stabilization And Backlog Rebase | `complete` | `manual_qa_completed` | 과거 backlog와 pending 상태를 현재 제품 기준으로 다시 정리했고 QA까지 완료했다 |
 | Phase 27 | Data Integrity And Backtest Trust Layer | `planned` | `not_ready_for_qa` | 백테스트 전에 데이터가 믿을 만한지, 어디까지 계산 가능한지 보여준다 |
 | Phase 28 | Strategy Family Parity And Cadence Completion | `planned` | `not_ready_for_qa` | annual / quarterly / 신규 전략이 같은 수준의 옵션과 저장 / replay 흐름을 갖게 한다 |
 | Phase 29 | Candidate Review And Recommendation Workflow | `planned` | `not_ready_for_qa` | 백테스트 결과를 후보, near miss, watchlist, pre-live 흐름으로 표준화한다 |
@@ -1532,7 +1532,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 - 특히 Phase 18 structural backlog와 Phase 8/9/12~15의 pending 상태가 현재도 blocker인지 먼저 봐야 한다.
 
 ### 현재 메모
-- Phase 26 implementation은 완료되었고 사용자 checklist QA가 남아 있다.
+- Phase 26 implementation과 사용자 checklist QA는 완료되었다.
 - 과거 pending 상태는 immediate blocker가 아니라 Phase 27~30에서 다룰 주제 또는 future option으로 재분류했다.
 - 새 전략 구현이나 deep backtest는 이번 phase에서 하지 않았다.
 
