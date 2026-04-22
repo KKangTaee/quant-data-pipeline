@@ -4,12 +4,12 @@
 
 이 문서는 Phase 29 `Candidate Review And Recommendation Workflow`의 진행 상황을 정리한다.
 
-현재는 phase closeout 문서가 아니라 first work unit handoff summary다.
-Phase 29가 완료되면 이 문서를 closeout 기준으로 다시 갱신한다.
+현재는 phase closeout 문서가 아니라 implementation handoff summary다.
+사용자 QA가 완료되면 이 문서를 closeout 기준으로 다시 갱신한다.
 
 ## 진행 상태
 
-- `active`
+- `implementation_complete`
 
 ## 검증 상태
 
@@ -77,6 +77,7 @@ Phase 29가 완료되면 이 문서를 closeout 기준으로 다시 갱신한다
 
 ## 현재 판단
 
-Phase 29는 active 상태다.
+Phase 29는 implementation complete 상태다.
 첫 번째 / 두 번째 / 세 번째 / 네 번째 작업 단위는 구현됐고,
-자동 검증과 사용자 QA를 거친 뒤 다음 작업 단위로 넘어간다.
+자동 검증도 통과했다.
+남은 단계는 사용자 checklist QA이며, QA 완료 후 Phase 29 closeout 또는 Phase 30 handoff로 넘어간다.

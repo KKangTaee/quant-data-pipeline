@@ -1960,3 +1960,12 @@ Detailed historical logs were archived on `2026-04-13`.
   - `python3 -m py_compile app/web/pages/backtest.py` passed
 - Durable takeaway:
   - Review notes can be promoted into candidate registry rows only through an explicit preview-and-append step. This remains candidate persistence, not investment approval or live trading readiness.
+
+### 2026-04-23
+- Moved Phase 29 into implementation handoff state.
+- Changed:
+  - updated Phase 29 progress status to `implementation_complete`
+  - kept validation status at `manual_qa_pending`
+  - synced Phase 29 TODO, completion summary, next-phase preparation, checklist, master roadmap, and document index
+- Durable takeaway:
+  - Phase 29 implementation is complete. The next gate is user checklist QA, not Phase 30 development yet.

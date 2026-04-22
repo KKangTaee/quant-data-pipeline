@@ -2,7 +2,7 @@
 
 ## 진행 상태
 
-- `active`
+- `implementation_complete`
 
 ## 검증 상태
 
@@ -25,7 +25,7 @@ current candidate registry에 남은 후보를 검토 보드로 읽고,
 - `completed` Candidate Review 안에서 compare re-entry 재사용
   - 대표 후보나 near-miss 후보 묶음을 compare form으로 채울 수 있게 했다.
 
-## 2. 다음 작업 후보
+## 2. 구현 완료 항목
 
 - `completed` Latest Backtest Run -> candidate review handoff
   - 새 실행 결과를 후보 검토 초안으로 보낼 수 있게 했다.
@@ -64,9 +64,10 @@ current candidate registry에 남은 후보를 검토 보드로 읽고,
 
 ## 현재 판단
 
-Phase 29는 active 상태다.
+Phase 29는 implementation complete 상태다.
 첫 번째 작업 단위인 `Candidate Review Board`와
 두 번째 작업 단위인 `Result To Candidate Review Handoff`,
 세 번째 작업 단위인 `Candidate Review Note`,
 네 번째 작업 단위인 `Review Note To Registry Draft`는 구현됐다.
 다음 단계는 `.note/finance/phase29/PHASE29_TEST_CHECKLIST.md` 기준 사용자 QA다.
+사용자 QA 완료 전에는 Phase 30으로 넘어가지 않는다.

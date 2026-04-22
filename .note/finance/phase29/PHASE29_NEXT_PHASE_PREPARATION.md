@@ -4,12 +4,12 @@
 
 이 문서는 Phase 29 이후 Phase 30으로 넘어갈 때 어떤 질문을 다뤄야 하는지 미리 정리하는 handoff 문서다.
 
-현재는 Phase 29가 아직 active 상태이므로, 이 문서는 임시 준비 문서다.
+현재는 Phase 29 구현이 끝나고 사용자 QA를 기다리는 상태이므로, 이 문서는 임시 준비 문서다.
 Phase 29 closeout 시점에 다시 갱신한다.
 
 ## 현재 handoff 상태
 
-- Phase 29는 active / manual_qa_pending 상태다.
+- Phase 29는 implementation_complete / manual_qa_pending 상태다.
 - 첫 작업 단위로 `Backtest > Candidate Review` panel을 추가했다.
 - 두 번째 작업 단위로 Latest Backtest Run / History 결과를 `Candidate Intake Draft`로 넘기는 길을 만들었다.
 - 세 번째 작업 단위로 `Candidate Intake Draft`를 `Candidate Review Note`로 저장하는 길을 만들었다.

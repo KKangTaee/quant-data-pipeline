@@ -2621,3 +2621,19 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `Reject For Now` note는 registry append를 막아 거절 판단이 후보 목록에 섞이지 않게 했다
 - Follow-up:
   - Phase 29 QA에서는 review note 저장, registry row preview, explicit append가 투자 추천이나 live approval처럼 보이지 않는지 확인한다
+
+### 2026-04-23 - Phase 29는 구현 완료 후 사용자 QA 대기 상태다
+- User request:
+  - 다음 단계 진행을 요청함
+- Interpreted goal:
+  - Phase 29에서 더 붙일 구현이 남았는지 확인하고, 남지 않았다면 QA handoff 상태를 명확히 해야 함
+- Analysis result:
+  - Phase 29의 네 구현 단위는 완료됐다
+    - Candidate Review Board
+    - Result To Candidate Review Handoff
+    - Candidate Review Note
+    - Review Note To Registry Draft
+  - 따라서 진행 상태는 `implementation_complete`, 검증 상태는 `manual_qa_pending`으로 정리하는 것이 맞다
+  - 사용자 checklist QA 완료 전에는 Phase 30으로 넘어가지 않는다
+- Follow-up:
+  - 사용자는 `.note/finance/phase29/PHASE29_TEST_CHECKLIST.md` 기준으로 QA를 진행하고, 완료되면 Phase 29 closeout 후 Phase 30으로 넘어간다

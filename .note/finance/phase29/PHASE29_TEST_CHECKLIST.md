@@ -123,7 +123,7 @@ current candidate를 검토 보드로 읽고 compare / Pre-Live Review로 자연
   - `.note/finance/FINANCE_DOC_INDEX.md`
 - 체크 항목:
   - [ ] Phase 29가 최종 투자 승인 phase가 아니라 후보 검토 workflow phase로 설명되는지
-  - [ ] Phase 29 상태가 `active / manual_qa_pending`으로 읽히는지
+  - [ ] Phase 29 상태가 `implementation_complete / manual_qa_pending`으로 읽히는지
   - [ ] 다음 단계가 사용자 QA 후 Phase 29 closeout 또는 Phase 30 handoff로 이어지는지
 
 ## 한 줄 판단 기준

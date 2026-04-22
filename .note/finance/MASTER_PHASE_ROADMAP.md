@@ -1481,7 +1481,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 | Phase 26 | `complete` | `manual_qa_completed` | 완료 |
 | Phase 27 | `complete` | `manual_qa_completed` | 완료 |
 | Phase 28 | `complete` | `manual_qa_completed` | Capability + Replay + Data Trust + Real-Money/Guardrail parity QA 완료 |
-| Phase 29 | `active` | `manual_qa_pending` | Candidate Review Board + Result Handoff + Review Notes + Registry Draft 구현 완료 |
+| Phase 29 | `implementation_complete` | `manual_qa_pending` | Candidate Review Board + Result Handoff + Review Notes + Registry Draft 구현 완료, 사용자 QA 대기 |
 | Phase 30 | `planned` | `not_ready_for_qa` | portfolio proposal / pre-live monitoring 예정 |
 
 한 줄 현재 판단:
@@ -1526,7 +1526,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 | Phase 26 | Foundation Stabilization And Backlog Rebase | `complete` | `manual_qa_completed` | 과거 backlog와 pending 상태를 현재 제품 기준으로 다시 정리했고 QA까지 완료했다 |
 | Phase 27 | Data Integrity And Backtest Trust Layer | `complete` | `manual_qa_completed` | 백테스트 전에 데이터가 믿을 만한지, 어디까지 계산 가능한지 보여주고 QA까지 완료했다 |
 | Phase 28 | Strategy Family Parity And Cadence Completion | `complete` | `manual_qa_completed` | annual / quarterly / 신규 전략의 지원 범위, 재진입 상태, compare data trust, Real-Money / Guardrail scope를 화면에서 구분하고 QA까지 완료했다 |
-| Phase 29 | Candidate Review And Recommendation Workflow | `active` | `manual_qa_pending` | current candidate를 검토 보드로 읽고, Latest / History 결과를 후보 검토 초안, review note, registry draft로 넘기는 workflow를 구현했다 |
+| Phase 29 | Candidate Review And Recommendation Workflow | `implementation_complete` | `manual_qa_pending` | current candidate를 검토 보드로 읽고, Latest / History 결과를 후보 검토 초안, review note, registry draft로 넘기는 workflow를 구현했다 |
 | Phase 30 | Portfolio Proposal And Pre-Live Monitoring Surface | `planned` | `not_ready_for_qa` | 후보들을 포트폴리오 제안과 paper / pre-live monitoring 화면으로 연결한다 |
 
 ### Phase 26. Foundation Stabilization And Backlog Rebase
@@ -1589,7 +1589,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 - 그러려면 좋은 결과를 볼 때마다 임시 문서로 판단하지 않고, 반복 가능한 후보 검토 절차가 필요하다.
 
 ### 현재 메모
-- Phase 29는 active / manual_qa_pending 상태다.
+- Phase 29는 implementation_complete / manual_qa_pending 상태다.
 - 첫 작업으로 `Backtest > Candidate Review` panel을 추가했다.
 - 이 panel은 current candidate registry의 active 후보를 review board로 보여주고,
   후보별 review stage, 존재 이유, 다음 행동 제안을 표시한다.
