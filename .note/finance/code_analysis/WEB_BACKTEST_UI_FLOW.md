@@ -122,6 +122,33 @@ Phase 28 이후 Saved Portfolio 영역에는
 - strategy override map
 - strategy별 핵심 override: cadence, universe, factor, overlay, handling, benchmark, guardrail, score 설정
 
+## Compare / Weighted Data Trust 흐름
+
+Phase 28 이후 compare와 weighted portfolio 결과도 component별 data trust를 표시한다.
+
+표시 위치:
+
+- `Strategy Comparison > Data Trust`
+- `Weighted Portfolio Result > Component Data Trust`
+- `History > Selected History Run > Saved Input & Context`
+
+보는 값:
+
+- 요청 종료일과 실제 결과 종료일
+- result row 수
+- price freshness status
+- common latest price / newest latest price / latest-date spread
+- excluded ticker 수
+- malformed ticker 수
+- warnings 수
+- 간단한 interpretation
+
+의미:
+
+- compare 결과가 서로 같은 데이터 조건에서 나온 것인지 먼저 확인한다.
+- weighted portfolio는 composite 결과이므로, 구성 전략별 데이터 상태를 먼저 확인한다.
+- 이 표는 성과 비교표가 아니라 데이터 조건 확인표다.
+
 ## History 흐름
 
 History는 compact summary 중심이다.

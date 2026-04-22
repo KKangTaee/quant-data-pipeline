@@ -75,13 +75,31 @@ Phase 28 구현 범위가 닫히면 최종 checklist로 다시 갱신한다.
   - [ ] `Load Saved Setup Into Compare`를 누르기 전에 어떤 값이 다시 채워질지 대략 판단할 수 있는지
   - [ ] `Replay Saved Portfolio`가 저장된 전략 목록과 weight/date alignment를 기준으로 재실행되는 흐름으로 이해되는지
 
-## 6. Phase 28 작업 의도 확인
+## 6. Compare / weighted Data Trust 확인
+
+- 확인 위치:
+  - `Backtest > Compare & Portfolio Builder`
+  - 전략 2개 이상 선택 후 `Run Strategy Comparison`
+  - `Strategy Comparison > Data Trust`
+  - `Weighted Portfolio Result > Component Data Trust`
+  - `Backtest > History > Selected History Run > Saved Input & Context`
+- 체크 항목:
+  - [ ] compare 결과에 `Data Trust` 탭이 보이는지
+  - [ ] `Compare Data Trust Snapshot`에서 strategy별 `Requested End`, `Actual Result End`, `Result Rows`가 보이는지
+  - [ ] price freshness가 있는 전략은 `Common Latest Price`, `Newest Latest Price`, `Latest-Date Spread`가 보이는지
+  - [ ] excluded ticker 또는 malformed row가 있는 경우 `Data Quality Details Across Strategies`에서 세부 정보가 보이는지
+  - [ ] weighted portfolio 결과에 `Component Data Trust` 탭이 보이는지
+  - [ ] saved portfolio replay 후 History record에서 component별 data trust rows가 다시 보이는지
+  - [ ] 이 표가 성과 비교표가 아니라 데이터 조건 확인표라는 점이 이해되는지
+
+## 7. Phase 28 작업 의도 확인
 
 - 확인 위치:
   - `.note/finance/phase28/PHASE28_STRATEGY_FAMILY_PARITY_AND_CADENCE_COMPLETION_PLAN.md`
   - `.note/finance/phase28/PHASE28_STRATEGY_CAPABILITY_SNAPSHOT_FIRST_WORK_UNIT.md`
   - `.note/finance/phase28/PHASE28_HISTORY_REPLAY_PARITY_SECOND_WORK_UNIT.md`
   - `.note/finance/phase28/PHASE28_SAVED_PORTFOLIO_REPLAY_PARITY_THIRD_WORK_UNIT.md`
+  - `.note/finance/phase28/PHASE28_COMPARE_AND_WEIGHTED_DATA_TRUST_FOURTH_WORK_UNIT.md`
 - 체크 항목:
   - [ ] Phase 28이 새 전략 추가가 아니라 strategy family 차이 정리 phase라는 점이 이해되는지
   - [ ] `Parity`가 모든 전략을 똑같이 만드는 뜻이 아니라, 차이를 헷갈리지 않게 맞추는 뜻으로 읽히는지
@@ -89,8 +107,9 @@ Phase 28 구현 범위가 닫히면 최종 checklist로 다시 갱신한다.
   - [ ] GRS가 재무제표 전략이 아니라 price-only ETF 전략이라는 점이 문서와 UI에서 일관되게 보이는지
   - [ ] history replay / load parity가 투자 분석이 아니라 재실행 / 복원 QA라는 점이 이해되는지
   - [ ] saved portfolio replay / load parity도 투자 분석이 아니라 compare + weighted portfolio 재현 QA라는 점이 이해되는지
+  - [ ] compare / weighted Data Trust도 투자 분석이 아니라 데이터 조건 확인 QA라는 점이 이해되는지
 
-## 7. 문서와 closeout 확인
+## 8. 문서와 closeout 확인
 
 - 확인 문서:
   - `.note/finance/phase28/PHASE28_CURRENT_CHAPTER_TODO.md`
@@ -101,7 +120,7 @@ Phase 28 구현 범위가 닫히면 최종 checklist로 다시 갱신한다.
 - 체크 항목:
   - [ ] Phase 28 상태가 현재 구현 상태와 맞는지
   - [ ] 새 문서가 index에서 바로 찾히는지
-  - [ ] 다음 작업 후보가 Data Trust Summary 확장 또는 Real-Money / Guardrail parity 쪽으로 자연스럽게 이어지는지
+  - [ ] 다음 작업 후보가 Real-Money / Guardrail parity 쪽으로 자연스럽게 이어지는지
 
 ## 한 줄 판단 기준
 

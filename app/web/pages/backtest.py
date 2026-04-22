@@ -2861,6 +2861,137 @@ def _render_data_trust_summary(meta: dict[str, Any]) -> None:
                 st.dataframe(malformed_df, use_container_width=True, hide_index=True)
 
 
+def _data_trust_status_label(status: str | None) -> str:
+    normalized = str(status or "").strip().lower()
+    if normalized == "ok":
+        return "OK"
+    if normalized == "warning":
+        return "Warning"
+    if normalized == "error":
+        return "Error"
+    return "-"
+
+
+def _build_strategy_data_trust_rows(bundles: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for bundle in bundles:
+        meta = dict(bundle.get("meta") or {})
+        result_df = bundle.get("result_df")
+        price_freshness = dict(meta.get("price_freshness") or {})
+        freshness_details = dict(price_freshness.get("details") or {})
+        excluded_tickers = list(meta.get("excluded_tickers") or [])
+        malformed_price_rows = list(meta.get("malformed_price_rows") or [])
+        warnings = list(meta.get("warnings") or [])
+
+        requested_end = meta.get("end") or meta.get("requested_end") or meta.get("input_end")
+        actual_end = meta.get("actual_result_end")
+        if not actual_end and isinstance(result_df, pd.DataFrame) and not result_df.empty and "Date" in result_df.columns:
+            actual_end = str(pd.to_datetime(result_df["Date"], errors="coerce").max().date())
+        actual_end_ts = pd.to_datetime(actual_end, errors="coerce")
+        requested_end_ts = pd.to_datetime(requested_end, errors="coerce")
+        result_period_shortened = (
+            pd.notna(actual_end_ts)
+            and pd.notna(requested_end_ts)
+            and actual_end_ts.date() < requested_end_ts.date()
+        )
+        issue_count = len(excluded_tickers) + len(malformed_price_rows) + len(warnings)
+        freshness_status = str(price_freshness.get("status") or "").strip().lower()
+
+        if freshness_status in {"warning", "error"}:
+            interpretation = "가격 최신성 확인 필요"
+        elif excluded_tickers or malformed_price_rows:
+            interpretation = "제외/결측 ticker 확인 필요"
+        elif result_period_shortened:
+            interpretation = "실제 결과 종료일이 요청 종료일보다 짧음"
+        elif issue_count == 0:
+            interpretation = "눈에 띄는 데이터 이슈 없음"
+        else:
+            interpretation = "주의사항 확인 필요"
+
+        rows.append(
+            {
+                "Strategy": bundle.get("strategy_name") or meta.get("strategy_name") or "-",
+                "Requested End": requested_end or "-",
+                "Actual Result End": actual_end or "-",
+                "Result Rows": meta.get("result_rows", len(result_df) if isinstance(result_df, pd.DataFrame) else "-"),
+                "Price Freshness": _data_trust_status_label(freshness_status),
+                "Common Latest Price": freshness_details.get("common_latest_date") or "-",
+                "Newest Latest Price": freshness_details.get("newest_latest_date") or "-",
+                "Latest-Date Spread": (
+                    f"{freshness_details.get('spread_days')}d"
+                    if freshness_details.get("spread_days") is not None
+                    else "-"
+                ),
+                "Excluded Tickers": len(excluded_tickers),
+                "Malformed Tickers": len(malformed_price_rows),
+                "Warnings": len(warnings),
+                "Interpretation": interpretation,
+            }
+        )
+    return rows
+
+
+def _render_strategy_data_trust_details(bundles: list[dict[str, Any]]) -> None:
+    detail_found = False
+    for bundle in bundles:
+        meta = dict(bundle.get("meta") or {})
+        excluded_tickers = list(meta.get("excluded_tickers") or [])
+        malformed_price_rows = list(meta.get("malformed_price_rows") or [])
+        warnings = list(meta.get("warnings") or [])
+        price_freshness = dict(meta.get("price_freshness") or {})
+        message = price_freshness.get("message")
+        if not any([excluded_tickers, malformed_price_rows, warnings, message]):
+            continue
+
+        detail_found = True
+        st.markdown(f"##### {bundle.get('strategy_name') or '-'}")
+        if message:
+            st.caption(str(message))
+        if warnings:
+            st.markdown("**Warnings**")
+            for warning in warnings:
+                st.warning(str(warning))
+        if excluded_tickers:
+            st.markdown("**Excluded Tickers**")
+            st.code(", ".join(excluded_tickers))
+        if malformed_price_rows:
+            st.markdown("**Malformed / Missing Price Rows**")
+            malformed_df = pd.DataFrame(malformed_price_rows).rename(
+                columns={
+                    "ticker": "Ticker",
+                    "price_col": "Price Column",
+                    "count": "Missing Row Count",
+                    "first_date": "First Missing Date",
+                    "last_date": "Last Missing Date",
+                    "sample_dates": "Sample Missing Dates",
+                }
+            )
+            st.dataframe(malformed_df, use_container_width=True, hide_index=True)
+    if not detail_found:
+        st.caption("이번 compare 구성에서는 별도 excluded ticker, malformed row, warning detail이 기록되지 않았습니다.")
+
+
+def _render_strategy_data_trust_snapshot(
+    bundles: list[dict[str, Any]],
+    *,
+    title: str = "Data Trust Snapshot",
+    caption: str | None = None,
+) -> list[dict[str, Any]]:
+    rows = _build_strategy_data_trust_rows(bundles)
+    if not rows:
+        return []
+
+    st.markdown(f"##### {title}")
+    st.caption(
+        caption
+        or "여러 전략을 비교하거나 섞기 전에 각 전략이 실제로 어떤 데이터 기간과 품질 조건에서 계산됐는지 확인합니다."
+    )
+    st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+    with st.expander("Data Quality Details Across Strategies", expanded=False):
+        _render_strategy_data_trust_details(bundles)
+    return rows
+
+
 def _render_last_run() -> None:
     error = st.session_state.backtest_last_error
     error_kind = st.session_state.backtest_last_error_kind
@@ -4818,12 +4949,31 @@ def _render_compare_results() -> None:
             "`Dynamic Candidate Pool`, `Membership Avg`, and `Membership Range` help explain why static and dynamic results diverge."
         )
 
-    summary_tab, balance_tab, drawdown_tab, return_tab, highlights_tab, focus_tab, meta_tab = st.tabs(
-        ["Summary Compare", "Equity Overlay", "Drawdown Overlay", "Return Overlay", "Strategy Highlights", "Focused Strategy", "Execution Meta"]
+    summary_tab, data_trust_tab, balance_tab, drawdown_tab, return_tab, highlights_tab, focus_tab, meta_tab = st.tabs(
+        [
+            "Summary Compare",
+            "Data Trust",
+            "Equity Overlay",
+            "Drawdown Overlay",
+            "Return Overlay",
+            "Strategy Highlights",
+            "Focused Strategy",
+            "Execution Meta",
+        ]
     )
 
     with summary_tab:
         st.dataframe(summary_df, use_container_width=True)
+
+    with data_trust_tab:
+        _render_strategy_data_trust_snapshot(
+            bundles,
+            title="Compare Data Trust Snapshot",
+            caption=(
+                "Compare 결과를 해석하기 전에 각 전략의 요청 종료일, 실제 결과 종료일, "
+                "가격 최신성, 제외 ticker, 결측 row를 함께 확인합니다."
+            ),
+        )
 
     with balance_tab:
         _render_compare_altair_chart(
@@ -5036,8 +5186,10 @@ def _build_weighted_portfolio_bundle(
         weights=normalized_weights,
         date_policy=date_policy,
     )
+    component_data_trust_rows = _build_strategy_data_trust_rows(bundles)
     weighted_bundle["component_contribution_amount_df"] = contribution_amount_df
     weighted_bundle["component_contribution_share_df"] = contribution_share_df
+    weighted_bundle["component_data_trust_rows"] = component_data_trust_rows
     weighted_bundle["component_input_weights"] = [float(weight) for weight in weights_percent]
     weighted_bundle["component_weights"] = normalized_weights
     weighted_bundle["component_strategy_names"] = strategy_names
@@ -5052,6 +5204,7 @@ def _build_weighted_portfolio_bundle(
             "date_policy": date_policy,
             "input_weights_percent": [float(weight) for weight in weights_percent],
             "normalized_weights": normalized_weights,
+            "component_data_trust_rows": component_data_trust_rows,
             "compare_source_context": dict(compare_source_context or {}),
         }
     )
@@ -5458,6 +5611,7 @@ def _run_saved_portfolio_record(record: dict[str, Any]) -> None:
         context={
             "selected_strategies": selected_strategies,
             "strategy_overrides": strategy_overrides,
+            "strategy_data_trust_rows": _build_strategy_data_trust_rows(bundles),
             "weights_percent": weights_percent,
             "date_policy": portfolio_context.get("date_policy"),
             "saved_portfolio_id": record.get("portfolio_id"),
@@ -5481,6 +5635,7 @@ def _run_saved_portfolio_record(record: dict[str, Any]) -> None:
             "selected_strategies": selected_strategies,
             "date_policy": portfolio_context.get("date_policy"),
             "weights_percent": weights_percent,
+            "component_data_trust_rows": weighted_bundle.get("component_data_trust_rows") or [],
             "saved_portfolio_id": record.get("portfolio_id"),
             "saved_portfolio_name": record.get("name"),
             "compare_source_context": {
@@ -5570,6 +5725,7 @@ def _render_weighted_portfolio_builder() -> None:
             "selected_strategies": strategy_names,
             "date_policy": date_policy,
             "weights_percent": weights,
+            "component_data_trust_rows": weighted_bundle.get("component_data_trust_rows") or [],
             "compare_source_context": compare_source_context,
         },
     )
@@ -6093,14 +6249,33 @@ def _render_weighted_portfolio_result(bundle: dict) -> None:
     component_input_weights = bundle.get("component_input_weights") or []
     component_weights = bundle.get("component_weights") or []
     component_strategy_names = bundle.get("component_strategy_names") or []
+    component_data_trust_rows = list(bundle.get("component_data_trust_rows") or [])
     meta = bundle.get("meta") or {}
 
-    summary_tab, curve_tab, contribution_tab, balance_tab, periods_tab, table_tab, meta_tab = st.tabs(
-        ["Summary", "Equity Curve", "Contribution", "Balance Extremes", "Period Extremes", "Result Table", "Meta"]
+    summary_tab, data_trust_tab, curve_tab, contribution_tab, balance_tab, periods_tab, table_tab, meta_tab = st.tabs(
+        [
+            "Summary",
+            "Component Data Trust",
+            "Equity Curve",
+            "Contribution",
+            "Balance Extremes",
+            "Period Extremes",
+            "Result Table",
+            "Meta",
+        ]
     )
 
     with summary_tab:
         st.dataframe(bundle["summary_df"], use_container_width=True)
+    with data_trust_tab:
+        st.caption(
+            "Weighted Portfolio 자체는 여러 전략 결과를 섞은 composite입니다. "
+            "따라서 먼저 각 구성 전략이 어떤 실제 결과 기간과 데이터 상태에서 계산됐는지 확인합니다."
+        )
+        if component_data_trust_rows:
+            st.dataframe(pd.DataFrame(component_data_trust_rows), use_container_width=True, hide_index=True)
+        else:
+            st.info("이 weighted portfolio에는 component data trust snapshot이 저장되어 있지 않습니다. 최신 compare 결과에서 다시 생성하면 표시됩니다.")
     with curve_tab:
         _render_balance_chart_with_markers(
             chart_df,
@@ -10489,6 +10664,20 @@ def _render_persistent_backtest_history() -> None:
                         "아래 표에서 trend/regime과 portfolio handling contract 설정을 바로 확인할 수 있습니다."
                     )
                     st.dataframe(pd.DataFrame(override_rows), use_container_width=True, hide_index=True)
+                strategy_data_trust_rows = context.get("strategy_data_trust_rows") or []
+                if strategy_data_trust_rows:
+                    st.caption(
+                        "Compare 기록에는 전략별 Data Trust Snapshot도 저장됩니다. "
+                        "요청 종료일, 실제 결과 종료일, 가격 최신성, excluded/malformed ticker를 다시 확인할 수 있습니다."
+                    )
+                    st.dataframe(pd.DataFrame(strategy_data_trust_rows), use_container_width=True, hide_index=True)
+            component_data_trust_rows = context.get("component_data_trust_rows") or []
+            if component_data_trust_rows:
+                st.caption(
+                    "Weighted portfolio 기록에는 구성 전략별 Data Trust Snapshot이 같이 저장됩니다. "
+                    "포트폴리오 조합 결과를 해석하기 전에 각 component의 데이터 상태를 다시 봅니다."
+                )
+                st.dataframe(pd.DataFrame(component_data_trust_rows), use_container_width=True, hide_index=True)
             dynamic_universe_preview_rows = context.get("dynamic_universe_preview_rows") or []
             if dynamic_universe_preview_rows:
                 st.caption(
@@ -14736,6 +14925,7 @@ def render_backtest_tab() -> None:
                             "selected_strategies": selected_strategy_execution_names,
                             "selected_strategy_categories": selected_strategies,
                             "strategy_overrides": compare_strategy_overrides,
+                            "strategy_data_trust_rows": _build_strategy_data_trust_rows(bundles),
                             "strategy_summaries": [
                                 row
                                 for bundle in bundles

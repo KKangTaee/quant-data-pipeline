@@ -2532,3 +2532,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - replay history context에는 `weights_percent`를 함께 남겨 나중에 saved portfolio replay 결과를 읽을 때 weight 구성을 더 쉽게 추적할 수 있게 했다
 - Follow-up:
   - 다음 Phase 28 판단은 Data Trust Summary를 compare / saved replay까지 확장할지, Real-Money / Guardrail parity를 어떤 전략군까지 맞출지다
+
+### 2026-04-22 - Phase 28 compare / weighted 결과도 component data trust가 보여야 한다
+- User request:
+  - Phase 28 다음 단계 진행을 요청함
+- Interpreted goal:
+  - single strategy 결과에서 확인하던 Data Trust Summary를 compare, weighted portfolio, saved replay에서도 해석 가능한 형태로 확장해야 함
+- Analysis result:
+  - compare는 여러 전략 결과를 나란히 보는 화면이므로, 성과표만 보면 실제 결과 기간이나 데이터 품질 차이를 놓칠 수 있다
+  - `Strategy Comparison > Data Trust`를 추가해 전략별 requested end, actual result end, result rows, price freshness, excluded/malformed ticker, warning count를 보여주게 했다
+  - `Weighted Portfolio Result > Component Data Trust`를 추가해 composite 결과를 보기 전에 구성 전략별 데이터 조건을 확인하게 했다
+  - compare / weighted / saved replay history context에도 data trust rows를 남긴다
+- Follow-up:
+  - 다음 Phase 28 판단은 Real-Money / Guardrail parity를 quarterly와 ETF 전략군에 어디까지 맞출지 정하는 것이다

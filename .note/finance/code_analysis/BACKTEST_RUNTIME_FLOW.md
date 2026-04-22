@@ -83,6 +83,14 @@ Saved Portfolio replay로 생성되는 history context에는 재진입 확인을
 `weights_percent`도 함께 남긴다.
 strategy별 세부 override는 saved portfolio record의 `compare_context.strategy_overrides`가 기준이다.
 
+Phase 28 이후 compare / weighted portfolio history context에는 component별 data trust rows도 남긴다.
+
+- `strategy_data_trust_rows`: strategy compare record에 저장되는 전략별 data trust snapshot
+- `component_data_trust_rows`: weighted portfolio record에 저장되는 구성 전략별 data trust snapshot
+
+이 값은 성과 계산 자체를 바꾸지 않고, 사용자가 compare / weighted / saved replay 결과를 읽을 때
+각 component의 실제 결과 기간과 데이터 품질 조건을 다시 확인하게 하는 metadata다.
+
 ## Real-Money / Guardrail / Pre-Live runtime 기준
 
 runtime은 단순 성과표만 반환하지 않는다.

@@ -31,8 +31,10 @@ Phase 28의 목표는 새 전략을 급하게 늘리는 것이 아니다.
 - `completed` saved portfolio replay parity 점검
   - compare에서 만든 strategy override가 saved replay에서 같은 의미로 복원되는지 본다.
   - `Saved Portfolio Replay / Load Parity Snapshot`으로 저장 포트폴리오의 전략 목록, weight, date alignment, strategy override 저장 상태를 볼 수 있게 했다.
-- `pending` Data Trust Summary 확장 범위 결정
+- `completed` Data Trust Summary 확장 범위 결정
   - 단일 실행 외 compare / saved replay에서 데이터 신뢰성 정보를 어디까지 보여줄지 정한다.
+  - compare 결과에는 `Data Trust` 탭을, weighted portfolio 결과에는 `Component Data Trust` 탭을 추가했다.
+  - strategy compare / weighted portfolio history context에도 data trust rows를 남긴다.
 - `pending` Real-Money / Guardrail parity 결정
   - quarterly와 price-only ETF 전략에 어떤 검증 surface를 붙일지 정한다.
 
@@ -52,6 +54,7 @@ Phase 28의 목표는 새 전략을 급하게 늘리는 것이 아니다.
 - `completed` first work-unit 문서 생성
 - `completed` second work-unit 문서 생성
 - `completed` third work-unit 문서 생성
+- `completed` fourth work-unit 문서 생성
 - `completed` roadmap / doc index / work log / question log sync
 - `completed` code_analysis sync
 
@@ -63,4 +66,5 @@ Phase 28은 active 상태다.
 `History Replay / Load Parity Snapshot`도 추가됐다.
 세 번째 작업 단위로 saved portfolio의 replay / load 가능성을 확인하는
 `Saved Portfolio Replay / Load Parity Snapshot`도 추가됐다.
-다음 판단은 Data Trust Summary 확장 범위와 Real-Money / Guardrail parity 결정을 어디까지 다룰지다.
+네 번째 작업 단위로 compare / weighted / saved replay에서도 component별 data trust를 볼 수 있게 했다.
+다음 판단은 Real-Money / Guardrail parity 결정을 어디까지 다룰지다.

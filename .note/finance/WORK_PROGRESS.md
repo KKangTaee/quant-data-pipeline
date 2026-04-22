@@ -1841,3 +1841,16 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.venv` saved portfolio parity helper smoke passed
 - Durable takeaway:
   - Saved Portfolio is now easier to inspect before replay: users can see whether compare inputs, strategy overrides, weights, and date alignment are present before loading or rerunning.
+
+### 2026-04-22
+- Extended Phase 28 Data Trust visibility into compare, weighted portfolio, and saved replay flows.
+- Changed:
+  - added a `Data Trust` tab to `Strategy Comparison`
+  - added a `Component Data Trust` tab to `Weighted Portfolio Result`
+  - persisted strategy/component data trust rows in compare and weighted portfolio history context
+  - documented the fourth Phase 28 work unit and synced roadmap, index, comprehensive analysis, and code-flow notes
+- Validation:
+  - `python3 -m py_compile app/web/pages/backtest.py` passed
+  - `.venv` strategy data trust helper smoke passed
+- Durable takeaway:
+  - Compare and weighted portfolio results now expose the component data conditions behind the result, so users can distinguish performance differences from date-window or data-quality differences.

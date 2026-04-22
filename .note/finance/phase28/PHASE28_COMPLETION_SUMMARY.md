@@ -56,9 +56,18 @@
 
 - 저장 포트폴리오를 다시 실행하기 전에 “이 저장본이 같은 전략과 같은 weight로 다시 열릴 수 있는가”를 먼저 확인할 수 있다.
 
+### 5. Compare / Weighted Data Trust 확장
+
+- `Strategy Comparison`에 `Data Trust` 탭을 추가했다.
+- `Weighted Portfolio Result`에 `Component Data Trust` 탭을 추가했다.
+- compare / weighted / saved replay history context에도 전략별 data trust rows를 남긴다.
+
+쉽게 말하면:
+
+- 여러 전략을 비교하거나 섞기 전에, 각 전략이 실제로 어떤 데이터 기간과 품질 조건에서 계산됐는지 먼저 확인할 수 있다.
+
 ## 아직 남아 있는 것
 
-- Data Trust Summary를 compare / saved replay에 어디까지 확장할지 결정
 - Real-Money / Guardrail parity 범위 결정
 - 사용자 manual UI validation
 
@@ -67,4 +76,5 @@
 아직 closeout 상태가 아니다.
 
 현재는 Phase 28의 첫 번째 / 두 번째 / 세 번째 구현 단위를 완료한 상태이며,
-남은 Data Trust Summary 확장 범위와 Real-Money / Guardrail parity 범위를 더 본 뒤 사용자 QA 단계로 넘길지 판단한다.
+네 번째 Data Trust 확장 단위까지 완료했다.
+남은 Real-Money / Guardrail parity 범위를 더 본 뒤 사용자 QA 단계로 넘길지 판단한다.
