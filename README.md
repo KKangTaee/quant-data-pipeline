@@ -68,6 +68,9 @@ DB-backed market data ingestion, factor generation, and strategy backtesting wor
 - persistent backtest history
   - 실행 입력/요약뿐 아니라 `gate snapshot`도 함께 저장하는 history v2
   - 이후 blocker audit, candidate review, rerun drilldown에 활용
+- candidate review workflow
+  - current candidate registry의 후보를 `Backtest > Candidate Review`에서 검토 보드로 읽고
+    compare 또는 Pre-Live Review로 넘기는 흐름
 
 ## 프로젝트 구조
 

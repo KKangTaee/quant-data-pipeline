@@ -35,15 +35,15 @@
   - script, automation, plugin이 읽는 machine-readable persistence
 
 ## 현재 UI 연결
-- `Phase 20` 기준으로
-  `Backtest > Compare & Portfolio Builder > Current Candidate Re-entry`
-  surface가 이 registry를 읽는다.
-- 즉 현재 strongest candidate와 near-miss는
-  문서에서만 다시 찾는 것이 아니라,
-  compare workflow로 다시 보내는 UI ingress로도 쓰이기 시작했다.
-- 그리고 compare로 다시 불러온 뒤에는
-  `Current Compare Bundle` 요약을 통해
-  weighted portfolio와 saved portfolio까지 같은 출처 맥락을 이어갈 수 있게 됐다.
+- `Backtest > Candidate Review`
+  - 이 registry의 active 후보를 검토 보드로 보여준다.
+  - 후보별 role, review stage, why it exists, suggested next step을 확인한다.
+  - 선택한 후보를 `Pre-Live Review`로 넘길 수 있다.
+- `Backtest > Compare & Portfolio Builder > Current Candidate Re-entry`
+  - 이 registry의 후보 묶음을 compare form으로 다시 채운다.
+- 즉 현재 strongest candidate와 near-miss는 문서에서만 다시 찾는 것이 아니라,
+  candidate review, compare, Pre-Live Review workflow로 이어지는 source-of-truth로 사용된다.
+- 다만 이 registry row 자체가 live trading 승인이나 최종 투자 추천은 아니다.
 
 ## 기본 사용 방법
 

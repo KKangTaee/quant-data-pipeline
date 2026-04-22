@@ -2,8 +2,8 @@
 
 ## 목적
 
-이 문서는 Streamlit Backtest 화면의 single strategy, compare, history, saved portfolio 흐름을 설명한다.
-UI form, payload 복원, history replay, saved portfolio replay를 수정할 때 먼저 확인한다.
+이 문서는 Streamlit Backtest 화면의 single strategy, compare, candidate review, history, saved portfolio 흐름을 설명한다.
+UI form, payload 복원, candidate review, history replay, saved portfolio replay를 수정할 때 먼저 확인한다.
 
 ## 핵심 파일
 
@@ -17,10 +17,11 @@ UI form, payload 복원, history replay, saved portfolio replay를 수정할 때
 
 ## 화면 흐름
 
-Backtest page는 현재 네 panel 중심으로 본다.
+Backtest page는 현재 다섯 panel 중심으로 본다.
 
 - `Single Strategy`: 하나의 전략을 실행하고 latest result를 확인한다.
 - `Compare & Portfolio Builder`: 여러 전략을 같은 기간으로 비교하고 weighted portfolio를 만든다.
+- `Candidate Review`: current candidate registry의 후보를 검토 보드로 읽고 compare 또는 Pre-Live Review로 넘긴다.
 - `History`: 저장된 실행 기록을 inspect하고, 가능한 경우 run again 또는 load into form을 수행한다.
 - `Pre-Live Review`: current candidate를 실전 전 운영 상태로 기록하고 저장된 Pre-Live record를 확인한다.
 
@@ -111,6 +112,23 @@ compare result bundles
 
 저장된 portfolio는 live trading 승인 기록이 아니다.
 후보 조합을 다시 재현하고 검증하기 위한 operator workflow artifact다.
+
+## Candidate Review 흐름
+
+```text
+CURRENT_CANDIDATE_REGISTRY.jsonl
+  -> Backtest > Candidate Review
+  -> Candidate Board에서 후보 역할 / 다음 행동 확인
+  -> Inspect Candidate에서 후보 상세 확인
+  -> Open Candidate In Pre-Live Review 또는 Send To Compare
+```
+
+구분:
+
+- Candidate Review는 후보를 투자 추천으로 확정하는 화면이 아니다.
+- Candidate Review는 current candidate, near miss, scenario를 먼저 읽는 중간 검토 화면이다.
+- `Suggested Next Step`은 다음 검토 행동 제안이지 live trading 승인이나 최종 투자 판단이 아니다.
+- Pre-Live Review로 넘겨도 저장 전 초안일 뿐이며, 실제 저장은 `Save Pre-Live Record`로 한다.
 
 Phase 28 이후 Saved Portfolio 영역에는
 `Saved Portfolio Replay / Load Parity Snapshot`을 둔다.

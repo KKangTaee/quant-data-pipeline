@@ -1894,3 +1894,21 @@ Detailed historical logs were archived on `2026-04-13`.
   - `git diff --check` passed
 - Durable takeaway:
   - Phase 28 is closed. The next planned development phase is Phase 29 `Candidate Review And Recommendation Workflow`.
+
+### 2026-04-23
+- Opened Phase 29 and implemented the first Candidate Review workflow unit.
+- Changed:
+  - bootstrapped the Phase 29 document bundle for `Candidate Review And Recommendation Workflow`
+  - added `Backtest > Candidate Review` as a dedicated panel
+  - added a candidate review board for active `CURRENT_CANDIDATE_REGISTRY.jsonl` rows
+  - added candidate detail inspection, suggested next step, and Pre-Live Review handoff
+  - reused current candidate compare re-entry inside Candidate Review
+  - synced roadmap, document index, comprehensive analysis, web UI flow docs, glossary, and README
+- Validation:
+  - `python3 -m py_compile app/web/pages/backtest.py` passed
+  - `.venv` import smoke for candidate review helper columns passed
+  - `python3 plugins/quant-finance-workflow/scripts/manage_current_candidate_registry.py validate` passed
+  - finance refinement hygiene check passed after root log sync
+  - `git diff --check` passed
+- Durable takeaway:
+  - Phase 29 starts by making current candidates readable as review objects before sending them to compare or Pre-Live. This is a candidate review workflow, not live approval.

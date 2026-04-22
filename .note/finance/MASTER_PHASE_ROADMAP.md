@@ -1481,7 +1481,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 | Phase 26 | `complete` | `manual_qa_completed` | 완료 |
 | Phase 27 | `complete` | `manual_qa_completed` | 완료 |
 | Phase 28 | `complete` | `manual_qa_completed` | Capability + Replay + Data Trust + Real-Money/Guardrail parity QA 완료 |
-| Phase 29 | `planned` | `not_ready_for_qa` | candidate review workflow 예정 |
+| Phase 29 | `active` | `manual_qa_pending` | Candidate Review Board 첫 구현 완료 |
 | Phase 30 | `planned` | `not_ready_for_qa` | portfolio proposal / pre-live monitoring 예정 |
 
 한 줄 현재 판단:
@@ -1498,7 +1498,8 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
   `Phase 28`도 사용자 QA까지 완료되어 전략 family별 지원 범위와 cadence 차이,
   history / saved portfolio 재실행과 form 복원 가능성,
   compare / weighted data trust, Real-Money / Guardrail scope가 closeout 기준으로 정리되었다.
-  다음 개발 단계는 `Phase 29` candidate review / recommendation workflow다.
+  현재는 `Phase 29`를 열어 `Backtest > Candidate Review`에서 current candidate를 검토 보드로 읽고
+  compare 또는 Pre-Live Review로 넘기는 첫 workflow를 구현한 상태다.
 
 ---
 
@@ -1523,7 +1524,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 | Phase 26 | Foundation Stabilization And Backlog Rebase | `complete` | `manual_qa_completed` | 과거 backlog와 pending 상태를 현재 제품 기준으로 다시 정리했고 QA까지 완료했다 |
 | Phase 27 | Data Integrity And Backtest Trust Layer | `complete` | `manual_qa_completed` | 백테스트 전에 데이터가 믿을 만한지, 어디까지 계산 가능한지 보여주고 QA까지 완료했다 |
 | Phase 28 | Strategy Family Parity And Cadence Completion | `complete` | `manual_qa_completed` | annual / quarterly / 신규 전략의 지원 범위, 재진입 상태, compare data trust, Real-Money / Guardrail scope를 화면에서 구분하고 QA까지 완료했다 |
-| Phase 29 | Candidate Review And Recommendation Workflow | `planned` | `not_ready_for_qa` | 백테스트 결과를 후보, near miss, watchlist, pre-live 흐름으로 표준화한다 |
+| Phase 29 | Candidate Review And Recommendation Workflow | `active` | `manual_qa_pending` | current candidate를 검토 보드로 읽고 compare / Pre-Live Review로 넘기는 첫 workflow를 구현했다 |
 | Phase 30 | Portfolio Proposal And Pre-Live Monitoring Surface | `planned` | `not_ready_for_qa` | 후보들을 포트폴리오 제안과 paper / pre-live monitoring 화면으로 연결한다 |
 
 ### Phase 26. Foundation Stabilization And Backlog Rebase
@@ -1584,6 +1585,14 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 ### 왜 필요한가
 - 최종 목표는 투자 후보와 포트폴리오 구성안을 제안하는 프로그램이다.
 - 그러려면 좋은 결과를 볼 때마다 임시 문서로 판단하지 않고, 반복 가능한 후보 검토 절차가 필요하다.
+
+### 현재 메모
+- Phase 29는 active / manual_qa_pending 상태다.
+- 첫 작업으로 `Backtest > Candidate Review` panel을 추가했다.
+- 이 panel은 current candidate registry의 active 후보를 review board로 보여주고,
+  후보별 review stage, 존재 이유, 다음 행동 제안을 표시한다.
+- 선택한 후보는 Pre-Live Review로 넘길 수 있고, 후보 묶음은 기존 compare re-entry로 보낼 수 있다.
+- 다음 작업 후보는 Latest Backtest Run 또는 History 결과를 candidate review 초안으로 넘기는 handoff다.
 
 ### Phase 30. Portfolio Proposal And Pre-Live Monitoring Surface
 

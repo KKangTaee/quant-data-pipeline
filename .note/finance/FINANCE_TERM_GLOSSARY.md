@@ -2410,6 +2410,33 @@ Real-Money 검증 신호를 본 뒤,
 
 ---
 
+## Candidate Review
+
+### 기본 설명
+백테스트 후보를 바로 투자 추천으로 확정하기 전에,
+왜 후보로 남아 있는지와 다음에 무엇을 할지 검토하는 단계다.
+
+### 왜 사용되는지
+current candidate, near miss, scenario 후보가 섞이면
+사용자가 성과표만 보고 바로 투자 후보처럼 오해할 수 있다.
+Candidate Review는 후보를 먼저 읽고,
+compare 또는 Pre-Live Review로 넘길지 판단하게 만든다.
+
+### 예시 / 필요 상황
+- `Backtest > Candidate Review`
+- `Candidate Board`
+- `Inspect Candidate`
+- `Suggested Next Step`
+- `Open Candidate In Pre-Live Review`
+
+중요한 경계:
+
+- Candidate Review는 live trading approval이 아니다.
+- `Suggested Next Step`은 투자 추천이 아니라 다음 검토 행동 제안이다.
+- Pre-Live Review로 넘겨도 저장 전 초안일 뿐이다.
+
+---
+
 ## Backlog Rebase
 
 ### 기본 설명

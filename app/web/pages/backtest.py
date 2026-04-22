@@ -280,7 +280,13 @@ CURRENT_CANDIDATE_COMPARE_DEFAULT_START = date(2016, 1, 1)
 CURRENT_CANDIDATE_COMPARE_DEFAULT_END = date(2026, 4, 1)
 CURRENT_CANDIDATE_REGISTRY_FILE = Path(".note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl")
 PRE_LIVE_CANDIDATE_REGISTRY_FILE = Path(".note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl")
-BACKTEST_PANEL_OPTIONS = ["Single Strategy", "Compare & Portfolio Builder", "History", "Pre-Live Review"]
+BACKTEST_PANEL_OPTIONS = [
+    "Single Strategy",
+    "Compare & Portfolio Builder",
+    "Candidate Review",
+    "History",
+    "Pre-Live Review",
+]
 PRE_LIVE_STATUS_OPTIONS = ["watchlist", "paper_tracking", "hold", "reject", "re_review"]
 STATIC_MANAGED_RESEARCH_UNIVERSE = "static_managed_research"
 HISTORICAL_DYNAMIC_PIT_UNIVERSE = "historical_dynamic_pit"
@@ -5774,10 +5780,7 @@ def _render_current_candidate_bundle_workspace() -> None:
     display_df = _build_current_candidate_registry_rows_for_display(rows)
     anchor_rows = [row for row in rows if str(row.get("record_type") or "") == "current_candidate"]
     near_miss_rows = [row for row in rows if str(row.get("record_type") or "") == "near_miss"]
-    label_to_row = {
-        f"{str(row.get('strategy_family') or '').replace('_', ' ').title()} | {_current_candidate_registry_role_label(row)} | {row.get('title')}": row
-        for row in rows
-    }
+    label_to_row = {_current_candidate_registry_selection_label(row): row for row in rows}
 
     st.caption(
         "문서에 정리된 대표 후보를 compare form에 다시 채워 넣는 보조 도구입니다. "
@@ -5840,6 +5843,106 @@ def _render_current_candidate_bundle_workspace() -> None:
                 st.error(str(exc))
 
 
+def _render_candidate_review_workspace() -> None:
+    st.markdown("### Candidate Review")
+    st.caption(
+        "백테스트 결과를 바로 투자 추천으로 확정하는 화면이 아닙니다. "
+        "`CURRENT_CANDIDATE_REGISTRY`에 기록된 후보를 검토 보드로 읽고, "
+        "필요하면 Compare 또는 Pre-Live Review로 넘기는 중간 작업 화면입니다."
+    )
+
+    rows = _load_current_candidate_registry_latest()
+    pre_live_rows = _load_pre_live_candidate_registry_latest()
+
+    summary_cols = st.columns(4, gap="small")
+    summary_cols[0].metric("Active Candidates", len(rows))
+    summary_cols[1].metric(
+        "Current Anchors",
+        len([row for row in rows if str(row.get("record_type") or "") == "current_candidate"]),
+    )
+    summary_cols[2].metric(
+        "Near Miss / Scenario",
+        len([row for row in rows if str(row.get("record_type") or "") != "current_candidate"]),
+    )
+    summary_cols[3].metric("Pre-Live Records", len(pre_live_rows))
+
+    with st.expander("How To Use Candidate Review", expanded=False):
+        st.markdown(
+            "- `Candidate Review`는 후보를 읽고 다음 검토 행동을 정하는 화면입니다.\n"
+            "- `Compare로 보기`: 후보끼리 같은 기간과 설정으로 다시 비교합니다.\n"
+            "- `Pre-Live Review로 넘기기`: 후보를 실제 돈 없이 관찰 / 보류 / 재검토 상태로 기록합니다.\n"
+            "- 이 화면은 live trading 승인이나 최종 투자 판단을 하지 않습니다.\n"
+            "- 후보 목록은 `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`의 active row 기준입니다."
+        )
+
+    if not rows:
+        st.info("현재 current candidate registry에 active 후보가 없습니다.")
+        st.caption(f"Path: {CURRENT_CANDIDATE_REGISTRY_FILE}")
+        return
+
+    board_tab, detail_tab, compare_tab = st.tabs(["Candidate Board", "Inspect Candidate", "Send To Compare"])
+    with board_tab:
+        st.markdown("#### Candidate Board")
+        st.caption(
+            "이 표는 성과 순위표가 아니라 후보 검토 보드입니다. "
+            "`Suggested Next Step`은 자동 투자 추천이 아니라 다음 작업 제안입니다."
+        )
+        st.dataframe(_build_candidate_review_board_rows_for_display(rows), use_container_width=True, hide_index=True)
+
+    with detail_tab:
+        st.markdown("#### Inspect Candidate")
+        label_to_row = {_current_candidate_registry_selection_label(row): row for row in rows}
+        selected_label = st.selectbox(
+            "Candidate To Inspect",
+            options=list(label_to_row.keys()),
+            key="candidate_review_selected_candidate",
+            help="후보의 역할, Real-Money 신호, 다음 작업 제안을 확인합니다.",
+        )
+        selected_row = label_to_row[selected_label]
+        selected_result = dict(selected_row.get("result") or {})
+
+        with st.container(border=True):
+            st.markdown(f"##### {selected_row.get('title') or selected_row.get('registry_id')}")
+            st.caption(_candidate_review_reason(selected_row))
+            metric_cols = st.columns(5, gap="small")
+            metric_cols[0].metric("Review Stage", _candidate_review_stage(selected_row))
+            metric_cols[1].metric("CAGR", str(selected_result.get("cagr") or "-"))
+            metric_cols[2].metric("MDD", str(selected_result.get("mdd") or "-"))
+            metric_cols[3].metric("Promotion", str(selected_result.get("promotion") or "-"))
+            metric_cols[4].metric("Shortlist", str(selected_result.get("shortlist") or "-"))
+            st.markdown("**Suggested Next Step**")
+            st.write(_candidate_review_next_step(selected_row))
+            st.markdown("**Contract Summary**")
+            st.write(_current_candidate_registry_contract_summary(selected_row))
+
+        action_cols = st.columns(2, gap="small")
+        with action_cols[0]:
+            if st.button("Open Candidate In Pre-Live Review", key="candidate_review_open_pre_live", use_container_width=True):
+                st.session_state["pre_live_candidate_to_review"] = selected_label
+                st.session_state["candidate_review_to_pre_live_notice"] = (
+                    f"`{selected_row.get('title') or selected_row.get('registry_id')}` 후보를 Pre-Live Review에서 열었습니다. "
+                    "아직 저장된 것은 아니며, 운영 상태와 next action을 확인한 뒤 저장해야 합니다."
+                )
+                _request_backtest_panel("Pre-Live Review")
+                st.rerun()
+        with action_cols[1]:
+            st.caption(
+                "Pre-Live Review로 넘겨도 live trading이 승인되지 않습니다. "
+                "후보의 운영 상태 기록 초안을 여는 동작입니다."
+            )
+
+        with st.expander("Raw Candidate Registry Row", expanded=False):
+            st.json(selected_row)
+
+    with compare_tab:
+        st.markdown("#### Send Candidates To Compare")
+        st.caption(
+            "대표 후보나 near-miss 후보를 compare form에 다시 채워 넣습니다. "
+            "이 단계는 compare 실행이 아니라 입력값 prefill입니다."
+        )
+        _render_current_candidate_bundle_workspace()
+
+
 def _render_pre_live_review_workspace() -> None:
     st.markdown("### Pre-Live Review")
     st.caption(
@@ -5847,6 +5950,11 @@ def _render_pre_live_review_workspace() -> None:
         "`CURRENT_CANDIDATE_REGISTRY`의 후보를 보고, 실전 전에 watchlist / paper tracking / hold / reject / re-review 중 "
         "어떤 운영 상태로 둘지 기록하는 화면입니다."
     )
+
+    candidate_review_notice = st.session_state.get("candidate_review_to_pre_live_notice")
+    if candidate_review_notice:
+        st.info(candidate_review_notice)
+        st.session_state.candidate_review_to_pre_live_notice = None
 
     current_rows = _load_current_candidate_registry_latest()
     pre_live_rows = _load_pre_live_candidate_registry_latest()
@@ -5873,10 +5981,7 @@ def _render_pre_live_review_workspace() -> None:
         )
         st.dataframe(_build_current_candidate_registry_rows_for_display(current_rows), use_container_width=True, hide_index=True)
 
-        label_to_row = {
-            f"{str(row.get('strategy_family') or '').replace('_', ' ').title()} | {_current_candidate_registry_role_label(row)} | {row.get('title')}": row
-            for row in current_rows
-        }
+        label_to_row = {_current_candidate_registry_selection_label(row): row for row in current_rows}
         selected_label = st.selectbox(
             "Candidate To Review",
             options=list(label_to_row.keys()),
@@ -8313,6 +8418,11 @@ def _current_candidate_registry_role_label(row: dict[str, Any]) -> str:
     return candidate_role or record_type or "candidate"
 
 
+def _current_candidate_registry_selection_label(row: dict[str, Any]) -> str:
+    family = str(row.get("strategy_family") or "").replace("_", " ").title()
+    return f"{family} | {_current_candidate_registry_role_label(row)} | {row.get('title')}"
+
+
 def _current_candidate_registry_contract_summary(row: dict[str, Any]) -> str:
     contract = dict(row.get("contract") or {})
     parts: list[str] = []
@@ -8357,6 +8467,79 @@ def _build_current_candidate_registry_rows_for_display(rows: list[dict[str, Any]
                 "MDD": result.get("mdd"),
                 "Promotion": result.get("promotion"),
                 "Shortlist": result.get("shortlist"),
+                "Registry ID": row.get("registry_id"),
+            }
+        )
+    return pd.DataFrame(display_rows)
+
+
+def _candidate_review_stage(row: dict[str, Any]) -> str:
+    record_type = str(row.get("record_type") or "").strip().lower()
+    result = dict(row.get("result") or {})
+    promotion = str(result.get("promotion") or "").strip().lower()
+    shortlist = str(result.get("shortlist") or "").strip().lower()
+    deployment = str(result.get("deployment") or "").strip().lower()
+
+    if record_type == "current_candidate" and promotion == "real_money_candidate":
+        return "Main Review Candidate"
+    if record_type == "near_miss":
+        return "Near-Miss / Risk Alternative"
+    if record_type == "scenario":
+        return "Scenario / Cleaner Alternative"
+    if shortlist == "watchlist" or deployment == "review_required":
+        return "Watchlist Review"
+    return "Manual Review"
+
+
+def _candidate_review_reason(row: dict[str, Any]) -> str:
+    record_type = str(row.get("record_type") or "").strip().lower()
+    role = _current_candidate_registry_role_label(row)
+    if record_type == "current_candidate":
+        return "현재 family의 기준 후보로 비교와 Pre-Live 검토의 출발점입니다."
+    if record_type == "near_miss":
+        return "주 후보보다 일부 gate는 약하지만 MDD나 방어성이 좋아 다시 볼 후보입니다."
+    if record_type == "scenario":
+        return "주 후보를 바로 대체하기보다 설정 차이를 비교하기 위한 대안 후보입니다."
+    return f"`{role}` 역할로 기록된 후보라 수동 확인이 필요합니다."
+
+
+def _candidate_review_next_step(row: dict[str, Any]) -> str:
+    record_type = str(row.get("record_type") or "").strip().lower()
+    result = dict(row.get("result") or {})
+    promotion = str(result.get("promotion") or "").strip().lower()
+    shortlist = str(result.get("shortlist") or "").strip().lower()
+    deployment = str(result.get("deployment") or "").strip().lower()
+
+    if record_type == "current_candidate" and promotion == "real_money_candidate":
+        return "Compare에서 다른 family 후보와 같이 본 뒤, 유지 후보라면 Pre-Live Review로 운영 상태를 기록합니다."
+    if record_type == "near_miss":
+        return "낙폭을 줄이는 대안이 필요한 상황에서 Compare로 주 후보와 비교합니다. 기본 후보로 자동 승격하지 않습니다."
+    if record_type == "scenario":
+        return "설정 차이를 확인하는 비교 대상으로 사용합니다. 필요할 때만 Pre-Live 후보로 넘깁니다."
+    if shortlist == "watchlist" or deployment == "review_required":
+        return "Watchlist 후보로 두고 다음 비교나 데이터 업데이트 후 재검토합니다."
+    return "후보 역할과 Real-Money 신호를 확인한 뒤 compare 또는 Pre-Live Review 중 하나로 넘깁니다."
+
+
+def _build_candidate_review_board_rows_for_display(rows: list[dict[str, Any]]) -> pd.DataFrame:
+    display_rows: list[dict[str, Any]] = []
+    for row in rows:
+        result = dict(row.get("result") or {})
+        docs = dict(row.get("docs") or {})
+        display_rows.append(
+            {
+                "Review Stage": _candidate_review_stage(row),
+                "Family": str(row.get("strategy_family") or "").replace("_", " ").title(),
+                "Role": _current_candidate_registry_role_label(row),
+                "Title": row.get("title"),
+                "CAGR": result.get("cagr"),
+                "MDD": result.get("mdd"),
+                "Promotion": result.get("promotion"),
+                "Shortlist": result.get("shortlist"),
+                "Deployment": result.get("deployment"),
+                "Why It Exists": _candidate_review_reason(row),
+                "Suggested Next Step": _candidate_review_next_step(row),
+                "Docs": ", ".join(sorted(docs.keys())) if docs else "-",
                 "Registry ID": row.get("registry_id"),
             }
         )
@@ -13607,6 +13790,7 @@ def render_backtest_tab() -> None:
             """
             - `Single Strategy`: 전략 1개를 실행하고 결과를 바로 확인하는 화면입니다.
             - `Compare & Portfolio Builder`: 여러 전략을 같은 기간으로 비교하는 화면입니다.
+            - `Candidate Review`: current candidate registry의 후보를 검토 보드로 읽고 compare 또는 Pre-Live Review로 넘기는 화면입니다.
             - `History`: 저장된 실행 결과를 다시 보고, `Run Again` 또는 `Load Into Form`을 사용하는 화면입니다.
             - `Pre-Live Review`: current candidate를 실전 전 관찰 / 보류 / 재검토 기록으로 넘기는 화면입니다.
             - `Load Into Form`을 누르면 저장된 입력값이 `Single Strategy` 화면으로 자동 이동하며 다시 채워집니다.
@@ -15224,6 +15408,9 @@ def render_backtest_tab() -> None:
         if st.session_state.backtest_compare_bundles and len(st.session_state.backtest_compare_bundles) >= 2:
             st.divider()
         _render_saved_portfolio_workspace()
+
+    elif active_panel == "Candidate Review":
+        _render_candidate_review_workspace()
 
     elif active_panel == "History":
         st.markdown("### Backtest History")

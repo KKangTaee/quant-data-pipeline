@@ -2570,3 +2570,17 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 사용자가 checklist QA 완료를 선언했으므로 remaining QA 항목을 완료 처리하고 roadmap / index / closeout 문서를 같은 상태로 동기화한다
 - Follow-up:
   - 다음 단계는 Phase 29 `Candidate Review And Recommendation Workflow`를 열고, 백테스트 결과를 후보 검토 / 추천 workflow로 넘기는 절차를 설계하는 것이다
+
+### 2026-04-23 - Phase 29 첫 작업은 Candidate Review Board다
+- User request:
+  - Phase 28 종료 후 다음 단계 진행을 요청함
+- Interpreted goal:
+  - Phase 29를 열고 current candidate를 후보 검토 workflow로 읽는 첫 UI / 문서 단위를 구현한다
+- Analysis result:
+  - Phase 29는 최종 투자 승인이나 live trading을 여는 단계가 아니다
+  - 첫 작업은 `Backtest > Candidate Review` panel을 추가해 active current candidate registry row를 review board로 보여주는 것이다
+  - Candidate Board는 후보별 review stage, 존재 이유, suggested next step을 보여주고, Inspect Candidate에서 Pre-Live Review로 넘길 수 있게 한다
+  - `Send To Compare`에서는 기존 current candidate re-entry를 재사용해 compare form으로 후보 묶음을 넘긴다
+- Follow-up:
+  - Phase 29 QA에서는 Candidate Review가 투자 추천처럼 보이지 않고, compare / Pre-Live Review로 넘기는 중간 workflow로 읽히는지 확인한다
+  - 다음 작업 후보는 Latest Backtest Run 또는 History record를 candidate review 초안으로 넘기는 handoff다
