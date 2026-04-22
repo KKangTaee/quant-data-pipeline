@@ -29,8 +29,12 @@ current candidate를 검토 보드로 읽고 compare / Pre-Live Review로 자연
 
 - 확인 위치:
   - `Backtest > Candidate Review > Candidate Board`
+- 테스트 전 이해:
+  - 현재 보드의 기존 후보는 자동으로 선별된 최신 백테스트 결과가 아니다.
+  - 이전 phase에서 registry에 남겨 둔 sample / seed 후보군으로 보고 workflow를 확인한다.
 - 체크 항목:
   - [ ] current candidate registry의 active 후보들이 표로 보이는지
+  - [ ] 기존 후보군이 실제 투자 추천이 아니라 sample candidate set으로 이해되는지
   - [ ] `Review Stage`가 current anchor, near miss, scenario 후보를 구분하는 데 도움이 되는지
   - [ ] `Why It Exists`가 후보가 왜 남아 있는지 쉽게 설명하는지
   - [ ] `Suggested Next Step`이 투자 추천이 아니라 다음 검토 행동 제안으로 읽히는지

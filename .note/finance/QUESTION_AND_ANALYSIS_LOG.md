@@ -2637,3 +2637,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 사용자 checklist QA 완료 전에는 Phase 30으로 넘어가지 않는다
 - Follow-up:
   - 사용자는 `.note/finance/phase29/PHASE29_TEST_CHECKLIST.md` 기준으로 QA를 진행하고, 완료되면 Phase 29 closeout 후 Phase 30으로 넘어간다
+
+### 2026-04-23 - Candidate Board의 기존 후보는 Phase 29 QA용 sample candidate set으로 본다
+- User request:
+  - Candidate Board 후보가 Single Strategy 백테스트 결과가 자동 검증되어 올라온 것인지 확인하고, 추후 개발 필요성을 기록해 달라고 요청함
+- Interpreted goal:
+  - 현재 Candidate Board의 기존 후보군 성격을 명확히 하고, 향후 실제 후보 lifecycle board로 고도화해야 한다는 backlog를 남긴다
+- Analysis result:
+  - 현재 Candidate Board의 기존 row는 최신 Single Strategy 결과 자동 선별물이 아니다
+  - 이전 phase에서 문서화한 후보를 `CURRENT_CANDIDATE_REGISTRY.jsonl`에 seed처럼 남겨 둔 sample / registry 후보군이다
+  - Phase 29 QA에서는 이 후보들을 workflow 확인용 sample candidate set으로 본다
+  - 추후 phase에서는 sample 후보와 실제 사용자 append 후보를 구분하고, 후보 lifecycle / source / archive 상태를 더 잘 관리하는 Candidate Board 고도화가 필요하다
+- Follow-up:
+  - 이 내용은 `PHASE29_NEXT_PHASE_PREPARATION.md`의 future development note와 `PHASE29_TEST_CHECKLIST.md`의 Candidate Board 확인 항목에 반영했다

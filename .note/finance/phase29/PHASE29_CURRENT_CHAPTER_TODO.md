@@ -24,6 +24,9 @@ current candidate registry에 남은 후보를 검토 보드로 읽고,
   - 선택 후보를 Pre-Live Review로 넘기되, 아직 저장 전 초안이라는 안내를 보여준다.
 - `completed` Candidate Review 안에서 compare re-entry 재사용
   - 대표 후보나 near-miss 후보 묶음을 compare form으로 채울 수 있게 했다.
+- `completed` Candidate Board sample boundary 기록
+  - 현재 기존 후보는 자동 선별 결과가 아니라 sample / seed registry 후보군으로 보고 QA한다.
+  - 추후 phase에서 실제 후보 lifecycle board로 고도화할 필요가 있음을 handoff에 남겼다.
 
 ## 2. 구현 완료 항목
 

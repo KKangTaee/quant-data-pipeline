@@ -1969,3 +1969,12 @@ Detailed historical logs were archived on `2026-04-13`.
   - synced Phase 29 TODO, completion summary, next-phase preparation, checklist, master roadmap, and document index
 - Durable takeaway:
   - Phase 29 implementation is complete. The next gate is user checklist QA, not Phase 30 development yet.
+
+### 2026-04-23
+- Clarified Candidate Board sample-candidate boundary for Phase 29 QA.
+- Changed:
+  - documented that existing Candidate Board rows are sample / seed registry candidates for workflow QA, not automatic Single Strategy selections
+  - added future development note for Candidate Board maturation into a real candidate lifecycle board
+  - updated Phase 29 checklist so the user can QA with the correct sample-data interpretation
+- Durable takeaway:
+  - Candidate Board needs later-phase refinement, especially source distinction, sample/archive handling, and safe non-automatic candidate recommendation flow.

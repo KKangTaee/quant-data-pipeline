@@ -17,6 +17,19 @@ Phase 29 closeout 시점에 다시 갱신한다.
   명시적 append 버튼으로만 registry에 기록하는 길을 만들었다.
 - 현재는 사용자 QA 후 Phase 29를 닫고 Phase 30으로 넘길 수 있는지 확인하면 된다.
 
+## Candidate Board future development note
+
+- 현재 `Candidate Board`에 보이는 기존 후보는 자동 선별 결과가 아니라,
+  이전 phase에서 문서화해 둔 후보를 registry에 seed처럼 남긴 샘플 후보군에 가깝다.
+- Phase 29 QA에서는 이 목록을 투자 추천 목록이 아니라
+  Candidate Review workflow가 잘 작동하는지 확인하기 위한 sample candidate set으로 본다.
+- 추후 phase에서는 Candidate Board를 실제 후보 lifecycle board로 고도화해야 한다.
+- 고도화 후보:
+  - sample / seed 후보와 사용자가 직접 append한 후보를 화면에서 구분한다.
+  - Single Strategy / History / Review Note에서 넘어온 후보의 source를 더 분명히 보여준다.
+  - 자동 후보 추천을 만들더라도 바로 board에 올리지 않고 review draft / review note를 거치게 한다.
+  - 오래된 sample 후보를 archive하거나 status로 숨길 수 있게 한다.
+
 ## Phase 30으로 넘어가기 전에 더 중요한 질문
 
 1. 후보 1개를 보는 것이 아니라 후보 묶음을 포트폴리오 제안으로 어떻게 만들 것인가
