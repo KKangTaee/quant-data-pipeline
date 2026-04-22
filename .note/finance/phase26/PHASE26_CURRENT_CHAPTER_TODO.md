@@ -27,7 +27,7 @@ Phase 27~30 개발 순서를 안정적으로 고정하는 것이다.
 ## 2. Foundation Gap Map
 
 - `completed` 데이터 / 백테스트 신뢰성 gap 정리
-  - stale price, missing ticker, common-date truncation, excluded ticker, malformed price row 같은 이슈를 Phase 27 입력으로 묶는다.
+  - stale price, missing ticker, common-date truncation, excluded ticker, malformed price row 같은 이슈를 Phase 27에서 다룰 주제로 묶는다.
 - `completed` strategy family parity gap 정리
   - annual, quarterly, Global Relative Strength, saved replay / history / compare / Real-Money / Guardrail 차이를 확인한다.
 - `completed` candidate review / portfolio proposal gap 정리
@@ -58,5 +58,5 @@ Phase 27~30 개발 순서를 안정적으로 고정하는 것이다.
 
 Phase 26 implementation은 완료되었고, 사용자 checklist QA가 남아 있다.
 과거 phase의 오래된 pending 상태는 현재 Phase 27 진입을 막는 blocker가 아니라
-이후 phase 입력 또는 future option으로 재분류되었다.
+이후 phase에서 다룰 주제 또는 future option으로 재분류되었다.
 Phase 27 구현은 사용자가 `PHASE26_TEST_CHECKLIST.md`를 확인한 뒤 시작한다.

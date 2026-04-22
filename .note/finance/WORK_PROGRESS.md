@@ -1758,3 +1758,13 @@ Detailed historical logs were archived on `2026-04-13`.
   - documentation consistency and hygiene checks are the relevant checks for this document-only phase
 - Durable takeaway:
   - No old pending phase is an immediate blocker before Phase 27. Old pending checklists are now historical references or later-phase inputs, not active QA gates.
+
+### 2026-04-22
+- Clarified Phase 26 QA wording and next-phase handoff format.
+- Changed:
+  - replaced the ambiguous Phase 26 term `input` with user-facing wording: `다룰 주제`
+  - added a short plain-language Phase 18 explanation to `PHASE26_BACKLOG_REBASE_AND_FOUNDATION_GAP_MAP.md`
+  - expanded `PHASE26_NEXT_PHASE_PREPARATION.md` with a `다음 phase에서 실제로 할 작업` section for Phase 27
+  - updated the phase bundle helper, checklist template, and `AGENTS.md` so future next-phase handoff docs explain both why the next phase is natural and what work it will actually do
+- Durable takeaway:
+  - Future next-phase preparation docs should not stop at "why next"; they should also show the concrete work the user should expect in the next phase.

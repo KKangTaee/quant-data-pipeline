@@ -23,7 +23,7 @@
 | 구분 | 뜻 | 다음 처리 |
 |---|---|---|
 | Immediate blocker | 다음 phase를 시작하기 전에 해결해야 하는 문제 | Phase 26에서 처리하거나 Phase 27 시작 전 고정 |
-| Next-phase input | 다음 phase의 핵심 입력으로 넘길 문제 | Phase 27~30 중 해당 phase에 명시 |
+| 다음 phase에서 다룰 주제 | 다음 phase에서 실제로 검토하거나 구현할 수 있는 문제 | Phase 27~30 중 해당 phase에 명시 |
 | Future option | 지금 막지는 않지만 나중에 선택할 수 있는 개선 후보 | roadmap에 과도하게 크게 쓰지 않고 phase 문서에 보관 |
 | Legacy note | 현재 구현 판단에는 직접 영향을 주지 않는 과거 기록 | index / archive 문서에서 찾을 수 있게만 유지 |
 
@@ -39,7 +39,7 @@
 ## 이번 작업의 산출물
 
 - Phase 상태 / backlog 재분류표
-- Phase 27~30 입력으로 넘길 항목 목록
+- Phase 27~30에서 다룰 주제 목록
 - Live Readiness / Final Approval을 Phase 30 이후로 두는 boundary note
 
 결과 문서:

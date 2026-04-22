@@ -1465,7 +1465,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 | Phase 11 | `complete` | `legacy_unknown` | 과거 완료 phase. 필요 시 과거 문서 확인 |
 | Phase 12 | `complete` | `superseded_by_later_phase` | Real-Money first pass가 Phase 13~15/25에 흡수 |
 | Phase 13 | `complete` | `superseded_by_later_phase` | probation language가 Phase 25 Pre-Live로 재정의 |
-| Phase 14 | `complete` | `superseded_by_later_phase` | calibration 설계가 Phase 27~29 입력으로 정리 |
+| Phase 14 | `complete` | `superseded_by_later_phase` | calibration 설계가 Phase 27~29에서 다룰 주제로 정리 |
 | Phase 15 | `complete` | `superseded_by_later_phase` | candidate workflow가 registry/report 흐름으로 흡수 |
 | Phase 16 | `complete` | `legacy_unknown` | 과거 완료 phase. 필요 시 과거 문서 확인 |
 | Phase 17 | `complete` | `legacy_unknown` | 과거 완료 phase. 필요 시 과거 문서 확인 |
@@ -1533,7 +1533,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 
 ### 현재 메모
 - Phase 26 implementation은 완료되었고 사용자 checklist QA가 남아 있다.
-- 과거 pending 상태는 immediate blocker가 아니라 Phase 27~30 입력 또는 future option으로 재분류했다.
+- 과거 pending 상태는 immediate blocker가 아니라 Phase 27~30에서 다룰 주제 또는 future option으로 재분류했다.
 - 새 전략 구현이나 deep backtest는 이번 phase에서 하지 않았다.
 
 ### Phase 27. Data Integrity And Backtest Trust Layer

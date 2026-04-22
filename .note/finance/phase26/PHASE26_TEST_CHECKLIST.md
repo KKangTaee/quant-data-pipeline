@@ -20,9 +20,9 @@
   - `.note/finance/phase26/PHASE26_FOUNDATION_STABILIZATION_AND_BACKLOG_REBASE_PLAN.md`
   - `.note/finance/phase26/PHASE26_BACKLOG_REBASE_AND_FOUNDATION_GAP_MAP.md`
 - 체크 항목:
-  - [ ] Phase 26이 새 전략 구현이나 투자 분석이 아니라 backlog / foundation 정리 phase라는 점이 이해되는지
-  - [ ] Live Readiness / Final Approval이 Phase 26~30 이후 과제로 분리되어 있는지
-  - [ ] Phase 27~30의 큰 순서가 데이터 신뢰성 -> 전략 parity -> 후보 검토 -> 포트폴리오 제안으로 읽히는지
+  - [x] Phase 26이 새 전략 구현이나 투자 분석이 아니라 backlog / foundation 정리 phase라는 점이 이해되는지
+  - [x] Live Readiness / Final Approval이 Phase 26~30 이후 과제로 분리되어 있는지
+  - [x] Phase 27~30의 큰 순서가 데이터 신뢰성 -> 전략 parity -> 후보 검토 -> 포트폴리오 제안으로 읽히는지
 
 ## 2. Backlog rebase 확인
 
@@ -31,20 +31,20 @@
   - `.note/finance/FINANCE_DOC_INDEX.md`
   - `.note/finance/phase26/PHASE26_BACKLOG_REBASE_AND_FOUNDATION_GAP_MAP.md`
 - 체크 항목:
-  - [ ] Phase 8, 9, 12~15, 18이 왜 우선 재분류 대상이었는지 이해되는지
-  - [ ] 과거 phase의 pending 상태가 현재 blocker인지 future option인지 구분되어 있는지
-  - [ ] `superseded_by_later_phase`가 "무시"가 아니라 "이후 phase에 흡수됨"이라는 뜻으로 읽히는지
-  - [ ] Phase 18 remaining structural backlog가 다음 개발 흐름에서 어떻게 다뤄질지 이해되는지
+  - [x] Phase 8, 9, 12~15, 18이 왜 우선 재분류 대상이었는지 이해되는지
+  - [x] 과거 phase의 pending 상태가 현재 blocker인지 future option인지 구분되어 있는지
+  - [x] `superseded_by_later_phase`가 "무시"가 아니라 "이후 phase에 흡수됨"이라는 뜻으로 읽히는지
+  - [x] Phase 18 remaining structural backlog가 다음 개발 흐름에서 어떻게 다뤄질지 이해되는지
 
 ## 3. Foundation gap 확인
 
 - 확인 위치:
   - `.note/finance/phase26/PHASE26_BACKLOG_REBASE_AND_FOUNDATION_GAP_MAP.md`
 - 체크 항목:
-  - [ ] 데이터 / 백테스트 신뢰성 gap이 Phase 27 입력으로 정리되어 있는지
-  - [ ] annual / quarterly / 신규 전략 parity gap이 Phase 28 입력으로 정리되어 있는지
-  - [ ] 후보 검토 workflow gap이 Phase 29 입력으로 정리되어 있는지
-  - [ ] portfolio proposal / pre-live monitoring gap이 Phase 30 입력으로 정리되어 있는지
+  - [x] 데이터 / 백테스트 신뢰성 gap이 Phase 27에서 다룰 주제로 정리되어 있는지
+  - [x] annual / quarterly / 신규 전략 parity gap이 Phase 28에서 다룰 주제로 정리되어 있는지
+  - [x] 후보 검토 workflow gap이 Phase 29에서 다룰 주제로 정리되어 있는지
+  - [x] portfolio proposal / pre-live monitoring gap이 Phase 30에서 다룰 주제로 정리되어 있는지
 
 ## 4. 문서와 closeout 확인
 

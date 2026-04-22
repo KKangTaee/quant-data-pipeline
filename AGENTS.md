@@ -197,6 +197,9 @@
 - When handing off a checklist for user verification, treat "all checklist items checked" as the default gate before moving to the next major phase, unless the user explicitly asks to skip or defer some items.
 - When sharing phase completion, include the checklist document in the final handoff so the user has a concrete test plan.
 - When a phase reaches practical completion, also review the project’s durable workflow guidance and references for staleness.
+- In `PHASE*_NEXT_PHASE_PREPARATION.md`, explain both:
+  - why the next phase is the right direction
+  - what concrete work the next phase will actually do, in plain language
 - At minimum, check whether newly implemented behavior should update:
   - `AGENTS.md`
   - finance skills / `SKILL.md` instructions that are actively used for this repository

@@ -19,6 +19,22 @@
 2. missing ticker, stale price, malformed row, common-date truncation을 사용자가 놓치지 않게 할 수 있는가
 3. 결과가 좋거나 나쁠 때 전략 문제와 데이터 문제를 분리해서 볼 수 있는가
 
+## 다음 phase에서 실제로 할 작업
+
+쉽게 말하면, Phase 27은 백테스트를 돌리기 전에
+"이번 데이터로 어디까지 믿고 계산할 수 있는지"를 먼저 보여주는 phase다.
+
+주요 작업은 다음과 같다.
+
+1. 데이터 가능 범위 진단
+   - 종목별 최신 가격일, 공통 계산 가능 기간, 제외된 종목을 더 분명하게 보여준다.
+2. 데이터 문제 경고 정리
+   - missing ticker, stale price, malformed row, common-date truncation을 사용자가 이해할 수 있는 경고로 정리한다.
+3. 백테스트 preflight / 결과 상단 설명 강화
+   - 실행 전후에 "왜 이 기간까지만 계산됐는지", "왜 이 종목이 제외됐는지"를 바로 확인할 수 있게 한다.
+4. 전략 문제와 데이터 문제 분리
+   - 결과가 이상할 때 전략 로직 문제인지, 데이터 품질 문제인지 구분해서 볼 수 있게 한다.
+
 ## 추천 다음 방향
 
 Phase 27은 `Data Integrity And Backtest Trust Layer`가 자연스럽다.
