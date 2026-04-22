@@ -8,8 +8,8 @@
 
 ## 현재 handoff 상태
 
-- Phase 28은 implementation complete 상태다.
-- 사용자 manual QA가 완료되면 Phase 29로 넘어갈 수 있다.
+- Phase 28은 complete / manual_qa_completed 상태다.
+- 사용자 manual QA가 완료되었으므로 Phase 29로 넘어갈 수 있다.
 - Phase 28에서 strategy family별 실행 / 저장 / 재실행 의미와 Real-Money / Guardrail 범위가 안정되었으므로, 다음 질문은 백테스트 결과를 어떻게 후보 검토 workflow로 넘길지다.
 
 ## 다음 phase에서 더 중요한 질문
@@ -48,4 +48,4 @@ Phase 29는 `Candidate Review And Recommendation Workflow`가 자연스럽다.
 
 - Phase 29는 자동 투자 추천이나 live approval이 아니다.
 - 후보 검토 workflow는 최종 목표인 투자 후보 / 포트폴리오 구성 제안으로 가기 위한 중간 운영 절차다.
-- Phase 28 manual QA 완료 후 이 문서를 최종 handoff 기준으로 다시 갱신한다.
+- 이 문서는 Phase 28 closeout 이후 Phase 29 opening handoff 기준으로 사용한다.

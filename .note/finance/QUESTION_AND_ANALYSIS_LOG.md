@@ -2559,3 +2559,14 @@ Detailed historical analysis was archived on `2026-04-13`.
   - compare, history, saved portfolio에 `Real-Money / Guardrail Scope` 표를 추가해 replay 전에 어떤 검증 범위의 결과인지 확인하게 했다
 - Follow-up:
   - Phase 28 checklist QA에서 compare tab, history scope table, saved portfolio scope table이 실제로 이해되는지 확인한다
+
+### 2026-04-23 - Phase 28 QA 완료 후 closeout한다
+- User request:
+  - Phase 28 QA 완료를 선언하고 최종 확인 후 종료를 요청함
+- Interpreted goal:
+  - Phase 28을 `complete` / `manual_qa_completed` 상태로 닫고 Phase 29 handoff 문서를 정리한다
+- Analysis result:
+  - Phase 28의 핵심 완료 기준은 새 전략 추가가 아니라 strategy family별 기능 범위, cadence 차이, history / saved portfolio 재진입, compare / weighted data trust, Real-Money / Guardrail scope가 사용자가 이해할 수 있게 보이는지였다
+  - 사용자가 checklist QA 완료를 선언했으므로 remaining QA 항목을 완료 처리하고 roadmap / index / closeout 문서를 같은 상태로 동기화한다
+- Follow-up:
+  - 다음 단계는 Phase 29 `Candidate Review And Recommendation Workflow`를 열고, 백테스트 결과를 후보 검토 / 추천 workflow로 넘기는 절차를 설계하는 것이다

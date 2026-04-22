@@ -2,11 +2,11 @@
 
 ## 진행 상태
 
-- `implementation_complete`
+- `complete`
 
 ## 검증 상태
 
-- `manual_qa_pending`
+- `manual_qa_completed`
 
 ## 현재 목표
 
@@ -46,7 +46,7 @@ Phase 28의 목표는 새 전략을 급하게 늘리는 것이 아니다.
 - `completed` `.venv` import smoke + history parity helper smoke
 - `completed` finance refinement hygiene check
 - `completed` `git diff --check`
-- `pending` targeted manual UI validation
+- `completed` targeted manual UI validation
 - `completed` generated history files unstaged 확인
 
 ## 4. Documentation Sync
@@ -63,7 +63,7 @@ Phase 28의 목표는 새 전략을 급하게 늘리는 것이 아니다.
 
 ## 현재 판단
 
-Phase 28은 implementation complete 상태다.
+Phase 28은 complete 상태다.
 첫 작업 단위인 `Strategy Capability Snapshot`은 구현됐고,
 두 번째 작업 단위로 history record의 재실행 / form 복원 가능성을 확인하는
 `History Replay / Load Parity Snapshot`도 추가됐다.
@@ -71,4 +71,4 @@ Phase 28은 implementation complete 상태다.
 `Saved Portfolio Replay / Load Parity Snapshot`도 추가됐다.
 네 번째 작업 단위로 compare / weighted / saved replay에서도 component별 data trust를 볼 수 있게 했다.
 다섯 번째 작업 단위로 annual strict, quarterly prototype, ETF 전략군의 Real-Money / Guardrail 지원 범위를 같은 표로 구분했다.
-이제 다음 단계는 사용자 manual UI validation이다.
+사용자 manual UI validation까지 완료했으므로, 다음 단계는 Phase 29 `Candidate Review And Recommendation Workflow`를 여는 것이다.

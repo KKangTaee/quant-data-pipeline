@@ -1480,7 +1480,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 | Phase 25 | `complete` | `manual_qa_completed` | 완료 |
 | Phase 26 | `complete` | `manual_qa_completed` | 완료 |
 | Phase 27 | `complete` | `manual_qa_completed` | 완료 |
-| Phase 28 | `implementation_complete` | `manual_qa_pending` | Capability + Replay + Data Trust + Real-Money/Guardrail parity 구현 완료 |
+| Phase 28 | `complete` | `manual_qa_completed` | Capability + Replay + Data Trust + Real-Money/Guardrail parity QA 완료 |
 | Phase 29 | `planned` | `not_ready_for_qa` | candidate review workflow 예정 |
 | Phase 30 | `planned` | `not_ready_for_qa` | portfolio proposal / pre-live monitoring 예정 |
 
@@ -1495,9 +1495,10 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
   사용자 manual QA까지 완료했다.
   `Phase 26`은 과거 pending 상태와 foundation gap을 재분류했고, 사용자 checklist QA까지 완료했다.
   `Phase 27`은 데이터 신뢰성과 백테스트 결과 해석 표면을 강화했고, 사용자 checklist QA까지 완료했다.
-  현재는 `Phase 28` 구현이 완료되어 전략 family별 지원 범위와 cadence 차이,
+  `Phase 28`도 사용자 QA까지 완료되어 전략 family별 지원 범위와 cadence 차이,
   history / saved portfolio 재실행과 form 복원 가능성,
-  compare / weighted data trust, Real-Money / Guardrail scope를 사용자 QA로 확인하면 된다.
+  compare / weighted data trust, Real-Money / Guardrail scope가 closeout 기준으로 정리되었다.
+  다음 개발 단계는 `Phase 29` candidate review / recommendation workflow다.
 
 ---
 
@@ -1521,7 +1522,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 |---|---|---|---|---|
 | Phase 26 | Foundation Stabilization And Backlog Rebase | `complete` | `manual_qa_completed` | 과거 backlog와 pending 상태를 현재 제품 기준으로 다시 정리했고 QA까지 완료했다 |
 | Phase 27 | Data Integrity And Backtest Trust Layer | `complete` | `manual_qa_completed` | 백테스트 전에 데이터가 믿을 만한지, 어디까지 계산 가능한지 보여주고 QA까지 완료했다 |
-| Phase 28 | Strategy Family Parity And Cadence Completion | `implementation_complete` | `manual_qa_pending` | annual / quarterly / 신규 전략의 지원 범위, 재진입 상태, compare data trust, Real-Money / Guardrail scope를 화면에서 구분한다 |
+| Phase 28 | Strategy Family Parity And Cadence Completion | `complete` | `manual_qa_completed` | annual / quarterly / 신규 전략의 지원 범위, 재진입 상태, compare data trust, Real-Money / Guardrail scope를 화면에서 구분하고 QA까지 완료했다 |
 | Phase 29 | Candidate Review And Recommendation Workflow | `planned` | `not_ready_for_qa` | 백테스트 결과를 후보, near miss, watchlist, pre-live 흐름으로 표준화한다 |
 | Phase 30 | Portfolio Proposal And Pre-Live Monitoring Surface | `planned` | `not_ready_for_qa` | 후보들을 포트폴리오 제안과 paper / pre-live monitoring 화면으로 연결한다 |
 
@@ -1566,14 +1567,14 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 - 전략을 더 늘리기 전에 family별 차이를 의도된 차이와 미완성 차이로 나눠야 한다.
 
 ### 현재 메모
-- Phase 28은 implementation complete phase다.
+- Phase 28은 complete / manual_qa_completed phase다.
 - 첫 작업은 `Strategy Capability Snapshot`이었다.
 - Single Strategy와 Compare 전략 박스에서 cadence, data trust, Real-Money/Guardrail, history/replay 지원 범위를 표로 보여준다.
 - 두 번째 작업으로 `History Replay / Load Parity Snapshot`을 추가해 selected history record의 재실행 / form 복원 관련 저장 상태를 볼 수 있게 했다.
 - 세 번째 작업으로 `Saved Portfolio Replay / Load Parity Snapshot`을 추가해 저장 포트폴리오의 전략 목록, weight/date alignment, strategy override 저장 상태를 볼 수 있게 했다.
 - 네 번째 작업으로 compare / weighted / saved replay에서도 component별 data trust를 볼 수 있게 했다.
 - 다섯 번째 작업으로 compare / history / saved portfolio에 Real-Money / Guardrail scope 표를 추가했다.
-- 다음 단계는 Phase 28 manual QA다.
+- 다음 단계는 Phase 29 `Candidate Review And Recommendation Workflow`다.
 
 ### Phase 29. Candidate Review And Recommendation Workflow
 

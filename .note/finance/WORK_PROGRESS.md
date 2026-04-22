@@ -1882,3 +1882,15 @@ Detailed historical logs were archived on `2026-04-13`.
   - `git diff --check` passed
 - Durable takeaway:
   - Saving a new weighted portfolio after rebuilding with different strategies should no longer retain the previous portfolio name by accident.
+
+### 2026-04-23
+- Closed Phase 28 after user manual QA completion.
+- Changed:
+  - marked the remaining Phase 28 checklist items as completed based on the user's QA completion confirmation
+  - moved Phase 28 status to `complete` / `manual_qa_completed`
+  - synced Phase 28 closeout summary, next-phase handoff, master roadmap, document index, and comprehensive analysis
+- Validation:
+  - finance refinement hygiene check passed
+  - `git diff --check` passed
+- Durable takeaway:
+  - Phase 28 is closed. The next planned development phase is Phase 29 `Candidate Review And Recommendation Workflow`.
