@@ -46,9 +46,18 @@
 
 - 예전 백테스트를 다시 열기 전에 “이 기록으로 무엇이 복원되고 무엇은 빠질 수 있는지”를 먼저 확인할 수 있다.
 
+### 4. Saved Portfolio Replay / Load Parity Snapshot 추가
+
+- `Backtest > Compare & Portfolio Builder > Saved Portfolios`에서 저장 포트폴리오를 선택하면 replay / load 가능성을 표로 볼 수 있게 했다.
+- compare 공용 입력, 전략 목록, weight/date alignment, strategy override map, 전략별 핵심 override 저장 상태를 보여준다.
+- `Strategy Override Summary` 접힘 영역으로 저장된 strategy-specific 설정을 한 번 더 요약한다.
+
+쉽게 말하면:
+
+- 저장 포트폴리오를 다시 실행하기 전에 “이 저장본이 같은 전략과 같은 weight로 다시 열릴 수 있는가”를 먼저 확인할 수 있다.
+
 ## 아직 남아 있는 것
 
-- saved portfolio replay parity 점검
 - Data Trust Summary를 compare / saved replay에 어디까지 확장할지 결정
 - Real-Money / Guardrail parity 범위 결정
 - 사용자 manual UI validation
@@ -57,5 +66,5 @@
 
 아직 closeout 상태가 아니다.
 
-현재는 Phase 28의 첫 번째 / 두 번째 구현 단위를 완료한 상태이며,
-saved portfolio replay parity와 남은 확장 범위를 더 본 뒤 사용자 QA 단계로 넘길지 판단한다.
+현재는 Phase 28의 첫 번째 / 두 번째 / 세 번째 구현 단위를 완료한 상태이며,
+남은 Data Trust Summary 확장 범위와 Real-Money / Guardrail parity 범위를 더 본 뒤 사용자 QA 단계로 넘길지 판단한다.

@@ -5085,6 +5085,298 @@ def _build_saved_portfolio_display_rows(saved_portfolios: list[dict[str, Any]]) 
     return pd.DataFrame(rows)
 
 
+def _saved_portfolio_value_is_present(value: Any) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, (float, np.floating)) and pd.isna(value):
+        return False
+    if isinstance(value, str):
+        return bool(value.strip())
+    if isinstance(value, (list, tuple, set, dict)):
+        return bool(value)
+    return True
+
+
+def _format_saved_portfolio_value(value: Any) -> str:
+    if not _saved_portfolio_value_is_present(value):
+        return "-"
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, (list, tuple, set)):
+        items = [str(item) for item in list(value)]
+        preview = ", ".join(items[:8])
+        if len(items) > 8:
+            preview += f" 외 {len(items) - 8}개"
+        return preview
+    if isinstance(value, dict):
+        text = json.dumps(value, ensure_ascii=False, default=str)
+    else:
+        text = str(value)
+    if len(text) > 140:
+        return text[:137] + "..."
+    return text
+
+
+def _saved_portfolio_field_summary(source: dict[str, Any], fields: list[str]) -> str:
+    pairs = [
+        f"{field}={_format_saved_portfolio_value(source.get(field))}"
+        for field in fields
+        if _saved_portfolio_value_is_present(source.get(field))
+    ]
+    return " / ".join(pairs) if pairs else "-"
+
+
+def _saved_portfolio_present_count(source: dict[str, Any], fields: list[str]) -> int:
+    return sum(1 for field in fields if _saved_portfolio_value_is_present(source.get(field)))
+
+
+def _saved_portfolio_strategy_expected_fields(strategy_name: str) -> tuple[list[str], str]:
+    if strategy_name.endswith("(Strict Annual)") or strategy_name.endswith("(Strict Quarterly Prototype)"):
+        fields = [
+            "universe_mode",
+            "preset_name",
+            "tickers",
+            "top_n",
+            "rebalance_interval",
+            "factor_freq",
+            "snapshot_mode",
+            "quality_factors",
+            "value_factors",
+            "universe_contract",
+            "dynamic_target_size",
+            "trend_filter_enabled",
+            "trend_filter_window",
+            "weighting_mode",
+            "rejected_slot_handling_mode",
+            "risk_off_mode",
+            "defensive_tickers",
+            "market_regime_enabled",
+            "benchmark_contract",
+            "benchmark_ticker",
+            "guardrail_reference_ticker",
+            "underperformance_guardrail_enabled",
+            "drawdown_guardrail_enabled",
+        ]
+        return fields, "strict factor 전략은 cadence, factor, universe, overlay, portfolio handling, guardrail 설정이 replay 의미를 결정합니다."
+
+    if strategy_name == "Global Relative Strength":
+        fields = [
+            "universe_mode",
+            "preset_name",
+            "tickers",
+            "cash_ticker",
+            "top",
+            "interval",
+            "score_lookback_months",
+            "score_return_columns",
+            "score_weights",
+            "trend_filter_window",
+            "min_price_filter",
+            "transaction_cost_bps",
+            "benchmark_ticker",
+        ]
+        return fields, "GRS는 score horizon / weight, cash ticker, trend window가 replay 의미를 결정합니다."
+
+    if strategy_name == "GTAA":
+        fields = [
+            "universe_mode",
+            "preset_name",
+            "tickers",
+            "top",
+            "interval",
+            "score_lookback_months",
+            "score_return_columns",
+            "score_weights",
+            "trend_filter_window",
+            "risk_off_mode",
+            "defensive_tickers",
+            "market_regime_enabled",
+            "crash_guardrail_enabled",
+            "benchmark_ticker",
+        ]
+        return fields, "GTAA는 score, risk-off, defensive sleeve, crash guardrail 설정이 replay 의미를 결정합니다."
+
+    if strategy_name == "Risk Parity Trend":
+        fields = [
+            "rebalance_interval",
+            "vol_window",
+            "min_price_filter",
+            "transaction_cost_bps",
+            "benchmark_ticker",
+            "underperformance_guardrail_enabled",
+            "drawdown_guardrail_enabled",
+        ]
+        return fields, "Risk Parity Trend는 vol window와 ETF operability / guardrail 입력을 같이 확인합니다."
+
+    if strategy_name == "Dual Momentum":
+        fields = [
+            "top",
+            "rebalance_interval",
+            "min_price_filter",
+            "transaction_cost_bps",
+            "benchmark_ticker",
+            "underperformance_guardrail_enabled",
+            "drawdown_guardrail_enabled",
+        ]
+        return fields, "Dual Momentum은 top, cadence, ETF operability / guardrail 입력을 같이 확인합니다."
+
+    if strategy_name == "Equal Weight":
+        fields = ["universe_mode", "preset_name", "tickers", "rebalance_interval"]
+        return fields, "Equal Weight는 ticker universe와 rebalance interval이 replay 의미를 결정합니다."
+
+    return ["universe_mode", "preset_name", "tickers", "top", "rebalance_interval"], "전략별 핵심 override가 저장됐는지 확인합니다."
+
+
+def _build_saved_portfolio_replay_parity_rows(record: dict[str, Any]) -> pd.DataFrame:
+    compare_context = dict(record.get("compare_context") or {})
+    portfolio_context = dict(record.get("portfolio_context") or {})
+    strategy_overrides = dict(compare_context.get("strategy_overrides") or {})
+    selected_strategies = list(compare_context.get("selected_strategies") or [])
+    strategy_names = list(portfolio_context.get("strategy_names") or [])
+    weights_percent = list(portfolio_context.get("weights_percent") or [])
+
+    rows: list[dict[str, str]] = []
+    rows.append(
+        {
+            "확인 영역": "Compare 공용 입력",
+            "저장 상태": "저장됨" if _saved_portfolio_present_count(compare_context, ["start", "end", "timeframe", "option"]) == 4 else "일부 누락",
+            "저장된 값": _saved_portfolio_field_summary(compare_context, ["start", "end", "timeframe", "option"]),
+            "왜 중요한가": "Replay는 이 기간과 timeframe / option으로 strategy compare를 다시 실행합니다.",
+        }
+    )
+    rows.append(
+        {
+            "확인 영역": "전략 목록",
+            "저장 상태": "저장됨" if selected_strategies else "누락 가능",
+            "저장된 값": _format_saved_portfolio_value(selected_strategies),
+            "왜 중요한가": "어떤 전략들을 다시 compare하고 weighted portfolio로 섞을지 결정합니다.",
+        }
+    )
+    rows.append(
+        {
+            "확인 영역": "Weight / Date Alignment",
+            "저장 상태": "저장됨" if len(weights_percent) == len(selected_strategies) and weights_percent else "일부 누락",
+            "저장된 값": (
+                f"strategy_names={_format_saved_portfolio_value(strategy_names)} / "
+                f"weights_percent={_format_saved_portfolio_value(weights_percent)} / "
+                f"date_policy={_format_saved_portfolio_value(portfolio_context.get('date_policy'))}"
+            ),
+            "왜 중요한가": "`Load Saved Setup Into Compare`와 `Replay Saved Portfolio`가 같은 weight와 date alignment로 이어지는지 확인합니다.",
+        }
+    )
+    rows.append(
+        {
+            "확인 영역": "Strategy Override Map",
+            "저장 상태": "저장됨" if all(strategy in strategy_overrides for strategy in selected_strategies) else "일부 누락",
+            "저장된 값": f"{sum(1 for strategy in selected_strategies if strategy in strategy_overrides)} / {len(selected_strategies)} strategies",
+            "왜 중요한가": "전략별 세부 옵션이 없으면 replay가 기본값으로 돌아가 다른 결과가 될 수 있습니다.",
+        }
+    )
+
+    for strategy_name in selected_strategies:
+        override = dict(strategy_overrides.get(strategy_name) or {})
+        fields, reason = _saved_portfolio_strategy_expected_fields(strategy_name)
+        present = _saved_portfolio_present_count(override, fields)
+        status = "저장됨" if present >= max(1, min(4, len(fields))) else "누락 가능"
+        if not override:
+            status = "누락 가능"
+        rows.append(
+            {
+                "확인 영역": strategy_name,
+                "저장 상태": status,
+                "저장된 값": _saved_portfolio_field_summary(override, fields),
+                "왜 중요한가": reason,
+            }
+        )
+
+    return pd.DataFrame(rows)
+
+
+def _build_saved_portfolio_override_summary_rows(record: dict[str, Any]) -> pd.DataFrame:
+    compare_context = dict(record.get("compare_context") or {})
+    strategy_overrides = dict(compare_context.get("strategy_overrides") or {})
+    rows: list[dict[str, Any]] = []
+    for strategy_name in list(compare_context.get("selected_strategies") or []):
+        override = dict(strategy_overrides.get(strategy_name) or {})
+        _, strategy_variant = display_name_to_selection(strategy_name)
+        rows.append(
+            {
+                "Strategy": strategy_name,
+                "Variant": strategy_variant or "-",
+                "Top / Interval": (
+                    f"{override.get('top_n') or override.get('top') or '-'} / "
+                    f"{override.get('rebalance_interval') or override.get('interval') or '-'}"
+                ),
+                "Universe": _format_saved_portfolio_value(
+                    override.get("universe_contract") or override.get("preset_name") or override.get("universe_mode")
+                ),
+                "Cadence / Snapshot": _format_saved_portfolio_value(
+                    override.get("factor_freq") or override.get("snapshot_mode") or override.get("score_lookback_months")
+                ),
+                "Overlay / Handling": _format_saved_portfolio_value(
+                    {
+                        key: override.get(key)
+                        for key in [
+                            "trend_filter_enabled",
+                            "trend_filter_window",
+                            "weighting_mode",
+                            "rejected_slot_handling_mode",
+                            "risk_off_mode",
+                            "market_regime_enabled",
+                        ]
+                        if key in override
+                    }
+                ),
+                "Benchmark / Guardrail": _format_saved_portfolio_value(
+                    {
+                        key: override.get(key)
+                        for key in [
+                            "benchmark_contract",
+                            "benchmark_ticker",
+                            "guardrail_reference_ticker",
+                            "underperformance_guardrail_enabled",
+                            "drawdown_guardrail_enabled",
+                        ]
+                        if key in override
+                    }
+                ),
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def _render_saved_portfolio_replay_parity_snapshot(record: dict[str, Any]) -> None:
+    parity_df = _build_saved_portfolio_replay_parity_rows(record)
+    if parity_df.empty:
+        return
+
+    compare_context = dict(record.get("compare_context") or {})
+    portfolio_context = dict(record.get("portfolio_context") or {})
+    selected_strategies = list(compare_context.get("selected_strategies") or [])
+    weights_percent = list(portfolio_context.get("weights_percent") or [])
+
+    st.markdown("#### Saved Portfolio Replay / Load Parity Snapshot")
+    st.caption(
+        "이 표는 저장된 포트폴리오를 `Load Saved Setup Into Compare` 또는 `Replay Saved Portfolio`로 다시 열 때 "
+        "전략 목록, 공용 기간, strategy-specific override, weight/date alignment가 충분히 남아 있는지 확인하는 표입니다."
+    )
+    metric_cols = st.columns(4, gap="small")
+    metric_cols[0].metric("Strategies", len(selected_strategies))
+    metric_cols[1].metric("Weights", len(weights_percent))
+    metric_cols[2].metric("Overrides", len(dict(compare_context.get("strategy_overrides") or {})))
+    metric_cols[3].metric("Date Policy", portfolio_context.get("date_policy") or "-")
+    st.dataframe(parity_df, use_container_width=True, hide_index=True)
+
+    override_df = _build_saved_portfolio_override_summary_rows(record)
+    if not override_df.empty:
+        with st.expander("Strategy Override Summary", expanded=False):
+            st.caption(
+                "전략별 저장 override를 사람이 읽기 쉬운 형태로 줄여서 보여줍니다. "
+                "정확한 전체 payload는 `Compare Context` 또는 `Raw Record` 탭에서 확인합니다."
+            )
+            st.dataframe(override_df, use_container_width=True, hide_index=True)
+
+
 def _run_saved_portfolio_record(record: dict[str, Any]) -> None:
     compare_context = dict(record.get("compare_context") or {})
     source_context = dict(record.get("source_context") or {})
@@ -5166,6 +5458,8 @@ def _run_saved_portfolio_record(record: dict[str, Any]) -> None:
         context={
             "selected_strategies": selected_strategies,
             "strategy_overrides": strategy_overrides,
+            "weights_percent": weights_percent,
+            "date_policy": portfolio_context.get("date_policy"),
             "saved_portfolio_id": record.get("portfolio_id"),
             "saved_portfolio_name": record.get("name"),
             "compare_source_context": {
@@ -5186,6 +5480,7 @@ def _run_saved_portfolio_record(record: dict[str, Any]) -> None:
         context={
             "selected_strategies": selected_strategies,
             "date_policy": portfolio_context.get("date_policy"),
+            "weights_percent": weights_percent,
             "saved_portfolio_id": record.get("portfolio_id"),
             "saved_portfolio_name": record.get("name"),
             "compare_source_context": {
@@ -5274,6 +5569,7 @@ def _render_weighted_portfolio_builder() -> None:
         context={
             "selected_strategies": strategy_names,
             "date_policy": date_policy,
+            "weights_percent": weights,
             "compare_source_context": compare_source_context,
         },
     )
@@ -5703,6 +5999,9 @@ def _render_saved_portfolio_workspace() -> None:
     compare_context = selected_record.get("compare_context") or {}
     portfolio_context = selected_record.get("portfolio_context") or {}
     source_context = selected_record.get("source_context") or {}
+
+    _render_saved_portfolio_replay_parity_snapshot(selected_record)
+
     detail_tabs = st.tabs(["Summary", "Source & Next Step", "Compare Context", "Raw Record"])
     with detail_tabs[0]:
         st.json(

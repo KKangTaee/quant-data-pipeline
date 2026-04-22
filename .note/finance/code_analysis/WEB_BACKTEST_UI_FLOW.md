@@ -112,6 +112,16 @@ compare result bundles
 저장된 portfolio는 live trading 승인 기록이 아니다.
 후보 조합을 다시 재현하고 검증하기 위한 operator workflow artifact다.
 
+Phase 28 이후 Saved Portfolio 영역에는
+`Saved Portfolio Replay / Load Parity Snapshot`을 둔다.
+이 표는 저장 포트폴리오를 다시 열거나 재실행하기 전에 아래 값이 남아 있는지 보여준다.
+
+- compare 공용 입력: start / end / timeframe / option
+- selected strategy list
+- weights percent / date alignment
+- strategy override map
+- strategy별 핵심 override: cadence, universe, factor, overlay, handling, benchmark, guardrail, score 설정
+
 ## History 흐름
 
 History는 compact summary 중심이다.

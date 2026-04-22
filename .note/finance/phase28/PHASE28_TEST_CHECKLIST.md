@@ -60,20 +60,37 @@ Phase 28 구현 범위가 닫히면 최종 checklist로 다시 갱신한다.
   - [ ] strict annual guardrail 설정을 사용한 record에서 `guardrail_reference_ticker`가 사라지지 않는지
   - [ ] GRS처럼 excluded ticker나 malformed price row가 있을 수 있는 전략에서 해당 정보가 history record에 남는지
 
-## 5. Phase 28 작업 의도 확인
+## 5. Saved Portfolio replay / load parity 확인
+
+- 확인 위치:
+  - `Backtest > Compare & Portfolio Builder`
+  - `Saved Portfolios`
+  - 저장 포트폴리오 1개 선택
+  - `Saved Portfolio Replay / Load Parity Snapshot`
+- 체크 항목:
+  - [ ] 저장 포트폴리오를 선택했을 때 `Saved Portfolio Replay / Load Parity Snapshot`이 보이는지
+  - [ ] `Compare 공용 입력`, `전략 목록`, `Weight / Date Alignment`, `Strategy Override Map` 행이 보이는지
+  - [ ] 전략별 행에서 annual strict / quarterly prototype / GRS / GTAA 등의 핵심 override가 저장되어 있는지 읽을 수 있는지
+  - [ ] `Strategy Override Summary`를 열었을 때 strategy별 variant, top/interval, universe, cadence, overlay/handling, benchmark/guardrail 요약이 보이는지
+  - [ ] `Load Saved Setup Into Compare`를 누르기 전에 어떤 값이 다시 채워질지 대략 판단할 수 있는지
+  - [ ] `Replay Saved Portfolio`가 저장된 전략 목록과 weight/date alignment를 기준으로 재실행되는 흐름으로 이해되는지
+
+## 6. Phase 28 작업 의도 확인
 
 - 확인 위치:
   - `.note/finance/phase28/PHASE28_STRATEGY_FAMILY_PARITY_AND_CADENCE_COMPLETION_PLAN.md`
   - `.note/finance/phase28/PHASE28_STRATEGY_CAPABILITY_SNAPSHOT_FIRST_WORK_UNIT.md`
   - `.note/finance/phase28/PHASE28_HISTORY_REPLAY_PARITY_SECOND_WORK_UNIT.md`
+  - `.note/finance/phase28/PHASE28_SAVED_PORTFOLIO_REPLAY_PARITY_THIRD_WORK_UNIT.md`
 - 체크 항목:
   - [ ] Phase 28이 새 전략 추가가 아니라 strategy family 차이 정리 phase라는 점이 이해되는지
   - [ ] `Parity`가 모든 전략을 똑같이 만드는 뜻이 아니라, 차이를 헷갈리지 않게 맞추는 뜻으로 읽히는지
   - [ ] quarterly prototype이 annual strict와 같은 실전 검증 수준으로 오해되지 않는지
   - [ ] GRS가 재무제표 전략이 아니라 price-only ETF 전략이라는 점이 문서와 UI에서 일관되게 보이는지
   - [ ] history replay / load parity가 투자 분석이 아니라 재실행 / 복원 QA라는 점이 이해되는지
+  - [ ] saved portfolio replay / load parity도 투자 분석이 아니라 compare + weighted portfolio 재현 QA라는 점이 이해되는지
 
-## 6. 문서와 closeout 확인
+## 7. 문서와 closeout 확인
 
 - 확인 문서:
   - `.note/finance/phase28/PHASE28_CURRENT_CHAPTER_TODO.md`
@@ -84,7 +101,7 @@ Phase 28 구현 범위가 닫히면 최종 checklist로 다시 갱신한다.
 - 체크 항목:
   - [ ] Phase 28 상태가 현재 구현 상태와 맞는지
   - [ ] 새 문서가 index에서 바로 찾히는지
-  - [ ] 다음 작업 후보가 history / replay parity 쪽으로 자연스럽게 이어지는지
+  - [ ] 다음 작업 후보가 Data Trust Summary 확장 또는 Real-Money / Guardrail parity 쪽으로 자연스럽게 이어지는지
 
 ## 한 줄 판단 기준
 

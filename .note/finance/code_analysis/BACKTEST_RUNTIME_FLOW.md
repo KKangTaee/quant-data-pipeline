@@ -79,6 +79,10 @@ Phase 28 이후 새 backtest history record도 재실행 / form 복원 QA를 위
 - `malformed_price_rows`
 - `guardrail_reference_ticker`
 
+Saved Portfolio replay로 생성되는 history context에는 재진입 확인을 위해
+`weights_percent`도 함께 남긴다.
+strategy별 세부 override는 saved portfolio record의 `compare_context.strategy_overrides`가 기준이다.
+
 ## Real-Money / Guardrail / Pre-Live runtime 기준
 
 runtime은 단순 성과표만 반환하지 않는다.

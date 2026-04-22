@@ -28,8 +28,9 @@ Phase 28의 목표는 새 전략을 급하게 늘리는 것이 아니다.
 - `completed` history / load-into-form / run-again parity 점검
   - annual, quarterly, GRS의 핵심 설정값이 다시 열었을 때 빠지지 않는지 확인한다.
   - `History Replay / Load Parity Snapshot`으로 선택한 history record의 저장 상태를 먼저 볼 수 있게 했다.
-- `pending` saved portfolio replay parity 점검
+- `completed` saved portfolio replay parity 점검
   - compare에서 만든 strategy override가 saved replay에서 같은 의미로 복원되는지 본다.
+  - `Saved Portfolio Replay / Load Parity Snapshot`으로 저장 포트폴리오의 전략 목록, weight, date alignment, strategy override 저장 상태를 볼 수 있게 했다.
 - `pending` Data Trust Summary 확장 범위 결정
   - 단일 실행 외 compare / saved replay에서 데이터 신뢰성 정보를 어디까지 보여줄지 정한다.
 - `pending` Real-Money / Guardrail parity 결정
@@ -50,6 +51,7 @@ Phase 28의 목표는 새 전략을 급하게 늘리는 것이 아니다.
 - `completed` Phase 28 plan / TODO 작성
 - `completed` first work-unit 문서 생성
 - `completed` second work-unit 문서 생성
+- `completed` third work-unit 문서 생성
 - `completed` roadmap / doc index / work log / question log sync
 - `completed` code_analysis sync
 
@@ -59,4 +61,6 @@ Phase 28은 active 상태다.
 첫 작업 단위인 `Strategy Capability Snapshot`은 구현됐고,
 두 번째 작업 단위로 history record의 재실행 / form 복원 가능성을 확인하는
 `History Replay / Load Parity Snapshot`도 추가됐다.
-다음 판단은 saved portfolio replay parity와 Data Trust Summary 확장 범위를 어디까지 다룰지다.
+세 번째 작업 단위로 saved portfolio의 replay / load 가능성을 확인하는
+`Saved Portfolio Replay / Load Parity Snapshot`도 추가됐다.
+다음 판단은 Data Trust Summary 확장 범위와 Real-Money / Guardrail parity 결정을 어디까지 다룰지다.

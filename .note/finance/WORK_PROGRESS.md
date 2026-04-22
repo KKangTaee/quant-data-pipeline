@@ -1828,3 +1828,16 @@ Detailed historical logs were archived on `2026-04-13`.
   - `python3 -m py_compile app/web/pages/backtest.py app/web/runtime/history.py` passed
 - Durable takeaway:
   - Phase 28 now lets users inspect whether a saved history run contains the key settings needed for `Load Into Form` or `Run Again` before pressing either action.
+
+### 2026-04-22
+- Implemented Phase 28 saved portfolio replay / load parity visibility.
+- Changed:
+  - added `Saved Portfolio Replay / Load Parity Snapshot` under `Backtest > Compare & Portfolio Builder > Saved Portfolios`
+  - added a compact `Strategy Override Summary` for saved portfolio records
+  - preserved `weights_percent` in saved portfolio replay history context
+  - documented the third Phase 28 work unit and synced roadmap, index, comprehensive analysis, and code-flow notes
+- Validation:
+  - `python3 -m py_compile app/web/pages/backtest.py` passed
+  - `.venv` saved portfolio parity helper smoke passed
+- Durable takeaway:
+  - Saved Portfolio is now easier to inspect before replay: users can see whether compare inputs, strategy overrides, weights, and date alignment are present before loading or rerunning.

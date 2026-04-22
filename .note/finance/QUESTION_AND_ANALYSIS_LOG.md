@@ -2520,3 +2520,15 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 새 history record는 `guardrail_reference_ticker`, `actual_result_start/end`, `result_rows`, `price_freshness`, `excluded_tickers`, `malformed_price_rows`를 추가 보존한다
 - Follow-up:
   - 다음 Phase 28 작업은 saved portfolio replay parity와 compare / saved replay에서 Data Trust Summary를 어디까지 확장할지 결정하는 것이다
+
+### 2026-04-22 - Phase 28 saved portfolio 재진입도 저장 상태를 먼저 보여줘야 한다
+- User request:
+  - Phase 28 다음 단계 진행을 요청함
+- Interpreted goal:
+  - 저장된 포트폴리오를 다시 불러오거나 재실행하기 전에 compare 공용 입력, strategy override, weight/date alignment가 남아 있는지 확인 가능해야 함
+- Analysis result:
+  - Saved Portfolio는 투자 승인 기록이 아니라 compare + weighted portfolio 재현용 artifact다
+  - 따라서 `Saved Portfolio Replay / Load Parity Snapshot`을 추가해 selected strategy, compare period, weights, date policy, strategy override map, 전략별 핵심 설정 저장 상태를 보여주게 했다
+  - replay history context에는 `weights_percent`를 함께 남겨 나중에 saved portfolio replay 결과를 읽을 때 weight 구성을 더 쉽게 추적할 수 있게 했다
+- Follow-up:
+  - 다음 Phase 28 판단은 Data Trust Summary를 compare / saved replay까지 확장할지, Real-Money / Guardrail parity를 어떤 전략군까지 맞출지다
