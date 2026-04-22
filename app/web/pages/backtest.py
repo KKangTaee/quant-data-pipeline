@@ -6094,6 +6094,57 @@ def _render_compare_prefill_applied_card(payload: dict[str, Any] | None, source_
     st.info("값이 맞으면 `Run Strategy Comparison`을 눌러 실제 compare를 실행하면 됩니다.")
 
 
+def _format_portfolio_name_weight(weight: float) -> str:
+    if abs(float(weight) - round(float(weight))) < 0.0001:
+        return f"{int(round(float(weight)))}%"
+    return f"{float(weight):.1f}%"
+
+
+def _suggest_weighted_portfolio_name(weighted_bundle: dict[str, Any]) -> str:
+    strategy_names = [
+        str(name).strip()
+        for name in list(weighted_bundle.get("component_strategy_names") or [])
+        if str(name).strip()
+    ]
+    input_weights = [float(weight) for weight in list(weighted_bundle.get("component_input_weights") or [])]
+    normalized_weights = [float(weight) * 100.0 for weight in list(weighted_bundle.get("component_weights") or [])]
+    weights = input_weights if len(input_weights) == len(strategy_names) else normalized_weights
+
+    if strategy_names and len(weights) == len(strategy_names):
+        return " + ".join(
+            f"{strategy_name} {_format_portfolio_name_weight(weight)}"
+            for strategy_name, weight in zip(strategy_names, weights)
+        )
+    if strategy_names:
+        return " + ".join(strategy_names)
+    return "Weighted Portfolio"
+
+
+def _weighted_portfolio_name_signature(weighted_bundle: dict[str, Any]) -> str:
+    meta = dict(weighted_bundle.get("meta") or {})
+    return json.dumps(
+        {
+            "strategies": list(weighted_bundle.get("component_strategy_names") or []),
+            "weights": list(weighted_bundle.get("component_input_weights") or []),
+            "date_policy": weighted_bundle.get("date_policy") or meta.get("date_policy"),
+            "start": meta.get("start"),
+            "end": meta.get("end"),
+        },
+        ensure_ascii=False,
+        sort_keys=True,
+        default=str,
+    )
+
+
+def _sync_saved_portfolio_name_suggestion(weighted_bundle: dict[str, Any]) -> str:
+    suggested_name = _suggest_weighted_portfolio_name(weighted_bundle)
+    signature = _weighted_portfolio_name_signature(weighted_bundle)
+    if st.session_state.get("saved_portfolio_name_signature") != signature:
+        st.session_state["saved_portfolio_name_input"] = suggested_name
+        st.session_state["saved_portfolio_name_signature"] = signature
+    return suggested_name
+
+
 def _render_saved_portfolio_workspace() -> None:
     st.markdown("### Saved Portfolios")
     st.caption(
@@ -6116,13 +6167,11 @@ def _render_saved_portfolio_workspace() -> None:
                 "지금 보고 있는 compare 결과 + weighted portfolio 구성(weight/date policy)을 저장합니다. "
                 "저장한 뒤에는 그대로 다시 실행하거나, compare 화면으로 다시 불러와 수정할 수 있습니다."
             )
-            suggested_name = str(compare_source_context.get("source_label") or "").strip()
-            if not suggested_name:
-                suggested_name = " / ".join(list(weighted_bundle.get("component_strategy_names") or []))
+            suggested_name = _sync_saved_portfolio_name_suggestion(weighted_bundle)
             with st.form("save_saved_portfolio_form", clear_on_submit=False):
                 st.markdown(
                     "- `Portfolio Name`: 저장 목록에 보일 실제 이름입니다.\n"
-                    "- 추천 이름은 현재 source label 또는 strategy 조합을 기준으로 자동 채워집니다."
+                    "- 추천 이름은 방금 만든 strategy 조합, weight, date alignment가 바뀔 때 자동으로 다시 채워집니다."
                 )
                 portfolio_name = st.text_input(
                     "Portfolio Name",

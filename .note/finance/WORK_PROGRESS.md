@@ -1869,3 +1869,16 @@ Detailed historical logs were archived on `2026-04-13`.
   - finance refinement hygiene check passed
 - Durable takeaway:
   - Phase 28 does not force annual strict Real-Money / Guardrail behavior onto quarterly prototype or ETF strategies. It now shows each strategy family's intended validation scope before compare, history replay, or saved portfolio replay.
+
+### 2026-04-23
+- Fixed Saved Portfolio name suggestion refresh during Phase 28 QA.
+- Changed:
+  - `Save This Weighted Portfolio` now derives the default portfolio name from the latest weighted portfolio strategy names and weights
+  - the `Portfolio Name` input resets when the weighted portfolio strategy / weight / date alignment signature changes
+  - manual name edits are preserved while the same weighted portfolio result is still active
+- Validation:
+  - `python3 -m py_compile app/web/pages/backtest.py` passed
+  - `.venv` weighted portfolio name suggestion helper smoke passed
+  - `git diff --check` passed
+- Durable takeaway:
+  - Saving a new weighted portfolio after rebuilding with different strategies should no longer retain the previous portfolio name by accident.
