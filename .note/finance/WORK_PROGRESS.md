@@ -1804,3 +1804,16 @@ Detailed historical logs were archived on `2026-04-13`.
   - Phase 27 checklist was completed by the user before closeout
 - Durable takeaway:
   - Phase 27 is closed. `Data Trust Summary`, `price_freshness`, excluded ticker details, and result-window metadata are now the baseline trust-layer concepts for later strategy family parity work.
+
+### 2026-04-22
+- Opened Phase 28 and implemented the first strategy-family parity visibility unit.
+- Changed:
+  - created the Phase 28 document bundle for `Strategy Family Parity And Cadence Completion`
+  - added `Strategy Capability Snapshot` to `Backtest > Single Strategy`
+  - added the same capability snapshot inside selected strategy boxes in `Compare & Portfolio Builder`
+  - documented annual strict, quarterly prototype, Global Relative Strength, GTAA, and ETF strategy support differences
+  - updated roadmap, document index, comprehensive analysis, web UI flow docs, and Phase 28 checklist draft
+- Validation:
+  - `python3 -m py_compile app/web/pages/backtest.py` passed
+- Durable takeaway:
+  - Phase 28 starts by making strategy family differences visible before adding or equalizing more functionality. The current focus is "what does this strategy currently support?" rather than new strategy discovery.

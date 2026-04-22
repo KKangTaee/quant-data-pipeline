@@ -6167,6 +6167,193 @@ def _compare_family_variant_session_key(strategy_choice: str) -> str | None:
     return COMPARE_FAMILY_VARIANT_SESSION_KEYS.get(strategy_choice)
 
 
+def _strategy_capability_rows(strategy_name: str | None) -> list[dict[str, str]]:
+    name = str(strategy_name or "").strip()
+    if not name:
+        return []
+
+    common_history = "History / Load Into Form / Run Again 지원"
+    if name.endswith("(Strict Annual)"):
+        return [
+            {
+                "확인 영역": "Cadence / 데이터",
+                "현재 상태": "Annual statement shadow factor 기반 strict family",
+                "확인 포인트": "연간 재무제표 cadence를 쓰며, monthly rebalance로 실행합니다.",
+            },
+            {
+                "확인 영역": "Data Trust",
+                "현재 상태": "Price Freshness Preflight + Data Trust Summary 지원",
+                "확인 포인트": "결과 상단에서 실제 결과 기간과 가격 최신성을 확인합니다.",
+            },
+            {
+                "확인 영역": "선택 기록",
+                "현재 상태": "Selection History / Interpretation 지원",
+                "확인 포인트": "선택 종목, trend rejection, risk-off, weighting 해석을 볼 수 있습니다.",
+            },
+            {
+                "확인 영역": "Real-Money / Guardrail",
+                "현재 상태": "가장 성숙한 기준 surface",
+                "확인 포인트": "Benchmark, liquidity, validation, underperformance/drawdown guardrail을 함께 봅니다.",
+            },
+            {
+                "확인 영역": "저장 / 재실행",
+                "현재 상태": common_history,
+                "확인 포인트": "입력값과 contract 값이 history / replay에서 복원되어야 합니다.",
+            },
+        ]
+
+    if name.endswith("(Strict Quarterly Prototype)"):
+        return [
+            {
+                "확인 영역": "Cadence / 데이터",
+                "현재 상태": "Quarterly statement shadow factor 기반 prototype",
+                "확인 포인트": "분기 재무제표 cadence를 쓰지만, 아직 annual strict와 같은 성숙도로 보지 않습니다.",
+            },
+            {
+                "확인 영역": "Data Trust",
+                "현재 상태": "Price Freshness Preflight + Data Trust Summary 지원",
+                "확인 포인트": "분기 factor coverage와 실제 결과 기간을 annual과 같은 방식으로 확인합니다.",
+            },
+            {
+                "확인 영역": "선택 기록",
+                "현재 상태": "Selection History / Interpretation 지원",
+                "확인 포인트": "quarterly 선택 기록이 annual처럼 잘못 읽히지 않는지 봅니다.",
+            },
+            {
+                "확인 영역": "Portfolio Handling",
+                "현재 상태": "Weighting / Rejected Slot / Risk-Off contract 지원",
+                "확인 포인트": "단, Real-Money promotion / Guardrail 판단은 아직 annual strict 중심입니다.",
+            },
+            {
+                "확인 영역": "저장 / 재실행",
+                "현재 상태": common_history,
+                "확인 포인트": "quarterly cadence와 contract 값이 load / replay에서 유지되어야 합니다.",
+            },
+        ]
+
+    if name == "Global Relative Strength":
+        return [
+            {
+                "확인 영역": "Cadence / 데이터",
+                "현재 상태": "Price-only ETF relative strength family",
+                "확인 포인트": "재무제표 factor가 아니라 ETF 가격, 상대강도, trend filter를 사용합니다.",
+            },
+            {
+                "확인 영역": "Data Trust",
+                "현재 상태": "Price Freshness Preflight + Data Trust Summary 지원",
+                "확인 포인트": "Phase 27 기준으로 stale / missing ETF 가격을 먼저 확인합니다.",
+            },
+            {
+                "확인 영역": "선택 기록",
+                "현재 상태": "Snapshot Selection History 대상은 아님",
+                "확인 포인트": "행별 factor 선택표가 아니라 ETF ranking / result table 중심으로 봅니다.",
+            },
+            {
+                "확인 영역": "Real-Money / Guardrail",
+                "현재 상태": "ETF operability + Real-Money first pass 지원",
+                "확인 포인트": "annual strict와 동일한 guardrail surface는 아니며, Phase 28에서 차이를 확인합니다.",
+            },
+            {
+                "확인 영역": "저장 / 재실행",
+                "현재 상태": common_history,
+                "확인 포인트": "cash ticker, score horizon, score weight, trend window가 복원되어야 합니다.",
+            },
+        ]
+
+    if name == "GTAA":
+        return [
+            {
+                "확인 영역": "Cadence / 데이터",
+                "현재 상태": "Price-only tactical ETF family",
+                "확인 포인트": "ETF 가격과 score / risk-off overlay를 중심으로 실행합니다.",
+            },
+            {
+                "확인 영역": "Data Trust",
+                "현재 상태": "Result window summary 지원, dedicated price freshness surface는 확장 후보",
+                "확인 포인트": "Phase 28에서 GRS 수준의 freshness surface가 필요한지 봅니다.",
+            },
+            {
+                "확인 영역": "Real-Money / Guardrail",
+                "현재 상태": "ETF Real-Money + ETF Guardrail surface 지원",
+                "확인 포인트": "risk-off overlay와 crash / ETF guardrail을 함께 확인합니다.",
+            },
+            {
+                "확인 영역": "저장 / 재실행",
+                "현재 상태": common_history,
+                "확인 포인트": "score weights, risk-off, defensive tickers, guardrail 값이 복원되어야 합니다.",
+            },
+        ]
+
+    if name in {"Risk Parity Trend", "Dual Momentum"}:
+        return [
+            {
+                "확인 영역": "Cadence / 데이터",
+                "현재 상태": "Price-only ETF strategy",
+                "확인 포인트": "재무제표 cadence가 아니라 ETF 가격 기반 전략입니다.",
+            },
+            {
+                "확인 영역": "Data Trust",
+                "현재 상태": "Result window summary 지원, dedicated price freshness surface는 확장 후보",
+                "확인 포인트": "Phase 28에서 GRS 수준으로 맞출 필요가 있는지 확인합니다.",
+            },
+            {
+                "확인 영역": "Real-Money / Guardrail",
+                "현재 상태": "ETF Real-Money + ETF Guardrail surface 지원",
+                "확인 포인트": "ETF operability와 guardrail 정책을 함께 봅니다.",
+            },
+            {
+                "확인 영역": "저장 / 재실행",
+                "현재 상태": common_history,
+                "확인 포인트": "전략별 핵심 입력값이 history / replay에서 복원되어야 합니다.",
+            },
+        ]
+
+    if name == "Equal Weight":
+        return [
+            {
+                "확인 영역": "Cadence / 데이터",
+                "현재 상태": "Price-only baseline strategy",
+                "확인 포인트": "전략 후보가 아니라 비교 기준 또는 단순 포트폴리오 baseline으로 봅니다.",
+            },
+            {
+                "확인 영역": "Data Trust",
+                "현재 상태": "Result window summary 지원",
+                "확인 포인트": "별도 price freshness preflight는 아직 없습니다.",
+            },
+            {
+                "확인 영역": "Real-Money / Guardrail",
+                "현재 상태": "promotion / guardrail 판단 대상 아님",
+                "확인 포인트": "실전 후보 판정이 아니라 기준선 역할입니다.",
+            },
+            {
+                "확인 영역": "저장 / 재실행",
+                "현재 상태": common_history,
+                "확인 포인트": "ticker와 rebalance interval이 복원되어야 합니다.",
+            },
+        ]
+
+    return [
+        {
+            "확인 영역": "지원 범위",
+            "현재 상태": "개별 전략 설정을 확인해야 함",
+            "확인 포인트": "Phase 28 parity map에 아직 명시되지 않은 전략입니다.",
+        }
+    ]
+
+
+def _render_strategy_capability_snapshot(strategy_name: str | None) -> None:
+    rows = _strategy_capability_rows(strategy_name)
+    if not rows:
+        return
+
+    with st.expander("Strategy Capability Snapshot", expanded=False):
+        st.caption(
+            "Phase 28 기준으로 이 전략이 어떤 cadence, data trust, Real-Money/Guardrail, "
+            "history/replay 지원 범위를 갖는지 빠르게 확인하는 표입니다."
+        )
+        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+
+
 def _render_single_strategy_family_form(strategy_choice: str) -> None:
     variant_key = _single_family_variant_session_key(strategy_choice)
     variant_options = family_variant_options(strategy_choice)
@@ -6180,6 +6367,7 @@ def _render_single_strategy_family_form(strategy_choice: str) -> None:
         key=variant_key,
     )
     concrete_strategy_name = resolve_concrete_strategy_display_name(strategy_choice, selected_variant)
+    _render_strategy_capability_snapshot(concrete_strategy_name)
 
     if concrete_strategy_name == "Quality Snapshot":
         _render_quality_snapshot_form()
@@ -12383,6 +12571,8 @@ def render_backtest_tab() -> None:
             help="The first Phase 4 UI keeps one strategy form visible at a time.",
             key="backtest_strategy_choice",
         )
+        if not family_variant_options(strategy_choice):
+            _render_strategy_capability_snapshot(strategy_choice)
 
         st.divider()
         if strategy_choice == "Equal Weight":
@@ -12511,6 +12701,7 @@ def render_backtest_tab() -> None:
                             )
                         st.caption(f"현재 compare 실행 variant: `{quality_compare_strategy_name}`")
                         st.caption("선택한 variant의 세부 설정이 아래에 이어집니다.")
+                        _render_strategy_capability_snapshot(quality_compare_strategy_name)
                         quality_compare_settings_container = st.container()
 
                 if "Value" in selected_strategies:
@@ -12529,6 +12720,7 @@ def render_backtest_tab() -> None:
                             )
                         st.caption(f"현재 compare 실행 variant: `{value_compare_strategy_name}`")
                         st.caption("선택한 variant의 세부 설정이 아래에 이어집니다.")
+                        _render_strategy_capability_snapshot(value_compare_strategy_name)
                         value_compare_settings_container = st.container()
 
                 if "Quality + Value" in selected_strategies:
@@ -12547,11 +12739,13 @@ def render_backtest_tab() -> None:
                             )
                         st.caption(f"현재 compare 실행 variant: `{quality_value_compare_strategy_name}`")
                         st.caption("선택한 variant의 세부 설정이 아래에 이어집니다.")
+                        _render_strategy_capability_snapshot(quality_value_compare_strategy_name)
                         quality_value_compare_settings_container = st.container()
 
                 if "Equal Weight" in selected_strategies:
                     with st.container(border=True):
                         st.markdown("##### Equal Weight")
+                        _render_strategy_capability_snapshot("Equal Weight")
                         (
                             compare_eq_universe_mode,
                             compare_eq_preset_name,
@@ -12581,6 +12775,7 @@ def render_backtest_tab() -> None:
                 if "GTAA" in selected_strategies:
                     with st.container(border=True):
                         st.markdown("##### GTAA")
+                        _render_strategy_capability_snapshot("GTAA")
                         (
                             compare_gtaa_universe_mode,
                             compare_gtaa_preset_name,
@@ -12675,6 +12870,7 @@ def render_backtest_tab() -> None:
                 if "Global Relative Strength" in selected_strategies:
                     with st.container(border=True):
                         st.markdown("##### Global Relative Strength")
+                        _render_strategy_capability_snapshot("Global Relative Strength")
                         (
                             compare_grs_universe_mode,
                             compare_grs_preset_name,
@@ -12765,6 +12961,7 @@ def render_backtest_tab() -> None:
                 if "Risk Parity Trend" in selected_strategies:
                     with st.container(border=True):
                         st.markdown("##### Risk Parity Trend")
+                        _render_strategy_capability_snapshot("Risk Parity Trend")
                         _render_advanced_group_caption("핵심 실행 계약은 위에 두고, 실전 계약과 guardrail은 아래 그룹으로 분리했습니다.")
                         compare_strategy_overrides["Risk Parity Trend"] = {
                             "rebalance_interval": int(
@@ -12827,6 +13024,7 @@ def render_backtest_tab() -> None:
                 if "Dual Momentum" in selected_strategies:
                     with st.container(border=True):
                         st.markdown("##### Dual Momentum")
+                        _render_strategy_capability_snapshot("Dual Momentum")
                         _render_advanced_group_caption("핵심 실행 계약은 위에 두고, 실전 계약과 guardrail은 아래 그룹으로 분리했습니다.")
                         compare_strategy_overrides["Dual Momentum"] = {
                             "top": int(

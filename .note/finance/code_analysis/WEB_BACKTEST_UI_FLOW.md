@@ -61,6 +61,23 @@ strategy multi-select
 - variant 변경은 버튼 없이 즉시 아래 옵션이 바뀌는 방향이 선호된다.
 - 최대 compare 전략 수는 operator가 읽을 수 있는 범위로 유지한다.
 
+## Strategy Capability Snapshot 흐름
+
+Phase 28 이후 `Single Strategy`와 `Compare & Portfolio Builder`의 strategy box에는
+`Strategy Capability Snapshot` 접힘 영역을 둔다.
+
+목적:
+
+- annual strict, quarterly strict, price-only ETF 전략이 서로 다른 이유를 UI에서 먼저 설명한다.
+- cadence, data trust, selection history, Real-Money/Guardrail, history/replay 지원 범위를 표로 보여준다.
+- 기능이 없는 것처럼 보이는 부분이 버그인지, 아직 annual 중심으로 남긴 의도적 차이인지 구분하게 한다.
+
+현재 기준:
+
+- strict annual은 가장 성숙한 Real-Money / Guardrail surface로 설명한다.
+- strict quarterly prototype은 Data Trust와 Portfolio Handling은 지원하지만, Real-Money promotion / Guardrail 판단은 아직 annual strict 중심으로 설명한다.
+- Global Relative Strength는 재무제표 selection history 대상이 아니라 price-only ETF relative strength strategy로 설명한다.
+
 ## Data Trust Summary 흐름
 
 Phase 27 이후 `Latest Backtest Run` 상단에는 `Data Trust Summary`를 둔다.

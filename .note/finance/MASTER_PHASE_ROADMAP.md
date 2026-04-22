@@ -1480,7 +1480,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 | Phase 25 | `complete` | `manual_qa_completed` | 완료 |
 | Phase 26 | `complete` | `manual_qa_completed` | 완료 |
 | Phase 27 | `complete` | `manual_qa_completed` | 완료 |
-| Phase 28 | `planned` | `not_ready_for_qa` | strategy family parity 예정 |
+| Phase 28 | `active` | `not_ready_for_qa` | Strategy Capability Snapshot 첫 구현 진행 |
 | Phase 29 | `planned` | `not_ready_for_qa` | candidate review workflow 예정 |
 | Phase 30 | `planned` | `not_ready_for_qa` | portfolio proposal / pre-live monitoring 예정 |
 
@@ -1495,7 +1495,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
   사용자 manual QA까지 완료했다.
   `Phase 26`은 과거 pending 상태와 foundation gap을 재분류했고, 사용자 checklist QA까지 완료했다.
   `Phase 27`은 데이터 신뢰성과 백테스트 결과 해석 표면을 강화했고, 사용자 checklist QA까지 완료했다.
-  다음 예정 단계는 `Phase 28` 전략 family parity / cadence completion이다.
+  현재는 `Phase 28`에서 전략 family별 지원 범위와 cadence 차이를 화면에서 더 명확하게 보여주는 중이다.
 
 ---
 
@@ -1519,7 +1519,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 |---|---|---|---|---|
 | Phase 26 | Foundation Stabilization And Backlog Rebase | `complete` | `manual_qa_completed` | 과거 backlog와 pending 상태를 현재 제품 기준으로 다시 정리했고 QA까지 완료했다 |
 | Phase 27 | Data Integrity And Backtest Trust Layer | `complete` | `manual_qa_completed` | 백테스트 전에 데이터가 믿을 만한지, 어디까지 계산 가능한지 보여주고 QA까지 완료했다 |
-| Phase 28 | Strategy Family Parity And Cadence Completion | `planned` | `not_ready_for_qa` | annual / quarterly / 신규 전략이 같은 수준의 옵션과 저장 / replay 흐름을 갖게 한다 |
+| Phase 28 | Strategy Family Parity And Cadence Completion | `active` | `not_ready_for_qa` | annual / quarterly / 신규 전략의 지원 범위를 화면에서 먼저 구분한다 |
 | Phase 29 | Candidate Review And Recommendation Workflow | `planned` | `not_ready_for_qa` | 백테스트 결과를 후보, near miss, watchlist, pre-live 흐름으로 표준화한다 |
 | Phase 30 | Portfolio Proposal And Pre-Live Monitoring Surface | `planned` | `not_ready_for_qa` | 후보들을 포트폴리오 제안과 paper / pre-live monitoring 화면으로 연결한다 |
 
@@ -1562,6 +1562,12 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 ### 왜 필요한가
 - 지금 annual strict는 가장 성숙하지만 quarterly와 신규 전략은 아직 일부 검증 surface가 다르다.
 - 전략을 더 늘리기 전에 family별 차이를 의도된 차이와 미완성 차이로 나눠야 한다.
+
+### 현재 메모
+- Phase 28은 active phase다.
+- 첫 작업은 `Strategy Capability Snapshot`이다.
+- Single Strategy와 Compare 전략 박스에서 cadence, data trust, Real-Money/Guardrail, history/replay 지원 범위를 표로 보여준다.
+- 다음 작업 후보는 history / load-into-form / run-again / saved replay parity 점검이다.
 
 ### Phase 29. Candidate Review And Recommendation Workflow
 

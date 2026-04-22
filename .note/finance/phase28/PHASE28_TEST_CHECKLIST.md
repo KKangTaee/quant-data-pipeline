@@ -1,0 +1,68 @@
+# Phase 28 Test Checklist
+
+## 목적
+
+이 checklist는 Phase 28에서 추가한 `Strategy Capability Snapshot`이
+사용자가 전략 family별 차이를 이해하는 데 도움이 되는지 확인하기 위한 문서다.
+
+현재는 Phase 28 active 상태의 QA 초안이다.
+Phase 28 구현 범위가 닫히면 최종 checklist로 다시 갱신한다.
+
+## 사용 방법
+
+- 아래 항목은 사용자가 직접 `[ ]`를 `[x]`로 바꾸며 확인한다.
+- 특별한 사유가 없으면, 모든 주요 체크 항목이 완료된 뒤 다음 major phase로 넘어간다.
+- checklist에는 별도 `용어 기준` 섹션을 만들지 않는다.
+- 용어 설명이 필요하면 각 체크 항목 안에 `어디서 무엇을 어떻게 확인하는지`를 직접 적는다.
+
+## 1. Single Strategy capability snapshot 확인
+
+- 확인 위치:
+  - `Backtest > Single Strategy`
+- 체크 항목:
+  - [ ] `Strategy`를 `Global Relative Strength`로 선택했을 때 `Strategy Capability Snapshot` 접힘 영역이 보이는지
+  - [ ] snapshot 안에서 GRS가 `price-only ETF relative strength family`로 설명되는지
+  - [ ] `Strategy`를 `Quality`, `Value`, `Quality + Value` 중 하나로 선택한 뒤 `Variant`를 `Strict Annual`로 두면 annual strict 설명이 보이는지
+  - [ ] `Variant`를 `Strict Quarterly Prototype`으로 바꾸면 quarterly prototype 설명으로 바뀌는지
+  - [ ] annual strict와 quarterly prototype의 Real-Money / Guardrail 차이가 읽히는지
+
+## 2. Compare strategy box capability snapshot 확인
+
+- 확인 위치:
+  - `Backtest > Compare & Portfolio Builder > Strategies`
+- 체크 항목:
+  - [ ] `Quality`, `Value`, `Quality + Value`, `Global Relative Strength`를 선택했을 때 각 전략 박스 안에 `Strategy Capability Snapshot`이 보이는지
+  - [ ] compare 안에서 `Quality Variant`, `Value Variant`, `Quality + Value Variant`를 바꾸면 snapshot 설명이 해당 variant 기준으로 읽히는지
+  - [ ] `Equal Weight`, `GTAA`, `Risk Parity Trend`, `Dual Momentum`도 각각 지원 범위가 간단히 설명되는지
+  - [ ] snapshot 표가 너무 길거나 방해되지 않고, 필요할 때 접어서 확인할 수 있는지
+
+## 3. Phase 28 첫 작업 의도 확인
+
+- 확인 위치:
+  - `.note/finance/phase28/PHASE28_STRATEGY_FAMILY_PARITY_AND_CADENCE_COMPLETION_PLAN.md`
+  - `.note/finance/phase28/PHASE28_STRATEGY_CAPABILITY_SNAPSHOT_FIRST_WORK_UNIT.md`
+- 체크 항목:
+  - [ ] Phase 28이 새 전략 추가가 아니라 strategy family 차이 정리 phase라는 점이 이해되는지
+  - [ ] `Parity`가 모든 전략을 똑같이 만드는 뜻이 아니라, 차이를 헷갈리지 않게 맞추는 뜻으로 읽히는지
+  - [ ] quarterly prototype이 annual strict와 같은 실전 검증 수준으로 오해되지 않는지
+  - [ ] GRS가 재무제표 전략이 아니라 price-only ETF 전략이라는 점이 문서와 UI에서 일관되게 보이는지
+
+## 4. 문서와 closeout 확인
+
+- 확인 문서:
+  - `.note/finance/phase28/PHASE28_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/phase28/PHASE28_COMPLETION_SUMMARY.md`
+  - `.note/finance/phase28/PHASE28_NEXT_PHASE_PREPARATION.md`
+  - `.note/finance/MASTER_PHASE_ROADMAP.md`
+  - `.note/finance/FINANCE_DOC_INDEX.md`
+- 체크 항목:
+  - [ ] Phase 28 상태가 현재 구현 상태와 맞는지
+  - [ ] 새 문서가 index에서 바로 찾히는지
+  - [ ] 다음 작업 후보가 history / replay parity 쪽으로 자연스럽게 이어지는지
+
+## 한 줄 판단 기준
+
+이번 checklist는
+**새 기능이 많이 붙었는가**가 아니라,
+**전략별로 이미 붙어 있는 기능과 아직 덜 붙은 기능을 사용자가 헷갈리지 않고 읽을 수 있는가**
+를 확인하는 문서다.

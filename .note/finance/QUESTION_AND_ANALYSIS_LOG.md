@@ -2494,3 +2494,17 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 남은 확장 주제는 Phase 28에서 annual / quarterly / 신규 전략의 family parity 관점으로 다룬다
 - Follow-up:
   - Phase 28을 열 때는 `Data Trust Summary`, `price_freshness`, history/load/replay 보존, Real-Money/Guardrail parity 범위를 함께 검토한다
+
+### 2026-04-22 - Phase 28은 strategy family 차이를 먼저 보이게 만든다
+- User request:
+  - Phase 28 진행을 요청함
+- Interpreted goal:
+  - annual strict, quarterly strict, price-only ETF 전략이 같은 Backtest 화면 안에서 다르게 보이는 이유를 먼저 설명해야 함
+- Analysis result:
+  - 첫 작업 단위는 새 전략 개발이 아니라 `Strategy Capability Snapshot`이다
+  - annual strict는 가장 성숙한 Real-Money / Guardrail surface로 설명한다
+  - strict quarterly prototype은 Data Trust와 Portfolio Handling은 지원하지만 Real-Money promotion / Guardrail 판단은 아직 annual 중심이라고 설명한다
+  - Global Relative Strength는 재무제표 selection history 대상이 아니라 price-only ETF relative strength 전략이라고 설명한다
+  - 이 snapshot은 Single Strategy와 Compare strategy box에서 확인하게 한다
+- Follow-up:
+  - 다음 작업은 history / load-into-form / run-again / saved replay에서 strategy별 핵심 설정이 실제로 빠지지 않는지 점검하는 것이다
