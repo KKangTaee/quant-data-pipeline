@@ -2806,6 +2806,61 @@ def _render_strict_price_freshness_preflight(
                 )
 
 
+def _render_data_trust_summary(meta: dict[str, Any]) -> None:
+    price_freshness = meta.get("price_freshness") or {}
+    freshness_details = price_freshness.get("details") or {}
+    excluded_tickers = list(meta.get("excluded_tickers") or [])
+    malformed_price_rows = list(meta.get("malformed_price_rows") or [])
+
+    st.markdown("#### Data Trust Summary")
+    st.caption(
+        "이번 결과가 어떤 데이터 범위에서 계산됐는지 먼저 확인하는 요약입니다. "
+        "성과 해석 전에 요청 기간과 실제 결과 기간, 가격 최신성, 제외 ticker를 같이 봅니다."
+    )
+
+    metric_cols = st.columns(4)
+    metric_cols[0].metric("Requested End", meta.get("end") or "-")
+    metric_cols[1].metric("Actual Result End", meta.get("actual_result_end") or "-")
+    metric_cols[2].metric("Result Rows", meta.get("result_rows", "-"))
+    metric_cols[3].metric("Excluded Tickers", len(excluded_tickers))
+
+    if freshness_details:
+        fresh_cols = st.columns(4)
+        fresh_cols[0].metric("Effective Trading End", freshness_details.get("effective_end_date") or "-")
+        fresh_cols[1].metric("Common Latest Price", freshness_details.get("common_latest_date") or "-")
+        fresh_cols[2].metric("Newest Latest Price", freshness_details.get("newest_latest_date") or "-")
+        fresh_cols[3].metric("Latest-Date Spread", f"{freshness_details.get('spread_days', 0)}d")
+        status = str(price_freshness.get("status") or "").strip().lower()
+        message = price_freshness.get("message")
+        if status == "ok":
+            st.success(message or "가격 최신성 점검이 통과되었습니다.")
+        elif status == "warning":
+            st.warning(message or "가격 최신성 점검에서 주의가 필요합니다.")
+        elif status == "error":
+            st.error(message or "가격 최신성 점검에 실패했습니다.")
+
+    if excluded_tickers or malformed_price_rows:
+        with st.expander("Data Quality Details", expanded=False):
+            if excluded_tickers:
+                st.markdown("**Excluded Tickers**")
+                st.caption("전략 계산에 필요한 가격 이력이나 파생 지표가 부족해 이번 실행에서 제외된 ticker입니다.")
+                st.code(", ".join(excluded_tickers))
+            if malformed_price_rows:
+                st.markdown("**Malformed / Missing Price Rows**")
+                st.caption("가격 컬럼에 결측이 있는 ticker입니다. 공통 계산 가능 날짜가 짧아질 수 있습니다.")
+                malformed_df = pd.DataFrame(malformed_price_rows).rename(
+                    columns={
+                        "ticker": "Ticker",
+                        "price_col": "Price Column",
+                        "count": "Missing Row Count",
+                        "first_date": "First Missing Date",
+                        "last_date": "Last Missing Date",
+                        "sample_dates": "Sample Missing Dates",
+                    }
+                )
+                st.dataframe(malformed_df, use_container_width=True, hide_index=True)
+
+
 def _render_last_run() -> None:
     error = st.session_state.backtest_last_error
     error_kind = st.session_state.backtest_last_error_kind
@@ -2866,6 +2921,8 @@ def _render_last_run() -> None:
             f"- `Real-Money`: {'있음' if has_real_money_details else '없음'}",
         ]
         st.markdown("\n".join(availability_lines))
+
+    _render_data_trust_summary(meta)
 
     if warnings:
         warning_lines = "\n".join(f"- {warning}" for warning in warnings)
@@ -10265,6 +10322,22 @@ def _render_global_relative_strength_form() -> None:
 
     _universe_mode, preset_name, tickers = _render_global_relative_strength_universe_inputs(
         key_prefix="grs",
+    )
+    preflight_tickers = list(tickers)
+    cash_for_preflight = str(
+        st.session_state.get("grs_cash_ticker", GLOBAL_RELATIVE_STRENGTH_DEFAULT_CASH_TICKER) or ""
+    ).strip().upper()
+    benchmark_for_preflight = str(
+        st.session_state.get("grs_benchmark_ticker", ETF_REAL_MONEY_DEFAULT_BENCHMARK) or ""
+    ).strip().upper()
+    for extra_ticker in [cash_for_preflight, benchmark_for_preflight]:
+        if extra_ticker and extra_ticker not in preflight_tickers:
+            preflight_tickers.append(extra_ticker)
+    _render_strict_price_freshness_preflight(
+        tickers=preflight_tickers,
+        end_value=st.session_state.get("grs_end", DEFAULT_BACKTEST_END_DATE),
+        timeframe=st.session_state.get("grs_timeframe", "1d"),
+        strategy_label="Global Relative Strength",
     )
 
     with st.form("global_relative_strength_backtest_form", clear_on_submit=False):

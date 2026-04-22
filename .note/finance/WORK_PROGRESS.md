@@ -1778,3 +1778,18 @@ Detailed historical logs were archived on `2026-04-13`.
   - Phase 26 checklist was completed by the user before closeout
 - Durable takeaway:
   - Phase 26 is closed. Phase 27 can now open as the data integrity / backtest trust layer.
+
+### 2026-04-22
+- Opened Phase 27 and implemented the first data-trust visibility unit.
+- Changed:
+  - created the Phase 27 document bundle for `Data Integrity And Backtest Trust Layer`
+  - added `Data Trust Summary` to the latest Backtest result view
+  - added requested vs actual result end, result row count, excluded ticker, malformed price row, and price freshness summary metadata to backtest result bundles
+  - connected Global Relative Strength to the same price-freshness preflight used by strict annual workflows, with Korean warning copy for stale / mismatched ticker data
+  - updated roadmap, document index, comprehensive analysis, code-flow notes, and data-quality notes for the new Phase 27 trust-layer behavior
+- Validation:
+  - `python3 -m py_compile app/web/runtime/backtest.py app/web/pages/backtest.py` passed
+  - `.venv/bin/python` import of `app.web.runtime.backtest` and `app.web.pages.backtest` passed
+  - `git diff --check` passed
+- Durable takeaway:
+  - Phase 27 starts by making backtest data boundaries visible before deeper strategy work: users should see when the requested end date, actual result end date, stale ticker data, excluded tickers, or malformed rows affect the interpretation of a run.

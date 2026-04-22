@@ -58,6 +58,15 @@ app/web/streamlit_app.py
 - `warnings`: 데이터 부족, excluded ticker, stale data 같은 사용자 주의사항
 - selection history가 있는 전략은 selection row와 interpretation context
 
+Phase 27 이후 result bundle meta에는 Data Trust Summary가 읽을 수 있도록 아래 값도 포함한다.
+
+- `result_rows`: 실제 result table row 수
+- `actual_result_start`: 실제 결과 시작일
+- `actual_result_end`: 실제 결과 종료일
+- `price_freshness`: ticker별 최신 가격 날짜 / stale / missing 진단
+- `excluded_tickers`: 실행 중 제외된 ticker
+- `malformed_price_rows`: 가격 결측 행이 있는 ticker 요약
+
 ## Real-Money / Guardrail / Pre-Live runtime 기준
 
 runtime은 단순 성과표만 반환하지 않는다.
@@ -89,6 +98,9 @@ runtime은 단순 성과표만 반환하지 않는다.
 ETF basket 전략에서 특정 ticker의 가격 이력이나 결측이 부족하면,
 전체 결과가 짧아지거나 ticker가 excluded 처리될 수 있다.
 이 경우 조용히 지나가지 말고 warning / metadata에 남겨야 한다.
+
+`Global Relative Strength`는 Phase 27 첫 작업부터 price freshness preflight와
+Data Trust Summary metadata를 남기는 첫 적용 대상이다.
 
 ## 갱신해야 하는 경우
 

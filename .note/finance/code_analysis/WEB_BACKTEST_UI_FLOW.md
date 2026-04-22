@@ -61,6 +61,21 @@ strategy multi-select
 - variant 변경은 버튼 없이 즉시 아래 옵션이 바뀌는 방향이 선호된다.
 - 최대 compare 전략 수는 operator가 읽을 수 있는 범위로 유지한다.
 
+## Data Trust Summary 흐름
+
+Phase 27 이후 `Latest Backtest Run` 상단에는 `Data Trust Summary`를 둔다.
+
+목적:
+
+- 요청 종료일과 실제 결과 종료일을 먼저 비교한다.
+- price freshness, common latest price, latest-date spread를 결과 해석 전에 보여준다.
+- excluded ticker와 malformed price row가 있으면 `Data Quality Details`에서 확인하게 한다.
+
+첫 적용 대상:
+
+- `Global Relative Strength` single strategy 실행 전 `Price Freshness Preflight`
+- `Latest Backtest Run`의 공통 `Data Trust Summary`
+
 ## Weighted Portfolio / Saved Portfolio 흐름
 
 ```text

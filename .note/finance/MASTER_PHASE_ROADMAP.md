@@ -1479,7 +1479,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 | Phase 24 | `complete` | `manual_qa_completed` | 완료 |
 | Phase 25 | `complete` | `manual_qa_completed` | 완료 |
 | Phase 26 | `complete` | `manual_qa_completed` | 완료 |
-| Phase 27 | `planned` | `not_ready_for_qa` | data integrity / backtest trust 예정 |
+| Phase 27 | `active` | `not_ready_for_qa` | Data Trust Summary 첫 구현 진행 |
 | Phase 28 | `planned` | `not_ready_for_qa` | strategy family parity 예정 |
 | Phase 29 | `planned` | `not_ready_for_qa` | candidate review workflow 예정 |
 | Phase 30 | `planned` | `not_ready_for_qa` | portfolio proposal / pre-live monitoring 예정 |
@@ -1494,6 +1494,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
   Pre-Live 후보 기록 포맷, 저장 위치, helper 기반 operator review workflow, `Backtest > Pre-Live Review` UI까지 구현했다.
   사용자 manual QA까지 완료했다.
   `Phase 26`은 과거 pending 상태와 foundation gap을 재분류했고, 사용자 checklist QA까지 완료했다.
+  현재는 `Phase 27`에서 데이터 신뢰성과 백테스트 결과 해석 표면을 강화하고 있다.
 
 ---
 
@@ -1516,7 +1517,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 | Phase | 이름 | 진행 상태 | 검증 상태 | 쉽게 말하면 |
 |---|---|---|---|---|
 | Phase 26 | Foundation Stabilization And Backlog Rebase | `complete` | `manual_qa_completed` | 과거 backlog와 pending 상태를 현재 제품 기준으로 다시 정리했고 QA까지 완료했다 |
-| Phase 27 | Data Integrity And Backtest Trust Layer | `planned` | `not_ready_for_qa` | 백테스트 전에 데이터가 믿을 만한지, 어디까지 계산 가능한지 보여준다 |
+| Phase 27 | Data Integrity And Backtest Trust Layer | `active` | `not_ready_for_qa` | 백테스트 전에 데이터가 믿을 만한지, 어디까지 계산 가능한지 보여준다 |
 | Phase 28 | Strategy Family Parity And Cadence Completion | `planned` | `not_ready_for_qa` | annual / quarterly / 신규 전략이 같은 수준의 옵션과 저장 / replay 흐름을 갖게 한다 |
 | Phase 29 | Candidate Review And Recommendation Workflow | `planned` | `not_ready_for_qa` | 백테스트 결과를 후보, near miss, watchlist, pre-live 흐름으로 표준화한다 |
 | Phase 30 | Portfolio Proposal And Pre-Live Monitoring Surface | `planned` | `not_ready_for_qa` | 후보들을 포트폴리오 제안과 paper / pre-live monitoring 화면으로 연결한다 |
@@ -1541,6 +1542,11 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 ### 목적
 - 백테스트 실행 전에 데이터 가능 범위와 신뢰성 문제를 더 명확히 보여준다.
 - missing ticker, stale price, malformed row, common-date truncation 같은 이슈를 사용자가 놓치지 않게 만든다.
+
+### 현재 메모
+- Phase 27은 active phase다.
+- 첫 작업은 `Backtest Data Trust Summary`와 `Global Relative Strength price freshness preflight`다.
+- 새 전략 발굴이나 투자 후보 판정은 이번 작업의 목적이 아니다.
 
 ### 왜 필요한가
 - Phase 24 QA에서 `EEM`, `IWM`, 공통 날짜 문제처럼 데이터 때문에 결과 범위가 달라지는 사례가 이미 드러났다.

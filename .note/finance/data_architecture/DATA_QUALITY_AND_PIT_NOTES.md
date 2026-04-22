@@ -25,6 +25,7 @@
 - 현재 전략은 주로 `Close`를 사용한다.
 - provider no-data와 rate-limit 분류는 heuristic일 수 있다.
 - 특정 ticker의 stale / missing price는 공통 date intersection을 줄이거나 excluded ticker를 만들 수 있다.
+- Phase 27 이후 백테스트 결과 화면은 `Data Trust Summary`에서 요청 종료일, 실제 결과 종료일, common latest price, excluded ticker, malformed price row를 먼저 보여주는 방향으로 간다.
 
 ## Profile / universe data
 

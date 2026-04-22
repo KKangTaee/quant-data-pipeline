@@ -2204,8 +2204,10 @@ def inspect_strict_annual_price_freshness(
     tickers: Sequence[str] | None = None,
     end: str | None = None,
     timeframe: str = "1d",
+    context_label: str = "selected universe",
 ) -> dict[str, Any]:
     normalized_tickers = _normalize_tickers(tickers)
+    label = str(context_label or "selected universe").strip() or "selected universe"
     end_ts = pd.to_datetime(end).normalize() if end is not None else None
     effective_end_ts = end_ts
 
@@ -2222,7 +2224,7 @@ def inspect_strict_annual_price_freshness(
     if summary.empty:
         return {
             "status": "error",
-            "message": "No DB price rows were found for the selected strict annual universe.",
+            "message": f"No DB price rows were found for the {label}.",
             "details": {
                 "requested_count": len(normalized_tickers),
                 "covered_count": 0,
@@ -2249,7 +2251,7 @@ def inspect_strict_annual_price_freshness(
     if working.empty:
         return {
             "status": "error",
-            "message": "No usable DB price dates were found for the selected strict annual universe.",
+            "message": f"No usable DB price dates were found for the {label}.",
             "details": {
                 "requested_count": len(normalized_tickers),
                 "covered_count": 0,
@@ -2373,13 +2375,13 @@ def inspect_strict_annual_price_freshness(
     if not missing_symbols and len(stale_df) == 0 and spread_days == 0:
         if effective_shift_days > 0 and end_ts is not None:
             message = (
-                f"All {len(normalized_tickers)} selected symbols have price data through effective trading end "
+                f"All {len(normalized_tickers)} {label} symbols have price data through effective trading end "
                 f"`{target_end.strftime('%Y-%m-%d')}`. Selected end `{end_ts.strftime('%Y-%m-%d')}` does not have "
                 "a later DB market session."
             )
         else:
             message = (
-                f"All {len(normalized_tickers)} selected symbols have price data through "
+                f"All {len(normalized_tickers)} {label} symbols have price data through "
                 f"`{common_latest.strftime('%Y-%m-%d')}`."
             )
         return {
@@ -2395,7 +2397,7 @@ def inspect_strict_annual_price_freshness(
             f"`{target_end.strftime('%Y-%m-%d')}` for DB freshness checks."
         )
     if missing_symbols:
-        message_parts.append(f"{len(missing_symbols)} symbols have no DB price rows.")
+        message_parts.append(f"{len(missing_symbols)} {label} symbols have no DB price rows.")
     if len(stale_df) > 0:
         message_parts.append(
             f"{len(stale_df)} symbols stop before the effective trading end `{target_end.strftime('%Y-%m-%d')}`."
@@ -2452,6 +2454,9 @@ def build_backtest_result_bundle(
         "strategy_key": strategy_key,
         "strategy_name": strategy_name,
         "strategy_family": _infer_strategy_family(strategy_key, strategy_name),
+        "result_rows": int(len(result_df)),
+        "actual_result_start": result_df["Date"].min().strftime("%Y-%m-%d"),
+        "actual_result_end": result_df["Date"].max().strftime("%Y-%m-%d"),
         "tickers": input_params.get("tickers", []),
         "start": input_params.get("start"),
         "end": input_params.get("end"),
@@ -2848,6 +2853,12 @@ def run_global_relative_strength_backtest_from_db(
     preflight_tickers = list(normalized_tickers)
     if normalized_cash_ticker and normalized_cash_ticker not in preflight_tickers:
         preflight_tickers.append(normalized_cash_ticker)
+    price_freshness = inspect_strict_annual_price_freshness(
+        tickers=preflight_tickers,
+        end=end,
+        timeframe=timeframe,
+        context_label="Global Relative Strength universe",
+    )
     _preflight_price_strategy_data(
         tickers=preflight_tickers,
         start=start,
@@ -2898,6 +2909,12 @@ def run_global_relative_strength_backtest_from_db(
     excluded_tickers = _normalize_tickers(excluded_tickers_raw) if excluded_tickers_raw else []
     malformed_price_rows = list(result_df.attrs.get("malformed_price_rows") or [])
     warnings: list[str] = []
+    if price_freshness["status"] == "warning":
+        warnings.append(
+            "가격 최신성 점검에서 주의가 필요합니다. "
+            + price_freshness["message"]
+            + " 결과 기간이 요청 종료일보다 짧아질 수 있으므로 `Data Trust Summary`와 원본 가격 데이터를 함께 확인하세요."
+        )
     if excluded_tickers:
         warnings.append(
             "Global Relative Strength 실행에서 이동평균/상대강도 계산에 필요한 가격 이력이 부족한 티커를 제외했습니다: "
@@ -2955,6 +2972,7 @@ def run_global_relative_strength_backtest_from_db(
         summary_freq=_summary_frequency(option, timeframe),
         warnings=warnings,
     )
+    bundle["meta"]["price_freshness"] = price_freshness
     return _apply_real_money_hardening(
         bundle,
         summary_freq=_summary_frequency(option, timeframe),

@@ -2469,3 +2469,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 다음 phase는 `Data Integrity And Backtest Trust Layer`로 여는 것이 맞다
 - Follow-up:
   - Phase 27 시작 시 데이터 가능 범위, stale/missing ticker, malformed row, common-date truncation, backtest preflight 설명을 우선 다룬다
+
+### 2026-04-22 - Phase 27은 backtest 결과의 데이터 신뢰 조건을 먼저 보이게 만든다
+- User request:
+  - Phase 26 완료 후 다음 단계 진행을 요청함
+- Interpreted goal:
+  - Phase 27을 열고, 사용자가 백테스트 결과를 볼 때 "이 결과가 어떤 데이터 범위와 품질 조건에서 나온 것인지"를 먼저 확인할 수 있게 해야 함
+- Analysis result:
+  - 첫 작업 단위는 새 전략 개발이나 투자 분석이 아니라 trust-layer 표시다
+  - Backtest result bundle에 요청 종료일, 실제 결과 종료일, 결과 row 수, excluded ticker, malformed price row, price freshness 정보를 남긴다
+  - Latest Backtest Run 상단에는 `Data Trust Summary`를 보여 결과 해석 전에 데이터 가용성 / 최신성 / 제외 사유를 확인하게 한다
+  - Global Relative Strength는 Phase 24에서 stale ticker 이슈가 실제로 드러났으므로 Phase 27 price-freshness preflight의 첫 적용 대상으로 삼는다
+- Follow-up:
+  - Phase 27 QA에서는 Data Trust Summary가 사용자의 실제 해석 흐름에 충분히 도움이 되는지 확인하고, 필요하면 다른 strategy family에도 같은 trust-layer 표현을 확장한다
