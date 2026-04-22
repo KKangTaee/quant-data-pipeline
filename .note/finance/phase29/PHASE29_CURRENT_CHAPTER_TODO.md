@@ -31,8 +31,13 @@ current candidate registry에 남은 후보를 검토 보드로 읽고,
   - 새 실행 결과를 후보 검토 초안으로 보낼 수 있게 했다.
 - `completed` History record -> candidate review handoff
   - 과거 실행 기록에서 후보 검토 초안으로 넘기는 버튼을 추가했다.
-- `pending` current candidate registry guide 보강
+- `completed` Candidate Intake Draft -> Candidate Review Note 저장
+  - 후보 검토 초안을 current candidate registry에 바로 넣지 않고,
+    별도 review note로 operator decision / reason / next action을 남길 수 있게 했다.
+- `completed` current candidate registry guide 보강
   - 후보 등록 / near miss / scenario 기록 기준을 더 쉽게 정리한다.
+- `pending` candidate review note -> current candidate registry 등록 기준 정리
+  - review note 중 어떤 경우에 실제 후보 registry row로 남길지 후속 기준을 정한다.
 
 ## 3. Validation
 
@@ -49,6 +54,7 @@ current candidate registry에 남은 후보를 검토 보드로 읽고,
 - `completed` current chapter TODO 문서 생성
 - `completed` first work-unit 문서 생성
 - `completed` second work-unit 문서 생성
+- `completed` third work-unit 문서 생성
 - `completed` roadmap / doc index / work log / question log sync
 - `completed` code_analysis sync
 - `completed` glossary sync
@@ -58,5 +64,6 @@ current candidate registry에 남은 후보를 검토 보드로 읽고,
 
 Phase 29는 active 상태다.
 첫 번째 작업 단위인 `Candidate Review Board`와
-두 번째 작업 단위인 `Result To Candidate Review Handoff`는 구현됐고,
+두 번째 작업 단위인 `Result To Candidate Review Handoff`,
+세 번째 작업 단위인 `Candidate Review Note`는 구현됐다.
 다음 단계는 `.note/finance/phase29/PHASE29_TEST_CHECKLIST.md` 기준 사용자 QA다.

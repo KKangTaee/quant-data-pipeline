@@ -2596,3 +2596,15 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 이 draft는 `CURRENT_CANDIDATE_REGISTRY.jsonl`에 자동 저장되지 않으며, 투자 추천이나 live approval도 아니다
 - Follow-up:
   - 다음 판단은 Candidate Intake Draft를 실제 registry row, near-miss record, scenario note 중 어디로 남길지 기준을 정하는 것이다
+
+### 2026-04-23 - Candidate Intake Draft는 먼저 Review Note로 남긴다
+- User request:
+  - Phase 29 다음 작업 진행을 요청함
+- Interpreted goal:
+  - 후보 검토 초안을 current candidate registry에 자동 등록하지 않고, 사람이 판단한 내용과 다음 행동을 안전하게 저장할 중간 기록이 필요함
+- Analysis result:
+  - `Candidate Review Note`를 `CURRENT_CANDIDATE_REGISTRY.jsonl`과 별도인 `.note/finance/CANDIDATE_REVIEW_NOTES.jsonl`에 저장하는 구조로 정했다
+  - Review Note는 review decision, operator reason, next action, optional review date, result snapshot, Real-Money signal, data trust snapshot을 담는다
+  - 이 기록은 투자 추천, live approval, current candidate 자동 승격이 아니다
+- Follow-up:
+  - 다음 판단은 review note 중 어떤 것을 실제 current candidate registry row로 남길지 기준을 정하는 것이다

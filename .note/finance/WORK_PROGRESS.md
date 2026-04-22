@@ -1815,6 +1815,10 @@ Detailed historical logs were archived on `2026-04-13`.
   - updated roadmap, document index, comprehensive analysis, web UI flow docs, and Phase 28 checklist draft
 - Validation:
   - `python3 -m py_compile app/web/pages/backtest.py` passed
+  - `.venv` candidate review note helper smoke passed
+  - `python3 plugins/quant-finance-workflow/scripts/manage_current_candidate_registry.py validate` passed
+  - finance refinement hygiene check passed
+  - `git diff --check` passed
 - Durable takeaway:
   - Phase 28 starts by making strategy family differences visible before adding or equalizing more functionality. The current focus is "what does this strategy currently support?" rather than new strategy discovery.
 
@@ -1926,3 +1930,16 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.venv` helper smoke passed
 - Durable takeaway:
   - Latest/history results can now be reviewed as candidate drafts without automatically writing to `CURRENT_CANDIDATE_REGISTRY.jsonl`.
+
+### 2026-04-23
+- Implemented Phase 29 Candidate Review Note workflow.
+- Changed:
+  - added `.note/finance/CANDIDATE_REVIEW_NOTES.jsonl` as the append-only target for operator candidate review decisions
+  - added `Save As Candidate Review Note` under `Backtest > Candidate Review > Candidate Intake Draft`
+  - added `Review Notes` tab to inspect saved candidate review notes
+  - kept Candidate Review Note separate from `CURRENT_CANDIDATE_REGISTRY.jsonl`, Pre-Live approval, and investment recommendation
+  - synced Phase 29 docs, roadmap, doc index, glossary, operations guide, web UI flow docs, comprehensive analysis, and README
+- Validation:
+  - `python3 -m py_compile app/web/pages/backtest.py` passed
+- Durable takeaway:
+  - Candidate Intake Drafts now have a safe persistence step for human review decisions without automatically promoting the draft into the current candidate registry.

@@ -49,10 +49,15 @@
 - `Candidate Intake Draft`
   - `Latest Backtest Run` 또는 `History` 결과를 후보처럼 검토해보는 임시 초안이다.
   - registry에 자동 저장되지 않는다.
+- `Candidate Review Note`
+  - `Candidate Intake Draft`를 본 뒤 운영자가 남기는 판단 메모다.
+  - `.note/finance/CANDIDATE_REVIEW_NOTES.jsonl`에 저장된다.
+  - 이 역시 current candidate registry 자동 등록은 아니다.
 - `CURRENT_CANDIDATE_REGISTRY.jsonl`
   - 사람이 후보로 남기기로 판단한 뒤 기록되는 durable 후보 저장소다.
 
 즉 좋은 결과가 나왔다면 먼저 Candidate Intake Draft로 읽고,
+필요하면 Candidate Review Note로 판단을 남긴 뒤,
 후보로 남길 근거가 충분할 때 registry row 또는 관련 report로 정리하는 흐름이 안전하다.
 
 ## 기본 사용 방법

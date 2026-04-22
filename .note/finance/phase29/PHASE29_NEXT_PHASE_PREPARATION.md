@@ -11,8 +11,9 @@ Phase 29 closeout 시점에 다시 갱신한다.
 
 - Phase 29는 active / manual_qa_pending 상태다.
 - 첫 작업 단위로 `Backtest > Candidate Review` panel을 추가했다.
-- 현재는 이미 registry에 있는 후보를 읽고 compare / Pre-Live Review로 넘기는 길을 만든 상태다.
-- 아직 새 백테스트 결과를 candidate review 초안으로 등록하는 흐름은 남아 있다.
+- 두 번째 작업 단위로 Latest Backtest Run / History 결과를 `Candidate Intake Draft`로 넘기는 길을 만들었다.
+- 세 번째 작업 단위로 `Candidate Intake Draft`를 `Candidate Review Note`로 저장하는 길을 만들었다.
+- 현재는 review note 중 어떤 것을 실제 current candidate registry row로 남길지 기준 정리가 남아 있다.
 
 ## Phase 30으로 넘어가기 전에 더 중요한 질문
 

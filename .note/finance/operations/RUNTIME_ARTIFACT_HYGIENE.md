@@ -35,6 +35,7 @@ git 상태를 지저분하게 만들기 쉽다.
 - current candidate summary
 - glossary / roadmap / index
 - current candidate registry (`CURRENT_CANDIDATE_REGISTRY.jsonl`)
+- candidate review notes (`CANDIDATE_REVIEW_NOTES.jsonl`)
 - pre-live candidate registry (`PRE_LIVE_CANDIDATE_REGISTRY.jsonl`)
 
 ### runtime artifact
@@ -61,6 +62,7 @@ git 상태를 지저분하게 만들기 쉽다.
 의도적으로 유지하는 durable registry로 본다.
 
 - `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`
+- `.note/finance/CANDIDATE_REVIEW_NOTES.jsonl`
 - `.note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl`
 
 ## 지금 프로젝트에서 특히 조심할 것

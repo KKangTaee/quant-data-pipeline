@@ -72,6 +72,7 @@ DB-backed market data ingestion, factor generation, and strategy backtesting wor
   - current candidate registry의 후보를 `Backtest > Candidate Review`에서 검토 보드로 읽고
     compare 또는 Pre-Live Review로 넘기는 흐름
   - latest backtest / history result를 registry 저장 전 후보 검토 초안으로 읽는 흐름
+  - 후보 검토 초안을 바로 registry에 넣지 않고 Candidate Review Note로 판단과 다음 행동을 남기는 흐름
 
 ## 프로젝트 구조
 

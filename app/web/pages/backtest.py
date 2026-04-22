@@ -280,6 +280,7 @@ CURRENT_CANDIDATE_COMPARE_DEFAULT_START = date(2016, 1, 1)
 CURRENT_CANDIDATE_COMPARE_DEFAULT_END = date(2026, 4, 1)
 CURRENT_CANDIDATE_REGISTRY_FILE = Path(".note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl")
 PRE_LIVE_CANDIDATE_REGISTRY_FILE = Path(".note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl")
+CANDIDATE_REVIEW_NOTES_FILE = Path(".note/finance/CANDIDATE_REVIEW_NOTES.jsonl")
 BACKTEST_PANEL_OPTIONS = [
     "Single Strategy",
     "Compare & Portfolio Builder",
@@ -288,6 +289,13 @@ BACKTEST_PANEL_OPTIONS = [
     "Pre-Live Review",
 ]
 PRE_LIVE_STATUS_OPTIONS = ["watchlist", "paper_tracking", "hold", "reject", "re_review"]
+CANDIDATE_REVIEW_DECISION_OPTIONS = [
+    "consider_registry_candidate",
+    "keep_as_near_miss_review",
+    "keep_as_scenario_review",
+    "needs_more_evidence",
+    "reject_for_now",
+]
 STATIC_MANAGED_RESEARCH_UNIVERSE = "static_managed_research"
 HISTORICAL_DYNAMIC_PIT_UNIVERSE = "historical_dynamic_pit"
 STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS = {
@@ -634,6 +642,8 @@ def _init_backtest_state() -> None:
         st.session_state.backtest_candidate_review_draft = None
     if "backtest_candidate_review_draft_notice" not in st.session_state:
         st.session_state.backtest_candidate_review_draft_notice = None
+    if "backtest_candidate_review_note_notice" not in st.session_state:
+        st.session_state.backtest_candidate_review_note_notice = None
     if "backtest_active_panel" not in st.session_state:
         st.session_state.backtest_active_panel = "Single Strategy"
     if "backtest_requested_panel" not in st.session_state:
@@ -5873,8 +5883,9 @@ def _render_candidate_review_workspace() -> None:
 
     rows = _load_current_candidate_registry_latest()
     pre_live_rows = _load_pre_live_candidate_registry_latest()
+    review_notes = _load_candidate_review_notes()
 
-    summary_cols = st.columns(4, gap="small")
+    summary_cols = st.columns(5, gap="small")
     summary_cols[0].metric("Active Candidates", len(rows))
     summary_cols[1].metric(
         "Current Anchors",
@@ -5885,12 +5896,14 @@ def _render_candidate_review_workspace() -> None:
         len([row for row in rows if str(row.get("record_type") or "") != "current_candidate"]),
     )
     summary_cols[3].metric("Pre-Live Records", len(pre_live_rows))
+    summary_cols[4].metric("Review Notes", len(review_notes))
 
     with st.expander("How To Use Candidate Review", expanded=False):
         st.markdown(
             "- `Candidate Review`는 후보를 읽고 다음 검토 행동을 정하는 화면입니다.\n"
             "- `Compare로 보기`: 후보끼리 같은 기간과 설정으로 다시 비교합니다.\n"
             "- `Pre-Live Review로 넘기기`: 후보를 실제 돈 없이 관찰 / 보류 / 재검토 상태로 기록합니다.\n"
+            "- `Candidate Review Note`: 후보 검토 초안을 봤을 때 운영자가 남기는 판단 기록입니다.\n"
             "- 이 화면은 live trading 승인이나 최종 투자 판단을 하지 않습니다.\n"
             "- 후보 목록은 `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`의 active row 기준입니다."
         )
@@ -5898,10 +5911,14 @@ def _render_candidate_review_workspace() -> None:
     if not rows:
         st.info("현재 current candidate registry에 active 후보가 없습니다.")
         st.caption(f"Path: {CURRENT_CANDIDATE_REGISTRY_FILE}")
-        return
 
-    board_tab, draft_tab, detail_tab, compare_tab = st.tabs(
-        ["Candidate Board", "Candidate Intake Draft", "Inspect Candidate", "Send To Compare"]
+    note_notice = st.session_state.get("backtest_candidate_review_note_notice")
+    if note_notice:
+        st.success(note_notice)
+        st.session_state.backtest_candidate_review_note_notice = None
+
+    board_tab, draft_tab, notes_tab, detail_tab, compare_tab = st.tabs(
+        ["Candidate Board", "Candidate Intake Draft", "Review Notes", "Inspect Candidate", "Send To Compare"]
     )
     with board_tab:
         st.markdown("#### Candidate Board")
@@ -5909,7 +5926,10 @@ def _render_candidate_review_workspace() -> None:
             "이 표는 성과 순위표가 아니라 후보 검토 보드입니다. "
             "`Suggested Next Step`은 자동 투자 추천이 아니라 다음 작업 제안입니다."
         )
-        st.dataframe(_build_candidate_review_board_rows_for_display(rows), use_container_width=True, hide_index=True)
+        if rows:
+            st.dataframe(_build_candidate_review_board_rows_for_display(rows), use_container_width=True, hide_index=True)
+        else:
+            st.info("표시할 active current candidate가 없습니다.")
 
     with draft_tab:
         st.markdown("#### Candidate Intake Draft")
@@ -5947,12 +5967,99 @@ def _render_candidate_review_workspace() -> None:
             st.dataframe(pd.DataFrame([data_trust]), use_container_width=True, hide_index=True)
             with st.expander("Candidate Review Draft JSON", expanded=False):
                 st.json(draft)
+            st.markdown("#### Save As Candidate Review Note")
+            st.caption(
+                "여기서 저장하는 것은 current candidate 등록이 아닙니다. "
+                "초안을 본 뒤 사람이 남기는 검토 판단과 다음 행동 메모입니다."
+            )
+            draft_key = _candidate_review_draft_widget_key(draft)
+            default_decision = _default_candidate_review_decision_from_draft(draft)
+            decision = st.selectbox(
+                "Review Decision",
+                options=CANDIDATE_REVIEW_DECISION_OPTIONS,
+                index=(
+                    CANDIDATE_REVIEW_DECISION_OPTIONS.index(default_decision)
+                    if default_decision in CANDIDATE_REVIEW_DECISION_OPTIONS
+                    else 0
+                ),
+                format_func=_candidate_review_decision_label,
+                key=f"candidate_review_decision_{draft_key}",
+                help="이 초안을 어떤 검토 상태로 남길지 고릅니다. 이 값은 투자 승인이나 registry 자동 등록이 아닙니다.",
+            )
+            operator_reason = st.text_area(
+                "Operator Reason",
+                value=_default_candidate_review_operator_reason(draft, decision),
+                key=f"candidate_review_operator_reason_{draft_key}_{decision}",
+                help="왜 이 판단을 했는지 다음에 읽는 사람이 이해할 수 있게 남깁니다.",
+            )
+            next_action = st.text_area(
+                "Next Action",
+                value=_default_candidate_review_next_action(decision),
+                key=f"candidate_review_next_action_{draft_key}_{decision}",
+                help="다음에 무엇을 확인하거나 실행할지 남깁니다.",
+            )
+            default_use_review_date = decision in {"needs_more_evidence", "consider_registry_candidate"}
+            use_review_date = st.checkbox(
+                "Review Date 지정",
+                value=default_use_review_date,
+                key=f"candidate_review_use_review_date_{draft_key}_{decision}",
+                help="다음 재검토 날짜가 필요하면 켭니다.",
+            )
+            review_date_value: date | None = None
+            if use_review_date:
+                review_date_value = st.date_input(
+                    "Review Date",
+                    value=date.today() + timedelta(days=14),
+                    key=f"candidate_review_review_date_{draft_key}_{decision}",
+                )
+            review_note = _build_candidate_review_note_from_draft(
+                draft,
+                review_decision=decision,
+                operator_reason=operator_reason,
+                next_action=next_action,
+                review_date_value=review_date_value,
+            )
+            with st.expander("Candidate Review Note JSON Preview", expanded=False):
+                st.json(review_note)
+            if st.button("Save Candidate Review Note", key=f"save_candidate_review_note_{draft_key}", use_container_width=True):
+                _append_candidate_review_note(review_note)
+                st.session_state.backtest_candidate_review_note_notice = (
+                    f"Candidate Review Note `{review_note['review_note_id']}`를 저장했습니다. "
+                    "이 기록은 current candidate registry 등록이나 투자 승인이 아닙니다."
+                )
+                st.rerun()
             if st.button("Clear Candidate Draft", key="clear_candidate_review_draft", use_container_width=True):
                 st.session_state.backtest_candidate_review_draft = None
                 st.rerun()
 
+    with notes_tab:
+        st.markdown("#### Candidate Review Notes")
+        st.caption(
+            "후보 검토 초안을 보고 남긴 운영자 판단 기록입니다. "
+            "이 기록은 current candidate registry나 Pre-Live registry와 별도로 관리됩니다."
+        )
+        st.caption(f"Path: {CANDIDATE_REVIEW_NOTES_FILE}")
+        if not review_notes:
+            st.info("아직 저장된 Candidate Review Note가 없습니다.")
+        else:
+            st.dataframe(_build_candidate_review_notes_rows_for_display(review_notes), use_container_width=True, hide_index=True)
+            note_labels = [
+                f"{row.get('recorded_at')} | {_candidate_review_decision_label(str(row.get('review_decision') or ''))} | {row.get('strategy_name') or row.get('strategy_key') or row.get('review_note_id')}"
+                for row in review_notes
+            ]
+            selected_note_label = st.selectbox(
+                "Inspect Candidate Review Note",
+                options=note_labels,
+                key="candidate_review_note_to_inspect",
+            )
+            selected_note = review_notes[note_labels.index(selected_note_label)]
+            st.json(selected_note)
+
     with detail_tab:
         st.markdown("#### Inspect Candidate")
+        if not rows:
+            st.info("현재 inspect할 active current candidate가 없습니다.")
+            return
         label_to_row = {_current_candidate_registry_selection_label(row): row for row in rows}
         selected_label = st.selectbox(
             "Candidate To Inspect",
@@ -8801,6 +8908,160 @@ def _queue_candidate_review_draft(draft: dict[str, Any]) -> None:
         "아직 registry에 저장된 것이 아니며, 투자 추천이나 live 승인도 아닙니다."
     )
     st.session_state.backtest_requested_panel = "Candidate Review"
+
+
+def _candidate_review_draft_widget_key(draft: dict[str, Any]) -> str:
+    raw = "_".join(
+        [
+            str(draft.get("source_kind") or "draft"),
+            str(draft.get("strategy_key") or draft.get("strategy_name") or "candidate"),
+            str(draft.get("created_at") or draft.get("recorded_at") or "unknown"),
+        ]
+    )
+    return "".join(char if char.isalnum() else "_" for char in raw)[:96]
+
+
+def _candidate_review_decision_label(decision: str) -> str:
+    labels = {
+        "consider_registry_candidate": "Registry Candidate 검토: 후보 기록으로 남길지 검토",
+        "keep_as_near_miss_review": "Near-Miss 검토 노트: 대안 후보로 계속 관찰",
+        "keep_as_scenario_review": "Scenario 검토 노트: 설정 비교용으로 유지",
+        "needs_more_evidence": "추가 근거 필요: 데이터나 비교가 더 필요",
+        "reject_for_now": "Reject For Now: 지금은 후보로 남기지 않음",
+    }
+    return labels.get(decision, decision)
+
+
+def _default_candidate_review_decision_from_draft(draft: dict[str, Any]) -> str:
+    suggested_type = str(draft.get("suggested_record_type") or "").strip().lower()
+    signal = dict(draft.get("real_money_signal") or {})
+    promotion = str(signal.get("promotion") or "").strip().lower()
+    if suggested_type == "current_candidate_review" or promotion == "real_money_candidate":
+        return "consider_registry_candidate"
+    if suggested_type == "near_miss_review":
+        return "keep_as_near_miss_review"
+    if suggested_type == "scenario_review":
+        return "keep_as_scenario_review"
+    return "needs_more_evidence"
+
+
+def _default_candidate_review_operator_reason(draft: dict[str, Any], decision: str) -> str:
+    strategy_name = str(draft.get("strategy_name") or draft.get("strategy_key") or "candidate")
+    result = dict(draft.get("result_snapshot") or {})
+    signal = dict(draft.get("real_money_signal") or {})
+    base = (
+        f"{strategy_name}: CAGR={result.get('cagr') or 'unknown'}, "
+        f"MDD={result.get('maximum_drawdown') or 'unknown'}, "
+        f"promotion={signal.get('promotion') or 'unknown'}, "
+        f"shortlist={signal.get('shortlist') or 'unknown'}."
+    )
+    if decision == "consider_registry_candidate":
+        return f"{base} 후보 기록으로 남길 가치가 있는지 기존 current anchor와 비교가 필요하다."
+    if decision == "keep_as_near_miss_review":
+        return f"{base} 주 후보는 아니지만 낙폭, 안정성, 설정 차이 측면에서 대안 후보로 다시 볼 가치가 있다."
+    if decision == "keep_as_scenario_review":
+        return f"{base} 바로 승격하기보다 설정 비교용 scenario로 남겨두는 것이 적절하다."
+    if decision == "reject_for_now":
+        return f"{base} 현재 근거만으로는 후보 검토를 계속하기 어렵다."
+    return f"{base} 후보 판단 전에 데이터 신뢰성, 기존 후보와의 비교, Real-Money 신호를 더 확인해야 한다."
+
+
+def _default_candidate_review_next_action(decision: str) -> str:
+    if decision == "consider_registry_candidate":
+        return "기존 current candidate와 같은 기간 / 같은 contract로 compare한 뒤 registry 기록 여부를 결정한다."
+    if decision == "keep_as_near_miss_review":
+        return "near-miss로 남길지 판단하기 위해 MDD, benchmark gap, data trust를 기존 후보와 비교한다."
+    if decision == "keep_as_scenario_review":
+        return "scenario 설명이 충분한지 확인하고, 필요할 때 compare 대상으로만 사용한다."
+    if decision == "reject_for_now":
+        return "현재 초안은 후보 기록으로 남기지 않는다. 같은 아이디어는 새 근거가 생겼을 때 다시 검토한다."
+    return "누락 데이터, price freshness, history replay 가능성, Real-Money blocker를 먼저 보강한 뒤 다시 검토한다."
+
+
+def _build_candidate_review_note_from_draft(
+    draft: dict[str, Any],
+    *,
+    review_decision: str,
+    operator_reason: str,
+    next_action: str,
+    review_date_value: date | None,
+) -> dict[str, Any]:
+    return {
+        "schema_version": 1,
+        "review_note_id": f"candidate_review_note_{uuid4().hex[:12]}",
+        "recorded_at": datetime.now().isoformat(timespec="seconds"),
+        "record_status": "active",
+        "source_kind": draft.get("source_kind"),
+        "source_created_at": draft.get("created_at"),
+        "source_recorded_at": draft.get("recorded_at"),
+        "strategy_key": draft.get("strategy_key"),
+        "strategy_name": draft.get("strategy_name"),
+        "suggested_record_type": draft.get("suggested_record_type"),
+        "suggested_record_type_label": draft.get("suggested_record_type_label"),
+        "review_decision": review_decision,
+        "review_decision_label": _candidate_review_decision_label(review_decision),
+        "operator_reason": operator_reason,
+        "next_action": next_action,
+        "review_date": review_date_value.isoformat() if review_date_value else None,
+        "result_snapshot": dict(draft.get("result_snapshot") or {}),
+        "real_money_signal": dict(draft.get("real_money_signal") or {}),
+        "data_trust_snapshot": dict(draft.get("data_trust_snapshot") or {}),
+        "settings_snapshot": dict(draft.get("settings_snapshot") or {}),
+        "notes": (
+            "Created from Backtest > Candidate Review > Candidate Intake Draft. "
+            "This is an operator review note, not CURRENT_CANDIDATE_REGISTRY insertion, "
+            "not Pre-Live approval, and not an investment recommendation."
+        ),
+    }
+
+
+def _append_candidate_review_note(row: dict[str, Any]) -> None:
+    CANDIDATE_REVIEW_NOTES_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with CANDIDATE_REVIEW_NOTES_FILE.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(row, ensure_ascii=False) + "\n")
+
+
+def _load_candidate_review_notes() -> list[dict[str, Any]]:
+    if not CANDIDATE_REVIEW_NOTES_FILE.exists():
+        return []
+
+    rows: list[dict[str, Any]] = []
+    for line in CANDIDATE_REVIEW_NOTES_FILE.read_text(encoding="utf-8", errors="ignore").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if str(row.get("record_status") or "active").strip().lower() == "active":
+            rows.append(row)
+
+    return sorted(rows, key=lambda row: str(row.get("recorded_at") or ""), reverse=True)
+
+
+def _build_candidate_review_notes_rows_for_display(rows: list[dict[str, Any]]) -> pd.DataFrame:
+    display_rows: list[dict[str, Any]] = []
+    for row in rows:
+        result = dict(row.get("result_snapshot") or {})
+        signal = dict(row.get("real_money_signal") or {})
+        data_trust = dict(row.get("data_trust_snapshot") or {})
+        display_rows.append(
+            {
+                "Recorded At": row.get("recorded_at"),
+                "Decision": row.get("review_decision_label") or _candidate_review_decision_label(str(row.get("review_decision") or "")),
+                "Strategy": row.get("strategy_name") or row.get("strategy_key"),
+                "CAGR": result.get("cagr"),
+                "MDD": result.get("maximum_drawdown"),
+                "Promotion": signal.get("promotion"),
+                "Shortlist": signal.get("shortlist"),
+                "Data Trust": data_trust.get("price_freshness_status"),
+                "Next Action": row.get("next_action"),
+                "Review Date": row.get("review_date"),
+                "Review Note ID": row.get("review_note_id"),
+            }
+        )
+    return pd.DataFrame(display_rows)
 
 
 def _load_pre_live_candidate_registry_latest() -> list[dict[str, Any]]:

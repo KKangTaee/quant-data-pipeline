@@ -40,17 +40,31 @@ Phase 29가 완료되면 이 문서를 closeout 기준으로 다시 갱신한다
 - 새 백테스트 결과나 과거 history run을 바로 current candidate로 저장하지 않고,
   먼저 후보 검토 초안으로 읽는 단계가 생겼다.
 
+### 3. Candidate Review Note 저장 추가
+
+- `Candidate Review > Candidate Intake Draft`에서 검토 초안을 review note로 저장할 수 있게 했다.
+- 저장되는 위치는 `.note/finance/CANDIDATE_REVIEW_NOTES.jsonl`이다.
+- 저장 항목에는 review decision, operator reason, next action, optional review date가 포함된다.
+- `Candidate Review > Review Notes` 탭에서 저장된 검토 노트를 표와 JSON으로 다시 볼 수 있게 했다.
+
+쉽게 말하면:
+
+- 백테스트 결과를 후보로 볼지 말지 판단한 이유를 남길 수 있게 되었다.
+- 다만 이것은 current candidate 등록이나 투자 승인 기록이 아니다.
+
 ## 아직 남아 있는 것
 
-- current candidate registry guide 보강
+- review note를 실제 current candidate registry row로 올릴 기준 정리
 - 사용자 manual UI validation
 
 쉽게 말하면:
 
 - 지금은 registry에 있는 후보를 읽고, latest/history 결과를 후보 검토 초안으로 보내는 상태다.
-- 다음에는 후보 검토 초안을 실제 후보 기록으로 남길지, 별도 review note로 남길지 기준을 정해야 한다.
+- 이제 초안을 별도 review note로 남길 수 있다.
+- 다음에는 review note 중 어떤 것을 실제 후보 기록으로 승격할지 기준을 더 정리하면 된다.
 
 ## 현재 판단
 
 Phase 29는 active 상태다.
-첫 번째 / 두 번째 작업 단위는 구현됐고, 자동 검증과 사용자 QA를 거친 뒤 다음 작업 단위로 넘어간다.
+첫 번째 / 두 번째 / 세 번째 작업 단위는 구현됐고,
+자동 검증과 사용자 QA를 거친 뒤 다음 작업 단위로 넘어간다.

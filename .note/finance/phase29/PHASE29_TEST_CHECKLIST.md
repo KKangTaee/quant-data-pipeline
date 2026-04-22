@@ -5,7 +5,7 @@
 이 checklist는 Phase 29에서 추가한 `Candidate Review` 화면이
 current candidate를 검토 보드로 읽고 compare / Pre-Live Review로 자연스럽게 넘기는지 확인하기 위한 문서다.
 
-현재는 Phase 29 first / second work unit QA checklist다.
+현재는 Phase 29 first / second / third work unit QA checklist다.
 이 문서의 항목을 확인한 뒤 다음 작업 단위로 넘어갈지 판단한다.
 
 ## 사용 방법
@@ -82,19 +82,34 @@ current candidate를 검토 보드로 읽고 compare / Pre-Live Review로 자연
   - [ ] History run에서도 `Review As Candidate Draft`를 누르면 후보 검토 초안으로 이동하는지
   - [ ] 후보 검토 초안이 current candidate registry에 자동 저장된 것으로 오해되지 않는지
 
-## 7. 문서와 상태 확인
+## 7. Candidate Intake Draft -> Candidate Review Note 저장 확인
+
+- 확인 위치:
+  - `Backtest > Candidate Review > Candidate Intake Draft`
+  - `Backtest > Candidate Review > Review Notes`
+- 체크 항목:
+  - [ ] `Save As Candidate Review Note` 영역이 보이는지
+  - [ ] `Review Decision`이 후보 등록 검토 / near-miss / scenario / 추가 근거 필요 / reject for now 중 하나로 읽히는지
+  - [ ] `Operator Reason`에 왜 이 판단을 했는지 남길 수 있는지
+  - [ ] `Next Action`에 다음에 무엇을 확인할지 남길 수 있는지
+  - [ ] `Save Candidate Review Note`를 눌렀을 때 current candidate registry 등록이나 투자 승인으로 오해되지 않는지
+  - [ ] 저장 후 `Review Notes` 탭에서 방금 저장한 기록이 표로 보이는지
+  - [ ] `Inspect Candidate Review Note`에서 원본 JSON을 확인할 수 있는지
+
+## 8. 문서와 상태 확인
 
 - 확인 문서:
   - `.note/finance/phase29/PHASE29_CANDIDATE_REVIEW_AND_RECOMMENDATION_WORKFLOW_PLAN.md`
   - `.note/finance/phase29/PHASE29_CANDIDATE_REVIEW_BOARD_FIRST_WORK_UNIT.md`
   - `.note/finance/phase29/PHASE29_RESULT_TO_CANDIDATE_REVIEW_HANDOFF_SECOND_WORK_UNIT.md`
+  - `.note/finance/phase29/PHASE29_CANDIDATE_REVIEW_NOTE_THIRD_WORK_UNIT.md`
   - `.note/finance/phase29/PHASE29_CURRENT_CHAPTER_TODO.md`
   - `.note/finance/MASTER_PHASE_ROADMAP.md`
   - `.note/finance/FINANCE_DOC_INDEX.md`
 - 체크 항목:
   - [ ] Phase 29가 최종 투자 승인 phase가 아니라 후보 검토 workflow phase로 설명되는지
   - [ ] Phase 29 상태가 `active / manual_qa_pending`으로 읽히는지
-  - [ ] 다음 작업 후보가 Latest / History result to candidate handoff 쪽으로 이어지는지
+  - [ ] 다음 작업 후보가 review note를 실제 후보 registry 기록으로 남길지 판단하는 기준 정리로 이어지는지
 
 ## 한 줄 판단 기준
 
