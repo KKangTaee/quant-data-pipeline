@@ -27,6 +27,8 @@ Phase 29 closeout 시점에 다시 갱신한다.
 - 고도화 후보:
   - sample / seed 후보와 사용자가 직접 append한 후보를 화면에서 구분한다.
   - Single Strategy / History / Review Note에서 넘어온 후보의 source를 더 분명히 보여준다.
+  - strict annual이 아닌 GTAA / GRS / future strategy 후보도 compare로 보낼 수 있도록
+    `compare_prefill` 또는 변환 가능한 `contract`를 registry row에 안정적으로 남긴다.
   - 자동 후보 추천을 만들더라도 바로 board에 올리지 않고 review draft / review note를 거치게 한다.
   - 오래된 sample 후보를 archive하거나 status로 숨길 수 있게 한다.
 

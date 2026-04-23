@@ -140,6 +140,12 @@ Latest Backtest Run 또는 History selected record
 
 - Candidate Review는 후보를 투자 추천으로 확정하는 화면이 아니다.
 - Candidate Review는 current candidate, near miss, scenario를 먼저 읽는 중간 검토 화면이다.
+- `Send To Compare`는 후보 row의 `compare_prefill`을 우선 사용하고,
+  기존 strict annual seed 후보는 registry id 기반 기본값을 사용한다.
+- GTAA seed 후보처럼 `compare_prefill`은 없지만 전략 `contract`가 남아 있는 경우에는
+  해당 `contract`를 compare override로 변환해 form에 채운다.
+- 후보 row에 `compare_prefill`도 없고 변환 가능한 `contract`도 없으면,
+  사용자가 해결할 수 있는 설정 문제가 아니라 해당 후보 row의 compare 재진입 정보가 부족한 상태다.
 - Candidate Intake Draft는 registry에 저장된 후보가 아니라 검토 초안이다.
 - Candidate Review Note는 초안을 보고 남기는 operator decision 기록이다.
 - Candidate Review Note를 저장해도 current candidate registry에 자동 등록되지 않는다.

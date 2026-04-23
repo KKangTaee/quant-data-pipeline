@@ -27,6 +27,10 @@ current candidate registry에 남은 후보를 검토 보드로 읽고,
 - `completed` Candidate Board sample boundary 기록
   - 현재 기존 후보는 자동 선별 결과가 아니라 sample / seed registry 후보군으로 보고 QA한다.
   - 추후 phase에서 실제 후보 lifecycle board로 고도화할 필요가 있음을 handoff에 남겼다.
+- `completed` GTAA candidate -> compare prefill 보강
+  - GTAA sample 후보의 registry `contract`를 compare form override로 변환하게 했다.
+  - 따라서 `Load Recommended Candidates` / `Load Lower-MDD Alternatives`에서 GTAA 후보가
+    "compare prefill contract가 준비되지 않았습니다" 경고로 막히지 않아야 한다.
 
 ## 2. 구현 완료 항목
 
@@ -50,6 +54,7 @@ current candidate registry에 남은 후보를 검토 보드로 읽고,
 - `completed` `.venv` import smoke
 - `completed` finance refinement hygiene check
 - `completed` `git diff --check`
+- `completed` GTAA current / near-miss registry row -> compare prefill smoke
 - `pending` targeted manual UI validation
 
 ## 4. Documentation Sync

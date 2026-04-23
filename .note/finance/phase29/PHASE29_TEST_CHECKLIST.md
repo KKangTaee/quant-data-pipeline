@@ -20,10 +20,10 @@ current candidate를 검토 보드로 읽고 compare / Pre-Live Review로 자연
 - 확인 위치:
   - `Backtest > Candidate Review`
 - 체크 항목:
-  - [ ] `Candidate Review` panel이 `Backtest` 상단 panel 선택지에 보이는지
-  - [ ] 화면 상단 설명이 이 화면을 live trading 승인이나 최종 투자 판단으로 오해하지 않게 설명하는지
-  - [ ] `Active Candidates`, `Current Anchors`, `Near Miss / Scenario`, `Pre-Live Records` metric이 보이는지
-  - [ ] `How To Use Candidate Review` 안내를 열었을 때 compare / Pre-Live Review로 넘어가는 역할이 이해되는지
+  - [x] `Candidate Review` panel이 `Backtest` 상단 panel 선택지에 보이는지
+  - [x] 화면 상단 설명이 이 화면을 live trading 승인이나 최종 투자 판단으로 오해하지 않게 설명하는지
+  - [x] `Active Candidates`, `Current Anchors`, `Near Miss / Scenario`, `Pre-Live Records` metric이 보이는지
+  - [x] `How To Use Candidate Review` 안내를 열었을 때 compare / Pre-Live Review로 넘어가는 역할이 이해되는지
 
 ## 2. Candidate Board 확인
 
@@ -33,22 +33,22 @@ current candidate를 검토 보드로 읽고 compare / Pre-Live Review로 자연
   - 현재 보드의 기존 후보는 자동으로 선별된 최신 백테스트 결과가 아니다.
   - 이전 phase에서 registry에 남겨 둔 sample / seed 후보군으로 보고 workflow를 확인한다.
 - 체크 항목:
-  - [ ] current candidate registry의 active 후보들이 표로 보이는지
-  - [ ] 기존 후보군이 실제 투자 추천이 아니라 sample candidate set으로 이해되는지
-  - [ ] `Review Stage`가 current anchor, near miss, scenario 후보를 구분하는 데 도움이 되는지
-  - [ ] `Why It Exists`가 후보가 왜 남아 있는지 쉽게 설명하는지
-  - [ ] `Suggested Next Step`이 투자 추천이 아니라 다음 검토 행동 제안으로 읽히는지
-  - [ ] CAGR / MDD / Promotion / Shortlist / Deployment가 한 행에서 같이 보여 후보 상태를 읽기 쉬운지
+  - [x] current candidate registry의 active 후보들이 표로 보이는지
+  - [x] 기존 후보군이 실제 투자 추천이 아니라 sample candidate set으로 이해되는지
+  - [x] `Review Stage`가 current anchor, near miss, scenario 후보를 구분하는 데 도움이 되는지
+  - [x] `Why It Exists`가 후보가 왜 남아 있는지 쉽게 설명하는지
+  - [x] `Suggested Next Step`이 투자 추천이 아니라 다음 검토 행동 제안으로 읽히는지
+  - [x] CAGR / MDD / Promotion / Shortlist / Deployment가 한 행에서 같이 보여 후보 상태를 읽기 쉬운지
 
 ## 3. Inspect Candidate 확인
 
 - 확인 위치:
   - `Backtest > Candidate Review > Inspect Candidate`
 - 체크 항목:
-  - [ ] 후보를 선택하면 detail card에 title, review stage, CAGR, MDD, promotion, shortlist가 보이는지
-  - [ ] `Suggested Next Step`과 `Contract Summary`가 후보를 compare할지 Pre-Live로 넘길지 판단하는 데 도움이 되는지
-  - [ ] `Raw Candidate Registry Row`를 열면 원본 registry row를 확인할 수 있는지
-  - [ ] `Open Candidate In Pre-Live Review` 버튼 이름이 저장/승인 버튼으로 오해되지 않는지
+  - [x] 후보를 선택하면 detail card에 title, review stage, CAGR, MDD, promotion, shortlist가 보이는지
+  - [x] `Suggested Next Step`과 `Contract Summary`가 후보를 compare할지 Pre-Live로 넘길지 판단하는 데 도움이 되는지
+  - [x] `Raw Candidate Registry Row`를 열면 원본 registry row를 확인할 수 있는지
+  - [x] `Open Candidate In Pre-Live Review` 버튼 이름이 저장/승인 버튼으로 오해되지 않는지
 
 ## 4. Candidate Review -> Pre-Live Review 흐름 확인
 
@@ -57,18 +57,24 @@ current candidate를 검토 보드로 읽고 compare / Pre-Live Review로 자연
   - `Open Candidate In Pre-Live Review`
   - 이동 후 `Backtest > Pre-Live Review`
 - 체크 항목:
-  - [ ] 버튼을 누르면 `Pre-Live Review` panel로 이동하는지
-  - [ ] 이동 후 선택한 후보가 `Candidate To Review`에 유지되는지
-  - [ ] 상단 안내문이 아직 저장된 것이 아니라 운영 상태와 next action을 확인해야 한다고 설명하는지
-  - [ ] `Save Pre-Live Record`를 누르기 전까지 registry에 저장된 것으로 오해되지 않는지
+  - [x] 버튼을 누르면 `Pre-Live Review` panel로 이동하는지
+  - [x] 이동 후 선택한 후보가 `Candidate To Review`에 유지되는지
+  - [x] 상단 안내문이 아직 저장된 것이 아니라 운영 상태와 next action을 확인해야 한다고 설명하는지
+  - [x] `Save Pre-Live Record`를 누르기 전까지 registry에 저장된 것으로 오해되지 않는지
 
 ## 5. Candidate Review -> Compare 흐름 확인
 
 - 확인 위치:
   - `Backtest > Candidate Review > Send To Compare`
+- QA 참고:
+  - 기존에는 GTAA sample 후보가 `contract` 정보는 갖고 있어도 compare form으로 옮기는 prefill 변환이 없어 경고가 나올 수 있었다.
+  - 현재 기준으로 `Load Recommended Candidates`와 `Load Lower-MDD Alternatives`는 GTAA 후보도 compare form에 채워야 정상이다.
+  - 같은 경고가 다시 나오면 사용자 설정 문제가 아니라, 해당 후보 row에 compare prefill 또는 변환 가능한 contract가 없는 개발/데이터 정합성 이슈로 본다.
 - 체크 항목:
-  - [ ] `Load Recommended Candidates`가 대표 후보 묶음을 compare form에 채우는 기능으로 이해되는지
-  - [ ] `Load Lower-MDD Alternatives`가 near-miss 대안을 compare form에 채우는 기능으로 이해되는지
+  - [x] `Load Recommended Candidates`가 대표 후보 묶음을 compare form에 채우는 기능으로 이해되는지
+  - [x] `Load Lower-MDD Alternatives`가 near-miss 대안을 compare form에 채우는 기능으로 이해되는지
+  - [ ] `Load Recommended Candidates`를 눌렀을 때 GTAA 대표 후보가 경고 없이 compare form에 채워지는지
+  - [ ] `Load Lower-MDD Alternatives`를 눌렀을 때 GTAA lower-MDD 대안 후보가 경고 없이 compare form에 채워지는지
   - [ ] `Pick Manually`에서 후보를 직접 고르고 `Load Selected Candidates Into Compare`를 누를 수 있는지
   - [ ] compare panel로 이동한 뒤 `Compare Form Updated`에서 어떤 후보가 채워졌는지 확인할 수 있는지
 

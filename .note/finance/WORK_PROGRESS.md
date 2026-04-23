@@ -1978,3 +1978,16 @@ Detailed historical logs were archived on `2026-04-13`.
   - updated Phase 29 checklist so the user can QA with the correct sample-data interpretation
 - Durable takeaway:
   - Candidate Board needs later-phase refinement, especially source distinction, sample/archive handling, and safe non-automatic candidate recommendation flow.
+
+### 2026-04-23
+- Fixed Phase 29 Candidate Review -> Compare prefill for GTAA sample candidates.
+- Changed:
+  - added a GTAA registry `contract` -> compare override fallback for current candidate rows without explicit `compare_prefill`
+  - normalized registry risk-off wording such as `cash_only_or_defensive_bond_preference` into the executable GTAA mode `defensive_bond_preference`
+  - updated Phase 29 checklist / TODO / handoff docs and the Backtest UI flow code analysis note
+  - reviewed `FINANCE_DOC_INDEX.md`; no index update was needed because no new document was introduced
+- Validation:
+  - `python3 -m py_compile app/web/pages/backtest.py` passed
+  - `.venv` smoke confirmed both GTAA recommended and lower-MDD registry rows now produce compare prefill payloads
+- Durable takeaway:
+  - The previous warning was not a user-actionable issue. GTAA seed candidates now have a usable Compare re-entry path through their stored registry contract.

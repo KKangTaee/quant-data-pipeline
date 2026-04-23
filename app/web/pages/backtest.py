@@ -9675,6 +9675,101 @@ def _current_candidate_registry_default_compare_override(row: dict[str, Any]) ->
     return None
 
 
+def _normalize_gtaa_registry_risk_off_mode(value: str | None) -> str:
+    normalized = str(value or "").strip().lower()
+    if normalized in set(GTAA_RISK_OFF_MODE_LABELS.values()):
+        return normalized
+    if "defensive" in normalized:
+        return "defensive_bond_preference"
+    return GTAA_DEFAULT_RISK_OFF_MODE
+
+
+def _current_candidate_registry_contract_compare_override(row: dict[str, Any]) -> dict[str, Any] | None:
+    strategy_name = str(row.get("strategy_name") or "").strip()
+    contract = dict(row.get("contract") or {})
+    if not strategy_name or not contract:
+        return None
+
+    if strategy_name == "GTAA":
+        tickers = list(contract.get("tickers") or [])
+        if not tickers:
+            return None
+        score_lookback_months = [
+            int(months)
+            for months in list(contract.get("score_lookback_months") or [])
+            if months is not None
+        ]
+        if not score_lookback_months:
+            score_lookback_months = [
+                months
+                for months in [
+                    _gtaa_months_from_return_col(col)
+                    for col in list(contract.get("score_return_columns") or GTAA_SCORE_RETURN_COLUMNS)
+                ]
+                if months is not None
+            ]
+
+        override: dict[str, Any] = {
+            "tickers": tickers,
+            "universe_mode": "manual_tickers",
+            "top": int(contract.get("top") or 3),
+            "interval": int(contract.get("interval") or contract.get("rebalance_interval") or GTAA_DEFAULT_SIGNAL_INTERVAL),
+            "score_lookback_months": score_lookback_months,
+            "score_return_columns": [
+                _gtaa_return_col_from_months(int(months)) for months in score_lookback_months
+            ],
+            "score_weights": _build_equal_gtaa_score_weights(score_lookback_months),
+            "trend_filter_window": int(contract.get("trend_filter_window") or GTAA_DEFAULT_TREND_FILTER_WINDOW),
+            "risk_off_mode": _normalize_gtaa_registry_risk_off_mode(contract.get("risk_off_mode")),
+            "defensive_tickers": list(contract.get("defensive_tickers") or GTAA_DEFAULT_DEFENSIVE_TICKERS),
+            "market_regime_enabled": bool(contract.get("market_regime_enabled", False)),
+            "market_regime_window": int(contract.get("market_regime_window") or STRICT_MARKET_REGIME_DEFAULT_WINDOW),
+            "market_regime_benchmark": contract.get("market_regime_benchmark")
+            or STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
+            "crash_guardrail_enabled": bool(contract.get("crash_guardrail_enabled", GTAA_DEFAULT_CRASH_GUARDRAIL_ENABLED)),
+            "crash_guardrail_drawdown_threshold": float(
+                contract.get("crash_guardrail_drawdown_threshold") or GTAA_DEFAULT_CRASH_GUARDRAIL_DRAWDOWN_THRESHOLD
+            ),
+            "crash_guardrail_lookback_months": int(
+                contract.get("crash_guardrail_lookback_months") or GTAA_DEFAULT_CRASH_GUARDRAIL_LOOKBACK_MONTHS
+            ),
+            "min_price_filter": float(contract.get("min_price_filter") or ETF_REAL_MONEY_DEFAULT_MIN_PRICE),
+            "transaction_cost_bps": float(contract.get("transaction_cost_bps") or ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS),
+            "benchmark_ticker": str(contract.get("benchmark_ticker") or ETF_REAL_MONEY_DEFAULT_BENCHMARK).strip().upper(),
+            "promotion_min_etf_aum_b": float(contract.get("promotion_min_etf_aum_b") or ETF_OPERABILITY_DEFAULT_MIN_AUM_B),
+            "promotion_max_bid_ask_spread_pct": float(
+                contract.get("promotion_max_bid_ask_spread_pct") or ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT
+            ),
+            "underperformance_guardrail_enabled": bool(
+                contract.get("underperformance_guardrail_enabled", STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED)
+            ),
+            "underperformance_guardrail_window_months": int(
+                contract.get("underperformance_guardrail_window_months") or STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS
+            ),
+            "underperformance_guardrail_threshold": float(
+                contract.get("underperformance_guardrail_threshold") or STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD
+            ),
+            "drawdown_guardrail_enabled": bool(
+                contract.get("drawdown_guardrail_enabled", STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_ENABLED)
+            ),
+            "drawdown_guardrail_window_months": int(
+                contract.get("drawdown_guardrail_window_months") or STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_WINDOW_MONTHS
+            ),
+            "drawdown_guardrail_strategy_threshold": float(
+                contract.get("drawdown_guardrail_strategy_threshold") or STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD
+            ),
+            "drawdown_guardrail_gap_threshold": float(
+                contract.get("drawdown_guardrail_gap_threshold") or STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD
+            ),
+        }
+        if contract.get("preset_name"):
+            override["preset_name"] = contract.get("preset_name")
+            override["universe_mode"] = contract.get("universe_mode") or "preset"
+        return override
+
+    return None
+
+
 def _current_candidate_registry_row_to_compare_prefill(row: dict[str, Any]) -> dict[str, Any] | None:
     compare_prefill = dict(row.get("compare_prefill") or {})
     strategy_name = str(compare_prefill.get("strategy_name") or row.get("strategy_name") or "").strip()
@@ -9685,6 +9780,8 @@ def _current_candidate_registry_row_to_compare_prefill(row: dict[str, Any]) -> d
     strategy_override = dict(compare_prefill.get("strategy_override") or {})
     if not strategy_override:
         strategy_override = _current_candidate_registry_default_compare_override(row) or {}
+    if not strategy_override:
+        strategy_override = _current_candidate_registry_contract_compare_override(row) or {}
     if not strategy_override:
         return None
     if not strategy_override.get("guardrail_reference_ticker"):

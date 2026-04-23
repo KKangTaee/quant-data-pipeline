@@ -2650,3 +2650,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 추후 phase에서는 sample 후보와 실제 사용자 append 후보를 구분하고, 후보 lifecycle / source / archive 상태를 더 잘 관리하는 Candidate Board 고도화가 필요하다
 - Follow-up:
   - 이 내용은 `PHASE29_NEXT_PHASE_PREPARATION.md`의 future development note와 `PHASE29_TEST_CHECKLIST.md`의 Candidate Board 확인 항목에 반영했다
+
+### 2026-04-23 - GTAA sample 후보도 Compare로 보낼 수 있어야 한다
+- User request:
+  - Phase 29 QA 중 `Load Recommended Candidates`와 `Load Lower-MDD Alternatives`를 누르면 GTAA 후보에 대해 "compare prefill contract가 준비되지 않았습니다" 경고가 나오며, 현재 환경에서 사용자가 해결할 방법이 없다고 보고함
+- Interpreted goal:
+  - Candidate Review의 Send To Compare 흐름에서 sample / seed GTAA 후보도 실제 compare form으로 옮겨져야 한다
+- Analysis result:
+  - 원인은 GTAA 후보 row에 `contract`는 있지만 explicit `compare_prefill`이 없고, 기존 변환 로직이 strict annual seed 후보만 처리했기 때문이다
+  - GTAA registry `contract`를 compare override로 변환하는 fallback을 추가했다
+  - registry에 남은 복합 표현 `cash_only_or_defensive_bond_preference`는 GTAA 실행 가능 값인 `defensive_bond_preference`로 정규화한다
+- Follow-up:
+  - Phase 29 QA에서는 `Load Recommended Candidates`와 `Load Lower-MDD Alternatives`가 GTAA 후보를 경고 없이 compare form에 채우는지 확인한다
+  - 향후 GTAA 외 신규 전략 후보도 compare로 보내려면 registry row에 explicit `compare_prefill` 또는 변환 가능한 `contract`를 남기는 규칙이 필요하다
