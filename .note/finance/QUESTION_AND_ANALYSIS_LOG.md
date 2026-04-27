@@ -2702,3 +2702,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 실제 Portfolio Proposal 저장소나 UI 구현은 다음 작업 단위에서 계약을 먼저 정한 뒤 진행한다
 - Follow-up:
   - 다음 작업은 Candidate Review / Pre-Live / registry helper 중 작은 모듈 분리를 먼저 할지, Portfolio Proposal row 계약을 먼저 정의할지 선택한다
+
+### 2026-04-28 - 현재 흐름은 포트폴리오 발견 엔진이 아니라 후보 검증 운영 흐름이다
+- User request:
+  - `테스트에서 상용화 후보 검토까지 사용하는 흐름`이 실제로 실전 포트폴리오를 찾기 위한 올바른 흐름인지, 프로그램 취지와 맞는지 판단을 요청함
+- Interpreted goal:
+  - Phase 30의 product-flow가 단순히 기능을 이어 붙인 절차인지, 아니면 최종 목표인 실전 포트폴리오 / 가이드 제시로 가는 합리적인 제품 경로인지 검토해야 함
+- Analysis result:
+  - 현재 흐름은 실전 포트폴리오를 자동으로 찾아내는 discovery engine이라기보다, 좋은 백테스트 결과를 바로 투자 후보로 착각하지 않게 만드는 evidence handling / candidate governance flow에 가깝다
+  - 이 방향은 프로그램 취지와 맞다. 데이터 신뢰성, Real-Money 신호, compare, 후보 초안, review note, registry, Pre-Live 기록을 거치게 하므로 실전 후보 검토에 필요한 안전장치를 만든다
+  - 다만 "실전 포트폴리오를 찾는 과정"으로 완성되려면 아직 Portfolio Proposal 단계에서 목적 함수, 위험 예산, 후보 간 상관/중복, 비중 산정, benchmark / drawdown / turnover / capacity / paper tracking feedback을 함께 다루는 발견 및 구성 layer가 추가되어야 한다
+  - 따라서 현재 흐름은 올바른 기반이지만 최종 완성형은 아니다. 지금 만든 것은 후보를 안전하게 보존하고 검토하는 레일이고, Phase 30 후속 작업에서 portfolio construction layer를 붙여야 진짜 포트폴리오 발견 흐름이 된다
+- Follow-up:
+  - Phase 30 다음 작업은 단순 UI 추가보다 Portfolio Proposal row 계약을 먼저 정의해, 어떤 후보 묶음이 어떤 목적과 위험 역할로 포트폴리오 제안이 되는지 명확히 하는 것이 중요하다
