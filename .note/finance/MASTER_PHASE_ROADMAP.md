@@ -1481,8 +1481,8 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 | Phase 26 | `complete` | `manual_qa_completed` | 완료 |
 | Phase 27 | `complete` | `manual_qa_completed` | 완료 |
 | Phase 28 | `complete` | `manual_qa_completed` | Capability + Replay + Data Trust + Real-Money/Guardrail parity QA 완료 |
-| Phase 29 | `implementation_complete` | `manual_qa_pending` | Candidate Review Board + Result Handoff + Review Notes + Registry Draft 구현 완료, 사용자 QA 대기 |
-| Phase 30 | `planned` | `not_ready_for_qa` | portfolio proposal / pre-live monitoring 예정 |
+| Phase 29 | `complete` | `manual_qa_completed` | Candidate Review Board + Result Handoff + Review Notes + Registry Draft QA 완료 |
+| Phase 30 | `planned` | `not_ready_for_qa` | portfolio proposal / pre-live monitoring 예정. 구현 전 사용 흐름 재정렬과 리팩토링 경계 검토 필요 |
 
 한 줄 현재 판단:
 - current annual strict candidate와 portfolio bridge를 같은 frame에서 다시 본 `Phase 21`은 manual validation까지 완료되었고,
@@ -1498,10 +1498,11 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
   `Phase 28`도 사용자 QA까지 완료되어 전략 family별 지원 범위와 cadence 차이,
   history / saved portfolio 재실행과 form 복원 가능성,
   compare / weighted data trust, Real-Money / Guardrail scope가 closeout 기준으로 정리되었다.
-  현재는 `Phase 29`를 열어 `Backtest > Candidate Review`에서 current candidate를 검토 보드로 읽고
+  `Phase 29`는 `Backtest > Candidate Review`에서 current candidate를 검토 보드로 읽고
   compare 또는 Pre-Live Review로 넘기는 workflow와, Latest / History 결과를 후보 검토 초안으로 보내는 handoff,
   초안을 별도 Candidate Review Note로 저장하는 흐름,
-  그리고 review note를 current candidate registry row 초안으로 변환해 명시적으로 append하는 흐름을 구현한 상태다.
+  그리고 review note를 current candidate registry row 초안으로 변환해 명시적으로 append하는 흐름을 구현하고
+  사용자 QA까지 완료한 상태다.
 
 ---
 
@@ -1526,8 +1527,8 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 | Phase 26 | Foundation Stabilization And Backlog Rebase | `complete` | `manual_qa_completed` | 과거 backlog와 pending 상태를 현재 제품 기준으로 다시 정리했고 QA까지 완료했다 |
 | Phase 27 | Data Integrity And Backtest Trust Layer | `complete` | `manual_qa_completed` | 백테스트 전에 데이터가 믿을 만한지, 어디까지 계산 가능한지 보여주고 QA까지 완료했다 |
 | Phase 28 | Strategy Family Parity And Cadence Completion | `complete` | `manual_qa_completed` | annual / quarterly / 신규 전략의 지원 범위, 재진입 상태, compare data trust, Real-Money / Guardrail scope를 화면에서 구분하고 QA까지 완료했다 |
-| Phase 29 | Candidate Review And Recommendation Workflow | `implementation_complete` | `manual_qa_pending` | current candidate를 검토 보드로 읽고, Latest / History 결과를 후보 검토 초안, review note, registry draft로 넘기는 workflow를 구현했다 |
-| Phase 30 | Portfolio Proposal And Pre-Live Monitoring Surface | `planned` | `not_ready_for_qa` | 후보들을 포트폴리오 제안과 paper / pre-live monitoring 화면으로 연결한다 |
+| Phase 29 | Candidate Review And Recommendation Workflow | `complete` | `manual_qa_completed` | current candidate를 검토 보드로 읽고, Latest / History 결과를 후보 검토 초안, review note, registry draft로 넘기는 workflow를 구현하고 QA까지 완료했다 |
+| Phase 30 | Portfolio Proposal And Pre-Live Monitoring Surface | `planned` | `not_ready_for_qa` | 후보들을 포트폴리오 제안과 paper / pre-live monitoring 화면으로 연결한다. 구현 전 product-flow 재정렬과 리팩토링 경계 검토를 먼저 한다 |
 
 ### Phase 26. Foundation Stabilization And Backlog Rebase
 
@@ -1577,7 +1578,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 - 세 번째 작업으로 `Saved Portfolio Replay / Load Parity Snapshot`을 추가해 저장 포트폴리오의 전략 목록, weight/date alignment, strategy override 저장 상태를 볼 수 있게 했다.
 - 네 번째 작업으로 compare / weighted / saved replay에서도 component별 data trust를 볼 수 있게 했다.
 - 다섯 번째 작업으로 compare / history / saved portfolio에 Real-Money / Guardrail scope 표를 추가했다.
-- 다음 단계는 Phase 29 `Candidate Review And Recommendation Workflow`다.
+- Phase 29 `Candidate Review And Recommendation Workflow`는 사용자 QA까지 완료됐다.
 
 ### Phase 29. Candidate Review And Recommendation Workflow
 
@@ -1589,7 +1590,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 - 그러려면 좋은 결과를 볼 때마다 임시 문서로 판단하지 않고, 반복 가능한 후보 검토 절차가 필요하다.
 
 ### 현재 메모
-- Phase 29는 implementation_complete / manual_qa_pending 상태다.
+- Phase 29는 complete / manual_qa_completed 상태다.
 - 첫 작업으로 `Backtest > Candidate Review` panel을 추가했다.
 - 이 panel은 current candidate registry의 active 후보를 review board로 보여주고,
   후보별 review stage, 존재 이유, 다음 행동 제안을 표시한다.
@@ -1597,7 +1598,8 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 - 두 번째 작업으로 Latest Backtest Run 또는 History 결과를 candidate review 초안으로 넘기는 handoff를 추가했다.
 - 세 번째 작업으로 candidate review 초안을 별도 review note로 저장하는 흐름을 추가했다.
 - 네 번째 작업으로 review note를 current candidate registry row 초안으로 변환하고, 명시적 append 버튼으로만 후보 registry에 기록하는 흐름을 추가했다.
-- 다음 작업 후보는 사용자 QA 후 Phase 29 closeout 또는 Phase 30 portfolio proposal handoff다.
+- 다음 작업 후보는 Phase 30을 바로 구현하기 전,
+  Phase 29 이후 기준의 사용 흐름 재정렬과 `backtest.py` 리팩토링 경계 검토다.
 
 ### Phase 30. Portfolio Proposal And Pre-Live Monitoring Surface
 
@@ -1607,6 +1609,11 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 ### 왜 필요한가
 - 단일 전략 후보만으로는 최종 product goal인 포트폴리오 구성 제안까지 가기 어렵다.
 - 다만 이 phase도 live trading 승인이 아니라 proposal / monitoring surface까지를 목표로 한다.
+
+### 시작 전 준비 메모
+- Phase 30 기능 구현 전에 `테스트에서 상용화 후보 검토까지 사용하는 흐름`을 Phase 29 이후 기준으로 다시 정리한다.
+- 기준 흐름은 `Backtest Run -> Candidate Draft -> Candidate Review Note -> Current Candidate Registry -> Compare / Pre-Live -> Portfolio Proposal -> Live Readiness`다.
+- `backtest.py`가 16k lines 이상으로 커졌으므로, Candidate Review / Pre-Live / History / Compare / Saved Portfolio / registry helper를 어떤 모듈로 점진 분리할지 먼저 계획한다.
 
 ### Phase 30 이후
 - Live Readiness / Final Approval은 Phase 30 이후 별도 phase로 연다.

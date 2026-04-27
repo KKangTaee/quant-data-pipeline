@@ -1991,3 +1991,15 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.venv` smoke confirmed both GTAA recommended and lower-MDD registry rows now produce compare prefill payloads
 - Durable takeaway:
   - The previous warning was not a user-actionable issue. GTAA seed candidates now have a usable Compare re-entry path through their stored registry contract.
+
+### 2026-04-28
+- Closed Phase 29 after user manual QA completion.
+- Changed:
+  - marked remaining Phase 29 checklist items as completed based on user QA completion confirmation
+  - moved Phase 29 status to `complete` / `manual_qa_completed`
+  - synced Phase 29 TODO, completion summary, next-phase preparation, master roadmap, doc index, and comprehensive analysis
+  - recorded that Phase 30 should start with product-flow reorientation and `backtest.py` module-boundary planning before new portfolio proposal implementation
+- Validation:
+  - `git diff --check` passed
+- Durable takeaway:
+  - Phase 29 is closed. The next step is not immediate feature expansion; it is to make the post-Phase-29 operating flow understandable and plan a gradual Backtest UI refactor boundary.

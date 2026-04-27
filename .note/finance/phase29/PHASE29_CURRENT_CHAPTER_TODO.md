@@ -2,11 +2,11 @@
 
 ## 진행 상태
 
-- `implementation_complete`
+- `complete`
 
 ## 검증 상태
 
-- `manual_qa_pending`
+- `manual_qa_completed`
 
 ## 현재 목표
 
@@ -55,7 +55,7 @@ current candidate registry에 남은 후보를 검토 보드로 읽고,
 - `completed` finance refinement hygiene check
 - `completed` `git diff --check`
 - `completed` GTAA current / near-miss registry row -> compare prefill smoke
-- `pending` targeted manual UI validation
+- `completed` targeted manual UI validation
 
 ## 4. Documentation Sync
 
@@ -72,10 +72,11 @@ current candidate registry에 남은 후보를 검토 보드로 읽고,
 
 ## 현재 판단
 
-Phase 29는 implementation complete 상태다.
+Phase 29는 complete 상태다.
 첫 번째 작업 단위인 `Candidate Review Board`와
 두 번째 작업 단위인 `Result To Candidate Review Handoff`,
 세 번째 작업 단위인 `Candidate Review Note`,
 네 번째 작업 단위인 `Review Note To Registry Draft`는 구현됐다.
-다음 단계는 `.note/finance/phase29/PHASE29_TEST_CHECKLIST.md` 기준 사용자 QA다.
-사용자 QA 완료 전에는 Phase 30으로 넘어가지 않는다.
+`.note/finance/phase29/PHASE29_TEST_CHECKLIST.md` 기준 사용자 QA도 완료됐다.
+다음 단계는 Phase 30을 바로 기능 구현으로 열기보다,
+먼저 Phase 29 이후의 사용 흐름 재정렬과 `backtest.py` 리팩토링 경계 검토를 진행하는 것이다.

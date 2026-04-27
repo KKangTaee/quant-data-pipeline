@@ -2663,3 +2663,29 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Follow-up:
   - Phase 29 QA에서는 `Load Recommended Candidates`와 `Load Lower-MDD Alternatives`가 GTAA 후보를 경고 없이 compare form에 채우는지 확인한다
   - 향후 GTAA 외 신규 전략 후보도 compare로 보내려면 registry row에 explicit `compare_prefill` 또는 변환 가능한 `contract`를 남기는 규칙이 필요하다
+
+### 2026-04-28 - Phase 30 전에 product-flow 이해와 리팩토링 경계를 먼저 재정렬한다
+- User request:
+  - Phase 29 QA 완료 후, Candidate Review / Review Note / Registry Draft 같은 새 기능의 실제 사용 이유가 흐려졌고, `backtest.py`가 16k lines 이상으로 커져 리팩토링이 필요해 보인다고 문제 제기함
+- Interpreted goal:
+  - 최종 목표인 실전 포트폴리오 및 가이드 제시까지 가기 전에, 만드는 사람도 전체 흐름을 충분히 이해하고 갈 수 있는 합리적 진행 순서를 정해야 함
+- Analysis result:
+  - Phase 30을 기능 구현으로 바로 진행하면 Portfolio Proposal이 Candidate Review / Pre-Live 위에 또 얹혀 이해 부채와 UI 복잡도가 커질 위험이 있다
+  - 반대로 지금 전면 리팩토링만 시작하면 어떤 product boundary를 기준으로 나눌지 불명확해지고, 투자 후보 / 포트폴리오 제안 목표와 멀어질 수 있다
+  - 가장 합리적인 방향은 Phase 29 closeout 후 곧바로 Phase 30 구현을 시작하지 않고, 짧은 `Phase 30 준비 작업`을 먼저 두는 것이다
+  - 준비 작업의 핵심은 `테스트에서 상용화 후보 검토까지 사용하는 흐름`을 Phase 29 이후 기준으로 다시 쓰고, `Backtest Run -> Candidate Draft -> Candidate Review Note -> Current Candidate Registry -> Compare / Pre-Live -> Portfolio Proposal -> Live Readiness` 흐름을 canonical product map으로 고정하는 것이다
+  - 리팩토링은 stop-the-world 방식이 아니라 이 product map에 맞춰 `Candidate Review`, `Pre-Live Review`, `History`, `Compare / Weighted / Saved Portfolio`, `Single Strategy latest result`, registry persistence helper를 점진적으로 분리하는 방식이 적절하다
+- Follow-up:
+  - Phase 29 closeout 때 checklist 상태 불일치를 정리하고, Phase 30을 열기 전 첫 작업을 `사용 흐름 재정렬 + backtest.py module boundary plan`으로 잡는 것을 권장한다
+
+### 2026-04-28 - Phase 29 QA 완료에 따라 closeout한다
+- User request:
+  - Phase 29 QA checklist 완료를 선언하고 Phase 29 완료 처리를 요청함
+- Interpreted goal:
+  - Phase 29를 `complete / manual_qa_completed` 상태로 닫고, roadmap / index / phase closeout 문서가 같은 상태를 말하도록 동기화해야 함
+- Analysis result:
+  - Phase 29의 구현 단위인 Candidate Review Board, Result To Candidate Review Handoff, Candidate Review Note, Review Note To Registry Draft는 구현과 QA가 끝난 것으로 처리한다
+  - Phase 29는 투자 승인이나 live trading phase가 아니라 후보 검토 workflow phase로 닫힌다
+  - 다음 단계는 Phase 30 기능 구현 직행이 아니라, Phase 29 이후 기준의 사용 흐름 재정렬과 `backtest.py` 리팩토링 경계 검토를 먼저 하는 것이 안전하다
+- Follow-up:
+  - Phase 30을 열기 전 `테스트에서 상용화 후보 검토까지 사용하는 흐름`을 새 canonical flow로 다시 쓰고, Backtest UI 모듈 분리 계획을 세운다

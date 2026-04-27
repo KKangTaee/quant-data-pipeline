@@ -5,8 +5,8 @@
 이 checklist는 Phase 29에서 추가한 `Candidate Review` 화면이
 current candidate를 검토 보드로 읽고 compare / Pre-Live Review로 자연스럽게 넘기는지 확인하기 위한 문서다.
 
-현재는 Phase 29 first / second / third / fourth work unit QA checklist다.
-이 문서의 항목을 확인한 뒤 다음 작업 단위로 넘어갈지 판단한다.
+이 문서는 Phase 29 first / second / third / fourth work unit QA 완료 기록이다.
+이 문서의 항목은 사용자 QA 완료 기준으로 확인됐다.
 
 ## 사용 방법
 
@@ -69,14 +69,20 @@ current candidate를 검토 보드로 읽고 compare / Pre-Live Review로 자연
 - QA 참고:
   - 기존에는 GTAA sample 후보가 `contract` 정보는 갖고 있어도 compare form으로 옮기는 prefill 변환이 없어 경고가 나올 수 있었다.
   - 현재 기준으로 `Load Recommended Candidates`와 `Load Lower-MDD Alternatives`는 GTAA 후보도 compare form에 채워야 정상이다.
+  - `Load Recommended Candidates`는 GTAA만 따로 불러오는 버튼이 아니라, active `current_candidate` 전체 묶음을 compare form에 채운다.
+    현재 seed 기준 기대 구성은 `Value + Quality + Quality + Value + GTAA` 4개다.
+  - `Load Lower-MDD Alternatives`도 GTAA만 따로 불러오는 버튼이 아니라, active `near_miss` 전체 묶음을 compare form에 채운다.
+    현재 seed 기준 기대 구성은 `Value + Quality + Value + GTAA` 3개다.
+  - `Quality cleaner alternative`는 현재 `near_miss`가 아니라 `scenario`로 기록되어 있으므로
+    `Load Lower-MDD Alternatives`에 포함되지 않는 것이 정상이다.
   - 같은 경고가 다시 나오면 사용자 설정 문제가 아니라, 해당 후보 row에 compare prefill 또는 변환 가능한 contract가 없는 개발/데이터 정합성 이슈로 본다.
 - 체크 항목:
   - [x] `Load Recommended Candidates`가 대표 후보 묶음을 compare form에 채우는 기능으로 이해되는지
   - [x] `Load Lower-MDD Alternatives`가 near-miss 대안을 compare form에 채우는 기능으로 이해되는지
-  - [ ] `Load Recommended Candidates`를 눌렀을 때 GTAA 대표 후보가 경고 없이 compare form에 채워지는지
-  - [ ] `Load Lower-MDD Alternatives`를 눌렀을 때 GTAA lower-MDD 대안 후보가 경고 없이 compare form에 채워지는지
-  - [ ] `Pick Manually`에서 후보를 직접 고르고 `Load Selected Candidates Into Compare`를 누를 수 있는지
-  - [ ] compare panel로 이동한 뒤 `Compare Form Updated`에서 어떤 후보가 채워졌는지 확인할 수 있는지
+  - [x] `Load Recommended Candidates`를 눌렀을 때 GTAA 대표 후보가 경고 없이 compare form에 채워지는지
+  - [x] `Load Lower-MDD Alternatives`를 눌렀을 때 GTAA lower-MDD 대안 후보가 경고 없이 compare form에 채워지는지
+  - [x] `Pick Manually`에서 후보를 직접 고르고 `Load Selected Candidates Into Compare`를 누를 수 있는지
+  - [x] compare panel로 이동한 뒤 `Compare Form Updated`에서 어떤 후보가 채워졌는지 확인할 수 있는지
 
 ## 6. Latest / History -> Candidate Intake Draft 흐름 확인
 
@@ -85,12 +91,12 @@ current candidate를 검토 보드로 읽고 compare / Pre-Live Review로 자연
   - `Backtest > History > Selected History Run > Actions For This History Run`
   - `Backtest > Candidate Review > Candidate Intake Draft`
 - 체크 항목:
-  - [ ] 최신 백테스트 결과에서 `Review As Candidate Draft` 버튼이 보이는지
-  - [ ] 버튼을 누르면 `Candidate Review > Candidate Intake Draft`로 이동하는지
-  - [ ] 초안에 `Suggested Type`, CAGR, MDD, Promotion, Shortlist가 보이는지
-  - [ ] `Data Trust Snapshot`이 함께 보여 결과를 후보로 볼 때 데이터 조건도 같이 확인할 수 있는지
-  - [ ] History run에서도 `Review As Candidate Draft`를 누르면 후보 검토 초안으로 이동하는지
-  - [ ] 후보 검토 초안이 current candidate registry에 자동 저장된 것으로 오해되지 않는지
+  - [x] 최신 백테스트 결과에서 `Review As Candidate Draft` 버튼이 보이는지
+  - [x] 버튼을 누르면 `Candidate Review > Candidate Intake Draft`로 이동하는지
+  - [x] 초안에 `Suggested Type`, CAGR, MDD, Promotion, Shortlist가 보이는지
+  - [x] `Data Trust Snapshot`이 함께 보여 결과를 후보로 볼 때 데이터 조건도 같이 확인할 수 있는지
+  - [x] History run에서도 `Review As Candidate Draft`를 누르면 후보 검토 초안으로 이동하는지
+  - [x] 후보 검토 초안이 current candidate registry에 자동 저장된 것으로 오해되지 않는지
 
 ## 7. Candidate Intake Draft -> Candidate Review Note 저장 확인
 
@@ -98,27 +104,27 @@ current candidate를 검토 보드로 읽고 compare / Pre-Live Review로 자연
   - `Backtest > Candidate Review > Candidate Intake Draft`
   - `Backtest > Candidate Review > Review Notes`
 - 체크 항목:
-  - [ ] `Save As Candidate Review Note` 영역이 보이는지
-  - [ ] `Review Decision`이 후보 등록 검토 / near-miss / scenario / 추가 근거 필요 / reject for now 중 하나로 읽히는지
-  - [ ] `Operator Reason`에 왜 이 판단을 했는지 남길 수 있는지
-  - [ ] `Next Action`에 다음에 무엇을 확인할지 남길 수 있는지
-  - [ ] `Save Candidate Review Note`를 눌렀을 때 current candidate registry 등록이나 투자 승인으로 오해되지 않는지
-  - [ ] 저장 후 `Review Notes` 탭에서 방금 저장한 기록이 표로 보이는지
-  - [ ] `Inspect Candidate Review Note`에서 원본 JSON을 확인할 수 있는지
+  - [x] `Save As Candidate Review Note` 영역이 보이는지
+  - [x] `Review Decision`이 후보 등록 검토 / near-miss / scenario / 추가 근거 필요 / reject for now 중 하나로 읽히는지
+  - [x] `Operator Reason`에 왜 이 판단을 했는지 남길 수 있는지
+  - [x] `Next Action`에 다음에 무엇을 확인할지 남길 수 있는지
+  - [x] `Save Candidate Review Note`를 눌렀을 때 current candidate registry 등록이나 투자 승인으로 오해되지 않는지
+  - [x] 저장 후 `Review Notes` 탭에서 방금 저장한 기록이 표로 보이는지
+  - [x] `Inspect Candidate Review Note`에서 원본 JSON을 확인할 수 있는지
 
 ## 8. Review Note -> Current Candidate Registry Draft 확인
 
 - 확인 위치:
   - `Backtest > Candidate Review > Review Notes`
 - 체크 항목:
-  - [ ] 저장된 review note를 선택하면 `Prepare Current Candidate Registry Row` 영역이 보이는지
-  - [ ] `Registry ID`, `Record Type`, `Strategy Family`, `Strategy Name`, `Candidate Role`, `Title`이 저장 전 필수 정보처럼 읽히는지
-  - [ ] `Record Type`에서 current candidate / near miss / scenario의 차이가 이해되는지
-  - [ ] `Current Candidate Registry Row JSON Preview`에서 저장될 row를 미리 볼 수 있는지
-  - [ ] `Append To Current Candidate Registry` 버튼이 자동 승격이 아니라 명시적 append 동작으로 읽히는지
-  - [ ] `Reject For Now` review note는 registry append가 막히는지
-  - [ ] append 후 Candidate Board에서 새 후보 row가 보이는지
-  - [ ] append 후에도 투자 승인이나 live trading 승인으로 오해되지 않는지
+  - [x] 저장된 review note를 선택하면 `Prepare Current Candidate Registry Row` 영역이 보이는지
+  - [x] `Registry ID`, `Record Type`, `Strategy Family`, `Strategy Name`, `Candidate Role`, `Title`이 저장 전 필수 정보처럼 읽히는지
+  - [x] `Record Type`에서 current candidate / near miss / scenario의 차이가 이해되는지
+  - [x] `Current Candidate Registry Row JSON Preview`에서 저장될 row를 미리 볼 수 있는지
+  - [x] `Append To Current Candidate Registry` 버튼이 자동 승격이 아니라 명시적 append 동작으로 읽히는지
+  - [x] `Reject For Now` review note는 registry append가 막히는지
+  - [x] append 후 Candidate Board에서 새 후보 row가 보이는지
+  - [x] append 후에도 투자 승인이나 live trading 승인으로 오해되지 않는지
 
 ## 9. 문서와 상태 확인
 
@@ -132,9 +138,9 @@ current candidate를 검토 보드로 읽고 compare / Pre-Live Review로 자연
   - `.note/finance/MASTER_PHASE_ROADMAP.md`
   - `.note/finance/FINANCE_DOC_INDEX.md`
 - 체크 항목:
-  - [ ] Phase 29가 최종 투자 승인 phase가 아니라 후보 검토 workflow phase로 설명되는지
-  - [ ] Phase 29 상태가 `implementation_complete / manual_qa_pending`으로 읽히는지
-  - [ ] 다음 단계가 사용자 QA 후 Phase 29 closeout 또는 Phase 30 handoff로 이어지는지
+  - [x] Phase 29가 최종 투자 승인 phase가 아니라 후보 검토 workflow phase로 설명되는지
+  - [x] Phase 29 상태가 closeout 후 `complete / manual_qa_completed`로 정리되는지
+  - [x] 다음 단계가 Phase 30을 바로 구현하기 전 사용 흐름 재정렬 / 리팩토링 경계 검토로 이어지는지
 
 ## 한 줄 판단 기준
 

@@ -4,18 +4,18 @@
 
 이 문서는 Phase 29 `Candidate Review And Recommendation Workflow`의 진행 상황을 정리한다.
 
-현재는 phase closeout 문서가 아니라 implementation handoff summary다.
-사용자 QA가 완료되면 이 문서를 closeout 기준으로 다시 갱신한다.
+현재는 Phase 29 closeout summary다.
+사용자 QA 완료 기준으로 Phase 29를 닫고 다음 단계 준비 방향을 정리한다.
 
 ## 진행 상태
 
-- `implementation_complete`
+- `complete`
 
 ## 검증 상태
 
-- `manual_qa_pending`
+- `manual_qa_completed`
 
-## 이번 phase에서 현재까지 완료한 것
+## 이번 phase에서 완료한 것
 
 ### 1. Candidate Review Board 첫 구현
 
@@ -65,9 +65,10 @@
 - review note를 실제 후보 목록에 남기는 길이 생겼다.
 - 하지만 이 동작도 투자 승인이나 live trading 승인이 아니다.
 
-## 아직 남아 있는 것
+## 사용자 QA 결과
 
-- 사용자 manual UI validation
+- `.note/finance/phase29/PHASE29_TEST_CHECKLIST.md` 기준 manual UI validation 완료
+- Candidate Review Board, Candidate Intake Draft, Review Note, Registry Draft, Compare / Pre-Live handoff가 투자 승인이나 live trading 승인으로 오해되지 않는지 확인 완료
 
 쉽게 말하면:
 
@@ -77,7 +78,9 @@
 
 ## 현재 판단
 
-Phase 29는 implementation complete 상태다.
+Phase 29는 complete 상태다.
 첫 번째 / 두 번째 / 세 번째 / 네 번째 작업 단위는 구현됐고,
-자동 검증도 통과했다.
-남은 단계는 사용자 checklist QA이며, QA 완료 후 Phase 29 closeout 또는 Phase 30 handoff로 넘어간다.
+자동 검증과 사용자 checklist QA도 완료됐다.
+다음 단계는 Phase 30을 곧바로 기능 구현으로 열기 전에,
+Phase 29 이후 기준의 `테스트에서 상용화 후보 검토까지 사용하는 흐름`을 다시 정리하고
+`backtest.py` 리팩토링 경계를 검토하는 준비 작업이다.
