@@ -2689,3 +2689,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 다음 단계는 Phase 30 기능 구현 직행이 아니라, Phase 29 이후 기준의 사용 흐름 재정렬과 `backtest.py` 리팩토링 경계 검토를 먼저 하는 것이 안전하다
 - Follow-up:
   - Phase 30을 열기 전 `테스트에서 상용화 후보 검토까지 사용하는 흐름`을 새 canonical flow로 다시 쓰고, Backtest UI 모듈 분리 계획을 세운다
+
+### 2026-04-28 - Phase 30 첫 작업은 사용 흐름 재정렬과 `backtest.py` 리팩토링 경계다
+- User request:
+  - Phase 29가 마무리되었으니 `사용 흐름 재정렬 + backtest.py 리팩토링 경계 검토`를 진행하자고 요청함
+- Interpreted goal:
+  - Portfolio Proposal 기능을 바로 붙이기 전에, Phase 29 이후의 후보 검토 흐름을 다시 이해 가능하게 만들고 큰 Backtest UI 파일을 어떤 경계로 나눌지 정해야 함
+- Analysis result:
+  - Phase 30을 active로 열되 첫 작업은 기능 구현이 아니라 product-flow reorientation으로 둔다
+  - 기준 흐름은 `Ingestion / Data Trust -> Single Strategy Backtest -> Real-Money Signal -> Hold / Blocker Resolution -> Compare -> Candidate Draft -> Candidate Review Note -> Current Candidate Registry -> Candidate Board / Compare / Pre-Live Review -> Portfolio Proposal -> Live Readiness / Final Approval`이다
+  - `backtest.py` 리팩토링은 stop-the-world 방식이 아니라 Candidate Review, Pre-Live Review, registry helper, History, Saved Portfolio / Weighted Portfolio, result display, strategy forms 순서로 점진 분리하는 것이 안전하다
+  - 실제 Portfolio Proposal 저장소나 UI 구현은 다음 작업 단위에서 계약을 먼저 정한 뒤 진행한다
+- Follow-up:
+  - 다음 작업은 Candidate Review / Pre-Live / registry helper 중 작은 모듈 분리를 먼저 할지, Portfolio Proposal row 계약을 먼저 정의할지 선택한다

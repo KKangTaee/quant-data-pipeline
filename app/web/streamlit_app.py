@@ -2787,7 +2787,8 @@ def _render_guides_page() -> None:
         st.info(
             "`Real-Money`는 개별 백테스트 실행에 붙는 **검증 신호**입니다. "
             "거래비용, benchmark, drawdown, ETF 운용 가능성 같은 위험 신호를 보여줍니다. "
-            "반면 `Pre-Live 운영 점검`은 그 신호를 보고 paper tracking, watchlist, 보류, 재검토를 어떻게 기록하고 운영할지 정하는 **별도 운영 절차**입니다."
+            "반면 `Candidate Review`와 `Pre-Live 운영 점검`은 그 신호를 보고 "
+            "후보로 남길지, 비교할지, paper tracking / watchlist / 보류 / 재검토로 둘지 정하는 **별도 운영 절차**입니다."
         )
 
         step_rows = [
@@ -2805,9 +2806,9 @@ def _render_guides_page() -> None:
             {
                 "title": "2단계. Single Strategy로 전략 하나를 먼저 읽기",
                 "path": "Backtest > Single Strategy",
-                "goal": "전략 하나의 기본 성과, 계약, meta를 먼저 이해합니다.",
+                "goal": "전략 하나의 기본 성과, 계약, data trust, meta를 먼저 이해합니다.",
                 "check": [
-                    "`Summary`, `Equity Curve`, `Execution Context`를 먼저 확인",
+                    "`Summary`, `Equity Curve`, `Data Trust Summary`, `Execution Context`를 먼저 확인",
                     "필요한 universe / factor / overlay / real-money contract를 입력",
                     "single run 기준으로 숫자와 meta가 자연스러운지 확인",
                 ],
@@ -2838,46 +2839,83 @@ def _render_guides_page() -> None:
             {
                 "title": "5단계. Compare로 후보를 서로 비교",
                 "path": "Backtest > Compare & Portfolio Builder",
-                "goal": "여러 전략을 한 번에 놓고 shortlist / deployment 상태를 비교합니다.",
+                "goal": "여러 전략이나 registry 후보를 한 번에 놓고 shortlist / deployment / data trust 상태를 비교합니다.",
                 "check": [
                     "`Strategy Highlights`에서 전략별 상태를 한 줄씩 비교",
+                    "`Data Trust`에서 결과 기간과 가격 최신성 차이 확인",
                     "`Focused Strategy > Real-Money Contract`로 한 전략씩 깊게 읽기",
-                    "single run에서 괜찮아 보이던 전략이 compare에서도 유지되는지 확인",
+                    "`Candidate Review > Send To Compare`에서 보낸 후보 묶음이 의도대로 채워졌는지 확인",
                 ],
-                "next_step": "여기서 shortlist 후보를 1~3개 정도로 좁히는 흐름이 자연스럽습니다.",
+                "next_step": "여기서 후보를 좁힌 뒤, 좋은 run이나 비교할 만한 run은 Candidate Draft로 넘겨 검토합니다.",
             },
             {
-                "title": "6단계. History와 backtest report로 재현 가능하게 남기기",
-                "path": "Backtest > History / .note/finance/backtest_reports/",
-                "goal": "좋았던 run을 다시 재현할 수 있게 남깁니다.",
+                "title": "6단계. Candidate Draft로 먼저 읽기",
+                "path": "Backtest > Latest Backtest Run / History > Review As Candidate Draft",
+                "goal": "좋아 보이는 결과를 바로 후보 registry에 넣지 않고, 먼저 후보 검토 초안으로 읽습니다.",
                 "check": [
-                    "`Load Into Form`으로 입력값이 잘 복원되는지 확인",
-                    "좋은 후보는 backtest report 문서로 남기기",
-                    "phase 문서와 결과 문서를 혼동하지 않고 정리하기",
+                    "`Review As Candidate Draft`로 `Candidate Review > Candidate Intake Draft` 이동",
+                    "`Suggested Type`, CAGR, MDD, Promotion, Shortlist 확인",
+                    "`Data Trust Snapshot`으로 결과 해석 조건 확인",
                 ],
-                "next_step": "재현 가능한 run만 다음 probation 후보로 넘기는 편이 안전합니다.",
+                "next_step": "Candidate Draft는 저장 전 초안입니다. 후보로 남길지 판단하려면 Review Note를 먼저 남깁니다.",
             },
             {
-                "title": "7단계. Pre-Live 운영 점검으로 후보 관리",
-                "path": "Phase 25 / Paper Run Checklist / Monitoring Note",
-                "goal": "Real-Money 검증 신호를 바탕으로 paper tracking, watchlist, 보류, 재검토 같은 운영 행동을 기록합니다.",
+                "title": "7단계. Candidate Review Note로 판단을 남기기",
+                "path": "Backtest > Candidate Review > Candidate Intake Draft",
+                "goal": "초안을 보고 후보 등록 검토, near-miss, scenario, 추가 근거 필요, reject 판단을 기록합니다.",
                 "check": [
-                    "`Shortlist = watchlist / paper_probation / small_capital_trial` 확인",
-                    "`Monitoring Focus`, `Monitoring Breach Signals` 확인",
-                    "paper run 기간, 재검토 날짜, 중단 조건, 재수집/재검증 필요 항목 기록",
+                    "`Review Decision` 선택",
+                    "`Operator Reason`에 왜 그렇게 판단했는지 기록",
+                    "`Next Action`에 다음에 확인할 일을 기록",
+                    "`Save Candidate Review Note`가 registry 등록이나 투자 승인이 아님을 확인",
                 ],
-                "next_step": "이 단계는 Phase 25에서 본격화할 운영 절차입니다. Real-Money 탭의 신호를 받아서 실제 운영 기록으로 남기는 역할입니다.",
+                "next_step": "후보로 남길 가치가 있으면 Review Notes에서 registry row 초안을 확인합니다.",
             },
             {
-                "title": "8단계. 실전 후보 판단은 마지막에 보수적으로",
-                "path": "Real-Money 검증 신호 + Pre-Live 운영 점검 종합",
-                "goal": "좋은 숫자보다, 실전 후보로 계속 관찰할지 또는 보류할지를 마지막으로 종합 판단합니다.",
+                "title": "8단계. Current Candidate Registry에 명시적으로 남기기",
+                "path": "Backtest > Candidate Review > Review Notes > Prepare Current Candidate Registry Row",
+                "goal": "Review Note 중 실제 후보 목록에 남길 것만 current candidate registry row로 append합니다.",
                 "check": [
-                    "`Promotion = real_money_candidate`에 가까운지",
-                    "`Shortlist`가 `paper_probation` 이상인지",
-                    "Pre-Live 운영 기록에서 paper run / monitoring 조건이 명확한지",
+                    "`Registry ID`, `Record Type`, `Strategy Family`, `Candidate Role` 확인",
+                    "`Current Candidate Registry Row JSON Preview`에서 저장될 row 확인",
+                    "`Append To Current Candidate Registry`가 자동 승격이 아니라 명시적 저장인지 확인",
                 ],
-                "next_step": "조건이 좋더라도 바로 full live가 아니라, paper run과 정기 review를 먼저 붙이는 것이 기본입니다.",
+                "next_step": "Registry에 남긴 후보는 Candidate Board에서 다시 읽고 Compare 또는 Pre-Live Review로 넘깁니다.",
+            },
+            {
+                "title": "9단계. Candidate Board에서 후보를 운영 대상으로 읽기",
+                "path": "Backtest > Candidate Review > Candidate Board / Inspect Candidate / Send To Compare",
+                "goal": "후보를 성과 순위표가 아니라 current anchor, near miss, scenario 역할로 읽습니다.",
+                "check": [
+                    "`Why It Exists`로 후보가 왜 남아 있는지 확인",
+                    "`Suggested Next Step`으로 compare 또는 Pre-Live로 보낼지 판단",
+                    "`Open Candidate In Pre-Live Review`가 저장/승인 버튼이 아님을 확인",
+                    "`Send To Compare`로 후보 묶음을 다시 비교",
+                ],
+                "next_step": "운영 관찰이 필요하면 Pre-Live Review에서 paper / watchlist / hold 상태를 기록합니다.",
+            },
+            {
+                "title": "10단계. Pre-Live 운영 점검으로 후보 관리",
+                "path": "Backtest > Pre-Live Review",
+                "goal": "Real-Money 검증 신호와 후보 registry를 바탕으로 paper tracking, watchlist, 보류, 재검토 같은 운영 행동을 기록합니다.",
+                "check": [
+                    "`Candidate To Review`가 의도한 후보인지 확인",
+                    "`Pre-Live Status`가 paper tracking / watchlist / hold / reject / re-review 중 무엇인지 확인",
+                    "`Operator Reason`, `Next Action`, `Review Date`, `Tracking Plan` 확인",
+                    "`Save Pre-Live Record`가 live trading 승인이 아님을 확인",
+                ],
+                "next_step": "Pre-Live 기록은 포트폴리오 제안이나 paper monitoring으로 이어질 수 있지만, 아직 실제 돈 투입 승인은 아닙니다.",
+            },
+            {
+                "title": "11단계. Portfolio Proposal과 Live Readiness는 별도 단계로",
+                "path": "Phase 30 이후",
+                "goal": "후보 여러 개를 포트폴리오 제안으로 묶되, 투자 승인과 분리해서 검토합니다.",
+                "check": [
+                    "후보별 역할, 비중, 위험 기여도를 설명할 수 있는지",
+                    "각 후보의 Data Trust / Real-Money / Pre-Live 상태를 같이 볼 수 있는지",
+                    "Live Readiness / Final Approval은 별도 phase에서 다룰 수 있게 경계를 유지하는지",
+                ],
+                "next_step": "Phase 30은 portfolio proposal / monitoring surface를 만드는 단계이고, 실제 투자 승인 단계는 그 이후에 별도로 검토합니다.",
             },
         ]
 

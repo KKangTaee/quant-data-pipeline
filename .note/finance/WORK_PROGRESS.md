@@ -2003,3 +2003,18 @@ Detailed historical logs were archived on `2026-04-13`.
   - `git diff --check` passed
 - Durable takeaway:
   - Phase 29 is closed. The next step is not immediate feature expansion; it is to make the post-Phase-29 operating flow understandable and plan a gradual Backtest UI refactor boundary.
+
+### 2026-04-28
+- Opened Phase 30 and completed the first product-flow / refactor-boundary work unit.
+- Changed:
+  - bootstrapped the Phase 30 document bundle for `Portfolio Proposal And Pre-Live Monitoring Surface`
+  - updated the main Guide's `테스트에서 상용화 후보 검토까지 사용하는 흐름` to the post-Phase-29 flow:
+    Data Trust -> Single Strategy -> Real-Money Signal -> Compare -> Candidate Draft -> Candidate Review Note -> Current Candidate Registry -> Candidate Board / Pre-Live -> Portfolio Proposal -> Live Readiness
+  - documented the `backtest.py` refactor boundary in `WEB_BACKTEST_UI_FLOW.md` and the Phase 30 first work-unit note
+  - synced Phase 30 status in roadmap, document index, comprehensive analysis, TODO, completion summary, and checklist draft
+- Validation:
+  - `python3 -m py_compile app/web/streamlit_app.py app/web/pages/backtest.py` passed
+  - `python3 plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py` passed after root logs were reviewed and updated
+  - `git diff --check` passed
+- Durable takeaway:
+  - Phase 30 is active, but not yet in Portfolio Proposal implementation. The first completed unit makes the user flow understandable again and sets a conservative boundary for future `backtest.py` module extraction.

@@ -25,6 +25,57 @@ Backtest page는 현재 다섯 panel 중심으로 본다.
 - `History`: 저장된 실행 기록을 inspect하고, 가능한 경우 run again 또는 load into form을 수행한다.
 - `Pre-Live Review`: current candidate를 실전 전 운영 상태로 기록하고 저장된 Pre-Live record를 확인한다.
 
+## Phase 30 기준 제품 흐름
+
+Phase 30 첫 작업 이후 사용자-facing Guide는 아래 흐름을 기준으로 읽는다.
+
+```text
+Ingestion / Data Trust
+  -> Single Strategy Backtest
+  -> Real-Money Signal
+  -> Hold / Blocker Resolution
+  -> Compare
+  -> Candidate Draft
+  -> Candidate Review Note
+  -> Current Candidate Registry
+  -> Candidate Board / Compare / Pre-Live Review
+  -> Portfolio Proposal
+  -> Live Readiness / Final Approval
+```
+
+구분:
+
+- `Candidate Draft`는 latest run 또는 history run을 후보처럼 읽는 저장 전 초안이다.
+- `Candidate Review Note`는 사람이 판단과 next action을 남기는 기록이다.
+- `Current Candidate Registry`는 후보로 남기기로 한 row의 저장소다.
+- `Pre-Live Review`는 실제 돈 없이 paper / watchlist / hold / re-review 상태를 기록하는 운영 단계다.
+- `Portfolio Proposal`은 후보 묶음 제안이며, live trading approval이 아니다.
+- `Live Readiness / Final Approval`은 Phase 30 이후 별도 phase 후보로 남긴다.
+
+## `backtest.py` 리팩토링 경계
+
+현재 `app/web/pages/backtest.py`는 Backtest page 대부분을 담고 있으며,
+2026-04-28 기준 16k lines 이상이다.
+기능을 바로 크게 옮기기보다 아래 순서로 제품 경계가 분명한 부분부터 나눈다.
+
+| 우선순위 | 분리 후보 | 대표 책임 | 이유 |
+|---|---|---|---|
+| 1 | Candidate Review module | Candidate Board, Intake Draft, Review Notes, registry draft UI | Phase 29 기능 묶음이 독립적이고 `CANDIDATE_REVIEW_NOTES.jsonl` 경계가 분명하다 |
+| 2 | Pre-Live Review module | Pre-Live draft, status / tracking plan, registry inspect | `PRE_LIVE_CANDIDATE_REGISTRY.jsonl` 경계가 분명하다 |
+| 3 | Candidate registry helpers | current candidate load / append / compare prefill conversion | Candidate Review / Compare / Pre-Live가 공통으로 쓴다 |
+| 4 | History module | run history display, selected record, run again, load into form | `BACKTEST_RUN_HISTORY.jsonl` inspect / replay 책임이 크다 |
+| 5 | Saved Portfolio / Weighted module | saved portfolio display, replay, weighted builder/result | Phase 30 portfolio proposal과 이어질 가능성이 높다 |
+| 6 | Result display helpers | latest result, charts, data trust, real-money details | 공용 display helper가 많지만 workflow module 안정화 뒤가 안전하다 |
+| 7 | Strategy forms | strategy-specific form rendering and state keys | 가장 크지만 state key와 form semantics가 많아 가장 나중에 신중히 분리한다 |
+
+분리 원칙:
+
+- 먼저 함수 이동만 하고 behavior를 바꾸지 않는다.
+- module split 후에는 `python3 -m py_compile app/web/pages/backtest.py app/web/streamlit_app.py`를 기본 확인한다.
+- Streamlit session state key는 이름을 바꾸지 않는 것을 기본으로 한다.
+- registry file path와 append-only semantics는 helper 이동 후에도 유지한다.
+- 한 번에 여러 workflow를 옮기지 않는다.
+
 ## Single Strategy 흐름
 
 ```text
