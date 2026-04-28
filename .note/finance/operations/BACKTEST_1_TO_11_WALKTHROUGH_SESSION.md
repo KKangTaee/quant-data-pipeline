@@ -53,6 +53,26 @@
 다만 현재 실습 후보인 `GTAA Balanced Top-2` registry 계약은 `Interval = 4`이므로,
 후보의 cadence를 그대로 맞춘 Compare smoke에서는 Equal Weight도 `Rebalance Interval = 4`로 실행했다.
 
+### Compare에서 interval을 꼭 맞춰야 하나
+
+원칙은 "무엇을 비교하려는가"에 따라 다르다.
+
+| 비교 목적 | interval 처리 | 해석 |
+|---|---|---|
+| 같은 cadence에서 전략 로직 차이를 비교 | 가능하면 같은 interval로 맞춘다 | 이번 GTAA 실습 smoke처럼 GTAA, Equal Weight, GRS, Risk Parity를 모두 `4`로 둔 경우 |
+| 후보의 실제 운용 계약끼리 비교 | 각 후보의 원래 interval을 유지할 수 있다 | 단, 결과 차이에 strategy logic뿐 아니라 cadence 차이도 섞였다고 표시해야 한다 |
+| 월간 benchmark와 비교 | benchmark는 `1`을 쓸 수 있다 | `option=month_end`에서 `1`은 매월 / 대략 4주 cadence다 |
+
+5단계에서 처음 후보를 확인할 때는 보통
+기간, timeframe, option, universe, Real-Money / guardrail 해석 기준을 먼저 맞춘다.
+그 다음 interval은 아래 둘 중 하나로 선택한다.
+
+- **cadence-matched compare**:
+  후보가 `Interval = 4`라면 비교 전략도 `4`로 맞춰 전략 로직 차이를 본다.
+- **benchmark compare**:
+  Equal Weight를 "월간 시장 기준"으로 두고 싶다면 `Rebalance Interval = 1`을 쓴다.
+  이때는 후보와 benchmark의 cadence가 다르다고 Review Note에 남긴다.
+
 ## 이 세션에서 정리한 질문과 답
 
 ### Risk-Off 후보군 해석

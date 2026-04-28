@@ -3042,3 +3042,17 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Guides, Equal Weight input help, walkthrough 문서에 이 구분을 추가했다
 - Follow-up:
   - 사용자가 후보 cadence를 맞출지, 월간 benchmark를 둘지에 따라 Equal Weight interval을 `4` 또는 `1`로 선택한다
+
+### 2026-04-29 - Compare에서 interval은 비교 목적에 맞춰 맞추거나 분리한다
+- User request:
+  - 5단계에서 추천한 4개 비교 포트폴리오가 모두 interval `4`인데, 비교할 때 interval도 동일하게 해야 하는지 질문함
+- Interpreted goal:
+  - 5단계 Compare에서 cadence를 통제해야 하는 경우와 benchmark 성격으로 다르게 둘 수 있는 경우를 구분해야 함
+- Analysis result:
+  - 같은 cadence에서 전략 로직 차이를 비교하려면 interval을 맞추는 것이 좋다
+  - 이번 GTAA 실습 smoke는 후보 계약이 `Interval = 4`였기 때문에 Equal Weight, Global Relative Strength, Risk Parity도 `4`로 맞춰 cadence-matched compare로 실행했다
+  - 후보의 실제 운용 계약끼리 비교한다면 각 후보의 원래 interval을 유지해도 되지만, 그 경우 성과 차이에 strategy logic과 cadence 차이가 함께 섞였다고 기록해야 한다
+  - Equal Weight를 월간 / 대략 4주 benchmark로 쓰고 싶다면 `option=month_end`에서 `Rebalance Interval = 1`을 쓰는 것이 맞다
+  - walkthrough 문서에 `cadence-matched compare`와 `benchmark compare`의 차이를 추가했다
+- Follow-up:
+  - 수동 실습에서는 먼저 `Interval = 4`로 후보 cadence를 맞춘 비교를 하고, 필요하면 Equal Weight `1`을 별도 월간 benchmark로 추가 비교한다
