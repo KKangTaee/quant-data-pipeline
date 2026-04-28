@@ -2820,3 +2820,15 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 이 surface는 proposal row나 Pre-Live record를 자동 수정하지 않고, 상태 변경은 `Backtest > Pre-Live Review`에서 별도 저장해야 한다
 - Follow-up:
   - 다음 작업 후보는 paper tracking performance feedback loop 또는 Candidate Review / Pre-Live / History / Saved Portfolio 추가 모듈 분리다
+
+### 2026-04-28 - Phase 30은 paper tracking feedback까지 마무리한 뒤 QA로 가고 리팩토링은 별도 태스크로 분리한다
+- User request:
+  - Phase 30에서 남은 `Paper tracking performance feedback loop`는 마무리하고 QA로 가는 것이 좋은지, `backtest.py` 추가 모듈 분리는 별도 특별 태스크로 빼는 것이 맞는지 확인 요청함
+- Interpreted goal:
+  - Phase 30 closeout 전에 남은 제품 기능과 구조 리팩토링을 같은 phase에 묶을지 분리할지 판단해야 함
+- Analysis result:
+  - `Paper tracking performance feedback loop`는 Portfolio Proposal / Pre-Live Monitoring이라는 Phase 30 목표에 직접 연결되므로 Phase 30 안에서 마무리하는 것이 자연스럽다
+  - Candidate Review / Pre-Live / History / Saved Portfolio 추가 모듈 분리는 제품 기능 완성보다 codebase 구조 개선에 가깝고, 변경 범위가 커질 수 있으므로 Phase 30 QA gate에 섞지 않는 것이 안전하다
+  - 따라서 Phase 30은 paper tracking performance feedback loop를 마지막 기능 단위로 완료한 뒤 checklist QA로 넘기는 것이 적절하다
+- Follow-up:
+  - `backtest.py` 추가 분리는 Phase 30 closeout 이후 별도 special refactor task 또는 다음 지원 트랙으로 열어 진행한다
