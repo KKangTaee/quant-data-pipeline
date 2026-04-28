@@ -171,6 +171,22 @@ benchmark 성격의 Equal Weight, momentum 대안인 Global Relative Strength,
 처음 실습이 너무 느리면 `Risk Parity Trend`를 제외하고,
 `GTAA`, `Equal Weight`, `Global Relative Strength` 세 개만 먼저 비교한다.
 
+### 2026-04-29 실습용 Compare smoke 결과
+
+아래 결과는 위 구성을 `.venv` runtime에서 직접 실행해 확인한 값이다.
+UI에서 다시 실행할 때 DB 상태나 end date가 달라지면 숫자는 달라질 수 있다.
+
+| 역할 | Strategy | CAGR | MDD | End Balance | Promotion | Deployment |
+|---|---|---:|---:|---:|---|---|
+| 기준 후보 | `GTAA Balanced Top-2` | `17.88%` | `-8.39%` | `53,876.9` | `real_money_candidate` | `paper_only` |
+| benchmark 성격 | `Equal Weight Same Universe` | `11.85%` | `-21.26%` | `31,491.0` | `-` | `-` |
+| momentum 대안 | `Global Relative Strength Same Universe` | `1.05%` | `-22.45%` | `11,133.4` | `hold` | `blocked` |
+| risk-balanced 대안 | `Risk Parity Trend Default Universe` | `1.43%` | `-33.07%` | `11,537.3` | `hold` | `blocked` |
+
+`GTAA`를 6단계 후보로 선택했을 때 smoke 기준 Draft Score는 `9.0 / 10`,
+판정은 `6단계 Candidate Draft 조건부 진행 가능`이었다.
+조건부가 된 이유는 Review Note에 같이 남길 warning이 1개 있었기 때문이다.
+
 ## 이 세션에서 추가된 일반 UI / Guide 보조 기능
 
 아래 항목은 Phase 30 QA 항목이 아니라,

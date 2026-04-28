@@ -2222,3 +2222,12 @@ Detailed historical logs were archived on `2026-04-13`.
   - synced the web backtest UI flow, work log, and question log without touching Phase 30 QA docs
 - Durable takeaway:
   - Step 5 now has a visible stop/go signal for entering step 6, mirroring the earlier 4->5 readiness box.
+
+### 2026-04-29
+- Ran a runtime smoke for the walkthrough's step-5 Compare setup.
+- Result:
+  - compared GTAA Balanced Top-2, Equal Weight same universe, Global Relative Strength same universe, and Risk Parity Trend default universe
+  - GTAA Balanced Top-2 remained the strongest candidate in the smoke run with CAGR 17.88% and MDD -8.39%
+  - the new Candidate Draft readiness evaluation returned `9.0 / 10` and `6단계 Candidate Draft 조건부 진행 가능`
+- Durable takeaway:
+  - The walkthrough now has a concrete compare set and expected smoke result for the user's manual test.

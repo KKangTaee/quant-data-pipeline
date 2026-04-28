@@ -3002,3 +3002,15 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 실습용 비교 구성은 GTAA Balanced Top-2, Equal Weight same universe, Global Relative Strength same universe, 선택적으로 Risk Parity Trend로 정리했다
 - Follow-up:
   - 사용자는 해당 비교 구성을 UI에서 실행한 뒤 Draft Score와 막는 항목을 보고 6단계 진입 여부를 판단한다
+
+### 2026-04-29 - GTAA 실습용 Compare smoke 결과를 남긴다
+- User request:
+  - 6단계 진입 평가 기능을 만든 뒤, 실전 테스트에서 어떤 비교 포트폴리오를 썼는지 알 수 있어야 한다고 요청함
+- Interpreted goal:
+  - 사용자가 같은 compare 구성을 UI에서 재현할 수 있도록 실제 smoke에 사용한 전략과 핵심 결과를 별도 walkthrough 문서에 남긴다
+- Analysis result:
+  - GTAA Balanced Top-2, Equal Weight same universe, Global Relative Strength same universe, Risk Parity Trend default universe를 같은 기간으로 실행했다
+  - GTAA Balanced Top-2는 CAGR 17.88%, MDD -8.39%, Promotion `real_money_candidate`, Deployment `paper_only`로 가장 강한 후보로 남았다
+  - 새 Draft Score는 `9.0 / 10`, 판정은 `6단계 Candidate Draft 조건부 진행 가능`으로 계산됐다
+- Follow-up:
+  - UI 수동 테스트에서는 같은 비교 구성을 재현하고, `Send Selected Strategy To Candidate Draft`로 6단계 이동을 확인한다
