@@ -3056,3 +3056,17 @@ Detailed historical analysis was archived on `2026-04-13`.
   - walkthrough 문서에 `cadence-matched compare`와 `benchmark compare`의 차이를 추가했다
 - Follow-up:
   - 수동 실습에서는 먼저 `Interval = 4`로 후보 cadence를 맞춘 비교를 하고, 필요하면 Equal Weight `1`을 별도 월간 benchmark로 추가 비교한다
+
+### 2026-04-29 - Candidate Draft 점수와 Data Trust gate를 분리한다
+- User request:
+  - `Data Trust hard blocker cap = 6.4 / 10`을 점수에 섞지 말고 경고로 구별하는 것이 어떠냐고 제안함
+- Interpreted goal:
+  - 사용자가 Draft Score를 전략/비교 근거의 강도로 읽고, Data Trust 문제는 별도 gate로 확인할 수 있어야 함
+- Analysis result:
+  - `6단계 Candidate Draft 진입 평가`에서 hard `6.4` score cap을 제거했다
+  - 요청 종료일보다 실제 결과 종료일이 1-2일 짧은 케이스는 `Data Trust WARNING`으로 표시하고, 조건부로 Candidate Draft 이동이 가능하게 했다
+  - 가격 최신성 error 또는 실제 결과 기간이 31일 넘게 비는 경우는 `Data Trust BLOCKED`로 유지한다
+  - UI에는 `Draft Score` 옆에 `Data Trust` gate metric을 추가했다
+  - 점수 계산표에는 Data Trust 점수를 남기되, gate 상태는 별도 warning/error 메시지로 보여준다
+- Follow-up:
+  - 사용자는 `Draft Score`와 `Data Trust` gate를 함께 보고, warning이면 Review Note에 근거를 남긴 뒤 6단계로 넘긴다

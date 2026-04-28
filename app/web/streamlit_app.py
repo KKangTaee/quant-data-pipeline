@@ -3158,8 +3158,8 @@ def _render_guides_page() -> None:
                     },
                     {
                         "확인 항목": "Data Trust",
-                        "6단계 진행 가능": "선택 후보의 실제 결과 기간과 가격 최신성이 해석 가능한 상태",
-                        "멈춰야 하는 경우": "가격 최신성 error, 결과 기간 단축, excluded / malformed ticker가 핵심 해석을 막음",
+                        "6단계 진행 가능": "선택 후보의 Data Trust가 `OK` 또는 Review Note에 남길 수 있는 `WARNING` 상태",
+                        "멈춰야 하는 경우": "가격 최신성 error, 결과 기간이 크게 비는 경우처럼 Data Trust가 `BLOCKED` 상태",
                     },
                     {
                         "확인 항목": "Real-Money Gate",
@@ -3179,8 +3179,8 @@ def _render_guides_page() -> None:
                 "상대 비교 근거가 있으면 6단계 Candidate Draft로 넘길 수 있습니다."
             )
             st.warning(
-                "6단계 진입은 후보 검토 초안으로 보내는 것일 뿐, "
-                "current candidate registry 저장이나 Pre-Live 승인과는 분리됩니다."
+                "Data Trust warning은 Draft Score를 강제로 cap하지 않고 별도 gate로 표시합니다. "
+                "6단계 진입은 후보 검토 초안으로 보내는 것일 뿐, current candidate registry 저장이나 Pre-Live 승인과는 분리됩니다."
             )
 
     st.markdown("### 문서와 파일")

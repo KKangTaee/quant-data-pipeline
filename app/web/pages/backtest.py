@@ -4467,12 +4467,17 @@ def _build_compare_data_trust_assessment(bundle: dict[str, Any]) -> dict[str, An
         and pd.notna(requested_end_ts)
         and actual_end_ts.date() < requested_end_ts.date()
     )
+    shortened_days = (
+        (requested_end_ts.date() - actual_end_ts.date()).days
+        if period_shortened
+        else 0
+    )
 
     reasons: list[str] = []
     if freshness_status == "error":
         reasons.append("가격 최신성 error")
     if period_shortened:
-        reasons.append("실제 결과 종료일이 요청 종료일보다 짧음")
+        reasons.append(f"실제 결과 종료일이 요청 종료일보다 {shortened_days}일 짧음")
     if freshness_status == "warning":
         reasons.append("가격 최신성 warning")
     if excluded_tickers:
@@ -4482,22 +4487,40 @@ def _build_compare_data_trust_assessment(bundle: dict[str, Any]) -> dict[str, An
     if warnings:
         reasons.append(f"warning {len(warnings)}개")
 
-    if freshness_status == "error" or period_shortened:
+    data_blocked = freshness_status == "error" or shortened_days > 31
+    data_warning = (
+        period_shortened
+        or freshness_status == "warning"
+        or bool(excluded_tickers)
+        or bool(malformed_price_rows)
+        or bool(warnings)
+    )
+
+    if data_blocked:
         score = 0.0
-        judgment = "데이터 신뢰성 blocker"
-    elif freshness_status == "warning" or excluded_tickers or malformed_price_rows or warnings:
+        judgment = "Data Trust blocked"
+        gate_status = "blocked"
+        tone = "error"
+    elif data_warning:
         score = 1.0
-        judgment = "진행 가능하지만 Data Trust 확인 필요"
+        judgment = "Data Trust warning"
+        gate_status = "warning"
+        tone = "warning"
     else:
         score = 2.0
-        judgment = "눈에 띄는 Data Trust 이슈 없음"
+        judgment = "Data Trust OK"
+        gate_status = "ok"
+        tone = "success"
 
     return {
         "score": score,
         "judgment": judgment,
+        "gate_status": gate_status,
+        "tone": tone,
         "reasons": reasons,
         "requested_end": requested_end,
         "actual_end": actual_end,
+        "shortened_days": shortened_days,
     }
 
 
@@ -4569,7 +4592,13 @@ def _build_candidate_draft_readiness_evaluation(
     )
 
     if selected_bundle is None:
-        data_assessment = {"score": 0.0, "judgment": "선택 후보 없음", "reasons": ["선택 후보 없음"]}
+        data_assessment = {
+            "score": 0.0,
+            "judgment": "선택 후보 없음",
+            "gate_status": "blocked",
+            "tone": "error",
+            "reasons": ["선택 후보 없음"],
+        }
         real_money_assessment = {"score": 0.0, "ready": False, "hard_blocked": True, "judgment": "선택 후보 없음", "reasons": []}
         relative_evidence = {
             "score": 0.0,
@@ -4593,25 +4622,25 @@ def _build_candidate_draft_readiness_evaluation(
         + float(relative_evidence["score"]),
         1,
     )
-    hard_stop = (
+    data_gate_status = str(data_assessment.get("gate_status") or "ok").strip().lower()
+    blocking_gate = (
         compare_score < 2.0
-        or float(data_assessment["score"]) == 0.0
+        or data_gate_status == "blocked"
         or bool(real_money_assessment.get("hard_blocked"))
         or float(relative_evidence["score"]) == 0.0
     )
-    if hard_stop:
-        score = min(score, 6.4)
     clean_pass = (
         score >= 8.0
         and compare_score == 2.0
         and float(data_assessment["score"]) == 2.0
+        and data_gate_status == "ok"
         and bool(real_money_assessment.get("ready"))
         and float(relative_evidence["score"]) >= 2.0
     )
     conditional_pass = (
         score >= 6.5
         and compare_score >= 1.0
-        and float(data_assessment["score"]) >= 1.0
+        and data_gate_status in {"ok", "warning"}
         and bool(real_money_assessment.get("ready"))
         and float(relative_evidence["score"]) >= 1.0
     )
@@ -4632,7 +4661,7 @@ def _build_candidate_draft_readiness_evaluation(
     blocking_reasons: list[str] = []
     if compare_score < 2.0:
         blocking_reasons.append(compare_judgment)
-    if float(data_assessment["score"]) == 0.0:
+    if data_gate_status == "blocked":
         blocking_reasons.extend(data_assessment.get("reasons") or [str(data_assessment.get("judgment"))])
     if real_money_assessment.get("hard_blocked"):
         blocking_reasons.extend(real_money_assessment.get("reasons") or [str(real_money_assessment.get("judgment"))])
@@ -4640,7 +4669,7 @@ def _build_candidate_draft_readiness_evaluation(
         blocking_reasons.append(str(relative_evidence.get("judgment")))
 
     review_reasons: list[str] = []
-    if float(data_assessment["score"]) == 1.0:
+    if data_gate_status == "warning":
         review_reasons.extend(data_assessment.get("reasons") or [str(data_assessment.get("judgment"))])
     if float(relative_evidence["score"]) in {1.0, 2.0}:
         review_reasons.append(str(relative_evidence.get("judgment")))
@@ -4678,6 +4707,14 @@ def _build_candidate_draft_readiness_evaluation(
         "tone": tone,
         "next_action": next_action,
         "can_send_to_candidate_draft": clean_pass or conditional_pass,
+        "data_trust_gate": {
+            "status": data_gate_status,
+            "tone": data_assessment.get("tone") or "success",
+            "judgment": data_assessment.get("judgment"),
+            "reasons": data_assessment.get("reasons") or [],
+            "requested_end": data_assessment.get("requested_end"),
+            "actual_end": data_assessment.get("actual_end"),
+        },
         "criteria_rows": criteria_rows,
         "rank_rows": relative_evidence.get("rank_rows") or [],
         "overview_rows": relative_evidence.get("overview_rows") or [],
@@ -4723,11 +4760,16 @@ def _render_candidate_draft_readiness_box(bundles: list[dict[str, Any]]) -> None
         )
         score = float(evaluation["score"])
         tone = str(evaluation["tone"])
+        data_gate = dict(evaluation.get("data_trust_gate") or {})
+        data_gate_status = str(data_gate.get("status") or "-").upper()
 
-        metric_cols = st.columns([0.24, 0.28, 0.48], gap="small")
+        metric_cols = st.columns([0.2, 0.2, 0.22, 0.38], gap="small")
         metric_cols[0].metric("Draft Score", f"{score:.1f} / 10")
-        metric_cols[1].metric("Candidate", candidate_strategy)
+        metric_cols[1].metric("Data Trust", data_gate_status)
         with metric_cols[2]:
+            st.caption("Candidate")
+            st.markdown(f"**{candidate_strategy}**")
+        with metric_cols[3]:
             st.caption("판정")
             st.markdown(f"**{evaluation['verdict']}**")
             st.caption("다음 행동")
@@ -4735,7 +4777,7 @@ def _render_candidate_draft_readiness_box(bundles: list[dict[str, Any]]) -> None
         st.progress(max(0.0, min(score / 10.0, 1.0)))
         st.caption(
             "점수 기준: `8.0점 이상`은 깔끔한 6단계 진행, `6.5점 이상`은 조건부 진행, "
-            "그 아래이거나 핵심 blocker가 있으면 Compare에서 더 확인합니다."
+            "그 아래이면 Compare에서 더 확인합니다. Data Trust는 점수를 강제로 깎는 cap이 아니라 별도 gate로 표시합니다."
         )
 
         message = f"{evaluation['verdict']}: Compare 결과, Data Trust, Real-Money gate, 상대 비교 근거를 합산했습니다."
@@ -4745,6 +4787,13 @@ def _render_candidate_draft_readiness_box(bundles: list[dict[str, Any]]) -> None
             st.warning(message)
         else:
             st.error(message)
+
+        if data_gate.get("status") == "warning":
+            warning_text = ", ".join(str(item) for item in data_gate.get("reasons") or []) or str(data_gate.get("judgment"))
+            st.warning(f"Data Trust Warning: {warning_text}")
+        elif data_gate.get("status") == "blocked":
+            blocked_text = ", ".join(str(item) for item in data_gate.get("reasons") or []) or str(data_gate.get("judgment"))
+            st.error(f"Data Trust Blocked: {blocked_text}")
 
         if evaluation["blocking_reasons"]:
             st.caption("막는 항목: " + ", ".join(f"`{item}`" for item in evaluation["blocking_reasons"]))

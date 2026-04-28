@@ -2254,3 +2254,14 @@ Detailed historical logs were archived on `2026-04-13`.
   - updated the walkthrough note to explain why the GTAA smoke used `Rebalance Interval = 4` and when Equal Weight should use `1`
 - Durable takeaway:
   - Operators should use `Rebalance Interval = 1` for a literal monthly / roughly 4-week Equal Weight benchmark under `month_end`; `4` only matches the existing GTAA candidate's slower cadence.
+
+### 2026-04-29
+- Split Compare Candidate Draft score from Data Trust gate warnings.
+- Changed:
+  - removed the hard `6.4 / 10` score cap from the `6단계 Candidate Draft 진입 평가`
+  - changed short actual-end / requested-end mismatches into `Data Trust WARNING` instead of a score-capping blocker
+  - added a visible `Data Trust` gate metric beside `Draft Score`
+  - kept true blocking cases, such as price freshness error or a result period gap over 31 days, as `Data Trust BLOCKED`
+  - synced the walkthrough note, web backtest UI flow doc, and Guides pass-criteria copy
+- Durable takeaway:
+  - Draft Score now reflects compare evidence, while Data Trust tells the operator whether the evidence is clean, warning-level, or blocked.
