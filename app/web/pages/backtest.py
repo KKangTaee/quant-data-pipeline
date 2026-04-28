@@ -4285,6 +4285,511 @@ def _render_next_step_readiness_box(meta: dict[str, Any]) -> None:
             )
 
 
+def _safe_summary_metric(bundle: dict[str, Any], column: str) -> float | None:
+    summary_df = bundle.get("summary_df")
+    if not isinstance(summary_df, pd.DataFrame) or summary_df.empty or column not in summary_df.columns:
+        return None
+    value = pd.to_numeric(pd.Series([summary_df.iloc[0].get(column)]), errors="coerce").iloc[0]
+    if pd.isna(value):
+        return None
+    return float(value)
+
+
+def _compare_strategy_contract_label(bundle: dict[str, Any]) -> str:
+    meta = dict(bundle.get("meta") or {})
+    parts = []
+    if meta.get("preset_name"):
+        parts.append(f"preset={meta.get('preset_name')}")
+    if meta.get("top") is not None:
+        parts.append(f"top={meta.get('top')}")
+    if meta.get("rebalance_interval") is not None:
+        parts.append(f"interval={meta.get('rebalance_interval')}")
+    if meta.get("score_lookback_months"):
+        score_parts = []
+        for month in meta.get("score_lookback_months") or []:
+            month_text = str(month).strip()
+            score_parts.append(month_text if month_text.upper().endswith("M") else f"{month_text}M")
+        parts.append("score=" + "/".join(score_parts))
+    if meta.get("trend_filter_window") is not None:
+        parts.append(f"trend=MA{meta.get('trend_filter_window')}")
+    if meta.get("risk_off_mode"):
+        parts.append(f"risk_off={meta.get('risk_off_mode')}")
+    return " / ".join(parts) if parts else "-"
+
+
+def _build_compare_strategy_overview_rows(bundles: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    data_trust_rows = {
+        str(row.get("Strategy") or ""): row
+        for row in _build_strategy_data_trust_rows(bundles)
+    }
+    rows: list[dict[str, Any]] = []
+    for bundle in bundles:
+        strategy_name = str(bundle.get("strategy_name") or "-")
+        meta = dict(bundle.get("meta") or {})
+        data_trust = data_trust_rows.get(strategy_name, {})
+        rows.append(
+            {
+                "Strategy": strategy_name,
+                "Contract": _compare_strategy_contract_label(bundle),
+                "End Balance": _safe_summary_metric(bundle, "End Balance"),
+                "CAGR": _safe_summary_metric(bundle, "CAGR"),
+                "MDD": _safe_summary_metric(bundle, "Maximum Drawdown"),
+                "Sharpe": _safe_summary_metric(bundle, "Sharpe Ratio"),
+                "Data Trust": data_trust.get("Interpretation") or "-",
+                "Promotion": meta.get("promotion_decision") or "-",
+                "Deployment": _deployment_readiness_status_value_to_label(meta.get("deployment_readiness_status")),
+            }
+        )
+    return rows
+
+
+def _rank_candidate_metric(
+    metric_rows: list[dict[str, Any]],
+    *,
+    candidate_strategy: str,
+    column: str,
+    higher_is_better: bool = True,
+) -> dict[str, Any]:
+    values = [
+        (str(row.get("Strategy") or ""), row.get(column))
+        for row in metric_rows
+        if row.get(column) is not None and not pd.isna(row.get(column))
+    ]
+    candidate_value = next((value for strategy, value in values if strategy == candidate_strategy), None)
+    if candidate_value is None or not values:
+        return {
+            "rank": None,
+            "count": len(values),
+            "value": candidate_value,
+            "top_half": False,
+        }
+    better_count = sum(
+        1
+        for _, value in values
+        if (float(value) > float(candidate_value) if higher_is_better else float(value) < float(candidate_value))
+    )
+    rank = better_count + 1
+    count = len(values)
+    top_half_limit = max(1, (count + 1) // 2)
+    return {
+        "rank": rank,
+        "count": count,
+        "value": float(candidate_value),
+        "top_half": rank <= top_half_limit,
+    }
+
+
+def _build_compare_relative_evidence(
+    *,
+    bundles: list[dict[str, Any]],
+    candidate_strategy: str,
+) -> dict[str, Any]:
+    overview_rows = _build_compare_strategy_overview_rows(bundles)
+    metric_specs = [
+        ("End Balance", "End Balance", True),
+        ("CAGR", "CAGR", True),
+        ("Maximum Drawdown", "MDD", True),
+        ("Sharpe Ratio", "Sharpe", True),
+    ]
+    rank_rows: list[dict[str, Any]] = []
+    advantages: list[str] = []
+    for label, column, higher_is_better in metric_specs:
+        rank_info = _rank_candidate_metric(
+            overview_rows,
+            candidate_strategy=candidate_strategy,
+            column=column,
+            higher_is_better=higher_is_better,
+        )
+        rank = rank_info.get("rank")
+        count = rank_info.get("count") or 0
+        if rank_info.get("top_half"):
+            advantages.append(label)
+        rank_rows.append(
+            {
+                "비교 항목": label,
+                "현재 값": rank_info.get("value"),
+                "순위": f"{rank} / {count}" if rank is not None and count else "-",
+                "판단": "상위권 근거" if rank_info.get("top_half") else "추가 설명 필요",
+            }
+        )
+
+    cagr_rank = next((row for row in rank_rows if row["비교 항목"] == "CAGR"), {})
+    mdd_rank = next((row for row in rank_rows if row["비교 항목"] == "Maximum Drawdown"), {})
+    cagr_rank_text = str(cagr_rank.get("순위") or "")
+    mdd_rank_text = str(mdd_rank.get("순위") or "")
+    bottom_on_cagr_and_mdd = False
+    if " / " in cagr_rank_text and " / " in mdd_rank_text:
+        cagr_pos, cagr_count = [int(value.strip()) for value in cagr_rank_text.split(" / ")]
+        mdd_pos, mdd_count = [int(value.strip()) for value in mdd_rank_text.split(" / ")]
+        bottom_on_cagr_and_mdd = cagr_pos == cagr_count and mdd_pos == mdd_count
+
+    has_return_advantage = bool({"End Balance", "CAGR"}.intersection(advantages))
+    has_risk_advantage = bool({"Maximum Drawdown", "Sharpe Ratio"}.intersection(advantages))
+    if has_return_advantage and has_risk_advantage:
+        score = 3.0
+        judgment = "성과와 위험 쪽에 모두 설명 가능한 상대 근거가 있음"
+    elif advantages:
+        score = 2.0
+        judgment = "일부 상대 우위가 있어 Candidate Draft 검토 가능"
+    elif bottom_on_cagr_and_mdd:
+        score = 0.0
+        judgment = "CAGR과 MDD가 모두 최하위라 후보 초안 전에 재검토 필요"
+    else:
+        score = 1.0
+        judgment = "상대 우위가 약해 operator 설명이 필요"
+
+    return {
+        "score": score,
+        "judgment": judgment,
+        "advantages": advantages,
+        "rank_rows": rank_rows,
+        "overview_rows": overview_rows,
+    }
+
+
+def _build_compare_data_trust_assessment(bundle: dict[str, Any]) -> dict[str, Any]:
+    meta = dict(bundle.get("meta") or {})
+    result_df = bundle.get("result_df")
+    price_freshness = dict(meta.get("price_freshness") or {})
+    freshness_status = str(price_freshness.get("status") or "").strip().lower()
+    excluded_tickers = list(meta.get("excluded_tickers") or [])
+    malformed_price_rows = list(meta.get("malformed_price_rows") or [])
+    warnings = list(meta.get("warnings") or [])
+
+    requested_end = meta.get("end") or meta.get("requested_end") or meta.get("input_end")
+    actual_end = meta.get("actual_result_end")
+    if not actual_end and isinstance(result_df, pd.DataFrame) and not result_df.empty and "Date" in result_df.columns:
+        actual_end = str(pd.to_datetime(result_df["Date"], errors="coerce").max().date())
+    actual_end_ts = pd.to_datetime(actual_end, errors="coerce")
+    requested_end_ts = pd.to_datetime(requested_end, errors="coerce")
+    period_shortened = (
+        pd.notna(actual_end_ts)
+        and pd.notna(requested_end_ts)
+        and actual_end_ts.date() < requested_end_ts.date()
+    )
+
+    reasons: list[str] = []
+    if freshness_status == "error":
+        reasons.append("가격 최신성 error")
+    if period_shortened:
+        reasons.append("실제 결과 종료일이 요청 종료일보다 짧음")
+    if freshness_status == "warning":
+        reasons.append("가격 최신성 warning")
+    if excluded_tickers:
+        reasons.append(f"excluded ticker {len(excluded_tickers)}개")
+    if malformed_price_rows:
+        reasons.append(f"malformed price row {len(malformed_price_rows)}개")
+    if warnings:
+        reasons.append(f"warning {len(warnings)}개")
+
+    if freshness_status == "error" or period_shortened:
+        score = 0.0
+        judgment = "데이터 신뢰성 blocker"
+    elif freshness_status == "warning" or excluded_tickers or malformed_price_rows or warnings:
+        score = 1.0
+        judgment = "진행 가능하지만 Data Trust 확인 필요"
+    else:
+        score = 2.0
+        judgment = "눈에 띄는 Data Trust 이슈 없음"
+
+    return {
+        "score": score,
+        "judgment": judgment,
+        "reasons": reasons,
+        "requested_end": requested_end,
+        "actual_end": actual_end,
+    }
+
+
+def _build_compare_real_money_gate_assessment(bundle: dict[str, Any]) -> dict[str, Any]:
+    meta = dict(bundle.get("meta") or {})
+    if not meta.get("real_money_hardening"):
+        return {
+            "score": 1.0,
+            "ready": False,
+            "hard_blocked": True,
+            "judgment": "Real-Money gate 정보가 없어 후보 초안 전 재확인 필요",
+            "reasons": ["Real-Money hardening 정보 없음"],
+        }
+
+    promotion = str(meta.get("promotion_decision") or "").strip().lower()
+    deployment = str(meta.get("deployment_readiness_status") or "").strip().lower()
+    severe_statuses = {"caution", "unavailable", "error", "missing"}
+    severe_issue_rows = [
+        row
+        for row in _build_stage_issue_resolution_rows(meta)
+        if str(row.get("현재 상태") or "").strip().lower() in severe_statuses
+    ]
+
+    promotion_ok = bool(promotion and promotion != "hold")
+    deployment_ok = bool(deployment and deployment != "blocked")
+    blocker_ok = not severe_issue_rows
+    score = float(promotion_ok) + float(deployment_ok) + float(blocker_ok)
+    reasons: list[str] = []
+    if not promotion_ok:
+        reasons.append("Promotion Decision이 hold이거나 비어 있음")
+    if not deployment_ok:
+        reasons.append("Deployment Readiness가 blocked이거나 비어 있음")
+    reasons.extend(f"{row.get('항목')}: {row.get('현재 상태')}" for row in severe_issue_rows)
+
+    ready = promotion_ok and deployment_ok and blocker_ok
+    if ready:
+        judgment = "Real-Money gate가 Candidate Draft 검토를 막지 않음"
+    else:
+        judgment = "Real-Money gate에서 먼저 해결할 blocker가 있음"
+
+    return {
+        "score": score,
+        "ready": ready,
+        "hard_blocked": not ready,
+        "judgment": judgment,
+        "reasons": reasons,
+    }
+
+
+def _build_candidate_draft_readiness_evaluation(
+    bundles: list[dict[str, Any]],
+    *,
+    candidate_strategy: str,
+) -> dict[str, Any]:
+    selected_bundle = next(
+        (bundle for bundle in bundles if str(bundle.get("strategy_name") or "") == candidate_strategy),
+        None,
+    )
+    compare_complete = (
+        len(bundles) >= 2
+        and all(isinstance(bundle.get("summary_df"), pd.DataFrame) and not bundle["summary_df"].empty for bundle in bundles)
+        and all(isinstance(bundle.get("result_df"), pd.DataFrame) and not bundle["result_df"].empty for bundle in bundles)
+    )
+    compare_score = 2.0 if compare_complete else (1.0 if len(bundles) >= 2 else 0.0)
+    compare_judgment = (
+        "2개 이상 전략이 정상 비교됨"
+        if compare_score == 2.0
+        else "Compare 실행 결과가 부족하거나 1개 전략만 있음"
+    )
+
+    if selected_bundle is None:
+        data_assessment = {"score": 0.0, "judgment": "선택 후보 없음", "reasons": ["선택 후보 없음"]}
+        real_money_assessment = {"score": 0.0, "ready": False, "hard_blocked": True, "judgment": "선택 후보 없음", "reasons": []}
+        relative_evidence = {
+            "score": 0.0,
+            "judgment": "선택 후보 없음",
+            "advantages": [],
+            "rank_rows": [],
+            "overview_rows": _build_compare_strategy_overview_rows(bundles),
+        }
+    else:
+        data_assessment = _build_compare_data_trust_assessment(selected_bundle)
+        real_money_assessment = _build_compare_real_money_gate_assessment(selected_bundle)
+        relative_evidence = _build_compare_relative_evidence(
+            bundles=bundles,
+            candidate_strategy=candidate_strategy,
+        )
+
+    score = round(
+        compare_score
+        + float(data_assessment["score"])
+        + float(real_money_assessment["score"])
+        + float(relative_evidence["score"]),
+        1,
+    )
+    hard_stop = (
+        compare_score < 2.0
+        or float(data_assessment["score"]) == 0.0
+        or bool(real_money_assessment.get("hard_blocked"))
+        or float(relative_evidence["score"]) == 0.0
+    )
+    if hard_stop:
+        score = min(score, 6.4)
+    clean_pass = (
+        score >= 8.0
+        and compare_score == 2.0
+        and float(data_assessment["score"]) == 2.0
+        and bool(real_money_assessment.get("ready"))
+        and float(relative_evidence["score"]) >= 2.0
+    )
+    conditional_pass = (
+        score >= 6.5
+        and compare_score >= 1.0
+        and float(data_assessment["score"]) >= 1.0
+        and bool(real_money_assessment.get("ready"))
+        and float(relative_evidence["score"]) >= 1.0
+    )
+
+    if clean_pass:
+        verdict = "6단계 Candidate Draft 진행 가능"
+        tone = "success"
+        next_action = "선택 후보를 Candidate Draft로 보내고 operator 판단을 남깁니다."
+    elif conditional_pass:
+        verdict = "6단계 Candidate Draft 조건부 진행 가능"
+        tone = "warning"
+        next_action = "Candidate Draft로 넘기되 비교 약점과 확인 항목을 Review Note에 명시합니다."
+    else:
+        verdict = "5단계 Compare에서 먼저 추가 확인"
+        tone = "error"
+        next_action = "비교 기준, Data Trust, Real-Money blocker, 상대 우위 설명을 다시 확인합니다."
+
+    blocking_reasons: list[str] = []
+    if compare_score < 2.0:
+        blocking_reasons.append(compare_judgment)
+    if float(data_assessment["score"]) == 0.0:
+        blocking_reasons.extend(data_assessment.get("reasons") or [str(data_assessment.get("judgment"))])
+    if real_money_assessment.get("hard_blocked"):
+        blocking_reasons.extend(real_money_assessment.get("reasons") or [str(real_money_assessment.get("judgment"))])
+    if float(relative_evidence["score"]) == 0.0:
+        blocking_reasons.append(str(relative_evidence.get("judgment")))
+
+    review_reasons: list[str] = []
+    if float(data_assessment["score"]) == 1.0:
+        review_reasons.extend(data_assessment.get("reasons") or [str(data_assessment.get("judgment"))])
+    if float(relative_evidence["score"]) in {1.0, 2.0}:
+        review_reasons.append(str(relative_evidence.get("judgment")))
+
+    criteria_rows = [
+        {
+            "기준": "Compare Run",
+            "현재 값": f"{len(bundles)}개 전략",
+            "점수": f"{compare_score:g} / 2",
+            "판단": compare_judgment,
+        },
+        {
+            "기준": "Data Trust",
+            "현재 값": data_assessment.get("judgment"),
+            "점수": f"{float(data_assessment['score']):g} / 2",
+            "판단": ", ".join(data_assessment.get("reasons") or []) or "특이사항 없음",
+        },
+        {
+            "기준": "Real-Money Gate",
+            "현재 값": real_money_assessment.get("judgment"),
+            "점수": f"{float(real_money_assessment['score']):g} / 3",
+            "판단": ", ".join(real_money_assessment.get("reasons") or []) or "특이사항 없음",
+        },
+        {
+            "기준": "Relative Evidence",
+            "현재 값": relative_evidence.get("judgment"),
+            "점수": f"{float(relative_evidence['score']):g} / 3",
+            "판단": ", ".join(relative_evidence.get("advantages") or []) or "상대 우위 약함",
+        },
+    ]
+
+    return {
+        "score": score,
+        "verdict": verdict,
+        "tone": tone,
+        "next_action": next_action,
+        "can_send_to_candidate_draft": clean_pass or conditional_pass,
+        "criteria_rows": criteria_rows,
+        "rank_rows": relative_evidence.get("rank_rows") or [],
+        "overview_rows": relative_evidence.get("overview_rows") or [],
+        "blocking_reasons": blocking_reasons,
+        "review_reasons": review_reasons,
+        "selected_bundle": selected_bundle,
+    }
+
+
+def _render_candidate_draft_readiness_box(bundles: list[dict[str, Any]]) -> None:
+    if not bundles:
+        return
+
+    strategy_names = [str(bundle.get("strategy_name") or "") for bundle in bundles if bundle.get("strategy_name")]
+    if not strategy_names:
+        return
+
+    default_strategy = st.session_state.get("compare_focus_strategy")
+    if default_strategy not in strategy_names:
+        best_bundle = max(
+            bundles,
+            key=lambda bundle: _safe_summary_metric(bundle, "End Balance") or float("-inf"),
+        )
+        default_strategy = str(best_bundle.get("strategy_name") or strategy_names[0])
+    default_index = strategy_names.index(default_strategy) if default_strategy in strategy_names else 0
+
+    with st.container(border=True):
+        st.markdown("##### 6단계 Candidate Draft 진입 평가")
+        st.caption(
+            "이 박스는 Compare 결과를 보고 선택 후보를 `Candidate Draft`로 넘겨도 되는지 판단하는 보조 신호입니다. "
+            "투자 승인이나 registry 저장이 아니라, 6단계 후보 검토 초안으로 보낼 수 있는지를 봅니다."
+        )
+        candidate_strategy = st.selectbox(
+            "6단계로 넘길 후보",
+            options=strategy_names,
+            index=default_index,
+            key="compare_candidate_draft_readiness_strategy",
+            help="Compare에 올린 전략 중 Candidate Draft로 검토할 후보를 고릅니다.",
+        )
+        evaluation = _build_candidate_draft_readiness_evaluation(
+            bundles,
+            candidate_strategy=candidate_strategy,
+        )
+        score = float(evaluation["score"])
+        tone = str(evaluation["tone"])
+
+        metric_cols = st.columns([0.24, 0.28, 0.48], gap="small")
+        metric_cols[0].metric("Draft Score", f"{score:.1f} / 10")
+        metric_cols[1].metric("Candidate", candidate_strategy)
+        with metric_cols[2]:
+            st.caption("판정")
+            st.markdown(f"**{evaluation['verdict']}**")
+            st.caption("다음 행동")
+            st.markdown(str(evaluation["next_action"]))
+        st.progress(max(0.0, min(score / 10.0, 1.0)))
+        st.caption(
+            "점수 기준: `8.0점 이상`은 깔끔한 6단계 진행, `6.5점 이상`은 조건부 진행, "
+            "그 아래이거나 핵심 blocker가 있으면 Compare에서 더 확인합니다."
+        )
+
+        message = f"{evaluation['verdict']}: Compare 결과, Data Trust, Real-Money gate, 상대 비교 근거를 합산했습니다."
+        if tone == "success":
+            st.success(message)
+        elif tone == "warning":
+            st.warning(message)
+        else:
+            st.error(message)
+
+        if evaluation["blocking_reasons"]:
+            st.caption("막는 항목: " + ", ".join(f"`{item}`" for item in evaluation["blocking_reasons"]))
+        elif evaluation["review_reasons"]:
+            st.caption("Review Note에 같이 남길 항목: " + ", ".join(f"`{item}`" for item in evaluation["review_reasons"]))
+        else:
+            st.caption("Candidate Draft로 넘기기 전에 막는 핵심 항목은 보이지 않습니다.")
+
+        action_cols = st.columns([0.34, 0.66], gap="small")
+        with action_cols[0]:
+            if st.button(
+                "Send Selected Strategy To Candidate Draft",
+                key="compare_send_candidate_draft",
+                disabled=not bool(evaluation["can_send_to_candidate_draft"]),
+                use_container_width=True,
+            ):
+                selected_bundle = evaluation.get("selected_bundle")
+                if selected_bundle is not None:
+                    draft = _candidate_review_draft_from_bundle(selected_bundle)
+                    draft["source_kind"] = "compare_focused_strategy"
+                    draft["compare_readiness_evaluation"] = {
+                        "score": evaluation["score"],
+                        "verdict": evaluation["verdict"],
+                        "criteria_rows": evaluation["criteria_rows"],
+                        "rank_rows": evaluation["rank_rows"],
+                    }
+                    _queue_candidate_review_draft(draft)
+                    st.rerun()
+        with action_cols[1]:
+            st.caption(
+                "버튼을 누르면 `Candidate Review > Candidate Intake Draft`로 이동합니다. "
+                "아직 current candidate registry 저장이나 Pre-Live 승인이 아닙니다."
+            )
+
+        with st.expander("점수 계산 기준 보기", expanded=False):
+            st.dataframe(pd.DataFrame(evaluation["criteria_rows"]), use_container_width=True, hide_index=True)
+            rank_rows = evaluation.get("rank_rows") or []
+            if rank_rows:
+                st.markdown("**상대 비교 순위**")
+                st.dataframe(pd.DataFrame(rank_rows), use_container_width=True, hide_index=True)
+
+        with st.expander("이번 Compare 구성 보기", expanded=False):
+            st.dataframe(pd.DataFrame(evaluation["overview_rows"]), use_container_width=True, hide_index=True)
+
+
 def _render_real_money_details(bundle: dict[str, Any]) -> None:
     meta = bundle.get("meta") or {}
     if not meta.get("real_money_hardening"):
@@ -5206,6 +5711,7 @@ def _render_compare_results() -> None:
             "In Phase 10 first pass, annual strict strategies rebuild approximate rebalance-date membership, so "
             "`Dynamic Candidate Pool`, `Membership Avg`, and `Membership Range` help explain why static and dynamic results diverge."
         )
+    _render_candidate_draft_readiness_box(bundles)
 
     summary_tab, data_trust_tab, real_money_guardrail_tab, balance_tab, drawdown_tab, return_tab, highlights_tab, focus_tab, meta_tab = st.tabs(
         [

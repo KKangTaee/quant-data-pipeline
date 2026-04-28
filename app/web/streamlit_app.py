@@ -3113,6 +3113,46 @@ def _render_guides_page() -> None:
                 "live trading 승인이나 주문 지시가 아닙니다."
             )
 
+        with st.container(border=True):
+            st.markdown("#### 5단계에서 6단계로 넘어가는 최소 기준")
+            st.caption(
+                "이 기준은 `Compare` 결과를 보고 선택 후보를 `Candidate Draft`로 넘겨도 되는지 판단하는 기준입니다. "
+                "후보 registry 저장이나 투자 승인이 아니라, 6단계 검토 초안 진입 조건입니다."
+            )
+            draft_rows = pd.DataFrame(
+                [
+                    {
+                        "확인 항목": "Compare Run",
+                        "6단계 진행 가능": "2개 이상 전략이 같은 기간 / 같은 option으로 정상 비교됨",
+                        "멈춰야 하는 경우": "비교 전략이 1개뿐이거나 실행 오류 / 빈 결과가 있음",
+                    },
+                    {
+                        "확인 항목": "Data Trust",
+                        "6단계 진행 가능": "선택 후보의 실제 결과 기간과 가격 최신성이 해석 가능한 상태",
+                        "멈춰야 하는 경우": "가격 최신성 error, 결과 기간 단축, excluded / malformed ticker가 핵심 해석을 막음",
+                    },
+                    {
+                        "확인 항목": "Real-Money Gate",
+                        "6단계 진행 가능": "`Promotion != hold`, `Deployment != blocked`, 핵심 blocker 없음",
+                        "멈춰야 하는 경우": "4단계 blocker가 다시 나타나거나 Real-Money signal이 비어 있음",
+                    },
+                    {
+                        "확인 항목": "Relative Evidence",
+                        "6단계 진행 가능": "CAGR, End Balance, MDD, Sharpe 중 최소 하나 이상의 설명 가능한 상대 근거가 있음",
+                        "멈춰야 하는 경우": "선택 후보가 성과와 낙폭 모두 비교군 최하위이고 설명할 역할이 없음",
+                    },
+                ]
+            )
+            st.dataframe(draft_rows, use_container_width=True, hide_index=True)
+            st.success(
+                "`Compare 정상 실행`, `Data Trust 해석 가능`, `Real-Money blocker 없음`, "
+                "상대 비교 근거가 있으면 6단계 Candidate Draft로 넘길 수 있습니다."
+            )
+            st.warning(
+                "6단계 진입은 후보 검토 초안으로 보내는 것일 뿐, "
+                "current candidate registry 저장이나 Pre-Live 승인과는 분리됩니다."
+            )
+
     st.markdown("### 지금 먼저 보면 좋은 문서")
     st.markdown(
         """

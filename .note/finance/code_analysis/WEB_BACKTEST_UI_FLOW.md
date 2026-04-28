@@ -172,6 +172,7 @@ strategy multi-select
   -> strategy별 box에서 variant / advanced inputs 설정
   -> Run Strategy Comparison
   -> strategy별 result bundle 실행
+  -> 6단계 Candidate Draft 진입 평가
   -> comparison table / overlay / focused strategy 표시
   -> Weighted Portfolio Builder로 전달
 ```
@@ -182,6 +183,32 @@ strategy multi-select
 - strategy-specific advanced inputs는 strategy별 box 안에서 보이게 한다.
 - variant 변경은 버튼 없이 즉시 아래 옵션이 바뀌는 방향이 선호된다.
 - 최대 compare 전략 수는 operator가 읽을 수 있는 범위로 유지한다.
+
+Compare 결과 상단에는 `6단계 Candidate Draft 진입 평가` 박스를 둔다.
+
+목적:
+
+- Compare 결과 중 어떤 전략을 6단계 `Candidate Draft`로 넘길지 명시적으로 선택하게 한다.
+- Compare 실행 정상 여부, 선택 후보의 Data Trust, Real-Money gate, 상대 비교 근거를 10점으로 요약한다.
+- 이 평가는 current candidate registry 저장, Pre-Live 승인, live trading approval이 아니라 후보 검토 초안으로 넘길 수 있는지 보는 신호다.
+
+기준:
+
+- `Compare Run`: 2개 이상 전략이 정상 비교됐는지
+- `Data Trust`: 선택 후보의 결과 기간, 가격 최신성, excluded / malformed ticker가 해석 가능한지
+- `Real-Money Gate`: `Promotion != hold`, `Deployment != blocked`, 핵심 blocker 없음인지
+- `Relative Evidence`: CAGR, End Balance, Maximum Drawdown, Sharpe 중 설명 가능한 상대 근거가 있는지
+
+점수 해석:
+
+- `8.0 / 10` 이상이면 6단계 Candidate Draft로 깔끔하게 진행 가능하다.
+- `6.5 / 10` 이상이면 조건부 진행 가능하되 Review Note에 약점과 확인 항목을 남긴다.
+- 그 아래이거나 핵심 blocker가 있으면 5단계 Compare에서 비교 기준, 계약, 데이터, Real-Money 신호를 먼저 재확인한다.
+
+실행:
+
+- 통과 또는 조건부 통과 상태에서는 `Send Selected Strategy To Candidate Draft` 버튼으로 `Candidate Review > Candidate Intake Draft`로 보낼 수 있다.
+- 보내진 draft는 아직 registry 저장이 아니며, 6단계에서 operator decision과 next action을 남겨야 한다.
 
 ## Strategy Capability Snapshot 흐름
 

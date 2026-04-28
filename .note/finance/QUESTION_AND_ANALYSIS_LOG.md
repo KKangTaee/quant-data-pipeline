@@ -2988,3 +2988,17 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 현재 compare form은 같은 strategy family 후보를 여러 개 동시에 비교하는 데 제한이 있으므로, 같은 family 파라미터 변형끼리의 정밀 비교는 single run / history 기반 수동 비교 또는 이후 별도 지원 과제로 남긴다
 - Follow-up:
   - walkthrough 문서의 5단계 설명을 신규 전략 기본 경로와 registry shortcut 경로로 분리했다
+
+### 2026-04-29 - 5단계 Compare 결과에서 6단계 Candidate Draft 진입 기준을 점수화한다
+- User request:
+  - 신규 전략을 Compare에서 1~3개 비교 기준과 함께 테스트한 뒤, 6단계 Candidate Draft로 넘어갈 수 있는 조건을 명확히 보여주는 점수형 UI를 요청함
+- Interpreted goal:
+  - 4->5 Real-Money readiness처럼, 5->6도 Compare 결과를 보고 통과 / 조건부 통과 / 재확인을 한눈에 판단할 수 있어야 함
+- Analysis result:
+  - `Backtest > Compare & Portfolio Builder` 결과 상단에 `6단계 Candidate Draft 진입 평가` 박스를 추가했다
+  - 사용자가 Compare 후보 중 하나를 선택하면 Compare Run 2점, Data Trust 2점, Real-Money Gate 3점, Relative Evidence 3점으로 10점 만점 평가를 보여준다
+  - `8.0 / 10` 이상은 Candidate Draft 진행 가능, `6.5 / 10` 이상은 조건부 진행, 그 아래는 Compare에서 추가 확인으로 표시한다
+  - 통과 또는 조건부 통과 상태에서는 `Send Selected Strategy To Candidate Draft` 버튼으로 `Candidate Review > Candidate Intake Draft`에 초안을 보낼 수 있다
+  - 실습용 비교 구성은 GTAA Balanced Top-2, Equal Weight same universe, Global Relative Strength same universe, 선택적으로 Risk Parity Trend로 정리했다
+- Follow-up:
+  - 사용자는 해당 비교 구성을 UI에서 실행한 뒤 Draft Score와 막는 항목을 보고 6단계 진입 여부를 판단한다

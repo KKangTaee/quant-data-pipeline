@@ -2211,3 +2211,14 @@ Detailed historical logs were archived on `2026-04-13`.
   - noted the current same-family compare limitation and the need to use benchmark / alternative family comparisons first
 - Durable takeaway:
   - Step 5 starts from the tested strategy contract itself; registry shortcuts are only for candidates that already exist in current candidate registry.
+
+### 2026-04-29
+- Added a Compare-to-Candidate-Draft readiness surface for the 1~11 walkthrough.
+- Changed:
+  - added `6단계 Candidate Draft 진입 평가` to Compare results
+  - scored the selected compare candidate out of 10 from Compare Run, Data Trust, Real-Money Gate, and Relative Evidence
+  - added a direct `Send Selected Strategy To Candidate Draft` button for pass / conditional pass cases
+  - documented the GTAA Balanced Top-2 compare test setup in the walkthrough session
+  - synced the web backtest UI flow, work log, and question log without touching Phase 30 QA docs
+- Durable takeaway:
+  - Step 5 now has a visible stop/go signal for entering step 6, mirroring the earlier 4->5 readiness box.
