@@ -1482,7 +1482,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 | Phase 27 | `complete` | `manual_qa_completed` | 완료 |
 | Phase 28 | `complete` | `manual_qa_completed` | Capability + Replay + Data Trust + Real-Money/Guardrail parity QA 완료 |
 | Phase 29 | `complete` | `manual_qa_completed` | Candidate Review Board + Result Handoff + Review Notes + Registry Draft QA 완료 |
-| Phase 30 | `active` | `not_ready_for_qa` | product-flow 재정렬과 Portfolio Proposal 계약 정의 완료, UI / persistence 전 단계 |
+| Phase 30 | `active` | `not_ready_for_qa` | product-flow 재정렬, Portfolio Proposal 계약 정의, registry I/O helper 첫 분리 완료 |
 
 한 줄 현재 판단:
 - current annual strict candidate와 portfolio bridge를 같은 frame에서 다시 본 `Phase 21`은 manual validation까지 완료되었고,
@@ -1508,6 +1508,8 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
   16k lines 이상으로 커진 `app/web/pages/backtest.py`의 점진 리팩토링 경계를 정리하는 것이었다.
   두 번째 작업으로 Portfolio Proposal row의 목적, 후보 역할, 비중 근거, risk constraints,
   evidence snapshot, blocker, operator decision 계약을 정의했다.
+  세 번째 작업으로 current candidate / review note / pre-live registry JSONL I/O helper를
+  `app/web/runtime/candidate_registry.py`로 분리했다.
 
 ---
 
@@ -1533,7 +1535,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 | Phase 27 | Data Integrity And Backtest Trust Layer | `complete` | `manual_qa_completed` | 백테스트 전에 데이터가 믿을 만한지, 어디까지 계산 가능한지 보여주고 QA까지 완료했다 |
 | Phase 28 | Strategy Family Parity And Cadence Completion | `complete` | `manual_qa_completed` | annual / quarterly / 신규 전략의 지원 범위, 재진입 상태, compare data trust, Real-Money / Guardrail scope를 화면에서 구분하고 QA까지 완료했다 |
 | Phase 29 | Candidate Review And Recommendation Workflow | `complete` | `manual_qa_completed` | current candidate를 검토 보드로 읽고, Latest / History 결과를 후보 검토 초안, review note, registry draft로 넘기는 workflow를 구현하고 QA까지 완료했다 |
-| Phase 30 | Portfolio Proposal And Pre-Live Monitoring Surface | `active` | `not_ready_for_qa` | 후보들을 포트폴리오 제안과 paper / pre-live monitoring 화면으로 연결하기 전 product-flow와 proposal row 계약을 먼저 정리했다 |
+| Phase 30 | Portfolio Proposal And Pre-Live Monitoring Surface | `active` | `not_ready_for_qa` | 후보들을 포트폴리오 제안과 paper / pre-live monitoring 화면으로 연결하기 전 product-flow, proposal row 계약, registry I/O helper 경계를 먼저 정리했다 |
 
 ### Phase 26. Foundation Stabilization And Backlog Rebase
 
@@ -1624,7 +1626,8 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 - 두 번째 작업으로 Portfolio Proposal row 계약을 정의했다.
   이 계약은 proposal objective, component candidates, target weights, risk constraints, evidence snapshot, open blockers, operator decision을 포함한다.
 - 향후 저장소 후보는 `.note/finance/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`이지만, 아직 파일 생성이나 append helper는 구현하지 않았다.
-- 실제 코드 분리는 별도 작업 단위에서 진행한다.
+- 세 번째 작업으로 `app/web/runtime/candidate_registry.py`를 추가해 current candidate / candidate review note / pre-live registry JSONL read / append helper를 분리했다.
+- 추가 코드 분리는 Candidate Review / Pre-Live / History / Saved Portfolio 같은 별도 작업 단위에서 점진 진행한다.
 
 ### Phase 30 이후
 - Live Readiness / Final Approval은 Phase 30 이후 별도 phase로 연다.

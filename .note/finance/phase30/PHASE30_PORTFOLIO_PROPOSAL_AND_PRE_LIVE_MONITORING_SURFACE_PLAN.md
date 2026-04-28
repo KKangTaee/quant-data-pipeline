@@ -56,6 +56,7 @@ Phase 29까지 오면서 좋은 백테스트 결과를 후보로 읽고,
 - `.note/finance/CANDIDATE_REVIEW_NOTES.jsonl`
 - `.note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl`
 - `app/web/pages/backtest.py` 모듈 분리 경계
+- `app/web/runtime/candidate_registry.py` registry JSONL I/O helper
 - `.note/finance/code_analysis/WEB_BACKTEST_UI_FLOW.md`
 
 이번 phase에서 바로 다루지 않는 것:
@@ -135,7 +136,23 @@ Phase 29까지 오면서 좋은 백테스트 결과를 후보로 읽고,
   - `.note/finance/phase30/PHASE30_PORTFOLIO_PROPOSAL_CONTRACT_SECOND_WORK_UNIT.md`에서 계약을 정의했다.
   - 향후 저장소 후보는 `.note/finance/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`이지만, 이번 작업에서는 파일 생성이나 append helper 구현은 하지 않았다.
 
-### 세 번째 작업: Proposal review / monitoring surface
+### 세 번째 작업: Registry I/O helper 분리
+
+- 무엇을 바꾸는가:
+  - `backtest.py` 안의 current candidate / review note / pre-live registry read / append helper를 runtime module로 분리한다.
+
+- 왜 필요한가:
+  - Portfolio Proposal 구현 때 같은 registry helper pattern을 재사용하기 쉽다.
+  - UI rendering과 persistence helper의 책임을 조금이라도 분리해 `backtest.py` 증가를 늦춘다.
+
+- 작업이 끝나면 좋은 점:
+  - Candidate Review / Pre-Live UI는 그대로 두면서, 저장소 I/O 경계가 먼저 생긴다.
+
+- 현재 결과:
+  - `app/web/runtime/candidate_registry.py`가 추가되었다.
+  - 이번 작업은 전체 `backtest.py` 리팩토링이 아니라 registry JSONL I/O 첫 분리다.
+
+### 네 번째 작업: Proposal review / monitoring surface
 
 - 무엇을 바꾸는가:
   - 후보 묶음의 Real-Money / Data Trust / Pre-Live 상태를 한 화면에서 읽게 한다.

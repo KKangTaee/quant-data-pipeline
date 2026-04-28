@@ -2767,3 +2767,17 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 따라서 `Portfolio Proposal Contract Second Work Unit`은 첫 작업을 건너뛴 것이 아니라, 첫 작업 이후 이어지는 설계 단계다
 - Follow-up:
   - Phase 30 TODO와 plan, second work-unit 문서에 `Phase 30 전체 목표 / 첫 번째 작업 / 두 번째 작업 / 이후 작업 후보` 구분을 명시했다
+
+### 2026-04-28 - Phase 30 안에서 작은 `backtest.py` 리팩토링을 먼저 시작한다
+- User request:
+  - 이전에 제안한 방향대로 그대로 진행해 달라고 요청함
+- Interpreted goal:
+  - Portfolio Proposal UI를 붙이기 전에 `backtest.py`가 더 커지는 것을 막기 위해 작고 안전한 helper split을 먼저 진행한다
+- Analysis result:
+  - 대규모 `backtest.py` 분리는 위험하므로, UI rendering과 session state를 건드리지 않는 registry JSONL I/O helper부터 분리한다
+  - `app/web/runtime/candidate_registry.py`를 추가해 current candidate registry, candidate review notes, pre-live registry read / append helper를 담당하게 했다
+  - Candidate Review UI, Pre-Live UI, compare prefill behavior, row schema, JSONL path, append-only semantics는 유지했다
+  - 이번 작업은 전체 Backtest UI refactor가 아니라 Phase 30의 첫 실제 code split이다
+- Follow-up:
+  - 다음 리팩토링 후보는 Candidate Review display / draft helper 또는 Pre-Live Review display / draft helper다
+  - Portfolio Proposal UI를 먼저 구현한다면 새 `candidate_registry.py` helper pattern을 재사용한다

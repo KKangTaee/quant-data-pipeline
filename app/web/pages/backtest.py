@@ -5,7 +5,6 @@ import json
 import time
 from datetime import date, datetime, timedelta
 from functools import lru_cache
-from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
@@ -16,12 +15,21 @@ import streamlit as st
 
 from app.web.runtime import (
     BACKTEST_HISTORY_FILE,
+    CANDIDATE_REVIEW_NOTES_FILE,
+    CURRENT_CANDIDATE_REGISTRY_FILE,
+    PRE_LIVE_CANDIDATE_REGISTRY_FILE,
     SAVED_PORTFOLIO_FILE,
+    append_candidate_review_note as _append_candidate_review_note,
     append_backtest_run_history,
+    append_current_candidate_registry_row as _append_current_candidate_registry_row,
+    append_pre_live_candidate_registry_row as _append_pre_live_candidate_registry_row,
     build_backtest_result_bundle,
     delete_saved_portfolio,
     inspect_strict_annual_price_freshness,
     load_backtest_run_history,
+    load_candidate_review_notes as _load_candidate_review_notes,
+    load_current_candidate_registry_latest as _load_current_candidate_registry_latest,
+    load_pre_live_candidate_registry_latest as _load_pre_live_candidate_registry_latest,
     load_saved_portfolios,
     run_dual_momentum_backtest_from_db,
     run_equal_weight_backtest_from_db,
@@ -278,9 +286,6 @@ STRICT_MARKET_REGIME_BENCHMARK_OPTIONS = ["SPY", "QQQ", "VTI", "IWM"]
 DEFAULT_BACKTEST_END_DATE = date.today()
 CURRENT_CANDIDATE_COMPARE_DEFAULT_START = date(2016, 1, 1)
 CURRENT_CANDIDATE_COMPARE_DEFAULT_END = date(2026, 4, 1)
-CURRENT_CANDIDATE_REGISTRY_FILE = Path(".note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl")
-PRE_LIVE_CANDIDATE_REGISTRY_FILE = Path(".note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl")
-CANDIDATE_REVIEW_NOTES_FILE = Path(".note/finance/CANDIDATE_REVIEW_NOTES.jsonl")
 BACKTEST_PANEL_OPTIONS = [
     "Single Strategy",
     "Compare & Portfolio Builder",
@@ -8636,42 +8641,6 @@ def _queue_saved_portfolio_compare_prefill(saved_portfolio: dict[str, Any]) -> N
     st.session_state.backtest_requested_panel = "Compare & Portfolio Builder"
 
 
-def _load_current_candidate_registry_latest() -> list[dict[str, Any]]:
-    if not CURRENT_CANDIDATE_REGISTRY_FILE.exists():
-        return []
-
-    latest: dict[str, dict[str, Any]] = {}
-    for line in CURRENT_CANDIDATE_REGISTRY_FILE.read_text(encoding="utf-8", errors="ignore").splitlines():
-        line = line.strip()
-        if not line:
-            continue
-        try:
-            row = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        registry_id = str(row.get("registry_id") or "").strip()
-        if not registry_id:
-            continue
-        previous = latest.get(registry_id)
-        if previous is None or str(row.get("recorded_at") or "") >= str(previous.get("recorded_at") or ""):
-            latest[registry_id] = row
-
-    family_order = {"value": 0, "quality": 1, "quality_value": 2}
-    role_order = {"current_candidate": 0, "near_miss": 1, "scenario": 2}
-    return sorted(
-        [
-            row
-            for row in latest.values()
-            if str(row.get("status") or "active").strip().lower() == "active"
-        ],
-        key=lambda row: (
-            family_order.get(str(row.get("strategy_family") or ""), 99),
-            role_order.get(str(row.get("record_type") or ""), 99),
-            str(row.get("title") or ""),
-        ),
-    )
-
-
 def _current_candidate_registry_role_label(row: dict[str, Any]) -> str:
     record_type = str(row.get("record_type") or "").strip().lower()
     candidate_role = str(row.get("candidate_role") or "").strip().lower()
@@ -9112,31 +9081,6 @@ def _build_candidate_review_note_from_draft(
     }
 
 
-def _append_candidate_review_note(row: dict[str, Any]) -> None:
-    CANDIDATE_REVIEW_NOTES_FILE.parent.mkdir(parents=True, exist_ok=True)
-    with CANDIDATE_REVIEW_NOTES_FILE.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(row, ensure_ascii=False) + "\n")
-
-
-def _load_candidate_review_notes() -> list[dict[str, Any]]:
-    if not CANDIDATE_REVIEW_NOTES_FILE.exists():
-        return []
-
-    rows: list[dict[str, Any]] = []
-    for line in CANDIDATE_REVIEW_NOTES_FILE.read_text(encoding="utf-8", errors="ignore").splitlines():
-        line = line.strip()
-        if not line:
-            continue
-        try:
-            row = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if str(row.get("record_status") or "active").strip().lower() == "active":
-            rows.append(row)
-
-    return sorted(rows, key=lambda row: str(row.get("recorded_at") or ""), reverse=True)
-
-
 def _build_candidate_review_notes_rows_for_display(rows: list[dict[str, Any]]) -> pd.DataFrame:
     display_rows: list[dict[str, Any]] = []
     for row in rows:
@@ -9360,51 +9304,6 @@ def _build_current_candidate_registry_row_from_review_note(
         },
         "notes": notes,
     }
-
-
-def _append_current_candidate_registry_row(row: dict[str, Any]) -> None:
-    CURRENT_CANDIDATE_REGISTRY_FILE.parent.mkdir(parents=True, exist_ok=True)
-    with CURRENT_CANDIDATE_REGISTRY_FILE.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(row, ensure_ascii=False) + "\n")
-
-
-def _load_pre_live_candidate_registry_latest() -> list[dict[str, Any]]:
-    if not PRE_LIVE_CANDIDATE_REGISTRY_FILE.exists():
-        return []
-
-    latest: dict[str, dict[str, Any]] = {}
-    for line in PRE_LIVE_CANDIDATE_REGISTRY_FILE.read_text(encoding="utf-8", errors="ignore").splitlines():
-        line = line.strip()
-        if not line:
-            continue
-        try:
-            row = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        pre_live_id = str(row.get("pre_live_id") or "").strip()
-        if not pre_live_id:
-            continue
-        previous = latest.get(pre_live_id)
-        if previous is None or str(row.get("recorded_at") or "") >= str(previous.get("recorded_at") or ""):
-            latest[pre_live_id] = row
-
-    return sorted(
-        [
-            row
-            for row in latest.values()
-            if str(row.get("record_status") or "active").strip().lower() == "active"
-        ],
-        key=lambda row: (
-            str(row.get("pre_live_status") or ""),
-            str(row.get("title") or ""),
-        ),
-    )
-
-
-def _append_pre_live_candidate_registry_row(row: dict[str, Any]) -> None:
-    PRE_LIVE_CANDIDATE_REGISTRY_FILE.parent.mkdir(parents=True, exist_ok=True)
-    with PRE_LIVE_CANDIDATE_REGISTRY_FILE.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(row, ensure_ascii=False) + "\n")
 
 
 def _default_pre_live_status_from_current_candidate(row: dict[str, Any]) -> str:

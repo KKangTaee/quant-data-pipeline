@@ -16,6 +16,17 @@ from .backtest import (
     run_value_snapshot_strict_quarterly_prototype_backtest_from_db,
 )
 from .history import BACKTEST_HISTORY_FILE, append_backtest_run_history, load_backtest_run_history
+from .candidate_registry import (
+    CANDIDATE_REVIEW_NOTES_FILE,
+    CURRENT_CANDIDATE_REGISTRY_FILE,
+    PRE_LIVE_CANDIDATE_REGISTRY_FILE,
+    append_candidate_review_note,
+    append_current_candidate_registry_row,
+    append_pre_live_candidate_registry_row,
+    load_candidate_review_notes,
+    load_current_candidate_registry_latest,
+    load_pre_live_candidate_registry_latest,
+)
 from .portfolio_store import (
     SAVED_PORTFOLIO_FILE,
     delete_saved_portfolio,
@@ -25,12 +36,21 @@ from .portfolio_store import (
 
 __all__ = [
     "BACKTEST_HISTORY_FILE",
+    "CANDIDATE_REVIEW_NOTES_FILE",
+    "CURRENT_CANDIDATE_REGISTRY_FILE",
+    "PRE_LIVE_CANDIDATE_REGISTRY_FILE",
     "SAVED_PORTFOLIO_FILE",
+    "append_candidate_review_note",
     "append_backtest_run_history",
+    "append_current_candidate_registry_row",
+    "append_pre_live_candidate_registry_row",
     "build_backtest_result_bundle",
     "delete_saved_portfolio",
     "inspect_strict_annual_price_freshness",
     "load_backtest_run_history",
+    "load_candidate_review_notes",
+    "load_current_candidate_registry_latest",
+    "load_pre_live_candidate_registry_latest",
     "load_saved_portfolios",
     "run_dual_momentum_backtest_from_db",
     "run_equal_weight_backtest_from_db",

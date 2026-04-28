@@ -64,9 +64,21 @@
   - [ ] `.note/finance/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`는 향후 저장소 후보일 뿐, 이번 작업에서 파일 생성이나 저장 구현이 된 것은 아니라고 읽히는지
   - [ ] Proposal lifecycle이 draft / review_ready / paper_tracking / hold / rejected / superseded / live_readiness_candidate로 구분되고, live approval과 분리되는지
 
+## 5. Registry I/O helper 리팩토링 확인
+
+- 확인 위치:
+  - `app/web/runtime/candidate_registry.py`
+  - `app/web/pages/backtest.py`
+  - `.note/finance/phase30/PHASE30_REGISTRY_IO_HELPER_REFACTOR_THIRD_WORK_UNIT.md`
+- 체크 항목:
+  - [ ] current candidate / candidate review note / pre-live registry의 JSONL read / append helper가 `app/web/runtime/candidate_registry.py`로 분리되었는지
+  - [ ] Candidate Review UI, Pre-Live Review UI, Compare prefill, session state key는 바뀌지 않았다고 읽히는지
+  - [ ] 이번 작업이 전체 `backtest.py` 리팩토링 완료가 아니라 첫 작은 helper split이라고 이해되는지
+  - [ ] 이후 Candidate Review / Pre-Live / History / Saved Portfolio 추가 분리가 별도 작업으로 남아 있다고 읽히는지
+
 ## 한 줄 판단 기준
 
 이번 Phase 30 중간 QA는
 **새 기능이 생겼는가**가 아니라,
-**Phase 29 이후 흐름과 Portfolio Proposal 계약을 사용자가 이해하고, 다음 리팩토링 / UI 구현 경계를 납득할 수 있는가**
+**Phase 29 이후 흐름, Portfolio Proposal 계약, 첫 registry helper split을 사용자가 이해하고, 다음 리팩토링 / UI 구현 경계를 납득할 수 있는가**
 를 확인한다.

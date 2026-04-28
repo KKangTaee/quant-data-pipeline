@@ -2031,3 +2031,21 @@ Detailed historical logs were archived on `2026-04-13`.
   - `git diff --check` passed
 - Durable takeaway:
   - Phase 30 can now move toward either Proposal UI / persistence or a small Backtest UI module split with a clearer definition of what a Portfolio Proposal is.
+
+### 2026-04-28
+- Completed the third Phase 30 work unit: registry JSONL I/O helper split.
+- Changed:
+  - added `app/web/runtime/candidate_registry.py`
+  - moved current candidate registry, candidate review note, and pre-live registry JSONL read / append helpers out of `app/web/pages/backtest.py`
+  - exported the helper functions and registry path constants from `app/web/runtime/__init__.py`
+  - kept Candidate Review UI, Pre-Live UI, compare prefill behavior, row schemas, file paths, append-only behavior, and Streamlit session state keys unchanged
+  - synced Phase 30 TODO, checklist, completion summary, plan, roadmap, doc index, comprehensive analysis, and web UI flow docs
+- Validation:
+  - `python3 -m py_compile app/web/runtime/candidate_registry.py app/web/runtime/__init__.py app/web/pages/backtest.py` passed
+  - `python3 plugins/quant-finance-workflow/scripts/manage_current_candidate_registry.py validate` passed
+  - `python3 plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py validate` passed
+  - `.venv/bin/python` import smoke for current candidate / pre-live / review note loaders passed
+  - `python3 plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py` passed
+  - `git diff --check` passed
+- Durable takeaway:
+  - This is the first actual `backtest.py` code split in Phase 30, but it is intentionally narrow: registry I/O only. Candidate Review / Pre-Live display logic remains in `backtest.py` for later targeted refactors.
