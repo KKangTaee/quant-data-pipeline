@@ -1482,7 +1482,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 | Phase 27 | `complete` | `manual_qa_completed` | 완료 |
 | Phase 28 | `complete` | `manual_qa_completed` | Capability + Replay + Data Trust + Real-Money/Guardrail parity QA 완료 |
 | Phase 29 | `complete` | `manual_qa_completed` | Candidate Review Board + Result Handoff + Review Notes + Registry Draft QA 완료 |
-| Phase 30 | `active` | `not_ready_for_qa` | product-flow 재정렬, Portfolio Proposal 계약 정의, registry I/O helper 분리, Proposal Draft UI 구현 |
+| Phase 30 | `active` | `not_ready_for_qa` | product-flow 재정렬, Portfolio Proposal 계약 정의, registry I/O helper 분리, Proposal Draft UI, Monitoring Review 구현 |
 
 한 줄 현재 판단:
 - current annual strict candidate와 portfolio bridge를 같은 frame에서 다시 본 `Phase 21`은 manual validation까지 완료되었고,
@@ -1512,6 +1512,8 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
   `app/web/runtime/candidate_registry.py`로 분리했다.
   네 번째 작업으로 `Backtest > Portfolio Proposal`에서 current candidate 여러 개를 proposal draft로 묶고
   `.note/finance/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`에 append-only로 저장하는 UI / helper를 추가했다.
+  다섯 번째 작업으로 저장된 proposal draft를 blocker / review gap / 후보 구성 관점에서 다시 보는
+  `Monitoring Review` tab을 추가했다.
 
 ---
 
@@ -1537,7 +1539,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 | Phase 27 | Data Integrity And Backtest Trust Layer | `complete` | `manual_qa_completed` | 백테스트 전에 데이터가 믿을 만한지, 어디까지 계산 가능한지 보여주고 QA까지 완료했다 |
 | Phase 28 | Strategy Family Parity And Cadence Completion | `complete` | `manual_qa_completed` | annual / quarterly / 신규 전략의 지원 범위, 재진입 상태, compare data trust, Real-Money / Guardrail scope를 화면에서 구분하고 QA까지 완료했다 |
 | Phase 29 | Candidate Review And Recommendation Workflow | `complete` | `manual_qa_completed` | current candidate를 검토 보드로 읽고, Latest / History 결과를 후보 검토 초안, review note, registry draft로 넘기는 workflow를 구현하고 QA까지 완료했다 |
-| Phase 30 | Portfolio Proposal And Pre-Live Monitoring Surface | `active` | `not_ready_for_qa` | 후보들을 포트폴리오 제안으로 묶는 draft UI / persistence를 추가했고, paper / monitoring surface는 후속 작업으로 남아 있다 |
+| Phase 30 | Portfolio Proposal And Pre-Live Monitoring Surface | `active` | `not_ready_for_qa` | 후보들을 포트폴리오 제안으로 묶는 draft UI / persistence와 저장 proposal monitoring review를 추가했고, paper tracking feedback 연결은 후속 작업으로 남아 있다 |
 
 ### Phase 26. Foundation Stabilization And Backlog Rebase
 
@@ -1631,6 +1633,8 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 - 네 번째 작업으로 `app/web/runtime/portfolio_proposal.py`와 `Backtest > Portfolio Proposal` panel을 추가했다.
   current candidate 여러 개를 proposal draft로 묶고, 목적 / 역할 / target weight / weight reason / operator decision을 확인한 뒤
   `.note/finance/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`에 append-only로 저장할 수 있다.
+- 다섯 번째 작업으로 `Backtest > Portfolio Proposal > Monitoring Review` tab을 추가했다.
+  저장된 proposal draft의 monitoring state, component table, blocker, review gap, operator decision을 확인할 수 있다.
 - 추가 코드 분리는 Candidate Review / Pre-Live / History / Saved Portfolio 같은 별도 작업 단위에서 점진 진행한다.
 
 ### Phase 30 이후

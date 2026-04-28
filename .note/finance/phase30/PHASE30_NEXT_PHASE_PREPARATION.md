@@ -15,6 +15,7 @@
 - 두 번째 작업으로 Portfolio Proposal row 계약을 정의했다.
 - 세 번째 작업으로 registry JSONL I/O helper를 runtime module로 분리했다.
 - 네 번째 작업으로 `Backtest > Portfolio Proposal` draft 작성 / 저장 / registry inspect 흐름을 추가했다.
+- 다섯 번째 작업으로 `Backtest > Portfolio Proposal > Monitoring Review` surface를 추가했다.
 
 ## 다음 phase에서 더 중요한 질문
 
@@ -50,4 +51,5 @@ Live Readiness / Final Approval phase를 별도로 열지 판단한다.
 - Phase 30의 두 번째 작업은 Portfolio Proposal 계약 정의였다.
 - Phase 30의 세 번째 작업은 current candidate / review note / pre-live registry helper 분리였다.
 - Phase 30의 네 번째 작업은 Portfolio Proposal Draft UI / persistence 구현이었다.
-- 다음 구현 전에 `PHASE30_CURRENT_CHAPTER_TODO.md`, Portfolio Proposal 계약 문서, fourth work-unit 문서, Portfolio Proposal registry guide를 먼저 확인한다.
+- Phase 30의 다섯 번째 작업은 Portfolio Proposal Monitoring Review 구현이었다.
+- 다음 구현 전에 `PHASE30_CURRENT_CHAPTER_TODO.md`, Portfolio Proposal 계약 문서, fourth/fifth work-unit 문서, Portfolio Proposal registry guide를 먼저 확인한다.

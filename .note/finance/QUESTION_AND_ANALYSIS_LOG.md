@@ -2794,3 +2794,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 이 기능은 saved portfolio replay, live trading approval, automatic optimizer를 대체하지 않는다
 - Follow-up:
   - 다음 작업 후보는 proposal monitoring surface 또는 Candidate Review / Pre-Live / History / Saved Portfolio의 추가 모듈 분리다
+
+### 2026-04-28 - Phase 30 다섯 번째 작업은 Proposal Monitoring Review로 진행한다
+- User request:
+  - Phase 30 다음 단계를 계속 진행해 달라고 요청함
+- Interpreted goal:
+  - Proposal Draft UI 다음에는 저장된 proposal을 단순 JSON inspect로만 두지 않고, 검토 상태와 남은 확인 항목을 볼 수 있는 monitoring surface가 필요함
+- Analysis result:
+  - `Backtest > Portfolio Proposal > Monitoring Review` tab을 추가했다
+  - 저장된 proposal draft를 monitoring state, component table, blocker, review gap, operator decision 기준으로 다시 읽을 수 있게 했다
+  - `blocked`, `needs_review`, `review_ready`는 review summary일 뿐 live approval 상태가 아니다
+  - proposal monitoring은 current candidate / pre-live registry / saved portfolio를 자동 변경하지 않는다
+- Follow-up:
+  - 다음 작업 후보는 paper / pre-live tracking feedback을 proposal에 연결하거나, Candidate Review / Pre-Live / History / Saved Portfolio의 추가 모듈 분리를 진행하는 것이다

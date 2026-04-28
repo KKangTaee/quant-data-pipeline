@@ -2068,3 +2068,21 @@ Detailed historical logs were archived on `2026-04-13`.
   - `git diff --check` passed
 - Durable takeaway:
   - Phase 30 now has the first implemented Portfolio Proposal draft surface. It remains proposal-draft persistence only, not live approval, optimizer output, or order instruction.
+
+### 2026-04-28
+- Completed the fifth Phase 30 work unit: Portfolio Proposal Monitoring Review.
+- Changed:
+  - added `Backtest > Portfolio Proposal > Monitoring Review`
+  - added monitoring summary rows for saved proposal drafts
+  - added selected proposal detail review with objective, construction, component monitoring, blockers, review gaps, operator decision, and JSON inspect
+  - defined `blocked`, `needs_review`, and `review_ready` as monitoring summary states, not live approval states
+  - synced Phase 30 TODO, checklist, completion summary, plan, next-phase prep, roadmap, doc index, glossary, comprehensive analysis, web UI flow docs, operations guide, and README
+- Validation:
+  - `python3 -m py_compile app/web/runtime/portfolio_proposal.py app/web/runtime/__init__.py app/web/pages/backtest.py` passed
+  - `.venv/bin/python` smoke for proposal monitoring helper functions passed
+  - `python3 plugins/quant-finance-workflow/scripts/manage_current_candidate_registry.py validate` passed
+  - `python3 plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py validate` passed
+  - `python3 plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py` passed
+  - `git diff --check` passed
+- Durable takeaway:
+  - Phase 30 proposal drafts can now be saved and then reviewed as monitoring objects. This still does not approve live trading, create orders, or optimize portfolio weights.

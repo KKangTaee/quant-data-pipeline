@@ -15,6 +15,7 @@ paper / pre-live monitoring surface로 연결하기 위한 계획 문서다.
 - Phase 30 전체 목표는 후보 묶음을 Portfolio Proposal / Pre-Live Monitoring으로 연결하는 것이다.
 - 두 번째 작업인 Portfolio Proposal 계약 정의는 첫 번째 작업 이후, UI 구현 전에 진행하는 설계 단계다.
 - 네 번째 작업에서 `Backtest > Portfolio Proposal` draft 작성 / 저장 / registry inspect 흐름을 추가했다.
+- 다섯 번째 작업에서 저장된 proposal draft를 다시 읽는 `Monitoring Review` surface를 추가했다.
 
 ## 목적
 
@@ -23,6 +24,7 @@ paper / pre-live monitoring surface로 연결하기 위한 계획 문서다.
 3. Phase 30 portfolio proposal 구현 전에 `backtest.py` 리팩토링 경계를 정한다.
 4. Portfolio Proposal row가 담아야 할 목적, 후보 역할, 비중 근거, 위험 경계, evidence snapshot, blocker, operator decision을 먼저 정의한다.
 5. Portfolio Proposal 계약을 실제 Backtest UI와 append-only registry persistence로 연결한다.
+6. 저장된 Portfolio Proposal draft를 blocker / review gap / 후보 구성 관점으로 다시 읽는다.
 
 ## 쉽게 말하면
 
@@ -91,6 +93,11 @@ Phase 29까지 오면서 좋은 백테스트 결과를 후보로 읽고,
    - 왜 필요한가: 계약만 있으면 사용자가 실제 workflow에서 proposal을 만들 수 없으므로, 저장 전 초안과 registry inspect surface가 필요하다.
    - 기대 효과: 후보 검토 흐름이 단일 후보 registry에서 포트폴리오 제안 초안까지 이어진다.
    - 현재 상태: 네 번째 작업 단위에서 `Backtest > Portfolio Proposal` panel, append-only proposal helper, proposal registry inspect tab을 추가했다.
+5. Portfolio Proposal Monitoring Review
+   - 쉽게 말하면: 저장한 proposal draft를 다시 열어 어떤 blocker와 review gap이 남았는지 확인한다.
+   - 왜 필요한가: proposal은 저장에서 끝나는 것이 아니라, paper / pre-live monitoring과 live readiness 전 검토로 이어져야 한다.
+   - 기대 효과: 사용자는 proposal draft가 단순 저장물인지, 추가 확인이 필요한 검토 대상인지 한눈에 볼 수 있다.
+   - 현재 상태: 다섯 번째 작업 단위에서 `Monitoring Review` tab, monitoring summary, component table, blocker / review gap readout을 추가했다.
 
 ## 이 문서에서 자주 쓰는 용어
 
@@ -182,16 +189,20 @@ Phase 29까지 오면서 좋은 백테스트 결과를 후보로 읽고,
   - `app/web/runtime/portfolio_proposal.py`가 추가되었다.
   - `Backtest > Portfolio Proposal` panel에 `Create Proposal Draft`와 `Proposal Registry` tab이 추가되었다.
 
-### 다섯 번째 작업 후보: Proposal review / monitoring surface
+### 다섯 번째 작업: Portfolio Proposal Monitoring Review
 
 - 무엇을 바꾸는가:
-  - 후보 묶음의 Real-Money / Data Trust / Pre-Live 상태를 한 화면에서 읽게 한다.
+  - 저장된 proposal draft의 Real-Money / Data Trust / Pre-Live 상태, blocker, review gap, operator decision을 한 화면에서 읽게 한다.
 
 - 왜 필요한가:
   - 포트폴리오 제안은 성과 숫자만으로 판단할 수 없다.
 
 - 작업이 끝나면 좋은 점:
   - 사용자는 포트폴리오 제안을 paper tracking 또는 재검토 대상으로 볼 수 있다.
+
+- 현재 결과:
+  - `Backtest > Portfolio Proposal > Monitoring Review` tab이 추가되었다.
+  - monitoring state는 `blocked`, `needs_review`, `review_ready`로 요약하지만 live approval은 아니다.
 
 ## 다음에 확인할 것
 
@@ -200,6 +211,7 @@ Phase 29까지 오면서 좋은 백테스트 결과를 후보로 읽고,
 - Portfolio Proposal을 투자 승인처럼 보이게 하는 용어나 버튼이 없는지
 - Phase 30 이후 Live Readiness / Final Approval을 별도 phase로 남겨둘지
 - `Backtest > Portfolio Proposal`에서 proposal draft 저장과 registry inspect 흐름이 자연스러운지
+- `Monitoring Review`에서 저장된 proposal의 blocker / review gap / 후보 구성이 한눈에 읽히는지
 - proposal draft가 saved portfolio 또는 live approval로 오해되지 않는지
 
 ## 한 줄 정리
@@ -208,4 +220,5 @@ Phase 30은 후보 검토 결과를 포트폴리오 제안과 pre-live monitorin
 첫 작업은 기능 추가 전에 사용 흐름과 코드 경계를 다시 정렬하는 것이었고,
 두 번째 작업은 Portfolio Proposal 계약 정의,
 세 번째 작업은 registry helper 분리,
-네 번째 작업은 Portfolio Proposal Draft UI / persistence 구현이다.
+네 번째 작업은 Portfolio Proposal Draft UI / persistence 구현,
+다섯 번째 작업은 Portfolio Proposal Monitoring Review 구현이다.

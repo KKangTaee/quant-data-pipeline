@@ -6531,6 +6531,197 @@ def _build_portfolio_proposal_rows_for_display(rows: list[dict[str, Any]]) -> pd
     return pd.DataFrame(display_rows)
 
 
+def _portfolio_proposal_weight_total(row: dict[str, Any]) -> float:
+    total = 0.0
+    for ref in list(row.get("candidate_refs") or []):
+        try:
+            total += float(ref.get("target_weight") or 0.0)
+        except (TypeError, ValueError):
+            continue
+    return round(total, 4)
+
+
+def _portfolio_proposal_review_gaps(row: dict[str, Any]) -> list[str]:
+    gaps: list[str] = []
+    operator_decision = dict(row.get("operator_decision") or {})
+    if not operator_decision.get("review_date"):
+        gaps.append("Review date is not set.")
+
+    for ref in list(row.get("candidate_refs") or []):
+        registry_id = str(ref.get("registry_id") or "-")
+        data_trust_status = str(ref.get("data_trust_status") or "not_attached")
+        pre_live_status = str(ref.get("pre_live_status") or "not_started")
+        if data_trust_status in {"not_attached", "unknown", "missing"}:
+            gaps.append(f"{registry_id}: data trust status needs review.")
+        if pre_live_status == "not_started":
+            gaps.append(f"{registry_id}: pre-live status is not started.")
+    return gaps
+
+
+def _portfolio_proposal_monitoring_blockers(row: dict[str, Any]) -> list[str]:
+    blockers = [str(value) for value in list(row.get("open_blockers") or []) if str(value).strip()]
+    for ref in list(row.get("candidate_refs") or []):
+        registry_id = str(ref.get("registry_id") or "-")
+        real_money_status = dict(ref.get("real_money_status") or {})
+        try:
+            target_weight = float(ref.get("target_weight") or 0.0)
+        except (TypeError, ValueError):
+            target_weight = 0.0
+        pre_live_status = str(ref.get("pre_live_status") or "not_started")
+        proposal_role = str(ref.get("proposal_role") or "")
+        deployment_status = str(real_money_status.get("deployment") or "").lower()
+        component_blockers = [str(value) for value in list(ref.get("open_candidate_blockers") or []) if str(value).strip()]
+        for blocker in component_blockers:
+            blockers.append(f"{registry_id}: {blocker}")
+        if pre_live_status == "reject" and target_weight > 0:
+            blockers.append(f"{registry_id}: rejected pre-live candidate has active weight.")
+        if deployment_status == "blocked" and proposal_role == "core_anchor":
+            blockers.append(f"{registry_id}: blocked candidate is marked as core anchor.")
+    return blockers
+
+
+def _portfolio_proposal_monitoring_state(row: dict[str, Any]) -> str:
+    if _portfolio_proposal_monitoring_blockers(row):
+        return "blocked"
+    if _portfolio_proposal_review_gaps(row):
+        return "needs_review"
+    return "review_ready"
+
+
+def _build_portfolio_proposal_monitoring_rows(rows: list[dict[str, Any]]) -> pd.DataFrame:
+    display_rows: list[dict[str, Any]] = []
+    for row in rows:
+        operator_decision = dict(row.get("operator_decision") or {})
+        blockers = _portfolio_proposal_monitoring_blockers(row)
+        review_gaps = _portfolio_proposal_review_gaps(row)
+        display_rows.append(
+            {
+                "Updated At": row.get("updated_at") or row.get("created_at"),
+                "Proposal ID": row.get("proposal_id"),
+                "Status": row.get("proposal_status"),
+                "Monitoring State": _portfolio_proposal_monitoring_state(row),
+                "Components": len(row.get("candidate_refs") or []),
+                "Weight Total": _portfolio_proposal_weight_total(row),
+                "Blockers": len(blockers),
+                "Review Gaps": len(review_gaps),
+                "Review Date": operator_decision.get("review_date"),
+                "Next Action": operator_decision.get("next_action"),
+            }
+        )
+    return pd.DataFrame(display_rows)
+
+
+def _build_portfolio_proposal_component_rows(row: dict[str, Any]) -> pd.DataFrame:
+    display_rows: list[dict[str, Any]] = []
+    for ref in list(row.get("candidate_refs") or []):
+        real_money_status = dict(ref.get("real_money_status") or {})
+        blockers = [str(value) for value in list(ref.get("open_candidate_blockers") or []) if str(value).strip()]
+        display_rows.append(
+            {
+                "Registry ID": ref.get("registry_id"),
+                "Family": ref.get("strategy_family"),
+                "Strategy": ref.get("strategy_name"),
+                "Candidate Role": ref.get("candidate_role"),
+                "Proposal Role": ref.get("proposal_role"),
+                "Target Weight": ref.get("target_weight"),
+                "Data Trust": ref.get("data_trust_status"),
+                "Pre-Live": ref.get("pre_live_status"),
+                "Promotion": real_money_status.get("promotion"),
+                "Shortlist": real_money_status.get("shortlist"),
+                "Deployment": real_money_status.get("deployment"),
+                "Weight Reason": ref.get("weight_reason"),
+                "Candidate Blockers": "; ".join(blockers) if blockers else "-",
+            }
+        )
+    return pd.DataFrame(display_rows)
+
+
+def _portfolio_proposal_selection_label(row: dict[str, Any]) -> str:
+    return f"{row.get('updated_at') or row.get('created_at')} | {row.get('proposal_status')} | {row.get('proposal_id')}"
+
+
+def _render_portfolio_proposal_monitoring_review(proposal_rows: list[dict[str, Any]]) -> None:
+    st.markdown("#### Proposal Monitoring Review")
+    st.caption(
+        "저장된 proposal draft를 blocker / review gap / 후보 구성 관점에서 다시 읽는 화면입니다. "
+        "여기서도 live approval이나 주문 지시는 만들지 않습니다."
+    )
+    if not proposal_rows:
+        st.info("아직 monitoring review를 볼 Portfolio Proposal이 없습니다.")
+        return
+
+    monitoring_df = _build_portfolio_proposal_monitoring_rows(proposal_rows)
+    st.dataframe(monitoring_df, use_container_width=True, hide_index=True)
+
+    labels = [_portfolio_proposal_selection_label(row) for row in proposal_rows]
+    selected_label = st.selectbox(
+        "Review Portfolio Proposal",
+        options=labels,
+        key="portfolio_proposal_monitoring_selected_record",
+    )
+    selected_row = proposal_rows[labels.index(selected_label)]
+    objective = dict(selected_row.get("objective") or {})
+    construction = dict(selected_row.get("construction") or {})
+    operator_decision = dict(selected_row.get("operator_decision") or {})
+    blockers = _portfolio_proposal_monitoring_blockers(selected_row)
+    review_gaps = _portfolio_proposal_review_gaps(selected_row)
+    component_rows = _build_portfolio_proposal_component_rows(selected_row)
+
+    status_cols = st.columns(4, gap="small")
+    status_cols[0].metric("Monitoring State", _portfolio_proposal_monitoring_state(selected_row))
+    status_cols[1].metric("Components", len(selected_row.get("candidate_refs") or []))
+    status_cols[2].metric("Target Weight", f"{_portfolio_proposal_weight_total(selected_row)}%")
+    status_cols[3].metric("Live Approval", "Disabled")
+
+    st.markdown("##### Proposal Objective")
+    objective_cols = st.columns(3, gap="small")
+    with objective_cols[0]:
+        st.markdown(f"**Primary Goal**  \n`{objective.get('primary_goal') or '-'}`")
+    with objective_cols[1]:
+        st.markdown(f"**Secondary Goal**  \n`{objective.get('secondary_goal') or '-'}`")
+    with objective_cols[2]:
+        st.markdown(f"**Capital Scope**  \n`{objective.get('capital_scope') or '-'}`")
+    st.caption(
+        f"Review cadence: `{objective.get('target_holding_style') or '-'}` / "
+        f"Weighting: `{construction.get('weighting_method') or '-'}` / "
+        f"Benchmark policy: `{construction.get('benchmark_policy') or '-'}`"
+    )
+
+    st.markdown("##### Component Monitoring")
+    if component_rows.empty:
+        st.info("이 proposal에는 component candidate가 없습니다.")
+    else:
+        st.dataframe(component_rows, use_container_width=True, hide_index=True)
+
+    detail_cols = st.columns(2, gap="small")
+    with detail_cols[0]:
+        st.markdown("##### Blockers")
+        if blockers:
+            for blocker in blockers:
+                st.warning(blocker)
+        else:
+            st.success("현재 저장된 proposal blocker는 없습니다.")
+    with detail_cols[1]:
+        st.markdown("##### Review Gaps")
+        if review_gaps:
+            for gap in review_gaps:
+                st.info(gap)
+        else:
+            st.success("현재 저장된 review gap은 없습니다.")
+
+    st.markdown("##### Operator Decision")
+    st.write(
+        {
+            "decision": operator_decision.get("decision"),
+            "reason": operator_decision.get("reason"),
+            "next_action": operator_decision.get("next_action"),
+            "review_date": operator_decision.get("review_date"),
+        }
+    )
+    with st.expander("Portfolio Proposal JSON", expanded=False):
+        st.json(selected_row)
+
+
 def _render_portfolio_proposal_workspace() -> None:
     st.markdown("### Portfolio Proposal")
     st.caption(
@@ -6550,7 +6741,7 @@ def _render_portfolio_proposal_workspace() -> None:
     summary_cols[3].metric("Live Approval", "Disabled")
     st.caption(f"Path: {PORTFOLIO_PROPOSAL_REGISTRY_FILE}")
 
-    create_tab, registry_tab = st.tabs(["Create Proposal Draft", "Proposal Registry"])
+    create_tab, monitoring_tab, registry_tab = st.tabs(["Create Proposal Draft", "Monitoring Review", "Proposal Registry"])
     with create_tab:
         if not current_rows:
             st.info("Portfolio Proposal을 만들 current candidate가 없습니다.")
@@ -6723,6 +6914,9 @@ def _render_portfolio_proposal_workspace() -> None:
             st.success(f"Portfolio Proposal `{proposal_row['proposal_id']}`를 저장했습니다. live approval은 아닙니다.")
             st.rerun()
 
+    with monitoring_tab:
+        _render_portfolio_proposal_monitoring_review(proposal_rows)
+
     with registry_tab:
         st.markdown("#### Proposal Registry")
         st.caption(f"Path: {PORTFOLIO_PROPOSAL_REGISTRY_FILE}")
@@ -6730,10 +6924,7 @@ def _render_portfolio_proposal_workspace() -> None:
             st.info("아직 저장된 Portfolio Proposal이 없습니다.")
             return
         st.dataframe(_build_portfolio_proposal_rows_for_display(proposal_rows), use_container_width=True, hide_index=True)
-        labels = [
-            f"{row.get('updated_at') or row.get('created_at')} | {row.get('proposal_status')} | {row.get('proposal_id')}"
-            for row in proposal_rows
-        ]
+        labels = [_portfolio_proposal_selection_label(row) for row in proposal_rows]
         selected_label = st.selectbox("Inspect Portfolio Proposal", options=labels, key="portfolio_proposal_selected_record")
         selected_row = proposal_rows[labels.index(selected_label)]
         st.json(selected_row)
