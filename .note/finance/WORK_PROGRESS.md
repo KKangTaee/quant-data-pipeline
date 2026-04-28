@@ -2244,3 +2244,13 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.venv/bin/python -m py_compile app/web/streamlit_app.py` passed
 - Durable takeaway:
   - Guides now separates core concepts, ordered workflow, stop/go criteria, and reference files so the walkthrough can be followed without mixing practice notes into phase QA docs.
+
+### 2026-04-29
+- Clarified interval / rebalance interval semantics after walkthrough feedback.
+- Changed:
+  - added a Guides expander explaining that `option=month_end` makes interval values row cadence, not week counts
+  - clarified `1 = monthly / roughly 4 weeks`, `4 = every fourth month-end row`, and `12 = annual`
+  - updated Equal Weight input help text in single and compare forms
+  - updated the walkthrough note to explain why the GTAA smoke used `Rebalance Interval = 4` and when Equal Weight should use `1`
+- Durable takeaway:
+  - Operators should use `Rebalance Interval = 1` for a literal monthly / roughly 4-week Equal Weight benchmark under `month_end`; `4` only matches the existing GTAA candidate's slower cadence.

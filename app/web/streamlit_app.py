@@ -2910,6 +2910,37 @@ def _render_guides_page() -> None:
                 "`Real-Money Contract`는 거래비용, benchmark, ETF AUM, spread 같은 실전 검토 기준입니다."
             )
 
+    with st.expander("Interval / Rebalance Interval 읽는 법", expanded=False):
+        st.caption(
+            "`option=month_end`로 실행할 때 interval 숫자는 주 단위가 아니라 "
+            "월말 데이터 row를 몇 개마다 사용할지 정하는 값입니다."
+        )
+        interval_rows = pd.DataFrame(
+            [
+                {
+                    "입력값": "`1`",
+                    "month_end 기준 의미": "매월 리밸런싱 / 매월 신호 갱신",
+                    "헷갈리기 쉬운 표현": "대략 4주마다로 볼 수 있음",
+                },
+                {
+                    "입력값": "`4`",
+                    "month_end 기준 의미": "4번째 월말 row마다 리밸런싱 / 신호 갱신",
+                    "헷갈리기 쉬운 표현": "4주가 아니라 대략 4개월 cadence",
+                },
+                {
+                    "입력값": "`12`",
+                    "month_end 기준 의미": "12번째 월말 row마다 리밸런싱",
+                    "헷갈리기 쉬운 표현": "연 1회 cadence",
+                },
+            ]
+        )
+        st.dataframe(interval_rows, use_container_width=True, hide_index=True)
+        st.info(
+            "따라서 `SPY, QQQ, GLD, IEF` Equal Weight를 4주/월간 리밸런싱으로 보려면 "
+            "`Rebalance Interval = 1`을 사용합니다. "
+            "기존 GTAA 실습 후보의 `Interval = 4`는 후보 계약을 맞춘 값이지 4주 리밸런싱이 아닙니다."
+        )
+
     st.markdown("### 1~11 단계 실행 흐름")
 
     with st.container(border=True):

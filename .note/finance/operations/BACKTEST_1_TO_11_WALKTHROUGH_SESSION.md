@@ -36,6 +36,23 @@
 이는 투자 승인이나 주문 지시가 아니라,
 5단계 Compare에서 다른 후보와 비교해 볼 수 있다는 뜻이다.
 
+### Interval / Rebalance Interval 읽는 법
+
+현재 walkthrough의 공통 실행 option은 `month_end`다.
+이 경우 `Interval` 또는 `Rebalance Interval`은 주 단위가 아니라
+월말 데이터 row를 몇 개마다 사용할지 정하는 값이다.
+
+| 입력값 | `month_end` 기준 의미 | 실습에서 주의할 점 |
+|---|---|---|
+| `1` | 매월 리밸런싱 / 매월 신호 갱신 | 대략 4주 cadence로 보려면 이 값을 쓴다 |
+| `4` | 4번째 월말 row마다 리밸런싱 / 신호 갱신 | 4주가 아니라 대략 4개월 cadence다 |
+| `12` | 12번째 월말 row마다 리밸런싱 | 연 1회 cadence다 |
+
+따라서 `Equal Weight Same Universe`를 말 그대로 4주 / 월간 리밸런싱 benchmark로 쓰려면
+`Rebalance Interval = 1`이 맞다.
+다만 현재 실습 후보인 `GTAA Balanced Top-2` registry 계약은 `Interval = 4`이므로,
+후보의 cadence를 그대로 맞춘 Compare smoke에서는 Equal Weight도 `Rebalance Interval = 4`로 실행했다.
+
 ## 이 세션에서 정리한 질문과 답
 
 ### Risk-Off 후보군 해석
@@ -164,7 +181,7 @@ benchmark 성격의 Equal Weight, momentum 대안인 Global Relative Strength,
 | 역할 | Strategy | 설정 |
 |---|---|---|
 | 기준 후보 | `GTAA` | Manual tickers `SPY, QQQ, GLD, IEF`, Top `2`, Interval `4`, Score Horizons `1M / 3M`, Trend Filter `200`, Risk-Off `Defensive Bond Preference`, Defensive Tickers `TLT, IEF, LQD, BIL` |
-| benchmark 성격 | `Equal Weight` | Manual tickers `SPY, QQQ, GLD, IEF`, Rebalance Interval `4` |
+| benchmark 성격 | `Equal Weight` | Manual tickers `SPY, QQQ, GLD, IEF`, Rebalance Interval `4`로 후보 cadence를 맞춤. 월간 / 4주 benchmark가 목적이면 `1` |
 | momentum 대안 | `Global Relative Strength` | Manual tickers `SPY, QQQ, GLD, IEF`, Cash / Defensive Ticker `IEF`, Top `2`, Interval `4`, Score Horizons `1M / 3M`, Trend Filter `200` |
 | risk-balanced 대안 | `Risk Parity Trend` | 기본 `Risk Parity Universe`, Rebalance Interval `4`, Vol Window `6` |
 

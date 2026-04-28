@@ -3028,3 +3028,17 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Phase 30 QA 문서는 건드리지 않고 operations walkthrough와 code analysis 문서만 동기화했다
 - Follow-up:
   - 사용자는 Guides에서 `핵심 개념 -> 1~11 단계 -> 단계 통과 기준 -> 문서와 파일` 순서로 실습 안내를 확인한다
+
+### 2026-04-29 - month_end interval은 주 단위가 아니라 row cadence다
+- User request:
+  - `Equal Weight Same Universe`를 `SPY, QQQ, GLD, IEF, 4주 리밸런싱`이라고 했을 때 interval이 `1`인지 `12`인지 질문함
+- Interpreted goal:
+  - Compare 실습에서 `Interval`과 `Rebalance Interval` 숫자가 어떤 시간 단위를 뜻하는지 명확히 해야 함
+- Analysis result:
+  - 현재 walkthrough는 `option=month_end` 기준이므로 interval 숫자는 주 단위가 아니라 월말 row 간격이다
+  - `1`은 매월 리밸런싱 / 매월 신호 갱신이며 대략 4주 cadence로 볼 수 있다
+  - `4`는 4번째 월말 row마다 갱신하는 느린 cadence이고, `12`는 연 1회 cadence다
+  - 기존 GTAA 실습 후보는 registry 계약이 `Interval = 4`라서 Compare smoke에서 Equal Weight도 `4`로 후보 cadence를 맞췄지만, literal 4주 / 월간 Equal Weight benchmark라면 `Rebalance Interval = 1`을 써야 한다
+  - Guides, Equal Weight input help, walkthrough 문서에 이 구분을 추가했다
+- Follow-up:
+  - 사용자가 후보 cadence를 맞출지, 월간 benchmark를 둘지에 따라 Equal Weight interval을 `4` 또는 `1`로 선택한다

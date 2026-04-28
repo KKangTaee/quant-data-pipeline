@@ -14121,7 +14121,10 @@ def _render_equal_weight_form() -> None:
                 max_value=36,
                 value=12,
                 step=1,
-                help="Equal Weight sample 기준 기본값은 12입니다.",
+                help=(
+                    "`option=month_end` 기준으로 1=매월(대략 4주), 4=4개월마다, 12=연 1회입니다. "
+                    "Equal Weight sample 기본값은 12입니다."
+                ),
                 key="eq_rebalance_interval",
             )
 
@@ -16550,6 +16553,9 @@ def render_backtest_tab() -> None:
                                     max_value=36,
                                     value=12,
                                     step=1,
+                                    help=(
+                                        "`option=month_end` 기준으로 1=매월(대략 4주), 4=4개월마다, 12=연 1회입니다."
+                                    ),
                                     key="compare_eq_interval",
                                 )
                             )
