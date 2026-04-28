@@ -9,6 +9,12 @@ paper / pre-live monitoring surface로 연결하기 위한 계획 문서다.
 첫 작업은 Phase 29 이후 기준으로 사용 흐름을 다시 정렬하고,
 너무 커진 `app/web/pages/backtest.py`를 어떤 제품 경계로 나눌지 검토하는 것이다.
 
+주의:
+
+- `사용 흐름 재정렬 + backtest.py 리팩토링 경계 검토`는 Phase 30 전체가 아니라 첫 번째 작업 단위다.
+- Phase 30 전체 목표는 후보 묶음을 Portfolio Proposal / Pre-Live Monitoring으로 연결하는 것이다.
+- 두 번째 작업인 Portfolio Proposal 계약 정의는 첫 번째 작업 이후, UI 구현 전에 진행하는 설계 단계다.
+
 ## 목적
 
 1. `테스트에서 상용화 후보 검토까지 사용하는 흐름`을 Phase 29 이후 기준으로 다시 정리한다.
@@ -150,4 +156,5 @@ Phase 29까지 오면서 좋은 백테스트 결과를 후보로 읽고,
 ## 한 줄 정리
 
 Phase 30은 후보 검토 결과를 포트폴리오 제안과 pre-live monitoring으로 연결하는 phase이며,
-첫 작업은 기능 추가 전에 사용 흐름과 코드 경계를 다시 정렬하는 것이다.
+첫 작업은 기능 추가 전에 사용 흐름과 코드 경계를 다시 정렬하는 것이었고,
+두 번째 작업은 그 다음 단계인 Portfolio Proposal 계약 정의다.

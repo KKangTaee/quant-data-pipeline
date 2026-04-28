@@ -54,6 +54,10 @@
   첫 작업으로 Phase 29 이후 기준의 사용 흐름과 `backtest.py` 리팩토링 경계를 정리했고,
   두 번째 작업으로 Portfolio Proposal row 계약을 정의했다.
   아직 Proposal UI / persistence 구현 단계는 아니다.
+- Phase 30을 읽을 때는 전체 목표와 작업 단위를 분리해서 본다.
+  전체 목표는 Portfolio Proposal / Pre-Live Monitoring surface이고,
+  첫 번째 작업은 product-flow / refactor boundary,
+  두 번째 작업은 Portfolio Proposal contract다.
 
 ---
 

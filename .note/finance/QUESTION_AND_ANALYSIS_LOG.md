@@ -2754,3 +2754,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Portfolio Proposal은 saved portfolio replay나 current candidate registry를 대체하지 않고, 후보 묶음을 왜 제안 초안으로 보는지 설명하는 별도 검토 단위다
 - Follow-up:
   - 다음 작업은 Proposal UI / persistence 구현 또는 current candidate registry helper 모듈 분리 중 하나로 이어진다
+
+### 2026-04-28 - Phase 30 전체 목표와 첫 작업 단위를 구분해야 한다
+- User request:
+  - Phase 30이 `사용 흐름 재정렬 + backtest.py 리팩토링 경계 검토` 작업으로 진행되는 것으로 이해했는데, 왜 갑자기 `Portfolio Proposal Contract Second Work Unit`이 진행되는지 설명을 요청함
+- Interpreted goal:
+  - Phase 30 전체 목표와 첫 번째 작업 단위, 두 번째 작업 단위의 관계를 명확히 해야 함
+- Analysis result:
+  - Phase 30 전체 목표는 후보 묶음을 Portfolio Proposal / Pre-Live Monitoring으로 연결하는 것이다
+  - `사용 흐름 재정렬 + backtest.py 리팩토링 경계 검토`는 Phase 30 전체가 아니라 첫 번째 작업 단위였다
+  - 첫 번째 작업에서 Portfolio Proposal이 흐름상 어디에 오는지 정했으므로, 두 번째 작업에서는 UI / 저장소 구현 전에 Proposal row 계약을 정의했다
+  - 따라서 `Portfolio Proposal Contract Second Work Unit`은 첫 작업을 건너뛴 것이 아니라, 첫 작업 이후 이어지는 설계 단계다
+- Follow-up:
+  - Phase 30 TODO와 plan, second work-unit 문서에 `Phase 30 전체 목표 / 첫 번째 작업 / 두 번째 작업 / 이후 작업 후보` 구분을 명시했다
