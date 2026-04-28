@@ -3014,3 +3014,17 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 새 Draft Score는 `9.0 / 10`, 판정은 `6단계 Candidate Draft 조건부 진행 가능`으로 계산됐다
 - Follow-up:
   - UI 수동 테스트에서는 같은 비교 구성을 재현하고, `Send Selected Strategy To Candidate Draft`로 6단계 이동을 확인한다
+
+### 2026-04-29 - Reference Guides를 실습 흐름에 맞게 재정리한다
+- User request:
+  - Guides의 `실전 승격 흐름`, `Real-Money Contract`, `GTAA Risk-Off` 설명을 큰 카테고리로 묶고, `테스트에서 상용화 후보 검토까지 사용하는 흐름`과 `단계 통과 기준`은 각 단계를 클릭해 펼쳐보게 만들며, 문서/파일 목록도 최신화해 달라고 요청함
+- Interpreted goal:
+  - 1~11단계 실습 중 필요한 개념 설명, 단계별 절차, stop/go 기준, 참고 문서가 한 화면에서 구분되어야 함
+- Analysis result:
+  - `Reference > Guides`에 `핵심 개념 가이드` 묶음을 만들고 실전 승격 흐름, Real-Money Contract, GTAA Risk-Off 설명을 expander로 정리했다
+  - `1~11 단계 실행 흐름`에서는 1~11단계를 각각 expander로 바꿔 필요한 단계만 펼쳐 읽게 했다
+  - `단계 통과 기준`에서는 4->5, 5->6 기준을 각각 expander로 바꿨다
+  - `문서와 파일`에는 현재 먼저 볼 문서로 walkthrough session, web backtest UI flow, glossary, doc index, roadmap, registry 파일을 최신화했다
+  - Phase 30 QA 문서는 건드리지 않고 operations walkthrough와 code analysis 문서만 동기화했다
+- Follow-up:
+  - 사용자는 Guides에서 `핵심 개념 -> 1~11 단계 -> 단계 통과 기준 -> 문서와 파일` 순서로 실습 안내를 확인한다

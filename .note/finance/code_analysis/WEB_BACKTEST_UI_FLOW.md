@@ -29,9 +29,9 @@ Backtest page는 현재 여섯 panel 중심으로 본다.
 - `Pre-Live Review`: current candidate를 실전 전 운영 상태로 기록하고 저장된 Pre-Live record를 확인한다.
 - `Portfolio Proposal`: current candidate 여러 개를 목적 / 역할 / 비중 근거와 함께 proposal draft로 저장하고 monitoring review / pre-live feedback / paper tracking feedback으로 다시 읽는다.
 
-## Phase 30 기준 제품 흐름
+## 현재 Reference Guide 제품 흐름
 
-Phase 30 첫 작업 이후 사용자-facing Guide는 아래 흐름을 기준으로 읽는다.
+`Reference > Guides`의 사용자-facing 흐름은 아래 순서로 읽는다.
 
 ```text
 Ingestion / Data Trust
@@ -55,6 +55,15 @@ Ingestion / Data Trust
 - `Pre-Live Review`는 실제 돈 없이 paper / watchlist / hold / re-review 상태를 기록하는 운영 단계다.
 - `Portfolio Proposal`은 후보 묶음 제안이며, live trading approval이 아니다.
 - `Live Readiness / Final Approval`은 Phase 30 이후 별도 phase 후보로 남긴다.
+
+현재 Guides 화면은 네 묶음으로 정리한다.
+
+| 묶음 | 내용 |
+|---|---|
+| `핵심 개념 가이드` | 실전 승격 흐름, Real-Money Contract, GTAA Risk-Off 후보군 해석 |
+| `1~11 단계 실행 흐름` | 테스트에서 상용화 후보 검토까지의 단계별 흐름. 각 단계는 expander로 접어 읽는다 |
+| `단계 통과 기준` | 4->5, 5->6처럼 다음 단계로 넘길지 판단하는 stop/go 기준. 각 기준은 expander로 접어 읽는다 |
+| `문서와 파일` | 현재 먼저 볼 문서, 주요 registry / guide / log 파일, live approval이 아님을 구분하는 운영 경계 |
 
 ## Phase 30 Portfolio Proposal 계약
 

@@ -2399,8 +2399,10 @@ def _render_guides_page() -> None:
     st.caption("현재 운영 기준과 phase 문서를 빠르게 찾는 참고 페이지입니다.")
     _render_runtime_build_indicator()
 
-    with st.container(border=True):
-        st.markdown("### 실전 승격 흐름 빠른 설명")
+    st.markdown("### 핵심 개념 가이드")
+    st.caption("Real-Money 해석, contract 입력, GTAA Risk-Off처럼 단계 진행 전에 자주 헷갈리는 개념을 모았습니다.")
+
+    with st.expander("실전 승격 흐름 빠른 설명", expanded=True):
         st.caption("Backtest 결과 화면의 `Real-Money > 현재 판단`에서 보이는 값을 먼저 이해하기 위한 요약입니다.")
         st.code("Backtest 결과 -> Real-Money -> 현재 판단", language="text")
 
@@ -2629,8 +2631,7 @@ def _render_guides_page() -> None:
                 )
                 st.dataframe(ops_rows, use_container_width=True, hide_index=True)
 
-    with st.container(border=True):
-        st.markdown("### Real-Money Contract 값 해설")
+    with st.expander("Real-Money Contract 값 해설", expanded=False):
         st.caption(
             "전략 폼의 `Advanced Inputs > Real-Money Contract`에 보이는 값이 "
             "무엇을 뜻하고, 왜 필요한지, 결과에서 어디에 영향을 주는지 빠르게 정리합니다."
@@ -2774,8 +2775,7 @@ def _render_guides_page() -> None:
                 "`후보 진입 조건 -> benchmark 비교 계약 -> robustness 기준 -> ETF operability -> 실행 후 Real-Money 해석` 순서로 보면 됩니다."
             )
 
-    with st.container(border=True):
-        st.markdown("### GTAA Risk-Off 후보군 보는 법")
+    with st.expander("GTAA Risk-Off 후보군 보는 법", expanded=False):
         st.caption(
             "`Risk-Off Contract`는 GTAA가 점수로 고른 ETF를 그대로 보유할지, "
             "추세가 약한 자리는 현금이나 방어 ETF로 비울지 정하는 실행 규칙입니다."
@@ -2910,6 +2910,8 @@ def _render_guides_page() -> None:
                 "`Real-Money Contract`는 거래비용, benchmark, ETF AUM, spread 같은 실전 검토 기준입니다."
             )
 
+    st.markdown("### 1~11 단계 실행 흐름")
+
     with st.container(border=True):
         st.markdown("### 테스트에서 상용화 후보 검토까지 사용하는 흐름")
         st.caption(
@@ -2927,7 +2929,7 @@ def _render_guides_page() -> None:
             "후보로 남길지, 비교할지, paper tracking / watchlist / 보류 / 재검토로 둘지 정하는 **별도 운영 절차**입니다."
         )
         st.caption(
-            "큰 흐름으로는 1~5단계가 테스트 / 검증 구간, 6~10단계가 후보 검토 / 운영 기록 구간, "
+            "큰 흐름으로는 1-5단계가 테스트 / 검증 구간, 6-10단계가 후보 검토 / 운영 기록 구간, "
             "11단계가 포트폴리오 제안과 live readiness 경계입니다."
         )
 
@@ -3062,8 +3064,7 @@ def _render_guides_page() -> None:
         ]
 
         for row in step_rows:
-            with st.container(border=True):
-                st.markdown(f"#### {row['title']}")
+            with st.expander(row["title"], expanded=row["title"].startswith("1단계")):
                 st.caption(f"위치: {row['path']}")
                 st.markdown(f"**무엇을 하는 단계인가**  \n{row['goal']}")
                 st.markdown("**이 단계에서 볼 것**")
@@ -3078,8 +3079,7 @@ def _render_guides_page() -> None:
             "각 단계에서 멈출지 다음 단계로 갈지 판단할 때 따로 보는 기준입니다."
         )
 
-        with st.container(border=True):
-            st.markdown("#### 4단계에서 5단계로 넘어가는 최소 기준")
+        with st.expander("4단계에서 5단계로 넘어가는 최소 기준", expanded=True):
             st.caption(
                 "이 기준은 투자 승인 기준이 아니라, `Hold 해결`을 마치고 "
                 "`Compare`에서 다른 후보와 비교해 볼 수 있는지 판단하는 기준입니다."
@@ -3113,8 +3113,7 @@ def _render_guides_page() -> None:
                 "live trading 승인이나 주문 지시가 아닙니다."
             )
 
-        with st.container(border=True):
-            st.markdown("#### 5단계에서 6단계로 넘어가는 최소 기준")
+        with st.expander("5단계에서 6단계로 넘어가는 최소 기준", expanded=True):
             st.caption(
                 "이 기준은 `Compare` 결과를 보고 선택 후보를 `Candidate Draft`로 넘겨도 되는지 판단하는 기준입니다. "
                 "후보 registry 저장이나 투자 승인이 아니라, 6단계 검토 초안 진입 조건입니다."
@@ -3153,39 +3152,78 @@ def _render_guides_page() -> None:
                 "current candidate registry 저장이나 Pre-Live 승인과는 분리됩니다."
             )
 
-    st.markdown("### 지금 먼저 보면 좋은 문서")
-    st.markdown(
-        """
-        - `FINANCE_COMPREHENSIVE_ANALYSIS.md`
-          현재 finance 구조와 runtime/data/strategy 흐름 종합 문서
-        - `MASTER_PHASE_ROADMAP.md`
-          전체 phase 흐름과 현재 위치를 보여주는 상위 로드맵
-        - `PHASE13_TEST_CHECKLIST.md`
-          현재 수동 검수와 UX 확인을 진행할 때 가장 먼저 보는 체크리스트
-        - `PHASE12_TEST_CHECKLIST.md`
-          방금 closeout된 Phase 12 수동 검수 기준
-        - `FINANCE_TERM_GLOSSARY.md`
-          반복되는 퀀트/백테스트 용어를 쉽게 다시 확인하는 문서
-        - `WORK_PROGRESS.md`
-          구현 진행 로그
-        """
-    )
+    st.markdown("### 문서와 파일")
 
-    st.markdown("### 주요 파일 경로")
-    st.code(
-        "\n".join(
+    with st.container(border=True):
+        st.markdown("#### 지금 먼저 보면 좋은 문서")
+        docs_rows = pd.DataFrame(
             [
-                ".note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md",
-                ".note/finance/MASTER_PHASE_ROADMAP.md",
-                ".note/finance/phase13/PHASE13_TEST_CHECKLIST.md",
-                ".note/finance/phase12/PHASE12_TEST_CHECKLIST.md",
-                ".note/finance/FINANCE_TERM_GLOSSARY.md",
-                ".note/finance/WORK_PROGRESS.md",
-                ".note/finance/QUESTION_AND_ANALYSIS_LOG.md",
+                {
+                    "상황": "현재 finance 전체 구조를 잡고 싶을 때",
+                    "문서": ".note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md",
+                    "역할": "finance package의 현재 제품 표면, data / strategy / review layer 요약",
+                },
+                {
+                    "상황": "이번 1~11단계 실습 흐름을 따라갈 때",
+                    "문서": ".note/finance/operations/BACKTEST_1_TO_11_WALKTHROUGH_SESSION.md",
+                    "역할": "GTAA 실습 후보, 4->5 / 5->6 판단 기준, Compare smoke 결과 기록",
+                },
+                {
+                    "상황": "Backtest 화면이 어떤 순서로 동작하는지 볼 때",
+                    "문서": ".note/finance/code_analysis/WEB_BACKTEST_UI_FLOW.md",
+                    "역할": "Single / Compare / Candidate Review / Pre-Live / Portfolio Proposal UI 흐름",
+                },
+                {
+                    "상황": "용어가 헷갈릴 때",
+                    "문서": ".note/finance/FINANCE_TERM_GLOSSARY.md",
+                    "역할": "Real-Money, Pre-Live, Candidate Registry 같은 반복 용어 설명",
+                },
+                {
+                    "상황": "프로젝트의 큰 phase 위치를 확인할 때",
+                    "문서": ".note/finance/MASTER_PHASE_ROADMAP.md",
+                    "역할": "전체 phase 흐름, 현재 방향, 이후 작업 축",
+                },
+                {
+                    "상황": "최신 문서 목록을 훑고 싶을 때",
+                    "문서": ".note/finance/FINANCE_DOC_INDEX.md",
+                    "역할": "finance 문서의 상위 index",
+                },
             ]
-        ),
-        language="text",
-    )
+        )
+        st.dataframe(docs_rows, use_container_width=True, hide_index=True)
+
+    with st.container(border=True):
+        st.markdown("#### 주요 파일 경로")
+        st.code(
+            "\n".join(
+                [
+                    ".note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md",
+                    ".note/finance/FINANCE_DOC_INDEX.md",
+                    ".note/finance/MASTER_PHASE_ROADMAP.md",
+                    ".note/finance/FINANCE_TERM_GLOSSARY.md",
+                    ".note/finance/operations/BACKTEST_1_TO_11_WALKTHROUGH_SESSION.md",
+                    ".note/finance/code_analysis/WEB_BACKTEST_UI_FLOW.md",
+                    ".note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl",
+                    ".note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl",
+                    ".note/finance/WORK_PROGRESS.md",
+                    ".note/finance/QUESTION_AND_ANALYSIS_LOG.md",
+                ]
+            ),
+            language="text",
+        )
+
+    with st.container(border=True):
+        st.markdown("#### Guides에서 같이 기억할 경계")
+        st.markdown(
+            """
+            - `Real-Money`는 개별 backtest 결과에 붙는 검증 신호입니다.
+            - `Compare`는 후보를 서로 비교해 다음 검토 초안으로 보낼지 판단하는 단계입니다.
+            - `Candidate Draft`와 `Review Note`는 저장 전 검토 기록입니다.
+            - `Current Candidate Registry`는 명시적으로 남긴 후보 목록입니다.
+            - `Pre-Live Review`는 paper / watchlist / hold / re-review 같은 운영 상태 기록입니다.
+            - `Portfolio Proposal`은 후보 묶음의 제안 초안이며, live trading 승인이 아닙니다.
+            """
+        )
 
 
 def _render_glossary_page() -> None:

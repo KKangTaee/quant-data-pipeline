@@ -2231,3 +2231,16 @@ Detailed historical logs were archived on `2026-04-13`.
   - the new Candidate Draft readiness evaluation returned `9.0 / 10` and `6단계 Candidate Draft 조건부 진행 가능`
 - Durable takeaway:
   - The walkthrough now has a concrete compare set and expected smoke result for the user's manual test.
+
+### 2026-04-29
+- Reorganized the Reference Guides page for the 1~11 walkthrough support session.
+- Changed:
+  - grouped Real-Money promotion, Real-Money Contract, and GTAA Risk-Off explanations under `핵심 개념 가이드`
+  - made each 1~11 workflow step an expander under `1~11 단계 실행 흐름`
+  - made 4->5 and 5->6 pass criteria expanders under `단계 통과 기준`
+  - refreshed the `지금 먼저 보면 좋은 문서` and file path list to point at current operations / code analysis / registry docs instead of older Phase 12/13 checklists
+  - synced the walkthrough operations note and web backtest UI flow doc without touching Phase 30 QA docs
+- Validation:
+  - `.venv/bin/python -m py_compile app/web/streamlit_app.py` passed
+- Durable takeaway:
+  - Guides now separates core concepts, ordered workflow, stop/go criteria, and reference files so the walkthrough can be followed without mixing practice notes into phase QA docs.
