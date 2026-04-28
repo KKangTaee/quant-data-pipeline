@@ -41,6 +41,8 @@ Phase 30 전체 목표와 첫 작업을 구분해서 읽는다.
   - portfolio proposal phase를 열되, 첫 작업을 product-flow reorientation으로 둔다.
 - `completed` Guide의 `테스트에서 상용화 후보 검토까지 사용하는 흐름` 갱신
   - Candidate Draft / Candidate Review Note / Current Candidate Registry / Pre-Live / Portfolio Proposal의 위치를 한 흐름으로 설명한다.
+- `completed` Guide의 `4단계에서 5단계로 넘어가는 최소 기준` 보강
+  - `Promotion Decision != hold`, `Deployment != blocked`, 핵심 blocker 없음이 Compare 진입 기준이며 투자 승인 기준이 아니라는 점을 명시했다.
 - `completed` Guide의 `GTAA Risk-Off 후보군 보는 법` 보강
   - `Defensive Tickers`와 GTAA universe의 교집합만 실제 fallback 후보로 쓰인다는 점을 manual QA 보조 설명으로 추가했다.
 - `completed` Phase 30 first work-unit 문서 작성
@@ -102,6 +104,7 @@ Phase 30 전체 목표와 첫 작업을 구분해서 읽는다.
 - `completed` roadmap / doc index / work log / question log sync
 - `completed` manual walkthrough support guide sync
   - `GTAA Risk-Off 후보군 보는 법` Guide와 Phase 30 checklist 항목을 추가했다.
+  - 4단계 pass 기준을 Guide와 Phase 30 checklist에 추가했다.
 
 ## 현재 판단
 

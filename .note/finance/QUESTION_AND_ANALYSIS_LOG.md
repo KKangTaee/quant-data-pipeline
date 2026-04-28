@@ -2897,3 +2897,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `real_money_candidate`도 투자 승인이 아니라 5단계 Compare와 6~10단계 후보 검토 / Pre-Live 운영 기록으로 넘길 수 있다는 신호다
 - Follow-up:
   - 현재 GTAA Balanced Top-2 실습 후보는 `real_money_candidate`, `paper_probation`, `paper_tracking`, `paper_only`, blocker 없음이므로 4단계 pass 사례로 사용한다
+
+### 2026-04-28 - 4단계 pass 기준을 Guide에 명시한다
+- User request:
+  - 투자 승인 기준이 아니라 5단계 Compare로 넘어갈 수 있는 명시적 Real-Money 기준을 Guide에 두고 싶다고 요청함
+- Interpreted goal:
+  - 사용자가 임의의 포트폴리오 후보를 볼 때 4단계에서 멈출지, 5단계 Compare로 넘길지 반복적으로 판단할 수 있는 최소 기준을 화면에 고정한다
+- Analysis result:
+  - `Reference > Guides > 테스트에서 상용화 후보 검토까지 사용하는 흐름`에 `4단계에서 5단계로 넘어가는 최소 기준` 표를 추가했다
+  - 기준은 `Promotion Decision != hold`, `Deployment Readiness / Deployment Status != blocked`, 핵심 blocker 없음이다
+  - `real_money_candidate`는 강한 pass 신호이고, `production_candidate`도 hold 해결 관점에서는 5단계로 넘겨 비교할 수 있지만 더 보수적으로 읽는다
+  - 이 기준은 Compare 진입 기준이지 live trading approval이나 최종 투자 승인 기준이 아니다
+- Follow-up:
+  - Phase 30 manual QA에서는 이 기준이 1~5단계 검증 구간의 종료 조건으로 읽히는지 확인한다

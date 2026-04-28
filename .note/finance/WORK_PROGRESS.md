@@ -2151,3 +2151,13 @@ Detailed historical logs were archived on `2026-04-13`.
   - updated the Phase 30 checklist so this Guide section is included in manual QA
 - Durable takeaway:
   - The walkthrough now has an explicit explanation for why `TLT / LQD / BIL` are not active fallback candidates unless they are also included in the GTAA universe.
+
+### 2026-04-28
+- Added an explicit Guide rule for passing from step 4 to step 5 in the 1~11 workflow.
+- Changed:
+  - added `4단계에서 5단계로 넘어가는 최소 기준` under `Reference > Guides > 테스트에서 상용화 후보 검토까지 사용하는 흐름`
+  - documented the minimum Compare-entry criteria as `Promotion Decision != hold`, `Deployment != blocked`, and no unresolved core blocker
+  - clarified that this is a Compare-entry criterion, not live trading approval
+  - synced the Phase 30 checklist, current TODO, doc index, work log, and question log
+- Durable takeaway:
+  - Operators can now decide whether a candidate has cleared Hold resolution and can move to Compare without treating the signal as final investment approval.
