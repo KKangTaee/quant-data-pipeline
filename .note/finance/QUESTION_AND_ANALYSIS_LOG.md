@@ -2781,3 +2781,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Follow-up:
   - 다음 리팩토링 후보는 Candidate Review display / draft helper 또는 Pre-Live Review display / draft helper다
   - Portfolio Proposal UI를 먼저 구현한다면 새 `candidate_registry.py` helper pattern을 재사용한다
+
+### 2026-04-28 - Phase 30 네 번째 작업은 Portfolio Proposal Draft UI / persistence로 진행한다
+- User request:
+  - Phase 30에서 이전에 진행하려던 방향대로 다음 단계를 진행해 달라고 요청함
+- Interpreted goal:
+  - registry helper split 이후에는 계약으로만 남아 있던 Portfolio Proposal을 실제 Backtest 화면에서 작성하고 저장할 수 있게 만들어야 함
+- Analysis result:
+  - `Backtest > Portfolio Proposal` panel을 추가해 current candidate 여러 개를 proposal draft로 묶는 흐름을 구현했다
+  - proposal draft에는 objective, proposal type/status, candidate refs, proposal role, target weight, weight reason, Real-Money / Pre-Live 상태, blocker, operator decision을 남긴다
+  - 저장소는 `.note/finance/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`이며 첫 proposal 저장 시 생성되는 append-only registry다
+  - 이 기능은 saved portfolio replay, live trading approval, automatic optimizer를 대체하지 않는다
+- Follow-up:
+  - 다음 작업 후보는 proposal monitoring surface 또는 Candidate Review / Pre-Live / History / Saved Portfolio의 추가 모듈 분리다

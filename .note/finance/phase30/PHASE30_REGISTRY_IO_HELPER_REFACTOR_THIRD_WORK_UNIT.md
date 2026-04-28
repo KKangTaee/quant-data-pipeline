@@ -79,3 +79,9 @@ Candidate Review, Current Candidate Registry, Pre-Live Review가 함께 쓰는
 
 다만 Portfolio Proposal UI를 먼저 구현해야 한다면,
 이번에 분리한 `candidate_registry.py`를 재사용해 저장소 helper 패턴을 맞춘다.
+
+후속 상태:
+
+- 네 번째 작업에서 Portfolio Proposal UI / persistence를 먼저 구현했다.
+- proposal 전용 JSONL helper는 `app/web/runtime/portfolio_proposal.py`로 분리했다.
+- Candidate Review / Pre-Live display module 분리는 여전히 후속 리팩토링 후보로 남아 있다.

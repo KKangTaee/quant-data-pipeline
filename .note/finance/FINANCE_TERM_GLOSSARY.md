@@ -462,7 +462,7 @@ Portfolio Proposal은 단일 후보 registry와 live approval 사이에서,
 ### 예시 / 필요 상황
 - `core_anchor`, `diversifier`, `defensive_sleeve` 후보를 묶어 drawdown을 낮추는 포트폴리오 제안 초안을 만든다.
 - proposal row에는 후보별 `target_weight`, `weight_reason`, `open_blockers`, `operator_decision`이 함께 남아야 한다.
-- Phase 30에서는 `.note/finance/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`를 향후 저장소 후보로 제안하되, live trading 승인이나 주문 지시와는 분리한다.
+- Phase 30에서는 `Backtest > Portfolio Proposal`에서 proposal draft를 만들고 `.note/finance/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`에 append-only로 저장한다. 이 저장은 live trading 승인이나 주문 지시와는 분리한다.
 
 ---
 

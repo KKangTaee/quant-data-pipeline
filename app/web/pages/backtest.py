@@ -17,11 +17,14 @@ from app.web.runtime import (
     BACKTEST_HISTORY_FILE,
     CANDIDATE_REVIEW_NOTES_FILE,
     CURRENT_CANDIDATE_REGISTRY_FILE,
+    PORTFOLIO_PROPOSAL_REGISTRY_FILE,
+    PORTFOLIO_PROPOSAL_SCHEMA_VERSION,
     PRE_LIVE_CANDIDATE_REGISTRY_FILE,
     SAVED_PORTFOLIO_FILE,
     append_candidate_review_note as _append_candidate_review_note,
     append_backtest_run_history,
     append_current_candidate_registry_row as _append_current_candidate_registry_row,
+    append_portfolio_proposal,
     append_pre_live_candidate_registry_row as _append_pre_live_candidate_registry_row,
     build_backtest_result_bundle,
     delete_saved_portfolio,
@@ -29,6 +32,7 @@ from app.web.runtime import (
     load_backtest_run_history,
     load_candidate_review_notes as _load_candidate_review_notes,
     load_current_candidate_registry_latest as _load_current_candidate_registry_latest,
+    load_portfolio_proposals,
     load_pre_live_candidate_registry_latest as _load_pre_live_candidate_registry_latest,
     load_saved_portfolios,
     run_dual_momentum_backtest_from_db,
@@ -292,8 +296,33 @@ BACKTEST_PANEL_OPTIONS = [
     "Candidate Review",
     "History",
     "Pre-Live Review",
+    "Portfolio Proposal",
 ]
 PRE_LIVE_STATUS_OPTIONS = ["watchlist", "paper_tracking", "hold", "reject", "re_review"]
+PORTFOLIO_PROPOSAL_STATUS_OPTIONS = [
+    "draft",
+    "review_ready",
+    "paper_tracking",
+    "hold",
+    "rejected",
+    "superseded",
+    "live_readiness_candidate",
+]
+PORTFOLIO_PROPOSAL_TYPE_OPTIONS = [
+    "balanced_core",
+    "lower_drawdown_core",
+    "defensive_blend",
+    "satellite_pack",
+]
+PORTFOLIO_PROPOSAL_ROLE_OPTIONS = [
+    "core_anchor",
+    "return_driver",
+    "diversifier",
+    "defensive_sleeve",
+    "satellite",
+    "watch_only",
+]
+PORTFOLIO_PROPOSAL_WEIGHTING_OPTIONS = ["manual_weight", "equal_weight"]
 CANDIDATE_REVIEW_DECISION_OPTIONS = [
     "consider_registry_candidate",
     "keep_as_near_miss_review",
@@ -6367,6 +6396,347 @@ def _render_pre_live_review_workspace() -> None:
         )
         selected_record = pre_live_rows[record_labels.index(selected_record_label)]
         st.json(selected_record)
+
+
+def _portfolio_proposal_pre_live_status_by_registry_id(pre_live_rows: list[dict[str, Any]]) -> dict[str, str]:
+    statuses: dict[str, str] = {}
+    for row in pre_live_rows:
+        registry_id = str(row.get("source_candidate_registry_id") or "").strip()
+        if registry_id:
+            statuses[registry_id] = str(row.get("pre_live_status") or "not_started")
+    return statuses
+
+
+def _build_portfolio_proposal_row(
+    *,
+    proposal_id: str,
+    proposal_status: str,
+    proposal_type: str,
+    primary_goal: str,
+    secondary_goal: str,
+    target_holding_style: str,
+    capital_scope: str,
+    weighting_method: str,
+    benchmark_policy: str,
+    selected_rows: list[dict[str, Any]],
+    component_inputs: dict[str, dict[str, Any]],
+    open_blockers: list[str],
+    operator_decision: str,
+    operator_reason: str,
+    next_action: str,
+    review_date_value: date | None,
+) -> dict[str, Any]:
+    now = datetime.now().isoformat(timespec="seconds")
+    candidate_refs: list[dict[str, Any]] = []
+    evidence_components: list[dict[str, Any]] = []
+    for row in selected_rows:
+        registry_id = str(row.get("registry_id") or "")
+        component_input = dict(component_inputs.get(registry_id) or {})
+        result = dict(row.get("result") or {})
+        candidate_ref = {
+            "registry_id": registry_id,
+            "strategy_family": row.get("strategy_family"),
+            "strategy_name": row.get("strategy_name"),
+            "candidate_role": row.get("candidate_role"),
+            "proposal_role": component_input.get("proposal_role"),
+            "target_weight": component_input.get("target_weight"),
+            "weight_reason": component_input.get("weight_reason"),
+            "data_trust_status": component_input.get("data_trust_status") or "not_attached",
+            "real_money_status": {
+                "promotion": result.get("promotion"),
+                "shortlist": result.get("shortlist"),
+                "deployment": result.get("deployment"),
+            },
+            "pre_live_status": component_input.get("pre_live_status") or "not_started",
+            "open_candidate_blockers": component_input.get("open_candidate_blockers") or [],
+        }
+        candidate_refs.append(candidate_ref)
+        evidence_components.append(
+            {
+                "registry_id": registry_id,
+                "title": row.get("title"),
+                "cagr": result.get("cagr"),
+                "mdd": result.get("mdd"),
+                "promotion": result.get("promotion"),
+                "shortlist": result.get("shortlist"),
+                "deployment": result.get("deployment"),
+                "period": row.get("period") or {},
+            }
+        )
+
+    return {
+        "schema_version": PORTFOLIO_PROPOSAL_SCHEMA_VERSION,
+        "proposal_id": proposal_id.strip(),
+        "created_at": now,
+        "updated_at": now,
+        "proposal_status": proposal_status,
+        "proposal_type": proposal_type,
+        "objective": {
+            "primary_goal": primary_goal.strip(),
+            "secondary_goal": secondary_goal.strip(),
+            "target_holding_style": target_holding_style.strip(),
+            "capital_scope": capital_scope,
+        },
+        "candidate_refs": candidate_refs,
+        "construction": {
+            "weighting_method": weighting_method,
+            "benchmark_policy": benchmark_policy.strip(),
+            "date_alignment": "compare_or_saved_portfolio_context_required",
+        },
+        "risk_constraints": {
+            "max_component_weight": max(
+                [float(ref.get("target_weight") or 0.0) for ref in candidate_refs],
+                default=0.0,
+            ),
+            "requires_component_data_trust_review": True,
+            "requires_real_money_review": True,
+            "requires_pre_live_review": True,
+        },
+        "evidence_snapshot": {
+            "component_count": len(candidate_refs),
+            "components": evidence_components,
+        },
+        "open_blockers": open_blockers,
+        "operator_decision": {
+            "decision": operator_decision.strip(),
+            "reason": operator_reason.strip(),
+            "next_action": next_action.strip(),
+            "review_date": review_date_value.isoformat() if review_date_value else None,
+        },
+        "notes": (
+            "Created from Backtest > Portfolio Proposal. This is a proposal draft, "
+            "not live trading approval and not an order instruction."
+        ),
+    }
+
+
+def _build_portfolio_proposal_rows_for_display(rows: list[dict[str, Any]]) -> pd.DataFrame:
+    display_rows: list[dict[str, Any]] = []
+    for row in rows:
+        objective = dict(row.get("objective") or {})
+        construction = dict(row.get("construction") or {})
+        operator_decision = dict(row.get("operator_decision") or {})
+        display_rows.append(
+            {
+                "Updated At": row.get("updated_at") or row.get("created_at"),
+                "Proposal ID": row.get("proposal_id"),
+                "Status": row.get("proposal_status"),
+                "Type": row.get("proposal_type"),
+                "Primary Goal": objective.get("primary_goal"),
+                "Components": len(row.get("candidate_refs") or []),
+                "Weighting": construction.get("weighting_method"),
+                "Next Action": operator_decision.get("next_action"),
+            }
+        )
+    return pd.DataFrame(display_rows)
+
+
+def _render_portfolio_proposal_workspace() -> None:
+    st.markdown("### Portfolio Proposal")
+    st.caption(
+        "후보 여러 개를 목적 / 역할 / 비중 근거 / 위험 경계와 함께 묶는 제안 초안입니다. "
+        "이 화면은 live trading 승인이나 주문 지시를 만들지 않습니다."
+    )
+
+    current_rows = _load_current_candidate_registry_latest()
+    pre_live_rows = _load_pre_live_candidate_registry_latest()
+    proposal_rows = load_portfolio_proposals()
+    pre_live_status_by_registry_id = _portfolio_proposal_pre_live_status_by_registry_id(pre_live_rows)
+
+    summary_cols = st.columns(4, gap="small")
+    summary_cols[0].metric("Current Candidates", len(current_rows))
+    summary_cols[1].metric("Pre-Live Records", len(pre_live_rows))
+    summary_cols[2].metric("Saved Proposals", len(proposal_rows))
+    summary_cols[3].metric("Live Approval", "Disabled")
+    st.caption(f"Path: {PORTFOLIO_PROPOSAL_REGISTRY_FILE}")
+
+    create_tab, registry_tab = st.tabs(["Create Proposal Draft", "Proposal Registry"])
+    with create_tab:
+        if not current_rows:
+            st.info("Portfolio Proposal을 만들 current candidate가 없습니다.")
+            st.caption(f"먼저 Candidate Review에서 `{CURRENT_CANDIDATE_REGISTRY_FILE}`에 후보를 남겨야 합니다.")
+            return
+
+        st.markdown("#### 1. 후보 선택")
+        st.caption("Portfolio Proposal은 current candidate registry에 남은 후보를 묶어 만드는 초안입니다.")
+        st.dataframe(_build_current_candidate_registry_rows_for_display(current_rows), use_container_width=True, hide_index=True)
+        label_to_row = {_current_candidate_registry_selection_label(row): row for row in current_rows}
+        selected_labels = st.multiselect(
+            "Proposal Components",
+            options=list(label_to_row.keys()),
+            max_selections=6,
+            key="portfolio_proposal_component_selection",
+            help="포트폴리오 제안에 포함할 후보를 고릅니다. 최소 1개 이상 필요합니다.",
+        )
+        selected_rows = [label_to_row[label] for label in selected_labels]
+
+        st.markdown("#### 2. 제안 목적")
+        default_proposal_id = f"proposal_{date.today().strftime('%Y%m%d')}_{uuid4().hex[:6]}"
+        objective_cols = st.columns(4, gap="small")
+        with objective_cols[0]:
+            proposal_id = st.text_input("Proposal ID", value=default_proposal_id, key="portfolio_proposal_id")
+        with objective_cols[1]:
+            proposal_status = st.selectbox("Status", options=PORTFOLIO_PROPOSAL_STATUS_OPTIONS, index=0, key="portfolio_proposal_status")
+        with objective_cols[2]:
+            proposal_type = st.selectbox("Type", options=PORTFOLIO_PROPOSAL_TYPE_OPTIONS, index=0, key="portfolio_proposal_type")
+        with objective_cols[3]:
+            capital_scope = st.selectbox("Capital Scope", options=["paper_only", "review_only", "small_trial_candidate"], index=0, key="portfolio_proposal_capital_scope")
+        goal_cols = st.columns(3, gap="small")
+        with goal_cols[0]:
+            primary_goal = st.text_input("Primary Goal", value="balanced_growth", key="portfolio_proposal_primary_goal")
+        with goal_cols[1]:
+            secondary_goal = st.text_input("Secondary Goal", value="drawdown_control", key="portfolio_proposal_secondary_goal")
+        with goal_cols[2]:
+            target_holding_style = st.text_input("Review Cadence", value="monthly_or_quarterly_review", key="portfolio_proposal_holding_style")
+        construction_cols = st.columns(2, gap="small")
+        with construction_cols[0]:
+            weighting_method = st.selectbox(
+                "Weighting Method",
+                options=PORTFOLIO_PROPOSAL_WEIGHTING_OPTIONS,
+                index=1,
+                key="portfolio_proposal_weighting_method",
+            )
+        with construction_cols[1]:
+            benchmark_policy = st.text_input("Benchmark Policy", value="compare_or_saved_portfolio_context_required", key="portfolio_proposal_benchmark_policy")
+
+        st.markdown("#### 3. 후보별 역할과 비중")
+        component_inputs: dict[str, dict[str, Any]] = {}
+        if not selected_rows:
+            st.info("포트폴리오 제안 후보를 먼저 선택하세요.")
+        equal_weight = round(100.0 / len(selected_rows), 4) if selected_rows else 0.0
+        for idx, row in enumerate(selected_rows):
+            registry_id = str(row.get("registry_id") or f"candidate_{idx}")
+            result = dict(row.get("result") or {})
+            with st.container(border=True):
+                st.markdown(f"##### {row.get('title') or registry_id}")
+                st.caption(
+                    f"Family: `{row.get('strategy_family') or '-'}` / "
+                    f"Candidate Role: `{row.get('candidate_role') or '-'}` / "
+                    f"Pre-Live: `{pre_live_status_by_registry_id.get(registry_id, 'not_started')}`"
+                )
+                metric_cols = st.columns(4, gap="small")
+                metric_cols[0].metric("CAGR", str(result.get("cagr") or "-"))
+                metric_cols[1].metric("MDD", str(result.get("mdd") or "-"))
+                metric_cols[2].metric("Promotion", str(result.get("promotion") or "-"))
+                metric_cols[3].metric("Shortlist", str(result.get("shortlist") or "-"))
+                input_cols = st.columns([0.25, 0.18, 0.57], gap="small")
+                with input_cols[0]:
+                    proposal_role = st.selectbox(
+                        "Proposal Role",
+                        options=PORTFOLIO_PROPOSAL_ROLE_OPTIONS,
+                        index=min(idx, len(PORTFOLIO_PROPOSAL_ROLE_OPTIONS) - 1),
+                        key=f"portfolio_proposal_role_{registry_id}",
+                    )
+                with input_cols[1]:
+                    target_weight = st.number_input(
+                        "Target Weight %",
+                        min_value=0.0,
+                        max_value=100.0,
+                        value=equal_weight if weighting_method == "equal_weight" else 0.0,
+                        step=1.0,
+                        key=f"portfolio_proposal_weight_{registry_id}_{weighting_method}",
+                    )
+                with input_cols[2]:
+                    weight_reason = st.text_input(
+                        "Weight Reason",
+                        value="초기 검토용 비중",
+                        key=f"portfolio_proposal_weight_reason_{registry_id}",
+                    )
+                component_inputs[registry_id] = {
+                    "proposal_role": proposal_role,
+                    "target_weight": float(target_weight),
+                    "weight_reason": weight_reason,
+                    "data_trust_status": "not_attached",
+                    "pre_live_status": pre_live_status_by_registry_id.get(registry_id, "not_started"),
+                    "open_candidate_blockers": [],
+                }
+
+        total_weight = round(sum(float(value.get("target_weight") or 0.0) for value in component_inputs.values()), 4)
+        st.caption(f"Target weight total: `{total_weight}%`")
+
+        st.markdown("#### 4. 저장 전 판단")
+        open_blockers: list[str] = []
+        if not selected_rows:
+            open_blockers.append("No current candidate selected.")
+        if selected_rows and abs(total_weight - 100.0) > 0.01:
+            open_blockers.append("Target weights must sum to 100%.")
+        for row in selected_rows:
+            registry_id = str(row.get("registry_id") or "")
+            component_input = component_inputs.get(registry_id) or {}
+            if component_input.get("pre_live_status") == "reject" and float(component_input.get("target_weight") or 0.0) > 0:
+                open_blockers.append(f"{registry_id}: rejected pre-live candidate cannot have active weight.")
+            if component_input.get("proposal_role") == "core_anchor":
+                result = dict(row.get("result") or {})
+                if str(result.get("deployment") or "").lower() == "blocked":
+                    open_blockers.append(f"{registry_id}: blocked candidate cannot be core anchor without review.")
+        operator_decision = st.selectbox(
+            "Operator Decision",
+            options=["draft_for_review", "needs_more_evidence", "ready_for_paper_tracking", "hold"],
+            index=0,
+            key="portfolio_proposal_operator_decision",
+            help="이 값은 proposal 검토 상태이며 live approval이 아닙니다.",
+        )
+        operator_reason = st.text_area(
+            "Operator Reason",
+            value="후보 묶음의 역할과 비중을 검토하기 위한 Portfolio Proposal draft.",
+            key="portfolio_proposal_operator_reason",
+        )
+        next_action = st.text_area(
+            "Next Action",
+            value="component data trust, Real-Money status, Pre-Live status를 같이 점검한다.",
+            key="portfolio_proposal_next_action",
+        )
+        use_review_date = st.checkbox("Review Date 지정", value=True, key="portfolio_proposal_use_review_date")
+        review_date_value: date | None = None
+        if use_review_date:
+            review_date_value = st.date_input("Review Date", value=date.today() + timedelta(days=30), key="portfolio_proposal_review_date")
+
+        proposal_row = _build_portfolio_proposal_row(
+            proposal_id=proposal_id,
+            proposal_status=proposal_status,
+            proposal_type=proposal_type,
+            primary_goal=primary_goal,
+            secondary_goal=secondary_goal,
+            target_holding_style=target_holding_style,
+            capital_scope=capital_scope,
+            weighting_method=weighting_method,
+            benchmark_policy=benchmark_policy,
+            selected_rows=selected_rows,
+            component_inputs=component_inputs,
+            open_blockers=open_blockers,
+            operator_decision=operator_decision,
+            operator_reason=operator_reason,
+            next_action=next_action,
+            review_date_value=review_date_value,
+        )
+
+        if open_blockers:
+            st.warning("저장 전 해결하거나 명시적으로 확인해야 할 blocker가 있습니다.")
+            for blocker in open_blockers:
+                st.caption(f"- {blocker}")
+        with st.expander("Portfolio Proposal JSON Preview", expanded=False):
+            st.json(proposal_row)
+
+        save_disabled = bool(open_blockers) or not proposal_id.strip()
+        if st.button("Save Portfolio Proposal Draft", key="save_portfolio_proposal_draft", disabled=save_disabled, use_container_width=True):
+            append_portfolio_proposal(proposal_row)
+            st.success(f"Portfolio Proposal `{proposal_row['proposal_id']}`를 저장했습니다. live approval은 아닙니다.")
+            st.rerun()
+
+    with registry_tab:
+        st.markdown("#### Proposal Registry")
+        st.caption(f"Path: {PORTFOLIO_PROPOSAL_REGISTRY_FILE}")
+        if not proposal_rows:
+            st.info("아직 저장된 Portfolio Proposal이 없습니다.")
+            return
+        st.dataframe(_build_portfolio_proposal_rows_for_display(proposal_rows), use_container_width=True, hide_index=True)
+        labels = [
+            f"{row.get('updated_at') or row.get('created_at')} | {row.get('proposal_status')} | {row.get('proposal_id')}"
+            for row in proposal_rows
+        ]
+        selected_label = st.selectbox("Inspect Portfolio Proposal", options=labels, key="portfolio_proposal_selected_record")
+        selected_row = proposal_rows[labels.index(selected_label)]
+        st.json(selected_row)
 
 
 def _build_compare_prefill_summary_rows(payload: dict[str, Any]) -> pd.DataFrame:
@@ -14616,6 +14986,7 @@ def render_backtest_tab() -> None:
             - `Candidate Review`: current candidate registry의 후보를 검토 보드로 읽고 compare 또는 Pre-Live Review로 넘기는 화면입니다.
             - `History`: 저장된 실행 결과를 다시 보고, `Run Again` 또는 `Load Into Form`을 사용하는 화면입니다.
             - `Pre-Live Review`: current candidate를 실전 전 관찰 / 보류 / 재검토 기록으로 넘기는 화면입니다.
+            - `Portfolio Proposal`: 후보 여러 개를 목적 / 역할 / 비중 근거와 함께 묶는 제안 초안을 만드는 화면입니다.
             - `Load Into Form`을 누르면 저장된 입력값이 `Single Strategy` 화면으로 자동 이동하며 다시 채워집니다.
             - `quarterly strict prototype` 전략은 현재 **research-only** 경로입니다.
             """
@@ -16240,5 +16611,8 @@ def render_backtest_tab() -> None:
         st.caption("Single-strategy runs and strategy-comparison runs share the same persistent history and drilldown surface.")
         _render_persistent_backtest_history()
 
-    else:
+    elif active_panel == "Pre-Live Review":
         _render_pre_live_review_workspace()
+
+    else:
+        _render_portfolio_proposal_workspace()

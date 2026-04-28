@@ -2049,3 +2049,22 @@ Detailed historical logs were archived on `2026-04-13`.
   - `git diff --check` passed
 - Durable takeaway:
   - This is the first actual `backtest.py` code split in Phase 30, but it is intentionally narrow: registry I/O only. Candidate Review / Pre-Live display logic remains in `backtest.py` for later targeted refactors.
+
+### 2026-04-28
+- Completed the fourth Phase 30 work unit: Portfolio Proposal Draft UI / persistence.
+- Changed:
+  - added `app/web/runtime/portfolio_proposal.py`
+  - exported proposal registry helpers from `app/web/runtime/__init__.py`
+  - added `Backtest > Portfolio Proposal` with `Create Proposal Draft` and `Proposal Registry` tabs
+  - allowed current candidates to be grouped into a proposal draft with objective, proposal type, status, candidate roles, target weights, weight reasons, blocker checks, and operator decision
+  - added `.note/finance/operations/PORTFOLIO_PROPOSAL_REGISTRY_GUIDE.md`
+  - synced Phase 30 TODO, checklist, completion summary, plan, next-phase prep, roadmap, doc index, glossary, comprehensive analysis, web UI flow docs, and README
+- Validation:
+  - `python3 -m py_compile app/web/runtime/portfolio_proposal.py app/web/runtime/__init__.py app/web/pages/backtest.py` passed
+  - `.venv/bin/python` import smoke for proposal registry path / append helper / loader passed
+  - `python3 plugins/quant-finance-workflow/scripts/manage_current_candidate_registry.py validate` passed
+  - `python3 plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py validate` passed
+  - `python3 plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py` passed
+  - `git diff --check` passed
+- Durable takeaway:
+  - Phase 30 now has the first implemented Portfolio Proposal draft surface. It remains proposal-draft persistence only, not live approval, optimizer output, or order instruction.

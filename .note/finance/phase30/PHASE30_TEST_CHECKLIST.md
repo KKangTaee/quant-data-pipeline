@@ -6,8 +6,8 @@
 리팩토링 경계 검토, 이후 Portfolio Proposal / Pre-Live Monitoring surface가
 사용자가 이해할 수 있는 흐름으로 연결되는지 확인하기 위한 문서다.
 
-현재는 Phase 30 첫 작업 단위 QA checklist 초안이다.
-첫 작업은 기능 구현이 아니라 사용 흐름과 코드 경계 정리다.
+현재는 Phase 30 중간 QA checklist 초안이다.
+최종 Phase 30 QA는 사용자가 마지막에 진행한다.
 
 ## 사용 방법
 
@@ -27,7 +27,7 @@
   - [ ] `Candidate Review Note`가 사람의 판단과 다음 행동을 남기는 기록으로 설명되는지
   - [ ] `Current Candidate Registry`가 후보 저장소이지 투자 승인 저장소가 아니라고 읽히는지
   - [ ] `Pre-Live Review`가 live trading 승인 전 paper / watchlist / hold 운영 기록으로 설명되는지
-  - [ ] `Portfolio Proposal`이 Phase 30 이후 후보 묶음 제안이며 투자 승인과 구분되는지
+  - [ ] `Portfolio Proposal`이 Phase 30에서 만든 후보 묶음 제안 초안이며 투자 승인과 구분되는지
 
 ## 2. 리팩토링 경계 확인
 
@@ -48,9 +48,9 @@
   - `.note/finance/MASTER_PHASE_ROADMAP.md`
   - `.note/finance/FINANCE_DOC_INDEX.md`
 - 체크 항목:
-  - [ ] Phase 30이 active 상태지만 아직 portfolio proposal 기능 구현 단계는 아니라고 읽히는지
+  - [ ] Phase 30이 active 상태이며, 사용 흐름 정렬 / proposal 계약 / registry helper 분리 / proposal draft UI가 단계적으로 진행되었다고 읽히는지
   - [ ] 첫 작업이 사용 흐름 재정렬과 리팩토링 경계 검토로 설명되는지
-  - [ ] 다음 작업 후보가 실제 모듈 분리 또는 Portfolio Proposal 계약 정의로 이어지는지
+  - [ ] 두 번째 작업이 Portfolio Proposal 계약 정의였고, 네 번째 작업에서 그 계약이 실제 UI / 저장소로 연결되었다고 읽히는지
 
 ## 4. Portfolio Proposal 계약 확인
 
@@ -61,7 +61,7 @@
   - [ ] proposal row에 목적, 후보 역할, 비중 근거, risk constraints, evidence snapshot, blocker, operator decision이 필요하다는 점이 이해되는지
   - [ ] `core_anchor`, `diversifier`, `defensive_sleeve`, `satellite`, `watch_only` 같은 후보 역할이 포트폴리오 안에서 왜 필요한지 이해되는지
   - [ ] `manual_weight` 또는 `equal_weight`로 먼저 시작하고 optimizer는 당장 제외한다는 판단이 안전하게 느껴지는지
-  - [ ] `.note/finance/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`는 향후 저장소 후보일 뿐, 이번 작업에서 파일 생성이나 저장 구현이 된 것은 아니라고 읽히는지
+  - [ ] `.note/finance/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`는 proposal draft가 저장될 append-only registry이며, 첫 저장 시 생성된다고 읽히는지
   - [ ] Proposal lifecycle이 draft / review_ready / paper_tracking / hold / rejected / superseded / live_readiness_candidate로 구분되고, live approval과 분리되는지
 
 ## 5. Registry I/O helper 리팩토링 확인
@@ -76,9 +76,28 @@
   - [ ] 이번 작업이 전체 `backtest.py` 리팩토링 완료가 아니라 첫 작은 helper split이라고 이해되는지
   - [ ] 이후 Candidate Review / Pre-Live / History / Saved Portfolio 추가 분리가 별도 작업으로 남아 있다고 읽히는지
 
+## 6. Portfolio Proposal Draft UI 확인
+
+- 확인 위치:
+  - `Backtest > Portfolio Proposal`
+  - `.note/finance/operations/PORTFOLIO_PROPOSAL_REGISTRY_GUIDE.md`
+  - `.note/finance/phase30/PHASE30_PORTFOLIO_PROPOSAL_DRAFT_UI_FOURTH_WORK_UNIT.md`
+- 체크 항목:
+  - [ ] Backtest panel 선택지에 `Portfolio Proposal`이 보이는지
+  - [ ] 화면 상단에서 current candidates, pre-live records, saved proposals, live approval disabled 상태가 보이는지
+  - [ ] `Create Proposal Draft` tab에서 current candidate 여러 개를 선택할 수 있는지
+  - [ ] proposal objective 영역에서 Proposal ID, Status, Type, Capital Scope, Primary Goal, Secondary Goal, Review Cadence, Weighting Method가 보이는지
+  - [ ] 선택한 후보별로 Proposal Role, Target Weight %, Weight Reason을 입력할 수 있는지
+  - [ ] 후보별 CAGR, MDD, Promotion, Shortlist, Pre-Live 상태가 proposal 작성 맥락에서 함께 보이는지
+  - [ ] target weight 합계가 100%가 아니면 저장 전 blocker가 표시되는지
+  - [ ] `Portfolio Proposal JSON Preview`에서 저장될 row 구조를 확인할 수 있는지
+  - [ ] `Save Portfolio Proposal Draft`가 live approval이나 주문 지시가 아니라 proposal draft 저장으로 읽히는지
+  - [ ] `Proposal Registry` tab에서 저장된 proposal draft를 다시 inspect할 수 있는지
+  - [ ] proposal 저장이 current candidate registry 또는 pre-live registry를 자동 변경하지 않는다고 이해되는지
+
 ## 한 줄 판단 기준
 
 이번 Phase 30 중간 QA는
-**새 기능이 생겼는가**가 아니라,
-**Phase 29 이후 흐름, Portfolio Proposal 계약, 첫 registry helper split을 사용자가 이해하고, 다음 리팩토링 / UI 구현 경계를 납득할 수 있는가**
+**새 기능이 많아졌는가**가 아니라,
+**Phase 29 이후 흐름, Portfolio Proposal 계약, 첫 registry helper split, Proposal Draft UI가 live approval과 구분되는 방식으로 이해되고 QA 가능한가**
 를 확인한다.

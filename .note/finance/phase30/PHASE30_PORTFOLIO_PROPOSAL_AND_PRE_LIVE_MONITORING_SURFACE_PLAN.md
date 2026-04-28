@@ -14,6 +14,7 @@ paper / pre-live monitoring surface로 연결하기 위한 계획 문서다.
 - `사용 흐름 재정렬 + backtest.py 리팩토링 경계 검토`는 Phase 30 전체가 아니라 첫 번째 작업 단위다.
 - Phase 30 전체 목표는 후보 묶음을 Portfolio Proposal / Pre-Live Monitoring으로 연결하는 것이다.
 - 두 번째 작업인 Portfolio Proposal 계약 정의는 첫 번째 작업 이후, UI 구현 전에 진행하는 설계 단계다.
+- 네 번째 작업에서 `Backtest > Portfolio Proposal` draft 작성 / 저장 / registry inspect 흐름을 추가했다.
 
 ## 목적
 
@@ -21,6 +22,7 @@ paper / pre-live monitoring surface로 연결하기 위한 계획 문서다.
 2. Candidate Draft / Candidate Review Note / Current Candidate Registry / Pre-Live Review가 언제 필요한지 설명한다.
 3. Phase 30 portfolio proposal 구현 전에 `backtest.py` 리팩토링 경계를 정한다.
 4. Portfolio Proposal row가 담아야 할 목적, 후보 역할, 비중 근거, 위험 경계, evidence snapshot, blocker, operator decision을 먼저 정의한다.
+5. Portfolio Proposal 계약을 실제 Backtest UI와 append-only registry persistence로 연결한다.
 
 ## 쉽게 말하면
 
@@ -55,8 +57,10 @@ Phase 29까지 오면서 좋은 백테스트 결과를 후보로 읽고,
 - `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`
 - `.note/finance/CANDIDATE_REVIEW_NOTES.jsonl`
 - `.note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl`
+- `.note/finance/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`
 - `app/web/pages/backtest.py` 모듈 분리 경계
 - `app/web/runtime/candidate_registry.py` registry JSONL I/O helper
+- `app/web/runtime/portfolio_proposal.py` proposal JSONL I/O helper
 - `.note/finance/code_analysis/WEB_BACKTEST_UI_FLOW.md`
 
 이번 phase에서 바로 다루지 않는 것:
@@ -82,6 +86,11 @@ Phase 29까지 오면서 좋은 백테스트 결과를 후보로 읽고,
    - 왜 필요한가: 단일 후보 검토만으로는 최종 목표인 포트폴리오 구성 제안까지 가지 못한다.
    - 기대 효과: 사용자가 포트폴리오 제안을 투자 승인과 구분해 읽을 수 있다.
    - 현재 상태: 두 번째 작업 단위에서 proposal row의 최소 필드, 후보 역할, 비중 원칙, 저장 전 차단 조건, lifecycle을 정의했다.
+4. Portfolio Proposal Draft UI / persistence
+   - 쉽게 말하면: current candidate 여러 개를 선택해 proposal objective, 후보별 역할, target weight, 다음 행동을 저장하는 첫 화면을 만든다.
+   - 왜 필요한가: 계약만 있으면 사용자가 실제 workflow에서 proposal을 만들 수 없으므로, 저장 전 초안과 registry inspect surface가 필요하다.
+   - 기대 효과: 후보 검토 흐름이 단일 후보 registry에서 포트폴리오 제안 초안까지 이어진다.
+   - 현재 상태: 네 번째 작업 단위에서 `Backtest > Portfolio Proposal` panel, append-only proposal helper, proposal registry inspect tab을 추가했다.
 
 ## 이 문서에서 자주 쓰는 용어
 
@@ -134,7 +143,8 @@ Phase 29까지 오면서 좋은 백테스트 결과를 후보로 읽고,
 
 - 현재 결과:
   - `.note/finance/phase30/PHASE30_PORTFOLIO_PROPOSAL_CONTRACT_SECOND_WORK_UNIT.md`에서 계약을 정의했다.
-  - 향후 저장소 후보는 `.note/finance/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`이지만, 이번 작업에서는 파일 생성이나 append helper 구현은 하지 않았다.
+  - 두 번째 작업 당시에는 파일 생성이나 append helper 구현은 하지 않았다.
+  - 후속 네 번째 작업에서 `.note/finance/PORTFOLIO_PROPOSAL_REGISTRY.jsonl` append-only 저장소와 UI가 구현되었다.
 
 ### 세 번째 작업: Registry I/O helper 분리
 
@@ -152,7 +162,27 @@ Phase 29까지 오면서 좋은 백테스트 결과를 후보로 읽고,
   - `app/web/runtime/candidate_registry.py`가 추가되었다.
   - 이번 작업은 전체 `backtest.py` 리팩토링이 아니라 registry JSONL I/O 첫 분리다.
 
-### 네 번째 작업: Proposal review / monitoring surface
+### 네 번째 작업: Portfolio Proposal Draft UI / persistence
+
+- 무엇을 바꾸는가:
+  - `Backtest > Portfolio Proposal`에서 current candidate 여러 개를 선택하고,
+    proposal 목적, 후보별 역할, target weight, weight reason, operator decision을 작성한다.
+  - 저장된 proposal draft는 `.note/finance/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`에 append-only로 남긴다.
+  - `Proposal Registry` tab에서 저장된 proposal row를 다시 확인한다.
+
+- 왜 필요한가:
+  - Phase 29의 후보 검토 흐름을 포트폴리오 제안 초안으로 실제 연결해야 한다.
+  - 단일 candidate 저장소만으로는 최종 목표인 portfolio construction guide까지 이어지기 어렵다.
+
+- 작업이 끝나면 좋은 점:
+  - 사용자는 current candidate 여러 개를 목적 / 역할 / 비중 근거와 함께 하나의 proposal draft로 저장할 수 있다.
+  - proposal draft가 live approval과 분리된 기록이라는 점이 화면과 저장소에서 명확해진다.
+
+- 현재 결과:
+  - `app/web/runtime/portfolio_proposal.py`가 추가되었다.
+  - `Backtest > Portfolio Proposal` panel에 `Create Proposal Draft`와 `Proposal Registry` tab이 추가되었다.
+
+### 다섯 번째 작업 후보: Proposal review / monitoring surface
 
 - 무엇을 바꾸는가:
   - 후보 묶음의 Real-Money / Data Trust / Pre-Live 상태를 한 화면에서 읽게 한다.
@@ -169,9 +199,13 @@ Phase 29까지 오면서 좋은 백테스트 결과를 후보로 읽고,
 - `backtest.py` 리팩토링 경계가 너무 세밀하거나 너무 넓지 않은지
 - Portfolio Proposal을 투자 승인처럼 보이게 하는 용어나 버튼이 없는지
 - Phase 30 이후 Live Readiness / Final Approval을 별도 phase로 남겨둘지
+- `Backtest > Portfolio Proposal`에서 proposal draft 저장과 registry inspect 흐름이 자연스러운지
+- proposal draft가 saved portfolio 또는 live approval로 오해되지 않는지
 
 ## 한 줄 정리
 
 Phase 30은 후보 검토 결과를 포트폴리오 제안과 pre-live monitoring으로 연결하는 phase이며,
 첫 작업은 기능 추가 전에 사용 흐름과 코드 경계를 다시 정렬하는 것이었고,
-두 번째 작업은 그 다음 단계인 Portfolio Proposal 계약 정의다.
+두 번째 작업은 Portfolio Proposal 계약 정의,
+세 번째 작업은 registry helper 분리,
+네 번째 작업은 Portfolio Proposal Draft UI / persistence 구현이다.

@@ -33,16 +33,25 @@ from .portfolio_store import (
     load_saved_portfolios,
     save_saved_portfolio,
 )
+from .portfolio_proposal import (
+    PORTFOLIO_PROPOSAL_REGISTRY_FILE,
+    PORTFOLIO_PROPOSAL_SCHEMA_VERSION,
+    append_portfolio_proposal,
+    load_portfolio_proposals,
+)
 
 __all__ = [
     "BACKTEST_HISTORY_FILE",
     "CANDIDATE_REVIEW_NOTES_FILE",
     "CURRENT_CANDIDATE_REGISTRY_FILE",
     "PRE_LIVE_CANDIDATE_REGISTRY_FILE",
+    "PORTFOLIO_PROPOSAL_REGISTRY_FILE",
+    "PORTFOLIO_PROPOSAL_SCHEMA_VERSION",
     "SAVED_PORTFOLIO_FILE",
     "append_candidate_review_note",
     "append_backtest_run_history",
     "append_current_candidate_registry_row",
+    "append_portfolio_proposal",
     "append_pre_live_candidate_registry_row",
     "build_backtest_result_bundle",
     "delete_saved_portfolio",
@@ -50,6 +59,7 @@ __all__ = [
     "load_backtest_run_history",
     "load_candidate_review_notes",
     "load_current_candidate_registry_latest",
+    "load_portfolio_proposals",
     "load_pre_live_candidate_registry_latest",
     "load_saved_portfolios",
     "run_dual_momentum_backtest_from_db",

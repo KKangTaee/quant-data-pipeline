@@ -19,7 +19,7 @@ DB-backed market data ingestion, factor generation, and strategy backtesting wor
 - `Ingestion`
   - 일별 업데이트, statement refresh, 진단 작업
 - `Backtest`
-  - 단일 전략 실행, compare, history, saved portfolio workflow
+  - 단일 전략 실행, compare, history, saved portfolio, candidate review, pre-live review, portfolio proposal workflow
 - `Ops Review`
   - 최근 실행 결과, persistent history, logs, failure artifact 검토
 - `Guides`
@@ -74,6 +74,11 @@ DB-backed market data ingestion, factor generation, and strategy backtesting wor
   - latest backtest / history result를 registry 저장 전 후보 검토 초안으로 읽는 흐름
   - 후보 검토 초안을 바로 registry에 넣지 않고 Candidate Review Note로 판단과 다음 행동을 남기는 흐름
   - 저장된 review note를 registry row 초안으로 확인한 뒤 명시적으로 current candidate registry에 append하는 흐름
+- portfolio proposal workflow
+  - current candidate 여러 개를 `Backtest > Portfolio Proposal`에서 proposal draft로 묶는 흐름
+  - 후보별 role, target weight, weight reason, Real-Money / Pre-Live 상태를 함께 확인하는 흐름
+  - `.note/finance/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`에 proposal draft를 append-only로 저장하는 흐름
+  - live trading approval이나 주문 지시와 분리된 검토 기록 흐름
 
 ## 프로젝트 구조
 
@@ -84,6 +89,8 @@ app/
     streamlit_app.py     # Finance Console entry point
     pages/backtest.py    # Backtest UI
     runtime/             # UI-facing runtime wrappers
+      candidate_registry.py
+      portfolio_proposal.py
 finance/
   data/                  # ingestion, DB schema, loaders, factors
   strategy.py            # strategy simulation logic
