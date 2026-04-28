@@ -2134,3 +2134,20 @@ Detailed historical logs were archived on `2026-04-13`.
   - framed Monitoring Review, Pre-Live Feedback, and Paper Tracking Feedback as checks inside the Portfolio Proposal step, not separate major workflow steps
 - Durable takeaway:
   - The guide now reflects Phase 30 at the correct level of abstraction: a portfolio proposal review step before future Live Readiness / Final Approval, not a list of Phase 30 work-unit details.
+
+### 2026-04-28
+- Started Phase 30 manual walkthrough support for the 1~11 guide flow.
+- Verified current candidate registry and reran the GTAA Balanced Top-2 candidate through `run_gtaa_backtest_from_db`.
+- Selected `gtaa_real_money_balanced_top2_ief_20260418` as the first practice portfolio candidate because current runtime shows `Promotion=real_money_candidate`, `Shortlist=paper_probation`, `Probation=paper_tracking`, `Deployment=paper_only`, `Validation=normal`, `ETF Operability=normal`, and no blockers.
+- No code changes were made; this was an operator-flow analysis and QA handoff step.
+
+### 2026-04-28
+- Added a user-facing Guide section for reading GTAA Risk-Off candidates.
+- Changed:
+  - added `Reference > Guides > GTAA Risk-Off 후보군 보는 법`
+  - explained that `Defensive Tickers` do not expand the GTAA universe by themselves
+  - documented that only the intersection of GTAA Tickers and Defensive Tickers can become usable defensive fallback candidates
+  - added the current GTAA Balanced Top-2 example where `IEF` is the only usable defensive fallback candidate
+  - updated the Phase 30 checklist so this Guide section is included in manual QA
+- Durable takeaway:
+  - The walkthrough now has an explicit explanation for why `TLT / LQD / BIL` are not active fallback candidates unless they are also included in the GTAA universe.

@@ -2775,6 +2775,142 @@ def _render_guides_page() -> None:
             )
 
     with st.container(border=True):
+        st.markdown("### GTAA Risk-Off 후보군 보는 법")
+        st.caption(
+            "`Risk-Off Contract`는 GTAA가 점수로 고른 ETF를 그대로 보유할지, "
+            "추세가 약한 자리는 현금이나 방어 ETF로 비울지 정하는 실행 규칙입니다."
+        )
+        st.code(
+            "Backtest > Single Strategy > GTAA > Advanced Inputs > Risk-Off Overlay > Risk-Off Contract",
+            language="text",
+        )
+        st.info(
+            "`Defensive Tickers`에 적은 ETF가 자동으로 새 후보군에 추가되는 것은 아닙니다. "
+            "현재 구현에서는 GTAA universe 안에도 들어 있는 defensive ticker만 실제 대체 후보로 사용할 수 있습니다."
+        )
+
+        risk_off_rows = pd.DataFrame(
+            [
+                {
+                    "입력 / 개념": "GTAA Tickers",
+                    "무엇을 뜻하나": "GTAA가 점수를 매기고 실제 가격 데이터를 읽는 기본 후보군",
+                    "확인할 점": "방어 ETF를 실제 fallback 후보로 쓰려면 이 universe에도 포함되어 있어야 합니다.",
+                },
+                {
+                    "입력 / 개념": "Top Assets",
+                    "무엇을 뜻하나": "리밸런싱 때 점수 상위 몇 개 슬롯을 만들지 정하는 값",
+                    "확인할 점": "`Top=2`면 최종 슬롯은 2개이며, 통과한 슬롯은 기본적으로 50%씩 들어갑니다.",
+                },
+                {
+                    "입력 / 개념": "Trend Filter Window",
+                    "무엇을 뜻하나": "선택 후보가 이동평균선 위에 있는지 보는 추세 필터",
+                    "확인할 점": "`200`이면 `Close >= MA200`인 ETF만 최종 후보로 남습니다.",
+                },
+                {
+                    "입력 / 개념": "Fallback Mode",
+                    "무엇을 뜻하나": "빈 슬롯이나 위험구간에서 현금만 둘지, 방어 ETF를 먼저 찾을지 정하는 값",
+                    "확인할 점": "`Defensive Bond Preference`면 usable defensive ticker를 먼저 찾고, 없으면 현금으로 남깁니다.",
+                },
+                {
+                    "입력 / 개념": "Defensive Tickers",
+                    "무엇을 뜻하나": "fallback 때 우선 검토할 방어 ETF 목록",
+                    "확인할 점": "이 목록과 GTAA universe의 교집합만 실제 fallback 후보가 됩니다.",
+                },
+            ]
+        )
+        st.dataframe(risk_off_rows, use_container_width=True, hide_index=True)
+
+        risk_off_tabs = st.tabs(["읽는 순서", "이번 GTAA 예시", "결과에서 확인할 곳"])
+        with risk_off_tabs[0]:
+            st.markdown(
+                """
+                1. **먼저 GTAA universe를 봅니다.**
+                - 이 목록이 실제 점수 계산과 가격 로딩의 후보군입니다.
+
+                2. **Defensive Tickers와 universe의 교집합을 봅니다.**
+                - `Defensive Tickers`에 있어도 universe에 없으면 현재 run에서는 실제 대체 후보가 아닙니다.
+
+                3. **점수 상위 `Top Assets`를 고릅니다.**
+                - 예를 들어 `Top=2`면 우선 점수 상위 2개 ETF를 고릅니다.
+
+                4. **Trend Filter를 적용합니다.**
+                - `Trend Filter Window=200`이면 `Close >= MA200`인 후보만 통과합니다.
+
+                5. **빈 슬롯을 채웁니다.**
+                - `Fallback Mode=Cash Only`면 빈 슬롯은 현금입니다.
+                - `Fallback Mode=Defensive Bond Preference`면 usable defensive ticker 중 `Close >= MA200`인 후보를 먼저 넣고,
+                  그래도 남는 슬롯은 현금으로 둡니다.
+
+                6. **비중을 읽습니다.**
+                - 현재 GTAA 구현은 `Top Assets` 슬롯 기준으로 균등 배분합니다.
+                - `Top=2`에서 최종 후보가 2개면 `50% / 50%`, 최종 후보가 1개면 `50% / 현금 50%`,
+                  최종 후보가 없으면 `현금 100%`로 읽습니다.
+                """
+            )
+
+        with risk_off_tabs[1]:
+            example_rows = pd.DataFrame(
+                [
+                    {
+                        "항목": "GTAA Tickers",
+                        "값": "SPY, QQQ, GLD, IEF",
+                        "해석": "이번 run에서 실제 점수 계산과 fallback 검토가 가능한 universe",
+                    },
+                    {
+                        "항목": "Defensive Tickers",
+                        "값": "TLT, IEF, LQD, BIL",
+                        "해석": "방어 후보로 적은 목록",
+                    },
+                    {
+                        "항목": "실제 usable defensive 후보",
+                        "값": "IEF",
+                        "해석": "두 목록의 교집합이 IEF뿐이므로 현재 run에서는 IEF만 실제 방어 대체 후보",
+                    },
+                    {
+                        "항목": "Top Assets",
+                        "값": "2",
+                        "해석": "최종 후보 2개가 통과하면 각각 50%씩, 1개만 통과하면 나머지 50%는 현금",
+                    },
+                ]
+            )
+            st.dataframe(example_rows, use_container_width=True, hide_index=True)
+            st.warning(
+                "`TLT`, `LQD`, `BIL`도 실제 방어 후보로 쓰고 싶다면 "
+                "GTAA Tickers에도 함께 넣어야 합니다. Defensive Tickers 입력만으로는 universe가 확장되지 않습니다."
+            )
+
+        with risk_off_tabs[2]:
+            result_rows = pd.DataFrame(
+                [
+                    {
+                        "결과 항목": "Raw Selected Ticker",
+                        "무엇을 보나": "점수 기준으로 먼저 뽑힌 Top 후보",
+                    },
+                    {
+                        "결과 항목": "Overlay Rejected Ticker",
+                        "무엇을 보나": "Trend Filter 또는 가격 조건 때문에 탈락한 후보",
+                    },
+                    {
+                        "결과 항목": "Defensive Fallback Ticker",
+                        "무엇을 보나": "빈 슬롯을 채우기 위해 실제로 들어간 방어 후보",
+                    },
+                    {
+                        "결과 항목": "Next Ticker",
+                        "무엇을 보나": "다음 리밸런싱 구간에 들고 갈 최종 후보",
+                    },
+                    {
+                        "결과 항목": "Cash",
+                        "무엇을 보나": "채워지지 않은 슬롯이 현금으로 남은 금액",
+                    },
+                ]
+            )
+            st.dataframe(result_rows, use_container_width=True, hide_index=True)
+            st.caption(
+                "`Risk-Off Contract`는 전략의 보유 후보와 현금 비중을 바꾸는 실행 규칙이고, "
+                "`Real-Money Contract`는 거래비용, benchmark, ETF AUM, spread 같은 실전 검토 기준입니다."
+            )
+
+    with st.container(border=True):
         st.markdown("### 테스트에서 상용화 후보 검토까지 사용하는 흐름")
         st.caption(
             "이 프로그램은 단순 백테스트 숫자 확인을 넘어서, "

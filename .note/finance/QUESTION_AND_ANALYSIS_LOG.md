@@ -2857,3 +2857,30 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Live Readiness / Final Approval은 여전히 이후 별도 단계로 남겨, Portfolio Proposal이 투자 승인처럼 읽히지 않게 했다
 - Follow-up:
   - Phase 30 QA 때 Guide 11단계가 구현 기능을 충분히 반영하면서도 과도하게 세분화되지 않았는지 확인한다
+
+### 2026-04-28 - 11단계 실습은 GTAA Balanced Top-2 후보로 시작한다
+- User request:
+  - Phase 30까지 구현된 기능을 실제로 어떻게 11단계까지 밟아야 하는지 모르겠고, 먼저 4단계 `Hold면 먼저 막히는 항목 해결`을 통과할 만한 가상 포트폴리오 후보를 제시해 달라고 요청함
+- Interpreted goal:
+  - 6~10단계의 Candidate Draft / Review Note / Registry / Candidate Board / Pre-Live Review 흐름을 실습할 수 있도록, 현재 registry와 runtime 기준으로 `hold`가 아닌 후보 하나를 고른다
+- Analysis result:
+  - 첫 실습 후보는 `gtaa_real_money_balanced_top2_ief_20260418`로 둔다
+  - 설정은 `GTAA`, `SPY / QQQ / GLD / IEF`, `Top=2`, `Signal Interval=4`, `Score Horizons=1M / 3M`, `Risk-Off=defensive_bond_preference`, `Benchmark=SPY`, `Transaction Cost=10bps`, `Min ETF AUM=1.0B`, `Max Spread=0.50%`다
+  - current DB runtime 재실행 결과는 `2016-01-29 ~ 2026-04-27`, `CAGR=17.88%`, `MDD=-8.39%`, `Benchmark CAGR=13.60%`, `Net CAGR Spread=+4.28%p`, `Promotion=real_money_candidate`, `Shortlist=paper_probation`, `Probation=paper_tracking`, `Deployment=paper_only`, `Validation=normal`, `ETF Operability=normal`, blocker 없음이었다
+  - 따라서 4단계 판단은 `Hold 해결 필요 없음`; 바로 투자 승인이 아니라 5단계 Compare와 6~10단계 후보 검토 / 운영 기록으로 넘기기에 적합하다
+- Follow-up:
+  - 다음 실습에서는 이 후보를 기준으로 `Single Strategy -> Real-Money -> Compare -> Candidate Draft -> Review Note -> Current Candidate Registry -> Candidate Board -> Pre-Live Review -> Portfolio Proposal` 순서로 하나씩 확인한다
+  - 실제 Pre-Live feedback / Paper Tracking feedback을 보려면 Pre-Live record와 Portfolio Proposal draft를 명시적으로 저장해야 하며, 둘 다 live approval은 아니다
+
+### 2026-04-28 - GTAA Risk-Off 후보군 해석을 Guides에 별도 추가한다
+- User request:
+  - `Trend Filter Window`, `Fallback Mode`, `Defensive Tickers`가 실제 후보군과 어떻게 연결되는지 헷갈리므로 Guides에 별도 정리를 추가해 달라고 요청함
+- Interpreted goal:
+  - GTAA `Risk-Off Contract`에서 defensive ticker가 자동으로 universe에 추가되는 것이 아니라, GTAA universe와 defensive ticker 목록의 교집합만 실제 fallback 후보가 된다는 점을 사용자-facing Guide에서 바로 확인하게 한다
+- Analysis result:
+  - `Reference > Guides`에 `GTAA Risk-Off 후보군 보는 법` 섹션을 추가했다
+  - Guide는 GTAA Tickers, Top Assets, Trend Filter Window, Fallback Mode, Defensive Tickers의 역할을 표로 설명하고, `Top=2`일 때 최종 후보 / cash 비중을 어떻게 읽는지 정리한다
+  - 현재 실습 후보 예시에서는 `GTAA Tickers = SPY, QQQ, GLD, IEF`, `Defensive Tickers = TLT, IEF, LQD, BIL`이므로 실제 usable defensive 후보는 `IEF`뿐이라고 명시했다
+  - Phase 30 checklist에도 해당 Guide 항목을 확인하도록 추가했다
+- Follow-up:
+  - 향후 GTAA 방어 후보를 넓히려면 `Defensive Tickers`뿐 아니라 `GTAA Tickers`에도 `TLT / LQD / BIL` 같은 후보를 포함해야 한다
