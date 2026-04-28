@@ -2193,3 +2193,12 @@ Detailed historical logs were archived on `2026-04-13`.
   - synced the Phase 30 checklist, current TODO, doc index, work log, and question log
 - Durable takeaway:
   - Stage flow guidance and stage pass criteria are now separated, so operators can read the workflow first and consult criteria only when deciding whether to move forward.
+
+### 2026-04-29
+- Corrected the documentation scope for the 1~11 walkthrough support session.
+- Changed:
+  - removed session-specific GTAA Risk-Off, 4->5 pass, and Real-Money readiness checklist items from the Phase 30 QA checklist / TODO
+  - created `.note/finance/operations/BACKTEST_1_TO_11_WALKTHROUGH_SESSION.md` as the separate home for practice questions, candidate examples, and walkthrough-specific UI notes
+  - updated the finance doc index and operations README so the walkthrough session is discoverable outside the phase docs
+- Durable takeaway:
+  - Phase documents should not absorb ad hoc practice-session guidance unless the user explicitly asks to change that phase's QA scope.

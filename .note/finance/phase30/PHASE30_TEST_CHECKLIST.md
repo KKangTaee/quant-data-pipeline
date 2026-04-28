@@ -20,15 +20,9 @@
 
 - 확인 위치:
   - `Guides > 테스트에서 상용화 후보 검토까지 사용하는 흐름`
-  - `Guides > 단계 통과 기준`
-  - `Guides > GTAA Risk-Off 후보군 보는 법`
-  - `Backtest 결과 > Real-Money > 현재 판단 > 5단계 Compare 진입 평가`
 - 체크 항목:
   - [ ] 1~5단계가 데이터 최신화, Single Strategy, Real-Money, Hold 해결, Compare로 이어지는 테스트 / 검증 구간으로 읽히는지
-  - [ ] 4단계에서 5단계로 넘어가는 최소 기준이 `Promotion Decision != hold`, `Deployment != blocked`, 핵심 blocker 없음으로 명시되어 있고 투자 승인 기준과 구분되는지
-  - [ ] Real-Money `현재 판단`에서 10점 만점의 Compare 진입 점수, 판정, 다음 행동, 점수 계산 기준을 확인할 수 있는지
   - [ ] 6~10단계가 Phase 29 기능 나열이 아니라 후보 초안, 판단 기록, 후보 저장, 운영 관찰로 이어지는 후보 검토 / 운영 기록 구간으로 읽히는지
-  - [ ] GTAA `Risk-Off Contract`에서 `Defensive Tickers`와 GTAA universe의 교집합만 실제 fallback 후보로 쓰인다는 점이 이해되는지
   - [ ] `Candidate Draft`가 좋은 백테스트 결과를 바로 후보 registry에 넣는 것이 아니라 저장 전 초안으로 설명되는지
   - [ ] `Candidate Review Note`가 사람의 판단과 다음 행동을 남기는 기록으로 설명되는지
   - [ ] `Current Candidate Registry`가 후보 저장소이지 투자 승인 저장소가 아니라고 읽히는지

@@ -2963,3 +2963,15 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Phase 30 checklist와 current TODO, doc index도 새 위치를 기준으로 갱신했다
 - Follow-up:
   - 이후 5→6, 10→11처럼 추가 통과 기준이 필요해지면 같은 `단계 통과 기준` section에 누적하고, 단계형 흐름 본문은 계속 순서형 Guide로 유지한다
+
+### 2026-04-29 - 실습 세션 내용은 Phase 30 QA와 분리해서 관리한다
+- User request:
+  - 이번 세션에서 한 질문과 수정은 Phase 30 자체 QA가 아니라 별도 실습성 내용인데, 왜 Phase 30 문서를 갱신했는지 지적하고 별도 관리해 달라고 요청함
+- Interpreted goal:
+  - 1~11단계 walkthrough 실습에서 나온 질문, 예시 후보, Guide / Real-Money 보조 기능은 Phase 30 checklist나 TODO가 아니라 별도 운영 문서에 모아야 함
+- Analysis result:
+  - `.note/finance/operations/BACKTEST_1_TO_11_WALKTHROUGH_SESSION.md`를 만들고 GTAA 실습 후보, Risk-Off 해석, 4->5 기준, 5단계 Compare 기준, 이번 세션에서 추가된 UI 보조 기능을 모았다
+  - Phase 30 checklist와 current TODO에서는 GTAA Risk-Off, 4->5 pass 기준, Real-Money readiness 평가 같은 실습 세션 항목을 제거했다
+  - `FINANCE_DOC_INDEX.md`와 `operations/README.md`에는 새 walkthrough 문서를 운영 문서로 등록했다
+- Follow-up:
+  - 앞으로 사용자가 Phase 문서 갱신을 명시하지 않으면, 이런 실습 질문은 operations walkthrough 문서나 question log로만 관리한다
