@@ -2,11 +2,11 @@
 
 ## 진행 상태
 
-- `active`
+- `implementation_complete`
 
 ## 검증 상태
 
-- `not_ready_for_qa`
+- `manual_qa_pending`
 
 ## 현재 목표
 
@@ -27,12 +27,13 @@ Phase 30 전체 목표와 첫 작업을 구분해서 읽는다.
 | 네 번째 작업 | Portfolio Proposal Draft UI / persistence 구현 | `completed` |
 | 다섯 번째 작업 | Portfolio Proposal Monitoring Review surface 구현 | `completed` |
 | 여섯 번째 작업 | Portfolio Proposal Pre-Live Feedback surface 구현 | `completed` |
-| 이후 작업 후보 | Paper tracking performance feedback loop 또는 Candidate Review / Pre-Live 추가 분리 | `pending` |
+| 일곱 번째 작업 | Portfolio Proposal Paper Tracking Feedback surface 구현 | `completed` |
+| 이후 작업 후보 | Candidate Review / Pre-Live / History / Saved Portfolio 추가 모듈 분리 | `deferred_special_refactor_task` |
 
 첫 작업은 기능 구현이 아니라
 사용 흐름 재정렬과 `backtest.py` 리팩토링 경계 검토였다.
 
-현재 여섯 번째 작업은 저장된 Portfolio Proposal draft와 최신 Pre-Live registry 상태를 비교하는 feedback surface를 추가하는 것이다.
+현재 일곱 번째 작업까지 완료되어, 저장된 Portfolio Proposal draft를 최신 Pre-Live 상태와 paper tracking 성과 snapshot 관점에서 다시 읽을 수 있다.
 
 ## 1. 사용 흐름 재정렬
 
@@ -67,7 +68,10 @@ Phase 30 전체 목표와 첫 작업을 구분해서 읽는다.
   - 저장된 proposal draft를 monitoring state, blocker, review gap, component table, operator decision 관점으로 다시 읽는다.
 - `completed` Pre-Live Feedback surface
   - 저장된 proposal snapshot과 현재 Pre-Live registry active record를 비교해 status drift, review overdue, feedback gap을 확인한다.
-- `pending` Paper tracking performance feedback loop
+- `completed` Paper tracking performance feedback loop
+  - 저장된 proposal evidence snapshot과 현재 Pre-Live result snapshot의 CAGR / MDD를 비교해 성과 악화, missing result, paper tracking 미진입 gap을 확인한다.
+- `deferred` Candidate Review / Pre-Live / History / Saved Portfolio의 추가 `backtest.py` 모듈 분리
+  - Phase 30 QA와 섞지 않고 별도 special refactor task에서 다룬다.
 
 ## 4. Validation
 
@@ -90,13 +94,14 @@ Phase 30 전체 목표와 첫 작업을 구분해서 읽는다.
 - `completed` fourth work-unit 문서 생성
 - `completed` fifth work-unit 문서 생성
 - `completed` sixth work-unit 문서 생성
+- `completed` seventh work-unit 문서 생성
 - `completed` Portfolio Proposal registry operations guide 생성
 - `completed` `WEB_BACKTEST_UI_FLOW.md` sync
 - `completed` roadmap / doc index / work log / question log sync
 
 ## 현재 판단
 
-Phase 30은 active 상태이며, Portfolio Proposal Draft UI / persistence까지 구현된 상태다.
+Phase 30은 implementation_complete / manual_qa_pending 상태이며, Portfolio Proposal Draft UI / persistence부터 paper tracking feedback까지 구현된 상태다.
 먼저 사용자가 전체 흐름을 다시 이해할 수 있게 만들고,
 그 흐름에 맞춰 `backtest.py`의 점진 리팩토링 경계를 정했다.
 두 번째 작업으로 Portfolio Proposal row 계약을 정의했다.
@@ -104,4 +109,6 @@ Phase 30은 active 상태이며, Portfolio Proposal Draft UI / persistence까지
 네 번째 작업으로 `Backtest > Portfolio Proposal`의 draft 작성 / 저장 / registry inspect 흐름을 추가했다.
 다섯 번째 작업으로 `Monitoring Review` tab을 추가해 저장된 proposal draft를 다시 점검할 수 있게 했다.
 여섯 번째 작업으로 `Pre-Live Feedback` tab을 추가해 proposal snapshot과 현재 Pre-Live 상태를 비교할 수 있게 했다.
-다음 작업에서는 paper tracking performance feedback loop 또는 Candidate Review / Pre-Live 추가 모듈 분리를 선택한다.
+일곱 번째 작업으로 `Paper Tracking Feedback` tab을 추가해 proposal 저장 당시 성과와 최신 Pre-Live result snapshot의 CAGR / MDD 변화를 비교할 수 있게 했다.
+이제 사용자가 Phase 30 checklist로 targeted manual QA를 진행하면 된다.
+Candidate Review / Pre-Live / History / Saved Portfolio 추가 모듈 분리는 Phase 30 이후 별도 special refactor task로 분리한다.

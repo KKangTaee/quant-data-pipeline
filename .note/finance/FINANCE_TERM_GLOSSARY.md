@@ -462,7 +462,31 @@ Portfolio Proposal은 단일 후보 registry와 live approval 사이에서,
 ### 예시 / 필요 상황
 - `core_anchor`, `diversifier`, `defensive_sleeve` 후보를 묶어 drawdown을 낮추는 포트폴리오 제안 초안을 만든다.
 - proposal row에는 후보별 `target_weight`, `weight_reason`, `open_blockers`, `operator_decision`이 함께 남아야 한다.
-- Phase 30에서는 `Backtest > Portfolio Proposal`에서 proposal draft를 만들고 `.note/finance/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`에 append-only로 저장한다. `Monitoring Review`에서는 저장된 proposal의 blocker와 review gap을 다시 확인하고, `Pre-Live Feedback`에서는 proposal snapshot과 현재 Pre-Live 상태를 비교한다. 이 저장과 review는 live trading 승인이나 주문 지시와는 분리한다.
+- Phase 30에서는 `Backtest > Portfolio Proposal`에서 proposal draft를 만들고 `.note/finance/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`에 append-only로 저장한다. `Monitoring Review`에서는 저장된 proposal의 blocker와 review gap을 다시 확인하고, `Pre-Live Feedback`에서는 proposal snapshot과 현재 Pre-Live 상태를 비교하며, `Paper Tracking Feedback`에서는 proposal 저장 당시 evidence snapshot과 현재 Pre-Live result snapshot의 CAGR / MDD 변화를 비교한다. 이 저장과 review는 live trading 승인이나 주문 지시와는 분리한다.
+
+---
+
+## Paper Tracking Feedback
+
+### 기본 설명
+Portfolio Proposal에 포함된 후보가 현재 paper tracking 상태에서 어떤 성과 snapshot을 갖는지 다시 읽는 보조 화면이다.
+
+현재 구현에서는 별도 paper PnL 시계열을 계산하지 않고,
+proposal 저장 당시의 `evidence_snapshot`과
+최신 Pre-Live record의 `result_snapshot`에 있는 CAGR / MDD를 비교한다.
+
+### 왜 사용되는지
+proposal 저장 당시에는 좋아 보였던 후보라도,
+paper tracking 중에 CAGR이 크게 낮아지거나 MDD가 더 깊어지면
+live readiness 전에 다시 확인해야 한다.
+
+그래서 Paper Tracking Feedback은 proposal이 현재 관찰 성과와 어긋나지 않는지 보는
+운영 재확인 신호로 사용한다.
+
+### 예시 / 필요 상황
+- `paper_tracking` 상태가 아닌 component가 proposal에 active weight로 남아 있는지 확인한다.
+- proposal 저장 당시 CAGR 28.0, MDD -20.0이던 후보가 최신 Pre-Live snapshot에서 CAGR 25.0, MDD -26.0으로 바뀌었다면 `worsened`로 읽는다.
+- `stable_or_better`가 보여도 live approval이나 주문 가능 상태가 아니다. 최종 승인은 별도 Live Readiness / Final Approval phase에서 다룬다.
 
 ---
 

@@ -13,7 +13,7 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Active Pointers
 
 - current phase board:
-  - [PHASE25_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase25/PHASE25_CURRENT_CHAPTER_TODO.md)
+  - [PHASE30_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase30/PHASE30_CURRENT_CHAPTER_TODO.md)
 - current candidate summary:
   - [CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md)
 - historical full archive:
@@ -2105,3 +2105,23 @@ Detailed historical logs were archived on `2026-04-13`.
   - `git diff --check` passed
 - Durable takeaway:
   - Portfolio Proposal can now be checked against the current Pre-Live operating state without mutating proposal rows or Pre-Live records.
+
+### 2026-04-28
+- Completed the seventh Phase 30 work unit: Portfolio Proposal Paper Tracking Feedback.
+- Changed:
+  - added `Backtest > Portfolio Proposal > Paper Tracking Feedback`
+  - compared proposal saved evidence snapshots with current active Pre-Live `result_snapshot` metrics
+  - added component-level saved/current CAGR, saved/current MDD, delta, performance signal, tracking cadence, stop condition, and success condition readouts
+  - added feedback gap detection for missing active Pre-Live records, non-`paper_tracking` status, missing saved/current metrics, CAGR / MDD deterioration, and missing tracking cadence
+  - moved Phase 30 to `implementation_complete` / `manual_qa_pending`
+  - synced Phase 30 TODO, checklist, completion summary, plan, next-phase prep, roadmap, doc index, glossary, comprehensive analysis, web UI flow docs, operations guide, and README
+- Validation:
+  - `python3 -m py_compile app/web/runtime/portfolio_proposal.py app/web/runtime/__init__.py app/web/pages/backtest.py` passed
+  - `.venv/bin/python` smoke for Paper Tracking Feedback helper functions passed
+  - `python3 plugins/quant-finance-workflow/scripts/manage_current_candidate_registry.py validate` passed
+  - `python3 plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py validate` passed
+  - `python3 plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py` passed
+  - `git diff --check` passed
+  - Playwright browser smoke confirmed `Backtest > Portfolio Proposal > Paper Tracking Feedback` renders; existing Streamlit subpath `_stcore` 404 console messages were observed
+- Durable takeaway:
+  - Phase 30 product functionality is now ready for user manual QA. Additional `backtest.py` module splitting is intentionally deferred to a separate special refactor task.

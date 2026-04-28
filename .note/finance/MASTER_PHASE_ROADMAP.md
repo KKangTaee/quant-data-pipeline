@@ -1482,7 +1482,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 | Phase 27 | `complete` | `manual_qa_completed` | 완료 |
 | Phase 28 | `complete` | `manual_qa_completed` | Capability + Replay + Data Trust + Real-Money/Guardrail parity QA 완료 |
 | Phase 29 | `complete` | `manual_qa_completed` | Candidate Review Board + Result Handoff + Review Notes + Registry Draft QA 완료 |
-| Phase 30 | `active` | `not_ready_for_qa` | product-flow 재정렬, Portfolio Proposal 계약 정의, registry I/O helper 분리, Proposal Draft UI, Monitoring Review, Pre-Live Feedback 구현 |
+| Phase 30 | `implementation_complete` | `manual_qa_pending` | product-flow 재정렬, Portfolio Proposal 계약 정의, registry I/O helper 분리, Proposal Draft UI, Monitoring Review, Pre-Live Feedback, Paper Tracking Feedback 구현 |
 
 한 줄 현재 판단:
 - current annual strict candidate와 portfolio bridge를 같은 frame에서 다시 본 `Phase 21`은 manual validation까지 완료되었고,
@@ -1503,7 +1503,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
   초안을 별도 Candidate Review Note로 저장하는 흐름,
   그리고 review note를 current candidate registry row 초안으로 변환해 명시적으로 append하는 흐름을 구현하고
   사용자 QA까지 완료한 상태다.
-  `Phase 30`은 active 상태로 열렸지만, 아직 portfolio proposal 기능 구현 단계는 아니다.
+  `Phase 30`은 implementation_complete / manual_qa_pending 상태다.
   첫 작업은 Phase 29 이후 기준으로 사용 흐름을 다시 정렬하고,
   16k lines 이상으로 커진 `app/web/pages/backtest.py`의 점진 리팩토링 경계를 정리하는 것이었다.
   두 번째 작업으로 Portfolio Proposal row의 목적, 후보 역할, 비중 근거, risk constraints,
@@ -1516,6 +1516,8 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
   `Monitoring Review` tab을 추가했다.
   여섯 번째 작업으로 proposal snapshot과 현재 Pre-Live registry 상태를 비교하는
   `Pre-Live Feedback` tab을 추가했다.
+  일곱 번째 작업으로 proposal evidence snapshot과 현재 Pre-Live result snapshot의 CAGR / MDD를 비교하는
+  `Paper Tracking Feedback` tab을 추가했다.
 
 ---
 
@@ -1541,7 +1543,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 | Phase 27 | Data Integrity And Backtest Trust Layer | `complete` | `manual_qa_completed` | 백테스트 전에 데이터가 믿을 만한지, 어디까지 계산 가능한지 보여주고 QA까지 완료했다 |
 | Phase 28 | Strategy Family Parity And Cadence Completion | `complete` | `manual_qa_completed` | annual / quarterly / 신규 전략의 지원 범위, 재진입 상태, compare data trust, Real-Money / Guardrail scope를 화면에서 구분하고 QA까지 완료했다 |
 | Phase 29 | Candidate Review And Recommendation Workflow | `complete` | `manual_qa_completed` | current candidate를 검토 보드로 읽고, Latest / History 결과를 후보 검토 초안, review note, registry draft로 넘기는 workflow를 구현하고 QA까지 완료했다 |
-| Phase 30 | Portfolio Proposal And Pre-Live Monitoring Surface | `active` | `not_ready_for_qa` | 후보들을 포트폴리오 제안으로 묶는 draft UI / persistence와 저장 proposal monitoring review, Pre-Live feedback 비교를 추가했고, paper tracking performance feedback은 후속 작업으로 남아 있다 |
+| Phase 30 | Portfolio Proposal And Pre-Live Monitoring Surface | `implementation_complete` | `manual_qa_pending` | 후보들을 포트폴리오 제안으로 묶는 draft UI / persistence와 저장 proposal monitoring review, Pre-Live feedback, Paper Tracking feedback 비교를 구현했고 사용자 QA가 남아 있다 |
 
 ### Phase 26. Foundation Stabilization And Backlog Rebase
 
@@ -1624,7 +1626,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 - 다만 이 phase도 live trading 승인이 아니라 proposal / monitoring surface까지를 목표로 한다.
 
 ### 현재 메모
-- Phase 30은 active / not_ready_for_qa 상태다.
+- Phase 30은 implementation_complete / manual_qa_pending 상태다.
 - 첫 작업 단위는 portfolio proposal 기능 구현이 아니라,
   `테스트에서 상용화 후보 검토까지 사용하는 흐름`을 Phase 29 이후 기준으로 다시 정렬하는 것이었다.
 - 기준 흐름은 `Ingestion / Data Trust -> Single Strategy Backtest -> Real-Money Signal -> Hold / Blocker Resolution -> Compare -> Candidate Draft -> Candidate Review Note -> Current Candidate Registry -> Candidate Board / Compare / Pre-Live Review -> Portfolio Proposal -> Live Readiness / Final Approval`이다.
@@ -1639,7 +1641,9 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
   저장된 proposal draft의 monitoring state, component table, blocker, review gap, operator decision을 확인할 수 있다.
 - 여섯 번째 작업으로 `Backtest > Portfolio Proposal > Pre-Live Feedback` tab을 추가했다.
   저장된 proposal snapshot과 현재 Pre-Live registry active record를 비교할 수 있다.
-- 추가 코드 분리는 Candidate Review / Pre-Live / History / Saved Portfolio 같은 별도 작업 단위에서 점진 진행한다.
+- 일곱 번째 작업으로 `Backtest > Portfolio Proposal > Paper Tracking Feedback` tab을 추가했다.
+  저장된 proposal evidence snapshot과 현재 Pre-Live result snapshot의 CAGR / MDD, performance signal, tracking plan을 비교할 수 있다.
+- 추가 코드 분리는 Candidate Review / Pre-Live / History / Saved Portfolio 같은 별도 special refactor task에서 점진 진행한다.
 
 ### Phase 30 이후
 - Live Readiness / Final Approval은 Phase 30 이후 별도 phase로 연다.

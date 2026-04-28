@@ -27,7 +27,7 @@ Backtest page는 현재 여섯 panel 중심으로 본다.
 - `Candidate Review`: current candidate registry의 후보를 검토 보드로 읽고 compare 또는 Pre-Live Review로 넘긴다.
 - `History`: 저장된 실행 기록을 inspect하고, 가능한 경우 run again 또는 load into form을 수행한다.
 - `Pre-Live Review`: current candidate를 실전 전 운영 상태로 기록하고 저장된 Pre-Live record를 확인한다.
-- `Portfolio Proposal`: current candidate 여러 개를 목적 / 역할 / 비중 근거와 함께 proposal draft로 저장하고 monitoring review / pre-live feedback으로 다시 읽는다.
+- `Portfolio Proposal`: current candidate 여러 개를 목적 / 역할 / 비중 근거와 함께 proposal draft로 저장하고 monitoring review / pre-live feedback / paper tracking feedback으로 다시 읽는다.
 
 ## Phase 30 기준 제품 흐름
 
@@ -369,6 +369,7 @@ CURRENT_CANDIDATE_REGISTRY.jsonl
   -> PORTFOLIO_PROPOSAL_REGISTRY.jsonl append
   -> Monitoring Review tab에서 blocker / review gap 확인
   -> Pre-Live Feedback tab에서 current pre-live status 비교
+  -> Paper Tracking Feedback tab에서 current result snapshot 성과 비교
   -> Proposal Registry tab에서 JSON inspect
 ```
 
@@ -381,6 +382,8 @@ CURRENT_CANDIDATE_REGISTRY.jsonl
 - 현재 proposal UI는 optimizer가 아니며, target weight는 manual / equal-weight 초안 기준이다.
 - `Monitoring Review`의 `blocked`, `needs_review`, `review_ready`는 review 요약이며 live approval 상태가 아니다.
 - `Pre-Live Feedback`은 proposal snapshot과 현재 Pre-Live registry를 비교하는 읽기 전용 surface다.
+- `Paper Tracking Feedback`은 proposal evidence snapshot과 현재 Pre-Live result snapshot의 CAGR / MDD를 비교하는 읽기 전용 surface다.
+- 현재 `Paper Tracking Feedback`은 실제 paper PnL 시계열 자동 계산이 아니라 Pre-Live record에 저장된 최신 snapshot 비교다.
 
 ## Streamlit form 주의
 

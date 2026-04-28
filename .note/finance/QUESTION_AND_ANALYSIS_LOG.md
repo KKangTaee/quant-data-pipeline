@@ -2832,3 +2832,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 따라서 Phase 30은 paper tracking performance feedback loop를 마지막 기능 단위로 완료한 뒤 checklist QA로 넘기는 것이 적절하다
 - Follow-up:
   - `backtest.py` 추가 분리는 Phase 30 closeout 이후 별도 special refactor task 또는 다음 지원 트랙으로 열어 진행한다
+
+### 2026-04-28 - Phase 30 마지막 기능 단위는 Paper Tracking Feedback으로 닫고 manual QA로 넘긴다
+- User request:
+  - Phase 30을 먼저 마무리하는 것이 좋으니 1번 기능을 완료하고 사용자가 QA를 진행하겠다고 요청함
+- Interpreted goal:
+  - Portfolio Proposal / Pre-Live Monitoring이라는 Phase 30 목표에 직접 연결되는 마지막 제품 기능을 구현하고, 구조 리팩토링은 별도 작업으로 분리해야 함
+- Analysis result:
+  - `Backtest > Portfolio Proposal > Paper Tracking Feedback` tab을 추가해 proposal 저장 당시 evidence snapshot과 현재 Pre-Live `result_snapshot`의 CAGR / MDD를 비교하게 했다
+  - 이 기능은 실제 paper PnL 자동 계산이나 live approval이 아니라, 현재 Pre-Live registry에 저장된 최신 성과 snapshot을 proposal 관점에서 다시 읽는 보조 surface다
+  - performance signal은 `needs_paper_tracking`, `missing_current_result`, `missing_saved_snapshot`, `worsened`, `stable_or_better`로 제한해 QA에서 해석 가능한 범위로 두었다
+  - Phase 30 상태는 `implementation_complete` / `manual_qa_pending`으로 전환하고, 추가 `backtest.py` 모듈 분리는 별도 special refactor task로 남겼다
+- Follow-up:
+  - 사용자는 `.note/finance/phase30/PHASE30_TEST_CHECKLIST.md` 기준으로 final manual QA를 진행한다

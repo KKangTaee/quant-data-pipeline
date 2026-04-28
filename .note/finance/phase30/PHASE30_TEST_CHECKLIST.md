@@ -6,8 +6,8 @@
 리팩토링 경계 검토, 이후 Portfolio Proposal / Pre-Live Monitoring surface가
 사용자가 이해할 수 있는 흐름으로 연결되는지 확인하기 위한 문서다.
 
-현재는 Phase 30 중간 QA checklist 초안이다.
-최종 Phase 30 QA는 사용자가 마지막에 진행한다.
+현재는 Phase 30 구현 완료 후 manual QA checklist다.
+이 checklist 확인이 끝나면 Phase 30 closeout 여부를 판단한다.
 
 ## 사용 방법
 
@@ -48,7 +48,7 @@
   - `.note/finance/MASTER_PHASE_ROADMAP.md`
   - `.note/finance/FINANCE_DOC_INDEX.md`
 - 체크 항목:
-  - [ ] Phase 30이 active 상태이며, 사용 흐름 정렬 / proposal 계약 / registry helper 분리 / proposal draft UI / monitoring review / pre-live feedback이 단계적으로 진행되었다고 읽히는지
+  - [ ] Phase 30이 implementation_complete / manual_qa_pending 상태이며, 사용 흐름 정렬 / proposal 계약 / registry helper 분리 / proposal draft UI / monitoring review / pre-live feedback / paper tracking feedback이 단계적으로 진행되었다고 읽히는지
   - [ ] 첫 작업이 사용 흐름 재정렬과 리팩토링 경계 검토로 설명되는지
   - [ ] 두 번째 작업이 Portfolio Proposal 계약 정의였고, 네 번째 작업에서 그 계약이 실제 UI / 저장소로 연결되었다고 읽히는지
 
@@ -125,9 +125,25 @@
   - [ ] Feedback Gaps가 자동 승인 / 자동 수정이 아니라 운영 재확인 항목으로 읽히는지
   - [ ] 상태를 바꾸려면 `Backtest > Pre-Live Review`에서 별도 record를 저장해야 한다고 이해되는지
 
+## 9. Portfolio Proposal Paper Tracking Feedback 확인
+
+- 확인 위치:
+  - `Backtest > Portfolio Proposal > Paper Tracking Feedback`
+  - `.note/finance/phase30/PHASE30_PORTFOLIO_PROPOSAL_PAPER_TRACKING_FEEDBACK_SEVENTH_WORK_UNIT.md`
+- 체크 항목:
+  - [ ] 저장된 proposal이 없을 때 빈 상태 안내가 보이는지
+  - [ ] proposal을 저장한 뒤 Paper Tracking Feedback summary table이 보이는지
+  - [ ] summary table에 Paper Tracking, Missing Current Result, Worsened, Stable / Better, Feedback Gaps가 보이는지
+  - [ ] proposal을 선택하면 component별 Saved CAGR, Current CAGR, CAGR Delta가 보이는지
+  - [ ] component별 Saved MDD, Current MDD, MDD Delta가 보이는지
+  - [ ] Performance Signal이 `needs_paper_tracking`, `missing_current_result`, `missing_saved_snapshot`, `worsened`, `stable_or_better` 중 하나로 읽히는지
+  - [ ] Tracking Cadence, Stop Condition, Success Condition이 Pre-Live tracking plan에서 읽힌 정보로 보이는지
+  - [ ] Feedback Gaps가 paper tracking 미진입, missing result, CAGR / MDD 악화 같은 재확인 항목으로 읽히는지
+  - [ ] 이 tab이 실제 paper PnL 자동 계산, proposal 자동 수정, live approval이 아니라 최신 Pre-Live result snapshot을 읽는 보조 surface로 이해되는지
+
 ## 한 줄 판단 기준
 
-이번 Phase 30 중간 QA는
+이번 Phase 30 QA는
 **새 기능이 많아졌는가**가 아니라,
-**Phase 29 이후 흐름, Portfolio Proposal 계약, 첫 registry helper split, Proposal Draft UI, Monitoring Review, Pre-Live Feedback이 live approval과 구분되는 방식으로 이해되고 QA 가능한가**
+**Phase 29 이후 흐름, Portfolio Proposal 계약, 첫 registry helper split, Proposal Draft UI, Monitoring Review, Pre-Live Feedback, Paper Tracking Feedback이 live approval과 구분되는 방식으로 이해되고 QA 가능한가**
 를 확인한다.

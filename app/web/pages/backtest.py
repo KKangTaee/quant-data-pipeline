@@ -323,6 +323,8 @@ PORTFOLIO_PROPOSAL_ROLE_OPTIONS = [
     "watch_only",
 ]
 PORTFOLIO_PROPOSAL_WEIGHTING_OPTIONS = ["manual_weight", "equal_weight"]
+PORTFOLIO_PROPOSAL_PAPER_CAGR_DETERIORATION_THRESHOLD = -2.0
+PORTFOLIO_PROPOSAL_PAPER_MDD_DETERIORATION_THRESHOLD = -5.0
 CANDIDATE_REVIEW_DECISION_OPTIONS = [
     "consider_registry_candidate",
     "keep_as_near_miss_review",
@@ -6658,6 +6660,67 @@ def _portfolio_proposal_parse_review_date(value: Any) -> date | None:
         return None
 
 
+def _portfolio_proposal_optional_float(value: Any) -> float | None:
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        if pd.isna(value):
+            return None
+        return float(value)
+    value_text = str(value).strip()
+    if not value_text or value_text.lower() in {"none", "nan", "null"} or value_text == "-":
+        return None
+    value_text = value_text.replace("%", "").replace(",", "")
+    try:
+        return float(value_text)
+    except ValueError:
+        return None
+
+
+def _portfolio_proposal_metric_delta(current_value: Any, saved_value: Any) -> float | None:
+    current_float = _portfolio_proposal_optional_float(current_value)
+    saved_float = _portfolio_proposal_optional_float(saved_value)
+    if current_float is None or saved_float is None:
+        return None
+    return round(current_float - saved_float, 4)
+
+
+def _portfolio_proposal_evidence_by_registry_id(row: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    evidence = dict(row.get("evidence_snapshot") or {})
+    records: dict[str, dict[str, Any]] = {}
+    for component in list(evidence.get("components") or []):
+        registry_id = str(dict(component).get("registry_id") or "").strip()
+        if registry_id:
+            records[registry_id] = dict(component)
+    return records
+
+
+def _portfolio_proposal_paper_tracking_signal(
+    *,
+    current_status: str,
+    saved_cagr: Any,
+    current_cagr: Any,
+    saved_mdd: Any,
+    current_mdd: Any,
+) -> str:
+    if current_status != "paper_tracking":
+        return "needs_paper_tracking"
+    if current_cagr is None or current_mdd is None:
+        return "missing_current_result"
+    if saved_cagr is None or saved_mdd is None:
+        return "missing_saved_snapshot"
+    cagr_delta = _portfolio_proposal_metric_delta(current_cagr, saved_cagr)
+    mdd_delta = _portfolio_proposal_metric_delta(current_mdd, saved_mdd)
+    if cagr_delta is None or mdd_delta is None:
+        return "missing_current_result"
+    if (
+        cagr_delta <= PORTFOLIO_PROPOSAL_PAPER_CAGR_DETERIORATION_THRESHOLD
+        or mdd_delta <= PORTFOLIO_PROPOSAL_PAPER_MDD_DETERIORATION_THRESHOLD
+    ):
+        return "worsened"
+    return "stable_or_better"
+
+
 def _portfolio_proposal_pre_live_feedback_rows(
     row: dict[str, Any],
     pre_live_by_registry_id: dict[str, dict[str, Any]],
@@ -6744,6 +6807,123 @@ def _build_portfolio_proposal_pre_live_feedback_summary_rows(
                 "Paper Tracking": paper_tracking_count,
                 "Status Drift": drift_count,
                 "Overdue Reviews": overdue_count,
+                "Feedback Gaps": len(gaps),
+            }
+        )
+    return pd.DataFrame(display_rows)
+
+
+def _portfolio_proposal_paper_tracking_feedback_rows(
+    row: dict[str, Any],
+    pre_live_by_registry_id: dict[str, dict[str, Any]],
+) -> pd.DataFrame:
+    display_rows: list[dict[str, Any]] = []
+    evidence_by_registry_id = _portfolio_proposal_evidence_by_registry_id(row)
+    for ref in list(row.get("candidate_refs") or []):
+        registry_id = str(ref.get("registry_id") or "")
+        pre_live_record = pre_live_by_registry_id.get(registry_id) or {}
+        evidence = evidence_by_registry_id.get(registry_id) or {}
+        result_snapshot = dict(pre_live_record.get("result_snapshot") or {})
+        tracking_plan = dict(pre_live_record.get("tracking_plan") or {})
+        current_status = str(pre_live_record.get("pre_live_status") or "not_started")
+        saved_cagr = _portfolio_proposal_optional_float(evidence.get("cagr"))
+        saved_mdd = _portfolio_proposal_optional_float(evidence.get("mdd"))
+        current_cagr = _portfolio_proposal_optional_float(result_snapshot.get("cagr"))
+        current_mdd = _portfolio_proposal_optional_float(result_snapshot.get("mdd"))
+        display_rows.append(
+            {
+                "Registry ID": registry_id or "-",
+                "Proposal Role": ref.get("proposal_role"),
+                "Target Weight": ref.get("target_weight"),
+                "Current Pre-Live": current_status,
+                "Saved CAGR": saved_cagr,
+                "Current CAGR": current_cagr,
+                "CAGR Delta": _portfolio_proposal_metric_delta(current_cagr, saved_cagr),
+                "Saved MDD": saved_mdd,
+                "Current MDD": current_mdd,
+                "MDD Delta": _portfolio_proposal_metric_delta(current_mdd, saved_mdd),
+                "Performance Signal": _portfolio_proposal_paper_tracking_signal(
+                    current_status=current_status,
+                    saved_cagr=saved_cagr,
+                    current_cagr=current_cagr,
+                    saved_mdd=saved_mdd,
+                    current_mdd=current_mdd,
+                ),
+                "Tracking Cadence": tracking_plan.get("cadence"),
+                "Stop Condition": tracking_plan.get("stop_condition"),
+                "Success Condition": tracking_plan.get("success_condition"),
+            }
+        )
+    return pd.DataFrame(display_rows)
+
+
+def _portfolio_proposal_paper_tracking_feedback_gaps(
+    row: dict[str, Any],
+    pre_live_by_registry_id: dict[str, dict[str, Any]],
+) -> list[str]:
+    gaps: list[str] = []
+    evidence_by_registry_id = _portfolio_proposal_evidence_by_registry_id(row)
+    for ref in list(row.get("candidate_refs") or []):
+        registry_id = str(ref.get("registry_id") or "")
+        if not registry_id:
+            continue
+        pre_live_record = pre_live_by_registry_id.get(registry_id) or {}
+        evidence = evidence_by_registry_id.get(registry_id) or {}
+        result_snapshot = dict(pre_live_record.get("result_snapshot") or {})
+        tracking_plan = dict(pre_live_record.get("tracking_plan") or {})
+        current_status = str(pre_live_record.get("pre_live_status") or "not_started")
+        saved_cagr = _portfolio_proposal_optional_float(evidence.get("cagr"))
+        saved_mdd = _portfolio_proposal_optional_float(evidence.get("mdd"))
+        current_cagr = _portfolio_proposal_optional_float(result_snapshot.get("cagr"))
+        current_mdd = _portfolio_proposal_optional_float(result_snapshot.get("mdd"))
+        cagr_delta = _portfolio_proposal_metric_delta(current_cagr, saved_cagr)
+        mdd_delta = _portfolio_proposal_metric_delta(current_mdd, saved_mdd)
+        if not pre_live_record:
+            gaps.append(f"{registry_id}: no active Pre-Live record is linked for paper tracking feedback.")
+            continue
+        if current_status != "paper_tracking":
+            gaps.append(f"{registry_id}: current Pre-Live status is `{current_status}`, not `paper_tracking`.")
+        if saved_cagr is None or saved_mdd is None:
+            gaps.append(f"{registry_id}: proposal evidence snapshot is missing CAGR or MDD.")
+        if current_cagr is None or current_mdd is None:
+            gaps.append(f"{registry_id}: current Pre-Live result snapshot is missing CAGR or MDD.")
+        if cagr_delta is not None and cagr_delta <= PORTFOLIO_PROPOSAL_PAPER_CAGR_DETERIORATION_THRESHOLD:
+            gaps.append(f"{registry_id}: CAGR delta `{cagr_delta}` is below the paper tracking threshold.")
+        if mdd_delta is not None and mdd_delta <= PORTFOLIO_PROPOSAL_PAPER_MDD_DETERIORATION_THRESHOLD:
+            gaps.append(f"{registry_id}: MDD delta `{mdd_delta}` is below the paper tracking threshold.")
+        if current_status == "paper_tracking" and not tracking_plan.get("cadence"):
+            gaps.append(f"{registry_id}: paper tracking cadence is not set.")
+    return gaps
+
+
+def _build_portfolio_proposal_paper_tracking_feedback_summary_rows(
+    rows: list[dict[str, Any]],
+    pre_live_by_registry_id: dict[str, dict[str, Any]],
+) -> pd.DataFrame:
+    display_rows: list[dict[str, Any]] = []
+    for row in rows:
+        feedback_df = _portfolio_proposal_paper_tracking_feedback_rows(row, pre_live_by_registry_id)
+        gaps = _portfolio_proposal_paper_tracking_feedback_gaps(row, pre_live_by_registry_id)
+        if feedback_df.empty:
+            paper_tracking_count = 0
+            missing_current_result_count = 0
+            worsened_count = 0
+            stable_or_better_count = 0
+        else:
+            paper_tracking_count = int((feedback_df["Current Pre-Live"] == "paper_tracking").sum())
+            missing_current_result_count = int((feedback_df["Performance Signal"] == "missing_current_result").sum())
+            worsened_count = int((feedback_df["Performance Signal"] == "worsened").sum())
+            stable_or_better_count = int((feedback_df["Performance Signal"] == "stable_or_better").sum())
+        display_rows.append(
+            {
+                "Updated At": row.get("updated_at") or row.get("created_at"),
+                "Proposal ID": row.get("proposal_id"),
+                "Status": row.get("proposal_status"),
+                "Components": len(row.get("candidate_refs") or []),
+                "Paper Tracking": paper_tracking_count,
+                "Missing Current Result": missing_current_result_count,
+                "Worsened": worsened_count,
+                "Stable / Better": stable_or_better_count,
                 "Feedback Gaps": len(gaps),
             }
         )
@@ -6884,6 +7064,64 @@ def _render_portfolio_proposal_pre_live_feedback(
     )
 
 
+def _render_portfolio_proposal_paper_tracking_feedback(
+    proposal_rows: list[dict[str, Any]],
+    pre_live_rows: list[dict[str, Any]],
+) -> None:
+    st.markdown("#### Paper Tracking Performance Feedback")
+    st.caption(
+        "proposal 저장 당시 evidence snapshot과 현재 Pre-Live result snapshot의 CAGR / MDD를 비교합니다. "
+        "실제 paper PnL을 자동 계산하는 화면은 아니며, Pre-Live record에 저장된 최신 snapshot을 읽기만 합니다."
+    )
+    if not proposal_rows:
+        st.info("Paper tracking feedback을 볼 Portfolio Proposal이 없습니다.")
+        return
+
+    pre_live_by_registry_id = _portfolio_proposal_pre_live_record_by_registry_id(pre_live_rows)
+    summary_df = _build_portfolio_proposal_paper_tracking_feedback_summary_rows(proposal_rows, pre_live_by_registry_id)
+    st.dataframe(summary_df, use_container_width=True, hide_index=True)
+
+    labels = [_portfolio_proposal_selection_label(row) for row in proposal_rows]
+    selected_label = st.selectbox(
+        "Review Paper Tracking Feedback",
+        options=labels,
+        key="portfolio_proposal_paper_tracking_feedback_selected_record",
+    )
+    selected_row = proposal_rows[labels.index(selected_label)]
+    feedback_df = _portfolio_proposal_paper_tracking_feedback_rows(selected_row, pre_live_by_registry_id)
+    feedback_gaps = _portfolio_proposal_paper_tracking_feedback_gaps(selected_row, pre_live_by_registry_id)
+
+    if feedback_df.empty:
+        st.info("이 proposal에는 paper tracking feedback을 연결할 component candidate가 없습니다.")
+        return
+
+    feedback_cols = st.columns(5, gap="small")
+    feedback_cols[0].metric("Components", len(feedback_df))
+    feedback_cols[1].metric("Paper Tracking", int((feedback_df["Current Pre-Live"] == "paper_tracking").sum()))
+    feedback_cols[2].metric("Worsened", int((feedback_df["Performance Signal"] == "worsened").sum()))
+    feedback_cols[3].metric("Stable / Better", int((feedback_df["Performance Signal"] == "stable_or_better").sum()))
+    feedback_cols[4].metric("Feedback Gaps", len(feedback_gaps))
+
+    st.caption(
+        "Delta는 current Pre-Live result snapshot에서 proposal 저장 당시 evidence snapshot을 뺀 값입니다. "
+        f"CAGR `{PORTFOLIO_PROPOSAL_PAPER_CAGR_DETERIORATION_THRESHOLD}` 이하 또는 "
+        f"MDD `{PORTFOLIO_PROPOSAL_PAPER_MDD_DETERIORATION_THRESHOLD}` 이하로 악화되면 `worsened`로 표시합니다."
+    )
+    st.markdown("##### Component Paper Tracking Feedback")
+    st.dataframe(feedback_df, use_container_width=True, hide_index=True)
+
+    st.markdown("##### Feedback Gaps")
+    if feedback_gaps:
+        for gap in feedback_gaps:
+            st.warning(gap)
+    else:
+        st.success("현재 paper tracking performance feedback gap은 없습니다.")
+    st.caption(
+        "이 tab은 live approval이나 자동 portfolio 변경을 만들지 않습니다. "
+        "새로운 paper tracking 성과를 반영하려면 Pre-Live record의 result snapshot을 새로 남겨야 합니다."
+    )
+
+
 def _render_portfolio_proposal_workspace() -> None:
     st.markdown("### Portfolio Proposal")
     st.caption(
@@ -6903,8 +7141,14 @@ def _render_portfolio_proposal_workspace() -> None:
     summary_cols[3].metric("Live Approval", "Disabled")
     st.caption(f"Path: {PORTFOLIO_PROPOSAL_REGISTRY_FILE}")
 
-    create_tab, monitoring_tab, feedback_tab, registry_tab = st.tabs(
-        ["Create Proposal Draft", "Monitoring Review", "Pre-Live Feedback", "Proposal Registry"]
+    create_tab, monitoring_tab, feedback_tab, paper_feedback_tab, registry_tab = st.tabs(
+        [
+            "Create Proposal Draft",
+            "Monitoring Review",
+            "Pre-Live Feedback",
+            "Paper Tracking Feedback",
+            "Proposal Registry",
+        ]
     )
     with create_tab:
         if not current_rows:
@@ -7083,6 +7327,9 @@ def _render_portfolio_proposal_workspace() -> None:
 
     with feedback_tab:
         _render_portfolio_proposal_pre_live_feedback(proposal_rows, pre_live_rows)
+
+    with paper_feedback_tab:
+        _render_portfolio_proposal_paper_tracking_feedback(proposal_rows, pre_live_rows)
 
     with registry_tab:
         st.markdown("#### Proposal Registry")

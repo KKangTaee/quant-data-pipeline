@@ -80,6 +80,7 @@ DB-backed market data ingestion, factor generation, and strategy backtesting wor
   - `.note/finance/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`에 proposal draft를 append-only로 저장하는 흐름
   - 저장된 proposal draft를 `Monitoring Review`에서 blocker / review gap / component 관점으로 다시 확인하는 흐름
   - 저장된 proposal snapshot을 `Pre-Live Feedback`에서 현재 Pre-Live 상태와 비교하는 흐름
+  - 저장된 proposal evidence snapshot을 `Paper Tracking Feedback`에서 현재 Pre-Live result snapshot의 CAGR / MDD와 비교하는 흐름
   - live trading approval이나 주문 지시와 분리된 검토 기록 흐름
 
 ## 프로젝트 구조
