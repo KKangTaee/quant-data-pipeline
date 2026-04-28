@@ -3070,3 +3070,17 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 점수 계산표에는 Data Trust 점수를 남기되, gate 상태는 별도 warning/error 메시지로 보여준다
 - Follow-up:
   - 사용자는 `Draft Score`와 `Data Trust` gate를 함께 보고, warning이면 Review Note에 근거를 남긴 뒤 6단계로 넘긴다
+
+### 2026-04-29 - 5단계 Compare는 기술적 필수 조건이 아니라 상대 근거 검증 단계다
+- User request:
+  - 5단계 pass 조건이 Compare, Data Trust, Real-Money, Relative Evidence라면 이 네 조건이 꼭 Compare를 해야 판단 가능한지, 4단계에서 바로 6단계로 넘어가도 되는지 질문함
+- Interpreted goal:
+  - 5단계 Compare가 반드시 필요한 이유와, single run에서 바로 Candidate Draft로 넘기는 예외 경로를 구분해야 함
+- Analysis result:
+  - Data Trust와 Real-Money Gate는 single run만으로도 상당 부분 확인 가능하다
+  - Compare Run과 Relative Evidence는 비교군이 있어야 판단 가능하다
+  - 따라서 5단계는 Candidate Draft를 만드는 기술적 필수 조건은 아니지만, registry / Pre-Live / Portfolio Proposal로 이어질 후보라면 상대 근거를 붙이기 위한 기본 검증 단계다
+  - 4단계에서 바로 6단계로 가는 것은 `single-run draft` 또는 `compare_pending` 상태로 허용할 수 있다
+  - 단, 이 경우 Review Note에 Compare가 아직 없고 상대 근거가 pending이라는 점을 남겨야 한다
+- Follow-up:
+  - walkthrough 문서에 `4단계에서 바로 6단계로 가도 되나` 구분을 추가했다
