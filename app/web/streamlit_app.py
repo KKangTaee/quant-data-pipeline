@@ -2941,6 +2941,57 @@ def _render_guides_page() -> None:
             "기존 GTAA 실습 후보의 `Interval = 4`는 후보 계약을 맞춘 값이지 4주 리밸런싱이 아닙니다."
         )
 
+    with st.expander("Compare 대상 선정법", expanded=False):
+        st.caption(
+            "5단계 Compare는 아무 전략과 비교하는 절차가 아니라, "
+            "현재 후보가 비교할 만한 기준 앞에서도 남길 이유가 있는지 확인하는 단계입니다."
+        )
+        comparator_rows = pd.DataFrame(
+            [
+                {
+                    "비교 대상 역할": "Naive baseline",
+                    "무엇을 확인하나": "복잡한 전략을 쓸 이유가 있는지",
+                    "예시": "같은 universe Equal Weight",
+                },
+                {
+                    "비교 대상 역할": "Market benchmark",
+                    "무엇을 확인하나": "단순 시장 노출보다 나은지",
+                    "예시": "SPY, 60/40, AGG / BIL 조합",
+                },
+                {
+                    "비교 대상 역할": "가까운 대안 전략",
+                    "무엇을 확인하나": "비슷한 목적의 다른 방식보다 나은지",
+                    "예시": "GTAA vs Global Relative Strength",
+                },
+                {
+                    "비교 대상 역할": "위험 기준 대안",
+                    "무엇을 확인하나": "수익과 낙폭 / 변동성의 교환이 납득되는지",
+                    "예시": "Risk Parity Trend, 방어형 allocation",
+                },
+                {
+                    "비교 대상 역할": "기존 강한 후보",
+                    "무엇을 확인하나": "이미 남아 있는 후보보다 새 후보를 추가할 이유가 있는지",
+                    "예시": "Current Candidate Registry의 active 후보",
+                },
+            ]
+        )
+        st.dataframe(comparator_rows, use_container_width=True, hide_index=True)
+        st.markdown(
+            """
+            **좋은 비교군의 조건**
+
+            - 같은 투자 문제를 풀어야 합니다.
+            - 기간, timeframe, option은 먼저 맞춥니다.
+            - universe, cadence, 거래비용, risk-off 조건이 다르면 그 차이를 Review Note에 남깁니다.
+            - 일부러 약한 strawman만 두지 않습니다.
+            - 최소 하나는 단순하고 강한 기준이어야 합니다.
+            """
+        )
+        st.info(
+            "GTAA 실습에서는 같은 universe Equal Weight, 가까운 momentum 대안인 Global Relative Strength, "
+            "위험 기준 대안인 Risk Parity Trend를 함께 두면 비교 의미가 살아납니다."
+        )
+
     st.markdown("### 1~11 단계 실행 흐름")
 
     with st.container(border=True):

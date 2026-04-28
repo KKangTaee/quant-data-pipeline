@@ -60,7 +60,7 @@ Ingestion / Data Trust
 
 | 묶음 | 내용 |
 |---|---|
-| `핵심 개념 가이드` | 실전 승격 흐름, Real-Money Contract, GTAA Risk-Off 후보군 해석 |
+| `핵심 개념 가이드` | 실전 승격 흐름, Real-Money Contract, GTAA Risk-Off 후보군, interval, Compare 대상 선정법 해석 |
 | `1~11 단계 실행 흐름` | 테스트에서 상용화 후보 검토까지의 단계별 흐름. 각 단계는 expander로 접어 읽는다 |
 | `단계 통과 기준` | 4->5, 5->6처럼 다음 단계로 넘길지 판단하는 stop/go 기준. 각 기준은 expander로 접어 읽는다 |
 | `문서와 파일` | 현재 먼저 볼 문서, 주요 registry / guide / log 파일, live approval이 아님을 구분하는 운영 경계 |

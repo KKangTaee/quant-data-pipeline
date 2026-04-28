@@ -3084,3 +3084,17 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 단, 이 경우 Review Note에 Compare가 아직 없고 상대 근거가 pending이라는 점을 남겨야 한다
 - Follow-up:
   - walkthrough 문서에 `4단계에서 바로 6단계로 가도 되나` 구분을 추가했다
+
+### 2026-04-29 - 5단계 Compare는 비교할 만한 대상 선정이 핵심이다
+- User request:
+  - 5단계에서 무의미한 전략들과 비교하면 Compare 자체가 의미 없으므로, "비교할 만한 대상"을 어떻게 설정해야 하는지 질문함
+  - 앞으로 질문에 바로 수정 반영하지 말고 먼저 답한 뒤 수정 진행 여부를 물어보라는 작업 방식도 요청함
+- Interpreted goal:
+  - 5단계의 본질을 "아무 비교 실행"이 아니라 "의미 있는 comparator set 구성"으로 정의해야 함
+- Analysis result:
+  - 비교 대상은 같은 투자 문제를 풀거나 후보의 약점 / 대체 가능성 / 단순 기준 대비 우위를 설명할 수 있어야 한다
+  - 의미 있는 comparator role은 naive baseline, market benchmark, 가까운 대안 전략, 위험 기준 대안, 기존 강한 후보로 정리했다
+  - GTAA 실습에서는 같은 universe Equal Weight, Global Relative Strength, Risk Parity Trend, 필요 시 SPY 또는 60/40이 비교할 만한 대상이다
+  - 사용자가 수정 진행을 승인한 뒤 `Reference > Guides > Compare 대상 선정법`과 walkthrough의 5단계 설명을 갱신했다
+- Follow-up:
+  - 이후 사용자가 해석 / 설계 질문을 하면 먼저 답변하고, 문서나 코드 수정은 명시 승인을 받은 뒤 진행한다

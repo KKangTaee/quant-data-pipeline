@@ -2265,3 +2265,13 @@ Detailed historical logs were archived on `2026-04-13`.
   - synced the walkthrough note, web backtest UI flow doc, and Guides pass-criteria copy
 - Durable takeaway:
   - Draft Score now reflects compare evidence, while Data Trust tells the operator whether the evidence is clean, warning-level, or blocked.
+
+### 2026-04-29
+- Added comparator-selection guidance for the 1~11 walkthrough.
+- Changed:
+  - added `Reference > Guides > Compare 대상 선정법`
+  - documented meaningful comparator roles: naive baseline, market benchmark, adjacent alternative, risk baseline, and existing strong candidate
+  - clarified in the walkthrough that Compare is only useful when the comparator set can explain whether the candidate deserves to remain
+  - synced the web backtest UI flow doc and question log
+- Durable takeaway:
+  - Step 5 is not just "run any comparison"; it is the step where the operator chooses defensible comparator roles and checks whether the candidate still has a reason to proceed.
