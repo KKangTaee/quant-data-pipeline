@@ -2931,41 +2931,6 @@ def _render_guides_page() -> None:
             "11단계가 포트폴리오 제안과 live readiness 경계입니다."
         )
 
-        with st.container(border=True):
-            st.markdown("#### 4단계에서 5단계로 넘어가는 최소 기준")
-            st.caption(
-                "이 기준은 투자 승인 기준이 아니라, `Hold 해결`을 마치고 "
-                "`Compare`에서 다른 후보와 비교해 볼 수 있는지 판단하는 기준입니다."
-            )
-            pass_rows = pd.DataFrame(
-                [
-                    {
-                        "확인 항목": "Promotion Decision",
-                        "5단계 진행 가능": "`real_money_candidate` 또는 `production_candidate`처럼 `hold`가 아닌 상태",
-                        "멈춰야 하는 경우": "`hold`이면 Hold 해결 가이드의 blocker를 먼저 봅니다.",
-                    },
-                    {
-                        "확인 항목": "Deployment Readiness / Deployment Status",
-                        "5단계 진행 가능": "`paper_only`, `watchlist_only`, `review_required`처럼 `blocked`가 아닌 상태",
-                        "멈춰야 하는 경우": "`blocked`이면 deployment checklist와 blocker를 먼저 확인합니다.",
-                    },
-                    {
-                        "확인 항목": "Hold 해결 가이드 / Blocker",
-                        "5단계 진행 가능": "핵심 blocker가 없거나, 남은 항목을 알고 Compare에서 더 검토하기로 정리한 상태",
-                        "멈춰야 하는 경우": "데이터 오류, benchmark 부재, ETF operability caution처럼 승격을 직접 막는 blocker가 남은 상태",
-                    },
-                ]
-            )
-            st.dataframe(pass_rows, use_container_width=True, hide_index=True)
-            st.success(
-                "`Promotion Decision != hold`, `Deployment != blocked`, 핵심 blocker 없음이면 "
-                "4단계는 pass로 보고 5단계 Compare로 넘어갈 수 있습니다."
-            )
-            st.warning(
-                "`real_money_candidate`는 다음 단계로 넘길 수 있다는 강한 신호일 뿐, "
-                "live trading 승인이나 주문 지시가 아닙니다."
-            )
-
         step_rows = [
             {
                 "title": "1단계. 데이터 최신화부터 시작",
@@ -3105,6 +3070,48 @@ def _render_guides_page() -> None:
                 for item in row["check"]:
                     st.markdown(f"- {item}")
                 st.info(row["next_step"])
+
+    with st.container(border=True):
+        st.markdown("### 단계 통과 기준")
+        st.caption(
+            "아래 기준은 단계형 Guide 중간에 끼워 넣지 않고, "
+            "각 단계에서 멈출지 다음 단계로 갈지 판단할 때 따로 보는 기준입니다."
+        )
+
+        with st.container(border=True):
+            st.markdown("#### 4단계에서 5단계로 넘어가는 최소 기준")
+            st.caption(
+                "이 기준은 투자 승인 기준이 아니라, `Hold 해결`을 마치고 "
+                "`Compare`에서 다른 후보와 비교해 볼 수 있는지 판단하는 기준입니다."
+            )
+            pass_rows = pd.DataFrame(
+                [
+                    {
+                        "확인 항목": "Promotion Decision",
+                        "5단계 진행 가능": "`real_money_candidate` 또는 `production_candidate`처럼 `hold`가 아닌 상태",
+                        "멈춰야 하는 경우": "`hold`이면 Hold 해결 가이드의 blocker를 먼저 봅니다.",
+                    },
+                    {
+                        "확인 항목": "Deployment Readiness / Deployment Status",
+                        "5단계 진행 가능": "`paper_only`, `watchlist_only`, `review_required`처럼 `blocked`가 아닌 상태",
+                        "멈춰야 하는 경우": "`blocked`이면 deployment checklist와 blocker를 먼저 확인합니다.",
+                    },
+                    {
+                        "확인 항목": "Hold 해결 가이드 / Blocker",
+                        "5단계 진행 가능": "핵심 blocker가 없거나, 남은 항목을 알고 Compare에서 더 검토하기로 정리한 상태",
+                        "멈춰야 하는 경우": "데이터 오류, benchmark 부재, ETF operability caution처럼 승격을 직접 막는 blocker가 남은 상태",
+                    },
+                ]
+            )
+            st.dataframe(pass_rows, use_container_width=True, hide_index=True)
+            st.success(
+                "`Promotion Decision != hold`, `Deployment != blocked`, 핵심 blocker 없음이면 "
+                "4단계는 pass로 보고 5단계 Compare로 넘어갈 수 있습니다."
+            )
+            st.warning(
+                "`real_money_candidate`는 다음 단계로 넘길 수 있다는 강한 신호일 뿐, "
+                "live trading 승인이나 주문 지시가 아닙니다."
+            )
 
     st.markdown("### 지금 먼저 보면 좋은 문서")
     st.markdown(

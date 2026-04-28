@@ -20,6 +20,7 @@
 
 - 확인 위치:
   - `Guides > 테스트에서 상용화 후보 검토까지 사용하는 흐름`
+  - `Guides > 단계 통과 기준`
   - `Guides > GTAA Risk-Off 후보군 보는 법`
   - `Backtest 결과 > Real-Money > 현재 판단 > 5단계 Compare 진입 평가`
 - 체크 항목:

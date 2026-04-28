@@ -63,7 +63,7 @@
   다섯 번째 작업으로 저장된 proposal draft를 blocker / review gap / component table 관점에서 다시 보는 `Monitoring Review` tab을 구현했다.
   여섯 번째 작업으로 proposal snapshot과 현재 Pre-Live registry 상태를 비교하는 `Pre-Live Feedback` tab을 구현했다.
   일곱 번째 작업으로 proposal evidence snapshot과 현재 Pre-Live result snapshot의 CAGR / MDD를 비교하는 `Paper Tracking Feedback` tab을 구현했다.
-  manual QA 보조로 `Reference > Guides`에 4단계에서 5단계 Compare로 넘어가는 최소 기준을 추가했다.
+  manual QA 보조로 `Reference > Guides > 단계 통과 기준`에 4단계에서 5단계 Compare로 넘어가는 최소 기준을 분리해 두었다.
   manual QA 보조로 `Real-Money > 현재 판단`에 10점 만점의 `5단계 Compare 진입 평가` 박스를 추가했다.
   manual QA 보조로 `Reference > Guides > GTAA Risk-Off 후보군 보는 법`을 추가해 defensive ticker가 실제 fallback 후보가 되는 조건을 설명한다.
 - Phase 30을 읽을 때는 전체 목표와 작업 단위를 분리해서 본다.

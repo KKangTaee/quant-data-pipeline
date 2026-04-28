@@ -2950,3 +2950,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 5단계 통과는 `Review As Candidate Draft`로 넘길 수 있는 상태라는 뜻이지 current candidate registry 저장이나 Pre-Live / live approval을 뜻하지 않는다
 - Follow-up:
   - 현재 실습에서는 GTAA Balanced Top-2를 기본 후보로 두고, Low-MDD 대안과 High-CAGR 대안을 비교한 뒤 Candidate Draft로 넘길 후보를 하나 고른다
+
+### 2026-04-29 - 4→5 통과 기준은 단계형 흐름 밖의 별도 Guide로 분리한다
+- User request:
+  - `테스트에서 상용화 후보 검토까지 사용하는 흐름` 안에 갑자기 `4단계에서 5단계로 넘어가는 최소 기준`이 나오면, 단계별 흐름을 읽다가 기준 설명으로 끊겨 어색하다고 피드백함
+- Interpreted goal:
+  - 1~11단계 흐름은 순서대로 읽히게 유지하고, 단계 통과 / 중단 기준은 별도 분류에서 확인하도록 정보 구조를 정리해야 함
+- Analysis result:
+  - `4단계에서 5단계로 넘어가는 최소 기준`을 `Reference > Guides > 테스트에서 상용화 후보 검토까지 사용하는 흐름` 본문에서 제거했다
+  - 같은 기준은 `Reference > Guides > 단계 통과 기준`이라는 별도 section으로 이동했다
+  - `테스트에서 상용화 후보 검토까지 사용하는 흐름`은 안내 문단 뒤 곧바로 1단계부터 시작하도록 정리했다
+  - Phase 30 checklist와 current TODO, doc index도 새 위치를 기준으로 갱신했다
+- Follow-up:
+  - 이후 5→6, 10→11처럼 추가 통과 기준이 필요해지면 같은 `단계 통과 기준` section에 누적하고, 단계형 흐름 본문은 계속 순서형 Guide로 유지한다

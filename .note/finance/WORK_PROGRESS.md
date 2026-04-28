@@ -2183,3 +2183,13 @@ Detailed historical logs were archived on `2026-04-13`.
   - synced the web backtest UI flow and question log
 - Durable takeaway:
   - The score now reads as an operator aid, while the actual stop/go gate remains Promotion non-hold, Deployment non-blocked, and no core blocker.
+
+### 2026-04-29
+- Reorganized the Reference guide layout after manual QA feedback.
+- Changed:
+  - moved `4단계에서 5단계로 넘어가는 최소 기준` out of `테스트에서 상용화 후보 검토까지 사용하는 흐름`
+  - added a separate `Reference > Guides > 단계 통과 기준` section for stop/go criteria
+  - kept the 1~11 workflow section as a pure step-by-step guide that starts directly at 1단계
+  - synced the Phase 30 checklist, current TODO, doc index, work log, and question log
+- Durable takeaway:
+  - Stage flow guidance and stage pass criteria are now separated, so operators can read the workflow first and consult criteria only when deciding whether to move forward.
