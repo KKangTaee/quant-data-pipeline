@@ -2715,3 +2715,17 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 따라서 현재 흐름은 올바른 기반이지만 최종 완성형은 아니다. 지금 만든 것은 후보를 안전하게 보존하고 검토하는 레일이고, Phase 30 후속 작업에서 portfolio construction layer를 붙여야 진짜 포트폴리오 발견 흐름이 된다
 - Follow-up:
   - Phase 30 다음 작업은 단순 UI 추가보다 Portfolio Proposal row 계약을 먼저 정의해, 어떤 후보 묶음이 어떤 목적과 위험 역할로 포트폴리오 제안이 되는지 명확히 하는 것이 중요하다
+
+### 2026-04-28 - 모델 변경과 컨텍스트 유실에도 현재 방향성은 최종 목표와 대체로 정렬되어 있다
+- User request:
+  - 이전 개발 모델과 현재 모델이 다르고, 토큰 부족이나 과거 정보 유실로 개발 방향이 잘못 흘렀을 가능성이 있으니 현재 방향성이 최종 목표와 맞는지 검증을 요청함
+- Interpreted goal:
+  - 현재 phase 흐름이 우연히 기능을 붙인 결과인지, 아니면 `실전 포트폴리오 및 가이드 제시`라는 north star에 맞게 진행되고 있는지 재평가해야 함
+- Analysis result:
+  - 현재 방향성은 대체로 올바르다. 데이터 수집, DB-backed backtest, 전략 실행, 결과 재현, data trust, Real-Money 신호, candidate review, pre-live 기록 순서가 최종 포트폴리오 제안 전에 필요한 기반을 만든다
+  - 특히 `좋은 백테스트 = 즉시 투자`로 흐르지 않게 Data Trust / Real-Money / Review Note / Registry / Pre-Live를 둔 것은 실전 포트폴리오 개발 방향에 맞는 보수적 설계다
+  - 다만 모델 변경과 장기 개발의 영향으로 기능과 문서가 많이 늘었고, `backtest.py`가 16k lines 이상으로 커졌으며, 포트폴리오 구성 논리는 아직 명시적 계약으로 정리되지 않았다
+  - 따라서 현재 상태는 "방향을 잃었다"가 아니라 "올바른 기반을 많이 만들었지만, 이제 portfolio construction contract와 code boundary를 명확히 하지 않으면 길을 잃을 수 있는 시점"으로 보는 것이 맞다
+- Follow-up:
+  - Phase 30의 다음 핵심 작업은 Portfolio Proposal 계약 정의와 Backtest UI 점진 리팩토링이다
+  - 앞으로 phase closeout 때마다 현재 작업이 north star, 즉 데이터 기반 투자 후보 / 포트폴리오 제안으로 이어지는지 간단한 direction check를 남기는 것이 좋다
