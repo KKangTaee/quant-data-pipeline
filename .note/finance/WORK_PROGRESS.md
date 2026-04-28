@@ -2125,3 +2125,12 @@ Detailed historical logs were archived on `2026-04-13`.
   - Playwright browser smoke confirmed `Backtest > Portfolio Proposal > Paper Tracking Feedback` renders; existing Streamlit subpath `_stcore` 404 console messages were observed
 - Durable takeaway:
   - Phase 30 product functionality is now ready for user manual QA. Additional `backtest.py` module splitting is intentionally deferred to a separate special refactor task.
+
+### 2026-04-28
+- Refined the Reference guide's `테스트에서 상용화 후보 검토까지 사용하는 흐름` after user direction.
+- Changed:
+  - kept the guide as an 11-step product/user flow instead of expanding Phase 30 into many implementation steps
+  - updated step 11 from future-oriented `Phase 30 이후` wording to the implemented `Backtest > Portfolio Proposal` path
+  - framed Monitoring Review, Pre-Live Feedback, and Paper Tracking Feedback as checks inside the Portfolio Proposal step, not separate major workflow steps
+- Durable takeaway:
+  - The guide now reflects Phase 30 at the correct level of abstraction: a portfolio proposal review step before future Live Readiness / Final Approval, not a list of Phase 30 work-unit details.

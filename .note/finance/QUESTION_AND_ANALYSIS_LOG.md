@@ -2845,3 +2845,15 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Phase 30 상태는 `implementation_complete` / `manual_qa_pending`으로 전환하고, 추가 `backtest.py` 모듈 분리는 별도 special refactor task로 남겼다
 - Follow-up:
   - 사용자는 `.note/finance/phase30/PHASE30_TEST_CHECKLIST.md` 기준으로 final manual QA를 진행한다
+
+### 2026-04-28 - Reference Guide는 Phase 30 기능 목록이 아니라 최종 포트폴리오 탐색 흐름이어야 한다
+- User request:
+  - Reference / Guides의 `테스트에서 상용화 후보 검토까지 사용하는 흐름`에 Phase 30 내용이 반영되었는지 확인하되, Phase 30 내용을 11~20단계처럼 쪼개 추가하지 말라고 요청함
+- Interpreted goal:
+  - 사용자가 단계대로 진행해 최종적으로 실전투자 가능한 포트폴리오 후보를 찾는 큰 흐름을 보존해야 함
+- Analysis result:
+  - 기존 Guide는 Portfolio Proposal을 11단계에 두고 있어 큰 구조는 맞았지만, path가 `Phase 30 이후`로 되어 있어 Phase 30 구현 완료 상태와 어긋났다
+  - 11단계를 `Backtest > Portfolio Proposal`로 갱신하고, Monitoring Review / Pre-Live Feedback / Paper Tracking Feedback은 별도 단계가 아니라 11단계 안에서 보는 확인 항목으로만 반영했다
+  - Live Readiness / Final Approval은 여전히 이후 별도 단계로 남겨, Portfolio Proposal이 투자 승인처럼 읽히지 않게 했다
+- Follow-up:
+  - Phase 30 QA 때 Guide 11단계가 구현 기능을 충분히 반영하면서도 과도하게 세분화되지 않았는지 확인한다

@@ -2792,7 +2792,7 @@ def _render_guides_page() -> None:
         )
         st.caption(
             "큰 흐름으로는 1~5단계가 테스트 / 검증 구간, 6~10단계가 후보 검토 / 운영 기록 구간, "
-            "11단계가 이후 포트폴리오 제안과 live readiness 경계입니다."
+            "11단계가 포트폴리오 제안과 live readiness 경계입니다."
         )
 
         step_rows = [
@@ -2911,15 +2911,17 @@ def _render_guides_page() -> None:
                 "next_step": "Pre-Live 기록은 포트폴리오 제안이나 paper monitoring으로 이어질 수 있지만, 아직 실제 돈 투입 승인은 아닙니다.",
             },
             {
-                "title": "11단계. Portfolio Proposal과 Live Readiness는 별도 단계로",
-                "path": "Phase 30 이후",
-                "goal": "후보 여러 개를 포트폴리오 제안으로 묶되, 투자 승인과 분리해서 검토합니다.",
+                "title": "11단계. Portfolio Proposal로 후보 묶음을 검토하고 Live Readiness 경계 유지",
+                "path": "Backtest > Portfolio Proposal",
+                "goal": "후보 여러 개를 목적, 역할, 비중, 운영 상태와 함께 포트폴리오 제안 초안으로 묶습니다. 이 단계도 투자 승인이나 주문 지시가 아닙니다.",
                 "check": [
-                    "후보별 역할, 비중, 위험 기여도를 설명할 수 있는지",
+                    "후보별 역할, target weight, 비중 근거를 설명할 수 있는지",
                     "각 후보의 Data Trust / Real-Money / Pre-Live 상태를 같이 볼 수 있는지",
-                    "Live Readiness / Final Approval은 별도 phase에서 다룰 수 있게 경계를 유지하는지",
+                    "`Monitoring Review`에서 blocker와 review gap을 다시 확인할 수 있는지",
+                    "`Pre-Live Feedback`과 `Paper Tracking Feedback`에서 현재 운영 상태와 성과 snapshot을 다시 읽을 수 있는지",
+                    "Live Readiness / Final Approval은 아직 별도 단계로 남겨 두고 경계를 유지하는지",
                 ],
-                "next_step": "Phase 30은 portfolio proposal / monitoring surface를 만드는 단계이고, 실제 투자 승인 단계는 그 이후에 별도로 검토합니다.",
+                "next_step": "Portfolio Proposal까지 확인한 뒤에도 바로 투자하지 않습니다. 실제 투자 가능 여부는 이후 Live Readiness / Final Approval 단계에서 별도 기준으로 검토합니다.",
             },
         ]
 
