@@ -2790,6 +2790,10 @@ def _render_guides_page() -> None:
             "반면 `Candidate Review`와 `Pre-Live 운영 점검`은 그 신호를 보고 "
             "후보로 남길지, 비교할지, paper tracking / watchlist / 보류 / 재검토로 둘지 정하는 **별도 운영 절차**입니다."
         )
+        st.caption(
+            "큰 흐름으로는 1~5단계가 테스트 / 검증 구간, 6~10단계가 후보 검토 / 운영 기록 구간, "
+            "11단계가 이후 포트폴리오 제안과 live readiness 경계입니다."
+        )
 
         step_rows = [
             {

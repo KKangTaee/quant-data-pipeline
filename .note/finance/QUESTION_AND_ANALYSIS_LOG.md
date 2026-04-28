@@ -2729,3 +2729,15 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Follow-up:
   - Phase 30의 다음 핵심 작업은 Portfolio Proposal 계약 정의와 Backtest UI 점진 리팩토링이다
   - 앞으로 phase closeout 때마다 현재 작업이 north star, 즉 데이터 기반 투자 후보 / 포트폴리오 제안으로 이어지는지 간단한 direction check를 남기는 것이 좋다
+
+### 2026-04-28 - Guide 흐름은 전체 흐름이지만 Phase 29 구간이 촘촘해 보일 수 있다
+- User request:
+  - `테스트에서 상용화 후보 검토까지 사용하는 흐름`의 6~10번이 Phase 29 내용만 추가된 것처럼 보이는데, 전체 흐름으로 정리된 것이 맞는지 독립적으로 확인해 달라고 요청함
+- Interpreted goal:
+  - 사용자 의문을 그대로 따라가지 말고, Guide가 전체 테스트 -> 후보 검토 흐름인지 또는 Phase 29 기능 나열로 치우쳤는지 검토해야 함
+- Analysis result:
+  - 현재 Guide는 1~5단계가 데이터 최신화 / Single Strategy / Real-Money / Hold 해결 / Compare로 이어지는 테스트 및 검증 구간이고, 6~10단계가 Candidate Draft / Review Note / Registry / Candidate Board / Pre-Live로 이어지는 후보 검토 및 운영 기록 구간이다
+  - 따라서 전체 흐름 자체는 맞다. 다만 6~10단계가 Phase 29에서 구현된 기능을 촘촘히 반영하므로, 구간 구분 없이 읽으면 Phase 29 기능 설명처럼 보일 수 있다
+  - Guide와 Phase 30 checklist에 `1~5 = 테스트 / 검증`, `6~10 = 후보 검토 / 운영 기록`, `11 = 포트폴리오 제안 / live readiness 경계`라는 큰 구간 설명을 추가했다
+- Follow-up:
+  - 사용자는 checklist에서 각 세부 기능보다 먼저 큰 구간 구분이 납득되는지 확인한다
