@@ -2202,3 +2202,12 @@ Detailed historical logs were archived on `2026-04-13`.
   - updated the finance doc index and operations README so the walkthrough session is discoverable outside the phase docs
 - Durable takeaway:
   - Phase documents should not absorb ad hoc practice-session guidance unless the user explicitly asks to change that phase's QA scope.
+
+### 2026-04-29
+- Clarified the correct step-5 Compare path for a new strategy in the walkthrough session.
+- Changed:
+  - documented that `Candidate Review > Send To Compare` and `Load Recommended Candidates` are registry quick re-entry tools, not the first path for a new unregistered strategy
+  - added the direct `Backtest > Compare & Portfolio Builder` path for recreating the single-run contract in Compare
+  - noted the current same-family compare limitation and the need to use benchmark / alternative family comparisons first
+- Durable takeaway:
+  - Step 5 starts from the tested strategy contract itself; registry shortcuts are only for candidates that already exist in current candidate registry.

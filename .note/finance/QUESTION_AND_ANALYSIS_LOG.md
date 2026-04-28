@@ -2975,3 +2975,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `FINANCE_DOC_INDEX.md`와 `operations/README.md`에는 새 walkthrough 문서를 운영 문서로 등록했다
 - Follow-up:
   - 앞으로 사용자가 Phase 문서 갱신을 명시하지 않으면, 이런 실습 질문은 operations walkthrough 문서나 question log로만 관리한다
+
+### 2026-04-29 - 신규 전략의 5단계 Compare는 registry shortcut이 아니라 직접 Compare 재현으로 시작한다
+- User request:
+  - 4단계를 통과한 신규 전략을 5단계에서 확인한다고 가정하면, `Candidate Review > Send To Compare > Load Recommended Candidates` 경로는 이미 registry에 있는 후보에 의존하므로 이상하지 않느냐고 질문함
+- Interpreted goal:
+  - 신규 전략이 아직 current candidate registry에 없을 때 5단계 Compare를 어떻게 시작해야 하는지 정확히 정리해야 함
+- Analysis result:
+  - 사용자의 지적이 맞다. `Load Recommended Candidates`는 이미 registry에 기록된 대표 후보 묶음을 compare form에 다시 채우는 quick re-entry 도구이지, 신규 전략의 첫 Compare 경로가 아니다
+  - 신규 전략은 `Backtest > Compare & Portfolio Builder`로 직접 이동한 뒤, 4단계 single run의 기간과 strategy-specific contract를 Compare form에 재현해서 실행한다
+  - 비교 기준은 Equal Weight, benchmark 성격 후보, 다른 ETF 전략, 또는 이미 registry에 있는 기존 대표 후보 중 목적에 맞게 고른다
+  - 현재 compare form은 같은 strategy family 후보를 여러 개 동시에 비교하는 데 제한이 있으므로, 같은 family 파라미터 변형끼리의 정밀 비교는 single run / history 기반 수동 비교 또는 이후 별도 지원 과제로 남긴다
+- Follow-up:
+  - walkthrough 문서의 5단계 설명을 신규 전략 기본 경로와 registry shortcut 경로로 분리했다
