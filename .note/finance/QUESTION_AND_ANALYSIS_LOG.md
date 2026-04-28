@@ -2937,3 +2937,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Real-Money `5단계 Compare 진입 평가` 박스와 code flow 문서에 이 해석을 추가했다
 - Follow-up:
   - 점수는 투자 승인 기준이 아니라 Compare 진입 보조 기준으로 유지한다
+
+### 2026-04-29 - 5단계 Compare는 후보를 상대 비교해 Candidate Draft로 넘길지 정하는 단계다
+- User request:
+  - 4단계가 통과된 GTAA Balanced Top-2 포트폴리오로 5단계에서 무엇을 확인하고 어떻게 통과하는지 안내를 요청함
+- Interpreted goal:
+  - 5단계 Compare를 투자 승인 단계가 아니라 후보 간 상대 비교와 Candidate Draft handoff 준비 단계로 정의해야 함
+- Analysis result:
+  - 5단계의 목적은 기준 후보가 단독 결과 착시가 아니라 같은 기간 / 같은 Real-Money 해석 기준에서도 계속 볼 만한지 확인하는 것이다
+  - 최소 비교 묶음은 GTAA Balanced Top-2를 중심으로 GTAA Low-MDD 대안, GTAA High-CAGR 대안, 필요하면 Equal Weight 또는 SPY benchmark 성격의 기준을 함께 놓는 방식이 적절하다
+  - 통과 기준은 compare run이 정상 실행되고, 기준 후보의 Data Trust / Real-Money가 깨지지 않으며, 후보가 목적에 맞는 상대 우위를 설명할 수 있고, 다음 단계로 넘길 후보 역할이 정리되는 것이다
+  - 5단계 통과는 `Review As Candidate Draft`로 넘길 수 있는 상태라는 뜻이지 current candidate registry 저장이나 Pre-Live / live approval을 뜻하지 않는다
+- Follow-up:
+  - 현재 실습에서는 GTAA Balanced Top-2를 기본 후보로 두고, Low-MDD 대안과 High-CAGR 대안을 비교한 뒤 Candidate Draft로 넘길 후보를 하나 고른다
