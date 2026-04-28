@@ -16,6 +16,7 @@ paper / pre-live monitoring surface로 연결하기 위한 계획 문서다.
 - 두 번째 작업인 Portfolio Proposal 계약 정의는 첫 번째 작업 이후, UI 구현 전에 진행하는 설계 단계다.
 - 네 번째 작업에서 `Backtest > Portfolio Proposal` draft 작성 / 저장 / registry inspect 흐름을 추가했다.
 - 다섯 번째 작업에서 저장된 proposal draft를 다시 읽는 `Monitoring Review` surface를 추가했다.
+- 여섯 번째 작업에서 저장된 proposal snapshot과 현재 Pre-Live registry 상태를 비교하는 `Pre-Live Feedback` surface를 추가했다.
 
 ## 목적
 
@@ -25,6 +26,7 @@ paper / pre-live monitoring surface로 연결하기 위한 계획 문서다.
 4. Portfolio Proposal row가 담아야 할 목적, 후보 역할, 비중 근거, 위험 경계, evidence snapshot, blocker, operator decision을 먼저 정의한다.
 5. Portfolio Proposal 계약을 실제 Backtest UI와 append-only registry persistence로 연결한다.
 6. 저장된 Portfolio Proposal draft를 blocker / review gap / 후보 구성 관점으로 다시 읽는다.
+7. Portfolio Proposal draft와 최신 Pre-Live 운영 상태를 비교한다.
 
 ## 쉽게 말하면
 
@@ -98,6 +100,11 @@ Phase 29까지 오면서 좋은 백테스트 결과를 후보로 읽고,
    - 왜 필요한가: proposal은 저장에서 끝나는 것이 아니라, paper / pre-live monitoring과 live readiness 전 검토로 이어져야 한다.
    - 기대 효과: 사용자는 proposal draft가 단순 저장물인지, 추가 확인이 필요한 검토 대상인지 한눈에 볼 수 있다.
    - 현재 상태: 다섯 번째 작업 단위에서 `Monitoring Review` tab, monitoring summary, component table, blocker / review gap readout을 추가했다.
+6. Portfolio Proposal Pre-Live Feedback
+   - 쉽게 말하면: proposal 저장 당시 Pre-Live 상태와 현재 Pre-Live registry 상태가 달라졌는지 확인한다.
+   - 왜 필요한가: proposal을 저장한 뒤에도 paper / pre-live 운영 상태는 바뀔 수 있다.
+   - 기대 효과: proposal이 현재 관찰 상태와 어긋난 채로 다음 단계로 넘어가는 위험을 줄인다.
+   - 현재 상태: 여섯 번째 작업 단위에서 `Pre-Live Feedback` tab, status drift, review overdue, feedback gap readout을 추가했다.
 
 ## 이 문서에서 자주 쓰는 용어
 
@@ -204,6 +211,23 @@ Phase 29까지 오면서 좋은 백테스트 결과를 후보로 읽고,
   - `Backtest > Portfolio Proposal > Monitoring Review` tab이 추가되었다.
   - monitoring state는 `blocked`, `needs_review`, `review_ready`로 요약하지만 live approval은 아니다.
 
+### 여섯 번째 작업: Portfolio Proposal Pre-Live Feedback
+
+- 무엇을 바꾸는가:
+  - 저장된 proposal draft의 component 후보를 현재 Pre-Live registry active record와 비교한다.
+  - saved pre-live snapshot, current pre-live status, status drift, review overdue, tracking cadence, next action을 보여준다.
+
+- 왜 필요한가:
+  - proposal draft는 저장 당시의 snapshot이므로, 이후 Pre-Live 상태 변화가 반영되지 않을 수 있다.
+  - paper / pre-live 운영 상태가 바뀌면 proposal 해석도 다시 확인해야 한다.
+
+- 작업이 끝나면 좋은 점:
+  - 사용자는 proposal을 live readiness 후보로 착각하기 전에 현재 Pre-Live feedback gap을 확인할 수 있다.
+
+- 현재 결과:
+  - `Backtest > Portfolio Proposal > Pre-Live Feedback` tab이 추가되었다.
+  - 이 tab은 읽기 전용이며 proposal row나 Pre-Live registry를 자동 수정하지 않는다.
+
 ## 다음에 확인할 것
 
 - Guide를 읽었을 때 Candidate Draft / Review Note / Registry Draft의 필요성이 이해되는지
@@ -212,6 +236,7 @@ Phase 29까지 오면서 좋은 백테스트 결과를 후보로 읽고,
 - Phase 30 이후 Live Readiness / Final Approval을 별도 phase로 남겨둘지
 - `Backtest > Portfolio Proposal`에서 proposal draft 저장과 registry inspect 흐름이 자연스러운지
 - `Monitoring Review`에서 저장된 proposal의 blocker / review gap / 후보 구성이 한눈에 읽히는지
+- `Pre-Live Feedback`에서 proposal 저장 당시 snapshot과 현재 Pre-Live 상태 차이가 읽히는지
 - proposal draft가 saved portfolio 또는 live approval로 오해되지 않는지
 
 ## 한 줄 정리
@@ -221,4 +246,5 @@ Phase 30은 후보 검토 결과를 포트폴리오 제안과 pre-live monitorin
 두 번째 작업은 Portfolio Proposal 계약 정의,
 세 번째 작업은 registry helper 분리,
 네 번째 작업은 Portfolio Proposal Draft UI / persistence 구현,
-다섯 번째 작업은 Portfolio Proposal Monitoring Review 구현이다.
+다섯 번째 작업은 Portfolio Proposal Monitoring Review 구현,
+여섯 번째 작업은 Portfolio Proposal Pre-Live Feedback 구현이다.

@@ -2029,6 +2029,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - Validation:
   - `python3 plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py` passed
   - `git diff --check` passed
+  - Playwright browser smoke confirmed the `Pre-Live Feedback` tab renders under `Backtest > Portfolio Proposal`
 - Durable takeaway:
   - Phase 30 can now move toward either Proposal UI / persistence or a small Backtest UI module split with a clearer definition of what a Portfolio Proposal is.
 
@@ -2086,3 +2087,21 @@ Detailed historical logs were archived on `2026-04-13`.
   - `git diff --check` passed
 - Durable takeaway:
   - Phase 30 proposal drafts can now be saved and then reviewed as monitoring objects. This still does not approve live trading, create orders, or optimize portfolio weights.
+
+### 2026-04-28
+- Completed the sixth Phase 30 work unit: Portfolio Proposal Pre-Live Feedback.
+- Changed:
+  - added `Backtest > Portfolio Proposal > Pre-Live Feedback`
+  - compared proposal saved Pre-Live snapshots with current active Pre-Live registry records
+  - added component-level saved/current Pre-Live status, status drift, review overdue, tracking cadence, and current next action readouts
+  - added feedback gap detection for missing active Pre-Live records, status drift, hold/reject/re-review with active weight, and overdue review dates
+  - synced Phase 30 TODO, checklist, completion summary, plan, next-phase prep, roadmap, doc index, glossary, comprehensive analysis, web UI flow docs, operations guide, and README
+- Validation:
+  - `python3 -m py_compile app/web/runtime/portfolio_proposal.py app/web/runtime/__init__.py app/web/pages/backtest.py` passed
+  - `.venv/bin/python` smoke for Pre-Live feedback helper functions passed
+  - `python3 plugins/quant-finance-workflow/scripts/manage_current_candidate_registry.py validate` passed
+  - `python3 plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py validate` passed
+  - `python3 plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py` passed
+  - `git diff --check` passed
+- Durable takeaway:
+  - Portfolio Proposal can now be checked against the current Pre-Live operating state without mutating proposal rows or Pre-Live records.

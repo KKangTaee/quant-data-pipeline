@@ -6640,6 +6640,116 @@ def _portfolio_proposal_selection_label(row: dict[str, Any]) -> str:
     return f"{row.get('updated_at') or row.get('created_at')} | {row.get('proposal_status')} | {row.get('proposal_id')}"
 
 
+def _portfolio_proposal_pre_live_record_by_registry_id(pre_live_rows: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    records: dict[str, dict[str, Any]] = {}
+    for row in pre_live_rows:
+        registry_id = str(row.get("source_candidate_registry_id") or "").strip()
+        if registry_id:
+            records[registry_id] = dict(row)
+    return records
+
+
+def _portfolio_proposal_parse_review_date(value: Any) -> date | None:
+    if not value:
+        return None
+    try:
+        return date.fromisoformat(str(value)[:10])
+    except ValueError:
+        return None
+
+
+def _portfolio_proposal_pre_live_feedback_rows(
+    row: dict[str, Any],
+    pre_live_by_registry_id: dict[str, dict[str, Any]],
+) -> pd.DataFrame:
+    display_rows: list[dict[str, Any]] = []
+    for ref in list(row.get("candidate_refs") or []):
+        registry_id = str(ref.get("registry_id") or "")
+        pre_live_record = pre_live_by_registry_id.get(registry_id) or {}
+        saved_status = str(ref.get("pre_live_status") or "not_started")
+        current_status = str(pre_live_record.get("pre_live_status") or "not_started")
+        tracking_plan = dict(pre_live_record.get("tracking_plan") or {})
+        review_date = pre_live_record.get("review_date")
+        review_date_value = _portfolio_proposal_parse_review_date(review_date)
+        display_rows.append(
+            {
+                "Registry ID": registry_id or "-",
+                "Proposal Role": ref.get("proposal_role"),
+                "Target Weight": ref.get("target_weight"),
+                "Saved Pre-Live": saved_status,
+                "Current Pre-Live": current_status,
+                "Status Drift": "changed" if saved_status != current_status else "same",
+                "Current Review Date": review_date,
+                "Review Overdue": bool(review_date_value and review_date_value < date.today()),
+                "Tracking Cadence": tracking_plan.get("cadence"),
+                "Current Next Action": pre_live_record.get("next_action"),
+            }
+        )
+    return pd.DataFrame(display_rows)
+
+
+def _portfolio_proposal_pre_live_feedback_gaps(
+    row: dict[str, Any],
+    pre_live_by_registry_id: dict[str, dict[str, Any]],
+) -> list[str]:
+    gaps: list[str] = []
+    for ref in list(row.get("candidate_refs") or []):
+        registry_id = str(ref.get("registry_id") or "")
+        if not registry_id:
+            continue
+        pre_live_record = pre_live_by_registry_id.get(registry_id) or {}
+        saved_status = str(ref.get("pre_live_status") or "not_started")
+        current_status = str(pre_live_record.get("pre_live_status") or "not_started")
+        try:
+            target_weight = float(ref.get("target_weight") or 0.0)
+        except (TypeError, ValueError):
+            target_weight = 0.0
+        if not pre_live_record:
+            gaps.append(f"{registry_id}: no active Pre-Live record is linked.")
+        if saved_status != current_status:
+            gaps.append(f"{registry_id}: proposal snapshot `{saved_status}` differs from current Pre-Live `{current_status}`.")
+        if current_status in {"hold", "reject", "re_review"} and target_weight > 0:
+            gaps.append(f"{registry_id}: current Pre-Live status `{current_status}` needs review for active weight.")
+        review_date_value = _portfolio_proposal_parse_review_date(pre_live_record.get("review_date"))
+        if review_date_value and review_date_value < date.today():
+            gaps.append(f"{registry_id}: Pre-Live review date `{review_date_value.isoformat()}` is overdue.")
+    return gaps
+
+
+def _build_portfolio_proposal_pre_live_feedback_summary_rows(
+    rows: list[dict[str, Any]],
+    pre_live_by_registry_id: dict[str, dict[str, Any]],
+) -> pd.DataFrame:
+    display_rows: list[dict[str, Any]] = []
+    for row in rows:
+        feedback_df = _portfolio_proposal_pre_live_feedback_rows(row, pre_live_by_registry_id)
+        gaps = _portfolio_proposal_pre_live_feedback_gaps(row, pre_live_by_registry_id)
+        if feedback_df.empty:
+            linked_count = 0
+            paper_tracking_count = 0
+            drift_count = 0
+            overdue_count = 0
+        else:
+            linked_count = int((feedback_df["Current Pre-Live"] != "not_started").sum())
+            paper_tracking_count = int((feedback_df["Current Pre-Live"] == "paper_tracking").sum())
+            drift_count = int((feedback_df["Status Drift"] == "changed").sum())
+            overdue_count = int(feedback_df["Review Overdue"].sum())
+        display_rows.append(
+            {
+                "Updated At": row.get("updated_at") or row.get("created_at"),
+                "Proposal ID": row.get("proposal_id"),
+                "Status": row.get("proposal_status"),
+                "Components": len(row.get("candidate_refs") or []),
+                "Linked Pre-Live": linked_count,
+                "Paper Tracking": paper_tracking_count,
+                "Status Drift": drift_count,
+                "Overdue Reviews": overdue_count,
+                "Feedback Gaps": len(gaps),
+            }
+        )
+    return pd.DataFrame(display_rows)
+
+
 def _render_portfolio_proposal_monitoring_review(proposal_rows: list[dict[str, Any]]) -> None:
     st.markdown("#### Proposal Monitoring Review")
     st.caption(
@@ -6722,6 +6832,58 @@ def _render_portfolio_proposal_monitoring_review(proposal_rows: list[dict[str, A
         st.json(selected_row)
 
 
+def _render_portfolio_proposal_pre_live_feedback(
+    proposal_rows: list[dict[str, Any]],
+    pre_live_rows: list[dict[str, Any]],
+) -> None:
+    st.markdown("#### Pre-Live Feedback")
+    st.caption(
+        "저장된 proposal snapshot과 현재 Pre-Live registry 상태를 비교합니다. "
+        "proposal row를 자동 수정하지 않고, paper / pre-live 추적 상태를 읽기만 합니다."
+    )
+    if not proposal_rows:
+        st.info("Pre-Live feedback을 볼 Portfolio Proposal이 없습니다.")
+        return
+
+    pre_live_by_registry_id = _portfolio_proposal_pre_live_record_by_registry_id(pre_live_rows)
+    summary_df = _build_portfolio_proposal_pre_live_feedback_summary_rows(proposal_rows, pre_live_by_registry_id)
+    st.dataframe(summary_df, use_container_width=True, hide_index=True)
+
+    labels = [_portfolio_proposal_selection_label(row) for row in proposal_rows]
+    selected_label = st.selectbox(
+        "Review Pre-Live Feedback",
+        options=labels,
+        key="portfolio_proposal_pre_live_feedback_selected_record",
+    )
+    selected_row = proposal_rows[labels.index(selected_label)]
+    feedback_df = _portfolio_proposal_pre_live_feedback_rows(selected_row, pre_live_by_registry_id)
+    feedback_gaps = _portfolio_proposal_pre_live_feedback_gaps(selected_row, pre_live_by_registry_id)
+
+    if feedback_df.empty:
+        st.info("이 proposal에는 Pre-Live feedback을 연결할 component candidate가 없습니다.")
+        return
+
+    feedback_cols = st.columns(4, gap="small")
+    feedback_cols[0].metric("Components", len(feedback_df))
+    feedback_cols[1].metric("Linked Pre-Live", int((feedback_df["Current Pre-Live"] != "not_started").sum()))
+    feedback_cols[2].metric("Paper Tracking", int((feedback_df["Current Pre-Live"] == "paper_tracking").sum()))
+    feedback_cols[3].metric("Feedback Gaps", len(feedback_gaps))
+
+    st.markdown("##### Component Pre-Live Feedback")
+    st.dataframe(feedback_df, use_container_width=True, hide_index=True)
+
+    st.markdown("##### Feedback Gaps")
+    if feedback_gaps:
+        for gap in feedback_gaps:
+            st.warning(gap)
+    else:
+        st.success("현재 Pre-Live feedback gap은 없습니다.")
+    st.caption(
+        "이 tab은 proposal 저장 당시 snapshot과 현재 Pre-Live registry를 비교하는 읽기 전용 surface입니다. "
+        "상태를 바꾸려면 `Backtest > Pre-Live Review`에서 별도 record를 저장해야 합니다."
+    )
+
+
 def _render_portfolio_proposal_workspace() -> None:
     st.markdown("### Portfolio Proposal")
     st.caption(
@@ -6741,7 +6903,9 @@ def _render_portfolio_proposal_workspace() -> None:
     summary_cols[3].metric("Live Approval", "Disabled")
     st.caption(f"Path: {PORTFOLIO_PROPOSAL_REGISTRY_FILE}")
 
-    create_tab, monitoring_tab, registry_tab = st.tabs(["Create Proposal Draft", "Monitoring Review", "Proposal Registry"])
+    create_tab, monitoring_tab, feedback_tab, registry_tab = st.tabs(
+        ["Create Proposal Draft", "Monitoring Review", "Pre-Live Feedback", "Proposal Registry"]
+    )
     with create_tab:
         if not current_rows:
             st.info("Portfolio Proposal을 만들 current candidate가 없습니다.")
@@ -6916,6 +7080,9 @@ def _render_portfolio_proposal_workspace() -> None:
 
     with monitoring_tab:
         _render_portfolio_proposal_monitoring_review(proposal_rows)
+
+    with feedback_tab:
+        _render_portfolio_proposal_pre_live_feedback(proposal_rows, pre_live_rows)
 
     with registry_tab:
         st.markdown("#### Proposal Registry")

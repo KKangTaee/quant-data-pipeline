@@ -26,12 +26,13 @@ Phase 30 전체 목표와 첫 작업을 구분해서 읽는다.
 | 세 번째 작업 | registry JSONL I/O helper를 runtime module로 분리 | `completed` |
 | 네 번째 작업 | Portfolio Proposal Draft UI / persistence 구현 | `completed` |
 | 다섯 번째 작업 | Portfolio Proposal Monitoring Review surface 구현 | `completed` |
-| 이후 작업 후보 | Paper / Pre-Live tracking feedback 연결 또는 Candidate Review / Pre-Live 추가 분리 | `pending` |
+| 여섯 번째 작업 | Portfolio Proposal Pre-Live Feedback surface 구현 | `completed` |
+| 이후 작업 후보 | Paper tracking performance feedback loop 또는 Candidate Review / Pre-Live 추가 분리 | `pending` |
 
 첫 작업은 기능 구현이 아니라
 사용 흐름 재정렬과 `backtest.py` 리팩토링 경계 검토였다.
 
-현재 다섯 번째 작업은 저장된 Portfolio Proposal draft를 blocker / review gap / 후보 구성 관점에서 다시 읽는 monitoring review surface를 추가하는 것이다.
+현재 여섯 번째 작업은 저장된 Portfolio Proposal draft와 최신 Pre-Live registry 상태를 비교하는 feedback surface를 추가하는 것이다.
 
 ## 1. 사용 흐름 재정렬
 
@@ -64,7 +65,9 @@ Phase 30 전체 목표와 첫 작업을 구분해서 읽는다.
   - `Backtest > Portfolio Proposal`에서 current candidate 여러 개를 골라 proposal objective, role, target weight, weight reason, operator decision을 저장 전 확인한다.
 - `completed` Proposal Monitoring Review surface
   - 저장된 proposal draft를 monitoring state, blocker, review gap, component table, operator decision 관점으로 다시 읽는다.
-- `pending` Paper / Pre-Live tracking feedback 연결
+- `completed` Pre-Live Feedback surface
+  - 저장된 proposal snapshot과 현재 Pre-Live registry active record를 비교해 status drift, review overdue, feedback gap을 확인한다.
+- `pending` Paper tracking performance feedback loop
 
 ## 4. Validation
 
@@ -86,6 +89,7 @@ Phase 30 전체 목표와 첫 작업을 구분해서 읽는다.
 - `completed` third work-unit 문서 생성
 - `completed` fourth work-unit 문서 생성
 - `completed` fifth work-unit 문서 생성
+- `completed` sixth work-unit 문서 생성
 - `completed` Portfolio Proposal registry operations guide 생성
 - `completed` `WEB_BACKTEST_UI_FLOW.md` sync
 - `completed` roadmap / doc index / work log / question log sync
@@ -99,4 +103,5 @@ Phase 30은 active 상태이며, Portfolio Proposal Draft UI / persistence까지
 세 번째 작업으로 registry JSONL I/O helper를 `app/web/runtime/candidate_registry.py`로 분리했다.
 네 번째 작업으로 `Backtest > Portfolio Proposal`의 draft 작성 / 저장 / registry inspect 흐름을 추가했다.
 다섯 번째 작업으로 `Monitoring Review` tab을 추가해 저장된 proposal draft를 다시 점검할 수 있게 했다.
-다음 작업에서는 paper / pre-live tracking feedback 연결 또는 Candidate Review / Pre-Live 추가 모듈 분리를 선택한다.
+여섯 번째 작업으로 `Pre-Live Feedback` tab을 추가해 proposal snapshot과 현재 Pre-Live 상태를 비교할 수 있게 했다.
+다음 작업에서는 paper tracking performance feedback loop 또는 Candidate Review / Pre-Live 추가 모듈 분리를 선택한다.

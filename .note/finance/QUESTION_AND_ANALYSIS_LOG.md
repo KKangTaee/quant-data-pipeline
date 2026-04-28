@@ -2807,3 +2807,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - proposal monitoring은 current candidate / pre-live registry / saved portfolio를 자동 변경하지 않는다
 - Follow-up:
   - 다음 작업 후보는 paper / pre-live tracking feedback을 proposal에 연결하거나, Candidate Review / Pre-Live / History / Saved Portfolio의 추가 모듈 분리를 진행하는 것이다
+
+### 2026-04-28 - Phase 30 여섯 번째 작업은 Proposal Pre-Live Feedback으로 진행한다
+- User request:
+  - Phase 30 다음 작업을 계속 진행해 달라고 요청함
+- Interpreted goal:
+  - Proposal Monitoring Review 다음에는 저장된 proposal이 현재 Pre-Live 운영 상태와 어긋나는지 확인할 수 있어야 함
+- Analysis result:
+  - `Backtest > Portfolio Proposal > Pre-Live Feedback` tab을 추가했다
+  - proposal 저장 당시 component별 `pre_live_status` snapshot과 현재 active Pre-Live registry record를 비교한다
+  - status drift, missing active Pre-Live record, active weight가 있는 hold / reject / re_review 상태, overdue review date를 feedback gap으로 보여준다
+  - 이 surface는 proposal row나 Pre-Live record를 자동 수정하지 않고, 상태 변경은 `Backtest > Pre-Live Review`에서 별도 저장해야 한다
+- Follow-up:
+  - 다음 작업 후보는 paper tracking performance feedback loop 또는 Candidate Review / Pre-Live / History / Saved Portfolio 추가 모듈 분리다

@@ -48,7 +48,7 @@
   - `.note/finance/MASTER_PHASE_ROADMAP.md`
   - `.note/finance/FINANCE_DOC_INDEX.md`
 - 체크 항목:
-  - [ ] Phase 30이 active 상태이며, 사용 흐름 정렬 / proposal 계약 / registry helper 분리 / proposal draft UI / monitoring review가 단계적으로 진행되었다고 읽히는지
+  - [ ] Phase 30이 active 상태이며, 사용 흐름 정렬 / proposal 계약 / registry helper 분리 / proposal draft UI / monitoring review / pre-live feedback이 단계적으로 진행되었다고 읽히는지
   - [ ] 첫 작업이 사용 흐름 재정렬과 리팩토링 경계 검토로 설명되는지
   - [ ] 두 번째 작업이 Portfolio Proposal 계약 정의였고, 네 번째 작업에서 그 계약이 실제 UI / 저장소로 연결되었다고 읽히는지
 
@@ -110,9 +110,24 @@
   - [ ] Operator Decision과 proposal JSON을 다시 inspect할 수 있는지
   - [ ] `Monitoring State`가 live approval이나 주문 지시가 아니라 review 요약으로 읽히는지
 
+## 8. Portfolio Proposal Pre-Live Feedback 확인
+
+- 확인 위치:
+  - `Backtest > Portfolio Proposal > Pre-Live Feedback`
+  - `.note/finance/phase30/PHASE30_PORTFOLIO_PROPOSAL_PRE_LIVE_FEEDBACK_SIXTH_WORK_UNIT.md`
+- 체크 항목:
+  - [ ] 저장된 proposal이 없을 때 빈 상태 안내가 보이는지
+  - [ ] proposal을 저장한 뒤 Pre-Live feedback summary table이 보이는지
+  - [ ] summary table에 Linked Pre-Live, Paper Tracking, Status Drift, Overdue Reviews, Feedback Gaps가 보이는지
+  - [ ] proposal을 선택하면 component별 Saved Pre-Live와 Current Pre-Live가 함께 보이는지
+  - [ ] Status Drift가 proposal 저장 당시 snapshot과 현재 Pre-Live 상태 차이로 읽히는지
+  - [ ] Current Review Date, Review Overdue, Tracking Cadence, Current Next Action이 보이는지
+  - [ ] Feedback Gaps가 자동 승인 / 자동 수정이 아니라 운영 재확인 항목으로 읽히는지
+  - [ ] 상태를 바꾸려면 `Backtest > Pre-Live Review`에서 별도 record를 저장해야 한다고 이해되는지
+
 ## 한 줄 판단 기준
 
 이번 Phase 30 중간 QA는
 **새 기능이 많아졌는가**가 아니라,
-**Phase 29 이후 흐름, Portfolio Proposal 계약, 첫 registry helper split, Proposal Draft UI, Monitoring Review가 live approval과 구분되는 방식으로 이해되고 QA 가능한가**
+**Phase 29 이후 흐름, Portfolio Proposal 계약, 첫 registry helper split, Proposal Draft UI, Monitoring Review, Pre-Live Feedback이 live approval과 구분되는 방식으로 이해되고 QA 가능한가**
 를 확인한다.
