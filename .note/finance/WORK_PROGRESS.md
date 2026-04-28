@@ -2275,3 +2275,12 @@ Detailed historical logs were archived on `2026-04-13`.
   - synced the web backtest UI flow doc and question log
 - Durable takeaway:
   - Step 5 is not just "run any comparison"; it is the step where the operator chooses defensible comparator roles and checks whether the candidate still has a reason to proceed.
+
+### 2026-04-29
+- Added a concrete comparator-selection example for the GTAA walkthrough.
+- Changed:
+  - added a `GTAA Balanced Top-2` scenario table under `Reference > Guides > Compare 대상 선정법`
+  - mirrored the same example in `.note/finance/operations/BACKTEST_1_TO_11_WALKTHROUGH_SESSION.md`
+  - clarified what each comparator tests and what a pass interpretation would look like
+- Durable takeaway:
+  - Operators now have both comparator categories and a concrete GTAA example for deciding what "meaningful Compare" means before moving to Candidate Draft.

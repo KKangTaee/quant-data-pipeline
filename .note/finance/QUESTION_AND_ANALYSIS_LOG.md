@@ -3098,3 +3098,15 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 사용자가 수정 진행을 승인한 뒤 `Reference > Guides > Compare 대상 선정법`과 walkthrough의 5단계 설명을 갱신했다
 - Follow-up:
   - 이후 사용자가 해석 / 설계 질문을 하면 먼저 답변하고, 문서나 코드 수정은 명시 승인을 받은 뒤 진행한다
+
+### 2026-04-29 - Compare 대상 선정법에 GTAA 상황 예시를 추가한다
+- User request:
+  - `Compare 대상 선정법` 설명은 마음에 들지만, 예시 칸만으로 충분한지 묻고 상황 예시를 추가해 달라고 요청함
+- Interpreted goal:
+  - comparator role 개념뿐 아니라 실제 후보를 놓고 어떤 비교군을 고르고 어떻게 해석하는지 보여줘야 함
+- Analysis result:
+  - 예시 칸만으로는 개념 구분은 가능하지만, 실제 5단계에서 비교군을 구성하기에는 조금 부족하다고 판단했다
+  - 사용자의 승인 후 `GTAA Balanced Top-2` 상황 예시를 Guides와 walkthrough 문서에 추가했다
+  - 예시는 Equal Weight Same Universe, Global Relative Strength, Risk Parity Trend, SPY 또는 60/40을 비교군으로 두고 각각의 비교 목적과 통과 해석을 설명한다
+- Follow-up:
+  - 사용자는 GTAA 실습에서 이 상황 예시를 기준으로 5단계 comparator set을 구성한다

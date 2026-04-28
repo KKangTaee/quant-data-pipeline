@@ -2991,6 +2991,40 @@ def _render_guides_page() -> None:
             "GTAA 실습에서는 같은 universe Equal Weight, 가까운 momentum 대안인 Global Relative Strength, "
             "위험 기준 대안인 Risk Parity Trend를 함께 두면 비교 의미가 살아납니다."
         )
+        st.markdown("**상황 예시: GTAA Balanced Top-2를 5단계에서 비교한다면**")
+        gtaa_example_rows = pd.DataFrame(
+            [
+                {
+                    "비교 대상": "Equal Weight Same Universe",
+                    "설정 예": "`SPY, QQQ, GLD, IEF`, 후보와 같은 cadence",
+                    "왜 비교하나": "같은 ETF를 그냥 균등 보유하는 것보다 GTAA를 쓸 이유가 있는지 확인",
+                    "통과 해석": "수익 / End Balance가 우위이고 MDD도 과도하게 나빠지지 않으면 기본 근거가 생김",
+                },
+                {
+                    "비교 대상": "Global Relative Strength",
+                    "설정 예": "`SPY, QQQ, GLD, IEF`, Top 2, 같은 score horizon",
+                    "왜 비교하나": "비슷한 momentum ETF 전략보다 GTAA 구조가 나은지 확인",
+                    "통과 해석": "성과가 더 좋거나, 성과가 비슷해도 낙폭 / 안정성이 더 납득되면 근거가 생김",
+                },
+                {
+                    "비교 대상": "Risk Parity Trend",
+                    "설정 예": "기본 Risk Parity universe, 후보와 같은 cadence",
+                    "왜 비교하나": "위험 균형형 접근보다 GTAA의 수익 / 낙폭 교환이 납득되는지 확인",
+                    "통과 해석": "MDD가 더 크더라도 수익 보상이 충분하거나, MDD도 함께 우위면 강한 근거",
+                },
+                {
+                    "비교 대상": "SPY 또는 60/40",
+                    "설정 예": "단순 market benchmark 또는 주식/채권 혼합 benchmark",
+                    "왜 비교하나": "아주 단순한 시장 노출보다 전략을 운영할 이유가 있는지 확인",
+                    "통과 해석": "복잡한 tactical 전략을 쓸 만큼 risk-adjusted 근거가 설명되어야 함",
+                },
+            ]
+        )
+        st.dataframe(gtaa_example_rows, use_container_width=True, hide_index=True)
+        st.caption(
+            "이 예시에서 비교 대상 하나만 이기는 것이 목표가 아닙니다. "
+            "각 비교 대상 앞에서 후보의 역할을 말할 수 있어야 6단계 Candidate Draft로 넘길 근거가 생깁니다."
+        )
 
     st.markdown("### 1~11 단계 실행 흐름")
 

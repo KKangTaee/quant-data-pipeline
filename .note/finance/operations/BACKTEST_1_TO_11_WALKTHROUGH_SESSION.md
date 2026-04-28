@@ -155,6 +155,26 @@ GTAA 실습에서는 아래 비교가 의미 있다.
 - `Risk Parity Trend`: 더 위험 균형적인 접근보다 GTAA의 수익 / 낙폭 조합이 납득되는지 확인
 - 필요하면 `SPY` 또는 `60/40`: 아주 단순한 시장 기준보다 이 전략을 쓸 이유가 있는지 확인
 
+상황 예시:
+
+현재 확인 중인 전략이 `GTAA Balanced Top-2`라고 하자.
+이 전략은 ETF tactical allocation 후보이므로,
+비교군은 같은 ETF를 더 단순하게 보유하는 방법,
+비슷한 momentum 방식,
+더 위험 균형적인 접근,
+그리고 단순 시장 benchmark를 함께 두면 좋다.
+
+| 비교 대상 | 설정 예 | 왜 비교하나 | 통과 해석 |
+|---|---|---|---|
+| `Equal Weight Same Universe` | `SPY, QQQ, GLD, IEF`, 후보와 같은 cadence | 같은 ETF를 그냥 균등 보유하는 것보다 GTAA를 쓸 이유가 있는지 확인 | 수익 / End Balance가 우위이고 MDD도 과도하게 나빠지지 않으면 기본 근거가 생김 |
+| `Global Relative Strength` | `SPY, QQQ, GLD, IEF`, Top 2, 같은 score horizon | 비슷한 momentum ETF 전략보다 GTAA 구조가 나은지 확인 | 성과가 더 좋거나, 성과가 비슷해도 낙폭 / 안정성이 더 납득되면 근거가 생김 |
+| `Risk Parity Trend` | 기본 Risk Parity universe, 후보와 같은 cadence | 위험 균형형 접근보다 GTAA의 수익 / 낙폭 교환이 납득되는지 확인 | MDD가 더 크더라도 수익 보상이 충분하거나, MDD도 함께 우위면 강한 근거 |
+| `SPY` 또는 `60/40` | 단순 market benchmark 또는 주식/채권 혼합 benchmark | 아주 단순한 시장 노출보다 전략을 운영할 이유가 있는지 확인 | 복잡한 tactical 전략을 쓸 만큼 risk-adjusted 근거가 설명되어야 함 |
+
+이 예시에서 비교 대상 하나만 이기는 것이 목표는 아니다.
+각 비교 대상 앞에서 후보의 역할을 말할 수 있어야
+6단계 Candidate Draft로 넘길 근거가 생긴다.
+
 비교 대상이 형편없는 전략뿐이면 5단계는 통과 의식이 된다.
 따라서 5단계의 핵심은 Compare 버튼을 누르는 것이 아니라,
 `비교할 만한 대상`을 고르고 그 앞에서도 후보를 남길 이유가 있는지 설명하는 것이다.
