@@ -151,6 +151,12 @@ strategy 선택
 - `Deployment Readiness / Deployment Status != blocked`
 - 핵심 blocker 없음
 
+점수 해석:
+
+- `8.0 / 10` 이상이면 깔끔하게 5단계 Compare로 진행 가능한 상태다.
+- `8.0 / 10` 미만이어도 위 핵심 기준을 만족하면 Compare로는 넘길 수 있지만, 개선 항목을 같이 확인한다.
+- 위 핵심 기준을 만족하지 못하면 점수와 무관하게 4단계에서 blocker를 먼저 해결한다.
+
 표시:
 
 - `Readiness Score`: 10점 만점의 Compare 진입 점수

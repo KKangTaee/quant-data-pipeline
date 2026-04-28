@@ -4254,6 +4254,10 @@ def _render_next_step_readiness_box(meta: dict[str, Any]) -> None:
             st.caption("다음 행동")
             st.markdown(str(evaluation["next_action"]))
         st.progress(max(0.0, min(score / 10.0, 1.0)))
+        st.caption(
+            "점수 기준: `8.0점 이상`은 깔끔한 진행, `8.0점 미만`이어도 핵심 3조건을 만족하면 조건부 진행, "
+            "핵심 3조건을 만족하지 못하면 점수와 무관하게 4단계에서 먼저 멈춥니다."
+        )
 
         message = (
             f"{evaluation['verdict']}: "

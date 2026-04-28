@@ -2174,3 +2174,12 @@ Detailed historical logs were archived on `2026-04-13`.
   - GTAA Balanced Top-2 smoke evaluation returned `8.5 / 10` and `5단계 Compare 진행 가능`
 - Durable takeaway:
   - Real-Money now gives an explicit Compare-entry signal before the operator digs into detailed checklist rows.
+
+### 2026-04-29
+- Clarified the Real-Money Compare-entry readiness score threshold.
+- Changed:
+  - added UI copy explaining that `8.0 / 10` is a clean Compare-entry pass
+  - clarified that below `8.0 / 10` can still proceed conditionally when the three core criteria pass
+  - synced the web backtest UI flow and question log
+- Durable takeaway:
+  - The score now reads as an operator aid, while the actual stop/go gate remains Promotion non-hold, Deployment non-blocked, and no core blocker.

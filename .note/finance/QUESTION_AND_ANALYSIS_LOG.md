@@ -2924,3 +2924,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - GTAA Balanced Top-2 실습 후보는 현재 runtime 기준 `8.5 / 10`, `5단계 Compare 진행 가능`으로 계산됐다
 - Follow-up:
   - Phase 30 manual QA에서 이 박스가 4단계 pass 기준을 명확하게 보여주는지 확인한다
+
+### 2026-04-29 - Compare 진입 점수의 통과 기준을 명시한다
+- User request:
+  - 8.5점이 나온 현재 포트폴리오 사례에서 몇 점부터 5단계 진행으로 보면 되는지 질문함
+- Interpreted goal:
+  - Readiness Score가 단순 숫자가 아니라 어떤 기준으로 pass / conditional pass / stop으로 읽히는지 명확히 해야 함
+- Analysis result:
+  - `8.0 / 10` 이상은 깔끔한 5단계 Compare 진행으로 읽는다
+  - `8.0 / 10` 미만이어도 `Promotion Decision != hold`, `Deployment != blocked`, 핵심 blocker 없음이면 조건부로 Compare 진행 가능하다
+  - 핵심 3조건을 만족하지 못하면 점수와 무관하게 4단계에서 먼저 멈춘다
+  - Real-Money `5단계 Compare 진입 평가` 박스와 code flow 문서에 이 해석을 추가했다
+- Follow-up:
+  - 점수는 투자 승인 기준이 아니라 Compare 진입 보조 기준으로 유지한다
