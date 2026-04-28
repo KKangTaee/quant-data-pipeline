@@ -14,6 +14,7 @@ paper / pre-live monitoring surface로 연결하기 위한 계획 문서다.
 1. `테스트에서 상용화 후보 검토까지 사용하는 흐름`을 Phase 29 이후 기준으로 다시 정리한다.
 2. Candidate Draft / Candidate Review Note / Current Candidate Registry / Pre-Live Review가 언제 필요한지 설명한다.
 3. Phase 30 portfolio proposal 구현 전에 `backtest.py` 리팩토링 경계를 정한다.
+4. Portfolio Proposal row가 담아야 할 목적, 후보 역할, 비중 근거, 위험 경계, evidence snapshot, blocker, operator decision을 먼저 정의한다.
 
 ## 쉽게 말하면
 
@@ -73,6 +74,7 @@ Phase 29까지 오면서 좋은 백테스트 결과를 후보로 읽고,
    - 쉽게 말하면: 후보 여러 개를 어떤 목적과 비중, 위험 역할로 묶을지 저장 전 초안을 정한다.
    - 왜 필요한가: 단일 후보 검토만으로는 최종 목표인 포트폴리오 구성 제안까지 가지 못한다.
    - 기대 효과: 사용자가 포트폴리오 제안을 투자 승인과 구분해 읽을 수 있다.
+   - 현재 상태: 두 번째 작업 단위에서 proposal row의 최소 필드, 후보 역할, 비중 원칙, 저장 전 차단 조건, lifecycle을 정의했다.
 
 ## 이 문서에서 자주 쓰는 용어
 
@@ -122,6 +124,10 @@ Phase 29까지 오면서 좋은 백테스트 결과를 후보로 읽고,
 
 - 작업이 끝나면 좋은 점:
   - 포트폴리오 제안 UI와 저장소를 만들기 전, 무엇을 저장해야 하는지 흔들리지 않는다.
+
+- 현재 결과:
+  - `.note/finance/phase30/PHASE30_PORTFOLIO_PROPOSAL_CONTRACT_SECOND_WORK_UNIT.md`에서 계약을 정의했다.
+  - 향후 저장소 후보는 `.note/finance/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`이지만, 이번 작업에서는 파일 생성이나 append helper 구현은 하지 않았다.
 
 ### 세 번째 작업: Proposal review / monitoring surface
 

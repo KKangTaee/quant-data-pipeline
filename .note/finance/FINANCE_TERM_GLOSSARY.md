@@ -441,6 +441,31 @@ source, weight, date alignment, replay, 해석이 함께 남은 재현 가능한
 
 ---
 
+## Portfolio Proposal
+
+### 기본 설명
+후보 여러 개를 하나의 포트폴리오 제안 초안으로 묶은 기록이다.
+
+단순히 weighted portfolio 결과를 저장한 것이 아니라,
+어떤 목적의 포트폴리오인지,
+각 후보가 어떤 역할을 하는지,
+비중을 왜 그렇게 주는지,
+data trust / Real-Money / Pre-Live 상태와 미해결 blocker가 무엇인지까지 함께 남긴다.
+
+### 왜 사용되는지
+최종 목표는 단일 전략 후보를 많이 쌓는 것이 아니라,
+사용자가 실제로 검토할 수 있는 포트폴리오 구성안과 가이드를 제시하는 것이다.
+
+Portfolio Proposal은 단일 후보 registry와 live approval 사이에서,
+후보 묶음의 목적, 비중, 위험 경계, 검토 근거를 사람에게 설명하기 위해 사용한다.
+
+### 예시 / 필요 상황
+- `core_anchor`, `diversifier`, `defensive_sleeve` 후보를 묶어 drawdown을 낮추는 포트폴리오 제안 초안을 만든다.
+- proposal row에는 후보별 `target_weight`, `weight_reason`, `open_blockers`, `operator_decision`이 함께 남아야 한다.
+- Phase 30에서는 `.note/finance/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`를 향후 저장소 후보로 제안하되, live trading 승인이나 주문 지시와는 분리한다.
+
+---
+
 ## Portfolio Bridge
 
 ### 기본 설명

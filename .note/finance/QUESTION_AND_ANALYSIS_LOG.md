@@ -2741,3 +2741,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Guide와 Phase 30 checklist에 `1~5 = 테스트 / 검증`, `6~10 = 후보 검토 / 운영 기록`, `11 = 포트폴리오 제안 / live readiness 경계`라는 큰 구간 설명을 추가했다
 - Follow-up:
   - 사용자는 checklist에서 각 세부 기능보다 먼저 큰 구간 구분이 납득되는지 확인한다
+
+### 2026-04-28 - Phase 30 다음 작업은 Portfolio Proposal 계약 정의로 진행한다
+- User request:
+  - Phase 30의 다음 단계를 진행하고, 최종 QA는 마지막에 진행하겠다고 요청함
+- Interpreted goal:
+  - 첫 작업 QA를 지금 완료 gate로 삼지 않고, Phase 30 후속 작업을 계속 진행해야 함
+- Analysis result:
+  - Phase 30의 다음 작업은 UI를 바로 만드는 것보다 Portfolio Proposal row 계약을 먼저 정의하는 것이 적절하다
+  - 계약에는 proposal objective, candidate refs, proposal roles, target weights, construction method, risk constraints, evidence snapshot, open blockers, operator decision이 포함되어야 한다
+  - 향후 저장소 후보는 `.note/finance/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`이지만, 이번 작업에서는 파일 생성 / append helper / UI 구현을 하지 않는다
+  - Portfolio Proposal은 saved portfolio replay나 current candidate registry를 대체하지 않고, 후보 묶음을 왜 제안 초안으로 보는지 설명하는 별도 검토 단위다
+- Follow-up:
+  - 다음 작업은 Proposal UI / persistence 구현 또는 current candidate registry helper 모듈 분리 중 하나로 이어진다

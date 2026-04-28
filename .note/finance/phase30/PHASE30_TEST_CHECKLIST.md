@@ -52,9 +52,21 @@
   - [ ] 첫 작업이 사용 흐름 재정렬과 리팩토링 경계 검토로 설명되는지
   - [ ] 다음 작업 후보가 실제 모듈 분리 또는 Portfolio Proposal 계약 정의로 이어지는지
 
+## 4. Portfolio Proposal 계약 확인
+
+- 확인 문서:
+  - `.note/finance/phase30/PHASE30_PORTFOLIO_PROPOSAL_CONTRACT_SECOND_WORK_UNIT.md`
+- 체크 항목:
+  - [ ] Portfolio Proposal이 단순 saved portfolio나 weighted result가 아니라 후보 묶음 제안으로 설명되는지
+  - [ ] proposal row에 목적, 후보 역할, 비중 근거, risk constraints, evidence snapshot, blocker, operator decision이 필요하다는 점이 이해되는지
+  - [ ] `core_anchor`, `diversifier`, `defensive_sleeve`, `satellite`, `watch_only` 같은 후보 역할이 포트폴리오 안에서 왜 필요한지 이해되는지
+  - [ ] `manual_weight` 또는 `equal_weight`로 먼저 시작하고 optimizer는 당장 제외한다는 판단이 안전하게 느껴지는지
+  - [ ] `.note/finance/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`는 향후 저장소 후보일 뿐, 이번 작업에서 파일 생성이나 저장 구현이 된 것은 아니라고 읽히는지
+  - [ ] Proposal lifecycle이 draft / review_ready / paper_tracking / hold / rejected / superseded / live_readiness_candidate로 구분되고, live approval과 분리되는지
+
 ## 한 줄 판단 기준
 
-이번 첫 작업 QA는
+이번 Phase 30 중간 QA는
 **새 기능이 생겼는가**가 아니라,
-**Phase 29 이후 흐름을 사용자가 다시 이해하고, 다음 리팩토링 / Phase 30 구현 경계를 납득할 수 있는가**
+**Phase 29 이후 흐름과 Portfolio Proposal 계약을 사용자가 이해하고, 다음 리팩토링 / UI 구현 경계를 납득할 수 있는가**
 를 확인한다.

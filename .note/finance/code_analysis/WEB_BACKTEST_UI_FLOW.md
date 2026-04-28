@@ -52,6 +52,34 @@ Ingestion / Data Trust
 - `Portfolio Proposal`은 후보 묶음 제안이며, live trading approval이 아니다.
 - `Live Readiness / Final Approval`은 Phase 30 이후 별도 phase 후보로 남긴다.
 
+## Phase 30 Portfolio Proposal 계약
+
+Phase 30 두 번째 작업 이후 Portfolio Proposal은 단순 weighted portfolio 저장값이 아니라,
+후보 묶음의 목적과 검토 근거를 함께 담는 제안 초안으로 본다.
+
+상세 계약은 아래 문서를 기준으로 한다.
+
+- `.note/finance/phase30/PHASE30_PORTFOLIO_PROPOSAL_CONTRACT_SECOND_WORK_UNIT.md`
+
+향후 UI / persistence 구현 시 기본 후보 저장 위치는
+`.note/finance/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`이다.
+다만 현재 작업에서는 아직 파일 생성, append helper, Proposal tab을 구현하지 않았다.
+
+Proposal UI가 생길 때 최소 표시해야 하는 묶음:
+
+- proposal objective
+- component candidates and proposal roles
+- target weights and weight reasons
+- construction method and date alignment
+- risk constraints
+- evidence snapshot
+- open blockers
+- operator decision
+
+Portfolio Proposal은 `SAVED_PORTFOLIOS.jsonl`의 replay 계약을 대체하지 않는다.
+Saved Portfolio는 재현 가능한 weight setup이고,
+Portfolio Proposal은 그 setup이나 candidate set을 왜 제안 후보로 보는지 설명하는 검토 단위다.
+
 ## `backtest.py` 리팩토링 경계
 
 현재 `app/web/pages/backtest.py`는 Backtest page 대부분을 담고 있으며,

@@ -11,7 +11,8 @@
 
 - Phase 29는 complete / manual_qa_completed 상태로 닫혔다.
 - Phase 30은 active / not_ready_for_qa 상태로 열렸다.
-- 첫 작업은 `테스트에서 상용화 후보 검토까지 사용하는 흐름` 재정렬과 `backtest.py` 리팩토링 경계 검토다.
+- 첫 작업은 `테스트에서 상용화 후보 검토까지 사용하는 흐름` 재정렬과 `backtest.py` 리팩토링 경계 검토였다.
+- 두 번째 작업으로 Portfolio Proposal row 계약을 정의했다.
 
 ## 다음 phase에서 더 중요한 질문
 
@@ -43,5 +44,6 @@ Live Readiness / Final Approval phase를 별도로 열지 판단한다.
 ## handoff 메모
 
 - Phase 30은 live approval이 아니다.
-- Phase 30의 첫 작업은 product-flow와 refactor boundary 정리다.
-- 다음 구현 전에 `PHASE30_CURRENT_CHAPTER_TODO.md`와 첫 작업 단위 문서를 먼저 확인한다.
+- Phase 30의 첫 작업은 product-flow와 refactor boundary 정리였다.
+- Phase 30의 두 번째 작업은 Portfolio Proposal 계약 정의였다.
+- 다음 구현 전에 `PHASE30_CURRENT_CHAPTER_TODO.md`, 첫 작업 단위 문서, Portfolio Proposal 계약 문서를 먼저 확인한다.

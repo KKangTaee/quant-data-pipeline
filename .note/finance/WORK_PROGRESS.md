@@ -2018,3 +2018,16 @@ Detailed historical logs were archived on `2026-04-13`.
   - `git diff --check` passed
 - Durable takeaway:
   - Phase 30 is active, but not yet in Portfolio Proposal implementation. The first completed unit makes the user flow understandable again and sets a conservative boundary for future `backtest.py` module extraction.
+
+### 2026-04-28
+- Completed the second Phase 30 work unit: Portfolio Proposal contract definition.
+- Changed:
+  - added `.note/finance/phase30/PHASE30_PORTFOLIO_PROPOSAL_CONTRACT_SECOND_WORK_UNIT.md`
+  - defined the minimum proposal row contract: objective, component candidates, proposal roles, target weights, risk constraints, evidence snapshot, open blockers, and operator decision
+  - proposed `.note/finance/PORTFOLIO_PROPOSAL_REGISTRY.jsonl` as a future append-only storage location without creating the file or implementing append behavior yet
+  - updated Phase 30 TODO, checklist, completion summary, roadmap, doc index, glossary, web UI flow docs, and comprehensive analysis
+- Validation:
+  - `python3 plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py` passed
+  - `git diff --check` passed
+- Durable takeaway:
+  - Phase 30 can now move toward either Proposal UI / persistence or a small Backtest UI module split with a clearer definition of what a Portfolio Proposal is.
