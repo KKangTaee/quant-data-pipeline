@@ -135,6 +135,29 @@ strategy 선택
 - 복원 후 결과를 갱신하려면 사용자가 다시 실행해야 한다.
 - selection history가 있는 전략은 latest result의 `Selection History Table` / `Interpretation Summary`에서 상세를 본다.
 
+## Real-Money Compare 진입 평가 흐름
+
+`Real-Money > 현재 판단`에는 `5단계 Compare 진입 평가` 박스를 둔다.
+
+목적:
+
+- `Promotion`, `Deployment`, blocker 정보를 10점 척도로 요약한다.
+- 사용자가 4단계 Hold 해결을 마치고 5단계 Compare로 넘어갈 수 있는지 먼저 판단하게 한다.
+- 이 평가는 live trading approval이나 주문 지시가 아니라 Compare 진입 보조 신호다.
+
+기준:
+
+- `Promotion Decision != hold`
+- `Deployment Readiness / Deployment Status != blocked`
+- 핵심 blocker 없음
+
+표시:
+
+- `Readiness Score`: 10점 만점의 Compare 진입 점수
+- `판정`: `5단계 Compare 진행 가능`, `5단계 Compare 진행 가능, 개선 항목 동시 확인`, `4단계에서 먼저 blocker 해결`
+- `다음 행동`: Compare로 넘길지, blocker를 먼저 해결할지 설명
+- `점수 계산 기준 보기`: Promotion / Deployment / Core Blocker별 점수 근거
+
 ## Compare 흐름
 
 ```text

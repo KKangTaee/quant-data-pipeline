@@ -4101,6 +4101,186 @@ def _render_dynamic_universe_details(bundle: dict[str, Any]) -> None:
         st.dataframe(pd.DataFrame(candidate_status_rows), use_container_width=True, hide_index=True)
 
 
+def _build_next_step_readiness_evaluation(meta: dict[str, Any]) -> dict[str, Any]:
+    promotion = str(meta.get("promotion_decision") or "").strip().lower()
+    deployment = str(meta.get("deployment_readiness_status") or "").strip().lower()
+    issue_rows = _build_stage_issue_resolution_rows(meta)
+    severe_statuses = {"caution", "unavailable", "error", "missing"}
+    severe_issue_rows = [
+        row
+        for row in issue_rows
+        if str(row.get("현재 상태") or "").strip().lower() in severe_statuses
+    ]
+    softer_issue_rows = [
+        row
+        for row in issue_rows
+        if str(row.get("현재 상태") or "").strip().lower() in {"watch", "warning"}
+    ]
+
+    fail_count = int(meta.get("deployment_check_fail_count") or 0)
+    watch_count = int(meta.get("deployment_check_watch_count") or 0)
+    unavailable_count = int(meta.get("deployment_check_unavailable_count") or 0)
+
+    if promotion == "real_money_candidate":
+        promotion_score = 4.0
+        promotion_judgment = "강한 통과 신호"
+    elif promotion == "production_candidate":
+        promotion_score = 3.0
+        promotion_judgment = "비교 가능, 추가 검토 필요"
+    elif promotion and promotion != "hold":
+        promotion_score = 2.0
+        promotion_judgment = "비교 가능성은 있으나 보수적 확인 필요"
+    else:
+        promotion_score = 0.0
+        promotion_judgment = "hold 해결 전에는 다음 단계 보류"
+
+    if deployment == "small_capital_ready":
+        deployment_score = 3.0
+        deployment_judgment = "deployment checklist가 강함"
+    elif deployment in {"small_capital_ready_with_review", "paper_only"}:
+        deployment_score = 2.5
+        deployment_judgment = "다음 검토로 넘기기 충분"
+    elif deployment == "watchlist_only":
+        deployment_score = 2.0
+        deployment_judgment = "watchlist로 비교 가능"
+    elif deployment == "review_required":
+        deployment_score = 1.5
+        deployment_judgment = "비교는 가능하지만 checklist 재확인 필요"
+    else:
+        deployment_score = 0.0
+        deployment_judgment = "blocked 또는 상태 부족"
+
+    if severe_issue_rows:
+        blocker_score = 0.0
+        blocker_judgment = "핵심 blocker가 남아 있음"
+    elif fail_count > 0 or watch_count > 0 or unavailable_count > 0 or softer_issue_rows:
+        blocker_score = 2.0
+        blocker_judgment = "진행 가능하지만 개선 항목 있음"
+    else:
+        blocker_score = 3.0
+        blocker_judgment = "핵심 blocker 없음"
+
+    score = round(promotion_score + deployment_score + blocker_score, 1)
+    can_move_to_compare = (
+        promotion not in {"", "hold"}
+        and deployment not in {"", "blocked"}
+        and not severe_issue_rows
+    )
+
+    if can_move_to_compare and score >= 8.0:
+        verdict = "5단계 Compare 진행 가능"
+        tone = "success"
+        next_action = "Compare에서 다른 후보와 성과, data trust, Real-Money 상태를 비교합니다."
+    elif can_move_to_compare:
+        verdict = "5단계 Compare 진행 가능, 개선 항목 동시 확인"
+        tone = "warning"
+        next_action = "Compare로 넘기되 watch / checklist 항목을 같이 열어보고 후보 등록은 보수적으로 판단합니다."
+    else:
+        verdict = "4단계에서 먼저 blocker 해결"
+        tone = "error"
+        next_action = "Hold 해결 가이드, Deployment checklist, 실행 부담 / 검토 근거의 caution 항목을 먼저 정리합니다."
+
+    blocking_reasons: list[str] = []
+    if promotion in {"", "hold"}:
+        blocking_reasons.append("Promotion Decision이 hold이거나 비어 있음")
+    if deployment in {"", "blocked"}:
+        blocking_reasons.append("Deployment Readiness가 blocked이거나 비어 있음")
+    blocking_reasons.extend(
+        f"{row.get('항목')}: {row.get('현재 상태')}"
+        for row in severe_issue_rows
+    )
+
+    review_reasons: list[str] = []
+    if fail_count > 0:
+        review_reasons.append(f"Deployment checklist fail {fail_count}개")
+    if watch_count > 0:
+        review_reasons.append(f"Deployment checklist watch {watch_count}개")
+    if unavailable_count > 0:
+        review_reasons.append(f"Deployment checklist unavailable {unavailable_count}개")
+    review_reasons.extend(
+        f"{row.get('항목')}: {row.get('현재 상태')}"
+        for row in softer_issue_rows
+    )
+
+    criteria_rows = [
+        {
+            "기준": "Promotion Decision",
+            "현재 값": promotion or "-",
+            "점수": f"{promotion_score:g} / 4",
+            "판단": promotion_judgment,
+        },
+        {
+            "기준": "Deployment Readiness",
+            "현재 값": deployment or "-",
+            "점수": f"{deployment_score:g} / 3",
+            "판단": deployment_judgment,
+        },
+        {
+            "기준": "Core Blocker",
+            "현재 값": "없음" if not severe_issue_rows else f"{len(severe_issue_rows)}개",
+            "점수": f"{blocker_score:g} / 3",
+            "판단": blocker_judgment,
+        },
+    ]
+
+    return {
+        "score": score,
+        "verdict": verdict,
+        "tone": tone,
+        "next_action": next_action,
+        "can_move_to_compare": can_move_to_compare,
+        "criteria_rows": criteria_rows,
+        "blocking_reasons": blocking_reasons,
+        "review_reasons": review_reasons,
+    }
+
+
+def _render_next_step_readiness_box(meta: dict[str, Any]) -> None:
+    evaluation = _build_next_step_readiness_evaluation(meta)
+    score = float(evaluation["score"])
+    tone = str(evaluation["tone"])
+
+    with st.container(border=True):
+        st.markdown("##### 5단계 Compare 진입 평가")
+        st.caption(
+            "이 박스는 투자 승인 기준이 아니라, `Hold 해결`을 마치고 "
+            "`Compare`에서 다른 후보와 비교해 볼 수 있는지 빠르게 판단하는 표지입니다."
+        )
+        metric_cols = st.columns([0.24, 0.76], gap="small")
+        metric_cols[0].metric("Readiness Score", f"{score:.1f} / 10")
+        with metric_cols[1]:
+            st.caption("판정")
+            st.markdown(f"**{evaluation['verdict']}**")
+            st.caption("다음 행동")
+            st.markdown(str(evaluation["next_action"]))
+        st.progress(max(0.0, min(score / 10.0, 1.0)))
+
+        message = (
+            f"{evaluation['verdict']}: "
+            f"`Promotion Decision != hold`, `Deployment != blocked`, 핵심 blocker 없음 기준으로 계산했습니다."
+        )
+        if tone == "success":
+            st.success(message)
+        elif tone == "warning":
+            st.warning(message)
+        else:
+            st.error(message)
+
+        if evaluation["blocking_reasons"]:
+            st.caption("막는 항목: " + ", ".join(f"`{item}`" for item in evaluation["blocking_reasons"]))
+        elif evaluation["review_reasons"]:
+            st.caption("같이 볼 개선 항목: " + ", ".join(f"`{item}`" for item in evaluation["review_reasons"]))
+        else:
+            st.caption("핵심 blocker가 보이지 않습니다. Compare로 넘겨 상대 후보와 비교해도 되는 상태입니다.")
+
+        with st.expander("점수 계산 기준 보기", expanded=False):
+            st.dataframe(pd.DataFrame(evaluation["criteria_rows"]), use_container_width=True, hide_index=True)
+            st.caption(
+                "`real_money_candidate`는 가장 강한 Compare 진입 신호이고, "
+                "`production_candidate`는 Compare에는 올릴 수 있지만 후보 등록 전 추가 검토가 필요한 상태입니다."
+            )
+
+
 def _render_real_money_details(bundle: dict[str, Any]) -> None:
     meta = bundle.get("meta") or {}
     if not meta.get("real_money_hardening"):
@@ -4147,6 +4327,7 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
             "이 섹션은 이 전략을 지금 어떤 단계로 해석해야 하는지 보여줍니다. "
             "즉 `당장 보류할지`, `paper probation으로 둘지`, `소액 trial까지 볼지`를 먼저 판단하는 곳입니다."
         )
+        _render_next_step_readiness_box(meta)
 
         if meta.get("promotion_decision"):
             with _section_header("전략 승격 판단", "이 전략이 현재 계약 기준에서 어느 정도까지 올라왔는지 보여줍니다."):

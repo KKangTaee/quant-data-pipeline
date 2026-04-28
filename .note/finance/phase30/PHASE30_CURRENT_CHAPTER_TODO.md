@@ -45,6 +45,8 @@ Phase 30 전체 목표와 첫 작업을 구분해서 읽는다.
   - `Promotion Decision != hold`, `Deployment != blocked`, 핵심 blocker 없음이 Compare 진입 기준이며 투자 승인 기준이 아니라는 점을 명시했다.
 - `completed` Guide의 `GTAA Risk-Off 후보군 보는 법` 보강
   - `Defensive Tickers`와 GTAA universe의 교집합만 실제 fallback 후보로 쓰인다는 점을 manual QA 보조 설명으로 추가했다.
+- `completed` Real-Money `5단계 Compare 진입 평가` 박스 추가
+  - `Real-Money > 현재 판단`에서 10점 만점의 Compare 진입 점수, 판정, 다음 행동, 점수 계산 기준을 먼저 보여준다.
 - `completed` Phase 30 first work-unit 문서 작성
   - 사용 흐름 재정렬과 리팩토링 경계 검토의 목적을 기록한다.
 
@@ -105,6 +107,7 @@ Phase 30 전체 목표와 첫 작업을 구분해서 읽는다.
 - `completed` manual walkthrough support guide sync
   - `GTAA Risk-Off 후보군 보는 법` Guide와 Phase 30 checklist 항목을 추가했다.
   - 4단계 pass 기준을 Guide와 Phase 30 checklist에 추가했다.
+  - Real-Money Compare 진입 평가 UI와 code flow 문서를 추가했다.
 
 ## 현재 판단
 

@@ -2910,3 +2910,17 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 이 기준은 Compare 진입 기준이지 live trading approval이나 최종 투자 승인 기준이 아니다
 - Follow-up:
   - Phase 30 manual QA에서는 이 기준이 1~5단계 검증 구간의 종료 조건으로 읽히는지 확인한다
+
+### 2026-04-28 - Real-Money 탭에 5단계 Compare 진입 평가 박스를 추가한다
+- User request:
+  - Real-Money 탭에서 다음 단계로 넘어가도 되는지 한눈에 알기 어렵기 때문에, 10점 만점의 시각적 평가 박스를 추가해 달라고 요청함
+- Interpreted goal:
+  - `Checklist 상세 보기`를 열기 전에 4단계 Hold 해결이 끝났는지, 5단계 Compare로 넘어갈 수 있는지 빠르게 판단할 수 있어야 함
+- Analysis result:
+  - `Real-Money > 현재 판단` 상단에 `5단계 Compare 진입 평가` 박스를 추가했다
+  - 점수는 10점 만점이며 `Promotion Decision`, `Deployment Readiness`, `Core Blocker` 세 기준을 합산한다
+  - 판정은 `5단계 Compare 진행 가능`, `5단계 Compare 진행 가능, 개선 항목 동시 확인`, `4단계에서 먼저 blocker 해결`로 표시한다
+  - 이 평가는 Compare 진입 보조 신호이며 live trading approval이나 주문 지시가 아니다
+  - GTAA Balanced Top-2 실습 후보는 현재 runtime 기준 `8.5 / 10`, `5단계 Compare 진행 가능`으로 계산됐다
+- Follow-up:
+  - Phase 30 manual QA에서 이 박스가 4단계 pass 기준을 명확하게 보여주는지 확인한다

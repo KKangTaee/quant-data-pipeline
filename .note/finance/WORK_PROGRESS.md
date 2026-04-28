@@ -2161,3 +2161,16 @@ Detailed historical logs were archived on `2026-04-13`.
   - synced the Phase 30 checklist, current TODO, doc index, work log, and question log
 - Durable takeaway:
   - Operators can now decide whether a candidate has cleared Hold resolution and can move to Compare without treating the signal as final investment approval.
+
+### 2026-04-28
+- Added a Real-Money next-step readiness surface for the 1~11 workflow.
+- Changed:
+  - added `5단계 Compare 진입 평가` to `Real-Money > 현재 판단`
+  - scored Compare-entry readiness out of 10 from Promotion Decision, Deployment Readiness, and Core Blocker status
+  - displayed the verdict, next action, progress bar, blocking reasons, review reasons, and score calculation table
+  - synced Phase 30 checklist, current TODO, web backtest UI flow, work log, and question log
+- Validation:
+  - `python3 -m py_compile app/web/pages/backtest.py app/web/streamlit_app.py` passed
+  - GTAA Balanced Top-2 smoke evaluation returned `8.5 / 10` and `5단계 Compare 진행 가능`
+- Durable takeaway:
+  - Real-Money now gives an explicit Compare-entry signal before the operator digs into detailed checklist rows.
