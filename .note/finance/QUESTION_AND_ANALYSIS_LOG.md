@@ -2884,3 +2884,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Phase 30 checklist에도 해당 Guide 항목을 확인하도록 추가했다
 - Follow-up:
   - 향후 GTAA 방어 후보를 넓히려면 `Defensive Tickers`뿐 아니라 `GTAA Tickers`에도 `TLT / LQD / BIL` 같은 후보를 포함해야 한다
+
+### 2026-04-28 - 4단계 pass 기준은 Promotion만이 아니라 blocker 해소 여부다
+- User request:
+  - Real-Money 단계에서 `승격판단 = REAL_MONEY_CANDIDATE`가 나오면 4단계를 pass로 봐도 되는지, 아니면 다른 확인이 필요한지 질문함
+- Interpreted goal:
+  - 4단계 `Hold면 먼저 막히는 항목 해결`의 완료 조건을 실습 기준으로 분명히 정한다
+- Analysis result:
+  - `Promotion Decision = real_money_candidate`면 보통 4단계는 pass로 볼 수 있다
+  - 다만 실습 기준의 정확한 pass는 `Promotion != hold`, `Deployment != blocked`, Hold 해결 가이드 / blocker가 남아 있지 않음, 그리고 주요 실행 부담 항목이 error / caution으로 막고 있지 않음을 함께 확인하는 것이다
+  - `production_candidate`나 `watchlist`는 hold 해결 관점에서는 pass일 수 있지만, 바로 paper tracking 후보로 강하게 보지는 않고 Compare / Candidate Review에서 더 보수적으로 읽는다
+  - `real_money_candidate`도 투자 승인이 아니라 5단계 Compare와 6~10단계 후보 검토 / Pre-Live 운영 기록으로 넘길 수 있다는 신호다
+- Follow-up:
+  - 현재 GTAA Balanced Top-2 실습 후보는 `real_money_candidate`, `paper_probation`, `paper_tracking`, `paper_only`, blocker 없음이므로 4단계 pass 사례로 사용한다
