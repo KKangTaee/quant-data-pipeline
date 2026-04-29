@@ -3128,10 +3128,13 @@ def _render_guides_page() -> None:
                     "`7단계 Registry 후보 범위 판단`에서 Current / Near Miss / Scenario / Stop 범위 확인",
                     "`Registry ID`, `Record Type`, `Strategy Family`, `Candidate Role` 확인",
                     "`Current Candidate Registry Row JSON Preview`에서 저장될 row 확인",
+                    "같은 Review Note가 이미 registry에 저장되어 있는지 확인",
+                    "이미 저장된 Review Note라면 append 버튼이 기본 비활성화되는지 확인",
+                    "정말 새 revision으로 다시 남길 때만 `같은 Review Note를 새 registry revision으로 다시 저장` 체크",
                     "`Append To Current Candidate Registry`가 자동 승격이 아니라 명시적 저장인지 확인",
                     "참고 기록이면 Review Note 상태로만 남김",
                 ],
-                "next_step": "Registry에 저장한 후보는 Candidate Board에서 다시 읽고 Compare 또는 Pre-Live Review로 넘깁니다.",
+                "next_step": "Registry에 저장한 후보는 Candidate Board의 8단계 Route를 확인합니다. `PRE_LIVE_READY`면 9단계로, `COMPARE_REVIEW_READY`면 Compare 재검토로 이동합니다.",
             },
             {
                 "title": "8단계. Candidate Board에서 후보를 운영 대상으로 읽기",
@@ -3337,6 +3340,10 @@ def _render_guides_page() -> None:
             st.warning(
                 "Current Candidate 범위는 가장 엄격합니다. Compare 근거가 없거나 Real-Money gate가 약하면 "
                 "Near Miss 또는 Scenario로 남기거나 7단계에서 멈추는 것이 기본입니다."
+            )
+            st.info(
+                "같은 Review Note가 이미 저장되어 있으면 append 버튼은 기본 비활성화됩니다. "
+                "의도적으로 새 revision을 남길 때만 중복 저장 체크박스를 켭니다."
             )
 
         with st.expander("8단계에서 9단계로 넘어가는 최소 기준", expanded=True):
