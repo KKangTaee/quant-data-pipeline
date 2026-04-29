@@ -7018,6 +7018,14 @@ def _render_candidate_review_workspace() -> None:
             )
             with st.expander("Current Candidate Registry Row JSON Preview", expanded=False):
                 st.json(registry_row)
+            packaging_candidate_label = _current_candidate_registry_selection_label(registry_row)
+            with st.container(border=True):
+                st.markdown("##### 3단계에서 보일 Packaging 확인 후보 이름")
+                st.code(packaging_candidate_label, language="text")
+                st.caption(
+                    "`Append To Current Candidate Registry`를 누르면 "
+                    "`3. Pre-Live 진입 평가 > Packaging 확인 후보`에서 이 이름으로 찾을 수 있습니다."
+                )
             save_disabled = (
                 not bool(registry_scope["can_prepare_registry_row"])
                 or review_decision == "reject_for_now"
