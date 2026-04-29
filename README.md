@@ -69,11 +69,10 @@ DB-backed market data ingestion, factor generation, and strategy backtesting wor
   - 실행 입력/요약뿐 아니라 `gate snapshot`도 함께 저장하는 history v2
   - 이후 blocker audit, candidate review, rerun drilldown에 활용
 - candidate review workflow
-  - current candidate registry의 후보를 `Backtest > Candidate Review`에서 검토 보드로 읽고
-    compare 또는 Pre-Live Review로 넘기는 흐름
+  - `Backtest > Candidate Review`에서 후보 검토 초안, Review Note 저장, registry append, Pre-Live route 판단을 한 화면의 순서형 Candidate Packaging flow로 처리하는 흐름
   - latest backtest / history result를 registry 저장 전 후보 검토 초안으로 읽는 흐름
   - 후보 검토 초안을 바로 registry에 넣지 않고 Candidate Review Note로 판단과 다음 행동을 남기는 흐름
-  - 저장된 review note를 registry row 초안으로 확인한 뒤 명시적으로 current candidate registry에 append하는 흐름
+  - 저장된 review note를 registry row 초안으로 확인한 뒤 명시적으로 current candidate registry에 append하고, `PRE_LIVE_READY`일 때만 Pre-Live Review로 넘기는 흐름
 - portfolio proposal workflow
   - current candidate 여러 개를 `Backtest > Portfolio Proposal`에서 proposal draft로 묶는 흐름
   - 후보별 role, target weight, weight reason, Real-Money / Pre-Live 상태를 함께 확인하는 흐름

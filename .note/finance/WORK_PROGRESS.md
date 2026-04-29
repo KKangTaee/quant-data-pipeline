@@ -2339,3 +2339,14 @@ Detailed historical logs were archived on `2026-04-13`.
   - synced the walkthrough session note and web backtest UI flow doc without touching Phase 30 QA docs
 - Durable takeaway:
   - Candidate Packaging is not a new quant validation layer; it is one packaging gate that turns a compared candidate into a machine-readable, Pre-Live-ready operating candidate.
+
+### 2026-04-29
+- Refactored the Candidate Review UX into one sequential Candidate Packaging flow.
+- Changed:
+  - removed the primary `Candidate Board / Candidate Intake Draft / Review Notes / Inspect Candidate / Send To Compare` tab workflow from `Backtest > Candidate Review`
+  - rebuilt the screen as `1. Draft 확인 / Review Note 저장`, `2. Registry 저장`, `3. Pre-Live 진입 평가`
+  - kept the existing manual save buttons and readiness gates, but placed them in the order a user actually follows after step-5 Compare
+  - moved saved board and compare re-entry into lower auxiliary expanders
+  - synced Guides, walkthrough notes, and the web backtest UI flow doc without touching Phase 30 QA docs
+- Durable takeaway:
+  - Candidate Review is now a single operator flow, not a collection of tabs that force the user to discover the workflow order.

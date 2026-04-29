@@ -3180,3 +3180,17 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Guides는 1~8 단계로 재정리했다: 6 Candidate Packaging, 7 Pre-Live Review, 8 Portfolio Proposal
 - Follow-up:
   - 사용자는 5단계 Compare 통과 후보를 Candidate Packaging으로 보낸 뒤, Review Note / registry 저장을 마치고 Candidate Board의 Route가 `PRE_LIVE_READY`인지 확인한다
+
+### 2026-04-29 - Candidate Review는 탭이 아니라 순서형 Packaging 화면이어야 한다
+- User request:
+  - 기존 `Candidate Board`, `Candidate Intake Draft`, `Review Notes`, `Inspect Candidate`, `Send To Compare` 탭 구조가 사용자가 따라가기 어렵고 순서가 엉망이라고 지적함
+  - 탭을 없애고, 사용자가 5단계 Compare 이후 6단계 Candidate Packaging을 자연스럽게 진행한 뒤 Pre-Live로 넘어갈 수 있는 UX/UI 개편을 요청함
+- Interpreted goal:
+  - 검증 로직을 새로 만들기보다 기존 저장 준비 / registry scope / route 판단을 하나의 화면에 순서대로 배치해야 함
+  - 각 저장 버튼은 자동화가 아니라 사람이 확인 후 누르는 명시적 기록 버튼으로 유지해야 함
+- Analysis result:
+  - `Backtest > Candidate Review`를 `1. Draft 확인 / Review Note 저장`, `2. Registry 저장`, `3. Pre-Live 진입 평가` 순서형 화면으로 개편했다
+  - 기존 탭에서 흩어져 있던 Review Note 저장, registry append, route 판단을 한 화면에 배치했다
+  - saved board와 compare re-entry는 하단 보조 도구로 낮춰, 주 흐름을 방해하지 않게 했다
+- Follow-up:
+  - 사용자는 5단계에서 보낸 candidate draft를 Candidate Review 한 화면에서 위에서 아래로 처리하고, `PRE_LIVE_READY`일 때만 7단계 Pre-Live Review로 이동한다

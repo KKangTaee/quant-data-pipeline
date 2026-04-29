@@ -3102,25 +3102,25 @@ def _render_guides_page() -> None:
                     "`Strategy Highlights`에서 전략별 상태를 한 줄씩 비교",
                     "`Data Trust`에서 결과 기간과 가격 최신성 차이 확인",
                     "`Focused Strategy > Real-Money Contract`로 한 전략씩 깊게 읽기",
-                    "`Candidate Review > Send To Compare`에서 보낸 후보 묶음이 의도대로 채워졌는지 확인",
+                    "`Candidate Review > 보조 도구: Send Candidates To Compare`에서 보낸 후보 묶음이 의도대로 채워졌는지 확인",
                 ],
                 "next_step": "여기서 후보를 좁힌 뒤, 좋은 run이나 비교할 만한 run은 Candidate Packaging으로 넘겨 Pre-Live 전달 준비를 합니다.",
             },
             {
                 "title": "6단계. Candidate Packaging으로 Pre-Live 전달 준비",
-                "path": "Backtest > Candidate Review > Candidate Intake Draft / Review Notes / Candidate Board",
+                "path": "Backtest > Candidate Review > 6단계 Candidate Packaging Flow",
                 "goal": "좋아 보이는 결과를 바로 Pre-Live로 보내지 않고, Review Note와 registry row로 남긴 뒤 Pre-Live가 읽을 수 있는 운영 후보 패키지인지 확인합니다.",
                 "check": [
-                    "`Review As Candidate Draft`로 `Candidate Review > Candidate Intake Draft` 이동",
+                    "`Review As Candidate Draft`로 `Candidate Review > 1. Draft 확인 / Review Note 저장` 이동",
                     "후보 이름 / source / result snapshot / Data Trust / Real-Money signal / settings snapshot 확인",
                     "`Candidate Packaging 저장 준비`에서 Review Note 저장 가능 여부 확인",
                     "`Review Decision`, `Operator Reason`, `Next Action` 작성",
                     "`Save Candidate Review Note` 클릭",
-                    "`Review Notes`에서 Current / Near Miss / Scenario / Stop 범위 확인",
+                    "`2. Registry 저장`에서 Current / Near Miss / Scenario / Stop 범위 확인",
                     "`Registry ID`, `Record Type`, `Strategy Family`, `Candidate Role` 확인",
                     "같은 Review Note가 이미 registry에 저장되어 있는지 확인",
                     "`Append To Current Candidate Registry`가 자동 승격이 아니라 명시적 저장인지 확인",
-                    "`Candidate Board`의 `Candidate Packaging 종합 판단`에서 Route 확인",
+                    "`3. Pre-Live 진입 평가`의 `Candidate Packaging 종합 판단`에서 Route 확인",
                     "`PRE_LIVE_READY`이면 `Open Selected Candidate In Pre-Live Review`로 다음 단계 초안을 열기",
                     "`COMPARE_REVIEW_READY`이면 Compare Picker에서 비교할 후보를 추가해 다시 비교",
                 ],
@@ -3244,7 +3244,7 @@ def _render_guides_page() -> None:
 
         with st.expander("6단계 Candidate Packaging에서 7단계 Pre-Live로 넘어가는 최소 기준", expanded=True):
             st.caption(
-                "이 기준은 Draft 확인, Review Note 저장, registry 저장, Candidate Board route 확인을 하나의 Candidate Packaging 단계로 묶어 봅니다. "
+                "이 기준은 Draft 확인, Review Note 저장, registry 저장, Pre-Live 진입 평가를 하나의 Candidate Packaging 단계로 묶어 봅니다. "
                 "`PRE_LIVE_READY`인 후보만 다음 단계인 Pre-Live Review로 넘어갑니다."
             )
             packaging_rows = pd.DataFrame(
@@ -3280,8 +3280,8 @@ def _render_guides_page() -> None:
                         "멈춰야 하는 경우": "같은 판단을 의미 없이 반복 append하려는 경우",
                     },
                     {
-                        "확인 항목": "Candidate Board Route",
-                        "7단계 진행 가능": "`Candidate Packaging 종합 판단`의 Route가 `PRE_LIVE_READY`",
+                        "확인 항목": "Pre-Live Route",
+                        "7단계 진행 가능": "`3. Pre-Live 진입 평가`의 Route가 `PRE_LIVE_READY`",
                         "멈춰야 하는 경우": "`COMPARE_REVIEW_READY`는 Compare 재검토, `BOARD_HOLD`는 보강 필요",
                     },
                 ]
@@ -3289,7 +3289,7 @@ def _render_guides_page() -> None:
             st.dataframe(packaging_rows, use_container_width=True, hide_index=True)
             st.success(
                 "`Candidate Packaging 저장 준비`가 저장 가능이고, Review Note와 registry row가 남았으며, "
-                "`Candidate Packaging 종합 판단` Route가 `PRE_LIVE_READY`이면 7단계 Pre-Live Review로 넘어갑니다."
+                "`Pre-Live 진입 평가` Route가 `PRE_LIVE_READY`이면 7단계 Pre-Live Review로 넘어갑니다."
             )
             st.warning(
                 "`COMPARE_REVIEW_READY`는 실패가 아니라 다른 경로입니다. 이 경우 Pre-Live로 바로 가지 말고 Compare에서 비교 후보를 추가해 다시 검토합니다."
@@ -3361,7 +3361,7 @@ def _render_guides_page() -> None:
             """
             - `Real-Money`는 개별 backtest 결과에 붙는 검증 신호입니다.
             - `Compare`는 후보를 서로 비교해 다음 검토 초안으로 보낼지 판단하는 단계입니다.
-            - `Candidate Packaging`은 Draft / Review Note / Registry / Board route 확인을 하나로 묶은 단계입니다.
+            - `Candidate Packaging`은 Draft 확인 / Review Note 저장 / Registry 저장 / Pre-Live route 확인을 하나로 묶은 단계입니다.
             - `Candidate Draft`와 `Review Note`는 Candidate Packaging 안에서 쓰는 저장 전 검토 기록입니다.
             - `Current Candidate Registry`는 명시적으로 남긴 후보 목록입니다.
             - `Pre-Live Review`는 paper / watchlist / hold / re-review 같은 운영 상태 기록입니다.
