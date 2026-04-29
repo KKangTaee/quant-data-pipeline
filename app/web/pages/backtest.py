@@ -6793,7 +6793,14 @@ def _render_pre_live_review_workspace() -> None:
         signal_cols[0].metric("Promotion", str(result.get("promotion") or "-"))
         signal_cols[1].metric("Shortlist", str(result.get("shortlist") or "-"))
         signal_cols[2].metric("Deployment", str(result.get("deployment") or "-"))
-        signal_cols[3].metric("Default Status", _pre_live_status_korean_label(default_status))
+        signal_cols[3].metric("System Suggested Status", _pre_live_status_korean_label(default_status))
+        with st.container(border=True):
+            st.markdown("##### Status Recommendation")
+            st.caption(
+                "System Suggested Status는 선택한 current candidate의 Real-Money 신호와 blocker를 바탕으로 계산한 추천값입니다. "
+                "Operator Final Status가 실제 저장되는 운영 판단입니다."
+            )
+            st.info(_pre_live_status_suggestion_reason(selected_row, default_status))
         with st.expander("Pre-Live Status 의미", expanded=False):
             st.dataframe(
                 pd.DataFrame(
@@ -6809,13 +6816,18 @@ def _render_pre_live_review_workspace() -> None:
                 hide_index=True,
             )
         selected_status = st.selectbox(
-            "Pre-Live Status",
+            "Operator Final Status",
             options=PRE_LIVE_STATUS_OPTIONS,
             index=PRE_LIVE_STATUS_OPTIONS.index(default_status) if default_status in PRE_LIVE_STATUS_OPTIONS else 0,
             format_func=_pre_live_status_korean_label,
             key=f"pre_live_status_{registry_id}",
-            help="이 값은 투자 승인 상태가 아니라, 실전 전 운영 상태입니다.",
+            help="이 값이 Pre-Live registry에 저장됩니다. 투자 승인 상태가 아니라 실전 전 운영 상태입니다.",
         )
+        if selected_status != default_status:
+            st.warning(
+                "Operator Final Status가 System Suggested Status와 다릅니다. "
+                "의도적으로 다른 결정을 내리는 경우 Operator Reason에 근거를 남겨주세요."
+            )
         operator_reason = st.text_area(
             "Operator Reason",
             value=_default_pre_live_operator_reason(selected_row, selected_status),
@@ -10202,6 +10214,29 @@ def _pre_live_status_korean_label(status: str) -> str:
         "re_review": "Re-Review: 정해진 날짜에 재검토",
     }
     return labels.get(status, status)
+
+
+# Pre-Live system 추천 상태가 왜 나왔는지 operator에게 짧은 근거로 보여준다.
+def _pre_live_status_suggestion_reason(row: dict[str, Any], suggested_status: str) -> str:
+    result = dict(row.get("result") or {})
+    promotion = str(result.get("promotion") or "unknown")
+    shortlist = str(result.get("shortlist") or "unknown")
+    deployment = str(result.get("deployment") or "unknown")
+    blockers = result.get("blockers") if isinstance(result.get("blockers"), list) else []
+    signal = f"promotion={promotion}, shortlist={shortlist}, deployment={deployment}"
+
+    if suggested_status == "reject":
+        reason = "promotion 또는 deployment가 reject / fail / blocked 계열이라 Pre-Live 추적 유지보다 종료가 우선입니다."
+    elif suggested_status == "hold":
+        blocker_label = ", ".join(str(item) for item in blockers[:3]) if blockers else "확인 필요 blocker"
+        reason = f"blocker가 남아 있어 먼저 해소 여부를 봐야 합니다: {blocker_label}."
+    elif suggested_status == "paper_tracking":
+        reason = "paper_probation, small_capital_trial, paper_only 신호가 있어 실제 돈 없이 관찰하는 경로가 가장 자연스럽습니다."
+    elif suggested_status == "watchlist":
+        reason = "watchlist 또는 review_required 신호라 바로 paper tracking보다 후보로 남겨 재검토하는 경로가 적절합니다."
+    else:
+        reason = "즉시 분류할 강한 신호가 부족해 정해진 날짜에 다시 확인하는 경로로 둡니다."
+    return f"{_pre_live_status_korean_label(suggested_status)} 추천: {reason} ({signal})"
 
 
 def _pre_live_tracking_plan(status: str) -> dict[str, str | None]:

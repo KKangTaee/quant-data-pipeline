@@ -2411,3 +2411,14 @@ Detailed historical logs were archived on `2026-04-13`.
   - Streamlit smoke checked `Backtest > Pre-Live Review` and confirmed the sequential step-7 screen renders with the new readiness box
 - Durable takeaway:
   - Pre-Live Review is now an operating-state decision step, not a tabbed persistence utility.
+
+### 2026-04-30
+- Clarified candidate-specific Pre-Live status recommendation vs operator final decision.
+- Changed:
+  - renamed the step-7 status metric to `System Suggested Status`
+  - renamed the saved selectbox to `Operator Final Status`
+  - added a visible recommendation reason derived from the selected current candidate's Real-Money signal and blockers
+  - added a warning when the operator intentionally chooses a final status different from the system suggestion
+  - synced the web backtest UI flow document
+- Durable takeaway:
+  - Pre-Live status is still operator-controlled, but the UI now makes the candidate-specific system recommendation and the saved human decision visibly separate.

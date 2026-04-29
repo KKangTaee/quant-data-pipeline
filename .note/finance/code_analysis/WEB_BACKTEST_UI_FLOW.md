@@ -438,6 +438,8 @@ CURRENT_CANDIDATE_REGISTRY.jsonl
 - pre-live registry는 그 후보를 실전 전 어떻게 관찰하거나 보류할지 기록한다.
 - Pre-Live Review는 탭 구조가 아니라 `운영 후보 확인 -> 운영 상태 / 추적 계획 결정 -> Portfolio Proposal 진입 평가 -> 저장 및 다음 단계` 순서형 화면으로 본다.
 - Candidate Packaging에서 넘어온 후보는 자동 선택되지만, 사용자가 직접 Pre-Live Review에 들어와 current candidate를 고르는 것도 허용한다.
+- `System Suggested Status`는 선택한 current candidate의 Real-Money 신호와 blocker에서 계산한 추천값이고, `Operator Final Status`가 실제 Pre-Live registry에 저장되는 운영 판단이다.
+- 운영자가 추천값과 다른 status를 선택하면 UI는 경고를 보여주며, 의도적 override 근거를 `Operator Reason`에 남기도록 안내한다.
 - `Portfolio Proposal 진입 평가`는 전략 성과 점수가 아니라 Pre-Live record가 8단계에서 읽을 수 있을 만큼 identity, result snapshot, Real-Money signal, status, reason, next action, review date, tracking plan을 갖췄는지 보는 readiness score다.
 - `Save Pre-Live Record`는 live trading 승인 버튼이 아니다.
 - `paper_tracking`도 실제 돈을 넣는다는 뜻이 아니라 paper 관찰 상태다.

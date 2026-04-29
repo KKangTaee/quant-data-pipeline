@@ -3263,3 +3263,17 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Candidate Review render/helper 모듈은 Streamlit standalone page 노출을 피하기 위해 `app/web/` 하위로 이동했다
 - Follow-up:
   - 사용자는 7단계에서 `paper_tracking` 상태와 필요한 reason / next action / review date / tracking plan을 저장한 뒤, `PORTFOLIO_PROPOSAL_READY`이면 8단계 Portfolio Proposal로 이동한다
+
+### 2026-04-30 - Pre-Live status는 후보별 추천값과 운영자 최종값을 분리해 보여야 한다
+- User request:
+  - `2. 운영 상태 / 추적 계획 결정`에서 `Pre-Live Status`를 사용자가 직접 결정하는지, 후보 선택마다 자동으로 바뀌어야 하는지 확인함
+  - 시스템 추천값과 운영자가 최종 저장하는 값을 UI에서 분리하는 개선을 승인함
+- Interpreted goal:
+  - 후보별 Real-Money 신호와 blocker에 따른 추천 상태는 자동으로 보여주되, 최종 저장되는 운영 판단은 사용자가 명시적으로 결정해야 함
+  - 추천과 다른 판단을 내릴 때는 이유를 남기게 만들어 운영 기록의 해석 가능성을 높여야 함
+- Analysis result:
+  - `System Suggested Status`는 current candidate 선택이 바뀔 때 해당 후보의 `promotion`, `shortlist`, `deployment`, `blockers`에서 계산되는 추천값이다
+  - `Operator Final Status`가 실제 `PRE_LIVE_CANDIDATE_REGISTRY.jsonl`에 저장되는 값이다
+  - 두 값이 다르면 UI에서 경고를 보여주고, `Operator Reason`에 override 근거를 남기도록 안내한다
+- Follow-up:
+  - 사용자는 후보를 바꾸면 추천 status와 추천 근거가 바뀌는지 확인하고, 필요하면 final status를 조정한 뒤 이유와 next action을 저장한다
