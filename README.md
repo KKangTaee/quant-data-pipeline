@@ -90,6 +90,7 @@ app/
   web/
     streamlit_app.py     # Finance Console entry point
     pages/backtest.py    # Backtest UI
+    pages/backtest_candidate_review.py # Candidate Review / Candidate Packaging UI
     runtime/             # UI-facing runtime wrappers
       candidate_registry.py
       portfolio_proposal.py

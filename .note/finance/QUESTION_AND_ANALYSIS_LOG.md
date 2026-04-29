@@ -3208,3 +3208,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 3단계 선택 영역 아래에 방금 저장한 후보의 Registry ID, Revision ID, Record Type, Strategy, Title, Source Review Note, Recorded At을 보여주는 요약 카드를 추가했다
 - Follow-up:
   - 사용자는 append 직후 3단계에서 자동 선택된 후보 요약을 확인한 뒤 `Candidate Packaging 종합 판단` Route를 읽으면 된다
+
+### 2026-04-29 - Candidate Review를 별도 모듈로 먼저 분리한다
+- User request:
+  - `backtest.py`가 너무 커져 수정 시간이 오래 걸린다는 문제의식에서, 전체 리팩토링보다 최근 작업한 `Candidate Review` 부분만 별도 스크립트로 관리하는 방향을 제안하고 진행을 승인함
+- Interpreted goal:
+  - 7단계 Pre-Live 작업을 더 얹기 전에 Candidate Review의 화면 render 코드를 집중된 파일로 옮겨 이후 수정 비용을 줄여야 함
+  - 이번 작업은 기능 변경 없이 추출 리팩토링으로 제한해야 함
+- Analysis result:
+  - `app/web/pages/backtest_candidate_review.py`를 추가하고 Candidate Review / Candidate Packaging render flow를 옮겼다
+  - `backtest.py`에는 `_render_candidate_review_workspace()` wrapper만 남겨 기존 panel routing을 유지했다
+  - shared helper와 registry 변환 helper는 1차 리팩토링에서는 `backtest.py`에 남겨 import 위험을 줄였다
+- Follow-up:
+  - 다음 Pre-Live 운영 점검 개발은 Candidate Review 화면 코드가 분리된 상태에서 진행한다

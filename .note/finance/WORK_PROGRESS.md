@@ -2361,3 +2361,14 @@ Detailed historical logs were archived on `2026-04-13`.
   - synced the walkthrough session note and web backtest UI flow doc
 - Durable takeaway:
   - The operator no longer has to guess which candidate in the Packaging selectbox came from the immediately preceding registry append.
+
+### 2026-04-29
+- Extracted the Candidate Review render flow from `backtest.py`.
+- Changed:
+  - added `app/web/pages/backtest_candidate_review.py`
+  - moved the `Candidate Review` / `Candidate Packaging` screen render logic into the new module
+  - kept `_render_candidate_review_workspace()` in `backtest.py` as a thin wrapper so panel routing remains unchanged
+  - left shared helpers and registry conversion helpers in `backtest.py` for this first behavior-preserving split
+  - synced the web backtest UI flow document
+- Durable takeaway:
+  - Candidate Review can now be edited from a focused module before adding more Pre-Live workflow work.
