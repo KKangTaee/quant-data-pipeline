@@ -3150,3 +3150,18 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `Append To Current Candidate Registry`는 독립 검증 단계가 아니라 7단계의 명시적 저장 버튼으로 설명한다
 - Follow-up:
   - 앞으로 Guides의 큰 흐름은 기능 단위가 아니라 사용자 판단 단위로만 나눈다
+
+### 2026-04-29 - 8단계는 Candidate Board에서 다음 운영 경로를 읽는 단계다
+- User request:
+  - `Append To Current Candidate Registry`를 두 번째 클릭했을 때 작동하지 않는 것처럼 보이는 현상이 정상인지 확인하고, 8단계에서 무엇을 해야 하며 통과 과정은 어떻게 되는지 개발해 달라고 요청함
+- Interpreted goal:
+  - 같은 Review Note를 반복 append하는 혼란을 막고, registry 저장 뒤 Candidate Board에서 Pre-Live로 갈 후보와 Compare로 돌아갈 후보를 명확히 구분해야 함
+- Analysis result:
+  - 반복 클릭은 실제로 작동하지 않은 것이 아니라, append-only registry에 같은 `source_review_note_id` / `registry_id`의 새 revision을 여러 번 추가한 상태였다
+  - Candidate Board는 `registry_id` 기준 latest row만 보여주므로 두 번째 이후 클릭은 화면 변화가 작게 보였다
+  - 이 UX는 정상 의도라고 보기 어렵기 때문에, 같은 Review Note가 이미 registry에 있으면 append 버튼을 기본 비활성화하고 의도적 revision 저장 체크박스를 켠 경우에만 다시 저장하도록 했다
+  - 8단계는 후보를 다시 백테스트하는 단계가 아니라, Candidate Board에서 route를 읽는 단계로 정의했다
+  - `PRE_LIVE_READY`는 9단계 Pre-Live Review로 이동 가능, `COMPARE_REVIEW_READY`는 Compare 재검토 경로, `BOARD_HOLD`는 registry row 보강 또는 Review Note 재검토 상태다
+- Follow-up:
+  - 사용자는 7단계 저장 뒤 `Candidate Board`에서 `8단계 Candidate Board 운영 판단`의 Route를 확인한다
+  - `PRE_LIVE_READY`이면 Pre-Live Review로 열고, `COMPARE_REVIEW_READY`이면 Compare에서 비교 후보를 추가한다

@@ -6705,6 +6705,75 @@ def _render_candidate_review_workspace() -> None:
         )
         if rows:
             st.dataframe(_build_candidate_review_board_rows_for_display(rows), use_container_width=True, hide_index=True)
+            st.markdown("#### 8단계. Candidate Board 운영 확인")
+            st.caption(
+                "7단계에서 저장한 후보를 다시 읽고, 이 후보를 Pre-Live로 넘길지, "
+                "Compare에서 다시 비교할지, 아니면 Board에 보류할지 판단합니다."
+            )
+            board_label_to_row = {_current_candidate_registry_selection_label(row): row for row in rows}
+            selected_board_label = st.selectbox(
+                "8단계 확인 후보",
+                options=list(board_label_to_row.keys()),
+                key="candidate_board_step8_candidate",
+                help="Candidate Board에서 다음 운영 경로를 판단할 후보를 고릅니다.",
+            )
+            selected_board_row = board_label_to_row[selected_board_label]
+            board_evaluation = _build_candidate_board_operating_evaluation(selected_board_row)
+            with st.container(border=True):
+                st.markdown("##### 8단계 Candidate Board 운영 판단")
+                st.caption(
+                    "이 점수는 전략 성과 점수가 아니라, registry에 저장된 후보가 다음 운영 화면으로 넘어갈 만큼 "
+                    "역할, 근거, 설정, Real-Money 신호를 갖췄는지 보는 체크입니다."
+                )
+                route_cols = st.columns([0.22, 0.18, 0.2, 0.4], gap="small")
+                route_cols[0].metric("Route", str(board_evaluation["route_label"]))
+                route_cols[1].metric("Readiness", f"{float(board_evaluation['score']):.1f} / 10")
+                route_cols[2].metric("Blockers", len(board_evaluation["blocking_reasons"]))
+                with route_cols[3]:
+                    st.caption("판정")
+                    st.markdown(f"**{board_evaluation['verdict']}**")
+                    st.caption("다음 행동")
+                    st.markdown(str(board_evaluation["next_action"]))
+                st.progress(max(0.0, min(float(board_evaluation["score"]) / 10.0, 1.0)))
+                st.dataframe(pd.DataFrame(board_evaluation["criteria_rows"]), use_container_width=True, hide_index=True)
+                if board_evaluation["can_move_to_pre_live"]:
+                    st.success("8단계 통과: 이 후보는 Pre-Live Review로 넘겨 운영 상태를 기록할 수 있습니다.")
+                elif board_evaluation["can_move_to_compare"]:
+                    st.info("8단계 통과: 이 후보는 Pre-Live보다 Compare에서 다시 볼 후보입니다.")
+                else:
+                    st.error("8단계 보류: " + ", ".join(str(item) for item in board_evaluation["blocking_reasons"]))
+                if board_evaluation["warning_reasons"]:
+                    st.warning("주의 항목: " + ", ".join(str(item) for item in board_evaluation["warning_reasons"]))
+            route_action_cols = st.columns(2, gap="small")
+            with route_action_cols[0]:
+                if st.button(
+                    "Open Selected Candidate In Pre-Live Review",
+                    key="candidate_board_open_pre_live",
+                    disabled=not bool(board_evaluation["can_move_to_pre_live"]),
+                    use_container_width=True,
+                ):
+                    st.session_state["pre_live_candidate_to_review"] = selected_board_label
+                    st.session_state["candidate_review_to_pre_live_notice"] = (
+                        f"`{selected_board_row.get('title') or selected_board_row.get('registry_id')}` 후보를 "
+                        "8단계 Candidate Board에서 Pre-Live Review로 열었습니다. "
+                        "아직 live trading 승인이나 투자 실행은 아닙니다."
+                    )
+                    _request_backtest_panel("Pre-Live Review")
+                    st.rerun()
+            with route_action_cols[1]:
+                if st.button(
+                    "Open Compare Picker For Selected Candidate",
+                    key="candidate_board_open_compare_picker",
+                    disabled=not bool(board_evaluation["can_move_to_compare"]),
+                    use_container_width=True,
+                ):
+                    st.session_state["current_candidate_bundle_selection"] = [selected_board_label]
+                    st.session_state.backtest_compare_prefill_notice = (
+                        f"`{selected_board_row.get('title') or selected_board_row.get('registry_id')}` 후보를 "
+                        "Compare 후보 선택 목록에 표시했습니다. Compare 실행 전 비교할 후보를 하나 이상 더 고르세요."
+                    )
+                    _request_backtest_panel("Compare & Portfolio Builder")
+                    st.rerun()
         else:
             st.info("표시할 active current candidate가 없습니다.")
 
@@ -6882,6 +6951,7 @@ def _render_candidate_review_workspace() -> None:
                 )
             registry_defaults = _candidate_review_note_to_registry_defaults(selected_note)
             registry_scope = _build_candidate_registry_scope_evaluation(selected_note)
+            registry_key = _candidate_review_note_widget_key(selected_note)
             with st.container(border=True):
                 st.markdown("##### 7단계 Registry 후보 범위 판단")
                 st.caption(
@@ -6905,8 +6975,26 @@ def _render_candidate_review_workspace() -> None:
                     st.error("registry 저장 전 멈출 항목: " + ", ".join(str(item) for item in registry_scope["blocking_reasons"]))
                 if registry_scope["warning_reasons"]:
                     st.warning("Registry notes에 함께 남길 주의 항목: " + ", ".join(str(item) for item in registry_scope["warning_reasons"]))
+            existing_review_note_registry_rows = _candidate_review_note_existing_registry_rows(selected_note)
+            if existing_review_note_registry_rows:
+                st.success(
+                    "이 Review Note는 이미 Current Candidate Registry에 저장되어 있습니다. "
+                    "Candidate Board에는 같은 Registry ID의 최신 revision만 보이기 때문에 반복 클릭 후에도 변화가 작게 보일 수 있습니다."
+                )
+                st.dataframe(
+                    _build_existing_review_note_registry_rows_for_display(existing_review_note_registry_rows),
+                    use_container_width=True,
+                    hide_index=True,
+                )
+                allow_registry_revision_append = st.checkbox(
+                    "같은 Review Note를 새 registry revision으로 다시 저장",
+                    value=False,
+                    key=f"candidate_registry_allow_revision_append_{registry_key}",
+                    help="의도적으로 같은 Review Note를 append-only registry에 새 revision으로 남길 때만 켭니다.",
+                )
+            else:
+                allow_registry_revision_append = True
             existing_registry_ids = {str(row.get("registry_id") or "") for row in _load_current_candidate_registry_latest()}
-            registry_key = _candidate_review_note_widget_key(selected_note)
             registry_id = st.text_input(
                 "Registry ID",
                 value=registry_defaults["registry_id"],
@@ -6987,12 +7075,18 @@ def _render_candidate_review_workspace() -> None:
                 or not str(strategy_family).strip()
                 or not str(strategy_name).strip()
                 or not str(candidate_role).strip()
+                or (bool(existing_review_note_registry_rows) and not bool(allow_registry_revision_append))
             )
             if save_disabled and review_decision != "reject_for_now":
                 if not bool(registry_scope["can_prepare_registry_row"]):
                     st.error("7단계 범위 판단이 통과되어야 registry append를 진행할 수 있습니다.")
                 elif bool(allowed_record_types) and record_type not in allowed_record_types:
                     st.error("7단계에서 허용된 Record Type 범위 안에서만 append할 수 있습니다.")
+                elif bool(existing_review_note_registry_rows) and not bool(allow_registry_revision_append):
+                    st.info(
+                        "이미 저장된 Review Note입니다. 같은 판단을 새 revision으로 다시 남길 이유가 있을 때만 "
+                        "위 체크박스를 켠 뒤 저장하세요."
+                    )
                 else:
                     st.error("Registry ID, Strategy Family, Strategy Name, Candidate Role은 필수입니다.")
             if st.button(
@@ -7004,7 +7098,8 @@ def _render_candidate_review_workspace() -> None:
                 _append_current_candidate_registry_row(registry_row)
                 st.session_state.backtest_candidate_review_note_notice = (
                     f"Current Candidate Registry row `{registry_row['registry_id']}`를 append했습니다. "
-                    "이 기록도 투자 승인이나 live trading 승인은 아닙니다."
+                    "이 기록도 투자 승인이나 live trading 승인은 아닙니다. "
+                    "다음은 Candidate Board의 8단계 운영 확인입니다."
                 )
                 st.rerun()
 
@@ -10503,6 +10598,51 @@ def _build_current_candidate_registry_rows_for_display(rows: list[dict[str, Any]
     return pd.DataFrame(display_rows)
 
 
+def _load_current_candidate_registry_rows_all() -> list[dict[str, Any]]:
+    if not CURRENT_CANDIDATE_REGISTRY_FILE.exists():
+        return []
+
+    rows: list[dict[str, Any]] = []
+    for line in CURRENT_CANDIDATE_REGISTRY_FILE.read_text(encoding="utf-8", errors="ignore").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(row, dict):
+            rows.append(row)
+    return rows
+
+
+def _candidate_review_note_existing_registry_rows(note: dict[str, Any]) -> list[dict[str, Any]]:
+    review_note_id = str(note.get("review_note_id") or "").strip()
+    if not review_note_id:
+        return []
+    return [
+        row
+        for row in _load_current_candidate_registry_rows_all()
+        if str(row.get("source_review_note_id") or "").strip() == review_note_id
+        and str(row.get("status") or "active").strip().lower() == "active"
+    ]
+
+
+def _build_existing_review_note_registry_rows_for_display(rows: list[dict[str, Any]]) -> pd.DataFrame:
+    return pd.DataFrame(
+        [
+            {
+                "Recorded At": row.get("recorded_at"),
+                "Registry ID": row.get("registry_id"),
+                "Revision ID": row.get("revision_id"),
+                "Record Type": row.get("record_type"),
+                "Title": row.get("title"),
+            }
+            for row in rows
+        ]
+    )
+
+
 def _candidate_review_stage(row: dict[str, Any]) -> str:
     record_type = str(row.get("record_type") or "").strip().lower()
     result = dict(row.get("result") or {})
@@ -10574,6 +10714,147 @@ def _build_candidate_review_board_rows_for_display(rows: list[dict[str, Any]]) -
             }
         )
     return pd.DataFrame(display_rows)
+
+
+def _build_candidate_board_operating_evaluation(row: dict[str, Any]) -> dict[str, Any]:
+    record_type = str(row.get("record_type") or "").strip().lower()
+    result = dict(row.get("result") or {})
+    contract = dict(row.get("contract") or {})
+    compare_prefill = dict(row.get("compare_prefill") or {})
+    review_context = dict(row.get("review_context") or {})
+    promotion = str(result.get("promotion") or "").strip().lower()
+    deployment = str(result.get("deployment") or "").strip().lower()
+    shortlist = str(result.get("shortlist") or "").strip().lower()
+
+    identity_ready = (
+        _candidate_intake_value_present(row.get("registry_id"))
+        and _candidate_intake_value_present(row.get("strategy_family"))
+        and _candidate_intake_value_present(row.get("strategy_name") or row.get("title"))
+        and record_type in CURRENT_CANDIDATE_RECORD_TYPE_OPTIONS
+    )
+    result_ready = any(_candidate_intake_value_present(result.get(key)) for key in ("cagr", "mdd", "end_balance"))
+    contract_ready = bool(contract) or bool(compare_prefill)
+    review_context_ready = (
+        _candidate_intake_value_present(row.get("notes"))
+        or _candidate_intake_value_present(review_context.get("operator_reason"))
+        or _candidate_intake_value_present(review_context.get("next_action"))
+    )
+    real_money_signal_ready = any(
+        _candidate_intake_value_present(result.get(key))
+        for key in ("promotion", "shortlist", "deployment", "validation_status", "monitoring_status")
+    )
+    real_money_not_blocked = (
+        real_money_signal_ready
+        and promotion not in {"", "hold"}
+        and deployment not in {"", "blocked"}
+    )
+    core_board_ready = identity_ready and result_ready and contract_ready and review_context_ready
+    can_move_to_pre_live = record_type == "current_candidate" and core_board_ready and real_money_not_blocked
+    can_move_to_compare = record_type in {"near_miss", "scenario"} and core_board_ready and contract_ready
+
+    warning_reasons: list[str] = []
+    if record_type == "current_candidate" and shortlist in {"watchlist", "paper_probation"}:
+        warning_reasons.append(f"Shortlist={shortlist}")
+    if record_type in {"near_miss", "scenario"} and real_money_not_blocked:
+        warning_reasons.append("Real-Money gate가 나쁘지 않더라도 이 row는 우선 비교/시나리오 범위입니다")
+
+    if can_move_to_pre_live:
+        route_label = "PRE_LIVE_READY"
+        verdict = "8단계 통과: Pre-Live 운영 기록으로 넘길 수 있음"
+        next_action = "Pre-Live Review에서 paper tracking / watchlist / hold 같은 운영 상태를 저장합니다."
+    elif can_move_to_compare:
+        route_label = "COMPARE_REVIEW_READY"
+        verdict = "8단계 통과: Compare에서 다시 비교할 후보"
+        next_action = "Compare 후보 선택 목록에서 비교할 다른 후보를 추가한 뒤 실행합니다."
+    else:
+        route_label = "BOARD_HOLD"
+        verdict = "8단계 보류: Board에서 역할과 근거를 먼저 보강"
+        next_action = "후보 식별, 성과 snapshot, 설정 snapshot, Real-Money 신호, 판단 메모를 확인합니다."
+
+    checks = [
+        {
+            "criteria": "Registry Identity / Role",
+            "ready": identity_ready,
+            "points": 2.0,
+            "current": f"id={row.get('registry_id') or '-'}, type={record_type or '-'}",
+            "judgment": "보드에서 후보 역할을 읽을 수 있음" if identity_ready else "registry id / role / strategy 식별 부족",
+        },
+        {
+            "criteria": "Result Snapshot",
+            "ready": result_ready,
+            "points": 1.5,
+            "current": (
+                f"CAGR={result.get('cagr') or '-'}, "
+                f"MDD={result.get('mdd') or '-'}, "
+                f"End={result.get('end_balance') or '-'}"
+            ),
+            "judgment": "운영 판단에 쓸 성과 snapshot 있음" if result_ready else "성과 snapshot 부족",
+        },
+        {
+            "criteria": "Contract / Compare Prefill",
+            "ready": contract_ready,
+            "points": 2.0,
+            "current": _current_candidate_registry_contract_summary(row),
+            "judgment": "Compare 또는 Pre-Live에서 재진입 가능" if contract_ready else "설정 snapshot 부족",
+        },
+        {
+            "criteria": "Review Context",
+            "ready": review_context_ready,
+            "points": 1.5,
+            "current": "작성됨" if review_context_ready else "미작성",
+            "judgment": "왜 남긴 후보인지 읽을 수 있음" if review_context_ready else "운영자 판단 근거 부족",
+        },
+        {
+            "criteria": "Real-Money Signal",
+            "ready": real_money_signal_ready,
+            "points": 1.0,
+            "current": f"promotion={promotion or '-'}, deployment={deployment or '-'}",
+            "judgment": "신호 확인 가능" if real_money_signal_ready else "Real-Money signal 부족",
+        },
+        {
+            "criteria": "Pre-Live Route",
+            "ready": can_move_to_pre_live or can_move_to_compare,
+            "points": 2.0,
+            "current": route_label,
+            "judgment": (
+                "current candidate라 Pre-Live 가능"
+                if can_move_to_pre_live
+                else "비교/시나리오 후보라 Compare 가능"
+                if can_move_to_compare
+                else "다음 운영 경로 보류"
+            ),
+        },
+    ]
+
+    max_points = sum(float(item["points"]) for item in checks)
+    earned_points = sum(float(item["points"]) for item in checks if item["ready"])
+    score = round((earned_points / max_points) * 10.0, 1) if max_points else 0.0
+    blocking_reasons = [str(item["criteria"]) for item in checks if not item["ready"]]
+    if record_type == "current_candidate" and real_money_signal_ready and not real_money_not_blocked:
+        blocking_reasons.append("current_candidate지만 Real-Money gate가 hold/blocked")
+
+    return {
+        "route_label": route_label,
+        "score": score,
+        "verdict": verdict,
+        "next_action": next_action,
+        "can_move_to_pre_live": can_move_to_pre_live,
+        "can_move_to_compare": can_move_to_compare,
+        "blocking_reasons": blocking_reasons,
+        "warning_reasons": warning_reasons,
+        "criteria_rows": [
+            {
+                "기준": item["criteria"],
+                "상태": "PASS" if item["ready"] else "CHECK",
+                "현재 값": item["current"],
+                "점수": f"{float(item['points']):g} / {float(item['points']):g}"
+                if item["ready"]
+                else f"0 / {float(item['points']):g}",
+                "판단": item["judgment"],
+            }
+            for item in checks
+        ],
+    }
 
 
 def _candidate_review_record_type_suggestion(

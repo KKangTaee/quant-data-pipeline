@@ -41,7 +41,8 @@ Ingestion / Data Trust
   -> Compare
   -> Candidate Intake & Review Note 저장
   -> Review Notes에서 Registry 후보 범위 결정 및 저장
-  -> Candidate Board / Compare / Pre-Live Review
+  -> Candidate Board 운영 확인
+  -> Compare 재검토 또는 Pre-Live Review
   -> Portfolio Proposal
   -> Live Readiness / Final Approval
 ```
@@ -51,6 +52,7 @@ Ingestion / Data Trust
 - `Candidate Draft`는 latest run 또는 history run을 후보처럼 읽는 저장 전 초안이다.
 - `Candidate Intake & Review Note 저장`은 Draft 수신 정보가 충분한지 확인하고 사람이 판단과 next action을 저장하는 사용자-facing 6단계다.
 - `Review Notes에서 Registry 후보 범위 결정 및 저장`은 저장된 판단 기록을 Current Candidate / Near Miss / Scenario / Stop 중 어디까지 남길지 정하고, 통과한 row만 Current Candidate Registry에 append하는 사용자-facing 7단계다.
+- `Candidate Board 운영 확인`은 저장된 후보를 다시 읽고 `PRE_LIVE_READY`, `COMPARE_REVIEW_READY`, `BOARD_HOLD` 중 다음 경로를 정하는 사용자-facing 8단계다.
 - `Pre-Live Review`는 실제 돈 없이 paper / watchlist / hold / re-review 상태를 기록하는 운영 단계다.
 - `Portfolio Proposal`은 후보 묶음 제안이며, live trading approval이 아니다.
 - `Live Readiness / Final Approval`은 Phase 30 이후 별도 phase 후보로 남긴다.
@@ -61,7 +63,7 @@ Ingestion / Data Trust
 |---|---|
 | `핵심 개념 가이드` | 실전 승격 흐름, Real-Money Contract, GTAA Risk-Off 후보군, interval, Compare 대상 선정법 해석 |
 | `1~10 단계 실행 흐름` | 테스트에서 상용화 후보 검토까지의 단계별 흐름. 각 단계는 expander로 접어 읽는다 |
-| `단계 통과 기준` | 4->5, 5->6, 6->7처럼 다음 단계로 넘길지 판단하는 stop/go 기준과 7단계 registry 저장 기준. 각 기준은 expander로 접어 읽는다 |
+| `단계 통과 기준` | 4->5, 5->6, 6->7, 8->9처럼 다음 단계로 넘길지 판단하는 stop/go 기준과 registry 저장 기준. 각 기준은 expander로 접어 읽는다 |
 | `문서와 파일` | 현재 먼저 볼 문서, 주요 registry / guide / log 파일, live approval이 아님을 구분하는 운영 경계 |
 
 ## Phase 30 Portfolio Proposal 계약
@@ -314,6 +316,9 @@ Latest Backtest Run 또는 History selected record
 - 범위 판단과 맞지 않는 record type은 append를 막는다.
 - Review Note를 registry row로 남기려면 `Review Notes` 탭에서 row preview를 확인한 뒤
   같은 7단계 안에서 `Append To Current Candidate Registry`를 명시적으로 눌러야 한다.
+- 같은 Review Note가 이미 append된 경우에는 중복 append를 기본 차단하고, 의도적 revision 저장 체크박스를 켠 경우에만 다시 저장한다.
+- Candidate Board는 `8단계 Candidate Board 운영 판단`으로 registry row가 Pre-Live로 갈지, Compare로 돌아갈지, Board에 보류될지 보여준다.
+- `PRE_LIVE_READY`는 9단계 Pre-Live Review 진입 가능 상태이고, `COMPARE_REVIEW_READY`는 실패가 아니라 Compare 재검토 경로다.
 - `Suggested Next Step`은 다음 검토 행동 제안이지 live trading 승인이나 최종 투자 판단이 아니다.
 - Pre-Live Review로 넘겨도 저장 전 초안일 뿐이며, 실제 저장은 `Save Pre-Live Record`로 한다.
 

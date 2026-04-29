@@ -3136,12 +3136,13 @@ def _render_guides_page() -> None:
             {
                 "title": "8단계. Candidate Board에서 후보를 운영 대상으로 읽기",
                 "path": "Backtest > Candidate Review > Candidate Board / Inspect Candidate / Send To Compare",
-                "goal": "후보를 성과 순위표가 아니라 current anchor, near miss, scenario 역할로 읽습니다.",
+                "goal": "7단계에서 저장한 후보를 성과 순위표가 아니라 current anchor, near miss, scenario 역할로 읽고 다음 운영 경로를 정합니다.",
                 "check": [
                     "`Why It Exists`로 후보가 왜 남아 있는지 확인",
                     "`Suggested Next Step`으로 compare 또는 Pre-Live로 보낼지 판단",
-                    "`Open Candidate In Pre-Live Review`가 저장/승인 버튼이 아님을 확인",
-                    "`Send To Compare`로 후보 묶음을 다시 비교",
+                    "`8단계 Candidate Board 운영 판단`에서 Route가 `PRE_LIVE_READY`, `COMPARE_REVIEW_READY`, `BOARD_HOLD` 중 무엇인지 확인",
+                    "`PRE_LIVE_READY`이면 `Open Selected Candidate In Pre-Live Review`로 9단계 초안을 열기",
+                    "`COMPARE_REVIEW_READY`이면 Compare Picker에서 비교할 후보를 추가해 다시 비교",
                 ],
                 "next_step": "운영 관찰이 필요하면 Pre-Live Review에서 paper / watchlist / hold 상태를 기록합니다.",
             },
@@ -3336,6 +3337,50 @@ def _render_guides_page() -> None:
             st.warning(
                 "Current Candidate 범위는 가장 엄격합니다. Compare 근거가 없거나 Real-Money gate가 약하면 "
                 "Near Miss 또는 Scenario로 남기거나 7단계에서 멈추는 것이 기본입니다."
+            )
+
+        with st.expander("8단계에서 9단계로 넘어가는 최소 기준", expanded=True):
+            st.caption(
+                "이 기준은 Candidate Board에서 registry 후보를 다시 읽은 뒤 Pre-Live Review로 넘겨도 되는지 보는 기준입니다. "
+                "Near Miss / Scenario는 8단계를 통과해도 보통 9단계가 아니라 Compare 재검토로 돌아갑니다."
+            )
+            board_rows = pd.DataFrame(
+                [
+                    {
+                        "확인 항목": "Registry Identity / Role",
+                        "9단계 진행 가능": "`registry_id`, strategy family/name, record type을 읽을 수 있음",
+                        "멈춰야 하는 경우": "후보 row가 무엇인지, 어떤 역할인지 식별할 수 없음",
+                    },
+                    {
+                        "확인 항목": "Result Snapshot",
+                        "9단계 진행 가능": "CAGR, MDD, End Balance 중 운영 판단에 쓸 값이 남아 있음",
+                        "멈춰야 하는 경우": "Candidate Board에서 성과 snapshot을 읽을 수 없음",
+                    },
+                    {
+                        "확인 항목": "Contract / Compare Prefill",
+                        "9단계 진행 가능": "설정 snapshot 또는 compare prefill이 있어 다음 화면에서 재진입 가능",
+                        "멈춰야 하는 경우": "어떤 universe / top / interval / guardrail 설정인지 재현하기 어려움",
+                    },
+                    {
+                        "확인 항목": "Review Context",
+                        "9단계 진행 가능": "왜 남긴 후보인지, 다음 행동이 무엇인지 notes 또는 review context에 있음",
+                        "멈춰야 하는 경우": "registry row만 있고 사람의 판단 이유가 비어 있음",
+                    },
+                    {
+                        "확인 항목": "Route",
+                        "9단계 진행 가능": "`current_candidate`이고 Real-Money gate가 `hold/blocked`가 아니어서 `PRE_LIVE_READY`",
+                        "멈춰야 하는 경우": "`near_miss` / `scenario`이면 Pre-Live보다 Compare 재검토가 기본",
+                    },
+                ]
+            )
+            st.dataframe(board_rows, use_container_width=True, hide_index=True)
+            st.success(
+                "`8단계 Candidate Board 운영 판단`의 Route가 `PRE_LIVE_READY`이면 "
+                "9단계 Pre-Live Review로 넘어갈 수 있습니다."
+            )
+            st.warning(
+                "`COMPARE_REVIEW_READY`는 실패가 아니라 다른 경로입니다. "
+                "이 경우 9단계로 바로 가지 말고 Compare에서 비교 후보를 추가해 다시 검토합니다."
             )
 
     st.markdown("### 문서와 파일")

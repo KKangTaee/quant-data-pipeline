@@ -2317,3 +2317,14 @@ Detailed historical logs were archived on `2026-04-13`.
   - synced walkthrough and web backtest UI flow docs without touching Phase 30 QA docs
 - Durable takeaway:
   - Button-level persistence actions should stay inside the broader decision step instead of becoming standalone workflow stages.
+
+### 2026-04-29
+- Added duplicate-safe registry append and step-8 Candidate Board operating readiness.
+- Changed:
+  - confirmed repeated `Append To Current Candidate Registry` clicks were appending duplicate revisions for the same Review Note while the Board showed only the latest `registry_id` row
+  - added a Review Notes duplicate guard that disables append for an already saved Review Note unless the operator explicitly checks a new-revision override
+  - added `8단계 Candidate Board 운영 판단` with `PRE_LIVE_READY`, `COMPARE_REVIEW_READY`, and `BOARD_HOLD` routes
+  - added route actions to open a ready current candidate in Pre-Live Review or open the Compare picker for near-miss / scenario candidates
+  - synced Guides, walkthrough session notes, and web backtest UI flow docs without touching Phase 30 QA docs
+- Durable takeaway:
+  - Step 8 is a route-reading step: only `PRE_LIVE_READY` moves to Pre-Live; compare-ready alternatives return to Compare instead of being treated as failures.
