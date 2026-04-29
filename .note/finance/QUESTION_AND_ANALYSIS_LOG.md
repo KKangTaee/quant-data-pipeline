@@ -3332,3 +3332,18 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 기존 `_request_backtest_panel("History")`, `Back To History`, history inspect / replay / load / candidate draft 기능은 유지했다
 - Follow-up:
   - 이후 History 자체가 더 커지면 `app/web/pages/backtest.py`에서 별도 History module로 분리하는 것이 다음 자연스러운 리팩토링 후보이다
+
+### 2026-04-30 - Backtest Run History는 Operations의 운영 / 재현 화면으로 분리한다
+- User request:
+  - Backtest workflow 옆에 `Run History` 버튼을 두는 대신, history 관련 정보를 별도 스크립트로 관리하고 `Operations` 아래 새 대분류 탭으로 옮기는 것이 어떠냐고 제안함
+- Interpreted goal:
+  - Backtest는 후보를 만들고 검토하는 주 흐름에 집중해야 함
+  - 저장된 백테스트 실행 기록은 운영 감사, 재현, form 복원, 후보 검토 초안 전달 기능이므로 Operations에서 관리하는 편이 사용자가 흐름을 이해하기 쉽다
+- Analysis result:
+  - `app/web/backtest_history.py`를 추가해 `Operations > Backtest Run History` page shell을 분리했다
+  - `streamlit_app.py`의 Operations navigation에 `Backtest Run History`를 추가했다
+  - Backtest 화면에서는 `Run History` 버튼과 History panel route를 제거하고, 과거 실행 기록은 Operations에서 관리한다고 안내한다
+  - 기존 history action은 유지한다: `Load Into Form`, `Run Again`, `Review As Candidate Draft`는 필요한 session state를 만든 뒤 Backtest page로 이동한다
+  - Candidate Review 안내 문구도 `Operations > Backtest Run History`에서 넘어온 초안으로 표현을 바꿨다
+- Follow-up:
+  - History helper 본문은 아직 `app/web/pages/backtest.py`에 많이 남아 있으므로, 다음 리팩토링에서는 history helper / replay helper를 `backtest_history_helpers.py`로 추가 분리하는 것이 자연스럽다

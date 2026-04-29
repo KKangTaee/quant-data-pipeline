@@ -42,6 +42,7 @@ from app.jobs.run_history import (
 )
 from app.jobs.symbol_sources import resolve_symbol_source
 from app.jobs.symbol_sources import filter_non_plain_symbols
+from app.web.backtest_history import render_backtest_run_history_page
 from app.web.pages.backtest import QUALITY_STRICT_PRESETS, clear_backtest_preview_caches, render_backtest_tab
 from finance.data.financial_statements import inspect_financial_statement_source
 from finance.loaders import load_statement_coverage_summary, load_statement_timing_audit
@@ -2345,8 +2346,9 @@ def _render_overview_page() -> None:
     st.markdown(
         """
         - `Ingestion`: 일별 업데이트, statement refresh, 진단 작업을 실행합니다.
-        - `Backtest`: 전략 실행, compare, 후보 검토, Pre-Live, Portfolio Proposal 흐름과 Run History 보조 도구를 다룹니다.
+        - `Backtest`: 전략 실행, compare, 후보 검토, Pre-Live, Portfolio Proposal 흐름을 다룹니다.
         - `Ops Review`: 최근 실행 결과, persistent history, logs, failure CSV를 한 번에 봅니다.
+        - `Backtest Run History`: 저장된 백테스트 실행 기록을 재현하고 Backtest 작업 흐름으로 다시 보냅니다.
         - `Guides`: 현재 phase 문서, 체크리스트, 승격 해석 가이드를 빠르게 찾습니다.
         - `Glossary`: 현재 퀀트 프로그램에서 쓰는 용어를 검색하면서 다시 확인합니다.
         """
@@ -2392,6 +2394,10 @@ def _render_ops_review_page() -> None:
         _render_recent_logs()
         st.divider()
         _render_failure_csv_preview()
+
+
+def _render_backtest_run_history_page(open_backtest_page) -> None:
+    render_backtest_run_history_page(open_backtest_page=open_backtest_page)
 
 
 def _render_guides_page() -> None:
@@ -3442,19 +3448,38 @@ def main() -> None:
     _init_state()
     _promote_pending_job()
     _apply_pending_ingestion_prefill()
+
+    overview_page = st.Page(_render_overview_page, title="Overview", icon="🏠", default=True, url_path="overview")
+    ingestion_page = st.Page(_render_ingestion_page, title="Ingestion", icon="🛠️", url_path="ingestion")
+    backtest_page = st.Page(_render_backtest_page, title="Backtest", icon="📈", url_path="backtest")
+    ops_review_page = st.Page(_render_ops_review_page, title="Ops Review", icon="🧾", url_path="ops-review")
+
+    def open_backtest_page() -> None:
+        st.switch_page(backtest_page)
+
+    backtest_history_page = st.Page(
+        lambda: _render_backtest_run_history_page(open_backtest_page),
+        title="Backtest Run History",
+        icon="🗂️",
+        url_path="backtest-run-history",
+    )
+    guides_page = st.Page(_render_guides_page, title="Guides", icon="📚", url_path="guides")
+    glossary_page = st.Page(_render_glossary_page, title="Glossary", icon="📖", url_path="glossary")
+
     navigation = st.navigation(
         {
             "Workspace": [
-                st.Page(_render_overview_page, title="Overview", icon="🏠", default=True, url_path="overview"),
-                st.Page(_render_ingestion_page, title="Ingestion", icon="🛠️", url_path="ingestion"),
-                st.Page(_render_backtest_page, title="Backtest", icon="📈", url_path="backtest"),
+                overview_page,
+                ingestion_page,
+                backtest_page,
             ],
             "Operations": [
-                st.Page(_render_ops_review_page, title="Ops Review", icon="🧾", url_path="ops-review"),
+                ops_review_page,
+                backtest_history_page,
             ],
             "Reference": [
-                st.Page(_render_guides_page, title="Guides", icon="📚", url_path="guides"),
-                st.Page(_render_glossary_page, title="Glossary", icon="📖", url_path="glossary"),
+                guides_page,
+                glossary_page,
             ],
         },
         position="top",

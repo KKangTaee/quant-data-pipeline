@@ -19,9 +19,11 @@ DB-backed market data ingestion, factor generation, and strategy backtesting wor
 - `Ingestion`
   - 일별 업데이트, statement refresh, 진단 작업
 - `Backtest`
-  - 단일 전략 실행, compare, candidate review, pre-live review, portfolio proposal workflow와 보조 `Run History`
+  - 단일 전략 실행, compare, candidate review, pre-live review, portfolio proposal workflow
 - `Ops Review`
   - 최근 실행 결과, persistent history, logs, failure artifact 검토
+- `Backtest Run History`
+  - 저장된 백테스트 실행 기록 검토, form 복원, 재실행, candidate review 초안 전달
 - `Guides`
   - 현재 phase 문서, 체크리스트, 승격 해석 가이드, 단계형 운영 흐름 안내
 - `Glossary`
@@ -68,9 +70,10 @@ DB-backed market data ingestion, factor generation, and strategy backtesting wor
 - persistent backtest history
   - 실행 입력/요약뿐 아니라 `gate snapshot`도 함께 저장하는 history v2
   - 이후 blocker audit, candidate review, rerun drilldown에 활용
+  - `Operations > Backtest Run History`에서 운영 기록처럼 확인하고, 필요 시 Backtest 흐름으로 다시 보냄
 - candidate review workflow
   - `Backtest > Candidate Review`에서 후보 검토 초안, Review Note 저장, registry append, Pre-Live route 판단을 한 화면의 순서형 Candidate Packaging flow로 처리하는 흐름
-  - latest backtest / history result를 registry 저장 전 후보 검토 초안으로 읽는 흐름
+  - latest backtest / Operations의 Backtest Run History result를 registry 저장 전 후보 검토 초안으로 읽는 흐름
   - 후보 검토 초안을 바로 registry에 넣지 않고 Candidate Review Note로 판단과 다음 행동을 남기는 흐름
   - 저장된 review note를 registry row 초안으로 확인한 뒤 명시적으로 current candidate registry에 append하고, `PRE_LIVE_READY`일 때만 Pre-Live Review로 넘기는 흐름
 - portfolio proposal workflow
@@ -89,12 +92,13 @@ app/
   jobs/                  # ingestion jobs, diagnostics, run history
   web/
     streamlit_app.py     # Finance Console entry point
+    backtest_history.py  # Operations > Backtest Run History UI
     backtest_ui_components.py # Backtest 공용 status/route UI component
     backtest_candidate_review.py # Candidate Review / Candidate Packaging UI
     backtest_candidate_review_helpers.py # Candidate Review 판단/변환 helper
     backtest_pre_live_review.py # Pre-Live Review UI
     backtest_pre_live_review_helpers.py # Pre-Live 상태/초안/진입평가 helper
-    pages/backtest.py    # Backtest shell, workflow navigation, remaining Single/Compare/History/Proposal UI
+    pages/backtest.py    # Backtest shell, workflow navigation, remaining Single/Compare/History helper/Proposal UI
     runtime/             # UI-facing runtime wrappers
       candidate_registry.py
       portfolio_proposal.py

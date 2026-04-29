@@ -2466,3 +2466,19 @@ Detailed historical logs were archived on `2026-04-13`.
   - Streamlit smoke checked `/backtest`, confirmed the duplicate title is gone, the segmented workflow renders, `Run History` opens the history surface, and selecting a workflow panel returns to that panel
 - Durable takeaway:
   - History remains available for replay and candidate handoff, but it is no longer presented as a core step in the candidate review workflow.
+
+### 2026-04-30
+- Moved Backtest run history into the Operations navigation.
+- Changed:
+  - added `app/web/backtest_history.py` as the `Operations > Backtest Run History` page shell
+  - added a new `Backtest Run History` page under the `Operations` top navigation group
+  - removed the visible `Run History` button and hidden History panel route from the Backtest workflow selector
+  - kept the Backtest workflow focused on `Single Strategy -> Compare & Portfolio Builder -> Candidate Review -> Pre-Live Review -> Portfolio Proposal`
+  - preserved history actions: `Load Into Form`, `Run Again`, and `Review As Candidate Draft` now switch back into the Backtest workflow after preparing the relevant session state
+  - updated Candidate Review copy to point to `Operations > Backtest Run History`
+  - synced README, comprehensive analysis, script structure map, and web backtest UI flow docs
+- Verification:
+  - `.venv/bin/python -m py_compile app/web/streamlit_app.py app/web/backtest_history.py app/web/pages/backtest.py app/web/backtest_candidate_review.py` passed
+  - Streamlit smoke checked the top navigation: `Operations > Backtest Run History` renders the persistent backtest history surface, and `Backtest` no longer shows a Run History utility button
+- Durable takeaway:
+  - Backtest is now visually reserved for candidate-building workflow, while persisted backtest history is treated as an Operations audit / replay surface.

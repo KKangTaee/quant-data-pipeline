@@ -126,7 +126,7 @@ def render_candidate_review_workspace() -> None:
     st.markdown("#### 1. Draft 확인 / Review Note 저장")
     with st.container(border=True):
         st.caption(
-            "Latest Backtest Run 또는 History에서 보낸 후보 검토 초안을 확인하고, "
+            "Latest Backtest Run 또는 Operations > Backtest Run History에서 보낸 후보 검토 초안을 확인하고, "
             "운영자 판단과 다음 행동을 Review Note로 저장합니다. "
             "이 작업은 Candidate Packaging의 첫 저장 지점이며, 아직 current candidate registry 등록이나 투자 승인이 아닙니다."
         )
@@ -138,7 +138,7 @@ def render_candidate_review_workspace() -> None:
         if not draft:
             st.info(
                 "아직 후보 검토 초안이 없습니다. "
-                "`Latest Backtest Run` 또는 `History > Selected History Run`에서 `Review As Candidate Draft`를 누르면 여기에 표시됩니다."
+                "`Latest Backtest Run` 또는 `Operations > Backtest Run History > Selected History Run`에서 `Review As Candidate Draft`를 누르면 여기에 표시됩니다."
             )
         else:
             result_snapshot = dict(draft.get("result_snapshot") or {})

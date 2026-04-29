@@ -307,7 +307,6 @@ BACKTEST_PANEL_OPTIONS = [
     "Single Strategy",
     "Compare & Portfolio Builder",
     "Candidate Review",
-    "History",
     "Pre-Live Review",
     "Portfolio Proposal",
 ]
@@ -707,7 +706,7 @@ def _init_backtest_state() -> None:
     active_panel = st.session_state.get("backtest_active_panel")
     if active_panel in set(BACKTEST_WORKFLOW_PANEL_OPTIONS):
         st.session_state.backtest_workflow_active_panel = active_panel
-    elif active_panel != "History":
+    else:
         st.session_state.backtest_active_panel = "Single Strategy"
         st.session_state.backtest_workflow_active_panel = "Single Strategy"
     if "qss_end" not in st.session_state:
@@ -12048,7 +12047,7 @@ def _render_snapshot_selection_history(
             st.dataframe(frequency_df, use_container_width=True, hide_index=True)
 
 
-def _render_persistent_backtest_history() -> None:
+def _render_persistent_backtest_history(*, open_backtest_page=None) -> None:
     st.markdown("### Persistent Backtest History")
     st.info(
         "여기서 말하는 `history run`은 예전에 저장된 백테스트 실행 기록 1건입니다. "
@@ -12435,19 +12434,25 @@ def _render_persistent_backtest_history() -> None:
 
     action_cols = st.columns([0.18, 0.18, 0.24, 0.40], gap="small")
     with action_cols[0]:
-        if st.button("Load Into Form", key="backtest_history_load_into_form", use_container_width=True):
+        if st.button("Load Into Form", key="backtest_history_load_into_form", width="stretch"):
             if _load_history_into_form(selected_record):
+                if open_backtest_page is not None:
+                    open_backtest_page()
                 st.rerun()
     with action_cols[1]:
-        if st.button("Run Again", key="backtest_history_run_again", use_container_width=True):
+        if st.button("Run Again", key="backtest_history_run_again", width="stretch"):
             rerun_ok = _handle_backtest_run(payload, strategy_name=_history_strategy_display_name(selected_record))
             if rerun_ok:
                 _set_single_strategy_target_from_strategy_key(selected_record.get("strategy_key"))
                 st.session_state.backtest_requested_panel = "Single Strategy"
+                if open_backtest_page is not None:
+                    open_backtest_page()
                 st.rerun()
     with action_cols[2]:
-        if st.button("Review As Candidate Draft", key="backtest_history_candidate_review_draft", use_container_width=True):
+        if st.button("Review As Candidate Draft", key="backtest_history_candidate_review_draft", width="stretch"):
             _queue_candidate_review_draft(_candidate_review_draft_from_history_record(selected_record))
+            if open_backtest_page is not None:
+                open_backtest_page()
             st.rerun()
     with action_cols[3]:
         st.caption(
@@ -15044,50 +15049,33 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
     _handle_backtest_run(payload, strategy_name="Quality + Value Snapshot (Strict Annual)")
 
 
-# Render the Backtest workflow as primary navigation while keeping History as a utility view.
+# Render the Backtest workflow as primary navigation.
 def _render_backtest_panel_selector() -> str:
     st.markdown("#### 후보 검토 흐름")
     st.caption("전략 실행에서 후보 검토, Pre-Live 운영 점검, Portfolio Proposal까지 이어지는 주 흐름입니다.")
 
-    nav_cols = st.columns([0.78, 0.22], gap="small")
-    with nav_cols[0]:
-        if hasattr(st, "segmented_control"):
-            st.segmented_control(
-                "Backtest Workflow",
-                options=BACKTEST_WORKFLOW_PANEL_OPTIONS,
-                selection_mode="single",
-                required=True,
-                key="backtest_workflow_active_panel",
-                on_change=_activate_backtest_workflow_panel,
-                label_visibility="collapsed",
-                width="stretch",
-            )
-        else:
-            st.radio(
-                "Backtest Workflow",
-                options=BACKTEST_WORKFLOW_PANEL_OPTIONS,
-                horizontal=True,
-                key="backtest_workflow_active_panel",
-                on_change=_activate_backtest_workflow_panel,
-                label_visibility="collapsed",
-            )
-    with nav_cols[1]:
-        st.button(
-            "Run History",
-            key="backtest_open_history_utility",
-            help="저장된 Backtest 실행 기록을 확인하고 Run Again / Load Into Form / Review As Candidate Draft를 수행합니다.",
-            on_click=_request_backtest_panel,
-            args=("History",),
+    if hasattr(st, "segmented_control"):
+        st.segmented_control(
+            "Backtest Workflow",
+            options=BACKTEST_WORKFLOW_PANEL_OPTIONS,
+            selection_mode="single",
+            required=True,
+            key="backtest_workflow_active_panel",
+            on_change=_activate_backtest_workflow_panel,
+            label_visibility="collapsed",
             width="stretch",
         )
-
-    active_panel = st.session_state.get("backtest_active_panel") or "Single Strategy"
-    if active_panel == "History":
-        st.info(
-            "Run History는 보조 도구입니다. 과거 실행을 다시 읽거나 form으로 불러온 뒤, "
-            "필요하면 위 후보 검토 흐름으로 돌아가세요."
+    else:
+        st.radio(
+            "Backtest Workflow",
+            options=BACKTEST_WORKFLOW_PANEL_OPTIONS,
+            horizontal=True,
+            key="backtest_workflow_active_panel",
+            on_change=_activate_backtest_workflow_panel,
+            label_visibility="collapsed",
         )
-    return str(active_panel)
+    st.caption("과거 실행 기록과 재현 도구는 `Operations > Backtest Run History`에서 관리합니다.")
+    return str(st.session_state.get("backtest_active_panel") or "Single Strategy")
 
 
 def render_backtest_tab() -> None:
@@ -15101,7 +15089,7 @@ def render_backtest_tab() -> None:
             - `Candidate Review`: 후보 초안, Review Note, registry 저장, Pre-Live route 확인을 순서대로 처리합니다.
             - `Pre-Live Review`: current candidate를 실전 전 관찰 / 보류 / 재검토 운영 기록으로 넘깁니다.
             - `Portfolio Proposal`: 후보 여러 개를 목적 / 역할 / 비중 근거와 함께 묶는 제안 초안을 만듭니다.
-            - `Run History`: 저장된 실행 결과를 다시 보고, `Run Again` 또는 `Load Into Form`을 사용하는 보조 도구입니다.
+            - `Operations > Backtest Run History`: 저장된 실행 결과를 다시 보고, `Run Again` 또는 `Load Into Form`을 사용하는 운영 도구입니다.
             - `Load Into Form`을 누르면 저장된 입력값이 `Single Strategy` 화면으로 자동 이동하며 다시 채워집니다.
             - `quarterly strict prototype` 전략은 현재 **research-only** 경로입니다.
             """
@@ -15127,13 +15115,7 @@ def render_backtest_tab() -> None:
             )
             prefill_action_cols = st.columns([0.22, 0.78], gap="small")
             with prefill_action_cols[0]:
-                st.button(
-                    "Back To History",
-                    key="backtest_prefill_back_to_history",
-                    on_click=_request_backtest_panel,
-                    args=("History",),
-                    use_container_width=True,
-                )
+                st.caption("History는 `Operations > Backtest Run History`에서 다시 열 수 있습니다.")
             st.session_state.backtest_prefill_notice = None
 
         pending_strategy_choice = st.session_state.get("backtest_prefill_strategy_choice")
@@ -16717,11 +16699,6 @@ def render_backtest_tab() -> None:
 
     elif active_panel == "Candidate Review":
         _render_candidate_review_workspace()
-
-    elif active_panel == "History":
-        st.markdown("### Backtest History")
-        st.caption("Single-strategy runs and strategy-comparison runs share the same persistent history and drilldown surface.")
-        _render_persistent_backtest_history()
 
     elif active_panel == "Pre-Live Review":
         _render_pre_live_review_workspace()
