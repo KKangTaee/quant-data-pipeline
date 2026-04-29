@@ -5,42 +5,47 @@ from datetime import date, timedelta
 import pandas as pd
 import streamlit as st
 
+from app.web.pages.backtest_candidate_review_helpers import (
+    CANDIDATE_REVIEW_DECISION_OPTIONS,
+    CURRENT_CANDIDATE_RECORD_TYPE_OPTIONS,
+    _build_candidate_board_operating_evaluation,
+    _build_candidate_intake_readiness_evaluation,
+    _build_candidate_registry_scope_evaluation,
+    _build_candidate_review_board_rows_for_display,
+    _build_candidate_review_note_from_draft,
+    _build_candidate_review_notes_rows_for_display,
+    _build_current_candidate_registry_row_from_review_note,
+    _build_current_candidate_registry_rows_for_display,
+    _build_existing_review_note_registry_rows_for_display,
+    _candidate_review_decision_label,
+    _candidate_review_draft_widget_key,
+    _candidate_review_next_step,
+    _candidate_review_note_existing_registry_rows,
+    _candidate_review_note_to_registry_defaults,
+    _candidate_review_note_widget_key,
+    _candidate_review_reason,
+    _candidate_review_stage,
+    _current_candidate_record_type_label,
+    _current_candidate_registry_contract_summary,
+    _current_candidate_registry_selection_label,
+    _default_candidate_review_decision_from_draft,
+    _default_candidate_review_next_action,
+    _default_candidate_review_operator_reason,
+)
+from app.web.runtime import (
+    CANDIDATE_REVIEW_NOTES_FILE,
+    CURRENT_CANDIDATE_REGISTRY_FILE,
+    append_candidate_review_note as _append_candidate_review_note,
+    append_current_candidate_registry_row as _append_current_candidate_registry_row,
+    load_candidate_review_notes as _load_candidate_review_notes,
+    load_current_candidate_registry_latest as _load_current_candidate_registry_latest,
+    load_pre_live_candidate_registry_latest as _load_pre_live_candidate_registry_latest,
+)
+
 
 def render_candidate_review_workspace() -> None:
     from app.web.pages import backtest as bt
 
-    CANDIDATE_REVIEW_DECISION_OPTIONS = bt.CANDIDATE_REVIEW_DECISION_OPTIONS
-    CANDIDATE_REVIEW_NOTES_FILE = bt.CANDIDATE_REVIEW_NOTES_FILE
-    CURRENT_CANDIDATE_RECORD_TYPE_OPTIONS = bt.CURRENT_CANDIDATE_RECORD_TYPE_OPTIONS
-    CURRENT_CANDIDATE_REGISTRY_FILE = bt.CURRENT_CANDIDATE_REGISTRY_FILE
-    _append_candidate_review_note = bt._append_candidate_review_note
-    _append_current_candidate_registry_row = bt._append_current_candidate_registry_row
-    _build_candidate_board_operating_evaluation = bt._build_candidate_board_operating_evaluation
-    _build_candidate_intake_readiness_evaluation = bt._build_candidate_intake_readiness_evaluation
-    _build_candidate_registry_scope_evaluation = bt._build_candidate_registry_scope_evaluation
-    _build_candidate_review_board_rows_for_display = bt._build_candidate_review_board_rows_for_display
-    _build_candidate_review_note_from_draft = bt._build_candidate_review_note_from_draft
-    _build_candidate_review_notes_rows_for_display = bt._build_candidate_review_notes_rows_for_display
-    _build_current_candidate_registry_row_from_review_note = bt._build_current_candidate_registry_row_from_review_note
-    _build_current_candidate_registry_rows_for_display = bt._build_current_candidate_registry_rows_for_display
-    _build_existing_review_note_registry_rows_for_display = bt._build_existing_review_note_registry_rows_for_display
-    _candidate_review_decision_label = bt._candidate_review_decision_label
-    _candidate_review_draft_widget_key = bt._candidate_review_draft_widget_key
-    _candidate_review_next_step = bt._candidate_review_next_step
-    _candidate_review_note_existing_registry_rows = bt._candidate_review_note_existing_registry_rows
-    _candidate_review_note_to_registry_defaults = bt._candidate_review_note_to_registry_defaults
-    _candidate_review_note_widget_key = bt._candidate_review_note_widget_key
-    _candidate_review_reason = bt._candidate_review_reason
-    _candidate_review_stage = bt._candidate_review_stage
-    _current_candidate_record_type_label = bt._current_candidate_record_type_label
-    _current_candidate_registry_contract_summary = bt._current_candidate_registry_contract_summary
-    _current_candidate_registry_selection_label = bt._current_candidate_registry_selection_label
-    _default_candidate_review_decision_from_draft = bt._default_candidate_review_decision_from_draft
-    _default_candidate_review_next_action = bt._default_candidate_review_next_action
-    _default_candidate_review_operator_reason = bt._default_candidate_review_operator_reason
-    _load_candidate_review_notes = bt._load_candidate_review_notes
-    _load_current_candidate_registry_latest = bt._load_current_candidate_registry_latest
-    _load_pre_live_candidate_registry_latest = bt._load_pre_live_candidate_registry_latest
     _queue_current_candidate_compare_prefill = bt._queue_current_candidate_compare_prefill
     _request_backtest_panel = bt._request_backtest_panel
 

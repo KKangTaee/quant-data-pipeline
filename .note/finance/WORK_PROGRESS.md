@@ -2372,3 +2372,17 @@ Detailed historical logs were archived on `2026-04-13`.
   - synced the web backtest UI flow document
 - Durable takeaway:
   - Candidate Review can now be edited from a focused module before adding more Pre-Live workflow work.
+
+### 2026-04-29
+- Split Candidate Review render code from Candidate Review helper logic.
+- Changed:
+  - added `app/web/pages/backtest_candidate_review_helpers.py`
+  - moved Candidate Review readiness evaluation, Review Note conversion, registry row conversion, and display helper functions out of `backtest.py`
+  - changed `app/web/pages/backtest_candidate_review.py` to import helper logic directly instead of aliasing helper functions from `backtest.py`
+  - kept cross-panel handoff functions such as current-candidate compare prefill in `backtest.py` for now
+  - synced README, comprehensive analysis, and web backtest UI flow docs
+- Verification:
+  - `.venv/bin/python -m py_compile app/web/pages/backtest.py app/web/pages/backtest_candidate_review.py app/web/pages/backtest_candidate_review_helpers.py` passed
+  - Streamlit smoke checked `Backtest > Candidate Review` on localhost and confirmed the Candidate Packaging screen renders
+- Durable takeaway:
+  - Candidate Review now has a clearer two-file boundary: render in `backtest_candidate_review.py`, 판단 / 변환 / scoring helper in `backtest_candidate_review_helpers.py`.

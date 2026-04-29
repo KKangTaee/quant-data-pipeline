@@ -3221,3 +3221,15 @@ Detailed historical analysis was archived on `2026-04-13`.
   - shared helper와 registry 변환 helper는 1차 리팩토링에서는 `backtest.py`에 남겨 import 위험을 줄였다
 - Follow-up:
   - 다음 Pre-Live 운영 점검 개발은 Candidate Review 화면 코드가 분리된 상태에서 진행한다
+
+### 2026-04-29 - Candidate Review는 render와 helper를 분리해서 관리한다
+- User request:
+  - Candidate Review를 별도 파일로 뺀 뒤에도 helper / registry 변환 일부가 `backtest.py`에 남아 있으므로, 화면 렌더링 코드와 기능 helper 코드를 나눠 관리하는 방향이 좋다고 보고 진행을 승인함
+- Interpreted goal:
+  - Candidate Review 화면 수정과 후보 판단 / 변환 로직 수정을 서로 덜 건드리게 만들어, 이후 Pre-Live 작업을 더 얹기 전에 `backtest.py` 의존도를 줄여야 함
+- Analysis result:
+  - `app/web/pages/backtest_candidate_review.py`는 Candidate Packaging 화면 render를 맡는다
+  - `app/web/pages/backtest_candidate_review_helpers.py`는 Candidate Review decision option, readiness evaluation, Review Note 생성, registry row 변환, display DataFrame helper를 맡는다
+  - `backtest.py`에는 panel routing wrapper와 cross-panel handoff 함수만 남기고, Candidate Review helper 함수들은 새 helper 모듈에서 import한다
+- Follow-up:
+  - 다음 리팩토링 후보는 Pre-Live Review module 또는 current-candidate compare prefill helper 분리다
