@@ -39,8 +39,8 @@ Ingestion / Data Trust
   -> Real-Money Signal
   -> Hold / Blocker Resolution
   -> Compare
-  -> Candidate Draft
-  -> Candidate Review Note
+  -> Candidate Intake & Review Note 저장
+  -> Review Notes에서 Registry 후보 여부 결정
   -> Current Candidate Registry
   -> Candidate Board / Compare / Pre-Live Review
   -> Portfolio Proposal
@@ -50,7 +50,8 @@ Ingestion / Data Trust
 구분:
 
 - `Candidate Draft`는 latest run 또는 history run을 후보처럼 읽는 저장 전 초안이다.
-- `Candidate Review Note`는 사람이 판단과 next action을 남기는 기록이다.
+- `Candidate Intake & Review Note 저장`은 Draft 수신 정보가 충분한지 확인하고 사람이 판단과 next action을 저장하는 사용자-facing 6단계다.
+- `Review Notes`는 저장된 판단 기록을 다시 보고 실제 registry row로 남길지 결정하는 사용자-facing 7단계다.
 - `Current Candidate Registry`는 후보로 남기기로 한 row의 저장소다.
 - `Pre-Live Review`는 실제 돈 없이 paper / watchlist / hold / re-review 상태를 기록하는 운영 단계다.
 - `Portfolio Proposal`은 후보 묶음 제안이며, live trading approval이 아니다.
@@ -62,7 +63,7 @@ Ingestion / Data Trust
 |---|---|
 | `핵심 개념 가이드` | 실전 승격 흐름, Real-Money Contract, GTAA Risk-Off 후보군, interval, Compare 대상 선정법 해석 |
 | `1~11 단계 실행 흐름` | 테스트에서 상용화 후보 검토까지의 단계별 흐름. 각 단계는 expander로 접어 읽는다 |
-| `단계 통과 기준` | 4->5, 5->6처럼 다음 단계로 넘길지 판단하는 stop/go 기준. 각 기준은 expander로 접어 읽는다 |
+| `단계 통과 기준` | 4->5, 5->6, 6->7처럼 다음 단계로 넘길지 판단하는 stop/go 기준. 각 기준은 expander로 접어 읽는다 |
 | `문서와 파일` | 현재 먼저 볼 문서, 주요 registry / guide / log 파일, live approval이 아님을 구분하는 운영 경계 |
 
 ## Phase 30 Portfolio Proposal 계약
@@ -289,8 +290,10 @@ Latest Backtest Run 또는 History selected record
   -> Review As Candidate Draft
   -> Backtest > Candidate Review > Candidate Intake Draft
   -> result snapshot / Real-Money signal / data trust snapshot 확인
-  -> optional Save Candidate Review Note
+  -> 6단계 Intake 저장 준비 확인
+  -> Save Candidate Review Note
   -> CANDIDATE_REVIEW_NOTES.jsonl
+  -> Review Notes에서 registry 후보 여부 결정
   -> optional Prepare Current Candidate Registry Row
   -> explicit Append To Current Candidate Registry
 ```
@@ -306,7 +309,8 @@ Latest Backtest Run 또는 History selected record
 - 후보 row에 `compare_prefill`도 없고 변환 가능한 `contract`도 없으면,
   사용자가 해결할 수 있는 설정 문제가 아니라 해당 후보 row의 compare 재진입 정보가 부족한 상태다.
 - Candidate Intake Draft는 registry에 저장된 후보가 아니라 검토 초안이다.
-- Candidate Review Note는 초안을 보고 남기는 operator decision 기록이다.
+- Candidate Review Note는 초안을 보고 남기는 operator decision 기록이며,
+  현재 UI에서는 Draft 수신 정보와 operator reason / next action이 준비되어야 저장 버튼이 활성화된다.
 - Candidate Review Note를 저장해도 current candidate registry에 자동 등록되지 않는다.
 - Review Note를 registry row로 남기려면 `Review Notes` 탭에서 row preview를 확인한 뒤
   `Append To Current Candidate Registry`를 명시적으로 눌러야 한다.

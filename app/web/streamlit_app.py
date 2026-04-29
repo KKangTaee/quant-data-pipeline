@@ -3107,27 +3107,29 @@ def _render_guides_page() -> None:
                 "next_step": "여기서 후보를 좁힌 뒤, 좋은 run이나 비교할 만한 run은 Candidate Draft로 넘겨 검토합니다.",
             },
             {
-                "title": "6단계. Candidate Draft로 먼저 읽기",
+                "title": "6단계. Candidate Intake & Review Note 저장",
                 "path": "Backtest > Latest Backtest Run / History > Review As Candidate Draft",
-                "goal": "좋아 보이는 결과를 바로 후보 registry에 넣지 않고, 먼저 후보 검토 초안으로 읽습니다.",
+                "goal": "좋아 보이는 결과를 바로 후보 registry에 넣지 않고, 후보 초안 수신 상태를 확인한 뒤 운영자 판단을 Review Note로 저장합니다.",
                 "check": [
                     "`Review As Candidate Draft`로 `Candidate Review > Candidate Intake Draft` 이동",
-                    "`Suggested Type`, CAGR, MDD, Promotion, Shortlist 확인",
-                    "`Data Trust Snapshot`으로 결과 해석 조건 확인",
+                    "후보 이름 / source / result snapshot / Data Trust / Real-Money signal / settings snapshot 확인",
+                    "`Review Decision`, `Operator Reason`, `Next Action` 작성",
+                    "`6단계 Intake 저장 준비`가 `READY_TO_SAVE`인지 확인",
+                    "`Save Candidate Review Note` 클릭",
                 ],
-                "next_step": "Candidate Draft는 저장 전 초안입니다. 후보로 남길지 판단하려면 Review Note를 먼저 남깁니다.",
+                "next_step": "저장된 Review Note는 7단계에서 registry 후보로 남길지 다시 검토합니다.",
             },
             {
-                "title": "7단계. Candidate Review Note로 판단을 남기기",
-                "path": "Backtest > Candidate Review > Candidate Intake Draft",
-                "goal": "초안을 보고 후보 등록 검토, near-miss, scenario, 추가 근거 필요, reject 판단을 기록합니다.",
+                "title": "7단계. Review Notes에서 Registry 후보 여부 결정",
+                "path": "Backtest > Candidate Review > Review Notes",
+                "goal": "저장된 Review Note 중 실제 후보 목록에 남길 것과 참고 기록으로만 둘 것을 구분합니다.",
                 "check": [
-                    "`Review Decision` 선택",
-                    "`Operator Reason`에 왜 그렇게 판단했는지 기록",
-                    "`Next Action`에 다음에 확인할 일을 기록",
-                    "`Save Candidate Review Note`가 registry 등록이나 투자 승인이 아님을 확인",
+                    "저장된 `Review Decision`, `Operator Reason`, `Next Action` 다시 확인",
+                    "비교 근거와 Data Trust warning이 registry 후보로 남기기에 충분한지 확인",
+                    "후보로 남길 경우 `Prepare Current Candidate Registry Row`로 row preview 확인",
+                    "참고 기록이면 Review Note 상태로만 남김",
                 ],
-                "next_step": "후보로 남길 가치가 있으면 Review Notes에서 registry row 초안을 확인합니다.",
+                "next_step": "registry row로 남기기로 결정한 것만 8단계에서 append합니다.",
             },
             {
                 "title": "8단계. Current Candidate Registry에 명시적으로 남기기",
@@ -3266,6 +3268,44 @@ def _render_guides_page() -> None:
             st.warning(
                 "Data Trust warning은 Draft Score를 강제로 cap하지 않고 별도 gate로 표시합니다. "
                 "6단계 진입은 후보 검토 초안으로 보내는 것일 뿐, current candidate registry 저장이나 Pre-Live 승인과는 분리됩니다."
+            )
+
+        with st.expander("6단계에서 7단계로 넘어가는 최소 기준", expanded=True):
+            st.caption(
+                "이 기준은 Candidate Draft를 Review Note로 저장할 수 있는지 보는 기준입니다. "
+                "6단계에서 Draft 확인과 Review Note 저장을 함께 끝내고, 7단계에서는 저장된 Note를 registry 후보로 남길지 판단합니다."
+            )
+            intake_rows = pd.DataFrame(
+                [
+                    {
+                        "확인 항목": "후보 식별 / Source",
+                        "7단계 진행 가능": "후보 이름 또는 strategy key와 source가 확인됨",
+                        "멈춰야 하는 경우": "어떤 실행 결과에서 온 초안인지 식별할 수 없음",
+                    },
+                    {
+                        "확인 항목": "Result Snapshot",
+                        "7단계 진행 가능": "CAGR, MDD, End Balance 같은 핵심 결과 snapshot이 있음",
+                        "멈춰야 하는 경우": "성과 snapshot이 비어 있어 다음 사람이 판단 근거를 재현하기 어려움",
+                    },
+                    {
+                        "확인 항목": "Data Trust / Real-Money / Settings",
+                        "7단계 진행 가능": "Data Trust가 OK 또는 설명 가능한 warning이고, Real-Money signal과 설정 snapshot이 남아 있음",
+                        "멈춰야 하는 경우": "Data Trust error, Real-Money signal 공백, universe / ticker / cadence 정보 부족",
+                    },
+                    {
+                        "확인 항목": "Operator Reason / Next Action",
+                        "7단계 진행 가능": "왜 이 판단을 남기는지와 다음 행동이 작성됨",
+                        "멈춰야 하는 경우": "저장 버튼만 누르고 사람이 판단한 이유가 남지 않음",
+                    },
+                ]
+            )
+            st.dataframe(intake_rows, use_container_width=True, hide_index=True)
+            st.success(
+                "`6단계 Intake 저장 준비`가 `READY_TO_SAVE`이고 `Save Candidate Review Note`를 눌렀다면 "
+                "6단계는 pass로 보고 7단계 Review Notes 검토로 넘어갑니다."
+            )
+            st.warning(
+                "이 저장은 후보 registry append가 아닙니다. registry에 남길지는 7단계에서 Review Notes를 보고 다시 결정합니다."
             )
 
     st.markdown("### 문서와 파일")

@@ -3110,3 +3110,17 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 예시는 Equal Weight Same Universe, Global Relative Strength, Risk Parity Trend, SPY 또는 60/40을 비교군으로 두고 각각의 비교 목적과 통과 해석을 설명한다
 - Follow-up:
   - 사용자는 GTAA 실습에서 이 상황 예시를 기준으로 5단계 comparator set을 구성한다
+
+### 2026-04-29 - 6단계와 7단계는 Draft 확인 / Note 저장 / Registry 결정으로 재정리한다
+- User request:
+  - `Candidate Intake Draft`에서 통과되면 `Save Candidate Review Note`를 활성화하고, 사실상 6단계와 7단계를 하나로 묶는 것이 맞지 않느냐고 질문함
+- Interpreted goal:
+  - 이미 4단계 / 5단계에서 확인한 성과와 gate를 다시 반복하는 단계가 아니라, 후보 초안이 저장 가능한 검토 기록으로 전환되는지 명확히 보여줘야 함
+- Analysis result:
+  - 6단계는 `Candidate Intake & Review Note 저장`으로 재정의했다
+  - 6단계는 Draft 수신 상태 확인과 operator reason / next action 저장을 함께 처리한다
+  - `Save Candidate Review Note`는 후보 이름/source, result snapshot, Data Trust, Real-Money signal, settings snapshot, operator reason / next action이 준비된 경우에만 활성화된다
+  - 7단계는 저장된 Review Notes를 보고 실제 current candidate registry row로 남길지 결정하는 단계로 분리했다
+  - 8단계는 여전히 `Append To Current Candidate Registry`를 명시적으로 누르는 registry 저장 단계다
+- Follow-up:
+  - 사용자는 5단계 통과 후보를 Candidate Intake Draft로 보낸 뒤 `6단계 Intake 저장 준비`가 `READY_TO_SAVE`인지 확인하고 Review Note를 저장한다

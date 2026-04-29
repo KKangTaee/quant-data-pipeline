@@ -2284,3 +2284,14 @@ Detailed historical logs were archived on `2026-04-13`.
   - clarified what each comparator tests and what a pass interpretation would look like
 - Durable takeaway:
   - Operators now have both comparator categories and a concrete GTAA example for deciding what "meaningful Compare" means before moving to Candidate Draft.
+
+### 2026-04-29
+- Combined Candidate Draft intake and Review Note save into one user-facing step.
+- Changed:
+  - updated `Candidate Review > Candidate Intake Draft` copy to present step 6 as `Candidate Intake & Review Note 저장`
+  - added a `6단계 Intake 저장 준비` readiness box that checks candidate identity/source, result snapshot, Data Trust, Real-Money signal, settings snapshot, and operator reason / next action
+  - disabled `Save Candidate Review Note` until the intake readiness check passes
+  - redefined Guides steps so step 7 is now Review Notes registry-candidate decision and step 8 remains explicit current candidate registry append
+  - synced the walkthrough session note and web backtest UI flow doc without touching Phase 30 QA docs
+- Durable takeaway:
+  - Candidate Draft 확인과 Review Note 저장은 one-step intake workflow이고, registry append는 still a separate explicit decision.

@@ -6680,7 +6680,7 @@ def _render_candidate_review_workspace() -> None:
             "- `Candidate Review`는 후보를 읽고 다음 검토 행동을 정하는 화면입니다.\n"
             "- `Compare로 보기`: 후보끼리 같은 기간과 설정으로 다시 비교합니다.\n"
             "- `Pre-Live Review로 넘기기`: 후보를 실제 돈 없이 관찰 / 보류 / 재검토 상태로 기록합니다.\n"
-            "- `Candidate Review Note`: 후보 검토 초안을 봤을 때 운영자가 남기는 판단 기록입니다.\n"
+            "- `Candidate Intake & Review Note`: 후보 검토 초안의 핵심 정보가 들어왔는지 확인한 뒤 운영자 판단을 저장합니다.\n"
             "- 이 화면은 live trading 승인이나 최종 투자 판단을 하지 않습니다.\n"
             "- 후보 목록은 `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`의 active row 기준입니다."
         )
@@ -6709,10 +6709,11 @@ def _render_candidate_review_workspace() -> None:
             st.info("표시할 active current candidate가 없습니다.")
 
     with draft_tab:
-        st.markdown("#### Candidate Intake Draft")
+        st.markdown("#### Candidate Intake & Review Note 저장")
         st.caption(
-            "Latest Backtest Run 또는 History에서 보낸 후보 검토 초안을 확인합니다. "
-            "이 초안은 registry에 저장된 후보가 아니며, current candidate 승격도 아닙니다."
+            "6A에서는 Latest Backtest Run 또는 History에서 보낸 후보 검토 초안을 확인하고, "
+            "6B에서는 운영자 판단과 다음 행동을 Review Note로 저장합니다. "
+            "이 저장은 current candidate registry 등록이나 투자 승인이 아닙니다."
         )
         draft_notice = st.session_state.get("backtest_candidate_review_draft_notice")
         if draft_notice:
@@ -6789,6 +6790,37 @@ def _render_candidate_review_workspace() -> None:
                     value=date.today() + timedelta(days=14),
                     key=f"candidate_review_review_date_{draft_key}_{decision}",
                 )
+            intake_readiness = _build_candidate_intake_readiness_evaluation(
+                draft,
+                operator_reason=operator_reason,
+                next_action=next_action,
+            )
+            with st.container(border=True):
+                st.markdown("##### 6단계 Intake 저장 준비")
+                st.caption(
+                    "이 박스는 전략 품질 점수가 아니라, Candidate Draft가 Review Note로 저장될 만큼 "
+                    "필수 정보와 운영자 판단을 갖췄는지 보는 체크입니다."
+                )
+                readiness_cols = st.columns([0.22, 0.18, 0.2, 0.4], gap="small")
+                readiness_cols[0].metric(
+                    "Intake Status",
+                    "READY_TO_SAVE" if intake_readiness["ready"] else "NEEDS_FIX",
+                )
+                readiness_cols[1].metric("Completeness", f"{float(intake_readiness['score']):.1f} / 10")
+                readiness_cols[2].metric("Blockers", len(intake_readiness["blocking_reasons"]))
+                with readiness_cols[3]:
+                    st.caption("판정")
+                    st.markdown(f"**{intake_readiness['verdict']}**")
+                    st.caption("다음 행동")
+                    st.markdown(str(intake_readiness["next_action"]))
+                st.progress(max(0.0, min(float(intake_readiness["score"]) / 10.0, 1.0)))
+                st.dataframe(pd.DataFrame(intake_readiness["criteria_rows"]), use_container_width=True, hide_index=True)
+                if intake_readiness["ready"]:
+                    st.success("Draft 확인과 운영자 메모가 저장 가능한 상태입니다.")
+                else:
+                    st.error("저장 전 먼저 채울 항목: " + ", ".join(str(item) for item in intake_readiness["blocking_reasons"]))
+                if intake_readiness["warning_reasons"]:
+                    st.warning("Review Note에 함께 남길 주의 항목: " + ", ".join(str(item) for item in intake_readiness["warning_reasons"]))
             review_note = _build_candidate_review_note_from_draft(
                 draft,
                 review_decision=decision,
@@ -6798,7 +6830,12 @@ def _render_candidate_review_workspace() -> None:
             )
             with st.expander("Candidate Review Note JSON Preview", expanded=False):
                 st.json(review_note)
-            if st.button("Save Candidate Review Note", key=f"save_candidate_review_note_{draft_key}", use_container_width=True):
+            if st.button(
+                "Save Candidate Review Note",
+                key=f"save_candidate_review_note_{draft_key}",
+                disabled=not bool(intake_readiness["ready"]),
+                use_container_width=True,
+            ):
                 _append_candidate_review_note(review_note)
                 st.session_state.backtest_candidate_review_note_notice = (
                     f"Candidate Review Note `{review_note['review_note_id']}`를 저장했습니다. "
@@ -6812,8 +6849,8 @@ def _render_candidate_review_workspace() -> None:
     with notes_tab:
         st.markdown("#### Candidate Review Notes")
         st.caption(
-            "후보 검토 초안을 보고 남긴 운영자 판단 기록입니다. "
-            "이 기록은 current candidate registry나 Pre-Live registry와 별도로 관리됩니다."
+            "6단계에서 저장한 운영자 판단 기록입니다. "
+            "7단계에서는 이 기록 중 실제 후보 registry row로 남길 것을 고릅니다."
         )
         st.caption(f"Path: {CANDIDATE_REVIEW_NOTES_FILE}")
         if not review_notes:
@@ -10689,6 +10726,163 @@ def _queue_candidate_review_draft(draft: dict[str, Any]) -> None:
         "아직 registry에 저장된 것이 아니며, 투자 추천이나 live 승인도 아닙니다."
     )
     st.session_state.backtest_requested_panel = "Candidate Review"
+
+
+def _candidate_intake_value_present(value: Any) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        return bool(normalized and normalized not in {"-", "none", "nan", "unknown"})
+    if isinstance(value, (list, tuple, set, dict)):
+        return bool(value)
+    try:
+        return not bool(pd.isna(value))
+    except (TypeError, ValueError):
+        return True
+
+
+def _build_candidate_intake_readiness_evaluation(
+    draft: dict[str, Any],
+    *,
+    operator_reason: str,
+    next_action: str,
+) -> dict[str, Any]:
+    result = dict(draft.get("result_snapshot") or {})
+    signal = dict(draft.get("real_money_signal") or {})
+    data_trust = dict(draft.get("data_trust_snapshot") or {})
+    settings = dict(draft.get("settings_snapshot") or {})
+
+    identity_ready = _candidate_intake_value_present(draft.get("strategy_name")) or _candidate_intake_value_present(
+        draft.get("strategy_key")
+    )
+    source_ready = _candidate_intake_value_present(draft.get("source_kind"))
+    result_ready = all(
+        _candidate_intake_value_present(result.get(key))
+        for key in ("end_balance", "cagr", "maximum_drawdown")
+    )
+    data_status = str(data_trust.get("price_freshness_status") or "").strip().lower()
+    data_snapshot_ready = bool(data_trust) and any(
+        _candidate_intake_value_present(data_trust.get(key))
+        for key in ("requested_end", "actual_result_start", "actual_result_end", "result_rows", "price_freshness_status")
+    )
+    data_ready = data_snapshot_ready and data_status != "error"
+    real_money_ready = bool(signal) and any(_candidate_intake_value_present(value) for value in signal.values())
+    settings_core_ready = any(
+        _candidate_intake_value_present(settings.get(key))
+        for key in ("tickers", "preset_name", "universe_mode", "universe_contract")
+    )
+    settings_contract_ready = any(
+        _candidate_intake_value_present(settings.get(key))
+        for key in ("factor_freq", "rebalance_freq", "top", "benchmark_contract", "benchmark_ticker")
+    )
+    settings_ready = bool(settings) and settings_core_ready and settings_contract_ready
+    operator_ready = _candidate_intake_value_present(operator_reason) and _candidate_intake_value_present(next_action)
+
+    checks = [
+        {
+            "criteria": "후보 식별 / Source",
+            "ready": identity_ready and source_ready,
+            "points": 1.5,
+            "current": f"{draft.get('strategy_name') or draft.get('strategy_key') or '-'} / {draft.get('source_kind') or '-'}",
+            "judgment": "후보 이름과 source가 확인됨" if identity_ready and source_ready else "후보 이름 또는 source가 부족함",
+        },
+        {
+            "criteria": "Result Snapshot",
+            "ready": result_ready,
+            "points": 2.0,
+            "current": (
+                f"CAGR={result.get('cagr') or '-'}, "
+                f"MDD={result.get('maximum_drawdown') or '-'}, "
+                f"End={result.get('end_balance') or '-'}"
+            ),
+            "judgment": "성과 snapshot이 저장 가능" if result_ready else "CAGR / MDD / End Balance 중 누락 있음",
+        },
+        {
+            "criteria": "Data Trust Snapshot",
+            "ready": data_ready,
+            "points": 1.5,
+            "current": data_status.upper() if data_status else "SNAPSHOT_ONLY",
+            "judgment": (
+                "Data Trust가 해석 가능"
+                if data_ready
+                else "Data Trust snapshot이 없거나 price freshness error 상태"
+            ),
+        },
+        {
+            "criteria": "Real-Money Signal",
+            "ready": real_money_ready,
+            "points": 1.5,
+            "current": (
+                f"promotion={signal.get('promotion') or '-'}, "
+                f"deployment={signal.get('deployment') or '-'}"
+            ),
+            "judgment": "Real-Money signal이 비어 있지 않음" if real_money_ready else "Real-Money signal이 비어 있음",
+        },
+        {
+            "criteria": "Settings Snapshot",
+            "ready": settings_ready,
+            "points": 2.0,
+            "current": (
+                f"universe={settings.get('universe_mode') or settings.get('preset_name') or '-'}, "
+                f"tickers={len(settings.get('tickers') or []) if isinstance(settings.get('tickers'), list) else '-'}, "
+                f"top={settings.get('top') or '-'}, rebalance={settings.get('rebalance_freq') or '-'}"
+            ),
+            "judgment": "재현 가능한 설정 snapshot이 있음" if settings_ready else "universe / ticker / cadence 정보가 부족함",
+        },
+        {
+            "criteria": "Operator Reason / Next Action",
+            "ready": operator_ready,
+            "points": 1.5,
+            "current": "작성됨" if operator_ready else "미작성",
+            "judgment": "운영자 판단과 다음 행동이 작성됨" if operator_ready else "Review Note 저장 전 판단 메모 필요",
+        },
+    ]
+
+    max_points = sum(float(row["points"]) for row in checks)
+    earned_points = sum(float(row["points"]) for row in checks if row["ready"])
+    score = round((earned_points / max_points) * 10.0, 1) if max_points else 0.0
+    ready = all(bool(row["ready"]) for row in checks)
+
+    blocking_reasons = [str(row["criteria"]) for row in checks if not row["ready"]]
+    warning_reasons: list[str] = []
+    if data_status == "warning":
+        warning_reasons.append("Data Trust가 warning 상태이므로 Review Note에 사유를 남겨야 함")
+    excluded_tickers = data_trust.get("excluded_tickers") or []
+    if isinstance(excluded_tickers, list) and excluded_tickers:
+        warning_reasons.append(f"Excluded ticker {len(excluded_tickers)}개")
+    malformed_count = int(data_trust.get("malformed_price_row_count") or 0)
+    warning_count = int(data_trust.get("warning_count") or 0)
+    if malformed_count:
+        warning_reasons.append(f"Malformed price row group {malformed_count}개")
+    if warning_count:
+        warning_reasons.append(f"Data warning {warning_count}개")
+
+    if ready:
+        verdict = "6단계 Review Note 저장 가능"
+        next_step = "Save Candidate Review Note를 누른 뒤 Review Notes에서 registry 후보로 남길지 판단합니다."
+    else:
+        verdict = "6단계 저장 전 Draft 보강 필요"
+        next_step = "막힌 항목을 보강하거나, Latest / History / Compare에서 후보 초안을 다시 보내 확인합니다."
+
+    return {
+        "ready": ready,
+        "score": score,
+        "verdict": verdict,
+        "next_action": next_step,
+        "blocking_reasons": blocking_reasons,
+        "warning_reasons": warning_reasons,
+        "criteria_rows": [
+            {
+                "기준": row["criteria"],
+                "상태": "PASS" if row["ready"] else "BLOCK",
+                "현재 값": row["current"],
+                "점수": f"{float(row['points']):g} / {float(row['points']):g}" if row["ready"] else f"0 / {float(row['points']):g}",
+                "판단": row["judgment"],
+            }
+            for row in checks
+        ],
+    }
 
 
 def _candidate_review_draft_widget_key(draft: dict[str, Any]) -> str:
