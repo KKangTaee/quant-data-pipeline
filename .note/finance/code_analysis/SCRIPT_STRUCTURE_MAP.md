@@ -1,0 +1,98 @@
+# Finance Script Structure Map
+
+## 목적
+
+이 문서는 코드 수정자가 먼저 보는 빠른 스크립트 책임 지도다.
+상세 실행 흐름은 같은 폴더의 개별 flow 문서에 두고,
+여기에는 "어느 파일이 어떤 종류의 기능을 관리하는지"만 간략히 남긴다.
+
+코드 수정 전에 이 문서를 먼저 훑고, 실제 수정은 해당 영역의 상세 문서를 이어서 확인한다.
+
+## 갱신 기준
+
+아래 변경이 있으면 같은 작업 단위에서 이 문서를 갱신한다.
+
+- 새 Python 스크립트가 추가되거나 기존 스크립트가 삭제될 때
+- 스크립트 이름이 바뀌거나 위치가 이동할 때
+- 큰 모듈이 render / helper / runtime처럼 책임 단위로 분리될 때
+- 특정 스크립트가 관리하는 기능 범위가 눈에 띄게 바뀔 때
+
+작은 함수 내부 구현 변경, copy 변경, 일회성 실험 결과는 이 문서에 올리지 않는다.
+
+## App / Web
+
+| 스크립트 | 관리하는 기능 |
+|---|---|
+| `app/web/streamlit_app.py` | Finance Console top navigation, page entry, page-level routing |
+| `app/web/backtest_strategy_catalog.py` | Strategy display name, strategy key, family variant 선택 매핑 |
+| `app/web/pages/backtest.py` | Backtest page shell, panel routing, Single / Compare / History / Pre-Live / Portfolio Proposal의 아직 분리되지 않은 render logic, cross-panel handoff |
+| `app/web/pages/backtest_candidate_review.py` | `Backtest > Candidate Review`의 Candidate Packaging 화면 render |
+| `app/web/pages/backtest_candidate_review_helpers.py` | Candidate Review readiness 평가, Review Note 생성, current candidate registry row 변환, Candidate Review display table helper |
+
+## App / Runtime
+
+| 스크립트 | 관리하는 기능 |
+|---|---|
+| `app/web/runtime/backtest.py` | UI payload를 DB-backed backtest 실행으로 변환하는 runtime wrapper, Real-Money / guardrail / benchmark 계약 처리 |
+| `app/web/runtime/candidate_registry.py` | current candidate, candidate review note, pre-live registry JSONL path / load / append helper |
+| `app/web/runtime/history.py` | Backtest run history persistence helper |
+| `app/web/runtime/portfolio_proposal.py` | Portfolio proposal draft registry JSONL path / load / append helper |
+| `app/web/runtime/portfolio_store.py` | Saved portfolio persistence helper |
+
+## Finance Core
+
+| 스크립트 | 관리하는 기능 |
+|---|---|
+| `finance/sample.py` | DB-backed strategy example / smoke 실행 함수, UI runtime이 호출하는 sample-level strategy entry |
+| `finance/engine.py` | Strategy orchestration, input alignment, engine-level execution |
+| `finance/strategy.py` | 실제 portfolio simulation / rebalancing logic |
+| `finance/transform.py` | Strategy 공용 전처리, signal / factor / ranking transform helper |
+| `finance/performance.py` | 성과 요약, portfolio performance metric, weighted portfolio 계산 helper |
+| `finance/display.py` | CLI / notebook 성격의 display helper |
+| `finance/visualize.py` | 백테스트 결과 시각화 helper |
+
+## Finance Loaders
+
+| 스크립트 | 관리하는 기능 |
+|---|---|
+| `finance/loaders/price.py` | DB price history read path |
+| `finance/loaders/factors.py` | Factor snapshot read path |
+| `finance/loaders/fundamentals.py` | Fundamentals read path |
+| `finance/loaders/financial_statements.py` | Statement snapshot read path |
+| `finance/loaders/universe.py` | Universe / investability 관련 read path |
+| `finance/loaders/runtime_adapter.py` | loader output을 runtime / strategy 입력으로 맞추는 adapter |
+| `finance/loaders/_common.py` | loader 공통 DB / dataframe helper |
+
+## Finance Data / DB
+
+| 스크립트 | 관리하는 기능 |
+|---|---|
+| `finance/data/db/schema.py` | Finance DB table schema 기준 |
+| `finance/data/db/mysql.py` | MySQL connection / execution helper |
+| `finance/data/data.py` | 가격 데이터 수집 entry / orchestration |
+| `finance/data/data_format.py` | 수집 데이터 정규화 helper |
+| `finance/data/nyse.py` | NYSE universe source 수집 |
+| `finance/data/nyse_db.py` | NYSE universe DB persistence |
+| `finance/data/asset_profile.py` | Asset profile / ETF operability metadata 수집 |
+| `finance/data/fundamentals.py` | Fundamentals 수집 |
+| `finance/data/financial_statements.py` | Financial statement 수집 |
+| `finance/data/factors.py` | Factor 생성 / 저장 pipeline |
+
+## Repo-Local Automation
+
+| 스크립트 | 관리하는 기능 |
+|---|---|
+| `plugins/quant-finance-workflow/scripts/bootstrap_finance_phase_bundle.py` | 새 finance phase 문서 bundle 생성 |
+| `plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py` | finance diff의 docs / logs / generated artifact hygiene 점검 |
+| `plugins/quant-finance-workflow/scripts/manage_current_candidate_registry.py` | Current Candidate Registry list / show / validate / append helper |
+| `plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py` | Pre-Live Candidate Registry template / draft / list / show / validate / append helper |
+
+## 같이 볼 상세 문서
+
+| 작업 종류 | 상세 문서 |
+|---|---|
+| Backtest UI / Candidate Review / History / Proposal | `.note/finance/code_analysis/WEB_BACKTEST_UI_FLOW.md` |
+| UI payload -> runtime -> result bundle | `.note/finance/code_analysis/BACKTEST_RUNTIME_FLOW.md` |
+| Data / DB / loader | `.note/finance/code_analysis/DATA_DB_PIPELINE_FLOW.md` |
+| Strategy family 추가 / 연결 | `.note/finance/code_analysis/STRATEGY_IMPLEMENTATION_FLOW.md` |
+| Repo-local helper script | `.note/finance/code_analysis/AUTOMATION_SCRIPTS_GUIDE.md` |

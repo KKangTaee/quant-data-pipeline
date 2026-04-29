@@ -3233,3 +3233,17 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `backtest.py`에는 panel routing wrapper와 cross-panel handoff 함수만 남기고, Candidate Review helper 함수들은 새 helper 모듈에서 import한다
 - Follow-up:
   - 다음 리팩토링 후보는 Pre-Live Review module 또는 current-candidate compare prefill helper 분리다
+
+### 2026-04-29 - 코드 수정 전 script 책임 지도를 먼저 보도록 지침화한다
+- User request:
+  - 코드 수정이 들어갈 때 현재 프로젝트의 스크립트 구조와 각 스크립트가 관리하는 기능을 문서에 기록하고, 에이전트가 그 문서를 먼저 확인한 뒤 작업하도록 지침을 추가해 달라고 요청함
+  - 새 함수가 만들어질 때 그 함수가 어떤 기능을 하는지 상단에 간략히 표시하는 지침도 추가해 달라고 요청함
+- Interpreted goal:
+  - 큰 파일이 다시 비대해지거나 기능 위치가 흐려지는 문제를 줄이고, 다음 작업자가 파일 책임을 빠르게 파악한 뒤 수정하게 만들어야 함
+- Analysis result:
+  - `AGENTS.md`에 finance 코드 수정 전 `SCRIPT_STRUCTURE_MAP.md`와 관련 code analysis 문서를 먼저 확인하는 규칙을 추가했다
+  - `.note/finance/code_analysis/SCRIPT_STRUCTURE_MAP.md`를 새로 만들어 app/web, runtime, finance core, loaders, data/DB, repo-local automation의 script별 책임을 요약했다
+  - 새 script 추가, 이동, 분리, 책임 변경 시 해당 map과 상세 flow 문서를 같이 갱신하도록 했다
+  - 새 non-trivial domain / workflow / persistence / scoring 함수에는 목적 주석 또는 간결한 docstring을 남기되, 자명한 trivial helper에는 억지 주석을 달지 않는 기준으로 정리했다
+- Follow-up:
+  - 앞으로 Backtest UI나 finance core를 리팩토링할 때 먼저 script map에서 책임 위치를 확인하고, 경계가 바뀌면 같은 커밋에서 map을 갱신한다

@@ -10,6 +10,7 @@
 
 | 상황 | 먼저 볼 문서 |
 |---|---|
+| 어떤 스크립트가 어떤 책임을 갖는지 빠르게 확인 | `SCRIPT_STRUCTURE_MAP.md` |
 | backtest 실행이 어디서 시작해 어디서 끝나는지 확인 | `BACKTEST_RUNTIME_FLOW.md` |
 | DB / loader / ingestion 흐름 확인 | `DATA_DB_PIPELINE_FLOW.md` |
 | Streamlit Backtest UI, compare, history, saved replay 확인 | `WEB_BACKTEST_UI_FLOW.md` |
@@ -23,6 +24,8 @@
 
 기록한다:
 
+- 새 script가 생기거나 기존 script의 책임이 바뀐 경우
+- render / helper / runtime처럼 module boundary를 새로 나눈 경우
 - 실행 흐름이 바뀐 경우
 - 새 strategy family가 추가된 경우
 - 새 DB table, loader, persistence 경로가 생긴 경우
@@ -42,6 +45,7 @@
 | 문서 | 역할 |
 |---|---|
 | `FINANCE_COMPREHENSIVE_ANALYSIS.md` | finance 전체 시스템 구조와 현재 구현 상태의 큰 지도 |
+| `SCRIPT_STRUCTURE_MAP.md` | 코드 수정 전 빠르게 보는 script별 책임 지도 |
 | `code_analysis/*` | 실제 코드 수정자가 보는 개발자용 흐름 지도 |
 | `WORK_PROGRESS.md` | 최근 작업 진행 로그 |
 | `QUESTION_AND_ANALYSIS_LOG.md` | 사용자 질문과 설계 판단의 durable summary |
@@ -53,6 +57,7 @@
 코드 변경 후 아래 질문 중 하나라도 `yes`면 이 폴더의 문서를 확인한다.
 
 - 새 코드 경로가 기존 flow 문서에 없는가?
+- 새 script가 생겼거나 기존 script의 책임 / 위치가 바뀌었는가?
 - 다음 사람이 같은 파일을 고치려면 실행 순서를 다시 찾아야 하는가?
 - 새 strategy family가 single / compare / history / saved replay 중 일부에 연결됐는가?
 - 새 ingestion / DB / loader 경로가 생겼는가?

@@ -13,6 +13,10 @@
   - strategy research and backtesting
 - When a workstream can be split into independent investigation tracks, use available sub-agents to explore them in parallel.
 - If sub-agents are unnecessary for the current task, or the current session/tooling does not make them practical, continue directly instead of blocking work.
+- Before changing code in `finance` or the Streamlit finance app, first check the current script responsibility map:
+  - `.note/finance/code_analysis/SCRIPT_STRUCTURE_MAP.md`
+  - then the matching detailed flow document under `.note/finance/code_analysis/`
+  This is the default way to locate which script owns which behavior before editing.
 - Before changing code, identify which domain the task belongs to:
   - `finance/data/*`, `finance/data/db/*`: ingestion, schema, persistence
   - `finance/engine.py`, `finance/transform.py`, `finance/strategy.py`, `finance/performance.py`, `finance/display.py`, `finance/visualize.py`: backtest and analysis
@@ -121,6 +125,7 @@
 - Keep the document aligned with the current code and implemented workflow. Mark future plans explicitly as future work.
 - Use `.note/finance/code_analysis/` for developer-facing code flow documents.
 - Keep `.note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md` as the high-level system map, and put detailed code modification flow in `.note/finance/code_analysis/`.
+- Keep `.note/finance/code_analysis/SCRIPT_STRUCTURE_MAP.md` as the quick script responsibility map. When a code change adds a new script, renames or moves a script, splits a module, or materially changes what a script is responsible for, update this map in the same work unit.
 - When code changes add or materially alter runtime flow, DB/loader flow, Backtest UI flow, strategy implementation flow, or repo-local automation scripts, update the matching `.note/finance/code_analysis/*.md` document.
 - Do not update code analysis documents for small copy changes, one-off backtest results, or phase status updates unless the durable code flow changed.
 - Use `.note/finance/data_architecture/` for data / DB architecture documents.
@@ -248,6 +253,12 @@
   - `Total Balance`
   - `Total Return`
 
+## Function Documentation Rules
+- When adding a non-trivial function that owns domain logic, workflow routing, persistence conversion, scoring, validation, or cross-module handoff, add a short purpose comment immediately above it or a concise docstring inside it.
+- The comment should explain what the function is responsible for, not restate the function name line-by-line.
+- Trivial wrappers, obvious one-line helpers, local callbacks, and functions whose purpose is already completely clear from their name and context do not need forced comments.
+- If a function is moved during refactoring, preserve or improve the existing purpose comment only when it helps future readers find the boundary.
+
 ## Sample and Usage Rules
 - If a new core strategy or ingestion workflow is added, update `finance/sample.py` or add an equivalent usage example unless there is a clear reason not to.
 - Treat `finance/sample.py` as example-plus-smoke-test code, not as the main architecture boundary.
@@ -268,12 +279,14 @@
 ## Change Review Checklist
 - For finance backtest refinement work, was `check_finance_refinement_hygiene.py` run when it would materially help?
 - Does this change affect the project-level overview, setup flow, or main UI surface described in `README.md`?
+- Does this change add, rename, move, split, or materially change the responsibility of a script? If yes, update `.note/finance/code_analysis/SCRIPT_STRUCTURE_MAP.md` and the matching detailed flow document.
 - Does this change affect data source boundaries?
 - Does this change affect DB schema or table meaning?
 - Does this change alter strategy inputs, outputs, or assumptions?
 - Does this change require documentation sync in `FINANCE_COMPREHENSIVE_ANALYSIS.md`?
 - Does this change require an update to `.note/finance/code_analysis/` because a durable code flow changed?
 - Does this change require an update to `.note/finance/data_architecture/` because data / DB meaning changed?
+- Did newly added non-trivial functions get a short purpose comment or docstring when the intent is not obvious from the surrounding code?
 - If this phase is closing or handing off, does it require a phase-specific manual test checklist document?
 - If this phase is closing or handing off, do `AGENTS.md`, active skills, roadmap/index docs, or phase reference docs need to be refreshed to reflect the implemented workflow?
 - Does this change require an appended entry in `WORK_PROGRESS.md`?

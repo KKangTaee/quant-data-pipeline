@@ -2386,3 +2386,13 @@ Detailed historical logs were archived on `2026-04-13`.
   - Streamlit smoke checked `Backtest > Candidate Review` on localhost and confirmed the Candidate Packaging screen renders
 - Durable takeaway:
   - Candidate Review now has a clearer two-file boundary: render in `backtest_candidate_review.py`, 판단 / 변환 / scoring helper in `backtest_candidate_review_helpers.py`.
+
+### 2026-04-29
+- Added repository guidance for script responsibility mapping and function-purpose comments.
+- Changed:
+  - updated `AGENTS.md` so agents check `.note/finance/code_analysis/SCRIPT_STRUCTURE_MAP.md` and the matching code analysis flow doc before finance code edits
+  - added `.note/finance/code_analysis/SCRIPT_STRUCTURE_MAP.md` as the quick script responsibility map
+  - updated `code_analysis/README.md` and `FINANCE_DOC_INDEX.md` to point future code work to the new map
+  - added a function documentation rule for new non-trivial domain / workflow / persistence / scoring helpers
+- Durable takeaway:
+  - Future finance code changes should keep script responsibility documentation current when modules are added, moved, split, or materially repurposed.

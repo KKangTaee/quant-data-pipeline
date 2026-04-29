@@ -135,6 +135,7 @@
 | 문서 | 역할 |
 |---|---|
 | `.note/finance/code_analysis/README.md` | 코드 분석 문서의 기준, 갱신 조건, 읽는 순서 |
+| `.note/finance/code_analysis/SCRIPT_STRUCTURE_MAP.md` | 코드 수정 전 확인하는 script별 책임 지도 |
 | `.note/finance/code_analysis/BACKTEST_RUNTIME_FLOW.md` | UI payload에서 runtime, loader, strategy, result bundle까지의 실행 흐름 |
 | `.note/finance/code_analysis/DATA_DB_PIPELINE_FLOW.md` | data collection, DB persistence, loader read path 흐름 |
 | `.note/finance/code_analysis/WEB_BACKTEST_UI_FLOW.md` | Backtest UI, Single Strategy, Compare, History, Saved Portfolio 흐름 |
