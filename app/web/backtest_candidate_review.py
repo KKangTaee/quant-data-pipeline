@@ -5,7 +5,7 @@ from datetime import date, timedelta
 import pandas as pd
 import streamlit as st
 
-from app.web.pages.backtest_candidate_review_helpers import (
+from app.web.backtest_candidate_review_helpers import (
     CANDIDATE_REVIEW_DECISION_OPTIONS,
     CURRENT_CANDIDATE_RECORD_TYPE_OPTIONS,
     _build_candidate_board_operating_evaluation,
@@ -569,6 +569,9 @@ def render_candidate_review_workspace() -> None:
                     use_container_width=True,
                 ):
                     st.session_state["pre_live_candidate_to_review"] = selected_board_label
+                    st.session_state["pre_live_focus_candidate_label"] = selected_board_label
+                    st.session_state["pre_live_focus_registry_id"] = selected_board_row.get("registry_id")
+                    st.session_state["pre_live_focus_revision_id"] = selected_board_row.get("revision_id")
                     st.session_state["candidate_review_to_pre_live_notice"] = (
                         f"`{selected_board_row.get('title') or selected_board_row.get('registry_id')}` 후보를 "
                         "Candidate Packaging에서 Pre-Live Review로 열었습니다. "

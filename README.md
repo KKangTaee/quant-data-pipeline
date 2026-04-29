@@ -89,9 +89,9 @@ app/
   jobs/                  # ingestion jobs, diagnostics, run history
   web/
     streamlit_app.py     # Finance Console entry point
+    backtest_candidate_review.py # Candidate Review / Candidate Packaging UI
+    backtest_candidate_review_helpers.py # Candidate Review 판단/변환 helper
     pages/backtest.py    # Backtest UI
-    pages/backtest_candidate_review.py # Candidate Review / Candidate Packaging UI
-    pages/backtest_candidate_review_helpers.py # Candidate Review 판단/변환 helper
     runtime/             # UI-facing runtime wrappers
       candidate_registry.py
       portfolio_proposal.py

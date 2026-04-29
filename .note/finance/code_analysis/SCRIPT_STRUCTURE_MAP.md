@@ -25,9 +25,9 @@
 |---|---|
 | `app/web/streamlit_app.py` | Finance Console top navigation, page entry, page-level routing |
 | `app/web/backtest_strategy_catalog.py` | Strategy display name, strategy key, family variant 선택 매핑 |
+| `app/web/backtest_candidate_review.py` | `Backtest > Candidate Review`의 Candidate Packaging 화면 render |
+| `app/web/backtest_candidate_review_helpers.py` | Candidate Review readiness 평가, Review Note 생성, current candidate registry row 변환, Candidate Review display table helper |
 | `app/web/pages/backtest.py` | Backtest page shell, panel routing, Single / Compare / History / Pre-Live / Portfolio Proposal의 아직 분리되지 않은 render logic, cross-panel handoff |
-| `app/web/pages/backtest_candidate_review.py` | `Backtest > Candidate Review`의 Candidate Packaging 화면 render |
-| `app/web/pages/backtest_candidate_review_helpers.py` | Candidate Review readiness 평가, Review Note 생성, current candidate registry row 변환, Candidate Review display table helper |
 
 ## App / Runtime
 

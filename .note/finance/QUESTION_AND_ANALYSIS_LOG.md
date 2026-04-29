@@ -3247,3 +3247,19 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 새 non-trivial domain / workflow / persistence / scoring 함수에는 목적 주석 또는 간결한 docstring을 남기되, 자명한 trivial helper에는 억지 주석을 달지 않는 기준으로 정리했다
 - Follow-up:
   - 앞으로 Backtest UI나 finance core를 리팩토링할 때 먼저 script map에서 책임 위치를 확인하고, 경계가 바뀌면 같은 커밋에서 map을 갱신한다
+
+### 2026-04-30 - Pre-Live Review는 순서형 7단계 운영 점검 화면으로 본다
+- User request:
+  - Candidate Packaging에서 `Open Selected Candidate In Pre-Live Review`로 넘어온 뒤, 7단계가 왜 필요한지 / 무엇을 확인하는지 / 다음 단계로 갈 수 있는지 UI에서 잘 보이지 않는다고 지적함
+  - 기존 `Create From Current Candidate / Pre-Live Registry` 탭 구조가 사용자에게 의미가 잘 전달되지 않으므로, 유지가 꼭 필요한지 검토하고 더 자연스러운 UX로 개선해 달라고 요청함
+- Interpreted goal:
+  - 7단계는 후보를 다시 검증하는 단계가 아니라, Pre-Live 운영 상태와 추적 계획을 저장하고 Portfolio Proposal로 보낼 수 있는지 판단하는 단계로 보여야 함
+  - 6단계에서 넘어온 후보는 자동으로 이어지되, 직접 Pre-Live로 들어와 후보를 고르는 사용 경로도 막지 않아야 함
+- Analysis result:
+  - `Backtest > Pre-Live Review`를 탭 구조에서 `1. 운영 후보 확인`, `2. 운영 상태 / 추적 계획 결정`, `3. Portfolio Proposal 진입 평가`, `4. 저장 및 다음 단계` 순서형 화면으로 개편했다
+  - Candidate Packaging에서 넘어온 후보는 session state로 자동 선택하고, 직접 진입한 사용자는 current candidate를 선택할 수 있게 유지했다
+  - `Portfolio Proposal 진입 평가`는 10점 readiness와 route를 보여준다: `PORTFOLIO_PROPOSAL_READY`, `WATCHLIST_ONLY`, `PRE_LIVE_HOLD`, `REJECTED`, `SCHEDULED_REVIEW`
+  - saved Pre-Live record inspect는 하단 보조 도구로 낮춰 주 흐름을 방해하지 않게 했다
+  - Candidate Review render/helper 모듈은 Streamlit standalone page 노출을 피하기 위해 `app/web/` 하위로 이동했다
+- Follow-up:
+  - 사용자는 7단계에서 `paper_tracking` 상태와 필요한 reason / next action / review date / tracking plan을 저장한 뒤, `PORTFOLIO_PROPOSAL_READY`이면 8단계 Portfolio Proposal로 이동한다

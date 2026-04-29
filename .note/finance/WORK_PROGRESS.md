@@ -2396,3 +2396,18 @@ Detailed historical logs were archived on `2026-04-13`.
   - added a function documentation rule for new non-trivial domain / workflow / persistence / scoring helpers
 - Durable takeaway:
   - Future finance code changes should keep script responsibility documentation current when modules are added, moved, split, or materially repurposed.
+
+### 2026-04-30
+- Refactored the Pre-Live Review UX into a sequential step-7 operating check.
+- Changed:
+  - removed the primary `Create From Current Candidate / Pre-Live Registry` tab workflow from `Backtest > Pre-Live Review`
+  - rebuilt the screen as `1. 운영 후보 확인`, `2. 운영 상태 / 추적 계획 결정`, `3. Portfolio Proposal 진입 평가`, `4. 저장 및 다음 단계`
+  - added a 10-point Portfolio Proposal readiness evaluation with route labels such as `PORTFOLIO_PROPOSAL_READY`, `WATCHLIST_ONLY`, `PRE_LIVE_HOLD`, `REJECTED`, and `SCHEDULED_REVIEW`
+  - preserved direct Pre-Live entry while auto-selecting candidates opened from Candidate Packaging
+  - moved saved Pre-Live registry inspection into a lower auxiliary expander
+  - moved Candidate Review render/helper modules outside `app/web/pages/` to avoid Streamlit exposing them as standalone pages
+- Verification:
+  - `.venv/bin/python -m py_compile app/web/pages/backtest.py app/web/backtest_candidate_review.py app/web/backtest_candidate_review_helpers.py app/web/streamlit_app.py` passed
+  - Streamlit smoke checked `Backtest > Pre-Live Review` and confirmed the sequential step-7 screen renders with the new readiness box
+- Durable takeaway:
+  - Pre-Live Review is now an operating-state decision step, not a tabbed persistence utility.
