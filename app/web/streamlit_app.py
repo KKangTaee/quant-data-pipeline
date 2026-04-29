@@ -3023,10 +3023,10 @@ def _render_guides_page() -> None:
         st.dataframe(gtaa_example_rows, use_container_width=True, hide_index=True)
         st.caption(
             "이 예시에서 비교 대상 하나만 이기는 것이 목표가 아닙니다. "
-            "각 비교 대상 앞에서 후보의 역할을 말할 수 있어야 6단계 Candidate Draft로 넘길 근거가 생깁니다."
+            "각 비교 대상 앞에서 후보의 역할을 말할 수 있어야 6단계 Candidate Packaging으로 넘길 근거가 생깁니다."
         )
 
-    st.markdown("### 1~10 단계 실행 흐름")
+    st.markdown("### 1~8 단계 실행 흐름")
 
     with st.container(border=True):
         st.markdown("### 테스트에서 상용화 후보 검토까지 사용하는 흐름")
@@ -3045,8 +3045,8 @@ def _render_guides_page() -> None:
             "후보로 남길지, 비교할지, paper tracking / watchlist / 보류 / 재검토로 둘지 정하는 **별도 운영 절차**입니다."
         )
         st.caption(
-            "큰 흐름으로는 1-5단계가 테스트 / 검증 구간, 6-9단계가 후보 검토 / 운영 기록 구간, "
-            "10단계가 포트폴리오 제안과 live readiness 경계입니다."
+            "큰 흐름으로는 1-5단계가 테스트 / 검증 구간, 6단계가 후보 패키징 구간, "
+            "7단계가 Pre-Live 운영 기록, 8단계가 포트폴리오 제안과 live readiness 경계입니다."
         )
 
         step_rows = [
@@ -3104,53 +3104,30 @@ def _render_guides_page() -> None:
                     "`Focused Strategy > Real-Money Contract`로 한 전략씩 깊게 읽기",
                     "`Candidate Review > Send To Compare`에서 보낸 후보 묶음이 의도대로 채워졌는지 확인",
                 ],
-                "next_step": "여기서 후보를 좁힌 뒤, 좋은 run이나 비교할 만한 run은 Candidate Draft로 넘겨 검토합니다.",
+                "next_step": "여기서 후보를 좁힌 뒤, 좋은 run이나 비교할 만한 run은 Candidate Packaging으로 넘겨 Pre-Live 전달 준비를 합니다.",
             },
             {
-                "title": "6단계. Candidate Intake & Review Note 저장",
-                "path": "Backtest > Latest Backtest Run / History > Review As Candidate Draft",
-                "goal": "좋아 보이는 결과를 바로 후보 registry에 넣지 않고, 후보 초안 수신 상태를 확인한 뒤 운영자 판단을 Review Note로 저장합니다.",
+                "title": "6단계. Candidate Packaging으로 Pre-Live 전달 준비",
+                "path": "Backtest > Candidate Review > Candidate Intake Draft / Review Notes / Candidate Board",
+                "goal": "좋아 보이는 결과를 바로 Pre-Live로 보내지 않고, Review Note와 registry row로 남긴 뒤 Pre-Live가 읽을 수 있는 운영 후보 패키지인지 확인합니다.",
                 "check": [
                     "`Review As Candidate Draft`로 `Candidate Review > Candidate Intake Draft` 이동",
                     "후보 이름 / source / result snapshot / Data Trust / Real-Money signal / settings snapshot 확인",
+                    "`Candidate Packaging 저장 준비`에서 Review Note 저장 가능 여부 확인",
                     "`Review Decision`, `Operator Reason`, `Next Action` 작성",
-                    "`6단계 Intake 저장 준비`가 `READY_TO_SAVE`인지 확인",
                     "`Save Candidate Review Note` 클릭",
-                ],
-                "next_step": "저장된 Review Note는 7단계에서 registry 후보로 남길지 다시 검토합니다.",
-            },
-            {
-                "title": "7단계. Current Candidate Registry에 남길 범위 결정 및 저장",
-                "path": "Backtest > Candidate Review > Review Notes",
-                "goal": "저장된 Review Note를 Current / Near Miss / Scenario / Stop 중 어디까지 남길지 정하고, 통과하면 registry에 명시적으로 저장합니다.",
-                "check": [
-                    "저장된 `Review Decision`, `Operator Reason`, `Next Action` 다시 확인",
-                    "`7단계 Registry 후보 범위 판단`에서 Current / Near Miss / Scenario / Stop 범위 확인",
+                    "`Review Notes`에서 Current / Near Miss / Scenario / Stop 범위 확인",
                     "`Registry ID`, `Record Type`, `Strategy Family`, `Candidate Role` 확인",
-                    "`Current Candidate Registry Row JSON Preview`에서 저장될 row 확인",
                     "같은 Review Note가 이미 registry에 저장되어 있는지 확인",
-                    "이미 저장된 Review Note라면 append 버튼이 기본 비활성화되는지 확인",
-                    "정말 새 revision으로 다시 남길 때만 `같은 Review Note를 새 registry revision으로 다시 저장` 체크",
                     "`Append To Current Candidate Registry`가 자동 승격이 아니라 명시적 저장인지 확인",
-                    "참고 기록이면 Review Note 상태로만 남김",
-                ],
-                "next_step": "Registry에 저장한 후보는 Candidate Board의 8단계 Route를 확인합니다. `PRE_LIVE_READY`면 9단계로, `COMPARE_REVIEW_READY`면 Compare 재검토로 이동합니다.",
-            },
-            {
-                "title": "8단계. Candidate Board에서 후보를 운영 대상으로 읽기",
-                "path": "Backtest > Candidate Review > Candidate Board / Inspect Candidate / Send To Compare",
-                "goal": "7단계에서 저장한 후보를 성과 순위표가 아니라 current anchor, near miss, scenario 역할로 읽고 다음 운영 경로를 정합니다.",
-                "check": [
-                    "`Why It Exists`로 후보가 왜 남아 있는지 확인",
-                    "`Suggested Next Step`으로 compare 또는 Pre-Live로 보낼지 판단",
-                    "`8단계 Candidate Board 운영 판단`에서 Route가 `PRE_LIVE_READY`, `COMPARE_REVIEW_READY`, `BOARD_HOLD` 중 무엇인지 확인",
-                    "`PRE_LIVE_READY`이면 `Open Selected Candidate In Pre-Live Review`로 9단계 초안을 열기",
+                    "`Candidate Board`의 `Candidate Packaging 종합 판단`에서 Route 확인",
+                    "`PRE_LIVE_READY`이면 `Open Selected Candidate In Pre-Live Review`로 다음 단계 초안을 열기",
                     "`COMPARE_REVIEW_READY`이면 Compare Picker에서 비교할 후보를 추가해 다시 비교",
                 ],
-                "next_step": "운영 관찰이 필요하면 Pre-Live Review에서 paper / watchlist / hold 상태를 기록합니다.",
+                "next_step": "`PRE_LIVE_READY`인 후보만 7단계 Pre-Live Review로 넘깁니다. `COMPARE_REVIEW_READY`는 실패가 아니라 Compare 재검토 경로입니다.",
             },
             {
-                "title": "9단계. Pre-Live 운영 점검으로 후보 관리",
+                "title": "7단계. Pre-Live 운영 점검으로 후보 관리",
                 "path": "Backtest > Pre-Live Review",
                 "goal": "Real-Money 검증 신호와 후보 registry를 바탕으로 paper tracking, watchlist, 보류, 재검토 같은 운영 행동을 기록합니다.",
                 "check": [
@@ -3162,7 +3139,7 @@ def _render_guides_page() -> None:
                 "next_step": "Pre-Live 기록은 포트폴리오 제안이나 paper monitoring으로 이어질 수 있지만, 아직 실제 돈 투입 승인은 아닙니다.",
             },
             {
-                "title": "10단계. Portfolio Proposal로 후보 묶음을 검토하고 Live Readiness 경계 유지",
+                "title": "8단계. Portfolio Proposal로 후보 묶음을 검토하고 Live Readiness 경계 유지",
                 "path": "Backtest > Portfolio Proposal",
                 "goal": "후보 여러 개를 목적, 역할, 비중, 운영 상태와 함께 포트폴리오 제안 초안으로 묶습니다. 이 단계도 투자 승인이나 주문 지시가 아닙니다.",
                 "check": [
@@ -3228,8 +3205,8 @@ def _render_guides_page() -> None:
 
         with st.expander("5단계에서 6단계로 넘어가는 최소 기준", expanded=True):
             st.caption(
-                "이 기준은 `Compare` 결과를 보고 선택 후보를 `Candidate Draft`로 넘겨도 되는지 판단하는 기준입니다. "
-                "후보 registry 저장이나 투자 승인이 아니라, 6단계 검토 초안 진입 조건입니다."
+                "이 기준은 `Compare` 결과를 보고 선택 후보를 `Candidate Packaging`으로 넘겨도 되는지 판단하는 기준입니다. "
+                "후보 registry 저장이나 투자 승인이 아니라, Pre-Live 전달 준비 단계로 보낼 수 있는지 보는 진입 조건입니다."
             )
             draft_rows = pd.DataFrame(
                 [
@@ -3258,19 +3235,19 @@ def _render_guides_page() -> None:
             st.dataframe(draft_rows, use_container_width=True, hide_index=True)
             st.success(
                 "`Compare 정상 실행`, `Data Trust 해석 가능`, `Real-Money blocker 없음`, "
-                "상대 비교 근거가 있으면 6단계 Candidate Draft로 넘길 수 있습니다."
+                "상대 비교 근거가 있으면 6단계 Candidate Packaging으로 넘길 수 있습니다."
             )
             st.warning(
                 "Data Trust warning은 Draft Score를 강제로 cap하지 않고 별도 gate로 표시합니다. "
-                "6단계 진입은 후보 검토 초안으로 보내는 것일 뿐, current candidate registry 저장이나 Pre-Live 승인과는 분리됩니다."
+                "6단계 진입은 후보 패키징 초안으로 보내는 것일 뿐, current candidate registry 저장이나 Pre-Live 승인과는 분리됩니다."
             )
 
-        with st.expander("6단계에서 7단계로 넘어가는 최소 기준", expanded=True):
+        with st.expander("6단계 Candidate Packaging에서 7단계 Pre-Live로 넘어가는 최소 기준", expanded=True):
             st.caption(
-                "이 기준은 Candidate Draft를 Review Note로 저장할 수 있는지 보는 기준입니다. "
-                "6단계에서 Draft 확인과 Review Note 저장을 함께 끝내고, 7단계에서는 저장된 Note를 registry 후보로 남길지 판단합니다."
+                "이 기준은 Draft 확인, Review Note 저장, registry 저장, Candidate Board route 확인을 하나의 Candidate Packaging 단계로 묶어 봅니다. "
+                "`PRE_LIVE_READY`인 후보만 다음 단계인 Pre-Live Review로 넘어갑니다."
             )
-            intake_rows = pd.DataFrame(
+            packaging_rows = pd.DataFrame(
                 [
                     {
                         "확인 항목": "후보 식별 / Source",
@@ -3279,7 +3256,7 @@ def _render_guides_page() -> None:
                     },
                     {
                         "확인 항목": "Result Snapshot",
-                        "7단계 진행 가능": "CAGR, MDD, End Balance 같은 핵심 결과 snapshot이 있음",
+                        "7단계 진행 가능": "CAGR, MDD, End Balance 같은 핵심 결과 snapshot이 Review Note와 registry row에 남아 있음",
                         "멈춰야 하는 경우": "성과 snapshot이 비어 있어 다음 사람이 판단 근거를 재현하기 어려움",
                     },
                     {
@@ -3292,102 +3269,30 @@ def _render_guides_page() -> None:
                         "7단계 진행 가능": "왜 이 판단을 남기는지와 다음 행동이 작성됨",
                         "멈춰야 하는 경우": "저장 버튼만 누르고 사람이 판단한 이유가 남지 않음",
                     },
-                ]
-            )
-            st.dataframe(intake_rows, use_container_width=True, hide_index=True)
-            st.success(
-                "`6단계 Intake 저장 준비`가 `READY_TO_SAVE`이고 `Save Candidate Review Note`를 눌렀다면 "
-                "6단계는 pass로 보고 7단계 Review Notes 검토로 넘어갑니다."
-            )
-            st.warning(
-                "이 저장은 후보 registry append가 아닙니다. registry에 남길지는 7단계에서 Review Notes를 보고 다시 결정합니다."
-            )
-
-        with st.expander("7단계 registry 저장 최소 기준", expanded=True):
-            st.caption(
-                "이 기준은 저장된 Review Note를 어떤 registry 범위로 남기고, 같은 7단계 안에서 append까지 진행할 수 있는지 보는 기준입니다. "
-                "여기서 `Stop`이면 append하지 않고 Review Notes에만 남깁니다."
-            )
-            registry_scope_rows = pd.DataFrame(
-                [
                     {
-                        "범위": "Current Candidate",
-                        "7단계 저장 가능": "Review Decision이 registry candidate 검토이고, Compare 근거 / Data Trust / Real-Money gate / 설정 snapshot이 충분함",
-                        "Record Type": "`current_candidate`",
+                        "확인 항목": "Registry Scope / Record Type",
+                        "7단계 진행 가능": "Current Candidate로 남길 후보는 `current_candidate`, 참고 후보는 `near_miss` 또는 `scenario`로 맞게 저장됨",
+                        "멈춰야 하는 경우": "Current 후보 근거가 부족한데 `current_candidate`로 저장하려 하거나 Stop 범위임",
                     },
                     {
-                        "범위": "Near Miss",
-                        "7단계 저장 가능": "아직 주 후보는 아니지만 result snapshot, Data Trust, 설정 snapshot, 다음 재검토 이유가 남아 있음",
-                        "Record Type": "`near_miss`",
+                        "확인 항목": "중복 저장",
+                        "7단계 진행 가능": "같은 Review Note가 이미 저장된 경우 기본 append를 막고, 의도적 revision일 때만 체크박스를 켬",
+                        "멈춰야 하는 경우": "같은 판단을 의미 없이 반복 append하려는 경우",
                     },
                     {
-                        "범위": "Scenario",
-                        "7단계 저장 가능": "실전 후보라기보다 설정 비교용으로 남길 이유와 재현 가능한 설정이 있음",
-                        "Record Type": "`scenario`",
-                    },
-                    {
-                        "범위": "Stop",
-                        "7단계 저장 가능": "진행하지 않음. reject, Data Trust error, 설정/성과 snapshot 부족, 판단 메모 부족이면 Review Notes에만 남김",
-                        "Record Type": "-",
+                        "확인 항목": "Candidate Board Route",
+                        "7단계 진행 가능": "`Candidate Packaging 종합 판단`의 Route가 `PRE_LIVE_READY`",
+                        "멈춰야 하는 경우": "`COMPARE_REVIEW_READY`는 Compare 재검토, `BOARD_HOLD`는 보강 필요",
                     },
                 ]
             )
-            st.dataframe(registry_scope_rows, use_container_width=True, hide_index=True)
+            st.dataframe(packaging_rows, use_container_width=True, hide_index=True)
             st.success(
-                "`7단계 Registry 후보 범위 판단`이 Current / Near Miss / Scenario 중 하나로 나오고, "
-                "선택한 Record Type이 그 범위와 맞으면 같은 7단계에서 append 버튼이 활성화됩니다."
+                "`Candidate Packaging 저장 준비`가 저장 가능이고, Review Note와 registry row가 남았으며, "
+                "`Candidate Packaging 종합 판단` Route가 `PRE_LIVE_READY`이면 7단계 Pre-Live Review로 넘어갑니다."
             )
             st.warning(
-                "Current Candidate 범위는 가장 엄격합니다. Compare 근거가 없거나 Real-Money gate가 약하면 "
-                "Near Miss 또는 Scenario로 남기거나 7단계에서 멈추는 것이 기본입니다."
-            )
-            st.info(
-                "같은 Review Note가 이미 저장되어 있으면 append 버튼은 기본 비활성화됩니다. "
-                "의도적으로 새 revision을 남길 때만 중복 저장 체크박스를 켭니다."
-            )
-
-        with st.expander("8단계에서 9단계로 넘어가는 최소 기준", expanded=True):
-            st.caption(
-                "이 기준은 Candidate Board에서 registry 후보를 다시 읽은 뒤 Pre-Live Review로 넘겨도 되는지 보는 기준입니다. "
-                "Near Miss / Scenario는 8단계를 통과해도 보통 9단계가 아니라 Compare 재검토로 돌아갑니다."
-            )
-            board_rows = pd.DataFrame(
-                [
-                    {
-                        "확인 항목": "Registry Identity / Role",
-                        "9단계 진행 가능": "`registry_id`, strategy family/name, record type을 읽을 수 있음",
-                        "멈춰야 하는 경우": "후보 row가 무엇인지, 어떤 역할인지 식별할 수 없음",
-                    },
-                    {
-                        "확인 항목": "Result Snapshot",
-                        "9단계 진행 가능": "CAGR, MDD, End Balance 중 운영 판단에 쓸 값이 남아 있음",
-                        "멈춰야 하는 경우": "Candidate Board에서 성과 snapshot을 읽을 수 없음",
-                    },
-                    {
-                        "확인 항목": "Contract / Compare Prefill",
-                        "9단계 진행 가능": "설정 snapshot 또는 compare prefill이 있어 다음 화면에서 재진입 가능",
-                        "멈춰야 하는 경우": "어떤 universe / top / interval / guardrail 설정인지 재현하기 어려움",
-                    },
-                    {
-                        "확인 항목": "Review Context",
-                        "9단계 진행 가능": "왜 남긴 후보인지, 다음 행동이 무엇인지 notes 또는 review context에 있음",
-                        "멈춰야 하는 경우": "registry row만 있고 사람의 판단 이유가 비어 있음",
-                    },
-                    {
-                        "확인 항목": "Route",
-                        "9단계 진행 가능": "`current_candidate`이고 Real-Money gate가 `hold/blocked`가 아니어서 `PRE_LIVE_READY`",
-                        "멈춰야 하는 경우": "`near_miss` / `scenario`이면 Pre-Live보다 Compare 재검토가 기본",
-                    },
-                ]
-            )
-            st.dataframe(board_rows, use_container_width=True, hide_index=True)
-            st.success(
-                "`8단계 Candidate Board 운영 판단`의 Route가 `PRE_LIVE_READY`이면 "
-                "9단계 Pre-Live Review로 넘어갈 수 있습니다."
-            )
-            st.warning(
-                "`COMPARE_REVIEW_READY`는 실패가 아니라 다른 경로입니다. "
-                "이 경우 9단계로 바로 가지 말고 Compare에서 비교 후보를 추가해 다시 검토합니다."
+                "`COMPARE_REVIEW_READY`는 실패가 아니라 다른 경로입니다. 이 경우 Pre-Live로 바로 가지 말고 Compare에서 비교 후보를 추가해 다시 검토합니다."
             )
 
     st.markdown("### 문서와 파일")
@@ -3456,7 +3361,8 @@ def _render_guides_page() -> None:
             """
             - `Real-Money`는 개별 backtest 결과에 붙는 검증 신호입니다.
             - `Compare`는 후보를 서로 비교해 다음 검토 초안으로 보낼지 판단하는 단계입니다.
-            - `Candidate Draft`와 `Review Note`는 저장 전 검토 기록입니다.
+            - `Candidate Packaging`은 Draft / Review Note / Registry / Board route 확인을 하나로 묶은 단계입니다.
+            - `Candidate Draft`와 `Review Note`는 Candidate Packaging 안에서 쓰는 저장 전 검토 기록입니다.
             - `Current Candidate Registry`는 명시적으로 남긴 후보 목록입니다.
             - `Pre-Live Review`는 paper / watchlist / hold / re-review 같은 운영 상태 기록입니다.
             - `Portfolio Proposal`은 후보 묶음의 제안 초안이며, live trading 승인이 아닙니다.

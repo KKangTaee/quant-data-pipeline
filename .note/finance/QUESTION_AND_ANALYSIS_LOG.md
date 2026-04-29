@@ -3165,3 +3165,18 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Follow-up:
   - 사용자는 7단계 저장 뒤 `Candidate Board`에서 `8단계 Candidate Board 운영 판단`의 Route를 확인한다
   - `PRE_LIVE_READY`이면 Pre-Live Review로 열고, `COMPARE_REVIEW_READY`이면 Compare에서 비교 후보를 추가한다
+
+### 2026-04-29 - 6/7/8은 Candidate Packaging 하나의 단계로 합친다
+- User request:
+  - 6단계 Review Note, 7단계 registry 저장, 8단계 Candidate Board 확인이 사실상 하나의 기능처럼 보이며, 사용자-facing 단계로 쪼개져 있는 것이 프로그램 흐름을 이상하게 만든다고 지적함
+  - 세 단계를 하나로 합치고, 이 단계가 정확히 무엇을 하며 다음 단계로 넘어가는 조건이 무엇인지 통합적으로 보여 달라고 요청함
+- Interpreted goal:
+  - Draft / Review Note / Registry / Board route는 별도 퀀트 검증 단계가 아니라 Pre-Live 전달을 위한 후보 패키징 작업으로 보여야 함
+- Analysis result:
+  - 기존 6 / 7 / 8 user-facing 단계를 `6단계 Candidate Packaging` 하나로 합쳤다
+  - Candidate Packaging은 후보 초안 확인, Review Note 저장, registry row 저장, Candidate Board route 확인을 한 단계에서 처리한다
+  - 최종 통과 기준은 `Candidate Packaging 종합 판단`의 Route가 `PRE_LIVE_READY`인지 여부다
+  - `COMPARE_REVIEW_READY`는 실패가 아니라 Compare 재검토 경로이고, `BOARD_HOLD`는 Review Note 또는 registry row 보강 상태다
+  - Guides는 1~8 단계로 재정리했다: 6 Candidate Packaging, 7 Pre-Live Review, 8 Portfolio Proposal
+- Follow-up:
+  - 사용자는 5단계 Compare 통과 후보를 Candidate Packaging으로 보낸 뒤, Review Note / registry 저장을 마치고 Candidate Board의 Route가 `PRE_LIVE_READY`인지 확인한다

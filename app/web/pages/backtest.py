@@ -4430,7 +4430,7 @@ def _build_compare_relative_evidence(
         judgment = "성과와 위험 쪽에 모두 설명 가능한 상대 근거가 있음"
     elif advantages:
         score = 2.0
-        judgment = "일부 상대 우위가 있어 Candidate Draft 검토 가능"
+        judgment = "일부 상대 우위가 있어 Candidate Packaging 검토 가능"
     elif bottom_on_cagr_and_mdd:
         score = 0.0
         judgment = "CAGR과 MDD가 모두 최하위라 후보 초안 전에 재검토 필요"
@@ -4557,7 +4557,7 @@ def _build_compare_real_money_gate_assessment(bundle: dict[str, Any]) -> dict[st
 
     ready = promotion_ok and deployment_ok and blocker_ok
     if ready:
-        judgment = "Real-Money gate가 Candidate Draft 검토를 막지 않음"
+        judgment = "Real-Money gate가 Candidate Packaging 검토를 막지 않음"
     else:
         judgment = "Real-Money gate에서 먼저 해결할 blocker가 있음"
 
@@ -4646,13 +4646,13 @@ def _build_candidate_draft_readiness_evaluation(
     )
 
     if clean_pass:
-        verdict = "6단계 Candidate Draft 진행 가능"
+        verdict = "6단계 Candidate Packaging 진입 가능"
         tone = "success"
-        next_action = "선택 후보를 Candidate Draft로 보내고 operator 판단을 남깁니다."
+        next_action = "선택 후보를 Candidate Packaging으로 보내고 operator 판단과 registry 저장 준비를 남깁니다."
     elif conditional_pass:
-        verdict = "6단계 Candidate Draft 조건부 진행 가능"
+        verdict = "6단계 Candidate Packaging 조건부 진입 가능"
         tone = "warning"
-        next_action = "Candidate Draft로 넘기되 비교 약점과 확인 항목을 Review Note에 명시합니다."
+        next_action = "Candidate Packaging으로 넘기되 비교 약점과 확인 항목을 Review Note에 명시합니다."
     else:
         verdict = "5단계 Compare에서 먼저 추가 확인"
         tone = "error"
@@ -4742,17 +4742,17 @@ def _render_candidate_draft_readiness_box(bundles: list[dict[str, Any]]) -> None
     default_index = strategy_names.index(default_strategy) if default_strategy in strategy_names else 0
 
     with st.container(border=True):
-        st.markdown("##### 6단계 Candidate Draft 진입 평가")
+        st.markdown("##### 6단계 Candidate Packaging 진입 평가")
         st.caption(
-            "이 박스는 Compare 결과를 보고 선택 후보를 `Candidate Draft`로 넘겨도 되는지 판단하는 보조 신호입니다. "
-            "투자 승인이나 registry 저장이 아니라, 6단계 후보 검토 초안으로 보낼 수 있는지를 봅니다."
+            "이 박스는 Compare 결과를 보고 선택 후보를 `Candidate Packaging`으로 넘겨도 되는지 판단하는 보조 신호입니다. "
+            "투자 승인이나 registry 저장이 아니라, 후보를 Pre-Live로 보낼 수 있는 형태로 패키징할 준비가 됐는지를 봅니다."
         )
         candidate_strategy = st.selectbox(
-            "6단계로 넘길 후보",
+            "Candidate Packaging으로 넘길 후보",
             options=strategy_names,
             index=default_index,
             key="compare_candidate_draft_readiness_strategy",
-            help="Compare에 올린 전략 중 Candidate Draft로 검토할 후보를 고릅니다.",
+            help="Compare에 올린 전략 중 Candidate Packaging에서 검토할 후보를 고릅니다.",
         )
         evaluation = _build_candidate_draft_readiness_evaluation(
             bundles,
@@ -4776,7 +4776,7 @@ def _render_candidate_draft_readiness_box(bundles: list[dict[str, Any]]) -> None
             st.markdown(str(evaluation["next_action"]))
         st.progress(max(0.0, min(score / 10.0, 1.0)))
         st.caption(
-            "점수 기준: `8.0점 이상`은 깔끔한 6단계 진행, `6.5점 이상`은 조건부 진행, "
+            "점수 기준: `8.0점 이상`은 깔끔한 Candidate Packaging 진행, `6.5점 이상`은 조건부 진행, "
             "그 아래이면 Compare에서 더 확인합니다. Data Trust는 점수를 강제로 깎는 cap이 아니라 별도 gate로 표시합니다."
         )
 
@@ -4800,12 +4800,12 @@ def _render_candidate_draft_readiness_box(bundles: list[dict[str, Any]]) -> None
         elif evaluation["review_reasons"]:
             st.caption("Review Note에 같이 남길 항목: " + ", ".join(f"`{item}`" for item in evaluation["review_reasons"]))
         else:
-            st.caption("Candidate Draft로 넘기기 전에 막는 핵심 항목은 보이지 않습니다.")
+            st.caption("Candidate Packaging으로 넘기기 전에 막는 핵심 항목은 보이지 않습니다.")
 
         action_cols = st.columns([0.34, 0.66], gap="small")
         with action_cols[0]:
             if st.button(
-                "Send Selected Strategy To Candidate Draft",
+                "Send Selected Strategy To Candidate Packaging",
                 key="compare_send_candidate_draft",
                 disabled=not bool(evaluation["can_send_to_candidate_draft"]),
                 use_container_width=True,
@@ -4825,7 +4825,7 @@ def _render_candidate_draft_readiness_box(bundles: list[dict[str, Any]]) -> None
         with action_cols[1]:
             st.caption(
                 "버튼을 누르면 `Candidate Review > Candidate Intake Draft`로 이동합니다. "
-                "아직 current candidate registry 저장이나 Pre-Live 승인이 아닙니다."
+                "아직 current candidate registry 저장이나 Pre-Live 승인이 아니라 6단계 패키징 초안을 여는 동작입니다."
             )
 
         with st.expander("점수 계산 기준 보기", expanded=False):
@@ -6653,9 +6653,8 @@ def _render_current_candidate_bundle_workspace() -> None:
 def _render_candidate_review_workspace() -> None:
     st.markdown("### Candidate Review")
     st.caption(
-        "백테스트 결과를 바로 투자 추천으로 확정하는 화면이 아닙니다. "
-        "`CURRENT_CANDIDATE_REGISTRY`에 기록된 후보를 검토 보드로 읽고, "
-        "필요하면 Compare 또는 Pre-Live Review로 넘기는 중간 작업 화면입니다."
+        "6단계 Candidate Packaging 작업 공간입니다. 백테스트 후보를 바로 투자 추천으로 확정하는 화면이 아니라, "
+        "후보 초안 확인, Review Note 작성, registry row 저장, Pre-Live 전달 가능 여부를 한 단계 안에서 정리합니다."
     )
 
     rows = _load_current_candidate_registry_latest()
@@ -6675,12 +6674,41 @@ def _render_candidate_review_workspace() -> None:
     summary_cols[3].metric("Pre-Live Records", len(pre_live_rows))
     summary_cols[4].metric("Review Notes", len(review_notes))
 
+    with st.container(border=True):
+        st.markdown("#### 6단계 Candidate Packaging 통합 흐름")
+        st.caption(
+            "이 구간은 세 개의 별도 검증 단계가 아니라, 5단계 Compare를 통과한 후보를 "
+            "Pre-Live Review가 읽을 수 있는 운영 후보 패키지로 만드는 하나의 단계입니다."
+        )
+        packaging_rows = pd.DataFrame(
+            [
+                {
+                    "구성요소": "Draft 확인",
+                    "확인하는 것": "후보 이름, source, result snapshot, Data Trust, Real-Money signal, settings snapshot",
+                    "통과 신호": "Review Note 저장 가능",
+                },
+                {
+                    "구성요소": "Review Note / Registry 저장",
+                    "확인하는 것": "operator reason, next action, Current / Near Miss / Scenario 범위, 중복 저장 여부",
+                    "통과 신호": "Current Candidate Registry에 명시적으로 저장",
+                },
+                {
+                    "구성요소": "Pre-Live 전달 판단",
+                    "확인하는 것": "registry identity, result, contract, review context, Real-Money signal, route",
+                    "통과 신호": "`PRE_LIVE_READY`이면 다음 단계로 이동",
+                },
+            ]
+        )
+        st.dataframe(packaging_rows, use_container_width=True, hide_index=True)
+
     with st.expander("How To Use Candidate Review", expanded=False):
         st.markdown(
-            "- `Candidate Review`는 후보를 읽고 다음 검토 행동을 정하는 화면입니다.\n"
+            "- `Candidate Review`는 6단계 Candidate Packaging 작업 공간입니다.\n"
             "- `Compare로 보기`: 후보끼리 같은 기간과 설정으로 다시 비교합니다.\n"
             "- `Pre-Live Review로 넘기기`: 후보를 실제 돈 없이 관찰 / 보류 / 재검토 상태로 기록합니다.\n"
-            "- `Candidate Intake & Review Note`: 후보 검토 초안의 핵심 정보가 들어왔는지 확인한 뒤 운영자 판단을 저장합니다.\n"
+            "- `Candidate Intake Draft`: 후보 검토 초안의 핵심 정보가 들어왔는지 확인한 뒤 운영자 판단을 저장합니다.\n"
+            "- `Review Notes`: 저장된 판단을 current / near miss / scenario 중 어디로 남길지 정하고 registry row로 저장합니다.\n"
+            "- `Candidate Board`: 저장된 후보가 Pre-Live로 갈 수 있는지 최종 route를 확인합니다.\n"
             "- 이 화면은 live trading 승인이나 최종 투자 판단을 하지 않습니다.\n"
             "- 후보 목록은 `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`의 active row 기준입니다."
         )
@@ -6705,22 +6733,22 @@ def _render_candidate_review_workspace() -> None:
         )
         if rows:
             st.dataframe(_build_candidate_review_board_rows_for_display(rows), use_container_width=True, hide_index=True)
-            st.markdown("#### 8단계. Candidate Board 운영 확인")
+            st.markdown("#### Candidate Packaging: Pre-Live 전달 판단")
             st.caption(
-                "7단계에서 저장한 후보를 다시 읽고, 이 후보를 Pre-Live로 넘길지, "
+                "registry에 저장한 후보를 다시 읽고, 이 후보를 다음 단계인 Pre-Live Review로 넘길지, "
                 "Compare에서 다시 비교할지, 아니면 Board에 보류할지 판단합니다."
             )
             board_label_to_row = {_current_candidate_registry_selection_label(row): row for row in rows}
             selected_board_label = st.selectbox(
-                "8단계 확인 후보",
+                "Packaging 확인 후보",
                 options=list(board_label_to_row.keys()),
                 key="candidate_board_step8_candidate",
-                help="Candidate Board에서 다음 운영 경로를 판단할 후보를 고릅니다.",
+                help="Candidate Packaging에서 다음 운영 경로를 판단할 후보를 고릅니다.",
             )
             selected_board_row = board_label_to_row[selected_board_label]
             board_evaluation = _build_candidate_board_operating_evaluation(selected_board_row)
             with st.container(border=True):
-                st.markdown("##### 8단계 Candidate Board 운영 판단")
+                st.markdown("##### Candidate Packaging 종합 판단")
                 st.caption(
                     "이 점수는 전략 성과 점수가 아니라, registry에 저장된 후보가 다음 운영 화면으로 넘어갈 만큼 "
                     "역할, 근거, 설정, Real-Money 신호를 갖췄는지 보는 체크입니다."
@@ -6737,11 +6765,11 @@ def _render_candidate_review_workspace() -> None:
                 st.progress(max(0.0, min(float(board_evaluation["score"]) / 10.0, 1.0)))
                 st.dataframe(pd.DataFrame(board_evaluation["criteria_rows"]), use_container_width=True, hide_index=True)
                 if board_evaluation["can_move_to_pre_live"]:
-                    st.success("8단계 통과: 이 후보는 Pre-Live Review로 넘겨 운영 상태를 기록할 수 있습니다.")
+                    st.success("Candidate Packaging 통과: 이 후보는 Pre-Live Review로 넘겨 운영 상태를 기록할 수 있습니다.")
                 elif board_evaluation["can_move_to_compare"]:
-                    st.info("8단계 통과: 이 후보는 Pre-Live보다 Compare에서 다시 볼 후보입니다.")
+                    st.info("Candidate Packaging 확인 완료: 이 후보는 Pre-Live보다 Compare에서 다시 볼 후보입니다.")
                 else:
-                    st.error("8단계 보류: " + ", ".join(str(item) for item in board_evaluation["blocking_reasons"]))
+                    st.error("Candidate Packaging 보류: " + ", ".join(str(item) for item in board_evaluation["blocking_reasons"]))
                 if board_evaluation["warning_reasons"]:
                     st.warning("주의 항목: " + ", ".join(str(item) for item in board_evaluation["warning_reasons"]))
             route_action_cols = st.columns(2, gap="small")
@@ -6755,7 +6783,7 @@ def _render_candidate_review_workspace() -> None:
                     st.session_state["pre_live_candidate_to_review"] = selected_board_label
                     st.session_state["candidate_review_to_pre_live_notice"] = (
                         f"`{selected_board_row.get('title') or selected_board_row.get('registry_id')}` 후보를 "
-                        "8단계 Candidate Board에서 Pre-Live Review로 열었습니다. "
+                        "Candidate Packaging에서 Pre-Live Review로 열었습니다. "
                         "아직 live trading 승인이나 투자 실행은 아닙니다."
                     )
                     _request_backtest_panel("Pre-Live Review")
@@ -6778,11 +6806,11 @@ def _render_candidate_review_workspace() -> None:
             st.info("표시할 active current candidate가 없습니다.")
 
     with draft_tab:
-        st.markdown("#### Candidate Intake & Review Note 저장")
+        st.markdown("#### Candidate Packaging: Draft 확인과 Review Note 저장")
         st.caption(
-            "6A에서는 Latest Backtest Run 또는 History에서 보낸 후보 검토 초안을 확인하고, "
-            "6B에서는 운영자 판단과 다음 행동을 Review Note로 저장합니다. "
-            "이 저장은 current candidate registry 등록이나 투자 승인이 아닙니다."
+            "Latest Backtest Run 또는 History에서 보낸 후보 검토 초안을 확인하고, "
+            "운영자 판단과 다음 행동을 Review Note로 저장합니다. "
+            "이 작업은 Candidate Packaging의 첫 저장 지점이며, 아직 current candidate registry 등록이나 투자 승인이 아닙니다."
         )
         draft_notice = st.session_state.get("backtest_candidate_review_draft_notice")
         if draft_notice:
@@ -6865,7 +6893,7 @@ def _render_candidate_review_workspace() -> None:
                 next_action=next_action,
             )
             with st.container(border=True):
-                st.markdown("##### 6단계 Intake 저장 준비")
+                st.markdown("##### Candidate Packaging 저장 준비")
                 st.caption(
                     "이 박스는 전략 품질 점수가 아니라, Candidate Draft가 Review Note로 저장될 만큼 "
                     "필수 정보와 운영자 판단을 갖췄는지 보는 체크입니다."
@@ -6908,7 +6936,7 @@ def _render_candidate_review_workspace() -> None:
                 _append_candidate_review_note(review_note)
                 st.session_state.backtest_candidate_review_note_notice = (
                     f"Candidate Review Note `{review_note['review_note_id']}`를 저장했습니다. "
-                    "이 기록은 current candidate registry 등록이나 투자 승인이 아닙니다."
+                    "다음은 같은 Candidate Packaging 안에서 registry에 남길 범위를 정하는 작업입니다."
                 )
                 st.rerun()
             if st.button("Clear Candidate Draft", key="clear_candidate_review_draft", use_container_width=True):
@@ -6918,8 +6946,8 @@ def _render_candidate_review_workspace() -> None:
     with notes_tab:
         st.markdown("#### Candidate Review Notes")
         st.caption(
-            "6단계에서 저장한 운영자 판단 기록입니다. "
-            "7단계에서는 registry에 남길 범위를 정하고, 통과한 기록만 명시적으로 저장합니다."
+            "Candidate Packaging에서 저장한 운영자 판단 기록입니다. "
+            "여기서는 registry에 남길 범위를 정하고, 통과한 기록만 명시적으로 저장합니다."
         )
         st.caption(f"Path: {CANDIDATE_REVIEW_NOTES_FILE}")
         if not review_notes:
@@ -6937,7 +6965,7 @@ def _render_candidate_review_workspace() -> None:
             )
             selected_note = review_notes[note_labels.index(selected_note_label)]
             st.json(selected_note)
-            st.markdown("#### 7단계. Registry 후보 범위 결정 및 저장")
+            st.markdown("#### Candidate Packaging: Registry 후보 범위 결정 및 저장")
             st.caption(
                 "선택한 review note를 실제 current candidate registry row로 남길지 검토합니다. "
                 "범위 판단과 Record Type이 맞을 때 아래 저장 버튼이 활성화되며, "
@@ -6953,7 +6981,7 @@ def _render_candidate_review_workspace() -> None:
             registry_scope = _build_candidate_registry_scope_evaluation(selected_note)
             registry_key = _candidate_review_note_widget_key(selected_note)
             with st.container(border=True):
-                st.markdown("##### 7단계 Registry 후보 범위 판단")
+                st.markdown("##### Registry 후보 범위 판단")
                 st.caption(
                     "이 박스는 저장된 Review Note를 어떤 범위로 남길지 정합니다. "
                     "`Current Candidate`는 주 후보, `Near Miss`는 다시 볼 대안, `Scenario`는 설정 비교용 후보입니다."
@@ -7022,7 +7050,7 @@ def _render_candidate_review_workspace() -> None:
             allowed_record_types = set(registry_scope.get("allowed_record_types") or [])
             if allowed_record_types and record_type not in allowed_record_types:
                 st.error(
-                    "선택한 Record Type이 7단계 범위 판단과 맞지 않습니다. "
+                    "선택한 Record Type이 registry 범위 판단과 맞지 않습니다. "
                     "권장 범위로 바꾸거나 Review Note를 다시 확인하세요."
                 )
             input_cols = st.columns(3, gap="small")
@@ -7079,9 +7107,9 @@ def _render_candidate_review_workspace() -> None:
             )
             if save_disabled and review_decision != "reject_for_now":
                 if not bool(registry_scope["can_prepare_registry_row"]):
-                    st.error("7단계 범위 판단이 통과되어야 registry append를 진행할 수 있습니다.")
+                    st.error("Registry 범위 판단이 통과되어야 append를 진행할 수 있습니다.")
                 elif bool(allowed_record_types) and record_type not in allowed_record_types:
-                    st.error("7단계에서 허용된 Record Type 범위 안에서만 append할 수 있습니다.")
+                    st.error("허용된 Record Type 범위 안에서만 append할 수 있습니다.")
                 elif bool(existing_review_note_registry_rows) and not bool(allow_registry_revision_append):
                     st.info(
                         "이미 저장된 Review Note입니다. 같은 판단을 새 revision으로 다시 남길 이유가 있을 때만 "
@@ -7099,7 +7127,7 @@ def _render_candidate_review_workspace() -> None:
                 st.session_state.backtest_candidate_review_note_notice = (
                     f"Current Candidate Registry row `{registry_row['registry_id']}`를 append했습니다. "
                     "이 기록도 투자 승인이나 live trading 승인은 아닙니다. "
-                    "다음은 Candidate Board의 8단계 운영 확인입니다."
+                    "다음은 Candidate Board에서 Candidate Packaging 종합 판단을 확인하는 작업입니다."
                 )
                 st.rerun()
 
@@ -10760,15 +10788,15 @@ def _build_candidate_board_operating_evaluation(row: dict[str, Any]) -> dict[str
 
     if can_move_to_pre_live:
         route_label = "PRE_LIVE_READY"
-        verdict = "8단계 통과: Pre-Live 운영 기록으로 넘길 수 있음"
+        verdict = "Candidate Packaging 통과: Pre-Live 운영 기록으로 넘길 수 있음"
         next_action = "Pre-Live Review에서 paper tracking / watchlist / hold 같은 운영 상태를 저장합니다."
     elif can_move_to_compare:
         route_label = "COMPARE_REVIEW_READY"
-        verdict = "8단계 통과: Compare에서 다시 비교할 후보"
+        verdict = "Candidate Packaging 확인 완료: Compare에서 다시 비교할 후보"
         next_action = "Compare 후보 선택 목록에서 비교할 다른 후보를 추가한 뒤 실행합니다."
     else:
         route_label = "BOARD_HOLD"
-        verdict = "8단계 보류: Board에서 역할과 근거를 먼저 보강"
+        verdict = "Candidate Packaging 보류: Board에서 역할과 근거를 먼저 보강"
         next_action = "후보 식별, 성과 snapshot, 설정 snapshot, Real-Money 신호, 판단 메모를 확인합니다."
 
     checks = [
@@ -11046,7 +11074,7 @@ def _candidate_review_draft_from_history_record(record: dict[str, Any]) -> dict[
 def _queue_candidate_review_draft(draft: dict[str, Any]) -> None:
     st.session_state.backtest_candidate_review_draft = draft
     st.session_state.backtest_candidate_review_draft_notice = (
-        "후보 검토 초안을 Candidate Review로 보냈습니다. "
+        "후보 검토 초안을 Candidate Packaging으로 보냈습니다. "
         "아직 registry에 저장된 것이 아니며, 투자 추천이나 live 승인도 아닙니다."
     )
     st.session_state.backtest_requested_panel = "Candidate Review"
@@ -11183,10 +11211,10 @@ def _build_candidate_intake_readiness_evaluation(
         warning_reasons.append(f"Data warning {warning_count}개")
 
     if ready:
-        verdict = "6단계 Review Note 저장 가능"
-        next_step = "Save Candidate Review Note를 누른 뒤 Review Notes에서 registry 후보로 남길지 판단합니다."
+        verdict = "Candidate Packaging Review Note 저장 가능"
+        next_step = "Save Candidate Review Note를 누른 뒤 같은 Candidate Packaging 안에서 registry 후보 범위를 정합니다."
     else:
-        verdict = "6단계 저장 전 Draft 보강 필요"
+        verdict = "Candidate Packaging 저장 전 Draft 보강 필요"
         next_step = "막힌 항목을 보강하거나, Latest / History / Compare에서 후보 초안을 다시 보내 확인합니다."
 
     return {
@@ -11432,25 +11460,25 @@ def _build_candidate_registry_scope_evaluation(note: dict[str, Any]) -> dict[str
         scope_label = "CURRENT_CANDIDATE_SCOPE"
         recommended_record_type = "current_candidate"
         allowed_record_types = ["current_candidate"]
-        verdict = "7단계 Current Candidate registry 저장 가능"
+        verdict = "Current Candidate registry 저장 가능"
         next_action = "Current Candidate row preview를 확인한 뒤 append 버튼으로 저장합니다."
     elif near_miss_scope_ready:
         scope_label = "NEAR_MISS_SCOPE"
         recommended_record_type = "near_miss"
         allowed_record_types = ["near_miss"]
-        verdict = "7단계 Near Miss registry 저장 가능"
+        verdict = "Near Miss registry 저장 가능"
         next_action = "Near Miss row로 남기되, 다음 비교 / 재검토 조건을 notes에 남깁니다."
     elif scenario_scope_ready:
         scope_label = "SCENARIO_SCOPE"
         recommended_record_type = "scenario"
         allowed_record_types = ["scenario"]
-        verdict = "7단계 Scenario registry 저장 가능"
+        verdict = "Scenario registry 저장 가능"
         next_action = "Scenario row로 남기고, 비교용 설정이라는 점을 notes에 남깁니다."
     else:
         scope_label = "STOP_OR_REVIEW_MORE"
         recommended_record_type = ""
         allowed_record_types = []
-        verdict = "7단계에서 추가 확인 필요"
+        verdict = "Registry 저장 전 추가 확인 필요"
         next_action = "Review Note의 판단, Data Trust, 설정 snapshot, 비교 근거를 먼저 보강합니다."
 
     checks = [

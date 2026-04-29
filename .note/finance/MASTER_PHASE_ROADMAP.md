@@ -1629,7 +1629,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 - Phase 30은 implementation_complete / manual_qa_pending 상태다.
 - 첫 작업 단위는 portfolio proposal 기능 구현이 아니라,
   `테스트에서 상용화 후보 검토까지 사용하는 흐름`을 Phase 29 이후 기준으로 다시 정렬하는 것이었다.
-- 기준 흐름은 `Ingestion / Data Trust -> Single Strategy Backtest -> Real-Money Signal -> Hold / Blocker Resolution -> Compare -> Candidate Draft -> Candidate Review Note -> Current Candidate Registry -> Candidate Board / Compare / Pre-Live Review -> Portfolio Proposal -> Live Readiness / Final Approval`이다.
+- 기준 흐름은 `Ingestion / Data Trust -> Single Strategy Backtest -> Real-Money Signal -> Hold / Blocker Resolution -> Compare -> Candidate Packaging -> Compare 재검토 또는 Pre-Live Review -> Portfolio Proposal -> Live Readiness / Final Approval`이다.
 - `backtest.py`가 16k lines 이상으로 커졌으므로, Candidate Review / Pre-Live / registry helper / History / Saved Portfolio / result display / strategy forms를 어떤 순서로 점진 분리할지 먼저 문서화했다.
 - 두 번째 작업으로 Portfolio Proposal row 계약을 정의했다.
   이 계약은 proposal objective, component candidates, target weights, risk constraints, evidence snapshot, open blockers, operator decision을 포함한다.

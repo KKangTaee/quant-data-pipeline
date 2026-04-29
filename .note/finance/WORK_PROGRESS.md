@@ -2328,3 +2328,14 @@ Detailed historical logs were archived on `2026-04-13`.
   - synced Guides, walkthrough session notes, and web backtest UI flow docs without touching Phase 30 QA docs
 - Durable takeaway:
   - Step 8 is a route-reading step: only `PRE_LIVE_READY` moves to Pre-Live; compare-ready alternatives return to Compare instead of being treated as failures.
+
+### 2026-04-29
+- Merged the former 6 / 7 / 8 user-facing steps into one Candidate Packaging step.
+- Changed:
+  - reframed Candidate Review as `6단계 Candidate Packaging` instead of separate Draft / Registry / Board workflow steps
+  - updated Compare handoff copy to `Send Selected Strategy To Candidate Packaging`
+  - renamed the intake, registry, and board readiness boxes to `Candidate Packaging 저장 준비`, `Registry 후보 범위 판단`, and `Candidate Packaging 종합 판단`
+  - reduced Guides from 1~10 to 1~8 steps: 6 Candidate Packaging, 7 Pre-Live Review, 8 Portfolio Proposal
+  - synced the walkthrough session note and web backtest UI flow doc without touching Phase 30 QA docs
+- Durable takeaway:
+  - Candidate Packaging is not a new quant validation layer; it is one packaging gate that turns a compared candidate into a machine-readable, Pre-Live-ready operating candidate.
