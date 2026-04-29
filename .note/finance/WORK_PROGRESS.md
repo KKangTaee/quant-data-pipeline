@@ -2452,3 +2452,17 @@ Detailed historical logs were archived on `2026-04-13`.
   - synced README, comprehensive analysis, script structure map, and web backtest UI flow docs
 - Durable takeaway:
   - Route labels such as `PORTFOLIO_PROPOSAL_READY` and `PRE_LIVE_READY` now wrap inside a decision panel instead of being truncated.
+
+### 2026-04-30
+- Cleaned up the Backtest page shell and navigation.
+- Changed:
+  - removed the duplicate in-page `Backtest` heading under the top-level Backtest page title
+  - changed the visible Backtest navigation from a six-item radio list to a Streamlit segmented workflow selector
+  - kept the main workflow focused on `Single Strategy -> Compare & Portfolio Builder -> Candidate Review -> Pre-Live Review -> Portfolio Proposal`
+  - moved `History` out of the main workflow navigation and exposed it as a `Run History` utility button while preserving existing History behavior and handoff routes
+  - synced README, comprehensive analysis, script structure map, and web backtest UI flow docs
+- Verification:
+  - `.venv/bin/python -m py_compile app/web/pages/backtest.py app/web/streamlit_app.py app/web/backtest_ui_components.py app/web/backtest_candidate_review.py app/web/backtest_pre_live_review.py` passed
+  - Streamlit smoke checked `/backtest`, confirmed the duplicate title is gone, the segmented workflow renders, `Run History` opens the history surface, and selecting a workflow panel returns to that panel
+- Durable takeaway:
+  - History remains available for replay and candidate handoff, but it is no longer presented as a core step in the candidate review workflow.

@@ -2,7 +2,7 @@
 
 ## 목적
 
-이 문서는 Streamlit Backtest 화면의 single strategy, compare, candidate review, history, saved portfolio 흐름을 설명한다.
+이 문서는 Streamlit Backtest 화면의 single strategy, compare, candidate review, Pre-Live, portfolio proposal, history utility, saved portfolio 흐름을 설명한다.
 UI form, payload 복원, candidate review, history replay, saved portfolio replay를 수정할 때 먼저 확인한다.
 
 ## 핵심 파일
@@ -10,7 +10,7 @@ UI form, payload 복원, candidate review, history replay, saved portfolio repla
 | 파일 | 역할 |
 |---|---|
 | `app/web/streamlit_app.py` | top navigation과 page entry |
-| `app/web/pages/backtest.py` | Backtest page entry, shared helper, 아직 분리되지 않은 panel render logic |
+| `app/web/pages/backtest.py` | Backtest page entry, workflow navigation, shared helper, 아직 분리되지 않은 panel / history utility render logic |
 | `app/web/backtest_ui_components.py` | Backtest UI 공용 status card, route/readiness panel render helper |
 | `app/web/backtest_candidate_review.py` | Candidate Review / Candidate Packaging 화면 render logic |
 | `app/web/backtest_candidate_review_helpers.py` | Candidate Review 판단, Review Note / registry 변환, readiness score helper |
@@ -25,14 +25,19 @@ UI form, payload 복원, candidate review, history replay, saved portfolio repla
 
 ## 화면 흐름
 
-Backtest page는 현재 여섯 panel 중심으로 본다.
+Backtest page는 후보 검토 주 흐름과 보조 history utility로 나눠 본다.
+
+주 흐름:
 
 - `Single Strategy`: 하나의 전략을 실행하고 latest result를 확인한다.
 - `Compare & Portfolio Builder`: 여러 전략을 같은 기간으로 비교하고 weighted portfolio를 만든다.
 - `Candidate Review`: Candidate Packaging 단일 흐름에서 Draft 확인, Review Note 저장, registry 저장, Pre-Live route 확인을 순서대로 처리한다.
-- `History`: 저장된 실행 기록을 inspect하고, 가능한 경우 run again 또는 load into form을 수행한다.
 - `Pre-Live Review`: current candidate를 실전 전 운영 상태로 기록하고 저장된 Pre-Live record를 확인한다.
 - `Portfolio Proposal`: current candidate 여러 개를 목적 / 역할 / 비중 근거와 함께 proposal draft로 저장하고 monitoring review / pre-live feedback / paper tracking feedback으로 다시 읽는다.
+
+보조 utility:
+
+- `Run History`: 저장된 실행 기록을 inspect하고, 가능한 경우 run again, load into form, candidate draft handoff를 수행한다. 후보 검토 흐름의 주 단계가 아니라 과거 실행을 다시 열기 위한 보조 도구로 둔다.
 
 ## 현재 Reference Guide 제품 흐름
 
@@ -131,6 +136,7 @@ Phase 30 third work unit status:
 - Candidate Review는 `app/web/backtest_candidate_review.py`와 `app/web/backtest_candidate_review_helpers.py`로 분리되어, `backtest.py`에는 panel wrapper와 cross-panel handoff call만 남아 있다.
 - Pre-Live Review도 `app/web/backtest_pre_live_review.py`와 `app/web/backtest_pre_live_review_helpers.py`로 분리되어, `backtest.py`에는 panel wrapper와 cross-panel handoff call만 남아 있다.
 - 긴 route/status 문자열은 `app/web/backtest_ui_components.py`의 wrapping card / route panel을 사용해 `st.metric` 말줄임을 피한다.
+- Backtest shell은 중복 제목을 제거하고, `Single Strategy -> Compare & Portfolio Builder -> Candidate Review -> Pre-Live Review -> Portfolio Proposal`을 주 workflow navigation으로 보여준다. `History`는 메인 흐름에서 제외하고 `Run History` utility 버튼으로 연다.
 - Compare prefill 변환, 일부 History / Saved Portfolio / Portfolio Proposal render logic, Streamlit session state는 아직 `app/web/pages/backtest.py`에 남아 있다.
 - 따라서 이 작업은 전체 Backtest UI refactor가 아니라 Candidate Review / Pre-Live Review를 중심으로 한 점진적 module split이다.
 

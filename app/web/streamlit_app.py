@@ -2345,7 +2345,7 @@ def _render_overview_page() -> None:
     st.markdown(
         """
         - `Ingestion`: 일별 업데이트, statement refresh, 진단 작업을 실행합니다.
-        - `Backtest`: 전략 실행, compare, history, saved portfolio workflow를 다룹니다.
+        - `Backtest`: 전략 실행, compare, 후보 검토, Pre-Live, Portfolio Proposal 흐름과 Run History 보조 도구를 다룹니다.
         - `Ops Review`: 최근 실행 결과, persistent history, logs, failure CSV를 한 번에 봅니다.
         - `Guides`: 현재 phase 문서, 체크리스트, 승격 해석 가이드를 빠르게 찾습니다.
         - `Glossary`: 현재 퀀트 프로그램에서 쓰는 용어를 검색하면서 다시 확인합니다.
@@ -2373,7 +2373,7 @@ def _render_ingestion_page() -> None:
 
 def _render_backtest_page() -> None:
     st.title("Backtest")
-    st.caption("전략 실행, compare, history, saved portfolio workflow를 다루는 작업 공간입니다.")
+    st.caption("백테스트 실행부터 비교, 후보 검토, Pre-Live, Portfolio Proposal까지 이어지는 후보 검토 작업 공간입니다.")
     render_backtest_tab()
 
 

@@ -3317,3 +3317,18 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 기존 score, progress bar, criteria table, route별 버튼 활성화 조건은 바꾸지 않았다
 - Follow-up:
   - 이후 다른 Backtest panel에서 긴 status label이 `st.metric`에 들어가는 경우 `backtest_ui_components.py`의 component를 재사용한다
+
+### 2026-04-30 - Backtest navigation에서 History는 주 흐름이 아니라 보조 도구로 둔다
+- User request:
+  - Backtest page에 `Backtest` 제목과 설명이 중복되어 보이고, panel navigation에서 `Candidate Review` 다음에 `History`가 나오는 구조가 후보 검토 흐름을 어색하게 만든다고 지적함
+  - Streamlit에서 더 보기 좋은 탭 / 내비게이션 방식이 있으면 바꾸고, History는 다른 위치로 옮기는 방향을 검토해 달라고 요청함
+- Interpreted goal:
+  - Backtest는 최종 후보를 찾아 Candidate Review, Pre-Live, Portfolio Proposal로 이어지는 작업 공간으로 읽혀야 함
+  - History는 여전히 rerun, load into form, candidate draft handoff에 필요하지만 후보 검토의 본 단계처럼 보이면 안 됨
+- Analysis result:
+  - 상위 `Backtest` page title만 남기고 내부 중복 title/caption을 제거했다
+  - 현재 Streamlit 1.56.0에서 지원하는 `st.segmented_control`을 사용해 메인 workflow를 `Single Strategy -> Compare & Portfolio Builder -> Candidate Review -> Pre-Live Review -> Portfolio Proposal`로 표시했다
+  - `History`는 메인 workflow에서 제외하고 `Run History` utility 버튼으로 분리했다
+  - 기존 `_request_backtest_panel("History")`, `Back To History`, history inspect / replay / load / candidate draft 기능은 유지했다
+- Follow-up:
+  - 이후 History 자체가 더 커지면 `app/web/pages/backtest.py`에서 별도 History module로 분리하는 것이 다음 자연스러운 리팩토링 후보이다

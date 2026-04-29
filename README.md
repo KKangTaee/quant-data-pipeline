@@ -19,7 +19,7 @@ DB-backed market data ingestion, factor generation, and strategy backtesting wor
 - `Ingestion`
   - 일별 업데이트, statement refresh, 진단 작업
 - `Backtest`
-  - 단일 전략 실행, compare, history, saved portfolio, candidate review, pre-live review, portfolio proposal workflow
+  - 단일 전략 실행, compare, candidate review, pre-live review, portfolio proposal workflow와 보조 `Run History`
 - `Ops Review`
   - 최근 실행 결과, persistent history, logs, failure artifact 검토
 - `Guides`
@@ -94,7 +94,7 @@ app/
     backtest_candidate_review_helpers.py # Candidate Review 판단/변환 helper
     backtest_pre_live_review.py # Pre-Live Review UI
     backtest_pre_live_review_helpers.py # Pre-Live 상태/초안/진입평가 helper
-    pages/backtest.py    # Backtest UI
+    pages/backtest.py    # Backtest shell, workflow navigation, remaining Single/Compare/History/Proposal UI
     runtime/             # UI-facing runtime wrappers
       candidate_registry.py
       portfolio_proposal.py

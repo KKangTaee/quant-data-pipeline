@@ -311,6 +311,13 @@ BACKTEST_PANEL_OPTIONS = [
     "Pre-Live Review",
     "Portfolio Proposal",
 ]
+BACKTEST_WORKFLOW_PANEL_OPTIONS = [
+    "Single Strategy",
+    "Compare & Portfolio Builder",
+    "Candidate Review",
+    "Pre-Live Review",
+    "Portfolio Proposal",
+]
 PORTFOLIO_PROPOSAL_STATUS_OPTIONS = [
     "draft",
     "review_ready",
@@ -687,12 +694,22 @@ def _init_backtest_state() -> None:
         st.session_state.backtest_candidate_review_note_notice = None
     if "backtest_active_panel" not in st.session_state:
         st.session_state.backtest_active_panel = "Single Strategy"
+    if "backtest_workflow_active_panel" not in st.session_state:
+        st.session_state.backtest_workflow_active_panel = "Single Strategy"
     if "backtest_requested_panel" not in st.session_state:
         st.session_state.backtest_requested_panel = None
     requested_panel = st.session_state.get("backtest_requested_panel")
     if requested_panel in set(BACKTEST_PANEL_OPTIONS):
         st.session_state.backtest_active_panel = requested_panel
+        if requested_panel in set(BACKTEST_WORKFLOW_PANEL_OPTIONS):
+            st.session_state.backtest_workflow_active_panel = requested_panel
         st.session_state.backtest_requested_panel = None
+    active_panel = st.session_state.get("backtest_active_panel")
+    if active_panel in set(BACKTEST_WORKFLOW_PANEL_OPTIONS):
+        st.session_state.backtest_workflow_active_panel = active_panel
+    elif active_panel != "History":
+        st.session_state.backtest_active_panel = "Single Strategy"
+        st.session_state.backtest_workflow_active_panel = "Single Strategy"
     if "qss_end" not in st.session_state:
         st.session_state["qss_end"] = DEFAULT_BACKTEST_END_DATE
     if "qss_timeframe" not in st.session_state:
@@ -1002,6 +1019,13 @@ def _request_backtest_panel(panel: str) -> None:
     if panel not in set(BACKTEST_PANEL_OPTIONS):
         return
     st.session_state.backtest_requested_panel = panel
+
+
+# Sync the visual workflow selector to the active Backtest panel.
+def _activate_backtest_workflow_panel() -> None:
+    selected_panel = st.session_state.get("backtest_workflow_active_panel")
+    if selected_panel in set(BACKTEST_WORKFLOW_PANEL_OPTIONS):
+        st.session_state.backtest_active_panel = selected_panel
 
 
 def _parse_manual_tickers(text: str) -> list[str]:
@@ -15020,21 +15044,64 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
     _handle_backtest_run(payload, strategy_name="Quality + Value Snapshot (Strict Annual)")
 
 
+# Render the Backtest workflow as primary navigation while keeping History as a utility view.
+def _render_backtest_panel_selector() -> str:
+    st.markdown("#### 후보 검토 흐름")
+    st.caption("전략 실행에서 후보 검토, Pre-Live 운영 점검, Portfolio Proposal까지 이어지는 주 흐름입니다.")
+
+    nav_cols = st.columns([0.78, 0.22], gap="small")
+    with nav_cols[0]:
+        if hasattr(st, "segmented_control"):
+            st.segmented_control(
+                "Backtest Workflow",
+                options=BACKTEST_WORKFLOW_PANEL_OPTIONS,
+                selection_mode="single",
+                required=True,
+                key="backtest_workflow_active_panel",
+                on_change=_activate_backtest_workflow_panel,
+                label_visibility="collapsed",
+                width="stretch",
+            )
+        else:
+            st.radio(
+                "Backtest Workflow",
+                options=BACKTEST_WORKFLOW_PANEL_OPTIONS,
+                horizontal=True,
+                key="backtest_workflow_active_panel",
+                on_change=_activate_backtest_workflow_panel,
+                label_visibility="collapsed",
+            )
+    with nav_cols[1]:
+        st.button(
+            "Run History",
+            key="backtest_open_history_utility",
+            help="저장된 Backtest 실행 기록을 확인하고 Run Again / Load Into Form / Review As Candidate Draft를 수행합니다.",
+            on_click=_request_backtest_panel,
+            args=("History",),
+            width="stretch",
+        )
+
+    active_panel = st.session_state.get("backtest_active_panel") or "Single Strategy"
+    if active_panel == "History":
+        st.info(
+            "Run History는 보조 도구입니다. 과거 실행을 다시 읽거나 form으로 불러온 뒤, "
+            "필요하면 위 후보 검토 흐름으로 돌아가세요."
+        )
+    return str(active_panel)
+
+
 def render_backtest_tab() -> None:
     _init_backtest_state()
-
-    st.subheader("Backtest")
-    st.caption("단일 전략 실행, 전략 비교, 실행 이력을 한 화면에서 관리합니다.")
 
     with st.expander("Backtest 사용 안내", expanded=False):
         st.markdown(
             """
-            - `Single Strategy`: 전략 1개를 실행하고 결과를 바로 확인하는 화면입니다.
-            - `Compare & Portfolio Builder`: 여러 전략을 같은 기간으로 비교하는 화면입니다.
-            - `Candidate Review`: 후보 초안, Review Note, registry 저장, Pre-Live route 확인을 순서대로 처리하는 Candidate Packaging 화면입니다.
-            - `History`: 저장된 실행 결과를 다시 보고, `Run Again` 또는 `Load Into Form`을 사용하는 화면입니다.
-            - `Pre-Live Review`: current candidate를 실전 전 관찰 / 보류 / 재검토 기록으로 넘기는 화면입니다.
-            - `Portfolio Proposal`: 후보 여러 개를 목적 / 역할 / 비중 근거와 함께 묶는 제안 초안을 만드는 화면입니다.
+            - `Single Strategy`: 전략 1개를 실행하고 결과를 바로 확인합니다.
+            - `Compare & Portfolio Builder`: 여러 전략을 같은 기간으로 비교하고 후보 근거를 확인합니다.
+            - `Candidate Review`: 후보 초안, Review Note, registry 저장, Pre-Live route 확인을 순서대로 처리합니다.
+            - `Pre-Live Review`: current candidate를 실전 전 관찰 / 보류 / 재검토 운영 기록으로 넘깁니다.
+            - `Portfolio Proposal`: 후보 여러 개를 목적 / 역할 / 비중 근거와 함께 묶는 제안 초안을 만듭니다.
+            - `Run History`: 저장된 실행 결과를 다시 보고, `Run Again` 또는 `Load Into Form`을 사용하는 보조 도구입니다.
             - `Load Into Form`을 누르면 저장된 입력값이 `Single Strategy` 화면으로 자동 이동하며 다시 채워집니다.
             - `quarterly strict prototype` 전략은 현재 **research-only** 경로입니다.
             """
@@ -15044,13 +15111,7 @@ def render_backtest_tab() -> None:
             "실제 첫 보유/선택이 그보다 뒤에서 시작되는 상황을 뜻합니다."
         )
 
-    active_panel = st.radio(
-        "Backtest Panel",
-        options=BACKTEST_PANEL_OPTIONS,
-        horizontal=True,
-        label_visibility="collapsed",
-        key="backtest_active_panel",
-    )
+    active_panel = _render_backtest_panel_selector()
 
     if active_panel == "Single Strategy":
         prefill_notice = st.session_state.get("backtest_prefill_notice")
