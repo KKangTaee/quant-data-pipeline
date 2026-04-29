@@ -13,7 +13,7 @@ UI form, payload 복원, candidate review, history replay, saved portfolio repla
 | `app/web/backtest_history.py` | `Operations > Backtest Run History` 화면 render, selected record inspect, run again / load into form / candidate draft handoff |
 | `app/web/backtest_history_helpers.py` | History table row, replay payload, replay parity, Real-Money / Guardrail scope helper |
 | `app/web/pages/backtest.py` | Backtest page entry, workflow navigation, shared helper, 아직 분리되지 않은 Single / Compare / Saved Portfolio / Portfolio Proposal render logic |
-| `app/web/backtest_ui_components.py` | Backtest UI 공용 status card, artifact pipeline, step input/action/output summary, route/readiness panel render helper |
+| `app/web/backtest_ui_components.py` | Backtest UI 공용 status card, artifact pipeline, compact badge strip, stage brief strip, route/readiness panel render helper |
 | `app/web/backtest_candidate_review.py` | Candidate Review / Candidate Packaging / Pre-Live 운영 기록 화면 render logic |
 | `app/web/backtest_candidate_review_helpers.py` | Candidate Review 판단, Review Note / registry 변환, Pre-Live status 추천 / draft 변환 / Portfolio Proposal 진입 readiness score helper |
 | `app/web/runtime/backtest.py` | UI payload를 실행 가능한 runtime call로 변환 |
@@ -320,7 +320,7 @@ Latest Backtest Run 또는 Operations > Backtest Run History selected record
 - Candidate Review는 후보를 투자 추천으로 확정하는 화면이 아니다.
 - Candidate Review는 Candidate Packaging 작업 공간이며 한 화면 안에서 Draft 확인, Registry 저장, Pre-Live 운영 기록, Portfolio Proposal 진입 평가를 순서대로 처리한다.
 - 상단의 `Candidate Packaging 산출물 흐름`은 Draft, Review Note, Current Candidate, Pre-Live Record, Proposal Ready를 카드로 보여준다.
-- 각 큰 단계는 긴 설명문 대신 `Input / Action / Output` summary card로 목적과 결과물을 먼저 보여준다.
+- 각 큰 단계는 긴 설명문이나 card grid 대신 얇은 `왜 / 결과` brief strip으로 목적과 산출물을 먼저 보여준다.
 - `Send To Compare`는 후보 row의 `compare_prefill`을 우선 사용하고,
   기존 strict annual seed 후보는 registry id 기반 기본값을 사용한다.
 - GTAA seed 후보처럼 `compare_prefill`은 없지만 전략 `contract`가 남아 있는 경우에는
@@ -331,8 +331,10 @@ Latest Backtest Run 또는 Operations > Backtest Run History selected record
 - Candidate Review Note는 초안을 보고 남기는 operator decision 기록이며,
   현재 UI에서는 Draft 수신 정보와 operator reason / next action이 준비되어야 저장 버튼이 활성화된다.
 - Candidate Review Note를 저장해도 current candidate registry에 자동 등록되지 않는다.
-- `2. Registry 저장`은 `Registry 후보 범위 판단`으로 Current Candidate / Near Miss / Scenario / Stop 범위를 먼저 보여준다.
-- `Registry 후보 범위 판단`은 `Candidate Packaging 종합 판단`과 같은 route/readiness panel을 사용해 Scope, Scope Score, Blockers, 판정, 다음 행동을 표시한다.
+- `2. Registry 저장`은 `저장 범위 판단`으로 Current Candidate / Near Miss / Scenario / Stop 범위를 먼저 보여준다.
+- `저장 범위 판단`은 `Candidate Packaging 종합 판단`과 같은 route/readiness panel을 사용해 Scope, Scope Score, Blockers, 판정, 다음 행동을 표시한다.
+- Registry scope의 추천 type, 허용 type, Review Decision은 compact badge strip으로 보여주고, 판단 기준 표와 기존 저장 기록은 기본 접힘 영역에 둔다.
+- Registry row 저장값은 기본적으로 `Registry ID`, `Record Type`, `Candidate Title`, `Registry Notes`, 다음 단계에서 찾을 label만 펼쳐 보여주고, strategy family / name / role 같은 고급 식별값은 접힘 영역에 둔다.
 - 범위 판단과 맞지 않는 record type은 append를 막는다.
 - Review Note를 registry row로 남기려면 `2. Registry 저장`에서 row preview를 확인한 뒤
   같은 Candidate Packaging 안에서 `Append To Current Candidate Registry`를 명시적으로 눌러야 한다.
@@ -341,6 +343,7 @@ Latest Backtest Run 또는 Operations > Backtest Run History selected record
 - Candidate selection label은 `Strategy Family | Role | Title | id=<registry_id>` 형식이다. 같은 family와 title이 반복되어도 `registry_id`로 방금 저장한 row를 찾을 수 있게 한다.
 - `3. 운영 상태 저장 및 Portfolio Proposal 진입 평가`는 `Candidate Packaging 종합 판단`으로 registry row가 운영 기록으로 갈지, Compare로 돌아갈지, Board에 보류될지 보여준다.
 - `PRE_LIVE_READY`는 같은 화면에서 Pre-Live 운영 record를 저장할 수 있다는 뜻이고, `COMPARE_REVIEW_READY`는 실패가 아니라 Compare 재검토 경로다.
+- Pre-Live 운영 상태 영역은 Candidate Review 관점에서 필요한 promotion / shortlist / deployment / suggested status만 badge strip으로 보여주고, 추천 근거, 저장 후보 식별값, 판단 기준 표는 접힘 영역에 둔다.
 - `Suggested Next Step`은 다음 검토 행동 제안이지 live trading 승인이나 최종 투자 판단이 아니다.
 - `Save Pre-Live Record`는 live trading 승인이 아니라 `PRE_LIVE_CANDIDATE_REGISTRY.jsonl`에 paper / watchlist / hold 같은 운영 상태를 남기는 append-only 기록이다.
 - `Open Portfolio Proposal`은 같은 후보의 현재 선택 상태가 저장된 Pre-Live record와 맞고 route가 `PORTFOLIO_PROPOSAL_READY`일 때 활성화된다.

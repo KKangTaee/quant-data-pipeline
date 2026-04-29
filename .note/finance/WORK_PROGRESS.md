@@ -2524,3 +2524,20 @@ Detailed historical logs were archived on `2026-04-13`.
   - Streamlit smoke checked `Backtest > Candidate Review`; the artifact pipeline, step summaries, and Registry scope panel render correctly
 - Durable takeaway:
   - Candidate Review now explains its workflow through compact visual structure rather than large instructional text blocks.
+
+### 2026-04-30
+- Refined Candidate Review after visual review feedback.
+- Changed:
+  - removed the per-section Input / Action / Output card grids because they made the page feel busier
+  - replaced them with thin `왜 / 결과` brief strips
+  - simplified `2. Registry 저장` by keeping the Scope route panel visible and moving detailed criteria / previous registry rows into collapsed expanders
+  - reduced visible Registry row inputs to ID, record type, title, notes, and the next-step selection label; moved advanced strategy identity fields into a collapsed section
+  - changed Registry metadata and Pre-Live signal summaries from large cards to compact badge strips
+  - trimmed `3. 운영 상태 저장 및 Portfolio Proposal 진입 평가` so Candidate Review shows only the selected candidate's core state, operating decision, and proposal route by default, with recent-candidate identity details hidden behind an expander
+  - added a Streamlit copy-shortcut guard so normal Cmd/Ctrl+C does not bubble into Streamlit's clear-cache shortcut handler
+- Verification:
+  - `.venv/bin/python -m py_compile app/web/backtest_candidate_review.py app/web/backtest_ui_components.py app/web/streamlit_app.py app/web/pages/backtest.py` passed
+  - Streamlit smoke checked `Backtest > Candidate Review`; artifact pipeline remains, step guidance is shown as `왜 / 결과`, Registry advanced identity fields and detailed criteria are collapsed, and Cmd/Ctrl+C no longer opens the clear-cache modal
+  - `python3 plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py` passed
+- Durable takeaway:
+  - Candidate Review should keep the artifact pipeline, but per-section guidance should stay thin and action-centered.

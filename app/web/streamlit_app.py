@@ -78,6 +78,37 @@ APP_RUNTIME_MARKER = (
 )
 
 
+# Stop Streamlit's clear-cache shortcut from intercepting normal browser copy.
+def _install_copy_shortcut_guard() -> None:
+    st.html(
+        """
+        <script>
+        (function () {
+          try {
+            if (document.__quantCopyShortcutGuardInstalled) {
+              return;
+            }
+            document.__quantCopyShortcutGuardInstalled = true;
+            document.addEventListener(
+              "keydown",
+              function (event) {
+                const key = String(event.key || "").toLowerCase();
+                if ((event.metaKey || event.ctrlKey) && key === "c") {
+                  event.stopImmediatePropagation();
+                }
+              },
+              true
+            );
+          } catch (error) {
+            // If parent document access is unavailable, leave Streamlit defaults untouched.
+          }
+        })();
+        </script>
+        """,
+        unsafe_allow_javascript=True,
+    )
+
+
 def _preset_csv(name: str, fallback_name: str = "US Statement Coverage 300") -> str:
     tickers = QUALITY_STRICT_PRESETS.get(name) or QUALITY_STRICT_PRESETS.get(fallback_name, [])
     return ",".join(tickers)
@@ -3434,6 +3465,7 @@ def main() -> None:
         page_icon="F",
         layout="wide",
     )
+    _install_copy_shortcut_guard()
     _init_state()
     _promote_pending_job()
     _apply_pending_ingestion_prefill()

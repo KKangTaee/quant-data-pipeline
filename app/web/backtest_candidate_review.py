@@ -43,9 +43,9 @@ from app.web.backtest_candidate_review_helpers import (
 )
 from app.web.backtest_ui_components import (
     render_artifact_pipeline,
+    render_badge_strip,
     render_readiness_route_panel,
-    render_status_card_grid,
-    render_step_io_summary,
+    render_stage_brief,
 )
 from app.web.runtime import (
     CANDIDATE_REVIEW_NOTES_FILE,
@@ -152,13 +152,9 @@ def render_candidate_review_workspace() -> None:
     st.divider()
     st.markdown("#### 1. Draft 확인 / Review Note 저장")
     with st.container(border=True):
-        render_step_io_summary(
-            input_label="Backtest Run",
-            input_detail="Latest 결과 또는 Operations history에서 보낸 후보 초안",
-            action_label="Operator Review",
-            action_detail="판단, 이유, 다음 행동을 사람의 메모로 고정",
-            output_label="Candidate Review Note",
-            output_detail="아직 registry 등록은 아닌 검토 기록",
+        render_stage_brief(
+            purpose="백테스트 실행 결과를 바로 후보로 확정하지 않고, 먼저 검토 메모로 고정합니다.",
+            result="Candidate Review Note",
         )
         draft_notice = st.session_state.get("backtest_candidate_review_draft_notice")
         if draft_notice:
@@ -294,15 +290,10 @@ def render_candidate_review_workspace() -> None:
     st.divider()
     st.markdown("#### 2. Registry 저장")
     with st.container(border=True):
-        render_step_io_summary(
-            input_label="Candidate Review Note",
-            input_detail="1번에서 저장한 판단 메모와 다음 행동",
-            action_label="Scope Decision",
-            action_detail="Current / Near Miss / Scenario 중 남길 범위 결정",
-            output_label="Current Candidate Row",
-            output_detail="후보 목록에서 다시 선택 가능한 registry record",
+        render_stage_brief(
+            purpose="Review Note를 실제 후보 목록에서 다시 찾을 수 있는 registry row로 바꿉니다.",
+            result="Current Candidate Registry Row",
         )
-        st.caption(f"Path: {CANDIDATE_REVIEW_NOTES_FILE}")
         if not review_notes:
             st.info("아직 저장된 Candidate Review Note가 없습니다. 먼저 위 1번에서 Review Note를 저장하세요.")
         else:
@@ -321,12 +312,6 @@ def render_candidate_review_workspace() -> None:
                 st.json(selected_note)
             with st.expander("Review Notes Archive", expanded=False):
                 st.dataframe(_build_candidate_review_notes_rows_for_display(review_notes), use_container_width=True, hide_index=True)
-            st.markdown("##### Registry 후보 범위 결정 및 저장")
-            st.caption(
-                "선택한 review note를 실제 current candidate registry row로 남길지 검토합니다. "
-                "범위 판단과 Record Type이 맞을 때 아래 저장 버튼이 활성화되며, "
-                "버튼을 눌러야만 `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`에 append됩니다."
-            )
             review_decision = str(selected_note.get("review_decision") or "")
             if review_decision == "reject_for_now":
                 st.warning(
@@ -337,7 +322,7 @@ def render_candidate_review_workspace() -> None:
             registry_scope = _build_candidate_registry_scope_evaluation(selected_note)
             registry_key = _candidate_review_note_widget_key(selected_note)
             with st.container(border=True):
-                st.markdown("##### Registry 후보 범위 판단")
+                st.markdown("##### 저장 범위 판단")
                 render_readiness_route_panel(
                     route_label=str(registry_scope["scope_label"]),
                     score=float(registry_scope["score"]),
@@ -347,30 +332,28 @@ def render_candidate_review_workspace() -> None:
                     route_title="Scope",
                     score_title="Scope Score",
                 )
-                render_status_card_grid(
+                render_badge_strip(
                     [
                         {
-                            "title": "Recommended Type",
+                            "label": "Recommended",
                             "value": str(registry_scope["recommended_record_type_label"]),
-                            "detail": "저장 시 기본으로 맞추는 record type",
                             "tone": "positive" if registry_scope["can_prepare_registry_row"] else "warning",
                         },
                         {
-                            "title": "Allowed Types",
+                            "label": "Allowed",
                             "value": ", ".join(str(item) for item in registry_scope.get("allowed_record_types") or []) or "-",
-                            "detail": "범위 판단과 충돌하지 않는 선택지",
                             "tone": "neutral",
                         },
                         {
-                            "title": "Review Decision",
+                            "label": "Decision",
                             "value": _candidate_review_decision_label(review_decision),
-                            "detail": "선택된 Review Note의 판단값",
                             "tone": "neutral",
                         },
                     ]
                 )
                 st.progress(max(0.0, min(float(registry_scope["score"]) / 10.0, 1.0)))
-                st.dataframe(pd.DataFrame(registry_scope["criteria_rows"]), use_container_width=True, hide_index=True)
+                with st.expander("저장 범위 판단 기준 보기", expanded=False):
+                    st.dataframe(pd.DataFrame(registry_scope["criteria_rows"]), use_container_width=True, hide_index=True)
                 if registry_scope["can_prepare_registry_row"]:
                     st.success("이 Review Note는 표시된 범위 안에서 registry row preview로 넘길 수 있습니다.")
                 else:
@@ -383,11 +366,12 @@ def render_candidate_review_workspace() -> None:
                     "이 Review Note는 이미 Current Candidate Registry에 저장되어 있습니다. "
                     "Saved Candidate Board에는 같은 Registry ID의 최신 revision만 보이기 때문에 반복 클릭 후에도 변화가 작게 보일 수 있습니다."
                 )
-                st.dataframe(
-                    _build_existing_review_note_registry_rows_for_display(existing_review_note_registry_rows),
-                    use_container_width=True,
-                    hide_index=True,
-                )
+                with st.expander("기존 registry 저장 기록 보기", expanded=False):
+                    st.dataframe(
+                        _build_existing_review_note_registry_rows_for_display(existing_review_note_registry_rows),
+                        use_container_width=True,
+                        hide_index=True,
+                    )
                 allow_registry_revision_append = st.checkbox(
                     "같은 Review Note를 새 registry revision으로 다시 저장",
                     value=False,
@@ -397,6 +381,8 @@ def render_candidate_review_workspace() -> None:
             else:
                 allow_registry_revision_append = True
             existing_registry_ids = {str(row.get("registry_id") or "") for row in _load_current_candidate_registry_latest()}
+            st.markdown("##### 저장될 후보 Row")
+            st.caption("대부분은 기본값 그대로 저장하면 됩니다. 화면에서 다시 찾을 이름과 후보 범위만 먼저 확인하세요.")
             registry_id = st.text_input(
                 "Registry ID",
                 value=registry_defaults["registry_id"],
@@ -408,49 +394,54 @@ def render_candidate_review_workspace() -> None:
                     "같은 Registry ID가 이미 active 후보에 있습니다. "
                     "저장하면 append-only 방식으로 새 row가 추가되고 latest view에서는 더 최근 row가 보입니다."
                 )
-            record_type = st.selectbox(
-                "Record Type",
-                options=CURRENT_CANDIDATE_RECORD_TYPE_OPTIONS,
-                index=CURRENT_CANDIDATE_RECORD_TYPE_OPTIONS.index(
-                    str(registry_scope.get("recommended_record_type") or registry_defaults["record_type"])
-                    if str(registry_scope.get("recommended_record_type") or registry_defaults["record_type"])
-                    in CURRENT_CANDIDATE_RECORD_TYPE_OPTIONS
-                    else registry_defaults["record_type"]
-                ),
-                format_func=_current_candidate_record_type_label,
-                key=f"candidate_registry_draft_record_type_{registry_key}",
-                help="current anchor인지, near-miss 대안인지, scenario 비교 후보인지 고릅니다.",
-            )
+            row_core_cols = st.columns([0.36, 0.64], gap="small")
+            with row_core_cols[0]:
+                record_type = st.selectbox(
+                    "Record Type",
+                    options=CURRENT_CANDIDATE_RECORD_TYPE_OPTIONS,
+                    index=CURRENT_CANDIDATE_RECORD_TYPE_OPTIONS.index(
+                        str(registry_scope.get("recommended_record_type") or registry_defaults["record_type"])
+                        if str(registry_scope.get("recommended_record_type") or registry_defaults["record_type"])
+                        in CURRENT_CANDIDATE_RECORD_TYPE_OPTIONS
+                        else registry_defaults["record_type"]
+                    ),
+                    format_func=_current_candidate_record_type_label,
+                    key=f"candidate_registry_draft_record_type_{registry_key}",
+                    help="current anchor인지, near-miss 대안인지, scenario 비교 후보인지 고릅니다.",
+                )
+            with row_core_cols[1]:
+                title = st.text_input(
+                    "Candidate Title",
+                    value=registry_defaults["title"],
+                    key=f"candidate_registry_draft_title_{registry_key}",
+                )
             allowed_record_types = set(registry_scope.get("allowed_record_types") or [])
             if allowed_record_types and record_type not in allowed_record_types:
                 st.error(
                     "선택한 Record Type이 registry 범위 판단과 맞지 않습니다. "
                     "권장 범위로 바꾸거나 Review Note를 다시 확인하세요."
                 )
-            input_cols = st.columns(3, gap="small")
-            with input_cols[0]:
-                strategy_family = st.text_input(
-                    "Strategy Family",
-                    value=registry_defaults["strategy_family"],
-                    key=f"candidate_registry_draft_family_{registry_key}",
-                )
-            with input_cols[1]:
-                strategy_name = st.text_input(
-                    "Strategy Name",
-                    value=registry_defaults["strategy_name"],
-                    key=f"candidate_registry_draft_strategy_{registry_key}",
-                )
-            with input_cols[2]:
-                candidate_role = st.text_input(
-                    "Candidate Role",
-                    value=registry_defaults["candidate_role"],
-                    key=f"candidate_registry_draft_role_{registry_key}",
-                )
-            title = st.text_input(
-                "Title",
-                value=registry_defaults["title"],
-                key=f"candidate_registry_draft_title_{registry_key}",
-            )
+            with st.expander("고급 식별값 수정", expanded=False):
+                st.caption("후보가 여러 개라 이름이 헷갈릴 때만 수정합니다. 보통은 자동 생성값을 그대로 둡니다.")
+                input_cols = st.columns(3, gap="small")
+                with input_cols[0]:
+                    strategy_family = st.text_input(
+                        "Strategy Family",
+                        value=registry_defaults["strategy_family"],
+                        key=f"candidate_registry_draft_family_{registry_key}",
+                    )
+                with input_cols[1]:
+                    strategy_name = st.text_input(
+                        "Strategy Name",
+                        value=registry_defaults["strategy_name"],
+                        key=f"candidate_registry_draft_strategy_{registry_key}",
+                    )
+                with input_cols[2]:
+                    candidate_role = st.text_input(
+                        "Candidate Role",
+                        value=registry_defaults["candidate_role"],
+                        key=f"candidate_registry_draft_role_{registry_key}",
+                    )
             registry_note_text = st.text_area(
                 "Registry Notes",
                 value=registry_defaults["notes"],
@@ -470,13 +461,12 @@ def render_candidate_review_workspace() -> None:
             with st.expander("Current Candidate Registry Row JSON Preview", expanded=False):
                 st.json(registry_row)
             packaging_candidate_label = _current_candidate_registry_selection_label(registry_row)
-            with st.container(border=True):
-                st.markdown("##### 3단계에서 보일 운영 확인 후보 이름")
-                st.code(packaging_candidate_label, language="text")
-                st.caption(
-                    "`Append To Current Candidate Registry`를 누르면 "
-                    "`3. 운영 상태 저장 및 Portfolio Proposal 진입 평가 > Packaging 확인 후보`에서 이 이름으로 찾을 수 있습니다."
-                )
+            st.markdown("##### 다음 단계에서 찾을 이름")
+            st.code(packaging_candidate_label, language="text")
+            st.caption(
+                "`Append To Current Candidate Registry`를 누르면 "
+                "`3. 운영 상태 저장 및 Portfolio Proposal 진입 평가 > Packaging 확인 후보`에서 이 이름으로 자동 선택됩니다."
+            )
             save_disabled = (
                 not bool(registry_scope["can_prepare_registry_row"])
                 or review_decision == "reject_for_now"
@@ -522,13 +512,9 @@ def render_candidate_review_workspace() -> None:
     st.divider()
     st.markdown("#### 3. 운영 상태 저장 및 Portfolio Proposal 진입 평가")
     with st.container(border=True):
-        render_step_io_summary(
-            input_label="Current Candidate",
-            input_detail="2번에서 저장했거나 registry에 남아 있는 후보 row",
-            action_label="Operating Status",
-            action_detail="paper / watchlist / hold 같은 실전 전 상태 결정",
-            output_label="Pre-Live Record / Proposal Route",
-            output_detail="운영 기록 저장 후 Portfolio Proposal 가능 여부 판정",
+        render_stage_brief(
+            purpose="후보를 바로 포트폴리오로 보내지 않고, 실제 돈 없이 어떻게 추적할지 먼저 정합니다.",
+            result="Pre-Live Record / Proposal Ready 판정",
         )
         if not rows:
             st.info("현재 평가할 active current candidate가 없습니다. 먼저 위 2번에서 Registry에 저장하세요.")
@@ -572,25 +558,26 @@ def render_candidate_review_workspace() -> None:
             if recent_label and selected_registry_id == recent_registry_id and (
                 not recent_revision_id or selected_revision_id == recent_revision_id
             ):
-                st.success("방금 `2. Registry 저장`에서 append한 후보가 선택되어 있습니다.")
-                st.dataframe(
-                    pd.DataFrame(
-                        [
-                            {
-                                "Registry ID": selected_board_row.get("registry_id"),
-                                "Revision ID": selected_board_row.get("revision_id"),
-                                "Record Type": selected_board_row.get("record_type"),
-                                "Strategy Family": selected_board_row.get("strategy_family"),
-                                "Strategy Name": selected_board_row.get("strategy_name"),
-                                "Title": selected_board_row.get("title"),
-                                "Source Review Note": selected_board_row.get("source_review_note_id"),
-                                "Recorded At": selected_board_row.get("recorded_at"),
-                            }
-                        ]
-                    ),
-                    use_container_width=True,
-                    hide_index=True,
-                )
+                st.success(f"방금 `2. Registry 저장`에서 append한 후보가 선택되어 있습니다: `{selected_board_label}`")
+                with st.expander("방금 저장한 후보 식별값 보기", expanded=False):
+                    st.dataframe(
+                        pd.DataFrame(
+                            [
+                                {
+                                    "Registry ID": selected_board_row.get("registry_id"),
+                                    "Revision ID": selected_board_row.get("revision_id"),
+                                    "Record Type": selected_board_row.get("record_type"),
+                                    "Strategy Family": selected_board_row.get("strategy_family"),
+                                    "Strategy Name": selected_board_row.get("strategy_name"),
+                                    "Title": selected_board_row.get("title"),
+                                    "Source Review Note": selected_board_row.get("source_review_note_id"),
+                                    "Recorded At": selected_board_row.get("recorded_at"),
+                                }
+                            ]
+                        ),
+                        use_container_width=True,
+                        hide_index=True,
+                    )
             board_evaluation = _build_candidate_board_operating_evaluation(selected_board_row)
             with st.container(border=True):
                 st.markdown("##### Candidate Packaging 종합 판단")
@@ -606,7 +593,8 @@ def render_candidate_review_workspace() -> None:
                     next_action=str(board_evaluation["next_action"]),
                 )
                 st.progress(max(0.0, min(float(board_evaluation["score"]) / 10.0, 1.0)))
-                st.dataframe(pd.DataFrame(board_evaluation["criteria_rows"]), use_container_width=True, hide_index=True)
+                with st.expander("Candidate Packaging 판단 기준 보기", expanded=False):
+                    st.dataframe(pd.DataFrame(board_evaluation["criteria_rows"]), use_container_width=True, hide_index=True)
                 if board_evaluation["can_move_to_pre_live"]:
                     st.success("Candidate Packaging 통과: 이 후보는 아래에서 Pre-Live 운영 상태를 기록할 수 있습니다.")
                 elif board_evaluation["can_move_to_compare"]:
@@ -632,59 +620,20 @@ def render_candidate_review_workspace() -> None:
                         "이미 이 candidate에 연결된 active Pre-Live 운영 기록이 있습니다. "
                         "다시 저장하면 append-only 방식으로 새 revision이 추가되고 latest view에서는 새 기록이 보입니다."
                     )
-                render_status_card_grid(
+                render_badge_strip(
                     [
-                        {"title": "Promotion", "value": str(selected_result.get("promotion") or "-"), "tone": "positive"},
-                        {"title": "Shortlist", "value": str(selected_result.get("shortlist") or "-"), "tone": "neutral"},
-                        {"title": "Deployment", "value": str(selected_result.get("deployment") or "-"), "tone": "warning"},
+                        {"label": "Promotion", "value": str(selected_result.get("promotion") or "-"), "tone": "positive"},
+                        {"label": "Shortlist", "value": str(selected_result.get("shortlist") or "-"), "tone": "neutral"},
+                        {"label": "Deployment", "value": str(selected_result.get("deployment") or "-"), "tone": "warning"},
                         {
-                            "title": "System Suggested Status",
+                            "label": "Suggested",
                             "value": _pre_live_status_korean_label(default_status),
                             "tone": "positive" if default_status == "paper_tracking" else "neutral",
                         },
                     ]
                 )
-                with st.container(border=True):
-                    st.markdown("##### Status Recommendation")
-                    st.caption(
-                        "System Suggested Status는 선택한 current candidate의 Real-Money 신호와 blocker를 바탕으로 계산한 추천값입니다. "
-                        "Operator Final Status가 실제 저장되는 운영 판단입니다."
-                    )
+                with st.expander("운영 상태 추천 근거 보기", expanded=False):
                     st.info(_pre_live_status_suggestion_reason(selected_board_row, default_status))
-                with st.expander("Pre-Live Status 의미", expanded=False):
-                    st.dataframe(
-                        pd.DataFrame(
-                            [
-                                {
-                                    "Status": "paper_tracking",
-                                    "의미": "실제 돈 없이 성과와 blocker 변화를 추적",
-                                    "다음 단계": "Portfolio Proposal 후보로 검토 가능",
-                                },
-                                {
-                                    "Status": "watchlist",
-                                    "의미": "다시 볼 후보로 남기되 아직 paper tracking 전",
-                                    "다음 단계": "후보 비교 또는 데이터 업데이트 후 재검토",
-                                },
-                                {
-                                    "Status": "hold",
-                                    "의미": "blocker나 미확인 요소가 남아 보류",
-                                    "다음 단계": "보류 사유 해소 후 재검토",
-                                },
-                                {
-                                    "Status": "reject",
-                                    "의미": "현재 기준에서는 추적 종료",
-                                    "다음 단계": "새 근거가 생기면 새 후보로 재검토",
-                                },
-                                {
-                                    "Status": "re_review",
-                                    "의미": "정해진 날짜에 다시 확인",
-                                    "다음 단계": "review date에 상태 재분류",
-                                },
-                            ]
-                        ),
-                        use_container_width=True,
-                        hide_index=True,
-                    )
                 pre_live_key = f"{selected_registry_id}_{selected_revision_id}"
                 selected_status = st.selectbox(
                     "Operator Final Status",
@@ -754,7 +703,8 @@ def render_candidate_review_workspace() -> None:
                         next_action=str(pre_live_readiness["next_action"]),
                     )
                     st.progress(max(0.0, min(float(pre_live_readiness["score"]) / 10.0, 1.0)))
-                    st.dataframe(pd.DataFrame(pre_live_readiness["criteria_rows"]), use_container_width=True, hide_index=True)
+                    with st.expander("Proposal 진입 판단 기준 보기", expanded=False):
+                        st.dataframe(pd.DataFrame(pre_live_readiness["criteria_rows"]), use_container_width=True, hide_index=True)
                     if pre_live_readiness["can_move_to_portfolio_proposal"]:
                         st.success(
                             "운영 기록 통과: Pre-Live record를 저장하면 Portfolio Proposal에서 후보로 사용할 수 있습니다."

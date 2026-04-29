@@ -3388,3 +3388,20 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `Registry 후보 범위 판단`은 `Candidate Packaging 종합 판단`과 같은 route/readiness panel로 바꿔 Scope, Score, Blockers, 판정, 다음 행동을 같은 시각 언어로 보여준다
 - Follow-up:
   - 이후 다른 Backtest workflow도 설명문이 길어지면, 먼저 artifact card 또는 input/action/output summary로 줄이는 방식을 우선 검토한다
+
+### 2026-04-30 - Candidate Review 단계 내부는 더 얇은 안내와 접힌 상세로 정리한다
+- User request:
+  - Artifact pipeline은 괜찮지만 각 단계별 Input / Action / Output 카드는 오히려 복잡해 보인다고 지적함
+  - Registry 저장과 운영 상태 저장 구간은 처음 사용하는 사람이 보기에는 정보가 너무 많이 펼쳐져 있어 핵심 행동이 흐려진다고 봄
+  - 웹에서 Cmd+C를 누를 때 Streamlit `Clear caches` modal이 뜨는 문제도 확인을 요청함
+- Interpreted goal:
+  - 상단 산출물 흐름은 유지하되, 단계 내부는 긴 설명이나 카드 grid가 아니라 얇은 목적/결과 표시와 핵심 판정 중심으로 정리해야 함
+  - 상세 기준 표, 기존 저장 row, 추천 근거는 필요할 때만 열어보는 보조 정보여야 함
+- Analysis result:
+  - Input / Action / Output 카드를 제거하고 각 섹션 상단은 `왜 / 결과` brief strip으로 축소했다
+  - Registry 저장 구간은 Scope route panel과 저장값 form 중심으로 정리하고, 판단 기준과 기존 저장 기록은 collapsed expander로 이동했다
+  - Registry row 저장 form은 먼저 찾아야 할 이름과 후보 범위를 확인하도록 줄이고, strategy family / strategy name / candidate role 같은 고급 식별값은 접힘 영역으로 보냈다
+  - 운영 상태 저장 구간은 promotion / shortlist / deployment / suggested status를 compact badge로 보여주고, 방금 저장한 후보 식별값, Pre-Live 추천 근거, proposal route 기준은 접어 두었다
+  - Cmd+C cache modal은 repo 코드가 만든 것이 아니라 Streamlit 기본 단축키 계열 동작으로 판단했고, 앱에서 Cmd/Ctrl+C keydown 이벤트가 Streamlit handler까지 전파되지 않도록 guard를 설치했다
+- Follow-up:
+  - Playwright smoke에서는 Cmd/Ctrl+C 후 clear-cache modal이 뜨지 않았다. 실제 브라우저 사용 중에도 다시 뜨면 Streamlit shortcut 처리 변경 여부를 추가로 확인한다

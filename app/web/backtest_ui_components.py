@@ -178,74 +178,104 @@ def render_artifact_pipeline(cards: list[dict[str, Any]]) -> None:
     )
 
 
-# Render a step's purpose through input/action/output cards instead of long instructional text.
-def render_step_io_summary(
-    *,
-    input_label: str,
-    input_detail: str,
-    action_label: str,
-    action_detail: str,
-    output_label: str,
-    output_detail: str,
-) -> None:
-    items = [
-        ("Input", input_label, input_detail),
-        ("Action", action_label, action_detail),
-        ("Output", output_label, output_detail),
-    ]
-    html_items: list[str] = []
-    for eyebrow, label, detail in items:
-        html_items.append(
-            '<div class="bt-io-card">'
-            f'<div class="bt-io-eyebrow">{escape(eyebrow)}</div>'
-            f'<div class="bt-io-label">{escape(label)}</div>'
-            f'<div class="bt-io-detail">{escape(detail)}</div>'
-            "</div>"
+# Render compact inline badges for secondary metadata without adding another table.
+def render_badge_strip(items: list[dict[str, Any]]) -> None:
+    badges: list[str] = []
+    for item in items:
+        label = escape(str(item.get("label") or ""))
+        value = escape(str(item.get("value") or "-"))
+        tone = escape(str(item.get("tone") or "neutral"))
+        badges.append(
+            f'<span class="bt-badge bt-badge-{tone}">'
+            f'<span class="bt-badge-label">{label}</span>'
+            f'<span class="bt-badge-value">{value}</span>'
+            "</span>"
         )
     st.markdown(
         """
         <style>
-          .bt-io-strip {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 0.65rem;
-            margin: 0.35rem 0 1rem 0;
+          .bt-badge-strip {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.45rem;
+            margin: 0.25rem 0 0.85rem 0;
           }
-          .bt-io-card {
-            padding: 0.75rem 0.85rem;
+          .bt-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            max-width: 100%;
+            padding: 0.3rem 0.58rem;
             border: 1px solid rgba(49, 51, 63, 0.14);
-            border-left: 4px solid #64748b;
-            border-radius: 8px;
+            border-radius: 999px;
             background: #f8fafc;
+            color: #334155;
+            font-size: 0.82rem;
+            line-height: 1.2;
           }
-          .bt-io-eyebrow {
-            font-size: 0.72rem;
-            font-weight: 800;
-            letter-spacing: 0;
-            color: #64748b;
-            text-transform: uppercase;
-            margin-bottom: 0.25rem;
-          }
-          .bt-io-label {
-            font-size: 0.98rem;
-            line-height: 1.25;
+          .bt-badge-positive { border-color: rgba(15, 118, 110, 0.24); background: #f0fdfa; }
+          .bt-badge-warning { border-color: rgba(180, 83, 9, 0.24); background: #fffbeb; }
+          .bt-badge-danger { border-color: rgba(185, 28, 28, 0.24); background: #fef2f2; }
+          .bt-badge-label {
             font-weight: 760;
+            color: #64748b;
+            white-space: nowrap;
+          }
+          .bt-badge-value {
+            font-weight: 700;
             color: #111827;
             overflow-wrap: anywhere;
-          }
-          .bt-io-detail {
-            margin-top: 0.35rem;
-            font-size: 0.84rem;
-            line-height: 1.35;
-            color: #475569;
-            overflow-wrap: anywhere;
+            word-break: break-word;
           }
         </style>
         """,
         unsafe_allow_html=True,
     )
     st.markdown(
-        f'<div class="bt-io-strip">{"".join(html_items)}</div>',
+        f'<div class="bt-badge-strip">{"".join(badges)}</div>',
+        unsafe_allow_html=True,
+    )
+
+
+# Render a thin purpose/result strip so section meaning is visible without a card grid.
+def render_stage_brief(*, purpose: str, result: str) -> None:
+    st.markdown(
+        """
+        <style>
+          .bt-stage-brief {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.55rem;
+            align-items: center;
+            margin: 0.2rem 0 0.85rem 0;
+            padding: 0.55rem 0.7rem;
+            border-left: 4px solid #64748b;
+            border-radius: 6px;
+            background: #f8fafc;
+          }
+          .bt-stage-brief-item {
+            display: inline-flex;
+            gap: 0.35rem;
+            align-items: baseline;
+            min-width: min(100%, 260px);
+            font-size: 0.9rem;
+            line-height: 1.35;
+            color: #334155;
+          }
+          .bt-stage-brief-key {
+            font-weight: 820;
+            color: #475569;
+            white-space: nowrap;
+          }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        '<div class="bt-stage-brief">'
+        f'<span class="bt-stage-brief-item"><span class="bt-stage-brief-key">왜</span>{escape(purpose)}</span>'
+        f'<span class="bt-stage-brief-item"><span class="bt-stage-brief-key">결과</span>{escape(result)}</span>'
+        "</div>",
         unsafe_allow_html=True,
     )
 
