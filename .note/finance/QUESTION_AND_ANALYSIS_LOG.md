@@ -3303,3 +3303,17 @@ Detailed historical analysis was archived on `2026-04-13`.
   - card 값은 `overflow-wrap: anywhere` / `word-break: break-word`로 긴 snake_case 상태도 줄바꿈되도록 했다
 - Follow-up:
   - 같은 문제가 다른 Backtest panel의 long status summary에서도 반복되면 동일한 card pattern을 해당 panel에 적용한다
+
+### 2026-04-30 - Route/readiness 판정도 말줄임 없이 보여야 한다
+- User request:
+  - `Portfolio Proposal 진입 평가`의 `Route` 값이 `PORTFOLIO_...`처럼 잘려 보이고, 이런 긴 상태 문자열 요약이 여러 곳에 있다고 지적함
+  - 카드 방식이 아니어도 더 시각적으로 읽기 좋은 UI로 개선해 달라고 요청함
+- Interpreted goal:
+  - route label은 숫자 metric이 아니라 운영 경로 판정이므로, 말줄임 없이 읽히는 decision panel이 더 적합함
+  - 동일한 문제가 반복되지 않게 Candidate Review와 Pre-Live Review가 같은 공용 UI component를 쓰도록 해야 함
+- Analysis result:
+  - `app/web/backtest_ui_components.py`를 추가해 wrapping status card와 route/readiness decision panel을 공용화했다
+  - `Candidate Review > Pre-Live 진입 평가`와 `Pre-Live Review > Portfolio Proposal 진입 평가`의 `Route / Readiness / Blockers / 판정 / 다음 행동` 영역을 새 route panel로 교체했다
+  - 기존 score, progress bar, criteria table, route별 버튼 활성화 조건은 바꾸지 않았다
+- Follow-up:
+  - 이후 다른 Backtest panel에서 긴 status label이 `st.metric`에 들어가는 경우 `backtest_ui_components.py`의 component를 재사용한다

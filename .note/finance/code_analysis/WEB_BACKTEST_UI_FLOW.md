@@ -11,6 +11,7 @@ UI form, payload 복원, candidate review, history replay, saved portfolio repla
 |---|---|
 | `app/web/streamlit_app.py` | top navigation과 page entry |
 | `app/web/pages/backtest.py` | Backtest page entry, shared helper, 아직 분리되지 않은 panel render logic |
+| `app/web/backtest_ui_components.py` | Backtest UI 공용 status card, route/readiness panel render helper |
 | `app/web/backtest_candidate_review.py` | Candidate Review / Candidate Packaging 화면 render logic |
 | `app/web/backtest_candidate_review_helpers.py` | Candidate Review 판단, Review Note / registry 변환, readiness score helper |
 | `app/web/backtest_pre_live_review.py` | Pre-Live Review 순서형 7단계 운영 점검 화면 render logic |
@@ -129,6 +130,7 @@ Phase 30 third work unit status:
 - `app/web/runtime/portfolio_proposal.py`로 proposal draft registry read / append helper도 추가했다.
 - Candidate Review는 `app/web/backtest_candidate_review.py`와 `app/web/backtest_candidate_review_helpers.py`로 분리되어, `backtest.py`에는 panel wrapper와 cross-panel handoff call만 남아 있다.
 - Pre-Live Review도 `app/web/backtest_pre_live_review.py`와 `app/web/backtest_pre_live_review_helpers.py`로 분리되어, `backtest.py`에는 panel wrapper와 cross-panel handoff call만 남아 있다.
+- 긴 route/status 문자열은 `app/web/backtest_ui_components.py`의 wrapping card / route panel을 사용해 `st.metric` 말줄임을 피한다.
 - Compare prefill 변환, 일부 History / Saved Portfolio / Portfolio Proposal render logic, Streamlit session state는 아직 `app/web/pages/backtest.py`에 남아 있다.
 - 따라서 이 작업은 전체 Backtest UI refactor가 아니라 Candidate Review / Pre-Live Review를 중심으로 한 점진적 module split이다.
 

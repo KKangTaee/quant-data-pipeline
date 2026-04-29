@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 from datetime import date, timedelta
-from html import escape
-from typing import Any
 
 import pandas as pd
 import streamlit as st
@@ -22,6 +20,7 @@ from app.web.backtest_pre_live_review_helpers import (
     _pre_live_status_korean_label,
     _pre_live_status_suggestion_reason,
 )
+from app.web.backtest_ui_components import render_readiness_route_panel, render_status_card_grid
 from app.web.runtime import (
     CURRENT_CANDIDATE_REGISTRY_FILE,
     PRE_LIVE_CANDIDATE_REGISTRY_FILE,
@@ -29,76 +28,6 @@ from app.web.runtime import (
     load_current_candidate_registry_latest as _load_current_candidate_registry_latest,
     load_pre_live_candidate_registry_latest as _load_pre_live_candidate_registry_latest,
 )
-
-
-# Render long Pre-Live status strings as wrapping cards instead of truncating Streamlit metrics.
-def _render_status_card_grid(cards: list[dict[str, Any]]) -> None:
-    html_cards: list[str] = []
-    for card in cards:
-        title = escape(str(card.get("title") or ""))
-        value = escape(str(card.get("value") or "-"))
-        detail = escape(str(card.get("detail") or ""))
-        tone = escape(str(card.get("tone") or "neutral"))
-        detail_html = f'<div class="pl-status-card-detail">{detail}</div>' if detail else ""
-        html_cards.append(
-            f'<div class="pl-status-card pl-status-card-{tone}">'
-            f'<div class="pl-status-card-title">{title}</div>'
-            f'<div class="pl-status-card-value">{value}</div>'
-            f"{detail_html}"
-            "</div>"
-        )
-    st.markdown(
-        """
-        <style>
-          .pl-status-card-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 0.75rem;
-            margin: 0.35rem 0 1rem 0;
-          }
-          .pl-status-card {
-            min-height: 104px;
-            padding: 0.9rem 1rem;
-            border: 1px solid rgba(49, 51, 63, 0.18);
-            border-top: 4px solid #64748b;
-            border-radius: 8px;
-            background: #ffffff;
-            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
-          }
-          .pl-status-card-positive { border-top-color: #0f766e; }
-          .pl-status-card-warning { border-top-color: #b45309; }
-          .pl-status-card-danger { border-top-color: #b91c1c; }
-          .pl-status-card-neutral { border-top-color: #475569; }
-          .pl-status-card-title {
-            font-size: 0.86rem;
-            font-weight: 650;
-            color: #475569;
-            margin-bottom: 0.45rem;
-            overflow-wrap: anywhere;
-          }
-          .pl-status-card-value {
-            font-size: 1.35rem;
-            font-weight: 700;
-            line-height: 1.25;
-            color: #111827;
-            overflow-wrap: anywhere;
-            word-break: break-word;
-          }
-          .pl-status-card-detail {
-            margin-top: 0.45rem;
-            font-size: 0.82rem;
-            line-height: 1.3;
-            color: #64748b;
-            overflow-wrap: anywhere;
-          }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        f'<div class="pl-status-card-grid">{"".join(html_cards)}</div>',
-        unsafe_allow_html=True,
-    )
 
 
 def render_pre_live_review_workspace() -> None:
@@ -120,7 +49,7 @@ def render_pre_live_review_workspace() -> None:
     current_rows = _load_current_candidate_registry_latest()
     pre_live_rows = _load_pre_live_candidate_registry_latest()
 
-    _render_status_card_grid(
+    render_status_card_grid(
         [
             {"title": "Current Candidates", "value": len(current_rows), "tone": "neutral"},
             {"title": "Pre-Live Active Records", "value": len(pre_live_rows), "tone": "positive"},
@@ -234,7 +163,7 @@ def render_pre_live_review_workspace() -> None:
             )
 
         st.markdown("#### 2. 운영 상태 / 추적 계획 결정")
-        _render_status_card_grid(
+        render_status_card_grid(
             [
                 {"title": "Promotion", "value": str(result.get("promotion") or "-"), "tone": "positive"},
                 {"title": "Shortlist", "value": str(result.get("shortlist") or "-"), "tone": "neutral"},
@@ -328,15 +257,13 @@ def render_pre_live_review_workspace() -> None:
                 "이 점수는 전략 성과 점수가 아니라, Pre-Live 운영 기록이 8단계 Portfolio Proposal에서 읽을 수 있을 만큼 "
                 "후보 식별, 운영 상태, 추적 계획을 갖췄는지 보는 체크입니다."
             )
-            eval_cols = st.columns([0.24, 0.18, 0.18, 0.4], gap="small")
-            eval_cols[0].metric("Route", str(readiness["route_label"]))
-            eval_cols[1].metric("Readiness", f"{float(readiness['score']):.1f} / 10")
-            eval_cols[2].metric("Blockers", len(readiness["blocking_reasons"]))
-            with eval_cols[3]:
-                st.caption("판정")
-                st.markdown(f"**{readiness['verdict']}**")
-                st.caption("다음 행동")
-                st.markdown(str(readiness["next_action"]))
+            render_readiness_route_panel(
+                route_label=str(readiness["route_label"]),
+                score=float(readiness["score"]),
+                blockers_count=len(readiness["blocking_reasons"]),
+                verdict=str(readiness["verdict"]),
+                next_action=str(readiness["next_action"]),
+            )
             st.progress(max(0.0, min(float(readiness["score"]) / 10.0, 1.0)))
             st.dataframe(pd.DataFrame(readiness["criteria_rows"]), use_container_width=True, hide_index=True)
             if readiness["can_move_to_portfolio_proposal"]:

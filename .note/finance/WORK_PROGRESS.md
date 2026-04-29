@@ -2442,3 +2442,13 @@ Detailed historical logs were archived on `2026-04-13`.
   - kept the underlying Pre-Live scoring, draft, registry, and session-state behavior unchanged
 - Durable takeaway:
   - Long candidate status strings no longer collapse into ellipses in the main Pre-Live Review signal summary.
+
+### 2026-04-30
+- Improved long route/readiness labels in Candidate Review and Pre-Live Review.
+- Changed:
+  - added `app/web/backtest_ui_components.py` with shared wrapping status cards and a route/readiness panel
+  - replaced `st.metric` route summaries in `Candidate Review > Pre-Live 진입 평가` and `Pre-Live Review > Portfolio Proposal 진입 평가`
+  - preserved the existing progress bars, criteria tables, route decisions, and button gating
+  - synced README, comprehensive analysis, script structure map, and web backtest UI flow docs
+- Durable takeaway:
+  - Route labels such as `PORTFOLIO_PROPOSAL_READY` and `PRE_LIVE_READY` now wrap inside a decision panel instead of being truncated.

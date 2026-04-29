@@ -89,6 +89,7 @@ app/
   jobs/                  # ingestion jobs, diagnostics, run history
   web/
     streamlit_app.py     # Finance Console entry point
+    backtest_ui_components.py # Backtest 공용 status/route UI component
     backtest_candidate_review.py # Candidate Review / Candidate Packaging UI
     backtest_candidate_review_helpers.py # Candidate Review 판단/변환 helper
     backtest_pre_live_review.py # Pre-Live Review UI

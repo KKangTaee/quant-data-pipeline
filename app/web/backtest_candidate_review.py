@@ -32,6 +32,7 @@ from app.web.backtest_candidate_review_helpers import (
     _default_candidate_review_next_action,
     _default_candidate_review_operator_reason,
 )
+from app.web.backtest_ui_components import render_readiness_route_panel
 from app.web.runtime import (
     CANDIDATE_REVIEW_NOTES_FILE,
     CURRENT_CANDIDATE_REGISTRY_FILE,
@@ -541,15 +542,13 @@ def render_candidate_review_workspace() -> None:
                     "이 점수는 전략 성과 점수가 아니라, registry에 저장된 후보가 다음 운영 화면으로 넘어갈 만큼 "
                     "역할, 근거, 설정, Real-Money 신호를 갖췄는지 보는 체크입니다."
                 )
-                route_cols = st.columns([0.22, 0.18, 0.2, 0.4], gap="small")
-                route_cols[0].metric("Route", str(board_evaluation["route_label"]))
-                route_cols[1].metric("Readiness", f"{float(board_evaluation['score']):.1f} / 10")
-                route_cols[2].metric("Blockers", len(board_evaluation["blocking_reasons"]))
-                with route_cols[3]:
-                    st.caption("판정")
-                    st.markdown(f"**{board_evaluation['verdict']}**")
-                    st.caption("다음 행동")
-                    st.markdown(str(board_evaluation["next_action"]))
+                render_readiness_route_panel(
+                    route_label=str(board_evaluation["route_label"]),
+                    score=float(board_evaluation["score"]),
+                    blockers_count=len(board_evaluation["blocking_reasons"]),
+                    verdict=str(board_evaluation["verdict"]),
+                    next_action=str(board_evaluation["next_action"]),
+                )
                 st.progress(max(0.0, min(float(board_evaluation["score"]) / 10.0, 1.0)))
                 st.dataframe(pd.DataFrame(board_evaluation["criteria_rows"]), use_container_width=True, hide_index=True)
                 if board_evaluation["can_move_to_pre_live"]:
