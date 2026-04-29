@@ -2295,3 +2295,14 @@ Detailed historical logs were archived on `2026-04-13`.
   - synced the walkthrough session note and web backtest UI flow doc without touching Phase 30 QA docs
 - Durable takeaway:
   - Candidate Draft 확인과 Review Note 저장은 one-step intake workflow이고, registry append는 still a separate explicit decision.
+
+### 2026-04-29
+- Added step-7 registry scope gating for saved Candidate Review Notes.
+- Changed:
+  - added `7단계 Registry 후보 범위 판단` in `Backtest > Candidate Review > Review Notes`
+  - classified saved Review Notes into Current Candidate / Near Miss / Scenario / Stop before registry append
+  - disabled append when the selected Record Type does not match the step-7 scope
+  - preserved compare readiness evidence in Candidate Review Notes and copied it into registry review context
+  - synced Guides, walkthrough session notes, and web backtest UI flow without touching Phase 30 QA docs
+- Durable takeaway:
+  - Step 7 now decides how far a saved Review Note can travel; only a matched scope proceeds to explicit step-8 registry append.

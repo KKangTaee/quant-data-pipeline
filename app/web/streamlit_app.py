@@ -3125,7 +3125,7 @@ def _render_guides_page() -> None:
                 "goal": "저장된 Review Note 중 실제 후보 목록에 남길 것과 참고 기록으로만 둘 것을 구분합니다.",
                 "check": [
                     "저장된 `Review Decision`, `Operator Reason`, `Next Action` 다시 확인",
-                    "비교 근거와 Data Trust warning이 registry 후보로 남기기에 충분한지 확인",
+                    "`7단계 Registry 후보 범위 판단`에서 Current / Near Miss / Scenario / Stop 범위 확인",
                     "후보로 남길 경우 `Prepare Current Candidate Registry Row`로 row preview 확인",
                     "참고 기록이면 Review Note 상태로만 남김",
                 ],
@@ -3306,6 +3306,45 @@ def _render_guides_page() -> None:
             )
             st.warning(
                 "이 저장은 후보 registry append가 아닙니다. registry에 남길지는 7단계에서 Review Notes를 보고 다시 결정합니다."
+            )
+
+        with st.expander("7단계에서 8단계로 넘어가는 최소 기준", expanded=True):
+            st.caption(
+                "이 기준은 저장된 Review Note를 어떤 registry 범위로 남길지 정하는 기준입니다. "
+                "여기서 `Stop`이면 8단계 append로 가지 않고 Review Notes에만 남깁니다."
+            )
+            registry_scope_rows = pd.DataFrame(
+                [
+                    {
+                        "범위": "Current Candidate",
+                        "8단계 진행 가능": "Review Decision이 registry candidate 검토이고, Compare 근거 / Data Trust / Real-Money gate / 설정 snapshot이 충분함",
+                        "Record Type": "`current_candidate`",
+                    },
+                    {
+                        "범위": "Near Miss",
+                        "8단계 진행 가능": "아직 주 후보는 아니지만 result snapshot, Data Trust, 설정 snapshot, 다음 재검토 이유가 남아 있음",
+                        "Record Type": "`near_miss`",
+                    },
+                    {
+                        "범위": "Scenario",
+                        "8단계 진행 가능": "실전 후보라기보다 설정 비교용으로 남길 이유와 재현 가능한 설정이 있음",
+                        "Record Type": "`scenario`",
+                    },
+                    {
+                        "범위": "Stop",
+                        "8단계 진행 가능": "진행하지 않음. reject, Data Trust error, 설정/성과 snapshot 부족, 판단 메모 부족이면 Review Notes에만 남김",
+                        "Record Type": "-",
+                    },
+                ]
+            )
+            st.dataframe(registry_scope_rows, use_container_width=True, hide_index=True)
+            st.success(
+                "`7단계 Registry 후보 범위 판단`이 Current / Near Miss / Scenario 중 하나로 나오고, "
+                "선택한 Record Type이 그 범위와 맞으면 8단계 append로 넘어갈 수 있습니다."
+            )
+            st.warning(
+                "Current Candidate 범위는 가장 엄격합니다. Compare 근거가 없거나 Real-Money gate가 약하면 "
+                "Near Miss 또는 Scenario로 남기거나 7단계에서 멈추는 것이 기본입니다."
             )
 
     st.markdown("### 문서와 파일")

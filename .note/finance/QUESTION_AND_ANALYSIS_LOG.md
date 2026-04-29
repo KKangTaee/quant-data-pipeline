@@ -3124,3 +3124,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 8단계는 여전히 `Append To Current Candidate Registry`를 명시적으로 누르는 registry 저장 단계다
 - Follow-up:
   - 사용자는 5단계 통과 후보를 Candidate Intake Draft로 보낸 뒤 `6단계 Intake 저장 준비`가 `READY_TO_SAVE`인지 확인하고 Review Note를 저장한다
+
+### 2026-04-29 - 7단계는 registry 후보 범위를 정한 뒤 8단계로 넘긴다
+- User request:
+  - 6단계에서 Review Note 저장까지 끝냈으니, 7단계에서 무엇을 하고 어떤 범위를 정해야 다음 단계로 진행할 수 있는지 개발해 달라고 요청함
+- Interpreted goal:
+  - 7단계가 단순히 저장된 note를 append하는 화면이 아니라, 해당 note를 `current_candidate`, `near_miss`, `scenario`, 또는 append 보류 중 어디로 둘지 판단하는 gate가 되어야 함
+- Analysis result:
+  - `Backtest > Candidate Review > Review Notes`에 `7단계 Registry 후보 범위 판단` 박스를 추가했다
+  - Review Note의 decision, result snapshot, Data Trust, Real-Money gate, settings snapshot, compare evidence, operator reason / next action을 확인해 scope를 정한다
+  - Current Candidate는 가장 엄격하게 보고, Compare 근거와 Real-Money gate가 충분하지 않으면 Near Miss / Scenario / Stop으로 분리한다
+  - 선택한 Record Type이 scope와 맞지 않으면 `Append To Current Candidate Registry`가 비활성화된다
+- Follow-up:
+  - 사용자는 저장된 Review Note를 고른 뒤 scope가 Current / Near Miss / Scenario 중 하나인지 확인하고, 추천 Record Type과 맞춘 뒤 8단계 append로 진행한다

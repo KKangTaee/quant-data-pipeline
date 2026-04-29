@@ -63,7 +63,7 @@ Ingestion / Data Trust
 |---|---|
 | `핵심 개념 가이드` | 실전 승격 흐름, Real-Money Contract, GTAA Risk-Off 후보군, interval, Compare 대상 선정법 해석 |
 | `1~11 단계 실행 흐름` | 테스트에서 상용화 후보 검토까지의 단계별 흐름. 각 단계는 expander로 접어 읽는다 |
-| `단계 통과 기준` | 4->5, 5->6, 6->7처럼 다음 단계로 넘길지 판단하는 stop/go 기준. 각 기준은 expander로 접어 읽는다 |
+| `단계 통과 기준` | 4->5, 5->6, 6->7, 7->8처럼 다음 단계로 넘길지 판단하는 stop/go 기준. 각 기준은 expander로 접어 읽는다 |
 | `문서와 파일` | 현재 먼저 볼 문서, 주요 registry / guide / log 파일, live approval이 아님을 구분하는 운영 경계 |
 
 ## Phase 30 Portfolio Proposal 계약
@@ -293,7 +293,7 @@ Latest Backtest Run 또는 History selected record
   -> 6단계 Intake 저장 준비 확인
   -> Save Candidate Review Note
   -> CANDIDATE_REVIEW_NOTES.jsonl
-  -> Review Notes에서 registry 후보 여부 결정
+  -> Review Notes에서 registry 후보 범위 판단
   -> optional Prepare Current Candidate Registry Row
   -> explicit Append To Current Candidate Registry
 ```
@@ -312,6 +312,8 @@ Latest Backtest Run 또는 History selected record
 - Candidate Review Note는 초안을 보고 남기는 operator decision 기록이며,
   현재 UI에서는 Draft 수신 정보와 operator reason / next action이 준비되어야 저장 버튼이 활성화된다.
 - Candidate Review Note를 저장해도 current candidate registry에 자동 등록되지 않는다.
+- Review Notes 탭은 `7단계 Registry 후보 범위 판단`으로 Current Candidate / Near Miss / Scenario / Stop 범위를 먼저 보여준다.
+- 범위 판단과 맞지 않는 record type은 8단계 append를 막는다.
 - Review Note를 registry row로 남기려면 `Review Notes` 탭에서 row preview를 확인한 뒤
   `Append To Current Candidate Registry`를 명시적으로 눌러야 한다.
 - `Suggested Next Step`은 다음 검토 행동 제안이지 live trading 승인이나 최종 투자 판단이 아니다.

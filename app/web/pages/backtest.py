@@ -6880,6 +6880,30 @@ def _render_candidate_review_workspace() -> None:
                     "후보로 다시 볼 근거가 생긴 뒤 새 review note를 만드는 편이 안전합니다."
                 )
             registry_defaults = _candidate_review_note_to_registry_defaults(selected_note)
+            registry_scope = _build_candidate_registry_scope_evaluation(selected_note)
+            with st.container(border=True):
+                st.markdown("##### 7단계 Registry 후보 범위 판단")
+                st.caption(
+                    "이 박스는 저장된 Review Note를 어떤 범위로 남길지 정합니다. "
+                    "`Current Candidate`는 주 후보, `Near Miss`는 다시 볼 대안, `Scenario`는 설정 비교용 후보입니다."
+                )
+                scope_cols = st.columns([0.22, 0.22, 0.18, 0.38], gap="small")
+                scope_cols[0].metric("Scope", str(registry_scope["scope_label"]))
+                scope_cols[1].metric("Recommended Type", str(registry_scope["recommended_record_type_label"]))
+                scope_cols[2].metric("Scope Score", f"{float(registry_scope['score']):.1f} / 10")
+                with scope_cols[3]:
+                    st.caption("판정")
+                    st.markdown(f"**{registry_scope['verdict']}**")
+                    st.caption("다음 행동")
+                    st.markdown(str(registry_scope["next_action"]))
+                st.progress(max(0.0, min(float(registry_scope["score"]) / 10.0, 1.0)))
+                st.dataframe(pd.DataFrame(registry_scope["criteria_rows"]), use_container_width=True, hide_index=True)
+                if registry_scope["can_prepare_registry_row"]:
+                    st.success("이 Review Note는 표시된 범위 안에서 registry row preview로 넘길 수 있습니다.")
+                else:
+                    st.error("8단계로 넘기기 전 멈출 항목: " + ", ".join(str(item) for item in registry_scope["blocking_reasons"]))
+                if registry_scope["warning_reasons"]:
+                    st.warning("Registry notes에 함께 남길 주의 항목: " + ", ".join(str(item) for item in registry_scope["warning_reasons"]))
             existing_registry_ids = {str(row.get("registry_id") or "") for row in _load_current_candidate_registry_latest()}
             registry_key = _candidate_review_note_widget_key(selected_note)
             registry_id = st.text_input(
@@ -6896,11 +6920,22 @@ def _render_candidate_review_workspace() -> None:
             record_type = st.selectbox(
                 "Record Type",
                 options=CURRENT_CANDIDATE_RECORD_TYPE_OPTIONS,
-                index=CURRENT_CANDIDATE_RECORD_TYPE_OPTIONS.index(registry_defaults["record_type"]),
+                index=CURRENT_CANDIDATE_RECORD_TYPE_OPTIONS.index(
+                    str(registry_scope.get("recommended_record_type") or registry_defaults["record_type"])
+                    if str(registry_scope.get("recommended_record_type") or registry_defaults["record_type"])
+                    in CURRENT_CANDIDATE_RECORD_TYPE_OPTIONS
+                    else registry_defaults["record_type"]
+                ),
                 format_func=_current_candidate_record_type_label,
                 key=f"candidate_registry_draft_record_type_{registry_key}",
                 help="current anchor인지, near-miss 대안인지, scenario 비교 후보인지 고릅니다.",
             )
+            allowed_record_types = set(registry_scope.get("allowed_record_types") or [])
+            if allowed_record_types and record_type not in allowed_record_types:
+                st.error(
+                    "선택한 Record Type이 7단계 범위 판단과 맞지 않습니다. "
+                    "권장 범위로 바꾸거나 Review Note를 다시 확인하세요."
+                )
             input_cols = st.columns(3, gap="small")
             with input_cols[0]:
                 strategy_family = st.text_input(
@@ -6944,14 +6979,21 @@ def _render_candidate_review_workspace() -> None:
             with st.expander("Current Candidate Registry Row JSON Preview", expanded=False):
                 st.json(registry_row)
             save_disabled = (
-                review_decision == "reject_for_now"
+                not bool(registry_scope["can_prepare_registry_row"])
+                or review_decision == "reject_for_now"
+                or (bool(allowed_record_types) and record_type not in allowed_record_types)
                 or not str(registry_id).strip()
                 or not str(strategy_family).strip()
                 or not str(strategy_name).strip()
                 or not str(candidate_role).strip()
             )
             if save_disabled and review_decision != "reject_for_now":
-                st.error("Registry ID, Strategy Family, Strategy Name, Candidate Role은 필수입니다.")
+                if not bool(registry_scope["can_prepare_registry_row"]):
+                    st.error("7단계 범위 판단이 통과되어야 8단계 registry append를 진행할 수 있습니다.")
+                elif bool(allowed_record_types) and record_type not in allowed_record_types:
+                    st.error("7단계에서 허용된 Record Type 범위 안에서만 append할 수 있습니다.")
+                else:
+                    st.error("Registry ID, Strategy Family, Strategy Name, Candidate Role은 필수입니다.")
             if st.button(
                 "Append To Current Candidate Registry",
                 key=f"append_candidate_registry_row_{registry_key}",
@@ -10982,6 +11024,7 @@ def _build_candidate_review_note_from_draft(
         "real_money_signal": dict(draft.get("real_money_signal") or {}),
         "data_trust_snapshot": dict(draft.get("data_trust_snapshot") or {}),
         "settings_snapshot": dict(draft.get("settings_snapshot") or {}),
+        "compare_readiness_evaluation": dict(draft.get("compare_readiness_evaluation") or {}),
         "notes": (
             "Created from Backtest > Candidate Review > Candidate Intake Draft. "
             "This is an operator review note, not CURRENT_CANDIDATE_REGISTRY insertion, "
@@ -11032,6 +11075,201 @@ def _current_candidate_record_type_label(record_type: str) -> str:
         "scenario": "Scenario: 설정 비교용 후보",
     }
     return labels.get(record_type, record_type)
+
+
+def _build_candidate_registry_scope_evaluation(note: dict[str, Any]) -> dict[str, Any]:
+    decision = str(note.get("review_decision") or "").strip().lower()
+    result = dict(note.get("result_snapshot") or {})
+    signal = dict(note.get("real_money_signal") or {})
+    data_trust = dict(note.get("data_trust_snapshot") or {})
+    settings = dict(note.get("settings_snapshot") or {})
+    compare_readiness = dict(note.get("compare_readiness_evaluation") or {})
+
+    result_ready = all(
+        _candidate_intake_value_present(result.get(key))
+        for key in ("end_balance", "cagr", "maximum_drawdown")
+    )
+    operator_ready = _candidate_intake_value_present(note.get("operator_reason")) and _candidate_intake_value_present(
+        note.get("next_action")
+    )
+    data_status = str(data_trust.get("price_freshness_status") or "").strip().lower()
+    data_ready = bool(data_trust) and data_status != "error"
+    real_money_ready = bool(signal) and any(_candidate_intake_value_present(value) for value in signal.values())
+    promotion = str(signal.get("promotion") or "").strip().lower()
+    deployment = str(signal.get("deployment") or "").strip().lower()
+    real_money_not_blocked = (
+        real_money_ready
+        and promotion not in {"", "hold"}
+        and deployment not in {"", "blocked"}
+    )
+    settings_ready = bool(settings) and any(
+        _candidate_intake_value_present(settings.get(key))
+        for key in ("tickers", "preset_name", "universe_mode", "universe_contract")
+    )
+    has_compare_evidence = (
+        str(note.get("source_kind") or "").strip().lower() == "compare_focused_strategy"
+        or _candidate_intake_value_present(compare_readiness.get("verdict"))
+        or _candidate_intake_value_present(compare_readiness.get("score"))
+    )
+    reject = decision == "reject_for_now"
+
+    warning_reasons: list[str] = []
+    if data_status == "warning":
+        warning_reasons.append("Data Trust warning")
+    if not has_compare_evidence:
+        warning_reasons.append("Compare 근거가 Review Note에 직접 남아 있지 않음")
+    if decision == "needs_more_evidence":
+        warning_reasons.append("추가 근거 필요 상태이므로 registry에는 near-miss 범위만 검토")
+
+    current_scope_ready = (
+        decision == "consider_registry_candidate"
+        and result_ready
+        and operator_ready
+        and data_ready
+        and real_money_not_blocked
+        and settings_ready
+        and has_compare_evidence
+    )
+    near_miss_scope_ready = (
+        decision in {"keep_as_near_miss_review", "needs_more_evidence"}
+        and result_ready
+        and operator_ready
+        and data_ready
+        and settings_ready
+        and not reject
+    )
+    scenario_scope_ready = (
+        decision == "keep_as_scenario_review"
+        and operator_ready
+        and settings_ready
+        and data_ready
+        and not reject
+    )
+
+    if current_scope_ready:
+        scope_label = "CURRENT_CANDIDATE_SCOPE"
+        recommended_record_type = "current_candidate"
+        allowed_record_types = ["current_candidate"]
+        verdict = "8단계 Current Candidate append 진행 가능"
+        next_action = "Current Candidate row preview를 확인한 뒤 8단계 append를 진행합니다."
+    elif near_miss_scope_ready:
+        scope_label = "NEAR_MISS_SCOPE"
+        recommended_record_type = "near_miss"
+        allowed_record_types = ["near_miss"]
+        verdict = "8단계 Near Miss append 진행 가능"
+        next_action = "Near Miss row로 남기되, 다음 비교 / 재검토 조건을 notes에 남깁니다."
+    elif scenario_scope_ready:
+        scope_label = "SCENARIO_SCOPE"
+        recommended_record_type = "scenario"
+        allowed_record_types = ["scenario"]
+        verdict = "8단계 Scenario append 진행 가능"
+        next_action = "Scenario row로 남기고, 비교용 설정이라는 점을 notes에 남깁니다."
+    else:
+        scope_label = "STOP_OR_REVIEW_MORE"
+        recommended_record_type = ""
+        allowed_record_types = []
+        verdict = "7단계에서 추가 확인 필요"
+        next_action = "Review Note의 판단, Data Trust, 설정 snapshot, 비교 근거를 먼저 보강합니다."
+
+    checks = [
+        {
+            "criteria": "Review Decision",
+            "ready": not reject and decision in {
+                "consider_registry_candidate",
+                "keep_as_near_miss_review",
+                "keep_as_scenario_review",
+                "needs_more_evidence",
+            },
+            "points": 2.0,
+            "current": _candidate_review_decision_label(decision) if decision else "-",
+            "judgment": "registry 범위 검토 가능한 decision" if not reject else "reject는 registry append 중단",
+        },
+        {
+            "criteria": "Result Snapshot",
+            "ready": result_ready,
+            "points": 1.5,
+            "current": (
+                f"CAGR={result.get('cagr') or '-'}, "
+                f"MDD={result.get('maximum_drawdown') or '-'}, "
+                f"End={result.get('end_balance') or '-'}"
+            ),
+            "judgment": "후보 row에 남길 성과 snapshot 있음" if result_ready else "성과 snapshot 부족",
+        },
+        {
+            "criteria": "Data Trust",
+            "ready": data_ready,
+            "points": 1.5,
+            "current": data_status.upper() if data_status else "SNAPSHOT_ONLY",
+            "judgment": "해석 가능" if data_ready else "Data Trust error 또는 snapshot 부족",
+        },
+        {
+            "criteria": "Real-Money Gate",
+            "ready": real_money_not_blocked,
+            "points": 2.0,
+            "current": f"promotion={promotion or '-'}, deployment={deployment or '-'}",
+            "judgment": "current 후보 범위 가능" if real_money_not_blocked else "current 후보가 아니라 near-miss/scenario 범위 검토",
+        },
+        {
+            "criteria": "Settings Snapshot",
+            "ready": settings_ready,
+            "points": 1.5,
+            "current": (
+                f"universe={settings.get('universe_mode') or settings.get('preset_name') or '-'}, "
+                f"tickers={len(settings.get('tickers') or []) if isinstance(settings.get('tickers'), list) else '-'}"
+            ),
+            "judgment": "후보 row 재진입 정보 있음" if settings_ready else "재현 가능한 설정 부족",
+        },
+        {
+            "criteria": "Compare Evidence",
+            "ready": has_compare_evidence or decision in {"keep_as_near_miss_review", "keep_as_scenario_review", "needs_more_evidence"},
+            "points": 1.0,
+            "current": compare_readiness.get("verdict") or note.get("source_kind") or "-",
+            "judgment": "current 후보 근거 있음" if has_compare_evidence else "current 후보 전에는 compare 보강 필요",
+        },
+        {
+            "criteria": "Operator Reason / Next Action",
+            "ready": operator_ready,
+            "points": 0.5,
+            "current": "작성됨" if operator_ready else "미작성",
+            "judgment": "후보로 남기는 이유와 다음 행동 있음" if operator_ready else "판단 메모 부족",
+        },
+    ]
+
+    max_points = sum(float(row["points"]) for row in checks)
+    earned_points = sum(float(row["points"]) for row in checks if row["ready"])
+    score = round((earned_points / max_points) * 10.0, 1) if max_points else 0.0
+    blocking_reasons = [str(row["criteria"]) for row in checks if not row["ready"]]
+    if not allowed_record_types and not blocking_reasons:
+        blocking_reasons.append("registry에 남길 범위를 결정하지 못함")
+
+    recommended_label = (
+        _current_candidate_record_type_label(recommended_record_type)
+        if recommended_record_type
+        else "Registry append 보류"
+    )
+
+    return {
+        "scope_label": scope_label,
+        "recommended_record_type": recommended_record_type,
+        "recommended_record_type_label": recommended_label,
+        "allowed_record_types": allowed_record_types,
+        "can_prepare_registry_row": bool(allowed_record_types),
+        "score": score,
+        "verdict": verdict,
+        "next_action": next_action,
+        "blocking_reasons": blocking_reasons,
+        "warning_reasons": warning_reasons,
+        "criteria_rows": [
+            {
+                "기준": row["criteria"],
+                "상태": "PASS" if row["ready"] else "CHECK",
+                "현재 값": row["current"],
+                "점수": f"{float(row['points']):g} / {float(row['points']):g}" if row["ready"] else f"0 / {float(row['points']):g}",
+                "판단": row["judgment"],
+            }
+            for row in checks
+        ],
+    }
 
 
 def _candidate_review_registry_record_type_default(note: dict[str, Any]) -> str:
@@ -11210,6 +11448,7 @@ def _build_current_candidate_registry_row_from_review_note(
             "next_action": note.get("next_action"),
             "review_date": note.get("review_date"),
             "data_trust_snapshot": note.get("data_trust_snapshot") or {},
+            "compare_readiness_evaluation": note.get("compare_readiness_evaluation") or {},
         },
         "notes": notes,
     }
