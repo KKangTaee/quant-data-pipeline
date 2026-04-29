@@ -2433,3 +2433,12 @@ Detailed historical logs were archived on `2026-04-13`.
   - synced README, comprehensive analysis, script structure map, and web backtest UI flow docs
 - Durable takeaway:
   - Candidate Review and Pre-Live Review now follow the same render/helper module split pattern, lowering the cost of future 7단계 workflow edits.
+
+### 2026-04-30
+- Improved Pre-Live Review summary readability on narrow screens.
+- Changed:
+  - replaced long-string `st.metric` blocks in Pre-Live Review with wrapping status cards
+  - applied the card layout to the top summary and the step-2 Promotion / Shortlist / Deployment / System Suggested Status signals
+  - kept the underlying Pre-Live scoring, draft, registry, and session-state behavior unchanged
+- Durable takeaway:
+  - Long candidate status strings no longer collapse into ellipses in the main Pre-Live Review signal summary.

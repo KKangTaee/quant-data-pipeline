@@ -3290,3 +3290,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `app/web/pages/backtest.py`에는 `_render_pre_live_review_workspace()` wrapper만 남겨 panel routing과 cross-panel handoff를 유지한다
 - Follow-up:
   - 다음 7단계 UX 수정은 우선 `backtest_pre_live_review.py` / `backtest_pre_live_review_helpers.py`에서 확인한다
+
+### 2026-04-30 - Pre-Live Review summary는 긴 status 문자열을 카드로 보여준다
+- User request:
+  - `st.metric` 기반 요약값이 화면 폭이 줄면 `...`로 잘려 상태 문자열을 읽기 어렵다고 지적함
+  - dashboard card처럼 title별 박스를 만들어 더 시각적으로 표시해 달라고 요청함
+- Interpreted goal:
+  - 숫자 metric보다 긴 운영 상태 문자열에 적합한 wrapping card UI가 필요함
+  - Pre-Live Review의 핵심 status 신호를 화면 폭이 좁아도 읽을 수 있어야 함
+- Analysis result:
+  - Pre-Live Review 상단 summary와 `2. 운영 상태 / 추적 계획 결정`의 Promotion / Shortlist / Deployment / System Suggested Status 표시를 wrapping card grid로 바꿨다
+  - card 값은 `overflow-wrap: anywhere` / `word-break: break-word`로 긴 snake_case 상태도 줄바꿈되도록 했다
+- Follow-up:
+  - 같은 문제가 다른 Backtest panel의 long status summary에서도 반복되면 동일한 card pattern을 해당 panel에 적용한다

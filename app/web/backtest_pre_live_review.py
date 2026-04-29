@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from datetime import date, timedelta
+from html import escape
+from typing import Any
 
 import pandas as pd
 import streamlit as st
@@ -29,6 +31,76 @@ from app.web.runtime import (
 )
 
 
+# Render long Pre-Live status strings as wrapping cards instead of truncating Streamlit metrics.
+def _render_status_card_grid(cards: list[dict[str, Any]]) -> None:
+    html_cards: list[str] = []
+    for card in cards:
+        title = escape(str(card.get("title") or ""))
+        value = escape(str(card.get("value") or "-"))
+        detail = escape(str(card.get("detail") or ""))
+        tone = escape(str(card.get("tone") or "neutral"))
+        detail_html = f'<div class="pl-status-card-detail">{detail}</div>' if detail else ""
+        html_cards.append(
+            f'<div class="pl-status-card pl-status-card-{tone}">'
+            f'<div class="pl-status-card-title">{title}</div>'
+            f'<div class="pl-status-card-value">{value}</div>'
+            f"{detail_html}"
+            "</div>"
+        )
+    st.markdown(
+        """
+        <style>
+          .pl-status-card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 0.75rem;
+            margin: 0.35rem 0 1rem 0;
+          }
+          .pl-status-card {
+            min-height: 104px;
+            padding: 0.9rem 1rem;
+            border: 1px solid rgba(49, 51, 63, 0.18);
+            border-top: 4px solid #64748b;
+            border-radius: 8px;
+            background: #ffffff;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+          }
+          .pl-status-card-positive { border-top-color: #0f766e; }
+          .pl-status-card-warning { border-top-color: #b45309; }
+          .pl-status-card-danger { border-top-color: #b91c1c; }
+          .pl-status-card-neutral { border-top-color: #475569; }
+          .pl-status-card-title {
+            font-size: 0.86rem;
+            font-weight: 650;
+            color: #475569;
+            margin-bottom: 0.45rem;
+            overflow-wrap: anywhere;
+          }
+          .pl-status-card-value {
+            font-size: 1.35rem;
+            font-weight: 700;
+            line-height: 1.25;
+            color: #111827;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+          }
+          .pl-status-card-detail {
+            margin-top: 0.45rem;
+            font-size: 0.82rem;
+            line-height: 1.3;
+            color: #64748b;
+            overflow-wrap: anywhere;
+          }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        f'<div class="pl-status-card-grid">{"".join(html_cards)}</div>',
+        unsafe_allow_html=True,
+    )
+
+
 def render_pre_live_review_workspace() -> None:
     from app.web.pages import backtest as bt
 
@@ -48,10 +120,13 @@ def render_pre_live_review_workspace() -> None:
     current_rows = _load_current_candidate_registry_latest()
     pre_live_rows = _load_pre_live_candidate_registry_latest()
 
-    summary_cols = st.columns(3, gap="small")
-    summary_cols[0].metric("Current Candidates", len(current_rows))
-    summary_cols[1].metric("Pre-Live Active Records", len(pre_live_rows))
-    summary_cols[2].metric("Live Trading", "Disabled")
+    _render_status_card_grid(
+        [
+            {"title": "Current Candidates", "value": len(current_rows), "tone": "neutral"},
+            {"title": "Pre-Live Active Records", "value": len(pre_live_rows), "tone": "positive"},
+            {"title": "Live Trading", "value": "Disabled", "tone": "danger", "detail": "Pre-Live는 투자 승인 단계가 아닙니다."},
+        ]
+    )
 
     with st.container(border=True):
         st.markdown("#### 7단계 Pre-Live 운영 점검")
@@ -159,11 +234,18 @@ def render_pre_live_review_workspace() -> None:
             )
 
         st.markdown("#### 2. 운영 상태 / 추적 계획 결정")
-        signal_cols = st.columns(4, gap="small")
-        signal_cols[0].metric("Promotion", str(result.get("promotion") or "-"))
-        signal_cols[1].metric("Shortlist", str(result.get("shortlist") or "-"))
-        signal_cols[2].metric("Deployment", str(result.get("deployment") or "-"))
-        signal_cols[3].metric("System Suggested Status", _pre_live_status_korean_label(default_status))
+        _render_status_card_grid(
+            [
+                {"title": "Promotion", "value": str(result.get("promotion") or "-"), "tone": "positive"},
+                {"title": "Shortlist", "value": str(result.get("shortlist") or "-"), "tone": "neutral"},
+                {"title": "Deployment", "value": str(result.get("deployment") or "-"), "tone": "warning"},
+                {
+                    "title": "System Suggested Status",
+                    "value": _pre_live_status_korean_label(default_status),
+                    "tone": "positive" if default_status == "paper_tracking" else "neutral",
+                },
+            ]
+        )
         with st.container(border=True):
             st.markdown("##### Status Recommendation")
             st.caption(
