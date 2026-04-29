@@ -2482,3 +2482,17 @@ Detailed historical logs were archived on `2026-04-13`.
   - Streamlit smoke checked the top navigation: `Operations > Backtest Run History` renders the persistent backtest history surface, and `Backtest` no longer shows a Run History utility button
 - Durable takeaway:
   - Backtest is now visually reserved for candidate-building workflow, while persisted backtest history is treated as an Operations audit / replay surface.
+
+### 2026-04-30
+- Completed the second Backtest Run History module split.
+- Changed:
+  - moved the persistent history inspector, selected-record detail view, replay parity snapshot, and History action buttons into `app/web/backtest_history.py`
+  - added `app/web/backtest_history_helpers.py` for history table rows, replay payload reconstruction, field parity summaries, and Real-Money / Guardrail scope helper tables
+  - removed the moved history render/helper bodies from `app/web/pages/backtest.py`
+  - kept actual backtest rerun execution delegated to `backtest.py` so History does not own strategy runtime behavior
+  - synced script structure and web backtest UI flow docs
+- Verification:
+  - `python3 -m py_compile app/web/backtest_history.py app/web/backtest_history_helpers.py app/web/pages/backtest.py app/web/streamlit_app.py` passed
+  - `uv run python` import smoke confirmed `backtest_history_helpers`, `backtest_history`, and the Backtest parity renderer import load correctly
+- Durable takeaway:
+  - `backtest.py` is now shorter by the History inspector/replay helper block, and future Run History edits should start in `app/web/backtest_history.py` or `app/web/backtest_history_helpers.py`.

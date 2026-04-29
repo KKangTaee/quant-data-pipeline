@@ -3347,3 +3347,17 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Candidate Review 안내 문구도 `Operations > Backtest Run History`에서 넘어온 초안으로 표현을 바꿨다
 - Follow-up:
   - History helper 본문은 아직 `app/web/pages/backtest.py`에 많이 남아 있으므로, 다음 리팩토링에서는 history helper / replay helper를 `backtest_history_helpers.py`로 추가 분리하는 것이 자연스럽다
+
+### 2026-04-30 - Backtest Run History 본문도 render/helper로 분리한다
+- User request:
+  - `app/web/backtest_history.py`가 아직 shell만 있고 실제 history code는 `backtest.py`에 남아 있는지 확인하고, 2차 분리를 진행하면 `backtest.py` 길이가 줄어드는지 질문한 뒤 리팩토링을 승인함
+- Interpreted goal:
+  - Operations로 옮긴 History 화면의 실제 render와 replay helper를 별도 모듈로 옮겨야 함
+  - Backtest page는 후보 생성 / 검토 workflow shell에 집중하고, 과거 실행 기록 inspect / replay / load / candidate draft handoff는 History module이 관리해야 함
+- Analysis result:
+  - `app/web/backtest_history.py`가 `Operations > Backtest Run History`의 persistent history inspector, selected record detail, replay parity snapshot, action button render를 맡는다
+  - `app/web/backtest_history_helpers.py`가 history table row, replay payload 복원, History replay parity, Real-Money / Guardrail scope table helper를 맡는다
+  - 실제 `Run Again`의 전략 실행은 여전히 `backtest.py`의 `_handle_backtest_run`에 위임한다. History는 실행 UI와 저장 기록 해석을 담당하고 strategy runtime owner가 되지는 않는다
+  - `backtest.py`에서는 History render/helper 본문을 제거하고, Compare / saved portfolio가 쓰는 Real-Money / Guardrail parity renderer만 import해 사용한다
+- Follow-up:
+  - 다음 구조 개선 후보는 Saved Portfolio / Weighted Portfolio 또는 Portfolio Proposal render/helper 분리다
