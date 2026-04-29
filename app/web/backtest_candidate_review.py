@@ -41,7 +41,12 @@ from app.web.backtest_candidate_review_helpers import (
     _pre_live_status_korean_label,
     _pre_live_status_suggestion_reason,
 )
-from app.web.backtest_ui_components import render_readiness_route_panel, render_status_card_grid
+from app.web.backtest_ui_components import (
+    render_artifact_pipeline,
+    render_readiness_route_panel,
+    render_status_card_grid,
+    render_step_io_summary,
+)
 from app.web.runtime import (
     CANDIDATE_REVIEW_NOTES_FILE,
     CURRENT_CANDIDATE_REGISTRY_FILE,
@@ -70,6 +75,7 @@ def render_candidate_review_workspace() -> None:
     rows = _load_current_candidate_registry_latest()
     pre_live_rows = _load_pre_live_candidate_registry_latest()
     review_notes = _load_candidate_review_notes()
+    candidate_draft = dict(st.session_state.get("backtest_candidate_review_draft") or {})
 
     summary_cols = st.columns(5, gap="small")
     summary_cols[0].metric("Active Candidates", len(rows))
@@ -85,36 +91,41 @@ def render_candidate_review_workspace() -> None:
     summary_cols[4].metric("Review Notes", len(review_notes))
 
     with st.container(border=True):
-        st.markdown("#### 6단계 Candidate Packaging Flow")
-        st.caption(
-            "이 구간은 여러 탭을 오가는 별도 검증 단계가 아니라, 5단계 Compare를 통과한 후보를 "
-            "운영 기록과 Portfolio Proposal이 읽을 수 있는 후보 패키지로 만드는 하나의 단계입니다."
-        )
-        packaging_rows = pd.DataFrame(
+        st.markdown("#### Candidate Packaging 산출물 흐름")
+        render_artifact_pipeline(
             [
                 {
-                    "구성요소": "Draft 확인",
-                    "확인하는 것": "후보 이름, source, result snapshot, Data Trust, Real-Money signal, settings snapshot",
-                    "통과 신호": "Review Note 저장 가능",
+                    "title": "후보 초안",
+                    "detail": "Backtest 결과를 후보로 검토할 준비",
+                    "status": "준비됨" if candidate_draft else "대기",
+                    "tone": "positive" if candidate_draft else "neutral",
                 },
                 {
-                    "구성요소": "Review Note / Registry 저장",
-                    "확인하는 것": "operator reason, next action, Current / Near Miss / Scenario 범위, 중복 저장 여부",
-                    "통과 신호": "Current Candidate Registry에 명시적으로 저장",
+                    "title": "Review Note",
+                    "detail": "사람의 판단과 다음 행동 저장",
+                    "status": f"{len(review_notes)}개 저장" if review_notes else "대기",
+                    "tone": "positive" if review_notes else "neutral",
                 },
                 {
-                    "구성요소": "Pre-Live 운영 기록",
-                    "확인하는 것": "paper tracking / watchlist / hold / reject / re-review 운영 상태와 추적 계획",
-                    "통과 신호": "Pre-Live Registry에 명시적으로 저장",
+                    "title": "Current Candidate",
+                    "detail": "후보 목록에서 다시 찾을 수 있는 record",
+                    "status": f"{len(rows)}개 active" if rows else "대기",
+                    "tone": "positive" if rows else "neutral",
                 },
                 {
-                    "구성요소": "Portfolio Proposal 진입 평가",
-                    "확인하는 것": "registry identity, result, contract, review context, Real-Money signal, route",
-                    "통과 신호": "`PORTFOLIO_PROPOSAL_READY`이면 다음 단계로 이동",
+                    "title": "Pre-Live Record",
+                    "detail": "paper / watchlist / hold 운영 상태 저장",
+                    "status": f"{len(pre_live_rows)}개 저장" if pre_live_rows else "대기",
+                    "tone": "positive" if pre_live_rows else "neutral",
+                },
+                {
+                    "title": "Proposal Ready",
+                    "detail": "Portfolio Proposal로 넘길 수 있는지 판정",
+                    "status": "3번에서 판정",
+                    "tone": "warning" if rows else "neutral",
                 },
             ]
         )
-        st.dataframe(packaging_rows, use_container_width=True, hide_index=True)
 
     with st.expander("How To Use Candidate Review", expanded=False):
         st.markdown(
@@ -141,16 +152,19 @@ def render_candidate_review_workspace() -> None:
     st.divider()
     st.markdown("#### 1. Draft 확인 / Review Note 저장")
     with st.container(border=True):
-        st.caption(
-            "Latest Backtest Run 또는 Operations > Backtest Run History에서 보낸 후보 검토 초안을 확인하고, "
-            "운영자 판단과 다음 행동을 Review Note로 저장합니다. "
-            "이 작업은 Candidate Packaging의 첫 저장 지점이며, 아직 current candidate registry 등록이나 투자 승인이 아닙니다."
+        render_step_io_summary(
+            input_label="Backtest Run",
+            input_detail="Latest 결과 또는 Operations history에서 보낸 후보 초안",
+            action_label="Operator Review",
+            action_detail="판단, 이유, 다음 행동을 사람의 메모로 고정",
+            output_label="Candidate Review Note",
+            output_detail="아직 registry 등록은 아닌 검토 기록",
         )
         draft_notice = st.session_state.get("backtest_candidate_review_draft_notice")
         if draft_notice:
             st.info(draft_notice)
             st.session_state.backtest_candidate_review_draft_notice = None
-        draft = dict(st.session_state.get("backtest_candidate_review_draft") or {})
+        draft = candidate_draft
         if not draft:
             st.info(
                 "아직 후보 검토 초안이 없습니다. "
@@ -280,9 +294,13 @@ def render_candidate_review_workspace() -> None:
     st.divider()
     st.markdown("#### 2. Registry 저장")
     with st.container(border=True):
-        st.caption(
-            "저장된 Candidate Review Note를 current / near miss / scenario 중 어디로 남길지 정하고, "
-            "통과한 기록만 Current Candidate Registry에 명시적으로 append합니다."
+        render_step_io_summary(
+            input_label="Candidate Review Note",
+            input_detail="1번에서 저장한 판단 메모와 다음 행동",
+            action_label="Scope Decision",
+            action_detail="Current / Near Miss / Scenario 중 남길 범위 결정",
+            output_label="Current Candidate Row",
+            output_detail="후보 목록에서 다시 선택 가능한 registry record",
         )
         st.caption(f"Path: {CANDIDATE_REVIEW_NOTES_FILE}")
         if not review_notes:
@@ -320,19 +338,37 @@ def render_candidate_review_workspace() -> None:
             registry_key = _candidate_review_note_widget_key(selected_note)
             with st.container(border=True):
                 st.markdown("##### Registry 후보 범위 판단")
-                st.caption(
-                    "이 박스는 저장된 Review Note를 어떤 범위로 남길지 정합니다. "
-                    "`Current Candidate`는 주 후보, `Near Miss`는 다시 볼 대안, `Scenario`는 설정 비교용 후보입니다."
+                render_readiness_route_panel(
+                    route_label=str(registry_scope["scope_label"]),
+                    score=float(registry_scope["score"]),
+                    blockers_count=len(registry_scope["blocking_reasons"]),
+                    verdict=str(registry_scope["verdict"]),
+                    next_action=str(registry_scope["next_action"]),
+                    route_title="Scope",
+                    score_title="Scope Score",
                 )
-                scope_cols = st.columns([0.22, 0.22, 0.18, 0.38], gap="small")
-                scope_cols[0].metric("Scope", str(registry_scope["scope_label"]))
-                scope_cols[1].metric("Recommended Type", str(registry_scope["recommended_record_type_label"]))
-                scope_cols[2].metric("Scope Score", f"{float(registry_scope['score']):.1f} / 10")
-                with scope_cols[3]:
-                    st.caption("판정")
-                    st.markdown(f"**{registry_scope['verdict']}**")
-                    st.caption("다음 행동")
-                    st.markdown(str(registry_scope["next_action"]))
+                render_status_card_grid(
+                    [
+                        {
+                            "title": "Recommended Type",
+                            "value": str(registry_scope["recommended_record_type_label"]),
+                            "detail": "저장 시 기본으로 맞추는 record type",
+                            "tone": "positive" if registry_scope["can_prepare_registry_row"] else "warning",
+                        },
+                        {
+                            "title": "Allowed Types",
+                            "value": ", ".join(str(item) for item in registry_scope.get("allowed_record_types") or []) or "-",
+                            "detail": "범위 판단과 충돌하지 않는 선택지",
+                            "tone": "neutral",
+                        },
+                        {
+                            "title": "Review Decision",
+                            "value": _candidate_review_decision_label(review_decision),
+                            "detail": "선택된 Review Note의 판단값",
+                            "tone": "neutral",
+                        },
+                    ]
+                )
                 st.progress(max(0.0, min(float(registry_scope["score"]) / 10.0, 1.0)))
                 st.dataframe(pd.DataFrame(registry_scope["criteria_rows"]), use_container_width=True, hide_index=True)
                 if registry_scope["can_prepare_registry_row"]:
@@ -486,9 +522,13 @@ def render_candidate_review_workspace() -> None:
     st.divider()
     st.markdown("#### 3. 운영 상태 저장 및 Portfolio Proposal 진입 평가")
     with st.container(border=True):
-        st.caption(
-            "registry에 저장한 후보를 다시 읽고, 이 후보를 실제 돈 없이 어떻게 추적할지 저장한 뒤 "
-            "Portfolio Proposal로 넘길 수 있는지 판단합니다. near-miss / scenario 후보는 여기서 Compare 경로로 다시 보낼 수 있습니다."
+        render_step_io_summary(
+            input_label="Current Candidate",
+            input_detail="2번에서 저장했거나 registry에 남아 있는 후보 row",
+            action_label="Operating Status",
+            action_detail="paper / watchlist / hold 같은 실전 전 상태 결정",
+            output_label="Pre-Live Record / Proposal Route",
+            output_detail="운영 기록 저장 후 Portfolio Proposal 가능 여부 판정",
         )
         if not rows:
             st.info("현재 평가할 active current candidate가 없습니다. 먼저 위 2번에서 Registry에 저장하세요.")

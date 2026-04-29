@@ -2510,3 +2510,17 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.venv/bin/python -m py_compile app/web/backtest_candidate_review.py app/web/backtest_candidate_review_helpers.py app/web/pages/backtest.py app/web/streamlit_app.py` passed
 - Durable takeaway:
   - Pre-Live remains an operating-record concept, but it is no longer a separate Backtest tab or script pair. Future UI edits for this step should start in Candidate Review.
+
+### 2026-04-30
+- Improved Candidate Review orientation without adding long explanatory copy.
+- Changed:
+  - added shared Backtest UI components for an artifact pipeline and input/action/output step summaries
+  - replaced the Candidate Packaging flow table with a five-card artifact chain: Draft, Review Note, Current Candidate, Pre-Live Record, Proposal Ready
+  - added compact input/action/output cards to the three Candidate Review sections
+  - changed `Registry 후보 범위 판단` from metric columns to the same wrapping route/readiness panel style used by Candidate Packaging and Portfolio Proposal readiness
+  - synced the script structure map and web backtest UI flow docs
+- Verification:
+  - `.venv/bin/python -m py_compile app/web/backtest_candidate_review.py app/web/backtest_ui_components.py app/web/pages/backtest.py app/web/streamlit_app.py` passed
+  - Streamlit smoke checked `Backtest > Candidate Review`; the artifact pipeline, step summaries, and Registry scope panel render correctly
+- Durable takeaway:
+  - Candidate Review now explains its workflow through compact visual structure rather than large instructional text blocks.

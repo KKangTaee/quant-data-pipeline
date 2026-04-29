@@ -3374,3 +3374,17 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `app/web/backtest_pre_live_review.py`와 `app/web/backtest_pre_live_review_helpers.py`는 삭제했고, Pre-Live status 추천 / draft / readiness helper는 `app/web/backtest_candidate_review_helpers.py`로 통합했다
 - Follow-up:
   - 다음 Candidate Review UX 수정은 별도 Pre-Live script가 아니라 `app/web/backtest_candidate_review.py`와 `app/web/backtest_candidate_review_helpers.py`에서 확인한다
+
+### 2026-04-30 - Candidate Review 설명은 긴 텍스트보다 중간 밀도의 시각 구조로 푼다
+- User request:
+  - Candidate Review의 3개 큰 단계가 왜 필요한지 더 잘 보여야 하지만, 텍스트 설명을 많이 추가하면 UI가 비대해진다고 우려함
+  - 너무 짧은 칩만 쓰는 것도 의미가 부족하니 중간 밀도의 표현을 요청함
+- Interpreted goal:
+  - 사용자가 `Draft -> Review Note -> Current Candidate -> Pre-Live Record -> Proposal Ready` 산출물 흐름을 한눈에 읽어야 함
+  - 각 단계는 긴 문단 대신 무엇을 입력으로 받아 무엇을 만들고 끝나는지 구조적으로 보여줘야 함
+- Analysis result:
+  - Candidate Review 상단에 다섯 개 산출물 card pipeline을 추가했다
+  - 각 큰 단계에는 `Input / Action / Output` summary cards를 추가했다
+  - `Registry 후보 범위 판단`은 `Candidate Packaging 종합 판단`과 같은 route/readiness panel로 바꿔 Scope, Score, Blockers, 판정, 다음 행동을 같은 시각 언어로 보여준다
+- Follow-up:
+  - 이후 다른 Backtest workflow도 설명문이 길어지면, 먼저 artifact card 또는 input/action/output summary로 줄이는 방식을 우선 검토한다

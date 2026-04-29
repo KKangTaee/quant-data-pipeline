@@ -13,7 +13,7 @@ UI form, payload 복원, candidate review, history replay, saved portfolio repla
 | `app/web/backtest_history.py` | `Operations > Backtest Run History` 화면 render, selected record inspect, run again / load into form / candidate draft handoff |
 | `app/web/backtest_history_helpers.py` | History table row, replay payload, replay parity, Real-Money / Guardrail scope helper |
 | `app/web/pages/backtest.py` | Backtest page entry, workflow navigation, shared helper, 아직 분리되지 않은 Single / Compare / Saved Portfolio / Portfolio Proposal render logic |
-| `app/web/backtest_ui_components.py` | Backtest UI 공용 status card, route/readiness panel render helper |
+| `app/web/backtest_ui_components.py` | Backtest UI 공용 status card, artifact pipeline, step input/action/output summary, route/readiness panel render helper |
 | `app/web/backtest_candidate_review.py` | Candidate Review / Candidate Packaging / Pre-Live 운영 기록 화면 render logic |
 | `app/web/backtest_candidate_review_helpers.py` | Candidate Review 판단, Review Note / registry 변환, Pre-Live status 추천 / draft 변환 / Portfolio Proposal 진입 readiness score helper |
 | `app/web/runtime/backtest.py` | UI payload를 실행 가능한 runtime call로 변환 |
@@ -319,6 +319,8 @@ Latest Backtest Run 또는 Operations > Backtest Run History selected record
 
 - Candidate Review는 후보를 투자 추천으로 확정하는 화면이 아니다.
 - Candidate Review는 Candidate Packaging 작업 공간이며 한 화면 안에서 Draft 확인, Registry 저장, Pre-Live 운영 기록, Portfolio Proposal 진입 평가를 순서대로 처리한다.
+- 상단의 `Candidate Packaging 산출물 흐름`은 Draft, Review Note, Current Candidate, Pre-Live Record, Proposal Ready를 카드로 보여준다.
+- 각 큰 단계는 긴 설명문 대신 `Input / Action / Output` summary card로 목적과 결과물을 먼저 보여준다.
 - `Send To Compare`는 후보 row의 `compare_prefill`을 우선 사용하고,
   기존 strict annual seed 후보는 registry id 기반 기본값을 사용한다.
 - GTAA seed 후보처럼 `compare_prefill`은 없지만 전략 `contract`가 남아 있는 경우에는
@@ -330,6 +332,7 @@ Latest Backtest Run 또는 Operations > Backtest Run History selected record
   현재 UI에서는 Draft 수신 정보와 operator reason / next action이 준비되어야 저장 버튼이 활성화된다.
 - Candidate Review Note를 저장해도 current candidate registry에 자동 등록되지 않는다.
 - `2. Registry 저장`은 `Registry 후보 범위 판단`으로 Current Candidate / Near Miss / Scenario / Stop 범위를 먼저 보여준다.
+- `Registry 후보 범위 판단`은 `Candidate Packaging 종합 판단`과 같은 route/readiness panel을 사용해 Scope, Scope Score, Blockers, 판정, 다음 행동을 표시한다.
 - 범위 판단과 맞지 않는 record type은 append를 막는다.
 - Review Note를 registry row로 남기려면 `2. Registry 저장`에서 row preview를 확인한 뒤
   같은 Candidate Packaging 안에서 `Append To Current Candidate Registry`를 명시적으로 눌러야 한다.
