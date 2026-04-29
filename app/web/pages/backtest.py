@@ -7047,10 +7047,16 @@ def _render_candidate_review_workspace() -> None:
                 use_container_width=True,
             ):
                 _append_current_candidate_registry_row(registry_row)
+                registry_label = _current_candidate_registry_selection_label(registry_row)
+                st.session_state["candidate_packaging_recent_registry_id"] = registry_row["registry_id"]
+                st.session_state["candidate_packaging_recent_revision_id"] = registry_row["revision_id"]
+                st.session_state["candidate_packaging_recent_label"] = registry_label
+                st.session_state["candidate_packaging_focus_recent_registry_id"] = registry_row["registry_id"]
+                st.session_state["candidate_packaging_focus_recent_revision_id"] = registry_row["revision_id"]
                 st.session_state.backtest_candidate_review_note_notice = (
                     f"Current Candidate Registry row `{registry_row['registry_id']}`를 append했습니다. "
                     "이 기록도 투자 승인이나 live trading 승인은 아닙니다. "
-                    "다음은 같은 화면의 Pre-Live 진입 평가에서 Candidate Packaging 종합 판단을 확인하는 작업입니다."
+                    "아래 `3. Pre-Live 진입 평가`에서 방금 저장한 후보를 자동 선택했습니다."
                 )
                 st.rerun()
 
@@ -7065,6 +7071,32 @@ def _render_candidate_review_workspace() -> None:
             st.info("현재 평가할 active current candidate가 없습니다. 먼저 위 2번에서 Registry에 저장하세요.")
         else:
             board_label_to_row = {_current_candidate_registry_selection_label(row): row for row in rows}
+            focus_registry_id = str(st.session_state.get("candidate_packaging_focus_recent_registry_id") or "").strip()
+            focus_revision_id = str(st.session_state.get("candidate_packaging_focus_recent_revision_id") or "").strip()
+            recent_registry_id = str(st.session_state.get("candidate_packaging_recent_registry_id") or "").strip()
+            recent_revision_id = str(st.session_state.get("candidate_packaging_recent_revision_id") or "").strip()
+            recent_label = ""
+            focus_label = ""
+            for candidate_label, candidate_row in board_label_to_row.items():
+                row_registry_id = str(candidate_row.get("registry_id") or "").strip()
+                row_revision_id = str(candidate_row.get("revision_id") or "").strip()
+                if recent_registry_id and row_registry_id == recent_registry_id and (
+                    not recent_revision_id or row_revision_id == recent_revision_id
+                ):
+                    recent_label = candidate_label
+                if focus_registry_id and row_registry_id == focus_registry_id and (
+                    not focus_revision_id or row_revision_id == focus_revision_id
+                ):
+                    focus_label = candidate_label
+            if focus_label:
+                st.session_state["candidate_board_step8_candidate"] = focus_label
+                st.session_state["candidate_packaging_focus_recent_registry_id"] = None
+                st.session_state["candidate_packaging_focus_recent_revision_id"] = None
+            current_board_selection = st.session_state.get("candidate_board_step8_candidate")
+            if current_board_selection not in board_label_to_row:
+                st.session_state["candidate_board_step8_candidate"] = (
+                    focus_label or recent_label or next(iter(board_label_to_row.keys()))
+                )
             selected_board_label = st.selectbox(
                 "Packaging 확인 후보",
                 options=list(board_label_to_row.keys()),
@@ -7072,6 +7104,30 @@ def _render_candidate_review_workspace() -> None:
                 help="Candidate Packaging에서 다음 운영 경로를 판단할 후보를 고릅니다.",
             )
             selected_board_row = board_label_to_row[selected_board_label]
+            selected_registry_id = str(selected_board_row.get("registry_id") or "").strip()
+            selected_revision_id = str(selected_board_row.get("revision_id") or "").strip()
+            if recent_label and selected_registry_id == recent_registry_id and (
+                not recent_revision_id or selected_revision_id == recent_revision_id
+            ):
+                st.success("방금 `2. Registry 저장`에서 append한 후보가 선택되어 있습니다.")
+                st.dataframe(
+                    pd.DataFrame(
+                        [
+                            {
+                                "Registry ID": selected_board_row.get("registry_id"),
+                                "Revision ID": selected_board_row.get("revision_id"),
+                                "Record Type": selected_board_row.get("record_type"),
+                                "Strategy Family": selected_board_row.get("strategy_family"),
+                                "Strategy Name": selected_board_row.get("strategy_name"),
+                                "Title": selected_board_row.get("title"),
+                                "Source Review Note": selected_board_row.get("source_review_note_id"),
+                                "Recorded At": selected_board_row.get("recorded_at"),
+                            }
+                        ]
+                    ),
+                    use_container_width=True,
+                    hide_index=True,
+                )
             board_evaluation = _build_candidate_board_operating_evaluation(selected_board_row)
             with st.container(border=True):
                 st.markdown("##### Candidate Packaging 종합 판단")
@@ -10599,7 +10655,15 @@ def _current_candidate_registry_role_label(row: dict[str, Any]) -> str:
 
 def _current_candidate_registry_selection_label(row: dict[str, Any]) -> str:
     family = str(row.get("strategy_family") or "").replace("_", " ").title()
-    return f"{family} | {_current_candidate_registry_role_label(row)} | {row.get('title')}"
+    registry_id = str(row.get("registry_id") or "").strip()
+    label_parts = [
+        family or "Candidate",
+        _current_candidate_registry_role_label(row),
+        str(row.get("title") or registry_id or "untitled"),
+    ]
+    if registry_id:
+        label_parts.append(f"id={registry_id}")
+    return " | ".join(label_parts)
 
 
 def _current_candidate_registry_contract_summary(row: dict[str, Any]) -> str:

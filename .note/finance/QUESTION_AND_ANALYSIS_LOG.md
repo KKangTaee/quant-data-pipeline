@@ -3194,3 +3194,17 @@ Detailed historical analysis was archived on `2026-04-13`.
   - saved board와 compare re-entry는 하단 보조 도구로 낮춰, 주 흐름을 방해하지 않게 했다
 - Follow-up:
   - 사용자는 5단계에서 보낸 candidate draft를 Candidate Review 한 화면에서 위에서 아래로 처리하고, `PRE_LIVE_READY`일 때만 7단계 Pre-Live Review로 이동한다
+
+### 2026-04-29 - Registry 저장 직후 3단계에서 방금 저장한 후보를 바로 알아볼 수 있어야 한다
+- User request:
+  - `Append To Current Candidate Registry` 이후 `3. Pre-Live 진입 평가`의 `Packaging 확인 후보`에 GTAA 후보가 여러 개 보여 어떤 후보가 방금 저장한 것인지 알 수 없다고 지적함
+  - 텍스트 설명이 아니라 2단계 저장 후 3단계 평가가 자연스럽게 이어지도록 UX/UI 기능 개선을 요청함
+- Interpreted goal:
+  - registry append 결과가 3단계 route 평가의 선택 상태로 직접 이어져야 함
+  - 후보 label만 봐도 같은 family 후보를 구분할 수 있어야 함
+- Analysis result:
+  - current candidate 선택 label에 `registry_id`를 포함했다
+  - registry append 직후 새 row의 `registry_id`와 `revision_id`를 session state에 저장하고, 3단계에서 해당 후보를 자동 선택하도록 했다
+  - 3단계 선택 영역 아래에 방금 저장한 후보의 Registry ID, Revision ID, Record Type, Strategy, Title, Source Review Note, Recorded At을 보여주는 요약 카드를 추가했다
+- Follow-up:
+  - 사용자는 append 직후 3단계에서 자동 선택된 후보 요약을 확인한 뒤 `Candidate Packaging 종합 판단` Route를 읽으면 된다

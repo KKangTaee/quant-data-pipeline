@@ -317,6 +317,8 @@ Latest Backtest Run 또는 History selected record
 - Review Note를 registry row로 남기려면 `2. Registry 저장`에서 row preview를 확인한 뒤
   같은 Candidate Packaging 안에서 `Append To Current Candidate Registry`를 명시적으로 눌러야 한다.
 - 같은 Review Note가 이미 append된 경우에는 중복 append를 기본 차단하고, 의도적 revision 저장 체크박스를 켠 경우에만 다시 저장한다.
+- append 성공 직후에는 새 registry row의 `registry_id` / `revision_id`를 session state에 남기고, `3. Pre-Live 진입 평가`에서 해당 후보를 자동 선택한다.
+- Candidate selection label은 `Strategy Family | Role | Title | id=<registry_id>` 형식이다. 같은 family와 title이 반복되어도 `registry_id`로 방금 저장한 row를 찾을 수 있게 한다.
 - `3. Pre-Live 진입 평가`는 `Candidate Packaging 종합 판단`으로 registry row가 Pre-Live로 갈지, Compare로 돌아갈지, Board에 보류될지 보여준다.
 - `PRE_LIVE_READY`는 7단계 Pre-Live Review 진입 가능 상태이고, `COMPARE_REVIEW_READY`는 실패가 아니라 Compare 재검토 경로다.
 - `Suggested Next Step`은 다음 검토 행동 제안이지 live trading 승인이나 최종 투자 판단이 아니다.

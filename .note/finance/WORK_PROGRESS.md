@@ -2350,3 +2350,14 @@ Detailed historical logs were archived on `2026-04-13`.
   - synced Guides, walkthrough notes, and the web backtest UI flow doc without touching Phase 30 QA docs
 - Durable takeaway:
   - Candidate Review is now a single operator flow, not a collection of tabs that force the user to discover the workflow order.
+
+### 2026-04-29
+- Improved the handoff from Candidate Packaging registry save to Pre-Live route evaluation.
+- Changed:
+  - added `registry_id` to current candidate selection labels so repeated GTAA / same-title candidates can be distinguished
+  - after `Append To Current Candidate Registry`, stored the appended row's `registry_id` and `revision_id` in session state
+  - auto-selected the just-appended row in `3. Pre-Live 진입 평가`
+  - added a visible "방금 저장한 후보" summary card with Registry ID, Revision ID, Source Review Note, and Recorded At
+  - synced the walkthrough session note and web backtest UI flow doc
+- Durable takeaway:
+  - The operator no longer has to guess which candidate in the Packaging selectbox came from the immediately preceding registry append.
