@@ -91,6 +91,8 @@ app/
     streamlit_app.py     # Finance Console entry point
     backtest_candidate_review.py # Candidate Review / Candidate Packaging UI
     backtest_candidate_review_helpers.py # Candidate Review 판단/변환 helper
+    backtest_pre_live_review.py # Pre-Live Review UI
+    backtest_pre_live_review_helpers.py # Pre-Live 상태/초안/진입평가 helper
     pages/backtest.py    # Backtest UI
     runtime/             # UI-facing runtime wrappers
       candidate_registry.py

@@ -13,6 +13,8 @@ UI form, payload 복원, candidate review, history replay, saved portfolio repla
 | `app/web/pages/backtest.py` | Backtest page entry, shared helper, 아직 분리되지 않은 panel render logic |
 | `app/web/backtest_candidate_review.py` | Candidate Review / Candidate Packaging 화면 render logic |
 | `app/web/backtest_candidate_review_helpers.py` | Candidate Review 판단, Review Note / registry 변환, readiness score helper |
+| `app/web/backtest_pre_live_review.py` | Pre-Live Review 순서형 7단계 운영 점검 화면 render logic |
+| `app/web/backtest_pre_live_review_helpers.py` | Pre-Live status 추천, draft 변환, Portfolio Proposal 진입 readiness score helper |
 | `app/web/runtime/backtest.py` | UI payload를 실행 가능한 runtime call로 변환 |
 | `app/web/runtime/candidate_registry.py` | current candidate / review note / pre-live registry JSONL read / append helper |
 | `app/web/runtime/portfolio_proposal.py` | portfolio proposal draft JSONL read / append helper |
@@ -105,7 +107,7 @@ Portfolio Proposal은 그 setup이나 candidate set을 왜 제안 후보로 보�
 | 우선순위 | 분리 후보 | 대표 책임 | 이유 |
 |---|---|---|---|
 | 1 | Candidate Review module | Candidate Packaging flow, review note save, registry draft UI, Pre-Live route check | 완료: render flow는 `app/web/backtest_candidate_review.py`, 판단 / 변환 helper는 `app/web/backtest_candidate_review_helpers.py`로 분리. Streamlit auto page discovery를 피하려고 `pages/` 밖에 둔다 |
-| 2 | Pre-Live Review module | Pre-Live draft, status / tracking plan, registry inspect | `PRE_LIVE_CANDIDATE_REGISTRY.jsonl` 경계가 분명하다 |
+| 2 | Pre-Live Review module | Pre-Live draft, status / tracking plan, registry inspect | 완료: render flow는 `app/web/backtest_pre_live_review.py`, status / draft / readiness helper는 `app/web/backtest_pre_live_review_helpers.py`로 분리. Streamlit auto page discovery를 피하려고 `pages/` 밖에 둔다 |
 | 3 | Registry runtime helpers | current candidate / review note / pre-live / proposal registry I/O, compare prefill conversion | Candidate Review / Compare / Pre-Live / Proposal이 공통 persistence pattern을 쓴다 |
 | 4 | History module | run history display, selected record, run again, load into form | `BACKTEST_RUN_HISTORY.jsonl` inspect / replay 책임이 크다 |
 | 5 | Saved Portfolio / Weighted module | saved portfolio display, replay, weighted builder/result | Phase 30 portfolio proposal과 이어질 가능성이 높다 |
@@ -126,8 +128,9 @@ Phase 30 third work unit status:
 - 분리된 대상은 current candidate registry, candidate review notes, pre-live candidate registry의 file path constant와 I/O helper다.
 - `app/web/runtime/portfolio_proposal.py`로 proposal draft registry read / append helper도 추가했다.
 - Candidate Review는 `app/web/backtest_candidate_review.py`와 `app/web/backtest_candidate_review_helpers.py`로 분리되어, `backtest.py`에는 panel wrapper와 cross-panel handoff call만 남아 있다.
-- Pre-Live UI, Compare prefill 변환, 일부 History / Saved Portfolio / Portfolio Proposal render logic, Streamlit session state는 아직 `app/web/pages/backtest.py`에 남아 있다.
-- 따라서 이 작업은 전체 Backtest UI refactor가 아니라 Candidate Review를 중심으로 한 점진적 module split이다.
+- Pre-Live Review도 `app/web/backtest_pre_live_review.py`와 `app/web/backtest_pre_live_review_helpers.py`로 분리되어, `backtest.py`에는 panel wrapper와 cross-panel handoff call만 남아 있다.
+- Compare prefill 변환, 일부 History / Saved Portfolio / Portfolio Proposal render logic, Streamlit session state는 아직 `app/web/pages/backtest.py`에 남아 있다.
+- 따라서 이 작업은 전체 Backtest UI refactor가 아니라 Candidate Review / Pre-Live Review를 중심으로 한 점진적 module split이다.
 
 ## Single Strategy 흐름
 

@@ -2422,3 +2422,14 @@ Detailed historical logs were archived on `2026-04-13`.
   - synced the web backtest UI flow document
 - Durable takeaway:
   - Pre-Live status is still operator-controlled, but the UI now makes the candidate-specific system recommendation and the saved human decision visibly separate.
+
+### 2026-04-30
+- Extracted the Pre-Live Review render flow and helper logic from `backtest.py`.
+- Changed:
+  - added `app/web/backtest_pre_live_review.py` for the `Backtest > Pre-Live Review` sequential step-7 UI
+  - added `app/web/backtest_pre_live_review_helpers.py` for status suggestion, draft conversion, readiness scoring, and registry display helpers
+  - kept `backtest.py` as the Backtest panel router with a thin Pre-Live wrapper
+  - preserved the existing Pre-Live registry runtime helper and session-state keys
+  - synced README, comprehensive analysis, script structure map, and web backtest UI flow docs
+- Durable takeaway:
+  - Candidate Review and Pre-Live Review now follow the same render/helper module split pattern, lowering the cost of future 7단계 workflow edits.

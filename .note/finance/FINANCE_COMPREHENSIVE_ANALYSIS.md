@@ -56,7 +56,7 @@ DB / strategy / runtime / UI 연결을 한 번에 확인하기 위한 상세 분
 | Persistence | 수집한 데이터를 MySQL 테이블에 저장한다 | `finance/data/db/*` |
 | Loader / Runtime Read Path | DB 데이터를 백테스트용 입력으로 꺼낸다 | `finance/loaders/*`, `finance/sample.py` |
 | Strategy / Backtest Engine | 전략을 계산하고 result dataframe을 만든다 | `finance/strategy.py`, `finance/engine.py`, `finance/transform.py` |
-| Web Runtime / UI | Streamlit에서 single / compare / candidate review / history / saved replay / Pre-Live Review / Portfolio Proposal을 실행한다 | `app/web/runtime/*`, `app/web/pages/backtest.py`, `app/web/backtest_candidate_review*.py` |
+| Web Runtime / UI | Streamlit에서 single / compare / candidate review / history / saved replay / Pre-Live Review / Portfolio Proposal을 실행한다 | `app/web/runtime/*`, `app/web/pages/backtest.py`, `app/web/backtest_candidate_review*.py`, `app/web/backtest_pre_live_review*.py` |
 | Review / Proposal / Pre-Live | 결과를 진단하고 candidate note / registry / proposal draft / paper / watchlist / hold / re-review로 관리한다 | Real-Money surface, Phase 25 / Phase 29 / Phase 30 문서 |
 
 중요한 경계:
@@ -284,7 +284,7 @@ web UI가 그 wrapper의 result bundle을 받아 single / compare / history / sa
 | 계층 | 대표 파일 | 한 줄 역할 |
 |---|---|---|
 | Web entry | `app/web/streamlit_app.py` | Finance Console navigation entry |
-| Backtest UI | `app/web/pages/backtest.py`, `app/web/backtest_candidate_review.py`, `app/web/backtest_candidate_review_helpers.py` | Single / Compare / History / Saved Portfolio / Pre-Live Review / Portfolio Proposal 화면과 분리된 Candidate Review / Candidate Packaging 화면 및 helper |
+| Backtest UI | `app/web/pages/backtest.py`, `app/web/backtest_candidate_review.py`, `app/web/backtest_candidate_review_helpers.py`, `app/web/backtest_pre_live_review.py`, `app/web/backtest_pre_live_review_helpers.py` | Single / Compare / History / Saved Portfolio / Portfolio Proposal 화면과 분리된 Candidate Review / Candidate Packaging, Pre-Live Review 화면 및 helper |
 | Web runtime | `app/web/runtime/backtest.py` | UI payload를 DB-backed backtest 실행으로 변환 |
 | Candidate registry runtime | `app/web/runtime/candidate_registry.py` | current candidate / candidate review note / pre-live registry JSONL read / append helper |
 | Portfolio proposal runtime | `app/web/runtime/portfolio_proposal.py` | portfolio proposal draft JSONL read / append helper |
@@ -489,7 +489,7 @@ warnings, metadata, report blocker, pre-live review reason으로 남기는 방�
 | Web runtime | `app/web/runtime/backtest.py` | UI에서 호출하는 DB-backed runtime wrapper |
 | Candidate registry runtime | `app/web/runtime/candidate_registry.py` | candidate / review note / pre-live registry JSONL I/O helper |
 | Portfolio proposal runtime | `app/web/runtime/portfolio_proposal.py` | proposal draft registry JSONL I/O helper |
-| Web UI | `app/web/pages/backtest.py`, `app/web/backtest_candidate_review.py`, `app/web/backtest_candidate_review_helpers.py` | Single / Compare / History / Saved Portfolio / Pre-Live Review / Portfolio Proposal 화면과 Candidate Review / Candidate Packaging 화면 / helper |
+| Web UI | `app/web/pages/backtest.py`, `app/web/backtest_candidate_review.py`, `app/web/backtest_candidate_review_helpers.py`, `app/web/backtest_pre_live_review.py`, `app/web/backtest_pre_live_review_helpers.py` | Single / Compare / History / Saved Portfolio / Portfolio Proposal 화면과 Candidate Review / Candidate Packaging, Pre-Live Review 화면 / helper |
 
 현재 구현을 읽는 핵심 구분:
 

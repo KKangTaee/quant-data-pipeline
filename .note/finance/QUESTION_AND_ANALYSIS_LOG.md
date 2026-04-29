@@ -3277,3 +3277,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 두 값이 다르면 UI에서 경고를 보여주고, `Operator Reason`에 override 근거를 남기도록 안내한다
 - Follow-up:
   - 사용자는 후보를 바꾸면 추천 status와 추천 근거가 바뀌는지 확인하고, 필요하면 final status를 조정한 뒤 이유와 next action을 저장한다
+
+### 2026-04-30 - Pre-Live Review도 Candidate Review와 같은 module split으로 관리한다
+- User request:
+  - Candidate Review를 별도 render/helper 파일로 분리한 것처럼, Pre-Live Review도 신규 스크립트 파일을 만들어 관리하도록 리팩토링을 요청함
+- Interpreted goal:
+  - `backtest.py`의 추가 비대화를 막고, 7단계 Pre-Live 운영 점검 화면과 판단 helper를 독립적으로 수정할 수 있게 만들어야 함
+  - 이번 작업은 behavior 변경이 아니라 파일 책임 분리여야 함
+- Analysis result:
+  - `app/web/backtest_pre_live_review.py`가 `Backtest > Pre-Live Review` 화면 render를 맡는다
+  - `app/web/backtest_pre_live_review_helpers.py`가 status 추천, 추천 근거, operator default, Pre-Live draft 생성, Portfolio Proposal 진입 readiness 평가, registry display helper를 맡는다
+  - `app/web/pages/backtest.py`에는 `_render_pre_live_review_workspace()` wrapper만 남겨 panel routing과 cross-panel handoff를 유지한다
+- Follow-up:
+  - 다음 7단계 UX 수정은 우선 `backtest_pre_live_review.py` / `backtest_pre_live_review_helpers.py`에서 확인한다
