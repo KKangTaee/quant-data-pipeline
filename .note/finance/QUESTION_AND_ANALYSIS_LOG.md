@@ -3137,3 +3137,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 선택한 Record Type이 scope와 맞지 않으면 `Append To Current Candidate Registry`가 비활성화된다
 - Follow-up:
   - 사용자는 저장된 Review Note를 고른 뒤 scope가 Current / Near Miss / Scenario 중 하나인지 확인하고, 추천 Record Type과 맞춘 뒤 8단계 append로 진행한다
+
+### 2026-04-29 - registry 범위 판단과 append는 하나의 사용자-facing 단계로 합친다
+- User request:
+  - 7단계 조건이 통과되면 `Append To Current Candidate Registry` 버튼이 활성화되는 구조라면, 7단계와 8단계는 사실상 하나의 단계로 보는 것이 맞다고 지적하고 합쳐 달라고 요청함
+- Interpreted goal:
+  - 버튼 단위 저장 액션을 별도 단계로 쪼개지 말고, 사용자가 다른 종류의 판단을 하는 큰 단계만 남겨야 함
+- Analysis result:
+  - 이전 7단계 `Review Notes에서 registry 후보 범위 판단`과 8단계 `Current Candidate Registry append`를 하나의 7단계로 합쳤다
+  - 새 7단계는 `Current Candidate Registry에 남길 범위 결정 및 저장`이며, scope 판단이 통과하고 Record Type이 맞으면 같은 단계 안에서 append한다
+  - 이후 Candidate Board / Pre-Live / Portfolio Proposal 단계는 하나씩 당겨서 표시한다
+  - `Append To Current Candidate Registry`는 독립 검증 단계가 아니라 7단계의 명시적 저장 버튼으로 설명한다
+- Follow-up:
+  - 앞으로 Guides의 큰 흐름은 기능 단위가 아니라 사용자 판단 단위로만 나눈다

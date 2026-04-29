@@ -40,8 +40,7 @@ Ingestion / Data Trust
   -> Hold / Blocker Resolution
   -> Compare
   -> Candidate Intake & Review Note 저장
-  -> Review Notes에서 Registry 후보 여부 결정
-  -> Current Candidate Registry
+  -> Review Notes에서 Registry 후보 범위 결정 및 저장
   -> Candidate Board / Compare / Pre-Live Review
   -> Portfolio Proposal
   -> Live Readiness / Final Approval
@@ -51,8 +50,7 @@ Ingestion / Data Trust
 
 - `Candidate Draft`는 latest run 또는 history run을 후보처럼 읽는 저장 전 초안이다.
 - `Candidate Intake & Review Note 저장`은 Draft 수신 정보가 충분한지 확인하고 사람이 판단과 next action을 저장하는 사용자-facing 6단계다.
-- `Review Notes`는 저장된 판단 기록을 다시 보고 실제 registry row로 남길지 결정하는 사용자-facing 7단계다.
-- `Current Candidate Registry`는 후보로 남기기로 한 row의 저장소다.
+- `Review Notes에서 Registry 후보 범위 결정 및 저장`은 저장된 판단 기록을 Current Candidate / Near Miss / Scenario / Stop 중 어디까지 남길지 정하고, 통과한 row만 Current Candidate Registry에 append하는 사용자-facing 7단계다.
 - `Pre-Live Review`는 실제 돈 없이 paper / watchlist / hold / re-review 상태를 기록하는 운영 단계다.
 - `Portfolio Proposal`은 후보 묶음 제안이며, live trading approval이 아니다.
 - `Live Readiness / Final Approval`은 Phase 30 이후 별도 phase 후보로 남긴다.
@@ -62,8 +60,8 @@ Ingestion / Data Trust
 | 묶음 | 내용 |
 |---|---|
 | `핵심 개념 가이드` | 실전 승격 흐름, Real-Money Contract, GTAA Risk-Off 후보군, interval, Compare 대상 선정법 해석 |
-| `1~11 단계 실행 흐름` | 테스트에서 상용화 후보 검토까지의 단계별 흐름. 각 단계는 expander로 접어 읽는다 |
-| `단계 통과 기준` | 4->5, 5->6, 6->7, 7->8처럼 다음 단계로 넘길지 판단하는 stop/go 기준. 각 기준은 expander로 접어 읽는다 |
+| `1~10 단계 실행 흐름` | 테스트에서 상용화 후보 검토까지의 단계별 흐름. 각 단계는 expander로 접어 읽는다 |
+| `단계 통과 기준` | 4->5, 5->6, 6->7처럼 다음 단계로 넘길지 판단하는 stop/go 기준과 7단계 registry 저장 기준. 각 기준은 expander로 접어 읽는다 |
 | `문서와 파일` | 현재 먼저 볼 문서, 주요 registry / guide / log 파일, live approval이 아님을 구분하는 운영 경계 |
 
 ## Phase 30 Portfolio Proposal 계약
@@ -294,7 +292,7 @@ Latest Backtest Run 또는 History selected record
   -> Save Candidate Review Note
   -> CANDIDATE_REVIEW_NOTES.jsonl
   -> Review Notes에서 registry 후보 범위 판단
-  -> optional Prepare Current Candidate Registry Row
+  -> Prepare Current Candidate Registry Row
   -> explicit Append To Current Candidate Registry
 ```
 
@@ -313,9 +311,9 @@ Latest Backtest Run 또는 History selected record
   현재 UI에서는 Draft 수신 정보와 operator reason / next action이 준비되어야 저장 버튼이 활성화된다.
 - Candidate Review Note를 저장해도 current candidate registry에 자동 등록되지 않는다.
 - Review Notes 탭은 `7단계 Registry 후보 범위 판단`으로 Current Candidate / Near Miss / Scenario / Stop 범위를 먼저 보여준다.
-- 범위 판단과 맞지 않는 record type은 8단계 append를 막는다.
+- 범위 판단과 맞지 않는 record type은 append를 막는다.
 - Review Note를 registry row로 남기려면 `Review Notes` 탭에서 row preview를 확인한 뒤
-  `Append To Current Candidate Registry`를 명시적으로 눌러야 한다.
+  같은 7단계 안에서 `Append To Current Candidate Registry`를 명시적으로 눌러야 한다.
 - `Suggested Next Step`은 다음 검토 행동 제안이지 live trading 승인이나 최종 투자 판단이 아니다.
 - Pre-Live Review로 넘겨도 저장 전 초안일 뿐이며, 실제 저장은 `Save Pre-Live Record`로 한다.
 

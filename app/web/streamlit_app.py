@@ -3026,7 +3026,7 @@ def _render_guides_page() -> None:
             "각 비교 대상 앞에서 후보의 역할을 말할 수 있어야 6단계 Candidate Draft로 넘길 근거가 생깁니다."
         )
 
-    st.markdown("### 1~11 단계 실행 흐름")
+    st.markdown("### 1~10 단계 실행 흐름")
 
     with st.container(border=True):
         st.markdown("### 테스트에서 상용화 후보 검토까지 사용하는 흐름")
@@ -3045,8 +3045,8 @@ def _render_guides_page() -> None:
             "후보로 남길지, 비교할지, paper tracking / watchlist / 보류 / 재검토로 둘지 정하는 **별도 운영 절차**입니다."
         )
         st.caption(
-            "큰 흐름으로는 1-5단계가 테스트 / 검증 구간, 6-10단계가 후보 검토 / 운영 기록 구간, "
-            "11단계가 포트폴리오 제안과 live readiness 경계입니다."
+            "큰 흐름으로는 1-5단계가 테스트 / 검증 구간, 6-9단계가 후보 검토 / 운영 기록 구간, "
+            "10단계가 포트폴리오 제안과 live readiness 경계입니다."
         )
 
         step_rows = [
@@ -3120,30 +3120,21 @@ def _render_guides_page() -> None:
                 "next_step": "저장된 Review Note는 7단계에서 registry 후보로 남길지 다시 검토합니다.",
             },
             {
-                "title": "7단계. Review Notes에서 Registry 후보 여부 결정",
+                "title": "7단계. Current Candidate Registry에 남길 범위 결정 및 저장",
                 "path": "Backtest > Candidate Review > Review Notes",
-                "goal": "저장된 Review Note 중 실제 후보 목록에 남길 것과 참고 기록으로만 둘 것을 구분합니다.",
+                "goal": "저장된 Review Note를 Current / Near Miss / Scenario / Stop 중 어디까지 남길지 정하고, 통과하면 registry에 명시적으로 저장합니다.",
                 "check": [
                     "저장된 `Review Decision`, `Operator Reason`, `Next Action` 다시 확인",
                     "`7단계 Registry 후보 범위 판단`에서 Current / Near Miss / Scenario / Stop 범위 확인",
-                    "후보로 남길 경우 `Prepare Current Candidate Registry Row`로 row preview 확인",
-                    "참고 기록이면 Review Note 상태로만 남김",
-                ],
-                "next_step": "registry row로 남기기로 결정한 것만 8단계에서 append합니다.",
-            },
-            {
-                "title": "8단계. Current Candidate Registry에 명시적으로 남기기",
-                "path": "Backtest > Candidate Review > Review Notes > Prepare Current Candidate Registry Row",
-                "goal": "Review Note 중 실제 후보 목록에 남길 것만 current candidate registry row로 append합니다.",
-                "check": [
                     "`Registry ID`, `Record Type`, `Strategy Family`, `Candidate Role` 확인",
                     "`Current Candidate Registry Row JSON Preview`에서 저장될 row 확인",
                     "`Append To Current Candidate Registry`가 자동 승격이 아니라 명시적 저장인지 확인",
+                    "참고 기록이면 Review Note 상태로만 남김",
                 ],
-                "next_step": "Registry에 남긴 후보는 Candidate Board에서 다시 읽고 Compare 또는 Pre-Live Review로 넘깁니다.",
+                "next_step": "Registry에 저장한 후보는 Candidate Board에서 다시 읽고 Compare 또는 Pre-Live Review로 넘깁니다.",
             },
             {
-                "title": "9단계. Candidate Board에서 후보를 운영 대상으로 읽기",
+                "title": "8단계. Candidate Board에서 후보를 운영 대상으로 읽기",
                 "path": "Backtest > Candidate Review > Candidate Board / Inspect Candidate / Send To Compare",
                 "goal": "후보를 성과 순위표가 아니라 current anchor, near miss, scenario 역할로 읽습니다.",
                 "check": [
@@ -3155,7 +3146,7 @@ def _render_guides_page() -> None:
                 "next_step": "운영 관찰이 필요하면 Pre-Live Review에서 paper / watchlist / hold 상태를 기록합니다.",
             },
             {
-                "title": "10단계. Pre-Live 운영 점검으로 후보 관리",
+                "title": "9단계. Pre-Live 운영 점검으로 후보 관리",
                 "path": "Backtest > Pre-Live Review",
                 "goal": "Real-Money 검증 신호와 후보 registry를 바탕으로 paper tracking, watchlist, 보류, 재검토 같은 운영 행동을 기록합니다.",
                 "check": [
@@ -3167,7 +3158,7 @@ def _render_guides_page() -> None:
                 "next_step": "Pre-Live 기록은 포트폴리오 제안이나 paper monitoring으로 이어질 수 있지만, 아직 실제 돈 투입 승인은 아닙니다.",
             },
             {
-                "title": "11단계. Portfolio Proposal로 후보 묶음을 검토하고 Live Readiness 경계 유지",
+                "title": "10단계. Portfolio Proposal로 후보 묶음을 검토하고 Live Readiness 경계 유지",
                 "path": "Backtest > Portfolio Proposal",
                 "goal": "후보 여러 개를 목적, 역할, 비중, 운영 상태와 함께 포트폴리오 제안 초안으로 묶습니다. 이 단계도 투자 승인이나 주문 지시가 아닙니다.",
                 "check": [
@@ -3308,31 +3299,31 @@ def _render_guides_page() -> None:
                 "이 저장은 후보 registry append가 아닙니다. registry에 남길지는 7단계에서 Review Notes를 보고 다시 결정합니다."
             )
 
-        with st.expander("7단계에서 8단계로 넘어가는 최소 기준", expanded=True):
+        with st.expander("7단계 registry 저장 최소 기준", expanded=True):
             st.caption(
-                "이 기준은 저장된 Review Note를 어떤 registry 범위로 남길지 정하는 기준입니다. "
-                "여기서 `Stop`이면 8단계 append로 가지 않고 Review Notes에만 남깁니다."
+                "이 기준은 저장된 Review Note를 어떤 registry 범위로 남기고, 같은 7단계 안에서 append까지 진행할 수 있는지 보는 기준입니다. "
+                "여기서 `Stop`이면 append하지 않고 Review Notes에만 남깁니다."
             )
             registry_scope_rows = pd.DataFrame(
                 [
                     {
                         "범위": "Current Candidate",
-                        "8단계 진행 가능": "Review Decision이 registry candidate 검토이고, Compare 근거 / Data Trust / Real-Money gate / 설정 snapshot이 충분함",
+                        "7단계 저장 가능": "Review Decision이 registry candidate 검토이고, Compare 근거 / Data Trust / Real-Money gate / 설정 snapshot이 충분함",
                         "Record Type": "`current_candidate`",
                     },
                     {
                         "범위": "Near Miss",
-                        "8단계 진행 가능": "아직 주 후보는 아니지만 result snapshot, Data Trust, 설정 snapshot, 다음 재검토 이유가 남아 있음",
+                        "7단계 저장 가능": "아직 주 후보는 아니지만 result snapshot, Data Trust, 설정 snapshot, 다음 재검토 이유가 남아 있음",
                         "Record Type": "`near_miss`",
                     },
                     {
                         "범위": "Scenario",
-                        "8단계 진행 가능": "실전 후보라기보다 설정 비교용으로 남길 이유와 재현 가능한 설정이 있음",
+                        "7단계 저장 가능": "실전 후보라기보다 설정 비교용으로 남길 이유와 재현 가능한 설정이 있음",
                         "Record Type": "`scenario`",
                     },
                     {
                         "범위": "Stop",
-                        "8단계 진행 가능": "진행하지 않음. reject, Data Trust error, 설정/성과 snapshot 부족, 판단 메모 부족이면 Review Notes에만 남김",
+                        "7단계 저장 가능": "진행하지 않음. reject, Data Trust error, 설정/성과 snapshot 부족, 판단 메모 부족이면 Review Notes에만 남김",
                         "Record Type": "-",
                     },
                 ]
@@ -3340,7 +3331,7 @@ def _render_guides_page() -> None:
             st.dataframe(registry_scope_rows, use_container_width=True, hide_index=True)
             st.success(
                 "`7단계 Registry 후보 범위 판단`이 Current / Near Miss / Scenario 중 하나로 나오고, "
-                "선택한 Record Type이 그 범위와 맞으면 8단계 append로 넘어갈 수 있습니다."
+                "선택한 Record Type이 그 범위와 맞으면 같은 7단계에서 append 버튼이 활성화됩니다."
             )
             st.warning(
                 "Current Candidate 범위는 가장 엄격합니다. Compare 근거가 없거나 Real-Money gate가 약하면 "
@@ -3359,7 +3350,7 @@ def _render_guides_page() -> None:
                     "역할": "finance package의 현재 제품 표면, data / strategy / review layer 요약",
                 },
                 {
-                    "상황": "이번 1~11단계 실습 흐름을 따라갈 때",
+                    "상황": "이번 backtest walkthrough 실습 흐름을 따라갈 때",
                     "문서": ".note/finance/operations/BACKTEST_1_TO_11_WALKTHROUGH_SESSION.md",
                     "역할": "GTAA 실습 후보, 4->5 / 5->6 판단 기준, Compare smoke 결과 기록",
                 },

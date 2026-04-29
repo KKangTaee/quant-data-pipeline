@@ -6850,7 +6850,7 @@ def _render_candidate_review_workspace() -> None:
         st.markdown("#### Candidate Review Notes")
         st.caption(
             "6단계에서 저장한 운영자 판단 기록입니다. "
-            "7단계에서는 이 기록 중 실제 후보 registry row로 남길 것을 고릅니다."
+            "7단계에서는 registry에 남길 범위를 정하고, 통과한 기록만 명시적으로 저장합니다."
         )
         st.caption(f"Path: {CANDIDATE_REVIEW_NOTES_FILE}")
         if not review_notes:
@@ -6868,10 +6868,11 @@ def _render_candidate_review_workspace() -> None:
             )
             selected_note = review_notes[note_labels.index(selected_note_label)]
             st.json(selected_note)
-            st.markdown("#### Prepare Current Candidate Registry Row")
+            st.markdown("#### 7단계. Registry 후보 범위 결정 및 저장")
             st.caption(
                 "선택한 review note를 실제 current candidate registry row로 남길지 검토합니다. "
-                "아래 저장 버튼을 눌러야만 `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`에 append됩니다."
+                "범위 판단과 Record Type이 맞을 때 아래 저장 버튼이 활성화되며, "
+                "버튼을 눌러야만 `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`에 append됩니다."
             )
             review_decision = str(selected_note.get("review_decision") or "")
             if review_decision == "reject_for_now":
@@ -6901,7 +6902,7 @@ def _render_candidate_review_workspace() -> None:
                 if registry_scope["can_prepare_registry_row"]:
                     st.success("이 Review Note는 표시된 범위 안에서 registry row preview로 넘길 수 있습니다.")
                 else:
-                    st.error("8단계로 넘기기 전 멈출 항목: " + ", ".join(str(item) for item in registry_scope["blocking_reasons"]))
+                    st.error("registry 저장 전 멈출 항목: " + ", ".join(str(item) for item in registry_scope["blocking_reasons"]))
                 if registry_scope["warning_reasons"]:
                     st.warning("Registry notes에 함께 남길 주의 항목: " + ", ".join(str(item) for item in registry_scope["warning_reasons"]))
             existing_registry_ids = {str(row.get("registry_id") or "") for row in _load_current_candidate_registry_latest()}
@@ -6989,7 +6990,7 @@ def _render_candidate_review_workspace() -> None:
             )
             if save_disabled and review_decision != "reject_for_now":
                 if not bool(registry_scope["can_prepare_registry_row"]):
-                    st.error("7단계 범위 판단이 통과되어야 8단계 registry append를 진행할 수 있습니다.")
+                    st.error("7단계 범위 판단이 통과되어야 registry append를 진행할 수 있습니다.")
                 elif bool(allowed_record_types) and record_type not in allowed_record_types:
                     st.error("7단계에서 허용된 Record Type 범위 안에서만 append할 수 있습니다.")
                 else:
@@ -11150,19 +11151,19 @@ def _build_candidate_registry_scope_evaluation(note: dict[str, Any]) -> dict[str
         scope_label = "CURRENT_CANDIDATE_SCOPE"
         recommended_record_type = "current_candidate"
         allowed_record_types = ["current_candidate"]
-        verdict = "8단계 Current Candidate append 진행 가능"
-        next_action = "Current Candidate row preview를 확인한 뒤 8단계 append를 진행합니다."
+        verdict = "7단계 Current Candidate registry 저장 가능"
+        next_action = "Current Candidate row preview를 확인한 뒤 append 버튼으로 저장합니다."
     elif near_miss_scope_ready:
         scope_label = "NEAR_MISS_SCOPE"
         recommended_record_type = "near_miss"
         allowed_record_types = ["near_miss"]
-        verdict = "8단계 Near Miss append 진행 가능"
+        verdict = "7단계 Near Miss registry 저장 가능"
         next_action = "Near Miss row로 남기되, 다음 비교 / 재검토 조건을 notes에 남깁니다."
     elif scenario_scope_ready:
         scope_label = "SCENARIO_SCOPE"
         recommended_record_type = "scenario"
         allowed_record_types = ["scenario"]
-        verdict = "8단계 Scenario append 진행 가능"
+        verdict = "7단계 Scenario registry 저장 가능"
         next_action = "Scenario row로 남기고, 비교용 설정이라는 점을 notes에 남깁니다."
     else:
         scope_label = "STOP_OR_REVIEW_MORE"

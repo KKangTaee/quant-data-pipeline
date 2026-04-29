@@ -2306,3 +2306,14 @@ Detailed historical logs were archived on `2026-04-13`.
   - synced Guides, walkthrough session notes, and web backtest UI flow without touching Phase 30 QA docs
 - Durable takeaway:
   - Step 7 now decides how far a saved Review Note can travel; only a matched scope proceeds to explicit step-8 registry append.
+
+### 2026-04-29
+- Merged the previous step-7 scope decision and step-8 registry append into one user-facing step.
+- Changed:
+  - updated Guides so step 7 is `Current Candidate Registry에 남길 범위 결정 및 저장`
+  - removed the separate step that treated `Append To Current Candidate Registry` as its own user-facing stage
+  - renumbered Candidate Board / Pre-Live / Portfolio Proposal to follow the merged registry step
+  - updated Candidate Review copy so append is presented as the save action inside step 7
+  - synced walkthrough and web backtest UI flow docs without touching Phase 30 QA docs
+- Durable takeaway:
+  - Button-level persistence actions should stay inside the broader decision step instead of becoming standalone workflow stages.
