@@ -307,14 +307,12 @@ BACKTEST_PANEL_OPTIONS = [
     "Single Strategy",
     "Compare & Portfolio Builder",
     "Candidate Review",
-    "Pre-Live Review",
     "Portfolio Proposal",
 ]
 BACKTEST_WORKFLOW_PANEL_OPTIONS = [
     "Single Strategy",
     "Compare & Portfolio Builder",
     "Candidate Review",
-    "Pre-Live Review",
     "Portfolio Proposal",
 ]
 PORTFOLIO_PROPOSAL_STATUS_OPTIONS = [
@@ -3095,7 +3093,7 @@ def _render_last_run() -> None:
         with handoff_cols[1]:
             st.caption(
                 "`Candidate Review`에서 suggested record type, Real-Money signal, data trust snapshot을 먼저 확인한 뒤 "
-                "후보 등록 / compare / Pre-Live 여부를 판단합니다."
+                "후보 등록 / compare / Pre-Live 운영 기록 여부를 판단합니다."
             )
 
     if warnings:
@@ -4715,7 +4713,7 @@ def _render_candidate_draft_readiness_box(bundles: list[dict[str, Any]]) -> None
         st.markdown("##### 6단계 Candidate Packaging 진입 평가")
         st.caption(
             "이 박스는 Compare 결과를 보고 선택 후보를 `Candidate Packaging`으로 넘겨도 되는지 판단하는 보조 신호입니다. "
-            "투자 승인이나 registry 저장이 아니라, 후보를 Pre-Live로 보낼 수 있는 형태로 패키징할 준비가 됐는지를 봅니다."
+            "투자 승인이나 registry 저장이 아니라, 후보를 운영 기록과 Portfolio Proposal이 읽을 수 있는 형태로 패키징할 준비가 됐는지를 봅니다."
         )
         candidate_strategy = st.selectbox(
             "Candidate Packaging으로 넘길 후보",
@@ -4795,7 +4793,7 @@ def _render_candidate_draft_readiness_box(bundles: list[dict[str, Any]]) -> None
         with action_cols[1]:
             st.caption(
                 "버튼을 누르면 `Candidate Review > 1. Draft 확인`으로 이동합니다. "
-                "아직 current candidate registry 저장이나 Pre-Live 승인이 아니라 6단계 패키징 초안을 여는 동작입니다."
+                "아직 current candidate registry 저장이나 Pre-Live 운영 record 저장이 아니라 6단계 패키징 초안을 여는 동작입니다."
             )
 
         with st.expander("점수 계산 기준 보기", expanded=False):
@@ -6626,12 +6624,6 @@ def _render_candidate_review_workspace() -> None:
     render_candidate_review_workspace()
 
 
-def _render_pre_live_review_workspace() -> None:
-    from app.web.backtest_pre_live_review import render_pre_live_review_workspace
-
-    render_pre_live_review_workspace()
-
-
 def _portfolio_proposal_pre_live_status_by_registry_id(pre_live_rows: list[dict[str, Any]]) -> dict[str, str]:
     statuses: dict[str, str] = {}
     for row in pre_live_rows:
@@ -7292,7 +7284,7 @@ def _render_portfolio_proposal_pre_live_feedback(
         st.success("현재 Pre-Live feedback gap은 없습니다.")
     st.caption(
         "이 tab은 proposal 저장 당시 snapshot과 현재 Pre-Live registry를 비교하는 읽기 전용 surface입니다. "
-        "상태를 바꾸려면 `Backtest > Pre-Live Review`에서 별도 record를 저장해야 합니다."
+        "상태를 바꾸려면 `Backtest > Candidate Review`에서 별도 Pre-Live record를 저장해야 합니다."
     )
 
 
@@ -13775,7 +13767,7 @@ def _render_quality_value_snapshot_strict_annual_form() -> None:
 # Render the Backtest workflow as primary navigation.
 def _render_backtest_panel_selector() -> str:
     st.markdown("#### 후보 검토 흐름")
-    st.caption("전략 실행에서 후보 검토, Pre-Live 운영 점검, Portfolio Proposal까지 이어지는 주 흐름입니다.")
+    st.caption("전략 실행에서 후보 검토, Pre-Live 운영 기록, Portfolio Proposal까지 이어지는 주 흐름입니다.")
 
     if hasattr(st, "segmented_control"):
         st.segmented_control(
@@ -13809,8 +13801,7 @@ def render_backtest_tab() -> None:
             """
             - `Single Strategy`: 전략 1개를 실행하고 결과를 바로 확인합니다.
             - `Compare & Portfolio Builder`: 여러 전략을 같은 기간으로 비교하고 후보 근거를 확인합니다.
-            - `Candidate Review`: 후보 초안, Review Note, registry 저장, Pre-Live route 확인을 순서대로 처리합니다.
-            - `Pre-Live Review`: current candidate를 실전 전 관찰 / 보류 / 재검토 운영 기록으로 넘깁니다.
+            - `Candidate Review`: 후보 초안, Review Note, registry 저장, Pre-Live 운영 기록, Portfolio Proposal 진입 평가를 순서대로 처리합니다.
             - `Portfolio Proposal`: 후보 여러 개를 목적 / 역할 / 비중 근거와 함께 묶는 제안 초안을 만듭니다.
             - `Operations > Backtest Run History`: 저장된 실행 결과를 다시 보고, `Run Again` 또는 `Load Into Form`을 사용하는 운영 도구입니다.
             - `Load Into Form`을 누르면 저장된 입력값이 `Single Strategy` 화면으로 자동 이동하며 다시 채워집니다.
@@ -15422,9 +15413,6 @@ def render_backtest_tab() -> None:
 
     elif active_panel == "Candidate Review":
         _render_candidate_review_workspace()
-
-    elif active_panel == "Pre-Live Review":
-        _render_pre_live_review_workspace()
 
     else:
         _render_portfolio_proposal_workspace()

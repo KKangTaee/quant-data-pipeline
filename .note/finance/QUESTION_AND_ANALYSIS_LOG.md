@@ -3361,3 +3361,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `backtest.py`에서는 History render/helper 본문을 제거하고, Compare / saved portfolio가 쓰는 Real-Money / Guardrail parity renderer만 import해 사용한다
 - Follow-up:
   - 다음 구조 개선 후보는 Saved Portfolio / Weighted Portfolio 또는 Portfolio Proposal render/helper 분리다
+
+### 2026-04-30 - Pre-Live Review는 별도 탭보다 Candidate Review 안의 운영 기록으로 합친다
+- User request:
+  - Candidate Review와 Pre-Live Review가 실제로 분리될 만큼 다른 단계인지 질문했고, Pre-Live Review 탭과 전용 스크립트를 없애고 Candidate Review로 합치는 방향을 승인함
+- Interpreted goal:
+  - 후보 정의와 운영 상태 기록의 개념 차이는 유지하되, 사용자가 6단계 이후 별도 탭을 오가며 같은 후보를 다시 찾아야 하는 UX는 없애야 함
+  - `PRE_LIVE_CANDIDATE_REGISTRY.jsonl`은 Portfolio Proposal이 읽는 운영 record로 유지해야 함
+- Analysis result:
+  - 별도 `Pre-Live Review` Backtest panel을 제거하고, Candidate Review 3번 구간을 `운영 상태 저장 및 Portfolio Proposal 진입 평가`로 확장했다
+  - `Save Pre-Live Record`와 `Open Portfolio Proposal`이 Candidate Review 안에서 이어지므로, Review Note / current candidate registry / pre-live record / proposal handoff가 한 화면의 순서형 flow로 보인다
+  - `app/web/backtest_pre_live_review.py`와 `app/web/backtest_pre_live_review_helpers.py`는 삭제했고, Pre-Live status 추천 / draft / readiness helper는 `app/web/backtest_candidate_review_helpers.py`로 통합했다
+- Follow-up:
+  - 다음 Candidate Review UX 수정은 별도 Pre-Live script가 아니라 `app/web/backtest_candidate_review.py`와 `app/web/backtest_candidate_review_helpers.py`에서 확인한다

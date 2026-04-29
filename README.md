@@ -72,10 +72,10 @@ DB-backed market data ingestion, factor generation, and strategy backtesting wor
   - 이후 blocker audit, candidate review, rerun drilldown에 활용
   - `Operations > Backtest Run History`에서 운영 기록처럼 확인하고, 필요 시 Backtest 흐름으로 다시 보냄
 - candidate review workflow
-  - `Backtest > Candidate Review`에서 후보 검토 초안, Review Note 저장, registry append, Pre-Live route 판단을 한 화면의 순서형 Candidate Packaging flow로 처리하는 흐름
+  - `Backtest > Candidate Review`에서 후보 검토 초안, Review Note 저장, registry append, Pre-Live 운영 기록, Portfolio Proposal 진입 평가를 한 화면의 순서형 Candidate Packaging flow로 처리하는 흐름
   - latest backtest / Operations의 Backtest Run History result를 registry 저장 전 후보 검토 초안으로 읽는 흐름
   - 후보 검토 초안을 바로 registry에 넣지 않고 Candidate Review Note로 판단과 다음 행동을 남기는 흐름
-  - 저장된 review note를 registry row 초안으로 확인한 뒤 명시적으로 current candidate registry에 append하고, `PRE_LIVE_READY`일 때만 Pre-Live Review로 넘기는 흐름
+  - 저장된 review note를 registry row 초안으로 확인한 뒤 명시적으로 current candidate registry에 append하고, `PORTFOLIO_PROPOSAL_READY`일 때만 Portfolio Proposal로 넘기는 흐름
 - portfolio proposal workflow
   - current candidate 여러 개를 `Backtest > Portfolio Proposal`에서 proposal draft로 묶는 흐름
   - 후보별 role, target weight, weight reason, Real-Money / Pre-Live 상태를 함께 확인하는 흐름
@@ -94,10 +94,8 @@ app/
     streamlit_app.py     # Finance Console entry point
     backtest_history.py  # Operations > Backtest Run History UI
     backtest_ui_components.py # Backtest 공용 status/route UI component
-    backtest_candidate_review.py # Candidate Review / Candidate Packaging UI
-    backtest_candidate_review_helpers.py # Candidate Review 판단/변환 helper
-    backtest_pre_live_review.py # Pre-Live Review UI
-    backtest_pre_live_review_helpers.py # Pre-Live 상태/초안/진입평가 helper
+    backtest_candidate_review.py # Candidate Review / Candidate Packaging / Pre-Live 운영 기록 UI
+    backtest_candidate_review_helpers.py # Candidate Review 판단/변환/Pre-Live 운영 기록 helper
     pages/backtest.py    # Backtest shell, workflow navigation, remaining Single/Compare/History helper/Proposal UI
     runtime/             # UI-facing runtime wrappers
       candidate_registry.py

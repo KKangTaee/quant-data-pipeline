@@ -2346,7 +2346,7 @@ def _render_overview_page() -> None:
     st.markdown(
         """
         - `Ingestion`: 일별 업데이트, statement refresh, 진단 작업을 실행합니다.
-        - `Backtest`: 전략 실행, compare, 후보 검토, Pre-Live, Portfolio Proposal 흐름을 다룹니다.
+        - `Backtest`: 전략 실행, compare, 후보 검토, Pre-Live 운영 기록, Portfolio Proposal 흐름을 다룹니다.
         - `Ops Review`: 최근 실행 결과, persistent history, logs, failure CSV를 한 번에 봅니다.
         - `Backtest Run History`: 저장된 백테스트 실행 기록을 재현하고 Backtest 작업 흐름으로 다시 보냅니다.
         - `Guides`: 현재 phase 문서, 체크리스트, 승격 해석 가이드를 빠르게 찾습니다.
@@ -2375,7 +2375,7 @@ def _render_ingestion_page() -> None:
 
 def _render_backtest_page() -> None:
     st.title("Backtest")
-    st.caption("백테스트 실행부터 비교, 후보 검토, Pre-Live, Portfolio Proposal까지 이어지는 후보 검토 작업 공간입니다.")
+    st.caption("백테스트 실행부터 비교, 후보 검토, Pre-Live 운영 기록, Portfolio Proposal까지 이어지는 후보 검토 작업 공간입니다.")
     render_backtest_tab()
 
 
@@ -3110,12 +3110,12 @@ def _render_guides_page() -> None:
                     "`Focused Strategy > Real-Money Contract`로 한 전략씩 깊게 읽기",
                     "`Candidate Review > 보조 도구: Send Candidates To Compare`에서 보낸 후보 묶음이 의도대로 채워졌는지 확인",
                 ],
-                "next_step": "여기서 후보를 좁힌 뒤, 좋은 run이나 비교할 만한 run은 Candidate Packaging으로 넘겨 Pre-Live 전달 준비를 합니다.",
+                "next_step": "여기서 후보를 좁힌 뒤, 좋은 run이나 비교할 만한 run은 Candidate Packaging으로 넘겨 운영 기록과 Proposal 진입 준비를 합니다.",
             },
             {
-                "title": "6단계. Candidate Packaging으로 Pre-Live 전달 준비",
+                "title": "6단계. Candidate Packaging으로 운영 기록과 Proposal 진입 준비",
                 "path": "Backtest > Candidate Review > 6단계 Candidate Packaging Flow",
-                "goal": "좋아 보이는 결과를 바로 Pre-Live로 보내지 않고, Review Note와 registry row로 남긴 뒤 Pre-Live가 읽을 수 있는 운영 후보 패키지인지 확인합니다.",
+                "goal": "좋아 보이는 결과를 바로 다음 단계로 보내지 않고, Review Note와 registry row, Pre-Live 운영 기록으로 남긴 뒤 Portfolio Proposal이 읽을 수 있는 후보 패키지인지 확인합니다.",
                 "check": [
                     "`Review As Candidate Draft`로 `Candidate Review > 1. Draft 확인 / Review Note 저장` 이동",
                     "후보 이름 / source / result snapshot / Data Trust / Real-Money signal / settings snapshot 확인",
@@ -3126,29 +3126,18 @@ def _render_guides_page() -> None:
                     "`Registry ID`, `Record Type`, `Strategy Family`, `Candidate Role` 확인",
                     "같은 Review Note가 이미 registry에 저장되어 있는지 확인",
                     "`Append To Current Candidate Registry`가 자동 승격이 아니라 명시적 저장인지 확인",
-                    "`3. Pre-Live 진입 평가`의 `Candidate Packaging 종합 판단`에서 Route 확인",
-                    "`PRE_LIVE_READY`이면 `Open Selected Candidate In Pre-Live Review`로 다음 단계 초안을 열기",
+                    "`3. 운영 상태 저장 및 Portfolio Proposal 진입 평가`의 `Candidate Packaging 종합 판단`에서 Route 확인",
+                    "`PRE_LIVE_READY`이면 같은 화면에서 `Save Pre-Live Record`로 운영 상태 기록",
                     "`COMPARE_REVIEW_READY`이면 Compare Picker에서 비교할 후보를 추가해 다시 비교",
                 ],
-                "next_step": "`PRE_LIVE_READY`인 후보만 7단계 Pre-Live Review로 넘깁니다. `COMPARE_REVIEW_READY`는 실패가 아니라 Compare 재검토 경로입니다.",
+                "next_step": "`PORTFOLIO_PROPOSAL_READY`인 후보만 Portfolio Proposal로 넘깁니다. `COMPARE_REVIEW_READY`는 실패가 아니라 Compare 재검토 경로입니다.",
             },
             {
-                "title": "7단계. Pre-Live 운영 점검으로 후보 관리",
-                "path": "Backtest > Pre-Live Review",
-                "goal": "Real-Money 검증 신호와 후보 registry를 바탕으로 paper tracking, watchlist, 보류, 재검토 같은 운영 행동을 기록합니다.",
-                "check": [
-                    "`Candidate To Review`가 의도한 후보인지 확인",
-                    "`Pre-Live Status`가 paper tracking / watchlist / hold / reject / re-review 중 무엇인지 확인",
-                    "`Operator Reason`, `Next Action`, `Review Date`, `Tracking Plan` 확인",
-                    "`Save Pre-Live Record`가 live trading 승인이 아님을 확인",
-                ],
-                "next_step": "Pre-Live 기록은 포트폴리오 제안이나 paper monitoring으로 이어질 수 있지만, 아직 실제 돈 투입 승인은 아닙니다.",
-            },
-            {
-                "title": "8단계. Portfolio Proposal로 후보 묶음을 검토하고 Live Readiness 경계 유지",
+                "title": "7단계. Portfolio Proposal로 후보 묶음을 검토하고 Live Readiness 경계 유지",
                 "path": "Backtest > Portfolio Proposal",
                 "goal": "후보 여러 개를 목적, 역할, 비중, 운영 상태와 함께 포트폴리오 제안 초안으로 묶습니다. 이 단계도 투자 승인이나 주문 지시가 아닙니다.",
                 "check": [
+                    "`Candidate Review > Open Portfolio Proposal`로 넘어온 후보가 component 선택에 들어왔는지 확인",
                     "후보별 역할, target weight, 비중 근거를 설명할 수 있는지",
                     "각 후보의 Data Trust / Real-Money / Pre-Live 상태를 같이 볼 수 있는지",
                     "`Monitoring Review`에서 blocker와 review gap을 다시 확인할 수 있는지",
@@ -3212,7 +3201,7 @@ def _render_guides_page() -> None:
         with st.expander("5단계에서 6단계로 넘어가는 최소 기준", expanded=True):
             st.caption(
                 "이 기준은 `Compare` 결과를 보고 선택 후보를 `Candidate Packaging`으로 넘겨도 되는지 판단하는 기준입니다. "
-                "후보 registry 저장이나 투자 승인이 아니라, Pre-Live 전달 준비 단계로 보낼 수 있는지 보는 진입 조건입니다."
+                "후보 registry 저장이나 투자 승인이 아니라, 운영 기록과 Proposal 진입 준비 단계로 보낼 수 있는지 보는 진입 조건입니다."
             )
             draft_rows = pd.DataFrame(
                 [
@@ -3245,60 +3234,60 @@ def _render_guides_page() -> None:
             )
             st.warning(
                 "Data Trust warning은 Draft Score를 강제로 cap하지 않고 별도 gate로 표시합니다. "
-                "6단계 진입은 후보 패키징 초안으로 보내는 것일 뿐, current candidate registry 저장이나 Pre-Live 승인과는 분리됩니다."
+                "6단계 진입은 후보 패키징 초안으로 보내는 것일 뿐, current candidate registry 저장이나 Pre-Live 운영 record 저장과는 분리됩니다."
             )
 
-        with st.expander("6단계 Candidate Packaging에서 7단계 Pre-Live로 넘어가는 최소 기준", expanded=True):
+        with st.expander("6단계 Candidate Packaging에서 7단계 Portfolio Proposal로 넘어가는 최소 기준", expanded=True):
             st.caption(
-                "이 기준은 Draft 확인, Review Note 저장, registry 저장, Pre-Live 진입 평가를 하나의 Candidate Packaging 단계로 묶어 봅니다. "
-                "`PRE_LIVE_READY`인 후보만 다음 단계인 Pre-Live Review로 넘어갑니다."
+                "이 기준은 Draft 확인, Review Note 저장, registry 저장, Pre-Live 운영 기록, Proposal 진입 평가를 하나의 Candidate Packaging 단계로 묶어 봅니다. "
+                "`PORTFOLIO_PROPOSAL_READY`인 후보만 다음 단계인 Portfolio Proposal로 넘어갑니다."
             )
             packaging_rows = pd.DataFrame(
                 [
                     {
                         "확인 항목": "후보 식별 / Source",
-                        "7단계 진행 가능": "후보 이름 또는 strategy key와 source가 확인됨",
+                        "Portfolio Proposal 진행 가능": "후보 이름 또는 strategy key와 source가 확인됨",
                         "멈춰야 하는 경우": "어떤 실행 결과에서 온 초안인지 식별할 수 없음",
                     },
                     {
                         "확인 항목": "Result Snapshot",
-                        "7단계 진행 가능": "CAGR, MDD, End Balance 같은 핵심 결과 snapshot이 Review Note와 registry row에 남아 있음",
+                        "Portfolio Proposal 진행 가능": "CAGR, MDD, End Balance 같은 핵심 결과 snapshot이 Review Note와 registry row에 남아 있음",
                         "멈춰야 하는 경우": "성과 snapshot이 비어 있어 다음 사람이 판단 근거를 재현하기 어려움",
                     },
                     {
                         "확인 항목": "Data Trust / Real-Money / Settings",
-                        "7단계 진행 가능": "Data Trust가 OK 또는 설명 가능한 warning이고, Real-Money signal과 설정 snapshot이 남아 있음",
+                        "Portfolio Proposal 진행 가능": "Data Trust가 OK 또는 설명 가능한 warning이고, Real-Money signal과 설정 snapshot이 남아 있음",
                         "멈춰야 하는 경우": "Data Trust error, Real-Money signal 공백, universe / ticker / cadence 정보 부족",
                     },
                     {
                         "확인 항목": "Operator Reason / Next Action",
-                        "7단계 진행 가능": "왜 이 판단을 남기는지와 다음 행동이 작성됨",
+                        "Portfolio Proposal 진행 가능": "왜 이 판단을 남기는지와 다음 행동이 작성됨",
                         "멈춰야 하는 경우": "저장 버튼만 누르고 사람이 판단한 이유가 남지 않음",
                     },
                     {
                         "확인 항목": "Registry Scope / Record Type",
-                        "7단계 진행 가능": "Current Candidate로 남길 후보는 `current_candidate`, 참고 후보는 `near_miss` 또는 `scenario`로 맞게 저장됨",
+                        "Portfolio Proposal 진행 가능": "Current Candidate로 남길 후보는 `current_candidate`, 참고 후보는 `near_miss` 또는 `scenario`로 맞게 저장됨",
                         "멈춰야 하는 경우": "Current 후보 근거가 부족한데 `current_candidate`로 저장하려 하거나 Stop 범위임",
                     },
                     {
                         "확인 항목": "중복 저장",
-                        "7단계 진행 가능": "같은 Review Note가 이미 저장된 경우 기본 append를 막고, 의도적 revision일 때만 체크박스를 켬",
+                        "Portfolio Proposal 진행 가능": "같은 Review Note가 이미 저장된 경우 기본 append를 막고, 의도적 revision일 때만 체크박스를 켬",
                         "멈춰야 하는 경우": "같은 판단을 의미 없이 반복 append하려는 경우",
                     },
                     {
-                        "확인 항목": "Pre-Live Route",
-                        "7단계 진행 가능": "`3. Pre-Live 진입 평가`의 Route가 `PRE_LIVE_READY`",
+                        "확인 항목": "Pre-Live 운영 기록 / Proposal Route",
+                        "Portfolio Proposal 진행 가능": "`3. 운영 상태 저장 및 Portfolio Proposal 진입 평가`의 Route가 `PORTFOLIO_PROPOSAL_READY`",
                         "멈춰야 하는 경우": "`COMPARE_REVIEW_READY`는 Compare 재검토, `BOARD_HOLD`는 보강 필요",
                     },
                 ]
             )
             st.dataframe(packaging_rows, use_container_width=True, hide_index=True)
             st.success(
-                "`Candidate Packaging 저장 준비`가 저장 가능이고, Review Note와 registry row가 남았으며, "
-                "`Pre-Live 진입 평가` Route가 `PRE_LIVE_READY`이면 7단계 Pre-Live Review로 넘어갑니다."
+                "`Candidate Packaging 저장 준비`가 저장 가능이고, Review Note / registry row / Pre-Live 운영 record가 남았으며, "
+                "`Portfolio Proposal 진입 평가` Route가 `PORTFOLIO_PROPOSAL_READY`이면 7단계 Portfolio Proposal로 넘어갑니다."
             )
             st.warning(
-                "`COMPARE_REVIEW_READY`는 실패가 아니라 다른 경로입니다. 이 경우 Pre-Live로 바로 가지 말고 Compare에서 비교 후보를 추가해 다시 검토합니다."
+                "`COMPARE_REVIEW_READY`는 실패가 아니라 다른 경로입니다. 이 경우 Proposal로 바로 가지 말고 Compare에서 비교 후보를 추가해 다시 검토합니다."
             )
 
     st.markdown("### 문서와 파일")
@@ -3367,10 +3356,10 @@ def _render_guides_page() -> None:
             """
             - `Real-Money`는 개별 backtest 결과에 붙는 검증 신호입니다.
             - `Compare`는 후보를 서로 비교해 다음 검토 초안으로 보낼지 판단하는 단계입니다.
-            - `Candidate Packaging`은 Draft 확인 / Review Note 저장 / Registry 저장 / Pre-Live route 확인을 하나로 묶은 단계입니다.
+            - `Candidate Packaging`은 Draft 확인 / Review Note 저장 / Registry 저장 / Pre-Live 운영 기록 / Portfolio Proposal 진입 평가를 하나로 묶은 단계입니다.
             - `Candidate Draft`와 `Review Note`는 Candidate Packaging 안에서 쓰는 저장 전 검토 기록입니다.
             - `Current Candidate Registry`는 명시적으로 남긴 후보 목록입니다.
-            - `Pre-Live Review`는 paper / watchlist / hold / re-review 같은 운영 상태 기록입니다.
+            - `Pre-Live 운영 기록`은 paper / watchlist / hold / re-review 같은 실전 전 운영 상태 기록입니다.
             - `Portfolio Proposal`은 후보 묶음의 제안 초안이며, live trading 승인이 아닙니다.
             """
         )

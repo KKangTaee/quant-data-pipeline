@@ -2496,3 +2496,17 @@ Detailed historical logs were archived on `2026-04-13`.
   - `uv run python` import smoke confirmed `backtest_history_helpers`, `backtest_history`, and the Backtest parity renderer import load correctly
 - Durable takeaway:
   - `backtest.py` is now shorter by the History inspector/replay helper block, and future Run History edits should start in `app/web/backtest_history.py` or `app/web/backtest_history_helpers.py`.
+
+### 2026-04-30
+- Merged the standalone Pre-Live Review workflow into Candidate Review.
+- Changed:
+  - removed the `Pre-Live Review` Backtest panel from the main workflow navigation
+  - moved Pre-Live status suggestion, draft generation, readiness scoring, and registry display helper logic into `app/web/backtest_candidate_review_helpers.py`
+  - deleted the standalone `app/web/backtest_pre_live_review.py` and `app/web/backtest_pre_live_review_helpers.py` scripts
+  - expanded `Backtest > Candidate Review > 3. 운영 상태 저장 및 Portfolio Proposal 진입 평가` so a ready current candidate can save a Pre-Live operating record and then open Portfolio Proposal from the same screen
+  - kept `PRE_LIVE_CANDIDATE_REGISTRY.jsonl` and runtime append/load semantics intact because Portfolio Proposal still reads those operating records
+  - synced README, comprehensive analysis, script structure map, web backtest UI flow, and Guides copy
+- Verification:
+  - `.venv/bin/python -m py_compile app/web/backtest_candidate_review.py app/web/backtest_candidate_review_helpers.py app/web/pages/backtest.py app/web/streamlit_app.py` passed
+- Durable takeaway:
+  - Pre-Live remains an operating-record concept, but it is no longer a separate Backtest tab or script pair. Future UI edits for this step should start in Candidate Review.

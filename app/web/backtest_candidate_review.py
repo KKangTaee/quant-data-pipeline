@@ -8,6 +8,7 @@ import streamlit as st
 from app.web.backtest_candidate_review_helpers import (
     CANDIDATE_REVIEW_DECISION_OPTIONS,
     CURRENT_CANDIDATE_RECORD_TYPE_OPTIONS,
+    PRE_LIVE_STATUS_OPTIONS,
     _build_candidate_board_operating_evaluation,
     _build_candidate_intake_readiness_evaluation,
     _build_candidate_registry_scope_evaluation,
@@ -17,6 +18,9 @@ from app.web.backtest_candidate_review_helpers import (
     _build_current_candidate_registry_row_from_review_note,
     _build_current_candidate_registry_rows_for_display,
     _build_existing_review_note_registry_rows_for_display,
+    _build_pre_live_draft_from_current_candidate,
+    _build_pre_live_operating_readiness_evaluation,
+    _build_pre_live_registry_rows_for_display,
     _candidate_review_decision_label,
     _candidate_review_draft_widget_key,
     _candidate_review_next_step,
@@ -31,13 +35,20 @@ from app.web.backtest_candidate_review_helpers import (
     _default_candidate_review_decision_from_draft,
     _default_candidate_review_next_action,
     _default_candidate_review_operator_reason,
+    _default_pre_live_next_action,
+    _default_pre_live_operator_reason,
+    _default_pre_live_status_from_current_candidate,
+    _pre_live_status_korean_label,
+    _pre_live_status_suggestion_reason,
 )
-from app.web.backtest_ui_components import render_readiness_route_panel
+from app.web.backtest_ui_components import render_readiness_route_panel, render_status_card_grid
 from app.web.runtime import (
     CANDIDATE_REVIEW_NOTES_FILE,
     CURRENT_CANDIDATE_REGISTRY_FILE,
+    PRE_LIVE_CANDIDATE_REGISTRY_FILE,
     append_candidate_review_note as _append_candidate_review_note,
     append_current_candidate_registry_row as _append_current_candidate_registry_row,
+    append_pre_live_candidate_registry_row as _append_pre_live_candidate_registry_row,
     load_candidate_review_notes as _load_candidate_review_notes,
     load_current_candidate_registry_latest as _load_current_candidate_registry_latest,
     load_pre_live_candidate_registry_latest as _load_pre_live_candidate_registry_latest,
@@ -53,7 +64,7 @@ def render_candidate_review_workspace() -> None:
     st.markdown("### Candidate Review")
     st.caption(
         "6단계 Candidate Packaging 작업 공간입니다. 백테스트 후보를 바로 투자 추천으로 확정하는 화면이 아니라, "
-        "후보 초안 확인, Review Note 작성, registry row 저장, Pre-Live 전달 가능 여부를 한 단계 안에서 정리합니다."
+        "후보 초안 확인, Review Note 작성, registry row 저장, Pre-Live 운영 기록, Portfolio Proposal 진입 평가를 한 화면에서 정리합니다."
     )
 
     rows = _load_current_candidate_registry_latest()
@@ -76,8 +87,8 @@ def render_candidate_review_workspace() -> None:
     with st.container(border=True):
         st.markdown("#### 6단계 Candidate Packaging Flow")
         st.caption(
-            "이 구간은 세 개의 별도 검증 단계가 아니라, 5단계 Compare를 통과한 후보를 "
-            "Pre-Live Review가 읽을 수 있는 운영 후보 패키지로 만드는 하나의 단계입니다."
+            "이 구간은 여러 탭을 오가는 별도 검증 단계가 아니라, 5단계 Compare를 통과한 후보를 "
+            "운영 기록과 Portfolio Proposal이 읽을 수 있는 후보 패키지로 만드는 하나의 단계입니다."
         )
         packaging_rows = pd.DataFrame(
             [
@@ -92,9 +103,14 @@ def render_candidate_review_workspace() -> None:
                     "통과 신호": "Current Candidate Registry에 명시적으로 저장",
                 },
                 {
-                    "구성요소": "Pre-Live 전달 판단",
+                    "구성요소": "Pre-Live 운영 기록",
+                    "확인하는 것": "paper tracking / watchlist / hold / reject / re-review 운영 상태와 추적 계획",
+                    "통과 신호": "Pre-Live Registry에 명시적으로 저장",
+                },
+                {
+                    "구성요소": "Portfolio Proposal 진입 평가",
                     "확인하는 것": "registry identity, result, contract, review context, Real-Money signal, route",
-                    "통과 신호": "`PRE_LIVE_READY`이면 다음 단계로 이동",
+                    "통과 신호": "`PORTFOLIO_PROPOSAL_READY`이면 다음 단계로 이동",
                 },
             ]
         )
@@ -103,11 +119,11 @@ def render_candidate_review_workspace() -> None:
     with st.expander("How To Use Candidate Review", expanded=False):
         st.markdown(
             "- `Candidate Review`는 6단계 Candidate Packaging 작업 공간입니다.\n"
-            "- 화면은 `1. Draft 확인`, `2. Registry 저장`, `3. Pre-Live 진입 평가` 순서로 진행합니다.\n"
+            "- 화면은 `1. Draft 확인`, `2. Registry 저장`, `3. 운영 상태 저장 및 Portfolio Proposal 진입 평가` 순서로 진행합니다.\n"
             "- 각 버튼은 자동 처리 버튼이 아니라 사람이 확인한 뒤 다음 기록을 남기는 수동 저장 버튼입니다.\n"
             "- `Draft 확인`: 후보 검토 초안의 핵심 정보가 들어왔는지 확인한 뒤 Review Note를 저장합니다.\n"
             "- `Registry 저장`: 저장된 판단을 current / near miss / scenario 중 어디로 남길지 정하고 registry row로 저장합니다.\n"
-            "- `Pre-Live 진입 평가`: 저장된 후보가 Pre-Live로 갈 수 있는지 route와 blocker를 확인합니다.\n"
+            "- `운영 상태 저장 및 Portfolio Proposal 진입 평가`: 저장된 후보를 실제 돈 없이 어떻게 추적할지 기록하고 다음 단계 가능 여부를 확인합니다.\n"
             "- 하단 보조 도구에서는 저장된 보드, note archive, raw candidate, compare 전송을 다시 확인할 수 있습니다.\n"
             "- 이 화면은 live trading 승인이나 최종 투자 판단을 하지 않습니다.\n"
             "- 후보 목록은 `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`의 active row 기준입니다."
@@ -419,11 +435,11 @@ def render_candidate_review_workspace() -> None:
                 st.json(registry_row)
             packaging_candidate_label = _current_candidate_registry_selection_label(registry_row)
             with st.container(border=True):
-                st.markdown("##### 3단계에서 보일 Packaging 확인 후보 이름")
+                st.markdown("##### 3단계에서 보일 운영 확인 후보 이름")
                 st.code(packaging_candidate_label, language="text")
                 st.caption(
                     "`Append To Current Candidate Registry`를 누르면 "
-                    "`3. Pre-Live 진입 평가 > Packaging 확인 후보`에서 이 이름으로 찾을 수 있습니다."
+                    "`3. 운영 상태 저장 및 Portfolio Proposal 진입 평가 > Packaging 확인 후보`에서 이 이름으로 찾을 수 있습니다."
                 )
             save_disabled = (
                 not bool(registry_scope["can_prepare_registry_row"])
@@ -463,16 +479,16 @@ def render_candidate_review_workspace() -> None:
                 st.session_state.backtest_candidate_review_note_notice = (
                     f"Current Candidate Registry row `{registry_row['registry_id']}`를 append했습니다. "
                     "이 기록도 투자 승인이나 live trading 승인은 아닙니다. "
-                    "아래 `3. Pre-Live 진입 평가`에서 방금 저장한 후보를 자동 선택했습니다."
+                    "아래 `3. 운영 상태 저장 및 Portfolio Proposal 진입 평가`에서 방금 저장한 후보를 자동 선택했습니다."
                 )
                 st.rerun()
 
     st.divider()
-    st.markdown("#### 3. Pre-Live 진입 평가")
+    st.markdown("#### 3. 운영 상태 저장 및 Portfolio Proposal 진입 평가")
     with st.container(border=True):
         st.caption(
-            "registry에 저장한 후보를 다시 읽고, 이 후보를 다음 단계인 Pre-Live Review로 넘길지, "
-            "Compare에서 다시 비교할지, 아니면 Board에 보류할지 판단합니다."
+            "registry에 저장한 후보를 다시 읽고, 이 후보를 실제 돈 없이 어떻게 추적할지 저장한 뒤 "
+            "Portfolio Proposal로 넘길 수 있는지 판단합니다. near-miss / scenario 후보는 여기서 Compare 경로로 다시 보낼 수 있습니다."
         )
         if not rows:
             st.info("현재 평가할 active current candidate가 없습니다. 먼저 위 2번에서 Registry에 저장하세요.")
@@ -552,33 +568,205 @@ def render_candidate_review_workspace() -> None:
                 st.progress(max(0.0, min(float(board_evaluation["score"]) / 10.0, 1.0)))
                 st.dataframe(pd.DataFrame(board_evaluation["criteria_rows"]), use_container_width=True, hide_index=True)
                 if board_evaluation["can_move_to_pre_live"]:
-                    st.success("Candidate Packaging 통과: 이 후보는 Pre-Live Review로 넘겨 운영 상태를 기록할 수 있습니다.")
+                    st.success("Candidate Packaging 통과: 이 후보는 아래에서 Pre-Live 운영 상태를 기록할 수 있습니다.")
                 elif board_evaluation["can_move_to_compare"]:
-                    st.info("Candidate Packaging 확인 완료: 이 후보는 Pre-Live보다 Compare에서 다시 볼 후보입니다.")
+                    st.info("Candidate Packaging 확인 완료: 이 후보는 운영 기록보다 Compare에서 다시 볼 후보입니다.")
                 else:
                     st.error("Candidate Packaging 보류: " + ", ".join(str(item) for item in board_evaluation["blocking_reasons"]))
                 if board_evaluation["warning_reasons"]:
                     st.warning("주의 항목: " + ", ".join(str(item) for item in board_evaluation["warning_reasons"]))
-            route_action_cols = st.columns(2, gap="small")
-            with route_action_cols[0]:
-                if st.button(
-                    "Open Selected Candidate In Pre-Live Review",
-                    key="candidate_board_open_pre_live",
-                    disabled=not bool(board_evaluation["can_move_to_pre_live"]),
-                    use_container_width=True,
-                ):
-                    st.session_state["pre_live_candidate_to_review"] = selected_board_label
-                    st.session_state["pre_live_focus_candidate_label"] = selected_board_label
-                    st.session_state["pre_live_focus_registry_id"] = selected_board_row.get("registry_id")
-                    st.session_state["pre_live_focus_revision_id"] = selected_board_row.get("revision_id")
-                    st.session_state["candidate_review_to_pre_live_notice"] = (
-                        f"`{selected_board_row.get('title') or selected_board_row.get('registry_id')}` 후보를 "
-                        "Candidate Packaging에서 Pre-Live Review로 열었습니다. "
-                        "아직 live trading 승인이나 투자 실행은 아닙니다."
+
+            if board_evaluation["can_move_to_pre_live"]:
+                st.markdown("##### Pre-Live 운영 상태 / 추적 계획 저장")
+                selected_result = dict(selected_board_row.get("result") or {})
+                default_status = _default_pre_live_status_from_current_candidate(selected_board_row)
+                existing_pre_live_rows = [
+                    row
+                    for row in pre_live_rows
+                    if str(row.get("source_candidate_registry_id") or "").strip() == selected_registry_id
+                    and str(row.get("record_status") or "active").strip().lower() == "active"
+                ]
+                latest_existing_pre_live = existing_pre_live_rows[0] if existing_pre_live_rows else None
+                if latest_existing_pre_live:
+                    st.info(
+                        "이미 이 candidate에 연결된 active Pre-Live 운영 기록이 있습니다. "
+                        "다시 저장하면 append-only 방식으로 새 revision이 추가되고 latest view에서는 새 기록이 보입니다."
                     )
-                    _request_backtest_panel("Pre-Live Review")
-                    st.rerun()
-            with route_action_cols[1]:
+                render_status_card_grid(
+                    [
+                        {"title": "Promotion", "value": str(selected_result.get("promotion") or "-"), "tone": "positive"},
+                        {"title": "Shortlist", "value": str(selected_result.get("shortlist") or "-"), "tone": "neutral"},
+                        {"title": "Deployment", "value": str(selected_result.get("deployment") or "-"), "tone": "warning"},
+                        {
+                            "title": "System Suggested Status",
+                            "value": _pre_live_status_korean_label(default_status),
+                            "tone": "positive" if default_status == "paper_tracking" else "neutral",
+                        },
+                    ]
+                )
+                with st.container(border=True):
+                    st.markdown("##### Status Recommendation")
+                    st.caption(
+                        "System Suggested Status는 선택한 current candidate의 Real-Money 신호와 blocker를 바탕으로 계산한 추천값입니다. "
+                        "Operator Final Status가 실제 저장되는 운영 판단입니다."
+                    )
+                    st.info(_pre_live_status_suggestion_reason(selected_board_row, default_status))
+                with st.expander("Pre-Live Status 의미", expanded=False):
+                    st.dataframe(
+                        pd.DataFrame(
+                            [
+                                {
+                                    "Status": "paper_tracking",
+                                    "의미": "실제 돈 없이 성과와 blocker 변화를 추적",
+                                    "다음 단계": "Portfolio Proposal 후보로 검토 가능",
+                                },
+                                {
+                                    "Status": "watchlist",
+                                    "의미": "다시 볼 후보로 남기되 아직 paper tracking 전",
+                                    "다음 단계": "후보 비교 또는 데이터 업데이트 후 재검토",
+                                },
+                                {
+                                    "Status": "hold",
+                                    "의미": "blocker나 미확인 요소가 남아 보류",
+                                    "다음 단계": "보류 사유 해소 후 재검토",
+                                },
+                                {
+                                    "Status": "reject",
+                                    "의미": "현재 기준에서는 추적 종료",
+                                    "다음 단계": "새 근거가 생기면 새 후보로 재검토",
+                                },
+                                {
+                                    "Status": "re_review",
+                                    "의미": "정해진 날짜에 다시 확인",
+                                    "다음 단계": "review date에 상태 재분류",
+                                },
+                            ]
+                        ),
+                        use_container_width=True,
+                        hide_index=True,
+                    )
+                pre_live_key = f"{selected_registry_id}_{selected_revision_id}"
+                selected_status = st.selectbox(
+                    "Operator Final Status",
+                    options=PRE_LIVE_STATUS_OPTIONS,
+                    index=PRE_LIVE_STATUS_OPTIONS.index(default_status) if default_status in PRE_LIVE_STATUS_OPTIONS else 0,
+                    format_func=_pre_live_status_korean_label,
+                    key=f"candidate_review_pre_live_status_{pre_live_key}",
+                    help="이 값이 Pre-Live registry에 저장됩니다. 투자 승인 상태가 아니라 실전 전 운영 상태입니다.",
+                )
+                if selected_status != default_status:
+                    st.warning(
+                        "Operator Final Status가 System Suggested Status와 다릅니다. "
+                        "의도적으로 다른 결정을 내리는 경우 Operator Reason에 근거를 남겨주세요."
+                    )
+                operator_reason = st.text_area(
+                    "Operator Reason",
+                    value=_default_pre_live_operator_reason(selected_board_row, selected_status),
+                    key=f"candidate_review_pre_live_reason_{pre_live_key}_{selected_status}",
+                    help="왜 이 후보를 이 상태로 두는지 사람이 읽을 수 있게 남깁니다.",
+                )
+                next_action = st.text_area(
+                    "Next Action",
+                    value=_default_pre_live_next_action(selected_status),
+                    key=f"candidate_review_pre_live_next_action_{pre_live_key}_{selected_status}",
+                    help="다음에 무엇을 확인하거나 실행할지 남깁니다.",
+                )
+                default_use_review_date = selected_status in {"paper_tracking", "re_review"}
+                use_review_date = st.checkbox(
+                    "Review Date 지정",
+                    value=default_use_review_date,
+                    key=f"candidate_review_pre_live_use_review_date_{pre_live_key}_{selected_status}",
+                    help="paper tracking과 re-review는 다음 점검일을 두는 것이 안전합니다.",
+                )
+                review_date_value: date | None = None
+                if use_review_date or selected_status in {"paper_tracking", "re_review"}:
+                    review_date_value = st.date_input(
+                        "Review Date",
+                        value=date.today() + timedelta(days=30),
+                        key=f"candidate_review_pre_live_review_date_{pre_live_key}_{selected_status}",
+                    )
+
+                pre_live_draft = _build_pre_live_draft_from_current_candidate(
+                    selected_board_row,
+                    pre_live_status=selected_status,
+                    operator_reason=operator_reason,
+                    next_action=next_action,
+                    review_date_value=review_date_value,
+                )
+                pre_live_readiness = _build_pre_live_operating_readiness_evaluation(
+                    selected_board_row,
+                    pre_live_status=selected_status,
+                    operator_reason=operator_reason,
+                    next_action=next_action,
+                    review_date_value=review_date_value,
+                )
+                with st.container(border=True):
+                    st.markdown("##### Portfolio Proposal 진입 평가")
+                    st.caption(
+                        "이 점수는 전략 성과 점수가 아니라, Pre-Live 운영 기록이 Portfolio Proposal에서 읽을 수 있을 만큼 "
+                        "후보 식별, 운영 상태, 추적 계획을 갖췄는지 보는 체크입니다."
+                    )
+                    render_readiness_route_panel(
+                        route_label=str(pre_live_readiness["route_label"]),
+                        score=float(pre_live_readiness["score"]),
+                        blockers_count=len(pre_live_readiness["blocking_reasons"]),
+                        verdict=str(pre_live_readiness["verdict"]),
+                        next_action=str(pre_live_readiness["next_action"]),
+                    )
+                    st.progress(max(0.0, min(float(pre_live_readiness["score"]) / 10.0, 1.0)))
+                    st.dataframe(pd.DataFrame(pre_live_readiness["criteria_rows"]), use_container_width=True, hide_index=True)
+                    if pre_live_readiness["can_move_to_portfolio_proposal"]:
+                        st.success(
+                            "운영 기록 통과: Pre-Live record를 저장하면 Portfolio Proposal에서 후보로 사용할 수 있습니다."
+                        )
+                    elif pre_live_readiness["can_save_record"]:
+                        st.info("Pre-Live 기록 저장은 가능하지만, 현재 route는 Portfolio Proposal 직행이 아닙니다.")
+                    else:
+                        st.error("저장 전 확인 필요: " + ", ".join(str(item) for item in pre_live_readiness["blocking_reasons"]))
+                    if pre_live_readiness["warning_reasons"]:
+                        st.warning("주의 항목: " + ", ".join(str(item) for item in pre_live_readiness["warning_reasons"]))
+                with st.expander("Pre-Live Record JSON Preview", expanded=False):
+                    st.json(pre_live_draft)
+
+                matching_saved_record = bool(
+                    latest_existing_pre_live
+                    and str(latest_existing_pre_live.get("pre_live_status") or "") == selected_status
+                )
+                action_cols = st.columns([0.28, 0.28, 0.44], gap="small")
+                with action_cols[0]:
+                    if st.button(
+                        "Save Pre-Live Record",
+                        key=f"candidate_review_save_pre_live_record_{pre_live_key}",
+                        disabled=not bool(pre_live_readiness["can_save_record"]),
+                        use_container_width=True,
+                    ):
+                        _append_pre_live_candidate_registry_row(pre_live_draft)
+                        st.session_state["pre_live_recent_record_id"] = pre_live_draft["pre_live_id"]
+                        st.session_state["pre_live_recent_revision_id"] = pre_live_draft["revision_id"]
+                        st.success(f"Pre-Live 기록 `{pre_live_draft['pre_live_id']}`를 저장했습니다.")
+                        st.rerun()
+                with action_cols[1]:
+                    proposal_disabled = not bool(pre_live_readiness["can_move_to_portfolio_proposal"]) or not matching_saved_record
+                    if st.button(
+                        "Open Portfolio Proposal",
+                        key=f"candidate_review_open_portfolio_proposal_{pre_live_key}",
+                        disabled=proposal_disabled,
+                        use_container_width=True,
+                        help="paper_tracking 상태의 저장된 Pre-Live record가 있을 때 Portfolio Proposal로 이동합니다.",
+                    ):
+                        st.session_state["portfolio_proposal_component_selection"] = [selected_board_label]
+                        st.session_state["portfolio_proposal_from_pre_live_notice"] = (
+                            f"`{selected_board_row.get('title') or selected_registry_id}` 후보를 Candidate Review에서 Portfolio Proposal로 열었습니다."
+                        )
+                        _request_backtest_panel("Portfolio Proposal")
+                        st.rerun()
+                with action_cols[2]:
+                    st.caption(
+                        "`Open Portfolio Proposal`은 같은 후보의 현재 선택 상태가 저장된 Pre-Live record와 맞을 때 활성화됩니다. "
+                        "저장해도 live trading이 열리는 것은 아닙니다."
+                    )
+
+            if board_evaluation["can_move_to_compare"]:
                 if st.button(
                     "Open Compare Picker For Selected Candidate",
                     key="candidate_board_open_compare_picker",
@@ -619,6 +807,28 @@ def render_candidate_review_workspace() -> None:
             st.dataframe(_build_candidate_review_board_rows_for_display(rows), use_container_width=True, hide_index=True)
         else:
             st.info("표시할 active current candidate가 없습니다.")
+
+    with st.expander("보조 도구: 저장된 Pre-Live 운영 기록 확인", expanded=False):
+        st.caption(
+            "Candidate Review 3번에서 저장한 Pre-Live 운영 기록입니다. "
+            "이 기록은 live trading 승인이 아니라 Portfolio Proposal이 읽을 수 있는 운영 상태 로그입니다."
+        )
+        st.caption(f"Path: {PRE_LIVE_CANDIDATE_REGISTRY_FILE}")
+        if pre_live_rows:
+            st.dataframe(_build_pre_live_registry_rows_for_display(pre_live_rows), use_container_width=True, hide_index=True)
+            pre_live_record_labels = [
+                f"{row.get('pre_live_status')} | {row.get('title')} | {row.get('recorded_at')}"
+                for row in pre_live_rows
+            ]
+            selected_pre_live_record_label = st.selectbox(
+                "Inspect Pre-Live Record",
+                options=pre_live_record_labels,
+                key="candidate_review_selected_pre_live_record",
+            )
+            selected_pre_live_record = pre_live_rows[pre_live_record_labels.index(selected_pre_live_record_label)]
+            st.json(selected_pre_live_record)
+        else:
+            st.info("아직 저장된 Pre-Live 운영 기록이 없습니다.")
 
     with st.expander("보조 도구: Send Candidates To Compare", expanded=False):
         st.caption(
