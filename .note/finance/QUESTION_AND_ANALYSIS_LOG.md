@@ -3463,3 +3463,18 @@ Detailed historical analysis was archived on `2026-04-13`.
   - saved proposal monitoring / Pre-Live feedback / paper tracking feedback은 주 단계가 아니라 접힌 보조 도구로 낮췄다
 - Follow-up:
   - 다음 단계 개발 시 `Open Live Readiness`를 실제 Live Readiness 화면으로 연결하고, proposal readiness row를 입력 계약으로 사용한다
+
+### 2026-04-30 - Portfolio Proposal은 단일 후보 저장 반복과 다중 후보 구성 초안을 분리해야 한다
+- User request:
+  - Portfolio Proposal을 실제로 사용해 보니 단일 후보를 넣어도 Candidate Review와 비슷하게 또 저장하고 넘기는 느낌이라고 지적함
+  - `Proposal Components`, 목적 / 역할 / 비중 설계, 후보별 role / target weight / reason이 언제 필요한지 불명확하다고 봄
+  - 단일 후보라면 Candidate Review 이후 바로 Live Readiness로 가는 것이 낫지 않느냐고 질문함
+- Interpreted goal:
+  - Portfolio Proposal이 필요한 경우와 불필요한 경우를 UX에서 분리해야 함
+  - 단일 후보는 저장을 반복하지 않고 Live Readiness 직행 가능성만 확인하고, 여러 후보를 묶을 때만 proposal draft를 저장해야 함
+- Analysis result:
+  - 단일 후보는 `단일 후보 직행 평가` 경로로 처리한다. role은 `core_anchor`, target weight는 `100%`, capital scope는 `paper_only`로 자동 전제한다.
+  - 여러 후보는 `포트폴리오 초안 작성` 경로로 처리한다. 여기서만 Proposal ID, Status, Type, Capital Scope, 목적, review cadence, weighting, benchmark policy, 후보별 role / weight / reason이 의미 있는 입력이 된다.
+  - `Proposal Components`는 비교가 아니라 구성 후보 선택이다. 좋은지 나쁜지 비교하는 작업은 5단계 Compare에서 끝내고, 이 단계는 선택한 후보를 포트폴리오 형태로 묶을 때만 사용한다.
+- Follow-up:
+  - 향후 Live Readiness 화면이 구현되면 `Open Live Readiness`는 direct candidate 또는 saved proposal draft를 입력으로 받을 수 있어야 한다.

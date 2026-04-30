@@ -2605,3 +2605,21 @@ Detailed historical logs were archived on `2026-04-13`.
   - `python3 plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py` passed
 - Durable takeaway:
   - Portfolio Proposal should remain a Backtest tab, but it should read as one lightweight construction-draft step between Candidate Review and future Live Readiness, not as several separate record-review stages.
+
+### 2026-04-30
+- Split Backtest > Portfolio Proposal into single-candidate direct readiness and multi-candidate construction paths.
+- Changed:
+  - added a `단일 후보 직행 평가` mode for one selected current candidate
+  - added direct readiness scoring with `LIVE_READINESS_DIRECT_READY`, `LIVE_READINESS_DIRECT_REVIEW_REQUIRED`, and `LIVE_READINESS_DIRECT_BLOCKED`
+  - made direct mode use implicit role `core_anchor`, target weight `100%`, and capital scope `paper_only` without writing a new proposal draft
+  - kept `포트폴리오 초안 작성` for two or more candidates, where role / target weight / reason are real proposal inputs
+  - clarified that `Proposal Components` is construction selection, not strategy comparison
+  - synced Guides, Portfolio Proposal registry guide, web Backtest UI flow, walkthrough note, and the high-level finance map
+- Verification:
+  - `python3 -m py_compile app/web/backtest_portfolio_proposal.py app/web/backtest_portfolio_proposal_helpers.py` passed
+  - `python3 -m py_compile app/web/backtest_portfolio_proposal.py app/web/backtest_portfolio_proposal_helpers.py app/web/pages/backtest.py app/web/streamlit_app.py` passed
+  - Streamlit smoke checked `Backtest > Portfolio Proposal` on port `8514`; selecting `GTAA review candidate` opened `단일 후보 직행 평가`, showed `Proposal Draft=저장 불필요`, and rendered `LIVE_READINESS_DIRECT_READY`
+  - `git diff --check` passed
+  - `python3 plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py` passed
+- Durable takeaway:
+  - Portfolio Proposal should not force a save loop for a single candidate; proposal draft persistence is mainly for multi-candidate construction or intentionally documented allocation proposals.

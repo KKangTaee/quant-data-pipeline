@@ -626,6 +626,117 @@ def _portfolio_proposal_open_blockers(
     return blockers
 
 
+# Score whether one already-packaged candidate can move directly to the later Live Readiness review.
+def _build_portfolio_proposal_direct_readiness_evaluation(
+    *,
+    selected_row: dict[str, Any] | None,
+    pre_live_status: str,
+    data_trust_status: str,
+) -> dict[str, Any]:
+    if not selected_row:
+        return {
+            "score": 0.0,
+            "checks": [
+                {
+                    "criteria": "Candidate Selection",
+                    "ready": False,
+                    "current_value": "no candidate",
+                    "judgment": "Live Readiness로 보낼 후보 선택 필요",
+                    "score": 10.0,
+                }
+            ],
+            "route_label": "LIVE_READINESS_DIRECT_BLOCKED",
+            "verdict": "단일 후보 선택 필요",
+            "next_action": "Candidate Review를 통과한 current candidate 1개를 선택합니다.",
+            "blocking_reasons": ["Candidate Selection"],
+            "can_move_to_live_readiness": False,
+        }
+
+    result = dict(selected_row.get("result") or {})
+    registry_id = str(selected_row.get("registry_id") or "").strip()
+    identity_ready = bool(registry_id and (selected_row.get("strategy_family") or selected_row.get("strategy_name")))
+    result_ready = any(result.get(key) not in (None, "") for key in ("cagr", "mdd", "end_balance"))
+    pre_live_ready = pre_live_status == "paper_tracking"
+    promotion = str(result.get("promotion") or "").lower()
+    deployment = str(result.get("deployment") or "").lower()
+    real_money_signal_ready = bool(promotion or deployment)
+    real_money_ready = real_money_signal_ready and promotion != "hold" and deployment not in {"blocked", "reject", "rejected"}
+    data_trust_ready = data_trust_status in {"ok", "warning"}
+    direct_context_ready = True
+
+    checks = [
+        {
+            "criteria": "Candidate Identity",
+            "ready": identity_ready,
+            "current_value": f"id={registry_id or '-'}, family={selected_row.get('strategy_family') or '-'}",
+            "judgment": "후보 식별 가능" if identity_ready else "후보 registry id 또는 strategy 식별자 필요",
+            "score": 1.4,
+        },
+        {
+            "criteria": "Result Snapshot",
+            "ready": result_ready,
+            "current_value": f"CAGR={result.get('cagr')}, MDD={result.get('mdd')}, End={result.get('end_balance')}",
+            "judgment": "성과 snapshot 있음" if result_ready else "성과 snapshot 필요",
+            "score": 1.4,
+        },
+        {
+            "criteria": "Pre-Live State",
+            "ready": pre_live_ready,
+            "current_value": pre_live_status or "not_started",
+            "judgment": "paper tracking 운영 기록 있음" if pre_live_ready else "paper_tracking Pre-Live record 필요",
+            "score": 2.0,
+        },
+        {
+            "criteria": "Real-Money Signal",
+            "ready": real_money_ready,
+            "current_value": f"promotion={promotion or '-'}, deployment={deployment or '-'}",
+            "judgment": "hold / blocked 아님" if real_money_ready else "Real-Money hold / blocked 또는 신호 공백",
+            "score": 1.8,
+        },
+        {
+            "criteria": "Data Trust",
+            "ready": data_trust_ready,
+            "current_value": data_trust_status or "not_attached",
+            "judgment": "Data Trust attached" if data_trust_ready else "Data Trust snapshot 필요",
+            "score": 1.4,
+        },
+        {
+            "criteria": "Direct Portfolio Context",
+            "ready": direct_context_ready,
+            "current_value": "role=core_anchor, weight=100%, capital=paper_only",
+            "judgment": "단일 후보 기본 구성으로 평가" if direct_context_ready else "구성 기본값 필요",
+            "score": 2.0,
+        },
+    ]
+    score = round(sum(float(check["score"]) for check in checks if check["ready"]), 1)
+    score = min(score, 10.0)
+    blocking_reasons = [str(check["criteria"]) for check in checks if not check["ready"]]
+    can_move_to_live_readiness = not blocking_reasons
+
+    if can_move_to_live_readiness:
+        route_label = "LIVE_READINESS_DIRECT_READY"
+        verdict = "단일 후보 통과: 저장 없이 Live Readiness 검토 후보로 볼 수 있음"
+        next_action = "이 후보는 별도 proposal draft 저장 없이 이후 Live Readiness 단계에서 실전 전 검토 대상으로 읽을 수 있습니다."
+    elif identity_ready and result_ready:
+        route_label = "LIVE_READINESS_DIRECT_REVIEW_REQUIRED"
+        verdict = "단일 후보 보강 필요: Live Readiness 직행 전 확인 항목 있음"
+        next_action = "Pre-Live paper tracking, Real-Money signal, Data Trust snapshot 중 부족한 항목을 보강합니다."
+    else:
+        route_label = "LIVE_READINESS_DIRECT_BLOCKED"
+        verdict = "단일 후보 직행 불가: 후보 패키지 식별 또는 성과 snapshot 필요"
+        next_action = "Candidate Review에서 current candidate / Pre-Live 운영 기록을 먼저 정리합니다."
+
+    return {
+        "score": score,
+        "checks": checks,
+        "route_label": route_label,
+        "verdict": verdict,
+        "next_action": next_action,
+        "blocking_reasons": blocking_reasons,
+        "can_move_to_live_readiness": can_move_to_live_readiness,
+    }
+
+
 # Score whether the proposal draft is only saveable or ready for a later Live Readiness step.
 def _build_portfolio_proposal_readiness_evaluation(
     *,
