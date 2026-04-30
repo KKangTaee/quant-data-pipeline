@@ -3435,3 +3435,17 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 판단 기준, Pre-Live JSON, 선택 후보 detail은 하나의 `상세 보기` expander 내부 tab으로 통합했다
 - Follow-up:
   - 이후 Candidate Review의 다른 하단 보조 도구도 같은 기준으로, action은 먼저 보이고 raw/detail은 접힘 영역으로 보내는 방향이 좋다
+
+### 2026-04-30 - 다음 단계 판단은 운영 기록 입력 위에서 먼저 읽히게 한다
+- User request:
+  - 다음 단계 판단 panel의 긴 route label이 카드 안에서 잘려 의미를 읽기 어렵다고 지적함
+  - 이 판정은 운영 기록을 저장할 수 있는 이유를 설명하므로 `운영 기록 저장 및 다음 단계 판단` 아래보다 위에 있어야 한다고 봄
+- Interpreted goal:
+  - `저장 범위 판단`과 같은 포맷의 공통 판정 장치는 유지하되, 긴 route label은 mid-word로 깨지지 않아야 함
+  - 사용자는 먼저 통과/보류 여부를 보고, 그 다음 운영 상태 / 추적 계획을 입력하고 저장 버튼을 찾아야 함
+- Analysis result:
+  - route/readiness panel을 더 넓게 배치하고 route label은 underscore 기준으로 줄바꿈되게 고쳤다
+  - Candidate Review 3번의 `다음 단계 진행 판단`을 `운영 상태 / 추적 계획 입력` 위로 올렸다
+  - 판정 panel은 현재 입력값으로 계산되지만, 화면상으로는 저장 가능 여부를 먼저 읽을 수 있게 배치했다
+- Follow-up:
+  - 다른 route panel에서도 긴 enum 값은 글자 중간이 아니라 의미 단위에서 줄바꿈되도록 같은 공통 컴포넌트를 사용한다

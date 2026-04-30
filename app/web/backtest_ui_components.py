@@ -291,7 +291,7 @@ def render_readiness_route_panel(
     route_title: str = "Route",
     score_title: str = "Readiness",
 ) -> None:
-    route = escape(route_label or "-")
+    route = escape(route_label or "-").replace("_", "_<wbr>")
     score_text = escape(f"{score:.1f} / 10")
     blockers = escape(str(blockers_count))
     verdict_text = escape(verdict or "-")
@@ -304,14 +304,14 @@ def render_readiness_route_panel(
         <style>
           .bt-route-panel {
             display: grid;
-            grid-template-columns: minmax(240px, 0.95fr) minmax(280px, 1.25fr);
+            grid-template-columns: repeat(auto-fit, minmax(min(460px, 100%), 1fr));
             gap: 0.85rem;
             align-items: stretch;
             margin: 0.45rem 0 0.85rem 0;
           }
           .bt-route-summary {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            grid-template-columns: minmax(200px, 1.35fr) minmax(120px, 0.8fr) minmax(96px, 0.7fr);
             gap: 0.65rem;
           }
           .bt-route-card {
@@ -332,12 +332,12 @@ def render_readiness_route_panel(
             margin-bottom: 0.4rem;
           }
           .bt-route-value {
-            font-size: 1.15rem;
+            font-size: clamp(0.98rem, 1.1vw, 1.15rem);
             font-weight: 750;
             line-height: 1.25;
             color: #111827;
-            overflow-wrap: anywhere;
-            word-break: break-word;
+            overflow-wrap: normal;
+            word-break: normal;
           }
           .bt-route-verdict {
             padding: 0.95rem 1rem;
@@ -367,6 +367,7 @@ def render_readiness_route_panel(
           }
           @media (max-width: 760px) {
             .bt-route-panel { grid-template-columns: 1fr; }
+            .bt-route-summary { grid-template-columns: 1fr; }
           }
         </style>
         """,

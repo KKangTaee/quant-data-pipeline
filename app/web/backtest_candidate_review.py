@@ -613,7 +613,6 @@ def render_candidate_review_workspace() -> None:
                     st.dataframe(pd.DataFrame(board_evaluation["criteria_rows"]), use_container_width=True, hide_index=True)
 
             if board_evaluation["can_move_to_pre_live"]:
-                st.markdown("##### 운영 기록 저장 및 다음 단계 판단")
                 default_status = _default_pre_live_status_from_current_candidate(selected_board_row)
                 existing_pre_live_rows = [
                     row
@@ -627,6 +626,8 @@ def render_candidate_review_workspace() -> None:
                         "이미 이 candidate에 연결된 active Pre-Live 운영 기록이 있습니다. "
                         "다시 저장하면 append-only 방식으로 새 revision이 추가되고 latest view에서는 새 기록이 보입니다."
                     )
+                next_step_judgment_slot = st.empty()
+                st.markdown("##### 운영 상태 / 추적 계획 입력")
                 render_badge_strip(
                     [
                         {"label": "Promotion", "value": str(selected_result.get("promotion") or "-"), "tone": "positive"},
@@ -696,46 +697,49 @@ def render_candidate_review_workspace() -> None:
                     next_action=next_action,
                     review_date_value=review_date_value,
                 )
-                render_readiness_route_panel(
-                    route_label=str(pre_live_readiness["route_label"]),
-                    score=float(pre_live_readiness["score"]),
-                    blockers_count=len(pre_live_readiness["blocking_reasons"]),
-                    verdict=str(pre_live_readiness["verdict"]),
-                    next_action=str(pre_live_readiness["next_action"]),
-                    route_title="Next Route",
-                    score_title="Readiness",
-                )
-                render_badge_strip(
-                    [
-                        {
-                            "label": "Save Record",
-                            "value": "가능" if pre_live_readiness["can_save_record"] else "확인 필요",
-                            "tone": "positive" if pre_live_readiness["can_save_record"] else "danger",
-                        },
-                        {
-                            "label": "Proposal",
-                            "value": "저장 후 이동 가능"
-                            if pre_live_readiness["can_move_to_portfolio_proposal"]
-                            else "직행 아님",
-                            "tone": "positive"
-                            if pre_live_readiness["can_move_to_portfolio_proposal"]
-                            else "warning",
-                        },
-                        {
-                            "label": "Blockers",
-                            "value": str(len(pre_live_readiness["blocking_reasons"])),
-                            "tone": "positive" if not pre_live_readiness["blocking_reasons"] else "danger",
-                        },
-                    ]
-                )
-                if pre_live_readiness["can_move_to_portfolio_proposal"]:
-                    st.success("이 운영 기록을 저장하면 Portfolio Proposal로 이동할 수 있습니다.")
-                elif pre_live_readiness["can_save_record"]:
-                    st.info("Pre-Live 기록 저장은 가능하지만, 현재 상태는 Portfolio Proposal 직행 경로가 아닙니다.")
-                else:
-                    st.error("저장 전 확인 필요: " + ", ".join(str(item) for item in pre_live_readiness["blocking_reasons"]))
-                if pre_live_readiness["warning_reasons"]:
-                    st.warning("주의 항목: " + ", ".join(str(item) for item in pre_live_readiness["warning_reasons"]))
+                with next_step_judgment_slot.container(border=True):
+                    st.markdown("##### 다음 단계 진행 판단")
+                    render_readiness_route_panel(
+                        route_label=str(pre_live_readiness["route_label"]),
+                        score=float(pre_live_readiness["score"]),
+                        blockers_count=len(pre_live_readiness["blocking_reasons"]),
+                        verdict=str(pre_live_readiness["verdict"]),
+                        next_action=str(pre_live_readiness["next_action"]),
+                        route_title="Next Route",
+                        score_title="Readiness",
+                    )
+                    render_badge_strip(
+                        [
+                            {
+                                "label": "Save Record",
+                                "value": "가능" if pre_live_readiness["can_save_record"] else "확인 필요",
+                                "tone": "positive" if pre_live_readiness["can_save_record"] else "danger",
+                            },
+                            {
+                                "label": "Proposal",
+                                "value": "저장 후 이동 가능"
+                                if pre_live_readiness["can_move_to_portfolio_proposal"]
+                                else "직행 아님",
+                                "tone": "positive"
+                                if pre_live_readiness["can_move_to_portfolio_proposal"]
+                                else "warning",
+                            },
+                            {
+                                "label": "Blockers",
+                                "value": str(len(pre_live_readiness["blocking_reasons"])),
+                                "tone": "positive" if not pre_live_readiness["blocking_reasons"] else "danger",
+                            },
+                        ]
+                    )
+                    st.progress(max(0.0, min(float(pre_live_readiness["score"]) / 10.0, 1.0)))
+                    if pre_live_readiness["can_move_to_portfolio_proposal"]:
+                        st.success("이 운영 기록은 저장 후 Portfolio Proposal로 이동할 수 있습니다.")
+                    elif pre_live_readiness["can_save_record"]:
+                        st.info("Pre-Live 기록 저장은 가능하지만, 현재 상태는 Portfolio Proposal 직행 경로가 아닙니다.")
+                    else:
+                        st.error("저장 전 확인 필요: " + ", ".join(str(item) for item in pre_live_readiness["blocking_reasons"]))
+                    if pre_live_readiness["warning_reasons"]:
+                        st.warning("주의 항목: " + ", ".join(str(item) for item in pre_live_readiness["warning_reasons"]))
 
                 matching_saved_record = bool(
                     latest_existing_pre_live

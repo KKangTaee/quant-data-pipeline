@@ -2570,3 +2570,18 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.venv/bin/python -m py_compile app/web/backtest_candidate_review.py app/web/backtest_ui_components.py app/web/pages/backtest.py app/web/streamlit_app.py` passed
 - Durable takeaway:
   - Candidate Review step 3 should preserve a common next-step judgment panel, but keep secondary details behind one collapsed area so the save/open actions are easy to find.
+
+### 2026-04-30
+- Repositioned Candidate Review step 3 next-step judgment above the operating-record inputs.
+- Changed:
+  - widened and rebalanced the shared route/readiness panel so long route labels break at underscores instead of mid-word
+  - moved `다음 단계 진행 판단` above `운영 상태 / 추적 계획 입력` while keeping it driven by the current input values
+  - kept the panel in the same bordered format as `저장 범위 판단`, including progress and success/warning/error status
+  - left Save / Open buttons before the collapsed detail area
+- Verification:
+  - `.venv/bin/python -m py_compile app/web/backtest_candidate_review.py app/web/backtest_ui_components.py app/web/pages/backtest.py app/web/streamlit_app.py` passed
+  - Streamlit smoke checked `Backtest > Candidate Review` on port `8512`; `다음 단계 진행 판단` now appears above `운영 상태 / 추적 계획 입력`, Save/Open actions remain before `상세 보기`, and route/readiness cards do not horizontally overflow at 900px / 600px viewport widths
+  - `git diff --check` passed
+  - `python3 plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py` passed
+- Durable takeaway:
+  - Candidate Review should show the pass/fail route judgment before the operator writes or saves the operating record, because the judgment explains why saving is available.

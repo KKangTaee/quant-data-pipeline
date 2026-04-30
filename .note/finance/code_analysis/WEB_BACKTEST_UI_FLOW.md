@@ -343,7 +343,8 @@ Latest Backtest Run 또는 Operations > Backtest Run History selected record
 - Candidate selection label은 `Strategy Family | Role | Title | id=<registry_id>` 형식이다. 같은 family와 title이 반복되어도 `registry_id`로 방금 저장한 row를 찾을 수 있게 한다.
 - `3. 운영 기록 저장 및 Portfolio Proposal 이동`은 먼저 선택 후보가 운영 기록으로 갈 current candidate인지, Compare로 돌아갈 후보인지 확인한다.
 - `PRE_LIVE_READY`는 같은 화면에서 Pre-Live 운영 record를 저장할 수 있다는 뜻이고, `COMPARE_REVIEW_READY`는 실패가 아니라 Compare 재검토 경로다.
-- `운영 기록 저장 및 다음 단계 판단`은 Operator Final Status, Operator Reason, Next Action, Review Date를 바탕으로 공통 route/readiness panel과 compact badges를 함께 보여준다.
+- `운영 기록 저장 및 다음 단계 판단`은 Operator Final Status, Operator Reason, Next Action, Review Date를 바탕으로 공통 route/readiness panel과 compact badges를 함께 보여준다. 이 판정 박스는 입력 영역보다 위에 렌더링해, 저장 가능 여부를 먼저 읽고 아래에서 운영 기록을 작성하는 흐름으로 보이게 한다.
+- 공통 route/readiness panel은 긴 enum route를 underscore 기준으로 줄바꿈하고, 좁은 화면에서는 verdict 영역을 아래로 내려 가로 넘침 없이 읽히게 한다.
 - Save / Open 버튼은 판단 기준과 JSON보다 먼저 보이게 하고, 상세 기준 / Pre-Live JSON / 선택 후보 raw detail은 하나의 `상세 보기` expander 안에 둔다.
 - Pre-Live 운영 상태 영역은 Candidate Review 관점에서 필요한 promotion / shortlist / deployment / suggested status만 badge strip으로 보여주고, 추천 근거, 저장 후보 식별값, 판단 기준 표는 접힘 영역에 둔다.
 - `Suggested Next Step`은 다음 검토 행동 제안이지 live trading 승인이나 최종 투자 판단이 아니다.
