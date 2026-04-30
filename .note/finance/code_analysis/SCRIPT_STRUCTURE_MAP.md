@@ -28,7 +28,7 @@
 | `app/web/backtest_history.py` | `Operations > Backtest Run History` 화면 render, history inspect / replay / form load / candidate draft handoff, Real-Money / Guardrail parity table render |
 | `app/web/backtest_history_helpers.py` | Backtest history row 변환, replay payload 복원, History replay parity / Real-Money scope table helper |
 | `app/web/backtest_ui_components.py` | Backtest UI 공용 wrapping status card, artifact pipeline, compact badge strip, stage brief strip, route/readiness 판정 panel |
-| `app/web/backtest_candidate_review.py` | `Backtest > Candidate Review`의 Candidate Packaging 화면 render, Review Note / current candidate registry 저장, Pre-Live 운영 기록 저장, Portfolio Proposal 진입 평가 |
+| `app/web/backtest_candidate_review.py` | `Backtest > Candidate Review`의 Candidate Packaging 화면 render, Review Note / current candidate registry 저장, Pre-Live 운영 기록 저장, Portfolio Proposal 이동 판단 |
 | `app/web/backtest_candidate_review_helpers.py` | Candidate Review readiness 평가, Review Note 생성, current candidate registry row 변환, Pre-Live status 추천 / draft 생성 / Proposal readiness 평가, display table helper |
 | `app/web/pages/backtest.py` | Backtest page shell, workflow navigation, Single / Compare / Saved Portfolio / Portfolio Proposal의 아직 분리되지 않은 render logic, cross-panel handoff |
 

@@ -3405,3 +3405,18 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Cmd+C cache modal은 repo 코드가 만든 것이 아니라 Streamlit 기본 단축키 계열 동작으로 판단했고, 앱에서 Cmd/Ctrl+C keydown 이벤트가 Streamlit handler까지 전파되지 않도록 guard를 설치했다
 - Follow-up:
   - Playwright smoke에서는 Cmd/Ctrl+C 후 clear-cache modal이 뜨지 않았다. 실제 브라우저 사용 중에도 다시 뜨면 Streamlit shortcut 처리 변경 여부를 추가로 확인한다
+
+### 2026-04-30 - Candidate Review 3번은 운영 기록 저장과 다음 단계 판단을 한 블록으로 본다
+- User request:
+  - Candidate Review 3번 내부의 `운영 상태 / 추적 계획 저장`과 `다음 단계 이동`이 분리되어 보이는 것이 애매하다고 지적함
+  - 다음 단계 이동 가능 여부가 확정되어야 저장하고 이동할 수 있는 것 아니냐고 질문함
+- Interpreted goal:
+  - 3번 내부에서 다시 새로운 전략 평가를 하는 느낌을 줄이고, 저장 전에는 저장 가능 여부와 저장 후 이동 가능 여부를 미리 보여줘야 함
+  - `Portfolio Proposal 진입 평가`를 별도 큰 단계처럼 보이게 하기보다 운영 기록 저장 결과로 흡수해야 함
+- Analysis result:
+  - Candidate Review 3번을 `운영 기록 저장 및 Portfolio Proposal 이동`으로 이름을 바꿨다
+  - `Candidate Packaging 종합 판단`은 `선택 후보 확인`으로 축소해 Route / Record Type / Promotion / Deployment만 먼저 보여준다
+  - `Pre-Live 운영 상태 / 추적 계획 저장`과 `Portfolio Proposal 진입 평가`는 `운영 기록 저장 및 다음 단계 판단`으로 합쳤다
+  - 저장 버튼 위에서 `Save Record`, `Next Route`, `Proposal`, `Blockers`를 compact badge로 보여주며, 상세 기준은 접힘 영역으로 둔다
+- Follow-up:
+  - 이후 3번 UI를 더 줄일 때도 핵심은 `저장 가능 여부`와 `저장된 record 기준 다음 단계 이동 가능 여부`를 분리해서 보여주는 것이다

@@ -2541,3 +2541,19 @@ Detailed historical logs were archived on `2026-04-13`.
   - `python3 plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py` passed
 - Durable takeaway:
   - Candidate Review should keep the artifact pipeline, but per-section guidance should stay thin and action-centered.
+
+### 2026-04-30
+- Simplified Candidate Review step 3 into candidate confirmation plus operating-record save.
+- Changed:
+  - renamed step 3 to `운영 기록 저장 및 Portfolio Proposal 이동`
+  - replaced the visible `Candidate Packaging 종합 판단` panel with a compact `선택 후보 확인` block
+  - merged the separate `Pre-Live 운영 상태 / 추적 계획 저장` and `Portfolio Proposal 진입 평가` blocks into `운영 기록 저장 및 다음 단계 판단`
+  - changed the default view to show `Save Record`, `Next Route`, `Proposal`, and `Blockers` as compact badges above the save/open buttons
+  - moved detailed route criteria into collapsed expanders
+  - synced Guides copy and web backtest UI flow docs
+- Verification:
+  - `.venv/bin/python -m py_compile app/web/backtest_candidate_review.py app/web/backtest_ui_components.py app/web/pages/backtest.py app/web/streamlit_app.py` passed
+  - Streamlit smoke checked `Backtest > Candidate Review`; step 3 now renders as `선택 후보 확인` plus `운영 기록 저장 및 다음 단계 판단`, and the old separate Proposal readiness panel is gone
+  - `python3 plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py` passed
+- Durable takeaway:
+  - Step 3 should read as `select candidate -> save operating record -> open Proposal if the saved record qualifies`, not as a second full Candidate Packaging evaluation.

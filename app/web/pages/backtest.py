@@ -13801,7 +13801,7 @@ def render_backtest_tab() -> None:
             """
             - `Single Strategy`: 전략 1개를 실행하고 결과를 바로 확인합니다.
             - `Compare & Portfolio Builder`: 여러 전략을 같은 기간으로 비교하고 후보 근거를 확인합니다.
-            - `Candidate Review`: 후보 초안, Review Note, registry 저장, Pre-Live 운영 기록, Portfolio Proposal 진입 평가를 순서대로 처리합니다.
+            - `Candidate Review`: 후보 초안, Review Note, registry 저장, Pre-Live 운영 기록, Portfolio Proposal 이동 판단을 순서대로 처리합니다.
             - `Portfolio Proposal`: 후보 여러 개를 목적 / 역할 / 비중 근거와 함께 묶는 제안 초안을 만듭니다.
             - `Operations > Backtest Run History`: 저장된 실행 결과를 다시 보고, `Run Again` 또는 `Load Into Form`을 사용하는 운영 도구입니다.
             - `Load Into Form`을 누르면 저장된 입력값이 `Single Strategy` 화면으로 자동 이동하며 다시 채워집니다.

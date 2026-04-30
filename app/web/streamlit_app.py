@@ -3157,8 +3157,10 @@ def _render_guides_page() -> None:
                     "`Registry ID`, `Record Type`, `Strategy Family`, `Candidate Role` 확인",
                     "같은 Review Note가 이미 registry에 저장되어 있는지 확인",
                     "`Append To Current Candidate Registry`가 자동 승격이 아니라 명시적 저장인지 확인",
-                    "`3. 운영 상태 저장 및 Portfolio Proposal 진입 평가`의 `Candidate Packaging 종합 판단`에서 Route 확인",
-                    "`PRE_LIVE_READY`이면 같은 화면에서 `Save Pre-Live Record`로 운영 상태 기록",
+                    "`3. 운영 기록 저장 및 Portfolio Proposal 이동`에서 방금 저장한 후보가 선택되었는지 확인",
+                    "`선택 후보 확인`에서 Route가 `PRE_LIVE_READY`인지 확인",
+                    "`운영 기록 저장 및 다음 단계 판단`에서 운영 상태 / 이유 / 다음 행동 / 점검일 작성",
+                    "`Save Pre-Live Record` 저장 후 `Open Portfolio Proposal` 활성화 여부 확인",
                     "`COMPARE_REVIEW_READY`이면 Compare Picker에서 비교할 후보를 추가해 다시 비교",
                 ],
                 "next_step": "`PORTFOLIO_PROPOSAL_READY`인 후보만 Portfolio Proposal로 넘깁니다. `COMPARE_REVIEW_READY`는 실패가 아니라 Compare 재검토 경로입니다.",
@@ -3307,7 +3309,7 @@ def _render_guides_page() -> None:
                     },
                     {
                         "확인 항목": "Pre-Live 운영 기록 / Proposal Route",
-                        "Portfolio Proposal 진행 가능": "`3. 운영 상태 저장 및 Portfolio Proposal 진입 평가`의 Route가 `PORTFOLIO_PROPOSAL_READY`",
+                        "Portfolio Proposal 진행 가능": "`3. 운영 기록 저장 및 Portfolio Proposal 이동`에서 `Save Record=가능`, `Next Route=PORTFOLIO_PROPOSAL_READY`",
                         "멈춰야 하는 경우": "`COMPARE_REVIEW_READY`는 Compare 재검토, `BOARD_HOLD`는 보강 필요",
                     },
                 ]
@@ -3315,7 +3317,7 @@ def _render_guides_page() -> None:
             st.dataframe(packaging_rows, use_container_width=True, hide_index=True)
             st.success(
                 "`Candidate Packaging 저장 준비`가 저장 가능이고, Review Note / registry row / Pre-Live 운영 record가 남았으며, "
-                "`Portfolio Proposal 진입 평가` Route가 `PORTFOLIO_PROPOSAL_READY`이면 7단계 Portfolio Proposal로 넘어갑니다."
+                "`운영 기록 저장 및 다음 단계 판단` Route가 `PORTFOLIO_PROPOSAL_READY`이면 7단계 Portfolio Proposal로 넘어갑니다."
             )
             st.warning(
                 "`COMPARE_REVIEW_READY`는 실패가 아니라 다른 경로입니다. 이 경우 Proposal로 바로 가지 말고 Compare에서 비교 후보를 추가해 다시 검토합니다."
@@ -3387,7 +3389,7 @@ def _render_guides_page() -> None:
             """
             - `Real-Money`는 개별 backtest 결과에 붙는 검증 신호입니다.
             - `Compare`는 후보를 서로 비교해 다음 검토 초안으로 보낼지 판단하는 단계입니다.
-            - `Candidate Packaging`은 Draft 확인 / Review Note 저장 / Registry 저장 / Pre-Live 운영 기록 / Portfolio Proposal 진입 평가를 하나로 묶은 단계입니다.
+            - `Candidate Packaging`은 Draft 확인 / Review Note 저장 / Registry 저장 / Pre-Live 운영 기록 / Portfolio Proposal 이동 판단을 하나로 묶은 단계입니다.
             - `Candidate Draft`와 `Review Note`는 Candidate Packaging 안에서 쓰는 저장 전 검토 기록입니다.
             - `Current Candidate Registry`는 명시적으로 남긴 후보 목록입니다.
             - `Pre-Live 운영 기록`은 paper / watchlist / hold / re-review 같은 실전 전 운영 상태 기록입니다.
