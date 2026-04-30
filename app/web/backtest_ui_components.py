@@ -8,13 +8,20 @@ import streamlit as st
 
 def _route_tone(route_label: str) -> str:
     normalized = route_label.lower()
-    if any(term in normalized for term in ["ready", "pass", "proposal"]):
-        return "positive"
-    if any(term in normalized for term in ["hold", "watchlist", "review", "check"]):
-        return "warning"
     if any(term in normalized for term in ["reject", "blocked", "fail"]):
         return "danger"
+    if any(term in normalized for term in ["hold", "watchlist", "review", "check"]):
+        return "warning"
+    if any(term in normalized for term in ["ready", "pass"]):
+        return "positive"
     return "neutral"
+
+
+def _display_value(value: Any) -> str:
+    if value is None:
+        return "-"
+    value_text = str(value)
+    return value_text if value_text else "-"
 
 
 # Render long Backtest status strings as wrapping cards instead of truncating Streamlit metrics.
@@ -22,8 +29,9 @@ def render_status_card_grid(cards: list[dict[str, Any]]) -> None:
     html_cards: list[str] = []
     for card in cards:
         title = escape(str(card.get("title") or ""))
-        value = escape(str(card.get("value") or "-"))
-        detail = escape(str(card.get("detail") or ""))
+        value = escape(_display_value(card.get("value")))
+        detail_raw = card.get("detail")
+        detail = escape(_display_value(detail_raw)) if detail_raw not in (None, "") else ""
         tone = escape(str(card.get("tone") or "neutral"))
         detail_html = f'<div class="bt-status-card-detail">{detail}</div>' if detail else ""
         html_cards.append(
@@ -183,7 +191,7 @@ def render_badge_strip(items: list[dict[str, Any]]) -> None:
     badges: list[str] = []
     for item in items:
         label = escape(str(item.get("label") or ""))
-        value = escape(str(item.get("value") or "-"))
+        value = escape(_display_value(item.get("value")))
         tone = escape(str(item.get("tone") or "neutral"))
         badges.append(
             f'<span class="bt-badge bt-badge-{tone}">'

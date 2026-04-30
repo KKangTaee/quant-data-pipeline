@@ -3083,7 +3083,7 @@ def _render_guides_page() -> None:
         )
         st.caption(
             "큰 흐름으로는 1-5단계가 테스트 / 검증 구간, 6단계가 후보 패키징 구간, "
-            "7단계가 Pre-Live 운영 기록, 8단계가 포트폴리오 제안과 live readiness 경계입니다."
+            "7단계가 포트폴리오 초안 작성과 Live Readiness 진입 경계입니다."
         )
 
         step_rows = [
@@ -3166,16 +3166,15 @@ def _render_guides_page() -> None:
                 "next_step": "`PORTFOLIO_PROPOSAL_READY`인 후보만 Portfolio Proposal로 넘깁니다. `COMPARE_REVIEW_READY`는 실패가 아니라 Compare 재검토 경로입니다.",
             },
             {
-                "title": "7단계. Portfolio Proposal로 후보 묶음을 검토하고 Live Readiness 경계 유지",
+                "title": "7단계. Portfolio Proposal로 포트폴리오 초안을 만들고 Live Readiness 후보 여부 판단",
                 "path": "Backtest > Portfolio Proposal",
-                "goal": "후보 여러 개를 목적, 역할, 비중, 운영 상태와 함께 포트폴리오 제안 초안으로 묶습니다. 이 단계도 투자 승인이나 주문 지시가 아닙니다.",
+                "goal": "Candidate Review를 통과한 후보를 목적, 역할, 비중, capital scope가 있는 포트폴리오 초안으로 바꿉니다. 이 단계도 투자 승인이나 주문 지시가 아닙니다.",
                 "check": [
                     "`Candidate Review > Open Portfolio Proposal`로 넘어온 후보가 component 선택에 들어왔는지 확인",
-                    "후보별 역할, target weight, 비중 근거를 설명할 수 있는지",
-                    "각 후보의 Data Trust / Real-Money / Pre-Live 상태를 같이 볼 수 있는지",
-                    "`Monitoring Review`에서 blocker와 review gap을 다시 확인할 수 있는지",
-                    "`Pre-Live Feedback`과 `Paper Tracking Feedback`에서 현재 운영 상태와 성과 snapshot을 다시 읽을 수 있는지",
-                    "Live Readiness / Final Approval은 아직 별도 단계로 남겨 두고 경계를 유지하는지",
+                    "`1. Proposal 후보 확인`, `2. 목적 / 역할 / 비중 설계`, `3. Proposal 저장 및 다음 단계 판단` 순서로 위에서 아래로 진행되는지",
+                    "후보별 proposal role, target weight, 비중 근거를 설명할 수 있는지",
+                    "`Live Readiness 진입 평가`에서 route, readiness score, blocker를 확인할 수 있는지",
+                    "`Save Portfolio Proposal Draft`는 가능하지만 `Open Live Readiness`는 아직 다음 개발 전까지 비활성화되어 있는지",
                 ],
                 "next_step": "Portfolio Proposal까지 확인한 뒤에도 바로 투자하지 않습니다. 실제 투자 가능 여부는 이후 Live Readiness / Final Approval 단계에서 별도 기준으로 검토합니다.",
             },
@@ -3323,6 +3322,49 @@ def _render_guides_page() -> None:
                 "`COMPARE_REVIEW_READY`는 실패가 아니라 다른 경로입니다. 이 경우 Proposal로 바로 가지 말고 Compare에서 비교 후보를 추가해 다시 검토합니다."
             )
 
+        with st.expander("7단계 Portfolio Proposal에서 Live Readiness 후보로 넘어가는 최소 기준", expanded=True):
+            st.caption(
+                "Live Readiness 화면은 아직 다음 개발 대상입니다. 지금은 Portfolio Proposal에서 다음 단계가 읽을 수 있는 "
+                "포트폴리오 초안 형태인지까지만 판단합니다."
+            )
+            proposal_rows = pd.DataFrame(
+                [
+                    {
+                        "확인 항목": "Proposal 후보 선택",
+                        "Live Readiness 후보 가능": "후보가 1개 이상 선택되고 Proposal ID가 있음",
+                        "멈춰야 하는 경우": "후보가 없거나 어떤 proposal인지 식별할 수 없음",
+                    },
+                    {
+                        "확인 항목": "역할 / 비중",
+                        "Live Readiness 후보 가능": "target weight 합계가 100%이고 최소 1개 core anchor가 있음",
+                        "멈춰야 하는 경우": "비중 합계가 맞지 않거나 포트폴리오 중심 후보가 없음",
+                    },
+                    {
+                        "확인 항목": "Pre-Live 상태",
+                        "Live Readiness 후보 가능": "active weight 후보가 paper_tracking 상태",
+                        "멈춰야 하는 경우": "active 후보가 not_started, hold, reject, re_review 상태",
+                    },
+                    {
+                        "확인 항목": "Operator Context",
+                        "Live Readiness 후보 가능": "판단 이유, 다음 행동, review date가 남아 있음",
+                        "멈춰야 하는 경우": "저장만 되고 왜 다음 단계로 보는지 설명이 없음",
+                    },
+                    {
+                        "확인 항목": "Blocker",
+                        "Live Readiness 후보 가능": "rejected 후보 active weight, blocked core anchor 같은 hard blocker가 없음",
+                        "멈춰야 하는 경우": "저장 blocker가 남아 있음",
+                    },
+                ]
+            )
+            st.dataframe(proposal_rows, use_container_width=True, hide_index=True)
+            st.success(
+                "`Live Readiness 진입 평가` Route가 `LIVE_READINESS_CANDIDATE_READY`이면 proposal draft 저장 후 "
+                "향후 Live Readiness 단계가 읽을 수 있는 후보 형태로 봅니다."
+            )
+            st.warning(
+                "`Open Live Readiness` 버튼은 아직 다음 개발 전까지 비활성화됩니다. 현재는 `Save Portfolio Proposal Draft`까지만 처리합니다."
+            )
+
     st.markdown("### 문서와 파일")
 
     with st.container(border=True):
@@ -3393,7 +3435,7 @@ def _render_guides_page() -> None:
             - `Candidate Draft`와 `Review Note`는 Candidate Packaging 안에서 쓰는 저장 전 검토 기록입니다.
             - `Current Candidate Registry`는 명시적으로 남긴 후보 목록입니다.
             - `Pre-Live 운영 기록`은 paper / watchlist / hold / re-review 같은 실전 전 운영 상태 기록입니다.
-            - `Portfolio Proposal`은 후보 묶음의 제안 초안이며, live trading 승인이 아닙니다.
+            - `Portfolio Proposal`은 후보를 Live Readiness가 읽을 수 있는 포트폴리오 초안으로 바꾸는 단계이며, live trading 승인이 아닙니다.
             """
         )
 

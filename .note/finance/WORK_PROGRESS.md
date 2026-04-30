@@ -2585,3 +2585,23 @@ Detailed historical logs were archived on `2026-04-13`.
   - `python3 plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py` passed
 - Durable takeaway:
   - Candidate Review should show the pass/fail route judgment before the operator writes or saves the operating record, because the judgment explains why saving is available.
+
+### 2026-04-30
+- Reworked Backtest > Portfolio Proposal into a single construction-draft flow toward future Live Readiness.
+- Changed:
+  - split Portfolio Proposal render logic into `app/web/backtest_portfolio_proposal.py`
+  - split proposal row creation, readiness scoring, monitoring, Pre-Live feedback, and paper tracking feedback helpers into `app/web/backtest_portfolio_proposal_helpers.py`
+  - reduced `app/web/pages/backtest.py` to a Portfolio Proposal wrapper call for this panel
+  - replaced the old five-tab proposal surface with `1. Proposal 후보 확인`, `2. 목적 / 역할 / 비중 설계`, `3. Proposal 저장 및 다음 단계 판단`
+  - added a Live Readiness route/readiness panel with `LIVE_READINESS_CANDIDATE_READY`, `PROPOSAL_DRAFT_READY`, and `PROPOSAL_BLOCKED` routes
+  - moved saved proposal monitoring / Pre-Live feedback / paper tracking feedback into one collapsed support area
+  - refreshed Reference > Guides copy for the new Portfolio Proposal / Live Readiness boundary
+  - updated the walkthrough session note so 6단계 Candidate Packaging and 7단계 Portfolio Proposal match the implemented flow
+  - fixed shared status cards so numeric `0` displays as `0` instead of `-`
+- Verification:
+  - `.venv/bin/python -m py_compile app/web/backtest_portfolio_proposal.py app/web/backtest_portfolio_proposal_helpers.py app/web/backtest_ui_components.py app/web/pages/backtest.py app/web/streamlit_app.py` passed
+  - Streamlit smoke checked `Backtest > Portfolio Proposal` on port `8513`; the new three-step flow rendered, selecting `GTAA review candidate` produced `LIVE_READINESS_CANDIDATE_READY`, and `Save Portfolio Proposal Draft` became enabled
+  - `git diff --check` passed
+  - `python3 plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py` passed
+- Durable takeaway:
+  - Portfolio Proposal should remain a Backtest tab, but it should read as one lightweight construction-draft step between Candidate Review and future Live Readiness, not as several separate record-review stages.

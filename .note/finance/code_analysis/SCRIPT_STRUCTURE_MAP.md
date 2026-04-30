@@ -30,7 +30,9 @@
 | `app/web/backtest_ui_components.py` | Backtest UI 공용 wrapping status card, artifact pipeline, compact badge strip, stage brief strip, route/readiness 판정 panel |
 | `app/web/backtest_candidate_review.py` | `Backtest > Candidate Review`의 Candidate Packaging 화면 render, Review Note / current candidate registry 저장, Pre-Live 운영 기록 저장, Portfolio Proposal 이동 판단 |
 | `app/web/backtest_candidate_review_helpers.py` | Candidate Review readiness 평가, Review Note 생성, current candidate registry row 변환, Pre-Live status 추천 / draft 생성 / Proposal readiness 평가, display table helper |
-| `app/web/pages/backtest.py` | Backtest page shell, workflow navigation, Single / Compare / Saved Portfolio / Portfolio Proposal의 아직 분리되지 않은 render logic, cross-panel handoff |
+| `app/web/backtest_portfolio_proposal.py` | `Backtest > Portfolio Proposal`의 proposal 후보 선택, 목적 / 역할 / 비중 설계, Live Readiness 진입 평가, proposal draft 저장 화면 render |
+| `app/web/backtest_portfolio_proposal_helpers.py` | Portfolio Proposal row 생성, save / Live Readiness readiness 평가, saved proposal monitoring / Pre-Live feedback / paper tracking feedback table helper |
+| `app/web/pages/backtest.py` | Backtest page shell, workflow navigation, Single / Compare / Saved Portfolio의 아직 분리되지 않은 render logic, cross-panel handoff |
 
 ## App / Runtime
 

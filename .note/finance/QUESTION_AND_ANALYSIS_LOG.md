@@ -3449,3 +3449,17 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 판정 panel은 현재 입력값으로 계산되지만, 화면상으로는 저장 가능 여부를 먼저 읽을 수 있게 배치했다
 - Follow-up:
   - 다른 route panel에서도 긴 enum 값은 글자 중간이 아니라 의미 단위에서 줄바꿈되도록 같은 공통 컴포넌트를 사용한다
+
+### 2026-04-30 - Portfolio Proposal은 후보를 Live Readiness용 포트폴리오 초안으로 바꾸는 한 단계다
+- User request:
+  - Portfolio Proposal 초안 작성 기능이 필요한지, Candidate Review 이후 바로 Live Readiness / Final Approval로 가도 되는지 검토 요청
+  - 기능이 필요하다면 전체 흐름에서 하나의 단계로 유지하고 UX를 개편해 달라고 요청
+- Interpreted goal:
+  - 후보를 계속 저장만 하는 단계가 아니라, Live Readiness가 읽을 수 있는 포트폴리오 형태를 만드는 최소 단계로 재정의한다
+  - 단일 후보는 빠르게 지나갈 수 있고, 여러 후보는 목적 / 역할 / 비중을 명시하게 한다
+- Analysis result:
+  - Candidate Review는 “후보가 볼 만한가”를 판단하고, Portfolio Proposal은 “후보를 어떤 목적 / 역할 / 비중의 포트폴리오 초안으로 볼 것인가”를 판단하는 경계로 유지한다
+  - Portfolio Proposal 화면은 `후보 확인 -> 목적 / 역할 / 비중 설계 -> Live Readiness 진입 평가 -> 저장` 순서로 재구성했다
+  - saved proposal monitoring / Pre-Live feedback / paper tracking feedback은 주 단계가 아니라 접힌 보조 도구로 낮췄다
+- Follow-up:
+  - 다음 단계 개발 시 `Open Live Readiness`를 실제 Live Readiness 화면으로 연결하고, proposal readiness row를 입력 계약으로 사용한다
