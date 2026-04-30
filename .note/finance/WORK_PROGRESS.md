@@ -2638,3 +2638,20 @@ Detailed historical logs were archived on `2026-04-13`.
   - Streamlit smoke checked `Workspace > Overview` on port `8515`; KPI cards, Top 3 candidate cards, funnel chart, next actions, recent activity, and collapsed system snapshot rendered
 - Durable takeaway:
   - Overview should behave like the front dashboard for the quant workflow, showing current candidates and next actions rather than acting as a static start guide.
+
+### 2026-04-30
+- Split the remaining large Backtest page shell into workflow modules.
+- Changed:
+  - reduced `app/web/pages/backtest.py` to a thin Backtest page shell and workflow panel dispatcher
+  - added `app/web/backtest_common.py` for shared presets, session state, panel routing, strategy input widgets, real-money / guardrail inputs, and status label helpers
+  - added `app/web/backtest_single_strategy.py`, `app/web/backtest_single_forms.py`, and `app/web/backtest_single_runner.py` for Single Strategy orchestration, strategy-specific forms, and DB-backed run dispatch
+  - added `app/web/backtest_compare.py` for Compare & Portfolio Builder, weighted portfolio builder, saved portfolio load / replay, and current-candidate compare prefill
+  - added `app/web/backtest_result_display.py` for latest result / compare result / data trust / real-money detail / selection history display helpers
+  - updated `streamlit_app.py`, `backtest_history.py`, and `backtest_candidate_review.py` to import the new module boundaries instead of reaching through the page shell
+  - synced the script structure map, web Backtest UI flow, and high-level finance map
+- Verification:
+  - `.venv/bin/python -m py_compile app/web/pages/backtest.py app/web/backtest_common.py app/web/backtest_single_strategy.py app/web/backtest_single_forms.py app/web/backtest_single_runner.py app/web/backtest_compare.py app/web/backtest_result_display.py app/web/backtest_history.py app/web/backtest_candidate_review.py app/web/streamlit_app.py` passed
+  - `.venv/bin/python` import smoke passed for the Backtest shell and new Backtest modules
+  - Streamlit smoke checked `Workspace > Overview` and `Backtest` on port `8516`; `Single Strategy`, `Compare & Portfolio Builder`, `Candidate Review`, and `Portfolio Proposal` rendered after the split
+- Durable takeaway:
+  - `app/web/pages/backtest.py` should stay a page shell. Future Single / Compare / result display work should land in the matching `app/web/backtest_*.py` module instead of growing the page entry again.

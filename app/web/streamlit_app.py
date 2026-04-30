@@ -42,9 +42,10 @@ from app.jobs.run_history import (
 )
 from app.jobs.symbol_sources import resolve_symbol_source
 from app.jobs.symbol_sources import filter_non_plain_symbols
+from app.web.backtest_common import QUALITY_STRICT_PRESETS, clear_backtest_preview_caches
 from app.web.backtest_history import render_backtest_run_history_page
 from app.web.overview_dashboard import render_overview_dashboard
-from app.web.pages.backtest import QUALITY_STRICT_PRESETS, clear_backtest_preview_caches, render_backtest_tab
+from app.web.pages.backtest import render_backtest_tab
 from finance.data.financial_statements import inspect_financial_statement_source
 from finance.loaders import load_statement_coverage_summary, load_statement_timing_audit
 

@@ -3493,3 +3493,19 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Runtime / Build 정보는 디버깅에 유용하므로 제거하지 않고 `System Snapshot`으로 접어 둔다
 - Follow-up:
   - 이후 Live Readiness가 구현되면 Overview Top 후보와 Next Actions에 direct Live Readiness / saved proposal 입력 경로를 연결할 수 있다.
+
+### 2026-04-30 - Backtest page는 page shell이고 workflow 본문은 module별로 관리한다
+- User request:
+  - `backtest.py`가 다시 커졌으니 Single Strategy와 Compare / Portfolio Builder도 Candidate Review, Portfolio Proposal처럼 별도 스크립트로 분리해 달라고 요청함
+  - 향후 새 phase나 새 전략이 추가될 때도 대응 가능한 module 구조를 원함
+- Interpreted goal:
+  - 단순 helper 하나로 빼는 것이 아니라, Single Strategy form / runner / result display / Compare / saved replay 책임을 분리해 수정 위치를 명확하게 한다
+  - 기존 session state key와 저장 / replay / candidate handoff behavior는 유지한다
+- Analysis result:
+  - `app/web/pages/backtest.py`는 page shell과 workflow navigation만 남기는 구조가 맞다
+  - Single Strategy는 `backtest_single_strategy.py`, `backtest_single_forms.py`, `backtest_single_runner.py`로 나눠 orchestration / form / 실행 dispatch 책임을 분리했다
+  - Compare & Portfolio Builder는 `backtest_compare.py`가 담당하고, 결과 표시 공통부는 `backtest_result_display.py`로 분리했다
+  - 공용 preset, session state, 입력 component, status label은 `backtest_common.py`에 모았다. 이 파일은 다음 리팩토링에서 `state / strategy_inputs / presets`로 더 나눌 수 있는 transitional shared module이다
+- Follow-up:
+  - 새 전략 추가 시에는 catalog, single form, runner dispatch, compare default / override 경계를 우선 확인한다
+  - `backtest_common.py`가 다시 커지면 다음 작업 단위에서 `backtest_state.py`, `backtest_strategy_inputs.py`, `backtest_presets.py`로 추가 분리한다

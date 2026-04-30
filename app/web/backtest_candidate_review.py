@@ -41,6 +41,8 @@ from app.web.backtest_candidate_review_helpers import (
     _pre_live_status_korean_label,
     _pre_live_status_suggestion_reason,
 )
+from app.web.backtest_common import _request_backtest_panel
+from app.web.backtest_compare import _queue_current_candidate_compare_prefill
 from app.web.backtest_ui_components import (
     render_artifact_pipeline,
     render_badge_strip,
@@ -61,11 +63,6 @@ from app.web.runtime import (
 
 
 def render_candidate_review_workspace() -> None:
-    from app.web.pages import backtest as bt
-
-    _queue_current_candidate_compare_prefill = bt._queue_current_candidate_compare_prefill
-    _request_backtest_panel = bt._request_backtest_panel
-
     st.markdown("### Candidate Review")
     st.caption(
         "6단계 Candidate Packaging 작업 공간입니다. 백테스트 후보를 바로 투자 추천으로 확정하는 화면이 아니라, "

@@ -8,6 +8,8 @@ import pandas as pd
 import streamlit as st
 
 from app.web.runtime import BACKTEST_HISTORY_FILE, load_backtest_run_history
+from app.web.backtest_common import _set_single_strategy_target_from_strategy_key
+from app.web.backtest_single_runner import _handle_backtest_run
 from app.web.backtest_candidate_review_helpers import (
     _candidate_review_draft_from_history_record,
     _queue_candidate_review_draft,
@@ -33,20 +35,6 @@ SNAPSHOT_SELECTION_HISTORY_STRATEGY_KEYS = {
     "quality_value_snapshot_strict_annual",
     "quality_value_snapshot_strict_quarterly_prototype",
 }
-
-
-# Delegate run replay to the Backtest page without making History own execution logic.
-def _handle_backtest_run(payload: dict, *, strategy_name: str) -> bool:
-    from app.web.pages import backtest as bt
-
-    return bt._handle_backtest_run(payload, strategy_name=strategy_name)
-
-
-# Keep Single Strategy prefill targeting in the Backtest page where the form state lives.
-def _set_single_strategy_target_from_strategy_key(strategy_key: str | None) -> None:
-    from app.web.pages import backtest as bt
-
-    bt._set_single_strategy_target_from_strategy_key(strategy_key)
 
 
 # Build a compact family / variant label for History -> Single Strategy prefill notices.
