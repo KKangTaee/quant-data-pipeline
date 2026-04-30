@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+from typing import Any
+
 import altair as alt
 import pandas as pd
 import streamlit as st
 
 from app.web.backtest_common import *  # noqa: F401,F403
+from app.web.backtest_ui_components import render_status_card_grid
 
 
 def _render_compare_altair_chart(
@@ -1149,6 +1152,19 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
             st.caption(description)
         return section
 
+    def _status_tone(value: Any) -> str:
+        normalized = str(value or "").strip().lower()
+        if any(term in normalized for term in ["hold", "blocked", "reject", "fail", "caution", "breach"]):
+            return "danger"
+        if any(term in normalized for term in ["watch", "review", "production", "unavailable"]):
+            return "warning"
+        if any(term in normalized for term in ["real_money", "paper", "small_capital", "routine", "normal", "ready"]):
+            return "positive"
+        return "neutral"
+
+    def _render_real_money_cards(cards: list[dict[str, Any]]) -> None:
+        render_status_card_grid(cards)
+
     st.info(
         "이 탭은 실전형 해석을 한 번에 보기 위한 화면입니다. "
         "먼저 `현재 판단`에서 지금 상태를 보고, "
@@ -1157,13 +1173,46 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
         "마지막 `상세 데이터`에서 원자료를 확인하면 됩니다."
     )
 
-    summary_cols = st.columns(6, gap="small")
-    summary_cols[0].metric("Promotion", str(meta.get("promotion_decision") or "-").upper())
-    summary_cols[1].metric("Shortlist", _shortlist_status_value_to_label(meta.get("shortlist_status")))
-    summary_cols[2].metric("Probation", _probation_status_value_to_label(meta.get("probation_status")))
-    summary_cols[3].metric("Deployment", _deployment_readiness_status_value_to_label(meta.get("deployment_readiness_status")))
-    summary_cols[4].metric("Rolling Review", _review_status_value_to_label(meta.get("rolling_review_status")))
-    summary_cols[5].metric("Validation", _review_status_value_to_label(meta.get("validation_status")))
+    _render_real_money_cards(
+        [
+            {
+                "title": "Promotion",
+                "value": str(meta.get("promotion_decision") or "-").upper(),
+                "detail": meta.get("promotion_next_step") or "",
+                "tone": _status_tone(meta.get("promotion_decision")),
+            },
+            {
+                "title": "Shortlist",
+                "value": _shortlist_status_value_to_label(meta.get("shortlist_status")),
+                "detail": meta.get("shortlist_next_step") or "",
+                "tone": _status_tone(meta.get("shortlist_status")),
+            },
+            {
+                "title": "Probation",
+                "value": _probation_status_value_to_label(meta.get("probation_status")),
+                "detail": meta.get("probation_review_frequency") or "",
+                "tone": _status_tone(meta.get("probation_status")),
+            },
+            {
+                "title": "Deployment",
+                "value": _deployment_readiness_status_value_to_label(meta.get("deployment_readiness_status")),
+                "detail": meta.get("deployment_readiness_next_step") or "",
+                "tone": _status_tone(meta.get("deployment_readiness_status")),
+            },
+            {
+                "title": "Rolling Review",
+                "value": _review_status_value_to_label(meta.get("rolling_review_status")),
+                "detail": meta.get("rolling_review_window_label") or "",
+                "tone": _status_tone(meta.get("rolling_review_status")),
+            },
+            {
+                "title": "Validation",
+                "value": _review_status_value_to_label(meta.get("validation_status")),
+                "detail": meta.get("validation_window_label") or "",
+                "tone": _status_tone(meta.get("validation_status")),
+            },
+        ]
+    )
 
     overview_tab, review_tab, execution_tab, detail_tab = st.tabs(
         ["현재 판단", "검토 근거", "실행 부담", "상세 데이터"]
@@ -1180,9 +1229,22 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
             with _section_header("전략 승격 판단", "이 전략이 현재 계약 기준에서 어느 정도까지 올라왔는지 보여줍니다."):
                 decision = str(meta.get("promotion_decision") or "-")
                 next_step = str(meta.get("promotion_next_step") or "-")
-                promotion_cols = st.columns(2, gap="small")
-                promotion_cols[0].metric("Decision", decision.upper())
-                promotion_cols[1].metric("Next Step", next_step)
+                _render_real_money_cards(
+                    [
+                        {
+                            "title": "Decision",
+                            "value": decision.upper(),
+                            "detail": "현재 승격 판정",
+                            "tone": _status_tone(decision),
+                        },
+                        {
+                            "title": "Next Step",
+                            "value": next_step,
+                            "detail": "이 판정에서 이어지는 처리",
+                            "tone": _status_tone(decision),
+                        },
+                    ]
+                )
                 rationale = list(meta.get("promotion_rationale") or [])
                 if rationale:
                     st.caption("왜 이렇게 판단했는지: " + ", ".join(f"`{item}`" for item in rationale))
@@ -1229,10 +1291,28 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
                 shortlist_status = str(meta.get("shortlist_status") or "-")
                 shortlist_next_step = str(meta.get("shortlist_next_step") or "-")
                 shortlist_family = str(meta.get("shortlist_family") or meta.get("strategy_family") or "-")
-                shortlist_cols = st.columns(3, gap="small")
-                shortlist_cols[0].metric("Family", shortlist_family)
-                shortlist_cols[1].metric("Status", _shortlist_status_value_to_label(shortlist_status))
-                shortlist_cols[2].metric("Next Step", shortlist_next_step)
+                _render_real_money_cards(
+                    [
+                        {
+                            "title": "Family",
+                            "value": shortlist_family,
+                            "detail": "후보가 속한 전략군",
+                            "tone": "neutral",
+                        },
+                        {
+                            "title": "Status",
+                            "value": _shortlist_status_value_to_label(shortlist_status),
+                            "detail": "숏리스트 단계",
+                            "tone": _status_tone(shortlist_status),
+                        },
+                        {
+                            "title": "Next Step",
+                            "value": shortlist_next_step,
+                            "detail": "다음 검토 행동",
+                            "tone": _status_tone(shortlist_status),
+                        },
+                    ]
+                )
                 shortlist_rationale = list(meta.get("shortlist_rationale") or [])
                 if shortlist_rationale:
                     st.caption("숏리스트 판단 근거: " + ", ".join(f"`{item}`" for item in shortlist_rationale))
@@ -1267,12 +1347,40 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
                 probation_review_frequency = str(meta.get("probation_review_frequency") or "-")
                 monitoring_status = str(meta.get("monitoring_status") or "-")
                 monitoring_review_frequency = str(meta.get("monitoring_review_frequency") or "-")
-                probation_cols = st.columns(5, gap="small")
-                probation_cols[0].metric("Probation", _probation_status_value_to_label(probation_status))
-                probation_cols[1].metric("Stage", probation_stage)
-                probation_cols[2].metric("Probation Review", probation_review_frequency)
-                probation_cols[3].metric("Monitoring", _monitoring_status_value_to_label(monitoring_status))
-                probation_cols[4].metric("Monitoring Review", monitoring_review_frequency)
+                _render_real_money_cards(
+                    [
+                        {
+                            "title": "Probation",
+                            "value": _probation_status_value_to_label(probation_status),
+                            "detail": "운영 전 관찰 상태",
+                            "tone": _status_tone(probation_status),
+                        },
+                        {
+                            "title": "Stage",
+                            "value": probation_stage,
+                            "detail": "현재 probation 단계",
+                            "tone": _status_tone(probation_status),
+                        },
+                        {
+                            "title": "Probation Review",
+                            "value": probation_review_frequency,
+                            "detail": "점검 주기",
+                            "tone": "neutral",
+                        },
+                        {
+                            "title": "Monitoring",
+                            "value": _monitoring_status_value_to_label(monitoring_status),
+                            "detail": meta.get("monitoring_next_step") or "운영 감시 상태",
+                            "tone": _status_tone(monitoring_status),
+                        },
+                        {
+                            "title": "Monitoring Review",
+                            "value": monitoring_review_frequency,
+                            "detail": "감시 점검 주기",
+                            "tone": "neutral",
+                        },
+                    ]
+                )
                 if meta.get("probation_next_step"):
                     st.caption(f"다음 probation 액션: `{meta.get('probation_next_step')}`")
                 probation_rationale = list(meta.get("probation_rationale") or [])
@@ -1304,13 +1412,46 @@ def _render_real_money_details(bundle: dict[str, Any]) -> None:
             ):
                 deployment_status = str(meta.get("deployment_readiness_status") or "-")
                 deployment_next_step = str(meta.get("deployment_readiness_next_step") or "-")
-                deployment_cols = st.columns(6, gap="small")
-                deployment_cols[0].metric("Status", _deployment_readiness_status_value_to_label(deployment_status))
-                deployment_cols[1].metric("Next Step", deployment_next_step)
-                deployment_cols[2].metric("Pass", str(int(meta.get("deployment_check_pass_count") or 0)))
-                deployment_cols[3].metric("Watch", str(int(meta.get("deployment_check_watch_count") or 0)))
-                deployment_cols[4].metric("Fail", str(int(meta.get("deployment_check_fail_count") or 0)))
-                deployment_cols[5].metric("Unavailable", str(int(meta.get("deployment_check_unavailable_count") or 0)))
+                _render_real_money_cards(
+                    [
+                        {
+                            "title": "Status",
+                            "value": _deployment_readiness_status_value_to_label(deployment_status),
+                            "detail": "현재 배치 준비 상태",
+                            "tone": _status_tone(deployment_status),
+                        },
+                        {
+                            "title": "Next Step",
+                            "value": deployment_next_step,
+                            "detail": "다음 처리",
+                            "tone": _status_tone(deployment_status),
+                        },
+                        {
+                            "title": "Pass",
+                            "value": str(int(meta.get("deployment_check_pass_count") or 0)),
+                            "detail": "통과 체크",
+                            "tone": "positive",
+                        },
+                        {
+                            "title": "Watch",
+                            "value": str(int(meta.get("deployment_check_watch_count") or 0)),
+                            "detail": "관찰 체크",
+                            "tone": "warning" if int(meta.get("deployment_check_watch_count") or 0) else "neutral",
+                        },
+                        {
+                            "title": "Fail",
+                            "value": str(int(meta.get("deployment_check_fail_count") or 0)),
+                            "detail": "막는 체크",
+                            "tone": "danger" if int(meta.get("deployment_check_fail_count") or 0) else "neutral",
+                        },
+                        {
+                            "title": "Unavailable",
+                            "value": str(int(meta.get("deployment_check_unavailable_count") or 0)),
+                            "detail": "판단 불가 체크",
+                            "tone": "warning" if int(meta.get("deployment_check_unavailable_count") or 0) else "neutral",
+                        },
+                    ]
+                )
 
                 deployment_rationale = list(meta.get("deployment_readiness_rationale") or [])
                 if deployment_rationale:
