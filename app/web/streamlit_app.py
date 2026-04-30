@@ -43,6 +43,7 @@ from app.jobs.run_history import (
 from app.jobs.symbol_sources import resolve_symbol_source
 from app.jobs.symbol_sources import filter_non_plain_symbols
 from app.web.backtest_history import render_backtest_run_history_page
+from app.web.overview_dashboard import render_overview_dashboard
 from app.web.pages.backtest import QUALITY_STRICT_PRESETS, clear_backtest_preview_caches, render_backtest_tab
 from finance.data.financial_statements import inspect_financial_statement_source
 from finance.loaders import load_statement_coverage_summary, load_statement_timing_audit
@@ -2360,42 +2361,15 @@ def _render_ingestion_console() -> None:
 
 
 def _render_overview_page() -> None:
-    st.title("Finance Console")
-    st.caption("데이터 수집, 백테스트, 운영 검토를 한 곳에서 관리하는 내부 콘솔입니다.")
     _render_running_banner()
-    _render_runtime_build_indicator()
-
-    latest_result = st.session_state.get("last_completed_result")
-    recent_results = st.session_state.get("recent_results") or []
-
-    col1, col2, col3 = st.columns(3)
-    col1.metric("현재 상태", "Phase 14 Practical Closeout")
-    col2.metric("Recent Results", len(recent_results))
-    col3.metric("Git SHA", CURRENT_GIT_SHORT_SHA or "unknown")
-
-    st.markdown("### 시작 가이드")
-    st.markdown(
-        """
-        - `Ingestion`: 일별 업데이트, statement refresh, 진단 작업을 실행합니다.
-        - `Backtest`: 전략 실행, compare, 후보 검토, Pre-Live 운영 기록, Portfolio Proposal 흐름을 다룹니다.
-        - `Ops Review`: 최근 실행 결과, persistent history, logs, failure CSV를 한 번에 봅니다.
-        - `Backtest Run History`: 저장된 백테스트 실행 기록을 재현하고 Backtest 작업 흐름으로 다시 보냅니다.
-        - `Guides`: 현재 phase 문서, 체크리스트, 승격 해석 가이드를 빠르게 찾습니다.
-        - `Glossary`: 현재 퀀트 프로그램에서 쓰는 용어를 검색하면서 다시 확인합니다.
-        """
+    render_overview_dashboard(
+        runtime_marker=APP_RUNTIME_MARKER,
+        loaded_at=APP_RUNTIME_LOADED_AT,
+        git_sha=CURRENT_GIT_SHORT_SHA,
+        latest_result=st.session_state.get("last_completed_result"),
+        recent_results=st.session_state.get("recent_results") or [],
+        render_runtime_snapshot=_render_runtime_build_indicator,
     )
-
-    if latest_result:
-        status = str(latest_result.get("status") or "-")
-        label = str(latest_result.get("label") or latest_result.get("job_name") or "latest_run")
-        run_time = latest_result.get("finished_at") or latest_result.get("started_at") or "-"
-        st.markdown("### Latest Completed Run")
-        summary_cols = st.columns(3)
-        summary_cols[0].metric("Label", label)
-        summary_cols[1].metric("Status", status.upper())
-        summary_cols[2].metric("Finished At", str(run_time))
-    else:
-        st.info("아직 완료된 실행 기록이 없습니다. 먼저 `Ingestion`이나 `Backtest`에서 작업을 실행하면 여기에도 요약이 보입니다.")
 
 
 def _render_ingestion_page() -> None:

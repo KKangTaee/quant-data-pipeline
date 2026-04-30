@@ -24,14 +24,16 @@
 | 스크립트 | 관리하는 기능 |
 |---|---|
 | `app/web/streamlit_app.py` | Finance Console top navigation, page entry, page-level routing |
+| `app/web/overview_dashboard.py` | `Workspace > Overview`의 후보 Top 3, funnel chart, next actions, recent activity, system snapshot dashboard render |
+| `app/web/overview_dashboard_helpers.py` | Overview dashboard용 current candidate / Pre-Live / proposal / history / saved portfolio 집계, 후보 우선순위 scoring, funnel / activity table helper |
 | `app/web/backtest_strategy_catalog.py` | Strategy display name, strategy key, family variant 선택 매핑 |
 | `app/web/backtest_history.py` | `Operations > Backtest Run History` 화면 render, history inspect / replay / form load / candidate draft handoff, Real-Money / Guardrail parity table render |
 | `app/web/backtest_history_helpers.py` | Backtest history row 변환, replay payload 복원, History replay parity / Real-Money scope table helper |
 | `app/web/backtest_ui_components.py` | Backtest UI 공용 wrapping status card, artifact pipeline, compact badge strip, stage brief strip, route/readiness 판정 panel |
 | `app/web/backtest_candidate_review.py` | `Backtest > Candidate Review`의 Candidate Packaging 화면 render, Review Note / current candidate registry 저장, Pre-Live 운영 기록 저장, Portfolio Proposal 이동 판단 |
 | `app/web/backtest_candidate_review_helpers.py` | Candidate Review readiness 평가, Review Note 생성, current candidate registry row 변환, Pre-Live status 추천 / draft 생성 / Proposal readiness 평가, display table helper |
-| `app/web/backtest_portfolio_proposal.py` | `Backtest > Portfolio Proposal`의 proposal 후보 선택, 목적 / 역할 / 비중 설계, Live Readiness 진입 평가, proposal draft 저장 화면 render |
-| `app/web/backtest_portfolio_proposal_helpers.py` | Portfolio Proposal row 생성, save / Live Readiness readiness 평가, saved proposal monitoring / Pre-Live feedback / paper tracking feedback table helper |
+| `app/web/backtest_portfolio_proposal.py` | `Backtest > Portfolio Proposal`의 단일 후보 Live Readiness 직행 평가, 다중 후보 proposal 후보 선택, 목적 / 역할 / 비중 설계, proposal draft 저장 화면 render |
+| `app/web/backtest_portfolio_proposal_helpers.py` | Portfolio Proposal row 생성, 단일 후보 direct readiness / proposal save readiness 평가, saved proposal monitoring / Pre-Live feedback / paper tracking feedback table helper |
 | `app/web/pages/backtest.py` | Backtest page shell, workflow navigation, Single / Compare / Saved Portfolio의 아직 분리되지 않은 render logic, cross-panel handoff |
 
 ## App / Runtime

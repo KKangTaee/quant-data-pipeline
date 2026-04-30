@@ -2623,3 +2623,18 @@ Detailed historical logs were archived on `2026-04-13`.
   - `python3 plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py` passed
 - Durable takeaway:
   - Portfolio Proposal should not force a save loop for a single candidate; proposal draft persistence is mainly for multi-candidate construction or intentionally documented allocation proposals.
+
+### 2026-04-30
+- Reworked Workspace > Overview into a registry-backed quant dashboard.
+- Changed:
+  - added `app/web/overview_dashboard.py` for Overview rendering
+  - added `app/web/overview_dashboard_helpers.py` for current candidate, Pre-Live, proposal, history, saved portfolio aggregation
+  - replaced the old static start guide with KPI cards, review-priority Top 3 candidates, candidate funnel chart, next actions, recent activity, and collapsed system snapshot
+  - moved runtime/build details into the `System Snapshot` expander instead of the top of the page
+  - updated README, script structure map, web Backtest UI flow, and high-level finance map for the new Overview modules
+- Verification:
+  - `.venv/bin/python -m py_compile app/web/overview_dashboard.py app/web/overview_dashboard_helpers.py app/web/streamlit_app.py` passed
+  - `.venv/bin/python` snapshot load returned 12 current candidates, 2 paper tracking records, 30 recent runs, and a Top 3 candidate list
+  - Streamlit smoke checked `Workspace > Overview` on port `8515`; KPI cards, Top 3 candidate cards, funnel chart, next actions, recent activity, and collapsed system snapshot rendered
+- Durable takeaway:
+  - Overview should behave like the front dashboard for the quant workflow, showing current candidates and next actions rather than acting as a static start guide.

@@ -3478,3 +3478,18 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `Proposal Components`는 비교가 아니라 구성 후보 선택이다. 좋은지 나쁜지 비교하는 작업은 5단계 Compare에서 끝내고, 이 단계는 선택한 후보를 포트폴리오 형태로 묶을 때만 사용한다.
 - Follow-up:
   - 향후 Live Readiness 화면이 구현되면 `Open Live Readiness`는 direct candidate 또는 saved proposal draft를 입력으로 받을 수 있어야 한다.
+
+### 2026-04-30 - Workspace Overview는 정적 시작 가이드보다 후보 / 다음 행동 dashboard가 되어야 한다
+- User request:
+  - Workspace Overview가 방치되어 있고 실제로 하는 일이 없으니, 현재 테스트한 포트폴리오 Top 후보, 추천성 정보, 그래프, 필요한 요소가 있는 대시보드 앞단으로 개편하고 싶다고 요청함
+  - Overview도 별도 스크립트로 분리해서 관리하는 것이 좋은지 검토 요청
+- Interpreted goal:
+  - Overview는 가이드 페이지가 아니라 현재 후보 상태와 다음 행동을 한눈에 보여주는 front dashboard가 되어야 함
+  - `streamlit_app.py`가 더 커지지 않도록 Overview render와 집계 helper를 별도 모듈로 분리해야 함
+- Analysis result:
+  - Overview는 `Current Candidates`, `Paper Tracking`, `Proposal Drafts`, `Recent Runs` KPI를 상단에 둔다
+  - `검토 우선 후보 Top 3`은 투자 추천이 아니라 Real-Money signal, Pre-Live status, deployment blocker, CAGR/MDD 기반 운영 검토 우선순위로 표시한다
+  - Candidate funnel chart와 Next Actions를 나란히 두어 후보들이 어디에 쌓였고 다음에 어느 탭으로 가야 하는지 보여준다
+  - Runtime / Build 정보는 디버깅에 유용하므로 제거하지 않고 `System Snapshot`으로 접어 둔다
+- Follow-up:
+  - 이후 Live Readiness가 구현되면 Overview Top 후보와 Next Actions에 direct Live Readiness / saved proposal 입력 경로를 연결할 수 있다.

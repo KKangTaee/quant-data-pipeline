@@ -15,7 +15,7 @@ DB-backed market data ingestion, factor generation, and strategy backtesting wor
 현재 메인 진입점은 Streamlit 기반 `Finance Console`입니다.
 
 - `Overview`
-  - 현재 상태, 최근 실행 결과, 빠른 진입 가이드
+  - 후보 Top 3, candidate funnel, next actions, recent activity, system snapshot dashboard
 - `Ingestion`
   - 일별 업데이트, statement refresh, 진단 작업
 - `Backtest`
@@ -92,6 +92,8 @@ app/
   jobs/                  # ingestion jobs, diagnostics, run history
   web/
     streamlit_app.py     # Finance Console entry point
+    overview_dashboard.py # Workspace > Overview dashboard UI
+    overview_dashboard_helpers.py # Overview 후보/Pre-Live/Proposal/History 집계 helper
     backtest_history.py  # Operations > Backtest Run History UI
     backtest_ui_components.py # Backtest 공용 status/route UI component
     backtest_candidate_review.py # Candidate Review / Candidate Packaging / Pre-Live 운영 기록 UI
@@ -133,7 +135,7 @@ uv sync
 .venv/bin/streamlit run app/web/streamlit_app.py
 ```
 
-앱이 열리면 상단 navigation에서 `Ingestion`, `Backtest`, `Ops Review`, `Guides`, `Glossary`를 이동하며 사용합니다.
+앱이 열리면 상단 navigation에서 `Overview`, `Ingestion`, `Backtest`, `Ops Review`, `Backtest Run History`, `Guides`, `Glossary`를 이동하며 사용합니다.
 
 ## 참고 문서
 
