@@ -2122,11 +2122,11 @@ def _sync_saved_portfolio_name_suggestion(weighted_bundle: dict[str, Any]) -> st
     return suggested_name
 
 def _render_saved_portfolio_workspace() -> None:
-    st.markdown("### Saved Portfolios")
+    st.markdown("### Saved Weighted Portfolios")
     st.caption(
-        "이 영역은 `Compare Strategies -> Weighted Portfolio Builder` 다음 단계입니다. "
-        "현재 compare 결과와 weighted portfolio 구성을 저장해두고, 나중에 다시 "
-        "`Load Saved Setup Into Compare` 또는 `Replay Saved Portfolio`로 이어갈 수 있습니다."
+        "이 영역은 후보 보관함이 아니라 `Compare Strategies -> Weighted Portfolio Builder`에서 만든 "
+        "비중 포트폴리오 산출물 저장소입니다. 저장 후보 자체의 그래프 재검토는 "
+        "`Operations > Candidate Library`에서 확인합니다."
     )
 
     saved_notice = st.session_state.get("backtest_saved_portfolio_notice")
@@ -2138,7 +2138,7 @@ def _render_saved_portfolio_workspace() -> None:
     weighted_bundle = st.session_state.backtest_weighted_bundle
     compare_source_context = dict(st.session_state.get("backtest_compare_source_context") or {})
     if compare_bundles and weighted_bundle:
-        with st.expander("Save This Weighted Portfolio", expanded=False):
+        with st.expander("Save This Weighted Portfolio Output", expanded=False):
             st.caption(
                 "지금 보고 있는 compare 결과 + weighted portfolio 구성(weight/date policy)을 저장합니다. "
                 "저장한 뒤에는 그대로 다시 실행하거나, compare 화면으로 다시 불러와 수정할 수 있습니다."
@@ -2163,7 +2163,7 @@ def _render_saved_portfolio_workspace() -> None:
                     help="나중에 저장된 포트폴리오를 다시 열었을 때 용도를 빠르게 떠올릴 수 있게 해줍니다.",
                     key="saved_portfolio_description_input",
                 )
-                save_submitted = st.form_submit_button("Save Portfolio", use_container_width=True)
+                save_submitted = st.form_submit_button("Save Weighted Portfolio", use_container_width=True)
             if save_submitted:
                 try:
                     record = save_saved_portfolio(
@@ -2191,7 +2191,7 @@ def _render_saved_portfolio_workspace() -> None:
 
     saved_portfolios = load_saved_portfolios(limit=100)
     if not saved_portfolios:
-        st.info("저장된 포트폴리오가 아직 없습니다.")
+        st.info("저장된 weighted portfolio output이 아직 없습니다.")
         st.caption(f"Path: {SAVED_PORTFOLIO_FILE}")
         return
 

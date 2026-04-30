@@ -53,7 +53,7 @@ def _render_backtest_panel_selector() -> str:
             on_change=_activate_backtest_workflow_panel,
             label_visibility="collapsed",
         )
-    st.caption("과거 실행 기록과 재현 도구는 `Operations > Backtest Run History`에서 관리합니다.")
+    st.caption("과거 실행 기록은 `Operations > Backtest Run History`, 저장 후보 재검토는 `Operations > Candidate Library`에서 관리합니다.")
     return str(st.session_state.get("backtest_active_panel") or "Single Strategy")
 
 
@@ -68,6 +68,7 @@ def render_backtest_tab() -> None:
             - `Candidate Review`: 후보 초안, Review Note, registry 저장, Pre-Live 운영 기록, Portfolio Proposal 이동 판단을 순서대로 처리합니다.
             - `Portfolio Proposal`: 후보 여러 개를 목적 / 역할 / 비중 근거와 함께 묶는 제안 초안을 만듭니다.
             - `Operations > Backtest Run History`: 저장된 실행 결과를 다시 보고, `Run Again` 또는 `Load Into Form`을 사용하는 운영 도구입니다.
+            - `Operations > Candidate Library`: registry / Pre-Live 후보를 다시 열어보고, 저장된 contract로 result curve를 재생성합니다.
             - `Load Into Form`을 누르면 저장된 입력값이 `Single Strategy` 화면으로 자동 이동하며 다시 채워집니다.
             - `quarterly strict prototype` 전략은 현재 **research-only** 경로입니다.
             """

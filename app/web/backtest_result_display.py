@@ -1,6 +1,72 @@
 from __future__ import annotations
 
+import altair as alt
+import pandas as pd
+import streamlit as st
+
 from app.web.backtest_common import *  # noqa: F401,F403
+
+
+def _render_compare_altair_chart(
+    compare_df: pd.DataFrame,
+    *,
+    title: str,
+    y_title: str,
+    show_end_markers: bool = False,
+) -> None:
+    long_df = (
+        compare_df.reset_index()
+        .melt(id_vars="Date", var_name="Strategy", value_name="Value")
+        .dropna(subset=["Value"])
+    )
+
+    chart = (
+        alt.Chart(long_df)
+        .mark_line(point=True)
+        .encode(
+            x=alt.X("Date:T", title="Date"),
+            y=alt.Y("Value:Q", title=y_title),
+            color=alt.Color("Strategy:N", title="Strategy"),
+            tooltip=[
+                alt.Tooltip("Date:T", title="Date"),
+                alt.Tooltip("Strategy:N", title="Strategy"),
+                alt.Tooltip("Value:Q", title=y_title, format=",.3f"),
+            ],
+        )
+        .properties(title=title, height=360)
+    )
+
+    if not show_end_markers:
+        st.altair_chart(chart, use_container_width=True)
+        return
+
+    marker_df = long_df.sort_values("Date").groupby("Strategy", as_index=False).tail(1)
+    end_points = (
+        alt.Chart(marker_df)
+        .mark_point(size=90, filled=True)
+        .encode(
+            x="Date:T",
+            y="Value:Q",
+            color=alt.Color("Strategy:N", legend=None),
+            tooltip=[
+                alt.Tooltip("Date:T", title="End Date"),
+                alt.Tooltip("Strategy:N", title="Strategy"),
+                alt.Tooltip("Value:Q", title=y_title, format=",.3f"),
+            ],
+        )
+    )
+    end_labels = (
+        alt.Chart(marker_df)
+        .mark_text(align="left", dx=8, dy=-8, fontSize=11)
+        .encode(
+            x="Date:T",
+            y="Value:Q",
+            text="Strategy:N",
+            color=alt.Color("Strategy:N", legend=None),
+        )
+    )
+    st.altair_chart(chart + end_points + end_labels, use_container_width=True)
+
 
 def _render_data_trust_summary(meta: dict[str, Any]) -> None:
     price_freshness = meta.get("price_freshness") or {}

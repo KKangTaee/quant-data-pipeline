@@ -43,6 +43,7 @@ from app.jobs.run_history import (
 from app.jobs.symbol_sources import resolve_symbol_source
 from app.jobs.symbol_sources import filter_non_plain_symbols
 from app.web.backtest_common import QUALITY_STRICT_PRESETS, clear_backtest_preview_caches
+from app.web.backtest_candidate_library import render_candidate_library_page
 from app.web.backtest_history import render_backtest_run_history_page
 from app.web.overview_dashboard import render_overview_dashboard
 from app.web.pages.backtest import render_backtest_tab
@@ -2406,6 +2407,11 @@ def _render_backtest_run_history_page(open_backtest_page) -> None:
     render_backtest_run_history_page(open_backtest_page=open_backtest_page)
 
 
+# Render the saved candidate library and replay surface under Operations.
+def _render_candidate_library_page() -> None:
+    render_candidate_library_page()
+
+
 def _render_guides_page() -> None:
     st.title("Guides")
     st.caption("현재 운영 기준과 phase 문서를 빠르게 찾는 참고 페이지입니다.")
@@ -3509,6 +3515,12 @@ def main() -> None:
         icon="🗂️",
         url_path="backtest-run-history",
     )
+    candidate_library_page = st.Page(
+        _render_candidate_library_page,
+        title="Candidate Library",
+        icon="📌",
+        url_path="candidate-library",
+    )
     guides_page = st.Page(_render_guides_page, title="Guides", icon="📚", url_path="guides")
     glossary_page = st.Page(_render_glossary_page, title="Glossary", icon="📖", url_path="glossary")
 
@@ -3522,6 +3534,7 @@ def main() -> None:
             "Operations": [
                 ops_review_page,
                 backtest_history_page,
+                candidate_library_page,
             ],
             "Reference": [
                 guides_page,

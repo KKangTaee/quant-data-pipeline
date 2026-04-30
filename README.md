@@ -95,6 +95,8 @@ app/
     overview_dashboard.py # Workspace > Overview dashboard UI
     overview_dashboard_helpers.py # Overview 후보/Pre-Live/Proposal/History 집계 helper
     backtest_history.py  # Operations > Backtest Run History UI
+    backtest_candidate_library.py # Operations > Candidate Library UI
+    backtest_candidate_library_helpers.py # 저장 후보 목록 / replay payload / 후보 replay helper
     backtest_ui_components.py # Backtest 공용 status/route UI component
     backtest_candidate_review.py # Candidate Review / Candidate Packaging / Pre-Live 운영 기록 UI
     backtest_candidate_review_helpers.py # Candidate Review 판단/변환/Pre-Live 운영 기록 helper
@@ -135,7 +137,7 @@ uv sync
 .venv/bin/streamlit run app/web/streamlit_app.py
 ```
 
-앱이 열리면 상단 navigation에서 `Overview`, `Ingestion`, `Backtest`, `Ops Review`, `Backtest Run History`, `Guides`, `Glossary`를 이동하며 사용합니다.
+앱이 열리면 상단 navigation에서 `Overview`, `Ingestion`, `Backtest`, `Ops Review`, `Backtest Run History`, `Candidate Library`, `Guides`, `Glossary`를 이동하며 사용합니다.
 
 ## 참고 문서
 

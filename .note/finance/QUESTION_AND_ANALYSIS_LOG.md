@@ -3509,3 +3509,56 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Follow-up:
   - 새 전략 추가 시에는 catalog, single form, runner dispatch, compare default / override 경계를 우선 확인한다
   - `backtest_common.py`가 다시 커지면 다음 작업 단위에서 `backtest_state.py`, `backtest_strategy_inputs.py`, `backtest_presets.py`로 추가 분리한다
+
+### 2026-04-30 - fresh registry에서 7단계까지 도달 가능한 GTAA 후보 선정
+- User request:
+  - 기존 runtime JSONL을 archive한 뒤 처음부터 다시 실습하기 위해, GTAA에서 6개 이상 ETF, `MDD <= 20%`, `CAGR >= 10%`, `interval < 3` 조건을 만족하고 현재 7단계까지 도달 가능한 후보를 찾아 저장해 달라고 요청함
+- Interpreted goal:
+  - 단순히 CAGR/MDD가 좋은 후보가 아니라, Candidate Review / Current Candidate Registry / Pre-Live paper tracking / Portfolio Proposal 단일 후보 직행 평가까지 앱이 읽을 수 있는 후보가 필요함
+- Analysis result:
+  - 숫자 성과만 보면 공격적인 broader GTAA universe 후보들이 더 높았지만, ETF profile coverage 또는 SPY rolling validation 경고 때문에 `hold / blocked`가 반복됐다
+  - clean ETF profile을 가진 `SPY, QQQ, GLD, IEF, LQD, TLT` 6개 universe를 사용하고, 다중자산 GTAA formal benchmark를 `AOR`로 두면 `real_money_candidate / paper_probation / paper_only`까지 통과했다
+  - 최종 후보는 `top=1`, `interval=2`, `score=3M/12M`, `MA200`, `risk_off=cash_only`, 기간 `2016-01-29 ~ 2026-04-01`, `CAGR=15.3395%`, `MDD=-13.9675%`, `Sharpe=1.6054`
+  - 같은 후보는 SPY full-period CAGR/MDD도 앞서지만, SPY를 formal benchmark로 쓰면 rolling worst-excess validation caution으로 `hold`가 된다
+- Follow-up:
+  - 사용자가 UI에서 재현할 때 benchmark는 `AOR`로 두고, SPY는 reference benchmark로 해석한다
+  - 후보 저장 ID는 `gtaa_current_candidate_clean6_aor_top1_i2_3m12m`, Pre-Live ID는 `pre_live_gtaa_current_candidate_clean6_aor_top1_i2_3m12m`이다
+
+### 2026-05-01 - top 2~4 / interval < 4 조건의 추가 GTAA 후보 선정
+- User request:
+  - GTAA 전략에서 `interval < 4`, `top = 2 / 3 / 4`, universe 6~15개 조건을 만족하면서 7단계까지 갈 수 있는 후보를 하나 더 찾아 달라고 요청함
+- Interpreted goal:
+  - 기존 top-1 후보와 달리, 여러 자산을 동시에 들고 가는 top-N GTAA 후보를 current candidate / Pre-Live / Portfolio Proposal 직행 평가까지 이어지게 한다
+- Analysis result:
+  - clean ETF profile을 유지하기 위해 `SPY, QQQ, GLD, IEF, LQD, TLT` universe를 사용했다
+  - `top=2`, `interval=3`, `score=1M/3M/6M`, `MA200`, `risk_off=cash_only`, benchmark `AOR` 후보가 `real_money_candidate / paper_probation / paper_only`까지 통과했다
+  - 결과는 `CAGR=12.8073%`, `MDD=-11.5626%`, `Sharpe=2.0147`, `AOR 대비 CAGR spread=+7.3363%p`
+  - 같은 탐색 중 `top=2 / interval=1 / 3M+6M+12M` 후보가 CAGR은 더 높았지만 MDD가 깊어, 추가 실습 후보로는 interval-3 후보를 선택했다
+- Follow-up:
+  - 저장 ID는 `gtaa_current_candidate_clean6_aor_top2_i3_1m3m6m`, Pre-Live ID는 `pre_live_gtaa_current_candidate_clean6_aor_top2_i3_1m3m6m`이다
+
+### 2026-05-01 - CAGR 15% 이상 / 낮은 MDD 조건의 GTAA 후보 재탐색
+- User request:
+  - 직전 top-2 interval-3 후보의 CAGR이 조금 아쉬우니, 같은 조건을 유지하면서 CAGR 15% 이상이고 MDD는 11~12%대 또는 더 낮은 후보를 다시 찾아 달라고 요청함
+- Interpreted goal:
+  - `top=2/3/4`, `interval<4`, universe 6~15개 조건을 유지하면서 더 높은 CAGR을 확보하되, 7단계까지 갈 수 있는 Real-Money gate와 ETF operability를 유지한다
+- Analysis result:
+  - clean ETF profile universe `SPY, QQQ, GLD, IEF, LQD, TLT` 안에서 `top=2`, `interval=2`, `score=1M/12M`, `MA150`, `risk_off=cash_only`, benchmark `AOR` 후보가 조건을 가장 잘 만족했다
+  - 결과는 `CAGR=15.2174%`, `MDD=-8.8783%`, `Sharpe=1.9630`, `AOR 대비 CAGR spread=+9.7464%p`
+  - Real-Money 신호는 `real_money_candidate / paper_probation / paper_only`, `Validation=normal`, `ETF Operability=normal`이었다
+- Follow-up:
+  - 저장 ID는 `gtaa_current_candidate_clean6_aor_top2_i2_1m12m_ma150`, Pre-Live ID는 `pre_live_gtaa_current_candidate_clean6_aor_top2_i2_1m12m_ma150`이다
+
+### 2026-05-01 - 저장 후보를 다시 열어 그래프와 결과표로 확인하는 방법
+- User request:
+  - 탐색으로 찾은 후보군을 나중에 다시 로드해 Single Strategy 결과처럼 summary, equity curve, balance extremes, period extremes, result table과 함께 보고 싶다고 요청함
+  - Compare 탭의 saved portfolio가 후보 보관함 역할까지 하는 것이 맞는지 검토 요청함
+- Interpreted goal:
+  - 저장 후보 자체를 재검토하는 보조 화면이 필요하며, 이를 새 workflow 단계로 만들지 않고 Operations 보조 도구로 분리해야 함
+  - saved candidate와 saved weighted portfolio의 의미를 UI에서 분리해야 함
+- Analysis result:
+  - `Backtest Run History`는 과거 실행 기록을 다시 여는 도구이고, `Saved Weighted Portfolios`는 Compare의 weighted portfolio builder 산출물이다
+  - current candidate registry에는 compact snapshot과 contract가 저장되므로, 그래프 / result table을 보려면 저장 contract로 DB-backed 백테스트를 다시 실행하는 replay surface가 필요하다
+  - `Operations > Candidate Library`를 추가해 current / Pre-Live 후보를 inspect하고, ETF 후보 family는 저장 contract로 result curve를 재생성하도록 했다
+- Follow-up:
+  - 이후 필요하면 Candidate Library에 여러 후보 선택 후 같은 전략 family 변형끼리 직접 비교하는 candidate-to-candidate compare mode를 추가할 수 있다

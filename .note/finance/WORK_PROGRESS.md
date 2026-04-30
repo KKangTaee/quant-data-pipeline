@@ -2655,3 +2655,76 @@ Detailed historical logs were archived on `2026-04-13`.
   - Streamlit smoke checked `Workspace > Overview` and `Backtest` on port `8516`; `Single Strategy`, `Compare & Portfolio Builder`, `Candidate Review`, and `Portfolio Proposal` rendered after the split
 - Durable takeaway:
   - `app/web/pages/backtest.py` should stay a page shell. Future Single / Compare / result display work should land in the matching `app/web/backtest_*.py` module instead of growing the page entry again.
+
+### 2026-04-30
+- Archived the existing local finance runtime JSONL records and started a fresh candidate registry run.
+- Found and saved a GTAA candidate that reaches the current 7-step workflow boundary:
+  - `GTAA Clean-6 AOR Top-1`
+  - universe `SPY, QQQ, GLD, IEF, LQD, TLT`
+  - `top=1`, `interval=2`, `score=3M/12M`, `trend=MA200`, `risk_off=cash_only`
+  - formal benchmark `AOR`
+  - `CAGR=15.3395%`, `MDD=-13.9675%`, `Promotion=real_money_candidate`
+- Persisted:
+  - `BACKTEST_RUN_HISTORY.jsonl`
+  - `CANDIDATE_REVIEW_NOTES.jsonl`
+  - `CURRENT_CANDIDATE_REGISTRY.jsonl`
+  - `PRE_LIVE_CANDIDATE_REGISTRY.jsonl`
+- Verification:
+  - `manage_current_candidate_registry.py validate` passed with 1 registry row
+  - `manage_pre_live_candidate_registry.py validate` passed with 1 pre-live row
+  - Portfolio Proposal direct readiness evaluated as `LIVE_READINESS_DIRECT_READY`, score `10.0`, blockers `0`
+- Durable takeaway:
+  - For this GTAA candidate, `AOR` is the appropriate formal multi-asset benchmark for the current gate. `SPY` remains useful as a reference, but using `SPY` as the formal promotion benchmark turns the same candidate into `hold` because of rolling worst-excess validation caution.
+
+### 2026-05-01
+- Found and saved a second GTAA candidate under the user's follow-up constraints:
+  - universe size 6~15, selected universe `SPY, QQQ, GLD, IEF, LQD, TLT`
+  - `top=2`, `interval=3`, `score=1M/3M/6M`, `trend=MA200`, `risk_off=cash_only`
+  - formal benchmark `AOR`
+  - `CAGR=12.8073%`, `MDD=-11.5626%`, `Sharpe=2.0147`
+  - `Promotion=real_money_candidate`, `ETF Operability=normal`, `Validation=normal`
+- Persisted:
+  - review note `candidate_review_note_a152594509dd`
+  - current candidate `gtaa_current_candidate_clean6_aor_top2_i3_1m3m6m`
+  - Pre-Live record `pre_live_gtaa_current_candidate_clean6_aor_top2_i3_1m3m6m`
+- Verification:
+  - `manage_current_candidate_registry.py validate` passed with 2 registry rows
+  - `manage_pre_live_candidate_registry.py validate` passed with 2 pre-live rows
+- Durable takeaway:
+  - The top-2 interval-3 candidate is less aggressive than the top-1 candidate, but it is a cleaner second practice candidate because drawdown is lower and Sharpe is higher while still passing the same AOR-based Real-Money gate.
+
+### 2026-05-01
+- Searched for a higher-CAGR GTAA candidate under the same top/interval/universe constraints.
+- Selected and saved:
+  - `GTAA Clean-6 AOR Top-2 High CAGR`
+  - universe `SPY, QQQ, GLD, IEF, LQD, TLT`
+  - `top=2`, `interval=2`, `score=1M/12M`, `trend=MA150`, `risk_off=cash_only`
+  - formal benchmark `AOR`
+  - `CAGR=15.2174%`, `MDD=-8.8783%`, `Sharpe=1.9630`
+  - `Promotion=real_money_candidate`, `ETF Operability=normal`, `Validation=normal`
+- Persisted:
+  - review note `candidate_review_note_d12013649150`
+  - current candidate `gtaa_current_candidate_clean6_aor_top2_i2_1m12m_ma150`
+  - Pre-Live record `pre_live_gtaa_current_candidate_clean6_aor_top2_i2_1m12m_ma150`
+- Verification:
+  - `manage_current_candidate_registry.py validate` passed with 3 registry rows
+  - `manage_pre_live_candidate_registry.py validate` passed with 3 pre-live rows
+- Durable takeaway:
+  - The high-CAGR top-2 candidate meets the user's tightened target better than the interval-3 candidate: CAGR is above 15% while MDD is below 9%.
+
+### 2026-05-01
+- Added an Operations-owned Candidate Library for saved candidate replay.
+- Changed:
+  - added `app/web/backtest_candidate_library.py` to inspect saved current candidates and matched Pre-Live records
+  - added `app/web/backtest_candidate_library_helpers.py` to join registry rows, build candidate tables, reconstruct ETF replay payloads, and re-run saved contracts
+  - added `Operations > Candidate Library` to the Streamlit navigation
+  - updated Backtest guidance to point run history to `Backtest Run History` and saved candidate replay to `Candidate Library`
+  - clarified the Compare-side saved portfolio area as `Saved Weighted Portfolios`, separate from saved candidate replay
+  - synced README, script structure map, web Backtest UI flow, and high-level finance map
+- Verification:
+  - `.venv/bin/python -m compileall app/web/backtest_candidate_library.py app/web/backtest_candidate_library_helpers.py app/web/streamlit_app.py app/web/pages/backtest.py app/web/backtest_compare.py` passed
+  - Candidate Library helper load returned 3 current candidates and built a GTAA replay payload from the saved registry contract
+  - GTAA candidate replay reproduced the stored candidate snapshot: `rows=63`, `End Balance=42653.22`, `CAGR=15.3395%`, `MDD=-13.9675%`
+  - Streamlit smoke checked `Operations > Candidate Library` on port `8517`; candidate table, snapshot cards, replay button, rebuilt Data Trust / Summary tabs rendered without console errors after adding the missing shared compare chart helper to `backtest_result_display.py`
+- Durable takeaway:
+  - Saved candidates and saved weighted portfolios are different artifact types. Candidate Library is a 보관함 / 재검토 tool for current candidates, while Compare keeps weighted portfolio outputs created by the portfolio builder.
