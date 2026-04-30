@@ -2557,3 +2557,16 @@ Detailed historical logs were archived on `2026-04-13`.
   - `python3 plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py` passed
 - Durable takeaway:
   - Step 3 should read as `select candidate -> save operating record -> open Proposal if the saved record qualifies`, not as a second full Candidate Packaging evaluation.
+
+### 2026-04-30
+- Restored the shared route/readiness judgment pattern inside Candidate Review step 3.
+- Changed:
+  - added the common route/readiness panel back to `운영 기록 저장 및 다음 단계 판단` so the next-step judgment remains visually consistent with `저장 범위 판단`
+  - kept the Promotion / Shortlist / Deployment / Suggested badges as the candidate signal summary
+  - moved `운영 기록 / 다음 단계 판단 기준`, `Pre-Live Record JSON Preview`, and `Selected Candidate Detail` into one collapsed `상세 보기` area with tabs
+  - moved the `Save Pre-Live Record` and `Open Portfolio Proposal` buttons into a bordered `저장 및 이동` action block before the details
+  - synced the web backtest UI flow doc
+- Verification:
+  - `.venv/bin/python -m py_compile app/web/backtest_candidate_review.py app/web/backtest_ui_components.py app/web/pages/backtest.py app/web/streamlit_app.py` passed
+- Durable takeaway:
+  - Candidate Review step 3 should preserve a common next-step judgment panel, but keep secondary details behind one collapsed area so the save/open actions are easy to find.

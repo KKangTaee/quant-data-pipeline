@@ -343,7 +343,8 @@ Latest Backtest Run 또는 Operations > Backtest Run History selected record
 - Candidate selection label은 `Strategy Family | Role | Title | id=<registry_id>` 형식이다. 같은 family와 title이 반복되어도 `registry_id`로 방금 저장한 row를 찾을 수 있게 한다.
 - `3. 운영 기록 저장 및 Portfolio Proposal 이동`은 먼저 선택 후보가 운영 기록으로 갈 current candidate인지, Compare로 돌아갈 후보인지 확인한다.
 - `PRE_LIVE_READY`는 같은 화면에서 Pre-Live 운영 record를 저장할 수 있다는 뜻이고, `COMPARE_REVIEW_READY`는 실패가 아니라 Compare 재검토 경로다.
-- `운영 기록 저장 및 다음 단계 판단`은 Operator Final Status, Operator Reason, Next Action, Review Date를 바탕으로 `Save Record` 가능 여부와 `Next Route`를 같은 영역에서 보여준다.
+- `운영 기록 저장 및 다음 단계 판단`은 Operator Final Status, Operator Reason, Next Action, Review Date를 바탕으로 공통 route/readiness panel과 compact badges를 함께 보여준다.
+- Save / Open 버튼은 판단 기준과 JSON보다 먼저 보이게 하고, 상세 기준 / Pre-Live JSON / 선택 후보 raw detail은 하나의 `상세 보기` expander 안에 둔다.
 - Pre-Live 운영 상태 영역은 Candidate Review 관점에서 필요한 promotion / shortlist / deployment / suggested status만 badge strip으로 보여주고, 추천 근거, 저장 후보 식별값, 판단 기준 표는 접힘 영역에 둔다.
 - `Suggested Next Step`은 다음 검토 행동 제안이지 live trading 승인이나 최종 투자 판단이 아니다.
 - `Save Pre-Live Record`는 live trading 승인이 아니라 `PRE_LIVE_CANDIDATE_REGISTRY.jsonl`에 paper / watchlist / hold 같은 운영 상태를 남기는 append-only 기록이다.
@@ -462,6 +463,7 @@ CURRENT_CANDIDATE_REGISTRY.jsonl
 - `System Suggested Status`는 선택한 current candidate의 Real-Money 신호와 blocker에서 계산한 추천값이고, `Operator Final Status`가 실제 Pre-Live registry에 저장되는 운영 판단이다.
 - 운영자가 추천값과 다른 status를 선택하면 UI는 경고를 보여주며, 의도적 override 근거를 `Operator Reason`에 남기도록 안내한다.
 - `운영 기록 저장 및 다음 단계 판단`은 전략 성과 점수가 아니라 Pre-Live record가 다음 단계에서 읽을 수 있을 만큼 identity, result snapshot, Real-Money signal, status, reason, next action, review date, tracking plan을 갖췄는지 보는 route 확인이다.
+- 이 route 확인은 `저장 범위 판단`과 같은 공통 판정 패턴을 사용하되, 독립된 큰 단계가 아니라 저장 버튼 위의 최종 확인으로 배치한다.
 - `Save Pre-Live Record`는 live trading 승인 버튼이 아니다.
 - `paper_tracking`도 실제 돈을 넣는다는 뜻이 아니라 paper 관찰 상태다.
 

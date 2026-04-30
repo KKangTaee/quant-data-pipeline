@@ -3420,3 +3420,18 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 저장 버튼 위에서 `Save Record`, `Next Route`, `Proposal`, `Blockers`를 compact badge로 보여주며, 상세 기준은 접힘 영역으로 둔다
 - Follow-up:
   - 이후 3번 UI를 더 줄일 때도 핵심은 `저장 가능 여부`와 `저장된 record 기준 다음 단계 이동 가능 여부`를 분리해서 보여주는 것이다
+
+### 2026-04-30 - Candidate Review 3번에도 공통 판정 panel은 유지한다
+- User request:
+  - `저장 범위 판단` 같은 시각적 판정 장치는 다음 단계 판단 공통 요소로 필요하니 3번에서도 없애면 안 된다고 지적함
+  - 다만 `운영 기록 / 다음 단계 판단 기준`, `Pre-Live Record JSON Preview`, `Selected Candidate Detail`이 버튼 주변에 흩어져 있어 Save / Open 버튼을 찾기 어렵다고 봄
+- Interpreted goal:
+  - 다음 단계로 넘어갈 수 있는지 보는 공통 route/readiness panel은 유지해야 함
+  - secondary detail은 버튼보다 앞에 흐름을 방해하지 않도록 하나로 묶어야 함
+- Analysis result:
+  - `운영 기록 저장 및 다음 단계 판단` 안에 route/readiness panel을 다시 배치했다
+  - `Save Record`, `Proposal`, `Blockers` badge는 panel 아래의 보조 신호로 남겼다
+  - `Save Pre-Live Record`와 `Open Portfolio Proposal`은 `저장 및 이동` action block으로 묶어 상세 보기보다 먼저 배치했다
+  - 판단 기준, Pre-Live JSON, 선택 후보 detail은 하나의 `상세 보기` expander 내부 tab으로 통합했다
+- Follow-up:
+  - 이후 Candidate Review의 다른 하단 보조 도구도 같은 기준으로, action은 먼저 보이고 raw/detail은 접힘 영역으로 보내는 방향이 좋다

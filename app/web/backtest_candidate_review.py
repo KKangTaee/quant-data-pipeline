@@ -696,12 +696,14 @@ def render_candidate_review_workspace() -> None:
                     next_action=next_action,
                     review_date_value=review_date_value,
                 )
-                next_route_tone = (
-                    "positive"
-                    if pre_live_readiness["can_move_to_portfolio_proposal"]
-                    else "warning"
-                    if pre_live_readiness["can_save_record"]
-                    else "danger"
+                render_readiness_route_panel(
+                    route_label=str(pre_live_readiness["route_label"]),
+                    score=float(pre_live_readiness["score"]),
+                    blockers_count=len(pre_live_readiness["blocking_reasons"]),
+                    verdict=str(pre_live_readiness["verdict"]),
+                    next_action=str(pre_live_readiness["next_action"]),
+                    route_title="Next Route",
+                    score_title="Readiness",
                 )
                 render_badge_strip(
                     [
@@ -710,7 +712,6 @@ def render_candidate_review_workspace() -> None:
                             "value": "가능" if pre_live_readiness["can_save_record"] else "확인 필요",
                             "tone": "positive" if pre_live_readiness["can_save_record"] else "danger",
                         },
-                        {"label": "Next Route", "value": str(pre_live_readiness["route_label"]), "tone": next_route_tone},
                         {
                             "label": "Proposal",
                             "value": "저장 후 이동 가능"
@@ -735,48 +736,71 @@ def render_candidate_review_workspace() -> None:
                     st.error("저장 전 확인 필요: " + ", ".join(str(item) for item in pre_live_readiness["blocking_reasons"]))
                 if pre_live_readiness["warning_reasons"]:
                     st.warning("주의 항목: " + ", ".join(str(item) for item in pre_live_readiness["warning_reasons"]))
-                with st.expander("운영 기록 / 다음 단계 판단 기준 보기", expanded=False):
-                    st.dataframe(pd.DataFrame(pre_live_readiness["criteria_rows"]), use_container_width=True, hide_index=True)
-                with st.expander("Pre-Live Record JSON Preview", expanded=False):
-                    st.json(pre_live_draft)
 
                 matching_saved_record = bool(
                     latest_existing_pre_live
                     and str(latest_existing_pre_live.get("pre_live_status") or "") == selected_status
                 )
-                action_cols = st.columns([0.28, 0.28, 0.44], gap="small")
-                with action_cols[0]:
-                    if st.button(
-                        "Save Pre-Live Record",
-                        key=f"candidate_review_save_pre_live_record_{pre_live_key}",
-                        disabled=not bool(pre_live_readiness["can_save_record"]),
-                        use_container_width=True,
-                    ):
-                        _append_pre_live_candidate_registry_row(pre_live_draft)
-                        st.session_state["pre_live_recent_record_id"] = pre_live_draft["pre_live_id"]
-                        st.session_state["pre_live_recent_revision_id"] = pre_live_draft["revision_id"]
-                        st.success(f"Pre-Live 기록 `{pre_live_draft['pre_live_id']}`를 저장했습니다.")
-                        st.rerun()
-                with action_cols[1]:
-                    proposal_disabled = not bool(pre_live_readiness["can_move_to_portfolio_proposal"]) or not matching_saved_record
-                    if st.button(
-                        "Open Portfolio Proposal",
-                        key=f"candidate_review_open_portfolio_proposal_{pre_live_key}",
-                        disabled=proposal_disabled,
-                        use_container_width=True,
-                        help="paper_tracking 상태의 저장된 Pre-Live record가 있을 때 Portfolio Proposal로 이동합니다.",
-                    ):
-                        st.session_state["portfolio_proposal_component_selection"] = [selected_board_label]
-                        st.session_state["portfolio_proposal_from_pre_live_notice"] = (
-                            f"`{selected_board_row.get('title') or selected_registry_id}` 후보를 Candidate Review에서 Portfolio Proposal로 열었습니다."
-                        )
-                        _request_backtest_panel("Portfolio Proposal")
-                        st.rerun()
-                with action_cols[2]:
+                with st.container(border=True):
+                    st.markdown("##### 저장 및 이동")
+                    action_cols = st.columns(2, gap="small")
+                    with action_cols[0]:
+                        if st.button(
+                            "Save Pre-Live Record",
+                            key=f"candidate_review_save_pre_live_record_{pre_live_key}",
+                            disabled=not bool(pre_live_readiness["can_save_record"]),
+                            use_container_width=True,
+                        ):
+                            _append_pre_live_candidate_registry_row(pre_live_draft)
+                            st.session_state["pre_live_recent_record_id"] = pre_live_draft["pre_live_id"]
+                            st.session_state["pre_live_recent_revision_id"] = pre_live_draft["revision_id"]
+                            st.success(f"Pre-Live 기록 `{pre_live_draft['pre_live_id']}`를 저장했습니다.")
+                            st.rerun()
+                    with action_cols[1]:
+                        proposal_disabled = not bool(pre_live_readiness["can_move_to_portfolio_proposal"]) or not matching_saved_record
+                        if st.button(
+                            "Open Portfolio Proposal",
+                            key=f"candidate_review_open_portfolio_proposal_{pre_live_key}",
+                            disabled=proposal_disabled,
+                            use_container_width=True,
+                            help="paper_tracking 상태의 저장된 Pre-Live record가 있을 때 Portfolio Proposal로 이동합니다.",
+                        ):
+                            st.session_state["portfolio_proposal_component_selection"] = [selected_board_label]
+                            st.session_state["portfolio_proposal_from_pre_live_notice"] = (
+                                f"`{selected_board_row.get('title') or selected_registry_id}` 후보를 Candidate Review에서 Portfolio Proposal로 열었습니다."
+                            )
+                            _request_backtest_panel("Portfolio Proposal")
+                            st.rerun()
                     st.caption(
                         "`Open Portfolio Proposal`은 같은 후보의 현재 선택 상태가 저장된 Pre-Live record와 맞을 때 활성화됩니다. "
                         "저장해도 live trading이 열리는 것은 아닙니다."
                     )
+
+                with st.expander("상세 보기", expanded=False):
+                    detail_tabs = st.tabs(["판단 기준", "Pre-Live JSON", "선택 후보"])
+                    with detail_tabs[0]:
+                        st.dataframe(
+                            pd.DataFrame(pre_live_readiness["criteria_rows"]),
+                            use_container_width=True,
+                            hide_index=True,
+                        )
+                    with detail_tabs[1]:
+                        st.json(pre_live_draft)
+                    with detail_tabs[2]:
+                        st.markdown(f"##### {selected_board_row.get('title') or selected_board_row.get('registry_id')}")
+                        st.caption(_candidate_review_reason(selected_board_row))
+                        metric_cols = st.columns(5, gap="small")
+                        metric_cols[0].metric("Review Stage", _candidate_review_stage(selected_board_row))
+                        metric_cols[1].metric("CAGR", str(selected_result.get("cagr") or "-"))
+                        metric_cols[2].metric("MDD", str(selected_result.get("mdd") or "-"))
+                        metric_cols[3].metric("Promotion", str(selected_result.get("promotion") or "-"))
+                        metric_cols[4].metric("Shortlist", str(selected_result.get("shortlist") or "-"))
+                        st.markdown("**Suggested Next Step**")
+                        st.write(_candidate_review_next_step(selected_board_row))
+                        st.markdown("**Contract Summary**")
+                        st.write(_current_candidate_registry_contract_summary(selected_board_row))
+                        st.markdown("**Raw Candidate Registry Row**")
+                        st.json(selected_board_row)
 
             if board_evaluation["can_move_to_compare"]:
                 if st.button(
@@ -793,22 +817,23 @@ def render_candidate_review_workspace() -> None:
                     _request_backtest_panel("Compare & Portfolio Builder")
                     st.rerun()
 
-            with st.expander("Selected Candidate Detail", expanded=False):
-                selected_result = dict(selected_board_row.get("result") or {})
-                st.markdown(f"##### {selected_board_row.get('title') or selected_board_row.get('registry_id')}")
-                st.caption(_candidate_review_reason(selected_board_row))
-                metric_cols = st.columns(5, gap="small")
-                metric_cols[0].metric("Review Stage", _candidate_review_stage(selected_board_row))
-                metric_cols[1].metric("CAGR", str(selected_result.get("cagr") or "-"))
-                metric_cols[2].metric("MDD", str(selected_result.get("mdd") or "-"))
-                metric_cols[3].metric("Promotion", str(selected_result.get("promotion") or "-"))
-                metric_cols[4].metric("Shortlist", str(selected_result.get("shortlist") or "-"))
-                st.markdown("**Suggested Next Step**")
-                st.write(_candidate_review_next_step(selected_board_row))
-                st.markdown("**Contract Summary**")
-                st.write(_current_candidate_registry_contract_summary(selected_board_row))
-                st.markdown("**Raw Candidate Registry Row**")
-                st.json(selected_board_row)
+            if not board_evaluation["can_move_to_pre_live"]:
+                with st.expander("Selected Candidate Detail", expanded=False):
+                    selected_result = dict(selected_board_row.get("result") or {})
+                    st.markdown(f"##### {selected_board_row.get('title') or selected_board_row.get('registry_id')}")
+                    st.caption(_candidate_review_reason(selected_board_row))
+                    metric_cols = st.columns(5, gap="small")
+                    metric_cols[0].metric("Review Stage", _candidate_review_stage(selected_board_row))
+                    metric_cols[1].metric("CAGR", str(selected_result.get("cagr") or "-"))
+                    metric_cols[2].metric("MDD", str(selected_result.get("mdd") or "-"))
+                    metric_cols[3].metric("Promotion", str(selected_result.get("promotion") or "-"))
+                    metric_cols[4].metric("Shortlist", str(selected_result.get("shortlist") or "-"))
+                    st.markdown("**Suggested Next Step**")
+                    st.write(_candidate_review_next_step(selected_board_row))
+                    st.markdown("**Contract Summary**")
+                    st.write(_current_candidate_registry_contract_summary(selected_board_row))
+                    st.markdown("**Raw Candidate Registry Row**")
+                    st.json(selected_board_row)
 
     st.divider()
     with st.expander("보조 도구: Saved Candidate Board", expanded=False):
