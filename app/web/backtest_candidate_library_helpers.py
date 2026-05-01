@@ -13,7 +13,10 @@ from app.web.runtime import (
     run_equal_weight_backtest_from_db,
     run_global_relative_strength_backtest_from_db,
     run_gtaa_backtest_from_db,
+    run_quality_snapshot_strict_annual_backtest_from_db,
+    run_quality_value_snapshot_strict_annual_backtest_from_db,
     run_risk_parity_trend_backtest_from_db,
+    run_value_snapshot_strict_annual_backtest_from_db,
 )
 from app.web.runtime.backtest import (
     BacktestDataError,
@@ -27,11 +30,28 @@ from app.web.runtime.backtest import (
     STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD,
     STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD,
     STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
+    STRICT_DEFAULT_BENCHMARK_CONTRACT,
+    STRICT_DEFAULT_DEFENSIVE_TICKERS,
+    STRICT_DEFAULT_RISK_OFF_MODE,
+    STRICT_DEFAULT_WEIGHTING_MODE,
+    STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M,
+    STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS,
     STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
     STRICT_MARKET_REGIME_DEFAULT_WINDOW,
+    STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
+    STRICT_PROMOTION_DEFAULT_MAX_DRAWDOWN_GAP_VS_BENCHMARK,
+    STRICT_PROMOTION_DEFAULT_MAX_STRATEGY_DRAWDOWN,
+    STRICT_PROMOTION_DEFAULT_MAX_UNDERPERFORMANCE_SHARE,
+    STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE,
+    STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE,
+    STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD,
+    STRICT_PROMOTION_DEFAULT_MIN_WORST_ROLLING_EXCESS_RETURN,
+    STRICT_REJECTED_SLOT_FILL_DEFAULT_ENABLED,
     STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED,
     STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD,
     STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
+    QUALITY_STRICT_DEFAULT_FACTORS,
+    VALUE_STRICT_DEFAULT_FACTORS,
 )
 from finance.sample import (
     GLOBAL_RELATIVE_STRENGTH_DEFAULT_CASH_TICKER,
@@ -60,6 +80,14 @@ ETF_REPLAY_STRATEGY_KEYS = {
     "risk_parity_trend",
     "dual_momentum",
 }
+
+STRICT_ANNUAL_REPLAY_STRATEGY_KEYS = {
+    "quality_snapshot_strict_annual",
+    "value_snapshot_strict_annual",
+    "quality_value_snapshot_strict_annual",
+}
+
+SUPPORTED_REPLAY_STRATEGY_KEYS = ETF_REPLAY_STRATEGY_KEYS | STRICT_ANNUAL_REPLAY_STRATEGY_KEYS
 
 
 # Return a readable display label for a current candidate row.
@@ -152,9 +180,9 @@ def build_candidate_replay_payload(current_row: dict[str, Any]) -> dict[str, Any
         compare_prefill.get("strategy_key")
         or _strategy_family_to_key(current_row.get("strategy_family"))
     )
-    if strategy_key not in ETF_REPLAY_STRATEGY_KEYS:
+    if strategy_key not in SUPPORTED_REPLAY_STRATEGY_KEYS:
         raise BacktestInputError(
-            f"Candidate Library replay currently supports ETF strategy candidates only: {sorted(ETF_REPLAY_STRATEGY_KEYS)}"
+            f"Candidate Library replay supports these strategy candidates: {sorted(SUPPORTED_REPLAY_STRATEGY_KEYS)}"
         )
 
     payload = {
@@ -247,6 +275,8 @@ def build_candidate_replay_payload(current_row: dict[str, Any]) -> dict[str, Any
                 "rebalance_interval": contract.get("rebalance_interval") or contract.get("interval") or 1,
             }
         )
+    elif strategy_key in STRICT_ANNUAL_REPLAY_STRATEGY_KEYS:
+        payload.update(_strict_annual_payload_values(strategy_key, contract))
 
     payload.update(_guardrail_payload_values(contract))
     return payload
@@ -392,6 +422,37 @@ def run_candidate_replay_payload(payload: dict[str, Any], *, current_row: dict[s
                 universe_mode=payload["universe_mode"],
                 preset_name=payload["preset_name"],
             )
+        elif strategy_key == "quality_snapshot_strict_annual":
+            bundle = run_quality_snapshot_strict_annual_backtest_from_db(
+                tickers=payload["tickers"],
+                start=payload["start"],
+                end=payload["end"],
+                timeframe=payload["timeframe"],
+                option=payload["option"],
+                quality_factors=payload["quality_factors"],
+                **_strict_annual_runtime_kwargs(payload),
+            )
+        elif strategy_key == "value_snapshot_strict_annual":
+            bundle = run_value_snapshot_strict_annual_backtest_from_db(
+                tickers=payload["tickers"],
+                start=payload["start"],
+                end=payload["end"],
+                timeframe=payload["timeframe"],
+                option=payload["option"],
+                value_factors=payload["value_factors"],
+                **_strict_annual_runtime_kwargs(payload),
+            )
+        elif strategy_key == "quality_value_snapshot_strict_annual":
+            bundle = run_quality_value_snapshot_strict_annual_backtest_from_db(
+                tickers=payload["tickers"],
+                start=payload["start"],
+                end=payload["end"],
+                timeframe=payload["timeframe"],
+                option=payload["option"],
+                quality_factors=payload["quality_factors"],
+                value_factors=payload["value_factors"],
+                **_strict_annual_runtime_kwargs(payload),
+            )
         else:
             raise BacktestInputError(f"Unsupported candidate replay strategy key: {strategy_key}")
     except (BacktestInputError, BacktestDataError):
@@ -468,7 +529,198 @@ def _strategy_family_to_key(strategy_family: Any) -> str:
     normalized = str(strategy_family or "").strip().lower()
     if normalized in {"equal_weight", "gtaa", "global_relative_strength", "risk_parity_trend", "dual_momentum"}:
         return normalized
+    if normalized == "quality":
+        return "quality_snapshot_strict_annual"
+    if normalized == "value":
+        return "value_snapshot_strict_annual"
+    if normalized == "quality_value":
+        return "quality_value_snapshot_strict_annual"
     return normalized
+
+
+# Restore strict annual candidate settings from the compact registry contract.
+def _strict_annual_payload_values(strategy_key: str, contract: dict[str, Any]) -> dict[str, Any]:
+    payload = {
+        "top": contract.get("top") or contract.get("top_n") or 10,
+        "rebalance_interval": contract.get("rebalance_interval") or contract.get("interval") or 1,
+        "min_history_months_filter": contract.get(
+            "min_history_months_filter",
+            STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS,
+        ),
+        "min_avg_dollar_volume_20d_m_filter": contract.get(
+            "min_avg_dollar_volume_20d_m_filter",
+            STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M,
+        ),
+        "benchmark_contract": contract.get("benchmark_contract", STRICT_DEFAULT_BENCHMARK_CONTRACT),
+        "guardrail_reference_ticker": contract.get(
+            "guardrail_reference_ticker",
+            contract.get("benchmark_ticker", ETF_REAL_MONEY_DEFAULT_BENCHMARK),
+        ),
+        "promotion_min_benchmark_coverage": contract.get(
+            "promotion_min_benchmark_coverage",
+            STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE,
+        ),
+        "promotion_min_net_cagr_spread": contract.get(
+            "promotion_min_net_cagr_spread",
+            STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD,
+        ),
+        "promotion_min_liquidity_clean_coverage": contract.get(
+            "promotion_min_liquidity_clean_coverage",
+            STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE,
+        ),
+        "promotion_max_underperformance_share": contract.get(
+            "promotion_max_underperformance_share",
+            STRICT_PROMOTION_DEFAULT_MAX_UNDERPERFORMANCE_SHARE,
+        ),
+        "promotion_min_worst_rolling_excess_return": contract.get(
+            "promotion_min_worst_rolling_excess_return",
+            STRICT_PROMOTION_DEFAULT_MIN_WORST_ROLLING_EXCESS_RETURN,
+        ),
+        "promotion_max_strategy_drawdown": contract.get(
+            "promotion_max_strategy_drawdown",
+            STRICT_PROMOTION_DEFAULT_MAX_STRATEGY_DRAWDOWN,
+        ),
+        "promotion_max_drawdown_gap_vs_benchmark": contract.get(
+            "promotion_max_drawdown_gap_vs_benchmark",
+            STRICT_PROMOTION_DEFAULT_MAX_DRAWDOWN_GAP_VS_BENCHMARK,
+        ),
+        "trend_filter_enabled": contract.get("trend_filter_enabled", False),
+        "trend_filter_window": contract.get("trend_filter_window", 200),
+        "weighting_mode": contract.get("weighting_mode", STRICT_DEFAULT_WEIGHTING_MODE),
+        "rejected_slot_handling_mode": contract.get("rejected_slot_handling_mode"),
+        "rejected_slot_fill_enabled": contract.get(
+            "rejected_slot_fill_enabled",
+            STRICT_REJECTED_SLOT_FILL_DEFAULT_ENABLED,
+        ),
+        "partial_cash_retention_enabled": contract.get(
+            "partial_cash_retention_enabled",
+            STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
+        ),
+        "risk_off_mode": contract.get("risk_off_mode", STRICT_DEFAULT_RISK_OFF_MODE),
+        "defensive_tickers": contract.get("defensive_tickers") or list(STRICT_DEFAULT_DEFENSIVE_TICKERS),
+        "market_regime_enabled": contract.get("market_regime_enabled", False),
+        "market_regime_window": contract.get("market_regime_window", STRICT_MARKET_REGIME_DEFAULT_WINDOW),
+        "market_regime_benchmark": contract.get(
+            "market_regime_benchmark",
+            STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
+        ),
+        "universe_contract": contract.get("universe_contract"),
+        "dynamic_candidate_tickers": contract.get("dynamic_candidate_tickers"),
+        "dynamic_target_size": contract.get("dynamic_target_size"),
+    }
+    if strategy_key in {"quality_snapshot_strict_annual", "quality_value_snapshot_strict_annual"}:
+        payload["quality_factors"] = contract.get("quality_factors") or list(QUALITY_STRICT_DEFAULT_FACTORS)
+    if strategy_key in {"value_snapshot_strict_annual", "quality_value_snapshot_strict_annual"}:
+        payload["value_factors"] = contract.get("value_factors") or list(VALUE_STRICT_DEFAULT_FACTORS)
+    return payload
+
+
+# Keep the strict annual replay dispatch aligned with the Single Strategy runner.
+def _strict_annual_runtime_kwargs(payload: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "top_n": payload.get("top", 10),
+        "rebalance_interval": payload.get("rebalance_interval", 1),
+        "min_price_filter": payload.get("min_price_filter", ETF_REAL_MONEY_DEFAULT_MIN_PRICE),
+        "min_history_months_filter": payload.get(
+            "min_history_months_filter",
+            STRICT_INVESTABILITY_DEFAULT_MIN_HISTORY_MONTHS,
+        ),
+        "min_avg_dollar_volume_20d_m_filter": payload.get(
+            "min_avg_dollar_volume_20d_m_filter",
+            STRICT_INVESTABILITY_DEFAULT_MIN_AVG_DOLLAR_VOLUME_20D_M,
+        ),
+        "transaction_cost_bps": payload.get(
+            "transaction_cost_bps",
+            ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
+        ),
+        "benchmark_contract": payload.get("benchmark_contract", STRICT_DEFAULT_BENCHMARK_CONTRACT),
+        "benchmark_ticker": payload.get("benchmark_ticker", ETF_REAL_MONEY_DEFAULT_BENCHMARK),
+        "guardrail_reference_ticker": payload.get(
+            "guardrail_reference_ticker",
+            payload.get("benchmark_ticker", ETF_REAL_MONEY_DEFAULT_BENCHMARK),
+        ),
+        "promotion_min_benchmark_coverage": payload.get(
+            "promotion_min_benchmark_coverage",
+            STRICT_PROMOTION_DEFAULT_MIN_BENCHMARK_COVERAGE,
+        ),
+        "promotion_min_net_cagr_spread": payload.get(
+            "promotion_min_net_cagr_spread",
+            STRICT_PROMOTION_DEFAULT_MIN_NET_CAGR_SPREAD,
+        ),
+        "promotion_min_liquidity_clean_coverage": payload.get(
+            "promotion_min_liquidity_clean_coverage",
+            STRICT_PROMOTION_DEFAULT_MIN_LIQUIDITY_CLEAN_COVERAGE,
+        ),
+        "promotion_max_underperformance_share": payload.get(
+            "promotion_max_underperformance_share",
+            STRICT_PROMOTION_DEFAULT_MAX_UNDERPERFORMANCE_SHARE,
+        ),
+        "promotion_min_worst_rolling_excess_return": payload.get(
+            "promotion_min_worst_rolling_excess_return",
+            STRICT_PROMOTION_DEFAULT_MIN_WORST_ROLLING_EXCESS_RETURN,
+        ),
+        "promotion_max_strategy_drawdown": payload.get(
+            "promotion_max_strategy_drawdown",
+            STRICT_PROMOTION_DEFAULT_MAX_STRATEGY_DRAWDOWN,
+        ),
+        "promotion_max_drawdown_gap_vs_benchmark": payload.get(
+            "promotion_max_drawdown_gap_vs_benchmark",
+            STRICT_PROMOTION_DEFAULT_MAX_DRAWDOWN_GAP_VS_BENCHMARK,
+        ),
+        "trend_filter_enabled": payload.get("trend_filter_enabled", False),
+        "trend_filter_window": payload.get("trend_filter_window", 200),
+        "weighting_mode": payload.get("weighting_mode", STRICT_DEFAULT_WEIGHTING_MODE),
+        "rejected_slot_handling_mode": payload.get("rejected_slot_handling_mode"),
+        "rejected_slot_fill_enabled": payload.get(
+            "rejected_slot_fill_enabled",
+            STRICT_REJECTED_SLOT_FILL_DEFAULT_ENABLED,
+        ),
+        "partial_cash_retention_enabled": payload.get(
+            "partial_cash_retention_enabled",
+            STRICT_PARTIAL_CASH_RETENTION_DEFAULT_ENABLED,
+        ),
+        "risk_off_mode": payload.get("risk_off_mode", STRICT_DEFAULT_RISK_OFF_MODE),
+        "defensive_tickers": payload.get("defensive_tickers", STRICT_DEFAULT_DEFENSIVE_TICKERS),
+        "market_regime_enabled": payload.get("market_regime_enabled", False),
+        "market_regime_window": payload.get("market_regime_window", STRICT_MARKET_REGIME_DEFAULT_WINDOW),
+        "market_regime_benchmark": payload.get(
+            "market_regime_benchmark",
+            STRICT_MARKET_REGIME_DEFAULT_BENCHMARK,
+        ),
+        "underperformance_guardrail_enabled": payload.get(
+            "underperformance_guardrail_enabled",
+            STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_ENABLED,
+        ),
+        "underperformance_guardrail_window_months": payload.get(
+            "underperformance_guardrail_window_months",
+            STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
+        ),
+        "underperformance_guardrail_threshold": payload.get(
+            "underperformance_guardrail_threshold",
+            STRICT_UNDERPERFORMANCE_GUARDRAIL_DEFAULT_THRESHOLD,
+        ),
+        "drawdown_guardrail_enabled": payload.get(
+            "drawdown_guardrail_enabled",
+            STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_ENABLED,
+        ),
+        "drawdown_guardrail_window_months": payload.get(
+            "drawdown_guardrail_window_months",
+            STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_WINDOW_MONTHS,
+        ),
+        "drawdown_guardrail_strategy_threshold": payload.get(
+            "drawdown_guardrail_strategy_threshold",
+            STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_STRATEGY_THRESHOLD,
+        ),
+        "drawdown_guardrail_gap_threshold": payload.get(
+            "drawdown_guardrail_gap_threshold",
+            STRICT_DRAWDOWN_GUARDRAIL_DEFAULT_GAP_THRESHOLD,
+        ),
+        "universe_mode": payload["universe_mode"],
+        "preset_name": payload["preset_name"],
+        "universe_contract": payload.get("universe_contract"),
+        "dynamic_candidate_tickers": payload.get("dynamic_candidate_tickers"),
+        "dynamic_target_size": payload.get("dynamic_target_size"),
+    }
 
 
 def _guardrail_payload_values(contract: dict[str, Any]) -> dict[str, Any]:

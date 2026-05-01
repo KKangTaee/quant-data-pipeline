@@ -21,7 +21,7 @@ UI form, payload 복원, candidate review, history replay, candidate replay, sav
 | `app/web/backtest_history.py` | `Operations > Backtest Run History` 화면 render, selected record inspect, run again / load into form / candidate draft handoff |
 | `app/web/backtest_history_helpers.py` | History table row, replay payload, replay parity, Real-Money / Guardrail scope helper |
 | `app/web/backtest_candidate_library.py` | `Operations > Candidate Library` 화면 render. 저장된 current / Pre-Live 후보 inspect와 저장 contract 기반 result curve rebuild |
-| `app/web/backtest_candidate_library_helpers.py` | Candidate Library registry join, table row, replay payload 생성, ETF 후보 replay runtime dispatch helper |
+| `app/web/backtest_candidate_library_helpers.py` | Candidate Library registry join, table row, replay payload 생성, ETF / strict annual equity 후보 replay runtime dispatch helper |
 | `app/web/pages/backtest.py` | Backtest page entry, workflow navigation, panel dispatch shell. 주요 panel 본문은 `app/web/backtest_*.py` module이 담당 |
 | `app/web/backtest_ui_components.py` | Backtest UI 공용 status card, artifact pipeline, compact badge strip, stage brief strip, route/readiness panel render helper |
 | `app/web/backtest_candidate_review.py` | Candidate Review / Candidate Packaging / Pre-Live 운영 기록 화면 render logic |
@@ -301,13 +301,16 @@ Candidate Library는 workflow 단계가 아니다.
 Candidate Review에서 저장한 후보를 나중에 다시 열어보고,
 registry snapshot과 실제 재실행 결과가 같은 설정으로 복원되는지 확인하는 보조 화면이다.
 
-초기 replay 지원 범위는 price-only ETF 후보 family다.
+현재 replay 지원 범위는 price-only ETF 후보 family와 strict annual equity 후보 family다.
 
 - Equal Weight
 - GTAA
 - Global Relative Strength
 - Risk Parity Trend
 - Dual Momentum
+- Quality Snapshot (Strict Annual)
+- Value Snapshot (Strict Annual)
+- Quality + Value Snapshot (Strict Annual)
 
 ## Weighted Portfolio / Saved Weighted Portfolio 흐름
 

@@ -3562,3 +3562,104 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `Operations > Candidate Library`를 추가해 current / Pre-Live 후보를 inspect하고, ETF 후보 family는 저장 contract로 result curve를 재생성하도록 했다
 - Follow-up:
   - 이후 필요하면 Candidate Library에 여러 후보 선택 후 같은 전략 family 변형끼리 직접 비교하는 candidate-to-candidate compare mode를 추가할 수 있다
+
+### 2026-05-01 - Quality 전략에서 7단계까지 갈 수 있는 실습 후보 탐색
+- User request:
+  - `Quality` 전략에서 `US Statement Coverage 100 / 300 / 500`, `dynamic PIT`, `topN 3~10`,
+    `CAGR >= 20%`, `MDD >= -15%` 조건을 만족하고 현재 7단계 workflow까지 갈 수 있는 후보를 찾아 달라고 요청함
+- Interpreted goal:
+  - 단순 성과가 좋은 Quality run이 아니라, Candidate Review / Registry / Pre-Live / Portfolio Proposal 실습 흐름에서 사용할 수 있는 non-blocked 후보가 필요함
+- Analysis result:
+  - Coverage 100에서 조건 충족 후보를 찾았다
+  - 설정은 `topN=8`, `AOR` formal benchmark, default quality factors,
+    `MA250 trend`, `retain_unfilled_as_cash`, `cash_only`,
+    underperformance guardrail `3M / -5%`,
+    drawdown guardrail `12M / -12% / 5% gap`
+  - 결과는 `CAGR=20.02%`, `MDD=-13.42%`, `Sharpe=1.3957`,
+    `real_money_candidate / paper_probation / review_required`
+  - Coverage 300은 exact hit가 없었고, Coverage 500은 같은 성공 조합에서도 `CAGR 7~9%`, MDD `-18~-23%` 수준으로 탈락했다
+- Follow-up:
+  - 사용자가 저장을 원하면 이 후보를 review note, current candidate registry, pre-live record 순서로 저장한다
+
+### 2026-05-01 - Quality 후보를 GTAA처럼 paper_only까지 낮출 수 있는지 재검토
+- User request:
+  - 직전 Quality 후보가 `review_required`라면, GTAA 후보처럼 registry에 추가하기 쉬운 `paper_only` 후보로 재구성하거나 더 조사해 달라고 요청함
+- Interpreted goal:
+  - 단순히 숫자 조건을 만족하는 후보보다, Candidate Review / Current Candidate Registry / Pre-Live paper tracking 흐름에서 더 자연스럽게 사용할 수 있는 Quality 후보가 필요한지 확인
+- Analysis result:
+  - `CAGR >= 20%`, `MDD >= -15%`, `Deployment = paper_only`를 동시에 만족하는 후보는 bounded search에서 찾지 못했다
+  - `paper_only`로 내려오는 가장 깔끔한 후보는 `US Statement Coverage 100`, `dynamic PIT`,
+    factors `roe, roa, cash_ratio, debt_to_assets`, `topN=10`, `MA250`, `retain_unfilled_as_cash`, `cash_only`, benchmark `AOR`
+  - 결과는 `CAGR=14.38%`, `MDD=-14.56%`, `Sharpe=1.2490`,
+    `real_money_candidate / paper_probation / paper_only`, `Monitoring=routine_review`
+- Follow-up:
+  - 사용자는 높은 CAGR을 우선하면 `review_required` 후보를, 깨끗한 registry 실습 흐름을 우선하면 `paper_only` 후보를 선택하면 된다
+
+### 2026-05-01 - Quality + Value 전략에서 CAGR 25% / MDD -20% 조건 후보 탐색
+- User request:
+  - Quality 단독으로는 좋은 후보를 찾기 어려우므로 `Quality + Value` 전략으로 스펙트럼을 넓혀
+    `US Statement Coverage 100 / 300 / 500 / 1000`, `dynamic PIT`, `topN 3~10`,
+    `CAGR >= 25%`, `MDD >= -20%` 조건을 만족하는 후보를 찾아 달라고 요청함
+- Interpreted goal:
+  - factor를 최소 3개 이상 섞은 blended 전략 중에서 단순 성과뿐 아니라
+    Candidate Review / Portfolio Proposal 실습 흐름에 올릴 수 있는 non-blocked 후보를 찾는다
+- Analysis result:
+  - 최종 후보는 `US Statement Coverage 100`, `Historical Dynamic PIT`,
+    `topN=10`, ticker benchmark `SPY` 조합이다
+  - quality factors:
+    `roe, roa, operating_margin, asset_turnover, current_ratio`
+  - value factors:
+    `book_to_market, earnings_yield, sales_yield, pcr, por`
+  - portfolio / guardrail:
+    `equal_weight`, `reweight_survivors`, `cash_only`,
+    underperformance guardrail `12M / -5%`,
+    drawdown guardrail `12M / -15% strategy threshold / 3% gap`
+  - 결과는 `CAGR=29.25%`, `MDD=-18.64%`, `Sharpe=1.5222`,
+    `real_money_candidate / paper_probation / review_required`,
+    `Validation=normal`, `Liquidity Clean Coverage=100%`
+  - Coverage 500에서도 숫자 조건 exact hit가 있었지만 full runtime에서
+    `liquidity_clean_coverage`가 낮고 validation caution이 남아 `hold / blocked`로 제외했다
+- Follow-up:
+  - 사용자가 7단계 통과 여부와 등록을 요청해 다음 기록까지 저장했다
+    - `candidate_review_note_qv_cov100_top10_spy_mdd20`
+    - `quality_value_current_candidate_cov100_top10_spy_mdd20`
+    - `pre_live_quality_value_current_candidate_cov100_top10_spy_mdd20`
+  - Candidate Library 목록에는 표시된다
+  - 2026-05-02 기준 Candidate Library의 full replay가 strict annual equity strategy까지 지원하도록 개선됐다
+
+### 2026-05-01 - review_required를 paper_only로 낮추기 위한 후보 재탐색
+- User request:
+  - 직전 후보가 `review_required` 상태라면 전략 설정을 다시 검증하거나 새 전략을 찾아
+    `Promotion = real_money_candidate`, `Shortlist = paper_probation`, `Deployment = paper_only` 상태가 나오도록 요청함
+- Interpreted goal:
+  - 단순히 높은 CAGR 후보를 찾는 것이 아니라, Candidate Review에서 더 깔끔하게 Current Candidate / Pre-Live 흐름으로 넘어갈 수 있는 운영 상태를 찾는다
+- Analysis result:
+  - `Quality + Value` 후보는 CAGR/MDD 조건은 강했지만 guardrail / monitoring 신호 때문에 exact `paper_only`까지 내려오지 못했다
+  - exact hit는 `Quality Snapshot (Strict Annual)`에서 찾았다
+  - 설정은 `US Statement Coverage 100`, `Historical Dynamic PIT`, factors `roe, roa, cash_ratio, debt_to_assets`,
+    `topN=10`, `MA250`, `retain_unfilled_as_cash`, `cash_only`, benchmark `AOR`
+  - 결과는 `CAGR=14.38%`, `MDD=-14.56%`, `Sharpe=1.2490`,
+    `real_money_candidate / paper_probation / paper_only`, `Monitoring=routine_review`
+- Follow-up:
+  - 다음 기록까지 저장했다
+    - `candidate_review_note_quality_cov100_top10_aor_ma250_paper_only`
+    - `quality_current_candidate_cov100_top10_aor_ma250_paper_only`
+    - `pre_live_quality_current_candidate_cov100_top10_aor_ma250_paper_only`
+  - Candidate Library 목록에서 `paper_tracking` 후보로 확인된다
+
+### 2026-05-02 - Candidate Library strict annual 후보 replay 경고 해결
+- User request:
+  - Candidate Library에서 `Quality + Value` 후보를 선택하고 `Rebuild Result Curve`를 누르면
+    ETF strategy만 지원한다는 replay input warning이 발생한다고 보고함
+- Interpreted goal:
+  - 저장 후보 보관함에서 strict annual equity 후보도 ETF 후보처럼 summary, equity curve, result table로 다시 열 수 있어야 한다
+- Analysis result:
+  - 원인은 `app/web/backtest_candidate_library_helpers.py`의 replay 허용 목록과 runtime dispatch가
+    `equal_weight`, `gtaa`, `global_relative_strength`, `risk_parity_trend`, `dual_momentum`만 지원했기 때문이었다
+  - replay 지원 범위를 `quality_snapshot_strict_annual`, `value_snapshot_strict_annual`, `quality_value_snapshot_strict_annual`까지 확장했다
+  - 저장된 current candidate contract에서 factor set, dynamic PIT universe, topN, benchmark, guardrail, liquidity, promotion threshold를 복원해 strict annual runtime으로 넘기도록 했다
+- Follow-up:
+  - `Quality + Value Coverage 100 Top-10` replay가 124 result rows로 재생성되고,
+    기존 gate인 `real_money_candidate / paper_probation / review_required`가 유지됨을 확인했다
+  - `Quality Coverage 100 Top-10 AOR MA250 paper-only` replay도 124 result rows와
+    `real_money_candidate / paper_probation / paper_only`로 확인했다

@@ -2728,3 +2728,111 @@ Detailed historical logs were archived on `2026-04-13`.
   - Streamlit smoke checked `Operations > Candidate Library` on port `8517`; candidate table, snapshot cards, replay button, rebuilt Data Trust / Summary tabs rendered without console errors after adding the missing shared compare chart helper to `backtest_result_display.py`
 - Durable takeaway:
   - Saved candidates and saved weighted portfolios are different artifact types. Candidate Library is a 보관함 / 재검토 tool for current candidates, while Compare keeps weighted portfolio outputs created by the portfolio builder.
+
+### 2026-05-01
+- Searched `Quality Snapshot (Strict Annual)` for a candidate that can be used in the current 7-step practice workflow.
+- Search frame:
+  - `US Statement Coverage 100 / 300 / 500`
+  - `Historical Dynamic PIT Universe`
+  - `topN 3~10`
+  - target `CAGR >= 20%`, `MDD >= -15%`
+- Selected candidate:
+  - `US Statement Coverage 100`, `topN=8`, `AOR` formal benchmark
+  - factors `roe, roa, net_margin, asset_turnover, current_ratio`
+  - `Trend Filter MA250`, `retain_unfilled_as_cash`, `cash_only`
+  - underperformance guardrail `3M / -5%`
+  - drawdown guardrail `12M / -12% strategy threshold / 5% gap threshold`
+  - `CAGR=20.02%`, `MDD=-13.42%`, `Sharpe=1.3957`
+  - `Promotion=real_money_candidate`, `Shortlist=paper_probation`, `Deployment=review_required`
+- Coverage 300 / 500 did not produce exact hits in the bounded search.
+- Durable takeaway:
+  - This Quality candidate is a valid 7-step practice candidate when the formal benchmark is `AOR`.
+  - It has not been appended to review/current/pre-live registries yet; saving should be done after the user confirms they want to persist this candidate.
+
+### 2026-05-01
+- Re-searched `Quality Snapshot (Strict Annual)` for a cleaner GTAA-like deployment path after the user asked whether the previous `review_required` candidate could be improved into a registry-ready candidate.
+- Finding:
+  - The earlier `CAGR 20% / MDD -13%` Quality candidate remains `review_required` because guardrail trigger / monitoring review signals stay active.
+  - A clean `paper_only` candidate was found, but CAGR drops below the original 20% requirement.
+- Clean paper-only candidate:
+  - `US Statement Coverage 100`, `Historical Dynamic PIT`
+  - factors `roe, roa, cash_ratio, debt_to_assets`
+  - `topN=10`, `Trend MA250`, `retain_unfilled_as_cash`, `cash_only`, benchmark `AOR`
+  - `CAGR=14.38%`, `MDD=-14.56%`, `Sharpe=1.2490`
+  - `Promotion=real_money_candidate`, `Shortlist=paper_probation`, `Deployment=paper_only`
+- Durable takeaway:
+  - There are two Quality practice choices:
+    - higher-return `review_required` candidate: closer to the user's numeric return target
+    - lower-return `paper_only` candidate: cleaner registry / Pre-Live practice path
+
+### 2026-05-01
+- Improved the Real-Money detail surface used by Candidate Library replay results.
+- Changed:
+  - replaced truncation-prone `st.metric` rows in the Real-Money overview with wrapping status cards
+  - applied the same card layout to Promotion, Shortlist, Probation / Monitoring, and Deployment Readiness sub-sections
+  - kept the existing checklist/detail tables, but moved long status and next-step strings into card values/details so narrower browser widths do not collapse them into `...`
+- Verification:
+  - `.venv/bin/python -m compileall app/web/backtest_result_display.py app/web/backtest_candidate_library.py app/web/backtest_ui_components.py` passed
+  - direct import check for `app.web.backtest_result_display._render_real_money_details` passed
+
+### 2026-05-01
+- Searched `Quality + Value Snapshot (Strict Annual)` for a practice candidate under the user's expanded constraints.
+- Search frame:
+  - `US Statement Coverage 100 / 300 / 500 / 1000` considered through local reruns and sub-agent sweeps
+  - `Historical Dynamic PIT Universe`
+  - `topN 3~10`
+  - target `CAGR >= 25%`, `MDD >= -20%`
+  - factor sets with at least 3 factors, mixing quality and value factors
+- Selected candidate:
+  - `US Statement Coverage 100`, `topN=10`, ticker benchmark `SPY`
+  - quality factors `roe, roa, operating_margin, asset_turnover, current_ratio`
+  - value factors `book_to_market, earnings_yield, sales_yield, pcr, por`
+  - `reweight_survivors`, `cash_only`, trend / market regime off
+  - underperformance guardrail `12M / -5%`
+  - drawdown guardrail `12M / -15% strategy threshold / 3% gap threshold`
+  - `CAGR=29.25%`, `MDD=-18.64%`, `Sharpe=1.5222`
+  - `Promotion=real_money_candidate`, `Shortlist=paper_probation`, `Deployment=review_required`
+- Durable takeaway:
+  - This Quality + Value candidate meets the user's CAGR/MDD target and can be used as a Candidate Review / Portfolio Proposal practice candidate.
+  - A Coverage 500 exact-performance hit was rejected as a workflow candidate because full runtime marked it `hold / blocked` due to liquidity / validation caution.
+
+### 2026-05-01
+- Registered the selected `Quality + Value Snapshot (Strict Annual)` practice candidate through the machine-readable workflow artifacts.
+- Saved records:
+  - `CANDIDATE_REVIEW_NOTES.jsonl`: `candidate_review_note_qv_cov100_top10_spy_mdd20`
+  - `CURRENT_CANDIDATE_REGISTRY.jsonl`: `quality_value_current_candidate_cov100_top10_spy_mdd20`
+  - `PRE_LIVE_CANDIDATE_REGISTRY.jsonl`: `pre_live_quality_value_current_candidate_cov100_top10_spy_mdd20`
+- Verification:
+  - reran full runtime before append: `CAGR=29.2522%`, `MDD=-18.6392%`, `Sharpe=1.5222`
+  - gate: `real_money_candidate / paper_probation / review_required`
+  - `manage_current_candidate_registry.py validate` passed with 4 rows
+  - `manage_pre_live_candidate_registry.py validate` passed with 4 rows
+  - Candidate Library helper loaded the candidate with `paper_tracking` Pre-Live status
+- Note:
+  - Candidate Library lists the candidate now. Strict annual equity replay support was added on 2026-05-02.
+
+### 2026-05-01
+- Rechecked the `review_required` issue after the user asked for a cleaner candidate with `Promotion=real_money_candidate`, `Shortlist=paper_probation`, and `Deployment=paper_only`.
+- Finding:
+  - `Quality + Value` variants could keep stronger CAGR, but no exact `paper_only` deployment candidate was found before stopping the bounded/sub-agent sweep.
+  - The clean exact hit was the lower-return `Quality Snapshot (Strict Annual)` candidate.
+- Registered records:
+  - `CANDIDATE_REVIEW_NOTES.jsonl`: `candidate_review_note_quality_cov100_top10_aor_ma250_paper_only`
+  - `CURRENT_CANDIDATE_REGISTRY.jsonl`: `quality_current_candidate_cov100_top10_aor_ma250_paper_only`
+  - `PRE_LIVE_CANDIDATE_REGISTRY.jsonl`: `pre_live_quality_current_candidate_cov100_top10_aor_ma250_paper_only`
+- Verification:
+  - candidate result: `CAGR=14.38%`, `MDD=-14.56%`, `Sharpe=1.2490`
+  - gate: `real_money_candidate / paper_probation / paper_only`
+  - `manage_current_candidate_registry.py validate` passed with 5 rows
+  - `manage_pre_live_candidate_registry.py validate` passed with 5 rows
+  - Candidate Library helper loaded the candidate with `paper_tracking` Pre-Live status
+
+### 2026-05-02
+- Fixed Candidate Library replay for saved strict annual equity candidates after the user hit the ETF-only replay warning on `Quality + Value Coverage 100 Top-10`.
+- Changed:
+  - extended `app/web/backtest_candidate_library_helpers.py` replay support from ETF-only families to `quality_snapshot_strict_annual`, `value_snapshot_strict_annual`, and `quality_value_snapshot_strict_annual`
+  - restored strict annual contract fields from current candidate registry rows, including factors, topN, dynamic PIT universe, trend / market regime, guardrails, benchmark, liquidity filters, and promotion thresholds
+- Verification:
+  - `.venv/bin/python -m compileall app/web/backtest_candidate_library_helpers.py app/web/backtest_candidate_library.py` passed
+  - Candidate Library replay helper rebuilt `quality_current_candidate_cov100_top10_aor_ma250_paper_only` with 124 result rows and gate `real_money_candidate / paper_probation / paper_only`
+  - Candidate Library replay helper rebuilt `quality_value_current_candidate_cov100_top10_spy_mdd20` with 124 result rows and gate `real_money_candidate / paper_probation / review_required`
