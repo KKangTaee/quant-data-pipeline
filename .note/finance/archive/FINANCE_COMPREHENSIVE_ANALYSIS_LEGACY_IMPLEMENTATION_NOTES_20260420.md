@@ -63,7 +63,7 @@ QA 피드백, backtest 검증 메모가 섞여 있다.
 
 - `3-3`에는 새 긴 구현 이력을 직접 append하지 않는다.
 - 현재 동작이 바뀌면 이 문서의 해당 주제 섹션을 짧게 수정한다.
-- phase 진행 기록은 해당 `.note/finance/phase*/` 문서와 `WORK_PROGRESS.md`에 남긴다.
+- phase 진행 기록은 해당 `.note/finance/phases/phase*/` 문서와 `WORK_PROGRESS.md`에 남긴다.
 - 설계 판단이나 사용자 질문에서 나온 durable conclusion은 `QUESTION_AND_ANALYSIS_LOG.md`에 남긴다.
 - backtest 결과, 후보 비교, 실험 성과는 `.note/finance/backtest_reports/` 또는 strategy별 backtest log에 남긴다.
 - 현재 후보나 near-miss 후보처럼 기계적으로 다시 읽어야 하는 정보는 `CURRENT_CANDIDATE_REGISTRY.jsonl`을 우선한다.

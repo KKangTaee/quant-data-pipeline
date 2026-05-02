@@ -13,7 +13,7 @@ Detailed historical analysis was archived on `2026-04-13`.
 ## Active Pointers
 
 - latest phase board:
-  - [PHASE26_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase26/PHASE26_CURRENT_CHAPTER_TODO.md)
+  - [PHASE26_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phases/phase26/PHASE26_CURRENT_CHAPTER_TODO.md)
 - current candidate summary:
   - [CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md)
 - historical full archive:
@@ -2324,7 +2324,7 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 종합 분석 문서가 다시 상세 기록 저장소처럼 비대해지지 않도록, high-level current-state map 역할과 업데이트 조건을 명확히 고정해야 함
 - Result:
   - `FINANCE_COMPREHENSIVE_ANALYSIS.md`는 `finance` 시스템의 큰 그림, 제품 표면, 주요 layer, data flow, strategy family, runtime / UI workflow, Real-Money / Pre-Live 경계가 바뀔 때만 갱신하는 문서로 정리했다
-  - 일회성 backtest 결과, phase checklist 상태, 상세 call flow, table별 상세 의미, 작은 UI copy, minor bug-fix 기록은 각각 `backtest_reports/`, `phase*/`, `code_analysis/`, `data_architecture/`, `WORK_PROGRESS.md` 등으로 분산 관리하기로 했다
+  - 일회성 backtest 결과, phase checklist 상태, 상세 call flow, table별 상세 의미, 작은 UI copy, minor bug-fix 기록은 각각 `backtest_reports/`, `phases/phase*/`, `code_analysis/`, `data_architecture/`, `WORK_PROGRESS.md` 등으로 분산 관리하기로 했다
   - `AGENTS.md`, `FINANCE_COMPREHENSIVE_ANALYSIS.md`, `FINANCE_DOC_INDEX.md`, active `finance-doc-sync` skill에 같은 기준을 반영했다
 
 ### 2026-04-20 - 종합 분석 문서의 legacy 상세 메모는 archive로 분리한다
@@ -2636,7 +2636,7 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 따라서 진행 상태는 `implementation_complete`, 검증 상태는 `manual_qa_pending`으로 정리하는 것이 맞다
   - 사용자 checklist QA 완료 전에는 Phase 30으로 넘어가지 않는다
 - Follow-up:
-  - 사용자는 `.note/finance/phase29/PHASE29_TEST_CHECKLIST.md` 기준으로 QA를 진행하고, 완료되면 Phase 29 closeout 후 Phase 30으로 넘어간다
+  - 사용자는 `.note/finance/phases/phase29/PHASE29_TEST_CHECKLIST.md` 기준으로 QA를 진행하고, 완료되면 Phase 29 closeout 후 Phase 30으로 넘어간다
 
 ### 2026-04-23 - Candidate Board의 기존 후보는 Phase 29 QA용 sample candidate set으로 본다
 - User request:
@@ -2844,7 +2844,7 @@ Detailed historical analysis was archived on `2026-04-13`.
   - performance signal은 `needs_paper_tracking`, `missing_current_result`, `missing_saved_snapshot`, `worsened`, `stable_or_better`로 제한해 QA에서 해석 가능한 범위로 두었다
   - Phase 30 상태는 `implementation_complete` / `manual_qa_pending`으로 전환하고, 추가 `backtest.py` 모듈 분리는 별도 special refactor task로 남겼다
 - Follow-up:
-  - 사용자는 `.note/finance/phase30/PHASE30_TEST_CHECKLIST.md` 기준으로 final manual QA를 진행한다
+  - 사용자는 `.note/finance/phases/phase30/PHASE30_TEST_CHECKLIST.md` 기준으로 final manual QA를 진행한다
 
 ### 2026-04-28 - Reference Guide는 Phase 30 기능 목록이 아니라 최종 포트폴리오 탐색 흐름이어야 한다
 - User request:
@@ -3677,3 +3677,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Follow-up:
   - strict annual runtime warning 문구를 한국어로 변경했다
   - `Quality + Value` replay에서 dynamic PIT, 최소 이력, 유동성, 상대성과 guardrail, drawdown guardrail, 실전 검토 보강 안내가 한국어로 출력됨을 확인했다
+
+### 2026-05-02 - finance phase 문서 상위 폴더 정리
+- User request:
+  - `.note/finance` root에 `phase1`~`phase30` 폴더가 직접 흩어져 있어 문서가 파편화되어 보이므로, phase 문서를 상위 폴더로 묶고 기존 링크도 정리해 달라고 요청함
+- Interpreted goal:
+  - root에는 top-level map, glossary, template, registry, operations entry만 남기고 phase 실행 문서는 한 곳에서 찾을 수 있게 만든다
+- Analysis result:
+  - canonical phase path를 `.note/finance/phases/phase<N>/`로 정했다
+  - 새 phase 생성 helper도 이 위치로 생성하도록 바꿔야 이후 문서 구조가 다시 흩어지지 않는다
+  - `FINANCE_DOC_INDEX.md`에는 folder map을 추가해 phase / operations / backtest_reports / code_analysis / data_architecture / research / support_tracks / archive의 역할을 바로 구분하게 했다
+- Follow-up:
+  - old `.note/finance/phaseN` 링크는 `.note/finance/phases/phaseN`으로 갱신했다
+  - `.note/finance/phases/README.md`를 새 phase 문서 landing page로 추가했다

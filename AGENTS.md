@@ -38,7 +38,7 @@
   - portfolio search outcomes
   - reproducible backtest guides
   prefer `.note/finance/backtest_reports/` as the canonical home.
-- Keep phase execution documents in `.note/finance/phase*/`, but if a result-oriented backtest note becomes reusable beyond that phase, prefer creating or moving the durable report into `.note/finance/backtest_reports/` and linking it from the phase document.
+- Keep phase execution documents in `.note/finance/phases/phase*/`, but if a result-oriented backtest note becomes reusable beyond that phase, prefer creating or moving the durable report into `.note/finance/backtest_reports/` and linking it from the phase document.
 - For repeated strategy experimentation, maintain strategy-specific backtest logs under `.note/finance/backtest_reports/strategies/`.
 - Preferred shape:
   - strategy hub: `STRATEGY.md`
@@ -52,9 +52,9 @@
   - result summary
   - interpretation / next action
 - Prefer phase-specific execution/planning docs under:
-  - `.note/finance/phase1/`
-  - `.note/finance/phase2/`
-  - `.note/finance/phase3/`
+  - `.note/finance/phases/phase1/`
+  - `.note/finance/phases/phase2/`
+  - `.note/finance/phases/phase3/`
   and continue the same pattern for later phases.
 - For repeated `finance` backtest-refinement work, use the repo-local hygiene helper when it is relevant:
   - `python3 plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py`
@@ -90,7 +90,7 @@
 - If the root work log becomes too large or a phase closes with substantial history, prefer archiving detailed history by phase rather than by month.
 - Preferred archive shape:
   - keep `.note/finance/WORK_PROGRESS.md` as the top-level current log
-  - move older detailed phase history into `.note/finance/phase*/PHASE*_WORKLOG.md`
+  - move older detailed phase history into `.note/finance/phases/phase*/PHASE*_WORKLOG.md`
   - leave a short summary/pointer in the root log instead of deleting past context
 - Do not split work logs by month unless the work is genuinely month-scoped and not phase-scoped. This repository is phase-managed, so phase-based archives are the default.
 
@@ -195,7 +195,7 @@
 - Do not introduce a formal chapter hierarchy unless the user explicitly requests it; `first_chapter_completed` should be treated as a legacy partial-completion label.
 - If scope changes during a phase, update the phase document and TODO board rather than leaving the change only in chat.
 - Before opening a new major phase, confirm the new phase direction with the user.
-- When a phase reaches a practical completion point, create a phase-specific manual test checklist document under `.note/finance/phase*/`.
+- When a phase reaches a practical completion point, create a phase-specific manual test checklist document under `.note/finance/phases/phase*/`.
 - The checklist should be written for user-facing verification and should cover the major features, UI paths, and validation points added during that phase.
 - Prefer checklist items to use Markdown task checkboxes such as `[ ]` so the user can mark progress directly inside the document.
 - Use `.note/finance/PHASE_TEST_CHECKLIST_TEMPLATE.md` as the default starting shape for new `finance` phase test checklist documents unless there is a strong reason to deviate.

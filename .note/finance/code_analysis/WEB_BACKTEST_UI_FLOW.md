@@ -95,7 +95,7 @@ Phase 30 두 번째 작업 이후 Portfolio Proposal은 단순 weighted portfoli
 
 상세 계약은 아래 문서를 기준으로 한다.
 
-- `.note/finance/phase30/PHASE30_PORTFOLIO_PROPOSAL_CONTRACT_SECOND_WORK_UNIT.md`
+- `.note/finance/phases/phase30/PHASE30_PORTFOLIO_PROPOSAL_CONTRACT_SECOND_WORK_UNIT.md`
 
 Phase 30 네 번째 작업 이후 기본 저장 위치는
 `.note/finance/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`이다.

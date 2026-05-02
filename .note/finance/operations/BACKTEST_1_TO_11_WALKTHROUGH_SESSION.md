@@ -10,7 +10,7 @@
 
 ## 관리 기준
 
-- 이 문서는 `.note/finance/phase30/*` 문서를 갱신하지 않기 위한 별도 기록장이다.
+- 이 문서는 `.note/finance/phases/phase30/*` 문서를 갱신하지 않기 위한 별도 기록장이다.
 - 실습 중 나온 질문, 해석, UI 보조 기능, 다음 확인 항목은 이 문서에 모은다.
 - Phase 문서는 특정 phase의 구현 / QA 범위가 바뀔 때만 수정한다.
 - 일반 Guide나 Real-Money UI가 바뀐 경우에는 앱 코드와 code analysis 문서에 기록하고,

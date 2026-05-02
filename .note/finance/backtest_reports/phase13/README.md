@@ -31,7 +31,7 @@
 
 ## 호환성 메모
 
-기존 `.note/finance/phase13/` 경로에는 짧은 안내 stub를 남겨두었다.
+기존 `.note/finance/phases/phase13/` 경로에는 짧은 안내 stub를 남겨두었다.
 
 즉:
 

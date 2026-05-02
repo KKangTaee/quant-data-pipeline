@@ -359,8 +359,8 @@ Keep entries append-only and concise.
 - Documented the change as a current-snapshot ETF operability overlay rather than a point-in-time ETF liquidity history model.
 - Reviewed Phase 12 remaining work and decided the current ETF second-pass items are next-phase backlog rather than closeout blockers.
 - Created:
-  - `.note/finance/phase12/PHASE12_COMPLETION_SUMMARY.md`
-  - `.note/finance/phase12/PHASE12_NEXT_PHASE_PREPARATION.md`
+  - `.note/finance/phases/phase12/PHASE12_COMPLETION_SUMMARY.md`
+  - `.note/finance/phases/phase12/PHASE12_NEXT_PHASE_PREPARATION.md`
 - Marked Phase 12 as practical closeout in:
   - roadmap
   - doc index
@@ -517,7 +517,7 @@ Keep entries append-only and concise.
 - Phase 3 current chapter and loader implementation chapter are now effectively complete from the loader/runtime groundwork perspective.
 - Added a dedicated Phase 3 chapter completion summary document for the finished loader/runtime groundwork.
 - Opened the next Phase 3 execution board:
-  - `.note/finance/phase3/PHASE3_RUNTIME_GENERALIZATION_TODO.md`
+  - `.note/finance/phases/phase3/PHASE3_RUNTIME_GENERALIZATION_TODO.md`
 - Reframed the active Phase 3 focus from “first loader implementation” to “runtime generalization and Phase 4 handoff preparation”.
 - Extended the Streamlit OHLCV period presets to include `20y` for long-horizon Daily Market Update and manual OHLCV runs.
 - Verified with the project virtualenv that yfinance accepts `period='20y'` for daily OHLCV fetches.
@@ -636,8 +636,8 @@ Keep entries append-only and concise.
   - curated `nyse_fundamentals` / broad `nyse_factors` table roles
   - canonical refresh and shared stock+ETF price-table rules
 - Opened Phase 4 and added:
-  - `.note/finance/phase4/PHASE4_UI_AND_BACKTEST_PLAN.md`
-  - `.note/finance/phase4/PHASE4_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/phases/phase4/PHASE4_UI_AND_BACKTEST_PLAN.md`
+  - `.note/finance/phases/phase4/PHASE4_CURRENT_CHAPTER_TODO.md`
 - Updated the roadmap to mark Phase 4 as active.
 - Fixed the Phase 4 collaboration rule explicitly:
   - non-obvious UI/runtime/product choices must be explained as options
@@ -1418,8 +1418,8 @@ Keep entries append-only and concise.
 
 - After Phase 4 closeout, the next major direction was user-confirmed and documented as a new Phase 5 workstream.
 - Added Phase 5 planning documents:
-  - `.note/finance/phase5/PHASE5_STRATEGY_LIBRARY_AND_RISK_OVERLAY_PLAN.md`
-  - `.note/finance/phase5/PHASE5_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/phases/phase5/PHASE5_STRATEGY_LIBRARY_AND_RISK_OVERLAY_PLAN.md`
+  - `.note/finance/phases/phase5/PHASE5_CURRENT_CHAPTER_TODO.md`
 - The next phase direction is now explicitly:
   - strategy library / comparative research
   - strict factor risk overlay design
@@ -1488,7 +1488,7 @@ Keep entries append-only and concise.
 
 - Fixed the Phase 5 operating direction around a more practical, investable research goal.
 - Added a dedicated Phase 5 policy document:
-  - `.note/finance/phase5/PHASE5_PRACTICAL_INVESTMENT_READINESS_POLICY.md`
+  - `.note/finance/phases/phase5/PHASE5_PRACTICAL_INVESTMENT_READINESS_POLICY.md`
 - The policy now explicitly states:
   - the target is a decision-support quality research environment, not immediate live trading automation
   - strict managed universes should evolve toward freshness-aware presets
@@ -1728,8 +1728,8 @@ Keep entries append-only and concise.
 ### 2026-03-28 - Phase 5 first chapter closeout documentation added
 
 - Added Phase 5 closeout documents:
-  - `.note/finance/phase5/PHASE5_COMPLETION_SUMMARY.md`
-  - `.note/finance/phase5/PHASE5_NEXT_PHASE_PREPARATION.md`
+  - `.note/finance/phases/phase5/PHASE5_COMPLETION_SUMMARY.md`
+  - `.note/finance/phases/phase5/PHASE5_NEXT_PHASE_PREPARATION.md`
 - Updated the Phase 5 current-chapter TODO board to reflect effective completion.
 - Updated the roadmap and finance doc index so Phase 5 now reads as a closed first chapter with next-step candidates prepared.
 
@@ -1764,8 +1764,8 @@ Keep entries append-only and concise.
   - second overlay implementation first
   - quarterly strict family entry/validation second
 - Added:
-  - `.note/finance/phase6/PHASE6_OVERLAY_AND_QUARTERLY_EXPANSION_PLAN.md`
-  - `.note/finance/phase6/PHASE6_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/phases/phase6/PHASE6_OVERLAY_AND_QUARTERLY_EXPANSION_PLAN.md`
+  - `.note/finance/phases/phase6/PHASE6_CURRENT_CHAPTER_TODO.md`
 - Synced the new phase opening into:
   - `MASTER_PHASE_ROADMAP.md`
   - `FINANCE_DOC_INDEX.md`
@@ -1787,12 +1787,12 @@ Keep entries append-only and concise.
   - annual strict quality+value with trend + market regime overlay
   - quarterly strict quality prototype with trend + market regime overlay
 - Added Phase 6 reference and validation docs:
-  - `.note/finance/phase6/PHASE6_MARKET_REGIME_OVERLAY_REQUIREMENTS.md`
-  - `.note/finance/phase6/PHASE6_MARKET_REGIME_OVERLAY_FIRST_PASS.md`
-  - `.note/finance/phase6/PHASE6_MARKET_REGIME_OVERLAY_VALIDATION.md`
-  - `.note/finance/phase6/PHASE6_STRICT_QUARTERLY_ENTRY_CRITERIA.md`
-  - `.note/finance/phase6/PHASE6_STRICT_QUARTERLY_FIRST_PASS_VALIDATION.md`
-  - `.note/finance/phase6/PHASE6_TEST_CHECKLIST.md`
+  - `.note/finance/phases/phase6/PHASE6_MARKET_REGIME_OVERLAY_REQUIREMENTS.md`
+  - `.note/finance/phases/phase6/PHASE6_MARKET_REGIME_OVERLAY_FIRST_PASS.md`
+  - `.note/finance/phases/phase6/PHASE6_MARKET_REGIME_OVERLAY_VALIDATION.md`
+  - `.note/finance/phases/phase6/PHASE6_STRICT_QUARTERLY_ENTRY_CRITERIA.md`
+  - `.note/finance/phases/phase6/PHASE6_STRICT_QUARTERLY_FIRST_PASS_VALIDATION.md`
+  - `.note/finance/phases/phase6/PHASE6_TEST_CHECKLIST.md`
 - Updated the Phase 6 TODO board, roadmap, finance doc index, and comprehensive analysis to reflect the implemented first pass.
 - Current state:
   - Phase 6 implementation work for the planned `1 -> 9` first pass is complete
@@ -1823,13 +1823,13 @@ Keep entries append-only and concise.
 ### 2026-03-28 - Phase 6 closeout and Phase 7 opening
 
 - Closed out Phase 6 with:
-  - `.note/finance/phase6/PHASE6_COMPLETION_SUMMARY.md`
-  - `.note/finance/phase6/PHASE6_NEXT_PHASE_PREPARATION.md`
+  - `.note/finance/phases/phase6/PHASE6_COMPLETION_SUMMARY.md`
+  - `.note/finance/phases/phase6/PHASE6_NEXT_PHASE_PREPARATION.md`
 - Marked the Phase 6 chapter TODO and phase plan as closeout-complete.
 - Updated roadmap/index/comprehensive analysis so Phase 6 now reads as completed.
 - Opened Phase 7 as the next active chapter with:
-  - `.note/finance/phase7/PHASE7_QUARTERLY_COVERAGE_AND_STATEMENT_PIT_HARDENING_PLAN.md`
-  - `.note/finance/phase7/PHASE7_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/phases/phase7/PHASE7_QUARTERLY_COVERAGE_AND_STATEMENT_PIT_HARDENING_PLAN.md`
+  - `.note/finance/phases/phase7/PHASE7_CURRENT_CHAPTER_TODO.md`
 - Fixed the next-phase direction as:
   - quarterly coverage hardening first
   - statement raw payload / PIT timing reality-check first
@@ -2190,7 +2190,7 @@ Keep entries append-only and concise.
     - currently lower operational value because only legacy `*failures*.csv` artifacts are present and not all modern jobs emit them
 - Added captions to make the current intended semantics of both panels explicit.
 - Added durable review note:
-  - `.note/finance/phase8/PHASE8_INGESTION_UI_POLISH_AND_REVIEW.md`
+  - `.note/finance/phases/phase8/PHASE8_INGESTION_UI_POLISH_AND_REVIEW.md`
 
 ### 2026-03-29 - Quarterly shadow preview cache/performance follow-up
 
@@ -3070,7 +3070,7 @@ Keep entries append-only and concise.
   - defensive-sector-only additions (`XLP`, `XLU`, `XLV`) hurt CAGR more than they helped drawdown
   - `QUAL` and `USMV` work better as supporting broadeners than as the primary engine
 - Saved the full study as:
-  - `.note/finance/phase12/PHASE12_GTAA_DB_ETF_GROUP_SEARCH.md`
+  - `.note/finance/phases/phase12/PHASE12_GTAA_DB_ETF_GROUP_SEARCH.md`
 
 ### 2026-04-04 - Rebased GTAA default signal interval to 1 and reran the main candidates under the new default
 
@@ -3094,7 +3094,7 @@ Keep entries append-only and concise.
   - `GTAA Universe (DBC)` for slightly lower MDD
 - Confirmed that rebasing interval to `1` does not by itself fix the relative weakness of the current default `PDBC` preset.
 - Saved the rerun note as:
-  - `.note/finance/phase12/PHASE12_GTAA_INTERVAL1_DEFAULT_REBASE_ANALYSIS.md`
+  - `.note/finance/phases/phase12/PHASE12_GTAA_INTERVAL1_DEFAULT_REBASE_ANALYSIS.md`
 
 ### 2026-04-04 - Simplified GTAA preset surface to the default plus the current top three candidates
 
@@ -3134,7 +3134,7 @@ Keep entries append-only and concise.
   - `Crash Guardrail Triggered`
   - `Risk-Off Reason`
 - Saved the implementation note as:
-  - `.note/finance/phase12/PHASE12_GTAA_SCORE_WEIGHT_AND_RISK_OFF_FIRST_PASS.md`
+  - `.note/finance/phases/phase12/PHASE12_GTAA_SCORE_WEIGHT_AND_RISK_OFF_FIRST_PASS.md`
 
 ### 2026-04-04 - Expanded GTAA score controls from fixed 1/3/6/12 weights to editable month-horizon rows
 
@@ -3197,7 +3197,7 @@ Keep entries append-only and concise.
   - `CAGR 8.96%`
   - `MDD -16.17%`
 - Saved the durable note as:
-  - `.note/finance/phase12/PHASE12_GTAA_VS_SPY_DOMINANCE_SEARCH.md`
+  - `.note/finance/phases/phase12/PHASE12_GTAA_VS_SPY_DOMINANCE_SEARCH.md`
 
 ### 2026-04-04 - Found a GTAA candidate that meets the practical CAGR 9 / MDD 16 floor
 
@@ -3212,7 +3212,7 @@ Keep entries append-only and concise.
   - `CAGR 12.90%`
   - `MDD -11.10%`
 - Saved the durable note as:
-  - `.note/finance/phase12/PHASE12_GTAA_CAGR9_MDD16_TARGET_SEARCH.md`
+  - `.note/finance/phases/phase12/PHASE12_GTAA_CAGR9_MDD16_TARGET_SEARCH.md`
 
 ### 2026-04-04 - Expanded the GTAA practical-floor search with cadence follow-up and found stronger target hits
 
@@ -3251,7 +3251,7 @@ Keep entries append-only and concise.
   - `CAGR 12.04%`
   - `MDD -9.79%`
 - Saved the durable note as:
-  - `.note/finance/phase12/PHASE12_GTAA_CAGR9_MDD16_TARGET_SEARCH.md`
+  - `.note/finance/phases/phase12/PHASE12_GTAA_CAGR9_MDD16_TARGET_SEARCH.md`
 
 ### 2026-04-04 - Added verified GTAA candidate-base presets to the UI
 
@@ -3273,7 +3273,7 @@ Keep entries append-only and concise.
   - compare execution
   - history/saved-portfolio prefill
   - saved strategy override restoration
-- Expanded `.note/finance/phase12/PHASE12_GTAA_CAGR9_MDD16_TARGET_SEARCH.md` with a candidate decision table:
+- Expanded `.note/finance/phases/phase12/PHASE12_GTAA_CAGR9_MDD16_TARGET_SEARCH.md` with a candidate decision table:
   - offensive
   - balanced
   - defensive
@@ -3649,8 +3649,8 @@ Keep entries append-only and concise.
   - `Phase 12`: implementation closed / manual_validation_pending
   - `Phase 13`: active planning and implementation
 - Added the initial Phase 13 documents:
-  - `.note/finance/phase13/PHASE13_DEPLOYMENT_READINESS_AND_PROBATION_PLAN.md`
-  - `.note/finance/phase13/PHASE13_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/phases/phase13/PHASE13_DEPLOYMENT_READINESS_AND_PROBATION_PLAN.md`
+  - `.note/finance/phases/phase13/PHASE13_CURRENT_CHAPTER_TODO.md`
 - Synced:
   - master phase roadmap
   - finance doc index
@@ -4429,7 +4429,7 @@ Keep entries append-only and concise.
   - `Value`
   - `Quality + Value`
 - Created:
-  - `.note/finance/phase13/PHASE13_STRICT_ANNUAL_FAMILY_BACKTEST_SUMMARY.md`
+  - `.note/finance/phases/phase13/PHASE13_STRICT_ANNUAL_FAMILY_BACKTEST_SUMMARY.md`
 - Consolidated practical conclusions:
   - `Value Strict Annual` was the strongest family overall
   - `Quality Strict Annual` could produce useful raw candidates, but full hardening often still ended in `hold`
@@ -4453,7 +4453,7 @@ Keep entries append-only and concise.
   - `Maximum Drawdown >= -20%`
   - `promotion != hold`
 - Used sub-agent parallel search by coverage and consolidated the result in:
-  - `.note/finance/phase13/PHASE13_STRICT_ANNUAL_COVERAGE300_500_1000_TARGET_SEARCH.md`
+  - `.note/finance/phases/phase13/PHASE13_STRICT_ANNUAL_COVERAGE300_500_1000_TARGET_SEARCH.md`
 - Practical result:
   - no exact-hit was confirmed for `Coverage 300` or `Coverage 500`
   - `Coverage 1000` did not surface an exact-hit within the current exploratory window and remained inconclusive
@@ -4473,7 +4473,7 @@ Keep entries append-only and concise.
   - `2016-01-01 ~ 2026-04-01`
   - `Historical Dynamic PIT Universe`
 - Used sub-agent parallel search by family and consolidated the result in:
-  - `.note/finance/phase13/PHASE13_REAL_MONEY_CANDIDATE_SPY_MDD25_SEARCH.md`
+  - `.note/finance/phases/phase13/PHASE13_REAL_MONEY_CANDIDATE_SPY_MDD25_SEARCH.md`
 - Practical result:
   - no family produced an exact-hit under the tested practical grid
   - `Value` remained the strongest family
@@ -4491,7 +4491,7 @@ Keep entries append-only and concise.
 
 - The user asked for a backtest-facing Markdown guide that explains how to reproduce the strongest `Value` raw winner.
 - Created:
-  - `.note/finance/phase13/PHASE13_VALUE_RAW_WINNER_BACKTEST_GUIDE.md`
+  - `.note/finance/phases/phase13/PHASE13_VALUE_RAW_WINNER_BACKTEST_GUIDE.md`
 - The guide records:
   - which family / variant to pick
   - which preset and universe contract to use
@@ -4519,7 +4519,7 @@ Keep entries append-only and concise.
 - Moved the major Phase 13 result-oriented Markdown reports into:
   - `.note/finance/backtest_reports/phase13/`
 - Left short compatibility stubs in:
-  - `.note/finance/phase13/`
+  - `.note/finance/phases/phase13/`
   so existing references do not immediately break.
 - Updated:
   - `.note/finance/backtest_reports/BACKTEST_REPORT_INDEX.md`
@@ -4580,7 +4580,7 @@ Keep entries append-only and concise.
   - `Real-Money` was reorganized into clearer internal tabs and grouped sections
   - `Hold 해결 가이드` and `Liquidity Policy` became more directly connected
 - Updated:
-  - `.note/finance/phase13/PHASE13_TEST_CHECKLIST.md`
+  - `.note/finance/phases/phase13/PHASE13_TEST_CHECKLIST.md`
 - Practical result:
   - the checklist now follows the current UI reading order instead of the original Phase 13 first-pass layout
 
@@ -4621,7 +4621,7 @@ Keep entries append-only and concise.
 - Updated:
   - `Real-Money > 현재 판단 > Hold 해결 가이드`
   - `Guides > 실전 승격 흐름 빠른 설명`
-  - `.note/finance/phase13/PHASE13_TEST_CHECKLIST.md`
+  - `.note/finance/phases/phase13/PHASE13_TEST_CHECKLIST.md`
 - Practical result:
   - hold guidance now shows `항목 / 현재 상태 / 상태를 보는 위치 / 이 상태의 뜻 / 바로 해볼 일`
   - guides now explain where each status is exposed and how to interpret it before changing settings
@@ -4727,9 +4727,9 @@ Keep entries append-only and concise.
 - The user wanted to close Phase 13 and prepare for Phase 14, while explicitly revisiting the previously deferred discussion about real-money gate calibration.
 - Updated:
   - created Phase 14 plan doc:
-    - `.note/finance/phase14/PHASE14_REAL_MONEY_GATE_CALIBRATION_AND_DEPLOYMENT_WORKFLOW_PLAN.md`
+    - `.note/finance/phases/phase14/PHASE14_REAL_MONEY_GATE_CALIBRATION_AND_DEPLOYMENT_WORKFLOW_PLAN.md`
   - created Phase 14 TODO board:
-    - `.note/finance/phase14/PHASE14_CURRENT_CHAPTER_TODO.md`
+    - `.note/finance/phases/phase14/PHASE14_CURRENT_CHAPTER_TODO.md`
   - updated:
     - `.note/finance/MASTER_PHASE_ROADMAP.md`
     - `.note/finance/FINANCE_DOC_INDEX.md`
@@ -4761,7 +4761,7 @@ Keep entries append-only and concise.
 - The user asked whether repeated `hold` outcomes might be happening simply because the current strategy families do not expose enough factors yet, and whether adding more factors plus broader backtests would be the right next move.
 - Updated:
   - created:
-    - `.note/finance/phase14/PHASE14_PROMOTION_SHORTLIST_CALIBRATION_REVIEW_FIRST_PASS.md`
+    - `.note/finance/phases/phase14/PHASE14_PROMOTION_SHORTLIST_CALIBRATION_REVIEW_FIRST_PASS.md`
   - documented the current threshold inventory that actually drives `promotion / shortlist`
   - separated two questions:
     - is the current gate too conservative?
@@ -4778,9 +4778,9 @@ Keep entries append-only and concise.
 - Implemented:
   - reviewed current gate logic in `app/web/runtime/backtest.py`
   - documented a first-pass blocker audit at:
-    - `.note/finance/phase14/PHASE14_GATE_BLOCKER_DISTRIBUTION_AUDIT_FIRST_PASS.md`
+    - `.note/finance/phases/phase14/PHASE14_GATE_BLOCKER_DISTRIBUTION_AUDIT_FIRST_PASS.md`
   - updated:
-    - `.note/finance/phase14/PHASE14_CURRENT_CHAPTER_TODO.md`
+    - `.note/finance/phases/phase14/PHASE14_CURRENT_CHAPTER_TODO.md`
     - `.note/finance/MASTER_PHASE_ROADMAP.md`
     - `.note/finance/FINANCE_DOC_INDEX.md`
     - `.note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md`
@@ -4848,14 +4848,14 @@ Keep entries append-only and concise.
 - After finishing the controlled factor expansion shortlist, the next active Phase 14 step was to read representative near-miss candidates case-by-case instead of only through aggregate blocker counts.
 - Updated:
   - created:
-    - `.note/finance/phase14/PHASE14_NEAR_MISS_CANDIDATE_CASE_STUDY_FIRST_PASS.md`
+    - `.note/finance/phases/phase14/PHASE14_NEAR_MISS_CANDIDATE_CASE_STUDY_FIRST_PASS.md`
   - compared four representative cases:
     - `Value` balanced exact-hit hold
     - `Quality` SPY-dominance near miss
     - `GTAA` practical non-hold
     - `GTAA` aggressive near miss
   - updated:
-    - `.note/finance/phase14/PHASE14_CURRENT_CHAPTER_TODO.md`
+    - `.note/finance/phases/phase14/PHASE14_CURRENT_CHAPTER_TODO.md`
     - `.note/finance/FINANCE_DOC_INDEX.md`
     - `.note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md`
 - Durable implication:
@@ -4868,7 +4868,7 @@ Keep entries append-only and concise.
 - The user asked to proceed with Phase 14, and the next active workstream was the controlled factor expansion shortlist.
 - Updated:
   - created:
-    - `.note/finance/phase14/PHASE14_CONTROLLED_FACTOR_EXPANSION_SHORTLIST_FIRST_PASS.md`
+    - `.note/finance/phases/phase14/PHASE14_CONTROLLED_FACTOR_EXPANSION_SHORTLIST_FIRST_PASS.md`
   - updated strict annual UI factor options in `app/web/pages/backtest.py`
     - Quality additions:
       - `interest_coverage`
@@ -4879,7 +4879,7 @@ Keep entries append-only and concise.
       - `liquidation_value`
   - kept defaults unchanged and only widened the selectable option set
   - updated:
-    - `.note/finance/phase14/PHASE14_CURRENT_CHAPTER_TODO.md`
+    - `.note/finance/phases/phase14/PHASE14_CURRENT_CHAPTER_TODO.md`
     - `.note/finance/FINANCE_DOC_INDEX.md`
     - `.note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md`
 - Durable implication:
@@ -4890,11 +4890,11 @@ Keep entries append-only and concise.
 - The user wanted Phase 14 to keep moving and also asked that our working guidance explicitly say to use sub-agents when they help, without forcing them when they do not.
 - Updated:
   - created:
-    - `.note/finance/phase14/PHASE14_STRICT_ANNUAL_VALIDATION_POLICY_SENSITIVITY_REVIEW_FIRST_PASS.md`
-    - `.note/finance/phase14/PHASE14_ETF_OPERABILITY_SENSITIVITY_REVIEW_FIRST_PASS.md`
+    - `.note/finance/phases/phase14/PHASE14_STRICT_ANNUAL_VALIDATION_POLICY_SENSITIVITY_REVIEW_FIRST_PASS.md`
+    - `.note/finance/phases/phase14/PHASE14_ETF_OPERABILITY_SENSITIVITY_REVIEW_FIRST_PASS.md`
   - updated:
     - `AGENTS.md`
-    - `.note/finance/phase14/PHASE14_CURRENT_CHAPTER_TODO.md`
+    - `.note/finance/phases/phase14/PHASE14_CURRENT_CHAPTER_TODO.md`
     - `.note/finance/FINANCE_DOC_INDEX.md`
 - Key evidence fixed in this work unit:
   - strict annual exact-hit hold:
@@ -4919,10 +4919,10 @@ Keep entries append-only and concise.
   - ETF `partial data coverage` interpretation rules
 - Updated:
   - created:
-    - `.note/finance/phase14/PHASE14_STRICT_ANNUAL_VALIDATION_STATUS_FIXED_THRESHOLD_REVIEW_FIRST_PASS.md`
-    - `.note/finance/phase14/PHASE14_ETF_OPERABILITY_DATA_COVERAGE_INTERPRETATION_REVIEW_FIRST_PASS.md`
+    - `.note/finance/phases/phase14/PHASE14_STRICT_ANNUAL_VALIDATION_STATUS_FIXED_THRESHOLD_REVIEW_FIRST_PASS.md`
+    - `.note/finance/phases/phase14/PHASE14_ETF_OPERABILITY_DATA_COVERAGE_INTERPRETATION_REVIEW_FIRST_PASS.md`
   - updated:
-    - `.note/finance/phase14/PHASE14_CURRENT_CHAPTER_TODO.md`
+    - `.note/finance/phases/phase14/PHASE14_CURRENT_CHAPTER_TODO.md`
     - `.note/finance/FINANCE_DOC_INDEX.md`
 - Durable implication:
   - strict annual next experiment is now narrowed to:
@@ -4939,14 +4939,14 @@ Keep entries append-only and concise.
 - The user wanted Phase 14 to be carried through to the end and asked for the checklist at the final handoff.
 - Updated:
   - created:
-    - `.note/finance/phase14/PHASE14_FAMILY_SPECIFIC_THRESHOLD_EXPERIMENT_DESIGN_FIRST_PASS.md`
-    - `.note/finance/phase14/PHASE14_DEPLOYMENT_WORKFLOW_BRIDGE_FIRST_PASS.md`
-    - `.note/finance/phase14/PHASE14_PIT_OPERABILITY_LATER_PASS_DECISION.md`
-    - `.note/finance/phase14/PHASE14_TEST_CHECKLIST.md`
-    - `.note/finance/phase14/PHASE14_COMPLETION_SUMMARY.md`
-    - `.note/finance/phase14/PHASE14_NEXT_PHASE_PREPARATION.md`
+    - `.note/finance/phases/phase14/PHASE14_FAMILY_SPECIFIC_THRESHOLD_EXPERIMENT_DESIGN_FIRST_PASS.md`
+    - `.note/finance/phases/phase14/PHASE14_DEPLOYMENT_WORKFLOW_BRIDGE_FIRST_PASS.md`
+    - `.note/finance/phases/phase14/PHASE14_PIT_OPERABILITY_LATER_PASS_DECISION.md`
+    - `.note/finance/phases/phase14/PHASE14_TEST_CHECKLIST.md`
+    - `.note/finance/phases/phase14/PHASE14_COMPLETION_SUMMARY.md`
+    - `.note/finance/phases/phase14/PHASE14_NEXT_PHASE_PREPARATION.md`
   - updated:
-    - `.note/finance/phase14/PHASE14_CURRENT_CHAPTER_TODO.md`
+    - `.note/finance/phases/phase14/PHASE14_CURRENT_CHAPTER_TODO.md`
     - `.note/finance/MASTER_PHASE_ROADMAP.md`
     - `.note/finance/FINANCE_DOC_INDEX.md`
     - `.note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md`
@@ -5267,7 +5267,7 @@ Keep entries append-only and concise.
   - `.note/finance/backtest_reports/strategies/QUALITY_STRICT_ANNUAL_RESCUED_CURRENT_CANDIDATE.md`
   - `.note/finance/backtest_reports/strategies/QUALITY_STRICT_ANNUAL_BACKTEST_LOG.md`
   - `.note/finance/backtest_reports/strategies/QUALITY_STRICT_ANNUAL.md`
-  - `.note/finance/phase15/PHASE15_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/phases/phase15/PHASE15_CURRENT_CHAPTER_TODO.md`
 
 ### 2026-04-13 - Phase 15에서 Quality rescued anchor downside search와 Quality + Value benchmark/pruning search를 정리함
 
@@ -5304,7 +5304,7 @@ Keep entries append-only and concise.
   - `.note/finance/backtest_reports/strategies/QUALITY_STRICT_ANNUAL.md`
   - `.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL_BACKTEST_LOG.md`
   - `.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL.md`
-  - `.note/finance/phase15/PHASE15_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/phases/phase15/PHASE15_CURRENT_CHAPTER_TODO.md`
 
 ### 2026-04-13 - Phase 15에서 Quality rescued anchor bounded factor search와 Quality + Value value-side search를 정리함
 
@@ -5339,7 +5339,7 @@ Keep entries append-only and concise.
   - `.note/finance/backtest_reports/strategies/QUALITY_STRICT_ANNUAL.md`
   - `.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL_BACKTEST_LOG.md`
   - `.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL.md`
-  - `.note/finance/phase15/PHASE15_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/phases/phase15/PHASE15_CURRENT_CHAPTER_TODO.md`
 
 ### 2026-04-13 - Phase 15에서 Quality + Value replacement-anchor follow-up을 정리함
 
@@ -5361,4 +5361,4 @@ Keep entries append-only and concise.
   - `.note/finance/backtest_reports/phase15/PHASE15_QUALITY_VALUE_REPLACEMENT_ANCHOR_FOLLOWUP_FOURTH_PASS.md`
   - `.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL_BACKTEST_LOG.md`
   - `.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL.md`
-  - `.note/finance/phase15/PHASE15_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/phases/phase15/PHASE15_CURRENT_CHAPTER_TODO.md`

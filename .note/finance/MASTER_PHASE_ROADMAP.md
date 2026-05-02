@@ -140,9 +140,9 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 - `legacy_unknown`
 
 ### 주요 문서
-- `.note/finance/phase1/INTERNAL_WEB_APP_DEVELOPMENT_GUIDE.md`
-- `.note/finance/phase1/PHASE1_WEB_APP_SCOPE.md`
-- `.note/finance/phase1/PHASE1_JOB_WRAPPER_INTERFACE.md`
+- `.note/finance/phases/phase1/INTERNAL_WEB_APP_DEVELOPMENT_GUIDE.md`
+- `.note/finance/phases/phase1/PHASE1_WEB_APP_SCOPE.md`
+- `.note/finance/phases/phase1/PHASE1_JOB_WRAPPER_INTERFACE.md`
 
 ---
 
@@ -172,13 +172,13 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 - 종료 요약 문서
 
 ### 주요 문서
-- `.note/finance/phase2/PHASE2_WEB_APP_AND_BACKTEST_PLAN.md`
-- `.note/finance/phase2/PHASE2_CURRENT_CHAPTER_TODO.md`
-- `.note/finance/phase2/PHASE2_POINT_IN_TIME_HARDENING_TODO.md`
-- `.note/finance/phase2/PHASE2_COMPLETION_SUMMARY.md`
-- `.note/finance/phase2/BACKTEST_LOADER_FUNCTION_DRAFT.md`
-- `.note/finance/phase2/BACKTEST_LOADER_INPUT_CONTRACT.md`
-- `.note/finance/phase2/BACKTEST_POINT_IN_TIME_GUIDELINES.md`
+- `.note/finance/phases/phase2/PHASE2_WEB_APP_AND_BACKTEST_PLAN.md`
+- `.note/finance/phases/phase2/PHASE2_CURRENT_CHAPTER_TODO.md`
+- `.note/finance/phases/phase2/PHASE2_POINT_IN_TIME_HARDENING_TODO.md`
+- `.note/finance/phases/phase2/PHASE2_COMPLETION_SUMMARY.md`
+- `.note/finance/phases/phase2/BACKTEST_LOADER_FUNCTION_DRAFT.md`
+- `.note/finance/phases/phase2/BACKTEST_LOADER_INPUT_CONTRACT.md`
+- `.note/finance/phases/phase2/BACKTEST_POINT_IN_TIME_GUIDELINES.md`
 
 ---
 
@@ -214,10 +214,10 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 - 다음 포커스는 runtime 일반화와 Phase 4 handoff 준비
 
 ### 주요 문서
-- `.note/finance/phase3/PHASE3_LOADER_AND_RUNTIME_PLAN.md`
-- `.note/finance/phase3/PHASE3_CURRENT_CHAPTER_TODO.md`
-- `.note/finance/phase3/PHASE3_CHAPTER1_COMPLETION_SUMMARY.md`
-- `.note/finance/phase3/PHASE3_RUNTIME_GENERALIZATION_TODO.md`
+- `.note/finance/phases/phase3/PHASE3_LOADER_AND_RUNTIME_PLAN.md`
+- `.note/finance/phases/phase3/PHASE3_CURRENT_CHAPTER_TODO.md`
+- `.note/finance/phases/phase3/PHASE3_CHAPTER1_COMPLETION_SUMMARY.md`
+- `.note/finance/phases/phase3/PHASE3_RUNTIME_GENERALIZATION_TODO.md`
 
 ---
 
@@ -309,11 +309,11 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
   - 후속 주요 workstream은 `Phase 6`으로 분리되어 이어졌다
 
 ### 주요 문서
-- `.note/finance/phase5/PHASE5_STRATEGY_LIBRARY_AND_RISK_OVERLAY_PLAN.md`
-- `.note/finance/phase5/PHASE5_CURRENT_CHAPTER_TODO.md`
-- `.note/finance/phase5/PHASE5_BASELINE_STRICT_FAMILY_COMPARATIVE_RESEARCH.md`
-- `.note/finance/phase5/PHASE5_COMPARE_ADVANCED_INPUT_PARITY_FIRST_PASS.md`
-- `.note/finance/phase5/PHASE5_FIRST_OVERLAY_REQUIREMENTS_AND_SELECTION.md`
+- `.note/finance/phases/phase5/PHASE5_STRATEGY_LIBRARY_AND_RISK_OVERLAY_PLAN.md`
+- `.note/finance/phases/phase5/PHASE5_CURRENT_CHAPTER_TODO.md`
+- `.note/finance/phases/phase5/PHASE5_BASELINE_STRICT_FAMILY_COMPARATIVE_RESEARCH.md`
+- `.note/finance/phases/phase5/PHASE5_COMPARE_ADVANCED_INPUT_PARITY_FIRST_PASS.md`
+- `.note/finance/phases/phase5/PHASE5_FIRST_OVERLAY_REQUIREMENTS_AND_SELECTION.md`
 
 ---
 
@@ -348,21 +348,21 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
     coverage가 늦게 시작되는 구조가 다음 major blocker로 남아 있다
 
 ### 주요 문서
-- `.note/finance/phase6/PHASE6_OVERLAY_AND_QUARTERLY_EXPANSION_PLAN.md`
-- `.note/finance/phase6/PHASE6_CURRENT_CHAPTER_TODO.md`
-- `.note/finance/phase6/PHASE6_COMPLETION_SUMMARY.md`
-- `.note/finance/phase6/PHASE6_NEXT_PHASE_PREPARATION.md`
-- `.note/finance/phase6/PHASE6_MARKET_REGIME_OVERLAY_REQUIREMENTS.md`
-- `.note/finance/phase6/PHASE6_MARKET_REGIME_OVERLAY_FIRST_PASS.md`
-- `.note/finance/phase6/PHASE6_MARKET_REGIME_OVERLAY_VALIDATION.md`
-- `.note/finance/phase6/PHASE6_STRICT_QUARTERLY_ENTRY_CRITERIA.md`
-- `.note/finance/phase6/PHASE6_STRICT_QUARTERLY_FIRST_PASS_VALIDATION.md`
-- `.note/finance/phase6/PHASE6_TEST_CHECKLIST.md`
-- `.note/finance/phase5/PHASE5_OVERLAY_RUNTIME_FIRST_PASS.md`
-- `.note/finance/phase5/PHASE5_QUARTERLY_STRICT_FAMILY_REVIEW.md`
-- `.note/finance/phase5/PHASE5_SECOND_OVERLAY_CANDIDATE_REVIEW.md`
-- `.note/finance/phase5/PHASE5_COMPLETION_SUMMARY.md`
-- `.note/finance/phase5/PHASE5_NEXT_PHASE_PREPARATION.md`
+- `.note/finance/phases/phase6/PHASE6_OVERLAY_AND_QUARTERLY_EXPANSION_PLAN.md`
+- `.note/finance/phases/phase6/PHASE6_CURRENT_CHAPTER_TODO.md`
+- `.note/finance/phases/phase6/PHASE6_COMPLETION_SUMMARY.md`
+- `.note/finance/phases/phase6/PHASE6_NEXT_PHASE_PREPARATION.md`
+- `.note/finance/phases/phase6/PHASE6_MARKET_REGIME_OVERLAY_REQUIREMENTS.md`
+- `.note/finance/phases/phase6/PHASE6_MARKET_REGIME_OVERLAY_FIRST_PASS.md`
+- `.note/finance/phases/phase6/PHASE6_MARKET_REGIME_OVERLAY_VALIDATION.md`
+- `.note/finance/phases/phase6/PHASE6_STRICT_QUARTERLY_ENTRY_CRITERIA.md`
+- `.note/finance/phases/phase6/PHASE6_STRICT_QUARTERLY_FIRST_PASS_VALIDATION.md`
+- `.note/finance/phases/phase6/PHASE6_TEST_CHECKLIST.md`
+- `.note/finance/phases/phase5/PHASE5_OVERLAY_RUNTIME_FIRST_PASS.md`
+- `.note/finance/phases/phase5/PHASE5_QUARTERLY_STRICT_FAMILY_REVIEW.md`
+- `.note/finance/phases/phase5/PHASE5_SECOND_OVERLAY_CANDIDATE_REVIEW.md`
+- `.note/finance/phases/phase5/PHASE5_COMPLETION_SUMMARY.md`
+- `.note/finance/phases/phase5/PHASE5_NEXT_PHASE_PREPARATION.md`
 
 ---
 
@@ -407,14 +407,14 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
   Phase 7 핵심 목표였던 quarterly coverage hardening / PIT inspection / longer-history recovery는 closeout 가능한 수준으로 정리되었다
 
 ### 주요 문서
-- `.note/finance/phase7/PHASE7_QUARTERLY_COVERAGE_AND_STATEMENT_PIT_HARDENING_PLAN.md`
-- `.note/finance/phase7/PHASE7_CURRENT_CHAPTER_TODO.md`
-- `.note/finance/phase7/PHASE7_STATEMENT_SOURCE_PAYLOAD_INSPECTION.md`
-- `.note/finance/phase7/PHASE7_RAW_STATEMENT_LEDGER_REVIEW_AND_DECISION.md`
-- `.note/finance/phase7/PHASE7_QUARTERLY_COVERAGE_HARDENING_FIRST_PASS.md`
-- `.note/finance/phase7/PHASE7_SUPPLEMENTARY_POLISH_PASS.md`
-- `.note/finance/phase7/PHASE7_COMPLETION_SUMMARY.md`
-- `.note/finance/phase7/PHASE7_NEXT_PHASE_PREPARATION.md`
+- `.note/finance/phases/phase7/PHASE7_QUARTERLY_COVERAGE_AND_STATEMENT_PIT_HARDENING_PLAN.md`
+- `.note/finance/phases/phase7/PHASE7_CURRENT_CHAPTER_TODO.md`
+- `.note/finance/phases/phase7/PHASE7_STATEMENT_SOURCE_PAYLOAD_INSPECTION.md`
+- `.note/finance/phases/phase7/PHASE7_RAW_STATEMENT_LEDGER_REVIEW_AND_DECISION.md`
+- `.note/finance/phases/phase7/PHASE7_QUARTERLY_COVERAGE_HARDENING_FIRST_PASS.md`
+- `.note/finance/phases/phase7/PHASE7_SUPPLEMENTARY_POLISH_PASS.md`
+- `.note/finance/phases/phase7/PHASE7_COMPLETION_SUMMARY.md`
+- `.note/finance/phases/phase7/PHASE7_NEXT_PHASE_PREPARATION.md`
 
 ---
 
@@ -454,16 +454,16 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
   까지 정리되어 later batch validation에 유리한 상태다
 
 ### 주요 문서
-- `.note/finance/phase8/PHASE8_QUARTERLY_STRATEGY_FAMILY_EXPANSION_PLAN.md`
-- `.note/finance/phase8/PHASE8_CURRENT_CHAPTER_TODO.md`
-- `.note/finance/phase8/PHASE8_QUARTERLY_FAMILY_SCOPE_AND_COMPARE_DECISION.md`
-- `.note/finance/phase8/PHASE8_QUARTERLY_VALUE_AND_MULTI_FACTOR_FIRST_PASS.md`
-- `.note/finance/phase8/PHASE8_QUARTERLY_VALIDATION_FIRST_PASS.md`
-- `.note/finance/phase8/PHASE8_PRICE_STALE_DIAGNOSIS_FIRST_PASS.md`
-- `.note/finance/phase8/PHASE8_STATEMENT_SHADOW_COVERAGE_GAP_DIAGNOSTICS.md`
-- `.note/finance/phase8/PHASE8_OPERATOR_RUNTIME_AND_SHADOW_REBUILD_TOOLING.md`
-- `.note/finance/phase8/PHASE8_STATEMENT_COVERAGE_DIAGNOSIS_GUIDANCE.md`
-- `.note/finance/phase8/PHASE8_TEST_CHECKLIST.md`
+- `.note/finance/phases/phase8/PHASE8_QUARTERLY_STRATEGY_FAMILY_EXPANSION_PLAN.md`
+- `.note/finance/phases/phase8/PHASE8_CURRENT_CHAPTER_TODO.md`
+- `.note/finance/phases/phase8/PHASE8_QUARTERLY_FAMILY_SCOPE_AND_COMPARE_DECISION.md`
+- `.note/finance/phases/phase8/PHASE8_QUARTERLY_VALUE_AND_MULTI_FACTOR_FIRST_PASS.md`
+- `.note/finance/phases/phase8/PHASE8_QUARTERLY_VALIDATION_FIRST_PASS.md`
+- `.note/finance/phases/phase8/PHASE8_PRICE_STALE_DIAGNOSIS_FIRST_PASS.md`
+- `.note/finance/phases/phase8/PHASE8_STATEMENT_SHADOW_COVERAGE_GAP_DIAGNOSTICS.md`
+- `.note/finance/phases/phase8/PHASE8_OPERATOR_RUNTIME_AND_SHADOW_REBUILD_TOOLING.md`
+- `.note/finance/phases/phase8/PHASE8_STATEMENT_COVERAGE_DIAGNOSIS_GUIDANCE.md`
+- `.note/finance/phases/phase8/PHASE8_TEST_CHECKLIST.md`
 
 ---
 
@@ -507,14 +507,14 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
   Phase 9에서 먼저 coverage 정책과 승격 기준을 고정하는 것이 맞다
 
 ### 주요 문서
-- `.note/finance/phase9/PHASE9_STRICT_COVERAGE_POLICY_AND_PROMOTION_PLAN.md`
-- `.note/finance/phase9/PHASE9_CURRENT_CHAPTER_TODO.md`
-- `.note/finance/phase9/PHASE9_REAL_MONEY_VALIDATION_DIRECTION.md`
-- `.note/finance/phase9/PHASE9_STRICT_COVERAGE_EXCEPTION_INVENTORY.md`
-- `.note/finance/phase9/PHASE9_STRICT_COVERAGE_POLICY_DECISION.md`
-- `.note/finance/phase9/PHASE9_STRICT_FAMILY_PROMOTION_GATE.md`
-- `.note/finance/phase9/PHASE9_OPERATOR_DECISION_TREE.md`
-- `.note/finance/phase9/PHASE9_TEST_CHECKLIST.md`
+- `.note/finance/phases/phase9/PHASE9_STRICT_COVERAGE_POLICY_AND_PROMOTION_PLAN.md`
+- `.note/finance/phases/phase9/PHASE9_CURRENT_CHAPTER_TODO.md`
+- `.note/finance/phases/phase9/PHASE9_REAL_MONEY_VALIDATION_DIRECTION.md`
+- `.note/finance/phases/phase9/PHASE9_STRICT_COVERAGE_EXCEPTION_INVENTORY.md`
+- `.note/finance/phases/phase9/PHASE9_STRICT_COVERAGE_POLICY_DECISION.md`
+- `.note/finance/phases/phase9/PHASE9_STRICT_FAMILY_PROMOTION_GATE.md`
+- `.note/finance/phases/phase9/PHASE9_OPERATOR_DECISION_TREE.md`
+- `.note/finance/phases/phase9/PHASE9_TEST_CHECKLIST.md`
 
 ---
 
@@ -558,15 +558,15 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
   productization보다 먼저 Phase 10을 구현하는 것이 더 합리적이다
 
 ### 주요 문서
-- `.note/finance/phase10/PHASE10_HISTORICAL_DYNAMIC_PIT_UNIVERSE_PLAN.md`
-- `.note/finance/phase10/PHASE10_CURRENT_CHAPTER_TODO.md`
-- `.note/finance/phase10/PHASE10_PIT_SOURCE_AND_SCHEMA_GAP_ANALYSIS.md`
-- `.note/finance/phase10/PHASE10_DYNAMIC_PIT_FIRST_PASS_IMPLEMENTATION_ORDER.md`
-- `.note/finance/phase10/PHASE10_ANNUAL_STRICT_DYNAMIC_PIT_FIRST_PASS.md`
-- `.note/finance/phase10/PHASE10_DYNAMIC_PIT_SECOND_PASS_HARDENING.md`
-- `.note/finance/phase10/PHASE10_COMPLETION_SUMMARY.md`
-- `.note/finance/phase10/PHASE10_NEXT_PHASE_PREPARATION.md`
-- `.note/finance/phase10/PHASE10_TEST_CHECKLIST.md`
+- `.note/finance/phases/phase10/PHASE10_HISTORICAL_DYNAMIC_PIT_UNIVERSE_PLAN.md`
+- `.note/finance/phases/phase10/PHASE10_CURRENT_CHAPTER_TODO.md`
+- `.note/finance/phases/phase10/PHASE10_PIT_SOURCE_AND_SCHEMA_GAP_ANALYSIS.md`
+- `.note/finance/phases/phase10/PHASE10_DYNAMIC_PIT_FIRST_PASS_IMPLEMENTATION_ORDER.md`
+- `.note/finance/phases/phase10/PHASE10_ANNUAL_STRICT_DYNAMIC_PIT_FIRST_PASS.md`
+- `.note/finance/phases/phase10/PHASE10_DYNAMIC_PIT_SECOND_PASS_HARDENING.md`
+- `.note/finance/phases/phase10/PHASE10_COMPLETION_SUMMARY.md`
+- `.note/finance/phases/phase10/PHASE10_NEXT_PHASE_PREPARATION.md`
+- `.note/finance/phases/phase10/PHASE10_TEST_CHECKLIST.md`
 
 ---
 
@@ -617,13 +617,13 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
   이는 later backlog로 남기고 first-pass practical closeout 처리한다
 
 ### 주요 문서
-- `.note/finance/phase11/PHASE11_PORTFOLIO_PRODUCTIZATION_AND_RESEARCH_WORKFLOW_PLAN.md`
-- `.note/finance/phase11/PHASE11_CURRENT_CHAPTER_TODO.md`
-- `.note/finance/phase11/PHASE11_EXECUTION_PREPARATION.md`
-- `.note/finance/phase11/PHASE11_SAVED_PORTFOLIO_FIRST_PASS.md`
-- `.note/finance/phase11/PHASE11_COMPLETION_SUMMARY.md`
-- `.note/finance/phase11/PHASE11_NEXT_PHASE_PREPARATION.md`
-- `.note/finance/phase11/PHASE11_TEST_CHECKLIST.md`
+- `.note/finance/phases/phase11/PHASE11_PORTFOLIO_PRODUCTIZATION_AND_RESEARCH_WORKFLOW_PLAN.md`
+- `.note/finance/phases/phase11/PHASE11_CURRENT_CHAPTER_TODO.md`
+- `.note/finance/phases/phase11/PHASE11_EXECUTION_PREPARATION.md`
+- `.note/finance/phases/phase11/PHASE11_SAVED_PORTFOLIO_FIRST_PASS.md`
+- `.note/finance/phases/phase11/PHASE11_COMPLETION_SUMMARY.md`
+- `.note/finance/phases/phase11/PHASE11_NEXT_PHASE_PREPARATION.md`
+- `.note/finance/phases/phase11/PHASE11_TEST_CHECKLIST.md`
 
 ---
 
@@ -680,13 +680,13 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
   second-pass deployment-readiness / probation / monitoring 쪽으로 여는 것이 자연스럽다
 
 ### 주요 문서
-- `.note/finance/phase12/PHASE12_REAL_MONEY_STRATEGY_PROMOTION_PLAN.md`
-- `.note/finance/phase12/PHASE12_CURRENT_CHAPTER_TODO.md`
-- `.note/finance/phase12/PHASE12_STRATEGY_PRODUCTION_AUDIT_MATRIX.md`
-- `.note/finance/phase12/PHASE12_REAL_MONEY_PROMOTION_CONTRACT.md`
-- `.note/finance/phase12/PHASE12_COMPLETION_SUMMARY.md`
-- `.note/finance/phase12/PHASE12_NEXT_PHASE_PREPARATION.md`
-- `.note/finance/phase12/PHASE12_TEST_CHECKLIST.md`
+- `.note/finance/phases/phase12/PHASE12_REAL_MONEY_STRATEGY_PROMOTION_PLAN.md`
+- `.note/finance/phases/phase12/PHASE12_CURRENT_CHAPTER_TODO.md`
+- `.note/finance/phases/phase12/PHASE12_STRATEGY_PRODUCTION_AUDIT_MATRIX.md`
+- `.note/finance/phases/phase12/PHASE12_REAL_MONEY_PROMOTION_CONTRACT.md`
+- `.note/finance/phases/phase12/PHASE12_COMPLETION_SUMMARY.md`
+- `.note/finance/phases/phase12/PHASE12_NEXT_PHASE_PREPARATION.md`
+- `.note/finance/phases/phase12/PHASE12_TEST_CHECKLIST.md`
 
 ---
 
@@ -737,11 +737,11 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
   이제는 추가 기능보다 probation / monitoring 관점에서 재해석하는 쪽이 우선이다
 
 ### 주요 문서
-- `.note/finance/phase13/PHASE13_DEPLOYMENT_READINESS_AND_PROBATION_PLAN.md`
-- `.note/finance/phase13/PHASE13_CURRENT_CHAPTER_TODO.md`
-- `.note/finance/phase13/PHASE13_COMPLETION_SUMMARY.md`
-- `.note/finance/phase13/PHASE13_NEXT_PHASE_PREPARATION.md`
-- `.note/finance/phase13/PHASE13_TEST_CHECKLIST.md`
+- `.note/finance/phases/phase13/PHASE13_DEPLOYMENT_READINESS_AND_PROBATION_PLAN.md`
+- `.note/finance/phases/phase13/PHASE13_CURRENT_CHAPTER_TODO.md`
+- `.note/finance/phases/phase13/PHASE13_COMPLETION_SUMMARY.md`
+- `.note/finance/phases/phase13/PHASE13_NEXT_PHASE_PREPARATION.md`
+- `.note/finance/phases/phase13/PHASE13_TEST_CHECKLIST.md`
 
 ---
 
@@ -792,22 +792,22 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
   현재는 next implementation phase를 bounded하게 열 수 있는 상태다
 
 ### 주요 문서
-- `.note/finance/phase14/PHASE14_REAL_MONEY_GATE_CALIBRATION_AND_DEPLOYMENT_WORKFLOW_PLAN.md`
-- `.note/finance/phase14/PHASE14_CURRENT_CHAPTER_TODO.md`
-- `.note/finance/phase14/PHASE14_GATE_BLOCKER_DISTRIBUTION_AUDIT_FIRST_PASS.md`
-- `.note/finance/phase14/PHASE14_PROMOTION_SHORTLIST_CALIBRATION_REVIEW_FIRST_PASS.md`
-- `.note/finance/phase14/PHASE14_CONTROLLED_FACTOR_EXPANSION_SHORTLIST_FIRST_PASS.md`
-- `.note/finance/phase14/PHASE14_NEAR_MISS_CANDIDATE_CASE_STUDY_FIRST_PASS.md`
-- `.note/finance/phase14/PHASE14_STRICT_ANNUAL_VALIDATION_POLICY_SENSITIVITY_REVIEW_FIRST_PASS.md`
-- `.note/finance/phase14/PHASE14_ETF_OPERABILITY_SENSITIVITY_REVIEW_FIRST_PASS.md`
-- `.note/finance/phase14/PHASE14_STRICT_ANNUAL_VALIDATION_STATUS_FIXED_THRESHOLD_REVIEW_FIRST_PASS.md`
-- `.note/finance/phase14/PHASE14_ETF_OPERABILITY_DATA_COVERAGE_INTERPRETATION_REVIEW_FIRST_PASS.md`
-- `.note/finance/phase14/PHASE14_FAMILY_SPECIFIC_THRESHOLD_EXPERIMENT_DESIGN_FIRST_PASS.md`
-- `.note/finance/phase14/PHASE14_DEPLOYMENT_WORKFLOW_BRIDGE_FIRST_PASS.md`
-- `.note/finance/phase14/PHASE14_PIT_OPERABILITY_LATER_PASS_DECISION.md`
-- `.note/finance/phase14/PHASE14_COMPLETION_SUMMARY.md`
-- `.note/finance/phase14/PHASE14_NEXT_PHASE_PREPARATION.md`
-- `.note/finance/phase14/PHASE14_TEST_CHECKLIST.md`
+- `.note/finance/phases/phase14/PHASE14_REAL_MONEY_GATE_CALIBRATION_AND_DEPLOYMENT_WORKFLOW_PLAN.md`
+- `.note/finance/phases/phase14/PHASE14_CURRENT_CHAPTER_TODO.md`
+- `.note/finance/phases/phase14/PHASE14_GATE_BLOCKER_DISTRIBUTION_AUDIT_FIRST_PASS.md`
+- `.note/finance/phases/phase14/PHASE14_PROMOTION_SHORTLIST_CALIBRATION_REVIEW_FIRST_PASS.md`
+- `.note/finance/phases/phase14/PHASE14_CONTROLLED_FACTOR_EXPANSION_SHORTLIST_FIRST_PASS.md`
+- `.note/finance/phases/phase14/PHASE14_NEAR_MISS_CANDIDATE_CASE_STUDY_FIRST_PASS.md`
+- `.note/finance/phases/phase14/PHASE14_STRICT_ANNUAL_VALIDATION_POLICY_SENSITIVITY_REVIEW_FIRST_PASS.md`
+- `.note/finance/phases/phase14/PHASE14_ETF_OPERABILITY_SENSITIVITY_REVIEW_FIRST_PASS.md`
+- `.note/finance/phases/phase14/PHASE14_STRICT_ANNUAL_VALIDATION_STATUS_FIXED_THRESHOLD_REVIEW_FIRST_PASS.md`
+- `.note/finance/phases/phase14/PHASE14_ETF_OPERABILITY_DATA_COVERAGE_INTERPRETATION_REVIEW_FIRST_PASS.md`
+- `.note/finance/phases/phase14/PHASE14_FAMILY_SPECIFIC_THRESHOLD_EXPERIMENT_DESIGN_FIRST_PASS.md`
+- `.note/finance/phases/phase14/PHASE14_DEPLOYMENT_WORKFLOW_BRIDGE_FIRST_PASS.md`
+- `.note/finance/phases/phase14/PHASE14_PIT_OPERABILITY_LATER_PASS_DECISION.md`
+- `.note/finance/phases/phase14/PHASE14_COMPLETION_SUMMARY.md`
+- `.note/finance/phases/phase14/PHASE14_NEXT_PHASE_PREPARATION.md`
+- `.note/finance/phases/phase14/PHASE14_TEST_CHECKLIST.md`
 
 ---
 
@@ -870,11 +870,11 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
   practical closeout까지 왔다
 
 ### 주요 문서
-- `.note/finance/phase15/PHASE15_CANDIDATE_QUALITY_IMPROVEMENT_PLAN.md`
-- `.note/finance/phase15/PHASE15_CURRENT_CHAPTER_TODO.md`
-- `.note/finance/phase15/PHASE15_COMPLETION_SUMMARY.md`
-- `.note/finance/phase15/PHASE15_NEXT_PHASE_PREPARATION.md`
-- `.note/finance/phase15/PHASE15_TEST_CHECKLIST.md`
+- `.note/finance/phases/phase15/PHASE15_CANDIDATE_QUALITY_IMPROVEMENT_PLAN.md`
+- `.note/finance/phases/phase15/PHASE15_CURRENT_CHAPTER_TODO.md`
+- `.note/finance/phases/phase15/PHASE15_COMPLETION_SUMMARY.md`
+- `.note/finance/phases/phase15/PHASE15_NEXT_PHASE_PREPARATION.md`
+- `.note/finance/phases/phase15/PHASE15_TEST_CHECKLIST.md`
 - `.note/finance/backtest_reports/phase15/PHASE15_VALUE_DOWNSIDE_IMPROVEMENT_SEARCH_FIRST_PASS.md`
 - `.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL_DOWNSIDE_IMPROVED_CURRENT_CANDIDATE.md`
 - `.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL_FACTOR_ADDITION_BEST_CURRENT_CANDIDATE.md`
@@ -921,13 +921,13 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
   bounded refinement closeout 후 structural downside improvement로 넘어가는 것이다
 
 ### 주요 문서
-- `.note/finance/phase16/README.md`
-- `.note/finance/phase16/PHASE16_CURRENT_CHAPTER_TODO.md`
-- `.note/finance/phase16/PHASE16_VALUE_DOWNSIDE_REFINEMENT_FIRST_PASS.md`
-- `.note/finance/phase16/PHASE16_QUALITY_VALUE_DOWNSIDE_REFINEMENT_FIRST_PASS.md`
-- `.note/finance/phase16/PHASE16_COMPLETION_SUMMARY.md`
-- `.note/finance/phase16/PHASE16_NEXT_PHASE_PREPARATION.md`
-- `.note/finance/phase16/PHASE16_TEST_CHECKLIST.md`
+- `.note/finance/phases/phase16/README.md`
+- `.note/finance/phases/phase16/PHASE16_CURRENT_CHAPTER_TODO.md`
+- `.note/finance/phases/phase16/PHASE16_VALUE_DOWNSIDE_REFINEMENT_FIRST_PASS.md`
+- `.note/finance/phases/phase16/PHASE16_QUALITY_VALUE_DOWNSIDE_REFINEMENT_FIRST_PASS.md`
+- `.note/finance/phases/phase16/PHASE16_COMPLETION_SUMMARY.md`
+- `.note/finance/phases/phase16/PHASE16_NEXT_PHASE_PREPARATION.md`
+- `.note/finance/phases/phase16/PHASE16_TEST_CHECKLIST.md`
 - `.note/finance/backtest_reports/phase16/PHASE16_VALUE_DOWNSIDE_RESCUE_SEARCH_SECOND_PASS.md`
 - `.note/finance/backtest_reports/phase16/PHASE16_QUALITY_VALUE_STRONGEST_POINT_DOWNSIDE_FOLLOWUP_SECOND_PASS.md`
 - `.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL_BACKTEST_LOG.md`
@@ -987,17 +987,17 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
   Phase 17에서는 operator bridge 보조 트랙으로 둔다
 
 ### 주요 문서
-- `.note/finance/phase17/README.md`
-- `.note/finance/phase17/PHASE17_STRUCTURAL_DOWNSIDE_IMPROVEMENT_PLAN.md`
-- `.note/finance/phase17/PHASE17_CURRENT_CHAPTER_TODO.md`
-- `.note/finance/phase17/PHASE17_STRUCTURAL_LEVER_INVENTORY_FIRST_PASS.md`
-- `.note/finance/phase17/PHASE17_CANDIDATE_CONSOLIDATION_FIT_REVIEW_FIRST_PASS.md`
-- `.note/finance/phase17/PHASE17_PARTIAL_CASH_RETENTION_IMPLEMENTATION_FIRST_SLICE.md`
-- `.note/finance/phase17/PHASE17_DEFENSIVE_SLEEVE_RISK_OFF_IMPLEMENTATION_SECOND_SLICE.md`
-- `.note/finance/phase17/PHASE17_CONCENTRATION_AWARE_WEIGHTING_IMPLEMENTATION_THIRD_SLICE.md`
-- `.note/finance/phase17/PHASE17_COMPLETION_SUMMARY.md`
-- `.note/finance/phase17/PHASE17_NEXT_PHASE_PREPARATION.md`
-- `.note/finance/phase17/PHASE17_TEST_CHECKLIST.md`
+- `.note/finance/phases/phase17/README.md`
+- `.note/finance/phases/phase17/PHASE17_STRUCTURAL_DOWNSIDE_IMPROVEMENT_PLAN.md`
+- `.note/finance/phases/phase17/PHASE17_CURRENT_CHAPTER_TODO.md`
+- `.note/finance/phases/phase17/PHASE17_STRUCTURAL_LEVER_INVENTORY_FIRST_PASS.md`
+- `.note/finance/phases/phase17/PHASE17_CANDIDATE_CONSOLIDATION_FIT_REVIEW_FIRST_PASS.md`
+- `.note/finance/phases/phase17/PHASE17_PARTIAL_CASH_RETENTION_IMPLEMENTATION_FIRST_SLICE.md`
+- `.note/finance/phases/phase17/PHASE17_DEFENSIVE_SLEEVE_RISK_OFF_IMPLEMENTATION_SECOND_SLICE.md`
+- `.note/finance/phases/phase17/PHASE17_CONCENTRATION_AWARE_WEIGHTING_IMPLEMENTATION_THIRD_SLICE.md`
+- `.note/finance/phases/phase17/PHASE17_COMPLETION_SUMMARY.md`
+- `.note/finance/phases/phase17/PHASE17_NEXT_PHASE_PREPARATION.md`
+- `.note/finance/phases/phase17/PHASE17_TEST_CHECKLIST.md`
 
 ---
 
@@ -1049,13 +1049,13 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
   integrated deep rerun을 다시 여는 것이 current phase 원칙이다
 
 ### 주요 문서
-- `.note/finance/phase18/PHASE18_LARGER_STRUCTURAL_REDESIGN_PLAN.md`
-- `.note/finance/phase18/PHASE18_CURRENT_CHAPTER_TODO.md`
-- `.note/finance/phase18/PHASE18_IMPLEMENTATION_FIRST_REPRIORITIZATION.md`
-- `.note/finance/phase18/PHASE18_NEXT_RANKED_FILL_IMPLEMENTATION_FIRST_SLICE.md`
-- `.note/finance/phase18/PHASE18_COMPLETION_SUMMARY.md`
-- `.note/finance/phase18/PHASE18_NEXT_PHASE_PREPARATION.md`
-- `.note/finance/phase18/PHASE18_TEST_CHECKLIST.md`
+- `.note/finance/phases/phase18/PHASE18_LARGER_STRUCTURAL_REDESIGN_PLAN.md`
+- `.note/finance/phases/phase18/PHASE18_CURRENT_CHAPTER_TODO.md`
+- `.note/finance/phases/phase18/PHASE18_IMPLEMENTATION_FIRST_REPRIORITIZATION.md`
+- `.note/finance/phases/phase18/PHASE18_NEXT_RANKED_FILL_IMPLEMENTATION_FIRST_SLICE.md`
+- `.note/finance/phases/phase18/PHASE18_COMPLETION_SUMMARY.md`
+- `.note/finance/phases/phase18/PHASE18_NEXT_PHASE_PREPARATION.md`
+- `.note/finance/phases/phase18/PHASE18_TEST_CHECKLIST.md`
 - `.note/finance/backtest_reports/phase18/README.md`
 - `.note/finance/backtest_reports/phase18/PHASE18_NEXT_RANKED_FILL_REPRESENTATIVE_RERUN_FIRST_PASS.md`
 
@@ -1226,12 +1226,12 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
   이제 다음 main phase는 `Phase 22` portfolio-level candidate construction이다
 
 ### 주요 문서
-- `.note/finance/phase21/PHASE21_INTEGRATED_DEEP_BACKTEST_VALIDATION_PLAN.md`
-- `.note/finance/phase21/PHASE21_CURRENT_CHAPTER_TODO.md`
-- `.note/finance/phase21/PHASE21_VALIDATION_FRAME_DEFINITION_FIRST_WORK_UNIT.md`
-- `.note/finance/phase21/PHASE21_COMPLETION_SUMMARY.md`
-- `.note/finance/phase21/PHASE21_NEXT_PHASE_PREPARATION.md`
-- `.note/finance/phase21/PHASE21_TEST_CHECKLIST.md`
+- `.note/finance/phases/phase21/PHASE21_INTEGRATED_DEEP_BACKTEST_VALIDATION_PLAN.md`
+- `.note/finance/phases/phase21/PHASE21_CURRENT_CHAPTER_TODO.md`
+- `.note/finance/phases/phase21/PHASE21_VALIDATION_FRAME_DEFINITION_FIRST_WORK_UNIT.md`
+- `.note/finance/phases/phase21/PHASE21_COMPLETION_SUMMARY.md`
+- `.note/finance/phases/phase21/PHASE21_NEXT_PHASE_PREPARATION.md`
+- `.note/finance/phases/phase21/PHASE21_TEST_CHECKLIST.md`
 
 ---
 
@@ -1304,13 +1304,13 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
   `사용자 요청 분석`으로 기록한다
 
 ### 주요 문서
-- `.note/finance/phase22/PHASE22_PORTFOLIO_LEVEL_CANDIDATE_CONSTRUCTION_PLAN.md`
-- `.note/finance/phase22/PHASE22_CURRENT_CHAPTER_TODO.md`
-- `.note/finance/phase22/PHASE22_PORTFOLIO_LEVEL_CANDIDATE_SEMANTICS_FIRST_WORK_UNIT.md`
-- `.note/finance/phase22/PHASE22_PORTFOLIO_BENCHMARK_GUARDRAIL_AND_WEIGHT_SCOPE_SECOND_WORK_UNIT.md`
-- `.note/finance/phase22/PHASE22_COMPLETION_SUMMARY.md`
-- `.note/finance/phase22/PHASE22_NEXT_PHASE_PREPARATION.md`
-- `.note/finance/phase22/PHASE22_TEST_CHECKLIST.md`
+- `.note/finance/phases/phase22/PHASE22_PORTFOLIO_LEVEL_CANDIDATE_CONSTRUCTION_PLAN.md`
+- `.note/finance/phases/phase22/PHASE22_CURRENT_CHAPTER_TODO.md`
+- `.note/finance/phases/phase22/PHASE22_PORTFOLIO_LEVEL_CANDIDATE_SEMANTICS_FIRST_WORK_UNIT.md`
+- `.note/finance/phases/phase22/PHASE22_PORTFOLIO_BENCHMARK_GUARDRAIL_AND_WEIGHT_SCOPE_SECOND_WORK_UNIT.md`
+- `.note/finance/phases/phase22/PHASE22_COMPLETION_SUMMARY.md`
+- `.note/finance/phases/phase22/PHASE22_NEXT_PHASE_PREPARATION.md`
+- `.note/finance/phases/phase22/PHASE22_TEST_CHECKLIST.md`
 - `.note/finance/backtest_reports/phase22/PHASE22_BASELINE_PORTFOLIO_CANDIDATE_PACK_FIRST_PASS.md`
 - `.note/finance/backtest_reports/phase22/PHASE22_WEIGHT_ALTERNATIVE_RERUN_FIRST_PASS.md`
 
@@ -1448,7 +1448,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 주의:
 - 이 문서의 위쪽 phase별 상세 기록에는 당시 기준의 legacy 상태 표현이 남아 있을 수 있다.
 - 현재 gate 판단은 아래 `현재 위치` 표와
-  `.note/finance/phase26/PHASE26_BACKLOG_REBASE_AND_FOUNDATION_GAP_MAP.md`를 우선한다.
+  `.note/finance/phases/phase26/PHASE26_BACKLOG_REBASE_AND_FOUNDATION_GAP_MAP.md`를 우선한다.
 
 | Phase | 진행 상태 | 검증 상태 | 현재 해석 |
 |---|---|---|---|

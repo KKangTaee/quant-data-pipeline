@@ -49,7 +49,7 @@
 | `code_analysis/*` | 실제 코드 수정자가 보는 개발자용 흐름 지도 |
 | `WORK_PROGRESS.md` | 최근 작업 진행 로그 |
 | `QUESTION_AND_ANALYSIS_LOG.md` | 사용자 질문과 설계 판단의 durable summary |
-| `phase*/` | phase별 계획, TODO, QA, closeout |
+| `phases/phase*/` | phase별 계획, TODO, QA, closeout |
 | `backtest_reports/` | 반복 가능한 backtest 결과와 후보 검토 |
 
 ## 코드 변경 후 갱신 기준

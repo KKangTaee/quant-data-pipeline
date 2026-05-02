@@ -47,9 +47,9 @@
 
 ### phase archive
 
-- `.note/finance/phase7/PHASE7_WORKLOG.md`
-- `.note/finance/phase8/PHASE8_WORKLOG.md`
-- `.note/finance/phase12/PHASE12_WORKLOG.md`
+- `.note/finance/phases/phase7/PHASE7_WORKLOG.md`
+- `.note/finance/phases/phase8/PHASE8_WORKLOG.md`
+- `.note/finance/phases/phase12/PHASE12_WORKLOG.md`
 
 형태로, phase가 커졌을 때 상세 구현 로그를 옮기는 방식을 기본으로 한다.
 

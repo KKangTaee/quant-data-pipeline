@@ -18,5 +18,5 @@
 ## 관리 기준
 
 - backtest 결과는 `../backtest_reports/`에 둔다.
-- phase 실행 문서는 `../phase*/`에 둔다.
+- phase 실행 문서는 `../phases/phase*/`에 둔다.
 - 투자 후보 / 포트폴리오 구성 제안에 참고되는 장기 research note만 이 폴더에 둔다.

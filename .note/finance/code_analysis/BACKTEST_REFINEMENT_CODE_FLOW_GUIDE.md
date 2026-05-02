@@ -79,7 +79,7 @@ real-money 해석 핵심 구간:
 전략 refinement 결과를 남길 때는 보통 아래 순서로 간다.
 
 1. active phase 문서
-   - 예: [PHASE17_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase17/PHASE17_CURRENT_CHAPTER_TODO.md)
+   - 예: [PHASE17_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phases/phase17/PHASE17_CURRENT_CHAPTER_TODO.md)
 2. phase raw report
    - 예: `PHASE16_*_FIRST_PASS.md`
 3. strategy hub
@@ -106,7 +106,7 @@ real-money 해석 핵심 구간:
 
 - [CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md)
   - 지금 어떤 후보를 기준점으로 삼아야 하는지
-- [PHASE17_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase17/PHASE17_CURRENT_CHAPTER_TODO.md)
+- [PHASE17_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phases/phase17/PHASE17_CURRENT_CHAPTER_TODO.md)
   - 지금 active structural refinement가 어디까지 왔는지
 - [VALUE_STRICT_ANNUAL.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL.md)
 - [QUALITY_STRICT_ANNUAL.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/QUALITY_STRICT_ANNUAL.md)

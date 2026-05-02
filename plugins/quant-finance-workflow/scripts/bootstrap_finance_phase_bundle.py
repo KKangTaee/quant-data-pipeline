@@ -9,6 +9,7 @@ from textwrap import dedent
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 FINANCE_NOTE_DIR = REPO_ROOT / ".note" / "finance"
+PHASES_DIR = FINANCE_NOTE_DIR / "phases"
 PHASE_PLAN_TEMPLATE = FINANCE_NOTE_DIR / "PHASE_PLAN_TEMPLATE.md"
 PHASE_CHECKLIST_TEMPLATE = FINANCE_NOTE_DIR / "PHASE_TEST_CHECKLIST_TEMPLATE.md"
 
@@ -19,7 +20,8 @@ def _slugify(value: str) -> str:
 
 
 def _phase_dir(phase_number: int) -> Path:
-    return FINANCE_NOTE_DIR / f"phase{phase_number}"
+    # Return the canonical location for phase-specific planning bundles.
+    return PHASES_DIR / f"phase{phase_number}"
 
 
 def _prefixed_template(header: str, template_path: Path) -> str:

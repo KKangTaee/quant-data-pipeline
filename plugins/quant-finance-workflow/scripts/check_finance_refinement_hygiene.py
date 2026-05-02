@@ -17,7 +17,7 @@ GENERATED_PATTERNS = [
     ".note/finance/SAVED_PORTFOLIOS.jsonl",
     ".note/finance/backtest_artifacts/*",
     ".note/finance/run_artifacts/*",
-    ".note/finance/phase12/_tmp_gtaa_*.csv",
+    ".note/finance/phases/phase12/_tmp_gtaa_*.csv",
     "csv/*daily_market_update_failures.csv",
     "*.ipynb",
     "*.DS_Store",
@@ -86,7 +86,7 @@ def _classify(paths: list[str]) -> dict[str, list[str]]:
             out["indexes"].append(path)
         elif path in REGISTRY_DOCS:
             out["registries"].append(path)
-        elif path.startswith(".note/finance/phase") and path.endswith(".md"):
+        elif path.startswith(".note/finance/phases/phase") and path.endswith(".md"):
             out["phase_docs"].append(path)
         elif path.startswith(".note/finance/backtest_reports/strategies/") and path.endswith("_BACKTEST_LOG.md"):
             out["backtest_logs"].append(path)

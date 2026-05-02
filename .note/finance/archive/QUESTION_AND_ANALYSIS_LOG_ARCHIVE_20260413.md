@@ -105,8 +105,8 @@ Do not copy full chat transcripts. Keep only the durable result.
     - 추가 downside follow-up
     같은 구현 성격의 작업으로 이어지는 것이 자연스럽다
 - Durable output:
-  - `.note/finance/phase15/PHASE15_COMPLETION_SUMMARY.md`
-  - `.note/finance/phase15/PHASE15_NEXT_PHASE_PREPARATION.md`
+  - `.note/finance/phases/phase15/PHASE15_COMPLETION_SUMMARY.md`
+  - `.note/finance/phases/phase15/PHASE15_NEXT_PHASE_PREPARATION.md`
 
 ### 2026-04-13 - Strategy hub 대표 결과 / 실무 해석 쉬운 문장화
 - Request topic:
@@ -155,7 +155,7 @@ Do not copy full chat transcripts. Keep only the durable result.
     “무엇을 확인하라는 뜻인지”가 바로 읽히도록 풀어 썼다
 - Durable output:
   - `.note/finance/FINANCE_TERM_GLOSSARY.md`
-  - `.note/finance/phase15/PHASE15_TEST_CHECKLIST.md`
+  - `.note/finance/phases/phase15/PHASE15_TEST_CHECKLIST.md`
 
 ### 2026-04-13 - Strategy hub 문서 역할 설명 보강
 - Request topic:
@@ -196,9 +196,9 @@ Do not copy full chat transcripts. Keep only the durable result.
     - downside follow-up
     - operator workflow persistence
 - Durable output:
-  - `.note/finance/phase15/PHASE15_COMPLETION_SUMMARY.md`
-  - `.note/finance/phase15/PHASE15_NEXT_PHASE_PREPARATION.md`
-  - `.note/finance/phase15/PHASE15_TEST_CHECKLIST.md`
+  - `.note/finance/phases/phase15/PHASE15_COMPLETION_SUMMARY.md`
+  - `.note/finance/phases/phase15/PHASE15_NEXT_PHASE_PREPARATION.md`
+  - `.note/finance/phases/phase15/PHASE15_TEST_CHECKLIST.md`
 
 ### 2026-04-13 - Phase 15 Quality+Value strongest-anchor Top N follow-up
 - Request topic:
@@ -280,7 +280,7 @@ Do not copy full chat transcripts. Keep only the durable result.
     - not point-in-time ETF operability history
     - not an actual trade-blocking rule yet
 - Durable output:
-  - `.note/finance/phase12/PHASE12_ETF_AUM_AND_SPREAD_POLICY_FIRST_PASS.md`
+  - `.note/finance/phases/phase12/PHASE12_ETF_AUM_AND_SPREAD_POLICY_FIRST_PASS.md`
 
 ### 2026-04-05 - Phase 12 closeout judgment
 - Request topic:
@@ -296,8 +296,8 @@ Do not copy full chat transcripts. Keep only the durable result.
   - decided that remaining ETF second-pass guardrail / PIT operability items are valuable but not closeout blockers
   - closed Phase 12 as `practical completion` and prepared next-phase direction around deployment-readiness / probation / monitoring
 - Durable output:
-  - `.note/finance/phase12/PHASE12_COMPLETION_SUMMARY.md`
-  - `.note/finance/phase12/PHASE12_NEXT_PHASE_PREPARATION.md`
+  - `.note/finance/phases/phase12/PHASE12_COMPLETION_SUMMARY.md`
+  - `.note/finance/phases/phase12/PHASE12_NEXT_PHASE_PREPARATION.md`
 
 ### 2026-04-05 - Streamlit page list and helper-module collision
 - Request topic:
@@ -398,7 +398,7 @@ Do not copy full chat transcripts. Keep only the durable result.
     - wrapper jobs
     - OHLCV / fundamentals / factors first
 - Durable output:
-  - `.note/finance/phase1/INTERNAL_WEB_APP_DEVELOPMENT_GUIDE.md`
+  - `.note/finance/phases/phase1/INTERNAL_WEB_APP_DEVELOPMENT_GUIDE.md`
 
 ### 2026-03-11 - Phase 1 web app scope definition
 - Request topic:
@@ -414,7 +414,7 @@ Do not copy full chat transcripts. Keep only the durable result.
     - run result visibility
   - explicitly excluded backtest UI, automation, complex frontend, and multi-user features
 - Durable output:
-  - `.note/finance/phase1/PHASE1_WEB_APP_SCOPE.md`
+  - `.note/finance/phases/phase1/PHASE1_WEB_APP_SCOPE.md`
 
 ### 2026-03-11 - Phase 1 job wrapper interface planning
 - Request topic:
@@ -429,7 +429,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - defined a common result payload for UI integration
   - recommended a thin wrapper layer rather than rewriting ingestion logic
 - Durable output:
-  - `.note/finance/phase1/PHASE1_JOB_WRAPPER_INTERFACE.md`
+  - `.note/finance/phases/phase1/PHASE1_JOB_WRAPPER_INTERFACE.md`
 
 ### 2026-03-11 - Phase 1 job wrapper implementation
 - Request topic:
@@ -682,7 +682,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - standardized `start/end` range filtering and `as_of_date` snapshot usage
   - recorded that detailed financial statement loaders are core ledger loaders, not optional side loaders
 - Durable output:
-  - `.note/finance/phase2/BACKTEST_LOADER_INPUT_CONTRACT.md`
+  - `.note/finance/phases/phase2/BACKTEST_LOADER_INPUT_CONTRACT.md`
 
 ### 2026-03-18 - Backtest point-in-time guidelines
 - Request topic:
@@ -697,7 +697,7 @@ Do not copy full chat transcripts. Keep only the durable result.
     - later strict filing-date-based point-in-time
   - recorded table-specific cautions for fundamentals, factors, and detailed financial statement loaders
 - Durable output:
-  - `.note/finance/phase2/BACKTEST_POINT_IN_TIME_GUIDELINES.md`
+  - `.note/finance/phases/phase2/BACKTEST_POINT_IN_TIME_GUIDELINES.md`
 
 ### 2026-03-11 - Single-job lock and running banner for admin UI
 - Request topic:
@@ -784,7 +784,7 @@ Do not copy full chat transcripts. Keep only the durable result.
     - strategy execution UI
   - recommended starting with daily/weekly/monthly pipeline separation before moving to backtest UI
 - Durable output:
-  - `.note/finance/phase2/PHASE2_WEB_APP_AND_BACKTEST_PLAN.md`
+  - `.note/finance/phases/phase2/PHASE2_WEB_APP_AND_BACKTEST_PLAN.md`
 
 ### 2026-03-11 - Why detailed financial statement tables must remain first-class
 - Request topic:
@@ -801,7 +801,7 @@ Do not copy full chat transcripts. Keep only the durable result.
     - longer-horizon backtest support
   - concluded that the detailed statement tables should be treated as a first-class raw ledger, not as an optional side dataset
 - Durable output:
-  - `.note/finance/phase2/PHASE2_WEB_APP_AND_BACKTEST_PLAN.md`
+  - `.note/finance/phases/phase2/PHASE2_WEB_APP_AND_BACKTEST_PLAN.md`
 
 ### 2026-03-12 - Phase 2 start: operational pipeline separation
 - Request topic:
@@ -852,7 +852,7 @@ Do not copy full chat transcripts. Keep only the durable result.
 - Result:
   - created a dedicated current-chapter TODO note with status, remaining work, and recommended next actions
 - Durable output:
-  - `.note/finance/phase2/PHASE2_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/phases/phase2/PHASE2_CURRENT_CHAPTER_TODO.md`
 
 ### 2026-03-17 - Convert the current PHASE2 TODO into a larger execution board
 - Request topic:
@@ -864,7 +864,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - organized it by major workstreams with `pending / in_progress / completed` item states
   - fixed the immediate next target as `B-6 pipeline_type` under execution-history hardening
 - Durable output:
-  - `.note/finance/phase2/PHASE2_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/phases/phase2/PHASE2_CURRENT_CHAPTER_TODO.md`
 
 ### 2026-03-17 - Add explanations to each current PHASE2 checklist item
 - Request topic:
@@ -874,7 +874,7 @@ Do not copy full chat transcripts. Keep only the durable result.
 - Result:
   - added short explanations under each detailed checklist item in the current PHASE2 board
 - Durable output:
-  - `.note/finance/phase2/PHASE2_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/phases/phase2/PHASE2_CURRENT_CHAPTER_TODO.md`
 
 ### 2026-03-17 - Complete TODO item B-6 pipeline_type storage
 - Request topic:
@@ -887,7 +887,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - updated the current TODO board so B-6 is completed and B-7 is the next target
 - Durable output:
   - `app/web/streamlit_app.py`
-  - `.note/finance/phase2/PHASE2_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/phases/phase2/PHASE2_CURRENT_CHAPTER_TODO.md`
 
 ### 2026-03-17 - Complete TODO item B-7 execution_mode storage
 - Request topic:
@@ -901,7 +901,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - updated the current TODO board so B-7 is completed and B-8 is the next target
 - Durable output:
   - `app/web/streamlit_app.py`
-  - `.note/finance/phase2/PHASE2_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/phases/phase2/PHASE2_CURRENT_CHAPTER_TODO.md`
 
 ### 2026-03-17 - Complete TODO item B-8 execution_context storage
 - Request topic:
@@ -915,7 +915,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - updated the current TODO board so B-8 is completed and B-9 is the next target
 - Durable output:
   - `app/web/streamlit_app.py`
-  - `.note/finance/phase2/PHASE2_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/phases/phase2/PHASE2_CURRENT_CHAPTER_TODO.md`
 
 ### 2026-03-17 - Complete TODO item B-9 persistent history table reflection
 - Request topic:
@@ -927,7 +927,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - updated the current TODO board so B-9 is completed and the next target is the JSONL schema review step
 - Durable output:
   - `app/web/streamlit_app.py`
-  - `.note/finance/phase2/PHASE2_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/phases/phase2/PHASE2_CURRENT_CHAPTER_TODO.md`
 
 ### 2026-03-17 - Complete TODO item B-10 JSONL schema review and normalization
 - Request topic:
@@ -941,7 +941,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - updated the current TODO board so execution-history hardening is now complete
 - Durable output:
   - `app/jobs/run_history.py`
-  - `.note/finance/phase2/PHASE2_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/phases/phase2/PHASE2_CURRENT_CHAPTER_TODO.md`
 
 ### 2026-03-17 - Complete TODO item A-7 operational pipeline cadence guidance
 - Request topic:
@@ -957,7 +957,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - updated the current TODO board so A-7 is completed and A-8 is the next target
 - Durable output:
   - `app/web/streamlit_app.py`
-  - `.note/finance/phase2/PHASE2_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/phases/phase2/PHASE2_CURRENT_CHAPTER_TODO.md`
 
 ### 2026-03-17 - Complete TODO item A-8 operational symbol-source guidance
 - Request topic:
@@ -969,7 +969,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - updated the current TODO board so A-8 is completed and A-9 is the next target
 - Durable output:
   - `app/web/streamlit_app.py`
-  - `.note/finance/phase2/PHASE2_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/phases/phase2/PHASE2_CURRENT_CHAPTER_TODO.md`
 
 ### 2026-03-17 - Complete TODO item A-9 operational vs manual role clarity
 - Request topic:
@@ -983,7 +983,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - updated the current TODO board so A-9 is completed and A-10 is the next target
 - Durable output:
   - `app/web/streamlit_app.py`
-  - `.note/finance/phase2/PHASE2_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/phases/phase2/PHASE2_CURRENT_CHAPTER_TODO.md`
 
 ### 2026-03-17 - Complete TODO item A-10 operational default review
 - Request topic:
@@ -998,7 +998,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - marked the entire operational-pipeline cleanup track as complete and moved the current focus to configuration externalization preparation
 - Durable output:
   - `app/web/streamlit_app.py`
-  - `.note/finance/phase2/PHASE2_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/phases/phase2/PHASE2_CURRENT_CHAPTER_TODO.md`
 
 ### 2026-03-18 - Complete TODO item C-1 hardcoded constant inventory
 - Request topic:
@@ -1016,7 +1016,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - updated the current TODO board so C-1 is completed and C-2 is the next target
 - Durable output:
   - `.note/finance/CONFIG_EXTERNALIZATION_INVENTORY.md`
-  - `.note/finance/phase2/PHASE2_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/phases/phase2/PHASE2_CURRENT_CHAPTER_TODO.md`
 
 ### 2026-03-18 - Complete TODO item C-2 externalization priority classification
 - Request topic:
@@ -1032,7 +1032,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - updated the current TODO board so C-2 is completed and C-3 is the next target
 - Durable output:
   - `.note/finance/CONFIG_EXTERNALIZATION_INVENTORY.md`
-  - `.note/finance/phase2/PHASE2_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/phases/phase2/PHASE2_CURRENT_CHAPTER_TODO.md`
 
 ### 2026-03-18 - Complete TODO item C-3 config file path decision
 - Request topic:
@@ -1045,7 +1045,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - updated the current TODO board so C-3 is completed and C-4 is the next target
 - Durable output:
   - `.note/finance/CONFIG_EXTERNALIZATION_INVENTORY.md`
-  - `.note/finance/phase2/PHASE2_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/phases/phase2/PHASE2_CURRENT_CHAPTER_TODO.md`
 
 ### 2026-03-18 - Complete TODO item C-4 config format draft
 - Request topic:
@@ -1059,7 +1059,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - updated the current TODO board so configuration externalization preparation is complete and the next focus is the backtest-loader planning track
 - Durable output:
   - `.note/finance/CONFIG_EXTERNALIZATION_INVENTORY.md`
-  - `.note/finance/phase2/PHASE2_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/phases/phase2/PHASE2_CURRENT_CHAPTER_TODO.md`
 
 ### 2026-03-18 - Complete TODO item D-2 backtest loader function draft
 - Request topic:
@@ -1077,8 +1077,8 @@ Do not copy full chat transcripts. Keep only the durable result.
   - prioritized initial loader implementation order
   - updated the current TODO board so D-2 is completed and D-3 is the next target
 - Durable output:
-  - `.note/finance/phase2/BACKTEST_LOADER_FUNCTION_DRAFT.md`
-  - `.note/finance/phase2/PHASE2_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/phases/phase2/BACKTEST_LOADER_FUNCTION_DRAFT.md`
+  - `.note/finance/phases/phase2/PHASE2_CURRENT_CHAPTER_TODO.md`
 
 ### 2026-03-18 - EDGAR detailed statement payload and point-in-time schema redesign
 - Request topic:
@@ -1124,7 +1124,7 @@ Do not copy full chat transcripts. Keep only the durable result.
     - `nyse_financial_statement_labels` can collapse concept-level meaning and should be treated as an operator-facing summary table unless its identity is widened
   - recorded the recommended patch order around fallback timing, key stabilization, and labels-table role definition
 - Durable output:
-  - `.note/finance/phase2/POINT_IN_TIME_SCHEMA_REVIEW_AND_PATCH_PLAN.md`
+  - `.note/finance/phases/phase2/POINT_IN_TIME_SCHEMA_REVIEW_AND_PATCH_PLAN.md`
 
 ### 2026-03-18 - Start next PHASE2 point-in-time hardening chapter
 - Request topic:
@@ -1138,7 +1138,7 @@ Do not copy full chat transcripts. Keep only the durable result.
     - `filing_date` only -> `23:59:59`
     - explicit `accepted_at` -> preserved
 - Durable output:
-  - `.note/finance/phase2/PHASE2_POINT_IN_TIME_HARDENING_TODO.md`
+  - `.note/finance/phases/phase2/PHASE2_POINT_IN_TIME_HARDENING_TODO.md`
   - `finance/data/financial_statements.py`
 
 ### 2026-03-18 - Audit current detailed-statement raw identity readiness
@@ -1157,8 +1157,8 @@ Do not copy full chat transcripts. Keep only the durable result.
     - new raw rows that can use accession-based identity
     - legacy rows that need backfill or rebuild before they are PIT-safe
 - Durable output:
-  - `.note/finance/phase2/PHASE2_POINT_IN_TIME_HARDENING_TODO.md`
-  - `.note/finance/phase2/POINT_IN_TIME_SCHEMA_REVIEW_AND_PATCH_PLAN.md`
+  - `.note/finance/phases/phase2/PHASE2_POINT_IN_TIME_HARDENING_TODO.md`
+  - `.note/finance/phases/phase2/POINT_IN_TIME_SCHEMA_REVIEW_AND_PATCH_PLAN.md`
 
 ### 2026-03-18 - Add raw-identity guard to new detailed-statement ingestion path
 - Request topic:
@@ -1171,7 +1171,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - kept the DB-level strict constraint as a later step because the existing table is still dominated by legacy rows
 - Durable output:
   - `finance/data/financial_statements.py`
-  - `.note/finance/phase2/PHASE2_POINT_IN_TIME_HARDENING_TODO.md`
+  - `.note/finance/phases/phase2/PHASE2_POINT_IN_TIME_HARDENING_TODO.md`
 
 ### 2026-03-18 - Validate accession-based reingestion stability on new raw path
 - Request topic:
@@ -1184,7 +1184,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - confirmed duplicate groups under `(symbol, freq, accession_no, statement_type, concept, period_end, unit)` remained 0
   - concluded that the immediate remaining issue is legacy-row cleanup, not new-path duplicate behavior
 - Durable output:
-  - `.note/finance/phase2/PHASE2_POINT_IN_TIME_HARDENING_TODO.md`
+  - `.note/finance/phases/phase2/PHASE2_POINT_IN_TIME_HARDENING_TODO.md`
 
 ### 2026-03-18 - Define legacy backfill and strict-constraint transition strategy
 - Request topic:
@@ -1199,8 +1199,8 @@ Do not copy full chat transcripts. Keep only the durable result.
     - delay DB-level strict constraints until coverage is sufficient
   - documented that the immediate next focus should move from raw identity to labels/loader boundary
 - Durable output:
-  - `.note/finance/phase2/POINT_IN_TIME_BACKFILL_AND_CONSTRAINT_STRATEGY.md`
-  - `.note/finance/phase2/PHASE2_POINT_IN_TIME_HARDENING_TODO.md`
+  - `.note/finance/phases/phase2/POINT_IN_TIME_BACKFILL_AND_CONSTRAINT_STRATEGY.md`
+  - `.note/finance/phases/phase2/PHASE2_POINT_IN_TIME_HARDENING_TODO.md`
 
 ### 2026-03-18 - Clarify labels vs values responsibility in loader design
 - Request topic:
@@ -1213,9 +1213,9 @@ Do not copy full chat transcripts. Keep only the durable result.
     - `nyse_financial_statement_labels` is an operator-facing summary / lookup helper
   - shifted the next TODO focus toward writing strict PIT loader query conditions
 - Durable output:
-  - `.note/finance/phase2/BACKTEST_LOADER_INPUT_CONTRACT.md`
-  - `.note/finance/phase2/BACKTEST_LOADER_FUNCTION_DRAFT.md`
-  - `.note/finance/phase2/PHASE2_POINT_IN_TIME_HARDENING_TODO.md`
+  - `.note/finance/phases/phase2/BACKTEST_LOADER_INPUT_CONTRACT.md`
+  - `.note/finance/phases/phase2/BACKTEST_LOADER_FUNCTION_DRAFT.md`
+  - `.note/finance/phases/phase2/PHASE2_POINT_IN_TIME_HARDENING_TODO.md`
 
 ### 2026-03-18 - Draft strict PIT statement-loader query rules
 - Request topic:
@@ -1230,8 +1230,8 @@ Do not copy full chat transcripts. Keep only the durable result.
   - documented that strict snapshots must prioritize `available_at <= as_of_date`, not just `period_end`
   - provided latest-available selection patterns using window-function and subquery styles
 - Durable output:
-  - `.note/finance/phase2/STRICT_PIT_LOADER_QUERY_DRAFT.md`
-  - `.note/finance/phase2/PHASE2_POINT_IN_TIME_HARDENING_TODO.md`
+  - `.note/finance/phases/phase2/STRICT_PIT_LOADER_QUERY_DRAFT.md`
+  - `.note/finance/phases/phase2/PHASE2_POINT_IN_TIME_HARDENING_TODO.md`
 
 ### 2026-03-18 - One-time cleanup redesign of statement labels/values tables
 - Request topic:
@@ -1247,7 +1247,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - `finance/data/db/schema.py`
   - `finance/data/financial_statements.py`
   - `.note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md`
-  - `.note/finance/phase2/PHASE2_POINT_IN_TIME_HARDENING_TODO.md`
+  - `.note/finance/phases/phase2/PHASE2_POINT_IN_TIME_HARDENING_TODO.md`
 
 ### 2026-03-22 - Establish phase-based project management as the default workflow
 - Request topic:
@@ -1274,9 +1274,9 @@ Do not copy full chat transcripts. Keep only the durable result.
   - keep the growing documentation set maintainable by separating phase-specific execution docs from cross-phase reference documents
 - Result:
   - moved phase-specific documents into:
-    - `.note/finance/phase1/`
-    - `.note/finance/phase2/`
-    - `.note/finance/phase3/`
+    - `.note/finance/phases/phase1/`
+    - `.note/finance/phases/phase2/`
+    - `.note/finance/phases/phase3/`
   - kept cross-phase anchor documents at the `.note/finance/` root
   - updated roadmap/index/log references to the new structure
 - Durable output:
@@ -1295,9 +1295,9 @@ Do not copy full chat transcripts. Keep only the durable result.
   - created the first Phase 3 TODO board
   - updated the roadmap and doc index to show Phase 2 completed and Phase 3 active
 - Durable output:
-  - `.note/finance/phase2/PHASE2_COMPLETION_SUMMARY.md`
-  - `.note/finance/phase3/PHASE3_LOADER_AND_RUNTIME_PLAN.md`
-  - `.note/finance/phase3/PHASE3_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/phases/phase2/PHASE2_COMPLETION_SUMMARY.md`
+  - `.note/finance/phases/phase3/PHASE3_LOADER_AND_RUNTIME_PLAN.md`
+  - `.note/finance/phases/phase3/PHASE3_CURRENT_CHAPTER_TODO.md`
   - `.note/finance/MASTER_PHASE_ROADMAP.md`
 
 ### 2026-03-22 - Fix Phase 3 loader naming policy
@@ -1312,8 +1312,8 @@ Do not copy full chat transcripts. Keep only the durable result.
     - `*_snapshot_strict` is for strict PIT snapshot reads
   - recorded this as the default naming rule for Phase 3
 - Durable output:
-  - `.note/finance/phase3/PHASE3_LOADER_NAMING_POLICY.md`
-  - `.note/finance/phase3/PHASE3_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/phases/phase3/PHASE3_LOADER_NAMING_POLICY.md`
+  - `.note/finance/phases/phase3/PHASE3_CURRENT_CHAPTER_TODO.md`
 
 ### 2026-03-22 - Fix the initial strict statement loader scope for Phase 3
 - Request topic:
@@ -1329,8 +1329,8 @@ Do not copy full chat transcripts. Keep only the durable result.
   - explicitly excluded `nyse_financial_statement_labels` from the strict source-of-truth path
   - left full-history strict reads and broad research coverage decisions for later steps
 - Durable output:
-  - `.note/finance/phase3/PHASE3_STRICT_STATEMENT_LOADER_SCOPE.md`
-  - `.note/finance/phase3/PHASE3_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/phases/phase3/PHASE3_STRICT_STATEMENT_LOADER_SCOPE.md`
+  - `.note/finance/phases/phase3/PHASE3_CURRENT_CHAPTER_TODO.md`
   - `.note/finance/FINANCE_DOC_INDEX.md`
 
 ### 2026-03-22 - Fix the broad statement loader policy for Phase 3
@@ -1346,8 +1346,8 @@ Do not copy full chat transcripts. Keep only the durable result.
     - do not reopen support for broken legacy rows after the Phase 2 schema cleanup
   - clarified that the strict/broad difference is now about time semantics and use case, not row-identity quality
 - Durable output:
-  - `.note/finance/phase3/PHASE3_BROAD_STATEMENT_LOADER_POLICY.md`
-  - `.note/finance/phase3/PHASE3_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/phases/phase3/PHASE3_BROAD_STATEMENT_LOADER_POLICY.md`
+  - `.note/finance/phases/phase3/PHASE3_CURRENT_CHAPTER_TODO.md`
   - `.note/finance/FINANCE_DOC_INDEX.md`
 
 ### 2026-03-22 - Fix the first loader implementation set for Phase 3
@@ -1363,8 +1363,8 @@ Do not copy full chat transcripts. Keep only the durable result.
   - moved fundamentals / factors / statements behind the first price-based strategy milestone
   - recorded the reasoning that existing strategies are currently price-centric, so price loaders are the safest first implementation target
 - Durable output:
-  - `.note/finance/phase3/PHASE3_INITIAL_LOADER_IMPLEMENTATION_SET.md`
-  - `.note/finance/phase3/PHASE3_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/phases/phase3/PHASE3_INITIAL_LOADER_IMPLEMENTATION_SET.md`
+  - `.note/finance/phases/phase3/PHASE3_CURRENT_CHAPTER_TODO.md`
   - `.note/finance/FINANCE_DOC_INDEX.md`
 
 ### 2026-03-22 - Fix the loader module path for Phase 3
@@ -1384,9 +1384,9 @@ Do not copy full chat transcripts. Keep only the durable result.
     - `financial_statements.py`
   - created the initial `finance/loaders/__init__.py` scaffold so the package boundary is now real, not just planned
 - Durable output:
-  - `.note/finance/phase3/PHASE3_LOADER_MODULE_PATH.md`
+  - `.note/finance/phases/phase3/PHASE3_LOADER_MODULE_PATH.md`
   - `finance/loaders/__init__.py`
-  - `.note/finance/phase3/PHASE3_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/phases/phase3/PHASE3_CURRENT_CHAPTER_TODO.md`
   - `.note/finance/FINANCE_DOC_INDEX.md`
 
 ### 2026-03-22 - Fix the shared helper scope for Phase 3 loaders
@@ -1404,9 +1404,9 @@ Do not copy full chat transcripts. Keep only the durable result.
     - snapshot input validation
   - explicitly left domain-specific query logic out of `_common.py`
 - Durable output:
-  - `.note/finance/phase3/PHASE3_LOADER_HELPER_SCOPE.md`
+  - `.note/finance/phases/phase3/PHASE3_LOADER_HELPER_SCOPE.md`
   - `finance/loaders/_common.py`
-  - `.note/finance/phase3/PHASE3_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/phases/phase3/PHASE3_CURRENT_CHAPTER_TODO.md`
   - `.note/finance/FINANCE_DOC_INDEX.md`
 
 ### 2026-03-22 - Fix the first implementation entry set for Phase 3
@@ -1427,10 +1427,10 @@ Do not copy full chat transcripts. Keep only the durable result.
     - `EqualWeightStrategy`
     - result DataFrame checks
 - Durable output:
-  - `.note/finance/phase3/PHASE3_FIRST_LOADER_IMPLEMENTATION_ORDER.md`
-  - `.note/finance/phase3/PHASE3_FIRST_DB_BACKED_STRATEGY_CANDIDATE.md`
-  - `.note/finance/phase3/PHASE3_MINIMAL_VALIDATION_PATH.md`
-  - `.note/finance/phase3/PHASE3_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/phases/phase3/PHASE3_FIRST_LOADER_IMPLEMENTATION_ORDER.md`
+  - `.note/finance/phases/phase3/PHASE3_FIRST_DB_BACKED_STRATEGY_CANDIDATE.md`
+  - `.note/finance/phases/phase3/PHASE3_MINIMAL_VALIDATION_PATH.md`
+  - `.note/finance/phases/phase3/PHASE3_CURRENT_CHAPTER_TODO.md`
   - `.note/finance/FINANCE_DOC_INDEX.md`
 
 ### 2026-03-22 - Start the first concrete loader implementation for Phase 3
@@ -1445,7 +1445,7 @@ Do not copy full chat transcripts. Keep only the durable result.
     - `finance/loaders/price.py`
   - re-exported the first public loader functions from `finance/loaders/__init__.py`
 - Durable output:
-  - `.note/finance/phase3/PHASE3_LOADER_IMPLEMENTATION_TODO.md`
+  - `.note/finance/phases/phase3/PHASE3_LOADER_IMPLEMENTATION_TODO.md`
   - `finance/loaders/universe.py`
   - `finance/loaders/price.py`
   - `finance/loaders/__init__.py`
@@ -1461,9 +1461,9 @@ Do not copy full chat transcripts. Keep only the durable result.
   - updated the validation example to use symbols currently confirmed in the local DB
 - Durable output:
   - `finance/loaders/runtime_adapter.py`
-  - `.note/finance/phase3/PHASE3_RUNTIME_ADAPTER_PATH.md`
-  - `.note/finance/phase3/PHASE3_MINIMAL_VALIDATION_PATH.md`
-  - `.note/finance/phase3/PHASE3_LOADER_IMPLEMENTATION_TODO.md`
+  - `.note/finance/phases/phase3/PHASE3_RUNTIME_ADAPTER_PATH.md`
+  - `.note/finance/phases/phase3/PHASE3_MINIMAL_VALIDATION_PATH.md`
+  - `.note/finance/phases/phase3/PHASE3_LOADER_IMPLEMENTATION_TODO.md`
 
 ### 2026-03-22 - Validate the first DB-backed strategy runtime path
 - Request topic:
@@ -1478,8 +1478,8 @@ Do not copy full chat transcripts. Keep only the durable result.
     - `GOOG`
   - confirmed 252 daily rows per symbol, 252 strategy result rows, and a final balance of `12998.14`
 - Durable output:
-  - `.note/finance/phase3/PHASE3_FIRST_DB_BACKED_RUNTIME_VALIDATION.md`
-  - `.note/finance/phase3/PHASE3_LOADER_IMPLEMENTATION_TODO.md`
+  - `.note/finance/phases/phase3/PHASE3_FIRST_DB_BACKED_RUNTIME_VALIDATION.md`
+  - `.note/finance/phases/phase3/PHASE3_LOADER_IMPLEMENTATION_TODO.md`
 
 ### 2026-03-22 - Add DB-backed sample entrypoints without changing the old strategy samples
 - Request topic:
@@ -1493,7 +1493,7 @@ Do not copy full chat transcripts. Keep only the durable result.
 - Durable output:
   - `finance/engine.py`
   - `finance/sample.py`
-  - `.note/finance/phase3/PHASE3_DB_SAMPLE_ENTRYPOINTS.md`
+  - `.note/finance/phases/phase3/PHASE3_DB_SAMPLE_ENTRYPOINTS.md`
 
 ### 2026-03-22 - Verify missing ETF OHLCV rows for DB-backed sample testing
 - Request topic:
@@ -1527,9 +1527,9 @@ Do not copy full chat transcripts. Keep only the durable result.
   - validated ETF ingestion for `VIG`, `SCHD`, `DGRO`, `GLD`
   - validated DB-backed ETF equal-weight sample execution
 - Durable output:
-  - `.note/finance/phase3/PHASE3_OHLCV_INGESTION_HARDENING_TODO.md`
-  - `.note/finance/phase3/PHASE3_OHLCV_STORAGE_DECISION.md`
-  - `.note/finance/phase3/PHASE3_OHLCV_INGESTION_VALIDATION.md`
+  - `.note/finance/phases/phase3/PHASE3_OHLCV_INGESTION_HARDENING_TODO.md`
+  - `.note/finance/phases/phase3/PHASE3_OHLCV_STORAGE_DECISION.md`
+  - `.note/finance/phases/phase3/PHASE3_OHLCV_INGESTION_VALIDATION.md`
   - `finance/data/data.py`
   - `app/jobs/ingestion_jobs.py`
   - `app/web/streamlit_app.py`
@@ -1565,7 +1565,7 @@ Do not copy full chat transcripts. Keep only the durable result.
 - Durable output:
   - `finance/loaders/financial_statements.py`
   - `finance/loaders/__init__.py`
-  - `.note/finance/phase3/PHASE3_STATEMENT_LOADER_VALIDATION.md`
+  - `.note/finance/phases/phase3/PHASE3_STATEMENT_LOADER_VALIDATION.md`
   - `.note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md`
 
 ### 2026-03-22 - Close Phase 3 chapter 1 and open the next runtime chapter
@@ -1578,8 +1578,8 @@ Do not copy full chat transcripts. Keep only the durable result.
   - opened a new Phase 3 TODO board for runtime generalization and Phase 4 handoff preparation
   - updated the master roadmap and finance doc index so the current project position is clearer
 - Durable output:
-  - `.note/finance/phase3/PHASE3_CHAPTER1_COMPLETION_SUMMARY.md`
-  - `.note/finance/phase3/PHASE3_RUNTIME_GENERALIZATION_TODO.md`
+  - `.note/finance/phases/phase3/PHASE3_CHAPTER1_COMPLETION_SUMMARY.md`
+  - `.note/finance/phases/phase3/PHASE3_RUNTIME_GENERALIZATION_TODO.md`
   - `.note/finance/MASTER_PHASE_ROADMAP.md`
   - `.note/finance/FINANCE_DOC_INDEX.md`
 
@@ -1625,7 +1625,7 @@ Do not copy full chat transcripts. Keep only the durable result.
 - Durable output:
   - `finance/engine.py`
   - `finance/sample.py`
-  - `.note/finance/phase3/PHASE3_DB_SAMPLE_ALIGNMENT_VALIDATION.md`
+  - `.note/finance/phases/phase3/PHASE3_DB_SAMPLE_ALIGNMENT_VALIDATION.md`
   - `.note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md`
 
 ### 2026-03-22 - Re-check remaining discrepancy after warmup alignment
@@ -1660,7 +1660,7 @@ Do not copy full chat transcripts. Keep only the durable result.
     - `Dual Momentum`
 - Durable output:
   - `finance/data/data.py`
-  - `.note/finance/phase3/PHASE3_DB_SAMPLE_ALIGNMENT_VALIDATION.md`
+  - `.note/finance/phases/phase3/PHASE3_DB_SAMPLE_ALIGNMENT_VALIDATION.md`
   - `.note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md`
 
 ### 2026-03-22 - Summarize what changed between the mismatch state and the final parity state
@@ -1676,7 +1676,7 @@ Do not copy full chat transcripts. Keep only the durable result.
     - the canonical OHLCV rebuild fix
     - the final matching state
 - Durable output:
-  - `.note/finance/phase3/PHASE3_PORTFOLIO_SAMPLE_PARITY_POSTMORTEM.md`
+  - `.note/finance/phases/phase3/PHASE3_PORTFOLIO_SAMPLE_PARITY_POSTMORTEM.md`
 
 ### 2026-03-22 - Separate the roles of the direct-fetch sample path and the DB-backed runtime path
 - Request topic:
@@ -1688,7 +1688,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - updated `finance/sample.py` docstrings to make the distinction explicit in code
   - advanced the Phase 3 runtime-generalization board to the next strategy-alignment step
 - Durable output:
-  - `.note/finance/phase3/PHASE3_RUNTIME_PATH_ROLE_SPLIT.md`
+  - `.note/finance/phases/phase3/PHASE3_RUNTIME_PATH_ROLE_SPLIT.md`
   - `finance/sample.py`
 
 ### 2026-03-22 - Unify the common runtime start pattern for price-only strategy samples
@@ -1707,8 +1707,8 @@ Do not copy full chat transcripts. Keep only the durable result.
   - advanced the runtime-generalization board from `B-1` to `B-2`
 - Durable output:
   - `finance/sample.py`
-  - `.note/finance/phase3/PHASE3_PRICE_ONLY_RUNTIME_PATTERN.md`
-  - `.note/finance/phase3/PHASE3_RUNTIME_GENERALIZATION_TODO.md`
+  - `.note/finance/phases/phase3/PHASE3_PRICE_ONLY_RUNTIME_PATTERN.md`
+  - `.note/finance/phases/phase3/PHASE3_RUNTIME_GENERALIZATION_TODO.md`
 
 ### 2026-03-22 - Remove the recurring Pandas SettingWithCopy warning in transform filtering
 - Request topic:
@@ -1736,8 +1736,8 @@ Do not copy full chat transcripts. Keep only the durable result.
   - clarified that `BacktestEngine` should not absorb ad hoc factor / fundamental query logic before the snapshot payload contract is fixed
   - advanced the active board from `B-2` to `B-3`
 - Durable output:
-  - `.note/finance/phase3/PHASE3_FACTOR_FUNDAMENTAL_RUNTIME_CONNECTIONS.md`
-  - `.note/finance/phase3/PHASE3_RUNTIME_GENERALIZATION_TODO.md`
+  - `.note/finance/phases/phase3/PHASE3_FACTOR_FUNDAMENTAL_RUNTIME_CONNECTIONS.md`
+  - `.note/finance/phases/phase3/PHASE3_RUNTIME_GENERALIZATION_TODO.md`
 
 ### 2026-03-22 - Fix the Phase 3 strategy input contract at the runtime payload level
 - Request topic:
@@ -1752,8 +1752,8 @@ Do not copy full chat transcripts. Keep only the durable result.
   - aligned the active Phase 3 board and comprehensive analysis document with that contract
   - advanced the board from `B-3` to `C-1`
 - Durable output:
-  - `.note/finance/phase3/PHASE3_RUNTIME_STRATEGY_INPUT_CONTRACT.md`
-  - `.note/finance/phase3/PHASE3_RUNTIME_GENERALIZATION_TODO.md`
+  - `.note/finance/phases/phase3/PHASE3_RUNTIME_STRATEGY_INPUT_CONTRACT.md`
+  - `.note/finance/phases/phase3/PHASE3_RUNTIME_GENERALIZATION_TODO.md`
 
 ### 2026-03-22 - Reassess the roles and collection quality of `nyse_fundamentals` and `nyse_factors`
 - Request topic:
@@ -1778,8 +1778,8 @@ Do not copy full chat transcripts. Keep only the durable result.
   - validated the new path on `AAPL`, `MSFT` annual/quarterly samples
   - documented that a full-universe backfill is still a separate operational decision
 - Durable output:
-  - `.note/finance/phase3/PHASE3_FUNDAMENTALS_FACTORS_HARDENING_TODO.md`
-  - `.note/finance/phase3/PHASE3_FUNDAMENTALS_FACTORS_REVIEW_AND_DIRECTION.md`
+  - `.note/finance/phases/phase3/PHASE3_FUNDAMENTALS_FACTORS_HARDENING_TODO.md`
+  - `.note/finance/phases/phase3/PHASE3_FUNDAMENTALS_FACTORS_REVIEW_AND_DIRECTION.md`
   - `finance/data/fundamentals.py`
   - `finance/data/factors.py`
   - `finance/data/db/schema.py`
@@ -1813,9 +1813,9 @@ Do not copy full chat transcripts. Keep only the durable result.
   - returned to the main `PHASE3_RUNTIME_GENERALIZATION_TODO.md` board
   - completed `C-1` by documenting a repeatable DB-backed smoke-scenario set for regression checks
 - Durable output:
-  - `.note/finance/phase3/PHASE3_REPEATABLE_DB_BACKED_SMOKE_SCENARIOS.md`
-  - `.note/finance/phase3/PHASE3_RUNTIME_GENERALIZATION_TODO.md`
-  - `.note/finance/phase3/PHASE3_FUNDAMENTALS_FACTORS_HARDENING_TODO.md`
+  - `.note/finance/phases/phase3/PHASE3_REPEATABLE_DB_BACKED_SMOKE_SCENARIOS.md`
+  - `.note/finance/phases/phase3/PHASE3_RUNTIME_GENERALIZATION_TODO.md`
+  - `.note/finance/phases/phase3/PHASE3_FUNDAMENTALS_FACTORS_HARDENING_TODO.md`
 
 ### 2026-03-22 - Add ready-to-run loader/runtime validation examples for Phase 3
 - Request topic:
@@ -1833,8 +1833,8 @@ Do not copy full chat transcripts. Keep only the durable result.
     - fundamentals/factors rebuild examples
   - advanced the main Phase 3 board from `C-2` to `C-3`
 - Durable output:
-  - `.note/finance/phase3/PHASE3_LOADER_RUNTIME_VALIDATION_EXAMPLES.md`
-  - `.note/finance/phase3/PHASE3_RUNTIME_GENERALIZATION_TODO.md`
+  - `.note/finance/phases/phase3/PHASE3_LOADER_RUNTIME_VALIDATION_EXAMPLES.md`
+  - `.note/finance/phases/phase3/PHASE3_RUNTIME_GENERALIZATION_TODO.md`
 
 ### 2026-03-22 - Split the Phase 3 runtime cleanup backlog and define the first UI runtime function candidates
 - Request topic:
@@ -1856,9 +1856,9 @@ Do not copy full chat transcripts. Keep only the durable result.
     - plus a shared backtest result bundle builder
   - advanced the main board from `D-1` to `D-2`
 - Durable output:
-  - `.note/finance/phase3/PHASE3_RUNTIME_CLEANUP_BACKLOG.md`
-  - `.note/finance/phase3/PHASE3_UI_RUNTIME_FUNCTION_CANDIDATES.md`
-  - `.note/finance/phase3/PHASE3_RUNTIME_GENERALIZATION_TODO.md`
+  - `.note/finance/phases/phase3/PHASE3_RUNTIME_CLEANUP_BACKLOG.md`
+  - `.note/finance/phases/phase3/PHASE3_UI_RUNTIME_FUNCTION_CANDIDATES.md`
+  - `.note/finance/phases/phase3/PHASE3_RUNTIME_GENERALIZATION_TODO.md`
 
 ### 2026-03-22 - Define the minimal user-facing input set for the future strategy execution UI
 - Request topic:
@@ -1880,8 +1880,8 @@ Do not copy full chat transcripts. Keep only the durable result.
   - documented that future factor/fundamental strategy UI will need additional inputs such as rebalance frequency and snapshot mode, but that is outside the first pass
   - advanced the main board from `D-2` to `D-3`
 - Durable output:
-  - `.note/finance/phase3/PHASE3_UI_USER_INPUT_SET_DRAFT.md`
-  - `.note/finance/phase3/PHASE3_RUNTIME_GENERALIZATION_TODO.md`
+  - `.note/finance/phases/phase3/PHASE3_UI_USER_INPUT_SET_DRAFT.md`
+  - `.note/finance/phases/phase3/PHASE3_RUNTIME_GENERALIZATION_TODO.md`
 
 ### 2026-03-22 - Define the first result bundle shape for the future strategy execution UI
 - Request topic:
@@ -1901,8 +1901,8 @@ Do not copy full chat transcripts. Keep only the durable result.
   - explicitly deferred richer fields such as trade logs and position tables to later phases
   - marked `D-3` complete and moved the runtime-generalization board to chapter completion review state
 - Durable output:
-  - `.note/finance/phase3/PHASE3_UI_RESULT_BUNDLE_DRAFT.md`
-  - `.note/finance/phase3/PHASE3_RUNTIME_GENERALIZATION_TODO.md`
+  - `.note/finance/phases/phase3/PHASE3_UI_RESULT_BUNDLE_DRAFT.md`
+  - `.note/finance/phases/phase3/PHASE3_RUNTIME_GENERALIZATION_TODO.md`
 
 ### 2026-03-22 - Open Phase 4 and lock the user-confirmation rule for UI choices
 - Request topic:
@@ -1917,8 +1917,8 @@ Do not copy full chat transcripts. Keep only the durable result.
     - implementation should proceed only after the user chooses a direction
   - set the first active Phase 4 task to `A-1 UI 구조 선택지 정리`
 - Durable output:
-  - `.note/finance/phase4/PHASE4_UI_AND_BACKTEST_PLAN.md`
-  - `.note/finance/phase4/PHASE4_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/phases/phase4/PHASE4_UI_AND_BACKTEST_PLAN.md`
+  - `.note/finance/phases/phase4/PHASE4_CURRENT_CHAPTER_TODO.md`
   - `.note/finance/MASTER_PHASE_ROADMAP.md`
 
 ### 2026-03-22 - Choose a separate Streamlit backtest app for the first Phase 4 UI structure
@@ -1934,8 +1934,8 @@ Do not copy full chat transcripts. Keep only the durable result.
   - created a structure decision document and a first backtest app shell
   - advanced the Phase 4 first chapter from UI structure decision to runtime public boundary work
 - Durable output:
-  - `.note/finance/phase4/PHASE4_UI_STRUCTURE_DECISION.md`
-  - `.note/finance/phase4/PHASE4_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/phases/phase4/PHASE4_UI_STRUCTURE_DECISION.md`
+  - `.note/finance/phases/phase4/PHASE4_CURRENT_CHAPTER_TODO.md`
 
 ### 2026-03-22 - Revise the Phase 4 UI structure to one main app with separate ingestion/backtest tabs
 - Request topic:
@@ -1950,9 +1950,9 @@ Do not copy full chat transcripts. Keep only the durable result.
     - internal code split by tab/concern rather than one giant file
   - removed the previously created separate `backtest_app.py` direction to avoid stale architecture drift
 - Durable output:
-  - `.note/finance/phase4/PHASE4_UI_STRUCTURE_DECISION.md`
-  - `.note/finance/phase4/PHASE4_UI_AND_BACKTEST_PLAN.md`
-  - `.note/finance/phase4/PHASE4_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/phases/phase4/PHASE4_UI_STRUCTURE_DECISION.md`
+  - `.note/finance/phases/phase4/PHASE4_UI_AND_BACKTEST_PLAN.md`
+  - `.note/finance/phases/phase4/PHASE4_CURRENT_CHAPTER_TODO.md`
 
 ### 2026-03-22 - Implement the first unified-app tab shell for Phase 4
 - Request topic:
@@ -1985,7 +1985,7 @@ Do not copy full chat transcripts. Keep only the durable result.
     - DB-backed `Equal Weight` execution
     - shared UI-facing bundle construction
 - Durable output:
-  - `.note/finance/phase4/PHASE4_RUNTIME_WRAPPER_SIGNATURES.md`
+  - `.note/finance/phases/phase4/PHASE4_RUNTIME_WRAPPER_SIGNATURES.md`
   - `app/web/runtime/backtest.py`
 
 ### 2026-03-22 - Implement the first Backtest tab execution form
@@ -2002,7 +2002,7 @@ Do not copy full chat transcripts. Keep only the durable result.
     - runtime payload preview on submit
   - kept actual wrapper execution and result rendering for the next step
 - Durable output:
-  - `.note/finance/phase4/PHASE4_FIRST_SCREEN_SCOPE.md`
+  - `.note/finance/phases/phase4/PHASE4_FIRST_SCREEN_SCOPE.md`
   - `app/web/pages/backtest.py`
 
 ### 2026-03-22 - Connect the first Backtest form to the public runtime wrapper
@@ -2034,7 +2034,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - kept the chart focused on `Total Balance` only for the first pass
   - separated raw result preview from execution metadata to reduce visual clutter
 - Durable output:
-  - `.note/finance/phase4/PHASE4_FIRST_RESULT_LAYOUT_DRAFT.md`
+  - `.note/finance/phases/phase4/PHASE4_FIRST_RESULT_LAYOUT_DRAFT.md`
   - `app/web/pages/backtest.py`
 
 ### 2026-03-22 - Harden first-pass backtest error and empty-result handling
@@ -2053,7 +2053,7 @@ Do not copy full chat transcripts. Keep only the durable result.
     - generic execution failures
   - added a durable Phase 4 note for error/empty-result rules
 - Durable output:
-  - `.note/finance/phase4/PHASE4_ERROR_AND_EMPTY_RESULT_RULES.md`
+  - `.note/finance/phases/phase4/PHASE4_ERROR_AND_EMPTY_RESULT_RULES.md`
   - `app/web/runtime/backtest.py`
   - `app/web/pages/backtest.py`
 
@@ -2070,7 +2070,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - added a GTAA-specific form including `top` parameter input
   - verified the GTAA wrapper with DB-backed parity output
 - Durable output:
-  - `.note/finance/phase4/PHASE4_SECOND_STRATEGY_GTAA_ADDITION.md`
+  - `.note/finance/phases/phase4/PHASE4_SECOND_STRATEGY_GTAA_ADDITION.md`
   - `app/web/runtime/backtest.py`
   - `app/web/pages/backtest.py`
 
@@ -2088,7 +2088,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - added a Risk Parity Trend form with its default universe
   - verified DB-backed wrapper parity for the default sample universe
 - Durable output:
-  - `.note/finance/phase4/PHASE4_THIRD_STRATEGY_RISK_PARITY_ADDITION.md`
+  - `.note/finance/phases/phase4/PHASE4_THIRD_STRATEGY_RISK_PARITY_ADDITION.md`
   - `app/web/runtime/backtest.py`
   - `app/web/pages/backtest.py`
 
@@ -2135,7 +2135,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - added a Dual Momentum-specific execution form using the default universe `QQQ, SPY, IWM, SOXX, BIL`
   - verified DB-backed runtime smoke output with `End Balance = 24600.7`
 - Durable output:
-  - `.note/finance/phase4/PHASE4_FOURTH_STRATEGY_DUAL_MOMENTUM_ADDITION.md`
+  - `.note/finance/phases/phase4/PHASE4_FOURTH_STRATEGY_DUAL_MOMENTUM_ADDITION.md`
   - `app/web/runtime/backtest.py`
   - `app/web/pages/backtest.py`
 
@@ -2160,7 +2160,7 @@ Do not copy full chat transcripts. Keep only the durable result.
     - then weighted portfolio builder
     - then richer annotations like top/bottom periods
 - Durable output:
-  - `.note/finance/phase4/PHASE4_VISUALIZATION_AND_PORTFOLIO_BUILDER_OPTIONS.md`
+  - `.note/finance/phases/phase4/PHASE4_VISUALIZATION_AND_PORTFOLIO_BUILDER_OPTIONS.md`
 
 ### 2026-03-22 - Implement the selected Phase 4 compare-first path with weighted portfolio builder
 - Request topic:
@@ -2186,7 +2186,7 @@ Do not copy full chat transcripts. Keep only the durable result.
     - `Dual Momentum 50 + GTAA 50`
     - `Weighted Portfolio End Balance = 23594.9`
 - Durable output:
-  - `.note/finance/phase4/PHASE4_COMPARE_AND_WEIGHTED_PORTFOLIO_FIRST_PASS.md`
+  - `.note/finance/phases/phase4/PHASE4_COMPARE_AND_WEIGHTED_PORTFOLIO_FIRST_PASS.md`
   - `app/web/pages/backtest.py`
 
 ### 2026-03-22 - Fix GTAA visibility in the compare equity overlay
@@ -2201,7 +2201,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - updated compare charts to use `line + point` Altair rendering so sparse strategies remain visible
 - Durable output:
   - `app/web/pages/backtest.py`
-  - `.note/finance/phase4/PHASE4_COMPARE_AND_WEIGHTED_PORTFOLIO_FIRST_PASS.md`
+  - `.note/finance/phases/phase4/PHASE4_COMPARE_AND_WEIGHTED_PORTFOLIO_FIRST_PASS.md`
 
 ### 2026-03-22 - Expose GTAA interval as an advanced input in the Backtest tab
 - Request topic:
@@ -2239,7 +2239,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - `finance/sample.py`
   - `app/web/runtime/backtest.py`
   - `app/web/pages/backtest.py`
-  - `.note/finance/phase4/PHASE4_COMPARE_AND_WEIGHTED_PORTFOLIO_FIRST_PASS.md`
+  - `.note/finance/phases/phase4/PHASE4_COMPARE_AND_WEIGHTED_PORTFOLIO_FIRST_PASS.md`
 
 ### 2026-03-22 - Add first-pass persistent backtest history
 - Request topic:
@@ -2258,7 +2258,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - added a `Persistent Backtest History` section in the Backtest tab
   - verified append/load behavior for all three run kinds and cleared the temporary validation file afterwards
 - Durable output:
-  - `.note/finance/phase4/PHASE4_BACKTEST_HISTORY_FIRST_PASS.md`
+  - `.note/finance/phases/phase4/PHASE4_BACKTEST_HISTORY_FIRST_PASS.md`
   - `app/web/runtime/history.py`
   - `app/web/runtime/__init__.py`
   - `app/web/pages/backtest.py`
@@ -2276,7 +2276,7 @@ Do not copy full chat transcripts. Keep only the durable result.
     - added a `Total Return` overlay tab
   - verified both helper outputs and compare datasets locally
 - Durable output:
-  - `.note/finance/phase4/PHASE4_VISUALIZATION_ENHANCEMENT_FIRST_PASS.md`
+  - `.note/finance/phases/phase4/PHASE4_VISUALIZATION_ENHANCEMENT_FIRST_PASS.md`
   - `app/web/pages/backtest.py`
 
 ### 2026-03-22 - Extend visualization markers to best/worst periods and weighted portfolio
@@ -2289,8 +2289,8 @@ Do not copy full chat transcripts. Keep only the durable result.
   - weighted-portfolio results now reuse the same marker-based equity chart and `Period Extremes` tab structure
   - Phase 4 planning/docs were synced so the implemented visualization state no longer lagged behind the code
 - Durable output:
-  - `.note/finance/phase4/PHASE4_VISUALIZATION_ENHANCEMENT_FIRST_PASS.md`
-  - `.note/finance/phase4/PHASE4_UI_AND_BACKTEST_PLAN.md`
+  - `.note/finance/phases/phase4/PHASE4_VISUALIZATION_ENHANCEMENT_FIRST_PASS.md`
+  - `.note/finance/phases/phase4/PHASE4_UI_AND_BACKTEST_PLAN.md`
   - `app/web/pages/backtest.py`
 
 ### 2026-03-22 - Deepen compare and weighted visual interpretation
@@ -2307,8 +2307,8 @@ Do not copy full chat transcripts. Keep only the durable result.
   - single-strategy and weighted-portfolio views both gained `Balance Extremes` tables
   - documentation was synced so the implemented Phase 4 visualization state matches the code
 - Durable output:
-  - `.note/finance/phase4/PHASE4_COMPARE_AND_WEIGHTED_PORTFOLIO_FIRST_PASS.md`
-  - `.note/finance/phase4/PHASE4_VISUALIZATION_ENHANCEMENT_FIRST_PASS.md`
+  - `.note/finance/phases/phase4/PHASE4_COMPARE_AND_WEIGHTED_PORTFOLIO_FIRST_PASS.md`
+  - `.note/finance/phases/phase4/PHASE4_VISUALIZATION_ENHANCEMENT_FIRST_PASS.md`
   - `app/web/pages/backtest.py`
 
 ### 2026-03-22 - Enhance persistent backtest history with filter and drilldown
@@ -2328,7 +2328,7 @@ Do not copy full chat transcripts. Keep only the durable result.
     - `Raw Record`
   - synced Phase 4 docs and the finance analysis document to reflect the stronger history surface
 - Durable output:
-  - `.note/finance/phase4/PHASE4_BACKTEST_HISTORY_ENHANCEMENT_FIRST_PASS.md`
+  - `.note/finance/phases/phase4/PHASE4_BACKTEST_HISTORY_ENHANCEMENT_FIRST_PASS.md`
   - `app/web/pages/backtest.py`
 
 ### 2026-03-22 - Add weighted portfolio contribution visualization
@@ -2345,7 +2345,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - implemented the contribution view as a UI-layer monthly decomposition that follows the same `date_policy` used by the weighted builder
   - verified both a synthetic decomposition and a real `Dual Momentum 50 + GTAA 50` example
 - Durable output:
-  - `.note/finance/phase4/PHASE4_WEIGHTED_PORTFOLIO_CONTRIBUTION_FIRST_PASS.md`
+  - `.note/finance/phases/phase4/PHASE4_WEIGHTED_PORTFOLIO_CONTRIBUTION_FIRST_PASS.md`
   - `app/web/pages/backtest.py`
 
 ### 2026-03-22 - Add second-pass backtest history controls
@@ -2363,7 +2363,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - added `Run Again` for supported single-strategy records
   - intentionally kept compare / weighted rerun closed because the current stored context is not yet rich enough to replay them safely
 - Durable output:
-  - `.note/finance/phase4/PHASE4_BACKTEST_HISTORY_ENHANCEMENT_SECOND_PASS.md`
+  - `.note/finance/phases/phase4/PHASE4_BACKTEST_HISTORY_ENHANCEMENT_SECOND_PASS.md`
   - `app/web/pages/backtest.py`
 
 ### 2026-03-23 - Add second-pass compare visualization aids
@@ -2381,7 +2381,7 @@ Do not copy full chat transcripts. Keep only the durable result.
     - worst period
   - the Phase 4 docs and finance analysis document were synced to reflect the stronger compare visualization state
 - Durable output:
-  - `.note/finance/phase4/PHASE4_VISUALIZATION_ENHANCEMENT_SECOND_PASS.md`
+  - `.note/finance/phases/phase4/PHASE4_VISUALIZATION_ENHANCEMENT_SECOND_PASS.md`
   - `app/web/pages/backtest.py`
 
 ### 2026-03-23 - Add third-pass backtest history reuse flow
@@ -2399,7 +2399,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - wired stored payloads back into the current single-strategy forms through session-state prefill
   - intentionally kept compare / weighted rerun closed because the current stored context is still not rich enough to replay advanced overrides safely
 - Durable output:
-  - `.note/finance/phase4/PHASE4_BACKTEST_HISTORY_ENHANCEMENT_THIRD_PASS.md`
+  - `.note/finance/phases/phase4/PHASE4_BACKTEST_HISTORY_ENHANCEMENT_THIRD_PASS.md`
   - `app/web/pages/backtest.py`
 
 ### 2026-03-23 - Tighten metric-threshold handling for history rows with missing values
@@ -2427,9 +2427,9 @@ Do not copy full chat transcripts. Keep only the durable result.
     - Simple multi-factor strategy
   - narrowed the realistic first candidate set to `Value` or `Quality`
 - Durable output:
-  - `.note/finance/phase4/PHASE4_UI_CHAPTER1_COMPLETION_SUMMARY.md`
-  - `.note/finance/phase4/PHASE4_FACTOR_FUNDAMENTAL_ENTRY_TODO.md`
-  - `.note/finance/phase4/PHASE4_FACTOR_FUNDAMENTAL_FIRST_STRATEGY_OPTIONS.md`
+  - `.note/finance/phases/phase4/PHASE4_UI_CHAPTER1_COMPLETION_SUMMARY.md`
+  - `.note/finance/phases/phase4/PHASE4_FACTOR_FUNDAMENTAL_ENTRY_TODO.md`
+  - `.note/finance/phases/phase4/PHASE4_FACTOR_FUNDAMENTAL_FIRST_STRATEGY_OPTIONS.md`
 
 ### 2026-03-23 - Fix the first factor/fundamental strategy direction to Quality
 - Request topic:
@@ -2445,8 +2445,8 @@ Do not copy full chat transcripts. Keep only the durable result.
     - `debt_ratio`
   - documented the first wrapper shape and narrowed the next unresolved decision to `snapshot_mode`
 - Durable output:
-  - `.note/finance/phase4/PHASE4_QUALITY_SNAPSHOT_STRATEGY_SCOPE.md`
-  - `.note/finance/phase4/PHASE4_QUALITY_RUNTIME_WRAPPER_DRAFT.md`
+  - `.note/finance/phases/phase4/PHASE4_QUALITY_SNAPSHOT_STRATEGY_SCOPE.md`
+  - `.note/finance/phases/phase4/PHASE4_QUALITY_RUNTIME_WRAPPER_DRAFT.md`
 
 ### 2026-03-23 - Choose broad_research mode and implement the first quality runtime path
 - Request topic:
@@ -2460,8 +2460,8 @@ Do not copy full chat transcripts. Keep only the durable result.
   - added a public backtest runtime wrapper
   - validated the path on `AAPL/MSFT/GOOG`
 - Durable output:
-  - `.note/finance/phase4/PHASE4_QUALITY_BROAD_RESEARCH_DECISION.md`
-  - `.note/finance/phase4/PHASE4_QUALITY_SNAPSHOT_IMPLEMENTATION_FIRST_PASS.md`
+  - `.note/finance/phases/phase4/PHASE4_QUALITY_BROAD_RESEARCH_DECISION.md`
+  - `.note/finance/phases/phase4/PHASE4_QUALITY_SNAPSHOT_IMPLEMENTATION_FIRST_PASS.md`
   - `finance/strategy.py`
   - `finance/sample.py`
   - `app/web/runtime/backtest.py`
@@ -2482,8 +2482,8 @@ Do not copy full chat transcripts. Keep only the durable result.
   - extended history/meta/prefill support for the quality strategy
   - also allowed first-pass compare exposure for the quality path
 - Durable output:
-  - `.note/finance/phase4/PHASE4_QUALITY_UI_INPUT_DRAFT.md`
-  - `.note/finance/phase4/PHASE4_FIFTH_STRATEGY_QUALITY_ADDITION.md`
+  - `.note/finance/phases/phase4/PHASE4_QUALITY_UI_INPUT_DRAFT.md`
+  - `.note/finance/phases/phase4/PHASE4_FIFTH_STRATEGY_QUALITY_ADDITION.md`
   - `app/web/pages/backtest.py`
   - `app/web/runtime/history.py`
 
@@ -2520,8 +2520,8 @@ Do not copy full chat transcripts. Keep only the durable result.
     - `Extended Statement Refresh` is not a first-pass requirement
 - Durable output:
   - `app/web/pages/backtest.py`
-  - `.note/finance/phase4/PHASE4_QUALITY_UI_INPUT_DRAFT.md`
-  - `.note/finance/phase4/PHASE4_FIFTH_STRATEGY_QUALITY_ADDITION.md`
+  - `.note/finance/phases/phase4/PHASE4_QUALITY_UI_INPUT_DRAFT.md`
+  - `.note/finance/phases/phase4/PHASE4_FIFTH_STRATEGY_QUALITY_ADDITION.md`
 
 ### 2026-03-24 - Investigate flat early Quality Snapshot results and improve Weekly Fundamental Refresh progress visibility
 - Request topic:
@@ -2605,8 +2605,8 @@ Do not copy full chat transcripts. Keep only the durable result.
     - but the immediate next task is not more strategy code
     - the immediate next task is securing deeper statement history / backfill coverage first
 - Durable output:
-  - `.note/finance/phase4/PHASE4_STATEMENT_DRIVEN_QUALITY_BLOCKER_AND_NEXT_STEPS.md`
-  - `.note/finance/phase4/PHASE4_FACTOR_FUNDAMENTAL_ENTRY_TODO.md`
+  - `.note/finance/phases/phase4/PHASE4_STATEMENT_DRIVEN_QUALITY_BLOCKER_AND_NEXT_STEPS.md`
+  - `.note/finance/phases/phase4/PHASE4_FACTOR_FUNDAMENTAL_ENTRY_TODO.md`
 
 ### 2026-03-24 - Execute the agreed feasibility-first, then targeted-backfill sequence for statement-driven quality
 - Request topic:
@@ -2628,8 +2628,8 @@ Do not copy full chat transcripts. Keep only the durable result.
     - statement-driven quality is a viable path
     - but it still needs deeper history before it can replace the current public quality strategy for long backtests
 - Durable output:
-  - `.note/finance/phase4/PHASE4_STATEMENT_LEDGER_FEASIBILITY_AND_TARGETED_BACKFILL.md`
-  - `.note/finance/phase4/PHASE4_FACTOR_FUNDAMENTAL_ENTRY_TODO.md`
+  - `.note/finance/phases/phase4/PHASE4_STATEMENT_LEDGER_FEASIBILITY_AND_TARGETED_BACKFILL.md`
+  - `.note/finance/phases/phase4/PHASE4_FACTOR_FUNDAMENTAL_ENTRY_TODO.md`
 
 ### 2026-03-24 - Build a sample-universe statement-driven quality prototype after feasibility and targeted backfill
 - Request topic:
@@ -2664,8 +2664,8 @@ Do not copy full chat transcripts. Keep only the durable result.
     - the statement-driven quality path is now proven at prototype level for the targeted sample universe
     - but it remains inappropriate to expose as a long-history public strategy until statement coverage becomes deeper and more even across the universe
 - Durable output:
-  - `.note/finance/phase4/PHASE4_STATEMENT_DRIVEN_QUALITY_PROTOTYPE_FIRST_PASS.md`
-  - `.note/finance/phase4/PHASE4_FACTOR_FUNDAMENTAL_ENTRY_TODO.md`
+  - `.note/finance/phases/phase4/PHASE4_STATEMENT_DRIVEN_QUALITY_PROTOTYPE_FIRST_PASS.md`
+  - `.note/finance/phases/phase4/PHASE4_FACTOR_FUNDAMENTAL_ENTRY_TODO.md`
 
 ### 2026-03-24 - Move statement-driven quality preprocessing into reusable data-layer mapping
 - Request topic:
@@ -2688,8 +2688,8 @@ Do not copy full chat transcripts. Keep only the durable result.
     - this still does not mean public replacement of the current broad-research quality path
     - but it is the right base for any future statement-driven rebuild/backfill
 - Durable output:
-  - `.note/finance/phase4/PHASE4_STATEMENT_TO_FUNDAMENTALS_FACTORS_MAPPING_FIRST_PASS.md`
-  - `.note/finance/phase4/PHASE4_FACTOR_FUNDAMENTAL_ENTRY_TODO.md`
+  - `.note/finance/phases/phase4/PHASE4_STATEMENT_TO_FUNDAMENTALS_FACTORS_MAPPING_FIRST_PASS.md`
+  - `.note/finance/phases/phase4/PHASE4_FACTOR_FUNDAMENTAL_ENTRY_TODO.md`
 
 ### 2026-03-24 - Add a strict statement quality loader boundary on top of the new mapping
 - Request topic:
@@ -2703,7 +2703,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - validated the loader directly for `AAPL/MSFT/GOOG` at `2025-01-31`
   - revalidated the sample-universe prototype end-to-end with unchanged final balance
 - Durable output:
-  - `.note/finance/phase4/PHASE4_STATEMENT_QUALITY_LOADER_FIRST_PASS.md`
+  - `.note/finance/phases/phase4/PHASE4_STATEMENT_QUALITY_LOADER_FIRST_PASS.md`
 
 ### 2026-03-24 - Start the statement-driven fundamentals/factors backfill planning step
 - Request topic:
@@ -2720,7 +2720,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - recommended the shadow-table path as the safest first rollout
   - added `load_statement_coverage_summary(...)` so statement usable history can be audited before any write path is chosen
 - Durable output:
-  - `.note/finance/phase4/PHASE4_STATEMENT_DRIVEN_BACKFILL_PLAN_FIRST_PASS.md`
+  - `.note/finance/phases/phase4/PHASE4_STATEMENT_DRIVEN_BACKFILL_PLAN_FIRST_PASS.md`
 
 ### 2026-03-24 - Open the statement-driven shadow-table backfill path
 - Request topic:
@@ -2740,7 +2740,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - validated annual sample-universe write/read on `AAPL/MSFT/GOOG`
   - confirmed current shadow path is useful for accounting-quality history, but valuation fields remain incomplete because statement-driven `shares_outstanding` is still sparse
 - Durable output:
-  - `.note/finance/phase4/PHASE4_STATEMENT_SHADOW_TABLES_FIRST_PASS.md`
+  - `.note/finance/phases/phase4/PHASE4_STATEMENT_SHADOW_TABLES_FIRST_PASS.md`
 
 ### 2026-03-24 - Add first-pass shares fallback to the statement-driven shadow path
 - Request topic:
@@ -2759,7 +2759,7 @@ Do not copy full chat transcripts. Keep only the durable result.
     - accounting quality fields remain statement-driven
     - valuation fields are currently `statement + broad shares fallback` hybrid rows
 - Durable output:
-  - `.note/finance/phase4/PHASE4_STATEMENT_SHADOW_SHARES_ENHANCEMENT_FIRST_PASS.md`
+  - `.note/finance/phases/phase4/PHASE4_STATEMENT_SHADOW_SHARES_ENHANCEMENT_FIRST_PASS.md`
 
 ### 2026-03-24 - Verify user-run Extended Statement Refresh and recheck the shadow path
 - Request topic:
@@ -2781,7 +2781,7 @@ Do not copy full chat transcripts. Keep only the durable result.
     - annual strict statement path remains the better sample-universe candidate
     - quarterly path is working but still too shallow to be the next public candidate
 - Durable output:
-  - `.note/finance/phase4/PHASE4_EXTENDED_STATEMENT_REFRESH_VERIFICATION_AND_SHADOW_REBUILD.md`
+  - `.note/finance/phases/phase4/PHASE4_EXTENDED_STATEMENT_REFRESH_VERIFICATION_AND_SHADOW_REBUILD.md`
 
 ### 2026-03-24 - Fix annual statement period limiting and reopen long-history strict quality on the sample universe
 - Request topic:
@@ -2802,7 +2802,7 @@ Do not copy full chat transcripts. Keep only the durable result.
     - `first_active = 2016-02-29`
     - long-history annual strict quality backtest is now actually usable on `AAPL/MSFT/GOOG`
 - Durable output:
-  - `.note/finance/phase4/PHASE4_ANNUAL_STATEMENT_PERIOD_LIMIT_FIX_AND_COVERAGE_EXPANSION.md`
+  - `.note/finance/phases/phase4/PHASE4_ANNUAL_STATEMENT_PERIOD_LIMIT_FIX_AND_COVERAGE_EXPANSION.md`
 
 ### 2026-03-24 - Promote strict annual statement quality into a public UI candidate
 - Request topic:
@@ -2824,7 +2824,7 @@ Do not copy full chat transcripts. Keep only the durable result.
     - broad quality = current research-oriented public path
     - strict annual quality = statement-driven public candidate path
 - Durable output:
-  - `.note/finance/phase4/PHASE4_STRICT_ANNUAL_QUALITY_PUBLIC_CANDIDATE_FIRST_PASS.md`
+  - `.note/finance/phases/phase4/PHASE4_STRICT_ANNUAL_QUALITY_PUBLIC_CANDIDATE_FIRST_PASS.md`
 
 ### 2026-03-24 - Prefer annual statement coverage expansion before treating strict annual quality as trustworthy
 - Request topic:
@@ -2841,7 +2841,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - manual `Financial Statement Ingestion` now benefits from the same progress path
   - sample validation confirmed the new callback contract works and result details now expose `upserted_filings`
 - Durable output:
-  - `.note/finance/phase4/PHASE4_ANNUAL_STATEMENT_COVERAGE_OPERATOR_SUPPORT_FIRST_PASS.md`
+  - `.note/finance/phases/phase4/PHASE4_ANNUAL_STATEMENT_COVERAGE_OPERATOR_SUPPORT_FIRST_PASS.md`
 
 ### 2026-03-24 - Stage 1 wider annual coverage run shows strict annual path can scale, but foreign issuers distort naive top-market-cap rollout
 - Request topic:
@@ -2861,7 +2861,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - `68` symbols already have `12+` annual accessions
   - the `20` missing symbols are mostly foreign issuers (`TSM`, `AZN`, `ASML`, `BABA`, `TM`, `HSBC`, etc.)
 - Durable output:
-  - `.note/finance/phase4/PHASE4_ANNUAL_STATEMENT_COVERAGE_STAGE1_TOP100_RUN.md`
+  - `.note/finance/phases/phase4/PHASE4_ANNUAL_STATEMENT_COVERAGE_STAGE1_TOP100_RUN.md`
 
 ### 2026-03-24 - Stage 2 US top-300 annual coverage run shows strict annual path is viable beyond the sample universe
 - Request topic:
@@ -2888,7 +2888,7 @@ Do not copy full chat transcripts. Keep only the durable result.
     - `CUK`
   - this materially increases confidence that the strict annual path is not just a sample-universe artifact
 - Durable output:
-  - `.note/finance/phase4/PHASE4_ANNUAL_STATEMENT_COVERAGE_STAGE2_US_TOP300_RUN.md`
+  - `.note/finance/phases/phase4/PHASE4_ANNUAL_STATEMENT_COVERAGE_STAGE2_US_TOP300_RUN.md`
 
 ### 2026-03-25 - Redefine strict annual quality as a verified wider-universe public candidate
 - Request topic:
@@ -2909,7 +2909,7 @@ Do not copy full chat transcripts. Keep only the durable result.
     - `US Statement Coverage 100`
     - this keeps compare runs lighter while preserving the wider-universe product meaning
 - Durable output:
-  - `.note/finance/phase4/PHASE4_STRICT_ANNUAL_QUALITY_PUBLIC_ROLE_AND_DEFAULT_UNIVERSE.md`
+  - `.note/finance/phases/phase4/PHASE4_STRICT_ANNUAL_QUALITY_PUBLIC_ROLE_AND_DEFAULT_UNIVERSE.md`
 
 ### 2026-03-25 - Fix quality preset preview not refreshing until submit
 - Request topic:
@@ -3464,8 +3464,8 @@ Do not copy full chat transcripts. Keep only the durable result.
     - `Strategy Library And Comparative Research`
     - `Risk Overlay For Strict Factor Strategies`
   - created:
-    - `.note/finance/phase5/PHASE5_STRATEGY_LIBRARY_AND_RISK_OVERLAY_PLAN.md`
-    - `.note/finance/phase5/PHASE5_CURRENT_CHAPTER_TODO.md`
+    - `.note/finance/phases/phase5/PHASE5_STRATEGY_LIBRARY_AND_RISK_OVERLAY_PLAN.md`
+    - `.note/finance/phases/phase5/PHASE5_CURRENT_CHAPTER_TODO.md`
   - updated phase-handoff documents so the next phase is no longer just a candidate list; it now explicitly includes:
     - strict family baseline comparison
     - overlay requirement definition
@@ -3766,7 +3766,7 @@ Do not copy full chat transcripts. Keep only the durable result.
     - tooltip / copy checks
 - Durable output:
   - the current recommended manual QA entry point is:
-    - `.note/finance/phase5/PHASE5_STRICT_FAMILY_TEST_CHECKLIST.md`
+    - `.note/finance/phases/phase5/PHASE5_STRICT_FAMILY_TEST_CHECKLIST.md`
 
 ### 2026-03-28 - Make phase-end manual test checklists a standing repository rule
 - Request topic:
@@ -3891,8 +3891,8 @@ Do not copy full chat transcripts. Keep only the durable result.
 - Result:
   - judged the current Phase 5 scope as effectively complete at the first-chapter level
   - added:
-    - `.note/finance/phase5/PHASE5_COMPLETION_SUMMARY.md`
-    - `.note/finance/phase5/PHASE5_NEXT_PHASE_PREPARATION.md`
+    - `.note/finance/phases/phase5/PHASE5_COMPLETION_SUMMARY.md`
+    - `.note/finance/phases/phase5/PHASE5_NEXT_PHASE_PREPARATION.md`
   - updated the Phase 5 TODO board, roadmap, and doc index to reflect closeout
 - Durable output:
   - Phase 5 should now be read as:
@@ -3944,8 +3944,8 @@ Do not copy full chat transcripts. Keep only the durable result.
     - second overlay implementation first
     - quarterly strict family entry and validation second
   - created:
-    - `.note/finance/phase6/PHASE6_OVERLAY_AND_QUARTERLY_EXPANSION_PLAN.md`
-    - `.note/finance/phase6/PHASE6_CURRENT_CHAPTER_TODO.md`
+    - `.note/finance/phases/phase6/PHASE6_OVERLAY_AND_QUARTERLY_EXPANSION_PLAN.md`
+    - `.note/finance/phases/phase6/PHASE6_CURRENT_CHAPTER_TODO.md`
   - synced the new phase into:
     - `MASTER_PHASE_ROADMAP.md`
     - `FINANCE_DOC_INDEX.md`
@@ -4364,7 +4364,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - only `local_ingestion_gap`-class results generate a targeted `Daily Market Update` payload
   - backtest preflight now points users toward this diagnosis card when a stale warning remains yellow
 - Durable output:
-  - `.note/finance/phase8/PHASE8_PRICE_STALE_DIAGNOSIS_FIRST_PASS.md`
+  - `.note/finance/phases/phase8/PHASE8_PRICE_STALE_DIAGNOSIS_FIRST_PASS.md`
 
 ### 2026-03-29 - Statement shadow coverage gap drilldown
 - Request topic:
@@ -4395,7 +4395,7 @@ Do not copy full chat transcripts. Keep only the durable result.
     - `Missing = 200`
     - all 200 missing symbols currently fall into `no_raw_statement_coverage`
 - Durable output:
-  - `.note/finance/phase8/PHASE8_STATEMENT_SHADOW_COVERAGE_GAP_DIAGNOSTICS.md`
+  - `.note/finance/phases/phase8/PHASE8_STATEMENT_SHADOW_COVERAGE_GAP_DIAGNOSTICS.md`
 
 ### 2026-03-29 - Extended Statement Refresh quarterly shadow rebuild fix
 - Request topic:
@@ -4493,7 +4493,7 @@ Do not copy full chat transcripts. Keep only the durable result.
     - statement shadow rebuild-only helper
     - failure artifact standardization
 - Durable output:
-  - `.note/finance/phase8/PHASE8_INGESTION_UI_POLISH_AND_REVIEW.md`
+  - `.note/finance/phases/phase8/PHASE8_INGESTION_UI_POLISH_AND_REVIEW.md`
 
 ### 2026-03-29 - Operator tooling implementation follow-up
 - Request topic:
@@ -4519,7 +4519,7 @@ Do not copy full chat transcripts. Keep only the durable result.
     - every ingestion run now writes JSON artifacts under `.note/finance/run_artifacts/`
     - runs with symbol-level issues also write standardized `csv/*_failures.csv`
 - Durable output:
-  - `.note/finance/phase8/PHASE8_OPERATOR_RUNTIME_AND_SHADOW_REBUILD_TOOLING.md`
+  - `.note/finance/phases/phase8/PHASE8_OPERATOR_RUNTIME_AND_SHADOW_REBUILD_TOOLING.md`
   - updated `PHASE8_TEST_CHECKLIST.md` with operator-tooling validation items
 
 ### 2026-03-29 - Coverage-missing symbol guidance for quarterly statement gaps
@@ -4551,7 +4551,7 @@ Do not copy full chat transcripts. Keep only the durable result.
     - classified as `foreign_or_nonstandard_form_structure`
     - recommendation: treat as foreign-form support/exclusion decision; recollection alone is unlikely to help
 - Durable output:
-  - `.note/finance/phase8/PHASE8_STATEMENT_COVERAGE_DIAGNOSIS_GUIDANCE.md`
+  - `.note/finance/phases/phase8/PHASE8_STATEMENT_COVERAGE_DIAGNOSIS_GUIDANCE.md`
 
 ### 2026-03-29 - Coarse vs fine diagnosis in quarterly coverage UI
 - Request topic:
@@ -5369,7 +5369,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - current project test results pointed to:
     - `DBC` > `No Commodity Sleeve` > `PDBC`
   - documented the full comparison in:
-    - `.note/finance/phase12/PHASE12_GTAA_DBC_PDBC_NO_COMMODITY_ANALYSIS.md`
+    - `.note/finance/phases/phase12/PHASE12_GTAA_DBC_PDBC_NO_COMMODITY_ANALYSIS.md`
   - recorded alternative broad commodity ETF candidates for later testing:
     - `CMDY`
     - `BCI`
@@ -5407,7 +5407,7 @@ Do not copy full chat transcripts. Keep only the durable result.
     - overall: `DBC` > `No Commodity Sleeve` > `COMT` > `CMDY` > `BCI` > `PDBC`
     - among K-1-free alternatives only: `COMT` > `CMDY` > `BCI` > `PDBC`
   - recorded the full comparison in:
-    - `.note/finance/phase12/PHASE12_GTAA_COMMODITY_ALTERNATIVE_CANDIDATE_ANALYSIS.md`
+    - `.note/finance/phases/phase12/PHASE12_GTAA_COMMODITY_ALTERNATIVE_CANDIDATE_ANALYSIS.md`
 - Durable implication:
   - if the project keeps pure strategy performance as the main criterion, `DBC` still remains the best commodity sleeve in current GTAA tests
   - if `DBC` must be avoided for structure/tax reasons, `COMT` and `CMDY` are the most defensible next candidates to test further
@@ -5435,7 +5435,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - `QUAL` by itself raised `CAGR` but made `MDD` worse
   - `TIP` was selected only rarely and did not appear to be a primary improvement driver
   - documented the full 10-run search in:
-    - `.note/finance/phase12/PHASE12_GTAA_INTERVAL1_UNIVERSE_VARIATION_SEARCH.md`
+    - `.note/finance/phases/phase12/PHASE12_GTAA_INTERVAL1_UNIVERSE_VARIATION_SEARCH.md`
 - Durable implication:
   - for current GTAA hardening, the next most defensible universe improvement is adding a low-volatility sleeve (`USMV`) rather than focusing only on commodity substitutions
   - `DBC` remains the preferred commodity sleeve in the current contract
@@ -5460,7 +5460,7 @@ Do not copy full chat transcripts. Keep only the durable result.
     - `COMT + QUAL + USMV`
   - found that `QUAL + USMV` additions improved the no-DBC contract more than trying to rescue `PDBC`
   - documented the full comparison in:
-    - `.note/finance/phase12/PHASE12_GTAA_NO_DBC_INTERVAL1_VARIATION_SEARCH.md`
+    - `.note/finance/phases/phase12/PHASE12_GTAA_NO_DBC_INTERVAL1_VARIATION_SEARCH.md`
 - Durable implication:
   - if `DBC` must be excluded, the best current GTAA direction is not simply "replace DBC with another commodity ETF"
   - the more effective path is:
@@ -5543,7 +5543,7 @@ Do not copy full chat transcripts. Keep only the durable result.
     - `MDD = -16.69%`
     - `Sharpe = 1.184`
   - saved the full study to:
-    - `.note/finance/phase12/PHASE12_GTAA_DB_ETF_GROUP_SEARCH.md`
+    - `.note/finance/phases/phase12/PHASE12_GTAA_DB_ETF_GROUP_SEARCH.md`
 - Durable implication:
   - under the current GTAA contract, the most promising next-step universe edit is not adding more bond sleeves or defensive sectors
   - the more defensible additive direction is:
@@ -5578,7 +5578,7 @@ Do not copy full chat transcripts. Keep only the durable result.
     - `GTAA Universe (DBC)` for slightly lower MDD
   - the current default `GTAA Universe` based on `PDBC` remained relatively weak even after the cadence rebase
   - saved the normalized rerun note as:
-    - `.note/finance/phase12/PHASE12_GTAA_INTERVAL1_DEFAULT_REBASE_ANALYSIS.md`
+    - `.note/finance/phases/phase12/PHASE12_GTAA_INTERVAL1_DEFAULT_REBASE_ANALYSIS.md`
 - Durable implication:
   - GTAA should now be read as a monthly-signal default strategy in current UI/runtime paths
   - however, changing interval alone does not make the current `PDBC` default universe the strongest option
@@ -5638,7 +5638,7 @@ Do not copy full chat transcripts. Keep only the durable result.
     - `Crash Guardrail Triggered`
     - `Risk-Off Reason`
   - saved the implementation note as:
-    - `.note/finance/phase12/PHASE12_GTAA_SCORE_WEIGHT_AND_RISK_OFF_FIRST_PASS.md`
+    - `.note/finance/phases/phase12/PHASE12_GTAA_SCORE_WEIGHT_AND_RISK_OFF_FIRST_PASS.md`
 - Durable implication:
   - GTAA should no longer be read as having a single hardcoded score contract
   - future GTAA hardening can now compare:
@@ -5853,7 +5853,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - make the top GTAA candidates easier to read as practical choices
   - and remove the mismatch where single GTAA had preset/manual universe control but compare GTAA did not
 - Result:
-  - expanded `.note/finance/phase12/PHASE12_GTAA_CAGR9_MDD16_TARGET_SEARCH.md` with a decision table covering:
+  - expanded `.note/finance/phases/phase12/PHASE12_GTAA_CAGR9_MDD16_TARGET_SEARCH.md` with a decision table covering:
     - offensive candidate
     - balanced candidate
     - defensive candidate
@@ -6381,8 +6381,8 @@ Do not copy full chat transcripts. Keep only the durable result.
     - monitoring
     - rolling / out-of-sample review
   - created:
-    - `.note/finance/phase13/PHASE13_DEPLOYMENT_READINESS_AND_PROBATION_PLAN.md`
-    - `.note/finance/phase13/PHASE13_CURRENT_CHAPTER_TODO.md`
+    - `.note/finance/phases/phase13/PHASE13_DEPLOYMENT_READINESS_AND_PROBATION_PLAN.md`
+    - `.note/finance/phases/phase13/PHASE13_CURRENT_CHAPTER_TODO.md`
   - synced:
     - master roadmap
     - finance doc index
@@ -7322,7 +7322,7 @@ Do not copy full chat transcripts. Keep only the durable result.
     - best defensive candidate
     - the common reason `hold` keeps appearing
 - Result:
-  - created `.note/finance/phase13/PHASE13_STRICT_ANNUAL_FAMILY_BACKTEST_SUMMARY.md`
+  - created `.note/finance/phases/phase13/PHASE13_STRICT_ANNUAL_FAMILY_BACKTEST_SUMMARY.md`
   - the summary records that:
     - `Value Strict Annual` was the strongest family overall
     - `Quality Strict Annual` had meaningful raw candidates but stayed conservative under full hardening
@@ -7401,7 +7401,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - leave one durable reproduction guide for the `Value > Strict Annual` raw winner
   - make the result easier to rerun without reopening multiple phase13 analysis notes
 - Result:
-  - created `.note/finance/phase13/PHASE13_VALUE_RAW_WINNER_BACKTEST_GUIDE.md`
+  - created `.note/finance/phases/phase13/PHASE13_VALUE_RAW_WINNER_BACKTEST_GUIDE.md`
   - the guide records:
     - `Value > Strict Annual`
     - `US Statement Coverage 100`
@@ -7444,7 +7444,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - avoid breaking the old paths immediately
 - Result:
   - moved the main Phase 13 backtest-result documents into `.note/finance/backtest_reports/phase13/`
-  - left short redirect stubs at the old `.note/finance/phase13/` paths
+  - left short redirect stubs at the old `.note/finance/phases/phase13/` paths
   - updated the report index and finance document index to point at the new canonical locations
 - Durable implication:
   - future Phase 13 result review should start from `backtest_reports/phase13/`
@@ -7518,7 +7518,7 @@ Do not copy full chat transcripts. Keep only the durable result.
 - Interpreted goal:
   - make the checklist match the current product surface rather than the earlier Phase 13 closeout snapshot
 - Result:
-  - updated `.note/finance/phase13/PHASE13_TEST_CHECKLIST.md`
+  - updated `.note/finance/phases/phase13/PHASE13_TEST_CHECKLIST.md`
   - added explicit checks for:
     - `Latest Backtest Run` guidance area
     - `Real-Money` internal tab structure
@@ -7867,7 +7867,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - move from planning into a concrete first work unit that explains repeated `hold / blocked` outcomes and sets up better evidence collection for later calibration work
 - Result:
   - audited the current real-money gate logic and documented the first-pass blocker pattern in:
-    - `.note/finance/phase14/PHASE14_GATE_BLOCKER_DISTRIBUTION_AUDIT_FIRST_PASS.md`
+    - `.note/finance/phases/phase14/PHASE14_GATE_BLOCKER_DISTRIBUTION_AUDIT_FIRST_PASS.md`
   - the strongest repeated blocker in strict annual family was recorded as:
     - `validation`
     - `validation_policy`
@@ -8021,7 +8021,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - move from blocker distribution counts to representative candidate case reading so the next calibration experiment can be chosen more precisely
 - Result:
   - created:
-    - `.note/finance/phase14/PHASE14_NEAR_MISS_CANDIDATE_CASE_STUDY_FIRST_PASS.md`
+    - `.note/finance/phases/phase14/PHASE14_NEAR_MISS_CANDIDATE_CASE_STUDY_FIRST_PASS.md`
   - re-read representative cases:
     - `Value` balanced exact-hit hold
     - `Quality` SPY-dominance near miss
@@ -8041,7 +8041,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - widen the strict annual search space carefully without mixing calibration review with a large uncontrolled factor explosion
 - Result:
   - created a controlled shortlist document at:
-    - `.note/finance/phase14/PHASE14_CONTROLLED_FACTOR_EXPANSION_SHORTLIST_FIRST_PASS.md`
+    - `.note/finance/phases/phase14/PHASE14_CONTROLLED_FACTOR_EXPANSION_SHORTLIST_FIRST_PASS.md`
   - opened only a small first-pass set in the strict annual UI:
     - Quality:
       - `interest_coverage`
@@ -8069,8 +8069,8 @@ Do not copy full chat transcripts. Keep only the durable result.
     - use sub-agents when a workstream can be split into independent tracks
     - proceed directly when sub-agents are unnecessary or the current session does not make them practical
   - created:
-    - `.note/finance/phase14/PHASE14_STRICT_ANNUAL_VALIDATION_POLICY_SENSITIVITY_REVIEW_FIRST_PASS.md`
-    - `.note/finance/phase14/PHASE14_ETF_OPERABILITY_SENSITIVITY_REVIEW_FIRST_PASS.md`
+    - `.note/finance/phases/phase14/PHASE14_STRICT_ANNUAL_VALIDATION_POLICY_SENSITIVITY_REVIEW_FIRST_PASS.md`
+    - `.note/finance/phases/phase14/PHASE14_ETF_OPERABILITY_SENSITIVITY_REVIEW_FIRST_PASS.md`
   - strict annual rerun evidence showed:
     - relaxing `promotion_min_worst_rolling_excess_return` can normalize `validation_policy_status`
     - but exact-hit hold and quality near-miss still stay `hold` because fixed internal `validation_status` remains `caution`
@@ -8092,8 +8092,8 @@ Do not copy full chat transcripts. Keep only the durable result.
   - take the next concrete step so the phase moves from broad threshold discussion into more precise family-specific experiment planning
 - Result:
   - created:
-    - `.note/finance/phase14/PHASE14_STRICT_ANNUAL_VALIDATION_STATUS_FIXED_THRESHOLD_REVIEW_FIRST_PASS.md`
-    - `.note/finance/phase14/PHASE14_ETF_OPERABILITY_DATA_COVERAGE_INTERPRETATION_REVIEW_FIRST_PASS.md`
+    - `.note/finance/phases/phase14/PHASE14_STRICT_ANNUAL_VALIDATION_STATUS_FIXED_THRESHOLD_REVIEW_FIRST_PASS.md`
+    - `.note/finance/phases/phase14/PHASE14_ETF_OPERABILITY_DATA_COVERAGE_INTERPRETATION_REVIEW_FIRST_PASS.md`
   - main analysis result:
     - strict annual:
       - the most direct current blocker is the internal `worst rolling excess <= -15%` severe boundary
@@ -8115,12 +8115,12 @@ Do not copy full chat transcripts. Keep only the durable result.
   - close Phase 14 in a way that leaves the real-money gate workstream understandable, bounded, and ready for the next implementation phase
 - Result:
   - created:
-    - `.note/finance/phase14/PHASE14_FAMILY_SPECIFIC_THRESHOLD_EXPERIMENT_DESIGN_FIRST_PASS.md`
-    - `.note/finance/phase14/PHASE14_DEPLOYMENT_WORKFLOW_BRIDGE_FIRST_PASS.md`
-    - `.note/finance/phase14/PHASE14_PIT_OPERABILITY_LATER_PASS_DECISION.md`
-    - `.note/finance/phase14/PHASE14_TEST_CHECKLIST.md`
-    - `.note/finance/phase14/PHASE14_COMPLETION_SUMMARY.md`
-    - `.note/finance/phase14/PHASE14_NEXT_PHASE_PREPARATION.md`
+    - `.note/finance/phases/phase14/PHASE14_FAMILY_SPECIFIC_THRESHOLD_EXPERIMENT_DESIGN_FIRST_PASS.md`
+    - `.note/finance/phases/phase14/PHASE14_DEPLOYMENT_WORKFLOW_BRIDGE_FIRST_PASS.md`
+    - `.note/finance/phases/phase14/PHASE14_PIT_OPERABILITY_LATER_PASS_DECISION.md`
+    - `.note/finance/phases/phase14/PHASE14_TEST_CHECKLIST.md`
+    - `.note/finance/phases/phase14/PHASE14_COMPLETION_SUMMARY.md`
+    - `.note/finance/phases/phase14/PHASE14_NEXT_PHASE_PREPARATION.md`
   - updated the active TODO board, roadmap, and doc index so Phase 14 now reads as `practical closeout / manual_validation_pending`
   - fixed the main handoff decision:
     - next work should be one of:
@@ -8373,8 +8373,8 @@ Do not copy full chat transcripts. Keep only the durable result.
     - in this family, overlay / slower cadence was not the best first downside lever because those paths tended to fall back to `hold`
     - `Top N diversification` is the cleanest first-pass lever for improving candidate quality without losing the non-hold gate state
 - Durable output:
-  - `.note/finance/phase15/PHASE15_CANDIDATE_QUALITY_IMPROVEMENT_PLAN.md`
-  - `.note/finance/phase15/PHASE15_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/phases/phase15/PHASE15_CANDIDATE_QUALITY_IMPROVEMENT_PLAN.md`
+  - `.note/finance/phases/phase15/PHASE15_CURRENT_CHAPTER_TODO.md`
   - `.note/finance/backtest_reports/phase15/PHASE15_VALUE_DOWNSIDE_IMPROVEMENT_SEARCH_FIRST_PASS.md`
   - `.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL_DOWNSIDE_IMPROVED_CURRENT_CANDIDATE.md`
 
@@ -8398,7 +8398,7 @@ Do not copy full chat transcripts. Keep only the durable result.
   - `psr` is the current best addition candidate for the `Value` family
   - the controlled addition search confirmed that we should keep widening the search space in a bounded way rather than relaxing gates again
 - Durable output:
-  - `.note/finance/phase15/PHASE15_VALUE_FACTOR_ADDITION_SECOND_PASS.md`
+  - `.note/finance/phases/phase15/PHASE15_VALUE_FACTOR_ADDITION_SECOND_PASS.md`
   - `.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL_FACTOR_ADDITION_BEST_CURRENT_CANDIDATE.md`
   - `.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL_BACKTEST_LOG.md`
   - `.note/finance/backtest_reports/strategies/VALUE_STRICT_ANNUAL.md`

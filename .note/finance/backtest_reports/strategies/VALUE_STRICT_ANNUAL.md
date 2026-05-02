@@ -215,7 +215,7 @@
   - strongest baseline에서 `MDD`를 낮추는 방향으로 본 first-pass downside improvement search 문서
 - [PHASE15_VALUE_FACTOR_ADDITION_SECOND_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase15/PHASE15_VALUE_FACTOR_ADDITION_SECOND_PASS.md)
   - first-pass downside-improved anchor에 one-factor addition을 붙여 다시 본 second-pass 문서
-- [PHASE16_VALUE_DOWNSIDE_REFINEMENT_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase16/PHASE16_VALUE_DOWNSIDE_REFINEMENT_FIRST_PASS.md)
+- [PHASE16_VALUE_DOWNSIDE_REFINEMENT_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phases/phase16/PHASE16_VALUE_DOWNSIDE_REFINEMENT_FIRST_PASS.md)
   - `Top N = 14 + psr` current practical point 위에서
     bounded downside follow-up을 다시 본 문서
 - [PHASE17_DEFENSIVE_SLEEVE_RISK_OFF_REPRESENTATIVE_RERUN_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase17/PHASE17_DEFENSIVE_SLEEVE_RISK_OFF_REPRESENTATIVE_RERUN_FIRST_PASS.md)

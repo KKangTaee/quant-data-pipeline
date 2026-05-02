@@ -4,9 +4,9 @@
 
 - `.note/finance/backtest_reports/strategies/CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md`
 - `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`
-- `.note/finance/phase20/PHASE20_CURRENT_CHAPTER_TODO.md`
-- `.note/finance/phase20/PHASE20_OPERATOR_WORKFLOW_INVENTORY_FIRST_PASS.md`
-- `.note/finance/phase21/PHASE21_CURRENT_CHAPTER_TODO.md`
+- `.note/finance/phases/phase20/PHASE20_CURRENT_CHAPTER_TODO.md`
+- `.note/finance/phases/phase20/PHASE20_OPERATOR_WORKFLOW_INVENTORY_FIRST_PASS.md`
+- `.note/finance/phases/phase21/PHASE21_CURRENT_CHAPTER_TODO.md`
 - relevant strategy hub:
   - `VALUE_STRICT_ANNUAL.md`
   - `QUALITY_STRICT_ANNUAL.md`

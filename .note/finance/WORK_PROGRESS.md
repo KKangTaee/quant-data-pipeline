@@ -13,7 +13,7 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Active Pointers
 
 - current phase board:
-  - [PHASE30_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phase30/PHASE30_CURRENT_CHAPTER_TODO.md)
+  - [PHASE30_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phases/phase30/PHASE30_CURRENT_CHAPTER_TODO.md)
 - current candidate summary:
   - [CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md)
 - historical full archive:
@@ -163,7 +163,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - Opened `Phase 23 Quarterly And Alternate Cadence Productionization`.
 - Created and rewrote the Phase 23 plan / TODO / checklist / completion / next-phase documents so the phase is clearly framed as product development, not investment analysis.
 - Added the first work-unit document:
-  - `.note/finance/phase23/PHASE23_QUARTERLY_PRODUCTIONIZATION_FRAME_FIRST_WORK_UNIT.md`
+  - `.note/finance/phases/phase23/PHASE23_QUARTERLY_PRODUCTIONIZATION_FRAME_FIRST_WORK_UNIT.md`
 - Current reading:
   - quarterly strict family already has execution paths
   - Phase 23 will harden UI, payload, compare/history/replay, and representative validation before Phase 24 new strategy expansion
@@ -2022,7 +2022,7 @@ Detailed historical logs were archived on `2026-04-13`.
 ### 2026-04-28
 - Completed the second Phase 30 work unit: Portfolio Proposal contract definition.
 - Changed:
-  - added `.note/finance/phase30/PHASE30_PORTFOLIO_PROPOSAL_CONTRACT_SECOND_WORK_UNIT.md`
+  - added `.note/finance/phases/phase30/PHASE30_PORTFOLIO_PROPOSAL_CONTRACT_SECOND_WORK_UNIT.md`
   - defined the minimum proposal row contract: objective, component candidates, proposal roles, target weights, risk constraints, evidence snapshot, open blockers, and operator decision
   - proposed `.note/finance/PORTFOLIO_PROPOSAL_REGISTRY.jsonl` as a future append-only storage location without creating the file or implementing append behavior yet
   - updated Phase 30 TODO, checklist, completion summary, roadmap, doc index, glossary, web UI flow docs, and comprehensive analysis
@@ -2847,3 +2847,15 @@ Detailed historical logs were archived on `2026-04-13`.
 - Verification:
   - `.venv/bin/python -m compileall app/web/runtime/backtest.py` passed
   - Candidate Library replay warnings for `quality_value_current_candidate_cov100_top10_spy_mdd20` are now displayed in Korean
+
+### 2026-05-02
+- Reorganized finance phase documents under a single phase parent folder after the user pointed out `.note/finance` root document fragmentation.
+- Changed:
+  - moved root-level numbered phase folders into `.note/finance/phases/phase1` through `.note/finance/phases/phase30`
+  - added `.note/finance/phases/README.md` as the phase document landing page
+  - updated phase links and workflow references in roadmap / doc index / analysis / code-analysis / operation docs
+  - updated `bootstrap_finance_phase_bundle.py` to create future phase bundles under `.note/finance/phases/phase<N>/`
+  - updated `check_finance_refinement_hygiene.py` phase-doc classification for the new path
+- Verification:
+  - no numbered phase directories remain directly under `.note/finance`
+  - old `.note/finance/phaseN` references are removed from active docs and scripts
