@@ -38,7 +38,7 @@ Pre-Live 관찰로 넘길지"를 정리하는 단계다.
 
 ## 이 phase에서 다루는 대상
 
-- `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`
+- `.note/finance/registries/CURRENT_CANDIDATE_REGISTRY.jsonl`
 - `Backtest > Candidate Review`
 - `Backtest > Compare & Portfolio Builder`의 current candidate re-entry
 - `Backtest > Pre-Live Review`의 current candidate 운영 기록
@@ -128,7 +128,7 @@ Pre-Live 관찰로 넘길지"를 정리하는 단계다.
 
 - 무엇을 바꾸는가:
   - `Candidate Review > Candidate Intake Draft`에서 검토 초안을 review note로 저장할 수 있게 한다.
-  - review note는 `.note/finance/CANDIDATE_REVIEW_NOTES.jsonl`에 append-only로 남긴다.
+  - review note는 `.note/finance/registries/CANDIDATE_REVIEW_NOTES.jsonl`에 append-only로 남긴다.
 
 - 왜 필요한가:
   - 후보 초안 판단을 남기되, current candidate registry 자동 등록과는 분리해야 한다.

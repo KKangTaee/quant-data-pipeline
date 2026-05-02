@@ -9,7 +9,7 @@
   script와 plugin도 다시 읽을 수 있는 JSONL 기록으로도 남는다.
 
 ## 이번 작업에서 한 것
-- `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`를 만들었다.
+- `.note/finance/registries/CURRENT_CANDIDATE_REGISTRY.jsonl`를 만들었다.
 - `plugins/quant-finance-workflow/scripts/manage_current_candidate_registry.py`를 추가했다.
 - 이 script는 아래 기능을 제공한다.
   - `seed-current-practical`

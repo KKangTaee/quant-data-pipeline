@@ -17,7 +17,7 @@
 
 저장 경로:
 
-- `.note/finance/BACKTEST_RUN_HISTORY.jsonl`
+- `.note/finance/run_history/BACKTEST_RUN_HISTORY.jsonl`
 
 ## 현재 저장되는 실행 종류
 

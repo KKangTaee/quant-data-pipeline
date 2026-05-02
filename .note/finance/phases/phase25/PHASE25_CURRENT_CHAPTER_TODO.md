@@ -45,7 +45,7 @@ Pre-Live 운영 점검 체계를 만드는 것이다.
   - 기본값은 출력만 하며, `--append`를 붙일 때만 실제 registry에 저장한다.
 - `completed` Backtest UI entry point 추가
   - `Backtest > Pre-Live Review` 패널에서 current candidate를 선택하고 Pre-Live 기록 초안을 확인할 수 있다.
-  - `Save Pre-Live Record`를 누를 때만 `.note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl`에 저장된다.
+  - `Save Pre-Live Record`를 누를 때만 `.note/finance/registries/PRE_LIVE_CANDIDATE_REGISTRY.jsonl`에 저장된다.
   - 저장된 active Pre-Live record는 같은 패널의 registry tab에서 확인할 수 있다.
 
 ## 4. Validation

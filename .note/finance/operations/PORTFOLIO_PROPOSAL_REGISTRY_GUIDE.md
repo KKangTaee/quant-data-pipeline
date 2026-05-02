@@ -2,7 +2,7 @@
 
 ## 이 문서는 무엇인가
 
-이 문서는 `.note/finance/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`을
+이 문서는 `.note/finance/registries/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`을
 어떤 용도로 쓰고, Current Candidate Registry / Pre-Live Candidate Registry와
 어떻게 구분하는지 설명한다.
 
@@ -43,9 +43,9 @@ Candidate Review에서 이미 current candidate와 Pre-Live 운영 기록이 남
 
 | 구분 | 위치 | 역할 |
 |---|---|---|
-| Current candidate registry | `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl` | current anchor, near-miss, scenario 후보 저장 |
-| Pre-Live candidate registry | `.note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl` | 후보의 pre-live 운영 상태 저장 |
-| Portfolio proposal registry | `.note/finance/PORTFOLIO_PROPOSAL_REGISTRY.jsonl` | 후보 묶음의 proposal draft 저장 |
+| Current candidate registry | `.note/finance/registries/CURRENT_CANDIDATE_REGISTRY.jsonl` | current anchor, near-miss, scenario 후보 저장 |
+| Pre-Live candidate registry | `.note/finance/registries/PRE_LIVE_CANDIDATE_REGISTRY.jsonl` | 후보의 pre-live 운영 상태 저장 |
+| Portfolio proposal registry | `.note/finance/registries/PORTFOLIO_PROPOSAL_REGISTRY.jsonl` | 후보 묶음의 proposal draft 저장 |
 | Runtime helper | `app/web/runtime/portfolio_proposal.py` | proposal JSONL append / load helper |
 | UI | `Backtest > Portfolio Proposal` | 단일 후보 직행 평가, 다중 후보 proposal 초안 작성, monitoring / feedback / 저장 record inspect |
 

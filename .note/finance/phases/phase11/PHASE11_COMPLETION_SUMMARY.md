@@ -15,7 +15,7 @@
   - `portfolio_context`
   - `source_context`
 - 저장 위치:
-  - `.note/finance/SAVED_PORTFOLIOS.jsonl`
+  - `.note/finance/saved/SAVED_PORTFOLIOS.jsonl`
 
 ### 2. Saved portfolio reuse flow
 

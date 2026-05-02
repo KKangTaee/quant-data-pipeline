@@ -54,7 +54,7 @@ Backtest panel에 `Pre-Live Review`를 추가했다.
 - 이 UI는 live trading을 여는 화면이 아니다.
 - `paper_tracking`도 실제 돈을 넣는다는 뜻이 아니다.
 - 이 UI는 `Real-Money 검증 신호`를 보고 다음 운영 행동을 기록하는 화면이다.
-- 저장 파일은 `.note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl`이다.
+- 저장 파일은 `.note/finance/registries/PRE_LIVE_CANDIDATE_REGISTRY.jsonl`이다.
 
 ## 이번 작업에서 하지 않은 것
 

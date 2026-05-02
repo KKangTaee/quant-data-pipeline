@@ -177,7 +177,7 @@ Pre-Live 후보 기록에는 최소한 다음 정보가 필요하다.
 2. `.jsonl` 또는 lightweight registry로 저장하고 UI에서 읽을 수 있게 한다.
 
 Phase 25 두 번째 작업에서 이 방향을 확정했다.
-Pre-Live 운영 기록은 별도 `.note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl`에 두고,
+Pre-Live 운영 기록은 별도 `.note/finance/registries/PRE_LIVE_CANDIDATE_REGISTRY.jsonl`에 두고,
 기존 `CURRENT_CANDIDATE_REGISTRY.jsonl`과는 `source_candidate_registry_id`로 연결한다.
 
 ## 한 줄 정리

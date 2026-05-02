@@ -60,10 +60,10 @@ Phase 29까지 오면서 좋은 백테스트 결과를 후보로 읽고,
 - `Backtest > Candidate Review`
 - `Backtest > Compare & Portfolio Builder`
 - `Backtest > Pre-Live Review`
-- `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`
-- `.note/finance/CANDIDATE_REVIEW_NOTES.jsonl`
-- `.note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl`
-- `.note/finance/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`
+- `.note/finance/registries/CURRENT_CANDIDATE_REGISTRY.jsonl`
+- `.note/finance/registries/CANDIDATE_REVIEW_NOTES.jsonl`
+- `.note/finance/registries/PRE_LIVE_CANDIDATE_REGISTRY.jsonl`
+- `.note/finance/registries/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`
 - `app/web/pages/backtest.py` 모듈 분리 경계
 - `app/web/runtime/candidate_registry.py` registry JSONL I/O helper
 - `app/web/runtime/portfolio_proposal.py` proposal JSONL I/O helper
@@ -165,7 +165,7 @@ Phase 29까지 오면서 좋은 백테스트 결과를 후보로 읽고,
 - 현재 결과:
   - `.note/finance/phases/phase30/PHASE30_PORTFOLIO_PROPOSAL_CONTRACT_SECOND_WORK_UNIT.md`에서 계약을 정의했다.
   - 두 번째 작업 당시에는 파일 생성이나 append helper 구현은 하지 않았다.
-  - 후속 네 번째 작업에서 `.note/finance/PORTFOLIO_PROPOSAL_REGISTRY.jsonl` append-only 저장소와 UI가 구현되었다.
+  - 후속 네 번째 작업에서 `.note/finance/registries/PORTFOLIO_PROPOSAL_REGISTRY.jsonl` append-only 저장소와 UI가 구현되었다.
 
 ### 세 번째 작업: Registry I/O helper 분리
 
@@ -188,7 +188,7 @@ Phase 29까지 오면서 좋은 백테스트 결과를 후보로 읽고,
 - 무엇을 바꾸는가:
   - `Backtest > Portfolio Proposal`에서 current candidate 여러 개를 선택하고,
     proposal 목적, 후보별 역할, target weight, weight reason, operator decision을 작성한다.
-  - 저장된 proposal draft는 `.note/finance/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`에 append-only로 남긴다.
+  - 저장된 proposal draft는 `.note/finance/registries/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`에 append-only로 남긴다.
   - `Proposal Registry` tab에서 저장된 proposal row를 다시 확인한다.
 
 - 왜 필요한가:

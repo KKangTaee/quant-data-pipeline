@@ -35,7 +35,7 @@ Portfolio Proposal UI는 그 중간 단계다.
 
 이 파일이 담당하는 것:
 
-- `.note/finance/PORTFOLIO_PROPOSAL_REGISTRY.jsonl` path constant
+- `.note/finance/registries/PORTFOLIO_PROPOSAL_REGISTRY.jsonl` path constant
 - `PORTFOLIO_PROPOSAL_SCHEMA_VERSION`
 - proposal row append helper
 - 최신 proposal row load helper

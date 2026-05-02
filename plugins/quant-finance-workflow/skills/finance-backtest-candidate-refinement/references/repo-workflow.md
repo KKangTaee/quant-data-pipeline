@@ -3,7 +3,7 @@
 ## Read first
 
 - `.note/finance/backtest_reports/strategies/CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md`
-- `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`
+- `.note/finance/registries/CURRENT_CANDIDATE_REGISTRY.jsonl`
 - `.note/finance/phases/phase20/PHASE20_CURRENT_CHAPTER_TODO.md`
 - `.note/finance/phases/phase20/PHASE20_OPERATOR_WORKFLOW_INVENTORY_FIRST_PASS.md`
 - `.note/finance/phases/phase21/PHASE21_CURRENT_CHAPTER_TODO.md`

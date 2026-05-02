@@ -9,8 +9,8 @@
 
 현재 프로젝트는 backtest와 UI 실행이 많아서 아래 파일이 계속 쌓인다.
 
-- `BACKTEST_RUN_HISTORY.jsonl`
-- `WEB_APP_RUN_HISTORY.jsonl`
+- `run_history/BACKTEST_RUN_HISTORY.jsonl`
+- `run_history/WEB_APP_RUN_HISTORY.jsonl`
 - `backtest_artifacts/`
 - `run_artifacts/`
 - `_tmp_*.csv`
@@ -34,17 +34,16 @@ git 상태를 지저분하게 만들기 쉽다.
 - strategy backtest log
 - current candidate summary
 - glossary / roadmap / index
-- current candidate registry (`CURRENT_CANDIDATE_REGISTRY.jsonl`)
-- candidate review notes (`CANDIDATE_REVIEW_NOTES.jsonl`)
-- pre-live candidate registry (`PRE_LIVE_CANDIDATE_REGISTRY.jsonl`)
+- current candidate registry (`registries/CURRENT_CANDIDATE_REGISTRY.jsonl`)
+- candidate review notes (`registries/CANDIDATE_REVIEW_NOTES.jsonl`)
+- pre-live candidate registry (`registries/PRE_LIVE_CANDIDATE_REGISTRY.jsonl`)
 
 ### runtime artifact
 
 기본적으로 commit 대상이 아닌 파일:
 
-- backtest run history jsonl
-- web app run history jsonl
-- saved portfolio runtime jsonl
+- `run_history/` 아래 backtest / web app run history jsonl
+- `saved/` 아래 saved portfolio setup jsonl
 - `backtest_artifacts/`
 - `run_artifacts/`
 - 임시 csv / failure csv
@@ -61,21 +60,20 @@ git 상태를 지저분하게 만들기 쉽다.
 단, 아래 파일은 generated artifact가 아니라
 의도적으로 유지하는 durable registry로 본다.
 
-- `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`
-- `.note/finance/CANDIDATE_REVIEW_NOTES.jsonl`
-- `.note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl`
+- `.note/finance/registries/CURRENT_CANDIDATE_REGISTRY.jsonl`
+- `.note/finance/registries/CANDIDATE_REVIEW_NOTES.jsonl`
+- `.note/finance/registries/PRE_LIVE_CANDIDATE_REGISTRY.jsonl`
+- `.note/finance/registries/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`
 
 ## 지금 프로젝트에서 특히 조심할 것
 
-- `.note/finance/BACKTEST_RUN_HISTORY.jsonl`
-- `.note/finance/WEB_APP_RUN_HISTORY.jsonl`
+- `.note/finance/run_history/BACKTEST_RUN_HISTORY.jsonl`
+- `.note/finance/run_history/WEB_APP_RUN_HISTORY.jsonl`
+- `.note/finance/saved/SAVED_PORTFOLIOS.jsonl`
 
-이 두 파일은 현재 이미 tracked history 역할도 일부 겸하고 있어서
-즉시 구조를 바꾸기보다,
-이번 단계에서는:
-
-- artifact라는 해석을 분명히 하고
-- 새 clutter를 `.gitignore`로 더 막는 방향이 안전하다
+이 파일들은 `run_history/`와 `saved/`로 모아 둔다.
+필요할 때 로컬 상태 확인에는 사용하지만,
+중요한 전략 판단은 별도 Markdown report나 registry row로 요약한다.
 
 ## 운영 체크
 

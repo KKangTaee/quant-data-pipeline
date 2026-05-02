@@ -23,7 +23,7 @@
   - `portfolio_context`
   - `source_context`
 - `completed` saved portfolio store 추가
-  - `.note/finance/SAVED_PORTFOLIOS.jsonl`
+  - `.note/finance/saved/SAVED_PORTFOLIOS.jsonl`
   - `app/web/runtime/portfolio_store.py`
 - `completed` create / load / delete 기본 CRUD
 

@@ -33,7 +33,7 @@
 2. 선택한 note 아래에 `Prepare Current Candidate Registry Row` 영역을 추가했다.
 3. `Registry ID`, `Record Type`, `Strategy Family`, `Strategy Name`, `Candidate Role`, `Title`, `Registry Notes`를 확인 / 수정할 수 있게 했다.
 4. `Current Candidate Registry Row JSON Preview`로 저장 전 row를 확인하게 했다.
-5. `Append To Current Candidate Registry` 버튼을 눌러야만 `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`에 append된다.
+5. `Append To Current Candidate Registry` 버튼을 눌러야만 `.note/finance/registries/CURRENT_CANDIDATE_REGISTRY.jsonl`에 append된다.
 
 ## 중요한 경계
 
@@ -45,8 +45,8 @@
 ## 확인할 위치
 
 - `Backtest > Candidate Review > Review Notes`
-- `.note/finance/CANDIDATE_REVIEW_NOTES.jsonl`
-- `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`
+- `.note/finance/registries/CANDIDATE_REVIEW_NOTES.jsonl`
+- `.note/finance/registries/CURRENT_CANDIDATE_REGISTRY.jsonl`
 
 ## 다음에 남은 것
 

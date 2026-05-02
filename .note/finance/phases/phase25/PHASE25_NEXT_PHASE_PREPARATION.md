@@ -9,7 +9,7 @@
 ## 현재 handoff 상태
 
 - 현재 고정된 것은 `Real-Money 검증 신호`와 `Pre-Live 운영 점검`의 역할 분리다.
-- Pre-Live 후보 저장소는 `.note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl`로 정했다.
+- Pre-Live 후보 저장소는 `.note/finance/registries/PRE_LIVE_CANDIDATE_REGISTRY.jsonl`로 정했다.
 - `manage_pre_live_candidate_registry.py` helper로 template / draft-from-current / list / show / append / validate를 지원한다.
 - current candidate에서 Pre-Live 기록 초안을 만드는 report/helper workflow는 추가했다.
 - `Backtest > Pre-Live Review` 패널에서 current candidate를 선택하고 Pre-Live 기록을 저장할 수 있다.

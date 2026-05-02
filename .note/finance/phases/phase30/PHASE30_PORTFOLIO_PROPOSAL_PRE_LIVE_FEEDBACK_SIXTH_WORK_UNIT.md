@@ -11,7 +11,7 @@ Phase 30의 여섯 번째 작업 단위 기록이다.
 proposal을 저장한 뒤에도 후보의 Pre-Live 상태는 바뀔 수 있다.
 
 이번 작업은 proposal 저장 당시 snapshot과
-현재 `.note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl`의 active record를 비교해서,
+현재 `.note/finance/registries/PRE_LIVE_CANDIDATE_REGISTRY.jsonl`의 active record를 비교해서,
 어떤 후보가 paper tracking 중인지,
 어떤 후보의 상태가 proposal 저장 당시와 달라졌는지,
 review date가 지났는지,

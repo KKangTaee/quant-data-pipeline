@@ -31,9 +31,9 @@ UI form, payload 복원, candidate review, history replay, candidate replay, sav
 | `app/web/runtime/backtest.py` | UI payload를 실행 가능한 runtime call로 변환 |
 | `app/web/runtime/candidate_registry.py` | current candidate / review note / pre-live registry JSONL read / append helper |
 | `app/web/runtime/portfolio_proposal.py` | portfolio proposal draft JSONL read / append helper |
-| `.note/finance/BACKTEST_RUN_HISTORY.jsonl` | local run history. 보통 commit하지 않음 |
-| `.note/finance/SAVED_PORTFOLIOS.jsonl` | saved portfolio persistence |
-| `.note/finance/PORTFOLIO_PROPOSAL_REGISTRY.jsonl` | proposal draft persistence. 첫 proposal 저장 시 생성 |
+| `.note/finance/run_history/BACKTEST_RUN_HISTORY.jsonl` | local run history. 보통 commit하지 않음 |
+| `.note/finance/saved/SAVED_PORTFOLIOS.jsonl` | saved portfolio persistence |
+| `.note/finance/registries/PORTFOLIO_PROPOSAL_REGISTRY.jsonl` | proposal draft persistence. 첫 proposal 저장 시 생성 |
 
 ## 화면 흐름
 
@@ -98,7 +98,7 @@ Phase 30 두 번째 작업 이후 Portfolio Proposal은 단순 weighted portfoli
 - `.note/finance/phases/phase30/PHASE30_PORTFOLIO_PROPOSAL_CONTRACT_SECOND_WORK_UNIT.md`
 
 Phase 30 네 번째 작업 이후 기본 저장 위치는
-`.note/finance/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`이다.
+`.note/finance/registries/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`이다.
 첫 proposal draft를 저장할 때 파일이 생성되며,
 append / load helper는 `app/web/runtime/portfolio_proposal.py`가 담당한다.
 

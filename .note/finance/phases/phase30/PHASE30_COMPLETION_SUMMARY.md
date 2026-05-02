@@ -41,7 +41,7 @@
 
 - Portfolio Proposal UI / persistence 구현 전에 proposal row의 최소 계약을 정의했다.
 - 후보 묶음의 목적, 후보별 역할, 비중 근거, risk constraints, evidence snapshot, open blockers, operator decision을 필수 정보로 잡았다.
-- 당시에는 저장소 후보를 `.note/finance/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`로 제안하되 파일 생성이나 append helper 구현은 하지 않았다.
+- 당시에는 저장소 후보를 `.note/finance/registries/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`로 제안하되 파일 생성이나 append helper 구현은 하지 않았다.
 - 네 번째 작업에서 이 저장소와 append helper가 실제 구현되었다.
 
 쉽게 말하면:
@@ -66,7 +66,7 @@
 
 - `Backtest > Portfolio Proposal` panel을 추가했다.
 - current candidate 여러 개를 선택해 proposal objective, proposal type, 후보별 역할, target weight, weight reason, operator decision을 작성할 수 있게 했다.
-- proposal row는 `.note/finance/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`에 append-only로 저장한다.
+- proposal row는 `.note/finance/registries/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`에 append-only로 저장한다.
 - `Proposal Registry` tab에서 저장된 proposal draft를 다시 확인할 수 있다.
 - 저장 버튼은 live trading approval이나 주문 지시가 아니라 proposal draft 저장으로만 동작한다.
 

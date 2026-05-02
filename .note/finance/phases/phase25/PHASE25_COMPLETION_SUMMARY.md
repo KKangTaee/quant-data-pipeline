@@ -37,7 +37,7 @@ closeout 시점에 정리하기 위한 문서다.
 
 현재 완료된 내용:
 
-- `.note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl`을 canonical 저장 위치로 정했다.
+- `.note/finance/registries/PRE_LIVE_CANDIDATE_REGISTRY.jsonl`을 canonical 저장 위치로 정했다.
 - `CURRENT_CANDIDATE_REGISTRY.jsonl`과는 분리하고, 필요할 때 `source_candidate_registry_id`로 연결하기로 했다.
 - `manage_pre_live_candidate_registry.py` helper를 추가했다.
 - `operations/PRE_LIVE_CANDIDATE_REGISTRY_GUIDE.md`를 추가했다.

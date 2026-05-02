@@ -30,11 +30,11 @@ Candidate Review, Current Candidate Registry, Pre-Live Review가 함께 쓰는
 
 이 파일이 담당하는 것:
 
-- `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl` 최신 active 후보 읽기
+- `.note/finance/registries/CURRENT_CANDIDATE_REGISTRY.jsonl` 최신 active 후보 읽기
 - current candidate registry row append
-- `.note/finance/CANDIDATE_REVIEW_NOTES.jsonl` active review note 읽기
+- `.note/finance/registries/CANDIDATE_REVIEW_NOTES.jsonl` active review note 읽기
 - candidate review note append
-- `.note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl` 최신 active pre-live row 읽기
+- `.note/finance/registries/PRE_LIVE_CANDIDATE_REGISTRY.jsonl` 최신 active pre-live row 읽기
 - pre-live candidate registry row append
 
 변경된 파일:

@@ -30,8 +30,11 @@
 - Put finance operations / runtime artifact / registry / data collection operating notes under `.note/finance/operations/`.
 - Put durable finance research reference notes under `.note/finance/research/`.
 - Put support-track planning, plugin, skill, and workflow automation notes under `.note/finance/support_tracks/`.
-- For machine-readable persistence of current strongest candidates and important near-miss scenarios, prefer `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl` as the default append-only registry unless the scope clearly expands into a broader experiment registry.
-- For Pre-Live operating records after Real-Money review, use `.note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl` as the append-only registry. Keep it separate from `CURRENT_CANDIDATE_REGISTRY.jsonl`: current candidate registry defines the candidate, pre-live registry records watchlist / paper tracking / hold / reject / re-review operating state.
+- Put machine-readable finance registry JSONL files under `.note/finance/registries/`.
+- Put local finance run-history JSONL files under `.note/finance/run_history/`.
+- Put reusable user-saved finance setup JSONL files under `.note/finance/saved/`.
+- For machine-readable persistence of current strongest candidates and important near-miss scenarios, prefer `.note/finance/registries/CURRENT_CANDIDATE_REGISTRY.jsonl` as the default append-only registry unless the scope clearly expands into a broader experiment registry.
+- For Pre-Live operating records after Real-Money review, use `.note/finance/registries/PRE_LIVE_CANDIDATE_REGISTRY.jsonl` as the append-only registry. Keep it separate from `CURRENT_CANDIDATE_REGISTRY.jsonl`: current candidate registry defines the candidate, pre-live registry records watchlist / paper tracking / hold / reject / re-review operating state.
 - For durable backtest result reports whose primary purpose is to record:
   - tested strategy settings
   - result summaries
@@ -65,7 +68,7 @@
   - `python3 plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py draft-from-current <registry_id>`
   - `python3 plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py list`
   - `python3 plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py validate`
-- For user-facing Pre-Live review, use `Backtest > Pre-Live Review` to inspect current candidates, create Pre-Live records, and review active Pre-Live registry entries.
+- For user-facing Pre-Live operating records, use `Backtest > Candidate Review` to inspect current candidates, create Pre-Live records, and route eligible candidates toward Portfolio Proposal / later Live Readiness.
 - Default moments to run it:
   - after a meaningful refinement/document-sync unit
   - before commit

@@ -1,7 +1,7 @@
 # Current Candidate Registry Guide
 
 ## 이 문서는 무엇인가
-- `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl` 파일이 무엇인지, 왜 만들었는지, 어떻게 쓰는지 설명하는 안내 문서다.
+- `.note/finance/registries/CURRENT_CANDIDATE_REGISTRY.jsonl` 파일이 무엇인지, 왜 만들었는지, 어떻게 쓰는지 설명하는 안내 문서다.
 
 ## 목적
 - current candidate와 near-miss를 사람이 읽는 Markdown 문서만이 아니라,
@@ -24,7 +24,7 @@
 
 ## 파일 위치
 - registry:
-  - `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`
+  - `.note/finance/registries/CURRENT_CANDIDATE_REGISTRY.jsonl`
 - human-facing summary:
   - `.note/finance/backtest_reports/strategies/CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md`
 
@@ -51,7 +51,7 @@
   - registry에 자동 저장되지 않는다.
 - `Candidate Review Note`
   - `Candidate Intake Draft`를 본 뒤 운영자가 남기는 판단 메모다.
-  - `.note/finance/CANDIDATE_REVIEW_NOTES.jsonl`에 저장된다.
+  - `.note/finance/registries/CANDIDATE_REVIEW_NOTES.jsonl`에 저장된다.
   - 이 역시 current candidate registry 자동 등록은 아니다.
 - `Review Note -> Current Candidate Registry Draft`
   - 저장된 review note 중 후보 목록에 남길 만한 것을 registry row 초안으로 바꾸는 단계다.

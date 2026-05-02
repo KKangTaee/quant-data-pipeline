@@ -8,7 +8,9 @@ from uuid import uuid4
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
-SAVED_PORTFOLIO_FILE = PROJECT_ROOT / ".note" / "finance" / "SAVED_PORTFOLIOS.jsonl"
+FINANCE_NOTE_DIR = PROJECT_ROOT / ".note" / "finance"
+SAVED_DIR = FINANCE_NOTE_DIR / "saved"
+SAVED_PORTFOLIO_FILE = SAVED_DIR / "SAVED_PORTFOLIOS.jsonl"
 SAVED_PORTFOLIO_SCHEMA_VERSION = 1
 
 

@@ -83,7 +83,7 @@ python3 plugins/quant-finance-workflow/scripts/manage_current_candidate_registry
 사용 시점:
 
 - Real-Money 검증 신호 이후 후보를 watchlist / paper tracking / hold / reject / re-review로 기록할 때
-- `.note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl` 형식이 깨지지 않았는지 확인할 때
+- `.note/finance/registries/PRE_LIVE_CANDIDATE_REGISTRY.jsonl` 형식이 깨지지 않았는지 확인할 때
 - current candidate와 pre-live 운영 상태를 분리해서 관리할 때
 
 대표 명령:

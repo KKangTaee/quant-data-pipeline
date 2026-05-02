@@ -1353,7 +1353,7 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Result:
   - `Phase 21`을 `Research Automation And Experiment Persistence`로 열었다
   - `bootstrap_finance_phase_bundle.py`를 추가해 새 phase 문서를 template 기준으로 한 번에 생성할 수 있게 했다
-  - `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`와 `manage_current_candidate_registry.py`를 추가해 current candidate를 machine-readable하게 남기고 다시 읽을 수 있게 했다
+  - `.note/finance/registries/CURRENT_CANDIDATE_REGISTRY.jsonl`와 `manage_current_candidate_registry.py`를 추가해 current candidate를 machine-readable하게 남기고 다시 읽을 수 있게 했다
   - `check_finance_refinement_hygiene.py`, plugin/skill docs, roadmap, doc index, runtime guidance도 새 workflow에 맞게 갱신했다
   - 현재 판단은 `Phase 21 = practical closeout / manual_validation_pending`이며, 이후에는 `Phase 20` operator workflow hardening 또는 `Phase 22` deep validation 준비로 더 자연스럽게 이어질 수 있다
 
@@ -1416,7 +1416,7 @@ Detailed historical analysis was archived on `2026-04-13`.
     `Quick Bundles`와 `Pick Manually` 두 탭으로 분리했다
   - `Pick Manually` 탭 안에서 이 목록은
     새 백테스트 실행이나 Markdown 문서 생성만으로 자동 누적되지 않고,
-    `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`의 active row를 읽는다고 명시했다
+    `.note/finance/registries/CURRENT_CANDIDATE_REGISTRY.jsonl`의 active row를 읽는다고 명시했다
   - 따라서 현재 구조에서는 문서만 만든다고 자동 노출되지 않는다
   - 다만 사용자가 별도로 “노출용 문서”를 하나 더 만들 필요는 없고,
     후보를 UI에 다시 쓰고 싶다면 registry가 갱신되어야 한다.
@@ -2385,7 +2385,7 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal:
   - Phase 25 첫 작업의 경계 정의 다음 단계로, 후보를 실전 전 어떤 운영 상태에 둘지 기록하는 포맷과 저장 위치를 확정해야 함
 - Result:
-  - `.note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl`을 Pre-Live 운영 상태 전용 append-only registry로 정했다
+  - `.note/finance/registries/PRE_LIVE_CANDIDATE_REGISTRY.jsonl`을 Pre-Live 운영 상태 전용 append-only registry로 정했다
   - `CURRENT_CANDIDATE_REGISTRY.jsonl`은 후보 자체를 정의하고, Pre-Live registry는 해당 후보의 `watchlist`, `paper_tracking`, `hold`, `reject`, `re_review` 운영 상태를 기록하는 것으로 분리했다
   - `source_candidate_registry_id`로 두 registry를 연결할 수 있게 했다
   - `manage_pre_live_candidate_registry.py` helper와 `PRE_LIVE_CANDIDATE_REGISTRY_GUIDE.md`를 추가했다
@@ -2399,7 +2399,7 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Result:
   - `manage_pre_live_candidate_registry.py draft-from-current <registry_id>` 명령을 추가했다
   - 이 명령은 `CURRENT_CANDIDATE_REGISTRY.jsonl`의 후보를 읽어 Pre-Live 기록 초안을 출력한다
-  - 기본값은 출력만 하며, 실제 `.note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl` 저장은 `--append`가 있을 때만 수행한다
+  - 기본값은 출력만 하며, 실제 `.note/finance/registries/PRE_LIVE_CANDIDATE_REGISTRY.jsonl` 저장은 `--append`가 있을 때만 수행한다
   - 기본 상태 추천은 `paper_probation -> paper_tracking`, `watchlist -> watchlist`, blocker -> `hold`, reject/fail 계열 -> `reject`, 그 외 애매한 경우 -> `re_review`로 정리했다
   - Backtest UI 버튼이나 dashboard는 아직 만들지 않았고, 다음 검토 대상으로 남겼다
 
@@ -2603,7 +2603,7 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal:
   - 후보 검토 초안을 current candidate registry에 자동 등록하지 않고, 사람이 판단한 내용과 다음 행동을 안전하게 저장할 중간 기록이 필요함
 - Analysis result:
-  - `Candidate Review Note`를 `CURRENT_CANDIDATE_REGISTRY.jsonl`과 별도인 `.note/finance/CANDIDATE_REVIEW_NOTES.jsonl`에 저장하는 구조로 정했다
+  - `Candidate Review Note`를 `CURRENT_CANDIDATE_REGISTRY.jsonl`과 별도인 `.note/finance/registries/CANDIDATE_REVIEW_NOTES.jsonl`에 저장하는 구조로 정했다
   - Review Note는 review decision, operator reason, next action, optional review date, result snapshot, Real-Money signal, data trust snapshot을 담는다
   - 이 기록은 투자 추천, live approval, current candidate 자동 승격이 아니다
 - Follow-up:
@@ -2617,7 +2617,7 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Analysis result:
   - `Candidate Review > Review Notes`에 `Prepare Current Candidate Registry Row` 영역을 추가했다
   - registry id, record type, strategy family, strategy name, candidate role, title, notes를 저장 전 확인하게 했다
-  - `Append To Current Candidate Registry`를 눌러야만 `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`에 append된다
+  - `Append To Current Candidate Registry`를 눌러야만 `.note/finance/registries/CURRENT_CANDIDATE_REGISTRY.jsonl`에 append된다
   - `Reject For Now` note는 registry append를 막아 거절 판단이 후보 목록에 섞이지 않게 했다
 - Follow-up:
   - Phase 29 QA에서는 review note 저장, registry row preview, explicit append가 투자 추천이나 live approval처럼 보이지 않는지 확인한다
@@ -2750,7 +2750,7 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Analysis result:
   - Phase 30의 다음 작업은 UI를 바로 만드는 것보다 Portfolio Proposal row 계약을 먼저 정의하는 것이 적절하다
   - 계약에는 proposal objective, candidate refs, proposal roles, target weights, construction method, risk constraints, evidence snapshot, open blockers, operator decision이 포함되어야 한다
-  - 향후 저장소 후보는 `.note/finance/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`이지만, 이번 작업에서는 파일 생성 / append helper / UI 구현을 하지 않는다
+  - 향후 저장소 후보는 `.note/finance/registries/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`이지만, 이번 작업에서는 파일 생성 / append helper / UI 구현을 하지 않는다
   - Portfolio Proposal은 saved portfolio replay나 current candidate registry를 대체하지 않고, 후보 묶음을 왜 제안 초안으로 보는지 설명하는 별도 검토 단위다
 - Follow-up:
   - 다음 작업은 Proposal UI / persistence 구현 또는 current candidate registry helper 모듈 분리 중 하나로 이어진다
@@ -2790,7 +2790,7 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Analysis result:
   - `Backtest > Portfolio Proposal` panel을 추가해 current candidate 여러 개를 proposal draft로 묶는 흐름을 구현했다
   - proposal draft에는 objective, proposal type/status, candidate refs, proposal role, target weight, weight reason, Real-Money / Pre-Live 상태, blocker, operator decision을 남긴다
-  - 저장소는 `.note/finance/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`이며 첫 proposal 저장 시 생성되는 append-only registry다
+  - 저장소는 `.note/finance/registries/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`이며 첫 proposal 저장 시 생성되는 append-only registry다
   - 이 기능은 saved portfolio replay, live trading approval, automatic optimizer를 대체하지 않는다
 - Follow-up:
   - 다음 작업 후보는 proposal monitoring surface 또는 Candidate Review / Pre-Live / History / Saved Portfolio의 추가 모듈 분리다
@@ -3690,3 +3690,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Follow-up:
   - old `.note/finance/phaseN` 링크는 `.note/finance/phases/phaseN`으로 갱신했다
   - `.note/finance/phases/README.md`를 새 phase 문서 landing page로 추가했다
+
+### 2026-05-02 - finance JSONL 저장 파일 폴더화
+- User request:
+  - `.jsonl` 파일도 별도 폴더를 만들어 관리하는 것이 좋지 않겠냐고 질문했고, 제안한 구조대로 진행을 승인함
+- Interpreted goal:
+  - `.note/finance` root에 실행 이력, registry, saved portfolio 파일이 섞이지 않게 하고, 앱 / helper / 문서가 같은 저장 위치를 바라보게 만든다
+- Analysis result:
+  - app-readable durable registry는 `.note/finance/registries/`에 둔다
+  - 로컬 실행 이력은 `.note/finance/run_history/`에 둔다
+  - 사용자가 명시적으로 저장한 weighted portfolio 설정은 `.note/finance/saved/`에 둔다
+- Follow-up:
+  - runtime path constants, helper scripts, hygiene classification, UI 안내 문구, durable docs를 새 경로 기준으로 갱신했다
+  - 각 JSONL 폴더에 README를 추가해 registry / run history / saved setup의 의미를 분리했다

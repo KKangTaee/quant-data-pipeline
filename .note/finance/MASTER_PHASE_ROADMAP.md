@@ -602,7 +602,7 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
   - saved portfolio end-to-end rerun
   까지 구현되었다
 - 현재 저장 파일은
-  - `.note/finance/SAVED_PORTFOLIOS.jsonl`
+  - `.note/finance/saved/SAVED_PORTFOLIOS.jsonl`
   이고,
   저장 단위는
   - `compare_context`
@@ -1432,7 +1432,7 @@ portfolio weight 분석을 계속 넓히는 것이 아니라,
 ### 현재 메모
 - Phase 25는 live trading이나 투자 승인 단계가 아니다.
 - 현재 첫 작업으로 `Real-Money 검증 신호`와 `Pre-Live 운영 점검`의 경계를 고정했다.
-- 두 번째 작업으로 Pre-Live 후보 기록 포맷과 `.note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl` 저장 위치를 고정했다.
+- 두 번째 작업으로 Pre-Live 후보 기록 포맷과 `.note/finance/registries/PRE_LIVE_CANDIDATE_REGISTRY.jsonl` 저장 위치를 고정했다.
 - 세 번째 작업으로 current candidate에서 Pre-Live 기록 초안을 만드는 `draft-from-current` helper workflow를 추가했다.
 - 네 번째 작업으로 `Backtest > Pre-Live Review` 패널을 추가했다.
 - Phase 25 manual QA까지 완료했다.
@@ -1511,7 +1511,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
   세 번째 작업으로 current candidate / review note / pre-live registry JSONL I/O helper를
   `app/web/runtime/candidate_registry.py`로 분리했다.
   네 번째 작업으로 `Backtest > Portfolio Proposal`에서 current candidate 여러 개를 proposal draft로 묶고
-  `.note/finance/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`에 append-only로 저장하는 UI / helper를 추가했다.
+  `.note/finance/registries/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`에 append-only로 저장하는 UI / helper를 추가했다.
   다섯 번째 작업으로 저장된 proposal draft를 blocker / review gap / 후보 구성 관점에서 다시 보는
   `Monitoring Review` tab을 추가했다.
   여섯 번째 작업으로 proposal snapshot과 현재 Pre-Live registry 상태를 비교하는
@@ -1636,7 +1636,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 - 세 번째 작업으로 `app/web/runtime/candidate_registry.py`를 추가해 current candidate / candidate review note / pre-live registry JSONL read / append helper를 분리했다.
 - 네 번째 작업으로 `app/web/runtime/portfolio_proposal.py`와 `Backtest > Portfolio Proposal` panel을 추가했다.
   current candidate 여러 개를 proposal draft로 묶고, 목적 / 역할 / target weight / weight reason / operator decision을 확인한 뒤
-  `.note/finance/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`에 append-only로 저장할 수 있다.
+  `.note/finance/registries/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`에 append-only로 저장할 수 있다.
 - 다섯 번째 작업으로 `Backtest > Portfolio Proposal > Monitoring Review` tab을 추가했다.
   저장된 proposal draft의 monitoring state, component table, blocker, review gap, operator decision을 확인할 수 있다.
 - 여섯 번째 작업으로 `Backtest > Portfolio Proposal > Pre-Live Feedback` tab을 추가했다.

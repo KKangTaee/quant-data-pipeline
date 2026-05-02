@@ -462,7 +462,7 @@ Portfolio Proposal은 단일 후보 registry와 live approval 사이에서,
 ### 예시 / 필요 상황
 - `core_anchor`, `diversifier`, `defensive_sleeve` 후보를 묶어 drawdown을 낮추는 포트폴리오 제안 초안을 만든다.
 - proposal row에는 후보별 `target_weight`, `weight_reason`, `open_blockers`, `operator_decision`이 함께 남아야 한다.
-- Phase 30에서는 `Backtest > Portfolio Proposal`에서 proposal draft를 만들고 `.note/finance/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`에 append-only로 저장한다. `Monitoring Review`에서는 저장된 proposal의 blocker와 review gap을 다시 확인하고, `Pre-Live Feedback`에서는 proposal snapshot과 현재 Pre-Live 상태를 비교하며, `Paper Tracking Feedback`에서는 proposal 저장 당시 evidence snapshot과 현재 Pre-Live result snapshot의 CAGR / MDD 변화를 비교한다. 이 저장과 review는 live trading 승인이나 주문 지시와는 분리한다.
+- Phase 30에서는 `Backtest > Portfolio Proposal`에서 proposal draft를 만들고 `.note/finance/registries/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`에 append-only로 저장한다. `Monitoring Review`에서는 저장된 proposal의 blocker와 review gap을 다시 확인하고, `Pre-Live Feedback`에서는 proposal snapshot과 현재 Pre-Live 상태를 비교하며, `Paper Tracking Feedback`에서는 proposal 저장 당시 evidence snapshot과 현재 Pre-Live result snapshot의 CAGR / MDD 변화를 비교한다. 이 저장과 review는 live trading 승인이나 주문 지시와는 분리한다.
 
 ---
 
@@ -2449,7 +2449,7 @@ Real-Money 검증 신호를 본 뒤,
 
 ### 예시 / 필요 상황
 - 파일 위치:
-  - `.note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl`
+  - `.note/finance/registries/PRE_LIVE_CANDIDATE_REGISTRY.jsonl`
 - helper:
   - `plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py`
   - current candidate에서 초안을 만들 때는 `draft-from-current <registry_id>`를 사용한다.
@@ -2525,7 +2525,7 @@ Candidate Review Note는 이 중간 판단을 안전하게 남긴다.
 - `Candidate Review > Candidate Intake Draft > Save Candidate Review Note`
 - `Candidate Review > Review Notes`
 - 저장 위치:
-  - `.note/finance/CANDIDATE_REVIEW_NOTES.jsonl`
+  - `.note/finance/registries/CANDIDATE_REVIEW_NOTES.jsonl`
 
 중요한 경계:
 

@@ -35,8 +35,8 @@ Pre-Live 후보 운영 기록은 별도 registry로 둔다.
 
 | 구분 | 위치 | 역할 |
 |---|---|---|
-| Current candidate registry | `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl` | 현재 후보, near-miss, scenario를 저장 |
-| Pre-Live candidate registry | `.note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl` | 후보의 운영 상태와 다음 행동을 저장 |
+| Current candidate registry | `.note/finance/registries/CURRENT_CANDIDATE_REGISTRY.jsonl` | 현재 후보, near-miss, scenario를 저장 |
+| Pre-Live candidate registry | `.note/finance/registries/PRE_LIVE_CANDIDATE_REGISTRY.jsonl` | 후보의 운영 상태와 다음 행동을 저장 |
 | Pre-Live registry guide | `.note/finance/operations/PRE_LIVE_CANDIDATE_REGISTRY_GUIDE.md` | 사용법과 필드 설명 |
 | Helper script | `plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py` | template / list / show / append / validate |
 
@@ -98,7 +98,7 @@ Pre-Live record에는 아래 필드가 필요하다.
 ## 이번 작업에서 구현한 것
 
 - Pre-Live record schema를 문서화했다.
-- `.note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl`을 canonical 저장 위치로 정했다.
+- `.note/finance/registries/PRE_LIVE_CANDIDATE_REGISTRY.jsonl`을 canonical 저장 위치로 정했다.
 - `manage_pre_live_candidate_registry.py` helper를 추가했다.
 - `operations/PRE_LIVE_CANDIDATE_REGISTRY_GUIDE.md`를 추가했다.
 - 기존 current candidate registry와 역할이 겹치지 않도록 분리 기준을 고정했다.

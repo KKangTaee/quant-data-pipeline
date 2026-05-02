@@ -67,7 +67,7 @@
 - `completed` backtest report index sync
   - Phase 22 archive README와 baseline candidate report를 등록
 - `completed` current candidate registry review
-  - `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl` validate 정상 확인
+  - `.note/finance/registries/CURRENT_CANDIDATE_REGISTRY.jsonl` validate 정상 확인
   - 이번 baseline은 portfolio-level candidate pack 초안이므로 기존 single-strategy registry에는 append하지 않음
   - portfolio-level registry schema가 필요하면 이후 별도 작업으로 정의
 - `completed` phase22 checklist first report alignment

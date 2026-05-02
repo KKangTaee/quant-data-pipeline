@@ -12,9 +12,9 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
 GENERATED_PATTERNS = [
-    ".note/finance/BACKTEST_RUN_HISTORY.jsonl",
-    ".note/finance/WEB_APP_RUN_HISTORY.jsonl",
-    ".note/finance/SAVED_PORTFOLIOS.jsonl",
+    ".note/finance/run_history/BACKTEST_RUN_HISTORY.jsonl",
+    ".note/finance/run_history/WEB_APP_RUN_HISTORY.jsonl",
+    ".note/finance/saved/SAVED_PORTFOLIOS.jsonl",
     ".note/finance/backtest_artifacts/*",
     ".note/finance/run_artifacts/*",
     ".note/finance/phases/phase12/_tmp_gtaa_*.csv",
@@ -34,9 +34,11 @@ INDEX_DOCS = {
 }
 
 REGISTRY_DOCS = {
-    ".note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl",
-    ".note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl",
-    ".note/finance/EXPERIMENT_REGISTRY.jsonl",
+    ".note/finance/registries/CURRENT_CANDIDATE_REGISTRY.jsonl",
+    ".note/finance/registries/CANDIDATE_REVIEW_NOTES.jsonl",
+    ".note/finance/registries/PRE_LIVE_CANDIDATE_REGISTRY.jsonl",
+    ".note/finance/registries/PORTFOLIO_PROPOSAL_REGISTRY.jsonl",
+    ".note/finance/registries/EXPERIMENT_REGISTRY.jsonl",
 }
 
 
@@ -187,7 +189,7 @@ def _build_checks(groups: dict[str, list[str]]) -> list[dict[str, str]]:
         )
 
     if changed_strategy_families or any("CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md" in path for path in other_docs):
-        has_candidate_registry = ".note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl" in registries
+        has_candidate_registry = ".note/finance/registries/CURRENT_CANDIDATE_REGISTRY.jsonl" in registries
         checks.append(
             {
                 "name": "current candidate registry reviewed",

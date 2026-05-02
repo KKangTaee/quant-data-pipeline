@@ -10,7 +10,9 @@ from uuid import uuid4
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-REGISTRY_FILE = REPO_ROOT / ".note" / "finance" / "CURRENT_CANDIDATE_REGISTRY.jsonl"
+FINANCE_NOTE_DIR = REPO_ROOT / ".note" / "finance"
+REGISTRIES_DIR = FINANCE_NOTE_DIR / "registries"
+REGISTRY_FILE = REGISTRIES_DIR / "CURRENT_CANDIDATE_REGISTRY.jsonl"
 SCHEMA_VERSION = 1
 
 

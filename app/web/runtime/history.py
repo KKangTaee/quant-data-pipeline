@@ -8,7 +8,9 @@ from typing import Any
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
-BACKTEST_HISTORY_FILE = PROJECT_ROOT / ".note" / "finance" / "BACKTEST_RUN_HISTORY.jsonl"
+FINANCE_NOTE_DIR = PROJECT_ROOT / ".note" / "finance"
+RUN_HISTORY_DIR = FINANCE_NOTE_DIR / "run_history"
+BACKTEST_HISTORY_FILE = RUN_HISTORY_DIR / "BACKTEST_RUN_HISTORY.jsonl"
 BACKTEST_ARTIFACT_DIR = PROJECT_ROOT / ".note" / "finance" / "backtest_artifacts"
 BACKTEST_HISTORY_SCHEMA_VERSION = 2
 _SAFE_CHARS = re.compile(r"[^A-Za-z0-9_.-]+")

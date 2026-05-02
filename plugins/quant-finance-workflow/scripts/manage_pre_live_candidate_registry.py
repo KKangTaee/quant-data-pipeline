@@ -10,8 +10,10 @@ from uuid import uuid4
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-REGISTRY_FILE = REPO_ROOT / ".note" / "finance" / "PRE_LIVE_CANDIDATE_REGISTRY.jsonl"
-CURRENT_CANDIDATE_REGISTRY_FILE = REPO_ROOT / ".note" / "finance" / "CURRENT_CANDIDATE_REGISTRY.jsonl"
+FINANCE_NOTE_DIR = REPO_ROOT / ".note" / "finance"
+REGISTRIES_DIR = FINANCE_NOTE_DIR / "registries"
+REGISTRY_FILE = REGISTRIES_DIR / "PRE_LIVE_CANDIDATE_REGISTRY.jsonl"
+CURRENT_CANDIDATE_REGISTRY_FILE = REGISTRIES_DIR / "CURRENT_CANDIDATE_REGISTRY.jsonl"
 SCHEMA_VERSION = 1
 
 VALID_RECORD_STATUSES = {"active", "superseded", "archived"}
@@ -305,7 +307,7 @@ def _build_pre_live_row_from_current_candidate(
         "recorded_at": _iso_now(),
         "record_status": "active",
         "source_kind": "current_candidate_registry",
-        "source_ref": ".note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl",
+        "source_ref": ".note/finance/registries/CURRENT_CANDIDATE_REGISTRY.jsonl",
         "source_candidate_registry_id": registry_id,
         "title": f"{current_row.get('title') or registry_id} - Pre-Live review",
         "strategy_or_bundle": {
@@ -344,7 +346,7 @@ def _template_row() -> dict[str, Any]:
         "recorded_at": _iso_now(),
         "record_status": "active",
         "source_kind": "current_candidate_registry",
-        "source_ref": ".note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl",
+        "source_ref": ".note/finance/registries/CURRENT_CANDIDATE_REGISTRY.jsonl",
         "source_candidate_registry_id": "example_current_candidate_id",
         "title": "Example pre-live candidate",
         "strategy_or_bundle": {

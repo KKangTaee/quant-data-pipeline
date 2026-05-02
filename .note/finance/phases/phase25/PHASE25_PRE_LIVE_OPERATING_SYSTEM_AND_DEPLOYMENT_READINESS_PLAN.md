@@ -80,7 +80,7 @@ Phase 25는 그 다음 행동을 기록하고 반복할 수 있게 만든다.
    - 쉽게 말하면: 후보를 관찰 대상으로 올릴 때 무엇을 저장해야 하는지 정한다.
    - 왜 필요한가: 결과 수치만 저장하면 나중에 왜 관찰 중인지 알 수 없다.
    - 기대 효과: paper tracking과 재검토 흐름을 재현할 수 있다.
-   - 현재 결정: `.note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl`을 별도 운영 기록소로 두고, current candidate registry와는 pointer로 연결한다.
+   - 현재 결정: `.note/finance/registries/PRE_LIVE_CANDIDATE_REGISTRY.jsonl`을 별도 운영 기록소로 두고, current candidate registry와는 pointer로 연결한다.
 
 3. Operator review workflow 설계
    - 쉽게 말하면: 후보를 보고 `watchlist`, `paper tracking`, `hold`, `reject`, `re-review` 중 어디로 보낼지 정한다.
@@ -145,7 +145,7 @@ Phase 25는 그 다음 행동을 기록하고 반복할 수 있게 만든다.
 - 무엇을 바꾸는가:
   - pre-live 후보 기록에 필요한 필드를 정한다.
   - 예: source run, strategy, settings, Real-Money signal, blocker, next action, review date.
-  - 저장 위치는 `.note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl`로 고정한다.
+  - 저장 위치는 `.note/finance/registries/PRE_LIVE_CANDIDATE_REGISTRY.jsonl`로 고정한다.
   - helper는 `plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py`를 사용한다.
 - 왜 필요한가:
   - 나중에 후보를 다시 봤을 때 단순 수치가 아니라 판단 맥락까지 복원해야 한다.

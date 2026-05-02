@@ -2,7 +2,7 @@
 
 ## 이 문서는 무엇인가
 
-`.note/finance/CANDIDATE_REVIEW_NOTES.jsonl` 파일이 무엇을 저장하고,
+`.note/finance/registries/CANDIDATE_REVIEW_NOTES.jsonl` 파일이 무엇을 저장하고,
 `CURRENT_CANDIDATE_REGISTRY.jsonl`과 어떻게 다른지 설명한다.
 
 ## 쉽게 말하면
@@ -20,7 +20,7 @@ Candidate Review Note는 "이 백테스트 결과를 보고 사람이 어떤 판
 
 ## 저장 위치
 
-- `.note/finance/CANDIDATE_REVIEW_NOTES.jsonl`
+- `.note/finance/registries/CANDIDATE_REVIEW_NOTES.jsonl`
 
 이 파일은 append-only 성격으로 사용한다.
 새 판단이 생기면 기존 줄을 고치기보다 새 줄을 추가하는 방식이 기본이다.
@@ -29,9 +29,9 @@ Candidate Review Note는 "이 백테스트 결과를 보고 사람이 어떤 판
 
 | 구분 | 파일 | 역할 |
 |---|---|---|
-| Candidate Review Note | `.note/finance/CANDIDATE_REVIEW_NOTES.jsonl` | 초안을 본 뒤 남기는 판단 메모 |
-| Current Candidate Registry | `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl` | current anchor / near-miss / scenario 후보 자체 |
-| Pre-Live Candidate Registry | `.note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl` | 후보의 pre-live 운영 상태와 다음 행동 |
+| Candidate Review Note | `.note/finance/registries/CANDIDATE_REVIEW_NOTES.jsonl` | 초안을 본 뒤 남기는 판단 메모 |
+| Current Candidate Registry | `.note/finance/registries/CURRENT_CANDIDATE_REGISTRY.jsonl` | current anchor / near-miss / scenario 후보 자체 |
+| Pre-Live Candidate Registry | `.note/finance/registries/PRE_LIVE_CANDIDATE_REGISTRY.jsonl` | 후보의 pre-live 운영 상태와 다음 행동 |
 
 ## UI에서 쓰는 위치
 
@@ -84,6 +84,6 @@ Candidate Review Note는 "이 백테스트 결과를 보고 사람이 어떤 판
 - `Registry Notes`
 
 `Append To Current Candidate Registry`를 눌러야만
-`.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`에 append된다.
+`.note/finance/registries/CURRENT_CANDIDATE_REGISTRY.jsonl`에 append된다.
 
 `Reject For Now` note는 기본적으로 registry append를 막는다.

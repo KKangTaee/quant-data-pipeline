@@ -60,7 +60,7 @@ Phase 30 전체 목표와 첫 작업을 구분해서 읽는다.
 - `completed` Portfolio Proposal row 계약 정의
   - 후보 묶음의 목적, 후보 역할, 비중 근거, risk constraints, evidence snapshot, blocker, operator decision 필드를 정한다.
 - `completed` Portfolio Proposal 저장소 위치와 append-only persistence 구현
-  - 저장 위치는 `.note/finance/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`이다.
+  - 저장 위치는 `.note/finance/registries/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`이다.
   - 첫 row를 저장할 때 파일이 생성되며, `app/web/runtime/portfolio_proposal.py`가 append / load helper를 담당한다.
 - `completed` Proposal Draft UI 초안
   - `Backtest > Portfolio Proposal`에서 current candidate 여러 개를 골라 proposal objective, role, target weight, weight reason, operator decision을 저장 전 확인한다.

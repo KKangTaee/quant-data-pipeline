@@ -48,7 +48,7 @@ Pre-Live registry에 들어갈 JSON row 초안을 출력한다.
 - 기본값은 출력만 한다.
 - 실제 저장은 하지 않는다.
 - 운영자가 초안을 확인한 뒤 `--append`를 붙일 때만
-  `.note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl`에 기록된다.
+  `.note/finance/registries/PRE_LIVE_CANDIDATE_REGISTRY.jsonl`에 기록된다.
 
 ## 상태 추천 기준
 

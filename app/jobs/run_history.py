@@ -6,7 +6,9 @@ from typing import Any
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-HISTORY_FILE = PROJECT_ROOT / ".note" / "finance" / "WEB_APP_RUN_HISTORY.jsonl"
+FINANCE_NOTE_DIR = PROJECT_ROOT / ".note" / "finance"
+RUN_HISTORY_DIR = FINANCE_NOTE_DIR / "run_history"
+HISTORY_FILE = RUN_HISTORY_DIR / "WEB_APP_RUN_HISTORY.jsonl"
 RUN_HISTORY_SCHEMA_VERSION = 2
 
 

@@ -61,7 +61,7 @@
   - [x] `shortlist = paper_probation` 후보가 기본적으로 `pre_live_status = paper_tracking` 초안으로 나오는지
   - [x] `shortlist = watchlist` 후보가 기본적으로 `pre_live_status = watchlist` 초안으로 나오는지
   - [x] `operator_reason`, `next_action`, `tracking_plan`이 사람이 읽을 수 있는 설명으로 채워지는지
-  - [x] `--append`를 붙일 때만 실제 `.note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl`에 저장된다는 점이 이해되는지
+  - [x] `--append`를 붙일 때만 실제 `.note/finance/registries/PRE_LIVE_CANDIDATE_REGISTRY.jsonl`에 저장된다는 점이 이해되는지
   - [x] Real-Money 검증 신호와 Pre-Live 운영 상태가 문서와 helper output에서 구분되어 보이는지
 
 ## 4. Backtest UI Pre-Live Review 확인

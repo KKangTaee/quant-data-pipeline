@@ -43,7 +43,7 @@
 ### 3. Candidate Review Note 저장 추가
 
 - `Candidate Review > Candidate Intake Draft`에서 검토 초안을 review note로 저장할 수 있게 했다.
-- 저장되는 위치는 `.note/finance/CANDIDATE_REVIEW_NOTES.jsonl`이다.
+- 저장되는 위치는 `.note/finance/registries/CANDIDATE_REVIEW_NOTES.jsonl`이다.
 - 저장 항목에는 review decision, operator reason, next action, optional review date가 포함된다.
 - `Candidate Review > Review Notes` 탭에서 저장된 검토 노트를 표와 JSON으로 다시 볼 수 있게 했다.
 
@@ -57,7 +57,7 @@
 - `Candidate Review > Review Notes`에서 저장된 review note를 선택할 수 있게 했다.
 - 선택한 note를 current candidate registry row 초안으로 변환해 보여준다.
 - 사용자는 registry id, record type, strategy family, candidate role, title, notes를 확인 / 수정할 수 있다.
-- `Append To Current Candidate Registry`를 눌러야만 `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`에 append된다.
+- `Append To Current Candidate Registry`를 눌러야만 `.note/finance/registries/CURRENT_CANDIDATE_REGISTRY.jsonl`에 append된다.
 - `Reject For Now` note는 기본적으로 registry append를 막아 reject 판단이 후보 목록에 섞이지 않게 했다.
 
 쉽게 말하면:

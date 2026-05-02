@@ -1925,7 +1925,7 @@ def _render_current_candidate_bundle_workspace() -> None:
             "- `Load Lower-MDD Alternatives`: 수익 단계는 조금 약하지만 낙폭은 더 낮았던 대안 후보를 compare form에 채웁니다.\n"
             "- `Pick Specific Candidates Manually`: 현재 registry에 기록된 후보를 직접 보고 골라 compare form에 채웁니다.\n"
             "- 이 목록은 모든 백테스트 결과가 자동으로 쌓이는 공간이 아닙니다.\n"
-            "- 현재는 `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`에 active 상태로 기록된 대표 후보와 대안 후보만 보여줍니다.\n"
+            "- 현재는 `.note/finance/registries/CURRENT_CANDIDATE_REGISTRY.jsonl`에 active 상태로 기록된 대표 후보와 대안 후보만 보여줍니다.\n"
             "- 같은 family 후보는 한 번에 하나만 compare form으로 불러올 수 있습니다."
         )
     quick_tab, manual_tab = st.tabs(["Quick Bundles", "Pick Manually"])
@@ -1957,7 +1957,7 @@ def _render_current_candidate_bundle_workspace() -> None:
         st.caption("특정 후보만 골라 비교하고 싶다면 여기서 직접 선택합니다.")
         st.info(
             "이 목록은 새 백테스트를 돌리거나 Markdown 문서를 만든다고 자동으로 생기지 않습니다. "
-            "현재는 `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`에 active 상태로 기록된 후보만 여기 보입니다."
+            "현재는 `.note/finance/registries/CURRENT_CANDIDATE_REGISTRY.jsonl`에 active 상태로 기록된 후보만 여기 보입니다."
         )
         st.dataframe(display_df, use_container_width=True, hide_index=True)
         selected_labels = st.multiselect(

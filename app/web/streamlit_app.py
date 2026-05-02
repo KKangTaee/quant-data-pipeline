@@ -3402,8 +3402,8 @@ def _render_guides_page() -> None:
                     ".note/finance/FINANCE_TERM_GLOSSARY.md",
                     ".note/finance/operations/BACKTEST_1_TO_11_WALKTHROUGH_SESSION.md",
                     ".note/finance/code_analysis/WEB_BACKTEST_UI_FLOW.md",
-                    ".note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl",
-                    ".note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl",
+                    ".note/finance/registries/CURRENT_CANDIDATE_REGISTRY.jsonl",
+                    ".note/finance/registries/PRE_LIVE_CANDIDATE_REGISTRY.jsonl",
                     ".note/finance/WORK_PROGRESS.md",
                     ".note/finance/QUESTION_AND_ANALYSIS_LOG.md",
                 ]

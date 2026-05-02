@@ -18,7 +18,7 @@
 - 아래 산출물은 여전히 repo 안에서 usable한 support tooling으로 유지한다.
   - `plugins/quant-finance-workflow/scripts/bootstrap_finance_phase_bundle.py`
   - `plugins/quant-finance-workflow/scripts/manage_current_candidate_registry.py`
-  - `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`
+  - `.note/finance/registries/CURRENT_CANDIDATE_REGISTRY.jsonl`
   - repo-local hygiene / plugin / skill sync
 
 ## 이 문서를 보는 방법

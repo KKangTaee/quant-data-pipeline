@@ -197,7 +197,7 @@ Phase 4는 UI/UX와 공개 실행 경계가 직접 결정되는 단계다.
   까지 열린 상태
 - compare mode에서도 전략별 advanced override가 열려 있어,
   첫 price-only 4개 전략의 핵심 cadence/selection 파라미터를 비교 실행 중 조정할 수 있다
-- 백테스트 실행 이력도 `.note/finance/BACKTEST_RUN_HISTORY.jsonl` 기준으로
+- 백테스트 실행 이력도 `.note/finance/run_history/BACKTEST_RUN_HISTORY.jsonl` 기준으로
   first-pass 수준에서 영속 저장되며,
   `Compare & Portfolio Builder` 하단에서 최근 이력을 다시 확인할 수 있다
 - 이어서 history는 한 단계 더 강화되어,

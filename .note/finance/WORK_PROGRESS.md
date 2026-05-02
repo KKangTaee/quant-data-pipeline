@@ -890,7 +890,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - Completed a practical Phase 21 automation/persistence baseline in one work unit.
 - Changed:
   - added `bootstrap_finance_phase_bundle.py` to open a new phase document bundle from the repo templates
-  - added `manage_current_candidate_registry.py` and seeded `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`
+  - added `manage_current_candidate_registry.py` and seeded `.note/finance/registries/CURRENT_CANDIDATE_REGISTRY.jsonl`
   - updated `check_finance_refinement_hygiene.py` so candidate-facing doc work can also review the machine-readable candidate registry
   - created `PHASE21` kickoff, work-unit, closeout, next-phase, and checklist documents
   - synced `AGENTS.md`, plugin/skill docs, roadmap, doc index, registry guide, runtime artifact guidance, and finance comprehensive analysis
@@ -1672,7 +1672,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - Advanced Phase 25 from boundary definition into Pre-Live candidate record persistence.
 - Changed:
   - added `plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py`
-  - defined `.note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl` as the append-only Pre-Live operating-state registry
+  - defined `.note/finance/registries/PRE_LIVE_CANDIDATE_REGISTRY.jsonl` as the append-only Pre-Live operating-state registry
   - added `.note/finance/operations/PRE_LIVE_CANDIDATE_REGISTRY_GUIDE.md`
   - added `PHASE25_PRE_LIVE_CANDIDATE_RECORD_CONTRACT_SECOND_WORK_UNIT.md`
   - updated Phase 25 plan, TODO, checklist, completion draft, next-phase draft, roadmap, doc index, comprehensive analysis, automation guide, AGENTS, and active finance-doc-sync guidance
@@ -1934,7 +1934,7 @@ Detailed historical logs were archived on `2026-04-13`.
 ### 2026-04-23
 - Implemented Phase 29 Candidate Review Note workflow.
 - Changed:
-  - added `.note/finance/CANDIDATE_REVIEW_NOTES.jsonl` as the append-only target for operator candidate review decisions
+  - added `.note/finance/registries/CANDIDATE_REVIEW_NOTES.jsonl` as the append-only target for operator candidate review decisions
   - added `Save As Candidate Review Note` under `Backtest > Candidate Review > Candidate Intake Draft`
   - added `Review Notes` tab to inspect saved candidate review notes
   - kept Candidate Review Note separate from `CURRENT_CANDIDATE_REGISTRY.jsonl`, Pre-Live approval, and investment recommendation
@@ -2024,7 +2024,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - Changed:
   - added `.note/finance/phases/phase30/PHASE30_PORTFOLIO_PROPOSAL_CONTRACT_SECOND_WORK_UNIT.md`
   - defined the minimum proposal row contract: objective, component candidates, proposal roles, target weights, risk constraints, evidence snapshot, open blockers, and operator decision
-  - proposed `.note/finance/PORTFOLIO_PROPOSAL_REGISTRY.jsonl` as a future append-only storage location without creating the file or implementing append behavior yet
+  - proposed `.note/finance/registries/PORTFOLIO_PROPOSAL_REGISTRY.jsonl` as a future append-only storage location without creating the file or implementing append behavior yet
   - updated Phase 30 TODO, checklist, completion summary, roadmap, doc index, glossary, web UI flow docs, and comprehensive analysis
 - Validation:
   - `python3 plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py` passed
@@ -2859,3 +2859,16 @@ Detailed historical logs were archived on `2026-04-13`.
 - Verification:
   - no numbered phase directories remain directly under `.note/finance`
   - old `.note/finance/phaseN` references are removed from active docs and scripts
+
+### 2026-05-02
+- Reorganized finance JSONL files into purpose-specific folders after the user asked whether registry and history files should also be folder-managed.
+- Changed:
+  - moved durable registry files under `.note/finance/registries/`
+  - moved local run history under `.note/finance/run_history/`
+  - moved saved portfolio setup storage under `.note/finance/saved/`
+  - updated Streamlit runtime path constants, registry helper scripts, hygiene helper classification, UI path copy, and durable operations docs
+  - added README files for `registries/`, `run_history/`, and `saved/`
+- Decision:
+  - registries are durable app-readable operating data
+  - run history remains generated / local execution state
+  - saved portfolio JSONL is reusable setup storage, not a candidate approval registry

@@ -15,7 +15,7 @@
 ### 1. Saved portfolio store
 
 - 새 저장 파일:
-  - `.note/finance/SAVED_PORTFOLIOS.jsonl`
+  - `.note/finance/saved/SAVED_PORTFOLIOS.jsonl`
 - 새 runtime 모듈:
   - `app/web/runtime/portfolio_store.py`
 - 지원 기능:

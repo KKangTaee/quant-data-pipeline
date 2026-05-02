@@ -56,7 +56,7 @@
 history는 계속 JSONL 파일에 append되는 구조를 유지한다.
 
 - 저장 경로:
-  - `.note/finance/BACKTEST_RUN_HISTORY.jsonl`
+  - `.note/finance/run_history/BACKTEST_RUN_HISTORY.jsonl`
 - UI는 최근 최대 `100`개 record를 로드해
   filter / search / drilldown을 제공한다
 

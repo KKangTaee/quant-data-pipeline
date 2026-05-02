@@ -90,7 +90,7 @@ Phase 21 practical baseline:
   - 새 phase 문서를 template 기준으로 한 번에 여는 automation script
 - `plugins/quant-finance-workflow/scripts/manage_current_candidate_registry.py`
   - current strongest candidate와 near-miss를 machine-readable registry로 남기고 다시 읽는 persistence helper
-- `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl`
+- `.note/finance/registries/CURRENT_CANDIDATE_REGISTRY.jsonl`
   - current candidate automation baseline을 위한 append-only registry
 
 이 초안은:

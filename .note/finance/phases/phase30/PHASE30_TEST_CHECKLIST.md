@@ -61,7 +61,7 @@
   - [ ] proposal row에 목적, 후보 역할, 비중 근거, risk constraints, evidence snapshot, blocker, operator decision이 필요하다는 점이 이해되는지
   - [ ] `core_anchor`, `diversifier`, `defensive_sleeve`, `satellite`, `watch_only` 같은 후보 역할이 포트폴리오 안에서 왜 필요한지 이해되는지
   - [ ] `manual_weight` 또는 `equal_weight`로 먼저 시작하고 optimizer는 당장 제외한다는 판단이 안전하게 느껴지는지
-  - [ ] `.note/finance/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`는 proposal draft가 저장될 append-only registry이며, 첫 저장 시 생성된다고 읽히는지
+  - [ ] `.note/finance/registries/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`는 proposal draft가 저장될 append-only registry이며, 첫 저장 시 생성된다고 읽히는지
   - [ ] Proposal lifecycle이 draft / review_ready / paper_tracking / hold / rejected / superseded / live_readiness_candidate로 구분되고, live approval과 분리되는지
 
 ## 5. Registry I/O helper 리팩토링 확인

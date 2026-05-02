@@ -10,7 +10,7 @@
 
 ## 이번 first-pass에서 확인한 한계
 
-- 기존 `.note/finance/BACKTEST_RUN_HISTORY.jsonl` record는
+- 기존 `.note/finance/run_history/BACKTEST_RUN_HISTORY.jsonl` record는
   실행 입력과 primary summary는 남기지만,
   `promotion / shortlist / deployment / validation policy` 상태를 같이 저장하지 않았다.
 - 따라서 broad aggregate를 바로 계산하기보다는,

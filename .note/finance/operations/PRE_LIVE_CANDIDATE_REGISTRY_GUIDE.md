@@ -2,7 +2,7 @@
 
 ## 이 문서는 무엇인가
 
-이 문서는 `.note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl`을
+이 문서는 `.note/finance/registries/PRE_LIVE_CANDIDATE_REGISTRY.jsonl`을
 어떤 용도로 쓰고, 기존 `CURRENT_CANDIDATE_REGISTRY.jsonl`과 어떻게 구분하는지 설명한다.
 
 ## 쉽게 말하면
@@ -57,8 +57,8 @@ Pre-Live는 "진단 결과를 본 뒤의 운영 계획"이다.
 
 | 구분 | 위치 | 역할 |
 |---|---|---|
-| Current candidate registry | `.note/finance/CURRENT_CANDIDATE_REGISTRY.jsonl` | current anchor, near-miss, scenario 후보 저장 |
-| Pre-Live candidate registry | `.note/finance/PRE_LIVE_CANDIDATE_REGISTRY.jsonl` | 후보의 pre-live 운영 상태 저장 |
+| Current candidate registry | `.note/finance/registries/CURRENT_CANDIDATE_REGISTRY.jsonl` | current anchor, near-miss, scenario 후보 저장 |
+| Pre-Live candidate registry | `.note/finance/registries/PRE_LIVE_CANDIDATE_REGISTRY.jsonl` | 후보의 pre-live 운영 상태 저장 |
 | Helper script | `plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py` | template / draft-from-current / list / show / append / validate |
 | UI | `Backtest > Pre-Live Review` | current candidate 선택, Pre-Live 초안 확인, 저장 record inspect |
 

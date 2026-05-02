@@ -18,7 +18,7 @@
 - 반대로 초안을 바로 `CURRENT_CANDIDATE_REGISTRY.jsonl`에 넣으면 후보 승격처럼 오해될 수 있다.
 
 그래서 current candidate registry와 별도로
-`.note/finance/CANDIDATE_REVIEW_NOTES.jsonl`에 검토 노트를 남긴다.
+`.note/finance/registries/CANDIDATE_REVIEW_NOTES.jsonl`에 검토 노트를 남긴다.
 
 ## 이 작업이 끝나면 좋은 점
 
@@ -32,7 +32,7 @@
 1. `Candidate Review > Candidate Intake Draft` 아래에
    `Save As Candidate Review Note` 영역을 추가했다.
 2. 운영자가 `Review Decision`, `Operator Reason`, `Next Action`, optional `Review Date`를 남길 수 있게 했다.
-3. 저장 버튼은 `.note/finance/CANDIDATE_REVIEW_NOTES.jsonl`에 append-only로 기록한다.
+3. 저장 버튼은 `.note/finance/registries/CANDIDATE_REVIEW_NOTES.jsonl`에 append-only로 기록한다.
 4. `Candidate Review > Review Notes` 탭을 추가해 저장된 검토 노트를 표와 JSON으로 확인할 수 있게 했다.
 5. `Candidate Review` 상단 metric에 `Review Notes` 개수를 추가했다.
 6. current candidate registry에 active 후보가 없어도,
@@ -49,7 +49,7 @@
 
 - `Backtest > Candidate Review > Candidate Intake Draft`
 - `Backtest > Candidate Review > Review Notes`
-- `.note/finance/CANDIDATE_REVIEW_NOTES.jsonl`
+- `.note/finance/registries/CANDIDATE_REVIEW_NOTES.jsonl`
 
 ## 다음에 남은 것
 
