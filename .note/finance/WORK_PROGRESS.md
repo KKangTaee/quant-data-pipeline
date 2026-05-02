@@ -2836,3 +2836,14 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.venv/bin/python -m compileall app/web/backtest_candidate_library_helpers.py app/web/backtest_candidate_library.py` passed
   - Candidate Library replay helper rebuilt `quality_current_candidate_cov100_top10_aor_ma250_paper_only` with 124 result rows and gate `real_money_candidate / paper_probation / paper_only`
   - Candidate Library replay helper rebuilt `quality_value_current_candidate_cov100_top10_spy_mdd20` with 124 result rows and gate `real_money_candidate / paper_probation / review_required`
+
+### 2026-05-02
+- Checked the saved `Quality + Value Coverage 100 Top-10` Candidate Library replay after the user could not see `2026-03-31` in the Result Table.
+- Finding:
+  - backend replay result contains `2026-03-31`; final four result dates are `2026-01-30`, `2026-02-27`, `2026-03-31`, `2026-04-01`
+  - the extra `2026-04-01` row is the requested end-date valuation row, while `2026-03-31` is the normal March month-end row
+- Changed:
+  - translated strict annual runtime warnings for dynamic PIT universe, history/liquidity filters, trend/market regime/risk-off, and underperformance/drawdown guardrails into Korean
+- Verification:
+  - `.venv/bin/python -m compileall app/web/runtime/backtest.py` passed
+  - Candidate Library replay warnings for `quality_value_current_candidate_cov100_top10_spy_mdd20` are now displayed in Korean

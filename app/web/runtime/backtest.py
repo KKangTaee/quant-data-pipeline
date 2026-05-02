@@ -161,22 +161,22 @@ def _build_strict_rejected_slot_handling_warning(
     resolved_mode = resolve_strict_rejection_handling_mode(rejected_slot_handling_mode)
     if resolved_mode == STRICT_REJECTION_HANDLING_MODE_FILL_RETAIN_CASH:
         return (
-            f"Trend Filter Overlay enabled: month-end selections with `Close < MA{trend_filter_window}` "
-            "try to refill rejected slots with next-ranked eligible names first, then keep any still-unfilled slots as cash."
+            f"Trend Filter Overlay가 켜져 있습니다: 월말 선택 종목 중 `Close < MA{trend_filter_window}`인 종목은 "
+            "먼저 다음 순위의 적격 종목으로 채우고, 그래도 남는 슬롯은 현금으로 보유합니다."
         )
     if resolved_mode == STRICT_REJECTION_HANDLING_MODE_FILL_REWEIGHT:
         return (
-            f"Trend Filter Overlay enabled: month-end selections with `Close < MA{trend_filter_window}` "
-            "try to refill rejected slots with next-ranked eligible names first, then reweight the final survivors."
+            f"Trend Filter Overlay가 켜져 있습니다: 월말 선택 종목 중 `Close < MA{trend_filter_window}`인 종목은 "
+            "먼저 다음 순위의 적격 종목으로 채우고, 최종 생존 종목을 다시 비중 조정합니다."
         )
     if resolved_mode == STRICT_REJECTION_HANDLING_MODE_RETAIN_CASH:
         return (
-            f"Trend Filter Overlay enabled: month-end selections with `Close < MA{trend_filter_window}` "
-            "leave rejected slots as cash until the next rebalance."
+            f"Trend Filter Overlay가 켜져 있습니다: 월말 선택 종목 중 `Close < MA{trend_filter_window}`인 종목은 "
+            "다음 리밸런싱 전까지 해당 슬롯을 현금으로 남깁니다."
         )
     return (
-        f"Trend Filter Overlay enabled: month-end selections with `Close < MA{trend_filter_window}` "
-        "are removed and survivors are reweighted until the next rebalance."
+        f"Trend Filter Overlay가 켜져 있습니다: 월말 선택 종목 중 `Close < MA{trend_filter_window}`인 종목은 "
+        "제외하고, 다음 리밸런싱 전까지 생존 종목의 비중을 다시 조정합니다."
     )
 
 
@@ -2114,8 +2114,9 @@ def _inspect_dynamic_universe_price_pool(
 def _dynamic_universe_warning(statement_freq: str) -> str:
     normalized_freq = str(statement_freq or "annual").strip().lower()
     return (
-        "Phase 10 first pass dynamic universe: approximate rebalance-date PIT membership is rebuilt "
-        f"from the managed candidate pool using rebalance-date close * latest-known {normalized_freq} shares_outstanding."
+        "Phase 10 1차 dynamic universe 방식입니다: 리밸런싱 날짜 기준 후보군을 "
+        "관리 대상 후보 pool에서 재구성하며, 리밸런싱일 종가와 당시까지 확인된 "
+        f"`{normalized_freq}` shares_outstanding을 사용해 근사 PIT membership을 만듭니다."
     )
 
 
@@ -3525,15 +3526,15 @@ def _run_statement_quality_bundle(
             if dynamic_price_pool["missing_count"] > 15:
                 more = f" ... (+{dynamic_price_pool['missing_count'] - 15} more)"
             warnings.append(
-                "Dynamic candidate pool note: "
-                f"{dynamic_price_pool['missing_count']} candidate symbols do not have any DB price history up to the selected end date "
-                f"and were naturally excluded from the approximate PIT membership build: {preview}{more}"
+                "Dynamic candidate pool 참고: "
+                f"{dynamic_price_pool['missing_count']}개 후보 symbol은 선택한 종료일까지 DB 가격 이력이 없어 "
+                f"근사 PIT membership 구성에서 자연스럽게 제외되었습니다: {preview}{more}"
             )
     if price_freshness["status"] == "warning":
         warnings.append(
-            "Price freshness preflight: "
+            "가격 최신성 사전 점검: "
             + price_freshness["message"]
-            + f" Large-universe {strict_label} runs can show duplicate or shifted final-month rows until lagging symbols are refreshed."
+            + f" 대형 universe `{strict_label}` 실행에서는 지연 symbol이 갱신되기 전까지 마지막 월 데이터가 중복되거나 밀려 보일 수 있습니다."
         )
     if start:
         active_rows = result_df[result_df["Selected Count"].fillna(0) > 0]
@@ -3541,19 +3542,18 @@ def _run_statement_quality_bundle(
             first_active_date = pd.to_datetime(active_rows.iloc[0]["Date"]).strftime("%Y-%m-%d")
             if first_active_date > start:
                 warnings.append(
-                    "No usable strict statement snapshot rows were available at the requested start date. "
-                    f"The strategy stayed in cash until `{first_active_date}`."
+                    "요청한 시작일에는 사용할 수 있는 strict statement snapshot row가 없었습니다. "
+                    f"전략은 `{first_active_date}`까지 현금 상태로 대기했습니다."
                 )
     if min_history_months_filter:
         warnings.append(
-            "Minimum history filter enabled: candidates need at least "
-            f"`{int(min_history_months_filter)}M` of DB price history before each rebalance."
+            "최소 가격 이력 필터가 켜져 있습니다: 각 리밸런싱 전에 후보 종목은 최소 "
+            f"`{int(min_history_months_filter)}개월`의 DB 가격 이력이 필요합니다."
         )
     if min_avg_dollar_volume_20d_m_filter:
         warnings.append(
-            "Liquidity filter enabled: candidates need at least "
-            f"`{float(min_avg_dollar_volume_20d_m_filter):.1f}M` of trailing 20-day average dollar volume "
-            "before each rebalance."
+            "유동성 필터가 켜져 있습니다: 각 리밸런싱 전에 후보 종목은 최근 20거래일 평균 거래대금이 최소 "
+            f"`{float(min_avg_dollar_volume_20d_m_filter):.1f}M 달러` 이상이어야 합니다."
         )
 
     input_params = {
@@ -3656,43 +3656,43 @@ def _run_statement_quality_bundle(
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [trend_warning]
     if weighting_mode == STRICT_WEIGHTING_MODE_RANK_TAPERED:
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
-            "Concentration-Aware Weighting enabled: selected holdings use a mild rank taper instead of pure equal weight."
+            "집중도 완화 비중 방식이 켜져 있습니다: 선택 종목을 단순 동일비중으로 두지 않고 순위에 따라 완만하게 차등 배분합니다."
         ]
     if risk_off_mode == STRICT_RISK_OFF_MODE_DEFENSIVE and effective_defensive_tickers:
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
-            "Strict annual defensive sleeve contract enabled: full risk-off states "
-            f"rotate into `{', '.join(effective_defensive_tickers)}` instead of staying fully in cash."
+            "Strict annual 방어자산 sleeve 계약이 켜져 있습니다: 완전 risk-off 상태에서는 전액 현금 대신 "
+            f"`{', '.join(effective_defensive_tickers)}`로 회전합니다."
         ]
     if market_regime_enabled:
         regime_warning = (
-            f"Market Regime Overlay enabled: month-end selections rotate into `{', '.join(effective_defensive_tickers)}` "
-            f"when `{market_regime_benchmark}` closes below `MA{market_regime_window}`."
+            f"Market Regime Overlay가 켜져 있습니다: `{market_regime_benchmark}`가 `MA{market_regime_window}` 아래에서 마감하면 "
+            f"월말 선택 종목을 `{', '.join(effective_defensive_tickers)}`로 회전합니다."
             if risk_off_mode == STRICT_RISK_OFF_MODE_DEFENSIVE and effective_defensive_tickers
-            else f"Market Regime Overlay enabled: month-end selections move fully to cash when `{market_regime_benchmark}` closes below `MA{market_regime_window}`."
+            else f"Market Regime Overlay가 켜져 있습니다: `{market_regime_benchmark}`가 `MA{market_regime_window}` 아래에서 마감하면 월말 선택 종목을 전액 현금으로 이동합니다."
         )
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [regime_warning]
     if underperformance_guardrail_enabled:
         under_warning = (
-            "Underperformance Guardrail enabled: rebalance candidates rotate into "
-            f"`{', '.join(effective_defensive_tickers)}` when trailing strategy excess return "
-            f"vs `{effective_guardrail_reference_ticker}` over `{underperformance_guardrail_window_months}M` falls below "
-            f"`{underperformance_guardrail_threshold:.0%}`."
+            "상대 성과 Guardrail이 켜져 있습니다: 최근 "
+            f"`{underperformance_guardrail_window_months}개월` 전략 초과수익률이 `{effective_guardrail_reference_ticker}` 대비 "
+            f"`{underperformance_guardrail_threshold:.0%}` 아래로 내려가면 리밸런싱 후보를 "
+            f"`{', '.join(effective_defensive_tickers)}`로 회전합니다."
             if risk_off_mode == STRICT_RISK_OFF_MODE_DEFENSIVE and effective_defensive_tickers
-            else "Underperformance Guardrail enabled: rebalance candidates move to cash when trailing strategy excess return "
-            f"vs `{effective_guardrail_reference_ticker}` over `{underperformance_guardrail_window_months}M` falls below "
-            f"`{underperformance_guardrail_threshold:.0%}`."
+            else "상대 성과 Guardrail이 켜져 있습니다: 최근 "
+            f"`{underperformance_guardrail_window_months}개월` 전략 초과수익률이 `{effective_guardrail_reference_ticker}` 대비 "
+            f"`{underperformance_guardrail_threshold:.0%}` 아래로 내려가면 리밸런싱 후보를 현금으로 이동합니다."
         )
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [under_warning]
     if drawdown_guardrail_enabled:
         drawdown_warning = (
-            "Drawdown Guardrail enabled: rebalance candidates rotate into "
-            f"`{', '.join(effective_defensive_tickers)}` when trailing strategy drawdown over "
-            f"`{drawdown_guardrail_window_months}M` falls below `{drawdown_guardrail_strategy_threshold:.0%}` "
-            f"or drawdown gap vs `{effective_guardrail_reference_ticker}` rises above `{drawdown_guardrail_gap_threshold:.0%}`."
+            "Drawdown Guardrail이 켜져 있습니다: 최근 "
+            f"`{drawdown_guardrail_window_months}개월` 전략 drawdown이 `{drawdown_guardrail_strategy_threshold:.0%}` 아래로 내려가거나 "
+            f"`{effective_guardrail_reference_ticker}` 대비 drawdown gap이 `{drawdown_guardrail_gap_threshold:.0%}`를 넘으면 "
+            f"리밸런싱 후보를 `{', '.join(effective_defensive_tickers)}`로 회전합니다."
             if risk_off_mode == STRICT_RISK_OFF_MODE_DEFENSIVE and effective_defensive_tickers
-            else "Drawdown Guardrail enabled: rebalance candidates move to cash when trailing strategy drawdown over "
-            f"`{drawdown_guardrail_window_months}M` falls below `{drawdown_guardrail_strategy_threshold:.0%}` "
-            f"or drawdown gap vs `{effective_guardrail_reference_ticker}` rises above `{drawdown_guardrail_gap_threshold:.0%}`."
+            else "Drawdown Guardrail이 켜져 있습니다: 최근 "
+            f"`{drawdown_guardrail_window_months}개월` 전략 drawdown이 `{drawdown_guardrail_strategy_threshold:.0%}` 아래로 내려가거나 "
+            f"`{effective_guardrail_reference_ticker}` 대비 drawdown gap이 `{drawdown_guardrail_gap_threshold:.0%}`를 넘으면 리밸런싱 후보를 현금으로 이동합니다."
         )
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [drawdown_warning]
     if dynamic_universe_snapshot_rows:
@@ -3801,7 +3801,7 @@ def run_quality_snapshot_strict_annual_backtest_from_db(
         dynamic_target_size=dynamic_target_size,
         snapshot_source="shadow_factors",
         static_warnings=[
-            "Strict annual statement path: ranks annual statement-driven quality snapshots using precomputed statement shadow factors for faster public execution.",
+            "Strict annual statement 경로입니다: 빠른 실행을 위해 사전 계산된 statement shadow factor로 annual statement 기반 quality snapshot을 순위화합니다.",
         ],
     )
     return _apply_real_money_hardening(
@@ -4051,7 +4051,7 @@ def run_value_snapshot_strict_annual_backtest_from_db(
     dynamic_candidate_status_rows = result_payload.get("candidate_status_rows") or []
 
     warnings = [
-        "Strict annual value path: ranks annual statement-driven value snapshots using precomputed statement shadow factors.",
+        "Strict annual value 경로입니다: 사전 계산된 statement shadow factor를 사용해 annual statement 기반 value snapshot을 순위화합니다.",
     ]
     if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE:
         warnings.append(_dynamic_universe_warning("annual"))
@@ -4061,15 +4061,15 @@ def run_value_snapshot_strict_annual_backtest_from_db(
             if dynamic_price_pool["missing_count"] > 15:
                 more = f" ... (+{dynamic_price_pool['missing_count'] - 15} more)"
             warnings.append(
-                "Dynamic candidate pool note: "
-                f"{dynamic_price_pool['missing_count']} candidate symbols do not have any DB price history up to the selected end date "
-                f"and were naturally excluded from the approximate PIT membership build: {preview}{more}"
+                "Dynamic candidate pool 참고: "
+                f"{dynamic_price_pool['missing_count']}개 후보 symbol은 선택한 종료일까지 DB 가격 이력이 없어 "
+                f"근사 PIT membership 구성에서 자연스럽게 제외되었습니다: {preview}{more}"
             )
     if price_freshness["status"] == "warning":
         warnings.append(
-            "Price freshness preflight: "
+            "가격 최신성 사전 점검: "
             + price_freshness["message"]
-            + " Large-universe strict annual runs can show duplicate or shifted final-month rows until lagging symbols are refreshed."
+            + " 대형 universe strict annual 실행에서는 지연 symbol이 갱신되기 전까지 마지막 월 데이터가 중복되거나 밀려 보일 수 있습니다."
         )
     if start:
         active_rows = result_df[result_df["Selected Count"].fillna(0) > 0]
@@ -4077,19 +4077,18 @@ def run_value_snapshot_strict_annual_backtest_from_db(
             first_active_date = pd.to_datetime(active_rows.iloc[0]["Date"]).strftime("%Y-%m-%d")
             if first_active_date > start:
                 warnings.append(
-                    "No usable strict statement shadow rows were available at the requested start date. "
-                    f"The strategy stayed in cash until `{first_active_date}`."
+                    "요청한 시작일에는 사용할 수 있는 strict statement shadow row가 없었습니다. "
+                    f"전략은 `{first_active_date}`까지 현금 상태로 대기했습니다."
                 )
     if min_history_months_filter:
         warnings.append(
-            "Minimum history filter enabled: candidates need at least "
-            f"`{int(min_history_months_filter)}M` of DB price history before each rebalance."
+            "최소 가격 이력 필터가 켜져 있습니다: 각 리밸런싱 전에 후보 종목은 최소 "
+            f"`{int(min_history_months_filter)}개월`의 DB 가격 이력이 필요합니다."
         )
     if min_avg_dollar_volume_20d_m_filter:
         warnings.append(
-            "Liquidity filter enabled: candidates need at least "
-            f"`{float(min_avg_dollar_volume_20d_m_filter):.1f}M` of trailing 20-day average dollar volume "
-            "before each rebalance."
+            "유동성 필터가 켜져 있습니다: 각 리밸런싱 전에 후보 종목은 최근 20거래일 평균 거래대금이 최소 "
+            f"`{float(min_avg_dollar_volume_20d_m_filter):.1f}M 달러` 이상이어야 합니다."
         )
 
     bundle = build_backtest_result_bundle(
@@ -4166,38 +4165,38 @@ def run_value_snapshot_strict_annual_backtest_from_db(
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [trend_warning]
     if weighting_mode == STRICT_WEIGHTING_MODE_RANK_TAPERED:
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
-            "Concentration-Aware Weighting enabled: selected holdings use a mild rank taper instead of pure equal weight."
+            "집중도 완화 비중 방식이 켜져 있습니다: 선택 종목을 단순 동일비중으로 두지 않고 순위에 따라 완만하게 차등 배분합니다."
         ]
     if market_regime_enabled:
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
-            f"Market Regime Overlay enabled: month-end selections move fully to cash when `{market_regime_benchmark}` closes below `MA{market_regime_window}`."
+            f"Market Regime Overlay가 켜져 있습니다: `{market_regime_benchmark}`가 `MA{market_regime_window}` 아래에서 마감하면 월말 선택 종목을 전액 현금으로 이동합니다."
         ]
     if risk_off_mode == STRICT_RISK_OFF_MODE_DEFENSIVE and effective_defensive_tickers:
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
-            "Strict annual defensive sleeve contract enabled: full risk-off states "
-            f"rotate into `{', '.join(effective_defensive_tickers)}` instead of staying fully in cash."
+            "Strict annual 방어자산 sleeve 계약이 켜져 있습니다: 완전 risk-off 상태에서는 전액 현금 대신 "
+            f"`{', '.join(effective_defensive_tickers)}`로 회전합니다."
         ]
     if underperformance_guardrail_enabled:
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
-            "Underperformance Guardrail enabled: rebalance candidates move to cash when trailing strategy excess return "
-            f"vs `{effective_guardrail_reference_ticker}` over `{underperformance_guardrail_window_months}M` falls below "
-            f"`{underperformance_guardrail_threshold:.0%}`."
+            "상대 성과 Guardrail이 켜져 있습니다: 최근 "
+            f"`{underperformance_guardrail_window_months}개월` 전략 초과수익률이 `{effective_guardrail_reference_ticker}` 대비 "
+            f"`{underperformance_guardrail_threshold:.0%}` 아래로 내려가면 리밸런싱 후보를 현금으로 이동합니다."
             if risk_off_mode != STRICT_RISK_OFF_MODE_DEFENSIVE or not effective_defensive_tickers
-            else "Underperformance Guardrail enabled: rebalance candidates rotate into "
-            f"`{', '.join(effective_defensive_tickers)}` when trailing strategy excess return "
-            f"vs `{effective_guardrail_reference_ticker}` over `{underperformance_guardrail_window_months}M` falls below "
-            f"`{underperformance_guardrail_threshold:.0%}`."
+            else "상대 성과 Guardrail이 켜져 있습니다: 최근 "
+            f"`{underperformance_guardrail_window_months}개월` 전략 초과수익률이 `{effective_guardrail_reference_ticker}` 대비 "
+            f"`{underperformance_guardrail_threshold:.0%}` 아래로 내려가면 리밸런싱 후보를 "
+            f"`{', '.join(effective_defensive_tickers)}`로 회전합니다."
         ]
     if drawdown_guardrail_enabled:
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
-            "Drawdown Guardrail enabled: rebalance candidates move to cash when trailing strategy drawdown over "
-            f"`{drawdown_guardrail_window_months}M` falls below `{drawdown_guardrail_strategy_threshold:.0%}` "
-            f"or drawdown gap vs `{effective_guardrail_reference_ticker}` rises above `{drawdown_guardrail_gap_threshold:.0%}`."
+            "Drawdown Guardrail이 켜져 있습니다: 최근 "
+            f"`{drawdown_guardrail_window_months}개월` 전략 drawdown이 `{drawdown_guardrail_strategy_threshold:.0%}` 아래로 내려가거나 "
+            f"`{effective_guardrail_reference_ticker}` 대비 drawdown gap이 `{drawdown_guardrail_gap_threshold:.0%}`를 넘으면 리밸런싱 후보를 현금으로 이동합니다."
             if risk_off_mode != STRICT_RISK_OFF_MODE_DEFENSIVE or not effective_defensive_tickers
-            else "Drawdown Guardrail enabled: rebalance candidates rotate into "
-            f"`{', '.join(effective_defensive_tickers)}` when trailing strategy drawdown over "
-            f"`{drawdown_guardrail_window_months}M` falls below `{drawdown_guardrail_strategy_threshold:.0%}` "
-            f"or drawdown gap vs `{effective_guardrail_reference_ticker}` rises above `{drawdown_guardrail_gap_threshold:.0%}`."
+            else "Drawdown Guardrail이 켜져 있습니다: 최근 "
+            f"`{drawdown_guardrail_window_months}개월` 전략 drawdown이 `{drawdown_guardrail_strategy_threshold:.0%}` 아래로 내려가거나 "
+            f"`{effective_guardrail_reference_ticker}` 대비 drawdown gap이 `{drawdown_guardrail_gap_threshold:.0%}`를 넘으면 리밸런싱 후보를 "
+            f"`{', '.join(effective_defensive_tickers)}`로 회전합니다."
         ]
     if dynamic_universe_snapshot_rows:
         bundle["dynamic_universe_snapshot_rows"] = dynamic_universe_snapshot_rows
@@ -4645,7 +4644,7 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
     dynamic_candidate_status_rows = result_payload.get("candidate_status_rows") or []
 
     warnings = [
-        "Strict annual multi-factor path: combines coverage-first quality factors with annual statement-driven valuation factors.",
+        "Strict annual multi-factor 경로입니다: coverage 우선 quality factor와 annual statement 기반 value factor를 함께 사용합니다.",
     ]
     if universe_contract == HISTORICAL_DYNAMIC_PIT_UNIVERSE:
         warnings.append(_dynamic_universe_warning("annual"))
@@ -4655,15 +4654,15 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
             if dynamic_price_pool["missing_count"] > 15:
                 more = f" ... (+{dynamic_price_pool['missing_count'] - 15} more)"
             warnings.append(
-                "Dynamic candidate pool note: "
-                f"{dynamic_price_pool['missing_count']} candidate symbols do not have any DB price history up to the selected end date "
-                f"and were naturally excluded from the approximate PIT membership build: {preview}{more}"
+                "Dynamic candidate pool 참고: "
+                f"{dynamic_price_pool['missing_count']}개 후보 symbol은 선택한 종료일까지 DB 가격 이력이 없어 "
+                f"근사 PIT membership 구성에서 자연스럽게 제외되었습니다: {preview}{more}"
             )
     if price_freshness["status"] == "warning":
         warnings.append(
-            "Price freshness preflight: "
+            "가격 최신성 사전 점검: "
             + price_freshness["message"]
-            + " Large-universe strict annual runs can show duplicate or shifted final-month rows until lagging symbols are refreshed."
+            + " 대형 universe strict annual 실행에서는 지연 symbol이 갱신되기 전까지 마지막 월 데이터가 중복되거나 밀려 보일 수 있습니다."
         )
     if start:
         active_rows = result_df[result_df["Selected Count"].fillna(0) > 0]
@@ -4671,19 +4670,18 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
             first_active_date = pd.to_datetime(active_rows.iloc[0]["Date"]).strftime("%Y-%m-%d")
             if first_active_date > start:
                 warnings.append(
-                    "No usable strict annual multi-factor snapshot rows were available at the requested start date. "
-                    f"The strategy stayed in cash until `{first_active_date}`."
+                    "요청한 시작일에는 사용할 수 있는 strict annual multi-factor snapshot row가 없었습니다. "
+                    f"전략은 `{first_active_date}`까지 현금 상태로 대기했습니다."
                 )
     if min_history_months_filter:
         warnings.append(
-            "Minimum history filter enabled: candidates need at least "
-            f"`{int(min_history_months_filter)}M` of DB price history before each rebalance."
+            "최소 가격 이력 필터가 켜져 있습니다: 각 리밸런싱 전에 후보 종목은 최소 "
+            f"`{int(min_history_months_filter)}개월`의 DB 가격 이력이 필요합니다."
         )
     if min_avg_dollar_volume_20d_m_filter:
         warnings.append(
-            "Liquidity filter enabled: candidates need at least "
-            f"`{float(min_avg_dollar_volume_20d_m_filter):.1f}M` of trailing 20-day average dollar volume "
-            "before each rebalance."
+            "유동성 필터가 켜져 있습니다: 각 리밸런싱 전에 후보 종목은 최근 20거래일 평균 거래대금이 최소 "
+            f"`{float(min_avg_dollar_volume_20d_m_filter):.1f}M 달러` 이상이어야 합니다."
         )
 
     bundle = build_backtest_result_bundle(
@@ -4761,38 +4759,38 @@ def run_quality_value_snapshot_strict_annual_backtest_from_db(
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [trend_warning]
     if weighting_mode == STRICT_WEIGHTING_MODE_RANK_TAPERED:
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
-            "Concentration-Aware Weighting enabled: selected holdings use a mild rank taper instead of pure equal weight."
+            "집중도 완화 비중 방식이 켜져 있습니다: 선택 종목을 단순 동일비중으로 두지 않고 순위에 따라 완만하게 차등 배분합니다."
         ]
     if market_regime_enabled:
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
-            f"Market Regime Overlay enabled: month-end selections move fully to cash when `{market_regime_benchmark}` closes below `MA{market_regime_window}`."
+            f"Market Regime Overlay가 켜져 있습니다: `{market_regime_benchmark}`가 `MA{market_regime_window}` 아래에서 마감하면 월말 선택 종목을 전액 현금으로 이동합니다."
         ]
     if risk_off_mode == STRICT_RISK_OFF_MODE_DEFENSIVE and effective_defensive_tickers:
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
-            "Strict annual defensive sleeve contract enabled: full risk-off states "
-            f"rotate into `{', '.join(effective_defensive_tickers)}` instead of staying fully in cash."
+            "Strict annual 방어자산 sleeve 계약이 켜져 있습니다: 완전 risk-off 상태에서는 전액 현금 대신 "
+            f"`{', '.join(effective_defensive_tickers)}`로 회전합니다."
         ]
     if underperformance_guardrail_enabled:
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
-            "Underperformance Guardrail enabled: rebalance candidates move to cash when trailing strategy excess return "
-            f"vs `{effective_guardrail_reference_ticker}` over `{underperformance_guardrail_window_months}M` falls below "
-            f"`{underperformance_guardrail_threshold:.0%}`."
+            "상대 성과 Guardrail이 켜져 있습니다: 최근 "
+            f"`{underperformance_guardrail_window_months}개월` 전략 초과수익률이 `{effective_guardrail_reference_ticker}` 대비 "
+            f"`{underperformance_guardrail_threshold:.0%}` 아래로 내려가면 리밸런싱 후보를 현금으로 이동합니다."
             if risk_off_mode != STRICT_RISK_OFF_MODE_DEFENSIVE or not effective_defensive_tickers
-            else "Underperformance Guardrail enabled: rebalance candidates rotate into "
-            f"`{', '.join(effective_defensive_tickers)}` when trailing strategy excess return "
-            f"vs `{effective_guardrail_reference_ticker}` over `{underperformance_guardrail_window_months}M` falls below "
-            f"`{underperformance_guardrail_threshold:.0%}`."
+            else "상대 성과 Guardrail이 켜져 있습니다: 최근 "
+            f"`{underperformance_guardrail_window_months}개월` 전략 초과수익률이 `{effective_guardrail_reference_ticker}` 대비 "
+            f"`{underperformance_guardrail_threshold:.0%}` 아래로 내려가면 리밸런싱 후보를 "
+            f"`{', '.join(effective_defensive_tickers)}`로 회전합니다."
         ]
     if drawdown_guardrail_enabled:
         bundle["meta"]["warnings"] = list(bundle["meta"].get("warnings") or []) + [
-            "Drawdown Guardrail enabled: rebalance candidates move to cash when trailing strategy drawdown over "
-            f"`{drawdown_guardrail_window_months}M` falls below `{drawdown_guardrail_strategy_threshold:.0%}` "
-            f"or drawdown gap vs `{effective_guardrail_reference_ticker}` rises above `{drawdown_guardrail_gap_threshold:.0%}`."
+            "Drawdown Guardrail이 켜져 있습니다: 최근 "
+            f"`{drawdown_guardrail_window_months}개월` 전략 drawdown이 `{drawdown_guardrail_strategy_threshold:.0%}` 아래로 내려가거나 "
+            f"`{effective_guardrail_reference_ticker}` 대비 drawdown gap이 `{drawdown_guardrail_gap_threshold:.0%}`를 넘으면 리밸런싱 후보를 현금으로 이동합니다."
             if risk_off_mode != STRICT_RISK_OFF_MODE_DEFENSIVE or not effective_defensive_tickers
-            else "Drawdown Guardrail enabled: rebalance candidates rotate into "
-            f"`{', '.join(effective_defensive_tickers)}` when trailing strategy drawdown over "
-            f"`{drawdown_guardrail_window_months}M` falls below `{drawdown_guardrail_strategy_threshold:.0%}` "
-            f"or drawdown gap vs `{effective_guardrail_reference_ticker}` rises above `{drawdown_guardrail_gap_threshold:.0%}`."
+            else "Drawdown Guardrail이 켜져 있습니다: 최근 "
+            f"`{drawdown_guardrail_window_months}개월` 전략 drawdown이 `{drawdown_guardrail_strategy_threshold:.0%}` 아래로 내려가거나 "
+            f"`{effective_guardrail_reference_ticker}` 대비 drawdown gap이 `{drawdown_guardrail_gap_threshold:.0%}`를 넘으면 리밸런싱 후보를 "
+            f"`{', '.join(effective_defensive_tickers)}`로 회전합니다."
         ]
     if dynamic_universe_snapshot_rows:
         bundle["dynamic_universe_snapshot_rows"] = dynamic_universe_snapshot_rows

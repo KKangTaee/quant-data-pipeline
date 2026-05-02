@@ -3663,3 +3663,17 @@ Detailed historical analysis was archived on `2026-04-13`.
     기존 gate인 `real_money_candidate / paper_probation / review_required`가 유지됨을 확인했다
   - `Quality Coverage 100 Top-10 AOR MA250 paper-only` replay도 124 result rows와
     `real_money_candidate / paper_probation / paper_only`로 확인했다
+
+### 2026-05-02 - Quality + Value replay의 2026-03-31 row와 주의사항 한글화
+- User request:
+  - Candidate Library에서 `Quality + Value Coverage 100 Top-10`을 replay한 뒤 Result Table에 `2026-03-31` 데이터가 보이지 않는 것 같다고 확인 요청
+  - replay 주의사항이 영어로 나오는 부분을 한국어로 바꿔 달라고 요청
+- Interpreted goal:
+  - 실제 result row 누락인지, UI 표시 문제인지 확인하고 strict annual 후보 replay의 operator-facing warning을 한국어로 정리한다
+- Analysis result:
+  - backend replay result에는 `2026-03-31` row가 존재한다
+  - 마지막 네 날짜는 `2026-01-30`, `2026-02-27`, `2026-03-31`, `2026-04-01`이다
+  - `2026-04-01`은 요청된 종료일 평가 row이고, `2026-03-31`은 정상적인 3월 month-end row다
+- Follow-up:
+  - strict annual runtime warning 문구를 한국어로 변경했다
+  - `Quality + Value` replay에서 dynamic PIT, 최소 이력, 유동성, 상대성과 guardrail, drawdown guardrail, 실전 검토 보강 안내가 한국어로 출력됨을 확인했다
