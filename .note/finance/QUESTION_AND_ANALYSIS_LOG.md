@@ -3703,3 +3703,21 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Follow-up:
   - runtime path constants, helper scripts, hygiene classification, UI 안내 문구, durable docs를 새 경로 기준으로 갱신했다
   - 각 JSONL 폴더에 README를 추가해 registry / run history / saved setup의 의미를 분리했다
+
+### 2026-05-02 - 실전투자 포트폴리오 선정을 위한 다음 phase 방향 재정리
+- User request:
+  - 리팩토링과 구조 개선 이후 실전투자 포트폴리오 선정을 위한 phase를 다시 진행하기 전에, 현재 흐름과 남은 검증 / 테스트 / 향후 기능을 정리해 달라고 요청함
+- Interpreted goal:
+  - Phase 30의 Portfolio Proposal 이후 바로 투자 승인으로 뛰지 않고, Live Readiness / Final Approval / 실제 paper tracking / portfolio risk validation을 어떤 순서로 만들지 정해야 함
+- Analysis result:
+  - 현재 제품 흐름은 `Data Trust -> Single Strategy -> Real-Money -> Compare -> Candidate Packaging -> Current Candidate / Pre-Live -> Portfolio Proposal`까지 구현되어 있다
+  - Phase 30은 `implementation_complete / manual_qa_pending`이며, 아직 최종 승인 체계는 없다
+  - 실전투자 포트폴리오 선정까지는 최소 5개 phase가 자연스럽다:
+    1. Live Readiness decision record / approval ledger
+    2. Portfolio construction risk engine
+    3. Robustness / validation pack
+    4. Paper portfolio tracking / shadow execution
+    5. Final portfolio selection guide
+  - 전문 플랫폼 조사 기준으로도 research/backtest/optimization/live/paper/performance attribution이 분리되어 있으므로, 우리 프로그램도 최종 선정 전에 optimizer보다 검증, 추적, 승인 기록을 먼저 분리해야 한다
+- Follow-up:
+  - 다음 구현을 시작할 때는 Phase 31을 `Live Readiness Decision Record`로 열고, 실제 주문 / broker integration은 후속 post-approval 영역으로 둔다
