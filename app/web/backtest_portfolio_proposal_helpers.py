@@ -30,6 +30,14 @@ PORTFOLIO_PROPOSAL_ROLE_OPTIONS = [
     "satellite",
     "watch_only",
 ]
+PORTFOLIO_PROPOSAL_ROLE_DESCRIPTIONS = {
+    "core_anchor": "포트폴리오의 중심 후보입니다. active weight가 있는 proposal에는 최소 1개가 필요합니다.",
+    "return_driver": "수익률을 끌어올리는 공격 후보입니다. 중심 후보 없이 이것만 있으면 Live Readiness 전에 차단됩니다.",
+    "diversifier": "core_anchor와 다른 위험 원천을 섞어 변동성과 drawdown을 낮추는 보조 후보입니다.",
+    "defensive_sleeve": "시장 악화나 risk-off 구간을 완충하기 위한 방어 후보입니다.",
+    "satellite": "작은 비중으로 특정 아이디어를 더하는 보조 후보입니다.",
+    "watch_only": "이번 proposal에서는 관찰만 하고 active weight를 주지 않는 후보입니다.",
+}
 PORTFOLIO_PROPOSAL_WEIGHTING_OPTIONS = ["manual_weight", "equal_weight"]
 PORTFOLIO_PROPOSAL_PAPER_CAGR_DETERIORATION_THRESHOLD = -2.0
 PORTFOLIO_PROPOSAL_PAPER_MDD_DETERIORATION_THRESHOLD = -5.0
@@ -1055,8 +1063,6 @@ def _portfolio_proposal_open_blockers(
         blockers.append("Proposal ID is required.")
     if not selected_rows:
         blockers.append("No current candidate selected.")
-    if selected_rows and abs(total_weight - 100.0) > 0.01:
-        blockers.append("Target weights must sum to 100%.")
     for row in selected_rows:
         registry_id = str(row.get("registry_id") or "")
         component_input = component_inputs.get(registry_id) or {}
@@ -1071,6 +1077,37 @@ def _portfolio_proposal_open_blockers(
             if str(result.get("deployment") or "").lower() == "blocked":
                 blockers.append(f"{registry_id}: blocked candidate cannot be core anchor without review.")
     return blockers
+
+
+def _portfolio_proposal_readiness_guidance(
+    *,
+    checks: list[dict[str, Any]],
+    open_blockers: list[str],
+    total_weight: float,
+) -> list[str]:
+    guidance: list[str] = []
+    for check in checks:
+        if check.get("ready"):
+            continue
+        criteria = str(check.get("criteria") or "")
+        if criteria == "Proposal Identity":
+            guidance.append("Proposal ID가 비어 있거나 후보가 선택되지 않았습니다. 후보 선택과 proposal id를 먼저 확인하세요.")
+        elif criteria == "Portfolio Construction":
+            guidance.append(f"Target Weight 합계를 100%로 맞추세요. 현재 합계는 {round(total_weight, 4)}%입니다.")
+        elif criteria == "Component Role":
+            guidance.append("active weight가 있는 후보 중 최소 1개는 Proposal Role을 `core_anchor`로 지정하세요.")
+        elif criteria == "Pre-Live State":
+            guidance.append("active weight가 있는 후보는 Pre-Live 상태가 `paper_tracking`이어야 합니다.")
+        elif criteria == "Operator Context":
+            guidance.append("Operator Reason, Next Action, Review Date를 채워 다음 검토 근거를 남기세요.")
+        elif criteria == "Blocking Scope":
+            if open_blockers:
+                guidance.extend(str(blocker) for blocker in open_blockers)
+            else:
+                guidance.append("저장 blocker가 남아 있습니다. 상세 보기의 open blockers를 확인하세요.")
+        else:
+            guidance.append(str(check.get("judgment") or criteria))
+    return list(dict.fromkeys(guidance))
 
 
 # Score whether one already-packaged candidate can move directly to the later Live Readiness review.
@@ -1201,8 +1238,10 @@ def _build_portfolio_proposal_readiness_evaluation(
         for row in selected_rows
         if _component_target_weight(component_inputs.get(str(row.get("registry_id") or ""), {}) or {}) > 0
     ]
+    has_active_components = bool(active_components)
     has_core_anchor = any(str(component.get("proposal_role") or "") == "core_anchor" for _, component in active_components)
-    pre_live_ready = bool(active_components) and all(
+    component_role_ready = (not has_active_components) or has_core_anchor
+    pre_live_ready = (not has_active_components) or all(
         str(component.get("pre_live_status") or "") == "paper_tracking"
         for _, component in active_components
     )
@@ -1230,9 +1269,13 @@ def _build_portfolio_proposal_readiness_evaluation(
         },
         {
             "criteria": "Component Role",
-            "ready": has_core_anchor,
-            "current_value": "core_anchor 있음" if has_core_anchor else "core_anchor 없음",
-            "judgment": "포트폴리오 중심 후보 있음" if has_core_anchor else "최소 1개 core anchor 필요",
+            "ready": component_role_ready,
+            "current_value": "core_anchor 있음" if has_core_anchor else "active component 없음" if not has_active_components else "core_anchor 없음",
+            "judgment": "포트폴리오 중심 후보 있음"
+            if has_core_anchor
+            else "active weight를 먼저 입력"
+            if not has_active_components
+            else "최소 1개 core anchor 필요",
             "score": 1.2,
         },
         {
@@ -1269,6 +1312,11 @@ def _build_portfolio_proposal_readiness_evaluation(
     score = round(sum(float(check["score"]) for check in checks if check["ready"]), 1)
     score = min(score, 10.0)
     live_readiness_blockers = [str(check["criteria"]) for check in checks if not check["ready"]]
+    blocking_guidance = _portfolio_proposal_readiness_guidance(
+        checks=checks,
+        open_blockers=open_blockers,
+        total_weight=total_weight,
+    )
     can_save_proposal = bool(identity_ready and construction_ready and blocker_ready)
     can_move_to_live_readiness = bool(can_save_proposal and not live_readiness_blockers)
 
@@ -1292,6 +1340,7 @@ def _build_portfolio_proposal_readiness_evaluation(
         "verdict": verdict,
         "next_action": next_step,
         "blocking_reasons": live_readiness_blockers,
+        "blocking_guidance": blocking_guidance,
         "open_blockers": open_blockers,
         "can_save_proposal": can_save_proposal,
         "can_move_to_live_readiness": can_move_to_live_readiness,

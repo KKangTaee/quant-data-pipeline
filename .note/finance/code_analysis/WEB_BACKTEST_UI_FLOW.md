@@ -544,6 +544,8 @@ CURRENT_CANDIDATE_REGISTRY.jsonl
 - 단일 후보는 `LIVE_READINESS_DIRECT_READY` / `LIVE_READINESS_DIRECT_REVIEW_REQUIRED` / `LIVE_READINESS_DIRECT_BLOCKED` route로 기존 current candidate와 Pre-Live record가 다음 단계 입력으로 충분한지 본다.
 - 여러 후보는 `LIVE_READINESS_CANDIDATE_READY` / `PROPOSAL_DRAFT_READY` / `PROPOSAL_BLOCKED` route로 proposal draft 저장 가능성과 Live Readiness 후보성을 본다.
 - `Proposal Components`는 비교 기능이 아니라 포트폴리오에 넣을 구성 후보 선택이다. 비교는 `Compare & Portfolio Builder`에서 수행한다.
+- `2. 목적 / 역할 / 비중 설계`에서는 active weight가 있는 proposal에 최소 1개 `core_anchor`가 필요하다. `return_driver`, `diversifier`, `defensive_sleeve`, `satellite`은 중심 후보를 보완하는 역할이고, `watch_only`는 보통 0% 관찰 후보로 둔다.
+- target weight 합계가 100%가 아니거나 core anchor가 없으면 `PROPOSAL_BLOCKED`가 정상적으로 뜬다. UI는 이때 criteria 이름만 보여주지 않고, 비중 합계 조정 / core anchor 지정 같은 수정 안내를 함께 보여준다.
 - saved portfolio는 재현 가능한 weight setup이고, proposal은 그 후보 묶음의 목적과 검토 이유를 남긴다.
 - `Save Portfolio Proposal Draft`는 live trading 승인 버튼이 아니다.
 - proposal 저장은 current candidate registry나 pre-live registry를 자동 변경하지 않는다.

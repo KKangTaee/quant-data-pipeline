@@ -3778,3 +3778,18 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Phase31은 `implementation_complete / manual_qa_pending` 상태다
   - 사용자 QA는 `.note/finance/phases/phase31/PHASE31_TEST_CHECKLIST.md` 기준으로 진행한다
   - Phase32는 Phase31 `handoff_summary`를 robustness / stress validation 입력 기준으로 삼아 설계한다
+
+### 2026-05-03 - Phase31 Proposal Role / PROPOSAL_BLOCKED QA clarification
+- User request:
+  - GTAA와 Quality 후보 2개를 섞으면 `PROPOSAL_BLOCKED`와 `Portfolio Construction, Blocking Scope`가 뜨는 것이 정상인지 확인 요청
+  - Proposal Role 옵션의 의미와 `core_anchor`를 `return_driver`로 바꿨을 때 blocker가 늘어나는 이유를 설명해 달라고 요청
+  - Validation Pack이 proposal 저장이나 live approval을 자동 수행하지 않는지 확인하라는 checklist 문구가 모호하다고 지적함
+- Interpreted goal:
+  - 기능 로직은 정상이어도 사용자가 무엇을 고쳐야 하는지 알 수 있게 UI와 checklist 설명을 보강해야 함
+- Analysis result:
+  - `PROPOSAL_BLOCKED`는 target weight 합계가 100%가 아니거나 active component에 `core_anchor`가 없으면 정상적으로 뜨는 route다
+  - `core_anchor`는 포트폴리오의 중심 후보이고, `return_driver`는 수익 기여 후보라서 중심 후보를 대체하지 않는다
+  - 기존 `Blocking Scope` 표시는 비중 합계 문제를 중복으로 보여줘 원인 파악이 어려웠다
+- Follow-up:
+  - UI에 Proposal Role / Target Weight 사용법 expander와 actionable blocker guidance를 추가했다
+  - checklist에는 Validation Pack을 펼쳐도 save가 자동 실행되지 않고 `Open Live Readiness`가 비활성 상태로 남는지 확인하라고 구체화했다

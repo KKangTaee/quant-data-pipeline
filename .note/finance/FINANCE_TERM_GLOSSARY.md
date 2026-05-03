@@ -464,6 +464,14 @@ Portfolio Proposal은 단일 후보 registry와 live approval 사이에서,
 - proposal row에는 후보별 `target_weight`, `weight_reason`, `open_blockers`, `operator_decision`이 함께 남아야 한다.
 - Phase 30에서는 `Backtest > Portfolio Proposal`에서 proposal draft를 만들고 `.note/finance/registries/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`에 append-only로 저장한다. `Monitoring Review`에서는 저장된 proposal의 blocker와 review gap을 다시 확인하고, `Pre-Live Feedback`에서는 proposal snapshot과 현재 Pre-Live 상태를 비교하며, `Paper Tracking Feedback`에서는 proposal 저장 당시 evidence snapshot과 현재 Pre-Live result snapshot의 CAGR / MDD 변화를 비교한다. 이 저장과 review는 live trading 승인이나 주문 지시와는 분리한다.
 
+### Proposal Role 사용 기준
+- `core_anchor`: 포트폴리오의 중심 후보. active weight가 있는 proposal에는 최소 1개가 필요하다.
+- `return_driver`: 수익률 기여를 기대하는 공격 후보. core anchor 없이 이것만 있으면 Live Readiness 전에 차단된다.
+- `diversifier`: core anchor와 다른 위험 원천을 섞어 변동성이나 drawdown을 낮추는 보조 후보.
+- `defensive_sleeve`: 시장 악화나 risk-off 구간을 완충하기 위한 방어 후보.
+- `satellite`: 작은 비중으로 특정 아이디어를 더하는 보조 후보.
+- `watch_only`: 이번 proposal에서는 관찰만 하고 보통 active weight를 주지 않는 후보.
+
 ---
 
 ## Paper Tracking Feedback

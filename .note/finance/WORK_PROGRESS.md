@@ -2900,3 +2900,15 @@ Detailed historical logs were archived on `2026-04-13`.
 - Status:
   - Phase 31 is now `implementation_complete / manual_qa_pending`
   - user QA should use `.note/finance/phases/phase31/PHASE31_TEST_CHECKLIST.md`
+
+### 2026-05-03
+- Refined Phase 31 QA feedback around in-progress Portfolio Proposal validation.
+- Changed:
+  - removed duplicate weight-sum reporting from `Blocking Scope`, so a 100% target-weight issue is surfaced as `Portfolio Construction` with an actionable correction
+  - added `blocking_guidance` messages such as target weight must sum to 100% and active proposals need at least one `core_anchor`
+  - added a `Proposal Role / Target Weight 사용법` expander inside `Backtest > Portfolio Proposal`
+  - clarified the Phase 31 checklist item for "Validation Pack does not auto-save or approve"
+  - added Proposal Role usage notes to the glossary and Backtest UI flow document
+- Decision:
+  - `PROPOSAL_BLOCKED` for GTAA + Quality is normal when target weights do not sum to 100% or no active `core_anchor` remains.
+  - The issue was not the validation logic but the lack of actionable UI guidance.

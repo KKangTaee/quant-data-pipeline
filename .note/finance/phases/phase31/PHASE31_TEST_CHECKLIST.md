@@ -35,9 +35,19 @@ Candidate Review / Pre-Live / Portfolio Proposal과 중복되지 않고,
   - [ ] 후보 2개 이상을 선택하면 `목적 / 역할 / 비중 설계`가 열리는지
   - [ ] 후보별 Proposal Role, Target Weight, Weight Reason을 입력한 뒤 저장 전 Validation Pack이 보이는지
   - [ ] target weight 합계가 100%가 아니면 hard blocker 또는 저장 blocker가 보이는지
+  - [ ] 저장 blocker가 보일 때 `Target Weight 합계를 100%로 맞추세요`, `core_anchor 필요`처럼 무엇을 고쳐야 하는지 알 수 있는 안내가 같이 보이는지
   - [ ] core_anchor가 없으면 validation에서 blocker 또는 review gap으로 읽히는지
   - [ ] 같은 family / benchmark / universe / factor set에 몰리면 review gap이 표시되는지
-  - [ ] 이 Validation Pack이 proposal draft 저장이나 live approval을 자동 수행하지 않는지
+  - [ ] Validation Pack을 펼쳐도 `Save Portfolio Proposal Draft`가 자동 실행되지 않고, `Open Live Readiness`는 비활성 상태로 남는지
+
+### Proposal Role 확인 기준
+
+- `core_anchor`: 포트폴리오의 중심 후보다. active weight가 있는 proposal에는 최소 1개가 필요하다.
+- `return_driver`: 수익률 기여를 기대하는 공격 후보지만, core anchor 없이 이것만 있으면 차단된다.
+- `diversifier`: core anchor와 다른 위험 원천을 섞어 변동성을 낮추는 보조 후보다.
+- `defensive_sleeve`: 하락장 / risk-off 구간 완충을 기대하는 방어 후보다.
+- `satellite`: 작은 비중으로 특정 아이디어를 더하는 보조 후보다.
+- `watch_only`: 이번 proposal에서는 관찰만 하고 보통 active weight를 주지 않는 후보다.
 
 ## 3. 저장된 Proposal Validation Pack 확인
 

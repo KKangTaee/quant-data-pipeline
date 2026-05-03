@@ -14,6 +14,7 @@ from app.web.backtest_candidate_review_helpers import (
 from app.web.backtest_portfolio_proposal_helpers import (
     PORTFOLIO_PROPOSAL_PAPER_CAGR_DETERIORATION_THRESHOLD,
     PORTFOLIO_PROPOSAL_PAPER_MDD_DETERIORATION_THRESHOLD,
+    PORTFOLIO_PROPOSAL_ROLE_DESCRIPTIONS,
     PORTFOLIO_PROPOSAL_ROLE_OPTIONS,
     PORTFOLIO_PROPOSAL_STATUS_OPTIONS,
     PORTFOLIO_PROPOSAL_TYPE_OPTIONS,
@@ -594,6 +595,23 @@ def render_portfolio_proposal_workspace() -> None:
                 purpose="두 개 이상 후보를 하나의 포트폴리오로 묶거나, 단일 후보라도 역할 / 비중 / 목적을 명시적으로 남기고 싶을 때 사용하는 작성 단계입니다.",
                 result="Portfolio construction draft",
             )
+            with st.expander("Proposal Role / Target Weight 사용법", expanded=False):
+                st.markdown(
+                    "- active weight가 있는 proposal에는 최소 1개 `core_anchor`가 필요합니다.\n"
+                    "- `return_driver`, `diversifier`, `defensive_sleeve`, `satellite`은 중심 후보를 보완하는 역할입니다.\n"
+                    "- `watch_only`는 관찰용 후보입니다. 저장 전에는 보통 weight를 0%로 둡니다.\n"
+                    "- `Target Weight %` 합계가 100%가 아니면 proposal 저장 전 blocker가 됩니다."
+                )
+                st.dataframe(
+                    pd.DataFrame(
+                        [
+                            {"Proposal Role": role, "사용 의미": PORTFOLIO_PROPOSAL_ROLE_DESCRIPTIONS.get(role, "-")}
+                            for role in PORTFOLIO_PROPOSAL_ROLE_OPTIONS
+                        ]
+                    ),
+                    width="stretch",
+                    hide_index=True,
+                )
             default_proposal_id = f"proposal_{date.today().strftime('%Y%m%d')}_{uuid4().hex[:6]}"
             default_status = "live_readiness_candidate" if selected_rows else "draft"
             objective_cols = st.columns(4, gap="small")
@@ -691,6 +709,7 @@ def render_portfolio_proposal_workspace() -> None:
                             options=PORTFOLIO_PROPOSAL_ROLE_OPTIONS,
                             index=role_index,
                             key=f"portfolio_proposal_role_{registry_id}",
+                            help="포트폴리오 안에서 후보가 맡는 역할입니다. active proposal에는 최소 1개 core_anchor가 필요합니다.",
                         )
                     with input_cols[1]:
                         target_weight = st.number_input(
@@ -830,7 +849,9 @@ def render_portfolio_proposal_workspace() -> None:
                 elif readiness["can_save_proposal"]:
                     st.info("proposal draft 저장은 가능하지만, Live Readiness 전 보강 항목이 남아 있습니다.")
                 else:
-                    st.error("저장 전 확인 필요: " + ", ".join(str(item) for item in readiness["blocking_reasons"]))
+                    st.error("저장 전 확인 필요")
+                    for guidance in list(readiness.get("blocking_guidance") or readiness["blocking_reasons"]):
+                        st.warning(str(guidance))
 
             with st.container(border=True):
                 validation_input = _build_portfolio_risk_validation_input_for_proposal(
