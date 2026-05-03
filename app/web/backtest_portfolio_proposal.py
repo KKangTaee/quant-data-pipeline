@@ -146,6 +146,63 @@ def _render_portfolio_risk_validation_pack(validation: dict[str, Any], *, title:
         st.json(validation.get("handoff_summary") or {})
         st.caption("이 결과는 live approval이나 주문 지시가 아니라 다음 robustness 검증 단계로 넘길 수 있는지 보는 읽기 전용 검증 pack입니다.")
 
+    robustness = dict(validation.get("robustness_validation") or {})
+    if robustness:
+        st.markdown("##### Robustness / Stress Validation Preview")
+        robustness_route = str(robustness.get("robustness_route") or "-")
+        robustness_score = float(robustness.get("robustness_score") or 0.0)
+        robustness_tone = "positive" if robustness_route == "READY_FOR_STRESS_SWEEP" else "warning"
+        if robustness_route == "BLOCKED_FOR_ROBUSTNESS":
+            robustness_tone = "danger"
+        robustness_blockers = list(robustness.get("blockers") or [])
+        input_gaps = list(robustness.get("input_gaps") or [])
+        suggested_sweeps = list(robustness.get("suggested_sweeps") or [])
+        robustness_metrics = dict(robustness.get("metrics") or {})
+        render_readiness_route_panel(
+            route_label=robustness_route,
+            score=robustness_score,
+            blockers_count=len(robustness_blockers),
+            verdict=str(robustness.get("verdict") or "-"),
+            next_action=str(robustness.get("next_action") or "-"),
+            route_title="Robustness Route",
+            score_title="Robustness Score",
+        )
+        render_badge_strip(
+            [
+                {"label": "Components", "value": robustness_metrics.get("components", 0), "tone": "neutral"},
+                {"label": "Families", "value": robustness_metrics.get("families", 0), "tone": "neutral"},
+                {"label": "Benchmarks", "value": robustness_metrics.get("benchmarks", 0), "tone": "neutral"},
+                {"label": "Suggested Sweeps", "value": robustness_metrics.get("suggested_sweeps", 0), "tone": robustness_tone},
+            ]
+        )
+        robustness_df = pd.DataFrame(robustness.get("component_rows") or [])
+        if robustness_df.empty:
+            st.info("Robustness preview에 연결된 component가 없습니다.")
+        else:
+            st.dataframe(robustness_df, width="stretch", hide_index=True)
+        robustness_cols = st.columns(3, gap="small")
+        with robustness_cols[0]:
+            st.markdown("###### Robustness Blockers")
+            if robustness_blockers:
+                for blocker in robustness_blockers:
+                    st.error(blocker)
+            else:
+                st.success("robustness blocker 없음")
+        with robustness_cols[1]:
+            st.markdown("###### Input Gaps")
+            if input_gaps:
+                for gap in input_gaps:
+                    st.warning(gap)
+            else:
+                st.success("input gap 없음")
+        with robustness_cols[2]:
+            st.markdown("###### Suggested Sweeps")
+            for sweep in suggested_sweeps[:6]:
+                st.info(sweep)
+        with st.expander("Robustness 기준 / 다음 실행 안내", expanded=False):
+            st.dataframe(pd.DataFrame(robustness.get("checks") or []), width="stretch", hide_index=True)
+            st.caption("이 preview는 Phase 32의 첫 pass입니다. 기간 분할 / benchmark 변경 / parameter sensitivity를 실제 실행했다는 뜻은 아닙니다.")
+
 
 # Render saved proposal monitoring, feedback, and raw JSON as one support area below the main flow.
 def _render_saved_proposal_details(

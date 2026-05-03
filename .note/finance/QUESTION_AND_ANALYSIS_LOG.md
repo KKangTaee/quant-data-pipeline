@@ -3848,3 +3848,18 @@ Detailed historical analysis was archived on `2026-04-13`.
   - finance-doc-sync는 좁게 유지하고, Phase32 전에 `finance-backtest-web-workflow`와 `finance-phase-management` 계열 스킬을 분리하는 것이 효율적이다
   - 기존 `finance-db-pipeline`, `finance-factor-pipeline`, `finance-strategy-implementation`은 그대로 domain implementation skill로 사용하고, finance-doc-sync는 마무리 동기화 skill로 두는 방향이 합리적이다
   - 사용자가 승인해 local Codex skill `finance-backtest-web-workflow`, `finance-phase-management`를 생성했고, `finance-doc-sync` 설명은 final sync 중심으로 좁혔다
+
+### 2026-05-03 - Phase32 Robustness / Stress Validation Pack 시작
+- User request:
+  - Phase31이 마무리되었으니 Phase32를 진행해 달라고 요청함
+- Interpreted goal:
+  - 최종 실전 포트폴리오 선정으로 바로 뛰지 않고, Phase31 Validation Pack 이후 후보 / proposal이 robustness 검증을 실행할 입력을 갖고 있는지 먼저 확인해야 함
+- Analysis result:
+  - Phase32는 `Robustness And Stress Validation Pack`으로 열었다
+  - 첫 작업은 실제 stress sweep engine이 아니라 `Robustness / Stress Validation Preview`다
+  - 단일 후보, 작성 중 proposal, 저장 proposal에서 period / contract / benchmark / CAGR / MDD / compare evidence를 읽어 `READY_FOR_STRESS_SWEEP`, `NEEDS_ROBUSTNESS_INPUT_REVIEW`, `BLOCKED_FOR_ROBUSTNESS`로 나눈다
+  - suggested sweep은 다음에 실행할 검증 질문이며, 현재 preview가 기간 분할 backtest나 parameter sweep을 이미 수행했다는 뜻은 아니다
+- Follow-up:
+  - Phase32는 `active / not_ready_for_qa` 상태로 시작했다
+  - 다음 작업은 stress / sensitivity result contract 정의와 실제 summary surface 확장이다
+  - Phase30은 계속 `implementation_complete / manual_qa_pending` 상태로 별도 유지한다

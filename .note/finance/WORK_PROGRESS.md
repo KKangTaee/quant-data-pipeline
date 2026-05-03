@@ -2982,3 +2982,19 @@ Detailed historical logs were archived on `2026-04-13`.
 - Hygiene:
   - `check_finance_refinement_hygiene.py` was run.
   - Current candidate registry changes were not needed because this was skill / workflow guidance work, not candidate data work.
+
+### 2026-05-03
+- Opened Phase 32 `Robustness And Stress Validation Pack` after the user approved moving on from Phase 31.
+- Changed:
+  - created `.note/finance/phases/phase32/` plan / TODO / checklist / summary / next-phase preparation documents
+  - added `Robustness / Stress Validation Preview` under `Backtest > Portfolio Proposal` Validation Pack
+  - expanded validation input rows with period, contract, benchmark, CAGR / MDD, and compare evidence snapshots
+  - added robustness route / score / blockers / input gaps / suggested sweeps for single candidate, in-progress proposal, and saved proposal validation
+  - updated roadmap, doc index, Backtest UI flow docs, glossary, README, and comprehensive analysis for Phase 32 active status
+- Decision:
+  - Phase 32 first work unit is a read-only robustness input preview.
+  - It does not run period split backtests, parameter sensitivity sweeps, live approval, or final portfolio selection yet.
+- Hygiene:
+  - py_compile, helper smoke, diff check, and finance refinement hygiene checks were run.
+  - current candidate and Pre-Live registry validation passed; no registry row edits were needed.
+  - Existing unrelated strategy logs, `uv.lock`, archived reset files, phase12 temp CSVs, and generated proposal registry artifact were left unstaged.

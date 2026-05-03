@@ -498,6 +498,51 @@ live readiness 전에 다시 확인해야 한다.
 
 ---
 
+## Robustness
+
+### 기본 설명
+백테스트 결과가 기간, benchmark, parameter, 구성 비중이 조금 달라져도 어느 정도 유지되는지 보는 검증이다.
+
+### 왜 사용되는지
+full-period CAGR / MDD가 좋아도 특정 구간이나 특정 설정에서만 우연히 잘 나온 결과일 수 있기 때문이다.
+
+### 예시 / 필요 상황
+- Phase 32에서는 `Backtest > Portfolio Proposal`의 Validation Pack 아래에서 robustness preview를 먼저 보여준다.
+- period / contract / benchmark / compare evidence가 부족하면 stress 검증을 실행하기 전에 입력 gap으로 읽는다.
+
+---
+
+## Stress Sweep
+
+### 기본 설명
+후보나 proposal을 여러 불리한 조건으로 다시 흔들어보는 검증 묶음이다.
+
+예를 들어 기간을 나누거나, 최근 3년 / 5년만 보거나, benchmark를 바꾸거나, parameter와 target weight를 조금 바꿔 결과가 얼마나 흔들리는지 본다.
+
+### 왜 사용되는지
+실전 후보는 좋은 조건에서만 좋아서는 부족하고,
+조건이 바뀌어도 최소한 설명 가능한 성격을 유지해야 하기 때문이다.
+
+### 예시 / 필요 상황
+- Phase 32 preview의 `Suggested Sweeps`는 실제 stress sweep 결과가 아니라, 다음에 실행할 검증 질문 목록이다.
+- `READY_FOR_STRESS_SWEEP`은 stress 검증 입력이 준비됐다는 뜻이지, 최종 투자 승인을 뜻하지 않는다.
+
+---
+
+## Sensitivity
+
+### 기본 설명
+전략 parameter나 포트폴리오 비중을 조금 바꿨을 때 결과가 얼마나 민감하게 달라지는지 보는 검증이다.
+
+### 왜 사용되는지
+후보가 특정 top-N, lookback, rebalance interval, target weight 하나에만 지나치게 의존하면 실전 운용에서 흔들릴 가능성이 커진다.
+
+### 예시 / 필요 상황
+- GTAA lookback 조합을 조금 바꿨을 때 결과가 급격히 나빠지는지 본다.
+- proposal component weight를 10%p 안팎으로 바꿨을 때 CAGR / MDD / benchmark 차이가 어떻게 변하는지 본다.
+
+---
+
 ## Portfolio Bridge
 
 ### 기본 설명

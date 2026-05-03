@@ -26,8 +26,8 @@ UI form, payload 복원, candidate review, history replay, candidate replay, sav
 | `app/web/backtest_ui_components.py` | Backtest UI 공용 status card, artifact pipeline, compact badge strip, stage brief strip, route/readiness panel render helper |
 | `app/web/backtest_candidate_review.py` | Candidate Review / Candidate Packaging / Pre-Live 운영 기록 화면 render logic |
 | `app/web/backtest_candidate_review_helpers.py` | Candidate Review 판단, Review Note / registry 변환, Pre-Live status 추천 / draft 변환 / Portfolio Proposal 진입 readiness score helper |
-| `app/web/backtest_portfolio_proposal.py` | 단일 후보 Live Readiness 직행 평가, 다중 후보 Portfolio Proposal 후보 선택 / 목적 / 역할 / 비중 설계, Phase 31 Portfolio Risk / Validation Pack, 저장된 proposal feedback section render logic |
-| `app/web/backtest_portfolio_proposal_helpers.py` | Portfolio Proposal row 생성, 단일 후보 direct readiness / proposal save readiness 평가, Phase 31 validation input / result / overlap first pass, monitoring / Pre-Live / paper feedback table helper |
+| `app/web/backtest_portfolio_proposal.py` | 단일 후보 Live Readiness 직행 평가, 다중 후보 Portfolio Proposal 후보 선택 / 목적 / 역할 / 비중 설계, Phase 31 Portfolio Risk / Validation Pack, Phase 32 Robustness / Stress Preview, 저장된 proposal feedback section render logic |
+| `app/web/backtest_portfolio_proposal_helpers.py` | Portfolio Proposal row 생성, 단일 후보 direct readiness / proposal save readiness 평가, Phase 31 validation input / result / overlap first pass, Phase 32 robustness input / route preview, monitoring / Pre-Live / paper feedback table helper |
 | `app/web/runtime/backtest.py` | UI payload를 실행 가능한 runtime call로 변환 |
 | `app/web/runtime/candidate_registry.py` | current candidate / review note / pre-live registry JSONL read / append helper |
 | `app/web/runtime/portfolio_proposal.py` | portfolio proposal draft JSONL read / append helper |
@@ -67,6 +67,7 @@ Ingestion / Data Trust
   -> Portfolio Proposal
      -> 후보 선택 / 목적 / 역할 / 비중 설계 / Live Readiness 진입 평가 / Proposal 저장
      -> Portfolio Risk / Live Readiness Validation Pack
+     -> Robustness / Stress Validation Preview
   -> Live Readiness / Final Approval
 ```
 
@@ -79,6 +80,7 @@ Ingestion / Data Trust
 - `Portfolio Proposal 이동 판단`은 Pre-Live 운영 record를 저장하기 전에 저장 가능 여부와 저장 후 Proposal 이동 가능 여부를 같이 보여주는 Candidate Packaging의 최종 route 확인이다.
 - `Portfolio Proposal`은 후보 묶음 제안이며, live trading approval이 아니다. 단일 후보는 기본 100% proposal로 빠르게 지나갈 수 있고, 여러 후보를 묶을 때는 역할 / 비중을 명시한다.
 - `Portfolio Risk / Live Readiness Validation Pack`은 Phase 31에서 추가된 읽기 전용 검증 surface다. 단일 후보, 작성 중 proposal, 저장된 proposal을 route / score / blocker / component risk / 다음 단계 안내로 읽는다.
+- `Robustness / Stress Validation Preview`는 Phase 32에서 추가된 첫 pass surface다. stress 검증 실행 전 period / contract / benchmark / CAGR / MDD / compare evidence가 충분한지 확인하고, 아직 실제 stress sweep을 실행했다는 뜻은 아니다.
 - `Live Readiness / Final Approval`은 Phase 30 이후 별도 phase 후보로 남긴다.
 
 현재 Guides 화면은 네 묶음으로 정리한다.
@@ -532,6 +534,7 @@ CURRENT_CANDIDATE_REGISTRY.jsonl
      -> 3. Proposal 저장 및 다음 단계 판단
      -> Live Readiness 진입 평가 route/readiness panel 확인
      -> Portfolio Risk / Live Readiness Validation Pack 확인
+     -> Robustness / Stress Validation Preview 확인
      -> Portfolio Proposal JSON Preview 확인
      -> Save Portfolio Proposal Draft
      -> PORTFOLIO_PROPOSAL_REGISTRY.jsonl append
@@ -558,6 +561,10 @@ CURRENT_CANDIDATE_REGISTRY.jsonl
 - validation route는 `READY_FOR_ROBUSTNESS_REVIEW`, `PAPER_TRACKING_REQUIRED`, `NEEDS_PORTFOLIO_RISK_REVIEW`, `BLOCKED_FOR_LIVE_READINESS`로 구분한다.
 - component table은 role, weight, family, benchmark, universe, factor set, Pre-Live, Data Trust, Promotion, Deployment를 같이 보여준다.
 - 이 validation은 다음 robustness 검증 단계로 넘길 수 있는지 확인하는 surface이며, live approval이나 새 approval registry 저장이 아니다.
+- Phase 32 이후 Validation Pack 안에는 `Robustness / Stress Validation Preview`가 같이 표시된다.
+- robustness route는 `READY_FOR_STRESS_SWEEP`, `NEEDS_ROBUSTNESS_INPUT_REVIEW`, `BLOCKED_FOR_ROBUSTNESS`로 구분한다.
+- robustness preview는 기간, 성과 snapshot, 설정 contract, benchmark, compare evidence를 읽고 suggested sweep을 보여준다.
+- 현재 robustness preview는 stress 실행 준비 상태를 확인하는 first pass이며, period split backtest나 parameter sensitivity engine을 실제로 실행한 결과는 아니다.
 
 ## Streamlit form 주의
 

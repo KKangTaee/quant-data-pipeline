@@ -42,6 +42,7 @@ PORTFOLIO_PROPOSAL_WEIGHTING_OPTIONS = ["manual_weight", "equal_weight"]
 PORTFOLIO_PROPOSAL_PAPER_CAGR_DETERIORATION_THRESHOLD = -2.0
 PORTFOLIO_PROPOSAL_PAPER_MDD_DETERIORATION_THRESHOLD = -5.0
 PORTFOLIO_RISK_MAX_REVIEW_WEIGHT = 70.0
+PORTFOLIO_ROBUSTNESS_MIN_WINDOW_YEARS = 5.0
 
 
 # Parse a proposal component target weight into a safe float.
@@ -73,6 +74,251 @@ def _portfolio_proposal_candidate_data_trust_status(row: dict[str, Any] | None) 
     if excluded_tickers:
         return "warning"
     return "ok"
+
+
+# Parse dates from registry snapshots that may store either date-only or timestamp strings.
+def _portfolio_robustness_parse_date(value: Any) -> datetime | None:
+    if value in (None, ""):
+        return None
+    if isinstance(value, datetime):
+        return value
+    if isinstance(value, date):
+        return datetime.combine(value, datetime.min.time())
+    raw = str(value).strip()
+    if not raw:
+        return None
+    for candidate in (raw, raw.replace("Z", "+00:00")):
+        try:
+            return datetime.fromisoformat(candidate)
+        except ValueError:
+            pass
+    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(raw[:19] if "%H" in fmt else raw[:10], fmt)
+        except ValueError:
+            pass
+    return None
+
+
+def _portfolio_robustness_period_years(period: dict[str, Any]) -> float | None:
+    start = _portfolio_robustness_parse_date(period.get("start"))
+    end = _portfolio_robustness_parse_date(period.get("end"))
+    if not start or not end or end <= start:
+        return None
+    return round((end - start).days / 365.25, 2)
+
+
+def _portfolio_robustness_has_compare_evidence(row: dict[str, Any]) -> bool:
+    compare_evidence = dict(row.get("compare_evidence") or {})
+    comparison_snapshot = dict(compare_evidence.get("comparison_snapshot") or {})
+    return bool(comparison_snapshot)
+
+
+def _portfolio_robustness_contract_summary(contract: dict[str, Any]) -> str:
+    if not contract:
+        return "missing"
+    keys = [
+        "benchmark_ticker",
+        "top_n",
+        "top",
+        "interval",
+        "rebalance_freq",
+        "factor_freq",
+        "trend_filter_window",
+        "score_lookback_months",
+        "transaction_cost_bps",
+    ]
+    summary_parts = []
+    for key in keys:
+        if key in contract and contract.get(key) not in (None, ""):
+            summary_parts.append(f"{key}={contract.get(key)}")
+    return ", ".join(summary_parts[:5]) or f"{len(contract)} fields"
+
+
+# Build the Phase 32 first-pass robustness readiness pack from Phase 31 validation input.
+def _build_portfolio_robustness_validation_result(
+    validation_input: dict[str, Any],
+    *,
+    phase31_route: str,
+) -> dict[str, Any]:
+    source_type = str(validation_input.get("source_type") or "")
+    source_id = str(validation_input.get("source_id") or "").strip()
+    components = [dict(row or {}) for row in list(validation_input.get("component_rows") or [])]
+    active_components = [
+        row
+        for row in components
+        if (_portfolio_proposal_optional_float(row.get("target_weight")) or 0.0) > 0.0
+    ]
+
+    blockers: list[str] = []
+    input_gaps: list[str] = []
+    suggested_sweeps: list[str] = []
+    component_rows: list[dict[str, Any]] = []
+
+    if phase31_route == "BLOCKED_FOR_LIVE_READINESS":
+        blockers.append("Phase 31 validation is blocked. Resolve portfolio risk hard blockers first.")
+    if not source_id:
+        blockers.append("Robustness source id is missing.")
+    if not active_components:
+        blockers.append("No active component is available for robustness validation.")
+
+    for row in active_components:
+        registry_id = str(row.get("registry_id") or "-")
+        period = dict(row.get("period") or {})
+        contract = dict(row.get("contract") or {})
+        years = _portfolio_robustness_period_years(period)
+        cagr = _portfolio_proposal_optional_float(row.get("cagr"))
+        mdd = _portfolio_proposal_optional_float(row.get("mdd"))
+        has_metrics = cagr is not None and mdd is not None
+        has_period = years is not None
+        has_long_window = bool(years is not None and years >= PORTFOLIO_ROBUSTNESS_MIN_WINDOW_YEARS)
+        has_contract = bool(contract)
+        has_compare = _portfolio_robustness_has_compare_evidence(row)
+        benchmark = str(row.get("benchmark") or "").strip()
+        stress_ready = has_metrics and has_period and has_contract and bool(benchmark)
+
+        if not has_metrics:
+            blockers.append(f"{registry_id}: CAGR / MDD snapshot is missing.")
+        if not has_period:
+            blockers.append(f"{registry_id}: result period start/end is missing.")
+        elif not has_long_window:
+            input_gaps.append(
+                f"{registry_id}: result window `{years}` years is shorter than `{PORTFOLIO_ROBUSTNESS_MIN_WINDOW_YEARS}` years."
+            )
+        if not has_contract:
+            blockers.append(f"{registry_id}: reproducible contract snapshot is missing.")
+        if not benchmark:
+            input_gaps.append(f"{registry_id}: benchmark label is missing.")
+        if not has_compare:
+            input_gaps.append(f"{registry_id}: compare evidence snapshot is missing.")
+
+        component_rows.append(
+            {
+                "Registry ID": registry_id,
+                "Title": row.get("title") or "-",
+                "Years": years,
+                "Start": period.get("start") or "-",
+                "End": period.get("end") or "-",
+                "CAGR": cagr,
+                "MDD": mdd,
+                "Benchmark": benchmark or "-",
+                "Contract": _portfolio_robustness_contract_summary(contract),
+                "Compare Evidence": "attached" if has_compare else "missing",
+                "Stress Ready": stress_ready,
+            }
+        )
+
+    families = sorted({str(row.get("strategy_family") or "-") for row in active_components})
+    benchmarks = sorted({str(row.get("benchmark") or "-") for row in active_components})
+    if source_type == "portfolio_proposal" and len(active_components) > 1:
+        suggested_sweeps.append("component weight sensitivity: +/-10% around target weights")
+        suggested_sweeps.append("component leave-one-out stress: remove one active component at a time")
+    suggested_sweeps.append("period split stress: early / middle / recent windows")
+    suggested_sweeps.append("recent-window stress: last 3Y and last 5Y where data is available")
+    if len(benchmarks) == 1 and benchmarks[0] not in {"-", ""}:
+        suggested_sweeps.append(f"benchmark sensitivity: compare against `{benchmarks[0]}` and SPY/reference benchmark")
+    else:
+        suggested_sweeps.append("benchmark sensitivity: define primary benchmark before stress comparison")
+    if families:
+        suggested_sweeps.append(f"family-specific parameter sensitivity: {', '.join(families[:4])}")
+
+    has_all_periods = bool(active_components) and all(
+        _portfolio_robustness_period_years(dict(row.get("period") or {})) is not None for row in active_components
+    )
+    has_all_metrics = bool(active_components) and all(
+        _portfolio_proposal_optional_float(row.get("cagr")) is not None
+        and _portfolio_proposal_optional_float(row.get("mdd")) is not None
+        for row in active_components
+    )
+    has_all_contracts = bool(active_components) and all(bool(dict(row.get("contract") or {})) for row in active_components)
+    has_all_benchmarks = bool(active_components) and all(
+        bool(str(row.get("benchmark") or "").strip()) for row in active_components
+    )
+    has_all_compare_evidence = bool(active_components) and all(
+        _portfolio_robustness_has_compare_evidence(row) for row in active_components
+    )
+    attached_compare_count = sum(1 for row in active_components if _portfolio_robustness_has_compare_evidence(row))
+    contract_count = sum(1 for row in active_components if dict(row.get("contract") or {}))
+
+    checks = [
+        {
+            "criteria": "Phase 31 Input",
+            "ready": phase31_route != "BLOCKED_FOR_LIVE_READINESS",
+            "current_value": phase31_route or "-",
+            "judgment": "Phase 31 hard blocker 없음" if phase31_route != "BLOCKED_FOR_LIVE_READINESS" else "Phase 31 blocker 선해결 필요",
+            "score": 2.0,
+        },
+        {
+            "criteria": "Result Period",
+            "ready": has_all_periods,
+            "current_value": f"components={len(active_components)}",
+            "judgment": "기간 snapshot 있음" if has_all_periods else "기간 snapshot 보강 필요",
+            "score": 1.8,
+        },
+        {
+            "criteria": "Metric Snapshot",
+            "ready": has_all_metrics,
+            "current_value": "CAGR/MDD",
+            "judgment": "성과 snapshot 있음" if has_all_metrics else "성과 snapshot 보강 필요",
+            "score": 1.8,
+        },
+        {
+            "criteria": "Reproducible Contract",
+            "ready": has_all_contracts,
+            "current_value": f"contracts={contract_count}",
+            "judgment": "설정 snapshot 있음" if has_all_contracts else "설정 contract 보강 필요",
+            "score": 1.6,
+        },
+        {
+            "criteria": "Benchmark Context",
+            "ready": has_all_benchmarks,
+            "current_value": ", ".join(benchmarks) or "-",
+            "judgment": "benchmark 비교 기준 있음" if has_all_benchmarks else "benchmark 기준 보강 필요",
+            "score": 1.2,
+        },
+        {
+            "criteria": "Compare Evidence",
+            "ready": has_all_compare_evidence,
+            "current_value": f"attached={attached_compare_count}",
+            "judgment": "compare evidence 있음" if has_all_compare_evidence else "compare evidence 보강 필요",
+            "score": 1.6,
+        },
+    ]
+    score = round(sum(float(check["score"]) for check in checks if check["ready"]), 1)
+    score = min(score, 10.0)
+
+    if blockers:
+        route = "BLOCKED_FOR_ROBUSTNESS"
+        verdict = "Robustness 검증 입력 차단: 필수 snapshot 보강 필요"
+        next_action = "Phase 31 blocker와 누락된 기간 / 성과 / 설정 snapshot을 먼저 보강합니다."
+    elif input_gaps:
+        route = "NEEDS_ROBUSTNESS_INPUT_REVIEW"
+        verdict = "Robustness 입력 보강 필요: stress 실행 전 확인 항목 있음"
+        next_action = "benchmark, compare evidence, 기간 길이 같은 입력 gap을 확인한 뒤 stress sweep을 실행합니다."
+    else:
+        route = "READY_FOR_STRESS_SWEEP"
+        verdict = "Stress 검증 실행 후보 가능: robustness 입력 first pass 통과"
+        next_action = "기간 분할, 최근 구간, benchmark 변경, parameter sensitivity 검증을 실행할 수 있습니다."
+
+    return {
+        "source_type": source_type,
+        "source_id": source_id,
+        "robustness_route": route,
+        "robustness_score": score,
+        "verdict": verdict,
+        "next_action": next_action,
+        "blockers": blockers,
+        "input_gaps": input_gaps,
+        "suggested_sweeps": suggested_sweeps,
+        "checks": checks,
+        "component_rows": component_rows,
+        "metrics": {
+            "components": len(active_components),
+            "families": len(families),
+            "benchmarks": len([value for value in benchmarks if value not in {"-", ""}]),
+            "suggested_sweeps": len(suggested_sweeps),
+        },
+    }
 
 
 # Convert latest Pre-Live rows into a registry_id -> status lookup for proposal component cards.
@@ -702,6 +948,7 @@ def _build_portfolio_risk_validation_input_for_single_candidate(
 ) -> dict[str, Any]:
     registry_id = str(selected_row.get("registry_id") or "").strip()
     result = dict(selected_row.get("result") or {})
+    review_context = dict(selected_row.get("review_context") or {})
     return {
         "source_type": "single_candidate",
         "source_id": registry_id,
@@ -726,6 +973,9 @@ def _build_portfolio_risk_validation_input_for_single_candidate(
                 "deployment": result.get("deployment"),
                 "cagr": result.get("cagr"),
                 "mdd": result.get("mdd"),
+                "period": dict(selected_row.get("period") or {}),
+                "contract": dict(selected_row.get("contract") or {}),
+                "compare_evidence": dict(review_context.get("compare_readiness_evaluation") or {}),
                 "benchmark": _portfolio_risk_component_benchmark(selected_row),
                 "universe": _portfolio_risk_component_universe(selected_row),
                 "factors": _portfolio_risk_component_factors(selected_row),
@@ -754,6 +1004,8 @@ def _build_portfolio_risk_validation_input_for_proposal(
         real_money_status = dict(ref.get("real_money_status") or {})
         evidence = evidence_by_registry_id.get(registry_id) or {}
         result = dict(current_row.get("result") or {})
+        review_context = dict(current_row.get("review_context") or {})
+        pre_live_settings = dict(pre_live_record.get("settings_snapshot") or {})
         data_trust_status = str(ref.get("data_trust_status") or "").strip()
         if not data_trust_status:
             data_trust_status = _portfolio_proposal_candidate_data_trust_status(current_row)
@@ -773,6 +1025,9 @@ def _build_portfolio_risk_validation_input_for_proposal(
                 "deployment": real_money_status.get("deployment") or result.get("deployment"),
                 "cagr": result.get("cagr", evidence.get("cagr")),
                 "mdd": result.get("mdd", evidence.get("mdd")),
+                "period": dict(current_row.get("period") or evidence.get("period") or pre_live_settings.get("period") or {}),
+                "contract": dict(current_row.get("contract") or pre_live_settings.get("contract") or {}),
+                "compare_evidence": dict(review_context.get("compare_readiness_evaluation") or {}),
                 "benchmark": _portfolio_risk_component_benchmark(current_row, ref),
                 "universe": _portfolio_risk_component_universe(current_row),
                 "factors": _portfolio_risk_component_factors(current_row),
@@ -969,6 +1224,11 @@ def _build_portfolio_risk_validation_result(validation_input: dict[str, Any]) ->
         verdict = "Phase 32 검증 후보 가능: portfolio risk first pass 통과"
         next_action = "이 후보 또는 proposal을 Phase 32 Robustness / Stress Validation Pack 입력으로 사용할 수 있습니다."
 
+    robustness_validation = _build_portfolio_robustness_validation_result(
+        validation_input,
+        phase31_route=validation_route,
+    )
+
     component_rows = [
         {
             "Registry ID": row.get("registry_id") or "-",
@@ -1015,6 +1275,7 @@ def _build_portfolio_risk_validation_result(validation_input: dict[str, Any]) ->
             "source_type": source_type,
             "source_id": source_id,
         },
+        "robustness_validation": robustness_validation,
     }
 
 
@@ -1033,12 +1294,15 @@ def _build_portfolio_risk_validation_summary_rows(
         )
         validation = _build_portfolio_risk_validation_result(validation_input)
         metrics = dict(validation.get("metrics") or {})
+        robustness = dict(validation.get("robustness_validation") or {})
         display_rows.append(
             {
                 "Updated At": row.get("updated_at") or row.get("created_at"),
                 "Proposal ID": row.get("proposal_id"),
                 "Validation Route": validation.get("validation_route"),
                 "Score": validation.get("validation_score"),
+                "Robustness Route": robustness.get("robustness_route"),
+                "Robustness Score": robustness.get("robustness_score"),
                 "Components": metrics.get("active_components"),
                 "Weight Total": metrics.get("weight_total"),
                 "Max Weight": metrics.get("max_weight"),

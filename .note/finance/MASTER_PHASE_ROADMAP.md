@@ -1484,6 +1484,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 | Phase 29 | `complete` | `manual_qa_completed` | Candidate Review Board + Result Handoff + Review Notes + Registry Draft QA 완료 |
 | Phase 30 | `implementation_complete` | `manual_qa_pending` | product-flow 재정렬, Portfolio Proposal 계약 정의, registry I/O helper 분리, Proposal Draft UI, Monitoring Review, Pre-Live Feedback, Paper Tracking Feedback 구현 |
 | Phase 31 | `complete` | `manual_qa_completed` | Portfolio Risk / Live Readiness Validation Pack 구현 및 QA 완료 |
+| Phase 32 | `active` | `not_ready_for_qa` | Robustness / Stress Validation Pack 진행 중. 첫 작업으로 Validation Pack 아래 robustness input preview와 stress 실행 후보 판정을 구현 |
 
 한 줄 현재 판단:
 - current annual strict candidate와 portfolio bridge를 같은 frame에서 다시 본 `Phase 21`은 manual validation까지 완료되었고,
@@ -1524,6 +1525,10 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
   기존 후보 / Pre-Live / proposal을 읽어 portfolio risk와 live readiness validation 결과를 보여주는 단계다.
   단일 후보 direct path, 작성 중 proposal, 저장된 proposal을 같은 Validation Pack으로 읽고,
   Phase 32 robustness 검증으로 넘길 수 있는지 route / score / blocker / 다음 단계 안내로 표시한다.
+  `Phase 32`는 active / not_ready_for_qa 상태다.
+  첫 작업으로 `Backtest > Portfolio Proposal` Validation Pack 아래에 `Robustness / Stress Validation Preview`를 추가해,
+  단일 후보 / 작성 중 proposal / 저장 proposal이 stress 검증을 실행할 입력을 갖고 있는지 먼저 읽게 했다.
+  아직 실제 period split backtest, parameter sensitivity engine, live approval, 최종 투자 선정은 아니다.
 
 ---
 
@@ -1660,7 +1665,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 | Phase | 이름 | 진행 상태 | 검증 상태 | 쉽게 말하면 |
 |---|---|---|---|---|
 | Phase 31 | Portfolio Risk And Live Readiness Validation | `complete` | `manual_qa_completed` | 후보 또는 proposal이 포트폴리오 구조상 실전 검토 후보로 더 갈 수 있는지 검증했고 QA까지 완료했다 |
-| Phase 32 | Robustness And Stress Validation Pack | `planned` | `not_ready_for_qa` | 좋은 결과가 특정 기간 / benchmark / parameter에만 의존한 것인지 확인한다 |
+| Phase 32 | Robustness And Stress Validation Pack | `active` | `not_ready_for_qa` | 좋은 결과가 특정 기간 / benchmark / parameter에만 의존한 것인지 확인하는 단계로 진입했고, 첫 작업으로 stress 실행 전 입력 preview를 붙였다 |
 | Phase 33 | Paper Portfolio Tracking Ledger | `planned` | `not_ready_for_qa` | snapshot 비교가 아니라 시작일 / 비중 / 추적 조건을 가진 paper portfolio 기록을 만든다 |
 | Phase 34 | Final Portfolio Selection Decision Pack | `planned` | `not_ready_for_qa` | 검증과 paper tracking을 모아 최종 실전 후보 포트폴리오를 선정 / 보류 / 거절한다 |
 | Phase 35 | Post-Selection Operating Guide | `planned` | `not_ready_for_qa` | 선정 이후 리밸런싱, 중단, 축소, 재검토 운영 기준을 정리한다 |
@@ -1677,6 +1682,21 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 - Phase 31은 complete / manual_qa_completed 상태다.
 - `Backtest > Portfolio Proposal`에서 단일 후보, 작성 중 proposal, 저장된 proposal을 Portfolio Risk / Live Readiness Validation Pack으로 읽는다.
 - 새 approval registry를 만들지 않고, 기존 current candidate / Pre-Live / proposal registry를 읽어 read-only validation pack으로 구현했다.
+
+### Phase 32. Robustness And Stress Validation Pack
+
+### 목적
+- Phase 31에서 구조적으로 검토 가능한 후보나 proposal이 특정 기간 / benchmark / parameter 조합에만 의존한 결과인지 확인한다.
+
+### 왜 필요한가
+- CAGR / MDD 한 번의 full-period 결과만으로는 실전 후보 품질을 판단하기 어렵다.
+- stress 검증을 실행하려면 먼저 기간, 설정 contract, benchmark, 성과 snapshot, compare evidence가 남아 있어야 한다.
+
+### 현재 메모
+- Phase 32는 active / not_ready_for_qa 상태다.
+- 첫 번째 작업으로 `Backtest > Portfolio Proposal`의 Validation Pack 아래에 `Robustness / Stress Validation Preview`를 추가했다.
+- route는 `READY_FOR_STRESS_SWEEP`, `NEEDS_ROBUSTNESS_INPUT_REVIEW`, `BLOCKED_FOR_ROBUSTNESS`로 읽는다.
+- 아직 실제 period split backtest 실행, parameter sensitivity engine, 새 robustness registry, live approval은 만들지 않았다.
 
 ### 한 줄 흐름
 - `정리 -> 데이터 신뢰성 -> 전략 parity -> 후보 검토 -> 포트폴리오 제안 -> 이후 live readiness`
