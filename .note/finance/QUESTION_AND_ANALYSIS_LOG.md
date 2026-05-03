@@ -13,13 +13,25 @@ Detailed historical analysis was archived on `2026-04-13`.
 ## Active Pointers
 
 - latest phase board:
-  - [PHASE33_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phases/phase33/PHASE33_CURRENT_CHAPTER_TODO.md)
+  - [PHASE34_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phases/phase34/PHASE34_CURRENT_CHAPTER_TODO.md)
 - current candidate summary:
   - [CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md)
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-05-03 - Phase 34는 Final Portfolio Selection Decision Pack으로 시작한다
+- Request topic:
+  - 사용자가 Phase 34 작업 시작을 요청함
+- Interpreted goal:
+  - Phase 33 paper tracking ledger closeout 이후, 최종 실전 후보 선정 / 보류 / 거절 / 재검토를 다루는 Phase 34를 열어야 함
+- Result:
+  - Phase 34 문서 bundle을 `.note/finance/phases/phase34/` 아래에 생성했다
+  - Phase 34 상태를 `active / not_ready_for_qa`로 잡았다
+  - 첫 작업으로 final decision row 계약과 저장소 경계를 정의했다
+  - 다음 작업은 저장된 paper ledger record를 final decision evidence pack으로 읽는 기준을 구현하는 것이다
+  - Phase 34도 live approval, broker order, 자동매매가 아니라 final selection decision pack이다
 
 ### 2026-05-03 - Phase 33 checklist 완료로 Paper Portfolio Tracking Ledger phase를 닫는다
 - Request topic:

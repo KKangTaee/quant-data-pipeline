@@ -13,13 +13,31 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Active Pointers
 
 - current phase board:
-  - [PHASE33_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phases/phase33/PHASE33_CURRENT_CHAPTER_TODO.md)
+  - [PHASE34_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phases/phase34/PHASE34_CURRENT_CHAPTER_TODO.md)
 - current candidate summary:
   - [CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md)
 - historical full archive:
   - [WORK_PROGRESS_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/archive/WORK_PROGRESS_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-05-03
+- Opened Phase 34 `Final Portfolio Selection Decision Pack`.
+- Created:
+  - `.note/finance/phases/phase34/PHASE34_FINAL_PORTFOLIO_SELECTION_DECISION_PACK_PLAN.md`
+  - `.note/finance/phases/phase34/PHASE34_CURRENT_CHAPTER_TODO.md`
+  - `.note/finance/phases/phase34/PHASE34_FINAL_DECISION_CONTRACT_FIRST_WORK_UNIT.md`
+  - `.note/finance/phases/phase34/PHASE34_TEST_CHECKLIST.md`
+  - `.note/finance/phases/phase34/PHASE34_COMPLETION_SUMMARY.md`
+  - `.note/finance/phases/phase34/PHASE34_NEXT_PHASE_PREPARATION.md`
+- Synced:
+  - roadmap, document index, work log, question log, and comprehensive analysis current-state references
+- Current status:
+  - Phase 34 is `active` / `not_ready_for_qa`
+  - first work unit, final decision contract and storage boundary, is completed
+  - next work unit is decision evidence pack calculation criteria
+- Durable takeaway:
+  - Phase 34 is not live approval or order execution. It will read Phase 33 paper ledger records and create a final selection / hold / reject / re-review decision pack.
 
 ### 2026-05-03
 - Closed Phase 33 after the user confirmed the checklist was complete.
