@@ -1483,6 +1483,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 | Phase 28 | `complete` | `manual_qa_completed` | Capability + Replay + Data Trust + Real-Money/Guardrail parity QA 완료 |
 | Phase 29 | `complete` | `manual_qa_completed` | Candidate Review Board + Result Handoff + Review Notes + Registry Draft QA 완료 |
 | Phase 30 | `implementation_complete` | `manual_qa_pending` | product-flow 재정렬, Portfolio Proposal 계약 정의, registry I/O helper 분리, Proposal Draft UI, Monitoring Review, Pre-Live Feedback, Paper Tracking Feedback 구현 |
+| Phase 31 | `active` | `not_ready_for_qa` | Portfolio Risk / Live Readiness Validation phase 시작. 첫 작업은 단일 후보와 proposal draft를 같은 검증 입력으로 읽는 계약 정의 |
 
 한 줄 현재 판단:
 - current annual strict candidate와 portfolio bridge를 같은 frame에서 다시 본 `Phase 21`은 manual validation까지 완료되었고,
@@ -1518,6 +1519,10 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
   `Pre-Live Feedback` tab을 추가했다.
   일곱 번째 작업으로 proposal evidence snapshot과 현재 Pre-Live result snapshot의 CAGR / MDD를 비교하는
   `Paper Tracking Feedback` tab을 추가했다.
+  `Phase 31`은 active / not_ready_for_qa 상태로 열렸다.
+  Phase 31은 Candidate Review / Portfolio Proposal 판단 기록을 반복 저장하는 단계가 아니라,
+  기존 후보 / Pre-Live / proposal을 읽어 portfolio risk와 live readiness validation 결과를 보여주는 단계다.
+  첫 작업은 단일 후보와 proposal draft를 같은 validation input으로 읽는 계약과 result model을 정의하는 것이다.
 
 ---
 
@@ -1646,8 +1651,31 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 - 추가 코드 분리는 Candidate Review / Pre-Live / History / Saved Portfolio 같은 별도 special refactor task에서 점진 진행한다.
 
 ### Phase 30 이후
-- Live Readiness / Final Approval은 Phase 30 이후 별도 phase로 연다.
-- 이 단계에서는 실제 돈을 넣어도 되는지 최종 판단 기준, paper tracking 근거, blocker 해소 여부, 승인 / 보류 / 거절 기록을 다룬다.
+- Phase 31부터는 최종 실전 포트폴리오 선정 전 검증 phase로 이어간다.
+- 이 구간은 실제 주문 / broker 연동이 아니라, 포트폴리오 후보를 고르기 위한 검증, paper tracking, 최종 선정 decision pack을 만든다.
+
+### Phase 31~35 실전 포트폴리오 선정 로드맵
+
+| Phase | 이름 | 진행 상태 | 검증 상태 | 쉽게 말하면 |
+|---|---|---|---|---|
+| Phase 31 | Portfolio Risk And Live Readiness Validation | `active` | `not_ready_for_qa` | 후보 또는 proposal이 포트폴리오 구조상 실전 검토 후보로 더 갈 수 있는지 검증한다 |
+| Phase 32 | Robustness And Stress Validation Pack | `planned` | `not_ready_for_qa` | 좋은 결과가 특정 기간 / benchmark / parameter에만 의존한 것인지 확인한다 |
+| Phase 33 | Paper Portfolio Tracking Ledger | `planned` | `not_ready_for_qa` | snapshot 비교가 아니라 시작일 / 비중 / 추적 조건을 가진 paper portfolio 기록을 만든다 |
+| Phase 34 | Final Portfolio Selection Decision Pack | `planned` | `not_ready_for_qa` | 검증과 paper tracking을 모아 최종 실전 후보 포트폴리오를 선정 / 보류 / 거절한다 |
+| Phase 35 | Post-Selection Operating Guide | `planned` | `not_ready_for_qa` | 선정 이후 리밸런싱, 중단, 축소, 재검토 운영 기준을 정리한다 |
+
+### Phase 31. Portfolio Risk And Live Readiness Validation
+
+### 목적
+- Candidate Review / Pre-Live / Portfolio Proposal 결과를 읽어 포트폴리오 위험과 Live Readiness 검증 결과를 보여준다.
+
+### 왜 필요한가
+- Phase 30까지는 후보를 proposal draft로 묶을 수 있지만, 후보 간 중복, 집중 위험, core anchor 부재, active 후보 blocker를 실전 검토 전 하나의 validation pack으로 읽는 surface는 아직 없다.
+
+### 현재 메모
+- Phase 31은 active / not_ready_for_qa 상태다.
+- 첫 작업은 `Portfolio Risk Input And Validation Contract`다.
+- 새 approval registry를 먼저 만들지 않고, 기존 current candidate / Pre-Live / proposal registry를 읽어 read-only validation pack으로 시작한다.
 
 ### 한 줄 흐름
 - `정리 -> 데이터 신뢰성 -> 전략 parity -> 후보 검토 -> 포트폴리오 제안 -> 이후 live readiness`

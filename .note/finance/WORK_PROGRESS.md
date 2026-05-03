@@ -2872,3 +2872,13 @@ Detailed historical logs were archived on `2026-04-13`.
   - registries are durable app-readable operating data
   - run history remains generated / local execution state
   - saved portfolio JSONL is reusable setup storage, not a candidate approval registry
+
+### 2026-05-03
+- Opened Phase 31 preparation after the user approved the Phase 31~35 direction toward final real-money portfolio candidate selection.
+- Created the Phase 31 document bundle under `.note/finance/phases/phase31/`.
+- Defined Phase 31 as `Portfolio Risk And Live Readiness Validation`, not as a duplicate Live Readiness decision-record phase.
+- Added the first work-unit document for `Portfolio Risk Input And Validation Contract`.
+- Decision:
+  - Phase 31 should read existing current candidate, Pre-Live, and Portfolio Proposal registries first.
+  - It should start as a read-only validation pack and avoid creating a new approval registry unless a later phase clearly needs one.
+  - Phase 30 remains `implementation_complete / manual_qa_pending`; Phase 31 opens as `active / not_ready_for_qa`.

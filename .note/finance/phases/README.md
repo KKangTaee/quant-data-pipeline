@@ -10,7 +10,7 @@
 
 | 경로 | 역할 |
 |---|---|
-| `phase1/` ~ `phase30/` | phase별 계획, TODO, 작업 단위, QA, closeout 문서 |
+| `phase1/` ~ `phase31/` | phase별 계획, TODO, 작업 단위, QA, closeout 문서 |
 | `../MASTER_PHASE_ROADMAP.md` | 전체 phase 순서와 현재 진행 상태 |
 | `../FINANCE_DOC_INDEX.md` | phase 문서를 포함한 finance 문서 전체 index |
 | `../PHASE_PLAN_TEMPLATE.md` | 새 phase plan 템플릿 |

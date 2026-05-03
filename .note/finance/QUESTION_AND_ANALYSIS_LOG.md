@@ -3748,3 +3748,18 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Follow-up:
   - 다음 구현 계획은 독립 `Live Readiness Decision Record` phase보다 `Portfolio Risk & Live Readiness Validation` phase로 재정의하는 편이 더 합리적이다
   - 단일 후보는 기존 `LIVE_READINESS_DIRECT_READY` 경로를 입력으로 바로 다음 검증 phase에 넘기는 방식이 자연스럽다
+
+### 2026-05-03 - Phase31~35 최종 실전 포트폴리오 선정 로드맵 확정과 Phase31 준비
+- User request:
+  - Phase31~35를 최종 실전투자 포트폴리오 선정 흐름으로 다시 구성하고, Phase31 개발 준비를 진행하라고 승인함
+- Interpreted goal:
+  - Phase31을 기존 Candidate Review / Portfolio Proposal 판단과 중복되지 않는 다음 검증 phase로 열고, 이후 Phase32~35의 역할을 최종 선정 흐름에 맞게 정렬해야 함
+- Analysis result:
+  - Phase31은 `Portfolio Risk And Live Readiness Validation`으로 연다
+  - Phase31은 새 approval registry나 decision note를 먼저 만드는 단계가 아니라, current candidate / Pre-Live / Portfolio Proposal을 읽는 read-only validation pack으로 시작한다
+  - Phase32~35는 각각 robustness / stress validation, paper portfolio tracking ledger, final selection decision pack, post-selection operating guide로 이어진다
+  - 사용자-facing Guide 단계는 phase 수만큼 잘게 쪼개지 않고, 최종적으로 Portfolio Risk / Robustness+Paper Tracking / Final Selection 정도의 큰 흐름으로 유지하는 것이 맞다
+- Follow-up:
+  - Phase31 문서 bundle을 `.note/finance/phases/phase31/` 아래에 생성했다
+  - 첫 작업 단위는 `Portfolio Risk Input And Validation Contract`로 잡았다
+  - Phase30은 아직 manual QA pending이므로 closeout 상태는 변경하지 않는다
