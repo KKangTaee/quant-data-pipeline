@@ -1484,7 +1484,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 | Phase 29 | `complete` | `manual_qa_completed` | Candidate Review Board + Result Handoff + Review Notes + Registry Draft QA 완료 |
 | Phase 30 | `implementation_complete` | `manual_qa_pending` | product-flow 재정렬, Portfolio Proposal 계약 정의, registry I/O helper 분리, Proposal Draft UI, Monitoring Review, Pre-Live Feedback, Paper Tracking Feedback 구현 |
 | Phase 31 | `complete` | `manual_qa_completed` | Portfolio Risk / Live Readiness Validation Pack 구현 및 QA 완료 |
-| Phase 32 | `implementation_complete` | `manual_qa_pending` | Robustness / Stress Validation Pack 구현 완료. robustness preview, stress summary contract / table, Phase33 handoff surface를 추가했고 사용자 QA 대기 중 |
+| Phase 32 | `complete` | `manual_qa_completed` | Robustness / Stress Validation Pack 구현 및 QA 완료 |
 
 한 줄 현재 판단:
 - current annual strict candidate와 portfolio bridge를 같은 frame에서 다시 본 `Phase 21`은 manual validation까지 완료되었고,
@@ -1525,10 +1525,11 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
   기존 후보 / Pre-Live / proposal을 읽어 portfolio risk와 live readiness validation 결과를 보여주는 단계다.
   단일 후보 direct path, 작성 중 proposal, 저장된 proposal을 같은 Validation Pack으로 읽고,
   Phase 32 robustness 검증으로 넘길 수 있는지 route / score / blocker / 다음 단계 안내로 표시한다.
-  `Phase 32`는 implementation_complete / manual_qa_pending 상태다.
+  `Phase 32`는 complete / manual_qa_completed 상태다.
   `Backtest > Portfolio Proposal` Validation Pack 아래에 `Robustness / Stress Validation Preview`,
   `Stress / Sensitivity Summary`, `Phase 33 Handoff`를 추가해,
   단일 후보 / 작성 중 proposal / 저장 proposal이 stress 검증과 paper ledger 준비로 넘어갈 수 있는지 읽게 했다.
+  사용자 checklist QA까지 완료했다.
   아직 실제 period split backtest runner, parameter sensitivity engine, paper ledger 저장, live approval, 최종 투자 선정은 아니다.
 
 ---
@@ -1666,7 +1667,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 | Phase | 이름 | 진행 상태 | 검증 상태 | 쉽게 말하면 |
 |---|---|---|---|---|
 | Phase 31 | Portfolio Risk And Live Readiness Validation | `complete` | `manual_qa_completed` | 후보 또는 proposal이 포트폴리오 구조상 실전 검토 후보로 더 갈 수 있는지 검증했고 QA까지 완료했다 |
-| Phase 32 | Robustness And Stress Validation Pack | `implementation_complete` | `manual_qa_pending` | robustness preview, stress summary contract / table, Phase33 paper ledger handoff를 구현했고 사용자 QA가 남아 있다 |
+| Phase 32 | Robustness And Stress Validation Pack | `complete` | `manual_qa_completed` | robustness preview, stress summary contract / table, Phase33 paper ledger handoff를 구현하고 QA까지 완료했다 |
 | Phase 33 | Paper Portfolio Tracking Ledger | `planned` | `not_ready_for_qa` | snapshot 비교가 아니라 시작일 / 비중 / 추적 조건을 가진 paper portfolio 기록을 만든다 |
 | Phase 34 | Final Portfolio Selection Decision Pack | `planned` | `not_ready_for_qa` | 검증과 paper tracking을 모아 최종 실전 후보 포트폴리오를 선정 / 보류 / 거절한다 |
 | Phase 35 | Post-Selection Operating Guide | `planned` | `not_ready_for_qa` | 선정 이후 리밸런싱, 중단, 축소, 재검토 운영 기준을 정리한다 |
@@ -1694,11 +1695,12 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 - stress 검증을 실행하려면 먼저 기간, 설정 contract, benchmark, 성과 snapshot, compare evidence가 남아 있어야 한다.
 
 ### 현재 메모
-- Phase 32는 implementation_complete / manual_qa_pending 상태다.
+- Phase 32는 complete / manual_qa_completed 상태다.
 - `Backtest > Portfolio Proposal`의 Validation Pack 아래에 `Robustness / Stress Validation Preview`, `Stress / Sensitivity Summary`, `Phase 33 Handoff`를 추가했다.
 - route는 `READY_FOR_STRESS_SWEEP`, `NEEDS_ROBUSTNESS_INPUT_REVIEW`, `BLOCKED_FOR_ROBUSTNESS`로 읽는다.
 - stress summary result contract는 `phase32_stress_summary_v1`로 고정했다.
 - Phase33 handoff route는 `READY_FOR_PAPER_LEDGER_PREP`, `NEEDS_STRESS_INPUT_REVIEW`, `BLOCKED_FOR_PAPER_LEDGER`로 읽는다.
+- 사용자 checklist QA까지 완료했다.
 - 아직 실제 period split backtest 실행, parameter sensitivity engine, 새 robustness registry, paper ledger 저장, live approval은 만들지 않았다.
 
 ### 한 줄 흐름

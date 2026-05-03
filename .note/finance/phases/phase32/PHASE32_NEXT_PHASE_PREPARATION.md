@@ -4,8 +4,8 @@
 
 이 문서는 Phase 32 이후 Phase 33 `Paper Portfolio Tracking Ledger`로 넘어갈 때 필요한 handoff를 정리한다.
 
-Phase 32는 `implementation_complete / manual_qa_pending` 상태이며,
-사용자 QA가 완료되면 Phase 33을 여는 것이 자연스럽다.
+Phase 32는 `complete / manual_qa_completed` 상태이며,
+다음 major phase는 사용자 승인 후 Phase 33을 여는 것이 자연스럽다.
 
 ## 현재 handoff 상태
 
@@ -37,14 +37,14 @@ Phase 32는 `implementation_complete / manual_qa_pending` 상태이며,
 
 ## 추천 다음 방향
 
-Phase 32 QA가 완료되면 Phase 33 `Paper Portfolio Tracking Ledger`로 넘어간다.
+Phase 32 QA가 완료되었으므로, 다음 major phase는 Phase 33 `Paper Portfolio Tracking Ledger`가 자연스럽다.
 
 왜냐하면 최종 실전 포트폴리오 선정 전에는 백테스트 결과뿐 아니라,
 실제 운용을 가정한 관찰 기간과 추적 조건이 필요하기 때문이다.
 
 ## Phase 33 시작 전 확인할 것
 
-- Phase32 checklist가 완료되었는지
+- Phase32 checklist는 완료되었다.
 - `READY_FOR_PAPER_LEDGER_PREP`와 `NEEDS_STRESS_INPUT_REVIEW`의 차이가 UI에서 이해되는지
 - Phase33은 live approval이 아니라 paper tracking ledger 저장 단계라는 경계가 유지되는지
 
