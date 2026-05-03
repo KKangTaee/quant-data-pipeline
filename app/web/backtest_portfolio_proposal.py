@@ -18,6 +18,10 @@ from app.web.backtest_portfolio_proposal_helpers import (
     PORTFOLIO_PROPOSAL_STATUS_OPTIONS,
     PORTFOLIO_PROPOSAL_TYPE_OPTIONS,
     PORTFOLIO_PROPOSAL_WEIGHTING_OPTIONS,
+    _build_portfolio_risk_validation_input_for_proposal,
+    _build_portfolio_risk_validation_input_for_single_candidate,
+    _build_portfolio_risk_validation_result,
+    _build_portfolio_risk_validation_summary_rows,
     _build_portfolio_proposal_component_rows,
     _build_portfolio_proposal_direct_readiness_evaluation,
     _build_portfolio_proposal_monitoring_rows,
@@ -31,6 +35,8 @@ from app.web.backtest_portfolio_proposal_helpers import (
     _portfolio_proposal_open_blockers,
     _portfolio_proposal_paper_tracking_feedback_gaps,
     _portfolio_proposal_paper_tracking_feedback_rows,
+    _portfolio_proposal_candidate_data_trust_status,
+    _portfolio_proposal_current_candidate_by_registry_id,
     _portfolio_proposal_pre_live_feedback_gaps,
     _portfolio_proposal_pre_live_feedback_rows,
     _portfolio_proposal_pre_live_record_by_registry_id,
@@ -58,23 +64,7 @@ from app.web.runtime import (
 
 # Turn a current candidate row into an OK / warning / missing data trust label for proposal components.
 def _component_data_trust_status(row: dict[str, Any]) -> str:
-    review_context = dict(row.get("review_context") or {})
-    data_trust = dict(review_context.get("data_trust_snapshot") or {})
-    if not data_trust:
-        return "not_attached"
-    warning_count = data_trust.get("warning_count")
-    excluded_tickers = list(data_trust.get("excluded_tickers") or [])
-    malformed_count = int(data_trust.get("malformed_price_row_count") or 0)
-    if malformed_count > 0:
-        return "warning"
-    try:
-        if int(warning_count or 0) > 0:
-            return "warning"
-    except (TypeError, ValueError):
-        return "warning"
-    if excluded_tickers:
-        return "warning"
-    return "ok"
+    return _portfolio_proposal_candidate_data_trust_status(row)
 
 
 # Keep Streamlit multiselect state valid after registry rows change or a handoff label disappears.
@@ -88,18 +78,117 @@ def _sync_component_selection_state(label_to_row: dict[str, dict[str, Any]]) -> 
         st.session_state[key] = valid_labels
 
 
+# Render the Phase 31 read-only risk validation pack for a selected candidate or proposal.
+def _render_portfolio_risk_validation_pack(validation: dict[str, Any], *, title: str) -> None:
+    metrics = dict(validation.get("metrics") or {})
+    hard_blockers = list(validation.get("hard_blockers") or [])
+    paper_tracking_gaps = list(validation.get("paper_tracking_gaps") or [])
+    review_gaps = list(validation.get("review_gaps") or [])
+    route = str(validation.get("validation_route") or "-")
+    score = float(validation.get("validation_score") or 0.0)
+    route_tone = "positive" if route == "READY_FOR_ROBUSTNESS_REVIEW" else "warning"
+    if route == "BLOCKED_FOR_LIVE_READINESS":
+        route_tone = "danger"
+
+    st.markdown(f"##### {title}")
+    render_readiness_route_panel(
+        route_label=route,
+        score=score,
+        blockers_count=len(hard_blockers),
+        verdict=str(validation.get("verdict") or "-"),
+        next_action=str(validation.get("next_action") or "-"),
+        route_title="Validation Route",
+        score_title="Risk Score",
+    )
+    render_badge_strip(
+        [
+            {"label": "Source", "value": validation.get("source_type") or "-", "tone": "neutral"},
+            {"label": "Components", "value": metrics.get("active_components", 0), "tone": "positive"},
+            {"label": "Weight Total", "value": f"{metrics.get('weight_total', 0)}%", "tone": "neutral"},
+            {"label": "Max Weight", "value": f"{metrics.get('max_weight', 0)}%", "tone": "neutral"},
+            {"label": "Next Phase", "value": "Phase 32" if route == "READY_FOR_ROBUSTNESS_REVIEW" else "보강 후 판단", "tone": route_tone},
+        ]
+    )
+    st.progress(max(0.0, min(score / 10.0, 1.0)))
+
+    component_df = pd.DataFrame(validation.get("component_rows") or [])
+    if component_df.empty:
+        st.info("Validation Pack에 연결된 component가 없습니다.")
+    else:
+        st.dataframe(component_df, width="stretch", hide_index=True)
+
+    gap_cols = st.columns(3, gap="small")
+    with gap_cols[0]:
+        st.markdown("###### Hard Blockers")
+        if hard_blockers:
+            for blocker in hard_blockers:
+                st.error(blocker)
+        else:
+            st.success("hard blocker 없음")
+    with gap_cols[1]:
+        st.markdown("###### Paper Tracking")
+        if paper_tracking_gaps:
+            for gap in paper_tracking_gaps:
+                st.warning(gap)
+        else:
+            st.success("paper tracking gap 없음")
+    with gap_cols[2]:
+        st.markdown("###### Review Gaps")
+        if review_gaps:
+            for gap in review_gaps:
+                st.info(gap)
+        else:
+            st.success("review gap 없음")
+
+    with st.expander("Validation 기준 / Phase 32 handoff", expanded=False):
+        st.dataframe(pd.DataFrame(validation.get("checks") or []), width="stretch", hide_index=True)
+        st.json(validation.get("handoff_summary") or {})
+        st.caption("이 결과는 live approval이나 주문 지시가 아니라 Phase 32 robustness 검증으로 넘길 수 있는지 보는 읽기 전용 검증 pack입니다.")
+
+
 # Render saved proposal monitoring, feedback, and raw JSON as one support area below the main flow.
-def _render_saved_proposal_details(proposal_rows: list[dict[str, Any]], pre_live_rows: list[dict[str, Any]]) -> None:
+def _render_saved_proposal_details(
+    proposal_rows: list[dict[str, Any]],
+    pre_live_rows: list[dict[str, Any]],
+    current_rows: list[dict[str, Any]],
+) -> None:
     with st.expander("보조 도구: Saved Proposals / Feedback", expanded=False):
         if not proposal_rows:
             st.info("아직 저장된 Portfolio Proposal이 없습니다.")
             st.caption(f"Path: {PORTFOLIO_PROPOSAL_REGISTRY_FILE}")
             return
 
-        overview_tab, pre_live_tab, paper_tab, json_tab = st.tabs(
-            ["Monitoring", "Pre-Live Feedback", "Paper Tracking", "Raw JSON"]
+        current_by_registry_id = _portfolio_proposal_current_candidate_by_registry_id(current_rows)
+        pre_live_by_registry_id = _portfolio_proposal_pre_live_record_by_registry_id(pre_live_rows)
+        validation_tab, overview_tab, pre_live_tab, paper_tab, json_tab = st.tabs(
+            ["Validation Pack", "Monitoring", "Pre-Live Feedback", "Paper Tracking", "Raw JSON"]
         )
         labels = [_portfolio_proposal_selection_label(row) for row in proposal_rows]
+
+        with validation_tab:
+            st.caption("Phase 31 검증 surface입니다. 저장된 proposal이 Phase 32 robustness 검증으로 넘어갈 수 있는지 읽습니다.")
+            st.dataframe(
+                _build_portfolio_risk_validation_summary_rows(
+                    proposal_rows,
+                    current_by_registry_id,
+                    pre_live_by_registry_id,
+                ),
+                width="stretch",
+                hide_index=True,
+            )
+            selected_label = st.selectbox(
+                "Review Validation Pack",
+                options=labels,
+                key="portfolio_proposal_validation_selected_record",
+            )
+            selected_row = proposal_rows[labels.index(selected_label)]
+            validation_input = _build_portfolio_risk_validation_input_for_proposal(
+                proposal_row=selected_row,
+                current_by_registry_id=current_by_registry_id,
+                pre_live_by_registry_id=pre_live_by_registry_id,
+            )
+            validation = _build_portfolio_risk_validation_result(validation_input)
+            _render_portfolio_risk_validation_pack(validation, title="Portfolio Risk / Live Readiness Validation")
 
         with overview_tab:
             st.caption("저장된 proposal draft를 blocker / review gap / 후보 구성 관점에서 다시 읽습니다.")
@@ -167,7 +256,6 @@ def _render_saved_proposal_details(proposal_rows: list[dict[str, Any]], pre_live
 
         with pre_live_tab:
             st.caption("proposal 저장 당시 snapshot과 현재 Pre-Live registry 상태를 비교하는 읽기 전용 영역입니다.")
-            pre_live_by_registry_id = _portfolio_proposal_pre_live_record_by_registry_id(pre_live_rows)
             st.dataframe(
                 _build_portfolio_proposal_pre_live_feedback_summary_rows(proposal_rows, pre_live_by_registry_id),
                 width="stretch",
@@ -216,7 +304,6 @@ def _render_saved_proposal_details(proposal_rows: list[dict[str, Any]], pre_live
                 "proposal evidence snapshot과 현재 Pre-Live result snapshot의 CAGR / MDD를 비교합니다. "
                 "실제 paper PnL 시계열 계산은 아직 아닙니다."
             )
-            pre_live_by_registry_id = _portfolio_proposal_pre_live_record_by_registry_id(pre_live_rows)
             st.dataframe(
                 _build_portfolio_proposal_paper_tracking_feedback_summary_rows(proposal_rows, pre_live_by_registry_id),
                 width="stretch",
@@ -284,6 +371,8 @@ def render_portfolio_proposal_workspace() -> None:
     pre_live_rows = _load_pre_live_candidate_registry_latest()
     proposal_rows = load_portfolio_proposals()
     pre_live_status_by_registry_id = _portfolio_proposal_pre_live_status_by_registry_id(pre_live_rows)
+    pre_live_record_by_registry_id = _portfolio_proposal_pre_live_record_by_registry_id(pre_live_rows)
+    current_by_registry_id = _portfolio_proposal_current_candidate_by_registry_id(current_rows)
 
     pre_live_notice = st.session_state.get("portfolio_proposal_from_pre_live_notice")
     if pre_live_notice:
@@ -486,6 +575,17 @@ def render_portfolio_proposal_workspace() -> None:
             with st.expander("판단 기준", expanded=False):
                 st.dataframe(pd.DataFrame(readiness["checks"]), width="stretch", hide_index=True)
                 st.caption("이 평가는 저장 row를 새로 만들지 않고, 기존 current candidate / Pre-Live record를 다음 단계 입력으로 읽을 수 있는지만 봅니다.")
+
+        st.markdown("#### 4. Portfolio Risk / Validation Pack")
+        with st.container(border=True):
+            validation_input = _build_portfolio_risk_validation_input_for_single_candidate(
+                selected_row=selected_row,
+                pre_live_record=pre_live_record_by_registry_id.get(registry_id),
+                pre_live_status=pre_live_status,
+                data_trust_status=data_trust_status,
+            )
+            validation = _build_portfolio_risk_validation_result(validation_input)
+            _render_portfolio_risk_validation_pack(validation, title="단일 후보 Portfolio Risk / Live Readiness Validation")
 
     elif selected_rows:
         st.markdown("#### 2. 목적 / 역할 / 비중 설계")
@@ -732,6 +832,15 @@ def render_portfolio_proposal_workspace() -> None:
                 else:
                     st.error("저장 전 확인 필요: " + ", ".join(str(item) for item in readiness["blocking_reasons"]))
 
+            with st.container(border=True):
+                validation_input = _build_portfolio_risk_validation_input_for_proposal(
+                    proposal_row=proposal_row,
+                    current_by_registry_id=current_by_registry_id,
+                    pre_live_by_registry_id=pre_live_record_by_registry_id,
+                )
+                validation = _build_portfolio_risk_validation_result(validation_input)
+                _render_portfolio_risk_validation_pack(validation, title="작성 중 Proposal Portfolio Risk / Live Readiness Validation")
+
             st.markdown("##### 저장 및 다음 단계")
             action_cols = st.columns(2, gap="small")
             with action_cols[0]:
@@ -772,4 +881,4 @@ def render_portfolio_proposal_workspace() -> None:
             st.info("`1. Proposal 후보 확인`에서 current candidate를 1개 이상 선택하세요.")
 
     st.divider()
-    _render_saved_proposal_details(proposal_rows, pre_live_rows)
+    _render_saved_proposal_details(proposal_rows, pre_live_rows, current_rows)

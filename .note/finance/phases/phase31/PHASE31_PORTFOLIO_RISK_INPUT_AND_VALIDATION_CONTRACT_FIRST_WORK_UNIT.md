@@ -56,10 +56,18 @@ Phase 31 validation result는 우선 화면에서 계산되는 summary로 본다
 
 ## 첫 작업의 완료 기준
 
-- 단일 후보와 proposal draft를 같은 validation input dict로 만들 수 있다.
-- validation result가 route, score, blocker, next action을 반환한다.
-- 아직 UI가 완성되지 않아도 helper 단위 smoke로 입력/출력이 확인된다.
-- 새 registry를 만들지 않았다는 점이 문서에 남아 있다.
+- `completed` 단일 후보와 proposal draft를 같은 validation input dict로 만들 수 있다.
+- `completed` validation result가 route, score, blocker, next action을 반환한다.
+- `completed` helper 단위 smoke로 입력/출력이 확인됐다.
+- `completed` 새 registry를 만들지 않았다는 점이 문서와 UI에 남아 있다.
+
+## 구현 결과
+
+- `app/web/backtest_portfolio_proposal_helpers.py`에 Phase 31 validation input / result helper를 추가했다.
+- `app/web/backtest_portfolio_proposal.py`에서 단일 후보, 작성 중 proposal, 저장된 proposal을 같은 Validation Pack으로 렌더링한다.
+- validation route는 `READY_FOR_ROBUSTNESS_REVIEW`, `PAPER_TRACKING_REQUIRED`, `NEEDS_PORTFOLIO_RISK_REVIEW`, `BLOCKED_FOR_LIVE_READINESS`로 구분한다.
+- component table은 role, weight, family, benchmark, universe, factors, Pre-Live, Data Trust, Promotion, Deployment를 함께 보여준다.
+- Phase 32 handoff summary는 validation expander 안에서 확인할 수 있다.
 
 ## 이번 작업에서 하지 않는 것
 

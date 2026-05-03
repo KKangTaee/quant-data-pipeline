@@ -19,7 +19,7 @@ DB-backed market data ingestion, factor generation, and strategy backtesting wor
 - `Ingestion`
   - 일별 업데이트, statement refresh, 진단 작업
 - `Backtest`
-  - 단일 전략 실행, compare, candidate review, pre-live review, portfolio proposal workflow
+  - 단일 전략 실행, compare, candidate review, pre-live review, portfolio proposal workflow, portfolio risk validation pack
 - `Ops Review`
   - 최근 실행 결과, persistent history, logs, failure artifact 검토
 - `Backtest Run History`
@@ -83,6 +83,7 @@ DB-backed market data ingestion, factor generation, and strategy backtesting wor
   - 저장된 proposal draft를 `Monitoring Review`에서 blocker / review gap / component 관점으로 다시 확인하는 흐름
   - 저장된 proposal snapshot을 `Pre-Live Feedback`에서 현재 Pre-Live 상태와 비교하는 흐름
   - 저장된 proposal evidence snapshot을 `Paper Tracking Feedback`에서 현재 Pre-Live result snapshot의 CAGR / MDD와 비교하는 흐름
+  - Phase 31 `Validation Pack`에서 단일 후보, 작성 중 proposal, 저장 proposal을 component risk / blocker / paper tracking gap / overlap first pass / Phase 32 handoff 관점으로 확인하는 흐름
   - live trading approval이나 주문 지시와 분리된 검토 기록 흐름
 
 ## 프로젝트 구조
@@ -100,7 +101,9 @@ app/
     backtest_ui_components.py # Backtest 공용 status/route UI component
     backtest_candidate_review.py # Candidate Review / Candidate Packaging / Pre-Live 운영 기록 UI
     backtest_candidate_review_helpers.py # Candidate Review 판단/변환/Pre-Live 운영 기록 helper
-    pages/backtest.py    # Backtest shell, workflow navigation, remaining Single/Compare/History helper/Proposal UI
+    backtest_portfolio_proposal.py # Portfolio Proposal / Validation Pack UI
+    backtest_portfolio_proposal_helpers.py # Portfolio Proposal 저장/검증/Phase31 handoff helper
+    pages/backtest.py    # Backtest shell, workflow navigation
     runtime/             # UI-facing runtime wrappers
       candidate_registry.py
       portfolio_proposal.py

@@ -4,14 +4,15 @@
 
 이 문서는 Phase 31 이후 어떤 질문으로 Phase 32를 여는 것이 자연스러운지 정리하는 handoff 초안이다.
 
-현재 Phase 31은 kickoff / planning 상태다.
-따라서 이 문서는 구현 완료 전 임시 방향이며, Phase 31 closeout 시 실제 결과 기준으로 다시 갱신한다.
+현재 Phase 31은 implementation_complete / manual_qa_pending 상태다.
+사용자 QA가 완료되면 이 문서를 기준으로 Phase 32 방향을 확정한다.
 
 ## 현재 handoff 상태
 
 - Phase 30은 Portfolio Proposal / Monitoring Review / Pre-Live Feedback / Paper Tracking Feedback을 구현했고 manual QA pending 상태다.
-- Phase 31은 Portfolio Proposal 이후 같은 판단 기록을 중복 저장하지 않고, portfolio risk / live readiness validation pack을 만드는 phase로 정의됐다.
-- Phase 31이 끝나면 단일 후보 또는 proposal draft에 대해 다음 robustness 검증으로 넘길 수 있는지 더 명확히 읽을 수 있어야 한다.
+- Phase 31은 Portfolio Proposal 이후 같은 판단 기록을 중복 저장하지 않고, portfolio risk / live readiness validation pack을 구현했다.
+- 단일 후보 또는 proposal draft는 `READY_FOR_ROBUSTNESS_REVIEW`, `PAPER_TRACKING_REQUIRED`, `NEEDS_PORTFOLIO_RISK_REVIEW`, `BLOCKED_FOR_LIVE_READINESS` 중 하나로 읽힌다.
+- Phase 31 validation pack은 live approval이 아니라, Phase 32 robustness 검증에 넘길 수 있는지 판단하는 입력 정리다.
 
 ## 다음 phase에서 더 중요한 질문
 
@@ -47,3 +48,4 @@ Phase 32는 그 구조가 다른 조건에서도 버틸 수 있는지 보는 단
 - Phase 32도 live approval이 아니라 robustness 검증이다.
 - 실제 paper ledger는 Phase 33에서 다룬다.
 - 최종 선정 decision pack은 Phase 34에서 다룬다.
+- Phase 31 QA가 완료되기 전에는 Phase 32를 바로 열지 않는다.

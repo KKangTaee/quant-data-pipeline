@@ -3763,3 +3763,18 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Phase31 문서 bundle을 `.note/finance/phases/phase31/` 아래에 생성했다
   - 첫 작업 단위는 `Portfolio Risk Input And Validation Contract`로 잡았다
   - Phase30은 아직 manual QA pending이므로 closeout 상태는 변경하지 않는다
+
+### 2026-05-03 - Phase31 Validation Pack 구현 완료와 QA handoff
+- User request:
+  - Phase31 TODO에 있는 내용을 모두 개발하고, 전체 개발이 끝나면 checklist 기준으로 테스트할 수 있게 지시해 달라고 요청함
+- Interpreted goal:
+  - Phase31을 새 수동 판단 기록이나 approval registry가 아니라, 기존 current candidate / Pre-Live / Portfolio Proposal을 읽는 read-only risk validation surface로 구현해야 함
+- Analysis result:
+  - `Backtest > Portfolio Proposal`에 Validation Pack을 추가했다
+  - 단일 후보 direct path, 작성 중 proposal draft, 저장 proposal 모두 같은 validation input / result schema로 읽는다
+  - Validation Pack은 route, score, hard blockers, paper tracking gaps, review gaps, component risk table, Phase32 handoff summary를 보여준다
+  - 경계는 유지한다: live approval, 주문 지시, 자동 optimizer, 신규 approval registry가 아니다
+- Follow-up:
+  - Phase31은 `implementation_complete / manual_qa_pending` 상태다
+  - 사용자 QA는 `.note/finance/phases/phase31/PHASE31_TEST_CHECKLIST.md` 기준으로 진행한다
+  - Phase32는 Phase31 `handoff_summary`를 robustness / stress validation 입력 기준으로 삼아 설계한다

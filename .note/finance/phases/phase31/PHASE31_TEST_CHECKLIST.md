@@ -2,66 +2,66 @@
 
 ## 목적
 
-이 checklist는 Phase 31에서 만드는 Portfolio Risk / Live Readiness Validation 흐름이
+이 checklist는 Phase 31에서 구현한 Portfolio Risk / Live Readiness Validation 흐름이
 Candidate Review / Pre-Live / Portfolio Proposal과 중복되지 않고,
 실전 후보 검토 전 필요한 위험 검증으로 읽히는지 확인하기 위한 문서다.
 
-현재는 Phase 31 kickoff checklist 초안이다.
-실제 구현이 끝나면 화면 경로와 체크 항목을 구현 결과에 맞춰 갱신한다.
+현재는 Phase 31 구현 완료 후 manual QA checklist다.
+이 checklist 확인이 끝나면 Phase 31 closeout 여부를 판단한다.
 
 ## 사용 방법
 
 - 아래 항목은 사용자가 직접 `[ ]`를 `[x]`로 바꾸며 확인한다.
-- Phase 31 구현 완료 후 targeted manual QA에 사용한다.
 - 일부 항목이 후속 phase로 넘어가면 그 이유를 completion summary에 남긴다.
+- 이 checklist는 live approval이나 주문 가능 여부를 확인하는 문서가 아니다.
 
-## 1. Validation Pack 위치 확인
+## 1. 단일 후보 Validation Pack 확인
 
 - 확인 위치:
   - `Backtest > Portfolio Proposal`
 - 체크 항목:
-  - [ ] 단일 후보 또는 저장된 proposal draft를 선택한 뒤 Portfolio Risk / Live Readiness Validation 결과를 볼 수 있는지
-  - [ ] 이 화면이 live approval이나 주문 지시가 아니라 검증 surface로 읽히는지
-  - [ ] Candidate Review의 `다음 단계 진행 판단`이나 Portfolio Proposal의 `Live Readiness 진입 평가`를 반복 저장하는 UI로 보이지 않는지
+  - [ ] `Proposal Components`에서 후보 1개를 선택하면 `단일 후보 직행 평가`가 열리는지
+  - [ ] `3. Live Readiness 직행 평가` 아래에 `4. Portfolio Risk / Validation Pack`이 보이는지
+  - [ ] Validation Route, Risk Score, Source, Components, Weight Total, Max Weight, Next Phase가 보이는지
+  - [ ] component table에 Registry ID, Role, Weight, Family, Benchmark, Universe, Factors, Pre-Live, Data Trust, Promotion, Deployment가 보이는지
+  - [ ] hard blocker / paper tracking gap / review gap이 분리되어 보이는지
+  - [ ] `Validation 기준 / Phase 32 handoff` expander에서 checks와 handoff summary를 확인할 수 있는지
 
-## 2. 입력 계약 확인
+## 2. 작성 중 Proposal Validation Pack 확인
 
 - 확인 위치:
-  - `Backtest > Portfolio Proposal > Validation Pack`
+  - `Backtest > Portfolio Proposal > 포트폴리오 초안 작성`
 - 체크 항목:
-  - [ ] 단일 후보 direct path와 다중 후보 proposal path가 같은 validation panel에서 읽히는지
-  - [ ] Current Candidate, Pre-Live Record, Proposal Draft 중 어떤 입력을 읽고 있는지 표시되는지
-  - [ ] 입력이 부족할 때 사용자가 어느 이전 단계로 돌아가야 하는지 보이는지
+  - [ ] 후보 2개 이상을 선택하면 `목적 / 역할 / 비중 설계`가 열리는지
+  - [ ] 후보별 Proposal Role, Target Weight, Weight Reason을 입력한 뒤 저장 전 Validation Pack이 보이는지
+  - [ ] target weight 합계가 100%가 아니면 hard blocker 또는 저장 blocker가 보이는지
+  - [ ] core_anchor가 없으면 validation에서 blocker 또는 review gap으로 읽히는지
+  - [ ] 같은 family / benchmark / universe / factor set에 몰리면 review gap이 표시되는지
+  - [ ] 이 Validation Pack이 proposal draft 저장이나 live approval을 자동 수행하지 않는지
 
-## 3. Portfolio Risk Summary 확인
+## 3. 저장된 Proposal Validation Pack 확인
 
 - 확인 위치:
-  - `Backtest > Portfolio Proposal > Validation Pack > Portfolio Risk Summary`
+  - `Backtest > Portfolio Proposal > 보조 도구: Saved Proposals / Feedback > Validation Pack`
 - 체크 항목:
-  - [ ] 후보 수, target weight 합계, core anchor 유무가 보이는지
-  - [ ] concentration 또는 active 후보 상태 blocker가 있으면 차단 항목으로 보이는지
-  - [ ] `ready`, `review required`, `blocked` 같은 route가 투자 승인과 분리된 검증 신호로 읽히는지
+  - [ ] 저장된 proposal이 없을 때 빈 상태 안내가 보이는지
+  - [ ] 저장된 proposal이 있으면 summary table에 Proposal ID, Validation Route, Score, Components, Weight Total, Max Weight, Hard Blockers, Paper Gaps, Review Gaps가 보이는지
+  - [ ] `Review Validation Pack`에서 proposal을 선택하면 상세 validation panel이 보이는지
+  - [ ] 저장된 proposal의 Monitoring / Pre-Live Feedback / Paper Tracking / Raw JSON tab도 기존처럼 동작하는지
 
-## 4. Component Risk / Overlap 확인
-
-- 확인 위치:
-  - `Backtest > Portfolio Proposal > Validation Pack > Component Risk`
-- 체크 항목:
-  - [ ] 후보별 role, target weight, strategy family, benchmark, Pre-Live status, promotion, deployment가 함께 보이는지
-  - [ ] 같은 strategy family, universe, factor, benchmark 편중이 가능한 범위에서 표시되는지
-  - [ ] hard blocker와 review gap이 구분되어 보이는지
-
-## 5. Phase 32 Handoff 확인
+## 4. Phase 32 Handoff 확인
 
 - 확인 위치:
-  - `Backtest > Portfolio Proposal > Validation Pack > Next Action`
+  - `Backtest > Portfolio Proposal > Validation Pack > Validation 기준 / Phase 32 handoff`
   - `.note/finance/phases/phase31/PHASE31_NEXT_PHASE_PREPARATION.md`
 - 체크 항목:
-  - [ ] validation 결과가 Phase 32 robustness 검증으로 넘길 수 있는지 설명하는지
-  - [ ] paper tracking이 먼저 필요한 후보와 robustness로 넘길 후보가 구분되는지
+  - [ ] `READY_FOR_ROBUSTNESS_REVIEW`는 Phase 32 robustness 검증 후보 가능으로 읽히는지
+  - [ ] `PAPER_TRACKING_REQUIRED`는 paper tracking 보강 필요로 읽히는지
+  - [ ] `NEEDS_PORTFOLIO_RISK_REVIEW`는 비중 / 중복 / Data Trust gap 보강 필요로 읽히는지
+  - [ ] `BLOCKED_FOR_LIVE_READINESS`는 hard blocker 해결 전 차단으로 읽히는지
   - [ ] Phase 32에서 실제로 무엇을 검증할지 next phase preparation에 쉽게 설명되어 있는지
 
-## 6. 문서와 closeout 확인
+## 5. 문서와 closeout 확인
 
 - 확인 문서:
   - `.note/finance/phases/phase31/PHASE31_PORTFOLIO_RISK_AND_LIVE_READINESS_VALIDATION_PLAN.md`
@@ -70,9 +70,9 @@ Candidate Review / Pre-Live / Portfolio Proposal과 중복되지 않고,
   - `.note/finance/MASTER_PHASE_ROADMAP.md`
   - `.note/finance/FINANCE_DOC_INDEX.md`
 - 체크 항목:
-  - [ ] Phase 31이 `Portfolio Risk / Live Readiness Validation`으로 설명되는지
+  - [ ] Phase 31이 `implementation_complete / manual_qa_pending` 상태로 설명되는지
   - [ ] Phase 31이 duplicate decision record가 아니라 기존 후보/Proposal을 읽는 검증 단계로 설명되는지
-  - [ ] Phase 30 manual QA pending 상태와 Phase 31 active 상태가 혼동되지 않는지
+  - [ ] Phase 30 manual QA pending 상태와 Phase 31 manual QA pending 상태가 혼동되지 않는지
 
 ## 한 줄 판단 기준
 

@@ -53,6 +53,16 @@ Phase 30까지는 아래가 가능해졌다.
 - 다음 Phase 32의 robustness 검증은 어떤 후보 또는 proposal을 입력으로 삼을지 더 명확해진다.
 - Final Selection으로 가기 전에 `포트폴리오 구조상 말이 되는가`라는 질문을 별도 검증 단계로 고정할 수 있다.
 
+## 현재 구현 상태
+
+- 진행 상태: `implementation_complete`
+- 검증 상태: `manual_qa_pending`
+
+구현 결과는 이 kickoff plan의 경계를 따른다.
+새 approval registry를 만들지 않고,
+`Backtest > Portfolio Proposal` 안에서 단일 후보, 작성 중 proposal, 저장 proposal을 같은 Validation Pack으로 읽는다.
+수동 QA는 `PHASE31_TEST_CHECKLIST.md`에서 진행한다.
+
 ## 이 phase에서 다루는 대상
 
 직접 다루는 범위:
@@ -74,24 +84,24 @@ Phase 30까지는 아래가 가능해졌다.
 - optimizer 기반 자동 비중 산출
 - Phase 32의 본격 stress / robustness sweep
 
-## 현재 구현 우선순위
+## 구현 우선순위와 완료 상태
 
-1. Portfolio Risk input contract 정의
+1. Portfolio Risk input contract 정의 - `completed`
    - 쉽게 말하면: 단일 후보와 proposal draft를 검증 pack이 읽을 수 있는 같은 입력 모양으로 맞춘다.
    - 왜 먼저 하는가: 입력이 흐릿하면 Live Readiness 판단 기록을 중복해서 만들 위험이 커진다.
    - 기대 효과: Phase 31은 기존 기록을 재사용하고, 새 approval registry를 만들지 않는다는 경계가 분명해진다.
 
-2. Portfolio Risk Summary / Readiness panel 구현
+2. Portfolio Risk Summary / Readiness panel 구현 - `completed`
    - 쉽게 말하면: 후보 구성, 비중, core anchor, blocker, Pre-Live 상태를 한 화면에서 요약한다.
    - 왜 필요한가: 현재 proposal draft는 저장할 수 있지만, 실전 검토 후보로 구조적으로 괜찮은지는 별도 요약이 없다.
    - 기대 효과: 사용자는 `ready`, `review required`, `blocked`를 투자 승인과 분리해서 읽을 수 있다.
 
-3. Component overlap / concentration check 추가
+3. Component overlap / concentration check 추가 - `completed`
    - 쉽게 말하면: 후보들이 서로 다른 역할을 하는지, 사실상 같은 위험에 몰려 있는지 본다.
    - 왜 필요한가: 좋은 후보 여러 개를 묶어도 같은 factor나 universe에 몰리면 포트폴리오 위험은 줄지 않을 수 있다.
    - 기대 효과: Phase 32에서 더 깊게 robustness를 보기 전에 기본 구조 위험을 걸러낼 수 있다.
 
-4. Phase 32 handoff field 고정
+4. Phase 32 handoff field 고정 - `completed`
    - 쉽게 말하면: robustness 검증이 읽을 최소 summary와 blocker를 정한다.
    - 왜 필요한가: Phase 31 결과가 다음 phase 입력이 되어야 개발 흐름이 끊기지 않는다.
    - 기대 효과: Phase 32를 새로 설계할 때 같은 입력 계약을 다시 만들지 않아도 된다.
@@ -143,9 +153,9 @@ Phase 30까지는 아래가 가능해졌다.
 
 ## 다음에 확인할 것
 
-- Phase 30 QA가 끝나지 않은 상태에서 Phase 31 구현을 시작해도 괜찮은지, QA gate를 어떻게 운영할지 확인한다.
-- `Backtest > Portfolio Proposal`에 새 tab을 추가할지, 기존 `Saved Proposals / Feedback` 안에 validation section으로 넣을지 결정한다.
-- 첫 구현 전 `WEB_BACKTEST_UI_FLOW.md`와 `SCRIPT_STRUCTURE_MAP.md`를 다시 확인한다.
+- Phase 31 manual QA에서 direct single-candidate path, 작성 중 proposal path, saved proposal Validation Pack을 확인한다.
+- Phase 30 manual QA pending 상태와 Phase 31 manual QA pending 상태가 혼동되지 않는지 확인한다.
+- Phase 32를 열 때는 Phase 31 `handoff_summary`를 robustness / stress validation 입력 기준으로 사용한다.
 
 ## 한 줄 정리
 

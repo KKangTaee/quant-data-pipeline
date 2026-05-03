@@ -33,6 +33,7 @@ PORTFOLIO_PROPOSAL_ROLE_OPTIONS = [
 PORTFOLIO_PROPOSAL_WEIGHTING_OPTIONS = ["manual_weight", "equal_weight"]
 PORTFOLIO_PROPOSAL_PAPER_CAGR_DETERIORATION_THRESHOLD = -2.0
 PORTFOLIO_PROPOSAL_PAPER_MDD_DETERIORATION_THRESHOLD = -5.0
+PORTFOLIO_RISK_MAX_REVIEW_WEIGHT = 70.0
 
 
 # Parse a proposal component target weight into a safe float.
@@ -41,6 +42,29 @@ def _component_target_weight(component_input: dict[str, Any]) -> float:
         return float(component_input.get("target_weight") or 0.0)
     except (TypeError, ValueError):
         return 0.0
+
+
+# Turn a current candidate row into an OK / warning / missing data trust label for proposal components.
+def _portfolio_proposal_candidate_data_trust_status(row: dict[str, Any] | None) -> str:
+    if not row:
+        return "not_attached"
+    review_context = dict(row.get("review_context") or {})
+    data_trust = dict(review_context.get("data_trust_snapshot") or {})
+    if not data_trust:
+        return "not_attached"
+    warning_count = data_trust.get("warning_count")
+    excluded_tickers = list(data_trust.get("excluded_tickers") or [])
+    malformed_count = int(data_trust.get("malformed_price_row_count") or 0)
+    if malformed_count > 0:
+        return "warning"
+    try:
+        if int(warning_count or 0) > 0:
+            return "warning"
+    except (TypeError, ValueError):
+        return "warning"
+    if excluded_tickers:
+        return "warning"
+    return "ok"
 
 
 # Convert latest Pre-Live rows into a registry_id -> status lookup for proposal component cards.
@@ -590,6 +614,429 @@ def _build_portfolio_proposal_paper_tracking_feedback_summary_rows(
                 "Worsened": worsened_count,
                 "Stable / Better": stable_or_better_count,
                 "Feedback Gaps": len(gaps),
+            }
+        )
+    return pd.DataFrame(display_rows)
+
+
+# Convert current candidate rows into a registry_id -> row lookup for validation pack inputs.
+def _portfolio_proposal_current_candidate_by_registry_id(rows: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    candidates: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        registry_id = str(row.get("registry_id") or "").strip()
+        if registry_id:
+            candidates[registry_id] = dict(row)
+    return candidates
+
+
+# Extract a benchmark-like label from saved candidate contracts and result snapshots.
+def _portfolio_risk_component_benchmark(row: dict[str, Any] | None, ref: dict[str, Any] | None = None) -> str:
+    candidate = dict(row or {})
+    ref = dict(ref or {})
+    contract = dict(candidate.get("contract") or {})
+    result = dict(candidate.get("result") or {})
+    real_money = dict(ref.get("real_money_status") or {})
+    for value in (
+        contract.get("benchmark_ticker"),
+        contract.get("benchmark"),
+        result.get("benchmark_ticker"),
+        real_money.get("benchmark_ticker"),
+    ):
+        if value not in (None, ""):
+            return str(value)
+    return "-"
+
+
+# Extract a compact universe label that can be compared across proposal components.
+def _portfolio_risk_component_universe(row: dict[str, Any] | None) -> str:
+    candidate = dict(row or {})
+    contract = dict(candidate.get("contract") or {})
+    tickers = list(contract.get("tickers") or [])
+    if tickers:
+        return ",".join(str(ticker) for ticker in tickers)
+    for key in ("universe_contract", "universe_mode", "preset_name"):
+        value = contract.get(key)
+        if value not in (None, ""):
+            return str(value)
+    return "-"
+
+
+# Extract a factor set label for strict equity candidates when saved contracts include factor names.
+def _portfolio_risk_component_factors(row: dict[str, Any] | None) -> str:
+    candidate = dict(row or {})
+    contract = dict(candidate.get("contract") or {})
+    factors: list[str] = []
+    for key in (
+        "factors",
+        "factor_set",
+        "quality_factors",
+        "value_factors",
+        "selected_factors",
+        "factor_columns",
+    ):
+        value = contract.get(key)
+        if isinstance(value, list):
+            factors.extend(str(item) for item in value if str(item).strip())
+        elif isinstance(value, str) and value.strip():
+            factors.append(value.strip())
+    if not factors:
+        return "-"
+    return ",".join(sorted(dict.fromkeys(factors)))
+
+
+# Build the Phase 31 validation input for one already-packaged candidate.
+def _build_portfolio_risk_validation_input_for_single_candidate(
+    *,
+    selected_row: dict[str, Any],
+    pre_live_record: dict[str, Any] | None,
+    pre_live_status: str,
+    data_trust_status: str,
+) -> dict[str, Any]:
+    registry_id = str(selected_row.get("registry_id") or "").strip()
+    result = dict(selected_row.get("result") or {})
+    return {
+        "source_type": "single_candidate",
+        "source_id": registry_id,
+        "source_label": selected_row.get("title") or registry_id,
+        "objective": {
+            "primary_goal": "single_candidate_live_readiness_validation",
+            "capital_scope": "paper_only",
+        },
+        "component_rows": [
+            {
+                "registry_id": registry_id,
+                "title": selected_row.get("title") or registry_id,
+                "strategy_family": selected_row.get("strategy_family"),
+                "strategy_name": selected_row.get("strategy_name"),
+                "candidate_role": selected_row.get("candidate_role"),
+                "proposal_role": "core_anchor",
+                "target_weight": 100.0,
+                "data_trust_status": data_trust_status,
+                "pre_live_status": pre_live_status or "not_started",
+                "promotion": result.get("promotion"),
+                "shortlist": result.get("shortlist"),
+                "deployment": result.get("deployment"),
+                "cagr": result.get("cagr"),
+                "mdd": result.get("mdd"),
+                "benchmark": _portfolio_risk_component_benchmark(selected_row),
+                "universe": _portfolio_risk_component_universe(selected_row),
+                "factors": _portfolio_risk_component_factors(selected_row),
+                "has_current_candidate": bool(selected_row),
+                "has_pre_live_record": bool(pre_live_record),
+                "open_candidate_blockers": list(result.get("blockers") or []),
+            }
+        ],
+    }
+
+
+# Build the Phase 31 validation input for a saved or draft Portfolio Proposal row.
+def _build_portfolio_risk_validation_input_for_proposal(
+    *,
+    proposal_row: dict[str, Any],
+    current_by_registry_id: dict[str, dict[str, Any]],
+    pre_live_by_registry_id: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    component_rows: list[dict[str, Any]] = []
+    evidence_by_registry_id = _portfolio_proposal_evidence_by_registry_id(proposal_row)
+    for ref in list(proposal_row.get("candidate_refs") or []):
+        ref = dict(ref or {})
+        registry_id = str(ref.get("registry_id") or "").strip()
+        current_row = current_by_registry_id.get(registry_id) or {}
+        pre_live_record = pre_live_by_registry_id.get(registry_id) or {}
+        real_money_status = dict(ref.get("real_money_status") or {})
+        evidence = evidence_by_registry_id.get(registry_id) or {}
+        result = dict(current_row.get("result") or {})
+        data_trust_status = str(ref.get("data_trust_status") or "").strip()
+        if not data_trust_status:
+            data_trust_status = _portfolio_proposal_candidate_data_trust_status(current_row)
+        component_rows.append(
+            {
+                "registry_id": registry_id,
+                "title": current_row.get("title") or evidence.get("title") or registry_id,
+                "strategy_family": ref.get("strategy_family") or current_row.get("strategy_family"),
+                "strategy_name": ref.get("strategy_name") or current_row.get("strategy_name"),
+                "candidate_role": ref.get("candidate_role") or current_row.get("candidate_role"),
+                "proposal_role": ref.get("proposal_role"),
+                "target_weight": _portfolio_proposal_optional_float(ref.get("target_weight")) or 0.0,
+                "data_trust_status": data_trust_status or "not_attached",
+                "pre_live_status": str(pre_live_record.get("pre_live_status") or ref.get("pre_live_status") or "not_started"),
+                "promotion": real_money_status.get("promotion") or result.get("promotion"),
+                "shortlist": real_money_status.get("shortlist") or result.get("shortlist"),
+                "deployment": real_money_status.get("deployment") or result.get("deployment"),
+                "cagr": result.get("cagr", evidence.get("cagr")),
+                "mdd": result.get("mdd", evidence.get("mdd")),
+                "benchmark": _portfolio_risk_component_benchmark(current_row, ref),
+                "universe": _portfolio_risk_component_universe(current_row),
+                "factors": _portfolio_risk_component_factors(current_row),
+                "has_current_candidate": bool(current_row),
+                "has_pre_live_record": bool(pre_live_record),
+                "open_candidate_blockers": list(ref.get("open_candidate_blockers") or []),
+            }
+        )
+
+    objective = dict(proposal_row.get("objective") or {})
+    return {
+        "source_type": "portfolio_proposal",
+        "source_id": str(proposal_row.get("proposal_id") or "").strip(),
+        "source_label": str(proposal_row.get("proposal_id") or "").strip(),
+        "objective": objective,
+        "proposal_status": proposal_row.get("proposal_status"),
+        "component_rows": component_rows,
+    }
+
+
+def _portfolio_risk_count_values(rows: list[dict[str, Any]], key: str) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for row in rows:
+        value = str(row.get(key) or "-").strip() or "-"
+        counts[value] = counts.get(value, 0) + 1
+    return counts
+
+
+# Score a single candidate or proposal draft for Phase 31 portfolio risk / live readiness validation.
+def _build_portfolio_risk_validation_result(validation_input: dict[str, Any]) -> dict[str, Any]:
+    source_type = str(validation_input.get("source_type") or "")
+    source_id = str(validation_input.get("source_id") or "").strip()
+    components = [dict(row or {}) for row in list(validation_input.get("component_rows") or [])]
+    active_components = [
+        row
+        for row in components
+        if (_portfolio_proposal_optional_float(row.get("target_weight")) or 0.0) > 0.0
+    ]
+    active_count = len(active_components)
+    weight_total = round(
+        sum((_portfolio_proposal_optional_float(row.get("target_weight")) or 0.0) for row in active_components),
+        4,
+    )
+    max_weight = max(
+        [(_portfolio_proposal_optional_float(row.get("target_weight")) or 0.0) for row in active_components],
+        default=0.0,
+    )
+    has_core_anchor = any(str(row.get("proposal_role") or "") == "core_anchor" for row in active_components)
+
+    hard_blockers: list[str] = []
+    review_gaps: list[str] = []
+    paper_tracking_gaps: list[str] = []
+
+    if not source_id:
+        hard_blockers.append("Validation source id is missing.")
+    if not components:
+        hard_blockers.append("No validation component is attached.")
+    if active_count == 0:
+        hard_blockers.append("No active component weight is attached.")
+    if active_count and abs(weight_total - 100.0) > 0.01:
+        hard_blockers.append(f"Active target weights must sum to 100%, current={weight_total}%.")
+    if active_count and not has_core_anchor:
+        hard_blockers.append("At least one active core_anchor component is required.")
+
+    for row in active_components:
+        registry_id = str(row.get("registry_id") or "-")
+        pre_live_status = str(row.get("pre_live_status") or "not_started")
+        promotion = str(row.get("promotion") or "").lower()
+        deployment = str(row.get("deployment") or "").lower()
+        data_trust_status = str(row.get("data_trust_status") or "not_attached").lower()
+        component_blockers = [str(value) for value in list(row.get("open_candidate_blockers") or []) if str(value).strip()]
+        for blocker in component_blockers:
+            hard_blockers.append(f"{registry_id}: {blocker}")
+        if not row.get("has_current_candidate"):
+            review_gaps.append(f"{registry_id}: current candidate registry row is not linked.")
+        if not row.get("has_pre_live_record"):
+            paper_tracking_gaps.append(f"{registry_id}: active Pre-Live record is not linked.")
+        if pre_live_status in {"hold", "reject", "rejected", "pre_live_hold"}:
+            hard_blockers.append(f"{registry_id}: active component has `{pre_live_status}` Pre-Live status.")
+        elif pre_live_status != "paper_tracking":
+            paper_tracking_gaps.append(f"{registry_id}: Pre-Live status is `{pre_live_status}`, not `paper_tracking`.")
+        if promotion == "hold":
+            hard_blockers.append(f"{registry_id}: Real-Money promotion is hold.")
+        if deployment in {"blocked", "reject", "rejected"}:
+            hard_blockers.append(f"{registry_id}: deployment status is `{deployment}`.")
+        if not promotion and not deployment:
+            review_gaps.append(f"{registry_id}: Real-Money signal is missing.")
+        if data_trust_status in {"blocked", "error"}:
+            hard_blockers.append(f"{registry_id}: Data Trust is `{data_trust_status}`.")
+        elif data_trust_status in {"not_attached", "missing", "unknown", ""}:
+            review_gaps.append(f"{registry_id}: Data Trust snapshot is not attached.")
+
+    if source_type == "portfolio_proposal" and active_count > 1:
+        if max_weight > PORTFOLIO_RISK_MAX_REVIEW_WEIGHT:
+            review_gaps.append(f"Max component weight `{max_weight}%` is above review threshold `{PORTFOLIO_RISK_MAX_REVIEW_WEIGHT}%`.")
+        for label, key in (
+            ("strategy family", "strategy_family"),
+            ("benchmark", "benchmark"),
+            ("universe", "universe"),
+            ("factor set", "factors"),
+        ):
+            counts = _portfolio_risk_count_values(active_components, key)
+            dominant_value, dominant_count = max(counts.items(), key=lambda item: item[1]) if counts else ("-", 0)
+            if dominant_value != "-" and dominant_count == active_count:
+                review_gaps.append(f"All active components share the same {label}: `{dominant_value}`.")
+
+    hard_blockers = list(dict.fromkeys(hard_blockers))
+    paper_tracking_gaps = list(dict.fromkeys(paper_tracking_gaps))
+    review_gaps = list(dict.fromkeys(review_gaps))
+
+    identity_ready = bool(source_id and components)
+    construction_ready = bool(active_count and abs(weight_total - 100.0) <= 0.01 and has_core_anchor)
+    concentration_ready = source_type == "single_candidate" or max_weight <= PORTFOLIO_RISK_MAX_REVIEW_WEIGHT
+    pre_live_ready = bool(active_count) and not paper_tracking_gaps
+    real_money_ready = not any("Real-Money" in item or "deployment status" in item for item in hard_blockers)
+    data_trust_ready = not any("Data Trust" in item for item in hard_blockers + review_gaps)
+    overlap_ready = not any("share the same" in item for item in review_gaps)
+    blocker_ready = not hard_blockers
+    checks = [
+        {
+            "criteria": "Source Identity",
+            "ready": identity_ready,
+            "current_value": f"type={source_type}, id={source_id or '-'}",
+            "judgment": "검증 입력 식별 가능" if identity_ready else "source id 또는 component 필요",
+            "score": 1.0,
+        },
+        {
+            "criteria": "Portfolio Construction",
+            "ready": construction_ready,
+            "current_value": f"components={active_count}, weight_total={weight_total}%, core_anchor={has_core_anchor}",
+            "judgment": "비중과 중심 후보 확인" if construction_ready else "비중 합계 또는 core anchor 확인 필요",
+            "score": 1.8,
+        },
+        {
+            "criteria": "Concentration",
+            "ready": concentration_ready,
+            "current_value": f"max_weight={max_weight}%",
+            "judgment": "집중도 first pass 통과" if concentration_ready else "비중 집중 검토 필요",
+            "score": 1.2,
+        },
+        {
+            "criteria": "Pre-Live / Paper Tracking",
+            "ready": pre_live_ready,
+            "current_value": ", ".join(sorted({str(row.get("pre_live_status") or "not_started") for row in active_components})) or "-",
+            "judgment": "active 후보가 paper_tracking 상태" if pre_live_ready else "paper tracking 또는 Pre-Live 연결 필요",
+            "score": 1.4,
+        },
+        {
+            "criteria": "Real-Money / Deployment",
+            "ready": real_money_ready,
+            "current_value": ", ".join(sorted({str(row.get("deployment") or "-") for row in active_components})) or "-",
+            "judgment": "hold / blocked hard blocker 없음" if real_money_ready else "Real-Money hard blocker 확인 필요",
+            "score": 1.4,
+        },
+        {
+            "criteria": "Data Trust",
+            "ready": data_trust_ready,
+            "current_value": ", ".join(sorted({str(row.get("data_trust_status") or "not_attached") for row in active_components})) or "-",
+            "judgment": "Data Trust attached" if data_trust_ready else "Data Trust 보강 필요",
+            "score": 1.0,
+        },
+        {
+            "criteria": "Overlap First Pass",
+            "ready": overlap_ready,
+            "current_value": f"families={len(_portfolio_risk_count_values(active_components, 'strategy_family'))}",
+            "judgment": "중복 위험 first pass 통과" if overlap_ready else "family / benchmark / universe / factor 편중 검토 필요",
+            "score": 1.0,
+        },
+        {
+            "criteria": "Hard Blockers",
+            "ready": blocker_ready,
+            "current_value": f"hard_blockers={len(hard_blockers)}",
+            "judgment": "hard blocker 없음" if blocker_ready else "차단 항목 해결 필요",
+            "score": 1.2,
+        },
+    ]
+    score = round(sum(float(check["score"]) for check in checks if check["ready"]), 1)
+    score = min(score, 10.0)
+
+    if hard_blockers:
+        validation_route = "BLOCKED_FOR_LIVE_READINESS"
+        verdict = "Live Readiness 검증 차단: hard blocker 해결 필요"
+        next_action = "차단 항목을 해결한 뒤 Candidate Review / Pre-Live / Portfolio Proposal 입력을 다시 확인합니다."
+    elif paper_tracking_gaps:
+        validation_route = "PAPER_TRACKING_REQUIRED"
+        verdict = "Paper tracking 보강 필요: 실전 검토 전 운영 기록 연결 필요"
+        next_action = "active 후보의 Pre-Live paper_tracking record와 tracking plan을 먼저 정리합니다."
+    elif review_gaps:
+        validation_route = "NEEDS_PORTFOLIO_RISK_REVIEW"
+        verdict = "Portfolio Risk 보강 필요: robustness 전 확인 항목 있음"
+        next_action = "비중 집중, 중복, Data Trust gap을 확인한 뒤 Phase 32 robustness 검증으로 넘길지 판단합니다."
+    else:
+        validation_route = "READY_FOR_ROBUSTNESS_REVIEW"
+        verdict = "Phase 32 검증 후보 가능: portfolio risk first pass 통과"
+        next_action = "이 후보 또는 proposal을 Phase 32 Robustness / Stress Validation Pack 입력으로 사용할 수 있습니다."
+
+    component_rows = [
+        {
+            "Registry ID": row.get("registry_id") or "-",
+            "Title": row.get("title") or "-",
+            "Role": row.get("proposal_role") or "-",
+            "Weight": _portfolio_proposal_optional_float(row.get("target_weight")) or 0.0,
+            "Family": row.get("strategy_family") or "-",
+            "Benchmark": row.get("benchmark") or "-",
+            "Universe": row.get("universe") or "-",
+            "Factors": row.get("factors") or "-",
+            "Pre-Live": row.get("pre_live_status") or "not_started",
+            "Data Trust": row.get("data_trust_status") or "not_attached",
+            "Promotion": row.get("promotion") or "-",
+            "Deployment": row.get("deployment") or "-",
+            "CAGR": row.get("cagr"),
+            "MDD": row.get("mdd"),
+        }
+        for row in components
+    ]
+    return {
+        "source_type": source_type,
+        "source_id": source_id,
+        "validation_route": validation_route,
+        "validation_score": score,
+        "verdict": verdict,
+        "next_action": next_action,
+        "hard_blockers": hard_blockers,
+        "paper_tracking_gaps": paper_tracking_gaps,
+        "review_gaps": review_gaps,
+        "checks": checks,
+        "component_rows": component_rows,
+        "metrics": {
+            "components": len(components),
+            "active_components": active_count,
+            "weight_total": weight_total,
+            "max_weight": max_weight,
+            "has_core_anchor": has_core_anchor,
+        },
+        "handoff_summary": {
+            "next_phase": "Phase 32 Robustness And Stress Validation Pack",
+            "ready_for_robustness": validation_route == "READY_FOR_ROBUSTNESS_REVIEW",
+            "requires_paper_tracking": validation_route == "PAPER_TRACKING_REQUIRED",
+            "blocked": validation_route == "BLOCKED_FOR_LIVE_READINESS",
+            "source_type": source_type,
+            "source_id": source_id,
+        },
+    }
+
+
+# Build a compact validation summary table for saved Portfolio Proposal rows.
+def _build_portfolio_risk_validation_summary_rows(
+    rows: list[dict[str, Any]],
+    current_by_registry_id: dict[str, dict[str, Any]],
+    pre_live_by_registry_id: dict[str, dict[str, Any]],
+) -> pd.DataFrame:
+    display_rows: list[dict[str, Any]] = []
+    for row in rows:
+        validation_input = _build_portfolio_risk_validation_input_for_proposal(
+            proposal_row=row,
+            current_by_registry_id=current_by_registry_id,
+            pre_live_by_registry_id=pre_live_by_registry_id,
+        )
+        validation = _build_portfolio_risk_validation_result(validation_input)
+        metrics = dict(validation.get("metrics") or {})
+        display_rows.append(
+            {
+                "Updated At": row.get("updated_at") or row.get("created_at"),
+                "Proposal ID": row.get("proposal_id"),
+                "Validation Route": validation.get("validation_route"),
+                "Score": validation.get("validation_score"),
+                "Components": metrics.get("active_components"),
+                "Weight Total": metrics.get("weight_total"),
+                "Max Weight": metrics.get("max_weight"),
+                "Hard Blockers": len(validation.get("hard_blockers") or []),
+                "Paper Gaps": len(validation.get("paper_tracking_gaps") or []),
+                "Review Gaps": len(validation.get("review_gaps") or []),
             }
         )
     return pd.DataFrame(display_rows)

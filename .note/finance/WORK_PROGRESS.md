@@ -2882,3 +2882,21 @@ Detailed historical logs were archived on `2026-04-13`.
   - Phase 31 should read existing current candidate, Pre-Live, and Portfolio Proposal registries first.
   - It should start as a read-only validation pack and avoid creating a new approval registry unless a later phase clearly needs one.
   - Phase 30 remains `implementation_complete / manual_qa_pending`; Phase 31 opens as `active / not_ready_for_qa`.
+
+### 2026-05-03
+- Completed Phase 31 implementation for `Portfolio Risk And Live Readiness Validation`.
+- Changed:
+  - added Phase 31 validation helpers in `app/web/backtest_portfolio_proposal_helpers.py`
+  - normalized direct single-candidate and proposal draft inputs into one validation input shape
+  - added validation result fields for route, score, blockers, paper tracking gaps, review gaps, component rows, checks, and Phase 32 handoff summary
+  - rendered Validation Pack surfaces in `Backtest > Portfolio Proposal` for direct single-candidate review, in-progress proposal drafts, and saved proposal review
+  - kept the feature read-only: no new approval registry, no live approval, no optimizer
+- Documentation:
+  - synced Phase 31 TODO, completion summary, checklist, next phase preparation, roadmap, doc index, README, comprehensive analysis, and Backtest UI flow docs
+- Verification:
+  - `.venv/bin/python -m py_compile app/web/streamlit_app.py app/web/pages/backtest.py app/web/backtest_portfolio_proposal.py app/web/backtest_portfolio_proposal_helpers.py` passed
+  - helper smoke confirmed one direct candidate can route to `READY_FOR_ROBUSTNESS_REVIEW`
+  - helper smoke confirmed a two-candidate proposal with overlap routes to `NEEDS_PORTFOLIO_RISK_REVIEW`
+- Status:
+  - Phase 31 is now `implementation_complete / manual_qa_pending`
+  - user QA should use `.note/finance/phases/phase31/PHASE31_TEST_CHECKLIST.md`
