@@ -1057,10 +1057,15 @@ def _portfolio_proposal_open_blockers(
     component_inputs: dict[str, dict[str, Any]],
     proposal_id: str,
     total_weight: float,
+    existing_proposal_ids: set[str] | None = None,
 ) -> list[str]:
     blockers: list[str] = []
-    if not proposal_id.strip():
+    proposal_id = proposal_id.strip()
+    existing_proposal_ids = existing_proposal_ids or set()
+    if not proposal_id:
         blockers.append("Proposal ID is required.")
+    elif proposal_id in existing_proposal_ids:
+        blockers.append(f"Proposal ID `{proposal_id}` already exists. Change Proposal ID before saving a new draft.")
     if not selected_rows:
         blockers.append("No current candidate selected.")
     for row in selected_rows:

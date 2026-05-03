@@ -379,6 +379,9 @@ def render_portfolio_proposal_workspace() -> None:
     if pre_live_notice:
         st.info(pre_live_notice)
         st.session_state["portfolio_proposal_from_pre_live_notice"] = None
+    save_notice = st.session_state.pop("portfolio_proposal_save_notice", None)
+    if save_notice:
+        st.success(str(save_notice))
 
     render_status_card_grid(
         [
@@ -612,6 +615,8 @@ def render_portfolio_proposal_workspace() -> None:
                     width="stretch",
                     hide_index=True,
                 )
+            if st.session_state.pop("portfolio_proposal_reset_id_after_save", False):
+                st.session_state.pop("portfolio_proposal_id", None)
             default_proposal_id = f"proposal_{date.today().strftime('%Y%m%d')}_{uuid4().hex[:6]}"
             default_status = "live_readiness_candidate" if selected_rows else "draft"
             objective_cols = st.columns(4, gap="small")
@@ -783,6 +788,7 @@ def render_portfolio_proposal_workspace() -> None:
                 component_inputs=component_inputs,
                 proposal_id=proposal_id,
                 total_weight=total_weight,
+                existing_proposal_ids={str(row.get("proposal_id") or "").strip() for row in proposal_rows},
             )
             readiness = _build_portfolio_proposal_readiness_evaluation(
                 selected_rows=selected_rows,
@@ -872,7 +878,11 @@ def render_portfolio_proposal_workspace() -> None:
                     width="stretch",
                 ):
                     append_portfolio_proposal(proposal_row)
-                    st.success(f"Portfolio Proposal `{proposal_row['proposal_id']}`를 저장했습니다. live approval은 아닙니다.")
+                    st.session_state["portfolio_proposal_save_notice"] = (
+                        f"Portfolio Proposal `{proposal_row['proposal_id']}`를 저장했습니다. "
+                        "live approval은 아닙니다. 저장된 proposal은 아래 `보조 도구: Saved Proposals / Feedback`에서 확인할 수 있습니다."
+                    )
+                    st.session_state["portfolio_proposal_reset_id_after_save"] = True
                     st.rerun()
             with action_cols[1]:
                 st.button(

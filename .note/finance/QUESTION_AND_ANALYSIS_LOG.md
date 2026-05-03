@@ -3793,3 +3793,17 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Follow-up:
   - UI에 Proposal Role / Target Weight 사용법 expander와 actionable blocker guidance를 추가했다
   - checklist에는 Validation Pack을 펼쳐도 save가 자동 실행되지 않고 `Open Live Readiness`가 비활성 상태로 남는지 확인하라고 구체화했다
+
+### 2026-05-03 - Phase31 Save Portfolio Proposal Draft 반응 없음 QA 확인
+- User request:
+  - `GTAA Clean-6 AOR Top-1 (3M/12M, i2)`와 `Quality Coverage 100 Top-10 AOR MA250 paper-only candidate`를 선택한 뒤 `Save Portfolio Proposal Draft`를 눌러도 반응이 없어 보인다고 보고함
+- Interpreted goal:
+  - 실제 저장 실패인지, 저장은 되지만 UI feedback이 사라지는 문제인지 확인해야 함
+- Analysis result:
+  - proposal row는 `.note/finance/registries/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`에 append되고 있었다
+  - 문제는 `st.success()` 직후 `st.rerun()`이 실행되어 성공 메시지가 보이지 않는 UX였다
+  - 같은 Proposal ID로 반복 클릭하면 중복 row가 쌓일 수 있는 보완점도 확인했다
+- Follow-up:
+  - 저장 성공 메시지를 session state에 담아 rerun 이후에도 표시되게 했다
+  - 저장 후 다음 proposal id는 새 기본값으로 바뀌게 했다
+  - 이미 존재하는 Proposal ID는 저장 blocker로 막고, ID 변경 안내를 표시한다

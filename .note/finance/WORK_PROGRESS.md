@@ -2912,3 +2912,14 @@ Detailed historical logs were archived on `2026-04-13`.
 - Decision:
   - `PROPOSAL_BLOCKED` for GTAA + Quality is normal when target weights do not sum to 100% or no active `core_anchor` remains.
   - The issue was not the validation logic but the lack of actionable UI guidance.
+
+### 2026-05-03
+- Fixed Phase 31 Portfolio Proposal save feedback after the user reported no visible reaction from `Save Portfolio Proposal Draft`.
+- Finding:
+  - the proposal draft was being appended to `.note/finance/registries/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`
+  - the success message disappeared because the UI called `st.rerun()` immediately after `st.success`
+  - repeated clicks could append the same Proposal ID multiple times
+- Changed:
+  - moved the save success message into session state so it remains visible after rerun
+  - reset the Proposal ID after a successful save so the next draft gets a fresh default id
+  - added duplicate Proposal ID blocking with an explicit "change Proposal ID" instruction
