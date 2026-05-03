@@ -2949,3 +2949,10 @@ Detailed historical logs were archived on `2026-04-13`.
   - UI label changed from `Validation 기준 / Phase 32 handoff` to `검증 기준 / 다음 단계 안내`
   - caption now describes this as a read-only check for the next robustness validation step
   - Phase 31 checklist and Backtest UI flow notes now use the same user-facing wording
+
+### 2026-05-03
+- Clarified the Phase 31 manual QA checklist after the user found the `다음 단계 안내 확인` section hard to verify.
+- Changed:
+  - explained that QA does not need to force all four validation routes
+  - added concrete checks for `Validation Route`, `Next Action`, and the `검증 기준 / 다음 단계 안내` expander
+  - added route interpretation tables to the checklist and next-phase preparation document

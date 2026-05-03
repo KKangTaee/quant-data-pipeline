@@ -70,15 +70,27 @@ Candidate Review / Pre-Live / Portfolio Proposal과 중복되지 않고,
 
 ## 4. 다음 단계 안내 확인
 
+- 이 항목의 의미:
+  - 아래 4개 route를 모두 강제로 재현하라는 뜻은 아니다.
+  - 현재 선택한 단일 후보 또는 Portfolio Proposal에서 표시되는 `Validation Route`, `Next Action`, `검증 기준 / 다음 단계 안내`가 다음 검증 단계 안내로 자연스럽게 읽히는지 확인한다.
+  - `.note/finance/phases/phase31/PHASE31_NEXT_PHASE_PREPARATION.md`는 Phase 32에서 실제로 어떤 검증을 만들지 읽는 참고 문서다.
 - 확인 위치:
   - `Backtest > Portfolio Proposal > 단일 후보 또는 Portfolio Proposal Validation Pack > 검증 기준 / 다음 단계 안내`
   - `.note/finance/phases/phase31/PHASE31_NEXT_PHASE_PREPARATION.md`
-- 체크 항목:
-  - [ ] `READY_FOR_ROBUSTNESS_REVIEW`는 Phase 32 robustness 검증 후보 가능으로 읽히는지
-  - [ ] `PAPER_TRACKING_REQUIRED`는 paper tracking 보강 필요로 읽히는지
-  - [ ] `NEEDS_PORTFOLIO_RISK_REVIEW`는 비중 / 중복 / Data Trust gap 보강 필요로 읽히는지
-  - [ ] `BLOCKED_FOR_LIVE_READINESS`는 hard blocker 해결 전 차단으로 읽히는지
+- 확인 방법:
+  - [ ] Validation Pack 상단의 `Validation Route`와 `Next Action`을 확인했는지
+  - [ ] `검증 기준 / 다음 단계 안내` expander를 열었을 때 checks와 다음 단계 요약이 보이는지
+  - [ ] 화면에 실제로 나온 route가 아래 해석 기준과 같은 의미로 읽히는지
   - [ ] Phase 32에서 실제로 무엇을 검증할지 next phase preparation에 쉽게 설명되어 있는지
+
+### Route 해석 기준
+
+| Route | 사용자가 이렇게 읽으면 된다 |
+|---|---|
+| `READY_FOR_ROBUSTNESS_REVIEW` | 구조상 큰 차단 항목은 없으므로, 다음 phase의 robustness / stress 검증 입력으로 넘겨볼 수 있다. 투자 승인이라는 뜻은 아니다. |
+| `PAPER_TRACKING_REQUIRED` | 실전 검토 전 Pre-Live paper tracking 기록이나 관찰 계획을 먼저 보강해야 한다. |
+| `NEEDS_PORTFOLIO_RISK_REVIEW` | 비중 집중, 후보 간 중복, Data Trust gap 같은 포트폴리오 구조 리스크를 더 확인해야 한다. |
+| `BLOCKED_FOR_LIVE_READINESS` | hard blocker가 있으므로, 다음 검증 단계로 넘기기 전에 차단 항목을 먼저 해결해야 한다. |
 
 ## 5. 문서와 closeout 확인
 
@@ -89,9 +101,9 @@ Candidate Review / Pre-Live / Portfolio Proposal과 중복되지 않고,
   - `.note/finance/MASTER_PHASE_ROADMAP.md`
   - `.note/finance/FINANCE_DOC_INDEX.md`
 - 체크 항목:
-  - [ ] Phase 31이 `implementation_complete / manual_qa_pending` 상태로 설명되는지
-  - [ ] Phase 31이 duplicate decision record가 아니라 기존 후보/Proposal을 읽는 검증 단계로 설명되는지
-  - [ ] Phase 30 manual QA pending 상태와 Phase 31 manual QA pending 상태가 혼동되지 않는지
+  - [x] Phase 31이 `implementation_complete / manual_qa_pending` 상태로 설명되는지
+  - [x] Phase 31이 duplicate decision record가 아니라 기존 후보/Proposal을 읽는 검증 단계로 설명되는지
+  - [x] Phase 30 manual QA pending 상태와 Phase 31 manual QA pending 상태가 혼동되지 않는지
 
 ## 한 줄 판단 기준
 

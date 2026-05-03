@@ -14,6 +14,17 @@
 - 단일 후보 또는 proposal draft는 `READY_FOR_ROBUSTNESS_REVIEW`, `PAPER_TRACKING_REQUIRED`, `NEEDS_PORTFOLIO_RISK_REVIEW`, `BLOCKED_FOR_LIVE_READINESS` 중 하나로 읽힌다.
 - Phase 31 validation pack은 live approval이 아니라, Phase 32 robustness 검증에 넘길 수 있는지 판단하는 입력 정리다.
 
+## Phase 31 route를 읽는 법
+
+이 route는 투자 승인 상태가 아니라 다음에 무엇을 해야 하는지 알려주는 검증 안내다.
+
+| Route | 의미 | 다음 행동 |
+|---|---|---|
+| `READY_FOR_ROBUSTNESS_REVIEW` | 구조상 큰 차단 항목은 없어서 robustness / stress 검증으로 넘겨볼 수 있다. | Phase 32에서 기간 / 조건 / benchmark / parameter 민감도를 검증한다. |
+| `PAPER_TRACKING_REQUIRED` | paper tracking record나 관찰 계획이 부족하다. | Pre-Live paper tracking 기록을 먼저 보강한 뒤 다시 본다. |
+| `NEEDS_PORTFOLIO_RISK_REVIEW` | 비중 집중, 후보 간 중복, Data Trust gap 같은 구조 리스크가 남아 있다. | 역할 / 비중 / 중복 위험을 조정하거나 근거를 보강한다. |
+| `BLOCKED_FOR_LIVE_READINESS` | hard blocker가 있어 다음 검증 단계로 넘기기 어렵다. | blocker를 해결한 뒤 Candidate Review / Pre-Live / Proposal 입력을 다시 확인한다. |
+
 ## 다음 phase에서 더 중요한 질문
 
 1. Phase 31 validation을 통과한 후보나 proposal이 특정 기간 / benchmark / parameter에만 의존한 결과인지 어떻게 검증할 것인가
