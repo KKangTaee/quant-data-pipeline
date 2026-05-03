@@ -4,8 +4,8 @@
 
 이 문서는 Phase 31 이후 어떤 질문으로 Phase 32를 여는 것이 자연스러운지 정리하는 handoff 초안이다.
 
-현재 Phase 31은 implementation_complete / manual_qa_pending 상태다.
-사용자 QA가 완료되면 이 문서를 기준으로 Phase 32 방향을 확정한다.
+현재 Phase 31은 complete / manual_qa_completed 상태다.
+사용자 QA가 완료되었으므로, 다음 주요 구현을 시작할 때 이 문서를 기준으로 Phase 32 방향을 확정한다.
 
 ## 현재 handoff 상태
 
@@ -59,4 +59,4 @@ Phase 32는 그 구조가 다른 조건에서도 버틸 수 있는지 보는 단
 - Phase 32도 live approval이 아니라 robustness 검증이다.
 - 실제 paper ledger는 Phase 33에서 다룬다.
 - 최종 선정 decision pack은 Phase 34에서 다룬다.
-- Phase 31 QA가 완료되기 전에는 Phase 32를 바로 열지 않는다.
+- Phase 31 QA는 완료되었으므로, 다음 major phase를 열 때는 Phase 32 `Robustness And Stress Validation Pack`으로 진행할 수 있다.

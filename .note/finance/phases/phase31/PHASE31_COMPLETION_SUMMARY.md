@@ -6,11 +6,11 @@
 
 ## 진행 상태
 
-- `implementation_complete`
+- `complete`
 
 ## 검증 상태
 
-- `manual_qa_pending`
+- `manual_qa_completed`
 
 ## 이번 phase에서 완료된 것
 
@@ -38,7 +38,7 @@
 
 - `Backtest > Portfolio Proposal` 단일 후보 경로에 `Portfolio Risk / Validation Pack`을 추가했다.
 - 작성 중인 proposal에도 저장 전 validation pack을 표시한다.
-- 저장된 proposal은 `보조 도구: Saved Proposals / Feedback > Validation Pack` tab에서 다시 읽을 수 있다.
+- 저장된 proposal은 다중 후보 proposal 작성 흐름의 `4. 저장된 Portfolio Proposal 확인 > Validation Pack` tab에서 다시 읽을 수 있다.
 
 쉽게 말하면:
 
@@ -76,5 +76,6 @@
 
 ## closeout 판단
 
-Phase 31은 implementation_complete / manual_qa_pending 상태다.
-이제 사용자가 `PHASE31_TEST_CHECKLIST.md` 기준으로 manual QA를 진행하면 된다.
+Phase 31은 complete / manual_qa_completed 상태다.
+사용자가 `PHASE31_TEST_CHECKLIST.md` 기준으로 manual QA closeout을 승인했다.
+다음 주요 구현 후보는 Phase 32 `Robustness And Stress Validation Pack`이다.

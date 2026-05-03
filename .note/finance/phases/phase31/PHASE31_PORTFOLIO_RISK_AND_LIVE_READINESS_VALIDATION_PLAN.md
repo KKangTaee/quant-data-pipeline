@@ -55,8 +55,8 @@ Phase 30까지는 아래가 가능해졌다.
 
 ## 현재 구현 상태
 
-- 진행 상태: `implementation_complete`
-- 검증 상태: `manual_qa_pending`
+- 진행 상태: `complete`
+- 검증 상태: `manual_qa_completed`
 
 구현 결과는 이 kickoff plan의 경계를 따른다.
 새 approval registry를 만들지 않고,

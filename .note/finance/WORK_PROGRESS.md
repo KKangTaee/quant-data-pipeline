@@ -2956,3 +2956,16 @@ Detailed historical logs were archived on `2026-04-13`.
   - explained that QA does not need to force all four validation routes
   - added concrete checks for `Validation Route`, `Next Action`, and the `검증 기준 / 다음 단계 안내` expander
   - added route interpretation tables to the checklist and next-phase preparation document
+
+### 2026-05-03
+- Closed Phase 31 after the user confirmed Phase 31 closeout.
+- Changed:
+  - marked remaining Phase 31 checklist items as completed based on the user's QA completion signal
+  - moved Phase 31 status to `complete` / `manual_qa_completed`
+  - synced Phase 31 TODO, completion summary, next-phase preparation, roadmap, doc index, README, and comprehensive analysis
+  - kept Phase 30 as `implementation_complete` / `manual_qa_pending`
+- Next direction:
+  - Phase 32 can open as `Robustness And Stress Validation Pack` when the user approves the next phase start.
+- Hygiene:
+  - `check_finance_refinement_hygiene.py` was run.
+  - Current candidate registry changes were not needed because Phase 31 closeout changed docs / QA status only, not candidate rows.

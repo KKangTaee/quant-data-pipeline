@@ -26,7 +26,7 @@ Candidate Review / Pre-Live / Portfolio Proposal과 중복되지 않고,
   - [x] component table에 Registry ID, Role, Weight, Family, Benchmark, Universe, Factors, Pre-Live, Data Trust, Promotion, Deployment가 보이는지
   - [x] hard blocker / paper tracking gap / review gap이 분리되어 보이는지
   - [x] `검증 기준 / 다음 단계 안내` expander에서 checks와 다음 단계 요약을 확인할 수 있는지
-  - [ ] 단일 후보 직행 평가에서는 `저장된 Portfolio Proposal 확인` 목록이 노출되지 않는지
+  - [x] 단일 후보 직행 평가에서는 `저장된 Portfolio Proposal 확인` 목록이 노출되지 않는지
 
 ## 2. 작성 중 Proposal Validation Pack 확인
 
@@ -40,7 +40,7 @@ Candidate Review / Pre-Live / Portfolio Proposal과 중복되지 않고,
   - [x] core_anchor가 없으면 validation에서 blocker 또는 review gap으로 읽히는지
   - [x] 같은 family / benchmark / universe / factor set에 몰리면 review gap이 표시되는지
   - [x] Validation Pack을 펼쳐도 `Save Portfolio Proposal Draft`가 자동 실행되지 않고, `Open Live Readiness`는 비활성 상태로 남는지
-  - [ ] `Save Portfolio Proposal Draft`를 클릭하면 저장 성공 안내가 보이고, 안내 문구가 `4. 저장된 Portfolio Proposal 확인`으로 이어지는지
+  - [x] `Save Portfolio Proposal Draft`를 클릭하면 저장 성공 안내가 보이고, 안내 문구가 `4. 저장된 Portfolio Proposal 확인`으로 이어지는지
 
 ### Proposal Role 확인 기준
 
@@ -57,7 +57,7 @@ Candidate Review / Pre-Live / Portfolio Proposal과 중복되지 않고,
   - `Backtest > Portfolio Proposal`
   - 후보 2개 이상 선택 후 `4. 저장된 Portfolio Proposal 확인 > Validation Pack`
 - 체크 항목:
-  - [ ] 저장된 proposal이 없을 때 `아직 저장된 Portfolio Proposal이 없습니다.` 안내가 보이는지
+  - [x] 저장된 proposal이 없을 때 `아직 저장된 Portfolio Proposal이 없습니다.` 안내가 보이는지
   - [x] 후보 2개 이상을 선택한 포트폴리오 초안 작성 흐름에서만 저장된 proposal 목록이 보이는지
   - [x] proposal 저장 후 `Saved Proposals` count 또는 summary table에 새 proposal이 반영되는지
   - [x] 저장된 proposal이 있으면 summary table에 Proposal ID, Validation Route, Score, Components, Weight Total, Max Weight, Hard Blockers, Paper Gaps, Review Gaps가 보이는지
@@ -78,10 +78,10 @@ Candidate Review / Pre-Live / Portfolio Proposal과 중복되지 않고,
   - `Backtest > Portfolio Proposal > 단일 후보 또는 Portfolio Proposal Validation Pack > 검증 기준 / 다음 단계 안내`
   - `.note/finance/phases/phase31/PHASE31_NEXT_PHASE_PREPARATION.md`
 - 확인 방법:
-  - [ ] Validation Pack 상단의 `Validation Route`와 `Next Action`을 확인했는지
-  - [ ] `검증 기준 / 다음 단계 안내` expander를 열었을 때 checks와 다음 단계 요약이 보이는지
-  - [ ] 화면에 실제로 나온 route가 아래 해석 기준과 같은 의미로 읽히는지
-  - [ ] Phase 32에서 실제로 무엇을 검증할지 next phase preparation에 쉽게 설명되어 있는지
+  - [x] Validation Pack 상단의 `Validation Route`와 `Next Action`을 확인했는지
+  - [x] `검증 기준 / 다음 단계 안내` expander를 열었을 때 checks와 다음 단계 요약이 보이는지
+  - [x] 화면에 실제로 나온 route가 아래 해석 기준과 같은 의미로 읽히는지
+  - [x] Phase 32에서 실제로 무엇을 검증할지 next phase preparation에 쉽게 설명되어 있는지
 
 ### Route 해석 기준
 
@@ -101,7 +101,7 @@ Candidate Review / Pre-Live / Portfolio Proposal과 중복되지 않고,
   - `.note/finance/MASTER_PHASE_ROADMAP.md`
   - `.note/finance/FINANCE_DOC_INDEX.md`
 - 체크 항목:
-  - [x] Phase 31이 `implementation_complete / manual_qa_pending` 상태로 설명되는지
+  - [x] Phase 31이 `complete / manual_qa_completed` 상태로 설명되는지
   - [x] Phase 31이 duplicate decision record가 아니라 기존 후보/Proposal을 읽는 검증 단계로 설명되는지
   - [x] Phase 30 manual QA pending 상태와 Phase 31 manual QA pending 상태가 혼동되지 않는지
 

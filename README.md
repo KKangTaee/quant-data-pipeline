@@ -83,7 +83,7 @@ DB-backed market data ingestion, factor generation, and strategy backtesting wor
   - 저장된 proposal draft를 `Monitoring Review`에서 blocker / review gap / component 관점으로 다시 확인하는 흐름
   - 저장된 proposal snapshot을 `Pre-Live Feedback`에서 현재 Pre-Live 상태와 비교하는 흐름
   - 저장된 proposal evidence snapshot을 `Paper Tracking Feedback`에서 현재 Pre-Live result snapshot의 CAGR / MDD와 비교하는 흐름
-  - Phase 31 `Validation Pack`에서 단일 후보, 작성 중 proposal, 저장 proposal을 component risk / blocker / paper tracking gap / overlap first pass / Phase 32 handoff 관점으로 확인하는 흐름
+  - Phase 31 `Validation Pack`에서 단일 후보, 작성 중 proposal, 저장 proposal을 component risk / blocker / paper tracking gap / overlap first pass / 다음 단계 안내 관점으로 확인하는 흐름
   - live trading approval이나 주문 지시와 분리된 검토 기록 흐름
 
 ## 프로젝트 구조
