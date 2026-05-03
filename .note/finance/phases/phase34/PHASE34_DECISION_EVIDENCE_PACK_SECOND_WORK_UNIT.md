@@ -10,6 +10,14 @@
 paper ledger가 있다고 바로 최종 후보로 고르는 것이 아니라,
 그 ledger가 최종 판단에 충분한 근거를 갖고 있는지 다시 확인한다.
 
+## 2026-05-03 보정 후 현재 해석
+
+이 문서는 Phase34 두 번째 작업의 첫 구현 기준을 기록한다.
+현재 main flow에서는 별도 paper ledger row가 필수 입력이 아니며,
+`Backtest > Final Review`가 단일 후보 또는 saved proposal을 source로 선택한 뒤
+validation / robustness / inline paper observation 기준을 하나의 evidence pack으로 묶는다.
+기존 paper ledger 기반 helper는 compatibility / 운영 artifact를 읽는 기준으로 남긴다.
+
 ## 왜 필요한가
 
 - paper ledger는 "관찰 대상으로 등록했다"는 기록이다.

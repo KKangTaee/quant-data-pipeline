@@ -2,7 +2,7 @@
 
 ## 목적
 
-이 문서는 Streamlit Backtest 화면의 single strategy, compare, candidate review, Pre-Live 운영 기록, portfolio proposal, Operations-owned backtest history, Candidate Library, saved weighted portfolio 흐름을 설명한다.
+이 문서는 Streamlit Backtest 화면의 single strategy, compare, candidate review, Pre-Live 운영 기록, portfolio proposal, final review, Operations-owned backtest history, Candidate Library, saved weighted portfolio 흐름을 설명한다.
 UI form, payload 복원, candidate review, history replay, candidate replay, saved weighted portfolio replay를 수정할 때 먼저 확인한다.
 
 ## 핵심 파일
@@ -26,8 +26,10 @@ UI form, payload 복원, candidate review, history replay, candidate replay, sav
 | `app/web/backtest_ui_components.py` | Backtest UI 공용 status card, artifact pipeline, compact badge strip, stage brief strip, route/readiness panel render helper |
 | `app/web/backtest_candidate_review.py` | Candidate Review / Candidate Packaging / Pre-Live 운영 기록 화면 render logic |
 | `app/web/backtest_candidate_review_helpers.py` | Candidate Review 판단, Review Note / registry 변환, Pre-Live status 추천 / draft 변환 / Portfolio Proposal 진입 readiness score helper |
-| `app/web/backtest_portfolio_proposal.py` | 단일 후보 Live Readiness 직행 평가, 다중 후보 Portfolio Proposal 후보 선택 / 목적 / 역할 / 비중 설계, Phase 31 Portfolio Risk / Validation Pack, Phase 32 Robustness / Stress Summary / Phase33 Handoff, Phase 33 Paper Tracking Ledger draft / save / review, Phase 34 Final Selection Decision draft / save / review, 저장된 proposal feedback section render logic |
-| `app/web/backtest_portfolio_proposal_helpers.py` | Portfolio Proposal row 생성, 단일 후보 direct readiness / proposal save readiness 평가, Phase 31 validation input / result / overlap first pass, Phase 32 robustness input / stress summary contract / Phase33 handoff, Phase 33 paper ledger row / save readiness / Phase34 handoff, Phase 34 final decision evidence / save readiness / Phase35 handoff, monitoring / Pre-Live / paper feedback table helper |
+| `app/web/backtest_portfolio_proposal.py` | 단일 후보 직행 평가, 다중 후보 Portfolio Proposal 후보 선택 / 목적 / 역할 / 비중 설계, proposal draft 저장, 저장된 proposal monitoring / feedback section render logic |
+| `app/web/backtest_portfolio_proposal_helpers.py` | Portfolio Proposal row 생성, 단일 후보 direct readiness / proposal save readiness 평가, 공유 validation / robustness 계산 helper, monitoring / Pre-Live / paper feedback table helper |
+| `app/web/backtest_final_review.py` | Final Review 화면 render. 단일 후보 / 저장 proposal 선택, Validation / Robustness / Paper Observation 기준 확인, 최종 판단 기록, saved final decision review |
+| `app/web/backtest_final_review_helpers.py` | Final Review source 선택, validation 재사용, inline paper observation snapshot, final evidence / save readiness / decision row / display helper |
 | `app/web/runtime/backtest.py` | UI payload를 실행 가능한 runtime call로 변환 |
 | `app/web/runtime/candidate_registry.py` | current candidate / review note / pre-live registry JSONL read / append helper |
 | `app/web/runtime/portfolio_proposal.py` | portfolio proposal draft JSONL read / append helper |
@@ -48,7 +50,8 @@ Backtest 주 흐름:
 - `Single Strategy`: 하나의 전략을 실행하고 latest result를 확인한다.
 - `Compare & Portfolio Builder`: 여러 전략을 같은 기간으로 비교하고 weighted portfolio를 만든다.
 - `Candidate Review`: Candidate Packaging 단일 흐름에서 Draft 확인, Review Note 저장, registry 저장, Pre-Live 운영 기록 저장, Portfolio Proposal 이동 판단을 순서대로 처리한다.
-- `Portfolio Proposal`: Candidate Review를 통과한 단일 후보는 추가 proposal 저장 없이 Live Readiness 직행 가능 여부를 확인한다. 여러 후보를 묶을 때만 목적 / 역할 / 비중이 있는 포트폴리오 초안을 저장하고, 같은 화면에서 저장된 proposal monitoring / pre-live feedback / paper tracking feedback, Paper Ledger, Final Selection Decision을 확인한다.
+- `Portfolio Proposal`: Candidate Review를 통과한 단일 후보는 추가 proposal 저장 없이 직행 후보로 읽는다. 여러 후보를 묶을 때만 목적 / 역할 / 비중이 있는 포트폴리오 초안을 저장한다.
+- `Final Review`: 단일 후보 또는 저장된 proposal을 선택해 Validation / Robustness / Paper Observation 기준을 한 화면에서 확인하고, 최종 실전 후보 선정 / 보류 / 거절 / 재검토 결과를 하나의 기록으로 남긴다.
 
 Operations 보조 화면:
 
@@ -70,13 +73,13 @@ Ingestion / Data Trust
   -> Compare 재검토 또는 Portfolio Proposal
   -> Portfolio Proposal
      -> 후보 선택 / 목적 / 역할 / 비중 설계 / Live Readiness 진입 평가 / Proposal 저장
-     -> Paper Tracking Ledger 저장 / Final Selection Decision 저장
+  -> Final Review
      -> Portfolio Risk / Live Readiness Validation Pack
      -> Robustness / Stress Validation Preview
      -> Stress / Sensitivity Summary
-     -> Phase 33 Handoff
-     -> Paper Tracking Ledger Draft / Save
-  -> Live Readiness / Final Approval
+     -> Paper Observation 기준 확인
+     -> 최종 선정 / 보류 / 거절 / 재검토 결과 기록
+  -> Post-Selection Operating Guide
 ```
 
 구분:
@@ -86,11 +89,12 @@ Ingestion / Data Trust
 - `Registry 저장`은 저장된 판단 기록을 Current Candidate / Near Miss / Scenario / Stop 중 어디까지 남길지 정하고, 통과한 row만 Current Candidate Registry에 append하는 Candidate Packaging 내부 작업이다.
 - `Pre-Live 운영 기록`은 저장된 후보를 실제 돈 없이 paper / watchlist / hold / re-review 중 어떻게 관찰할지 기록하는 Candidate Packaging 내부 작업이다.
 - `Portfolio Proposal 이동 판단`은 Pre-Live 운영 record를 저장하기 전에 저장 가능 여부와 저장 후 Proposal 이동 가능 여부를 같이 보여주는 Candidate Packaging의 최종 route 확인이다.
-- `Portfolio Proposal`은 후보 묶음 제안이며, live trading approval이 아니다. 단일 후보는 기본 100% proposal로 빠르게 지나갈 수 있고, 여러 후보를 묶을 때는 역할 / 비중을 명시한다.
+- `Portfolio Proposal`은 후보 묶음 제안이며, live trading approval이 아니다. 단일 후보는 별도 proposal 저장 없이 지나갈 수 있고, 여러 후보를 묶을 때는 역할 / 비중을 명시한다.
+- `Final Review`는 Proposal 탭 밖에서 검증과 최종 판단을 담당한다. 별도 Paper Ledger 저장 버튼을 주요 흐름으로 노출하지 않고, paper observation 기준을 최종 검토 기록 안에 포함한다.
 - `Portfolio Risk / Live Readiness Validation Pack`은 Phase 31에서 추가된 읽기 전용 검증 surface다. 단일 후보, 작성 중 proposal, 저장된 proposal을 route / score / blocker / component risk / 다음 단계 안내로 읽는다.
 - `Robustness / Stress Validation Pack`은 Phase 32에서 추가된 surface다. stress 검증 실행 전 period / contract / benchmark / CAGR / MDD / compare evidence가 충분한지 확인하고, stress / sensitivity summary row와 Phase33 paper ledger handoff를 보여준다. 아직 실제 stress sweep을 실행했다는 뜻은 아니다.
-- `Paper Tracking Ledger`는 Phase 33에서 추가된 append-only 기록 흐름이다. Validation Pack의 Phase33 handoff를 바탕으로 시작일, target weight, benchmark, review cadence, trigger를 저장하고 Phase34 final selection handoff를 준비한다. live approval이나 주문 지시가 아니다.
-- `Live Readiness / Final Approval`은 Phase 30 이후 별도 phase 후보로 남긴다.
+- `Paper Tracking Ledger`는 Phase 33에서 추가된 append-only 기록 흐름이지만, 현재 주 사용자 흐름에서는 Final Review의 inline paper observation 기준으로 흡수한다. 기존 ledger row는 backward compatibility / 과거 QA 기록으로 읽을 수 있다.
+- `Post-Selection Operating Guide`는 Phase 35 이후 별도 phase 후보로 남긴다.
 
 현재 Guides 화면은 네 묶음으로 정리한다.
 
@@ -162,9 +166,10 @@ Phase 30 third work unit status:
 - `app/web/runtime/portfolio_proposal.py`로 proposal draft registry read / append helper도 추가했다.
 - Candidate Review는 `app/web/backtest_candidate_review.py`와 `app/web/backtest_candidate_review_helpers.py`로 분리되어, `backtest.py`에는 panel wrapper와 cross-panel handoff call만 남아 있다.
 - 긴 route/status 문자열은 `app/web/backtest_ui_components.py`의 wrapping card / route panel을 사용해 `st.metric` 말줄임을 피한다.
-- Backtest shell은 중복 제목을 제거하고, `Single Strategy -> Compare & Portfolio Builder -> Candidate Review -> Portfolio Proposal`을 주 workflow navigation으로 보여준다. `History`는 메인 흐름에서 제외하고 `Operations > Backtest Run History` page로 연다.
+- Backtest shell은 중복 제목을 제거하고, `Single Strategy -> Compare & Portfolio Builder -> Candidate Review -> Portfolio Proposal -> Final Review`를 주 workflow navigation으로 보여준다. `History`는 메인 흐름에서 제외하고 `Operations > Backtest Run History` page로 연다.
 - Backtest Run History는 `app/web/backtest_history.py`와 `app/web/backtest_history_helpers.py`로 분리되어, `backtest.py`에는 History 화면 render / replay helper 본문이 남아 있지 않다.
 - Portfolio Proposal은 `app/web/backtest_portfolio_proposal.py`와 `app/web/backtest_portfolio_proposal_helpers.py`로 분리되어, `backtest.py`에는 panel wrapper만 남아 있다.
+- Final Review는 `app/web/backtest_final_review.py`와 `app/web/backtest_final_review_helpers.py`로 분리되어, `backtest.py`에는 panel dispatch만 남아 있다.
 - Single Strategy는 `app/web/backtest_single_strategy.py`, `app/web/backtest_single_forms.py`, `app/web/backtest_single_runner.py`로 분리되어, form render와 runtime dispatch를 page shell에서 제거했다.
 - Compare / Portfolio Builder는 `app/web/backtest_compare.py`로 분리되어, compare 실행, weighted portfolio builder, saved portfolio replay / load, current-candidate compare prefill을 page shell에서 제거했다.
 - Latest result / compare result / Real-Money detail / selection history display는 `app/web/backtest_result_display.py`가 담당한다.
@@ -542,18 +547,11 @@ CURRENT_CANDIDATE_REGISTRY.jsonl
      -> 2. 목적 / 역할 / 비중 설계
      -> 3. Proposal 저장 및 다음 단계 판단
      -> Live Readiness 진입 평가 route/readiness panel 확인
-     -> Portfolio Risk / Live Readiness Validation Pack 확인
-     -> Robustness / Stress Validation Preview 확인
-     -> Stress / Sensitivity Summary / Phase33 Handoff 확인
-     -> Paper Tracking Ledger Draft 확인 / Save Paper Tracking Ledger
      -> Portfolio Proposal JSON Preview 확인
      -> Save Portfolio Proposal Draft
      -> PORTFOLIO_PROPOSAL_REGISTRY.jsonl append
-     -> 4. 저장된 Portfolio Proposal 확인에서 validation / monitoring / Pre-Live / paper feedback / raw JSON inspect
-     -> 저장된 Paper Tracking Ledger 확인에서 Phase34 handoff inspect
-     -> Final Selection Decision Pack 확인 / Save Final Selection Decision
-     -> FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl append
-     -> 저장된 Final Selection Decision 확인에서 Phase35 handoff inspect
+     -> 4. 저장된 Portfolio Proposal 확인에서 monitoring / Pre-Live / paper feedback / raw JSON inspect
+     -> Final Review 탭으로 이동
 ```
 
 구분:
@@ -570,28 +568,36 @@ CURRENT_CANDIDATE_REGISTRY.jsonl
 - 현재 proposal UI는 optimizer가 아니며, target weight는 manual / equal-weight 초안 기준이다.
 - 단일 후보 직행 평가는 role `core_anchor`, weight `100%`, capital scope `paper_only`를 자동 전제로 둔다.
 - `Save Portfolio Proposal Draft`는 여러 후보를 묶는 포트폴리오 초안 작성 흐름에서만 노출한다. 단일 후보 direct path에는 proposal 저장 목록을 붙이지 않는다.
-- saved proposal의 validation / monitoring / Pre-Live feedback / paper tracking feedback은 다중 후보 작성 흐름의 `4. 저장된 Portfolio Proposal 확인` 안에서 읽는다.
+- saved proposal의 monitoring / Pre-Live feedback / paper feedback은 다중 후보 작성 흐름의 `4. 저장된 Portfolio Proposal 확인` 안에서 읽는다.
 - 현재 `Paper Tracking Feedback`은 실제 paper PnL 시계열 자동 계산이 아니라 Pre-Live record에 저장된 최신 snapshot 비교다.
-- Phase 31 이후 `Validation Pack`은 단일 후보 direct path, 작성 중 proposal, 저장된 proposal에서 모두 같은 검증 언어를 사용한다.
+
+## Final Review 흐름
+
+```text
+Current Candidate 또는 Saved Portfolio Proposal
+  -> Backtest > Final Review
+  -> 1. 최종 검토 대상 선택
+  -> 2. Validation 근거 확인
+  -> 3. Robustness / Stress 질문 확인
+  -> 4. Paper Observation 기준 확인
+     -> 별도 Save Paper Tracking Ledger 없이 최종 검토 기록 안에 포함
+  -> 5. 최종 판단 및 테스트 검증
+     -> 최종 검토 결과 기록
+     -> FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl append
+  -> 6. 기록된 최종 검토 결과 확인
+     -> Phase35 handoff inspect
+```
+
+구분:
+
+- Final Review는 Portfolio Proposal 탭이 아니라 별도 workflow panel이다.
+- Phase 31 이후 `Validation Pack`은 Final Review 안에서 단일 후보와 저장 proposal을 같은 검증 언어로 읽는다.
 - validation route는 `READY_FOR_ROBUSTNESS_REVIEW`, `PAPER_TRACKING_REQUIRED`, `NEEDS_PORTFOLIO_RISK_REVIEW`, `BLOCKED_FOR_LIVE_READINESS`로 구분한다.
-- component table은 role, weight, family, benchmark, universe, factor set, Pre-Live, Data Trust, Promotion, Deployment를 같이 보여준다.
-- 이 validation은 다음 robustness 검증 단계로 넘길 수 있는지 확인하는 surface이며, live approval이나 새 approval registry 저장이 아니다.
-- Phase 32 이후 Validation Pack 안에는 `Robustness / Stress Validation Preview`가 같이 표시된다.
-- robustness route는 `READY_FOR_STRESS_SWEEP`, `NEEDS_ROBUSTNESS_INPUT_REVIEW`, `BLOCKED_FOR_ROBUSTNESS`로 구분한다.
-- robustness preview는 기간, 성과 snapshot, 설정 contract, benchmark, compare evidence를 읽고 suggested sweep을 보여준다.
-- `Stress / Sensitivity Summary`는 `phase32_stress_summary_v1` row 계약으로 period split, recent window, benchmark sensitivity, parameter sensitivity, weight sensitivity, leave-one-out scenario를 보여준다.
+- Phase 32의 `Robustness / Stress Validation Preview`와 `Stress / Sensitivity Summary`도 Final Review 안에서 읽는다.
 - `Result Status = NOT_RUN`은 아직 실제 stress runner가 실행되지 않았다는 뜻이다.
-- `Phase 33 Handoff`는 paper ledger 준비 가능성을 `READY_FOR_PAPER_LEDGER_PREP`, `NEEDS_STRESS_INPUT_REVIEW`, `BLOCKED_FOR_PAPER_LEDGER`로 읽는다.
-- 현재 Phase32 surface는 stress 실행 준비와 handoff 상태를 확인하는 pack이며, period split backtest나 parameter sensitivity engine을 실제로 실행한 결과는 아니다.
-- Phase 33 이후 `Paper Tracking Ledger Draft`는 단일 후보 direct path와 저장된 proposal validation detail에서 저장할 수 있다.
-- 작성 중 proposal은 preview를 볼 수 있지만 durable source가 아직 없으므로 proposal draft를 먼저 저장해야 paper ledger save가 열린다.
-- `Save Paper Tracking Ledger`는 `.note/finance/registries/PAPER_PORTFOLIO_TRACKING_LEDGER.jsonl`에 append-only row를 저장한다. 이 row에는 source id, target components, tracking start date, benchmark, review cadence, review triggers, Phase32 handoff snapshot, baseline snapshot, Phase34 handoff가 남는다.
-- 저장된 ledger는 `저장된 Paper Tracking Ledger 확인`에서 다시 읽으며, `READY_FOR_FINAL_SELECTION_REVIEW`, `NEEDS_PAPER_TRACKING_REVIEW`, `BLOCKED_FOR_FINAL_SELECTION_REVIEW`로 Phase34 준비 상태를 보여준다.
-- Phase 34 이후 저장된 Paper Ledger detail 아래에는 `Final Selection Decision Pack`이 표시된다.
-- Final Decision evidence route는 `READY_FOR_FINAL_DECISION`, `FINAL_DECISION_NEEDS_REVIEW`, `FINAL_DECISION_BLOCKED`로 구분한다.
-- `Save Final Selection Decision`은 `.note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`에 `SELECT_FOR_PRACTICAL_PORTFOLIO`, `HOLD_FOR_MORE_PAPER_TRACKING`, `REJECT_FOR_PRACTICAL_USE`, `RE_REVIEW_REQUIRED` 중 하나를 append-only로 저장한다.
-- 저장된 final decision은 `저장된 Final Selection Decision 확인`에서 다시 읽으며, Phase35 handoff를 보여준다.
-- Final Decision은 Phase 35 운영 가이드 입력이지 live approval, broker order, 자동매매 지시가 아니다.
+- Paper Observation은 별도 ledger 저장 버튼으로 노출하지 않고, benchmark / review cadence / trigger / baseline을 최종 검토 기록 안에 포함한다.
+- `최종 검토 결과 기록`은 `.note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`에 `SELECT_FOR_PRACTICAL_PORTFOLIO`, `HOLD_FOR_MORE_PAPER_TRACKING`, `REJECT_FOR_PRACTICAL_USE`, `RE_REVIEW_REQUIRED` 중 하나를 append-only로 저장한다.
+- Final Review 기록은 Phase 35 운영 가이드 입력이지 live approval, broker order, 자동매매 지시가 아니다.
 
 ## Streamlit form 주의
 

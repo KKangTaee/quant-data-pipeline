@@ -9,6 +9,14 @@ Phase 34의 첫 번째 작업은 `Final Portfolio Selection Decision Pack`의 de
 최종 선정 판단 한 줄에 무엇을 적을지 먼저 정한다.
 이 판단은 "실전 후보로 선정한다"는 검토 기록이지, broker 주문이나 자동매매 지시가 아니다.
 
+## 2026-05-03 보정 후 현재 해석
+
+이 문서는 Phase34 첫 구현 당시의 계약 초안이다.
+이후 사용자 UX 검토를 반영해 main flow는 `Backtest > Final Review`로 분리됐고,
+`source_paper_ledger_id`는 legacy / compatibility field로 남긴다.
+현재 사용자-facing record는 단일 후보 또는 saved proposal을 source로 읽고,
+paper observation 기준은 `source_observation_id`와 `paper_tracking_snapshot` 안에 포함한다.
+
 ## 왜 필요한가
 
 - Phase 33의 paper ledger는 "관찰 대상으로 등록했다"는 기록이다.
@@ -31,6 +39,7 @@ Paper Portfolio Tracking Ledger, Portfolio Proposal Registry, Current Candidate 
 - `updated_at`
 - `decision_status`
 - `decision_route`
+- `source_observation_id`
 - `source_paper_ledger_id`
 - `source_type`
 - `source_id`
@@ -68,4 +77,4 @@ Paper Portfolio Tracking Ledger, Portfolio Proposal Registry, Current Candidate 
 
 - final decision row schema가 코드 구현 전에 문서에서 먼저 같은 의미로 읽힌다.
 - `selected` decision과 live approval / order instruction의 경계가 분명하다.
-- Phase 33 paper ledger row를 final decision input으로 읽는 기준이 정리된다.
+- Phase 33 paper ledger row 또는 Final Review inline paper observation을 final decision input으로 읽는 기준이 정리된다.

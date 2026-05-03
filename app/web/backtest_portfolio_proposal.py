@@ -7,26 +7,17 @@ from uuid import uuid4
 import pandas as pd
 import streamlit as st
 
+from app.web.backtest_common import _request_backtest_panel
 from app.web.backtest_candidate_review_helpers import (
     _build_current_candidate_registry_rows_for_display,
     _current_candidate_registry_selection_label,
 )
 from app.web.backtest_portfolio_proposal_helpers import (
-    FINAL_SELECTION_DECISION_ROUTE_DESCRIPTIONS,
-    FINAL_SELECTION_DECISION_ROUTE_OPTIONS,
-    PAPER_PORTFOLIO_LEDGER_REVIEW_CADENCE_OPTIONS,
-    PAPER_PORTFOLIO_LEDGER_STATUS_OPTIONS,
-    PORTFOLIO_PROPOSAL_PAPER_CAGR_DETERIORATION_THRESHOLD,
-    PORTFOLIO_PROPOSAL_PAPER_MDD_DETERIORATION_THRESHOLD,
     PORTFOLIO_PROPOSAL_ROLE_DESCRIPTIONS,
     PORTFOLIO_PROPOSAL_ROLE_OPTIONS,
     PORTFOLIO_PROPOSAL_STATUS_OPTIONS,
     PORTFOLIO_PROPOSAL_TYPE_OPTIONS,
     PORTFOLIO_PROPOSAL_WEIGHTING_OPTIONS,
-    _build_portfolio_risk_validation_input_for_proposal,
-    _build_portfolio_risk_validation_input_for_single_candidate,
-    _build_portfolio_risk_validation_result,
-    _build_portfolio_risk_validation_summary_rows,
     _build_portfolio_proposal_component_rows,
     _build_portfolio_proposal_direct_readiness_evaluation,
     _build_portfolio_proposal_monitoring_rows,
@@ -35,25 +26,12 @@ from app.web.backtest_portfolio_proposal_helpers import (
     _build_portfolio_proposal_readiness_evaluation,
     _build_portfolio_proposal_row,
     _build_portfolio_proposal_rows_for_display,
-    _build_final_selection_decision_component_rows,
-    _build_final_selection_decision_evidence_pack,
-    _build_final_selection_decision_row,
-    _build_final_selection_decision_rows_for_display,
-    _build_final_selection_decision_save_evaluation,
-    _build_paper_portfolio_ledger_component_rows,
-    _build_paper_portfolio_ledger_row,
-    _build_paper_portfolio_ledger_rows_for_display,
-    _build_paper_portfolio_ledger_save_evaluation,
-    _paper_ledger_default_benchmark,
-    _paper_ledger_parse_trigger_lines,
-    _paper_ledger_slug,
     _portfolio_proposal_monitoring_blockers,
     _portfolio_proposal_monitoring_state,
     _portfolio_proposal_open_blockers,
     _portfolio_proposal_paper_tracking_feedback_gaps,
     _portfolio_proposal_paper_tracking_feedback_rows,
     _portfolio_proposal_candidate_data_trust_status,
-    _portfolio_proposal_current_candidate_by_registry_id,
     _portfolio_proposal_pre_live_feedback_gaps,
     _portfolio_proposal_pre_live_feedback_rows,
     _portfolio_proposal_pre_live_record_by_registry_id,
@@ -71,15 +49,9 @@ from app.web.backtest_ui_components import (
 )
 from app.web.runtime import (
     CURRENT_CANDIDATE_REGISTRY_FILE,
-    FINAL_SELECTION_DECISION_REGISTRY_FILE,
     PORTFOLIO_PROPOSAL_REGISTRY_FILE,
-    PAPER_PORTFOLIO_LEDGER_FILE,
-    append_final_selection_decision,
-    append_paper_portfolio_ledger_row,
     append_portfolio_proposal,
     load_current_candidate_registry_latest as _load_current_candidate_registry_latest,
-    load_final_selection_decisions,
-    load_paper_portfolio_ledger,
     load_portfolio_proposals,
     load_pre_live_candidate_registry_latest as _load_pre_live_candidate_registry_latest,
 )
@@ -101,624 +73,25 @@ def _sync_component_selection_state(label_to_row: dict[str, dict[str, Any]]) -> 
         st.session_state[key] = valid_labels
 
 
-def _render_paper_ledger_draft_controls(
-    validation: dict[str, Any],
-    *,
-    key_prefix: str,
-    source_is_persisted: bool,
-    paper_ledger_rows: list[dict[str, Any]],
-) -> None:
-    st.markdown("##### Paper Tracking Ledger Draft")
-    st.caption(
-        "Phase 33 영역입니다. Validation Pack을 여는 것만으로는 저장되지 않고, "
-        "`Save Paper Tracking Ledger`를 명시적으로 눌러야 append-only ledger에 기록됩니다."
-    )
-    existing_ledger_ids = {
-        str(row.get("ledger_id") or "").strip()
-        for row in paper_ledger_rows
-        if str(row.get("ledger_id") or "").strip()
-    }
-    source_id = str(validation.get("source_id") or "").strip()
-    source_slug = _paper_ledger_slug(source_id)
-    if st.session_state.pop(f"{key_prefix}_reset_ledger_id_after_save", False):
-        st.session_state.pop(f"{key_prefix}_ledger_id", None)
-    default_ledger_id = f"paper_{source_slug}_{date.today().strftime('%Y%m%d')}_{uuid4().hex[:6]}"
-    default_triggers = "\n".join(
-        [
-            f"CAGR delta <= {PORTFOLIO_PROPOSAL_PAPER_CAGR_DETERIORATION_THRESHOLD}",
-            f"MDD delta <= {PORTFOLIO_PROPOSAL_PAPER_MDD_DETERIORATION_THRESHOLD}",
-            "Pre-Live status drift from paper_tracking",
-            "Benchmark-relative underperformance review",
-        ]
-    )
-
-    input_cols = st.columns(4, gap="small")
-    with input_cols[0]:
-        ledger_id = st.text_input("Ledger ID", value=default_ledger_id, key=f"{key_prefix}_ledger_id")
-    with input_cols[1]:
-        paper_status = st.selectbox(
-            "Paper Status",
-            options=PAPER_PORTFOLIO_LEDGER_STATUS_OPTIONS,
-            index=0,
-            key=f"{key_prefix}_paper_status",
-        )
-    with input_cols[2]:
-        tracking_start_date = st.date_input(
-            "Tracking Start Date",
-            value=date.today(),
-            key=f"{key_prefix}_tracking_start_date",
-        )
-    with input_cols[3]:
-        review_cadence = st.selectbox(
-            "Review Cadence",
-            options=PAPER_PORTFOLIO_LEDGER_REVIEW_CADENCE_OPTIONS,
-            index=1,
-            key=f"{key_prefix}_review_cadence",
-        )
-    benchmark_note_cols = st.columns([0.32, 0.68], gap="small")
-    with benchmark_note_cols[0]:
-        tracking_benchmark = st.text_input(
-            "Tracking Benchmark",
-            value=_paper_ledger_default_benchmark(validation),
-            key=f"{key_prefix}_tracking_benchmark",
-        )
-    with benchmark_note_cols[1]:
-        operator_note = st.text_input(
-            "Operator Note",
-            value="Phase 32 handoff 이후 실제 돈 없이 paper tracking 조건을 기록한다.",
-            key=f"{key_prefix}_operator_note",
-        )
-    trigger_text = st.text_area(
-        "Review Triggers",
-        value=default_triggers,
-        key=f"{key_prefix}_review_triggers",
-        help="한 줄에 하나씩 stop / re-review trigger를 남깁니다.",
-    )
-    review_triggers = _paper_ledger_parse_trigger_lines(trigger_text)
-    evaluation = _build_paper_portfolio_ledger_save_evaluation(
-        validation=validation,
-        ledger_id=ledger_id,
-        source_is_persisted=source_is_persisted,
-        tracking_start_date=tracking_start_date,
-        tracking_benchmark=tracking_benchmark,
-        review_cadence=review_cadence,
-        review_triggers=review_triggers,
-        existing_ledger_ids=existing_ledger_ids,
-    )
-    render_readiness_route_panel(
-        route_label=str(evaluation.get("route") or "-"),
-        score=float(evaluation.get("score") or 0.0),
-        blockers_count=len(evaluation.get("blockers") or []),
-        verdict=str(evaluation.get("verdict") or "-"),
-        next_action=str(evaluation.get("next_action") or "-"),
-        route_title="Paper Ledger Route",
-        score_title="Ledger Score",
-    )
-    render_badge_strip(
-        [
-            {"label": "Source", "value": validation.get("source_type") or "-", "tone": "neutral"},
-            {"label": "Persisted", "value": "yes" if source_is_persisted else "no", "tone": "positive" if source_is_persisted else "warning"},
-            {"label": "Triggers", "value": len(review_triggers), "tone": "positive" if review_triggers else "warning"},
-            {"label": "Live Approval", "value": "Disabled", "tone": "neutral"},
-        ]
-    )
-    if evaluation.get("blockers"):
-        for blocker in list(evaluation.get("blockers") or []):
-            st.warning(str(blocker))
-
-    paper_row = _build_paper_portfolio_ledger_row(
-        validation=validation,
-        ledger_id=ledger_id,
-        paper_status=paper_status,
-        tracking_start_date=tracking_start_date,
-        tracking_benchmark=tracking_benchmark,
-        review_cadence=review_cadence,
-        review_triggers=review_triggers,
-        operator_note=operator_note,
-    )
-    action_cols = st.columns(2, gap="small")
-    with action_cols[0]:
-        if st.button(
-            "Save Paper Tracking Ledger",
-            key=f"{key_prefix}_save_paper_ledger",
-            disabled=not bool(evaluation.get("can_save")),
-            width="stretch",
-        ):
-            append_paper_portfolio_ledger_row(paper_row)
-            st.session_state["paper_portfolio_ledger_save_notice"] = (
-                f"Paper Tracking Ledger `{paper_row['ledger_id']}`를 저장했습니다. "
-                "이 기록은 live approval이나 주문 지시가 아닙니다."
-            )
-            st.session_state[f"{key_prefix}_reset_ledger_id_after_save"] = True
-            st.rerun()
-    with action_cols[1]:
-        st.button(
-            "Open Final Selection",
-            key=f"{key_prefix}_open_final_selection_placeholder",
-            disabled=True,
-            width="stretch",
-            help="Phase 34 Final Selection Decision Pack에서 연결할 예정입니다.",
-        )
-    with st.expander("Paper Ledger JSON Preview", expanded=False):
-        st.json(paper_row)
-        st.caption(f"Path: {PAPER_PORTFOLIO_LEDGER_FILE}")
-
-
-# Render the Phase 31 read-only risk validation pack for a selected candidate or proposal.
-def _render_portfolio_risk_validation_pack(
-    validation: dict[str, Any],
-    *,
-    title: str,
-    paper_ledger_rows: list[dict[str, Any]] | None = None,
-    source_is_persisted: bool = True,
-) -> None:
-    metrics = dict(validation.get("metrics") or {})
-    hard_blockers = list(validation.get("hard_blockers") or [])
-    paper_tracking_gaps = list(validation.get("paper_tracking_gaps") or [])
-    review_gaps = list(validation.get("review_gaps") or [])
-    route = str(validation.get("validation_route") or "-")
-    score = float(validation.get("validation_score") or 0.0)
-    route_tone = "positive" if route == "READY_FOR_ROBUSTNESS_REVIEW" else "warning"
-    if route == "BLOCKED_FOR_LIVE_READINESS":
-        route_tone = "danger"
-
-    st.markdown(f"##### {title}")
-    render_readiness_route_panel(
-        route_label=route,
-        score=score,
-        blockers_count=len(hard_blockers),
-        verdict=str(validation.get("verdict") or "-"),
-        next_action=str(validation.get("next_action") or "-"),
-        route_title="Validation Route",
-        score_title="Risk Score",
-    )
-    render_badge_strip(
-        [
-            {"label": "Source", "value": validation.get("source_type") or "-", "tone": "neutral"},
-            {"label": "Components", "value": metrics.get("active_components", 0), "tone": "positive"},
-            {"label": "Weight Total", "value": f"{metrics.get('weight_total', 0)}%", "tone": "neutral"},
-            {"label": "Max Weight", "value": f"{metrics.get('max_weight', 0)}%", "tone": "neutral"},
-            {"label": "Next Phase", "value": "Phase 32" if route == "READY_FOR_ROBUSTNESS_REVIEW" else "보강 후 판단", "tone": route_tone},
-        ]
-    )
-    st.progress(max(0.0, min(score / 10.0, 1.0)))
-
-    component_df = pd.DataFrame(validation.get("component_rows") or [])
-    if component_df.empty:
-        st.info("Validation Pack에 연결된 component가 없습니다.")
-    else:
-        st.dataframe(component_df, width="stretch", hide_index=True)
-
-    gap_cols = st.columns(3, gap="small")
-    with gap_cols[0]:
-        st.markdown("###### Hard Blockers")
-        if hard_blockers:
-            for blocker in hard_blockers:
-                st.error(blocker)
-        else:
-            st.success("hard blocker 없음")
-    with gap_cols[1]:
-        st.markdown("###### Paper Tracking")
-        if paper_tracking_gaps:
-            for gap in paper_tracking_gaps:
-                st.warning(gap)
-        else:
-            st.success("paper tracking gap 없음")
-    with gap_cols[2]:
-        st.markdown("###### Review Gaps")
-        if review_gaps:
-            for gap in review_gaps:
-                st.info(gap)
-        else:
-            st.success("review gap 없음")
-
-    with st.expander("검증 기준 / 다음 단계 안내", expanded=False):
-        st.dataframe(pd.DataFrame(validation.get("checks") or []), width="stretch", hide_index=True)
-        st.json(validation.get("handoff_summary") or {})
-        st.caption("이 결과는 live approval이나 주문 지시가 아니라 다음 robustness 검증 단계로 넘길 수 있는지 보는 읽기 전용 검증 pack입니다.")
-
-    robustness = dict(validation.get("robustness_validation") or {})
-    if robustness:
-        st.markdown("##### Robustness / Stress Validation Preview")
-        robustness_route = str(robustness.get("robustness_route") or "-")
-        robustness_score = float(robustness.get("robustness_score") or 0.0)
-        robustness_tone = "positive" if robustness_route == "READY_FOR_STRESS_SWEEP" else "warning"
-        if robustness_route == "BLOCKED_FOR_ROBUSTNESS":
-            robustness_tone = "danger"
-        robustness_blockers = list(robustness.get("blockers") or [])
-        input_gaps = list(robustness.get("input_gaps") or [])
-        suggested_sweeps = list(robustness.get("suggested_sweeps") or [])
-        robustness_metrics = dict(robustness.get("metrics") or {})
-        stress_metrics = dict(robustness.get("stress_metrics") or {})
-        phase33_handoff = dict(robustness.get("phase33_handoff") or {})
-        render_readiness_route_panel(
-            route_label=robustness_route,
-            score=robustness_score,
-            blockers_count=len(robustness_blockers),
-            verdict=str(robustness.get("verdict") or "-"),
-            next_action=str(robustness.get("next_action") or "-"),
-            route_title="Robustness Route",
-            score_title="Robustness Score",
-        )
-        render_badge_strip(
-            [
-                {"label": "Components", "value": robustness_metrics.get("components", 0), "tone": "neutral"},
-                {"label": "Families", "value": robustness_metrics.get("families", 0), "tone": "neutral"},
-                {"label": "Benchmarks", "value": robustness_metrics.get("benchmarks", 0), "tone": "neutral"},
-                {"label": "Suggested Sweeps", "value": robustness_metrics.get("suggested_sweeps", 0), "tone": robustness_tone},
-                {"label": "Stress Rows", "value": stress_metrics.get("rows", 0), "tone": "neutral"},
-                {"label": "Stress Ready", "value": stress_metrics.get("ready_rows", 0), "tone": robustness_tone},
-            ]
-        )
-        robustness_df = pd.DataFrame(robustness.get("component_rows") or [])
-        if robustness_df.empty:
-            st.info("Robustness preview에 연결된 component가 없습니다.")
-        else:
-            st.dataframe(robustness_df, width="stretch", hide_index=True)
-        robustness_cols = st.columns(3, gap="small")
-        with robustness_cols[0]:
-            st.markdown("###### Robustness Blockers")
-            if robustness_blockers:
-                for blocker in robustness_blockers:
-                    st.error(blocker)
-            else:
-                st.success("robustness blocker 없음")
-        with robustness_cols[1]:
-            st.markdown("###### Input Gaps")
-            if input_gaps:
-                for gap in input_gaps:
-                    st.warning(gap)
-            else:
-                st.success("input gap 없음")
-        with robustness_cols[2]:
-            st.markdown("###### Suggested Sweeps")
-            for sweep in suggested_sweeps[:6]:
-                st.info(sweep)
-        with st.expander("Robustness 기준 / 다음 실행 안내", expanded=False):
-            st.dataframe(pd.DataFrame(robustness.get("checks") or []), width="stretch", hide_index=True)
-            st.json(robustness.get("stress_result_contract") or {})
-            st.caption("이 preview는 Phase 32의 첫 pass입니다. 기간 분할 / benchmark 변경 / parameter sensitivity를 실제 실행했다는 뜻은 아닙니다.")
-
-        st.markdown("##### Stress / Sensitivity Summary")
-        stress_df = pd.DataFrame(robustness.get("stress_summary_rows") or [])
-        if stress_df.empty:
-            st.info("Stress summary row가 아직 없습니다.")
-        else:
-            st.dataframe(stress_df, width="stretch", hide_index=True)
-            st.caption("`Result Status = NOT_RUN`은 아직 실제 stress runner가 실행되지 않았고, Phase 32가 읽을 결과 계약만 준비됐다는 뜻입니다.")
-
-        if phase33_handoff:
-            handoff_blockers = int(dict(phase33_handoff.get("metrics") or {}).get("blocked_stress_rows") or 0)
-            render_readiness_route_panel(
-                route_label=str(phase33_handoff.get("handoff_route") or "-"),
-                score=float(phase33_handoff.get("handoff_score") or 0.0),
-                blockers_count=handoff_blockers,
-                verdict=str(phase33_handoff.get("verdict") or "-"),
-                next_action=str(phase33_handoff.get("next_action") or "-"),
-                route_title="Phase 33 Handoff",
-                score_title="Handoff Score",
-            )
-            with st.expander("Phase 33 paper ledger 준비 기준", expanded=False):
-                st.dataframe(pd.DataFrame(phase33_handoff.get("requirements") or []), width="stretch", hide_index=True)
-                st.caption("이 handoff는 paper ledger 준비 가능성만 말합니다. live approval이나 주문 지시가 아닙니다.")
-            key_scope = "persisted" if source_is_persisted else "draft"
-            key_source = _paper_ledger_slug(f"{key_scope}_{validation.get('source_type')}_{validation.get('source_id')}")
-            _render_paper_ledger_draft_controls(
-                validation,
-                key_prefix=f"paper_ledger_{key_source}",
-                source_is_persisted=source_is_persisted,
-                paper_ledger_rows=paper_ledger_rows or [],
-            )
-
-
-def _render_final_selection_decision_draft_controls(
-    paper_ledger_row: dict[str, Any],
-    *,
-    final_decision_rows: list[dict[str, Any]],
-    key_prefix: str,
-) -> None:
-    st.markdown("##### Final Selection Decision Pack")
-    st.caption(
-        "Phase 34 영역입니다. 저장된 paper ledger를 읽어 최종 실전 후보로 선정할지, 더 볼지, 거절할지, 재검토할지 기록합니다. "
-        "이 기록은 live approval이나 주문 지시가 아닙니다."
-    )
-    evidence = _build_final_selection_decision_evidence_pack(paper_ledger_row)
-    metrics = dict(evidence.get("metrics") or {})
-    render_readiness_route_panel(
-        route_label=str(evidence.get("route") or "-"),
-        score=float(evidence.get("score") or 0.0),
-        blockers_count=len(evidence.get("blockers") or []),
-        verdict=str(evidence.get("verdict") or "-"),
-        next_action=str(evidence.get("next_action") or "-"),
-        route_title="Decision Evidence Route",
-        score_title="Evidence Score",
-    )
-    render_badge_strip(
-        [
-            {"label": "Source Ledger", "value": paper_ledger_row.get("ledger_id") or "-", "tone": "neutral"},
-            {"label": "Paper Status", "value": metrics.get("paper_status") or "-", "tone": "positive" if metrics.get("paper_status") == "active_tracking" else "warning"},
-            {"label": "Components", "value": metrics.get("active_components", 0), "tone": "neutral"},
-            {"label": "Weight Total", "value": f"{metrics.get('target_weight_total', 0)}%", "tone": "neutral"},
-            {"label": "Suggested", "value": evidence.get("suggested_decision_route") or "-", "tone": "positive" if evidence.get("route") == "READY_FOR_FINAL_DECISION" else "warning"},
-            {"label": "Live Approval", "value": "Disabled", "tone": "neutral"},
-        ]
-    )
-
-    evidence_df = pd.DataFrame(evidence.get("checks") or [])
-    if not evidence_df.empty:
-        st.dataframe(evidence_df, width="stretch", hide_index=True)
-    if evidence.get("blockers"):
-        st.markdown("###### Evidence Blockers")
-        for blocker in list(evidence.get("blockers") or []):
-            st.error(str(blocker))
-    if evidence.get("review_items"):
-        st.markdown("###### Review Items")
-        for item in list(evidence.get("review_items") or []):
-            st.warning(str(item))
-
-    existing_decision_ids = {
-        str(row.get("decision_id") or "").strip()
-        for row in final_decision_rows
-        if str(row.get("decision_id") or "").strip()
-    }
-    if st.session_state.pop(f"{key_prefix}_reset_final_decision_id_after_save", False):
-        st.session_state.pop(f"{key_prefix}_decision_id", None)
-    source_slug = _paper_ledger_slug(paper_ledger_row.get("ledger_id") or paper_ledger_row.get("source_id"))
-    default_decision_id = f"final_{source_slug}_{date.today().strftime('%Y%m%d')}_{uuid4().hex[:6]}"
-    suggested_route = str(evidence.get("suggested_decision_route") or FINAL_SELECTION_DECISION_ROUTE_OPTIONS[0])
-    suggested_index = (
-        FINAL_SELECTION_DECISION_ROUTE_OPTIONS.index(suggested_route)
-        if suggested_route in FINAL_SELECTION_DECISION_ROUTE_OPTIONS
-        else 0
-    )
-
-    input_cols = st.columns([0.34, 0.33, 0.33], gap="small")
-    with input_cols[0]:
-        decision_id = st.text_input("Decision ID", value=default_decision_id, key=f"{key_prefix}_decision_id")
-    with input_cols[1]:
-        decision_route = st.selectbox(
-            "Decision Route",
-            options=FINAL_SELECTION_DECISION_ROUTE_OPTIONS,
-            index=suggested_index,
-            key=f"{key_prefix}_decision_route",
-            help="최종 실전 후보 선정 / 보류 / 거절 / 재검토 중 하나를 명시합니다.",
-        )
-    with input_cols[2]:
-        st.text_input(
-            "Source Paper Ledger",
-            value=str(paper_ledger_row.get("ledger_id") or "-"),
-            disabled=True,
-            key=f"{key_prefix}_source_ledger_display",
-        )
-    st.caption(FINAL_SELECTION_DECISION_ROUTE_DESCRIPTIONS.get(str(decision_route), "-"))
-    operator_reason = st.text_area(
-        "Operator Reason",
-        value="paper tracking 조건, validation snapshot, target component 구성을 기준으로 최종 실전 후보 판단을 기록한다.",
-        key=f"{key_prefix}_operator_reason",
-    )
-    operator_constraints = st.text_area(
-        "Operator Constraints",
-        value="실제 투자 전 Phase 35에서 투입 금액, 리밸런싱, stop/re-review 기준을 별도로 확정한다.",
-        key=f"{key_prefix}_operator_constraints",
-    )
-    operator_next_action = st.text_area(
-        "Operator Next Action",
-        value="선정이면 Phase 35 운영 가이드 작성으로 넘기고, 보류/재검토면 paper tracking 또는 구성 근거를 보강한다.",
-        key=f"{key_prefix}_operator_next_action",
-    )
-    save_evaluation = _build_final_selection_decision_save_evaluation(
-        paper_ledger_row=paper_ledger_row,
-        decision_id=decision_id,
-        decision_route=str(decision_route),
-        operator_reason=operator_reason,
-        existing_decision_ids=existing_decision_ids,
-    )
-    render_readiness_route_panel(
-        route_label=str(save_evaluation.get("route") or "-"),
-        score=float(save_evaluation.get("score") or 0.0),
-        blockers_count=len(save_evaluation.get("blockers") or []),
-        verdict=str(save_evaluation.get("verdict") or "-"),
-        next_action=str(save_evaluation.get("next_action") or "-"),
-        route_title="Decision Save Route",
-        score_title="Save Score",
-    )
-    if save_evaluation.get("blockers"):
-        for blocker in list(save_evaluation.get("blockers") or []):
-            st.warning(str(blocker))
-
-    decision_row = _build_final_selection_decision_row(
-        paper_ledger_row=paper_ledger_row,
-        decision_id=decision_id,
-        decision_route=str(decision_route),
-        operator_reason=operator_reason,
-        operator_constraints=operator_constraints,
-        operator_next_action=operator_next_action,
-    )
-    action_cols = st.columns(2, gap="small")
-    with action_cols[0]:
-        if st.button(
-            "Save Final Selection Decision",
-            key=f"{key_prefix}_save_final_decision",
-            disabled=not bool(save_evaluation.get("can_save")),
-            width="stretch",
-        ):
-            append_final_selection_decision(decision_row)
-            st.session_state["final_selection_decision_save_notice"] = (
-                f"Final Selection Decision `{decision_row['decision_id']}`를 저장했습니다. "
-                "이 기록은 live approval이나 주문 지시가 아닙니다."
-            )
-            st.session_state[f"{key_prefix}_reset_final_decision_id_after_save"] = True
-            st.rerun()
-    with action_cols[1]:
-        st.button(
-            "Open Post-Selection Guide",
-            key=f"{key_prefix}_open_phase35_placeholder",
-            disabled=True,
-            width="stretch",
-            help="Phase 35에서 선택된 최종 후보를 운영 가이드로 바꾸는 화면을 연결할 예정입니다.",
-        )
-    with st.expander("Final Selection Decision JSON Preview", expanded=False):
-        st.json(decision_row)
-        st.caption(f"Path: {FINAL_SELECTION_DECISION_REGISTRY_FILE}")
-
-
-def _render_saved_final_decision_details(final_decision_rows: list[dict[str, Any]]) -> None:
-    if not final_decision_rows:
-        return
-
-    with st.container(border=True):
-        st.markdown("#### 저장된 Final Selection Decision 확인")
-        st.caption("Phase 34에서 저장한 최종 선정 / 보류 / 거절 / 재검토 기록을 다시 읽고 Phase 35 handoff를 확인합니다.")
-        st.dataframe(_build_final_selection_decision_rows_for_display(final_decision_rows), width="stretch", hide_index=True)
-        labels = [
-            f"{row.get('updated_at') or row.get('created_at')} | {row.get('decision_route')} | {row.get('decision_id')}"
-            for row in final_decision_rows
-        ]
-        selected_label = st.selectbox(
-            "Review Final Selection Decision",
-            options=labels,
-            key="final_selection_decision_selected_record",
-        )
-        selected_row = final_decision_rows[labels.index(selected_label)]
-        evidence = dict(selected_row.get("decision_evidence_snapshot") or {})
-        phase35_handoff = dict(selected_row.get("phase35_handoff") or {})
-        render_readiness_route_panel(
-            route_label=str(phase35_handoff.get("handoff_route") or "-"),
-            score=float(evidence.get("score") or 0.0),
-            blockers_count=len(evidence.get("blockers") or []),
-            verdict=str(phase35_handoff.get("verdict") or "-"),
-            next_action=str(phase35_handoff.get("next_action") or "-"),
-            route_title="Phase 35 Handoff",
-            score_title="Evidence Score",
-        )
-        render_badge_strip(
-            [
-                {"label": "Decision", "value": selected_row.get("decision_route") or "-", "tone": "positive" if selected_row.get("decision_route") == "SELECT_FOR_PRACTICAL_PORTFOLIO" else "warning"},
-                {"label": "Source Ledger", "value": selected_row.get("source_paper_ledger_id") or "-", "tone": "neutral"},
-                {"label": "Evidence Route", "value": evidence.get("route") or "-", "tone": "positive" if evidence.get("route") == "READY_FOR_FINAL_DECISION" else "warning"},
-                {"label": "Live Approval", "value": "Disabled", "tone": "neutral"},
-                {"label": "Order", "value": "Disabled", "tone": "neutral"},
-            ]
-        )
-        component_df = _build_final_selection_decision_component_rows(selected_row)
-        if component_df.empty:
-            st.info("이 decision에는 selected component가 없습니다.")
-        else:
-            st.dataframe(component_df, width="stretch", hide_index=True)
-        with st.expander("Phase 35 handoff 기준 / Raw JSON", expanded=False):
-            st.dataframe(pd.DataFrame(phase35_handoff.get("requirements") or []), width="stretch", hide_index=True)
-            st.json(selected_row)
-
-
-def _render_saved_paper_ledger_details(
-    paper_ledger_rows: list[dict[str, Any]],
-    final_decision_rows: list[dict[str, Any]],
-) -> None:
-    if not paper_ledger_rows:
-        return
-
-    with st.container(border=True):
-        st.markdown("#### 저장된 Paper Tracking Ledger 확인")
-        st.caption("Phase 33에서 저장한 paper tracking 기록을 다시 읽고 Phase 34 handoff 준비 상태를 확인합니다.")
-        st.dataframe(_build_paper_portfolio_ledger_rows_for_display(paper_ledger_rows), width="stretch", hide_index=True)
-        labels = [
-            f"{row.get('updated_at') or row.get('created_at')} | {row.get('paper_status')} | {row.get('ledger_id')}"
-            for row in paper_ledger_rows
-        ]
-        selected_label = st.selectbox(
-            "Review Paper Tracking Ledger",
-            options=labels,
-            key="paper_portfolio_ledger_selected_record",
-        )
-        selected_row = paper_ledger_rows[labels.index(selected_label)]
-        handoff = dict(selected_row.get("phase34_handoff") or {})
-        baseline = dict(selected_row.get("baseline_snapshot") or {})
-        render_readiness_route_panel(
-            route_label=str(handoff.get("handoff_route") or "-"),
-            score=float(handoff.get("handoff_score") or 0.0),
-            blockers_count=int(dict(handoff.get("metrics") or {}).get("blockers") or 0),
-            verdict=str(handoff.get("verdict") or "-"),
-            next_action=str(handoff.get("next_action") or "-"),
-            route_title="Phase 34 Handoff",
-            score_title="Handoff Score",
-        )
-        render_badge_strip(
-            [
-                {"label": "Source", "value": f"{selected_row.get('source_type')} / {selected_row.get('source_id')}", "tone": "neutral"},
-                {"label": "Status", "value": selected_row.get("paper_status") or "-", "tone": "positive" if selected_row.get("paper_status") == "active_tracking" else "warning"},
-                {"label": "Weight Total", "value": f"{baseline.get('target_weight_total')}%", "tone": "neutral"},
-                {"label": "Review Cadence", "value": selected_row.get("review_cadence") or "-", "tone": "neutral"},
-            ]
-        )
-        component_df = _build_paper_portfolio_ledger_component_rows(selected_row)
-        if component_df.empty:
-            st.info("이 ledger에는 target component가 없습니다.")
-        else:
-            st.dataframe(component_df, width="stretch", hide_index=True)
-        with st.expander("Paper Ledger detail", expanded=False):
-            st.markdown("###### Review Triggers")
-            for trigger in list(selected_row.get("review_triggers") or []):
-                st.info(str(trigger))
-            st.json(selected_row)
-        key_source = _paper_ledger_slug(selected_row.get("ledger_id") or selected_row.get("source_id"))
-        _render_final_selection_decision_draft_controls(
-            selected_row,
-            final_decision_rows=final_decision_rows,
-            key_prefix=f"final_selection_{key_source}",
-        )
-
-
 # Render saved proposal monitoring, feedback, and raw JSON as one support area below the main flow.
 def _render_saved_proposal_details(
     proposal_rows: list[dict[str, Any]],
     pre_live_rows: list[dict[str, Any]],
     current_rows: list[dict[str, Any]],
-    paper_ledger_rows: list[dict[str, Any]],
 ) -> None:
     with st.container(border=True):
         st.markdown("#### 4. 저장된 Portfolio Proposal 확인")
-        st.caption("저장한 포트폴리오 초안은 여기서 Validation / Monitoring / Feedback 순서로 다시 확인합니다.")
+        st.caption("저장한 포트폴리오 초안은 여기서 구성 / 상태 / feedback 중심으로 확인합니다. 상세 검증과 최종 판단은 `Final Review` 탭에서 진행합니다.")
         if not proposal_rows:
             st.info("아직 저장된 Portfolio Proposal이 없습니다.")
             st.caption(f"Path: {PORTFOLIO_PROPOSAL_REGISTRY_FILE}")
             return
 
-        current_by_registry_id = _portfolio_proposal_current_candidate_by_registry_id(current_rows)
         pre_live_by_registry_id = _portfolio_proposal_pre_live_record_by_registry_id(pre_live_rows)
-        validation_tab, overview_tab, pre_live_tab, paper_tab, json_tab = st.tabs(
-            ["Validation Pack", "Monitoring", "Pre-Live Feedback", "Paper Tracking", "Raw JSON"]
+        overview_tab, pre_live_tab, paper_tab, json_tab = st.tabs(
+            ["Monitoring", "Pre-Live Feedback", "Paper Feedback", "Raw JSON"]
         )
         labels = [_portfolio_proposal_selection_label(row) for row in proposal_rows]
-
-        with validation_tab:
-            st.caption("Phase 31 검증 surface입니다. 저장된 proposal이 Phase 32 robustness 검증으로 넘어갈 수 있는지 읽습니다.")
-            st.dataframe(
-                _build_portfolio_risk_validation_summary_rows(
-                    proposal_rows,
-                    current_by_registry_id,
-                    pre_live_by_registry_id,
-                ),
-                width="stretch",
-                hide_index=True,
-            )
-            selected_label = st.selectbox(
-                "Review Validation Pack",
-                options=labels,
-                key="portfolio_proposal_validation_selected_record",
-            )
-            selected_row = proposal_rows[labels.index(selected_label)]
-            validation_input = _build_portfolio_risk_validation_input_for_proposal(
-                proposal_row=selected_row,
-                current_by_registry_id=current_by_registry_id,
-                pre_live_by_registry_id=pre_live_by_registry_id,
-            )
-            validation = _build_portfolio_risk_validation_result(validation_input)
-            _render_portfolio_risk_validation_pack(
-                validation,
-                title="Portfolio Risk / Live Readiness Validation",
-                paper_ledger_rows=paper_ledger_rows,
-                source_is_persisted=True,
-            )
 
         with overview_tab:
             st.caption("저장된 proposal draft를 blocker / review gap / 후보 구성 관점에서 다시 읽습니다.")
@@ -900,11 +273,8 @@ def render_portfolio_proposal_workspace() -> None:
     current_rows = _load_current_candidate_registry_latest()
     pre_live_rows = _load_pre_live_candidate_registry_latest()
     proposal_rows = load_portfolio_proposals()
-    paper_ledger_rows = load_paper_portfolio_ledger()
-    final_decision_rows = load_final_selection_decisions()
     pre_live_status_by_registry_id = _portfolio_proposal_pre_live_status_by_registry_id(pre_live_rows)
     pre_live_record_by_registry_id = _portfolio_proposal_pre_live_record_by_registry_id(pre_live_rows)
-    current_by_registry_id = _portfolio_proposal_current_candidate_by_registry_id(current_rows)
 
     pre_live_notice = st.session_state.get("portfolio_proposal_from_pre_live_notice")
     if pre_live_notice:
@@ -913,20 +283,13 @@ def render_portfolio_proposal_workspace() -> None:
     save_notice = st.session_state.pop("portfolio_proposal_save_notice", None)
     if save_notice:
         st.success(str(save_notice))
-    paper_ledger_notice = st.session_state.pop("paper_portfolio_ledger_save_notice", None)
-    if paper_ledger_notice:
-        st.success(str(paper_ledger_notice))
-    final_decision_notice = st.session_state.pop("final_selection_decision_save_notice", None)
-    if final_decision_notice:
-        st.success(str(final_decision_notice))
 
     render_status_card_grid(
         [
             {"title": "Current Candidates", "value": len(current_rows), "tone": "positive" if current_rows else "neutral"},
             {"title": "Pre-Live Records", "value": len(pre_live_rows), "tone": "positive" if pre_live_rows else "neutral"},
             {"title": "Saved Proposals", "value": len(proposal_rows), "tone": "positive" if proposal_rows else "neutral"},
-            {"title": "Paper Ledgers", "value": len(paper_ledger_rows), "tone": "positive" if paper_ledger_rows else "neutral"},
-            {"title": "Final Decisions", "value": len(final_decision_rows), "tone": "positive" if final_decision_rows else "neutral"},
+            {"title": "Final Review", "value": "별도 탭", "detail": "검증/관찰/최종 판단은 Final Review에서 진행", "tone": "neutral"},
             {"title": "Live Approval", "value": "Disabled", "detail": "이 화면은 승인/주문이 아닙니다.", "tone": "neutral"},
         ]
     )
@@ -1119,23 +482,15 @@ def render_portfolio_proposal_workspace() -> None:
                 st.dataframe(pd.DataFrame(readiness["checks"]), width="stretch", hide_index=True)
                 st.caption("이 평가는 저장 row를 새로 만들지 않고, 기존 current candidate / Pre-Live record를 다음 단계 입력으로 읽을 수 있는지만 봅니다.")
 
-        st.markdown("#### 4. Portfolio Risk / Validation Pack")
+        st.markdown("#### 4. 다음 단계")
         with st.container(border=True):
-            validation_input = _build_portfolio_risk_validation_input_for_single_candidate(
-                selected_row=selected_row,
-                pre_live_record=pre_live_record_by_registry_id.get(registry_id),
-                pre_live_status=pre_live_status,
-                data_trust_status=data_trust_status,
+            render_stage_brief(
+                purpose="Portfolio Proposal 탭은 후보를 묶거나 단일 후보 직행 가능성을 확인하는 곳입니다. 상세 검증과 최종 판단은 Final Review에서 진행합니다.",
+                result="Final Review로 이동",
             )
-            validation = _build_portfolio_risk_validation_result(validation_input)
-            _render_portfolio_risk_validation_pack(
-                validation,
-                title="단일 후보 Portfolio Risk / Live Readiness Validation",
-                paper_ledger_rows=paper_ledger_rows,
-                source_is_persisted=True,
-            )
-        _render_saved_paper_ledger_details(paper_ledger_rows, final_decision_rows)
-        _render_saved_final_decision_details(final_decision_rows)
+            if st.button("Open Final Review", key="open_final_review_direct", width="stretch"):
+                _request_backtest_panel("Final Review")
+                st.rerun()
 
     elif selected_rows:
         st.markdown("#### 2. 목적 / 역할 / 비중 설계")
@@ -1405,20 +760,6 @@ def render_portfolio_proposal_workspace() -> None:
                     for guidance in list(readiness.get("blocking_guidance") or readiness["blocking_reasons"]):
                         st.warning(str(guidance))
 
-            with st.container(border=True):
-                validation_input = _build_portfolio_risk_validation_input_for_proposal(
-                    proposal_row=proposal_row,
-                    current_by_registry_id=current_by_registry_id,
-                    pre_live_by_registry_id=pre_live_record_by_registry_id,
-                )
-                validation = _build_portfolio_risk_validation_result(validation_input)
-                _render_portfolio_risk_validation_pack(
-                    validation,
-                    title="작성 중 Proposal Portfolio Risk / Live Readiness Validation",
-                    paper_ledger_rows=paper_ledger_rows,
-                    source_is_persisted=False,
-                )
-
             st.markdown("##### 저장 및 다음 단계")
             action_cols = st.columns(2, gap="small")
             with action_cols[0]:
@@ -1436,14 +777,15 @@ def render_portfolio_proposal_workspace() -> None:
                     st.session_state["portfolio_proposal_reset_id_after_save"] = True
                     st.rerun()
             with action_cols[1]:
-                st.button(
-                    "Open Live Readiness",
-                    key="open_live_readiness_placeholder",
-                    disabled=True,
+                if st.button(
+                    "Open Final Review",
+                    key="open_final_review_from_proposal",
                     width="stretch",
-                    help="Live Readiness 단계는 다음 작업에서 연결할 예정입니다.",
-                )
-            st.caption("`Open Live Readiness`는 다음 단계 개발 전까지 비활성화됩니다. 이 경로에서는 proposal draft 저장까지만 처리합니다.")
+                    help="저장된 proposal 또는 단일 후보를 검증 근거와 함께 최종 판단합니다.",
+                ):
+                    _request_backtest_panel("Final Review")
+                    st.rerun()
+            st.caption("이 경로에서는 proposal draft 저장까지만 처리합니다. 검증 / 관찰 / 최종 판단은 `Final Review`에서 진행합니다.")
 
             with st.expander("상세 보기", expanded=False):
                 criteria_tab, json_tab = st.tabs(["판단 기준", "Portfolio Proposal JSON"])
@@ -1454,9 +796,7 @@ def render_portfolio_proposal_workspace() -> None:
                 with json_tab:
                     st.json(proposal_row)
 
-        _render_saved_proposal_details(proposal_rows, pre_live_rows, current_rows, paper_ledger_rows)
-        _render_saved_paper_ledger_details(paper_ledger_rows, final_decision_rows)
-        _render_saved_final_decision_details(final_decision_rows)
+        _render_saved_proposal_details(proposal_rows, pre_live_rows, current_rows)
     else:
         st.markdown("#### 2. 진행 방식 선택")
         with st.container(border=True):
@@ -1465,5 +805,3 @@ def render_portfolio_proposal_workspace() -> None:
                 result="Candidate selection required",
             )
             st.info("`1. Proposal 후보 확인`에서 current candidate를 1개 이상 선택하세요.")
-        _render_saved_paper_ledger_details(paper_ledger_rows, final_decision_rows)
-        _render_saved_final_decision_details(final_decision_rows)

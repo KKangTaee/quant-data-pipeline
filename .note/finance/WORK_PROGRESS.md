@@ -3112,3 +3112,19 @@ Detailed historical logs were archived on `2026-04-13`.
 - Hygiene:
   - py_compile and helper smoke were run during implementation.
   - Existing unrelated strategy logs, `uv.lock`, archived reset files, phase12 temp CSVs, generated registries, and run history artifacts were left unstaged.
+
+### 2026-05-03
+- Reworked Phase 34 after the user challenged the repeated save-button flow.
+- Changed:
+  - split final validation / observation / judgment into a new `Backtest > Final Review` panel
+  - kept `Backtest > Portfolio Proposal` focused on single-candidate direct readiness, multi-candidate proposal draft save, and saved proposal feedback
+  - added `app/web/backtest_final_review.py` and `app/web/backtest_final_review_helpers.py`
+  - removed the old Paper Ledger / Final Selection save surfaces from the active Portfolio Proposal flow
+  - changed the user-facing final save action to `최종 검토 결과 기록`
+  - moved paper observation criteria into the final review record instead of requiring a separate main-flow Paper Ledger save
+  - rebuilt the Phase34 checklist around Portfolio Proposal boundary, Final Review source selection, validation / observation, final record, and Phase35 handoff
+  - synced README, AGENTS, code analysis docs, operations guides, roadmap, doc index, glossary, comprehensive analysis, and Phase34 docs
+- Decision:
+  - Paper Portfolio Tracking Ledger remains as a compatibility / operating artifact.
+  - The main Phase34 user flow is now `Portfolio Proposal draft -> Final Review -> 최종 검토 결과 기록`.
+  - Final Review records remain append-only final select / hold / reject / re-review judgments, not live approval or orders.

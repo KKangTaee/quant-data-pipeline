@@ -3951,3 +3951,19 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Phase34는 `implementation_complete / manual_qa_pending` 상태가 됐다
   - 사용자는 `.note/finance/phases/phase34/PHASE34_TEST_CHECKLIST.md`로 manual QA를 진행하면 된다
   - QA 완료 후 Phase35 `Post-Selection Operating Guide`를 시작하는 것이 자연스럽다
+
+### 2026-05-03 - Phase34 반복 저장 UX와 Final Review 탭 분리 판단
+- User request:
+  - `Save Portfolio Proposal Draft`, `Save Paper Tracking Ledger`, `Save Final Selection Decision`이 반복되는 패턴이 설득력 있는지 문제 제기
+  - 특히 Paper Ledger와 Final Decision을 꼭 별도로 저장해야 하는지, Portfolio Proposal 탭 안에서 계속 확장하는 것이 맞는지 검토 요청
+- Interpreted goal:
+  - 최종 투자 포트폴리오 선정 흐름이 사용자가 이해할 수 있는 큰 단계로 보이도록 제품 경계를 다시 잡아야 함
+- Analysis result:
+  - Portfolio Proposal은 후보 묶음의 목적 / 역할 / 비중을 정하는 초안 작성 단계로 유지하는 것이 맞다
+  - 최종 validation, robustness, paper observation, 선정 / 보류 / 거절 / 재검토 판단은 별도 Final Review 탭으로 빼는 것이 더 자연스럽다
+  - Paper Ledger는 기존 Phase33 QA와 운영 호환성을 위해 남기되, main flow에서 별도 저장 버튼으로 강제하지 않는다
+  - paper observation 기준은 final review record 안에 포함하고, 사용자-facing 최종 저장 액션은 `최종 검토 결과 기록` 하나로 정리한다
+- Follow-up:
+  - `Backtest > Final Review` panel과 helper를 추가했다
+  - Portfolio Proposal active flow에서 Paper Ledger / Final Selection 저장 surface를 제거했다
+  - Phase34 checklist와 durable docs를 Final Review 기준으로 개편했다

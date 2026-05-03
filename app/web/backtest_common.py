@@ -301,12 +301,14 @@ BACKTEST_PANEL_OPTIONS = [
     "Compare & Portfolio Builder",
     "Candidate Review",
     "Portfolio Proposal",
+    "Final Review",
 ]
 BACKTEST_WORKFLOW_PANEL_OPTIONS = [
     "Single Strategy",
     "Compare & Portfolio Builder",
     "Candidate Review",
     "Portfolio Proposal",
+    "Final Review",
 ]
 STATIC_MANAGED_RESEARCH_UNIVERSE = "static_managed_research"
 HISTORICAL_DYNAMIC_PIT_UNIVERSE = "historical_dynamic_pit"

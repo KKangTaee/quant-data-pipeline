@@ -75,8 +75,9 @@
   - `python3 plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py list`
   - `python3 plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py validate`
 - For user-facing Pre-Live operating records, use `Backtest > Candidate Review` to inspect current candidates, create Pre-Live records, and route eligible candidates toward Portfolio Proposal / later Live Readiness.
-- For user-facing Paper Portfolio Tracking records, use `Backtest > Portfolio Proposal` to inspect the Validation Pack / Phase 33 handoff, explicitly save a paper ledger row, and review saved ledger records before Final Selection work.
-- For user-facing Final Portfolio Selection decisions, use `Backtest > Portfolio Proposal` saved Paper Ledger review to inspect the Final Selection Decision Pack, explicitly save a final decision row, and review saved Phase 35 handoff. This remains separate from broker order, auto-trading, and live approval.
+- For user-facing final review work, use `Backtest > Final Review` to inspect the selected current candidate or saved proposal, read Validation / Robustness / Paper Observation criteria together, and record the final select / hold / reject / re-review judgment with Phase 35 handoff.
+- Keep `Backtest > Portfolio Proposal` focused on single-candidate direct evaluation, multi-candidate proposal construction, proposal draft save, and saved proposal feedback. Do not re-expand it into the final validation / paper observation / final decision workspace.
+- Treat Paper Portfolio Tracking Ledger as a compatibility / operating artifact. In the main user-facing final-review flow, paper observation criteria are recorded inside the final review decision row instead of requiring a separate `Save Paper Tracking Ledger` step.
 - Default moments to run it:
   - after a meaningful refinement/document-sync unit
   - before commit

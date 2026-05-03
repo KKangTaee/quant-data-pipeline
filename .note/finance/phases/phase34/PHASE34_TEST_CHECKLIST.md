@@ -2,55 +2,72 @@
 
 ## 목적
 
-이 checklist는 Phase 34 `Final Portfolio Selection Decision Pack` 구현이 끝난 뒤 사용자가 직접 확인할 manual QA 문서다.
+이 checklist는 Phase 34 `Final Review / Final Portfolio Selection Decision Pack` 구현이 끝난 뒤 사용자가 직접 확인할 manual QA 문서다.
 
 현재 Phase 34는 `implementation_complete / manual_qa_pending` 상태다.
 아래 항목을 확인한 뒤 `[ ]`를 `[x]`로 바꾸면 된다.
 
 ## 사용 방법
 
-- `Backtest > Portfolio Proposal`에서 저장된 Paper Tracking Ledger가 최소 1개 있어야 Phase34 decision pack을 확인할 수 있다.
-- 저장된 ledger가 없다면 Phase33 경로에서 `Save Paper Tracking Ledger`를 먼저 저장한다.
-- QA 중 저장되는 final decision은 `.note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`에 append-only로 남는다.
+- `Backtest > Portfolio Proposal`은 후보를 묶어 proposal draft를 저장하거나 단일 후보 직행 가능성을 확인하는 탭이다.
+- `Backtest > Final Review`는 단일 후보 또는 저장된 proposal을 골라 validation, robustness / stress 질문, paper observation 기준, 최종 판단을 한 번에 기록하는 탭이다.
+- `Save Paper Tracking Ledger`는 이번 사용자-facing 흐름의 필수 단계가 아니다. 관찰 기준은 Final Review의 최종 검토 기록 안에 함께 저장된다.
+- QA 중 저장되는 final review record는 `.note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`에 append-only로 남는다.
 
-## 1. Final Decision Evidence Pack 확인
+## 1. Portfolio Proposal 경계 확인
 
 - 확인 위치:
   - `Backtest > Portfolio Proposal`
-  - 저장된 Paper Tracking Ledger detail 또는 Phase34 final decision 영역
 - 체크 항목:
-  - [ ] 저장된 paper ledger row를 선택하면 `Final Selection Decision Pack`이 보이는지
-  - [ ] source paper ledger, source candidate / proposal, target weights, benchmark, review cadence가 보이는지
-  - [ ] Decision Evidence Route가 `READY_FOR_FINAL_DECISION`, `FINAL_DECISION_NEEDS_REVIEW`, `FINAL_DECISION_BLOCKED` 중 하나로 읽히는지
-  - [ ] Evidence checks에서 Phase31 validation, Phase32 robustness / stress, Phase33 paper tracking 근거가 한 묶음으로 읽히는지
-  - [ ] missing evidence와 blocker가 다음 행동으로 설명되는지
+  - [ ] 단일 후보를 1개 선택하면 기본값이 `단일 후보 직행 평가`로 열리는지
+  - [ ] 단일 후보 직행 경로에서 proposal draft 저장 버튼이 보이지 않고 `Open Final Review`가 보이는지
+  - [ ] 2개 이상 후보를 선택하면 `포트폴리오 초안 작성` 경로로 열리는지
+  - [ ] 다중 후보 경로에서 `Save Portfolio Proposal Draft`와 `Open Final Review`가 보이는지
+  - [ ] `Save Paper Tracking Ledger`와 `Save Final Selection Decision`이 Portfolio Proposal 탭의 주 흐름에 노출되지 않는지
+  - [ ] 저장된 proposal 확인 영역이 Monitoring / Pre-Live Feedback / Paper Feedback / Raw JSON 중심으로 읽히는지
 
-## 2. Final Decision Route 확인
+## 2. Final Review 대상 선택 확인
 
 - 확인 위치:
-  - Final decision draft / preview 영역
+  - `Backtest > Final Review`
 - 체크 항목:
-  - [ ] `SELECT_FOR_PRACTICAL_PORTFOLIO`는 최종 실전 후보 선정으로 읽히는지
-  - [ ] `HOLD_FOR_MORE_PAPER_TRACKING`은 추가 관찰 필요로 읽히는지
-  - [ ] `REJECT_FOR_PRACTICAL_USE`는 현 조건에서 실전 후보 제외로 읽히는지
-  - [ ] `RE_REVIEW_REQUIRED`는 blocker / 데이터 gap / operator constraint 재검토로 읽히는지
-  - [ ] 어떤 route도 live approval이나 주문 지시로 보이지 않는지
-  - [ ] `SELECT_FOR_PRACTICAL_PORTFOLIO` 선택 시 evidence blocker가 있으면 저장 전 차단되는지
-  - [ ] 보류 / 거절 / 재검토 route는 사용자 사유를 남길 때 판단 기록으로 저장 가능한지
+  - [ ] 상단 card에서 `Paper Ledger Save = Not Required`가 보이는지
+  - [ ] 상단 card에서 `Live Approval = Disabled`가 보이는지
+  - [ ] `최종 검토 대상 선택`에서 current candidate와 saved proposal을 선택할 수 있는지
+  - [ ] 선택한 source의 `Source Type`과 `Source ID`가 보이는지
+  - [ ] source를 바꿔도 자동 저장이나 live approval이 수행되지 않는지
 
-## 3. 저장된 Final Decision 확인
+## 3. 검증 / 관찰 기준 확인
 
 - 확인 위치:
-  - 저장된 final decision review section
+  - `Backtest > Final Review`
+  - `2. 검증 근거 확인`
+  - `3. Robustness / Stress 질문 확인`
+  - `4. Paper Observation 기준 확인`
 - 체크 항목:
-  - [ ] final decision row가 명시 저장 버튼으로만 append되는지
-  - [ ] 저장된 decision record에서 source paper ledger와 selected components가 연결되어 보이는지
-  - [ ] current candidate / Pre-Live / Portfolio Proposal / Paper Ledger registry를 덮어쓰지 않는지
-  - [ ] Phase35 handoff가 선정 이후 운영 기준 준비 상태로 읽히는지
-  - [ ] 저장 성공 후 `저장된 Final Selection Decision 확인` 영역에서 방금 저장한 row가 보이는지
+  - [ ] validation route, score, hard blockers, weight total, component table이 보이는지
+  - [ ] robustness / stress summary가 실제 stress runner 실행 결과가 아니라 최종 검토 전 확인 질문으로 읽히는지
+  - [ ] paper observation이 `Inline Observation`으로 표시되는지
+  - [ ] 별도 ledger 저장 없이 review cadence, benchmark, 재검토 trigger가 최종 검토 기록에 포함될 기준으로 보이는지
+  - [ ] target weight 합계가 100%가 아니거나 active component가 없으면 blocker가 사용자가 고칠 항목으로 읽히는지
+
+## 4. 최종 검토 결과 기록 확인
+
+- 확인 위치:
+  - `Backtest > Final Review`
+  - `5. 최종 판단 및 테스트 검증`
+  - `6. 기록된 최종 검토 결과 확인`
+- 체크 항목:
+  - [ ] 최종 판단 route가 `SELECT_FOR_PRACTICAL_PORTFOLIO`, `HOLD_FOR_MORE_PAPER_TRACKING`, `REJECT_FOR_PRACTICAL_USE`, `RE_REVIEW_REQUIRED` 중 하나로 선택되는지
+  - [ ] 화면의 주 저장 버튼이 `최종 검토 결과 기록` 하나로 읽히는지
+  - [ ] `SELECT_FOR_PRACTICAL_PORTFOLIO`는 evidence blocker가 있으면 기록 전 차단되는지
+  - [ ] 보류 / 거절 / 재검토 route는 사용자 판단 사유를 남기면 기록 가능한지
+  - [ ] 저장 후 `기록된 최종 검토 결과 확인` 영역에서 방금 저장한 row가 보이는지
+  - [ ] 저장된 record의 `Observation`이 `paper_observation_*` 형태로 보이고, 별도 `source_paper_ledger_id`가 필수처럼 보이지 않는지
+  - [ ] 저장된 record에서 source, selected components, evidence route, Phase35 handoff가 연결되어 보이는지
   - [ ] `Live Approval`, `Order`가 Disabled로 읽히는지
 
-## 4. 문서와 closeout 확인
+## 5. 문서와 closeout 확인
 
 - 확인 문서:
   - `.note/finance/phases/phase34/PHASE34_CURRENT_CHAPTER_TODO.md`
@@ -61,10 +78,11 @@
   - `.note/finance/operations/FINAL_PORTFOLIO_SELECTION_DECISIONS_GUIDE.md`
 - 체크 항목:
   - [ ] Phase 34 상태가 구현 상태와 맞는지
+  - [ ] Phase 34가 Portfolio Proposal 탭 안에 저장 버튼을 계속 늘리는 흐름이 아니라 Final Review 탭으로 분리됐다고 설명되는지
   - [ ] Phase 35에서 무엇을 만들지 next phase preparation에 쉽게 설명되어 있는지
-  - [ ] final decision이 live approval / order instruction과 별도 개념으로 설명되어 있는지
+  - [ ] final review record가 live approval / order instruction과 별도 개념으로 설명되어 있는지
 
 ## 한 줄 판단 기준
 
 이번 Phase34 QA는
-**paper tracking까지 본 후보나 proposal을 선정 / 보류 / 거절 / 재검토로 명시 판단할 수 있고, 아직 주문이나 live approval이 아니라는 경계가 분명하면 통과**다.
+**Portfolio Proposal은 초안 작성에 머물고, Final Review에서 검증 근거 / paper observation 기준 / 최종 판단을 하나의 기록으로 남기며, 아직 주문이나 live approval이 아니라는 경계가 분명하면 통과**다.
