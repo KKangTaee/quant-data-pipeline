@@ -3834,3 +3834,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Follow-up:
   - Phase31 checklist, TODO, completion summary, next phase preparation, roadmap, doc index, README, comprehensive analysis, work log를 closeout 상태로 동기화했다
   - 다음 major phase는 사용자 승인 후 Phase32 `Robustness And Stress Validation Pack`으로 열 수 있다
+
+### 2026-05-03 - finance-doc-sync skill 운영 방식 검토
+- User request:
+  - 현재 세션에서 finance-doc-sync만 자주 호출되는 것이 효율적인지, 스킬을 개편하거나 쪼개는 것이 나은지 검토 요청
+- Interpreted goal:
+  - finance-doc-sync를 구현용 메인 스킬로 계속 쓰는 것이 맞는지 판단하고, 더 효율적인 finance 개발 스킬 구조를 제안해야 함
+- Analysis result:
+  - finance-doc-sync는 문서 동기화 / phase QA / closeout / durable analysis 기록을 위한 meta skill로는 유효하다
+  - 최근 Phase31 후반 작업은 대부분 QA checklist, 라벨, roadmap/index closeout이어서 finance-doc-sync 호출이 자연스러웠다
+  - 다만 Backtest UI 구현, registry/runtime 작업, phase 운영, portfolio validation 개발까지 모두 finance-doc-sync 하나로 처리하면 스킬이 너무 넓어져 context 사용과 작업 판단이 둔해질 수 있다
+- Follow-up:
+  - finance-doc-sync는 좁게 유지하고, Phase32 전에 `finance-backtest-web-workflow`와 `finance-phase-management` 계열 스킬을 분리하는 것이 효율적이다
+  - 기존 `finance-db-pipeline`, `finance-factor-pipeline`, `finance-strategy-implementation`은 그대로 domain implementation skill로 사용하고, finance-doc-sync는 마무리 동기화 skill로 두는 방향이 합리적이다
