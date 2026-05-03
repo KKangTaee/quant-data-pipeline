@@ -85,6 +85,7 @@ DB-backed market data ingestion, factor generation, and strategy backtesting wor
   - 저장된 proposal evidence snapshot을 `Paper Tracking Feedback`에서 현재 Pre-Live result snapshot의 CAGR / MDD와 비교하는 흐름
   - Phase 31 `Validation Pack`에서 단일 후보, 작성 중 proposal, 저장 proposal을 component risk / blocker / paper tracking gap / overlap first pass / 다음 단계 안내 관점으로 확인하는 흐름
   - Phase 32 `Robustness / Stress Validation Pack`에서 stress 검증 실행 전 period / contract / benchmark / 성과 snapshot / compare evidence 입력 gap, stress / sensitivity summary, Phase33 paper ledger handoff를 확인하는 흐름
+  - Phase 33 `Paper Tracking Ledger`에서 시작일, target weights, benchmark, review cadence, trigger를 가진 paper ledger row를 명시적으로 저장하고 Phase34 handoff 준비 상태를 확인하는 흐름
   - live trading approval이나 주문 지시와 분리된 검토 기록 흐름
 
 ## 프로젝트 구조
@@ -102,12 +103,13 @@ app/
     backtest_ui_components.py # Backtest 공용 status/route UI component
     backtest_candidate_review.py # Candidate Review / Candidate Packaging / Pre-Live 운영 기록 UI
     backtest_candidate_review_helpers.py # Candidate Review 판단/변환/Pre-Live 운영 기록 helper
-    backtest_portfolio_proposal.py # Portfolio Proposal / Validation Pack / Robustness-Stress UI
-    backtest_portfolio_proposal_helpers.py # Portfolio Proposal 저장/검증/Phase31-32 validation helper
+    backtest_portfolio_proposal.py # Portfolio Proposal / Validation Pack / Robustness-Stress / Paper Ledger UI
+    backtest_portfolio_proposal_helpers.py # Portfolio Proposal 저장/검증/Phase31-33 validation helper
     pages/backtest.py    # Backtest shell, workflow navigation
     runtime/             # UI-facing runtime wrappers
       candidate_registry.py
       portfolio_proposal.py
+      paper_portfolio_ledger.py
 finance/
   data/                  # ingestion, DB schema, loaders, factors
   strategy.py            # strategy simulation logic

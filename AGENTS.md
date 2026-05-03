@@ -39,6 +39,7 @@
 - Put reusable user-saved finance setup JSONL files under `.note/finance/saved/`.
 - For machine-readable persistence of current strongest candidates and important near-miss scenarios, prefer `.note/finance/registries/CURRENT_CANDIDATE_REGISTRY.jsonl` as the default append-only registry unless the scope clearly expands into a broader experiment registry.
 - For Pre-Live operating records after Real-Money review, use `.note/finance/registries/PRE_LIVE_CANDIDATE_REGISTRY.jsonl` as the append-only registry. Keep it separate from `CURRENT_CANDIDATE_REGISTRY.jsonl`: current candidate registry defines the candidate, pre-live registry records watchlist / paper tracking / hold / reject / re-review operating state.
+- For Paper Portfolio Tracking records after robustness / stress review, use `.note/finance/registries/PAPER_PORTFOLIO_TRACKING_LEDGER.jsonl` as the append-only ledger. Keep it separate from `PORTFOLIO_PROPOSAL_REGISTRY.jsonl`: proposal registry defines the candidate bundle, paper ledger records tracking start date, target weights, benchmark, cadence, triggers, and Phase 34 handoff state.
 - For durable backtest result reports whose primary purpose is to record:
   - tested strategy settings
   - result summaries
@@ -73,6 +74,7 @@
   - `python3 plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py list`
   - `python3 plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py validate`
 - For user-facing Pre-Live operating records, use `Backtest > Candidate Review` to inspect current candidates, create Pre-Live records, and route eligible candidates toward Portfolio Proposal / later Live Readiness.
+- For user-facing Paper Portfolio Tracking records, use `Backtest > Portfolio Proposal` to inspect the Validation Pack / Phase 33 handoff, explicitly save a paper ledger row, and review saved ledger records before Final Selection work.
 - Default moments to run it:
   - after a meaningful refinement/document-sync unit
   - before commit

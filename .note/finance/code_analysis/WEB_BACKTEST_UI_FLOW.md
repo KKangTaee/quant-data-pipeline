@@ -26,14 +26,16 @@ UI form, payload 복원, candidate review, history replay, candidate replay, sav
 | `app/web/backtest_ui_components.py` | Backtest UI 공용 status card, artifact pipeline, compact badge strip, stage brief strip, route/readiness panel render helper |
 | `app/web/backtest_candidate_review.py` | Candidate Review / Candidate Packaging / Pre-Live 운영 기록 화면 render logic |
 | `app/web/backtest_candidate_review_helpers.py` | Candidate Review 판단, Review Note / registry 변환, Pre-Live status 추천 / draft 변환 / Portfolio Proposal 진입 readiness score helper |
-| `app/web/backtest_portfolio_proposal.py` | 단일 후보 Live Readiness 직행 평가, 다중 후보 Portfolio Proposal 후보 선택 / 목적 / 역할 / 비중 설계, Phase 31 Portfolio Risk / Validation Pack, Phase 32 Robustness / Stress Summary / Phase33 Handoff, 저장된 proposal feedback section render logic |
-| `app/web/backtest_portfolio_proposal_helpers.py` | Portfolio Proposal row 생성, 단일 후보 direct readiness / proposal save readiness 평가, Phase 31 validation input / result / overlap first pass, Phase 32 robustness input / stress summary contract / Phase33 handoff, monitoring / Pre-Live / paper feedback table helper |
+| `app/web/backtest_portfolio_proposal.py` | 단일 후보 Live Readiness 직행 평가, 다중 후보 Portfolio Proposal 후보 선택 / 목적 / 역할 / 비중 설계, Phase 31 Portfolio Risk / Validation Pack, Phase 32 Robustness / Stress Summary / Phase33 Handoff, Phase 33 Paper Tracking Ledger draft / save / review, 저장된 proposal feedback section render logic |
+| `app/web/backtest_portfolio_proposal_helpers.py` | Portfolio Proposal row 생성, 단일 후보 direct readiness / proposal save readiness 평가, Phase 31 validation input / result / overlap first pass, Phase 32 robustness input / stress summary contract / Phase33 handoff, Phase 33 paper ledger row / save readiness / Phase34 handoff, monitoring / Pre-Live / paper feedback table helper |
 | `app/web/runtime/backtest.py` | UI payload를 실행 가능한 runtime call로 변환 |
 | `app/web/runtime/candidate_registry.py` | current candidate / review note / pre-live registry JSONL read / append helper |
 | `app/web/runtime/portfolio_proposal.py` | portfolio proposal draft JSONL read / append helper |
+| `app/web/runtime/paper_portfolio_ledger.py` | paper portfolio tracking ledger JSONL read / append helper |
 | `.note/finance/run_history/BACKTEST_RUN_HISTORY.jsonl` | local run history. 보통 commit하지 않음 |
 | `.note/finance/saved/SAVED_PORTFOLIOS.jsonl` | saved portfolio persistence |
 | `.note/finance/registries/PORTFOLIO_PROPOSAL_REGISTRY.jsonl` | proposal draft persistence. 첫 proposal 저장 시 생성 |
+| `.note/finance/registries/PAPER_PORTFOLIO_TRACKING_LEDGER.jsonl` | paper tracking ledger persistence. 첫 paper ledger 저장 시 생성 |
 
 ## 화면 흐름
 
@@ -70,6 +72,7 @@ Ingestion / Data Trust
      -> Robustness / Stress Validation Preview
      -> Stress / Sensitivity Summary
      -> Phase 33 Handoff
+     -> Paper Tracking Ledger Draft / Save
   -> Live Readiness / Final Approval
 ```
 
@@ -83,6 +86,7 @@ Ingestion / Data Trust
 - `Portfolio Proposal`은 후보 묶음 제안이며, live trading approval이 아니다. 단일 후보는 기본 100% proposal로 빠르게 지나갈 수 있고, 여러 후보를 묶을 때는 역할 / 비중을 명시한다.
 - `Portfolio Risk / Live Readiness Validation Pack`은 Phase 31에서 추가된 읽기 전용 검증 surface다. 단일 후보, 작성 중 proposal, 저장된 proposal을 route / score / blocker / component risk / 다음 단계 안내로 읽는다.
 - `Robustness / Stress Validation Pack`은 Phase 32에서 추가된 surface다. stress 검증 실행 전 period / contract / benchmark / CAGR / MDD / compare evidence가 충분한지 확인하고, stress / sensitivity summary row와 Phase33 paper ledger handoff를 보여준다. 아직 실제 stress sweep을 실행했다는 뜻은 아니다.
+- `Paper Tracking Ledger`는 Phase 33에서 추가된 append-only 기록 흐름이다. Validation Pack의 Phase33 handoff를 바탕으로 시작일, target weight, benchmark, review cadence, trigger를 저장하고 Phase34 final selection handoff를 준비한다. live approval이나 주문 지시가 아니다.
 - `Live Readiness / Final Approval`은 Phase 30 이후 별도 phase 후보로 남긴다.
 
 현재 Guides 화면은 네 묶음으로 정리한다.
@@ -538,10 +542,12 @@ CURRENT_CANDIDATE_REGISTRY.jsonl
      -> Portfolio Risk / Live Readiness Validation Pack 확인
      -> Robustness / Stress Validation Preview 확인
      -> Stress / Sensitivity Summary / Phase33 Handoff 확인
+     -> Paper Tracking Ledger Draft 확인 / Save Paper Tracking Ledger
      -> Portfolio Proposal JSON Preview 확인
      -> Save Portfolio Proposal Draft
      -> PORTFOLIO_PROPOSAL_REGISTRY.jsonl append
      -> 4. 저장된 Portfolio Proposal 확인에서 validation / monitoring / Pre-Live / paper feedback / raw JSON inspect
+     -> 저장된 Paper Tracking Ledger 확인에서 Phase34 handoff inspect
 ```
 
 구분:
@@ -571,6 +577,10 @@ CURRENT_CANDIDATE_REGISTRY.jsonl
 - `Result Status = NOT_RUN`은 아직 실제 stress runner가 실행되지 않았다는 뜻이다.
 - `Phase 33 Handoff`는 paper ledger 준비 가능성을 `READY_FOR_PAPER_LEDGER_PREP`, `NEEDS_STRESS_INPUT_REVIEW`, `BLOCKED_FOR_PAPER_LEDGER`로 읽는다.
 - 현재 Phase32 surface는 stress 실행 준비와 handoff 상태를 확인하는 pack이며, period split backtest나 parameter sensitivity engine을 실제로 실행한 결과는 아니다.
+- Phase 33 이후 `Paper Tracking Ledger Draft`는 단일 후보 direct path와 저장된 proposal validation detail에서 저장할 수 있다.
+- 작성 중 proposal은 preview를 볼 수 있지만 durable source가 아직 없으므로 proposal draft를 먼저 저장해야 paper ledger save가 열린다.
+- `Save Paper Tracking Ledger`는 `.note/finance/registries/PAPER_PORTFOLIO_TRACKING_LEDGER.jsonl`에 append-only row를 저장한다. 이 row에는 source id, target components, tracking start date, benchmark, review cadence, review triggers, Phase32 handoff snapshot, baseline snapshot, Phase34 handoff가 남는다.
+- 저장된 ledger는 `저장된 Paper Tracking Ledger 확인`에서 다시 읽으며, `READY_FOR_FINAL_SELECTION_REVIEW`, `NEEDS_PAPER_TRACKING_REVIEW`, `BLOCKED_FOR_FINAL_SELECTION_REVIEW`로 Phase34 준비 상태를 보여준다.
 
 ## Streamlit form 주의
 

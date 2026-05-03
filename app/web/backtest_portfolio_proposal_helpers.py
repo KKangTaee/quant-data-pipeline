@@ -5,7 +5,7 @@ from typing import Any
 
 import pandas as pd
 
-from app.web.runtime import PORTFOLIO_PROPOSAL_SCHEMA_VERSION
+from app.web.runtime import PAPER_PORTFOLIO_LEDGER_SCHEMA_VERSION, PORTFOLIO_PROPOSAL_SCHEMA_VERSION
 
 PORTFOLIO_PROPOSAL_STATUS_OPTIONS = [
     "draft",
@@ -44,6 +44,20 @@ PORTFOLIO_PROPOSAL_PAPER_MDD_DETERIORATION_THRESHOLD = -5.0
 PORTFOLIO_RISK_MAX_REVIEW_WEIGHT = 70.0
 PORTFOLIO_ROBUSTNESS_MIN_WINDOW_YEARS = 5.0
 PORTFOLIO_ROBUSTNESS_STRESS_SCHEMA_VERSION = "phase32_stress_summary_v1"
+PAPER_PORTFOLIO_LEDGER_STATUS_OPTIONS = [
+    "active_tracking",
+    "watch",
+    "paused",
+    "re_review",
+    "closed",
+]
+PAPER_PORTFOLIO_LEDGER_REVIEW_CADENCE_OPTIONS = [
+    "weekly_review",
+    "monthly_review",
+    "quarterly_review",
+    "rebalance_cadence_review",
+    "event_driven_review",
+]
 
 
 # Parse a proposal component target weight into a safe float.
@@ -413,6 +427,353 @@ def _build_portfolio_phase33_handoff(
             "active_weight_total": round(active_weight_total, 2),
         },
     }
+
+
+def _paper_ledger_slug(value: Any) -> str:
+    raw = str(value or "").strip().lower()
+    cleaned = "".join(char if char.isalnum() else "_" for char in raw)
+    return "_".join(part for part in cleaned.split("_") if part) or "source"
+
+
+def _paper_ledger_parse_trigger_lines(value: str) -> list[str]:
+    triggers = [line.strip("- ").strip() for line in str(value or "").splitlines()]
+    return [line for line in triggers if line]
+
+
+def _paper_ledger_default_benchmark(validation: dict[str, Any]) -> str:
+    component_rows = [dict(row or {}) for row in list(validation.get("component_rows") or [])]
+    benchmarks = [
+        str(row.get("Benchmark") or "").strip()
+        for row in component_rows
+        if str(row.get("Benchmark") or "").strip() not in {"", "-"}
+    ]
+    if benchmarks:
+        return benchmarks[0]
+    robustness = dict(validation.get("robustness_validation") or {})
+    phase33_handoff = dict(robustness.get("phase33_handoff") or {})
+    for requirement in list(phase33_handoff.get("requirements") or []):
+        requirement = dict(requirement or {})
+        if requirement.get("Requirement") == "Tracking benchmark":
+            current = str(requirement.get("Current") or "").strip()
+            if current and current != "-":
+                return current.split(",")[0].strip()
+    return "SPY"
+
+
+def _paper_ledger_target_components(validation: dict[str, Any]) -> list[dict[str, Any]]:
+    components: list[dict[str, Any]] = []
+    for row in list(validation.get("component_rows") or []):
+        row = dict(row or {})
+        components.append(
+            {
+                "registry_id": row.get("Registry ID"),
+                "title": row.get("Title"),
+                "proposal_role": row.get("Role"),
+                "target_weight": _portfolio_proposal_optional_float(row.get("Weight")) or 0.0,
+                "strategy_family": row.get("Family"),
+                "benchmark": row.get("Benchmark"),
+                "universe": row.get("Universe"),
+                "factors": row.get("Factors"),
+                "pre_live_status": row.get("Pre-Live"),
+                "data_trust_status": row.get("Data Trust"),
+                "promotion": row.get("Promotion"),
+                "deployment": row.get("Deployment"),
+                "baseline_cagr": row.get("CAGR"),
+                "baseline_mdd": row.get("MDD"),
+            }
+        )
+    return components
+
+
+def _paper_ledger_baseline_snapshot(validation: dict[str, Any]) -> dict[str, Any]:
+    components = _paper_ledger_target_components(validation)
+    active_components = [
+        component
+        for component in components
+        if (_portfolio_proposal_optional_float(component.get("target_weight")) or 0.0) > 0.0
+    ]
+    weighted_cagr = 0.0
+    weighted_mdd = 0.0
+    total_weight = 0.0
+    cagr_complete = True
+    mdd_complete = True
+    for component in active_components:
+        weight = _portfolio_proposal_optional_float(component.get("target_weight")) or 0.0
+        cagr = _portfolio_proposal_optional_float(component.get("baseline_cagr"))
+        mdd = _portfolio_proposal_optional_float(component.get("baseline_mdd"))
+        if cagr is None:
+            cagr_complete = False
+        else:
+            weighted_cagr += cagr * weight
+        if mdd is None:
+            mdd_complete = False
+        else:
+            weighted_mdd += mdd * weight
+        total_weight += weight
+    return {
+        "component_count": len(components),
+        "active_component_count": len(active_components),
+        "target_weight_total": round(total_weight, 4),
+        "weighted_cagr": round(weighted_cagr / total_weight, 6) if total_weight > 0 and cagr_complete else None,
+        "weighted_mdd": round(weighted_mdd / total_weight, 6) if total_weight > 0 and mdd_complete else None,
+    }
+
+
+def _build_paper_portfolio_ledger_save_evaluation(
+    *,
+    validation: dict[str, Any],
+    ledger_id: str,
+    source_is_persisted: bool,
+    tracking_start_date: date | None,
+    tracking_benchmark: str,
+    review_cadence: str,
+    review_triggers: list[str],
+    existing_ledger_ids: set[str] | None = None,
+) -> dict[str, Any]:
+    """Evaluate whether a validation pack can be saved as a durable paper ledger row."""
+    existing_ledger_ids = existing_ledger_ids or set()
+    robustness = dict(validation.get("robustness_validation") or {})
+    phase33_handoff = dict(robustness.get("phase33_handoff") or {})
+    handoff_route = str(phase33_handoff.get("handoff_route") or "")
+    baseline = _paper_ledger_baseline_snapshot(validation)
+    identity_ready = bool(str(ledger_id or "").strip()) and str(ledger_id or "").strip() not in existing_ledger_ids
+    source_ready = bool(validation.get("source_type") and validation.get("source_id") and source_is_persisted)
+    handoff_ready = handoff_route == "READY_FOR_PAPER_LEDGER_PREP"
+    components_ready = bool(baseline.get("active_component_count")) and abs(float(baseline.get("target_weight_total") or 0.0) - 100.0) <= 0.01
+    tracking_ready = bool(tracking_start_date and str(tracking_benchmark or "").strip() and review_cadence)
+    triggers_ready = bool(review_triggers)
+    checks = [
+        {
+            "criteria": "Ledger Identity",
+            "ready": identity_ready,
+            "current_value": ledger_id or "-",
+            "judgment": "ledger id 사용 가능" if identity_ready else "ledger id 중복 또는 누락",
+            "score": 1.4,
+        },
+        {
+            "criteria": "Persisted Source",
+            "ready": source_ready,
+            "current_value": f"{validation.get('source_type')} / {validation.get('source_id')}",
+            "judgment": "저장된 후보 또는 proposal source" if source_ready else "proposal draft를 먼저 저장하거나 source id를 확인",
+            "score": 1.8,
+        },
+        {
+            "criteria": "Phase 33 Handoff",
+            "ready": handoff_ready,
+            "current_value": handoff_route or "-",
+            "judgment": "paper ledger 준비 가능" if handoff_ready else "Phase 32 stress input gap 선확인 필요",
+            "score": 2.0,
+        },
+        {
+            "criteria": "Target Components",
+            "ready": components_ready,
+            "current_value": f"active={baseline.get('active_component_count')}, weight={baseline.get('target_weight_total')}%",
+            "judgment": "추적 비중 합계 100%" if components_ready else "active component 또는 비중 합계 확인 필요",
+            "score": 1.8,
+        },
+        {
+            "criteria": "Tracking Rules",
+            "ready": tracking_ready,
+            "current_value": f"start={tracking_start_date}, benchmark={tracking_benchmark or '-'}, cadence={review_cadence or '-'}",
+            "judgment": "시작일 / benchmark / review cadence 설정됨" if tracking_ready else "추적 시작 조건 보강 필요",
+            "score": 1.6,
+        },
+        {
+            "criteria": "Review Triggers",
+            "ready": triggers_ready,
+            "current_value": f"triggers={len(review_triggers)}",
+            "judgment": "재검토 trigger 있음" if triggers_ready else "stop / re-review trigger 필요",
+            "score": 1.4,
+        },
+    ]
+    score = round(sum(float(check["score"]) for check in checks if check["ready"]), 1)
+    blockers = [str(check["criteria"]) for check in checks if not check["ready"]]
+    if not blockers:
+        route = "PAPER_LEDGER_SAVE_READY"
+        verdict = "Paper ledger 저장 가능: 실제 돈 없이 추적 조건을 남길 수 있음"
+        next_action = "Save Paper Tracking Ledger를 눌러 append-only ledger에 기록합니다."
+    elif source_ready and handoff_ready and components_ready:
+        route = "PAPER_LEDGER_DRAFT_NEEDS_INPUT"
+        verdict = "Paper ledger 초안 보강 필요: 추적 규칙이나 trigger가 부족함"
+        next_action = "tracking start date, benchmark, review cadence, trigger를 채운 뒤 저장합니다."
+    else:
+        route = "PAPER_LEDGER_BLOCKED"
+        verdict = "Paper ledger 저장 차단: source 또는 Phase 33 handoff를 먼저 확인"
+        next_action = "저장된 source와 Phase 32 handoff, target weight를 먼저 보강합니다."
+    return {
+        "route": route,
+        "score": min(score, 10.0),
+        "verdict": verdict,
+        "next_action": next_action,
+        "checks": checks,
+        "blockers": blockers,
+        "can_save": not blockers,
+    }
+
+
+def _build_paper_portfolio_ledger_row(
+    *,
+    validation: dict[str, Any],
+    ledger_id: str,
+    paper_status: str,
+    tracking_start_date: date,
+    tracking_benchmark: str,
+    review_cadence: str,
+    review_triggers: list[str],
+    operator_note: str,
+) -> dict[str, Any]:
+    """Convert a validation pack and user tracking inputs into one append-only ledger row."""
+    now = datetime.now().isoformat(timespec="seconds")
+    robustness = dict(validation.get("robustness_validation") or {})
+    phase33_handoff = dict(robustness.get("phase33_handoff") or {})
+    stress_rows = list(robustness.get("stress_summary_rows") or [])
+    target_components = _paper_ledger_target_components(validation)
+    return {
+        "schema_version": PAPER_PORTFOLIO_LEDGER_SCHEMA_VERSION,
+        "ledger_id": str(ledger_id or "").strip(),
+        "created_at": now,
+        "updated_at": now,
+        "paper_status": paper_status,
+        "source_type": validation.get("source_type"),
+        "source_id": validation.get("source_id"),
+        "source_title": validation.get("source_label") or validation.get("source_id"),
+        "tracking_start_date": tracking_start_date.isoformat(),
+        "tracking_benchmark": str(tracking_benchmark or "").strip(),
+        "review_cadence": review_cadence,
+        "target_components": target_components,
+        "phase32_handoff_snapshot": {
+            "validation_route": validation.get("validation_route"),
+            "validation_score": validation.get("validation_score"),
+            "robustness_route": robustness.get("robustness_route"),
+            "robustness_score": robustness.get("robustness_score"),
+            "phase33_handoff": phase33_handoff,
+            "stress_summary_rows": stress_rows,
+        },
+        "baseline_snapshot": _paper_ledger_baseline_snapshot(validation),
+        "tracking_rules": {
+            "tracking_start_date": tracking_start_date.isoformat(),
+            "tracking_benchmark": str(tracking_benchmark or "").strip(),
+            "review_cadence": review_cadence,
+            "performance_reference": "baseline_snapshot",
+            "live_approval": False,
+        },
+        "review_triggers": review_triggers,
+        "operator_note": str(operator_note or "").strip(),
+        "phase34_handoff": _build_paper_portfolio_ledger_phase34_handoff(
+            {
+                "ledger_id": str(ledger_id or "").strip(),
+                "paper_status": paper_status,
+                "target_components": target_components,
+                "tracking_start_date": tracking_start_date.isoformat(),
+                "tracking_benchmark": str(tracking_benchmark or "").strip(),
+                "review_cadence": review_cadence,
+                "review_triggers": review_triggers,
+                "baseline_snapshot": _paper_ledger_baseline_snapshot(validation),
+            }
+        ),
+        "notes": "Created from Backtest > Portfolio Proposal. This is paper tracking, not live approval or an order instruction.",
+    }
+
+
+def _build_paper_portfolio_ledger_phase34_handoff(row: dict[str, Any]) -> dict[str, Any]:
+    """Summarize whether a saved paper ledger row can feed Phase 34 final selection review."""
+    baseline = dict(row.get("baseline_snapshot") or {})
+    target_components = list(row.get("target_components") or [])
+    active_components = [
+        dict(component or {})
+        for component in target_components
+        if (_portfolio_proposal_optional_float(dict(component or {}).get("target_weight")) or 0.0) > 0.0
+    ]
+    status = str(row.get("paper_status") or "")
+    has_tracking_rules = bool(row.get("tracking_start_date") and row.get("tracking_benchmark") and row.get("review_cadence"))
+    has_triggers = bool(list(row.get("review_triggers") or []))
+    weight_total = float(baseline.get("target_weight_total") or 0.0)
+    has_component_weights = bool(active_components) and abs(weight_total - 100.0) <= 0.01
+    blocker_count = 0
+    if not row.get("ledger_id"):
+        blocker_count += 1
+    if not has_component_weights:
+        blocker_count += 1
+    if not has_tracking_rules:
+        blocker_count += 1
+    if status in {"paused", "re_review", "closed"}:
+        blocker_count += 1
+    if blocker_count:
+        route = "BLOCKED_FOR_FINAL_SELECTION_REVIEW"
+        verdict = "Phase 34 handoff 차단: paper ledger 상태나 입력을 먼저 확인"
+        next_action = "ledger id, 비중, tracking rule, 상태를 보강한 뒤 최종 선정 검토로 넘깁니다."
+    elif not has_triggers or status == "watch":
+        route = "NEEDS_PAPER_TRACKING_REVIEW"
+        verdict = "추가 관찰 필요: trigger 또는 watch 상태 확인"
+        next_action = "review trigger와 관찰 기간을 보강한 뒤 Phase 34 decision pack에서 판단합니다."
+    else:
+        route = "READY_FOR_FINAL_SELECTION_REVIEW"
+        verdict = "Phase 34 입력 가능: paper tracking 조건과 기준이 기록됨"
+        next_action = "Phase 34에서 백테스트, stress, paper ledger, operator note를 함께 읽어 선정 / 보류 / 거절을 판단합니다."
+    score = 10.0 - blocker_count * 2.0
+    if not has_triggers:
+        score -= 1.0
+    if status == "watch":
+        score -= 1.0
+    return {
+        "handoff_route": route,
+        "handoff_score": round(max(0.0, min(score, 10.0)), 1),
+        "verdict": verdict,
+        "next_action": next_action,
+        "metrics": {
+            "active_components": len(active_components),
+            "target_weight_total": weight_total,
+            "has_tracking_rules": has_tracking_rules,
+            "review_triggers": len(list(row.get("review_triggers") or [])),
+            "blockers": blocker_count,
+        },
+    }
+
+
+def _build_paper_portfolio_ledger_rows_for_display(rows: list[dict[str, Any]]) -> pd.DataFrame:
+    """Flatten ledger records into a compact table for the saved ledger review surface."""
+    display_rows: list[dict[str, Any]] = []
+    for row in rows:
+        baseline = dict(row.get("baseline_snapshot") or {})
+        handoff = dict(row.get("phase34_handoff") or _build_paper_portfolio_ledger_phase34_handoff(row))
+        display_rows.append(
+            {
+                "Updated At": row.get("updated_at") or row.get("created_at"),
+                "Ledger ID": row.get("ledger_id"),
+                "Paper Status": row.get("paper_status"),
+                "Source": f"{row.get('source_type')} / {row.get('source_id')}",
+                "Start Date": row.get("tracking_start_date"),
+                "Benchmark": row.get("tracking_benchmark"),
+                "Review Cadence": row.get("review_cadence"),
+                "Components": baseline.get("active_component_count"),
+                "Weight Total": baseline.get("target_weight_total"),
+                "Phase34 Handoff": handoff.get("handoff_route"),
+                "Handoff Score": handoff.get("handoff_score"),
+            }
+        )
+    return pd.DataFrame(display_rows)
+
+
+def _build_paper_portfolio_ledger_component_rows(row: dict[str, Any]) -> pd.DataFrame:
+    """Flatten the selected ledger's target components for operator review."""
+    display_rows: list[dict[str, Any]] = []
+    for component in list(row.get("target_components") or []):
+        component = dict(component or {})
+        display_rows.append(
+            {
+                "Registry ID": component.get("registry_id"),
+                "Title": component.get("title"),
+                "Role": component.get("proposal_role"),
+                "Weight": component.get("target_weight"),
+                "Family": component.get("strategy_family"),
+                "Benchmark": component.get("benchmark"),
+                "Pre-Live": component.get("pre_live_status"),
+                "Data Trust": component.get("data_trust_status"),
+                "CAGR": component.get("baseline_cagr"),
+                "MDD": component.get("baseline_mdd"),
+            }
+        )
+    return pd.DataFrame(display_rows)
 
 
 # Build the Phase 32 first-pass robustness readiness pack from Phase 31 validation input.
@@ -1563,6 +1924,7 @@ def _build_portfolio_risk_validation_result(validation_input: dict[str, Any]) ->
     return {
         "source_type": source_type,
         "source_id": source_id,
+        "source_label": validation_input.get("source_label") or source_id,
         "validation_route": validation_route,
         "validation_score": score,
         "verdict": verdict,

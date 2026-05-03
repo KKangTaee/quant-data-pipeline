@@ -1485,7 +1485,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 | Phase 30 | `implementation_complete` | `manual_qa_pending` | product-flow 재정렬, Portfolio Proposal 계약 정의, registry I/O helper 분리, Proposal Draft UI, Monitoring Review, Pre-Live Feedback, Paper Tracking Feedback 구현 |
 | Phase 31 | `complete` | `manual_qa_completed` | Portfolio Risk / Live Readiness Validation Pack 구현 및 QA 완료 |
 | Phase 32 | `complete` | `manual_qa_completed` | Robustness / Stress Validation Pack 구현 및 QA 완료 |
-| Phase 33 | `active` | `not_ready_for_qa` | Paper Portfolio Tracking Ledger 시작. paper tracking record 계약과 저장소 경계를 먼저 정의 중 |
+| Phase 33 | `implementation_complete` | `manual_qa_pending` | Paper Portfolio Tracking Ledger draft / save / review / Phase34 handoff 구현 |
 
 한 줄 현재 판단:
 - current annual strict candidate와 portfolio bridge를 같은 frame에서 다시 본 `Phase 21`은 manual validation까지 완료되었고,
@@ -1532,10 +1532,10 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
   단일 후보 / 작성 중 proposal / 저장 proposal이 stress 검증과 paper ledger 준비로 넘어갈 수 있는지 읽게 했다.
   사용자 checklist QA까지 완료했다.
   아직 실제 period split backtest runner, parameter sensitivity engine, paper ledger 저장, live approval, 최종 투자 선정은 아니다.
-  `Phase 33`은 active / not_ready_for_qa 상태다.
+  `Phase 33`은 implementation_complete / manual_qa_pending 상태다.
   Phase 33은 Phase 32 handoff를 받아 실제 돈 없이 후보나 proposal을 관찰할 paper tracking ledger를 만드는 단계이며,
-  첫 작업으로 ledger row 계약과 `.note/finance/registries/PAPER_PORTFOLIO_TRACKING_LEDGER.jsonl` 저장소 경계를 정의한다.
-  아직 paper ledger 저장 UI, paper PnL 시계열, final selection decision pack은 구현 전이다.
+  `.note/finance/registries/PAPER_PORTFOLIO_TRACKING_LEDGER.jsonl` 저장소, ledger draft / save UI, 저장 ledger review surface, Phase34 handoff 준비 상태를 구현했다.
+  아직 paper PnL 시계열 자동 계산, final selection decision pack, live approval, 주문 지시는 구현 전이다.
 
 ---
 
@@ -1673,7 +1673,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 |---|---|---|---|---|
 | Phase 31 | Portfolio Risk And Live Readiness Validation | `complete` | `manual_qa_completed` | 후보 또는 proposal이 포트폴리오 구조상 실전 검토 후보로 더 갈 수 있는지 검증했고 QA까지 완료했다 |
 | Phase 32 | Robustness And Stress Validation Pack | `complete` | `manual_qa_completed` | robustness preview, stress summary contract / table, Phase33 paper ledger handoff를 구현하고 QA까지 완료했다 |
-| Phase 33 | Paper Portfolio Tracking Ledger | `active` | `not_ready_for_qa` | snapshot 비교가 아니라 시작일 / 비중 / 추적 조건을 가진 paper portfolio 기록을 만들기 시작했다 |
+| Phase 33 | Paper Portfolio Tracking Ledger | `implementation_complete` | `manual_qa_pending` | 시작일 / 비중 / 추적 조건을 가진 paper portfolio ledger를 저장하고 Phase34 handoff를 확인한다 |
 | Phase 34 | Final Portfolio Selection Decision Pack | `planned` | `not_ready_for_qa` | 검증과 paper tracking을 모아 최종 실전 후보 포트폴리오를 선정 / 보류 / 거절한다 |
 | Phase 35 | Post-Selection Operating Guide | `planned` | `not_ready_for_qa` | 선정 이후 리밸런싱, 중단, 축소, 재검토 운영 기준을 정리한다 |
 
@@ -1717,10 +1717,11 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 - 최종 실전 포트폴리오 선정 전에는 백테스트와 robustness 검증뿐 아니라, 시작일 / 비중 / benchmark / review cadence가 있는 paper tracking 기록이 필요하다.
 
 ### 현재 메모
-- Phase 33은 active / not_ready_for_qa 상태다.
-- 첫 작업은 paper ledger row 계약과 저장소 경계 정의다.
-- 예상 저장소는 `.note/finance/registries/PAPER_PORTFOLIO_TRACKING_LEDGER.jsonl`이다.
-- 아직 paper ledger 저장 UI, paper PnL 시계열, Phase 34 final selection decision pack은 만들지 않았다.
+- Phase 33은 implementation_complete / manual_qa_pending 상태다.
+- `.note/finance/registries/PAPER_PORTFOLIO_TRACKING_LEDGER.jsonl` append-only 저장소와 `app/web/runtime/paper_portfolio_ledger.py` helper를 추가했다.
+- `Backtest > Portfolio Proposal` Validation Pack 아래에서 paper ledger draft를 확인하고 `Save Paper Tracking Ledger`로 저장할 수 있다.
+- 저장된 ledger는 `저장된 Paper Tracking Ledger 확인`에서 source, component, review trigger, Phase34 handoff route를 다시 읽는다.
+- 아직 paper PnL 시계열 자동 계산, Phase 34 final selection decision pack, live approval, 주문 지시는 만들지 않았다.
 
 ### 한 줄 흐름
 - `정리 -> 데이터 신뢰성 -> 전략 parity -> 후보 검토 -> 포트폴리오 제안 -> 이후 live readiness`

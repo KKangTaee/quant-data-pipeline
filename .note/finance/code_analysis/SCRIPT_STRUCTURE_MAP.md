@@ -40,8 +40,8 @@
 | `app/web/backtest_ui_components.py` | Backtest UI 공용 wrapping status card, artifact pipeline, compact badge strip, stage brief strip, route/readiness 판정 panel |
 | `app/web/backtest_candidate_review.py` | `Backtest > Candidate Review`의 Candidate Packaging 화면 render, Review Note / current candidate registry 저장, Pre-Live 운영 기록 저장, Portfolio Proposal 이동 판단 |
 | `app/web/backtest_candidate_review_helpers.py` | Candidate Review readiness 평가, Review Note 생성, current candidate registry row 변환, Pre-Live status 추천 / draft 생성 / Proposal readiness 평가, display table helper |
-| `app/web/backtest_portfolio_proposal.py` | `Backtest > Portfolio Proposal`의 단일 후보 Live Readiness 직행 평가, 다중 후보 proposal 후보 선택, 목적 / 역할 / 비중 설계, proposal draft 저장, Phase 31 Portfolio Risk / Validation Pack과 Phase 32 Robustness / Stress Summary / Phase33 Handoff 화면 render |
-| `app/web/backtest_portfolio_proposal_helpers.py` | Portfolio Proposal row 생성, 단일 후보 direct readiness / proposal save readiness 평가, Phase 31 validation input / result / overlap first pass, Phase 32 robustness input / stress summary contract / Phase33 handoff 계산, saved proposal monitoring / Pre-Live feedback / paper tracking feedback table helper |
+| `app/web/backtest_portfolio_proposal.py` | `Backtest > Portfolio Proposal`의 단일 후보 Live Readiness 직행 평가, 다중 후보 proposal 후보 선택, 목적 / 역할 / 비중 설계, proposal draft 저장, Phase 31 Portfolio Risk / Validation Pack, Phase 32 Robustness / Stress Summary / Phase33 Handoff, Paper Tracking Ledger draft / save / review 화면 render |
+| `app/web/backtest_portfolio_proposal_helpers.py` | Portfolio Proposal row 생성, 단일 후보 direct readiness / proposal save readiness 평가, Phase 31 validation input / result / overlap first pass, Phase 32 robustness input / stress summary contract / Phase33 handoff 계산, Phase 33 paper ledger row / save readiness / Phase34 handoff 계산, saved proposal monitoring / Pre-Live feedback / paper tracking feedback table helper |
 | `app/web/pages/backtest.py` | Backtest page shell, workflow navigation, panel dispatch entry. Single / Compare / Candidate Review / Portfolio Proposal 본문은 별도 module이 관리 |
 
 ## App / Runtime
@@ -52,6 +52,7 @@
 | `app/web/runtime/candidate_registry.py` | current candidate, candidate review note, pre-live registry JSONL path / load / append helper |
 | `app/web/runtime/history.py` | Backtest run history persistence helper |
 | `app/web/runtime/portfolio_proposal.py` | Portfolio proposal draft registry JSONL path / load / append helper |
+| `app/web/runtime/paper_portfolio_ledger.py` | Paper Portfolio Tracking Ledger JSONL path / load / append helper |
 | `app/web/runtime/portfolio_store.py` | Saved portfolio persistence helper |
 
 ## Finance Core

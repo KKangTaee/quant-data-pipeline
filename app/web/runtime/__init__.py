@@ -39,6 +39,12 @@ from .portfolio_proposal import (
     append_portfolio_proposal,
     load_portfolio_proposals,
 )
+from .paper_portfolio_ledger import (
+    PAPER_PORTFOLIO_LEDGER_FILE,
+    PAPER_PORTFOLIO_LEDGER_SCHEMA_VERSION,
+    append_paper_portfolio_ledger_row,
+    load_paper_portfolio_ledger,
+)
 
 __all__ = [
     "BACKTEST_HISTORY_FILE",
@@ -47,10 +53,13 @@ __all__ = [
     "PRE_LIVE_CANDIDATE_REGISTRY_FILE",
     "PORTFOLIO_PROPOSAL_REGISTRY_FILE",
     "PORTFOLIO_PROPOSAL_SCHEMA_VERSION",
+    "PAPER_PORTFOLIO_LEDGER_FILE",
+    "PAPER_PORTFOLIO_LEDGER_SCHEMA_VERSION",
     "SAVED_PORTFOLIO_FILE",
     "append_candidate_review_note",
     "append_backtest_run_history",
     "append_current_candidate_registry_row",
+    "append_paper_portfolio_ledger_row",
     "append_portfolio_proposal",
     "append_pre_live_candidate_registry_row",
     "build_backtest_result_bundle",
@@ -59,6 +68,7 @@ __all__ = [
     "load_backtest_run_history",
     "load_candidate_review_notes",
     "load_current_candidate_registry_latest",
+    "load_paper_portfolio_ledger",
     "load_portfolio_proposals",
     "load_pre_live_candidate_registry_latest",
     "load_saved_portfolios",

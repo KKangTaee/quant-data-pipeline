@@ -12,6 +12,8 @@ from app.web.backtest_candidate_review_helpers import (
     _current_candidate_registry_selection_label,
 )
 from app.web.backtest_portfolio_proposal_helpers import (
+    PAPER_PORTFOLIO_LEDGER_REVIEW_CADENCE_OPTIONS,
+    PAPER_PORTFOLIO_LEDGER_STATUS_OPTIONS,
     PORTFOLIO_PROPOSAL_PAPER_CAGR_DETERIORATION_THRESHOLD,
     PORTFOLIO_PROPOSAL_PAPER_MDD_DETERIORATION_THRESHOLD,
     PORTFOLIO_PROPOSAL_ROLE_DESCRIPTIONS,
@@ -31,6 +33,13 @@ from app.web.backtest_portfolio_proposal_helpers import (
     _build_portfolio_proposal_readiness_evaluation,
     _build_portfolio_proposal_row,
     _build_portfolio_proposal_rows_for_display,
+    _build_paper_portfolio_ledger_component_rows,
+    _build_paper_portfolio_ledger_row,
+    _build_paper_portfolio_ledger_rows_for_display,
+    _build_paper_portfolio_ledger_save_evaluation,
+    _paper_ledger_default_benchmark,
+    _paper_ledger_parse_trigger_lines,
+    _paper_ledger_slug,
     _portfolio_proposal_monitoring_blockers,
     _portfolio_proposal_monitoring_state,
     _portfolio_proposal_open_blockers,
@@ -56,8 +65,11 @@ from app.web.backtest_ui_components import (
 from app.web.runtime import (
     CURRENT_CANDIDATE_REGISTRY_FILE,
     PORTFOLIO_PROPOSAL_REGISTRY_FILE,
+    PAPER_PORTFOLIO_LEDGER_FILE,
+    append_paper_portfolio_ledger_row,
     append_portfolio_proposal,
     load_current_candidate_registry_latest as _load_current_candidate_registry_latest,
+    load_paper_portfolio_ledger,
     load_portfolio_proposals,
     load_pre_live_candidate_registry_latest as _load_pre_live_candidate_registry_latest,
 )
@@ -79,8 +91,157 @@ def _sync_component_selection_state(label_to_row: dict[str, dict[str, Any]]) -> 
         st.session_state[key] = valid_labels
 
 
+def _render_paper_ledger_draft_controls(
+    validation: dict[str, Any],
+    *,
+    key_prefix: str,
+    source_is_persisted: bool,
+    paper_ledger_rows: list[dict[str, Any]],
+) -> None:
+    st.markdown("##### Paper Tracking Ledger Draft")
+    st.caption(
+        "Phase 33 영역입니다. Validation Pack을 여는 것만으로는 저장되지 않고, "
+        "`Save Paper Tracking Ledger`를 명시적으로 눌러야 append-only ledger에 기록됩니다."
+    )
+    existing_ledger_ids = {
+        str(row.get("ledger_id") or "").strip()
+        for row in paper_ledger_rows
+        if str(row.get("ledger_id") or "").strip()
+    }
+    source_id = str(validation.get("source_id") or "").strip()
+    source_slug = _paper_ledger_slug(source_id)
+    if st.session_state.pop(f"{key_prefix}_reset_ledger_id_after_save", False):
+        st.session_state.pop(f"{key_prefix}_ledger_id", None)
+    default_ledger_id = f"paper_{source_slug}_{date.today().strftime('%Y%m%d')}_{uuid4().hex[:6]}"
+    default_triggers = "\n".join(
+        [
+            f"CAGR delta <= {PORTFOLIO_PROPOSAL_PAPER_CAGR_DETERIORATION_THRESHOLD}",
+            f"MDD delta <= {PORTFOLIO_PROPOSAL_PAPER_MDD_DETERIORATION_THRESHOLD}",
+            "Pre-Live status drift from paper_tracking",
+            "Benchmark-relative underperformance review",
+        ]
+    )
+
+    input_cols = st.columns(4, gap="small")
+    with input_cols[0]:
+        ledger_id = st.text_input("Ledger ID", value=default_ledger_id, key=f"{key_prefix}_ledger_id")
+    with input_cols[1]:
+        paper_status = st.selectbox(
+            "Paper Status",
+            options=PAPER_PORTFOLIO_LEDGER_STATUS_OPTIONS,
+            index=0,
+            key=f"{key_prefix}_paper_status",
+        )
+    with input_cols[2]:
+        tracking_start_date = st.date_input(
+            "Tracking Start Date",
+            value=date.today(),
+            key=f"{key_prefix}_tracking_start_date",
+        )
+    with input_cols[3]:
+        review_cadence = st.selectbox(
+            "Review Cadence",
+            options=PAPER_PORTFOLIO_LEDGER_REVIEW_CADENCE_OPTIONS,
+            index=1,
+            key=f"{key_prefix}_review_cadence",
+        )
+    benchmark_note_cols = st.columns([0.32, 0.68], gap="small")
+    with benchmark_note_cols[0]:
+        tracking_benchmark = st.text_input(
+            "Tracking Benchmark",
+            value=_paper_ledger_default_benchmark(validation),
+            key=f"{key_prefix}_tracking_benchmark",
+        )
+    with benchmark_note_cols[1]:
+        operator_note = st.text_input(
+            "Operator Note",
+            value="Phase 32 handoff 이후 실제 돈 없이 paper tracking 조건을 기록한다.",
+            key=f"{key_prefix}_operator_note",
+        )
+    trigger_text = st.text_area(
+        "Review Triggers",
+        value=default_triggers,
+        key=f"{key_prefix}_review_triggers",
+        help="한 줄에 하나씩 stop / re-review trigger를 남깁니다.",
+    )
+    review_triggers = _paper_ledger_parse_trigger_lines(trigger_text)
+    evaluation = _build_paper_portfolio_ledger_save_evaluation(
+        validation=validation,
+        ledger_id=ledger_id,
+        source_is_persisted=source_is_persisted,
+        tracking_start_date=tracking_start_date,
+        tracking_benchmark=tracking_benchmark,
+        review_cadence=review_cadence,
+        review_triggers=review_triggers,
+        existing_ledger_ids=existing_ledger_ids,
+    )
+    render_readiness_route_panel(
+        route_label=str(evaluation.get("route") or "-"),
+        score=float(evaluation.get("score") or 0.0),
+        blockers_count=len(evaluation.get("blockers") or []),
+        verdict=str(evaluation.get("verdict") or "-"),
+        next_action=str(evaluation.get("next_action") or "-"),
+        route_title="Paper Ledger Route",
+        score_title="Ledger Score",
+    )
+    render_badge_strip(
+        [
+            {"label": "Source", "value": validation.get("source_type") or "-", "tone": "neutral"},
+            {"label": "Persisted", "value": "yes" if source_is_persisted else "no", "tone": "positive" if source_is_persisted else "warning"},
+            {"label": "Triggers", "value": len(review_triggers), "tone": "positive" if review_triggers else "warning"},
+            {"label": "Live Approval", "value": "Disabled", "tone": "neutral"},
+        ]
+    )
+    if evaluation.get("blockers"):
+        for blocker in list(evaluation.get("blockers") or []):
+            st.warning(str(blocker))
+
+    paper_row = _build_paper_portfolio_ledger_row(
+        validation=validation,
+        ledger_id=ledger_id,
+        paper_status=paper_status,
+        tracking_start_date=tracking_start_date,
+        tracking_benchmark=tracking_benchmark,
+        review_cadence=review_cadence,
+        review_triggers=review_triggers,
+        operator_note=operator_note,
+    )
+    action_cols = st.columns(2, gap="small")
+    with action_cols[0]:
+        if st.button(
+            "Save Paper Tracking Ledger",
+            key=f"{key_prefix}_save_paper_ledger",
+            disabled=not bool(evaluation.get("can_save")),
+            width="stretch",
+        ):
+            append_paper_portfolio_ledger_row(paper_row)
+            st.session_state["paper_portfolio_ledger_save_notice"] = (
+                f"Paper Tracking Ledger `{paper_row['ledger_id']}`를 저장했습니다. "
+                "이 기록은 live approval이나 주문 지시가 아닙니다."
+            )
+            st.session_state[f"{key_prefix}_reset_ledger_id_after_save"] = True
+            st.rerun()
+    with action_cols[1]:
+        st.button(
+            "Open Final Selection",
+            key=f"{key_prefix}_open_final_selection_placeholder",
+            disabled=True,
+            width="stretch",
+            help="Phase 34 Final Selection Decision Pack에서 연결할 예정입니다.",
+        )
+    with st.expander("Paper Ledger JSON Preview", expanded=False):
+        st.json(paper_row)
+        st.caption(f"Path: {PAPER_PORTFOLIO_LEDGER_FILE}")
+
+
 # Render the Phase 31 read-only risk validation pack for a selected candidate or proposal.
-def _render_portfolio_risk_validation_pack(validation: dict[str, Any], *, title: str) -> None:
+def _render_portfolio_risk_validation_pack(
+    validation: dict[str, Any],
+    *,
+    title: str,
+    paper_ledger_rows: list[dict[str, Any]] | None = None,
+    source_is_persisted: bool = True,
+) -> None:
     metrics = dict(validation.get("metrics") or {})
     hard_blockers = list(validation.get("hard_blockers") or [])
     paper_tracking_gaps = list(validation.get("paper_tracking_gaps") or [])
@@ -230,6 +391,63 @@ def _render_portfolio_risk_validation_pack(validation: dict[str, Any], *, title:
             with st.expander("Phase 33 paper ledger 준비 기준", expanded=False):
                 st.dataframe(pd.DataFrame(phase33_handoff.get("requirements") or []), width="stretch", hide_index=True)
                 st.caption("이 handoff는 paper ledger 준비 가능성만 말합니다. live approval이나 주문 지시가 아닙니다.")
+            key_scope = "persisted" if source_is_persisted else "draft"
+            key_source = _paper_ledger_slug(f"{key_scope}_{validation.get('source_type')}_{validation.get('source_id')}")
+            _render_paper_ledger_draft_controls(
+                validation,
+                key_prefix=f"paper_ledger_{key_source}",
+                source_is_persisted=source_is_persisted,
+                paper_ledger_rows=paper_ledger_rows or [],
+            )
+
+
+def _render_saved_paper_ledger_details(paper_ledger_rows: list[dict[str, Any]]) -> None:
+    if not paper_ledger_rows:
+        return
+
+    with st.container(border=True):
+        st.markdown("#### 저장된 Paper Tracking Ledger 확인")
+        st.caption("Phase 33에서 저장한 paper tracking 기록을 다시 읽고 Phase 34 handoff 준비 상태를 확인합니다.")
+        st.dataframe(_build_paper_portfolio_ledger_rows_for_display(paper_ledger_rows), width="stretch", hide_index=True)
+        labels = [
+            f"{row.get('updated_at') or row.get('created_at')} | {row.get('paper_status')} | {row.get('ledger_id')}"
+            for row in paper_ledger_rows
+        ]
+        selected_label = st.selectbox(
+            "Review Paper Tracking Ledger",
+            options=labels,
+            key="paper_portfolio_ledger_selected_record",
+        )
+        selected_row = paper_ledger_rows[labels.index(selected_label)]
+        handoff = dict(selected_row.get("phase34_handoff") or {})
+        baseline = dict(selected_row.get("baseline_snapshot") or {})
+        render_readiness_route_panel(
+            route_label=str(handoff.get("handoff_route") or "-"),
+            score=float(handoff.get("handoff_score") or 0.0),
+            blockers_count=int(dict(handoff.get("metrics") or {}).get("blockers") or 0),
+            verdict=str(handoff.get("verdict") or "-"),
+            next_action=str(handoff.get("next_action") or "-"),
+            route_title="Phase 34 Handoff",
+            score_title="Handoff Score",
+        )
+        render_badge_strip(
+            [
+                {"label": "Source", "value": f"{selected_row.get('source_type')} / {selected_row.get('source_id')}", "tone": "neutral"},
+                {"label": "Status", "value": selected_row.get("paper_status") or "-", "tone": "positive" if selected_row.get("paper_status") == "active_tracking" else "warning"},
+                {"label": "Weight Total", "value": f"{baseline.get('target_weight_total')}%", "tone": "neutral"},
+                {"label": "Review Cadence", "value": selected_row.get("review_cadence") or "-", "tone": "neutral"},
+            ]
+        )
+        component_df = _build_paper_portfolio_ledger_component_rows(selected_row)
+        if component_df.empty:
+            st.info("이 ledger에는 target component가 없습니다.")
+        else:
+            st.dataframe(component_df, width="stretch", hide_index=True)
+        with st.expander("Paper Ledger detail", expanded=False):
+            st.markdown("###### Review Triggers")
+            for trigger in list(selected_row.get("review_triggers") or []):
+                st.info(str(trigger))
+            st.json(selected_row)
 
 
 # Render saved proposal monitoring, feedback, and raw JSON as one support area below the main flow.
@@ -237,6 +455,7 @@ def _render_saved_proposal_details(
     proposal_rows: list[dict[str, Any]],
     pre_live_rows: list[dict[str, Any]],
     current_rows: list[dict[str, Any]],
+    paper_ledger_rows: list[dict[str, Any]],
 ) -> None:
     with st.container(border=True):
         st.markdown("#### 4. 저장된 Portfolio Proposal 확인")
@@ -276,7 +495,12 @@ def _render_saved_proposal_details(
                 pre_live_by_registry_id=pre_live_by_registry_id,
             )
             validation = _build_portfolio_risk_validation_result(validation_input)
-            _render_portfolio_risk_validation_pack(validation, title="Portfolio Risk / Live Readiness Validation")
+            _render_portfolio_risk_validation_pack(
+                validation,
+                title="Portfolio Risk / Live Readiness Validation",
+                paper_ledger_rows=paper_ledger_rows,
+                source_is_persisted=True,
+            )
 
         with overview_tab:
             st.caption("저장된 proposal draft를 blocker / review gap / 후보 구성 관점에서 다시 읽습니다.")
@@ -458,6 +682,7 @@ def render_portfolio_proposal_workspace() -> None:
     current_rows = _load_current_candidate_registry_latest()
     pre_live_rows = _load_pre_live_candidate_registry_latest()
     proposal_rows = load_portfolio_proposals()
+    paper_ledger_rows = load_paper_portfolio_ledger()
     pre_live_status_by_registry_id = _portfolio_proposal_pre_live_status_by_registry_id(pre_live_rows)
     pre_live_record_by_registry_id = _portfolio_proposal_pre_live_record_by_registry_id(pre_live_rows)
     current_by_registry_id = _portfolio_proposal_current_candidate_by_registry_id(current_rows)
@@ -469,12 +694,16 @@ def render_portfolio_proposal_workspace() -> None:
     save_notice = st.session_state.pop("portfolio_proposal_save_notice", None)
     if save_notice:
         st.success(str(save_notice))
+    paper_ledger_notice = st.session_state.pop("paper_portfolio_ledger_save_notice", None)
+    if paper_ledger_notice:
+        st.success(str(paper_ledger_notice))
 
     render_status_card_grid(
         [
             {"title": "Current Candidates", "value": len(current_rows), "tone": "positive" if current_rows else "neutral"},
             {"title": "Pre-Live Records", "value": len(pre_live_rows), "tone": "positive" if pre_live_rows else "neutral"},
             {"title": "Saved Proposals", "value": len(proposal_rows), "tone": "positive" if proposal_rows else "neutral"},
+            {"title": "Paper Ledgers", "value": len(paper_ledger_rows), "tone": "positive" if paper_ledger_rows else "neutral"},
             {"title": "Live Approval", "value": "Disabled", "detail": "이 화면은 승인/주문이 아닙니다.", "tone": "neutral"},
         ]
     )
@@ -676,7 +905,13 @@ def render_portfolio_proposal_workspace() -> None:
                 data_trust_status=data_trust_status,
             )
             validation = _build_portfolio_risk_validation_result(validation_input)
-            _render_portfolio_risk_validation_pack(validation, title="단일 후보 Portfolio Risk / Live Readiness Validation")
+            _render_portfolio_risk_validation_pack(
+                validation,
+                title="단일 후보 Portfolio Risk / Live Readiness Validation",
+                paper_ledger_rows=paper_ledger_rows,
+                source_is_persisted=True,
+            )
+        _render_saved_paper_ledger_details(paper_ledger_rows)
 
     elif selected_rows:
         st.markdown("#### 2. 목적 / 역할 / 비중 설계")
@@ -953,7 +1188,12 @@ def render_portfolio_proposal_workspace() -> None:
                     pre_live_by_registry_id=pre_live_record_by_registry_id,
                 )
                 validation = _build_portfolio_risk_validation_result(validation_input)
-                _render_portfolio_risk_validation_pack(validation, title="작성 중 Proposal Portfolio Risk / Live Readiness Validation")
+                _render_portfolio_risk_validation_pack(
+                    validation,
+                    title="작성 중 Proposal Portfolio Risk / Live Readiness Validation",
+                    paper_ledger_rows=paper_ledger_rows,
+                    source_is_persisted=False,
+                )
 
             st.markdown("##### 저장 및 다음 단계")
             action_cols = st.columns(2, gap="small")
@@ -990,7 +1230,8 @@ def render_portfolio_proposal_workspace() -> None:
                 with json_tab:
                     st.json(proposal_row)
 
-        _render_saved_proposal_details(proposal_rows, pre_live_rows, current_rows)
+        _render_saved_proposal_details(proposal_rows, pre_live_rows, current_rows, paper_ledger_rows)
+        _render_saved_paper_ledger_details(paper_ledger_rows)
     else:
         st.markdown("#### 2. 진행 방식 선택")
         with st.container(border=True):
@@ -999,3 +1240,4 @@ def render_portfolio_proposal_workspace() -> None:
                 result="Candidate selection required",
             )
             st.info("`1. Proposal 후보 확인`에서 current candidate를 1개 이상 선택하세요.")
+        _render_saved_paper_ledger_details(paper_ledger_rows)
