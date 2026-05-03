@@ -3721,3 +3721,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 전문 플랫폼 조사 기준으로도 research/backtest/optimization/live/paper/performance attribution이 분리되어 있으므로, 우리 프로그램도 최종 선정 전에 optimizer보다 검증, 추적, 승인 기록을 먼저 분리해야 한다
 - Follow-up:
   - 다음 구현을 시작할 때는 Phase 31을 `Live Readiness Decision Record`로 열고, 실제 주문 / broker integration은 후속 post-approval 영역으로 둔다
+
+### 2026-05-03 - Phase31~35 역할과 Phase31 필요성 clarification
+- User request:
+  - Phase31이 왜 필요한지, 이미 Portfolio Proposal / 단일 후보 기록이 있는데 무엇을 새로 기록하는지, Phase31~35에서 정확히 무엇을 하는지 자세한 설명을 요청함
+- Interpreted goal:
+  - 기존 후보 / Pre-Live / Proposal 저장소와 새 Live Readiness decision record의 차이를 명확히 해야 함
+- Analysis result:
+  - 기존 저장소는 후보 정의, 운영 기록, proposal 초안이지 “실전 검토 후보로 공식 접수했다”는 승인 전 decision ledger가 아니다
+  - Phase31은 Candidate Review Note가 candidate registry append 전 사람 판단을 남겼던 것처럼, Portfolio Proposal 또는 단일 후보를 Live Readiness 검토 대상으로 공식 접수 / 보류 / 거절하는 기록을 만든다
+  - 단일 후보도 Phase31 대상이다. 단일 후보는 proposal draft 저장 없이 current candidate + Pre-Live record + direct readiness 평가를 입력으로 Live Readiness record를 남길 수 있다
+  - Phase32~35는 각각 portfolio risk engine, robustness validation pack, paper portfolio tracking, final portfolio selection guide로 분리해 최종 포트폴리오 후보 선정까지 이어진다
+- Follow-up:
+  - Phase31을 열 때는 `.note/finance/registries/LIVE_READINESS_REVIEW_REGISTRY.jsonl` 같은 별도 decision registry와 `Backtest > Live Readiness` 또는 Portfolio Proposal handoff UI를 우선 정의한다
