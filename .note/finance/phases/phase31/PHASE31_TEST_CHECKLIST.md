@@ -25,7 +25,7 @@ Candidate Review / Pre-Live / Portfolio Proposal과 중복되지 않고,
   - [x] Validation Route, Risk Score, Source, Components, Weight Total, Max Weight, Next Phase가 보이는지
   - [x] component table에 Registry ID, Role, Weight, Family, Benchmark, Universe, Factors, Pre-Live, Data Trust, Promotion, Deployment가 보이는지
   - [x] hard blocker / paper tracking gap / review gap이 분리되어 보이는지
-  - [x] `Validation 기준 / Phase 32 handoff` expander에서 checks와 handoff summary를 확인할 수 있는지
+  - [x] `검증 기준 / 다음 단계 안내` expander에서 checks와 다음 단계 요약을 확인할 수 있는지
   - [ ] 단일 후보 직행 평가에서는 `저장된 Portfolio Proposal 확인` 목록이 노출되지 않는지
 
 ## 2. 작성 중 Proposal Validation Pack 확인
@@ -58,20 +58,20 @@ Candidate Review / Pre-Live / Portfolio Proposal과 중복되지 않고,
   - 후보 2개 이상 선택 후 `4. 저장된 Portfolio Proposal 확인 > Validation Pack`
 - 체크 항목:
   - [ ] 저장된 proposal이 없을 때 `아직 저장된 Portfolio Proposal이 없습니다.` 안내가 보이는지
-  - [ ] 후보 2개 이상을 선택한 포트폴리오 초안 작성 흐름에서만 저장된 proposal 목록이 보이는지
-  - [ ] proposal 저장 후 `Saved Proposals` count 또는 summary table에 새 proposal이 반영되는지
-  - [ ] 저장된 proposal이 있으면 summary table에 Proposal ID, Validation Route, Score, Components, Weight Total, Max Weight, Hard Blockers, Paper Gaps, Review Gaps가 보이는지
-  - [ ] `Review Validation Pack`에서 proposal을 선택하면 상세 validation panel이 보이는지
-  - [ ] 저장된 proposal의 Monitoring / Pre-Live Feedback / Paper Tracking / Raw JSON tab도 기존처럼 동작하는지
+  - [x] 후보 2개 이상을 선택한 포트폴리오 초안 작성 흐름에서만 저장된 proposal 목록이 보이는지
+  - [x] proposal 저장 후 `Saved Proposals` count 또는 summary table에 새 proposal이 반영되는지
+  - [x] 저장된 proposal이 있으면 summary table에 Proposal ID, Validation Route, Score, Components, Weight Total, Max Weight, Hard Blockers, Paper Gaps, Review Gaps가 보이는지
+  - [x] `Review Validation Pack`에서 proposal을 선택하면 상세 validation panel이 보이는지
+  - [x] 저장된 proposal의 Monitoring / Pre-Live Feedback / Paper Tracking / Raw JSON tab도 기존처럼 동작하는지
 
 - QA reset 참고:
   - 저장된 proposal을 초기화해야 하면 `.note/finance/registries/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`을 삭제해도 된다.
   - 다음에 `Save Portfolio Proposal Draft`를 실행하면 앱이 필요한 JSONL 파일을 다시 만든다.
 
-## 4. Phase 32 Handoff 확인
+## 4. 다음 단계 안내 확인
 
 - 확인 위치:
-  - `Backtest > Portfolio Proposal > 단일 후보 또는 Portfolio Proposal Validation Pack > Validation 기준 / Phase 32 handoff`
+  - `Backtest > Portfolio Proposal > 단일 후보 또는 Portfolio Proposal Validation Pack > 검증 기준 / 다음 단계 안내`
   - `.note/finance/phases/phase31/PHASE31_NEXT_PHASE_PREPARATION.md`
 - 체크 항목:
   - [ ] `READY_FOR_ROBUSTNESS_REVIEW`는 Phase 32 robustness 검증 후보 가능으로 읽히는지

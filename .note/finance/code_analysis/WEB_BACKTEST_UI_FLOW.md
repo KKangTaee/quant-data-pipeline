@@ -78,7 +78,7 @@ Ingestion / Data Trust
 - `Pre-Live 운영 기록`은 저장된 후보를 실제 돈 없이 paper / watchlist / hold / re-review 중 어떻게 관찰할지 기록하는 Candidate Packaging 내부 작업이다.
 - `Portfolio Proposal 이동 판단`은 Pre-Live 운영 record를 저장하기 전에 저장 가능 여부와 저장 후 Proposal 이동 가능 여부를 같이 보여주는 Candidate Packaging의 최종 route 확인이다.
 - `Portfolio Proposal`은 후보 묶음 제안이며, live trading approval이 아니다. 단일 후보는 기본 100% proposal로 빠르게 지나갈 수 있고, 여러 후보를 묶을 때는 역할 / 비중을 명시한다.
-- `Portfolio Risk / Live Readiness Validation Pack`은 Phase 31에서 추가된 읽기 전용 검증 surface다. 단일 후보, 작성 중 proposal, 저장된 proposal을 route / score / blocker / component risk / Phase 32 handoff로 읽는다.
+- `Portfolio Risk / Live Readiness Validation Pack`은 Phase 31에서 추가된 읽기 전용 검증 surface다. 단일 후보, 작성 중 proposal, 저장된 proposal을 route / score / blocker / component risk / 다음 단계 안내로 읽는다.
 - `Live Readiness / Final Approval`은 Phase 30 이후 별도 phase 후보로 남긴다.
 
 현재 Guides 화면은 네 묶음으로 정리한다.
@@ -557,7 +557,7 @@ CURRENT_CANDIDATE_REGISTRY.jsonl
 - Phase 31 이후 `Validation Pack`은 단일 후보 direct path, 작성 중 proposal, 저장된 proposal에서 모두 같은 검증 언어를 사용한다.
 - validation route는 `READY_FOR_ROBUSTNESS_REVIEW`, `PAPER_TRACKING_REQUIRED`, `NEEDS_PORTFOLIO_RISK_REVIEW`, `BLOCKED_FOR_LIVE_READINESS`로 구분한다.
 - component table은 role, weight, family, benchmark, universe, factor set, Pre-Live, Data Trust, Promotion, Deployment를 같이 보여준다.
-- 이 validation은 Phase 32 robustness 검증 handoff를 위한 surface이며, live approval이나 새 approval registry 저장이 아니다.
+- 이 validation은 다음 robustness 검증 단계로 넘길 수 있는지 확인하는 surface이며, live approval이나 새 approval registry 저장이 아니다.
 
 ## Streamlit form 주의
 

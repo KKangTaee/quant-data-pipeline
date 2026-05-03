@@ -44,7 +44,7 @@ Phase 31 validation result는 우선 화면에서 계산되는 summary로 본다
 - `review_gaps`: 다음 검증 전에 확인하면 좋은 항목
 - `next_action`: 사용자가 다음에 해야 할 행동
 - `component_rows`: 후보별 role / weight / status / risk signal table
-- `handoff_summary`: Phase 32 robustness 검증이 읽을 요약
+- `handoff_summary`: 다음 robustness 검증 단계가 읽을 요약
 
 ## 첫 구현 위치 후보
 
@@ -67,7 +67,7 @@ Phase 31 validation result는 우선 화면에서 계산되는 summary로 본다
 - `app/web/backtest_portfolio_proposal.py`에서 단일 후보, 작성 중 proposal, 저장된 proposal을 같은 Validation Pack으로 렌더링한다.
 - validation route는 `READY_FOR_ROBUSTNESS_REVIEW`, `PAPER_TRACKING_REQUIRED`, `NEEDS_PORTFOLIO_RISK_REVIEW`, `BLOCKED_FOR_LIVE_READINESS`로 구분한다.
 - component table은 role, weight, family, benchmark, universe, factors, Pre-Live, Data Trust, Promotion, Deployment를 함께 보여준다.
-- Phase 32 handoff summary는 validation expander 안에서 확인할 수 있다.
+- `handoff_summary`는 `검증 기준 / 다음 단계 안내` expander 안에서 확인할 수 있다.
 
 ## 이번 작업에서 하지 않는 것
 

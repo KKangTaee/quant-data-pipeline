@@ -101,7 +101,7 @@ Phase 30까지는 아래가 가능해졌다.
    - 왜 필요한가: 좋은 후보 여러 개를 묶어도 같은 factor나 universe에 몰리면 포트폴리오 위험은 줄지 않을 수 있다.
    - 기대 효과: Phase 32에서 더 깊게 robustness를 보기 전에 기본 구조 위험을 걸러낼 수 있다.
 
-4. Phase 32 handoff field 고정 - `completed`
+4. 다음 단계 안내 field 고정 - `completed`
    - 쉽게 말하면: robustness 검증이 읽을 최소 summary와 blocker를 정한다.
    - 왜 필요한가: Phase 31 결과가 다음 phase 입력이 되어야 개발 흐름이 끊기지 않는다.
    - 기대 효과: Phase 32를 새로 설계할 때 같은 입력 계약을 다시 만들지 않아도 된다.
@@ -145,7 +145,7 @@ Phase 30까지는 아래가 가능해졌다.
 - core anchor 부재, weight concentration, active candidate hold/rejected, missing snapshot 같은 blocker를 분리한다.
 - factor / universe / benchmark overlap은 처음에는 저장된 contract에서 읽을 수 있는 값 중심의 first pass로 구현한다.
 
-### 네 번째 작업. Phase 32 handoff 요약 추가
+### 네 번째 작업. 다음 단계 안내 요약 추가
 
 - Phase 32가 robustness / stress validation에 쓸 최소 입력을 정한다.
 - validation pack이 `ready_for_robustness`, `paper_tracking_required`, `blocked` 같은 다음 행동을 명확히 말하게 한다.

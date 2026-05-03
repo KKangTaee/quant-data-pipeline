@@ -27,7 +27,7 @@
 ### 2. Validation input / result contract 구현
 
 - 단일 후보 direct path와 proposal draft path를 같은 validation input 형태로 정규화했다.
-- validation result는 route, score, hard blockers, paper tracking gaps, review gaps, next action, component rows, Phase 32 handoff summary를 반환한다.
+- validation result는 route, score, hard blockers, paper tracking gaps, review gaps, next action, component rows, 다음 단계 안내 summary를 반환한다.
 - 새 approval registry를 만들지 않고, 현재 화면에서 계산되는 read-only validation pack으로 시작했다.
 
 쉽게 말하면:
@@ -54,7 +54,7 @@
 
 - 좋은 후보 여러 개를 묶었을 때 실제로 분산이 되는지, 아니면 같은 위험을 반복해서 담는지 먼저 볼 수 있다.
 
-### 5. Phase 32 handoff
+### 5. 다음 단계 안내
 
 - validation route가 `READY_FOR_ROBUSTNESS_REVIEW`이면 Phase 32 robustness 검증 입력으로 볼 수 있게 했다.
 - `PAPER_TRACKING_REQUIRED`, `NEEDS_PORTFOLIO_RISK_REVIEW`, `BLOCKED_FOR_LIVE_READINESS`는 각각 paper tracking, 위험 재검토, hard blocker 해결이 먼저 필요하다는 뜻으로 분리했다.

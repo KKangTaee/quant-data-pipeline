@@ -141,10 +141,10 @@ def _render_portfolio_risk_validation_pack(validation: dict[str, Any], *, title:
         else:
             st.success("review gap 없음")
 
-    with st.expander("Validation 기준 / Phase 32 handoff", expanded=False):
+    with st.expander("검증 기준 / 다음 단계 안내", expanded=False):
         st.dataframe(pd.DataFrame(validation.get("checks") or []), width="stretch", hide_index=True)
         st.json(validation.get("handoff_summary") or {})
-        st.caption("이 결과는 live approval이나 주문 지시가 아니라 Phase 32 robustness 검증으로 넘길 수 있는지 보는 읽기 전용 검증 pack입니다.")
+        st.caption("이 결과는 live approval이나 주문 지시가 아니라 다음 robustness 검증 단계로 넘길 수 있는지 보는 읽기 전용 검증 pack입니다.")
 
 
 # Render saved proposal monitoring, feedback, and raw JSON as one support area below the main flow.

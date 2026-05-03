@@ -2942,3 +2942,10 @@ Detailed historical logs were archived on `2026-04-13`.
   - replaced the stale `보조 도구: Saved Proposals / Feedback` verification path with `4. 저장된 Portfolio Proposal 확인`
   - added checks that saved proposal lists appear only in the multi-candidate proposal construction flow
   - added a QA reset note for deleting `.note/finance/registries/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`
+
+### 2026-05-03
+- Renamed the Phase 31 validation expander label after the user pointed out that `Phase 32 handoff` sounded like an internal phase term.
+- Changed:
+  - UI label changed from `Validation 기준 / Phase 32 handoff` to `검증 기준 / 다음 단계 안내`
+  - caption now describes this as a read-only check for the next robustness validation step
+  - Phase 31 checklist and Backtest UI flow notes now use the same user-facing wording
