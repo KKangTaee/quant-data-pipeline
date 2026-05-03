@@ -2934,3 +2934,11 @@ Detailed historical logs were archived on `2026-04-13`.
 - Decision:
   - single candidates should proceed as direct next-stage inputs without proposal draft save/list UX
   - saved proposal lists belong to the portfolio construction flow where two or more candidates are being composed
+
+### 2026-05-03
+- Refined the Phase 31 manual QA checklist after the saved proposal UX move.
+- Changed:
+  - preserved the user's existing checked QA items
+  - replaced the stale `보조 도구: Saved Proposals / Feedback` verification path with `4. 저장된 Portfolio Proposal 확인`
+  - added checks that saved proposal lists appear only in the multi-candidate proposal construction flow
+  - added a QA reset note for deleting `.note/finance/registries/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`
