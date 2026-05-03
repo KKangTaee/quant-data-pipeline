@@ -3938,3 +3938,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Follow-up:
   - Phase32 checklist, TODO, completion summary, next phase preparation, roadmap, doc index, comprehensive analysis, work log를 closeout 상태로 동기화했다
   - Phase33 후보 방향은 `Paper Portfolio Tracking Ledger`다
+### 2026-05-03 - Phase34 Final Selection Decision 구현 완료
+- User request:
+  - Phase34 TODO의 첫 번째 작업부터 네 번째 작업까지 모두 완료하고 checklist 확인 단계까지 진행해 달라고 요청함
+- Interpreted goal:
+  - Phase33 paper ledger를 바로 주문이나 승인으로 연결하지 않고, 최종 실전 후보 선정 / 보류 / 거절 / 재검토 판단을 별도 append-only decision record로 남겨야 함
+- Analysis result:
+  - Paper Ledger는 관찰 대상 등록이고, Final Selection Decision은 그 관찰 기록을 바탕으로 한 사람의 최종 판단 기록이다
+  - Final Decision은 `.note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`에 별도로 저장하며 current candidate, Pre-Live, Portfolio Proposal, Paper Ledger registry를 덮어쓰지 않는다
+  - `SELECT_FOR_PRACTICAL_PORTFOLIO`도 live approval이나 broker order가 아니라 Phase35 운영 가이드 입력이다
+- Follow-up:
+  - Phase34는 `implementation_complete / manual_qa_pending` 상태가 됐다
+  - 사용자는 `.note/finance/phases/phase34/PHASE34_TEST_CHECKLIST.md`로 manual QA를 진행하면 된다
+  - QA 완료 후 Phase35 `Post-Selection Operating Guide`를 시작하는 것이 자연스럽다

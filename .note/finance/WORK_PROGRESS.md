@@ -3098,3 +3098,17 @@ Detailed historical logs were archived on `2026-04-13`.
 - Hygiene:
   - `check_finance_refinement_hygiene.py` was run.
   - Current candidate / Pre-Live registry validation passed; no registry row edits were needed.
+### 2026-05-03
+- Completed Phase 34 implementation work units 1 through 4 after the user asked to finish the phase through checklist handoff.
+- Changed:
+  - added `app/web/runtime/final_selection_decisions.py` and runtime exports for `.note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`
+  - added Final Selection Decision evidence, save-readiness, row-building, display, and Phase35 handoff helpers
+  - added `Final Selection Decision Pack`, `Save Final Selection Decision`, and saved final decision review under `Backtest > Portfolio Proposal`
+  - created Phase34 second / third / fourth work-unit documents and updated checklist, completion summary, next-phase preparation, roadmap, doc index, operations guides, README, code-analysis docs, and comprehensive analysis
+- Decision:
+  - Phase34 final decision records are append-only selection / hold / reject / re-review judgments.
+  - They are not live approval, broker orders, or automatic trading instructions.
+  - Phase35 should read selected final decisions as input for a post-selection operating guide.
+- Hygiene:
+  - py_compile and helper smoke were run during implementation.
+  - Existing unrelated strategy logs, `uv.lock`, archived reset files, phase12 temp CSVs, generated registries, and run history artifacts were left unstaged.

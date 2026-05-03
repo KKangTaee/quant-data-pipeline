@@ -1486,7 +1486,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 | Phase 31 | `complete` | `manual_qa_completed` | Portfolio Risk / Live Readiness Validation Pack 구현 및 QA 완료 |
 | Phase 32 | `complete` | `manual_qa_completed` | Robustness / Stress Validation Pack 구현 및 QA 완료 |
 | Phase 33 | `complete` | `manual_qa_completed` | Paper Portfolio Tracking Ledger draft / save / review / Phase34 handoff 구현 및 QA 완료 |
-| Phase 34 | `active` | `not_ready_for_qa` | Final Portfolio Selection Decision Pack 시작. final decision 계약과 저장소 경계 정의 완료 |
+| Phase 34 | `implementation_complete` | `manual_qa_pending` | Final Portfolio Selection Decision Pack 구현 완료. paper ledger 기반 최종 decision 저장 / review / Phase35 handoff 추가 |
 
 한 줄 현재 판단:
 - current annual strict candidate와 portfolio bridge를 같은 frame에서 다시 본 `Phase 21`은 manual validation까지 완료되었고,
@@ -1536,10 +1536,10 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
   `Phase 33`은 complete / manual_qa_completed 상태다.
   Phase 33은 Phase 32 handoff를 받아 실제 돈 없이 후보나 proposal을 관찰할 paper tracking ledger를 만드는 단계이며,
   `.note/finance/registries/PAPER_PORTFOLIO_TRACKING_LEDGER.jsonl` 저장소, ledger draft / save UI, 저장 ledger review surface, Phase34 handoff 준비 상태를 구현하고 사용자 QA까지 완료했다.
-  아직 paper PnL 시계열 자동 계산, final selection decision pack, live approval, 주문 지시는 구현 전이다.
-  `Phase 34`는 active / not_ready_for_qa 상태다.
-  Phase 34는 저장된 paper ledger record를 읽어 최종 실전 후보로 선정 / 보류 / 거절 / 재검토할지 판단하는 decision pack을 만드는 단계이며,
-  첫 작업으로 final decision row 계약과 live approval / 주문 지시 경계를 정의했다.
+  아직 paper PnL 시계열 자동 계산, live approval, 주문 지시는 구현 전이다.
+  `Phase 34`는 implementation_complete / manual_qa_pending 상태다.
+  Phase 34는 저장된 paper ledger record를 읽어 최종 실전 후보로 선정 / 보류 / 거절 / 재검토할지 판단하는 decision pack을 구현했으며,
+  final decision 저장 / review / Phase35 handoff와 live approval / 주문 지시 경계를 추가했다.
 
 ---
 
@@ -1678,7 +1678,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 | Phase 31 | Portfolio Risk And Live Readiness Validation | `complete` | `manual_qa_completed` | 후보 또는 proposal이 포트폴리오 구조상 실전 검토 후보로 더 갈 수 있는지 검증했고 QA까지 완료했다 |
 | Phase 32 | Robustness And Stress Validation Pack | `complete` | `manual_qa_completed` | robustness preview, stress summary contract / table, Phase33 paper ledger handoff를 구현하고 QA까지 완료했다 |
 | Phase 33 | Paper Portfolio Tracking Ledger | `complete` | `manual_qa_completed` | 시작일 / 비중 / 추적 조건을 가진 paper portfolio ledger를 저장하고 Phase34 handoff를 확인했으며 QA까지 완료했다 |
-| Phase 34 | Final Portfolio Selection Decision Pack | `active` | `not_ready_for_qa` | 검증과 paper tracking을 모아 최종 실전 후보 포트폴리오를 선정 / 보류 / 거절하는 decision pack을 시작했고 첫 계약 작업을 완료했다 |
+| Phase 34 | Final Portfolio Selection Decision Pack | `implementation_complete` | `manual_qa_pending` | 검증과 paper tracking을 모아 최종 실전 후보 포트폴리오를 선정 / 보류 / 거절 / 재검토하는 decision pack을 구현했고 사용자 QA가 남아 있다 |
 | Phase 35 | Post-Selection Operating Guide | `planned` | `not_ready_for_qa` | 선정 이후 리밸런싱, 중단, 축소, 재검토 운영 기준을 정리한다 |
 
 ### Phase 31. Portfolio Risk And Live Readiness Validation
@@ -1725,7 +1725,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 - `.note/finance/registries/PAPER_PORTFOLIO_TRACKING_LEDGER.jsonl` append-only 저장소와 `app/web/runtime/paper_portfolio_ledger.py` helper를 추가했다.
 - `Backtest > Portfolio Proposal` Validation Pack 아래에서 paper ledger draft를 확인하고 `Save Paper Tracking Ledger`로 저장할 수 있다.
 - 저장된 ledger는 `저장된 Paper Tracking Ledger 확인`에서 source, component, review trigger, Phase34 handoff route를 다시 읽으며 사용자 QA까지 완료했다.
-- 아직 paper PnL 시계열 자동 계산, Phase 34 final selection decision pack, live approval, 주문 지시는 만들지 않았다.
+- 아직 paper PnL 시계열 자동 계산, Phase 35 post-selection operating guide, live approval, 주문 지시는 만들지 않았다.
 
 ### Phase 34. Final Portfolio Selection Decision Pack
 
@@ -1737,10 +1737,11 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 - 최종 후보 판단은 백테스트 성과, validation blocker, robustness / stress evidence, paper tracking 상태, operator reason을 함께 읽어야 한다.
 
 ### 현재 메모
-- Phase 34는 active / not_ready_for_qa 상태다.
-- `.note/finance/phases/phase34/` 아래 phase plan, TODO, checklist 초안, completion / next-phase preparation 문서를 생성했다.
-- 첫 작업으로 final decision row 계약과 저장소 경계를 정의했다.
-- 예상 final decision 저장소는 `.note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`이다.
+- Phase 34는 implementation_complete / manual_qa_pending 상태다.
+- `.note/finance/phases/phase34/` 아래 phase plan, TODO, checklist, completion / next-phase preparation, 네 개 작업 단위 문서를 정리했다.
+- `.note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl` append-only 저장소와 `app/web/runtime/final_selection_decisions.py` helper를 추가했다.
+- 저장된 Paper Ledger detail 아래에서 Final Selection Decision Evidence Pack을 확인하고 `Save Final Selection Decision`으로 선정 / 보류 / 거절 / 재검토 판단을 저장할 수 있다.
+- 저장된 decision은 `저장된 Final Selection Decision 확인`에서 source paper ledger, selected components, Phase35 handoff route를 다시 읽는다.
 - `selected` decision은 최종 실전 후보 선정이지 live approval, broker order, 자동매매 지시가 아니다.
 
 ### 한 줄 흐름

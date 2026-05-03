@@ -12,6 +12,8 @@ from app.web.backtest_candidate_review_helpers import (
     _current_candidate_registry_selection_label,
 )
 from app.web.backtest_portfolio_proposal_helpers import (
+    FINAL_SELECTION_DECISION_ROUTE_DESCRIPTIONS,
+    FINAL_SELECTION_DECISION_ROUTE_OPTIONS,
     PAPER_PORTFOLIO_LEDGER_REVIEW_CADENCE_OPTIONS,
     PAPER_PORTFOLIO_LEDGER_STATUS_OPTIONS,
     PORTFOLIO_PROPOSAL_PAPER_CAGR_DETERIORATION_THRESHOLD,
@@ -33,6 +35,11 @@ from app.web.backtest_portfolio_proposal_helpers import (
     _build_portfolio_proposal_readiness_evaluation,
     _build_portfolio_proposal_row,
     _build_portfolio_proposal_rows_for_display,
+    _build_final_selection_decision_component_rows,
+    _build_final_selection_decision_evidence_pack,
+    _build_final_selection_decision_row,
+    _build_final_selection_decision_rows_for_display,
+    _build_final_selection_decision_save_evaluation,
     _build_paper_portfolio_ledger_component_rows,
     _build_paper_portfolio_ledger_row,
     _build_paper_portfolio_ledger_rows_for_display,
@@ -64,11 +71,14 @@ from app.web.backtest_ui_components import (
 )
 from app.web.runtime import (
     CURRENT_CANDIDATE_REGISTRY_FILE,
+    FINAL_SELECTION_DECISION_REGISTRY_FILE,
     PORTFOLIO_PROPOSAL_REGISTRY_FILE,
     PAPER_PORTFOLIO_LEDGER_FILE,
+    append_final_selection_decision,
     append_paper_portfolio_ledger_row,
     append_portfolio_proposal,
     load_current_candidate_registry_latest as _load_current_candidate_registry_latest,
+    load_final_selection_decisions,
     load_paper_portfolio_ledger,
     load_portfolio_proposals,
     load_pre_live_candidate_registry_latest as _load_pre_live_candidate_registry_latest,
@@ -401,7 +411,209 @@ def _render_portfolio_risk_validation_pack(
             )
 
 
-def _render_saved_paper_ledger_details(paper_ledger_rows: list[dict[str, Any]]) -> None:
+def _render_final_selection_decision_draft_controls(
+    paper_ledger_row: dict[str, Any],
+    *,
+    final_decision_rows: list[dict[str, Any]],
+    key_prefix: str,
+) -> None:
+    st.markdown("##### Final Selection Decision Pack")
+    st.caption(
+        "Phase 34 영역입니다. 저장된 paper ledger를 읽어 최종 실전 후보로 선정할지, 더 볼지, 거절할지, 재검토할지 기록합니다. "
+        "이 기록은 live approval이나 주문 지시가 아닙니다."
+    )
+    evidence = _build_final_selection_decision_evidence_pack(paper_ledger_row)
+    metrics = dict(evidence.get("metrics") or {})
+    render_readiness_route_panel(
+        route_label=str(evidence.get("route") or "-"),
+        score=float(evidence.get("score") or 0.0),
+        blockers_count=len(evidence.get("blockers") or []),
+        verdict=str(evidence.get("verdict") or "-"),
+        next_action=str(evidence.get("next_action") or "-"),
+        route_title="Decision Evidence Route",
+        score_title="Evidence Score",
+    )
+    render_badge_strip(
+        [
+            {"label": "Source Ledger", "value": paper_ledger_row.get("ledger_id") or "-", "tone": "neutral"},
+            {"label": "Paper Status", "value": metrics.get("paper_status") or "-", "tone": "positive" if metrics.get("paper_status") == "active_tracking" else "warning"},
+            {"label": "Components", "value": metrics.get("active_components", 0), "tone": "neutral"},
+            {"label": "Weight Total", "value": f"{metrics.get('target_weight_total', 0)}%", "tone": "neutral"},
+            {"label": "Suggested", "value": evidence.get("suggested_decision_route") or "-", "tone": "positive" if evidence.get("route") == "READY_FOR_FINAL_DECISION" else "warning"},
+            {"label": "Live Approval", "value": "Disabled", "tone": "neutral"},
+        ]
+    )
+
+    evidence_df = pd.DataFrame(evidence.get("checks") or [])
+    if not evidence_df.empty:
+        st.dataframe(evidence_df, width="stretch", hide_index=True)
+    if evidence.get("blockers"):
+        st.markdown("###### Evidence Blockers")
+        for blocker in list(evidence.get("blockers") or []):
+            st.error(str(blocker))
+    if evidence.get("review_items"):
+        st.markdown("###### Review Items")
+        for item in list(evidence.get("review_items") or []):
+            st.warning(str(item))
+
+    existing_decision_ids = {
+        str(row.get("decision_id") or "").strip()
+        for row in final_decision_rows
+        if str(row.get("decision_id") or "").strip()
+    }
+    if st.session_state.pop(f"{key_prefix}_reset_final_decision_id_after_save", False):
+        st.session_state.pop(f"{key_prefix}_decision_id", None)
+    source_slug = _paper_ledger_slug(paper_ledger_row.get("ledger_id") or paper_ledger_row.get("source_id"))
+    default_decision_id = f"final_{source_slug}_{date.today().strftime('%Y%m%d')}_{uuid4().hex[:6]}"
+    suggested_route = str(evidence.get("suggested_decision_route") or FINAL_SELECTION_DECISION_ROUTE_OPTIONS[0])
+    suggested_index = (
+        FINAL_SELECTION_DECISION_ROUTE_OPTIONS.index(suggested_route)
+        if suggested_route in FINAL_SELECTION_DECISION_ROUTE_OPTIONS
+        else 0
+    )
+
+    input_cols = st.columns([0.34, 0.33, 0.33], gap="small")
+    with input_cols[0]:
+        decision_id = st.text_input("Decision ID", value=default_decision_id, key=f"{key_prefix}_decision_id")
+    with input_cols[1]:
+        decision_route = st.selectbox(
+            "Decision Route",
+            options=FINAL_SELECTION_DECISION_ROUTE_OPTIONS,
+            index=suggested_index,
+            key=f"{key_prefix}_decision_route",
+            help="최종 실전 후보 선정 / 보류 / 거절 / 재검토 중 하나를 명시합니다.",
+        )
+    with input_cols[2]:
+        st.text_input(
+            "Source Paper Ledger",
+            value=str(paper_ledger_row.get("ledger_id") or "-"),
+            disabled=True,
+            key=f"{key_prefix}_source_ledger_display",
+        )
+    st.caption(FINAL_SELECTION_DECISION_ROUTE_DESCRIPTIONS.get(str(decision_route), "-"))
+    operator_reason = st.text_area(
+        "Operator Reason",
+        value="paper tracking 조건, validation snapshot, target component 구성을 기준으로 최종 실전 후보 판단을 기록한다.",
+        key=f"{key_prefix}_operator_reason",
+    )
+    operator_constraints = st.text_area(
+        "Operator Constraints",
+        value="실제 투자 전 Phase 35에서 투입 금액, 리밸런싱, stop/re-review 기준을 별도로 확정한다.",
+        key=f"{key_prefix}_operator_constraints",
+    )
+    operator_next_action = st.text_area(
+        "Operator Next Action",
+        value="선정이면 Phase 35 운영 가이드 작성으로 넘기고, 보류/재검토면 paper tracking 또는 구성 근거를 보강한다.",
+        key=f"{key_prefix}_operator_next_action",
+    )
+    save_evaluation = _build_final_selection_decision_save_evaluation(
+        paper_ledger_row=paper_ledger_row,
+        decision_id=decision_id,
+        decision_route=str(decision_route),
+        operator_reason=operator_reason,
+        existing_decision_ids=existing_decision_ids,
+    )
+    render_readiness_route_panel(
+        route_label=str(save_evaluation.get("route") or "-"),
+        score=float(save_evaluation.get("score") or 0.0),
+        blockers_count=len(save_evaluation.get("blockers") or []),
+        verdict=str(save_evaluation.get("verdict") or "-"),
+        next_action=str(save_evaluation.get("next_action") or "-"),
+        route_title="Decision Save Route",
+        score_title="Save Score",
+    )
+    if save_evaluation.get("blockers"):
+        for blocker in list(save_evaluation.get("blockers") or []):
+            st.warning(str(blocker))
+
+    decision_row = _build_final_selection_decision_row(
+        paper_ledger_row=paper_ledger_row,
+        decision_id=decision_id,
+        decision_route=str(decision_route),
+        operator_reason=operator_reason,
+        operator_constraints=operator_constraints,
+        operator_next_action=operator_next_action,
+    )
+    action_cols = st.columns(2, gap="small")
+    with action_cols[0]:
+        if st.button(
+            "Save Final Selection Decision",
+            key=f"{key_prefix}_save_final_decision",
+            disabled=not bool(save_evaluation.get("can_save")),
+            width="stretch",
+        ):
+            append_final_selection_decision(decision_row)
+            st.session_state["final_selection_decision_save_notice"] = (
+                f"Final Selection Decision `{decision_row['decision_id']}`를 저장했습니다. "
+                "이 기록은 live approval이나 주문 지시가 아닙니다."
+            )
+            st.session_state[f"{key_prefix}_reset_final_decision_id_after_save"] = True
+            st.rerun()
+    with action_cols[1]:
+        st.button(
+            "Open Post-Selection Guide",
+            key=f"{key_prefix}_open_phase35_placeholder",
+            disabled=True,
+            width="stretch",
+            help="Phase 35에서 선택된 최종 후보를 운영 가이드로 바꾸는 화면을 연결할 예정입니다.",
+        )
+    with st.expander("Final Selection Decision JSON Preview", expanded=False):
+        st.json(decision_row)
+        st.caption(f"Path: {FINAL_SELECTION_DECISION_REGISTRY_FILE}")
+
+
+def _render_saved_final_decision_details(final_decision_rows: list[dict[str, Any]]) -> None:
+    if not final_decision_rows:
+        return
+
+    with st.container(border=True):
+        st.markdown("#### 저장된 Final Selection Decision 확인")
+        st.caption("Phase 34에서 저장한 최종 선정 / 보류 / 거절 / 재검토 기록을 다시 읽고 Phase 35 handoff를 확인합니다.")
+        st.dataframe(_build_final_selection_decision_rows_for_display(final_decision_rows), width="stretch", hide_index=True)
+        labels = [
+            f"{row.get('updated_at') or row.get('created_at')} | {row.get('decision_route')} | {row.get('decision_id')}"
+            for row in final_decision_rows
+        ]
+        selected_label = st.selectbox(
+            "Review Final Selection Decision",
+            options=labels,
+            key="final_selection_decision_selected_record",
+        )
+        selected_row = final_decision_rows[labels.index(selected_label)]
+        evidence = dict(selected_row.get("decision_evidence_snapshot") or {})
+        phase35_handoff = dict(selected_row.get("phase35_handoff") or {})
+        render_readiness_route_panel(
+            route_label=str(phase35_handoff.get("handoff_route") or "-"),
+            score=float(evidence.get("score") or 0.0),
+            blockers_count=len(evidence.get("blockers") or []),
+            verdict=str(phase35_handoff.get("verdict") or "-"),
+            next_action=str(phase35_handoff.get("next_action") or "-"),
+            route_title="Phase 35 Handoff",
+            score_title="Evidence Score",
+        )
+        render_badge_strip(
+            [
+                {"label": "Decision", "value": selected_row.get("decision_route") or "-", "tone": "positive" if selected_row.get("decision_route") == "SELECT_FOR_PRACTICAL_PORTFOLIO" else "warning"},
+                {"label": "Source Ledger", "value": selected_row.get("source_paper_ledger_id") or "-", "tone": "neutral"},
+                {"label": "Evidence Route", "value": evidence.get("route") or "-", "tone": "positive" if evidence.get("route") == "READY_FOR_FINAL_DECISION" else "warning"},
+                {"label": "Live Approval", "value": "Disabled", "tone": "neutral"},
+                {"label": "Order", "value": "Disabled", "tone": "neutral"},
+            ]
+        )
+        component_df = _build_final_selection_decision_component_rows(selected_row)
+        if component_df.empty:
+            st.info("이 decision에는 selected component가 없습니다.")
+        else:
+            st.dataframe(component_df, width="stretch", hide_index=True)
+        with st.expander("Phase 35 handoff 기준 / Raw JSON", expanded=False):
+            st.dataframe(pd.DataFrame(phase35_handoff.get("requirements") or []), width="stretch", hide_index=True)
+            st.json(selected_row)
+
+
+def _render_saved_paper_ledger_details(
+    paper_ledger_rows: list[dict[str, Any]],
+    final_decision_rows: list[dict[str, Any]],
+) -> None:
     if not paper_ledger_rows:
         return
 
@@ -448,6 +660,12 @@ def _render_saved_paper_ledger_details(paper_ledger_rows: list[dict[str, Any]]) 
             for trigger in list(selected_row.get("review_triggers") or []):
                 st.info(str(trigger))
             st.json(selected_row)
+        key_source = _paper_ledger_slug(selected_row.get("ledger_id") or selected_row.get("source_id"))
+        _render_final_selection_decision_draft_controls(
+            selected_row,
+            final_decision_rows=final_decision_rows,
+            key_prefix=f"final_selection_{key_source}",
+        )
 
 
 # Render saved proposal monitoring, feedback, and raw JSON as one support area below the main flow.
@@ -683,6 +901,7 @@ def render_portfolio_proposal_workspace() -> None:
     pre_live_rows = _load_pre_live_candidate_registry_latest()
     proposal_rows = load_portfolio_proposals()
     paper_ledger_rows = load_paper_portfolio_ledger()
+    final_decision_rows = load_final_selection_decisions()
     pre_live_status_by_registry_id = _portfolio_proposal_pre_live_status_by_registry_id(pre_live_rows)
     pre_live_record_by_registry_id = _portfolio_proposal_pre_live_record_by_registry_id(pre_live_rows)
     current_by_registry_id = _portfolio_proposal_current_candidate_by_registry_id(current_rows)
@@ -697,6 +916,9 @@ def render_portfolio_proposal_workspace() -> None:
     paper_ledger_notice = st.session_state.pop("paper_portfolio_ledger_save_notice", None)
     if paper_ledger_notice:
         st.success(str(paper_ledger_notice))
+    final_decision_notice = st.session_state.pop("final_selection_decision_save_notice", None)
+    if final_decision_notice:
+        st.success(str(final_decision_notice))
 
     render_status_card_grid(
         [
@@ -704,6 +926,7 @@ def render_portfolio_proposal_workspace() -> None:
             {"title": "Pre-Live Records", "value": len(pre_live_rows), "tone": "positive" if pre_live_rows else "neutral"},
             {"title": "Saved Proposals", "value": len(proposal_rows), "tone": "positive" if proposal_rows else "neutral"},
             {"title": "Paper Ledgers", "value": len(paper_ledger_rows), "tone": "positive" if paper_ledger_rows else "neutral"},
+            {"title": "Final Decisions", "value": len(final_decision_rows), "tone": "positive" if final_decision_rows else "neutral"},
             {"title": "Live Approval", "value": "Disabled", "detail": "이 화면은 승인/주문이 아닙니다.", "tone": "neutral"},
         ]
     )
@@ -911,7 +1134,8 @@ def render_portfolio_proposal_workspace() -> None:
                 paper_ledger_rows=paper_ledger_rows,
                 source_is_persisted=True,
             )
-        _render_saved_paper_ledger_details(paper_ledger_rows)
+        _render_saved_paper_ledger_details(paper_ledger_rows, final_decision_rows)
+        _render_saved_final_decision_details(final_decision_rows)
 
     elif selected_rows:
         st.markdown("#### 2. 목적 / 역할 / 비중 설계")
@@ -1231,7 +1455,8 @@ def render_portfolio_proposal_workspace() -> None:
                     st.json(proposal_row)
 
         _render_saved_proposal_details(proposal_rows, pre_live_rows, current_rows, paper_ledger_rows)
-        _render_saved_paper_ledger_details(paper_ledger_rows)
+        _render_saved_paper_ledger_details(paper_ledger_rows, final_decision_rows)
+        _render_saved_final_decision_details(final_decision_rows)
     else:
         st.markdown("#### 2. 진행 방식 선택")
         with st.container(border=True):
@@ -1240,4 +1465,5 @@ def render_portfolio_proposal_workspace() -> None:
                 result="Candidate selection required",
             )
             st.info("`1. Proposal 후보 확인`에서 current candidate를 1개 이상 선택하세요.")
-        _render_saved_paper_ledger_details(paper_ledger_rows)
+        _render_saved_paper_ledger_details(paper_ledger_rows, final_decision_rows)
+        _render_saved_final_decision_details(final_decision_rows)

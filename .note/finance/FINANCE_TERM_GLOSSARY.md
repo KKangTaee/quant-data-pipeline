@@ -2684,7 +2684,7 @@ operator reason을 함께 읽고 사람이 명시적으로 남겨야 한다.
 ### 예시 / 필요 상황
 - Phase 33 paper ledger record가 최종 선정 검토 가능 상태일 때
 - 후보나 portfolio proposal을 실전 후보로 선정할지, 더 관찰할지, 거절할지 기록해야 할 때
-- 저장 위치 후보:
+- 저장 위치:
   - `.note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`
 
 중요한 경계:

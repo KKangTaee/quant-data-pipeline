@@ -5,7 +5,11 @@ from typing import Any
 
 import pandas as pd
 
-from app.web.runtime import PAPER_PORTFOLIO_LEDGER_SCHEMA_VERSION, PORTFOLIO_PROPOSAL_SCHEMA_VERSION
+from app.web.runtime import (
+    FINAL_SELECTION_DECISION_SCHEMA_VERSION,
+    PAPER_PORTFOLIO_LEDGER_SCHEMA_VERSION,
+    PORTFOLIO_PROPOSAL_SCHEMA_VERSION,
+)
 
 PORTFOLIO_PROPOSAL_STATUS_OPTIONS = [
     "draft",
@@ -58,6 +62,18 @@ PAPER_PORTFOLIO_LEDGER_REVIEW_CADENCE_OPTIONS = [
     "rebalance_cadence_review",
     "event_driven_review",
 ]
+FINAL_SELECTION_DECISION_ROUTE_OPTIONS = [
+    "SELECT_FOR_PRACTICAL_PORTFOLIO",
+    "HOLD_FOR_MORE_PAPER_TRACKING",
+    "REJECT_FOR_PRACTICAL_USE",
+    "RE_REVIEW_REQUIRED",
+]
+FINAL_SELECTION_DECISION_ROUTE_DESCRIPTIONS = {
+    "SELECT_FOR_PRACTICAL_PORTFOLIO": "실전 후보로 선정하고 Phase 35 운영 가이드 작성으로 넘깁니다. 승인/주문은 아닙니다.",
+    "HOLD_FOR_MORE_PAPER_TRACKING": "paper tracking 기간이나 trigger 확인이 더 필요해 보류합니다.",
+    "REJECT_FOR_PRACTICAL_USE": "현재 근거로는 실전 후보에서 제외합니다.",
+    "RE_REVIEW_REQUIRED": "구성, 비중, stress, paper tracking 조건을 재검토해야 합니다.",
+}
 
 
 # Parse a proposal component target weight into a safe float.
@@ -771,6 +787,385 @@ def _build_paper_portfolio_ledger_component_rows(row: dict[str, Any]) -> pd.Data
                 "Data Trust": component.get("data_trust_status"),
                 "CAGR": component.get("baseline_cagr"),
                 "MDD": component.get("baseline_mdd"),
+            }
+        )
+    return pd.DataFrame(display_rows)
+
+
+def _final_selection_decision_active_components(row: dict[str, Any]) -> list[dict[str, Any]]:
+    """Return active paper-ledger components that would enter a final portfolio decision."""
+    components: list[dict[str, Any]] = []
+    for component in list(row.get("target_components") or []):
+        component = dict(component or {})
+        if (_portfolio_proposal_optional_float(component.get("target_weight")) or 0.0) > 0.0:
+            components.append(component)
+    return components
+
+
+def _build_final_selection_decision_evidence_pack(row: dict[str, Any]) -> dict[str, Any]:
+    """Evaluate whether a saved paper ledger is ready for final practical selection."""
+    handoff = dict(row.get("phase34_handoff") or _build_paper_portfolio_ledger_phase34_handoff(row))
+    baseline = dict(row.get("baseline_snapshot") or {})
+    phase32_snapshot = dict(row.get("phase32_handoff_snapshot") or {})
+    active_components = _final_selection_decision_active_components(row)
+    review_triggers = [str(value) for value in list(row.get("review_triggers") or []) if str(value).strip()]
+    paper_status = str(row.get("paper_status") or "")
+    handoff_route = str(handoff.get("handoff_route") or "")
+    validation_route = str(phase32_snapshot.get("validation_route") or "")
+    robustness_route = str(phase32_snapshot.get("robustness_route") or "")
+    weight_total = _portfolio_proposal_optional_float(baseline.get("target_weight_total"))
+    if weight_total is None:
+        weight_total = sum(
+            _portfolio_proposal_optional_float(component.get("target_weight")) or 0.0 for component in active_components
+        )
+    has_weight_total = bool(active_components) and abs(float(weight_total or 0.0) - 100.0) <= 0.01
+    has_tracking_rules = bool(row.get("tracking_start_date") and row.get("tracking_benchmark") and row.get("review_cadence"))
+    has_live_block = bool(row.get("live_approval") or row.get("order_instruction"))
+    robustness_blocked = validation_route == "BLOCKED_FOR_LIVE_READINESS" or robustness_route == "BLOCKED_FOR_ROBUSTNESS"
+    paper_status_ready = paper_status == "active_tracking"
+
+    checks = [
+        {
+            "criteria": "Paper Ledger Source",
+            "ready": bool(row.get("ledger_id")),
+            "current_value": row.get("ledger_id") or "-",
+            "judgment": "저장된 paper ledger source" if row.get("ledger_id") else "paper ledger id 없음",
+            "score": 1.2,
+        },
+        {
+            "criteria": "Phase 34 Handoff",
+            "ready": handoff_route == "READY_FOR_FINAL_SELECTION_REVIEW",
+            "current_value": handoff_route or "-",
+            "judgment": "final selection review 입력 가능"
+            if handoff_route == "READY_FOR_FINAL_SELECTION_REVIEW"
+            else "paper ledger handoff 보강 필요",
+            "score": 2.0,
+        },
+        {
+            "criteria": "Paper Status",
+            "ready": paper_status_ready,
+            "current_value": paper_status or "-",
+            "judgment": "active tracking 상태" if paper_status_ready else "watch / paused / re-review / closed 상태 확인 필요",
+            "score": 1.2,
+        },
+        {
+            "criteria": "Target Components",
+            "ready": has_weight_total,
+            "current_value": f"active={len(active_components)}, weight={round(float(weight_total or 0.0), 4)}%",
+            "judgment": "최종 판단용 component와 비중 합계 100%" if has_weight_total else "component 또는 target weight 합계 확인 필요",
+            "score": 1.6,
+        },
+        {
+            "criteria": "Tracking Rules",
+            "ready": has_tracking_rules,
+            "current_value": f"start={row.get('tracking_start_date')}, benchmark={row.get('tracking_benchmark')}, cadence={row.get('review_cadence')}",
+            "judgment": "paper tracking 기준 있음" if has_tracking_rules else "tracking start / benchmark / cadence 보강 필요",
+            "score": 1.2,
+        },
+        {
+            "criteria": "Review Triggers",
+            "ready": bool(review_triggers),
+            "current_value": f"triggers={len(review_triggers)}",
+            "judgment": "재검토 trigger 있음" if review_triggers else "최종 선정 전 stop / re-review trigger 필요",
+            "score": 1.0,
+        },
+        {
+            "criteria": "Robustness Snapshot",
+            "ready": not robustness_blocked,
+            "current_value": f"validation={validation_route or '-'}, robustness={robustness_route or '-'}",
+            "judgment": "이전 validation / robustness blocker 없음" if not robustness_blocked else "Phase 31/32 blocker 선해결 필요",
+            "score": 1.4,
+        },
+        {
+            "criteria": "Execution Boundary",
+            "ready": not has_live_block,
+            "current_value": "live/order disabled" if not has_live_block else "live/order flag detected",
+            "judgment": "선정 판단만 저장함" if not has_live_block else "live approval 또는 order flag 제거 필요",
+            "score": 0.4,
+        },
+    ]
+    blocker_criteria = {
+        "Paper Ledger Source",
+        "Phase 34 Handoff",
+        "Target Components",
+        "Tracking Rules",
+        "Robustness Snapshot",
+        "Execution Boundary",
+    }
+    blockers = [str(check["criteria"]) for check in checks if not check["ready"] and check["criteria"] in blocker_criteria]
+    review_items = [str(check["criteria"]) for check in checks if not check["ready"] and check["criteria"] not in blocker_criteria]
+    score = round(sum(float(check["score"]) for check in checks if check["ready"]), 1)
+    score = min(score, 10.0)
+
+    if blockers:
+        route = "FINAL_DECISION_BLOCKED"
+        verdict = "최종 선정 판단 차단: source, 비중, tracking, robustness 경계를 먼저 확인"
+        next_action = "blocker를 해결하거나 `RE_REVIEW_REQUIRED` / `REJECT_FOR_PRACTICAL_USE`로 기록합니다."
+        suggested_decision_route = "RE_REVIEW_REQUIRED"
+    elif review_items:
+        route = "FINAL_DECISION_NEEDS_REVIEW"
+        verdict = "최종 선정 전 추가 확인 필요: paper 상태나 trigger 검토가 남아 있음"
+        next_action = "`HOLD_FOR_MORE_PAPER_TRACKING`으로 보류하거나 trigger를 보강한 뒤 다시 봅니다."
+        suggested_decision_route = "HOLD_FOR_MORE_PAPER_TRACKING"
+    else:
+        route = "READY_FOR_FINAL_DECISION"
+        verdict = "최종 실전 후보 선정 판단 가능: paper ledger와 validation 근거가 연결됨"
+        next_action = "선정 사유와 제약 조건을 남기고 Final Selection Decision을 저장합니다."
+        suggested_decision_route = "SELECT_FOR_PRACTICAL_PORTFOLIO"
+
+    return {
+        "route": route,
+        "score": score,
+        "verdict": verdict,
+        "next_action": next_action,
+        "checks": checks,
+        "blockers": blockers,
+        "review_items": review_items,
+        "suggested_decision_route": suggested_decision_route,
+        "metrics": {
+            "active_components": len(active_components),
+            "target_weight_total": round(float(weight_total or 0.0), 4),
+            "review_triggers": len(review_triggers),
+            "paper_status": paper_status,
+            "phase34_handoff_route": handoff_route,
+            "phase34_handoff_score": handoff.get("handoff_score"),
+            "validation_route": validation_route,
+            "robustness_route": robustness_route,
+            "tracking_start_date": row.get("tracking_start_date"),
+            "tracking_benchmark": row.get("tracking_benchmark"),
+            "review_cadence": row.get("review_cadence"),
+        },
+    }
+
+
+def _build_final_selection_decision_save_evaluation(
+    *,
+    paper_ledger_row: dict[str, Any],
+    decision_id: str,
+    decision_route: str,
+    operator_reason: str,
+    existing_decision_ids: set[str] | None = None,
+) -> dict[str, Any]:
+    """Evaluate whether one final selection decision can be appended safely."""
+    existing_decision_ids = existing_decision_ids or set()
+    evidence = _build_final_selection_decision_evidence_pack(paper_ledger_row)
+    decision_id_clean = str(decision_id or "").strip()
+    decision_route_clean = str(decision_route or "").strip()
+    identity_ready = bool(decision_id_clean) and decision_id_clean not in existing_decision_ids
+    source_ready = bool(str(paper_ledger_row.get("ledger_id") or "").strip())
+    route_ready = decision_route_clean in FINAL_SELECTION_DECISION_ROUTE_OPTIONS
+    reason_ready = bool(str(operator_reason or "").strip())
+    select_readiness_ready = decision_route_clean != "SELECT_FOR_PRACTICAL_PORTFOLIO" or evidence.get("route") == "READY_FOR_FINAL_DECISION"
+    checks = [
+        {
+            "criteria": "Decision Identity",
+            "ready": identity_ready,
+            "current_value": decision_id_clean or "-",
+            "judgment": "decision id 사용 가능" if identity_ready else "decision id 중복 또는 누락",
+            "score": 1.2,
+        },
+        {
+            "criteria": "Source Paper Ledger",
+            "ready": source_ready,
+            "current_value": paper_ledger_row.get("ledger_id") or "-",
+            "judgment": "paper ledger source 연결됨" if source_ready else "paper ledger source 없음",
+            "score": 1.4,
+        },
+        {
+            "criteria": "Decision Route",
+            "ready": route_ready,
+            "current_value": decision_route_clean or "-",
+            "judgment": "허용된 최종 판단 route" if route_ready else "허용되지 않은 route",
+            "score": 1.0,
+        },
+        {
+            "criteria": "Operator Reason",
+            "ready": reason_ready,
+            "current_value": "attached" if reason_ready else "-",
+            "judgment": "사용자 판단 사유 있음" if reason_ready else "선정 / 보류 / 거절 / 재검토 사유 필요",
+            "score": 1.2,
+        },
+        {
+            "criteria": "Select Readiness",
+            "ready": select_readiness_ready,
+            "current_value": str(evidence.get("route") or "-"),
+            "judgment": "선정 route에 필요한 근거 충족"
+            if select_readiness_ready
+            else "SELECT 저장 전 evidence blocker / review item 해결 필요",
+            "score": 1.4,
+        },
+        {
+            "criteria": "Live Approval Boundary",
+            "ready": True,
+            "current_value": "disabled",
+            "judgment": "final decision은 승인이나 주문이 아님",
+            "score": 0.4,
+        },
+    ]
+    blockers = [str(check["criteria"]) for check in checks if not check["ready"]]
+    score = round(sum(float(check["score"]) for check in checks if check["ready"]), 1)
+    if not blockers:
+        route = "FINAL_DECISION_SAVE_READY"
+        verdict = "Final Selection Decision 저장 가능"
+        next_action = "Save Final Selection Decision을 눌러 append-only decision registry에 기록합니다."
+    elif source_ready and route_ready and reason_ready and decision_route_clean != "SELECT_FOR_PRACTICAL_PORTFOLIO":
+        route = "FINAL_DECISION_DRAFT_NEEDS_INPUT"
+        verdict = "최종 선정은 아니지만 보류/거절/재검토 기록은 보강 후 저장 가능"
+        next_action = "decision id 중복과 필수 사유를 확인한 뒤 저장합니다."
+    else:
+        route = "FINAL_DECISION_BLOCKED"
+        verdict = "Final Selection Decision 저장 차단"
+        next_action = "decision id, source ledger, route, operator reason, SELECT readiness를 확인합니다."
+    return {
+        "route": route,
+        "score": min(score, 10.0),
+        "verdict": verdict,
+        "next_action": next_action,
+        "checks": checks,
+        "blockers": blockers,
+        "can_save": not blockers,
+        "evidence_pack": evidence,
+    }
+
+
+def _build_final_selection_decision_phase35_handoff(row: dict[str, Any]) -> dict[str, Any]:
+    """Summarize how a saved final decision should be read by Phase 35."""
+    decision_route = str(row.get("decision_route") or "")
+    evidence = dict(row.get("decision_evidence_snapshot") or {})
+    if decision_route == "SELECT_FOR_PRACTICAL_PORTFOLIO":
+        handoff_route = "READY_FOR_POST_SELECTION_OPERATING_GUIDE"
+        verdict = "Phase 35 운영 가이드 작성 가능: 최종 후보 선정 기록이 있음"
+        next_action = "투입 금액, 리밸런싱, 모니터링, stop/re-review 기준을 운영 가이드로 정리합니다."
+    elif decision_route == "HOLD_FOR_MORE_PAPER_TRACKING":
+        handoff_route = "WAIT_FOR_MORE_PAPER_TRACKING"
+        verdict = "Phase 35 보류: paper tracking 근거를 더 쌓아야 함"
+        next_action = "추가 관찰 기간 또는 trigger 충족 후 final decision을 다시 남깁니다."
+    elif decision_route == "REJECT_FOR_PRACTICAL_USE":
+        handoff_route = "NO_PHASE35_HANDOFF"
+        verdict = "Phase 35 대상 아님: 실전 후보에서 제외됨"
+        next_action = "필요하면 후보군/전략 탐색 단계로 되돌아갑니다."
+    else:
+        handoff_route = "RE_REVIEW_BEFORE_OPERATING_GUIDE"
+        verdict = "Phase 35 전 재검토 필요: 구성 / 비중 / 근거를 다시 확인"
+        next_action = "paper ledger 또는 proposal 구성 근거를 보강한 뒤 final decision을 다시 저장합니다."
+    return {
+        "handoff_route": handoff_route,
+        "verdict": verdict,
+        "next_action": next_action,
+        "requirements": [
+            {
+                "Requirement": "Final decision route",
+                "Status": "READY" if decision_route == "SELECT_FOR_PRACTICAL_PORTFOLIO" else "NOT_READY",
+                "Current": decision_route or "-",
+                "Why It Matters": "Phase 35는 선정된 후보만 운영 가이드로 바꾼다.",
+            },
+            {
+                "Requirement": "Evidence pack",
+                "Status": "READY" if evidence.get("route") == "READY_FOR_FINAL_DECISION" else "REVIEW",
+                "Current": evidence.get("route") or "-",
+                "Why It Matters": "실전 후보 선정 근거가 paper ledger와 validation snapshot에 연결되어야 한다.",
+            },
+            {
+                "Requirement": "Execution boundary",
+                "Status": "READY",
+                "Current": "live approval disabled / order instruction disabled",
+                "Why It Matters": "선정 기록은 주문 실행이 아니라 다음 운영 가이드 입력이다.",
+            },
+        ],
+    }
+
+
+def _build_final_selection_decision_row(
+    *,
+    paper_ledger_row: dict[str, Any],
+    decision_id: str,
+    decision_route: str,
+    operator_reason: str,
+    operator_constraints: str,
+    operator_next_action: str,
+) -> dict[str, Any]:
+    """Convert a paper ledger row and user judgment into one final decision record."""
+    now = datetime.now().isoformat(timespec="seconds")
+    evidence_pack = _build_final_selection_decision_evidence_pack(paper_ledger_row)
+    active_components = _final_selection_decision_active_components(paper_ledger_row)
+    row = {
+        "schema_version": FINAL_SELECTION_DECISION_SCHEMA_VERSION,
+        "decision_id": str(decision_id or "").strip(),
+        "created_at": now,
+        "updated_at": now,
+        "decision_status": "recorded",
+        "decision_route": str(decision_route or "").strip(),
+        "selected_practical_portfolio": decision_route == "SELECT_FOR_PRACTICAL_PORTFOLIO",
+        "source_paper_ledger_id": paper_ledger_row.get("ledger_id"),
+        "source_type": paper_ledger_row.get("source_type"),
+        "source_id": paper_ledger_row.get("source_id"),
+        "source_title": paper_ledger_row.get("source_title") or paper_ledger_row.get("source_id"),
+        "selected_components": active_components,
+        "decision_evidence_snapshot": evidence_pack,
+        "risk_and_validation_snapshot": paper_ledger_row.get("phase32_handoff_snapshot") or {},
+        "paper_tracking_snapshot": {
+            "paper_status": paper_ledger_row.get("paper_status"),
+            "tracking_start_date": paper_ledger_row.get("tracking_start_date"),
+            "tracking_benchmark": paper_ledger_row.get("tracking_benchmark"),
+            "review_cadence": paper_ledger_row.get("review_cadence"),
+            "baseline_snapshot": paper_ledger_row.get("baseline_snapshot") or {},
+            "review_triggers": list(paper_ledger_row.get("review_triggers") or []),
+            "operator_note": paper_ledger_row.get("operator_note"),
+        },
+        "operator_decision": {
+            "reason": str(operator_reason or "").strip(),
+            "constraints": str(operator_constraints or "").strip(),
+            "next_action": str(operator_next_action or "").strip(),
+        },
+        "live_approval": False,
+        "order_instruction": False,
+        "notes": "Created from Backtest > Portfolio Proposal. This is a final selection decision record, not live approval or an order instruction.",
+    }
+    row["phase35_handoff"] = _build_final_selection_decision_phase35_handoff(row)
+    return row
+
+
+def _build_final_selection_decision_rows_for_display(rows: list[dict[str, Any]]) -> pd.DataFrame:
+    """Flatten final decision records into a compact review table."""
+    display_rows: list[dict[str, Any]] = []
+    for row in rows:
+        evidence = dict(row.get("decision_evidence_snapshot") or {})
+        handoff = dict(row.get("phase35_handoff") or {})
+        display_rows.append(
+            {
+                "Updated At": row.get("updated_at") or row.get("created_at"),
+                "Decision ID": row.get("decision_id"),
+                "Decision Route": row.get("decision_route"),
+                "Source Ledger": row.get("source_paper_ledger_id"),
+                "Source": f"{row.get('source_type')} / {row.get('source_id')}",
+                "Components": len(row.get("selected_components") or []),
+                "Evidence Route": evidence.get("route"),
+                "Evidence Score": evidence.get("score"),
+                "Phase35 Handoff": handoff.get("handoff_route"),
+                "Live Approval": "Disabled",
+            }
+        )
+    return pd.DataFrame(display_rows)
+
+
+def _build_final_selection_decision_component_rows(row: dict[str, Any]) -> pd.DataFrame:
+    """Flatten final decision selected components for operator review."""
+    display_rows: list[dict[str, Any]] = []
+    for component in list(row.get("selected_components") or []):
+        component = dict(component or {})
+        display_rows.append(
+            {
+                "Registry ID": component.get("registry_id"),
+                "Title": component.get("title"),
+                "Role": component.get("proposal_role"),
+                "Weight": component.get("target_weight"),
+                "Family": component.get("strategy_family"),
+                "Benchmark": component.get("benchmark"),
+                "Data Trust": component.get("data_trust_status"),
+                "Promotion": component.get("promotion"),
+                "Deployment": component.get("deployment"),
+                "Baseline CAGR": component.get("baseline_cagr"),
+                "Baseline MDD": component.get("baseline_mdd"),
             }
         )
     return pd.DataFrame(display_rows)

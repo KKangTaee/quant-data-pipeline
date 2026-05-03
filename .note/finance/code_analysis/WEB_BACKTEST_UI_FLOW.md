@@ -26,16 +26,18 @@ UI form, payload 복원, candidate review, history replay, candidate replay, sav
 | `app/web/backtest_ui_components.py` | Backtest UI 공용 status card, artifact pipeline, compact badge strip, stage brief strip, route/readiness panel render helper |
 | `app/web/backtest_candidate_review.py` | Candidate Review / Candidate Packaging / Pre-Live 운영 기록 화면 render logic |
 | `app/web/backtest_candidate_review_helpers.py` | Candidate Review 판단, Review Note / registry 변환, Pre-Live status 추천 / draft 변환 / Portfolio Proposal 진입 readiness score helper |
-| `app/web/backtest_portfolio_proposal.py` | 단일 후보 Live Readiness 직행 평가, 다중 후보 Portfolio Proposal 후보 선택 / 목적 / 역할 / 비중 설계, Phase 31 Portfolio Risk / Validation Pack, Phase 32 Robustness / Stress Summary / Phase33 Handoff, Phase 33 Paper Tracking Ledger draft / save / review, 저장된 proposal feedback section render logic |
-| `app/web/backtest_portfolio_proposal_helpers.py` | Portfolio Proposal row 생성, 단일 후보 direct readiness / proposal save readiness 평가, Phase 31 validation input / result / overlap first pass, Phase 32 robustness input / stress summary contract / Phase33 handoff, Phase 33 paper ledger row / save readiness / Phase34 handoff, monitoring / Pre-Live / paper feedback table helper |
+| `app/web/backtest_portfolio_proposal.py` | 단일 후보 Live Readiness 직행 평가, 다중 후보 Portfolio Proposal 후보 선택 / 목적 / 역할 / 비중 설계, Phase 31 Portfolio Risk / Validation Pack, Phase 32 Robustness / Stress Summary / Phase33 Handoff, Phase 33 Paper Tracking Ledger draft / save / review, Phase 34 Final Selection Decision draft / save / review, 저장된 proposal feedback section render logic |
+| `app/web/backtest_portfolio_proposal_helpers.py` | Portfolio Proposal row 생성, 단일 후보 direct readiness / proposal save readiness 평가, Phase 31 validation input / result / overlap first pass, Phase 32 robustness input / stress summary contract / Phase33 handoff, Phase 33 paper ledger row / save readiness / Phase34 handoff, Phase 34 final decision evidence / save readiness / Phase35 handoff, monitoring / Pre-Live / paper feedback table helper |
 | `app/web/runtime/backtest.py` | UI payload를 실행 가능한 runtime call로 변환 |
 | `app/web/runtime/candidate_registry.py` | current candidate / review note / pre-live registry JSONL read / append helper |
 | `app/web/runtime/portfolio_proposal.py` | portfolio proposal draft JSONL read / append helper |
 | `app/web/runtime/paper_portfolio_ledger.py` | paper portfolio tracking ledger JSONL read / append helper |
+| `app/web/runtime/final_selection_decisions.py` | final portfolio selection decision JSONL read / append helper |
 | `.note/finance/run_history/BACKTEST_RUN_HISTORY.jsonl` | local run history. 보통 commit하지 않음 |
 | `.note/finance/saved/SAVED_PORTFOLIOS.jsonl` | saved portfolio persistence |
 | `.note/finance/registries/PORTFOLIO_PROPOSAL_REGISTRY.jsonl` | proposal draft persistence. 첫 proposal 저장 시 생성 |
 | `.note/finance/registries/PAPER_PORTFOLIO_TRACKING_LEDGER.jsonl` | paper tracking ledger persistence. 첫 paper ledger 저장 시 생성 |
+| `.note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl` | final selection decision persistence. 첫 final decision 저장 시 생성 |
 
 ## 화면 흐름
 
@@ -46,7 +48,7 @@ Backtest 주 흐름:
 - `Single Strategy`: 하나의 전략을 실행하고 latest result를 확인한다.
 - `Compare & Portfolio Builder`: 여러 전략을 같은 기간으로 비교하고 weighted portfolio를 만든다.
 - `Candidate Review`: Candidate Packaging 단일 흐름에서 Draft 확인, Review Note 저장, registry 저장, Pre-Live 운영 기록 저장, Portfolio Proposal 이동 판단을 순서대로 처리한다.
-- `Portfolio Proposal`: Candidate Review를 통과한 단일 후보는 추가 proposal 저장 없이 Live Readiness 직행 가능 여부를 확인한다. 여러 후보를 묶을 때만 목적 / 역할 / 비중이 있는 포트폴리오 초안을 저장하고, 같은 다중 후보 작성 흐름 안에서 저장된 proposal monitoring / pre-live feedback / paper tracking feedback을 확인한다.
+- `Portfolio Proposal`: Candidate Review를 통과한 단일 후보는 추가 proposal 저장 없이 Live Readiness 직행 가능 여부를 확인한다. 여러 후보를 묶을 때만 목적 / 역할 / 비중이 있는 포트폴리오 초안을 저장하고, 같은 화면에서 저장된 proposal monitoring / pre-live feedback / paper tracking feedback, Paper Ledger, Final Selection Decision을 확인한다.
 
 Operations 보조 화면:
 
@@ -68,6 +70,7 @@ Ingestion / Data Trust
   -> Compare 재검토 또는 Portfolio Proposal
   -> Portfolio Proposal
      -> 후보 선택 / 목적 / 역할 / 비중 설계 / Live Readiness 진입 평가 / Proposal 저장
+     -> Paper Tracking Ledger 저장 / Final Selection Decision 저장
      -> Portfolio Risk / Live Readiness Validation Pack
      -> Robustness / Stress Validation Preview
      -> Stress / Sensitivity Summary
@@ -548,6 +551,9 @@ CURRENT_CANDIDATE_REGISTRY.jsonl
      -> PORTFOLIO_PROPOSAL_REGISTRY.jsonl append
      -> 4. 저장된 Portfolio Proposal 확인에서 validation / monitoring / Pre-Live / paper feedback / raw JSON inspect
      -> 저장된 Paper Tracking Ledger 확인에서 Phase34 handoff inspect
+     -> Final Selection Decision Pack 확인 / Save Final Selection Decision
+     -> FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl append
+     -> 저장된 Final Selection Decision 확인에서 Phase35 handoff inspect
 ```
 
 구분:
@@ -581,6 +587,11 @@ CURRENT_CANDIDATE_REGISTRY.jsonl
 - 작성 중 proposal은 preview를 볼 수 있지만 durable source가 아직 없으므로 proposal draft를 먼저 저장해야 paper ledger save가 열린다.
 - `Save Paper Tracking Ledger`는 `.note/finance/registries/PAPER_PORTFOLIO_TRACKING_LEDGER.jsonl`에 append-only row를 저장한다. 이 row에는 source id, target components, tracking start date, benchmark, review cadence, review triggers, Phase32 handoff snapshot, baseline snapshot, Phase34 handoff가 남는다.
 - 저장된 ledger는 `저장된 Paper Tracking Ledger 확인`에서 다시 읽으며, `READY_FOR_FINAL_SELECTION_REVIEW`, `NEEDS_PAPER_TRACKING_REVIEW`, `BLOCKED_FOR_FINAL_SELECTION_REVIEW`로 Phase34 준비 상태를 보여준다.
+- Phase 34 이후 저장된 Paper Ledger detail 아래에는 `Final Selection Decision Pack`이 표시된다.
+- Final Decision evidence route는 `READY_FOR_FINAL_DECISION`, `FINAL_DECISION_NEEDS_REVIEW`, `FINAL_DECISION_BLOCKED`로 구분한다.
+- `Save Final Selection Decision`은 `.note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`에 `SELECT_FOR_PRACTICAL_PORTFOLIO`, `HOLD_FOR_MORE_PAPER_TRACKING`, `REJECT_FOR_PRACTICAL_USE`, `RE_REVIEW_REQUIRED` 중 하나를 append-only로 저장한다.
+- 저장된 final decision은 `저장된 Final Selection Decision 확인`에서 다시 읽으며, Phase35 handoff를 보여준다.
+- Final Decision은 Phase 35 운영 가이드 입력이지 live approval, broker order, 자동매매 지시가 아니다.
 
 ## Streamlit form 주의
 

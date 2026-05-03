@@ -51,6 +51,7 @@ Paper Portfolio Tracking Ledger는
 3. `Paper Tracking Ledger Draft`에서 시작일, benchmark, review cadence, trigger, operator note를 확인한다.
 4. 저장 조건이 통과하면 `Save Paper Tracking Ledger`를 누른다.
 5. 저장 후 `저장된 Paper Tracking Ledger 확인`에서 row와 Phase34 handoff를 다시 읽는다.
+6. Phase34 handoff가 준비되면 같은 detail 아래 `Final Selection Decision Pack`에서 선정 / 보류 / 거절 / 재검토 판단을 남긴다.
 
 ## 중요한 경계
 
@@ -60,6 +61,7 @@ Paper Portfolio Tracking Ledger는
 - 이 ledger는 live approval이 아니다.
 - 이 ledger는 주문 지시가 아니다.
 - Phase34 handoff가 `READY_FOR_FINAL_SELECTION_REVIEW`여도 최종 선정 자체는 Phase34에서 별도로 판단한다.
+- 최종 선정 판단은 `.note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`에 별도 append-only row로 저장한다.
 
 ## 현재 한계
 

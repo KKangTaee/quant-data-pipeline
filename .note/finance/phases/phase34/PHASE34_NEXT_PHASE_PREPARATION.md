@@ -4,13 +4,13 @@
 
 이 문서는 Phase 34 이후 Phase 35 `Post-Selection Operating Guide`로 넘어갈 때 필요한 질문을 미리 정리하는 초안이다.
 
-현재 Phase 34는 방금 시작된 상태이므로,
-이 문서는 최종 handoff가 아니라 방향을 잃지 않기 위한 준비 문서다.
+현재 Phase 34 구현은 완료됐고 manual QA 대기 상태다.
+이 문서는 Phase34 QA 통과 후 Phase35로 넘어갈 때의 handoff 기준을 정리한다.
 
 ## 현재 handoff 상태
 
 - Phase 33은 paper tracking ledger 저장 / review / Phase34 handoff를 완료했다.
-- Phase 34는 final selection decision pack을 만들어 Phase 35가 읽을 최종 후보 판단 기록을 만들 예정이다.
+- Phase 34는 final selection decision pack을 구현해 Phase 35가 읽을 최종 후보 판단 기록을 만들 수 있게 했다.
 - 아직 Phase 35 post-selection operating guide는 만들지 않았다.
 
 ## 다음 phase에서 더 중요한 질문
@@ -44,4 +44,6 @@ Phase 34가 끝나면 Phase 35 `Post-Selection Operating Guide`로 넘어가는 
 ## handoff 메모
 
 - Phase 35는 Phase 34 final decision record의 selected route, operator constraints, selected components, Phase35 handoff를 최소 입력으로 읽어야 한다.
+- Phase35의 기본 입력 source는 `.note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`에서 `decision_route = SELECT_FOR_PRACTICAL_PORTFOLIO`이고 `phase35_handoff.handoff_route = READY_FOR_POST_SELECTION_OPERATING_GUIDE`인 row다.
+- 보류 / 거절 / 재검토 row는 Phase35 운영 가이드 대상이 아니라 review backlog 또는 제외 기록으로 읽는다.
 - Phase 35에서도 broker order, 자동 매매, live approval은 별도 범위로 유지한다.

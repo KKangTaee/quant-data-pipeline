@@ -41,7 +41,7 @@ Phase 34는 "이제 이 포트폴리오를 실전 후보로 골라도 되는가?
 - Phase 32 robustness / stress snapshot
 - Phase 33 paper ledger row와 `phase34_handoff`
 - 새 final selection decision 저장소
-  - 예상 위치: `.note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`
+  - 위치: `.note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`
 
 ## 현재 구현 우선순위
 
@@ -105,9 +105,9 @@ Phase 34는 "이제 이 포트폴리오를 실전 후보로 골라도 되는가?
 
 ## 다음에 확인할 것
 
-- final decision 저장소 이름과 row schema가 기존 registry들과 섞이지 않는지 확인한다.
-- `선정`이라는 단어가 live approval / 주문 지시로 오해되지 않는지 확인한다.
-- 단일 후보와 proposal 모두 final decision input으로 자연스럽게 읽히는지 확인한다.
+- final decision 저장소 이름과 row schema가 기존 registry들과 섞이지 않는지 QA에서 확인한다.
+- `선정`이라는 단어가 live approval / 주문 지시로 오해되지 않는지 QA에서 확인한다.
+- 단일 후보와 proposal 모두 final decision input으로 자연스럽게 읽히는지 QA에서 확인한다.
 
 ## 한 줄 정리
 

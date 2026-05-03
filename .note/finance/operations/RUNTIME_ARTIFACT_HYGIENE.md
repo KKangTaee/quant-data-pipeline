@@ -37,6 +37,9 @@ git 상태를 지저분하게 만들기 쉽다.
 - current candidate registry (`registries/CURRENT_CANDIDATE_REGISTRY.jsonl`)
 - candidate review notes (`registries/CANDIDATE_REVIEW_NOTES.jsonl`)
 - pre-live candidate registry (`registries/PRE_LIVE_CANDIDATE_REGISTRY.jsonl`)
+- portfolio proposal registry (`registries/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`)
+- paper portfolio tracking ledger (`registries/PAPER_PORTFOLIO_TRACKING_LEDGER.jsonl`)
+- final portfolio selection decisions (`registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`)
 
 ### runtime artifact
 
@@ -64,6 +67,8 @@ git 상태를 지저분하게 만들기 쉽다.
 - `.note/finance/registries/CANDIDATE_REVIEW_NOTES.jsonl`
 - `.note/finance/registries/PRE_LIVE_CANDIDATE_REGISTRY.jsonl`
 - `.note/finance/registries/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`
+- `.note/finance/registries/PAPER_PORTFOLIO_TRACKING_LEDGER.jsonl`
+- `.note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`
 
 ## 지금 프로젝트에서 특히 조심할 것
 
