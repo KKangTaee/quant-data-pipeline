@@ -3807,3 +3807,17 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 저장 성공 메시지를 session state에 담아 rerun 이후에도 표시되게 했다
   - 저장 후 다음 proposal id는 새 기본값으로 바뀌게 했다
   - 이미 존재하는 Proposal ID는 저장 blocker로 막고, ID 변경 안내를 표시한다
+
+### 2026-05-03 - Phase31 저장된 Proposal UX 위치 재정리
+- User request:
+  - `보조도구: Saved Proposals / Feedback`에 저장한 draft가 보이지만, 단일 후보 direct path 아래에도 표시되어 UX가 어색하다고 지적함
+  - 단일 후보는 저장 없이 다음 단계로 진행하고, 포트폴리오 후보군 작성 흐름에서만 저장 버튼과 저장된 proposal 목록이 자연스럽게 보이도록 개편 요청
+- Interpreted goal:
+  - 단일 후보 direct path와 다중 후보 proposal construction path를 UI에서 더 분명히 분리해야 함
+- Analysis result:
+  - 단일 후보에는 이미 `4. Portfolio Risk / Validation Pack`이 있으므로 저장된 proposal feedback을 아래에 붙이면 저장하지 않는 direct path의 의미가 흐려진다
+  - 저장된 proposal 목록은 `Save Portfolio Proposal Draft`와 같은 다중 후보 작성 흐름 안에서 보여야 한다
+- Follow-up:
+  - saved proposal validation / monitoring / feedback section을 단일 후보 path에서 제거했다
+  - 다중 후보 proposal draft path 안에 `4. 저장된 Portfolio Proposal 확인` section으로 이동했다
+  - save success copy도 새 section을 가리키게 바꿨다

@@ -153,7 +153,9 @@ def _render_saved_proposal_details(
     pre_live_rows: list[dict[str, Any]],
     current_rows: list[dict[str, Any]],
 ) -> None:
-    with st.expander("보조 도구: Saved Proposals / Feedback", expanded=False):
+    with st.container(border=True):
+        st.markdown("#### 4. 저장된 Portfolio Proposal 확인")
+        st.caption("저장한 포트폴리오 초안은 여기서 Validation / Monitoring / Feedback 순서로 다시 확인합니다.")
         if not proposal_rows:
             st.info("아직 저장된 Portfolio Proposal이 없습니다.")
             st.caption(f"Path: {PORTFOLIO_PROPOSAL_REGISTRY_FILE}")
@@ -880,7 +882,7 @@ def render_portfolio_proposal_workspace() -> None:
                     append_portfolio_proposal(proposal_row)
                     st.session_state["portfolio_proposal_save_notice"] = (
                         f"Portfolio Proposal `{proposal_row['proposal_id']}`를 저장했습니다. "
-                        "live approval은 아닙니다. 저장된 proposal은 아래 `보조 도구: Saved Proposals / Feedback`에서 확인할 수 있습니다."
+                        "live approval은 아닙니다. 저장된 proposal은 아래 `4. 저장된 Portfolio Proposal 확인`에서 확인할 수 있습니다."
                     )
                     st.session_state["portfolio_proposal_reset_id_after_save"] = True
                     st.rerun()
@@ -902,6 +904,8 @@ def render_portfolio_proposal_workspace() -> None:
                         st.warning("저장 blocker: " + ", ".join(open_blockers))
                 with json_tab:
                     st.json(proposal_row)
+
+        _render_saved_proposal_details(proposal_rows, pre_live_rows, current_rows)
     else:
         st.markdown("#### 2. 진행 방식 선택")
         with st.container(border=True):
@@ -910,6 +914,3 @@ def render_portfolio_proposal_workspace() -> None:
                 result="Candidate selection required",
             )
             st.info("`1. Proposal 후보 확인`에서 current candidate를 1개 이상 선택하세요.")
-
-    st.divider()
-    _render_saved_proposal_details(proposal_rows, pre_live_rows, current_rows)

@@ -26,7 +26,7 @@ UI form, payload 복원, candidate review, history replay, candidate replay, sav
 | `app/web/backtest_ui_components.py` | Backtest UI 공용 status card, artifact pipeline, compact badge strip, stage brief strip, route/readiness panel render helper |
 | `app/web/backtest_candidate_review.py` | Candidate Review / Candidate Packaging / Pre-Live 운영 기록 화면 render logic |
 | `app/web/backtest_candidate_review_helpers.py` | Candidate Review 판단, Review Note / registry 변환, Pre-Live status 추천 / draft 변환 / Portfolio Proposal 진입 readiness score helper |
-| `app/web/backtest_portfolio_proposal.py` | 단일 후보 Live Readiness 직행 평가, 다중 후보 Portfolio Proposal 후보 선택 / 목적 / 역할 / 비중 설계, Phase 31 Portfolio Risk / Validation Pack, saved proposal feedback 보조 영역 render logic |
+| `app/web/backtest_portfolio_proposal.py` | 단일 후보 Live Readiness 직행 평가, 다중 후보 Portfolio Proposal 후보 선택 / 목적 / 역할 / 비중 설계, Phase 31 Portfolio Risk / Validation Pack, 저장된 proposal feedback section render logic |
 | `app/web/backtest_portfolio_proposal_helpers.py` | Portfolio Proposal row 생성, 단일 후보 direct readiness / proposal save readiness 평가, Phase 31 validation input / result / overlap first pass, monitoring / Pre-Live / paper feedback table helper |
 | `app/web/runtime/backtest.py` | UI payload를 실행 가능한 runtime call로 변환 |
 | `app/web/runtime/candidate_registry.py` | current candidate / review note / pre-live registry JSONL read / append helper |
@@ -44,7 +44,7 @@ Backtest 주 흐름:
 - `Single Strategy`: 하나의 전략을 실행하고 latest result를 확인한다.
 - `Compare & Portfolio Builder`: 여러 전략을 같은 기간으로 비교하고 weighted portfolio를 만든다.
 - `Candidate Review`: Candidate Packaging 단일 흐름에서 Draft 확인, Review Note 저장, registry 저장, Pre-Live 운영 기록 저장, Portfolio Proposal 이동 판단을 순서대로 처리한다.
-- `Portfolio Proposal`: Candidate Review를 통과한 단일 후보는 추가 proposal 저장 없이 Live Readiness 직행 가능 여부를 확인하고, 여러 후보를 묶을 때만 목적 / 역할 / 비중이 있는 포트폴리오 초안으로 저장한다. Phase 31 이후 단일 후보, 작성 중 proposal, 저장된 proposal은 Portfolio Risk / Live Readiness Validation Pack으로 읽고, saved proposal monitoring / pre-live feedback / paper tracking feedback은 보조 상세 영역에서 읽는다.
+- `Portfolio Proposal`: Candidate Review를 통과한 단일 후보는 추가 proposal 저장 없이 Live Readiness 직행 가능 여부를 확인한다. 여러 후보를 묶을 때만 목적 / 역할 / 비중이 있는 포트폴리오 초안을 저장하고, 같은 다중 후보 작성 흐름 안에서 저장된 proposal monitoring / pre-live feedback / paper tracking feedback을 확인한다.
 
 Operations 보조 화면:
 
@@ -535,7 +535,7 @@ CURRENT_CANDIDATE_REGISTRY.jsonl
      -> Portfolio Proposal JSON Preview 확인
      -> Save Portfolio Proposal Draft
      -> PORTFOLIO_PROPOSAL_REGISTRY.jsonl append
-  -> 보조 도구: Saved Proposals / Feedback에서 validation / monitoring / Pre-Live / paper feedback / raw JSON inspect
+     -> 4. 저장된 Portfolio Proposal 확인에서 validation / monitoring / Pre-Live / paper feedback / raw JSON inspect
 ```
 
 구분:
@@ -551,8 +551,8 @@ CURRENT_CANDIDATE_REGISTRY.jsonl
 - proposal 저장은 current candidate registry나 pre-live registry를 자동 변경하지 않는다.
 - 현재 proposal UI는 optimizer가 아니며, target weight는 manual / equal-weight 초안 기준이다.
 - 단일 후보 직행 평가는 role `core_anchor`, weight `100%`, capital scope `paper_only`를 자동 전제로 둔다.
-- `Save Portfolio Proposal Draft`는 여러 후보를 묶거나, 단일 후보라도 명시적인 포트폴리오 초안을 남길 때 사용한다.
-- saved proposal의 monitoring / Pre-Live feedback / paper tracking feedback은 주 단계가 아니라 `보조 도구: Saved Proposals / Feedback` 안의 읽기 전용 surface다.
+- `Save Portfolio Proposal Draft`는 여러 후보를 묶는 포트폴리오 초안 작성 흐름에서만 노출한다. 단일 후보 direct path에는 proposal 저장 목록을 붙이지 않는다.
+- saved proposal의 validation / monitoring / Pre-Live feedback / paper tracking feedback은 다중 후보 작성 흐름의 `4. 저장된 Portfolio Proposal 확인` 안에서 읽는다.
 - 현재 `Paper Tracking Feedback`은 실제 paper PnL 시계열 자동 계산이 아니라 Pre-Live record에 저장된 최신 snapshot 비교다.
 - Phase 31 이후 `Validation Pack`은 단일 후보 direct path, 작성 중 proposal, 저장된 proposal에서 모두 같은 검증 언어를 사용한다.
 - validation route는 `READY_FOR_ROBUSTNESS_REVIEW`, `PAPER_TRACKING_REQUIRED`, `NEEDS_PORTFOLIO_RISK_REVIEW`, `BLOCKED_FOR_LIVE_READINESS`로 구분한다.

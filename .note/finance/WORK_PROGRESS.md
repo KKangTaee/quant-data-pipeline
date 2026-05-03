@@ -2923,3 +2923,14 @@ Detailed historical logs were archived on `2026-04-13`.
   - moved the save success message into session state so it remains visible after rerun
   - reset the Proposal ID after a successful save so the next draft gets a fresh default id
   - added duplicate Proposal ID blocking with an explicit "change Proposal ID" instruction
+
+### 2026-05-03
+- Refined Phase 31 Portfolio Proposal UX after the user noted saved proposal feedback looked awkward in the single-candidate direct path.
+- Changed:
+  - removed the saved proposal feedback section from the single-candidate direct path
+  - kept single-candidate review focused on direct Live Readiness readiness plus Portfolio Risk / Validation Pack
+  - moved saved proposal validation / monitoring / feedback into the multi-candidate proposal draft path as `4. 저장된 Portfolio Proposal 확인`
+  - updated the save success copy to point to the new saved proposal section
+- Decision:
+  - single candidates should proceed as direct next-stage inputs without proposal draft save/list UX
+  - saved proposal lists belong to the portfolio construction flow where two or more candidates are being composed
