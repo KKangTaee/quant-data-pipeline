@@ -52,6 +52,15 @@ Phase 32는 "이 결과가 조건이 조금 바뀌어도 버티는가"를 보는
    - 왜 필요한가: 숫자만 보여주면 사용자가 다음 행동을 정하기 어렵다.
    - 기대 효과: Phase 33 / Phase 34로 넘어가는 기준이 더 명확해진다.
 
+## 현재 구현 결과
+
+- Phase 32는 `implementation_complete / manual_qa_pending` 상태다.
+- 첫 번째 작업으로 robustness 입력 preview와 stress 실행 후보 판정을 구현했다.
+- 두 번째 작업으로 `phase32_stress_summary_v1` stress / sensitivity result contract를 정의했다.
+- 세 번째 작업으로 `Stress / Sensitivity Summary` table을 Validation Pack 안에 추가했다.
+- 네 번째 작업으로 `Phase 33 Handoff` route panel과 paper ledger 준비 기준 table을 추가했다.
+- 실제 period split backtest, benchmark sensitivity runner, parameter sweep engine, paper ledger 저장은 Phase 32 범위 밖이며 후속 phase에서 다룬다.
+
 ## 이 문서에서 자주 쓰는 용어
 
 - `Robustness`: 기간이나 조건이 조금 바뀌어도 후보의 성격이 유지되는지 보는 검증이다.

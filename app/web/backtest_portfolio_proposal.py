@@ -158,6 +158,8 @@ def _render_portfolio_risk_validation_pack(validation: dict[str, Any], *, title:
         input_gaps = list(robustness.get("input_gaps") or [])
         suggested_sweeps = list(robustness.get("suggested_sweeps") or [])
         robustness_metrics = dict(robustness.get("metrics") or {})
+        stress_metrics = dict(robustness.get("stress_metrics") or {})
+        phase33_handoff = dict(robustness.get("phase33_handoff") or {})
         render_readiness_route_panel(
             route_label=robustness_route,
             score=robustness_score,
@@ -173,6 +175,8 @@ def _render_portfolio_risk_validation_pack(validation: dict[str, Any], *, title:
                 {"label": "Families", "value": robustness_metrics.get("families", 0), "tone": "neutral"},
                 {"label": "Benchmarks", "value": robustness_metrics.get("benchmarks", 0), "tone": "neutral"},
                 {"label": "Suggested Sweeps", "value": robustness_metrics.get("suggested_sweeps", 0), "tone": robustness_tone},
+                {"label": "Stress Rows", "value": stress_metrics.get("rows", 0), "tone": "neutral"},
+                {"label": "Stress Ready", "value": stress_metrics.get("ready_rows", 0), "tone": robustness_tone},
             ]
         )
         robustness_df = pd.DataFrame(robustness.get("component_rows") or [])
@@ -201,7 +205,31 @@ def _render_portfolio_risk_validation_pack(validation: dict[str, Any], *, title:
                 st.info(sweep)
         with st.expander("Robustness 기준 / 다음 실행 안내", expanded=False):
             st.dataframe(pd.DataFrame(robustness.get("checks") or []), width="stretch", hide_index=True)
+            st.json(robustness.get("stress_result_contract") or {})
             st.caption("이 preview는 Phase 32의 첫 pass입니다. 기간 분할 / benchmark 변경 / parameter sensitivity를 실제 실행했다는 뜻은 아닙니다.")
+
+        st.markdown("##### Stress / Sensitivity Summary")
+        stress_df = pd.DataFrame(robustness.get("stress_summary_rows") or [])
+        if stress_df.empty:
+            st.info("Stress summary row가 아직 없습니다.")
+        else:
+            st.dataframe(stress_df, width="stretch", hide_index=True)
+            st.caption("`Result Status = NOT_RUN`은 아직 실제 stress runner가 실행되지 않았고, Phase 32가 읽을 결과 계약만 준비됐다는 뜻입니다.")
+
+        if phase33_handoff:
+            handoff_blockers = int(dict(phase33_handoff.get("metrics") or {}).get("blocked_stress_rows") or 0)
+            render_readiness_route_panel(
+                route_label=str(phase33_handoff.get("handoff_route") or "-"),
+                score=float(phase33_handoff.get("handoff_score") or 0.0),
+                blockers_count=handoff_blockers,
+                verdict=str(phase33_handoff.get("verdict") or "-"),
+                next_action=str(phase33_handoff.get("next_action") or "-"),
+                route_title="Phase 33 Handoff",
+                score_title="Handoff Score",
+            )
+            with st.expander("Phase 33 paper ledger 준비 기준", expanded=False):
+                st.dataframe(pd.DataFrame(phase33_handoff.get("requirements") or []), width="stretch", hide_index=True)
+                st.caption("이 handoff는 paper ledger 준비 가능성만 말합니다. live approval이나 주문 지시가 아닙니다.")
 
 
 # Render saved proposal monitoring, feedback, and raw JSON as one support area below the main flow.

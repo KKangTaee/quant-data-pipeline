@@ -43,6 +43,7 @@ PORTFOLIO_PROPOSAL_PAPER_CAGR_DETERIORATION_THRESHOLD = -2.0
 PORTFOLIO_PROPOSAL_PAPER_MDD_DETERIORATION_THRESHOLD = -5.0
 PORTFOLIO_RISK_MAX_REVIEW_WEIGHT = 70.0
 PORTFOLIO_ROBUSTNESS_MIN_WINDOW_YEARS = 5.0
+PORTFOLIO_ROBUSTNESS_STRESS_SCHEMA_VERSION = "phase32_stress_summary_v1"
 
 
 # Parse a proposal component target weight into a safe float.
@@ -133,6 +134,285 @@ def _portfolio_robustness_contract_summary(contract: dict[str, Any]) -> str:
         if key in contract and contract.get(key) not in (None, ""):
             summary_parts.append(f"{key}={contract.get(key)}")
     return ", ".join(summary_parts[:5]) or f"{len(contract)} fields"
+
+
+def _portfolio_robustness_format_percent(value: float | None) -> str:
+    if value is None:
+        return "-"
+    return f"{value * 100:.1f}%"
+
+
+def _portfolio_robustness_baseline_summary(active_components: list[dict[str, Any]]) -> dict[str, Any]:
+    weighted_cagr = 0.0
+    weighted_mdd = 0.0
+    total_weight = 0.0
+    cagr_complete = True
+    mdd_complete = True
+    years_values: list[float] = []
+    for row in active_components:
+        weight = _portfolio_proposal_optional_float(row.get("target_weight")) or 0.0
+        cagr = _portfolio_proposal_optional_float(row.get("cagr"))
+        mdd = _portfolio_proposal_optional_float(row.get("mdd"))
+        years = _portfolio_robustness_period_years(dict(row.get("period") or {}))
+        if cagr is None:
+            cagr_complete = False
+        else:
+            weighted_cagr += cagr * weight
+        if mdd is None:
+            mdd_complete = False
+        else:
+            weighted_mdd += mdd * weight
+        if years is not None:
+            years_values.append(years)
+        total_weight += weight
+    baseline_cagr = weighted_cagr / total_weight if total_weight > 0.0 and cagr_complete else None
+    baseline_mdd = weighted_mdd / total_weight if total_weight > 0.0 and mdd_complete else None
+    min_years = min(years_values) if years_values else None
+    return {
+        "weighted_cagr": baseline_cagr,
+        "weighted_mdd": baseline_mdd,
+        "min_years": min_years,
+        "weight_total": round(total_weight, 2),
+        "component_count": len(active_components),
+        "baseline_label": (
+            f"CAGR {_portfolio_robustness_format_percent(baseline_cagr)} / "
+            f"MDD {_portfolio_robustness_format_percent(baseline_mdd)} / "
+            f"min years {min_years if min_years is not None else '-'}"
+        ),
+    }
+
+
+def _portfolio_robustness_target_weight_total(active_components: list[dict[str, Any]]) -> float:
+    total = 0.0
+    for row in active_components:
+        total += _portfolio_proposal_optional_float(row.get("target_weight")) or 0.0
+    return round(total, 4)
+
+
+def _portfolio_robustness_stress_result_contract() -> dict[str, Any]:
+    return {
+        "schema_version": PORTFOLIO_ROBUSTNESS_STRESS_SCHEMA_VERSION,
+        "row_identity": ["source_type", "source_id", "stress_id"],
+        "status_values": {
+            "input_status": ["READY", "INPUT_GAP", "BLOCKED", "NOT_APPLICABLE"],
+            "result_status": ["NOT_RUN", "PASS", "WATCH", "FAIL"],
+        },
+        "metric_fields": [
+            "baseline_cagr",
+            "baseline_mdd",
+            "stress_cagr",
+            "stress_mdd",
+            "cagr_delta",
+            "mdd_delta",
+        ],
+        "phase32_scope": "read-only summary contract; actual stress execution engine is future work",
+    }
+
+
+def _portfolio_robustness_stress_row(
+    *,
+    stress_id: str,
+    category: str,
+    scenario: str,
+    ready: bool,
+    robustness_route: str,
+    baseline_label: str,
+    expected_check: str,
+    decision_use: str,
+    next_action: str,
+    not_applicable: bool = False,
+) -> dict[str, Any]:
+    if not_applicable:
+        input_status = "NOT_APPLICABLE"
+        judgment = "이 source에는 적용하지 않음"
+    elif robustness_route == "BLOCKED_FOR_ROBUSTNESS":
+        input_status = "BLOCKED"
+        judgment = "robustness blocker 선해결 필요"
+    elif ready:
+        input_status = "READY"
+        judgment = "실행 입력 준비됨"
+    else:
+        input_status = "INPUT_GAP"
+        judgment = "stress 실행 전 입력 보강 필요"
+    return {
+        "Stress ID": stress_id,
+        "Category": category,
+        "Scenario": scenario,
+        "Input Status": input_status,
+        "Result Status": "NOT_RUN",
+        "Baseline": baseline_label,
+        "Expected Check": expected_check,
+        "Judgment": judgment,
+        "Decision Use": decision_use,
+        "Next Action": next_action,
+    }
+
+
+def _build_portfolio_stress_summary_rows(
+    *,
+    source_type: str,
+    active_components: list[dict[str, Any]],
+    robustness_route: str,
+    has_all_periods: bool,
+    has_all_contracts: bool,
+    has_all_benchmarks: bool,
+    has_all_compare_evidence: bool,
+) -> list[dict[str, Any]]:
+    baseline = _portfolio_robustness_baseline_summary(active_components)
+    baseline_label = str(baseline.get("baseline_label") or "-")
+    has_long_windows = bool(
+        active_components
+        and all(
+            (_portfolio_robustness_period_years(dict(row.get("period") or {})) or 0.0)
+            >= PORTFOLIO_ROBUSTNESS_MIN_WINDOW_YEARS
+            for row in active_components
+        )
+    )
+    is_multi_component = source_type == "portfolio_proposal" and len(active_components) > 1
+    weight_total = _portfolio_robustness_target_weight_total(active_components)
+    weights_ready = is_multi_component and abs(weight_total - 100.0) <= 0.01
+    return [
+        _portfolio_robustness_stress_row(
+            stress_id="period_split",
+            category="Period",
+            scenario="early / middle / recent 구간 분할",
+            ready=has_all_periods and has_long_windows,
+            robustness_route=robustness_route,
+            baseline_label=baseline_label,
+            expected_check="각 구간에서 CAGR / MDD 방향성이 유지되는지 확인",
+            decision_use="특정 장기 구간에만 의존한 후보인지 판단",
+            next_action="기간 분할 백테스트 runner가 붙으면 같은 contract로 구간별 결과를 채운다.",
+        ),
+        _portfolio_robustness_stress_row(
+            stress_id="recent_window",
+            category="Recent",
+            scenario="최근 3Y / 5Y stress",
+            ready=has_all_periods,
+            robustness_route=robustness_route,
+            baseline_label=baseline_label,
+            expected_check="최근 구간의 성과 저하와 MDD 확대를 확인",
+            decision_use="paper tracking 시작 전 최근 성과 이탈 여부 판단",
+            next_action="최근 구간 result를 계산해 baseline 대비 deterioration을 표시한다.",
+        ),
+        _portfolio_robustness_stress_row(
+            stress_id="benchmark_sensitivity",
+            category="Benchmark",
+            scenario="primary benchmark / SPY reference 비교",
+            ready=has_all_benchmarks and has_all_compare_evidence,
+            robustness_route=robustness_route,
+            baseline_label=baseline_label,
+            expected_check="benchmark를 바꿔도 후보 해석이 유지되는지 확인",
+            decision_use="benchmark 선택 때문에 좋아 보이는 결과인지 판단",
+            next_action="compare evidence와 formal benchmark 기준을 같이 채운다.",
+        ),
+        _portfolio_robustness_stress_row(
+            stress_id="parameter_sensitivity",
+            category="Parameter",
+            scenario="top-N / lookback / rebalance interval sensitivity",
+            ready=has_all_contracts,
+            robustness_route=robustness_route,
+            baseline_label=baseline_label,
+            expected_check="주요 parameter를 조금 바꿔도 결과가 과도하게 무너지지 않는지 확인",
+            decision_use="특정 parameter 조합에만 맞춘 후보인지 판단",
+            next_action="contract snapshot 기반으로 family별 parameter sweep 후보를 만든다.",
+        ),
+        _portfolio_robustness_stress_row(
+            stress_id="weight_sensitivity",
+            category="Portfolio",
+            scenario="component target weight +/-10% sensitivity",
+            ready=weights_ready,
+            robustness_route=robustness_route,
+            baseline_label=baseline_label,
+            expected_check="비중을 조금 바꿔도 proposal 성격이 유지되는지 확인",
+            decision_use="paper ledger target weight가 지나치게 섬세한지 판단",
+            next_action="다중 후보 proposal에서 target weight 주변 stress 결과를 채운다.",
+            not_applicable=not is_multi_component,
+        ),
+        _portfolio_robustness_stress_row(
+            stress_id="leave_one_out",
+            category="Portfolio",
+            scenario="component leave-one-out stress",
+            ready=is_multi_component,
+            robustness_route=robustness_route,
+            baseline_label=baseline_label,
+            expected_check="한 component를 제외해도 proposal이 완전히 무너지지 않는지 확인",
+            decision_use="단일 component 의존도가 큰 proposal인지 판단",
+            next_action="다중 후보 proposal에서 component를 하나씩 제외한 결과를 채운다.",
+            not_applicable=not is_multi_component,
+        ),
+    ]
+
+
+def _build_portfolio_phase33_handoff(
+    *,
+    source_type: str,
+    source_id: str,
+    active_components: list[dict[str, Any]],
+    robustness_route: str,
+    robustness_score: float,
+    stress_summary_rows: list[dict[str, Any]],
+) -> dict[str, Any]:
+    input_gap_count = sum(1 for row in stress_summary_rows if row.get("Input Status") == "INPUT_GAP")
+    blocked_count = sum(1 for row in stress_summary_rows if row.get("Input Status") == "BLOCKED")
+    ready_count = sum(1 for row in stress_summary_rows if row.get("Input Status") == "READY")
+    active_weight_total = _portfolio_robustness_target_weight_total(active_components)
+    benchmarks = sorted({str(row.get("benchmark") or "-") for row in active_components if str(row.get("benchmark") or "").strip()})
+    has_component_weights = bool(active_components) and (
+        source_type == "single_candidate" or abs(active_weight_total - 100.0) <= 0.01
+    )
+    has_tracking_benchmark = bool(benchmarks)
+    requirements = [
+        {
+            "Requirement": "Paper ledger source",
+            "Status": "READY" if source_id else "BLOCKED",
+            "Current": source_id or "-",
+            "Why It Matters": "Phase 33 paper ledger가 어떤 후보 / proposal을 추적하는지 고정한다.",
+        },
+        {
+            "Requirement": "Component weights",
+            "Status": "READY" if has_component_weights else "INPUT_GAP",
+            "Current": f"{active_weight_total:.1f}%",
+            "Why It Matters": "paper portfolio 시작 비중과 이후 성과 추적 기준이 된다.",
+        },
+        {
+            "Requirement": "Tracking benchmark",
+            "Status": "READY" if has_tracking_benchmark else "INPUT_GAP",
+            "Current": ", ".join(benchmarks) or "-",
+            "Why It Matters": "paper 성과를 무엇과 비교할지 정한다.",
+        },
+        {
+            "Requirement": "Stress summary contract",
+            "Status": "READY" if ready_count > 0 and blocked_count == 0 else "INPUT_GAP",
+            "Current": f"ready={ready_count}, input_gap={input_gap_count}, blocked={blocked_count}",
+            "Why It Matters": "paper tracking 전에 남은 robustness 질문을 Phase 33이 이어받는다.",
+        },
+    ]
+    if robustness_route == "BLOCKED_FOR_ROBUSTNESS" or blocked_count > 0:
+        handoff_route = "BLOCKED_FOR_PAPER_LEDGER"
+        verdict = "Phase 33 handoff 차단: robustness blocker 선해결 필요"
+        next_action = "기간 / 성과 / 설정 snapshot blocker를 해결한 뒤 paper ledger 준비를 다시 봅니다."
+    elif robustness_route == "NEEDS_ROBUSTNESS_INPUT_REVIEW" or input_gap_count > 0:
+        handoff_route = "NEEDS_STRESS_INPUT_REVIEW"
+        verdict = "Phase 33 전 입력 보강 필요: stress gap이 남아 있음"
+        next_action = "benchmark, compare evidence, 기간 길이, weight gap을 보강한 뒤 paper ledger 초안을 만듭니다."
+    else:
+        handoff_route = "READY_FOR_PAPER_LEDGER_PREP"
+        verdict = "Phase 33 paper ledger 준비 가능: 후보 / proposal 추적 조건을 만들 수 있음"
+        next_action = "Phase 33에서 시작일, target weight, review cadence, stop/re-review trigger를 가진 paper ledger row를 만듭니다."
+    handoff_score = min(10.0, round(robustness_score + max(0, ready_count - input_gap_count) * 0.2, 1))
+    return {
+        "handoff_route": handoff_route,
+        "handoff_score": handoff_score,
+        "verdict": verdict,
+        "next_action": next_action,
+        "requirements": requirements,
+        "metrics": {
+            "ready_stress_rows": ready_count,
+            "input_gap_stress_rows": input_gap_count,
+            "blocked_stress_rows": blocked_count,
+            "active_weight_total": round(active_weight_total, 2),
+        },
+    }
 
 
 # Build the Phase 32 first-pass robustness readiness pack from Phase 31 validation input.
@@ -300,9 +580,36 @@ def _build_portfolio_robustness_validation_result(
         verdict = "Stress 검증 실행 후보 가능: robustness 입력 first pass 통과"
         next_action = "기간 분할, 최근 구간, benchmark 변경, parameter sensitivity 검증을 실행할 수 있습니다."
 
+    stress_summary_rows = _build_portfolio_stress_summary_rows(
+        source_type=source_type,
+        active_components=active_components,
+        robustness_route=route,
+        has_all_periods=has_all_periods,
+        has_all_contracts=has_all_contracts,
+        has_all_benchmarks=has_all_benchmarks,
+        has_all_compare_evidence=has_all_compare_evidence,
+    )
+    stress_metrics = {
+        "rows": len(stress_summary_rows),
+        "ready_rows": sum(1 for row in stress_summary_rows if row.get("Input Status") == "READY"),
+        "input_gap_rows": sum(1 for row in stress_summary_rows if row.get("Input Status") == "INPUT_GAP"),
+        "blocked_rows": sum(1 for row in stress_summary_rows if row.get("Input Status") == "BLOCKED"),
+        "not_applicable_rows": sum(1 for row in stress_summary_rows if row.get("Input Status") == "NOT_APPLICABLE"),
+        "not_run_rows": sum(1 for row in stress_summary_rows if row.get("Result Status") == "NOT_RUN"),
+    }
+    phase33_handoff = _build_portfolio_phase33_handoff(
+        source_type=source_type,
+        source_id=source_id,
+        active_components=active_components,
+        robustness_route=route,
+        robustness_score=score,
+        stress_summary_rows=stress_summary_rows,
+    )
+
     return {
         "source_type": source_type,
         "source_id": source_id,
+        "stress_result_contract": _portfolio_robustness_stress_result_contract(),
         "robustness_route": route,
         "robustness_score": score,
         "verdict": verdict,
@@ -312,11 +619,16 @@ def _build_portfolio_robustness_validation_result(
         "suggested_sweeps": suggested_sweeps,
         "checks": checks,
         "component_rows": component_rows,
+        "stress_summary_rows": stress_summary_rows,
+        "stress_metrics": stress_metrics,
+        "phase33_handoff": phase33_handoff,
         "metrics": {
             "components": len(active_components),
             "families": len(families),
             "benchmarks": len([value for value in benchmarks if value not in {"-", ""}]),
             "suggested_sweeps": len(suggested_sweeps),
+            "stress_rows": stress_metrics["rows"],
+            "ready_stress_rows": stress_metrics["ready_rows"],
         },
     }
 
@@ -1295,6 +1607,7 @@ def _build_portfolio_risk_validation_summary_rows(
         validation = _build_portfolio_risk_validation_result(validation_input)
         metrics = dict(validation.get("metrics") or {})
         robustness = dict(validation.get("robustness_validation") or {})
+        phase33_handoff = dict(robustness.get("phase33_handoff") or {})
         display_rows.append(
             {
                 "Updated At": row.get("updated_at") or row.get("created_at"),
@@ -1303,6 +1616,7 @@ def _build_portfolio_risk_validation_summary_rows(
                 "Score": validation.get("validation_score"),
                 "Robustness Route": robustness.get("robustness_route"),
                 "Robustness Score": robustness.get("robustness_score"),
+                "Phase33 Handoff": phase33_handoff.get("handoff_route"),
                 "Components": metrics.get("active_components"),
                 "Weight Total": metrics.get("weight_total"),
                 "Max Weight": metrics.get("max_weight"),

@@ -2,11 +2,11 @@
 
 ## 진행 상태
 
-- `active`
+- `implementation_complete`
 
 ## 검증 상태
 
-- `not_ready_for_qa`
+- `manual_qa_pending`
 
 ## 현재 목표
 
@@ -18,11 +18,11 @@ Phase 32의 목표는 Phase 31에서 읽은 후보 또는 Portfolio Proposal을 
 
 | 구분 | 의미 | 현재 상태 |
 |---|---|---|
-| Phase 32 전체 목표 | Robustness / Stress Validation Pack을 만든다 | `active` |
+| Phase 32 전체 목표 | Robustness / Stress Validation Pack을 만든다 | `implementation_complete` |
 | 첫 번째 작업 | Robustness 입력 preview와 stress 실행 후보 판정 | `completed` |
-| 두 번째 작업 | Stress / sensitivity result contract 정의 | `pending` |
-| 세 번째 작업 | 후보 / proposal별 stress summary surface 추가 | `pending` |
-| 네 번째 작업 | Phase 33 paper ledger handoff 정리 | `pending` |
+| 두 번째 작업 | Stress / sensitivity result contract 정의 | `completed` |
+| 세 번째 작업 | 후보 / proposal별 stress summary surface 추가 | `completed` |
+| 네 번째 작업 | Phase 33 paper ledger handoff 정리 | `completed` |
 
 ## 1. Phase kickoff
 
@@ -42,26 +42,31 @@ Phase 32의 목표는 Phase 31에서 읽은 후보 또는 Portfolio Proposal을 
 - `completed` UI preview 추가
   - Validation Pack 아래에서 component별 기간 / CAGR / MDD / benchmark / contract / compare evidence를 확인한다.
 - `completed` 문서 sync
-  - roadmap / doc index / code flow / work log를 Phase 32 active 상태로 맞춘다.
+  - roadmap / doc index / code flow / work log를 Phase 32 implementation_complete 상태로 맞춘다.
 
 ## 3. Validation
 
 - `completed` `.venv/bin/python -m py_compile app/web/backtest_portfolio_proposal.py app/web/backtest_portfolio_proposal_helpers.py`
 - `completed` saved proposal robustness helper smoke
   - 저장된 proposal에서 robustness route와 suggested sweep row가 생성되는지 확인했다.
-- `pending` Streamlit UI smoke
+- `completed` saved proposal stress summary / Phase33 handoff helper smoke
+  - 저장된 proposal에서 stress summary row 6개와 Phase33 handoff route가 생성되는지 확인했다.
+- `completed` Streamlit server health smoke
+  - 기존 local Streamlit server가 `http://localhost:8520`에서 응답하는지 확인했다.
 - `pending` targeted manual validation
+  - 이제 사용자가 Phase32 checklist 기준으로 확인한다.
 
 ## 4. Documentation Sync
 
 - `completed` phase kickoff plan 문서 생성
 - `completed` current chapter TODO 문서 생성
 - `completed` first work-unit 문서 생성
+- `completed` second / third / fourth work-unit 문서 생성
+- `completed` final checklist 정리
 - `completed` roadmap / doc index / work log / question log sync
 - `completed` Backtest UI flow sync
 
 ## 현재 판단
 
-Phase 32는 active / not_ready_for_qa 상태다.
-첫 번째 작업은 implementation과 helper smoke를 통과했다.
-아직 Phase 32 전체 사용자 QA checklist handoff 단계는 아니다.
+Phase 32는 implementation_complete / manual_qa_pending 상태다.
+2번째부터 4번째 작업까지 구현과 helper smoke를 통과했고, 이제 사용자 checklist QA 단계다.
