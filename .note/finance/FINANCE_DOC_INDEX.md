@@ -784,6 +784,7 @@ Support Track은 main finance feature phase가 아니라,
 | `.note/finance/support_tracks/RESEARCH_AUTOMATION_PHASE_BUNDLE_AUTOMATION_FIRST_WORK_UNIT_20260416.md` | phase bundle bootstrap 작업 |
 | `.note/finance/support_tracks/RESEARCH_AUTOMATION_CURRENT_CANDIDATE_REGISTRY_AND_WORKFLOW_AUTOMATION_SECOND_WORK_UNIT_20260416.md` | current candidate registry / workflow 자동화 작업 |
 | `.note/finance/support_tracks/CODEX_PLUGIN_AND_SKILL_APPLICATION_REVIEW_20260413.md` | Codex plugin / skill 적용 리뷰 |
+| `.note/finance/support_tracks/FINANCE_SKILL_SPLIT_20260503.md` | finance 작업용 local Codex skill 분리 기록 |
 | `.note/finance/support_tracks/ROADMAP_REBASE_PHASE18_TO_PHASE25_20260414.md` | Phase 18~25 roadmap rebase 논의용 문서 |
 
 ---

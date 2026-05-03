@@ -2969,3 +2969,16 @@ Detailed historical logs were archived on `2026-04-13`.
 - Hygiene:
   - `check_finance_refinement_hygiene.py` was run.
   - Current candidate registry changes were not needed because Phase 31 closeout changed docs / QA status only, not candidate rows.
+
+### 2026-05-03
+- Created narrower local Codex skills after the user approved splitting `finance-doc-sync`.
+- Changed:
+  - added `/Users/taeho/.codex/skills/finance-backtest-web-workflow/SKILL.md`
+  - added `/Users/taeho/.codex/skills/finance-phase-management/SKILL.md`
+  - narrowed `/Users/taeho/.codex/skills/finance-doc-sync/SKILL.md` so it is treated as final documentation alignment, not the primary implementation skill
+  - updated `AGENTS.md` and support track docs with the intended skill usage order
+- Decision:
+  - Phase32 Backtest UI work should start with `finance-backtest-web-workflow` or `finance-phase-management`, then use `finance-doc-sync` for final alignment.
+- Hygiene:
+  - `check_finance_refinement_hygiene.py` was run.
+  - Current candidate registry changes were not needed because this was skill / workflow guidance work, not candidate data work.

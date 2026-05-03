@@ -11,6 +11,10 @@
 - Treat this project as a quant research workspace with two connected domains:
   - data ingestion and persistence
   - strategy research and backtesting
+- When relevant local Codex skills are available, prefer the narrower primary skill before `finance-doc-sync`:
+  - `finance-backtest-web-workflow` for `app/web/backtest_*.py`, Streamlit Backtest UI, Candidate Review, Portfolio Proposal, History, Candidate Library, and runtime JSONL UI helpers
+  - `finance-phase-management` for phase open / TODO / checklist / roadmap status / manual QA / closeout work
+  - `finance-doc-sync` for final documentation alignment after implementation or phase status changes
 - When a workstream can be split into independent investigation tracks, use available sub-agents to explore them in parallel.
 - If sub-agents are unnecessary for the current task, or the current session/tooling does not make them practical, continue directly instead of blocking work.
 - Before changing code in `finance` or the Streamlit finance app, first check the current script responsibility map:

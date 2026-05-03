@@ -3847,3 +3847,4 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Follow-up:
   - finance-doc-sync는 좁게 유지하고, Phase32 전에 `finance-backtest-web-workflow`와 `finance-phase-management` 계열 스킬을 분리하는 것이 효율적이다
   - 기존 `finance-db-pipeline`, `finance-factor-pipeline`, `finance-strategy-implementation`은 그대로 domain implementation skill로 사용하고, finance-doc-sync는 마무리 동기화 skill로 두는 방향이 합리적이다
+  - 사용자가 승인해 local Codex skill `finance-backtest-web-workflow`, `finance-phase-management`를 생성했고, `finance-doc-sync` 설명은 final sync 중심으로 좁혔다
