@@ -13,13 +13,26 @@ Detailed historical analysis was archived on `2026-04-13`.
 ## Active Pointers
 
 - latest phase board:
-  - [PHASE26_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phases/phase26/PHASE26_CURRENT_CHAPTER_TODO.md)
+  - [PHASE33_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phases/phase33/PHASE33_CURRENT_CHAPTER_TODO.md)
 - current candidate summary:
   - [CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md)
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-05-03 - Phase 32를 닫고 Phase 33은 Paper Portfolio Tracking Ledger로 시작한다
+- Request topic:
+  - 사용자가 Phase 32 checklist 완료 후 Phase 32 마무리와 Phase 33 시작을 요청함
+- Interpreted goal:
+  - Phase 32 Robustness / Stress Validation Pack을 사용자 QA 완료 상태로 닫고,
+    Phase 33은 최종 선정이나 live approval이 아니라 실제 돈 없이 관찰할 paper tracking ledger를 만드는 단계로 열어야 함
+- Result:
+  - Phase 32를 `complete` / `manual_qa_completed`로 닫았다
+  - Phase 33 문서 bundle을 `.note/finance/phases/phase33/` 아래에 생성했다
+  - Phase 33의 첫 작업은 `PAPER_PORTFOLIO_TRACKING_LEDGER.jsonl` row 계약과 저장소 경계를 정의하는 것으로 잡았다
+  - paper ledger는 current candidate / Pre-Live / Portfolio Proposal registry를 덮어쓰지 않는 append-only 저장소로 설계한다
+  - Phase 33은 paper PnL 계산, 최종 선정 decision, live approval, 주문 지시를 만들지 않는다
 
 ### 2026-04-20 - FINANCE_COMPREHENSIVE_ANALYSIS는 현재 구조와 phase 히스토리를 분리해서 읽어야 한다
 - Request topic:
