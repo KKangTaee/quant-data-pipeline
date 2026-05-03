@@ -4,8 +4,8 @@
 
 이 문서는 Phase 33 이후 Phase 34 `Final Portfolio Selection Decision Pack`으로 넘어갈 때 필요한 기준을 정리한다.
 
-현재 Phase 33은 `implementation_complete / manual_qa_pending` 상태다.
-사용자 QA가 끝나면 Phase 34는 저장된 paper ledger record를 읽어 최종 선정 검토 화면을 만들면 된다.
+현재 Phase 33은 `complete / manual_qa_completed` 상태다.
+Phase 34는 저장된 paper ledger record를 읽어 최종 선정 검토 화면을 만들면 된다.
 
 ## 현재 handoff 상태
 

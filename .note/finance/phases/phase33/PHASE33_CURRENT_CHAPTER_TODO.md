@@ -2,11 +2,11 @@
 
 ## 진행 상태
 
-- `implementation_complete`
+- `complete`
 
 ## 검증 상태
 
-- `manual_qa_pending`
+- `manual_qa_completed`
 
 ## 현재 목표
 
@@ -18,7 +18,7 @@ Phase 34 final selection decision pack이 읽을 수 있는 관찰 기록 기반
 
 | 구분 | 의미 | 현재 상태 |
 |---|---|---|
-| Phase 33 전체 목표 | Paper Portfolio Tracking Ledger를 만든다 | `implementation_complete` |
+| Phase 33 전체 목표 | Paper Portfolio Tracking Ledger를 만든다 | `complete` |
 | 첫 번째 작업 | Paper ledger row 계약과 저장소 경계 정의 | `completed` |
 | 두 번째 작업 | Paper ledger draft / save UI 추가 | `completed` |
 | 세 번째 작업 | 저장된 paper ledger review surface 추가 | `completed` |
@@ -70,7 +70,7 @@ Phase 34 final selection decision pack이 읽을 수 있는 관찰 기록 기반
 - `completed` `.venv/bin/python -m py_compile app/web/runtime/paper_portfolio_ledger.py app/web/runtime/__init__.py app/web/backtest_portfolio_proposal.py app/web/backtest_portfolio_proposal_helpers.py`
 - `completed` `python3 -m py_compile app/web/runtime/paper_portfolio_ledger.py app/web/runtime/__init__.py app/web/backtest_portfolio_proposal.py app/web/backtest_portfolio_proposal_helpers.py`
 - `completed` ledger helper smoke
-- `pending` user manual QA
+- `completed` user manual QA
 
 ## 7. Documentation Sync
 
@@ -83,6 +83,6 @@ Phase 34 final selection decision pack이 읽을 수 있는 관찰 기록 기반
 
 ## 현재 판단
 
-Phase 33은 implementation_complete / manual_qa_pending 상태다.
-첫 번째부터 네 번째 작업까지 구현과 문서 동기화가 끝났고,
-이제 사용자가 `PHASE33_TEST_CHECKLIST.md` 기준으로 manual QA를 진행하면 된다.
+Phase 33은 complete / manual_qa_completed 상태다.
+첫 번째부터 네 번째 작업까지 구현과 문서 동기화, 사용자 manual QA가 끝났고,
+이제 Phase 34 `Final Portfolio Selection Decision Pack`을 열 준비가 되었다.
