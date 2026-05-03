@@ -3734,3 +3734,17 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Phase32~35는 각각 portfolio risk engine, robustness validation pack, paper portfolio tracking, final portfolio selection guide로 분리해 최종 포트폴리오 후보 선정까지 이어진다
 - Follow-up:
   - Phase31을 열 때는 `.note/finance/registries/LIVE_READINESS_REVIEW_REGISTRY.jsonl` 같은 별도 decision registry와 `Backtest > Live Readiness` 또는 Portfolio Proposal handoff UI를 우선 정의한다
+
+### 2026-05-03 - Phase31 독립 단계 중복 가능성 재판단
+- User request:
+  - Candidate Review의 `다음 단계 진행 판단`이 이미 사용자가 해당 포트폴리오에 대한 기록을 남기는 용도처럼 보이는데, Phase31이 굳이 필요한지 재질문함
+- Interpreted goal:
+  - 기존 Candidate Review / Portfolio Proposal 흐름과 새 Phase31이 실제로 다른 일을 하는지, 아니면 기록 UI를 중복해서 만드는 위험이 있는지 확인해야 함
+- Analysis result:
+  - 사용자의 판단이 맞다. 현재 Candidate Review는 Pre-Live 운영 기록과 Portfolio Proposal 이동 판단을 이미 제공한다
+  - 현재 Portfolio Proposal도 단일 후보 Live Readiness 직행 평가와 다중 후보 Live Readiness 진입 평가를 이미 제공한다
+  - 따라서 Phase31을 단순히 `다음 단계 판단 사유를 한 번 더 저장하는 단계`로 만들면 중복이다
+  - Phase31이 필요하다면 별도 수동 기록 화면이 아니라, 이후 risk / robustness / paper tracking이 같은 후보를 추적할 수 있도록 `Live Readiness intake`, `case id`, `evidence freeze`를 얇게 정의하는 정도여야 한다
+- Follow-up:
+  - 다음 구현 계획은 독립 `Live Readiness Decision Record` phase보다 `Portfolio Risk & Live Readiness Validation` phase로 재정의하는 편이 더 합리적이다
+  - 단일 후보는 기존 `LIVE_READINESS_DIRECT_READY` 경로를 입력으로 바로 다음 검증 phase에 넘기는 방식이 자연스럽다
