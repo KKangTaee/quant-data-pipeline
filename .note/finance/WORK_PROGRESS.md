@@ -3160,3 +3160,17 @@ Detailed historical logs were archived on `2026-04-13`.
 - Hygiene:
   - py_compile and selected final decision input smoke were run.
   - Existing unrelated strategy logs, `uv.lock`, generated registries, run history artifacts, archived reset files, and phase12 temp CSVs were left unstaged.
+
+### 2026-05-04
+- Reworked Phase 35 after the user challenged the repeated save-button pattern.
+- Changed:
+  - removed the active `운영 가이드 기록` append-only save flow from `Backtest > Post-Selection Guide`
+  - removed `app/web/runtime/post_selection_guides.py` and runtime exports for a separate post-selection operating guide registry
+  - changed Post-Selection Guide into a no-extra-save final investment guide surface that reads Final Review decision records
+  - added plain-language final verdict mapping: 투자 가능 후보 / 투자하면 안 됨 / 내용 부족 / 재검토 필요
+  - changed Phase35 readiness routes to `FINAL_INVESTMENT_GUIDE_READY`, `FINAL_INVESTMENT_GUIDE_NEEDS_INPUT`, and `FINAL_INVESTMENT_GUIDE_BLOCKED`
+  - updated the Phase35 checklist and durable docs so Final Review remains the source of truth and Phase35 is a read / preview surface
+- Decision:
+  - Phase35 should not create another required registry after Final Review.
+  - Final Review's final selection decision remains the durable judgment.
+  - Post-Selection Guide confirms final investment readiness and operating-before-live rules without creating live approval, broker orders, or auto-trading.

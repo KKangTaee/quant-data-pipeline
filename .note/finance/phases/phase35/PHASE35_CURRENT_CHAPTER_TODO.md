@@ -10,87 +10,84 @@
 
 ## 현재 목표
 
-Phase 35의 목표는 Phase 34에서 최종 선정된 final review record를 바로 주문으로 연결하는 것이 아니다.
-선정된 후보를 실제 운영 전 어떤 리밸런싱 / 중단 / 축소 / 재검토 기준으로 관리할지
-`Post-Selection Operating Guide`로 정리하는 것이다.
+Phase 35의 목표는 Phase 34에서 기록한 final review decision을 다시 저장하는 것이 아니다.
+최종 판단 기록을 읽어 사용자가 마지막에 다음을 확인하게 만드는 것이다.
+
+- 투자 가능 후보인지
+- 투자하면 안 되는 후보인지
+- 내용 / 관찰 근거가 부족한지
+- 재검토가 필요한지
+- 실제 투자 전 리밸런싱 / 축소 / 중단 / 재검토 기준이 충분한지
 
 ## 작업 단위 진행 순서
 
 | 구분 | 의미 | 현재 상태 |
 |---|---|---|
-| Phase 35 전체 목표 | 최종 선정 후보의 운영 가이드를 만든다 | `implementation_complete` |
-| 첫 번째 작업 | Operating policy 계약 정의 | `completed` |
+| Phase 35 전체 목표 | 최종 판단 결과를 최종 투자 지침 확인 화면으로 읽는다 | `implementation_complete` |
+| 첫 번째 작업 | Final investment guide 계약 정의 | `completed` |
 | 두 번째 작업 | Phase35 input selector / readiness 기준 | `completed` |
-| 세 번째 작업 | Operating guide preview / record surface | `completed` |
-| 네 번째 작업 | Saved guide review와 다음 handoff 정리 | `completed` |
+| 세 번째 작업 | Final guide preview UI 구현 | `completed` |
+| 네 번째 작업 | No-extra-save handoff와 문서 보정 | `completed` |
 
 ## 1. Phase kickoff
 
 - `completed` Phase 34 closeout 확인
   - Phase 34는 `complete / manual_qa_completed` 상태다.
 - `completed` Phase 34 next phase preparation 확인
-  - Phase 35 방향은 `Post-Selection Operating Guide`다.
+  - Phase 35 입력은 Final Review의 최종 판단 기록이다.
 - `completed` Phase 35 문서 bundle 생성
   - 문서 위치는 `.note/finance/phases/phase35/`이다.
 
-## 2. 첫 번째 작업 준비 항목
+## 2. 첫 번째 작업 완료 항목
 
 - `completed` selected final review record 입력 기준 정의
   - `decision_route = SELECT_FOR_PRACTICAL_PORTFOLIO`
-  - `phase35_handoff.handoff_route = READY_FOR_POST_SELECTION_OPERATING_GUIDE`
-- `completed` operating policy 필드 초안 정의
-  - rebalancing cadence
-  - rebalance trigger
-  - reduce / stop trigger
-  - re-review trigger
-  - capital / live approval boundary
-- `completed` 저장소 경계 판단
-  - `.note/finance/registries/POST_SELECTION_OPERATING_GUIDES.jsonl`을 새 append-only registry로 둔다.
-  - final decision record는 원본 선정 판단으로 보존한다.
-  - current candidate / proposal / final decision 원본을 덮어쓰지 않는다.
+  - 신규 저장 row는 `phase35_handoff.handoff_route = READY_FOR_FINAL_INVESTMENT_GUIDE`로 읽는다.
+  - 기존 QA row의 `READY_FOR_POST_SELECTION_OPERATING_GUIDE`도 backward compatibility로 읽는다.
+- `completed` 최종 판단 문구 정의
+  - `SELECT_FOR_PRACTICAL_PORTFOLIO`: 투자 가능 후보
+  - `HOLD_FOR_MORE_PAPER_TRACKING`: 내용 부족 / 관찰 필요
+  - `REJECT_FOR_PRACTICAL_USE`: 투자하면 안 됨
+  - `RE_REVIEW_REQUIRED`: 재검토 필요
+- `completed` 저장소 경계 보정
+  - Phase35는 새 append-only registry를 만들지 않는다.
+  - Final Review의 `FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`이 최종 판단 원본이다.
+  - Post-Selection Guide는 read / preview surface다.
 
 ## 3. 두 번째 작업 완료 항목
 
 - `completed` Phase35 input selector 구현
-  - selected final review record만 `Guide Eligible = Yes`로 읽는다.
-- `completed` readiness route 구현
-  - `OPERATING_GUIDE_RECORD_READY`
-  - `OPERATING_GUIDE_NEEDS_INPUT`
-  - `OPERATING_GUIDE_BLOCKED`
+  - selected final review record만 최종 지침 확인 대상으로 선택할 수 있다.
+- `completed` final investment readiness route 구현
+  - `FINAL_INVESTMENT_GUIDE_READY`
+  - `FINAL_INVESTMENT_GUIDE_NEEDS_INPUT`
+  - `FINAL_INVESTMENT_GUIDE_BLOCKED`
 - `completed` selected가 아닌 final decision row 제외 안내
 
 ## 4. 세 번째 작업 완료 항목
 
-- `completed` `Backtest > Post-Selection Guide` workflow panel 추가
-- `completed` operating guide 입력 UI 구현
-  - Guide ID
+- `completed` `Backtest > Post-Selection Guide` workflow panel 보정
+- `completed` final guide preview UI 구현
   - Capital Mode
   - Rebalancing Cadence
   - 자본 / 승인 경계
   - 리밸런싱 / 축소 / 중단 / 재검토 기준
-- `completed` `운영 가이드 기록` append-only save 구현
-- `completed` Final Review에서 Post-Selection Guide로 이동하는 버튼 연결
+- `completed` `운영 가이드 기록` append-only save 제거
+- `completed` Final Review에서 Post-Selection Guide로 이동하는 버튼 유지
 
 ## 5. 네 번째 작업 완료 항목
 
-- `completed` 저장된 operating guide review table 구현
-- `completed` saved guide 상세 JSON / component / operating policy 확인 구현
-- `completed` base workflow complete handoff route 구현
-  - `POST_SELECTION_OPERATING_GUIDE_READY`
+- `completed` saved guide review table 제거
+- `completed` `추가 저장 없음` disabled action 추가
+- `completed` live approval / broker order / 자동매매 비활성 경계 유지
+- `completed` Phase35 checklist를 no-extra-save QA 기준으로 개편
+- `completed` operations / code analysis / roadmap / index 문서 보정
 
 ## 6. Validation
 
 - `completed` phase35 helper / UI 구현 후 `py_compile`
 - `completed` selected final decision input smoke
 - `pending` user manual QA
-
-## 7. Documentation Sync
-
-- `completed` phase kickoff plan 문서 생성
-- `completed` current chapter TODO 문서 생성
-- `completed` first / second / third / fourth work-unit 문서 생성
-- `completed` roadmap / doc index / work log / question log sync
-- `completed` Phase35 구현 후 operations guide / code analysis 문서 검토
 
 ## 현재 판단
 
@@ -102,15 +99,15 @@ Phase 35는 implementation_complete / manual_qa_pending 상태다.
 
 - `Backtest > Post-Selection Guide` workflow panel
 - selected final review record input selector
-- `.note/finance/registries/POST_SELECTION_OPERATING_GUIDES.jsonl` append-only 저장소 helper
-- operating guide readiness / blocker / score
-- 리밸런싱 / 축소 / 중단 / 재검토 운영 기준 입력
-- `운영 가이드 기록` 명시 액션
-- 저장된 운영 가이드 review surface
+- 투자 가능 후보 / 투자하면 안 됨 / 내용 부족 / 재검토 필요 표시
+- final investment readiness / blocker / score
+- 리밸런싱 / 축소 / 중단 / 재검토 운영 전 기준 preview
+- 추가 저장 없음 경계
 - live approval / broker order / 자동매매 비활성 경계
 
 중요한 경계:
 
+- Phase35는 Final Review 기록을 다시 저장하지 않는다.
 - Phase35도 live approval이나 broker order가 아니다.
 - Phase35는 Portfolio Proposal 탭을 다시 키우는 작업이 아니다.
-- Phase35는 Phase34 final review record를 읽어 운영 기준을 만드는 작업이다.
+- Phase35는 Phase34 final review record를 읽어 최종 투자 가능성과 운영 전 지침을 확인하는 작업이다.

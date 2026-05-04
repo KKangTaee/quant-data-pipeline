@@ -308,12 +308,12 @@ def render_final_review_workspace() -> None:
         )
         operator_constraints = st.text_area(
             "운영 제약",
-            value="실제 투자 전 Phase 35에서 투입 금액, 리밸런싱, 중단 / 재검토 기준을 별도로 확정한다.",
+            value="실제 투자 전 Phase 35에서 투자 가능성, 투입 금액, 리밸런싱, 중단 / 재검토 기준을 다시 확인한다.",
             key="final_review_operator_constraints",
         )
         operator_next_action = st.text_area(
             "다음 행동",
-            value="선정이면 Phase 35 운영 가이드로 넘기고, 보류 / 재검토면 추가 관찰 또는 구성 근거를 보강한다.",
+            value="선정이면 Phase 35 최종 투자 지침 확인으로 넘기고, 보류 / 재검토면 추가 관찰 또는 구성 근거를 보강한다.",
             key="final_review_operator_next_action",
         )
         save_evaluation = _build_final_review_save_evaluation(
@@ -363,7 +363,7 @@ def render_final_review_workspace() -> None:
                 "Post-Selection Guide 열기",
                 key="final_review_open_post_selection_guide",
                 width="stretch",
-                help="최종 선정 기록이 있으면 운영 가이드 작성 화면에서 읽을 수 있습니다.",
+                help="최종 선정 기록이 있으면 최종 투자 지침 확인 화면에서 읽을 수 있습니다.",
             ):
                 _request_backtest_panel("Post-Selection Guide")
                 st.rerun()

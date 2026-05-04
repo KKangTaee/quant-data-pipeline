@@ -1,49 +1,69 @@
 # Phase 35 Next Phase Preparation
 
-## 목적
+## 현재 상태
 
-이 문서는 Phase 35 이후 어떤 방향으로 넘어갈 수 있는지 미리 기록하는 초안이다.
+- Phase 35 progress: `implementation_complete`
+- Phase 35 validation: `manual_qa_pending`
 
-현재 Phase 35는 implementation_complete / manual_qa_pending 상태이므로,
-이 문서는 사용자 QA 이후 다시 확정할 수 있다.
+Phase 35는 사용자 QA 대기 상태다.
+QA가 완료되면 실전 후보 포트폴리오 선정과 운영 전 지침 확인까지의 기본 흐름은 닫을 수 있다.
 
-## 현재 handoff 상태
+## Phase35가 끝나면 갖춰지는 것
 
-- Phase 34는 complete / manual_qa_completed 상태다.
-- Phase 35는 Phase34 final review record 중 selected record를 읽어 운영 가이드를 만드는 phase다.
-- `Backtest > Post-Selection Guide`에서 selected final decision을 읽고 operating guide를 append-only로 기록할 수 있다.
-- 저장소는 `.note/finance/registries/POST_SELECTION_OPERATING_GUIDES.jsonl`이다.
-- 현재 Phase35 manual QA가 남아 있다.
+- `Backtest > Final Review`에서 최종 선정 / 보류 / 거절 / 재검토 판단을 기록한다.
+- `Backtest > Post-Selection Guide`에서 final decision을 다시 읽어 투자 가능 후보 / 투자하면 안 됨 / 내용 부족 / 재검토 필요를 확인한다.
+- selected final decision의 component, target weight, evidence, 리밸런싱 / 축소 / 중단 / 재검토 기준을 확인한다.
+- Phase35는 추가 registry를 저장하지 않는다.
+- live approval, broker order, 자동매매는 여전히 out of scope다.
 
-## 다음 phase에서 더 중요한 질문
+## 다음 phase 후보
 
-1. Phase35에서 운영 기준이 만들어진 뒤, 실제 live approval / broker order와 어디까지 연결할 것인가?
-2. live approval 전에 paper/live monitoring 성과를 자동 계산하거나 추적해야 하는가?
-3. 운영 가이드가 깨졌을 때 Candidate Review / Final Review로 되돌리는 route를 어떻게 만들 것인가?
+Phase35 QA가 완료된 뒤에는 아래 중 하나를 선택하는 것이 자연스럽다.
 
-## 다음 phase에서 실제로 할 작업
+### 후보 A. Portfolio Monitoring / Paper-Live Tracking
 
-쉽게 말하면:
+- 선정된 포트폴리오 후보를 실제 기간별 성과 관찰 화면으로 추적한다.
+- 실제 투자 전 paper/live monitoring chart, benchmark comparison, trigger breach를 본다.
+- Phase35의 운영 전 기준을 실제 관찰 데이터와 연결한다.
 
-- Phase36 후보는 Phase35 결과에 따라 달라진다.
-- 운영 가이드만으로 충분하면 live approval 경계를 더 자세히 정리할 수 있고,
-  자동 성과 추적이 필요하다고 판단되면 paper/live monitoring engine을 먼저 만들 수 있다.
+### 후보 B. Live Approval Boundary
 
-주요 후보:
+- 사용자가 실제 투자 승인 전 확인해야 할 최종 체크리스트를 만든다.
+- 주문 실행은 하지 않되, 투자 금액, 계좌 제약, 실행 위험, tax/cost checklist를 확인한다.
+- live approval과 broker order의 경계를 문서와 UI에서 명확히 나눈다.
 
-1. Live Approval Boundary / Execution Readiness
-   - 실제 주문 전 승인 절차, operator confirmation, broker/order boundary를 정리한다.
-2. Paper / Live Monitoring Result Tracker
-   - 운영 가이드 기준으로 실제 추적 성과, 리밸런싱 이벤트, stop / reduce trigger를 기록한다.
+### 후보 C. Portfolio Construction Quality Upgrade
 
-## 추천 다음 방향
+- 후보 조합의 correlation, turnover, capacity, concentration, cost estimate를 더 정량화한다.
+- 현재 Phase31~35의 validation / final guide를 더 강하게 만든다.
 
-Phase35 manual QA가 끝나기 전에는 Phase36 방향을 확정하지 않는다.
+## 권장 방향
 
-왜냐하면 운영 guide를 만들고 나서야
-다음 병목이 live approval 계약인지, monitoring tracker인지, 리스크/비용 엔진인지 분명해지기 때문이다.
+Phase35 manual QA가 끝나면 바로 주문 / 자동매매로 가기보다,
+먼저 `Portfolio Monitoring / Paper-Live Tracking`을 검토하는 것이 좋다.
 
-## handoff 메모
+이유:
 
-- Phase35 checklist 완료 후 이 문서를 다시 갱신한다.
-- Phase36을 열기 전에는 사용자의 방향 승인이 필요하다.
+- 사용자가 이미 최종 후보와 운영 전 기준을 확인할 수 있게 되었으므로, 다음 병목은 "실제로 지켜보면 어떤가"다.
+- live approval 전에 paper/live tracking 기간을 거치면 과최적화나 데이터 문제를 더 잘 발견할 수 있다.
+- broker order를 만들기 전에 monitoring과 trigger breach 체계가 있어야 한다.
+
+## 명확한 out of scope
+
+다음 phase를 열더라도 아래는 별도 승인 없이는 만들지 않는다.
+
+- 실제 주문 생성
+- broker API 연결
+- 자동매매
+- 수익 보장 표현
+- 사용자의 투자 금액을 자동 결정하는 기능
+
+## QA gate
+
+Phase35는 아래가 확인되면 closeout 가능하다.
+
+- Post-Selection Guide가 추가 저장 없이 Final Review record를 읽는지
+- 투자 가능 / 투자하면 안 됨 / 내용 부족 / 재검토 필요가 명확히 보이는지
+- `FINAL_INVESTMENT_GUIDE_READY`가 정상 조건에서 보이는지
+- live approval / order disabled 경계가 유지되는지
+- 문서가 "실전 후보 포트폴리오 선정 + 운영 전 지침 확인"까지 갖춘 상태로 읽히는지

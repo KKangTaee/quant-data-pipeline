@@ -2721,11 +2721,11 @@ operator reason을 함께 읽고 사람이 명시적으로 남겨야 한다.
 
 ---
 
-## Post-Selection Operating Guide
+## Post-Selection Guide
 
 ### 기본 설명
-Phase34에서 최종 실전 후보로 선정한 record를 읽어,
-실제 운영 전에 리밸런싱 / 축소 / 중단 / 재검토 기준을 정리하는 가이드다.
+Phase34에서 기록한 Final Review record를 읽어,
+최종 투자 가능성과 실제 운영 전 리밸런싱 / 축소 / 중단 / 재검토 기준을 확인하는 화면이다.
 
 ### 왜 사용되는지
 `SELECT_FOR_PRACTICAL_PORTFOLIO`는 "실전 후보로 고르겠다"는 검토 기록이지,
@@ -2734,17 +2734,23 @@ Phase34에서 최종 실전 후보로 선정한 record를 읽어,
 선정 이후에도 사용자는 언제 비중을 조정할지,
 어떤 조건에서 멈추거나 줄일지,
 어떤 데이터나 paper observation 문제가 생기면 다시 검토할지 알아야 한다.
-Phase35는 이 기준을 한곳에 모아 사용자가 따라갈 수 있는 운영 안내로 만든다.
+Phase35는 이 기준을 한곳에 모아 사용자가 마지막으로 확인하게 만든다.
+
+2026-05-04 보정 이후 Phase35는 별도 post-selection registry를 저장하지 않는다.
+Final Review의 final selection decision이 최종 판단 원본이고,
+Post-Selection Guide는 read / preview surface다.
 
 ### 예시 / 필요 상황
 - Final Review에서 `SELECT_FOR_PRACTICAL_PORTFOLIO`로 저장된 후보가 있을 때
 - 선정된 후보의 target weight, observation 기준, blocker, operator constraint를 운영 기준으로 다시 읽고 싶을 때
 - live approval이나 broker order 전에 사람이 확인할 운영 규칙표가 필요할 때
-- 저장 위치:
-  - `.note/finance/registries/POST_SELECTION_OPERATING_GUIDES.jsonl`
+- 별도 저장 위치:
+  - 없음
+- 원본 판단 위치:
+  - `.note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`
 
 중요한 경계:
 
-- Post-Selection Operating Guide는 주문 실행 지시가 아니다.
-- Post-Selection Operating Guide는 live approval이 아니다.
-- Phase35는 최종 선정 후보를 운영 가능한 기준표로 바꾸는 단계다.
+- Post-Selection Guide는 주문 실행 지시가 아니다.
+- Post-Selection Guide는 live approval이 아니다.
+- Phase35는 최종 선정 후보를 다시 저장하는 단계가 아니라 운영 전 기준을 확인하는 단계다.

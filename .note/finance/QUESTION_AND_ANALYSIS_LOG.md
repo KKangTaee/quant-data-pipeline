@@ -3995,3 +3995,17 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Follow-up:
   - Phase35는 `implementation_complete / manual_qa_pending` 상태가 됐다
   - 사용자는 `.note/finance/phases/phase35/PHASE35_TEST_CHECKLIST.md`로 manual QA를 진행하면 된다
+
+### 2026-05-04 - Phase35 반복 저장 UX 보정 판단
+- User request:
+  - Phase35에도 또 저장 흐름이 생긴 이유를 문제 제기하고, Final Review와 Post-Selection Guide의 차이 및 저장 필요성을 재검토해 달라고 요청함
+- Interpreted goal:
+  - 최종 투자 포트폴리오 선정 흐름에서 사용자가 이해하기 어려운 반복 저장 패턴을 제거하고, Final Review와 Phase35의 역할을 더 선명하게 해야 함
+- Analysis result:
+  - Phase35의 별도 operating guide registry는 장기 추적성 측면에서는 설명 가능하지만, 현재 제품 목표인 "최종 투자 가능 후보 선정 + 운영 전 지침 확인"에는 과한 UX로 판단했다
+  - Final Review의 final selection decision을 최종 판단 원본으로 두고, Post-Selection Guide는 그 기록을 읽는 no-extra-save preview surface로 보정하는 것이 더 적절하다
+  - 최종 판단은 `투자 가능 후보`, `투자하면 안 됨`, `내용 부족 / 관찰 필요`, `재검토 필요`로 사용자가 바로 이해할 수 있어야 한다
+- Follow-up:
+  - `Backtest > Post-Selection Guide`에서 `운영 가이드 기록` save flow와 saved guide review를 제거했다
+  - `app/web/runtime/post_selection_guides.py`를 삭제했다
+  - Phase35 checklist와 durable docs를 no-extra-save final investment guide 기준으로 개편했다

@@ -57,7 +57,7 @@ Final Portfolio Selection Decision은
 
 | Route | 의미 |
 |---|---|
-| `SELECT_FOR_PRACTICAL_PORTFOLIO` | 최종 실전 후보로 선정하고 Phase35 운영 가이드 작성 대상으로 넘긴다. 승인 / 주문은 아니다. |
+| `SELECT_FOR_PRACTICAL_PORTFOLIO` | 최종 실전 후보로 선정하고 Phase35 최종 투자 지침 확인 대상으로 넘긴다. 승인 / 주문은 아니다. |
 | `HOLD_FOR_MORE_PAPER_TRACKING` | 추가 paper observation 기간이나 trigger 확인이 필요해 보류한다. |
 | `REJECT_FOR_PRACTICAL_USE` | 현재 근거로는 실전 후보에서 제외한다. |
 | `RE_REVIEW_REQUIRED` | 구성, 비중, validation, robustness, paper tracking 조건을 다시 봐야 한다. |
@@ -69,10 +69,10 @@ Final Portfolio Selection Decision은
 - `SELECT_FOR_PRACTICAL_PORTFOLIO`도 live approval이나 주문 지시가 아니다.
 - final decision 저장은 current candidate, Pre-Live, Portfolio Proposal registry를 덮어쓰지 않는다.
 - Paper Ledger registry는 호환성 / 운영 artifact로 유지하지만, 현재 main flow에서 별도 저장을 필수로 요구하지 않는다.
-- Phase 35 handoff는 운영 가이드 준비 상태이지 자동매매 연결이 아니다.
+- Phase 35 handoff는 최종 투자 지침 확인 준비 상태이지 자동매매 연결이 아니다.
 
 ## 현재 한계
 
-- Phase 35 post-selection operating guide는 아직 구현 전이다.
+- Phase 35 Post-Selection Guide는 구현되어 있으며, Final Review record를 읽는 no-extra-save preview surface다.
 - 실제 broker order, 자동매매, live approval은 범위 밖이다.
 - paper PnL 시계열 자동 계산은 아직 없으므로, 현재 decision evidence는 validation snapshot / inline paper observation 기준 / operator note 기반으로 해석한다.

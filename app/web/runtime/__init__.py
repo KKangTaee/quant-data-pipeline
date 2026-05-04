@@ -51,12 +51,6 @@ from .final_selection_decisions import (
     append_final_selection_decision,
     load_final_selection_decisions,
 )
-from .post_selection_guides import (
-    POST_SELECTION_OPERATING_GUIDE_FILE,
-    POST_SELECTION_OPERATING_GUIDE_SCHEMA_VERSION,
-    append_post_selection_operating_guide,
-    load_post_selection_operating_guides,
-)
 
 __all__ = [
     "BACKTEST_HISTORY_FILE",
@@ -69,14 +63,11 @@ __all__ = [
     "PAPER_PORTFOLIO_LEDGER_SCHEMA_VERSION",
     "FINAL_SELECTION_DECISION_REGISTRY_FILE",
     "FINAL_SELECTION_DECISION_SCHEMA_VERSION",
-    "POST_SELECTION_OPERATING_GUIDE_FILE",
-    "POST_SELECTION_OPERATING_GUIDE_SCHEMA_VERSION",
     "SAVED_PORTFOLIO_FILE",
     "append_candidate_review_note",
     "append_backtest_run_history",
     "append_current_candidate_registry_row",
     "append_final_selection_decision",
-    "append_post_selection_operating_guide",
     "append_paper_portfolio_ledger_row",
     "append_portfolio_proposal",
     "append_pre_live_candidate_registry_row",
@@ -87,7 +78,6 @@ __all__ = [
     "load_candidate_review_notes",
     "load_current_candidate_registry_latest",
     "load_final_selection_decisions",
-    "load_post_selection_operating_guides",
     "load_paper_portfolio_ledger",
     "load_portfolio_proposals",
     "load_pre_live_candidate_registry_latest",

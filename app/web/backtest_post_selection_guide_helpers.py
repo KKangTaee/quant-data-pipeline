@@ -1,11 +1,8 @@
 from __future__ import annotations
 
-from datetime import datetime
 from typing import Any
 
 import pandas as pd
-
-from app.web.runtime import POST_SELECTION_OPERATING_GUIDE_SCHEMA_VERSION
 
 
 POST_SELECTION_REBALANCE_CADENCE_OPTIONS = [
@@ -20,6 +17,34 @@ POST_SELECTION_CAPITAL_MODE_OPTIONS = [
     "operator_defined_capital",
     "paper_only_until_next_review",
 ]
+
+POST_SELECTION_READY_HANDOFF_ROUTES = {
+    "READY_FOR_FINAL_INVESTMENT_GUIDE",
+    "READY_FOR_POST_SELECTION_OPERATING_GUIDE",
+}
+
+FINAL_INVESTMENT_VERDICT_LABELS = {
+    "SELECT_FOR_PRACTICAL_PORTFOLIO": {
+        "label": "투자 가능 후보",
+        "detail": "검증 근거와 관찰 기준이 준비되어 최종 실전 후보로 읽을 수 있습니다.",
+        "tone": "positive",
+    },
+    "HOLD_FOR_MORE_PAPER_TRACKING": {
+        "label": "내용 부족 / 관찰 필요",
+        "detail": "바로 투자 후보로 확정하기보다 추가 관찰 근거가 필요합니다.",
+        "tone": "warning",
+    },
+    "REJECT_FOR_PRACTICAL_USE": {
+        "label": "투자하면 안 됨",
+        "detail": "현재 근거로는 실전 후보에서 제외하는 판단입니다.",
+        "tone": "danger",
+    },
+    "RE_REVIEW_REQUIRED": {
+        "label": "재검토 필요",
+        "detail": "구성, 비중, 검증 근거, 데이터 상태를 다시 확인해야 합니다.",
+        "tone": "warning",
+    },
+}
 
 
 def _optional_float(value: Any) -> float | None:
@@ -42,8 +67,33 @@ def _selected_final_decision_is_eligible(row: dict[str, Any]) -> bool:
     handoff = dict(row.get("phase35_handoff") or {})
     return (
         str(row.get("decision_route") or "") == "SELECT_FOR_PRACTICAL_PORTFOLIO"
-        and str(handoff.get("handoff_route") or "") == "READY_FOR_POST_SELECTION_OPERATING_GUIDE"
+        and str(handoff.get("handoff_route") or "") in POST_SELECTION_READY_HANDOFF_ROUTES
     )
+
+
+def build_final_investment_decision_summary(row: dict[str, Any]) -> dict[str, Any]:
+    """Translate final decision routes into plain investment-readiness language."""
+    decision_route = str(row.get("decision_route") or "")
+    handoff = dict(row.get("phase35_handoff") or {})
+    verdict = dict(
+        FINAL_INVESTMENT_VERDICT_LABELS.get(
+            decision_route,
+            {
+                "label": "내용 부족 / 재검토 필요",
+                "detail": "최종 판단 route가 명확하지 않아 다시 확인해야 합니다.",
+                "tone": "warning",
+            },
+        )
+    )
+    return {
+        "decision_route": decision_route,
+        "verdict_label": verdict["label"],
+        "verdict_detail": verdict["detail"],
+        "tone": verdict["tone"],
+        "phase35_handoff": handoff.get("handoff_route") or "-",
+        "phase35_next_action": handoff.get("next_action") or "-",
+        "eligible_for_final_guide": _selected_final_decision_is_eligible(row),
+    }
 
 
 def build_post_selection_source_options(final_decision_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -73,14 +123,16 @@ def build_post_selection_source_review_rows(final_decision_rows: list[dict[str, 
     display_rows: list[dict[str, Any]] = []
     for row in final_decision_rows:
         handoff = dict(row.get("phase35_handoff") or {})
+        summary = build_final_investment_decision_summary(row)
         components = [dict(component or {}) for component in list(row.get("selected_components") or [])]
         display_rows.append(
             {
                 "Updated At": row.get("updated_at") or row.get("created_at"),
                 "Decision ID": row.get("decision_id"),
                 "Decision Route": row.get("decision_route"),
+                "투자 가능성": summary["verdict_label"],
                 "Phase35 Handoff": handoff.get("handoff_route"),
-                "Guide Eligible": "Yes" if _selected_final_decision_is_eligible(row) else "No",
+                "Final Guide Eligible": "Yes" if _selected_final_decision_is_eligible(row) else "No",
                 "Source": f"{row.get('source_type')} / {row.get('source_id')}",
                 "Components": len(components),
                 "Weight Total": _component_weight_total(components),
@@ -144,8 +196,6 @@ def default_post_selection_policy_inputs(final_decision_row: dict[str, Any]) -> 
 def build_post_selection_readiness(
     *,
     final_decision_row: dict[str, Any],
-    guide_id: str,
-    existing_guide_ids: set[str],
     capital_mode: str,
     capital_boundary_note: str,
     rebalancing_cadence: str,
@@ -154,84 +204,92 @@ def build_post_selection_readiness(
     stop_trigger: str,
     re_review_trigger: str,
 ) -> dict[str, Any]:
-    """Check whether the selected final decision and operator policy form a usable guide."""
+    """Check whether the selected final decision can be read as a usable final guide."""
     components = [dict(component or {}) for component in list(final_decision_row.get("selected_components") or [])]
     weight_total = _component_weight_total(components)
     handoff = dict(final_decision_row.get("phase35_handoff") or {})
     decision_ready = _selected_final_decision_is_eligible(final_decision_row)
-    guide_id_clean = str(guide_id or "").strip()
+    summary = build_final_investment_decision_summary(final_decision_row)
+    evidence = dict(final_decision_row.get("decision_evidence_snapshot") or {})
     checks = [
         {
             "Criteria": "Selected final decision",
             "Ready": decision_ready,
             "Current": handoff.get("handoff_route") or "-",
-            "Meaning": "Phase35는 최종 선정된 record만 운영 가이드로 바꾼다.",
-            "Score": 1.6,
+            "Meaning": "Phase35는 최종 선정된 record만 마지막 투자 가능성 확인 대상으로 읽는다.",
+            "Score": 2.0,
         },
         {
-            "Criteria": "Guide identity",
-            "Ready": bool(guide_id_clean) and guide_id_clean not in existing_guide_ids,
-            "Current": guide_id_clean or "-",
-            "Meaning": "중복되지 않는 운영 가이드 id가 필요하다.",
-            "Score": 1.0,
+            "Criteria": "Final investment verdict",
+            "Ready": summary["verdict_label"] == "투자 가능 후보",
+            "Current": summary["verdict_label"],
+            "Meaning": "최종 판단이 투자 가능 후보 / 투자하면 안 됨 / 내용 부족 / 재검토 필요 중 무엇인지 확인한다.",
+            "Score": 1.2,
         },
         {
             "Criteria": "Target components",
             "Ready": bool(components) and abs(weight_total - 100.0) <= 0.01,
             "Current": f"components={len(components)}, weight_total={weight_total:.1f}%",
-            "Meaning": "운영할 component와 target weight 합계가 명확해야 한다.",
-            "Score": 1.6,
+            "Meaning": "투자 후보로 볼 component와 target weight 합계가 명확해야 한다.",
+            "Score": 1.4,
+        },
+        {
+            "Criteria": "Evidence package",
+            "Ready": evidence.get("route") == "READY_FOR_FINAL_DECISION",
+            "Current": evidence.get("route") or "-",
+            "Meaning": "검증 / robustness / 관찰 기준이 최종 판단 근거로 묶였는지 본다.",
+            "Score": 1.2,
         },
         {
             "Criteria": "Capital boundary",
             "Ready": capital_mode in POST_SELECTION_CAPITAL_MODE_OPTIONS and bool(str(capital_boundary_note).strip()),
             "Current": capital_mode or "-",
-            "Meaning": "가이드가 주문/승인이 아니라는 자본 투입 경계를 남긴다.",
-            "Score": 1.2,
+            "Meaning": "실제 투입 금액과 승인 경계는 사용자가 별도 판단해야 함을 확인한다.",
+            "Score": 1.0,
         },
         {
             "Criteria": "Rebalancing policy",
             "Ready": rebalancing_cadence in POST_SELECTION_REBALANCE_CADENCE_OPTIONS and bool(str(rebalance_trigger).strip()),
             "Current": rebalancing_cadence or "-",
             "Meaning": "언제 비중을 다시 맞출지 기준이 필요하다.",
-            "Score": 1.4,
+            "Score": 1.1,
         },
         {
             "Criteria": "Reduce / stop policy",
             "Ready": bool(str(reduce_trigger).strip()) and bool(str(stop_trigger).strip()),
             "Current": "attached" if str(reduce_trigger).strip() and str(stop_trigger).strip() else "-",
             "Meaning": "언제 줄이고 멈출지 기준이 필요하다.",
-            "Score": 1.4,
+            "Score": 1.1,
         },
         {
             "Criteria": "Re-review policy",
             "Ready": bool(str(re_review_trigger).strip()),
             "Current": "attached" if str(re_review_trigger).strip() else "-",
             "Meaning": "어떤 조건에서 Final Review나 Candidate Review로 되돌아갈지 남긴다.",
-            "Score": 1.0,
+            "Score": 1.2,
         },
         {
             "Criteria": "Execution boundary",
             "Ready": True,
             "Current": "live approval disabled / order instruction disabled",
-            "Meaning": "운영 가이드는 주문 실행 지시가 아니다.",
+            "Meaning": "최종 지침 preview는 주문 실행 지시가 아니다.",
             "Score": 0.8,
         },
     ]
     blockers = [str(row["Criteria"]) for row in checks if not row["Ready"]]
     score = round(sum(float(row["Score"]) for row in checks if row["Ready"]), 1)
     if not decision_ready:
-        route = "OPERATING_GUIDE_BLOCKED"
-        verdict = "운영 가이드 작성 차단: 최종 선정 record가 아님"
-        next_action = "Final Review에서 `SELECT_FOR_PRACTICAL_PORTFOLIO` 기록을 먼저 남깁니다."
+        route = "FINAL_INVESTMENT_GUIDE_BLOCKED"
+        verdict = "최종 투자 지침 확인 차단: 최종 선정 record가 아님"
+        next_action = "Final Review에서 `투자 가능 후보`로 볼 수 있는 최종 판단을 먼저 기록합니다."
     elif blockers:
-        route = "OPERATING_GUIDE_NEEDS_INPUT"
-        verdict = "운영 가이드 기록 전 보강 필요"
-        next_action = "비중 합계, 리밸런싱, 축소 / 중단 / 재검토 기준을 채웁니다."
+        route = "FINAL_INVESTMENT_GUIDE_NEEDS_INPUT"
+        verdict = "최종 투자 지침 확인 전 보강 필요"
+        next_action = "비중 합계, 리밸런싱, 축소 / 중단 / 재검토 기준을 확인합니다."
     else:
-        route = "OPERATING_GUIDE_RECORD_READY"
-        verdict = "운영 가이드 기록 가능"
-        next_action = "`운영 가이드 기록`을 눌러 선정 후 운영 기준을 append-only로 남깁니다."
+        route = "FINAL_INVESTMENT_GUIDE_READY"
+        verdict = "기본 투자 후보 확인 가능"
+        next_action = "이 화면의 지침을 기준으로 실제 투자 전 사용자가 마지막 판단을 진행합니다."
     return {
         "route": route,
         "score": min(score, 10.0),
@@ -239,7 +297,7 @@ def build_post_selection_readiness(
         "next_action": next_action,
         "checks": checks,
         "blockers": blockers,
-        "can_save": not blockers,
+        "can_use": not blockers,
         "metrics": {
             "component_count": len(components),
             "target_weight_total": weight_total,
@@ -249,10 +307,9 @@ def build_post_selection_readiness(
     }
 
 
-def build_post_selection_operating_guide_row(
+def build_post_selection_guide_preview(
     *,
     final_decision_row: dict[str, Any],
-    guide_id: str,
     readiness: dict[str, Any],
     capital_mode: str,
     capital_boundary_note: str,
@@ -263,19 +320,17 @@ def build_post_selection_operating_guide_row(
     re_review_trigger: str,
     operator_review_note: str,
 ) -> dict[str, Any]:
-    """Create one operating guide row while preserving the source final decision unchanged."""
-    now = datetime.now().isoformat(timespec="seconds")
+    """Build a non-persistent guide preview from the saved final decision."""
     components = [dict(component or {}) for component in list(final_decision_row.get("selected_components") or [])]
     paper = dict(final_decision_row.get("paper_tracking_snapshot") or {})
     evidence = dict(final_decision_row.get("decision_evidence_snapshot") or {})
     handoff = dict(final_decision_row.get("phase35_handoff") or {})
+    summary = build_final_investment_decision_summary(final_decision_row)
     row = {
-        "schema_version": POST_SELECTION_OPERATING_GUIDE_SCHEMA_VERSION,
-        "guide_id": str(guide_id or "").strip(),
-        "created_at": now,
-        "updated_at": now,
-        "guide_status": "recorded",
+        "preview_only": True,
         "guide_route": readiness.get("route"),
+        "final_investment_verdict": summary["verdict_label"],
+        "final_investment_detail": summary["verdict_detail"],
         "source_decision_id": final_decision_row.get("decision_id"),
         "source_decision_route": final_decision_row.get("decision_route"),
         "source_type": final_decision_row.get("source_type"),
@@ -303,40 +358,15 @@ def build_post_selection_operating_guide_row(
         "source_evidence_snapshot": evidence,
         "guide_readiness_snapshot": readiness,
         "post_selection_handoff": {
-            "handoff_route": "POST_SELECTION_OPERATING_GUIDE_READY",
-            "verdict": "기본 실전 포트폴리오 후보 흐름 완료: 선정 후보와 운영 기준이 연결됨",
-            "next_action": "실제 주문 / live approval은 별도 의사결정으로 유지하고, 이 가이드를 기준으로 운영 전 최종 확인을 진행합니다.",
+            "handoff_route": "FINAL_INVESTMENT_GUIDE_READY" if readiness.get("can_use") else readiness.get("route"),
+            "verdict": "기본 실전 후보 포트폴리오 흐름 완료: 최종 판단과 운영 전 기준이 연결됨",
+            "next_action": "실제 주문 / live approval은 별도 의사결정으로 유지하고, 이 화면을 기준으로 운영 전 최종 확인을 진행합니다.",
         },
         "live_approval": False,
         "order_instruction": False,
         "notes": (
-            "Created from Backtest > Post-Selection Guide. This guide records operating rules "
-            "after a final selection decision. It is not live approval, broker order, or auto-trading."
+            "Preview from Backtest > Post-Selection Guide. Final Review remains the durable record. "
+            "This preview is not live approval, broker order, or auto-trading."
         ),
     }
     return row
-
-
-def build_post_selection_guide_rows_for_display(rows: list[dict[str, Any]]) -> pd.DataFrame:
-    """Flatten saved operating guides for the review table."""
-    display_rows: list[dict[str, Any]] = []
-    for row in rows:
-        readiness = dict(row.get("guide_readiness_snapshot") or {})
-        policy = dict(row.get("operating_policy") or {})
-        handoff = dict(row.get("post_selection_handoff") or {})
-        display_rows.append(
-            {
-                "Updated At": row.get("updated_at") or row.get("created_at"),
-                "Guide ID": row.get("guide_id"),
-                "Source Decision": row.get("source_decision_id"),
-                "Source": f"{row.get('source_type')} / {row.get('source_id')}",
-                "Components": len(row.get("target_components") or []),
-                "Weight Total": row.get("target_weight_total"),
-                "Guide Route": readiness.get("route") or row.get("guide_route"),
-                "Guide Score": readiness.get("score"),
-                "Rebalance": policy.get("rebalancing_cadence"),
-                "Handoff": handoff.get("handoff_route"),
-                "Live Approval": "Disabled",
-            }
-        )
-    return pd.DataFrame(display_rows)

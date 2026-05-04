@@ -25,7 +25,7 @@ from app.web.runtime import FINAL_SELECTION_DECISION_SCHEMA_VERSION
 
 FINAL_REVIEW_ROUTE_OPTIONS = FINAL_SELECTION_DECISION_ROUTE_OPTIONS
 FINAL_REVIEW_ROUTE_DESCRIPTIONS = {
-    "SELECT_FOR_PRACTICAL_PORTFOLIO": "실전 후보로 선정하고 Phase 35 운영 가이드 작성 대상으로 넘깁니다. 승인/주문은 아닙니다.",
+    "SELECT_FOR_PRACTICAL_PORTFOLIO": "실전 후보로 선정하고 Phase 35 최종 투자 지침 확인 대상으로 넘깁니다. 승인/주문은 아닙니다.",
     "HOLD_FOR_MORE_PAPER_TRACKING": "근거는 남기되 실제 선정 전 더 관찰합니다.",
     "REJECT_FOR_PRACTICAL_USE": "현재 근거로는 실전 후보에서 제외합니다.",
     "RE_REVIEW_REQUIRED": "구성, 비중, 검증 근거, 데이터 상태를 다시 검토합니다.",
@@ -232,7 +232,7 @@ def _build_final_review_decision_evidence_pack(
     else:
         route = "READY_FOR_FINAL_DECISION"
         verdict = "최종 검토 가능: 검증 근거와 관찰 기준이 하나의 판단 기록으로 묶임"
-        next_action = "최종 판단과 사유를 기록하고 Phase 35 운영 가이드 준비 여부를 확인합니다."
+        next_action = "최종 판단과 사유를 기록하고 Phase 35 최종 투자 지침 확인으로 넘길지 봅니다."
         suggested_decision_route = "SELECT_FOR_PRACTICAL_PORTFOLIO"
     return {
         "route": route,

@@ -1487,7 +1487,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 | Phase 32 | `complete` | `manual_qa_completed` | Robustness / Stress Validation Pack 구현 및 QA 완료 |
 | Phase 33 | `complete` | `manual_qa_completed` | Paper Portfolio Tracking Ledger draft / save / review / Phase34 handoff 구현 및 QA 완료 |
 | Phase 34 | `complete` | `manual_qa_completed` | Final Review 탭 분리와 최종 검토 결과 기록 QA 완료 |
-| Phase 35 | `implementation_complete` | `manual_qa_pending` | Post-Selection Guide panel / operating guide registry / saved guide review 구현, 사용자 QA 대기 |
+| Phase 35 | `implementation_complete` | `manual_qa_pending` | Post-Selection Guide panel을 no-extra-save 최종 투자 지침 확인 화면으로 보정, 사용자 QA 대기 |
 
 한 줄 현재 판단:
 - current annual strict candidate와 portfolio bridge를 같은 frame에서 다시 본 `Phase 21`은 manual validation까지 완료되었고,
@@ -1544,7 +1544,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
   final decision 저장 / review / Phase35 handoff와 live approval / 주문 지시 경계를 추가했고 사용자 QA까지 완료했다.
   `Phase 35`는 implementation_complete / manual_qa_pending 상태다.
   Phase35는 최종 선정 후보를 주문으로 보내는 단계가 아니라,
-  리밸런싱 / 축소 / 중단 / 재검토 운영 기준으로 바꾸는 `Post-Selection Operating Guide`를 만들었고 사용자 QA가 남아 있다.
+  투자 가능 후보 / 투자하면 안 됨 / 내용 부족 / 재검토 필요와 리밸런싱 / 축소 / 중단 / 재검토 운영 전 기준을 확인하는 `Post-Selection Guide`를 만들었고 사용자 QA가 남아 있다.
 
 ---
 
@@ -1684,7 +1684,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 | Phase 32 | Robustness And Stress Validation Pack | `complete` | `manual_qa_completed` | robustness preview, stress summary contract / table, Phase33 paper ledger handoff를 구현하고 QA까지 완료했다 |
 | Phase 33 | Paper Portfolio Tracking Ledger | `complete` | `manual_qa_completed` | 시작일 / 비중 / 추적 조건을 가진 paper portfolio ledger를 저장하고 Phase34 handoff를 확인했으며 QA까지 완료했다 |
 | Phase 34 | Final Portfolio Selection Decision Pack | `complete` | `manual_qa_completed` | Final Review 탭에서 검증과 paper observation 기준을 모아 최종 실전 후보 포트폴리오를 선정 / 보류 / 거절 / 재검토하는 decision pack을 구현했고 QA까지 완료했다 |
-| Phase 35 | Post-Selection Operating Guide | `implementation_complete` | `manual_qa_pending` | 선정 이후 리밸런싱, 축소, 중단, 재검토 운영 기준을 기록 / review하고 QA를 기다린다 |
+| Phase 35 | Post-Selection Guide | `implementation_complete` | `manual_qa_pending` | 최종 판단 기록을 읽어 투자 가능성 및 운영 전 기준을 no-extra-save preview로 확인하고 QA를 기다린다 |
 
 ### Phase 31. Portfolio Risk And Live Readiness Validation
 
@@ -1749,21 +1749,22 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 - 저장된 decision은 `기록된 최종 검토 결과 확인`에서 source, observation, selected components, Phase35 handoff route를 다시 읽는다.
 - `selected` decision은 최종 실전 후보 선정이지 live approval, broker order, 자동매매 지시가 아니다.
 
-### Phase 35. Post-Selection Operating Guide
+### Phase 35. Post-Selection Guide
 
 ### 목적
 - Phase 34에서 최종 선정된 final review record를 읽어 리밸런싱 / 중단 / 축소 / 재검토 운영 기준을 만든다.
 
 ### 왜 필요한가
-- 최종 후보를 선정해도 운영 기준이 없으면 실전 포트폴리오로 쓰기 어렵다.
-- 선정 이후에도 live approval / 주문 지시와 분리된 사람이 따라갈 guide가 필요하다.
+- 최종 후보를 선정해도 사용자는 마지막에 투자 가능 후보인지 쉽게 읽어야 한다.
+- 선정 이후에도 live approval / 주문 지시와 분리된 사람이 확인할 운영 전 기준이 필요하다.
+- Phase35에서 또 저장소를 만들면 Final Review 원본 판단과 역할이 겹치므로 no-extra-save 흐름으로 보정했다.
 
 ### 현재 메모
 - Phase 35는 implementation_complete / manual_qa_pending 상태다.
 - `.note/finance/phases/phase35/` 아래 phase plan, TODO, 네 개 작업 단위, completion summary, next-phase preparation, checklist를 정리했다.
-- `.note/finance/registries/POST_SELECTION_OPERATING_GUIDES.jsonl` append-only 저장소와 `app/web/runtime/post_selection_guides.py` helper를 추가했다.
-- `Backtest > Post-Selection Guide` 탭에서 selected final decision을 선택하고, 리밸런싱 / 축소 / 중단 / 재검토 기준을 작성한 뒤 `운영 가이드 기록`으로 저장할 수 있다.
-- 저장된 guide는 source decision, target components, guide route, operating policy, JSON을 다시 읽는다.
+- `Backtest > Post-Selection Guide` 탭에서 selected final decision을 선택하고, 투자 가능 후보 / 투자하면 안 됨 / 내용 부족 / 재검토 필요를 확인한다.
+- 리밸런싱 / 축소 / 중단 / 재검토 기준은 preview로 확인하며 별도 post-selection registry를 저장하지 않는다.
+- Final Review의 final decision registry가 최종 판단 원본이다.
 - Phase35 checklist 기반 사용자 QA가 남아 있다.
 - Phase35도 broker order, 자동매매, live approval은 만들지 않는다.
 
