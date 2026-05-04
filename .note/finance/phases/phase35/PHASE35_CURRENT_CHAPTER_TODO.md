@@ -40,6 +40,7 @@ Final Review에서 사용자가 확인해야 하는 최종 상태는 아래 네 
 - `app/web/backtest_post_selection_guide.py`와 helper module을 제거했다.
 - `Backtest > Final Review`가 현재 후보 선정 workflow의 마지막 active panel이 되게 했다.
 - saved final decision review에서 `투자 가능성`과 `Final Review Status`를 확인할 수 있게 했다.
+- 기존 저장 row에 남아 있는 legacy `phase35_handoff` 문구가 UI에 그대로 보이지 않도록 Final Review status 표시를 현재 기준으로 변환한다.
 - `Final Review`의 보조 action은 `Live Approval / Order` disabled 상태로 남겨 실행 경계를 유지했다.
 - `phase35_handoff` field는 과거 row 호환을 위해 읽을 수 있지만, 사용자-facing으로는 final review completion status로 해석한다.
 

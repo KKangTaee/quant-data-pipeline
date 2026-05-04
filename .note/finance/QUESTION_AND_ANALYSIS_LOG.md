@@ -4023,3 +4023,15 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Backtest workflow에서 별도 후속 guide panel을 제거했다
   - Final Review saved decision review에 투자 가능성 label과 Final Review Status 해석을 보강했다
   - Phase35 문서와 checklist를 `Portfolio Proposal -> Final Review -> 최종 판단 완료` 기준으로 개편했다
+
+### 2026-05-04 - Final Review 저장 결과의 legacy Phase35 문구 표시 문제
+- User request:
+  - `기록된 최종검토 결과 확인`의 판정에 `Phase 35 운영 가이드 작성 가능`과 운영 가이드 정리 next action이 보여 현재 흐름과 맞지 않는다고 지적함
+- Interpreted goal:
+  - 기존 저장 row에 남아 있는 legacy handoff 문구가 Final Review UI에서 현재 제품 방향과 충돌하지 않게 해야 함
+- Analysis result:
+  - 문제는 최종 검토 단계 자체가 아니라 과거 Phase35 설계 때 저장된 `phase35_handoff` 문구를 UI가 그대로 표시한 것이다
+  - 현재 기준에서는 Final Review가 최종 판단 완료 지점이며, selected route는 `최종 판단 완료: 실전 후보로 선정됨`으로 읽혀야 한다
+- Follow-up:
+  - saved final decision display에 현재 Final Review end-state 문구 변환 layer를 추가했다
+  - raw JSON은 호환성 때문에 유지하지만 route panel은 legacy Phase35 운영 가이드 문구를 보여주지 않도록 했다

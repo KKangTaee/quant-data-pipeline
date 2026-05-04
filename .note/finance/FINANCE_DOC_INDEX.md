@@ -82,7 +82,7 @@
 | Phase 32 | `complete` | `manual_qa_completed` | Robustness / Stress Validation Pack 구현 및 QA 완료 |
 | Phase 33 | `complete` | `manual_qa_completed` | Paper Portfolio Tracking Ledger draft / save / review / Phase34 handoff 구현 및 QA 완료 |
 | Phase 34 | `complete` | `manual_qa_completed` | Final Review 탭 분리와 최종 검토 결과 기록 QA 완료 |
-| Phase 35 | `implementation_complete` | `manual_qa_pending` | Final Review를 마지막 active panel로 고정하고 별도 후속 가이드 workflow 제거, 사용자 QA 대기 |
+| Phase 35 | `implementation_complete` | `manual_qa_pending` | Final Review를 마지막 active panel로 고정하고 별도 후속 가이드 workflow 제거, legacy handoff 문구 표시 보정, 사용자 QA 대기 |
 
 현재 한 줄 요약:
 

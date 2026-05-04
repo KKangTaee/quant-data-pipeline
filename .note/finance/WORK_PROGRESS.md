@@ -3189,3 +3189,14 @@ Detailed historical logs were archived on `2026-04-13`.
   - The active user workflow ends at Final Review.
   - `FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl` is the final judgment source of truth.
   - No separate post-selection registry or active post-selection panel should be added unless the user explicitly reopens that design.
+
+### 2026-05-04
+- Fixed a Final Review saved-record display issue after the user noticed legacy Phase35 operating-guide wording in `기록된 최종 검토 결과 확인`.
+- Changed:
+  - added a Final Review status display translation layer for saved final decision rows
+  - mapped existing selected / hold / reject / re-review records to current Final Review end-state wording
+  - stopped showing legacy `Phase 35 운영 가이드 작성 가능` verdict / next action text in the route panel
+  - updated the Phase35 checklist to include this regression check
+- Decision:
+  - Existing final decision JSON rows are not rewritten.
+  - Legacy `phase35_handoff` data can remain in raw JSON for compatibility, but the UI should explain the record as Final Review completion.

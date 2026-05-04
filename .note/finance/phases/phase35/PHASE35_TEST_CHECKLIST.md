@@ -46,6 +46,7 @@
   - [ ] `REJECT_FOR_PRACTICAL_USE`는 `투자하면 안 됨`으로 읽히는지
   - [ ] `RE_REVIEW_REQUIRED`는 `재검토 필요`로 읽히는지
   - [ ] detail panel title이 `Final Review Status`로 읽히는지
+  - [ ] detail panel의 판정 / 다음 행동이 `Phase 35 운영 가이드 작성 가능` 같은 예전 문구가 아니라 현재 Final Review 완료 기준으로 읽히는지
   - [ ] selected component table이 계속 보이는지
 
 ## 4. 실행 경계 확인

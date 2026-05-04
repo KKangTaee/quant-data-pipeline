@@ -1035,7 +1035,7 @@ def _build_final_selection_decision_phase35_handoff(row: dict[str, Any]) -> dict
     if decision_route == "SELECT_FOR_PRACTICAL_PORTFOLIO":
         handoff_route = "FINAL_REVIEW_DECISION_COMPLETE"
         verdict = "최종 판단 완료: 실전 후보로 선정됨"
-        next_action = "실제 투자 승인 / 주문은 별도 사용자 판단으로 유지합니다."
+        next_action = "실제 투자 금액, 리밸런싱, 주문 승인 여부는 별도 운영 / 승인 단계에서 사용자가 결정합니다."
     elif decision_route == "HOLD_FOR_MORE_PAPER_TRACKING":
         handoff_route = "WAIT_FOR_MORE_PAPER_TRACKING"
         verdict = "최종 판단 보류: paper tracking 근거를 더 쌓아야 함"

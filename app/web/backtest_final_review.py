@@ -17,6 +17,7 @@ from app.web.backtest_final_review_helpers import (
     _build_final_review_paper_observation_snapshot,
     _build_final_review_save_evaluation,
     _build_final_review_source_options,
+    _build_final_review_status_display,
     _build_final_review_validation,
 )
 from app.web.backtest_portfolio_proposal_helpers import (
@@ -153,13 +154,13 @@ def _render_saved_final_review_decisions(final_decision_rows: list[dict[str, Any
     selected_label = st.selectbox("기록 확인", options=labels, key="final_review_saved_decision_selected")
     selected_row = final_decision_rows[labels.index(selected_label)]
     evidence = dict(selected_row.get("decision_evidence_snapshot") or {})
-    handoff = dict(selected_row.get("phase35_handoff") or {})
+    status_display = _build_final_review_status_display(selected_row)
     render_readiness_route_panel(
-        route_label=str(handoff.get("handoff_route") or "-"),
+        route_label=str(status_display.get("route") or "-"),
         score=float(evidence.get("score") or 0.0),
         blockers_count=len(evidence.get("blockers") or []),
-        verdict=str(handoff.get("verdict") or "-"),
-        next_action=str(handoff.get("next_action") or "-"),
+        verdict=str(status_display.get("verdict") or "-"),
+        next_action=str(status_display.get("next_action") or "-"),
         route_title="Final Review Status",
         score_title="Evidence Score",
     )
