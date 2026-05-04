@@ -3223,3 +3223,17 @@ Detailed historical logs were archived on `2026-04-13`.
 - Decision:
   - JSONL files should not be presented as bare paths in the guide.
   - The guide should make clear that only `FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl` is the final candidate-selection judgment source, while run history and saved portfolios are replay / reuse records.
+
+### 2026-05-04
+- Lightened repeated operator judgment UX after the user approved the proposed improvement direction.
+- Changed:
+  - changed Candidate Review Pre-Live input from `Operator Final Status` framing to `추천 운영 상태 확인` / `운영 상태 확인`
+  - moved Candidate Review operating memo, next action, and review date into an optional expander with defaults
+  - changed Portfolio Proposal `Operator Decision` framing to `Proposal 저장 상태`
+  - moved Portfolio Proposal memo and next review date into an optional expander with defaults
+  - added a Final Review notice that only the Final Review `최종 판단` is the main practical-candidate decision surface
+  - moved Final Review decision id, operating constraints, and next action into an advanced expander
+  - updated Phase35 TODO / checklist / completion summary and Backtest UI flow docs
+- Decision:
+  - The registry contracts remain unchanged.
+  - Intermediate records stay useful as preparation / operating notes, but they should not feel like repeated final decisions.

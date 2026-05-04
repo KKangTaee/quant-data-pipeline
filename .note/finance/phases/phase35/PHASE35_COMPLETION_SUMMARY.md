@@ -37,6 +37,10 @@ Final Review가 저장한 final decision record가 최종 판단 원본이고,
 - saved final decision review에 `투자 가능성` 표시를 추가했다.
 - route panel을 `Final Review Status`로 읽게 했다.
 - `Live Approval / Order` disabled 경계를 유지했다.
+- Candidate Review와 Portfolio Proposal의 operator judgment 입력은 최종 판단처럼 보이지 않도록 낮췄다.
+  - Candidate Review는 `추천 운영 상태 확인`과 필요시 수정하는 운영 메모로 읽는다.
+  - Portfolio Proposal은 `Proposal 저장 상태`와 필요시 수정하는 구성 메모로 읽는다.
+  - Final Review의 `최종 판단`만 실전 후보 선정 여부를 명시하는 주 decision surface로 둔다.
 
 ### 4. 문서 / checklist 동기화
 

@@ -4073,3 +4073,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 장기적으로는 중간 단계의 메모 입력을 "자동 추천 + 기본값 + 필요한 경우만 수정"으로 낮추고, 최종 판단만 진짜 사람이 명시적으로 기록하는 UX가 더 적절하다.
 - Follow-up:
   - 다음 UX 개선 후보는 Candidate Review / Portfolio Proposal의 operator field를 advanced / optional로 낮추고, Final Review만 `최종 판단`의 주 decision surface로 강조하는 방향이다.
+
+### 2026-05-04 - 중간 operator judgment UX 경량화 구현
+- User request:
+  - 반복 판단 입력 구조는 개선하는 것이 맞다는 판단에 동의하고, 그 방향으로 진행 요청
+- Interpreted goal:
+  - 저장 계약은 유지하되 Candidate Review / Portfolio Proposal이 최종 결정처럼 보이지 않게 하고, Final Review만 최종 판단 지점으로 강조해야 함
+- Analysis result:
+  - Candidate Review의 Pre-Live status는 후보 관찰 상태 확인이지 최종 투자 판단이 아니다
+  - Portfolio Proposal의 decision은 proposal draft 저장 상태 확인이지 최종 선정 판단이 아니다
+  - Final Review의 `최종 판단`만 실전 후보 선정 / 보류 / 거절 / 재검토를 명시하는 주 decision surface로 유지한다
+- Follow-up:
+  - Candidate Review와 Portfolio Proposal의 operator memo 입력을 기본값이 있는 접힘 영역으로 낮췄다
+  - Final Review에는 이 구간이 실제 최종 판단이라는 안내를 추가했고, 저장 ID / 운영 전 조건 / 다음 행동은 고급 접힘 영역으로 이동했다

@@ -654,35 +654,50 @@ def render_portfolio_proposal_workspace() -> None:
                 ]
             )
 
-        st.markdown("#### 3. Proposal 저장 및 다음 단계 판단")
+        st.markdown("#### 3. Proposal 초안 저장 준비")
         with st.container(border=True):
             readiness_slot = st.empty()
-            st.markdown("##### 검토 메모 / 다음 행동 입력")
+            st.markdown("##### 구성 메모 확인")
+            st.caption(
+                "이 구간은 최종 투자 판단이 아니라, 여러 후보를 어떤 목적 / 역할 / 비중으로 묶었는지 남기는 초안 저장 단계입니다. "
+                "상세 검증과 최종 선정 여부는 Final Review에서 판단합니다."
+            )
+            operator_decision_labels = {
+                "ready_for_live_readiness_review": "Final Review 입력 준비",
+                "draft_for_review": "초안 저장 후 재검토",
+                "needs_more_evidence": "근거 보강 필요",
+                "hold": "보류",
+            }
             operator_decision = st.selectbox(
-                "Operator Decision",
+                "Proposal 저장 상태",
                 options=["ready_for_live_readiness_review", "draft_for_review", "needs_more_evidence", "hold"],
                 index=0,
                 key="portfolio_proposal_operator_decision",
-                help="이 값은 proposal 검토 상태이며 live approval이 아닙니다.",
+                format_func=lambda value: operator_decision_labels.get(str(value), str(value)),
+                help="Proposal draft의 저장 상태입니다. 최종 투자 판단이나 live approval이 아닙니다.",
             )
-            operator_reason = st.text_area(
-                "Operator Reason",
-                value="후보 묶음의 목적, 역할, 비중을 Live Readiness에서 검토할 수 있도록 proposal draft를 남긴다.",
-                key="portfolio_proposal_operator_reason",
-            )
-            next_action = st.text_area(
-                "Next Action",
-                value="Live Readiness 단계에서 component data trust, Real-Money status, Pre-Live status, 비중 근거를 같이 점검한다.",
-                key="portfolio_proposal_next_action",
-            )
-            use_review_date = st.checkbox("Review Date 지정", value=True, key="portfolio_proposal_use_review_date")
-            review_date_value: date | None = None
-            if use_review_date:
-                review_date_value = st.date_input(
-                    "Review Date",
-                    value=date.today() + timedelta(days=30),
-                    key="portfolio_proposal_review_date",
+            with st.expander("필요하면 proposal 메모 / 다음 확인일 수정", expanded=False):
+                st.caption(
+                    "역할과 비중이 이미 핵심 판단입니다. 메모는 기본값을 두고, 특별한 근거가 있을 때만 수정해도 됩니다."
                 )
+                operator_reason = st.text_area(
+                    "구성 메모",
+                    value="후보 묶음의 목적, 역할, 비중을 Final Review에서 검증할 수 있도록 proposal draft를 남긴다.",
+                    key="portfolio_proposal_operator_reason",
+                )
+                next_action = st.text_area(
+                    "다음 확인",
+                    value="Final Review에서 component data trust, Real-Money status, Pre-Live status, 비중 근거를 함께 점검한다.",
+                    key="portfolio_proposal_next_action",
+                )
+                use_review_date = st.checkbox("다음 확인일 지정", value=True, key="portfolio_proposal_use_review_date")
+                review_date_value: date | None = None
+                if use_review_date:
+                    review_date_value = st.date_input(
+                        "다음 확인일",
+                        value=date.today() + timedelta(days=30),
+                        key="portfolio_proposal_review_date",
+                    )
 
             open_blockers = _portfolio_proposal_open_blockers(
                 selected_rows=selected_rows,

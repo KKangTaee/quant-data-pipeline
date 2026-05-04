@@ -624,7 +624,11 @@ def render_candidate_review_workspace() -> None:
                         "다시 저장하면 append-only 방식으로 새 revision이 추가되고 latest view에서는 새 기록이 보입니다."
                     )
                 next_step_judgment_slot = st.empty()
-                st.markdown("##### 운영 상태 / 추적 계획 입력")
+                st.markdown("##### 추천 운영 상태 확인")
+                st.caption(
+                    "이 구간은 최종 투자 판단이 아니라, 후보를 실전 전 관찰 대상으로 둘지 확인하는 운영 상태 기록입니다. "
+                    "시스템 추천을 기본값으로 두고, 다르게 볼 때만 상태와 메모를 조정합니다."
+                )
                 render_badge_strip(
                     [
                         {"label": "Promotion", "value": str(selected_result.get("promotion") or "-"), "tone": "positive"},
@@ -641,44 +645,48 @@ def render_candidate_review_workspace() -> None:
                     st.info(_pre_live_status_suggestion_reason(selected_board_row, default_status))
                 pre_live_key = f"{selected_registry_id}_{selected_revision_id}"
                 selected_status = st.selectbox(
-                    "Operator Final Status",
+                    "운영 상태 확인",
                     options=PRE_LIVE_STATUS_OPTIONS,
                     index=PRE_LIVE_STATUS_OPTIONS.index(default_status) if default_status in PRE_LIVE_STATUS_OPTIONS else 0,
                     format_func=_pre_live_status_korean_label,
                     key=f"candidate_review_pre_live_status_{pre_live_key}",
-                    help="이 값이 Pre-Live registry에 저장됩니다. 투자 승인 상태가 아니라 실전 전 운영 상태입니다.",
+                    help="시스템 추천 운영 상태를 확인합니다. 필요할 때만 바꾸면 되며, 투자 승인 상태가 아닙니다.",
                 )
                 if selected_status != default_status:
                     st.warning(
-                        "Operator Final Status가 System Suggested Status와 다릅니다. "
-                        "의도적으로 다른 결정을 내리는 경우 Operator Reason에 근거를 남겨주세요."
+                        "시스템 추천 운영 상태와 다르게 선택했습니다. "
+                        "의도적으로 다른 운영 상태를 남기는 경우 아래 메모에 근거를 남겨주세요."
                     )
-                operator_reason = st.text_area(
-                    "Operator Reason",
-                    value=_default_pre_live_operator_reason(selected_board_row, selected_status),
-                    key=f"candidate_review_pre_live_reason_{pre_live_key}_{selected_status}",
-                    help="왜 이 후보를 이 상태로 두는지 사람이 읽을 수 있게 남깁니다.",
-                )
-                next_action = st.text_area(
-                    "Next Action",
-                    value=_default_pre_live_next_action(selected_status),
-                    key=f"candidate_review_pre_live_next_action_{pre_live_key}_{selected_status}",
-                    help="다음에 무엇을 확인하거나 실행할지 남깁니다.",
-                )
-                default_use_review_date = selected_status in {"paper_tracking", "re_review"}
-                use_review_date = st.checkbox(
-                    "Review Date 지정",
-                    value=default_use_review_date,
-                    key=f"candidate_review_pre_live_use_review_date_{pre_live_key}_{selected_status}",
-                    help="paper tracking과 re-review는 다음 점검일을 두는 것이 안전합니다.",
-                )
-                review_date_value: date | None = None
-                if use_review_date or selected_status in {"paper_tracking", "re_review"}:
-                    review_date_value = st.date_input(
-                        "Review Date",
-                        value=date.today() + timedelta(days=30),
-                        key=f"candidate_review_pre_live_review_date_{pre_live_key}_{selected_status}",
+                with st.expander("필요하면 운영 메모 / 다음 확인일 수정", expanded=False):
+                    st.caption(
+                        "기본 문구가 이미 채워져 있으므로, 특별한 사유가 있을 때만 수정해도 됩니다."
                     )
+                    operator_reason = st.text_area(
+                        "운영 상태 메모",
+                        value=_default_pre_live_operator_reason(selected_board_row, selected_status),
+                        key=f"candidate_review_pre_live_reason_{pre_live_key}_{selected_status}",
+                        help="왜 이 후보를 이 상태로 두는지 사람이 읽을 수 있게 남깁니다.",
+                    )
+                    next_action = st.text_area(
+                        "다음 확인",
+                        value=_default_pre_live_next_action(selected_status),
+                        key=f"candidate_review_pre_live_next_action_{pre_live_key}_{selected_status}",
+                        help="다음에 무엇을 확인하거나 실행할지 남깁니다.",
+                    )
+                    default_use_review_date = selected_status in {"paper_tracking", "re_review"}
+                    use_review_date = st.checkbox(
+                        "다음 확인일 지정",
+                        value=default_use_review_date,
+                        key=f"candidate_review_pre_live_use_review_date_{pre_live_key}_{selected_status}",
+                        help="paper tracking과 re-review는 다음 점검일을 두는 것이 안전합니다.",
+                    )
+                    review_date_value: date | None = None
+                    if use_review_date or selected_status in {"paper_tracking", "re_review"}:
+                        review_date_value = st.date_input(
+                            "다음 확인일",
+                            value=date.today() + timedelta(days=30),
+                            key=f"candidate_review_pre_live_review_date_{pre_live_key}_{selected_status}",
+                        )
 
                 pre_live_draft = _build_pre_live_draft_from_current_candidate(
                     selected_board_row,

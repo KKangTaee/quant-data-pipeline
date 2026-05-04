@@ -409,7 +409,7 @@ Latest Backtest Run 또는 Operations > Backtest Run History selected record
 - Candidate selection label은 `Strategy Family | Role | Title | id=<registry_id>` 형식이다. 같은 family와 title이 반복되어도 `registry_id`로 방금 저장한 row를 찾을 수 있게 한다.
 - `3. 운영 기록 저장 및 Portfolio Proposal 이동`은 먼저 선택 후보가 운영 기록으로 갈 current candidate인지, Compare로 돌아갈 후보인지 확인한다.
 - `PRE_LIVE_READY`는 같은 화면에서 Pre-Live 운영 record를 저장할 수 있다는 뜻이고, `COMPARE_REVIEW_READY`는 실패가 아니라 Compare 재검토 경로다.
-- `운영 기록 저장 및 다음 단계 판단`은 Operator Final Status, Operator Reason, Next Action, Review Date를 바탕으로 공통 route/readiness panel과 compact badges를 함께 보여준다. 이 판정 박스는 입력 영역보다 위에 렌더링해, 저장 가능 여부를 먼저 읽고 아래에서 운영 기록을 작성하는 흐름으로 보이게 한다.
+- `운영 기록 저장 및 다음 단계 판단`은 System Suggested Status를 기본값으로 보여주고, 사용자가 필요할 때만 `운영 상태 확인`과 접힌 운영 메모 / 다음 확인일을 수정하게 한다. 이 판정 박스는 입력 영역보다 위에 렌더링해, 저장 가능 여부를 먼저 읽고 아래에서 최소한의 운영 기록을 확인하는 흐름으로 보이게 한다.
 - 공통 route/readiness panel은 긴 enum route를 underscore 기준으로 줄바꿈하고, 좁은 화면에서는 verdict 영역을 아래로 내려 가로 넘침 없이 읽히게 한다.
 - Save / Open 버튼은 판단 기준과 JSON보다 먼저 보이게 하고, 상세 기준 / Pre-Live JSON / 선택 후보 raw detail은 하나의 `상세 보기` expander 안에 둔다.
 - Pre-Live 운영 상태 영역은 Candidate Review 관점에서 필요한 promotion / shortlist / deployment / suggested status만 badge strip으로 보여주고, 추천 근거, 저장 후보 식별값, 판단 기준 표는 접힘 영역에 둔다.
@@ -527,7 +527,7 @@ CURRENT_CANDIDATE_REGISTRY.jsonl
 - pre-live registry는 그 후보를 실전 전 어떻게 관찰하거나 보류할지 기록한다.
 - Pre-Live 운영 기록은 별도 탭이 아니라 Candidate Review 3번 구간 안의 `선택 후보 확인 -> 운영 기록 저장 및 다음 단계 판단 -> 저장 및 이동` 순서형 화면으로 본다.
 - Candidate Packaging에서 방금 저장한 후보는 자동 선택되지만, 사용자가 Candidate Review에서 다른 current candidate를 직접 고르는 것도 허용한다.
-- `System Suggested Status`는 선택한 current candidate의 Real-Money 신호와 blocker에서 계산한 추천값이고, `Operator Final Status`가 실제 Pre-Live registry에 저장되는 운영 판단이다.
+- `System Suggested Status`는 선택한 current candidate의 Real-Money 신호와 blocker에서 계산한 추천값이고, `운영 상태 확인` 값이 실제 Pre-Live registry에 저장되는 운영 상태다. 이 값은 최종 투자 판단이 아니라 실전 전 관찰 / 보류 상태다.
 - 운영자가 추천값과 다른 status를 선택하면 UI는 경고를 보여주며, 의도적 override 근거를 `Operator Reason`에 남기도록 안내한다.
 - `운영 기록 저장 및 다음 단계 판단`은 전략 성과 점수가 아니라 Pre-Live record가 다음 단계에서 읽을 수 있을 만큼 identity, result snapshot, Real-Money signal, status, reason, next action, review date, tracking plan을 갖췄는지 보는 route 확인이다.
 - 이 route 확인은 `저장 범위 판단`과 같은 공통 판정 패턴을 사용하되, 독립된 큰 단계가 아니라 저장 버튼 위의 최종 확인으로 배치한다.
@@ -563,6 +563,7 @@ CURRENT_CANDIDATE_REGISTRY.jsonl
 - `Proposal Components`는 비교 기능이 아니라 포트폴리오에 넣을 구성 후보 선택이다. 비교는 `Compare & Portfolio Builder`에서 수행한다.
 - `2. 목적 / 역할 / 비중 설계`에서는 active weight가 있는 proposal에 최소 1개 `core_anchor`가 필요하다. `return_driver`, `diversifier`, `defensive_sleeve`, `satellite`은 중심 후보를 보완하는 역할이고, `watch_only`는 보통 0% 관찰 후보로 둔다.
 - target weight 합계가 100%가 아니거나 core anchor가 없으면 `PROPOSAL_BLOCKED`가 정상적으로 뜬다. UI는 이때 criteria 이름만 보여주지 않고, 비중 합계 조정 / core anchor 지정 같은 수정 안내를 함께 보여준다.
+- `Proposal 저장 상태`는 proposal draft 저장 상태를 확인하는 가벼운 field다. 역할 / 비중 / blocker가 핵심이고, 구성 메모와 다음 확인일은 기본값을 둔 접힘 영역에서 필요할 때만 수정한다.
 - saved portfolio는 재현 가능한 weight setup이고, proposal은 그 후보 묶음의 목적과 검토 이유를 남긴다.
 - `Save Portfolio Proposal Draft`는 live trading 승인 버튼이 아니다.
 - proposal 저장은 current candidate registry나 pre-live registry를 자동 변경하지 않는다.
@@ -597,6 +598,7 @@ Current Candidate 또는 Saved Portfolio Proposal
 - Phase 32의 `Robustness / Stress Validation Preview`와 `Stress / Sensitivity Summary`도 Final Review 안에서 읽는다.
 - `Result Status = NOT_RUN`은 아직 실제 stress runner가 실행되지 않았다는 뜻이다.
 - Paper Observation은 별도 ledger 저장 버튼으로 노출하지 않고, benchmark / review cadence / trigger / baseline을 최종 검토 기록 안에 포함한다.
+- Candidate Review와 Portfolio Proposal의 판단 field는 준비 기록이고, Final Review의 `최종 판단`만 실전 후보 선정 / 보류 / 거절 / 재검토를 명시하는 주 decision surface다.
 - `최종 검토 결과 기록`은 `.note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`에 `SELECT_FOR_PRACTICAL_PORTFOLIO`, `HOLD_FOR_MORE_PAPER_TRACKING`, `REJECT_FOR_PRACTICAL_USE`, `RE_REVIEW_REQUIRED` 중 하나를 append-only로 저장한다.
 - Final Review 기록은 `최종 판단 완료` 기록이지 live approval, broker order, 자동매매 지시가 아니다.
 

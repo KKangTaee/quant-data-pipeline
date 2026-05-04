@@ -34,7 +34,20 @@
   - [ ] `최종 검토 결과 기록` 저장 action이 동작하는지
   - [ ] 저장 후 `.note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`에 row가 append되는지
 
-## 3. 저장된 최종 판단 Review 확인
+## 3. 중간 단계 판단 UX 경량화 확인
+
+- 확인 위치:
+  - `Backtest > Candidate Review`
+  - `Backtest > Portfolio Proposal`
+  - `Backtest > Final Review`
+- 체크 항목:
+  - [ ] Candidate Review의 Pre-Live 영역이 `Operator Final Status` 같은 최종 결정 표현이 아니라 `추천 운영 상태 확인` / `운영 상태 확인`으로 읽히는지
+  - [ ] Candidate Review의 운영 메모 / 다음 확인일은 기본값이 있고, 필요할 때만 접힘 영역에서 수정하는 형태인지
+  - [ ] Portfolio Proposal의 저장 구간이 `Operator Decision`이 아니라 `Proposal 저장 상태`로 읽히는지
+  - [ ] Portfolio Proposal의 구성 메모 / 다음 확인일은 접힘 영역에 있고, 최종 투자 판단처럼 보이지 않는지
+  - [ ] Final Review의 `최종 판단`만 실전 후보 선정 / 보류 / 거절 / 재검토를 명시하는 주 decision surface로 읽히는지
+
+## 4. 저장된 최종 판단 Review 확인
 
 - 확인 위치:
   - `Backtest > Final Review`
@@ -49,7 +62,7 @@
   - [ ] detail panel의 판정 / 다음 행동이 `Phase 35 운영 가이드 작성 가능` 같은 예전 문구가 아니라 현재 Final Review 완료 기준으로 읽히는지
   - [ ] selected component table이 계속 보이는지
 
-## 4. 실행 경계 확인
+## 5. 실행 경계 확인
 
 - 확인 위치:
   - `Backtest > Final Review`
@@ -60,7 +73,7 @@
   - [ ] saved final decision JSON에서 `order_instruction = false`인지
   - [ ] final decision 저장이 current candidate / Pre-Live / Portfolio Proposal registry를 덮어쓰지 않는지
 
-## 5. 코드 / 파일 경계 확인
+## 6. 코드 / 파일 경계 확인
 
 - 확인 위치:
   - repository file tree
@@ -71,7 +84,7 @@
   - [ ] `app/web/backtest_common.py` panel option에 후속 가이드가 없는지
   - [ ] `.note/finance/operations/POST_SELECTION_FINAL_INVESTMENT_GUIDE.md`가 더 이상 active guide로 남아 있지 않은지
 
-## 6. 문서 확인
+## 7. 문서 확인
 
 - 확인 문서:
   - `.note/finance/phases/phase35/PHASE35_CURRENT_CHAPTER_TODO.md`

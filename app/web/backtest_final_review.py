@@ -291,17 +291,21 @@ def render_final_review_workspace() -> None:
         suggested_route = str(evidence.get("suggested_decision_route") or FINAL_REVIEW_ROUTE_OPTIONS[0])
         suggested_index = FINAL_REVIEW_ROUTE_OPTIONS.index(suggested_route) if suggested_route in FINAL_REVIEW_ROUTE_OPTIONS else 0
 
-        input_cols = st.columns([0.36, 0.34, 0.30], gap="small")
+        st.info(
+            "여기가 실제 최종 판단 구간입니다. 앞 단계의 운영 상태 / proposal 메모는 준비 기록이고, "
+            "실전 후보 선정 / 보류 / 거절 / 재검토는 여기에서 한 번만 명시적으로 기록합니다."
+        )
+
+        input_cols = st.columns([0.56, 0.44], gap="small")
         with input_cols[0]:
-            decision_id = st.text_input("Decision ID", value=default_decision_id, key="final_review_decision_id")
-        with input_cols[1]:
             decision_route = st.selectbox(
                 "최종 판단",
                 options=FINAL_REVIEW_ROUTE_OPTIONS,
                 index=suggested_index,
                 key="final_review_decision_route",
+                help="이 값이 Final Review의 최종 판단으로 저장됩니다.",
             )
-        with input_cols[2]:
+        with input_cols[1]:
             st.text_input("Source", value=str(source.get("source_id") or "-"), disabled=True, key="final_review_source_display")
         st.caption(FINAL_REVIEW_ROUTE_DESCRIPTIONS.get(str(decision_route), "-"))
         operator_reason = st.text_area(
@@ -309,16 +313,18 @@ def render_final_review_workspace() -> None:
             value="검증 근거와 관찰 기준을 함께 보고 최종 실전 후보 여부를 판단한다.",
             key="final_review_operator_reason",
         )
-        operator_constraints = st.text_area(
-            "운영 제약",
-            value="실제 투자 전 투입 금액, 리밸런싱, 중단 / 재검토 기준은 사용자가 별도로 확인한다.",
-            key="final_review_operator_constraints",
-        )
-        operator_next_action = st.text_area(
-            "다음 행동",
-            value="선정이면 최종 판단 완료로 보고, 보류 / 재검토면 추가 관찰 또는 구성 근거를 보강한다.",
-            key="final_review_operator_next_action",
-        )
+        with st.expander("고급: 저장 ID / 운영 전 조건 / 다음 행동 확인", expanded=False):
+            decision_id = st.text_input("Decision ID", value=default_decision_id, key="final_review_decision_id")
+            operator_constraints = st.text_area(
+                "운영 전 조건",
+                value="실제 투자 전 투입 금액, 리밸런싱, 중단 / 재검토 기준은 사용자가 별도로 확인한다.",
+                key="final_review_operator_constraints",
+            )
+            operator_next_action = st.text_area(
+                "다음 행동",
+                value="선정이면 최종 판단 완료로 보고, 보류 / 재검토면 추가 관찰 또는 구성 근거를 보강한다.",
+                key="final_review_operator_next_action",
+            )
         save_evaluation = _build_final_review_save_evaluation(
             evidence=evidence,
             decision_id=decision_id,

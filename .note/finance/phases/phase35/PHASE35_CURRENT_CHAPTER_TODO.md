@@ -33,6 +33,7 @@ Final Review에서 사용자가 확인해야 하는 최종 상태는 아래 네 
 | 두 번째 작업 | 별도 후속 가이드 workflow 제거 | `completed` |
 | 세 번째 작업 | Final Review UI의 최종 판단 완료 표시 보강 | `completed` |
 | 네 번째 작업 | 문서 / QA checklist 동기화 | `completed` |
+| 보정 작업 | 중간 단계 operator judgment UX 경량화 | `completed` |
 
 ## 완료한 내용
 
@@ -43,6 +44,9 @@ Final Review에서 사용자가 확인해야 하는 최종 상태는 아래 네 
 - 기존 저장 row에 남아 있는 legacy `phase35_handoff` 문구가 UI에 그대로 보이지 않도록 Final Review status 표시를 현재 기준으로 변환한다.
 - `Final Review`의 보조 action은 `Live Approval / Order` disabled 상태로 남겨 실행 경계를 유지했다.
 - `phase35_handoff` field는 과거 row 호환을 위해 읽을 수 있지만, 사용자-facing으로는 final review completion status로 해석한다.
+- Candidate Review의 Pre-Live 운영 상태 입력을 `추천 운영 상태 확인`으로 낮추고, 운영 메모 / 다음 확인일은 접힘 영역에서 필요할 때만 수정하게 했다.
+- Portfolio Proposal의 `Operator Decision`을 `Proposal 저장 상태`로 낮추고, 구성 메모 / 다음 확인일은 접힘 영역으로 보냈다.
+- Final Review의 `최종 판단`에만 실제 최종 의사결정이라는 안내를 추가하고, 저장 ID / 운영 전 조건 / 다음 행동은 고급 접힘 영역으로 정리했다.
 
 ## 중요한 경계
 
