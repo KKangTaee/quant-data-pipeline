@@ -3244,3 +3244,11 @@ Detailed historical logs were archived on `2026-04-13`.
   - converted mixed numeric / string `Current` values in the inline paper observation checks to strings before rendering
 - Decision:
   - The warning was not a final review logic failure, but it was a real UI hygiene issue because Streamlit logged an Arrow conversion traceback on each Final Review visit.
+
+### 2026-05-04
+- Captured the Phase35-after product gap after the user asked to save the discussion as a Markdown note.
+- Changed:
+  - added `.note/finance/operations/FINAL_SELECTED_PORTFOLIO_OPERATIONS_DASHBOARD_GAP_20260504.md`
+  - registered the note in `.note/finance/operations/README.md` and `.note/finance/FINANCE_DOC_INDEX.md`
+- Decision:
+  - The next most natural product direction is a final-selected portfolio operations dashboard, not another candidate-selection save/review step.

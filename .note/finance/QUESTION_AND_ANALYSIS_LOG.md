@@ -4098,3 +4098,5 @@ Detailed historical analysis was archived on `2026-04-13`.
   - SR 11-7류 model risk guidance도 model development / validation / governance와 ongoing monitoring을 함께 본다. 즉 후보 선정만으로 끝나지 않고, 사용 중 성능과 환경 변화 추적이 필요하다
 - Follow-up:
   - 다음 주요 제품 방향 후보는 `Final-selected portfolio monitoring & rebalance operations`가 가장 자연스럽다
+  - 사용자가 나중에 다시 확인할 수 있도록 `.note/finance/operations/FINAL_SELECTED_PORTFOLIO_OPERATIONS_DASHBOARD_GAP_20260504.md`에 요약 문서를 생성했다
+  - 사용자 판단상 1순위 기능은 `최종 선정 포트폴리오 운영 대시보드`로 기록했다

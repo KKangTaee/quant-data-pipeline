@@ -192,6 +192,7 @@
 | `.note/finance/operations/PAPER_PORTFOLIO_TRACKING_LEDGER_GUIDE.md` | paper portfolio tracking ledger 사용법 |
 | `.note/finance/operations/FINAL_PORTFOLIO_SELECTION_DECISIONS_GUIDE.md` | final portfolio selection decision 사용법 |
 | `.note/finance/operations/BACKTEST_1_TO_11_WALKTHROUGH_SESSION.md` | 과거 1~11단계 실습 세션에서 나온 질문, 후보 예시, Guide/Real-Money 보조 기능 기록. 현재 Reference Guides 실행 흐름은 1~10단계 기준 |
+| `.note/finance/operations/FINAL_SELECTED_PORTFOLIO_OPERATIONS_DASHBOARD_GAP_20260504.md` | Phase35 이후 완성형 운용 플랫폼 gap과 최종 선정 포트폴리오 운영 대시보드 우선순위 정리 |
 | `.note/finance/registries/CURRENT_CANDIDATE_REGISTRY.jsonl` | current strongest candidate / near-miss append-only registry |
 | `.note/finance/registries/CANDIDATE_REVIEW_NOTES.jsonl` | 후보 검토 초안을 보고 남기는 operator decision append-only notes |
 | `.note/finance/registries/PRE_LIVE_CANDIDATE_REGISTRY.jsonl` | pre-live 운영 상태 append-only registry. QA 과정에서 첫 active record가 생성됨 |
@@ -933,6 +934,7 @@ Support Track은 main finance feature phase가 아니라,
 |---|---|
 | `.note/finance/operations/README.md` | 운영성 문서 묶음 안내 |
 | `.note/finance/code_analysis/BACKTEST_REFINEMENT_CODE_FLOW_GUIDE.md` | Streamlit UI -> runtime -> finance strategy 흐름 안내 |
+| `.note/finance/operations/FINAL_SELECTED_PORTFOLIO_OPERATIONS_DASHBOARD_GAP_20260504.md` | Phase35 이후 최종 선정 포트폴리오 운영 대시보드와 완성형 플랫폼 gap 정리 |
 | `.note/finance/operations/CONFIG_EXTERNALIZATION_INVENTORY.md` | 설정값 외부화 inventory |
 | `.note/finance/operations/DATA_COLLECTION_UI_STRATEGY.md` | 데이터 수집 UI 방향 |
 | `.note/finance/operations/OHLCV_AND_FINANCIAL_INGESTION_REVIEW.md` | OHLCV / 재무 데이터 수집 리뷰 |
