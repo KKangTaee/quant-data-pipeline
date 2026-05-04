@@ -196,6 +196,7 @@ def build_candidate_replay_payload(current_row: dict[str, Any]) -> dict[str, Any
         "universe_mode": contract.get("universe_mode") or "manual",
         "preset_name": contract.get("preset_name"),
         "benchmark_ticker": contract.get("benchmark_ticker") or ETF_REAL_MONEY_DEFAULT_BENCHMARK,
+        "guardrail_reference_ticker": contract.get("guardrail_reference_ticker"),
         "min_price_filter": contract.get("min_price_filter", ETF_REAL_MONEY_DEFAULT_MIN_PRICE),
         "transaction_cost_bps": contract.get(
             "transaction_cost_bps",
@@ -206,6 +207,15 @@ def build_candidate_replay_payload(current_row: dict[str, Any]) -> dict[str, Any
             "promotion_max_bid_ask_spread_pct",
             ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT,
         ),
+        "promotion_min_benchmark_coverage": contract.get("promotion_min_benchmark_coverage"),
+        "promotion_min_net_cagr_spread": contract.get("promotion_min_net_cagr_spread"),
+        "promotion_min_liquidity_clean_coverage": contract.get("promotion_min_liquidity_clean_coverage"),
+        "promotion_max_underperformance_share": contract.get("promotion_max_underperformance_share"),
+        "promotion_min_worst_rolling_excess_return": contract.get(
+            "promotion_min_worst_rolling_excess_return"
+        ),
+        "promotion_max_strategy_drawdown": contract.get("promotion_max_strategy_drawdown"),
+        "promotion_max_drawdown_gap_vs_benchmark": contract.get("promotion_max_drawdown_gap_vs_benchmark"),
     }
 
     if not payload["tickers"]:
@@ -295,6 +305,24 @@ def run_candidate_replay_payload(payload: dict[str, Any], *, current_row: dict[s
                 timeframe=payload["timeframe"],
                 option=payload["option"],
                 rebalance_interval=payload["rebalance_interval"],
+                min_price_filter=payload.get("min_price_filter", ETF_REAL_MONEY_DEFAULT_MIN_PRICE),
+                transaction_cost_bps=payload.get("transaction_cost_bps", ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS),
+                benchmark_ticker=payload.get("benchmark_ticker", ETF_REAL_MONEY_DEFAULT_BENCHMARK),
+                guardrail_reference_ticker=payload.get("guardrail_reference_ticker"),
+                promotion_min_etf_aum_b=payload.get("promotion_min_etf_aum_b", ETF_OPERABILITY_DEFAULT_MIN_AUM_B),
+                promotion_max_bid_ask_spread_pct=payload.get(
+                    "promotion_max_bid_ask_spread_pct",
+                    ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT,
+                ),
+                promotion_min_benchmark_coverage=payload.get("promotion_min_benchmark_coverage"),
+                promotion_min_net_cagr_spread=payload.get("promotion_min_net_cagr_spread"),
+                promotion_min_liquidity_clean_coverage=payload.get("promotion_min_liquidity_clean_coverage"),
+                promotion_max_underperformance_share=payload.get("promotion_max_underperformance_share"),
+                promotion_min_worst_rolling_excess_return=payload.get(
+                    "promotion_min_worst_rolling_excess_return"
+                ),
+                promotion_max_strategy_drawdown=payload.get("promotion_max_strategy_drawdown"),
+                promotion_max_drawdown_gap_vs_benchmark=payload.get("promotion_max_drawdown_gap_vs_benchmark"),
                 universe_mode=payload["universe_mode"],
                 preset_name=payload["preset_name"],
             )

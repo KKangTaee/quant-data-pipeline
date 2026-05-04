@@ -287,6 +287,7 @@ Phase 28 이후 `Single Strategy`와 `Compare & Portfolio Builder`의 strategy b
 
 - strict annual은 가장 성숙한 Real-Money / Guardrail surface로 설명한다.
 - strict quarterly prototype은 Data Trust와 Portfolio Handling은 지원하지만, Real-Money promotion / Guardrail 판단은 아직 annual strict 중심으로 설명한다.
+- Equal Weight는 static ETF basket baseline이지만, Single / Compare 실행에서는 ETF Real-Money first pass를 붙여 promotion / shortlist / deployment gate를 읽는다.
 - Global Relative Strength는 재무제표 selection history 대상이 아니라 price-only ETF relative strength strategy로 설명한다.
 
 ## Data Trust Summary 흐름
@@ -479,7 +480,7 @@ Phase 28 이후 compare, history, saved portfolio에는
 - strict quarterly prototype은 cadence / replay / portfolio handling 검증 단계이며, annual strict 수준의 promotion surface로 보지 않는다.
 - Global Relative Strength는 ETF operability + cost / benchmark first pass이며, dedicated ETF underperformance / drawdown guardrail은 아직 없다.
 - GTAA, Risk Parity Trend, Dual Momentum은 ETF Real-Money + ETF guardrail first pass로 본다.
-- Equal Weight는 실전 후보가 아니라 baseline이다.
+- Equal Weight는 baseline 성격의 static ETF basket이지만, Phase35 이후 ETF operability, cost, benchmark 기반 Real-Money first pass와 saved replay 입력 보존을 지원한다.
 
 의미:
 

@@ -96,7 +96,7 @@ Phase 28 이후 Real-Money / Guardrail parity는 별도의 성과 계산 로직�
 
 - annual strict: benchmark / investability / promotion / guardrail 입력을 full strict surface로 해석한다.
 - strict quarterly prototype: portfolio handling과 risk-off contract는 저장하지만, promotion guardrail surface는 deferred로 해석한다.
-- ETF 전략군: ETF operability, cost, benchmark, ETF guardrail first pass를 strategy별 지원 범위로 해석한다.
+- ETF 전략군: Equal Weight / GTAA / Global Relative Strength / Risk Parity Trend / Dual Momentum의 ETF operability, cost, benchmark, ETF guardrail first pass를 strategy별 지원 범위로 해석한다.
 
 이 scope table은 runtime result를 바꾸지 않는다.
 사용자가 history / saved replay 전에 어떤 검증 범위의 결과인지 이해하게 하는 metadata 해석 layer다.

@@ -4112,3 +4112,15 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `전략 비교` 탭은 새 mix 생성에 집중하고, `저장 Mix 다시 열기` 탭은 기존 mix load / replay / delete에 집중하는 구조가 가장 자연스럽다
 - Follow-up:
   - Compare workspace를 내부 탭 구조로 나누고, GTAA / Equal Weight quick allocation과 저장 CTA를 result 확인 바로 아래에 배치했다
+
+### 2026-05-05 - Equal Weight Real-Money 판정 누락 해소
+- User request:
+  - Equal Weight 후보에서 `5단계 Compare에서 먼저 추가 확인` 안내가 뜨는 이유를 묻고, 다른 전략처럼 Real-Money 판정을 추가해 달라고 요청함
+- Interpreted goal:
+  - Equal Weight도 static ETF basket baseline에 머물지 않고, Candidate Review / Compare 진입 판단이 읽을 수 있는 promotion / shortlist / deployment 메타를 생성해야 함
+- Analysis result:
+  - 기존 Equal Weight runtime은 성과표와 기본 contract만 남겨 Real-Money gate가 비어 있었고, Compare readiness는 이를 blocker로 해석했다
+  - GTAA 등 ETF 전략군과 같은 first-pass 수준으로 비용, 벤치마크, ETF 운용 가능성, 가격 최신성, promotion / deployment metadata를 붙이면 UI가 같은 방식으로 pass / hold를 판단할 수 있다
+  - 다만 ETF asset profile coverage가 부족하면 Equal Weight도 명시적으로 `hold/blocked`가 될 수 있으며, 이것은 누락이 아니라 운용 가능성 데이터 경고다
+- Follow-up:
+  - Equal Weight Single / Compare 입력, runtime hardening, saved Portfolio Mix override, Candidate Library replay payload에 Real-Money 필드를 연결했다

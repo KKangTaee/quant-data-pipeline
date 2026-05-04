@@ -64,6 +64,7 @@ DB / strategy / runtime / UI 연결을 한 번에 확인하기 위한 상세 분
 - 이 프로젝트의 최종 목표는 `데이터 수집 + 백테스트 제품 개발`을 기반으로 투자 후보와 포트폴리오 구성을 제안하는 프로그램을 만드는 것이다.
 - 다만 현재 phase에서 나온 강한 백테스트 결과가 곧바로 최종 투자 추천이나 live trading 승인을 뜻하지는 않는다.
 - `Real-Money 검증 신호`는 개별 백테스트 결과에 붙는 진단표다.
+- Equal Weight는 static ETF basket baseline 성격이지만, 현재 Backtest UI에서는 GTAA 등 다른 ETF 전략군처럼 비용, 벤치마크, ETF 운용 가능성 기반 Real-Money first pass를 함께 남긴다.
 - `Pre-Live 운영 점검`은 그 진단표를 보고 다음 행동을 기록하는 운영 절차다.
 - 실제 투자 분석은 사용자가 명시적으로 요청했을 때 별도 분석으로 수행한다.
 

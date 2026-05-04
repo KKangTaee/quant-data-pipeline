@@ -56,6 +56,21 @@ def _apply_single_strategy_prefill(strategy_key: str) -> None:
         st.session_state["eq_timeframe"] = payload.get("timeframe") or "1d"
         st.session_state["eq_option"] = payload.get("option") or "month_end"
         st.session_state["eq_rebalance_interval"] = int(payload.get("rebalance_interval") or 12)
+        st.session_state["eq_min_price_filter"] = float(
+            payload.get("min_price_filter") or ETF_REAL_MONEY_DEFAULT_MIN_PRICE
+        )
+        st.session_state["eq_transaction_cost_bps"] = float(
+            payload.get("transaction_cost_bps") or ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS
+        )
+        st.session_state["eq_benchmark_ticker"] = str(
+            payload.get("benchmark_ticker") or ETF_REAL_MONEY_DEFAULT_BENCHMARK
+        ).strip().upper()
+        st.session_state["eq_promotion_min_etf_aum_b"] = float(
+            payload.get("promotion_min_etf_aum_b") or ETF_OPERABILITY_DEFAULT_MIN_AUM_B
+        )
+        st.session_state["eq_promotion_max_bid_ask_spread_pct"] = float(
+            (payload.get("promotion_max_bid_ask_spread_pct") or ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT) * 100.0
+        )
     elif strategy_key == "gtaa":
         st.session_state["gtaa_universe_mode"] = "Preset" if universe_mode == "preset" and preset_name in GTAA_PRESETS else "Manual"
         if st.session_state["gtaa_universe_mode"] == "Preset":
@@ -758,6 +773,14 @@ def _render_equal_weight_form() -> None:
                 ),
                 key="eq_rebalance_interval",
             )
+        with st.expander("Real-Money Contract", expanded=False):
+            (
+                min_price_filter,
+                transaction_cost_bps,
+                benchmark_ticker,
+                promotion_min_etf_aum_b,
+                promotion_max_bid_ask_spread_pct,
+            ) = _render_etf_real_money_inputs(key_prefix="eq")
 
         submitted = st.form_submit_button("Run Equal Weight Backtest", use_container_width=True)
 
@@ -784,6 +807,11 @@ def _render_equal_weight_form() -> None:
         "timeframe": timeframe,
         "option": option,
         "rebalance_interval": int(rebalance_interval),
+        "min_price_filter": float(min_price_filter),
+        "transaction_cost_bps": float(transaction_cost_bps),
+        "benchmark_ticker": benchmark_ticker,
+        "promotion_min_etf_aum_b": float(promotion_min_etf_aum_b),
+        "promotion_max_bid_ask_spread_pct": float(promotion_max_bid_ask_spread_pct),
         "universe_mode": _universe_mode,
         "preset_name": preset_name,
     }

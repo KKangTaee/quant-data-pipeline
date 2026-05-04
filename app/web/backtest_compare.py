@@ -12,7 +12,14 @@ def _strategy_compare_defaults(strategy_name: str) -> dict:
             "tickers": ["VIG", "SCHD", "DGRO", "GLD"],
             "preset_name": "Dividend ETFs",
             "runner": run_equal_weight_backtest_from_db,
-            "extra": {"rebalance_interval": 12},
+            "extra": {
+                "rebalance_interval": 12,
+                "min_price_filter": ETF_REAL_MONEY_DEFAULT_MIN_PRICE,
+                "transaction_cost_bps": ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS,
+                "benchmark_ticker": ETF_REAL_MONEY_DEFAULT_BENCHMARK,
+                "promotion_min_etf_aum_b": ETF_OPERABILITY_DEFAULT_MIN_AUM_B,
+                "promotion_max_bid_ask_spread_pct": ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT,
+            },
         }
     if strategy_name == "GTAA":
         return {
@@ -1537,8 +1544,18 @@ def _saved_portfolio_strategy_expected_fields(strategy_name: str) -> tuple[list[
         return fields, "Dual Momentum은 top, cadence, ETF operability / guardrail 입력을 같이 확인합니다."
 
     if strategy_name == "Equal Weight":
-        fields = ["universe_mode", "preset_name", "tickers", "rebalance_interval"]
-        return fields, "Equal Weight는 ticker universe와 rebalance interval이 replay 의미를 결정합니다."
+        fields = [
+            "universe_mode",
+            "preset_name",
+            "tickers",
+            "rebalance_interval",
+            "min_price_filter",
+            "transaction_cost_bps",
+            "benchmark_ticker",
+            "promotion_min_etf_aum_b",
+            "promotion_max_bid_ask_spread_pct",
+        ]
+        return fields, "Equal Weight는 ticker universe, cadence, ETF operability / benchmark 입력을 같이 확인합니다."
 
     return ["universe_mode", "preset_name", "tickers", "top", "rebalance_interval"], "전략별 핵심 override가 저장됐는지 확인합니다."
 
@@ -2478,6 +2495,17 @@ def _bundle_to_saved_strategy_override(bundle: dict[str, Any]) -> dict[str, Any]
             "preset_name": meta.get("preset_name") or "Dividend ETFs",
             "universe_mode": meta.get("universe_mode") or "preset",
             "rebalance_interval": int(meta.get("rebalance_interval") or 12),
+            "min_price_filter": float(meta.get("min_price_filter") or ETF_REAL_MONEY_DEFAULT_MIN_PRICE),
+            "transaction_cost_bps": float(
+                meta.get("transaction_cost_bps") or ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS
+            ),
+            "promotion_min_etf_aum_b": float(
+                meta.get("promotion_min_etf_aum_b") or ETF_OPERABILITY_DEFAULT_MIN_AUM_B
+            ),
+            "promotion_max_bid_ask_spread_pct": float(
+                meta.get("promotion_max_bid_ask_spread_pct") or ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT
+            ),
+            "benchmark_ticker": meta.get("benchmark_ticker") or ETF_REAL_MONEY_DEFAULT_BENCHMARK,
         }
     if strategy_name == "GTAA":
         return {
@@ -3073,6 +3101,21 @@ def _apply_compare_strategy_prefill(strategy_name: str, override: dict[str, Any]
         else:
             st.session_state["compare_eq_manual_tickers"] = tickers_text
         st.session_state["compare_eq_interval"] = int(override.get("rebalance_interval") or 12)
+        st.session_state["compare_eq_min_price_filter"] = float(
+            override.get("min_price_filter") or ETF_REAL_MONEY_DEFAULT_MIN_PRICE
+        )
+        st.session_state["compare_eq_transaction_cost_bps"] = float(
+            override.get("transaction_cost_bps") or ETF_REAL_MONEY_DEFAULT_TRANSACTION_COST_BPS
+        )
+        st.session_state["compare_eq_benchmark_ticker"] = str(
+            override.get("benchmark_ticker") or ETF_REAL_MONEY_DEFAULT_BENCHMARK
+        ).strip().upper()
+        st.session_state["compare_eq_promotion_min_etf_aum_b"] = float(
+            override.get("promotion_min_etf_aum_b") or ETF_OPERABILITY_DEFAULT_MIN_AUM_B
+        )
+        st.session_state["compare_eq_promotion_max_bid_ask_spread_pct"] = float(
+            (override.get("promotion_max_bid_ask_spread_pct") or ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT) * 100.0
+        )
         return
     if strategy_name == "GTAA":
         preset_name = override.get("preset_name")
@@ -3745,6 +3788,23 @@ def _render_strategy_compare_workspace() -> None:
                             )
                         )
                     }
+                    with st.expander("Real-Money Contract", expanded=False):
+                        (
+                            min_price_filter,
+                            transaction_cost_bps,
+                            benchmark_ticker,
+                            promotion_min_etf_aum_b,
+                            promotion_max_bid_ask_spread_pct,
+                        ) = _render_etf_real_money_inputs(
+                            key_prefix="compare_eq",
+                        )
+                    compare_strategy_overrides["Equal Weight"]["min_price_filter"] = float(min_price_filter)
+                    compare_strategy_overrides["Equal Weight"]["transaction_cost_bps"] = float(transaction_cost_bps)
+                    compare_strategy_overrides["Equal Weight"]["benchmark_ticker"] = benchmark_ticker
+                    compare_strategy_overrides["Equal Weight"]["promotion_min_etf_aum_b"] = float(promotion_min_etf_aum_b)
+                    compare_strategy_overrides["Equal Weight"]["promotion_max_bid_ask_spread_pct"] = float(
+                        promotion_max_bid_ask_spread_pct
+                    )
 
             if "GTAA" in selected_strategies:
                 with st.container(border=True):

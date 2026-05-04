@@ -3263,3 +3263,16 @@ Detailed historical logs were archived on `2026-04-13`.
   - renamed save/replay UI wording toward `Portfolio Mix` so saved setups are not confused with candidate registries
 - Decision:
   - `.note/finance/saved/SAVED_PORTFOLIOS.jsonl` remains the persistence location because these rows are reusable replay setups, not append-only candidate / proposal / final-decision registry rows.
+
+### 2026-05-05
+- Added Equal Weight Real-Money first-pass support after the user noticed its Compare 진입 평가 lacked a proper Real-Money judgment.
+- Changed:
+  - added Equal Weight runtime Real-Money hardening with cost-adjusted result, benchmark overlay, price freshness, ETF operability policy, promotion / shortlist / deployment metadata
+  - added Equal Weight Real-Money Contract inputs in Single Strategy and Compare strategy boxes
+  - preserved Equal Weight Real-Money fields in saved Portfolio Mix overrides and Candidate Library replay payloads
+  - updated Backtest UI / runtime flow docs and the finance comprehensive map to reflect the new Equal Weight boundary
+- Verification:
+  - `py_compile` passed for the touched Backtest UI/runtime modules
+  - DB-backed Equal Weight smoke confirmed `real_money_hardening`, `promotion_decision`, `shortlist_status`, and `deployment_readiness_status` are now emitted
+- Note:
+  - the tested Equal Weight baskets currently report `etf_operability_status=caution` because asset profile coverage is partial, so they may still be `hold/blocked`; that is now an explicit gate result rather than a missing judgment.
