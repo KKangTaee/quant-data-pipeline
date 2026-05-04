@@ -1576,7 +1576,7 @@ def _build_saved_portfolio_replay_parity_rows(record: dict[str, Any]) -> pd.Data
                 f"weights_percent={_format_saved_portfolio_value(weights_percent)} / "
                 f"date_policy={_format_saved_portfolio_value(portfolio_context.get('date_policy'))}"
             ),
-            "왜 중요한가": "`Load Saved Setup Into Compare`와 `Replay Saved Portfolio`가 같은 weight와 date alignment로 이어지는지 확인합니다.",
+            "왜 중요한가": "`Load Saved Mix Into Compare`와 `Replay Saved Mix`가 같은 weight와 date alignment로 이어지는지 확인합니다.",
         }
     )
     rows.append(
@@ -1668,9 +1668,9 @@ def _render_saved_portfolio_replay_parity_snapshot(record: dict[str, Any]) -> No
     selected_strategies = list(compare_context.get("selected_strategies") or [])
     weights_percent = list(portfolio_context.get("weights_percent") or [])
 
-    st.markdown("#### Saved Portfolio Replay / Load Parity Snapshot")
+    st.markdown("#### Saved Mix Replay / Load Parity Snapshot")
     st.caption(
-        "이 표는 저장된 포트폴리오를 `Load Saved Setup Into Compare` 또는 `Replay Saved Portfolio`로 다시 열 때 "
+        "이 표는 저장된 portfolio mix를 `Load Saved Mix Into Compare` 또는 `Replay Saved Mix`로 다시 열 때 "
         "전략 목록, 공용 기간, strategy-specific override, weight/date alignment가 충분히 남아 있는지 확인하는 표입니다."
     )
     metric_cols = st.columns(4, gap="small")
@@ -1820,6 +1820,27 @@ def _run_saved_portfolio_record(record: dict[str, Any]) -> None:
         },
     )
 
+# Detect whether the latest compare result can offer GTAA / Equal Weight mix shortcuts.
+def _weighted_strategy_role_flags(strategy_names: list[str]) -> dict[str, bool]:
+    return {
+        "gtaa": any("gtaa" in str(name).lower() for name in strategy_names),
+        "equal_weight": any("equal weight" in str(name).lower() for name in strategy_names),
+    }
+
+# Fill the weight inputs with a common core/satellite GTAA + Equal Weight allocation.
+def _apply_gtaa_equal_weight_mix_preset(strategy_names: list[str], *, gtaa_weight: float, equal_weight: float) -> None:
+    for strategy_name in strategy_names:
+        normalized = str(strategy_name).lower()
+        if "gtaa" in normalized:
+            st.session_state[f"weight_{strategy_name}"] = float(gtaa_weight)
+        elif "equal weight" in normalized:
+            st.session_state[f"weight_{strategy_name}"] = float(equal_weight)
+        else:
+            st.session_state[f"weight_{strategy_name}"] = 0.0
+    st.session_state.backtest_weighted_portfolio_notice = (
+        f"비중을 GTAA {gtaa_weight:.0f}% / Equal Weight {equal_weight:.0f}%로 채웠습니다."
+    )
+
 def _render_weighted_portfolio_builder() -> None:
     bundles = st.session_state.backtest_compare_bundles
     if not bundles or len(bundles) < 2:
@@ -1830,12 +1851,32 @@ def _render_weighted_portfolio_builder() -> None:
     default_weight = round(100 / len(strategy_names), 2)
     _apply_weighted_portfolio_prefill(strategy_names)
 
-    st.markdown("### Weighted Portfolio Builder")
+    st.markdown("### 2. 비중 포트폴리오 구성")
     st.caption(
-        "방금 compare에서 확인한 전략들을 어떤 비중으로 섞을지 정하는 단계입니다. "
-        "예: `Dual Momentum 50 + GTAA 50` 같은 월간 혼합 포트폴리오."
+        "방금 비교한 전략들을 하나의 mix로 섞습니다. 여기서 만든 결과는 바로 아래에서 확인한 뒤 저장할 수 있습니다."
     )
     _render_compare_source_context_card(compare_source_context, bundles)
+    weighted_notice = st.session_state.get("backtest_weighted_portfolio_notice")
+    if weighted_notice:
+        st.success(weighted_notice)
+        st.session_state.backtest_weighted_portfolio_notice = None
+
+    role_flags = _weighted_strategy_role_flags(strategy_names)
+    if role_flags["gtaa"] and role_flags["equal_weight"]:
+        with st.container(border=True):
+            st.markdown("##### 빠른 비중 설정")
+            st.caption("GTAA와 Equal Weight를 함께 비교 중이면 자주 쓰는 core/satellite 비중을 한 번에 채울 수 있습니다.")
+            quick_cols = st.columns([0.25, 0.25, 0.50], gap="small")
+            with quick_cols[0]:
+                if st.button("GTAA 70 / EW 30", key="weighted_mix_gtaa70_ew30", use_container_width=True):
+                    _apply_gtaa_equal_weight_mix_preset(strategy_names, gtaa_weight=70.0, equal_weight=30.0)
+                    st.rerun()
+            with quick_cols[1]:
+                if st.button("GTAA 50 / EW 50", key="weighted_mix_gtaa50_ew50", use_container_width=True):
+                    _apply_gtaa_equal_weight_mix_preset(strategy_names, gtaa_weight=50.0, equal_weight=50.0)
+                    st.rerun()
+            with quick_cols[2]:
+                st.caption("다른 전략이 함께 있으면 빠른 설정 시 해당 전략 비중은 0%로 둡니다.")
 
     with st.form("weighted_portfolio_builder_form", clear_on_submit=False):
         weight_cols = st.columns(min(len(strategy_names), 4))
@@ -1852,6 +1893,14 @@ def _render_weighted_portfolio_builder() -> None:
                 )
                 weights.append(weight)
 
+        total_weight = sum(weights)
+        if abs(total_weight - 100.0) <= 0.01:
+            st.success("총 비중이 100%입니다. 이 상태로 결과를 만들 수 있습니다.")
+        else:
+            st.warning(
+                f"현재 총 비중은 {total_weight:.1f}%입니다. 실행 시 내부 계산은 정규화되지만, 저장/검토용 mix는 100%로 맞추는 것을 권장합니다."
+            )
+
         date_policy = st.selectbox(
             "Date Alignment",
             options=["intersection", "union"],
@@ -1865,7 +1914,9 @@ def _render_weighted_portfolio_builder() -> None:
     if not submitted:
         weighted_bundle = st.session_state.backtest_weighted_bundle
         if weighted_bundle:
+            st.markdown("### 3. 비중 포트폴리오 결과 확인")
             _render_weighted_portfolio_result(weighted_bundle)
+            _render_save_weighted_portfolio_panel(weighted_bundle)
         return
 
     total_weight = sum(weights)
@@ -1903,7 +1954,9 @@ def _render_weighted_portfolio_builder() -> None:
         },
     )
     st.success("Weighted portfolio created.")
+    st.markdown("### 3. 비중 포트폴리오 결과 확인")
     _render_weighted_portfolio_result(weighted_bundle)
+    _render_save_weighted_portfolio_panel(weighted_bundle)
 
 def _render_current_candidate_bundle_workspace() -> None:
     rows = _load_current_candidate_registry_latest()
@@ -2121,81 +2174,74 @@ def _sync_saved_portfolio_name_suggestion(weighted_bundle: dict[str, Any]) -> st
         st.session_state["saved_portfolio_name_signature"] = signature
     return suggested_name
 
-def _render_saved_portfolio_workspace() -> None:
-    st.markdown("### Saved Weighted Portfolios")
-    st.caption(
-        "이 영역은 후보 보관함이 아니라 `Compare Strategies -> Weighted Portfolio Builder`에서 만든 "
-        "비중 포트폴리오 산출물 저장소입니다. 저장 후보 자체의 그래프 재검토는 "
-        "`Operations > Candidate Library`에서 확인합니다."
-    )
-
-    saved_notice = st.session_state.get("backtest_saved_portfolio_notice")
-    if saved_notice:
-        st.success(saved_notice)
-        st.session_state.backtest_saved_portfolio_notice = None
-
+# Save the just-built weighted result as a reusable setup, separate from formal registries.
+def _render_save_weighted_portfolio_panel(weighted_bundle: dict[str, Any]) -> None:
     compare_bundles = st.session_state.backtest_compare_bundles
-    weighted_bundle = st.session_state.backtest_weighted_bundle
+    if not compare_bundles or not weighted_bundle:
+        return
+
     compare_source_context = dict(st.session_state.get("backtest_compare_source_context") or {})
-    if compare_bundles and weighted_bundle:
-        with st.expander("Save This Weighted Portfolio Output", expanded=False):
-            st.caption(
-                "지금 보고 있는 compare 결과 + weighted portfolio 구성(weight/date policy)을 저장합니다. "
-                "저장한 뒤에는 그대로 다시 실행하거나, compare 화면으로 다시 불러와 수정할 수 있습니다."
+    with st.container(border=True):
+        st.markdown("#### 저장")
+        st.caption(
+            "지금 확인한 strategy mix를 다시 열 수 있는 저장 항목으로 남깁니다. "
+            "후보 registry가 아니라 재현 가능한 weighted portfolio setup입니다."
+        )
+        st.caption(f"저장 위치: `{SAVED_PORTFOLIO_FILE}`")
+        suggested_name = _sync_saved_portfolio_name_suggestion(weighted_bundle)
+        with st.form("save_saved_portfolio_form", clear_on_submit=False):
+            portfolio_name = st.text_input(
+                "Portfolio Mix Name",
+                value=suggested_name or "",
+                placeholder="예: GTAA Clean-6 70 + Equal Weight Growth 30",
+                help="저장 Mix 다시 열기 탭의 목록에 표시될 이름입니다.",
+                key="saved_portfolio_name_input",
             )
-            suggested_name = _sync_saved_portfolio_name_suggestion(weighted_bundle)
-            with st.form("save_saved_portfolio_form", clear_on_submit=False):
-                st.markdown(
-                    "- `Portfolio Name`: 저장 목록에 보일 실제 이름입니다.\n"
-                    "- 추천 이름은 방금 만든 strategy 조합, weight, date alignment가 바뀔 때 자동으로 다시 채워집니다."
+            portfolio_description = st.text_area(
+                "Memo",
+                value="",
+                placeholder="이 mix를 왜 저장하는지, 어떤 용도로 다시 볼지 간단히 남깁니다.",
+                help="나중에 저장된 mix를 다시 열었을 때 용도를 빠르게 떠올릴 수 있게 해줍니다.",
+                key="saved_portfolio_description_input",
+            )
+            save_submitted = st.form_submit_button("Save Portfolio Mix", use_container_width=True)
+        if save_submitted:
+            try:
+                record = save_saved_portfolio(
+                    name=portfolio_name,
+                    description=portfolio_description,
+                    compare_context=_build_saved_portfolio_compare_context(compare_bundles),
+                    portfolio_context=_build_saved_portfolio_context(
+                        bundles=compare_bundles,
+                        weighted_bundle=weighted_bundle,
+                    ),
+                    source_context={
+                        "created_from": "weighted_portfolio_builder",
+                        "source_strategy_names": [bundle["strategy_name"] for bundle in compare_bundles],
+                        "compare_source_context": compare_source_context,
+                    },
                 )
-                portfolio_name = st.text_input(
-                    "Portfolio Name",
-                    value=suggested_name or "",
-                    placeholder="예: Annual Strict Blend 60/40",
-                    help="이 이름이 저장 목록과 replay/edit 화면에 그대로 보입니다.",
-                    key="saved_portfolio_name_input",
+                st.session_state.backtest_saved_portfolio_notice = (
+                    f"저장된 portfolio mix `{record.get('name')}`를 만들었습니다. `저장 Mix 다시 열기` 탭에서 확인할 수 있습니다."
                 )
-                portfolio_description = st.text_area(
-                    "Description",
-                    value="",
-                    placeholder="이 포트폴리오를 왜 저장하는지, 이후 어떻게 쓸지 간단히 적습니다.",
-                    help="나중에 저장된 포트폴리오를 다시 열었을 때 용도를 빠르게 떠올릴 수 있게 해줍니다.",
-                    key="saved_portfolio_description_input",
-                )
-                save_submitted = st.form_submit_button("Save Weighted Portfolio", use_container_width=True)
-            if save_submitted:
-                try:
-                    record = save_saved_portfolio(
-                        name=portfolio_name,
-                        description=portfolio_description,
-                        compare_context=_build_saved_portfolio_compare_context(compare_bundles),
-                        portfolio_context=_build_saved_portfolio_context(
-                            bundles=compare_bundles,
-                            weighted_bundle=weighted_bundle,
-                        ),
-                        source_context={
-                            "created_from": "weighted_portfolio_builder",
-                            "source_strategy_names": [bundle["strategy_name"] for bundle in compare_bundles],
-                            "compare_source_context": compare_source_context,
-                        },
-                    )
-                    st.session_state.backtest_saved_portfolio_notice = (
-                        f"저장된 포트폴리오 `{record.get('name')}`를 만들었습니다."
-                    )
-                    st.rerun()
-                except Exception as exc:
-                    st.error(f"Saved portfolio creation failed: {exc}")
-    else:
-        st.caption("먼저 compare를 실행하고 `Weighted Portfolio Builder`에서 결과를 만든 뒤 저장할 수 있습니다.")
+                st.rerun()
+            except Exception as exc:
+                st.error(f"Portfolio mix save failed: {exc}")
+
+def _render_saved_portfolio_workspace() -> None:
+    st.markdown("### 저장 Mix 다시 열기")
+    st.caption(
+        "전략 비교 탭에서 저장한 weighted portfolio mix를 다시 불러오거나 replay합니다. "
+        "후보 검토용 registry가 아니라 재사용 가능한 설정 저장소입니다."
+    )
 
     saved_portfolios = load_saved_portfolios(limit=100)
     if not saved_portfolios:
-        st.info("저장된 weighted portfolio output이 아직 없습니다.")
-        st.caption(f"Path: {SAVED_PORTFOLIO_FILE}")
+        st.info("저장된 portfolio mix가 아직 없습니다. `전략 비교` 탭에서 비중 포트폴리오 결과를 만든 뒤 저장할 수 있습니다.")
+        st.caption(f"저장 위치: `{SAVED_PORTFOLIO_FILE}`")
         return
 
-    st.caption(f"Path: {SAVED_PORTFOLIO_FILE}")
+    st.caption(f"저장 위치: `{SAVED_PORTFOLIO_FILE}`")
     st.dataframe(_build_saved_portfolio_display_rows(saved_portfolios), use_container_width=True, hide_index=True)
 
     record_labels = [
@@ -2203,7 +2249,7 @@ def _render_saved_portfolio_workspace() -> None:
         for item in saved_portfolios
     ]
     selected_label = st.selectbox(
-        "Inspect Saved Portfolio",
+        "Inspect Saved Portfolio Mix",
         options=record_labels,
         index=0,
         key="saved_portfolio_selected_record",
@@ -2242,13 +2288,13 @@ def _render_saved_portfolio_workspace() -> None:
         )
         st.markdown("##### Next Action")
         st.markdown(
-            "- `Load Saved Setup Into Compare`: 저장된 전략 조합, compare 기간, strategy-specific 설정, "
+            "- `Load Saved Mix Into Compare`: 저장된 전략 조합, compare 기간, strategy-specific 설정, "
             "weighted portfolio의 weight/date alignment를 다시 채워 수정합니다."
         )
         st.markdown(
-            "- `Replay Saved Portfolio`: 저장 당시의 compare context와 weighted portfolio 구성을 그대로 다시 실행합니다."
+            "- `Replay Saved Mix`: 저장 당시의 compare context와 weighted portfolio 구성을 그대로 다시 실행합니다."
         )
-        st.markdown("- `Delete Portfolio`: 더 이상 쓰지 않는 저장 포트폴리오를 정리합니다.")
+        st.markdown("- `Delete Mix`: 더 이상 쓰지 않는 저장 mix를 정리합니다.")
     with detail_tabs[2]:
         left, right = st.columns(2, gap="large")
         with left:
@@ -2262,34 +2308,34 @@ def _render_saved_portfolio_workspace() -> None:
 
     action_cols = st.columns([0.24, 0.24, 0.20, 0.32], gap="small")
     with action_cols[0]:
-        if st.button("Load Saved Setup Into Compare", key="saved_portfolio_load_into_compare", use_container_width=True):
+        if st.button("Load Saved Mix Into Compare", key="saved_portfolio_load_into_compare", use_container_width=True):
             _queue_saved_portfolio_compare_prefill(selected_record)
             st.rerun()
     with action_cols[1]:
-        if st.button("Replay Saved Portfolio", key="saved_portfolio_run", use_container_width=True):
+        if st.button("Replay Saved Mix", key="saved_portfolio_run", use_container_width=True):
             try:
-                with st.spinner("Running saved portfolio from stored compare context..."):
+                with st.spinner("Running saved mix from stored compare context..."):
                     _run_saved_portfolio_record(selected_record)
                 st.session_state.backtest_saved_portfolio_notice = (
-                    f"저장된 포트폴리오 `{selected_record.get('name')}`를 다시 실행했습니다."
+                    f"저장된 portfolio mix `{selected_record.get('name')}`를 다시 실행했습니다."
                 )
                 st.rerun()
             except Exception as exc:
-                st.error(f"Saved portfolio run failed: {exc}")
+                st.error(f"Saved mix run failed: {exc}")
     with action_cols[2]:
-        if st.button("Delete", key="saved_portfolio_delete", use_container_width=True):
+        if st.button("Delete Mix", key="saved_portfolio_delete", use_container_width=True):
             if delete_saved_portfolio(str(selected_record.get("portfolio_id") or "")):
                 st.session_state.backtest_saved_portfolio_notice = (
-                    f"저장된 포트폴리오 `{selected_record.get('name')}`를 삭제했습니다."
+                    f"저장된 portfolio mix `{selected_record.get('name')}`를 삭제했습니다."
                 )
                 st.rerun()
             else:
-                st.error("Saved portfolio delete failed.")
+                st.error("Saved mix delete failed.")
     with action_cols[3]:
         st.caption(
-            "`Load Saved Setup Into Compare`는 저장된 compare 전략/기간/세부 설정과 weighted portfolio "
+            "`Load Saved Mix Into Compare`는 저장된 compare 전략/기간/세부 설정과 weighted portfolio "
             "weight/date alignment를 다시 채웁니다. "
-            "`Replay Saved Portfolio`는 저장 당시의 compare부터 weighted portfolio 결과까지 한 번에 다시 실행합니다."
+            "`Replay Saved Mix`는 저장 당시의 compare부터 weighted portfolio 결과까지 한 번에 다시 실행합니다."
         )
 
 def _render_weighted_portfolio_result(bundle: dict) -> None:
@@ -3522,10 +3568,10 @@ def _resolve_saved_portfolio_dynamic_inputs(
     params["dynamic_target_size"] = dynamic_target_size
     return params
 
-# Render and operate the Compare & Portfolio Builder workspace.
-def render_compare_portfolio_workspace() -> None:
-    st.markdown("### Compare Strategies")
-    st.caption("Start with a shared date range and compare up to four strategies chosen from the current DB-backed strategy surface. This section then feeds directly into a weighted portfolio builder.")
+# Render the create-new-mix side of Compare & Portfolio Builder.
+def _render_strategy_compare_workspace() -> None:
+    st.markdown("### 1. 전략 비교")
+    st.caption("공통 기간으로 전략을 비교한 뒤, 이어서 비중 포트폴리오를 만들고 저장합니다.")
     _apply_compare_prefill()
     compare_prefill_notice = st.session_state.get("backtest_compare_prefill_notice")
     if compare_prefill_notice:
@@ -5037,8 +5083,18 @@ def render_compare_portfolio_workspace() -> None:
     if st.session_state.backtest_compare_bundles:
         st.divider()
     _render_weighted_portfolio_builder()
-    if st.session_state.backtest_compare_bundles and len(st.session_state.backtest_compare_bundles) >= 2:
-        st.divider()
-    _render_saved_portfolio_workspace()
+
+# Render and operate the Compare & Portfolio Builder workspace.
+def render_compare_portfolio_workspace() -> None:
+    saved_notice = st.session_state.get("backtest_saved_portfolio_notice")
+    if saved_notice:
+        st.success(saved_notice)
+        st.session_state.backtest_saved_portfolio_notice = None
+
+    workspace_tab, saved_tab = st.tabs(["전략 비교", "저장 Mix 다시 열기"])
+    with workspace_tab:
+        _render_strategy_compare_workspace()
+    with saved_tab:
+        _render_saved_portfolio_workspace()
 
 __all__ = [name for name in globals() if not name.startswith("__")]

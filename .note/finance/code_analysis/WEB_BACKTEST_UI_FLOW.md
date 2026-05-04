@@ -331,21 +331,29 @@ registry snapshot과 실제 재실행 결과가 같은 설정으로 복원되는
 - Value Snapshot (Strict Annual)
 - Quality + Value Snapshot (Strict Annual)
 
-## Weighted Portfolio / Saved Weighted Portfolio 흐름
+## Weighted Portfolio / Saved Portfolio Mix 흐름
 
 ```text
-compare result bundles
+Backtest > Compare & Portfolio Builder
+  -> 전략 비교 탭
+  -> compare result bundles
   -> weight 입력
+  -> optional GTAA 70 / Equal Weight 30 quick mix
   -> make_monthly_weighted_portfolio(...)
   -> weighted result
-  -> optional save
-  -> Load Saved Setup Into Compare or Replay Saved Portfolio
+  -> Save Portfolio Mix
+
+Backtest > Compare & Portfolio Builder
+  -> 저장 Mix 다시 열기 탭
+  -> Load Saved Mix Into Compare or Replay Saved Mix
 ```
 
 구분:
 
-- `Load Saved Setup Into Compare`: 저장된 compare 구성과 weight를 form에 다시 채운다.
-- `Replay Saved Portfolio`: 저장 당시 context로 compare와 weighted portfolio를 다시 실행한다.
+- `전략 비교`: 새 compare를 실행하고, 그 결과를 기반으로 weighted portfolio mix를 만든 뒤 저장한다.
+- `저장 Mix 다시 열기`: `.note/finance/saved/SAVED_PORTFOLIOS.jsonl`에 저장한 reusable setup을 다시 불러오거나 replay한다.
+- `Load Saved Mix Into Compare`: 저장된 compare 구성과 weight를 form에 다시 채운다.
+- `Replay Saved Mix`: 저장 당시 context로 compare와 weighted portfolio를 다시 실행한다.
 
 저장된 weighted portfolio는 live trading 승인 기록이 아니다.
 후보 조합을 다시 재현하고 검증하기 위한 operator workflow artifact다.
@@ -417,7 +425,7 @@ Latest Backtest Run 또는 Operations > Backtest Run History selected record
 - `Save Pre-Live Record`는 live trading 승인이 아니라 `PRE_LIVE_CANDIDATE_REGISTRY.jsonl`에 paper / watchlist / hold 같은 운영 상태를 남기는 append-only 기록이다.
 - `Open Portfolio Proposal`은 같은 후보의 현재 선택 상태가 저장된 Pre-Live record와 맞고 route가 `PORTFOLIO_PROPOSAL_READY`일 때 활성화된다.
 
-Phase 28 이후 Saved Portfolio 영역에는
+Phase 28 이후 `저장 Mix 다시 열기` 영역에는
 `Saved Portfolio Replay / Load Parity Snapshot`을 둔다.
 이 표는 저장 포트폴리오를 다시 열거나 재실행하기 전에 아래 값이 남아 있는지 보여준다.
 
@@ -463,7 +471,7 @@ Phase 28 이후 compare, history, saved portfolio에는
 
 - `Strategy Comparison > Real-Money / Guardrail`
 - `Operations > Backtest Run History > Selected History Run > History Real-Money / Guardrail Scope`
-- `Saved Portfolios > Saved Portfolio Real-Money / Guardrail Scope`
+- `저장 Mix 다시 열기 > Saved Portfolio Real-Money / Guardrail Scope`
 
 현재 기준:
 

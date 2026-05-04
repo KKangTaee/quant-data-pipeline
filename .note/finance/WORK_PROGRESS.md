@@ -3252,3 +3252,14 @@ Detailed historical logs were archived on `2026-04-13`.
   - registered the note in `.note/finance/operations/README.md` and `.note/finance/FINANCE_DOC_INDEX.md`
 - Decision:
   - The next most natural product direction is a final-selected portfolio operations dashboard, not another candidate-selection save/review step.
+
+### 2026-05-05
+- Improved `Backtest > Compare & Portfolio Builder` after the user asked to make GTAA / Equal Weight mix creation and saved portfolio reuse easier to understand.
+- Changed:
+  - split the Compare workspace into `전략 비교` and `저장 Mix 다시 열기` tabs
+  - kept compare execution, weighted portfolio construction, result review, and save CTA in the `전략 비교` tab
+  - moved saved portfolio list / load / replay / delete into the `저장 Mix 다시 열기` tab
+  - added quick allocation buttons for `GTAA 70 / EW 30` and `GTAA 50 / EW 50`
+  - renamed save/replay UI wording toward `Portfolio Mix` so saved setups are not confused with candidate registries
+- Decision:
+  - `.note/finance/saved/SAVED_PORTFOLIOS.jsonl` remains the persistence location because these rows are reusable replay setups, not append-only candidate / proposal / final-decision registry rows.

@@ -4100,3 +4100,15 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 다음 주요 제품 방향 후보는 `Final-selected portfolio monitoring & rebalance operations`가 가장 자연스럽다
   - 사용자가 나중에 다시 확인할 수 있도록 `.note/finance/operations/FINAL_SELECTED_PORTFOLIO_OPERATIONS_DASHBOARD_GAP_20260504.md`에 요약 문서를 생성했다
   - 사용자 판단상 1순위 기능은 `최종 선정 포트폴리오 운영 대시보드`로 기록했다
+
+### 2026-05-05 - Compare & Portfolio Builder 저장 Mix UX 재구성
+- User request:
+  - GTAA 70 + Equal Weight 30 mix를 확인하고 저장하려는데, Weighted Portfolio Builder / Result / Save 영역과 저장된 파일 관리 위치가 한 화면에서 잘 드러나지 않는다고 지적함
+- Interpreted goal:
+  - 새 전략 비교와 저장된 mix 다시 열기를 분리해, 사용자가 `비교 -> 비중 조합 -> 결과 확인 -> 저장` 흐름과 `저장된 mix load / replay` 흐름을 혼동하지 않게 해야 함
+- Analysis result:
+  - saved portfolio row는 후보 registry가 아니라 재사용 가능한 weighted portfolio setup이다
+  - 따라서 저장 위치는 `.note/finance/saved/SAVED_PORTFOLIOS.jsonl` 유지가 적절하며, UI에서 `Portfolio Mix`와 저장 위치를 명확히 보여주는 편이 registry semantics를 흐리지 않는다
+  - `전략 비교` 탭은 새 mix 생성에 집중하고, `저장 Mix 다시 열기` 탭은 기존 mix load / replay / delete에 집중하는 구조가 가장 자연스럽다
+- Follow-up:
+  - Compare workspace를 내부 탭 구조로 나누고, GTAA / Equal Weight quick allocation과 저장 CTA를 result 확인 바로 아래에 배치했다

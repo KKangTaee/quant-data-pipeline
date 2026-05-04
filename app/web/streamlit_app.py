@@ -3743,9 +3743,9 @@ def _render_guides_page() -> None:
                     {
                         "파일": "SAVED_PORTFOLIOS.jsonl",
                         "폴더": ".note/finance/saved/",
-                        "담는 데이터": "weighted portfolio builder에서 저장한 재사용 가능한 비중 setup",
-                        "화면 위치": "Backtest > Compare & Portfolio Builder",
-                        "읽는 법": "포트폴리오 proposal이 아니라, 다시 불러올 수 있는 weight setup입니다.",
+                        "담는 데이터": "Compare에서 만든 재사용 가능한 portfolio mix setup",
+                        "화면 위치": "Backtest > Compare & Portfolio Builder > 저장 Mix 다시 열기",
+                        "읽는 법": "포트폴리오 proposal이나 후보 registry가 아니라, 다시 불러오거나 replay할 수 있는 weight setup입니다.",
                     },
                 ]
             )
@@ -3791,6 +3791,7 @@ def _render_guides_page() -> None:
             """
             - `Real-Money`는 개별 backtest 결과에 붙는 검증 신호입니다.
             - `Compare`는 후보를 서로 비교해 다음 검토 초안으로 보낼지 판단하는 단계입니다.
+            - `Saved Portfolio Mix`는 Compare에서 만든 비중 조합을 다시 열기 위한 saved setup이며, 후보 registry나 최종 판단 기록이 아닙니다.
             - `Candidate Packaging`은 Draft 확인 / Review Note 저장 / Registry 저장 / Pre-Live 운영 기록 / Portfolio Proposal 이동 판단을 하나로 묶은 단계입니다.
             - `Candidate Draft`와 `Review Note`는 Candidate Packaging 안에서 쓰는 저장 전 검토 기록입니다.
             - `Current Candidate Registry`는 명시적으로 남긴 후보 목록입니다.
