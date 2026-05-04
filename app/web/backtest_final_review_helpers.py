@@ -178,7 +178,7 @@ def _build_final_review_paper_observation_snapshot(validation: dict[str, Any]) -
         {
             "Criteria": "Active components",
             "Ready": bool(active_components),
-            "Current": len(active_components),
+            "Current": str(len(active_components)),
             "Meaning": "최종 판단에 들어갈 active component가 있는지 봅니다.",
         },
         {
@@ -196,7 +196,7 @@ def _build_final_review_paper_observation_snapshot(validation: dict[str, Any]) -
         {
             "Criteria": "Review triggers",
             "Ready": True,
-            "Current": len(default_triggers),
+            "Current": str(len(default_triggers)),
             "Meaning": "최종 판단 이후에도 다시 볼 조건을 남깁니다.",
         },
     ]

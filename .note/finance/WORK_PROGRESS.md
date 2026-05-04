@@ -3237,3 +3237,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - Decision:
   - The registry contracts remain unchanged.
   - Intermediate records stay useful as preparation / operating notes, but they should not feel like repeated final decisions.
+
+### 2026-05-04
+- Fixed a Final Review dataframe serialization warning reported by the user.
+- Changed:
+  - converted mixed numeric / string `Current` values in the inline paper observation checks to strings before rendering
+- Decision:
+  - The warning was not a final review logic failure, but it was a real UI hygiene issue because Streamlit logged an Arrow conversion traceback on each Final Review visit.
