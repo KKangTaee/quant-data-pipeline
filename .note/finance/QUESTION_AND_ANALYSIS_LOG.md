@@ -3967,3 +3967,17 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `Backtest > Final Review` panel과 helper를 추가했다
   - Portfolio Proposal active flow에서 Paper Ledger / Final Selection 저장 surface를 제거했다
   - Phase34 checklist와 durable docs를 Final Review 기준으로 개편했다
+
+### 2026-05-04 - Phase34 closeout and Phase35 start preparation
+- User request:
+  - Phase34 checklist 완료를 알리고, Phase34를 마무리한 뒤 Phase35 시작 준비를 요청함
+- Interpreted goal:
+  - Phase34 manual QA 완료 신호를 반영하고, 다음 phase를 구현이 아니라 시작 가능한 문서 / 로드맵 상태로 열어야 함
+- Analysis result:
+  - Phase34는 `complete / manual_qa_completed` 상태로 닫는다
+  - Phase35는 `Post-Selection Operating Guide`로 시작한다
+  - Phase35는 Phase34에서 `SELECT_FOR_PRACTICAL_PORTFOLIO`로 저장된 final review record를 읽어 리밸런싱 / 중단 / 축소 / 재검토 운영 기준을 만드는 단계다
+  - 이 단계도 live approval, broker order, 자동매매, optimizer가 아니다
+- Follow-up:
+  - Phase35 문서 bundle을 `.note/finance/phases/phase35/` 아래에 만들었다
+  - Phase35는 `active / not_ready_for_qa` 상태이며, 첫 작업은 operating policy contract 정리다

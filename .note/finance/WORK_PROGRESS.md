@@ -3128,3 +3128,19 @@ Detailed historical logs were archived on `2026-04-13`.
   - Paper Portfolio Tracking Ledger remains as a compatibility / operating artifact.
   - The main Phase34 user flow is now `Portfolio Proposal draft -> Final Review -> 최종 검토 결과 기록`.
   - Final Review records remain append-only final select / hold / reject / re-review judgments, not live approval or orders.
+
+### 2026-05-04
+- Closed Phase 34 after the user confirmed `PHASE34_TEST_CHECKLIST.md` was complete.
+- Changed:
+  - preserved the user's checked Phase34 checklist items
+  - moved Phase34 status to `complete` / `manual_qa_completed`
+  - opened Phase35 `Post-Selection Operating Guide` as `active` / `not_ready_for_qa`
+  - created the Phase35 plan / TODO / completion summary / next-phase preparation / checklist placeholder bundle under `.note/finance/phases/phase35/`
+  - synced roadmap, doc index, comprehensive analysis, glossary, phase docs, and durable logs
+- Decision:
+  - Phase35 starts from Phase34 `SELECT_FOR_PRACTICAL_PORTFOLIO` final review records.
+  - Phase35 will turn selected records into rebalance / stop / reduce / re-review operating guidance.
+  - Phase35 is not live approval, broker order, auto-trading, or an optimizer.
+- Hygiene:
+  - This was a documentation / phase-management closeout and kickoff unit.
+  - Existing unrelated strategy logs, `uv.lock`, generated registries, run history artifacts, archived reset files, and phase12 temp CSVs were left unstaged.

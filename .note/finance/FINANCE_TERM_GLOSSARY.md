@@ -2718,3 +2718,31 @@ operator reason을 함께 읽고 사람이 명시적으로 남겨야 한다.
 - Final selection decision은 live approval이 아니다.
 - Final selection decision은 broker order나 자동매매 지시가 아니다.
 - `선정`도 "실전 후보로 선택했다"는 검토 기록이지, 실제 주문 실행이 아니다.
+
+---
+
+## Post-Selection Operating Guide
+
+### 기본 설명
+Phase34에서 최종 실전 후보로 선정한 record를 읽어,
+실제 운영 전에 리밸런싱 / 중단 / 축소 / 재검토 기준을 정리하는 가이드다.
+
+### 왜 사용되는지
+`SELECT_FOR_PRACTICAL_PORTFOLIO`는 "실전 후보로 고르겠다"는 검토 기록이지,
+곧바로 주문하거나 live approval을 내린다는 뜻이 아니다.
+
+선정 이후에도 사용자는 언제 비중을 조정할지,
+어떤 조건에서 멈추거나 줄일지,
+어떤 데이터나 paper observation 문제가 생기면 다시 검토할지 알아야 한다.
+Phase35는 이 기준을 한곳에 모아 사용자가 따라갈 수 있는 운영 안내로 만든다.
+
+### 예시 / 필요 상황
+- Final Review에서 `SELECT_FOR_PRACTICAL_PORTFOLIO`로 저장된 후보가 있을 때
+- 선정된 후보의 target weight, observation 기준, blocker, operator constraint를 운영 기준으로 다시 읽고 싶을 때
+- live approval이나 broker order 전에 사람이 확인할 운영 규칙표가 필요할 때
+
+중요한 경계:
+
+- Post-Selection Operating Guide는 주문 실행 지시가 아니다.
+- Post-Selection Operating Guide는 live approval이 아니다.
+- Phase35는 최종 선정 후보를 운영 가능한 기준표로 바꾸는 단계다.

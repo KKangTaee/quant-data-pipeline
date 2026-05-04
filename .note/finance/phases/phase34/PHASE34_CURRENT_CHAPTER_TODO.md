@@ -2,11 +2,11 @@
 
 ## 진행 상태
 
-- `implementation_complete`
+- `complete`
 
 ## 검증 상태
 
-- `manual_qa_pending`
+- `manual_qa_completed`
 
 ## 현재 목표
 
@@ -18,7 +18,7 @@ validation / robustness / paper observation 기준 / operator judgment를 하나
 
 | 구분 | 의미 | 현재 상태 |
 |---|---|---|
-| Phase 34 전체 목표 | Final Portfolio Selection Decision Pack을 만든다 | `implementation_complete` |
+| Phase 34 전체 목표 | Final Portfolio Selection Decision Pack을 만든다 | `completed` |
 | 첫 번째 작업 | Final decision 계약과 저장소 경계 정의 | `completed` |
 | 두 번째 작업 | Decision evidence pack 계산 기준 추가 | `completed` |
 | 세 번째 작업 | Final decision UI 추가 | `completed` |
@@ -49,7 +49,7 @@ validation / robustness / paper observation 기준 / operator judgment를 하나
 - `completed` 향후 구현 대상 모듈 확인
 - `completed` helper smoke validation
 - `completed` Final Review tab reboundary smoke validation
-- `pending` user manual QA
+- `completed` user manual QA
 
 ## 4. Documentation Sync
 
@@ -63,10 +63,10 @@ validation / robustness / paper observation 기준 / operator judgment를 하나
 
 ## 현재 판단
 
-Phase 34는 implementation_complete / manual_qa_pending 상태다.
+Phase 34는 complete / manual_qa_completed 상태다.
 첫 번째부터 네 번째 작업까지 구현한 뒤, 사용자가 제기한 반복 저장 UX 문제를 반영해
 최종 검토 surface를 `Backtest > Final Review` 탭으로 분리했다.
-이제 사용자가 `PHASE34_TEST_CHECKLIST.md`를 기준으로 manual QA를 진행하면 된다.
+2026-05-04 사용자가 `PHASE34_TEST_CHECKLIST.md` 기준 manual QA 완료를 확인했다.
 
 구현된 내용:
 
