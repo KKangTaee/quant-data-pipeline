@@ -11,14 +11,14 @@
 Final Portfolio Selection Decision은
 "검증 근거와 paper observation 기준까지 본 이 후보나 proposal을 최종 실전 후보로 선정할지, 더 볼지, 거절할지, 재검토할지"를 남기는 장부다.
 
-이 장부는 마지막 판단 기록에 가깝지만, 그래도 live approval이나 broker 주문은 아니다.
-실제 투자 운영 기준은 Phase 35에서 별도 guide로 정리한다.
+이 장부는 현재 Backtest workflow의 마지막 판단 기록이다.
+그래도 live approval이나 broker 주문은 아니다.
 
 ## 파일 위치
 
 | 구분 | 위치 | 역할 |
 |---|---|---|
-| Final decision registry | `.note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl` | 최종 선정 / 보류 / 거절 / 재검토 판단과 Phase35 handoff 저장 |
+| Final decision registry | `.note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl` | 최종 선정 / 보류 / 거절 / 재검토 판단과 final review completion status 저장 |
 | Runtime helper | `app/web/runtime/final_selection_decisions.py` | final decision JSONL append / load helper |
 | UI | `Backtest > Final Review` | 단일 후보 또는 저장된 proposal을 읽어 validation / robustness / paper observation / 최종 판단 기록 |
 
@@ -40,7 +40,7 @@ Final Portfolio Selection Decision은
 | `risk_and_validation_snapshot` | Phase31 / Phase32 validation과 robustness snapshot |
 | `paper_tracking_snapshot` | inline paper observation 기준, benchmark, cadence, baseline, trigger |
 | `operator_decision` | 사람이 남긴 판단 사유, 제약 조건, 다음 행동 |
-| `phase35_handoff` | Phase 35 운영 가이드로 넘길 준비 상태 |
+| `phase35_handoff` | legacy field name. 현재 UI에서는 final review completion status로 읽음 |
 | `live_approval` / `order_instruction` | 항상 `false`로 두는 실행 경계 |
 
 ## 기본 사용 방법
@@ -51,13 +51,13 @@ Final Portfolio Selection Decision은
 4. `최종 판단`을 선정 / 보류 / 거절 / 재검토 중 하나로 고른다.
 5. `판단 사유`, `운영 제약`, `다음 행동`을 남긴다.
 6. 기록 조건이 통과하면 `최종 검토 결과 기록`을 누른다.
-7. 저장 후 `기록된 최종 검토 결과 확인`에서 Phase35 handoff를 다시 읽는다.
+7. 저장 후 `기록된 최종 검토 결과 확인`에서 최종 판단 상태와 투자 가능성 label을 다시 읽는다.
 
 ## route 의미
 
 | Route | 의미 |
 |---|---|
-| `SELECT_FOR_PRACTICAL_PORTFOLIO` | 최종 실전 후보로 선정하고 Phase35 최종 투자 지침 확인 대상으로 넘긴다. 승인 / 주문은 아니다. |
+| `SELECT_FOR_PRACTICAL_PORTFOLIO` | 최종 실전 후보로 선정한다. 승인 / 주문은 아니다. |
 | `HOLD_FOR_MORE_PAPER_TRACKING` | 추가 paper observation 기간이나 trigger 확인이 필요해 보류한다. |
 | `REJECT_FOR_PRACTICAL_USE` | 현재 근거로는 실전 후보에서 제외한다. |
 | `RE_REVIEW_REQUIRED` | 구성, 비중, validation, robustness, paper tracking 조건을 다시 봐야 한다. |
@@ -69,10 +69,10 @@ Final Portfolio Selection Decision은
 - `SELECT_FOR_PRACTICAL_PORTFOLIO`도 live approval이나 주문 지시가 아니다.
 - final decision 저장은 current candidate, Pre-Live, Portfolio Proposal registry를 덮어쓰지 않는다.
 - Paper Ledger registry는 호환성 / 운영 artifact로 유지하지만, 현재 main flow에서 별도 저장을 필수로 요구하지 않는다.
-- Phase 35 handoff는 최종 투자 지침 확인 준비 상태이지 자동매매 연결이 아니다.
+- `phase35_handoff`라는 legacy field가 있어도 현재 UI에서는 Final Review 완료 상태로 읽으며 자동매매 연결이 아니다.
 
 ## 현재 한계
 
-- Phase 35 Post-Selection Guide는 구현되어 있으며, Final Review record를 읽는 no-extra-save preview surface다.
+- 별도 Post-Selection Guide panel은 현재 active workflow에서 제거했다. 최종 판단 확인은 `Backtest > Final Review`의 saved final decision review에서 한다.
 - 실제 broker order, 자동매매, live approval은 범위 밖이다.
 - paper PnL 시계열 자동 계산은 아직 없으므로, 현재 decision evidence는 validation snapshot / inline paper observation 기준 / operator note 기반으로 해석한다.

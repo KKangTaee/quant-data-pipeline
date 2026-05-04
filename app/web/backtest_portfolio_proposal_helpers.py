@@ -69,7 +69,7 @@ FINAL_SELECTION_DECISION_ROUTE_OPTIONS = [
     "RE_REVIEW_REQUIRED",
 ]
 FINAL_SELECTION_DECISION_ROUTE_DESCRIPTIONS = {
-    "SELECT_FOR_PRACTICAL_PORTFOLIO": "실전 후보로 선정하고 Phase 35 최종 투자 지침 확인으로 넘깁니다. 승인/주문은 아닙니다.",
+    "SELECT_FOR_PRACTICAL_PORTFOLIO": "실전 후보로 선정합니다. 승인/주문은 아니며 Final Review에서 최종 판단이 완료됩니다.",
     "HOLD_FOR_MORE_PAPER_TRACKING": "paper tracking 기간이나 trigger 확인이 더 필요해 보류합니다.",
     "REJECT_FOR_PRACTICAL_USE": "현재 근거로는 실전 후보에서 제외합니다.",
     "RE_REVIEW_REQUIRED": "구성, 비중, stress, paper tracking 조건을 재검토해야 합니다.",
@@ -1029,24 +1029,24 @@ def _build_final_selection_decision_save_evaluation(
 
 
 def _build_final_selection_decision_phase35_handoff(row: dict[str, Any]) -> dict[str, Any]:
-    """Summarize how a saved final decision should be read by Phase 35."""
+    """Summarize final-review completion while preserving the legacy handoff field name."""
     decision_route = str(row.get("decision_route") or "")
     evidence = dict(row.get("decision_evidence_snapshot") or {})
     if decision_route == "SELECT_FOR_PRACTICAL_PORTFOLIO":
-        handoff_route = "READY_FOR_FINAL_INVESTMENT_GUIDE"
-        verdict = "Phase 35 최종 투자 지침 확인 가능: 최종 후보 선정 기록이 있음"
-        next_action = "투자 가능 여부와 리밸런싱, 축소, 중단, 재검토 기준을 확인합니다."
+        handoff_route = "FINAL_REVIEW_DECISION_COMPLETE"
+        verdict = "최종 판단 완료: 실전 후보로 선정됨"
+        next_action = "실제 투자 승인 / 주문은 별도 사용자 판단으로 유지합니다."
     elif decision_route == "HOLD_FOR_MORE_PAPER_TRACKING":
         handoff_route = "WAIT_FOR_MORE_PAPER_TRACKING"
-        verdict = "Phase 35 보류: paper tracking 근거를 더 쌓아야 함"
+        verdict = "최종 판단 보류: paper tracking 근거를 더 쌓아야 함"
         next_action = "추가 관찰 기간 또는 trigger 충족 후 final decision을 다시 남깁니다."
     elif decision_route == "REJECT_FOR_PRACTICAL_USE":
-        handoff_route = "NO_PHASE35_HANDOFF"
-        verdict = "Phase 35 대상 아님: 실전 후보에서 제외됨"
+        handoff_route = "FINAL_REVIEW_REJECTED"
+        verdict = "최종 판단 완료: 실전 후보에서 제외됨"
         next_action = "필요하면 후보군/전략 탐색 단계로 되돌아갑니다."
     else:
-        handoff_route = "RE_REVIEW_BEFORE_OPERATING_GUIDE"
-        verdict = "Phase 35 전 재검토 필요: 구성 / 비중 / 근거를 다시 확인"
+        handoff_route = "FINAL_REVIEW_REVIEW_REQUIRED"
+        verdict = "최종 판단 재검토 필요: 구성 / 비중 / 근거를 다시 확인"
         next_action = "paper ledger 또는 proposal 구성 근거를 보강한 뒤 final decision을 다시 저장합니다."
     return {
         "handoff_route": handoff_route,
@@ -1057,7 +1057,7 @@ def _build_final_selection_decision_phase35_handoff(row: dict[str, Any]) -> dict
                 "Requirement": "Final decision route",
                 "Status": "READY" if decision_route == "SELECT_FOR_PRACTICAL_PORTFOLIO" else "NOT_READY",
                 "Current": decision_route or "-",
-                "Why It Matters": "Phase 35는 선정된 후보만 최종 투자 지침 확인 대상으로 읽는다.",
+                "Why It Matters": "Final Review에서 실전 후보 선정 여부를 명확히 남긴다.",
             },
             {
                 "Requirement": "Evidence pack",
@@ -1069,7 +1069,7 @@ def _build_final_selection_decision_phase35_handoff(row: dict[str, Any]) -> dict
                 "Requirement": "Execution boundary",
                 "Status": "READY",
                 "Current": "live approval disabled / order instruction disabled",
-                "Why It Matters": "선정 기록은 주문 실행이 아니라 최종 투자 지침 확인 입력이다.",
+                "Why It Matters": "선정 기록은 주문 실행이 아니라 최종 검토 판단이다.",
             },
         ],
     }
@@ -1141,7 +1141,7 @@ def _build_final_selection_decision_rows_for_display(rows: list[dict[str, Any]])
                 "Components": len(row.get("selected_components") or []),
                 "Evidence Route": evidence.get("route"),
                 "Evidence Score": evidence.get("score"),
-                "Phase35 Handoff": handoff.get("handoff_route"),
+                "Final Status": handoff.get("handoff_route"),
                 "Live Approval": "Disabled",
             }
         )

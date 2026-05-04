@@ -42,11 +42,9 @@
 | `app/web/backtest_candidate_review_helpers.py` | Candidate Review readiness 평가, Review Note 생성, current candidate registry row 변환, Pre-Live status 추천 / draft 생성 / Proposal readiness 평가, display table helper |
 | `app/web/backtest_portfolio_proposal.py` | `Backtest > Portfolio Proposal`의 단일 후보 직행 평가, 다중 후보 proposal 후보 선택, 목적 / 역할 / 비중 설계, proposal draft 저장, 저장 proposal monitoring / feedback 화면 render |
 | `app/web/backtest_portfolio_proposal_helpers.py` | Portfolio Proposal row 생성, 단일 후보 direct readiness / proposal save readiness 평가, 공유 validation / robustness 계산 helper, saved proposal monitoring / Pre-Live feedback / paper feedback table helper |
-| `app/web/backtest_final_review.py` | `Backtest > Final Review`의 단일 후보 / 저장 proposal 선택, Validation / Robustness / Paper Observation 기준 확인, 최종 선정 / 보류 / 거절 / 재검토 결과 기록, Phase35 handoff review 화면 render |
+| `app/web/backtest_final_review.py` | `Backtest > Final Review`의 단일 후보 / 저장 proposal 선택, Validation / Robustness / Paper Observation 기준 확인, 최종 선정 / 보류 / 거절 / 재검토 결과 기록, 최종 판단 완료 review 화면 render |
 | `app/web/backtest_final_review_helpers.py` | Final Review source 선택, validation 재사용, inline paper observation snapshot, final review evidence / save readiness / decision row 생성, saved final decision display helper |
-| `app/web/backtest_post_selection_guide.py` | `Backtest > Post-Selection Guide`의 selected final decision 선택, 최종 투자 가능성 확인, 운영 전 기준 preview 화면 render |
-| `app/web/backtest_post_selection_guide_helpers.py` | Post-Selection Guide input selector, 최종 판단 문구 변환, readiness route, final guide preview helper |
-| `app/web/pages/backtest.py` | Backtest page shell, workflow navigation, panel dispatch entry. Single / Compare / Candidate Review / Portfolio Proposal / Final Review / Post-Selection Guide 본문은 별도 module이 관리 |
+| `app/web/pages/backtest.py` | Backtest page shell, workflow navigation, panel dispatch entry. Single / Compare / Candidate Review / Portfolio Proposal / Final Review 본문은 별도 module이 관리 |
 
 ## App / Runtime
 

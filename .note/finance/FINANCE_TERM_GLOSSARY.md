@@ -2721,29 +2721,25 @@ operator reason을 함께 읽고 사람이 명시적으로 남겨야 한다.
 
 ---
 
-## Post-Selection Guide
+## Final Review Completion Flow
 
 ### 기본 설명
-Phase34에서 기록한 Final Review record를 읽어,
-최종 투자 가능성과 실제 운영 전 리밸런싱 / 축소 / 중단 / 재검토 기준을 확인하는 화면이다.
+Phase35에서 정리한 현재 Backtest workflow의 마지막 형태다.
+별도 후속 가이드 탭을 만들지 않고,
+`Portfolio Proposal -> Final Review -> 최종 판단 완료`로 마무리한다.
 
 ### 왜 사용되는지
 `SELECT_FOR_PRACTICAL_PORTFOLIO`는 "실전 후보로 고르겠다"는 검토 기록이지,
 곧바로 주문하거나 live approval을 내린다는 뜻이 아니다.
 
-선정 이후에도 사용자는 언제 비중을 조정할지,
-어떤 조건에서 멈추거나 줄일지,
-어떤 데이터나 paper observation 문제가 생기면 다시 검토할지 알아야 한다.
-Phase35는 이 기준을 한곳에 모아 사용자가 마지막으로 확인하게 만든다.
-
-2026-05-04 보정 이후 Phase35는 별도 post-selection registry를 저장하지 않는다.
-Final Review의 final selection decision이 최종 판단 원본이고,
-Post-Selection Guide는 read / preview surface다.
+다만 현재 단계에서는 별도 마지막 탭을 더 만드는 것보다,
+Final Review의 saved decision review에서 최종 판단 의미와 실행 경계를 바로 읽게 하는 것이 더 적절하다.
+Final Review의 final selection decision이 최종 판단 원본이다.
 
 ### 예시 / 필요 상황
 - Final Review에서 `SELECT_FOR_PRACTICAL_PORTFOLIO`로 저장된 후보가 있을 때
-- 선정된 후보의 target weight, observation 기준, blocker, operator constraint를 운영 기준으로 다시 읽고 싶을 때
-- live approval이나 broker order 전에 사람이 확인할 운영 규칙표가 필요할 때
+- 저장된 final decision이 투자 가능 후보 / 내용 부족 / 투자하면 안 됨 / 재검토 필요 중 무엇인지 확인할 때
+- live approval이나 broker order와 최종 후보 선정 기록을 구분해야 할 때
 - 별도 저장 위치:
   - 없음
 - 원본 판단 위치:
@@ -2751,6 +2747,6 @@ Post-Selection Guide는 read / preview surface다.
 
 중요한 경계:
 
-- Post-Selection Guide는 주문 실행 지시가 아니다.
-- Post-Selection Guide는 live approval이 아니다.
-- Phase35는 최종 선정 후보를 다시 저장하는 단계가 아니라 운영 전 기준을 확인하는 단계다.
+- Final Review completion은 주문 실행 지시가 아니다.
+- Final Review completion은 live approval이 아니다.
+- Phase35는 최종 선정 후보를 다시 저장하는 단계가 아니라 workflow를 Final Review에서 끝내도록 정리한 단계다.

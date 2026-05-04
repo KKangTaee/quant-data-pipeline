@@ -4009,3 +4009,17 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `Backtest > Post-Selection Guide`에서 `운영 가이드 기록` save flow와 saved guide review를 제거했다
   - `app/web/runtime/post_selection_guides.py`를 삭제했다
   - Phase35 checklist와 durable docs를 no-extra-save final investment guide 기준으로 개편했다
+
+### 2026-05-04 - Phase35 후속 가이드 제거와 Final Review 종료 흐름 확정
+- User request:
+  - `Portfolio Proposal -> Final Review -> 최종 판단 완료`로 가는 것이 더 좋겠고, 별도 Post-Selection Guide는 현재 상황에서 과하다고 판단해 수정 요청
+- Interpreted goal:
+  - 최종 투자 포트폴리오 선정 흐름을 더 단순하고 사용자가 이해하기 쉬운 active workflow로 정리해야 함
+- Analysis result:
+  - Final Review가 이미 validation, robustness, paper observation, operator judgment, final decision 저장 / review를 담당하므로 별도 후속 guide panel은 현재 제품 단계에서 중복이다
+  - 최종 판단 원본은 `.note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`이다
+  - 사용자가 마지막에 확인해야 할 것은 투자 가능 후보 / 내용 부족 / 투자하면 안 됨 / 재검토 필요와 live approval / order disabled 경계다
+- Follow-up:
+  - Backtest workflow에서 별도 후속 guide panel을 제거했다
+  - Final Review saved decision review에 투자 가능성 label과 Final Review Status 해석을 보강했다
+  - Phase35 문서와 checklist를 `Portfolio Proposal -> Final Review -> 최종 판단 완료` 기준으로 개편했다

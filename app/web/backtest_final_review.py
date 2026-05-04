@@ -7,8 +7,8 @@ from uuid import uuid4
 import pandas as pd
 import streamlit as st
 
-from app.web.backtest_common import _request_backtest_panel
 from app.web.backtest_final_review_helpers import (
+    FINAL_REVIEW_DECISION_LABELS,
     FINAL_REVIEW_ROUTE_DESCRIPTIONS,
     FINAL_REVIEW_ROUTE_OPTIONS,
     _build_final_review_decision_evidence_pack,
@@ -160,12 +160,14 @@ def _render_saved_final_review_decisions(final_decision_rows: list[dict[str, Any
         blockers_count=len(evidence.get("blockers") or []),
         verdict=str(handoff.get("verdict") or "-"),
         next_action=str(handoff.get("next_action") or "-"),
-        route_title="Phase 35 Handoff",
+        route_title="Final Review Status",
         score_title="Evidence Score",
     )
+    decision_label = FINAL_REVIEW_DECISION_LABELS.get(str(selected_row.get("decision_route") or ""), "재검토 필요")
     render_badge_strip(
         [
             {"label": "Decision", "value": selected_row.get("decision_route") or "-", "tone": "positive" if selected_row.get("decision_route") == "SELECT_FOR_PRACTICAL_PORTFOLIO" else "warning"},
+            {"label": "투자 가능성", "value": decision_label, "tone": "positive" if selected_row.get("decision_route") == "SELECT_FOR_PRACTICAL_PORTFOLIO" else "warning"},
             {"label": "Source", "value": f"{selected_row.get('source_type')} / {selected_row.get('source_id')}", "tone": "neutral"},
             {"label": "Observation", "value": selected_row.get("source_observation_id") or selected_row.get("source_paper_ledger_id") or "-", "tone": "neutral"},
             {"label": "Live Approval", "value": "Disabled", "tone": "neutral"},
@@ -308,12 +310,12 @@ def render_final_review_workspace() -> None:
         )
         operator_constraints = st.text_area(
             "운영 제약",
-            value="실제 투자 전 Phase 35에서 투자 가능성, 투입 금액, 리밸런싱, 중단 / 재검토 기준을 다시 확인한다.",
+            value="실제 투자 전 투입 금액, 리밸런싱, 중단 / 재검토 기준은 사용자가 별도로 확인한다.",
             key="final_review_operator_constraints",
         )
         operator_next_action = st.text_area(
             "다음 행동",
-            value="선정이면 Phase 35 최종 투자 지침 확인으로 넘기고, 보류 / 재검토면 추가 관찰 또는 구성 근거를 보강한다.",
+            value="선정이면 최종 판단 완료로 보고, 보류 / 재검토면 추가 관찰 또는 구성 근거를 보강한다.",
             key="final_review_operator_next_action",
         )
         save_evaluation = _build_final_review_save_evaluation(
@@ -359,14 +361,13 @@ def render_final_review_workspace() -> None:
                 st.session_state["final_review_reset_decision_id_after_save"] = True
                 st.rerun()
         with action_cols[1]:
-            if st.button(
-                "Post-Selection Guide 열기",
-                key="final_review_open_post_selection_guide",
+            st.button(
+                "Live Approval / Order",
+                key="final_review_live_order_disabled",
+                disabled=True,
                 width="stretch",
-                help="최종 선정 기록이 있으면 최종 투자 지침 확인 화면에서 읽을 수 있습니다.",
-            ):
-                _request_backtest_panel("Post-Selection Guide")
-                st.rerun()
+                help="Final Review는 최종 검토 기록까지 담당하며 실제 승인/주문은 만들지 않습니다.",
+            )
         with st.expander("최종 검토 결과 Preview", expanded=False):
             st.json(final_row)
             st.caption(f"Path: {FINAL_SELECTION_DECISION_REGISTRY_FILE}")

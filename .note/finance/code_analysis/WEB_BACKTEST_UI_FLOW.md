@@ -30,8 +30,6 @@ UI form, payload 복원, candidate review, history replay, candidate replay, sav
 | `app/web/backtest_portfolio_proposal_helpers.py` | Portfolio Proposal row 생성, 단일 후보 direct readiness / proposal save readiness 평가, 공유 validation / robustness 계산 helper, monitoring / Pre-Live / paper feedback table helper |
 | `app/web/backtest_final_review.py` | Final Review 화면 render. 단일 후보 / 저장 proposal 선택, Validation / Robustness / Paper Observation 기준 확인, 최종 판단 기록, saved final decision review |
 | `app/web/backtest_final_review_helpers.py` | Final Review source 선택, validation 재사용, inline paper observation snapshot, final evidence / save readiness / decision row / display helper |
-| `app/web/backtest_post_selection_guide.py` | Post-Selection Guide 화면 render. selected final decision 선택, 최종 투자 가능성 확인, 운영 전 기준 preview |
-| `app/web/backtest_post_selection_guide_helpers.py` | Post-Selection Guide input selector, 최종 판단 문구 변환, readiness route, final guide preview helper |
 | `app/web/runtime/backtest.py` | UI payload를 실행 가능한 runtime call로 변환 |
 | `app/web/runtime/candidate_registry.py` | current candidate / review note / pre-live registry JSONL read / append helper |
 | `app/web/runtime/portfolio_proposal.py` | portfolio proposal draft JSONL read / append helper |
@@ -53,8 +51,7 @@ Backtest 주 흐름:
 - `Compare & Portfolio Builder`: 여러 전략을 같은 기간으로 비교하고 weighted portfolio를 만든다.
 - `Candidate Review`: Candidate Packaging 단일 흐름에서 Draft 확인, Review Note 저장, registry 저장, Pre-Live 운영 기록 저장, Portfolio Proposal 이동 판단을 순서대로 처리한다.
 - `Portfolio Proposal`: Candidate Review를 통과한 단일 후보는 추가 proposal 저장 없이 직행 후보로 읽는다. 여러 후보를 묶을 때만 목적 / 역할 / 비중이 있는 포트폴리오 초안을 저장한다.
-- `Final Review`: 단일 후보 또는 저장된 proposal을 선택해 Validation / Robustness / Paper Observation 기준을 한 화면에서 확인하고, 최종 실전 후보 선정 / 보류 / 거절 / 재검토 결과를 하나의 기록으로 남긴다.
-- `Post-Selection Guide`: Final Review의 최종 판단 기록을 읽어 투자 가능 후보 / 투자하면 안 됨 / 내용 부족 / 재검토 필요와 운영 전 기준을 확인한다. 새 registry를 저장하지 않는다.
+- `Final Review`: 단일 후보 또는 저장된 proposal을 선택해 Validation / Robustness / Paper Observation 기준을 한 화면에서 확인하고, 최종 실전 후보 선정 / 보류 / 거절 / 재검토 결과를 하나의 기록으로 남긴 뒤 현재 workflow를 `최종 판단 완료`로 마무리한다.
 
 Operations 보조 화면:
 
@@ -82,7 +79,7 @@ Ingestion / Data Trust
      -> Stress / Sensitivity Summary
      -> Paper Observation 기준 확인
      -> 최종 선정 / 보류 / 거절 / 재검토 결과 기록
-  -> Post-Selection Guide
+     -> 최종 판단 완료
 ```
 
 구분:
@@ -93,11 +90,11 @@ Ingestion / Data Trust
 - `Pre-Live 운영 기록`은 저장된 후보를 실제 돈 없이 paper / watchlist / hold / re-review 중 어떻게 관찰할지 기록하는 Candidate Packaging 내부 작업이다.
 - `Portfolio Proposal 이동 판단`은 Pre-Live 운영 record를 저장하기 전에 저장 가능 여부와 저장 후 Proposal 이동 가능 여부를 같이 보여주는 Candidate Packaging의 최종 route 확인이다.
 - `Portfolio Proposal`은 후보 묶음 제안이며, live trading approval이 아니다. 단일 후보는 별도 proposal 저장 없이 지나갈 수 있고, 여러 후보를 묶을 때는 역할 / 비중을 명시한다.
-- `Final Review`는 Proposal 탭 밖에서 검증과 최종 판단을 담당한다. 별도 Paper Ledger 저장 버튼을 주요 흐름으로 노출하지 않고, paper observation 기준을 최종 검토 기록 안에 포함한다.
+- `Final Review`는 Proposal 탭 밖에서 검증과 최종 판단을 담당한다. 별도 Paper Ledger 저장 버튼을 주요 흐름으로 노출하지 않고, paper observation 기준을 최종 검토 기록 안에 포함하며 현재 사용자-facing workflow의 마지막 active panel이다.
 - `Portfolio Risk / Live Readiness Validation Pack`은 Phase 31에서 추가된 읽기 전용 검증 surface다. 단일 후보, 작성 중 proposal, 저장된 proposal을 route / score / blocker / component risk / 다음 단계 안내로 읽는다.
 - `Robustness / Stress Validation Pack`은 Phase 32에서 추가된 surface다. stress 검증 실행 전 period / contract / benchmark / CAGR / MDD / compare evidence가 충분한지 확인하고, stress / sensitivity summary row와 Phase33 paper ledger handoff를 보여준다. 아직 실제 stress sweep을 실행했다는 뜻은 아니다.
 - `Paper Tracking Ledger`는 Phase 33에서 추가된 append-only 기록 흐름이지만, 현재 주 사용자 흐름에서는 Final Review의 inline paper observation 기준으로 흡수한다. 기존 ledger row는 backward compatibility / 과거 QA 기록으로 읽을 수 있다.
-- `Post-Selection Guide`는 Phase 35에서 보정된 마지막 workflow panel이다. `SELECT_FOR_PRACTICAL_PORTFOLIO` final decision만 최종 지침 확인 대상으로 읽고, 별도 post-selection registry를 저장하지 않는다.
+- Phase 35에서 별도 `Post-Selection Guide` panel은 과한 단계로 판단해 active workflow에서 제거했다. 최종 판단과 투자 가능 / 투자하면 안 됨 / 내용 부족 / 재검토 필요 해석은 `Backtest > Final Review`의 saved final decision review에서 확인한다.
 
 현재 Guides 화면은 네 묶음으로 정리한다.
 
@@ -169,11 +166,11 @@ Phase 30 third work unit status:
 - `app/web/runtime/portfolio_proposal.py`로 proposal draft registry read / append helper도 추가했다.
 - Candidate Review는 `app/web/backtest_candidate_review.py`와 `app/web/backtest_candidate_review_helpers.py`로 분리되어, `backtest.py`에는 panel wrapper와 cross-panel handoff call만 남아 있다.
 - 긴 route/status 문자열은 `app/web/backtest_ui_components.py`의 wrapping card / route panel을 사용해 `st.metric` 말줄임을 피한다.
-- Backtest shell은 중복 제목을 제거하고, `Single Strategy -> Compare & Portfolio Builder -> Candidate Review -> Portfolio Proposal -> Final Review -> Post-Selection Guide`를 주 workflow navigation으로 보여준다. `History`는 메인 흐름에서 제외하고 `Operations > Backtest Run History` page로 연다.
+- Backtest shell은 중복 제목을 제거하고, `Single Strategy -> Compare & Portfolio Builder -> Candidate Review -> Portfolio Proposal -> Final Review`를 주 workflow navigation으로 보여준다. `History`는 메인 흐름에서 제외하고 `Operations > Backtest Run History` page로 연다.
 - Backtest Run History는 `app/web/backtest_history.py`와 `app/web/backtest_history_helpers.py`로 분리되어, `backtest.py`에는 History 화면 render / replay helper 본문이 남아 있지 않다.
 - Portfolio Proposal은 `app/web/backtest_portfolio_proposal.py`와 `app/web/backtest_portfolio_proposal_helpers.py`로 분리되어, `backtest.py`에는 panel wrapper만 남아 있다.
 - Final Review는 `app/web/backtest_final_review.py`와 `app/web/backtest_final_review_helpers.py`로 분리되어, `backtest.py`에는 panel dispatch만 남아 있다.
-- Post-Selection Guide는 `app/web/backtest_post_selection_guide.py`와 `app/web/backtest_post_selection_guide_helpers.py`로 분리되어, `backtest.py`에는 panel dispatch만 남아 있다.
+- Phase35 보정 이후 Post-Selection Guide module과 panel dispatch는 제거했다. Final Review가 현재 workflow의 마지막 active panel이다.
 - Single Strategy는 `app/web/backtest_single_strategy.py`, `app/web/backtest_single_forms.py`, `app/web/backtest_single_runner.py`로 분리되어, form render와 runtime dispatch를 page shell에서 제거했다.
 - Compare / Portfolio Builder는 `app/web/backtest_compare.py`로 분리되어, compare 실행, weighted portfolio builder, saved portfolio replay / load, current-candidate compare prefill을 page shell에서 제거했다.
 - Latest result / compare result / Real-Money detail / selection history display는 `app/web/backtest_result_display.py`가 담당한다.
@@ -601,33 +598,31 @@ Current Candidate 또는 Saved Portfolio Proposal
 - `Result Status = NOT_RUN`은 아직 실제 stress runner가 실행되지 않았다는 뜻이다.
 - Paper Observation은 별도 ledger 저장 버튼으로 노출하지 않고, benchmark / review cadence / trigger / baseline을 최종 검토 기록 안에 포함한다.
 - `최종 검토 결과 기록`은 `.note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`에 `SELECT_FOR_PRACTICAL_PORTFOLIO`, `HOLD_FOR_MORE_PAPER_TRACKING`, `REJECT_FOR_PRACTICAL_USE`, `RE_REVIEW_REQUIRED` 중 하나를 append-only로 저장한다.
-- Final Review 기록은 Phase 35 최종 투자 지침 확인 입력이지 live approval, broker order, 자동매매 지시가 아니다.
+- Final Review 기록은 `최종 판단 완료` 기록이지 live approval, broker order, 자동매매 지시가 아니다.
 
-## Post-Selection Guide 흐름
+## Final Review 완료 흐름
 
 ```text
-SELECT_FOR_PRACTICAL_PORTFOLIO Final Review Record
-  -> Backtest > Post-Selection Guide
-  -> 1. 최종 판단 결과 확인
-     -> 투자 가능 후보 / 투자하면 안 됨 / 내용 부족 / 재검토 필요 확인
-  -> 2. 선정 기록과 component 확인
-  -> 3. 운영 전 기준 확인
-     -> Capital Mode / Rebalancing Cadence
-     -> 자본 / 승인 경계
-     -> 리밸런싱 / 축소 / 중단 / 재검토 기준
-  -> 4. 최종 투자 가능성 확인
-     -> FINAL_INVESTMENT_GUIDE_READY / NEEDS_INPUT / BLOCKED
-     -> 추가 저장 없음
+Backtest > Final Review
+  -> 검토 대상 선택
+  -> Validation / Robustness / Paper Observation 확인
+  -> 최종 판단 선택
+     -> SELECT_FOR_PRACTICAL_PORTFOLIO / HOLD_FOR_MORE_PAPER_TRACKING
+     -> REJECT_FOR_PRACTICAL_USE / RE_REVIEW_REQUIRED
+  -> 최종 검토 결과 기록
+  -> 기록된 최종 검토 결과 확인
+     -> 투자 가능 후보 / 내용 부족 / 투자하면 안 됨 / 재검토 필요 확인
+     -> Live Approval = Disabled / Order = Disabled 확인
 ```
 
 구분:
 
-- Post-Selection Guide는 Final Review 이후의 마지막 workflow panel이다.
-- 입력은 `decision_route = SELECT_FOR_PRACTICAL_PORTFOLIO`이고 `phase35_handoff.handoff_route = READY_FOR_FINAL_INVESTMENT_GUIDE`인 final decision record로 제한한다. 기존 QA row의 `READY_FOR_POST_SELECTION_OPERATING_GUIDE`도 읽기 호환한다.
-- 보류 / 거절 / 재검토 final decision은 투자 가능 후보가 아니라 내용 부족 / 투자하면 안 됨 / 재검토 필요로 읽힌다.
-- Phase35는 별도 `POST_SELECTION_OPERATING_GUIDES.jsonl`을 저장하지 않는다.
-- Final Review의 final decision registry가 최종 판단 원본이다.
-- Post-Selection Guide도 live approval, broker order, 자동매매 지시가 아니다.
+- Final Review는 현재 active workflow의 마지막 panel이다.
+- final decision registry가 최종 판단 원본이다.
+- `decision_route`는 사용자-facing으로 `투자 가능 후보`, `내용 부족 / 관찰 필요`, `투자하면 안 됨`, `재검토 필요`로 읽는다.
+- `phase35_handoff` 필드는 과거 row 호환을 위해 남아 있을 수 있지만, UI에서는 `Final Review Status` 또는 `Final Status`로 읽는다.
+- 별도 Post-Selection registry나 Post-Selection panel은 만들지 않는다.
+- Final Review도 live approval, broker order, 자동매매 지시가 아니다.
 
 ## Streamlit form 주의
 

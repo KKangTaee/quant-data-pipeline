@@ -87,13 +87,8 @@ DB-backed market data ingestion, factor generation, and strategy backtesting wor
   - `Backtest > Final Review`에서 단일 후보 또는 저장된 proposal을 검증 근거와 함께 최종 검토하는 흐름
   - Phase 31 `Validation Pack`, Phase 32 `Robustness / Stress`, Paper Observation 기준을 한 화면에서 확인하는 흐름
   - 별도 `Save Paper Tracking Ledger` 없이 관찰 기준을 최종 검토 기록 안에 포함하는 흐름
-  - `최종 검토 결과 기록`으로 선정 / 보류 / 거절 / 재검토 판단과 Phase35 운영 가이드 handoff를 남기는 흐름
+  - `최종 검토 결과 기록`으로 선정 / 보류 / 거절 / 재검토 판단을 남기고 `최종 판단 완료`로 마무리하는 흐름
   - live trading approval이나 주문 지시와 분리된 검토 기록 흐름
-- post-selection final guide workflow
-  - `Backtest > Post-Selection Guide`에서 Final Review의 최종 판단 기록을 읽는 흐름
-  - 투자 가능 후보 / 투자하면 안 됨 / 내용 부족 / 재검토 필요를 구분해서 보여주는 흐름
-  - 리밸런싱 / 축소 / 중단 / 재검토 기준을 preview로 확인하되 새 registry를 저장하지 않는 흐름
-  - live approval이나 주문 지시와 분리된 마지막 확인 흐름
 
 ## 프로젝트 구조
 
@@ -114,8 +109,6 @@ app/
     backtest_portfolio_proposal_helpers.py # Portfolio Proposal 저장/검증/feedback helper
     backtest_final_review.py # Final Review / 검증 근거 / 최종 판단 기록 UI
     backtest_final_review_helpers.py # Final Review source/evidence/decision helper
-    backtest_post_selection_guide.py # Post-Selection Guide / 최종 투자 지침 확인 UI
-    backtest_post_selection_guide_helpers.py # Post-Selection Guide selector/readiness/preview helper
     pages/backtest.py    # Backtest shell, workflow navigation
     runtime/             # UI-facing runtime wrappers
       candidate_registry.py

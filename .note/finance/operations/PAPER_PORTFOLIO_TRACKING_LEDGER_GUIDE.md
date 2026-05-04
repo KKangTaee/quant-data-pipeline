@@ -55,7 +55,7 @@ Paper Portfolio Tracking Ledger는
 1. `Backtest > Final Review`에서 단일 후보 또는 saved proposal을 선택한다.
 2. `Paper Observation 기준 확인`에서 benchmark, review cadence, review trigger를 확인한다.
 3. `최종 검토 결과 기록`을 누르면 이 기준이 final review record의 `paper_tracking_snapshot` 안에 들어간다.
-4. 별도 Paper Ledger row가 없어도 Phase35 handoff는 final review record를 기준으로 이어진다.
+4. 별도 Paper Ledger row가 없어도 최종 판단 완료 상태는 final review record를 기준으로 읽는다.
 
 ## legacy / 별도 ledger가 필요한 경우
 

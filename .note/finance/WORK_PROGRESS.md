@@ -3174,3 +3174,18 @@ Detailed historical logs were archived on `2026-04-13`.
   - Phase35 should not create another required registry after Final Review.
   - Final Review's final selection decision remains the durable judgment.
   - Post-Selection Guide confirms final investment readiness and operating-before-live rules without creating live approval, broker orders, or auto-trading.
+
+### 2026-05-04
+- Simplified Phase35 again after the user concluded the separate Post-Selection Guide step was still too heavy for the current product stage.
+- Changed:
+  - removed the active Post-Selection Guide panel from Backtest workflow navigation
+  - deleted `app/web/backtest_post_selection_guide.py` and `app/web/backtest_post_selection_guide_helpers.py`
+  - kept `Backtest > Final Review` as the final active portfolio-selection panel
+  - added saved final decision investment verdict display so final records read as 투자 가능 후보 / 내용 부족 / 투자하면 안 됨 / 재검토 필요
+  - replaced Post-Selection navigation from Final Review with a disabled `Live Approval / Order` boundary action
+  - rewrote Phase35 TODO, plan, work-unit docs, completion summary, next preparation, and checklist around `Portfolio Proposal -> Final Review -> 최종 판단 완료`
+  - synced README, AGENTS, code-analysis docs, operations guides, roadmap, index, glossary, and comprehensive analysis to the simplified flow
+- Decision:
+  - The active user workflow ends at Final Review.
+  - `FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl` is the final judgment source of truth.
+  - No separate post-selection registry or active post-selection panel should be added unless the user explicitly reopens that design.
