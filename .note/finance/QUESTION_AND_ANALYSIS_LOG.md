@@ -4060,3 +4060,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 최종 실전 후보 선정 여부는 `FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`에서 확인해야 하며, run history나 saved portfolio는 재현 / 재사용 보조 기록이다
 - Follow-up:
   - Guides의 `주요 파일 경로`를 탭 기반 JSONL 저장소 지도로 바꾸고, 각 파일의 데이터 의미 / 생성 화면 / 읽는 법을 표와 요약 카드로 설명했다
+
+### 2026-05-04 - 반복되는 operator judgment 입력 구조 재검토
+- User request:
+  - Candidate Review, Portfolio Proposal, Final Review마다 Operator Final Status / Operator Decision / 최종 판단을 사람이 입력하고 저장하는 구조가 왜 필요한지, 과한 UX는 아닌지 재검토 요청
+- Interpreted goal:
+  - 백테스트와 검증 결과가 자동으로 최종 투자 가능 여부를 말해 주는 프로그램을 원했는데, 사람이 여러 번 판단 사유를 입력하는 구조가 사용 부담으로 보이므로 제품 방향이 맞는지 확인해야 함
+- Analysis result:
+  - 판단 기록 자체는 필요하다. 백테스트 모델은 검증 신호를 줄 수 있지만, 실제 후보 선정은 목적, 제약, capital scope, 관찰 조건, 사용 범위 같은 사람의 운영 판단을 포함하기 때문이다.
+  - 다만 현재 UI처럼 세 단계가 모두 동등한 "결정"처럼 보이면 과하다.
+  - 올바른 역할 분리는 Candidate Review = 후보를 관찰 대상으로 남길지, Portfolio Proposal = 여러 후보를 어떤 역할/비중으로 묶을지, Final Review = 실전 후보로 최종 선정할지다.
+  - 장기적으로는 중간 단계의 메모 입력을 "자동 추천 + 기본값 + 필요한 경우만 수정"으로 낮추고, 최종 판단만 진짜 사람이 명시적으로 기록하는 UX가 더 적절하다.
+- Follow-up:
+  - 다음 UX 개선 후보는 Candidate Review / Portfolio Proposal의 operator field를 advanced / optional로 낮추고, Final Review만 `최종 판단`의 주 decision surface로 강조하는 방향이다.
