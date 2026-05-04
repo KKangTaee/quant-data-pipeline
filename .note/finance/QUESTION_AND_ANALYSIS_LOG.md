@@ -4049,3 +4049,14 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Follow-up:
   - `Reference > Guides`의 핵심 개념, 1~10 단계 실행 흐름, 단계 통과 기준, 문서 / 파일 안내를 갱신했다
   - `WEB_BACKTEST_UI_FLOW.md`, historical walkthrough note, `FINANCE_DOC_INDEX.md`를 같은 기준으로 동기화했다
+
+### 2026-05-04 - Guides JSONL 저장소 설명 UX 개선
+- User request:
+  - `Reference > Guides > 주요 파일 경로`에서 JSONL 파일들이 어떤 데이터를 말하는지 시각적으로 더 잘 설명되도록 UX/UI 개선을 요청함
+- Interpreted goal:
+  - 사용자가 경로 목록만 보고 registry / run history / saved setup의 차이를 추측하지 않게 해야 함
+- Analysis result:
+  - JSONL은 모두 같은 확장자지만 역할이 다르다: 후보 검토 기록, current candidate 정의, Pre-Live 운영 상태, portfolio proposal draft, paper ledger 호환 기록, final selection decision, run history, saved portfolio setup으로 나뉜다
+  - 최종 실전 후보 선정 여부는 `FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`에서 확인해야 하며, run history나 saved portfolio는 재현 / 재사용 보조 기록이다
+- Follow-up:
+  - Guides의 `주요 파일 경로`를 탭 기반 JSONL 저장소 지도로 바꾸고, 각 파일의 데이터 의미 / 생성 화면 / 읽는 법을 표와 요약 카드로 설명했다

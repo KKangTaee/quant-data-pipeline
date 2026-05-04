@@ -3213,3 +3213,13 @@ Detailed historical logs were archived on `2026-04-13`.
   - `Backtest > Final Review > 기록된 최종 검토 결과 확인` is the current final check for whether a portfolio was selected as a practical candidate.
   - Portfolio Proposal UI may still contain legacy `Live Readiness` route labels, but the current user-facing interpretation is Final Review input readiness.
   - `SELECT_FOR_PRACTICAL_PORTFOLIO` means selected as a practical candidate, not live approval, broker order, or auto-trading.
+
+### 2026-05-04
+- Improved `Reference > Guides > 문서와 파일 > 주요 파일 경로` after the user asked for clearer JSONL explanations.
+- Changed:
+  - split the file-path section into tabs for candidate review records, runtime / reusable records, and the full path list
+  - added a visual JSONL storage map that explains what each registry stores, where it is created, and how to read it
+  - clarified the difference between candidate notes, current candidate registry, Pre-Live records, proposal drafts, paper ledger compatibility rows, final selection decisions, run history, and saved portfolios
+- Decision:
+  - JSONL files should not be presented as bare paths in the guide.
+  - The guide should make clear that only `FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl` is the final candidate-selection judgment source, while run history and saved portfolios are replay / reuse records.

@@ -103,7 +103,7 @@ Ingestion / Data Trust
 | `핵심 개념 가이드` | 실전 승격 흐름, Real-Money Contract, GTAA Risk-Off 후보군, interval, Compare 대상 선정법, Portfolio Proposal -> Final Review -> 최종 판단 완료 해석 |
 | `1~10 단계 실행 흐름` | 데이터 최신화부터 Final Review 저장 결과 확인까지의 단계별 흐름. 각 단계는 expander로 접어 읽는다 |
 | `단계 통과 기준` | 4->5, 5->6, 6->7, 7->8, 8->9, 9->10, 최종 판단 해석처럼 다음 단계로 넘길지 판단하는 stop/go 기준 |
-| `문서와 파일` | 현재 먼저 볼 문서, proposal / paper ledger / final decision guide와 registry path, live approval이 아님을 구분하는 운영 경계 |
+| `문서와 파일` | 현재 먼저 볼 문서, 후보 검토 / 실행 재사용 JSONL 저장소 지도, proposal / paper ledger / final decision guide와 registry path, live approval이 아님을 구분하는 운영 경계 |
 
 ## Phase 30 Portfolio Proposal 계약
 

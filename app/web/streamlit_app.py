@@ -3626,29 +3626,164 @@ def _render_guides_page() -> None:
 
     with st.container(border=True):
         st.markdown("#### 주요 파일 경로")
-        st.code(
-            "\n".join(
-                [
-                    ".note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md",
-                    ".note/finance/FINANCE_DOC_INDEX.md",
-                    ".note/finance/MASTER_PHASE_ROADMAP.md",
-                    ".note/finance/FINANCE_TERM_GLOSSARY.md",
-                    ".note/finance/operations/BACKTEST_1_TO_11_WALKTHROUGH_SESSION.md",
-                    ".note/finance/operations/PORTFOLIO_PROPOSAL_REGISTRY_GUIDE.md",
-                    ".note/finance/operations/PAPER_PORTFOLIO_TRACKING_LEDGER_GUIDE.md",
-                    ".note/finance/operations/FINAL_PORTFOLIO_SELECTION_DECISIONS_GUIDE.md",
-                    ".note/finance/code_analysis/WEB_BACKTEST_UI_FLOW.md",
-                    ".note/finance/registries/CURRENT_CANDIDATE_REGISTRY.jsonl",
-                    ".note/finance/registries/PRE_LIVE_CANDIDATE_REGISTRY.jsonl",
-                    ".note/finance/registries/PORTFOLIO_PROPOSAL_REGISTRY.jsonl",
-                    ".note/finance/registries/PAPER_PORTFOLIO_TRACKING_LEDGER.jsonl",
-                    ".note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl",
-                    ".note/finance/WORK_PROGRESS.md",
-                    ".note/finance/QUESTION_AND_ANALYSIS_LOG.md",
-                ]
-            ),
-            language="text",
+        st.caption(
+            "JSONL 파일은 앱이 로컬에 남기는 append-only 기록입니다. "
+            "같은 JSONL이라도 후보 정의, 관찰 상태, 포트폴리오 초안, 최종 판단처럼 맡는 역할이 다릅니다."
         )
+
+        jsonl_tabs = st.tabs(["후보 검토 기록", "실행 / 재사용 기록", "문서 경로 모음"])
+
+        with jsonl_tabs[0]:
+            st.markdown("##### 후보 검토 JSONL 저장소")
+            registry_rows = pd.DataFrame(
+                [
+                    {
+                        "흐름 단계": "6단계 Candidate Packaging",
+                        "파일": "CANDIDATE_REVIEW_NOTES.jsonl",
+                        "담는 데이터": "후보 초안을 보고 사람이 남긴 Review Decision, 이유, 다음 행동",
+                        "화면 위치": "Backtest > Candidate Review > 1. Draft 확인 / Review Note 저장",
+                        "읽는 법": "저장 전 검토 메모입니다. 후보 자체를 확정한 registry는 아닙니다.",
+                    },
+                    {
+                        "흐름 단계": "6단계 Candidate Packaging",
+                        "파일": "CURRENT_CANDIDATE_REGISTRY.jsonl",
+                        "담는 데이터": "명시적으로 남긴 current candidate, near-miss, scenario, stop 후보 row",
+                        "화면 위치": "Backtest > Candidate Review > 2. Registry 저장 / Operations > Candidate Library",
+                        "읽는 법": "이 프로그램이 다시 열어 볼 후보 정의 목록입니다.",
+                    },
+                    {
+                        "흐름 단계": "6단계 Candidate Packaging",
+                        "파일": "PRE_LIVE_CANDIDATE_REGISTRY.jsonl",
+                        "담는 데이터": "후보를 paper tracking, watchlist, hold, re-review 중 어떤 운영 상태로 둘지 남긴 기록",
+                        "화면 위치": "Backtest > Candidate Review > 3. 운영 기록 저장 및 Portfolio Proposal 이동",
+                        "읽는 법": "실제 돈을 넣기 전 관찰 / 보류 상태 기록입니다.",
+                    },
+                    {
+                        "흐름 단계": "7단계 Portfolio Proposal",
+                        "파일": "PORTFOLIO_PROPOSAL_REGISTRY.jsonl",
+                        "담는 데이터": "여러 후보를 묶은 목적, 역할, target weight, 비중 근거, blocker가 있는 proposal draft",
+                        "화면 위치": "Backtest > Portfolio Proposal",
+                        "읽는 법": "포트폴리오 구성 초안입니다. live approval이나 주문 지시가 아닙니다.",
+                    },
+                    {
+                        "흐름 단계": "8단계 Final Review 검증",
+                        "파일": "PAPER_PORTFOLIO_TRACKING_LEDGER.jsonl",
+                        "담는 데이터": "과거 Phase33에서 만든 paper tracking 관찰 조건과 trigger 기록",
+                        "화면 위치": "Backtest > Portfolio Proposal / Final Review 호환 영역",
+                        "읽는 법": "현재 main flow에서는 Final Review의 inline paper observation 기준으로 흡수해서 읽습니다.",
+                    },
+                    {
+                        "흐름 단계": "9~10단계 Final Review",
+                        "파일": "FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl",
+                        "담는 데이터": "실전 후보 선정, 관찰 보류, 거절, 재검토 판단과 이유",
+                        "화면 위치": "Backtest > Final Review > 최종 판단 및 테스트 검증 / 기록된 최종 검토 결과 확인",
+                        "읽는 법": "최종 판단 원본입니다. `SELECT_FOR_PRACTICAL_PORTFOLIO`이면 실전 후보로 선정된 것으로 읽습니다.",
+                    },
+                ]
+            )
+            st.dataframe(registry_rows, use_container_width=True, hide_index=True)
+
+            lineage_cols = st.columns(3)
+            with lineage_cols[0]:
+                with st.container(border=True):
+                    st.markdown("**후보를 남기는 기록**")
+                    st.caption("Candidate Review에서 생깁니다.")
+                    st.markdown(
+                        """
+                        - `CANDIDATE_REVIEW_NOTES.jsonl`
+                        - `CURRENT_CANDIDATE_REGISTRY.jsonl`
+                        - `PRE_LIVE_CANDIDATE_REGISTRY.jsonl`
+                        """
+                    )
+            with lineage_cols[1]:
+                with st.container(border=True):
+                    st.markdown("**포트폴리오로 묶는 기록**")
+                    st.caption("Portfolio Proposal에서 생깁니다.")
+                    st.markdown(
+                        """
+                        - `PORTFOLIO_PROPOSAL_REGISTRY.jsonl`
+                        - `PAPER_PORTFOLIO_TRACKING_LEDGER.jsonl`
+                        """
+                    )
+            with lineage_cols[2]:
+                with st.container(border=True):
+                    st.markdown("**최종 판단 기록**")
+                    st.caption("Final Review에서 생깁니다.")
+                    st.markdown(
+                        """
+                        - `FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`
+                        - live approval 아님
+                        - broker order 아님
+                        """
+                    )
+
+            st.info(
+                "흐름으로 읽으면 `Review Note -> Current Candidate -> Pre-Live 운영 기록 -> Portfolio Proposal -> Final Review Decision`입니다. "
+                "각 저장소는 서로 덮어쓰지 않고, 단계별 판단을 따로 남깁니다."
+            )
+
+        with jsonl_tabs[1]:
+            st.markdown("##### 실행 / 재사용 JSONL 저장소")
+            runtime_rows = pd.DataFrame(
+                [
+                    {
+                        "파일": "BACKTEST_RUN_HISTORY.jsonl",
+                        "폴더": ".note/finance/run_history/",
+                        "담는 데이터": "Backtest 실행 payload, 결과 요약, replay에 필요한 실행 기록",
+                        "화면 위치": "Operations > Backtest Run History",
+                        "읽는 법": "과거 실행을 다시 열거나 Candidate Draft로 넘기는 실행 이력입니다.",
+                    },
+                    {
+                        "파일": "WEB_APP_RUN_HISTORY.jsonl",
+                        "폴더": ".note/finance/run_history/",
+                        "담는 데이터": "웹 앱 로컬 실행 / 운영 로그 성격의 runtime artifact",
+                        "화면 위치": "로컬 운영 보조 기록",
+                        "읽는 법": "일반적으로 commit하지 않는 generated artifact입니다.",
+                    },
+                    {
+                        "파일": "SAVED_PORTFOLIOS.jsonl",
+                        "폴더": ".note/finance/saved/",
+                        "담는 데이터": "weighted portfolio builder에서 저장한 재사용 가능한 비중 setup",
+                        "화면 위치": "Backtest > Compare & Portfolio Builder",
+                        "읽는 법": "포트폴리오 proposal이 아니라, 다시 불러올 수 있는 weight setup입니다.",
+                    },
+                ]
+            )
+            st.dataframe(runtime_rows, use_container_width=True, hide_index=True)
+            st.warning(
+                "`run_history`와 `saved`의 JSONL은 연구 / 재현 편의 기록입니다. "
+                "최종 후보 선정 여부는 `FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`에서 확인합니다."
+            )
+
+        with jsonl_tabs[2]:
+            st.markdown("##### 전체 경로 모음")
+            st.code(
+                "\n".join(
+                    [
+                        ".note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md",
+                        ".note/finance/FINANCE_DOC_INDEX.md",
+                        ".note/finance/MASTER_PHASE_ROADMAP.md",
+                        ".note/finance/FINANCE_TERM_GLOSSARY.md",
+                        ".note/finance/operations/BACKTEST_1_TO_11_WALKTHROUGH_SESSION.md",
+                        ".note/finance/operations/PORTFOLIO_PROPOSAL_REGISTRY_GUIDE.md",
+                        ".note/finance/operations/PAPER_PORTFOLIO_TRACKING_LEDGER_GUIDE.md",
+                        ".note/finance/operations/FINAL_PORTFOLIO_SELECTION_DECISIONS_GUIDE.md",
+                        ".note/finance/code_analysis/WEB_BACKTEST_UI_FLOW.md",
+                        ".note/finance/registries/CANDIDATE_REVIEW_NOTES.jsonl",
+                        ".note/finance/registries/CURRENT_CANDIDATE_REGISTRY.jsonl",
+                        ".note/finance/registries/PRE_LIVE_CANDIDATE_REGISTRY.jsonl",
+                        ".note/finance/registries/PORTFOLIO_PROPOSAL_REGISTRY.jsonl",
+                        ".note/finance/registries/PAPER_PORTFOLIO_TRACKING_LEDGER.jsonl",
+                        ".note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl",
+                        ".note/finance/run_history/BACKTEST_RUN_HISTORY.jsonl",
+                        ".note/finance/run_history/WEB_APP_RUN_HISTORY.jsonl",
+                        ".note/finance/saved/SAVED_PORTFOLIOS.jsonl",
+                        ".note/finance/WORK_PROGRESS.md",
+                        ".note/finance/QUESTION_AND_ANALYSIS_LOG.md",
+                    ]
+                ),
+                language="text",
+            )
 
     with st.container(border=True):
         st.markdown("#### Guides에서 같이 기억할 경계")
