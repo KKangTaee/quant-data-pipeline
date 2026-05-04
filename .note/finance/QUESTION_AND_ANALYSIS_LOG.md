@@ -4086,3 +4086,15 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Follow-up:
   - Candidate Review와 Portfolio Proposal의 operator memo 입력을 기본값이 있는 접힘 영역으로 낮췄다
   - Final Review에는 이 구간이 실제 최종 판단이라는 안내를 추가했고, 저장 ID / 운영 전 조건 / 다음 행동은 고급 접힘 영역으로 이동했다
+
+### 2026-05-04 - 완성형 퀀트 운용 플랫폼으로 가기 위한 기능 gap
+- User request:
+  - 현재 최소 후보 선정 workflow 이후, 완성형 퀀트 운용 플랫폼을 구현하려면 어떤 기능이 더 필요한지 질문함
+- Interpreted goal:
+  - 지금의 `전략 실행 -> 후보 선정 -> Final Review` 흐름과 실제 운용 플랫폼 사이의 남은 제품 gap을 정리해야 함
+- Analysis result:
+  - 현재 시스템은 실전 후보 포트폴리오를 찾는 최소 workflow까지 도달했다
+  - 완성형 플랫폼이 되려면 후보 선정 이후의 운영 영역이 필요하다: live/paper portfolio monitoring, rebalance engine, execution/order workflow, risk/limit/alert framework, performance attribution, model governance/versioning, data quality automation, reporting
+  - SR 11-7류 model risk guidance도 model development / validation / governance와 ongoing monitoring을 함께 본다. 즉 후보 선정만으로 끝나지 않고, 사용 중 성능과 환경 변화 추적이 필요하다
+- Follow-up:
+  - 다음 주요 제품 방향 후보는 `Final-selected portfolio monitoring & rebalance operations`가 가장 자연스럽다
