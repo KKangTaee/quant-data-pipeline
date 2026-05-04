@@ -30,6 +30,8 @@ UI form, payload 복원, candidate review, history replay, candidate replay, sav
 | `app/web/backtest_portfolio_proposal_helpers.py` | Portfolio Proposal row 생성, 단일 후보 direct readiness / proposal save readiness 평가, 공유 validation / robustness 계산 helper, monitoring / Pre-Live / paper feedback table helper |
 | `app/web/backtest_final_review.py` | Final Review 화면 render. 단일 후보 / 저장 proposal 선택, Validation / Robustness / Paper Observation 기준 확인, 최종 판단 기록, saved final decision review |
 | `app/web/backtest_final_review_helpers.py` | Final Review source 선택, validation 재사용, inline paper observation snapshot, final evidence / save readiness / decision row / display helper |
+| `app/web/backtest_post_selection_guide.py` | Post-Selection Guide 화면 render. selected final decision 선택, 운영 기준 작성, operating guide 기록 / saved guide review |
+| `app/web/backtest_post_selection_guide_helpers.py` | Post-Selection Guide input selector, readiness route, operating guide row 생성, saved guide display helper |
 | `app/web/runtime/backtest.py` | UI payload를 실행 가능한 runtime call로 변환 |
 | `app/web/runtime/candidate_registry.py` | current candidate / review note / pre-live registry JSONL read / append helper |
 | `app/web/runtime/portfolio_proposal.py` | portfolio proposal draft JSONL read / append helper |
@@ -40,6 +42,7 @@ UI form, payload 복원, candidate review, history replay, candidate replay, sav
 | `.note/finance/registries/PORTFOLIO_PROPOSAL_REGISTRY.jsonl` | proposal draft persistence. 첫 proposal 저장 시 생성 |
 | `.note/finance/registries/PAPER_PORTFOLIO_TRACKING_LEDGER.jsonl` | paper tracking ledger persistence. 첫 paper ledger 저장 시 생성 |
 | `.note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl` | final selection decision persistence. 첫 final decision 저장 시 생성 |
+| `.note/finance/registries/POST_SELECTION_OPERATING_GUIDES.jsonl` | post-selection operating guide persistence. 첫 운영 가이드 기록 시 생성 |
 
 ## 화면 흐름
 
@@ -52,6 +55,7 @@ Backtest 주 흐름:
 - `Candidate Review`: Candidate Packaging 단일 흐름에서 Draft 확인, Review Note 저장, registry 저장, Pre-Live 운영 기록 저장, Portfolio Proposal 이동 판단을 순서대로 처리한다.
 - `Portfolio Proposal`: Candidate Review를 통과한 단일 후보는 추가 proposal 저장 없이 직행 후보로 읽는다. 여러 후보를 묶을 때만 목적 / 역할 / 비중이 있는 포트폴리오 초안을 저장한다.
 - `Final Review`: 단일 후보 또는 저장된 proposal을 선택해 Validation / Robustness / Paper Observation 기준을 한 화면에서 확인하고, 최종 실전 후보 선정 / 보류 / 거절 / 재검토 결과를 하나의 기록으로 남긴다.
+- `Post-Selection Guide`: 최종 선정된 final decision만 읽어 리밸런싱 / 축소 / 중단 / 재검토 운영 기준을 기록하고 다시 확인한다.
 
 Operations 보조 화면:
 
@@ -94,7 +98,7 @@ Ingestion / Data Trust
 - `Portfolio Risk / Live Readiness Validation Pack`은 Phase 31에서 추가된 읽기 전용 검증 surface다. 단일 후보, 작성 중 proposal, 저장된 proposal을 route / score / blocker / component risk / 다음 단계 안내로 읽는다.
 - `Robustness / Stress Validation Pack`은 Phase 32에서 추가된 surface다. stress 검증 실행 전 period / contract / benchmark / CAGR / MDD / compare evidence가 충분한지 확인하고, stress / sensitivity summary row와 Phase33 paper ledger handoff를 보여준다. 아직 실제 stress sweep을 실행했다는 뜻은 아니다.
 - `Paper Tracking Ledger`는 Phase 33에서 추가된 append-only 기록 흐름이지만, 현재 주 사용자 흐름에서는 Final Review의 inline paper observation 기준으로 흡수한다. 기존 ledger row는 backward compatibility / 과거 QA 기록으로 읽을 수 있다.
-- `Post-Selection Operating Guide`는 Phase 35 이후 별도 phase 후보로 남긴다.
+- `Post-Selection Operating Guide`는 Phase 35에서 추가된 마지막 workflow panel이다. `SELECT_FOR_PRACTICAL_PORTFOLIO` final decision만 운영 가이드 대상으로 읽고, `POST_SELECTION_OPERATING_GUIDES.jsonl`에 append-only로 기록한다.
 
 현재 Guides 화면은 네 묶음으로 정리한다.
 
@@ -166,10 +170,11 @@ Phase 30 third work unit status:
 - `app/web/runtime/portfolio_proposal.py`로 proposal draft registry read / append helper도 추가했다.
 - Candidate Review는 `app/web/backtest_candidate_review.py`와 `app/web/backtest_candidate_review_helpers.py`로 분리되어, `backtest.py`에는 panel wrapper와 cross-panel handoff call만 남아 있다.
 - 긴 route/status 문자열은 `app/web/backtest_ui_components.py`의 wrapping card / route panel을 사용해 `st.metric` 말줄임을 피한다.
-- Backtest shell은 중복 제목을 제거하고, `Single Strategy -> Compare & Portfolio Builder -> Candidate Review -> Portfolio Proposal -> Final Review`를 주 workflow navigation으로 보여준다. `History`는 메인 흐름에서 제외하고 `Operations > Backtest Run History` page로 연다.
+- Backtest shell은 중복 제목을 제거하고, `Single Strategy -> Compare & Portfolio Builder -> Candidate Review -> Portfolio Proposal -> Final Review -> Post-Selection Guide`를 주 workflow navigation으로 보여준다. `History`는 메인 흐름에서 제외하고 `Operations > Backtest Run History` page로 연다.
 - Backtest Run History는 `app/web/backtest_history.py`와 `app/web/backtest_history_helpers.py`로 분리되어, `backtest.py`에는 History 화면 render / replay helper 본문이 남아 있지 않다.
 - Portfolio Proposal은 `app/web/backtest_portfolio_proposal.py`와 `app/web/backtest_portfolio_proposal_helpers.py`로 분리되어, `backtest.py`에는 panel wrapper만 남아 있다.
 - Final Review는 `app/web/backtest_final_review.py`와 `app/web/backtest_final_review_helpers.py`로 분리되어, `backtest.py`에는 panel dispatch만 남아 있다.
+- Post-Selection Guide는 `app/web/backtest_post_selection_guide.py`와 `app/web/backtest_post_selection_guide_helpers.py`로 분리되어, `backtest.py`에는 panel dispatch만 남아 있다.
 - Single Strategy는 `app/web/backtest_single_strategy.py`, `app/web/backtest_single_forms.py`, `app/web/backtest_single_runner.py`로 분리되어, form render와 runtime dispatch를 page shell에서 제거했다.
 - Compare / Portfolio Builder는 `app/web/backtest_compare.py`로 분리되어, compare 실행, weighted portfolio builder, saved portfolio replay / load, current-candidate compare prefill을 page shell에서 제거했다.
 - Latest result / compare result / Real-Money detail / selection history display는 `app/web/backtest_result_display.py`가 담당한다.
@@ -598,6 +603,34 @@ Current Candidate 또는 Saved Portfolio Proposal
 - Paper Observation은 별도 ledger 저장 버튼으로 노출하지 않고, benchmark / review cadence / trigger / baseline을 최종 검토 기록 안에 포함한다.
 - `최종 검토 결과 기록`은 `.note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`에 `SELECT_FOR_PRACTICAL_PORTFOLIO`, `HOLD_FOR_MORE_PAPER_TRACKING`, `REJECT_FOR_PRACTICAL_USE`, `RE_REVIEW_REQUIRED` 중 하나를 append-only로 저장한다.
 - Final Review 기록은 Phase 35 운영 가이드 입력이지 live approval, broker order, 자동매매 지시가 아니다.
+
+## Post-Selection Guide 흐름
+
+```text
+SELECT_FOR_PRACTICAL_PORTFOLIO Final Review Record
+  -> Backtest > Post-Selection Guide
+  -> 1. Phase35 입력 대상 확인
+     -> Guide Eligible = Yes record만 선택 가능
+  -> 2. 선정 기록과 component 확인
+  -> 3. 운영 기준 작성
+     -> Capital Mode / Rebalancing Cadence
+     -> 자본 / 승인 경계
+     -> 리밸런싱 / 축소 / 중단 / 재검토 기준
+  -> 4. 운영 가이드 기록 준비
+     -> 운영 가이드 기록
+     -> POST_SELECTION_OPERATING_GUIDES.jsonl append
+  -> 5. 기록된 운영 가이드 확인
+     -> source decision / component / operating policy / JSON inspect
+```
+
+구분:
+
+- Post-Selection Guide는 Final Review 이후의 마지막 workflow panel이다.
+- 입력은 `decision_route = SELECT_FOR_PRACTICAL_PORTFOLIO`이고 `phase35_handoff.handoff_route = READY_FOR_POST_SELECTION_OPERATING_GUIDE`인 final decision record로 제한한다.
+- 보류 / 거절 / 재검토 final decision은 operating guide 대상이 아니다.
+- `운영 가이드 기록`은 `.note/finance/registries/POST_SELECTION_OPERATING_GUIDES.jsonl`에 append-only로 저장한다.
+- 이 기록은 final decision registry, current candidate registry, proposal registry를 덮어쓰지 않는다.
+- Post-Selection Guide도 live approval, broker order, 자동매매 지시가 아니다.
 
 ## Streamlit form 주의
 

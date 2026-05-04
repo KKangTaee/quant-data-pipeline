@@ -89,6 +89,10 @@ DB-backed market data ingestion, factor generation, and strategy backtesting wor
   - 별도 `Save Paper Tracking Ledger` 없이 관찰 기준을 최종 검토 기록 안에 포함하는 흐름
   - `최종 검토 결과 기록`으로 선정 / 보류 / 거절 / 재검토 판단과 Phase35 운영 가이드 handoff를 남기는 흐름
   - live trading approval이나 주문 지시와 분리된 검토 기록 흐름
+- post-selection operating guide workflow
+  - `Backtest > Post-Selection Guide`에서 최종 선정된 final decision만 운영 가이드 대상으로 읽는 흐름
+  - 리밸런싱 / 축소 / 중단 / 재검토 기준을 작성하고 `운영 가이드 기록`으로 append-only 저장하는 흐름
+  - `.note/finance/registries/POST_SELECTION_OPERATING_GUIDES.jsonl`에 운영 기준을 남기되 live approval이나 주문 지시와 분리하는 흐름
 
 ## 프로젝트 구조
 
@@ -109,12 +113,15 @@ app/
     backtest_portfolio_proposal_helpers.py # Portfolio Proposal 저장/검증/feedback helper
     backtest_final_review.py # Final Review / 검증 근거 / 최종 판단 기록 UI
     backtest_final_review_helpers.py # Final Review source/evidence/decision helper
+    backtest_post_selection_guide.py # Post-Selection Guide / 운영 기준 기록 UI
+    backtest_post_selection_guide_helpers.py # Post-Selection Guide selector/readiness/row helper
     pages/backtest.py    # Backtest shell, workflow navigation
     runtime/             # UI-facing runtime wrappers
       candidate_registry.py
       portfolio_proposal.py
       paper_portfolio_ledger.py
       final_selection_decisions.py
+      post_selection_guides.py
 finance/
   data/                  # ingestion, DB schema, loaders, factors
   strategy.py            # strategy simulation logic

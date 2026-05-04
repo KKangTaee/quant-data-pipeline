@@ -302,6 +302,7 @@ BACKTEST_PANEL_OPTIONS = [
     "Candidate Review",
     "Portfolio Proposal",
     "Final Review",
+    "Post-Selection Guide",
 ]
 BACKTEST_WORKFLOW_PANEL_OPTIONS = [
     "Single Strategy",
@@ -309,6 +310,7 @@ BACKTEST_WORKFLOW_PANEL_OPTIONS = [
     "Candidate Review",
     "Portfolio Proposal",
     "Final Review",
+    "Post-Selection Guide",
 ]
 STATIC_MANAGED_RESEARCH_UNIVERSE = "static_managed_research"
 HISTORICAL_DYNAMIC_PIT_UNIVERSE = "historical_dynamic_pit"

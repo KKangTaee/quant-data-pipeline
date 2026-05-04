@@ -7,6 +7,7 @@ from uuid import uuid4
 import pandas as pd
 import streamlit as st
 
+from app.web.backtest_common import _request_backtest_panel
 from app.web.backtest_final_review_helpers import (
     FINAL_REVIEW_ROUTE_DESCRIPTIONS,
     FINAL_REVIEW_ROUTE_OPTIONS,
@@ -358,13 +359,14 @@ def render_final_review_workspace() -> None:
                 st.session_state["final_review_reset_decision_id_after_save"] = True
                 st.rerun()
         with action_cols[1]:
-            st.button(
-                "Phase 35 운영 가이드 열기",
-                key="final_review_open_phase35_placeholder",
-                disabled=True,
+            if st.button(
+                "Post-Selection Guide 열기",
+                key="final_review_open_post_selection_guide",
                 width="stretch",
-                help="Phase 35에서 최종 선정 후보의 운영 가이드를 연결할 예정입니다.",
-            )
+                help="최종 선정 기록이 있으면 운영 가이드 작성 화면에서 읽을 수 있습니다.",
+            ):
+                _request_backtest_panel("Post-Selection Guide")
+                st.rerun()
         with st.expander("최종 검토 결과 Preview", expanded=False):
             st.json(final_row)
             st.caption(f"Path: {FINAL_SELECTION_DECISION_REGISTRY_FILE}")

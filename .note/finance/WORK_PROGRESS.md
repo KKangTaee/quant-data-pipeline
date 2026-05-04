@@ -3144,3 +3144,19 @@ Detailed historical logs were archived on `2026-04-13`.
 - Hygiene:
   - This was a documentation / phase-management closeout and kickoff unit.
   - Existing unrelated strategy logs, `uv.lock`, generated registries, run history artifacts, archived reset files, and phase12 temp CSVs were left unstaged.
+
+### 2026-05-04
+- Completed Phase 35 implementation work units 1 through 4 after the user asked to proceed through checklist handoff.
+- Changed:
+  - added `Backtest > Post-Selection Guide` as the final workflow panel
+  - added `app/web/backtest_post_selection_guide.py` and helper logic for selected final decision input, readiness, operating policy, guide row creation, and saved guide review
+  - added `app/web/runtime/post_selection_guides.py` and `.note/finance/registries/POST_SELECTION_OPERATING_GUIDES.jsonl` as the append-only operating guide registry path
+  - connected Final Review to Post-Selection Guide with a navigation button
+  - updated Phase35 work-unit docs, checklist, roadmap, doc index, comprehensive analysis, README, AGENTS, code analysis docs, operations guide, glossary, and active skill guidance
+- Decision:
+  - Phase35 stores operating rules separately from final decisions so selection judgment and operating policy do not overwrite each other.
+  - The user-facing action is one clear `운영 가이드 기록` button.
+  - Post-Selection Guide remains disabled for live approval, broker order, and auto-trading.
+- Hygiene:
+  - py_compile and selected final decision input smoke were run.
+  - Existing unrelated strategy logs, `uv.lock`, generated registries, run history artifacts, archived reset files, and phase12 temp CSVs were left unstaged.

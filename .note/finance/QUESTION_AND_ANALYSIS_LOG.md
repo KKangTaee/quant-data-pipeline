@@ -3981,3 +3981,17 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Follow-up:
   - Phase35 문서 bundle을 `.note/finance/phases/phase35/` 아래에 만들었다
   - Phase35는 `active / not_ready_for_qa` 상태이며, 첫 작업은 operating policy contract 정리다
+
+### 2026-05-04 - Phase35 Post-Selection Operating Guide 구현 완료
+- User request:
+  - Phase35의 첫 번째 작업부터 마지막 작업까지 순서대로 진행하고, checklist 확인 단계가 되면 알려 달라고 요청함
+- Interpreted goal:
+  - 최종 선정 후보를 바로 주문이나 승인으로 연결하지 않고, 사용자가 따라갈 리밸런싱 / 축소 / 중단 / 재검토 운영 기준을 UI와 append-only 기록으로 만들어야 함
+- Analysis result:
+  - Phase35 입력은 `SELECT_FOR_PRACTICAL_PORTFOLIO`와 `READY_FOR_POST_SELECTION_OPERATING_GUIDE`를 만족하는 final review record로 제한한다
+  - 운영 가이드는 final decision 원본을 덮어쓰지 않고 `.note/finance/registries/POST_SELECTION_OPERATING_GUIDES.jsonl`에 별도 append-only row로 남긴다
+  - `Backtest > Post-Selection Guide`에서 selected final decision, target components, operating readiness, operating policy, saved guide review를 확인한다
+  - `운영 가이드 기록`도 live approval, broker order, 자동매매가 아니다
+- Follow-up:
+  - Phase35는 `implementation_complete / manual_qa_pending` 상태가 됐다
+  - 사용자는 `.note/finance/phases/phase35/PHASE35_TEST_CHECKLIST.md`로 manual QA를 진행하면 된다

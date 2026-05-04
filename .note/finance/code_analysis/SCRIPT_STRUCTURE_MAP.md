@@ -44,7 +44,9 @@
 | `app/web/backtest_portfolio_proposal_helpers.py` | Portfolio Proposal row 생성, 단일 후보 direct readiness / proposal save readiness 평가, 공유 validation / robustness 계산 helper, saved proposal monitoring / Pre-Live feedback / paper feedback table helper |
 | `app/web/backtest_final_review.py` | `Backtest > Final Review`의 단일 후보 / 저장 proposal 선택, Validation / Robustness / Paper Observation 기준 확인, 최종 선정 / 보류 / 거절 / 재검토 결과 기록, Phase35 handoff review 화면 render |
 | `app/web/backtest_final_review_helpers.py` | Final Review source 선택, validation 재사용, inline paper observation snapshot, final review evidence / save readiness / decision row 생성, saved final decision display helper |
-| `app/web/pages/backtest.py` | Backtest page shell, workflow navigation, panel dispatch entry. Single / Compare / Candidate Review / Portfolio Proposal / Final Review 본문은 별도 module이 관리 |
+| `app/web/backtest_post_selection_guide.py` | `Backtest > Post-Selection Guide`의 selected final decision 선택, 운영 기준 작성, operating guide 기록 / review 화면 render |
+| `app/web/backtest_post_selection_guide_helpers.py` | Post-Selection Guide input selector, readiness route, operating guide row 생성, saved guide display helper |
+| `app/web/pages/backtest.py` | Backtest page shell, workflow navigation, panel dispatch entry. Single / Compare / Candidate Review / Portfolio Proposal / Final Review / Post-Selection Guide 본문은 별도 module이 관리 |
 
 ## App / Runtime
 
@@ -56,6 +58,7 @@
 | `app/web/runtime/portfolio_proposal.py` | Portfolio proposal draft registry JSONL path / load / append helper |
 | `app/web/runtime/paper_portfolio_ledger.py` | Paper Portfolio Tracking Ledger JSONL path / load / append helper |
 | `app/web/runtime/final_selection_decisions.py` | Final Portfolio Selection Decision JSONL path / load / append helper |
+| `app/web/runtime/post_selection_guides.py` | Post-Selection Operating Guide JSONL path / load / append helper |
 | `app/web/runtime/portfolio_store.py` | Saved portfolio persistence helper |
 
 ## Finance Core

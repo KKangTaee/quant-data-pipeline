@@ -1487,7 +1487,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 | Phase 32 | `complete` | `manual_qa_completed` | Robustness / Stress Validation Pack 구현 및 QA 완료 |
 | Phase 33 | `complete` | `manual_qa_completed` | Paper Portfolio Tracking Ledger draft / save / review / Phase34 handoff 구현 및 QA 완료 |
 | Phase 34 | `complete` | `manual_qa_completed` | Final Review 탭 분리와 최종 검토 결과 기록 QA 완료 |
-| Phase 35 | `active` | `not_ready_for_qa` | Post-Selection Operating Guide 시작. 최종 선정 후보의 운영 기준을 설계할 준비 상태 |
+| Phase 35 | `implementation_complete` | `manual_qa_pending` | Post-Selection Guide panel / operating guide registry / saved guide review 구현, 사용자 QA 대기 |
 
 한 줄 현재 판단:
 - current annual strict candidate와 portfolio bridge를 같은 frame에서 다시 본 `Phase 21`은 manual validation까지 완료되었고,
@@ -1542,9 +1542,9 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
   Phase 34는 `Backtest > Final Review` 탭을 분리해 단일 후보 또는 saved proposal을 최종 검토 대상으로 읽고,
   validation / robustness / paper observation 기준 / operator judgment를 하나의 final review record로 저장하게 했다.
   final decision 저장 / review / Phase35 handoff와 live approval / 주문 지시 경계를 추가했고 사용자 QA까지 완료했다.
-  `Phase 35`는 active / not_ready_for_qa 상태로 시작했다.
+  `Phase 35`는 implementation_complete / manual_qa_pending 상태다.
   Phase35는 최종 선정 후보를 주문으로 보내는 단계가 아니라,
-  리밸런싱 / 중단 / 축소 / 재검토 운영 기준으로 바꾸는 `Post-Selection Operating Guide`를 만든다.
+  리밸런싱 / 축소 / 중단 / 재검토 운영 기준으로 바꾸는 `Post-Selection Operating Guide`를 만들었고 사용자 QA가 남아 있다.
 
 ---
 
@@ -1684,7 +1684,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 | Phase 32 | Robustness And Stress Validation Pack | `complete` | `manual_qa_completed` | robustness preview, stress summary contract / table, Phase33 paper ledger handoff를 구현하고 QA까지 완료했다 |
 | Phase 33 | Paper Portfolio Tracking Ledger | `complete` | `manual_qa_completed` | 시작일 / 비중 / 추적 조건을 가진 paper portfolio ledger를 저장하고 Phase34 handoff를 확인했으며 QA까지 완료했다 |
 | Phase 34 | Final Portfolio Selection Decision Pack | `complete` | `manual_qa_completed` | Final Review 탭에서 검증과 paper observation 기준을 모아 최종 실전 후보 포트폴리오를 선정 / 보류 / 거절 / 재검토하는 decision pack을 구현했고 QA까지 완료했다 |
-| Phase 35 | Post-Selection Operating Guide | `active` | `not_ready_for_qa` | 선정 이후 리밸런싱, 중단, 축소, 재검토 운영 기준을 정리한다 |
+| Phase 35 | Post-Selection Operating Guide | `implementation_complete` | `manual_qa_pending` | 선정 이후 리밸런싱, 축소, 중단, 재검토 운영 기준을 기록 / review하고 QA를 기다린다 |
 
 ### Phase 31. Portfolio Risk And Live Readiness Validation
 
@@ -1730,7 +1730,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 - `.note/finance/registries/PAPER_PORTFOLIO_TRACKING_LEDGER.jsonl` append-only 저장소와 `app/web/runtime/paper_portfolio_ledger.py` helper를 추가했다.
 - Phase 33 첫 구현에서는 `Backtest > Portfolio Proposal` Validation Pack 아래에서 paper ledger draft를 확인하고 `Save Paper Tracking Ledger`로 저장할 수 있었다.
 - 저장된 ledger는 source, component, review trigger, Phase34 handoff route를 다시 읽으며 사용자 QA까지 완료했다. Phase 34 보정 이후 main flow에서는 Final Review의 inline paper observation이 이 역할을 흡수하고, ledger는 compatibility artifact로 유지한다.
-- 아직 paper PnL 시계열 자동 계산, Phase 35 post-selection operating guide, live approval, 주문 지시는 만들지 않았다.
+- 아직 paper PnL 시계열 자동 계산, live approval, 주문 지시는 만들지 않았다.
 
 ### Phase 34. Final Portfolio Selection Decision Pack
 
@@ -1759,10 +1759,12 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 - 선정 이후에도 live approval / 주문 지시와 분리된 사람이 따라갈 guide가 필요하다.
 
 ### 현재 메모
-- Phase 35는 active / not_ready_for_qa 상태다.
-- `.note/finance/phases/phase35/` 아래 phase plan, TODO, completion summary, next-phase preparation, checklist placeholder를 생성했다.
-- 아직 구현은 시작하지 않았다.
-- 첫 번째 작업은 selected final review record를 읽는 operating policy 계약 정의다.
+- Phase 35는 implementation_complete / manual_qa_pending 상태다.
+- `.note/finance/phases/phase35/` 아래 phase plan, TODO, 네 개 작업 단위, completion summary, next-phase preparation, checklist를 정리했다.
+- `.note/finance/registries/POST_SELECTION_OPERATING_GUIDES.jsonl` append-only 저장소와 `app/web/runtime/post_selection_guides.py` helper를 추가했다.
+- `Backtest > Post-Selection Guide` 탭에서 selected final decision을 선택하고, 리밸런싱 / 축소 / 중단 / 재검토 기준을 작성한 뒤 `운영 가이드 기록`으로 저장할 수 있다.
+- 저장된 guide는 source decision, target components, guide route, operating policy, JSON을 다시 읽는다.
+- Phase35 checklist 기반 사용자 QA가 남아 있다.
 - Phase35도 broker order, 자동매매, live approval은 만들지 않는다.
 
 ### 한 줄 흐름

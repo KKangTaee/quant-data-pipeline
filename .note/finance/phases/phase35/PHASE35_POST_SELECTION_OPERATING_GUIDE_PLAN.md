@@ -7,6 +7,9 @@ Phase 35에서 만들 `Post-Selection Operating Guide`의 목적, 범위, 작업
 Phase 34에서 최종 검토 결과를 기록할 수 있게 되었으므로,
 이제는 `SELECT_FOR_PRACTICAL_PORTFOLIO`로 선정된 후보를 실제 운영 전 어떤 규칙으로 관리할지 정리한다.
 
+2026-05-04 기준 구현은 완료됐고,
+사용자는 `PHASE35_TEST_CHECKLIST.md`로 manual QA를 진행하면 된다.
+
 ## 목적
 
 - Phase 34 final review record 중 최종 선정된 후보를 Phase 35 운영 입력으로 읽는다.
@@ -41,7 +44,7 @@ Phase 35는 "고른 뒤에는 언제 사고, 언제 줄이고, 언제 멈추고,
   - `phase35_handoff.handoff_route = READY_FOR_POST_SELECTION_OPERATING_GUIDE`
 - `Backtest > Final Review`에서 저장된 최종 검토 결과
 - Phase 35 운영 가이드 surface
-  - 예상 위치: `Backtest > Final Review` 안의 saved decision review 확장 또는 별도 `Post-Selection Guide` section
+  - 구현 위치: `Backtest > Post-Selection Guide`
 - Phase 35 운영 policy 문서 / runtime helper
 
 ## 이 phase에서 다루지 않는 것
@@ -53,24 +56,28 @@ Phase 35는 "고른 뒤에는 언제 사고, 언제 줄이고, 언제 멈추고,
 - paper PnL 시계열 자동 계산 엔진
 - optimizer / 신규 포트폴리오 생성 엔진
 
-## 현재 구현 우선순위
+## 구현 우선순위와 완료 상태
 
 1. Post-selection operating policy 계약 정의
    - 쉽게 말하면: 선정된 후보를 어떤 규칙으로 운영할지 row / guide 기준을 먼저 정한다.
    - 왜 먼저 하는가: policy 없이 UI부터 만들면 또 버튼과 저장소가 늘어나는 흐름이 될 수 있다.
    - 기대 효과: Phase35가 live approval과 섞이지 않고 운영 가이드로 읽힌다.
+   - 상태: 완료
 2. Selected final decision 입력 surface 정의
    - 쉽게 말하면: Phase34에서 선정된 record만 골라 Phase35 입력으로 읽는다.
    - 왜 필요한가: 보류 / 거절 / 재검토 record는 운영 guide 대상이 아니기 때문이다.
    - 기대 효과: 사용자가 운영 guide를 만들 대상과 제외 대상을 혼동하지 않는다.
+   - 상태: 완료
 3. Operating guide preview / record UI 구현
    - 쉽게 말하면: 리밸런싱, 축소, 중단, 재검토 기준을 화면에서 확인한다.
    - 왜 필요한가: 최종 후보 선정 이후 사용자가 따라갈 실제 운영 기준이 필요하다.
    - 기대 효과: 실전 포트폴리오 후보가 "선정 기록"에서 "운영 가능한 후보"로 한 단계 더 구체화된다.
+   - 상태: 완료
 4. Saved operating guide review와 다음 phase handoff
    - 쉽게 말하면: 만든 운영 가이드를 다시 열어 보고, 이후 live approval 또는 monitoring 확장으로 넘길 준비를 한다.
    - 왜 필요한가: 운영 기준은 한 번 만든 뒤 다시 확인할 수 있어야 한다.
    - 기대 효과: Phase35 이후 작업이 가이드 없는 승인/주문 흐름으로 뛰지 않는다.
+   - 상태: 완료
 
 ## 이 문서에서 자주 쓰는 용어
 
@@ -82,9 +89,9 @@ Phase 35는 "고른 뒤에는 언제 사고, 언제 줄이고, 언제 멈추고,
 ## 이번 phase의 운영 원칙
 
 - Phase35는 운영 기준을 만드는 phase이지 주문 실행 phase가 아니다.
-- 저장소를 새로 만들지 여부는 첫 작업에서 먼저 판단한다.
-- 새 저장소가 필요하더라도 append-only로 만들고, final decision registry를 덮어쓰지 않는다.
-- UI는 `Final Review`와 연결하되, Portfolio Proposal 탭으로 다시 확장하지 않는다.
+- 저장소는 `.note/finance/registries/POST_SELECTION_OPERATING_GUIDES.jsonl`로 분리한다.
+- 새 저장소는 append-only로 만들고, final decision registry를 덮어쓰지 않는다.
+- UI는 `Backtest > Post-Selection Guide`로 분리하고, Portfolio Proposal 탭으로 다시 확장하지 않는다.
 - Phase34에서 사용자가 문제 제기한 "반복 저장 UX"가 재발하지 않게 한다.
 
 ## 이번 phase의 주요 작업 단위

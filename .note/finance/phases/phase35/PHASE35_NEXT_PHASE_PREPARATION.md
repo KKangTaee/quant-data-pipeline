@@ -4,14 +4,16 @@
 
 이 문서는 Phase 35 이후 어떤 방향으로 넘어갈 수 있는지 미리 기록하는 초안이다.
 
-현재 Phase 35는 active / not_ready_for_qa 상태이므로,
-이 문서는 구현 중 바뀔 수 있다.
+현재 Phase 35는 implementation_complete / manual_qa_pending 상태이므로,
+이 문서는 사용자 QA 이후 다시 확정할 수 있다.
 
 ## 현재 handoff 상태
 
 - Phase 34는 complete / manual_qa_completed 상태다.
-- Phase 35는 Phase34 final review record 중 selected record를 읽어 운영 가이드를 만드는 phase로 시작했다.
-- 아직 Phase35 operating guide 구현은 시작하지 않았다.
+- Phase 35는 Phase34 final review record 중 selected record를 읽어 운영 가이드를 만드는 phase다.
+- `Backtest > Post-Selection Guide`에서 selected final decision을 읽고 operating guide를 append-only로 기록할 수 있다.
+- 저장소는 `.note/finance/registries/POST_SELECTION_OPERATING_GUIDES.jsonl`이다.
+- 현재 Phase35 manual QA가 남아 있다.
 
 ## 다음 phase에서 더 중요한 질문
 
@@ -36,12 +38,12 @@
 
 ## 추천 다음 방향
 
-Phase35가 끝나기 전에는 Phase36 방향을 확정하지 않는다.
+Phase35 manual QA가 끝나기 전에는 Phase36 방향을 확정하지 않는다.
 
 왜냐하면 운영 guide를 만들고 나서야
 다음 병목이 live approval 계약인지, monitoring tracker인지, 리스크/비용 엔진인지 분명해지기 때문이다.
 
 ## handoff 메모
 
-- Phase35 구현 후 이 문서를 다시 갱신한다.
-- Phase36을 열기 전에는 Phase35 checklist 완료와 사용자의 방향 승인이 필요하다.
+- Phase35 checklist 완료 후 이 문서를 다시 갱신한다.
+- Phase36을 열기 전에는 사용자의 방향 승인이 필요하다.

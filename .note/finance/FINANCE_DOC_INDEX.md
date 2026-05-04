@@ -24,9 +24,14 @@
 | 현재 active phase TODO | `.note/finance/phases/phase35/PHASE35_CURRENT_CHAPTER_TODO.md` |
 | Phase 35 계획 | `.note/finance/phases/phase35/PHASE35_POST_SELECTION_OPERATING_GUIDE_PLAN.md` |
 | Phase 35 TODO | `.note/finance/phases/phase35/PHASE35_CURRENT_CHAPTER_TODO.md` |
+| Phase 35 첫 작업 단위 | `.note/finance/phases/phase35/PHASE35_OPERATING_POLICY_CONTRACT_FIRST_WORK_UNIT.md` |
+| Phase 35 두 번째 작업 단위 | `.note/finance/phases/phase35/PHASE35_INPUT_SELECTOR_AND_READINESS_SECOND_WORK_UNIT.md` |
+| Phase 35 세 번째 작업 단위 | `.note/finance/phases/phase35/PHASE35_OPERATING_GUIDE_UI_THIRD_WORK_UNIT.md` |
+| Phase 35 네 번째 작업 단위 | `.note/finance/phases/phase35/PHASE35_SAVED_GUIDE_REVIEW_AND_HANDOFF_FOURTH_WORK_UNIT.md` |
 | Phase 35 completion summary | `.note/finance/phases/phase35/PHASE35_COMPLETION_SUMMARY.md` |
 | Phase 35 next phase preparation | `.note/finance/phases/phase35/PHASE35_NEXT_PHASE_PREPARATION.md` |
-| Phase 35 QA checklist placeholder | `.note/finance/phases/phase35/PHASE35_TEST_CHECKLIST.md` |
+| Phase 35 QA checklist | `.note/finance/phases/phase35/PHASE35_TEST_CHECKLIST.md` |
+| Phase 35 운영 가이드 registry guide | `.note/finance/operations/POST_SELECTION_OPERATING_GUIDES_GUIDE.md` |
 | 최근 완료 phase TODO | `.note/finance/phases/phase34/PHASE34_CURRENT_CHAPTER_TODO.md` |
 | Phase 34 계획 | `.note/finance/phases/phase34/PHASE34_FINAL_PORTFOLIO_SELECTION_DECISION_PACK_PLAN.md` |
 | Phase 34 첫 작업 단위 | `.note/finance/phases/phase34/PHASE34_FINAL_DECISION_CONTRACT_FIRST_WORK_UNIT.md` |
@@ -78,7 +83,7 @@
 | Phase 32 | `complete` | `manual_qa_completed` | Robustness / Stress Validation Pack 구현 및 QA 완료 |
 | Phase 33 | `complete` | `manual_qa_completed` | Paper Portfolio Tracking Ledger draft / save / review / Phase34 handoff 구현 및 QA 완료 |
 | Phase 34 | `complete` | `manual_qa_completed` | Final Review 탭 분리와 최종 검토 결과 기록 QA 완료 |
-| Phase 35 | `active` | `not_ready_for_qa` | Post-Selection Operating Guide 시작 준비 완료. 최종 선정 후보의 리밸런싱 / 중단 / 축소 / 재검토 운영 기준을 설계할 단계 |
+| Phase 35 | `implementation_complete` | `manual_qa_pending` | Post-Selection Guide panel / operating guide registry / saved guide review 구현, 사용자 QA 대기 |
 
 현재 한 줄 요약:
 
@@ -124,9 +129,9 @@
   validation / robustness / paper observation 기준 / operator judgment를 하나의 record로 저장한다.
   `.note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`에 최종 선정 / 보류 / 거절 / 재검토 판단을 append-only로 저장한다.
 - 사용자 QA까지 완료했다.
-- Phase 35 `Post-Selection Operating Guide`는 active / not_ready_for_qa 상태다.
-  최종 선정 후보를 바로 주문으로 연결하지 않고,
-  리밸런싱 / 중단 / 축소 / 재검토 운영 기준으로 바꾸는 phase다.
+- Phase 35 `Post-Selection Operating Guide`는 implementation_complete / manual_qa_pending 상태다.
+  `Backtest > Post-Selection Guide`에서 selected final decision을 읽고,
+  리밸런싱 / 축소 / 중단 / 재검토 운영 기준을 append-only로 기록 / review한다.
 
 ---
 
@@ -359,7 +364,7 @@ Phase 상태는 하나의 긴 문장으로 합치지 않고, 아래 두 축으�
 | Phase 32 | `complete` | `manual_qa_completed` | Robustness / Stress Validation Pack 구현 및 QA 완료 | robustness / stress validation | `.note/finance/phases/phase32/PHASE32_ROBUSTNESS_AND_STRESS_VALIDATION_PACK_PLAN.md` |
 | Phase 33 | `complete` | `manual_qa_completed` | Paper Portfolio Tracking Ledger draft / save / review / Phase34 handoff 구현 및 QA 완료 | paper tracking ledger | `.note/finance/phases/phase33/PHASE33_PAPER_PORTFOLIO_TRACKING_LEDGER_PLAN.md` |
 | Phase 34 | `complete` | `manual_qa_completed` | Final Review 탭 분리와 final review record 저장 / review / Phase35 handoff QA 완료 | final review / final selection decision | `.note/finance/phases/phase34/PHASE34_FINAL_PORTFOLIO_SELECTION_DECISION_PACK_PLAN.md` |
-| Phase 35 | `active` | `not_ready_for_qa` | Post-Selection Operating Guide 시작. 최종 선정 후보의 운영 기준을 설계할 준비 상태 | post-selection operating guide | `.note/finance/phases/phase35/PHASE35_POST_SELECTION_OPERATING_GUIDE_PLAN.md` |
+| Phase 35 | `implementation_complete` | `manual_qa_pending` | Post-Selection Guide panel / operating guide registry / saved guide review 구현, 사용자 QA 대기 | post-selection operating guide | `.note/finance/phases/phase35/PHASE35_POST_SELECTION_OPERATING_GUIDE_PLAN.md` |
 
 ---
 
@@ -373,14 +378,19 @@ Phase 상태는 하나의 긴 문장으로 합치지 않고, 아래 두 축으�
 |---|---|
 | Plan | `.note/finance/phases/phase35/PHASE35_POST_SELECTION_OPERATING_GUIDE_PLAN.md` |
 | TODO | `.note/finance/phases/phase35/PHASE35_CURRENT_CHAPTER_TODO.md` |
+| First work unit | `.note/finance/phases/phase35/PHASE35_OPERATING_POLICY_CONTRACT_FIRST_WORK_UNIT.md` |
+| Second work unit | `.note/finance/phases/phase35/PHASE35_INPUT_SELECTOR_AND_READINESS_SECOND_WORK_UNIT.md` |
+| Third work unit | `.note/finance/phases/phase35/PHASE35_OPERATING_GUIDE_UI_THIRD_WORK_UNIT.md` |
+| Fourth work unit | `.note/finance/phases/phase35/PHASE35_SAVED_GUIDE_REVIEW_AND_HANDOFF_FOURTH_WORK_UNIT.md` |
 | Completion summary | `.note/finance/phases/phase35/PHASE35_COMPLETION_SUMMARY.md` |
 | Next phase preparation | `.note/finance/phases/phase35/PHASE35_NEXT_PHASE_PREPARATION.md` |
-| QA checklist placeholder | `.note/finance/phases/phase35/PHASE35_TEST_CHECKLIST.md` |
+| QA checklist | `.note/finance/phases/phase35/PHASE35_TEST_CHECKLIST.md` |
+| Operations guide | `.note/finance/operations/POST_SELECTION_OPERATING_GUIDES_GUIDE.md` |
 
 한 줄 설명:
 
-- Phase 35는 Phase34에서 `SELECT_FOR_PRACTICAL_PORTFOLIO`로 선정된 final review record를 읽어 리밸런싱 / 중단 / 축소 / 재검토 운영 기준을 만드는 phase다.
-- 현재는 active / not_ready_for_qa 상태이며, 아직 구현이나 manual QA 대상은 아니다.
+- Phase 35는 Phase34에서 `SELECT_FOR_PRACTICAL_PORTFOLIO`로 선정된 final review record를 읽어 리밸런싱 / 축소 / 중단 / 재검토 운영 기준을 만드는 phase다.
+- 현재는 implementation_complete / manual_qa_pending 상태이며, 사용자는 Phase35 checklist로 QA를 진행하면 된다.
 
 ### Phase 34. Final Portfolio Selection Decision Pack
 
