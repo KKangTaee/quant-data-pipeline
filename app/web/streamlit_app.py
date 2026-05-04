@@ -3044,7 +3044,68 @@ def _render_guides_page() -> None:
             "각 비교 대상 앞에서 후보의 역할을 말할 수 있어야 6단계 Candidate Packaging으로 넘길 근거가 생깁니다."
         )
 
-    st.markdown("### 1~8 단계 실행 흐름")
+    with st.expander("Portfolio Proposal -> Final Review -> 최종 판단 완료", expanded=False):
+        st.caption(
+            "Phase35 보정 이후 현재 active workflow는 별도 Post-Selection Guide 없이 "
+            "`Portfolio Proposal -> Final Review -> 최종 판단 완료`에서 끝납니다."
+        )
+        final_flow_rows = pd.DataFrame(
+            [
+                {
+                    "구간": "Portfolio Proposal",
+                    "하는 일": "단일 후보는 추가 proposal 저장 없이 Final Review 입력 후보로 읽고, 여러 후보는 목적 / 역할 / 비중이 있는 proposal draft로 묶습니다.",
+                    "통과 후 의미": "검증과 최종 판단으로 넘길 후보 형태가 준비됨",
+                },
+                {
+                    "구간": "Final Review 검증",
+                    "하는 일": "Validation, Robustness, Stress / Sensitivity, Paper Observation 기준을 한 화면에서 확인합니다.",
+                    "통과 후 의미": "최종 판단을 기록해도 되는 근거가 모였는지 확인됨",
+                },
+                {
+                    "구간": "Final Review 최종 판단",
+                    "하는 일": "실전 후보로 선정 / 보류 / 거절 / 재검토 중 하나를 이유와 함께 기록합니다.",
+                    "통과 후 의미": "사용자가 마지막으로 확인할 최종 판단 원본이 저장됨",
+                },
+                {
+                    "구간": "기록된 최종 검토 결과 확인",
+                    "하는 일": "저장된 final decision을 다시 열어 투자 가능 후보인지, 관찰이 더 필요한지, 투자하면 안 되는지 확인합니다.",
+                    "통과 후 의미": "실전 후보 선정 여부가 확인됨",
+                },
+            ]
+        )
+        st.dataframe(final_flow_rows, use_container_width=True, hide_index=True)
+
+        route_rows = pd.DataFrame(
+            [
+                {
+                    "Final Review 판단": "SELECT_FOR_PRACTICAL_PORTFOLIO",
+                    "화면에서 읽을 말": "실전 후보로 선정",
+                    "의미": "현재 근거 기준으로 실전 후보군에 올릴 수 있다는 판단",
+                },
+                {
+                    "Final Review 판단": "HOLD_FOR_MORE_PAPER_TRACKING",
+                    "화면에서 읽을 말": "내용 부족 / 관찰 필요",
+                    "의미": "당장 선정하기에는 paper observation이나 근거가 더 필요함",
+                },
+                {
+                    "Final Review 판단": "REJECT_FOR_PRACTICAL_USE",
+                    "화면에서 읽을 말": "투자하면 안 됨",
+                    "의미": "현재 근거로는 실전 후보에서 제외해야 함",
+                },
+                {
+                    "Final Review 판단": "RE_REVIEW_REQUIRED",
+                    "화면에서 읽을 말": "재검토 필요",
+                    "의미": "조건 / 데이터 / 구성 변경 후 다시 검토해야 함",
+                },
+            ]
+        )
+        st.dataframe(route_rows, use_container_width=True, hide_index=True)
+        st.warning(
+            "`실전 후보로 선정`은 live approval, broker order, 자동매매 지시가 아닙니다. "
+            "이 프로그램의 현재 최종 지점은 투자 후보 선정 여부 확인입니다."
+        )
+
+    st.markdown("### 1~10 단계 실행 흐름")
 
     with st.container(border=True):
         st.markdown("### 테스트에서 상용화 후보 검토까지 사용하는 흐름")
@@ -3063,8 +3124,8 @@ def _render_guides_page() -> None:
             "후보로 남길지, 비교할지, paper tracking / watchlist / 보류 / 재검토로 둘지 정하는 **별도 운영 절차**입니다."
         )
         st.caption(
-            "큰 흐름으로는 1-5단계가 테스트 / 검증 구간, 6단계가 후보 패키징 구간, "
-            "7단계가 포트폴리오 초안 작성과 Live Readiness 진입 경계입니다."
+            "큰 흐름으로는 1-5단계가 데이터 / 백테스트 / 비교 구간, 6단계가 후보 패키징 구간, "
+            "7단계가 Portfolio Proposal 구성 구간, 8-10단계가 Final Review 검증과 최종 판단 확인 구간입니다."
         )
 
         step_rows = [
@@ -3149,15 +3210,54 @@ def _render_guides_page() -> None:
             {
                 "title": "7단계. 단일 후보 직행 평가 또는 Portfolio Proposal 초안 작성",
                 "path": "Backtest > Portfolio Proposal",
-                "goal": "Candidate Review를 통과한 후보가 1개면 저장을 반복하지 않고 Live Readiness 직행 가능 여부를 확인합니다. 여러 후보를 묶을 때만 목적, 역할, 비중, capital scope가 있는 포트폴리오 초안으로 저장합니다.",
+                "goal": "Candidate Review를 통과한 후보가 1개면 저장을 반복하지 않고 Final Review 입력 후보로 읽습니다. 여러 후보를 묶을 때만 목적, 역할, 비중, capital scope가 있는 포트폴리오 초안으로 저장합니다.",
                 "check": [
                     "`Candidate Review > Open Portfolio Proposal`로 넘어온 후보가 component 선택에 들어왔는지 확인",
                     "후보가 1개면 `단일 후보 직행 평가`를 먼저 사용하고, `Proposal Draft 저장 불필요`로 표시되는지 확인",
                     "후보가 2개 이상이면 `포트폴리오 초안 작성` 경로에서 후보별 proposal role, target weight, 비중 근거를 작성",
-                    "`Live Readiness 직행 평가` 또는 `Live Readiness 진입 평가`에서 route, readiness score, blocker를 확인",
-                    "`Open Live Readiness`는 아직 다음 개발 전까지 비활성화되어 있는지",
+                    "`Live Readiness 직행 평가` 또는 `Live Readiness 진입 평가`는 현재 흐름에서 Final Review 입력 준비 상태로 읽고 route, readiness score, blocker를 확인",
+                    "다중 후보 proposal draft를 저장했다면 저장 목록에서 다시 열 수 있는지 확인",
                 ],
-                "next_step": "단일 후보 직행 평가나 다중 후보 proposal 초안 모두 투자 승인이 아닙니다. 실제 투자 가능 여부는 이후 Live Readiness / Final Approval 단계에서 별도 기준으로 검토합니다.",
+                "next_step": "단일 후보 직행 평가나 다중 후보 proposal 초안 모두 투자 승인이 아닙니다. 실제 실전 후보 선정 여부는 Final Review에서 검증하고 판단합니다.",
+            },
+            {
+                "title": "8단계. Final Review에서 검증 근거와 관찰 기준 확인",
+                "path": "Backtest > Final Review > 1~4. 최종 검토 대상 / 검증 근거 / Robustness / Paper Observation",
+                "goal": "단일 후보나 저장된 proposal을 최종 검토 대상으로 선택하고, validation / robustness / paper observation 기준이 최종 판단을 기록할 만큼 충분한지 확인합니다.",
+                "check": [
+                    "`1. 최종 검토 대상 선택`에서 current candidate 또는 saved proposal을 선택",
+                    "`2. Portfolio Risk / Validation Pack`에서 route, score, blocker, component risk 확인",
+                    "`3. Robustness / Stress Validation Preview`에서 기간 / benchmark / drawdown / stress readiness 확인",
+                    "`4. Paper Observation`에서 paper tracking 관찰 조건과 남은 보강 항목 확인",
+                    "preview를 여는 것만으로 proposal draft 저장이나 live approval이 자동 수행되지 않는지 확인",
+                ],
+                "next_step": "hard blocker가 없고 검증 근거가 충분하면 9단계 최종 판단 및 테스트 검증으로 넘어갑니다.",
+            },
+            {
+                "title": "9단계. 최종 판단 및 테스트 검증 기록",
+                "path": "Backtest > Final Review > 5. 최종 판단 및 테스트 검증",
+                "goal": "실전 후보로 선정할지, 관찰을 더 할지, 거절할지, 재검토할지를 사람의 이유와 함께 하나의 최종 검토 결과로 기록합니다.",
+                "check": [
+                    "`Final Decision Route`가 의도한 판단인지 확인",
+                    "`Operator Reason`, `Constraints`, `Next Action`을 비워 두지 않음",
+                    "`Record Route`가 `FINAL_REVIEW_RECORD_READY`인지 확인",
+                    "`최종 검토 결과 기록` 버튼이 live approval이나 주문 지시가 아님을 확인",
+                    "저장 후 기존 candidate / proposal registry를 덮어쓰지 않는지 확인",
+                ],
+                "next_step": "저장된 최종 판단은 10단계에서 다시 열어 실전 후보 선정 여부를 확인합니다.",
+            },
+            {
+                "title": "10단계. 기록된 최종 검토 결과로 실전 후보 선정 여부 확인",
+                "path": "Backtest > Final Review > 6. 기록된 최종 검토 결과 확인",
+                "goal": "저장된 final decision을 다시 열어 이 포트폴리오가 실전 후보로 선정되었는지, 아직 보류인지, 제외인지, 재검토인지 최종 확인합니다.",
+                "check": [
+                    "`투자 가능성`이 `실전 후보로 선정`, `내용 부족 / 관찰 필요`, `투자하면 안 됨`, `재검토 필요` 중 무엇인지 확인",
+                    "`Final Review Status`가 현재 흐름의 최종 판단 완료 문구로 읽히는지 확인",
+                    "source candidate / proposal과 target components / weights가 저장 당시 조건과 맞는지 확인",
+                    "`live_approval=false`, `order_instruction=false` 경계가 유지되는지 확인",
+                    "선정된 경우에도 실제 주문 전에는 투입 금액, 리밸런싱, 모니터링, stop / re-review 기준을 별도 운영 판단으로 정리해야 함을 확인",
+                ],
+                "next_step": "`SELECT_FOR_PRACTICAL_PORTFOLIO`이면 이 프로그램 기준 실전 후보로 선정된 것입니다. 다만 이 결과는 주문 실행이나 자동 승인과는 분리됩니다.",
             },
         ]
 
@@ -3303,52 +3403,170 @@ def _render_guides_page() -> None:
                 "`COMPARE_REVIEW_READY`는 실패가 아니라 다른 경로입니다. 이 경우 Proposal로 바로 가지 말고 Compare에서 비교 후보를 추가해 다시 검토합니다."
             )
 
-        with st.expander("7단계 Portfolio Proposal에서 Live Readiness 후보로 넘어가는 최소 기준", expanded=True):
+        with st.expander("7단계 Portfolio Proposal에서 8단계 Final Review로 넘어가는 최소 기준", expanded=True):
             st.caption(
-                "Live Readiness 화면은 아직 다음 개발 대상입니다. 지금은 단일 후보는 추가 저장 없이 다음 단계가 읽을 수 있는지, "
-                "여러 후보는 proposal draft로 저장할 만큼 구성 근거가 있는지 판단합니다."
+                "이 기준은 단일 후보나 다중 후보 proposal을 Final Review가 읽을 수 있는지 판단하는 기준입니다. "
+                "단일 후보는 추가 proposal 저장 없이 넘어가고, 다중 후보는 draft 저장이 필요합니다."
             )
             proposal_rows = pd.DataFrame(
                 [
                     {
                         "확인 항목": "진행 방식",
-                        "Live Readiness 후보 가능": "후보 1개는 단일 후보 직행 평가, 후보 2개 이상은 포트폴리오 초안 작성으로 진행",
+                        "Final Review 진행 가능": "후보 1개는 단일 후보 직행 평가, 후보 2개 이상은 포트폴리오 초안 작성으로 진행",
                         "멈춰야 하는 경우": "후보가 없거나 여러 후보를 골라 놓고 역할 / 비중을 정하지 않음",
                     },
                     {
                         "확인 항목": "단일 후보 직행",
-                        "Live Readiness 후보 가능": "candidate identity, result snapshot, paper_tracking, Real-Money signal, Data Trust가 확인됨",
+                        "Final Review 진행 가능": "candidate identity, result snapshot, paper_tracking, Real-Money signal, Data Trust가 확인됨",
                         "멈춰야 하는 경우": "Pre-Live record가 없거나 Real-Money hold / blocked, Data Trust snapshot 공백",
                     },
                     {
                         "확인 항목": "다중 후보 구성",
-                        "Live Readiness 후보 가능": "target weight 합계가 100%이고 최소 1개 core anchor가 있음",
+                        "Final Review 진행 가능": "target weight 합계가 100%이고 최소 1개 core anchor가 있음",
                         "멈춰야 하는 경우": "비중 합계가 맞지 않거나 포트폴리오 중심 후보가 없음",
                     },
                     {
                         "확인 항목": "Pre-Live 상태",
-                        "Live Readiness 후보 가능": "active weight 후보가 paper_tracking 상태",
+                        "Final Review 진행 가능": "active weight 후보가 paper_tracking 상태",
                         "멈춰야 하는 경우": "active 후보가 not_started, hold, reject, re_review 상태",
                     },
                     {
                         "확인 항목": "Proposal 저장 필요 여부",
-                        "Live Readiness 후보 가능": "단일 후보 직행 평가는 저장 불필요, 다중 후보 구성은 proposal draft 저장 필요",
+                        "Final Review 진행 가능": "단일 후보 직행 평가는 저장 불필요, 다중 후보 구성은 proposal draft 저장 필요",
                         "멈춰야 하는 경우": "단일 후보인데 의미 없는 proposal 저장을 반복하거나, 다중 후보인데 구성 초안을 저장하지 않음",
                     },
                     {
                         "확인 항목": "Blocker",
-                        "Live Readiness 후보 가능": "rejected 후보 active weight, blocked core anchor 같은 hard blocker가 없음",
+                        "Final Review 진행 가능": "rejected 후보 active weight, blocked core anchor 같은 hard blocker가 없음",
                         "멈춰야 하는 경우": "저장 blocker가 남아 있음",
                     },
                 ]
             )
             st.dataframe(proposal_rows, use_container_width=True, hide_index=True)
             st.success(
-                "단일 후보는 `LIVE_READINESS_DIRECT_READY`, 다중 후보 proposal은 `LIVE_READINESS_CANDIDATE_READY`이면 "
-                "향후 Live Readiness 단계가 읽을 수 있는 후보 형태로 봅니다."
+                "현재 Portfolio Proposal UI의 route label은 `LIVE_READINESS_DIRECT_READY` / `LIVE_READINESS_CANDIDATE_READY`로 남아 있을 수 있습니다. "
+                "현재 제품 흐름에서는 이 상태를 Final Review가 읽을 수 있는 후보 형태로 해석합니다."
             )
             st.warning(
-                "`Open Live Readiness` 버튼은 아직 다음 개발 전까지 비활성화됩니다. 다중 후보 구성일 때만 `Save Portfolio Proposal Draft`를 사용합니다."
+                "Portfolio Proposal은 최종 승인 단계가 아닙니다. 다중 후보 구성일 때만 `Save Portfolio Proposal Draft`를 사용하고, "
+                "실전 후보 선정 여부는 Final Review에서 판단합니다."
+            )
+
+        with st.expander("8단계 Final Review 검증에서 9단계 최종 판단 기록으로 넘어가는 최소 기준", expanded=True):
+            st.caption(
+                "이 기준은 validation / robustness / paper observation을 확인한 뒤 최종 판단을 기록해도 되는지 보는 기준입니다."
+            )
+            validation_rows = pd.DataFrame(
+                [
+                    {
+                        "확인 항목": "검토 대상",
+                        "최종 판단 기록 가능": "단일 current candidate 또는 saved portfolio proposal이 명확히 선택됨",
+                        "멈춰야 하는 경우": "source가 비어 있거나 저장 당시 후보 / proposal과 현재 선택이 맞지 않음",
+                    },
+                    {
+                        "확인 항목": "Validation Pack",
+                        "최종 판단 기록 가능": "route, score, blocker, component risk가 해석 가능하고 hard blocker가 없음",
+                        "멈춰야 하는 경우": "Portfolio Construction, Data Trust, Blocking Scope 같은 hard blocker가 남음",
+                    },
+                    {
+                        "확인 항목": "Robustness / Stress",
+                        "최종 판단 기록 가능": "기간, benchmark, CAGR / MDD, stress preview가 판단 근거로 읽힘",
+                        "멈춰야 하는 경우": "benchmark 부재, 기간 부족, drawdown gap 미해석처럼 검증 근거가 비어 있음",
+                    },
+                    {
+                        "확인 항목": "Paper Observation",
+                        "최종 판단 기록 가능": "paper tracking 또는 관찰 기준이 final record 안에서 설명 가능",
+                        "멈춰야 하는 경우": "실전 전 관찰 조건이 전혀 없거나 남은 보강 항목을 설명하지 못함",
+                    },
+                    {
+                        "확인 항목": "자동 실행 경계",
+                        "최종 판단 기록 가능": "preview를 열어도 proposal 저장, live approval, broker order가 자동 수행되지 않음",
+                        "멈춰야 하는 경우": "검증 surface가 저장 / 승인 / 주문처럼 오해될 수 있음",
+                    },
+                ]
+            )
+            st.dataframe(validation_rows, use_container_width=True, hide_index=True)
+            st.success(
+                "검토 대상이 명확하고 validation / robustness / paper observation의 hard blocker가 없으면 "
+                "9단계에서 final decision route를 기록할 수 있습니다."
+            )
+            st.warning(
+                "검증 통과는 주문 실행이 아닙니다. 이 단계는 최종 판단 기록으로 넘어갈 수 있는지 확인하는 stop/go 기준입니다."
+            )
+
+        with st.expander("9단계 최종 판단 기록에서 10단계 저장 결과 확인으로 넘어가는 최소 기준", expanded=True):
+            st.caption(
+                "이 기준은 `최종 검토 결과 기록`을 append-only final decision으로 남긴 뒤 다시 열어 볼 수 있는지 확인하는 기준입니다."
+            )
+            record_rows = pd.DataFrame(
+                [
+                    {
+                        "확인 항목": "Final Decision Route",
+                        "저장 결과 확인 가능": "`SELECT_FOR_PRACTICAL_PORTFOLIO`, `HOLD_FOR_MORE_PAPER_TRACKING`, `REJECT_FOR_PRACTICAL_USE`, `RE_REVIEW_REQUIRED` 중 하나",
+                        "멈춰야 하는 경우": "판단 route가 비어 있거나 화면 문구와 실제 route가 어긋남",
+                    },
+                    {
+                        "확인 항목": "Operator Reason",
+                        "저장 결과 확인 가능": "왜 선정 / 보류 / 거절 / 재검토인지 사람이 읽을 이유가 작성됨",
+                        "멈춰야 하는 경우": "이유 없이 저장만 눌러 나중에 판단 근거를 복원할 수 없음",
+                    },
+                    {
+                        "확인 항목": "Constraints / Next Action",
+                        "저장 결과 확인 가능": "남은 제약과 다음 행동이 Final Review record 안에 남음",
+                        "멈춰야 하는 경우": "선정했지만 어떤 조건에서 운용해야 하는지, 보류했지만 무엇을 더 볼지 모름",
+                    },
+                    {
+                        "확인 항목": "Record Route",
+                        "저장 결과 확인 가능": "`FINAL_REVIEW_RECORD_READY` 상태로 `최종 검토 결과 기록` 저장",
+                        "멈춰야 하는 경우": "save readiness blocker가 남아 있거나 duplicate id가 충돌함",
+                    },
+                ]
+            )
+            st.dataframe(record_rows, use_container_width=True, hide_index=True)
+            st.success(
+                "`FINAL_REVIEW_RECORD_READY`이고 최종 판단 / 이유 / 다음 행동이 남아 있으면 "
+                "10단계 `기록된 최종 검토 결과 확인`에서 결과를 다시 확인합니다."
+            )
+            st.warning(
+                "Final Selection Decision Registry는 최종 판단 원본입니다. current candidate, Pre-Live, Portfolio Proposal registry를 덮어쓰지 않습니다."
+            )
+
+        with st.expander("10단계에서 실전 후보 선정 여부를 최종 확인하는 기준", expanded=True):
+            st.caption(
+                "이 기준은 사용자가 마지막으로 `이 포트폴리오가 실전 후보로 선정되었는가`를 읽는 기준입니다."
+            )
+            final_rows = pd.DataFrame(
+                [
+                    {
+                        "저장 판단": "SELECT_FOR_PRACTICAL_PORTFOLIO",
+                        "화면 해석": "실전 후보로 선정",
+                        "다음에 할 일": "실제 주문 전 투입 금액, 리밸런싱, 모니터링, stop / re-review 기준을 별도 운영 판단으로 정리",
+                    },
+                    {
+                        "저장 판단": "HOLD_FOR_MORE_PAPER_TRACKING",
+                        "화면 해석": "내용 부족 / 관찰 필요",
+                        "다음에 할 일": "paper observation 기간과 추가 확인 지표를 채운 뒤 다시 Final Review",
+                    },
+                    {
+                        "저장 판단": "REJECT_FOR_PRACTICAL_USE",
+                        "화면 해석": "투자하면 안 됨",
+                        "다음에 할 일": "실전 후보군에서 제외하고 필요하면 near-miss / rejected 근거로 보관",
+                    },
+                    {
+                        "저장 판단": "RE_REVIEW_REQUIRED",
+                        "화면 해석": "재검토 필요",
+                        "다음에 할 일": "데이터 / 기간 / 후보 구성 / 비중 조건을 바꾼 뒤 다시 검토",
+                    },
+                ]
+            )
+            st.dataframe(final_rows, use_container_width=True, hide_index=True)
+            st.success(
+                "`SELECT_FOR_PRACTICAL_PORTFOLIO`로 저장된 record가 있으면, 현재 프로그램 기준으로는 "
+                "실전 후보 선정 여부 확인까지 도달한 것입니다."
+            )
+            st.warning(
+                "이 최종 확인도 live approval, broker order, 자동매매 지시가 아닙니다. "
+                "화면의 `Live Approval / Order` 경계가 disabled 상태인지 함께 확인합니다."
             )
 
     st.markdown("### 문서와 파일")
@@ -3363,14 +3581,29 @@ def _render_guides_page() -> None:
                     "역할": "finance package의 현재 제품 표면, data / strategy / review layer 요약",
                 },
                 {
-                    "상황": "이번 backtest walkthrough 실습 흐름을 따라갈 때",
+                    "상황": "과거 walkthrough 실습 맥락을 참고할 때",
                     "문서": ".note/finance/operations/BACKTEST_1_TO_11_WALKTHROUGH_SESSION.md",
-                    "역할": "GTAA 실습 후보, 4->5 / 5->6 판단 기준, Compare smoke 결과 기록",
+                    "역할": "초기 1~11 실습 세션의 질문 / 후보 예시 / Guide 보조 기능 기록. 현재 Guides 실행 흐름은 1~10단계 기준",
                 },
                 {
                     "상황": "Backtest 화면이 어떤 순서로 동작하는지 볼 때",
                     "문서": ".note/finance/code_analysis/WEB_BACKTEST_UI_FLOW.md",
-                    "역할": "Single / Compare / Candidate Review / Pre-Live / Portfolio Proposal UI 흐름",
+                    "역할": "Single / Compare / Candidate Review / Portfolio Proposal / Final Review UI 흐름",
+                },
+                {
+                    "상황": "포트폴리오 초안 저장소를 이해할 때",
+                    "문서": ".note/finance/operations/PORTFOLIO_PROPOSAL_REGISTRY_GUIDE.md",
+                    "역할": "여러 후보를 묶은 portfolio proposal draft가 무엇이고 언제 저장되는지 설명",
+                },
+                {
+                    "상황": "과거 paper tracking ledger 기록을 해석할 때",
+                    "문서": ".note/finance/operations/PAPER_PORTFOLIO_TRACKING_LEDGER_GUIDE.md",
+                    "역할": "Phase33 ledger의 호환성 / 관찰 기록 의미 설명. 현재 main flow는 Final Review inline paper observation 기준",
+                },
+                {
+                    "상황": "최종 판단 기록을 확인할 때",
+                    "문서": ".note/finance/operations/FINAL_PORTFOLIO_SELECTION_DECISIONS_GUIDE.md",
+                    "역할": "Final Review에서 저장한 선정 / 보류 / 거절 / 재검토 판단 기록 사용법",
                 },
                 {
                     "상황": "용어가 헷갈릴 때",
@@ -3401,9 +3634,15 @@ def _render_guides_page() -> None:
                     ".note/finance/MASTER_PHASE_ROADMAP.md",
                     ".note/finance/FINANCE_TERM_GLOSSARY.md",
                     ".note/finance/operations/BACKTEST_1_TO_11_WALKTHROUGH_SESSION.md",
+                    ".note/finance/operations/PORTFOLIO_PROPOSAL_REGISTRY_GUIDE.md",
+                    ".note/finance/operations/PAPER_PORTFOLIO_TRACKING_LEDGER_GUIDE.md",
+                    ".note/finance/operations/FINAL_PORTFOLIO_SELECTION_DECISIONS_GUIDE.md",
                     ".note/finance/code_analysis/WEB_BACKTEST_UI_FLOW.md",
                     ".note/finance/registries/CURRENT_CANDIDATE_REGISTRY.jsonl",
                     ".note/finance/registries/PRE_LIVE_CANDIDATE_REGISTRY.jsonl",
+                    ".note/finance/registries/PORTFOLIO_PROPOSAL_REGISTRY.jsonl",
+                    ".note/finance/registries/PAPER_PORTFOLIO_TRACKING_LEDGER.jsonl",
+                    ".note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl",
                     ".note/finance/WORK_PROGRESS.md",
                     ".note/finance/QUESTION_AND_ANALYSIS_LOG.md",
                 ]
@@ -3421,8 +3660,12 @@ def _render_guides_page() -> None:
             - `Candidate Draft`와 `Review Note`는 Candidate Packaging 안에서 쓰는 저장 전 검토 기록입니다.
             - `Current Candidate Registry`는 명시적으로 남긴 후보 목록입니다.
             - `Pre-Live 운영 기록`은 paper / watchlist / hold / re-review 같은 실전 전 운영 상태 기록입니다.
-            - `Portfolio Proposal`은 단일 후보라면 저장을 반복하지 않고 Live Readiness 직행 가능 여부를 확인하고, 여러 후보를 묶을 때만 포트폴리오 초안을 저장하는 단계입니다.
+            - `Portfolio Proposal`은 단일 후보라면 저장을 반복하지 않고 Final Review 입력 후보로 읽고, 여러 후보를 묶을 때만 포트폴리오 초안을 저장하는 단계입니다.
             - `Proposal Components`는 비교 기능이 아니라 포트폴리오에 넣을 구성 후보 선택입니다. 비교는 `Compare & Portfolio Builder`에서 합니다.
+            - `Paper Tracking Ledger`는 과거 Phase33 / 호환성 기록으로 남아 있지만, 현재 main flow에서는 Final Review의 paper observation 기준으로 흡수합니다.
+            - `Final Review`는 validation, robustness, paper observation, 최종 판단 기록, 저장 결과 확인을 담당하는 마지막 active panel입니다.
+            - `SELECT_FOR_PRACTICAL_PORTFOLIO`는 실전 후보로 선정되었다는 뜻이지 live approval, broker order, 자동매매 지시가 아닙니다.
+            - `Live Approval / Order`는 현재 제품 범위 밖이며 화면에서도 disabled 경계로 읽습니다.
             """
         )
 

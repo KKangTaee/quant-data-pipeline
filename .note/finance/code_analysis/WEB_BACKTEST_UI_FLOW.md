@@ -72,9 +72,9 @@ Ingestion / Data Trust
      -> Draft 확인 / Review Note 저장 / Registry 저장 / Pre-Live 운영 기록 / Portfolio Proposal 이동 판단
   -> Compare 재검토 또는 Portfolio Proposal
   -> Portfolio Proposal
-     -> 후보 선택 / 목적 / 역할 / 비중 설계 / Live Readiness 진입 평가 / Proposal 저장
+     -> 후보 선택 / 목적 / 역할 / 비중 설계 / Proposal 저장 / Final Review 입력 준비
   -> Final Review
-     -> Portfolio Risk / Live Readiness Validation Pack
+     -> Portfolio Risk / Validation Pack
      -> Robustness / Stress Validation Preview
      -> Stress / Sensitivity Summary
      -> Paper Observation 기준 확인
@@ -89,7 +89,7 @@ Ingestion / Data Trust
 - `Registry 저장`은 저장된 판단 기록을 Current Candidate / Near Miss / Scenario / Stop 중 어디까지 남길지 정하고, 통과한 row만 Current Candidate Registry에 append하는 Candidate Packaging 내부 작업이다.
 - `Pre-Live 운영 기록`은 저장된 후보를 실제 돈 없이 paper / watchlist / hold / re-review 중 어떻게 관찰할지 기록하는 Candidate Packaging 내부 작업이다.
 - `Portfolio Proposal 이동 판단`은 Pre-Live 운영 record를 저장하기 전에 저장 가능 여부와 저장 후 Proposal 이동 가능 여부를 같이 보여주는 Candidate Packaging의 최종 route 확인이다.
-- `Portfolio Proposal`은 후보 묶음 제안이며, live trading approval이 아니다. 단일 후보는 별도 proposal 저장 없이 지나갈 수 있고, 여러 후보를 묶을 때는 역할 / 비중을 명시한다.
+- `Portfolio Proposal`은 후보 묶음 제안이며, live trading approval이 아니다. 단일 후보는 별도 proposal 저장 없이 Final Review 입력 후보로 읽고, 여러 후보를 묶을 때는 역할 / 비중을 명시한다. 내부 route label에 `Live Readiness`라는 legacy 표현이 남아 있어도 현재 사용자-facing 해석은 Final Review 입력 준비다.
 - `Final Review`는 Proposal 탭 밖에서 검증과 최종 판단을 담당한다. 별도 Paper Ledger 저장 버튼을 주요 흐름으로 노출하지 않고, paper observation 기준을 최종 검토 기록 안에 포함하며 현재 사용자-facing workflow의 마지막 active panel이다.
 - `Portfolio Risk / Live Readiness Validation Pack`은 Phase 31에서 추가된 읽기 전용 검증 surface다. 단일 후보, 작성 중 proposal, 저장된 proposal을 route / score / blocker / component risk / 다음 단계 안내로 읽는다.
 - `Robustness / Stress Validation Pack`은 Phase 32에서 추가된 surface다. stress 검증 실행 전 period / contract / benchmark / CAGR / MDD / compare evidence가 충분한지 확인하고, stress / sensitivity summary row와 Phase33 paper ledger handoff를 보여준다. 아직 실제 stress sweep을 실행했다는 뜻은 아니다.
@@ -100,10 +100,10 @@ Ingestion / Data Trust
 
 | 묶음 | 내용 |
 |---|---|
-| `핵심 개념 가이드` | 실전 승격 흐름, Real-Money Contract, GTAA Risk-Off 후보군, interval, Compare 대상 선정법 해석 |
-| `1~7 단계 실행 흐름` | 테스트에서 상용화 후보 검토까지의 단계별 흐름. 각 단계는 expander로 접어 읽는다 |
-| `단계 통과 기준` | 4->5, 5->6, 6->7처럼 다음 단계로 넘길지 판단하는 stop/go 기준과 Candidate Packaging 기준. 각 기준은 expander로 접어 읽는다 |
-| `문서와 파일` | 현재 먼저 볼 문서, 주요 registry / guide / log 파일, live approval이 아님을 구분하는 운영 경계 |
+| `핵심 개념 가이드` | 실전 승격 흐름, Real-Money Contract, GTAA Risk-Off 후보군, interval, Compare 대상 선정법, Portfolio Proposal -> Final Review -> 최종 판단 완료 해석 |
+| `1~10 단계 실행 흐름` | 데이터 최신화부터 Final Review 저장 결과 확인까지의 단계별 흐름. 각 단계는 expander로 접어 읽는다 |
+| `단계 통과 기준` | 4->5, 5->6, 6->7, 7->8, 8->9, 9->10, 최종 판단 해석처럼 다음 단계로 넘길지 판단하는 stop/go 기준 |
+| `문서와 파일` | 현재 먼저 볼 문서, proposal / paper ledger / final decision guide와 registry path, live approval이 아님을 구분하는 운영 경계 |
 
 ## Phase 30 Portfolio Proposal 계약
 
@@ -543,7 +543,7 @@ CURRENT_CANDIDATE_REGISTRY.jsonl
   -> 후보 1개 선택
      -> 단일 후보 직행 평가
      -> Live Readiness 직행 route/readiness panel 확인
-     -> proposal draft 저장 없이 향후 Live Readiness 입력으로 사용
+     -> proposal draft 저장 없이 Final Review 입력 후보로 사용
   -> 후보 2개 이상 선택
      -> 2. 목적 / 역할 / 비중 설계
      -> 3. Proposal 저장 및 다음 단계 판단
@@ -558,8 +558,8 @@ CURRENT_CANDIDATE_REGISTRY.jsonl
 구분:
 
 - Portfolio Proposal은 current candidate 하나를 다시 저장하는 단계가 아니다.
-- 단일 후보는 `LIVE_READINESS_DIRECT_READY` / `LIVE_READINESS_DIRECT_REVIEW_REQUIRED` / `LIVE_READINESS_DIRECT_BLOCKED` route로 기존 current candidate와 Pre-Live record가 다음 단계 입력으로 충분한지 본다.
-- 여러 후보는 `LIVE_READINESS_CANDIDATE_READY` / `PROPOSAL_DRAFT_READY` / `PROPOSAL_BLOCKED` route로 proposal draft 저장 가능성과 Live Readiness 후보성을 본다.
+- 단일 후보는 `LIVE_READINESS_DIRECT_READY` / `LIVE_READINESS_DIRECT_REVIEW_REQUIRED` / `LIVE_READINESS_DIRECT_BLOCKED` route로 기존 current candidate와 Pre-Live record가 Final Review 입력으로 충분한지 본다.
+- 여러 후보는 `LIVE_READINESS_CANDIDATE_READY` / `PROPOSAL_DRAFT_READY` / `PROPOSAL_BLOCKED` route로 proposal draft 저장 가능성과 Final Review 입력 후보성을 본다. route label의 `Live Readiness`는 Phase31 legacy naming이며, 현재 active workflow에서는 Final Review 전 검증 준비로 읽는다.
 - `Proposal Components`는 비교 기능이 아니라 포트폴리오에 넣을 구성 후보 선택이다. 비교는 `Compare & Portfolio Builder`에서 수행한다.
 - `2. 목적 / 역할 / 비중 설계`에서는 active weight가 있는 proposal에 최소 1개 `core_anchor`가 필요하다. `return_driver`, `diversifier`, `defensive_sleeve`, `satellite`은 중심 후보를 보완하는 역할이고, `watch_only`는 보통 0% 관찰 후보로 둔다.
 - target weight 합계가 100%가 아니거나 core anchor가 없으면 `PROPOSAL_BLOCKED`가 정상적으로 뜬다. UI는 이때 criteria 이름만 보여주지 않고, 비중 합계 조정 / core anchor 지정 같은 수정 안내를 함께 보여준다.

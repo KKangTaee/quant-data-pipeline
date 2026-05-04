@@ -3200,3 +3200,16 @@ Detailed historical logs were archived on `2026-04-13`.
 - Decision:
   - Existing final decision JSON rows are not rewritten.
   - Legacy `phase35_handoff` data can remain in raw JSON for compatibility, but the UI should explain the record as Final Review completion.
+
+### 2026-05-04
+- Updated `Reference > Guides` after the user asked to align the guide with the current final-candidate workflow.
+- Changed:
+  - expanded the guide execution flow from the stale 1~7 / 1~8 framing to the current 1~10 flow
+  - added a core concept guide for `Portfolio Proposal -> Final Review -> 최종 판단 완료`
+  - updated stage pass criteria for 7->8, 8->9, 9->10, and final decision interpretation
+  - refreshed the guide's document / file list with proposal, paper ledger, and final decision guide / registry paths
+  - synced `WEB_BACKTEST_UI_FLOW.md`, the historical walkthrough note, and `FINANCE_DOC_INDEX.md` so they no longer imply a separate active Live Readiness / Post-Selection step
+- Decision:
+  - `Backtest > Final Review > 기록된 최종 검토 결과 확인` is the current final check for whether a portfolio was selected as a practical candidate.
+  - Portfolio Proposal UI may still contain legacy `Live Readiness` route labels, but the current user-facing interpretation is Final Review input readiness.
+  - `SELECT_FOR_PRACTICAL_PORTFOLIO` means selected as a practical candidate, not live approval, broker order, or auto-trading.

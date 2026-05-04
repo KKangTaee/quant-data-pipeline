@@ -1553,14 +1553,15 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 ### 이 섹션은 무엇인가
 - `현재 위치`가 지금 상태를 보여주는 상태판이라면,
   이 섹션은 Phase 25 이후 어떤 순서로 제품 기반을 강화할지 보여주는 다음 구간 안내판이다.
-- 이 구간의 목적은 Live Readiness / Final Approval로 바로 가는 것이 아니라,
+- 이 구간의 목적은 최종 판단으로 바로 뛰어가는 것이 아니라,
   그 전에 필요한 데이터 신뢰성, 전략 parity, 후보 검토, 포트폴리오 제안 기반을 만드는 것이다.
 
 ### 핵심 원칙
 - 기본 흐름은 개발 / 검증 / 운영 workflow 구축이다.
 - 사용자가 명시적으로 요청할 때만 투자 분석, 후보 비교, 실전 적합성 분석을 한다.
 - 강한 백테스트 결과가 자동으로 투자 추천이나 live trading 승인으로 이어지지 않는다.
-- Live Readiness / Final Approval은 Phase 30 이후 별도 phase로 다룬다.
+- 이후 흐름은 Phase35 보정 이후 `Portfolio Proposal -> Final Review -> 최종 판단 완료`로 단순화했다.
+  별도 Live Readiness / Final Approval active panel은 현재 제품 범위에 두지 않는다.
 
 ### Phase 26~30 요약
 
@@ -1656,7 +1657,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 - Phase 30은 implementation_complete / manual_qa_pending 상태다.
 - 첫 작업 단위는 portfolio proposal 기능 구현이 아니라,
   `테스트에서 상용화 후보 검토까지 사용하는 흐름`을 Phase 29 이후 기준으로 다시 정렬하는 것이었다.
-- 기준 흐름은 `Ingestion / Data Trust -> Single Strategy Backtest -> Real-Money Signal -> Hold / Blocker Resolution -> Compare -> Candidate Packaging -> Compare 재검토 또는 Pre-Live Review -> Portfolio Proposal -> Live Readiness / Final Approval`이다.
+- 현재 기준 흐름은 `Ingestion / Data Trust -> Single Strategy Backtest -> Real-Money Signal -> Hold / Blocker Resolution -> Compare -> Candidate Packaging -> Compare 재검토 또는 Portfolio Proposal -> Final Review -> 최종 판단 완료`다.
 - `backtest.py`가 16k lines 이상으로 커졌으므로, Candidate Review / Pre-Live / registry helper / History / Saved Portfolio / result display / strategy forms를 어떤 순서로 점진 분리할지 먼저 문서화했다.
 - 두 번째 작업으로 Portfolio Proposal row 계약을 정의했다.
   이 계약은 proposal objective, component candidates, target weights, risk constraints, evidence snapshot, open blockers, operator decision을 포함한다.

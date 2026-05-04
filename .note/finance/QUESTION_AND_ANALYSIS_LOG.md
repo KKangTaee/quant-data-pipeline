@@ -4035,3 +4035,17 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Follow-up:
   - saved final decision display에 현재 Final Review end-state 문구 변환 layer를 추가했다
   - raw JSON은 호환성 때문에 유지하지만 route panel은 legacy Phase35 운영 가이드 문구를 보여주지 않도록 했다
+
+### 2026-05-04 - Reference Guides 최종 10단계 흐름 정렬
+- User request:
+  - 현재 단계 기준으로 Guides를 최종 10단계 흐름, 핵심 개념 가이드, 단계 통과 기준, 문서 / 파일 안내까지 업데이트해 달라고 요청함
+- Interpreted goal:
+  - 사용자가 `테스트에서 상용화 후보 검토까지 사용하는 흐름`을 따라가면 마지막에 실전 후보 선정 여부를 확인할 수 있어야 하며, Phase35에서 제거한 Post-Selection Guide나 별도 Live Readiness / Final Approval 흐름이 다시 살아나 보이면 안 됨
+- Analysis result:
+  - 현재 사용자-facing end state는 `Portfolio Proposal -> Final Review -> 최종 판단 완료`다
+  - Guides 실행 흐름은 1~10단계로 정리한다: 데이터 최신화, Single Strategy, Real-Money, Hold 해결, Compare, Candidate Packaging, Portfolio Proposal, Final Review 검증, 최종 판단 기록, 기록된 최종 검토 결과 확인
+  - `SELECT_FOR_PRACTICAL_PORTFOLIO`는 실전 후보로 선정되었다는 최종 확인 신호지만, live approval / broker order / 자동매매 지시는 아니다
+  - Portfolio Proposal 내부에 남아 있는 `Live Readiness` route label은 Phase31 legacy naming으로 보고, 현재 가이드에서는 Final Review 입력 준비로 해석한다
+- Follow-up:
+  - `Reference > Guides`의 핵심 개념, 1~10 단계 실행 흐름, 단계 통과 기준, 문서 / 파일 안내를 갱신했다
+  - `WEB_BACKTEST_UI_FLOW.md`, historical walkthrough note, `FINANCE_DOC_INDEX.md`를 같은 기준으로 동기화했다
