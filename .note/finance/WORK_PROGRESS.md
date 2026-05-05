@@ -3330,3 +3330,9 @@ Detailed historical logs were archived on `2026-04-13`.
   - `Compare & Portfolio Builder` 내부 전환을 상태 기반 선택 UI로 바꾸고, replay / load / 새 compare 실행 후에는 `전략 비교` 화면으로 돌아오게 했다.
   - 최신 compare 결과는 `전략 비교` 화면 상단의 `5단계 Compare 결과` 박스에 먼저 렌더링하도록 이동했다.
   - 후속 bugfix: Streamlit widget key를 생성 후 직접 수정해 발생한 `backtest_compare_workspace_mode cannot be modified` 오류를 막기 위해, 화면 전환은 `backtest_compare_workspace_mode_request` pending flag로 요청하고 다음 rerun에서 widget 생성 전 적용하도록 변경했다.
+
+### 2026-05-06
+- Compare 단계 표현 변경 롤백 및 작업 규칙 보강:
+  - user request에 따라 직전 `Compare 통과 판단 단계 표현 정리` 커밋을 revert했다. `Replay Saved Mix` 화면 전환 오류 수정은 유지했다.
+  - user feedback을 반영해 단순 label 변경으로 UX / 단계 혼란을 해결하려 하지 말고, 먼저 흐름 구조와 stage ownership을 설명한 뒤 `진행할까요?` 확인을 받도록 `AGENTS.md`에 지침을 추가했다.
+  - 향후 Compare / Candidate Review 단계 개편은 5단계 확인 위치와 6단계 handoff가 자연스럽게 이어지는 화면 구조를 먼저 제안한 뒤 진행한다.

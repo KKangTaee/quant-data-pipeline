@@ -25,6 +25,18 @@
   - `finance/data/*`, `finance/data/db/*`: ingestion, schema, persistence
   - `finance/engine.py`, `finance/transform.py`, `finance/strategy.py`, `finance/performance.py`, `finance/display.py`, `finance/visualize.py`: backtest and analysis
 
+## User Question / UX Flow Approval Rules
+- When the user asks a question about product flow, stage meaning, UX / UI structure, validation criteria, or whether a step is necessary, answer the question first before changing code or documents.
+- Do not treat a UX / workflow concern as a text-only copy change by default. First inspect the underlying screen structure, state flow, route boundary, and user task sequence; then explain whether the right fix is copy, layout, state behavior, or workflow restructuring.
+- Before implementing a requested UX / workflow / stage-structure change, explain:
+  - what problem you believe the user is pointing at
+  - which files / surfaces would likely change
+  - what the proposed user-facing flow will become
+  - any tradeoff or alternative path that matters
+- After that explanation, explicitly ask `진행할까요?` and wait for confirmation before editing code or durable docs.
+- If the user already gave explicit confirmation such as `진행해줘`, proceed with the agreed scope, but do not silently expand into adjacent workflow redesigns.
+- If a change mixes multiple stages, for example Compare gate plus Candidate Review handoff, make the stage ownership explicit in the proposal instead of hiding the ambiguity with renamed labels.
+
 ## Note Rules
 - Keep long-lived project notes under the top-level `.note/` directory, not inside package subdirectories.
 - For `finance` work, prefer `.note/finance/` as the canonical note location.
