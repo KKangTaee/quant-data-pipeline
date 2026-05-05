@@ -648,6 +648,12 @@ def _init_backtest_state() -> None:
         st.session_state.backtest_compare_prefill_notice = None
     if "backtest_compare_source_context" not in st.session_state:
         st.session_state.backtest_compare_source_context = None
+    if "backtest_compare_workspace_mode" not in st.session_state:
+        st.session_state.backtest_compare_workspace_mode = "전략 비교"
+    if "backtest_compare_workspace_mode_request" not in st.session_state:
+        st.session_state.backtest_compare_workspace_mode_request = None
+    if "backtest_compare_result_notice" not in st.session_state:
+        st.session_state.backtest_compare_result_notice = None
     if "backtest_weighted_portfolio_prefill" not in st.session_state:
         st.session_state.backtest_weighted_portfolio_prefill = None
     if "backtest_saved_portfolio_notice" not in st.session_state:

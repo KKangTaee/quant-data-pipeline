@@ -336,7 +336,8 @@ registry snapshot과 실제 재실행 결과가 같은 설정으로 복원되는
 
 ```text
 Backtest > Compare & Portfolio Builder
-  -> 전략 비교 탭
+  -> 전략 비교 화면
+  -> 5단계 Compare 결과
   -> compare result bundles
   -> weight 입력
   -> optional GTAA 70 / Equal Weight 30 quick mix
@@ -345,8 +346,10 @@ Backtest > Compare & Portfolio Builder
   -> Save Portfolio Mix
 
 Backtest > Compare & Portfolio Builder
-  -> 저장 Mix 다시 열기 탭
+  -> 저장 Mix 다시 열기 화면
   -> Load Saved Mix Into Compare or Replay Saved Mix
+  -> 전략 비교 화면으로 자동 이동
+  -> 5단계 Compare 결과 / weighted result 확인
 ```
 
 구분:
@@ -354,7 +357,12 @@ Backtest > Compare & Portfolio Builder
 - `전략 비교`: 새 compare를 실행하고, 그 결과를 기반으로 weighted portfolio mix를 만든 뒤 저장한다.
 - `저장 Mix 다시 열기`: `.note/finance/saved/SAVED_PORTFOLIOS.jsonl`에 저장한 reusable setup을 다시 불러오거나 replay한다.
 - `Load Saved Mix Into Compare`: 저장된 compare 구성과 weight를 form에 다시 채운다.
-- `Replay Saved Mix`: 저장 당시 context로 compare와 weighted portfolio를 다시 실행한다.
+- `Replay Saved Mix`: 저장 당시 context로 compare와 weighted portfolio를 다시 실행하고, 결과 확인을 위해 `전략 비교` 화면으로 되돌린다.
+
+2026-05-06 이후 Compare workspace의 `전략 비교` / `저장 Mix 다시 열기` 전환은 `st.tabs`가 아니라 상태를 가진 선택 UI로 관리한다.
+이는 saved mix replay 후에도 결과가 숨은 탭 안에 남지 않게 하기 위한 것이다.
+최근 compare 결과는 `전략 비교` 화면 상단의 `5단계 Compare 결과` 박스에 먼저 표시하고,
+그 아래에 입력 form과 weighted portfolio builder를 둔다.
 
 저장된 weighted portfolio는 live trading 승인 기록이 아니다.
 후보 조합을 다시 재현하고 검증하기 위한 operator workflow artifact다.

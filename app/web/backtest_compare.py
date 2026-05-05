@@ -1780,6 +1780,11 @@ def _run_saved_portfolio_record(record: dict[str, Any]) -> None:
         "weights_percent": weights_percent,
         "upstream_source_context": source_context,
     }
+    st.session_state.backtest_compare_workspace_mode_request = "전략 비교"
+    st.session_state.backtest_compare_result_notice = (
+        f"저장된 portfolio mix `{record.get('name')}`를 replay했습니다. "
+        "5단계 Compare 결과와 비중 포트폴리오 결과를 확인하세요."
+    )
     st.session_state.backtest_requested_panel = "Compare & Portfolio Builder"
 
     append_backtest_run_history(
@@ -2794,6 +2799,7 @@ def _queue_saved_portfolio_compare_prefill(saved_portfolio: dict[str, Any]) -> N
     source_context = dict(saved_portfolio.get("source_context") or {})
     st.session_state.backtest_compare_prefill_payload = compare_context
     st.session_state.backtest_compare_prefill_pending = True
+    st.session_state.backtest_compare_workspace_mode_request = "전략 비교"
     st.session_state.backtest_compare_prefill_notice = (
         f"저장된 포트폴리오 `{saved_portfolio.get('name')}`의 compare 전략/기간/세부 설정과 "
         "weighted portfolio weight/date alignment를 다시 채웠습니다. "
@@ -3624,6 +3630,19 @@ def _render_strategy_compare_workspace() -> None:
             st.session_state.get("backtest_compare_prefill_payload"),
             st.session_state.get("backtest_compare_source_context"),
         )
+    compare_result_notice = st.session_state.get("backtest_compare_result_notice")
+    if compare_result_notice:
+        st.success(compare_result_notice)
+        st.session_state.backtest_compare_result_notice = None
+    if st.session_state.backtest_compare_bundles or st.session_state.backtest_compare_error:
+        with st.container(border=True):
+            st.markdown("### 5단계 Compare 결과")
+            st.caption(
+                "최근 실행한 Compare 결과입니다. 여기서 Summary, Data Trust, Real-Money gate, "
+                "상대 비교 근거를 보고 Candidate Packaging으로 넘길 수 있는지 확인합니다."
+            )
+            _render_compare_results()
+        st.divider()
     current_compare_selection = list(st.session_state.get("compare_selected_strategies") or [])
     normalized_compare_selection: list[str] = []
     for strategy_name in current_compare_selection:
@@ -5097,6 +5116,12 @@ def _render_strategy_compare_workspace() -> None:
                 st.session_state.backtest_compare_bundles = bundles
                 st.session_state.backtest_compare_error = None
                 st.session_state.backtest_compare_error_kind = None
+                st.session_state.backtest_weighted_bundle = None
+                st.session_state.backtest_weighted_error = None
+                st.session_state.backtest_compare_workspace_mode_request = "전략 비교"
+                st.session_state.backtest_compare_result_notice = (
+                    "Strategy Comparison 결과를 만들었습니다. 아래 5단계 Compare 결과에서 통과 여부를 확인하세요."
+                )
                 append_backtest_run_history(
                     bundle={
                         "summary_df": pd.DataFrame(),
@@ -5139,7 +5164,7 @@ def _render_strategy_compare_workspace() -> None:
                 st.session_state.backtest_compare_bundles = None
                 st.session_state.backtest_compare_error_kind = "system"
                 st.session_state.backtest_compare_error = f"Comparison execution failed: {exc}"
-    _render_compare_results()
+        st.rerun()
     if st.session_state.backtest_compare_bundles:
         st.divider()
     _render_weighted_portfolio_builder()
@@ -5151,10 +5176,35 @@ def render_compare_portfolio_workspace() -> None:
         st.success(saved_notice)
         st.session_state.backtest_saved_portfolio_notice = None
 
-    workspace_tab, saved_tab = st.tabs(["전략 비교", "저장 Mix 다시 열기"])
-    with workspace_tab:
+    mode_options = ["전략 비교", "저장 Mix 다시 열기"]
+    requested_mode = st.session_state.get("backtest_compare_workspace_mode_request")
+    if requested_mode in mode_options:
+        st.session_state.backtest_compare_workspace_mode = requested_mode
+        st.session_state.backtest_compare_workspace_mode_request = None
+    if st.session_state.get("backtest_compare_workspace_mode") not in mode_options:
+        st.session_state.backtest_compare_workspace_mode = "전략 비교"
+    if hasattr(st, "segmented_control"):
+        st.segmented_control(
+            "Compare Workspace",
+            options=mode_options,
+            selection_mode="single",
+            required=True,
+            key="backtest_compare_workspace_mode",
+            label_visibility="collapsed",
+            width="stretch",
+        )
+    else:
+        st.radio(
+            "Compare Workspace",
+            options=mode_options,
+            horizontal=True,
+            key="backtest_compare_workspace_mode",
+            label_visibility="collapsed",
+        )
+
+    if st.session_state.backtest_compare_workspace_mode == "전략 비교":
         _render_strategy_compare_workspace()
-    with saved_tab:
+    else:
         _render_saved_portfolio_workspace()
 
 __all__ = [name for name in globals() if not name.startswith("__")]

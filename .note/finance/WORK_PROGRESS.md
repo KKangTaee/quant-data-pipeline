@@ -3276,3 +3276,57 @@ Detailed historical logs were archived on `2026-04-13`.
   - DB-backed Equal Weight smoke confirmed `real_money_hardening`, `promotion_decision`, `shortlist_status`, and `deployment_readiness_status` are now emitted
 - Note:
   - the tested Equal Weight baskets currently report `etf_operability_status=caution` because asset profile coverage is partial, so they may still be `hold/blocked`; that is now an explicit gate result rather than a missing judgment.
+
+### 2026-05-05
+- 정리 / 검증:
+  - user request에 따라 `Equal Weight Dividend Growth 4 (DGRW/SCHD/TDIV/VIG)` current candidate에 `inactive` tombstone row를 append해 Candidate Library 최신 active view에서 제외했다.
+  - Equal Weight ETF Real-Money gate 검증을 위해 주요 ETF 후보군의 `nyse_asset_profile` AUM / bid / ask metadata를 yfinance 기반 idempotent UPSERT로 보강했다.
+  - `Equal Weight Growth/Commodity 4 (QQQ/SOXX/XLE/IAU)`는 보강 후 `real_money_candidate / paper_probation / paper_only`, CAGR 19.96%, MDD -19.71%, SPY CAGR 13.67%, SPY MDD -24.80%로 runtime 재검증을 통과했다.
+- 후보 탐색:
+  - 배당 ETF 포함 Equal Weight 후보군을 3~5개 symbol, SPY 초과 CAGR, MDD 20% 이하 기준으로 재탐색했다.
+  - 가장 깔끔한 후보는 `IAU / QQQ / SOXX / VIG / XLE`, annual rebalance였다. Runtime 기준 CAGR 18.31%, MDD -19.27%, `real_money_candidate / paper_probation / paper_only`를 만족한다.
+  - SCHD 포함 후보는 성과상 SPY를 초과하는 조합이 있었지만, 현재 rolling validation에서 `hold/blocked` 또는 `watchlist_only`로 남아 10단계 실습 후보로는 VIG 포함 5종 후보가 더 깨끗하다.
+  - user request에 따라 `Equal Weight Dividend+Growth Balanced 5 (IAU/QQQ/SOXX/VIG/XLE)`를 Current Candidate Registry에 active row로 append해 Candidate Library에 노출했다.
+
+### 2026-05-05
+- GTAA SPY benchmark 후보 탐색:
+  - user request에 따라 `SPY`를 formal benchmark로 두고 `top=2~4`, universe 6~12개, `interval<=3` 조건의 GTAA 후보를 병렬 탐색했다.
+  - 가장 깔끔한 후보는 `QQQ / SOXX / MTUM / QUAL / USMV / IAU / IEF / TLT`, `top=2`, `interval=3`, `1M/6M/12M`, `MA250`, `cash_only`였다.
+  - Runtime 재검증 결과 `CAGR=18.97%`, `MDD=-18.10%`, `SPY CAGR=13.36%`, `SPY MDD=-15.90%`, `Promotion=real_money_candidate`, `Shortlist=paper_probation`, `Deployment=paper_only`, `Validation=normal`을 만족했다.
+  - 더 높은 CAGR 후보(`SPY/QQQ/SOXX/XLE/XLU/XLV/IEF/IAU`)도 있었지만 `Deployment=review_required`로 남아 10단계 실습 후보로는 위 후보가 더 깨끗하다.
+  - 결과를 `GTAA_BACKTEST_LOG.md`에 append했다. Candidate Library 등록은 아직 하지 않았다.
+
+### 2026-05-05
+- GTAA SPY benchmark 저MDD 후보 재탐색:
+  - user request에 따라 수익률을 조금 낮추더라도 `MDD<=15%`, `CAGR>=16~17%`, `top=2~4`, `interval<=3`, 10단계 통과 조건을 만족하는 후보를 추가 탐색했다.
+  - 대표 후보는 `QQQ / SOXX / MTUM / QUAL / USMV / IAU / IEF / TLT`, `top=3`, `interval=3`, `1M/6M`, `MA250`, `cash_only`, `Benchmark=SPY`였다.
+  - Runtime 재검증 결과 `CAGR=19.35%`, `MDD=-11.03%`, `SPY CAGR=13.36%`, `SPY MDD=-15.90%`, `Promotion=real_money_candidate`, `Shortlist=paper_probation`, `Deployment=paper_only`, `Validation=normal`을 만족했다.
+  - 결과를 `GTAA_BACKTEST_LOG.md`에 append했다. Candidate Library 등록은 아직 하지 않았다.
+
+### 2026-05-05
+- GTAA SPY Low-MDD 후보 Candidate Library 등록:
+  - user request에 따라 `GTAA SPY Low-MDD Style Top-3` 후보를 `.note/finance/registries/CURRENT_CANDIDATE_REGISTRY.jsonl`에 active current candidate row로 append했다.
+  - `registry_id=gtaa_current_candidate_spy_low_mdd_style_top3_i3_1m6m_ma250`.
+  - Registry validation 결과 required field 누락 없이 통과했다.
+
+### 2026-05-05
+- Equal Weight + GTAA mix 후보 탐색:
+  - user request에 따라 `GTAA SPY Low-MDD Style Top-3`와 함께 쓸 Equal Weight 후보를 symbol 3~5개, interval 6~12개월, benchmark `SPY`, 10단계 통과, MDD 15% 근처 조건으로 탐색했다.
+  - 엄격히 Equal Weight 단독 `MDD<=15%`와 `Promotion=real_money_candidate / Deployment=paper_only / Validation=normal`을 동시에 만족하는 후보는 찾지 못했다.
+  - 대표 실사용 후보는 `QQQ / SOXX / XLE / XLU / GLD`, annual rebalance다. 단독 기준 `CAGR=17.55%`, `MDD=-18.98%`, `Promotion=real_money_candidate`, `Deployment=paper_only`, `Validation=normal`.
+  - `GTAA 70 / EW 30` mix는 `CAGR=18.74%`, `MDD=-10.30%`, `Sharpe=2.51`; `GTAA 60 / EW 40` mix는 `CAGR=18.52%`, `MDD=-10.04%`, `Sharpe=2.54`.
+  - 결과를 `EQUAL_WEIGHT.md`와 `EQUAL_WEIGHT_BACKTEST_LOG.md`에 기록했다.
+
+### 2026-05-06
+- Portfolio Mix 저장:
+  - user request에 따라 `GTAA SPY Low-MDD Style Top-3 60% + Equal Weight Growth/Sector/Gold 5 40%` mix를 `.note/finance/saved/SAVED_PORTFOLIOS.jsonl`에 저장했다.
+  - `portfolio_id=portfolio_gtaa_spy_low_mdd_60_ew_growth_sector_gold_40`.
+  - 저장 row는 `Compare & Portfolio Builder > 저장 Mix 다시 열기`에서 다시 불러와 replay할 수 있는 reusable setup이다.
+
+### 2026-05-06
+- Compare 결과 노출 흐름 수정:
+  - user report에 따라 `Run Strategy Comparison` 또는 `Replay Saved Mix` 후 5단계 Compare 결과가 눈에 보이지 않는 문제를 확인했다.
+  - 원인은 saved mix replay 후에도 사용자가 `저장 Mix 다시 열기` 영역에 머물 수 있고, compare 결과가 `전략 비교` 영역 안쪽에 렌더링되어 결과가 숨은 것처럼 보이는 UX였다.
+  - `Compare & Portfolio Builder` 내부 전환을 상태 기반 선택 UI로 바꾸고, replay / load / 새 compare 실행 후에는 `전략 비교` 화면으로 돌아오게 했다.
+  - 최신 compare 결과는 `전략 비교` 화면 상단의 `5단계 Compare 결과` 박스에 먼저 렌더링하도록 이동했다.
+  - 후속 bugfix: Streamlit widget key를 생성 후 직접 수정해 발생한 `backtest_compare_workspace_mode cannot be modified` 오류를 막기 위해, 화면 전환은 `backtest_compare_workspace_mode_request` pending flag로 요청하고 다음 rerun에서 widget 생성 전 적용하도록 변경했다.
