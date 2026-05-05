@@ -496,7 +496,7 @@ def _build_compare_relative_evidence(
         judgment = "성과와 위험 쪽에 모두 설명 가능한 상대 근거가 있음"
     elif advantages:
         score = 2.0
-        judgment = "일부 상대 우위가 있어 Candidate Packaging 검토 가능"
+        judgment = "일부 상대 우위가 있어 Candidate Review 검토 가능"
     elif bottom_on_cagr_and_mdd:
         score = 0.0
         judgment = "CAGR과 MDD가 모두 최하위라 후보 초안 전에 재검토 필요"
@@ -621,7 +621,7 @@ def _build_compare_real_money_gate_assessment(bundle: dict[str, Any]) -> dict[st
 
     ready = promotion_ok and deployment_ok and blocker_ok
     if ready:
-        judgment = "Real-Money gate가 Candidate Packaging 검토를 막지 않음"
+        judgment = "Real-Money gate가 Candidate Review 검토를 막지 않음"
     else:
         judgment = "Real-Money gate에서 먼저 해결할 blocker가 있음"
 
@@ -709,13 +709,13 @@ def _build_candidate_draft_readiness_evaluation(
     )
 
     if clean_pass:
-        verdict = "6단계 Candidate Packaging 진입 가능"
+        verdict = "Candidate Review로 이동 가능"
         tone = "success"
-        next_action = "선택 후보를 Candidate Packaging으로 보내고 operator 판단과 registry 저장 준비를 남깁니다."
+        next_action = "선택 후보를 Candidate Review로 보내고 review note / registry 저장 준비를 이어갑니다."
     elif conditional_pass:
-        verdict = "6단계 Candidate Packaging 조건부 진입 가능"
+        verdict = "Candidate Review 조건부 이동 가능"
         tone = "warning"
-        next_action = "Candidate Packaging으로 넘기되 비교 약점과 확인 항목을 Review Note에 명시합니다."
+        next_action = "Candidate Review로 넘기되 비교 약점과 확인 항목을 Review Note에 명시합니다."
     else:
         verdict = "5단계 Compare에서 먼저 추가 확인"
         tone = "error"
@@ -804,17 +804,17 @@ def _render_candidate_draft_readiness_box(bundles: list[dict[str, Any]]) -> None
     default_index = strategy_names.index(default_strategy) if default_strategy in strategy_names else 0
 
     with st.container(border=True):
-        st.markdown("##### 6단계 Candidate Packaging 진입 평가")
+        st.markdown("##### Compare 통과 판단")
         st.caption(
-            "이 박스는 Compare 결과를 보고 선택 후보를 `Candidate Packaging`으로 넘겨도 되는지 판단하는 보조 신호입니다. "
-            "투자 승인이나 registry 저장이 아니라, 후보를 운영 기록과 Portfolio Proposal이 읽을 수 있는 형태로 패키징할 준비가 됐는지를 봅니다."
+            "이 박스는 5단계 Compare 안에서 선택 후보를 다음 검토 화면으로 넘겨도 되는지 보는 stop/go 신호입니다. "
+            "투자 승인이나 registry 저장이 아니라, Compare 결과 / Data Trust / Real-Money gate / 상대 근거가 충분한지를 확인합니다."
         )
         candidate_strategy = st.selectbox(
-            "Candidate Packaging으로 넘길 후보",
+            "Candidate Review로 넘길 후보",
             options=strategy_names,
             index=default_index,
             key="compare_candidate_draft_readiness_strategy",
-            help="Compare에 올린 전략 중 Candidate Packaging에서 검토할 후보를 고릅니다.",
+            help="Compare에 올린 전략 중 Candidate Review에서 이어서 검토할 후보를 고릅니다.",
         )
         evaluation = _build_candidate_draft_readiness_evaluation(
             bundles,
@@ -826,7 +826,7 @@ def _render_candidate_draft_readiness_box(bundles: list[dict[str, Any]]) -> None
         data_gate_status = str(data_gate.get("status") or "-").upper()
 
         metric_cols = st.columns([0.2, 0.2, 0.22, 0.38], gap="small")
-        metric_cols[0].metric("Draft Score", f"{score:.1f} / 10")
+        metric_cols[0].metric("Readiness", f"{score:.1f} / 10")
         metric_cols[1].metric("Data Trust", data_gate_status)
         with metric_cols[2]:
             st.caption("Candidate")
@@ -838,7 +838,7 @@ def _render_candidate_draft_readiness_box(bundles: list[dict[str, Any]]) -> None
             st.markdown(str(evaluation["next_action"]))
         st.progress(max(0.0, min(score / 10.0, 1.0)))
         st.caption(
-            "점수 기준: `8.0점 이상`은 깔끔한 Candidate Packaging 진행, `6.5점 이상`은 조건부 진행, "
+            "점수 기준: `8.0점 이상`은 깔끔한 다음 단계 이동, `6.5점 이상`은 조건부 이동, "
             "그 아래이면 Compare에서 더 확인합니다. Data Trust는 점수를 강제로 깎는 cap이 아니라 별도 gate로 표시합니다."
         )
 
@@ -862,12 +862,12 @@ def _render_candidate_draft_readiness_box(bundles: list[dict[str, Any]]) -> None
         elif evaluation["review_reasons"]:
             st.caption("Review Note에 같이 남길 항목: " + ", ".join(f"`{item}`" for item in evaluation["review_reasons"]))
         else:
-            st.caption("Candidate Packaging으로 넘기기 전에 막는 핵심 항목은 보이지 않습니다.")
+            st.caption("Candidate Review로 넘기기 전에 막는 핵심 항목은 보이지 않습니다.")
 
         action_cols = st.columns([0.34, 0.66], gap="small")
         with action_cols[0]:
             if st.button(
-                "Send Selected Strategy To Candidate Packaging",
+                "Send Selected Strategy To Candidate Review",
                 key="compare_send_candidate_draft",
                 disabled=not bool(evaluation["can_send_to_candidate_draft"]),
                 use_container_width=True,
@@ -887,7 +887,7 @@ def _render_candidate_draft_readiness_box(bundles: list[dict[str, Any]]) -> None
         with action_cols[1]:
             st.caption(
                 "버튼을 누르면 `Candidate Review > 1. Draft 확인`으로 이동합니다. "
-                "아직 current candidate registry 저장이나 Pre-Live 운영 record 저장이 아니라 6단계 패키징 초안을 여는 동작입니다."
+                "아직 current candidate registry 저장이나 Pre-Live 운영 record 저장이 아니라 다음 검토 초안을 여는 동작입니다."
             )
 
         with st.expander("점수 계산 기준 보기", expanded=False):
@@ -3639,7 +3639,7 @@ def _render_strategy_compare_workspace() -> None:
             st.markdown("### 5단계 Compare 결과")
             st.caption(
                 "최근 실행한 Compare 결과입니다. 여기서 Summary, Data Trust, Real-Money gate, "
-                "상대 비교 근거를 보고 Candidate Packaging으로 넘길 수 있는지 확인합니다."
+                "상대 비교 근거를 보고 Candidate Review로 넘길 수 있는지 확인합니다."
             )
             _render_compare_results()
         st.divider()
