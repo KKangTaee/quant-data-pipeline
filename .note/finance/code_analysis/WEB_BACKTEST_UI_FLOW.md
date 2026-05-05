@@ -232,7 +232,7 @@ strategy multi-select
   -> strategy별 box에서 variant / advanced inputs 설정
   -> Run Strategy Comparison
   -> strategy별 result bundle 실행
-  -> Compare 통과 판단
+  -> 6단계 Candidate Packaging 진입 평가
   -> comparison table / overlay / focused strategy 표시
   -> Weighted Portfolio Builder로 전달
 ```
@@ -244,13 +244,13 @@ strategy multi-select
 - variant 변경은 버튼 없이 즉시 아래 옵션이 바뀌는 방향이 선호된다.
 - 최대 compare 전략 수는 operator가 읽을 수 있는 범위로 유지한다.
 
-Compare 결과 상단에는 `Compare 통과 판단` 박스를 둔다.
+Compare 결과 상단에는 `6단계 Candidate Packaging 진입 평가` 박스를 둔다.
 
 목적:
 
-- Compare 결과 중 어떤 전략을 다음 `Candidate Review` 화면으로 넘길지 명시적으로 선택하게 한다.
+- Compare 결과 중 어떤 전략을 6단계 `Candidate Packaging`으로 넘길지 명시적으로 선택하게 한다.
 - Compare 실행 정상 여부, 선택 후보의 Data Trust, Real-Money gate, 상대 비교 근거를 10점으로 요약한다.
-- Data Trust는 Readiness 점수를 강제로 `6.4` 같은 값으로 누르는 cap이 아니라, 별도 `OK / WARNING / BLOCKED` gate로 같이 표시한다.
+- Data Trust는 Draft Score를 강제로 `6.4` 같은 값으로 누르는 cap이 아니라, 별도 `OK / WARNING / BLOCKED` gate로 같이 표시한다.
 - 이 평가는 current candidate registry 저장, Pre-Live 승인, live trading approval이 아니라 후보 검토 초안으로 넘길 수 있는지 보는 신호다.
 
 기준:
@@ -262,15 +262,15 @@ Compare 결과 상단에는 `Compare 통과 판단` 박스를 둔다.
 
 점수 해석:
 
-- `8.0 / 10` 이상이면 Candidate Review로 깔끔하게 진행 가능하다.
+- `8.0 / 10` 이상이면 6단계 Candidate Packaging으로 깔끔하게 진행 가능하다.
 - `6.5 / 10` 이상이면 조건부 진행 가능하되 Review Note에 약점과 확인 항목을 남긴다.
 - 짧은 실제 종료일 불일치, warning, excluded / malformed ticker 같은 Data Trust 이슈는 score를 cap하지 않고 warning으로 표시한다.
 - 가격 최신성 error 또는 결과 기간이 크게 비는 Data Trust blocked 상태, Real-Money blocker, 비교 실패, 상대 근거 없음은 5단계 Compare에서 먼저 재확인한다.
 
 실행:
 
-- 통과 또는 조건부 통과 상태에서는 `Send Selected Strategy To Candidate Review` 버튼으로 `Candidate Review > 1. Draft 확인`으로 보낼 수 있다.
-- 보내진 draft는 아직 registry 저장이 아니며, Candidate Review 안에서 operator decision과 next action을 남겨야 한다.
+- 통과 또는 조건부 통과 상태에서는 `Send Selected Strategy To Candidate Packaging` 버튼으로 `Candidate Review > 1. Draft 확인`으로 보낼 수 있다.
+- 보내진 draft는 아직 registry 저장이 아니며, Candidate Packaging 안에서 operator decision과 next action을 남겨야 한다.
 
 ## Strategy Capability Snapshot 흐름
 
