@@ -6,11 +6,13 @@ import streamlit as st
 
 from app.web.backtest_ui_components import render_badge_strip, render_status_card_grid
 from app.web.final_selected_portfolio_dashboard_helpers import (
+    build_selected_portfolio_drift_table,
     build_selected_portfolio_component_table,
     build_selected_portfolio_dashboard_table,
     build_selected_portfolio_evidence_table,
     filter_selected_portfolio_rows,
     final_selected_portfolio_label,
+    selected_portfolio_active_components,
     selected_portfolio_benchmark_options,
     selected_portfolio_source_type_options,
     selected_portfolio_status_options,
@@ -18,6 +20,7 @@ from app.web.final_selected_portfolio_dashboard_helpers import (
 from app.web.runtime import (
     FINAL_SELECTED_PORTFOLIO_STATUS_LABELS,
     FINAL_SELECTION_DECISION_REGISTRY_FILE,
+    build_selected_portfolio_drift_check,
     load_final_selected_portfolio_dashboard,
 )
 
@@ -148,6 +151,8 @@ def _render_selected_row_detail(row: dict[str, Any]) -> None:
         else:
             st.dataframe(evidence_df, width="stretch", hide_index=True)
 
+    _render_selected_row_drift_check(row)
+
     with st.container(border=True):
         st.markdown("##### 실행 경계")
         st.caption(
@@ -161,6 +166,93 @@ def _render_selected_row_detail(row: dict[str, Any]) -> None:
 
     with st.expander("Final Review 원본 JSON", expanded=False):
         st.json(row.get("raw_decision") or {})
+
+
+def _render_selected_row_drift_check(row: dict[str, Any]) -> None:
+    st.markdown("##### Current Weight / Drift Check")
+    st.caption(
+        "Phase36의 현재 비중 계약입니다. 실제 계좌 연결이나 주문 생성 없이, "
+        "component별 현재 비중을 수동 입력해 목표 비중과의 차이를 읽습니다."
+    )
+    components = selected_portfolio_active_components(row)
+    if not components:
+        st.info("drift를 계산할 active component가 없습니다.")
+        return
+
+    threshold_cols = st.columns([0.34, 0.33, 0.33], gap="small")
+    with threshold_cols[0]:
+        drift_threshold = st.number_input(
+            "Rebalance threshold (%)",
+            min_value=0.5,
+            max_value=50.0,
+            value=5.0,
+            step=0.5,
+            key=f"selected_portfolio_drift_threshold_{row.get('decision_id')}",
+            help="component별 target/current 차이가 이 값 이상이면 리밸런싱 검토 필요로 봅니다.",
+        )
+    with threshold_cols[1]:
+        watch_threshold = st.number_input(
+            "Watch threshold (%)",
+            min_value=0.1,
+            max_value=50.0,
+            value=2.0,
+            step=0.5,
+            key=f"selected_portfolio_watch_threshold_{row.get('decision_id')}",
+            help="리밸런싱 전 관찰이 필요한 drift 기준입니다.",
+        )
+    with threshold_cols[2]:
+        total_tolerance = st.number_input(
+            "Total tolerance (%)",
+            min_value=0.1,
+            max_value=10.0,
+            value=1.0,
+            step=0.1,
+            key=f"selected_portfolio_total_tolerance_{row.get('decision_id')}",
+            help="현재 비중 합계가 100%에서 이 범위 이상 벗어나면 입력 확인이 필요합니다.",
+        )
+
+    current_weights: dict[str, float] = {}
+    st.caption("기본값은 target weight입니다. 실제 현재 비중을 알고 있으면 값을 바꿔 drift를 확인합니다.")
+    input_cols = st.columns(2, gap="small")
+    for index, component in enumerate(components):
+        component_id = str(component.get("component_id") or f"component_{index + 1}")
+        title = str(component.get("title") or component_id)
+        target_weight = float(component.get("target_weight") or 0.0)
+        with input_cols[index % 2]:
+            current_weights[component_id] = st.number_input(
+                f"{title} current weight (%)",
+                min_value=0.0,
+                max_value=100.0,
+                value=target_weight,
+                step=0.5,
+                key=f"selected_portfolio_current_weight_{row.get('decision_id')}_{component_id}",
+            )
+
+    drift_check = build_selected_portfolio_drift_check(
+        row,
+        current_weights=current_weights,
+        drift_threshold_pct=float(drift_threshold),
+        watch_threshold_pct=float(watch_threshold),
+        total_weight_tolerance_pct=float(total_tolerance),
+    )
+    metrics = dict(drift_check.get("metrics") or {})
+    render_badge_strip(
+        [
+            {"label": "Drift Route", "value": drift_check.get("route_label"), "tone": _status_tone("rebalance_needed" if drift_check.get("route") == "REBALANCE_NEEDED" else "normal" if drift_check.get("route") == "DRIFT_ALIGNED" else "watch")},
+            {"label": "Current Total", "value": f"{float(metrics.get('current_weight_total') or 0.0):.1f}%", "tone": "neutral"},
+            {"label": "Target Total", "value": f"{float(metrics.get('target_weight_total') or 0.0):.1f}%", "tone": "neutral"},
+            {"label": "Max Drift", "value": f"{float(metrics.get('max_abs_drift') or 0.0):.1f}%", "tone": "warning" if float(metrics.get("max_abs_drift") or 0.0) >= float(drift_threshold) else "neutral"},
+            {"label": "Order", "value": "Disabled", "tone": "neutral"},
+        ]
+    )
+    st.caption(str(drift_check.get("verdict") or "-"))
+    drift_df = build_selected_portfolio_drift_table(drift_check)
+    if not drift_df.empty:
+        st.dataframe(drift_df, width="stretch", hide_index=True)
+    if drift_check.get("blockers"):
+        for blocker in list(drift_check.get("blockers") or []):
+            st.warning(str(blocker))
+    st.info(str(drift_check.get("next_action") or "-"))
 
 
 def render_final_selected_portfolio_dashboard_page() -> None:

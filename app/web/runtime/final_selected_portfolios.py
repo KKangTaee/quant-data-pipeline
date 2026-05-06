@@ -24,6 +24,12 @@ FINAL_SELECTED_PORTFOLIO_STATUS_ORDER = [
     "re_review_needed",
     "blocked",
 ]
+FINAL_SELECTED_PORTFOLIO_DRIFT_ROUTE_LABELS = {
+    "DRIFT_ALIGNED": "목표 비중 근처",
+    "DRIFT_WATCH": "비중 관찰 필요",
+    "REBALANCE_NEEDED": "리밸런싱 검토 필요",
+    "DRIFT_INPUT_INCOMPLETE": "현재 비중 입력 확인 필요",
+}
 
 
 def _optional_float(value: Any) -> float | None:
@@ -55,6 +61,16 @@ def _active_components(row: dict[str, Any]) -> list[dict[str, Any]]:
         if weight > 0.0:
             active.append(component_row)
     return active
+
+
+def _component_identity(component: dict[str, Any], index: int) -> str:
+    registry_id = _clean_text(component.get("registry_id"), "")
+    if registry_id:
+        return registry_id
+    title = _clean_text(component.get("title"), "")
+    if title:
+        return title
+    return f"component_{index + 1}"
 
 
 def _target_weight_total(row: dict[str, Any], active_components: list[dict[str, Any]]) -> float:
@@ -171,6 +187,109 @@ def build_final_selected_portfolio_dashboard_row(row: dict[str, Any]) -> dict[st
         "live_approval": bool(row.get("live_approval")),
         "order_instruction": bool(row.get("order_instruction")),
         "raw_decision": dict(row),
+    }
+
+
+def build_selected_portfolio_drift_check(
+    row: dict[str, Any],
+    *,
+    current_weights: dict[str, Any],
+    drift_threshold_pct: float = 5.0,
+    watch_threshold_pct: float = 2.0,
+    total_weight_tolerance_pct: float = 1.0,
+) -> dict[str, Any]:
+    """Compare target weights against operator-provided current weights without creating orders."""
+    raw_decision = dict(row.get("raw_decision") or row)
+    active_components = _active_components(raw_decision)
+    target_weight_total = _target_weight_total(raw_decision, active_components)
+    rows: list[dict[str, Any]] = []
+    current_weight_total = 0.0
+    missing_inputs: list[str] = []
+    rebalancing_components: list[str] = []
+    watch_components: list[str] = []
+    max_abs_drift = 0.0
+
+    for index, component in enumerate(active_components):
+        identity = _component_identity(component, index)
+        title = _clean_text(component.get("title") or identity)
+        target_weight = _optional_float(component.get("target_weight")) or 0.0
+        current_weight = _optional_float(current_weights.get(identity))
+        if current_weight is None:
+            missing_inputs.append(identity)
+            current_weight = 0.0
+        drift = current_weight - target_weight
+        abs_drift = abs(drift)
+        max_abs_drift = max(max_abs_drift, abs_drift)
+        current_weight_total += current_weight
+        if abs_drift >= drift_threshold_pct:
+            rebalancing_components.append(identity)
+        elif abs_drift >= watch_threshold_pct:
+            watch_components.append(identity)
+        rows.append(
+            {
+                "component_id": identity,
+                "title": title,
+                "target_weight": round(target_weight, 4),
+                "current_weight": round(current_weight, 4),
+                "drift": round(drift, 4),
+                "abs_drift": round(abs_drift, 4),
+                "drift_direction": "overweight" if drift > 0 else "underweight" if drift < 0 else "aligned",
+                "threshold_breached": abs_drift >= drift_threshold_pct,
+                "watch_breached": abs_drift >= watch_threshold_pct,
+            }
+        )
+
+    total_weight_gap = current_weight_total - target_weight_total
+    blockers: list[str] = []
+    if not active_components:
+        blockers.append("active component 없음")
+    if missing_inputs:
+        blockers.append("현재 비중 입력 누락")
+    if abs(current_weight_total - 100.0) > total_weight_tolerance_pct:
+        blockers.append("현재 비중 합계가 100% 근처가 아님")
+
+    if blockers:
+        route = "DRIFT_INPUT_INCOMPLETE"
+        verdict = "현재 비중 입력을 먼저 확인해야 합니다."
+        next_action = "component별 현재 비중을 입력하고 합계가 100% 근처인지 확인합니다."
+    elif rebalancing_components:
+        route = "REBALANCE_NEEDED"
+        verdict = "목표 비중 대비 drift가 커서 리밸런싱 검토가 필요합니다."
+        next_action = "주문 지시가 아니라, drift가 큰 component를 검토 목록에 올립니다."
+    elif watch_components:
+        route = "DRIFT_WATCH"
+        verdict = "목표 비중에서 일부 벗어났지만 즉시 리밸런싱 판단 전 관찰이 필요합니다."
+        next_action = "다음 점검일에 drift가 커지는지 확인합니다."
+    else:
+        route = "DRIFT_ALIGNED"
+        verdict = "현재 비중이 목표 비중 근처에 있습니다."
+        next_action = "정기 점검 주기에 따라 계속 관찰합니다."
+
+    return {
+        "route": route,
+        "route_label": FINAL_SELECTED_PORTFOLIO_DRIFT_ROUTE_LABELS.get(route, route),
+        "verdict": verdict,
+        "next_action": next_action,
+        "rows": rows,
+        "blockers": blockers,
+        "rebalancing_components": rebalancing_components,
+        "watch_components": watch_components,
+        "metrics": {
+            "target_weight_total": round(target_weight_total, 4),
+            "current_weight_total": round(current_weight_total, 4),
+            "total_weight_gap": round(total_weight_gap, 4),
+            "max_abs_drift": round(max_abs_drift, 4),
+            "drift_threshold_pct": round(float(drift_threshold_pct), 4),
+            "watch_threshold_pct": round(float(watch_threshold_pct), 4),
+            "total_weight_tolerance_pct": round(float(total_weight_tolerance_pct), 4),
+            "active_components": len(active_components),
+        },
+        "execution_boundary": {
+            "live_approval": False,
+            "order_instruction": False,
+            "auto_rebalance": False,
+            "notes": "This drift check is read-only and does not create broker orders.",
+        },
     }
 
 

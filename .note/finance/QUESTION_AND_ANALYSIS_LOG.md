@@ -4138,3 +4138,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Follow-up:
   - `app/web/runtime/final_selected_portfolios.py`, `app/web/final_selected_portfolio_dashboard.py`, `app/web/final_selected_portfolio_dashboard_helpers.py`를 추가했다
   - Phase36 문서 bundle과 roadmap / index / code analysis를 Selected Portfolio Dashboard 기준으로 동기화했다
+
+### 2026-05-06 - Phase36 QA deferred and drift check continuation
+- User request:
+  - Phase36 checklist 확인은 모든 작업이 마무리된 뒤 진행할 것이므로, 다음 작업을 계속 진행해 달라고 요청함
+- Interpreted goal:
+  - Phase36 first pass에서 멈추지 않고, 선정 포트폴리오의 target weight와 현재 비중 차이를 읽는 운영 기능까지 이어가야 함
+- Analysis result:
+  - 실제 계좌 / broker / current price 자동 연결 없이도 Phase36 안에서 구현 가능한 안전한 범위는 `현재 비중 수동 입력 -> target 대비 drift 계산 -> 리밸런싱 검토 필요 여부 표시`다
+  - 이 결과는 주문 지시가 아니라 read-only 운영 신호로 둔다
+  - DB current price 자동 조회와 account holding 연결은 후속 phase에서 별도 계약을 정해야 한다
+- Follow-up:
+  - `Current Weight / Drift Check` UI와 `build_selected_portfolio_drift_check` helper를 추가했다
+  - Phase36 checklist와 handoff 문서를 manual current weight drift 기준으로 갱신했다

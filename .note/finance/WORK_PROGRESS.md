@@ -3373,3 +3373,11 @@ Detailed historical logs were archived on `2026-04-13`.
   - Phase36 plan / TODO / first work unit / checklist / completion / next-phase preparation과 roadmap / index / code analysis / comprehensive map / README / Guides를 동기화했다.
   - Verification: `PYTHONPYCACHEPREFIX=/tmp/codex_pycache python3 -m py_compile ...`, runtime helper smoke, `git diff --check`, `check_finance_refinement_hygiene.py` 통과.
   - 남은 gate는 사용자 manual QA다.
+
+### 2026-05-06
+- Phase36 current weight / drift check 구현:
+  - user request에 따라 Phase36 QA를 마지막으로 미루고 다음 작업을 계속 진행했다.
+  - `build_selected_portfolio_drift_check` helper를 추가해 component별 target weight와 operator가 입력한 current weight를 비교한다.
+  - `Operations > Selected Portfolio Dashboard` 상세에 `Current Weight / Drift Check`를 추가했다.
+  - `Rebalance threshold`, `Watch threshold`, `Total tolerance`를 입력받고 `DRIFT_ALIGNED`, `DRIFT_WATCH`, `REBALANCE_NEEDED`, `DRIFT_INPUT_INCOMPLETE`로 read-only 판정한다.
+  - 실제 DB current price 조회, account holding 연결, broker order, auto rebalance는 계속 제외했다.

@@ -64,7 +64,19 @@
   - [ ] dashboard가 실제 주문, broker API, 자동매매를 만들지 않는다고 설명하는지
   - [ ] Final Review 원본 JSON에서 `live_approval=false`, `order_instruction=false`가 유지되는지
 
-## 6. 문서 확인
+## 6. Current Weight / Drift Check 확인
+
+- 확인 위치:
+  - `Operations > Selected Portfolio Dashboard > Current Weight / Drift Check`
+- 체크 항목:
+  - [ ] component별 현재 비중 입력란이 target weight 기본값으로 보이는지
+  - [ ] `Rebalance threshold`, `Watch threshold`, `Total tolerance`를 조정할 수 있는지
+  - [ ] 현재 비중 합계가 100% 근처가 아니면 `DRIFT_INPUT_INCOMPLETE` 계열 안내가 보이는지
+  - [ ] target 대비 drift가 watch threshold 이상이면 관찰 필요로 읽히는지
+  - [ ] target 대비 drift가 rebalance threshold 이상이면 `REBALANCE_NEEDED` / 리밸런싱 검토 필요로 읽히는지
+  - [ ] drift 결과가 주문 지시가 아니라 read-only 검토 신호로 설명되는지
+
+## 7. 문서 확인
 
 - 확인 문서:
   - `.note/finance/phases/phase36/PHASE36_CURRENT_CHAPTER_TODO.md`
@@ -74,7 +86,7 @@
   - `.note/finance/FINANCE_DOC_INDEX.md`
 - 체크 항목:
   - [ ] Phase36이 Final Review 이후 새 판단 저장 단계가 아니라 Operations dashboard로 설명되는지
-  - [ ] current price / drift / rebalance 자동 판단은 후속 phase로 설명되는지
+  - [ ] 수동 현재 비중 기반 drift check는 Phase36 범위로, DB current price / account holding 자동 연결은 후속 phase로 설명되는지
   - [ ] live approval / broker order / 자동매매가 out of scope로 남아 있는지
   - [ ] 새 page와 helper 파일이 code analysis 문서에 등록되어 있는지
 

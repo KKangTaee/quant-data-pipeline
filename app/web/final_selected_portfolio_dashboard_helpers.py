@@ -81,6 +81,45 @@ def build_selected_portfolio_component_table(row: dict[str, Any]) -> pd.DataFram
     return pd.DataFrame(display_rows)
 
 
+def selected_portfolio_active_components(row: dict[str, Any]) -> list[dict[str, Any]]:
+    raw_decision = dict(row.get("raw_decision") or {})
+    active: list[dict[str, Any]] = []
+    for index, component in enumerate(list(raw_decision.get("selected_components") or [])):
+        component_row = dict(component or {})
+        weight = _optional_float(component_row.get("target_weight")) or 0.0
+        if weight <= 0.0:
+            continue
+        component_id = _display_value(component_row.get("registry_id"))
+        if component_id == "-":
+            component_id = _display_value(component_row.get("title"))
+        if component_id == "-":
+            component_id = f"component_{index + 1}"
+        component_row["component_id"] = component_id
+        component_row["target_weight"] = weight
+        active.append(component_row)
+    return active
+
+
+def build_selected_portfolio_drift_table(drift_check: dict[str, Any]) -> pd.DataFrame:
+    display_rows: list[dict[str, Any]] = []
+    for row in list(drift_check.get("rows") or []):
+        drift = _optional_float(row.get("drift")) or 0.0
+        direction = "Overweight" if drift > 0 else "Underweight" if drift < 0 else "Aligned"
+        display_rows.append(
+            {
+                "Component": row.get("title"),
+                "Target Weight": row.get("target_weight"),
+                "Current Weight": row.get("current_weight"),
+                "Drift": row.get("drift"),
+                "Abs Drift": row.get("abs_drift"),
+                "Direction": direction,
+                "Rebalance": bool(row.get("threshold_breached")),
+                "Watch": bool(row.get("watch_breached")),
+            }
+        )
+    return pd.DataFrame(display_rows)
+
+
 def _append_check_rows(
     display_rows: list[dict[str, Any]],
     *,

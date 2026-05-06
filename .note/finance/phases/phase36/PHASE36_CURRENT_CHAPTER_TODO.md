@@ -27,8 +27,8 @@ Backtest > Final Review
 |---|---|---|
 | Phase36 전체 목표 | 최종 선정 포트폴리오 운영 대시보드 시작 | `implementation_complete` |
 | 첫 번째 작업 | selected final decision row read model / Operations page 구현 | `completed` |
-| 두 번째 작업 | current price / holding 기반 drift 계약 정리 | `pending` |
-| 세 번째 작업 | drift / rebalance_needed 자동 판단 | `pending` |
+| 두 번째 작업 | current weight 수동 입력 기반 drift 계약 정리 | `completed` |
+| 세 번째 작업 | drift / rebalance_needed read-only 자동 판단 | `completed` |
 | 문서 / QA | phase 문서, roadmap, code analysis, checklist 동기화 | `completed` |
 
 ## 완료한 내용
@@ -40,7 +40,9 @@ Backtest > Final Review
 - `app/web/streamlit_app.py`의 Operations navigation에 `Selected Portfolio Dashboard` page를 추가했다.
 - dashboard는 `FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`이 없거나 selected row가 없어도 empty state로 처리한다.
 - dashboard는 `normal`, `watch`, `rebalance_needed`, `re_review_needed`, `blocked` status 체계를 가진다.
-- 현재 first pass에서는 `rebalance_needed`를 자동 계산하지 않고 후속 current weight / drift phase를 위해 enum만 둔다.
+- `Current Weight / Drift Check`를 추가해 component별 현재 비중을 수동 입력하고 target weight와의 drift를 계산한다.
+- drift threshold 이상이면 `REBALANCE_NEEDED`, watch threshold 이상이면 `DRIFT_WATCH`, 입력 합계가 100% 근처가 아니면 `DRIFT_INPUT_INCOMPLETE`로 read-only 판정한다.
+- 이 drift check는 실제 current price / account holding 연결 없이 수동 현재 비중으로 동작한다.
 
 ## 중요한 경계
 
@@ -48,7 +50,7 @@ Backtest > Final Review
 - `FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`은 Final Review의 최종 판단 원본이다.
 - Phase36은 이 파일 중 `SELECT_FOR_PRACTICAL_PORTFOLIO` row만 운영 대상으로 읽는다.
 - live approval, broker order, 자동매매 버튼은 disabled로 유지한다.
-- 현재 가격 기반 drift, account holding, 주문 초안은 이번 first pass 범위 밖이다.
+- DB current price 자동 조회, account holding 연결, 주문 초안은 이번 phase 범위 밖이다.
 
 ## 검증 TODO
 
@@ -58,9 +60,10 @@ Backtest > Final Review
 - `completed` py_compile
 - `completed` runtime helper smoke
 - `completed` hygiene helper
+- `completed` drift helper smoke
 - `pending` user manual QA
 
 ## 현재 판단
 
-Phase36 first pass는 implementation_complete / manual_qa_pending 상태다.
+Phase36 구현은 implementation_complete / manual_qa_pending 상태다.
 사용자는 `PHASE36_TEST_CHECKLIST.md` 기준으로 `Operations > Selected Portfolio Dashboard`를 확인하면 된다.

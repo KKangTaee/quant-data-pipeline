@@ -41,6 +41,7 @@ Phase35는 Final Review를 마지막 판단 단계로 고정했다.
   - 선택 row 상세
   - target allocation table
   - evidence checks
+  - current weight / drift check
   - disabled Live Approval / Broker Order / Auto Rebalance boundary
 
 ### navigation
@@ -65,13 +66,12 @@ Phase36 first pass status:
 ## 이번 작업에서 제외한 것
 
 - 새 registry 저장
-- 현재 가격 조회
-- 실제 보유 수량 입력
-- target vs current drift 계산
+- 현재 가격 자동 조회
+- 실제 보유 수량 / 계좌 연결
 - 리밸런싱 주문 초안
 - broker API
 - 자동매매
 
 ## 완료 판단
 
-이 작업은 `Operations > Selected Portfolio Dashboard`에서 최종 선정 포트폴리오 목록과 상세 운영 기준을 읽을 수 있으면 완료로 본다.
+이 작업은 `Operations > Selected Portfolio Dashboard`에서 최종 선정 포트폴리오 목록, 상세 운영 기준, 수동 현재 비중 기반 drift 판정을 읽을 수 있으면 완료로 본다.

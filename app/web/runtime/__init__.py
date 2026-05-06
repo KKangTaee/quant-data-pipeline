@@ -52,10 +52,12 @@ from .final_selection_decisions import (
     load_final_selection_decisions,
 )
 from .final_selected_portfolios import (
+    FINAL_SELECTED_PORTFOLIO_DRIFT_ROUTE_LABELS,
     FINAL_SELECTED_PORTFOLIO_STATUS_LABELS,
     FINAL_SELECTED_PORTFOLIO_STATUS_ORDER,
     SELECTED_PRACTICAL_PORTFOLIO_ROUTE,
     build_final_selected_portfolio_dashboard_row,
+    build_selected_portfolio_drift_check,
     load_final_selected_portfolio_dashboard,
 )
 
@@ -70,6 +72,7 @@ __all__ = [
     "PAPER_PORTFOLIO_LEDGER_SCHEMA_VERSION",
     "FINAL_SELECTION_DECISION_REGISTRY_FILE",
     "FINAL_SELECTION_DECISION_SCHEMA_VERSION",
+    "FINAL_SELECTED_PORTFOLIO_DRIFT_ROUTE_LABELS",
     "FINAL_SELECTED_PORTFOLIO_STATUS_LABELS",
     "FINAL_SELECTED_PORTFOLIO_STATUS_ORDER",
     "SELECTED_PRACTICAL_PORTFOLIO_ROUTE",
@@ -83,6 +86,7 @@ __all__ = [
     "append_pre_live_candidate_registry_row",
     "build_backtest_result_bundle",
     "build_final_selected_portfolio_dashboard_row",
+    "build_selected_portfolio_drift_check",
     "delete_saved_portfolio",
     "inspect_strict_annual_price_freshness",
     "load_backtest_run_history",
