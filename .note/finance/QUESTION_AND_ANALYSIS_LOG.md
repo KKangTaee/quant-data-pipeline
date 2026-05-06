@@ -4124,3 +4124,17 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 다만 ETF asset profile coverage가 부족하면 Equal Weight도 명시적으로 `hold/blocked`가 될 수 있으며, 이것은 누락이 아니라 운용 가능성 데이터 경고다
 - Follow-up:
   - Equal Weight Single / Compare 입력, runtime hardening, saved Portfolio Mix override, Candidate Library replay payload에 Real-Money 필드를 연결했다
+
+### 2026-05-06 - 복구된 registries 기준 후보 / 포트폴리오 참조 검토
+- User request:
+  - `.note/finance/registries/` 폴더가 없어졌다가 복구되었으므로, 복구된 registry 내용을 기준으로 현재 후보와 포트폴리오 해석을 다시 검토해 달라고 요청함
+- Interpreted goal:
+  - 복구된 JSONL registry가 필수 필드를 갖추고 있는지, Current Candidate / Pre-Live / Candidate Review Note가 서로 연결되는지, saved portfolio가 registry id를 정상 참조하는지 확인해야 함
+- Analysis result:
+  - `CURRENT_CANDIDATE_REGISTRY.jsonl` 5개 row와 `PRE_LIVE_CANDIDATE_REGISTRY.jsonl` 5개 row는 repo helper validation을 통과했고, 각 Pre-Live row는 current candidate row와 1:1로 연결되어 있다
+  - `CANDIDATE_REVIEW_NOTES.jsonl` 5개 row도 current candidate의 `source_review_note_id`와 모두 연결된다
+  - 다만 `SAVED_PORTFOLIOS.jsonl`의 annual strict equal-third baseline은 과거 registry id인 `value_current_anchor_top14_psr`, `quality_current_anchor_top12_lqd`, `quality_value_current_anchor_top10_por`를 참조하지만, 현재 복구된 current registry에는 이 3개 row가 없다
+  - 현재 복구된 registry는 최근 GTAA 3개, Q+V MDD20 1개, Quality AOR MA250 1개 후보 중심이며, 과거 annual strict baseline candidate registry snapshot은 복구되지 않은 상태로 보인다
+  - `PORTFOLIO_PROPOSAL_REGISTRY.jsonl`, `PAPER_PORTFOLIO_TRACKING_LEDGER.jsonl`, `FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`도 현재 registry 폴더에는 없다
+- Follow-up:
+  - 현재 candidate / pre-live review는 사용 가능하지만, saved annual strict baseline을 Candidate Library / Portfolio Proposal에서 registry-linked bundle로 다시 쓰려면 과거 annual strict candidate row 3개를 복원하거나, saved portfolio의 embedded compare context 기반 replay로만 해석해야 한다
