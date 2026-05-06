@@ -4138,3 +4138,18 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `PORTFOLIO_PROPOSAL_REGISTRY.jsonl`, `PAPER_PORTFOLIO_TRACKING_LEDGER.jsonl`, `FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`도 현재 registry 폴더에는 없다
 - Follow-up:
   - 현재 candidate / pre-live review는 사용 가능하지만, saved annual strict baseline을 Candidate Library / Portfolio Proposal에서 registry-linked bundle로 다시 쓰려면 과거 annual strict candidate row 3개를 복원하거나, saved portfolio의 embedded compare context 기반 replay로만 해석해야 한다
+
+### 2026-05-06 - master 병합 후 registries 기준 백테스트 후보 재분석
+- User request:
+  - `master` 병합으로 registry JSONL이 채워졌으니, 병합된 registries 기준으로 백테스트 후보 데이터를 다시 분석해 달라고 요청함
+- Interpreted goal:
+  - Current Candidate, Pre-Live, Portfolio Proposal, Paper Ledger, Final Decision registry를 함께 읽어 실제 후보군, 유효한 Equal Weight 후보, 최종 선택된 후보, 남은 주의점을 구분해야 함
+- Analysis result:
+  - `CURRENT_CANDIDATE_REGISTRY.jsonl`은 10개 row validation을 통과했지만, `equal_weight_current_candidate_dividend_growth_4_schd_tdiv`는 active row와 inactive row가 함께 있는 append-only 중복 기록이다
+  - 현재 유효 후보군은 GTAA 4개, Equal Weight 2개, Quality 1개, Quality + Value 1개로 읽는 것이 적절하다. 배당 ETF Equal Weight 후보는 `hold / blocked`라 reference로만 본다
+  - 최종 선택 / paper ledger는 `gtaa_current_candidate_clean6_aor_top2_i2_1m12m_ma150` 단일 후보를 가리킨다. 핵심 수치는 `CAGR 15.22%`, `MDD -8.88%`, `Sharpe 1.96`, `AOR` benchmark, `paper_only`이다
+  - 새로 들어온 Equal Weight 후보 중 `QQQ/SOXX/XLE/IAU`는 `CAGR 19.96%`, `MDD -19.71%`, `real_money_candidate / paper_probation / paper_only`이고, `IAU/QQQ/SOXX/VIG/XLE`는 `CAGR 18.31%`, `MDD -19.27%`로 더 방어적인 balanced 대안이다
+  - `PORTFOLIO_PROPOSAL_REGISTRY.jsonl`의 4개 row는 같은 `proposal_20260503_0fb12b`의 반복 저장으로 보이며, 최신 row 기준 GTAA Top-1 50% + Quality AOR MA250 50% proposal draft다. Final Decision과 Paper Ledger는 이 proposal이 아니라 GTAA Top-2 High CAGR 단일 후보로 이어진다
+  - `FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`의 `decision_id`는 `quality_current...`로 시작하지만 source는 GTAA Top-2 High CAGR 후보다. ID naming은 legacy / 생성 당시 label artifact로 보이고, 실제 source fields를 기준으로 읽어야 한다
+- Follow-up:
+  - 현재 실전 후보 탐색 해석은 `GTAA Top-2 High CAGR`을 최종 선택된 paper-only 단일 후보로 두고, Equal Weight growth/commodity 후보들은 GTAA와 섞어볼 ETF diversifier / comparison candidate로 유지하는 방향이 가장 자연스럽다
