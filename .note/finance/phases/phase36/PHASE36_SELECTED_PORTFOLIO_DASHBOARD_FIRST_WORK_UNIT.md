@@ -3,10 +3,11 @@
 ## 목적
 
 Phase36 첫 번째 작업은 Final Review에서 선정된 포트폴리오를 Operations 화면에서 읽을 수 있게 만드는 것이다.
+이후 dashboard 재설계에서 이 화면은 단순 JSON / drift 확인이 아니라, 선정 포트폴리오를 최신 기간으로 다시 검증하는 운영 home으로 확장됐다.
 
 ## 쉽게 말하면
 
-Final Review에서 `투자 가능 후보`로 저장한 포트폴리오를 나중에 다시 찾아보려면, Backtest workflow가 아니라 운영 화면에 모아 보여야 한다.
+Final Review에서 `투자 가능 후보`로 저장한 포트폴리오를 나중에 다시 찾아보고, 원래 검증 기간 이후 데이터를 포함해 성과가 유지되는지 확인하려면, Backtest workflow가 아니라 운영 화면에 모아 보여야 한다.
 
 ## 왜 필요한가
 
@@ -39,10 +40,12 @@ Phase35는 Final Review를 마지막 판단 단계로 고정했다.
   - selected portfolio table
   - status / source / benchmark filter
   - 선택 row 상세
+  - Performance Recheck
+  - baseline 대비 변화 요약
+  - component contribution
   - target allocation table
   - evidence checks
-  - current weight / drift check
-  - drift alert / review trigger preview
+  - optional Allocation Check / drift check
   - disabled Live Approval / Broker Order / Auto Rebalance boundary
 
 ### navigation
@@ -67,12 +70,12 @@ Phase36 first pass status:
 ## 이번 작업에서 제외한 것
 
 - 새 registry 저장
-- 현재 가격 자동 조회
-- 실제 보유 수량 / 계좌 연결
+- 실제 계좌 자동 연결
 - 리밸런싱 주문 초안
 - broker API
 - 자동매매
+- alert persistence
 
 ## 완료 판단
 
-이 작업은 `Operations > Selected Portfolio Dashboard`에서 최종 선정 포트폴리오 목록, 상세 운영 기준, current weight / current value / shares x price 기반 drift 판정, drift alert / review trigger preview를 읽을 수 있으면 완료로 본다.
+이 작업은 `Operations > Selected Portfolio Dashboard`에서 최종 선정 포트폴리오 목록, 원래 검증 기간 snapshot, 사용자 지정 기간 / 가상 투자금 기반 Performance Recheck, component contribution, optional Allocation Check를 읽을 수 있으면 완료로 본다.

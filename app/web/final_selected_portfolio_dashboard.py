@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from datetime import date
 from typing import Any
 
+import pandas as pd
 import streamlit as st
 
 from app.web.backtest_ui_components import render_badge_strip, render_status_card_grid
@@ -27,6 +29,8 @@ from app.web.runtime import (
     build_selected_portfolio_current_weight_inputs,
     build_selected_portfolio_drift_alert_preview,
     build_selected_portfolio_drift_check,
+    build_selected_portfolio_performance_recheck,
+    build_selected_portfolio_recheck_defaults,
     load_final_selected_portfolio_dashboard,
     load_latest_selected_portfolio_prices,
 )
@@ -52,6 +56,33 @@ def _alert_tone(alert_route: str) -> str:
     return "neutral"
 
 
+def _format_pct(value: Any, *, default: str = "-") -> str:
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return default
+    if pd.isna(numeric):
+        return default
+    return f"{numeric:.2%}"
+
+
+def _format_money(value: Any, *, default: str = "-") -> str:
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return default
+    if pd.isna(numeric):
+        return default
+    return f"{numeric:,.0f}"
+
+
+def _coerce_date(value: Any, fallback: date) -> date:
+    parsed = pd.to_datetime(value, errors="coerce")
+    if pd.isna(parsed):
+        return fallback
+    return parsed.date()
+
+
 def _summary_cards(summary: dict[str, Any]) -> list[dict[str, Any]]:
     status_counts = dict(summary.get("status_counts") or {})
     return [
@@ -64,13 +95,13 @@ def _summary_cards(summary: dict[str, Any]) -> list[dict[str, Any]]:
         {
             "title": "Selected Portfolios",
             "value": summary.get("selected_decision_count", 0),
-            "detail": "`SELECT_FOR_PRACTICAL_PORTFOLIO`만 운영 대상으로 읽음",
+            "detail": "최신 기간 재검증 대상",
             "tone": "positive" if summary.get("selected_decision_count") else "neutral",
         },
         {
             "title": "Normal",
             "value": status_counts.get("normal", 0),
-            "detail": "첫 운영 대시보드 기준 통과",
+            "detail": "선정 row / allocation / blocker 기준 통과",
             "tone": "positive" if status_counts.get("normal") else "neutral",
         },
         {
@@ -113,7 +144,7 @@ def _render_empty_state(summary: dict[str, Any]) -> None:
 
 
 def _render_selected_row_detail(row: dict[str, Any]) -> None:
-    st.markdown("#### 선택 포트폴리오 상세")
+    st.markdown("#### Snapshot")
     render_badge_strip(
         [
             {
@@ -125,71 +156,271 @@ def _render_selected_row_detail(row: dict[str, Any]) -> None:
             {"label": "Source", "value": f"{row.get('source_type')} / {row.get('source_id')}", "tone": "neutral"},
             {"label": "Target Weight", "value": f"{float(row.get('target_weight_total') or 0.0):.1f}%", "tone": "neutral"},
             {"label": "Benchmark", "value": row.get("benchmark_label"), "tone": "neutral"},
-            {"label": "Evidence", "value": row.get("evidence_route"), "tone": "positive"},
+            {"label": "Original Period", "value": f"{row.get('baseline_start') or '-'} -> {row.get('baseline_end') or '-'}", "tone": "neutral"},
+            {"label": "Baseline CAGR", "value": _format_pct(row.get("baseline_cagr")), "tone": "positive"},
+            {"label": "Baseline MDD", "value": _format_pct(row.get("baseline_mdd")), "tone": "warning"},
             {"label": "Live Approval", "value": "Disabled", "tone": "neutral"},
             {"label": "Order", "value": "Disabled", "tone": "neutral"},
         ]
     )
     st.caption(str(row.get("status_reason") or "-"))
 
+    _render_performance_recheck(row)
+
     component_df = build_selected_portfolio_component_table(row)
     if component_df.empty:
         st.warning("선택된 포트폴리오에 active component가 없습니다.")
     else:
-        st.markdown("##### Target Allocation")
+        st.markdown("#### Allocation")
+        st.caption("Final Review에서 선정한 target allocation입니다. 실제 보유 상태 점검은 아래 Allocation Check에서 별도로 확인합니다.")
         st.dataframe(component_df, width="stretch", hide_index=True)
 
+    _render_operator_context(row)
+
+    with st.expander("Allocation Check: 실제 보유 상태 / drift 점검", expanded=False):
+        _render_selected_row_drift_check(row)
+
+    _render_execution_boundary()
+
+    with st.expander("Audit / Developer Details", expanded=False):
+        st.caption("일반 QA에서는 이 원본 JSON을 보지 않아도 됩니다. 저장 row 구조를 확인할 때만 펼쳐 봅니다.")
+        st.json(row.get("raw_decision") or {})
+
+
+def _render_operator_context(row: dict[str, Any]) -> None:
+    st.markdown("#### Operator Context")
     detail_cols = st.columns(2, gap="small")
     with detail_cols[0]:
         with st.container(border=True):
             st.markdown("##### 운영 판단")
-            st.write(
-                {
-                    "reason": row.get("operator_reason"),
-                    "constraints": row.get("operator_constraints"),
-                    "next_action": row.get("operator_next_action"),
-                }
-            )
+            st.markdown(f"**선정 사유**  \n{row.get('operator_reason') or '-'}")
+            st.markdown(f"**제약 조건**  \n{row.get('operator_constraints') or '-'}")
+            st.markdown(f"**다음 행동**  \n{row.get('operator_next_action') or '-'}")
     with detail_cols[1]:
         with st.container(border=True):
             st.markdown("##### 관찰 기준")
-            st.write(
-                {
-                    "review_cadence": row.get("review_cadence"),
-                    "review_triggers": row.get("review_triggers") or [],
-                    "blockers": row.get("blockers") or [],
-                }
-            )
+            st.markdown(f"**점검 주기**  \n{row.get('review_cadence') or '-'}")
+            triggers = [str(trigger) for trigger in list(row.get("review_triggers") or []) if str(trigger)]
+            blockers = [str(blocker) for blocker in list(row.get("blockers") or []) if str(blocker)]
+            if triggers:
+                st.markdown("**재검토 trigger**")
+                for trigger in triggers:
+                    st.markdown(f"- {trigger}")
+            else:
+                st.caption("등록된 review trigger가 없습니다.")
+            if blockers:
+                st.warning("남아 있는 blocker: " + ", ".join(blockers))
 
     evidence_df = build_selected_portfolio_evidence_table(row)
-    with st.expander("검증 근거 상세", expanded=False):
+    with st.expander("Final Review 검증 근거", expanded=False):
         if evidence_df.empty:
             st.info("표시할 evidence check row가 없습니다.")
         else:
             st.dataframe(evidence_df, width="stretch", hide_index=True)
 
-    _render_selected_row_drift_check(row)
 
+def _render_execution_boundary() -> None:
     with st.container(border=True):
-        st.markdown("##### 실행 경계")
+        st.markdown("#### Execution Boundary")
         st.caption(
             "이 대시보드는 최종 선정 포트폴리오를 운영 대상으로 읽는 화면입니다. "
-            "실제 투자 승인, broker 주문, 자동 리밸런싱은 만들지 않습니다."
+            "기간 확장 재검증과 drift 점검은 read-only이며 실제 투자 승인, broker 주문, 자동 리밸런싱은 만들지 않습니다."
         )
         action_cols = st.columns(3, gap="small")
         action_cols[0].button("Live Approval", disabled=True, width="stretch")
         action_cols[1].button("Broker Order", disabled=True, width="stretch")
         action_cols[2].button("Auto Rebalance", disabled=True, width="stretch")
 
-    with st.expander("Final Review 원본 JSON", expanded=False):
-        st.json(row.get("raw_decision") or {})
+
+def _render_performance_recheck(row: dict[str, Any]) -> None:
+    st.markdown("#### Performance Recheck")
+    st.caption(
+        "선정 당시의 component contract를 다시 실행해, 사용자가 지정한 기간에서 포트폴리오 성과가 유지되는지 확인합니다. "
+        "기본 종료일은 DB에 있는 최신 시장일입니다."
+    )
+    defaults = build_selected_portfolio_recheck_defaults(row)
+    if defaults.get("latest_market_date_error"):
+        st.warning(f"최신 시장일 확인 실패: {defaults.get('latest_market_date_error')}")
+
+    fallback_start = date(2016, 1, 1)
+    fallback_end = date.today()
+    default_start = _coerce_date(defaults.get("default_start"), fallback_start)
+    default_end = _coerce_date(defaults.get("default_end"), fallback_end)
+    decision_id = str(row.get("decision_id") or "selected_portfolio")
+    form_cols = st.columns([0.22, 0.22, 0.24, 0.18, 0.14], gap="small")
+    with form_cols[0]:
+        recheck_start = st.date_input(
+            "Recheck start",
+            value=default_start,
+            key=f"selected_portfolio_recheck_start_{decision_id}",
+        )
+    with form_cols[1]:
+        recheck_end = st.date_input(
+            "Recheck end",
+            value=default_end,
+            key=f"selected_portfolio_recheck_end_{decision_id}",
+        )
+    with form_cols[2]:
+        initial_capital = st.number_input(
+            "Virtual capital",
+            min_value=1_000.0,
+            value=10_000.0,
+            step=1_000.0,
+            key=f"selected_portfolio_recheck_capital_{decision_id}",
+        )
+    with form_cols[3]:
+        st.metric("Original End", defaults.get("baseline_end") or "-")
+    with form_cols[4]:
+        run_clicked = st.button(
+            "Run Recheck",
+            key=f"selected_portfolio_run_recheck_{decision_id}",
+            width="stretch",
+        )
+
+    result_key = f"selected_portfolio_recheck_result_{decision_id}"
+    if run_clicked:
+        with st.spinner("선정 포트폴리오 contract를 재실행하는 중입니다..."):
+            st.session_state[result_key] = build_selected_portfolio_performance_recheck(
+                row,
+                start=str(recheck_start),
+                end=str(recheck_end),
+                initial_capital=float(initial_capital),
+            )
+
+    result = dict(st.session_state.get(result_key) or {})
+    if not result:
+        st.info("날짜 범위와 가상 투자금을 확인한 뒤 `Run Recheck`를 누르면 최신 기간 기준 성과를 바로 계산합니다.")
+        return
+    if result.get("status") == "error":
+        st.error(str(result.get("error") or "Performance recheck failed."))
+        for blocker in list(result.get("blockers") or []):
+            st.warning(str(blocker))
+        return
+
+    for blocker in list(result.get("blockers") or []):
+        st.warning(str(blocker))
+
+    portfolio_summary = dict(result.get("portfolio_summary") or {})
+    benchmark_summary = dict(result.get("benchmark_summary") or {})
+    baseline_summary = dict(result.get("baseline_summary") or {})
+    change_summary = dict(result.get("change_summary") or {})
+    period = dict(result.get("period") or {})
+    render_status_card_grid(
+        [
+            {
+                "title": "Recheck Verdict",
+                "value": result.get("verdict_route"),
+                "detail": result.get("verdict"),
+                "tone": "positive" if result.get("verdict_route") == "SELECTION_THESIS_HOLDS" else "warning",
+            },
+            {
+                "title": "Portfolio Value",
+                "value": _format_money(portfolio_summary.get("end_balance")),
+                "detail": f"Total return {_format_pct(portfolio_summary.get('total_return'))}",
+                "tone": "positive",
+            },
+            {
+                "title": "Recheck CAGR",
+                "value": _format_pct(portfolio_summary.get("cagr")),
+                "detail": f"Original {_format_pct(baseline_summary.get('cagr'))}",
+                "tone": "positive" if (change_summary.get("cagr_delta_vs_baseline") or 0.0) >= 0 else "warning",
+            },
+            {
+                "title": "Recheck MDD",
+                "value": _format_pct(portfolio_summary.get("mdd")),
+                "detail": f"Original {_format_pct(baseline_summary.get('mdd'))}",
+                "tone": "warning",
+            },
+            {
+                "title": "Benchmark Spread",
+                "value": _format_pct(change_summary.get("net_cagr_spread")),
+                "detail": f"Benchmark {result.get('benchmark_label') or '-'} CAGR {_format_pct(benchmark_summary.get('cagr'))}",
+                "tone": "positive" if (change_summary.get("net_cagr_spread") or 0.0) >= 0 else "warning",
+            },
+        ]
+    )
+    st.caption(
+        f"Original period: {period.get('baseline_start') or '-'} -> {period.get('baseline_end') or '-'} | "
+        f"Recheck period: {period.get('start') or '-'} -> {period.get('end') or '-'}"
+    )
+
+    chart_df = result.get("chart_df")
+    if isinstance(chart_df, pd.DataFrame) and not chart_df.empty:
+        chart_view = chart_df.copy()
+        chart_view["Date"] = pd.to_datetime(chart_view["Date"], errors="coerce")
+        chart_view = chart_view.dropna(subset=["Date"]).set_index("Date")
+        st.line_chart(chart_view)
+
+    st.markdown("#### What Changed")
+    comparison_df = pd.DataFrame(
+        [
+            {
+                "Metric": "CAGR",
+                "Original": baseline_summary.get("cagr"),
+                "Recheck": portfolio_summary.get("cagr"),
+                "Change": change_summary.get("cagr_delta_vs_baseline"),
+            },
+            {
+                "Metric": "Maximum Drawdown",
+                "Original": baseline_summary.get("mdd"),
+                "Recheck": portfolio_summary.get("mdd"),
+                "Change": change_summary.get("mdd_delta_vs_baseline"),
+            },
+            {
+                "Metric": "Benchmark CAGR Spread",
+                "Original": None,
+                "Recheck": change_summary.get("net_cagr_spread"),
+                "Change": None,
+            },
+        ]
+    )
+    for column in ["Original", "Recheck", "Change"]:
+        comparison_df[column] = comparison_df[column].map(lambda value: _format_pct(value) if value is not None else "-")
+    st.dataframe(comparison_df, width="stretch", hide_index=True)
+
+    component_df = pd.DataFrame(list(result.get("component_rows") or []))
+    if not component_df.empty:
+        st.markdown("##### Component contribution")
+        for column in ["Total Return", "Weighted Contribution", "CAGR", "MDD"]:
+            if column in component_df.columns:
+                component_df[column] = component_df[column].map(lambda value: _format_pct(value) if value is not None else "-")
+        if "Target Weight" in component_df.columns:
+            component_df["Target Weight"] = component_df["Target Weight"].map(
+                lambda value: f"{float(value):.1f}%" if value is not None and not pd.isna(value) else "-"
+            )
+        st.dataframe(component_df, width="stretch", hide_index=True)
+
+    extremes = dict(result.get("period_extremes") or {})
+    extreme_cols = st.columns(2, gap="small")
+    with extreme_cols[0]:
+        best_df = pd.DataFrame(extremes.get("best") or [])
+        st.markdown("##### Strongest periods")
+        if best_df.empty:
+            st.caption("표시할 strong period가 없습니다.")
+        else:
+            if "Total Return" in best_df.columns:
+                best_df["Total Return"] = best_df["Total Return"].map(lambda value: _format_pct(value))
+            if "Total Balance" in best_df.columns:
+                best_df["Total Balance"] = best_df["Total Balance"].map(lambda value: _format_money(value))
+            st.dataframe(best_df, width="stretch", hide_index=True)
+    with extreme_cols[1]:
+        worst_df = pd.DataFrame(extremes.get("worst") or [])
+        st.markdown("##### Weakest periods")
+        if worst_df.empty:
+            st.caption("표시할 weak period가 없습니다.")
+        else:
+            if "Total Return" in worst_df.columns:
+                worst_df["Total Return"] = worst_df["Total Return"].map(lambda value: _format_pct(value))
+            if "Total Balance" in worst_df.columns:
+                worst_df["Total Balance"] = worst_df["Total Balance"].map(lambda value: _format_money(value))
+            st.dataframe(worst_df, width="stretch", hide_index=True)
 
 
 def _render_selected_row_drift_check(row: dict[str, Any]) -> None:
-    st.markdown("##### Current Weight / Drift Check")
+    st.markdown("##### Allocation Check")
     st.caption(
-        "Phase36의 현재 비중 계약입니다. 실제 계좌 연결이나 주문 생성 없이, "
-        "component별 현재 비중, 평가금액, 또는 수량 x 현재가 입력으로 목표 비중과의 차이를 읽습니다."
+        "이 영역은 성과 재검증이 아니라, 실제 또는 가정 보유 상태가 target allocation에서 얼마나 벗어났는지 보는 고급 점검입니다. "
+        "입력값은 저장되지 않고 주문도 만들지 않습니다."
     )
     components = selected_portfolio_active_components(row)
     if not components:
@@ -230,15 +461,15 @@ def _render_selected_row_drift_check(row: dict[str, Any]) -> None:
 
     current_weights: dict[str, float] = {}
     input_mode = st.radio(
-        "Input mode",
-        options=["current_weight", "current_value", "shares_x_price"],
+        "현재 보유 상태 입력 방식",
+        options=["current_value", "shares_x_price", "current_weight"],
         format_func=lambda mode: FINAL_SELECTED_PORTFOLIO_VALUE_INPUT_MODE_LABELS.get(mode, mode),
         horizontal=True,
         key=f"selected_portfolio_current_input_mode_{row.get('decision_id')}",
     )
     value_input_contract: dict[str, Any] | None = None
     if input_mode == "current_weight":
-        st.caption("기본값은 target weight입니다. 실제 현재 비중을 알고 있으면 값을 바꿔 drift를 확인합니다.")
+        st.caption("이미 다른 곳에서 현재 비중을 계산해 둔 경우에만 씁니다. 기본값은 target weight입니다.")
         input_cols = st.columns(2, gap="small")
         for index, component in enumerate(components):
             component_id = str(component.get("component_id") or f"component_{index + 1}")
@@ -255,8 +486,8 @@ def _render_selected_row_drift_check(row: dict[str, Any]) -> None:
                 )
     elif input_mode == "current_value":
         st.caption(
-            "component별 현재 평가금액을 입력하면 전체 평가금액 대비 현재 비중으로 변환합니다. "
-            "통화 단위는 같기만 하면 됩니다."
+            "실제 또는 가정 보유금액을 component별로 입력하면 전체 평가금액 대비 현재 비중으로 변환합니다. "
+            "통화 단위는 모두 같기만 하면 됩니다."
         )
         cash_value = st.number_input(
             "Unassigned cash / outside value",
@@ -292,7 +523,7 @@ def _render_selected_row_drift_check(row: dict[str, Any]) -> None:
         current_weights = dict(value_input_contract.get("current_weights") or {})
     else:
         st.caption(
-            "component가 실제 보유 수량과 current price로 표현될 수 있을 때 쓰는 입력입니다. "
+            "실제 보유 수량과 현재가를 알고 있을 때 쓰는 고급 입력입니다. "
             "DB latest close는 보조값이며, 가격과 수량은 저장되지 않습니다."
         )
         component_symbols: dict[str, str] = {}
@@ -476,8 +707,8 @@ def _render_selected_row_drift_check(row: dict[str, Any]) -> None:
 def render_final_selected_portfolio_dashboard_page() -> None:
     st.title("Selected Portfolio Dashboard")
     st.caption(
-        "Final Review에서 실전 후보로 선정된 포트폴리오를 운영 관점으로 모아 보는 Phase36 대시보드입니다. "
-        "새 registry를 쓰지 않고 최종 판단 기록을 읽기만 합니다."
+        "Final Review에서 실전 후보로 선정한 포트폴리오를 최신 기간으로 다시 계산하고, "
+        "선정 당시 근거가 유지되는지 확인하는 Phase36 대시보드입니다."
     )
 
     dashboard = load_final_selected_portfolio_dashboard()
@@ -487,16 +718,14 @@ def render_final_selected_portfolio_dashboard_page() -> None:
     render_status_card_grid(_summary_cards(summary))
 
     with st.container(border=True):
-        st.markdown("#### 데이터 기준")
-        st.write(
-            {
-                "source": str(FINAL_SELECTION_DECISION_REGISTRY_FILE),
-                "selected_filter": "decision_route == SELECT_FOR_PRACTICAL_PORTFOLIO 또는 selected_practical_portfolio == true",
-                "write_policy": "read_only_dashboard",
-                "live_approval": False,
-                "order_instruction": False,
-            }
-        )
+        st.markdown("#### 데이터 출처와 화면 경계")
+        data_cols = st.columns(3, gap="small")
+        data_cols[0].metric("Source", "Final Review Decisions")
+        data_cols[0].caption(str(FINAL_SELECTION_DECISION_REGISTRY_FILE))
+        data_cols[1].metric("Selected Filter", "Practical Portfolio")
+        data_cols[1].caption("`SELECT_FOR_PRACTICAL_PORTFOLIO` 또는 `selected_practical_portfolio=true`")
+        data_cols[2].metric("Write Policy", "Read Only")
+        data_cols[2].caption("재검증과 drift 점검은 새 판단 row나 주문 row를 저장하지 않습니다.")
 
     if not rows:
         _render_empty_state(summary)

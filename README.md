@@ -23,7 +23,7 @@ DB-backed market data ingestion, factor generation, and strategy backtesting wor
 - `Ops Review`
   - 최근 실행 결과, persistent history, logs, failure artifact 검토
 - `Selected Portfolio Dashboard`
-  - Final Review에서 선정된 포트폴리오의 target allocation, evidence, next action, current weight / value / holding 기반 drift check, drift alert preview를 read-only 운영 화면으로 확인
+  - Final Review에서 선정된 포트폴리오를 최신 날짜 범위로 다시 계산하고, 가상 투자금 기준 성과 / benchmark spread / component contribution / Allocation drift를 read-only 운영 화면으로 확인
 - `Backtest Run History`
   - 저장된 백테스트 실행 기록 검토, form 복원, 재실행, candidate review 초안 전달
 - `Guides`
@@ -94,7 +94,9 @@ DB-backed market data ingestion, factor generation, and strategy backtesting wor
 - selected portfolio operations dashboard
   - `Operations > Selected Portfolio Dashboard`에서 Final Review의 `SELECT_FOR_PRACTICAL_PORTFOLIO` row만 운영 대상으로 확인하는 흐름
   - `.note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`을 새로 쓰지 않고 read-only로 읽는 흐름
-  - target allocation, benchmark, evidence, operator next action, current weight / current value / shares x price 기반 drift, review trigger preview, disabled live approval / order boundary를 확인하는 흐름
+  - selected component의 저장 contract를 사용자가 지정한 시작일 / 종료일 / 가상 투자금으로 다시 실행해 최신 기간 성과를 확인하는 흐름
+  - portfolio value, total return, CAGR, MDD, benchmark spread, component contribution, strongest / weakest periods를 확인하는 흐름
+  - target allocation, benchmark, evidence, operator next action, current weight / current value / shares x price 기반 Allocation Check, disabled live approval / order boundary를 확인하는 흐름
   - shares x price 입력에서는 DB latest close를 보조로 불러올 수 있지만, 실제 account holding 연결이나 주문 생성은 하지 않는 흐름
 
 ## 프로젝트 구조
@@ -110,7 +112,7 @@ app/
     backtest_candidate_library.py # Operations > Candidate Library UI
     backtest_candidate_library_helpers.py # 저장 후보 목록 / replay payload / 후보 replay helper
     final_selected_portfolio_dashboard.py # Operations > Selected Portfolio Dashboard UI
-    final_selected_portfolio_dashboard_helpers.py # 선정 포트폴리오 table / evidence / value input helper
+    final_selected_portfolio_dashboard_helpers.py # 선정 포트폴리오 table / evidence / allocation input helper
     backtest_ui_components.py # Backtest 공용 status/route UI component
     backtest_candidate_review.py # Candidate Review / Candidate Packaging / Pre-Live 운영 기록 UI
     backtest_candidate_review_helpers.py # Candidate Review 판단/변환/Pre-Live 운영 기록 helper

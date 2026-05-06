@@ -1,7 +1,14 @@
 from __future__ import annotations
 
+from datetime import date
 from typing import Any
 
+import pandas as pd
+
+from finance.loaders import load_latest_market_date
+from finance.performance import portfolio_performance_summary
+
+from .candidate_registry import load_current_candidate_registry_latest
 from .final_selection_decisions import (
     FINAL_SELECTION_DECISION_REGISTRY_FILE,
     load_final_selection_decisions,
@@ -31,9 +38,9 @@ FINAL_SELECTED_PORTFOLIO_DRIFT_ROUTE_LABELS = {
     "DRIFT_INPUT_INCOMPLETE": "현재 비중 입력 확인 필요",
 }
 FINAL_SELECTED_PORTFOLIO_VALUE_INPUT_MODE_LABELS = {
-    "current_weight": "현재 비중 직접 입력",
-    "current_value": "현재 평가금액 입력",
-    "shares_x_price": "보유 수량 x 현재가",
+    "current_value": "현재 보유 평가금액으로 계산",
+    "shares_x_price": "보유 수량과 가격으로 계산",
+    "current_weight": "이미 계산한 현재 비중 입력",
 }
 FINAL_SELECTED_PORTFOLIO_DRIFT_ALERT_ROUTE_LABELS = {
     "NO_ALERT": "운영 경고 없음",
@@ -47,9 +54,12 @@ def _optional_float(value: Any) -> float | None:
     if value is None:
         return None
     try:
-        return float(value)
+        numeric = float(value)
     except (TypeError, ValueError):
         return None
+    if pd.isna(numeric):
+        return None
+    return numeric
 
 
 def _clean_text(value: Any, default: str = "-") -> str:
@@ -91,6 +101,62 @@ def _format_date_value(value: Any) -> str | None:
         return str(value.date())
     text = str(value).strip()
     return text or None
+
+
+def _date_text(value: Any) -> str | None:
+    formatted = _format_date_value(value)
+    if not formatted:
+        return None
+    parsed = pd.to_datetime(formatted, errors="coerce")
+    if pd.isna(parsed):
+        return formatted
+    return parsed.strftime("%Y-%m-%d")
+
+
+def _baseline_component_rows(row: dict[str, Any]) -> list[dict[str, Any]]:
+    raw_decision = dict(row.get("raw_decision") or row)
+    risk_snapshot = dict(raw_decision.get("risk_and_validation_snapshot") or {})
+    robustness = dict(risk_snapshot.get("robustness_validation") or {})
+    return [dict(item or {}) for item in list(robustness.get("component_rows") or [])]
+
+
+def _baseline_snapshot(row: dict[str, Any]) -> dict[str, Any]:
+    raw_decision = dict(row.get("raw_decision") or row)
+    paper_snapshot = dict(raw_decision.get("paper_tracking_snapshot") or {})
+    baseline = dict(paper_snapshot.get("baseline_snapshot") or {})
+    component_rows = _baseline_component_rows(raw_decision)
+    starts = [_date_text(item.get("Start")) for item in component_rows if _date_text(item.get("Start"))]
+    ends = [_date_text(item.get("End")) for item in component_rows if _date_text(item.get("End"))]
+    active_components = _active_components(raw_decision)
+    if not starts:
+        starts = [
+            _date_text(component.get("period_start") or component.get("start"))
+            for component in active_components
+            if _date_text(component.get("period_start") or component.get("start"))
+        ]
+    if not ends:
+        ends = [
+            _date_text(component.get("period_end") or component.get("end"))
+            for component in active_components
+            if _date_text(component.get("period_end") or component.get("end"))
+        ]
+    baseline_cagr = _optional_float(baseline.get("weighted_cagr"))
+    baseline_mdd = _optional_float(baseline.get("weighted_mdd"))
+    if baseline_cagr is None and component_rows:
+        cagr_values = [_optional_float(item.get("CAGR")) for item in component_rows]
+        cagr_values = [value for value in cagr_values if value is not None]
+        baseline_cagr = sum(cagr_values) / len(cagr_values) if cagr_values else None
+    if baseline_mdd is None and component_rows:
+        mdd_values = [_optional_float(item.get("MDD")) for item in component_rows]
+        mdd_values = [value for value in mdd_values if value is not None]
+        baseline_mdd = min(mdd_values) if mdd_values else None
+    return {
+        "baseline_start": min(starts) if starts else None,
+        "baseline_end": max(ends) if ends else None,
+        "baseline_cagr": baseline_cagr,
+        "baseline_mdd": baseline_mdd,
+        "component_rows": component_rows,
+    }
 
 
 def _target_weight_total(row: dict[str, Any], active_components: list[dict[str, Any]]) -> float:
@@ -177,6 +243,7 @@ def build_final_selected_portfolio_dashboard_row(row: dict[str, Any]) -> dict[st
     paper_snapshot = dict(row.get("paper_tracking_snapshot") or {})
     operator_decision = dict(row.get("operator_decision") or {})
     benchmarks = _component_benchmarks(active_components)
+    baseline = _baseline_snapshot(row)
     return {
         "decision_id": _clean_text(row.get("decision_id")),
         "updated_at": _clean_text(row.get("updated_at") or row.get("created_at")),
@@ -201,6 +268,10 @@ def build_final_selected_portfolio_dashboard_row(row: dict[str, Any]) -> dict[st
         "review_cadence": _clean_text(paper_snapshot.get("review_cadence")),
         "review_triggers": list(paper_snapshot.get("review_triggers") or []),
         "blockers": blockers,
+        "baseline_start": baseline.get("baseline_start"),
+        "baseline_end": baseline.get("baseline_end"),
+        "baseline_cagr": baseline.get("baseline_cagr"),
+        "baseline_mdd": baseline.get("baseline_mdd"),
         "operator_reason": _clean_text(operator_decision.get("reason")),
         "operator_constraints": _clean_text(operator_decision.get("constraints")),
         "operator_next_action": _clean_text(operator_decision.get("next_action")),
@@ -524,6 +595,353 @@ def build_selected_portfolio_drift_alert_preview(
             "order_instruction": False,
             "alert_persistence": False,
             "notes": "This preview is read-only and does not save alert records or create orders.",
+        },
+    }
+
+
+def load_selected_portfolio_latest_market_date(
+    *,
+    end: str | None = None,
+    timeframe: str = "1d",
+) -> dict[str, Any]:
+    """Return the latest available market date for dashboard recheck defaults."""
+    try:
+        latest = load_latest_market_date(end=end, timeframe=timeframe)
+    except Exception as exc:  # pragma: no cover - depends on local MySQL availability
+        return {"status": "error", "latest_market_date": None, "error": str(exc)}
+    return {
+        "status": "ok" if latest is not None else "empty",
+        "latest_market_date": _format_date_value(latest),
+        "error": None,
+    }
+
+
+def build_selected_portfolio_recheck_defaults(row: dict[str, Any]) -> dict[str, Any]:
+    """Extract the originally selected validation period for the dashboard recheck controls."""
+    baseline = _baseline_snapshot(row)
+    latest_result = load_selected_portfolio_latest_market_date()
+    latest_date = latest_result.get("latest_market_date")
+    return {
+        "baseline_start": baseline.get("baseline_start"),
+        "baseline_end": baseline.get("baseline_end"),
+        "baseline_cagr": baseline.get("baseline_cagr"),
+        "baseline_mdd": baseline.get("baseline_mdd"),
+        "latest_market_date": latest_date,
+        "latest_market_date_status": latest_result.get("status"),
+        "latest_market_date_error": latest_result.get("error"),
+        "default_start": baseline.get("baseline_start") or "2016-01-01",
+        "default_end": latest_date or baseline.get("baseline_end") or date.today().isoformat(),
+    }
+
+
+def _summary_metrics_from_df(result_df: pd.DataFrame, *, name: str, freq: str = "M") -> dict[str, Any]:
+    if result_df.empty:
+        return {"name": name}
+    summary_df = portfolio_performance_summary(result_df, name=name, freq=freq)
+    row = dict(summary_df.iloc[0]) if not summary_df.empty else {}
+    start_balance = _optional_float(row.get("Start Balance"))
+    end_balance = _optional_float(row.get("End Balance"))
+    total_return = (end_balance / start_balance - 1.0) if start_balance and end_balance is not None else None
+    return {
+        "name": name,
+        "start_date": _format_date_value(row.get("Start Date")),
+        "end_date": _format_date_value(row.get("End Date")),
+        "start_balance": start_balance,
+        "end_balance": end_balance,
+        "total_return": total_return,
+        "cagr": _optional_float(row.get("CAGR")),
+        "mdd": _optional_float(row.get("Maximum Drawdown")),
+        "sharpe": _optional_float(row.get("Sharpe Ratio")),
+        "std": _optional_float(row.get("Standard Deviation")),
+    }
+
+
+def _scale_result_df(result_df: pd.DataFrame, *, initial_capital: float) -> pd.DataFrame:
+    scaled = result_df[["Date", "Total Balance", "Total Return"]].copy()
+    scaled["Date"] = pd.to_datetime(scaled["Date"], errors="coerce")
+    scaled = scaled.dropna(subset=["Date", "Total Balance"]).sort_values("Date").reset_index(drop=True)
+    if scaled.empty:
+        return scaled
+    start_balance = _optional_float(scaled["Total Balance"].iloc[0]) or 0.0
+    scale = float(initial_capital) / start_balance if start_balance > 0 else 1.0
+    scaled["Total Balance"] = pd.to_numeric(scaled["Total Balance"], errors="coerce") * scale
+    scaled["Total Return"] = scaled["Total Balance"].pct_change().fillna(0.0)
+    return scaled
+
+
+def _scale_benchmark_df(benchmark_df: pd.DataFrame, *, initial_capital: float) -> pd.DataFrame:
+    if benchmark_df is None or benchmark_df.empty or "Benchmark Total Balance" not in benchmark_df.columns:
+        return pd.DataFrame()
+    scaled = benchmark_df[["Date", "Benchmark Total Balance", "Benchmark Total Return"]].copy()
+    scaled["Date"] = pd.to_datetime(scaled["Date"], errors="coerce")
+    scaled = scaled.dropna(subset=["Date", "Benchmark Total Balance"]).sort_values("Date").reset_index(drop=True)
+    if scaled.empty:
+        return scaled
+    start_balance = _optional_float(scaled["Benchmark Total Balance"].iloc[0]) or 0.0
+    scale = float(initial_capital) / start_balance if start_balance > 0 else 1.0
+    scaled["Benchmark Total Balance"] = pd.to_numeric(scaled["Benchmark Total Balance"], errors="coerce") * scale
+    scaled["Benchmark Total Return"] = scaled["Benchmark Total Balance"].pct_change().fillna(0.0)
+    return scaled
+
+
+def _combine_component_result_dfs(
+    dfs: list[pd.DataFrame],
+    *,
+    ratios: list[float],
+    initial_capital: float,
+) -> pd.DataFrame:
+    if not dfs:
+        return pd.DataFrame()
+    normalized_frames: list[pd.DataFrame] = []
+    for index, result_df in enumerate(dfs):
+        working = result_df[["Date", "Total Balance"]].copy()
+        working["Date"] = pd.to_datetime(working["Date"], errors="coerce")
+        working["Total Balance"] = pd.to_numeric(working["Total Balance"], errors="coerce")
+        working = working.dropna(subset=["Date", "Total Balance"]).sort_values("Date")
+        if working.empty:
+            continue
+        start_balance = _optional_float(working["Total Balance"].iloc[0]) or 0.0
+        if start_balance <= 0.0:
+            continue
+        working[f"component_{index}"] = working["Total Balance"] / start_balance
+        normalized_frames.append(working[["Date", f"component_{index}"]].set_index("Date"))
+    if not normalized_frames:
+        return pd.DataFrame()
+
+    combined = pd.concat(normalized_frames, axis=1, join="inner").sort_index()
+    if combined.empty:
+        return pd.DataFrame()
+    weights = pd.Series(
+        [float(ratio or 0.0) for ratio in ratios[: len(combined.columns)]],
+        index=list(combined.columns),
+        dtype=float,
+    )
+    if float(weights.sum()) <= 0.0:
+        weights = pd.Series([1.0 / len(combined.columns)] * len(combined.columns), index=list(combined.columns))
+    else:
+        weights = weights / float(weights.sum())
+    weighted_balance = combined.mul(weights, axis=1).sum(axis=1) * float(initial_capital)
+    output = pd.DataFrame(
+        {
+            "Date": weighted_balance.index,
+            "Total Balance": weighted_balance.values,
+        }
+    ).reset_index(drop=True)
+    output["Total Return"] = output["Total Balance"].pct_change().fillna(0.0)
+    return output
+
+
+def _period_extremes(result_df: pd.DataFrame, *, top_n: int = 3) -> dict[str, list[dict[str, Any]]]:
+    if result_df.empty or "Total Return" not in result_df.columns:
+        return {"best": [], "worst": []}
+    working = result_df[["Date", "Total Balance", "Total Return"]].copy()
+    working["Date"] = pd.to_datetime(working["Date"], errors="coerce")
+    working["Total Return"] = pd.to_numeric(working["Total Return"], errors="coerce")
+    working = working.dropna(subset=["Date", "Total Return"])
+    if working.empty:
+        return {"best": [], "worst": []}
+    working["Date"] = working["Date"].dt.strftime("%Y-%m-%d")
+    records = working.to_dict("records")
+    return {
+        "best": sorted(records, key=lambda item: float(item.get("Total Return") or 0.0), reverse=True)[:top_n],
+        "worst": sorted(records, key=lambda item: float(item.get("Total Return") or 0.0))[:top_n],
+    }
+
+
+def _find_candidate_rows_by_registry_id() -> dict[str, dict[str, Any]]:
+    return {
+        str(row.get("registry_id") or "").strip(): row
+        for row in load_current_candidate_registry_latest()
+        if str(row.get("registry_id") or "").strip()
+    }
+
+
+def build_selected_portfolio_performance_recheck(
+    row: dict[str, Any],
+    *,
+    start: str,
+    end: str,
+    initial_capital: float = 10000.0,
+) -> dict[str, Any]:
+    """Replay selected components over a user-selected period and compare against the original baseline."""
+    start_ts = pd.to_datetime(start, errors="coerce")
+    end_ts = pd.to_datetime(end, errors="coerce")
+    if pd.isna(start_ts) or pd.isna(end_ts):
+        return {"status": "error", "error": "재검증 시작일과 종료일을 확인해야 합니다."}
+    if start_ts > end_ts:
+        return {"status": "error", "error": "재검증 시작일은 종료일보다 늦을 수 없습니다."}
+    capital = float(initial_capital or 0.0)
+    if capital <= 0:
+        return {"status": "error", "error": "가상 투자금은 0보다 커야 합니다."}
+
+    raw_decision = dict(row.get("raw_decision") or row)
+    active_components = _active_components(raw_decision)
+    if not active_components:
+        return {"status": "error", "error": "재검증할 active component가 없습니다."}
+
+    try:
+        from app.web.backtest_candidate_library_helpers import (
+            build_candidate_replay_payload,
+            run_candidate_replay_payload,
+        )
+    except Exception as exc:  # pragma: no cover - defensive import boundary
+        return {"status": "error", "error": f"candidate replay helper import failed: {exc}"}
+
+    candidate_by_id = _find_candidate_rows_by_registry_id()
+    component_dfs: list[pd.DataFrame] = []
+    ratios: list[float] = []
+    component_rows: list[dict[str, Any]] = []
+    blockers: list[str] = []
+    first_benchmark_df = pd.DataFrame()
+    first_benchmark_label = "-"
+
+    for index, component in enumerate(active_components):
+        identity = _component_identity(component, index)
+        title = _clean_text(component.get("title") or identity)
+        weight = (_optional_float(component.get("target_weight")) or 0.0) / 100.0
+        registry_id = _clean_text(component.get("registry_id"), "")
+        current_row = candidate_by_id.get(registry_id)
+        if not current_row:
+            blockers.append(f"{title}: Candidate Registry row를 찾지 못했습니다. registry_id={registry_id or '-'}")
+            continue
+        try:
+            payload = build_candidate_replay_payload(current_row)
+            payload["start"] = start_ts.strftime("%Y-%m-%d")
+            payload["end"] = end_ts.strftime("%Y-%m-%d")
+            bundle = run_candidate_replay_payload(payload, current_row=current_row)
+        except Exception as exc:
+            blockers.append(f"{title}: 재검증 실행 실패 - {exc}")
+            continue
+
+        result_df = bundle.get("result_df")
+        if not isinstance(result_df, pd.DataFrame) or result_df.empty:
+            blockers.append(f"{title}: 재검증 결과가 비어 있습니다.")
+            continue
+        component_dfs.append(result_df)
+        ratios.append(weight)
+
+        scaled_component_df = _scale_result_df(result_df, initial_capital=capital)
+        component_summary = _summary_metrics_from_df(scaled_component_df, name=title)
+        component_return = _optional_float(component_summary.get("total_return"))
+        component_rows.append(
+            {
+                "Component": title,
+                "Registry ID": registry_id or "-",
+                "Target Weight": round(weight * 100.0, 4),
+                "Start": component_summary.get("start_date"),
+                "End": component_summary.get("end_date"),
+                "Total Return": component_return,
+                "Weighted Contribution": component_return * weight if component_return is not None else None,
+                "CAGR": component_summary.get("cagr"),
+                "MDD": component_summary.get("mdd"),
+                "Sharpe": component_summary.get("sharpe"),
+            }
+        )
+
+        benchmark_df = bundle.get("benchmark_chart_df")
+        if first_benchmark_df.empty and isinstance(benchmark_df, pd.DataFrame) and not benchmark_df.empty:
+            first_benchmark_df = benchmark_df
+            first_benchmark_label = str(payload.get("benchmark_ticker") or component.get("benchmark") or "Benchmark")
+
+    if not component_dfs:
+        return {
+            "status": "error",
+            "error": "재검증 가능한 component 결과가 없습니다.",
+            "blockers": blockers,
+        }
+
+    portfolio_df = _combine_component_result_dfs(component_dfs, ratios=ratios, initial_capital=capital)
+    if portfolio_df.empty:
+        return {"status": "error", "error": "포트폴리오 성과 합성 결과가 비어 있습니다.", "blockers": blockers}
+    portfolio_summary = _summary_metrics_from_df(portfolio_df, name="Selected Portfolio")
+    benchmark_scaled = _scale_benchmark_df(first_benchmark_df, initial_capital=capital)
+    benchmark_summary = (
+        _summary_metrics_from_df(
+            benchmark_scaled.rename(
+                columns={
+                    "Benchmark Total Balance": "Total Balance",
+                    "Benchmark Total Return": "Total Return",
+                }
+            ),
+            name=first_benchmark_label,
+        )
+        if not benchmark_scaled.empty
+        else {}
+    )
+
+    baseline = _baseline_snapshot(raw_decision)
+    latest_cagr = _optional_float(portfolio_summary.get("cagr"))
+    latest_mdd = _optional_float(portfolio_summary.get("mdd"))
+    baseline_cagr = _optional_float(baseline.get("baseline_cagr"))
+    baseline_mdd = _optional_float(baseline.get("baseline_mdd"))
+    cagr_delta = latest_cagr - baseline_cagr if latest_cagr is not None and baseline_cagr is not None else None
+    mdd_delta = latest_mdd - baseline_mdd if latest_mdd is not None and baseline_mdd is not None else None
+    benchmark_cagr = _optional_float(benchmark_summary.get("cagr"))
+    net_cagr_spread = latest_cagr - benchmark_cagr if latest_cagr is not None and benchmark_cagr is not None else None
+    if blockers:
+        verdict_route = "PARTIAL_RECHECK"
+        verdict = "일부 component만 재검증되어 결과 해석에 주의가 필요합니다."
+    elif cagr_delta is not None and cagr_delta < -0.03:
+        verdict_route = "PERFORMANCE_WEAKENED"
+        verdict = "원래 검증 대비 CAGR이 의미 있게 낮아졌습니다. 약화 원인을 확인해야 합니다."
+    elif mdd_delta is not None and mdd_delta < -0.05:
+        verdict_route = "RISK_DRAWDOWN_EXPANDED"
+        verdict = "원래 검증 대비 최대 낙폭이 커졌습니다. 리스크 재검토가 필요합니다."
+    else:
+        verdict_route = "SELECTION_THESIS_HOLDS"
+        verdict = "선택한 재검증 기간에서 기존 선정 근거가 대체로 유지됩니다."
+
+    chart_df = portfolio_df[["Date", "Total Balance"]].rename(columns={"Total Balance": "Selected Portfolio"})
+    if not benchmark_scaled.empty:
+        chart_df = chart_df.merge(
+            benchmark_scaled[["Date", "Benchmark Total Balance"]].rename(
+                columns={"Benchmark Total Balance": first_benchmark_label}
+            ),
+            on="Date",
+            how="left",
+        )
+
+    return {
+        "status": "ok" if not blockers else "partial",
+        "verdict_route": verdict_route,
+        "verdict": verdict,
+        "period": {
+            "start": start_ts.strftime("%Y-%m-%d"),
+            "end": end_ts.strftime("%Y-%m-%d"),
+            "baseline_start": baseline.get("baseline_start"),
+            "baseline_end": baseline.get("baseline_end"),
+            "added_days_vs_baseline": (
+                (end_ts - pd.to_datetime(baseline.get("baseline_end"), errors="coerce")).days
+                if baseline.get("baseline_end") and not pd.isna(pd.to_datetime(baseline.get("baseline_end"), errors="coerce"))
+                else None
+            ),
+        },
+        "initial_capital": capital,
+        "portfolio_summary": portfolio_summary,
+        "benchmark_summary": benchmark_summary,
+        "benchmark_label": first_benchmark_label,
+        "baseline_summary": {
+            "cagr": baseline_cagr,
+            "mdd": baseline_mdd,
+            "start": baseline.get("baseline_start"),
+            "end": baseline.get("baseline_end"),
+        },
+        "change_summary": {
+            "cagr_delta_vs_baseline": cagr_delta,
+            "mdd_delta_vs_baseline": mdd_delta,
+            "benchmark_cagr": benchmark_cagr,
+            "net_cagr_spread": net_cagr_spread,
+        },
+        "component_rows": component_rows,
+        "chart_df": chart_df,
+        "portfolio_result_df": portfolio_df,
+        "period_extremes": _period_extremes(portfolio_df),
+        "blockers": blockers,
+        "execution_boundary": {
+            "write_policy": "read_only_recheck",
+            "live_approval": False,
+            "order_instruction": False,
+            "notes": "Performance recheck replays stored candidate contracts over a selected period and does not save portfolio records.",
         },
     }
 

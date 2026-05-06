@@ -4307,3 +4307,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 장기 운영 구조는 사용자가 제안한 `phase`, `ux_ui-polishing`, `candidate-search` 축이 더 자연스럽다. `phase`는 문서와 실제 phase 개발을 끝까지 소유하고, `ux_ui-polishing`은 이미 구현된 기능의 사용성 / 흐름 / 화면 polish를 맡으며, `candidate-search`는 프로그램을 활용한 후보 탐색을 맡는다. 단, `phase`와 `ux_ui-polishing`은 같은 UI 파일을 건드릴 수 있으므로 동시에 같은 화면을 수정하지 않는 규칙이 필요하다
   - 기존 `docs-phase`, `web-backtest-ui`, `candidate-search` worktree는 clean 상태에서 제거했고, `master` 기준으로 `codex/phase`, `codex/ux-ui-polishing`, `codex/candidate-search` worktree를 새로 만들었다
   - worktree별 고정 문서는 반복 운영이 안정된 뒤 만들고, 초기에는 세션 첫 메시지로 역할 / 수정 가능 범위 / 수정 금지 범위 / 현재 충돌 주의 파일을 지정하는 방식이 낫다. 아직 운영 규칙이 변하는 중이라 문서를 너무 빨리 고정하면 오히려 stale guidance가 생길 수 있다
+
+### 2026-05-06 - Phase36 Selected Portfolio Dashboard 목적 보정
+- User request:
+  - `Selected Portfolio Dashboard`가 최종 선정 포트폴리오의 성과를 판단하는 화면이어야 하는데, 현재는 JSON과 drift 입력이 중심처럼 보여 사용자가 무엇을 검증해야 하는지 알기 어렵다고 지적함
+- Interpreted goal:
+  - Final Review에서 선정된 포트폴리오를 단순히 다시 보는 화면이 아니라, 원래 검증 기간 이후의 데이터를 포함해 사용자가 새 기간을 잡고 성과 유지 여부를 즉시 확인하는 운영 dashboard가 필요함
+- Analysis result:
+  - dashboard의 주 목적은 `JSON inspection`이 아니라 `선정 포트폴리오 performance recheck`로 재정의하는 것이 맞다
+  - 기본 화면은 Snapshot / Performance Recheck / What Changed / Allocation Check / Audit 순서가 적합하다
+  - Performance Recheck는 원래 선정일 이후만 보는 것이 아니라, 사용자가 지정한 start / end 범위로 selected component replay contract를 다시 실행해야 한다
+  - raw JSON은 기본 화면에서 제거하고 접힘 Audit 영역으로 이동해야 하며, drift check는 실제 보유 또는 가정 보유가 있을 때만 쓰는 optional advanced 기능이어야 한다
+- Follow-up:
+  - Phase36에서는 performance recheck와 가상 투자금 기반 현재 평가를 구현하고, 후속 Phase37 후보는 성과 악화 원인 분석 / review alert / attribution 강화로 잡는다

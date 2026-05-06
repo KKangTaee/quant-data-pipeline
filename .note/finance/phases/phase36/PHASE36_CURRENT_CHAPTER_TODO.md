@@ -10,7 +10,8 @@
 
 ## 현재 목표
 
-Phase36의 첫 목표는 Final Review에서 선정된 포트폴리오를 Operations 화면에서 다시 읽는 것이다.
+Phase36의 목표는 Final Review에서 선정된 포트폴리오를 Operations 화면에서 다시 읽고,
+사용자가 지정한 최신 기간으로 재검증할 수 있게 하는 것이다.
 
 ```text
 Backtest > Final Review
@@ -19,7 +20,7 @@ Backtest > Final Review
 ```
 
 이 대시보드는 read-only다.
-새 final decision row, 새 proposal row, 주문 row를 만들지 않는다.
+성과 재검증, component contribution, drift 점검은 새 final decision row, 새 proposal row, 주문 row를 만들지 않는다.
 
 ## 작업 단위 진행 순서
 
@@ -31,6 +32,7 @@ Backtest > Final Review
 | 세 번째 작업 | drift / rebalance_needed read-only 자동 판단 | `completed` |
 | 네 번째 작업 | current value / shares x price 기반 current weight 입력 계약 추가 | `completed` |
 | 다섯 번째 작업 | drift alert / review trigger preview 추가 | `completed` |
+| 여섯 번째 작업 | 기간 확장 성과 재검증 중심 dashboard rebounding | `completed` |
 | 문서 / QA | phase 문서, roadmap, code analysis, checklist 동기화 | `completed` |
 
 ## 완료한 내용
@@ -41,6 +43,11 @@ Backtest > Final Review
 - `app/web/final_selected_portfolio_dashboard_helpers.py`를 추가해 table / component / evidence display helper를 분리했다.
 - `app/web/streamlit_app.py`의 Operations navigation에 `Selected Portfolio Dashboard` page를 추가했다.
 - dashboard는 `FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`이 없거나 selected row가 없어도 empty state로 처리한다.
+- `Performance Recheck`를 추가해 selected component의 Current Candidate Registry replay contract를 사용자가 지정한 시작일 / 종료일로 다시 실행한다.
+- recheck 기본 종료일은 DB latest market date이며, 원래 검증 기간과 최신 확장 기간을 함께 보여준다.
+- virtual capital 기준 portfolio value, total return, CAGR, MDD, benchmark spread, component contribution, strongest / weakest periods를 표시한다.
+- raw JSON은 기본 화면에서 제거하고 `Audit / Developer Details` 접힘 영역으로 이동했다.
+- `Current Weight / Drift Check`는 `Allocation Check` 고급 영역으로 낮췄다.
 - dashboard는 `normal`, `watch`, `rebalance_needed`, `re_review_needed`, `blocked` status 체계를 가진다.
 - `Current Weight / Drift Check`를 추가해 component별 현재 비중을 수동 입력하고 target weight와의 drift를 계산한다.
 - drift threshold 이상이면 `REBALANCE_NEEDED`, watch threshold 이상이면 `DRIFT_WATCH`, 입력 합계가 100% 근처가 아니면 `DRIFT_INPUT_INCOMPLETE`로 read-only 판정한다.
@@ -71,9 +78,11 @@ Backtest > Final Review
 - `completed` drift helper smoke
 - `completed` value / holding input helper smoke
 - `completed` drift alert preview helper smoke
+- `completed` performance recheck defaults smoke
+- `completed` performance recheck replay smoke
 - `pending` user manual QA
 
 ## 현재 판단
 
 Phase36 구현은 implementation_complete / manual_qa_pending 상태다.
-사용자는 `PHASE36_TEST_CHECKLIST.md` 기준으로 `Operations > Selected Portfolio Dashboard`를 확인하면 된다.
+사용자는 `PHASE36_TEST_CHECKLIST.md` 기준으로 `Operations > Selected Portfolio Dashboard`의 Performance Recheck와 Allocation Check를 확인하면 된다.

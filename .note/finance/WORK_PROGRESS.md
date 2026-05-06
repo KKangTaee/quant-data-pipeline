@@ -3433,3 +3433,12 @@ Detailed historical logs were archived on `2026-04-13`.
   - Guide 선택지를 `단일 후보`, `여러 후보 묶음`, `저장된 비중 조합`, `보류 / 재검토`로 정리했다.
   - `전체 1~10 단계에서 현재 위치`를 선택 버튼 바로 아래로 올리고, 그 아래에 `선택한 경로 요약`, `Portfolio Flow`, 선택 경로별 checkpoint를 배치했다.
   - 여러 후보 묶음 경로는 Candidate Review 저장이 선행이고 Portfolio Proposal은 이미 저장된 후보를 묶는 화면이라는 ownership을 문구로 명확히 했다.
+
+### 2026-05-06
+- Phase36 Selected Portfolio Dashboard 목적 재설계:
+  - user feedback에 따라 기존 dashboard가 JSON inspection / drift 입력 화면처럼 보여 선정 포트폴리오의 성과 모니터링 목적이 흐려지는 문제를 확인했다.
+  - `Operations > Selected Portfolio Dashboard`를 Snapshot / Performance Recheck / What Changed / Allocation Check / Audit 구조로 재배치했다.
+  - Performance Recheck는 Final Review에서 선정된 component의 replay contract를 사용자가 지정한 start / end와 virtual capital로 다시 실행해 최신 성과, benchmark spread, component contribution, 강한 / 약한 기간을 보여준다.
+  - raw JSON은 접힘 Audit 영역으로 이동했고, 실제 보유 drift는 optional advanced Allocation Check로 낮췄다.
+  - Phase36 plan / TODO / first work unit / completion / next-phase preparation / checklist와 roadmap / doc index / comprehensive map / README / code analysis flow를 동기화했다.
+  - Verification: `py_compile`, performance recheck defaults / replay smoke, `git diff --check`, finance refinement hygiene helper, Streamlit `127.0.0.1:8505` browser smoke를 통과했다.
