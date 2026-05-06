@@ -3178,12 +3178,14 @@ def _render_guides_page() -> None:
                 "path": "Backtest > Compare & Portfolio Builder",
                 "goal": "여러 전략이나 registry 후보를 한 번에 놓고 shortlist / deployment / data trust 상태를 비교합니다.",
                 "check": [
+                    "`5단계 Compare 검증 보드`에서 PASS / CONDITIONAL / FAIL 확인",
                     "`Strategy Highlights`에서 전략별 상태를 한 줄씩 비교",
                     "`Data Trust`에서 결과 기간과 가격 최신성 차이 확인",
                     "`Focused Strategy > Real-Money Contract`로 한 전략씩 깊게 읽기",
+                    "`저장 Mix 다시 열기 > Replay Saved Mix`는 mix 자체 결과와 구성 전략 compare 검증이 분리되어 보이는지 확인",
                     "`Candidate Review > 보조 도구: Send Candidates To Compare`에서 보낸 후보 묶음이 의도대로 채워졌는지 확인",
                 ],
-                "next_step": "여기서 후보를 좁힌 뒤, 좋은 run이나 비교할 만한 run은 Candidate Packaging으로 넘겨 운영 기록과 Proposal 진입 준비를 합니다.",
+                "next_step": "5단계 Compare 검증이 PASS 또는 CONDITIONAL이면 버튼으로 6단계 Candidate Review에 보냅니다. 저장 Mix는 먼저 mix 자체 결과를 확인한 뒤, 필요한 경우 구성 전략 중 하나만 Candidate Review로 보냅니다.",
             },
             {
                 "title": "6단계. Candidate Packaging으로 운영 기록과 Proposal 진입 준비",
@@ -3313,14 +3315,15 @@ def _render_guides_page() -> None:
 
         with st.expander("5단계에서 6단계로 넘어가는 최소 기준", expanded=True):
             st.caption(
-                "이 기준은 `Compare` 결과를 보고 선택 후보를 `Candidate Packaging`으로 넘겨도 되는지 판단하는 기준입니다. "
+                "이 기준은 `Backtest > Compare & Portfolio Builder > 전략 비교 > 5단계 Compare 검증 보드`에서 확인합니다. "
+                "`PASS` 또는 `CONDITIONAL`이면 선택 후보를 6단계 Candidate Review로 보낼 수 있습니다. "
                 "후보 registry 저장이나 투자 승인이 아니라, 운영 기록과 Proposal 진입 준비 단계로 보낼 수 있는지 보는 진입 조건입니다."
             )
             draft_rows = pd.DataFrame(
                 [
                     {
                         "확인 항목": "Compare Run",
-                        "6단계 진행 가능": "2개 이상 전략이 같은 기간 / 같은 option으로 정상 비교됨",
+                        "6단계 진행 가능": "2개 이상 전략이 같은 기간 / 같은 option으로 정상 비교되어 `Compare Run = PASS`",
                         "멈춰야 하는 경우": "비교 전략이 1개뿐이거나 실행 오류 / 빈 결과가 있음",
                     },
                     {
@@ -3343,10 +3346,11 @@ def _render_guides_page() -> None:
             st.dataframe(draft_rows, use_container_width=True, hide_index=True)
             st.success(
                 "`Compare 정상 실행`, `Data Trust 해석 가능`, `Real-Money blocker 없음`, "
-                "상대 비교 근거가 있으면 6단계 Candidate Packaging으로 넘길 수 있습니다."
+                "상대 비교 근거가 있으면 `Send Selected Strategy To Candidate Review`로 6단계에 넘길 수 있습니다."
             )
             st.warning(
-                "Data Trust warning은 Draft Score를 강제로 cap하지 않고 별도 gate로 표시합니다. "
+                "`저장 Mix 다시 열기 > Replay Saved Mix`는 먼저 저장된 mix 자체 결과를 보여주고, "
+                "그 아래에서 구성 전략의 5단계 Compare 검증을 따로 보여줍니다. "
                 "6단계 진입은 후보 패키징 초안으로 보내는 것일 뿐, current candidate registry 저장이나 Pre-Live 운영 record 저장과는 분리됩니다."
             )
 

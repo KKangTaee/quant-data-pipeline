@@ -3336,3 +3336,11 @@ Detailed historical logs were archived on `2026-04-13`.
   - user request에 따라 직전 `Compare 통과 판단 단계 표현 정리` 커밋을 revert했다. `Replay Saved Mix` 화면 전환 오류 수정은 유지했다.
   - user feedback을 반영해 단순 label 변경으로 UX / 단계 혼란을 해결하려 하지 말고, 먼저 흐름 구조와 stage ownership을 설명한 뒤 `진행할까요?` 확인을 받도록 `AGENTS.md`에 지침을 추가했다.
   - 향후 Compare / Candidate Review 단계 개편은 5단계 확인 위치와 6단계 handoff가 자연스럽게 이어지는 화면 구조를 먼저 제안한 뒤 진행한다.
+
+### 2026-05-06
+- Compare 5단계 / 6단계 handoff UX 개편:
+  - user confirmation 후 `5단계 Compare 결과` 안에서 6단계 평가가 섞여 보이던 구조를 개선했다.
+  - Compare 결과 상단에 `5단계 Compare 검증 보드`를 두고 PASS / CONDITIONAL / FAIL, Readiness, Data Trust, 4개 검증 기준을 명시적으로 보여주도록 변경했다.
+  - `Send Selected Strategy To Candidate Review` 버튼은 `다음 행동` 영역으로 분리해, 버튼을 누른 뒤부터 6단계 Candidate Review가 시작된다는 경계를 화면에 남겼다.
+  - `Replay Saved Mix`는 `저장 Mix Replay 결과`와 `구성 전략 Compare 검증`을 나누어 표시해 mix 자체 결과와 개별 전략 handoff 검증을 구분하게 했다.
+  - `Reference > Guides`와 `WEB_BACKTEST_UI_FLOW.md`의 5단계 / 6단계 설명을 같은 흐름으로 갱신했다.

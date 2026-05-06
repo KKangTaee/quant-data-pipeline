@@ -496,7 +496,7 @@ def _build_compare_relative_evidence(
         judgment = "성과와 위험 쪽에 모두 설명 가능한 상대 근거가 있음"
     elif advantages:
         score = 2.0
-        judgment = "일부 상대 우위가 있어 Candidate Packaging 검토 가능"
+        judgment = "일부 상대 우위가 있어 Candidate Review 검토 가능"
     elif bottom_on_cagr_and_mdd:
         score = 0.0
         judgment = "CAGR과 MDD가 모두 최하위라 후보 초안 전에 재검토 필요"
@@ -621,7 +621,7 @@ def _build_compare_real_money_gate_assessment(bundle: dict[str, Any]) -> dict[st
 
     ready = promotion_ok and deployment_ok and blocker_ok
     if ready:
-        judgment = "Real-Money gate가 Candidate Packaging 검토를 막지 않음"
+        judgment = "Real-Money gate가 Candidate Review 검토를 막지 않음"
     else:
         judgment = "Real-Money gate에서 먼저 해결할 blocker가 있음"
 
@@ -709,17 +709,20 @@ def _build_candidate_draft_readiness_evaluation(
     )
 
     if clean_pass:
-        verdict = "6단계 Candidate Packaging 진입 가능"
+        stage_status = "PASS"
+        verdict = "PASS: Candidate Review로 이동 가능"
         tone = "success"
-        next_action = "선택 후보를 Candidate Packaging으로 보내고 operator 판단과 registry 저장 준비를 남깁니다."
+        next_action = "선택 후보를 6단계 Candidate Review로 보내고 operator 판단과 registry 저장 준비를 이어갑니다."
     elif conditional_pass:
-        verdict = "6단계 Candidate Packaging 조건부 진입 가능"
+        stage_status = "CONDITIONAL"
+        verdict = "CONDITIONAL: 보강 항목을 남기고 Candidate Review 이동 가능"
         tone = "warning"
-        next_action = "Candidate Packaging으로 넘기되 비교 약점과 확인 항목을 Review Note에 명시합니다."
+        next_action = "6단계 Candidate Review로 넘기되 비교 약점과 확인 항목을 Review Note에 명시합니다."
     else:
-        verdict = "5단계 Compare에서 먼저 추가 확인"
+        stage_status = "FAIL"
+        verdict = "FAIL: 5단계 Compare 보강 필요"
         tone = "error"
-        next_action = "비교 기준, Data Trust, Real-Money blocker, 상대 우위 설명을 다시 확인합니다."
+        next_action = "아래 Summary / Data Trust / Real-Money / Strategy Highlights를 다시 확인합니다."
 
     blocking_reasons: list[str] = []
     if compare_score < 2.0:
@@ -740,24 +743,28 @@ def _build_candidate_draft_readiness_evaluation(
     criteria_rows = [
         {
             "기준": "Compare Run",
+            "상태": "PASS" if compare_score == 2.0 else ("REVIEW" if compare_score == 1.0 else "FAIL"),
             "현재 값": f"{len(bundles)}개 전략",
             "점수": f"{compare_score:g} / 2",
             "판단": compare_judgment,
         },
         {
             "기준": "Data Trust",
+            "상태": "PASS" if data_gate_status == "ok" else ("REVIEW" if data_gate_status == "warning" else "FAIL"),
             "현재 값": data_assessment.get("judgment"),
             "점수": f"{float(data_assessment['score']):g} / 2",
             "판단": ", ".join(data_assessment.get("reasons") or []) or "특이사항 없음",
         },
         {
             "기준": "Real-Money Gate",
+            "상태": "PASS" if bool(real_money_assessment.get("ready")) else "FAIL",
             "현재 값": real_money_assessment.get("judgment"),
             "점수": f"{float(real_money_assessment['score']):g} / 3",
             "판단": ", ".join(real_money_assessment.get("reasons") or []) or "특이사항 없음",
         },
         {
             "기준": "Relative Evidence",
+            "상태": "PASS" if float(relative_evidence["score"]) >= 2.0 else ("REVIEW" if float(relative_evidence["score"]) >= 1.0 else "FAIL"),
             "현재 값": relative_evidence.get("judgment"),
             "점수": f"{float(relative_evidence['score']):g} / 3",
             "판단": ", ".join(relative_evidence.get("advantages") or []) or "상대 우위 약함",
@@ -766,6 +773,7 @@ def _build_candidate_draft_readiness_evaluation(
 
     return {
         "score": score,
+        "stage_status": stage_status,
         "verdict": verdict,
         "tone": tone,
         "next_action": next_action,
@@ -786,6 +794,7 @@ def _build_candidate_draft_readiness_evaluation(
         "selected_bundle": selected_bundle,
     }
 
+# Render the stage-5 stop/go board before a strategy is handed off to Candidate Review.
 def _render_candidate_draft_readiness_box(bundles: list[dict[str, Any]]) -> None:
     if not bundles:
         return
@@ -804,17 +813,17 @@ def _render_candidate_draft_readiness_box(bundles: list[dict[str, Any]]) -> None
     default_index = strategy_names.index(default_strategy) if default_strategy in strategy_names else 0
 
     with st.container(border=True):
-        st.markdown("##### 6단계 Candidate Packaging 진입 평가")
+        st.markdown("##### 5단계 Compare 검증 보드")
         st.caption(
-            "이 박스는 Compare 결과를 보고 선택 후보를 `Candidate Packaging`으로 넘겨도 되는지 판단하는 보조 신호입니다. "
-            "투자 승인이나 registry 저장이 아니라, 후보를 운영 기록과 Portfolio Proposal이 읽을 수 있는 형태로 패키징할 준비가 됐는지를 봅니다."
+            "이 보드는 5단계 Compare의 stop/go 판단입니다. 아래 Summary / Data Trust / Real-Money / Strategy Highlights를 요약해 "
+            "선택 후보를 6단계 Candidate Review로 보내도 되는지 확인합니다."
         )
         candidate_strategy = st.selectbox(
-            "Candidate Packaging으로 넘길 후보",
+            "5단계에서 검증할 후보",
             options=strategy_names,
             index=default_index,
             key="compare_candidate_draft_readiness_strategy",
-            help="Compare에 올린 전략 중 Candidate Packaging에서 검토할 후보를 고릅니다.",
+            help="Compare에 올린 전략 중 Candidate Review로 보낼 후보를 고릅니다.",
         )
         evaluation = _build_candidate_draft_readiness_evaluation(
             bundles,
@@ -824,22 +833,22 @@ def _render_candidate_draft_readiness_box(bundles: list[dict[str, Any]]) -> None
         tone = str(evaluation["tone"])
         data_gate = dict(evaluation.get("data_trust_gate") or {})
         data_gate_status = str(data_gate.get("status") or "-").upper()
+        stage_status = str(evaluation.get("stage_status") or "-")
 
-        metric_cols = st.columns([0.2, 0.2, 0.22, 0.38], gap="small")
-        metric_cols[0].metric("Draft Score", f"{score:.1f} / 10")
-        metric_cols[1].metric("Data Trust", data_gate_status)
-        with metric_cols[2]:
+        metric_cols = st.columns([0.18, 0.18, 0.2, 0.44], gap="small")
+        metric_cols[0].metric("5단계 판정", stage_status)
+        metric_cols[1].metric("Readiness", f"{score:.1f} / 10")
+        metric_cols[2].metric("Data Trust", data_gate_status)
+        with metric_cols[3]:
             st.caption("Candidate")
             st.markdown(f"**{candidate_strategy}**")
-        with metric_cols[3]:
-            st.caption("판정")
             st.markdown(f"**{evaluation['verdict']}**")
             st.caption("다음 행동")
             st.markdown(str(evaluation["next_action"]))
         st.progress(max(0.0, min(score / 10.0, 1.0)))
         st.caption(
-            "점수 기준: `8.0점 이상`은 깔끔한 Candidate Packaging 진행, `6.5점 이상`은 조건부 진행, "
-            "그 아래이면 Compare에서 더 확인합니다. Data Trust는 점수를 강제로 깎는 cap이 아니라 별도 gate로 표시합니다."
+            "점수 기준: `8.0점 이상`은 PASS, `6.5점 이상`은 CONDITIONAL, 그 아래 또는 hard blocker가 있으면 FAIL입니다. "
+            "Data Trust는 점수를 강제로 깎는 cap이 아니라 별도 gate로 표시합니다."
         )
 
         message = f"{evaluation['verdict']}: Compare 결과, Data Trust, Real-Money gate, 상대 비교 근거를 합산했습니다."
@@ -857,17 +866,21 @@ def _render_candidate_draft_readiness_box(bundles: list[dict[str, Any]]) -> None
             blocked_text = ", ".join(str(item) for item in data_gate.get("reasons") or []) or str(data_gate.get("judgment"))
             st.error(f"Data Trust Blocked: {blocked_text}")
 
+        st.markdown("**5단계 검증 기준**")
+        st.dataframe(pd.DataFrame(evaluation["criteria_rows"]), use_container_width=True, hide_index=True)
+
         if evaluation["blocking_reasons"]:
             st.caption("막는 항목: " + ", ".join(f"`{item}`" for item in evaluation["blocking_reasons"]))
         elif evaluation["review_reasons"]:
             st.caption("Review Note에 같이 남길 항목: " + ", ".join(f"`{item}`" for item in evaluation["review_reasons"]))
         else:
-            st.caption("Candidate Packaging으로 넘기기 전에 막는 핵심 항목은 보이지 않습니다.")
+            st.caption("6단계 Candidate Review로 넘기기 전에 막는 핵심 항목은 보이지 않습니다.")
 
+        st.markdown("##### 다음 행동")
         action_cols = st.columns([0.34, 0.66], gap="small")
         with action_cols[0]:
             if st.button(
-                "Send Selected Strategy To Candidate Packaging",
+                "Send Selected Strategy To Candidate Review",
                 key="compare_send_candidate_draft",
                 disabled=not bool(evaluation["can_send_to_candidate_draft"]),
                 use_container_width=True,
@@ -886,15 +899,13 @@ def _render_candidate_draft_readiness_box(bundles: list[dict[str, Any]]) -> None
                     st.rerun()
         with action_cols[1]:
             st.caption(
-                "버튼을 누르면 `Candidate Review > 1. Draft 확인`으로 이동합니다. "
-                "아직 current candidate registry 저장이나 Pre-Live 운영 record 저장이 아니라 6단계 패키징 초안을 여는 동작입니다."
+                "이 버튼을 누른 뒤부터 6단계가 시작됩니다. 이동 위치는 `Candidate Review > 1. Draft 확인`이며, "
+                "아직 current candidate registry 저장이나 Pre-Live 운영 record 저장은 아닙니다."
             )
 
-        with st.expander("점수 계산 기준 보기", expanded=False):
-            st.dataframe(pd.DataFrame(evaluation["criteria_rows"]), use_container_width=True, hide_index=True)
-            rank_rows = evaluation.get("rank_rows") or []
-            if rank_rows:
-                st.markdown("**상대 비교 순위**")
+        rank_rows = evaluation.get("rank_rows") or []
+        if rank_rows:
+            with st.expander("상대 비교 순위 보기", expanded=False):
                 st.dataframe(pd.DataFrame(rank_rows), use_container_width=True, hide_index=True)
 
         with st.expander("이번 Compare 구성 보기", expanded=False):
@@ -1098,8 +1109,11 @@ def _render_compare_results() -> None:
     drawdown_view = _build_drawdown_compare_view(bundles)
     return_view = _build_total_return_compare_view(bundles)
 
-    st.markdown("### Strategy Comparison")
-    st.caption("The first compare view focuses on strategy-to-strategy readability: one summary table, one overlay equity chart, and one overlay drawdown chart.")
+    st.markdown("### 전략 비교 상세")
+    st.caption(
+        "5단계 Compare의 상세 근거입니다. Summary, Data Trust, Real-Money / Guardrail, "
+        "Strategy Highlights, Focused Strategy를 탭별로 확인합니다."
+    )
     if any((bundle.get("meta") or {}).get("universe_contract") == HISTORICAL_DYNAMIC_PIT_UNIVERSE for bundle in bundles):
         st.info(
             "This compare run includes `Historical Dynamic PIT Universe` strategies. "
@@ -1783,7 +1797,7 @@ def _run_saved_portfolio_record(record: dict[str, Any]) -> None:
     st.session_state.backtest_compare_workspace_mode_request = "전략 비교"
     st.session_state.backtest_compare_result_notice = (
         f"저장된 portfolio mix `{record.get('name')}`를 replay했습니다. "
-        "5단계 Compare 결과와 비중 포트폴리오 결과를 확인하세요."
+        "저장 Mix Replay 결과와 구성 전략 Compare 검증을 나누어 확인하세요."
     )
     st.session_state.backtest_requested_panel = "Compare & Portfolio Builder"
 
@@ -3617,6 +3631,46 @@ def _resolve_saved_portfolio_dynamic_inputs(
     params["dynamic_target_size"] = dynamic_target_size
     return params
 
+def _is_saved_mix_replay_context() -> bool:
+    source_context = dict(st.session_state.get("backtest_compare_source_context") or {})
+    return str(source_context.get("source_kind") or "").strip() == "saved_portfolio"
+
+def _render_saved_mix_replay_result_card() -> None:
+    source_context = dict(st.session_state.get("backtest_compare_source_context") or {})
+    weighted_bundle = st.session_state.get("backtest_weighted_bundle")
+    strategy_names = list(source_context.get("selected_strategies") or [])
+    weights_percent = list(source_context.get("weights_percent") or [])
+    source_label = str(source_context.get("source_label") or "Saved Portfolio Mix")
+    saved_portfolio_id = str(source_context.get("saved_portfolio_id") or "-")
+
+    with st.container(border=True):
+        st.markdown("### 저장 Mix Replay 결과")
+        st.caption(
+            "이 영역은 저장된 비중 포트폴리오 mix 자체를 다시 연 결과입니다. "
+            "아래 `구성 전략 Compare 검증`은 mix 안의 개별 전략을 6단계 Candidate Review로 보낼 때만 사용합니다."
+        )
+        summary_cols = st.columns(4, gap="small")
+        with summary_cols[0]:
+            st.markdown(f"**Mix 이름**  \n{source_label}")
+        with summary_cols[1]:
+            st.markdown(f"**Portfolio ID**  \n`{saved_portfolio_id}`")
+        with summary_cols[2]:
+            st.markdown(f"**구성 전략**  \n{len(strategy_names)}개")
+        with summary_cols[3]:
+            st.markdown(
+                "**비중**  \n"
+                + (
+                    " / ".join(f"{float(weight):.0f}%" for weight in weights_percent)
+                    if weights_percent
+                    else "-"
+                )
+            )
+        if weighted_bundle and isinstance(weighted_bundle.get("summary_df"), pd.DataFrame):
+            _render_summary_metrics(weighted_bundle["summary_df"])
+            st.caption("상세 equity curve, contribution, result table은 아래 `3. 비중 포트폴리오 결과 확인`에서 확인합니다.")
+        else:
+            st.info("저장 Mix의 weighted portfolio 결과가 아직 없습니다. `Replay Saved Mix`를 다시 실행하면 생성됩니다.")
+
 # Render the create-new-mix side of Compare & Portfolio Builder.
 def _render_strategy_compare_workspace() -> None:
     st.markdown("### 1. 전략 비교")
@@ -3635,13 +3689,23 @@ def _render_strategy_compare_workspace() -> None:
         st.success(compare_result_notice)
         st.session_state.backtest_compare_result_notice = None
     if st.session_state.backtest_compare_bundles or st.session_state.backtest_compare_error:
-        with st.container(border=True):
-            st.markdown("### 5단계 Compare 결과")
-            st.caption(
-                "최근 실행한 Compare 결과입니다. 여기서 Summary, Data Trust, Real-Money gate, "
-                "상대 비교 근거를 보고 Candidate Packaging으로 넘길 수 있는지 확인합니다."
-            )
-            _render_compare_results()
+        if _is_saved_mix_replay_context():
+            _render_saved_mix_replay_result_card()
+            with st.container(border=True):
+                st.markdown("### 구성 전략 Compare 검증")
+                st.caption(
+                    "저장 Mix를 구성한 전략들을 5단계 기준으로 다시 비교합니다. "
+                    "이 검증은 mix 자체가 아니라, 구성 전략 중 하나를 6단계 Candidate Review로 보낼 때 사용하는 판단입니다."
+                )
+                _render_compare_results()
+        else:
+            with st.container(border=True):
+                st.markdown("### 5단계 Compare 결과")
+                st.caption(
+                    "최근 실행한 Compare 결과입니다. 여기서 Summary, Data Trust, Real-Money gate, "
+                    "상대 비교 근거를 보고 Candidate Review로 넘길 수 있는지 확인합니다."
+                )
+                _render_compare_results()
         st.divider()
     current_compare_selection = list(st.session_state.get("compare_selected_strategies") or [])
     normalized_compare_selection: list[str] = []
@@ -5048,6 +5112,11 @@ def _render_strategy_compare_workspace() -> None:
         else:
             selected_strategy_execution_names.append(strategy_name)
     if compare_submitted:
+        st.session_state.backtest_compare_source_context = {
+            "source_kind": "manual_compare",
+            "source_label": "Manual Strategy Comparison",
+            "selected_strategies": selected_strategy_execution_names,
+        }
         if not selected_strategies:
             st.session_state.backtest_compare_bundles = None
             st.session_state.backtest_compare_error_kind = "input"
@@ -5120,7 +5189,7 @@ def _render_strategy_compare_workspace() -> None:
                 st.session_state.backtest_weighted_error = None
                 st.session_state.backtest_compare_workspace_mode_request = "전략 비교"
                 st.session_state.backtest_compare_result_notice = (
-                    "Strategy Comparison 결과를 만들었습니다. 아래 5단계 Compare 결과에서 통과 여부를 확인하세요."
+                    "Strategy Comparison 결과를 만들었습니다. 아래 5단계 Compare 검증 보드에서 통과 여부를 확인하세요."
                 )
                 append_backtest_run_history(
                     bundle={
