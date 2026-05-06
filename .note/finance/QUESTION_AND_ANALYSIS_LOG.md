@@ -4177,3 +4177,133 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Follow-up:
   - `build_selected_portfolio_drift_alert_preview` helper와 `Drift Alert / Review Trigger Preview` UI를 추가했다
   - alert preview는 registry 저장, 주문 생성, 자동 리밸런싱을 하지 않는 read-only 운영 해석으로 문서화했다
+
+### 2026-05-06 - Guides 포트폴리오 플로우 맵 필요성
+- User request:
+  - 1~10단계 guide는 설명이 있지만, 단일 후보 / 여러 후보 / 저장 Mix처럼 포트폴리오 유형에 따라 달라지는 실제 흐름을 리스트만으로 이해하기 어렵다고 지적함
+- Interpreted goal:
+  - 사용자가 어떤 포트폴리오를 만들고 있는지 먼저 고르고, 그 경로에서 지나가는 화면과 생략되는 단계를 시각적으로 확인할 수 있어야 함
+- Analysis result:
+  - 선형 단계 목록은 공통 기준 설명에는 적합하지만, `단일 후보 직행`, `여러 후보 proposal 저장`, `saved mix -> Portfolio Proposal`, `blocker 재검토` 같은 분기 ownership을 드러내기 어렵다
+  - Guide 상단에 경로 선택형 시각 플로우 맵을 두고, 상세 1~10단계는 그 아래 reference로 유지하는 구조가 가장 작은 UX 개선이다
+- Follow-up:
+  - `Reference > Guides`에 포트폴리오 플로우 맵을 추가하고, `WEB_BACKTEST_UI_FLOW.md`를 해당 Guide 구조에 맞춰 동기화했다
+
+### 2026-05-06 - Guides 제품형 UX 개편 방향
+- User request:
+  - 포트폴리오 플로우 맵의 내용은 맞지만 시각적으로 실습용 UI처럼 보이며, Guides 전체가 제품형 안내 화면보다 문서 목록처럼 느껴진다고 지적함
+- Interpreted goal:
+  - 사용자가 문서 목록을 읽기 전에 지금 하려는 포트폴리오 경로와 다음 화면, 멈춤 기준을 제품형 guide 화면에서 먼저 이해해야 함
+- Analysis result:
+  - Runtime / Build가 최상단에 있는 구조는 운영자 / 개발자에게는 유용하지만 첫 사용자 guide 경험에는 부적절하다
+  - `핵심 개념`, `1~10단계`, `단계 통과 기준`, `문서와 파일`을 같은 위계로 나열하면 사용자가 먼저 무엇을 해야 하는지 판단하기 어렵다
+  - Streamlit native에서는 `st.graphviz_chart`가 flowchart에 가장 적합하고, 외부 React Flow 계열 component는 더 강하지만 dependency와 state 관리 부담이 커서 1차 개편에는 과하다
+- Follow-up:
+  - `Reference > Guides`를 hero / route selector / GraphViz flow / Decision Gates / Reference Drawer / System status 구조로 개편했다
+
+### 2026-05-06 - Guides 1~10 단계 복원 방식
+- User request:
+  - GraphViz flowchart는 이해하기 쉬워졌지만, chart 내용이 빈약하고 기존 1~10 단계 설명이 사라져 현재 위치를 파악하기 아쉽다고 지적함
+- Interpreted goal:
+  - 제품형 Guide의 간결함은 유지하면서도, 사용자가 단일 후보 / 여러 후보 / 저장 Mix / 막힘 해결 경로에서 전체 1~10 단계 중 어디에 있는지 읽을 수 있어야 함
+- Analysis result:
+  - flowchart node 안에 긴 설명을 넣으면 시각성이 떨어지므로 chart는 큰 경로 지도 역할만 맡기는 것이 적절하다
+  - 1~10 단계는 문서형 긴 목록으로 되돌리기보다 compact timeline으로 복원하고, 선택 경로별로 `필수`, `반복`, `직행`, `선행`, `생략`, `보류` 상태를 다르게 보여주는 것이 가장 자연스럽다
+- Follow-up:
+  - `Reference > Guides`에 경로별 checkpoint 카드와 1~10 단계 timeline을 추가해 시각적 흐름과 단계 해석을 함께 보강했다
+
+### 2026-05-06 - Guides 경로 라벨과 단계 ownership 정리
+- User request:
+  - `이 경로의 핵심 단계`, `현재 경로 / 다음 행동 / 주의할 점 / 읽는 기록`, `저장 Mix`, `막힘 해결`의 의미가 애매하고 여러 후보 포트폴리오 경로에서 Candidate Review와 Portfolio Proposal 순서가 충돌해 보인다고 지적함
+- Interpreted goal:
+  - 선택 버튼이 포트폴리오 유형만이 아니라 현재 진행 상황을 고르는 장치임을 명확히 하고, 전체 1~10 단계와 선택 경로 요약의 위계를 분리해야 함
+- Analysis result:
+  - `저장 Mix`는 후보가 아니라 Saved Portfolio의 재사용 weight setup이므로 `저장된 비중 조합`이 더 정확하다
+  - `막힘 해결`은 포트폴리오 구성 경로가 아니라 hold / blocked / insufficient evidence 상태에서 원인 화면으로 돌아가는 문제 해결 경로이므로 `보류 / 재검토`가 더 정확하다
+  - 여러 후보 경로는 Candidate Review에서 후보별 current candidate를 먼저 저장하고, Portfolio Proposal은 이미 저장된 후보를 역할 / 비중으로 묶는 후속 화면으로 설명해야 한다
+- Follow-up:
+  - Guide 선택지, 1~10 단계 배치, 선택 경로 요약 카드 문구, 여러 후보 묶음 경로 설명을 위 ownership에 맞게 정리했다
+
+### 2026-05-05 - Equal Weight 후보 정리와 배당 포함 후보 재탐색
+- User request:
+  - hold 상태였던 `Equal Weight Dividend Growth 4 (DGRW/SCHD/TDIV/VIG)`를 Candidate Library에서 제거하고, `Equal Weight Growth/Commodity 4 (QQQ/SOXX/XLE/IAU)`를 10단계 기준으로 검증한 뒤, 배당 ETF가 포함되면서 SPY보다 좋고 MDD 20% 이하인 Equal Weight 후보를 다시 찾아 달라고 요청함
+- Interpreted goal:
+  - 단순히 성과가 좋은 조합이 아니라 현재 Equal Weight Real-Money gate와 Candidate Library 관점에서 통과 가능한 후보인지 구분해야 함
+- Analysis result:
+  - Candidate Library 제거는 append-only registry 원칙을 유지하기 위해 기존 row 삭제가 아니라 같은 `registry_id`의 최신 `inactive` tombstone row로 처리하는 것이 맞다
+  - `QQQ/SOXX/XLE/IAU`는 처음에는 ETF profile coverage 부족 때문에 `hold/blocked`로 떨어졌지만, AUM / bid / ask metadata를 보강한 뒤에는 CAGR 19.96%, MDD -19.71%, `real_money_candidate / paper_probation / paper_only`로 통과했다
+  - 배당 포함 후보 중 가장 깨끗한 신규 후보는 `IAU / QQQ / SOXX / VIG / XLE`, annual rebalance다. CAGR 18.31%, MDD -19.27%이며 SPY CAGR 13.67%, SPY MDD -24.80% 대비 우위가 있고 Real-Money 상태도 paper-only로 정리된다
+  - SCHD 포함 후보는 일부 성과 조건을 만족했지만, 현재 rolling validation에서 `hold/blocked` 또는 `watchlist_only`로 남아 바로 10단계 실습 후보로 쓰기에는 VIG 포함 후보보다 약하다
+- Follow-up:
+  - 신규 VIG 포함 후보를 Candidate Library에 등록할지는 사용자 선택으로 둔다. 이미 등록된 `QQQ/SOXX/XLE/IAU` 후보는 ETF profile 보강 후 runtime 기준으로 다시 사용할 수 있다
+
+### 2026-05-05 - SPY benchmark GTAA 통과 후보 탐색
+- User request:
+  - 기존 `GTAA Clean-6 AOR Top-2 High CAGR`처럼 AOR를 benchmark로 쓰지 말고, SPY를 formal benchmark로 두었을 때 10단계까지 통과 가능한 GTAA 후보를 찾아 달라고 요청함
+- Interpreted goal:
+  - 단순히 CAGR/MDD가 좋은 후보가 아니라 `SPY` 기준 Real-Money gate에서 `Promotion`, `Shortlist`, `Deployment`, `Validation`이 모두 실습 가능한 후보를 찾아야 함
+- Analysis result:
+  - SPY benchmark에서는 기존 clean-6 GTAA가 rolling validation에서 자주 hold로 내려간다. 이유는 방어자산을 섞은 GTAA가 SPY 강세장에서 12개월 상대성과 기준으로 크게 뒤처지는 구간이 생기기 때문이다
+  - 병렬 탐색 결과 가장 깨끗한 후보는 `QQQ / SOXX / MTUM / QUAL / USMV / IAU / IEF / TLT`, `top=2`, `interval=3`, `1M/6M/12M`, `MA250`, `cash_only`, `Benchmark=SPY`였다
+  - Runtime 재검증 기준 `CAGR=18.97%`, `MDD=-18.10%`, `SPY CAGR=13.36%`, `SPY MDD=-15.90%`, `worst rolling excess=-9.84%`, `Promotion=real_money_candidate`, `Shortlist=paper_probation`, `Deployment=paper_only`, `Validation=normal`이다
+  - 더 높은 CAGR 후보(`SPY / QQQ / SOXX / XLE / XLU / XLV / IEF / IAU`)는 `CAGR=20.86%`, `MDD=-13.04%`였지만 `Deployment=review_required`라 최종 실습 후보로는 덜 깔끔하다
+- Follow-up:
+  - 후보를 Candidate Library에 등록하려면 Current Candidate Registry append를 별도로 진행한다
+
+### 2026-05-05 - SPY benchmark GTAA 저MDD 후보 재탐색
+- User request:
+  - SPY benchmark GTAA 후보 중 수익률을 조금 낮추더라도 MDD 15% 이하, CAGR 16~17% 이상, `top=2~4`, `interval<=3`, 10단계 통과가 가능한 후보를 더 깊게 찾아 달라고 요청함
+- Interpreted goal:
+  - 단순히 MDD가 낮은 후보가 아니라 `Promotion=real_money_candidate`, `Shortlist=paper_probation`, `Deployment=paper_only`, `Validation=normal`까지 유지되는 실습 후보를 찾아야 함
+- Analysis result:
+  - 가장 좋은 후보는 기존 style universe `QQQ / SOXX / MTUM / QUAL / USMV / IAU / IEF / TLT`를 유지하되, `top=3`, `interval=3`, `1M/6M`, `MA250`, `cash_only`, `Benchmark=SPY`로 바꾼 조합이다
+  - Runtime 재검증 기준 `CAGR=19.35%`, `MDD=-11.03%`, `Sharpe=2.42`, `SPY CAGR=13.36%`, `SPY MDD=-15.90%`, `rolling underperformance share=3.33%`, `Deployment=paper_only`로 조건을 충족했다
+  - `top=4`, `1M/6M`, `MA250`도 `CAGR=17.01%`, `MDD=-10.93%`로 더 보수적인 대안이지만, 대표 후보는 수익률과 방어력의 균형이 더 좋은 `top=3`이다
+- Follow-up:
+  - 후보를 Candidate Library에 등록하려면 Current Candidate Registry append를 별도로 진행한다
+
+### 2026-05-05 - GTAA SPY Low-MDD 후보 Candidate Library 등록
+- User request:
+  - `GTAA SPY Low-MDD Style Top-3` 후보를 Candidate Library에 추가해 달라고 요청함
+- Interpreted goal:
+  - 후보를 삭제/수정하지 않고 append-only 방식으로 Current Candidate Registry에 active row를 남겨 Operations > Candidate Library에서 inspect / rebuild 가능하게 해야 함
+- Analysis result:
+  - 등록 row는 `registry_id=gtaa_current_candidate_spy_low_mdd_style_top3_i3_1m6m_ma250`로 저장했다
+  - replay contract에는 `QQQ / SOXX / MTUM / QUAL / USMV / IAU / IEF / TLT`, `top=3`, `interval=3`, `1M/6M`, `MA250`, `cash_only`, `Benchmark=SPY`를 포함했다
+  - Registry validation 결과 required field 누락 없이 통과했다
+- Follow-up:
+  - Candidate Library에서 해당 title `GTAA SPY Low-MDD Style Top-3 (1M/6M, i3, MA250)`를 선택해 Rebuild Result Curve로 그래프와 result table을 다시 열 수 있다
+
+### 2026-05-05 - GTAA Low-MDD 후보와 함께 쓸 Equal Weight sleeve 탐색
+- User request:
+  - `GTAA SPY Low-MDD Style Top-3`와 함께 60:40 또는 70:30으로 섞었을 때 시너지가 나는 Equal Weight 후보를 찾아 달라고 요청함
+- Interpreted goal:
+  - 단독 성과만 좋은 ETF basket이 아니라, 현재 Equal Weight Real-Money gate를 통과하면서 GTAA와 섞었을 때 전체 포트폴리오의 drawdown / Sharpe가 좋아지는 후보를 찾아야 함
+- Analysis result:
+  - Equal Weight 단독 `MDD<=15%`와 `SPY benchmark 10단계 gate 통과`는 현재 조건에서 충돌한다
+  - 방어형 후보(`DGRW / XLU / GLD` 등)는 MDD는 낮지만 SPY 상대 rolling underperformance가 커서 `hold / blocked`가 된다
+  - 성장 / 섹터 / 금 조합은 10단계 gate를 통과하지만 단독 MDD가 18~19% 수준까지 올라간다
+  - 대표 실사용 후보는 `QQQ / SOXX / XLE / XLU / GLD`, annual rebalance다. 단독 `CAGR=17.55%`, `MDD=-18.98%`, `Promotion=real_money_candidate`, `Deployment=paper_only`, `Validation=normal`이고, GTAA와 70:30으로 섞으면 `CAGR=18.74%`, `MDD=-10.30%`, 60:40으로 섞으면 `CAGR=18.52%`, `MDD=-10.04%`가 된다
+- Follow-up:
+  - 사용자가 단독 Equal Weight MDD 15%를 절대 조건으로 유지하면 후보 등록은 보류하고, mix-level MDD 15%를 목표로 해석하면 위 후보를 Candidate Library에 등록할 수 있다
+
+### 2026-05-06 - 워크트리 기반 병렬 개발 운영 가이드
+- Request topic:
+  - 사용자가 현재 프로젝트의 목적 / 방향 / 개발 정도를 파악한 뒤, Git worktree를 어떻게 구성하고 개발 환경을 세팅하면 좋을지 가이드를 요청함
+- Interpreted goal:
+  - 처음부터 여러 기능을 무리하게 병렬 구현하기보다, 현재 phase 상태와 dirty worktree 상태를 기준으로 안전한 병렬 작업 단위를 정해야 함
+- Analysis result:
+  - 현재 `finance`는 데이터 수집, DB persistence, loader/runtime, 전략 / backtest engine, Streamlit Backtest UI, candidate / proposal / final review 운영 기록까지 이어진 quant research workspace다
+  - Phase 35는 `implementation_complete / manual_qa_pending`이며, 다음 큰 후보는 Portfolio Monitoring / Paper-Live Tracking, Live Approval Boundary, Portfolio Construction Quality Upgrade다
+  - 워크트리 분리는 `data-db`, `strategy-runtime`, `web-backtest-ui`, `docs-phase`처럼 파일 소유권이 겹치지 않는 축으로 나누는 것이 자연스럽다
+  - 현재 기본 worktree는 `master`가 `origin/master`보다 55 commits 앞서 있고 문서 / registry / run-history 변경이 많으므로, 새 worktree를 만들기 전 기준 브랜치와 local artifact 처리 방침을 먼저 정하는 것이 안전하다
+- Follow-up:
+  - 첫 운영 방식은 `master`를 기준선으로 두고, `../quant-data-pipeline-worktrees/<topic>` 아래에 topic branch별 worktree를 추가하는 구조를 권장한다
+  - `strategy-runtime`은 실전 후보를 찾는 탐색 브랜치가 아니라 전략 / 엔진 / runtime 구현 안정화 브랜치로 두고, 실전 후보 탐색은 `research-candidates` 또는 `candidate-search`처럼 별도 실험 브랜치로 분리하는 것이 안전하다
+  - 실제 병렬 작업은 각 worktree별로 별도 터미널이나 별도 Codex 세션을 열고, 요청마다 worktree path / branch / 담당 범위 / 건드리면 안 되는 파일 / 검증 명령을 명시하는 방식이 가장 안전하다
+  - 첫 세팅은 `docs-phase`, `web-backtest-ui`, `candidate-search` 3개 worktree를 만들고, 각 worktree마다 `uv sync`로 독립 `.venv`를 둔 뒤, main worktree는 통합 / merge / final smoke 확인용으로 유지하는 방식이 적합하다
+  - 각 worktree에서 Codex를 처음 실행한 직후에는 바로 큰 작업을 맡기기보다 `pwd`, branch, clean status, role, 수정 가능 / 금지 범위, 기본 검증 명령을 한 번 고정한 뒤 작은 첫 작업부터 시작하는 것이 좋다
+  - `docs-phase -> web-backtest-ui`처럼 의존성이 있는 흐름은 첫 범위 결정까지는 순차적이지만, 후보 탐색 / QA 정리 / 이미 범위가 확정된 UI 개선처럼 독립 가능한 작업은 병렬로 진행할 수 있다. 따라서 worktree 운영은 완전 동시 작업이라기보다 충돌을 줄이는 병렬 / 파이프라인 운영으로 이해하는 것이 맞다
+  - 장기 운영 구조는 사용자가 제안한 `phase`, `ux_ui-polishing`, `candidate-search` 축이 더 자연스럽다. `phase`는 문서와 실제 phase 개발을 끝까지 소유하고, `ux_ui-polishing`은 이미 구현된 기능의 사용성 / 흐름 / 화면 polish를 맡으며, `candidate-search`는 프로그램을 활용한 후보 탐색을 맡는다. 단, `phase`와 `ux_ui-polishing`은 같은 UI 파일을 건드릴 수 있으므로 동시에 같은 화면을 수정하지 않는 규칙이 필요하다
+  - 기존 `docs-phase`, `web-backtest-ui`, `candidate-search` worktree는 clean 상태에서 제거했고, `master` 기준으로 `codex/phase`, `codex/ux-ui-polishing`, `codex/candidate-search` worktree를 새로 만들었다
+  - worktree별 고정 문서는 반복 운영이 안정된 뒤 만들고, 초기에는 세션 첫 메시지로 역할 / 수정 가능 범위 / 수정 금지 범위 / 현재 충돌 주의 파일을 지정하는 방식이 낫다. 아직 운영 규칙이 변하는 중이라 문서를 너무 빨리 고정하면 오히려 stale guidance가 생길 수 있다

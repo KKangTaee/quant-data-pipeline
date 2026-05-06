@@ -171,3 +171,222 @@
 - 관련 문서:
   - [GTAA.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/GTAA.md)
   - [PHASE13_GTAA_NONHOLD_SPY_OUTPERFORMANCE_SEARCH.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase13/PHASE13_GTAA_NONHOLD_SPY_OUTPERFORMANCE_SEARCH.md)
+
+### 2026-04-30 - clean-6 AOR current candidate reset run
+
+- 목표:
+  - fresh registry reset 이후 7단계 `단일 후보 직행 평가 또는 Portfolio Proposal 초안 작성`까지 도달 가능한 GTAA 후보를 찾는다.
+- 전략:
+  - `GTAA Clean-6 AOR Top-1`
+- 기간 / universe:
+  - input: `2016-01-01 ~ 2026-04-01`
+  - effective result window: `2016-01-29 ~ 2026-04-01`
+  - universe: `SPY, QQQ, GLD, IEF, LQD, TLT`
+- 핵심 설정:
+  - `Option = month_end`
+  - `Top Assets = 1`
+  - `Signal Interval = 2`
+  - `Score Horizons = 3M / 12M`
+  - `Trend Filter = MA200`
+  - `Risk-Off Mode = cash_only`
+  - `Benchmark = AOR`
+  - `Minimum Price = 5.0`
+  - `Transaction Cost = 10 bps`
+- 결과:
+  - `CAGR = 15.3395%`
+  - `MDD = -13.9675%`
+  - `Sharpe = 1.6054`
+  - `End Balance = 42,653.22`
+  - `AOR CAGR = 5.4711%`
+  - `AOR MDD = -20.3628%`
+  - `AOR 대비 CAGR spread = +9.8684%p`
+  - `Promotion = real_money_candidate`
+  - `Shortlist = paper_probation`
+  - `Deployment = paper_only`
+  - `ETF Operability = normal`
+  - `Validation = normal`
+- 비교 참고:
+  - 같은 기간 `SPY` 기준으로도 full-period CAGR / MDD는 우위지만, rolling validation에서는 `worst_excess` 경고가 떠서 formal promotion benchmark로는 `hold`가 된다.
+  - 같은 universe equal weight, interval 2는 `CAGR = 6.8786%`, `MDD = -23.0319%`, `Sharpe = 0.7597`였다.
+- 저장:
+  - `BACKTEST_RUN_HISTORY.jsonl`에 single strategy run 저장
+  - `CANDIDATE_REVIEW_NOTES.jsonl`: `candidate_review_note_52d5888e63ce`
+  - `CURRENT_CANDIDATE_REGISTRY.jsonl`: `gtaa_current_candidate_clean6_aor_top1_i2_3m12m`
+  - `PRE_LIVE_CANDIDATE_REGISTRY.jsonl`: `pre_live_gtaa_current_candidate_clean6_aor_top1_i2_3m12m`
+- 해석:
+  - 이 후보는 다중자산 GTAA 특성에 맞춰 `AOR`를 formal benchmark로 두면 Candidate Review, Pre-Live paper tracking, Portfolio Proposal 단일 후보 직행 평가까지 통과한다.
+  - `SPY`는 reference benchmark로 계속 볼 수 있지만, formal gate로 쓰면 rolling 구간 부진 경고가 강해져 같은 후보가 hold로 내려간다.
+
+### 2026-05-01 - clean-6 AOR top-2 interval-3 follow-up candidate
+
+- 목표:
+  - 추가 조건 `interval < 4`, `top = 2 / 3 / 4`, universe 6~15개 안에서 7단계까지 도달 가능한 GTAA 후보를 하나 더 찾는다.
+- 전략:
+  - `GTAA Clean-6 AOR Top-2`
+- 기간 / universe:
+  - input: `2016-01-01 ~ 2026-04-01`
+  - effective result window: `2016-01-29 ~ 2026-04-01`
+  - universe: `SPY, QQQ, GLD, IEF, LQD, TLT`
+- 핵심 설정:
+  - `Option = month_end`
+  - `Top Assets = 2`
+  - `Signal Interval = 3`
+  - `Score Horizons = 1M / 3M / 6M`
+  - `Trend Filter = MA200`
+  - `Risk-Off Mode = cash_only`
+  - `Benchmark = AOR`
+  - `Minimum Price = 5.0`
+  - `Transaction Cost = 10 bps`
+- 결과:
+  - `CAGR = 12.8073%`
+  - `MDD = -11.5626%`
+  - `Sharpe = 2.0147`
+  - `End Balance = 34,032.54`
+  - `AOR CAGR = 5.4711%`
+  - `AOR MDD = -19.1037%`
+  - `AOR 대비 CAGR spread = +7.3363%p`
+  - `Promotion = real_money_candidate`
+  - `Shortlist = paper_probation`
+  - `Deployment = paper_only`
+  - `ETF Operability = normal`
+  - `Validation = normal`
+- 후보 선택 이유:
+  - 같은 clean-6 universe의 `top=2 / interval=1 / 3M+6M+12M` 후보가 CAGR은 더 높았지만 MDD가 더 깊었다.
+  - 이번 후보는 `interval=3`, `MDD=-11.5626%`, `Sharpe=2.0147`이라 추가 실습 후보로 더 안정적인 형태다.
+- 저장:
+  - `BACKTEST_RUN_HISTORY.jsonl`에 single strategy run 저장
+  - `CANDIDATE_REVIEW_NOTES.jsonl`: `candidate_review_note_a152594509dd`
+  - `CURRENT_CANDIDATE_REGISTRY.jsonl`: `gtaa_current_candidate_clean6_aor_top2_i3_1m3m6m`
+  - `PRE_LIVE_CANDIDATE_REGISTRY.jsonl`: `pre_live_gtaa_current_candidate_clean6_aor_top2_i3_1m3m6m`
+
+### 2026-05-01 - clean-6 AOR high-CAGR top-2 candidate
+
+- 목표:
+  - 추가 조건을 유지하면서 `CAGR >= 15%`, `MDD 11~12%대 이하`인 GTAA 후보를 찾는다.
+- 전략:
+  - `GTAA Clean-6 AOR Top-2 High CAGR`
+- 기간 / universe:
+  - input: `2016-01-01 ~ 2026-04-01`
+  - effective result window: `2016-01-29 ~ 2026-04-01`
+  - universe: `SPY, QQQ, GLD, IEF, LQD, TLT`
+- 핵심 설정:
+  - `Option = month_end`
+  - `Top Assets = 2`
+  - `Signal Interval = 2`
+  - `Score Horizons = 1M / 12M`
+  - `Trend Filter = MA150`
+  - `Risk-Off Mode = cash_only`
+  - `Benchmark = AOR`
+  - `Minimum Price = 5.0`
+  - `Transaction Cost = 10 bps`
+- 결과:
+  - `CAGR = 15.2174%`
+  - `MDD = -8.8783%`
+  - `Sharpe = 1.9630`
+  - `End Balance = 42,196.27`
+  - `AOR CAGR = 5.4711%`
+  - `AOR MDD = -20.3628%`
+  - `AOR 대비 CAGR spread = +9.7464%p`
+  - `Promotion = real_money_candidate`
+  - `Shortlist = paper_probation`
+  - `Deployment = paper_only`
+  - `ETF Operability = normal`
+  - `Validation = normal`
+- 후보 선택 이유:
+  - 요청 조건 `top=2/3/4`, `interval<4`, universe 6~15개, `CAGR>=15%`, 낮은 MDD 목표를 모두 만족했다.
+  - 이전 top-2 interval-3 후보보다 CAGR이 높고, MDD도 더 낮아 고CAGR 실습 후보로 적합하다.
+- 저장:
+  - `BACKTEST_RUN_HISTORY.jsonl`에 single strategy run 저장
+  - `CANDIDATE_REVIEW_NOTES.jsonl`: `candidate_review_note_d12013649150`
+  - `CURRENT_CANDIDATE_REGISTRY.jsonl`: `gtaa_current_candidate_clean6_aor_top2_i2_1m12m_ma150`
+  - `PRE_LIVE_CANDIDATE_REGISTRY.jsonl`: `pre_live_gtaa_current_candidate_clean6_aor_top2_i2_1m12m_ma150`
+
+### 2026-05-05 - SPY benchmark 통과 후보 탐색
+
+- 목표:
+  - 기존 clean-6 후보처럼 `AOR`가 아니라 `SPY`를 formal benchmark로 두고 10단계 실습 후보가 될 수 있는 GTAA 후보를 찾는다.
+  - 조건은 `top=2~4`, universe 6~12개, `interval<=3`이다.
+- 탐색 요약:
+  - 세 개의 병렬 탐색 track을 사용했다.
+  - cross-asset / sector / style / defensive ETF universe를 나누어 확인했다.
+  - `VGT`, `SMH`, `XLK`, `XLY`, `DIA`, `IWF` 일부 후보는 DB 가격 row가 짧아 장기 rolling validation 후보에서 제외했다.
+- 가장 깔끔한 실습 후보:
+  - 전략 이름: `GTAA SPY Benchmark Top-2 Style Momentum`
+  - input: `2016-01-01 ~ 2026-05-01`
+  - effective result window: `2016-01-29 ~ 2026-02-27`
+  - universe: `QQQ, SOXX, MTUM, QUAL, USMV, IAU, IEF, TLT`
+  - `Top Assets = 2`
+  - `Signal Interval = 3`
+  - `Score Horizons = 1M / 6M / 12M`
+  - `Trend Filter = MA250`
+  - `Risk-Off Mode = cash_only`
+  - `Benchmark = SPY`
+  - `Minimum Price = 5.0`
+  - `Transaction Cost = 10 bps`
+- 결과:
+  - `CAGR = 18.9684%`
+  - `MDD = -18.0974%`
+  - `Sharpe = 2.0242`
+  - `End Balance = 57,540.36`
+  - `SPY CAGR = 13.3638%`
+  - `SPY MDD = -15.9042%`
+  - `SPY 대비 CAGR spread = +5.6046%p`
+  - `Rolling underperformance share = 20.00%`
+  - `Worst rolling excess = -9.8442%`
+  - `Promotion = real_money_candidate`
+  - `Shortlist = paper_probation`
+  - `Deployment = paper_only`
+  - `Validation = normal`
+  - `ETF Operability = normal`
+- 비교 후보:
+  - `SPY, QQQ, SOXX, XLE, XLU, XLV, IEF, IAU`, `top=2`, `interval=3`, `1M/3M/6M`, `MA200`은 `CAGR=20.86%`, `MDD=-13.04%`로 더 좋아 보였지만 `Deployment=review_required`였다.
+  - 이유는 promotion은 통과했지만 recent rolling review / monitoring에서 manual review가 필요했기 때문이다.
+- 해석:
+  - `SPY`를 benchmark로 쓰면 GTAA가 AOR 기준보다 훨씬 엄격하게 평가된다.
+  - 이번 후보는 CAGR이 SPY보다 높고, worst rolling excess가 `-10%` 안쪽에 있어 `Validation=normal`로 유지된 점이 핵심이다.
+  - 아직 Candidate Library에는 자동 등록하지 않았다. 사용자가 원하면 Current Candidate Registry에 append한다.
+
+### 2026-05-05 - SPY benchmark 저MDD 후보 재탐색
+
+- 목표:
+  - 위 SPY benchmark 후보보다 수익률을 조금 낮추더라도 MDD를 낮춘 GTAA 후보를 찾는다.
+  - 조건은 `MDD <= 15%`, `CAGR >= 16~17%`, `top=2~4`, `interval<=3`, 10단계 실습 통과 가능 상태다.
+- 가장 강한 저MDD 후보:
+  - 전략 이름: `GTAA SPY Low-MDD Style Top-3`
+  - input: `2016-01-01 ~ 2026-05-01`
+  - effective result window: `2016-01-29 ~ 2026-02-27`
+  - universe: `QQQ, SOXX, MTUM, QUAL, USMV, IAU, IEF, TLT`
+  - `Top Assets = 3`
+  - `Signal Interval = 3`
+  - `Score Horizons = 1M / 6M`
+  - `Trend Filter = MA250`
+  - `Risk-Off Mode = cash_only`
+  - `Benchmark = SPY`
+  - `Minimum Price = 5.0`
+  - `Transaction Cost = 10 bps`
+- 결과:
+  - `CAGR = 19.3479%`
+  - `MDD = -11.0297%`
+  - `Sharpe = 2.4188`
+  - `End Balance = 59,437.88`
+  - `SPY CAGR = 13.3638%`
+  - `SPY MDD = -15.9042%`
+  - `SPY 대비 CAGR spread = +5.9841%p`
+  - `Rolling underperformance share = 3.33%`
+  - `Worst rolling excess = -0.0209%`
+  - `Rolling Review = normal`
+  - `Monitoring = routine_review`
+  - `Promotion = real_money_candidate`
+  - `Shortlist = paper_probation`
+  - `Deployment = paper_only`
+  - `Validation = normal`
+  - `ETF Operability = normal`
+- 비교 후보:
+  - 같은 universe, `top=4`, `1M/6M`, `MA250`도 `CAGR=17.0098%`, `MDD=-10.9297%`, `Deployment=paper_only`로 매우 안정적이다.
+  - 다만 `top=3` 후보가 CAGR, Sharpe, SPY 대비 spread가 더 높아 대표 후보로 더 적합하다.
+- 해석:
+  - 이전 `top=2 / 1M/6M/12M / MA250` 후보보다 MDD를 약 `18.10% -> 11.03%`로 크게 낮추면서 CAGR은 오히려 높게 유지했다.
+  - `top=3`으로 분산을 조금 늘리고, 12M momentum을 빼서 최근 1M/6M 흐름을 더 민감하게 반영한 것이 drawdown 개선에 도움이 된 것으로 해석한다.
+  - 사용자 요청에 따라 Candidate Library 노출용 Current Candidate Registry row를 append했다.
+- 저장:
+  - `CURRENT_CANDIDATE_REGISTRY.jsonl`: `gtaa_current_candidate_spy_low_mdd_style_top3_i3_1m6m_ma250`

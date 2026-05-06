@@ -15,6 +15,10 @@
   - `GTAA` 결과 허브
 - `strategies/GTAA_BACKTEST_LOG.md`
   - `GTAA` 전략 run 기록 누적 문서
+- `strategies/EQUAL_WEIGHT.md`
+  - `Equal Weight` 결과 허브
+- `strategies/EQUAL_WEIGHT_BACKTEST_LOG.md`
+  - `Equal Weight` ETF basket과 GTAA mix 후보 탐색 기록 누적 문서
 - `strategies/GTAA_REAL_MONEY_CANDIDATE_SEARCH_20260418.md`
   - current DB/runtime 기준 `Promotion = real_money_candidate`까지 올라간 GTAA compact ETF 후보 탐색 문서
 - `strategies/GTAA_EXPANDED_UNIVERSE_FOLLOWUP_20260420.md`

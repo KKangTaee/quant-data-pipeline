@@ -22,6 +22,107 @@
 
 ## 기록
 
+### 2026-05-01 - 7단계 실습용 Quality 후보 탐색
+
+- 목표:
+  - 사용자가 처음부터 다시 실습할 수 있도록 `Quality > Strict Annual`에서
+    현재 Backtest workflow 7단계까지 진행 가능한 후보를 찾는다
+- 전략:
+  - `Quality Snapshot (Strict Annual)`
+- 기간 / universe:
+  - `2016-01-01 ~ 2026-04-01`
+  - actual result period: `2016-01-29 ~ 2026-04-01`
+  - `US Statement Coverage 100`
+  - `Historical Dynamic PIT Universe`
+- 핵심 설정:
+  - factor:
+    - `roe`
+    - `roa`
+    - `net_margin`
+    - `asset_turnover`
+    - `current_ratio`
+  - `Top N = 8`
+  - `Rebalance Interval = 1`
+  - `Benchmark Contract = ticker`
+  - `Benchmark Ticker = AOR`
+  - `Guardrail Reference = SPY`
+  - `Trend Filter = on`, `MA250`
+  - `Weighting = equal_weight`
+  - `Rejected Slot Handling = retain_unfilled_as_cash`
+  - `Risk-Off = cash_only`
+  - `Min Avg Dollar Volume 20D = 1.0M`
+  - `Underperformance Guardrail = on`, `3M`, threshold `-5%`
+  - `Drawdown Guardrail = on`, `12M`, strategy threshold `-12%`, gap threshold `5%`
+- 결과:
+  - `CAGR = 20.02%`
+  - `MDD = -13.42%`
+  - `Sharpe = 1.3957`
+  - `Promotion = real_money_candidate`
+  - `Shortlist = paper_probation`
+  - `Deployment = review_required`
+  - `Validation / Benchmark Policy / Liquidity Policy / Validation Policy / Guardrail Policy = normal / normal / normal / normal / normal`
+- Coverage 300 / 500 확인:
+  - Coverage 300 bounded sweep에서는 exact hit가 없었다
+    - 고수익 후보는 `CAGR >= 20%`지만 MDD가 약 `-28% ~ -30%`
+    - 저낙폭 후보는 MDD가 `-16.70%` 근처까지 내려왔지만 CAGR이 크게 낮아짐
+  - Coverage 500에 동일 성공 조합을 적용하면 `top8`은 `CAGR 7.11% / MDD -18.07%`, `top10`은 `CAGR 9.23% / MDD -22.72%`로 탈락
+- 해석:
+  - 조건을 모두 만족한 후보는 Coverage 100에서 발견됐다
+  - formal benchmark를 `AOR`로 두면 `real_money_candidate / paper_probation / review_required`까지 올라가므로
+    Candidate Review에서 paper tracking 흐름으로 7단계 실습이 가능하다
+  - 같은 후보를 `SPY` formal benchmark로 보면 `production_candidate / watchlist / review_required`로 내려가므로,
+    이 후보의 정식 비교 기준은 다중자산 benchmark인 `AOR`로 해석하는 것이 맞다
+- 다음 액션:
+  - 사용자가 원하면 이 후보를 Candidate Review Note, Current Candidate Registry, Pre-Live record로 저장한다
+  - 저장 전에는 Single Strategy UI에서 위 설정으로 한 번 재현 확인한다
+
+### 2026-05-01 - paper_only 저장 가능 Quality 후보 재탐색
+
+- 목표:
+  - 직전 Quality 후보가 `review_required`였기 때문에,
+    GTAA 실습 후보처럼 `Deployment = paper_only`까지 내려오는 Quality 후보가 있는지 재탐색
+- 결론:
+  - `CAGR >= 20%`, `MDD >= -15%`, `Deployment = paper_only`를 동시에 만족하는 후보는 bounded search에서 찾지 못했다
+  - `paper_only`까지 깨끗하게 내려오는 최상위 후보는 CAGR이 14%대로 낮아진다
+- 가장 저장하기 쉬운 paper_only 후보:
+  - `US Statement Coverage 100`
+  - `Historical Dynamic PIT Universe`
+  - factor:
+    - `roe`
+    - `roa`
+    - `cash_ratio`
+    - `debt_to_assets`
+  - `Top N = 10`
+  - `Rebalance Interval = 1`
+  - `Benchmark Contract = ticker`
+  - `Benchmark Ticker = AOR`
+  - `Guardrail Reference = SPY`
+  - `Trend Filter = on`, `MA250`
+  - `Market Regime = off`
+  - `Weighting = equal_weight`
+  - `Rejected Slot Handling = retain_unfilled_as_cash`
+  - `Risk-Off = cash_only`
+  - `Min Avg Dollar Volume 20D = 1.0M`
+- 결과:
+  - `CAGR = 14.38%`
+  - `MDD = -14.56%`
+  - `Sharpe = 1.2490`
+  - `Promotion = real_money_candidate`
+  - `Shortlist = paper_probation`
+  - `Deployment = paper_only`
+  - `Probation = paper_tracking`
+  - `Monitoring = routine_review`
+  - `Validation / Benchmark Policy / Liquidity Policy / Validation Policy / Guardrail Policy = normal / normal / normal / normal / normal`
+- 해석:
+  - 7단계 registry / Pre-Live / Portfolio Proposal 실습 후보로는 이 후보가 더 깔끔하다
+  - 다만 사용자가 처음 제시한 `CAGR >= 20%` 조건은 만족하지 못한다
+  - `CAGR >= 20%`를 유지하려면 직전 `review_required` 후보처럼 guardrail trigger 또는 monitoring review가 남는다
+- 저장:
+  - `CANDIDATE_REVIEW_NOTES.jsonl`: `candidate_review_note_quality_cov100_top10_aor_ma250_paper_only`
+  - `CURRENT_CANDIDATE_REGISTRY.jsonl`: `quality_current_candidate_cov100_top10_aor_ma250_paper_only`
+  - `PRE_LIVE_CANDIDATE_REGISTRY.jsonl`: `pre_live_quality_current_candidate_cov100_top10_aor_ma250_paper_only`
+  - registry / pre-live validation 통과, Candidate Library에서 `paper_tracking` 후보로 로드 확인
+
 ### 2026-04-16 - phase21 integrated validation first pass
 
 - 목표:
@@ -451,6 +552,8 @@
 
 | 날짜 | run | 핵심 결과 | 판단 |
 | --- | --- | --- | --- |
+| 2026-05-01 | paper_only 저장 후보 등록 | Coverage 100, Top N 10, AOR benchmark, factors `roe, roa, cash_ratio, debt_to_assets`, `14.38% / -14.56%`, `real_money_candidate / paper_probation / paper_only` | Current Candidate / Pre-Live 등록 완료, Candidate Library 표시 확인 |
+| 2026-05-01 | 7단계 실습용 Quality 후보 탐색 | Coverage 100, Top N 8, AOR benchmark, `20.02% / -13.42%`, `real_money_candidate / paper_probation / review_required` | 조건 충족 후보 발견, 저장은 사용자 확인 후 진행 |
 | 2026-04-16 | Phase 21 integrated validation | current anchor `26.02% / -25.57%`, cleaner alternative `25.18% / -25.57%` | current anchor 유지, cleaner alternative는 comparison-only |
 | 2026-04-13 | alternate contract search | LQD anchor `26.02% / -25.57%`, SPY cleaner alternative `25.18% / -25.57%` | LQD + trend on + regime off 유지 |
 | 2026-04-13 | rescued anchor factor search | baseline `26.02% / -25.57%`, best addition `20.25% / -30.32%` | factor addition으로 교체하지 않음 |

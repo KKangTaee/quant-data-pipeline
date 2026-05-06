@@ -10,6 +10,7 @@ UI form, payload 복원, candidate review, history replay, candidate replay, sav
 | 파일 | 역할 |
 |---|---|
 | `app/web/streamlit_app.py` | top navigation과 page entry |
+| `app/web/reference_guides.py` | `Reference > Guides`의 제품형 workflow guide, portfolio flowchart, decision gates, reference drawer |
 | `app/web/overview_dashboard.py` | `Workspace > Overview`에서 Backtest registry 기반 후보 Top 3, candidate funnel, next actions, recent activity dashboard render |
 | `app/web/overview_dashboard_helpers.py` | Overview dashboard용 current candidate / Pre-Live / proposal / history / saved portfolio 집계와 candidate priority scoring helper |
 | `app/web/backtest_common.py` | Backtest 공용 preset, session state, panel routing, universe / real-money / guardrail input, status label helper |
@@ -101,14 +102,34 @@ Ingestion / Data Trust
 - Phase 35에서 별도 `Post-Selection Guide` panel은 과한 단계로 판단해 active workflow에서 제거했다. 최종 판단과 투자 가능 / 투자하면 안 됨 / 내용 부족 / 재검토 필요 해석은 `Backtest > Final Review`의 saved final decision review에서 확인한다.
 - Phase 36에서 선정 이후 운영 확인은 `Backtest` 주 workflow가 아니라 `Operations > Selected Portfolio Dashboard`로 분리했다. 이 화면은 Final Review selected row를 read-only로 읽고, current weight 직접 입력, current value 입력, shares x price 입력 기반 drift / rebalance-needed 검토 신호와 review trigger preview를 보여준다. shares x price 입력에서는 DB latest close를 보조로 불러올 수 있지만, account holding 자동 연결이나 주문 초안은 만들지 않는다.
 
-현재 Guides 화면은 네 묶음으로 정리한다.
+현재 Guides 화면은 제품형 의사결정 guide로 정리한다.
 
 | 묶음 | 내용 |
 |---|---|
-| `핵심 개념 가이드` | 실전 승격 흐름, Real-Money Contract, GTAA Risk-Off 후보군, interval, Compare 대상 선정법, Portfolio Proposal -> Final Review -> 최종 판단 완료 해석 |
-| `1~10 단계 실행 흐름` | 데이터 최신화부터 Final Review 저장 결과 확인까지의 단계별 흐름. 각 단계는 expander로 접어 읽는다 |
-| `단계 통과 기준` | 4->5, 5->6, 6->7, 7->8, 8->9, 9->10, 최종 판단 해석처럼 다음 단계로 넘길지 판단하는 stop/go 기준 |
-| `문서와 파일` | 현재 먼저 볼 문서, 후보 검토 / 실행 재사용 JSONL 저장소 지도, proposal / paper ledger / final decision guide와 registry path, live approval이 아님을 구분하는 운영 경계 |
+| `Portfolio Selection Guide` hero | 제품 안내 첫 화면으로, 현재 workflow와 runtime / git 상태를 compact badge로 보여준다. 개발용 `Runtime / Build`는 하단 접힘 `System status`로 낮춘다 |
+| `현재 진행 상황 선택` | 단일 후보, 여러 후보 묶음, 저장된 비중 조합, 보류 / 재검토 중 사용자의 현재 상황을 먼저 고른다 |
+| `전체 1~10 단계에서 현재 위치` | 선택 버튼 바로 아래에 제품형 compact timeline을 둔다. 선택 경로에 따라 `필수`, `반복`, `직행`, `선행`, `생략`, `보류` 같은 상태 라벨을 붙여 현재 위치와 생략되는 단계를 먼저 해석하게 한다 |
+| `선택한 경로 요약` | `선택한 목표`, `진행 순서`, `건너뛰거나 조심할 단계`, `생성 / 참조 기록`으로 선택 경로의 화면 순서와 기록 경계를 짧게 보여준다 |
+| `Portfolio Flow` | 선택 경로를 GraphViz flowchart로 보여주고, 환경상 GraphViz 렌더링이 실패하면 compact visual fallback으로 표시한다. chart node는 큰 흐름을 맡고, 긴 설명은 아래 checkpoint 패널로 넘긴다 |
+| `선택한 경로의 핵심 체크포인트` | 선택 경로에서 실제로 놓치면 안 되는 checkpoint를 카드로 보여준다. 단일 후보, 여러 후보 묶음, 저장된 비중 조합, 보류 / 재검토마다 같은 workflow를 다르게 해석한다 |
+| `Decision Gates` | 단계 번호 대신 `Compare로 가도 되는가`, `Candidate로 남겨도 되는가`, `Proposal로 묶어도 되는가`, `Final Review를 기록해도 되는가` 같은 사용자 질문 기준으로 Go / Review / Stop을 보여준다 |
+| `Reference Drawer` | 핵심 개념, 상세 단계, 기록 저장소, 운영 경계를 탭으로 낮춰 필요할 때만 확인하게 한다 |
+
+사용자는 먼저 현재 진행 상황을 고르고,
+1~10 단계 timeline에서 전체 workflow상 위치를 본 뒤,
+선택한 경로 요약과 flowchart로 실제 화면 순서와 기록 경계를 확인한다.
+그 다음 경로별 checkpoint에서 놓치면 안 되는 판단을 보고
+실제로 지나가는 화면, 반복되는 단계, 생략되는 단계, 생성되거나 읽는 기록을 본다.
+그 다음 Decision Gates와 Reference Drawer를 이어서 읽는다.
+
+경로별 핵심 차이는 아래와 같다.
+
+| 경로 | 핵심 차이 |
+|---|---|
+| `단일 후보 경로` | Candidate Review와 Pre-Live 기록 후 Portfolio Proposal에서 단일 후보 직행 평가를 사용하며, proposal draft 저장을 반복하지 않는다 |
+| `여러 후보 묶음 경로` | 후보별 실행 / 비교와 Candidate Review 저장이 선행이고, Portfolio Proposal은 이미 저장된 후보들을 역할 / 비중 / 목적이 있는 proposal draft로 묶은 뒤 Final Review에서 읽는다 |
+| `저장된 비중 조합 경로` | saved weighted portfolio setup은 후보 registry가 아니라 재사용 weight setup이므로 Candidate Review가 아니라 `Use This Mix In Portfolio Proposal`로 proposal registry에 연결한다 |
+| `보류 / 재검토 경로` | hold / blocked / insufficient evidence / re-review 상태에서는 Final Review 직행이 아니라 원인 화면으로 되돌아간다 |
 
 ## Phase 36 Selected Portfolio Dashboard
 

@@ -3396,3 +3396,40 @@ Detailed historical logs were archived on `2026-04-13`.
   - `Operations > Selected Portfolio Dashboard` 상세에서 Final Review review trigger와 drift alert row를 함께 보여준다.
   - 이 preview는 alert registry를 저장하지 않고, live approval / broker order / auto rebalance도 계속 disabled로 둔다.
   - Phase36 checklist / completion / next phase preparation과 roadmap / index / code analysis / comprehensive map / README를 alert preview 기준으로 동기화했다.
+
+### 2026-05-06
+- Guides 포트폴리오 플로우 맵 UX polish 시작:
+  - user request에 따라 `Reference > Guides`의 1~10 단계 실행 흐름을 선형 텍스트만으로 읽기 어렵다는 문제를 확인했다.
+  - 단일 후보, 다중 후보 portfolio proposal, saved mix, 재검토 / blocker 경로를 시각적 flow map으로 분리해 보여주는 Guide 보강을 진행한다.
+  - 변경 범위는 `app/web/streamlit_app.py`와 Backtest UI flow 문서 동기화로 제한하고, core finance 로직과 JSONL runtime artifact는 수정하지 않는다.
+- 구현:
+  - `Reference > Guides`의 `1~10 단계 실행 흐름` 앞에 `포트폴리오 플로우 맵`을 추가했다.
+  - 경로 선택은 단일 후보, 여러 후보 포트폴리오, 저장 Mix, 재검토 / 막힘 경로로 나누고, 각 경로를 카드형 순서도 / 사용 상황 / 생략되는 단계 / 생성 또는 참조 기록 표로 보여준다.
+  - `.note/finance/code_analysis/WEB_BACKTEST_UI_FLOW.md`의 Guides 묶음 설명을 다섯 묶음 기준으로 동기화했다.
+- 검증:
+  - `py_compile`로 `app/web/streamlit_app.py`, `app/web/pages/backtest.py`, `app/web/backtest_*.py`를 확인했다.
+  - worktree Streamlit 서버를 `127.0.0.1:8502`에 띄우고 `Reference > Guides`에서 플로우 맵 렌더링과 경로 선택 동작을 확인했다.
+  - `git diff --check`와 finance refinement hygiene helper를 통과했다.
+
+### 2026-05-06
+- Guides 제품형 UX 개편:
+  - user feedback에 따라 `Reference > Guides`가 실습 문서 목록처럼 보이고, flow map도 카드 나열에 가까운 문제를 확인했다.
+  - Guide 렌더링을 `app/web/reference_guides.py`로 분리하고, `streamlit_app.py`는 page shell / navigation 중심 책임을 유지하게 했다.
+  - 첫 화면을 `Portfolio Selection Guide` hero, 경로 선택, route summary, GraphViz 기반 `Portfolio Flow`, `Decision Gates`, `Reference Drawer`, 접힘 `System status` 구조로 개편했다.
+  - Runtime / Build는 사용자의 첫 guide 경험에서 제외하고 하단 `System status`로 낮췄다.
+  - 외부 dependency는 추가하지 않았고, GraphViz 렌더링 실패 시 compact visual fallback을 사용하도록 했다.
+  - 검증: `py_compile`, `git diff --check`, finance refinement hygiene helper를 통과했고, `127.0.0.1:8502/guides`에서 GraphViz flowchart 렌더링과 route selector 동작을 확인했다.
+
+### 2026-05-06
+- Guides 단계 해석 보강:
+  - user feedback에 따라 GraphViz flowchart는 좋아졌지만 노드 내용이 얕고, 기존 1~10 단계 위치감이 약해진 문제를 확인했다.
+  - `Reference > Guides`에 선택 경로별 핵심 checkpoint 카드와 `전체 1~10 단계` compact timeline을 추가했다.
+  - timeline은 단일 후보, 여러 후보 포트폴리오, 저장 Mix, 막힘 해결 경로에 따라 `필수`, `반복`, `직행`, `선행`, `생략`, `보류` 같은 상태 라벨을 다르게 보여준다.
+  - GraphViz node 문구도 `Run + Data Trust`, `Review + Registry`, `Validation + Decision`처럼 조금 더 정보성 있게 보강하되, 긴 설명은 timeline / checkpoint 패널로 분리했다.
+
+### 2026-05-06
+- Guides 경로 라벨 / 배치 polish:
+  - user feedback에 따라 `저장 Mix`, `막힘 해결`, `이 경로의 핵심 단계`, `현재 경로 / 다음 행동` 카드가 무엇을 의미하는지 애매한 문제를 확인했다.
+  - Guide 선택지를 `단일 후보`, `여러 후보 묶음`, `저장된 비중 조합`, `보류 / 재검토`로 정리했다.
+  - `전체 1~10 단계에서 현재 위치`를 선택 버튼 바로 아래로 올리고, 그 아래에 `선택한 경로 요약`, `Portfolio Flow`, 선택 경로별 checkpoint를 배치했다.
+  - 여러 후보 묶음 경로는 Candidate Review 저장이 선행이고 Portfolio Proposal은 이미 저장된 후보를 묶는 화면이라는 ownership을 문구로 명확히 했다.
