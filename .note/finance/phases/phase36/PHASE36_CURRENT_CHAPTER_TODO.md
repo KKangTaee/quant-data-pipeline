@@ -30,6 +30,7 @@ Backtest > Final Review
 | 두 번째 작업 | current weight 수동 입력 기반 drift 계약 정리 | `completed` |
 | 세 번째 작업 | drift / rebalance_needed read-only 자동 판단 | `completed` |
 | 네 번째 작업 | current value / shares x price 기반 current weight 입력 계약 추가 | `completed` |
+| 다섯 번째 작업 | drift alert / review trigger preview 추가 | `completed` |
 | 문서 / QA | phase 문서, roadmap, code analysis, checklist 동기화 | `completed` |
 
 ## 완료한 내용
@@ -47,6 +48,8 @@ Backtest > Final Review
 - shares x price 입력을 추가해 보유 수량과 현재가로 현재 비중을 계산한다.
 - shares x price 입력에서는 선택적으로 DB latest close를 불러와 현재가 입력을 보조한다.
 - 이 drift check는 실제 account holding 자동 연결 없이 operator 입력값으로 동작한다.
+- `Drift Alert / Review Trigger Preview`를 추가해 drift 결과를 운영 경고와 Final Review review trigger 관점으로 다시 읽는다.
+- alert preview는 새 alert registry를 저장하지 않고 주문 지시도 만들지 않는다.
 
 ## 중요한 경계
 
@@ -55,6 +58,7 @@ Backtest > Final Review
 - Phase36은 이 파일 중 `SELECT_FOR_PRACTICAL_PORTFOLIO` row만 운영 대상으로 읽는다.
 - live approval, broker order, 자동매매 버튼은 disabled로 유지한다.
 - DB latest close는 입력 보조 기능으로만 쓰며, account holding 자동 연결, 주문 초안은 이번 phase 범위 밖이다.
+- drift alert preview는 read-only 해석이며, alert persistence / 자동 알림 / 주문 workflow는 이번 phase 범위 밖이다.
 
 ## 검증 TODO
 
@@ -66,6 +70,7 @@ Backtest > Final Review
 - `completed` hygiene helper
 - `completed` drift helper smoke
 - `completed` value / holding input helper smoke
+- `completed` drift alert preview helper smoke
 - `pending` user manual QA
 
 ## 현재 판단

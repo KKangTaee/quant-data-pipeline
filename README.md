@@ -23,7 +23,7 @@ DB-backed market data ingestion, factor generation, and strategy backtesting wor
 - `Ops Review`
   - 최근 실행 결과, persistent history, logs, failure artifact 검토
 - `Selected Portfolio Dashboard`
-  - Final Review에서 선정된 포트폴리오의 target allocation, evidence, next action, current weight / value / holding 기반 drift check를 read-only 운영 화면으로 확인
+  - Final Review에서 선정된 포트폴리오의 target allocation, evidence, next action, current weight / value / holding 기반 drift check, drift alert preview를 read-only 운영 화면으로 확인
 - `Backtest Run History`
   - 저장된 백테스트 실행 기록 검토, form 복원, 재실행, candidate review 초안 전달
 - `Guides`
@@ -94,7 +94,7 @@ DB-backed market data ingestion, factor generation, and strategy backtesting wor
 - selected portfolio operations dashboard
   - `Operations > Selected Portfolio Dashboard`에서 Final Review의 `SELECT_FOR_PRACTICAL_PORTFOLIO` row만 운영 대상으로 확인하는 흐름
   - `.note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`을 새로 쓰지 않고 read-only로 읽는 흐름
-  - target allocation, benchmark, evidence, operator next action, current weight / current value / shares x price 기반 drift, disabled live approval / order boundary를 확인하는 흐름
+  - target allocation, benchmark, evidence, operator next action, current weight / current value / shares x price 기반 drift, review trigger preview, disabled live approval / order boundary를 확인하는 흐름
   - shares x price 입력에서는 DB latest close를 보조로 불러올 수 있지만, 실제 account holding 연결이나 주문 생성은 하지 않는 흐름
 
 ## 프로젝트 구조

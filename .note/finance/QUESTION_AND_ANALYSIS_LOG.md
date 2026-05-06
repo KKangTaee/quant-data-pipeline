@@ -4165,3 +4165,15 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `build_selected_portfolio_current_weight_inputs`와 `load_latest_selected_portfolio_prices`를 추가했다
   - `Operations > Selected Portfolio Dashboard`의 drift check 입력 모드를 current weight / current value / shares x price로 확장했다
   - Phase36 문서를 account holding 자동 연결 전 단계의 value / holding input contract 기준으로 갱신했다
+
+### 2026-05-06 - Phase36 drift alert preview continuation
+- User request:
+  - Phase36에 남은 작업이 있다면 QA 전에 계속 진행해 달라고 요청함
+- Interpreted goal:
+  - drift 숫자와 `REBALANCE_NEEDED` route만 보여주는 것에서 한 단계 더 나아가, 운영자가 어떤 review trigger를 같이 봐야 하는지 읽을 수 있어야 함
+- Analysis result:
+  - 실제 alert persistence, 자동 알림, stop / re-review workflow 저장은 별도 phase 경계가 필요하다
+  - Phase36에서 안전하게 구현할 수 있는 범위는 drift check 결과를 read-only alert preview로 해석하고, Final Review에 저장된 review trigger를 함께 표시하는 것이다
+- Follow-up:
+  - `build_selected_portfolio_drift_alert_preview` helper와 `Drift Alert / Review Trigger Preview` UI를 추가했다
+  - alert preview는 registry 저장, 주문 생성, 자동 리밸런싱을 하지 않는 read-only 운영 해석으로 문서화했다

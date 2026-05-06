@@ -42,6 +42,7 @@ Phase35는 Final Review를 마지막 판단 단계로 고정했다.
   - target allocation table
   - evidence checks
   - current weight / drift check
+  - drift alert / review trigger preview
   - disabled Live Approval / Broker Order / Auto Rebalance boundary
 
 ### navigation
@@ -74,4 +75,4 @@ Phase36 first pass status:
 
 ## 완료 판단
 
-이 작업은 `Operations > Selected Portfolio Dashboard`에서 최종 선정 포트폴리오 목록, 상세 운영 기준, current weight / current value / shares x price 기반 drift 판정을 읽을 수 있으면 완료로 본다.
+이 작업은 `Operations > Selected Portfolio Dashboard`에서 최종 선정 포트폴리오 목록, 상세 운영 기준, current weight / current value / shares x price 기반 drift 판정, drift alert / review trigger preview를 읽을 수 있으면 완료로 본다.

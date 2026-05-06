@@ -55,11 +55,14 @@ Final Review에서 `투자 가능 후보`로 저장한 포트폴리오를 나중
 - target weight와 current weight의 차이를 drift로 계산한다.
 - `Rebalance threshold`, `Watch threshold`, `Total tolerance`를 UI에서 조정할 수 있다.
 - route는 `DRIFT_ALIGNED`, `DRIFT_WATCH`, `REBALANCE_NEEDED`, `DRIFT_INPUT_INCOMPLETE`로 읽는다.
+- `Drift Alert / Review Trigger Preview`에서 drift 결과를 `운영 경고 없음`, `관찰 경고`, `리밸런싱 검토 경고`, `입력 확인 경고`로 다시 읽는다.
+- Final Review에 남긴 review trigger를 drift 경고와 함께 보여준다.
 
 쉽게 말하면:
 
 - 현재 계좌를 연결하지 않아도, 사용자가 현재 비중이나 평가금액, 보유 수량과 가격을 입력하면 목표 비중에서 얼마나 벗어났는지 바로 볼 수 있다.
 - 이 결과도 주문 지시가 아니라 리밸런싱 검토 신호다.
+- drift가 커졌을 때 어떤 review trigger를 같이 봐야 하는지 한 화면에서 확인할 수 있다.
 
 ### 5. 문서 동기화
 
@@ -70,12 +73,12 @@ Final Review에서 `투자 가능 후보`로 저장한 포트폴리오를 나중
 
 - 실제 account holding 자동 연결
 - 리밸런싱 주문 초안
-- risk alert / trigger breach 자동화
+- alert registry 저장 / 자동 알림 / trigger breach 자동화
 
 쉽게 말하면:
 
 - 이번 phase는 선정 포트폴리오를 운영 화면으로 옮기고, operator가 입력한 현재 비중 / 평가금액 / 수량 x 가격 기준 drift까지 읽는 단계다.
-- DB latest close는 현재가 입력 보조로만 쓰며, 실제 계좌 보유 수량을 자동으로 읽는 것은 다음 phase로 넘긴다.
+- DB latest close는 현재가 입력 보조로만 쓰며, drift alert preview는 저장 없는 해석이다. 실제 계좌 보유 수량 자동 읽기, alert persistence, 주문 workflow는 다음 phase로 넘긴다.
 
 ## closeout 판단
 

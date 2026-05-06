@@ -167,6 +167,21 @@ def build_selected_portfolio_drift_table(drift_check: dict[str, Any]) -> pd.Data
     return pd.DataFrame(display_rows)
 
 
+def build_selected_portfolio_drift_alert_table(alert_preview: dict[str, Any]) -> pd.DataFrame:
+    display_rows: list[dict[str, Any]] = []
+    for row in list(alert_preview.get("rows") or []):
+        display_rows.append(
+            {
+                "Area": row.get("area"),
+                "Trigger": row.get("trigger"),
+                "Status": row.get("status"),
+                "Current": row.get("current"),
+                "Next Action": row.get("next_action"),
+            }
+        )
+    return pd.DataFrame(display_rows)
+
+
 def _append_check_rows(
     display_rows: list[dict[str, Any]],
     *,

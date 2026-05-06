@@ -79,6 +79,9 @@
   - [ ] target 대비 drift가 watch threshold 이상이면 관찰 필요로 읽히는지
   - [ ] target 대비 drift가 rebalance threshold 이상이면 `REBALANCE_NEEDED` / 리밸런싱 검토 필요로 읽히는지
   - [ ] drift 결과가 주문 지시가 아니라 read-only 검토 신호로 설명되는지
+  - [ ] `Drift Alert / Review Trigger Preview`가 drift 결과를 운영 경고 / 관찰 / 리밸런싱 검토 / 입력 확인으로 다시 보여주는지
+  - [ ] Final Review에 남긴 review trigger가 alert preview table에 같이 표시되는지
+  - [ ] alert preview가 alert registry 저장이나 주문 지시를 만들지 않는다고 설명되는지
 
 ## 7. 문서 확인
 
@@ -90,7 +93,7 @@
   - `.note/finance/FINANCE_DOC_INDEX.md`
 - 체크 항목:
   - [ ] Phase36이 Final Review 이후 새 판단 저장 단계가 아니라 Operations dashboard로 설명되는지
-  - [ ] current weight / current value / shares x price 기반 drift check는 Phase36 범위로, DB latest close는 입력 보조 기능이며 account holding 자동 연결은 후속 phase로 설명되는지
+  - [ ] current weight / current value / shares x price 기반 drift check와 alert preview는 Phase36 범위로, DB latest close는 입력 보조 기능이며 account holding 자동 연결 / alert persistence는 후속 phase로 설명되는지
   - [ ] live approval / broker order / 자동매매가 out of scope로 남아 있는지
   - [ ] 새 page와 helper 파일이 code analysis 문서에 등록되어 있는지
 

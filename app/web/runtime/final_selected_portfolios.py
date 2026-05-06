@@ -35,6 +35,12 @@ FINAL_SELECTED_PORTFOLIO_VALUE_INPUT_MODE_LABELS = {
     "current_value": "현재 평가금액 입력",
     "shares_x_price": "보유 수량 x 현재가",
 }
+FINAL_SELECTED_PORTFOLIO_DRIFT_ALERT_ROUTE_LABELS = {
+    "NO_ALERT": "운영 경고 없음",
+    "WATCH_ALERT": "관찰 경고",
+    "REBALANCE_REVIEW_ALERT": "리밸런싱 검토 경고",
+    "INPUT_REVIEW_ALERT": "입력 확인 경고",
+}
 
 
 def _optional_float(value: Any) -> float | None:
@@ -406,6 +412,118 @@ def build_selected_portfolio_current_weight_inputs(
             "order_instruction": False,
             "auto_rebalance": False,
             "notes": "Value and holding inputs only estimate current weights; they do not create broker orders.",
+        },
+    }
+
+
+def build_selected_portfolio_drift_alert_preview(
+    row: dict[str, Any],
+    *,
+    drift_check: dict[str, Any],
+) -> dict[str, Any]:
+    """Translate a drift check into read-only alert and review-trigger guidance."""
+    raw_decision = dict(row.get("raw_decision") or row)
+    paper_snapshot = dict(raw_decision.get("paper_tracking_snapshot") or {})
+    review_triggers = [
+        str(trigger).strip()
+        for trigger in list(row.get("review_triggers") or paper_snapshot.get("review_triggers") or [])
+        if str(trigger).strip()
+    ]
+    drift_route = str(drift_check.get("route") or "").strip()
+    drift_rows = [dict(item or {}) for item in list(drift_check.get("rows") or [])]
+    drift_row_by_id = {str(item.get("component_id") or ""): item for item in drift_rows}
+    rebalancing_components = [str(item) for item in list(drift_check.get("rebalancing_components") or [])]
+    watch_components = [str(item) for item in list(drift_check.get("watch_components") or [])]
+    blockers = [str(item) for item in list(drift_check.get("blockers") or []) if str(item)]
+    metrics = dict(drift_check.get("metrics") or {})
+    alert_rows: list[dict[str, Any]] = []
+
+    if drift_route == "DRIFT_INPUT_INCOMPLETE":
+        alert_route = "INPUT_REVIEW_ALERT"
+        alert_level = "input_review"
+        verdict = "drift 판단 전에 입력값을 먼저 확인해야 합니다."
+        next_action = "현재 비중 / 평가금액 / 보유 수량 입력을 보강한 뒤 다시 확인합니다."
+        for blocker in blockers:
+            alert_rows.append(
+                {
+                    "area": "Input Review",
+                    "trigger": blocker,
+                    "status": "CHECK_INPUT",
+                    "current": f"current_weight_total={metrics.get('current_weight_total', '-')}",
+                    "next_action": next_action,
+                }
+            )
+    elif drift_route == "REBALANCE_NEEDED":
+        alert_route = "REBALANCE_REVIEW_ALERT"
+        alert_level = "high"
+        verdict = "목표 비중 대비 drift가 리밸런싱 검토 기준을 넘었습니다."
+        next_action = "주문 생성이 아니라, drift가 큰 component를 운영 검토 목록에 올립니다."
+        for component_id in rebalancing_components:
+            component_row = dict(drift_row_by_id.get(component_id) or {})
+            alert_rows.append(
+                {
+                    "area": "Rebalance Review",
+                    "trigger": component_row.get("title") or component_id,
+                    "status": "THRESHOLD_BREACHED",
+                    "current": f"drift={component_row.get('drift', '-')}, abs={component_row.get('abs_drift', '-')}",
+                    "next_action": "리밸런싱 필요 여부와 해당 component의 최신 근거를 확인합니다.",
+                }
+            )
+    elif drift_route == "DRIFT_WATCH":
+        alert_route = "WATCH_ALERT"
+        alert_level = "medium"
+        verdict = "목표 비중에서 벗어나기 시작했으므로 다음 관찰 주기에 확인합니다."
+        next_action = "watch component의 drift가 확대되는지 review cadence에 맞춰 다시 봅니다."
+        for component_id in watch_components:
+            component_row = dict(drift_row_by_id.get(component_id) or {})
+            alert_rows.append(
+                {
+                    "area": "Watch Review",
+                    "trigger": component_row.get("title") or component_id,
+                    "status": "WATCH_BREACHED",
+                    "current": f"drift={component_row.get('drift', '-')}, abs={component_row.get('abs_drift', '-')}",
+                    "next_action": "다음 점검일에 drift 확대 여부를 확인합니다.",
+                }
+            )
+    else:
+        alert_route = "NO_ALERT"
+        alert_level = "none"
+        verdict = "현재 drift 기준으로 별도 운영 경고는 없습니다."
+        next_action = "Final Review에 남긴 review cadence와 trigger에 따라 정기 점검합니다."
+
+    for trigger in review_triggers:
+        alert_rows.append(
+            {
+                "area": "Final Review Trigger",
+                "trigger": trigger,
+                "status": "REFERENCE_TRIGGER" if alert_route == "NO_ALERT" else "CHECK_WITH_ALERT",
+                "current": drift_check.get("route_label") or drift_route or "-",
+                "next_action": "drift 경고와 함께 이 trigger가 재검토 조건에 해당하는지 확인합니다."
+                if alert_route != "NO_ALERT"
+                else "정기 점검 시 이 trigger 기준을 다시 확인합니다.",
+            }
+        )
+
+    return {
+        "alert_route": alert_route,
+        "alert_route_label": FINAL_SELECTED_PORTFOLIO_DRIFT_ALERT_ROUTE_LABELS.get(alert_route, alert_route),
+        "alert_level": alert_level,
+        "verdict": verdict,
+        "next_action": next_action,
+        "rows": alert_rows,
+        "review_triggers": review_triggers,
+        "metrics": {
+            "review_trigger_count": len(review_triggers),
+            "alert_row_count": len(alert_rows),
+            "drift_route": drift_route,
+            "max_abs_drift": metrics.get("max_abs_drift"),
+            "current_weight_total": metrics.get("current_weight_total"),
+        },
+        "execution_boundary": {
+            "live_approval": False,
+            "order_instruction": False,
+            "alert_persistence": False,
+            "notes": "This preview is read-only and does not save alert records or create orders.",
         },
     }
 

@@ -44,8 +44,8 @@
 | `app/web/backtest_portfolio_proposal_helpers.py` | Portfolio Proposal row 생성, 단일 후보 direct readiness / proposal save readiness 평가, 공유 validation / robustness 계산 helper, saved proposal monitoring / Pre-Live feedback / paper feedback table helper |
 | `app/web/backtest_final_review.py` | `Backtest > Final Review`의 단일 후보 / 저장 proposal 선택, Validation / Robustness / Paper Observation 기준 확인, 최종 선정 / 보류 / 거절 / 재검토 결과 기록, 최종 판단 완료 review 화면 render |
 | `app/web/backtest_final_review_helpers.py` | Final Review source 선택, validation 재사용, inline paper observation snapshot, final review evidence / save readiness / decision row 생성, saved final decision display helper |
-| `app/web/final_selected_portfolio_dashboard.py` | `Operations > Selected Portfolio Dashboard` 화면 render, Final Review에서 선정된 포트폴리오 summary / table / detail / current weight, current value, shares x price 기반 drift check / disabled execution boundary 표시 |
-| `app/web/final_selected_portfolio_dashboard_helpers.py` | Selected Portfolio Dashboard용 table row, component row, evidence row, value / holding input row, drift row, filter option helper |
+| `app/web/final_selected_portfolio_dashboard.py` | `Operations > Selected Portfolio Dashboard` 화면 render, Final Review에서 선정된 포트폴리오 summary / table / detail / current weight, current value, shares x price 기반 drift check / drift alert preview / disabled execution boundary 표시 |
+| `app/web/final_selected_portfolio_dashboard_helpers.py` | Selected Portfolio Dashboard용 table row, component row, evidence row, value / holding input row, drift row, alert preview row, filter option helper |
 | `app/web/pages/backtest.py` | Backtest page shell, workflow navigation, panel dispatch entry. Single / Compare / Candidate Review / Portfolio Proposal / Final Review 본문은 별도 module이 관리 |
 
 ## App / Runtime
@@ -58,7 +58,7 @@
 | `app/web/runtime/portfolio_proposal.py` | Portfolio proposal draft registry JSONL path / load / append helper |
 | `app/web/runtime/paper_portfolio_ledger.py` | Paper Portfolio Tracking Ledger JSONL path / load / append helper |
 | `app/web/runtime/final_selection_decisions.py` | Final Portfolio Selection Decision JSONL path / load / append helper |
-| `app/web/runtime/final_selected_portfolios.py` | Final Selection Decision registry를 read-only로 읽어 최종 선정 포트폴리오 운영 대시보드 row / status summary / current weight 또는 value / holding input 기반 drift check로 변환 |
+| `app/web/runtime/final_selected_portfolios.py` | Final Selection Decision registry를 read-only로 읽어 최종 선정 포트폴리오 운영 대시보드 row / status summary / current weight 또는 value / holding input 기반 drift check / drift alert preview로 변환 |
 | `app/web/runtime/portfolio_store.py` | Saved portfolio persistence helper |
 
 ## Finance Core

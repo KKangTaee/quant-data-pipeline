@@ -7,6 +7,7 @@ import streamlit as st
 from app.web.backtest_ui_components import render_badge_strip, render_status_card_grid
 from app.web.final_selected_portfolio_dashboard_helpers import (
     build_selected_portfolio_current_weight_input_table,
+    build_selected_portfolio_drift_alert_table,
     build_selected_portfolio_drift_table,
     build_selected_portfolio_component_table,
     build_selected_portfolio_dashboard_table,
@@ -24,6 +25,7 @@ from app.web.runtime import (
     FINAL_SELECTED_PORTFOLIO_VALUE_INPUT_MODE_LABELS,
     FINAL_SELECTION_DECISION_REGISTRY_FILE,
     build_selected_portfolio_current_weight_inputs,
+    build_selected_portfolio_drift_alert_preview,
     build_selected_portfolio_drift_check,
     load_final_selected_portfolio_dashboard,
     load_latest_selected_portfolio_prices,
@@ -36,6 +38,16 @@ def _status_tone(status: str) -> str:
     if status in {"watch", "rebalance_needed", "re_review_needed"}:
         return "warning"
     if status == "blocked":
+        return "danger"
+    return "neutral"
+
+
+def _alert_tone(alert_route: str) -> str:
+    if alert_route == "NO_ALERT":
+        return "positive"
+    if alert_route in {"WATCH_ALERT", "INPUT_REVIEW_ALERT"}:
+        return "warning"
+    if alert_route == "REBALANCE_REVIEW_ALERT":
         return "danger"
     return "neutral"
 
@@ -427,7 +439,38 @@ def _render_selected_row_drift_check(row: dict[str, Any]) -> None:
     if drift_check.get("blockers"):
         for blocker in list(drift_check.get("blockers") or []):
             st.warning(str(blocker))
+    alert_preview = build_selected_portfolio_drift_alert_preview(row, drift_check=drift_check)
+    alert_metrics = dict(alert_preview.get("metrics") or {})
+    st.markdown("##### Drift Alert / Review Trigger Preview")
+    st.caption(
+        "drift 결과를 운영 경고와 Final Review review trigger 관점으로 다시 읽습니다. "
+        "이 preview는 alert registry를 저장하지 않고 주문 지시도 만들지 않습니다."
+    )
+    render_badge_strip(
+        [
+            {
+                "label": "Alert Route",
+                "value": alert_preview.get("alert_route_label"),
+                "tone": _alert_tone(str(alert_preview.get("alert_route") or "")),
+            },
+            {"label": "Alert Level", "value": alert_preview.get("alert_level"), "tone": "neutral"},
+            {
+                "label": "Review Triggers",
+                "value": alert_metrics.get("review_trigger_count", 0),
+                "tone": "neutral",
+            },
+            {"label": "Alert Save", "value": "Disabled", "tone": "neutral"},
+            {"label": "Order", "value": "Disabled", "tone": "neutral"},
+        ]
+    )
+    st.caption(str(alert_preview.get("verdict") or "-"))
+    alert_df = build_selected_portfolio_drift_alert_table(alert_preview)
+    if alert_df.empty:
+        st.info("표시할 drift alert / review trigger row가 없습니다.")
+    else:
+        st.dataframe(alert_df, width="stretch", hide_index=True)
     st.info(str(drift_check.get("next_action") or "-"))
+    st.info(str(alert_preview.get("next_action") or "-"))
 
 
 def render_final_selected_portfolio_dashboard_page() -> None:
