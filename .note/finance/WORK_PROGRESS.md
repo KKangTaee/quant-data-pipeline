@@ -3442,3 +3442,13 @@ Detailed historical logs were archived on `2026-04-13`.
   - raw JSON은 접힘 Audit 영역으로 이동했고, 실제 보유 drift는 optional advanced Allocation Check로 낮췄다.
   - Phase36 plan / TODO / first work unit / completion / next-phase preparation / checklist와 roadmap / doc index / comprehensive map / README / code analysis flow를 동기화했다.
   - Verification: `py_compile`, performance recheck defaults / replay smoke, `git diff --check`, finance refinement hygiene helper, Streamlit `127.0.0.1:8505` browser smoke를 통과했다.
+
+### 2026-05-07
+- Phase36 Selected Portfolio Dashboard UX 구조 polish:
+  - user feedback에 따라 데이터 출처 / 운영 대상 목록 / Snapshot / Performance Recheck / Allocation / Operator Context의 좁은 화면 배치와 의미 연결 문제를 확인했다.
+  - 데이터 출처와 화면 경계는 wrapping card와 접힘 registry path로 바꿨다.
+  - 운영 대상 목록은 compact table, 짧은 portfolio selector, responsive filter layout으로 정리했다.
+  - Snapshot은 selection summary와 Portfolio Blueprint로 재구성하고 target allocation을 포트폴리오 정의 영역으로 이동했다.
+  - Performance Recheck 결과는 `Summary`, `Equity Curve`, `Result Table`, `What Changed`, `Contribution`, `Extremes` tab으로 분리했다.
+  - Operator Context는 `Monitoring Playbook`으로 바꿔 Selection Evidence / Review Triggers / Holding Drift Check / Execution Boundary를 같은 흐름에서 읽게 했다.
+  - Verification: py_compile, `git diff --check`, finance refinement hygiene helper, Streamlit browser smoke, 390px narrow viewport smoke 통과.

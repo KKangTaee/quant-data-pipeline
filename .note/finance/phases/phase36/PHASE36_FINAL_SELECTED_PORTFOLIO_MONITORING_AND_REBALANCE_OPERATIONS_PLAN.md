@@ -174,11 +174,26 @@ Portfolio Proposal -> Final Review -> 최종 판단 완료
 - 끝나면 좋아지는 점:
   - 선정 포트폴리오를 최신 데이터까지 포함해 바로 다시 검증하고, 무엇이 강해졌거나 약해졌는지 읽을 수 있다.
 
+### 다섯 번째 작업. responsive dashboard UX / tabbed result polish
+
+- 무엇을 바꾸는가:
+  - 데이터 출처와 화면 경계를 metric column이 아니라 wrapping card와 접힘 registry path로 보여준다.
+  - 운영 대상 목록은 compact table, 짧은 portfolio selector, responsive filter layout으로 정리한다.
+  - Snapshot은 selection summary와 Portfolio Blueprint로 나누고 target allocation을 포트폴리오 정의 영역에 둔다.
+  - Performance Recheck 결과는 `Summary`, `Equity Curve`, `Result Table`, `What Changed`, `Contribution`, `Extremes` tab으로 나눈다.
+  - operator context는 Monitoring Playbook으로 재구성해 선정 근거, 관찰 기준, Holding Drift Check, Execution Boundary를 한 흐름에서 읽게 한다.
+- 왜 필요한가:
+  - 대시보드는 좁은 창에서도 의미가 잘리지 않아야 하고, 사용자가 “무엇을 먼저 확인해야 하는지”를 화면 구조만 보고 알 수 있어야 한다.
+- 끝나면 좋아지는 점:
+  - 사용자는 포트폴리오 선택, 정의 확인, 기간 재검증, 운영 점검, 실행 경계를 순서대로 읽을 수 있다.
+
 ## 다음에 확인할 것
 
 - Final Review에서 실제 selected row가 저장된 뒤 dashboard table과 detail이 기대대로 보이는지 확인한다.
 - `Performance Recheck`가 원래 검증 시작일과 DB latest market date를 기본값으로 잡는지 확인한다.
 - 종료일을 확장했을 때 selected component replay가 실행되고 성과 / benchmark / component contribution이 표시되는지 확인한다.
+- recheck 실행 후 Summary / Equity Curve / Result Table / What Changed / Contribution / Extremes tab이 보이는지 확인한다.
+- 좁은 화면에서 데이터 출처 카드와 운영 대상 선택 영역의 텍스트가 잘리지 않는지 확인한다.
 - selected row가 없을 때 empty state가 자연스럽게 보이는지 확인한다.
 - status 계산이 과하게 낙관적이지 않은지 확인한다.
 - account holding 자동 연결과 risk alert를 다음 phase에서 어디까지 다룰지 결정한다.

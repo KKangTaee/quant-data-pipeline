@@ -31,7 +31,7 @@ UI form, payload 복원, candidate review, history replay, candidate replay, sav
 | `app/web/backtest_portfolio_proposal_helpers.py` | Portfolio Proposal row 생성, 단일 후보 direct readiness / proposal save readiness 평가, 공유 validation / robustness 계산 helper, monitoring / Pre-Live / paper feedback table helper |
 | `app/web/backtest_final_review.py` | Final Review 화면 render. 단일 후보 / 저장 proposal 선택, Validation / Robustness / Paper Observation 기준 확인, 최종 판단 기록, saved final decision review |
 | `app/web/backtest_final_review_helpers.py` | Final Review source 선택, validation 재사용, inline paper observation snapshot, final evidence / save readiness / decision row / display helper |
-| `app/web/final_selected_portfolio_dashboard.py` | `Operations > Selected Portfolio Dashboard` 화면 render. Final Review에서 선정된 포트폴리오를 운영 대상으로 읽고 summary / table / detail / 기간 확장 Performance Recheck / component contribution / Allocation Check drift / disabled execution boundary를 보여준다 |
+| `app/web/final_selected_portfolio_dashboard.py` | `Operations > Selected Portfolio Dashboard` 화면 render. Final Review에서 선정된 포트폴리오를 운영 대상으로 읽고 wrapping source boundary cards / compact selection board / Snapshot + Portfolio Blueprint / tabbed Performance Recheck / Monitoring Playbook / Holding Drift Check / disabled execution boundary를 보여준다 |
 | `app/web/final_selected_portfolio_dashboard_helpers.py` | Selected Portfolio Dashboard의 table / component / evidence / value / holding input / drift / alert preview / filter helper |
 | `app/web/runtime/backtest.py` | UI payload를 실행 가능한 runtime call로 변환 |
 | `app/web/runtime/candidate_registry.py` | current candidate / review note / pre-live registry JSONL read / append helper |
@@ -61,7 +61,7 @@ Operations 보조 화면:
 
 - `Operations > Backtest Run History`: 저장된 실행 기록을 inspect하고, 가능한 경우 run again, load into form, candidate draft handoff를 수행한다. 후보 검토 흐름의 주 단계가 아니라 과거 실행을 다시 열기 위한 운영 / 재현 도구로 둔다.
 - `Operations > Candidate Library`: `CURRENT_CANDIDATE_REGISTRY.jsonl`과 `PRE_LIVE_CANDIDATE_REGISTRY.jsonl`을 읽어 저장된 후보를 다시 열어 본다. registry에는 compact snapshot만 남으므로, 그래프 / result table이 필요할 때 저장 contract로 DB-backed result curve를 재생성한다. 후보 등록 단계가 아니라 보관함 / 재검토 도구다.
-- `Operations > Selected Portfolio Dashboard`: `FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`에서 `SELECT_FOR_PRACTICAL_PORTFOLIO`로 선정된 row만 읽어 최종 선정 포트폴리오의 운영 대상 목록, 원래 검증 기간, 기간 확장 Performance Recheck, target allocation, operator context, optional Allocation Check drift를 보여준다. 새 final decision이나 alert row를 저장하지 않고, live approval / broker order / auto rebalance는 disabled로 둔다.
+- `Operations > Selected Portfolio Dashboard`: `FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`에서 `SELECT_FOR_PRACTICAL_PORTFOLIO`로 선정된 row만 읽어 최종 선정 포트폴리오의 운영 대상 목록, Snapshot / Portfolio Blueprint, 기간 확장 Performance Recheck tabs, Monitoring Playbook, optional Holding Drift Check를 보여준다. 새 final decision이나 alert row를 저장하지 않고, live approval / broker order / auto rebalance는 disabled로 둔다.
 
 ## 현재 Reference Guide 제품 흐름
 
@@ -148,7 +148,7 @@ Backtest > Final Review
 | 파일 | 역할 |
 |---|---|
 | `app/web/runtime/final_selected_portfolios.py` | Final Review final decision row를 읽고 selected dashboard row / status summary / selected component performance recheck / current weight 또는 value / holding input 기반 drift check / drift alert preview로 변환 |
-| `app/web/final_selected_portfolio_dashboard.py` | Operations dashboard 화면 render, Performance Recheck controls / chart / What Changed / Allocation Check / audit 표시 |
+| `app/web/final_selected_portfolio_dashboard.py` | Operations dashboard 화면 render, source boundary cards, compact selection board, Snapshot / Portfolio Blueprint, Performance Recheck controls + result tabs, Monitoring Playbook, audit 표시 |
 | `app/web/final_selected_portfolio_dashboard_helpers.py` | dashboard table, component table, evidence table, value / holding input table, drift table, alert preview table, filter helper |
 | `app/web/streamlit_app.py` | Operations navigation에 `Selected Portfolio Dashboard` page 등록 |
 

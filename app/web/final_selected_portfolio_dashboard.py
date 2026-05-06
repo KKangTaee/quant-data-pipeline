@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date
+from html import escape
 from typing import Any
 
 import pandas as pd
@@ -83,6 +84,76 @@ def _coerce_date(value: Any, fallback: date) -> date:
     return parsed.date()
 
 
+def _render_info_card_grid(cards: list[dict[str, Any]], *, min_width: int = 210) -> None:
+    html_cards: list[str] = []
+    for card in cards:
+        title = escape(str(card.get("title") or ""))
+        value = escape(str(card.get("value") if card.get("value") is not None else "-"))
+        detail = escape(str(card.get("detail") or ""))
+        tone = escape(str(card.get("tone") or "neutral"))
+        detail_html = f'<div class="fsp-info-card-detail">{detail}</div>' if detail else ""
+        html_cards.append(
+            f'<div class="fsp-info-card fsp-info-card-{tone}">'
+            f'<div class="fsp-info-card-title">{title}</div>'
+            f'<div class="fsp-info-card-value">{value}</div>'
+            f"{detail_html}"
+            "</div>"
+        )
+    st.markdown(
+        f"""
+        <style>
+          .fsp-info-card-grid {{
+            display: grid;
+            gap: 0.75rem;
+            margin: 0.35rem 0 1rem 0;
+          }}
+          .fsp-info-card {{
+            min-height: 92px;
+            padding: 0.85rem 0.95rem;
+            border: 1px solid rgba(49, 51, 63, 0.16);
+            border-top: 4px solid #64748b;
+            border-radius: 8px;
+            background: #ffffff;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+          }}
+          .fsp-info-card-positive {{ border-top-color: #0f766e; }}
+          .fsp-info-card-warning {{ border-top-color: #b45309; }}
+          .fsp-info-card-danger {{ border-top-color: #b91c1c; }}
+          .fsp-info-card-neutral {{ border-top-color: #475569; }}
+          .fsp-info-card-title {{
+            font-size: 0.82rem;
+            font-weight: 720;
+            color: #64748b;
+            line-height: 1.25;
+            overflow-wrap: anywhere;
+          }}
+          .fsp-info-card-value {{
+            margin-top: 0.35rem;
+            font-size: 1.08rem;
+            font-weight: 780;
+            color: #111827;
+            line-height: 1.25;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+          }}
+          .fsp-info-card-detail {{
+            margin-top: 0.4rem;
+            font-size: 0.82rem;
+            line-height: 1.35;
+            color: #64748b;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+          }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        f'<div class="fsp-info-card-grid" style="grid-template-columns: repeat(auto-fit, minmax({min_width}px, 1fr));">{"".join(html_cards)}</div>',
+        unsafe_allow_html=True,
+    )
+
+
 def _summary_cards(summary: dict[str, Any]) -> list[dict[str, Any]]:
     status_counts = dict(summary.get("status_counts") or {})
     return [
@@ -144,79 +215,130 @@ def _render_empty_state(summary: dict[str, Any]) -> None:
 
 
 def _render_selected_row_detail(row: dict[str, Any]) -> None:
-    st.markdown("#### Snapshot")
-    render_badge_strip(
-        [
-            {
-                "label": "Status",
-                "value": row.get("operation_status_label"),
-                "tone": _status_tone(str(row.get("operation_status") or "")),
-            },
-            {"label": "Decision ID", "value": row.get("decision_id"), "tone": "neutral"},
-            {"label": "Source", "value": f"{row.get('source_type')} / {row.get('source_id')}", "tone": "neutral"},
-            {"label": "Target Weight", "value": f"{float(row.get('target_weight_total') or 0.0):.1f}%", "tone": "neutral"},
-            {"label": "Benchmark", "value": row.get("benchmark_label"), "tone": "neutral"},
-            {"label": "Original Period", "value": f"{row.get('baseline_start') or '-'} -> {row.get('baseline_end') or '-'}", "tone": "neutral"},
-            {"label": "Baseline CAGR", "value": _format_pct(row.get("baseline_cagr")), "tone": "positive"},
-            {"label": "Baseline MDD", "value": _format_pct(row.get("baseline_mdd")), "tone": "warning"},
-            {"label": "Live Approval", "value": "Disabled", "tone": "neutral"},
-            {"label": "Order", "value": "Disabled", "tone": "neutral"},
-        ]
-    )
-    st.caption(str(row.get("status_reason") or "-"))
-
+    _render_snapshot(row)
     _render_performance_recheck(row)
-
-    component_df = build_selected_portfolio_component_table(row)
-    if component_df.empty:
-        st.warning("선택된 포트폴리오에 active component가 없습니다.")
-    else:
-        st.markdown("#### Allocation")
-        st.caption("Final Review에서 선정한 target allocation입니다. 실제 보유 상태 점검은 아래 Allocation Check에서 별도로 확인합니다.")
-        st.dataframe(component_df, width="stretch", hide_index=True)
-
     _render_operator_context(row)
-
-    with st.expander("Allocation Check: 실제 보유 상태 / drift 점검", expanded=False):
-        _render_selected_row_drift_check(row)
-
-    _render_execution_boundary()
 
     with st.expander("Audit / Developer Details", expanded=False):
         st.caption("일반 QA에서는 이 원본 JSON을 보지 않아도 됩니다. 저장 row 구조를 확인할 때만 펼쳐 봅니다.")
         st.json(row.get("raw_decision") or {})
 
 
-def _render_operator_context(row: dict[str, Any]) -> None:
-    st.markdown("#### Operator Context")
-    detail_cols = st.columns(2, gap="small")
-    with detail_cols[0]:
-        with st.container(border=True):
-            st.markdown("##### 운영 판단")
-            st.markdown(f"**선정 사유**  \n{row.get('operator_reason') or '-'}")
-            st.markdown(f"**제약 조건**  \n{row.get('operator_constraints') or '-'}")
-            st.markdown(f"**다음 행동**  \n{row.get('operator_next_action') or '-'}")
-    with detail_cols[1]:
-        with st.container(border=True):
-            st.markdown("##### 관찰 기준")
-            st.markdown(f"**점검 주기**  \n{row.get('review_cadence') or '-'}")
-            triggers = [str(trigger) for trigger in list(row.get("review_triggers") or []) if str(trigger)]
-            blockers = [str(blocker) for blocker in list(row.get("blockers") or []) if str(blocker)]
-            if triggers:
-                st.markdown("**재검토 trigger**")
-                for trigger in triggers:
-                    st.markdown(f"- {trigger}")
-            else:
-                st.caption("등록된 review trigger가 없습니다.")
-            if blockers:
-                st.warning("남아 있는 blocker: " + ", ".join(blockers))
+def _render_snapshot(row: dict[str, Any]) -> None:
+    st.markdown("#### Snapshot")
+    _render_info_card_grid(
+        [
+            {
+                "title": "Selection Status",
+                "value": row.get("operation_status_label"),
+                "detail": row.get("status_reason"),
+                "tone": _status_tone(str(row.get("operation_status") or "")),
+            },
+            {
+                "title": "Original Test Period",
+                "value": f"{row.get('baseline_start') or '-'} -> {row.get('baseline_end') or '-'}",
+                "detail": "Final Review에서 선정할 때 확인된 기준 기간",
+                "tone": "neutral",
+            },
+            {
+                "title": "Baseline CAGR",
+                "value": _format_pct(row.get("baseline_cagr")),
+                "detail": f"Benchmark {row.get('benchmark_label') or '-'}",
+                "tone": "positive",
+            },
+            {
+                "title": "Baseline MDD",
+                "value": _format_pct(row.get("baseline_mdd")),
+                "detail": "선정 당시 최대 낙폭 기준",
+                "tone": "warning",
+            },
+            {
+                "title": "Target Allocation",
+                "value": f"{float(row.get('target_weight_total') or 0.0):.1f}%",
+                "detail": f"{row.get('component_count') or 0} component",
+                "tone": "neutral",
+            },
+        ],
+        min_width=180,
+    )
+    with st.expander("Identity / Source", expanded=False):
+        st.markdown(f"**Decision ID**  \n`{row.get('decision_id') or '-'}`")
+        st.markdown(f"**Source**  \n`{row.get('source_type') or '-'}` / `{row.get('source_id') or '-'}`")
+        st.markdown(f"**Title**  \n{row.get('source_title') or '-'}")
+    component_df = build_selected_portfolio_component_table(row)
+    st.markdown("##### Portfolio Blueprint")
+    st.caption("이 포트폴리오가 어떤 component와 target weight로 선정됐는지 보여줍니다. 실제 보유 상태 점검은 Monitoring Playbook의 Holding Drift Check에서 확인합니다.")
+    if component_df.empty:
+        st.warning("선택된 포트폴리오에 active component가 없습니다.")
+    else:
+        st.dataframe(component_df, width="stretch", hide_index=True)
 
+
+def _render_operator_context(row: dict[str, Any]) -> None:
+    st.markdown("#### Monitoring Playbook")
+    st.caption(
+        "이 영역은 선정된 포트폴리오를 어떻게 계속 확인할지 정리합니다. "
+        "선정 근거, 관찰 기준, 보유 비중 점검, 실행 경계를 같은 흐름에서 봅니다."
+    )
+    triggers = [str(trigger) for trigger in list(row.get("review_triggers") or []) if str(trigger)]
+    blockers = [str(blocker) for blocker in list(row.get("blockers") or []) if str(blocker)]
+    _render_info_card_grid(
+        [
+            {
+                "title": "1. 선정 근거 확인",
+                "value": row.get("evidence_route"),
+                "detail": "Final Review evidence / validation / robustness / paper observation",
+                "tone": "positive" if not blockers else "warning",
+            },
+            {
+                "title": "2. 성과 유지 확인",
+                "value": "Performance Recheck",
+                "detail": "새 기간으로 CAGR, MDD, benchmark spread를 다시 계산",
+                "tone": "neutral",
+            },
+            {
+                "title": "3. 보유 상태 확인",
+                "value": "Holding Drift Check",
+                "detail": "실제 또는 가상 보유 비중이 target에서 벗어났는지 확인",
+                "tone": "neutral",
+            },
+            {
+                "title": "4. 실행 경계",
+                "value": "Read Only",
+                "detail": "승인, 주문, 자동 리밸런싱은 만들지 않음",
+                "tone": "neutral",
+            },
+        ],
+        min_width=190,
+    )
     evidence_df = build_selected_portfolio_evidence_table(row)
-    with st.expander("Final Review 검증 근거", expanded=False):
+    evidence_tab, trigger_tab, drift_tab, boundary_tab = st.tabs(
+        ["Selection Evidence", "Review Triggers", "Holding Drift Check", "Execution Boundary"]
+    )
+    with evidence_tab:
+        st.caption("Final Review에서 이 포트폴리오가 실전 후보로 선정될 수 있었던 검증 근거입니다.")
         if evidence_df.empty:
             st.info("표시할 evidence check row가 없습니다.")
         else:
             st.dataframe(evidence_df, width="stretch", hide_index=True)
+    with trigger_tab:
+        st.markdown("##### 운영 판단")
+        st.markdown(f"**선정 사유**  \n{row.get('operator_reason') or '-'}")
+        st.markdown(f"**제약 조건**  \n{row.get('operator_constraints') or '-'}")
+        st.markdown(f"**다음 행동**  \n{row.get('operator_next_action') or '-'}")
+        st.markdown("##### 관찰 기준")
+        st.markdown(f"**점검 주기**  \n{row.get('review_cadence') or '-'}")
+        if triggers:
+            for trigger in triggers:
+                st.markdown(f"- {trigger}")
+        else:
+            st.caption("등록된 review trigger가 없습니다.")
+        if blockers:
+            st.warning("남아 있는 blocker: " + ", ".join(blockers))
+    with drift_tab:
+        _render_selected_row_drift_check(row)
+    with boundary_tab:
+        _render_execution_boundary()
 
 
 def _render_execution_boundary() -> None:
@@ -305,115 +427,140 @@ def _render_performance_recheck(row: dict[str, Any]) -> None:
     baseline_summary = dict(result.get("baseline_summary") or {})
     change_summary = dict(result.get("change_summary") or {})
     period = dict(result.get("period") or {})
-    render_status_card_grid(
-        [
-            {
-                "title": "Recheck Verdict",
-                "value": result.get("verdict_route"),
-                "detail": result.get("verdict"),
-                "tone": "positive" if result.get("verdict_route") == "SELECTION_THESIS_HOLDS" else "warning",
-            },
-            {
-                "title": "Portfolio Value",
-                "value": _format_money(portfolio_summary.get("end_balance")),
-                "detail": f"Total return {_format_pct(portfolio_summary.get('total_return'))}",
-                "tone": "positive",
-            },
-            {
-                "title": "Recheck CAGR",
-                "value": _format_pct(portfolio_summary.get("cagr")),
-                "detail": f"Original {_format_pct(baseline_summary.get('cagr'))}",
-                "tone": "positive" if (change_summary.get("cagr_delta_vs_baseline") or 0.0) >= 0 else "warning",
-            },
-            {
-                "title": "Recheck MDD",
-                "value": _format_pct(portfolio_summary.get("mdd")),
-                "detail": f"Original {_format_pct(baseline_summary.get('mdd'))}",
-                "tone": "warning",
-            },
-            {
-                "title": "Benchmark Spread",
-                "value": _format_pct(change_summary.get("net_cagr_spread")),
-                "detail": f"Benchmark {result.get('benchmark_label') or '-'} CAGR {_format_pct(benchmark_summary.get('cagr'))}",
-                "tone": "positive" if (change_summary.get("net_cagr_spread") or 0.0) >= 0 else "warning",
-            },
-        ]
+    summary_tab, curve_tab, result_table_tab, changed_tab, contribution_tab, extremes_tab = st.tabs(
+        ["Summary", "Equity Curve", "Result Table", "What Changed", "Contribution", "Extremes"]
     )
-    st.caption(
-        f"Original period: {period.get('baseline_start') or '-'} -> {period.get('baseline_end') or '-'} | "
-        f"Recheck period: {period.get('start') or '-'} -> {period.get('end') or '-'}"
-    )
+    with summary_tab:
+        render_status_card_grid(
+            [
+                {
+                    "title": "Recheck Verdict",
+                    "value": result.get("verdict_route"),
+                    "detail": result.get("verdict"),
+                    "tone": "positive" if result.get("verdict_route") == "SELECTION_THESIS_HOLDS" else "warning",
+                },
+                {
+                    "title": "Portfolio Value",
+                    "value": _format_money(portfolio_summary.get("end_balance")),
+                    "detail": f"Total return {_format_pct(portfolio_summary.get('total_return'))}",
+                    "tone": "positive",
+                },
+                {
+                    "title": "Recheck CAGR",
+                    "value": _format_pct(portfolio_summary.get("cagr")),
+                    "detail": f"Original {_format_pct(baseline_summary.get('cagr'))}",
+                    "tone": "positive" if (change_summary.get("cagr_delta_vs_baseline") or 0.0) >= 0 else "warning",
+                },
+                {
+                    "title": "Recheck MDD",
+                    "value": _format_pct(portfolio_summary.get("mdd")),
+                    "detail": f"Original {_format_pct(baseline_summary.get('mdd'))}",
+                    "tone": "warning",
+                },
+                {
+                    "title": "Benchmark Spread",
+                    "value": _format_pct(change_summary.get("net_cagr_spread")),
+                    "detail": f"Benchmark {result.get('benchmark_label') or '-'} CAGR {_format_pct(benchmark_summary.get('cagr'))}",
+                    "tone": "positive" if (change_summary.get("net_cagr_spread") or 0.0) >= 0 else "warning",
+                },
+            ]
+        )
+        st.caption(
+            f"Original period: {period.get('baseline_start') or '-'} -> {period.get('baseline_end') or '-'} | "
+            f"Recheck period: {period.get('start') or '-'} -> {period.get('end') or '-'}"
+        )
 
     chart_df = result.get("chart_df")
-    if isinstance(chart_df, pd.DataFrame) and not chart_df.empty:
-        chart_view = chart_df.copy()
-        chart_view["Date"] = pd.to_datetime(chart_view["Date"], errors="coerce")
-        chart_view = chart_view.dropna(subset=["Date"]).set_index("Date")
-        st.line_chart(chart_view)
+    with curve_tab:
+        if isinstance(chart_df, pd.DataFrame) and not chart_df.empty:
+            chart_view = chart_df.copy()
+            chart_view["Date"] = pd.to_datetime(chart_view["Date"], errors="coerce")
+            chart_view = chart_view.dropna(subset=["Date"]).set_index("Date")
+            st.line_chart(chart_view)
+        else:
+            st.info("표시할 equity curve가 없습니다.")
 
-    st.markdown("#### What Changed")
-    comparison_df = pd.DataFrame(
-        [
-            {
-                "Metric": "CAGR",
-                "Original": baseline_summary.get("cagr"),
-                "Recheck": portfolio_summary.get("cagr"),
-                "Change": change_summary.get("cagr_delta_vs_baseline"),
-            },
-            {
-                "Metric": "Maximum Drawdown",
-                "Original": baseline_summary.get("mdd"),
-                "Recheck": portfolio_summary.get("mdd"),
-                "Change": change_summary.get("mdd_delta_vs_baseline"),
-            },
-            {
-                "Metric": "Benchmark CAGR Spread",
-                "Original": None,
-                "Recheck": change_summary.get("net_cagr_spread"),
-                "Change": None,
-            },
-        ]
-    )
-    for column in ["Original", "Recheck", "Change"]:
-        comparison_df[column] = comparison_df[column].map(lambda value: _format_pct(value) if value is not None else "-")
-    st.dataframe(comparison_df, width="stretch", hide_index=True)
+    with result_table_tab:
+        result_df = result.get("portfolio_result_df")
+        if isinstance(result_df, pd.DataFrame) and not result_df.empty:
+            display_df = result_df[["Date", "Total Balance", "Total Return"]].copy()
+            display_df["Date"] = pd.to_datetime(display_df["Date"], errors="coerce").dt.strftime("%Y-%m-%d")
+            display_df["Total Balance"] = display_df["Total Balance"].map(lambda value: _format_money(value))
+            display_df["Total Return"] = display_df["Total Return"].map(lambda value: _format_pct(value))
+            st.dataframe(display_df, width="stretch", hide_index=True)
+        else:
+            st.info("표시할 result table이 없습니다.")
 
-    component_df = pd.DataFrame(list(result.get("component_rows") or []))
-    if not component_df.empty:
-        st.markdown("##### Component contribution")
-        for column in ["Total Return", "Weighted Contribution", "CAGR", "MDD"]:
-            if column in component_df.columns:
-                component_df[column] = component_df[column].map(lambda value: _format_pct(value) if value is not None else "-")
-        if "Target Weight" in component_df.columns:
-            component_df["Target Weight"] = component_df["Target Weight"].map(
-                lambda value: f"{float(value):.1f}%" if value is not None and not pd.isna(value) else "-"
+    with changed_tab:
+        comparison_df = pd.DataFrame(
+            [
+                {
+                    "Metric": "CAGR",
+                    "Original": baseline_summary.get("cagr"),
+                    "Recheck": portfolio_summary.get("cagr"),
+                    "Change": change_summary.get("cagr_delta_vs_baseline"),
+                },
+                {
+                    "Metric": "Maximum Drawdown",
+                    "Original": baseline_summary.get("mdd"),
+                    "Recheck": portfolio_summary.get("mdd"),
+                    "Change": change_summary.get("mdd_delta_vs_baseline"),
+                },
+                {
+                    "Metric": "Benchmark CAGR Spread",
+                    "Original": None,
+                    "Recheck": change_summary.get("net_cagr_spread"),
+                    "Change": None,
+                },
+            ]
+        )
+        for column in ["Original", "Recheck", "Change"]:
+            comparison_df[column] = comparison_df[column].map(
+                lambda value: _format_pct(value) if value is not None else "-"
             )
-        st.dataframe(component_df, width="stretch", hide_index=True)
+        st.dataframe(comparison_df, width="stretch", hide_index=True)
 
-    extremes = dict(result.get("period_extremes") or {})
-    extreme_cols = st.columns(2, gap="small")
-    with extreme_cols[0]:
-        best_df = pd.DataFrame(extremes.get("best") or [])
-        st.markdown("##### Strongest periods")
-        if best_df.empty:
-            st.caption("표시할 strong period가 없습니다.")
+    with contribution_tab:
+        component_df = pd.DataFrame(list(result.get("component_rows") or []))
+        if component_df.empty:
+            st.info("표시할 component contribution이 없습니다.")
         else:
-            if "Total Return" in best_df.columns:
-                best_df["Total Return"] = best_df["Total Return"].map(lambda value: _format_pct(value))
-            if "Total Balance" in best_df.columns:
-                best_df["Total Balance"] = best_df["Total Balance"].map(lambda value: _format_money(value))
-            st.dataframe(best_df, width="stretch", hide_index=True)
-    with extreme_cols[1]:
-        worst_df = pd.DataFrame(extremes.get("worst") or [])
-        st.markdown("##### Weakest periods")
-        if worst_df.empty:
-            st.caption("표시할 weak period가 없습니다.")
-        else:
-            if "Total Return" in worst_df.columns:
-                worst_df["Total Return"] = worst_df["Total Return"].map(lambda value: _format_pct(value))
-            if "Total Balance" in worst_df.columns:
-                worst_df["Total Balance"] = worst_df["Total Balance"].map(lambda value: _format_money(value))
-            st.dataframe(worst_df, width="stretch", hide_index=True)
+            for column in ["Total Return", "Weighted Contribution", "CAGR", "MDD"]:
+                if column in component_df.columns:
+                    component_df[column] = component_df[column].map(
+                        lambda value: _format_pct(value) if value is not None else "-"
+                    )
+            if "Target Weight" in component_df.columns:
+                component_df["Target Weight"] = component_df["Target Weight"].map(
+                    lambda value: f"{float(value):.1f}%" if value is not None and not pd.isna(value) else "-"
+                )
+            st.dataframe(component_df, width="stretch", hide_index=True)
+
+    with extremes_tab:
+        extremes = dict(result.get("period_extremes") or {})
+        extreme_cols = st.columns(2, gap="small")
+        with extreme_cols[0]:
+            best_df = pd.DataFrame(extremes.get("best") or [])
+            st.markdown("##### Strongest periods")
+            if best_df.empty:
+                st.caption("표시할 strong period가 없습니다.")
+            else:
+                if "Total Return" in best_df.columns:
+                    best_df["Total Return"] = best_df["Total Return"].map(lambda value: _format_pct(value))
+                if "Total Balance" in best_df.columns:
+                    best_df["Total Balance"] = best_df["Total Balance"].map(lambda value: _format_money(value))
+                st.dataframe(best_df, width="stretch", hide_index=True)
+        with extreme_cols[1]:
+            worst_df = pd.DataFrame(extremes.get("worst") or [])
+            st.markdown("##### Weakest periods")
+            if worst_df.empty:
+                st.caption("표시할 weak period가 없습니다.")
+            else:
+                if "Total Return" in worst_df.columns:
+                    worst_df["Total Return"] = worst_df["Total Return"].map(lambda value: _format_pct(value))
+                if "Total Balance" in worst_df.columns:
+                    worst_df["Total Balance"] = worst_df["Total Balance"].map(lambda value: _format_money(value))
+                st.dataframe(worst_df, width="stretch", hide_index=True)
 
 
 def _render_selected_row_drift_check(row: dict[str, Any]) -> None:
@@ -717,66 +864,90 @@ def render_final_selected_portfolio_dashboard_page() -> None:
 
     render_status_card_grid(_summary_cards(summary))
 
-    with st.container(border=True):
-        st.markdown("#### 데이터 출처와 화면 경계")
-        data_cols = st.columns(3, gap="small")
-        data_cols[0].metric("Source", "Final Review Decisions")
-        data_cols[0].caption(str(FINAL_SELECTION_DECISION_REGISTRY_FILE))
-        data_cols[1].metric("Selected Filter", "Practical Portfolio")
-        data_cols[1].caption("`SELECT_FOR_PRACTICAL_PORTFOLIO` 또는 `selected_practical_portfolio=true`")
-        data_cols[2].metric("Write Policy", "Read Only")
-        data_cols[2].caption("재검증과 drift 점검은 새 판단 row나 주문 row를 저장하지 않습니다.")
+    st.markdown("#### 데이터 출처와 화면 경계")
+    _render_info_card_grid(
+        [
+            {
+                "title": "Source",
+                "value": "Final Review Decisions",
+                "detail": "최종 선정 판단 row를 읽습니다.",
+                "tone": "neutral",
+            },
+            {
+                "title": "Selected Filter",
+                "value": "Practical Portfolio",
+                "detail": "`SELECT_FOR_PRACTICAL_PORTFOLIO` 또는 selected flag만 운영 대상으로 봅니다.",
+                "tone": "positive",
+            },
+            {
+                "title": "Write Policy",
+                "value": "Read Only",
+                "detail": "재검증과 drift 점검은 새 판단 row나 주문 row를 저장하지 않습니다.",
+                "tone": "neutral",
+            },
+        ],
+        min_width=220,
+    )
+    with st.expander("Registry path", expanded=False):
+        st.code(str(FINAL_SELECTION_DECISION_REGISTRY_FILE), language="text")
 
     if not rows:
         _render_empty_state(summary)
         return
 
-    st.markdown("#### 운영 대상 목록")
-    filter_cols = st.columns([0.32, 0.28, 0.24, 0.16], gap="small")
-    status_options = selected_portfolio_status_options(rows)
-    source_type_options = selected_portfolio_source_type_options(rows)
-    benchmark_options = selected_portfolio_benchmark_options(rows)
-    with filter_cols[0]:
-        selected_statuses = st.multiselect(
-            "Status",
-            options=status_options,
-            default=status_options,
-            format_func=lambda status: FINAL_SELECTED_PORTFOLIO_STATUS_LABELS.get(status, status),
-            key="selected_portfolio_dashboard_status_filter",
-        )
-    with filter_cols[1]:
-        selected_source_types = st.multiselect(
-            "Source Type",
-            options=source_type_options,
-            default=source_type_options,
-            key="selected_portfolio_dashboard_source_filter",
-        )
-    with filter_cols[2]:
-        selected_benchmark = st.selectbox(
-            "Benchmark",
-            options=benchmark_options,
-            key="selected_portfolio_dashboard_benchmark_filter",
-        )
-    with filter_cols[3]:
-        st.metric("Total", len(rows))
+    st.markdown("#### 운영 대상 선택")
+    with st.container(border=True):
+        status_options = selected_portfolio_status_options(rows)
+        source_type_options = selected_portfolio_source_type_options(rows)
+        benchmark_options = selected_portfolio_benchmark_options(rows)
+        filter_top_cols = st.columns(2, gap="small")
+        with filter_top_cols[0]:
+            selected_statuses = st.multiselect(
+                "Status",
+                options=status_options,
+                default=status_options,
+                format_func=lambda status: FINAL_SELECTED_PORTFOLIO_STATUS_LABELS.get(status, status),
+                key="selected_portfolio_dashboard_status_filter",
+            )
+        with filter_top_cols[1]:
+            selected_benchmark = st.selectbox(
+                "Benchmark",
+                options=benchmark_options,
+                key="selected_portfolio_dashboard_benchmark_filter",
+            )
+        filter_bottom_cols = st.columns([0.64, 0.36], gap="small")
+        with filter_bottom_cols[0]:
+            selected_source_types = st.multiselect(
+                "Source Type",
+                options=source_type_options,
+                default=source_type_options,
+                key="selected_portfolio_dashboard_source_filter",
+            )
 
-    filtered_rows = filter_selected_portfolio_rows(
-        rows,
-        statuses=selected_statuses,
-        source_types=selected_source_types,
-        benchmark=str(selected_benchmark),
-    )
-    filter_cols[3].metric("Shown", len(filtered_rows))
-    if not filtered_rows:
-        st.warning("현재 filter 조건에 맞는 선정 포트폴리오가 없습니다.")
-        return
+        filtered_rows = filter_selected_portfolio_rows(
+            rows,
+            statuses=selected_statuses,
+            source_types=selected_source_types,
+            benchmark=str(selected_benchmark),
+        )
+        with filter_bottom_cols[1]:
+            _render_info_card_grid(
+                [
+                    {"title": "Total", "value": len(rows), "detail": "selected rows", "tone": "neutral"},
+                    {"title": "Shown", "value": len(filtered_rows), "detail": "after filter", "tone": "positive"},
+                ],
+                min_width=120,
+            )
+        if not filtered_rows:
+            st.warning("현재 filter 조건에 맞는 선정 포트폴리오가 없습니다.")
+            return
 
-    st.dataframe(build_selected_portfolio_dashboard_table(filtered_rows), width="stretch", hide_index=True)
-    labels = [final_selected_portfolio_label(row) for row in filtered_rows]
-    selected_label = st.selectbox(
-        "상세 확인",
-        options=labels,
-        key="selected_portfolio_dashboard_selected_row",
-    )
+        st.dataframe(build_selected_portfolio_dashboard_table(filtered_rows), width="stretch", hide_index=True)
+        labels = [final_selected_portfolio_label(row) for row in filtered_rows]
+        selected_label = st.selectbox(
+            "포트폴리오 선택",
+            options=labels,
+            key="selected_portfolio_dashboard_selected_row",
+        )
     selected_row = filtered_rows[labels.index(selected_label)]
     _render_selected_row_detail(selected_row)

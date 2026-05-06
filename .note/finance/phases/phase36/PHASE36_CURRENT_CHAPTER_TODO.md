@@ -33,6 +33,7 @@ Backtest > Final Review
 | 네 번째 작업 | current value / shares x price 기반 current weight 입력 계약 추가 | `completed` |
 | 다섯 번째 작업 | drift alert / review trigger preview 추가 | `completed` |
 | 여섯 번째 작업 | 기간 확장 성과 재검증 중심 dashboard rebounding | `completed` |
+| 일곱 번째 작업 | responsive dashboard UX / tabbed result / Monitoring Playbook 정리 | `completed` |
 | 문서 / QA | phase 문서, roadmap, code analysis, checklist 동기화 | `completed` |
 
 ## 완료한 내용
@@ -48,6 +49,11 @@ Backtest > Final Review
 - virtual capital 기준 portfolio value, total return, CAGR, MDD, benchmark spread, component contribution, strongest / weakest periods를 표시한다.
 - raw JSON은 기본 화면에서 제거하고 `Audit / Developer Details` 접힘 영역으로 이동했다.
 - `Current Weight / Drift Check`는 `Allocation Check` 고급 영역으로 낮췄다.
+- 데이터 출처와 화면 경계는 긴 텍스트가 잘리지 않도록 wrapping card와 접힘 registry path로 바꿨다.
+- 운영 대상 목록은 compact table / 짧은 portfolio selector / responsive filter layout으로 정리했다.
+- Snapshot은 selection summary와 Portfolio Blueprint로 나누고 target allocation을 포트폴리오 정의 영역에 배치했다.
+- Performance Recheck 결과는 `Summary`, `Equity Curve`, `Result Table`, `What Changed`, `Contribution`, `Extremes` tab으로 정리했다.
+- operator context는 `Monitoring Playbook`으로 재구성해 선정 근거, 관찰 기준, Holding Drift Check, Execution Boundary를 같은 흐름에서 읽게 했다.
 - dashboard는 `normal`, `watch`, `rebalance_needed`, `re_review_needed`, `blocked` status 체계를 가진다.
 - `Current Weight / Drift Check`를 추가해 component별 현재 비중을 수동 입력하고 target weight와의 drift를 계산한다.
 - drift threshold 이상이면 `REBALANCE_NEEDED`, watch threshold 이상이면 `DRIFT_WATCH`, 입력 합계가 100% 근처가 아니면 `DRIFT_INPUT_INCOMPLETE`로 read-only 판정한다.
@@ -80,9 +86,11 @@ Backtest > Final Review
 - `completed` drift alert preview helper smoke
 - `completed` performance recheck defaults smoke
 - `completed` performance recheck replay smoke
+- `completed` selected dashboard browser smoke
+- `completed` narrow viewport layout smoke
 - `pending` user manual QA
 
 ## 현재 판단
 
 Phase36 구현은 implementation_complete / manual_qa_pending 상태다.
-사용자는 `PHASE36_TEST_CHECKLIST.md` 기준으로 `Operations > Selected Portfolio Dashboard`의 Performance Recheck와 Allocation Check를 확인하면 된다.
+사용자는 `PHASE36_TEST_CHECKLIST.md` 기준으로 `Operations > Selected Portfolio Dashboard`의 Performance Recheck와 Monitoring Playbook / Holding Drift Check를 확인하면 된다.

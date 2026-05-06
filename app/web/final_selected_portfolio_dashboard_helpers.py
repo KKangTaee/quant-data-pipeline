@@ -26,12 +26,10 @@ def _optional_float(value: Any) -> float | None:
 
 def final_selected_portfolio_label(row: dict[str, Any]) -> str:
     """Build a stable selectbox label for one selected portfolio dashboard row."""
-    return (
-        f"{_display_value(row.get('updated_at'))} | "
-        f"{_display_value(row.get('operation_status_label'))} | "
-        f"{_display_value(row.get('source_title'))} | "
-        f"id={_display_value(row.get('decision_id'))}"
-    )
+    title = _display_value(row.get("source_title"))
+    if len(title) > 72:
+        title = f"{title[:69]}..."
+    return f"{_display_value(row.get('operation_status_label'))} | {title} | {_display_value(row.get('updated_at'))}"
 
 
 def build_selected_portfolio_dashboard_table(rows: list[dict[str, Any]]) -> pd.DataFrame:
@@ -41,15 +39,22 @@ def build_selected_portfolio_dashboard_table(rows: list[dict[str, Any]]) -> pd.D
             {
                 "Updated At": row.get("updated_at"),
                 "Status": row.get("operation_status_label"),
-                "Decision ID": row.get("decision_id"),
-                "Source": f"{row.get('source_type')} / {row.get('source_id')}",
-                "Title": row.get("source_title"),
+                "Portfolio": row.get("source_title"),
+                "Source Type": row.get("source_type"),
                 "Components": row.get("component_count"),
-                "Target Weight": row.get("target_weight_total"),
+                "Target": f"{_optional_float(row.get('target_weight_total')) or 0.0:.1f}%",
                 "Benchmark": row.get("benchmark_label"),
-                "Evidence Route": row.get("evidence_route"),
-                "Evidence Score": row.get("evidence_score"),
-                "Next Action": row.get("operator_next_action"),
+                "Original Period": f"{_display_value(row.get('baseline_start'))} -> {_display_value(row.get('baseline_end'))}",
+                "Baseline CAGR": (
+                    f"{(_optional_float(row.get('baseline_cagr')) or 0.0):.2%}"
+                    if _optional_float(row.get("baseline_cagr")) is not None
+                    else "-"
+                ),
+                "Baseline MDD": (
+                    f"{(_optional_float(row.get('baseline_mdd')) or 0.0):.2%}"
+                    if _optional_float(row.get("baseline_mdd")) is not None
+                    else "-"
+                ),
             }
         )
     return pd.DataFrame(display_rows)

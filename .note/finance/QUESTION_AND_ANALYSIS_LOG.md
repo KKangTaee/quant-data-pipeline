@@ -4320,3 +4320,17 @@ Detailed historical analysis was archived on `2026-04-13`.
   - raw JSON은 기본 화면에서 제거하고 접힘 Audit 영역으로 이동해야 하며, drift check는 실제 보유 또는 가정 보유가 있을 때만 쓰는 optional advanced 기능이어야 한다
 - Follow-up:
   - Phase36에서는 performance recheck와 가상 투자금 기반 현재 평가를 구현하고, 후속 Phase37 후보는 성과 악화 원인 분석 / review alert / attribution 강화로 잡는다
+
+### 2026-05-07 - Phase36 Selected Portfolio Dashboard UX 구조 개선
+- User request:
+  - 개편 후에도 데이터 출처 카드, 운영 대상 목록, Snapshot, Performance Recheck 결과, Allocation 위치, Operator Context / 실행 경계 연결이 좁은 화면과 사용자 이해 관점에서 아쉽다고 개선 방향을 요청함
+- Interpreted goal:
+  - 단순 copy 수정이 아니라 dashboard의 사용자 작업 순서를 `선택 -> 정의 확인 -> 기간 재검증 -> 운영 점검 -> 실행 경계 확인`으로 재배치해야 함
+- Analysis result:
+  - 긴 source path와 selected filter 설명은 metric column이 아니라 wrapping card + 접힘 registry path로 처리하는 것이 맞다
+  - 운영 대상 목록은 많은 audit column을 보여주는 표가 아니라 compact selection board여야 한다
+  - target allocation은 Performance 뒤가 아니라 Snapshot의 Portfolio Blueprint에 있어야 한다
+  - Performance Recheck 결과는 Backtest 결과 화면과 같은 tab 구조가 맞으며, Result Table도 별도 tab으로 노출해야 한다
+  - Operator Context는 독립 설명 카드가 아니라 Monitoring Playbook으로 바꾸고 Selection Evidence, Review Triggers, Holding Drift Check, Execution Boundary를 같은 흐름에 둬야 한다
+- Follow-up:
+  - Phase36 QA는 새 구조 기준으로 `PHASE36_TEST_CHECKLIST.md`에서 확인한다
