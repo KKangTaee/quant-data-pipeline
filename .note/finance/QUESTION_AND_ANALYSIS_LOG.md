@@ -4158,3 +4158,15 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 1~10 단계는 문서형 긴 목록으로 되돌리기보다 compact timeline으로 복원하고, 선택 경로별로 `필수`, `반복`, `직행`, `선행`, `생략`, `보류` 상태를 다르게 보여주는 것이 가장 자연스럽다
 - Follow-up:
   - `Reference > Guides`에 경로별 checkpoint 카드와 1~10 단계 timeline을 추가해 시각적 흐름과 단계 해석을 함께 보강했다
+
+### 2026-05-06 - Guides 경로 라벨과 단계 ownership 정리
+- User request:
+  - `이 경로의 핵심 단계`, `현재 경로 / 다음 행동 / 주의할 점 / 읽는 기록`, `저장 Mix`, `막힘 해결`의 의미가 애매하고 여러 후보 포트폴리오 경로에서 Candidate Review와 Portfolio Proposal 순서가 충돌해 보인다고 지적함
+- Interpreted goal:
+  - 선택 버튼이 포트폴리오 유형만이 아니라 현재 진행 상황을 고르는 장치임을 명확히 하고, 전체 1~10 단계와 선택 경로 요약의 위계를 분리해야 함
+- Analysis result:
+  - `저장 Mix`는 후보가 아니라 Saved Portfolio의 재사용 weight setup이므로 `저장된 비중 조합`이 더 정확하다
+  - `막힘 해결`은 포트폴리오 구성 경로가 아니라 hold / blocked / insufficient evidence 상태에서 원인 화면으로 돌아가는 문제 해결 경로이므로 `보류 / 재검토`가 더 정확하다
+  - 여러 후보 경로는 Candidate Review에서 후보별 current candidate를 먼저 저장하고, Portfolio Proposal은 이미 저장된 후보를 역할 / 비중으로 묶는 후속 화면으로 설명해야 한다
+- Follow-up:
+  - Guide 선택지, 1~10 단계 배치, 선택 경로 요약 카드 문구, 여러 후보 묶음 경로 설명을 위 ownership에 맞게 정리했다

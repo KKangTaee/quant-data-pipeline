@@ -102,15 +102,18 @@ Ingestion / Data Trust
 | 묶음 | 내용 |
 |---|---|
 | `Portfolio Selection Guide` hero | 제품 안내 첫 화면으로, 현재 workflow와 runtime / git 상태를 compact badge로 보여준다. 개발용 `Runtime / Build`는 하단 접힘 `System status`로 낮춘다 |
-| `지금 확인할 경로` | 단일 후보, 여러 후보 포트폴리오, 저장 Mix, 막힘 해결 중 사용자의 현재 목적을 먼저 고른다 |
-| `Portfolio Flow` | 선택 경로를 GraphViz flowchart로 보여주고, 환경상 GraphViz 렌더링이 실패하면 compact visual fallback으로 표시한다. chart node는 큰 흐름을 맡고, 긴 설명은 아래 단계 패널로 넘긴다 |
-| `이 경로의 핵심 단계` | 선택 경로에서 실제로 놓치면 안 되는 checkpoint를 카드로 보여준다. 단일 후보, 다중 후보, saved mix, blocker 해결 경로마다 같은 workflow를 다르게 해석한다 |
-| `전체 1~10 단계` | 제품형 compact timeline으로 전체 단계 번호를 복원한다. 선택 경로에 따라 `필수`, `반복`, `직행`, `선행`, `생략`, `보류` 같은 상태 라벨을 붙여 현재 위치와 생략되는 단계를 해석하게 한다 |
+| `현재 진행 상황 선택` | 단일 후보, 여러 후보 묶음, 저장된 비중 조합, 보류 / 재검토 중 사용자의 현재 상황을 먼저 고른다 |
+| `전체 1~10 단계에서 현재 위치` | 선택 버튼 바로 아래에 제품형 compact timeline을 둔다. 선택 경로에 따라 `필수`, `반복`, `직행`, `선행`, `생략`, `보류` 같은 상태 라벨을 붙여 현재 위치와 생략되는 단계를 먼저 해석하게 한다 |
+| `선택한 경로 요약` | `선택한 목표`, `진행 순서`, `건너뛰거나 조심할 단계`, `생성 / 참조 기록`으로 선택 경로의 화면 순서와 기록 경계를 짧게 보여준다 |
+| `Portfolio Flow` | 선택 경로를 GraphViz flowchart로 보여주고, 환경상 GraphViz 렌더링이 실패하면 compact visual fallback으로 표시한다. chart node는 큰 흐름을 맡고, 긴 설명은 아래 checkpoint 패널로 넘긴다 |
+| `선택한 경로의 핵심 체크포인트` | 선택 경로에서 실제로 놓치면 안 되는 checkpoint를 카드로 보여준다. 단일 후보, 여러 후보 묶음, 저장된 비중 조합, 보류 / 재검토마다 같은 workflow를 다르게 해석한다 |
 | `Decision Gates` | 단계 번호 대신 `Compare로 가도 되는가`, `Candidate로 남겨도 되는가`, `Proposal로 묶어도 되는가`, `Final Review를 기록해도 되는가` 같은 사용자 질문 기준으로 Go / Review / Stop을 보여준다 |
 | `Reference Drawer` | 핵심 개념, 상세 단계, 기록 저장소, 운영 경계를 탭으로 낮춰 필요할 때만 확인하게 한다 |
 
-사용자는 먼저 현재 만들려는 포트폴리오 유형을 고르고,
-flowchart로 큰 흐름을 확인한 뒤, 경로별 checkpoint와 1~10 단계 timeline에서
+사용자는 먼저 현재 진행 상황을 고르고,
+1~10 단계 timeline에서 전체 workflow상 위치를 본 뒤,
+선택한 경로 요약과 flowchart로 실제 화면 순서와 기록 경계를 확인한다.
+그 다음 경로별 checkpoint에서 놓치면 안 되는 판단을 보고
 실제로 지나가는 화면, 반복되는 단계, 생략되는 단계, 생성되거나 읽는 기록을 본다.
 그 다음 Decision Gates와 Reference Drawer를 이어서 읽는다.
 
@@ -119,9 +122,9 @@ flowchart로 큰 흐름을 확인한 뒤, 경로별 checkpoint와 1~10 단계 ti
 | 경로 | 핵심 차이 |
 |---|---|
 | `단일 후보 경로` | Candidate Review와 Pre-Live 기록 후 Portfolio Proposal에서 단일 후보 직행 평가를 사용하며, proposal draft 저장을 반복하지 않는다 |
-| `여러 후보 포트폴리오 경로` | 여러 current candidate를 역할 / 비중 / 목적이 있는 proposal draft로 저장한 뒤 Final Review에서 읽는다 |
-| `저장 Mix 경로` | saved weighted portfolio setup은 Candidate Review가 아니라 `Use This Mix In Portfolio Proposal`로 proposal registry에 연결한다 |
-| `재검토 / 막힘 경로` | hold / blocked / insufficient evidence / re-review 상태에서는 Final Review 직행이 아니라 원인 화면으로 되돌아간다 |
+| `여러 후보 묶음 경로` | 후보별 실행 / 비교와 Candidate Review 저장이 선행이고, Portfolio Proposal은 이미 저장된 후보들을 역할 / 비중 / 목적이 있는 proposal draft로 묶은 뒤 Final Review에서 읽는다 |
+| `저장된 비중 조합 경로` | saved weighted portfolio setup은 후보 registry가 아니라 재사용 weight setup이므로 Candidate Review가 아니라 `Use This Mix In Portfolio Proposal`로 proposal registry에 연결한다 |
+| `보류 / 재검토 경로` | hold / blocked / insufficient evidence / re-review 상태에서는 Final Review 직행이 아니라 원인 화면으로 되돌아간다 |
 
 ## Phase 30 Portfolio Proposal 계약
 

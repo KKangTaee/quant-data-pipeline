@@ -12,9 +12,9 @@ import streamlit as st
 
 GUIDE_ROUTE_OPTIONS = [
     "단일 후보",
-    "여러 후보 포트폴리오",
-    "저장 Mix",
-    "막힘 해결",
+    "여러 후보 묶음",
+    "저장된 비중 조합",
+    "보류 / 재검토",
 ]
 
 
@@ -23,9 +23,9 @@ def _route_cards() -> dict[str, dict[str, Any]]:
         "단일 후보": {
             "headline": "전략 하나를 끝까지 검토",
             "summary": "후보 1개를 Current Candidate와 Pre-Live 기록으로 남기고 Final Review가 직접 읽는 경로입니다.",
-            "primary_action": "Single Strategy 또는 Compare 결과에서 Candidate Review로 보냅니다.",
-            "skip": "Portfolio Proposal draft 저장은 반복하지 않습니다.",
-            "next_screen": "Backtest > Candidate Review",
+            "goal": "후보 1개를 Current Candidate와 Pre-Live 기록으로 남기고 Final Review에서 직접 읽게 합니다.",
+            "sequence": "Single Strategy 또는 Compare 결과 확인 -> Candidate Review 저장 -> Portfolio Proposal 단일 후보 평가 -> Final Review",
+            "caution": "단일 후보는 proposal draft를 새로 저장하지 않습니다. Portfolio Proposal에서는 direct candidate로 읽습니다.",
             "records": "Review Note, Current Candidate, Pre-Live, Final Decision",
             "dot": [
                 ("single", "1-2\\nRun + Data Trust", "run"),
@@ -43,12 +43,12 @@ def _route_cards() -> dict[str, dict[str, Any]]:
                 ("direct", "final", "검증"),
             ],
         },
-        "여러 후보 포트폴리오": {
-            "headline": "여러 후보를 하나의 proposal로 구성",
+        "여러 후보 묶음": {
+            "headline": "여러 후보를 하나의 proposal로 묶기",
             "summary": "여러 current candidate를 목적, 역할, target weight가 있는 포트폴리오 초안으로 저장하는 경로입니다.",
-            "primary_action": "각 후보를 Candidate Review에서 저장한 뒤 Portfolio Proposal에서 역할과 비중을 설계합니다.",
-            "skip": "단일 후보 직행 평가는 쓰지 않습니다.",
-            "next_screen": "Backtest > Portfolio Proposal",
+            "goal": "여러 current candidate를 목적, 역할, target weight가 있는 portfolio proposal로 묶습니다.",
+            "sequence": "후보별 실행 / 비교 -> Candidate Review에서 후보 저장 -> Portfolio Proposal에서 역할 / 비중 설계 -> Final Review",
+            "caution": "Portfolio Proposal은 후보를 새로 만드는 화면이 아니라, 이미 저장된 후보를 묶는 화면입니다.",
             "records": "Current Candidate, Pre-Live, Portfolio Proposal, Final Decision",
             "dot": [
                 ("candidates", "1-6\\nCandidate Pool", "candidate"),
@@ -64,12 +64,12 @@ def _route_cards() -> dict[str, dict[str, Any]]:
                 ("validation", "final", "hard blocker 없음"),
             ],
         },
-        "저장 Mix": {
+        "저장된 비중 조합": {
             "headline": "이미 저장된 weight setup을 workflow 기록으로 연결",
             "summary": "Compare에서 저장한 mix를 replay한 뒤 Candidate Review가 아니라 Portfolio Proposal 초안으로 연결합니다.",
-            "primary_action": "Replay Saved Mix 후 Workflow Registry가 비어 있으면 Use This Mix In Portfolio Proposal을 사용합니다.",
-            "skip": "Candidate Review는 건너뜁니다.",
-            "next_screen": "Backtest > Compare & Portfolio Builder > 저장 Mix 다시 열기",
+            "goal": "Saved Portfolio에 저장된 재사용 weight setup을 다시 검토해 proposal로 연결합니다.",
+            "sequence": "저장 조합 replay -> 결과 확인 -> Use This Mix In Portfolio Proposal -> Final Review",
+            "caution": "Saved Portfolio는 후보 registry가 아닙니다. Candidate Review를 거치지 않고 proposal registry에 연결합니다.",
             "records": "Saved Portfolio, Portfolio Proposal, Final Decision",
             "dot": [
                 ("saved", "5A\\nSaved Weight Setup", "compare"),
@@ -83,12 +83,12 @@ def _route_cards() -> dict[str, dict[str, Any]]:
                 ("proposal", "final", "proposal saved"),
             ],
         },
-        "막힘 해결": {
+        "보류 / 재검토": {
             "headline": "멈춰야 할 이유를 원인 화면으로 되돌림",
             "summary": "hold, blocked, evidence 부족, re-review가 나오면 Final Review 직행이 아니라 원인 화면으로 돌아갑니다.",
-            "primary_action": "현재 막힌 항목을 먼저 고르고, 해당 화면에서 설정 / 데이터 / 후보 구성을 보강합니다.",
-            "skip": "막힘 상태에서는 최종 판단 저장을 목표로 하지 않습니다.",
-            "next_screen": "Real-Money, Compare, Candidate Review, Portfolio Proposal 중 원인 화면",
+            "goal": "진행이 막혔을 때 최종 선정으로 밀고 가지 않고 원인 화면으로 돌아갑니다.",
+            "sequence": "막힘 원인 확인 -> 소유 화면으로 복귀 -> 데이터 / 근거 / 구성 보강 -> 같은 기준으로 재검토",
+            "caution": "hold, blocked, evidence 부족 상태는 최종 선정이 아니라 보류 또는 재검토로 남깁니다.",
             "records": "필요할 때만 Review Note 또는 Final Decision에 보류 사유 기록",
             "dot": [
                 ("hold", "3-4\\nHold / Blocker", "stop"),
@@ -240,7 +240,7 @@ def _route_stage_status() -> dict[str, dict[str, str]]:
             "9": "필수",
             "10": "필수",
         },
-        "여러 후보 포트폴리오": {
+        "여러 후보 묶음": {
             "1": "반복",
             "2": "반복",
             "3": "반복",
@@ -252,7 +252,7 @@ def _route_stage_status() -> dict[str, dict[str, str]]:
             "9": "필수",
             "10": "필수",
         },
-        "저장 Mix": {
+        "저장된 비중 조합": {
             "1": "선행",
             "2": "선행",
             "3": "선행",
@@ -264,7 +264,7 @@ def _route_stage_status() -> dict[str, dict[str, str]]:
             "9": "필수",
             "10": "필수",
         },
-        "막힘 해결": {
+        "보류 / 재검토": {
             "1": "점검",
             "2": "점검",
             "3": "점검",
@@ -303,7 +303,7 @@ def _route_checkpoint_rows() -> dict[str, list[dict[str, str]]]:
                 "screen": "Portfolio Proposal / Final Review",
             },
         ],
-        "여러 후보 포트폴리오": [
+        "여러 후보 묶음": [
             {
                 "checkpoint": "후보마다 같은 기준으로 검토했는가",
                 "detail": "각 후보는 최소한 성과, Data Trust, Real-Money, Candidate Review 근거가 비교 가능해야 합니다.",
@@ -325,7 +325,7 @@ def _route_checkpoint_rows() -> dict[str, list[dict[str, str]]]:
                 "screen": "Final Review",
             },
         ],
-        "저장 Mix": [
+        "저장된 비중 조합": [
             {
                 "checkpoint": "저장된 mix가 재현되는가",
                 "detail": "Saved Portfolio는 workflow 기록이 아니라 weight setup이므로 replay 결과부터 확인합니다.",
@@ -347,7 +347,7 @@ def _route_checkpoint_rows() -> dict[str, list[dict[str, str]]]:
                 "screen": "Final Review",
             },
         ],
-        "막힘 해결": [
+        "보류 / 재검토": [
             {
                 "checkpoint": "막힘 원인이 어느 화면 소유인지 찾았는가",
                 "detail": "데이터 문제, Real-Money blocker, 비교 근거 부족, proposal 구성 부족을 분리해야 합니다.",
@@ -677,7 +677,7 @@ def _render_hero(runtime_marker: str | None, git_sha: str | None) -> None:
           <div class="qg-hero-label">Portfolio Selection Guide</div>
           <div class="qg-hero-title">실전 후보 포트폴리오를 찾는 운영 가이드</div>
           <div class="qg-hero-copy">
-            이 화면은 문서 목록이 아니라 의사결정 안내입니다. 먼저 지금 만들려는 포트폴리오 경로를 고르고,
+            이 화면은 문서 목록이 아니라 의사결정 안내입니다. 먼저 현재 진행 상황을 고르고,
             그 경로에서 어떤 화면을 지나고 어느 조건에서 멈춰야 하는지 확인합니다.
           </div>
           <div class="qg-status-strip">
@@ -692,11 +692,13 @@ def _render_hero(runtime_marker: str | None, git_sha: str | None) -> None:
 
 def _render_orientation_cards(selected_route: str, route: dict[str, Any]) -> None:
     rows = [
-        ("현재 경로", route["headline"], route["summary"]),
-        ("다음 행동", route["next_screen"], route["primary_action"]),
-        ("주의할 점", route["skip"], "이 경계가 Candidate Review와 Portfolio Proposal의 역할을 나눕니다."),
-        ("읽는 기록", route["records"], "저장소는 서로 덮어쓰지 않고 단계별 판단을 따로 남깁니다."),
+        ("선택한 목표", route["headline"], route["goal"]),
+        ("진행 순서", "어떤 화면을 어떤 순서로 지나는가", route["sequence"]),
+        ("건너뛰거나 조심할 단계", "단계 ownership 확인", route["caution"]),
+        ("생성 / 참조 기록", route["records"], "저장소는 서로 덮어쓰지 않고 단계별 판단을 따로 남깁니다."),
     ]
+    st.markdown("### 선택한 경로 요약")
+    st.caption("아래 요약은 선택한 진행 상황이 어떤 화면을 지나고, 어떤 기록을 만들거나 읽는지 먼저 보여줍니다.")
     card_html = []
     for kicker, title, copy in rows:
         card_html.append(
@@ -711,7 +713,7 @@ def _render_orientation_cards(selected_route: str, route: dict[str, Any]) -> Non
     st.html(f'<div class="qg-card-grid">{"".join(card_html)}</div>')
 
     st.caption(
-        f"`{selected_route}` 경로를 보고 있습니다. 다른 portfolio 유형이면 위 선택 버튼에서 경로를 바꿔 확인합니다."
+        f"`{selected_route}` 기준으로 보고 있습니다. 다른 상황이면 위 선택 버튼에서 경로를 바꿔 확인합니다."
     )
 
 
@@ -787,8 +789,10 @@ def _status_pill_tone(status: str) -> str:
 
 
 def _render_route_checkpoints(selected_route: str) -> None:
-    st.markdown("### 이 경로의 핵심 단계")
-    st.caption("플로우차트를 본 뒤, 선택한 경로에서 실제로 놓치면 안 되는 판단만 먼저 확인합니다.")
+    st.markdown(f"### {selected_route} 핵심 체크포인트")
+    st.caption(
+        "전체 1~10 단계 중 이 진행 상황에서 특히 놓치면 안 되는 판단 지점만 모아 보여줍니다."
+    )
     checkpoint_cards = []
     for row in _route_checkpoint_rows()[selected_route]:
         checkpoint_cards.append(
@@ -804,9 +808,9 @@ def _render_route_checkpoints(selected_route: str) -> None:
 
 
 def _render_stage_timeline(selected_route: str) -> None:
-    st.markdown("### 전체 1~10 단계")
+    st.markdown("### 전체 1~10 단계에서 현재 위치")
     st.caption(
-        "번호는 전체 workflow의 위치 기준입니다. 선택한 경로에 따라 필수, 반복, 직행, 생략 같은 의미가 달라집니다."
+        f"`{selected_route}` 기준으로 전체 workflow의 어느 단계를 지나고, 무엇을 반복하거나 생략하는지 먼저 확인합니다."
     )
     status_by_step = _route_stage_status()[selected_route]
     cards = []
@@ -879,7 +883,7 @@ def _render_reference_drawer() -> None:
         st.dataframe(pd.DataFrame(_storage_rows()), width="stretch", hide_index=True)
         st.info(
             "Saved Portfolio는 재사용 setup이고, Portfolio Proposal은 workflow 기록입니다. "
-            "saved mix는 Candidate Review가 아니라 Portfolio Proposal로 연결합니다."
+            "저장된 비중 조합은 Candidate Review가 아니라 Portfolio Proposal로 연결합니다."
         )
     with tabs[3]:
         st.warning(
@@ -929,7 +933,7 @@ def render_reference_guides_page(
 
     if hasattr(st, "segmented_control"):
         st.segmented_control(
-            "지금 확인할 경로",
+            "현재 진행 상황 선택",
             options=GUIDE_ROUTE_OPTIONS,
             selection_mode="single",
             required=True,
@@ -939,17 +943,17 @@ def render_reference_guides_page(
         selected_route = str(st.session_state.get(state_key) or GUIDE_ROUTE_OPTIONS[0])
     else:
         selected_route = st.radio(
-            "지금 확인할 경로",
+            "현재 진행 상황 선택",
             options=GUIDE_ROUTE_OPTIONS,
             horizontal=True,
             key=state_key,
         )
 
     route = routes[selected_route]
+    _render_stage_timeline(selected_route)
     _render_orientation_cards(selected_route, route)
     _render_flow_visual(selected_route, route)
     _render_route_checkpoints(selected_route)
-    _render_stage_timeline(selected_route)
     _render_decision_gates()
     _render_reference_drawer()
     _render_runtime_reference(loaded_at, render_runtime_snapshot)
