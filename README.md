@@ -21,7 +21,7 @@ DB-backed market data ingestion, factor generation, and strategy backtesting wor
 - `Backtest`
   - 단일 전략 실행, compare, candidate review, pre-live review, portfolio proposal workflow, final review / portfolio selection decision
 - `Ops Review`
-  - 최근 실행 결과, persistent history, logs, failure artifact 검토
+  - Operations Dashboard 형태의 triage flow, run health, action inbox, failure artifact, logs, system snapshot 점검
 - `Backtest Run History`
   - 저장된 백테스트 실행 기록 검토, form 복원, 재실행, candidate review 초안 전달
 - `Guides`

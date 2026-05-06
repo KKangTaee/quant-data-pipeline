@@ -3396,3 +3396,10 @@ Detailed historical logs were archived on `2026-04-13`.
   - Guide 선택지를 `단일 후보`, `여러 후보 묶음`, `저장된 비중 조합`, `보류 / 재검토`로 정리했다.
   - `전체 1~10 단계에서 현재 위치`를 선택 버튼 바로 아래로 올리고, 그 아래에 `선택한 경로 요약`, `Portfolio Flow`, 선택 경로별 checkpoint를 배치했다.
   - 여러 후보 묶음 경로는 Candidate Review 저장이 선행이고 Portfolio Proposal은 이미 저장된 후보를 묶는 화면이라는 ownership을 문구로 명확히 했다.
+
+### 2026-05-06
+- Ops Review 운영 대시보드 개편:
+  - user confirmation에 따라 기존 `Ops Review`의 최근 결과 / history / logs / failure CSV 나열형 UI를 운영 상태 판독 화면으로 개편했다.
+  - 렌더링 책임을 `app/web/ops_review.py`로 분리하고, `streamlit_app.py`는 page entry와 navigation만 유지하게 했다.
+  - 상단 triage flow, run health cards, action inbox, 선택 run inspector, failure CSV / related logs / artifact index, 다음 이동 안내, system snapshot을 추가했다.
+  - job 실행은 `Workspace > Ingestion`, backtest replay는 `Operations > Backtest Run History`, 후보 replay는 `Operations > Candidate Library`가 맡는 경계를 UI와 flow 문서에 명시했다.

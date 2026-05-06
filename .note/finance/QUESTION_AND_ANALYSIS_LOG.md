@@ -4254,3 +4254,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 장기 운영 구조는 사용자가 제안한 `phase`, `ux_ui-polishing`, `candidate-search` 축이 더 자연스럽다. `phase`는 문서와 실제 phase 개발을 끝까지 소유하고, `ux_ui-polishing`은 이미 구현된 기능의 사용성 / 흐름 / 화면 polish를 맡으며, `candidate-search`는 프로그램을 활용한 후보 탐색을 맡는다. 단, `phase`와 `ux_ui-polishing`은 같은 UI 파일을 건드릴 수 있으므로 동시에 같은 화면을 수정하지 않는 규칙이 필요하다
   - 기존 `docs-phase`, `web-backtest-ui`, `candidate-search` worktree는 clean 상태에서 제거했고, `master` 기준으로 `codex/phase`, `codex/ux-ui-polishing`, `codex/candidate-search` worktree를 새로 만들었다
   - worktree별 고정 문서는 반복 운영이 안정된 뒤 만들고, 초기에는 세션 첫 메시지로 역할 / 수정 가능 범위 / 수정 금지 범위 / 현재 충돌 주의 파일을 지정하는 방식이 낫다. 아직 운영 규칙이 변하는 중이라 문서를 너무 빨리 고정하면 오히려 stale guidance가 생길 수 있다
+
+### 2026-05-06 - Ops Review 개편 방향과 1번 구현
+- User request:
+  - 완성된 프로그램 기능을 기준으로 `Operations > Ops Review`를 어떻게 개편하면 좋을지 분석한 뒤, 1번 개편을 UX/UI와 시각성을 고려해 진행해 달라고 요청함
+- Interpreted goal:
+  - 방치된 로그 모음 화면을 단순 운영 artifact viewer가 아니라, 사용자가 지금 무엇을 먼저 봐야 하는지 판단할 수 있는 운영 대시보드로 바꿔야 함
+- Analysis result:
+  - Ops Review의 적절한 책임은 ingestion / refresh / factor job의 run health, failure artifact, related logs, runtime build 상태를 한 화면에서 판독하는 것이다
+  - job 실행은 `Ingestion`, backtest replay / form 복원은 `Backtest Run History`, 저장 후보 replay는 `Candidate Library`가 담당해야 하므로 Ops Review가 action 실행 화면으로 확장되면 흐름이 다시 혼재된다
+  - 화면 구조는 `triage flow -> status cards -> action inbox -> selected run inspector -> logs / artifacts -> next screen guidance` 순서가 가장 자연스럽다
+- Follow-up:
+  - `app/web/ops_review.py`를 추가하고 `streamlit_app.py`의 Ops Review page entry에서 호출하게 했다
+  - README와 Backtest UI flow 문서에는 Ops Review가 운영 상태 판독 화면이며 실행 / replay / 후보 재검토는 전용 화면으로 이동한다는 경계를 남겼다
