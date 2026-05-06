@@ -4135,3 +4135,15 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Guide 상단에 경로 선택형 시각 플로우 맵을 두고, 상세 1~10단계는 그 아래 reference로 유지하는 구조가 가장 작은 UX 개선이다
 - Follow-up:
   - `Reference > Guides`에 포트폴리오 플로우 맵을 추가하고, `WEB_BACKTEST_UI_FLOW.md`를 해당 Guide 구조에 맞춰 동기화했다
+
+### 2026-05-06 - Guides 제품형 UX 개편 방향
+- User request:
+  - 포트폴리오 플로우 맵의 내용은 맞지만 시각적으로 실습용 UI처럼 보이며, Guides 전체가 제품형 안내 화면보다 문서 목록처럼 느껴진다고 지적함
+- Interpreted goal:
+  - 사용자가 문서 목록을 읽기 전에 지금 하려는 포트폴리오 경로와 다음 화면, 멈춤 기준을 제품형 guide 화면에서 먼저 이해해야 함
+- Analysis result:
+  - Runtime / Build가 최상단에 있는 구조는 운영자 / 개발자에게는 유용하지만 첫 사용자 guide 경험에는 부적절하다
+  - `핵심 개념`, `1~10단계`, `단계 통과 기준`, `문서와 파일`을 같은 위계로 나열하면 사용자가 먼저 무엇을 해야 하는지 판단하기 어렵다
+  - Streamlit native에서는 `st.graphviz_chart`가 flowchart에 가장 적합하고, 외부 React Flow 계열 component는 더 강하지만 dependency와 state 관리 부담이 커서 1차 개편에는 과하다
+- Follow-up:
+  - `Reference > Guides`를 hero / route selector / GraphViz flow / Decision Gates / Reference Drawer / System status 구조로 개편했다

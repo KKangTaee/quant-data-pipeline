@@ -3373,3 +3373,12 @@ Detailed historical logs were archived on `2026-04-13`.
   - `py_compile`로 `app/web/streamlit_app.py`, `app/web/pages/backtest.py`, `app/web/backtest_*.py`를 확인했다.
   - worktree Streamlit 서버를 `127.0.0.1:8502`에 띄우고 `Reference > Guides`에서 플로우 맵 렌더링과 경로 선택 동작을 확인했다.
   - `git diff --check`와 finance refinement hygiene helper를 통과했다.
+
+### 2026-05-06
+- Guides 제품형 UX 개편:
+  - user feedback에 따라 `Reference > Guides`가 실습 문서 목록처럼 보이고, flow map도 카드 나열에 가까운 문제를 확인했다.
+  - Guide 렌더링을 `app/web/reference_guides.py`로 분리하고, `streamlit_app.py`는 page shell / navigation 중심 책임을 유지하게 했다.
+  - 첫 화면을 `Portfolio Selection Guide` hero, 경로 선택, route summary, GraphViz 기반 `Portfolio Flow`, `Decision Gates`, `Reference Drawer`, 접힘 `System status` 구조로 개편했다.
+  - Runtime / Build는 사용자의 첫 guide 경험에서 제외하고 하단 `System status`로 낮췄다.
+  - 외부 dependency는 추가하지 않았고, GraphViz 렌더링 실패 시 compact visual fallback을 사용하도록 했다.
+  - 검증: `py_compile`, `git diff --check`, finance refinement hygiene helper를 통과했고, `127.0.0.1:8502/guides`에서 GraphViz flowchart 렌더링과 route selector 동작을 확인했다.

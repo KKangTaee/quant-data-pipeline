@@ -10,6 +10,7 @@ UI form, payload 복원, candidate review, history replay, candidate replay, sav
 | 파일 | 역할 |
 |---|---|
 | `app/web/streamlit_app.py` | top navigation과 page entry |
+| `app/web/reference_guides.py` | `Reference > Guides`의 제품형 workflow guide, portfolio flowchart, decision gates, reference drawer |
 | `app/web/overview_dashboard.py` | `Workspace > Overview`에서 Backtest registry 기반 후보 Top 3, candidate funnel, next actions, recent activity dashboard render |
 | `app/web/overview_dashboard_helpers.py` | Overview dashboard용 current candidate / Pre-Live / proposal / history / saved portfolio 집계와 candidate priority scoring helper |
 | `app/web/backtest_common.py` | Backtest 공용 preset, session state, panel routing, universe / real-money / guardrail input, status label helper |
@@ -96,20 +97,19 @@ Ingestion / Data Trust
 - `Paper Tracking Ledger`는 Phase 33에서 추가된 append-only 기록 흐름이지만, 현재 주 사용자 흐름에서는 Final Review의 inline paper observation 기준으로 흡수한다. 기존 ledger row는 backward compatibility / 과거 QA 기록으로 읽을 수 있다.
 - Phase 35에서 별도 `Post-Selection Guide` panel은 과한 단계로 판단해 active workflow에서 제거했다. 최종 판단과 투자 가능 / 투자하면 안 됨 / 내용 부족 / 재검토 필요 해석은 `Backtest > Final Review`의 saved final decision review에서 확인한다.
 
-현재 Guides 화면은 다섯 묶음으로 정리한다.
+현재 Guides 화면은 제품형 의사결정 guide로 정리한다.
 
 | 묶음 | 내용 |
 |---|---|
-| `핵심 개념 가이드` | 실전 승격 흐름, Real-Money Contract, GTAA Risk-Off 후보군, interval, Compare 대상 선정법, Portfolio Proposal -> Final Review -> 최종 판단 완료 해석 |
-| `포트폴리오 플로우 맵` | 단일 후보, 여러 후보 portfolio proposal, 저장 Mix, 재검토 / blocker 경로를 선택해 시각적 순서도와 생성 / 참조 기록을 함께 읽는다 |
-| `1~10 단계 실행 흐름` | 데이터 최신화부터 Final Review 저장 결과 확인까지의 단계별 흐름. 각 단계는 expander로 접어 읽는다 |
-| `단계 통과 기준` | 4->5, 5->6, 6->7, 7->8, 8->9, 9->10, 최종 판단 해석처럼 다음 단계로 넘길지 판단하는 stop/go 기준 |
-| `문서와 파일` | 현재 먼저 볼 문서, 후보 검토 / 실행 재사용 JSONL 저장소 지도, proposal / paper ledger / final decision guide와 registry path, live approval이 아님을 구분하는 운영 경계 |
+| `Portfolio Selection Guide` hero | 제품 안내 첫 화면으로, 현재 workflow와 runtime / git 상태를 compact badge로 보여준다. 개발용 `Runtime / Build`는 하단 접힘 `System status`로 낮춘다 |
+| `지금 확인할 경로` | 단일 후보, 여러 후보 포트폴리오, 저장 Mix, 막힘 해결 중 사용자의 현재 목적을 먼저 고른다 |
+| `Portfolio Flow` | 선택 경로를 GraphViz flowchart로 보여주고, 환경상 GraphViz 렌더링이 실패하면 compact visual fallback으로 표시한다 |
+| `Decision Gates` | 단계 번호 대신 `Compare로 가도 되는가`, `Candidate로 남겨도 되는가`, `Proposal로 묶어도 되는가`, `Final Review를 기록해도 되는가` 같은 사용자 질문 기준으로 Go / Review / Stop을 보여준다 |
+| `Reference Drawer` | 핵심 개념, 상세 단계, 기록 저장소, 운영 경계를 탭으로 낮춰 필요할 때만 확인하게 한다 |
 
-`포트폴리오 플로우 맵`은 1~10단계 텍스트 목록 위에 배치한다.
 사용자는 먼저 현재 만들려는 포트폴리오 유형을 고르고,
 해당 경로에서 실제로 지나가는 화면, 생략되는 단계, 생성되거나 읽는 기록을 본 뒤
-아래의 상세 1~10단계와 통과 기준을 이어서 읽는다.
+Decision Gates와 Reference Drawer를 이어서 읽는다.
 
 경로별 핵심 차이는 아래와 같다.
 
