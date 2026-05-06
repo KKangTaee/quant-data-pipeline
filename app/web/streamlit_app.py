@@ -3183,9 +3183,10 @@ def _render_guides_page() -> None:
                     "`Data Trust`에서 결과 기간과 가격 최신성 차이 확인",
                     "`Focused Strategy > Real-Money Contract`로 한 전략씩 깊게 읽기",
                     "`저장 Mix 다시 열기 > Replay Saved Mix`는 같은 화면 안에서 mix 자체 결과와 Portfolio Mix 검증 보드가 보이는지 확인",
+                    "`Workflow Registry=NOT RECORDED`이면 `Use This Mix In Portfolio Proposal`로 Portfolio Proposal 초안을 작성",
                     "`Candidate Review > 보조 도구: Send Candidates To Compare`에서 보낸 후보 묶음이 의도대로 채워졌는지 확인",
                 ],
-                "next_step": "5단계 Compare 검증이 PASS 또는 CONDITIONAL이면 버튼으로 6단계 Candidate Review에 보냅니다. 저장 Mix는 먼저 Portfolio Mix 검증 보드에서 replay / data trust / workflow 기록 여부를 확인합니다.",
+                "next_step": "개별 전략 Compare 검증이 PASS 또는 CONDITIONAL이면 버튼으로 6단계 Candidate Review에 보냅니다. 저장 Mix는 이미 비중이 정해진 조합이므로 Candidate Review가 아니라 Portfolio Proposal로 보내 workflow 기록을 남깁니다.",
             },
             {
                 "title": "6단계. Candidate Packaging으로 운영 기록과 Proposal 진입 준비",
@@ -3351,7 +3352,8 @@ def _render_guides_page() -> None:
             st.warning(
                 "`저장 Mix 다시 열기 > Replay Saved Mix`는 같은 화면 안에서 저장된 mix 자체 결과와 "
                 "`Portfolio Mix 검증 보드`를 보여줍니다. "
-                "저장 mix는 reusable setup이므로 성과 replay가 가능해도 자동으로 5~10단계 통과 기록이 되지는 않습니다."
+                "저장 mix는 reusable setup이므로 성과 replay가 가능해도 자동으로 5~10단계 통과 기록이 되지는 않습니다. "
+                "`Workflow Registry=NOT RECORDED`라면 `Use This Mix In Portfolio Proposal`로 저장 mix를 Portfolio Proposal 초안에 남깁니다."
             )
 
         with st.expander("6단계 Candidate Packaging에서 7단계 Portfolio Proposal로 넘어가는 최소 기준", expanded=True):
@@ -3749,7 +3751,7 @@ def _render_guides_page() -> None:
                         "폴더": ".note/finance/saved/",
                         "담는 데이터": "Compare에서 만든 재사용 가능한 portfolio mix setup",
                         "화면 위치": "Backtest > Compare & Portfolio Builder > 저장 Mix 다시 열기",
-                        "읽는 법": "포트폴리오 proposal이나 후보 registry가 아니라, 다시 불러오거나 replay할 수 있는 weight setup입니다.",
+                        "읽는 법": "다시 불러오거나 replay할 수 있는 weight setup입니다. 실제 workflow 기록으로 쓰려면 Candidate Review가 아니라 Portfolio Proposal 초안으로 넘깁니다.",
                     },
                 ]
             )

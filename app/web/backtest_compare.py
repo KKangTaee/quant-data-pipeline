@@ -996,6 +996,126 @@ def _build_saved_mix_validation_evaluation(
         "shortened_days": shortened_days,
     }
 
+# Extract the replay period from a result bundle so a saved mix proposal can
+# preserve the exact data window it was rebuilt from.
+def _bundle_result_period(bundle: dict[str, Any]) -> dict[str, str | None]:
+    result_df = bundle.get("result_df")
+    if not isinstance(result_df, pd.DataFrame) or result_df.empty or "Date" not in result_df.columns:
+        meta = dict(bundle.get("meta") or {})
+        return {"start": meta.get("start"), "end": meta.get("actual_result_end") or meta.get("end")}
+    dates = pd.to_datetime(result_df["Date"], errors="coerce").dropna()
+    if dates.empty:
+        return {"start": None, "end": None}
+    return {"start": str(dates.min().date()), "end": str(dates.max().date())}
+
+# Normalize a result summary row into the compact evidence fields used by
+# saved-mix validation and Portfolio Proposal prefill.
+def _bundle_summary_snapshot(bundle: dict[str, Any]) -> dict[str, Any]:
+    summary_df = bundle.get("summary_df")
+    if not isinstance(summary_df, pd.DataFrame) or summary_df.empty:
+        return {}
+    row = dict(summary_df.iloc[0].to_dict())
+    return {
+        "name": row.get("Name"),
+        "cagr": row.get("CAGR"),
+        "mdd": row.get("Maximum Drawdown"),
+        "sharpe": row.get("Sharpe Ratio"),
+        "end_balance": row.get("End Balance"),
+    }
+
+# Create stable id fragments for saved-mix synthetic component identifiers.
+def _saved_mix_slug(value: Any) -> str:
+    raw = str(value or "").strip().lower()
+    cleaned = "".join(char if char.isalnum() else "_" for char in raw)
+    return "_".join(part for part in cleaned.split("_") if part) or "saved_mix"
+
+# Suggest a proposal role from the saved weight distribution without changing
+# the user's stored weights.
+def _saved_mix_component_role(strategy_name: str, weight: float, max_weight: float) -> str:
+    if weight == max_weight:
+        return "core_anchor"
+    if "risk" in strategy_name.lower() or "bond" in strategy_name.lower():
+        return "defensive_sleeve"
+    return "diversifier"
+
+# Build the cross-panel payload that turns a replayed saved mix into a Portfolio
+# Proposal draft source rather than a Candidate Review handoff.
+def _build_saved_mix_proposal_prefill_payload(record: dict[str, Any]) -> dict[str, Any]:
+    weighted_bundle = dict(st.session_state.get("backtest_weighted_bundle") or {})
+    bundles = list(st.session_state.get("backtest_compare_bundles") or [])
+    compare_context = dict(record.get("compare_context") or {})
+    portfolio_context = dict(record.get("portfolio_context") or {})
+    source_context = dict(record.get("source_context") or {})
+    upstream_context = dict(source_context.get("compare_source_context") or {})
+    registry_ids = list(upstream_context.get("registry_ids") or [])
+    candidate_titles = list(upstream_context.get("candidate_titles") or [])
+    weights_percent = [float(weight) for weight in list(portfolio_context.get("weights_percent") or [])]
+    strategy_names = list(portfolio_context.get("strategy_names") or compare_context.get("selected_strategies") or [])
+    max_weight = max(weights_percent, default=0.0)
+    override_map = dict(compare_context.get("strategy_overrides") or {})
+
+    components: list[dict[str, Any]] = []
+    for idx, strategy_name in enumerate(strategy_names):
+        bundle = next((item for item in bundles if str(item.get("strategy_name") or "") == str(strategy_name)), {})
+        meta = dict(bundle.get("meta") or {})
+        summary = _bundle_summary_snapshot(bundle)
+        data_assessment = _build_compare_data_trust_assessment(bundle) if bundle else {}
+        weight = weights_percent[idx] if idx < len(weights_percent) else 0.0
+        registry_id = str(registry_ids[idx]) if idx < len(registry_ids) else ""
+        if not registry_id:
+            registry_id = f"saved_mix_component_{_saved_mix_slug(record.get('portfolio_id'))}_{_saved_mix_slug(strategy_name)}"
+        contract = {
+            "start": compare_context.get("start"),
+            "end": compare_context.get("end"),
+            "timeframe": compare_context.get("timeframe"),
+            "option": compare_context.get("option"),
+            **dict(override_map.get(strategy_name) or {}),
+        }
+        title = str(candidate_titles[idx]) if idx < len(candidate_titles) else str(strategy_name)
+        components.append(
+            {
+                "registry_id": registry_id,
+                "title": title,
+                "strategy_family": _saved_mix_slug(strategy_name),
+                "strategy_name": strategy_name,
+                "candidate_role": "saved_mix_component",
+                "proposal_role": _saved_mix_component_role(str(strategy_name), weight, max_weight),
+                "target_weight": weight,
+                "weight_reason": "Saved Mix에서 재생성한 목표 비중",
+                "data_trust_status": str(data_assessment.get("gate_status") or "warning"),
+                "pre_live_status": "saved_mix_replay",
+                "promotion": meta.get("promotion_decision"),
+                "shortlist": meta.get("shortlist_status"),
+                "deployment": meta.get("deployment_readiness_status"),
+                "cagr": summary.get("cagr"),
+                "mdd": summary.get("mdd"),
+                "period": _bundle_result_period(bundle),
+                "contract": contract,
+                "benchmark": meta.get("benchmark_ticker") or contract.get("benchmark_ticker") or "-",
+                "universe": ",".join(str(ticker) for ticker in list(contract.get("tickers") or [])) or str(contract.get("preset_name") or "-"),
+                "compare_evidence": {
+                    "source_kind": "saved_mix_replay",
+                    "saved_portfolio_id": record.get("portfolio_id"),
+                    "saved_portfolio_name": record.get("name"),
+                    "date_policy": portfolio_context.get("date_policy"),
+                },
+                "open_candidate_blockers": [],
+            }
+        )
+
+    return {
+        "source_kind": "saved_portfolio_mix",
+        "saved_portfolio_id": record.get("portfolio_id"),
+        "saved_portfolio_name": record.get("name"),
+        "description": record.get("description"),
+        "compare_context": compare_context,
+        "portfolio_context": portfolio_context,
+        "source_context": source_context,
+        "weighted_summary": _bundle_summary_snapshot(weighted_bundle),
+        "weighted_period": _bundle_result_period(weighted_bundle),
+        "components": components,
+    }
+
 # Render the saved-mix stop/go board in the saved portfolio workspace.
 def _render_saved_mix_validation_board(record: dict[str, Any]) -> None:
     weighted_bundle = st.session_state.get("backtest_weighted_bundle")
@@ -1036,6 +1156,24 @@ def _render_saved_mix_validation_board(record: dict[str, Any]) -> None:
             st.warning(message)
         else:
             st.error(message)
+        if evaluation["tone"] != "error":
+            st.info(
+                "이 saved mix는 이미 비중이 정해진 포트폴리오 조합입니다. "
+                "따라서 단일 전략 후보를 다루는 Candidate Review로 보내지 않고, "
+                "Portfolio Proposal에서 포트폴리오 초안으로 기록합니다."
+            )
+            if st.button(
+                "Use This Mix In Portfolio Proposal",
+                key=f"use_saved_mix_in_portfolio_proposal_{record.get('portfolio_id')}",
+                use_container_width=True,
+            ):
+                st.session_state.portfolio_proposal_saved_mix_prefill = _build_saved_mix_proposal_prefill_payload(record)
+                st.session_state.portfolio_proposal_saved_mix_notice = (
+                    f"Saved Mix `{record.get('name')}`를 Portfolio Proposal 초안으로 가져왔습니다. "
+                    "이 경로는 Candidate Review가 아니라 Portfolio Proposal로 이어집니다."
+                )
+                _request_backtest_panel("Portfolio Proposal")
+                st.rerun()
         st.dataframe(pd.DataFrame(evaluation["criteria_rows"]), use_container_width=True, hide_index=True)
         if evaluation["workflow_references"]:
             with st.expander("Workflow Registry References", expanded=False):

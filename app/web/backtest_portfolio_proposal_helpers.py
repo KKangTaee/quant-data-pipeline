@@ -1426,6 +1426,7 @@ def _build_portfolio_proposal_row(
         registry_id = str(row.get("registry_id") or "")
         component_input = dict(component_inputs.get(registry_id) or {})
         result = dict(row.get("result") or {})
+        review_context = dict(row.get("review_context") or {})
         candidate_ref = {
             "registry_id": registry_id,
             "strategy_family": row.get("strategy_family"),
@@ -1454,6 +1455,10 @@ def _build_portfolio_proposal_row(
                 "shortlist": result.get("shortlist"),
                 "deployment": result.get("deployment"),
                 "period": row.get("period") or {},
+                "contract": row.get("contract") or {},
+                "benchmark": row.get("benchmark"),
+                "universe": row.get("universe"),
+                "compare_evidence": dict(review_context.get("compare_readiness_evaluation") or {}),
             }
         )
 
@@ -2074,6 +2079,14 @@ def _build_portfolio_risk_validation_input_for_proposal(
         result = dict(current_row.get("result") or {})
         review_context = dict(current_row.get("review_context") or {})
         pre_live_settings = dict(pre_live_record.get("settings_snapshot") or {})
+        evidence_contract = dict(evidence.get("contract") or {})
+        evidence_compare = dict(evidence.get("compare_evidence") or {})
+        benchmark = _portfolio_risk_component_benchmark(current_row, ref)
+        if benchmark == "-":
+            benchmark = str(evidence.get("benchmark") or "-")
+        universe = _portfolio_risk_component_universe(current_row)
+        if universe == "-":
+            universe = str(evidence.get("universe") or "-")
         data_trust_status = str(ref.get("data_trust_status") or "").strip()
         if not data_trust_status:
             data_trust_status = _portfolio_proposal_candidate_data_trust_status(current_row)
@@ -2094,10 +2107,10 @@ def _build_portfolio_risk_validation_input_for_proposal(
                 "cagr": result.get("cagr", evidence.get("cagr")),
                 "mdd": result.get("mdd", evidence.get("mdd")),
                 "period": dict(current_row.get("period") or evidence.get("period") or pre_live_settings.get("period") or {}),
-                "contract": dict(current_row.get("contract") or pre_live_settings.get("contract") or {}),
-                "compare_evidence": dict(review_context.get("compare_readiness_evaluation") or {}),
-                "benchmark": _portfolio_risk_component_benchmark(current_row, ref),
-                "universe": _portfolio_risk_component_universe(current_row),
+                "contract": dict(current_row.get("contract") or pre_live_settings.get("contract") or evidence_contract),
+                "compare_evidence": dict(review_context.get("compare_readiness_evaluation") or evidence_compare),
+                "benchmark": benchmark,
+                "universe": universe,
                 "factors": _portfolio_risk_component_factors(current_row),
                 "has_current_candidate": bool(current_row),
                 "has_pre_live_record": bool(pre_live_record),

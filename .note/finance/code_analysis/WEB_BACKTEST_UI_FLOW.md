@@ -278,6 +278,8 @@ Compare 결과 상단에는 `5단계 Compare 검증 보드`를 둔다.
 - UI에서는 `저장 Mix 다시 열기` 화면 안에서 `저장 Mix Replay 결과`와 `Portfolio Mix 검증 보드`를 바로 보여준다.
 - `Portfolio Mix 검증 보드`는 saved mix 자체의 replay 가능 여부, mix data trust, 구성 전략 Real-Money gate, workflow registry 기록 여부를 분리해서 보여준다.
 - 저장 mix는 reusable setup이므로, replay 성과가 좋아도 자동으로 5~10단계 통과 기록이 되지 않는다. `Workflow Registry`가 `NOT RECORDED`이면 Portfolio Proposal / Final Review 쪽 기록이 아직 없다는 뜻이다.
+- 이 경우 사용자는 `Use This Mix In Portfolio Proposal`로 이동한다. Saved mix는 이미 비중이 정해진 포트폴리오 조합이므로, 단일 전략 후보를 만드는 `Candidate Review`로 보내지 않는다.
+- Portfolio Proposal에서는 saved mix를 proposal draft로 저장해 `.note/finance/saved/SAVED_PORTFOLIOS.jsonl`의 reusable setup을 `.note/finance/registries/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`의 workflow 기록으로 연결한다.
 - 개별 전략을 6단계 Candidate Review로 보낼 때만 `전략 비교` 화면의 `5단계 Compare 검증 보드`를 사용한다.
 
 ## Strategy Capability Snapshot 흐름
@@ -357,6 +359,8 @@ Backtest > Compare & Portfolio Builder
   -> 저장 Mix 다시 열기 화면
   -> Load Saved Mix Into Compare or Replay Saved Mix
   -> Replay Saved Mix는 같은 화면에서 replay result / Portfolio Mix 검증 보드 / weighted result 확인
+  -> workflow 기록이 없으면 Use This Mix In Portfolio Proposal
+  -> Portfolio Proposal에서 saved mix proposal draft 저장
   -> Load Saved Mix Into Compare는 전략 비교 화면으로 이동해 form을 다시 채움
 ```
 
@@ -378,6 +382,7 @@ Backtest > Compare & Portfolio Builder
 - `저장 Mix 다시 열기` 안에서 `Portfolio Mix 검증 보드`를 보여준다.
 - 이 보드는 `Saved Mix Replay`, `Mix Data Trust`, `Component Real-Money`, `Workflow Registry`를 따로 판단한다.
 - `Workflow Registry`가 `NOT RECORDED`이면 저장 mix가 성과 replay는 가능하지만 Portfolio Proposal / Final Review registry에는 아직 기록되지 않은 상태다.
+- `NOT RECORDED` 상태의 saved mix는 `Use This Mix In Portfolio Proposal`로 보낸다. 이 경로는 `Candidate Review`가 아니라 `Portfolio Proposal`이며, 비중이 정해진 mix를 proposal registry에 남겨 이후 Final Review에서 읽게 하는 경로다.
 - 따라서 saved mix replay 결과와 5단계 개별 전략 handoff 판단이 한 화면에서 섞이지 않는다.
 
 저장된 weighted portfolio는 live trading 승인 기록이 아니다.

@@ -3352,3 +3352,10 @@ Detailed historical logs were archived on `2026-04-13`.
   - mix 검증 보드는 `Saved Mix Replay`, `Mix Data Trust`, `Component Real-Money`, `Workflow Registry`를 따로 보여주며, saved mix setup과 5~10단계 workflow registry 기록을 구분한다.
   - `portfolio_gtaa_spy_low_mdd_60_ew_growth_sector_gold_40` 같은 saved setup은 replay 성과가 있어도 proposal / final review registry에 기록되지 않았으면 `Workflow Registry=NOT RECORDED`로 표시된다.
   - `Reference > Guides`와 `WEB_BACKTEST_UI_FLOW.md`를 같은 경계로 갱신했다.
+
+### 2026-05-06
+- Saved Mix -> Portfolio Proposal handoff 정리:
+  - user confirmation 후 `저장 Mix 다시 열기 > Portfolio Mix 검증 보드`에서 workflow 기록이 없는 saved mix를 바로 `Portfolio Proposal` 초안으로 보낼 수 있게 했다.
+  - 이 경로는 단일 후보를 만드는 `Candidate Review`가 아니라, 이미 비중이 정해진 portfolio mix를 proposal draft로 남기는 경로임을 UI와 Guides에 명시했다.
+  - Portfolio Proposal은 saved mix prefill이 있을 때 전용 작성 화면을 먼저 보여주고, 저장 시 `.note/finance/saved/SAVED_PORTFOLIOS.jsonl`의 setup과 `.note/finance/registries/PORTFOLIO_PROPOSAL_REGISTRY.jsonl` workflow 기록을 연결한다.
+  - Final Review에서 saved mix proposal을 읽을 때 component contract / benchmark / universe / compare evidence가 빠지지 않도록 proposal evidence snapshot을 보강했다.

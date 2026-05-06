@@ -72,6 +72,316 @@ def _sync_component_selection_state(label_to_row: dict[str, dict[str, Any]]) -> 
     if valid_labels != list(current_value):
         st.session_state[key] = valid_labels
 
+def _saved_mix_proposal_key(value: Any) -> str:
+    raw = str(value or "").strip().lower()
+    cleaned = "".join(char if char.isalnum() else "_" for char in raw)
+    return "_".join(part for part in cleaned.split("_") if part) or "saved_mix"
+
+# Convert saved-mix replay components into proposal component rows without
+# pretending they already exist in the Current Candidate Registry.
+def _saved_mix_component_selected_rows(prefill: dict[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for component in list(prefill.get("components") or []):
+        component = dict(component or {})
+        rows.append(
+            {
+                "registry_id": component.get("registry_id"),
+                "title": component.get("title"),
+                "strategy_family": component.get("strategy_family"),
+                "strategy_name": component.get("strategy_name"),
+                "candidate_role": component.get("candidate_role") or "saved_mix_component",
+                "period": dict(component.get("period") or {}),
+                "contract": dict(component.get("contract") or {}),
+                "benchmark": component.get("benchmark"),
+                "universe": component.get("universe"),
+                "review_context": {
+                    "compare_readiness_evaluation": dict(component.get("compare_evidence") or {}),
+                },
+                "result": {
+                    "cagr": component.get("cagr"),
+                    "mdd": component.get("mdd"),
+                    "promotion": component.get("promotion"),
+                    "shortlist": component.get("shortlist"),
+                    "deployment": component.get("deployment"),
+                    "blockers": list(component.get("open_candidate_blockers") or []),
+                },
+            }
+        )
+    return rows
+
+# Render a Portfolio Proposal draft source created from Compare > Saved Mix replay.
+def _render_saved_mix_proposal_prefill(
+    prefill: dict[str, Any],
+    *,
+    proposal_rows: list[dict[str, Any]],
+) -> None:
+    saved_portfolio_id = str(prefill.get("saved_portfolio_id") or "")
+    key_prefix = f"portfolio_proposal_saved_mix_{_saved_mix_proposal_key(saved_portfolio_id)}"
+    components = [dict(component or {}) for component in list(prefill.get("components") or [])]
+    weighted_summary = dict(prefill.get("weighted_summary") or {})
+    weighted_period = dict(prefill.get("weighted_period") or {})
+    portfolio_context = dict(prefill.get("portfolio_context") or {})
+    default_proposal_id = f"proposal_{_saved_mix_proposal_key(saved_portfolio_id)}"
+    existing_proposal_ids = {str(row.get("proposal_id") or "").strip() for row in proposal_rows}
+
+    with st.container(border=True):
+        st.markdown("#### Saved Mix에서 온 Portfolio Proposal 초안")
+        render_stage_brief(
+            purpose=(
+                "이 항목은 이미 GTAA / Equal Weight 같은 전략을 비중으로 섞은 포트폴리오 mix입니다. "
+                "따라서 단일 후보 검토용 Candidate Review로 돌아가지 않고 Portfolio Proposal 초안으로 기록합니다."
+            ),
+            result="Saved Mix -> Portfolio Proposal Draft",
+        )
+        st.info(
+            "여기서 저장하면 `SAVED_PORTFOLIOS.jsonl`의 reusable setup이 "
+            "`PORTFOLIO_PROPOSAL_REGISTRY.jsonl`의 workflow 기록으로 연결됩니다. "
+            "최종 투자 판단이나 주문 승인은 아니며, 이후 Final Review에서 검증합니다."
+        )
+        render_status_card_grid(
+            [
+                {"title": "Saved Mix", "value": prefill.get("saved_portfolio_name") or "-", "tone": "neutral"},
+                {"title": "CAGR", "value": weighted_summary.get("cagr") or "-", "tone": "positive"},
+                {"title": "MDD", "value": weighted_summary.get("mdd") or "-", "tone": "positive"},
+                {"title": "Components", "value": len(components), "tone": "positive" if components else "warning"},
+                {"title": "Date Policy", "value": portfolio_context.get("date_policy") or "-", "tone": "neutral"},
+            ]
+        )
+        render_badge_strip(
+            [
+                {"label": "Route", "value": "Compare Saved Mix -> Portfolio Proposal", "tone": "positive"},
+                {"label": "Candidate Review", "value": "건너뜀", "tone": "neutral"},
+                {"label": "Final Review", "value": "저장 후 확인", "tone": "warning"},
+            ]
+        )
+
+        objective_cols = st.columns(4, gap="small")
+        with objective_cols[0]:
+            proposal_id = st.text_input("Proposal ID", value=default_proposal_id, key=f"{key_prefix}_proposal_id")
+        with objective_cols[1]:
+            proposal_status = st.selectbox(
+                "Status",
+                options=PORTFOLIO_PROPOSAL_STATUS_OPTIONS,
+                index=PORTFOLIO_PROPOSAL_STATUS_OPTIONS.index("review_ready"),
+                key=f"{key_prefix}_status",
+            )
+        with objective_cols[2]:
+            proposal_type = st.selectbox(
+                "Type",
+                options=PORTFOLIO_PROPOSAL_TYPE_OPTIONS,
+                index=PORTFOLIO_PROPOSAL_TYPE_OPTIONS.index("balanced_core"),
+                key=f"{key_prefix}_type",
+            )
+        with objective_cols[3]:
+            capital_scope = st.selectbox(
+                "Capital Scope",
+                options=["paper_only", "review_only", "small_trial_candidate"],
+                index=0,
+                key=f"{key_prefix}_capital_scope",
+            )
+
+        goal_cols = st.columns(3, gap="small")
+        with goal_cols[0]:
+            primary_goal = st.text_input("Primary Goal", value="balanced_growth_with_drawdown_control", key=f"{key_prefix}_primary_goal")
+        with goal_cols[1]:
+            secondary_goal = st.text_input("Secondary Goal", value="gtAA_core_plus_equal_weight_diversifier", key=f"{key_prefix}_secondary_goal")
+        with goal_cols[2]:
+            target_holding_style = st.text_input("Review Cadence", value="monthly_or_quarterly_review", key=f"{key_prefix}_holding_style")
+
+        construction_cols = st.columns(2, gap="small")
+        with construction_cols[0]:
+            weighting_method = st.selectbox(
+                "Weighting Method",
+                options=PORTFOLIO_PROPOSAL_WEIGHTING_OPTIONS,
+                index=PORTFOLIO_PROPOSAL_WEIGHTING_OPTIONS.index("manual_weight"),
+                key=f"{key_prefix}_weighting",
+            )
+        with construction_cols[1]:
+            benchmark_policy = st.text_input(
+                "Benchmark Policy",
+                value="saved_mix_compare_context_spy_reference",
+                key=f"{key_prefix}_benchmark_policy",
+            )
+
+        component_inputs: dict[str, dict[str, Any]] = {}
+        selected_rows = _saved_mix_component_selected_rows(prefill)
+        for component in components:
+            registry_id = str(component.get("registry_id") or "")
+            role_default = str(component.get("proposal_role") or "diversifier")
+            role_index = PORTFOLIO_PROPOSAL_ROLE_OPTIONS.index(role_default) if role_default in PORTFOLIO_PROPOSAL_ROLE_OPTIONS else 2
+            with st.container(border=True):
+                st.markdown(f"##### {component.get('title') or component.get('strategy_name') or registry_id}")
+                st.caption("이 카드는 전략을 다시 검토하는 곳이 아니라, saved mix 안에서 맡은 역할과 비중을 proposal에 남기는 곳입니다.")
+                render_badge_strip(
+                    [
+                        {"label": "Strategy", "value": component.get("strategy_name") or "-", "tone": "neutral"},
+                        {"label": "Data Trust", "value": component.get("data_trust_status") or "-", "tone": "warning" if component.get("data_trust_status") != "ok" else "positive"},
+                        {"label": "Promotion", "value": component.get("promotion") or "-", "tone": "positive"},
+                        {"label": "Deployment", "value": component.get("deployment") or "-", "tone": "neutral"},
+                    ]
+                )
+                input_cols = st.columns([0.25, 0.18, 0.57], gap="small")
+                with input_cols[0]:
+                    proposal_role = st.selectbox(
+                        "Proposal Role",
+                        options=PORTFOLIO_PROPOSAL_ROLE_OPTIONS,
+                        index=role_index,
+                        key=f"{key_prefix}_role_{registry_id}",
+                    )
+                with input_cols[1]:
+                    target_weight = st.number_input(
+                        "Target Weight %",
+                        min_value=0.0,
+                        max_value=100.0,
+                        value=float(component.get("target_weight") or 0.0),
+                        step=1.0,
+                        key=f"{key_prefix}_weight_{registry_id}",
+                    )
+                with input_cols[2]:
+                    weight_reason = st.text_input(
+                        "Weight Reason",
+                        value=str(component.get("weight_reason") or "Saved Mix에서 가져온 목표 비중"),
+                        key=f"{key_prefix}_reason_{registry_id}",
+                    )
+                component_inputs[registry_id] = {
+                    "proposal_role": proposal_role,
+                    "target_weight": float(target_weight),
+                    "weight_reason": weight_reason,
+                    "data_trust_status": component.get("data_trust_status") or "warning",
+                    "pre_live_status": component.get("pre_live_status") or "saved_mix_replay",
+                    "open_candidate_blockers": list(component.get("open_candidate_blockers") or []),
+                }
+
+        total_weight = round(sum(float(value.get("target_weight") or 0.0) for value in component_inputs.values()), 4)
+        operator_reason = st.text_area(
+            "구성 메모",
+            value=(
+                "Compare Saved Mix replay에서 확인한 비중 포트폴리오를 Portfolio Proposal 초안으로 남긴다. "
+                "이 경로는 Candidate Review가 아니라 saved mix를 proposal registry에 연결하는 경로다."
+            ),
+            key=f"{key_prefix}_operator_reason",
+        )
+        next_action = st.text_area(
+            "다음 확인",
+            value="Final Review에서 saved mix replay 성과, component data trust, 비중 집중도, paper observation 기준을 확인한다.",
+            key=f"{key_prefix}_next_action",
+        )
+        use_review_date = st.checkbox("다음 확인일 지정", value=True, key=f"{key_prefix}_use_review_date")
+        review_date_value = (
+            st.date_input("다음 확인일", value=date.today() + timedelta(days=30), key=f"{key_prefix}_review_date")
+            if use_review_date
+            else None
+        )
+
+        open_blockers = _portfolio_proposal_open_blockers(
+            selected_rows=selected_rows,
+            component_inputs=component_inputs,
+            proposal_id=proposal_id,
+            total_weight=total_weight,
+            existing_proposal_ids=existing_proposal_ids,
+        )
+        readiness = _build_portfolio_proposal_readiness_evaluation(
+            selected_rows=selected_rows,
+            component_inputs=component_inputs,
+            proposal_id=proposal_id,
+            total_weight=total_weight,
+            operator_reason=operator_reason,
+            next_action=next_action,
+            review_date_value=review_date_value,
+            open_blockers=open_blockers,
+        )
+        proposal_row = _build_portfolio_proposal_row(
+            proposal_id=proposal_id,
+            proposal_status=proposal_status,
+            proposal_type=proposal_type,
+            primary_goal=primary_goal,
+            secondary_goal=secondary_goal,
+            target_holding_style=target_holding_style,
+            capital_scope=capital_scope,
+            weighting_method=weighting_method,
+            benchmark_policy=benchmark_policy,
+            selected_rows=selected_rows,
+            component_inputs=component_inputs,
+            open_blockers=open_blockers,
+            operator_decision="ready_for_live_readiness_review" if readiness["can_save_proposal"] else "draft_for_review",
+            operator_reason=operator_reason,
+            next_action=next_action,
+            review_date_value=review_date_value,
+        )
+        proposal_row["source_context"] = {
+            "source_kind": "saved_portfolio_mix",
+            "saved_portfolio_id": saved_portfolio_id,
+            "saved_portfolio_name": prefill.get("saved_portfolio_name"),
+            "date_policy": portfolio_context.get("date_policy"),
+        }
+        proposal_row["construction"]["date_alignment"] = portfolio_context.get("date_policy") or "intersection"
+        proposal_row["construction"]["saved_portfolio_id"] = saved_portfolio_id
+        proposal_row["evidence_snapshot"]["saved_mix"] = {
+            "saved_portfolio_id": saved_portfolio_id,
+            "saved_portfolio_name": prefill.get("saved_portfolio_name"),
+            "weighted_summary": weighted_summary,
+            "weighted_period": weighted_period,
+            "compare_context": prefill.get("compare_context"),
+        }
+        proposal_row["notes"] = (
+            "Created from Compare > 저장 Mix 다시 열기 > Replay Saved Mix. "
+            "This saved mix is routed to Portfolio Proposal, not Candidate Review. "
+            "This is not live trading approval and not an order instruction."
+        )
+
+        with st.container(border=True):
+            st.markdown("##### Proposal 저장 판단")
+            render_readiness_route_panel(
+                route_label=str(readiness["route_label"]),
+                score=float(readiness["score"]),
+                blockers_count=len(readiness["blocking_reasons"]),
+                verdict=str(readiness["verdict"]),
+                next_action=str(readiness["next_action"]),
+                route_title="Next Route",
+                score_title="Readiness",
+            )
+            render_badge_strip(
+                [
+                    {"label": "Weight Total", "value": f"{total_weight}%", "tone": "positive" if abs(total_weight - 100.0) <= 0.01 else "warning"},
+                    {"label": "Save Draft", "value": "가능" if readiness["can_save_proposal"] else "확인 필요", "tone": "positive" if readiness["can_save_proposal"] else "danger"},
+                    {"label": "Candidate Review", "value": "불필요", "tone": "neutral"},
+                ]
+            )
+            if readiness["can_save_proposal"] and not readiness["can_move_to_live_readiness"]:
+                st.info(
+                    "Saved Mix는 proposal draft로 저장할 수 있습니다. "
+                    "다만 개별 후보 Pre-Live record를 새로 만들지 않은 경로이므로 Final Review에서 paper tracking / observation 기준을 추가 확인할 수 있습니다."
+                )
+            elif not readiness["can_save_proposal"]:
+                for guidance in list(readiness.get("blocking_guidance") or readiness["blocking_reasons"]):
+                    st.warning(str(guidance))
+
+            action_cols = st.columns(3, gap="small")
+            with action_cols[0]:
+                if st.button(
+                    "Save Portfolio Proposal Draft",
+                    key=f"{key_prefix}_save",
+                    disabled=not bool(readiness["can_save_proposal"]),
+                    width="stretch",
+                ):
+                    append_portfolio_proposal(proposal_row)
+                    st.session_state["portfolio_proposal_save_notice"] = (
+                        f"Saved Mix 기반 Portfolio Proposal `{proposal_row['proposal_id']}`를 저장했습니다. "
+                        "이제 저장 mix는 workflow registry에서 확인됩니다."
+                    )
+                    st.session_state.pop("portfolio_proposal_saved_mix_prefill", None)
+                    st.rerun()
+            with action_cols[1]:
+                if st.button("Open Final Review", key=f"{key_prefix}_open_final", width="stretch"):
+                    _request_backtest_panel("Final Review")
+                    st.rerun()
+            with action_cols[2]:
+                if st.button("Clear Saved Mix Draft", key=f"{key_prefix}_clear", width="stretch"):
+                    st.session_state.pop("portfolio_proposal_saved_mix_prefill", None)
+                    st.rerun()
+
+            with st.expander("Saved Mix Proposal JSON", expanded=False):
+                st.json(proposal_row)
 
 # Render saved proposal monitoring, feedback, and raw JSON as one support area below the main flow.
 def _render_saved_proposal_details(
@@ -283,6 +593,10 @@ def render_portfolio_proposal_workspace() -> None:
     save_notice = st.session_state.pop("portfolio_proposal_save_notice", None)
     if save_notice:
         st.success(str(save_notice))
+    saved_mix_notice = st.session_state.pop("portfolio_proposal_saved_mix_notice", None)
+    if saved_mix_notice:
+        st.info(str(saved_mix_notice))
+    saved_mix_prefill = st.session_state.get("portfolio_proposal_saved_mix_prefill")
 
     render_status_card_grid(
         [
@@ -318,6 +632,13 @@ def render_portfolio_proposal_workspace() -> None:
                 },
             ]
         )
+
+    if saved_mix_prefill:
+        st.divider()
+        _render_saved_mix_proposal_prefill(dict(saved_mix_prefill), proposal_rows=proposal_rows)
+        st.divider()
+        _render_saved_proposal_details(proposal_rows, pre_live_rows, current_rows)
+        return
 
     st.divider()
     st.markdown("#### 1. Proposal 후보 확인")
