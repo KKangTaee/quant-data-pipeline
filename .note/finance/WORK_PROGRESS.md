@@ -3382,3 +3382,10 @@ Detailed historical logs were archived on `2026-04-13`.
   - Runtime / Build는 사용자의 첫 guide 경험에서 제외하고 하단 `System status`로 낮췄다.
   - 외부 dependency는 추가하지 않았고, GraphViz 렌더링 실패 시 compact visual fallback을 사용하도록 했다.
   - 검증: `py_compile`, `git diff --check`, finance refinement hygiene helper를 통과했고, `127.0.0.1:8502/guides`에서 GraphViz flowchart 렌더링과 route selector 동작을 확인했다.
+
+### 2026-05-06
+- Guides 단계 해석 보강:
+  - user feedback에 따라 GraphViz flowchart는 좋아졌지만 노드 내용이 얕고, 기존 1~10 단계 위치감이 약해진 문제를 확인했다.
+  - `Reference > Guides`에 선택 경로별 핵심 checkpoint 카드와 `전체 1~10 단계` compact timeline을 추가했다.
+  - timeline은 단일 후보, 여러 후보 포트폴리오, 저장 Mix, 막힘 해결 경로에 따라 `필수`, `반복`, `직행`, `선행`, `생략`, `보류` 같은 상태 라벨을 다르게 보여준다.
+  - GraphViz node 문구도 `Run + Data Trust`, `Review + Registry`, `Validation + Decision`처럼 조금 더 정보성 있게 보강하되, 긴 설명은 timeline / checkpoint 패널로 분리했다.

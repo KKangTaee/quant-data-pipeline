@@ -28,12 +28,12 @@ def _route_cards() -> dict[str, dict[str, Any]]:
             "next_screen": "Backtest > Candidate Review",
             "records": "Review Note, Current Candidate, Pre-Live, Final Decision",
             "dot": [
-                ("single", "1-2\\nSingle Strategy", "run"),
-                ("realmoney", "3-4\\nReal-Money Gate", "gate"),
-                ("compare", "5\\nCompare", "compare"),
-                ("candidate", "6\\nCandidate Review", "candidate"),
+                ("single", "1-2\\nRun + Data Trust", "run"),
+                ("realmoney", "3-4\\nSignal / Blocker", "gate"),
+                ("compare", "5\\nCompare Evidence", "compare"),
+                ("candidate", "6\\nReview + Registry", "candidate"),
                 ("direct", "7\\nDirect Candidate", "proposal"),
-                ("final", "8-10\\nFinal Review", "final"),
+                ("final", "8-10\\nValidation + Decision", "final"),
             ],
             "edges": [
                 ("single", "realmoney", "signal"),
@@ -52,10 +52,10 @@ def _route_cards() -> dict[str, dict[str, Any]]:
             "records": "Current Candidate, Pre-Live, Portfolio Proposal, Final Decision",
             "dot": [
                 ("candidates", "1-6\\nCandidate Pool", "candidate"),
-                ("roles", "7A\\nRoles / Weights", "proposal"),
-                ("draft", "7B\\nSave Proposal", "proposal"),
-                ("validation", "8\\nValidation Pack", "gate"),
-                ("final", "9-10\\nFinal Decision", "final"),
+                ("roles", "7A\\nRole + Weight Logic", "proposal"),
+                ("draft", "7B\\nSave Proposal Draft", "proposal"),
+                ("validation", "8\\nRisk / Validation", "gate"),
+                ("final", "9-10\\nObservation + Decision", "final"),
             ],
             "edges": [
                 ("candidates", "roles", "2개 이상"),
@@ -72,10 +72,10 @@ def _route_cards() -> dict[str, dict[str, Any]]:
             "next_screen": "Backtest > Compare & Portfolio Builder > 저장 Mix 다시 열기",
             "records": "Saved Portfolio, Portfolio Proposal, Final Decision",
             "dot": [
-                ("saved", "5A\\nSaved Mix", "compare"),
+                ("saved", "5A\\nSaved Weight Setup", "compare"),
                 ("replay", "5B\\nReplay / Mix Board", "gate"),
-                ("proposal", "7\\nUse In Proposal", "proposal"),
-                ("final", "8-10\\nFinal Review", "final"),
+                ("proposal", "7\\nAttach To Proposal", "proposal"),
+                ("final", "8-10\\nValidation + Decision", "final"),
             ],
             "edges": [
                 ("saved", "replay", "replay"),
@@ -92,9 +92,9 @@ def _route_cards() -> dict[str, dict[str, Any]]:
             "records": "필요할 때만 Review Note 또는 Final Decision에 보류 사유 기록",
             "dot": [
                 ("hold", "3-4\\nHold / Blocker", "stop"),
-                ("compare", "5\\nCompare 재검토", "compare"),
-                ("candidate", "6\\nPackaging 보강", "candidate"),
-                ("proposal", "7\\nProposal 수정", "proposal"),
+                ("compare", "5\\nCompare Evidence", "compare"),
+                ("candidate", "6\\nPackaging Evidence", "candidate"),
+                ("proposal", "7\\nProposal Repair", "proposal"),
                 ("review", "8-9\\nHOLD / RE_REVIEW", "final"),
             ],
             "edges": [
@@ -139,6 +139,237 @@ def _decision_gate_rows() -> list[dict[str, str]]:
             "screen": "Final Review",
         },
     ]
+
+
+def _stage_timeline_rows() -> list[dict[str, str]]:
+    return [
+        {
+            "step": "1",
+            "phase": "준비",
+            "screen": "Data / Ingestion",
+            "title": "데이터 신뢰 확인",
+            "check": "가격, benchmark, factor, profile이 최신인지 확인합니다.",
+            "output": "실행 가능한 데이터 상태",
+        },
+        {
+            "step": "2",
+            "phase": "실행",
+            "screen": "Single Strategy",
+            "title": "전략 하나 실행",
+            "check": "기간, universe, 전략 옵션, 비용 조건을 같은 계약으로 고정합니다.",
+            "output": "latest result bundle",
+        },
+        {
+            "step": "3",
+            "phase": "판정",
+            "screen": "Result / Real-Money",
+            "title": "성과와 실전 신호 확인",
+            "check": "CAGR, MDD, benchmark, Data Trust, promotion 신호를 같이 봅니다.",
+            "output": "compare 진입 후보",
+        },
+        {
+            "step": "4",
+            "phase": "판정",
+            "screen": "Real-Money",
+            "title": "Hold / Blocker 해결",
+            "check": "hard blocker, stale data, deployment blocked 여부를 먼저 해결합니다.",
+            "output": "진행 / 보류 / 재검토",
+        },
+        {
+            "step": "5",
+            "phase": "비교",
+            "screen": "Compare",
+            "title": "상대 근거 만들기",
+            "check": "같은 기간과 입력으로 여러 전략 또는 mix를 비교합니다.",
+            "output": "상대 성과와 역할 근거",
+        },
+        {
+            "step": "6",
+            "phase": "후보화",
+            "screen": "Candidate Review",
+            "title": "후보 기록 남기기",
+            "check": "Review Note, registry, Pre-Live 운영 상태를 저장합니다.",
+            "output": "Current Candidate / Pre-Live record",
+        },
+        {
+            "step": "7",
+            "phase": "구성",
+            "screen": "Portfolio Proposal",
+            "title": "단일 직행 또는 묶음 설계",
+            "check": "단일 후보는 direct로 읽고, 여러 후보는 역할과 target weight를 명시합니다.",
+            "output": "direct candidate 또는 proposal draft",
+        },
+        {
+            "step": "8",
+            "phase": "검증",
+            "screen": "Final Review",
+            "title": "Validation 기준 확인",
+            "check": "portfolio risk, validation pack, blocker, component evidence를 확인합니다.",
+            "output": "검증 가능 / 보강 필요",
+        },
+        {
+            "step": "9",
+            "phase": "검증",
+            "screen": "Final Review",
+            "title": "Robustness / Paper 관찰",
+            "check": "stress, sensitivity, paper observation 기준을 최종 판단 근거로 정리합니다.",
+            "output": "최종 판단 근거",
+        },
+        {
+            "step": "10",
+            "phase": "완료",
+            "screen": "Final Review",
+            "title": "최종 판단 기록",
+            "check": "선정, 보류, 거절, 재검토 중 하나를 이유와 함께 저장합니다.",
+            "output": "Final Selection Decision",
+        },
+    ]
+
+
+def _route_stage_status() -> dict[str, dict[str, str]]:
+    return {
+        "단일 후보": {
+            "1": "필수",
+            "2": "필수",
+            "3": "필수",
+            "4": "필수",
+            "5": "권장",
+            "6": "필수",
+            "7": "직행",
+            "8": "필수",
+            "9": "필수",
+            "10": "필수",
+        },
+        "여러 후보 포트폴리오": {
+            "1": "반복",
+            "2": "반복",
+            "3": "반복",
+            "4": "반복",
+            "5": "필수",
+            "6": "필수",
+            "7": "필수",
+            "8": "필수",
+            "9": "필수",
+            "10": "필수",
+        },
+        "저장 Mix": {
+            "1": "선행",
+            "2": "선행",
+            "3": "선행",
+            "4": "선행",
+            "5": "필수",
+            "6": "생략",
+            "7": "필수",
+            "8": "필수",
+            "9": "필수",
+            "10": "필수",
+        },
+        "막힘 해결": {
+            "1": "점검",
+            "2": "점검",
+            "3": "점검",
+            "4": "핵심",
+            "5": "복귀",
+            "6": "보강",
+            "7": "보강",
+            "8": "보류",
+            "9": "보류",
+            "10": "대기",
+        },
+    }
+
+
+def _route_checkpoint_rows() -> dict[str, list[dict[str, str]]]:
+    return {
+        "단일 후보": [
+            {
+                "checkpoint": "단일 전략 결과가 설명 가능한가",
+                "detail": "성과, 손실, benchmark, Data Trust를 같은 화면에서 읽고 후보로 볼 이유를 말할 수 있어야 합니다.",
+                "screen": "Single Strategy / Result",
+            },
+            {
+                "checkpoint": "Real-Money blocker가 없는가",
+                "detail": "hold나 blocked가 남아 있으면 Candidate Review보다 원인 해결이 먼저입니다.",
+                "screen": "Result > Real-Money",
+            },
+            {
+                "checkpoint": "후보 기록이 남았는가",
+                "detail": "Review Note, Current Candidate, Pre-Live 운영 상태가 있어야 Final Review 입력으로 읽기 쉽습니다.",
+                "screen": "Candidate Review",
+            },
+            {
+                "checkpoint": "Proposal 저장을 반복하지 않는가",
+                "detail": "단일 후보는 Portfolio Proposal에서 direct candidate로 평가하고, 다중 proposal draft 저장을 억지로 만들지 않습니다.",
+                "screen": "Portfolio Proposal / Final Review",
+            },
+        ],
+        "여러 후보 포트폴리오": [
+            {
+                "checkpoint": "후보마다 같은 기준으로 검토했는가",
+                "detail": "각 후보는 최소한 성과, Data Trust, Real-Money, Candidate Review 근거가 비교 가능해야 합니다.",
+                "screen": "Single Strategy / Compare / Candidate Review",
+            },
+            {
+                "checkpoint": "역할이 겹치지 않는가",
+                "detail": "성장, 방어, 현금성, 리밸런싱 보조처럼 proposal 안의 역할을 분리해야 합니다.",
+                "screen": "Portfolio Proposal",
+            },
+            {
+                "checkpoint": "비중 합계와 이유가 명확한가",
+                "detail": "target weight가 100%로 맞고, 각 weight reason이 최종 판단에서 재사용 가능해야 합니다.",
+                "screen": "Portfolio Proposal",
+            },
+            {
+                "checkpoint": "묶음 전체의 risk를 확인했는가",
+                "detail": "좋은 후보 여러 개라도 함께 묶었을 때 집중도, 손실, 관찰 기준이 달라질 수 있습니다.",
+                "screen": "Final Review",
+            },
+        ],
+        "저장 Mix": [
+            {
+                "checkpoint": "저장된 mix가 재현되는가",
+                "detail": "Saved Portfolio는 workflow 기록이 아니라 weight setup이므로 replay 결과부터 확인합니다.",
+                "screen": "Compare & Portfolio Builder",
+            },
+            {
+                "checkpoint": "Candidate Review를 억지로 거치지 않는가",
+                "detail": "저장 mix는 개별 current candidate가 아니므로 Use This Mix In Portfolio Proposal로 연결합니다.",
+                "screen": "Saved Mix Replay",
+            },
+            {
+                "checkpoint": "proposal 목적과 weight 이유가 보강됐는가",
+                "detail": "저장 setup을 그대로 쓰더라도 proposal objective, role, risk constraint는 새로 해석해야 합니다.",
+                "screen": "Portfolio Proposal",
+            },
+            {
+                "checkpoint": "Final Review에서 proposal로 읽히는가",
+                "detail": "최종 검토는 Saved Portfolio가 아니라 저장된 Portfolio Proposal registry row를 기준으로 진행합니다.",
+                "screen": "Final Review",
+            },
+        ],
+        "막힘 해결": [
+            {
+                "checkpoint": "막힘 원인이 어느 화면 소유인지 찾았는가",
+                "detail": "데이터 문제, Real-Money blocker, 비교 근거 부족, proposal 구성 부족을 분리해야 합니다.",
+                "screen": "Result / Compare / Candidate Review / Proposal",
+            },
+            {
+                "checkpoint": "Final Review 직행을 멈췄는가",
+                "detail": "hold, blocked, insufficient evidence 상태에서는 최종 선정보다 보류나 재검토 기록이 맞습니다.",
+                "screen": "Final Review",
+            },
+            {
+                "checkpoint": "되돌아갈 화면이 명확한가",
+                "detail": "데이터면 Ingestion, 상대 근거면 Compare, 후보 근거면 Candidate Review, 비중이면 Proposal로 돌아갑니다.",
+                "screen": "해당 원인 화면",
+            },
+            {
+                "checkpoint": "재검토 후 같은 기준으로 다시 읽는가",
+                "detail": "수정 후에도 1~10 단계 기준을 바꾸지 않고 같은 통과 기준으로 다시 판단합니다.",
+                "screen": "Portfolio Flow",
+            },
+        ],
+    }
 
 
 def _concept_rows() -> list[dict[str, str]]:
@@ -198,13 +429,13 @@ def _storage_rows() -> list[dict[str, str]]:
 
 def _detail_step_rows() -> list[dict[str, str]]:
     return [
-        {"단계": "1", "화면": "Ingestion", "목적": "가격 / 재무제표 / factor / profile 최신화"},
-        {"단계": "2", "화면": "Single Strategy", "목적": "전략 하나의 성과와 실행 계약 확인"},
-        {"단계": "3-4", "화면": "Real-Money", "목적": "승격 신호와 hold blocker 확인"},
-        {"단계": "5", "화면": "Compare", "목적": "다른 전략 / 기준과 상대 근거 확인"},
-        {"단계": "6", "화면": "Candidate Review", "목적": "Review Note, registry, Pre-Live 기록"},
-        {"단계": "7", "화면": "Portfolio Proposal", "목적": "단일 후보 직행 또는 다중 후보 proposal 구성"},
-        {"단계": "8-10", "화면": "Final Review", "목적": "검증 근거 확인, 최종 판단 저장, 결과 재확인"},
+        {
+            "단계": row["step"],
+            "화면": row["screen"],
+            "목적": row["title"],
+            "확인할 것": row["check"],
+        }
+        for row in _stage_timeline_rows()
     ]
 
 
@@ -298,6 +529,139 @@ def _render_page_style() -> None:
             color: #4b5563;
             font-size: 0.9rem;
             line-height: 1.45;
+          }
+          .qg-check-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 0.7rem;
+            margin: 0.45rem 0 1rem;
+          }
+          .qg-check-card {
+            border: 1px solid #d8dee8;
+            border-radius: 8px;
+            background: #ffffff;
+            padding: 0.85rem;
+          }
+          .qg-check-screen {
+            color: #64748b;
+            font-size: 0.74rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            margin-bottom: 0.25rem;
+          }
+          .qg-check-title {
+            color: #111827;
+            font-size: 0.95rem;
+            font-weight: 800;
+            line-height: 1.35;
+            margin-bottom: 0.3rem;
+          }
+          .qg-check-detail {
+            color: #374151;
+            font-size: 0.84rem;
+            line-height: 1.45;
+          }
+          .qg-timeline {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(185px, 1fr));
+            gap: 0.65rem;
+            margin: 0.55rem 0 1.05rem;
+          }
+          .qg-stage-card {
+            border: 1px solid #d8dee8;
+            border-radius: 8px;
+            background: #ffffff;
+            padding: 0.78rem;
+            min-height: 190px;
+          }
+          .qg-stage-card.qg-stage-muted {
+            background: #f8fafc;
+          }
+          .qg-stage-card.qg-stage-skip {
+            background: #f8fafc;
+            color: #64748b;
+          }
+          .qg-stage-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.45rem;
+            margin-bottom: 0.48rem;
+          }
+          .qg-stage-num {
+            width: 1.9rem;
+            height: 1.9rem;
+            border-radius: 999px;
+            background: #2f6f9f;
+            color: #ffffff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.84rem;
+            font-weight: 800;
+            flex: 0 0 auto;
+          }
+          .qg-stage-pill {
+            border: 1px solid #cbd5e1;
+            border-radius: 999px;
+            background: #ffffff;
+            color: #334155;
+            font-size: 0.7rem;
+            font-weight: 800;
+            padding: 0.18rem 0.42rem;
+            white-space: nowrap;
+          }
+          .qg-stage-pill.required {
+            border-color: #8fc5a3;
+            color: #246746;
+            background: #effaf3;
+          }
+          .qg-stage-pill.active {
+            border-color: #8bb9d8;
+            color: #2f6f9f;
+            background: #eef7fc;
+          }
+          .qg-stage-pill.warn {
+            border-color: #e5c36a;
+            color: #835b16;
+            background: #fff8e7;
+          }
+          .qg-stage-pill.muted {
+            border-color: #cbd5e1;
+            color: #64748b;
+            background: #f8fafc;
+          }
+          .qg-stage-phase {
+            color: #64748b;
+            font-size: 0.72rem;
+            font-weight: 800;
+            margin-bottom: 0.16rem;
+          }
+          .qg-stage-title {
+            color: #111827;
+            font-size: 0.94rem;
+            font-weight: 800;
+            line-height: 1.3;
+            margin-bottom: 0.26rem;
+          }
+          .qg-stage-screen {
+            color: #2f6f9f;
+            font-size: 0.78rem;
+            font-weight: 800;
+            margin-bottom: 0.36rem;
+          }
+          .qg-stage-copy {
+            color: #374151;
+            font-size: 0.8rem;
+            line-height: 1.42;
+          }
+          .qg-stage-output {
+            border-top: 1px solid #e5e7eb;
+            color: #64748b;
+            font-size: 0.76rem;
+            font-weight: 700;
+            margin-top: 0.55rem;
+            padding-top: 0.45rem;
           }
         </style>
         """
@@ -412,6 +776,74 @@ def _render_flow_visual(selected_route: str, route: dict[str, Any]) -> None:
     )
 
 
+def _status_pill_tone(status: str) -> str:
+    if status in {"필수", "핵심"}:
+        return "required"
+    if status in {"권장", "반복", "직행", "복귀", "보강"}:
+        return "active"
+    if status in {"선행", "점검", "보류", "대기"}:
+        return "warn"
+    return "muted"
+
+
+def _render_route_checkpoints(selected_route: str) -> None:
+    st.markdown("### 이 경로의 핵심 단계")
+    st.caption("플로우차트를 본 뒤, 선택한 경로에서 실제로 놓치면 안 되는 판단만 먼저 확인합니다.")
+    checkpoint_cards = []
+    for row in _route_checkpoint_rows()[selected_route]:
+        checkpoint_cards.append(
+            f"""
+            <div class="qg-check-card">
+              <div class="qg-check-screen">{escape(row["screen"])}</div>
+              <div class="qg-check-title">{escape(row["checkpoint"])}</div>
+              <div class="qg-check-detail">{escape(row["detail"])}</div>
+            </div>
+            """
+        )
+    st.html(f'<div class="qg-check-grid">{"".join(checkpoint_cards)}</div>')
+
+
+def _render_stage_timeline(selected_route: str) -> None:
+    st.markdown("### 전체 1~10 단계")
+    st.caption(
+        "번호는 전체 workflow의 위치 기준입니다. 선택한 경로에 따라 필수, 반복, 직행, 생략 같은 의미가 달라집니다."
+    )
+    status_by_step = _route_stage_status()[selected_route]
+    cards = []
+    for row in _stage_timeline_rows():
+        status = status_by_step.get(row["step"], "조건부")
+        tone = _status_pill_tone(status)
+        card_tone = "qg-stage-skip" if status == "생략" else ("qg-stage-muted" if tone in {"warn", "muted"} else "")
+        cards.append(
+            f"""
+            <div class="qg-stage-card {card_tone}">
+              <div class="qg-stage-head">
+                <span class="qg-stage-num">{escape(row["step"])}</span>
+                <span class="qg-stage-pill {tone}">{escape(status)}</span>
+              </div>
+              <div class="qg-stage-phase">{escape(row["phase"])}</div>
+              <div class="qg-stage-title">{escape(row["title"])}</div>
+              <div class="qg-stage-screen">{escape(row["screen"])}</div>
+              <div class="qg-stage-copy">{escape(row["check"])}</div>
+              <div class="qg-stage-output">산출물: {escape(row["output"])}</div>
+            </div>
+            """
+        )
+    st.html(f'<div class="qg-timeline">{"".join(cards)}</div>')
+
+    with st.expander("단계 상태 라벨 읽는 법", expanded=False):
+        st.markdown(
+            """
+            - `필수`: 이 경로에서 통과 기준으로 반드시 확인합니다.
+            - `반복`: 여러 후보를 만들기 위해 같은 판단을 후보별로 반복합니다.
+            - `직행`: 별도 proposal draft 저장 없이 다음 검토 화면에서 직접 읽습니다.
+            - `선행`: saved mix가 만들어지기 전 이미 지나간 단계로 봅니다.
+            - `생략`: 이 경로에서는 일부러 건너뛰는 단계입니다.
+            - `보류 / 대기`: 막힘을 해결하기 전에는 최종 선정으로 해석하지 않습니다.
+            """
+        )
+
+
 def _render_decision_gates() -> None:
     st.markdown("### Decision Gates")
     st.caption("단계 번호보다 사용자가 실제로 묻는 질문을 기준으로 Go / Review / Stop을 구분합니다.")
@@ -516,6 +948,8 @@ def render_reference_guides_page(
     route = routes[selected_route]
     _render_orientation_cards(selected_route, route)
     _render_flow_visual(selected_route, route)
+    _render_route_checkpoints(selected_route)
+    _render_stage_timeline(selected_route)
     _render_decision_gates()
     _render_reference_drawer()
     _render_runtime_reference(loaded_at, render_runtime_snapshot)

@@ -4147,3 +4147,14 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Streamlit native에서는 `st.graphviz_chart`가 flowchart에 가장 적합하고, 외부 React Flow 계열 component는 더 강하지만 dependency와 state 관리 부담이 커서 1차 개편에는 과하다
 - Follow-up:
   - `Reference > Guides`를 hero / route selector / GraphViz flow / Decision Gates / Reference Drawer / System status 구조로 개편했다
+
+### 2026-05-06 - Guides 1~10 단계 복원 방식
+- User request:
+  - GraphViz flowchart는 이해하기 쉬워졌지만, chart 내용이 빈약하고 기존 1~10 단계 설명이 사라져 현재 위치를 파악하기 아쉽다고 지적함
+- Interpreted goal:
+  - 제품형 Guide의 간결함은 유지하면서도, 사용자가 단일 후보 / 여러 후보 / 저장 Mix / 막힘 해결 경로에서 전체 1~10 단계 중 어디에 있는지 읽을 수 있어야 함
+- Analysis result:
+  - flowchart node 안에 긴 설명을 넣으면 시각성이 떨어지므로 chart는 큰 경로 지도 역할만 맡기는 것이 적절하다
+  - 1~10 단계는 문서형 긴 목록으로 되돌리기보다 compact timeline으로 복원하고, 선택 경로별로 `필수`, `반복`, `직행`, `선행`, `생략`, `보류` 상태를 다르게 보여주는 것이 가장 자연스럽다
+- Follow-up:
+  - `Reference > Guides`에 경로별 checkpoint 카드와 1~10 단계 timeline을 추가해 시각적 흐름과 단계 해석을 함께 보강했다

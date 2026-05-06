@@ -103,13 +103,16 @@ Ingestion / Data Trust
 |---|---|
 | `Portfolio Selection Guide` hero | 제품 안내 첫 화면으로, 현재 workflow와 runtime / git 상태를 compact badge로 보여준다. 개발용 `Runtime / Build`는 하단 접힘 `System status`로 낮춘다 |
 | `지금 확인할 경로` | 단일 후보, 여러 후보 포트폴리오, 저장 Mix, 막힘 해결 중 사용자의 현재 목적을 먼저 고른다 |
-| `Portfolio Flow` | 선택 경로를 GraphViz flowchart로 보여주고, 환경상 GraphViz 렌더링이 실패하면 compact visual fallback으로 표시한다 |
+| `Portfolio Flow` | 선택 경로를 GraphViz flowchart로 보여주고, 환경상 GraphViz 렌더링이 실패하면 compact visual fallback으로 표시한다. chart node는 큰 흐름을 맡고, 긴 설명은 아래 단계 패널로 넘긴다 |
+| `이 경로의 핵심 단계` | 선택 경로에서 실제로 놓치면 안 되는 checkpoint를 카드로 보여준다. 단일 후보, 다중 후보, saved mix, blocker 해결 경로마다 같은 workflow를 다르게 해석한다 |
+| `전체 1~10 단계` | 제품형 compact timeline으로 전체 단계 번호를 복원한다. 선택 경로에 따라 `필수`, `반복`, `직행`, `선행`, `생략`, `보류` 같은 상태 라벨을 붙여 현재 위치와 생략되는 단계를 해석하게 한다 |
 | `Decision Gates` | 단계 번호 대신 `Compare로 가도 되는가`, `Candidate로 남겨도 되는가`, `Proposal로 묶어도 되는가`, `Final Review를 기록해도 되는가` 같은 사용자 질문 기준으로 Go / Review / Stop을 보여준다 |
 | `Reference Drawer` | 핵심 개념, 상세 단계, 기록 저장소, 운영 경계를 탭으로 낮춰 필요할 때만 확인하게 한다 |
 
 사용자는 먼저 현재 만들려는 포트폴리오 유형을 고르고,
-해당 경로에서 실제로 지나가는 화면, 생략되는 단계, 생성되거나 읽는 기록을 본 뒤
-Decision Gates와 Reference Drawer를 이어서 읽는다.
+flowchart로 큰 흐름을 확인한 뒤, 경로별 checkpoint와 1~10 단계 timeline에서
+실제로 지나가는 화면, 반복되는 단계, 생략되는 단계, 생성되거나 읽는 기록을 본다.
+그 다음 Decision Gates와 Reference Drawer를 이어서 읽는다.
 
 경로별 핵심 차이는 아래와 같다.
 
