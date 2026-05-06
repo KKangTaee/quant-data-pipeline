@@ -3381,3 +3381,11 @@ Detailed historical logs were archived on `2026-04-13`.
   - `Operations > Selected Portfolio Dashboard` 상세에 `Current Weight / Drift Check`를 추가했다.
   - `Rebalance threshold`, `Watch threshold`, `Total tolerance`를 입력받고 `DRIFT_ALIGNED`, `DRIFT_WATCH`, `REBALANCE_NEEDED`, `DRIFT_INPUT_INCOMPLETE`로 read-only 판정한다.
   - 실제 DB current price 조회, account holding 연결, broker order, auto rebalance는 계속 제외했다.
+
+### 2026-05-06
+- Phase36 value / holding input drift check 확장:
+  - `finance/loaders/price.py`에 symbol별 latest price 조회 helper를 추가했다.
+  - `build_selected_portfolio_current_weight_inputs` helper를 추가해 current value 또는 shares x price 입력을 current weight로 변환한다.
+  - `Operations > Selected Portfolio Dashboard`의 drift check 입력 모드를 current weight 직접 입력, current value 입력, shares x price 입력으로 확장했다.
+  - shares x price 입력에서는 DB latest close를 보조로 불러올 수 있지만, 값은 저장하지 않고 account holding 자동 연결 / 주문 생성도 하지 않는다.
+  - Phase36 문서, roadmap / index / code analysis / comprehensive map / README를 value / holding input 기준으로 동기화했다.

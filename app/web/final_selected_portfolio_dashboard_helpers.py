@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 
 import pandas as pd
@@ -98,6 +99,52 @@ def selected_portfolio_active_components(row: dict[str, Any]) -> list[dict[str, 
         component_row["target_weight"] = weight
         active.append(component_row)
     return active
+
+
+def _clean_symbol_candidate(value: Any) -> str:
+    text = str(value or "").strip().upper()
+    if not text or text in {"-", "N/A", "NONE"}:
+        return ""
+    if not re.fullmatch(r"[A-Z0-9][A-Z0-9.\-]{0,14}", text):
+        return ""
+    return text
+
+
+def selected_portfolio_component_default_symbol(component: dict[str, Any]) -> str:
+    """Infer a safe single-symbol default for optional price assistance."""
+    for field in ("holding_symbol", "asset_symbol", "symbol", "ticker"):
+        candidate = _clean_symbol_candidate(component.get(field))
+        if candidate:
+            return candidate
+
+    universe = str(component.get("universe") or "").strip()
+    if universe:
+        tokens = [token.strip() for token in re.split(r"[,/\s]+", universe) if token.strip()]
+        if len(tokens) == 1:
+            candidate = _clean_symbol_candidate(tokens[0])
+            if candidate:
+                return candidate
+    return ""
+
+
+def build_selected_portfolio_current_weight_input_table(weight_inputs: dict[str, Any]) -> pd.DataFrame:
+    display_rows: list[dict[str, Any]] = []
+    for row in list(weight_inputs.get("rows") or []):
+        display_rows.append(
+            {
+                "Component": row.get("title"),
+                "Input Mode": row.get("input_mode_label"),
+                "Symbol": row.get("symbol") or "-",
+                "Shares": row.get("shares"),
+                "Price": row.get("price"),
+                "Price Date": row.get("price_date") or "-",
+                "Price Source": row.get("price_source") or "-",
+                "Current Value": row.get("current_value"),
+                "Current Weight": row.get("current_weight"),
+                "Complete": bool(row.get("input_complete")),
+            }
+        )
+    return pd.DataFrame(display_rows)
 
 
 def build_selected_portfolio_drift_table(drift_check: dict[str, Any]) -> pd.DataFrame:

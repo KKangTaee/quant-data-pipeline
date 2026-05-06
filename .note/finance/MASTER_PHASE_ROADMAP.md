@@ -1488,7 +1488,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 | Phase 33 | `complete` | `manual_qa_completed` | Paper Portfolio Tracking Ledger draft / save / review / Phase34 handoff 구현 및 QA 완료 |
 | Phase 34 | `complete` | `manual_qa_completed` | Final Review 탭 분리와 최종 검토 결과 기록 QA 완료 |
 | Phase 35 | `implementation_complete` | `manual_qa_pending` | Final Review를 마지막 active panel로 고정하고 별도 후속 가이드 workflow 제거, 사용자 QA 대기 |
-| Phase 36 | `implementation_complete` | `manual_qa_pending` | `Operations > Selected Portfolio Dashboard` 구현, Final Review selected row read-only 확인 + 수동 current weight drift check QA 대기 |
+| Phase 36 | `implementation_complete` | `manual_qa_pending` | `Operations > Selected Portfolio Dashboard` 구현, Final Review selected row read-only 확인 + current weight / value / holding 기반 drift check QA 대기 |
 
 한 줄 현재 판단:
 - current annual strict candidate와 portfolio bridge를 같은 frame에서 다시 본 `Phase 21`은 manual validation까지 완료되었고,
@@ -1687,7 +1687,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 | Phase 33 | Paper Portfolio Tracking Ledger | `complete` | `manual_qa_completed` | 시작일 / 비중 / 추적 조건을 가진 paper portfolio ledger를 저장하고 Phase34 handoff를 확인했으며 QA까지 완료했다 |
 | Phase 34 | Final Portfolio Selection Decision Pack | `complete` | `manual_qa_completed` | Final Review 탭에서 검증과 paper observation 기준을 모아 최종 실전 후보 포트폴리오를 선정 / 보류 / 거절 / 재검토하는 decision pack을 구현했고 QA까지 완료했다 |
 | Phase 35 | Final Review Completion Flow | `implementation_complete` | `manual_qa_pending` | Final Review를 마지막 active panel로 고정하고 최종 판단 완료 상태를 확인하게 했으며 QA를 기다린다 |
-| Phase 36 | Final Selected Portfolio Monitoring And Rebalance Operations | `implementation_complete` | `manual_qa_pending` | Final Review에서 선정된 포트폴리오와 수동 current weight drift를 Operations dashboard에서 read-only로 확인하게 했으며 QA를 기다린다 |
+| Phase 36 | Final Selected Portfolio Monitoring And Rebalance Operations | `implementation_complete` | `manual_qa_pending` | Final Review에서 선정된 포트폴리오와 current weight / value / holding 기반 drift를 Operations dashboard에서 read-only로 확인하게 했으며 QA를 기다린다 |
 
 ### Phase 31. Portfolio Risk And Live Readiness Validation
 
@@ -1786,9 +1786,10 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 - `.note/finance/phases/phase36/` 아래 phase plan, TODO, first work unit, completion summary, next-phase preparation, checklist를 정리했다.
 - `Operations > Selected Portfolio Dashboard` page를 추가했다.
 - `app/web/runtime/final_selected_portfolios.py`가 `FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`을 읽고 selected final decision row를 dashboard row로 변환한다.
-- dashboard 상세에서 component별 current weight를 수동 입력해 target 대비 drift를 계산하고 `DRIFT_ALIGNED`, `DRIFT_WATCH`, `REBALANCE_NEEDED`, `DRIFT_INPUT_INCOMPLETE`로 확인한다.
+- dashboard 상세에서 component별 current weight 직접 입력, current value 입력, shares x price 입력으로 target 대비 drift를 계산하고 `DRIFT_ALIGNED`, `DRIFT_WATCH`, `REBALANCE_NEEDED`, `DRIFT_INPUT_INCOMPLETE`로 확인한다.
+- shares x price 입력에서는 DB latest close를 보조로 불러올 수 있다.
 - dashboard는 새 registry를 쓰지 않고 read-only로 동작한다.
-- DB current price / account holding 자동 연결, 주문 초안, broker API, 자동매매는 후속 phase 범위다.
+- account holding 자동 연결, 주문 초안, broker API, 자동매매는 후속 phase 범위다.
 
 ### 한 줄 흐름
 - `정리 -> 데이터 신뢰성 -> 전략 parity -> 후보 검토 -> 포트폴리오 제안 -> Final Review -> 선정 포트폴리오 운영 대시보드`

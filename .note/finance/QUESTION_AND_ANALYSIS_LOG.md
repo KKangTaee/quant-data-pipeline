@@ -4151,3 +4151,17 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Follow-up:
   - `Current Weight / Drift Check` UI와 `build_selected_portfolio_drift_check` helper를 추가했다
   - Phase36 checklist와 handoff 문서를 manual current weight drift 기준으로 갱신했다
+
+### 2026-05-06 - Phase36 value / holding input contract extension
+- User request:
+  - Phase36의 다음 단계를 계속 진행해 달라고 요청함
+- Interpreted goal:
+  - 수동 current weight 입력만으로는 실제 운영 점검에 부족하므로, 평가금액이나 보유 수량과 현재가를 current weight로 바꿔 drift를 볼 수 있어야 함
+- Analysis result:
+  - 실제 account holding 자동 연결이나 주문 생성은 아직 안전한 범위가 아니다
+  - Phase36에서 안전하게 확장할 수 있는 범위는 operator가 current value 또는 shares x price를 입력하고, 선택적으로 DB latest close를 현재가 보조값으로 불러오는 read-only 계약이다
+  - DB latest close는 가격 입력 보조일 뿐이고, 최종 drift 판단은 여전히 dashboard에서 저장하지 않는 operator review 신호다
+- Follow-up:
+  - `build_selected_portfolio_current_weight_inputs`와 `load_latest_selected_portfolio_prices`를 추가했다
+  - `Operations > Selected Portfolio Dashboard`의 drift check 입력 모드를 current weight / current value / shares x price로 확장했다
+  - Phase36 문서를 account holding 자동 연결 전 단계의 value / holding input contract 기준으로 갱신했다

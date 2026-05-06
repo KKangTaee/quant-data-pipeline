@@ -2,7 +2,7 @@
 
 ## 목적
 
-이 checklist는 Phase36 first pass인 `Operations > Selected Portfolio Dashboard`가 제대로 열렸는지 확인하는 manual QA 문서다.
+이 checklist는 Phase36의 `Operations > Selected Portfolio Dashboard`가 제대로 열렸는지 확인하는 manual QA 문서다.
 
 이번 checklist는 주문이나 수익률 검증이 아니라, Final Review selected row를 운영 대시보드에서 올바르게 읽는지 확인한다.
 
@@ -69,7 +69,11 @@
 - 확인 위치:
   - `Operations > Selected Portfolio Dashboard > Current Weight / Drift Check`
 - 체크 항목:
-  - [ ] component별 현재 비중 입력란이 target weight 기본값으로 보이는지
+  - [ ] `Input mode`에서 현재 비중 직접 입력, 현재 평가금액 입력, 보유 수량 x 현재가 입력을 선택할 수 있는지
+  - [ ] 현재 비중 직접 입력에서는 component별 현재 비중 입력란이 target weight 기본값으로 보이는지
+  - [ ] 현재 평가금액 입력에서는 component별 current value와 `Unassigned cash / outside value`가 current weight로 변환되는지
+  - [ ] 보유 수량 x 현재가 입력에서는 holding symbol, shares, current price가 current value / current weight로 변환되는지
+  - [ ] `Load latest close`가 DB 조회 실패 시 화면 오류 대신 warning으로 남는지
   - [ ] `Rebalance threshold`, `Watch threshold`, `Total tolerance`를 조정할 수 있는지
   - [ ] 현재 비중 합계가 100% 근처가 아니면 `DRIFT_INPUT_INCOMPLETE` 계열 안내가 보이는지
   - [ ] target 대비 drift가 watch threshold 이상이면 관찰 필요로 읽히는지
@@ -86,7 +90,7 @@
   - `.note/finance/FINANCE_DOC_INDEX.md`
 - 체크 항목:
   - [ ] Phase36이 Final Review 이후 새 판단 저장 단계가 아니라 Operations dashboard로 설명되는지
-  - [ ] 수동 현재 비중 기반 drift check는 Phase36 범위로, DB current price / account holding 자동 연결은 후속 phase로 설명되는지
+  - [ ] current weight / current value / shares x price 기반 drift check는 Phase36 범위로, DB latest close는 입력 보조 기능이며 account holding 자동 연결은 후속 phase로 설명되는지
   - [ ] live approval / broker order / 자동매매가 out of scope로 남아 있는지
   - [ ] 새 page와 helper 파일이 code analysis 문서에 등록되어 있는지
 

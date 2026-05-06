@@ -30,6 +30,11 @@ FINAL_SELECTED_PORTFOLIO_DRIFT_ROUTE_LABELS = {
     "REBALANCE_NEEDED": "리밸런싱 검토 필요",
     "DRIFT_INPUT_INCOMPLETE": "현재 비중 입력 확인 필요",
 }
+FINAL_SELECTED_PORTFOLIO_VALUE_INPUT_MODE_LABELS = {
+    "current_weight": "현재 비중 직접 입력",
+    "current_value": "현재 평가금액 입력",
+    "shares_x_price": "보유 수량 x 현재가",
+}
 
 
 def _optional_float(value: Any) -> float | None:
@@ -71,6 +76,15 @@ def _component_identity(component: dict[str, Any], index: int) -> str:
     if title:
         return title
     return f"component_{index + 1}"
+
+
+def _format_date_value(value: Any) -> str | None:
+    if value is None:
+        return None
+    if hasattr(value, "date"):
+        return str(value.date())
+    text = str(value).strip()
+    return text or None
 
 
 def _target_weight_total(row: dict[str, Any], active_components: list[dict[str, Any]]) -> float:
@@ -290,6 +304,186 @@ def build_selected_portfolio_drift_check(
             "auto_rebalance": False,
             "notes": "This drift check is read-only and does not create broker orders.",
         },
+    }
+
+
+def build_selected_portfolio_current_weight_inputs(
+    row: dict[str, Any],
+    *,
+    component_inputs: dict[str, Any],
+    cash_value: Any = 0.0,
+    input_mode: str = "current_value",
+) -> dict[str, Any]:
+    """Convert value or holding inputs into component current weights for drift checks."""
+    raw_decision = dict(row.get("raw_decision") or row)
+    active_components = _active_components(raw_decision)
+    rows: list[dict[str, Any]] = []
+    current_weights: dict[str, float] = {}
+    missing_inputs: list[str] = []
+    invalid_inputs: list[str] = []
+    component_value_total = 0.0
+    normalized_mode = str(input_mode or "current_value").strip() or "current_value"
+
+    component_value_rows: list[tuple[int, dict[str, Any], str, str, float, dict[str, Any]]] = []
+    for index, component in enumerate(active_components):
+        identity = _component_identity(component, index)
+        title = _clean_text(component.get("title") or identity)
+        target_weight = _optional_float(component.get("target_weight")) or 0.0
+        input_row = dict((component_inputs or {}).get(identity) or {})
+        current_value = _optional_float(input_row.get("current_value"))
+        shares = _optional_float(input_row.get("shares"))
+        price = _optional_float(input_row.get("price"))
+        if current_value is None and shares is not None and price is not None:
+            current_value = shares * price
+
+        if current_value is None:
+            missing_inputs.append(identity)
+            current_value = 0.0
+        elif current_value < 0.0:
+            invalid_inputs.append(identity)
+            current_value = 0.0
+
+        component_value_total += current_value
+        component_value_rows.append((index, component, identity, title, target_weight, input_row | {"current_value": current_value}))
+
+    normalized_cash_value = _optional_float(cash_value)
+    if normalized_cash_value is None:
+        normalized_cash_value = 0.0
+    elif normalized_cash_value < 0.0:
+        invalid_inputs.append("cash_value")
+        normalized_cash_value = 0.0
+
+    portfolio_value_total = component_value_total + normalized_cash_value
+    for _index, component, identity, title, target_weight, input_row in component_value_rows:
+        current_value = _optional_float(input_row.get("current_value")) or 0.0
+        current_weight = (current_value / portfolio_value_total * 100.0) if portfolio_value_total > 0.0 else 0.0
+        current_weights[identity] = current_weight
+        rows.append(
+            {
+                "component_id": identity,
+                "title": title,
+                "target_weight": round(target_weight, 4),
+                "symbol": _clean_text(input_row.get("symbol"), ""),
+                "shares": _optional_float(input_row.get("shares")),
+                "price": _optional_float(input_row.get("price")),
+                "price_date": _format_date_value(input_row.get("price_date")),
+                "price_source": _clean_text(input_row.get("price_source"), ""),
+                "current_value": round(current_value, 4),
+                "current_weight": round(current_weight, 4),
+                "input_mode": normalized_mode,
+                "input_mode_label": FINAL_SELECTED_PORTFOLIO_VALUE_INPUT_MODE_LABELS.get(normalized_mode, normalized_mode),
+                "input_complete": identity not in missing_inputs and identity not in invalid_inputs,
+            }
+        )
+
+    blockers: list[str] = []
+    if not active_components:
+        blockers.append("active component 없음")
+    if missing_inputs:
+        blockers.append("현재 평가금액 입력 누락")
+    if invalid_inputs:
+        blockers.append("현재 평가금액 또는 현금 입력값이 음수")
+    if portfolio_value_total <= 0.0:
+        blockers.append("현재 평가금액 합계가 0보다 커야 함")
+
+    return {
+        "input_mode": normalized_mode,
+        "input_mode_label": FINAL_SELECTED_PORTFOLIO_VALUE_INPUT_MODE_LABELS.get(normalized_mode, normalized_mode),
+        "current_weights": current_weights,
+        "rows": rows,
+        "blockers": blockers,
+        "missing_inputs": missing_inputs,
+        "invalid_inputs": invalid_inputs,
+        "metrics": {
+            "component_value_total": round(component_value_total, 4),
+            "cash_value": round(normalized_cash_value, 4),
+            "portfolio_value_total": round(portfolio_value_total, 4),
+            "current_weight_total": round(sum(current_weights.values()), 4),
+            "active_components": len(active_components),
+        },
+        "execution_boundary": {
+            "live_approval": False,
+            "order_instruction": False,
+            "auto_rebalance": False,
+            "notes": "Value and holding inputs only estimate current weights; they do not create broker orders.",
+        },
+    }
+
+
+def load_latest_selected_portfolio_prices(
+    symbols: list[str],
+    *,
+    end: str | None = None,
+    timeframe: str = "1d",
+    field: str = "close",
+) -> dict[str, Any]:
+    """Read latest DB prices for optional dashboard input assistance without mutating portfolio records."""
+    cleaned_symbols: list[str] = []
+    seen: set[str] = set()
+    for symbol in symbols:
+        cleaned = str(symbol or "").strip().upper()
+        if not cleaned or cleaned in seen:
+            continue
+        seen.add(cleaned)
+        cleaned_symbols.append(cleaned)
+
+    if not cleaned_symbols:
+        return {
+            "status": "empty",
+            "rows": [],
+            "price_by_symbol": {},
+            "missing_symbols": [],
+            "error": None,
+        }
+
+    try:
+        from finance.loaders.price import load_latest_prices
+    except Exception as exc:  # pragma: no cover - defensive UI boundary
+        return {
+            "status": "error",
+            "rows": [],
+            "price_by_symbol": {},
+            "missing_symbols": cleaned_symbols,
+            "error": f"latest price loader import failed: {exc}",
+        }
+
+    try:
+        price_df = load_latest_prices(symbols=cleaned_symbols, end=end, timeframe=timeframe, field=field)
+    except Exception as exc:  # pragma: no cover - depends on local MySQL availability
+        return {
+            "status": "error",
+            "rows": [],
+            "price_by_symbol": {},
+            "missing_symbols": cleaned_symbols,
+            "error": str(exc),
+        }
+
+    rows: list[dict[str, Any]] = []
+    price_by_symbol: dict[str, dict[str, Any]] = {}
+    for record in price_df.to_dict("records") if not price_df.empty else []:
+        symbol = str(record.get("symbol") or "").strip().upper()
+        price = _optional_float(record.get("price"))
+        if not symbol or price is None:
+            continue
+        row = {
+            "symbol": symbol,
+            "latest_date": _format_date_value(record.get("latest_date")),
+            "price": round(price, 6),
+            "close": _optional_float(record.get("close")),
+            "adj_close": _optional_float(record.get("adj_close")),
+            "field": field,
+            "timeframe": timeframe,
+        }
+        rows.append(row)
+        price_by_symbol[symbol] = row
+
+    missing_symbols = [symbol for symbol in cleaned_symbols if symbol not in price_by_symbol]
+    return {
+        "status": "ok" if rows else "empty",
+        "rows": rows,
+        "price_by_symbol": price_by_symbol,
+        "missing_symbols": missing_symbols,
+        "error": None,
     }
 
 

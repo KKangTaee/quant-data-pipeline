@@ -7,11 +7,11 @@
 
 ## 목적
 
-Phase36은 Final Review에서 선정된 포트폴리오를 Operations 화면에서 다시 읽고, 수동 현재 비중 기준 drift를 확인하는 첫 운영 대시보드 phase다.
+Phase36은 Final Review에서 선정된 포트폴리오를 Operations 화면에서 다시 읽고, 현재 비중 / 현재 평가금액 / 보유 수량 x 현재가 기준 drift를 확인하는 첫 운영 대시보드 phase다.
 
 ## 쉽게 말하면
 
-Final Review에서 `투자 가능 후보`로 저장한 포트폴리오를 나중에 다시 찾고, 구성 비중과 검증 근거, 다음 행동, 목표 비중 대비 현재 비중 차이를 한 화면에서 보는 기능을 만들었다.
+Final Review에서 `투자 가능 후보`로 저장한 포트폴리오를 나중에 다시 찾고, 구성 비중과 검증 근거, 다음 행동, 목표 비중 대비 현재 비중 차이를 한 화면에서 보는 기능을 만들었다. 현재 비중은 직접 입력하거나, 평가금액 또는 보유 수량 x 현재가로 계산할 수 있다.
 
 ## 이번 phase에서 실제로 완료된 것
 
@@ -49,13 +49,16 @@ Final Review에서 `투자 가능 후보`로 저장한 포트폴리오를 나중
 ### 4. Current Weight / Drift Check
 
 - component별 현재 비중을 수동 입력하는 계약을 추가했다.
+- component별 현재 평가금액을 입력하면 전체 평가금액 대비 current weight로 변환한다.
+- component별 holding symbol, shares, current price를 입력하면 shares x price 기준 current value와 current weight로 변환한다.
+- shares x price 입력에서는 선택적으로 DB latest close를 불러와 현재가 입력을 보조한다.
 - target weight와 current weight의 차이를 drift로 계산한다.
 - `Rebalance threshold`, `Watch threshold`, `Total tolerance`를 UI에서 조정할 수 있다.
 - route는 `DRIFT_ALIGNED`, `DRIFT_WATCH`, `REBALANCE_NEEDED`, `DRIFT_INPUT_INCOMPLETE`로 읽는다.
 
 쉽게 말하면:
 
-- 현재 계좌를 연결하지 않아도, 사용자가 현재 비중을 입력하면 목표 비중에서 얼마나 벗어났는지 바로 볼 수 있다.
+- 현재 계좌를 연결하지 않아도, 사용자가 현재 비중이나 평가금액, 보유 수량과 가격을 입력하면 목표 비중에서 얼마나 벗어났는지 바로 볼 수 있다.
 - 이 결과도 주문 지시가 아니라 리밸런싱 검토 신호다.
 
 ### 5. 문서 동기화
@@ -65,15 +68,14 @@ Final Review에서 `투자 가능 후보`로 저장한 포트폴리오를 나중
 
 ## 아직 남아 있지만 closeout blocker는 아닌 것
 
-- DB current price 기반 current weight 자동 계산
-- 실제 account holding 연결
+- 실제 account holding 자동 연결
 - 리밸런싱 주문 초안
 - risk alert / trigger breach 자동화
 
 쉽게 말하면:
 
-- 이번 phase는 선정 포트폴리오를 운영 화면으로 옮기고, 수동 현재 비중 기준 drift까지 읽는 단계다.
-- 실제 가격 / 계좌 보유 수량을 자동으로 읽어 current weight를 계산하는 것은 다음 phase로 넘긴다.
+- 이번 phase는 선정 포트폴리오를 운영 화면으로 옮기고, operator가 입력한 현재 비중 / 평가금액 / 수량 x 가격 기준 drift까지 읽는 단계다.
+- DB latest close는 현재가 입력 보조로만 쓰며, 실제 계좌 보유 수량을 자동으로 읽는 것은 다음 phase로 넘긴다.
 
 ## closeout 판단
 

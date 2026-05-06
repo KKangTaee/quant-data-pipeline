@@ -6,6 +6,7 @@ import streamlit as st
 
 from app.web.backtest_ui_components import render_badge_strip, render_status_card_grid
 from app.web.final_selected_portfolio_dashboard_helpers import (
+    build_selected_portfolio_current_weight_input_table,
     build_selected_portfolio_drift_table,
     build_selected_portfolio_component_table,
     build_selected_portfolio_dashboard_table,
@@ -14,14 +15,18 @@ from app.web.final_selected_portfolio_dashboard_helpers import (
     final_selected_portfolio_label,
     selected_portfolio_active_components,
     selected_portfolio_benchmark_options,
+    selected_portfolio_component_default_symbol,
     selected_portfolio_source_type_options,
     selected_portfolio_status_options,
 )
 from app.web.runtime import (
     FINAL_SELECTED_PORTFOLIO_STATUS_LABELS,
+    FINAL_SELECTED_PORTFOLIO_VALUE_INPUT_MODE_LABELS,
     FINAL_SELECTION_DECISION_REGISTRY_FILE,
+    build_selected_portfolio_current_weight_inputs,
     build_selected_portfolio_drift_check,
     load_final_selected_portfolio_dashboard,
+    load_latest_selected_portfolio_prices,
 )
 
 
@@ -172,7 +177,7 @@ def _render_selected_row_drift_check(row: dict[str, Any]) -> None:
     st.markdown("##### Current Weight / Drift Check")
     st.caption(
         "Phase36의 현재 비중 계약입니다. 실제 계좌 연결이나 주문 생성 없이, "
-        "component별 현재 비중을 수동 입력해 목표 비중과의 차이를 읽습니다."
+        "component별 현재 비중, 평가금액, 또는 수량 x 현재가 입력으로 목표 비중과의 차이를 읽습니다."
     )
     components = selected_portfolio_active_components(row)
     if not components:
@@ -212,21 +217,191 @@ def _render_selected_row_drift_check(row: dict[str, Any]) -> None:
         )
 
     current_weights: dict[str, float] = {}
-    st.caption("기본값은 target weight입니다. 실제 현재 비중을 알고 있으면 값을 바꿔 drift를 확인합니다.")
-    input_cols = st.columns(2, gap="small")
-    for index, component in enumerate(components):
-        component_id = str(component.get("component_id") or f"component_{index + 1}")
-        title = str(component.get("title") or component_id)
-        target_weight = float(component.get("target_weight") or 0.0)
-        with input_cols[index % 2]:
-            current_weights[component_id] = st.number_input(
-                f"{title} current weight (%)",
-                min_value=0.0,
-                max_value=100.0,
-                value=target_weight,
-                step=0.5,
-                key=f"selected_portfolio_current_weight_{row.get('decision_id')}_{component_id}",
-            )
+    input_mode = st.radio(
+        "Input mode",
+        options=["current_weight", "current_value", "shares_x_price"],
+        format_func=lambda mode: FINAL_SELECTED_PORTFOLIO_VALUE_INPUT_MODE_LABELS.get(mode, mode),
+        horizontal=True,
+        key=f"selected_portfolio_current_input_mode_{row.get('decision_id')}",
+    )
+    value_input_contract: dict[str, Any] | None = None
+    if input_mode == "current_weight":
+        st.caption("기본값은 target weight입니다. 실제 현재 비중을 알고 있으면 값을 바꿔 drift를 확인합니다.")
+        input_cols = st.columns(2, gap="small")
+        for index, component in enumerate(components):
+            component_id = str(component.get("component_id") or f"component_{index + 1}")
+            title = str(component.get("title") or component_id)
+            target_weight = float(component.get("target_weight") or 0.0)
+            with input_cols[index % 2]:
+                current_weights[component_id] = st.number_input(
+                    f"{title} current weight (%)",
+                    min_value=0.0,
+                    max_value=100.0,
+                    value=target_weight,
+                    step=0.5,
+                    key=f"selected_portfolio_current_weight_{row.get('decision_id')}_{component_id}",
+                )
+    elif input_mode == "current_value":
+        st.caption(
+            "component별 현재 평가금액을 입력하면 전체 평가금액 대비 현재 비중으로 변환합니다. "
+            "통화 단위는 같기만 하면 됩니다."
+        )
+        cash_value = st.number_input(
+            "Unassigned cash / outside value",
+            min_value=0.0,
+            value=0.0,
+            step=1.0,
+            key=f"selected_portfolio_cash_value_{row.get('decision_id')}",
+            help="target component 밖에 남아 있는 현금이나 제외 자산이 있으면 입력합니다.",
+        )
+        component_inputs: dict[str, dict[str, Any]] = {}
+        input_cols = st.columns(2, gap="small")
+        for index, component in enumerate(components):
+            component_id = str(component.get("component_id") or f"component_{index + 1}")
+            title = str(component.get("title") or component_id)
+            target_weight = float(component.get("target_weight") or 0.0)
+            with input_cols[index % 2]:
+                component_inputs[component_id] = {
+                    "current_value": st.number_input(
+                        f"{title} current value",
+                        min_value=0.0,
+                        value=target_weight,
+                        step=1.0,
+                        key=f"selected_portfolio_current_value_{row.get('decision_id')}_{component_id}",
+                    ),
+                    "price_source": "manual_current_value",
+                }
+        value_input_contract = build_selected_portfolio_current_weight_inputs(
+            row,
+            component_inputs=component_inputs,
+            cash_value=cash_value,
+            input_mode="current_value",
+        )
+        current_weights = dict(value_input_contract.get("current_weights") or {})
+    else:
+        st.caption(
+            "component가 실제 보유 수량과 current price로 표현될 수 있을 때 쓰는 입력입니다. "
+            "DB latest close는 보조값이며, 가격과 수량은 저장되지 않습니다."
+        )
+        component_symbols: dict[str, str] = {}
+        symbol_cols = st.columns(2, gap="small")
+        for index, component in enumerate(components):
+            component_id = str(component.get("component_id") or f"component_{index + 1}")
+            title = str(component.get("title") or component_id)
+            default_symbol = selected_portfolio_component_default_symbol(component)
+            with symbol_cols[index % 2]:
+                component_symbols[component_id] = st.text_input(
+                    f"{title} holding symbol",
+                    value=default_symbol,
+                    key=f"selected_portfolio_holding_symbol_{row.get('decision_id')}_{component_id}",
+                    help="DB latest close 조회에만 쓰는 선택 입력입니다.",
+                ).strip().upper()
+
+        fetch_cols = st.columns([0.35, 0.35, 0.30], gap="small")
+        with fetch_cols[0]:
+            price_end = st.text_input(
+                "DB price end date",
+                value="",
+                placeholder="YYYY-MM-DD",
+                key=f"selected_portfolio_price_end_{row.get('decision_id')}",
+            ).strip()
+        symbols_to_fetch = sorted({symbol for symbol in component_symbols.values() if symbol})
+        fetch_key = f"selected_portfolio_latest_price_result_{row.get('decision_id')}"
+        with fetch_cols[1]:
+            if st.button(
+                "Load latest close",
+                disabled=not symbols_to_fetch,
+                key=f"selected_portfolio_load_latest_price_{row.get('decision_id')}",
+                width="stretch",
+            ):
+                price_result = load_latest_selected_portfolio_prices(symbols_to_fetch, end=price_end or None)
+                st.session_state[fetch_key] = price_result
+                price_by_symbol = dict(price_result.get("price_by_symbol") or {})
+                for index, component in enumerate(components):
+                    component_id = str(component.get("component_id") or f"component_{index + 1}")
+                    symbol = component_symbols.get(component_id)
+                    price_row = dict(price_by_symbol.get(symbol) or {})
+                    if price_row.get("price") is not None:
+                        st.session_state[
+                            f"selected_portfolio_holding_price_{row.get('decision_id')}_{component_id}"
+                        ] = float(price_row.get("price") or 0.0)
+                        st.session_state[
+                            f"selected_portfolio_holding_price_date_{row.get('decision_id')}_{component_id}"
+                        ] = price_row.get("latest_date")
+        with fetch_cols[2]:
+            st.metric("Symbols", len(symbols_to_fetch))
+
+        latest_price_result = dict(st.session_state.get(fetch_key) or {})
+        if latest_price_result.get("status") == "error":
+            st.warning(f"DB latest close 조회 실패: {latest_price_result.get('error')}")
+        elif latest_price_result.get("rows"):
+            with st.expander("Loaded latest close rows", expanded=False):
+                st.dataframe(list(latest_price_result.get("rows") or []), width="stretch", hide_index=True)
+                missing = list(latest_price_result.get("missing_symbols") or [])
+                if missing:
+                    st.caption(f"missing symbols: {', '.join(missing)}")
+
+        cash_value = st.number_input(
+            "Unassigned cash / outside value",
+            min_value=0.0,
+            value=0.0,
+            step=1.0,
+            key=f"selected_portfolio_holding_cash_value_{row.get('decision_id')}",
+            help="target component 밖에 남아 있는 현금이나 제외 자산이 있으면 입력합니다.",
+        )
+        component_inputs = {}
+        input_cols = st.columns(2, gap="small")
+        for index, component in enumerate(components):
+            component_id = str(component.get("component_id") or f"component_{index + 1}")
+            title = str(component.get("title") or component_id)
+            price_key = f"selected_portfolio_holding_price_{row.get('decision_id')}_{component_id}"
+            price_date_key = f"selected_portfolio_holding_price_date_{row.get('decision_id')}_{component_id}"
+            with input_cols[index % 2]:
+                shares = st.number_input(
+                    f"{title} shares",
+                    min_value=0.0,
+                    value=0.0,
+                    step=1.0,
+                    key=f"selected_portfolio_holding_shares_{row.get('decision_id')}_{component_id}",
+                )
+                price_kwargs = {
+                    "min_value": 0.0,
+                    "step": 0.01,
+                    "key": price_key,
+                }
+                if price_key not in st.session_state:
+                    price_kwargs["value"] = 0.0
+                price = st.number_input(f"{title} current price", **price_kwargs)
+            component_inputs[component_id] = {
+                "symbol": component_symbols.get(component_id),
+                "shares": shares,
+                "price": price,
+                "price_date": st.session_state.get(price_date_key),
+                "price_source": "db_latest_close" if st.session_state.get(price_date_key) else "manual_price",
+            }
+        value_input_contract = build_selected_portfolio_current_weight_inputs(
+            row,
+            component_inputs=component_inputs,
+            cash_value=cash_value,
+            input_mode="shares_x_price",
+        )
+        current_weights = dict(value_input_contract.get("current_weights") or {})
+
+    if value_input_contract is not None:
+        value_metrics = dict(value_input_contract.get("metrics") or {})
+        render_badge_strip(
+            [
+                {"label": "Input Mode", "value": value_input_contract.get("input_mode_label"), "tone": "neutral"},
+                {"label": "Portfolio Value", "value": f"{float(value_metrics.get('portfolio_value_total') or 0.0):,.2f}", "tone": "neutral"},
+                {"label": "Cash / Outside", "value": f"{float(value_metrics.get('cash_value') or 0.0):,.2f}", "tone": "neutral"},
+                {"label": "Weight Total", "value": f"{float(value_metrics.get('current_weight_total') or 0.0):.1f}%", "tone": "neutral"},
+            ]
+        )
+        input_df = build_selected_portfolio_current_weight_input_table(value_input_contract)
+        if not input_df.empty:
+            st.dataframe(input_df, width="stretch", hide_index=True)
+        for blocker in list(value_input_contract.get("blockers") or []):
+            st.warning(str(blocker))
 
     drift_check = build_selected_portfolio_drift_check(
         row,

@@ -59,7 +59,7 @@ Phase36 first pass status:
 |---|---|
 | `normal` | selected row, active component, target weight 100%, blocker 없음 |
 | `watch` | selected row지만 evidence / validation / robustness / paper route가 보수적으로 볼 필요가 있음 |
-| `rebalance_needed` | 후속 phase에서 current weight / drift 계산이 들어오면 사용할 상태 |
+| `rebalance_needed` | 상세 drift check에서 threshold 초과 시 읽는 상태. dashboard row 상태와 주문 지시는 분리한다 |
 | `re_review_needed` | evidence 또는 paper observation blocker가 남아 있음 |
 | `blocked` | selected row가 아니거나 component / target weight가 운영 대상으로 불충분함 |
 
@@ -74,4 +74,4 @@ Phase36 first pass status:
 
 ## 완료 판단
 
-이 작업은 `Operations > Selected Portfolio Dashboard`에서 최종 선정 포트폴리오 목록, 상세 운영 기준, 수동 현재 비중 기반 drift 판정을 읽을 수 있으면 완료로 본다.
+이 작업은 `Operations > Selected Portfolio Dashboard`에서 최종 선정 포트폴리오 목록, 상세 운영 기준, current weight / current value / shares x price 기반 drift 판정을 읽을 수 있으면 완료로 본다.

@@ -29,6 +29,7 @@ Backtest > Final Review
 | 첫 번째 작업 | selected final decision row read model / Operations page 구현 | `completed` |
 | 두 번째 작업 | current weight 수동 입력 기반 drift 계약 정리 | `completed` |
 | 세 번째 작업 | drift / rebalance_needed read-only 자동 판단 | `completed` |
+| 네 번째 작업 | current value / shares x price 기반 current weight 입력 계약 추가 | `completed` |
 | 문서 / QA | phase 문서, roadmap, code analysis, checklist 동기화 | `completed` |
 
 ## 완료한 내용
@@ -42,7 +43,10 @@ Backtest > Final Review
 - dashboard는 `normal`, `watch`, `rebalance_needed`, `re_review_needed`, `blocked` status 체계를 가진다.
 - `Current Weight / Drift Check`를 추가해 component별 현재 비중을 수동 입력하고 target weight와의 drift를 계산한다.
 - drift threshold 이상이면 `REBALANCE_NEEDED`, watch threshold 이상이면 `DRIFT_WATCH`, 입력 합계가 100% 근처가 아니면 `DRIFT_INPUT_INCOMPLETE`로 read-only 판정한다.
-- 이 drift check는 실제 current price / account holding 연결 없이 수동 현재 비중으로 동작한다.
+- current value 입력을 추가해 component별 평가금액과 cash / outside value로 현재 비중을 계산한다.
+- shares x price 입력을 추가해 보유 수량과 현재가로 현재 비중을 계산한다.
+- shares x price 입력에서는 선택적으로 DB latest close를 불러와 현재가 입력을 보조한다.
+- 이 drift check는 실제 account holding 자동 연결 없이 operator 입력값으로 동작한다.
 
 ## 중요한 경계
 
@@ -50,7 +54,7 @@ Backtest > Final Review
 - `FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`은 Final Review의 최종 판단 원본이다.
 - Phase36은 이 파일 중 `SELECT_FOR_PRACTICAL_PORTFOLIO` row만 운영 대상으로 읽는다.
 - live approval, broker order, 자동매매 버튼은 disabled로 유지한다.
-- DB current price 자동 조회, account holding 연결, 주문 초안은 이번 phase 범위 밖이다.
+- DB latest close는 입력 보조 기능으로만 쓰며, account holding 자동 연결, 주문 초안은 이번 phase 범위 밖이다.
 
 ## 검증 TODO
 
@@ -61,6 +65,7 @@ Backtest > Final Review
 - `completed` runtime helper smoke
 - `completed` hygiene helper
 - `completed` drift helper smoke
+- `completed` value / holding input helper smoke
 - `pending` user manual QA
 
 ## 현재 판단

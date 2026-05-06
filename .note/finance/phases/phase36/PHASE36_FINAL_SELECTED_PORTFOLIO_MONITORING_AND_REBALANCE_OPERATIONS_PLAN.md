@@ -44,7 +44,7 @@ Portfolio Proposal -> Final Review -> 최종 판단 완료
 - 사용자는 최종 선정 포트폴리오를 Backtest workflow가 아니라 Operations에서 다시 찾을 수 있다.
 - Final Review가 마지막 판단 단계라는 Phase35 경계가 유지된다.
 - 선정된 포트폴리오의 target allocation, evidence, next action을 한 화면에서 읽을 수 있다.
-- 이후 current price / drift / rebalance 계산 phase로 넘어갈 기준 surface가 생긴다.
+- 이후 account holding 자동 연결, risk alert, rebalance review phase로 넘어갈 기준 surface가 생긴다.
 
 ## 이 phase에서 다루는 대상
 
@@ -60,8 +60,7 @@ Portfolio Proposal -> Final Review -> 최종 판단 완료
 
 - 새 final decision 저장소
 - 새 candidate / proposal registry 저장
-- current price 기반 weight drift 계산
-- 실제 계좌 보유 수량
+- 실제 계좌 보유 수량 자동 연결
 - 주문 초안 생성
 - broker API
 - 자동매매
@@ -91,7 +90,7 @@ Portfolio Proposal -> Final Review -> 최종 판단 완료
 - 운영 대시보드
   - 선정 이후 상태, target allocation, evidence, next action을 읽는 화면이다.
 - drift
-  - 목표 비중과 현재 비중의 차이다. Phase36에서는 계산하지 않고 후속 phase에서 다룬다.
+  - 목표 비중과 현재 비중의 차이다. Phase36에서는 현재 비중 직접 입력, 현재 평가금액 입력, 수량 x 현재가 입력으로 read-only 계산한다.
 - read-only dashboard
   - 기존 기록을 읽어서 보여주지만 새 판단 row나 주문 row를 저장하지 않는 화면이다.
 
@@ -101,7 +100,8 @@ Portfolio Proposal -> Final Review -> 최종 판단 완료
 - Phase36은 `Operations` 영역의 운영 화면으로 둔다.
 - `FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`은 새로 만드는 파일이 아니라 Final Review가 이미 쓰는 최종 판단 원본이다.
 - dashboard는 이 파일을 읽기만 한다.
-- `rebalance_needed` status enum은 준비하지만, 자동 drift 판단은 current price / account holding 계약이 생긴 뒤에 구현한다.
+- `rebalance_needed` status enum은 운영 row 상태와 상세 drift check 결과를 구분해서 쓴다.
+- DB latest close 조회는 수량 x 현재가 입력을 돕는 보조값이며, 실제 계좌 보유 수량 자동 연결은 만들지 않는다.
 - live approval, broker order, 자동매매는 disabled 경계로 유지한다.
 
 ## 이번 phase의 주요 작업 단위
@@ -120,18 +120,19 @@ Portfolio Proposal -> Final Review -> 최종 판단 완료
 ### 두 번째 작업. price / holding 기반 drift 준비
 
 - 무엇을 바꾸는가:
-  - Phase36 first pass 이후, current price와 현재 보유 수량 또는 가정 금액을 어떤 계약으로 받을지 정한다.
+  - current weight 직접 입력 외에 current value와 shares x price 입력 계약을 추가한다.
+  - shares x price 입력에서는 선택적으로 DB latest close를 불러와 현재가 입력을 보조한다.
 - 왜 필요한가:
   - target weight만으로는 `rebalance_needed`를 자동 판단할 수 없다.
 - 끝나면 좋아지는 점:
-  - Phase37 또는 Phase38에서 current weight / drift 계산을 무리 없이 구현할 수 있다.
+  - 실제 계좌 연결 없이도 평가금액이나 보유 수량 가정으로 current weight / drift를 확인할 수 있다.
 
 ## 다음에 확인할 것
 
 - Final Review에서 실제 selected row가 저장된 뒤 dashboard table과 detail이 기대대로 보이는지 확인한다.
 - selected row가 없을 때 empty state가 자연스럽게 보이는지 확인한다.
 - status 계산이 과하게 낙관적이지 않은지 확인한다.
-- current price / holding 계약을 다음 phase에서 어떻게 받을지 결정한다.
+- account holding 자동 연결과 risk alert를 다음 phase에서 어디까지 다룰지 결정한다.
 
 ## 한 줄 정리
 

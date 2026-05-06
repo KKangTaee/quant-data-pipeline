@@ -44,7 +44,7 @@ external source
 | 파일 | 역할 |
 |---|---|
 | `finance/loaders/universe.py` | universe와 asset profile status 조회 |
-| `finance/loaders/price.py` | price history, price matrix, freshness 조회 |
+| `finance/loaders/price.py` | price history, price matrix, freshness, symbol별 latest price 조회 |
 | `finance/loaders/fundamentals.py` | broad fundamentals와 statement shadow fundamentals 조회 |
 | `finance/loaders/factors.py` | broad factors와 statement factor snapshot 조회 |
 | `finance/loaders/financial_statements.py` | statement values / labels / strict snapshot / timing audit 조회 |

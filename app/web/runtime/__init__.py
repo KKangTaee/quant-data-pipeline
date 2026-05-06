@@ -55,10 +55,13 @@ from .final_selected_portfolios import (
     FINAL_SELECTED_PORTFOLIO_DRIFT_ROUTE_LABELS,
     FINAL_SELECTED_PORTFOLIO_STATUS_LABELS,
     FINAL_SELECTED_PORTFOLIO_STATUS_ORDER,
+    FINAL_SELECTED_PORTFOLIO_VALUE_INPUT_MODE_LABELS,
     SELECTED_PRACTICAL_PORTFOLIO_ROUTE,
     build_final_selected_portfolio_dashboard_row,
+    build_selected_portfolio_current_weight_inputs,
     build_selected_portfolio_drift_check,
     load_final_selected_portfolio_dashboard,
+    load_latest_selected_portfolio_prices,
 )
 
 __all__ = [
@@ -75,6 +78,7 @@ __all__ = [
     "FINAL_SELECTED_PORTFOLIO_DRIFT_ROUTE_LABELS",
     "FINAL_SELECTED_PORTFOLIO_STATUS_LABELS",
     "FINAL_SELECTED_PORTFOLIO_STATUS_ORDER",
+    "FINAL_SELECTED_PORTFOLIO_VALUE_INPUT_MODE_LABELS",
     "SELECTED_PRACTICAL_PORTFOLIO_ROUTE",
     "SAVED_PORTFOLIO_FILE",
     "append_candidate_review_note",
@@ -86,6 +90,7 @@ __all__ = [
     "append_pre_live_candidate_registry_row",
     "build_backtest_result_bundle",
     "build_final_selected_portfolio_dashboard_row",
+    "build_selected_portfolio_current_weight_inputs",
     "build_selected_portfolio_drift_check",
     "delete_saved_portfolio",
     "inspect_strict_annual_price_freshness",
@@ -94,6 +99,7 @@ __all__ = [
     "load_current_candidate_registry_latest",
     "load_final_selection_decisions",
     "load_final_selected_portfolio_dashboard",
+    "load_latest_selected_portfolio_prices",
     "load_paper_portfolio_ledger",
     "load_portfolio_proposals",
     "load_pre_live_candidate_registry_latest",
