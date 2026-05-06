@@ -3359,3 +3359,17 @@ Detailed historical logs were archived on `2026-04-13`.
   - 이 경로는 단일 후보를 만드는 `Candidate Review`가 아니라, 이미 비중이 정해진 portfolio mix를 proposal draft로 남기는 경로임을 UI와 Guides에 명시했다.
   - Portfolio Proposal은 saved mix prefill이 있을 때 전용 작성 화면을 먼저 보여주고, 저장 시 `.note/finance/saved/SAVED_PORTFOLIOS.jsonl`의 setup과 `.note/finance/registries/PORTFOLIO_PROPOSAL_REGISTRY.jsonl` workflow 기록을 연결한다.
   - Final Review에서 saved mix proposal을 읽을 때 component contract / benchmark / universe / compare evidence가 빠지지 않도록 proposal evidence snapshot을 보강했다.
+
+### 2026-05-06
+- Guides 포트폴리오 플로우 맵 UX polish 시작:
+  - user request에 따라 `Reference > Guides`의 1~10 단계 실행 흐름을 선형 텍스트만으로 읽기 어렵다는 문제를 확인했다.
+  - 단일 후보, 다중 후보 portfolio proposal, saved mix, 재검토 / blocker 경로를 시각적 flow map으로 분리해 보여주는 Guide 보강을 진행한다.
+  - 변경 범위는 `app/web/streamlit_app.py`와 Backtest UI flow 문서 동기화로 제한하고, core finance 로직과 JSONL runtime artifact는 수정하지 않는다.
+- 구현:
+  - `Reference > Guides`의 `1~10 단계 실행 흐름` 앞에 `포트폴리오 플로우 맵`을 추가했다.
+  - 경로 선택은 단일 후보, 여러 후보 포트폴리오, 저장 Mix, 재검토 / 막힘 경로로 나누고, 각 경로를 카드형 순서도 / 사용 상황 / 생략되는 단계 / 생성 또는 참조 기록 표로 보여준다.
+  - `.note/finance/code_analysis/WEB_BACKTEST_UI_FLOW.md`의 Guides 묶음 설명을 다섯 묶음 기준으로 동기화했다.
+- 검증:
+  - `py_compile`로 `app/web/streamlit_app.py`, `app/web/pages/backtest.py`, `app/web/backtest_*.py`를 확인했다.
+  - worktree Streamlit 서버를 `127.0.0.1:8502`에 띄우고 `Reference > Guides`에서 플로우 맵 렌더링과 경로 선택 동작을 확인했다.
+  - `git diff --check`와 finance refinement hygiene helper를 통과했다.

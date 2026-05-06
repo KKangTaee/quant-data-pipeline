@@ -4124,3 +4124,14 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 다만 ETF asset profile coverage가 부족하면 Equal Weight도 명시적으로 `hold/blocked`가 될 수 있으며, 이것은 누락이 아니라 운용 가능성 데이터 경고다
 - Follow-up:
   - Equal Weight Single / Compare 입력, runtime hardening, saved Portfolio Mix override, Candidate Library replay payload에 Real-Money 필드를 연결했다
+
+### 2026-05-06 - Guides 포트폴리오 플로우 맵 필요성
+- User request:
+  - 1~10단계 guide는 설명이 있지만, 단일 후보 / 여러 후보 / 저장 Mix처럼 포트폴리오 유형에 따라 달라지는 실제 흐름을 리스트만으로 이해하기 어렵다고 지적함
+- Interpreted goal:
+  - 사용자가 어떤 포트폴리오를 만들고 있는지 먼저 고르고, 그 경로에서 지나가는 화면과 생략되는 단계를 시각적으로 확인할 수 있어야 함
+- Analysis result:
+  - 선형 단계 목록은 공통 기준 설명에는 적합하지만, `단일 후보 직행`, `여러 후보 proposal 저장`, `saved mix -> Portfolio Proposal`, `blocker 재검토` 같은 분기 ownership을 드러내기 어렵다
+  - Guide 상단에 경로 선택형 시각 플로우 맵을 두고, 상세 1~10단계는 그 아래 reference로 유지하는 구조가 가장 작은 UX 개선이다
+- Follow-up:
+  - `Reference > Guides`에 포트폴리오 플로우 맵을 추가하고, `WEB_BACKTEST_UI_FLOW.md`를 해당 Guide 구조에 맞춰 동기화했다

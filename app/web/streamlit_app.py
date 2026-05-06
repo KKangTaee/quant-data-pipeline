@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from html import escape
 import sys
 from datetime import date, datetime, timedelta
 from pathlib import Path
 import subprocess
+from textwrap import dedent
 from typing import Any
 
 import pandas as pd
@@ -2412,6 +2414,416 @@ def _render_candidate_library_page() -> None:
     render_candidate_library_page()
 
 
+def _portfolio_flow_map_data() -> dict[str, dict[str, Any]]:
+    return {
+        "단일 후보 경로": {
+            "summary": (
+                "전략 하나를 후보로 남긴 뒤, 별도 proposal draft 저장 없이 "
+                "Final Review가 Current Candidate와 Pre-Live 기록을 직접 읽는 경로입니다."
+            ),
+            "fit": "전략 1개를 실전 후보로 끝까지 검토할 때",
+            "skip": "Portfolio Proposal draft 저장은 생략합니다. 단일 후보는 100% direct candidate로 Final Review에 들어갑니다.",
+            "records": [
+                {"기록": "Candidate Review Note", "역할": "후보 초안 검토 이유와 다음 행동"},
+                {"기록": "Current Candidate Registry", "역할": "다시 열어 볼 후보 정의"},
+                {"기록": "Pre-Live Candidate Registry", "역할": "paper / watchlist / hold 운영 상태"},
+                {"기록": "Final Selection Decision", "역할": "선정 / 보류 / 거절 / 재검토 최종 판단"},
+            ],
+            "steps": [
+                {
+                    "step": "1-2",
+                    "title": "전략 하나 실행",
+                    "path": "Backtest > Single Strategy",
+                    "purpose": "성과, Data Trust, 실행 계약을 먼저 읽습니다.",
+                    "gate": "결과가 비어 있지 않고 Data Trust를 해석할 수 있음",
+                    "phase": "data",
+                },
+                {
+                    "step": "3-4",
+                    "title": "Real-Money 신호 확인",
+                    "path": "Backtest 결과 > Real-Money",
+                    "purpose": "Promotion, Deployment, blocker를 확인합니다.",
+                    "gate": "Promotion이 hold가 아니고 Deployment가 blocked가 아님",
+                    "phase": "signal",
+                },
+                {
+                    "step": "5",
+                    "title": "비교 근거 확인",
+                    "path": "Compare & Portfolio Builder",
+                    "purpose": "다른 전략과 상대 근거를 비교합니다.",
+                    "gate": "Compare PASS 또는 CONDITIONAL",
+                    "phase": "compare",
+                },
+                {
+                    "step": "6",
+                    "title": "후보 패키징",
+                    "path": "Candidate Review",
+                    "purpose": "Review Note, 후보 registry, Pre-Live 운영 기록을 남깁니다.",
+                    "gate": "Next Route가 PORTFOLIO_PROPOSAL_READY",
+                    "phase": "candidate",
+                },
+                {
+                    "step": "7",
+                    "title": "단일 후보 직행 평가",
+                    "path": "Portfolio Proposal",
+                    "purpose": "저장을 반복하지 않고 Final Review 입력 준비 상태만 봅니다.",
+                    "gate": "단일 후보 direct route가 ready 또는 review 가능한 상태",
+                    "phase": "proposal",
+                },
+                {
+                    "step": "8-10",
+                    "title": "최종 검토와 판단",
+                    "path": "Final Review",
+                    "purpose": "Validation, robustness, paper observation을 본 뒤 최종 판단을 저장합니다.",
+                    "gate": "SELECT / HOLD / REJECT / RE_REVIEW 중 하나로 기록됨",
+                    "phase": "final",
+                },
+            ],
+        },
+        "여러 후보 포트폴리오 경로": {
+            "summary": (
+                "여러 current candidate를 한 포트폴리오로 묶어 목적, 역할, target weight, "
+                "비중 근거를 남긴 뒤 Final Review로 넘기는 경로입니다."
+            ),
+            "fit": "core anchor, diversifier, defensive sleeve처럼 역할이 다른 후보를 함께 쓸 때",
+            "skip": "단일 후보 직행 평가는 쓰지 않습니다. 후보가 2개 이상이면 proposal draft 저장이 핵심 단계입니다.",
+            "records": [
+                {"기록": "Current Candidate Registry", "역할": "각 component 후보 정의"},
+                {"기록": "Pre-Live Candidate Registry", "역할": "active weight 후보의 운영 상태"},
+                {"기록": "Portfolio Proposal Registry", "역할": "목적 / 역할 / target weight가 있는 포트폴리오 초안"},
+                {"기록": "Final Selection Decision", "역할": "저장 proposal에 대한 최종 판단"},
+            ],
+            "steps": [
+                {
+                    "step": "1-5",
+                    "title": "후보 여러 개 확보",
+                    "path": "Single / Compare",
+                    "purpose": "각 후보의 성과, Real-Money, 상대 근거를 따로 확인합니다.",
+                    "gate": "각 후보가 Review로 보낼 근거를 가짐",
+                    "phase": "data",
+                },
+                {
+                    "step": "6",
+                    "title": "후보별 패키징",
+                    "path": "Candidate Review",
+                    "purpose": "각 component를 Current Candidate와 Pre-Live 기록으로 남깁니다.",
+                    "gate": "active 후보가 PORTFOLIO_PROPOSAL_READY",
+                    "phase": "candidate",
+                },
+                {
+                    "step": "7A",
+                    "title": "역할과 비중 설계",
+                    "path": "Portfolio Proposal > 목적 / 역할 / 비중",
+                    "purpose": "core anchor와 보완 후보 역할, target weight를 정합니다.",
+                    "gate": "비중 합계 100%, core anchor 최소 1개",
+                    "phase": "proposal",
+                },
+                {
+                    "step": "7B",
+                    "title": "Proposal 저장",
+                    "path": "Portfolio Proposal > Save Draft",
+                    "purpose": "다중 후보 포트폴리오 초안을 append-only 기록으로 남깁니다.",
+                    "gate": "PROPOSAL_DRAFT_READY 또는 Final Review 입력 가능",
+                    "phase": "proposal",
+                },
+                {
+                    "step": "8-10",
+                    "title": "저장 proposal 최종 검토",
+                    "path": "Final Review",
+                    "purpose": "component risk와 paper observation을 포함해 최종 판단을 남깁니다.",
+                    "gate": "선정 / 보류 / 거절 / 재검토 판단이 저장됨",
+                    "phase": "final",
+                },
+            ],
+        },
+        "저장 Mix 경로": {
+            "summary": (
+                "Compare에서 이미 비중이 정해진 saved mix를 다시 열어 replay한 뒤, "
+                "workflow 기록이 없으면 Candidate Review가 아니라 Portfolio Proposal 초안으로 연결하는 경로입니다."
+            ),
+            "fit": "GTAA 60% + Equal Weight 40%처럼 이미 weight setup이 저장된 mix를 workflow 기록으로 승격할 때",
+            "skip": "Candidate Review를 건너뜁니다. saved mix는 단일 전략 후보가 아니라 이미 구성된 포트폴리오 setup입니다.",
+            "records": [
+                {"기록": "Saved Portfolios", "역할": "재사용 가능한 weight setup"},
+                {"기록": "Portfolio Proposal Registry", "역할": "saved setup을 workflow proposal로 연결"},
+                {"기록": "Final Selection Decision", "역할": "proposal에 대한 최종 판단"},
+            ],
+            "steps": [
+                {
+                    "step": "5A",
+                    "title": "Mix 생성 또는 다시 열기",
+                    "path": "Compare & Portfolio Builder",
+                    "purpose": "weighted portfolio setup을 저장하거나 불러옵니다.",
+                    "gate": "Replay Saved Mix 실행 가능",
+                    "phase": "compare",
+                },
+                {
+                    "step": "5B",
+                    "title": "Mix 검증 보드",
+                    "path": "저장 Mix 다시 열기",
+                    "purpose": "Saved Mix Replay, Data Trust, component Real-Money, Workflow Registry를 분리해 봅니다.",
+                    "gate": "Workflow Registry가 NOT RECORDED이면 proposal 연결 필요",
+                    "phase": "compare",
+                },
+                {
+                    "step": "7",
+                    "title": "Proposal로 연결",
+                    "path": "Use This Mix In Portfolio Proposal",
+                    "purpose": "saved setup을 Portfolio Proposal draft로 남깁니다.",
+                    "gate": "비중과 component evidence가 proposal에 포함됨",
+                    "phase": "proposal",
+                },
+                {
+                    "step": "8-10",
+                    "title": "저장 proposal 최종 검토",
+                    "path": "Final Review",
+                    "purpose": "saved mix proposal을 검증하고 최종 판단을 기록합니다.",
+                    "gate": "최종 판단 record가 저장됨",
+                    "phase": "final",
+                },
+            ],
+        },
+        "재검토 / 막힘 경로": {
+            "summary": (
+                "어느 단계에서든 hold, blocked, insufficient evidence, re-review가 나오면 "
+                "최종 판단으로 직행하지 않고 원인 화면으로 되돌아가는 경로입니다."
+            ),
+            "fit": "결과가 좋아 보여도 데이터, blocker, 비중, paper observation 근거가 부족할 때",
+            "skip": "막힘 상태에서는 Final Review 저장을 목표로 하지 않습니다. 원인을 해결한 뒤 원래 경로로 복귀합니다.",
+            "records": [
+                {"기록": "Backtest Run History", "역할": "재실행 / form load 기준"},
+                {"기록": "Review Note 또는 Final Decision", "역할": "보류 / 재검토 사유를 남길 때만 사용"},
+            ],
+            "steps": [
+                {
+                    "step": "3-4",
+                    "title": "Hold 해결",
+                    "path": "Real-Money > Hold 해결 가이드",
+                    "purpose": "promotion hold, deployment blocked, policy caution 원인을 확인합니다.",
+                    "gate": "핵심 blocker 해결 후 다시 실행",
+                    "phase": "stop",
+                },
+                {
+                    "step": "5",
+                    "title": "Compare 재검토",
+                    "path": "Compare & Portfolio Builder",
+                    "purpose": "상대 근거가 약하거나 후보가 부족하면 비교군을 바꿉니다.",
+                    "gate": "PASS 또는 CONDITIONAL 후보 확보",
+                    "phase": "compare",
+                },
+                {
+                    "step": "6",
+                    "title": "Packaging 보강",
+                    "path": "Candidate Review",
+                    "purpose": "source, snapshot, reason, next action, registry scope 누락을 채웁니다.",
+                    "gate": "저장 가능하고 route가 Proposal 준비 상태",
+                    "phase": "candidate",
+                },
+                {
+                    "step": "7",
+                    "title": "Proposal 수정",
+                    "path": "Portfolio Proposal",
+                    "purpose": "비중 합계, core anchor, active 후보 상태를 고칩니다.",
+                    "gate": "proposal blocker 제거",
+                    "phase": "proposal",
+                },
+                {
+                    "step": "8-9",
+                    "title": "Final Review 보류",
+                    "path": "Final Review",
+                    "purpose": "검증 근거가 부족하면 HOLD 또는 RE_REVIEW로 남기고 다시 검토합니다.",
+                    "gate": "paper observation 또는 재검토 조건이 명확해짐",
+                    "phase": "final",
+                },
+            ],
+        },
+    }
+
+
+def _render_flow_track(steps: list[dict[str, str]]) -> None:
+    card_html: list[str] = []
+    for index, step in enumerate(steps):
+        phase_class = escape(step.get("phase", "data"))
+        card_html.append(
+            f"""
+            <div class="qdp-flow-card qdp-flow-{phase_class}">
+              <div class="qdp-flow-step">STEP {escape(str(step.get("step", "")))}</div>
+              <div class="qdp-flow-title">{escape(step.get("title", ""))}</div>
+              <div class="qdp-flow-path">{escape(step.get("path", ""))}</div>
+              <div class="qdp-flow-purpose">{escape(step.get("purpose", ""))}</div>
+              <div class="qdp-flow-gate">
+                <span>다음 조건</span>
+                {escape(step.get("gate", ""))}
+              </div>
+            </div>
+            """
+        )
+        if index < len(steps) - 1:
+            card_html.append('<div class="qdp-flow-arrow">-&gt;</div>')
+
+    st.html(
+        dedent(
+            f"""
+        <style>
+          .qdp-flow-track {{
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.55rem;
+            align-items: stretch;
+            margin: 0.35rem 0 1rem;
+          }}
+          .qdp-flow-card {{
+            flex: 1 1 185px;
+            min-width: 170px;
+            max-width: 245px;
+            border: 1px solid #d7dce2;
+            border-top: 4px solid #64748b;
+            border-radius: 8px;
+            background: #ffffff;
+            padding: 0.75rem 0.8rem;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+          }}
+          .qdp-flow-data {{
+            border-top-color: #2f6f9f;
+          }}
+          .qdp-flow-signal {{
+            border-top-color: #7c6f3f;
+          }}
+          .qdp-flow-compare {{
+            border-top-color: #4f7c45;
+          }}
+          .qdp-flow-candidate {{
+            border-top-color: #2f7d57;
+          }}
+          .qdp-flow-proposal {{
+            border-top-color: #9a6a1d;
+          }}
+          .qdp-flow-final {{
+            border-top-color: #5f6477;
+          }}
+          .qdp-flow-stop {{
+            border-top-color: #b45309;
+          }}
+          .qdp-flow-step {{
+            color: #475569;
+            font-size: 0.76rem;
+            font-weight: 700;
+            letter-spacing: 0;
+            margin-bottom: 0.15rem;
+          }}
+          .qdp-flow-title {{
+            color: #111827;
+            font-size: 0.98rem;
+            font-weight: 750;
+            line-height: 1.35;
+            margin-bottom: 0.35rem;
+          }}
+          .qdp-flow-path {{
+            color: #334155;
+            font-size: 0.78rem;
+            font-weight: 650;
+            line-height: 1.35;
+            margin-bottom: 0.45rem;
+          }}
+          .qdp-flow-purpose {{
+            color: #374151;
+            font-size: 0.86rem;
+            line-height: 1.45;
+            margin-bottom: 0.55rem;
+          }}
+          .qdp-flow-gate {{
+            color: #334155;
+            font-size: 0.78rem;
+            line-height: 1.4;
+            border-top: 1px solid #e5e7eb;
+            padding-top: 0.45rem;
+          }}
+          .qdp-flow-gate span {{
+            display: block;
+            color: #64748b;
+            font-weight: 700;
+            margin-bottom: 0.1rem;
+          }}
+          .qdp-flow-arrow {{
+            align-self: center;
+            color: #64748b;
+            font-weight: 800;
+            padding: 0 0.1rem;
+          }}
+          @media (max-width: 760px) {{
+            .qdp-flow-track {{
+              display: grid;
+              grid-template-columns: 1fr;
+            }}
+            .qdp-flow-card {{
+              max-width: none;
+            }}
+            .qdp-flow-arrow {{
+              display: none;
+            }}
+          }}
+        </style>
+        <div class="qdp-flow-track">
+          {''.join(card_html)}
+        </div>
+        """
+        ).strip()
+    )
+
+
+def _render_portfolio_flow_map() -> None:
+    flow_maps = _portfolio_flow_map_data()
+    flow_options = list(flow_maps.keys())
+
+    st.markdown("### 포트폴리오 플로우 맵")
+    st.caption(
+        "1~10단계를 하나의 목록으로 읽기 전에, 어떤 포트폴리오를 만들고 있는지에 따라 실제로 지나가는 경로를 먼저 고릅니다."
+    )
+
+    state_key = "guides_portfolio_flow_map_route"
+    if st.session_state.get(state_key) not in flow_options:
+        st.session_state[state_key] = flow_options[0]
+
+    if hasattr(st, "segmented_control"):
+        st.segmented_control(
+            "확인할 포트폴리오 경로",
+            options=flow_options,
+            selection_mode="single",
+            required=True,
+            key=state_key,
+        )
+        selected_flow = str(st.session_state.get(state_key) or flow_options[0])
+    else:
+        selected_flow = st.radio(
+            "확인할 포트폴리오 경로",
+            options=flow_options,
+            horizontal=True,
+            key=state_key,
+        )
+
+    flow = flow_maps.get(selected_flow) or flow_maps[flow_options[0]]
+
+    st.markdown(f"#### {selected_flow}")
+    st.caption(flow["summary"])
+    _render_flow_track(flow["steps"])
+
+    info_cols = st.columns([1.2, 1.4, 1.6])
+    with info_cols[0]:
+        st.markdown("##### 언제 쓰나")
+        st.info(flow["fit"])
+    with info_cols[1]:
+        st.markdown("##### 이 경로에서 달라지는 점")
+        st.warning(flow["skip"])
+    with info_cols[2]:
+        st.markdown("##### 생성되거나 읽는 기록")
+        st.dataframe(pd.DataFrame(flow["records"]), width="stretch", hide_index=True)
+
+    st.caption(
+        "이 맵은 화면 이동과 저장 책임을 구분하기 위한 Guide입니다. "
+        "Final Review의 최종 판단도 live approval, broker order, 자동매매 지시는 아닙니다."
+    )
+
+
 def _render_guides_page() -> None:
     st.title("Guides")
     st.caption("현재 운영 기준과 phase 문서를 빠르게 찾는 참고 페이지입니다.")
@@ -3104,6 +3516,8 @@ def _render_guides_page() -> None:
             "`실전 후보로 선정`은 live approval, broker order, 자동매매 지시가 아닙니다. "
             "이 프로그램의 현재 최종 지점은 투자 후보 선정 여부 확인입니다."
         )
+
+    _render_portfolio_flow_map()
 
     st.markdown("### 1~10 단계 실행 흐름")
 

@@ -96,14 +96,29 @@ Ingestion / Data Trust
 - `Paper Tracking Ledger`는 Phase 33에서 추가된 append-only 기록 흐름이지만, 현재 주 사용자 흐름에서는 Final Review의 inline paper observation 기준으로 흡수한다. 기존 ledger row는 backward compatibility / 과거 QA 기록으로 읽을 수 있다.
 - Phase 35에서 별도 `Post-Selection Guide` panel은 과한 단계로 판단해 active workflow에서 제거했다. 최종 판단과 투자 가능 / 투자하면 안 됨 / 내용 부족 / 재검토 필요 해석은 `Backtest > Final Review`의 saved final decision review에서 확인한다.
 
-현재 Guides 화면은 네 묶음으로 정리한다.
+현재 Guides 화면은 다섯 묶음으로 정리한다.
 
 | 묶음 | 내용 |
 |---|---|
 | `핵심 개념 가이드` | 실전 승격 흐름, Real-Money Contract, GTAA Risk-Off 후보군, interval, Compare 대상 선정법, Portfolio Proposal -> Final Review -> 최종 판단 완료 해석 |
+| `포트폴리오 플로우 맵` | 단일 후보, 여러 후보 portfolio proposal, 저장 Mix, 재검토 / blocker 경로를 선택해 시각적 순서도와 생성 / 참조 기록을 함께 읽는다 |
 | `1~10 단계 실행 흐름` | 데이터 최신화부터 Final Review 저장 결과 확인까지의 단계별 흐름. 각 단계는 expander로 접어 읽는다 |
 | `단계 통과 기준` | 4->5, 5->6, 6->7, 7->8, 8->9, 9->10, 최종 판단 해석처럼 다음 단계로 넘길지 판단하는 stop/go 기준 |
 | `문서와 파일` | 현재 먼저 볼 문서, 후보 검토 / 실행 재사용 JSONL 저장소 지도, proposal / paper ledger / final decision guide와 registry path, live approval이 아님을 구분하는 운영 경계 |
+
+`포트폴리오 플로우 맵`은 1~10단계 텍스트 목록 위에 배치한다.
+사용자는 먼저 현재 만들려는 포트폴리오 유형을 고르고,
+해당 경로에서 실제로 지나가는 화면, 생략되는 단계, 생성되거나 읽는 기록을 본 뒤
+아래의 상세 1~10단계와 통과 기준을 이어서 읽는다.
+
+경로별 핵심 차이는 아래와 같다.
+
+| 경로 | 핵심 차이 |
+|---|---|
+| `단일 후보 경로` | Candidate Review와 Pre-Live 기록 후 Portfolio Proposal에서 단일 후보 직행 평가를 사용하며, proposal draft 저장을 반복하지 않는다 |
+| `여러 후보 포트폴리오 경로` | 여러 current candidate를 역할 / 비중 / 목적이 있는 proposal draft로 저장한 뒤 Final Review에서 읽는다 |
+| `저장 Mix 경로` | saved weighted portfolio setup은 Candidate Review가 아니라 `Use This Mix In Portfolio Proposal`로 proposal registry에 연결한다 |
+| `재검토 / 막힘 경로` | hold / blocked / insufficient evidence / re-review 상태에서는 Final Review 직행이 아니라 원인 화면으로 되돌아간다 |
 
 ## Phase 30 Portfolio Proposal 계약
 
