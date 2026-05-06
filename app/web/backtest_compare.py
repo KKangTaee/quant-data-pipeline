@@ -794,6 +794,256 @@ def _build_candidate_draft_readiness_evaluation(
         "selected_bundle": selected_bundle,
     }
 
+# Read append-only workflow registries to see whether a saved mix has moved beyond
+# reusable setup storage into proposal / final-review workflow records.
+def _find_saved_mix_workflow_references(record: dict[str, Any]) -> list[dict[str, str]]:
+    portfolio_id = str(record.get("portfolio_id") or "").strip()
+    portfolio_name = str(record.get("name") or "").strip()
+    search_terms = [term for term in {portfolio_id, portfolio_name} if term]
+    if not search_terms:
+        return []
+
+    registry_paths = [
+        PROJECT_ROOT / ".note" / "finance" / "registries" / "CURRENT_CANDIDATE_REGISTRY.jsonl",
+        PROJECT_ROOT / ".note" / "finance" / "registries" / "PRE_LIVE_CANDIDATE_REGISTRY.jsonl",
+        PROJECT_ROOT / ".note" / "finance" / "registries" / "PORTFOLIO_PROPOSAL_REGISTRY.jsonl",
+        PROJECT_ROOT / ".note" / "finance" / "registries" / "FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl",
+    ]
+    references: list[dict[str, str]] = []
+    for path in registry_paths:
+        if not path.exists():
+            continue
+        for line_number, line in enumerate(path.read_text(encoding="utf-8", errors="ignore").splitlines(), start=1):
+            if any(term in line for term in search_terms):
+                references.append(
+                    {
+                        "Registry": path.name,
+                        "Line": str(line_number),
+                        "Matched": ", ".join(term for term in search_terms if term in line),
+                    }
+                )
+    return references
+
+def _weighted_bundle_actual_end(bundle: dict[str, Any]) -> str | None:
+    result_df = bundle.get("result_df")
+    if not isinstance(result_df, pd.DataFrame) or result_df.empty or "Date" not in result_df.columns:
+        return None
+    actual_end = pd.to_datetime(result_df["Date"], errors="coerce").max()
+    if pd.isna(actual_end):
+        return None
+    return str(actual_end.date())
+
+def _safe_int_value(value: Any) -> int:
+    try:
+        if value is None or value == "":
+            return 0
+        return int(float(value))
+    except (TypeError, ValueError):
+        return 0
+
+# Evaluate a saved weighted mix as a reusable portfolio setup, separate from the
+# single-strategy 5단계 Candidate Review handoff gate.
+def _build_saved_mix_validation_evaluation(
+    *,
+    record: dict[str, Any],
+    weighted_bundle: dict[str, Any] | None,
+    bundles: list[dict[str, Any]] | None,
+) -> dict[str, Any]:
+    replay_ready = (
+        isinstance(weighted_bundle, dict)
+        and isinstance(weighted_bundle.get("summary_df"), pd.DataFrame)
+        and not weighted_bundle["summary_df"].empty
+        and isinstance(weighted_bundle.get("result_df"), pd.DataFrame)
+        and not weighted_bundle["result_df"].empty
+    )
+    compare_context = dict(record.get("compare_context") or {})
+    requested_end = compare_context.get("end")
+    actual_end = _weighted_bundle_actual_end(weighted_bundle or {}) if replay_ready else None
+    requested_end_ts = pd.to_datetime(requested_end, errors="coerce")
+    actual_end_ts = pd.to_datetime(actual_end, errors="coerce")
+    shortened_days = (
+        (requested_end_ts.date() - actual_end_ts.date()).days
+        if pd.notna(requested_end_ts)
+        and pd.notna(actual_end_ts)
+        and actual_end_ts.date() < requested_end_ts.date()
+        else 0
+    )
+
+    data_rows = list((weighted_bundle or {}).get("component_data_trust_rows") or [])
+    has_component_error = any(str(row.get("Price Freshness") or "").strip().lower() == "error" for row in data_rows)
+    has_component_review = shortened_days > 0 or any(
+        str(row.get("Interpretation") or "").strip() not in {"", "-", "눈에 띄는 데이터 이슈 없음"}
+        or _safe_int_value(row.get("Warnings")) > 0
+        or _safe_int_value(row.get("Excluded Tickers")) > 0
+        or _safe_int_value(row.get("Malformed Tickers")) > 0
+        for row in data_rows
+    )
+    if not replay_ready:
+        data_status = "FAIL"
+        data_score = 0.0
+        data_judgment = "replay 결과 없음"
+    elif has_component_error:
+        data_status = "FAIL"
+        data_score = 0.0
+        data_judgment = "구성 전략 데이터에 error가 있음"
+    elif has_component_review:
+        data_status = "REVIEW"
+        data_score = 1.0
+        data_judgment = "구성 전략 기간 / warning 확인 필요"
+    else:
+        data_status = "PASS"
+        data_score = 2.0
+        data_judgment = "구성 전략 데이터 조건이 깨끗함"
+
+    component_bundles = list(bundles or [])
+    real_money_missing: list[str] = []
+    real_money_blocked: list[str] = []
+    for bundle in component_bundles:
+        meta = dict(bundle.get("meta") or {})
+        strategy_name = str(bundle.get("strategy_name") or meta.get("strategy_name") or "-")
+        promotion = str(meta.get("promotion_decision") or "").strip().lower()
+        deployment = str(meta.get("deployment_readiness_status") or "").strip().lower()
+        if not meta.get("real_money_hardening"):
+            real_money_missing.append(strategy_name)
+        if promotion == "hold" or deployment == "blocked":
+            real_money_blocked.append(strategy_name)
+    if real_money_blocked:
+        real_money_status = "FAIL"
+        real_money_score = 0.0
+        real_money_judgment = "Real-Money blocker가 있는 구성 전략 포함"
+    elif real_money_missing:
+        real_money_status = "REVIEW"
+        real_money_score = 1.0
+        real_money_judgment = "Real-Money 정보가 없는 구성 전략 포함"
+    elif component_bundles:
+        real_money_status = "PASS"
+        real_money_score = 2.0
+        real_money_judgment = "구성 전략 Real-Money gate가 막지 않음"
+    else:
+        real_money_status = "REVIEW"
+        real_money_score = 1.0
+        real_money_judgment = "구성 전략 replay 정보 확인 필요"
+
+    workflow_references = _find_saved_mix_workflow_references(record)
+    workflow_status = "PASS" if workflow_references else "NOT RECORDED"
+    workflow_score = 3.0 if workflow_references else 0.0
+    workflow_judgment = (
+        "proposal / final review workflow 기록 있음"
+        if workflow_references
+        else "saved mix setup만 있고 5~10단계 workflow registry 기록은 아직 없음"
+    )
+
+    replay_score = 3.0 if replay_ready else 0.0
+    score = round(replay_score + data_score + real_money_score + workflow_score, 1)
+    if not replay_ready or data_status == "FAIL" or real_money_status == "FAIL":
+        stage_status = "BLOCKED"
+        verdict = "Replay 또는 구성 전략 gate를 먼저 해결해야 합니다."
+        tone = "error"
+    elif workflow_status == "PASS":
+        stage_status = "WORKFLOW RECORDED"
+        verdict = "저장 mix가 workflow registry에서도 확인됩니다."
+        tone = "success"
+    else:
+        stage_status = "REPLAY OK"
+        verdict = "성과 replay는 가능하지만, 5~10단계 workflow 통과 기록은 아직 없습니다."
+        tone = "warning"
+
+    criteria_rows = [
+        {
+            "기준": "Saved Mix Replay",
+            "상태": "PASS" if replay_ready else "FAIL",
+            "현재 값": "weighted result 생성됨" if replay_ready else "weighted result 없음",
+            "점수": f"{replay_score:g} / 3",
+            "판단": "저장된 compare context와 weights로 다시 실행 가능" if replay_ready else "Replay Saved Mix를 다시 실행해야 함",
+        },
+        {
+            "기준": "Mix Data Trust",
+            "상태": data_status,
+            "현재 값": f"actual_end={actual_end or '-'}, requested_end={requested_end or '-'}",
+            "점수": f"{data_score:g} / 2",
+            "판단": (
+                f"{data_judgment}, {shortened_days}일 짧음"
+                if shortened_days
+                else data_judgment
+            ),
+        },
+        {
+            "기준": "Component Real-Money",
+            "상태": real_money_status,
+            "현재 값": real_money_judgment,
+            "점수": f"{real_money_score:g} / 2",
+            "판단": ", ".join(real_money_blocked or real_money_missing) or "특이사항 없음",
+        },
+        {
+            "기준": "Workflow Registry",
+            "상태": workflow_status,
+            "현재 값": f"{len(workflow_references)}개 참조",
+            "점수": f"{workflow_score:g} / 3",
+            "판단": workflow_judgment,
+        },
+    ]
+
+    return {
+        "score": score,
+        "stage_status": stage_status,
+        "verdict": verdict,
+        "tone": tone,
+        "criteria_rows": criteria_rows,
+        "workflow_references": workflow_references,
+        "data_rows": data_rows,
+        "actual_end": actual_end,
+        "requested_end": requested_end,
+        "shortened_days": shortened_days,
+    }
+
+# Render the saved-mix stop/go board in the saved portfolio workspace.
+def _render_saved_mix_validation_board(record: dict[str, Any]) -> None:
+    weighted_bundle = st.session_state.get("backtest_weighted_bundle")
+    bundles = st.session_state.get("backtest_compare_bundles") or []
+    evaluation = _build_saved_mix_validation_evaluation(
+        record=record,
+        weighted_bundle=weighted_bundle,
+        bundles=bundles,
+    )
+    with st.container(border=True):
+        st.markdown("### Portfolio Mix 검증 보드")
+        st.caption(
+            "이 보드는 저장 mix 자체를 다시 열었을 때 보는 검증입니다. "
+            "개별 전략을 Candidate Review로 보내는 5단계 보드와 분리해서, mix replay 가능 여부와 workflow 기록 여부를 봅니다."
+        )
+        metric_cols = st.columns([0.2, 0.18, 0.18, 0.44], gap="small")
+        metric_cols[0].metric("Mix 상태", str(evaluation["stage_status"]))
+        metric_cols[1].metric("Readiness", f"{float(evaluation['score']):.1f} / 10")
+        metric_cols[2].metric("Blockers", sum(1 for row in evaluation["criteria_rows"] if row["상태"] == "FAIL"))
+        with metric_cols[3]:
+            st.caption("판정")
+            st.markdown(f"**{evaluation['verdict']}**")
+            st.caption("다음 행동")
+            if evaluation["stage_status"] == "WORKFLOW RECORDED":
+                st.markdown("Portfolio Proposal / Final Review 쪽 기록을 열어 실제 통과 판단을 이어서 확인합니다.")
+            elif evaluation["tone"] == "warning":
+                st.markdown("이 mix를 실제 workflow 후보로 쓰려면 Portfolio Proposal 또는 Final Review 단계에 별도로 기록해야 합니다.")
+            else:
+                st.markdown("Replay result, Data Trust, Real-Money blocker를 먼저 다시 확인합니다.")
+        st.progress(max(0.0, min(float(evaluation["score"]) / 10.0, 1.0)))
+        message = (
+            f"{evaluation['verdict']} "
+            "Saved mix는 reusable setup이므로, 이 보드에서 workflow registry 기록 유무를 따로 확인합니다."
+        )
+        if evaluation["tone"] == "success":
+            st.success(message)
+        elif evaluation["tone"] == "warning":
+            st.warning(message)
+        else:
+            st.error(message)
+        st.dataframe(pd.DataFrame(evaluation["criteria_rows"]), use_container_width=True, hide_index=True)
+        if evaluation["workflow_references"]:
+            with st.expander("Workflow Registry References", expanded=False):
+                st.dataframe(pd.DataFrame(evaluation["workflow_references"]), use_container_width=True, hide_index=True)
+        if evaluation["data_rows"]:
+            with st.expander("Component Data Trust Snapshot", expanded=False):
+                st.dataframe(pd.DataFrame(evaluation["data_rows"]), use_container_width=True, hide_index=True)
+
 # Render the stage-5 stop/go board before a strategy is handed off to Candidate Review.
 def _render_candidate_draft_readiness_box(bundles: list[dict[str, Any]]) -> None:
     if not bundles:
@@ -1794,11 +2044,8 @@ def _run_saved_portfolio_record(record: dict[str, Any]) -> None:
         "weights_percent": weights_percent,
         "upstream_source_context": source_context,
     }
-    st.session_state.backtest_compare_workspace_mode_request = "전략 비교"
-    st.session_state.backtest_compare_result_notice = (
-        f"저장된 portfolio mix `{record.get('name')}`를 replay했습니다. "
-        "저장 Mix Replay 결과와 구성 전략 Compare 검증을 나누어 확인하세요."
-    )
+    st.session_state.backtest_saved_portfolio_replay_id = str(record.get("portfolio_id") or "")
+    st.session_state.backtest_compare_result_notice = None
     st.session_state.backtest_requested_panel = "Compare & Portfolio Builder"
 
     append_backtest_run_history(
@@ -2374,6 +2621,27 @@ def _render_saved_portfolio_workspace() -> None:
             "`Replay Saved Mix`는 저장 당시의 compare부터 weighted portfolio 결과까지 한 번에 다시 실행합니다."
         )
 
+    if _saved_portfolio_replay_matches_selected_record(selected_record):
+        st.divider()
+        _render_saved_mix_replay_result_card()
+        _render_saved_mix_validation_board(selected_record)
+        with st.expander("Weighted Portfolio Result 상세", expanded=True):
+            weighted_bundle = st.session_state.get("backtest_weighted_bundle")
+            if weighted_bundle:
+                _render_weighted_portfolio_result(weighted_bundle)
+            else:
+                st.info("Replay 결과가 아직 없습니다. `Replay Saved Mix`를 다시 실행해 주세요.")
+        bundles = st.session_state.get("backtest_compare_bundles") or []
+        if bundles:
+            with st.expander("구성 전략 참고 Summary", expanded=False):
+                overview_rows = _build_compare_strategy_overview_rows(list(bundles))
+                if overview_rows:
+                    st.dataframe(pd.DataFrame(overview_rows), use_container_width=True, hide_index=True)
+                data_rows = _build_strategy_data_trust_rows(list(bundles))
+                if data_rows:
+                    st.markdown("##### Component Data Trust")
+                    st.dataframe(pd.DataFrame(data_rows), use_container_width=True, hide_index=True)
+
 def _render_weighted_portfolio_result(bundle: dict) -> None:
     if st.session_state.backtest_weighted_error:
         st.error(st.session_state.backtest_weighted_error)
@@ -2813,6 +3081,7 @@ def _queue_saved_portfolio_compare_prefill(saved_portfolio: dict[str, Any]) -> N
     source_context = dict(saved_portfolio.get("source_context") or {})
     st.session_state.backtest_compare_prefill_payload = compare_context
     st.session_state.backtest_compare_prefill_pending = True
+    st.session_state.backtest_saved_portfolio_replay_id = None
     st.session_state.backtest_compare_workspace_mode_request = "전략 비교"
     st.session_state.backtest_compare_prefill_notice = (
         f"저장된 포트폴리오 `{saved_portfolio.get('name')}`의 compare 전략/기간/세부 설정과 "
@@ -3633,7 +3902,26 @@ def _resolve_saved_portfolio_dynamic_inputs(
 
 def _is_saved_mix_replay_context() -> bool:
     source_context = dict(st.session_state.get("backtest_compare_source_context") or {})
-    return str(source_context.get("source_kind") or "").strip() == "saved_portfolio"
+    saved_portfolio_id = str(source_context.get("saved_portfolio_id") or "")
+    replay_id = str(st.session_state.get("backtest_saved_portfolio_replay_id") or "")
+    return (
+        str(source_context.get("source_kind") or "").strip() == "saved_portfolio"
+        and bool(replay_id)
+        and replay_id == saved_portfolio_id
+    )
+
+# Keep replay details attached to the saved mix the user is currently inspecting.
+def _saved_portfolio_replay_matches_selected_record(record: dict[str, Any]) -> bool:
+    source_context = dict(st.session_state.get("backtest_compare_source_context") or {})
+    replay_id = str(st.session_state.get("backtest_saved_portfolio_replay_id") or "")
+    selected_id = str(record.get("portfolio_id") or "")
+    return (
+        bool(replay_id)
+        and replay_id == selected_id
+        and str(source_context.get("source_kind") or "").strip() == "saved_portfolio"
+        and str(source_context.get("saved_portfolio_id") or "") == selected_id
+        and isinstance(st.session_state.get("backtest_weighted_bundle"), dict)
+    )
 
 def _render_saved_mix_replay_result_card() -> None:
     source_context = dict(st.session_state.get("backtest_compare_source_context") or {})
@@ -3647,7 +3935,7 @@ def _render_saved_mix_replay_result_card() -> None:
         st.markdown("### 저장 Mix Replay 결과")
         st.caption(
             "이 영역은 저장된 비중 포트폴리오 mix 자체를 다시 연 결과입니다. "
-            "아래 `구성 전략 Compare 검증`은 mix 안의 개별 전략을 6단계 Candidate Review로 보낼 때만 사용합니다."
+            "아래 `Portfolio Mix 검증 보드`에서 mix replay와 workflow 기록 여부를 분리해서 확인합니다."
         )
         summary_cols = st.columns(4, gap="small")
         with summary_cols[0]:
@@ -3690,14 +3978,10 @@ def _render_strategy_compare_workspace() -> None:
         st.session_state.backtest_compare_result_notice = None
     if st.session_state.backtest_compare_bundles or st.session_state.backtest_compare_error:
         if _is_saved_mix_replay_context():
-            _render_saved_mix_replay_result_card()
-            with st.container(border=True):
-                st.markdown("### 구성 전략 Compare 검증")
-                st.caption(
-                    "저장 Mix를 구성한 전략들을 5단계 기준으로 다시 비교합니다. "
-                    "이 검증은 mix 자체가 아니라, 구성 전략 중 하나를 6단계 Candidate Review로 보낼 때 사용하는 판단입니다."
-                )
-                _render_compare_results()
+            st.info(
+                "최근 `Replay Saved Mix` 결과는 `저장 Mix 다시 열기` 화면에서 바로 확인합니다. "
+                "새로운 5단계 전략 비교를 하려면 아래 입력을 조정한 뒤 `Run Strategy Comparison`을 실행하세요."
+            )
         else:
             with st.container(border=True):
                 st.markdown("### 5단계 Compare 결과")
@@ -5112,6 +5396,7 @@ def _render_strategy_compare_workspace() -> None:
         else:
             selected_strategy_execution_names.append(strategy_name)
     if compare_submitted:
+        st.session_state.backtest_saved_portfolio_replay_id = None
         st.session_state.backtest_compare_source_context = {
             "source_kind": "manual_compare",
             "source_label": "Manual Strategy Comparison",

@@ -275,8 +275,10 @@ Compare 결과 상단에는 `5단계 Compare 검증 보드`를 둔다.
 저장 Mix replay:
 
 - `Replay Saved Mix`는 저장된 weighted portfolio mix 자체와 그 구성 전략 compare를 함께 복원한다.
-- UI에서는 `저장 Mix Replay 결과`를 먼저 보여주고, 그 아래 `구성 전략 Compare 검증`에서 개별 전략의 5단계 gate를 보여준다.
-- `구성 전략 Compare 검증`은 mix 자체의 최종 판단이 아니라, 구성 전략 중 하나를 6단계 Candidate Review로 보낼 때만 쓰는 보조 판단이다.
+- UI에서는 `저장 Mix 다시 열기` 화면 안에서 `저장 Mix Replay 결과`와 `Portfolio Mix 검증 보드`를 바로 보여준다.
+- `Portfolio Mix 검증 보드`는 saved mix 자체의 replay 가능 여부, mix data trust, 구성 전략 Real-Money gate, workflow registry 기록 여부를 분리해서 보여준다.
+- 저장 mix는 reusable setup이므로, replay 성과가 좋아도 자동으로 5~10단계 통과 기록이 되지 않는다. `Workflow Registry`가 `NOT RECORDED`이면 Portfolio Proposal / Final Review 쪽 기록이 아직 없다는 뜻이다.
+- 개별 전략을 6단계 Candidate Review로 보낼 때만 `전략 비교` 화면의 `5단계 Compare 검증 보드`를 사용한다.
 
 ## Strategy Capability Snapshot 흐름
 
@@ -354,8 +356,8 @@ Backtest > Compare & Portfolio Builder
 Backtest > Compare & Portfolio Builder
   -> 저장 Mix 다시 열기 화면
   -> Load Saved Mix Into Compare or Replay Saved Mix
-  -> 전략 비교 화면으로 자동 이동
-  -> 5단계 Compare 결과 / weighted result 확인
+  -> Replay Saved Mix는 같은 화면에서 replay result / Portfolio Mix 검증 보드 / weighted result 확인
+  -> Load Saved Mix Into Compare는 전략 비교 화면으로 이동해 form을 다시 채움
 ```
 
 구분:
@@ -363,12 +365,20 @@ Backtest > Compare & Portfolio Builder
 - `전략 비교`: 새 compare를 실행하고, 그 결과를 기반으로 weighted portfolio mix를 만든 뒤 저장한다.
 - `저장 Mix 다시 열기`: `.note/finance/saved/SAVED_PORTFOLIOS.jsonl`에 저장한 reusable setup을 다시 불러오거나 replay한다.
 - `Load Saved Mix Into Compare`: 저장된 compare 구성과 weight를 form에 다시 채운다.
-- `Replay Saved Mix`: 저장 당시 context로 compare와 weighted portfolio를 다시 실행하고, 결과 확인을 위해 `전략 비교` 화면으로 되돌린다.
+- `Replay Saved Mix`: 저장 당시 context로 compare와 weighted portfolio를 다시 실행하고, `저장 Mix 다시 열기` 화면 아래에 replay 결과를 바로 렌더링한다.
 
 2026-05-06 이후 Compare workspace의 `전략 비교` / `저장 Mix 다시 열기` 전환은 `st.tabs`가 아니라 상태를 가진 선택 UI로 관리한다.
 이는 saved mix replay 후에도 결과가 숨은 탭 안에 남지 않게 하기 위한 것이다.
 최근 compare 결과는 `전략 비교` 화면 상단의 `5단계 Compare 결과` 박스에 먼저 표시하고,
 그 아래에 입력 form과 weighted portfolio builder를 둔다.
+
+2026-05-06 후속 UX 정리:
+
+- saved mix replay는 더 이상 `전략 비교` 화면으로 강제 이동하지 않는다.
+- `저장 Mix 다시 열기` 안에서 `Portfolio Mix 검증 보드`를 보여준다.
+- 이 보드는 `Saved Mix Replay`, `Mix Data Trust`, `Component Real-Money`, `Workflow Registry`를 따로 판단한다.
+- `Workflow Registry`가 `NOT RECORDED`이면 저장 mix가 성과 replay는 가능하지만 Portfolio Proposal / Final Review registry에는 아직 기록되지 않은 상태다.
+- 따라서 saved mix replay 결과와 5단계 개별 전략 handoff 판단이 한 화면에서 섞이지 않는다.
 
 저장된 weighted portfolio는 live trading 승인 기록이 아니다.
 후보 조합을 다시 재현하고 검증하기 위한 operator workflow artifact다.

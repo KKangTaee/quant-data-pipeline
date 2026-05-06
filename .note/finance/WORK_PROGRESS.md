@@ -3344,3 +3344,11 @@ Detailed historical logs were archived on `2026-04-13`.
   - `Send Selected Strategy To Candidate Review` 버튼은 `다음 행동` 영역으로 분리해, 버튼을 누른 뒤부터 6단계 Candidate Review가 시작된다는 경계를 화면에 남겼다.
   - `Replay Saved Mix`는 `저장 Mix Replay 결과`와 `구성 전략 Compare 검증`을 나누어 표시해 mix 자체 결과와 개별 전략 handoff 검증을 구분하게 했다.
   - `Reference > Guides`와 `WEB_BACKTEST_UI_FLOW.md`의 5단계 / 6단계 설명을 같은 흐름으로 갱신했다.
+
+### 2026-05-06
+- Saved Mix replay UX 후속 개편:
+  - user confirmation 후 `Replay Saved Mix`가 더 이상 `전략 비교` 화면으로 강제 이동하지 않도록 변경했다.
+  - `저장 Mix 다시 열기` 화면 안에서 replay 결과, `Portfolio Mix 검증 보드`, weighted portfolio 상세 결과를 바로 확인하게 했다.
+  - mix 검증 보드는 `Saved Mix Replay`, `Mix Data Trust`, `Component Real-Money`, `Workflow Registry`를 따로 보여주며, saved mix setup과 5~10단계 workflow registry 기록을 구분한다.
+  - `portfolio_gtaa_spy_low_mdd_60_ew_growth_sector_gold_40` 같은 saved setup은 replay 성과가 있어도 proposal / final review registry에 기록되지 않았으면 `Workflow Registry=NOT RECORDED`로 표시된다.
+  - `Reference > Guides`와 `WEB_BACKTEST_UI_FLOW.md`를 같은 경계로 갱신했다.

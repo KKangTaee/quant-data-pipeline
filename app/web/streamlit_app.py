@@ -3182,10 +3182,10 @@ def _render_guides_page() -> None:
                     "`Strategy Highlights`에서 전략별 상태를 한 줄씩 비교",
                     "`Data Trust`에서 결과 기간과 가격 최신성 차이 확인",
                     "`Focused Strategy > Real-Money Contract`로 한 전략씩 깊게 읽기",
-                    "`저장 Mix 다시 열기 > Replay Saved Mix`는 mix 자체 결과와 구성 전략 compare 검증이 분리되어 보이는지 확인",
+                    "`저장 Mix 다시 열기 > Replay Saved Mix`는 같은 화면 안에서 mix 자체 결과와 Portfolio Mix 검증 보드가 보이는지 확인",
                     "`Candidate Review > 보조 도구: Send Candidates To Compare`에서 보낸 후보 묶음이 의도대로 채워졌는지 확인",
                 ],
-                "next_step": "5단계 Compare 검증이 PASS 또는 CONDITIONAL이면 버튼으로 6단계 Candidate Review에 보냅니다. 저장 Mix는 먼저 mix 자체 결과를 확인한 뒤, 필요한 경우 구성 전략 중 하나만 Candidate Review로 보냅니다.",
+                "next_step": "5단계 Compare 검증이 PASS 또는 CONDITIONAL이면 버튼으로 6단계 Candidate Review에 보냅니다. 저장 Mix는 먼저 Portfolio Mix 검증 보드에서 replay / data trust / workflow 기록 여부를 확인합니다.",
             },
             {
                 "title": "6단계. Candidate Packaging으로 운영 기록과 Proposal 진입 준비",
@@ -3349,9 +3349,9 @@ def _render_guides_page() -> None:
                 "상대 비교 근거가 있으면 `Send Selected Strategy To Candidate Review`로 6단계에 넘길 수 있습니다."
             )
             st.warning(
-                "`저장 Mix 다시 열기 > Replay Saved Mix`는 먼저 저장된 mix 자체 결과를 보여주고, "
-                "그 아래에서 구성 전략의 5단계 Compare 검증을 따로 보여줍니다. "
-                "6단계 진입은 후보 패키징 초안으로 보내는 것일 뿐, current candidate registry 저장이나 Pre-Live 운영 record 저장과는 분리됩니다."
+                "`저장 Mix 다시 열기 > Replay Saved Mix`는 같은 화면 안에서 저장된 mix 자체 결과와 "
+                "`Portfolio Mix 검증 보드`를 보여줍니다. "
+                "저장 mix는 reusable setup이므로 성과 replay가 가능해도 자동으로 5~10단계 통과 기록이 되지는 않습니다."
             )
 
         with st.expander("6단계 Candidate Packaging에서 7단계 Portfolio Proposal로 넘어가는 최소 기준", expanded=True):
