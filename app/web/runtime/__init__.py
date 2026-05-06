@@ -51,6 +51,13 @@ from .final_selection_decisions import (
     append_final_selection_decision,
     load_final_selection_decisions,
 )
+from .final_selected_portfolios import (
+    FINAL_SELECTED_PORTFOLIO_STATUS_LABELS,
+    FINAL_SELECTED_PORTFOLIO_STATUS_ORDER,
+    SELECTED_PRACTICAL_PORTFOLIO_ROUTE,
+    build_final_selected_portfolio_dashboard_row,
+    load_final_selected_portfolio_dashboard,
+)
 
 __all__ = [
     "BACKTEST_HISTORY_FILE",
@@ -63,6 +70,9 @@ __all__ = [
     "PAPER_PORTFOLIO_LEDGER_SCHEMA_VERSION",
     "FINAL_SELECTION_DECISION_REGISTRY_FILE",
     "FINAL_SELECTION_DECISION_SCHEMA_VERSION",
+    "FINAL_SELECTED_PORTFOLIO_STATUS_LABELS",
+    "FINAL_SELECTED_PORTFOLIO_STATUS_ORDER",
+    "SELECTED_PRACTICAL_PORTFOLIO_ROUTE",
     "SAVED_PORTFOLIO_FILE",
     "append_candidate_review_note",
     "append_backtest_run_history",
@@ -72,12 +82,14 @@ __all__ = [
     "append_portfolio_proposal",
     "append_pre_live_candidate_registry_row",
     "build_backtest_result_bundle",
+    "build_final_selected_portfolio_dashboard_row",
     "delete_saved_portfolio",
     "inspect_strict_annual_price_freshness",
     "load_backtest_run_history",
     "load_candidate_review_notes",
     "load_current_candidate_registry_latest",
     "load_final_selection_decisions",
+    "load_final_selected_portfolio_dashboard",
     "load_paper_portfolio_ledger",
     "load_portfolio_proposals",
     "load_pre_live_candidate_registry_latest",

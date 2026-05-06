@@ -45,6 +45,7 @@ from app.jobs.symbol_sources import filter_non_plain_symbols
 from app.web.backtest_common import QUALITY_STRICT_PRESETS, clear_backtest_preview_caches
 from app.web.backtest_candidate_library import render_candidate_library_page
 from app.web.backtest_history import render_backtest_run_history_page
+from app.web.final_selected_portfolio_dashboard import render_final_selected_portfolio_dashboard_page
 from app.web.overview_dashboard import render_overview_dashboard
 from app.web.pages.backtest import render_backtest_tab
 from finance.data.financial_statements import inspect_financial_statement_source
@@ -2412,6 +2413,10 @@ def _render_candidate_library_page() -> None:
     render_candidate_library_page()
 
 
+def _render_selected_portfolio_dashboard_page() -> None:
+    render_final_selected_portfolio_dashboard_page()
+
+
 def _render_guides_page() -> None:
     st.title("Guides")
     st.caption("현재 운영 기준과 phase 문서를 빠르게 찾는 참고 페이지입니다.")
@@ -3071,6 +3076,11 @@ def _render_guides_page() -> None:
                     "하는 일": "저장된 final decision을 다시 열어 투자 가능 후보인지, 관찰이 더 필요한지, 투자하면 안 되는지 확인합니다.",
                     "통과 후 의미": "실전 후보 선정 여부가 확인됨",
                 },
+                {
+                    "구간": "선정 이후 Operations 확인",
+                    "하는 일": "`Operations > Selected Portfolio Dashboard`에서 선정된 포트폴리오의 target allocation, evidence, next action을 다시 확인합니다.",
+                    "통과 후 의미": "최종 판단 원본을 새로 쓰지 않고 운영 대시보드에서 read-only로 읽음",
+                },
             ]
         )
         st.dataframe(final_flow_rows, use_container_width=True, hide_index=True)
@@ -3125,7 +3135,8 @@ def _render_guides_page() -> None:
         )
         st.caption(
             "큰 흐름으로는 1-5단계가 데이터 / 백테스트 / 비교 구간, 6단계가 후보 패키징 구간, "
-            "7단계가 Portfolio Proposal 구성 구간, 8-10단계가 Final Review 검증과 최종 판단 확인 구간입니다."
+            "7단계가 Portfolio Proposal 구성 구간, 8-10단계가 Final Review 검증과 최종 판단 확인 구간입니다. "
+            "선정 이후 운영 확인은 `Operations > Selected Portfolio Dashboard`에서 read-only로 봅니다."
         )
 
         step_rows = [
@@ -3261,6 +3272,17 @@ def _render_guides_page() -> None:
                     "선정된 경우에도 실제 주문 전에는 투입 금액, 리밸런싱, 모니터링, stop / re-review 기준을 별도 운영 판단으로 정리해야 함을 확인",
                 ],
                 "next_step": "`SELECT_FOR_PRACTICAL_PORTFOLIO`이면 이 프로그램 기준 실전 후보로 선정된 것입니다. 다만 이 결과는 주문 실행이나 자동 승인과는 분리됩니다.",
+            },
+            {
+                "title": "운영 보조. 선정 포트폴리오 대시보드에서 다시 확인",
+                "path": "Operations > Selected Portfolio Dashboard",
+                "goal": "Final Review에서 선정된 포트폴리오를 운영 관점으로 다시 찾고, target allocation, evidence, next action을 확인합니다.",
+                "check": [
+                    "`SELECT_FOR_PRACTICAL_PORTFOLIO` row만 운영 대상으로 보이는지 확인",
+                    "`Target Allocation`과 benchmark, evidence route / score 확인",
+                    "`Live Approval`, `Broker Order`, `Auto Rebalance`가 disabled인지 확인",
+                ],
+                "next_step": "current price / holding 기반 drift와 rebalance 판단은 후속 phase에서 별도 계약을 정한 뒤 다룹니다.",
             },
         ]
 
@@ -3612,6 +3634,11 @@ def _render_guides_page() -> None:
                     "역할": "Final Review에서 저장한 선정 / 보류 / 거절 / 재검토 판단 기록 사용법",
                 },
                 {
+                    "상황": "최종 선정 포트폴리오 운영 대시보드를 확인할 때",
+                    "문서": ".note/finance/phases/phase36/PHASE36_FINAL_SELECTED_PORTFOLIO_MONITORING_AND_REBALANCE_OPERATIONS_PLAN.md",
+                    "역할": "Operations > Selected Portfolio Dashboard가 Final Review selected row를 read-only로 읽는 방식 설명",
+                },
+                {
                     "상황": "용어가 헷갈릴 때",
                     "문서": ".note/finance/FINANCE_TERM_GLOSSARY.md",
                     "역할": "Real-Money, Pre-Live, Candidate Registry 같은 반복 용어 설명",
@@ -3682,8 +3709,8 @@ def _render_guides_page() -> None:
                         "흐름 단계": "9~10단계 Final Review",
                         "파일": "FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl",
                         "담는 데이터": "실전 후보 선정, 관찰 보류, 거절, 재검토 판단과 이유",
-                        "화면 위치": "Backtest > Final Review > 최종 판단 및 테스트 검증 / 기록된 최종 검토 결과 확인",
-                        "읽는 법": "최종 판단 원본입니다. `SELECT_FOR_PRACTICAL_PORTFOLIO`이면 실전 후보로 선정된 것으로 읽습니다.",
+                        "화면 위치": "Backtest > Final Review > 최종 판단 및 테스트 검증 / 기록된 최종 검토 결과 확인 / Operations > Selected Portfolio Dashboard",
+                        "읽는 법": "최종 판단 원본입니다. `SELECT_FOR_PRACTICAL_PORTFOLIO`이면 실전 후보로 선정된 것으로 읽고, Operations dashboard는 이 row를 read-only로 보여줍니다.",
                     },
                 ]
             )
@@ -3774,6 +3801,7 @@ def _render_guides_page() -> None:
                         ".note/finance/operations/PORTFOLIO_PROPOSAL_REGISTRY_GUIDE.md",
                         ".note/finance/operations/PAPER_PORTFOLIO_TRACKING_LEDGER_GUIDE.md",
                         ".note/finance/operations/FINAL_PORTFOLIO_SELECTION_DECISIONS_GUIDE.md",
+                        ".note/finance/phases/phase36/PHASE36_FINAL_SELECTED_PORTFOLIO_MONITORING_AND_REBALANCE_OPERATIONS_PLAN.md",
                         ".note/finance/code_analysis/WEB_BACKTEST_UI_FLOW.md",
                         ".note/finance/registries/CANDIDATE_REVIEW_NOTES.jsonl",
                         ".note/finance/registries/CURRENT_CANDIDATE_REGISTRY.jsonl",
@@ -3806,6 +3834,7 @@ def _render_guides_page() -> None:
             - `Proposal Components`는 비교 기능이 아니라 포트폴리오에 넣을 구성 후보 선택입니다. 비교는 `Compare & Portfolio Builder`에서 합니다.
             - `Paper Tracking Ledger`는 과거 Phase33 / 호환성 기록으로 남아 있지만, 현재 main flow에서는 Final Review의 paper observation 기준으로 흡수합니다.
             - `Final Review`는 validation, robustness, paper observation, 최종 판단 기록, 저장 결과 확인을 담당하는 마지막 active panel입니다.
+            - `Selected Portfolio Dashboard`는 Final Review에서 선정된 row를 Operations에서 다시 읽는 화면이며, 새 final decision이나 주문 기록을 저장하지 않습니다.
             - `SELECT_FOR_PRACTICAL_PORTFOLIO`는 실전 후보로 선정되었다는 뜻이지 live approval, broker order, 자동매매 지시가 아닙니다.
             - `Live Approval / Order`는 현재 제품 범위 밖이며 화면에서도 disabled 경계로 읽습니다.
             """
@@ -3906,6 +3935,12 @@ def main() -> None:
         icon="📌",
         url_path="candidate-library",
     )
+    selected_portfolio_dashboard_page = st.Page(
+        _render_selected_portfolio_dashboard_page,
+        title="Selected Portfolio Dashboard",
+        icon="📊",
+        url_path="selected-portfolio-dashboard",
+    )
     guides_page = st.Page(_render_guides_page, title="Guides", icon="📚", url_path="guides")
     glossary_page = st.Page(_render_glossary_page, title="Glossary", icon="📖", url_path="glossary")
 
@@ -3918,6 +3953,7 @@ def main() -> None:
             ],
             "Operations": [
                 ops_review_page,
+                selected_portfolio_dashboard_page,
                 backtest_history_page,
                 candidate_library_page,
             ],

@@ -4124,3 +4124,17 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 다만 ETF asset profile coverage가 부족하면 Equal Weight도 명시적으로 `hold/blocked`가 될 수 있으며, 이것은 누락이 아니라 운용 가능성 데이터 경고다
 - Follow-up:
   - Equal Weight Single / Compare 입력, runtime hardening, saved Portfolio Mix override, Candidate Library replay payload에 Real-Money 필드를 연결했다
+
+### 2026-05-06 - Phase36 최종 선정 포트폴리오 운영 대시보드 구현 방향
+- User request:
+  - Phase36에서 `최종 선정 포트폴리오를 위한 대시보드`를 어떻게 만들지 구체화하고, 진행해 달라고 요청함
+- Interpreted goal:
+  - Final Review 이후에 또 다른 판단 저장 단계를 만들지 않고, 이미 선정된 최종 포트폴리오를 운영자가 다시 찾아볼 수 있는 Operations surface가 필요함
+- Analysis result:
+  - `FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`은 Phase36에서 새로 만드는 파일이 아니라 Final Review가 이미 저장하는 최종 판단 원본이다
+  - Phase36 dashboard는 이 파일 중 `SELECT_FOR_PRACTICAL_PORTFOLIO` 또는 `selected_practical_portfolio=true` row만 read-only로 읽는다
+  - Backtest workflow는 Final Review에서 끝나야 하므로, 새 화면은 `Backtest` 주 흐름이 아니라 `Operations > Selected Portfolio Dashboard`로 둔다
+  - current price / holding 기반 drift 계산과 주문 초안은 Phase36 first pass가 아니라 후속 phase에서 별도 계약을 정한 뒤 다룬다
+- Follow-up:
+  - `app/web/runtime/final_selected_portfolios.py`, `app/web/final_selected_portfolio_dashboard.py`, `app/web/final_selected_portfolio_dashboard_helpers.py`를 추가했다
+  - Phase36 문서 bundle과 roadmap / index / code analysis를 Selected Portfolio Dashboard 기준으로 동기화했다

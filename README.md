@@ -22,6 +22,8 @@ DB-backed market data ingestion, factor generation, and strategy backtesting wor
   - 단일 전략 실행, compare, candidate review, pre-live review, portfolio proposal workflow, final review / portfolio selection decision
 - `Ops Review`
   - 최근 실행 결과, persistent history, logs, failure artifact 검토
+- `Selected Portfolio Dashboard`
+  - Final Review에서 선정된 포트폴리오의 target allocation, evidence, next action을 read-only 운영 화면으로 확인
 - `Backtest Run History`
   - 저장된 백테스트 실행 기록 검토, form 복원, 재실행, candidate review 초안 전달
 - `Guides`
@@ -89,6 +91,10 @@ DB-backed market data ingestion, factor generation, and strategy backtesting wor
   - 별도 `Save Paper Tracking Ledger` 없이 관찰 기준을 최종 검토 기록 안에 포함하는 흐름
   - `최종 검토 결과 기록`으로 선정 / 보류 / 거절 / 재검토 판단을 남기고 `최종 판단 완료`로 마무리하는 흐름
   - live trading approval이나 주문 지시와 분리된 검토 기록 흐름
+- selected portfolio operations dashboard
+  - `Operations > Selected Portfolio Dashboard`에서 Final Review의 `SELECT_FOR_PRACTICAL_PORTFOLIO` row만 운영 대상으로 확인하는 흐름
+  - `.note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`을 새로 쓰지 않고 read-only로 읽는 흐름
+  - target allocation, benchmark, evidence, operator next action, disabled live approval / order boundary를 확인하는 흐름
 
 ## 프로젝트 구조
 
@@ -102,6 +108,8 @@ app/
     backtest_history.py  # Operations > Backtest Run History UI
     backtest_candidate_library.py # Operations > Candidate Library UI
     backtest_candidate_library_helpers.py # 저장 후보 목록 / replay payload / 후보 replay helper
+    final_selected_portfolio_dashboard.py # Operations > Selected Portfolio Dashboard UI
+    final_selected_portfolio_dashboard_helpers.py # 선정 포트폴리오 table / evidence helper
     backtest_ui_components.py # Backtest 공용 status/route UI component
     backtest_candidate_review.py # Candidate Review / Candidate Packaging / Pre-Live 운영 기록 UI
     backtest_candidate_review_helpers.py # Candidate Review 판단/변환/Pre-Live 운영 기록 helper
@@ -115,6 +123,7 @@ app/
       portfolio_proposal.py
       paper_portfolio_ledger.py
       final_selection_decisions.py
+      final_selected_portfolios.py
 finance/
   data/                  # ingestion, DB schema, loaders, factors
   strategy.py            # strategy simulation logic
@@ -148,7 +157,7 @@ uv sync
 .venv/bin/streamlit run app/web/streamlit_app.py
 ```
 
-앱이 열리면 상단 navigation에서 `Overview`, `Ingestion`, `Backtest`, `Ops Review`, `Backtest Run History`, `Candidate Library`, `Guides`, `Glossary`를 이동하며 사용합니다.
+앱이 열리면 상단 navigation에서 `Overview`, `Ingestion`, `Backtest`, `Ops Review`, `Selected Portfolio Dashboard`, `Backtest Run History`, `Candidate Library`, `Guides`, `Glossary`를 이동하며 사용합니다.
 
 ## 참고 문서
 

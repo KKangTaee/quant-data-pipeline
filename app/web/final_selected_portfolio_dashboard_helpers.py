@@ -1,0 +1,162 @@
+from __future__ import annotations
+
+from typing import Any
+
+import pandas as pd
+
+from app.web.runtime.final_selected_portfolios import FINAL_SELECTED_PORTFOLIO_STATUS_LABELS
+
+
+def _display_value(value: Any) -> str:
+    if value is None:
+        return "-"
+    text = str(value).strip()
+    return text or "-"
+
+
+def _optional_float(value: Any) -> float | None:
+    if value is None:
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def final_selected_portfolio_label(row: dict[str, Any]) -> str:
+    """Build a stable selectbox label for one selected portfolio dashboard row."""
+    return (
+        f"{_display_value(row.get('updated_at'))} | "
+        f"{_display_value(row.get('operation_status_label'))} | "
+        f"{_display_value(row.get('source_title'))} | "
+        f"id={_display_value(row.get('decision_id'))}"
+    )
+
+
+def build_selected_portfolio_dashboard_table(rows: list[dict[str, Any]]) -> pd.DataFrame:
+    display_rows: list[dict[str, Any]] = []
+    for row in rows:
+        display_rows.append(
+            {
+                "Updated At": row.get("updated_at"),
+                "Status": row.get("operation_status_label"),
+                "Decision ID": row.get("decision_id"),
+                "Source": f"{row.get('source_type')} / {row.get('source_id')}",
+                "Title": row.get("source_title"),
+                "Components": row.get("component_count"),
+                "Target Weight": row.get("target_weight_total"),
+                "Benchmark": row.get("benchmark_label"),
+                "Evidence Route": row.get("evidence_route"),
+                "Evidence Score": row.get("evidence_score"),
+                "Next Action": row.get("operator_next_action"),
+            }
+        )
+    return pd.DataFrame(display_rows)
+
+
+def build_selected_portfolio_component_table(row: dict[str, Any]) -> pd.DataFrame:
+    raw_decision = dict(row.get("raw_decision") or {})
+    display_rows: list[dict[str, Any]] = []
+    for component in list(raw_decision.get("selected_components") or []):
+        component_row = dict(component or {})
+        weight = _optional_float(component_row.get("target_weight")) or 0.0
+        if weight <= 0.0:
+            continue
+        display_rows.append(
+            {
+                "Registry ID": component_row.get("registry_id"),
+                "Title": component_row.get("title"),
+                "Role": component_row.get("proposal_role"),
+                "Target Weight": weight,
+                "Family": component_row.get("strategy_family"),
+                "Benchmark": component_row.get("benchmark"),
+                "Universe": component_row.get("universe"),
+                "Data Trust": component_row.get("data_trust_status"),
+                "Promotion": component_row.get("promotion"),
+                "Deployment": component_row.get("deployment"),
+                "Baseline CAGR": component_row.get("baseline_cagr"),
+                "Baseline MDD": component_row.get("baseline_mdd"),
+            }
+        )
+    return pd.DataFrame(display_rows)
+
+
+def _append_check_rows(
+    display_rows: list[dict[str, Any]],
+    *,
+    area: str,
+    checks: list[dict[str, Any]],
+) -> None:
+    for check in checks:
+        check_row = dict(check or {})
+        display_rows.append(
+            {
+                "Area": area,
+                "Criteria": check_row.get("Criteria") or check_row.get("criteria") or "-",
+                "Ready": check_row.get("Ready") if "Ready" in check_row else check_row.get("ready"),
+                "Current": check_row.get("Current")
+                or check_row.get("current")
+                or check_row.get("current_value")
+                or "-",
+                "Meaning": check_row.get("Meaning") or check_row.get("meaning") or "-",
+                "Score": check_row.get("Score") or check_row.get("score") or "-",
+            }
+        )
+
+
+def build_selected_portfolio_evidence_table(row: dict[str, Any]) -> pd.DataFrame:
+    raw_decision = dict(row.get("raw_decision") or {})
+    evidence = dict(raw_decision.get("decision_evidence_snapshot") or {})
+    risk_snapshot = dict(raw_decision.get("risk_and_validation_snapshot") or {})
+    robustness = dict(risk_snapshot.get("robustness_validation") or {})
+    paper_snapshot = dict(raw_decision.get("paper_tracking_snapshot") or {})
+    display_rows: list[dict[str, Any]] = []
+    _append_check_rows(display_rows, area="Final Review Evidence", checks=list(evidence.get("checks") or []))
+    _append_check_rows(display_rows, area="Validation", checks=list(risk_snapshot.get("validation_checks") or []))
+    _append_check_rows(display_rows, area="Robustness", checks=list(robustness.get("checks") or []))
+    _append_check_rows(display_rows, area="Paper Observation", checks=list(paper_snapshot.get("checks") or []))
+    return pd.DataFrame(display_rows)
+
+
+def filter_selected_portfolio_rows(
+    rows: list[dict[str, Any]],
+    *,
+    statuses: list[str],
+    source_types: list[str],
+    benchmark: str,
+) -> list[dict[str, Any]]:
+    benchmark_clean = str(benchmark or "").strip()
+    filtered: list[dict[str, Any]] = []
+    for row in rows:
+        if statuses and str(row.get("operation_status") or "") not in statuses:
+            continue
+        if source_types and str(row.get("source_type") or "") not in source_types:
+            continue
+        if benchmark_clean and benchmark_clean != "All":
+            benchmarks = {str(item) for item in list(row.get("benchmarks") or [])}
+            if benchmark_clean not in benchmarks:
+                continue
+        filtered.append(row)
+    return filtered
+
+
+def selected_portfolio_status_options(rows: list[dict[str, Any]]) -> list[str]:
+    seen = {str(row.get("operation_status") or "blocked") for row in rows}
+    ordered = [status for status in FINAL_SELECTED_PORTFOLIO_STATUS_LABELS if status in seen]
+    return ordered or list(FINAL_SELECTED_PORTFOLIO_STATUS_LABELS)
+
+
+def selected_portfolio_source_type_options(rows: list[dict[str, Any]]) -> list[str]:
+    return sorted({str(row.get("source_type") or "-") for row in rows if str(row.get("source_type") or "-")})
+
+
+def selected_portfolio_benchmark_options(rows: list[dict[str, Any]]) -> list[str]:
+    benchmarks = sorted(
+        {
+            str(benchmark)
+            for row in rows
+            for benchmark in list(row.get("benchmarks") or [])
+            if str(benchmark).strip()
+        }
+    )
+    return ["All"] + benchmarks

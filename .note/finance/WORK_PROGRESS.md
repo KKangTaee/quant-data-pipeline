@@ -3359,3 +3359,17 @@ Detailed historical logs were archived on `2026-04-13`.
   - 이 경로는 단일 후보를 만드는 `Candidate Review`가 아니라, 이미 비중이 정해진 portfolio mix를 proposal draft로 남기는 경로임을 UI와 Guides에 명시했다.
   - Portfolio Proposal은 saved mix prefill이 있을 때 전용 작성 화면을 먼저 보여주고, 저장 시 `.note/finance/saved/SAVED_PORTFOLIOS.jsonl`의 setup과 `.note/finance/registries/PORTFOLIO_PROPOSAL_REGISTRY.jsonl` workflow 기록을 연결한다.
   - Final Review에서 saved mix proposal을 읽을 때 component contract / benchmark / universe / compare evidence가 빠지지 않도록 proposal evidence snapshot을 보강했다.
+
+### 2026-05-06
+- Phase36 시작:
+  - user confirmation에 따라 `Final-Selected Portfolio Monitoring And Rebalance Operations` phase를 열었다.
+  - Phase36의 첫 구현 목표는 `FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`을 새로 쓰는 것이 아니라, Final Review에서 이미 `SELECT_FOR_PRACTICAL_PORTFOLIO`로 선정된 row를 읽어 `Operations > Selected Portfolio Dashboard`에서 운영 대상으로 보여주는 것이다.
+  - 이번 작업에서는 current price / account holding 기반 drift 계산과 주문 초안은 제외하고, 최종 선정 포트폴리오 목록 / 상태 / target allocation / evidence / disabled execution boundary를 먼저 구현한다.
+
+### 2026-05-06
+- Phase36 first pass 구현 완료:
+  - `app/web/runtime/final_selected_portfolios.py` read model을 추가해 Final Review selected decision row를 dashboard row와 status summary로 변환했다.
+  - `Operations > Selected Portfolio Dashboard` page를 추가해 summary cards, selected portfolio table, status / source / benchmark filters, target allocation, evidence checks, operator next action, disabled execution boundary를 표시한다.
+  - Phase36 plan / TODO / first work unit / checklist / completion / next-phase preparation과 roadmap / index / code analysis / comprehensive map / README / Guides를 동기화했다.
+  - Verification: `PYTHONPYCACHEPREFIX=/tmp/codex_pycache python3 -m py_compile ...`, runtime helper smoke, `git diff --check`, `check_finance_refinement_hygiene.py` 통과.
+  - 남은 gate는 사용자 manual QA다.
