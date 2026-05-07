@@ -4347,3 +4347,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 각 trigger는 `Clear`, `Watch`, `Breached`, `Needs Input` 상태와 Suggested Action을 가져야 한다
 - Follow-up:
   - Phase36 dashboard에서 Review Triggers tab을 `Trigger Board`로 변경하고, 원본 operator note는 `Original Operator Notes` 접힘 영역으로 낮춘다
+
+### 2026-05-07 - Selected Portfolio Dashboard 흐름 / Actual Allocation 의미 재정리
+- User request:
+  - `GTAA Clean-6 AOR Top-2 High CAGR (1M/12M, i2, MA150)` 단일 포트폴리오를 기준으로 dashboard 사용 흐름을 검토했고, source boundary, 운영 대상 선택, Portfolio Blueprint, Monitoring Playbook, Holding Drift Check, Execution Boundary가 사용자 입장에서 무엇을 하는지 불명확하다고 지적함
+- Interpreted goal:
+  - dashboard는 Final Review 통과 포트폴리오를 최신 기간으로 다시 분석하는 화면이어야 하며, 보유금액 배분 점검은 기본 성과 재검증 흐름을 방해하지 않는 optional 기능이어야 함
+- Analysis result:
+  - 데이터 출처 / selected filter / write policy는 사용자 분석 흐름의 핵심이 아니라 audit 정보이므로 기본 화면에서 내려야 한다
+  - 운영 대상이 하나뿐일 때는 filter table보다 현재 선택된 포트폴리오 badge가 더 적합하다
+  - 단일 component 100% 포트폴리오에서 `Holding Drift Check`는 component 간 리밸런싱 기능처럼 보이면 혼란스럽다. 실제 의미는 "이 포트폴리오에 배정한 실제 또는 가상 금액이 target allocation과 다른가"를 보는 optional Actual Allocation 점검이다
+  - Review Signals는 성과 재검증 결과를 중심으로 하되, Actual Allocation은 사용자가 명시적으로 반영할 때만 signal board에 들어가야 한다
+- Follow-up:
+  - Phase36 dashboard를 `Selected Portfolio -> Snapshot -> Performance Recheck -> Portfolio Monitoring(Review Signals / Why Selected / Actual Allocation / Audit)` 흐름으로 재정렬한다

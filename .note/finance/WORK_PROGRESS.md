@@ -3460,3 +3460,12 @@ Detailed historical logs were archived on `2026-04-13`.
   - Trigger Board는 최신 Performance Recheck 결과와 Holding Drift Check 입력 상태를 읽어 `Clear`, `Watch`, `Breached`, `Needs Input`으로 번역한다.
   - operator reason / constraints / next action / 원본 trigger list는 `Original Operator Notes` expander로 낮췄다.
   - Trigger Board와 drift 결과는 계속 read-only이며 새 registry row나 주문 row를 만들지 않는다.
+
+### 2026-05-07
+- Phase36 Selected Portfolio Dashboard flow 재정렬:
+  - user feedback에 따라 source boundary, 운영 대상 필터, Portfolio Blueprint, Monitoring Playbook, Holding Drift Check가 주 성과 재검증 흐름을 흐리는 문제를 확인했다.
+  - 데이터 출처 / registry path / raw JSON은 `Audit / Developer Details`로 낮추고, 운영 대상이 1개일 때는 compact selected portfolio picker만 보여주게 했다.
+  - Snapshot은 단일 component 100% target allocation table을 접힘 details로 낮추고, Performance Recheck setup은 Original End / DB Latest badge와 primary 실행 버튼으로 재배치했다.
+  - Monitoring Playbook을 `Portfolio Monitoring`으로 바꾸고 `Review Signals`, `Why Selected`, `Actual Allocation`, `Audit` 흐름으로 정리했다.
+  - Holding Drift Check는 `Actual Allocation Check`로 바꿔 current value 입력을 기본으로 두고, shares x price / current weight / threshold 설정은 advanced 영역으로 낮췄다.
+  - Actual Allocation 결과는 사용자가 `Update Review Signals`를 누를 때만 Review Signals에 반영하도록 변경했다.

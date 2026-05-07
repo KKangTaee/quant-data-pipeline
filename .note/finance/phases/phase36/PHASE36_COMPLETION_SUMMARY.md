@@ -9,13 +9,13 @@
 
 Phase36은 Final Review에서 선정된 포트폴리오를 Operations 화면에서 다시 읽고,
 사용자가 지정한 최신 기간으로 즉시 재검증하는 첫 운영 대시보드 phase다.
-실제 또는 가정 보유 상태 기준 drift는 보조 고급 점검으로 둔다.
+실제 또는 가상 보유금액 배분 확인은 optional Actual Allocation 점검으로 둔다.
 
 ## 쉽게 말하면
 
 Final Review에서 `투자 가능 후보`로 저장한 포트폴리오를 나중에 다시 찾고,
 선정 당시의 전략 contract를 최신 날짜까지 다시 돌려 성과가 유지되는지 확인하는 기능을 만들었다.
-목표 비중 대비 현재 보유 상태 차이는 Monitoring Playbook의 `Holding Drift Check`에서 추가로 확인한다.
+목표 비중 대비 실제 또는 가상 보유금액 차이는 Portfolio Monitoring의 `Actual Allocation`에서 선택적으로 확인한다.
 
 ## 이번 phase에서 실제로 완료된 것
 
@@ -35,7 +35,7 @@ Final Review에서 `투자 가능 후보`로 저장한 포트폴리오를 나중
 - `app/web/final_selected_portfolio_dashboard.py`를 추가했다.
 - `app/web/final_selected_portfolio_dashboard_helpers.py`를 추가했다.
 - `app/web/streamlit_app.py`의 Operations navigation에 `Selected Portfolio Dashboard`를 추가했다.
-- summary cards, wrapping source boundary cards, compact selected portfolio table, responsive filter, Snapshot / Portfolio Blueprint, tabbed Performance Recheck, Monitoring Playbook, audit expander를 제공한다.
+- summary cards, compact selected portfolio picker, Snapshot, tabbed Performance Recheck, Portfolio Monitoring, audit expander를 제공한다.
 
 쉽게 말하면:
 
@@ -65,13 +65,16 @@ Final Review에서 `투자 가능 후보`로 저장한 포트폴리오를 나중
 
 - 이 화면은 운영 관찰 대시보드이지 주문 실행 화면이 아니다.
 
-### 5. Monitoring Playbook / Allocation Check
+### 5. Portfolio Monitoring / Actual Allocation
 
-- operator context는 `Monitoring Playbook`으로 바꿔 선정 근거, 관찰 기준, Holding Drift Check, Execution Boundary를 같은 흐름에서 보여준다.
-- `Trigger Board`는 Performance Recheck와 Holding Drift Check의 최신 상태를 읽어 `Clear`, `Watch`, `Breached`, `Needs Input`으로 운영 trigger를 번역한다.
+- operator context는 `Portfolio Monitoring`으로 바꿔 Review Signals, Why Selected, Actual Allocation, Audit 순서로 보여준다.
+- `Review Signals`는 Performance Recheck와 사용자가 명시적으로 반영한 Actual Allocation 상태를 읽어 `Clear`, `Watch`, `Breached`, `Needs Input`, `Optional`로 운영 signal을 번역한다.
 - 원본 operator reason / constraints / next action / trigger list는 `Original Operator Notes` 접힘 영역에서 확인한다.
-- target allocation은 Snapshot의 `Portfolio Blueprint`에 배치하고, 실제 또는 가상 보유 상태 점검은 `Holding Drift Check` tab으로 분리했다.
-- drift check는 기본 화면이 아니라 운영 점검 tab으로 이동했다.
+- target allocation은 Snapshot에서 요약하고, 단일 component 100%의 상세 table은 접힘 details로 낮췄다.
+- 데이터 출처 / registry path / 원본 JSON은 `Audit / Developer Details`로 내려 기본 화면의 분석 흐름에서 분리했다.
+- Actual Allocation은 기본 화면이 아니라 Portfolio Monitoring의 선택 점검 tab으로 둔다.
+- Actual Allocation은 current value 입력을 기본으로 보여주고, shares x price / current weight 입력과 threshold 설정은 advanced 영역으로 낮췄다.
+- Actual Allocation 결과는 사용자가 `Update Review Signals`를 누를 때만 Review Signals에 반영한다.
 - component별 현재 비중을 수동 입력하는 계약을 유지한다.
 - component별 현재 평가금액을 입력하면 전체 평가금액 대비 current weight로 변환한다.
 - component별 holding symbol, shares, current price를 입력하면 shares x price 기준 current value와 current weight로 변환한다.
@@ -79,12 +82,12 @@ Final Review에서 `투자 가능 후보`로 저장한 포트폴리오를 나중
 - target weight와 current weight의 차이를 drift로 계산한다.
 - `Rebalance threshold`, `Watch threshold`, `Total tolerance`를 UI에서 조정할 수 있다.
 - route는 `DRIFT_ALIGNED`, `DRIFT_WATCH`, `REBALANCE_NEEDED`, `DRIFT_INPUT_INCOMPLETE`로 읽는다.
-- `Drift Alert / Review Trigger Preview`에서 drift 결과를 `운영 경고 없음`, `관찰 경고`, `리밸런싱 검토 경고`, `입력 확인 경고`로 다시 읽는다.
+- `Allocation review notes`에서 drift 결과를 `운영 경고 없음`, `관찰 경고`, `리밸런싱 검토 경고`, `입력 확인 경고`로 다시 읽는다.
 - Final Review에 남긴 review trigger를 drift 경고와 함께 보여준다.
 
 쉽게 말하면:
 
-- 현재 계좌를 연결하지 않아도, 사용자가 현재 비중이나 평가금액, 보유 수량과 가격을 입력하면 목표 비중에서 얼마나 벗어났는지 `Holding Drift Check`에서 바로 볼 수 있다.
+- 현재 계좌를 연결하지 않아도, 사용자가 현재 평가금액이나 보유 수량과 가격을 입력하면 목표 비중에서 얼마나 벗어났는지 `Actual Allocation`에서 바로 볼 수 있다.
 - 이 결과도 주문 지시가 아니라 리밸런싱 검토 신호다.
 - drift가 커졌을 때 어떤 review trigger를 같이 봐야 하는지 한 화면에서 확인할 수 있다.
 

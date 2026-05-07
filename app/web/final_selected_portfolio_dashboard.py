@@ -224,14 +224,127 @@ def _render_empty_state(summary: dict[str, Any]) -> None:
     st.caption(f"Path: {FINAL_SELECTION_DECISION_REGISTRY_FILE}")
 
 
+def _render_selected_portfolio_picker(rows: list[dict[str, Any]]) -> dict[str, Any] | None:
+    st.markdown("#### Selected Portfolio")
+    if len(rows) == 1:
+        row = rows[0]
+        with st.container(border=True):
+            st.markdown(f"##### {row.get('source_title') or '-'}")
+            render_badge_strip(
+                [
+                    {
+                        "label": "Status",
+                        "value": row.get("operation_status_label"),
+                        "tone": _status_tone(str(row.get("operation_status") or "")),
+                    },
+                    {"label": "Benchmark", "value": row.get("benchmark_label"), "tone": "neutral"},
+                    {"label": "Components", "value": row.get("component_count"), "tone": "neutral"},
+                    {"label": "Target", "value": f"{float(row.get('target_weight_total') or 0.0):.1f}%", "tone": "neutral"},
+                    {"label": "Original End", "value": row.get("baseline_end"), "tone": "neutral"},
+                ]
+            )
+        return row
+
+    with st.container(border=True):
+        status_options = selected_portfolio_status_options(rows)
+        source_type_options = selected_portfolio_source_type_options(rows)
+        benchmark_options = selected_portfolio_benchmark_options(rows)
+        filter_top_cols = st.columns(2, gap="small")
+        with filter_top_cols[0]:
+            selected_statuses = st.multiselect(
+                "Status",
+                options=status_options,
+                default=status_options,
+                format_func=lambda status: FINAL_SELECTED_PORTFOLIO_STATUS_LABELS.get(status, status),
+                key="selected_portfolio_dashboard_status_filter",
+            )
+        with filter_top_cols[1]:
+            selected_benchmark = st.selectbox(
+                "Benchmark",
+                options=benchmark_options,
+                key="selected_portfolio_dashboard_benchmark_filter",
+            )
+        filter_bottom_cols = st.columns([0.64, 0.36], gap="small")
+        with filter_bottom_cols[0]:
+            selected_source_types = st.multiselect(
+                "Source Type",
+                options=source_type_options,
+                default=source_type_options,
+                key="selected_portfolio_dashboard_source_filter",
+            )
+
+        filtered_rows = filter_selected_portfolio_rows(
+            rows,
+            statuses=selected_statuses,
+            source_types=selected_source_types,
+            benchmark=str(selected_benchmark),
+        )
+        with filter_bottom_cols[1]:
+            _render_info_card_grid(
+                [
+                    {"title": "Total", "value": len(rows), "detail": "selected rows", "tone": "neutral"},
+                    {"title": "Shown", "value": len(filtered_rows), "detail": "after filter", "tone": "positive"},
+                ],
+                min_width=120,
+            )
+        if not filtered_rows:
+            st.warning("현재 filter 조건에 맞는 선정 포트폴리오가 없습니다.")
+            return None
+
+        with st.expander("Selected portfolio list", expanded=False):
+            st.dataframe(build_selected_portfolio_dashboard_table(filtered_rows), width="stretch", hide_index=True)
+        labels = [final_selected_portfolio_label(row) for row in filtered_rows]
+        selected_label = st.selectbox(
+            "포트폴리오 선택",
+            options=labels,
+            key="selected_portfolio_dashboard_selected_row",
+        )
+        return filtered_rows[labels.index(selected_label)]
+
+
 def _render_selected_row_detail(row: dict[str, Any]) -> None:
     _render_snapshot(row)
     _render_performance_recheck(row)
     _render_operator_context(row)
 
     with st.expander("Audit / Developer Details", expanded=False):
-        st.caption("일반 QA에서는 이 원본 JSON을 보지 않아도 됩니다. 저장 row 구조를 확인할 때만 펼쳐 봅니다.")
+        st.caption("데이터 출처, 화면 경계, 원본 저장 row 구조를 확인할 때만 펼쳐 봅니다.")
+        _render_source_boundary(row)
         st.json(row.get("raw_decision") or {})
+
+
+def _render_source_boundary(row: dict[str, Any] | None = None) -> None:
+    cards = [
+        {
+            "title": "Source",
+            "value": "Final Review Decisions",
+            "detail": "최종 선정 판단 row를 읽습니다.",
+            "tone": "neutral",
+        },
+        {
+            "title": "Selected Filter",
+            "value": "Practical Portfolio",
+            "detail": "SELECT_FOR_PRACTICAL_PORTFOLIO 또는 selected flag만 운영 대상으로 봅니다.",
+            "tone": "positive",
+        },
+        {
+            "title": "Write Policy",
+            "value": "Read Only",
+            "detail": "재검증과 allocation 점검은 새 판단 row나 주문 row를 저장하지 않습니다.",
+            "tone": "neutral",
+        },
+    ]
+    if row is not None:
+        cards.append(
+            {
+                "title": "Selected Decision",
+                "value": row.get("decision_id") or "-",
+                "detail": row.get("source_type") or "-",
+                "tone": "neutral",
+            }
+        )
+    _render_info_card_grid(cards, min_width=210)
+    st.code(str(FINAL_SELECTION_DECISION_REGISTRY_FILE), language="text")
 
 
 def _decision_key(row: dict[str, Any]) -> str:
@@ -301,7 +414,7 @@ def _build_review_trigger_board(row: dict[str, Any]) -> tuple[list[dict[str, str
             suggested_action=(
                 "남은 blocker가 없으므로 성과와 보유 상태를 계속 점검합니다."
                 if evidence_status == "Clear"
-                else "Selection Evidence tab에서 남은 blocker와 검증 근거를 다시 확인합니다."
+                else "Why Selected tab에서 남은 blocker와 검증 근거를 다시 확인합니다."
             ),
         )
     )
@@ -314,7 +427,7 @@ def _build_review_trigger_board(row: dict[str, Any]) -> tuple[list[dict[str, str
                     current_signal="Performance Recheck not run",
                     status="Needs Input",
                     why_it_matters="선정 당시 수익률 근거가 최신 기간에서도 유지되는지 봅니다.",
-                    suggested_action="Performance Recheck에서 기간과 가상 투자금을 확인한 뒤 Run Recheck를 실행합니다.",
+                    suggested_action="Performance Recheck에서 기간과 가상 투자금을 확인한 뒤 Run Performance Recheck를 실행합니다.",
                 ),
                 _trigger_row(
                     trigger="MDD expansion",
@@ -422,10 +535,10 @@ def _build_review_trigger_board(row: dict[str, Any]) -> tuple[list[dict[str, str
         )
 
     drift_route = str(drift_check.get("route") or "")
-    drift_signal = str(drift_check.get("route_label") or "Holding Drift Check not run")
+    drift_signal = str(drift_check.get("route_label") or "Actual Allocation not checked")
     if not drift_check:
-        drift_status = "Needs Input"
-        drift_action = "Holding Drift Check tab에서 현재 평가금액, 보유수량, 또는 현재 비중을 입력합니다."
+        drift_status = "Optional"
+        drift_action = "실제 또는 가상 보유금액까지 관리할 때만 Actual Allocation tab에서 입력합니다."
     elif drift_route == "DRIFT_ALIGNED":
         drift_status = "Clear"
         drift_action = "현재 입력 기준으로 target allocation 근처입니다."
@@ -440,10 +553,10 @@ def _build_review_trigger_board(row: dict[str, Any]) -> tuple[list[dict[str, str
         drift_action = "입력 합계와 누락 component를 확인한 뒤 다시 계산합니다."
     rows.append(
         _trigger_row(
-            trigger="Holding drift",
+            trigger="Actual allocation drift",
             current_signal=drift_signal,
             status=drift_status,
-            why_it_matters="실제 또는 가정 보유 비중이 선정 target allocation에서 벗어났는지 봅니다.",
+            why_it_matters="전략 성과가 아니라 실제 또는 가정 보유금액 배분이 target allocation에서 벗어났는지 봅니다.",
             suggested_action=drift_action,
         )
     )
@@ -452,14 +565,25 @@ def _build_review_trigger_board(row: dict[str, Any]) -> tuple[list[dict[str, str
     if "Breached" in statuses:
         return rows, "Breached", "재검토가 필요한 trigger가 있습니다. Breached row의 Suggested Action부터 확인합니다."
     if "Needs Input" in statuses:
-        return rows, "Needs Input", "운영 판단을 완성하려면 Performance Recheck 또는 Holding Drift Check 입력이 더 필요합니다."
+        required_inputs = [
+            row_item for row_item in rows
+            if row_item["Status"] == "Needs Input" and row_item["Trigger"] != "Actual allocation drift"
+        ]
+        if required_inputs:
+            return rows, "Needs Input", "먼저 Performance Recheck를 실행해야 최신 기간 기준 Review Signals를 완성할 수 있습니다."
+        return rows, "Needs Input", "Actual Allocation 입력값을 확인해야 보유금액 배분 signal을 완성할 수 있습니다."
     if "Watch" in statuses:
         return rows, "Watch", "큰 차단은 없지만 watch trigger가 있습니다. 다음 점검에서 같은 항목이 악화되는지 확인합니다."
-    return rows, "Clear", "현재 trigger board 기준으로 선정 thesis와 운영 점검 상태가 유지됩니다."
+    return rows, "Clear", "현재 Review Signals 기준으로 선정 thesis와 운영 점검 상태가 유지됩니다."
 
 
 def _render_snapshot(row: dict[str, Any]) -> None:
     st.markdown("#### Snapshot")
+    component_df = build_selected_portfolio_component_table(row)
+    component_count = int(row.get("component_count") or 0)
+    target_detail = f"{component_count} component"
+    if component_count == 1 and not component_df.empty:
+        target_detail = str(component_df.iloc[0].get("Title") or target_detail)
     _render_info_card_grid(
         [
             {
@@ -489,7 +613,7 @@ def _render_snapshot(row: dict[str, Any]) -> None:
             {
                 "title": "Target Allocation",
                 "value": f"{float(row.get('target_weight_total') or 0.0):.1f}%",
-                "detail": f"{row.get('component_count') or 0} component",
+                "detail": target_detail,
                 "tone": "neutral",
             },
         ],
@@ -499,65 +623,62 @@ def _render_snapshot(row: dict[str, Any]) -> None:
         st.markdown(f"**Decision ID**  \n`{row.get('decision_id') or '-'}`")
         st.markdown(f"**Source**  \n`{row.get('source_type') or '-'}` / `{row.get('source_id') or '-'}`")
         st.markdown(f"**Title**  \n{row.get('source_title') or '-'}")
-    component_df = build_selected_portfolio_component_table(row)
-    st.markdown("##### Portfolio Blueprint")
-    st.caption("이 포트폴리오가 어떤 component와 target weight로 선정됐는지 보여줍니다. 실제 보유 상태 점검은 Monitoring Playbook의 Holding Drift Check에서 확인합니다.")
     if component_df.empty:
         st.warning("선택된 포트폴리오에 active component가 없습니다.")
-    else:
+    elif component_count > 1:
+        st.markdown("##### Target Allocation")
+        st.caption("Final Review에서 확정된 component와 목표 비중입니다. 실제 또는 가상 보유금액 점검은 Portfolio Monitoring의 Actual Allocation에서 확인합니다.")
         st.dataframe(component_df, width="stretch", hide_index=True)
+    else:
+        with st.expander("Target allocation details", expanded=False):
+            st.caption("단일 component 100% 포트폴리오라 기본 화면에서는 Snapshot 카드로 요약합니다.")
+            st.dataframe(component_df, width="stretch", hide_index=True)
 
 
 def _render_operator_context(row: dict[str, Any]) -> None:
-    st.markdown("#### Monitoring Playbook")
+    st.markdown("#### Portfolio Monitoring")
     st.caption(
-        "이 영역은 선정된 포트폴리오를 어떻게 계속 확인할지 정리합니다. "
-        "선정 근거, 관찰 기준, 보유 비중 점검, 실행 경계를 같은 흐름에서 봅니다."
+        "Performance Recheck 이후 이 포트폴리오가 계속 추적할 만한지 확인하는 영역입니다. "
+        "먼저 Review Signals를 보고, 필요할 때 선정 근거와 실제/가상 보유금액 배분을 확인합니다."
     )
     triggers = [str(trigger) for trigger in list(row.get("review_triggers") or []) if str(trigger)]
     blockers = [str(blocker) for blocker in list(row.get("blockers") or []) if str(blocker)]
     _render_info_card_grid(
         [
             {
-                "title": "1. 선정 근거 확인",
+                "title": "1. Review Signals",
+                "value": "Latest Check",
+                "detail": "성과 약화, drawdown 확대, benchmark 우위, allocation drift를 한 번에 확인",
+                "tone": "neutral",
+            },
+            {
+                "title": "2. Why Selected",
                 "value": row.get("evidence_route"),
-                "detail": "Final Review evidence / validation / robustness / paper observation",
+                "detail": "Final Review에서 이 포트폴리오를 통과시킨 근거",
                 "tone": "positive" if not blockers else "warning",
             },
             {
-                "title": "2. 성과 유지 확인",
-                "value": "Performance Recheck",
-                "detail": "새 기간으로 CAGR, MDD, benchmark spread를 다시 계산",
+                "title": "3. Actual Allocation",
+                "value": "Optional",
+                "detail": "실제 또는 가상 보유금액을 target allocation과 비교할 때만 사용",
                 "tone": "neutral",
             },
             {
-                "title": "3. 보유 상태 확인",
-                "value": "Holding Drift Check",
-                "detail": "실제 또는 가상 보유 비중이 target에서 벗어났는지 확인",
-                "tone": "neutral",
-            },
-            {
-                "title": "4. 실행 경계",
+                "title": "4. Audit",
                 "value": "Read Only",
-                "detail": "승인, 주문, 자동 리밸런싱은 만들지 않음",
+                "detail": "승인, 주문, 자동 리밸런싱은 생성하지 않음",
                 "tone": "neutral",
             },
         ],
         min_width=190,
     )
     evidence_df = build_selected_portfolio_evidence_table(row)
-    evidence_tab, trigger_tab, drift_tab, boundary_tab = st.tabs(
-        ["Selection Evidence", "Trigger Board", "Holding Drift Check", "Execution Boundary"]
+    trigger_tab, evidence_tab, allocation_tab, audit_tab = st.tabs(
+        ["Review Signals", "Why Selected", "Actual Allocation", "Audit"]
     )
-    with evidence_tab:
-        st.caption("Final Review에서 이 포트폴리오가 실전 후보로 선정될 수 있었던 검증 근거입니다.")
-        if evidence_df.empty:
-            st.info("표시할 evidence check row가 없습니다.")
-        else:
-            st.dataframe(evidence_df, width="stretch", hide_index=True)
     with trigger_tab:
         st.caption(
-            "Performance Recheck와 Holding Drift Check의 최신 입력을 운영 trigger 상태로 번역합니다. "
+            "Performance Recheck와 Actual Allocation의 최신 입력을 운영 signal 상태로 번역합니다. "
             "먼저 Summary를 보고, Watch / Breached row의 Suggested Action을 확인합니다."
         )
         trigger_rows, board_status, board_conclusion = _build_review_trigger_board(row)
@@ -589,9 +710,15 @@ def _render_operator_context(row: dict[str, Any]) -> None:
                 st.caption("등록된 review trigger가 없습니다.")
             if blockers:
                 st.warning("남아 있는 blocker: " + ", ".join(blockers))
-    with drift_tab:
+    with evidence_tab:
+        st.caption("Final Review에서 이 포트폴리오가 실전 후보로 선정될 수 있었던 검증 근거입니다.")
+        if evidence_df.empty:
+            st.info("표시할 evidence check row가 없습니다.")
+        else:
+            st.dataframe(evidence_df, width="stretch", hide_index=True)
+    with allocation_tab:
         _render_selected_row_drift_check(row)
-    with boundary_tab:
+    with audit_tab:
         _render_execution_boundary()
 
 
@@ -623,35 +750,48 @@ def _render_performance_recheck(row: dict[str, Any]) -> None:
     default_start = _coerce_date(defaults.get("default_start"), fallback_start)
     default_end = _coerce_date(defaults.get("default_end"), fallback_end)
     decision_id = str(row.get("decision_id") or "selected_portfolio")
-    form_cols = st.columns([0.22, 0.22, 0.24, 0.18, 0.14], gap="small")
-    with form_cols[0]:
-        recheck_start = st.date_input(
-            "Recheck start",
-            value=default_start,
-            key=f"selected_portfolio_recheck_start_{decision_id}",
-        )
-    with form_cols[1]:
-        recheck_end = st.date_input(
-            "Recheck end",
-            value=default_end,
-            key=f"selected_portfolio_recheck_end_{decision_id}",
-        )
-    with form_cols[2]:
-        initial_capital = st.number_input(
-            "Virtual capital",
-            min_value=1_000.0,
-            value=10_000.0,
-            step=1_000.0,
-            key=f"selected_portfolio_recheck_capital_{decision_id}",
-        )
-    with form_cols[3]:
-        st.metric("Original End", defaults.get("baseline_end") or "-")
-    with form_cols[4]:
-        run_clicked = st.button(
-            "Run Recheck",
-            key=f"selected_portfolio_run_recheck_{decision_id}",
-            width="stretch",
-        )
+    with st.container(border=True):
+        st.markdown("##### Recheck Setup")
+        setup_cols = st.columns([0.24, 0.24, 0.24, 0.28], gap="small")
+        with setup_cols[0]:
+            recheck_start = st.date_input(
+                "Recheck start",
+                value=default_start,
+                key=f"selected_portfolio_recheck_start_{decision_id}",
+            )
+        with setup_cols[1]:
+            recheck_end = st.date_input(
+                "Recheck end",
+                value=default_end,
+                key=f"selected_portfolio_recheck_end_{decision_id}",
+            )
+        with setup_cols[2]:
+            initial_capital = st.number_input(
+                "Virtual capital",
+                min_value=1_000.0,
+                value=10_000.0,
+                step=1_000.0,
+                key=f"selected_portfolio_recheck_capital_{decision_id}",
+            )
+        with setup_cols[3]:
+            render_badge_strip(
+                [
+                    {"label": "Original End", "value": defaults.get("baseline_end") or "-", "tone": "neutral"},
+                    {"label": "DB Latest", "value": defaults.get("latest_market_date") or "-", "tone": "neutral"},
+                ]
+            )
+        action_cols = st.columns([0.72, 0.28], gap="small")
+        with action_cols[0]:
+            st.caption(
+                f"Original period: {defaults.get('baseline_start') or '-'} -> {defaults.get('baseline_end') or '-'}"
+            )
+        with action_cols[1]:
+            run_clicked = st.button(
+                "Run Performance Recheck",
+                key=f"selected_portfolio_run_recheck_{decision_id}",
+                type="primary",
+                width="stretch",
+            )
 
     result_key = f"selected_portfolio_recheck_result_{decision_id}"
     if run_clicked:
@@ -665,7 +805,7 @@ def _render_performance_recheck(row: dict[str, Any]) -> None:
 
     result = dict(st.session_state.get(result_key) or {})
     if not result:
-        st.info("날짜 범위와 가상 투자금을 확인한 뒤 `Run Recheck`를 누르면 최신 기간 기준 성과를 바로 계산합니다.")
+        st.info("날짜 범위와 가상 투자금을 확인한 뒤 `Run Performance Recheck`를 누르면 최신 기간 기준 성과를 바로 계산합니다.")
         return
     if result.get("status") == "error":
         st.error(str(result.get("error") or "Performance recheck failed."))
@@ -818,59 +958,81 @@ def _render_performance_recheck(row: dict[str, Any]) -> None:
 
 
 def _render_selected_row_drift_check(row: dict[str, Any]) -> None:
-    st.markdown("##### Allocation Check")
+    st.markdown("##### Actual Allocation Check")
     st.caption(
-        "이 영역은 성과 재검증이 아니라, 실제 또는 가정 보유 상태가 target allocation에서 얼마나 벗어났는지 보는 고급 점검입니다. "
-        "입력값은 저장되지 않고 주문도 만들지 않습니다."
+        "전략이나 백테스트 기간이 바뀌었는지 보는 기능이 아닙니다. "
+        "사용자가 실제 또는 가상으로 배정한 금액이 Final Review의 target allocation과 얼마나 다른지 확인하는 선택 점검입니다."
     )
     components = selected_portfolio_active_components(row)
     if not components:
-        st.info("drift를 계산할 active component가 없습니다.")
+        st.info("allocation을 계산할 active component가 없습니다.")
         return
 
-    threshold_cols = st.columns([0.34, 0.33, 0.33], gap="small")
-    with threshold_cols[0]:
-        drift_threshold = st.number_input(
-            "Rebalance threshold (%)",
-            min_value=0.5,
-            max_value=50.0,
-            value=5.0,
-            step=0.5,
-            key=f"selected_portfolio_drift_threshold_{row.get('decision_id')}",
-            help="component별 target/current 차이가 이 값 이상이면 리밸런싱 검토 필요로 봅니다.",
-        )
-    with threshold_cols[1]:
-        watch_threshold = st.number_input(
-            "Watch threshold (%)",
-            min_value=0.1,
-            max_value=50.0,
-            value=2.0,
-            step=0.5,
-            key=f"selected_portfolio_watch_threshold_{row.get('decision_id')}",
-            help="리밸런싱 전 관찰이 필요한 drift 기준입니다.",
-        )
-    with threshold_cols[2]:
-        total_tolerance = st.number_input(
-            "Total tolerance (%)",
-            min_value=0.1,
-            max_value=10.0,
-            value=1.0,
-            step=0.1,
-            key=f"selected_portfolio_total_tolerance_{row.get('decision_id')}",
-            help="현재 비중 합계가 100%에서 이 범위 이상 벗어나면 입력 확인이 필요합니다.",
+    target_total = sum(float(component.get("target_weight") or 0.0) for component in components)
+    single_component_target = len(components) == 1 and target_total >= 99.0
+    render_badge_strip(
+        [
+            {"label": "Target Components", "value": len(components), "tone": "neutral"},
+            {"label": "Target Total", "value": f"{target_total:.1f}%", "tone": "neutral"},
+            {"label": "Use When", "value": "Actual / Virtual Holdings", "tone": "neutral"},
+            {"label": "Writes", "value": "Disabled", "tone": "neutral"},
+        ]
+    )
+    if single_component_target:
+        st.info(
+            "이 포트폴리오는 단일 component 100% 구조입니다. 여기서는 component 간 리밸런싱보다, "
+            "이 포트폴리오에 배정한 금액과 현금/포트폴리오 밖 금액 때문에 target 100%에서 벗어났는지 확인하는 용도로 봅니다."
         )
 
+    drift_threshold = 5.0
+    watch_threshold = 2.0
+    total_tolerance = 1.0
+    with st.expander("Review thresholds", expanded=False):
+        threshold_cols = st.columns([0.34, 0.33, 0.33], gap="small")
+        with threshold_cols[0]:
+            drift_threshold = st.number_input(
+                "Rebalance threshold (%)",
+                min_value=0.5,
+                max_value=50.0,
+                value=5.0,
+                step=0.5,
+                key=f"selected_portfolio_drift_threshold_{row.get('decision_id')}",
+                help="component별 target/current 차이가 이 값 이상이면 리밸런싱 검토 필요로 봅니다.",
+            )
+        with threshold_cols[1]:
+            watch_threshold = st.number_input(
+                "Watch threshold (%)",
+                min_value=0.1,
+                max_value=50.0,
+                value=2.0,
+                step=0.5,
+                key=f"selected_portfolio_watch_threshold_{row.get('decision_id')}",
+                help="리밸런싱 전 관찰이 필요한 drift 기준입니다.",
+            )
+        with threshold_cols[2]:
+            total_tolerance = st.number_input(
+                "Total tolerance (%)",
+                min_value=0.1,
+                max_value=10.0,
+                value=1.0,
+                step=0.1,
+                key=f"selected_portfolio_total_tolerance_{row.get('decision_id')}",
+                help="현재 비중 합계가 100%에서 이 범위 이상 벗어나면 입력 확인이 필요합니다.",
+            )
+
     current_weights: dict[str, float] = {}
-    input_mode = st.radio(
-        "현재 보유 상태 입력 방식",
-        options=["current_value", "shares_x_price", "current_weight"],
-        format_func=lambda mode: FINAL_SELECTED_PORTFOLIO_VALUE_INPUT_MODE_LABELS.get(mode, mode),
-        horizontal=True,
-        key=f"selected_portfolio_current_input_mode_{row.get('decision_id')}",
-    )
+    input_mode = "current_value"
+    with st.expander("Advanced input modes", expanded=False):
+        input_mode = st.radio(
+            "현재 보유 상태 입력 방식",
+            options=["current_value", "shares_x_price", "current_weight"],
+            format_func=lambda mode: FINAL_SELECTED_PORTFOLIO_VALUE_INPUT_MODE_LABELS.get(mode, mode),
+            horizontal=True,
+            key=f"selected_portfolio_current_input_mode_{row.get('decision_id')}",
+        )
     value_input_contract: dict[str, Any] | None = None
     if input_mode == "current_weight":
-        st.caption("이미 다른 곳에서 현재 비중을 계산해 둔 경우에만 씁니다. 기본값은 target weight입니다.")
+        st.caption("외부에서 이미 현재 비중을 계산해 둔 경우에만 씁니다. 기본값은 target weight입니다.")
         input_cols = st.columns(2, gap="small")
         for index, component in enumerate(components):
             component_id = str(component.get("component_id") or f"component_{index + 1}")
@@ -886,17 +1048,15 @@ def _render_selected_row_drift_check(row: dict[str, Any]) -> None:
                     key=f"selected_portfolio_current_weight_{row.get('decision_id')}_{component_id}",
                 )
     elif input_mode == "current_value":
-        st.caption(
-            "실제 또는 가정 보유금액을 component별로 입력하면 전체 평가금액 대비 현재 비중으로 변환합니다. "
-            "통화 단위는 모두 같기만 하면 됩니다."
-        )
+        st.markdown("###### Current Value Input")
+        st.caption("가장 쉬운 방식입니다. component별 현재 평가금액을 넣으면 전체 금액 대비 현재 비중으로 변환합니다.")
         cash_value = st.number_input(
-            "Unassigned cash / outside value",
+            "Cash or value outside this selected portfolio",
             min_value=0.0,
             value=0.0,
             step=1.0,
             key=f"selected_portfolio_cash_value_{row.get('decision_id')}",
-            help="target component 밖에 남아 있는 현금이나 제외 자산이 있으면 입력합니다.",
+            help="이 포트폴리오 target component 밖에 남아 있는 현금이나 제외 자산이 있으면 입력합니다.",
         )
         component_inputs: dict[str, dict[str, Any]] = {}
         input_cols = st.columns(2, gap="small")
@@ -907,9 +1067,9 @@ def _render_selected_row_drift_check(row: dict[str, Any]) -> None:
             with input_cols[index % 2]:
                 component_inputs[component_id] = {
                     "current_value": st.number_input(
-                        f"{title} current value",
+                        f"{title} assigned value",
                         min_value=0.0,
-                        value=target_weight,
+                        value=10_000.0 if single_component_target else target_weight,
                         step=1.0,
                         key=f"selected_portfolio_current_value_{row.get('decision_id')}_{component_id}",
                     ),
@@ -1054,18 +1214,24 @@ def _render_selected_row_drift_check(row: dict[str, Any]) -> None:
         watch_threshold_pct=float(watch_threshold),
         total_weight_tolerance_pct=float(total_tolerance),
     )
-    st.session_state[f"selected_portfolio_drift_check_result_{_decision_key(row)}"] = drift_check
     metrics = dict(drift_check.get("metrics") or {})
     render_badge_strip(
         [
-            {"label": "Drift Route", "value": drift_check.get("route_label"), "tone": _status_tone("rebalance_needed" if drift_check.get("route") == "REBALANCE_NEEDED" else "normal" if drift_check.get("route") == "DRIFT_ALIGNED" else "watch")},
+            {"label": "Allocation Status", "value": drift_check.get("route_label"), "tone": _status_tone("rebalance_needed" if drift_check.get("route") == "REBALANCE_NEEDED" else "normal" if drift_check.get("route") == "DRIFT_ALIGNED" else "watch")},
             {"label": "Current Total", "value": f"{float(metrics.get('current_weight_total') or 0.0):.1f}%", "tone": "neutral"},
             {"label": "Target Total", "value": f"{float(metrics.get('target_weight_total') or 0.0):.1f}%", "tone": "neutral"},
             {"label": "Max Drift", "value": f"{float(metrics.get('max_abs_drift') or 0.0):.1f}%", "tone": "warning" if float(metrics.get("max_abs_drift") or 0.0) >= float(drift_threshold) else "neutral"},
             {"label": "Order", "value": "Disabled", "tone": "neutral"},
         ]
     )
-    st.caption(str(drift_check.get("verdict") or "-"))
+    route = str(drift_check.get("route") or "")
+    verdict = str(drift_check.get("verdict") or "-")
+    if route == "REBALANCE_NEEDED":
+        st.warning(verdict)
+    elif route in {"DRIFT_WATCH", "DRIFT_INPUT_INCOMPLETE"}:
+        st.info(verdict)
+    else:
+        st.success(verdict)
     drift_df = build_selected_portfolio_drift_table(drift_check)
     if not drift_df.empty:
         st.dataframe(drift_df, width="stretch", hide_index=True)
@@ -1073,36 +1239,47 @@ def _render_selected_row_drift_check(row: dict[str, Any]) -> None:
         for blocker in list(drift_check.get("blockers") or []):
             st.warning(str(blocker))
     alert_preview = build_selected_portfolio_drift_alert_preview(row, drift_check=drift_check)
-    st.session_state[f"selected_portfolio_drift_alert_result_{_decision_key(row)}"] = alert_preview
+    apply_cols = st.columns([0.62, 0.38], gap="small")
+    with apply_cols[0]:
+        st.caption("이 결과를 Review Signals에 반영하려면 오른쪽 버튼을 누릅니다. 입력값과 주문은 저장하지 않습니다.")
+    with apply_cols[1]:
+        if st.button(
+            "Update Review Signals",
+            key=f"selected_portfolio_update_allocation_signal_{row.get('decision_id')}",
+            width="stretch",
+        ):
+            st.session_state[f"selected_portfolio_drift_check_result_{_decision_key(row)}"] = drift_check
+            st.session_state[f"selected_portfolio_drift_alert_result_{_decision_key(row)}"] = alert_preview
+            st.rerun()
     alert_metrics = dict(alert_preview.get("metrics") or {})
-    st.markdown("##### Drift Alert / Review Trigger Preview")
-    st.caption(
-        "drift 결과를 운영 경고와 Final Review review trigger 관점으로 다시 읽습니다. "
-        "이 preview는 alert registry를 저장하지 않고 주문 지시도 만들지 않습니다."
-    )
-    render_badge_strip(
-        [
-            {
-                "label": "Alert Route",
-                "value": alert_preview.get("alert_route_label"),
-                "tone": _alert_tone(str(alert_preview.get("alert_route") or "")),
-            },
-            {"label": "Alert Level", "value": alert_preview.get("alert_level"), "tone": "neutral"},
-            {
-                "label": "Review Triggers",
-                "value": alert_metrics.get("review_trigger_count", 0),
-                "tone": "neutral",
-            },
-            {"label": "Alert Save", "value": "Disabled", "tone": "neutral"},
-            {"label": "Order", "value": "Disabled", "tone": "neutral"},
-        ]
-    )
-    st.caption(str(alert_preview.get("verdict") or "-"))
-    alert_df = build_selected_portfolio_drift_alert_table(alert_preview)
-    if alert_df.empty:
-        st.info("표시할 drift alert / review trigger row가 없습니다.")
-    else:
-        st.dataframe(alert_df, width="stretch", hide_index=True)
+    with st.expander("Allocation review notes", expanded=route in {"REBALANCE_NEEDED", "DRIFT_WATCH"}):
+        st.caption(
+            "allocation 결과를 운영 경고와 Final Review review trigger 관점으로 다시 읽습니다. "
+            "이 preview는 alert registry를 저장하지 않고 주문 지시도 만들지 않습니다."
+        )
+        render_badge_strip(
+            [
+                {
+                    "label": "Alert Route",
+                    "value": alert_preview.get("alert_route_label"),
+                    "tone": _alert_tone(str(alert_preview.get("alert_route") or "")),
+                },
+                {"label": "Alert Level", "value": alert_preview.get("alert_level"), "tone": "neutral"},
+                {
+                    "label": "Review Triggers",
+                    "value": alert_metrics.get("review_trigger_count", 0),
+                    "tone": "neutral",
+                },
+                {"label": "Alert Save", "value": "Disabled", "tone": "neutral"},
+                {"label": "Order", "value": "Disabled", "tone": "neutral"},
+            ]
+        )
+        st.caption(str(alert_preview.get("verdict") or "-"))
+        alert_df = build_selected_portfolio_drift_alert_table(alert_preview)
+        if alert_df.empty:
+            st.info("표시할 allocation review row가 없습니다.")
+        else:
+            st.dataframe(alert_df, width="stretch", hide_index=True)
     st.info(str(drift_check.get("next_action") or "-"))
     st.info(str(alert_preview.get("next_action") or "-"))
 
@@ -1120,90 +1297,11 @@ def render_final_selected_portfolio_dashboard_page() -> None:
 
     render_status_card_grid(_summary_cards(summary))
 
-    st.markdown("#### 데이터 출처와 화면 경계")
-    _render_info_card_grid(
-        [
-            {
-                "title": "Source",
-                "value": "Final Review Decisions",
-                "detail": "최종 선정 판단 row를 읽습니다.",
-                "tone": "neutral",
-            },
-            {
-                "title": "Selected Filter",
-                "value": "Practical Portfolio",
-                "detail": "`SELECT_FOR_PRACTICAL_PORTFOLIO` 또는 selected flag만 운영 대상으로 봅니다.",
-                "tone": "positive",
-            },
-            {
-                "title": "Write Policy",
-                "value": "Read Only",
-                "detail": "재검증과 drift 점검은 새 판단 row나 주문 row를 저장하지 않습니다.",
-                "tone": "neutral",
-            },
-        ],
-        min_width=220,
-    )
-    with st.expander("Registry path", expanded=False):
-        st.code(str(FINAL_SELECTION_DECISION_REGISTRY_FILE), language="text")
-
     if not rows:
         _render_empty_state(summary)
         return
 
-    st.markdown("#### 운영 대상 선택")
-    with st.container(border=True):
-        status_options = selected_portfolio_status_options(rows)
-        source_type_options = selected_portfolio_source_type_options(rows)
-        benchmark_options = selected_portfolio_benchmark_options(rows)
-        filter_top_cols = st.columns(2, gap="small")
-        with filter_top_cols[0]:
-            selected_statuses = st.multiselect(
-                "Status",
-                options=status_options,
-                default=status_options,
-                format_func=lambda status: FINAL_SELECTED_PORTFOLIO_STATUS_LABELS.get(status, status),
-                key="selected_portfolio_dashboard_status_filter",
-            )
-        with filter_top_cols[1]:
-            selected_benchmark = st.selectbox(
-                "Benchmark",
-                options=benchmark_options,
-                key="selected_portfolio_dashboard_benchmark_filter",
-            )
-        filter_bottom_cols = st.columns([0.64, 0.36], gap="small")
-        with filter_bottom_cols[0]:
-            selected_source_types = st.multiselect(
-                "Source Type",
-                options=source_type_options,
-                default=source_type_options,
-                key="selected_portfolio_dashboard_source_filter",
-            )
-
-        filtered_rows = filter_selected_portfolio_rows(
-            rows,
-            statuses=selected_statuses,
-            source_types=selected_source_types,
-            benchmark=str(selected_benchmark),
-        )
-        with filter_bottom_cols[1]:
-            _render_info_card_grid(
-                [
-                    {"title": "Total", "value": len(rows), "detail": "selected rows", "tone": "neutral"},
-                    {"title": "Shown", "value": len(filtered_rows), "detail": "after filter", "tone": "positive"},
-                ],
-                min_width=120,
-            )
-        if not filtered_rows:
-            st.warning("현재 filter 조건에 맞는 선정 포트폴리오가 없습니다.")
-            return
-
-        st.dataframe(build_selected_portfolio_dashboard_table(filtered_rows), width="stretch", hide_index=True)
-        labels = [final_selected_portfolio_label(row) for row in filtered_rows]
-        selected_label = st.selectbox(
-            "포트폴리오 선택",
-            options=labels,
-            key="selected_portfolio_dashboard_selected_row",
-        )
-    selected_row = filtered_rows[labels.index(selected_label)]
+    selected_row = _render_selected_portfolio_picker(rows)
+    if selected_row is None:
+        return
     _render_selected_row_detail(selected_row)

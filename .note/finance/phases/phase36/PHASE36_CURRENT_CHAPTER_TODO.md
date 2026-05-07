@@ -35,6 +35,7 @@ Backtest > Final Review
 | 여섯 번째 작업 | 기간 확장 성과 재검증 중심 dashboard rebounding | `completed` |
 | 일곱 번째 작업 | responsive dashboard UX / tabbed result / Monitoring Playbook 정리 | `completed` |
 | 여덟 번째 작업 | Review Triggers를 Trigger Board로 재구성 | `completed` |
+| 아홉 번째 작업 | dashboard 흐름 재정렬 / Actual Allocation 단순화 | `completed` |
 | 문서 / QA | phase 문서, roadmap, code analysis, checklist 동기화 | `completed` |
 
 ## 완료한 내용
@@ -49,13 +50,13 @@ Backtest > Final Review
 - recheck 기본 종료일은 DB latest market date이며, 원래 검증 기간과 최신 확장 기간을 함께 보여준다.
 - virtual capital 기준 portfolio value, total return, CAGR, MDD, benchmark spread, component contribution, strongest / weakest periods를 표시한다.
 - raw JSON은 기본 화면에서 제거하고 `Audit / Developer Details` 접힘 영역으로 이동했다.
-- `Current Weight / Drift Check`는 `Allocation Check` 고급 영역으로 낮췄다.
-- 데이터 출처와 화면 경계는 긴 텍스트가 잘리지 않도록 wrapping card와 접힘 registry path로 바꿨다.
-- 운영 대상 목록은 compact table / 짧은 portfolio selector / responsive filter layout으로 정리했다.
-- Snapshot은 selection summary와 Portfolio Blueprint로 나누고 target allocation을 포트폴리오 정의 영역에 배치했다.
+- 데이터 출처와 화면 경계는 기본 화면에서 제거하고 `Audit / Developer Details` 접힘 영역으로 낮췄다.
+- 운영 대상이 1개일 때는 필터 / table 대신 compact selected portfolio picker로 보여준다.
+- Snapshot은 selection summary 중심으로 유지하고, 단일 component 100%의 target allocation table은 접힘 details로 낮췄다.
 - Performance Recheck 결과는 `Summary`, `Equity Curve`, `Result Table`, `What Changed`, `Contribution`, `Extremes` tab으로 정리했다.
-- operator context는 `Monitoring Playbook`으로 재구성해 선정 근거, 관찰 기준, Holding Drift Check, Execution Boundary를 같은 흐름에서 읽게 했다.
-- `Review Triggers` tab은 `Trigger Board`로 바꿔 Performance Recheck와 Holding Drift Check 상태를 `Clear`, `Watch`, `Breached`, `Needs Input`으로 번역한다.
+- Performance Recheck setup은 original end와 DB latest date를 badge로 보여주고, 실행 버튼을 primary action으로 분리했다.
+- operator context는 `Portfolio Monitoring`으로 재구성해 `Review Signals`, `Why Selected`, `Actual Allocation`, `Audit` 순서로 읽게 했다.
+- `Review Signals`는 Performance Recheck와 명시적으로 반영된 Actual Allocation 상태를 `Clear`, `Watch`, `Breached`, `Needs Input`, `Optional`로 번역한다.
 - operator reason / constraints / next action / 원본 trigger list는 `Original Operator Notes` 접힘 영역으로 낮췄다.
 - dashboard는 `normal`, `watch`, `rebalance_needed`, `re_review_needed`, `blocked` status 체계를 가진다.
 - `Current Weight / Drift Check`를 추가해 component별 현재 비중을 수동 입력하고 target weight와의 drift를 계산한다.
@@ -63,8 +64,10 @@ Backtest > Final Review
 - current value 입력을 추가해 component별 평가금액과 cash / outside value로 현재 비중을 계산한다.
 - shares x price 입력을 추가해 보유 수량과 현재가로 현재 비중을 계산한다.
 - shares x price 입력에서는 선택적으로 DB latest close를 불러와 현재가 입력을 보조한다.
-- 이 drift check는 실제 account holding 자동 연결 없이 operator 입력값으로 동작한다.
-- `Drift Alert / Review Trigger Preview`를 추가해 drift 결과를 운영 경고와 Final Review review trigger 관점으로 다시 읽는다.
+- 이 drift check는 실제 account holding 자동 연결 없이 operator 입력값으로 동작하며, 이제 기본 명칭은 `Actual Allocation Check`다.
+- `Actual Allocation`은 current value 입력을 기본으로 보여주고, shares x price / current weight 입력과 threshold 설정은 advanced 영역으로 낮췄다.
+- Actual Allocation 결과는 사용자가 `Update Review Signals`를 누를 때만 Review Signals에 반영한다.
+- `Allocation review notes`를 추가해 drift 결과를 운영 경고와 Final Review review trigger 관점으로 다시 읽는다.
 - alert preview는 새 alert registry를 저장하지 않고 주문 지시도 만들지 않는다.
 
 ## 중요한 경계
@@ -96,4 +99,4 @@ Backtest > Final Review
 ## 현재 판단
 
 Phase36 구현은 implementation_complete / manual_qa_pending 상태다.
-사용자는 `PHASE36_TEST_CHECKLIST.md` 기준으로 `Operations > Selected Portfolio Dashboard`의 Performance Recheck와 Monitoring Playbook / Holding Drift Check를 확인하면 된다.
+사용자는 `PHASE36_TEST_CHECKLIST.md` 기준으로 `Operations > Selected Portfolio Dashboard`의 Performance Recheck와 Portfolio Monitoring / Actual Allocation을 확인하면 된다.
