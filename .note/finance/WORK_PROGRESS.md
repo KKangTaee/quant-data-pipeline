@@ -3476,3 +3476,12 @@ Detailed historical logs were archived on `2026-04-13`.
   - 렌더링 책임을 `app/web/ops_review.py`로 분리하고, `streamlit_app.py`는 page entry와 navigation만 유지하게 했다.
   - 상단 triage flow, run health cards, action inbox, 선택 run inspector, failure CSV / related logs / artifact index, 다음 이동 안내, system snapshot을 추가했다.
   - job 실행은 `Workspace > Ingestion`, backtest replay는 `Operations > Backtest Run History`, 후보 replay는 `Operations > Candidate Library`가 맡는 경계를 UI와 flow 문서에 명시했다.
+
+### 2026-05-07
+- Compare / saved mix 검증 ownership 정리:
+  - user feedback에 따라 `Load Saved Mix Into Compare -> Run Strategy Comparison -> 5단계 Compare 결과` 흐름이 저장 mix 검증처럼 보이는 UX 문제를 확인했다.
+  - Compare workspace를 `개별 전략 비교`와 `저장된 비중 조합` 용어로 분리하고, 5단계 Compare 보드는 개별 전략 후보만 Candidate Review로 넘기는 판단임을 명시했다.
+  - 저장 mix 화면의 primary action은 `Mix 재실행 및 검증`으로 바꾸고, 기존 load action은 `전략 비교에서 수정하기`라는 편집 / 재구성 경로로 낮췄다.
+  - GTAA `interval > 1`, `month_end`에서 요청 종료일이 다음 정상 cadence close 전이면 Data Trust hard block이 아니라 cadence-aligned review로 해석하도록 Compare data trust helper를 보정했다.
+  - `Portfolio Mix 검증 보드`는 saved mix의 replay, mix data trust, component Real-Money, workflow registry 기록 여부를 mix-level로 읽고 `포트폴리오 후보 초안으로 보내기`로 Portfolio Proposal에 연결한다.
+  - `Reference > Guides`와 `WEB_BACKTEST_UI_FLOW.md`를 새 용어와 단계 ownership 기준으로 동기화했다.

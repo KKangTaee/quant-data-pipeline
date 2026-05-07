@@ -4402,3 +4402,17 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Follow-up:
   - `app/web/ops_review.py`를 추가하고 `streamlit_app.py`의 Ops Review page entry에서 호출하게 했다
   - README와 Backtest UI flow 문서에는 Ops Review가 운영 상태 판독 화면이며 실행 / replay / 후보 재검토는 전용 화면으로 이동한다는 경계를 남겼다
+
+### 2026-05-07 - Compare / 저장 mix 검증 ownership 재정리
+- User request:
+  - Compare & Portfolio Builder에서 개별 전략 5단계 검증과 저장 mix 검증이 섞여 보이는 UX를 개선하고, Guides도 함께 맞춰 달라고 요청함
+- Interpreted goal:
+  - 5단계 Compare는 개별 전략 후보를 Candidate Review로 보낼 수 있는지 판단하는 보드로 고정하고, weighted / saved mix는 Portfolio Mix 검증 보드와 Portfolio Proposal 경로로 읽히게 해야 함
+- Analysis result:
+  - 기존 `Load Saved Mix Into Compare`는 저장 mix 검증 버튼처럼 보였지만 실제로는 개별 전략 비교 form을 다시 채우는 편집 경로였다
+  - 저장 mix를 열고 바로 `Run Strategy Comparison`을 누르면 GTAA / Equal Weight 각각의 5단계 보드가 떠서, 사용자가 mix-level 검증 실패로 오해할 수 있었다
+  - GTAA `interval=3`, `month_end`처럼 정상 cadence 때문에 result end가 요청 end보다 짧은 경우는 DB 부족이 아니라 cadence-aligned review로 분리하는 것이 맞다
+- Follow-up:
+  - Compare workspace label을 `개별 전략 비교` / `저장된 비중 조합`으로 바꾸고, saved mix primary action을 `Mix 재실행 및 검증`으로 조정했다
+  - `전략 비교에서 수정하기`는 검증이 아니라 저장 mix 구성을 편집 / 재구성하는 경로로 설명했다
+  - Guides와 `WEB_BACKTEST_UI_FLOW.md`에 mix는 Candidate Review가 아니라 Portfolio Proposal 초안으로 연결된다는 ownership을 반영했다

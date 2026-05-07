@@ -66,14 +66,14 @@ def _route_cards() -> dict[str, dict[str, Any]]:
         },
         "저장된 비중 조합": {
             "headline": "이미 저장된 weight setup을 workflow 기록으로 연결",
-            "summary": "Compare에서 저장한 mix를 replay한 뒤 Candidate Review가 아니라 Portfolio Proposal 초안으로 연결합니다.",
+            "summary": "Compare에서 저장한 mix를 재실행한 뒤 Candidate Review가 아니라 Portfolio Proposal 초안으로 연결합니다.",
             "goal": "Saved Portfolio에 저장된 재사용 weight setup을 다시 검토해 proposal로 연결합니다.",
-            "sequence": "저장 조합 replay -> 결과 확인 -> Use This Mix In Portfolio Proposal -> Final Review",
+            "sequence": "저장된 비중 조합 선택 -> Mix 재실행 및 검증 -> 포트폴리오 후보 초안으로 보내기 -> Final Review",
             "caution": "Saved Portfolio는 후보 registry가 아닙니다. Candidate Review를 거치지 않고 proposal registry에 연결합니다.",
             "records": "Saved Portfolio, Portfolio Proposal, Final Decision",
             "dot": [
                 ("saved", "5A\\nSaved Weight Setup", "compare"),
-                ("replay", "5B\\nReplay / Mix Board", "gate"),
+                ("replay", "5B\\nMix Validation Board", "gate"),
                 ("proposal", "7\\nAttach To Proposal", "proposal"),
                 ("final", "8-10\\nValidation + Decision", "final"),
             ],
@@ -328,13 +328,18 @@ def _route_checkpoint_rows() -> dict[str, list[dict[str, str]]]:
         "저장된 비중 조합": [
             {
                 "checkpoint": "저장된 mix가 재현되는가",
-                "detail": "Saved Portfolio는 workflow 기록이 아니라 weight setup이므로 replay 결과부터 확인합니다.",
-                "screen": "Compare & Portfolio Builder",
+                "detail": "Saved Portfolio는 workflow 기록이 아니라 weight setup이므로 `Mix 재실행 및 검증` 결과부터 확인합니다.",
+                "screen": "Compare & Portfolio Builder > 저장된 비중 조합",
+            },
+            {
+                "checkpoint": "개별 5단계 검증으로 오해하지 않는가",
+                "detail": "5단계 Compare 보드는 개별 전략 후보용이고, 저장 mix는 Portfolio Mix 검증 보드에서 판단합니다.",
+                "screen": "저장된 비중 조합 > Portfolio Mix 검증 보드",
             },
             {
                 "checkpoint": "Candidate Review를 억지로 거치지 않는가",
-                "detail": "저장 mix는 개별 current candidate가 아니므로 Use This Mix In Portfolio Proposal로 연결합니다.",
-                "screen": "Saved Mix Replay",
+                "detail": "저장 mix는 개별 current candidate가 아니므로 `포트폴리오 후보 초안으로 보내기`로 연결합니다.",
+                "screen": "저장된 비중 조합",
             },
             {
                 "checkpoint": "proposal 목적과 weight 이유가 보강됐는가",
@@ -552,7 +557,7 @@ def _runtime_artifact_rows() -> list[dict[str, str]]:
             "파일": "SAVED_PORTFOLIOS.jsonl",
             "폴더": ".note/finance/saved/",
             "담는 데이터": "Compare에서 만든 재사용 가능한 portfolio mix setup",
-            "화면 위치": "Backtest > Compare & Portfolio Builder > 저장 Mix 다시 열기",
+            "화면 위치": "Backtest > Compare & Portfolio Builder > 저장된 비중 조합",
         },
     ]
 

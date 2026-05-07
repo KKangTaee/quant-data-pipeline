@@ -130,7 +130,7 @@ Ingestion / Data Trust
 |---|---|
 | `단일 후보 경로` | Candidate Review와 Pre-Live 기록 후 Portfolio Proposal에서 단일 후보 직행 평가를 사용하며, proposal draft 저장을 반복하지 않는다 |
 | `여러 후보 묶음 경로` | 후보별 실행 / 비교와 Candidate Review 저장이 선행이고, Portfolio Proposal은 이미 저장된 후보들을 역할 / 비중 / 목적이 있는 proposal draft로 묶은 뒤 Final Review에서 읽는다 |
-| `저장된 비중 조합 경로` | saved weighted portfolio setup은 후보 registry가 아니라 재사용 weight setup이므로 Candidate Review가 아니라 `Use This Mix In Portfolio Proposal`로 proposal registry에 연결한다 |
+| `저장된 비중 조합 경로` | saved weighted portfolio setup은 후보 registry가 아니라 재사용 weight setup이므로 Candidate Review가 아니라 `포트폴리오 후보 초안으로 보내기`로 proposal registry에 연결한다 |
 | `보류 / 재검토 경로` | hold / blocked / insufficient evidence / re-review 상태에서는 Final Review 직행이 아니라 원인 화면으로 되돌아간다 |
 
 ## Phase 36 Selected Portfolio Dashboard
@@ -349,6 +349,7 @@ Compare 결과 상단에는 `5단계 Compare 검증 보드`를 둔다.
 - `8.0 / 10` 이상이면 `PASS`로 보고 Candidate Review로 깔끔하게 진행 가능하다.
 - `6.5 / 10` 이상이면 `CONDITIONAL`로 보고 조건부 진행 가능하되 Review Note에 약점과 확인 항목을 남긴다.
 - 짧은 실제 종료일 불일치, warning, excluded / malformed ticker 같은 Data Trust 이슈는 score를 cap하지 않고 warning으로 표시한다.
+- GTAA처럼 `interval > 1`, `option=month_end`인 cadence 전략은 요청 종료일이 다음 정상 cadence close 전이면 `Data Trust blocked`가 아니라 cadence-aligned review로 표시한다.
 - 가격 최신성 error 또는 결과 기간이 크게 비는 Data Trust blocked 상태, Real-Money blocker, 비교 실패, 상대 근거 없음은 `FAIL`로 보고 5단계 Compare에서 먼저 재확인한다.
 
 실행:
@@ -356,15 +357,15 @@ Compare 결과 상단에는 `5단계 Compare 검증 보드`를 둔다.
 - 통과 또는 조건부 통과 상태에서는 `Send Selected Strategy To Candidate Review` 버튼으로 `Candidate Review > 1. Draft 확인`으로 보낼 수 있다.
 - 이 버튼을 누른 뒤부터 6단계가 시작된다. 보내진 draft는 아직 registry 저장이 아니며, Candidate Review 안에서 operator decision과 next action을 남겨야 한다.
 
-저장 Mix replay:
+저장된 비중 조합 replay:
 
-- `Replay Saved Mix`는 저장된 weighted portfolio mix 자체와 그 구성 전략 compare를 함께 복원한다.
-- UI에서는 `저장 Mix 다시 열기` 화면 안에서 `저장 Mix Replay 결과`와 `Portfolio Mix 검증 보드`를 바로 보여준다.
+- `Mix 재실행 및 검증`은 저장된 weighted portfolio mix 자체와 그 구성 전략 compare를 함께 복원한다.
+- UI에서는 `저장된 비중 조합` 화면 안에서 `저장 Mix Replay 결과`와 `Portfolio Mix 검증 보드`를 바로 보여준다.
 - `Portfolio Mix 검증 보드`는 saved mix 자체의 replay 가능 여부, mix data trust, 구성 전략 Real-Money gate, workflow registry 기록 여부를 분리해서 보여준다.
 - 저장 mix는 reusable setup이므로, replay 성과가 좋아도 자동으로 5~10단계 통과 기록이 되지 않는다. `Workflow Registry`가 `NOT RECORDED`이면 Portfolio Proposal / Final Review 쪽 기록이 아직 없다는 뜻이다.
-- 이 경우 사용자는 `Use This Mix In Portfolio Proposal`로 이동한다. Saved mix는 이미 비중이 정해진 포트폴리오 조합이므로, 단일 전략 후보를 만드는 `Candidate Review`로 보내지 않는다.
+- 이 경우 사용자는 `포트폴리오 후보 초안으로 보내기`로 이동한다. Saved mix는 이미 비중이 정해진 포트폴리오 조합이므로, 단일 전략 후보를 만드는 `Candidate Review`로 보내지 않는다.
 - Portfolio Proposal에서는 saved mix를 proposal draft로 저장해 `.note/finance/saved/SAVED_PORTFOLIOS.jsonl`의 reusable setup을 `.note/finance/registries/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`의 workflow 기록으로 연결한다.
-- 개별 전략을 6단계 Candidate Review로 보낼 때만 `전략 비교` 화면의 `5단계 Compare 검증 보드`를 사용한다.
+- 개별 전략을 6단계 Candidate Review로 보낼 때만 `개별 전략 비교` 화면의 `5단계 Compare 검증 보드`를 사용한다.
 
 ## Strategy Capability Snapshot 흐름
 
@@ -430,8 +431,8 @@ registry snapshot과 실제 재실행 결과가 같은 설정으로 복원되는
 
 ```text
 Backtest > Compare & Portfolio Builder
-  -> 전략 비교 화면
-  -> 5단계 Compare 결과
+  -> 개별 전략 비교 화면
+  -> 개별 전략 5단계 Compare 결과
   -> compare result bundles
   -> weight 입력
   -> optional GTAA 70 / Equal Weight 30 quick mix
@@ -440,33 +441,34 @@ Backtest > Compare & Portfolio Builder
   -> Save Portfolio Mix
 
 Backtest > Compare & Portfolio Builder
-  -> 저장 Mix 다시 열기 화면
-  -> Load Saved Mix Into Compare or Replay Saved Mix
-  -> Replay Saved Mix는 같은 화면에서 replay result / Portfolio Mix 검증 보드 / weighted result 확인
-  -> workflow 기록이 없으면 Use This Mix In Portfolio Proposal
+  -> 저장된 비중 조합 화면
+  -> Mix 재실행 및 검증 or 전략 비교에서 수정하기
+  -> Mix 재실행 및 검증은 같은 화면에서 replay result / Portfolio Mix 검증 보드 / weighted result 확인
+  -> workflow 기록이 없으면 포트폴리오 후보 초안으로 보내기
   -> Portfolio Proposal에서 saved mix proposal draft 저장
-  -> Load Saved Mix Into Compare는 전략 비교 화면으로 이동해 form을 다시 채움
+  -> 전략 비교에서 수정하기는 개별 전략 비교 화면으로 이동해 form을 다시 채움
 ```
 
 구분:
 
-- `전략 비교`: 새 compare를 실행하고, 그 결과를 기반으로 weighted portfolio mix를 만든 뒤 저장한다.
-- `저장 Mix 다시 열기`: `.note/finance/saved/SAVED_PORTFOLIOS.jsonl`에 저장한 reusable setup을 다시 불러오거나 replay한다.
-- `Load Saved Mix Into Compare`: 저장된 compare 구성과 weight를 form에 다시 채운다.
-- `Replay Saved Mix`: 저장 당시 context로 compare와 weighted portfolio를 다시 실행하고, `저장 Mix 다시 열기` 화면 아래에 replay 결과를 바로 렌더링한다.
+- `개별 전략 비교`: 새 compare를 실행하고, 개별 전략 후보를 Candidate Review로 보낼 수 있는지 5단계 보드로 판단한다. 이어서 weighted portfolio mix를 만들고 저장할 수 있다.
+- `저장된 비중 조합`: `.note/finance/saved/SAVED_PORTFOLIOS.jsonl`에 저장한 reusable setup을 다시 실행하고 mix-level 검증으로 읽는다.
+- `전략 비교에서 수정하기`: 저장된 compare 구성과 weight를 form에 다시 채운다. 검증 버튼이 아니라 편집 / 재구성 진입이다.
+- `Mix 재실행 및 검증`: 저장 당시 context로 compare와 weighted portfolio를 다시 실행하고, `저장된 비중 조합` 화면 아래에 replay 결과와 mix 검증 보드를 바로 렌더링한다.
 
-2026-05-06 이후 Compare workspace의 `전략 비교` / `저장 Mix 다시 열기` 전환은 `st.tabs`가 아니라 상태를 가진 선택 UI로 관리한다.
+2026-05-06 이후 Compare workspace의 `개별 전략 비교` / `저장된 비중 조합` 전환은 `st.tabs`가 아니라 상태를 가진 선택 UI로 관리한다.
 이는 saved mix replay 후에도 결과가 숨은 탭 안에 남지 않게 하기 위한 것이다.
-최근 compare 결과는 `전략 비교` 화면 상단의 `5단계 Compare 결과` 박스에 먼저 표시하고,
+최근 compare 결과는 `개별 전략 비교` 화면 상단의 `개별 전략 5단계 Compare 결과` 박스에 먼저 표시하고,
 그 아래에 입력 form과 weighted portfolio builder를 둔다.
 
-2026-05-06 후속 UX 정리:
+2026-05-07 후속 UX 정리:
 
-- saved mix replay는 더 이상 `전략 비교` 화면으로 강제 이동하지 않는다.
-- `저장 Mix 다시 열기` 안에서 `Portfolio Mix 검증 보드`를 보여준다.
-- 이 보드는 `Saved Mix Replay`, `Mix Data Trust`, `Component Real-Money`, `Workflow Registry`를 따로 판단한다.
+- saved mix replay는 더 이상 `개별 전략 비교` 화면으로 강제 이동하지 않는다.
+- `저장된 비중 조합` 안에서 `Portfolio Mix 검증 보드`를 보여준다.
+- 이 보드는 `Mix Replay`, `Mix Data Trust`, `Component Real-Money`, `Workflow Registry`를 따로 판단한다.
+- mix data trust는 GTAA cadence-aligned result-date gap을 hard blocker와 분리해 `CADENCE ALIGNED` / review 성격으로 보여준다.
 - `Workflow Registry`가 `NOT RECORDED`이면 저장 mix가 성과 replay는 가능하지만 Portfolio Proposal / Final Review registry에는 아직 기록되지 않은 상태다.
-- `NOT RECORDED` 상태의 saved mix는 `Use This Mix In Portfolio Proposal`로 보낸다. 이 경로는 `Candidate Review`가 아니라 `Portfolio Proposal`이며, 비중이 정해진 mix를 proposal registry에 남겨 이후 Final Review에서 읽게 하는 경로다.
+- `NOT RECORDED` 상태의 saved mix는 `포트폴리오 후보 초안으로 보내기`로 보낸다. 이 경로는 `Candidate Review`가 아니라 `Portfolio Proposal`이며, 비중이 정해진 mix를 proposal registry에 남겨 이후 Final Review에서 읽게 하는 경로다.
 - 따라서 saved mix replay 결과와 5단계 개별 전략 handoff 판단이 한 화면에서 섞이지 않는다.
 
 저장된 weighted portfolio는 live trading 승인 기록이 아니다.
@@ -539,8 +541,8 @@ Latest Backtest Run 또는 Operations > Backtest Run History selected record
 - `Save Pre-Live Record`는 live trading 승인이 아니라 `PRE_LIVE_CANDIDATE_REGISTRY.jsonl`에 paper / watchlist / hold 같은 운영 상태를 남기는 append-only 기록이다.
 - `Open Portfolio Proposal`은 같은 후보의 현재 선택 상태가 저장된 Pre-Live record와 맞고 route가 `PORTFOLIO_PROPOSAL_READY`일 때 활성화된다.
 
-Phase 28 이후 `저장 Mix 다시 열기` 영역에는
-`Saved Portfolio Replay / Load Parity Snapshot`을 둔다.
+Phase 28 이후 `저장된 비중 조합` 영역에는
+`저장된 비중 조합 Replay / 편집 Parity Snapshot`을 둔다.
 이 표는 저장 포트폴리오를 다시 열거나 재실행하기 전에 아래 값이 남아 있는지 보여준다.
 
 - compare 공용 입력: start / end / timeframe / option
@@ -585,7 +587,7 @@ Phase 28 이후 compare, history, saved portfolio에는
 
 - `Strategy Comparison > Real-Money / Guardrail`
 - `Operations > Backtest Run History > Selected History Run > History Real-Money / Guardrail Scope`
-- `저장 Mix 다시 열기 > Saved Portfolio Real-Money / Guardrail Scope`
+- `저장된 비중 조합 > Saved Portfolio Real-Money / Guardrail Scope`
 
 현재 기준:
 
