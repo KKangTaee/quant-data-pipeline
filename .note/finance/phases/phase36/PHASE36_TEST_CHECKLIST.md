@@ -71,7 +71,10 @@
 - 체크 항목:
   - [ ] Monitoring Playbook 카드가 선정 근거, 성과 유지 확인, 보유 상태 확인, 실행 경계 순서로 보이는지
   - [ ] Selection Evidence tab에서 Final Review evidence / Validation / Robustness / Paper Observation check를 확인할 수 있는지
-  - [ ] Review Triggers tab에서 reason / constraints / next action / review cadence / triggers를 볼 수 있는지
+  - [ ] Trigger Board tab에서 Board Status, Review Cadence, Stored Triggers, Writes disabled badge가 보이는지
+  - [ ] Trigger Board table이 Final Review evidence, CAGR deterioration, MDD expansion, Benchmark underperformance, Holding drift를 보여주는지
+  - [ ] Trigger Board row가 `Clear`, `Watch`, `Breached`, `Needs Input` 중 하나로 상태를 표시하는지
+  - [ ] Original Operator Notes 접힘 영역에서 reason / constraints / next action / review cadence / 원본 trigger list를 볼 수 있는지
   - [ ] Holding Drift Check tab에서 실제 또는 가상 보유 상태 점검으로 이어지는지
   - [ ] Execution Boundary tab에서 live approval / broker order / auto rebalance disabled 상태를 확인할 수 있는지
 

@@ -4334,3 +4334,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Operator Context는 독립 설명 카드가 아니라 Monitoring Playbook으로 바꾸고 Selection Evidence, Review Triggers, Holding Drift Check, Execution Boundary를 같은 흐름에 둬야 한다
 - Follow-up:
   - Phase36 QA는 새 구조 기준으로 `PHASE36_TEST_CHECKLIST.md`에서 확인한다
+
+### 2026-05-07 - Monitoring Playbook / Review Triggers 의미 정리
+- User request:
+  - Monitoring Playbook에서 무엇을 해야 하는지 설명을 요청했고, 특히 Review Triggers tab이 너무 대충 만든 느낌이라 정리가 필요하다고 지적함
+- Interpreted goal:
+  - Monitoring Playbook은 설명 모음이 아니라 선정 포트폴리오의 운영 상태를 판단하는 board가 되어야 함
+- Analysis result:
+  - Selection Evidence는 선정 근거 확인, Performance Recheck는 성과 유지 확인, Holding Drift Check는 보유 비중 이탈 확인, Execution Boundary는 실행 금지 경계 확인 역할을 가진다
+  - Review Triggers는 원본 trigger list를 그대로 나열하는 탭이 아니라 Performance Recheck와 Holding Drift Check의 현재 상태를 운영 trigger row로 번역해야 한다
+  - 기본 trigger는 Final Review evidence, CAGR deterioration, MDD expansion, Benchmark underperformance, Holding drift가 적합하다
+  - 각 trigger는 `Clear`, `Watch`, `Breached`, `Needs Input` 상태와 Suggested Action을 가져야 한다
+- Follow-up:
+  - Phase36 dashboard에서 Review Triggers tab을 `Trigger Board`로 변경하고, 원본 operator note는 `Original Operator Notes` 접힘 영역으로 낮춘다

@@ -182,6 +182,7 @@ Portfolio Proposal -> Final Review -> 최종 판단 완료
   - Snapshot은 selection summary와 Portfolio Blueprint로 나누고 target allocation을 포트폴리오 정의 영역에 둔다.
   - Performance Recheck 결과는 `Summary`, `Equity Curve`, `Result Table`, `What Changed`, `Contribution`, `Extremes` tab으로 나눈다.
   - operator context는 Monitoring Playbook으로 재구성해 선정 근거, 관찰 기준, Holding Drift Check, Execution Boundary를 한 흐름에서 읽게 한다.
+  - Review Triggers는 Trigger Board로 바꿔 recheck / drift 상태를 Clear / Watch / Breached / Needs Input으로 번역한다.
 - 왜 필요한가:
   - 대시보드는 좁은 창에서도 의미가 잘리지 않아야 하고, 사용자가 “무엇을 먼저 확인해야 하는지”를 화면 구조만 보고 알 수 있어야 한다.
 - 끝나면 좋아지는 점:
@@ -193,6 +194,7 @@ Portfolio Proposal -> Final Review -> 최종 판단 완료
 - `Performance Recheck`가 원래 검증 시작일과 DB latest market date를 기본값으로 잡는지 확인한다.
 - 종료일을 확장했을 때 selected component replay가 실행되고 성과 / benchmark / component contribution이 표시되는지 확인한다.
 - recheck 실행 후 Summary / Equity Curve / Result Table / What Changed / Contribution / Extremes tab이 보이는지 확인한다.
+- Trigger Board가 Performance Recheck와 Holding Drift Check 상태를 운영 trigger row로 번역하는지 확인한다.
 - 좁은 화면에서 데이터 출처 카드와 운영 대상 선택 영역의 텍스트가 잘리지 않는지 확인한다.
 - selected row가 없을 때 empty state가 자연스럽게 보이는지 확인한다.
 - status 계산이 과하게 낙관적이지 않은지 확인한다.

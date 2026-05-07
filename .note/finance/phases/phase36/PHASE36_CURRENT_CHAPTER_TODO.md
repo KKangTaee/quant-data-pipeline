@@ -34,6 +34,7 @@ Backtest > Final Review
 | 다섯 번째 작업 | drift alert / review trigger preview 추가 | `completed` |
 | 여섯 번째 작업 | 기간 확장 성과 재검증 중심 dashboard rebounding | `completed` |
 | 일곱 번째 작업 | responsive dashboard UX / tabbed result / Monitoring Playbook 정리 | `completed` |
+| 여덟 번째 작업 | Review Triggers를 Trigger Board로 재구성 | `completed` |
 | 문서 / QA | phase 문서, roadmap, code analysis, checklist 동기화 | `completed` |
 
 ## 완료한 내용
@@ -54,6 +55,8 @@ Backtest > Final Review
 - Snapshot은 selection summary와 Portfolio Blueprint로 나누고 target allocation을 포트폴리오 정의 영역에 배치했다.
 - Performance Recheck 결과는 `Summary`, `Equity Curve`, `Result Table`, `What Changed`, `Contribution`, `Extremes` tab으로 정리했다.
 - operator context는 `Monitoring Playbook`으로 재구성해 선정 근거, 관찰 기준, Holding Drift Check, Execution Boundary를 같은 흐름에서 읽게 했다.
+- `Review Triggers` tab은 `Trigger Board`로 바꿔 Performance Recheck와 Holding Drift Check 상태를 `Clear`, `Watch`, `Breached`, `Needs Input`으로 번역한다.
+- operator reason / constraints / next action / 원본 trigger list는 `Original Operator Notes` 접힘 영역으로 낮췄다.
 - dashboard는 `normal`, `watch`, `rebalance_needed`, `re_review_needed`, `blocked` status 체계를 가진다.
 - `Current Weight / Drift Check`를 추가해 component별 현재 비중을 수동 입력하고 target weight와의 drift를 계산한다.
 - drift threshold 이상이면 `REBALANCE_NEEDED`, watch threshold 이상이면 `DRIFT_WATCH`, 입력 합계가 100% 근처가 아니면 `DRIFT_INPUT_INCOMPLETE`로 read-only 판정한다.

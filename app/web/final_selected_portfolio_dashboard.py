@@ -57,6 +57,16 @@ def _alert_tone(alert_route: str) -> str:
     return "neutral"
 
 
+def _review_trigger_tone(status: str) -> str:
+    if status == "Clear":
+        return "positive"
+    if status == "Watch":
+        return "warning"
+    if status == "Breached":
+        return "danger"
+    return "neutral"
+
+
 def _format_pct(value: Any, *, default: str = "-") -> str:
     try:
         numeric = float(value)
@@ -224,6 +234,230 @@ def _render_selected_row_detail(row: dict[str, Any]) -> None:
         st.json(row.get("raw_decision") or {})
 
 
+def _decision_key(row: dict[str, Any]) -> str:
+    return str(row.get("decision_id") or "selected_portfolio")
+
+
+def _latest_recheck_result(row: dict[str, Any]) -> dict[str, Any]:
+    return dict(st.session_state.get(f"selected_portfolio_recheck_result_{_decision_key(row)}") or {})
+
+
+def _latest_drift_check(row: dict[str, Any]) -> dict[str, Any]:
+    return dict(st.session_state.get(f"selected_portfolio_drift_check_result_{_decision_key(row)}") or {})
+
+
+def _trigger_row(
+    *,
+    trigger: str,
+    current_signal: str,
+    status: str,
+    why_it_matters: str,
+    suggested_action: str,
+) -> dict[str, str]:
+    return {
+        "Trigger": trigger,
+        "Current Signal": current_signal,
+        "Status": status,
+        "Why It Matters": why_it_matters,
+        "Suggested Action": suggested_action,
+    }
+
+
+def _status_from_delta(
+    value: Any,
+    *,
+    breach_below: float | None = None,
+    watch_below: float | None = None,
+    clear_label: str = "Clear",
+) -> str:
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return "Needs Input"
+    if pd.isna(numeric):
+        return "Needs Input"
+    if breach_below is not None and numeric < breach_below:
+        return "Breached"
+    if watch_below is not None and numeric < watch_below:
+        return "Watch"
+    return clear_label
+
+
+# Build the operator-facing trigger board by translating latest recheck/drift state into actionable rows.
+def _build_review_trigger_board(row: dict[str, Any]) -> tuple[list[dict[str, str]], str, str]:
+    recheck_result = _latest_recheck_result(row)
+    drift_check = _latest_drift_check(row)
+    blockers = [str(blocker) for blocker in list(row.get("blockers") or []) if str(blocker)]
+    evidence_route = str(row.get("evidence_route") or "-")
+    rows: list[dict[str, str]] = []
+
+    evidence_status = "Clear" if not blockers and evidence_route == "READY_FOR_FINAL_DECISION" else "Watch"
+    rows.append(
+        _trigger_row(
+            trigger="Final Review evidence",
+            current_signal=evidence_route,
+            status=evidence_status,
+            why_it_matters="선정 당시 검증 근거가 아직 운영 대상 조건을 만족하는지 확인합니다.",
+            suggested_action=(
+                "남은 blocker가 없으므로 성과와 보유 상태를 계속 점검합니다."
+                if evidence_status == "Clear"
+                else "Selection Evidence tab에서 남은 blocker와 검증 근거를 다시 확인합니다."
+            ),
+        )
+    )
+
+    if not recheck_result:
+        rows.extend(
+            [
+                _trigger_row(
+                    trigger="CAGR deterioration",
+                    current_signal="Performance Recheck not run",
+                    status="Needs Input",
+                    why_it_matters="선정 당시 수익률 근거가 최신 기간에서도 유지되는지 봅니다.",
+                    suggested_action="Performance Recheck에서 기간과 가상 투자금을 확인한 뒤 Run Recheck를 실행합니다.",
+                ),
+                _trigger_row(
+                    trigger="MDD expansion",
+                    current_signal="Performance Recheck not run",
+                    status="Needs Input",
+                    why_it_matters="최신 기간에서 최대 낙폭이 커졌는지 확인합니다.",
+                    suggested_action="Performance Recheck 실행 후 drawdown 변화를 확인합니다.",
+                ),
+                _trigger_row(
+                    trigger="Benchmark underperformance",
+                    current_signal="Performance Recheck not run",
+                    status="Needs Input",
+                    why_it_matters="선정 포트폴리오가 benchmark 대비 우위를 유지하는지 봅니다.",
+                    suggested_action="Performance Recheck 실행 후 benchmark spread를 확인합니다.",
+                ),
+            ]
+        )
+    elif recheck_result.get("status") == "error":
+        error_text = str(recheck_result.get("error") or "recheck failed")
+        rows.extend(
+            [
+                _trigger_row(
+                    trigger="CAGR deterioration",
+                    current_signal=error_text,
+                    status="Needs Input",
+                    why_it_matters="성과 유지 여부를 판단하려면 recheck 결과가 필요합니다.",
+                    suggested_action="입력 기간과 selected component contract를 확인한 뒤 다시 실행합니다.",
+                ),
+                _trigger_row(
+                    trigger="MDD expansion",
+                    current_signal=error_text,
+                    status="Needs Input",
+                    why_it_matters="리스크 확대 여부를 판단하려면 recheck 결과가 필요합니다.",
+                    suggested_action="Performance Recheck 오류를 먼저 해결합니다.",
+                ),
+                _trigger_row(
+                    trigger="Benchmark underperformance",
+                    current_signal=error_text,
+                    status="Needs Input",
+                    why_it_matters="benchmark 대비 성과를 판단하려면 recheck 결과가 필요합니다.",
+                    suggested_action="Performance Recheck 오류를 먼저 해결합니다.",
+                ),
+            ]
+        )
+    else:
+        change = dict(recheck_result.get("change_summary") or {})
+        portfolio_summary = dict(recheck_result.get("portfolio_summary") or {})
+        baseline_summary = dict(recheck_result.get("baseline_summary") or {})
+        cagr_delta = change.get("cagr_delta_vs_baseline")
+        mdd_delta = change.get("mdd_delta_vs_baseline")
+        spread = change.get("net_cagr_spread")
+        cagr_status = _status_from_delta(cagr_delta, breach_below=-0.03, watch_below=0.0)
+        mdd_status = _status_from_delta(mdd_delta, breach_below=-0.05, watch_below=0.0)
+        spread_status = _status_from_delta(spread, breach_below=0.0, watch_below=0.02)
+        rows.extend(
+            [
+                _trigger_row(
+                    trigger="CAGR deterioration",
+                    current_signal=(
+                        f"Recheck {_format_pct(portfolio_summary.get('cagr'))} vs "
+                        f"baseline {_format_pct(baseline_summary.get('cagr'))} "
+                        f"(delta {_format_pct(cagr_delta)})"
+                    ),
+                    status=cagr_status,
+                    why_it_matters="선정 근거였던 장기 수익률이 최신 기간에서 약해졌는지 봅니다.",
+                    suggested_action=(
+                        "CAGR 약화 폭이 큽니다. What Changed와 Contribution tab에서 원인을 확인합니다."
+                        if cagr_status == "Breached"
+                        else "다음 점검에서도 하락이 이어지는지 관찰합니다."
+                        if cagr_status == "Watch"
+                        else "현재 수익률 근거는 유지됩니다."
+                    ),
+                ),
+                _trigger_row(
+                    trigger="MDD expansion",
+                    current_signal=(
+                        f"Recheck {_format_pct(portfolio_summary.get('mdd'))} vs "
+                        f"baseline {_format_pct(baseline_summary.get('mdd'))} "
+                        f"(delta {_format_pct(mdd_delta)})"
+                    ),
+                    status=mdd_status,
+                    why_it_matters="최신 기간에서 손실 위험이 선정 당시보다 커졌는지 봅니다.",
+                    suggested_action=(
+                        "MDD 확대가 큽니다. 약한 기간과 component contribution을 먼저 확인합니다."
+                        if mdd_status == "Breached"
+                        else "drawdown이 더 커지는지 다음 점검에서 확인합니다."
+                        if mdd_status == "Watch"
+                        else "현재 drawdown 근거는 유지됩니다."
+                    ),
+                ),
+                _trigger_row(
+                    trigger="Benchmark underperformance",
+                    current_signal=f"Benchmark spread {_format_pct(spread)}",
+                    status=spread_status,
+                    why_it_matters="포트폴리오가 비교 기준 대비 우위를 유지하는지 봅니다.",
+                    suggested_action=(
+                        "benchmark를 밑돌았습니다. 선정 thesis를 재검토합니다."
+                        if spread_status == "Breached"
+                        else "spread가 얇습니다. 다음 recheck에서 우위가 유지되는지 봅니다."
+                        if spread_status == "Watch"
+                        else "benchmark 대비 우위가 유지됩니다."
+                    ),
+                ),
+            ]
+        )
+
+    drift_route = str(drift_check.get("route") or "")
+    drift_signal = str(drift_check.get("route_label") or "Holding Drift Check not run")
+    if not drift_check:
+        drift_status = "Needs Input"
+        drift_action = "Holding Drift Check tab에서 현재 평가금액, 보유수량, 또는 현재 비중을 입력합니다."
+    elif drift_route == "DRIFT_ALIGNED":
+        drift_status = "Clear"
+        drift_action = "현재 입력 기준으로 target allocation 근처입니다."
+    elif drift_route == "DRIFT_WATCH":
+        drift_status = "Watch"
+        drift_action = "watch component의 drift가 확대되는지 다음 점검에서 확인합니다."
+    elif drift_route == "REBALANCE_NEEDED":
+        drift_status = "Breached"
+        drift_action = "주문 지시가 아니라, drift가 큰 component를 운영 검토 목록에 올립니다."
+    else:
+        drift_status = "Needs Input"
+        drift_action = "입력 합계와 누락 component를 확인한 뒤 다시 계산합니다."
+    rows.append(
+        _trigger_row(
+            trigger="Holding drift",
+            current_signal=drift_signal,
+            status=drift_status,
+            why_it_matters="실제 또는 가정 보유 비중이 선정 target allocation에서 벗어났는지 봅니다.",
+            suggested_action=drift_action,
+        )
+    )
+
+    statuses = [row_item["Status"] for row_item in rows]
+    if "Breached" in statuses:
+        return rows, "Breached", "재검토가 필요한 trigger가 있습니다. Breached row의 Suggested Action부터 확인합니다."
+    if "Needs Input" in statuses:
+        return rows, "Needs Input", "운영 판단을 완성하려면 Performance Recheck 또는 Holding Drift Check 입력이 더 필요합니다."
+    if "Watch" in statuses:
+        return rows, "Watch", "큰 차단은 없지만 watch trigger가 있습니다. 다음 점검에서 같은 항목이 악화되는지 확인합니다."
+    return rows, "Clear", "현재 trigger board 기준으로 선정 thesis와 운영 점검 상태가 유지됩니다."
+
+
 def _render_snapshot(row: dict[str, Any]) -> None:
     st.markdown("#### Snapshot")
     _render_info_card_grid(
@@ -313,7 +547,7 @@ def _render_operator_context(row: dict[str, Any]) -> None:
     )
     evidence_df = build_selected_portfolio_evidence_table(row)
     evidence_tab, trigger_tab, drift_tab, boundary_tab = st.tabs(
-        ["Selection Evidence", "Review Triggers", "Holding Drift Check", "Execution Boundary"]
+        ["Selection Evidence", "Trigger Board", "Holding Drift Check", "Execution Boundary"]
     )
     with evidence_tab:
         st.caption("Final Review에서 이 포트폴리오가 실전 후보로 선정될 수 있었던 검증 근거입니다.")
@@ -322,19 +556,39 @@ def _render_operator_context(row: dict[str, Any]) -> None:
         else:
             st.dataframe(evidence_df, width="stretch", hide_index=True)
     with trigger_tab:
-        st.markdown("##### 운영 판단")
-        st.markdown(f"**선정 사유**  \n{row.get('operator_reason') or '-'}")
-        st.markdown(f"**제약 조건**  \n{row.get('operator_constraints') or '-'}")
-        st.markdown(f"**다음 행동**  \n{row.get('operator_next_action') or '-'}")
-        st.markdown("##### 관찰 기준")
-        st.markdown(f"**점검 주기**  \n{row.get('review_cadence') or '-'}")
-        if triggers:
-            for trigger in triggers:
-                st.markdown(f"- {trigger}")
+        st.caption(
+            "Performance Recheck와 Holding Drift Check의 최신 입력을 운영 trigger 상태로 번역합니다. "
+            "먼저 Summary를 보고, Watch / Breached row의 Suggested Action을 확인합니다."
+        )
+        trigger_rows, board_status, board_conclusion = _build_review_trigger_board(row)
+        render_badge_strip(
+            [
+                {"label": "Board Status", "value": board_status, "tone": _review_trigger_tone(board_status)},
+                {"label": "Review Cadence", "value": row.get("review_cadence"), "tone": "neutral"},
+                {"label": "Stored Triggers", "value": len(triggers), "tone": "neutral"},
+                {"label": "Writes", "value": "Disabled", "tone": "neutral"},
+            ]
+        )
+        if board_status == "Breached":
+            st.warning(board_conclusion)
+        elif board_status in {"Watch", "Needs Input"}:
+            st.info(board_conclusion)
         else:
-            st.caption("등록된 review trigger가 없습니다.")
-        if blockers:
-            st.warning("남아 있는 blocker: " + ", ".join(blockers))
+            st.success(board_conclusion)
+        st.dataframe(pd.DataFrame(trigger_rows), width="stretch", hide_index=True)
+        with st.expander("Original Operator Notes", expanded=False):
+            st.markdown(f"**선정 사유**  \n{row.get('operator_reason') or '-'}")
+            st.markdown(f"**제약 조건**  \n{row.get('operator_constraints') or '-'}")
+            st.markdown(f"**다음 행동**  \n{row.get('operator_next_action') or '-'}")
+            st.markdown(f"**점검 주기**  \n{row.get('review_cadence') or '-'}")
+            if triggers:
+                st.markdown("**Final Review에 저장된 원본 trigger**")
+                for trigger in triggers:
+                    st.markdown(f"- {trigger}")
+            else:
+                st.caption("등록된 review trigger가 없습니다.")
+            if blockers:
+                st.warning("남아 있는 blocker: " + ", ".join(blockers))
     with drift_tab:
         _render_selected_row_drift_check(row)
     with boundary_tab:
@@ -800,6 +1054,7 @@ def _render_selected_row_drift_check(row: dict[str, Any]) -> None:
         watch_threshold_pct=float(watch_threshold),
         total_weight_tolerance_pct=float(total_tolerance),
     )
+    st.session_state[f"selected_portfolio_drift_check_result_{_decision_key(row)}"] = drift_check
     metrics = dict(drift_check.get("metrics") or {})
     render_badge_strip(
         [
@@ -818,6 +1073,7 @@ def _render_selected_row_drift_check(row: dict[str, Any]) -> None:
         for blocker in list(drift_check.get("blockers") or []):
             st.warning(str(blocker))
     alert_preview = build_selected_portfolio_drift_alert_preview(row, drift_check=drift_check)
+    st.session_state[f"selected_portfolio_drift_alert_result_{_decision_key(row)}"] = alert_preview
     alert_metrics = dict(alert_preview.get("metrics") or {})
     st.markdown("##### Drift Alert / Review Trigger Preview")
     st.caption(

@@ -3452,3 +3452,11 @@ Detailed historical logs were archived on `2026-04-13`.
   - Performance Recheck 결과는 `Summary`, `Equity Curve`, `Result Table`, `What Changed`, `Contribution`, `Extremes` tab으로 분리했다.
   - Operator Context는 `Monitoring Playbook`으로 바꿔 Selection Evidence / Review Triggers / Holding Drift Check / Execution Boundary를 같은 흐름에서 읽게 했다.
   - Verification: py_compile, `git diff --check`, finance refinement hygiene helper, Streamlit browser smoke, 390px narrow viewport smoke 통과.
+
+### 2026-05-07
+- Phase36 Monitoring Playbook Trigger Board 정리:
+  - user feedback에 따라 기존 Review Triggers tab이 operator note와 trigger list를 나열하는 수준이라 운영 판단 보드로 보기 어렵다는 문제를 확인했다.
+  - Review Triggers tab을 `Trigger Board`로 바꾸고, Final Review evidence / CAGR deterioration / MDD expansion / benchmark underperformance / Holding drift row를 표시하게 했다.
+  - Trigger Board는 최신 Performance Recheck 결과와 Holding Drift Check 입력 상태를 읽어 `Clear`, `Watch`, `Breached`, `Needs Input`으로 번역한다.
+  - operator reason / constraints / next action / 원본 trigger list는 `Original Operator Notes` expander로 낮췄다.
+  - Trigger Board와 drift 결과는 계속 read-only이며 새 registry row나 주문 row를 만들지 않는다.

@@ -68,6 +68,8 @@ Final Review에서 `투자 가능 후보`로 저장한 포트폴리오를 나중
 ### 5. Monitoring Playbook / Allocation Check
 
 - operator context는 `Monitoring Playbook`으로 바꿔 선정 근거, 관찰 기준, Holding Drift Check, Execution Boundary를 같은 흐름에서 보여준다.
+- `Trigger Board`는 Performance Recheck와 Holding Drift Check의 최신 상태를 읽어 `Clear`, `Watch`, `Breached`, `Needs Input`으로 운영 trigger를 번역한다.
+- 원본 operator reason / constraints / next action / trigger list는 `Original Operator Notes` 접힘 영역에서 확인한다.
 - target allocation은 Snapshot의 `Portfolio Blueprint`에 배치하고, 실제 또는 가상 보유 상태 점검은 `Holding Drift Check` tab으로 분리했다.
 - drift check는 기본 화면이 아니라 운영 점검 tab으로 이동했다.
 - component별 현재 비중을 수동 입력하는 계약을 유지한다.

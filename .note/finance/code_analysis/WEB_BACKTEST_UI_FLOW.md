@@ -31,7 +31,7 @@ UI form, payload 복원, candidate review, history replay, candidate replay, sav
 | `app/web/backtest_portfolio_proposal_helpers.py` | Portfolio Proposal row 생성, 단일 후보 direct readiness / proposal save readiness 평가, 공유 validation / robustness 계산 helper, monitoring / Pre-Live / paper feedback table helper |
 | `app/web/backtest_final_review.py` | Final Review 화면 render. 단일 후보 / 저장 proposal 선택, Validation / Robustness / Paper Observation 기준 확인, 최종 판단 기록, saved final decision review |
 | `app/web/backtest_final_review_helpers.py` | Final Review source 선택, validation 재사용, inline paper observation snapshot, final evidence / save readiness / decision row / display helper |
-| `app/web/final_selected_portfolio_dashboard.py` | `Operations > Selected Portfolio Dashboard` 화면 render. Final Review에서 선정된 포트폴리오를 운영 대상으로 읽고 wrapping source boundary cards / compact selection board / Snapshot + Portfolio Blueprint / tabbed Performance Recheck / Monitoring Playbook / Holding Drift Check / disabled execution boundary를 보여준다 |
+| `app/web/final_selected_portfolio_dashboard.py` | `Operations > Selected Portfolio Dashboard` 화면 render. Final Review에서 선정된 포트폴리오를 운영 대상으로 읽고 wrapping source boundary cards / compact selection board / Snapshot + Portfolio Blueprint / tabbed Performance Recheck / Monitoring Playbook / Trigger Board / Holding Drift Check / disabled execution boundary를 보여준다 |
 | `app/web/final_selected_portfolio_dashboard_helpers.py` | Selected Portfolio Dashboard의 table / component / evidence / value / holding input / drift / alert preview / filter helper |
 | `app/web/runtime/backtest.py` | UI payload를 실행 가능한 runtime call로 변환 |
 | `app/web/runtime/candidate_registry.py` | current candidate / review note / pre-live registry JSONL read / append helper |
@@ -61,7 +61,7 @@ Operations 보조 화면:
 
 - `Operations > Backtest Run History`: 저장된 실행 기록을 inspect하고, 가능한 경우 run again, load into form, candidate draft handoff를 수행한다. 후보 검토 흐름의 주 단계가 아니라 과거 실행을 다시 열기 위한 운영 / 재현 도구로 둔다.
 - `Operations > Candidate Library`: `CURRENT_CANDIDATE_REGISTRY.jsonl`과 `PRE_LIVE_CANDIDATE_REGISTRY.jsonl`을 읽어 저장된 후보를 다시 열어 본다. registry에는 compact snapshot만 남으므로, 그래프 / result table이 필요할 때 저장 contract로 DB-backed result curve를 재생성한다. 후보 등록 단계가 아니라 보관함 / 재검토 도구다.
-- `Operations > Selected Portfolio Dashboard`: `FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`에서 `SELECT_FOR_PRACTICAL_PORTFOLIO`로 선정된 row만 읽어 최종 선정 포트폴리오의 운영 대상 목록, Snapshot / Portfolio Blueprint, 기간 확장 Performance Recheck tabs, Monitoring Playbook, optional Holding Drift Check를 보여준다. 새 final decision이나 alert row를 저장하지 않고, live approval / broker order / auto rebalance는 disabled로 둔다.
+- `Operations > Selected Portfolio Dashboard`: `FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`에서 `SELECT_FOR_PRACTICAL_PORTFOLIO`로 선정된 row만 읽어 최종 선정 포트폴리오의 운영 대상 목록, Snapshot / Portfolio Blueprint, 기간 확장 Performance Recheck tabs, Monitoring Playbook, Trigger Board, optional Holding Drift Check를 보여준다. 새 final decision이나 alert row를 저장하지 않고, live approval / broker order / auto rebalance는 disabled로 둔다.
 
 ## 현재 Reference Guide 제품 흐름
 
@@ -100,7 +100,7 @@ Ingestion / Data Trust
 - `Robustness / Stress Validation Pack`은 Phase 32에서 추가된 surface다. stress 검증 실행 전 period / contract / benchmark / CAGR / MDD / compare evidence가 충분한지 확인하고, stress / sensitivity summary row와 Phase33 paper ledger handoff를 보여준다. 아직 실제 stress sweep을 실행했다는 뜻은 아니다.
 - `Paper Tracking Ledger`는 Phase 33에서 추가된 append-only 기록 흐름이지만, 현재 주 사용자 흐름에서는 Final Review의 inline paper observation 기준으로 흡수한다. 기존 ledger row는 backward compatibility / 과거 QA 기록으로 읽을 수 있다.
 - Phase 35에서 별도 `Post-Selection Guide` panel은 과한 단계로 판단해 active workflow에서 제거했다. 최종 판단과 투자 가능 / 투자하면 안 됨 / 내용 부족 / 재검토 필요 해석은 `Backtest > Final Review`의 saved final decision review에서 확인한다.
-- Phase 36에서 선정 이후 운영 확인은 `Backtest` 주 workflow가 아니라 `Operations > Selected Portfolio Dashboard`로 분리했다. 이 화면은 Final Review selected row를 read-only로 읽고, 사용자가 지정한 시작일 / 종료일 / 가상 투자금으로 selected component contract를 다시 replay해 최신 기간 성과를 확인한다. current value, shares x price, current weight 기반 drift / rebalance-needed 검토 신호는 `Allocation Check` 고급 영역으로 낮췄다. shares x price 입력에서는 DB latest close를 보조로 불러올 수 있지만, account holding 자동 연결이나 주문 초안은 만들지 않는다.
+- Phase 36에서 선정 이후 운영 확인은 `Backtest` 주 workflow가 아니라 `Operations > Selected Portfolio Dashboard`로 분리했다. 이 화면은 Final Review selected row를 read-only로 읽고, 사용자가 지정한 시작일 / 종료일 / 가상 투자금으로 selected component contract를 다시 replay해 최신 기간 성과를 확인한다. `Trigger Board`는 최신 Performance Recheck와 Holding Drift Check 상태를 `Clear / Watch / Breached / Needs Input`으로 번역한다. current value, shares x price, current weight 기반 drift / rebalance-needed 검토 신호는 Monitoring Playbook의 `Holding Drift Check`에 둔다. shares x price 입력에서는 DB latest close를 보조로 불러올 수 있지만, account holding 자동 연결이나 주문 초안은 만들지 않는다.
 
 현재 Guides 화면은 제품형 의사결정 guide로 정리한다.
 
@@ -148,7 +148,7 @@ Backtest > Final Review
 | 파일 | 역할 |
 |---|---|
 | `app/web/runtime/final_selected_portfolios.py` | Final Review final decision row를 읽고 selected dashboard row / status summary / selected component performance recheck / current weight 또는 value / holding input 기반 drift check / drift alert preview로 변환 |
-| `app/web/final_selected_portfolio_dashboard.py` | Operations dashboard 화면 render, source boundary cards, compact selection board, Snapshot / Portfolio Blueprint, Performance Recheck controls + result tabs, Monitoring Playbook, audit 표시 |
+| `app/web/final_selected_portfolio_dashboard.py` | Operations dashboard 화면 render, source boundary cards, compact selection board, Snapshot / Portfolio Blueprint, Performance Recheck controls + result tabs, Monitoring Playbook / Trigger Board, audit 표시 |
 | `app/web/final_selected_portfolio_dashboard_helpers.py` | dashboard table, component table, evidence table, value / holding input table, drift table, alert preview table, filter helper |
 | `app/web/streamlit_app.py` | Operations navigation에 `Selected Portfolio Dashboard` page 등록 |
 
@@ -182,7 +182,7 @@ first-pass status:
 
 - `Operations > Selected Portfolio Dashboard`는 live approval, broker order, auto rebalance가 아니다.
 - Performance Recheck는 latest result 확인 도구이며 live approval이나 수익 보장 표현이 아니다.
-- current weight 직접 입력, current value 입력, shares x price 입력 기반 drift check는 `Allocation Check` 고급 영역에 둔다.
+- current weight 직접 입력, current value 입력, shares x price 입력 기반 drift check는 `Holding Drift Check` tab에 둔다.
 - DB latest close 조회는 shares x price 입력을 돕는 보조 기능이다.
 - Drift Alert / Review Trigger Preview는 read-only 해석이며 alert registry를 저장하지 않는다.
 - account holding 자동 연결, broker order, auto rebalance는 후속 phase에서 별도 계약을 정한 뒤 구현한다.
