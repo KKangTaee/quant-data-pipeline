@@ -3469,3 +3469,10 @@ Detailed historical logs were archived on `2026-04-13`.
   - Monitoring Playbook을 `Portfolio Monitoring`으로 바꾸고 `Review Signals`, `Why Selected`, `Actual Allocation`, `Audit` 흐름으로 정리했다.
   - Holding Drift Check는 `Actual Allocation Check`로 바꿔 current value 입력을 기본으로 두고, shares x price / current weight / threshold 설정은 advanced 영역으로 낮췄다.
   - Actual Allocation 결과는 사용자가 `Update Review Signals`를 누를 때만 Review Signals에 반영하도록 변경했다.
+
+### 2026-05-06
+- Ops Review 운영 대시보드 개편:
+  - user confirmation에 따라 기존 `Ops Review`의 최근 결과 / history / logs / failure CSV 나열형 UI를 운영 상태 판독 화면으로 개편했다.
+  - 렌더링 책임을 `app/web/ops_review.py`로 분리하고, `streamlit_app.py`는 page entry와 navigation만 유지하게 했다.
+  - 상단 triage flow, run health cards, action inbox, 선택 run inspector, failure CSV / related logs / artifact index, 다음 이동 안내, system snapshot을 추가했다.
+  - job 실행은 `Workspace > Ingestion`, backtest replay는 `Operations > Backtest Run History`, 후보 replay는 `Operations > Candidate Library`가 맡는 경계를 UI와 flow 문서에 명시했다.

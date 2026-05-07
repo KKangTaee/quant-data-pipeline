@@ -46,6 +46,7 @@ from app.web.backtest_common import QUALITY_STRICT_PRESETS, clear_backtest_previ
 from app.web.backtest_candidate_library import render_candidate_library_page
 from app.web.backtest_history import render_backtest_run_history_page
 from app.web.final_selected_portfolio_dashboard import render_final_selected_portfolio_dashboard_page
+from app.web.ops_review import render_operations_dashboard
 from app.web.overview_dashboard import render_overview_dashboard
 from app.web.pages.backtest import render_backtest_tab
 from app.web.reference_guides import render_reference_guides_page
@@ -2389,20 +2390,16 @@ def _render_backtest_page() -> None:
 
 
 def _render_ops_review_page() -> None:
-    st.title("Ops Review")
-    st.caption("최근 실행 결과, persistent history, 로그와 failure artifact를 운영 관점에서 한 곳에 모아 봅니다.")
-    _render_running_banner()
-    _render_runtime_build_indicator()
-
-    left, right = st.columns([3, 2])
-    with left:
-        _render_recent_results()
-        st.divider()
-        _render_persistent_run_history()
-    with right:
-        _render_recent_logs()
-        st.divider()
-        _render_failure_csv_preview()
+    render_operations_dashboard(
+        runtime_marker=APP_RUNTIME_MARKER,
+        loaded_at=APP_RUNTIME_LOADED_AT,
+        git_sha=CURRENT_GIT_SHORT_SHA,
+        running_job=st.session_state.get("running_job"),
+        recent_results=st.session_state.get("recent_results") or [],
+        log_dir=LOG_DIR,
+        csv_dir=CSV_DIR,
+        render_runtime_snapshot=_render_runtime_build_indicator,
+    )
 
 
 def _render_backtest_run_history_page(open_backtest_page) -> None:
