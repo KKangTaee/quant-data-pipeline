@@ -10,6 +10,8 @@ UI form, payload 복원, candidate review, history replay, candidate replay, sav
 | 파일 | 역할 |
 |---|---|
 | `app/web/streamlit_app.py` | top navigation과 page entry |
+| `app/web/reference_guides.py` | `Reference > Guides`의 제품형 workflow guide, portfolio flowchart, decision gates, reference drawer |
+| `app/web/ops_review.py` | `Operations > Ops Review`의 triage flow, 웹앱 run health, action inbox, failure artifact, log, system snapshot dashboard |
 | `app/web/overview_dashboard.py` | `Workspace > Overview`에서 Backtest registry 기반 후보 Top 3, candidate funnel, next actions, recent activity dashboard render |
 | `app/web/overview_dashboard_helpers.py` | Overview dashboard용 current candidate / Pre-Live / proposal / history / saved portfolio 집계와 candidate priority scoring helper |
 | `app/web/backtest_common.py` | Backtest 공용 preset, session state, panel routing, universe / real-money / guardrail input, status label helper |
@@ -30,11 +32,14 @@ UI form, payload 복원, candidate review, history replay, candidate replay, sav
 | `app/web/backtest_portfolio_proposal_helpers.py` | Portfolio Proposal row 생성, 단일 후보 direct readiness / proposal save readiness 평가, 공유 validation / robustness 계산 helper, monitoring / Pre-Live / paper feedback table helper |
 | `app/web/backtest_final_review.py` | Final Review 화면 render. 단일 후보 / 저장 proposal 선택, Validation / Robustness / Paper Observation 기준 확인, 최종 판단 기록, saved final decision review |
 | `app/web/backtest_final_review_helpers.py` | Final Review source 선택, validation 재사용, inline paper observation snapshot, final evidence / save readiness / decision row / display helper |
+| `app/web/final_selected_portfolio_dashboard.py` | `Operations > Selected Portfolio Dashboard` 화면 render. Final Review에서 선정된 포트폴리오를 운영 대상으로 읽고 compact selected portfolio picker / Snapshot / tabbed Performance Recheck / Portfolio Monitoring Review Signals / optional Actual Allocation / Audit을 보여준다 |
+| `app/web/final_selected_portfolio_dashboard_helpers.py` | Selected Portfolio Dashboard의 table / component / evidence / value / holding input / drift / alert preview / filter helper |
 | `app/web/runtime/backtest.py` | UI payload를 실행 가능한 runtime call로 변환 |
 | `app/web/runtime/candidate_registry.py` | current candidate / review note / pre-live registry JSONL read / append helper |
 | `app/web/runtime/portfolio_proposal.py` | portfolio proposal draft JSONL read / append helper |
 | `app/web/runtime/paper_portfolio_ledger.py` | paper portfolio tracking ledger JSONL read / append helper |
 | `app/web/runtime/final_selection_decisions.py` | final portfolio selection decision JSONL read / append helper |
+| `app/web/runtime/final_selected_portfolios.py` | final selection decision registry를 read-only dashboard row, selected component replay recheck, component contribution, optional Allocation Check / drift preview로 변환하는 Phase36 helper |
 | `.note/finance/run_history/BACKTEST_RUN_HISTORY.jsonl` | local run history. 보통 commit하지 않음 |
 | `.note/finance/saved/SAVED_PORTFOLIOS.jsonl` | saved portfolio persistence |
 | `.note/finance/registries/PORTFOLIO_PROPOSAL_REGISTRY.jsonl` | proposal draft persistence. 첫 proposal 저장 시 생성 |
@@ -55,8 +60,10 @@ Backtest 주 흐름:
 
 Operations 보조 화면:
 
+- `Operations > Ops Review`: 웹앱 ingestion / refresh / factor job의 run health를 점검한다. triage flow, 최근 실행 상태, action inbox, failure CSV, run artifact, related logs, runtime snapshot을 보여주며, job 실행은 `Ingestion`, backtest replay는 `Backtest Run History`, 후보 replay는 `Candidate Library`로 분리한다.
 - `Operations > Backtest Run History`: 저장된 실행 기록을 inspect하고, 가능한 경우 run again, load into form, candidate draft handoff를 수행한다. 후보 검토 흐름의 주 단계가 아니라 과거 실행을 다시 열기 위한 운영 / 재현 도구로 둔다.
 - `Operations > Candidate Library`: `CURRENT_CANDIDATE_REGISTRY.jsonl`과 `PRE_LIVE_CANDIDATE_REGISTRY.jsonl`을 읽어 저장된 후보를 다시 열어 본다. registry에는 compact snapshot만 남으므로, 그래프 / result table이 필요할 때 저장 contract로 DB-backed result curve를 재생성한다. 후보 등록 단계가 아니라 보관함 / 재검토 도구다.
+- `Operations > Selected Portfolio Dashboard`: `FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`에서 `SELECT_FOR_PRACTICAL_PORTFOLIO`로 선정된 row만 읽어 최종 선정 포트폴리오의 compact 선택, Snapshot, 기간 확장 Performance Recheck tabs, Portfolio Monitoring의 Review Signals / Why Selected / optional Actual Allocation / Audit을 보여준다. 새 final decision이나 alert row를 저장하지 않고, live approval / broker order / auto rebalance는 disabled로 둔다.
 
 ## 현재 Reference Guide 제품 흐름
 
@@ -95,15 +102,92 @@ Ingestion / Data Trust
 - `Robustness / Stress Validation Pack`은 Phase 32에서 추가된 surface다. stress 검증 실행 전 period / contract / benchmark / CAGR / MDD / compare evidence가 충분한지 확인하고, stress / sensitivity summary row와 Phase33 paper ledger handoff를 보여준다. 아직 실제 stress sweep을 실행했다는 뜻은 아니다.
 - `Paper Tracking Ledger`는 Phase 33에서 추가된 append-only 기록 흐름이지만, 현재 주 사용자 흐름에서는 Final Review의 inline paper observation 기준으로 흡수한다. 기존 ledger row는 backward compatibility / 과거 QA 기록으로 읽을 수 있다.
 - Phase 35에서 별도 `Post-Selection Guide` panel은 과한 단계로 판단해 active workflow에서 제거했다. 최종 판단과 투자 가능 / 투자하면 안 됨 / 내용 부족 / 재검토 필요 해석은 `Backtest > Final Review`의 saved final decision review에서 확인한다.
+- Phase 36에서 선정 이후 운영 확인은 `Backtest` 주 workflow가 아니라 `Operations > Selected Portfolio Dashboard`로 분리했다. 이 화면은 Final Review selected row를 read-only로 읽고, 사용자가 지정한 시작일 / 종료일 / 가상 투자금으로 selected component contract를 다시 replay해 최신 기간 성과를 확인한다. `Review Signals`는 최신 Performance Recheck와 사용자가 명시적으로 반영한 Actual Allocation 상태를 `Clear / Watch / Breached / Needs Input / Optional`로 번역한다. current value 기반 Actual Allocation을 기본 입력으로 두고, shares x price / current weight 입력은 advanced 입력으로 둔다. shares x price 입력에서는 DB latest close를 보조로 불러올 수 있지만, account holding 자동 연결이나 주문 초안은 만들지 않는다.
 
-현재 Guides 화면은 네 묶음으로 정리한다.
+현재 Guides 화면은 제품형 의사결정 guide로 정리한다.
 
 | 묶음 | 내용 |
 |---|---|
-| `핵심 개념 가이드` | 실전 승격 흐름, Real-Money Contract, GTAA Risk-Off 후보군, interval, Compare 대상 선정법, Portfolio Proposal -> Final Review -> 최종 판단 완료 해석 |
-| `1~10 단계 실행 흐름` | 데이터 최신화부터 Final Review 저장 결과 확인까지의 단계별 흐름. 각 단계는 expander로 접어 읽는다 |
-| `단계 통과 기준` | 4->5, 5->6, 6->7, 7->8, 8->9, 9->10, 최종 판단 해석처럼 다음 단계로 넘길지 판단하는 stop/go 기준 |
-| `문서와 파일` | 현재 먼저 볼 문서, 후보 검토 / 실행 재사용 JSONL 저장소 지도, proposal / paper ledger / final decision guide와 registry path, live approval이 아님을 구분하는 운영 경계 |
+| `Portfolio Selection Guide` hero | 제품 안내 첫 화면으로, 현재 workflow와 runtime / git 상태를 compact badge로 보여준다. 개발용 `Runtime / Build`는 하단 접힘 `System status`로 낮춘다 |
+| `현재 진행 상황 선택` | 단일 후보, 여러 후보 묶음, 저장된 비중 조합, 보류 / 재검토 중 사용자의 현재 상황을 먼저 고른다 |
+| `전체 1~10 단계에서 현재 위치` | 선택 버튼 바로 아래에 제품형 compact timeline을 둔다. 선택 경로에 따라 `필수`, `반복`, `직행`, `선행`, `생략`, `보류` 같은 상태 라벨을 붙여 현재 위치와 생략되는 단계를 먼저 해석하게 한다 |
+| `선택한 경로 요약` | `선택한 목표`, `진행 순서`, `건너뛰거나 조심할 단계`, `생성 / 참조 기록`으로 선택 경로의 화면 순서와 기록 경계를 짧게 보여준다 |
+| `Portfolio Flow` | 선택 경로를 GraphViz flowchart로 보여주고, 환경상 GraphViz 렌더링이 실패하면 compact visual fallback으로 표시한다. chart node는 큰 흐름을 맡고, 긴 설명은 아래 checkpoint 패널로 넘긴다 |
+| `선택한 경로의 핵심 체크포인트` | 선택 경로에서 실제로 놓치면 안 되는 checkpoint를 카드로 보여준다. 단일 후보, 여러 후보 묶음, 저장된 비중 조합, 보류 / 재검토마다 같은 workflow를 다르게 해석한다 |
+| `Decision Gates` | 단계 번호 대신 `Compare로 가도 되는가`, `Candidate로 남겨도 되는가`, `Proposal로 묶어도 되는가`, `Final Review를 기록해도 되는가` 같은 사용자 질문 기준으로 Go / Review / Stop을 보여준다 |
+| `Reference Drawer` | 핵심 개념, 상세 단계, 기록 저장소, 운영 경계를 탭으로 낮춰 필요할 때만 확인하게 한다 |
+
+사용자는 먼저 현재 진행 상황을 고르고,
+1~10 단계 timeline에서 전체 workflow상 위치를 본 뒤,
+선택한 경로 요약과 flowchart로 실제 화면 순서와 기록 경계를 확인한다.
+그 다음 경로별 checkpoint에서 놓치면 안 되는 판단을 보고
+실제로 지나가는 화면, 반복되는 단계, 생략되는 단계, 생성되거나 읽는 기록을 본다.
+그 다음 Decision Gates와 Reference Drawer를 이어서 읽는다.
+
+경로별 핵심 차이는 아래와 같다.
+
+| 경로 | 핵심 차이 |
+|---|---|
+| `단일 후보 경로` | Candidate Review와 Pre-Live 기록 후 Portfolio Proposal에서 단일 후보 직행 평가를 사용하며, proposal draft 저장을 반복하지 않는다 |
+| `여러 후보 묶음 경로` | 후보별 실행 / 비교와 Candidate Review 저장이 선행이고, Portfolio Proposal은 이미 저장된 후보들을 역할 / 비중 / 목적이 있는 proposal draft로 묶은 뒤 Final Review에서 읽는다 |
+| `저장된 비중 조합 경로` | saved weighted portfolio setup은 후보 registry가 아니라 재사용 weight setup이므로 Candidate Review가 아니라 `Use This Mix In Portfolio Proposal`로 proposal registry에 연결한다 |
+| `보류 / 재검토 경로` | hold / blocked / insufficient evidence / re-review 상태에서는 Final Review 직행이 아니라 원인 화면으로 되돌아간다 |
+
+## Phase 36 Selected Portfolio Dashboard
+
+Phase36은 Final Review 이후 새 판단 저장 단계를 추가하지 않는다.
+Backtest workflow는 Final Review에서 끝나고,
+선정 이후 확인은 Operations 화면에서 한다.
+
+```text
+Backtest > Final Review
+  -> FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl
+  -> Operations > Selected Portfolio Dashboard
+```
+
+구현 책임:
+
+| 파일 | 역할 |
+|---|---|
+| `app/web/runtime/final_selected_portfolios.py` | Final Review final decision row를 읽고 selected dashboard row / status summary / selected component performance recheck / current weight 또는 value / holding input 기반 drift check / drift alert preview로 변환 |
+| `app/web/final_selected_portfolio_dashboard.py` | Operations dashboard 화면 render, compact selected portfolio picker, Snapshot, Performance Recheck setup + result tabs, Portfolio Monitoring Review Signals / Why Selected / optional Actual Allocation / Audit 표시 |
+| `app/web/final_selected_portfolio_dashboard_helpers.py` | dashboard table, component table, evidence table, value / holding input table, drift table, alert preview table, filter helper |
+| `app/web/streamlit_app.py` | Operations navigation에 `Selected Portfolio Dashboard` page 등록 |
+
+데이터 기준:
+
+- source-of-truth: `.note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`
+- selected filter:
+  - `decision_route == SELECT_FOR_PRACTICAL_PORTFOLIO`
+  - 또는 `selected_practical_portfolio == true`
+- dashboard write policy:
+  - read-only
+  - 새 final decision row를 저장하지 않음
+  - proposal / candidate registry를 덮어쓰지 않음
+- performance recheck:
+  - selected component의 `registry_id`로 Current Candidate Registry의 replay contract를 찾음
+  - 사용자가 지정한 recheck start / end / virtual capital로 DB-backed strategy replay 실행
+  - portfolio value, total return, CAGR, MDD, benchmark spread, component contribution, strongest / weakest periods 표시
+  - 새 registry row를 저장하지 않음
+
+first-pass status:
+
+| status | 의미 |
+|---|---|
+| `normal` | selected row, active component, target weight 100%, blocker 없음 |
+| `watch` | selected row지만 evidence / validation / robustness / paper route가 보수적으로 읽힘 |
+| `rebalance_needed` | dashboard row 상태 enum으로 유지하며, 상세 `Current Weight / Drift Check`에서는 threshold 초과 시 `REBALANCE_NEEDED`로 표시 |
+| `re_review_needed` | evidence 또는 paper observation blocker가 남아 있음 |
+| `blocked` | component / target weight / selected route 기준이 운영 대상으로 불충분함 |
+
+경계:
+
+- `Operations > Selected Portfolio Dashboard`는 live approval, broker order, auto rebalance가 아니다.
+- Performance Recheck는 latest result 확인 도구이며 live approval이나 수익 보장 표현이 아니다.
+- current value 기반 Actual Allocation을 기본 입력으로 두고, current weight 직접 입력과 shares x price 입력 기반 drift check는 advanced 입력으로 둔다.
+- DB latest close 조회는 shares x price 입력을 돕는 보조 기능이다.
+- Drift Alert / Review Trigger Preview는 read-only 해석이며 alert registry를 저장하지 않는다.
+- account holding 자동 연결, broker order, auto rebalance는 후속 phase에서 별도 계약을 정한 뒤 구현한다.
 
 ## Phase 30 Portfolio Proposal 계약
 

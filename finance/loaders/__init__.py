@@ -26,13 +26,20 @@ from .fundamentals import (
     load_statement_fundamentals_shadow,
     load_statement_shadow_coverage_summary,
 )
-from .price import load_latest_market_date, load_price_freshness_summary, load_price_history, load_price_matrix
+from .price import (
+    load_latest_market_date,
+    load_latest_prices,
+    load_price_freshness_summary,
+    load_price_history,
+    load_price_matrix,
+)
 from .runtime_adapter import adapt_price_history_to_strategy_dfs, load_price_strategy_dfs
 from .universe import load_asset_profile_status_summary, load_universe
 
 __all__ = [
     "load_universe",
     "load_latest_market_date",
+    "load_latest_prices",
     "load_price_history",
     "load_price_freshness_summary",
     "load_price_matrix",

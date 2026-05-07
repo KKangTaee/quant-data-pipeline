@@ -1488,6 +1488,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 | Phase 33 | `complete` | `manual_qa_completed` | Paper Portfolio Tracking Ledger draft / save / review / Phase34 handoff 구현 및 QA 완료 |
 | Phase 34 | `complete` | `manual_qa_completed` | Final Review 탭 분리와 최종 검토 결과 기록 QA 완료 |
 | Phase 35 | `implementation_complete` | `manual_qa_pending` | Final Review를 마지막 active panel로 고정하고 별도 후속 가이드 workflow 제거, 사용자 QA 대기 |
+| Phase 36 | `implementation_complete` | `manual_qa_pending` | `Operations > Selected Portfolio Dashboard` 구현, Final Review selected row read-only 확인 + 사용자 지정 기간 / 가상 투자금 performance recheck + optional Allocation Check QA 대기 |
 
 한 줄 현재 판단:
 - current annual strict candidate와 portfolio bridge를 같은 frame에서 다시 본 `Phase 21`은 manual validation까지 완료되었고,
@@ -1677,7 +1678,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 - Phase 31부터는 최종 실전 포트폴리오 선정 전 검증 phase로 이어간다.
 - 이 구간은 실제 주문 / broker 연동이 아니라, 포트폴리오 후보를 고르기 위한 검증, paper tracking, 최종 선정 decision pack을 만든다.
 
-### Phase 31~35 실전 포트폴리오 선정 로드맵
+### Phase 31~36 실전 포트폴리오 선정 이후 운영 로드맵
 
 | Phase | 이름 | 진행 상태 | 검증 상태 | 쉽게 말하면 |
 |---|---|---|---|---|
@@ -1686,6 +1687,7 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 | Phase 33 | Paper Portfolio Tracking Ledger | `complete` | `manual_qa_completed` | 시작일 / 비중 / 추적 조건을 가진 paper portfolio ledger를 저장하고 Phase34 handoff를 확인했으며 QA까지 완료했다 |
 | Phase 34 | Final Portfolio Selection Decision Pack | `complete` | `manual_qa_completed` | Final Review 탭에서 검증과 paper observation 기준을 모아 최종 실전 후보 포트폴리오를 선정 / 보류 / 거절 / 재검토하는 decision pack을 구현했고 QA까지 완료했다 |
 | Phase 35 | Final Review Completion Flow | `implementation_complete` | `manual_qa_pending` | Final Review를 마지막 active panel로 고정하고 최종 판단 완료 상태를 확인하게 했으며 QA를 기다린다 |
+| Phase 36 | Final Selected Portfolio Monitoring And Rebalance Operations | `implementation_complete` | `manual_qa_pending` | Final Review에서 선정된 포트폴리오를 Operations dashboard에서 읽고 사용자 지정 최신 기간 / 가상 투자금 기준으로 성과 재검증하며, 실제 보유 drift는 optional Allocation Check로 확인하게 했고 QA를 기다린다 |
 
 ### Phase 31. Portfolio Risk And Live Readiness Validation
 
@@ -1770,8 +1772,30 @@ phase의 `진행 상태`와 `검증 상태`를 분리해서 관리한다.
 - Phase35 checklist 기반 사용자 QA가 남아 있다.
 - Phase35도 broker order, 자동매매, live approval은 만들지 않는다.
 
+### Phase 36. Final Selected Portfolio Monitoring And Rebalance Operations
+
+### 목적
+- Final Review에서 `SELECT_FOR_PRACTICAL_PORTFOLIO`로 선정된 포트폴리오를 Operations 화면에서 운영 대상으로 확인하고, 새 기간을 잡아 최신 성과를 즉시 재검증한다.
+
+### 왜 필요한가
+- Phase35에서 Final Review가 마지막 판단 단계로 정리됐으므로, 선정 이후 운영 확인은 Backtest workflow가 아니라 Operations surface로 분리하는 것이 자연스럽다.
+- 최종 선정 포트폴리오를 나중에 다시 찾고, 최초 검증 기간 이후 데이터를 포함해 성과가 계속 유지되는지, 어떤 구간이나 component가 약해졌는지 읽는 home이 필요하다.
+
+### 현재 메모
+- Phase 36은 implementation_complete / manual_qa_pending 상태다.
+- `.note/finance/phases/phase36/` 아래 phase plan, TODO, first work unit, completion summary, next-phase preparation, checklist를 정리했다.
+- `Operations > Selected Portfolio Dashboard` page를 추가했다.
+- `app/web/runtime/final_selected_portfolios.py`가 `FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`을 읽고 selected final decision row를 dashboard row로 변환한다.
+- dashboard 상세에서 사용자가 recheck start / end와 virtual capital을 입력해 현재 DB 최신 데이터까지 selected portfolio 성과를 다시 계산한다.
+- Performance Recheck는 selected candidate replay contract를 재사용해 CAGR / MDD / benchmark spread / component contribution / 강한 기간 / 약한 기간을 표시한다.
+- raw JSON은 기본 화면에서 제거하고 접힘 Audit 영역으로 내렸다.
+- 실제 보유 drift 확인은 optional advanced Allocation Check로 분리했다. 이 영역에서는 current weight 직접 입력, current value 입력, shares x price 입력으로 target 대비 drift를 계산하고 `DRIFT_ALIGNED`, `DRIFT_WATCH`, `REBALANCE_NEEDED`, `DRIFT_INPUT_INCOMPLETE`로 확인한다.
+- shares x price 입력에서는 DB latest close를 보조로 불러올 수 있다.
+- dashboard는 새 registry를 쓰지 않고 read-only로 동작한다.
+- account holding 자동 연결, alert persistence, 주문 초안, broker API, 자동매매는 후속 phase 범위다.
+
 ### 한 줄 흐름
-- `정리 -> 데이터 신뢰성 -> 전략 parity -> 후보 검토 -> 포트폴리오 제안 -> 이후 live readiness`
+- `정리 -> 데이터 신뢰성 -> 전략 parity -> 후보 검토 -> 포트폴리오 제안 -> Final Review -> 선정 포트폴리오 운영 대시보드`
 
 ---
 

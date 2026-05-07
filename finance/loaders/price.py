@@ -11,6 +11,7 @@ from ._common import normalize_date_range, normalize_timeframe, normalize_timest
 
 
 VALID_PRICE_FIELDS = {"open", "high", "low", "close", "adj_close", "volume", "dividends", "stock_splits"}
+VALID_LATEST_PRICE_FIELDS = {"open", "high", "low", "close", "adj_close"}
 
 
 def load_price_history(
@@ -81,6 +82,69 @@ def load_price_matrix(
     matrix = history.pivot(index="date", columns="symbol", values=normalized_field).sort_index()
     matrix.columns.name = None
     return matrix
+
+
+def load_latest_prices(
+    symbols: str | Iterable[str] | None = None,
+    *,
+    universe_source: str | None = None,
+    end: str | None = None,
+    timeframe: str = "1d",
+    field: str = "close",
+) -> pd.DataFrame:
+    """
+    Load one latest available OHLC price row per symbol from MySQL.
+    """
+    normalized_field = str(field).strip().lower()
+    if normalized_field not in VALID_LATEST_PRICE_FIELDS:
+        raise ValueError(f"Unsupported latest price field: {field!r}")
+
+    resolved_symbols = resolve_loader_symbols(symbols=symbols, universe_source=universe_source)
+    normalized_timeframe = normalize_timeframe(timeframe)
+    end_ts = normalize_timestamp(end, field_name="end") if end is not None else None
+
+    if not resolved_symbols:
+        return pd.DataFrame()
+
+    db = MySQLClient("localhost", "root", "1234", 3306)
+    try:
+        db.use_db("finance_price")
+        placeholders = ",".join(["%s"] * len(resolved_symbols))
+        latest_where = [f"symbol IN ({placeholders})", "timeframe = %s"]
+        latest_params: list[object] = list(resolved_symbols) + [normalized_timeframe]
+        if end_ts is not None:
+            latest_where.append("`date` <= %s")
+            latest_params.append(end_ts.strftime("%Y-%m-%d"))
+
+        sql = f"""
+        SELECT
+            ph.symbol,
+            ph.`date` AS latest_date,
+            ph.{normalized_field} AS price,
+            ph.close,
+            ph.adj_close
+        FROM nyse_price_history ph
+        INNER JOIN (
+            SELECT symbol, MAX(`date`) AS latest_date
+            FROM nyse_price_history
+            WHERE {" AND ".join(latest_where)}
+            GROUP BY symbol
+        ) latest
+            ON ph.symbol = latest.symbol
+           AND ph.`date` = latest.latest_date
+        WHERE ph.timeframe = %s
+        ORDER BY ph.symbol ASC
+        """
+        rows = db.query(sql, latest_params + [normalized_timeframe])
+    finally:
+        db.close()
+
+    df = pd.DataFrame(rows)
+    if df.empty:
+        return df
+
+    df["latest_date"] = pd.to_datetime(df["latest_date"], errors="coerce")
+    return df[["symbol", "latest_date", "price", "close", "adj_close"]]
 
 
 def load_price_freshness_summary(

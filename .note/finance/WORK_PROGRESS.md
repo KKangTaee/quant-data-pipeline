@@ -3359,3 +3359,120 @@ Detailed historical logs were archived on `2026-04-13`.
   - 이 경로는 단일 후보를 만드는 `Candidate Review`가 아니라, 이미 비중이 정해진 portfolio mix를 proposal draft로 남기는 경로임을 UI와 Guides에 명시했다.
   - Portfolio Proposal은 saved mix prefill이 있을 때 전용 작성 화면을 먼저 보여주고, 저장 시 `.note/finance/saved/SAVED_PORTFOLIOS.jsonl`의 setup과 `.note/finance/registries/PORTFOLIO_PROPOSAL_REGISTRY.jsonl` workflow 기록을 연결한다.
   - Final Review에서 saved mix proposal을 읽을 때 component contract / benchmark / universe / compare evidence가 빠지지 않도록 proposal evidence snapshot을 보강했다.
+
+### 2026-05-06
+- Phase36 시작:
+  - user confirmation에 따라 `Final-Selected Portfolio Monitoring And Rebalance Operations` phase를 열었다.
+  - Phase36의 첫 구현 목표는 `FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`을 새로 쓰는 것이 아니라, Final Review에서 이미 `SELECT_FOR_PRACTICAL_PORTFOLIO`로 선정된 row를 읽어 `Operations > Selected Portfolio Dashboard`에서 운영 대상으로 보여주는 것이다.
+  - 이번 작업에서는 current price / account holding 기반 drift 계산과 주문 초안은 제외하고, 최종 선정 포트폴리오 목록 / 상태 / target allocation / evidence / disabled execution boundary를 먼저 구현한다.
+
+### 2026-05-06
+- Phase36 first pass 구현 완료:
+  - `app/web/runtime/final_selected_portfolios.py` read model을 추가해 Final Review selected decision row를 dashboard row와 status summary로 변환했다.
+  - `Operations > Selected Portfolio Dashboard` page를 추가해 summary cards, selected portfolio table, status / source / benchmark filters, target allocation, evidence checks, operator next action, disabled execution boundary를 표시한다.
+  - Phase36 plan / TODO / first work unit / checklist / completion / next-phase preparation과 roadmap / index / code analysis / comprehensive map / README / Guides를 동기화했다.
+  - Verification: `PYTHONPYCACHEPREFIX=/tmp/codex_pycache python3 -m py_compile ...`, runtime helper smoke, `git diff --check`, `check_finance_refinement_hygiene.py` 통과.
+  - 남은 gate는 사용자 manual QA다.
+
+### 2026-05-06
+- Phase36 current weight / drift check 구현:
+  - user request에 따라 Phase36 QA를 마지막으로 미루고 다음 작업을 계속 진행했다.
+  - `build_selected_portfolio_drift_check` helper를 추가해 component별 target weight와 operator가 입력한 current weight를 비교한다.
+  - `Operations > Selected Portfolio Dashboard` 상세에 `Current Weight / Drift Check`를 추가했다.
+  - `Rebalance threshold`, `Watch threshold`, `Total tolerance`를 입력받고 `DRIFT_ALIGNED`, `DRIFT_WATCH`, `REBALANCE_NEEDED`, `DRIFT_INPUT_INCOMPLETE`로 read-only 판정한다.
+  - 실제 DB current price 조회, account holding 연결, broker order, auto rebalance는 계속 제외했다.
+
+### 2026-05-06
+- Phase36 value / holding input drift check 확장:
+  - `finance/loaders/price.py`에 symbol별 latest price 조회 helper를 추가했다.
+  - `build_selected_portfolio_current_weight_inputs` helper를 추가해 current value 또는 shares x price 입력을 current weight로 변환한다.
+  - `Operations > Selected Portfolio Dashboard`의 drift check 입력 모드를 current weight 직접 입력, current value 입력, shares x price 입력으로 확장했다.
+  - shares x price 입력에서는 DB latest close를 보조로 불러올 수 있지만, 값은 저장하지 않고 account holding 자동 연결 / 주문 생성도 하지 않는다.
+  - Phase36 문서, roadmap / index / code analysis / comprehensive map / README를 value / holding input 기준으로 동기화했다.
+
+### 2026-05-06
+- Phase36 drift alert / review trigger preview 추가:
+  - `build_selected_portfolio_drift_alert_preview` helper를 추가해 drift check 결과를 운영 경고 없음 / 관찰 경고 / 리밸런싱 검토 경고 / 입력 확인 경고로 변환했다.
+  - `Operations > Selected Portfolio Dashboard` 상세에서 Final Review review trigger와 drift alert row를 함께 보여준다.
+  - 이 preview는 alert registry를 저장하지 않고, live approval / broker order / auto rebalance도 계속 disabled로 둔다.
+  - Phase36 checklist / completion / next phase preparation과 roadmap / index / code analysis / comprehensive map / README를 alert preview 기준으로 동기화했다.
+
+### 2026-05-06
+- Guides 포트폴리오 플로우 맵 UX polish 시작:
+  - user request에 따라 `Reference > Guides`의 1~10 단계 실행 흐름을 선형 텍스트만으로 읽기 어렵다는 문제를 확인했다.
+  - 단일 후보, 다중 후보 portfolio proposal, saved mix, 재검토 / blocker 경로를 시각적 flow map으로 분리해 보여주는 Guide 보강을 진행한다.
+  - 변경 범위는 `app/web/streamlit_app.py`와 Backtest UI flow 문서 동기화로 제한하고, core finance 로직과 JSONL runtime artifact는 수정하지 않는다.
+- 구현:
+  - `Reference > Guides`의 `1~10 단계 실행 흐름` 앞에 `포트폴리오 플로우 맵`을 추가했다.
+  - 경로 선택은 단일 후보, 여러 후보 포트폴리오, 저장 Mix, 재검토 / 막힘 경로로 나누고, 각 경로를 카드형 순서도 / 사용 상황 / 생략되는 단계 / 생성 또는 참조 기록 표로 보여준다.
+  - `.note/finance/code_analysis/WEB_BACKTEST_UI_FLOW.md`의 Guides 묶음 설명을 다섯 묶음 기준으로 동기화했다.
+- 검증:
+  - `py_compile`로 `app/web/streamlit_app.py`, `app/web/pages/backtest.py`, `app/web/backtest_*.py`를 확인했다.
+  - worktree Streamlit 서버를 `127.0.0.1:8502`에 띄우고 `Reference > Guides`에서 플로우 맵 렌더링과 경로 선택 동작을 확인했다.
+  - `git diff --check`와 finance refinement hygiene helper를 통과했다.
+
+### 2026-05-06
+- Guides 제품형 UX 개편:
+  - user feedback에 따라 `Reference > Guides`가 실습 문서 목록처럼 보이고, flow map도 카드 나열에 가까운 문제를 확인했다.
+  - Guide 렌더링을 `app/web/reference_guides.py`로 분리하고, `streamlit_app.py`는 page shell / navigation 중심 책임을 유지하게 했다.
+  - 첫 화면을 `Portfolio Selection Guide` hero, 경로 선택, route summary, GraphViz 기반 `Portfolio Flow`, `Decision Gates`, `Reference Drawer`, 접힘 `System status` 구조로 개편했다.
+  - Runtime / Build는 사용자의 첫 guide 경험에서 제외하고 하단 `System status`로 낮췄다.
+  - 외부 dependency는 추가하지 않았고, GraphViz 렌더링 실패 시 compact visual fallback을 사용하도록 했다.
+  - 검증: `py_compile`, `git diff --check`, finance refinement hygiene helper를 통과했고, `127.0.0.1:8502/guides`에서 GraphViz flowchart 렌더링과 route selector 동작을 확인했다.
+
+### 2026-05-06
+- Guides 단계 해석 보강:
+  - user feedback에 따라 GraphViz flowchart는 좋아졌지만 노드 내용이 얕고, 기존 1~10 단계 위치감이 약해진 문제를 확인했다.
+  - `Reference > Guides`에 선택 경로별 핵심 checkpoint 카드와 `전체 1~10 단계` compact timeline을 추가했다.
+  - timeline은 단일 후보, 여러 후보 포트폴리오, 저장 Mix, 막힘 해결 경로에 따라 `필수`, `반복`, `직행`, `선행`, `생략`, `보류` 같은 상태 라벨을 다르게 보여준다.
+  - GraphViz node 문구도 `Run + Data Trust`, `Review + Registry`, `Validation + Decision`처럼 조금 더 정보성 있게 보강하되, 긴 설명은 timeline / checkpoint 패널로 분리했다.
+
+### 2026-05-06
+- Guides 경로 라벨 / 배치 polish:
+  - user feedback에 따라 `저장 Mix`, `막힘 해결`, `이 경로의 핵심 단계`, `현재 경로 / 다음 행동` 카드가 무엇을 의미하는지 애매한 문제를 확인했다.
+  - Guide 선택지를 `단일 후보`, `여러 후보 묶음`, `저장된 비중 조합`, `보류 / 재검토`로 정리했다.
+  - `전체 1~10 단계에서 현재 위치`를 선택 버튼 바로 아래로 올리고, 그 아래에 `선택한 경로 요약`, `Portfolio Flow`, 선택 경로별 checkpoint를 배치했다.
+  - 여러 후보 묶음 경로는 Candidate Review 저장이 선행이고 Portfolio Proposal은 이미 저장된 후보를 묶는 화면이라는 ownership을 문구로 명확히 했다.
+
+### 2026-05-06
+- Phase36 Selected Portfolio Dashboard 목적 재설계:
+  - user feedback에 따라 기존 dashboard가 JSON inspection / drift 입력 화면처럼 보여 선정 포트폴리오의 성과 모니터링 목적이 흐려지는 문제를 확인했다.
+  - `Operations > Selected Portfolio Dashboard`를 Snapshot / Performance Recheck / What Changed / Allocation Check / Audit 구조로 재배치했다.
+  - Performance Recheck는 Final Review에서 선정된 component의 replay contract를 사용자가 지정한 start / end와 virtual capital로 다시 실행해 최신 성과, benchmark spread, component contribution, 강한 / 약한 기간을 보여준다.
+  - raw JSON은 접힘 Audit 영역으로 이동했고, 실제 보유 drift는 optional advanced Allocation Check로 낮췄다.
+  - Phase36 plan / TODO / first work unit / completion / next-phase preparation / checklist와 roadmap / doc index / comprehensive map / README / code analysis flow를 동기화했다.
+  - Verification: `py_compile`, performance recheck defaults / replay smoke, `git diff --check`, finance refinement hygiene helper, Streamlit `127.0.0.1:8505` browser smoke를 통과했다.
+
+### 2026-05-07
+- Phase36 Selected Portfolio Dashboard UX 구조 polish:
+  - user feedback에 따라 데이터 출처 / 운영 대상 목록 / Snapshot / Performance Recheck / Allocation / Operator Context의 좁은 화면 배치와 의미 연결 문제를 확인했다.
+  - 데이터 출처와 화면 경계는 wrapping card와 접힘 registry path로 바꿨다.
+  - 운영 대상 목록은 compact table, 짧은 portfolio selector, responsive filter layout으로 정리했다.
+  - Snapshot은 selection summary와 Portfolio Blueprint로 재구성하고 target allocation을 포트폴리오 정의 영역으로 이동했다.
+  - Performance Recheck 결과는 `Summary`, `Equity Curve`, `Result Table`, `What Changed`, `Contribution`, `Extremes` tab으로 분리했다.
+  - Operator Context는 `Monitoring Playbook`으로 바꿔 Selection Evidence / Review Triggers / Holding Drift Check / Execution Boundary를 같은 흐름에서 읽게 했다.
+  - Verification: py_compile, `git diff --check`, finance refinement hygiene helper, Streamlit browser smoke, 390px narrow viewport smoke 통과.
+
+### 2026-05-07
+- Phase36 Monitoring Playbook Trigger Board 정리:
+  - user feedback에 따라 기존 Review Triggers tab이 operator note와 trigger list를 나열하는 수준이라 운영 판단 보드로 보기 어렵다는 문제를 확인했다.
+  - Review Triggers tab을 `Trigger Board`로 바꾸고, Final Review evidence / CAGR deterioration / MDD expansion / benchmark underperformance / Holding drift row를 표시하게 했다.
+  - Trigger Board는 최신 Performance Recheck 결과와 Holding Drift Check 입력 상태를 읽어 `Clear`, `Watch`, `Breached`, `Needs Input`으로 번역한다.
+  - operator reason / constraints / next action / 원본 trigger list는 `Original Operator Notes` expander로 낮췄다.
+  - Trigger Board와 drift 결과는 계속 read-only이며 새 registry row나 주문 row를 만들지 않는다.
+
+### 2026-05-07
+- Phase36 Selected Portfolio Dashboard flow 재정렬:
+  - user feedback에 따라 source boundary, 운영 대상 필터, Portfolio Blueprint, Monitoring Playbook, Holding Drift Check가 주 성과 재검증 흐름을 흐리는 문제를 확인했다.
+  - 데이터 출처 / registry path / raw JSON은 `Audit / Developer Details`로 낮추고, 운영 대상이 1개일 때는 compact selected portfolio picker만 보여주게 했다.
+  - Snapshot은 단일 component 100% target allocation table을 접힘 details로 낮추고, Performance Recheck setup은 Original End / DB Latest badge와 primary 실행 버튼으로 재배치했다.
+  - Monitoring Playbook을 `Portfolio Monitoring`으로 바꾸고 `Review Signals`, `Why Selected`, `Actual Allocation`, `Audit` 흐름으로 정리했다.
+  - Holding Drift Check는 `Actual Allocation Check`로 바꿔 current value 입력을 기본으로 두고, shares x price / current weight / threshold 설정은 advanced 영역으로 낮췄다.
+  - Actual Allocation 결과는 사용자가 `Update Review Signals`를 누를 때만 Review Signals에 반영하도록 변경했다.
+
+### 2026-05-06
+- Ops Review 운영 대시보드 개편:
+  - user confirmation에 따라 기존 `Ops Review`의 최근 결과 / history / logs / failure CSV 나열형 UI를 운영 상태 판독 화면으로 개편했다.
+  - 렌더링 책임을 `app/web/ops_review.py`로 분리하고, `streamlit_app.py`는 page entry와 navigation만 유지하게 했다.
+  - 상단 triage flow, run health cards, action inbox, 선택 run inspector, failure CSV / related logs / artifact index, 다음 이동 안내, system snapshot을 추가했다.
+  - job 실행은 `Workspace > Ingestion`, backtest replay는 `Operations > Backtest Run History`, 후보 replay는 `Operations > Candidate Library`가 맡는 경계를 UI와 flow 문서에 명시했다.

@@ -24,6 +24,8 @@
 | 스크립트 | 관리하는 기능 |
 |---|---|
 | `app/web/streamlit_app.py` | Finance Console top navigation, page entry, page-level routing |
+| `app/web/reference_guides.py` | `Reference > Guides`의 제품형 portfolio workflow guide, flowchart, decision gate, reference drawer render |
+| `app/web/ops_review.py` | `Operations > Ops Review`의 triage flow, 웹앱 run health, action inbox, failure artifact, log, system snapshot dashboard render |
 | `app/web/overview_dashboard.py` | `Workspace > Overview`의 후보 Top 3, funnel chart, next actions, recent activity, system snapshot dashboard render |
 | `app/web/overview_dashboard_helpers.py` | Overview dashboard용 current candidate / Pre-Live / proposal / history / saved portfolio 집계, 후보 우선순위 scoring, funnel / activity table helper |
 | `app/web/backtest_strategy_catalog.py` | Strategy display name, strategy key, family variant 선택 매핑 |
@@ -44,6 +46,8 @@
 | `app/web/backtest_portfolio_proposal_helpers.py` | Portfolio Proposal row 생성, 단일 후보 direct readiness / proposal save readiness 평가, 공유 validation / robustness 계산 helper, saved proposal monitoring / Pre-Live feedback / paper feedback table helper |
 | `app/web/backtest_final_review.py` | `Backtest > Final Review`의 단일 후보 / 저장 proposal 선택, Validation / Robustness / Paper Observation 기준 확인, 최종 선정 / 보류 / 거절 / 재검토 결과 기록, 최종 판단 완료 review 화면 render |
 | `app/web/backtest_final_review_helpers.py` | Final Review source 선택, validation 재사용, inline paper observation snapshot, final review evidence / save readiness / decision row 생성, saved final decision display helper |
+| `app/web/final_selected_portfolio_dashboard.py` | `Operations > Selected Portfolio Dashboard` 화면 render, Final Review에서 선정된 포트폴리오 summary / compact selected portfolio picker / Snapshot / tabbed Performance Recheck / Portfolio Monitoring Review Signals / optional Actual Allocation / Audit 표시 |
+| `app/web/final_selected_portfolio_dashboard_helpers.py` | Selected Portfolio Dashboard용 table row, component row, evidence row, value / holding input row, drift row, alert preview row, filter option helper |
 | `app/web/pages/backtest.py` | Backtest page shell, workflow navigation, panel dispatch entry. Single / Compare / Candidate Review / Portfolio Proposal / Final Review 본문은 별도 module이 관리 |
 
 ## App / Runtime
@@ -56,6 +60,7 @@
 | `app/web/runtime/portfolio_proposal.py` | Portfolio proposal draft registry JSONL path / load / append helper |
 | `app/web/runtime/paper_portfolio_ledger.py` | Paper Portfolio Tracking Ledger JSONL path / load / append helper |
 | `app/web/runtime/final_selection_decisions.py` | Final Portfolio Selection Decision JSONL path / load / append helper |
+| `app/web/runtime/final_selected_portfolios.py` | Final Selection Decision registry를 read-only로 읽어 최종 선정 포트폴리오 운영 대시보드 row / status summary / 기간 확장 replay recheck / current weight 또는 value / holding input 기반 drift check / drift alert preview로 변환 |
 | `app/web/runtime/portfolio_store.py` | Saved portfolio persistence helper |
 
 ## Finance Core
@@ -74,7 +79,7 @@
 
 | 스크립트 | 관리하는 기능 |
 |---|---|
-| `finance/loaders/price.py` | DB price history read path |
+| `finance/loaders/price.py` | DB price history / price matrix / freshness / latest per-symbol price read path |
 | `finance/loaders/factors.py` | Factor snapshot read path |
 | `finance/loaders/fundamentals.py` | Fundamentals read path |
 | `finance/loaders/financial_statements.py` | Statement snapshot read path |

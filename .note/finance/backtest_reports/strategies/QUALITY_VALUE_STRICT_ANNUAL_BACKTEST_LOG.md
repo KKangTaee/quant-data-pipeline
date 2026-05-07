@@ -996,10 +996,81 @@
   - [QUALITY_VALUE_STRICT_ANNUAL.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_ANNUAL.md)
   - [PHASE14_STRICT_ANNUAL_NONHOLD_CANDIDATE_REFRESH.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/phase14/PHASE14_STRICT_ANNUAL_NONHOLD_CANDIDATE_REFRESH.md)
 
+### 2026-05-01 - 7단계 실습용 Quality + Value 후보 탐색
+
+- 목표:
+  - `Quality + Value > Strict Annual`에서
+    `CAGR >= 25%`, `MDD >= -20%` 조건을 만족하면서
+    Candidate Review / Portfolio Proposal 실습 흐름에 올릴 수 있는 후보를 찾는다
+- 기간 / universe:
+  - `2016-01-01 ~ 2026-04-01`
+  - `US Statement Coverage 100`
+  - `Historical Dynamic PIT Universe`
+- 핵심 설정:
+  - `Option = month_end`
+  - `Top N = 10`
+  - `Rebalance Interval = 1`
+  - `Benchmark Contract = Ticker`
+  - `Benchmark Ticker = SPY`
+  - `Trend Filter = off`
+  - `Market Regime = off`
+  - `Weighting = equal_weight`
+  - `Rejected Slot Handling = reweight_survivors`
+  - `Risk-Off = cash_only`
+  - `Minimum Price = 5.0`
+  - `Minimum History = 12M`
+  - `Min Avg Dollar Volume 20D = 5.0M`
+  - `Transaction Cost = 10 bps`
+  - underperformance guardrail:
+    - `12M / -5%`
+  - drawdown guardrail:
+    - `12M / -15% strategy threshold / 3% gap threshold`
+- factor 구성:
+  - quality:
+    - `roe`
+    - `roa`
+    - `operating_margin`
+    - `asset_turnover`
+    - `current_ratio`
+  - value:
+    - `book_to_market`
+    - `earnings_yield`
+    - `sales_yield`
+    - `pcr`
+    - `por`
+- 결과:
+  - `CAGR = 29.25%`
+  - `MDD = -18.64%`
+  - `Sharpe = 1.5222`
+  - `Promotion = real_money_candidate`
+  - `Shortlist = paper_probation`
+  - `Deployment = review_required`
+  - `Validation = normal`
+  - `Liquidity Clean Coverage = 100%`
+- 해석:
+  - 기존 strongest CAGR anchor(`31.82% / -26.63%`)보다
+    수익률은 낮지만 MDD 목표를 만족하는 실습용 후보다.
+  - `review_required`와 `monitoring = breach_watch`가 남아
+    자동 실전 승인 후보는 아니지만,
+    `hold / blocked`는 아니므로 Candidate Review 이후
+    Portfolio Proposal 실습 후보로 사용할 수 있다.
+  - Coverage 500에서도 숫자상 exact hit가 있었지만
+    full runtime에서 liquidity / validation caution으로 `hold / blocked`가 되어
+    실습 후보로는 제외했다.
+- 다음 액션:
+  - Candidate Review / Current Candidate / Pre-Live 기록까지 저장했다.
+  - 저장 ID:
+    - `CANDIDATE_REVIEW_NOTES.jsonl`: `candidate_review_note_qv_cov100_top10_spy_mdd20`
+    - `CURRENT_CANDIDATE_REGISTRY.jsonl`: `quality_value_current_candidate_cov100_top10_spy_mdd20`
+    - `PRE_LIVE_CANDIDATE_REGISTRY.jsonl`: `pre_live_quality_value_current_candidate_cov100_top10_spy_mdd20`
+  - Candidate Library 목록에서는 `Quality + Value Coverage 100 Top-10 SPY MDD20 candidate`
+    로 확인한다.
+
 ## 최근 판단 요약표
 
 | 날짜 | run | 핵심 결과 | 판단 |
 | --- | --- | --- | --- |
+| 2026-05-01 | 7단계 실습용 Q+V 후보 탐색/저장 | Coverage 100, Top N 10, SPY benchmark, `29.25% / -18.64%`, `real_money_candidate / paper_probation / review_required` | MDD -20% 이내 실습 후보로 Current/Pre-Live 등록 완료, 자동 승인 후보는 아님 |
 | 2026-04-17 | Phase 21 integrated validation | current strongest `31.82% / -26.63%`, `Top N 9` alternative `32.21% / -25.61%` | current strongest 유지, `Top N 9`는 weaker-gate alternative |
 | 2026-04-14 | next-ranked fill | fill on `26.64% / -28.05%`, cash share와 MDD는 줄었지만 gate는 `hold / blocked` | replacement 아님, reference contract로 보류 |
 | 2026-04-14 | defensive sleeve risk-off | cash-only `31.82% / -26.63%`, sleeve `31.79% / -27.19%` | sleeve로 교체하지 않음 |
