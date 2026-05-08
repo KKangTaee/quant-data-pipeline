@@ -74,6 +74,7 @@
 | 최근 완료 phase QA checklist | `.note/finance/phases/phase29/PHASE29_TEST_CHECKLIST.md` |
 | 최근 작업 로그 | `.note/finance/WORK_PROGRESS.md` |
 | 최근 질문 / 설계 판단 | `.note/finance/QUESTION_AND_ANALYSIS_LOG.md` |
+| Backtest 3단계 workflow 재설계 가이드 | `.note/finance/code_analysis/BACKTEST_PORTFOLIO_SELECTION_WORKFLOW_REDESIGN_GUIDE.md` |
 
 현재 상태:
 
@@ -235,6 +236,7 @@
 | `.note/finance/code_analysis/BACKTEST_RUNTIME_FLOW.md` | UI payload에서 runtime, loader, strategy, result bundle까지의 실행 흐름 |
 | `.note/finance/code_analysis/DATA_DB_PIPELINE_FLOW.md` | data collection, DB persistence, loader read path 흐름 |
 | `.note/finance/code_analysis/WEB_BACKTEST_UI_FLOW.md` | Backtest UI, Single Strategy, Compare, History, Saved Portfolio 흐름 |
+| `.note/finance/code_analysis/BACKTEST_PORTFOLIO_SELECTION_WORKFLOW_REDESIGN_GUIDE.md` | Backtest 후보 선정 workflow를 3단계 구조로 바꾸기 전 route / registry / implementation impact를 정리한 개발 가이드 |
 | `.note/finance/code_analysis/STRATEGY_IMPLEMENTATION_FLOW.md` | 새 strategy family를 제품에 추가할 때 따라야 하는 구현 흐름 |
 | `.note/finance/code_analysis/AUTOMATION_SCRIPTS_GUIDE.md` | phase bootstrap, hygiene, candidate registry helper script 사용 기준 |
 | `.note/finance/code_analysis/BACKTEST_REFINEMENT_CODE_FLOW_GUIDE.md` | 기존 backtest refinement 중심 code flow guide |

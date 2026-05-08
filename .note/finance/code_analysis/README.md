@@ -14,6 +14,7 @@
 | backtest 실행이 어디서 시작해 어디서 끝나는지 확인 | `BACKTEST_RUNTIME_FLOW.md` |
 | DB / loader / ingestion 흐름 확인 | `DATA_DB_PIPELINE_FLOW.md` |
 | Streamlit Backtest UI, compare, history, saved replay 확인 | `WEB_BACKTEST_UI_FLOW.md` |
+| Backtest 후보 선정 workflow를 3단계 구조로 재설계할 때 | `BACKTEST_PORTFOLIO_SELECTION_WORKFLOW_REDESIGN_GUIDE.md` |
 | 새 전략 family를 추가하거나 기존 전략 연결을 바꿀 때 | `STRATEGY_IMPLEMENTATION_FLOW.md` |
 | repo-local helper script나 automation 갱신 | `AUTOMATION_SCRIPTS_GUIDE.md` |
 

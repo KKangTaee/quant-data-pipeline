@@ -4416,3 +4416,17 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Compare workspace label을 `개별 전략 비교` / `저장된 비중 조합`으로 바꾸고, saved mix primary action을 `Mix 재실행 및 검증`으로 조정했다
   - `전략 비교에서 수정하기`는 검증이 아니라 저장 mix 구성을 편집 / 재구성하는 경로로 설명했다
   - Guides와 `WEB_BACKTEST_UI_FLOW.md`에 mix는 Candidate Review가 아니라 Portfolio Proposal 초안으로 연결된다는 ownership을 반영했다
+
+### 2026-05-08 - Backtest 후보 선정 workflow는 3단계로 재설계해야 한다
+- User request:
+  - 사용자가 Candidate Review와 Portfolio Proposal의 역할이 불분명하고 메모 / 저장 단계가 반복되므로, 구현 전에 현재 코드를 깊게 분석하고 개발 가이드를 문서화해 달라고 요청함
+- Interpreted goal:
+  - `Single / Compare 백테스트 분석 -> 실전 검증 -> Final Review` 흐름으로 재정리하되, 기존 registry와 saved mix / final decision 호환성을 깨지 않는 구현 계획이 필요함
+- Analysis result:
+  - 현재 Candidate Review는 투자 검증 화면이라기보다 Review Note, Current Candidate, Pre-Live record를 저장하는 후보 포장 UI에 가깝다
+  - Portfolio Proposal은 Current Candidate 기반 weight builder, Saved Mix prefill, Validation Pack, saved proposal review가 섞여 있어 Compare의 weight 조합 기능과 목적이 충돌해 보인다
+  - Saved Mix는 이미 mix-level 검증 source를 갖고 있지만 Final Review / risk helper가 Current Candidate와 Pre-Live 존재를 기대해 마지막 단계에서 막힐 수 있다
+  - 5개 panel label을 바로 3개 label로 바꾸면 `backtest_requested_panel`, history replay, saved mix handoff가 깨질 수 있으므로 visible stage와 internal route를 먼저 분리해야 한다
+- Follow-up:
+  - `.note/finance/code_analysis/BACKTEST_PORTFOLIO_SELECTION_WORKFLOW_REDESIGN_GUIDE.md`에 route / session key / registry dependency / source contract / 단계별 구현 순서를 정리했다
+  - 제품 코드는 아직 수정하지 않았고, 사용자 확인 후 route foundation부터 구현한다

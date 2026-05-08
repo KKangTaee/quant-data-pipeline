@@ -3485,3 +3485,11 @@ Detailed historical logs were archived on `2026-04-13`.
   - GTAA `interval > 1`, `month_end`에서 요청 종료일이 다음 정상 cadence close 전이면 Data Trust hard block이 아니라 cadence-aligned review로 해석하도록 Compare data trust helper를 보정했다.
   - `Portfolio Mix 검증 보드`는 saved mix의 replay, mix data trust, component Real-Money, workflow registry 기록 여부를 mix-level로 읽고 `포트폴리오 후보 초안으로 보내기`로 Portfolio Proposal에 연결한다.
   - `Reference > Guides`와 `WEB_BACKTEST_UI_FLOW.md`를 새 용어와 단계 ownership 기준으로 동기화했다.
+
+### 2026-05-08
+- Backtest 후보 선정 workflow 3단계 재설계 사전 분석:
+  - user feedback에 따라 Candidate Review / Portfolio Proposal / Final Review가 반복 저장과 중복 비중 조합처럼 보이는 구조를 깊게 분석했다.
+  - sub-agent 4개 트랙으로 navigation / Candidate Review registry / Portfolio Proposal-Final Review schema / Guides 문서 영향을 분리 조사했다.
+  - 구현 전 기준 문서 `.note/finance/code_analysis/BACKTEST_PORTFOLIO_SELECTION_WORKFLOW_REDESIGN_GUIDE.md`를 추가했다.
+  - 핵심 판단은 5개 panel label을 바로 3개로 치환하지 않고, visible stage와 legacy internal route를 먼저 분리하는 것이다.
+  - 아직 제품 코드는 수정하지 않았다. 다음 단계는 사용자가 guide 방향을 확인한 뒤 route foundation부터 구현하는 것이다.
