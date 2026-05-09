@@ -8,6 +8,10 @@ from uuid import uuid4
 import pandas as pd
 import streamlit as st
 
+from app.web.backtest_practical_validation_helpers import (
+    build_selection_source_from_candidate_draft,
+    queue_practical_validation_source,
+)
 from app.web.backtest_strategy_catalog import strategy_key_to_display_name as catalog_strategy_key_to_display_name
 from app.web.runtime import CURRENT_CANDIDATE_REGISTRY_FILE
 from app.web.runtime.backtest import STRICT_BENCHMARK_CONTRACT_CANDIDATE_EQUAL_WEIGHT
@@ -942,10 +946,11 @@ def _candidate_review_draft_from_history_record(record: dict[str, Any]) -> dict[
 def _queue_candidate_review_draft(draft: dict[str, Any]) -> None:
     st.session_state.backtest_candidate_review_draft = draft
     st.session_state.backtest_candidate_review_draft_notice = (
-        "후보 검토 초안을 Candidate Packaging으로 보냈습니다. "
-        "아직 registry에 저장된 것이 아니며, 투자 추천이나 live 승인도 아닙니다."
+        "후보 검토 초안을 legacy Candidate Packaging에도 보존했습니다. "
+        "새 주 흐름은 Practical Validation으로 이어집니다."
     )
-    st.session_state.backtest_requested_panel = "Candidate Review"
+    source = build_selection_source_from_candidate_draft(draft)
+    queue_practical_validation_source(source, persist=True)
 
 
 def _candidate_intake_value_present(value: Any) -> bool:

@@ -19,7 +19,7 @@ DB-backed market data ingestion, factor generation, and strategy backtesting wor
 - `Ingestion`
   - 일별 업데이트, statement refresh, 진단 작업
 - `Backtest`
-  - 단일 전략 실행, compare, candidate review, pre-live review, portfolio proposal workflow, final review / portfolio selection decision
+  - `Backtest Analysis -> Practical Validation -> Final Review` 3단계로 후보 source 생성, 실전 검증, 최종 판단 기록을 처리
 - `Ops Review`
   - Operations Dashboard 형태의 triage flow, run health, action inbox, failure artifact, logs, system snapshot 점검
 - `Selected Portfolio Dashboard`
@@ -73,27 +73,17 @@ DB-backed market data ingestion, factor generation, and strategy backtesting wor
   - 실행 입력/요약뿐 아니라 `gate snapshot`도 함께 저장하는 history v2
   - 이후 blocker audit, candidate review, rerun drilldown에 활용
   - `Operations > Backtest Run History`에서 운영 기록처럼 확인하고, 필요 시 Backtest 흐름으로 다시 보냄
-- candidate review workflow
-  - `Backtest > Candidate Review`에서 후보 검토 초안, Review Note 저장, registry append, Pre-Live 운영 기록, Portfolio Proposal 진입 평가를 한 화면의 순서형 Candidate Packaging flow로 처리하는 흐름
-  - latest backtest / Operations의 Backtest Run History result를 registry 저장 전 후보 검토 초안으로 읽는 흐름
-  - 후보 검토 초안을 바로 registry에 넣지 않고 Candidate Review Note로 판단과 다음 행동을 남기는 흐름
-  - 저장된 review note를 registry row 초안으로 확인한 뒤 명시적으로 current candidate registry에 append하고, `PORTFOLIO_PROPOSAL_READY`일 때만 Portfolio Proposal로 넘기는 흐름
-- portfolio proposal workflow
-  - current candidate 여러 개를 `Backtest > Portfolio Proposal`에서 proposal draft로 묶는 흐름
-  - 후보별 role, target weight, weight reason, Real-Money / Pre-Live 상태를 함께 확인하는 흐름
-  - `.note/finance/registries/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`에 proposal draft를 append-only로 저장하는 흐름
-  - 저장된 proposal draft를 `Monitoring Review`에서 blocker / review gap / component 관점으로 다시 확인하는 흐름
-  - 저장된 proposal snapshot을 `Pre-Live Feedback`에서 현재 Pre-Live 상태와 비교하는 흐름
-  - 저장된 proposal evidence snapshot을 `Paper Tracking Feedback`에서 현재 Pre-Live result snapshot의 CAGR / MDD와 비교하는 흐름
-- final review workflow
-  - `Backtest > Final Review`에서 단일 후보 또는 저장된 proposal을 검증 근거와 함께 최종 검토하는 흐름
-  - Phase 31 `Validation Pack`, Phase 32 `Robustness / Stress`, Paper Observation 기준을 한 화면에서 확인하는 흐름
-  - 별도 `Save Paper Tracking Ledger` 없이 관찰 기준을 최종 검토 기록 안에 포함하는 흐름
-  - `최종 검토 결과 기록`으로 선정 / 보류 / 거절 / 재검토 판단을 남기고 `최종 판단 완료`로 마무리하는 흐름
-  - live trading approval이나 주문 지시와 분리된 검토 기록 흐름
+- Clean V2 portfolio selection workflow
+  - `Backtest > Backtest Analysis`에서 Single Strategy / Compare / 저장 Mix replay를 실행하고 실전 검증 후보 source를 선택하는 흐름
+  - `.note/finance/registries/PORTFOLIO_SELECTION_SOURCES.jsonl`에 선택한 후보 source를 append-only로 저장하는 흐름
+  - `Backtest > Practical Validation`에서 선택 source의 component, weight, Data Trust, Real-Money signal, paper observation 기준을 구조화하는 흐름
+  - `.note/finance/registries/PRACTICAL_VALIDATION_RESULTS.jsonl`에 검증 결과를 저장하되, 사용자 최종 메모는 Final Review에만 남기는 흐름
+  - `Backtest > Final Review`에서 Practical Validation 결과를 기준으로 최종 선정 / 보류 / 거절 / 재검토 판단을 한 번만 기록하는 흐름
+  - `.note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl`이 새 selected dashboard의 source-of-truth가 되는 흐름
+  - 기존 Candidate Review / Portfolio Proposal / Pre-Live JSONL은 legacy / archive compatibility 경로로 유지하고 새 workflow의 필수 join 조건으로 쓰지 않는 흐름
 - selected portfolio operations dashboard
   - `Operations > Selected Portfolio Dashboard`에서 Final Review의 `SELECT_FOR_PRACTICAL_PORTFOLIO` row만 운영 대상으로 확인하는 흐름
-  - `.note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`을 새로 쓰지 않고 read-only로 읽는 흐름
+  - `.note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl`을 read-only로 읽는 흐름
   - selected component의 저장 contract를 사용자가 지정한 시작일 / 종료일 / 가상 투자금으로 다시 실행해 최신 기간 성과를 확인하는 흐름
   - portfolio value, total return, CAGR, MDD, benchmark spread, component contribution, strongest / weakest periods를 확인하는 흐름
   - target allocation, benchmark, evidence, operator next action, current weight / current value / shares x price 기반 Allocation Check, disabled live approval / order boundary를 확인하는 흐름
@@ -108,6 +98,10 @@ app/
     streamlit_app.py     # Finance Console entry point
     overview_dashboard.py # Workspace > Overview dashboard UI
     overview_dashboard_helpers.py # Overview 후보/Pre-Live/Proposal/History 집계 helper
+    backtest_analysis.py # Backtest Analysis 3단계 wrapper
+    backtest_practical_validation.py # Practical Validation UI
+    backtest_practical_validation_helpers.py # Clean V2 source / validation helper
+    backtest_workflow_routes.py # Backtest 3단계 route mapping
     backtest_history.py  # Operations > Backtest Run History UI
     backtest_candidate_library.py # Operations > Candidate Library UI
     backtest_candidate_library_helpers.py # 저장 후보 목록 / replay payload / 후보 replay helper
@@ -126,6 +120,7 @@ app/
       portfolio_proposal.py
       paper_portfolio_ledger.py
       final_selection_decisions.py
+      portfolio_selection_v2.py
       final_selected_portfolios.py
 finance/
   data/                  # ingestion, DB schema, loaders, factors

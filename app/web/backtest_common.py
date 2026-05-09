@@ -75,6 +75,15 @@ from app.web.backtest_strategy_catalog import (
     strategy_key_to_display_name as catalog_strategy_key_to_display_name,
     strategy_key_to_selection,
 )
+from app.web.backtest_workflow_routes import (
+    BACKTEST_ANALYSIS_MODE_SINGLE,
+    BACKTEST_LEGACY_PANEL_OPTIONS,
+    BACKTEST_STAGE_ANALYSIS,
+    BACKTEST_STAGE_OPTIONS,
+    PRACTICAL_VALIDATION_MODE_SELECTED_SOURCE,
+    _route_target_to_stage_and_mode,
+    _valid_backtest_route_targets,
+)
 from app.web.backtest_candidate_review_helpers import (
     CANDIDATE_REVIEW_DECISION_OPTIONS,
     CURRENT_CANDIDATE_RECORD_TYPE_OPTIONS,
@@ -296,20 +305,10 @@ STRICT_MARKET_REGIME_BENCHMARK_OPTIONS = ["SPY", "QQQ", "VTI", "IWM"]
 DEFAULT_BACKTEST_END_DATE = date.today()
 CURRENT_CANDIDATE_COMPARE_DEFAULT_START = date(2016, 1, 1)
 CURRENT_CANDIDATE_COMPARE_DEFAULT_END = date(2026, 4, 1)
-BACKTEST_PANEL_OPTIONS = [
-    "Single Strategy",
-    "Compare & Portfolio Builder",
-    "Candidate Review",
-    "Portfolio Proposal",
-    "Final Review",
+BACKTEST_PANEL_OPTIONS = list(BACKTEST_STAGE_OPTIONS) + [
+    panel for panel in BACKTEST_LEGACY_PANEL_OPTIONS if panel not in set(BACKTEST_STAGE_OPTIONS)
 ]
-BACKTEST_WORKFLOW_PANEL_OPTIONS = [
-    "Single Strategy",
-    "Compare & Portfolio Builder",
-    "Candidate Review",
-    "Portfolio Proposal",
-    "Final Review",
-]
+BACKTEST_WORKFLOW_PANEL_OPTIONS = list(BACKTEST_STAGE_OPTIONS)
 STATIC_MANAGED_RESEARCH_UNIVERSE = "static_managed_research"
 HISTORICAL_DYNAMIC_PIT_UNIVERSE = "historical_dynamic_pit"
 STRICT_ANNUAL_UNIVERSE_CONTRACT_LABELS = {
@@ -664,24 +663,52 @@ def _init_backtest_state() -> None:
         st.session_state.backtest_candidate_review_draft_notice = None
     if "backtest_candidate_review_note_notice" not in st.session_state:
         st.session_state.backtest_candidate_review_note_notice = None
+    if "backtest_analysis_mode" not in st.session_state:
+        st.session_state.backtest_analysis_mode = BACKTEST_ANALYSIS_MODE_SINGLE
+    if "backtest_practical_validation_mode" not in st.session_state:
+        st.session_state.backtest_practical_validation_mode = PRACTICAL_VALIDATION_MODE_SELECTED_SOURCE
+    if "backtest_practical_validation_source" not in st.session_state:
+        st.session_state.backtest_practical_validation_source = None
+    if "backtest_practical_validation_notice" not in st.session_state:
+        st.session_state.backtest_practical_validation_notice = None
+    if "backtest_active_stage" not in st.session_state:
+        st.session_state.backtest_active_stage = BACKTEST_STAGE_ANALYSIS
     if "backtest_active_panel" not in st.session_state:
-        st.session_state.backtest_active_panel = "Single Strategy"
+        st.session_state.backtest_active_panel = BACKTEST_STAGE_ANALYSIS
     if "backtest_workflow_active_panel" not in st.session_state:
-        st.session_state.backtest_workflow_active_panel = "Single Strategy"
+        st.session_state.backtest_workflow_active_panel = BACKTEST_STAGE_ANALYSIS
     if "backtest_requested_panel" not in st.session_state:
         st.session_state.backtest_requested_panel = None
     requested_panel = st.session_state.get("backtest_requested_panel")
-    if requested_panel in set(BACKTEST_PANEL_OPTIONS):
-        st.session_state.backtest_active_panel = requested_panel
-        if requested_panel in set(BACKTEST_WORKFLOW_PANEL_OPTIONS):
-            st.session_state.backtest_workflow_active_panel = requested_panel
+    if requested_panel in _valid_backtest_route_targets():
+        route = _route_target_to_stage_and_mode(str(requested_panel))
+        requested_stage = str(route.get("stage") or BACKTEST_STAGE_ANALYSIS)
+        st.session_state.backtest_active_stage = requested_stage
+        st.session_state.backtest_active_panel = requested_stage
+        st.session_state.backtest_workflow_active_panel = requested_stage
+        if route.get("analysis_mode"):
+            st.session_state.backtest_analysis_mode = route["analysis_mode"]
+        if route.get("practical_mode"):
+            st.session_state.backtest_practical_validation_mode = route["practical_mode"]
         st.session_state.backtest_requested_panel = None
     active_panel = st.session_state.get("backtest_active_panel")
     if active_panel in set(BACKTEST_WORKFLOW_PANEL_OPTIONS):
+        st.session_state.backtest_active_stage = active_panel
         st.session_state.backtest_workflow_active_panel = active_panel
+    elif active_panel in _valid_backtest_route_targets():
+        route = _route_target_to_stage_and_mode(str(active_panel))
+        active_stage = str(route.get("stage") or BACKTEST_STAGE_ANALYSIS)
+        st.session_state.backtest_active_stage = active_stage
+        st.session_state.backtest_active_panel = active_stage
+        st.session_state.backtest_workflow_active_panel = active_stage
+        if route.get("analysis_mode"):
+            st.session_state.backtest_analysis_mode = route["analysis_mode"]
+        if route.get("practical_mode"):
+            st.session_state.backtest_practical_validation_mode = route["practical_mode"]
     else:
-        st.session_state.backtest_active_panel = "Single Strategy"
-        st.session_state.backtest_workflow_active_panel = "Single Strategy"
+        st.session_state.backtest_active_stage = BACKTEST_STAGE_ANALYSIS
+        st.session_state.backtest_active_panel = BACKTEST_STAGE_ANALYSIS
+        st.session_state.backtest_workflow_active_panel = BACKTEST_STAGE_ANALYSIS
     if "qss_end" not in st.session_state:
         st.session_state["qss_end"] = DEFAULT_BACKTEST_END_DATE
     if "qss_timeframe" not in st.session_state:
@@ -988,7 +1015,7 @@ def _init_backtest_state() -> None:
 
 
 def _request_backtest_panel(panel: str) -> None:
-    if panel not in set(BACKTEST_PANEL_OPTIONS):
+    if panel not in _valid_backtest_route_targets():
         return
     st.session_state.backtest_requested_panel = panel
 
@@ -997,6 +1024,7 @@ def _request_backtest_panel(panel: str) -> None:
 def _activate_backtest_workflow_panel() -> None:
     selected_panel = st.session_state.get("backtest_workflow_active_panel")
     if selected_panel in set(BACKTEST_WORKFLOW_PANEL_OPTIONS):
+        st.session_state.backtest_active_stage = selected_panel
         st.session_state.backtest_active_panel = selected_panel
 
 

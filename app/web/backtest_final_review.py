@@ -32,12 +32,13 @@ from app.web.backtest_ui_components import (
     render_status_card_grid,
 )
 from app.web.runtime import (
-    FINAL_SELECTION_DECISION_REGISTRY_FILE,
-    append_final_selection_decision,
+    FINAL_SELECTION_DECISION_V2_FILE,
+    append_final_selection_decision_v2,
     load_current_candidate_registry_latest,
-    load_final_selection_decisions,
+    load_final_selection_decisions_v2,
     load_portfolio_proposals,
     load_pre_live_candidate_registry_latest,
+    load_practical_validation_results,
 )
 
 
@@ -143,7 +144,7 @@ def _render_paper_observation_summary(paper_observation: dict[str, Any]) -> None
 def _render_saved_final_review_decisions(final_decision_rows: list[dict[str, Any]]) -> None:
     if not final_decision_rows:
         st.info("아직 기록된 최종 검토 결과가 없습니다.")
-        st.caption(f"Path: {FINAL_SELECTION_DECISION_REGISTRY_FILE}")
+        st.caption(f"Path: {FINAL_SELECTION_DECISION_V2_FILE}")
         return
 
     st.dataframe(_build_final_review_decision_rows_for_display(final_decision_rows), width="stretch", hide_index=True)
@@ -194,16 +195,21 @@ def render_final_review_workspace() -> None:
     current_rows = load_current_candidate_registry_latest()
     proposal_rows = load_portfolio_proposals()
     pre_live_rows = load_pre_live_candidate_registry_latest()
-    final_decision_rows = load_final_selection_decisions()
+    practical_validation_rows = load_practical_validation_results()
+    final_decision_rows = load_final_selection_decisions_v2()
+    session_practical_source = st.session_state.pop("final_review_practical_validation_source", None)
+    final_practical_notice = st.session_state.pop("final_review_practical_validation_notice", None)
 
     final_notice = st.session_state.pop("final_review_decision_notice", None)
+    if final_practical_notice:
+        st.success(str(final_practical_notice))
     if final_notice:
         st.success(str(final_notice))
 
     render_status_card_grid(
         [
             {"title": "Current Candidates", "value": len(current_rows), "tone": "positive" if current_rows else "neutral"},
-            {"title": "Saved Proposals", "value": len(proposal_rows), "tone": "positive" if proposal_rows else "neutral"},
+            {"title": "Practical Validations", "value": len(practical_validation_rows), "tone": "positive" if practical_validation_rows else "neutral"},
             {"title": "Final Review Records", "value": len(final_decision_rows), "tone": "positive" if final_decision_rows else "neutral"},
             {"title": "Paper Ledger Save", "value": "Not Required", "detail": "관찰 기준은 최종 검토 기록 안에 포함합니다.", "tone": "neutral"},
             {"title": "Live Approval", "value": "Disabled", "detail": "이 화면은 승인/주문이 아닙니다.", "tone": "neutral"},
@@ -221,9 +227,14 @@ def render_final_review_workspace() -> None:
             ]
         )
 
-    source_options = _build_final_review_source_options(current_rows, proposal_rows)
+    source_options = _build_final_review_source_options(
+        current_rows,
+        proposal_rows,
+        practical_validation_rows=practical_validation_rows,
+        session_practical_source=session_practical_source if isinstance(session_practical_source, dict) else None,
+    )
     if not source_options:
-        st.info("최종 검토할 current candidate 또는 saved proposal이 없습니다.")
+        st.info("최종 검토할 Practical Validation result, current candidate, saved proposal이 없습니다.")
         return
 
     st.divider()
@@ -360,7 +371,7 @@ def render_final_review_workspace() -> None:
                 disabled=not bool(save_evaluation.get("can_save")),
                 width="stretch",
             ):
-                append_final_selection_decision(final_row)
+                append_final_selection_decision_v2(final_row)
                 st.session_state["final_review_decision_notice"] = (
                     f"최종 검토 결과 `{final_row['decision_id']}`를 기록했습니다. "
                     "이 기록은 live approval이나 주문 지시가 아닙니다."
@@ -377,7 +388,7 @@ def render_final_review_workspace() -> None:
             )
         with st.expander("최종 검토 결과 Preview", expanded=False):
             st.json(final_row)
-            st.caption(f"Path: {FINAL_SELECTION_DECISION_REGISTRY_FILE}")
+            st.caption(f"Path: {FINAL_SELECTION_DECISION_V2_FILE}")
 
     st.markdown("#### 6. 기록된 최종 검토 결과 확인")
     with st.container(border=True):

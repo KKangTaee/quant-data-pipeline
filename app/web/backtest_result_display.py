@@ -315,20 +315,20 @@ def _render_last_run() -> None:
 
     _render_data_trust_summary(meta)
 
-    with st.expander("Candidate Review Handoff", expanded=False):
+    with st.expander("Practical Validation Handoff", expanded=False):
         st.caption(
-            "이번 실행 결과를 후보 검토 초안으로 읽어봅니다. "
-            "이 동작은 current candidate registry에 저장하지 않으며, 투자 추천이나 live 승인도 아닙니다."
+            "이번 실행 결과를 Clean V2 source로 저장하고 Practical Validation에서 실전 검증 자료로 읽어봅니다. "
+            "이 동작은 최종 선택, 투자 추천, live 승인, 주문 지시가 아닙니다."
         )
         handoff_cols = st.columns([0.28, 0.72], gap="small")
         with handoff_cols[0]:
-            if st.button("Review As Candidate Draft", key="latest_run_candidate_review_draft", use_container_width=True):
+            if st.button("Practical Validation으로 보내기", key="latest_run_candidate_review_draft", use_container_width=True):
                 _queue_candidate_review_draft(_candidate_review_draft_from_bundle(bundle))
                 st.rerun()
         with handoff_cols[1]:
             st.caption(
-                "`Candidate Review`에서 suggested record type, Real-Money signal, data trust snapshot을 먼저 확인한 뒤 "
-                "후보 등록 / compare / Pre-Live 운영 기록 여부를 판단합니다."
+                "`Practical Validation`에서 Data Trust, Real-Money signal, 구성 / 비중 조건을 확인한 뒤 "
+                "`Final Review`에서 최종 선택 / 보류 / 거절 / 재검토를 판단합니다."
             )
 
     if warnings:

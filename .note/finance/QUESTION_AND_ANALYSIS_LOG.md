@@ -4442,3 +4442,15 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 사용자 플로우는 `Backtest Analysis`에서 만들고 선택, `Practical Validation`에서 실전 검증, `Final Review`에서 최종 판단과 메모 저장, `Selected Portfolio Dashboard`에서 선정 이후 성과와 review signal 확인으로 정리한다
 - Follow-up:
   - `.note/finance/code_analysis/BACKTEST_PORTFOLIO_SELECTION_WORKFLOW_REDESIGN_GUIDE.md`에 Clean V2 저장소 설계, legacy archive 정책, 새 JSONL 파일 역할, 사후관리 flow를 보강했다
+
+### 2026-05-10 - Clean V2 구현은 legacy 삭제보다 stage / storage 병행 전환이 맞다
+- User request:
+  - 사용자가 새 스크립트를 만들고 기존 스크립트는 리팩토링 과정에서 정리하는 방식인지 확인한 뒤 작업 진행을 요청함
+- Interpreted goal:
+  - 기존 Candidate Review / Portfolio Proposal 파일을 즉시 삭제하지 않고, 새 Clean V2 stage와 저장소를 먼저 세워 사용 경로를 전환해야 함
+- Analysis result:
+  - 1차 구현에서는 `backtest_workflow_routes`, `backtest_analysis`, `backtest_practical_validation`, `portfolio_selection_v2`를 추가하고 기존 route request를 새 stage로 매핑하는 것이 안전하다
+  - 기존 JSONL과 UI 파일은 legacy compatibility로 남기되 새 main workflow의 필수 join 조건에서는 제거한다
+  - Selected Portfolio Dashboard는 Final Review V2 decision row를 source-of-truth로 읽는 것이 맞다
+- Follow-up:
+  - Backtest stage routing, Clean V2 source / validation / final decision persistence, Practical Validation UI, Final Review V2 저장, Selected Dashboard V2 read path를 1차 구현했다

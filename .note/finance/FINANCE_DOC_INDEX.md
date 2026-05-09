@@ -215,7 +215,12 @@
 | `.note/finance/registries/PORTFOLIO_PROPOSAL_REGISTRY.jsonl` | portfolio proposal draft append-only registry. 첫 proposal 저장 시 생성됨 |
 | `.note/finance/registries/PAPER_PORTFOLIO_TRACKING_LEDGER.jsonl` | paper tracking ledger append-only registry. 첫 paper ledger 저장 시 생성됨 |
 | `.note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl` | final selection decision append-only registry. 첫 final decision 저장 시 생성됨 |
+| `.note/finance/registries/PORTFOLIO_SELECTION_SOURCES.jsonl` | Clean V2 Backtest Analysis source append-only registry. 첫 후보 source 선택 시 생성됨 |
+| `.note/finance/registries/PRACTICAL_VALIDATION_RESULTS.jsonl` | Clean V2 Practical Validation result append-only registry. 첫 검증 결과 저장 시 생성됨 |
+| `.note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl` | Clean V2 final selection decision append-only registry. Selected Portfolio Dashboard의 새 source-of-truth |
+| `.note/finance/registries/SELECTED_PORTFOLIO_MONITORING_LOG.jsonl` | Clean V2 selected portfolio monitoring snapshot append-only log. 사용자가 명시 저장할 때 생성됨 |
 | `.note/finance/saved/SAVED_PORTFOLIOS.jsonl` | saved portfolio 정의 저장 파일 |
+| `.note/finance/saved/SAVED_PORTFOLIO_MIXES.jsonl` | Clean V2 reusable saved mix setup 저장 파일 |
 | `.note/finance/run_history/BACKTEST_RUN_HISTORY.jsonl` | local backtest run history. 보통 commit하지 않음 |
 | `.note/finance/run_history/WEB_APP_RUN_HISTORY.jsonl` | local web app run history. 보통 commit하지 않음 |
 | `.note/finance/operations/RUNTIME_ARTIFACT_HYGIENE.md` | runtime artifact를 어떻게 다룰지 정리한 문서 |

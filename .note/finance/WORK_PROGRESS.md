@@ -3500,3 +3500,11 @@ Detailed historical logs were archived on `2026-04-13`.
   - `PORTFOLIO_SELECTION_SOURCES`, `PRACTICAL_VALIDATION_RESULTS`, `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2`, `SELECTED_PORTFOLIO_MONITORING_LOG`, `SAVED_PORTFOLIO_MIXES`의 역할을 정리했다.
   - 사용자가 `Backtest Analysis -> Practical Validation -> Final Review -> Selected Portfolio Dashboard`를 어떻게 지나 최종 후보 선정과 사후관리를 하는지 end-to-end flow를 추가했다.
   - 제품 코드는 아직 수정하지 않았다. 다음 구현은 Clean V2 storage foundation과 route/stage 분리부터 시작하는 것이 맞다.
+
+### 2026-05-10
+- Backtest 후보 선정 workflow Clean V2 1차 구현:
+  - `Backtest Analysis -> Practical Validation -> Final Review` 3단계 stage routing을 추가하고 legacy panel request를 새 stage로 매핑했다.
+  - `app/web/runtime/portfolio_selection_v2.py`를 추가해 selection source, practical validation result, final decision v2, monitoring log, saved mix helper를 정의했다.
+  - Single / History / Compare focused strategy / Saved Mix handoff가 Clean V2 selection source를 만들고 Practical Validation으로 이동하도록 연결했다.
+  - Final Review는 Practical Validation result를 읽어 `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl`에 저장하고, Selected Portfolio Dashboard는 V2 decision registry를 읽도록 바꿨다.
+  - 기존 Candidate Review / Portfolio Proposal 코드는 삭제하지 않고 legacy compatibility로 유지했다.

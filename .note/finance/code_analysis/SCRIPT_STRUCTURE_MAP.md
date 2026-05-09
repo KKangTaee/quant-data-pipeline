@@ -29,7 +29,9 @@
 | `app/web/overview_dashboard.py` | `Workspace > Overview`의 후보 Top 3, funnel chart, next actions, recent activity, system snapshot dashboard render |
 | `app/web/overview_dashboard_helpers.py` | Overview dashboard용 current candidate / Pre-Live / proposal / history / saved portfolio 집계, 후보 우선순위 scoring, funnel / activity table helper |
 | `app/web/backtest_strategy_catalog.py` | Strategy display name, strategy key, family variant 선택 매핑 |
-| `app/web/backtest_common.py` | Backtest 공용 preset / session state / panel routing / ticker universe input / real-money contract / guardrail input / label 변환 helper |
+| `app/web/backtest_common.py` | Backtest 공용 preset / session state / 3단계 stage routing compatibility / ticker universe input / real-money contract / guardrail input / label 변환 helper |
+| `app/web/backtest_workflow_routes.py` | Backtest visible stage 3개와 legacy panel route를 매핑하는 route helper |
+| `app/web/backtest_analysis.py` | `Backtest > Backtest Analysis`에서 Single Strategy / Compare & Portfolio Builder를 submode로 렌더링하는 wrapper |
 | `app/web/backtest_single_strategy.py` | `Backtest > Single Strategy` 화면 orchestration, strategy 선택 / prefill notice / form dispatch / latest result 연결 |
 | `app/web/backtest_single_forms.py` | Single Strategy의 Equal Weight, GTAA, GRS, Risk Parity, Dual Momentum, Quality / Value 계열 strategy-specific form render |
 | `app/web/backtest_single_runner.py` | Single Strategy payload 실행 dispatch, DB-backed runtime 호출, latest bundle state 저장, run history append |
@@ -40,6 +42,8 @@
 | `app/web/backtest_candidate_library.py` | `Operations > Candidate Library` 화면 render, 저장된 current / Pre-Live 후보 inspect, 저장 contract 기반 result curve rebuild |
 | `app/web/backtest_candidate_library_helpers.py` | Candidate Library용 registry join, 후보 table row, replay payload 생성, ETF 후보 replay runtime dispatch helper |
 | `app/web/backtest_ui_components.py` | Backtest UI 공용 wrapping status card, artifact pipeline, compact badge strip, stage brief strip, route/readiness 판정 panel |
+| `app/web/backtest_practical_validation.py` | `Backtest > Practical Validation`에서 Clean V2 selection source를 실전 검증 결과로 구조화하고 Final Review로 넘기는 화면 render |
+| `app/web/backtest_practical_validation_helpers.py` | Clean V2 portfolio selection source 생성, Practical Validation 결과 생성 / 저장 / Final Review handoff helper |
 | `app/web/backtest_candidate_review.py` | `Backtest > Candidate Review`의 Candidate Packaging 화면 render, Review Note / current candidate registry 저장, Pre-Live 운영 기록 저장, Portfolio Proposal 이동 판단 |
 | `app/web/backtest_candidate_review_helpers.py` | Candidate Review readiness 평가, Review Note 생성, current candidate registry row 변환, Pre-Live status 추천 / draft 생성 / Proposal readiness 평가, display table helper |
 | `app/web/backtest_portfolio_proposal.py` | `Backtest > Portfolio Proposal`의 단일 후보 직행 평가, 다중 후보 proposal 후보 선택, 목적 / 역할 / 비중 설계, proposal draft 저장, 저장 proposal monitoring / feedback 화면 render |
@@ -48,7 +52,7 @@
 | `app/web/backtest_final_review_helpers.py` | Final Review source 선택, validation 재사용, inline paper observation snapshot, final review evidence / save readiness / decision row 생성, saved final decision display helper |
 | `app/web/final_selected_portfolio_dashboard.py` | `Operations > Selected Portfolio Dashboard` 화면 render, Final Review에서 선정된 포트폴리오 summary / compact selected portfolio picker / Snapshot / tabbed Performance Recheck / Portfolio Monitoring Review Signals / optional Actual Allocation / Audit 표시 |
 | `app/web/final_selected_portfolio_dashboard_helpers.py` | Selected Portfolio Dashboard용 table row, component row, evidence row, value / holding input row, drift row, alert preview row, filter option helper |
-| `app/web/pages/backtest.py` | Backtest page shell, workflow navigation, panel dispatch entry. Single / Compare / Candidate Review / Portfolio Proposal / Final Review 본문은 별도 module이 관리 |
+| `app/web/pages/backtest.py` | Backtest page shell, `Backtest Analysis -> Practical Validation -> Final Review` workflow navigation, stage dispatch entry. 본문은 별도 module이 관리 |
 
 ## App / Runtime
 
@@ -60,7 +64,8 @@
 | `app/web/runtime/portfolio_proposal.py` | Portfolio proposal draft registry JSONL path / load / append helper |
 | `app/web/runtime/paper_portfolio_ledger.py` | Paper Portfolio Tracking Ledger JSONL path / load / append helper |
 | `app/web/runtime/final_selection_decisions.py` | Final Portfolio Selection Decision JSONL path / load / append helper |
-| `app/web/runtime/final_selected_portfolios.py` | Final Selection Decision registry를 read-only로 읽어 최종 선정 포트폴리오 운영 대시보드 row / status summary / 기간 확장 replay recheck / current weight 또는 value / holding input 기반 drift check / drift alert preview로 변환 |
+| `app/web/runtime/portfolio_selection_v2.py` | Clean V2 portfolio selection source / Practical Validation result / Final Decision V2 / selected monitoring log / saved mix JSONL helper와 legacy archive copy helper |
+| `app/web/runtime/final_selected_portfolios.py` | Final Selection Decision V2 registry를 read-only로 읽어 최종 선정 포트폴리오 운영 대시보드 row / status summary / 기간 확장 replay recheck / current weight 또는 value / holding input 기반 drift check / drift alert preview로 변환 |
 | `app/web/runtime/portfolio_store.py` | Saved portfolio persistence helper |
 
 ## Finance Core

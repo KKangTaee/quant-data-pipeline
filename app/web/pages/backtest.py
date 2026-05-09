@@ -18,6 +18,7 @@ from app.web.backtest_common import (  # noqa: F401
     _set_single_strategy_target_from_strategy_key,
     clear_backtest_preview_caches,
 )
+from app.web.backtest_analysis import render_backtest_analysis_workspace
 from app.web.backtest_compare import (
     _queue_current_candidate_compare_prefill,  # noqa: F401
     render_compare_portfolio_workspace,
@@ -25,14 +26,20 @@ from app.web.backtest_compare import (
 from app.web.backtest_final_review import render_final_review_workspace
 from app.web.backtest_portfolio_proposal import render_portfolio_proposal_workspace
 from app.web.backtest_candidate_review import render_candidate_review_workspace
+from app.web.backtest_practical_validation import render_practical_validation_workspace
 from app.web.backtest_single_runner import _handle_backtest_run  # noqa: F401
 from app.web.backtest_single_strategy import render_single_strategy_workspace
+from app.web.backtest_workflow_routes import (
+    BACKTEST_STAGE_ANALYSIS,
+    BACKTEST_STAGE_FINAL_REVIEW,
+    BACKTEST_STAGE_PRACTICAL_VALIDATION,
+)
 
 
 # Render the Backtest workflow as primary navigation.
 def _render_backtest_panel_selector() -> str:
-    st.markdown("#### 후보 검토 흐름")
-    st.caption("전략 실행에서 후보 검토, Portfolio Proposal, Final Review의 최종 판단 완료까지 이어지는 주 흐름입니다.")
+    st.markdown("#### 후보 선정 흐름")
+    st.caption("Backtest Analysis에서 후보를 만들고, Practical Validation에서 검증한 뒤, Final Review에서 최종 판단합니다.")
 
     if hasattr(st, "segmented_control"):
         st.segmented_control(
@@ -54,8 +61,8 @@ def _render_backtest_panel_selector() -> str:
             on_change=_activate_backtest_workflow_panel,
             label_visibility="collapsed",
         )
-    st.caption("과거 실행 기록은 `Operations > Backtest Run History`, 저장 후보 재검토는 `Operations > Candidate Library`에서 관리합니다.")
-    return str(st.session_state.get("backtest_active_panel") or "Single Strategy")
+    st.caption("과거 실행 기록은 `Operations > Backtest Run History`, 선정 이후 관리는 `Operations > Selected Portfolio Dashboard`에서 확인합니다.")
+    return str(st.session_state.get("backtest_active_panel") or BACKTEST_STAGE_ANALYSIS)
 
 
 def render_backtest_tab() -> None:
@@ -64,13 +71,11 @@ def render_backtest_tab() -> None:
     with st.expander("Backtest 사용 안내", expanded=False):
         st.markdown(
             """
-            - `Single Strategy`: 전략 1개를 실행하고 결과를 바로 확인합니다.
-            - `Compare & Portfolio Builder`: 여러 전략을 같은 기간으로 비교하고 후보 근거를 확인합니다.
-            - `Candidate Review`: 후보 초안, Review Note, registry 저장, Pre-Live 운영 기록, Portfolio Proposal 이동 판단을 순서대로 처리합니다.
-            - `Portfolio Proposal`: 후보 여러 개를 목적 / 역할 / 비중 근거와 함께 묶는 제안 초안을 만듭니다.
-            - `Final Review`: 단일 후보 또는 저장된 proposal을 검증 근거와 함께 최종 선정 / 보류 / 거절 / 재검토로 판단하고 흐름을 마무리합니다.
+            - `Backtest Analysis`: Single Strategy, Compare, 저장된 비중 조합 replay로 후보 source를 만듭니다.
+            - `Practical Validation`: 선택한 단일 후보, Compare 후보, Saved Mix를 실전 검증 자료로 구조화합니다.
+            - `Final Review`: 검증 자료를 기준으로 최종 선정 / 보류 / 거절 / 재검토를 한 번만 기록합니다.
             - `Operations > Backtest Run History`: 저장된 실행 결과를 다시 보고, `Run Again` 또는 `Load Into Form`을 사용하는 운영 도구입니다.
-            - `Operations > Candidate Library`: registry / Pre-Live 후보를 다시 열어보고, 저장된 contract로 result curve를 재생성합니다.
+            - `Operations > Selected Portfolio Dashboard`: Final Review에서 선정된 V2 decision을 읽어 선정 이후 성과와 review signal을 확인합니다.
             - `Load Into Form`을 누르면 저장된 입력값이 `Single Strategy` 화면으로 자동 이동하며 다시 채워집니다.
             - `quarterly strict prototype` 전략은 현재 **research-only** 경로입니다.
             """
@@ -82,7 +87,13 @@ def render_backtest_tab() -> None:
 
     active_panel = _render_backtest_panel_selector()
 
-    if active_panel == "Single Strategy":
+    if active_panel == BACKTEST_STAGE_ANALYSIS:
+        render_backtest_analysis_workspace()
+    elif active_panel == BACKTEST_STAGE_PRACTICAL_VALIDATION:
+        render_practical_validation_workspace()
+    elif active_panel == BACKTEST_STAGE_FINAL_REVIEW:
+        render_final_review_workspace()
+    elif active_panel == "Single Strategy":
         render_single_strategy_workspace()
     elif active_panel == "Compare & Portfolio Builder":
         render_compare_portfolio_workspace()

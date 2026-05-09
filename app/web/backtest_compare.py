@@ -1,6 +1,10 @@
 from __future__ import annotations
 
 from app.web.backtest_common import *  # noqa: F401,F403
+from app.web.backtest_practical_validation_helpers import (
+    build_selection_source_from_saved_mix_prefill,
+    queue_practical_validation_source,
+)
 from app.web.backtest_history import (
     render_real_money_guardrail_parity_snapshot as _render_real_money_guardrail_parity_snapshot,
 )
@@ -1254,16 +1258,18 @@ def _render_saved_mix_validation_board(record: dict[str, Any]) -> None:
                 "Portfolio Proposal에서 포트폴리오 초안으로 기록합니다."
             )
             if st.button(
-                "포트폴리오 후보 초안으로 보내기",
+                "Practical Validation으로 보내기",
                 key=f"use_saved_mix_in_portfolio_proposal_{record.get('portfolio_id')}",
                 use_container_width=True,
             ):
-                st.session_state.portfolio_proposal_saved_mix_prefill = _build_saved_mix_proposal_prefill_payload(record)
+                prefill = _build_saved_mix_proposal_prefill_payload(record)
+                source = build_selection_source_from_saved_mix_prefill(prefill)
+                queue_practical_validation_source(source, persist=True)
+                st.session_state.portfolio_proposal_saved_mix_prefill = prefill
                 st.session_state.portfolio_proposal_saved_mix_notice = (
-                    f"Saved Mix `{record.get('name')}`를 Portfolio Proposal 초안으로 가져왔습니다. "
-                    "이 경로는 Candidate Review가 아니라 Portfolio Proposal로 이어집니다."
+                    f"Saved Mix `{record.get('name')}`를 Practical Validation source로 저장했습니다. "
+                    "이 경로는 Candidate Review / legacy Proposal 저장을 필수로 요구하지 않습니다."
                 )
-                _request_backtest_panel("Portfolio Proposal")
                 st.rerun()
         st.dataframe(pd.DataFrame(evaluation["criteria_rows"]), use_container_width=True, hide_index=True)
         if evaluation["workflow_references"]:
@@ -1362,7 +1368,7 @@ def _render_candidate_draft_readiness_box(bundles: list[dict[str, Any]]) -> None
         action_cols = st.columns([0.34, 0.66], gap="small")
         with action_cols[0]:
             if st.button(
-                "Send Selected Strategy To Candidate Review",
+                "Practical Validation으로 보내기",
                 key="compare_send_candidate_draft",
                 disabled=not bool(evaluation["can_send_to_candidate_draft"]),
                 use_container_width=True,
@@ -1381,8 +1387,8 @@ def _render_candidate_draft_readiness_box(bundles: list[dict[str, Any]]) -> None
                     st.rerun()
         with action_cols[1]:
             st.caption(
-                "이 버튼을 누른 뒤부터 6단계가 시작됩니다. 이동 위치는 `Candidate Review > 1. Draft 확인`이며, "
-                "아직 current candidate registry 저장이나 Pre-Live 운영 record 저장은 아닙니다."
+                "이 버튼을 누르면 선택한 개별 전략이 Clean V2 source로 저장되고 Practical Validation에서 실전 검증을 이어갑니다. "
+                "아직 최종 선택이나 live approval은 아닙니다."
             )
 
         rank_rows = evaluation.get("rank_rows") or []

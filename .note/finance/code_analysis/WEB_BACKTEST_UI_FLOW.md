@@ -14,7 +14,9 @@ UI form, payload 복원, candidate review, history replay, candidate replay, sav
 | `app/web/ops_review.py` | `Operations > Ops Review`의 triage flow, 웹앱 run health, action inbox, failure artifact, log, system snapshot dashboard |
 | `app/web/overview_dashboard.py` | `Workspace > Overview`에서 Backtest registry 기반 후보 Top 3, candidate funnel, next actions, recent activity dashboard render |
 | `app/web/overview_dashboard_helpers.py` | Overview dashboard용 current candidate / Pre-Live / proposal / history / saved portfolio 집계와 candidate priority scoring helper |
-| `app/web/backtest_common.py` | Backtest 공용 preset, session state, panel routing, universe / real-money / guardrail input, status label helper |
+| `app/web/backtest_common.py` | Backtest 공용 preset, session state, 3단계 stage routing compatibility, universe / real-money / guardrail input, status label helper |
+| `app/web/backtest_workflow_routes.py` | `Backtest Analysis`, `Practical Validation`, `Final Review` visible stage와 legacy panel route mapping |
+| `app/web/backtest_analysis.py` | `Backtest Analysis` stage wrapper. Single Strategy와 Compare & Portfolio Builder를 submode로 렌더링 |
 | `app/web/backtest_single_strategy.py` | `Single Strategy` 화면 orchestration. strategy 선택, prefill notice, form dispatch, latest result 연결 |
 | `app/web/backtest_single_forms.py` | Single Strategy strategy-specific form render. Equal Weight, GTAA, GRS, Risk Parity, Dual Momentum, Quality / Value 계열 |
 | `app/web/backtest_single_runner.py` | Single Strategy payload 실행 dispatch, DB-backed runtime 호출, latest bundle state 저장, run history append |
@@ -26,6 +28,8 @@ UI form, payload 복원, candidate review, history replay, candidate replay, sav
 | `app/web/backtest_candidate_library_helpers.py` | Candidate Library registry join, table row, replay payload 생성, ETF / strict annual equity 후보 replay runtime dispatch helper |
 | `app/web/pages/backtest.py` | Backtest page entry, workflow navigation, panel dispatch shell. 주요 panel 본문은 `app/web/backtest_*.py` module이 담당 |
 | `app/web/backtest_ui_components.py` | Backtest UI 공용 status card, artifact pipeline, compact badge strip, stage brief strip, route/readiness panel render helper |
+| `app/web/backtest_practical_validation.py` | `Practical Validation` stage render. Clean V2 selection source를 검증 결과로 구조화하고 Final Review로 넘김 |
+| `app/web/backtest_practical_validation_helpers.py` | Clean V2 selection source / validation result 생성, 저장, Final Review handoff helper |
 | `app/web/backtest_candidate_review.py` | Candidate Review / Candidate Packaging / Pre-Live 운영 기록 화면 render logic |
 | `app/web/backtest_candidate_review_helpers.py` | Candidate Review 판단, Review Note / registry 변환, Pre-Live status 추천 / draft 변환 / Portfolio Proposal 진입 readiness score helper |
 | `app/web/backtest_portfolio_proposal.py` | 단일 후보 직행 평가, 다중 후보 Portfolio Proposal 후보 선택 / 목적 / 역할 / 비중 설계, proposal draft 저장, 저장된 proposal monitoring / feedback section render logic |
@@ -39,31 +43,38 @@ UI form, payload 복원, candidate review, history replay, candidate replay, sav
 | `app/web/runtime/portfolio_proposal.py` | portfolio proposal draft JSONL read / append helper |
 | `app/web/runtime/paper_portfolio_ledger.py` | paper portfolio tracking ledger JSONL read / append helper |
 | `app/web/runtime/final_selection_decisions.py` | final portfolio selection decision JSONL read / append helper |
+| `app/web/runtime/portfolio_selection_v2.py` | Clean V2 selection source, practical validation result, Final Decision V2, selected monitoring log, saved mix JSONL helper |
 | `app/web/runtime/final_selected_portfolios.py` | final selection decision registry를 read-only dashboard row, selected component replay recheck, component contribution, optional Allocation Check / drift preview로 변환하는 Phase36 helper |
 | `.note/finance/run_history/BACKTEST_RUN_HISTORY.jsonl` | local run history. 보통 commit하지 않음 |
 | `.note/finance/saved/SAVED_PORTFOLIOS.jsonl` | saved portfolio persistence |
 | `.note/finance/registries/PORTFOLIO_PROPOSAL_REGISTRY.jsonl` | proposal draft persistence. 첫 proposal 저장 시 생성 |
 | `.note/finance/registries/PAPER_PORTFOLIO_TRACKING_LEDGER.jsonl` | paper tracking ledger persistence. 첫 paper ledger 저장 시 생성 |
-| `.note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl` | final selection decision persistence. 첫 final decision 저장 시 생성 |
+| `.note/finance/registries/PORTFOLIO_SELECTION_SOURCES.jsonl` | Clean V2 Backtest Analysis source persistence. 첫 후보 source 선택 시 생성 |
+| `.note/finance/registries/PRACTICAL_VALIDATION_RESULTS.jsonl` | Clean V2 Practical Validation result persistence. 첫 검증 결과 저장 시 생성 |
+| `.note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl` | Clean V2 final selection decision persistence. 첫 final decision 저장 시 생성 |
+| `.note/finance/registries/SELECTED_PORTFOLIO_MONITORING_LOG.jsonl` | 선정 이후 monitoring snapshot persistence. 사용자가 명시 저장할 때 생성 |
 
 ## 화면 흐름
 
-Backtest page는 후보 검토 주 흐름만 보여준다.
+Backtest page는 후보 선정 주 흐름만 보여준다.
 
 Backtest 주 흐름:
 
-- `Single Strategy`: 하나의 전략을 실행하고 latest result를 확인한다.
-- `Compare & Portfolio Builder`: 여러 전략을 같은 기간으로 비교하고 weighted portfolio를 만든다.
-- `Candidate Review`: Candidate Packaging 단일 흐름에서 Draft 확인, Review Note 저장, registry 저장, Pre-Live 운영 기록 저장, Portfolio Proposal 이동 판단을 순서대로 처리한다.
-- `Portfolio Proposal`: Candidate Review를 통과한 단일 후보는 추가 proposal 저장 없이 직행 후보로 읽는다. 여러 후보를 묶을 때만 목적 / 역할 / 비중이 있는 포트폴리오 초안을 저장한다.
-- `Final Review`: 단일 후보 또는 저장된 proposal을 선택해 Validation / Robustness / Paper Observation 기준을 한 화면에서 확인하고, 최종 실전 후보 선정 / 보류 / 거절 / 재검토 결과를 하나의 기록으로 남긴 뒤 현재 workflow를 `최종 판단 완료`로 마무리한다.
+- `Backtest Analysis`: Single Strategy 실행, Compare, weighted portfolio builder, 저장된 비중 조합 replay를 통해 후보 source를 만들고 `PORTFOLIO_SELECTION_SOURCES.jsonl`에 Clean V2 source로 저장한다.
+- `Practical Validation`: 선택된 단일 전략 / Compare 후보 / Saved Mix source를 실전 투입 전 조건으로 검증하고 `PRACTICAL_VALIDATION_RESULTS.jsonl`에 구조화된 검증 결과를 저장한다. 사용자 최종 메모는 받지 않는다.
+- `Final Review`: Practical Validation result를 기준으로 Validation / Robustness / Paper Observation 기준을 한 화면에서 확인하고, 최종 선정 / 보류 / 거절 / 재검토 판단과 최종 메모를 `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl`에 저장한다.
+
+Legacy / compatibility 흐름:
+
+- `Candidate Review`, `Portfolio Proposal`, 기존 Pre-Live registry, 기존 proposal registry는 바로 삭제하지 않는다. 다만 새 주 흐름의 필수 join 조건이 아니라 legacy inspector / archive compatibility로 낮춘다.
+- 기존 `Single Strategy`, `Compare & Portfolio Builder`, `Candidate Review`, `Portfolio Proposal` route request는 `backtest_workflow_routes.py`에서 3단계 stage로 매핑한다.
 
 Operations 보조 화면:
 
 - `Operations > Ops Review`: 웹앱 ingestion / refresh / factor job의 run health를 점검한다. triage flow, 최근 실행 상태, action inbox, failure CSV, run artifact, related logs, runtime snapshot을 보여주며, job 실행은 `Ingestion`, backtest replay는 `Backtest Run History`, 후보 replay는 `Candidate Library`로 분리한다.
 - `Operations > Backtest Run History`: 저장된 실행 기록을 inspect하고, 가능한 경우 run again, load into form, candidate draft handoff를 수행한다. 후보 검토 흐름의 주 단계가 아니라 과거 실행을 다시 열기 위한 운영 / 재현 도구로 둔다.
 - `Operations > Candidate Library`: `CURRENT_CANDIDATE_REGISTRY.jsonl`과 `PRE_LIVE_CANDIDATE_REGISTRY.jsonl`을 읽어 저장된 후보를 다시 열어 본다. registry에는 compact snapshot만 남으므로, 그래프 / result table이 필요할 때 저장 contract로 DB-backed result curve를 재생성한다. 후보 등록 단계가 아니라 보관함 / 재검토 도구다.
-- `Operations > Selected Portfolio Dashboard`: `FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`에서 `SELECT_FOR_PRACTICAL_PORTFOLIO`로 선정된 row만 읽어 최종 선정 포트폴리오의 compact 선택, Snapshot, 기간 확장 Performance Recheck tabs, Portfolio Monitoring의 Review Signals / Why Selected / optional Actual Allocation / Audit을 보여준다. 새 final decision이나 alert row를 저장하지 않고, live approval / broker order / auto rebalance는 disabled로 둔다.
+- `Operations > Selected Portfolio Dashboard`: `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl`에서 `SELECT_FOR_PRACTICAL_PORTFOLIO`로 선정된 row만 읽어 최종 선정 포트폴리오의 compact 선택, Snapshot, 기간 확장 Performance Recheck tabs, Portfolio Monitoring의 Review Signals / Why Selected / optional Actual Allocation / Audit을 보여준다. live approval / broker order / auto rebalance는 disabled로 둔다.
 
 ## 현재 Reference Guide 제품 흐름
 
