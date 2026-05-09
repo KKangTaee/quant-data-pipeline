@@ -25,6 +25,35 @@
 
 `Selected Portfolio Dashboard`는 Backtest 단계가 아니라 Operations 영역의 사후 확인 화면으로 유지한다.
 
+## 사용자 End-to-End Flow
+
+이 redesign이 끝났을 때 사용자는 아래 흐름으로 프로그램을 사용한다.
+
+| 순서 | 위치 | 사용자가 하는 일 | 저장되는 데이터 |
+|---|---|---|---|
+| 1 | `Backtest > Backtest Analysis` | Single Strategy를 실행하거나, Compare에서 여러 전략을 비교하거나, 저장된 Mix를 재실행한다. | 일반 실행 이력은 `run_history`에 남지만 generated artifact로 취급한다. |
+| 2 | `Backtest > Backtest Analysis` | 성과 / MDD / Sharpe / benchmark / rolling validation / Data Trust / Real-Money signal을 보고 실전 검증 후보로 선택한다. | 선택한 후보 원본은 `PORTFOLIO_SELECTION_SOURCES.jsonl`에 저장한다. |
+| 3 | `Backtest > Practical Validation` | 선택한 후보가 실전 투입 전 조건을 충족하는지 본다. 단일 전략, Compare 후보, Saved Mix 모두 같은 방식으로 검증한다. | 검증 결과는 `PRACTICAL_VALIDATION_RESULTS.jsonl`에 저장한다. 사용자 최종 메모는 아직 저장하지 않는다. |
+| 4 | `Backtest > Final Review` | 최종 후보로 선정할지, 보류 / 거절 / 재검토할지 판단한다. 투자 추천이나 live approval이 아니라 최종 후보 판단 record다. | 최종 판단과 사용자 최종 메모는 `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl`에 저장한다. |
+| 5 | `Operations > Selected Portfolio Dashboard` | Final Review에서 선정된 후보의 최신 성과를 다시 확인하고, original period 이후 성과 유지 여부와 review signal을 본다. | 사용자가 명시적으로 저장할 때만 `SELECTED_PORTFOLIO_MONITORING_LOG.jsonl`에 monitoring snapshot을 남긴다. |
+| 6 | `Operations > Selected Portfolio Dashboard` | 필요하면 실제 또는 가상 배정 금액 기준으로 allocation check를 한다. | allocation check는 monitoring log 안의 optional snapshot으로 저장한다. 주문, 자동매매, live approval은 만들지 않는다. |
+
+사용자가 이해해야 하는 흐름은 아래 한 줄이다.
+
+```text
+Backtest Analysis에서 만들고 고른다
+Practical Validation에서 실전 검증한다
+Final Review에서 최종 판단한다
+Selected Portfolio Dashboard에서 선정 후 상태를 다시 본다
+```
+
+중요한 경계:
+
+- 비중을 새로 만들거나 수정하는 작업은 `Backtest Analysis`가 맡는다.
+- `Practical Validation`은 이미 선택된 후보를 검증하는 단계다. 여기서 다시 weight builder를 크게 제공하지 않는다.
+- 사용자 최종 메모는 `Final Review`에만 남긴다.
+- 사후관리는 최종 선정 이후의 성과 재확인과 review signal 확인이지, 주문 실행이나 live approval이 아니다.
+
 ## 현재 코드의 실제 흐름
 
 ### 상단 화면 라우팅
@@ -317,6 +346,114 @@ Practical Validation은 저장소 이름이 아니라 “검증 대상 source”
 - Selected Dashboard recheck를 살리려면 `replay_contract` 또는 saved mix replay context를 component에 보존해야 한다.
 - 최종 메모는 source contract에 넣지 않고 Final Review decision row에만 저장한다.
 
+### 저장소 재설계: Compatibility Mode vs Clean V2 Mode
+
+이 문서의 첫 분석은 기존 JSONL을 가능한 한 유지하는 compatibility 관점이 강했다. 그러나 대규모 개편을 전제로 하면 기존 JSONL을 main source로 계속 끌고 갈 필요는 없다.
+
+두 가지 선택지가 있다.
+
+| 모드 | 설명 | 장점 | 단점 |
+|---|---|---|---|
+| `Compatibility Mode` | 기존 `CURRENT_CANDIDATE_REGISTRY`, `PRE_LIVE`, `PORTFOLIO_PROPOSAL` 등을 계속 읽고, 새 3단계 workflow를 그 위에 얹는다. | 기존 후보 / proposal / final decision을 바로 다시 볼 수 있다. | 기존 저장 단계와 join 조건이 계속 남아 UX와 코드가 복잡하다. |
+| `Clean V2 Mode` | 기존 JSONL은 archive로 보관하고, 새 workflow 전용 JSONL을 새로 만든다. | 3단계 workflow와 저장 구조가 일치한다. 반복 메모 / 반복 저장 문제가 줄어든다. | 기존 JSONL을 새 UI의 main source로 자동 이관하지 않는다. 필요하면 legacy viewer로만 본다. |
+
+이 redesign의 권장안은 `Clean V2 Mode`다.
+
+이유:
+
+- 사용자가 지적한 문제는 기존 저장소를 너무 적극적으로 재사용하면서 생긴 workflow 복잡성이다.
+- `Review Note -> Current Candidate -> Pre-Live -> Proposal -> Final Decision` 체인을 계속 유지하면 3단계 UI로 바꿔도 내부 개념이 다시 새어 나온다.
+- 기존 JSONL은 연구 기록으로 가치가 있지만, 새 UX의 source-of-truth가 될 필요는 없다.
+
+### 기존 JSONL archive 정책
+
+Clean V2 Mode를 선택하면 기존 registry 파일은 삭제하지 않고 archive한다.
+
+권장 위치:
+
+```text
+.note/finance/archive/legacy_portfolio_workflow_v1/20260510/registries/
+```
+
+archive 대상:
+
+```text
+.note/finance/registries/CANDIDATE_REVIEW_NOTES.jsonl
+.note/finance/registries/CURRENT_CANDIDATE_REGISTRY.jsonl
+.note/finance/registries/PRE_LIVE_CANDIDATE_REGISTRY.jsonl
+.note/finance/registries/PORTFOLIO_PROPOSAL_REGISTRY.jsonl
+.note/finance/registries/PAPER_PORTFOLIO_TRACKING_LEDGER.jsonl
+.note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl
+```
+
+archive 후 main workflow는 이 파일들을 필수 join 조건으로 사용하지 않는다.
+
+허용되는 사용:
+
+- legacy inspector에서 과거 후보를 읽는다.
+- 필요하면 수동 migration helper로 특정 record를 새 `PORTFOLIO_SELECTION_SOURCES.jsonl`에 복사한다.
+- 과거 분석의 감사 기록으로 보관한다.
+
+금지할 사용:
+
+- 새 Practical Validation 통과 조건으로 old Current Candidate row 존재를 요구한다.
+- 새 Final Review 통과 조건으로 old Pre-Live row 존재를 요구한다.
+- Saved Mix가 old proposal registry에 없다는 이유만으로 막는다.
+
+### Clean V2 저장 파일
+
+Clean V2 Mode에서는 아래 파일들이 새 main source-of-truth다.
+
+| 파일 | 저장 시점 | 역할 |
+|---|---|---|
+| `.note/finance/registries/PORTFOLIO_SELECTION_SOURCES.jsonl` | Backtest Analysis에서 사용자가 `실전 검증 후보로 선택`을 누를 때 | 단일 전략, Compare focused strategy, Saved Mix를 같은 source contract로 저장한다. |
+| `.note/finance/registries/PRACTICAL_VALIDATION_RESULTS.jsonl` | Practical Validation에서 사용자가 `검증 결과 저장` 또는 `Final Review로 보내기`를 누를 때 | blocker, review gap, data trust, real-money signal, robustness, paper observation 기준을 저장한다. 사용자 최종 메모는 저장하지 않는다. |
+| `.note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl` | Final Review에서 사용자가 최종 판단을 저장할 때 | select / hold / reject / re-review 판단과 최종 사용자 메모, 선택된 component, evidence snapshot을 저장한다. |
+| `.note/finance/registries/SELECTED_PORTFOLIO_MONITORING_LOG.jsonl` | Selected Portfolio Dashboard에서 사용자가 monitoring snapshot 저장을 명시할 때 | 선정 이후 performance recheck, review signal, optional allocation check snapshot을 저장한다. |
+| `.note/finance/saved/SAVED_PORTFOLIO_MIXES.jsonl` | Backtest Analysis에서 사용자가 reusable mix setup을 저장할 때 | 다시 실행 가능한 비중 조합 설정을 저장한다. 검증 결과나 최종 판단이 아니다. |
+
+`run_history/*.jsonl`은 계속 local generated artifact다. 재실행 convenience에는 쓰지만, 후보 선정 workflow의 영구 source-of-truth로 보지 않는다.
+
+### Clean V2 record 관계
+
+새 저장 구조는 아래처럼 단순하게 연결한다.
+
+```text
+PORTFOLIO_SELECTION_SOURCES
+  -> PRACTICAL_VALIDATION_RESULTS
+    -> FINAL_PORTFOLIO_SELECTION_DECISIONS_V2
+      -> SELECTED_PORTFOLIO_MONITORING_LOG
+```
+
+권장 id 관계:
+
+| record | 주요 id | 참조 |
+|---|---|---|
+| Selection Source | `selection_source_id` | source run / saved mix / replay contract를 내부 snapshot으로 보존 |
+| Practical Validation Result | `validation_id` | `selection_source_id` 참조 |
+| Final Decision V2 | `decision_id` | `selection_source_id`, `validation_id` 참조 |
+| Monitoring Log | `monitoring_id` | `decision_id`, 선택적으로 `selection_source_id` 참조 |
+
+중요한 점:
+
+- `selection_source_id`가 새 workflow의 후보 기준 id다.
+- 기존 `registry_id`는 있으면 legacy reference로만 보존한다.
+- Selected Portfolio Dashboard는 `decision_id`를 기준으로 선정 포트폴리오를 읽는다.
+- replay는 old registry join이 아니라 selection source의 `replay_contract` 또는 saved mix context를 우선 사용한다.
+
+### Clean V2에서 저장하지 않는 것
+
+새 workflow는 아래를 기본 저장하지 않는다.
+
+| 저장하지 않는 것 | 이유 |
+|---|---|
+| 별도 Review Note | 최종 판단 전 중간 메모가 반복되기 때문이다. |
+| 별도 Pre-Live record | Practical Validation의 paper observation snapshot으로 충분하다. |
+| 별도 Portfolio Proposal draft | Compare / Saved Mix에서 이미 비중 조합을 만들었고, Final Review evidence에 구성 정보를 담을 수 있다. |
+| Paper Tracking Ledger 필수 저장 | Final Review 전 필수 단계처럼 보이면 workflow가 다시 길어진다. |
+
+필요하면 advanced export나 legacy compatibility로 만들 수 있지만, main workflow의 필수 단계로 두지 않는다.
+
 ### Practical Validation 화면 구조
 
 `Practical Validation`은 기존 Candidate Review와 Portfolio Proposal을 합친 새 주 화면이다.
@@ -434,7 +571,27 @@ Final Review decision row에는 아래가 반드시 들어가야 한다.
 - 새 3단계 workflow의 구현 순서를 정한다.
 - 실제 제품 코드는 아직 수정하지 않는다.
 
-### 1단계. 호환 route foundation
+### 1단계. Legacy archive + Clean V2 storage foundation
+
+목표는 기존 JSONL을 새 workflow의 필수 source-of-truth에서 분리하고, 새 저장소를 먼저 세우는 것이다.
+
+작업:
+
+- 기존 registry JSONL을 `.note/finance/archive/legacy_portfolio_workflow_v1/<date>/registries/`로 archive한다.
+- `.note/finance/registries/PORTFOLIO_SELECTION_SOURCES.jsonl` helper를 추가한다.
+- `.note/finance/registries/PRACTICAL_VALIDATION_RESULTS.jsonl` helper를 추가한다.
+- `.note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl` helper를 추가한다.
+- `.note/finance/registries/SELECTED_PORTFOLIO_MONITORING_LOG.jsonl` helper를 추가한다.
+- `.note/finance/saved/SAVED_PORTFOLIO_MIXES.jsonl` helper를 추가한다.
+- legacy registry helper는 삭제하지 않고 legacy inspector / one-time import 용도로만 남긴다.
+
+검증:
+
+- 빈 V2 JSONL 상태에서 앱이 시작되어야 한다.
+- 기존 JSONL이 없어도 Backtest Analysis -> Practical Validation -> Final Review route가 막히지 않아야 한다.
+- legacy archive 파일은 main UI validation 조건으로 사용되지 않아야 한다.
+
+### 2단계. Route foundation and stage separation
 
 목표는 화면 이름 변경 전에 route와 stage를 분리하는 것이다.
 
@@ -452,7 +609,7 @@ Final Review decision row에는 아래가 반드시 들어가야 한다.
 - Single -> Candidate Review legacy handoff가 깨지지 않아야 한다.
 - Saved Mix -> Portfolio Proposal legacy handoff가 깨지지 않아야 한다.
 
-### 2단계. Backtest Analysis stage 도입
+### 3단계. Backtest Analysis stage 도입
 
 작업:
 
@@ -468,7 +625,7 @@ Final Review decision row에는 아래가 반드시 들어가야 한다.
 - Compare 실행, weighted mix 저장, saved mix replay가 기존처럼 동작한다.
 - 기존 session prefill이 새 stage에서도 복원된다.
 
-### 3단계. Practical Validation source queue 도입
+### 4단계. Practical Validation source queue 도입
 
 작업:
 
@@ -492,7 +649,7 @@ backtest_practical_validation_mode = "Selected Source"
 - Compare 개별 후보에서 같은 이동이 되어야 한다.
 - Saved Mix validation board에서 같은 이동이 되어야 한다.
 
-### 4단계. Practical Validation UI 구현
+### 5단계. Practical Validation UI 구현
 
 작업:
 
@@ -510,7 +667,7 @@ backtest_practical_validation_mode = "Selected Source"
 - Current Candidate가 없는 saved mix synthetic component가 hard blocker로만 처리되지 않아야 한다.
 - 비중 수정은 기본 화면에서 반복 제공하지 않아야 한다.
 
-### 5단계. Final Review source 확장
+### 6단계. Final Review source 확장
 
 작업:
 
@@ -525,7 +682,7 @@ backtest_practical_validation_mode = "Selected Source"
 - 기존 current candidate / saved proposal source도 계속 보여야 한다.
 - 저장된 final decision row가 Selected Dashboard에서 읽을 수 있어야 한다.
 
-### 6단계. Selected Portfolio Dashboard replay fallback
+### 7단계. Selected Portfolio Dashboard replay fallback
 
 작업:
 
@@ -539,7 +696,7 @@ backtest_practical_validation_mode = "Selected Source"
 - Saved Mix 기반 final decision은 최소한 snapshot / allocation / baseline evidence가 표시된다.
 - 가능한 경우 saved mix replay contract로 performance recheck가 동작한다.
 
-### 7단계. Guide / docs sync
+### 8단계. Guide / docs sync
 
 작업:
 
@@ -586,6 +743,9 @@ python3 plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.
 | 기존 Current Candidate 선택 | compatibility 경로에서 기존 후보 검증이 가능하다. |
 | 기존 saved proposal 선택 | 기존 proposal이 Final Review에서 계속 읽힌다. |
 | Final Review selected decision 저장 | Selected Portfolio Dashboard가 final decision을 읽는다. |
+| 빈 V2 registry에서 새 후보 선택 | 기존 JSONL 없이 `Selection Source -> Practical Validation -> Final Review`가 이어진다. |
+| legacy archive 이후 앱 시작 | legacy registry가 없어도 main workflow가 crash하지 않는다. |
+| monitoring snapshot 저장 | Final Review에서 선정된 후보만 monitoring log에 저장된다. |
 
 ### 저장소 hygiene
 
@@ -613,7 +773,7 @@ temp CSV
 
 먼저 stage와 internal route를 분리해야 한다.
 
-### Candidate Review 파일을 바로 삭제
+### Candidate Review 코드를 바로 삭제
 
 이 방식도 위험하다.
 
@@ -625,21 +785,25 @@ temp CSV
 
 Candidate Review UI는 main workflow에서 내리고, helper와 legacy inspector만 남기는 순서가 안전하다.
 
+Clean V2 Mode에서도 기존 JSONL 파일은 archive할 수 있다. 여기서 위험하다는 뜻은 `backtest_candidate_review_helpers.py` 같은 코드 자산을 분석 없이 삭제하는 것이다.
+
 ### Practical Validation에서 다시 weight builder를 크게 제공
 
 이 방식은 사용자의 혼란을 유지한다.
 
 비중 실험과 조합 저장은 `Backtest Analysis`에서 끝내고, Practical Validation은 이미 선택된 source를 실전 검증하는 화면으로 제한하는 편이 목적이 분명하다.
 
-## 남겨야 할 compatibility
+## Clean V2에서도 남길 compatibility
 
-| compatibility | 이유 |
-|---|---|
-| `CURRENT_CANDIDATE_REGISTRY.jsonl` read/write helper | 기존 후보, Candidate Library, replay helper가 의존한다. |
-| `PRE_LIVE_CANDIDATE_REGISTRY.jsonl` read helper | 기존 proposal / final validation evidence 보강에 필요하다. |
-| `PORTFOLIO_PROPOSAL_REGISTRY.jsonl` | 기존 saved proposal과 Final Review source 호환에 필요하다. |
-| legacy route label | 기존 session handoff와 history replay 안정성 때문에 필요하다. |
-| existing final decision schema | Selected Portfolio Dashboard가 읽는다. |
+Clean V2 Mode는 기존 JSONL을 main source-of-truth에서 내리는 것이지, 과거 기록을 무시하거나 코드 자산을 한 번에 삭제하는 뜻이 아니다.
+
+| compatibility | Clean V2에서의 위치 | 이유 |
+|---|---|---|
+| old registry JSONL | archive / legacy inspector | 과거 분석 기록으로 보관한다. 새 validation의 필수 조건으로 쓰지 않는다. |
+| candidate review helper 일부 | Practical Validation source builder 내부 재사용 | result snapshot, data trust, settings snapshot 변환 로직은 재사용 가치가 있다. |
+| legacy route label | transition mapping | 기존 session handoff와 history replay 안정성 때문에 route mapping은 한동안 유지한다. |
+| old final decision schema | legacy selected dashboard reader | 기존 선정 기록을 볼 수는 있게 하되, 새 선정은 V2 decision file에 저장한다. |
+| saved portfolio setup | one-time import 또는 legacy saved setup viewer | 사용자가 만든 과거 mix setup을 필요할 때 새 `SAVED_PORTFOLIO_MIXES.jsonl`로 복사할 수 있게 한다. |
 
 ## 열려 있는 설계 판단
 
@@ -647,10 +811,12 @@ Candidate Review UI는 main workflow에서 내리고, helper와 legacy inspector
 
 | 판단 | 권장안 |
 |---|---|
+| 저장소 모드 | 대규모 개편이면 `Clean V2 Mode`를 권장한다. 기존 JSONL은 archive하고 새 workflow 저장소를 main source로 둔다. |
 | 기존 Candidate Review / Portfolio Proposal 화면을 완전히 숨길지 | 첫 구현에서는 main workflow에서 내리고 Practical Validation의 legacy / advanced section으로 접는다. |
-| Practical Validation 중간 결과를 JSONL로 저장할지 | 기본은 session handoff로 두고, Final Review decision row가 최종 영구 기록이 되게 한다. 중간 registry를 새로 만들면 사용자가 지적한 저장 반복 문제가 재발한다. |
+| Practical Validation 중간 결과를 JSONL로 저장할지 | Clean V2에서는 저장한다. 단, 사용자 메모 저장이 아니라 구조화된 validation evidence 저장이다. 최종 사용자 메모는 Final Review에만 둔다. |
 | Saved Mix final source의 replay를 어디까지 보장할지 | 최소 snapshot display는 보장하고, 가능한 경우 saved mix replay contract로 recheck fallback을 구현한다. |
 | 기존 Portfolio Proposal multi-candidate builder를 어디에 둘지 | 새 주 흐름에서는 Backtest Analysis에서 비중 조합을 만들게 하고, 기존 builder는 compatibility / advanced path로 둔다. |
+| monitoring log를 저장할지 | 기본 dashboard 조회는 read-only다. 사용자가 명시적으로 저장할 때만 monitoring snapshot을 append한다. |
 
 ## 결론
 
@@ -659,13 +825,15 @@ Candidate Review UI는 main workflow에서 내리고, helper와 legacy inspector
 핵심은 다음 세 가지다.
 
 1. 상단 visible stage와 내부 workspace route를 분리한다.
-2. Candidate Review / Portfolio Proposal의 저장 중심 workflow를 Practical Validation 중심 workflow로 재배치한다.
-3. Saved Mix와 Compare 후보가 Current Candidate / Pre-Live registry 없이도 Final Review까지 이어질 수 있는 source contract를 만든다.
+2. 기존 JSONL을 archive하고 Clean V2 저장소를 새 source-of-truth로 둔다.
+3. Candidate Review / Portfolio Proposal의 저장 중심 workflow를 Practical Validation 중심 workflow로 재배치한다.
+4. Saved Mix와 Compare 후보가 Current Candidate / Pre-Live registry 없이도 Final Review까지 이어질 수 있는 source contract를 만든다.
 
-이 순서로 진행하면 기존 registry와 dashboard 호환성을 유지하면서도 사용자는 다음처럼 이해할 수 있다.
+이 순서로 진행하면 기존 registry를 계속 끌고 가는 복잡성을 줄이면서도 사용자는 다음처럼 이해할 수 있다.
 
 ```text
 Backtest Analysis에서 만들고 검증한다
 Practical Validation에서 실전 투입 전 조건을 본다
 Final Review에서 최종 판단과 메모를 남긴다
+Selected Portfolio Dashboard에서 선정 이후 상태를 다시 확인한다
 ```

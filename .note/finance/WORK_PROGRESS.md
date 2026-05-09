@@ -3493,3 +3493,10 @@ Detailed historical logs were archived on `2026-04-13`.
   - 구현 전 기준 문서 `.note/finance/code_analysis/BACKTEST_PORTFOLIO_SELECTION_WORKFLOW_REDESIGN_GUIDE.md`를 추가했다.
   - 핵심 판단은 5개 panel label을 바로 3개로 치환하지 않고, visible stage와 legacy internal route를 먼저 분리하는 것이다.
   - 아직 제품 코드는 수정하지 않았다. 다음 단계는 사용자가 guide 방향을 확인한 뒤 route foundation부터 구현하는 것이다.
+
+### 2026-05-10
+- Backtest 후보 선정 workflow 재설계 가이드 보강:
+  - user feedback에 따라 기존 JSONL을 꼭 main source로 유지하지 않고 archive한 뒤 Clean V2 저장 구조로 다시 시작하는 옵션을 문서화했다.
+  - `PORTFOLIO_SELECTION_SOURCES`, `PRACTICAL_VALIDATION_RESULTS`, `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2`, `SELECTED_PORTFOLIO_MONITORING_LOG`, `SAVED_PORTFOLIO_MIXES`의 역할을 정리했다.
+  - 사용자가 `Backtest Analysis -> Practical Validation -> Final Review -> Selected Portfolio Dashboard`를 어떻게 지나 최종 후보 선정과 사후관리를 하는지 end-to-end flow를 추가했다.
+  - 제품 코드는 아직 수정하지 않았다. 다음 구현은 Clean V2 storage foundation과 route/stage 분리부터 시작하는 것이 맞다.

@@ -4430,3 +4430,15 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Follow-up:
   - `.note/finance/code_analysis/BACKTEST_PORTFOLIO_SELECTION_WORKFLOW_REDESIGN_GUIDE.md`에 route / session key / registry dependency / source contract / 단계별 구현 순서를 정리했다
   - 제품 코드는 아직 수정하지 않았고, 사용자 확인 후 route foundation부터 구현한다
+
+### 2026-05-10 - 기존 JSONL은 archive하고 Clean V2 저장 구조로 다시 시작할 수 있다
+- User request:
+  - 사용자가 기존 JSONL을 반드시 활용하지 않아도 되며, archive로 보관하고 새 workflow 기준으로 새 저장 파일을 만들 수 있다고 설명함
+- Interpreted goal:
+  - 3단계 workflow redesign이 기존 registry chain에 과도하게 묶이지 않도록, 새 source-of-truth와 사용자 end-to-end flow를 명확히 해야 함
+- Analysis result:
+  - 대규모 개편에서는 `Compatibility Mode`보다 `Clean V2 Mode`가 더 적합하다
+  - 기존 `Review Note -> Current Candidate -> Pre-Live -> Portfolio Proposal -> Final Decision` chain은 archive / legacy inspector로 내리고, 새 main flow는 `Selection Source -> Practical Validation Result -> Final Decision V2 -> Monitoring Log`로 단순화한다
+  - 사용자 플로우는 `Backtest Analysis`에서 만들고 선택, `Practical Validation`에서 실전 검증, `Final Review`에서 최종 판단과 메모 저장, `Selected Portfolio Dashboard`에서 선정 이후 성과와 review signal 확인으로 정리한다
+- Follow-up:
+  - `.note/finance/code_analysis/BACKTEST_PORTFOLIO_SELECTION_WORKFLOW_REDESIGN_GUIDE.md`에 Clean V2 저장소 설계, legacy archive 정책, 새 JSONL 파일 역할, 사후관리 flow를 보강했다
