@@ -118,11 +118,23 @@ def build_selection_source_from_candidate_draft(draft: dict[str, Any]) -> dict[s
 
 
 def build_selection_source_from_saved_mix_prefill(prefill: dict[str, Any]) -> dict[str, Any]:
-    """Convert a replayed saved mix prefill into the Clean V2 selection-source contract."""
+    """Convert a weighted mix prefill into the Clean V2 selection-source contract."""
     created_at = _now_text()
-    saved_id = str(prefill.get("saved_portfolio_id") or "saved_mix")
-    saved_name = str(prefill.get("saved_portfolio_name") or saved_id)
-    source_id = f"selection_saved_mix_{_slug(saved_id)}_{uuid4().hex[:8]}"
+    source_kind = str(prefill.get("source_kind") or "saved_portfolio_mix")
+    source_ref_id = str(
+        prefill.get("saved_portfolio_id")
+        or prefill.get("weighted_portfolio_id")
+        or prefill.get("portfolio_id")
+        or source_kind
+    )
+    source_name = str(
+        prefill.get("saved_portfolio_name")
+        or prefill.get("weighted_portfolio_name")
+        or prefill.get("portfolio_name")
+        or source_ref_id
+    )
+    construction_source = "weighted_mix" if source_kind == "weighted_portfolio_mix" else "saved_mix"
+    source_id = f"selection_{_slug(source_kind)}_{_slug(source_ref_id)}_{uuid4().hex[:8]}"
     weighted_summary = dict(prefill.get("weighted_summary") or {})
     weighted_period = dict(prefill.get("weighted_period") or {})
     components: list[dict[str, Any]] = []
@@ -151,7 +163,8 @@ def build_selection_source_from_saved_mix_prefill(prefill: dict[str, Any]) -> di
                 "replay_contract": {
                     "contract": dict(component.get("contract") or {}),
                     "compare_evidence": dict(component.get("compare_evidence") or {}),
-                    "saved_portfolio_id": saved_id,
+                    "source_kind": source_kind,
+                    "source_ref_id": source_ref_id,
                 },
             }
         )
@@ -164,8 +177,8 @@ def build_selection_source_from_saved_mix_prefill(prefill: dict[str, Any]) -> di
         "selection_source_id": source_id,
         "created_at": created_at,
         "updated_at": created_at,
-        "source_kind": "saved_portfolio_mix",
-        "source_title": saved_name,
+        "source_kind": source_kind,
+        "source_title": source_name,
         "source_status": "selected_for_practical_validation",
         "period": {
             "start": weighted_period.get("start"),
@@ -180,24 +193,33 @@ def build_selection_source_from_saved_mix_prefill(prefill: dict[str, Any]) -> di
             "end_balance": _optional_float(weighted_summary.get("end_balance")),
         },
         "data_trust": {
-            "status": "mix_replay_snapshot",
+            "status": prefill.get("data_trust_status") or f"{construction_source}_snapshot",
             "warning_count": 0,
         },
         "real_money_signal": {
-            "route": "saved_mix_component_snapshot",
+            "route": f"{construction_source}_component_snapshot",
             "blockers": [],
             "review_gaps": [],
         },
         "components": components,
         "construction": {
-            "source": "saved_mix",
-            "saved_portfolio_id": saved_id,
+            "source": construction_source,
+            "source_ref_id": source_ref_id,
+            "saved_portfolio_id": prefill.get("saved_portfolio_id"),
+            "weighted_portfolio_id": prefill.get("weighted_portfolio_id"),
             "target_weight_total": target_weight_total,
             "date_policy": dict(prefill.get("portfolio_context") or {}).get("date_policy"),
         },
         "source_snapshot": prefill,
-        "notes": "Clean V2 saved mix selection source. It is not a live approval or an investment recommendation.",
+        "notes": "Clean V2 weighted mix selection source. It is not a live approval or an investment recommendation.",
     }
+
+
+def build_selection_source_from_weighted_mix_prefill(prefill: dict[str, Any]) -> dict[str, Any]:
+    """Convert the just-built weighted portfolio mix into a Practical Validation source."""
+    row = dict(prefill or {})
+    row.setdefault("source_kind", "weighted_portfolio_mix")
+    return build_selection_source_from_saved_mix_prefill(row)
 
 
 def queue_practical_validation_source(source: dict[str, Any], *, persist: bool = True) -> None:

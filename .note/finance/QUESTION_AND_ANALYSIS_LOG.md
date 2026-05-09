@@ -4454,3 +4454,15 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Selected Portfolio Dashboard는 Final Review V2 decision row를 source-of-truth로 읽는 것이 맞다
 - Follow-up:
   - Backtest stage routing, Clean V2 source / validation / final decision persistence, Practical Validation UI, Final Review V2 저장, Selected Dashboard V2 read path를 1차 구현했다
+
+### 2026-05-10 - Compare weighted mix도 바로 Practical Validation으로 가야 한다
+- User request:
+  - 사용자가 Backtest Analysis > Compare & Portfolio Builder에서 개별 전략만 Practical Validation으로 보낼 수 있고, mix 상태에서는 다음 행동으로 보낼 수 없는 것인지 확인함. 또한 저장 mix의 `전략 비교에서 수정하기`가 기존 5단계 결과를 먼저 보여주는 UX가 어색하다고 지적함
+- Interpreted goal:
+  - 개별 전략 handoff와 mix handoff를 분리하되, 새로 만든 mix도 저장 후 재실행을 강제하지 않고 바로 Practical Validation source로 보낼 수 있어야 함
+- Analysis result:
+  - 개별 전략 Compare 보드는 단일 후보 전용으로 유지하는 것이 맞다
+  - weighted mix는 별도 Clean V2 source로 Practical Validation에 보내는 primary action이 필요하다
+  - saved mix edit mode는 검증 경로가 아니라 편집 / 재구성 경로이므로 stale compare 결과보다 저장된 설정이 반영된 form을 먼저 보여주는 것이 맞다
+- Follow-up:
+  - 현재 weighted mix 직접 handoff를 추가하고, saved mix edit mode에서 기존 result state를 clear하도록 구현했다

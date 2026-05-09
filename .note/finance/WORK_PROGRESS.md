@@ -3508,3 +3508,10 @@ Detailed historical logs were archived on `2026-04-13`.
   - Single / History / Compare focused strategy / Saved Mix handoff가 Clean V2 selection source를 만들고 Practical Validation으로 이동하도록 연결했다.
   - Final Review는 Practical Validation result를 읽어 `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl`에 저장하고, Selected Portfolio Dashboard는 V2 decision registry를 읽도록 바꿨다.
   - 기존 Candidate Review / Portfolio Proposal 코드는 삭제하지 않고 legacy compatibility로 유지했다.
+
+### 2026-05-10
+- Compare weighted mix Practical Validation handoff UX 보강:
+  - user feedback에 따라 방금 만든 weighted portfolio mix를 저장 mix round-trip 없이 Practical Validation으로 보낼 수 없는 문제를 확인했다.
+  - `Weighted Portfolio Result` 아래에 `현재 Mix를 Practical Validation으로 보내기` action을 추가해 mix 전체를 Clean V2 selection source로 저장하게 했다.
+  - 저장 mix의 `전략 비교에서 수정하기`는 기존 stale compare / weighted 결과를 숨기고, 저장된 전략 / 기간 / 세부 설정 / weight를 form-first 상태로 다시 채우도록 조정했다.
+  - Compare / saved mix 문구와 `WEB_BACKTEST_UI_FLOW.md`를 Clean V2 Practical Validation ownership 기준으로 갱신했다.
