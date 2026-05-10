@@ -3634,3 +3634,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - stress window는 포트폴리오 curve / benchmark curve를 정적 이벤트 구간으로 잘라 return, MDD, benchmark spread를 계산하는 검증 preset으로 정리했다.
   - sentiment connector는 VIX / credit spread / yield curve 같은 market-context 지표를 Practical Validation에 snapshot으로 붙이는 후속 data adapter라고 문서화했다.
   - research / design 문서의 stress window 설계 질문 상태를 `O`로 변경했다.
+- Practical Validation V2 baseline / sensitivity / trial-count 설계 완료:
+  - user confirmation에 따라 Alternative Portfolio Challenge 1차 baseline을 SPY, QQQ, 60/40 proxy, cash-aware baseline으로 확정하고 All Weather-like proxy는 후속으로 정리했다.
+  - sensitivity perturbation grid는 주요 window perturbation, mix weight +/- 5%p, drop-one, 기존 runtime 지원 범위의 strategy-specific 작은 설정 변경으로 시작한다고 문서화했다.
+  - run_history trial count는 원본 파일을 저장하지 않고 `overfit_audit` local summary만 validation row에 선택적으로 남기는 방식으로 정리했다.

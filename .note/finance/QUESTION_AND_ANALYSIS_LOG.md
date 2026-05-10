@@ -4624,3 +4624,15 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Sentiment connector는 FRED / DB / API에서 VIX, credit spread, yield curve 같은 시장 분위기 지표를 가져와 Practical Validation에 snapshot으로 붙이는 data adapter다
 - Follow-up:
   - Practical Validation research / design 문서에 static stress calendar 링크와 sentiment connector 설명을 보강하고 stress window 설계 질문을 `O`로 변경했다
+
+### 2026-05-10 - Alternative baseline / sensitivity grid / trial count 설계 완료 처리
+- User request:
+  - 사용자가 이미 협의한 단순 대안 baseline, sensitivity perturbation grid, run_history trial count 내용을 문서에 보강하고 완료 처리하길 요청함
+- Interpreted goal:
+  - Practical Validation의 복잡성 비교, 견고성 검증, 과최적화 audit 기본 방침을 구현 전 확정 상태로 정리해야 함
+- Analysis result:
+  - Alternative Portfolio Challenge는 SPY, QQQ, 60/40 proxy, cash-aware baseline을 1차 포함하고, All Weather-like proxy는 ETF / weight assumption을 별도 확정한 뒤 후속으로 둔다
+  - Sensitivity MVP는 주요 window perturbation, mix weight +/- 5%p, drop-one, 기존 runtime이 지원하는 strategy-specific 작은 설정 변경부터 시작한다
+  - run_history 원본은 저장하지 않고, Practical Validation에서 local run_history를 읽을 수 있을 때 `overfit_audit` 요약값만 validation row에 선택적으로 남긴다
+- Follow-up:
+  - Practical Validation research / design 문서에 세 항목의 의미와 MVP 처리 방식을 보강하고 설계 질문 상태를 `O`로 변경했다

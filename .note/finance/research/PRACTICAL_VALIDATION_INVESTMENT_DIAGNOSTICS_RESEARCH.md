@@ -266,7 +266,8 @@ Practical Validation은 후보가 사용자의 선언한 목적과 맞는지도 
 - component ticker를 asset class로 분류한다.
 - equity / bond / cash / gold / commodity / real asset / inverse / leveraged 비중을 계산한다.
 - 사용자 validation profile과 비교한다.
-- 60/40, cash-aware, All Weather-like baseline과 노출 차이를 표시한다.
+- SPY, QQQ, 60/40, cash-aware baseline과 노출 차이를 표시한다.
+- All Weather-like baseline은 ETF / weight assumption을 별도 확정한 뒤 후속으로 둔다.
 
 MVP 데이터:
 
@@ -500,11 +501,30 @@ MVP:
 비교 후보:
 
 - SPY 또는 broad equity benchmark
+- QQQ 또는 growth / Nasdaq baseline
 - 60/40 proxy
-- equal weight simple mix
 - cash-aware defensive baseline
-- All Weather-like proxy
+- All Weather-like proxy, 후속
 - minimum volatility or risk-parity-like proxy, 후속
+
+MVP baseline 우선순위:
+
+| baseline | 의미 | 초기 처리 |
+|---|---|---|
+| SPY | 미국 대형주 broad equity 단순 대안 | 1차 포함 |
+| QQQ | 성장 / 나스닥 노출 단순 대안 | 1차 포함 |
+| 60/40 proxy | 주식 + 채권의 전통적 균형 대안 | 1차 포함 |
+| cash-aware baseline | 현금 또는 단기채를 섞은 방어형 단순 대안 | 1차 포함 |
+| All Weather-like proxy | 주식 / 채권 / 금 / 원자재류를 섞은 regime 분산 대안 | 후속 |
+
+`cash-aware baseline`은 100% cash / T-bill, SPY + cash,
+또는 전략의 비투자 구간을 cash로 둔 단순 비교군이다.
+방어형 / 저손실 / 현금 대기 성격의 후보가 단순 현금 혼합보다
+복잡성을 정당화하는지 확인하는 데 쓴다.
+
+`All Weather-like proxy`는 Bridgewater 원본 전략 복제가 아니라
+여러 regime에 대응하는 분산형 자산배분 대리 비교군이다.
+ETF 구성과 비중 가정이 결과에 큰 영향을 주므로 MVP에서는 후속으로 둔다.
 
 출력:
 
@@ -584,6 +604,41 @@ MVP:
 - selected source rank in compare set
 - local run_history trial count, commit 대상 아님
 - Deflated Sharpe Ratio / PBO는 후속 advanced module
+
+`sensitivity perturbation grid`는 현재 후보의 설정을 조금 흔든
+검증 시나리오 목록이다. 목적은 더 좋은 설정을 찾는 것이 아니라,
+현재 선택한 설정이 특정 숫자나 기간 하나에만 맞춰진 결과인지 확인하는 것이다.
+
+MVP grid:
+
+| 대상 | perturbation | 해석 |
+|---|---|---|
+| 모든 후보 | start / end 이동, 최근 3년 / 5년 window 비교 | 특정 기간에만 맞는 결과인지 확인 |
+| Mix | component weight +/- 5%p, 나머지 weight 비례 보정 | 특정 비중 한 점에만 의존하는지 확인 |
+| Mix | drop-one component test, 남은 weight 100% 재정규화 | 특정 component 하나에 과도하게 의존하는지 확인 |
+| GTAA | interval, moving average window, top/bottom selection, rebalance day perturbation | cadence / signal window 민감도 확인 |
+| Equal Weight | rebalance frequency, ticker subset / sector grouping perturbation | ticker set / sector grouping 민감도 확인 |
+| GRS / Relative Strength | lookback window, top_n, skip period perturbation | momentum window / selection count 민감도 확인 |
+
+`run_history trial count`는 원본 run history 파일을 저장하지 않고,
+Practical Validation이 local run_history를 읽을 수 있을 때 요약값만 선택적으로 남긴다.
+
+권장 `overfit_audit` summary:
+
+```json
+{
+  "audit_source": "local_run_history_summary",
+  "trial_count": 42,
+  "unique_strategy_variants": 6,
+  "unique_weight_variants": 8,
+  "unique_period_variants": 5,
+  "selected_rank_in_compare": 1,
+  "interpretation": "관련 실험 횟수가 많아 sensitivity 검증을 강화해야 합니다."
+}
+```
+
+local run_history는 generated artifact라 commit 대상이 아니다.
+자동 매칭이 불확실하면 `NOT_RUN` 또는 `REVIEW: selection process unclear`로 둔다.
 
 상태 예시:
 
@@ -771,8 +826,8 @@ domain별 evidence를 넣는 방식이 낫다.
 | O | 기존 Phase 31 / 32 검증과 충돌하지 않는가? | Clean V2에서는 Practical Validation 안의 module로 흡수하고, 기존 문서는 legacy / prior implementation reference로 둔다. |
 | O | rolling window 기본값을 profile별로 얼마로 둘 것인가? | 방어형 24개월, 균형형 36개월, 성장형 60개월, 전술 / 헤지형 24개월, 사용자 지정 36개월로 시작한다. rolling step은 1개월이다. |
 | O | cost assumption 기본값은 얼마로 둘 것인가? | 균형형 기준 one-way 10 bps를 시작점으로 둔다. profile별 숫자를 과도하게 다르게 두지 않고 expense ratio / turnover / liquidity coverage가 붙으면 보정한다. |
-| X | 단순 대안 baseline은 무엇부터 둘 것인가? | SPY, QQQ, 60/40 proxy, cash-aware baseline부터 시작하고 All Weather-like proxy는 후속으로 둔다. |
-| X | sensitivity perturbation grid는 strategy별로 어떻게 둘 것인가? | MVP는 mix weight +/- 5%p, drop-one, 주요 window perturbation부터 시작한다. |
-| X | run_history trial count를 validation row에 어떻게 남길 것인가? | run_history 파일 자체는 저장하지 않고 local audit summary만 선택적으로 남긴다. |
+| O | 단순 대안 baseline은 무엇부터 둘 것인가? | SPY, QQQ, 60/40 proxy, cash-aware baseline을 1차 포함하고 All Weather-like proxy는 ETF / weight assumption을 별도 확정한 뒤 후속으로 둔다. |
+| O | sensitivity perturbation grid는 strategy별로 어떻게 둘 것인가? | MVP는 주요 window perturbation, mix weight +/- 5%p, drop-one, 기존 runtime이 지원하는 strategy-specific 작은 설정 변경부터 시작한다. |
+| O | run_history trial count를 validation row에 어떻게 남길 것인가? | run_history 원본은 저장하지 않는다. Practical Validation에서 local run_history를 읽을 수 있을 때 `overfit_audit` 요약값만 validation row에 선택적으로 남긴다. |
 | O | stress window 기본 목록은 무엇으로 둘 것인가? | 2000년 이후 미국 증시 shock event를 static stress calendar v1로 관리한다. 기본 reference data는 `practical_validation_stress_windows_v1.json`이며 custom window도 허용한다. |
 | X | sentiment connector는 언제 붙일 것인가? | 1차 Practical Validation core 이후 FRED 기반 VIX / Credit Spread / Yield Curve snapshot부터 추가한다. |
