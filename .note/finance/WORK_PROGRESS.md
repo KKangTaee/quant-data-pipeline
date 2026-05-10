@@ -21,6 +21,21 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-10
+- Documented the Practical Validation investment diagnostics direction.
+- Created:
+  - `.note/finance/research/PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH.md`
+- Updated:
+  - `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_VALIDATION_DESIGN.md`
+  - `.note/finance/research/README.md`
+  - `.note/finance/FINANCE_DOC_INDEX.md`
+  - `.note/finance/code_analysis/README.md`
+  - `.note/finance/QUESTION_AND_ANALYSIS_LOG.md`
+- Durable decision:
+  - Practical Validation should not be only an upstream evidence summary. It should use upstream evidence as input, then run portfolio-level practical diagnostics such as asset allocation fit, concentration / overlap, correlation / risk contribution, macro / sentiment context, stress / scenario, alternative portfolio challenge, leveraged / inverse suitability, ETF operability, and robustness / overfit review.
+- Current status:
+  - Product code was not changed. This is a research and development guide update for the next implementation unit.
+
 ### 2026-05-03
 - Opened Phase 34 `Final Portfolio Selection Decision Pack`.
 - Created:

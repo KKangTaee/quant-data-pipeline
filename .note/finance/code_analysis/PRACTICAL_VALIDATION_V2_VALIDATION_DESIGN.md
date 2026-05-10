@@ -3,18 +3,25 @@
 ## 목적
 
 이 문서는 `Backtest > Practical Validation`을 단순한 source sanity gate에서
-실전 후보 검증 evidence pack으로 확장하기 위한 조사 / 분석 / 개발 설계 문서다.
+실전 투자 진단 엔진으로 확장하기 위한 조사 / 분석 / 개발 설계 문서다.
 
 현재 목표는 코드를 바로 수정하는 것이 아니라, 사용자가 궁금해한
 "이 전략을 실전 전략으로 사용할 수 있나?"라는 질문에 대해
 무엇을 어떤 기준으로 검증해야 하는지 정리하는 것이다.
 
+실전 투자 진단 module의 research 기준은
+[`PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH.md`](../research/PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH.md)에 정리한다.
+이 문서는 그 research를 실제 Backtest UI / JSON contract / 구현 slice로 옮기는 개발 가이드다.
+
 이 문서의 결론은 다음과 같다.
 
 - Practical Validation은 투자 추천, live approval, 주문 지시가 아니다.
 - Practical Validation은 `Backtest Analysis`에서 선택된 단일 전략, Compare 후보, weighted mix, saved mix를 같은 검증 단위로 읽어야 한다.
+- Practical Validation은 앞 단계 evidence를 단순히 다시 보여주는 화면이 아니라, 그 evidence 위에서 portfolio-level 실전 진단을 실행하는 단계다.
 - 검증 결과는 `PASS / REVIEW / BLOCKED / NOT_RUN`을 domain별로 분리해서 보여줘야 한다.
 - `NOT_RUN`은 통과가 아니다. 아직 데이터나 구현이 없어 확인하지 못했다는 별도 상태다.
+- 단일 전략도 1개 component, weight 100% 포트폴리오로 보고 asset allocation, concentration, stress, operability, macro / sentiment context를 진단해야 한다.
+- Mix는 component score 합산보다 asset class / exposure / correlation / risk contribution / drop-one sensitivity를 우선 봐야 한다.
 - Final Review는 Practical Validation 결과를 바탕으로 최종 선정 / 보류 / 거절 / 재검토를 판단한다.
 - Selected Portfolio Dashboard는 Final Review에서 선정된 후보의 사후 monitoring / recheck를 담당한다.
 
@@ -80,9 +87,20 @@ Practical Validation v2에서 가장 조심해야 할 부분은
 
 ```text
 앞 단계 검증 = 원본 실행 / 선택 / replay 검증의 source-of-truth
-Practical Validation = 그 증거를 통합하고, portfolio-level로 해석하고, 빠진 domain을 명시하는 evidence pack
+Practical Validation = 그 증거를 입력으로 받고, portfolio-level 실전 진단을 실행하는 Practical Investment Diagnostics layer
 Final Review = 사용자 최종 판단과 최종 메모 저장
 ```
+
+즉, Practical Validation에서 evidence 통합은 core가 아니라 `Input Evidence Layer`다.
+핵심은 아래 같은 질문을 새로 진단하는 것이다.
+
+- 현재 후보가 주식 / 채권 / 현금 / 금 / 원자재 비중 측면에서 목적에 맞는가?
+- 여러 ETF를 섞었지만 실제로는 같은 sector / theme / index에 몰려 있지 않은가?
+- 50:50 비중처럼 보여도 실제 risk contribution은 한쪽 asset에 과도하게 몰려 있지 않은가?
+- rising-rate, inflation shock, recession, crisis window에서 구조적으로 취약하지 않은가?
+- VIX, yield curve, credit spread, Fear & Greed 같은 risk context가 추가 관찰을 요구하지 않는가?
+- leveraged / inverse ETF가 있으면 보유 기간과 리밸런싱 cadence가 상품 구조와 맞는가?
+- 더 단순한 benchmark / 60:40 / cash-aware / All Weather-like baseline 대비 복잡성이 보상되는가?
 
 ### 중복이 되는 경우
 
@@ -105,11 +123,15 @@ Final Review = 사용자 최종 판단과 최종 메모 저장
 | upstream Data Trust blocker 전파 | 새 검증이 아니라 hard blocker 상속이다 |
 | source replay parity | 저장된 source가 지금도 같은 결과로 재현되는지 확인하는 freshness / reproducibility 검증이다 |
 | mix-level weight total / concentration | 앞 단계 단일 전략 검증에는 없는 포트폴리오 구성 검증이다 |
-| component evidence aggregation | component별 검증을 하나의 portfolio evidence pack으로 합치는 작업이다 |
+| component evidence aggregation | component별 upstream 검증을 입력 evidence로 묶는 작업이다. 최종 판정은 별도 portfolio-level 진단과 섞어서 읽는다 |
 | 같은 기간 benchmark alignment 확인 | 여러 component / mix가 서로 다른 actual period를 가질 수 있어 portfolio-level 정렬 확인이 필요하다 |
 | `NOT_RUN` domain 표시 | 앞 단계가 확인하지 않은 항목을 통과로 오해하지 않게 하는 표시다 |
+| asset allocation / exposure 진단 | 앞 단계 성과 검증만으로 실전 포트폴리오 구성이 적절한지 알 수 없다 |
+| correlation / risk contribution 진단 | 자본 비중과 실제 위험 기여가 다를 수 있어 portfolio-level 계산이 필요하다 |
+| macro / sentiment context | 현재 시장 환경이 후보의 목적과 충돌하는지 context로 확인하는 새 domain이다 |
+| alternative portfolio challenge | 더 단순한 대안 대비 복잡성이 보상되는지 Final Review evidence를 만든다 |
 | sensitivity / overfit audit | 현재 앞 단계에는 공식 domain으로 거의 없다 |
-| monitoring baseline 생성 | Final Review와 Selected Portfolio Dashboard가 이어서 쓸 기준을 만드는 작업이다 |
+| monitoring baseline seed 생성 | Pre-Live record를 만드는 것이 아니라 Final Review와 Selected Portfolio Dashboard가 이어서 쓸 기준값을 만드는 작업이다 |
 
 ## Stage Ownership Matrix
 
@@ -125,6 +147,11 @@ Practical Validation v2의 중복을 막으려면 각 검증 domain의 소유권
 | Compare relative ranking | Compare 5단계 보드 | selection rationale로 보관 | Practical Validation에서 다시 전략 순위를 매겨 후보 선택을 반복하지 않는다 |
 | Saved mix replay | Saved Mix 검증 보드 / Weighted Portfolio Builder | source replay parity와 Final Review handoff readiness 확인 | replay 가능 여부만 반복 점수화하지 않고, replay 결과의 freshness / parity를 본다 |
 | Weight / construction | Practical Validation | active components, target weight total, concentration, component role 확인 | 앞 단계가 component 성과를 만들었어도 portfolio 구성 검증은 여기서 한다 |
+| Asset allocation / exposure | Practical Validation | equity / bond / cash / gold / commodity / sector / theme exposure를 portfolio-level로 계산 | 단일 전략도 100% component 포트폴리오로 보고 같은 진단을 적용한다 |
+| Correlation / risk contribution | Practical Validation | component return correlation, volatility contribution, drop-one impact 계산 | Compare 순위나 component CAGR을 다시 고르는 데 쓰지 않고 portfolio risk 구조를 해석한다 |
+| Macro / sentiment context | Practical Validation | yield curve, recession window, VIX, Fear & Greed 같은 context overlay 표시 | 매수 / 매도 signal이나 live timing rule로 해석하지 않는다 |
+| Alternative portfolio challenge | Practical Validation | SPY, 60:40, cash-aware, All Weather-like baseline 대비 복잡성 보상 여부 표시 | 후보를 자동 탈락시키는 최적화 engine으로 만들지 않는다 |
+| Leveraged / inverse suitability | Practical Validation | daily objective, holding period, cadence mismatch, explicit acknowledgement 확인 | ticker 포함 여부만 보고 무조건 실패시키지 않고 비중 / 목적 / 보유 기간을 함께 본다 |
 | Sensitivity / overfit | Practical Validation 또는 후속 robustness runner | parameter / weight perturbation, trial-count audit | 앞 단계에 공식 검증이 없으므로 새 domain으로 둔다 |
 | Final decision / memo | Final Review | Practical Validation은 판단 근거만 제공 | 사용자 최종 메모를 여기서 받지 않는다 |
 | Post-selection monitoring | Selected Portfolio Dashboard | monitoring baseline / trigger seed 제공 | 사후 성과 recheck 자체는 dashboard가 맡는다 |
@@ -179,6 +206,17 @@ V2 row에는 각 domain의 출처를 남기는 것이 좋다.
 
 | 출처 | 설계에 반영할 점 |
 |---|---|
+| [Investor.gov - Asset Allocation, Diversification, and Rebalancing](https://www.investor.gov/additional-resources/general-resources/publications-research/info-sheets/beginners-guide-asset) | asset allocation은 time horizon / risk tolerance와 연결되고, diversification은 자산군 사이와 자산군 내부를 모두 봐야 한다. |
+| [CFA Institute - Portfolio Risk and Return Part I](https://www.cfainstitute.org/insights/professional-learning/refresher-readings/2026/portfolio-risk-return-part-1) | portfolio risk는 asset별 risk / return뿐 아니라 correlation에 크게 좌우된다. Practical Validation에서 correlation / risk contribution을 별도 domain으로 둔다. |
+| [CFA Institute - Measuring and Managing Market Risk](https://www.cfainstitute.org/insights/professional-learning/refresher-readings/2026/measuring-managing-market-risk) | stress test, scenario analysis, sensitivity, risk budget, position limit는 실전 risk management framework로 쓸 수 있다. |
+| [CFA Institute RPC - Extreme Risk Stress Testing](https://rpc.cfainstitute.org/research/financial-analysts-journal/2012/allocating-assets-in-climates-of-extreme-risk-a-new-paradigm-for-stress-testing-portfolios) | stress testing은 historical / hypothetical scenario와 covariance assumption에 민감하므로 결과와 한계를 같이 표시해야 한다. |
+| [FINRA - Leveraged and Inverse ETPs](https://www.finra.org/investors/insights/lowdown-leveraged-and-inverse-exchange-traded-products) | leveraged / inverse ETP는 보통 daily objective를 가지므로 중장기 보유, volatility compounding, cadence mismatch를 별도 suitability domain으로 봐야 한다. |
+| [Cboe - VIX / Volatility Trading](https://www.cboe.com/tradable-products/volatility-trading/) | VIX는 volatility context로 쓰되, VIX product를 장기 buy-and-hold 투자처럼 해석하지 않도록 boundary를 둔다. |
+| [CNN Fear & Greed Index](https://www.cnn.com/markets/fear-and-greed) | market momentum, breadth, put/call, junk bond demand, volatility, safe haven demand를 묶은 sentiment context다. 자동 trading signal이 아니라 review gap context로만 사용한다. |
+| [FRED - 10Y minus 3M Treasury Spread](https://fred.stlouisfed.org/series/T10Y3M) | yield curve spread는 macro / recession context overlay에 사용할 수 있다. 타이밍 확정 신호로 단정하지 않는다. |
+| [NBER - US Business Cycle Expansions and Contractions](https://www.nber.org/research/data/us-business-cycle-expansions-and-contractions) | recession / expansion date를 historical stress window와 regime tagging에 사용한다. |
+| [AQR - Risk Parity, Risk Management and the Real World](https://www.aqr.com/insights/research/white-papers/risk-parity-risk-management-and-the-real-world) | risk parity의 핵심인 risk exposure balance 개념을 portfolio risk contribution 진단에 참고한다. |
+| [Bridgewater - The All Weather Story](https://www.bridgewater.com/research-and-insights/the-all-weather-story) | growth / inflation surprise에 대한 asset class balance framework를 macro regime fit 설명에 참고한다. |
 | [CFA Institute - Backtesting & Simulation](https://www.cfainstitute.org/insights/professional-learning/refresher-readings/2026/backtesting-and-simulation) | rolling-window / walk-forward, scenario analysis, simulation, sensitivity analysis, survivorship bias, look-ahead bias, fat-tail / structural break 점검이 backtest 해석의 핵심이다. |
 | [SEC - Investment Adviser Marketing Rule Guide](https://www.sec.gov/resources-small-businesses/small-business-compliance-guides/investment-adviser-marketing) | performance 정보는 오해를 만들지 않도록 기간, net/gross, 가정, 한계가 명확해야 한다. 내부 검증 문서도 hypothetical performance를 실제 성과처럼 표현하지 않아야 한다. |
 | [SEC Marketing FAQ](https://www.sec.gov/rules-regulations/staff-guidance/division-investment-management-frequently-asked-questions/marketing-compliance-frequently-asked-questions) | gross / net performance나 특성치가 같은 기간과 비교 가능한 형식으로 표시되어야 한다는 원칙을 benchmark / cost 표시 설계에 반영한다. |
@@ -194,12 +232,12 @@ V2 row에는 각 domain의 출처를 남기는 것이 좋다.
 
 ## 설계 원칙
 
-### 1. Evidence pack이지 approval이 아니다
+### 1. Practical Diagnostics이지 approval이 아니다
 
 Practical Validation은 다음 질문에 답한다.
 
 ```text
-이 후보가 Final Review에서 실전 후보로 판단될 만큼 검증 자료를 갖췄는가?
+이 후보가 Final Review에서 실전 후보로 판단될 만큼 구조, 위험, 운용 가능성, context 근거를 갖췄는가?
 ```
 
 답하지 않는 질문은 다음이다.
@@ -216,6 +254,10 @@ Practical Validation은 다음 질문에 답한다.
 - live approval 아님
 - order instruction 아님
 - future return guarantee 아님
+
+Evidence pack은 Practical Diagnostics의 입력과 출력 형식이다.
+제품 가치의 중심은 "이미 통과한 검증을 다시 보여주기"가 아니라,
+포트폴리오 후보가 실전 운용 후보로서 어떤 구조적 약점과 검토 근거를 갖는지 새로 진단하는 데 있다.
 
 ### 2. Domain별 판정을 분리한다
 
@@ -304,6 +346,38 @@ Practical Validation에서 필요한 것은 최고 성과의 크기만이 아니
 
 초기에는 concentration을 blocker로 두지 말고 review gap으로 둔다.
 사용자의 투자 목적에 따라 100% 단일 후보도 의도한 구성이 될 수 있기 때문이다.
+
+### B2. Asset Allocation / Exposure Fit
+
+| 항목 | 내용 |
+|---|---|
+| 검증 질문 | 이 후보는 주식 / 채권 / 현금 / 금 / 원자재 / inverse / leveraged 노출이 목적에 맞는가? |
+| 필요한 데이터 | component ticker category, target weight, ETF category / holdings proxy, validation profile |
+| 현재 가능 여부 | 새 classification helper 필요 |
+| 판정 기준 | asset class exposure, equity concentration, hedge asset 존재 여부, profile 대비 편차 |
+| blocker | 대부분의 component를 분류할 수 없는데 실전 후보로 판단하려는 경우 |
+| review gap | equity 90% 이상, bond / cash / gold hedge 없음, theme / sector ETF가 포트폴리오 대부분 |
+
+단일 전략도 이 domain을 통과해야 한다.
+단일 ETF 100% 포트폴리오라면 "의도된 집중인지", "benchmark와 다를 바가 있는지",
+"ETF 내부 sector / holding concentration을 봐야 하는지"를 표시한다.
+
+Mix의 경우 component를 단순 합산하지 말고 asset class / sector / theme exposure를
+target weight 기준으로 합산한다.
+
+### B3. Correlation / Diversification / Risk Contribution
+
+| 항목 | 내용 |
+|---|---|
+| 검증 질문 | 자본 비중이 아니라 실제 위험도 분산되어 있는가? |
+| 필요한 데이터 | component price / return history, target weights, benchmark curve |
+| 현재 가능 여부 | 새 계산 필요 |
+| 판정 기준 | pairwise correlation, rolling correlation, volatility contribution, benchmark beta, drop-one impact |
+| blocker | 실전 후보 판단에 필요한 return history가 없고 snapshot-only로 risk 구조를 설명하려는 경우 |
+| review gap | 50:50 mix지만 portfolio volatility contribution의 대부분이 한 component에서 발생 |
+
+이 domain은 "어느 전략이 더 좋은지"를 다시 고르는 Compare 검증이 아니다.
+이미 선택된 후보가 실제로 분산된 포트폴리오인지 설명하는 portfolio risk 진단이다.
 
 ### C. Data Integrity / Data Trust
 
@@ -436,6 +510,21 @@ VaR / CVaR는 monthly return 기반으로 후속 추가한다.
 기간이 겹치지 않으면 `NOT_RUN: period does not cover stress window`로 표시한다.
 겹치지 않는 것을 실패로 처리하지 않는다.
 
+### H2. Macro / Sentiment Context Overlay
+
+| 항목 | 내용 |
+|---|---|
+| 검증 질문 | 현재 macro / sentiment 환경이 후보 포트폴리오의 목적과 충돌하거나 추가 관찰을 요구하는가? |
+| 필요한 데이터 | yield curve spread, recession window, VIX, credit spread, Fear & Greed, market breadth / momentum proxy |
+| 현재 가능 여부 | 새 connector / optional data 필요 |
+| 판정 기준 | risk-on / risk-off context, recession / rate shock context, high volatility context, signal freshness |
+| blocker | 기본값은 blocker로 쓰지 않음. 단, 후보 설명이 macro defense인데 macro evidence가 전혀 없으면 review 또는 blocked 후보 |
+| review gap | high-beta / high-equity 후보인데 sentiment가 극단적 greed 또는 volatility complacency로 표시됨 |
+
+이 domain은 매수 / 매도 signal이 아니다.
+CNN Fear & Greed, VIX, yield curve 같은 지표는 Final Review에서
+"현재 시장 context상 바로 선정할지, 추가 관찰할지"를 판단할 때 보는 context evidence다.
+
 ### I. Cost / Turnover / Slippage
 
 | 항목 | 내용 |
@@ -477,6 +566,22 @@ net_return = gross_return - turnover_cost - expense_ratio
 3. 20d average dollar volume proxy
 4. expense ratio if available
 5. bid-ask / premium-discount는 데이터 수집 확장 후 추가
+
+### J2. Leveraged / Inverse ETF Suitability
+
+| 항목 | 내용 |
+|---|---|
+| 검증 질문 | leveraged / inverse ETF가 포함되어 있다면 보유 기간, 리밸런싱 cadence, 목적이 상품 구조와 맞는가? |
+| 필요한 데이터 | ticker classification, leverage / inverse flag, target weight, rebalance cadence, component role |
+| 현재 가능 여부 | ticker classification helper 필요 |
+| 판정 기준 | daily objective disclosure, weight size, hedge role, holding period mismatch, operator acknowledgement |
+| blocker | leveraged / inverse 비중이 크고 목적 / holding period / acknowledgement가 없음 |
+| review gap | 작은 hedge 목적이라도 volatility compounding과 daily reset risk를 Final Review에서 확인해야 함 |
+
+FINRA / SEC 계열 자료는 leveraged / inverse ETP가 일반 ETF와 다르게 작동하며
+중장기 보유 성과가 underlying index와 크게 달라질 수 있음을 강조한다.
+따라서 이 domain은 단순히 ticker를 금지하는 장치가 아니라,
+상품 구조와 포트폴리오 사용 목적의 mismatch를 명시하는 장치다.
 
 ### K. Parameter / Weight Sensitivity
 
@@ -534,6 +639,20 @@ MVP:
 
 이 domain은 자동 점수보다 설명 가능성 표시가 중요하다.
 
+### M2. Alternative Portfolio Challenge
+
+| 항목 | 내용 |
+|---|---|
+| 검증 질문 | 이 후보는 더 단순한 대안 포트폴리오보다 복잡성을 감수할 만큼 나은가? |
+| 필요한 데이터 | candidate curve, benchmark curve, simple baseline curves, cost / turnover summary |
+| 현재 가능 여부 | benchmark / replay helper 확장 필요 |
+| 판정 기준 | SPY, 60:40 proxy, cash-aware baseline, All Weather-like proxy 대비 CAGR / MDD / Sharpe / recovery / cost drag |
+| blocker | 기본값은 blocker가 아님 |
+| review gap | 후보가 복잡하지만 단순 baseline 대비 성과 / 위험 개선이 거의 없음 |
+
+이 domain은 자동 최적화 engine이 아니다.
+Final Review에서 "왜 이 후보여야 하는가"를 묻기 위한 challenge evidence다.
+
 ### N. Paper Observation / Ongoing Monitoring Plan
 
 | 항목 | 내용 |
@@ -553,10 +672,13 @@ MVP trigger:
 - Data Trust refresh issue
 - actual allocation drift, if user enters allocation
 
+이 domain은 별도의 Pre-Live record를 만들거나 사용자 메모를 추가로 저장하는 단계가 아니다.
+Final Review selected row와 Selected Portfolio Dashboard가 이어서 읽을 monitoring baseline seed를 만드는 것이 목적이다.
+
 ## 권장 Practical Validation V2 JSON Schema
 
 현재 schema version 1은 단순 `checks / hard_blockers / review_gaps` 중심이다.
-v2에서는 domain result 구조를 추가한다.
+v2에서는 `input_evidence`와 `diagnostic_results`를 분리한다.
 
 ```json
 {
@@ -566,16 +688,39 @@ v2에서는 domain result 구조를 추가한다.
   "created_at": "...",
   "source_kind": "weighted_portfolio_mix",
   "source_title": "...",
+  "validation_profile": "balanced",
   "validation_route": "NEEDS_REVIEW",
   "overall_score": 7.4,
   "hard_blockers": [],
   "review_gaps": [],
   "not_run_domains": [],
-  "domain_results": [
+  "input_evidence": {
+    "data_trust": {},
+    "real_money_gate": {},
+    "compare_rationale": {},
+    "mix_replay": {}
+  },
+  "diagnostic_results": [
+    {
+      "domain": "asset_allocation_fit",
+      "status": "REVIEW",
+      "score": 6.5,
+      "origin": "pv_computed",
+      "summary": "Equity exposure is above the balanced profile review line.",
+      "metrics": {
+        "equity_weight": 0.86,
+        "bond_weight": 0.0,
+        "cash_like_weight": 0.0
+      },
+      "blockers": [],
+      "review_gaps": ["high equity exposure"],
+      "limitations": ["ticker category mapping is proxy-based"]
+    },
     {
       "domain": "rolling_walk_forward",
       "status": "REVIEW",
       "score": 6.0,
+      "origin": "pv_computed",
       "summary": "36m rolling benchmark win rate is 48%.",
       "metrics": {
         "window_months": 36,
@@ -585,6 +730,7 @@ v2에서는 domain result 구조를 추가한다.
       },
       "blockers": [],
       "review_gaps": ["benchmark win rate below target profile"],
+      "limitations": [],
       "evidence_rows": []
     }
   ],
@@ -599,9 +745,15 @@ v2에서는 domain result 구조를 추가한다.
   "benchmark_relative": {},
   "rolling_validation": {},
   "drawdown_tail": {},
+  "asset_allocation_fit": {},
+  "concentration_overlap": {},
+  "correlation_risk_contribution": {},
   "stress_windows": {},
+  "macro_sentiment_context": {},
+  "alternative_portfolio_challenge": {},
   "cost_turnover": {},
   "investability": {},
+  "leveraged_inverse_suitability": {},
   "sensitivity": {},
   "overfit_audit": {},
   "monitoring_plan": {},
@@ -612,7 +764,8 @@ v2에서는 domain result 구조를 추가한다.
 v1 compatibility:
 
 - Final Review는 v1 row도 계속 읽어야 한다.
-- v2 row가 있으면 `domain_results`를 우선 표시한다.
+- v2 row가 있으면 `diagnostic_results`를 우선 표시한다.
+- 과도기에는 기존 `domain_results` key를 읽되 새 저장은 `diagnostic_results`로 한다.
 - v1 row는 `legacy_minimum_contract` domain으로 변환해서 표시할 수 있다.
 
 ## 권장 UI 구조
@@ -628,15 +781,20 @@ v1 compatibility:
 권장 V2 UI:
 
 ```text
-1. 후보 Source / Replay 준비
-2. 검증 보드
-   - Source / Data
-   - Performance / Benchmark
-   - Rolling / Drawdown
-   - Stress / Cost
-   - Construction / ETF
+1. 후보 Source / Input Evidence
+   - Source / settings / component
+   - Data Trust / Real-Money / Compare / Mix replay inherited evidence
+2. Practical Diagnostics Board
+   - Asset Allocation / Exposure
+   - Concentration / Overlap
+   - Correlation / Risk Contribution
+   - Performance / Benchmark / Rolling / Drawdown
+   - Stress / Scenario
+   - Macro / Sentiment Context
+   - Alternative Portfolio Challenge
+   - Cost / ETF Operability / Leveraged-Inverse Suitability
    - Sensitivity / Overfit
-   - Monitoring
+   - Monitoring Baseline Seed
 3. Blockers / Review Gaps / Not Run
 4. 저장 및 Final Review 이동
 ```
@@ -655,7 +813,7 @@ v1 compatibility:
 
 | 버튼 | 동작 |
 |---|---|
-| `검증 실행 / 갱신` | replay / rolling / stress / cost 계산 실행 |
+| `실전 진단 실행 / 갱신` | replay / exposure / correlation / rolling / stress / macro context / cost 계산 실행 |
 | `검증 결과 저장` | `PRACTICAL_VALIDATION_RESULTS.jsonl` append |
 | `Final Review로 이동` | blocker가 없을 때 가능. review gap은 남긴 채 이동 가능 |
 
@@ -668,24 +826,37 @@ v1 compatibility:
 
 ## 구현 우선순위
 
-### Slice 1. V2 result contract와 domain board
+### Slice 1. Evidence intake와 Practical Diagnostics board
 
 목표:
 
-- 기존 v1 check를 v2 domain result로 감싼다.
-- UI에서 domain별 status board를 표시한다.
+- 기존 v1 check를 `Input Evidence Layer`로 감싼다.
+- UI에서 `Input Evidence`와 `Practical Diagnostics`를 분리해서 표시한다.
 - 아직 계산하지 못하는 domain은 `NOT_RUN`으로 명확히 표시한다.
 
 주요 파일:
 
 | 파일 | 변경 방향 |
 |---|---|
-| `app/web/backtest_practical_validation_helpers.py` | domain result builder 추가, v1 compatibility 유지 |
-| `app/web/backtest_practical_validation.py` | domain board UI 추가 |
-| `app/web/backtest_final_review_helpers.py` | v2 validation row를 Final Review evidence로 읽기 |
-| `app/web/runtime/portfolio_selection_v2.py` | schema version 2 상수 / loader compatibility |
+| `app/web/backtest_practical_validation_helpers.py` | input evidence builder와 diagnostic domain result builder 추가 |
+| `app/web/backtest_practical_validation.py` | evidence board / diagnostics board UI 분리 |
+| `app/web/backtest_final_review_helpers.py` | diagnostic result를 Final Review evidence로 읽기 |
+| `app/web/runtime/portfolio_selection_v2.py` | schema version 확장 / loader compatibility |
 
-### Slice 2. Replay / benchmark parity
+### Slice 2. Asset allocation / exposure classification
+
+목표:
+
+- ticker를 broad asset class / ETF category / inverse / leveraged flag로 분류한다.
+- 단일 전략은 100% component 포트폴리오로 보고 같은 exposure table을 만든다.
+- mix는 target weight 기준으로 asset class / sector / theme proxy를 합산한다.
+
+주의:
+
+- holdings look-through가 없으면 proxy classification으로 시작한다.
+- 분류가 없으면 `NOT_RUN`이지 pass가 아니다.
+
+### Slice 3. Replay / benchmark / portfolio curve parity
 
 목표:
 
@@ -699,28 +870,59 @@ v1 compatibility:
 - 기존 runtime으로 가능한 전략만 replay한다.
 - replay contract가 부족하면 `NOT_RUN` 또는 `REVIEW`로 둔다.
 
-### Slice 3. Rolling / drawdown / stress 계산
+### Slice 4. Rolling / drawdown / stress / scenario
 
 목표:
 
 - result curve에서 monthly return을 만든다.
 - rolling 12m / 36m, drawdown duration, stress window 결과를 계산한다.
-- chart는 이후 추가하고, first pass는 table 중심으로 둔다.
+- COVID crash, 2022 rate shock, banking stress, custom window를 table 중심으로 표시한다.
 
-### Slice 4. Cost / turnover / ETF investability
+후속:
+
+- hypothetical shock과 reverse stress test는 별도 advanced module로 둔다.
+
+### Slice 5. Correlation / risk contribution / alternative challenge
+
+목표:
+
+- component monthly return matrix로 correlation과 rolling correlation을 계산한다.
+- target weight 기준 volatility contribution과 drop-one impact를 표시한다.
+- SPY, 60:40 proxy, cash-aware, All Weather-like baseline 대비 복잡성이 보상되는지 challenge table을 만든다.
+
+주의:
+
+- 이 slice는 Compare 순위를 다시 고르는 기능이 아니다.
+- baseline challenge는 자동 탈락 기준이 아니라 Final Review 근거다.
+
+### Slice 6. Macro / sentiment context overlay
+
+목표:
+
+- NBER recession window와 FRED yield curve spread부터 붙인다.
+- VIX와 CNN Fear & Greed는 optional connector로 둔다.
+- status는 trade signal이 아니라 context review gap으로만 표시한다.
+
+주의:
+
+- sentiment overlay만으로 `BLOCKED`를 만들지 않는 것이 기본값이다.
+- 외부 데이터 freshness와 source URL을 result row에 남긴다.
+
+### Slice 7. Cost / turnover / ETF operability / leveraged-inverse suitability
 
 목표:
 
 - turnover가 runtime result에 있으면 사용하고, 없으면 rebalance weight history 필요 여부를 표시한다.
 - 사용자가 cost bps를 입력할 수 있게 하고 gross/net summary를 나란히 보여준다.
 - ETF investability는 price availability와 average dollar volume proxy부터 시작한다.
+- leveraged / inverse ticker는 별도 suitability warning과 acknowledgement requirement로 분리한다.
 
 주의:
 
 - bid-ask spread / premium-discount는 데이터 수집 확장이 필요할 수 있다.
 - 데이터가 없으면 `NOT_RUN`이지 pass가 아니다.
 
-### Slice 5. Sensitivity / overfit audit
+### Slice 8. Sensitivity / overfit audit
 
 목표:
 
@@ -733,12 +935,12 @@ v1 compatibility:
 - 대규모 parameter search engine은 별도 설계가 필요하다.
 - DSR / PBO는 후속 고급 검증으로 둔다.
 
-### Slice 6. Final Review / Selected Dashboard 연결
+### Slice 9. Final Review / Selected Dashboard 연결
 
 목표:
 
-- Final Review가 domain result를 그대로 읽어 최종 판단 evidence로 보여준다.
-- Selected Portfolio Dashboard의 review signal이 Practical Validation domain baseline을 읽을 수 있게 한다.
+- Final Review가 diagnostic result를 그대로 읽어 최종 판단 evidence로 보여준다.
+- Selected Portfolio Dashboard의 review signal이 Practical Validation baseline seed를 읽을 수 있게 한다.
 
 ## 구현하지 않을 것
 
@@ -762,7 +964,7 @@ v1 compatibility:
 |---|---|
 | `app/web/backtest_practical_validation_helpers.py` | Practical Validation v2 domain result 생성 |
 | `app/web/backtest_practical_validation.py` | 검증 보드 UI |
-| `app/web/backtest_final_review_helpers.py` | Final Review evidence pack 호환 |
+| `app/web/backtest_final_review_helpers.py` | Final Review diagnostic evidence 호환 |
 | `app/web/backtest_final_review.py` | v2 evidence 표시 |
 | `app/web/runtime/portfolio_selection_v2.py` | schema version / persistence helper |
 | `app/web/final_selected_portfolio_dashboard_helpers.py` | 선정 후 monitoring signal이 v2 baseline을 읽게 할 경우 |
@@ -812,10 +1014,17 @@ Validation Profile
 | practical validation result | `PRACTICAL_VALIDATION_RESULTS.jsonl` | v2 schema 확장 |
 | result curve | runtime replay 또는 source snapshot | replay helper 필요 |
 | benchmark curve | runtime replay / price loader | same-period 비교 helper 필요 |
+| ticker category / asset class | 새 mapping 또는 ETF profile | asset allocation / exposure 진단 필요 |
+| ETF leveraged / inverse flag | 새 mapping 또는 ETF profile | suitability warning 필요 |
+| sector / theme / holdings | 현재 불확실 | MVP는 proxy, 후속 holdings look-through |
+| component return matrix | price history에서 계산 가능 | correlation / risk contribution 계산 |
 | rebalance dates / weights | 전략 runtime output 확인 필요 | turnover 계산용 output contract 검토 |
 | ETF profile | `finance/data/asset_profile.py` 가능성 | expense / AUM / spread 데이터 coverage 확인 |
 | average dollar volume | price history에서 계산 가능 | loader helper 필요 |
 | bid-ask spread / premium-discount | 현재 불확실 | 데이터 수집 확장 필요 |
+| macro regime data | FRED / NBER source | yield curve / recession window context |
+| sentiment data | Cboe / CNN / optional provider | VIX / Fear & Greed context. trade signal 아님 |
+| simple baseline curves | price loader / replay helper | SPY, 60:40, cash-aware, All Weather-like challenge |
 | run trial count | local run_history | commit하지 않고 local audit로 사용 |
 
 ## Final Review와의 연결
@@ -824,11 +1033,11 @@ Practical Validation v2가 끝난 뒤 Final Review는 아래를 보여줘야 한
 
 | Final Review section | Practical Validation source |
 |---|---|
-| 최종 검증 요약 | domain status summary |
+| 최종 검증 요약 | diagnostic status summary |
 | 투자 가능 후보 / 보류 / 거절 / 재검토 판단 | route + hard blockers + review gaps |
 | 최종 메모 | Final Review에서만 입력 |
 | paper observation 기준 | monitoring_plan domain |
-| Selected Dashboard baseline | replay / benchmark / drawdown / monitoring domain |
+| Selected Dashboard baseline | replay / benchmark / drawdown / monitoring baseline seed |
 
 Final Review selected decision은 다음 조건을 강하게 봐야 한다.
 
@@ -848,16 +1057,22 @@ Final Review selected decision은 다음 조건을 강하게 봐야 한다.
 | rolling window 최소 길이는? | balanced profile 36개월 시작 |
 | cost assumption 기본값은? | balanced profile one-way 10 bps, expense ratio 있으면 추가 |
 | ETF investability 데이터가 없으면 blocker인가? | 처음에는 `NOT_RUN`; leveraged/inverse 또는 price missing만 blocker |
+| asset allocation profile은 어떻게 고를 것인가? | conservative / balanced / growth / custom profile로 시작 |
+| sentiment overlay를 hard blocker로 쓸 것인가? | 기본적으로 쓰지 않는다. context review gap으로만 둔다 |
+| sector / holdings look-through 데이터가 없으면 어떻게 할 것인가? | proxy classification으로 시작하고 missing coverage를 명시 |
+| leveraged / inverse ETF는 언제 blocker인가? | 큰 비중, medium-long cadence, 목적 불명, acknowledgement 없음이면 blocker 후보 |
+| simple baseline challenge에서 어떤 baseline을 우선할 것인가? | SPY, 60:40 proxy, cash-aware baseline부터 시작 |
 | sensitivity는 모든 전략에 필수인가? | MVP에서는 `REVIEW / NOT_RUN`, 최종 selected hard blocker로는 두지 않음 |
 | run_history trial count를 저장소에 남길 것인가? | 남기지 않음. local audit summary만 validation row에 넣을지 별도 결정 |
 | stress window를 고정할 것인가? | 기본 window + custom window 입력을 같이 둠 |
 
 ## 추천 다음 작업
 
-1. 먼저 Slice 1을 구현해 Practical Validation 화면이 domain별 상태를 보여주게 한다.
-2. Slice 2에서 replay / benchmark parity를 붙여 snapshot-only 한계를 줄인다.
-3. Slice 3에서 rolling / drawdown / stress 계산을 붙여 실제 검증력을 만든다.
-4. Slice 4 이후는 turnover / ETF data coverage를 확인한 뒤 진행한다.
+1. 먼저 Slice 1을 구현해 Practical Validation 화면이 `Input Evidence`와 `Practical Diagnostics`를 분리해서 보여주게 한다.
+2. Slice 2에서 asset allocation / exposure classification을 붙여 단일 전략과 mix를 같은 portfolio diagnostic model로 읽는다.
+3. Slice 3에서 replay / benchmark parity를 붙여 snapshot-only 한계를 줄인다.
+4. Slice 4에서 rolling / drawdown / stress 계산을 붙여 실제 검증력을 만든다.
+5. Slice 5 이후는 correlation / risk contribution, macro / sentiment, turnover / ETF data coverage를 확인한 뒤 진행한다.
 
 이 순서가 좋은 이유는 사용자가 지금 가장 혼란스러워하는 부분이
 "Practical Validation이 무엇을 검증하는지 보이지 않는다"는 점이기 때문이다.

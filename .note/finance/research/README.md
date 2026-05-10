@@ -11,6 +11,7 @@
 
 | 문서 | 역할 |
 |---|---|
+| `PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH.md` | Practical Validation을 실전 투자 진단 엔진으로 확장하기 위한 asset allocation / concentration / macro / sentiment / stress / ETF operability research |
 | `OVERLAY_CASH_POLICY_RESEARCH.md` | overlay cash policy research |
 | `US_PUBLIC_PORTFOLIO_AND_STRATEGY_SOURCE_MAP_20260404.md` | 미국 공개 포트폴리오 / 전략 source map |
 | `PLAYWRIGHT_MARKET_RESEARCH_PLAYBOOK_20260331.md` | Playwright 기반 market research playbook |

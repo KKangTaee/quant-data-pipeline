@@ -4501,3 +4501,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Practical Validation V2는 이를 다시 점수화하는 단계가 아니라 upstream evidence를 상속하고, portfolio-level source contract / weight / mix alignment / missing domain / sensitivity / overfit / monitoring baseline을 추가하는 evidence pack이어야 한다
 - Follow-up:
   - `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_VALIDATION_DESIGN.md`에 앞 단계 검증과의 중복 위험, Stage Ownership Matrix, domain `origin` 설계, 중복 감점 방지 원칙을 보강했다
+
+### 2026-05-10 - Practical Validation은 실전 투자 진단 엔진으로 설계해야 한다
+- User request:
+  - 사용자가 Practical Validation을 앞 단계 검증 요약판이 아니라, 실제 투자 후보로 검토할 때 필요한 asset allocation, concentration, macro / sentiment, stress, inverse / leveraged ETF, 대안 포트폴리오 비교 같은 실무적 검증 단계로 만들고 싶다고 설명함
+- Interpreted goal:
+  - 외부 자료와 실무 framework를 조사해 Practical Validation의 차별화된 진단 module, 중복 방지 경계, MVP 개발 순서를 문서화해야 함
+- Analysis result:
+  - Backtest Analysis는 성과 / Data Trust / Compare 선택 근거를 만드는 단계이고, Practical Validation은 그 evidence를 입력으로 받아 portfolio-level 실전 진단을 실행해야 한다
+  - 주요 신규 module은 asset allocation fit, concentration / overlap, correlation / risk contribution, macro / regime, sentiment overlay, stress / scenario, alternative portfolio challenge, leveraged / inverse suitability, ETF operability, robustness / overfit audit이다
+  - 단일 전략도 1개 component 100% 포트폴리오로 보고 같은 진단을 적용하며, mix는 component score 합산보다 exposure와 위험 구조를 우선 해석해야 한다
+- Follow-up:
+  - `.note/finance/research/PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH.md`를 새로 작성했다
+  - `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_VALIDATION_DESIGN.md`를 evidence pack 중심에서 Practical Investment Diagnostics 중심으로 보강했다

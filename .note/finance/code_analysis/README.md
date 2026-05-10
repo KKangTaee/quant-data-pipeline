@@ -15,7 +15,7 @@
 | DB / loader / ingestion 흐름 확인 | `DATA_DB_PIPELINE_FLOW.md` |
 | Streamlit Backtest UI, compare, history, saved replay 확인 | `WEB_BACKTEST_UI_FLOW.md` |
 | Backtest 후보 선정 workflow를 3단계 구조로 재설계할 때 | `BACKTEST_PORTFOLIO_SELECTION_WORKFLOW_REDESIGN_GUIDE.md` |
-| Practical Validation을 실전 후보 검증 evidence pack으로 확장할 때 | `PRACTICAL_VALIDATION_V2_VALIDATION_DESIGN.md` |
+| Practical Validation을 실전 투자 진단 엔진으로 확장할 때 | `PRACTICAL_VALIDATION_V2_VALIDATION_DESIGN.md` |
 | 새 전략 family를 추가하거나 기존 전략 연결을 바꿀 때 | `STRATEGY_IMPLEMENTATION_FLOW.md` |
 | repo-local helper script나 automation 갱신 | `AUTOMATION_SCRIPTS_GUIDE.md` |
 
