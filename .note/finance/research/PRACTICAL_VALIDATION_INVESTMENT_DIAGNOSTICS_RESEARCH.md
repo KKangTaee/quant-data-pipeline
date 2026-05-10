@@ -429,7 +429,11 @@ MVP 지표:
 
 - 1차 Practical Validation 개발에서는 sentiment data connector를 필수 구현 범위에 넣지 않는다.
 - 초기 result에서는 이 domain을 `NOT_RUN` 또는 `FUTURE_MODULE` 성격의 review note로 표시해도 된다.
+- `sentiment connector`는 외부 API 또는 로컬 DB에서 시장 분위기 지표를 읽어
+  Practical Validation 결과에 같은 날짜 기준 snapshot으로 붙이는 data adapter다.
 - Practical Validation core가 안정된 뒤, FRED 기반 VIX / Credit Spread / Yield Curve snapshot을 먼저 붙인다.
+  이는 검증 시점의 변동성, 신용 스프레드, 장단기 금리차를 가져와
+  high-risk / risk-on / risk-off context를 표시한다는 뜻이다.
 - CNN Fear & Greed는 공식 안정 API와 재현성 문제가 있으므로 optional connector로 둔다.
 - 후속 구현은 local cache / DB 우선, 필요 시 refresh API 호출 방식이 적절하다.
 
@@ -443,12 +447,35 @@ MVP 지표:
 
 진단:
 
-- COVID crash
-- 2022 inflation / rate shock
-- 2023 banking stress
+- static stress calendar preset
+- 2000년 이후 미국 증시에 충격을 준 주요 historical stress window
 - custom stress window
 - hypothetical equity -20%, bond yield +100 bps, credit spread +300 bps, USD shock
 - scenario별 return, MDD, recovery, benchmark spread
+
+기본 historical stress window는 AI가 즉석에서 기억한 이벤트가 아니라
+버전 관리되는 정적 reference data로 둔다.
+1차 reference data는
+[`practical_validation_stress_windows_v1.json`](practical_validation_stress_windows_v1.json)에 정의한다.
+
+Static stress calendar v1:
+
+| id | Window | 의미 |
+|---|---|---|
+| `dotcom_bust_2000_2002` | 2000-03-10 to 2002-10-09 | Dot-com bust / early-2000s bear market |
+| `nine_eleven_market_reopen_2001` | 2001-09-17 to 2001-09-21 | 9/11 market closure and reopening stress |
+| `global_financial_crisis_2007_2009` | 2007-10-09 to 2009-03-09 | Global financial crisis bear market |
+| `lehman_liquidity_crisis_2008` | 2008-09-15 to 2008-11-20 | Lehman / acute liquidity crisis |
+| `flash_crash_2010` | 2010-05-06 | May 2010 Flash Crash |
+| `debt_ceiling_eurozone_2011` | 2011-08-01 to 2011-10-04 | US debt-ceiling downgrade / eurozone stress |
+| `china_devaluation_growth_scare_2015_2016` | 2015-08-11 to 2016-02-11 | China devaluation / global growth scare |
+| `volatility_shock_2018_02` | 2018-02-02 to 2018-02-09 | February 2018 volatility shock |
+| `q4_2018_fed_trade_growth_scare` | 2018-10-01 to 2018-12-24 | Q4 2018 Fed / trade / growth scare |
+| `covid_crash_2020` | 2020-02-19 to 2020-03-23 | COVID crash |
+| `inflation_rate_shock_2022` | 2022-01-03 to 2022-10-12 | 2022 inflation / rate shock |
+| `banking_stress_2023` | 2023-03-08 to 2023-03-31 | March 2023 banking stress |
+| `yen_carry_unwind_2024` | 2024-08-02 to 2024-08-09 | August 2024 carry-trade unwind / volatility spike |
+| `tariff_shock_2025` | 2025-04-02 to 2025-04-09 | April 2025 tariff shock |
 
 MVP:
 
@@ -747,5 +774,5 @@ domain별 evidence를 넣는 방식이 낫다.
 | X | 단순 대안 baseline은 무엇부터 둘 것인가? | SPY, QQQ, 60/40 proxy, cash-aware baseline부터 시작하고 All Weather-like proxy는 후속으로 둔다. |
 | X | sensitivity perturbation grid는 strategy별로 어떻게 둘 것인가? | MVP는 mix weight +/- 5%p, drop-one, 주요 window perturbation부터 시작한다. |
 | X | run_history trial count를 validation row에 어떻게 남길 것인가? | run_history 파일 자체는 저장하지 않고 local audit summary만 선택적으로 남긴다. |
-| X | stress window 기본 목록은 무엇으로 둘 것인가? | COVID crash, 2022 inflation / rate shock, 2023 banking stress, custom window로 시작한다. |
+| O | stress window 기본 목록은 무엇으로 둘 것인가? | 2000년 이후 미국 증시 shock event를 static stress calendar v1로 관리한다. 기본 reference data는 `practical_validation_stress_windows_v1.json`이며 custom window도 허용한다. |
 | X | sentiment connector는 언제 붙일 것인가? | 1차 Practical Validation core 이후 FRED 기반 VIX / Credit Spread / Yield Curve snapshot부터 추가한다. |

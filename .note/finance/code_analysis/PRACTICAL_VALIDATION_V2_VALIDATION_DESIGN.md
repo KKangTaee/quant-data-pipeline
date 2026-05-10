@@ -596,14 +596,31 @@ VaR / CVaR는 monthly return 기반으로 후속 추가한다.
 | blocker | strategy 목적상 반드시 봐야 하는 stress window가 기간 내 있는데 결과가 없음 |
 | review gap | 특정 stress window에서 benchmark 대비 크게 열위 |
 
-초기 stress window 후보:
+초기 stress window는 AI가 즉석에서 기억한 이벤트가 아니라
+버전 관리되는 static calendar preset으로 관리한다.
+1차 reference data는
+[`practical_validation_stress_windows_v1.json`](../research/practical_validation_stress_windows_v1.json)에 둔다.
 
-| Window | 의미 |
-|---|---|
-| 2020-02 to 2020-04 | COVID crash |
-| 2022-01 to 2022-10 | inflation / rate shock |
-| 2023-03 | banking stress |
-| custom | 사용자가 직접 지정한 검증 기간 |
+Static stress calendar v1은 2000년 이후 미국 증시에 충격을 준 대표 구간을
+아래처럼 시작한다. 이 목록은 투자 신호가 아니라 검증용 기간 preset이다.
+
+| id | Window | 의미 |
+|---|---|---|
+| `dotcom_bust_2000_2002` | 2000-03-10 to 2002-10-09 | Dot-com bust / early-2000s bear market |
+| `nine_eleven_market_reopen_2001` | 2001-09-17 to 2001-09-21 | 9/11 market closure and reopening stress |
+| `global_financial_crisis_2007_2009` | 2007-10-09 to 2009-03-09 | Global financial crisis bear market |
+| `lehman_liquidity_crisis_2008` | 2008-09-15 to 2008-11-20 | Lehman / acute liquidity crisis |
+| `flash_crash_2010` | 2010-05-06 | May 2010 Flash Crash |
+| `debt_ceiling_eurozone_2011` | 2011-08-01 to 2011-10-04 | US debt-ceiling downgrade / eurozone stress |
+| `china_devaluation_growth_scare_2015_2016` | 2015-08-11 to 2016-02-11 | China devaluation / global growth scare |
+| `volatility_shock_2018_02` | 2018-02-02 to 2018-02-09 | February 2018 volatility shock |
+| `q4_2018_fed_trade_growth_scare` | 2018-10-01 to 2018-12-24 | Q4 2018 Fed / trade / growth scare |
+| `covid_crash_2020` | 2020-02-19 to 2020-03-23 | COVID crash |
+| `inflation_rate_shock_2022` | 2022-01-03 to 2022-10-12 | 2022 inflation / rate shock |
+| `banking_stress_2023` | 2023-03-08 to 2023-03-31 | March 2023 banking stress |
+| `yen_carry_unwind_2024` | 2024-08-02 to 2024-08-09 | August 2024 carry-trade unwind / volatility spike |
+| `tariff_shock_2025` | 2025-04-02 to 2025-04-09 | April 2025 tariff shock |
+| `custom` | user input | 사용자가 직접 지정한 검증 기간 |
 
 기간이 겹치지 않으면 `NOT_RUN: period does not cover stress window`로 표시한다.
 겹치지 않는 것을 실패로 처리하지 않는다.
@@ -627,7 +644,11 @@ CNN Fear & Greed, VIX, yield curve 같은 지표는 Final Review에서
 
 - Practical Validation 1차 구현에서는 sentiment data connector를 필수 범위로 넣지 않는다.
 - 이 domain은 먼저 `NOT_RUN: future market-context connector required`로 남겨도 된다.
+- `sentiment connector`는 외부 또는 로컬 DB의 시장 분위기 지표를 읽어
+  Practical Validation result에 같은 날짜 기준 snapshot으로 붙이는 data adapter다.
 - 후속 구현은 FRED 기반 VIX / Credit Spread / Yield Curve snapshot부터 시작한다.
+  즉 검증 시점의 변동성, 신용 스프레드, 장단기 금리차를 가져와
+  high-risk / risk-on / risk-off context를 표시한다는 뜻이다.
 - CNN Fear & Greed는 공식 안정 API와 재현성 문제가 있으므로 optional connector로 둔다.
 - API는 직접 실시간 호출만 쓰기보다 local cache / DB 우선, 필요 시 refresh 호출 방식으로 설계한다.
 
@@ -1251,7 +1272,7 @@ Final Review selected decision은 다음 조건을 강하게 봐야 한다.
 | O | cost assumption 기본값은 얼마로 둘 것인가? | 기본 거래비용 가정은 균형형 기준 one-way 10 bps로 시작한다. profile별 비용 숫자를 과도하게 다르게 두기보다 expense ratio / turnover / liquidity coverage가 붙으면 보정한다. |
 | X | simple baseline challenge에서 어떤 baseline을 우선할 것인가? | SPY, QQQ, 60/40 proxy, cash-aware baseline부터 시작하고 All Weather-like proxy는 후속으로 둔다. |
 | X | sensitivity perturbation grid는 strategy별로 어떻게 둘 것인가? | MVP는 mix weight +/- 5%p, drop-one, 주요 strategy window perturbation부터 시작한다. |
-| X | stress window 기본 목록은 무엇으로 둘 것인가? | COVID crash, 2022 inflation / rate shock, 2023 banking stress, custom window로 시작한다. |
+| O | stress window 기본 목록은 무엇으로 둘 것인가? | 2000년 이후 미국 증시 shock event를 static stress calendar v1로 관리한다. 기본 reference data는 `practical_validation_stress_windows_v1.json`이며 custom window도 허용한다. |
 | X | sentiment connector는 언제 붙일 것인가? | 1차 Practical Validation core 이후 FRED 기반 VIX / Credit Spread / Yield Curve snapshot부터 추가한다. |
 
 ## 추천 다음 작업

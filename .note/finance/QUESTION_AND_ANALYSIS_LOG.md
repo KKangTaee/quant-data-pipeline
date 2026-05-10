@@ -4611,3 +4611,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - MVP 기본 거래비용은 균형형 기준 one-way 10 bps로 시작하고, expense ratio / turnover / liquidity coverage가 붙으면 보정한다
 - Follow-up:
   - Practical Validation research / design 문서에 rolling window와 cost assumption 설명을 보강하고 해당 설계 질문을 `O`로 변경했다
+
+### 2026-05-10 - Stress window static calendar와 sentiment connector 의미 보강
+- User request:
+  - 사용자가 2000년 이후 미국 증시에 충격을 준 이벤트 구간을 static data로 정의하길 요청했고, sentiment connector의 의미와 FRED 기반 snapshot 추가 방향을 질문함
+- Interpreted goal:
+  - Practical Validation stress test가 AI 기억이나 임의 이벤트명이 아니라 버전 관리되는 deterministic stress calendar를 사용해야 함
+  - Sentiment connector가 trade signal이 아니라 market-context data adapter임을 명확히 해야 함
+- Analysis result:
+  - `practical_validation_stress_windows_v1.json`을 static reference data로 추가해 Dot-com, 9/11, GFC, Lehman, 2010 Flash Crash, 2011 debt-ceiling/eurozone, 2015 China devaluation, 2018 volatility/Q4 selloff, COVID, 2022 rate shock, 2023 banking stress, 2024 carry unwind, 2025 tariff shock window를 정의했다
+  - Stress window는 포트폴리오 수익률 curve와 benchmark curve를 해당 기간으로 잘라 return / MDD / spread를 계산하는 검증 preset이며, 기간이 겹치지 않으면 `NOT_RUN`으로 둔다
+  - Sentiment connector는 FRED / DB / API에서 VIX, credit spread, yield curve 같은 시장 분위기 지표를 가져와 Practical Validation에 snapshot으로 붙이는 data adapter다
+- Follow-up:
+  - Practical Validation research / design 문서에 static stress calendar 링크와 sentiment connector 설명을 보강하고 stress window 설계 질문을 `O`로 변경했다

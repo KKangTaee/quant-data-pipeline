@@ -3629,3 +3629,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - user confirmation에 따라 profile별 rolling window 기본값을 방어형 24개월, 균형형 36개월, 성장형 60개월, 전술 / 헤지형 24개월, 사용자 지정 36개월로 정리했다.
   - cost assumption은 거래 수수료 / bid-ask spread / slippage / 세금성 비용을 포함한 거래비용 가정이며, MVP 기본값은 one-way 10 bps로 시작한다고 문서화했다.
   - research / design 문서의 설계 질문 상태에서 rolling window와 cost assumption 항목을 `O`로 변경했다.
+- Practical Validation V2 stress calendar / sentiment connector 보강:
+  - user request에 따라 2000년 이후 미국 증시 shock event를 `practical_validation_stress_windows_v1.json` static reference data로 추가했다.
+  - stress window는 포트폴리오 curve / benchmark curve를 정적 이벤트 구간으로 잘라 return, MDD, benchmark spread를 계산하는 검증 preset으로 정리했다.
+  - sentiment connector는 VIX / credit spread / yield curve 같은 market-context 지표를 Practical Validation에 snapshot으로 붙이는 후속 data adapter라고 문서화했다.
+  - research / design 문서의 stress window 설계 질문 상태를 `O`로 변경했다.
