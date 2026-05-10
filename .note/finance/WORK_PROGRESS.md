@@ -3515,3 +3515,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - `Weighted Portfolio Result` 아래에 `현재 Mix를 Practical Validation으로 보내기` action을 추가해 mix 전체를 Clean V2 selection source로 저장하게 했다.
   - 저장 mix의 `전략 비교에서 수정하기`는 기존 stale compare / weighted 결과를 숨기고, 저장된 전략 / 기간 / 세부 설정 / weight를 form-first 상태로 다시 채우도록 조정했다.
   - Compare / saved mix 문구와 `WEB_BACKTEST_UI_FLOW.md`를 Clean V2 Practical Validation ownership 기준으로 갱신했다.
+
+### 2026-05-10
+- Portfolio Mix 검증 보드 legacy 문구 정리:
+  - user feedback에 따라 saved mix 판정 문구에 남아 있던 `5~10단계 workflow 통과 기록` 표현을 Clean V2 기준으로 교체했다.
+  - saved mix 기록 참조 확인 대상에 `PORTFOLIO_SELECTION_SOURCES`, `PRACTICAL_VALIDATION_RESULTS`, `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2`, `SELECTED_PORTFOLIO_MONITORING_LOG`를 추가했다.

@@ -372,7 +372,7 @@ Compare 결과 상단에는 개별 전략용 `Compare 검증 보드`를 둔다.
 
 - `Mix 재실행 및 검증`은 저장된 weighted portfolio mix 자체와 그 구성 전략 compare를 함께 복원한다.
 - UI에서는 `저장된 비중 조합` 화면 안에서 `저장 Mix Replay 결과`와 `Portfolio Mix 검증 보드`를 바로 보여준다.
-- `Portfolio Mix 검증 보드`는 saved mix 자체의 replay 가능 여부, mix data trust, 구성 전략 Real-Money gate, workflow registry 기록 여부를 분리해서 보여준다.
+- `Portfolio Mix 검증 보드`는 saved mix 자체의 replay 가능 여부, mix data trust, 구성 전략 Real-Money gate, Clean V2 검증 기록 여부를 분리해서 보여준다.
 - 저장 mix는 reusable setup이므로, replay 성과가 좋아도 자동으로 최종 판단 기록이 되지 않는다. `Workflow Registry`가 `NOT RECORDED`이면 Practical Validation / Final Review 쪽 기록이 아직 없다는 뜻이다.
 - 이 경우 사용자는 `Practical Validation으로 보내기`로 mix 전체를 Clean V2 source로 저장한다. Saved mix는 이미 비중이 정해진 포트폴리오 조합이므로, 단일 전략 후보 handoff와 분리한다.
 - 개별 전략을 Practical Validation으로 보낼 때만 `개별 전략 비교` 화면의 `Compare 검증 보드`를 사용한다. mix는 current weighted mix handoff 또는 saved mix validation board를 사용한다.

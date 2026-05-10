@@ -4466,3 +4466,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - saved mix edit mode는 검증 경로가 아니라 편집 / 재구성 경로이므로 stale compare 결과보다 저장된 설정이 반영된 form을 먼저 보여주는 것이 맞다
 - Follow-up:
   - 현재 weighted mix 직접 handoff를 추가하고, saved mix edit mode에서 기존 result state를 clear하도록 구현했다
+
+### 2026-05-10 - Portfolio Mix 검증 보드의 5~10단계 문구는 legacy 표현이다
+- User request:
+  - 사용자가 Portfolio Mix 검증 보드 판정에 `성과 replay는 가능하지만, 5~10단계 workflow 통과 기록은 아직 없습니다.`라고 표시되는 점을 지적함
+- Interpreted goal:
+  - Clean V2 전환 이후 saved mix 검증 보드는 5~10단계 legacy workflow가 아니라 Practical Validation / Final Review V2 기록 유무를 기준으로 설명해야 함
+- Analysis result:
+  - 해당 문구는 과거 workflow copy가 남은 것이며, 참조 확인도 legacy registry 중심이었다
+- Follow-up:
+  - 판정 문구와 기준명을 Clean V2 기준으로 바꾸고 V2 registry 참조 확인을 추가했다
