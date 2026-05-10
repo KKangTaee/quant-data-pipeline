@@ -24,9 +24,9 @@ from app.web.final_selected_portfolio_dashboard_helpers import (
     selected_portfolio_status_options,
 )
 from app.web.runtime import (
+    FINAL_SELECTION_DECISION_V2_FILE,
     FINAL_SELECTED_PORTFOLIO_STATUS_LABELS,
     FINAL_SELECTED_PORTFOLIO_VALUE_INPUT_MODE_LABELS,
-    FINAL_SELECTION_DECISION_REGISTRY_FILE,
     build_selected_portfolio_current_weight_inputs,
     build_selected_portfolio_drift_alert_preview,
     build_selected_portfolio_drift_check,
@@ -215,13 +215,13 @@ def _summary_cards(summary: dict[str, Any]) -> list[dict[str, Any]]:
 def _render_empty_state(summary: dict[str, Any]) -> None:
     if not summary.get("final_decision_count"):
         st.info("아직 Final Review에서 기록된 최종 판단 row가 없습니다.")
-        st.caption(f"Path: {FINAL_SELECTION_DECISION_REGISTRY_FILE}")
+        st.caption(f"Path: {FINAL_SELECTION_DECISION_V2_FILE}")
         return
     st.warning(
         "Final Review 기록은 있지만 `SELECT_FOR_PRACTICAL_PORTFOLIO`로 선정된 포트폴리오가 없습니다. "
         "`Backtest > Final Review`에서 최종 판단이 선정으로 저장된 row만 이 대시보드에 운영 대상으로 표시됩니다."
     )
-    st.caption(f"Path: {FINAL_SELECTION_DECISION_REGISTRY_FILE}")
+    st.caption(f"Path: {FINAL_SELECTION_DECISION_V2_FILE}")
 
 
 def _render_selected_portfolio_picker(rows: list[dict[str, Any]]) -> dict[str, Any] | None:
@@ -344,7 +344,7 @@ def _render_source_boundary(row: dict[str, Any] | None = None) -> None:
             }
         )
     _render_info_card_grid(cards, min_width=210)
-    st.code(str(FINAL_SELECTION_DECISION_REGISTRY_FILE), language="text")
+    st.code(str(FINAL_SELECTION_DECISION_V2_FILE), language="text")
 
 
 def _decision_key(row: dict[str, Any]) -> str:

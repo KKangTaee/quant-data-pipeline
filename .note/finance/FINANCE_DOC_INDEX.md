@@ -74,6 +74,8 @@
 | 최근 완료 phase QA checklist | `.note/finance/phases/phase29/PHASE29_TEST_CHECKLIST.md` |
 | 최근 작업 로그 | `.note/finance/WORK_PROGRESS.md` |
 | 최근 질문 / 설계 판단 | `.note/finance/QUESTION_AND_ANALYSIS_LOG.md` |
+| Backtest 3단계 workflow 재설계 가이드 | `.note/finance/code_analysis/BACKTEST_PORTFOLIO_SELECTION_WORKFLOW_REDESIGN_GUIDE.md` |
+| Practical Validation V2 남은 구현 계획 | `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_REMAINING_IMPLEMENTATION_PLAN.md` |
 
 현재 상태:
 
@@ -214,7 +216,12 @@
 | `.note/finance/registries/PORTFOLIO_PROPOSAL_REGISTRY.jsonl` | portfolio proposal draft append-only registry. 첫 proposal 저장 시 생성됨 |
 | `.note/finance/registries/PAPER_PORTFOLIO_TRACKING_LEDGER.jsonl` | paper tracking ledger append-only registry. 첫 paper ledger 저장 시 생성됨 |
 | `.note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl` | final selection decision append-only registry. 첫 final decision 저장 시 생성됨 |
+| `.note/finance/registries/PORTFOLIO_SELECTION_SOURCES.jsonl` | Clean V2 Backtest Analysis source append-only registry. 첫 후보 source 선택 시 생성됨 |
+| `.note/finance/registries/PRACTICAL_VALIDATION_RESULTS.jsonl` | Clean V2 Practical Validation result append-only registry. 첫 검증 결과 저장 시 생성됨 |
+| `.note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl` | Clean V2 final selection decision append-only registry. Selected Portfolio Dashboard의 새 source-of-truth |
+| `.note/finance/registries/SELECTED_PORTFOLIO_MONITORING_LOG.jsonl` | Clean V2 selected portfolio monitoring snapshot append-only log. 사용자가 명시 저장할 때 생성됨 |
 | `.note/finance/saved/SAVED_PORTFOLIOS.jsonl` | saved portfolio 정의 저장 파일 |
+| `.note/finance/saved/SAVED_PORTFOLIO_MIXES.jsonl` | Clean V2 reusable saved mix setup 저장 파일 |
 | `.note/finance/run_history/BACKTEST_RUN_HISTORY.jsonl` | local backtest run history. 보통 commit하지 않음 |
 | `.note/finance/run_history/WEB_APP_RUN_HISTORY.jsonl` | local web app run history. 보통 commit하지 않음 |
 | `.note/finance/operations/RUNTIME_ARTIFACT_HYGIENE.md` | runtime artifact를 어떻게 다룰지 정리한 문서 |
@@ -235,6 +242,9 @@
 | `.note/finance/code_analysis/BACKTEST_RUNTIME_FLOW.md` | UI payload에서 runtime, loader, strategy, result bundle까지의 실행 흐름 |
 | `.note/finance/code_analysis/DATA_DB_PIPELINE_FLOW.md` | data collection, DB persistence, loader read path 흐름 |
 | `.note/finance/code_analysis/WEB_BACKTEST_UI_FLOW.md` | Backtest UI, Single Strategy, Compare, History, Saved Portfolio 흐름 |
+| `.note/finance/code_analysis/BACKTEST_PORTFOLIO_SELECTION_WORKFLOW_REDESIGN_GUIDE.md` | Backtest 후보 선정 workflow를 3단계 구조로 바꾸기 전 route / registry / implementation impact를 정리한 개발 가이드 |
+| `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_VALIDATION_DESIGN.md` | Practical Validation을 실전 투자 진단 엔진으로 확장하기 위한 UI / JSON / domain 구현 설계 |
+| `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_REMAINING_IMPLEMENTATION_PLAN.md` | Practical Validation V2의 현재 구현 상태, 남은 구현 범위, helper 분리, replay / provider / Final Review 고도화 순서를 정리한 개발 계획 |
 | `.note/finance/code_analysis/STRATEGY_IMPLEMENTATION_FLOW.md` | 새 strategy family를 제품에 추가할 때 따라야 하는 구현 흐름 |
 | `.note/finance/code_analysis/AUTOMATION_SCRIPTS_GUIDE.md` | phase bootstrap, hygiene, candidate registry helper script 사용 기준 |
 | `.note/finance/code_analysis/BACKTEST_REFINEMENT_CODE_FLOW_GUIDE.md` | 기존 backtest refinement 중심 code flow guide |
@@ -984,6 +994,7 @@ Support Track은 main finance feature phase가 아니라,
 | 문서 | 역할 |
 |---|---|
 | `.note/finance/research/README.md` | research note 묶음 안내 |
+| `.note/finance/research/PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH.md` | Practical Validation 실전 투자 진단 module의 외부 reference / 설계 기준 |
 | `.note/finance/research/OVERLAY_CASH_POLICY_RESEARCH.md` | overlay cash policy research |
 | `.note/finance/research/US_PUBLIC_PORTFOLIO_AND_STRATEGY_SOURCE_MAP_20260404.md` | 미국 공개 포트폴리오 / 전략 source map |
 | `.note/finance/research/PLAYWRIGHT_MARKET_RESEARCH_PLAYBOOK_20260331.md` | Playwright 기반 market research playbook |

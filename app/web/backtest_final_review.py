@@ -32,12 +32,13 @@ from app.web.backtest_ui_components import (
     render_status_card_grid,
 )
 from app.web.runtime import (
-    FINAL_SELECTION_DECISION_REGISTRY_FILE,
-    append_final_selection_decision,
+    FINAL_SELECTION_DECISION_V2_FILE,
+    append_final_selection_decision_v2,
     load_current_candidate_registry_latest,
-    load_final_selection_decisions,
+    load_final_selection_decisions_v2,
     load_portfolio_proposals,
     load_pre_live_candidate_registry_latest,
+    load_practical_validation_results,
 )
 
 
@@ -66,6 +67,43 @@ def _render_validation_summary(validation: dict[str, Any]) -> None:
         st.info("최종 검토에 연결된 component가 없습니다.")
     else:
         st.dataframe(component_df, width="stretch", hide_index=True)
+    diagnostic_rows = list(validation.get("diagnostic_display_rows") or [])
+    if diagnostic_rows:
+        st.markdown("###### Practical Diagnostics")
+        profile = dict(validation.get("validation_profile") or {})
+        status_counts = dict(dict(validation.get("diagnostic_summary") or {}).get("status_counts") or {})
+        render_badge_strip(
+            [
+                {"label": "Profile", "value": profile.get("profile_label") or "-", "tone": "neutral"},
+                {"label": "PASS", "value": status_counts.get("PASS", 0), "tone": "positive"},
+                {"label": "REVIEW", "value": status_counts.get("REVIEW", 0), "tone": "warning"},
+                {"label": "BLOCKED", "value": status_counts.get("BLOCKED", 0), "tone": "danger"},
+                {"label": "NOT_RUN", "value": status_counts.get("NOT_RUN", 0), "tone": "neutral"},
+            ]
+        )
+        st.dataframe(pd.DataFrame(diagnostic_rows), width="stretch", hide_index=True)
+        not_run_critical = list(validation.get("not_run_critical_domains") or [])
+        if not_run_critical:
+            st.caption("NOT_RUN 항목은 선택을 자동 차단하지 않지만, 최종 판단 사유에서 확인해야 합니다.")
+            st.dataframe(pd.DataFrame(not_run_critical), width="stretch", hide_index=True)
+        profile_score_rows = list(validation.get("profile_score_rows") or [])
+        if profile_score_rows:
+            with st.expander("Profile-aware score breakdown", expanded=False):
+                st.dataframe(pd.DataFrame(profile_score_rows), width="stretch", hide_index=True)
+        curve_evidence = dict(validation.get("curve_evidence") or {})
+        if curve_evidence:
+            with st.expander("Curve / Replay evidence", expanded=False):
+                render_badge_strip(
+                    [
+                        {"label": "Portfolio Curve", "value": curve_evidence.get("portfolio_curve_source") or "-", "tone": "neutral"},
+                        {"label": "Rows", "value": curve_evidence.get("portfolio_curve_rows", 0), "tone": "neutral"},
+                        {"label": "Benchmark", "value": curve_evidence.get("benchmark_ticker") or "-", "tone": "neutral"},
+                        {"label": "Benchmark Rows", "value": curve_evidence.get("benchmark_curve_rows", 0), "tone": "neutral"},
+                    ]
+                )
+                component_curve_rows = list(curve_evidence.get("component_curve_rows") or [])
+                if component_curve_rows:
+                    st.dataframe(pd.DataFrame(component_curve_rows), width="stretch", hide_index=True)
     gap_cols = st.columns(3, gap="small")
     with gap_cols[0]:
         st.markdown("###### Hard Blockers")
@@ -143,7 +181,7 @@ def _render_paper_observation_summary(paper_observation: dict[str, Any]) -> None
 def _render_saved_final_review_decisions(final_decision_rows: list[dict[str, Any]]) -> None:
     if not final_decision_rows:
         st.info("아직 기록된 최종 검토 결과가 없습니다.")
-        st.caption(f"Path: {FINAL_SELECTION_DECISION_REGISTRY_FILE}")
+        st.caption(f"Path: {FINAL_SELECTION_DECISION_V2_FILE}")
         return
 
     st.dataframe(_build_final_review_decision_rows_for_display(final_decision_rows), width="stretch", hide_index=True)
@@ -194,16 +232,21 @@ def render_final_review_workspace() -> None:
     current_rows = load_current_candidate_registry_latest()
     proposal_rows = load_portfolio_proposals()
     pre_live_rows = load_pre_live_candidate_registry_latest()
-    final_decision_rows = load_final_selection_decisions()
+    practical_validation_rows = load_practical_validation_results()
+    final_decision_rows = load_final_selection_decisions_v2()
+    session_practical_source = st.session_state.pop("final_review_practical_validation_source", None)
+    final_practical_notice = st.session_state.pop("final_review_practical_validation_notice", None)
 
     final_notice = st.session_state.pop("final_review_decision_notice", None)
+    if final_practical_notice:
+        st.success(str(final_practical_notice))
     if final_notice:
         st.success(str(final_notice))
 
     render_status_card_grid(
         [
             {"title": "Current Candidates", "value": len(current_rows), "tone": "positive" if current_rows else "neutral"},
-            {"title": "Saved Proposals", "value": len(proposal_rows), "tone": "positive" if proposal_rows else "neutral"},
+            {"title": "Practical Validations", "value": len(practical_validation_rows), "tone": "positive" if practical_validation_rows else "neutral"},
             {"title": "Final Review Records", "value": len(final_decision_rows), "tone": "positive" if final_decision_rows else "neutral"},
             {"title": "Paper Ledger Save", "value": "Not Required", "detail": "관찰 기준은 최종 검토 기록 안에 포함합니다.", "tone": "neutral"},
             {"title": "Live Approval", "value": "Disabled", "detail": "이 화면은 승인/주문이 아닙니다.", "tone": "neutral"},
@@ -221,9 +264,14 @@ def render_final_review_workspace() -> None:
             ]
         )
 
-    source_options = _build_final_review_source_options(current_rows, proposal_rows)
+    source_options = _build_final_review_source_options(
+        current_rows,
+        proposal_rows,
+        practical_validation_rows=practical_validation_rows,
+        session_practical_source=session_practical_source if isinstance(session_practical_source, dict) else None,
+    )
     if not source_options:
-        st.info("최종 검토할 current candidate 또는 saved proposal이 없습니다.")
+        st.info("최종 검토할 Practical Validation result, current candidate, saved proposal이 없습니다.")
         return
 
     st.divider()
@@ -360,7 +408,7 @@ def render_final_review_workspace() -> None:
                 disabled=not bool(save_evaluation.get("can_save")),
                 width="stretch",
             ):
-                append_final_selection_decision(final_row)
+                append_final_selection_decision_v2(final_row)
                 st.session_state["final_review_decision_notice"] = (
                     f"최종 검토 결과 `{final_row['decision_id']}`를 기록했습니다. "
                     "이 기록은 live approval이나 주문 지시가 아닙니다."
@@ -377,7 +425,7 @@ def render_final_review_workspace() -> None:
             )
         with st.expander("최종 검토 결과 Preview", expanded=False):
             st.json(final_row)
-            st.caption(f"Path: {FINAL_SELECTION_DECISION_REGISTRY_FILE}")
+            st.caption(f"Path: {FINAL_SELECTION_DECISION_V2_FILE}")
 
     st.markdown("#### 6. 기록된 최종 검토 결과 확인")
     with st.container(border=True):

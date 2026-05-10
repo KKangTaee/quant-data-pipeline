@@ -4125,6 +4125,35 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Follow-up:
   - Equal Weight Single / Compare 입력, runtime hardening, saved Portfolio Mix override, Candidate Library replay payload에 Real-Money 필드를 연결했다
 
+### 2026-05-06 - 복구된 registries 기준 후보 / 포트폴리오 참조 검토
+- User request:
+  - `.note/finance/registries/` 폴더가 없어졌다가 복구되었으므로, 복구된 registry 내용을 기준으로 현재 후보와 포트폴리오 해석을 다시 검토해 달라고 요청함
+- Interpreted goal:
+  - 복구된 JSONL registry가 필수 필드를 갖추고 있는지, Current Candidate / Pre-Live / Candidate Review Note가 서로 연결되는지, saved portfolio가 registry id를 정상 참조하는지 확인해야 함
+- Analysis result:
+  - `CURRENT_CANDIDATE_REGISTRY.jsonl` 5개 row와 `PRE_LIVE_CANDIDATE_REGISTRY.jsonl` 5개 row는 repo helper validation을 통과했고, 각 Pre-Live row는 current candidate row와 1:1로 연결되어 있다
+  - `CANDIDATE_REVIEW_NOTES.jsonl` 5개 row도 current candidate의 `source_review_note_id`와 모두 연결된다
+  - 다만 `SAVED_PORTFOLIOS.jsonl`의 annual strict equal-third baseline은 과거 registry id인 `value_current_anchor_top14_psr`, `quality_current_anchor_top12_lqd`, `quality_value_current_anchor_top10_por`를 참조하지만, 현재 복구된 current registry에는 이 3개 row가 없다
+  - 현재 복구된 registry는 최근 GTAA 3개, Q+V MDD20 1개, Quality AOR MA250 1개 후보 중심이며, 과거 annual strict baseline candidate registry snapshot은 복구되지 않은 상태로 보인다
+  - `PORTFOLIO_PROPOSAL_REGISTRY.jsonl`, `PAPER_PORTFOLIO_TRACKING_LEDGER.jsonl`, `FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`도 현재 registry 폴더에는 없다
+- Follow-up:
+  - 현재 candidate / pre-live review는 사용 가능하지만, saved annual strict baseline을 Candidate Library / Portfolio Proposal에서 registry-linked bundle로 다시 쓰려면 과거 annual strict candidate row 3개를 복원하거나, saved portfolio의 embedded compare context 기반 replay로만 해석해야 한다
+
+### 2026-05-06 - master 병합 후 registries 기준 백테스트 후보 재분석
+- User request:
+  - `master` 병합으로 registry JSONL이 채워졌으니, 병합된 registries 기준으로 백테스트 후보 데이터를 다시 분석해 달라고 요청함
+- Interpreted goal:
+  - Current Candidate, Pre-Live, Portfolio Proposal, Paper Ledger, Final Decision registry를 함께 읽어 실제 후보군, 유효한 Equal Weight 후보, 최종 선택된 후보, 남은 주의점을 구분해야 함
+- Analysis result:
+  - `CURRENT_CANDIDATE_REGISTRY.jsonl`은 10개 row validation을 통과했지만, `equal_weight_current_candidate_dividend_growth_4_schd_tdiv`는 active row와 inactive row가 함께 있는 append-only 중복 기록이다
+  - 현재 유효 후보군은 GTAA 4개, Equal Weight 2개, Quality 1개, Quality + Value 1개로 읽는 것이 적절하다. 배당 ETF Equal Weight 후보는 `hold / blocked`라 reference로만 본다
+  - 최종 선택 / paper ledger는 `gtaa_current_candidate_clean6_aor_top2_i2_1m12m_ma150` 단일 후보를 가리킨다. 핵심 수치는 `CAGR 15.22%`, `MDD -8.88%`, `Sharpe 1.96`, `AOR` benchmark, `paper_only`이다
+  - 새로 들어온 Equal Weight 후보 중 `QQQ/SOXX/XLE/IAU`는 `CAGR 19.96%`, `MDD -19.71%`, `real_money_candidate / paper_probation / paper_only`이고, `IAU/QQQ/SOXX/VIG/XLE`는 `CAGR 18.31%`, `MDD -19.27%`로 더 방어적인 balanced 대안이다
+  - `PORTFOLIO_PROPOSAL_REGISTRY.jsonl`의 4개 row는 같은 `proposal_20260503_0fb12b`의 반복 저장으로 보이며, 최신 row 기준 GTAA Top-1 50% + Quality AOR MA250 50% proposal draft다. Final Decision과 Paper Ledger는 이 proposal이 아니라 GTAA Top-2 High CAGR 단일 후보로 이어진다
+  - `FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl`의 `decision_id`는 `quality_current...`로 시작하지만 source는 GTAA Top-2 High CAGR 후보다. ID naming은 legacy / 생성 당시 label artifact로 보이고, 실제 source fields를 기준으로 읽어야 한다
+- Follow-up:
+  - 현재 실전 후보 탐색 해석은 `GTAA Top-2 High CAGR`을 최종 선택된 paper-only 단일 후보로 두고, Equal Weight growth/commodity 후보들은 GTAA와 섞어볼 ETF diversifier / comparison candidate로 유지하는 방향이 가장 자연스럽다
+
 ### 2026-05-06 - Phase36 최종 선정 포트폴리오 운영 대시보드 구현 방향
 - User request:
   - Phase36에서 `최종 선정 포트폴리오를 위한 대시보드`를 어떻게 만들지 구체화하고, 진행해 달라고 요청함
@@ -4373,3 +4402,313 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Follow-up:
   - `app/web/ops_review.py`를 추가하고 `streamlit_app.py`의 Ops Review page entry에서 호출하게 했다
   - README와 Backtest UI flow 문서에는 Ops Review가 운영 상태 판독 화면이며 실행 / replay / 후보 재검토는 전용 화면으로 이동한다는 경계를 남겼다
+
+### 2026-05-07 - Compare / 저장 mix 검증 ownership 재정리
+- User request:
+  - Compare & Portfolio Builder에서 개별 전략 5단계 검증과 저장 mix 검증이 섞여 보이는 UX를 개선하고, Guides도 함께 맞춰 달라고 요청함
+- Interpreted goal:
+  - 5단계 Compare는 개별 전략 후보를 Candidate Review로 보낼 수 있는지 판단하는 보드로 고정하고, weighted / saved mix는 Portfolio Mix 검증 보드와 Portfolio Proposal 경로로 읽히게 해야 함
+- Analysis result:
+  - 기존 `Load Saved Mix Into Compare`는 저장 mix 검증 버튼처럼 보였지만 실제로는 개별 전략 비교 form을 다시 채우는 편집 경로였다
+  - 저장 mix를 열고 바로 `Run Strategy Comparison`을 누르면 GTAA / Equal Weight 각각의 5단계 보드가 떠서, 사용자가 mix-level 검증 실패로 오해할 수 있었다
+  - GTAA `interval=3`, `month_end`처럼 정상 cadence 때문에 result end가 요청 end보다 짧은 경우는 DB 부족이 아니라 cadence-aligned review로 분리하는 것이 맞다
+- Follow-up:
+  - Compare workspace label을 `개별 전략 비교` / `저장된 비중 조합`으로 바꾸고, saved mix primary action을 `Mix 재실행 및 검증`으로 조정했다
+  - `전략 비교에서 수정하기`는 검증이 아니라 저장 mix 구성을 편집 / 재구성하는 경로로 설명했다
+  - Guides와 `WEB_BACKTEST_UI_FLOW.md`에 mix는 Candidate Review가 아니라 Portfolio Proposal 초안으로 연결된다는 ownership을 반영했다
+
+### 2026-05-08 - Backtest 후보 선정 workflow는 3단계로 재설계해야 한다
+- User request:
+  - 사용자가 Candidate Review와 Portfolio Proposal의 역할이 불분명하고 메모 / 저장 단계가 반복되므로, 구현 전에 현재 코드를 깊게 분석하고 개발 가이드를 문서화해 달라고 요청함
+- Interpreted goal:
+  - `Single / Compare 백테스트 분석 -> 실전 검증 -> Final Review` 흐름으로 재정리하되, 기존 registry와 saved mix / final decision 호환성을 깨지 않는 구현 계획이 필요함
+- Analysis result:
+  - 현재 Candidate Review는 투자 검증 화면이라기보다 Review Note, Current Candidate, Pre-Live record를 저장하는 후보 포장 UI에 가깝다
+  - Portfolio Proposal은 Current Candidate 기반 weight builder, Saved Mix prefill, Validation Pack, saved proposal review가 섞여 있어 Compare의 weight 조합 기능과 목적이 충돌해 보인다
+  - Saved Mix는 이미 mix-level 검증 source를 갖고 있지만 Final Review / risk helper가 Current Candidate와 Pre-Live 존재를 기대해 마지막 단계에서 막힐 수 있다
+  - 5개 panel label을 바로 3개 label로 바꾸면 `backtest_requested_panel`, history replay, saved mix handoff가 깨질 수 있으므로 visible stage와 internal route를 먼저 분리해야 한다
+- Follow-up:
+  - `.note/finance/code_analysis/BACKTEST_PORTFOLIO_SELECTION_WORKFLOW_REDESIGN_GUIDE.md`에 route / session key / registry dependency / source contract / 단계별 구현 순서를 정리했다
+  - 제품 코드는 아직 수정하지 않았고, 사용자 확인 후 route foundation부터 구현한다
+
+### 2026-05-10 - 기존 JSONL은 archive하고 Clean V2 저장 구조로 다시 시작할 수 있다
+- User request:
+  - 사용자가 기존 JSONL을 반드시 활용하지 않아도 되며, archive로 보관하고 새 workflow 기준으로 새 저장 파일을 만들 수 있다고 설명함
+- Interpreted goal:
+  - 3단계 workflow redesign이 기존 registry chain에 과도하게 묶이지 않도록, 새 source-of-truth와 사용자 end-to-end flow를 명확히 해야 함
+- Analysis result:
+  - 대규모 개편에서는 `Compatibility Mode`보다 `Clean V2 Mode`가 더 적합하다
+  - 기존 `Review Note -> Current Candidate -> Pre-Live -> Portfolio Proposal -> Final Decision` chain은 archive / legacy inspector로 내리고, 새 main flow는 `Selection Source -> Practical Validation Result -> Final Decision V2 -> Monitoring Log`로 단순화한다
+  - 사용자 플로우는 `Backtest Analysis`에서 만들고 선택, `Practical Validation`에서 실전 검증, `Final Review`에서 최종 판단과 메모 저장, `Selected Portfolio Dashboard`에서 선정 이후 성과와 review signal 확인으로 정리한다
+- Follow-up:
+  - `.note/finance/code_analysis/BACKTEST_PORTFOLIO_SELECTION_WORKFLOW_REDESIGN_GUIDE.md`에 Clean V2 저장소 설계, legacy archive 정책, 새 JSONL 파일 역할, 사후관리 flow를 보강했다
+
+### 2026-05-10 - Clean V2 구현은 legacy 삭제보다 stage / storage 병행 전환이 맞다
+- User request:
+  - 사용자가 새 스크립트를 만들고 기존 스크립트는 리팩토링 과정에서 정리하는 방식인지 확인한 뒤 작업 진행을 요청함
+- Interpreted goal:
+  - 기존 Candidate Review / Portfolio Proposal 파일을 즉시 삭제하지 않고, 새 Clean V2 stage와 저장소를 먼저 세워 사용 경로를 전환해야 함
+- Analysis result:
+  - 1차 구현에서는 `backtest_workflow_routes`, `backtest_analysis`, `backtest_practical_validation`, `portfolio_selection_v2`를 추가하고 기존 route request를 새 stage로 매핑하는 것이 안전하다
+  - 기존 JSONL과 UI 파일은 legacy compatibility로 남기되 새 main workflow의 필수 join 조건에서는 제거한다
+  - Selected Portfolio Dashboard는 Final Review V2 decision row를 source-of-truth로 읽는 것이 맞다
+- Follow-up:
+  - Backtest stage routing, Clean V2 source / validation / final decision persistence, Practical Validation UI, Final Review V2 저장, Selected Dashboard V2 read path를 1차 구현했다
+
+### 2026-05-10 - Compare weighted mix도 바로 Practical Validation으로 가야 한다
+- User request:
+  - 사용자가 Backtest Analysis > Compare & Portfolio Builder에서 개별 전략만 Practical Validation으로 보낼 수 있고, mix 상태에서는 다음 행동으로 보낼 수 없는 것인지 확인함. 또한 저장 mix의 `전략 비교에서 수정하기`가 기존 5단계 결과를 먼저 보여주는 UX가 어색하다고 지적함
+- Interpreted goal:
+  - 개별 전략 handoff와 mix handoff를 분리하되, 새로 만든 mix도 저장 후 재실행을 강제하지 않고 바로 Practical Validation source로 보낼 수 있어야 함
+- Analysis result:
+  - 개별 전략 Compare 보드는 단일 후보 전용으로 유지하는 것이 맞다
+  - weighted mix는 별도 Clean V2 source로 Practical Validation에 보내는 primary action이 필요하다
+  - saved mix edit mode는 검증 경로가 아니라 편집 / 재구성 경로이므로 stale compare 결과보다 저장된 설정이 반영된 form을 먼저 보여주는 것이 맞다
+- Follow-up:
+  - 현재 weighted mix 직접 handoff를 추가하고, saved mix edit mode에서 기존 result state를 clear하도록 구현했다
+
+### 2026-05-10 - Portfolio Mix 검증 보드의 5~10단계 문구는 legacy 표현이다
+- User request:
+  - 사용자가 Portfolio Mix 검증 보드 판정에 `성과 replay는 가능하지만, 5~10단계 workflow 통과 기록은 아직 없습니다.`라고 표시되는 점을 지적함
+- Interpreted goal:
+  - Clean V2 전환 이후 saved mix 검증 보드는 5~10단계 legacy workflow가 아니라 Practical Validation / Final Review V2 기록 유무를 기준으로 설명해야 함
+- Analysis result:
+  - 해당 문구는 과거 workflow copy가 남은 것이며, 참조 확인도 legacy registry 중심이었다
+- Follow-up:
+  - 판정 문구와 기준명을 Clean V2 기준으로 바꾸고 V2 registry 참조 확인을 추가했다
+
+### 2026-05-10 - Practical Validation은 실전 후보 검증 evidence pack으로 확장해야 한다
+- User request:
+  - 사용자가 Practical Validation이 현재 어떤 검증을 하는지, 그 검증이 실전 투자 관점에서 신빙성이 있는지, 앞으로 어떤 검증을 넣어야 하는지 설계 조사와 문서화를 요청함
+- Interpreted goal:
+  - 구현 전에 `이 전략을 실전 전략 후보로 사용할 수 있나?`라는 질문에 답하기 위한 검증 domain, 데이터 요구사항, UI / JSON contract, 구현 우선순위를 정해야 함
+- Analysis result:
+  - 현재 Practical Validation은 source id, active component, weight total, Data Trust / Real-Money blocker, benchmark snapshot을 보는 최소 gate이며 깊은 실전 검증은 아니다
+  - 실전 후보 검증으로는 replay reproducibility, same-period benchmark, rolling / walk-forward, drawdown / tail / recovery, regime stress, cost / turnover, ETF investability, parameter / weight sensitivity, overfit audit, paper monitoring plan이 필요하다
+  - 각 domain은 `PASS / REVIEW / BLOCKED / NOT_RUN`으로 분리해야 하며, `NOT_RUN`은 통과가 아니라 아직 확인하지 못한 상태로 표시해야 한다
+- Follow-up:
+  - `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_VALIDATION_DESIGN.md`에 조사 출처, domain 설계, v2 schema, UI 구조, 구현 slice를 문서화했다
+  - 제품 코드는 아직 수정하지 않았다
+
+### 2026-05-10 - Practical Validation V2는 앞 단계 검증을 반복하면 안 된다
+- User request:
+  - 사용자가 Practical Validation 이전에도 Data Trust, Real-Money, Compare, Mix 검증이 있으므로 V2 설계가 중복 검증을 만들지 않는지 확인이 필요하다고 지적함
+- Interpreted goal:
+  - 각 검증 domain의 stage ownership을 분리하고, Practical Validation이 무엇을 상속 / 통합 / 신규 계산해야 하는지 명확히 해야 함
+- Analysis result:
+  - Single Strategy runtime은 이미 거래비용, benchmark overlay, rolling / OOS review, ETF operability, liquidity, validation / guardrail policy, promotion / deployment readiness를 만든다
+  - Compare 5단계 보드는 단일 후보 선택을 위한 Data Trust / Real-Money / 상대 순위 gate이고, Saved Mix 검증 보드는 replay 가능성과 V2 기록 연결성을 보는 gate다
+  - Practical Validation V2는 이를 다시 점수화하는 단계가 아니라 upstream evidence를 상속하고, portfolio-level source contract / weight / mix alignment / missing domain / sensitivity / overfit / monitoring baseline을 추가하는 evidence pack이어야 한다
+- Follow-up:
+  - `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_VALIDATION_DESIGN.md`에 앞 단계 검증과의 중복 위험, Stage Ownership Matrix, domain `origin` 설계, 중복 감점 방지 원칙을 보강했다
+
+### 2026-05-10 - Practical Validation은 실전 투자 진단 엔진으로 설계해야 한다
+- User request:
+  - 사용자가 Practical Validation을 앞 단계 검증 요약판이 아니라, 실제 투자 후보로 검토할 때 필요한 asset allocation, concentration, macro / sentiment, stress, inverse / leveraged ETF, 대안 포트폴리오 비교 같은 실무적 검증 단계로 만들고 싶다고 설명함
+- Interpreted goal:
+  - 외부 자료와 실무 framework를 조사해 Practical Validation의 차별화된 진단 module, 중복 방지 경계, MVP 개발 순서를 문서화해야 함
+- Analysis result:
+  - Backtest Analysis는 성과 / Data Trust / Compare 선택 근거를 만드는 단계이고, Practical Validation은 그 evidence를 입력으로 받아 portfolio-level 실전 진단을 실행해야 한다
+  - 주요 신규 module은 asset allocation fit, concentration / overlap, correlation / risk contribution, macro / regime, sentiment overlay, stress / scenario, alternative portfolio challenge, leveraged / inverse suitability, ETF operability, robustness / overfit audit이다
+  - 단일 전략도 1개 component 100% 포트폴리오로 보고 같은 진단을 적용하며, mix는 component score 합산보다 exposure와 위험 구조를 우선 해석해야 한다
+- Follow-up:
+  - `.note/finance/research/PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH.md`를 새로 작성했다
+  - `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_VALIDATION_DESIGN.md`를 evidence pack 중심에서 Practical Investment Diagnostics 중심으로 보강했다
+
+### 2026-05-10 - Practical Validation은 Validation Profile로 판정 기준을 조정해야 한다
+- User request:
+  - 사용자가 Practical Validation에서 모든 진단을 보수적으로 적용하면 공격형 / 방어형 등 사용자 목적에 맞지 않게 다음 단계가 막힐 수 있다고 지적함
+  - 3~5개 질문으로 사용자 성향과 목적을 파악해 threshold / weight / blocker 기준을 자동 조정하고, 사용자가 원한 방향과 후보 성격이 다르면 알려주는 기능을 제안함
+- Interpreted goal:
+  - 12개 진단 module은 유지하되, `Validation Profile`이 domain별 threshold, 중요도, blocker / review 기준, mismatch warning을 조정하는 구조를 문서화해야 함
+- Analysis result:
+  - 검증 domain을 줄이는 방식보다 가능한 domain은 모두 시도하고 profile에 따라 해석을 바꾸는 방식이 안전하다
+  - Data Trust, weight 합계, 가격 부재, 거래 불가, execution boundary, 큰 leveraged / inverse exposure의 목적 부재 같은 invariant hard blocker는 profile로 무력화하면 안 된다
+  - 공격형 목표인데 SPY / QQQ와 차이가 약하거나, 방어형 목표인데 equity / growth concentration이 높으면 intent mismatch warning으로 Final Review 전에 보여줘야 한다
+- Follow-up:
+  - Practical Validation research / design 문서에 Validation Profile 질문, profile별 threshold / weight / invariant blocker, intent mismatch warning, JSON / UI / 구현 slice 반영 사항을 보강했다
+
+### 2026-05-10 - Sentiment Overlay는 후속 module로 두고 Asset Allocation Profile 용어를 명확히 한다
+- User request:
+  - 사용자가 Sentiment Overlay 데이터 연동은 1차 Practical Validation 이후에 추가해도 되는지 확인했고, 해당 내용을 문서에 짧게 남기길 요청함
+  - `asset allocation profile`이 무엇을 뜻하는지도 질문함
+- Interpreted goal:
+  - 1차 Practical Validation core와 후속 market-context connector의 경계를 분리하고, asset allocation profile 용어를 문서상 명확히 해야 함
+- Analysis result:
+  - Sentiment Overlay는 반드시 넣고 싶은 future module이지만, 1차 구현에서는 `NOT_RUN` / future connector 상태로 남기고 core diagnostic flow를 먼저 안정화하는 것이 맞다
+  - 후속 구현은 FRED 기반 VIX / Credit Spread / Yield Curve snapshot부터 시작하고, Fear & Greed는 optional connector로 둔다
+  - asset allocation profile은 주식 / 채권 / 현금 / 금 / 원자재 / inverse / leveraged 노출을 사용자의 검증 목적에 맞춰 해석하는 자산 배분 성격 기준이다
+- Follow-up:
+  - Practical Validation research / design 문서와 glossary에 Sentiment Overlay 후속 구현 메모와 Asset Allocation Profile 정의를 추가했다
+
+### 2026-05-10 - Validation Profile 질문과 한글 화면 표기 확정
+- User request:
+  - 사용자가 profile과 질문을 영어가 아니라 화면에서는 한글로 표기하고, 앞서 제안한 5개 질문으로 진행하길 원함
+  - `profile로 무력화하면 안 되는 hard blocker`의 의미를 질문함
+- Interpreted goal:
+  - Practical Validation profile UI 질문, 선택지, 내부 저장 id, 한글 profile label, invariant hard blocker 설명을 문서에 명확히 해야 함
+- Analysis result:
+  - 사용자-facing profile 표기는 방어형 / 균형형 / 성장형 / 전술·헤지형 / 사용자 지정으로 둔다
+  - 내부 id는 `conservative_defensive`, `balanced_core`, `growth_aggressive`, `hedged_tactical`, `custom`으로 저장한다
+  - 5개 질문은 목적, 감내 손실, 운용 기간, 상품 / 운용 복잡도, 단순 대안 대비 기대를 묻는다
+  - 무력화하면 안 되는 hard blocker는 사용자가 공격형 profile을 골라도 자동 통과 처리하면 안 되는 치명적 문제이며, risk tolerance와 validation failure를 구분해야 한다
+- Follow-up:
+  - Practical Validation research / design 문서와 glossary에 한글 label, 5개 질문, 내부 저장 id, invariant hard blocker 설명을 보강했다
+
+### 2026-05-10 - Practical Validation 남은 설계 질문 정리
+- User request:
+  - 사용자가 남은 설계 질문 목록을 refresh해 달라고 요청함
+- Interpreted goal:
+  - 이미 결정된 질문과 실제 구현 시 확정할 질문이 섞여 있는 상태를 정리해야 함
+- Analysis result:
+  - sentiment hard blocker 여부, profile label / 질문 수 / domain 생략 여부 / invariant blocker / mismatch 처리 / NOT_RUN 허용 / sensitivity 기본 방침 등은 결정 완료로 이동했다
+  - rolling window 세부값, cost assumption, baseline proxy, sensitivity perturbation grid, stress window 목록, sentiment connector 착수 시점은 구현 선택으로 남겼다
+- Follow-up:
+  - Practical Validation research / design 문서의 `남은 설계 질문` / `Open Questions`를 `결정 완료`와 `남은 구현 선택`으로 재정리했다
+
+### 2026-05-10 - 설계 질문 표를 확인 여부 컬럼으로 통합
+- User request:
+  - 사용자가 설계 질문 상태를 `결정 완료`와 `남은 구현 선택` 두 섹션으로 나누지 말고 하나의 표로 합쳐 `확인 여부`를 `O / X`로 표시해 달라고 요청함
+- Interpreted goal:
+  - 설계 질문을 하나의 점검표처럼 읽을 수 있게 만들고, 결정된 항목과 구현 시 확정할 항목을 같은 표에서 구분해야 함
+- Analysis result:
+  - Practical Validation research / design 문서의 설계 질문 상태 표를 하나로 합치고 `확인 여부`, `질문`, `결정 / 기본 방향` 컬럼으로 바꾸는 것이 적절함
+- Follow-up:
+  - 두 문서의 설계 질문 상태를 단일 표로 통합하고 확인된 항목은 `O`, 구현 선택이 남은 항목은 `X`로 표시했다
+
+### 2026-05-10 - Proxy classification과 holdings look-through 설명 보강
+- User request:
+  - 사용자가 `proxy classification으로 시작하고 missing coverage를 NOT_RUN으로 표시한다`는 문장의 의미를 이해했고, 그 내용을 간략히 문서에 보강해 달라고 요청함
+- Interpreted goal:
+  - ETF 내부 holdings 데이터가 없을 때 대략 분류와 정밀 look-through 검증의 차이를 문서에서 바로 이해할 수 있어야 함
+- Analysis result:
+  - Proxy classification은 ETF의 대표 성격으로 QQQ, XLK, SMH 등을 대략 분류하는 방식이다
+  - Holdings look-through는 ETF 안의 실제 보유종목까지 확인해 Apple / Microsoft / Nvidia 같은 top holding overlap을 계산하는 정밀 방식이다
+  - holdings 데이터가 없으면 정밀 중복률 검증은 통과가 아니라 `NOT_RUN`으로 표시해야 한다
+- Follow-up:
+  - Practical Validation research / design 문서에 proxy classification과 holdings look-through 차이, NOT_RUN 의미를 짧은 예시로 보강했다
+
+### 2026-05-10 - Final Review route와 NOT_RUN 의미 보강
+- User request:
+  - 사용자가 `Final Review selected route에서 NOT_RUN을 허용할 것인가`의 의미를 이해했고, 해당 내용이 문서에 없다면 보강해 달라고 요청함
+- Interpreted goal:
+  - `NOT_RUN`이 통과가 아니라 미실행 상태이며, Final Review 이동은 가능하더라도 critical domain은 명시 확인이 필요하다는 경계를 문서화해야 함
+- Analysis result:
+  - `NOT_RUN`은 데이터나 기능 부족으로 아직 검증하지 못했다는 disclosure다
+  - Sentiment connector 미구현이나 holdings look-through 데이터 부재는 Final Review 이동을 막지 않을 수 있지만, 핵심 가격 부재 같은 문제는 `BLOCKED` 후보로 봐야 한다
+- Follow-up:
+  - Practical Validation research / design 문서에 Final Review route와 `NOT_RUN` 처리 의미를 보강했다
+
+### 2026-05-10 - Practical Validation rolling window와 cost assumption 기본값 확정
+- User request:
+  - 사용자가 rolling window 기본값과 cost assumption 의미를 확인했고, 확정된 항목의 확인 여부를 `O`로 바꿔 문서화하길 요청함
+- Interpreted goal:
+  - Practical Validation profile별 rolling 검증 기본 구간과 거래비용 기본 가정을 구현 전 설계 기준으로 고정해야 함
+- Analysis result:
+  - rolling window는 전략 lookback이나 리밸런싱 주기가 아니라 검증용 성과 측정 구간이다
+  - 기본 rolling window는 방어형 24개월, 균형형 36개월, 성장형 60개월, 전술 / 헤지형 24개월, 사용자 지정 36개월로 둔다
+  - cost assumption은 거래 수수료뿐 아니라 bid-ask spread, slippage, 세금성 비용을 포함한 거래비용 가정이다
+  - MVP 기본 거래비용은 균형형 기준 one-way 10 bps로 시작하고, expense ratio / turnover / liquidity coverage가 붙으면 보정한다
+- Follow-up:
+  - Practical Validation research / design 문서에 rolling window와 cost assumption 설명을 보강하고 해당 설계 질문을 `O`로 변경했다
+
+### 2026-05-10 - Stress window static calendar와 sentiment connector 의미 보강
+- User request:
+  - 사용자가 2000년 이후 미국 증시에 충격을 준 이벤트 구간을 static data로 정의하길 요청했고, sentiment connector의 의미와 FRED 기반 snapshot 추가 방향을 질문함
+- Interpreted goal:
+  - Practical Validation stress test가 AI 기억이나 임의 이벤트명이 아니라 버전 관리되는 deterministic stress calendar를 사용해야 함
+  - Sentiment connector가 trade signal이 아니라 market-context data adapter임을 명확히 해야 함
+- Analysis result:
+  - `practical_validation_stress_windows_v1.json`을 static reference data로 추가해 Dot-com, 9/11, GFC, Lehman, 2010 Flash Crash, 2011 debt-ceiling/eurozone, 2015 China devaluation, 2018 volatility/Q4 selloff, COVID, 2022 rate shock, 2023 banking stress, 2024 carry unwind, 2025 tariff shock window를 정의했다
+  - Stress window는 포트폴리오 수익률 curve와 benchmark curve를 해당 기간으로 잘라 return / MDD / spread를 계산하는 검증 preset이며, 기간이 겹치지 않으면 `NOT_RUN`으로 둔다
+  - Sentiment connector는 FRED / DB / API에서 VIX, credit spread, yield curve 같은 시장 분위기 지표를 가져와 Practical Validation에 snapshot으로 붙이는 data adapter다
+- Follow-up:
+  - Practical Validation research / design 문서에 static stress calendar 링크와 sentiment connector 설명을 보강하고 stress window 설계 질문을 `O`로 변경했다
+
+### 2026-05-10 - Alternative baseline / sensitivity grid / trial count 설계 완료 처리
+- User request:
+  - 사용자가 이미 협의한 단순 대안 baseline, sensitivity perturbation grid, run_history trial count 내용을 문서에 보강하고 완료 처리하길 요청함
+- Interpreted goal:
+  - Practical Validation의 복잡성 비교, 견고성 검증, 과최적화 audit 기본 방침을 구현 전 확정 상태로 정리해야 함
+- Analysis result:
+  - Alternative Portfolio Challenge는 SPY, QQQ, 60/40 proxy, cash-aware baseline을 1차 포함하고, All Weather-like proxy는 ETF / weight assumption을 별도 확정한 뒤 후속으로 둔다
+  - Sensitivity MVP는 주요 window perturbation, mix weight +/- 5%p, drop-one, 기존 runtime이 지원하는 strategy-specific 작은 설정 변경부터 시작한다
+  - run_history 원본은 저장하지 않고, Practical Validation에서 local run_history를 읽을 수 있을 때 `overfit_audit` 요약값만 validation row에 선택적으로 남긴다
+- Follow-up:
+  - Practical Validation research / design 문서에 세 항목의 의미와 MVP 처리 방식을 보강하고 설계 질문 상태를 `O`로 변경했다
+
+### 2026-05-10 - Sentiment connector 후속 구현 범위 확정
+- User request:
+  - 사용자가 `sentiment connector는 언제 붙일 것인가?` 항목도 확인 완료로 문서 처리하길 요청함
+- Interpreted goal:
+  - Sentiment connector를 1차 Practical Validation core가 아니라 후속 module로 붙이는 방침을 확정 상태로 표시해야 함
+- Analysis result:
+  - 시작 범위는 FRED 기반 VIX / Credit Spread / Yield Curve snapshot이다
+  - 이 데이터는 market-context evidence이며 trade signal이나 hard blocker로 쓰지 않는다
+  - CNN Fear & Greed는 공식 안정 API / 재현성 문제 때문에 optional connector로 유지한다
+- Follow-up:
+  - Practical Validation research / design 문서의 sentiment connector 설계 질문 상태를 `O`로 변경했다
+
+### 2026-05-10 - Practical Validation V2 core 구현 방향 확정
+- User request:
+  - 사용자가 새 전략 구현 없이 `PRACTICAL_VALIDATION_V2_VALIDATION_DESIGN`과 투자 진단 research 문서를 기반으로 Practical Validation 개발을 진행하길 요청함
+- Interpreted goal:
+  - Backtest Analysis에서 넘어온 단일 전략 / Compare 후보 / weighted mix / saved mix를 같은 포트폴리오 검증 단위로 읽고, Final Review 전에 실전 후보로 올릴 수 있는지 profile-aware diagnostics로 보여줘야 함
+- Analysis result:
+  - 제품 전략 runtime은 건드리지 않고 Practical Validation result schema를 v2로 올렸다
+  - 기존 source id / weight / Data Trust / Real-Money 확인은 `Input Evidence Layer`로 유지하고, 그 위에 12개 Practical Diagnostics domain을 `PASS / REVIEW / BLOCKED / NOT_RUN`으로 분리했다
+  - `REVIEW / NOT_RUN`은 Final Review 이동을 자동 차단하지 않지만, 최종 판단 사유에서 확인해야 하는 evidence로 남긴다
+  - `BLOCKED`는 Practical Validation 화면에서 Final Review 이동을 막는 source 보강 대상이다
+- Follow-up:
+  - 후속 개발은 return curve replay, benchmark parity, rolling/stress 구간 성과, correlation/risk contribution, ETF cost/liquidity connector, macro/sentiment connector 순서로 진행하는 것이 맞다
+
+### 2026-05-10 - Practical Validation 남은 12개 개발 항목 진행
+- User request:
+  - 사용자가 profile-aware scoring부터 Selected Dashboard 연동까지 남은 12개 항목을 단계별로 개발하길 요청함
+- Interpreted goal:
+  - 기존 보드 구조가 아니라 실제 계산 가능한 domain은 바로 정량 계산하고, 데이터 connector가 아직 없는 항목은 proxy / NOT_RUN / REVIEW 경계를 명확히 해야 함
+- Analysis result:
+  - 새 Backtest Analysis handoff에는 compact monthly curve snapshot을 저장한다
+  - 기존 source도 DB price proxy curve를 만들어 rolling, stress, baseline, correlation, sensitivity, operability 계산을 시도한다
+  - profile category는 domain weight를 바꿔 score breakdown과 최종 score에 반영한다
+  - holdings-level look-through, ETF expense / spread / AUM, FRED macro / sentiment는 아직 connector가 필요하므로 proxy 또는 후속으로 남긴다
+- Follow-up:
+  - 후속 고도화는 strategy runtime full replay 버튼, holdings provider, FRED connector, ETF expense / spread connector 순서로 진행한다
+
+### 2026-05-10 - Practical Validation V2 남은 구현 계획 문서화
+- User request:
+  - 사용자가 `PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH`와 `PRACTICAL_VALIDATION_V2_VALIDATION_DESIGN`에서 협의한 내용 중 아직 미완성인 항목과 구현 방식을 정리한 뒤, 문서 검토 후 개발을 진행하자고 요청함
+- Interpreted goal:
+  - 지금 코드가 완성된 범위와 남은 범위를 혼동하지 않도록, 실제 runtime replay / provider connector / Final Review 연동까지의 개발 계획을 검토 가능한 문서로 남겨야 함
+- Analysis result:
+  - 현재 Practical Validation V2는 profile, 12개 diagnostics board, profile-aware score, compact curve / DB price proxy 기반 rolling / stress / baseline / sensitivity / operability 1차 계산까지 구현됐다
+  - 남은 핵심은 새 검증명을 추가하는 것이 아니라 proxy evidence를 actual runtime replay와 provider snapshot으로 승격하는 것이다
+  - 첫 개발 단위는 helper split 후 actual runtime replay / curve provenance / benchmark parity hardening으로 잡는 것이 가장 안전하다
+- Follow-up:
+  - `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_REMAINING_IMPLEMENTATION_PLAN.md`를 추가하고, 사용자가 검토한 뒤 개발 범위를 확정하기로 했다
+
+### 2026-05-10 - Practical Validation V2 P0 개발 진행
+- User request:
+  - 사용자가 향후 개발 우선순위 중 helper split, actual runtime replay, curve provenance, benchmark parity hardening 1~4번을 단계별로 진행하길 요청함
+- Interpreted goal:
+  - Practical Validation이 proxy 중심 diagnostics에서 실제 기존 runtime replay 근거를 우선 사용할 수 있게 하고, 상대 benchmark 비교의 기간 / coverage 신뢰도를 명시해야 함
+- Analysis result:
+  - helper 책임을 curve/parity와 replay로 분리했다
+  - actual replay는 자동 실행이 아니라 사용자가 `실제 전략 replay 실행`을 누를 때만 기존 strategy runtime을 호출한다
+  - replay 결과가 있으면 diagnostics는 actual replay curve를 우선 사용하고, 없거나 실패하면 기존 embedded snapshot / DB price proxy 진단을 유지한다
+  - benchmark parity는 portfolio curve와 benchmark curve의 기간, 월별 coverage, frequency 차이를 계산해 review gap으로 남긴다
+- Follow-up:
+  - 다음 고도화는 Validation Inspector / profile comparison UX와 strategy-specific sensitivity runtime이 우선이다
+
+### 2026-05-10 - Practical Validation runtime replay 필요성 재검토
+- User request:
+  - 사용자가 같은 날짜를 다시 재현하는 Actual Runtime Replay가 Practical Validation에서 실제로 필요한지 질문했고, 필요하다면 최신 데이터 기준 검증이어야 한다는 방향을 확인함
+- Interpreted goal:
+  - Practical Validation의 3번 구간이 단순 확인용 replay가 아니라 실전 후보 최신성 확인에 의미 있는 단계가 되어야 함
+- Analysis result:
+  - 동일 기간 replay는 contract / runtime 재현 확인에는 유용하지만, 실전 후보 검증의 핵심 근거로는 가치가 제한적이다
+  - 따라서 기본 모드는 DB 최신 시장일까지 종료일을 확장하는 `최신 DB 데이터까지 확장 검증`으로 두고, `저장 기간 그대로 재현`은 보조 / 디버깅 모드로 낮추는 것이 맞다
+  - 결과 row에는 재검증 mode, 저장 기간, 요청 기간, 실제 기간, 최신 시장일, 확장 일수, period coverage, curve provenance와 benchmark parity를 남겨 Final Review에서 어떤 데이터 기준의 evidence인지 구분하게 한다
+  - 요청 종료일은 최신 DB 날짜까지 확장됐지만 실제 portfolio curve가 component cadence / intersection 때문에 따라오지 못하면 runtime 실행 성공과 별개로 `period_coverage=REVIEW`로 표시해야 한다
+- Follow-up:
+  - Practical Validation UI와 replay helper, validation result schema, code analysis 문서를 최신 runtime recheck 기준으로 수정했다

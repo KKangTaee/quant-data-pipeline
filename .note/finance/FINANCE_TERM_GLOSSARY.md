@@ -2750,3 +2750,66 @@ Final Review의 final selection decision이 최종 판단 원본이다.
 - Final Review completion은 주문 실행 지시가 아니다.
 - Final Review completion은 live approval이 아니다.
 - Phase35는 최종 선정 후보를 다시 저장하는 단계가 아니라 workflow를 Final Review에서 끝내도록 정리한 단계다.
+
+---
+
+## Validation Profile
+
+### 기본 설명
+Practical Validation에서 포트폴리오 후보를 어떤 기준으로 해석할지 정하는 검증 성향 설정이다.
+
+사용자 화면에서는 방어형, 균형형, 성장형, 전술 / 헤지형, 사용자 지정처럼 한글로 표시한다.
+코드와 JSON에는 `conservative_defensive`, `balanced_core`, `growth_aggressive`, `hedged_tactical`, `custom` 같은 안정적인 id를 저장한다.
+
+### 왜 사용되는지
+같은 포트폴리오도 사용자가 방어형 후보를 찾는지, 공격형 성장 후보를 찾는지에 따라
+drawdown, equity concentration, cost, alternative benchmark 비교를 해석하는 기준이 달라진다.
+
+Validation Profile은 12개 진단을 생략하는 장치가 아니라,
+threshold, domain weight, `REVIEW / BLOCKED` 경계, 사용자 의도와 후보 성격 mismatch warning을 조정하는 장치다.
+
+### 예시 / 필요 상황
+- 방어형 profile에서는 equity 90% 포트폴리오가 강한 `REVIEW`가 될 수 있다.
+- 성장형 profile에서는 equity 90%가 허용될 수 있지만, tail risk, liquidity, overfit은 계속 확인한다.
+- Data Trust hard blocker, weight 합계 오류, 핵심 가격 부재, 거래 불가 같은 invariant blocker는 profile로 무력화하지 않는다.
+- 여기서 "무력화하지 않는다"는 사용자가 공격형 profile을 골라도 검증 자체가 깨진 문제를 자동 통과로 바꾸지 않는다는 뜻이다.
+
+---
+
+## Asset Allocation Profile
+
+### 기본 설명
+Validation Profile 안에서 특히 포트폴리오가 가져야 할 자산 배분 성격을 뜻한다.
+
+즉, 주식 / 채권 / 현금 / 금 / 원자재 / inverse / leveraged 같은 노출이
+사용자의 검증 목적과 맞는지 보기 위한 기준이다.
+
+### 왜 사용되는지
+백테스트 성과가 좋아도 포트폴리오가 사용자가 원한 성격과 다를 수 있다.
+예를 들어 방어형 후보를 원했는데 실제로는 growth equity에 집중되어 있거나,
+공격형 후보를 원했는데 SPY / QQQ와 거의 차이가 없는 경우가 있다.
+
+### 예시 / 필요 상황
+- `conservative_defensive`: 주식 집중과 MDD를 엄격하게 보고, 채권 / 현금 / 방어 asset 부재를 review한다.
+- `balanced_core`: CAGR, MDD, benchmark, diversification을 균형 있게 본다.
+- `growth_aggressive`: 높은 equity exposure를 더 허용하지만, tail risk와 overfit은 계속 본다.
+- `hedged_tactical`: inverse / cash / bond role과 리밸런싱 cadence mismatch를 더 강하게 본다.
+
+---
+
+## Sentiment Overlay
+
+### 기본 설명
+VIX, Fear & Greed, Credit Spread, Yield Curve 같은 시장 분위기 / risk context 지표를
+Practical Validation 결과 위에 보조 layer로 얹어 보는 진단이다.
+
+### 왜 사용되는지
+포트폴리오 자체의 성과와 구조가 좋아도 현재 시장 환경이 과열, 공포, 신용위험 확대,
+경기둔화 우려 같은 상태일 수 있다.
+이때 Sentiment Overlay는 매수 / 매도 신호가 아니라 Final Review에서 추가로 확인할 context를 제공한다.
+
+### 예시 / 필요 상황
+- 공격형 성장 profile인데 VIX가 매우 낮고 Fear & Greed가 과열이면 진입 시점 review를 표시한다.
+- Credit Spread가 확대되는 risk-off context에서는 high-beta equity 후보의 drawdown 위험을 다시 확인한다.
+- 1차 Practical Validation 구현에서는 data connector 없이 `NOT_RUN`으로 표시하고,
+  후속 module에서 FRED 기반 VIX / Credit Spread / Yield Curve snapshot부터 붙일 수 있다.

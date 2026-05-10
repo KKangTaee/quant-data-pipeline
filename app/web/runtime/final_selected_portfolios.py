@@ -9,9 +9,9 @@ from finance.loaders import load_latest_market_date
 from finance.performance import portfolio_performance_summary
 
 from .candidate_registry import load_current_candidate_registry_latest
-from .final_selection_decisions import (
-    FINAL_SELECTION_DECISION_REGISTRY_FILE,
-    load_final_selection_decisions,
+from .portfolio_selection_v2 import (
+    FINAL_SELECTION_DECISION_V2_FILE,
+    load_final_selection_decisions_v2,
 )
 
 
@@ -215,7 +215,7 @@ def _derive_operation_status(
     watch_routes = []
     if evidence_route and evidence_route != "READY_FOR_FINAL_DECISION":
         watch_routes.append(f"evidence={evidence_route}")
-    if validation_route and validation_route != "READY_FOR_ROBUSTNESS_REVIEW":
+    if validation_route and validation_route not in {"READY_FOR_ROBUSTNESS_REVIEW", "READY_FOR_FINAL_REVIEW"}:
         watch_routes.append(f"validation={validation_route}")
     if robustness_route and robustness_route != "READY_FOR_STRESS_SWEEP":
         watch_routes.append(f"robustness={robustness_route}")
@@ -1036,7 +1036,7 @@ def _build_summary(
             status_counts[status] = 0
         status_counts[status] += 1
     return {
-        "registry_path": str(FINAL_SELECTION_DECISION_REGISTRY_FILE),
+        "registry_path": str(FINAL_SELECTION_DECISION_V2_FILE),
         "final_decision_count": len(all_final_decisions),
         "selected_decision_count": len(selected_rows),
         "dashboard_row_count": len(dashboard_rows),
@@ -1048,8 +1048,8 @@ def _build_summary(
 
 
 def load_final_selected_portfolio_dashboard(limit: int | None = 250) -> dict[str, Any]:
-    """Load Phase36 dashboard data from Final Review decisions without writing new registry rows."""
-    all_rows = load_final_selection_decisions(limit=limit)
+    """Load selected dashboard data from Final Review V2 decisions without writing new rows."""
+    all_rows = load_final_selection_decisions_v2(limit=limit)
     selected_rows = [row for row in all_rows if _is_selected_practical_portfolio(row)]
     dashboard_rows = [build_final_selected_portfolio_dashboard_row(row) for row in selected_rows]
     return {

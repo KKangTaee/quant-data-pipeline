@@ -22,65 +22,63 @@ def _route_cards() -> dict[str, dict[str, Any]]:
     return {
         "단일 후보": {
             "headline": "전략 하나를 끝까지 검토",
-            "summary": "후보 1개를 Current Candidate와 Pre-Live 기록으로 남기고 Final Review가 직접 읽는 경로입니다.",
-            "goal": "후보 1개를 Current Candidate와 Pre-Live 기록으로 남기고 Final Review에서 직접 읽게 합니다.",
-            "sequence": "Single Strategy 또는 Compare 결과 확인 -> Candidate Review 저장 -> Portfolio Proposal 단일 후보 평가 -> Final Review",
-            "caution": "단일 후보는 proposal draft를 새로 저장하지 않습니다. Portfolio Proposal에서는 direct candidate로 읽습니다.",
-            "records": "Review Note, Current Candidate, Pre-Live, Final Decision",
+            "summary": "후보 1개를 Clean V2 selection source로 저장하고 Practical Validation을 거쳐 Final Review가 직접 읽는 경로입니다.",
+            "goal": "후보 1개를 Practical Validation 결과로 만든 뒤 Final Review에서 최종 판단합니다.",
+            "sequence": "Backtest Analysis -> Practical Validation -> Final Review",
+            "caution": "Review Note / Pre-Live / Proposal 저장은 더 이상 필수 경로가 아닙니다.",
+            "records": "Portfolio Selection Source, Practical Validation Result, Final Decision V2",
             "dot": [
-                ("single", "1-2\\nRun + Data Trust", "run"),
-                ("realmoney", "3-4\\nSignal / Blocker", "gate"),
-                ("compare", "5\\nCompare Evidence", "compare"),
-                ("candidate", "6\\nReview + Registry", "candidate"),
-                ("direct", "7\\nDirect Candidate", "proposal"),
-                ("final", "8-10\\nValidation + Decision", "final"),
+                ("analysis", "1\\nBacktest Analysis", "run"),
+                ("validation", "2\\nPractical Validation", "gate"),
+                ("final", "3\\nFinal Review V2", "final"),
+                ("dashboard", "4\\nSelected Dashboard", "compare"),
             ],
             "edges": [
-                ("single", "realmoney", "signal"),
-                ("realmoney", "compare", "not hold"),
-                ("compare", "candidate", "PASS / CONDITIONAL"),
-                ("candidate", "direct", "PORTFOLIO_PROPOSAL_READY"),
-                ("direct", "final", "검증"),
+                ("analysis", "validation", "selection source"),
+                ("validation", "final", "validation result"),
+                ("final", "dashboard", "selected decision"),
             ],
         },
         "여러 후보 묶음": {
-            "headline": "여러 후보를 하나의 proposal로 묶기",
-            "summary": "여러 current candidate를 목적, 역할, target weight가 있는 포트폴리오 초안으로 저장하는 경로입니다.",
-            "goal": "여러 current candidate를 목적, 역할, target weight가 있는 portfolio proposal로 묶습니다.",
-            "sequence": "후보별 실행 / 비교 -> Candidate Review에서 후보 저장 -> Portfolio Proposal에서 역할 / 비중 설계 -> Final Review",
-            "caution": "Portfolio Proposal은 후보를 새로 만드는 화면이 아니라, 이미 저장된 후보를 묶는 화면입니다.",
-            "records": "Current Candidate, Pre-Live, Portfolio Proposal, Final Decision",
+            "headline": "여러 후보를 하나의 portfolio source로 묶기",
+            "summary": "Compare에서 후보들을 비교하고 target weight가 있는 Clean V2 source로 저장하는 경로입니다.",
+            "goal": "여러 전략의 역할과 target weight를 Backtest Analysis에서 정한 뒤 Practical Validation으로 보냅니다.",
+            "sequence": "Backtest Analysis compare / weight builder -> Practical Validation -> Final Review",
+            "caution": "Portfolio Proposal의 legacy weight builder는 compatibility 경로입니다. 새 조합 실험은 Backtest Analysis가 맡습니다.",
+            "records": "Portfolio Selection Source, Practical Validation Result, Final Decision V2",
             "dot": [
-                ("candidates", "1-6\\nCandidate Pool", "candidate"),
-                ("roles", "7A\\nRole + Weight Logic", "proposal"),
-                ("draft", "7B\\nSave Proposal Draft", "proposal"),
-                ("validation", "8\\nRisk / Validation", "gate"),
-                ("final", "9-10\\nObservation + Decision", "final"),
+                ("compare", "1A\\nCompare", "compare"),
+                ("weights", "1B\\nRole + Weight", "proposal"),
+                ("validation", "2\\nPractical Validation", "gate"),
+                ("final", "3\\nFinal Review V2", "final"),
+                ("dashboard", "4\\nSelected Dashboard", "compare"),
             ],
             "edges": [
-                ("candidates", "roles", "2개 이상"),
-                ("roles", "draft", "weight=100%"),
-                ("draft", "validation", "proposal ready"),
-                ("validation", "final", "hard blocker 없음"),
+                ("compare", "weights", "비중 구성"),
+                ("weights", "validation", "Clean V2 source"),
+                ("validation", "final", "검증 결과"),
+                ("final", "dashboard", "선정 row"),
             ],
         },
         "저장된 비중 조합": {
             "headline": "이미 저장된 weight setup을 workflow 기록으로 연결",
-            "summary": "Compare에서 저장한 mix를 replay한 뒤 Candidate Review가 아니라 Portfolio Proposal 초안으로 연결합니다.",
-            "goal": "Saved Portfolio에 저장된 재사용 weight setup을 다시 검토해 proposal로 연결합니다.",
-            "sequence": "저장 조합 replay -> 결과 확인 -> Use This Mix In Portfolio Proposal -> Final Review",
-            "caution": "Saved Portfolio는 후보 registry가 아닙니다. Candidate Review를 거치지 않고 proposal registry에 연결합니다.",
-            "records": "Saved Portfolio, Portfolio Proposal, Final Decision",
+            "summary": "Compare에서 저장한 mix를 재실행한 뒤 Practical Validation source로 연결합니다.",
+            "goal": "Saved Portfolio에 저장된 재사용 weight setup을 다시 검토해 Clean V2 source로 연결합니다.",
+            "sequence": "저장된 비중 조합 선택 -> Mix 재실행 및 검증 -> Practical Validation -> Final Review",
+            "caution": "Saved Portfolio는 후보 registry가 아닙니다. Candidate Review / legacy Proposal 저장을 필수로 거치지 않습니다.",
+            "records": "Saved Portfolio, Portfolio Selection Source, Practical Validation Result, Final Decision V2",
             "dot": [
-                ("saved", "5A\\nSaved Weight Setup", "compare"),
-                ("replay", "5B\\nReplay / Mix Board", "gate"),
-                ("proposal", "7\\nAttach To Proposal", "proposal"),
-                ("final", "8-10\\nValidation + Decision", "final"),
+                ("saved", "1A\\nSaved Weight Setup", "compare"),
+                ("replay", "1B\\nMix Replay", "gate"),
+                ("validation", "2\\nPractical Validation", "gate"),
+                ("final", "3\\nFinal Review V2", "final"),
+                ("dashboard", "4\\nSelected Dashboard", "compare"),
             ],
             "edges": [
                 ("saved", "replay", "replay"),
-                ("replay", "proposal", "NOT RECORDED"),
-                ("proposal", "final", "proposal saved"),
+                ("replay", "validation", "Clean V2 source"),
+                ("validation", "final", "검증 결과"),
+                ("final", "dashboard", "선정 row"),
             ],
         },
         "보류 / 재검토": {
@@ -89,20 +87,18 @@ def _route_cards() -> dict[str, dict[str, Any]]:
             "goal": "진행이 막혔을 때 최종 선정으로 밀고 가지 않고 원인 화면으로 돌아갑니다.",
             "sequence": "막힘 원인 확인 -> 소유 화면으로 복귀 -> 데이터 / 근거 / 구성 보강 -> 같은 기준으로 재검토",
             "caution": "hold, blocked, evidence 부족 상태는 최종 선정이 아니라 보류 또는 재검토로 남깁니다.",
-            "records": "필요할 때만 Review Note 또는 Final Decision에 보류 사유 기록",
+            "records": "Practical Validation Result 또는 Final Decision V2에 보류 / 재검토 사유 기록",
             "dot": [
-                ("hold", "3-4\\nHold / Blocker", "stop"),
-                ("compare", "5\\nCompare Evidence", "compare"),
-                ("candidate", "6\\nPackaging Evidence", "candidate"),
-                ("proposal", "7\\nProposal Repair", "proposal"),
-                ("review", "8-9\\nHOLD / RE_REVIEW", "final"),
+                ("source", "1\\n원인 화면", "stop"),
+                ("validation", "2\\nValidation Gap", "gate"),
+                ("review", "3\\nHOLD / RE_REVIEW", "final"),
+                ("repair", "1\\n설정 / 데이터 보강", "compare"),
             ],
             "edges": [
-                ("hold", "compare", "blocker 해결"),
-                ("compare", "candidate", "근거 확보"),
-                ("candidate", "proposal", "route ready"),
-                ("proposal", "review", "검증"),
-                ("review", "hold", "재검토 루프"),
+                ("source", "validation", "재검증"),
+                ("validation", "review", "보류 판단"),
+                ("review", "repair", "원인 해결"),
+                ("repair", "source", "다시 실행"),
             ],
         },
     }
@@ -111,32 +107,32 @@ def _route_cards() -> dict[str, dict[str, Any]]:
 def _decision_gate_rows() -> list[dict[str, str]]:
     return [
         {
-            "gate": "Compare로 가도 되는가",
-            "go": "Promotion이 hold가 아니고 Deployment가 blocked가 아님",
-            "review": "warning은 있지만 원인과 보강 항목을 설명할 수 있음",
-            "stop": "price freshness error, benchmark 부재, hard blocker",
-            "screen": "Backtest 결과 > Real-Money",
+            "gate": "Backtest Analysis에서 source로 보낼 수 있는가",
+            "go": "성과, Data Trust, benchmark, Real-Money signal을 함께 설명할 수 있음",
+            "review": "warning은 있지만 원인과 다음 검증 항목을 명시할 수 있음",
+            "stop": "실행 실패, source 식별 불가, hard blocker가 원인 화면에서 해결되지 않음",
+            "screen": "Backtest Analysis",
         },
         {
-            "gate": "Candidate로 남겨도 되는가",
-            "go": "Compare PASS 또는 CONDITIONAL, 상대 근거와 Data Trust 해석 가능",
-            "review": "상대 성과 약점은 있지만 포트폴리오 역할이 명확함",
-            "stop": "비교 실패, Real-Money signal 공백, 상대 근거 없음",
-            "screen": "Compare & Portfolio Builder",
+            "gate": "Practical Validation을 통과할 수 있는가",
+            "go": "BLOCKED가 없고 profile-aware Practical Diagnostics의 REVIEW / NOT_RUN 의미를 설명할 수 있음",
+            "review": "NOT_RUN 또는 REVIEW domain이 남아 있지만 Final Review에서 보류 / 재검토 / 선정 판단 근거로 다룰 수 있음",
+            "stop": "component 없음, 비중 합계 오류, Data Trust blocked, deployment blocked, 프로필과 충돌하는 큰 leveraged / inverse exposure",
+            "screen": "Practical Validation",
         },
         {
-            "gate": "Proposal로 묶어도 되는가",
-            "go": "Current Candidate와 Pre-Live 운영 기록이 있고 route가 proposal ready",
-            "review": "후보 수는 충분하지만 역할 / 비중 근거 보강 필요",
-            "stop": "Pre-Live record 없음, active 후보 hold/reject, source 식별 불가",
-            "screen": "Candidate Review / Portfolio Proposal",
-        },
-        {
-            "gate": "Final Review를 기록해도 되는가",
-            "go": "Validation, robustness, paper observation 기준이 해석 가능",
-            "review": "관찰 기간 또는 제약 조건을 남기고 HOLD 기록 가능",
-            "stop": "hard blocker가 남아 있거나 최종 판단 이유가 비어 있음",
+            "gate": "Final Review에서 최종 판단을 저장할 수 있는가",
+            "go": "Validation, robustness, paper observation 기준이 Ready이고 판단 사유가 있음",
+            "review": "선정은 어렵지만 HOLD / RE_REVIEW / REJECT 사유를 남길 수 있음",
+            "stop": "선정하려는데 final evidence blocker가 남아 있거나 판단 사유가 비어 있음",
             "screen": "Final Review",
+        },
+        {
+            "gate": "Selected Portfolio Dashboard에서 관찰 대상으로 볼 수 있는가",
+            "go": "Final Decision V2가 SELECT_FOR_PRACTICAL_PORTFOLIO이고 active component / 비중 기준이 정상",
+            "review": "선정 row는 있지만 drift, blocker, 최신 성과 재확인이 필요",
+            "stop": "Final Review 선정 row가 없거나 live approval / order로 오해되는 운영 행위",
+            "screen": "Operations > Selected Portfolio Dashboard",
         },
     ]
 
@@ -145,83 +141,35 @@ def _stage_timeline_rows() -> list[dict[str, str]]:
     return [
         {
             "step": "1",
-            "phase": "준비",
-            "screen": "Data / Ingestion",
-            "title": "데이터 신뢰 확인",
-            "check": "가격, benchmark, factor, profile이 최신인지 확인합니다.",
-            "output": "실행 가능한 데이터 상태",
+            "phase": "분석",
+            "screen": "Backtest Analysis",
+            "title": "후보 source 만들기",
+            "check": "Single Strategy, Compare, 저장 mix replay에서 성과 / Data Trust / 비중 근거를 확인합니다.",
+            "output": "Portfolio Selection Source",
         },
         {
             "step": "2",
-            "phase": "실행",
-            "screen": "Single Strategy",
-            "title": "전략 하나 실행",
-            "check": "기간, universe, 전략 옵션, 비용 조건을 같은 계약으로 고정합니다.",
-            "output": "latest result bundle",
+            "phase": "실전 검증",
+            "screen": "Practical Validation",
+            "title": "프로필 기반 실전 진단",
+            "check": "검증 프로필과 5개 답변을 기준으로 Input Evidence와 12개 Practical Diagnostics를 분리해서 봅니다.",
+            "output": "Practical Validation Result",
         },
         {
             "step": "3",
-            "phase": "판정",
-            "screen": "Result / Real-Money",
-            "title": "성과와 실전 신호 확인",
-            "check": "CAGR, MDD, benchmark, Data Trust, promotion 신호를 같이 봅니다.",
-            "output": "compare 진입 후보",
+            "phase": "최종 판단",
+            "screen": "Final Review",
+            "title": "최종 판단과 사유 기록",
+            "check": "Validation, robustness, paper observation 기준을 보고 선정 / 보류 / 거절 / 재검토를 기록합니다.",
+            "output": "Final Selection Decision V2",
         },
         {
             "step": "4",
-            "phase": "판정",
-            "screen": "Real-Money",
-            "title": "Hold / Blocker 해결",
-            "check": "hard blocker, stale data, deployment blocked 여부를 먼저 해결합니다.",
-            "output": "진행 / 보류 / 재검토",
-        },
-        {
-            "step": "5",
-            "phase": "비교",
-            "screen": "Compare",
-            "title": "상대 근거 만들기",
-            "check": "같은 기간과 입력으로 여러 전략 또는 mix를 비교합니다.",
-            "output": "상대 성과와 역할 근거",
-        },
-        {
-            "step": "6",
-            "phase": "후보화",
-            "screen": "Candidate Review",
-            "title": "후보 기록 남기기",
-            "check": "Review Note, registry, Pre-Live 운영 상태를 저장합니다.",
-            "output": "Current Candidate / Pre-Live record",
-        },
-        {
-            "step": "7",
-            "phase": "구성",
-            "screen": "Portfolio Proposal",
-            "title": "단일 직행 또는 묶음 설계",
-            "check": "단일 후보는 direct로 읽고, 여러 후보는 역할과 target weight를 명시합니다.",
-            "output": "direct candidate 또는 proposal draft",
-        },
-        {
-            "step": "8",
-            "phase": "검증",
-            "screen": "Final Review",
-            "title": "Validation 기준 확인",
-            "check": "portfolio risk, validation pack, blocker, component evidence를 확인합니다.",
-            "output": "검증 가능 / 보강 필요",
-        },
-        {
-            "step": "9",
-            "phase": "검증",
-            "screen": "Final Review",
-            "title": "Robustness / Paper 관찰",
-            "check": "stress, sensitivity, paper observation 기준을 최종 판단 근거로 정리합니다.",
-            "output": "최종 판단 근거",
-        },
-        {
-            "step": "10",
-            "phase": "완료",
-            "screen": "Final Review",
-            "title": "최종 판단 기록",
-            "check": "선정, 보류, 거절, 재검토 중 하나를 이유와 함께 저장합니다.",
-            "output": "Final Selection Decision",
+            "phase": "사후 관찰",
+            "screen": "Operations > Selected Portfolio Dashboard",
+            "title": "선정 row 읽기",
+            "check": "Final Review에서 선정된 V2 decision을 read-only로 읽고 drift / recheck signal을 확인합니다.",
+            "output": "Selected Portfolio Dashboard",
         },
     ]
 
@@ -232,49 +180,25 @@ def _route_stage_status() -> dict[str, dict[str, str]]:
             "1": "필수",
             "2": "필수",
             "3": "필수",
-            "4": "필수",
-            "5": "권장",
-            "6": "필수",
-            "7": "직행",
-            "8": "필수",
-            "9": "필수",
-            "10": "필수",
+            "4": "선정 후",
         },
         "여러 후보 묶음": {
-            "1": "반복",
-            "2": "반복",
-            "3": "반복",
-            "4": "반복",
-            "5": "필수",
-            "6": "필수",
-            "7": "필수",
-            "8": "필수",
-            "9": "필수",
-            "10": "필수",
+            "1": "필수",
+            "2": "필수",
+            "3": "필수",
+            "4": "선정 후",
         },
         "저장된 비중 조합": {
-            "1": "선행",
-            "2": "선행",
-            "3": "선행",
-            "4": "선행",
-            "5": "필수",
-            "6": "생략",
-            "7": "필수",
-            "8": "필수",
-            "9": "필수",
-            "10": "필수",
+            "1": "재실행",
+            "2": "필수",
+            "3": "필수",
+            "4": "선정 후",
         },
         "보류 / 재검토": {
             "1": "점검",
-            "2": "점검",
-            "3": "점검",
-            "4": "핵심",
-            "5": "복귀",
-            "6": "보강",
-            "7": "보강",
-            "8": "보류",
-            "9": "보류",
-            "10": "대기",
+            "2": "보강",
+            "3": "보류",
+            "4": "대기",
         },
     }
 
@@ -285,39 +209,39 @@ def _route_checkpoint_rows() -> dict[str, list[dict[str, str]]]:
             {
                 "checkpoint": "단일 전략 결과가 설명 가능한가",
                 "detail": "성과, 손실, benchmark, Data Trust를 같은 화면에서 읽고 후보로 볼 이유를 말할 수 있어야 합니다.",
-                "screen": "Single Strategy / Result",
+                "screen": "Backtest Analysis > Single Strategy",
             },
             {
-                "checkpoint": "Real-Money blocker가 없는가",
-                "detail": "hold나 blocked가 남아 있으면 Candidate Review보다 원인 해결이 먼저입니다.",
-                "screen": "Result > Real-Money",
+                "checkpoint": "Practical Validation source로 저장됐는가",
+                "detail": "후보는 Review Note가 아니라 Clean V2 selection source로 넘어가야 다음 검증에서 같은 계약으로 읽힙니다.",
+                "screen": "Backtest Analysis > Practical Validation Handoff",
             },
             {
-                "checkpoint": "후보 기록이 남았는가",
-                "detail": "Review Note, Current Candidate, Pre-Live 운영 상태가 있어야 Final Review 입력으로 읽기 쉽습니다.",
-                "screen": "Candidate Review",
+                "checkpoint": "실전 검증 blocker가 없는가",
+                "detail": "Practical Validation에서 Input Evidence, asset allocation, concentration, stress coverage, leverage / inverse, cost, sensitivity / overfit 상태를 함께 확인합니다.",
+                "screen": "Practical Validation",
             },
             {
-                "checkpoint": "Proposal 저장을 반복하지 않는가",
-                "detail": "단일 후보는 Portfolio Proposal에서 direct candidate로 평가하고, 다중 proposal draft 저장을 억지로 만들지 않습니다.",
-                "screen": "Portfolio Proposal / Final Review",
+                "checkpoint": "최종 판단을 한 번만 남기는가",
+                "detail": "선정 / 보류 / 거절 / 재검토와 최종 메모는 Final Review V2 decision에만 남깁니다.",
+                "screen": "Final Review",
             },
         ],
         "여러 후보 묶음": [
             {
                 "checkpoint": "후보마다 같은 기준으로 검토했는가",
-                "detail": "각 후보는 최소한 성과, Data Trust, Real-Money, Candidate Review 근거가 비교 가능해야 합니다.",
-                "screen": "Single Strategy / Compare / Candidate Review",
+                "detail": "각 후보는 최소한 성과, Data Trust, Real-Money signal, benchmark 기준이 비교 가능해야 합니다.",
+                "screen": "Backtest Analysis > Compare",
             },
             {
                 "checkpoint": "역할이 겹치지 않는가",
-                "detail": "성장, 방어, 현금성, 리밸런싱 보조처럼 proposal 안의 역할을 분리해야 합니다.",
-                "screen": "Portfolio Proposal",
+                "detail": "성장, 방어, 현금성, 리밸런싱 보조처럼 mix 안의 역할을 분리해야 합니다.",
+                "screen": "Backtest Analysis > Compare Weight Builder",
             },
             {
                 "checkpoint": "비중 합계와 이유가 명확한가",
-                "detail": "target weight가 100%로 맞고, 각 weight reason이 최종 판단에서 재사용 가능해야 합니다.",
-                "screen": "Portfolio Proposal",
+                "detail": "target weight가 100%로 맞고, 각 weight reason이 Practical Validation과 Final Review에서 재사용 가능해야 합니다.",
+                "screen": "Practical Validation",
             },
             {
                 "checkpoint": "묶음 전체의 risk를 확인했는가",
@@ -328,30 +252,30 @@ def _route_checkpoint_rows() -> dict[str, list[dict[str, str]]]:
         "저장된 비중 조합": [
             {
                 "checkpoint": "저장된 mix가 재현되는가",
-                "detail": "Saved Portfolio는 workflow 기록이 아니라 weight setup이므로 replay 결과부터 확인합니다.",
-                "screen": "Compare & Portfolio Builder",
+                "detail": "Saved Portfolio는 workflow 기록이 아니라 weight setup이므로 `Mix 재실행 및 검증` 결과부터 확인합니다.",
+                "screen": "Compare & Portfolio Builder > 저장된 비중 조합",
             },
             {
-                "checkpoint": "Candidate Review를 억지로 거치지 않는가",
-                "detail": "저장 mix는 개별 current candidate가 아니므로 Use This Mix In Portfolio Proposal로 연결합니다.",
-                "screen": "Saved Mix Replay",
+                "checkpoint": "개별 5단계 검증으로 오해하지 않는가",
+                "detail": "5단계 Compare 보드는 개별 전략 후보용이고, 저장 mix는 Portfolio Mix 검증 보드에서 판단합니다.",
+                "screen": "저장된 비중 조합 > Portfolio Mix 검증 보드",
             },
             {
-                "checkpoint": "proposal 목적과 weight 이유가 보강됐는가",
-                "detail": "저장 setup을 그대로 쓰더라도 proposal objective, role, risk constraint는 새로 해석해야 합니다.",
-                "screen": "Portfolio Proposal",
+                "checkpoint": "Practical Validation으로 직접 보내는가",
+                "detail": "저장 mix는 개별 current candidate가 아니므로 Candidate Review / legacy Proposal을 필수로 거치지 않습니다.",
+                "screen": "저장된 비중 조합",
             },
             {
-                "checkpoint": "Final Review에서 proposal로 읽히는가",
-                "detail": "최종 검토는 Saved Portfolio가 아니라 저장된 Portfolio Proposal registry row를 기준으로 진행합니다.",
+                "checkpoint": "Final Review에서 V2 검증 결과로 읽히는가",
+                "detail": "최종 검토는 Saved Portfolio 원본이 아니라 Practical Validation Result를 기준으로 진행합니다.",
                 "screen": "Final Review",
             },
         ],
         "보류 / 재검토": [
             {
                 "checkpoint": "막힘 원인이 어느 화면 소유인지 찾았는가",
-                "detail": "데이터 문제, Real-Money blocker, 비교 근거 부족, proposal 구성 부족을 분리해야 합니다.",
-                "screen": "Result / Compare / Candidate Review / Proposal",
+                "detail": "데이터 문제, Real-Money blocker, 비교 근거 부족, 구성 / 비중 문제를 분리해야 합니다.",
+                "screen": "Backtest Analysis / Practical Validation",
             },
             {
                 "checkpoint": "Final Review 직행을 멈췄는가",
@@ -360,12 +284,12 @@ def _route_checkpoint_rows() -> dict[str, list[dict[str, str]]]:
             },
             {
                 "checkpoint": "되돌아갈 화면이 명확한가",
-                "detail": "데이터면 Ingestion, 상대 근거면 Compare, 후보 근거면 Candidate Review, 비중이면 Proposal로 돌아갑니다.",
+                "detail": "데이터면 ingestion / 실행 설정, 상대 근거면 Compare, 비중이면 Backtest Analysis의 weight builder로 돌아갑니다.",
                 "screen": "해당 원인 화면",
             },
             {
                 "checkpoint": "재검토 후 같은 기준으로 다시 읽는가",
-                "detail": "수정 후에도 1~10 단계 기준을 바꾸지 않고 같은 통과 기준으로 다시 판단합니다.",
+                "detail": "수정 후에도 1~4 단계 기준을 바꾸지 않고 같은 통과 기준으로 다시 판단합니다.",
                 "screen": "Portfolio Flow",
             },
         ],
@@ -377,27 +301,32 @@ def _concept_rows() -> list[dict[str, str]]:
         {
             "개념": "Real-Money",
             "제품 안에서의 의미": "개별 backtest 결과에 붙는 실전 검토 신호",
-            "사용자가 볼 곳": "Backtest 결과 > Real-Money",
+            "사용자가 볼 곳": "Backtest Analysis 결과",
         },
         {
-            "개념": "Candidate Review",
-            "제품 안에서의 의미": "좋아 보이는 결과를 후보 기록으로 남길지 판단하는 packaging 화면",
-            "사용자가 볼 곳": "Backtest > Candidate Review",
+            "개념": "Backtest Analysis",
+            "제품 안에서의 의미": "Single Strategy, Compare, 저장 mix replay로 후보 source를 만드는 1단계",
+            "사용자가 볼 곳": "Backtest > Backtest Analysis",
         },
         {
-            "개념": "Portfolio Proposal",
-            "제품 안에서의 의미": "여러 후보를 목적 / 역할 / 비중이 있는 포트폴리오 초안으로 묶는 화면",
-            "사용자가 볼 곳": "Backtest > Portfolio Proposal",
+            "개념": "Practical Validation",
+            "제품 안에서의 의미": "선택된 source의 구성, 비중, Data Trust, blocker를 확인하는 2단계",
+            "사용자가 볼 곳": "Backtest > Practical Validation",
         },
         {
             "개념": "Final Review",
-            "제품 안에서의 의미": "선정 / 보류 / 거절 / 재검토를 기록하는 마지막 판단 화면",
+            "제품 안에서의 의미": "선정 / 보류 / 거절 / 재검토와 최종 사유를 기록하는 마지막 판단 화면",
             "사용자가 볼 곳": "Backtest > Final Review",
         },
         {
             "개념": "Selected Portfolio Dashboard",
-            "제품 안에서의 의미": "Final Review에서 선정된 포트폴리오를 읽어보는 read-only 운영 화면",
+            "제품 안에서의 의미": "Final Review V2에서 선정된 포트폴리오를 읽어보는 read-only 운영 화면",
             "사용자가 볼 곳": "Operations > Selected Portfolio Dashboard",
+        },
+        {
+            "개념": "Legacy Candidate / Proposal",
+            "제품 안에서의 의미": "기존 JSONL과 화면을 읽기 위한 호환 경로. 새 main flow의 필수 단계는 아닙니다.",
+            "사용자가 볼 곳": "Backtest legacy compatibility surfaces",
         },
     ]
 
@@ -405,14 +334,14 @@ def _concept_rows() -> list[dict[str, str]]:
 def _storage_rows() -> list[dict[str, str]]:
     return [
         {
-            "기록": "Current Candidate Registry",
-            "담는 내용": "다시 열어 볼 후보 정의",
-            "생성 화면": "Candidate Review",
+            "기록": "Portfolio Selection Source",
+            "담는 내용": "Backtest Analysis에서 선택한 단일 / 비교 / mix 후보 source",
+            "생성 화면": "Backtest Analysis",
         },
         {
-            "기록": "Pre-Live Candidate Registry",
-            "담는 내용": "paper / watchlist / hold 같은 운영 상태",
-            "생성 화면": "Candidate Review",
+            "기록": "Practical Validation Result",
+            "담는 내용": "구성, 비중, Data Trust, blocker, paper observation preview",
+            "생성 화면": "Practical Validation",
         },
         {
             "기록": "Saved Portfolio",
@@ -420,14 +349,14 @@ def _storage_rows() -> list[dict[str, str]]:
             "생성 화면": "Compare & Portfolio Builder",
         },
         {
-            "기록": "Portfolio Proposal Registry",
-            "담는 내용": "목적 / 역할 / 비중이 있는 proposal draft",
-            "생성 화면": "Portfolio Proposal",
+            "기록": "Final Selection Decision V2",
+            "담는 내용": "선정 / 보류 / 거절 / 재검토 최종 판단. Dashboard는 이 기록을 읽기만 합니다.",
+            "생성 화면": "Final Review",
         },
         {
-            "기록": "Final Selection Decision",
-            "담는 내용": "선정 / 보류 / 거절 / 재검토 최종 판단. Dashboard는 이 기록을 읽기만 합니다.",
-            "생성 화면": "Final Review / Operations read-only",
+            "기록": "Legacy Candidate / Proposal Registries",
+            "담는 내용": "기존 Candidate Review, Pre-Live, Portfolio Proposal, Paper Ledger, Final Decision V1 기록",
+            "생성 화면": "Legacy compatibility",
         },
     ]
 
@@ -447,12 +376,12 @@ def _document_reference_rows() -> list[dict[str, str]]:
         {
             "상황": "Backtest 화면이 어떤 순서로 동작하는지 볼 때",
             "문서": ".note/finance/code_analysis/WEB_BACKTEST_UI_FLOW.md",
-            "역할": "Single / Compare / Candidate Review / Portfolio Proposal / Final Review UI 흐름",
+            "역할": "Backtest Analysis / Practical Validation / Final Review V2 UI 흐름",
         },
         {
-            "상황": "포트폴리오 초안 저장소를 이해할 때",
+            "상황": "legacy 포트폴리오 초안 저장소를 이해할 때",
             "문서": ".note/finance/operations/PORTFOLIO_PROPOSAL_REGISTRY_GUIDE.md",
-            "역할": "여러 후보를 묶은 portfolio proposal draft가 무엇이고 언제 저장되는지 설명",
+            "역할": "기존 portfolio proposal draft가 무엇이고 Clean V2와 어떻게 구분되는지 설명",
         },
         {
             "상황": "과거 paper tracking ledger 기록을 해석할 때",
@@ -462,7 +391,7 @@ def _document_reference_rows() -> list[dict[str, str]]:
         {
             "상황": "최종 판단 기록을 확인할 때",
             "문서": ".note/finance/operations/FINAL_PORTFOLIO_SELECTION_DECISIONS_GUIDE.md",
-            "역할": "Final Review에서 저장한 선정 / 보류 / 거절 / 재검토 판단 기록 사용법",
+            "역할": "Final Review에서 저장한 선정 / 보류 / 거절 / 재검토 판단 기록 사용법. 현재 dashboard는 V2 decision을 우선 읽습니다.",
         },
         {
             "상황": "최종 선정 포트폴리오 운영 대시보드를 확인할 때",
@@ -490,46 +419,39 @@ def _document_reference_rows() -> list[dict[str, str]]:
 def _registry_detail_rows() -> list[dict[str, str]]:
     return [
         {
-            "흐름 단계": "6단계 Candidate Packaging",
-            "파일": "CANDIDATE_REVIEW_NOTES.jsonl",
-            "담는 데이터": "후보 초안을 보고 사람이 남긴 Review Decision, 이유, 다음 행동",
-            "화면 위치": "Backtest > Candidate Review > 1. Draft 확인 / Review Note 저장",
-            "읽는 법": "저장 전 검토 메모입니다. 후보 자체를 확정한 registry는 아닙니다.",
+            "흐름 단계": "1단계 Backtest Analysis",
+            "파일": "PORTFOLIO_SELECTION_SOURCES.jsonl",
+            "담는 데이터": "단일 전략, Compare 후보, 저장 mix replay를 Clean V2 source로 변환한 기록",
+            "화면 위치": "Backtest > Backtest Analysis",
+            "읽는 법": "실전 후보 검증의 입력 source입니다. live approval이나 주문 지시가 아닙니다.",
         },
         {
-            "흐름 단계": "6단계 Candidate Packaging",
-            "파일": "CURRENT_CANDIDATE_REGISTRY.jsonl",
-            "담는 데이터": "명시적으로 남긴 current candidate, near-miss, scenario, stop 후보 row",
-            "화면 위치": "Backtest > Candidate Review > 2. Registry 저장 / Operations > Candidate Library",
-            "읽는 법": "이 프로그램이 다시 열어 볼 후보 정의 목록입니다.",
+            "흐름 단계": "2단계 Practical Validation",
+            "파일": "PRACTICAL_VALIDATION_RESULTS.jsonl",
+            "담는 데이터": "구성 / 비중 / Data Trust / blocker / robustness preview / paper observation preview",
+            "화면 위치": "Backtest > Practical Validation",
+            "읽는 법": "Final Review V2가 우선 읽는 검증 결과입니다.",
         },
         {
-            "흐름 단계": "6단계 Candidate Packaging",
-            "파일": "PRE_LIVE_CANDIDATE_REGISTRY.jsonl",
-            "담는 데이터": "후보를 paper tracking, watchlist, hold, re-review 중 어떤 운영 상태로 둘지 남긴 기록",
-            "화면 위치": "Backtest > Candidate Review > 3. 운영 기록 저장 및 Portfolio Proposal 이동",
-            "읽는 법": "실제 돈을 넣기 전 관찰 / 보류 상태 기록입니다.",
-        },
-        {
-            "흐름 단계": "7단계 Portfolio Proposal",
-            "파일": "PORTFOLIO_PROPOSAL_REGISTRY.jsonl",
-            "담는 데이터": "여러 후보를 묶은 목적, 역할, target weight, 비중 근거, blocker가 있는 proposal draft",
-            "화면 위치": "Backtest > Portfolio Proposal",
-            "읽는 법": "포트폴리오 구성 초안입니다. live approval이나 주문 지시가 아닙니다.",
-        },
-        {
-            "흐름 단계": "8단계 Final Review 검증",
-            "파일": "PAPER_PORTFOLIO_TRACKING_LEDGER.jsonl",
-            "담는 데이터": "과거 Phase33에서 만든 paper tracking 관찰 조건과 trigger 기록",
-            "화면 위치": "Backtest > Portfolio Proposal / Final Review 호환 영역",
-            "읽는 법": "현재 main flow에서는 Final Review의 inline paper observation 기준으로 흡수해서 읽습니다.",
-        },
-        {
-            "흐름 단계": "9~10단계 Final Review",
-            "파일": "FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl",
-            "담는 데이터": "실전 후보 선정, 관찰 보류, 거절, 재검토 판단과 이유",
+            "흐름 단계": "3단계 Final Review",
+            "파일": "FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl",
+            "담는 데이터": "선정 / 보류 / 거절 / 재검토 최종 판단, operator reason, inline paper observation",
             "화면 위치": "Backtest > Final Review / Operations > Selected Portfolio Dashboard",
-            "읽는 법": "최종 판단 원본입니다. Dashboard는 selected row를 read-only로 보여줍니다.",
+            "읽는 법": "Selected Portfolio Dashboard의 source-of-truth입니다.",
+        },
+        {
+            "흐름 단계": "4단계 사후 관찰",
+            "파일": "SELECTED_PORTFOLIO_MONITORING_LOG.jsonl",
+            "담는 데이터": "선정 이후 별도 monitoring snapshot을 저장할 때 쓰는 Clean V2 보조 ledger",
+            "화면 위치": "Operations > Selected Portfolio Dashboard",
+            "읽는 법": "현재 dashboard의 필수 입력은 아니며, selected row 관찰 보조 기록입니다.",
+        },
+        {
+            "흐름 단계": "Legacy compatibility",
+            "파일": "FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl",
+            "담는 데이터": "기존 Final Review V1 판단 기록",
+            "화면 위치": "Backtest legacy compatibility",
+            "읽는 법": "새 dashboard source-of-truth는 V2 파일입니다. V1은 과거 기록 해석용입니다.",
         },
     ]
 
@@ -552,7 +474,7 @@ def _runtime_artifact_rows() -> list[dict[str, str]]:
             "파일": "SAVED_PORTFOLIOS.jsonl",
             "폴더": ".note/finance/saved/",
             "담는 데이터": "Compare에서 만든 재사용 가능한 portfolio mix setup",
-            "화면 위치": "Backtest > Compare & Portfolio Builder > 저장 Mix 다시 열기",
+            "화면 위치": "Backtest > Compare & Portfolio Builder > 저장된 비중 조합",
         },
     ]
 
@@ -569,6 +491,11 @@ def _reference_path_lines() -> list[str]:
         ".note/finance/operations/FINAL_PORTFOLIO_SELECTION_DECISIONS_GUIDE.md",
         ".note/finance/phases/phase36/PHASE36_FINAL_SELECTED_PORTFOLIO_MONITORING_AND_REBALANCE_OPERATIONS_PLAN.md",
         ".note/finance/code_analysis/WEB_BACKTEST_UI_FLOW.md",
+        ".note/finance/registries/PORTFOLIO_SELECTION_SOURCES.jsonl",
+        ".note/finance/registries/PRACTICAL_VALIDATION_RESULTS.jsonl",
+        ".note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl",
+        ".note/finance/registries/SELECTED_PORTFOLIO_MONITORING_LOG.jsonl",
+        ".note/finance/saved/SAVED_PORTFOLIO_MIXES.jsonl",
         ".note/finance/registries/CANDIDATE_REVIEW_NOTES.jsonl",
         ".note/finance/registries/CURRENT_CANDIDATE_REGISTRY.jsonl",
         ".note/finance/registries/PRE_LIVE_CANDIDATE_REGISTRY.jsonl",
@@ -837,7 +764,7 @@ def _render_hero(runtime_marker: str | None, git_sha: str | None) -> None:
             그 경로에서 어떤 화면을 지나고 어느 조건에서 멈춰야 하는지 확인합니다.
           </div>
           <div class="qg-status-strip">
-            <span class="qg-chip">Current workflow: Portfolio Proposal -> Final Review</span>
+            <span class="qg-chip">Current workflow: Backtest Analysis -> Practical Validation -> Final Review</span>
             <span class="qg-chip">Operations follow-up: Selected Portfolio Dashboard</span>
             <span class="qg-chip">Runtime {runtime_text}</span>
             <span class="qg-chip">Git {git_text}</span>
@@ -938,7 +865,7 @@ def _render_flow_visual(selected_route: str, route: dict[str, Any]) -> None:
 def _status_pill_tone(status: str) -> str:
     if status in {"필수", "핵심"}:
         return "required"
-    if status in {"권장", "반복", "직행", "복귀", "보강"}:
+    if status in {"권장", "반복", "직행", "복귀", "보강", "재실행", "선정 후"}:
         return "active"
     if status in {"선행", "점검", "보류", "대기"}:
         return "warn"
@@ -948,7 +875,7 @@ def _status_pill_tone(status: str) -> str:
 def _render_route_checkpoints(selected_route: str) -> None:
     st.markdown(f"### {selected_route} 핵심 체크포인트")
     st.caption(
-        "전체 1~10 단계 중 이 진행 상황에서 특히 놓치면 안 되는 판단 지점만 모아 보여줍니다."
+        "전체 1~4 단계 중 이 진행 상황에서 특히 놓치면 안 되는 판단 지점만 모아 보여줍니다."
     )
     checkpoint_cards = []
     for row in _route_checkpoint_rows()[selected_route]:
@@ -965,7 +892,7 @@ def _render_route_checkpoints(selected_route: str) -> None:
 
 
 def _render_stage_timeline(selected_route: str) -> None:
-    st.markdown("### 전체 1~10 단계에서 현재 위치")
+    st.markdown("### 전체 1~4 단계에서 현재 위치")
     st.caption(
         f"`{selected_route}` 기준으로 전체 workflow의 어느 단계를 지나고, 무엇을 반복하거나 생략하는지 먼저 확인합니다."
     )
@@ -998,6 +925,8 @@ def _render_stage_timeline(selected_route: str) -> None:
             - `필수`: 이 경로에서 통과 기준으로 반드시 확인합니다.
             - `반복`: 여러 후보를 만들기 위해 같은 판단을 후보별로 반복합니다.
             - `직행`: 별도 proposal draft 저장 없이 다음 검토 화면에서 직접 읽습니다.
+            - `재실행`: 저장된 setup을 현재 데이터 / 설정으로 다시 열어 검증합니다.
+            - `선정 후`: Final Review에서 선정된 row가 있을 때 읽습니다.
             - `선행`: saved mix가 만들어지기 전 이미 지나간 단계로 봅니다.
             - `생략`: 이 경로에서는 일부러 건너뛰는 단계입니다.
             - `보류 / 대기`: 막힘을 해결하기 전에는 최종 선정으로 해석하지 않습니다.
@@ -1027,21 +956,21 @@ def _render_reference_drawer() -> None:
         st.dataframe(pd.DataFrame(_concept_rows()), width="stretch", hide_index=True)
     with tabs[1]:
         st.dataframe(pd.DataFrame(_detail_step_rows()), width="stretch", hide_index=True)
-        with st.expander("1~10단계 전체를 어떻게 읽나", expanded=False):
+        with st.expander("1~4단계 전체를 어떻게 읽나", expanded=False):
             st.markdown(
                 """
-                - `1-5`: 데이터, 단일 전략, Real-Money, Compare로 후보 근거를 만든다.
-                - `6`: Candidate Review에서 후보로 남길지와 Pre-Live 운영 상태를 기록한다.
-                - `7`: 단일 후보는 direct candidate로 읽고, 여러 후보는 proposal draft로 묶는다.
-                - `8-10`: Final Review에서 검증 근거와 최종 판단을 남기고 다시 확인한다.
+                - `1`: Backtest Analysis에서 단일 / Compare / 저장 mix 후보 source를 만든다.
+                - `2`: Practical Validation에서 검증 프로필, Input Evidence, 12개 Practical Diagnostics를 확인한다.
+                - `3`: Final Review에서 최종 판단과 이유를 V2 decision으로 남긴다.
+                - `4`: Selected Portfolio Dashboard에서 선정 row를 read-only로 관찰한다.
                 """
             )
     with tabs[2]:
         st.dataframe(pd.DataFrame(_storage_rows()), width="stretch", hide_index=True)
         st.info(
-            "Saved Portfolio는 재사용 setup이고, Portfolio Proposal은 workflow 기록입니다. "
-            "저장된 비중 조합은 Candidate Review가 아니라 Portfolio Proposal로 연결합니다. "
-            "Selected Portfolio Dashboard는 새 저장소가 아니라 Final Selection Decision을 읽는 운영 화면입니다."
+            "Saved Portfolio는 재사용 setup이고, Clean V2 source는 검증 입력입니다. "
+            "저장된 비중 조합은 Candidate Review나 legacy Proposal을 필수로 거치지 않고 Practical Validation으로 연결합니다. "
+            "Selected Portfolio Dashboard는 새 저장소가 아니라 Final Selection Decision V2를 읽는 운영 화면입니다."
         )
     with tabs[3]:
         st.warning(
@@ -1050,10 +979,11 @@ def _render_reference_drawer() -> None:
         st.markdown(
             """
             - `Real-Money`는 검증 신호입니다.
-            - `Candidate Review`는 후보 기록입니다.
-            - `Portfolio Proposal`은 후보 묶음 초안입니다.
+            - `Backtest Analysis`는 후보 source를 만드는 1단계입니다.
+            - `Practical Validation`은 source를 profile-aware practical diagnostics 결과로 구조화하는 2단계입니다.
             - `Final Review`는 현재 workflow의 마지막 판단 기록입니다.
-            - `Selected Portfolio Dashboard`는 Final Review selected row를 Operations에서 다시 읽는 화면입니다.
+            - `Selected Portfolio Dashboard`는 Final Review V2 selected row를 Operations에서 다시 읽는 화면입니다.
+            - `Candidate Review / Portfolio Proposal`은 기존 기록을 읽기 위한 legacy compatibility 경로입니다.
             - `Live Approval / Order`는 현재 제품 범위 밖입니다.
             """
         )
