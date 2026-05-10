@@ -4554,3 +4554,14 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 무력화하면 안 되는 hard blocker는 사용자가 공격형 profile을 골라도 자동 통과 처리하면 안 되는 치명적 문제이며, risk tolerance와 validation failure를 구분해야 한다
 - Follow-up:
   - Practical Validation research / design 문서와 glossary에 한글 label, 5개 질문, 내부 저장 id, invariant hard blocker 설명을 보강했다
+
+### 2026-05-10 - Practical Validation 남은 설계 질문 정리
+- User request:
+  - 사용자가 남은 설계 질문 목록을 refresh해 달라고 요청함
+- Interpreted goal:
+  - 이미 결정된 질문과 실제 구현 시 확정할 질문이 섞여 있는 상태를 정리해야 함
+- Analysis result:
+  - sentiment hard blocker 여부, profile label / 질문 수 / domain 생략 여부 / invariant blocker / mismatch 처리 / NOT_RUN 허용 / sensitivity 기본 방침 등은 결정 완료로 이동했다
+  - rolling window 세부값, cost assumption, baseline proxy, sensitivity perturbation grid, stress window 목록, sentiment connector 착수 시점은 구현 선택으로 남겼다
+- Follow-up:
+  - Practical Validation research / design 문서의 `남은 설계 질문` / `Open Questions`를 `결정 완료`와 `남은 구현 선택`으로 재정리했다

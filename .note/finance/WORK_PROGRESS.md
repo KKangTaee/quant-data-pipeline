@@ -22,6 +22,16 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-10
+- Refreshed Practical Validation open design questions.
+- Updated:
+  - `.note/finance/research/PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH.md`
+  - `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_VALIDATION_DESIGN.md`
+  - `.note/finance/QUESTION_AND_ANALYSIS_LOG.md`
+- Durable decision:
+  - Practical Validation design questions are now split into `결정 완료` and `남은 구현 선택`.
+  - Remaining implementation choices are rolling window defaults, cost assumptions, baseline proxy set, sensitivity perturbation grid, stress window defaults, and future sentiment connector timing.
+
+### 2026-05-10
 - Finalized Korean-facing Validation Profile wording for Practical Validation design.
 - Updated:
   - `.note/finance/research/PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH.md`

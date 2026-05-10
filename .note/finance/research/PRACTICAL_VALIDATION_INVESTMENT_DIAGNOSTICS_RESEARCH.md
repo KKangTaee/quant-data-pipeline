@@ -681,17 +681,31 @@ domain별 evidence를 넣는 방식이 낫다.
 - sentiment 기반 자동 allocation 변경
 - live approval
 
-## 남은 설계 질문
+## 설계 질문 상태
 
-| 질문 | 기본 제안 |
+### 결정 완료
+
+| 질문 | 결정 |
 |---|---|
-| sentiment overlay를 hard blocker로 쓸 것인가? | 기본적으로 쓰지 않는다. context review gap으로만 둔다. |
-| asset allocation profile을 어떻게 고를 것인가? | `conservative_defensive`, `balanced_core`, `growth_aggressive`, `hedged_tactical`, `custom`으로 시작한다. |
-| profile 질문은 몇 개가 적절한가? | MVP에서는 3~5개로 제한한다. 길어지면 Practical Validation 진입 장벽이 높아진다. |
+| sentiment overlay를 hard blocker로 쓸 것인가? | 기본적으로 쓰지 않는다. context review gap으로만 둔다. 1차 구현에서는 `NOT_RUN` future module로 남겨도 된다. |
+| asset allocation profile을 어떻게 고를 것인가? | 화면 표기는 방어형 / 균형형 / 성장형 / 전술·헤지형 / 사용자 지정으로 두고, 내부 id는 영어로 저장한다. |
+| profile 질문은 몇 개가 적절한가? | 5개 질문으로 시작한다. 목적, 감내 손실, 운용 기간, 상품 / 운용 복잡도, 단순 대안 대비 기대를 묻는다. |
 | profile별로 12개 진단 중 일부를 생략할 것인가? | 생략하지 않는다. 가능한 진단은 모두 시도하고 threshold / weight / blocker 해석만 조정한다. |
-| profile로 무력화하면 안 되는 hard blocker는 무엇인가? | 사용자가 공격적 profile을 골라도 자동 통과로 바꾸면 안 되는 치명적 문제다. Data Trust hard blocker, weight 합계 오류, 핵심 가격 부재, 거래 불가, 큰 leveraged / inverse exposure의 목적 부재, execution boundary 위반 |
+| profile로 무력화하면 안 되는 hard blocker는 무엇인가? | Data Trust hard blocker, weight 합계 오류, 핵심 가격 부재, 거래 불가, 큰 leveraged / inverse exposure의 목적 부재, execution boundary 위반이다. |
 | 사용자 의도와 후보 성격 mismatch는 어디서 보여줄 것인가? | Practical Validation route summary와 Alternative Portfolio Challenge / Asset Allocation Fit domain에 같이 표시한다. |
 | sector / holdings look-through data가 없으면 어떻게 할 것인가? | proxy classification으로 시작하고 missing coverage를 `NOT_RUN`으로 표시한다. |
 | leveraged / inverse ETF는 언제 blocker인가? | 큰 비중, medium-long cadence, 목적 불명, acknowledgement 없음이면 blocker 후보로 둔다. |
 | Final Review selected route에서 `NOT_RUN`을 허용할 것인가? | 허용하되 critical domain이면 Final Review에서 명시 확인을 요구한다. |
 | 기존 Phase 31 / 32 검증과 충돌하지 않는가? | Clean V2에서는 Practical Validation 안의 module로 흡수하고, 기존 문서는 legacy / prior implementation reference로 둔다. |
+
+### 남은 구현 선택
+
+| 질문 | 기본 방향 |
+|---|---|
+| rolling window 기본값을 profile별로 얼마로 둘 것인가? | 방어형은 길게, 성장형은 짧게 시작하되 실제 계산 가능 history를 보고 구현 시 확정한다. |
+| cost assumption 기본값은 얼마로 둘 것인가? | balanced 기준 one-way 10 bps를 시작점으로 두고, expense ratio coverage와 turnover data가 붙으면 보정한다. |
+| 단순 대안 baseline은 무엇부터 둘 것인가? | SPY, QQQ, 60/40 proxy, cash-aware baseline부터 시작하고 All Weather-like proxy는 후속으로 둔다. |
+| sensitivity perturbation grid는 strategy별로 어떻게 둘 것인가? | MVP는 mix weight +/- 5%p, drop-one, 주요 window perturbation부터 시작한다. |
+| run_history trial count를 validation row에 어떻게 남길 것인가? | run_history 파일 자체는 저장하지 않고 local audit summary만 선택적으로 남긴다. |
+| stress window 기본 목록은 무엇으로 둘 것인가? | COVID crash, 2022 inflation / rate shock, 2023 banking stress, custom window로 시작한다. |
+| sentiment connector는 언제 붙일 것인가? | 1차 Practical Validation core 이후 FRED 기반 VIX / Credit Spread / Yield Curve snapshot부터 추가한다. |
