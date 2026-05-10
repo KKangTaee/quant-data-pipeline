@@ -3638,3 +3638,6 @@ Detailed historical logs were archived on `2026-04-13`.
   - user confirmation에 따라 Alternative Portfolio Challenge 1차 baseline을 SPY, QQQ, 60/40 proxy, cash-aware baseline으로 확정하고 All Weather-like proxy는 후속으로 정리했다.
   - sensitivity perturbation grid는 주요 window perturbation, mix weight +/- 5%p, drop-one, 기존 runtime 지원 범위의 strategy-specific 작은 설정 변경으로 시작한다고 문서화했다.
   - run_history trial count는 원본 파일을 저장하지 않고 `overfit_audit` local summary만 validation row에 선택적으로 남기는 방식으로 정리했다.
+- Practical Validation V2 sentiment connector 설계 질문 완료:
+  - user confirmation에 따라 sentiment connector는 1차 core 이후 후속 module로 붙이고, FRED 기반 VIX / credit spread / yield curve snapshot부터 시작한다고 확정했다.
+  - 해당 데이터는 trade signal이나 hard blocker가 아니라 market-context evidence로만 사용한다고 research / design 문서에 반영했다.

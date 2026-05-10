@@ -830,4 +830,4 @@ domain별 evidence를 넣는 방식이 낫다.
 | O | sensitivity perturbation grid는 strategy별로 어떻게 둘 것인가? | MVP는 주요 window perturbation, mix weight +/- 5%p, drop-one, 기존 runtime이 지원하는 strategy-specific 작은 설정 변경부터 시작한다. |
 | O | run_history trial count를 validation row에 어떻게 남길 것인가? | run_history 원본은 저장하지 않는다. Practical Validation에서 local run_history를 읽을 수 있을 때 `overfit_audit` 요약값만 validation row에 선택적으로 남긴다. |
 | O | stress window 기본 목록은 무엇으로 둘 것인가? | 2000년 이후 미국 증시 shock event를 static stress calendar v1로 관리한다. 기본 reference data는 `practical_validation_stress_windows_v1.json`이며 custom window도 허용한다. |
-| X | sentiment connector는 언제 붙일 것인가? | 1차 Practical Validation core 이후 FRED 기반 VIX / Credit Spread / Yield Curve snapshot부터 추가한다. |
+| O | sentiment connector는 언제 붙일 것인가? | 1차 Practical Validation core 이후 후속 module로 붙인다. 시작 범위는 FRED 기반 VIX / Credit Spread / Yield Curve snapshot이며 trade signal이나 hard blocker로 쓰지 않는다. |

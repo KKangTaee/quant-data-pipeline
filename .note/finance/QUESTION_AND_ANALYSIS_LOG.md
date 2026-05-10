@@ -4636,3 +4636,15 @@ Detailed historical analysis was archived on `2026-04-13`.
   - run_history 원본은 저장하지 않고, Practical Validation에서 local run_history를 읽을 수 있을 때 `overfit_audit` 요약값만 validation row에 선택적으로 남긴다
 - Follow-up:
   - Practical Validation research / design 문서에 세 항목의 의미와 MVP 처리 방식을 보강하고 설계 질문 상태를 `O`로 변경했다
+
+### 2026-05-10 - Sentiment connector 후속 구현 범위 확정
+- User request:
+  - 사용자가 `sentiment connector는 언제 붙일 것인가?` 항목도 확인 완료로 문서 처리하길 요청함
+- Interpreted goal:
+  - Sentiment connector를 1차 Practical Validation core가 아니라 후속 module로 붙이는 방침을 확정 상태로 표시해야 함
+- Analysis result:
+  - 시작 범위는 FRED 기반 VIX / Credit Spread / Yield Curve snapshot이다
+  - 이 데이터는 market-context evidence이며 trade signal이나 hard blocker로 쓰지 않는다
+  - CNN Fear & Greed는 공식 안정 API / 재현성 문제 때문에 optional connector로 유지한다
+- Follow-up:
+  - Practical Validation research / design 문서의 sentiment connector 설계 질문 상태를 `O`로 변경했다

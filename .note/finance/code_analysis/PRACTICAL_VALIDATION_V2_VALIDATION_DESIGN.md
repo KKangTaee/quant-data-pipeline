@@ -1331,7 +1331,7 @@ Final Review selected decision은 다음 조건을 강하게 봐야 한다.
 | O | simple baseline challenge에서 어떤 baseline을 우선할 것인가? | SPY, QQQ, 60/40 proxy, cash-aware baseline을 1차 포함하고 All Weather-like proxy는 ETF / weight assumption을 별도 확정한 뒤 후속으로 둔다. |
 | O | sensitivity perturbation grid는 strategy별로 어떻게 둘 것인가? | MVP는 주요 window perturbation, mix weight +/- 5%p, drop-one, 기존 runtime이 지원하는 strategy-specific 작은 설정 변경부터 시작한다. |
 | O | stress window 기본 목록은 무엇으로 둘 것인가? | 2000년 이후 미국 증시 shock event를 static stress calendar v1로 관리한다. 기본 reference data는 `practical_validation_stress_windows_v1.json`이며 custom window도 허용한다. |
-| X | sentiment connector는 언제 붙일 것인가? | 1차 Practical Validation core 이후 FRED 기반 VIX / Credit Spread / Yield Curve snapshot부터 추가한다. |
+| O | sentiment connector는 언제 붙일 것인가? | 1차 Practical Validation core 이후 후속 module로 붙인다. 시작 범위는 FRED 기반 VIX / Credit Spread / Yield Curve snapshot이며 trade signal이나 hard blocker로 쓰지 않는다. |
 
 ## 추천 다음 작업
 
