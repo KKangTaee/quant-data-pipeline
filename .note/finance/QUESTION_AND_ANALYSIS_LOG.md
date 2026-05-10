@@ -4489,3 +4489,15 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Follow-up:
   - `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_VALIDATION_DESIGN.md`에 조사 출처, domain 설계, v2 schema, UI 구조, 구현 slice를 문서화했다
   - 제품 코드는 아직 수정하지 않았다
+
+### 2026-05-10 - Practical Validation V2는 앞 단계 검증을 반복하면 안 된다
+- User request:
+  - 사용자가 Practical Validation 이전에도 Data Trust, Real-Money, Compare, Mix 검증이 있으므로 V2 설계가 중복 검증을 만들지 않는지 확인이 필요하다고 지적함
+- Interpreted goal:
+  - 각 검증 domain의 stage ownership을 분리하고, Practical Validation이 무엇을 상속 / 통합 / 신규 계산해야 하는지 명확히 해야 함
+- Analysis result:
+  - Single Strategy runtime은 이미 거래비용, benchmark overlay, rolling / OOS review, ETF operability, liquidity, validation / guardrail policy, promotion / deployment readiness를 만든다
+  - Compare 5단계 보드는 단일 후보 선택을 위한 Data Trust / Real-Money / 상대 순위 gate이고, Saved Mix 검증 보드는 replay 가능성과 V2 기록 연결성을 보는 gate다
+  - Practical Validation V2는 이를 다시 점수화하는 단계가 아니라 upstream evidence를 상속하고, portfolio-level source contract / weight / mix alignment / missing domain / sensitivity / overfit / monitoring baseline을 추가하는 evidence pack이어야 한다
+- Follow-up:
+  - `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_VALIDATION_DESIGN.md`에 앞 단계 검증과의 중복 위험, Stage Ownership Matrix, domain `origin` 설계, 중복 감점 방지 원칙을 보강했다

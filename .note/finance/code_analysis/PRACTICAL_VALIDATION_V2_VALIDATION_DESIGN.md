@@ -60,6 +60,119 @@ Backtest Analysis
 | ETF investability 검증 없음 | bid-ask spread, volume, premium/discount, 비용 구조를 확인하지 않는다 |
 | paper observation은 trigger baseline만 있음 | 실제 out-of-sample 관찰 결과가 아니라 향후 볼 기준만 만든다 |
 
+## 앞 단계 검증과의 중복 위험
+
+Practical Validation v2에서 가장 조심해야 할 부분은
+이미 앞 단계에서 수행한 검증을 다른 이름으로 다시 수행하는 것이다.
+
+현재 앞 단계에도 검증은 이미 존재한다.
+
+| 위치 | 현재 검증 | 실제 책임 |
+|---|---|---|
+| Single Strategy runtime | Data Trust, 거래비용 postprocess, benchmark overlay, rolling underperformance, out-of-sample split review, ETF operability, liquidity policy, validation policy, guardrail policy, promotion / deployment readiness | 단일 run의 실행 결과와 실전 해석 meta 생성 |
+| Single Strategy result 화면 | Data Trust Summary, Real-Money tab, Summary / Equity / extremes / Meta | 단일 run 결과를 사람이 해석할 수 있게 표시 |
+| Compare 5단계 보드 | Compare run 완성도, selected strategy Data Trust, Real-Money gate, 상대 순위 / 상대 근거 | 여러 전략 중 단일 후보를 Practical Validation으로 보낼 수 있는지 판단 |
+| Weighted Portfolio Builder | component result를 weight로 합성하고 weighted result curve / summary 생성 | mix 성과 산출 |
+| Saved Mix 검증 보드 | saved mix replay 가능 여부, component Data Trust, component Real-Money blocker, Practical Validation / Final Review V2 기록 존재 여부 | 저장된 mix setup이 다시 열리고 검증 flow로 연결될 수 있는지 판단 |
+| Practical Validation 현재 v1 | source id, active component, weight total, Data Trust blocked, Real-Money deployment blocked, benchmark snapshot | Final Review로 넘길 최소 Clean V2 source contract 확인 |
+
+따라서 Practical Validation v2는 아래 방식으로 설계해야 한다.
+
+```text
+앞 단계 검증 = 원본 실행 / 선택 / replay 검증의 source-of-truth
+Practical Validation = 그 증거를 통합하고, portfolio-level로 해석하고, 빠진 domain을 명시하는 evidence pack
+Final Review = 사용자 최종 판단과 최종 메모 저장
+```
+
+### 중복이 되는 경우
+
+아래처럼 구현하면 중복 검증 문제가 생긴다.
+
+| 잘못된 구현 | 문제 |
+|---|---|
+| Single Strategy runtime이 이미 만든 `validation_status`, `rolling_review_status`, `out_of_sample_review_status`를 무시하고 Practical Validation에서 같은 rolling 계산을 별도 기준으로 다시 FAIL 처리 | 사용자는 같은 rolling 검증이 두 번 다른 이름으로 실패한 것으로 본다 |
+| Compare 5단계가 이미 Data Trust / Real-Money / 상대 근거를 보고 후보를 보냈는데 Practical Validation이 같은 비교 순위를 다시 점수화 | Compare의 역할과 Practical Validation의 역할이 다시 섞인다 |
+| Saved Mix 검증 보드가 replay 가능성을 확인했는데 Practical Validation이 다시 replay 여부만 보고 별도 성공 / 실패 판정을 반복 | Mix 검증 보드와 Practical Validation이 같은 gate처럼 보인다 |
+| ETF operability가 runtime meta에 있는데 Practical Validation에서 같은 AUM / spread 기준을 다른 threshold로 다시 계산 | threshold 충돌과 이중 fail이 생긴다 |
+| 거래비용이 이미 `transaction_cost_bps`로 반영된 net result인데 Practical Validation이 같은 비용을 다시 차감 | 성과를 이중 차감할 위험이 있다 |
+
+### 중복이 아닌 경우
+
+반대로 아래는 의도적으로 Practical Validation에서 다시 봐야 한다.
+
+| Practical Validation에서 다시 보는 항목 | 중복이 아닌 이유 |
+|---|---|
+| upstream Data Trust blocker 전파 | 새 검증이 아니라 hard blocker 상속이다 |
+| source replay parity | 저장된 source가 지금도 같은 결과로 재현되는지 확인하는 freshness / reproducibility 검증이다 |
+| mix-level weight total / concentration | 앞 단계 단일 전략 검증에는 없는 포트폴리오 구성 검증이다 |
+| component evidence aggregation | component별 검증을 하나의 portfolio evidence pack으로 합치는 작업이다 |
+| 같은 기간 benchmark alignment 확인 | 여러 component / mix가 서로 다른 actual period를 가질 수 있어 portfolio-level 정렬 확인이 필요하다 |
+| `NOT_RUN` domain 표시 | 앞 단계가 확인하지 않은 항목을 통과로 오해하지 않게 하는 표시다 |
+| sensitivity / overfit audit | 현재 앞 단계에는 공식 domain으로 거의 없다 |
+| monitoring baseline 생성 | Final Review와 Selected Portfolio Dashboard가 이어서 쓸 기준을 만드는 작업이다 |
+
+## Stage Ownership Matrix
+
+Practical Validation v2의 중복을 막으려면 각 검증 domain의 소유권을 명확히 해야 한다.
+
+| Domain | 1차 소유 단계 | Practical Validation v2 역할 | 중복 방지 규칙 |
+|---|---|---|---|
+| Data freshness / result period | Single Strategy runtime, Compare Data Trust, Saved Mix 검증 보드 | upstream status를 상속하고 portfolio-level로 요약 | 같은 raw warning을 새 fail로 재계산하지 않는다. cadence-aware 해석을 유지한다 |
+| Transaction cost / net result | runtime Real-Money hardening | 비용이 이미 반영됐는지 표시하고 mix-level weighted net effect만 보강 | `transaction_cost_bps`가 이미 반영된 result에 같은 비용을 다시 차감하지 않는다 |
+| Benchmark overlay / policy | runtime Real-Money hardening | benchmark가 같은 기간 / 같은 방법론인지 확인하고 mix-level benchmark 필요 여부를 표시 | 단일 전략 benchmark policy를 Practical Validation에서 다른 threshold로 재판정하지 않는다 |
+| Rolling / OOS review | runtime Real-Money hardening | upstream rolling/OOS status를 domain board에 상속하고, mix result curve가 있을 때만 mix-level rolling을 추가 | upstream status와 PV-computed status를 같은 점수에 이중 반영하지 않는다 |
+| ETF operability / liquidity | runtime ETF / liquidity policy | component별 status를 통합하고 누락 데이터를 `NOT_RUN`으로 표시 | 같은 AUM / spread rule을 다른 기준으로 재계산하지 않는다 |
+| Compare relative ranking | Compare 5단계 보드 | selection rationale로 보관 | Practical Validation에서 다시 전략 순위를 매겨 후보 선택을 반복하지 않는다 |
+| Saved mix replay | Saved Mix 검증 보드 / Weighted Portfolio Builder | source replay parity와 Final Review handoff readiness 확인 | replay 가능 여부만 반복 점수화하지 않고, replay 결과의 freshness / parity를 본다 |
+| Weight / construction | Practical Validation | active components, target weight total, concentration, component role 확인 | 앞 단계가 component 성과를 만들었어도 portfolio 구성 검증은 여기서 한다 |
+| Sensitivity / overfit | Practical Validation 또는 후속 robustness runner | parameter / weight perturbation, trial-count audit | 앞 단계에 공식 검증이 없으므로 새 domain으로 둔다 |
+| Final decision / memo | Final Review | Practical Validation은 판단 근거만 제공 | 사용자 최종 메모를 여기서 받지 않는다 |
+| Post-selection monitoring | Selected Portfolio Dashboard | monitoring baseline / trigger seed 제공 | 사후 성과 recheck 자체는 dashboard가 맡는다 |
+
+## Practical Validation V2 구현 규칙
+
+V2 row에는 각 domain의 출처를 남기는 것이 좋다.
+
+```json
+{
+  "domain": "rolling_walk_forward",
+  "status": "REVIEW",
+  "origin": "upstream_runtime",
+  "source_ref": {
+    "selection_source_id": "selection_...",
+    "component_id": "..."
+  },
+  "upstream_status": "watch",
+  "pv_status": null,
+  "summary": "Runtime Real-Money rolling review를 상속했습니다.",
+  "metrics": {}
+}
+```
+
+권장 `origin` 값:
+
+| origin | 의미 |
+|---|---|
+| `upstream_runtime` | Single Strategy runtime / Real-Money meta에서 가져온 검증 |
+| `upstream_compare` | Compare 5단계 보드에서 가져온 선택 근거 |
+| `upstream_saved_mix` | Saved Mix 검증 보드에서 가져온 replay / mix gate 근거 |
+| `pv_source_contract` | Practical Validation이 직접 확인한 source / weight / component contract |
+| `pv_replay` | Practical Validation에서 source replay를 실행해 확인한 근거 |
+| `pv_computed` | Practical Validation에서 새로 계산한 portfolio-level metric |
+| `not_run` | 아직 데이터나 구현이 없어 실행하지 못한 domain |
+
+점수도 단순 합산하면 안 된다.
+예를 들어 `rolling_review_status=watch`와 `validation_policy_status=watch`가 같은 원인에서 나온 것이라면
+두 번 감점하지 말고 하나의 inherited review gap으로 묶어야 한다.
+
+권장 scoring 원칙:
+
+1. hard blocker는 중복되어도 한 번만 카운트한다.
+2. 같은 upstream source에서 나온 warning은 하나의 review gap 그룹으로 묶는다.
+3. PV가 새로 계산한 domain만 별도 점수로 반영한다.
+4. `NOT_RUN`은 감점보다 disclosure로 시작하되, critical domain이면 Final Review에서 확인을 요구한다.
+5. Final Review는 score만 보지 않고 blocker / review gap / not-run critical domain을 같이 읽는다.
+
 ## 조사 기준
 
 아래 기준을 설계에 반영한다.

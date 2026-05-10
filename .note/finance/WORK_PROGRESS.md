@@ -3527,3 +3527,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - CFA backtesting / GIPS / SEC performance presentation / SR 11-7 model validation / overfitting / transaction cost / ETF liquidity reference를 조사해 검증 domain으로 번역했다.
   - `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_VALIDATION_DESIGN.md`를 추가하고, source contract, replay, benchmark, rolling, drawdown, stress, cost, investability, sensitivity, overfit, monitoring plan domain과 구현 우선순위를 정리했다.
   - 제품 코드는 아직 수정하지 않았다. 다음 작업은 사용자가 설계를 확인한 뒤 Slice 1 domain board부터 구현하는 것이 맞다.
+- Practical Validation V2 중복 검증 위험 보강:
+  - user feedback에 따라 Practical Validation 이전 단계의 Data Trust / Real-Money / Compare / Saved Mix gate와 V2 설계가 겹칠 수 있는 지점을 확인했다.
+  - Practical Validation은 upstream runtime / compare / saved mix 검증을 반복하지 않고 `origin`과 `source_ref`를 남겨 상속 / 통합 / 신규 계산 domain을 분리해야 한다고 정리했다.
+  - 설계 문서에 Stage Ownership Matrix와 중복 감점 방지 원칙을 추가했다.
