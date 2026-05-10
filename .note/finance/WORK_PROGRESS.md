@@ -3625,3 +3625,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - user feedback에 따라 Practical Validation 이전 단계의 Data Trust / Real-Money / Compare / Saved Mix gate와 V2 설계가 겹칠 수 있는 지점을 확인했다.
   - Practical Validation은 upstream runtime / compare / saved mix 검증을 반복하지 않고 `origin`과 `source_ref`를 남겨 상속 / 통합 / 신규 계산 domain을 분리해야 한다고 정리했다.
   - 설계 문서에 Stage Ownership Matrix와 중복 감점 방지 원칙을 추가했다.
+- Practical Validation V2 rolling / cost 기본값 확정:
+  - user confirmation에 따라 profile별 rolling window 기본값을 방어형 24개월, 균형형 36개월, 성장형 60개월, 전술 / 헤지형 24개월, 사용자 지정 36개월로 정리했다.
+  - cost assumption은 거래 수수료 / bid-ask spread / slippage / 세금성 비용을 포함한 거래비용 가정이며, MVP 기본값은 one-way 10 bps로 시작한다고 문서화했다.
+  - research / design 문서의 설계 질문 상태에서 rolling window와 cost assumption 항목을 `O`로 변경했다.

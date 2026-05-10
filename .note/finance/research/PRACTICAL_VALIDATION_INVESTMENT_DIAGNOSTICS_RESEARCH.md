@@ -134,6 +134,41 @@ profile별 해석 예시:
 | leveraged ETF 30% | 목적 / 기간이 있어도 강한 `REVIEW` | 목적 / 기간 / acknowledgement 없으면 여전히 `BLOCKED` |
 | low-liquidity ETF | profile과 무관하게 blocker 후보 | profile과 무관하게 blocker 후보 |
 
+### Rolling Window와 Cost Assumption 기본값
+
+`rolling window`는 전략의 매매 lookback이나 리밸런싱 주기가 아니라
+검증용 성과 측정 구간이다.
+전체 백테스트 기간을 한 번만 보지 않고, 일정 길이의 구간을 한 달씩 밀면서
+후보가 여러 시장 구간에서도 유지됐는지 확인한다.
+
+초기 기본값:
+
+| profile | rolling window 기본값 | 이유 |
+|---|---:|---|
+| 방어형 | 24개월 | 짧은 구간에서도 하락 방어가 깨지는지 확인해야 한다 |
+| 균형형 | 36개월 | 중기 운용 안정성과 benchmark 대비 균형을 본다 |
+| 성장형 | 60개월 | 성장형은 긴 cycle에서 성과가 드러나는 경우가 많다 |
+| 전술 / 헤지형 | 24개월 | 국면 대응형은 짧은 window에서도 역할을 보여야 한다 |
+| 사용자 지정 | 36개월 기본 | 별도 설정이 없으면 균형형 기준을 쓴다 |
+
+rolling step은 1개월을 기본으로 둔다.
+12개월 rolling return은 보조 단기 지표로 계산할 수 있지만,
+route 판정의 기본 window는 profile별 값을 우선한다.
+
+`cost assumption`은 거래 수수료 / 거래비용 가정이다.
+증권사 수수료만이 아니라 bid-ask spread, slippage, 세금성 비용처럼
+실제 체결에서 백테스트 성과를 깎을 수 있는 비용을 보수적으로 포함한다.
+
+MVP 기본값은 균형형 기준 `one-way 10 bps`다.
+`10 bps`는 0.10%이고, `one-way`는 매수 또는 매도 한쪽 거래 1회 기준이다.
+따라서 매수 후 매도까지 단순 왕복으로 보면 약 20 bps 비용을 가정한다.
+
+초기 구현에서는 profile별로 비용 숫자를 과도하게 다르게 두기보다
+데이터가 없으면 one-way 10 bps를 시작점으로 사용한다.
+ETF별 expense ratio, turnover, average dollar volume, spread coverage가 붙으면
+component별 / 전략별 비용 모델로 보정한다.
+방어형이나 저비용 장기 운용 목적에서는 같은 비용이라도 cost drag 해석을 더 엄격하게 둔다.
+
 ## 사용자 의도와 후보 성격 mismatch
 
 Practical Validation은 후보가 사용자의 선언한 목적과 맞는지도 알려줘야 한다.
@@ -707,8 +742,8 @@ domain별 evidence를 넣는 방식이 낫다.
 | O | leveraged / inverse ETF는 언제 blocker인가? | 큰 비중, medium-long cadence, 목적 불명, acknowledgement 없음이면 blocker 후보로 둔다. |
 | O | Final Review selected route에서 `NOT_RUN`을 허용할 것인가? | 허용하되 critical domain이면 Final Review에서 명시 확인을 요구한다. |
 | O | 기존 Phase 31 / 32 검증과 충돌하지 않는가? | Clean V2에서는 Practical Validation 안의 module로 흡수하고, 기존 문서는 legacy / prior implementation reference로 둔다. |
-| X | rolling window 기본값을 profile별로 얼마로 둘 것인가? | 방어형은 길게, 성장형은 짧게 시작하되 실제 계산 가능 history를 보고 구현 시 확정한다. |
-| X | cost assumption 기본값은 얼마로 둘 것인가? | balanced 기준 one-way 10 bps를 시작점으로 두고, expense ratio coverage와 turnover data가 붙으면 보정한다. |
+| O | rolling window 기본값을 profile별로 얼마로 둘 것인가? | 방어형 24개월, 균형형 36개월, 성장형 60개월, 전술 / 헤지형 24개월, 사용자 지정 36개월로 시작한다. rolling step은 1개월이다. |
+| O | cost assumption 기본값은 얼마로 둘 것인가? | 균형형 기준 one-way 10 bps를 시작점으로 둔다. profile별 숫자를 과도하게 다르게 두지 않고 expense ratio / turnover / liquidity coverage가 붙으면 보정한다. |
 | X | 단순 대안 baseline은 무엇부터 둘 것인가? | SPY, QQQ, 60/40 proxy, cash-aware baseline부터 시작하고 All Weather-like proxy는 후속으로 둔다. |
 | X | sensitivity perturbation grid는 strategy별로 어떻게 둘 것인가? | MVP는 mix weight +/- 5%p, drop-one, 주요 window perturbation부터 시작한다. |
 | X | run_history trial count를 validation row에 어떻게 남길 것인가? | run_history 파일 자체는 저장하지 않고 local audit summary만 선택적으로 남긴다. |

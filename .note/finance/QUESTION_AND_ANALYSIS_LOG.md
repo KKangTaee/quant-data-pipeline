@@ -4598,3 +4598,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Sentiment connector 미구현이나 holdings look-through 데이터 부재는 Final Review 이동을 막지 않을 수 있지만, 핵심 가격 부재 같은 문제는 `BLOCKED` 후보로 봐야 한다
 - Follow-up:
   - Practical Validation research / design 문서에 Final Review route와 `NOT_RUN` 처리 의미를 보강했다
+
+### 2026-05-10 - Practical Validation rolling window와 cost assumption 기본값 확정
+- User request:
+  - 사용자가 rolling window 기본값과 cost assumption 의미를 확인했고, 확정된 항목의 확인 여부를 `O`로 바꿔 문서화하길 요청함
+- Interpreted goal:
+  - Practical Validation profile별 rolling 검증 기본 구간과 거래비용 기본 가정을 구현 전 설계 기준으로 고정해야 함
+- Analysis result:
+  - rolling window는 전략 lookback이나 리밸런싱 주기가 아니라 검증용 성과 측정 구간이다
+  - 기본 rolling window는 방어형 24개월, 균형형 36개월, 성장형 60개월, 전술 / 헤지형 24개월, 사용자 지정 36개월로 둔다
+  - cost assumption은 거래 수수료뿐 아니라 bid-ask spread, slippage, 세금성 비용을 포함한 거래비용 가정이다
+  - MVP 기본 거래비용은 균형형 기준 one-way 10 bps로 시작하고, expense ratio / turnover / liquidity coverage가 붙으면 보정한다
+- Follow-up:
+  - Practical Validation research / design 문서에 rolling window와 cost assumption 설명을 보강하고 해당 설계 질문을 `O`로 변경했다
