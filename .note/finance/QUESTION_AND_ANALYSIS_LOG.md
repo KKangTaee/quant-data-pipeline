@@ -4686,3 +4686,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 첫 개발 단위는 helper split 후 actual runtime replay / curve provenance / benchmark parity hardening으로 잡는 것이 가장 안전하다
 - Follow-up:
   - `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_REMAINING_IMPLEMENTATION_PLAN.md`를 추가하고, 사용자가 검토한 뒤 개발 범위를 확정하기로 했다
+
+### 2026-05-10 - Practical Validation V2 P0 개발 진행
+- User request:
+  - 사용자가 향후 개발 우선순위 중 helper split, actual runtime replay, curve provenance, benchmark parity hardening 1~4번을 단계별로 진행하길 요청함
+- Interpreted goal:
+  - Practical Validation이 proxy 중심 diagnostics에서 실제 기존 runtime replay 근거를 우선 사용할 수 있게 하고, 상대 benchmark 비교의 기간 / coverage 신뢰도를 명시해야 함
+- Analysis result:
+  - helper 책임을 curve/parity와 replay로 분리했다
+  - actual replay는 자동 실행이 아니라 사용자가 `실제 전략 replay 실행`을 누를 때만 기존 strategy runtime을 호출한다
+  - replay 결과가 있으면 diagnostics는 actual replay curve를 우선 사용하고, 없거나 실패하면 기존 embedded snapshot / DB price proxy 진단을 유지한다
+  - benchmark parity는 portfolio curve와 benchmark curve의 기간, 월별 coverage, frequency 차이를 계산해 review gap으로 남긴다
+- Follow-up:
+  - 다음 고도화는 Validation Inspector / profile comparison UX와 strategy-specific sensitivity runtime이 우선이다

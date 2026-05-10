@@ -42,8 +42,10 @@
 | `app/web/backtest_candidate_library.py` | `Operations > Candidate Library` 화면 render, 저장된 current / Pre-Live 후보 inspect, 저장 contract 기반 result curve rebuild |
 | `app/web/backtest_candidate_library_helpers.py` | Candidate Library용 registry join, 후보 table row, replay payload 생성, ETF 후보 replay runtime dispatch helper |
 | `app/web/backtest_ui_components.py` | Backtest UI 공용 wrapping status card, artifact pipeline, compact badge strip, stage brief strip, route/readiness 판정 panel |
-| `app/web/backtest_practical_validation.py` | `Backtest > Practical Validation`에서 Clean V2 selection source 확인, 검증 프로필 입력, V2 practical diagnostics board 표시, Final Review handoff를 담당하는 화면 render |
-| `app/web/backtest_practical_validation_helpers.py` | Clean V2 portfolio selection source 생성, compact curve snapshot / DB price proxy 계산, validation profile threshold / score 해석, 12개 Practical Diagnostics result 생성 / 저장 / Final Review handoff helper |
+| `app/web/backtest_practical_validation.py` | `Backtest > Practical Validation`에서 Clean V2 selection source 확인, 검증 프로필 입력, actual runtime replay 실행 버튼, V2 practical diagnostics board 표시, Final Review handoff를 담당하는 화면 render |
+| `app/web/backtest_practical_validation_helpers.py` | Clean V2 portfolio selection source 생성, validation profile threshold / score 해석, 12개 Practical Diagnostics result 생성 / 저장 / Final Review handoff helper |
+| `app/web/backtest_practical_validation_curve.py` | Practical Validation의 curve normalize / compact records / curve provenance / benchmark parity helper |
+| `app/web/backtest_practical_validation_replay.py` | Practical Validation source를 기존 strategy runtime으로 명시 replay하고 component / portfolio curve evidence를 만드는 helper |
 | `app/web/backtest_candidate_review.py` | `Backtest > Candidate Review`의 Candidate Packaging 화면 render, Review Note / current candidate registry 저장, Pre-Live 운영 기록 저장, Portfolio Proposal 이동 판단 |
 | `app/web/backtest_candidate_review_helpers.py` | Candidate Review readiness 평가, Review Note 생성, current candidate registry row 변환, Pre-Live status 추천 / draft 생성 / Proposal readiness 평가, display table helper |
 | `app/web/backtest_portfolio_proposal.py` | `Backtest > Portfolio Proposal`의 단일 후보 직행 평가, 다중 후보 proposal 후보 선택, 목적 / 역할 / 비중 설계, proposal draft 저장, 저장 proposal monitoring / feedback 화면 render |

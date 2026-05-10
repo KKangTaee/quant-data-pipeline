@@ -14,6 +14,7 @@ from app.web.backtest_practical_validation_helpers import (
     save_practical_validation_result,
     source_components_dataframe,
 )
+from app.web.backtest_practical_validation_replay import run_practical_validation_actual_replay
 from app.web.backtest_ui_components import (
     render_badge_strip,
     render_readiness_route_panel,
@@ -97,6 +98,76 @@ def _render_validation_profile_form() -> dict[str, Any]:
     return {"profile_id": profile_id, "answers": answers}
 
 
+def _replay_state_key(source: dict[str, Any]) -> str:
+    return f"practical_validation_replay_{source.get('selection_source_id') or 'source'}"
+
+
+def _render_actual_replay_panel(source: dict[str, Any]) -> dict[str, Any] | None:
+    replay_key = _replay_state_key(source)
+    replay_result = st.session_state.get(replay_key)
+    render_badge_strip(
+        [
+            {
+                "label": "Replay",
+                "value": dict(replay_result or {}).get("status") or "NOT_RUN",
+                "tone": "positive" if dict(replay_result or {}).get("status") == "PASS" else "neutral",
+            },
+            {"label": "Source", "value": "Existing runtime only", "tone": "neutral"},
+            {"label": "Auto Run", "value": "Disabled", "tone": "neutral"},
+            {
+                "label": "Components",
+                "value": dict(replay_result or {}).get("successful_component_count", 0),
+                "tone": "neutral",
+            },
+        ]
+    )
+    st.caption(
+        "이 버튼은 새 전략을 만들지 않고 기존 Backtest runtime으로 source를 재실행합니다. "
+        "실패해도 저장 snapshot / DB price proxy 기반 진단은 계속 볼 수 있습니다."
+    )
+    if st.button("실제 전략 replay 실행", key=f"{replay_key}_run", width="stretch"):
+        with st.spinner("기존 strategy runtime으로 Practical Validation source를 replay 중입니다..."):
+            replay_result = run_practical_validation_actual_replay(source)
+        st.session_state[replay_key] = replay_result
+        if replay_result.get("status") == "PASS":
+            st.success("Actual runtime replay가 완료되었습니다.")
+        else:
+            st.warning("Actual runtime replay가 일부 실패했습니다. 세부 결과를 확인하세요.")
+    replay_result = st.session_state.get(replay_key)
+    if isinstance(replay_result, dict) and replay_result:
+        summary = dict(replay_result.get("summary") or {})
+        render_badge_strip(
+            [
+                {"label": "Replay ID", "value": replay_result.get("replay_id") or "-", "tone": "neutral"},
+                {"label": "Elapsed", "value": f"{replay_result.get('elapsed_ms', 0)} ms", "tone": "neutral"},
+                {"label": "CAGR", "value": summary.get("cagr") if summary else "-", "tone": "neutral"},
+                {"label": "MDD", "value": summary.get("mdd") if summary else "-", "tone": "neutral"},
+            ]
+        )
+        component_rows = list(replay_result.get("component_results") or [])
+        if component_rows:
+            st.dataframe(
+                pd.DataFrame(
+                    [
+                        {
+                            "Component": row.get("title"),
+                            "Strategy": row.get("strategy_key"),
+                            "Weight": row.get("target_weight"),
+                            "Status": row.get("status"),
+                            "Rows": row.get("result_rows"),
+                            "Start": row.get("actual_start"),
+                            "End": row.get("actual_end"),
+                            "Error": row.get("error"),
+                        }
+                        for row in component_rows
+                    ]
+                ),
+                width="stretch",
+                hide_index=True,
+            )
+    return dict(replay_result) if isinstance(replay_result, dict) else None
+
+
 def _status_tone(status: Any) -> str:
     status_text = str(status or "").upper()
     if status_text == "PASS":
@@ -167,6 +238,39 @@ def _render_validation_result(validation_result: dict[str, Any]) -> None:
         component_curve_rows = list(curve_evidence.get("component_curve_rows") or [])
         if component_curve_rows:
             st.dataframe(pd.DataFrame(component_curve_rows), width="stretch", hide_index=True)
+        benchmark_parity = dict(curve_evidence.get("benchmark_parity") or {})
+        if benchmark_parity:
+            render_badge_strip(
+                [
+                    {
+                        "label": "Benchmark Parity",
+                        "value": benchmark_parity.get("status") or "-",
+                        "tone": _status_tone(benchmark_parity.get("status")),
+                    },
+                    {
+                        "label": "Coverage",
+                        "value": dict(benchmark_parity.get("metrics") or {}).get("coverage_ratio", "-"),
+                        "tone": "neutral",
+                    },
+                    {
+                        "label": "Same Period",
+                        "value": dict(benchmark_parity.get("metrics") or {}).get("same_period", "-"),
+                        "tone": "neutral",
+                    },
+                    {
+                        "label": "Same Frequency",
+                        "value": dict(benchmark_parity.get("metrics") or {}).get("same_frequency", "-"),
+                        "tone": "neutral",
+                    },
+                ]
+            )
+            parity_rows = list(benchmark_parity.get("rows") or [])
+            if parity_rows:
+                st.dataframe(pd.DataFrame(parity_rows), width="stretch", hide_index=True)
+        curve_provenance = dict(curve_evidence.get("curve_provenance") or {})
+        if curve_provenance:
+            with st.expander("Curve provenance", expanded=False):
+                st.json(curve_provenance)
 
     with st.expander("진단 세부 근거", expanded=False):
         for diagnostic in list(validation_result.get("diagnostic_results") or []):
@@ -249,12 +353,20 @@ def render_practical_validation_workspace() -> None:
     with st.container(border=True):
         validation_profile = _render_validation_profile_form()
 
-    validation_result = build_practical_validation_result(source, validation_profile=validation_profile)
-    st.markdown("#### 3. 실전 진단 보드")
+    st.markdown("#### 3. Actual Runtime Replay")
+    with st.container(border=True):
+        replay_result = _render_actual_replay_panel(source)
+
+    validation_result = build_practical_validation_result(
+        source,
+        validation_profile=validation_profile,
+        replay_result=replay_result,
+    )
+    st.markdown("#### 4. 실전 진단 보드")
     with st.container(border=True):
         _render_validation_result(validation_result)
 
-    st.markdown("#### 4. 다음 단계")
+    st.markdown("#### 5. 다음 단계")
     with st.container(border=True):
         st.info(
             "이 단계는 구조화된 검증 자료를 저장합니다. "

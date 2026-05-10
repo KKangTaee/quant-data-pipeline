@@ -53,6 +53,7 @@ Backtest Analysis
 | Operability | 가격 / volume 기반 proxy로 최소 운용성 확인 |
 | Macro / sentiment | FRED connector 전까지 benchmark price-action proxy context로 표시 |
 | Final Review handoff | Practical Diagnostics 요약, score breakdown, curve evidence, rolling evidence를 Final Review snapshot으로 전달 |
+| Actual runtime replay | 사용자가 명시적으로 실행할 때 기존 strategy runtime으로 source를 replay하고, curve provenance와 benchmark parity를 validation result에 저장 |
 
 현재 구현은 실전 후보 진단의 1차 골격과 일부 정량 계산이 완료된 상태다.
 다만 아래 영역은 아직 정밀 구현이 남아 있다.
@@ -61,13 +62,13 @@ Backtest Analysis
 
 | 번호 | 진단 module | 현재 상태 | 남은 구현 |
 |---:|---|---|---|
-| 1 | Input Evidence Layer | 대부분 구현 | source replay contract와 replay attempt 결과를 더 명확히 저장 |
+| 1 | Input Evidence Layer | source replay attempt와 benchmark parity 저장까지 구현 | source replay contract completeness와 unsupported strategy 설명을 더 보강 |
 | 2 | Asset Allocation Fit | ticker proxy classification 기반 | ETF holdings / sector / asset-class provider가 붙으면 look-through exposure로 보강 |
 | 3 | Concentration / Overlap / Exposure | ticker / weight / sector ticker proxy 기반 | holdings-level overlap, top holding concentration, issuer / theme 중복 계산 |
-| 4 | Correlation / Diversification / Risk Contribution | component curve 기반 proxy | 실제 strategy replay curve, 동일 기간 benchmark parity, contribution-to-drawdown 보강 |
+| 4 | Correlation / Diversification / Risk Contribution | component curve 기반 proxy, actual replay curve 우선 사용 | contribution-to-drawdown 보강 |
 | 5 | Regime / Macro Suitability | benchmark price-action proxy | FRED 기반 yield curve / credit spread / VIX snapshot connector 추가 |
 | 6 | Sentiment / Risk-On-Off Overlay | proxy context | VIX / credit spread / yield curve 우선, Fear & Greed는 안정 source 확정 후 optional |
-| 7 | Stress / Scenario Diagnostics | static event calendar + curve 기반 계산 | 실제 strategy runtime replay curve를 사용한 stress 결과와 stress별 interpretation 보강 |
+| 7 | Stress / Scenario Diagnostics | static event calendar + curve 기반 계산, actual replay curve 우선 사용 | stress별 interpretation 보강 |
 | 8 | Alternative Portfolio Challenge | SPY / QQQ / 60/40 / cash-aware proxy | same-period parity, profile별 성공 기준, All Weather-like proxy 후속 추가 |
 | 9 | Leveraged / Inverse ETF Suitability | ticker set / 목적 / 기간 proxy | 상품별 leverage multiple, daily objective, holding-period mismatch 근거 보강 |
 | 10 | Operability / Cost / Liquidity | DB price / volume proxy, one-way cost assumption | expense ratio, AUM, ADV, bid-ask spread, premium/discount, turnover connector |
@@ -179,6 +180,14 @@ diagnostics 계산, persistence handoff까지 많은 책임을 갖고 있다.
 - Practical Validation에서 후보 source를 실제 기존 runtime으로 다시 실행할 수 있게 한다.
 - compact / proxy curve와 actual replay curve를 구분해 표시한다.
 
+현재 상태:
+
+- 2026-05-10 1차 구현 완료.
+- Practical Validation 화면에 `실제 전략 replay 실행` 버튼을 추가했다.
+- replay는 자동 실행하지 않고 사용자가 명시적으로 실행한다.
+- replay 결과는 `actual_runtime_replay`, `embedded_source_curve`, `component_curve_weighted_proxy`, `db_price_proxy` provenance와 함께 validation result에 남긴다.
+- unsupported strategy나 contract 부족은 replay 실패로 처리하되, snapshot / proxy 기반 diagnostics는 계속 표시한다.
+
 작업:
 
 - source kind별 replay contract 생성
@@ -206,6 +215,12 @@ diagnostics 계산, persistence handoff까지 많은 책임을 갖고 있다.
 목표:
 
 - 후보와 benchmark가 같은 기간 / 같은 frequency / 같은 cost basis로 비교됐는지 확인한다.
+
+현재 상태:
+
+- 2026-05-10 1차 구현 완료.
+- portfolio curve와 benchmark curve의 기간, 월별 coverage, frequency 차이를 `benchmark_parity`로 계산한다.
+- parity가 `REVIEW`이면 Input Evidence review gap과 Curve / Replay Evidence에 표시한다.
 
 작업:
 

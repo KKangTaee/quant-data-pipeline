@@ -3658,3 +3658,9 @@ Detailed historical logs were archived on `2026-04-13`.
   - 현재 구현 완료 범위와 proxy / NOT_RUN / REVIEW로 남은 범위를 12개 diagnostics domain별로 정리했다.
   - 다음 개발 순서를 helper split, actual runtime replay, benchmark parity, validation inspector, strategy-specific sensitivity, provider connector, Final Review / Selected Dashboard 고도화 순으로 제안했다.
   - 제품 코드는 수정하지 않았고, 사용자가 문서를 검토한 뒤 첫 구현 단위를 확정하는 상태다.
+- Practical Validation V2 P0 actual replay / provenance 구현:
+  - user confirmation에 따라 helper split, actual runtime replay, curve provenance, benchmark parity hardening을 단계별로 구현했다.
+  - `backtest_practical_validation_curve.py`와 `backtest_practical_validation_replay.py`를 추가해 curve/parity와 기존 runtime replay 책임을 분리했다.
+  - Practical Validation 화면에 `실제 전략 replay 실행` 버튼을 추가했고, 자동 실행 없이 사용자가 명시 실행할 때만 기존 strategy runtime을 호출한다.
+  - validation result schema를 v3로 올리고 `curve_provenance`, `benchmark_parity`, `replay_attempt`를 저장하도록 했다.
+  - ETF holdings-level look-through, expense / spread / AUM, FRED macro / sentiment connector는 아직 후속으로 남겼다.

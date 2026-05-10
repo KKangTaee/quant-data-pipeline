@@ -11,6 +11,11 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
+from app.web.backtest_practical_validation_curve import (
+    build_benchmark_parity,
+    build_curve_provenance,
+    normalize_result_curve as normalize_validation_curve,
+)
 from app.web.runtime import (
     FINAL_SELECTION_DECISION_V2_SCHEMA_VERSION,
     PORTFOLIO_SELECTION_SOURCE_SCHEMA_VERSION,
@@ -936,17 +941,38 @@ def _combine_component_curves(
     return result
 
 
-def _build_curve_context(source_row: dict[str, Any], active_components: list[dict[str, Any]]) -> dict[str, Any]:
+def _build_curve_context(
+    source_row: dict[str, Any],
+    active_components: list[dict[str, Any]],
+    *,
+    replay_result: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     source_period = dict(source_row.get("period") or {})
+    replay_row = dict(replay_result or {})
+    replay_component_curves = {
+        str(item.get("component_id") or ""): item
+        for item in list(replay_row.get("component_results") or [])
+        if item.get("result_curve")
+    }
     source_curve = _normalize_result_curve(
         source_row.get("result_curve")
         or source_row.get("weighted_curve")
         or dict(source_row.get("source_snapshot") or {}).get("weighted_curve_snapshot")
     )
+    replay_curve = normalize_validation_curve(replay_row.get("portfolio_curve"))
+    if not replay_curve.empty:
+        source_curve = replay_curve
+        portfolio_curve_source = "actual_runtime_replay"
+    else:
+        portfolio_curve_source = ""
     component_curves: list[dict[str, Any]] = []
     for component in active_components:
-        component_curve = _normalize_result_curve(component.get("result_curve") or component.get("curve_snapshot"))
-        component_source = "embedded_result_curve" if not component_curve.empty else ""
+        replay_component = replay_component_curves.get(str(component.get("component_id") or ""))
+        component_curve = normalize_validation_curve(dict(replay_component or {}).get("result_curve"))
+        component_source = "actual_runtime_replay" if not component_curve.empty else ""
+        if component_curve.empty:
+            component_curve = _normalize_result_curve(component.get("result_curve") or component.get("curve_snapshot"))
+            component_source = "embedded_result_curve" if not component_curve.empty else ""
         if component_curve.empty:
             tickers = _component_universe_tickers(component)
             component_period = dict(component.get("period") or {})
@@ -968,7 +994,7 @@ def _build_curve_context(source_row: dict[str, Any], active_components: list[dic
     if source_curve.empty:
         source_curve = _combine_component_curves(component_curves)
         portfolio_curve_source = "component_curve_weighted_proxy" if not source_curve.empty else "unavailable"
-    else:
+    elif not portfolio_curve_source:
         portfolio_curve_source = "embedded_source_curve"
 
     benchmark_ticker = next(
@@ -979,8 +1005,16 @@ def _build_curve_context(source_row: dict[str, Any], active_components: list[dic
         ),
         "",
     )
-    benchmark_curve = _normalize_result_curve(source_row.get("benchmark_curve"))
+    benchmark_curve = normalize_validation_curve(replay_row.get("benchmark_curve"))
     benchmark_meta: dict[str, Any] = {"status": "NOT_RUN", "reason": "benchmark 없음"}
+    if not benchmark_curve.empty:
+        benchmark_meta = {
+            "status": "PASS",
+            "source": "actual_runtime_replay",
+            "tickers": [replay_row.get("benchmark_ticker") or benchmark_ticker],
+        }
+    elif benchmark_curve.empty:
+        benchmark_curve = _normalize_result_curve(source_row.get("benchmark_curve"))
     if benchmark_curve.empty and benchmark_ticker:
         start_value = source_period.get("actual_start") or source_period.get("start")
         end_value = source_period.get("actual_end") or source_period.get("end")
@@ -988,7 +1022,7 @@ def _build_curve_context(source_row: dict[str, Any], active_components: list[dic
             start_value = source_curve["Date"].min()
             end_value = source_curve["Date"].max()
         benchmark_curve, benchmark_meta = _price_proxy_curve([benchmark_ticker], start=start_value, end=end_value)
-    elif not benchmark_curve.empty:
+    elif not benchmark_curve.empty and benchmark_meta.get("source") != "actual_runtime_replay":
         benchmark_meta = {"status": "PASS", "source": "embedded_benchmark_curve", "tickers": [benchmark_ticker]}
 
     return {
@@ -1581,6 +1615,7 @@ def _operability_rows(active_components: list[dict[str, Any]], source_period: di
 def build_practical_validation_result(
     source: dict[str, Any],
     validation_profile: dict[str, Any] | None = None,
+    replay_result: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build the structured Practical Validation result used by Final Review V2."""
     now = _now_text()
@@ -1626,10 +1661,17 @@ def build_practical_validation_result(
     has_benchmark = any(str(component.get("benchmark") or "").strip() not in {"", "-"} for component in active_components)
     if not has_benchmark:
         review_gaps.append("benchmark snapshot 부족")
-    curve_context = _build_curve_context(source_row, active_components)
+    replay_row = dict(replay_result or {})
+    if replay_row and replay_row.get("status") in {"REVIEW", "BLOCKED"}:
+        review_gaps.append(f"Actual runtime replay status: {replay_row.get('status')}")
+    curve_context = _build_curve_context(source_row, active_components, replay_result=replay_row)
     portfolio_curve = _normalize_result_curve(curve_context.get("portfolio_curve"))
     benchmark_curve = _normalize_result_curve(curve_context.get("benchmark_curve"))
     portfolio_summary = dict(curve_context.get("portfolio_summary") or {})
+    benchmark_parity = build_benchmark_parity(portfolio_curve, benchmark_curve)
+    curve_provenance = build_curve_provenance(curve_context=curve_context, replay_result=replay_row)
+    if benchmark_parity.get("status") == "REVIEW":
+        review_gaps.append("Benchmark parity review 필요")
 
     input_checks = [
         {
@@ -1667,6 +1709,18 @@ def build_practical_validation_result(
             "Ready": not portfolio_curve.empty,
             "Current": curve_context.get("portfolio_curve_source") or "-",
             "Meaning": "rolling / stress / baseline / correlation 계산에 쓸 portfolio curve가 있는지 봅니다.",
+        },
+        {
+            "Criteria": "Actual runtime replay",
+            "Ready": replay_row.get("status") == "PASS",
+            "Current": replay_row.get("status") or "NOT_RUN",
+            "Meaning": "저장 snapshot이나 DB price proxy가 아니라 기존 strategy runtime으로 재실행한 curve가 있는지 봅니다.",
+        },
+        {
+            "Criteria": "Benchmark parity",
+            "Ready": benchmark_parity.get("status") == "PASS",
+            "Current": benchmark_parity.get("status") or "NOT_RUN",
+            "Meaning": "후보와 benchmark가 같은 기간 / coverage / frequency로 비교되는지 봅니다.",
         },
     ]
 
@@ -2143,6 +2197,8 @@ def build_practical_validation_result(
             "source_summary": source_summary,
             "data_trust": data_trust,
             "real_money_signal": real_money,
+            "curve_provenance": curve_provenance,
+            "benchmark_parity": benchmark_parity,
         },
         "diagnostic_results": diagnostics,
         "diagnostic_display_rows": _diagnostic_display_rows(diagnostics),
@@ -2172,6 +2228,8 @@ def build_practical_validation_result(
             "portfolio_curve_rows": len(portfolio_curve),
             "portfolio_curve_source": curve_context.get("portfolio_curve_source"),
             "portfolio_curve_summary": portfolio_summary,
+            "benchmark_parity_status": benchmark_parity.get("status"),
+            "benchmark_parity": benchmark_parity.get("metrics") or {},
             "rolling_validation": rolling_evidence.get("metrics") or {},
         },
         "component_rows": component_rows,
@@ -2237,6 +2295,9 @@ def build_practical_validation_result(
             "benchmark_ticker": curve_context.get("benchmark_ticker"),
             "benchmark_curve_rows": len(benchmark_curve),
             "benchmark_meta": dict(curve_context.get("benchmark_meta") or {}),
+            "curve_provenance": curve_provenance,
+            "benchmark_parity": benchmark_parity,
+            "replay_attempt": replay_row,
         },
         "final_review_handoff": {
             "route": route,
