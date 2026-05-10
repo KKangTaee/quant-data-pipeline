@@ -4712,3 +4712,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 요청 종료일은 최신 DB 날짜까지 확장됐지만 실제 portfolio curve가 component cadence / intersection 때문에 따라오지 못하면 runtime 실행 성공과 별개로 `period_coverage=REVIEW`로 표시해야 한다
 - Follow-up:
   - Practical Validation UI와 replay helper, validation result schema, code analysis 문서를 최신 runtime recheck 기준으로 수정했다
+
+### 2026-05-11 - Practical Validation V2 P2 개발 문서가 필요하다
+- User request:
+  - 사용자가 P2 개발을 어떻게 진행할지 전용 개발 문서가 있는지 물었고, 없다면 정리하면서 `PRACTICAL_VALIDATION_V2_PROVIDER_CONNECTOR_PLAN.md`도 만들길 요청함
+- Interpreted goal:
+  - P2 provider connector / macro connector / stress interpretation 작업이 기존 남은 구현 계획에 흩어져 있으므로, 구현 전에 실행 계획과 provider 세부 설계를 분리해 durable 문서로 남겨야 함
+- Analysis result:
+  - P2 전체 계획은 `PRACTICAL_VALIDATION_V2_P2_CONNECTOR_AND_STRESS_PLAN.md`로 정리했다
+  - Provider / DB / loader 상세 설계는 `PRACTICAL_VALIDATION_V2_PROVIDER_CONNECTOR_PLAN.md`로 분리했다
+  - 첫 구현 단위는 기존 `nyse_asset_profile`과 `nyse_price_history`를 bridge로 쓰는 Cost / Liquidity / ETF Operability connector가 가장 안전하다
+  - holdings와 macro는 dedicated table / loader contract를 먼저 잡고, Practical Validation에서는 provider coverage summary와 compact evidence만 저장하는 방향이 맞다
+- Follow-up:
+  - 새 문서를 기존 Remaining Implementation Plan, Code Analysis README, Finance Doc Index에 연결했다

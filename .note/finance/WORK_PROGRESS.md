@@ -3670,3 +3670,11 @@ Detailed historical logs were archived on `2026-04-13`.
   - `저장 기간 그대로 재현`은 보조 모드로 남겼고, validation result schema를 v4로 올려 mode, 저장 기간, 요청 기간, 실제 기간, 최신 시장일, 확장 일수, period coverage, curve provenance를 남기도록 했다.
   - 실제 실행은 성공했지만 component cadence / date alignment 때문에 portfolio curve가 요청 종료일까지 오지 못하면 `period_coverage=REVIEW`로 표시하도록 했다.
   - 관련 code analysis 문서와 comprehensive analysis를 최신 재검증 기준으로 갱신했다.
+
+### 2026-05-11
+- Practical Validation V2 P2 개발 문서 정리:
+  - user request에 따라 P2 실행 계획 문서 `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_P2_CONNECTOR_AND_STRESS_PLAN.md`를 추가했다.
+  - provider / DB / loader 상세 설계 문서 `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_PROVIDER_CONNECTOR_PLAN.md`를 추가했다.
+  - P2 범위를 Cost / Liquidity / ETF Operability connector, ETF holdings / sector look-through, Macro / Sentiment connector, Stress Interpretation, strategy-specific sensitivity runtime 경계로 정리했다.
+  - `PRACTICAL_VALIDATION_V2_REMAINING_IMPLEMENTATION_PLAN.md`, `code_analysis/README.md`, `FINANCE_DOC_INDEX.md`에 새 문서 링크를 반영했다.
+  - 제품 코드는 수정하지 않았다. 다음 작업은 provider connector 첫 구현 단위 확정 후 진행한다.

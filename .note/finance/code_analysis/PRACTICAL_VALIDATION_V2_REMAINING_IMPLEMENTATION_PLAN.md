@@ -9,6 +9,15 @@
 이번 문서의 목적은 개발 착수가 아니라, 사용자가 검토할 수 있는 남은 구현 계획을 만드는 것이다.
 코드 변경은 이 문서 검토 후 별도 확인을 받고 진행한다.
 
+## P2 전용 후속 문서
+
+P2 개발은 아래 두 문서로 더 구체화한다.
+
+| 문서 | 역할 |
+|---|---|
+| `PRACTICAL_VALIDATION_V2_P2_CONNECTOR_AND_STRESS_PLAN.md` | P2 전체 실행 계획. Cost / Liquidity, ETF holdings, Macro / Sentiment, Stress Interpretation, sensitivity runtime 경계를 정리 |
+| `PRACTICAL_VALIDATION_V2_PROVIDER_CONNECTOR_PLAN.md` | provider / DB / loader connector 상세 설계. ETF operability snapshot, holdings snapshot, macro series loader 계약을 정리 |
+
 ## 쉽게 말하면
 
 현재 Practical Validation V2는 이미 12개 진단 보드, 검증 프로필, profile-aware score,
