@@ -65,8 +65,8 @@ Backtest 주 흐름:
 - `Final Review`: Practical Validation result와 diagnostics 요약, Robustness / Paper Observation 기준을 한 화면에서 확인하고, 최종 선정 / 보류 / 거절 / 재검토 판단과 최종 메모를 `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl`에 저장한다.
 
 Practical Validation V2의 현재 구현은 최소 contract를 Input Evidence로 읽고, profile-aware practical diagnostics board를 만든다.
-현재 board는 asset allocation proxy, concentration / exposure, stress window coverage, simple baseline placeholder, leveraged / inverse suitability, cost assumption, local trial count summary, monitoring baseline seed를 포함한다.
-아직 실제 return matrix 기반 correlation / risk contribution, benchmark replay, rolling / walk-forward, stress 구간 성과 재계산, ETF expense / spread / ADV connector, macro / sentiment connector는 후속 계산이며 `NOT_RUN` 또는 `REVIEW`로 명시한다.
+현재 board는 compact curve snapshot 또는 DB price proxy curve를 사용해 rolling validation, stress window 구간 성과, simple baseline challenge, component correlation / risk contribution proxy, drop-one / weight perturbation sensitivity, ETF price / volume operability proxy를 계산한다.
+아직 strategy runtime full replay 버튼, ETF holdings-level look-through, expense ratio / bid-ask spread / AUM connector, FRED 기반 VIX / credit spread / yield curve connector는 후속 계산이며 `NOT_RUN` 또는 `REVIEW`로 명시한다.
 
 Legacy / compatibility 흐름:
 

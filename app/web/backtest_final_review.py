@@ -86,6 +86,24 @@ def _render_validation_summary(validation: dict[str, Any]) -> None:
         if not_run_critical:
             st.caption("NOT_RUN 항목은 선택을 자동 차단하지 않지만, 최종 판단 사유에서 확인해야 합니다.")
             st.dataframe(pd.DataFrame(not_run_critical), width="stretch", hide_index=True)
+        profile_score_rows = list(validation.get("profile_score_rows") or [])
+        if profile_score_rows:
+            with st.expander("Profile-aware score breakdown", expanded=False):
+                st.dataframe(pd.DataFrame(profile_score_rows), width="stretch", hide_index=True)
+        curve_evidence = dict(validation.get("curve_evidence") or {})
+        if curve_evidence:
+            with st.expander("Curve / Replay evidence", expanded=False):
+                render_badge_strip(
+                    [
+                        {"label": "Portfolio Curve", "value": curve_evidence.get("portfolio_curve_source") or "-", "tone": "neutral"},
+                        {"label": "Rows", "value": curve_evidence.get("portfolio_curve_rows", 0), "tone": "neutral"},
+                        {"label": "Benchmark", "value": curve_evidence.get("benchmark_ticker") or "-", "tone": "neutral"},
+                        {"label": "Benchmark Rows", "value": curve_evidence.get("benchmark_curve_rows", 0), "tone": "neutral"},
+                    ]
+                )
+                component_curve_rows = list(curve_evidence.get("component_curve_rows") or [])
+                if component_curve_rows:
+                    st.dataframe(pd.DataFrame(component_curve_rows), width="stretch", hide_index=True)
     gap_cols = st.columns(3, gap="small")
     with gap_cols[0]:
         st.markdown("###### Hard Blockers")

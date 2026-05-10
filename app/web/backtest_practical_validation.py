@@ -153,6 +153,20 @@ def _render_validation_result(validation_result: dict[str, Any]) -> None:
     if not_run_critical:
         st.info("아래 NOT_RUN 항목은 Final Review에서 선택/보류/재검토 판단 근거로 확인해야 합니다.")
         st.dataframe(pd.DataFrame(not_run_critical), width="stretch", hide_index=True)
+    curve_evidence = dict(validation_result.get("curve_evidence") or {})
+    if curve_evidence:
+        st.markdown("##### Curve / Replay Evidence")
+        render_badge_strip(
+            [
+                {"label": "Portfolio Curve", "value": curve_evidence.get("portfolio_curve_source") or "-", "tone": "positive" if curve_evidence.get("portfolio_curve_rows") else "warning"},
+                {"label": "Rows", "value": curve_evidence.get("portfolio_curve_rows", 0), "tone": "neutral"},
+                {"label": "Benchmark", "value": curve_evidence.get("benchmark_ticker") or "-", "tone": "neutral"},
+                {"label": "Benchmark Rows", "value": curve_evidence.get("benchmark_curve_rows", 0), "tone": "neutral"},
+            ]
+        )
+        component_curve_rows = list(curve_evidence.get("component_curve_rows") or [])
+        if component_curve_rows:
+            st.dataframe(pd.DataFrame(component_curve_rows), width="stretch", hide_index=True)
 
     with st.expander("진단 세부 근거", expanded=False):
         for diagnostic in list(validation_result.get("diagnostic_results") or []):
@@ -171,6 +185,10 @@ def _render_validation_result(validation_result: dict[str, Any]) -> None:
             limitations = list(diagnostic.get("limitations") or [])
             if limitations:
                 st.caption("Limitations: " + " / ".join(str(item) for item in limitations))
+    profile_score_rows = list(validation_result.get("profile_score_rows") or [])
+    if profile_score_rows:
+        with st.expander("Profile-aware score breakdown", expanded=False):
+            st.dataframe(pd.DataFrame(profile_score_rows), width="stretch", hide_index=True)
 
 
 def render_practical_validation_workspace() -> None:

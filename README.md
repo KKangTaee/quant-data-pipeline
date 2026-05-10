@@ -76,7 +76,7 @@ DB-backed market data ingestion, factor generation, and strategy backtesting wor
 - Clean V2 portfolio selection workflow
   - `Backtest > Backtest Analysis`에서 Single Strategy / Compare / 저장 Mix replay를 실행하고 실전 검증 후보 source를 선택하는 흐름
   - `.note/finance/registries/PORTFOLIO_SELECTION_SOURCES.jsonl`에 선택한 후보 source를 append-only로 저장하는 흐름
-  - `Backtest > Practical Validation`에서 선택 source의 component, weight, Data Trust, Real-Money signal을 Input Evidence로 읽고, 사용자 검증 profile과 12개 Practical Diagnostics를 구조화하는 흐름
+  - `Backtest > Practical Validation`에서 선택 source의 component, weight, Data Trust, Real-Money signal을 Input Evidence로 읽고, curve snapshot / DB price proxy 기반 rolling, stress, baseline, correlation, sensitivity, operability 진단을 사용자 검증 profile과 함께 구조화하는 흐름
   - `.note/finance/registries/PRACTICAL_VALIDATION_RESULTS.jsonl`에 검증 결과를 저장하되, 사용자 최종 메모는 Final Review에만 남기는 흐름
   - `Backtest > Final Review`에서 Practical Validation 결과를 기준으로 최종 선정 / 보류 / 거절 / 재검토 판단을 한 번만 기록하는 흐름
   - `.note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl`이 새 selected dashboard의 source-of-truth가 되는 흐름

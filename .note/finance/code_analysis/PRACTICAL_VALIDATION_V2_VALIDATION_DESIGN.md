@@ -1338,13 +1338,27 @@ Final Review selected decision은 다음 조건을 강하게 봐야 한다.
 
 ## 추천 다음 작업
 
-1. Slice 3에서 source/component return curve replay와 benchmark parity를 붙여 snapshot-only 한계를 줄인다.
-2. Slice 4에서 rolling / drawdown / stress window 구간 성과를 profile threshold로 해석한다.
-3. Slice 5에서 mix 후보의 correlation / risk contribution과 drop-one / weight perturbation 재계산을 붙인다.
-4. Slice 6 이후는 macro / sentiment connector, ETF expense / volume / spread data coverage를 확인한 뒤 진행한다.
-5. holdings look-through data가 붙으면 proxy classification을 보조 분류로 낮추고 ETF 내부 중복 노출을 별도 domain으로 승격한다.
+현재 1차 정량 보강 구현은 아래까지 완료됐다.
 
-이 순서가 좋은 이유는 사용자가 지금 가장 혼란스러워하는 부분이
-"Practical Validation이 무엇을 검증하는지 보이지 않는다"는 점이기 때문이다.
-먼저 domain board와 `NOT_RUN` 상태를 보이게 만들면,
-아직 구현되지 않은 검증과 실제 통과한 검증이 UI에서 분리된다.
+| 항목 | 현재 구현 상태 |
+|---|---|
+| Profile-aware scoring | profile별 domain weight를 적용하고 score breakdown을 UI / Final Review에 표시한다 |
+| Source / component curve | 새 handoff에는 compact monthly curve snapshot을 저장한다. 기존 source는 DB price proxy curve로 계산을 시도한다 |
+| Rolling validation | profile별 rolling window로 worst CAGR, worst MDD, negative rolling share를 계산한다 |
+| Stress window | static stress calendar와 portfolio / benchmark curve를 겹쳐 구간 return, MDD, benchmark spread를 계산한다 |
+| Alternative baseline | SPY, QQQ, 60/40, cash-aware, All Weather-like proxy를 DB price curve로 같은 기간 비교한다 |
+| Correlation / risk contribution | component monthly return matrix가 있으면 평균 상관과 risk contribution proxy를 계산한다 |
+| Sensitivity / robustness | drop-one과 mix weight +5%p perturbation을 component curve 기반으로 계산하고, run_history trial count summary와 합친다 |
+| ETF operability / cost | one-way cost assumption과 DB price / volume proxy로 basic operability를 확인한다 |
+| Holdings / sector look-through | 아직 holdings-level이 아니라 ticker / sector proxy classification이다 |
+| Macro / sentiment | FRED connector는 후속이고, 현재는 benchmark recent return / drawdown / vol proxy로 market context를 표시한다 |
+| Final Review gate | diagnostics, score breakdown, curve evidence, rolling evidence를 final decision snapshot에 포함한다 |
+| Selected Dashboard 연동 | Final Review snapshot에 monitoring seed와 diagnostics evidence를 남긴다. 별도 alert persistence / live approval은 없다 |
+
+다음 고도화는 proxy를 실제 데이터 connector로 교체하는 작업이다.
+
+1. strategy runtime full replay contract를 Practical Validation에서 선택적으로 실행하는 버튼을 추가한다.
+2. ETF holdings / sector look-through provider를 붙여 내부 보유종목 overlap을 계산한다.
+3. FRED 기반 VIX / credit spread / yield curve connector를 붙여 macro / sentiment proxy를 대체한다.
+4. ETF expense ratio, bid-ask spread, AUM / ADV connector를 붙여 operability domain을 보강한다.
+5. selected dashboard에서 Final Review monitoring seed를 alert persistence로 승격할지 별도 설계한다.

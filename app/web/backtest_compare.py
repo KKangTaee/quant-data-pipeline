@@ -4,6 +4,7 @@ from app.web.backtest_common import *  # noqa: F401,F403
 from app.web.backtest_practical_validation_helpers import (
     build_selection_source_from_saved_mix_prefill,
     build_selection_source_from_weighted_mix_prefill,
+    compact_curve_snapshot_from_bundle,
     queue_practical_validation_source,
 )
 from app.web.backtest_history import (
@@ -1190,6 +1191,7 @@ def _build_saved_mix_proposal_prefill_payload(record: dict[str, Any]) -> dict[st
                 "cagr": summary.get("cagr"),
                 "mdd": summary.get("mdd"),
                 "period": _bundle_result_period(bundle),
+                "result_curve": compact_curve_snapshot_from_bundle(bundle),
                 "contract": contract,
                 "benchmark": meta.get("benchmark_ticker") or contract.get("benchmark_ticker") or "-",
                 "universe": ",".join(str(ticker) for ticker in list(contract.get("tickers") or [])) or str(contract.get("preset_name") or "-"),
@@ -1213,6 +1215,7 @@ def _build_saved_mix_proposal_prefill_payload(record: dict[str, Any]) -> dict[st
         "source_context": source_context,
         "weighted_summary": _bundle_summary_snapshot(weighted_bundle),
         "weighted_period": _bundle_result_period(weighted_bundle),
+        "weighted_curve_snapshot": compact_curve_snapshot_from_bundle(weighted_bundle),
         "components": components,
     }
 
@@ -1275,6 +1278,7 @@ def _build_weighted_mix_practical_validation_prefill_payload(weighted_bundle: di
                 "cagr": summary.get("cagr"),
                 "mdd": summary.get("mdd"),
                 "period": _bundle_result_period(bundle),
+                "result_curve": compact_curve_snapshot_from_bundle(bundle),
                 "contract": contract,
                 "benchmark": meta_row.get("benchmark_ticker") or contract.get("benchmark_ticker") or "-",
                 "universe": ",".join(str(ticker) for ticker in list(contract.get("tickers") or [])) or str(contract.get("preset_name") or "-"),
@@ -1301,6 +1305,7 @@ def _build_weighted_mix_practical_validation_prefill_payload(weighted_bundle: di
         },
         "weighted_summary": _bundle_summary_snapshot(weighted_bundle),
         "weighted_period": _bundle_result_period(weighted_bundle),
+        "weighted_curve_snapshot": compact_curve_snapshot_from_bundle(weighted_bundle),
         "data_trust_status": "weighted_mix_snapshot",
         "components": components,
     }

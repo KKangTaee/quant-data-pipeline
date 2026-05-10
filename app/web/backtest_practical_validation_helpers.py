@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+import numpy as np
 import pandas as pd
 import streamlit as st
 
@@ -18,6 +19,8 @@ from app.web.runtime import (
     append_practical_validation_result,
     load_backtest_run_history,
 )
+from finance.loaders import load_price_history
+from finance.performance import portfolio_performance_summary
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -179,6 +182,39 @@ LEVERAGED_TICKERS = {"TQQQ", "UPRO", "SPXL", "SSO", "QLD", "TECL", "SOXL", "TMF"
 INVERSE_TICKERS = {"SH", "PSQ", "SDS", "QID", "SQQQ", "SPXU", "TZA", "DOG", "DXD"}
 TOKEN_PATTERN = re.compile(r"\b[A-Z]{2,6}\b")
 
+VALIDATION_PROFILE_DOMAIN_WEIGHTS = {
+    "conservative_defensive": {
+        "input_evidence_layer": 1.2,
+        "asset_allocation_fit": 1.35,
+        "concentration_overlap_exposure": 1.55,
+        "correlation_diversification_risk_contribution": 1.75,
+        "stress_scenario_diagnostics": 1.85,
+        "leveraged_inverse_etf_suitability": 1.65,
+        "operability_cost_liquidity": 1.65,
+        "robustness_sensitivity_overfit": 1.75,
+        "alternative_portfolio_challenge": 0.9,
+    },
+    "balanced_core": {},
+    "growth_aggressive": {
+        "asset_allocation_fit": 0.9,
+        "concentration_overlap_exposure": 0.9,
+        "stress_scenario_diagnostics": 1.0,
+        "alternative_portfolio_challenge": 1.35,
+        "robustness_sensitivity_overfit": 1.15,
+        "monitoring_baseline_seed": 1.1,
+    },
+    "hedged_tactical": {
+        "correlation_diversification_risk_contribution": 1.7,
+        "regime_macro_suitability": 1.55,
+        "sentiment_risk_on_off_overlay": 1.45,
+        "stress_scenario_diagnostics": 1.75,
+        "leveraged_inverse_etf_suitability": 1.75,
+        "operability_cost_liquidity": 1.55,
+        "robustness_sensitivity_overfit": 1.8,
+    },
+    "custom": {},
+}
+
 
 def _optional_float(value: Any) -> float | None:
     if value is None:
@@ -222,6 +258,31 @@ def build_validation_profile(profile_id: str | None, answers: dict[str, Any] | N
         profile_config["rolling_window_months"] = min(int(profile_config["rolling_window_months"]), 12)
     elif normalized_answers.get("holding_period") == "gt_3y" and profile_key == "growth_aggressive":
         profile_config["rolling_window_months"] = max(int(profile_config["rolling_window_months"]), 60)
+    domain_weights = {
+        domain: 1.0
+        for domain in [
+            "input_evidence_layer",
+            "asset_allocation_fit",
+            "concentration_overlap_exposure",
+            "correlation_diversification_risk_contribution",
+            "regime_macro_suitability",
+            "sentiment_risk_on_off_overlay",
+            "stress_scenario_diagnostics",
+            "alternative_portfolio_challenge",
+            "leveraged_inverse_etf_suitability",
+            "operability_cost_liquidity",
+            "robustness_sensitivity_overfit",
+            "monitoring_baseline_seed",
+        ]
+    }
+    domain_weights.update(VALIDATION_PROFILE_DOMAIN_WEIGHTS.get(profile_key, {}))
+    if normalized_answers.get("primary_goal") == "defensive":
+        domain_weights["stress_scenario_diagnostics"] = max(domain_weights["stress_scenario_diagnostics"], 1.35)
+        domain_weights["asset_allocation_fit"] = max(domain_weights["asset_allocation_fit"], 1.25)
+    elif normalized_answers.get("primary_goal") in {"growth", "aggressive"}:
+        domain_weights["alternative_portfolio_challenge"] = max(domain_weights["alternative_portfolio_challenge"], 1.3)
+    if normalized_answers.get("complexity_allowance") in {"inverse_leverage_limited", "tactical_high_turnover_allowed"}:
+        domain_weights["leveraged_inverse_etf_suitability"] = max(domain_weights["leveraged_inverse_etf_suitability"], 1.25)
     return {
         "profile_id": profile_key,
         "profile_label": profile_config["label"],
@@ -240,6 +301,7 @@ def build_validation_profile(profile_id: str | None, answers: dict[str, Any] | N
             "one_way_cost_bps": 10,
             "cost_interpretation": profile_config["cost_interpretation"],
         },
+        "domain_weights": {key: round(float(value), 4) for key, value in domain_weights.items()},
         "invariant_blockers": [
             "Data Trust hard blocker",
             "active weight 합계 오류",
@@ -285,6 +347,8 @@ def build_selection_source_from_candidate_draft(draft: dict[str, Any]) -> dict[s
             "actual_end": result.get("end_date") or data_trust.get("actual_result_end"),
         },
         "summary": _metric_snapshot_from_result(result),
+        "result_curve": list(draft.get("result_curve_snapshot") or []),
+        "benchmark_curve": list(draft.get("benchmark_curve_snapshot") or []),
         "data_trust": {
             "status": data_trust.get("price_freshness_status") or "snapshot",
             "requested_end": data_trust.get("requested_end"),
@@ -314,6 +378,7 @@ def build_selection_source_from_candidate_draft(draft: dict[str, Any]) -> dict[s
                 "deployment": real_money.get("deployment"),
                 "period_start": result.get("start_date"),
                 "period_end": result.get("end_date"),
+                "result_curve": list(draft.get("result_curve_snapshot") or []),
                 "replay_contract": {
                     "settings_snapshot": settings,
                     "source_kind": source_kind,
@@ -373,6 +438,7 @@ def build_selection_source_from_saved_mix_prefill(prefill: dict[str, Any]) -> di
                 "deployment": component.get("deployment"),
                 "period_start": dict(component.get("period") or {}).get("start"),
                 "period_end": dict(component.get("period") or {}).get("end"),
+                "result_curve": list(component.get("result_curve") or component.get("curve_snapshot") or []),
                 "replay_contract": {
                     "contract": dict(component.get("contract") or {}),
                     "compare_evidence": dict(component.get("compare_evidence") or {}),
@@ -405,6 +471,8 @@ def build_selection_source_from_saved_mix_prefill(prefill: dict[str, Any]) -> di
             "sharpe": _optional_float(weighted_summary.get("sharpe_ratio") or weighted_summary.get("sharpe")),
             "end_balance": _optional_float(weighted_summary.get("end_balance")),
         },
+        "weighted_curve": list(prefill.get("weighted_curve_snapshot") or []),
+        "result_curve": list(prefill.get("weighted_curve_snapshot") or []),
         "data_trust": {
             "status": prefill.get("data_trust_status") or f"{construction_source}_snapshot",
             "warning_count": 0,
@@ -601,14 +669,48 @@ def _status_counts(diagnostics: list[dict[str, Any]]) -> dict[str, int]:
     return counts
 
 
-def _diagnostic_score(diagnostics: list[dict[str, Any]], hard_blockers: list[str]) -> float:
+def _diagnostic_score(
+    diagnostics: list[dict[str, Any]],
+    hard_blockers: list[str],
+    profile: dict[str, Any] | None = None,
+) -> float:
     if hard_blockers:
         return 0.0
-    weights = {"PASS": 1.0, "REVIEW": 0.65, "NOT_RUN": 0.35, "BLOCKED": 0.0}
+    status_weights = {"PASS": 1.0, "REVIEW": 0.65, "NOT_RUN": 0.35, "BLOCKED": 0.0}
+    domain_weights = dict((profile or {}).get("domain_weights") or {})
     if not diagnostics:
         return 0.0
-    score = sum(weights.get(str(item.get("status") or "NOT_RUN"), 0.35) for item in diagnostics)
-    return round(score / len(diagnostics) * 10.0, 1)
+    weighted_score = 0.0
+    total_weight = 0.0
+    for item in diagnostics:
+        domain = str(item.get("domain") or "")
+        domain_weight = float(domain_weights.get(domain, 1.0) or 1.0)
+        total_weight += domain_weight
+        weighted_score += status_weights.get(str(item.get("status") or "NOT_RUN"), 0.35) * domain_weight
+    if total_weight <= 0.0:
+        return 0.0
+    return round(weighted_score / total_weight * 10.0, 1)
+
+
+def _profile_score_rows(diagnostics: list[dict[str, Any]], profile: dict[str, Any]) -> list[dict[str, Any]]:
+    status_weights = {"PASS": 1.0, "REVIEW": 0.65, "NOT_RUN": 0.35, "BLOCKED": 0.0}
+    domain_weights = dict(profile.get("domain_weights") or {})
+    rows: list[dict[str, Any]] = []
+    for item in diagnostics:
+        domain = str(item.get("domain") or "")
+        domain_weight = float(domain_weights.get(domain, 1.0) or 1.0)
+        status = str(item.get("status") or "NOT_RUN")
+        rows.append(
+            {
+                "Domain": item.get("title"),
+                "Status": status,
+                "Profile Weight": round(domain_weight, 4),
+                "Status Points": status_weights.get(status, 0.35),
+                "Weighted Points": round(status_weights.get(status, 0.35) * domain_weight, 4),
+                "Profile": profile.get("profile_label"),
+            }
+        )
+    return rows
 
 
 def _parse_date(value: Any) -> pd.Timestamp | None:
@@ -618,6 +720,397 @@ def _parse_date(value: Any) -> pd.Timestamp | None:
     if pd.isna(parsed):
         return None
     return parsed
+
+
+def _format_date(value: Any) -> str | None:
+    parsed = _parse_date(value)
+    if parsed is None:
+        return None
+    return parsed.strftime("%Y-%m-%d")
+
+
+def _curve_records_from_df(result_df: pd.DataFrame, *, max_rows: int = 420) -> list[dict[str, Any]]:
+    if not isinstance(result_df, pd.DataFrame) or result_df.empty:
+        return []
+    required = {"Date", "Total Balance"}
+    if not required.issubset(set(result_df.columns)):
+        return []
+    working = result_df.copy()
+    working["Date"] = pd.to_datetime(working["Date"], errors="coerce")
+    working["Total Balance"] = pd.to_numeric(working["Total Balance"], errors="coerce")
+    working = working.dropna(subset=["Date", "Total Balance"]).sort_values("Date")
+    if working.empty:
+        return []
+    if "Total Return" not in working.columns:
+        working["Total Return"] = working["Total Balance"].pct_change().fillna(0.0)
+    else:
+        working["Total Return"] = pd.to_numeric(working["Total Return"], errors="coerce").fillna(
+            working["Total Balance"].pct_change()
+        )
+        working["Total Return"] = working["Total Return"].fillna(0.0)
+    monthly = (
+        working.assign(_month=working["Date"].dt.to_period("M"))
+        .groupby("_month", as_index=False)
+        .tail(1)
+        .sort_values("Date")
+    )
+    if len(monthly) > max_rows:
+        monthly = monthly.tail(max_rows)
+    monthly["Date"] = monthly["Date"].dt.strftime("%Y-%m-%d")
+    return monthly[["Date", "Total Balance", "Total Return"]].to_dict("records")
+
+
+def compact_curve_snapshot_from_bundle(bundle: dict[str, Any], *, max_rows: int = 420) -> list[dict[str, Any]]:
+    """Persist a compact monthly curve snapshot from a Streamlit result bundle."""
+    result_df = dict(bundle or {}).get("result_df")
+    return _curve_records_from_df(result_df, max_rows=max_rows) if isinstance(result_df, pd.DataFrame) else []
+
+
+def compact_benchmark_curve_snapshot_from_bundle(bundle: dict[str, Any], *, max_rows: int = 420) -> list[dict[str, Any]]:
+    benchmark_df = dict(bundle or {}).get("benchmark_chart_df")
+    if not isinstance(benchmark_df, pd.DataFrame) or benchmark_df.empty:
+        return []
+    if "Benchmark Total Balance" not in benchmark_df.columns:
+        return []
+    working = benchmark_df.rename(
+        columns={
+            "Benchmark Total Balance": "Total Balance",
+            "Benchmark Total Return": "Total Return",
+        }
+    )
+    return _curve_records_from_df(working, max_rows=max_rows)
+
+
+def _normalize_result_curve(value: Any) -> pd.DataFrame:
+    if isinstance(value, pd.DataFrame):
+        raw = value.copy()
+    elif isinstance(value, list):
+        raw = pd.DataFrame(value)
+    else:
+        return pd.DataFrame()
+    if raw.empty or "Date" not in raw.columns or "Total Balance" not in raw.columns:
+        return pd.DataFrame()
+    raw["Date"] = pd.to_datetime(raw["Date"], errors="coerce")
+    raw["Total Balance"] = pd.to_numeric(raw["Total Balance"], errors="coerce")
+    if "Total Return" in raw.columns:
+        raw["Total Return"] = pd.to_numeric(raw["Total Return"], errors="coerce")
+    raw = raw.dropna(subset=["Date", "Total Balance"]).sort_values("Date").reset_index(drop=True)
+    if raw.empty:
+        return raw
+    raw["Total Return"] = raw.get("Total Return", raw["Total Balance"].pct_change()).fillna(
+        raw["Total Balance"].pct_change()
+    )
+    raw["Total Return"] = raw["Total Return"].fillna(0.0)
+    return raw[["Date", "Total Balance", "Total Return"]]
+
+
+def _component_universe_tickers(component: dict[str, Any]) -> list[str]:
+    contract = dict(component.get("contract") or {})
+    replay_contract = dict(component.get("replay_contract") or {})
+    settings = dict(replay_contract.get("settings_snapshot") or {})
+    raw_values: list[Any] = [
+        component.get("universe"),
+        contract.get("tickers"),
+        settings.get("tickers"),
+        component.get("benchmark"),
+    ]
+    tokens: list[str] = []
+    for value in raw_values:
+        if isinstance(value, str):
+            tokens.extend(part.strip().upper() for part in re.split(r"[,\\s]+", value) if part.strip())
+        elif isinstance(value, (list, tuple, set)):
+            tokens.extend(str(part or "").strip().upper() for part in value if str(part or "").strip())
+    tokens.extend(_component_tickers(component))
+    seen: set[str] = set()
+    clean: list[str] = []
+    for token in tokens:
+        if not token or token in seen or token == "-":
+            continue
+        seen.add(token)
+        clean.append(token)
+    return clean
+
+
+def _price_proxy_curve(
+    tickers: list[str],
+    *,
+    start: Any,
+    end: Any,
+    weights: list[float] | None = None,
+    initial_balance: float = 10000.0,
+) -> tuple[pd.DataFrame, dict[str, Any]]:
+    clean_tickers = [str(ticker or "").strip().upper() for ticker in tickers if str(ticker or "").strip()]
+    clean_tickers = list(dict.fromkeys(clean_tickers))
+    if not clean_tickers:
+        return pd.DataFrame(), {"status": "NOT_RUN", "reason": "ticker 없음"}
+    start_text = _format_date(start)
+    end_text = _format_date(end)
+    try:
+        history = load_price_history(symbols=clean_tickers, start=start_text, end=end_text, timeframe="1d")
+    except Exception as exc:
+        return pd.DataFrame(), {"status": "NOT_RUN", "reason": f"price DB load failed: {exc}"}
+    if history.empty:
+        return pd.DataFrame(), {"status": "NOT_RUN", "reason": "price history 없음", "tickers": clean_tickers}
+    price_col = "adj_close" if "adj_close" in history.columns else "close"
+    matrix = history.pivot(index="date", columns="symbol", values=price_col).sort_index()
+    matrix = matrix.apply(pd.to_numeric, errors="coerce").ffill().dropna(how="all")
+    available = [ticker for ticker in clean_tickers if ticker in matrix.columns and matrix[ticker].dropna().shape[0] >= 2]
+    if not available:
+        return pd.DataFrame(), {"status": "NOT_RUN", "reason": "usable price series 없음", "tickers": clean_tickers}
+    matrix = matrix[available].dropna()
+    if matrix.empty:
+        return pd.DataFrame(), {"status": "NOT_RUN", "reason": "aligned price series 없음", "tickers": available}
+    if weights and len(weights) == len(clean_tickers):
+        weight_map = {ticker: float(weight or 0.0) for ticker, weight in zip(clean_tickers, weights)}
+        raw_weights = np.array([weight_map.get(ticker, 0.0) for ticker in available], dtype=float)
+    else:
+        raw_weights = np.array([1.0 / len(available)] * len(available), dtype=float)
+    if raw_weights.sum() <= 0:
+        raw_weights = np.array([1.0 / len(available)] * len(available), dtype=float)
+    raw_weights = raw_weights / raw_weights.sum()
+    normalized = matrix.divide(matrix.iloc[0]).mul(raw_weights, axis=1).sum(axis=1)
+    balance = normalized * float(initial_balance)
+    result = pd.DataFrame({"Date": pd.to_datetime(balance.index), "Total Balance": balance.values})
+    result["Total Return"] = result["Total Balance"].pct_change().fillna(0.0)
+    missing = [ticker for ticker in clean_tickers if ticker not in available]
+    return result.reset_index(drop=True), {
+        "status": "PASS" if not missing else "REVIEW",
+        "source": "db_price_proxy",
+        "tickers": available,
+        "missing_tickers": missing,
+        "rows": len(result),
+    }
+
+
+def _summary_metrics_from_curve(result_df: pd.DataFrame, *, name: str = "Portfolio") -> dict[str, Any]:
+    if not isinstance(result_df, pd.DataFrame) or result_df.empty:
+        return {}
+    try:
+        summary_df = portfolio_performance_summary(result_df.copy(), name=name, freq="D")
+    except Exception:
+        return {}
+    if summary_df.empty:
+        return {}
+    row = dict(summary_df.iloc[0])
+    return {
+        "start": _format_date(row.get("Start Date")),
+        "end": _format_date(row.get("End Date")),
+        "cagr": _optional_float(row.get("CAGR")),
+        "mdd": _optional_float(row.get("Maximum Drawdown")),
+        "sharpe": _optional_float(row.get("Sharpe Ratio")),
+        "std": _optional_float(row.get("Standard Deviation")),
+        "end_balance": _optional_float(row.get("End Balance")),
+    }
+
+
+def _combine_component_curves(
+    component_curves: list[dict[str, Any]],
+    *,
+    initial_balance: float = 10000.0,
+) -> pd.DataFrame:
+    frames: list[pd.DataFrame] = []
+    weights: list[float] = []
+    for idx, item in enumerate(component_curves):
+        curve = _normalize_result_curve(item.get("curve"))
+        if curve.empty:
+            continue
+        start_balance = _optional_float(curve["Total Balance"].iloc[0])
+        if not start_balance or start_balance <= 0:
+            continue
+        normalized = curve[["Date", "Total Balance"]].copy()
+        normalized[f"component_{idx}"] = normalized["Total Balance"] / start_balance
+        frames.append(normalized[["Date", f"component_{idx}"]].set_index("Date"))
+        weights.append(float(item.get("weight") or 0.0))
+    if not frames:
+        return pd.DataFrame()
+    aligned = pd.concat(frames, axis=1, join="inner").sort_index()
+    if aligned.empty:
+        return pd.DataFrame()
+    raw_weights = np.array(weights[: len(aligned.columns)], dtype=float)
+    if raw_weights.sum() <= 0:
+        raw_weights = np.array([1.0 / len(aligned.columns)] * len(aligned.columns), dtype=float)
+    raw_weights = raw_weights / raw_weights.sum()
+    balance = aligned.mul(raw_weights, axis=1).sum(axis=1) * float(initial_balance)
+    result = pd.DataFrame({"Date": balance.index, "Total Balance": balance.values}).reset_index(drop=True)
+    result["Total Return"] = result["Total Balance"].pct_change().fillna(0.0)
+    return result
+
+
+def _build_curve_context(source_row: dict[str, Any], active_components: list[dict[str, Any]]) -> dict[str, Any]:
+    source_period = dict(source_row.get("period") or {})
+    source_curve = _normalize_result_curve(
+        source_row.get("result_curve")
+        or source_row.get("weighted_curve")
+        or dict(source_row.get("source_snapshot") or {}).get("weighted_curve_snapshot")
+    )
+    component_curves: list[dict[str, Any]] = []
+    for component in active_components:
+        component_curve = _normalize_result_curve(component.get("result_curve") or component.get("curve_snapshot"))
+        component_source = "embedded_result_curve" if not component_curve.empty else ""
+        if component_curve.empty:
+            tickers = _component_universe_tickers(component)
+            component_period = dict(component.get("period") or {})
+            component_curve, proxy_meta = _price_proxy_curve(
+                tickers,
+                start=component.get("period_start") or component_period.get("start") or source_period.get("actual_start") or source_period.get("start"),
+                end=component.get("period_end") or component_period.get("end") or source_period.get("actual_end") or source_period.get("end"),
+            )
+            component_source = str(proxy_meta.get("source") or proxy_meta.get("status") or "proxy_unavailable")
+        component_curves.append(
+            {
+                "component": _component_title(component),
+                "weight": _component_weight(component),
+                "curve": component_curve,
+                "source": component_source,
+                "rows": len(component_curve) if isinstance(component_curve, pd.DataFrame) else 0,
+            }
+        )
+    if source_curve.empty:
+        source_curve = _combine_component_curves(component_curves)
+        portfolio_curve_source = "component_curve_weighted_proxy" if not source_curve.empty else "unavailable"
+    else:
+        portfolio_curve_source = "embedded_source_curve"
+
+    benchmark_ticker = next(
+        (
+            str(component.get("benchmark") or "").strip().upper()
+            for component in active_components
+            if str(component.get("benchmark") or "").strip() not in {"", "-"}
+        ),
+        "",
+    )
+    benchmark_curve = _normalize_result_curve(source_row.get("benchmark_curve"))
+    benchmark_meta: dict[str, Any] = {"status": "NOT_RUN", "reason": "benchmark 없음"}
+    if benchmark_curve.empty and benchmark_ticker:
+        start_value = source_period.get("actual_start") or source_period.get("start")
+        end_value = source_period.get("actual_end") or source_period.get("end")
+        if not source_curve.empty:
+            start_value = source_curve["Date"].min()
+            end_value = source_curve["Date"].max()
+        benchmark_curve, benchmark_meta = _price_proxy_curve([benchmark_ticker], start=start_value, end=end_value)
+    elif not benchmark_curve.empty:
+        benchmark_meta = {"status": "PASS", "source": "embedded_benchmark_curve", "tickers": [benchmark_ticker]}
+
+    return {
+        "portfolio_curve": source_curve,
+        "portfolio_curve_source": portfolio_curve_source,
+        "portfolio_summary": _summary_metrics_from_curve(source_curve, name="Candidate Portfolio"),
+        "component_curves": component_curves,
+        "benchmark_ticker": benchmark_ticker,
+        "benchmark_curve": benchmark_curve,
+        "benchmark_meta": benchmark_meta,
+        "curve_rows": [
+            {
+                "Component": item.get("component"),
+                "Weight": item.get("weight"),
+                "Curve Source": item.get("source"),
+                "Rows": item.get("rows"),
+            }
+            for item in component_curves
+        ],
+    }
+
+
+def _aligned_monthly_returns(curves: list[dict[str, Any]]) -> pd.DataFrame:
+    frames: list[pd.DataFrame] = []
+    for idx, item in enumerate(curves):
+        curve = _normalize_result_curve(item.get("curve"))
+        if curve.empty:
+            continue
+        monthly = (
+            curve.assign(_month=curve["Date"].dt.to_period("M"))
+            .groupby("_month", as_index=False)
+            .tail(1)
+            .sort_values("Date")
+        )
+        monthly[f"component_{idx}"] = monthly["Total Balance"].pct_change()
+        frames.append(monthly[["Date", f"component_{idx}"]].dropna().set_index("Date"))
+    if not frames:
+        return pd.DataFrame()
+    return pd.concat(frames, axis=1, join="inner").dropna(how="any")
+
+
+def _rolling_validation_evidence(
+    portfolio_curve: pd.DataFrame,
+    benchmark_curve: pd.DataFrame,
+    *,
+    window_months: int,
+    mdd_review_line: float,
+) -> dict[str, Any]:
+    curve = _normalize_result_curve(portfolio_curve)
+    if curve.empty:
+        return {"status": "NOT_RUN", "rows": [], "summary": "portfolio curve 없음"}
+    monthly = (
+        curve.assign(_month=curve["Date"].dt.to_period("M"))
+        .groupby("_month", as_index=False)
+        .tail(1)
+        .sort_values("Date")
+        .reset_index(drop=True)
+    )
+    if len(monthly) < max(window_months + 1, 6):
+        return {"status": "NOT_RUN", "rows": [], "summary": f"{window_months}개월 rolling 계산에 필요한 월별 데이터가 부족합니다."}
+    rows: list[dict[str, Any]] = []
+    for end_idx in range(window_months, len(monthly)):
+        window = monthly.iloc[end_idx - window_months : end_idx + 1].copy()
+        start_balance = _optional_float(window["Total Balance"].iloc[0])
+        end_balance = _optional_float(window["Total Balance"].iloc[-1])
+        if not start_balance or end_balance is None or start_balance <= 0:
+            continue
+        years = max((window["Date"].iloc[-1] - window["Date"].iloc[0]).days / 365.25, 1 / 12)
+        cagr = (end_balance / start_balance) ** (1 / years) - 1
+        drawdown = window["Total Balance"] / window["Total Balance"].cummax() - 1
+        rows.append(
+            {
+                "Window End": _format_date(window["Date"].iloc[-1]),
+                "Window Months": window_months,
+                "CAGR": cagr,
+                "MDD": float(drawdown.min()),
+            }
+        )
+    if not rows:
+        return {"status": "NOT_RUN", "rows": [], "summary": "rolling windows 계산 실패"}
+    worst_mdd = min(float(row["MDD"]) for row in rows)
+    worst_cagr = min(float(row["CAGR"]) for row in rows)
+    negative_share = sum(1 for row in rows if float(row["CAGR"]) < 0) / len(rows)
+    evidence_rows = [
+        {
+            "Metric": "Rolling windows",
+            "Value": len(rows),
+            "Threshold": f"{window_months}M",
+            "Judgment": "computed",
+        },
+        {
+            "Metric": "Worst rolling CAGR",
+            "Value": worst_cagr,
+            "Threshold": ">= 0 preferred",
+            "Judgment": "REVIEW" if worst_cagr < 0 else "PASS",
+        },
+        {
+            "Metric": "Worst rolling MDD",
+            "Value": worst_mdd,
+            "Threshold": mdd_review_line / 100.0,
+            "Judgment": "REVIEW" if worst_mdd < (mdd_review_line / 100.0) else "PASS",
+        },
+        {
+            "Metric": "Negative rolling CAGR share",
+            "Value": negative_share,
+            "Threshold": "<= 35%",
+            "Judgment": "REVIEW" if negative_share > 0.35 else "PASS",
+        },
+    ]
+    status = "REVIEW" if any(row["Judgment"] == "REVIEW" for row in evidence_rows) else "PASS"
+    return {
+        "status": status,
+        "rows": evidence_rows,
+        "summary": f"{window_months}개월 rolling 기준 worst CAGR {worst_cagr:.2%}, worst MDD {worst_mdd:.2%}",
+        "metrics": {
+            "window_months": window_months,
+            "window_count": len(rows),
+            "worst_rolling_cagr": worst_cagr,
+            "worst_rolling_mdd": worst_mdd,
+            "negative_rolling_cagr_share": negative_share,
+        },
+    }
 
 
 def _load_static_stress_windows() -> list[dict[str, Any]]:
@@ -630,9 +1123,38 @@ def _load_static_stress_windows() -> list[dict[str, Any]]:
     return [dict(row or {}) for row in list(payload.get("windows") or []) if isinstance(row, dict)]
 
 
-def _stress_window_rows(source_period: dict[str, Any]) -> list[dict[str, Any]]:
+def _period_curve_metrics(result_df: pd.DataFrame, *, start: Any, end: Any) -> dict[str, Any]:
+    curve = _normalize_result_curve(result_df)
+    start_ts = _parse_date(start)
+    end_ts = _parse_date(end)
+    if curve.empty or start_ts is None or end_ts is None:
+        return {}
+    window = curve[(curve["Date"] >= start_ts) & (curve["Date"] <= end_ts)].copy()
+    if len(window) < 2:
+        return {}
+    start_balance = _optional_float(window["Total Balance"].iloc[0])
+    end_balance = _optional_float(window["Total Balance"].iloc[-1])
+    if not start_balance or end_balance is None or start_balance <= 0:
+        return {}
+    drawdown = window["Total Balance"] / window["Total Balance"].cummax() - 1
+    return {
+        "start": _format_date(window["Date"].iloc[0]),
+        "end": _format_date(window["Date"].iloc[-1]),
+        "return": end_balance / start_balance - 1.0,
+        "mdd": float(drawdown.min()),
+        "rows": len(window),
+    }
+
+
+def _stress_window_rows(
+    source_period: dict[str, Any],
+    portfolio_curve: pd.DataFrame | None = None,
+    benchmark_curve: pd.DataFrame | None = None,
+) -> list[dict[str, Any]]:
     actual_start = _parse_date(source_period.get("actual_start") or source_period.get("start"))
     actual_end = _parse_date(source_period.get("actual_end") or source_period.get("end"))
+    portfolio_curve = _normalize_result_curve(portfolio_curve)
+    benchmark_curve = _normalize_result_curve(benchmark_curve)
     rows: list[dict[str, Any]] = []
     for window in _load_static_stress_windows():
         start = _parse_date(window.get("start"))
@@ -640,12 +1162,28 @@ def _stress_window_rows(source_period: dict[str, Any]) -> list[dict[str, Any]]:
         if actual_start is None or actual_end is None or start is None or end is None:
             coverage = "UNKNOWN"
             result_status = "NOT_RUN"
+            judgment = "기간 정보 부족"
         elif actual_end < start or actual_start > end:
             coverage = "NOT_COVERED"
             result_status = "NOT_RUN"
+            judgment = "기간 미포함"
         else:
             coverage = "COVERED"
-            result_status = "NOT_RUN"
+            portfolio_metrics = _period_curve_metrics(portfolio_curve, start=start, end=end)
+            benchmark_metrics = _period_curve_metrics(benchmark_curve, start=start, end=end)
+            if portfolio_metrics:
+                result_status = "REVIEW" if (_optional_float(portfolio_metrics.get("mdd")) or 0.0) < -0.20 else "PASS"
+                judgment = "구간 성과 계산됨"
+            else:
+                result_status = "NOT_RUN"
+                judgment = "curve replay 필요"
+            benchmark_return = _optional_float(benchmark_metrics.get("return"))
+            portfolio_return = _optional_float(portfolio_metrics.get("return"))
+            benchmark_spread = (
+                portfolio_return - benchmark_return
+                if portfolio_return is not None and benchmark_return is not None
+                else None
+            )
         rows.append(
             {
                 "Scenario": window.get("label") or window.get("id"),
@@ -653,11 +1191,20 @@ def _stress_window_rows(source_period: dict[str, Any]) -> list[dict[str, Any]]:
                 "Category": window.get("category"),
                 "Coverage": coverage,
                 "Result Status": result_status,
+                "Portfolio Return": portfolio_metrics.get("return") if coverage == "COVERED" and "portfolio_metrics" in locals() else None,
+                "Portfolio MDD": portfolio_metrics.get("mdd") if coverage == "COVERED" and "portfolio_metrics" in locals() else None,
+                "Benchmark Spread": benchmark_spread if coverage == "COVERED" and "benchmark_spread" in locals() else None,
                 "Expected Check": "return / MDD / benchmark spread",
-                "Judgment": "curve replay 필요" if coverage == "COVERED" else "기간 미포함",
+                "Judgment": judgment,
                 "Decision Use": "Stress / scenario evidence",
             }
         )
+        if "portfolio_metrics" in locals():
+            del portfolio_metrics
+        if "benchmark_metrics" in locals():
+            del benchmark_metrics
+        if "benchmark_spread" in locals():
+            del benchmark_spread
     return rows
 
 
@@ -719,27 +1266,161 @@ def _build_overfit_audit(source_row: dict[str, Any], active_components: list[dic
     }
 
 
-def _baseline_rows() -> list[dict[str, Any]]:
-    return [
-        {"Baseline": "SPY", "Purpose": "미국 대형주 broad equity 단순 대안", "Priority": "MVP", "Result Status": "NOT_RUN"},
-        {"Baseline": "QQQ", "Purpose": "성장 / Nasdaq 노출 단순 대안", "Priority": "MVP", "Result Status": "NOT_RUN"},
-        {"Baseline": "60/40 proxy", "Purpose": "주식 + 채권 균형 대안", "Priority": "MVP", "Result Status": "NOT_RUN"},
-        {"Baseline": "cash-aware baseline", "Purpose": "현금 또는 단기채를 섞은 방어형 대안", "Priority": "MVP", "Result Status": "NOT_RUN"},
-        {"Baseline": "All Weather-like proxy", "Purpose": "regime 분산형 대리 비교군", "Priority": "Future", "Result Status": "NOT_RUN"},
+def _baseline_rows(
+    portfolio_curve: pd.DataFrame | None = None,
+    *,
+    source_period: dict[str, Any] | None = None,
+    success_metric: str = "better_risk_adjusted",
+) -> list[dict[str, Any]]:
+    portfolio_curve = _normalize_result_curve(portfolio_curve)
+    if not portfolio_curve.empty:
+        start_value = portfolio_curve["Date"].min()
+        end_value = portfolio_curve["Date"].max()
+    else:
+        source_period = dict(source_period or {})
+        start_value = source_period.get("actual_start") or source_period.get("start")
+        end_value = source_period.get("actual_end") or source_period.get("end")
+    candidate_summary = _summary_metrics_from_curve(portfolio_curve, name="Candidate")
+    definitions = [
+        ("SPY", "미국 대형주 broad equity 단순 대안", ["SPY"], [1.0], "MVP"),
+        ("QQQ", "성장 / Nasdaq 노출 단순 대안", ["QQQ"], [1.0], "MVP"),
+        ("60/40 proxy", "주식 + 채권 균형 대안", ["SPY", "TLT"], [0.6, 0.4], "MVP"),
+        ("cash-aware baseline", "현금 또는 단기채를 섞은 방어형 대안", ["SPY", "TLT", "BIL"], [0.6, 0.2, 0.2], "MVP"),
+        ("All Weather-like proxy", "regime 분산형 대리 비교군", ["SPY", "TLT", "IEF", "GLD", "DBC"], [0.30, 0.30, 0.15, 0.15, 0.10], "Future"),
     ]
-
-
-def _sensitivity_rows(active_components: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    rows = [
-        {"Scenario": "Window perturbation", "Scope": "start/end, recent 3y/5y", "Result Status": "NOT_RUN", "Expected Check": "CAGR / MDD / Sharpe dispersion"},
-    ]
-    if len(active_components) > 1:
-        rows.extend(
-            [
-                {"Scenario": "Mix weight +/- 5%p", "Scope": "component weights", "Result Status": "NOT_RUN", "Expected Check": "60:40 등 특정 비중 의존성"},
-                {"Scenario": "Drop-one component", "Scope": "remove one component and renormalize", "Result Status": "NOT_RUN", "Expected Check": "특정 component 의존성"},
-            ]
+    rows: list[dict[str, Any]] = []
+    for name, purpose, tickers, weights, priority in definitions:
+        baseline_curve, meta = _price_proxy_curve(tickers, start=start_value, end=end_value, weights=weights)
+        baseline_summary = _summary_metrics_from_curve(baseline_curve, name=name)
+        candidate_cagr = _optional_float(candidate_summary.get("cagr"))
+        candidate_mdd = _optional_float(candidate_summary.get("mdd"))
+        candidate_sharpe = _optional_float(candidate_summary.get("sharpe"))
+        baseline_cagr = _optional_float(baseline_summary.get("cagr"))
+        baseline_mdd = _optional_float(baseline_summary.get("mdd"))
+        baseline_sharpe = _optional_float(baseline_summary.get("sharpe"))
+        cagr_spread = candidate_cagr - baseline_cagr if candidate_cagr is not None and baseline_cagr is not None else None
+        mdd_advantage = candidate_mdd - baseline_mdd if candidate_mdd is not None and baseline_mdd is not None else None
+        sharpe_spread = candidate_sharpe - baseline_sharpe if candidate_sharpe is not None and baseline_sharpe is not None else None
+        if baseline_curve.empty or not candidate_summary:
+            result_status = "NOT_RUN"
+            judgment = str(meta.get("reason") or "candidate/baseline curve 부족")
+        elif success_metric == "higher_return":
+            result_status = "PASS" if (cagr_spread or 0.0) > 0 else "REVIEW"
+            judgment = "CAGR spread 기준"
+        elif success_metric == "lower_mdd":
+            result_status = "PASS" if (mdd_advantage or 0.0) >= 0 else "REVIEW"
+            judgment = "MDD advantage 기준"
+        elif success_metric == "better_downside_defense":
+            result_status = "PASS" if (mdd_advantage or 0.0) >= 0 else "REVIEW"
+            judgment = "downside defense 기준"
+        else:
+            result_status = "PASS" if (sharpe_spread or 0.0) >= 0 else "REVIEW"
+            judgment = "risk-adjusted spread 기준"
+        rows.append(
+            {
+                "Baseline": name,
+                "Purpose": purpose,
+                "Priority": priority,
+                "Result Status": result_status,
+                "Candidate CAGR": candidate_cagr,
+                "Baseline CAGR": baseline_cagr,
+                "CAGR Spread": cagr_spread,
+                "Candidate MDD": candidate_mdd,
+                "Baseline MDD": baseline_mdd,
+                "MDD Advantage": mdd_advantage,
+                "Sharpe Spread": sharpe_spread,
+                "Judgment": judgment,
+            }
         )
+    return rows
+
+
+def _sensitivity_rows(
+    active_components: list[dict[str, Any]],
+    component_curves: list[dict[str, Any]] | None = None,
+    portfolio_curve: pd.DataFrame | None = None,
+) -> list[dict[str, Any]]:
+    rows = [
+        {
+            "Scenario": "Window perturbation",
+            "Scope": "start/end, recent 3y/5y",
+            "Result Status": "NOT_RUN",
+            "Expected Check": "CAGR / MDD / Sharpe dispersion",
+        },
+    ]
+    portfolio_summary = _summary_metrics_from_curve(_normalize_result_curve(portfolio_curve), name="Portfolio")
+    if len(active_components) > 1:
+        usable_curves = list(component_curves or [])
+        if usable_curves and portfolio_summary:
+            base_cagr = _optional_float(portfolio_summary.get("cagr"))
+            base_mdd = _optional_float(portfolio_summary.get("mdd"))
+            for drop_idx, component in enumerate(active_components):
+                drop_curves = [
+                    dict(item)
+                    for idx, item in enumerate(usable_curves)
+                    if idx != drop_idx and not _normalize_result_curve(item.get("curve")).empty
+                ]
+                if not drop_curves:
+                    continue
+                drop_result = _combine_component_curves(drop_curves)
+                drop_summary = _summary_metrics_from_curve(drop_result, name="Drop One")
+                drop_cagr = _optional_float(drop_summary.get("cagr"))
+                drop_mdd = _optional_float(drop_summary.get("mdd"))
+                cagr_delta = drop_cagr - base_cagr if drop_cagr is not None and base_cagr is not None else None
+                mdd_delta = drop_mdd - base_mdd if drop_mdd is not None and base_mdd is not None else None
+                review = (cagr_delta is not None and cagr_delta < -0.03) or (
+                    mdd_delta is not None and mdd_delta < -0.05
+                )
+                rows.append(
+                    {
+                        "Scenario": f"Drop-one: {_component_title(component)}",
+                        "Scope": "remove one component and renormalize",
+                        "Result Status": "REVIEW" if review else "PASS",
+                        "Expected Check": "특정 component 의존성",
+                        "CAGR Delta": cagr_delta,
+                        "MDD Delta": mdd_delta,
+                    }
+                )
+            if len(active_components) == len(usable_curves):
+                for tilt_idx, component in enumerate(active_components):
+                    original_weights = np.array([_component_weight(item) for item in active_components], dtype=float)
+                    if original_weights.sum() <= 0:
+                        continue
+                    tilted = original_weights.copy()
+                    tilted[tilt_idx] = min(100.0, tilted[tilt_idx] + 5.0)
+                    reduce_total = tilted.sum() - 100.0
+                    if reduce_total > 0 and len(tilted) > 1:
+                        other_indices = [idx for idx in range(len(tilted)) if idx != tilt_idx]
+                        other_total = tilted[other_indices].sum()
+                        if other_total > 0:
+                            for idx in other_indices:
+                                tilted[idx] = max(0.0, tilted[idx] - reduce_total * tilted[idx] / other_total)
+                    tilted_curves = []
+                    for idx, item in enumerate(usable_curves):
+                        item_copy = dict(item)
+                        item_copy["weight"] = float(tilted[idx])
+                        tilted_curves.append(item_copy)
+                    tilted_result = _combine_component_curves(tilted_curves)
+                    tilted_summary = _summary_metrics_from_curve(tilted_result, name="Tilted")
+                    tilted_cagr = _optional_float(tilted_summary.get("cagr"))
+                    tilted_mdd = _optional_float(tilted_summary.get("mdd"))
+                    rows.append(
+                        {
+                            "Scenario": f"Mix weight +5%p: {_component_title(component)}",
+                            "Scope": "component weights",
+                            "Result Status": "PASS",
+                            "Expected Check": "비중 민감도",
+                            "CAGR Delta": tilted_cagr - base_cagr if tilted_cagr is not None and base_cagr is not None else None,
+                            "MDD Delta": tilted_mdd - base_mdd if tilted_mdd is not None and base_mdd is not None else None,
+                        }
+                    )
+        else:
+            rows.extend(
+                [
+                    {"Scenario": "Mix weight +/- 5%p", "Scope": "component weights", "Result Status": "NOT_RUN", "Expected Check": "60:40 등 특정 비중 의존성"},
+                    {"Scenario": "Drop-one component", "Scope": "remove one component and renormalize", "Result Status": "NOT_RUN", "Expected Check": "특정 component 의존성"},
+                ]
+            )
     strategy_keys = {str(component.get("strategy_key") or component.get("strategy_family") or "").lower() for component in active_components}
     if any("gtaa" in key for key in strategy_keys):
         rows.append({"Scenario": "GTAA parameter perturbation", "Scope": "interval / MA window / rebalance day", "Result Status": "NOT_RUN", "Expected Check": "cadence 민감도"})
@@ -747,6 +1428,153 @@ def _sensitivity_rows(active_components: list[dict[str, Any]]) -> list[dict[str,
         rows.append({"Scenario": "Equal Weight perturbation", "Scope": "rebalance frequency / ticker subset", "Result Status": "NOT_RUN", "Expected Check": "ticker set 민감도"})
     if any("relative" in key or "grs" in key for key in strategy_keys):
         rows.append({"Scenario": "Relative Strength perturbation", "Scope": "lookback / top_n / skip period", "Result Status": "NOT_RUN", "Expected Check": "momentum window 민감도"})
+    return rows
+
+
+def _correlation_risk_evidence(component_curves: list[dict[str, Any]]) -> dict[str, Any]:
+    returns = _aligned_monthly_returns(component_curves)
+    if returns.empty or returns.shape[1] < 2:
+        return {
+            "status": "NOT_RUN",
+            "summary": "component return matrix가 부족해 상관 / 위험기여를 계산하지 못했습니다.",
+            "rows": [],
+            "metrics": {},
+        }
+    corr = returns.corr()
+    off_diag_values = [
+        float(corr.iloc[i, j])
+        for i in range(corr.shape[0])
+        for j in range(corr.shape[1])
+        if i < j and not pd.isna(corr.iloc[i, j])
+    ]
+    avg_corr = float(np.mean(off_diag_values)) if off_diag_values else None
+    max_corr = float(np.max(off_diag_values)) if off_diag_values else None
+    vols = returns.std().fillna(0.0)
+    weights = np.array([float(item.get("weight") or 0.0) for item in component_curves[: len(vols)]], dtype=float)
+    if weights.sum() <= 0:
+        weights = np.array([1.0 / len(vols)] * len(vols), dtype=float)
+    weights = weights / weights.sum()
+    raw_risk = weights * vols.values
+    risk_contribution = raw_risk / raw_risk.sum() if raw_risk.sum() > 0 else np.array([0.0] * len(raw_risk))
+    max_risk_contribution = float(risk_contribution.max()) if len(risk_contribution) else None
+    rows = [
+        {
+            "Component": component_curves[idx].get("component"),
+            "Weight": round(float(weights[idx]) * 100.0, 4),
+            "Monthly Vol": float(vols.iloc[idx]),
+            "Risk Contribution Proxy": float(risk_contribution[idx]) if idx < len(risk_contribution) else None,
+        }
+        for idx in range(len(vols))
+    ]
+    status = "REVIEW" if (max_corr is not None and max_corr > 0.85) or (max_risk_contribution or 0.0) > 0.80 else "PASS"
+    return {
+        "status": status,
+        "summary": f"평균 상관 {avg_corr:.2f}, 최대 risk contribution {max_risk_contribution:.1%}" if avg_corr is not None and max_risk_contribution is not None else "상관 / 위험기여 proxy 계산됨",
+        "rows": rows,
+        "metrics": {
+            "average_correlation": avg_corr,
+            "max_correlation": max_corr,
+            "max_risk_contribution": max_risk_contribution,
+            "monthly_return_rows": len(returns),
+        },
+    }
+
+
+def _market_context_evidence(benchmark_curve: pd.DataFrame, *, label: str) -> dict[str, Any]:
+    curve = _normalize_result_curve(benchmark_curve)
+    if curve.empty or len(curve) < 20:
+        return {
+            "status": "NOT_RUN",
+            "summary": f"{label} proxy 계산에 필요한 benchmark curve가 없습니다.",
+            "rows": [],
+            "metrics": {},
+        }
+    recent = curve.tail(min(len(curve), 63)).copy()
+    start_balance = _optional_float(recent["Total Balance"].iloc[0])
+    end_balance = _optional_float(recent["Total Balance"].iloc[-1])
+    recent_return = end_balance / start_balance - 1.0 if start_balance and end_balance is not None else None
+    recent_drawdown = float((recent["Total Balance"] / recent["Total Balance"].cummax() - 1).min())
+    recent_vol = float(pd.to_numeric(recent["Total Return"], errors="coerce").std() * np.sqrt(252))
+    status = "REVIEW" if (recent_drawdown < -0.10 or recent_vol > 0.35) else "PASS"
+    return {
+        "status": status,
+        "summary": f"{label} proxy: recent return {recent_return:.2%}, drawdown {recent_drawdown:.2%}, vol {recent_vol:.2%}" if recent_return is not None else f"{label} proxy 계산됨",
+        "rows": [
+            {"Metric": "Recent return", "Value": recent_return, "Judgment": "REVIEW" if recent_return is not None and recent_return < -0.10 else "PASS"},
+            {"Metric": "Recent drawdown", "Value": recent_drawdown, "Judgment": "REVIEW" if recent_drawdown < -0.10 else "PASS"},
+            {"Metric": "Recent annualized vol", "Value": recent_vol, "Judgment": "REVIEW" if recent_vol > 0.35 else "PASS"},
+        ],
+        "metrics": {
+            "recent_return": recent_return,
+            "recent_drawdown": recent_drawdown,
+            "recent_annualized_vol": recent_vol,
+        },
+    }
+
+
+def _operability_rows(active_components: list[dict[str, Any]], source_period: dict[str, Any]) -> list[dict[str, Any]]:
+    tickers = sorted({ticker for component in active_components for ticker in _component_universe_tickers(component)})
+    if not tickers:
+        return []
+    end_value = source_period.get("actual_end") or source_period.get("end")
+    end_ts = _parse_date(end_value)
+    start_ts = end_ts - pd.Timedelta(days=90) if end_ts is not None else None
+    try:
+        history = load_price_history(
+            symbols=tickers,
+            start=_format_date(start_ts),
+            end=_format_date(end_ts),
+            timeframe="1d",
+        )
+    except Exception:
+        return [
+            {
+                "Ticker": ticker,
+                "Status": "NOT_RUN",
+                "Latest Close": None,
+                "Avg Dollar Volume 60D": None,
+                "Reason": "price DB load failed",
+            }
+            for ticker in tickers
+        ]
+    if history.empty:
+        return [
+            {
+                "Ticker": ticker,
+                "Status": "NOT_RUN",
+                "Latest Close": None,
+                "Avg Dollar Volume 60D": None,
+                "Reason": "price history 없음",
+            }
+            for ticker in tickers
+        ]
+    rows: list[dict[str, Any]] = []
+    for ticker in tickers:
+        ticker_df = history[history["symbol"].astype(str).str.upper() == ticker].copy()
+        if ticker_df.empty:
+            rows.append({"Ticker": ticker, "Status": "NOT_RUN", "Latest Close": None, "Avg Dollar Volume 60D": None, "Reason": "missing"})
+            continue
+        ticker_df["close"] = pd.to_numeric(ticker_df["close"], errors="coerce")
+        ticker_df["volume"] = pd.to_numeric(ticker_df["volume"], errors="coerce")
+        latest_close = _optional_float(ticker_df.sort_values("date")["close"].dropna().iloc[-1]) if not ticker_df["close"].dropna().empty else None
+        avg_dollar_volume = float((ticker_df["close"] * ticker_df["volume"]).dropna().tail(60).mean()) if not (ticker_df["close"] * ticker_df["volume"]).dropna().empty else None
+        status = "PASS"
+        reason = "basic price/volume available"
+        if latest_close is None or latest_close < 5.0:
+            status = "REVIEW"
+            reason = "low or missing latest price"
+        if avg_dollar_volume is None or avg_dollar_volume < 5_000_000:
+            status = "REVIEW"
+            reason = "low or missing average dollar volume"
+        rows.append(
+            {
+                "Ticker": ticker,
+                "Status": status,
+                "Latest Close": latest_close,
+                "Avg Dollar Volume 60D": avg_dollar_volume,
+                "Reason": reason,
+            }
+        )
     return rows
 
 
@@ -798,6 +1626,10 @@ def build_practical_validation_result(
     has_benchmark = any(str(component.get("benchmark") or "").strip() not in {"", "-"} for component in active_components)
     if not has_benchmark:
         review_gaps.append("benchmark snapshot 부족")
+    curve_context = _build_curve_context(source_row, active_components)
+    portfolio_curve = _normalize_result_curve(curve_context.get("portfolio_curve"))
+    benchmark_curve = _normalize_result_curve(curve_context.get("benchmark_curve"))
+    portfolio_summary = dict(curve_context.get("portfolio_summary") or {})
 
     input_checks = [
         {
@@ -830,6 +1662,12 @@ def build_practical_validation_result(
             "Current": "live approval disabled / order instruction disabled",
             "Meaning": "이 검증은 후보 자료이며 주문이나 자동매매가 아닙니다.",
         },
+        {
+            "Criteria": "Curve evidence",
+            "Ready": not portfolio_curve.empty,
+            "Current": curve_context.get("portfolio_curve_source") or "-",
+            "Meaning": "rolling / stress / baseline / correlation 계산에 쓸 portfolio curve가 있는지 봅니다.",
+        },
     ]
 
     exposure_summary = _build_exposure_summary(active_components)
@@ -851,6 +1689,12 @@ def build_practical_validation_result(
         "tactical_high_turnover_allowed",
     }
     complexity_restricts_broad = answers.get("complexity_allowance") == "broad_etf_only"
+    rolling_evidence = _rolling_validation_evidence(
+        portfolio_curve,
+        benchmark_curve,
+        window_months=int(thresholds.get("rolling_window_months") or 36),
+        mdd_review_line=float(thresholds.get("mdd_review_line") or -25.0),
+    )
 
     input_status = "BLOCKED" if hard_blockers else "REVIEW" if review_gaps else "PASS"
     diagnostics: list[dict[str, Any]] = [
@@ -930,12 +1774,30 @@ def build_practical_validation_result(
         )
     )
 
+    correlation_evidence = _correlation_risk_evidence(list(curve_context.get("component_curves") or []))
     if len(active_components) <= 1:
         diversification_status = "REVIEW"
         diversification_summary = "단일 component 후보라 component 간 상관 / 위험기여 분산을 확인할 수 없습니다."
+        diversification_rows = [
+            {
+                "Component": _component_title(component),
+                "Weight": _component_weight(component),
+                "Benchmark": component.get("benchmark") or "-",
+                "Replay Contract": "present" if component.get("replay_contract") else "missing",
+            }
+            for component in active_components
+        ]
+        diversification_metrics = {}
+    elif correlation_evidence.get("status") in {"PASS", "REVIEW"}:
+        diversification_status = str(correlation_evidence.get("status"))
+        diversification_summary = str(correlation_evidence.get("summary") or "상관 / 위험기여 proxy 계산됨")
+        diversification_rows = list(correlation_evidence.get("rows") or [])
+        diversification_metrics = dict(correlation_evidence.get("metrics") or {})
     else:
         diversification_status = "NOT_RUN"
-        diversification_summary = "component별 수익률 replay matrix가 아직 없어 correlation / risk contribution은 후속 계산이 필요합니다."
+        diversification_summary = str(correlation_evidence.get("summary") or "component별 수익률 replay matrix가 아직 없어 correlation / risk contribution은 후속 계산이 필요합니다.")
+        diversification_rows = list(curve_context.get("curve_rows") or [])
+        diversification_metrics = dict(correlation_evidence.get("metrics") or {})
     diagnostics.append(
         _domain_result(
             domain="correlation_diversification_risk_contribution",
@@ -944,50 +1806,56 @@ def build_practical_validation_result(
             origin="new_diagnostic",
             key_metric=f"{len(active_components)} components",
             summary=diversification_summary,
-            evidence_rows=[
-                {
-                    "Component": _component_title(component),
-                    "Weight": _component_weight(component),
-                    "Benchmark": component.get("benchmark") or "-",
-                    "Replay Contract": "present" if component.get("replay_contract") else "missing",
-                }
-                for component in active_components
-            ],
-            limitations=["실제 상관계수와 위험기여도는 component daily/monthly return matrix가 붙은 뒤 계산합니다."],
+            metrics=diversification_metrics,
+            evidence_rows=diversification_rows,
+            limitations=["curve가 embedded 결과가 아니라 DB price proxy일 수 있으므로 실제 전략 path와 다를 수 있습니다."],
             next_action="mix 후보라면 component별 return curve replay를 붙여 위험기여도를 계산합니다.",
         )
     )
 
+    regime_evidence = _market_context_evidence(benchmark_curve if not benchmark_curve.empty else portfolio_curve, label="Regime")
     diagnostics.append(
         _domain_result(
             domain="regime_macro_suitability",
             title="5. Regime / Macro Suitability",
-            status="NOT_RUN",
-            origin="future_connector",
-            key_metric="macro connector pending",
-            summary="금리, 인플레이션, 경기 국면 데이터 connector가 아직 붙지 않아 macro suitability는 기록만 남깁니다.",
-            limitations=["FRED 등 macro connector가 붙기 전에는 hard blocker로 사용하지 않습니다."],
+            status=str(regime_evidence.get("status") or "NOT_RUN"),
+            origin="market_proxy" if regime_evidence.get("status") != "NOT_RUN" else "future_connector",
+            key_metric="benchmark recent context",
+            summary=str(regime_evidence.get("summary") or "금리, 인플레이션, 경기 국면 데이터 connector가 아직 붙지 않아 macro suitability는 기록만 남깁니다."),
+            metrics=dict(regime_evidence.get("metrics") or {}),
+            evidence_rows=list(regime_evidence.get("rows") or []),
+            limitations=["현재는 benchmark recent return/drawdown/vol proxy이며, FRED macro connector는 후속입니다."],
             next_action="core Practical Validation 이후 FRED 기반 regime snapshot을 추가합니다.",
         )
     )
+    sentiment_evidence = _market_context_evidence(benchmark_curve if not benchmark_curve.empty else portfolio_curve, label="Risk-on/off")
     diagnostics.append(
         _domain_result(
             domain="sentiment_risk_on_off_overlay",
             title="6. Sentiment / Risk-On-Off Overlay",
-            status="NOT_RUN",
-            origin="future_connector",
-            key_metric="sentiment connector pending",
-            summary="VIX, Fear & Greed, credit spread / yield curve 보조지표는 이번 core 구현 범위에서 제외합니다.",
-            limitations=["시장 분위기 지표는 보조지표이며 단독 hard blocker로 쓰지 않습니다."],
+            status=str(sentiment_evidence.get("status") or "NOT_RUN"),
+            origin="market_proxy" if sentiment_evidence.get("status") != "NOT_RUN" else "future_connector",
+            key_metric="risk-on/off proxy",
+            summary=str(sentiment_evidence.get("summary") or "VIX, Fear & Greed, credit spread / yield curve 보조지표는 아직 connector가 필요합니다."),
+            metrics=dict(sentiment_evidence.get("metrics") or {}),
+            evidence_rows=list(sentiment_evidence.get("rows") or []),
+            limitations=["VIX/Fear & Greed/Credit Spread가 아니라 price-action proxy입니다. 단독 hard blocker로 쓰지 않습니다."],
             next_action="core 개발 후 FRED 기반 VIX / credit spread / yield curve snapshot부터 붙입니다.",
         )
     )
 
-    stress_rows = _stress_window_rows(source_period)
+    stress_rows = _stress_window_rows(source_period, portfolio_curve=portfolio_curve, benchmark_curve=benchmark_curve)
     covered_stress_count = sum(1 for row in stress_rows if row.get("Coverage") == "COVERED")
+    computed_stress_count = sum(1 for row in stress_rows if row.get("Coverage") == "COVERED" and row.get("Result Status") in {"PASS", "REVIEW"})
     if not stress_rows:
         stress_status = "NOT_RUN"
         stress_summary = "static stress window calendar를 읽지 못했습니다."
+    elif any(row.get("Result Status") == "REVIEW" for row in stress_rows if row.get("Coverage") == "COVERED"):
+        stress_status = "REVIEW"
+        stress_summary = f"stress window {computed_stress_count}개를 계산했고, 일부 구간에서 drawdown review가 필요합니다."
+    elif computed_stress_count > 0:
+        stress_status = "PASS"
+        stress_summary = f"stress window {computed_stress_count}개를 계산했고 즉시 review 수준의 drawdown은 감지되지 않았습니다."
     elif covered_stress_count > 0:
         stress_status = "REVIEW"
         stress_summary = f"백테스트 기간에 포함된 stress window {covered_stress_count}개가 있어 구간 replay가 필요합니다."
@@ -1008,17 +1876,31 @@ def build_practical_validation_result(
         )
     )
 
-    alternative_rows = _baseline_rows()
+    alternative_rows = _baseline_rows(
+        portfolio_curve,
+        source_period=source_period,
+        success_metric=str(answers.get("alternative_success_metric") or "better_risk_adjusted"),
+    )
+    baseline_status_values = {str(row.get("Result Status") or "NOT_RUN") for row in alternative_rows}
+    if "PASS" in baseline_status_values and "REVIEW" not in baseline_status_values:
+        alternative_status = "PASS"
+        alternative_summary = "후보가 1차 단순 대안 baseline 대비 선택 기준을 충족했습니다."
+    elif "PASS" in baseline_status_values or "REVIEW" in baseline_status_values:
+        alternative_status = "REVIEW"
+        alternative_summary = "일부 단순 대안 대비 복잡성을 보상하는 근거가 부족할 수 있습니다."
+    else:
+        alternative_status = "NOT_RUN"
+        alternative_summary = "단순 대안 baseline replay 비교를 실행하지 못했습니다."
     diagnostics.append(
         _domain_result(
             domain="alternative_portfolio_challenge",
             title="8. Alternative Portfolio Challenge",
-            status="NOT_RUN",
+            status=alternative_status,
             origin="new_diagnostic",
-            key_metric="SPY / QQQ / 60-40 / cash-aware pending",
-            summary="단순 대안 baseline 목록은 생성했지만 baseline replay 비교는 아직 실행하지 않았습니다.",
+            key_metric="SPY / QQQ / 60-40 / cash-aware",
+            summary=alternative_summary,
             evidence_rows=alternative_rows,
-            limitations=["미래 수익 보장이 아니라 단순 대안보다 복잡한 후보를 선택할 근거를 점검하는 용도입니다."],
+            limitations=["미래 수익 보장이 아니라 단순 대안보다 복잡한 후보를 선택할 근거를 점검하는 용도입니다. DB 가격 proxy baseline입니다."],
             next_action="후속 구현에서 baseline curve를 같은 기간으로 replay해 risk-adjusted 비교를 추가합니다.",
             profile_effect=profile_row["answer_labels"].get("alternative_success_metric", "-"),
         )
@@ -1053,9 +1935,17 @@ def build_practical_validation_result(
     )
 
     excluded_tickers = list(data_trust.get("excluded_tickers") or [])
+    operability_evidence_rows = _operability_rows(active_components, source_period)
+    operability_status_values = {str(row.get("Status") or "NOT_RUN") for row in operability_evidence_rows}
     if str(data_trust.get("status") or "").lower() in {"error", "blocked"}:
         operability_status = "BLOCKED"
         operability_summary = "Data Trust가 차단되어 가격/운용 가능성 판단을 진행할 수 없습니다."
+    elif "REVIEW" in operability_status_values:
+        operability_status = "REVIEW"
+        operability_summary = "일부 ticker의 가격 / 거래대금 proxy가 낮거나 누락되어 운용성 확인이 필요합니다."
+    elif operability_evidence_rows and operability_status_values == {"PASS"}:
+        operability_status = "PASS"
+        operability_summary = "기본 가격 / 거래대금 proxy 기준 운용성 blocker는 감지되지 않았습니다."
     elif excluded_tickers or unknown_weight > 50.0:
         operability_status = "REVIEW"
         operability_summary = "제외 ticker 또는 미분류 비중이 있어 ETF 운용성 확인이 필요합니다."
@@ -1086,19 +1976,32 @@ def build_practical_validation_result(
                     "Current": ", ".join(excluded_tickers) if excluded_tickers else "-",
                     "Meaning": "원본 backtest에서 가격/데이터 문제로 제외된 ticker",
                 },
-            ],
-            limitations=["ETF expense ratio / ADV / spread 데이터 connector는 후속 구현입니다."],
+            ] + operability_evidence_rows,
+            limitations=["ETF expense ratio / bid-ask spread 데이터는 후속 connector이며, 현재는 DB price/volume proxy입니다."],
             next_action="Final Review 전에 cost/liquidity connector가 없다는 점을 판단 근거에 남깁니다.",
             profile_effect=str(thresholds.get("cost_interpretation") or "-"),
         )
     )
 
     overfit_audit = _build_overfit_audit(source_row, active_components)
-    sensitivity_rows = _sensitivity_rows(active_components)
-    robustness_status = "REVIEW" if overfit_audit.get("status") == "REVIEW" else "NOT_RUN"
+    sensitivity_rows = _sensitivity_rows(
+        active_components,
+        component_curves=list(curve_context.get("component_curves") or []),
+        portfolio_curve=portfolio_curve,
+    )
+    sensitivity_status_values = {str(row.get("Result Status") or "NOT_RUN") for row in sensitivity_rows}
+    robustness_status = (
+        "REVIEW"
+        if overfit_audit.get("status") == "REVIEW" or "REVIEW" in sensitivity_status_values or rolling_evidence.get("status") == "REVIEW"
+        else "PASS"
+        if "PASS" in sensitivity_status_values or rolling_evidence.get("status") == "PASS"
+        else "NOT_RUN"
+    )
     robustness_summary = (
         overfit_audit.get("interpretation")
         if overfit_audit.get("status") == "REVIEW"
+        else "sensitivity perturbation 일부를 curve 기반으로 계산했습니다."
+        if robustness_status == "PASS"
         else "sensitivity perturbation 목록은 생성했지만 실제 재계산은 아직 실행하지 않았습니다."
     )
     diagnostics.append(
@@ -1109,9 +2012,9 @@ def build_practical_validation_result(
             origin="new_diagnostic",
             key_metric=f"local trials {overfit_audit.get('trial_count', 0)}",
             summary=str(robustness_summary),
-            metrics=overfit_audit,
-            evidence_rows=sensitivity_rows,
-            limitations=["run_history 원본은 저장하지 않고 local audit summary만 결과 row에 남깁니다."],
+            metrics={**overfit_audit, "rolling_validation": dict(rolling_evidence.get("metrics") or {})},
+            evidence_rows=list(rolling_evidence.get("rows") or []) + sensitivity_rows,
+            limitations=["run_history 원본은 저장하지 않고 local audit summary만 결과 row에 남깁니다. Curve proxy일 수 있습니다."],
             next_action="후속 구현에서 weight +/-5%p, drop-one, window perturbation을 실제 재계산합니다.",
         )
     )
@@ -1181,7 +2084,8 @@ def build_practical_validation_result(
             "robustness_sensitivity_overfit",
         }
     ]
-    validation_score = _diagnostic_score(diagnostics, hard_blockers)
+    validation_score = _diagnostic_score(diagnostics, hard_blockers, profile_row)
+    profile_score_rows = _profile_score_rows(diagnostics, profile_row)
 
     if hard_blockers:
         route = "BLOCKED"
@@ -1249,6 +2153,7 @@ def build_practical_validation_result(
             "profile_id": profile_row.get("profile_id"),
             "origin": "practical_validation_v2_core",
         },
+        "profile_score_rows": profile_score_rows,
         "not_run_domains": not_run_domains,
         "not_run_critical_domains": not_run_critical_domains,
         "intent_mismatch_warnings": intent_mismatch_warnings,
@@ -1262,7 +2167,12 @@ def build_practical_validation_result(
             "known_weight": known_weight,
             "unknown_weight": unknown_weight,
             "covered_stress_windows": covered_stress_count,
+            "computed_stress_windows": computed_stress_count,
             "local_trial_count": overfit_audit.get("trial_count", 0),
+            "portfolio_curve_rows": len(portfolio_curve),
+            "portfolio_curve_source": curve_context.get("portfolio_curve_source"),
+            "portfolio_curve_summary": portfolio_summary,
+            "rolling_validation": rolling_evidence.get("metrics") or {},
         },
         "component_rows": component_rows,
         "robustness_validation": {
@@ -1275,6 +2185,7 @@ def build_practical_validation_result(
             "stress_summary_rows": stress_rows + sensitivity_rows,
             "overfit_audit": overfit_audit,
             "sensitivity_rows": sensitivity_rows,
+            "rolling_validation": rolling_evidence,
         },
         "paper_observation": {
             "mode": "inline_paper_observation",
@@ -1318,6 +2229,15 @@ def build_practical_validation_result(
         "stress_window_rows": stress_rows,
         "alternative_baseline_rows": alternative_rows,
         "sensitivity_rows": sensitivity_rows,
+        "rolling_validation": rolling_evidence,
+        "curve_evidence": {
+            "portfolio_curve_source": curve_context.get("portfolio_curve_source"),
+            "portfolio_curve_rows": len(portfolio_curve),
+            "component_curve_rows": list(curve_context.get("curve_rows") or []),
+            "benchmark_ticker": curve_context.get("benchmark_ticker"),
+            "benchmark_curve_rows": len(benchmark_curve),
+            "benchmark_meta": dict(curve_context.get("benchmark_meta") or {}),
+        },
         "final_review_handoff": {
             "route": route,
             "allowed": route == "READY_FOR_FINAL_REVIEW",

@@ -4661,3 +4661,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `BLOCKED`는 Practical Validation 화면에서 Final Review 이동을 막는 source 보강 대상이다
 - Follow-up:
   - 후속 개발은 return curve replay, benchmark parity, rolling/stress 구간 성과, correlation/risk contribution, ETF cost/liquidity connector, macro/sentiment connector 순서로 진행하는 것이 맞다
+
+### 2026-05-10 - Practical Validation 남은 12개 개발 항목 진행
+- User request:
+  - 사용자가 profile-aware scoring부터 Selected Dashboard 연동까지 남은 12개 항목을 단계별로 개발하길 요청함
+- Interpreted goal:
+  - 기존 보드 구조가 아니라 실제 계산 가능한 domain은 바로 정량 계산하고, 데이터 connector가 아직 없는 항목은 proxy / NOT_RUN / REVIEW 경계를 명확히 해야 함
+- Analysis result:
+  - 새 Backtest Analysis handoff에는 compact monthly curve snapshot을 저장한다
+  - 기존 source도 DB price proxy curve를 만들어 rolling, stress, baseline, correlation, sensitivity, operability 계산을 시도한다
+  - profile category는 domain weight를 바꿔 score breakdown과 최종 score에 반영한다
+  - holdings-level look-through, ETF expense / spread / AUM, FRED macro / sentiment는 아직 connector가 필요하므로 proxy 또는 후속으로 남긴다
+- Follow-up:
+  - 후속 고도화는 strategy runtime full replay 버튼, holdings provider, FRED connector, ETF expense / spread connector 순서로 진행한다

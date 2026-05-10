@@ -10,6 +10,8 @@ import streamlit as st
 
 from app.web.backtest_practical_validation_helpers import (
     build_selection_source_from_candidate_draft,
+    compact_benchmark_curve_snapshot_from_bundle,
+    compact_curve_snapshot_from_bundle,
     queue_practical_validation_source,
 )
 from app.web.backtest_strategy_catalog import strategy_key_to_display_name as catalog_strategy_key_to_display_name
@@ -840,6 +842,8 @@ def _candidate_review_draft_from_bundle(bundle: dict[str, Any]) -> dict[str, Any
             "sharpe_ratio": summary.get("sharpe_ratio"),
             "maximum_drawdown": summary.get("maximum_drawdown"),
         },
+        "result_curve_snapshot": compact_curve_snapshot_from_bundle(bundle),
+        "benchmark_curve_snapshot": compact_benchmark_curve_snapshot_from_bundle(bundle),
         "real_money_signal": {
             "promotion": promotion,
             "shortlist": shortlist,

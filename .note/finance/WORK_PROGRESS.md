@@ -3647,3 +3647,9 @@ Detailed historical logs were archived on `2026-04-13`.
   - 아직 실제 return matrix 기반 correlation / risk contribution, baseline replay, stress 구간 성과 재계산, ETF expense / spread / ADV, macro / sentiment connector는 `NOT_RUN` 또는 `REVIEW`로 명시한다.
   - Practical Validation 화면은 profile 입력과 diagnostics board를 표시하고, BLOCKED가 없을 때만 Final Review로 보낸다.
   - Final Review 화면과 final decision snapshot은 Practical Diagnostics 요약 / NOT_RUN critical domain / profile evidence를 함께 읽도록 연결했다.
+- Practical Validation V2 정량 진단 1차 보강:
+  - profile별 domain weight와 score breakdown을 추가해 검증 profile 변경이 score 산정에 반영되도록 했다.
+  - Backtest Analysis handoff에서 compact monthly result curve snapshot을 저장하고, 기존 source는 DB price proxy curve로 계산을 시도하도록 했다.
+  - rolling validation, static stress window return / MDD / benchmark spread, SPY / QQQ / 60/40 / cash-aware baseline challenge, component correlation / risk contribution proxy, drop-one / weight +5%p sensitivity를 Practical Diagnostics에 연결했다.
+  - ETF operability는 DB price / volume proxy와 one-way cost assumption으로 1차 확인하고, macro / sentiment는 FRED connector 전까지 benchmark price-action proxy로 표시한다.
+  - Final Review에는 profile score breakdown, curve evidence, rolling evidence를 snapshot으로 남기도록 연결했다.
