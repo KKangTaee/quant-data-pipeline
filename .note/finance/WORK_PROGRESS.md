@@ -22,6 +22,18 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-10
+- Refined the Practical Validation diagnostics design with Validation Profile behavior.
+- Updated:
+  - `.note/finance/research/PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH.md`
+  - `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_VALIDATION_DESIGN.md`
+  - `.note/finance/QUESTION_AND_ANALYSIS_LOG.md`
+- Durable decision:
+  - Practical Validation should ask 3~5 questions to create a Validation Profile, then use that profile to adjust thresholds, domain weights, blocker / review interpretation, and user-intent mismatch warnings.
+  - The profile should not skip diagnostic domains. Available domains should still be attempted, while invariant hard blockers such as Data Trust failure, weight total error, missing core prices, execution boundary violations, and large leveraged / inverse mismatch remain strict.
+- Current status:
+  - Product code was not changed. This is a document-only design refinement before implementation.
+
+### 2026-05-10
 - Documented the Practical Validation investment diagnostics direction.
 - Created:
   - `.note/finance/research/PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH.md`

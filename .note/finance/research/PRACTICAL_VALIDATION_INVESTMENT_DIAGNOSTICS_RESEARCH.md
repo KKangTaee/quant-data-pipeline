@@ -23,6 +23,9 @@ Final Review로 올라가기 전에 아래 질문에 답하도록 돕는 검증 
 - Mix는 component 성과 합성뿐 아니라 자산군 / 섹터 / 상관 / 위험기여 / regime 적합성을 함께 봐야 한다.
 - sentiment, macro, yield curve, VIX, CNN Fear & Greed 같은 지표는 매수 / 매도 신호가 아니라 risk context overlay로 사용한다.
 - leveraged / inverse ETF는 별도 suitability 경고와 보유 기간 / 리밸런싱 cadence 확인이 필요하다.
+- Practical Validation은 3~5개 질문으로 `Validation Profile`을 먼저 만들고, 이 profile에 따라 threshold / 중요도 / blocker 해석을 조정한다.
+- 12개 진단을 임의로 생략하는 것이 아니라, 가능한 domain은 모두 시도하되 profile에 맞춰 `PASS / REVIEW / BLOCKED / NOT_RUN`의 기준을 다르게 적용한다.
+- 사용자 의도와 후보의 실제 성격이 다르면 mismatch warning을 표시한다. 예를 들어 공격형 목표인데 SPY / QQQ와 차이가 약하거나, 방어형 목표인데 고위험 equity / growth에 몰려 있으면 Final Review 전 확인하게 한다.
 - Final Review는 Practical Validation의 진단 결과를 읽어 최종 선정 / 보류 / 거절 / 재검토 판단을 저장한다.
 
 ## 단계 정의
@@ -36,9 +39,12 @@ Final Review로 올라가기 전에 아래 질문에 답하도록 돕는 검증 
    - 통과 후보를 Practical Validation source로 보낸다.
 
 2. Practical Validation
+   - 3~5개 질문으로 Validation Profile을 만든다.
    - 앞 단계 evidence를 입력으로 읽는다.
    - 포트폴리오 구조, 집중도, 상관, 위험기여, macro / sentiment context,
      stress, ETF 운용 가능성, leveraged / inverse suitability, robustness를 진단한다.
+   - 모든 가능한 진단을 시도하되, profile에 따라 threshold / weight / blocker 기준을 조정한다.
+   - 사용자 목표와 후보 성격이 다르면 mismatch warning을 표시한다.
    - 부족한 domain은 `NOT_RUN` 또는 `REVIEW`로 표시한다.
    - 투자 추천이 아니라 Final Review에 올릴 수 있는 검증 evidence를 만든다.
 
@@ -79,6 +85,78 @@ Practical Validation에서 새로 계산하거나 새로 해석해야 하는 부
 | leveraged / inverse ETF suitability | daily objective, compounding, holding period mismatch가 실전 리스크가 될 수 있음 |
 | cost / liquidity / ETF operability | bid-ask spread, expense, volume, premium / discount는 실전 성과에 직접 영향 |
 | robustness / sensitivity / overfit audit | best-only 백테스트가 아니라 주변 설정에서도 견고한지 확인 |
+
+## Validation Profile 기반 판정
+
+Practical Validation은 사용자에게 긴 설문을 요구하지 않는다.
+검증 실행 전에 3~5개 질문만 받아 후보를 어떤 기준으로 해석할지 정한다.
+
+중요한 설계 원칙:
+
+- 12개 진단 module은 가능한 한 모두 시도한다.
+- Validation Profile은 검증을 생략하기 위한 장치가 아니다.
+- Profile은 domain별 threshold, 중요도 weight, blocker / review 기준, UI 해석 문구를 조정하는 장치다.
+- Data Trust, weight 합계, 가격 부재, replay 불능, 거래 불가, 큰 leveraged / inverse exposure의 목적 부재 같은 hard blocker는 profile로 무력화하지 않는다.
+- Profile은 개인 재무상담이나 투자 적합성 판단이 아니다. 현재 후보를 사용자가 선택한 목적 / 위험 감내도 / 운용 기간에 맞춰 해석하는 product-level validation setting이다.
+
+권장 질문:
+
+| 질문 | 선택지 예시 | 판정에 반영되는 부분 |
+|---|---|---|
+| 이 후보의 주된 목적은 무엇인가? | 방어형 / 균형형 / 성장형 / 공격형 / 헤지형 | benchmark challenge, asset allocation fit, stress 해석 |
+| 감내 가능한 손실 폭은 어느 정도인가? | -10% / -20% / -35% / 그 이상도 가능 | MDD, drawdown duration, tail loss threshold |
+| 예상 운용 기간은 어느 정도인가? | 3개월 미만 / 6~12개월 / 1~3년 / 3년 이상 | leveraged / inverse suitability, rolling window, cost impact |
+| 복잡한 상품과 높은 회전율을 허용하는가? | 단순 ETF만 / sector ETF 가능 / leveraged·inverse 제한 허용 | ETF operability, cost / turnover, leveraged / inverse blocker |
+| 단순 대안보다 무엇이 나아야 하는가? | MDD 감소 / CAGR 증가 / Sharpe 개선 / 하락 방어 / 특정 theme 노출 | Alternative Portfolio Challenge의 성공 기준 |
+
+초기 profile 예시:
+
+| Profile | 목적 | 특징 |
+|---|---|---|
+| `conservative_defensive` | 손실 방어와 안정성 우선 | MDD, concentration, liquidity, cost에 엄격 |
+| `balanced_core` | 수익과 위험 균형 | CAGR / MDD / benchmark / diversification을 균형 있게 봄 |
+| `growth_aggressive` | 높은 성장과 upside 우선 | 높은 equity exposure를 허용하되 overfit, tail risk, liquidity는 계속 확인 |
+| `hedged_tactical` | hedge 또는 tactical exposure | inverse / cash / bond role을 더 세밀하게 확인 |
+| `custom` | 사용자가 직접 조정 | 질문 답변으로 threshold와 weight를 개별 생성 |
+
+profile별 해석 예시:
+
+| 상황 | 보수형 해석 | 공격형 해석 |
+|---|---|---|
+| equity exposure 95% | 강한 `REVIEW` 또는 일부 경우 `BLOCKED` | 목적과 맞으면 약한 `REVIEW` 또는 `PASS` |
+| MDD -35% | 대체로 `BLOCKED` 또는 강한 `REVIEW` | risk tolerance가 높으면 `REVIEW` |
+| SPY와 거의 같은 성과 | 복잡성 불필요 review | 공격형 목표와 차별성 부족 review |
+| leveraged ETF 30% | 목적 / 기간이 있어도 강한 `REVIEW` | 목적 / 기간 / acknowledgement 없으면 여전히 `BLOCKED` |
+| low-liquidity ETF | profile과 무관하게 blocker 후보 | profile과 무관하게 blocker 후보 |
+
+## 사용자 의도와 후보 성격 mismatch
+
+Practical Validation은 후보가 사용자의 선언한 목적과 맞는지도 알려줘야 한다.
+이 기능은 투자 추천이 아니라, 현재 후보의 성격이 사용자의 검증 profile과 맞지 않는다는 disclosure다.
+
+예시:
+
+| 사용자 의도 | 후보 진단 결과 | 표시해야 할 warning |
+|---|---|---|
+| 공격형 성장 | SPY / QQQ와 수익 / 노출 차이가 작음 | 복잡한 후보를 유지할 근거가 약하고 공격형 목표와 차별성이 낮음 |
+| 방어형 / 안정형 | equity / growth / sector concentration이 높음 | 선택한 profile 대비 손실 방어 구조가 부족함 |
+| 헤지형 | inverse ETF가 있지만 비중과 리밸런싱 cadence가 불명확 | hedge 목적과 상품 구조 mismatch를 확인해야 함 |
+| 저비용 장기 운용 | turnover / cost drag가 크거나 expense ratio가 높음 | 장기 비용 부담이 후보 목적과 충돌할 수 있음 |
+
+권장 문구:
+
+```text
+이 후보는 선택한 Growth profile 대비 SPY / QQQ와 노출 차이가 작습니다.
+복잡한 mix를 유지할 근거가 약하므로 Final Review에서 단순 benchmark 후보와 함께 비교하는 것이 좋습니다.
+```
+
+피해야 할 문구:
+
+```text
+차라리 SPY를 사세요.
+이 ETF가 더 낫습니다.
+지금 매수하세요.
+```
 
 ## 조사 자료 요약
 
@@ -479,7 +557,18 @@ domain별 evidence를 넣는 방식이 낫다.
   "selection_source_id": "selection_...",
   "source_kind": "single_strategy | compare_candidate | weighted_mix | saved_mix",
   "created_at": "...",
-  "validation_profile": "balanced",
+  "validation_profile": {
+    "profile_id": "balanced_core",
+    "answers": {
+      "primary_goal": "balanced",
+      "drawdown_tolerance": "-20%",
+      "holding_period": "1-3y",
+      "complexity_allowance": "sector_etf_allowed",
+      "alternative_success_metric": "mdd_reduction"
+    },
+    "thresholds": {},
+    "domain_weights": {}
+  },
   "route": "READY_FOR_FINAL_REVIEW | NEEDS_REVIEW | BLOCKED",
   "input_evidence": {
     "data_trust": {},
@@ -500,6 +589,8 @@ domain별 evidence를 넣는 방식이 낫다.
   "hard_blockers": [],
   "review_gaps": [],
   "not_run_critical_domains": [],
+  "intent_mismatch_warnings": [],
+  "invariant_hard_blockers": [],
   "final_review_handoff": {
     "allowed": true,
     "required_confirmations": []
@@ -518,6 +609,8 @@ domain별 evidence를 넣는 방식이 낫다.
 
 - 현재 v1 check를 domain board로 감싼다.
 - input evidence와 신규 diagnostic domain을 UI에서 분리한다.
+- 3~5개 질문으로 Validation Profile을 만들고 result row에 저장한다.
+- profile별 threshold / domain weight / invariant hard blocker를 분리한다.
 - 아직 구현되지 않은 domain은 `NOT_RUN`으로 표시한다.
 
 ### MVP 2. Asset allocation / concentration / ticker classification
@@ -525,6 +618,7 @@ domain별 evidence를 넣는 방식이 낫다.
 - ticker -> asset class / broad category mapping을 만든다.
 - component weight 기반 exposure table을 표시한다.
 - leveraged / inverse detection을 먼저 넣는다.
+- 사용자 profile과 후보 exposure가 충돌하면 mismatch warning을 만든다.
 
 ### MVP 3. Portfolio curve 기반 diagnostics
 
@@ -548,11 +642,14 @@ domain별 evidence를 넣는 방식이 낫다.
 
 - price availability, ADV proxy, expense ratio부터 시작한다.
 - bid-ask spread, premium / discount, holdings look-through는 데이터 수집 확장으로 분리한다.
+- liquidity, price availability, large leveraged / inverse mismatch 같은 invariant blocker는 profile과 무관하게 유지한다.
 
 ## UI 설계 원칙
 
 - `Input Evidence`와 `Practical Diagnostics`를 화면에서 분리한다.
+- 진단 실행 전에 `Validation Profile` 질문 3~5개를 먼저 보여준다.
 - 맨 위에는 route와 blocker / review gap / not-run critical domain 요약을 보여준다.
+- route summary에는 profile id, profile 기준으로 바뀐 주요 threshold, intent mismatch warning을 같이 보여준다.
 - 각 module은 `왜 보는가`, `결과`, `한계`, `Final Review에서 확인할 점`을 짧게 표시한다.
 - sentiment / macro는 버튼 이름이나 status에서 투자 지시처럼 보이면 안 된다.
 - `Run Practical Diagnostics` 이후에는 `Final Review로 보내기`가 가능하되,
@@ -573,7 +670,11 @@ domain별 evidence를 넣는 방식이 낫다.
 | 질문 | 기본 제안 |
 |---|---|
 | sentiment overlay를 hard blocker로 쓸 것인가? | 기본적으로 쓰지 않는다. context review gap으로만 둔다. |
-| asset allocation profile을 어떻게 고를 것인가? | conservative / balanced / growth / custom profile을 둔다. |
+| asset allocation profile을 어떻게 고를 것인가? | `conservative_defensive`, `balanced_core`, `growth_aggressive`, `hedged_tactical`, `custom`으로 시작한다. |
+| profile 질문은 몇 개가 적절한가? | MVP에서는 3~5개로 제한한다. 길어지면 Practical Validation 진입 장벽이 높아진다. |
+| profile별로 12개 진단 중 일부를 생략할 것인가? | 생략하지 않는다. 가능한 진단은 모두 시도하고 threshold / weight / blocker 해석만 조정한다. |
+| profile로 무력화하면 안 되는 hard blocker는 무엇인가? | Data Trust hard blocker, weight 합계 오류, 핵심 가격 부재, 거래 불가, 큰 leveraged / inverse exposure의 목적 부재, execution boundary 위반 |
+| 사용자 의도와 후보 성격 mismatch는 어디서 보여줄 것인가? | Practical Validation route summary와 Alternative Portfolio Challenge / Asset Allocation Fit domain에 같이 표시한다. |
 | sector / holdings look-through data가 없으면 어떻게 할 것인가? | proxy classification으로 시작하고 missing coverage를 `NOT_RUN`으로 표시한다. |
 | leveraged / inverse ETF는 언제 blocker인가? | 큰 비중, medium-long cadence, 목적 불명, acknowledgement 없음이면 blocker 후보로 둔다. |
 | Final Review selected route에서 `NOT_RUN`을 허용할 것인가? | 허용하되 critical domain이면 Final Review에서 명시 확인을 요구한다. |

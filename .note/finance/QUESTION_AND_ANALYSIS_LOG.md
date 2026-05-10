@@ -4514,3 +4514,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Follow-up:
   - `.note/finance/research/PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH.md`를 새로 작성했다
   - `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_VALIDATION_DESIGN.md`를 evidence pack 중심에서 Practical Investment Diagnostics 중심으로 보강했다
+
+### 2026-05-10 - Practical Validation은 Validation Profile로 판정 기준을 조정해야 한다
+- User request:
+  - 사용자가 Practical Validation에서 모든 진단을 보수적으로 적용하면 공격형 / 방어형 등 사용자 목적에 맞지 않게 다음 단계가 막힐 수 있다고 지적함
+  - 3~5개 질문으로 사용자 성향과 목적을 파악해 threshold / weight / blocker 기준을 자동 조정하고, 사용자가 원한 방향과 후보 성격이 다르면 알려주는 기능을 제안함
+- Interpreted goal:
+  - 12개 진단 module은 유지하되, `Validation Profile`이 domain별 threshold, 중요도, blocker / review 기준, mismatch warning을 조정하는 구조를 문서화해야 함
+- Analysis result:
+  - 검증 domain을 줄이는 방식보다 가능한 domain은 모두 시도하고 profile에 따라 해석을 바꾸는 방식이 안전하다
+  - Data Trust, weight 합계, 가격 부재, 거래 불가, execution boundary, 큰 leveraged / inverse exposure의 목적 부재 같은 invariant hard blocker는 profile로 무력화하면 안 된다
+  - 공격형 목표인데 SPY / QQQ와 차이가 약하거나, 방어형 목표인데 equity / growth concentration이 높으면 intent mismatch warning으로 Final Review 전에 보여줘야 한다
+- Follow-up:
+  - Practical Validation research / design 문서에 Validation Profile 질문, profile별 threshold / weight / invariant blocker, intent mismatch warning, JSON / UI / 구현 slice 반영 사항을 보강했다
