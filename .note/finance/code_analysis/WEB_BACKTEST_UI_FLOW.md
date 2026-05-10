@@ -64,6 +64,9 @@ Backtest 주 흐름:
 - `Practical Validation`: 선택된 단일 전략 / Compare 후보 / Saved Mix source를 실전 투입 전 조건으로 검증하고 `PRACTICAL_VALIDATION_RESULTS.jsonl`에 구조화된 검증 결과를 저장한다. 사용자 최종 메모는 받지 않는다.
 - `Final Review`: Practical Validation result를 기준으로 Validation / Robustness / Paper Observation 기준을 한 화면에서 확인하고, 최종 선정 / 보류 / 거절 / 재검토 판단과 최종 메모를 `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl`에 저장한다.
 
+Practical Validation의 현재 구현은 source id, active component, target weight total, Data Trust / Real-Money blocker, benchmark snapshot 같은 최소 contract를 확인하는 1차 gate다.
+실전 후보 검증 evidence pack으로 확장할 때는 `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_VALIDATION_DESIGN.md`를 기준으로 replay / benchmark parity, rolling / walk-forward, drawdown / stress, cost / turnover, ETF investability, sensitivity / overfit, monitoring plan domain을 단계적으로 추가한다.
+
 Legacy / compatibility 흐름:
 
 - `Candidate Review`, `Portfolio Proposal`, 기존 Pre-Live registry, 기존 proposal registry는 바로 삭제하지 않는다. 다만 새 주 흐름의 필수 join 조건이 아니라 legacy inspector / archive compatibility로 낮춘다.

@@ -4476,3 +4476,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 해당 문구는 과거 workflow copy가 남은 것이며, 참조 확인도 legacy registry 중심이었다
 - Follow-up:
   - 판정 문구와 기준명을 Clean V2 기준으로 바꾸고 V2 registry 참조 확인을 추가했다
+
+### 2026-05-10 - Practical Validation은 실전 후보 검증 evidence pack으로 확장해야 한다
+- User request:
+  - 사용자가 Practical Validation이 현재 어떤 검증을 하는지, 그 검증이 실전 투자 관점에서 신빙성이 있는지, 앞으로 어떤 검증을 넣어야 하는지 설계 조사와 문서화를 요청함
+- Interpreted goal:
+  - 구현 전에 `이 전략을 실전 전략 후보로 사용할 수 있나?`라는 질문에 답하기 위한 검증 domain, 데이터 요구사항, UI / JSON contract, 구현 우선순위를 정해야 함
+- Analysis result:
+  - 현재 Practical Validation은 source id, active component, weight total, Data Trust / Real-Money blocker, benchmark snapshot을 보는 최소 gate이며 깊은 실전 검증은 아니다
+  - 실전 후보 검증으로는 replay reproducibility, same-period benchmark, rolling / walk-forward, drawdown / tail / recovery, regime stress, cost / turnover, ETF investability, parameter / weight sensitivity, overfit audit, paper monitoring plan이 필요하다
+  - 각 domain은 `PASS / REVIEW / BLOCKED / NOT_RUN`으로 분리해야 하며, `NOT_RUN`은 통과가 아니라 아직 확인하지 못한 상태로 표시해야 한다
+- Follow-up:
+  - `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_VALIDATION_DESIGN.md`에 조사 출처, domain 설계, v2 schema, UI 구조, 구현 slice를 문서화했다
+  - 제품 코드는 아직 수정하지 않았다

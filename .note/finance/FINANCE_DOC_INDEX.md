@@ -242,6 +242,7 @@
 | `.note/finance/code_analysis/DATA_DB_PIPELINE_FLOW.md` | data collection, DB persistence, loader read path 흐름 |
 | `.note/finance/code_analysis/WEB_BACKTEST_UI_FLOW.md` | Backtest UI, Single Strategy, Compare, History, Saved Portfolio 흐름 |
 | `.note/finance/code_analysis/BACKTEST_PORTFOLIO_SELECTION_WORKFLOW_REDESIGN_GUIDE.md` | Backtest 후보 선정 workflow를 3단계 구조로 바꾸기 전 route / registry / implementation impact를 정리한 개발 가이드 |
+| `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_VALIDATION_DESIGN.md` | Practical Validation을 실전 후보 검증 evidence pack으로 확장하기 위한 조사 / domain 설계 / 구현 우선순위 |
 | `.note/finance/code_analysis/STRATEGY_IMPLEMENTATION_FLOW.md` | 새 strategy family를 제품에 추가할 때 따라야 하는 구현 흐름 |
 | `.note/finance/code_analysis/AUTOMATION_SCRIPTS_GUIDE.md` | phase bootstrap, hygiene, candidate registry helper script 사용 기준 |
 | `.note/finance/code_analysis/BACKTEST_REFINEMENT_CODE_FLOW_GUIDE.md` | 기존 backtest refinement 중심 code flow guide |

@@ -3520,3 +3520,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - Portfolio Mix 검증 보드 legacy 문구 정리:
   - user feedback에 따라 saved mix 판정 문구에 남아 있던 `5~10단계 workflow 통과 기록` 표현을 Clean V2 기준으로 교체했다.
   - saved mix 기록 참조 확인 대상에 `PORTFOLIO_SELECTION_SOURCES`, `PRACTICAL_VALIDATION_RESULTS`, `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2`, `SELECTED_PORTFOLIO_MONITORING_LOG`를 추가했다.
+
+### 2026-05-10
+- Practical Validation V2 검증 설계 조사 / 문서화:
+  - user request에 따라 현재 Practical Validation이 실제로 검증하는 항목과 실전 후보 검증으로 부족한 부분을 정리했다.
+  - CFA backtesting / GIPS / SEC performance presentation / SR 11-7 model validation / overfitting / transaction cost / ETF liquidity reference를 조사해 검증 domain으로 번역했다.
+  - `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_VALIDATION_DESIGN.md`를 추가하고, source contract, replay, benchmark, rolling, drawdown, stress, cost, investability, sensitivity, overfit, monitoring plan domain과 구현 우선순위를 정리했다.
+  - 제품 코드는 아직 수정하지 않았다. 다음 작업은 사용자가 설계를 확인한 뒤 Slice 1 domain board부터 구현하는 것이 맞다.
