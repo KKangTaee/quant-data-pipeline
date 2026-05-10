@@ -4527,3 +4527,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 공격형 목표인데 SPY / QQQ와 차이가 약하거나, 방어형 목표인데 equity / growth concentration이 높으면 intent mismatch warning으로 Final Review 전에 보여줘야 한다
 - Follow-up:
   - Practical Validation research / design 문서에 Validation Profile 질문, profile별 threshold / weight / invariant blocker, intent mismatch warning, JSON / UI / 구현 slice 반영 사항을 보강했다
+
+### 2026-05-10 - Sentiment Overlay는 후속 module로 두고 Asset Allocation Profile 용어를 명확히 한다
+- User request:
+  - 사용자가 Sentiment Overlay 데이터 연동은 1차 Practical Validation 이후에 추가해도 되는지 확인했고, 해당 내용을 문서에 짧게 남기길 요청함
+  - `asset allocation profile`이 무엇을 뜻하는지도 질문함
+- Interpreted goal:
+  - 1차 Practical Validation core와 후속 market-context connector의 경계를 분리하고, asset allocation profile 용어를 문서상 명확히 해야 함
+- Analysis result:
+  - Sentiment Overlay는 반드시 넣고 싶은 future module이지만, 1차 구현에서는 `NOT_RUN` / future connector 상태로 남기고 core diagnostic flow를 먼저 안정화하는 것이 맞다
+  - 후속 구현은 FRED 기반 VIX / Credit Spread / Yield Curve snapshot부터 시작하고, Fear & Greed는 optional connector로 둔다
+  - asset allocation profile은 주식 / 채권 / 현금 / 금 / 원자재 / inverse / leveraged 노출을 사용자의 검증 목적에 맞춰 해석하는 자산 배분 성격 기준이다
+- Follow-up:
+  - Practical Validation research / design 문서와 glossary에 Sentiment Overlay 후속 구현 메모와 Asset Allocation Profile 정의를 추가했다

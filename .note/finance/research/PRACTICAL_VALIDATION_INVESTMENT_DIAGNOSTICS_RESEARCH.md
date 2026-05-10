@@ -216,6 +216,11 @@ Practical Validation은 후보가 사용자의 선언한 목적과 맞는지도 
 이 후보는 주식, 채권, 현금, 금, 원자재, 대체자산 비중이 의도와 맞는가?
 ```
 
+여기서 `asset allocation profile`은 사용자가 기대하는 포트폴리오의 자산 배분 성격이다.
+예를 들어 방어형 profile은 주식 비중, drawdown, concentration을 더 엄격하게 보고,
+성장형 profile은 높은 주식 비중을 더 허용하되 tail risk, liquidity, overfit은 계속 확인한다.
+이 profile은 개인 재무상담이 아니라 Practical Validation의 판정 기준을 조정하는 설정이다.
+
 진단:
 
 - component ticker를 asset class로 분류한다.
@@ -369,6 +374,14 @@ MVP 지표:
 | `REVIEW` | high equity / high beta portfolio인데 greed / low-vol complacency context가 강함 |
 | `BLOCKED` | sentiment 단독으로 blocker 처리하지 않는 것을 기본값으로 함 |
 | `NOT_RUN` | 외부 sentiment data connector 미구현 |
+
+구현 순서 메모:
+
+- 1차 Practical Validation 개발에서는 sentiment data connector를 필수 구현 범위에 넣지 않는다.
+- 초기 result에서는 이 domain을 `NOT_RUN` 또는 `FUTURE_MODULE` 성격의 review note로 표시해도 된다.
+- Practical Validation core가 안정된 뒤, FRED 기반 VIX / Credit Spread / Yield Curve snapshot을 먼저 붙인다.
+- CNN Fear & Greed는 공식 안정 API와 재현성 문제가 있으므로 optional connector로 둔다.
+- 후속 구현은 local cache / DB 우선, 필요 시 refresh API 호출 방식이 적절하다.
 
 ### 7. Stress / Scenario Diagnostics
 

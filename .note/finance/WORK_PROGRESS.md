@@ -22,6 +22,18 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-10
+- Clarified Practical Validation terminology and future sentiment connector scope.
+- Updated:
+  - `.note/finance/research/PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH.md`
+  - `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_VALIDATION_DESIGN.md`
+  - `.note/finance/FINANCE_TERM_GLOSSARY.md`
+  - `.note/finance/QUESTION_AND_ANALYSIS_LOG.md`
+- Durable decision:
+  - Sentiment Overlay remains a required future Practical Validation module, but the first implementation can keep it as `NOT_RUN` / future connector until the core validation flow is stable.
+  - Future sentiment work should start with FRED-based VIX / Credit Spread / Yield Curve snapshots and keep Fear & Greed optional.
+  - Asset Allocation Profile means the expected asset exposure character used to interpret equity, bond, cash, gold, commodity, inverse, and leveraged allocation fit.
+
+### 2026-05-10
 - Refined the Practical Validation diagnostics design with Validation Profile behavior.
 - Updated:
   - `.note/finance/research/PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH.md`

@@ -419,6 +419,11 @@ Practical Validation에서 필요한 것은 최고 성과의 크기만이 아니
 | blocker | 대부분의 component를 분류할 수 없는데 실전 후보로 판단하려는 경우 |
 | review gap | equity 90% 이상, bond / cash / gold hedge 없음, theme / sector ETF가 포트폴리오 대부분 |
 
+`asset allocation profile`은 포트폴리오가 가져야 할 자산 배분 성격을 뜻한다.
+예를 들어 `conservative_defensive`는 equity concentration과 drawdown에 엄격하고,
+`growth_aggressive`는 높은 equity exposure를 더 허용하되 tail risk, liquidity, overfit은 계속 확인한다.
+이 profile은 투자 적합성 판단이 아니라 Practical Validation의 threshold / weight / warning 기준이다.
+
 단일 전략도 이 domain을 통과해야 한다.
 단일 ETF 100% 포트폴리오라면 "의도된 집중인지", "benchmark와 다를 바가 있는지",
 "ETF 내부 sector / holding concentration을 봐야 하는지"를 표시한다.
@@ -585,6 +590,14 @@ VaR / CVaR는 monthly return 기반으로 후속 추가한다.
 이 domain은 매수 / 매도 signal이 아니다.
 CNN Fear & Greed, VIX, yield curve 같은 지표는 Final Review에서
 "현재 시장 context상 바로 선정할지, 추가 관찰할지"를 판단할 때 보는 context evidence다.
+
+구현 순서 메모:
+
+- Practical Validation 1차 구현에서는 sentiment data connector를 필수 범위로 넣지 않는다.
+- 이 domain은 먼저 `NOT_RUN: future market-context connector required`로 남겨도 된다.
+- 후속 구현은 FRED 기반 VIX / Credit Spread / Yield Curve snapshot부터 시작한다.
+- CNN Fear & Greed는 공식 안정 API와 재현성 문제가 있으므로 optional connector로 둔다.
+- API는 직접 실시간 호출만 쓰기보다 local cache / DB 우선, 필요 시 refresh 호출 방식으로 설계한다.
 
 ### I. Cost / Turnover / Slippage
 
@@ -1004,6 +1017,8 @@ v1 compatibility:
 
 주의:
 
+- 이 slice는 1차 Practical Validation core가 안정된 뒤 진행한다.
+- 1차 구현에서는 sentiment domain을 `NOT_RUN`으로 표시하고 schema / UI 자리만 남겨도 된다.
 - sentiment overlay만으로 `BLOCKED`를 만들지 않는 것이 기본값이다.
 - 외부 데이터 freshness와 source URL을 result row에 남긴다.
 
@@ -1133,7 +1148,7 @@ aggressive profile에서도 자동 pass로 바꾸지 않는다.
 | average dollar volume | price history에서 계산 가능 | loader helper 필요 |
 | bid-ask spread / premium-discount | 현재 불확실 | 데이터 수집 확장 필요 |
 | macro regime data | FRED / NBER source | yield curve / recession window context |
-| sentiment data | Cboe / CNN / optional provider | VIX / Fear & Greed context. trade signal 아님 |
+| sentiment data | FRED / Cboe / CNN optional provider | 1차 core 이후 추가. VIX / Credit Spread / Yield Curve snapshot 우선, Fear & Greed는 optional. trade signal 아님 |
 | simple baseline curves | price loader / replay helper | SPY, 60:40, cash-aware, All Weather-like challenge |
 | run trial count | local run_history | commit하지 않고 local audit로 사용 |
 
