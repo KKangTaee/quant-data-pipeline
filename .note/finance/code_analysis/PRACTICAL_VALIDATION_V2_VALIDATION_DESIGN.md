@@ -279,6 +279,13 @@ Evidence pack은 Practical Diagnostics의 입력과 출력 형식이다.
 | `NEEDS_REVIEW` | blocker는 없지만 review gap 또는 NOT_RUN domain이 있음 |
 | `BLOCKED` | 재현성, 데이터, 비중, benchmark, execution boundary 같은 hard blocker 존재 |
 
+`Final Review selected route에서 NOT_RUN을 허용한다`는 말은
+일부 진단을 실행하지 못한 상태라도 최종 검토 대상으로 올릴 수 있다는 뜻이다.
+단, `NOT_RUN`은 통과가 아니며 데이터나 기능 부족으로 아직 확인하지 못했다는 표시다.
+예를 들어 sentiment connector 미구현이나 holdings look-through 데이터 부재는
+Final Review 이동을 막지 않을 수 있지만, 최종 선정 전 확인해야 할 미실행 검증으로 표시해야 한다.
+핵심 ticker 가격 부재처럼 검증 자체가 위험한 경우는 `NOT_RUN`이 아니라 `BLOCKED` 후보로 본다.
+
 ### 3. Validation Profile이 threshold / weight / blocker 해석을 조정한다
 
 Practical Validation은 진단 전에 3~5개 질문으로 `Validation Profile`을 만든다.

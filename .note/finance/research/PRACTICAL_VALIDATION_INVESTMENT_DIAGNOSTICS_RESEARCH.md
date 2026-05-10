@@ -46,6 +46,8 @@ Final Review로 올라가기 전에 아래 질문에 답하도록 돕는 검증 
    - 모든 가능한 진단을 시도하되, profile에 따라 threshold / weight / blocker 기준을 조정한다.
    - 사용자 목표와 후보 성격이 다르면 mismatch warning을 표시한다.
    - 부족한 domain은 `NOT_RUN` 또는 `REVIEW`로 표시한다.
+   - `NOT_RUN`은 통과가 아니라 데이터 / 기능 부족으로 실행하지 못한 상태다.
+   - `NOT_RUN`이 있어도 Final Review로 이동할 수는 있지만, 중요한 미실행 domain은 Final Review에서 명시 확인하게 한다.
    - 투자 추천이 아니라 Final Review에 올릴 수 있는 검증 evidence를 만든다.
 
 3. Final Review

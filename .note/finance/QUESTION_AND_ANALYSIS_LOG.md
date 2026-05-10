@@ -4587,3 +4587,14 @@ Detailed historical analysis was archived on `2026-04-13`.
   - holdings 데이터가 없으면 정밀 중복률 검증은 통과가 아니라 `NOT_RUN`으로 표시해야 한다
 - Follow-up:
   - Practical Validation research / design 문서에 proxy classification과 holdings look-through 차이, NOT_RUN 의미를 짧은 예시로 보강했다
+
+### 2026-05-10 - Final Review route와 NOT_RUN 의미 보강
+- User request:
+  - 사용자가 `Final Review selected route에서 NOT_RUN을 허용할 것인가`의 의미를 이해했고, 해당 내용이 문서에 없다면 보강해 달라고 요청함
+- Interpreted goal:
+  - `NOT_RUN`이 통과가 아니라 미실행 상태이며, Final Review 이동은 가능하더라도 critical domain은 명시 확인이 필요하다는 경계를 문서화해야 함
+- Analysis result:
+  - `NOT_RUN`은 데이터나 기능 부족으로 아직 검증하지 못했다는 disclosure다
+  - Sentiment connector 미구현이나 holdings look-through 데이터 부재는 Final Review 이동을 막지 않을 수 있지만, 핵심 가격 부재 같은 문제는 `BLOCKED` 후보로 봐야 한다
+- Follow-up:
+  - Practical Validation research / design 문서에 Final Review route와 `NOT_RUN` 처리 의미를 보강했다

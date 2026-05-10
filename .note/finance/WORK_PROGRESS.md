@@ -22,6 +22,17 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-10
+- Clarified `NOT_RUN` handling for Final Review route in Practical Validation docs.
+- Updated:
+  - `.note/finance/research/PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH.md`
+  - `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_VALIDATION_DESIGN.md`
+  - `.note/finance/QUESTION_AND_ANALYSIS_LOG.md`
+- Durable decision:
+  - `NOT_RUN` is not a pass. It means the diagnostic was not executed because data or implementation is missing.
+  - Final Review can still receive candidates with some `NOT_RUN` domains, but critical `NOT_RUN` domains must be explicitly acknowledged.
+  - Missing core prices or similarly dangerous gaps should be treated as `BLOCKED`, not soft `NOT_RUN`.
+
+### 2026-05-10
 - Clarified proxy classification and holdings look-through wording in Practical Validation design docs.
 - Updated:
   - `.note/finance/research/PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH.md`
