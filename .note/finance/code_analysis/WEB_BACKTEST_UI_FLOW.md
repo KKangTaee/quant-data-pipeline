@@ -28,10 +28,10 @@ UI form, payload 복원, candidate review, history replay, candidate replay, sav
 | `app/web/backtest_candidate_library_helpers.py` | Candidate Library registry join, table row, replay payload 생성, ETF / strict annual equity 후보 replay runtime dispatch helper |
 | `app/web/pages/backtest.py` | Backtest page entry, workflow navigation, panel dispatch shell. 주요 panel 본문은 `app/web/backtest_*.py` module이 담당 |
 | `app/web/backtest_ui_components.py` | Backtest UI 공용 status card, artifact pipeline, compact badge strip, stage brief strip, route/readiness panel render helper |
-| `app/web/backtest_practical_validation.py` | `Practical Validation` stage render. Clean V2 source 확인, 검증 프로필 입력, actual runtime replay 실행 버튼, V2 practical diagnostics board, Final Review handoff를 담당 |
+| `app/web/backtest_practical_validation.py` | `Practical Validation` stage render. Clean V2 source 확인, 검증 프로필 입력, 최신 DB 데이터 기준 runtime 재검증 실행 버튼, V2 practical diagnostics board, Final Review handoff를 담당 |
 | `app/web/backtest_practical_validation_helpers.py` | Clean V2 selection source / validation profile / 12개 Practical Diagnostics result 생성, 저장, Final Review handoff helper |
 | `app/web/backtest_practical_validation_curve.py` | Practical Validation curve normalize, compact curve records, curve provenance, benchmark parity helper |
-| `app/web/backtest_practical_validation_replay.py` | Practical Validation source를 기존 strategy runtime으로 명시 replay하고 actual component / portfolio curve evidence를 만드는 helper |
+| `app/web/backtest_practical_validation_replay.py` | Practical Validation source를 기존 strategy runtime으로 최신 DB 데이터 기준 재검증하거나 저장 기간 그대로 재현해 component / portfolio curve evidence를 만드는 helper |
 | `app/web/backtest_candidate_review.py` | Candidate Review / Candidate Packaging / Pre-Live 운영 기록 화면 render logic |
 | `app/web/backtest_candidate_review_helpers.py` | Candidate Review 판단, Review Note / registry 변환, Pre-Live status 추천 / draft 변환 / Portfolio Proposal 진입 readiness score helper |
 | `app/web/backtest_portfolio_proposal.py` | 단일 후보 직행 평가, 다중 후보 Portfolio Proposal 후보 선택 / 목적 / 역할 / 비중 설계, proposal draft 저장, 저장된 proposal monitoring / feedback section render logic |
@@ -68,8 +68,8 @@ Backtest 주 흐름:
 
 Practical Validation V2의 현재 구현은 최소 contract를 Input Evidence로 읽고, profile-aware practical diagnostics board를 만든다.
 현재 board는 compact curve snapshot 또는 DB price proxy curve를 사용해 rolling validation, stress window 구간 성과, simple baseline challenge, component correlation / risk contribution proxy, drop-one / weight perturbation sensitivity, ETF price / volume operability proxy를 계산한다.
-사용자가 명시적으로 `실제 전략 replay 실행`을 누르면 기존 strategy runtime으로 source를 다시 실행하고, replay curve를 diagnostics의 우선 evidence로 사용한다.
-화면은 curve provenance와 benchmark parity를 표시해 결과가 actual runtime replay인지, embedded snapshot인지, DB price proxy인지 구분한다.
+사용자가 명시적으로 `전략 재검증 실행`을 누르면 기존 strategy runtime으로 source를 다시 실행하고, 기본값은 DB의 최신 시장일까지 종료일을 확장한 재검증이다.
+보조 모드로 `저장 기간 그대로 재현`을 선택할 수 있으며, 화면은 저장 종료일, 재검증 종료일, 확장 일수, curve provenance와 benchmark parity를 표시해 결과가 최신 runtime 재검증인지, 저장 기간 재현인지, embedded snapshot인지, DB price proxy인지 구분한다.
 아직 ETF holdings-level look-through, expense ratio / bid-ask spread / AUM connector, FRED 기반 VIX / credit spread / yield curve connector는 후속 계산이며 `NOT_RUN` 또는 `REVIEW`로 명시한다.
 
 Legacy / compatibility 흐름:

@@ -53,7 +53,7 @@ Backtest Analysis
 | Operability | 가격 / volume 기반 proxy로 최소 운용성 확인 |
 | Macro / sentiment | FRED connector 전까지 benchmark price-action proxy context로 표시 |
 | Final Review handoff | Practical Diagnostics 요약, score breakdown, curve evidence, rolling evidence를 Final Review snapshot으로 전달 |
-| Actual runtime replay | 사용자가 명시적으로 실행할 때 기존 strategy runtime으로 source를 replay하고, curve provenance와 benchmark parity를 validation result에 저장 |
+| 최신 runtime 재검증 | 사용자가 명시적으로 실행할 때 기존 strategy runtime으로 source를 최신 DB 시장일까지 재검증하고, 보조 모드로 저장 기간 replay를 제공하며, curve provenance와 benchmark parity를 validation result에 저장 |
 
 현재 구현은 실전 후보 진단의 1차 골격과 일부 정량 계산이 완료된 상태다.
 다만 아래 영역은 아직 정밀 구현이 남아 있다.
@@ -62,13 +62,13 @@ Backtest Analysis
 
 | 번호 | 진단 module | 현재 상태 | 남은 구현 |
 |---:|---|---|---|
-| 1 | Input Evidence Layer | source replay attempt와 benchmark parity 저장까지 구현 | source replay contract completeness와 unsupported strategy 설명을 더 보강 |
+| 1 | Input Evidence Layer | source runtime recheck attempt와 benchmark parity 저장까지 구현 | source replay contract completeness와 unsupported strategy 설명을 더 보강 |
 | 2 | Asset Allocation Fit | ticker proxy classification 기반 | ETF holdings / sector / asset-class provider가 붙으면 look-through exposure로 보강 |
 | 3 | Concentration / Overlap / Exposure | ticker / weight / sector ticker proxy 기반 | holdings-level overlap, top holding concentration, issuer / theme 중복 계산 |
-| 4 | Correlation / Diversification / Risk Contribution | component curve 기반 proxy, actual replay curve 우선 사용 | contribution-to-drawdown 보강 |
+| 4 | Correlation / Diversification / Risk Contribution | component curve 기반 proxy, runtime recheck curve 우선 사용 | contribution-to-drawdown 보강 |
 | 5 | Regime / Macro Suitability | benchmark price-action proxy | FRED 기반 yield curve / credit spread / VIX snapshot connector 추가 |
 | 6 | Sentiment / Risk-On-Off Overlay | proxy context | VIX / credit spread / yield curve 우선, Fear & Greed는 안정 source 확정 후 optional |
-| 7 | Stress / Scenario Diagnostics | static event calendar + curve 기반 계산, actual replay curve 우선 사용 | stress별 interpretation 보강 |
+| 7 | Stress / Scenario Diagnostics | static event calendar + curve 기반 계산, runtime recheck curve 우선 사용 | stress별 interpretation 보강 |
 | 8 | Alternative Portfolio Challenge | SPY / QQQ / 60/40 / cash-aware proxy | same-period parity, profile별 성공 기준, All Weather-like proxy 후속 추가 |
 | 9 | Leveraged / Inverse ETF Suitability | ticker set / 목적 / 기간 proxy | 상품별 leverage multiple, daily objective, holding-period mismatch 근거 보강 |
 | 10 | Operability / Cost / Liquidity | DB price / volume proxy, one-way cost assumption | expense ratio, AUM, ADV, bid-ask spread, premium/discount, turnover connector |
@@ -173,27 +173,31 @@ diagnostics 계산, persistence handoff까지 많은 책임을 갖고 있다.
 
 ## 우선순위별 구현 단위
 
-### P0. Actual Runtime Replay와 Curve Provenance
+### P0. 최신 Runtime 재검증과 Curve Provenance
 
 목표:
 
 - Practical Validation에서 후보 source를 실제 기존 runtime으로 다시 실행할 수 있게 한다.
-- compact / proxy curve와 actual replay curve를 구분해 표시한다.
+- 기본 검증은 저장 당시 종료일을 그대로 재현하는 것이 아니라, DB에 더 최신 가격 데이터가 있으면 최신 시장일까지 기간을 확장해 다시 확인한다.
+- compact / proxy curve와 최신 runtime recheck curve, 저장 기간 replay curve를 구분해 표시한다.
 
 현재 상태:
 
-- 2026-05-10 1차 구현 완료.
-- Practical Validation 화면에 `실제 전략 replay 실행` 버튼을 추가했다.
-- replay는 자동 실행하지 않고 사용자가 명시적으로 실행한다.
-- replay 결과는 `actual_runtime_replay`, `embedded_source_curve`, `component_curve_weighted_proxy`, `db_price_proxy` provenance와 함께 validation result에 남긴다.
-- unsupported strategy나 contract 부족은 replay 실패로 처리하되, snapshot / proxy 기반 diagnostics는 계속 표시한다.
+- 2026-05-10 2차 구현 완료.
+- Practical Validation 화면의 3번 구간을 `최신 데이터 기준 전략 재검증`으로 정리했다.
+- 기본 모드는 `최신 DB 데이터까지 확장 검증`이며, DB 최신 시장일이 저장 종료일보다 뒤면 그 날짜까지 기존 strategy runtime을 다시 실행한다.
+- 보조 모드로 `저장 기간 그대로 재현`을 제공한다. 이 모드는 동일 기간 재현 / 디버깅 성격이며, 실전 후보 최신성 확인의 기본값은 아니다.
+- 재검증은 자동 실행하지 않고 사용자가 명시적으로 `전략 재검증 실행`을 누를 때만 실행한다.
+- 결과는 `actual_runtime_latest_recheck`, `actual_runtime_replay`, `embedded_source_curve`, `component_curve_weighted_proxy`, `db_price_proxy` provenance와 함께 validation result에 남긴다.
+- 요청 종료일과 실제 portfolio curve 종료일이 7일 이상 벌어지면 `period_coverage`를 `REVIEW`로 남긴다. 예를 들어 mix 안의 GTAA component가 cadence상 최신 월까지 오지 못하면 runtime 실행은 성공해도 최신성 coverage는 검토 대상으로 표시한다.
+- unsupported strategy나 contract 부족은 재검증 실패로 처리하되, snapshot / proxy 기반 diagnostics는 계속 표시한다.
 
 작업:
 
 - source kind별 replay contract 생성
 - single strategy / compare-selected / weighted mix / saved mix replay 경로 정리
-- `실제 전략 replay 실행` 버튼 추가
-- replay 성공 / 실패 / runtime error / elapsed time 저장
+- `전략 재검증 실행` 버튼 추가
+- 재검증 mode, 저장 기간, 요청 기간, 실제 기간, DB 최신 시장일, 확장 일수, period coverage, 성공 / 실패 / runtime error / elapsed time 저장
 - curve provenance와 result parity 표시
 
 수정 예상 파일:
@@ -206,8 +210,9 @@ diagnostics 계산, persistence handoff까지 많은 책임을 갖고 있다.
 
 검증:
 
-- 기존 source는 replay 없이도 이전처럼 board 표시
-- replay 버튼을 눌렀을 때만 actual runtime 실행
+- 기존 source는 재검증 없이도 이전처럼 board 표시
+- 재검증 버튼을 눌렀을 때만 actual runtime 실행
+- 기본 모드에서 저장 종료일보다 최신 DB 시장일이 있으면 runtime payload의 종료일이 최신 시장일로 확장됨
 - 실패 시 validation row를 망가뜨리지 않고 `REVIEW` 또는 `NOT_RUN` evidence로 남김
 
 ### P0. Benchmark Parity Hardening
@@ -443,8 +448,8 @@ diagnostics 계산, persistence handoff까지 많은 책임을 갖고 있다.
 |---|---|
 | ETF holdings provider | 먼저 기존 `finance/data/asset_profile.py`와 DB schema를 확인하고, 없으면 별도 provider 설계 문서 작성 |
 | FRED connector 저장 위치 | 초기에는 snapshot adapter + optional cache로 시작하고, 지속 수집이 필요해지면 data pipeline phase로 분리 |
-| actual replay 자동 실행 여부 | 자동 실행하지 않고 버튼 기반 명시 실행 |
-| validation schema version | replay / provider coverage 필드가 들어가는 첫 구현에서 v3로 올림 |
+| 최신 runtime 재검증 자동 실행 여부 | 자동 실행하지 않고 버튼 기반 명시 실행 |
+| validation schema version | 최신 runtime 재검증 period / provenance 필드가 들어가며 v4로 올림 |
 | Fear & Greed | 안정적 source와 재현성 확인 전에는 optional / 후속 |
 | All Weather-like baseline | ETF / weight assumption 확정 후 후속 |
 
@@ -452,7 +457,7 @@ diagnostics 계산, persistence handoff까지 많은 책임을 갖고 있다.
 
 현재 Practical Validation V2는 core board와 1차 정량 진단이 구현되어 있다.
 남은 핵심은 "더 많은 검증명을 추가하는 것"이 아니라,
-실제 runtime replay와 실제 provider 데이터를 붙여 proxy domain을 actual evidence로 승격하는 것이다.
+최신 runtime 재검증과 실제 provider 데이터를 붙여 proxy domain을 actual evidence로 승격하는 것이다.
 
-따라서 다음 개발은 helper split과 actual runtime replay / benchmark parity부터 진행하는 것이 가장 안전하다.
-이 문서를 사용자가 검토한 뒤, 첫 구현 단위는 `P0. Actual Runtime Replay와 Curve Provenance`로 잡는 것을 권장한다.
+따라서 다음 개발은 helper split과 최신 runtime 재검증 / benchmark parity부터 진행하는 것이 가장 안전하다.
+첫 구현 단위인 `P0. 최신 Runtime 재검증과 Curve Provenance`는 2026-05-10에 2차 구현까지 완료되었고, 후속은 Validation Inspector / strategy-specific sensitivity / provider connector 순서로 이어간다.

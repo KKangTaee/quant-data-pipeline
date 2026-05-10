@@ -4699,3 +4699,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - benchmark parity는 portfolio curve와 benchmark curve의 기간, 월별 coverage, frequency 차이를 계산해 review gap으로 남긴다
 - Follow-up:
   - 다음 고도화는 Validation Inspector / profile comparison UX와 strategy-specific sensitivity runtime이 우선이다
+
+### 2026-05-10 - Practical Validation runtime replay 필요성 재검토
+- User request:
+  - 사용자가 같은 날짜를 다시 재현하는 Actual Runtime Replay가 Practical Validation에서 실제로 필요한지 질문했고, 필요하다면 최신 데이터 기준 검증이어야 한다는 방향을 확인함
+- Interpreted goal:
+  - Practical Validation의 3번 구간이 단순 확인용 replay가 아니라 실전 후보 최신성 확인에 의미 있는 단계가 되어야 함
+- Analysis result:
+  - 동일 기간 replay는 contract / runtime 재현 확인에는 유용하지만, 실전 후보 검증의 핵심 근거로는 가치가 제한적이다
+  - 따라서 기본 모드는 DB 최신 시장일까지 종료일을 확장하는 `최신 DB 데이터까지 확장 검증`으로 두고, `저장 기간 그대로 재현`은 보조 / 디버깅 모드로 낮추는 것이 맞다
+  - 결과 row에는 재검증 mode, 저장 기간, 요청 기간, 실제 기간, 최신 시장일, 확장 일수, period coverage, curve provenance와 benchmark parity를 남겨 Final Review에서 어떤 데이터 기준의 evidence인지 구분하게 한다
+  - 요청 종료일은 최신 DB 날짜까지 확장됐지만 실제 portfolio curve가 component cadence / intersection 때문에 따라오지 못하면 runtime 실행 성공과 별개로 `period_coverage=REVIEW`로 표시해야 한다
+- Follow-up:
+  - Practical Validation UI와 replay helper, validation result schema, code analysis 문서를 최신 runtime recheck 기준으로 수정했다

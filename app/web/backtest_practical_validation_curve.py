@@ -204,6 +204,8 @@ def build_curve_provenance(
     replay = dict(replay_result or {})
     replay_status = str(replay.get("status") or "NOT_RUN")
     component_sources = list(curve_context.get("curve_rows") or [])
+    recheck_plan = dict(replay.get("recheck_plan") or {})
+    period_coverage = dict(replay.get("period_coverage") or {})
     return {
         "portfolio_curve_source": curve_context.get("portfolio_curve_source") or "unavailable",
         "portfolio_curve_rows": len(normalize_result_curve(curve_context.get("portfolio_curve"))),
@@ -214,5 +216,17 @@ def build_curve_provenance(
         "actual_runtime_replay_status": replay_status,
         "actual_runtime_replay_id": replay.get("replay_id"),
         "actual_runtime_attempted_at": replay.get("attempted_at"),
+        "runtime_recheck_status": replay_status,
+        "runtime_recheck_id": replay.get("replay_id"),
+        "runtime_recheck_attempted_at": replay.get("attempted_at"),
+        "runtime_recheck_mode": replay.get("recheck_mode") or recheck_plan.get("mode"),
+        "runtime_recheck_mode_label": replay.get("recheck_mode_label") or recheck_plan.get("mode_label"),
+        "stored_period": replay.get("stored_period") or recheck_plan.get("stored_period"),
+        "requested_period": replay.get("requested_period") or recheck_plan.get("requested_period"),
+        "latest_market_date": replay.get("latest_market_date") or recheck_plan.get("latest_market_date"),
+        "extension_days": replay.get("extension_days") or recheck_plan.get("extension_days"),
+        "period_coverage_status": period_coverage.get("status"),
+        "period_coverage_end_gap_days": period_coverage.get("end_gap_days"),
+        "actual_period": replay.get("actual_period") or period_coverage.get("actual_period"),
         "component_curve_sources": component_sources,
     }

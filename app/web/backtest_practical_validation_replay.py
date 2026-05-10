@@ -41,6 +41,7 @@ from app.web.runtime.backtest import (
     run_gtaa_backtest_from_db,
     run_risk_parity_trend_backtest_from_db,
 )
+from finance.loaders import load_latest_market_date
 from finance.performance import make_monthly_weighted_portfolio, portfolio_performance_summary
 from finance.sample import (
     GLOBAL_RELATIVE_STRENGTH_DEFAULT_TICKERS,
@@ -62,10 +63,31 @@ DISPLAY_NAME_TO_STRATEGY_KEY = {
     "dual momentum": "dual_momentum",
     "dual_momentum": "dual_momentum",
 }
+RECHECK_MODE_EXTEND_TO_LATEST = "extend_to_latest"
+RECHECK_MODE_STORED_PERIOD = "stored_period"
+RECHECK_MODE_LABELS = {
+    RECHECK_MODE_EXTEND_TO_LATEST: "최신 DB 데이터까지 확장 검증",
+    RECHECK_MODE_STORED_PERIOD: "저장 기간 그대로 재현",
+}
 
 
 def _now_text() -> str:
     return datetime.now().isoformat(timespec="seconds")
+
+
+def _date_text(value: Any) -> str | None:
+    parsed = pd.to_datetime(value, errors="coerce")
+    if pd.isna(parsed):
+        return None
+    return parsed.strftime("%Y-%m-%d")
+
+
+def _day_gap(start: Any, end: Any) -> int | None:
+    start_ts = pd.to_datetime(start, errors="coerce")
+    end_ts = pd.to_datetime(end, errors="coerce")
+    if pd.isna(start_ts) or pd.isna(end_ts):
+        return None
+    return int((end_ts.normalize() - start_ts.normalize()).days)
 
 
 def _clean_strategy_key(component: dict[str, Any], payload: dict[str, Any]) -> str:
@@ -147,12 +169,90 @@ def _source_period(source: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _component_payload(source: dict[str, Any], component: dict[str, Any]) -> dict[str, Any]:
+def build_practical_validation_recheck_plan(
+    source: dict[str, Any],
+    *,
+    mode: str = RECHECK_MODE_EXTEND_TO_LATEST,
+    end_override: Any | None = None,
+) -> dict[str, Any]:
+    """Plan the runtime period before executing the Practical Validation recheck."""
+    source_row = dict(source or {})
+    normalized_mode = mode if mode in RECHECK_MODE_LABELS else RECHECK_MODE_EXTEND_TO_LATEST
+    source_period = _source_period(source_row)
+    stored_start = _date_text(source_period.get("actual_start") or source_period.get("start"))
+    stored_end = _date_text(source_period.get("actual_end") or source_period.get("end"))
+    latest_market_date: str | None = None
+    latest_error: str | None = None
+    if normalized_mode == RECHECK_MODE_EXTEND_TO_LATEST:
+        try:
+            latest_market_date = _date_text(load_latest_market_date(timeframe="1d"))
+        except Exception as exc:
+            latest_error = str(exc)
+
+    override_end = _date_text(end_override)
+    requested_end = stored_end
+    if override_end:
+        requested_end = override_end
+    elif normalized_mode == RECHECK_MODE_EXTEND_TO_LATEST and latest_market_date:
+        stored_gap = _day_gap(stored_end, latest_market_date)
+        requested_end = latest_market_date if stored_gap is None or stored_gap > 0 else stored_end
+
+    requested_start = stored_start
+    extension_gap = _day_gap(stored_end, requested_end)
+    extension_days = max(extension_gap or 0, 0)
+    if not requested_start or not requested_end:
+        status = "BLOCKED"
+        status_reason = "source period가 부족해 runtime 재검증 기간을 만들 수 없습니다."
+    elif normalized_mode == RECHECK_MODE_STORED_PERIOD:
+        status = "STORED_PERIOD"
+        status_reason = "저장 당시 source 기간 그대로 기존 runtime을 재실행합니다."
+    elif latest_error:
+        status = "REVIEW"
+        status_reason = "최신 DB 시장일 조회에 실패해 저장 종료일 기준으로만 재실행합니다."
+    elif extension_days > 0:
+        status = "EXTENDED"
+        status_reason = "저장 당시 종료일 이후 DB에 있는 최신 시장일까지 확장해 재검증합니다."
+    else:
+        status = "NO_NEWER_DB_DATA"
+        status_reason = "저장 당시 종료일보다 더 최신인 DB 시장일이 없어 같은 종료일로 재검증합니다."
+
+    return {
+        "mode": normalized_mode,
+        "mode_label": RECHECK_MODE_LABELS[normalized_mode],
+        "status": status,
+        "status_reason": status_reason,
+        "stored_period": {
+            "start": stored_start,
+            "end": stored_end,
+        },
+        "requested_period": {
+            "start": requested_start,
+            "end": requested_end,
+        },
+        "latest_market_date": latest_market_date,
+        "latest_market_date_error": latest_error,
+        "extension_days": extension_days,
+        "uses_latest_db_date": normalized_mode == RECHECK_MODE_EXTEND_TO_LATEST,
+        "curve_source": (
+            "actual_runtime_latest_recheck"
+            if normalized_mode == RECHECK_MODE_EXTEND_TO_LATEST
+            else "actual_runtime_replay"
+        ),
+    }
+
+
+def _component_payload(
+    source: dict[str, Any],
+    component: dict[str, Any],
+    *,
+    period_override: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     period = _source_period(source)
+    override_period = dict(period_override or {})
     replay_contract = dict(component.get("replay_contract") or {})
     payload: dict[str, Any] = {
-        "start": period.get("start") or period.get("actual_start"),
-        "end": period.get("end") or period.get("actual_end"),
+        "start": override_period.get("start") or period.get("start") or period.get("actual_start"),
+        "end": override_period.get("end") or period.get("end") or period.get("actual_end"),
         "timeframe": "1d",
         "option": "month_end",
         "universe_mode": "manual_tickers",
@@ -168,6 +268,9 @@ def _component_payload(source: dict[str, Any], component: dict[str, Any]) -> dic
     payload.setdefault("end", period.get("actual_end"))
     payload["start"] = payload.get("start") or period.get("actual_start")
     payload["end"] = payload.get("end") or period.get("actual_end")
+    if override_period:
+        payload["start"] = override_period.get("start") or override_period.get("actual_start") or payload.get("start")
+        payload["end"] = override_period.get("end") or override_period.get("actual_end") or payload.get("end")
     if payload.get("top") is None and payload.get("top_n") is not None:
         payload["top"] = payload.get("top_n")
     strategy_key = _clean_strategy_key(component, payload)
@@ -205,6 +308,65 @@ def _summary_from_df(result_df: pd.DataFrame, *, name: str) -> dict[str, Any]:
         "cagr": optional_float(row.get("CAGR")),
         "sharpe": optional_float(row.get("Sharpe Ratio")),
         "mdd": optional_float(row.get("Maximum Drawdown")),
+    }
+
+
+def _period_coverage_rows(
+    component_outputs: list[dict[str, Any]],
+    *,
+    requested_end: Any,
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for row in component_outputs:
+        actual_end = _date_text(row.get("actual_end"))
+        requested = _date_text(row.get("requested_end") or requested_end)
+        gap_days = max(_day_gap(actual_end, requested) or 0, 0)
+        rows.append(
+            {
+                "Component": row.get("title") or row.get("component_id"),
+                "Status": "PASS" if gap_days <= 7 else "REVIEW",
+                "Requested End": requested or "-",
+                "Actual End": actual_end or "-",
+                "End Gap Days": gap_days,
+                "Meaning": (
+                    "요청한 최신 종료일과 거의 같은 기간까지 계산되었습니다."
+                    if gap_days <= 7
+                    else "요청한 최신 종료일보다 실제 결과가 짧습니다. cadence, signal interval, component date alignment를 확인해야 합니다."
+                ),
+            }
+        )
+    return rows
+
+
+def _period_coverage(
+    *,
+    summary: dict[str, Any],
+    requested_period: dict[str, Any],
+    component_outputs: list[dict[str, Any]],
+) -> dict[str, Any]:
+    requested_end = _date_text(requested_period.get("end"))
+    actual_start = _date_text(summary.get("start_date"))
+    actual_end = _date_text(summary.get("end_date"))
+    end_gap_days = max(_day_gap(actual_end, requested_end) or 0, 0)
+    rows = _period_coverage_rows(component_outputs, requested_end=requested_end)
+    status = "PASS" if end_gap_days <= 7 else "REVIEW"
+    return {
+        "status": status,
+        "summary": (
+            "runtime curve가 요청 종료일과 거의 같은 기간까지 계산되었습니다."
+            if status == "PASS"
+            else "runtime 실행은 성공했지만 실제 portfolio curve 종료일이 요청 종료일보다 짧습니다."
+        ),
+        "requested_period": {
+            "start": _date_text(requested_period.get("start")),
+            "end": requested_end,
+        },
+        "actual_period": {
+            "start": actual_start,
+            "end": actual_end,
+        },
+        "end_gap_days": end_gap_days,
+        "component_rows": rows,
     }
 
 
@@ -407,9 +569,15 @@ def _combine_replayed_components(
     return output
 
 
-def run_practical_validation_actual_replay(source: dict[str, Any]) -> dict[str, Any]:
-    """Replay a Practical Validation source through existing strategy runtime without adding strategies."""
+def run_practical_validation_actual_replay(
+    source: dict[str, Any],
+    *,
+    mode: str = RECHECK_MODE_EXTEND_TO_LATEST,
+    end_override: Any | None = None,
+) -> dict[str, Any]:
+    """Recheck a Practical Validation source through existing strategy runtime without adding strategies."""
     source_row = dict(source or {})
+    recheck_plan = build_practical_validation_recheck_plan(source_row, mode=mode, end_override=end_override)
     components = [
         dict(component or {})
         for component in list(source_row.get("components") or [])
@@ -417,14 +585,47 @@ def run_practical_validation_actual_replay(source: dict[str, Any]) -> dict[str, 
     ]
     started = time.perf_counter()
     attempted_at = _now_text()
-    replay_id = f"pv_replay_{uuid4().hex[:12]}"
+    replay_id = f"pv_recheck_{uuid4().hex[:12]}"
     component_outputs: list[dict[str, Any]] = []
     benchmark_curve_records: list[dict[str, Any]] = []
     benchmark_ticker = "-"
+    requested_period = dict(recheck_plan.get("requested_period") or {})
+
+    if recheck_plan.get("status") == "BLOCKED":
+        return {
+            "replay_id": replay_id,
+            "attempted_at": attempted_at,
+            "source_id": source_row.get("selection_source_id"),
+            "source_kind": source_row.get("source_kind"),
+            "status": "BLOCKED",
+            "elapsed_ms": round((time.perf_counter() - started) * 1000.0, 3),
+            "component_count": len(components),
+            "successful_component_count": 0,
+            "component_results": [],
+            "portfolio_curve": [],
+            "benchmark_curve": [],
+            "benchmark_ticker": benchmark_ticker,
+            "summary": {},
+            "recheck_plan": recheck_plan,
+            "recheck_mode": recheck_plan.get("mode"),
+            "stored_period": recheck_plan.get("stored_period"),
+            "requested_period": recheck_plan.get("requested_period"),
+            "actual_period": {},
+            "period_coverage": {
+                "status": "BLOCKED",
+                "summary": recheck_plan.get("status_reason"),
+                "requested_period": recheck_plan.get("requested_period"),
+                "actual_period": {},
+                "end_gap_days": None,
+                "component_rows": [],
+            },
+            "curve_source": recheck_plan.get("curve_source"),
+            "notes": recheck_plan.get("status_reason"),
+        }
 
     for index, component in enumerate(components):
         title = str(component.get("title") or component.get("strategy_name") or f"Component {index + 1}")
-        payload = _component_payload(source_row, component)
+        payload = _component_payload(source_row, component, period_override=requested_period)
         component_id = str(component.get("component_id") or component.get("registry_id") or f"component_{index + 1}")
         if not payload.get("strategy_key"):
             component_outputs.append(
@@ -434,7 +635,9 @@ def run_practical_validation_actual_replay(source: dict[str, Any]) -> dict[str, 
                     "target_weight": optional_float(component.get("target_weight")) or 0.0,
                     "strategy_key": "-",
                     "status": "NOT_RUN",
-                    "error": "strategy_key를 확인할 수 없어 actual runtime replay를 건너뜁니다.",
+                    "requested_start": payload.get("start"),
+                    "requested_end": payload.get("end"),
+                    "error": "strategy_key를 확인할 수 없어 runtime 재검증을 건너뜁니다.",
                     "payload_preview": payload,
                 }
             )
@@ -465,6 +668,8 @@ def run_practical_validation_actual_replay(source: dict[str, Any]) -> dict[str, 
                     "strategy_key": payload.get("strategy_key"),
                     "status": "PASS",
                     "result_rows": len(result_df),
+                    "requested_start": payload.get("start"),
+                    "requested_end": payload.get("end"),
                     "actual_start": meta.get("actual_result_start") or summary.get("start_date"),
                     "actual_end": meta.get("actual_result_end") or summary.get("end_date"),
                     "summary": summary,
@@ -499,6 +704,8 @@ def run_practical_validation_actual_replay(source: dict[str, Any]) -> dict[str, 
                     "target_weight": optional_float(component.get("target_weight")) or 0.0,
                     "strategy_key": payload.get("strategy_key") or "-",
                     "status": "REVIEW",
+                    "requested_start": payload.get("start"),
+                    "requested_end": payload.get("end"),
                     "error": str(exc),
                     "payload_preview": {
                         key: value
@@ -519,10 +726,32 @@ def run_practical_validation_actual_replay(source: dict[str, Any]) -> dict[str, 
         status = "BLOCKED" if not successful else "REVIEW"
         summary = {}
         portfolio_curve_records: list[dict[str, Any]] = []
+        period_coverage = {
+            "status": "NOT_RUN",
+            "summary": "portfolio curve가 없어 실제 기간 coverage를 확인하지 못했습니다.",
+            "requested_period": requested_period,
+            "actual_period": {},
+            "end_gap_days": None,
+            "component_rows": _period_coverage_rows(component_outputs, requested_end=requested_period.get("end")),
+        }
     else:
         status = "PASS" if len(successful) == len(components) else "REVIEW"
-        summary = _summary_from_df(portfolio_df, name="Actual Runtime Replay Portfolio")
+        summary = _summary_from_df(
+            portfolio_df,
+            name=(
+                "Latest Runtime Recheck Portfolio"
+                if recheck_plan.get("mode") == RECHECK_MODE_EXTEND_TO_LATEST
+                else "Stored Period Runtime Replay Portfolio"
+            ),
+        )
         portfolio_curve_records = curve_records_from_df(portfolio_df)
+        period_coverage = _period_coverage(
+            summary=summary,
+            requested_period=requested_period,
+            component_outputs=component_outputs,
+        )
+        if status == "PASS" and period_coverage.get("status") == "REVIEW":
+            status = "REVIEW"
     serializable_components = [
         {key: value for key, value in row.items() if key != "_result_df"}
         for row in component_outputs
@@ -541,5 +770,18 @@ def run_practical_validation_actual_replay(source: dict[str, Any]) -> dict[str, 
         "benchmark_curve": benchmark_curve_records,
         "benchmark_ticker": benchmark_ticker,
         "summary": summary,
-        "notes": "Actual replay uses existing strategy runtime only. It is validation evidence, not live approval.",
+        "recheck_plan": recheck_plan,
+        "recheck_mode": recheck_plan.get("mode"),
+        "recheck_mode_label": recheck_plan.get("mode_label"),
+        "stored_period": recheck_plan.get("stored_period"),
+        "requested_period": recheck_plan.get("requested_period"),
+        "actual_period": period_coverage.get("actual_period"),
+        "period_coverage": period_coverage,
+        "latest_market_date": recheck_plan.get("latest_market_date"),
+        "extension_days": recheck_plan.get("extension_days"),
+        "curve_source": recheck_plan.get("curve_source"),
+        "notes": (
+            "Runtime recheck uses existing strategy runtime only. "
+            "It is validation evidence, not live approval."
+        ),
     }

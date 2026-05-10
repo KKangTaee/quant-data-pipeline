@@ -3664,3 +3664,9 @@ Detailed historical logs were archived on `2026-04-13`.
   - Practical Validation 화면에 `실제 전략 replay 실행` 버튼을 추가했고, 자동 실행 없이 사용자가 명시 실행할 때만 기존 strategy runtime을 호출한다.
   - validation result schema를 v3로 올리고 `curve_provenance`, `benchmark_parity`, `replay_attempt`를 저장하도록 했다.
   - ETF holdings-level look-through, expense / spread / AUM, FRED macro / sentiment connector는 아직 후속으로 남겼다.
+- Practical Validation V2 P0 최신 재검증 의미 보정:
+  - user feedback에 따라 동일 기간 replay가 Practical Validation에서 충분한 검증 가치가 있는지 재검토했다.
+  - 3번 구간을 `최신 데이터 기준 전략 재검증`으로 바꾸고, 기본 모드는 DB 최신 시장일까지 종료일을 확장한 기존 strategy runtime 재검증으로 조정했다.
+  - `저장 기간 그대로 재현`은 보조 모드로 남겼고, validation result schema를 v4로 올려 mode, 저장 기간, 요청 기간, 실제 기간, 최신 시장일, 확장 일수, period coverage, curve provenance를 남기도록 했다.
+  - 실제 실행은 성공했지만 component cadence / date alignment 때문에 portfolio curve가 요청 종료일까지 오지 못하면 `period_coverage=REVIEW`로 표시하도록 했다.
+  - 관련 code analysis 문서와 comprehensive analysis를 최신 재검증 기준으로 갱신했다.

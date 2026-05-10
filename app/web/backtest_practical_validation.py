@@ -14,7 +14,12 @@ from app.web.backtest_practical_validation_helpers import (
     save_practical_validation_result,
     source_components_dataframe,
 )
-from app.web.backtest_practical_validation_replay import run_practical_validation_actual_replay
+from app.web.backtest_practical_validation_replay import (
+    RECHECK_MODE_EXTEND_TO_LATEST,
+    RECHECK_MODE_LABELS,
+    build_practical_validation_recheck_plan,
+    run_practical_validation_actual_replay,
+)
 from app.web.backtest_ui_components import (
     render_badge_strip,
     render_readiness_route_panel,
@@ -98,52 +103,89 @@ def _render_validation_profile_form() -> dict[str, Any]:
     return {"profile_id": profile_id, "answers": answers}
 
 
-def _replay_state_key(source: dict[str, Any]) -> str:
-    return f"practical_validation_replay_{source.get('selection_source_id') or 'source'}"
+def _replay_state_key(source: dict[str, Any], mode: str) -> str:
+    return f"practical_validation_recheck_{source.get('selection_source_id') or 'source'}_{mode}"
 
 
 def _render_actual_replay_panel(source: dict[str, Any]) -> dict[str, Any] | None:
-    replay_key = _replay_state_key(source)
+    source_id = source.get("selection_source_id") or "source"
+    mode = st.radio(
+        "재검증 방식",
+        options=list(RECHECK_MODE_LABELS.keys()),
+        format_func=lambda value: RECHECK_MODE_LABELS.get(value, value),
+        horizontal=True,
+        key=f"practical_validation_recheck_mode_{source_id}",
+    )
+    recheck_plan = build_practical_validation_recheck_plan(source, mode=mode)
+    replay_key = _replay_state_key(source, mode)
     replay_result = st.session_state.get(replay_key)
     render_badge_strip(
         [
+            {"label": "Mode", "value": recheck_plan.get("mode_label") or "-", "tone": "neutral"},
+            {"label": "Stored End", "value": dict(recheck_plan.get("stored_period") or {}).get("end") or "-", "tone": "neutral"},
+            {"label": "Recheck End", "value": dict(recheck_plan.get("requested_period") or {}).get("end") or "-", "tone": "neutral"},
             {
-                "label": "Replay",
-                "value": dict(replay_result or {}).get("status") or "NOT_RUN",
-                "tone": "positive" if dict(replay_result or {}).get("status") == "PASS" else "neutral",
-            },
-            {"label": "Source", "value": "Existing runtime only", "tone": "neutral"},
-            {"label": "Auto Run", "value": "Disabled", "tone": "neutral"},
-            {
-                "label": "Components",
-                "value": dict(replay_result or {}).get("successful_component_count", 0),
+                "label": "Extension",
+                "value": f"{recheck_plan.get('extension_days', 0)} days",
                 "tone": "neutral",
             },
         ]
     )
+    if recheck_plan.get("latest_market_date_error"):
+        st.warning(f"최신 DB 시장일 조회 실패: {recheck_plan.get('latest_market_date_error')}")
+    elif mode == RECHECK_MODE_EXTEND_TO_LATEST:
+        st.caption(
+            f"DB 최신 시장일 `{recheck_plan.get('latest_market_date') or '-'}` 기준입니다. "
+            f"{recheck_plan.get('status_reason') or ''}"
+        )
+    else:
+        st.caption(str(recheck_plan.get("status_reason") or ""))
     st.caption(
-        "이 버튼은 새 전략을 만들지 않고 기존 Backtest runtime으로 source를 재실행합니다. "
+        "이 버튼은 새 전략을 만들지 않고 기존 Backtest runtime으로 source를 재검증합니다. "
         "실패해도 저장 snapshot / DB price proxy 기반 진단은 계속 볼 수 있습니다."
     )
-    if st.button("실제 전략 replay 실행", key=f"{replay_key}_run", width="stretch"):
-        with st.spinner("기존 strategy runtime으로 Practical Validation source를 replay 중입니다..."):
-            replay_result = run_practical_validation_actual_replay(source)
+    if st.button("전략 재검증 실행", key=f"{replay_key}_run", width="stretch"):
+        with st.spinner("기존 strategy runtime으로 Practical Validation source를 재검증 중입니다..."):
+            replay_result = run_practical_validation_actual_replay(source, mode=mode)
         st.session_state[replay_key] = replay_result
         if replay_result.get("status") == "PASS":
-            st.success("Actual runtime replay가 완료되었습니다.")
+            st.success("전략 재검증이 완료되었습니다.")
+        elif replay_result.get("status") == "REVIEW":
+            st.warning("전략 재검증은 완료되었지만 기간 coverage 또는 일부 component 확인이 필요합니다.")
         else:
-            st.warning("Actual runtime replay가 일부 실패했습니다. 세부 결과를 확인하세요.")
+            st.warning("전략 재검증이 일부 실패했습니다. 세부 결과를 확인하세요.")
     replay_result = st.session_state.get(replay_key)
     if isinstance(replay_result, dict) and replay_result:
         summary = dict(replay_result.get("summary") or {})
+        period_coverage = dict(replay_result.get("period_coverage") or {})
+        actual_period = dict(period_coverage.get("actual_period") or replay_result.get("actual_period") or {})
         render_badge_strip(
             [
-                {"label": "Replay ID", "value": replay_result.get("replay_id") or "-", "tone": "neutral"},
+                {
+                    "label": "Recheck",
+                    "value": replay_result.get("status") or "NOT_RUN",
+                    "tone": _status_tone(replay_result.get("status")),
+                },
+                {"label": "Recheck ID", "value": replay_result.get("replay_id") or "-", "tone": "neutral"},
                 {"label": "Elapsed", "value": f"{replay_result.get('elapsed_ms', 0)} ms", "tone": "neutral"},
                 {"label": "CAGR", "value": summary.get("cagr") if summary else "-", "tone": "neutral"},
                 {"label": "MDD", "value": summary.get("mdd") if summary else "-", "tone": "neutral"},
             ]
         )
+        render_badge_strip(
+            [
+                {
+                    "label": "Coverage",
+                    "value": period_coverage.get("status") or "NOT_RUN",
+                    "tone": _status_tone(period_coverage.get("status")),
+                },
+                {"label": "Actual End", "value": actual_period.get("end") or "-", "tone": "neutral"},
+                {"label": "End Gap", "value": f"{period_coverage.get('end_gap_days', '-')} days", "tone": "neutral"},
+                {"label": "Latest DB", "value": replay_result.get("latest_market_date") or "-", "tone": "neutral"},
+            ]
+        )
+        if period_coverage.get("summary"):
+            st.caption(str(period_coverage.get("summary")))
         component_rows = list(replay_result.get("component_results") or [])
         if component_rows:
             st.dataframe(
@@ -155,6 +197,8 @@ def _render_actual_replay_panel(source: dict[str, Any]) -> dict[str, Any] | None
                             "Weight": row.get("target_weight"),
                             "Status": row.get("status"),
                             "Rows": row.get("result_rows"),
+                            "Requested Start": row.get("requested_start"),
+                            "Requested End": row.get("requested_end"),
                             "Start": row.get("actual_start"),
                             "End": row.get("actual_end"),
                             "Error": row.get("error"),
@@ -165,6 +209,9 @@ def _render_actual_replay_panel(source: dict[str, Any]) -> dict[str, Any] | None
                 width="stretch",
                 hide_index=True,
             )
+        coverage_rows = list(period_coverage.get("component_rows") or [])
+        if coverage_rows:
+            st.dataframe(pd.DataFrame(coverage_rows), width="stretch", hide_index=True)
     return dict(replay_result) if isinstance(replay_result, dict) else None
 
 
@@ -226,7 +273,7 @@ def _render_validation_result(validation_result: dict[str, Any]) -> None:
         st.dataframe(pd.DataFrame(not_run_critical), width="stretch", hide_index=True)
     curve_evidence = dict(validation_result.get("curve_evidence") or {})
     if curve_evidence:
-        st.markdown("##### Curve / Replay Evidence")
+        st.markdown("##### Curve / Recheck Evidence")
         render_badge_strip(
             [
                 {"label": "Portfolio Curve", "value": curve_evidence.get("portfolio_curve_source") or "-", "tone": "positive" if curve_evidence.get("portfolio_curve_rows") else "warning"},
@@ -353,7 +400,7 @@ def render_practical_validation_workspace() -> None:
     with st.container(border=True):
         validation_profile = _render_validation_profile_form()
 
-    st.markdown("#### 3. Actual Runtime Replay")
+    st.markdown("#### 3. 최신 데이터 기준 전략 재검증")
     with st.container(border=True):
         replay_result = _render_actual_replay_panel(source)
 
