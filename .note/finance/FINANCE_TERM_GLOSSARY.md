@@ -2758,7 +2758,8 @@ Final Review의 final selection decision이 최종 판단 원본이다.
 ### 기본 설명
 Practical Validation에서 포트폴리오 후보를 어떤 기준으로 해석할지 정하는 검증 성향 설정이다.
 
-예를 들어 `conservative_defensive`, `balanced_core`, `growth_aggressive`, `hedged_tactical`, `custom` 같은 profile이 있을 수 있다.
+사용자 화면에서는 방어형, 균형형, 성장형, 전술 / 헤지형, 사용자 지정처럼 한글로 표시한다.
+코드와 JSON에는 `conservative_defensive`, `balanced_core`, `growth_aggressive`, `hedged_tactical`, `custom` 같은 안정적인 id를 저장한다.
 
 ### 왜 사용되는지
 같은 포트폴리오도 사용자가 방어형 후보를 찾는지, 공격형 성장 후보를 찾는지에 따라
@@ -2771,6 +2772,7 @@ threshold, domain weight, `REVIEW / BLOCKED` 경계, 사용자 의도와 후보 
 - 방어형 profile에서는 equity 90% 포트폴리오가 강한 `REVIEW`가 될 수 있다.
 - 성장형 profile에서는 equity 90%가 허용될 수 있지만, tail risk, liquidity, overfit은 계속 확인한다.
 - Data Trust hard blocker, weight 합계 오류, 핵심 가격 부재, 거래 불가 같은 invariant blocker는 profile로 무력화하지 않는다.
+- 여기서 "무력화하지 않는다"는 사용자가 공격형 profile을 골라도 검증 자체가 깨진 문제를 자동 통과로 바꾸지 않는다는 뜻이다.
 
 ---
 

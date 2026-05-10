@@ -99,25 +99,28 @@ Practical Validation은 사용자에게 긴 설문을 요구하지 않는다.
 - Data Trust, weight 합계, 가격 부재, replay 불능, 거래 불가, 큰 leveraged / inverse exposure의 목적 부재 같은 hard blocker는 profile로 무력화하지 않는다.
 - Profile은 개인 재무상담이나 투자 적합성 판단이 아니다. 현재 후보를 사용자가 선택한 목적 / 위험 감내도 / 운용 기간에 맞춰 해석하는 product-level validation setting이다.
 
+사용자 화면에서는 아래 5개 질문을 한글로 표시한다.
+코드 / JSON에는 안정적인 영어 id를 저장한다.
+
 권장 질문:
 
-| 질문 | 선택지 예시 | 판정에 반영되는 부분 |
-|---|---|---|
-| 이 후보의 주된 목적은 무엇인가? | 방어형 / 균형형 / 성장형 / 공격형 / 헤지형 | benchmark challenge, asset allocation fit, stress 해석 |
-| 감내 가능한 손실 폭은 어느 정도인가? | -10% / -20% / -35% / 그 이상도 가능 | MDD, drawdown duration, tail loss threshold |
-| 예상 운용 기간은 어느 정도인가? | 3개월 미만 / 6~12개월 / 1~3년 / 3년 이상 | leveraged / inverse suitability, rolling window, cost impact |
-| 복잡한 상품과 높은 회전율을 허용하는가? | 단순 ETF만 / sector ETF 가능 / leveraged·inverse 제한 허용 | ETF operability, cost / turnover, leveraged / inverse blocker |
-| 단순 대안보다 무엇이 나아야 하는가? | MDD 감소 / CAGR 증가 / Sharpe 개선 / 하락 방어 / 특정 theme 노출 | Alternative Portfolio Challenge의 성공 기준 |
+| 화면 질문 | 화면 선택지 | 저장 id 예시 | 판정에 반영되는 부분 |
+|---|---|---|---|
+| 이 포트폴리오를 어떤 목적으로 검증할까요? | 손실 방어 중심 / 수익과 위험의 균형 / 성장 중심 / 공격적 수익 추구 / 헤지 또는 전술적 대응 | `defensive`, `balanced`, `growth`, `aggressive`, `hedged_tactical` | benchmark challenge, asset allocation fit, stress 해석 |
+| 어느 정도의 손실까지 감내할 수 있나요? | -10% 내외 / -20% 내외 / -35% 내외 / 그 이상도 가능 | `dd_10`, `dd_20`, `dd_35`, `dd_above_35` | MDD, drawdown duration, tail loss threshold |
+| 이 포트폴리오를 어느 기간 동안 운용할 생각인가요? | 3개월 미만 / 6~12개월 / 1~3년 / 3년 이상 | `lt_3m`, `6_to_12m`, `1_to_3y`, `gt_3y` | leveraged / inverse suitability, rolling window, cost impact |
+| 어떤 상품과 운용 복잡도까지 허용하나요? | 광범위 ETF만 / 섹터·테마 ETF까지 허용 / 인버스·레버리지 ETF를 제한적으로 허용 / 높은 회전율·전술 리밸런싱도 허용 | `broad_etf_only`, `sector_theme_allowed`, `inverse_leverage_limited`, `tactical_high_turnover_allowed` | ETF operability, cost / turnover, leveraged / inverse blocker |
+| 단순 대안보다 무엇이 더 좋아야 하나요? | 손실이 더 작아야 함 / 수익률이 더 높아야 함 / Sharpe·안정성이 좋아야 함 / 하락장에서 더 잘 버텨야 함 / 특정 자산·섹터·테마 노출이 목적임 | `lower_mdd`, `higher_return`, `better_risk_adjusted`, `better_downside_defense`, `target_exposure` | Alternative Portfolio Challenge의 성공 기준 |
 
 초기 profile 예시:
 
-| Profile | 목적 | 특징 |
+| 화면 표기 | 저장 id | 목적 | 특징 |
 |---|---|---|
-| `conservative_defensive` | 손실 방어와 안정성 우선 | MDD, concentration, liquidity, cost에 엄격 |
-| `balanced_core` | 수익과 위험 균형 | CAGR / MDD / benchmark / diversification을 균형 있게 봄 |
-| `growth_aggressive` | 높은 성장과 upside 우선 | 높은 equity exposure를 허용하되 overfit, tail risk, liquidity는 계속 확인 |
-| `hedged_tactical` | hedge 또는 tactical exposure | inverse / cash / bond role을 더 세밀하게 확인 |
-| `custom` | 사용자가 직접 조정 | 질문 답변으로 threshold와 weight를 개별 생성 |
+| 방어형 | `conservative_defensive` | 손실 방어와 안정성 우선 | MDD, concentration, liquidity, cost에 엄격 |
+| 균형형 | `balanced_core` | 수익과 위험 균형 | CAGR / MDD / benchmark / diversification을 균형 있게 봄 |
+| 성장형 | `growth_aggressive` | 높은 성장과 upside 우선 | 높은 equity exposure를 허용하되 overfit, tail risk, liquidity는 계속 확인 |
+| 전술 / 헤지형 | `hedged_tactical` | hedge 또는 tactical exposure | inverse / cash / bond role을 더 세밀하게 확인 |
+| 사용자 지정 | `custom` | 사용자가 직접 조정 | 질문 답변으로 threshold와 weight를 개별 생성 |
 
 profile별 해석 예시:
 
@@ -686,7 +689,7 @@ domain별 evidence를 넣는 방식이 낫다.
 | asset allocation profile을 어떻게 고를 것인가? | `conservative_defensive`, `balanced_core`, `growth_aggressive`, `hedged_tactical`, `custom`으로 시작한다. |
 | profile 질문은 몇 개가 적절한가? | MVP에서는 3~5개로 제한한다. 길어지면 Practical Validation 진입 장벽이 높아진다. |
 | profile별로 12개 진단 중 일부를 생략할 것인가? | 생략하지 않는다. 가능한 진단은 모두 시도하고 threshold / weight / blocker 해석만 조정한다. |
-| profile로 무력화하면 안 되는 hard blocker는 무엇인가? | Data Trust hard blocker, weight 합계 오류, 핵심 가격 부재, 거래 불가, 큰 leveraged / inverse exposure의 목적 부재, execution boundary 위반 |
+| profile로 무력화하면 안 되는 hard blocker는 무엇인가? | 사용자가 공격적 profile을 골라도 자동 통과로 바꾸면 안 되는 치명적 문제다. Data Trust hard blocker, weight 합계 오류, 핵심 가격 부재, 거래 불가, 큰 leveraged / inverse exposure의 목적 부재, execution boundary 위반 |
 | 사용자 의도와 후보 성격 mismatch는 어디서 보여줄 것인가? | Practical Validation route summary와 Alternative Portfolio Challenge / Asset Allocation Fit domain에 같이 표시한다. |
 | sector / holdings look-through data가 없으면 어떻게 할 것인가? | proxy classification으로 시작하고 missing coverage를 `NOT_RUN`으로 표시한다. |
 | leveraged / inverse ETF는 언제 blocker인가? | 큰 비중, medium-long cadence, 목적 불명, acknowledgement 없음이면 blocker 후보로 둔다. |

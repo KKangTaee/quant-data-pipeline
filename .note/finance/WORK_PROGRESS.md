@@ -22,6 +22,19 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-10
+- Finalized Korean-facing Validation Profile wording for Practical Validation design.
+- Updated:
+  - `.note/finance/research/PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH.md`
+  - `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_VALIDATION_DESIGN.md`
+  - `.note/finance/FINANCE_TERM_GLOSSARY.md`
+  - `.note/finance/QUESTION_AND_ANALYSIS_LOG.md`
+- Durable decision:
+  - User-facing profile labels should be Korean: 방어형, 균형형, 성장형, 전술 / 헤지형, 사용자 지정.
+  - Internal ids remain English for code / JSON stability.
+  - The 5 profile questions are portfolio purpose, tolerated drawdown, expected holding period, product / complexity allowance, and desired improvement versus simple alternatives.
+  - Invariant hard blockers mean validation failures that cannot be waived by an aggressive profile.
+
+### 2026-05-10
 - Clarified Practical Validation terminology and future sentiment connector scope.
 - Updated:
   - `.note/finance/research/PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH.md`

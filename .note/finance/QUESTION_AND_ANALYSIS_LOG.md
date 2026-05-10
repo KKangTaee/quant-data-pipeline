@@ -4540,3 +4540,17 @@ Detailed historical analysis was archived on `2026-04-13`.
   - asset allocation profile은 주식 / 채권 / 현금 / 금 / 원자재 / inverse / leveraged 노출을 사용자의 검증 목적에 맞춰 해석하는 자산 배분 성격 기준이다
 - Follow-up:
   - Practical Validation research / design 문서와 glossary에 Sentiment Overlay 후속 구현 메모와 Asset Allocation Profile 정의를 추가했다
+
+### 2026-05-10 - Validation Profile 질문과 한글 화면 표기 확정
+- User request:
+  - 사용자가 profile과 질문을 영어가 아니라 화면에서는 한글로 표기하고, 앞서 제안한 5개 질문으로 진행하길 원함
+  - `profile로 무력화하면 안 되는 hard blocker`의 의미를 질문함
+- Interpreted goal:
+  - Practical Validation profile UI 질문, 선택지, 내부 저장 id, 한글 profile label, invariant hard blocker 설명을 문서에 명확히 해야 함
+- Analysis result:
+  - 사용자-facing profile 표기는 방어형 / 균형형 / 성장형 / 전술·헤지형 / 사용자 지정으로 둔다
+  - 내부 id는 `conservative_defensive`, `balanced_core`, `growth_aggressive`, `hedged_tactical`, `custom`으로 저장한다
+  - 5개 질문은 목적, 감내 손실, 운용 기간, 상품 / 운용 복잡도, 단순 대안 대비 기대를 묻는다
+  - 무력화하면 안 되는 hard blocker는 사용자가 공격형 profile을 골라도 자동 통과 처리하면 안 되는 치명적 문제이며, risk tolerance와 validation failure를 구분해야 한다
+- Follow-up:
+  - Practical Validation research / design 문서와 glossary에 한글 label, 5개 질문, 내부 저장 id, invariant hard blocker 설명을 보강했다
