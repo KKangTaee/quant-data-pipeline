@@ -28,8 +28,8 @@ UI form, payload 복원, candidate review, history replay, candidate replay, sav
 | `app/web/backtest_candidate_library_helpers.py` | Candidate Library registry join, table row, replay payload 생성, ETF / strict annual equity 후보 replay runtime dispatch helper |
 | `app/web/pages/backtest.py` | Backtest page entry, workflow navigation, panel dispatch shell. 주요 panel 본문은 `app/web/backtest_*.py` module이 담당 |
 | `app/web/backtest_ui_components.py` | Backtest UI 공용 status card, artifact pipeline, compact badge strip, stage brief strip, route/readiness panel render helper |
-| `app/web/backtest_practical_validation.py` | `Practical Validation` stage render. Clean V2 selection source를 검증 결과로 구조화하고 Final Review로 넘김 |
-| `app/web/backtest_practical_validation_helpers.py` | Clean V2 selection source / validation result 생성, 저장, Final Review handoff helper |
+| `app/web/backtest_practical_validation.py` | `Practical Validation` stage render. Clean V2 source 확인, 검증 프로필 입력, V2 practical diagnostics board, Final Review handoff를 담당 |
+| `app/web/backtest_practical_validation_helpers.py` | Clean V2 selection source / validation profile / 12개 Practical Diagnostics result 생성, 저장, Final Review handoff helper |
 | `app/web/backtest_candidate_review.py` | Candidate Review / Candidate Packaging / Pre-Live 운영 기록 화면 render logic |
 | `app/web/backtest_candidate_review_helpers.py` | Candidate Review 판단, Review Note / registry 변환, Pre-Live status 추천 / draft 변환 / Portfolio Proposal 진입 readiness score helper |
 | `app/web/backtest_portfolio_proposal.py` | 단일 후보 직행 평가, 다중 후보 Portfolio Proposal 후보 선택 / 목적 / 역할 / 비중 설계, proposal draft 저장, 저장된 proposal monitoring / feedback section render logic |
@@ -61,11 +61,12 @@ Backtest page는 후보 선정 주 흐름만 보여준다.
 Backtest 주 흐름:
 
 - `Backtest Analysis`: Single Strategy 실행, Compare, weighted portfolio builder, 저장된 비중 조합 replay를 통해 후보 source를 만들고 `PORTFOLIO_SELECTION_SOURCES.jsonl`에 Clean V2 source로 저장한다.
-- `Practical Validation`: 선택된 단일 전략 / Compare 후보 / Saved Mix source를 실전 투입 전 조건으로 검증하고 `PRACTICAL_VALIDATION_RESULTS.jsonl`에 구조화된 검증 결과를 저장한다. 사용자 최종 메모는 받지 않는다.
-- `Final Review`: Practical Validation result를 기준으로 Validation / Robustness / Paper Observation 기준을 한 화면에서 확인하고, 최종 선정 / 보류 / 거절 / 재검토 판단과 최종 메모를 `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl`에 저장한다.
+- `Practical Validation`: 선택된 단일 전략 / Compare 후보 / Saved Mix source를 실전 투입 전 조건으로 검증한다. 사용자는 방어형 / 균형형 / 성장형 / 전술·헤지형 / 사용자 지정 profile과 5개 답변을 고르고, 화면은 Input Evidence와 12개 Practical Diagnostics를 `PASS / REVIEW / BLOCKED / NOT_RUN`으로 분리해 보여준다. 결과는 `PRACTICAL_VALIDATION_RESULTS.jsonl`에 저장하며 사용자 최종 메모는 받지 않는다.
+- `Final Review`: Practical Validation result와 diagnostics 요약, Robustness / Paper Observation 기준을 한 화면에서 확인하고, 최종 선정 / 보류 / 거절 / 재검토 판단과 최종 메모를 `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl`에 저장한다.
 
-Practical Validation의 현재 구현은 source id, active component, target weight total, Data Trust / Real-Money blocker, benchmark snapshot 같은 최소 contract를 확인하는 1차 gate다.
-실전 후보 검증 evidence pack으로 확장할 때는 `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_VALIDATION_DESIGN.md`를 기준으로 replay / benchmark parity, rolling / walk-forward, drawdown / stress, cost / turnover, ETF investability, sensitivity / overfit, monitoring plan domain을 단계적으로 추가한다.
+Practical Validation V2의 현재 구현은 최소 contract를 Input Evidence로 읽고, profile-aware practical diagnostics board를 만든다.
+현재 board는 asset allocation proxy, concentration / exposure, stress window coverage, simple baseline placeholder, leveraged / inverse suitability, cost assumption, local trial count summary, monitoring baseline seed를 포함한다.
+아직 실제 return matrix 기반 correlation / risk contribution, benchmark replay, rolling / walk-forward, stress 구간 성과 재계산, ETF expense / spread / ADV connector, macro / sentiment connector는 후속 계산이며 `NOT_RUN` 또는 `REVIEW`로 명시한다.
 
 Legacy / compatibility 흐름:
 

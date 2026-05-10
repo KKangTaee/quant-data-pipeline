@@ -67,6 +67,25 @@ def _render_validation_summary(validation: dict[str, Any]) -> None:
         st.info("최종 검토에 연결된 component가 없습니다.")
     else:
         st.dataframe(component_df, width="stretch", hide_index=True)
+    diagnostic_rows = list(validation.get("diagnostic_display_rows") or [])
+    if diagnostic_rows:
+        st.markdown("###### Practical Diagnostics")
+        profile = dict(validation.get("validation_profile") or {})
+        status_counts = dict(dict(validation.get("diagnostic_summary") or {}).get("status_counts") or {})
+        render_badge_strip(
+            [
+                {"label": "Profile", "value": profile.get("profile_label") or "-", "tone": "neutral"},
+                {"label": "PASS", "value": status_counts.get("PASS", 0), "tone": "positive"},
+                {"label": "REVIEW", "value": status_counts.get("REVIEW", 0), "tone": "warning"},
+                {"label": "BLOCKED", "value": status_counts.get("BLOCKED", 0), "tone": "danger"},
+                {"label": "NOT_RUN", "value": status_counts.get("NOT_RUN", 0), "tone": "neutral"},
+            ]
+        )
+        st.dataframe(pd.DataFrame(diagnostic_rows), width="stretch", hide_index=True)
+        not_run_critical = list(validation.get("not_run_critical_domains") or [])
+        if not_run_critical:
+            st.caption("NOT_RUN 항목은 선택을 자동 차단하지 않지만, 최종 판단 사유에서 확인해야 합니다.")
+            st.dataframe(pd.DataFrame(not_run_critical), width="stretch", hide_index=True)
     gap_cols = st.columns(3, gap="small")
     with gap_cols[0]:
         st.markdown("###### Hard Blockers")

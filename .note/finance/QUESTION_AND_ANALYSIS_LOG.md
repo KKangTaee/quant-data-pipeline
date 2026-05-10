@@ -4648,3 +4648,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - CNN Fear & Greed는 공식 안정 API / 재현성 문제 때문에 optional connector로 유지한다
 - Follow-up:
   - Practical Validation research / design 문서의 sentiment connector 설계 질문 상태를 `O`로 변경했다
+
+### 2026-05-10 - Practical Validation V2 core 구현 방향 확정
+- User request:
+  - 사용자가 새 전략 구현 없이 `PRACTICAL_VALIDATION_V2_VALIDATION_DESIGN`과 투자 진단 research 문서를 기반으로 Practical Validation 개발을 진행하길 요청함
+- Interpreted goal:
+  - Backtest Analysis에서 넘어온 단일 전략 / Compare 후보 / weighted mix / saved mix를 같은 포트폴리오 검증 단위로 읽고, Final Review 전에 실전 후보로 올릴 수 있는지 profile-aware diagnostics로 보여줘야 함
+- Analysis result:
+  - 제품 전략 runtime은 건드리지 않고 Practical Validation result schema를 v2로 올렸다
+  - 기존 source id / weight / Data Trust / Real-Money 확인은 `Input Evidence Layer`로 유지하고, 그 위에 12개 Practical Diagnostics domain을 `PASS / REVIEW / BLOCKED / NOT_RUN`으로 분리했다
+  - `REVIEW / NOT_RUN`은 Final Review 이동을 자동 차단하지 않지만, 최종 판단 사유에서 확인해야 하는 evidence로 남긴다
+  - `BLOCKED`는 Practical Validation 화면에서 Final Review 이동을 막는 source 보강 대상이다
+- Follow-up:
+  - 후속 개발은 return curve replay, benchmark parity, rolling/stress 구간 성과, correlation/risk contribution, ETF cost/liquidity connector, macro/sentiment connector 순서로 진행하는 것이 맞다

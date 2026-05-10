@@ -39,22 +39,21 @@ Backtest Analysis
   -> Operations > Selected Portfolio Dashboard
 ```
 
-현재 `build_practical_validation_result()`는 다음을 확인한다.
+현재 `build_practical_validation_result()`는 Practical Validation Result schema v2를 생성한다.
 
-| 현재 체크 | 의미 |
+| 현재 구현 | 의미 |
 |---|---|
-| `selection_source_id` 존재 | Backtest Analysis에서 선택된 Clean V2 source가 있는지 확인 |
-| active component 존재 | 검증할 component가 있는지 확인 |
-| target weight 합계 100% | 포트폴리오 비중이 완성됐는지 확인 |
-| Data Trust blocked 여부 | 원본 실행 결과가 명시적으로 blocked / error인지 확인 |
-| Real-Money deployment blocked 여부 | 기존 real-money signal이 blocked인지 확인 |
-| benchmark snapshot 존재 | 비교 기준이 아예 없는지 확인 |
-| execution boundary | live approval / order instruction disabled 문구 확인 |
+| Validation Profile | 방어형 / 균형형 / 성장형 / 전술·헤지형 / 사용자 지정과 5개 사용자 답변을 기준으로 threshold, rolling window, cost assumption을 정한다 |
+| Input Evidence Layer | 기존 source id, active component, weight total, Data Trust, Real-Money blocker, benchmark snapshot을 반복 계산이 아니라 입력 증거로 읽는다 |
+| 12개 Practical Diagnostics | asset allocation, concentration, correlation placeholder, macro/sentiment placeholder, stress window coverage, alternative baseline, leveraged/inverse, cost/liquidity, sensitivity/overfit, monitoring seed를 `PASS / REVIEW / BLOCKED / NOT_RUN`으로 분리한다 |
+| Static stress calendar | 2000년 이후 미국 증시 shock event reference를 읽어 source 기간에 포함된 stress window coverage를 표시한다 |
+| Local overfit audit summary | run_history 원본을 저장하지 않고 관련 local trial count 요약만 validation row에 선택적으로 남긴다 |
+| Final Review handoff | blocker가 없으면 `READY_FOR_FINAL_REVIEW`로 넘기되, `REVIEW / NOT_RUN` 항목은 Final Review 판단 근거로 노출한다 |
 
-즉, 현재 Practical Validation은 깊은 실전 검증이라기보다
-`Final Review로 넘길 수 있는 최소 source contract가 있는가`를 보는 단계다.
+즉, 현재 Practical Validation은 최소 source contract만 보는 v1 gate에서
+profile-aware practical investment diagnostics board로 확장되었다.
 
-현재 구현의 공백은 다음이다.
+현재 구현의 남은 공백은 다음이다.
 
 | 공백 | 왜 문제인가 |
 |---|---|
@@ -62,8 +61,8 @@ Backtest Analysis
 | benchmark 동일 기간 비교 검증 약함 | 같은 기간 / 같은 방법론으로 benchmark와 비교했는지 강하게 보장하지 않는다 |
 | 거래 비용 / turnover 검증 없음 | 실전 성과는 비용 차감 후 달라질 수 있다 |
 | rolling / walk-forward 안정성 없음 | 전체 기간 평균은 좋아도 특정 구간에서 계속 실패할 수 있다 |
-| stress / regime 검증 없음 | 2020, 2022 같은 구조적 시장 구간에서 어떤지 알 수 없다 |
-| overfit / sensitivity 검증 없음 | 많은 설정을 돌려 고른 best-only 결과인지 알 수 없다 |
+| stress / regime 정량 replay 미구현 | static window coverage는 표시하지만 구간별 return / MDD / benchmark spread 재계산은 아직 후속이다 |
+| overfit / sensitivity 정량 replay 미구현 | trial count summary와 perturbation grid는 표시하지만 weight +/-5%p, drop-one, window perturbation 실제 재계산은 후속이다 |
 | ETF investability 검증 없음 | bid-ask spread, volume, premium/discount, 비용 구조를 확인하지 않는다 |
 | paper observation은 trigger baseline만 있음 | 실제 out-of-sample 관찰 결과가 아니라 향후 볼 기준만 만든다 |
 
@@ -275,8 +274,8 @@ Evidence pack은 Practical Diagnostics의 입력과 출력 형식이다.
 
 | route | 조건 |
 |---|---|
-| `READY_FOR_FINAL_REVIEW` | blocker 없음, critical domain이 PASS 또는 허용 가능한 REVIEW |
-| `NEEDS_REVIEW` | blocker는 없지만 review gap 또는 NOT_RUN domain이 있음 |
+| `READY_FOR_FINAL_REVIEW` | blocker 없음. `REVIEW / NOT_RUN` domain이 있어도 Final Review에서 최종 판단 근거로 확인할 수 있으면 이동 가능 |
+| `NEEDS_REVIEW` | legacy / optional route. 현재 core 구현에서는 별도 route로 쓰기보다 `READY_FOR_FINAL_REVIEW` 안에 review gap과 NOT_RUN critical domain을 명시한다 |
 | `BLOCKED` | 재현성, 데이터, 비중, benchmark, execution boundary 같은 hard blocker 존재 |
 
 `Final Review selected route에서 NOT_RUN을 허용한다`는 말은
@@ -1057,6 +1056,8 @@ v1 compatibility:
 
 ### Slice 1. Validation Profile intake와 Practical Diagnostics board
 
+현재 상태: 1차 구현 완료.
+
 목표:
 
 - Practical Validation 진입 시 3~5개 질문으로 `Validation Profile`을 만든다.
@@ -1075,6 +1076,8 @@ v1 compatibility:
 | `app/web/runtime/portfolio_selection_v2.py` | schema version 확장 / loader compatibility |
 
 ### Slice 2. Asset allocation / exposure classification
+
+현재 상태: proxy classification 1차 구현 완료. Holdings look-through와 ETF 내부 보유종목 overlap은 후속이다.
 
 목표:
 
@@ -1335,11 +1338,11 @@ Final Review selected decision은 다음 조건을 강하게 봐야 한다.
 
 ## 추천 다음 작업
 
-1. 먼저 Slice 1을 구현해 `Validation Profile`, `Input Evidence`, `Practical Diagnostics`를 분리해서 보여주게 한다.
-2. Slice 2에서 asset allocation / exposure classification을 붙여 profile 목표와 후보 노출 mismatch를 표시한다.
-3. Slice 3에서 replay / benchmark parity를 붙여 snapshot-only 한계를 줄인다.
-4. Slice 4에서 rolling / drawdown / stress 계산을 profile threshold로 해석한다.
-5. Slice 5 이후는 correlation / risk contribution, macro / sentiment, turnover / ETF data coverage를 확인한 뒤 진행한다.
+1. Slice 3에서 source/component return curve replay와 benchmark parity를 붙여 snapshot-only 한계를 줄인다.
+2. Slice 4에서 rolling / drawdown / stress window 구간 성과를 profile threshold로 해석한다.
+3. Slice 5에서 mix 후보의 correlation / risk contribution과 drop-one / weight perturbation 재계산을 붙인다.
+4. Slice 6 이후는 macro / sentiment connector, ETF expense / volume / spread data coverage를 확인한 뒤 진행한다.
+5. holdings look-through data가 붙으면 proxy classification을 보조 분류로 낮추고 ETF 내부 중복 노출을 별도 domain으로 승격한다.
 
 이 순서가 좋은 이유는 사용자가 지금 가장 혼란스러워하는 부분이
 "Practical Validation이 무엇을 검증하는지 보이지 않는다"는 점이기 때문이다.

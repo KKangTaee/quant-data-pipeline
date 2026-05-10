@@ -19,7 +19,7 @@ DB-backed market data ingestion, factor generation, and strategy backtesting wor
 - `Ingestion`
   - 일별 업데이트, statement refresh, 진단 작업
 - `Backtest`
-  - `Backtest Analysis -> Practical Validation -> Final Review` 3단계로 후보 source 생성, 실전 검증, 최종 판단 기록을 처리
+  - `Backtest Analysis -> Practical Validation -> Final Review` 3단계로 후보 source 생성, profile-aware 실전 진단, 최종 판단 기록을 처리
 - `Ops Review`
   - Operations Dashboard 형태의 triage flow, run health, action inbox, failure artifact, logs, system snapshot 점검
 - `Selected Portfolio Dashboard`
@@ -76,7 +76,7 @@ DB-backed market data ingestion, factor generation, and strategy backtesting wor
 - Clean V2 portfolio selection workflow
   - `Backtest > Backtest Analysis`에서 Single Strategy / Compare / 저장 Mix replay를 실행하고 실전 검증 후보 source를 선택하는 흐름
   - `.note/finance/registries/PORTFOLIO_SELECTION_SOURCES.jsonl`에 선택한 후보 source를 append-only로 저장하는 흐름
-  - `Backtest > Practical Validation`에서 선택 source의 component, weight, Data Trust, Real-Money signal, paper observation 기준을 구조화하는 흐름
+  - `Backtest > Practical Validation`에서 선택 source의 component, weight, Data Trust, Real-Money signal을 Input Evidence로 읽고, 사용자 검증 profile과 12개 Practical Diagnostics를 구조화하는 흐름
   - `.note/finance/registries/PRACTICAL_VALIDATION_RESULTS.jsonl`에 검증 결과를 저장하되, 사용자 최종 메모는 Final Review에만 남기는 흐름
   - `Backtest > Final Review`에서 Practical Validation 결과를 기준으로 최종 선정 / 보류 / 거절 / 재검토 판단을 한 번만 기록하는 흐름
   - `.note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl`이 새 selected dashboard의 source-of-truth가 되는 흐름

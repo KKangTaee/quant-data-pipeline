@@ -115,9 +115,9 @@ def _decision_gate_rows() -> list[dict[str, str]]:
         },
         {
             "gate": "Practical Validation을 통과할 수 있는가",
-            "go": "active component가 있고 target weight 합계가 100%, Data Trust / deployment 차단 없음",
-            "review": "benchmark나 warning 보강이 필요하지만 Final Review에서 판단 가능",
-            "stop": "component 없음, 비중 합계 오류, Data Trust blocked, deployment blocked",
+            "go": "BLOCKED가 없고 profile-aware Practical Diagnostics의 REVIEW / NOT_RUN 의미를 설명할 수 있음",
+            "review": "NOT_RUN 또는 REVIEW domain이 남아 있지만 Final Review에서 보류 / 재검토 / 선정 판단 근거로 다룰 수 있음",
+            "stop": "component 없음, 비중 합계 오류, Data Trust blocked, deployment blocked, 프로필과 충돌하는 큰 leveraged / inverse exposure",
             "screen": "Practical Validation",
         },
         {
@@ -151,8 +151,8 @@ def _stage_timeline_rows() -> list[dict[str, str]]:
             "step": "2",
             "phase": "실전 검증",
             "screen": "Practical Validation",
-            "title": "구성 / 비중 / blocker 확인",
-            "check": "active component, target weight 100%, Data Trust, Real-Money / deployment blocker를 한 번에 봅니다.",
+            "title": "프로필 기반 실전 진단",
+            "check": "검증 프로필과 5개 답변을 기준으로 Input Evidence와 12개 Practical Diagnostics를 분리해서 봅니다.",
             "output": "Practical Validation Result",
         },
         {
@@ -218,7 +218,7 @@ def _route_checkpoint_rows() -> dict[str, list[dict[str, str]]]:
             },
             {
                 "checkpoint": "실전 검증 blocker가 없는가",
-                "detail": "active component, target weight, Data Trust, deployment blocker를 Practical Validation에서 먼저 확인합니다.",
+                "detail": "Practical Validation에서 Input Evidence, asset allocation, concentration, stress coverage, leverage / inverse, cost, sensitivity / overfit 상태를 함께 확인합니다.",
                 "screen": "Practical Validation",
             },
             {
@@ -960,7 +960,7 @@ def _render_reference_drawer() -> None:
             st.markdown(
                 """
                 - `1`: Backtest Analysis에서 단일 / Compare / 저장 mix 후보 source를 만든다.
-                - `2`: Practical Validation에서 구성, 비중, Data Trust, blocker를 확인한다.
+                - `2`: Practical Validation에서 검증 프로필, Input Evidence, 12개 Practical Diagnostics를 확인한다.
                 - `3`: Final Review에서 최종 판단과 이유를 V2 decision으로 남긴다.
                 - `4`: Selected Portfolio Dashboard에서 선정 row를 read-only로 관찰한다.
                 """
@@ -980,7 +980,7 @@ def _render_reference_drawer() -> None:
             """
             - `Real-Money`는 검증 신호입니다.
             - `Backtest Analysis`는 후보 source를 만드는 1단계입니다.
-            - `Practical Validation`은 source를 실전 검증 자료로 구조화하는 2단계입니다.
+            - `Practical Validation`은 source를 profile-aware practical diagnostics 결과로 구조화하는 2단계입니다.
             - `Final Review`는 현재 workflow의 마지막 판단 기록입니다.
             - `Selected Portfolio Dashboard`는 Final Review V2 selected row를 Operations에서 다시 읽는 화면입니다.
             - `Candidate Review / Portfolio Proposal`은 기존 기록을 읽기 위한 legacy compatibility 경로입니다.

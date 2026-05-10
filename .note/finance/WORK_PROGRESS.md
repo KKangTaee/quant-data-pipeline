@@ -3641,3 +3641,9 @@ Detailed historical logs were archived on `2026-04-13`.
 - Practical Validation V2 sentiment connector 설계 질문 완료:
   - user confirmation에 따라 sentiment connector는 1차 core 이후 후속 module로 붙이고, FRED 기반 VIX / credit spread / yield curve snapshot부터 시작한다고 확정했다.
   - 해당 데이터는 trade signal이나 hard blocker가 아니라 market-context evidence로만 사용한다고 research / design 문서에 반영했다.
+- Practical Validation V2 core 구현:
+  - `PRACTICAL_VALIDATION_RESULT_SCHEMA_VERSION`을 2로 올리고, 검증 프로필 / 5개 사용자 답변 / profile threshold resolver를 추가했다.
+  - Practical Validation result에 Input Evidence와 12개 Practical Diagnostics board를 추가했다. 현재 구현은 asset allocation proxy, concentration / exposure, stress window coverage, alternative baseline placeholder, leveraged / inverse suitability, cost assumption, local trial count summary, monitoring baseline seed를 생성한다.
+  - 아직 실제 return matrix 기반 correlation / risk contribution, baseline replay, stress 구간 성과 재계산, ETF expense / spread / ADV, macro / sentiment connector는 `NOT_RUN` 또는 `REVIEW`로 명시한다.
+  - Practical Validation 화면은 profile 입력과 diagnostics board를 표시하고, BLOCKED가 없을 때만 Final Review로 보낸다.
+  - Final Review 화면과 final decision snapshot은 Practical Diagnostics 요약 / NOT_RUN critical domain / profile evidence를 함께 읽도록 연결했다.
