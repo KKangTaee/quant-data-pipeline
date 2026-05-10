@@ -972,6 +972,12 @@ v1 compatibility:
 
 - holdings look-through가 없으면 proxy classification으로 시작한다.
 - 분류가 없으면 `NOT_RUN`이지 pass가 아니다.
+- proxy classification은 ETF의 대표 성격으로 대략 분류하는 방식이다.
+  예를 들어 QQQ는 미국 대형 성장 / 나스닥100 성향, XLK는 기술 섹터,
+  SMH는 반도체 섹터로 분류한다.
+- holdings look-through는 ETF 내부 보유종목까지 확인하는 정밀 방식이다.
+  이 데이터가 없으면 Apple / Microsoft / Nvidia 같은 top holding overlap은
+  통과가 아니라 `NOT_RUN`으로 표시한다.
 
 ### Slice 3. Replay / benchmark / portfolio curve parity
 

@@ -22,6 +22,17 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-10
+- Clarified proxy classification and holdings look-through wording in Practical Validation design docs.
+- Updated:
+  - `.note/finance/research/PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH.md`
+  - `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_VALIDATION_DESIGN.md`
+  - `.note/finance/QUESTION_AND_ANALYSIS_LOG.md`
+- Durable decision:
+  - Proxy classification means using ticker-level category proxies when holdings data is unavailable.
+  - Holdings look-through means checking ETF internal constituents and top holding overlap.
+  - Missing holdings coverage should be shown as `NOT_RUN`, not as pass.
+
+### 2026-05-10
 - Changed Practical Validation design-question status tables to a single checklist table.
 - Updated:
   - `.note/finance/research/PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH.md`

@@ -283,6 +283,16 @@ MVP 데이터:
 | `BLOCKED` | operator가 diversified mix로 저장했는데 실제 active component가 1개뿐임 |
 | `NOT_RUN` | holdings / sector data가 없음 |
 
+간단히 말하면, `proxy classification`은 ETF 내부 보유종목을 직접 보지 못할 때
+티커의 대표 성격으로 먼저 분류하는 방식이다.
+예를 들어 QQQ는 미국 대형 성장 / 나스닥100 성향, XLK는 기술 섹터,
+SMH는 반도체 섹터로 분류해 대략적인 기술주 / 성장주 집중 여부를 본다.
+
+반대로 `holdings look-through`는 ETF 안의 실제 보유종목까지 들여다보는 방식이다.
+예를 들어 QQQ, XLK, SMH 안에 Apple, Microsoft, Nvidia가 얼마나 겹치는지 확인한다.
+이 데이터가 없으면 ETF 내부 보유종목 중복률이나 top holding 집중도는 통과가 아니라
+`NOT_RUN`으로 표시해야 한다.
+
 ### 4. Correlation / Diversification / Risk Contribution
 
 질문:

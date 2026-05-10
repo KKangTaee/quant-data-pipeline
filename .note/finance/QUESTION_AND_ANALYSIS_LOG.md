@@ -4575,3 +4575,15 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Practical Validation research / design 문서의 설계 질문 상태 표를 하나로 합치고 `확인 여부`, `질문`, `결정 / 기본 방향` 컬럼으로 바꾸는 것이 적절함
 - Follow-up:
   - 두 문서의 설계 질문 상태를 단일 표로 통합하고 확인된 항목은 `O`, 구현 선택이 남은 항목은 `X`로 표시했다
+
+### 2026-05-10 - Proxy classification과 holdings look-through 설명 보강
+- User request:
+  - 사용자가 `proxy classification으로 시작하고 missing coverage를 NOT_RUN으로 표시한다`는 문장의 의미를 이해했고, 그 내용을 간략히 문서에 보강해 달라고 요청함
+- Interpreted goal:
+  - ETF 내부 holdings 데이터가 없을 때 대략 분류와 정밀 look-through 검증의 차이를 문서에서 바로 이해할 수 있어야 함
+- Analysis result:
+  - Proxy classification은 ETF의 대표 성격으로 QQQ, XLK, SMH 등을 대략 분류하는 방식이다
+  - Holdings look-through는 ETF 안의 실제 보유종목까지 확인해 Apple / Microsoft / Nvidia 같은 top holding overlap을 계산하는 정밀 방식이다
+  - holdings 데이터가 없으면 정밀 중복률 검증은 통과가 아니라 `NOT_RUN`으로 표시해야 한다
+- Follow-up:
+  - Practical Validation research / design 문서에 proxy classification과 holdings look-through 차이, NOT_RUN 의미를 짧은 예시로 보강했다
