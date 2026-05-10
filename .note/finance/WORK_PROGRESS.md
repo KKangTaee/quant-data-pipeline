@@ -3653,3 +3653,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - rolling validation, static stress window return / MDD / benchmark spread, SPY / QQQ / 60/40 / cash-aware baseline challenge, component correlation / risk contribution proxy, drop-one / weight +5%p sensitivity를 Practical Diagnostics에 연결했다.
   - ETF operability는 DB price / volume proxy와 one-way cost assumption으로 1차 확인하고, macro / sentiment는 FRED connector 전까지 benchmark price-action proxy로 표시한다.
   - Final Review에는 profile score breakdown, curve evidence, rolling evidence를 snapshot으로 남기도록 연결했다.
+- Practical Validation V2 남은 구현 계획 문서화:
+  - user request에 따라 추가 개발 전 검토용 문서 `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_REMAINING_IMPLEMENTATION_PLAN.md`를 추가했다.
+  - 현재 구현 완료 범위와 proxy / NOT_RUN / REVIEW로 남은 범위를 12개 diagnostics domain별로 정리했다.
+  - 다음 개발 순서를 helper split, actual runtime replay, benchmark parity, validation inspector, strategy-specific sensitivity, provider connector, Final Review / Selected Dashboard 고도화 순으로 제안했다.
+  - 제품 코드는 수정하지 않았고, 사용자가 문서를 검토한 뒤 첫 구현 단위를 확정하는 상태다.

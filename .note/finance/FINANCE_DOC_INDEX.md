@@ -75,6 +75,7 @@
 | 최근 작업 로그 | `.note/finance/WORK_PROGRESS.md` |
 | 최근 질문 / 설계 판단 | `.note/finance/QUESTION_AND_ANALYSIS_LOG.md` |
 | Backtest 3단계 workflow 재설계 가이드 | `.note/finance/code_analysis/BACKTEST_PORTFOLIO_SELECTION_WORKFLOW_REDESIGN_GUIDE.md` |
+| Practical Validation V2 남은 구현 계획 | `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_REMAINING_IMPLEMENTATION_PLAN.md` |
 
 현재 상태:
 
@@ -243,6 +244,7 @@
 | `.note/finance/code_analysis/WEB_BACKTEST_UI_FLOW.md` | Backtest UI, Single Strategy, Compare, History, Saved Portfolio 흐름 |
 | `.note/finance/code_analysis/BACKTEST_PORTFOLIO_SELECTION_WORKFLOW_REDESIGN_GUIDE.md` | Backtest 후보 선정 workflow를 3단계 구조로 바꾸기 전 route / registry / implementation impact를 정리한 개발 가이드 |
 | `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_VALIDATION_DESIGN.md` | Practical Validation을 실전 투자 진단 엔진으로 확장하기 위한 UI / JSON / domain 구현 설계 |
+| `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_REMAINING_IMPLEMENTATION_PLAN.md` | Practical Validation V2의 현재 구현 상태, 남은 구현 범위, helper 분리, replay / provider / Final Review 고도화 순서를 정리한 개발 계획 |
 | `.note/finance/code_analysis/STRATEGY_IMPLEMENTATION_FLOW.md` | 새 strategy family를 제품에 추가할 때 따라야 하는 구현 흐름 |
 | `.note/finance/code_analysis/AUTOMATION_SCRIPTS_GUIDE.md` | phase bootstrap, hygiene, candidate registry helper script 사용 기준 |
 | `.note/finance/code_analysis/BACKTEST_REFINEMENT_CODE_FLOW_GUIDE.md` | 기존 backtest refinement 중심 code flow guide |

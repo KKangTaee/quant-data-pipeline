@@ -4674,3 +4674,15 @@ Detailed historical analysis was archived on `2026-04-13`.
   - holdings-level look-through, ETF expense / spread / AUM, FRED macro / sentiment는 아직 connector가 필요하므로 proxy 또는 후속으로 남긴다
 - Follow-up:
   - 후속 고도화는 strategy runtime full replay 버튼, holdings provider, FRED connector, ETF expense / spread connector 순서로 진행한다
+
+### 2026-05-10 - Practical Validation V2 남은 구현 계획 문서화
+- User request:
+  - 사용자가 `PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH`와 `PRACTICAL_VALIDATION_V2_VALIDATION_DESIGN`에서 협의한 내용 중 아직 미완성인 항목과 구현 방식을 정리한 뒤, 문서 검토 후 개발을 진행하자고 요청함
+- Interpreted goal:
+  - 지금 코드가 완성된 범위와 남은 범위를 혼동하지 않도록, 실제 runtime replay / provider connector / Final Review 연동까지의 개발 계획을 검토 가능한 문서로 남겨야 함
+- Analysis result:
+  - 현재 Practical Validation V2는 profile, 12개 diagnostics board, profile-aware score, compact curve / DB price proxy 기반 rolling / stress / baseline / sensitivity / operability 1차 계산까지 구현됐다
+  - 남은 핵심은 새 검증명을 추가하는 것이 아니라 proxy evidence를 actual runtime replay와 provider snapshot으로 승격하는 것이다
+  - 첫 개발 단위는 helper split 후 actual runtime replay / curve provenance / benchmark parity hardening으로 잡는 것이 가장 안전하다
+- Follow-up:
+  - `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_REMAINING_IMPLEMENTATION_PLAN.md`를 추가하고, 사용자가 검토한 뒤 개발 범위를 확정하기로 했다
