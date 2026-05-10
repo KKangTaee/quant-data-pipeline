@@ -22,6 +22,16 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-10
+- Changed Practical Validation design-question status tables to a single checklist table.
+- Updated:
+  - `.note/finance/research/PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH.md`
+  - `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_VALIDATION_DESIGN.md`
+  - `.note/finance/QUESTION_AND_ANALYSIS_LOG.md`
+- Durable decision:
+  - Use one table with `확인 여부`, `질문`, and `결정 / 기본 방향` columns instead of splitting design questions into completed and remaining sections.
+  - Mark confirmed items as `O` and implementation-time choices as `X`.
+
+### 2026-05-10
 - Refreshed Practical Validation open design questions.
 - Updated:
   - `.note/finance/research/PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH.md`

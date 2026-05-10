@@ -4565,3 +4565,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - rolling window 세부값, cost assumption, baseline proxy, sensitivity perturbation grid, stress window 목록, sentiment connector 착수 시점은 구현 선택으로 남겼다
 - Follow-up:
   - Practical Validation research / design 문서의 `남은 설계 질문` / `Open Questions`를 `결정 완료`와 `남은 구현 선택`으로 재정리했다
+
+### 2026-05-10 - 설계 질문 표를 확인 여부 컬럼으로 통합
+- User request:
+  - 사용자가 설계 질문 상태를 `결정 완료`와 `남은 구현 선택` 두 섹션으로 나누지 말고 하나의 표로 합쳐 `확인 여부`를 `O / X`로 표시해 달라고 요청함
+- Interpreted goal:
+  - 설계 질문을 하나의 점검표처럼 읽을 수 있게 만들고, 결정된 항목과 구현 시 확정할 항목을 같은 표에서 구분해야 함
+- Analysis result:
+  - Practical Validation research / design 문서의 설계 질문 상태 표를 하나로 합치고 `확인 여부`, `질문`, `결정 / 기본 방향` 컬럼으로 바꾸는 것이 적절함
+- Follow-up:
+  - 두 문서의 설계 질문 상태를 단일 표로 통합하고 확인된 항목은 `O`, 구현 선택이 남은 항목은 `X`로 표시했다
