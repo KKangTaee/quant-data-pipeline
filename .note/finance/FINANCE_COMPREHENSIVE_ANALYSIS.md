@@ -21,7 +21,7 @@ DB / strategy / runtime / UI 연결을 한 번에 확인하기 위한 상세 분
 - 범위 포함: `finance` 패키지 전체
 - 범위 제외: `financial_advisor`
 - 최초 기준 시점: 2026-03-11
-- 최근 동기화 기준: 2026-05-11 / Practical Validation V2 P2-4 macro / sentiment market-context snapshot initial implementation
+- 최근 동기화 기준: 2026-05-11 / Practical Validation V2 P2-5A provider snapshot ingestion UI / job wrapper 연결
 
 ---
 
@@ -355,6 +355,7 @@ web UI가 그 wrapper의 result bundle을 받아 single / compare / Operations h
 - broad fundamentals / factors는 빠른 research convenience layer다.
 - statement-driven shadow path는 strict annual / quarterly factor strategy에서 더 중요하다.
 - detailed financial statements의 raw truth는 `nyse_financial_statement_values`를 중심으로 본다.
+- Practical Validation provider snapshot은 P2-5A 기준으로 `Workspace > Ingestion > Practical Validation Provider Snapshots`에서 실행할 수 있으며, 실제 12개 진단 연결은 P2-5B에서 loader context로 붙인다.
 
 ---
 

@@ -122,6 +122,7 @@ Ingestion / Data Trust
 - `Paper Tracking Ledger`는 Phase 33에서 추가된 append-only 기록 흐름이지만, 현재 주 사용자 흐름에서는 Final Review의 inline paper observation 기준으로 흡수한다. 기존 ledger row는 backward compatibility / 과거 QA 기록으로 읽을 수 있다.
 - Phase 35에서 별도 `Post-Selection Guide` panel은 과한 단계로 판단해 active workflow에서 제거했다. 최종 판단과 투자 가능 / 투자하면 안 됨 / 내용 부족 / 재검토 필요 해석은 `Backtest > Final Review`의 saved final decision review에서 확인한다.
 - Phase 36에서 선정 이후 운영 확인은 `Backtest` 주 workflow가 아니라 `Operations > Selected Portfolio Dashboard`로 분리했다. 이 화면은 Final Review selected row를 read-only로 읽고, 사용자가 지정한 시작일 / 종료일 / 가상 투자금으로 selected component contract를 다시 replay해 최신 기간 성과를 확인한다. `Review Signals`는 최신 Performance Recheck와 사용자가 명시적으로 반영한 Actual Allocation 상태를 `Clear / Watch / Breached / Needs Input / Optional`로 번역한다. current value 기반 Actual Allocation을 기본 입력으로 두고, shares x price / current weight 입력은 advanced 입력으로 둔다. shares x price 입력에서는 DB latest close를 보조로 불러올 수 있지만, account holding 자동 연결이나 주문 초안은 만들지 않는다.
+- Practical Validation P2 provider data는 `Workspace > Ingestion > Practical Validation Provider Snapshots`에서 먼저 수집한다. 이후 Practical Validation 화면은 loader / provider context를 읽어 12개 진단의 actual / proxy / `NOT_RUN` 상태를 표시한다.
 
 현재 Guides 화면은 제품형 의사결정 guide로 정리한다.
 

@@ -44,6 +44,8 @@ external source
 | `finance/data/fundamentals.py` | fundamentals와 statement fundamentals shadow 적재 |
 | `finance/data/factors.py` | factor 생성과 statement factor shadow 적재 |
 | `finance/data/financial_statements.py` | EDGAR detailed statement filing/value/label 적재 |
+| `app/jobs/ingestion_jobs.py` | Streamlit Ingestion에서 실행되는 수집 job wrapper. provider collector 결과를 표준 `JobResult`로 변환한다 |
+| `app/web/streamlit_app.py` | `Workspace > Ingestion`의 provider snapshot 실행 화면. P2-5A 기준 ETF operability, ETF holdings / exposure, macro context 수집 버튼을 제공한다 |
 
 ## Loader 계층
 
@@ -66,6 +68,8 @@ external source
 - factor / fundamental 전략은 rebalance date 기준 snapshot payload가 핵심 계약이다.
 - Practical Validation provider connector는 UI에서 외부 provider를 직접 호출하지 않고,
   `finance/data/*` ingestion이 저장한 snapshot을 `finance/loaders/provider.py`로 읽는다.
+  P2-5A부터 `Workspace > Ingestion > Practical Validation Provider Snapshots`에서
+  해당 ingestion을 수동 실행할 수 있다.
   `etf_operability_snapshot`은 기존 DB의 price/profile 기반 bridge/proxy snapshot과
   iShares / SSGA / Invesco official page 기반 actual/partial snapshot을 source별로 함께 제공한다.
   `etf_holdings_snapshot`은 official holdings download/API row를 저장하고,

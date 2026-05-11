@@ -513,12 +513,23 @@ official provider / API / CSV / XLSX / yfinance fallback
 - 최신 observation date와 staleness가 계산된다.
 - macro data가 없으면 Practical Validation에서 `NOT_RUN`으로 남길 수 있다.
 
-### 작업 단위 5. Loader / Provider Coverage context
+### 작업 단위 5. Ingestion 실행 연결 / Loader Provider Coverage context
 
 목표:
 
+- 수집 foundation을 사용자가 `Workspace > Ingestion`에서 직접 실행할 수 있게 한다.
 - 수집된 DB snapshot을 Practical Validation이 읽을 수 있는 context로 변환한다.
 - 사용자가 "어떤 데이터가 실제 provider이고, 어떤 데이터가 proxy인지" 바로 이해하게 한다.
+
+상태:
+
+- P2-5A `implementation_complete`
+  - `app/jobs/ingestion_jobs.py`에 ETF operability, ETF holdings / exposure, macro market-context job wrapper를 추가했다.
+  - `Workspace > Ingestion > Practical Validation Provider Snapshots`에서 세 connector를 실행할 수 있다.
+  - 실행 결과는 기존 Ingestion job 결과와 동일하게 status, rows written, failed symbols, details, run metadata로 표시된다.
+- P2-5B `pending`
+  - loader 결과를 Practical Validation 12개 진단의 provider context로 연결한다.
+  - JSONL에는 full holdings row / full macro series를 저장하지 않고 compact provider coverage만 남긴다.
 
 표시 예:
 
@@ -533,6 +544,7 @@ Macro            NOT_RUN  macro connector not configured
 
 검증:
 
+- P2-5A 기준으로 Ingestion 화면에서 provider snapshot collection job이 실행된다.
 - provider table이 비어 있어도 빈 context 또는 `NOT_RUN`이 안정적으로 반환된다.
 - provider snapshot과 DB price proxy 출처가 분리된다.
 
@@ -603,7 +615,7 @@ Macro            NOT_RUN  macro connector not configured
 P2는 새 전략을 만드는 작업이 아니라,
 Practical Validation이 이미 가진 12개 diagnostics를 실제 provider data와 더 좋은 해석으로 보강하는 단계다.
 
-첫 구현은 UI가 아니라 provider data collection foundation이다.
-공식 provider / FRED 데이터를 ingestion에서 DB에 저장한 다음,
-loader와 Practical Validation connector를 붙인다.
+초기 구현은 UI가 아니라 provider data collection foundation이었다.
+이후 P2-5A에서 공식 provider / FRED 데이터를 `Workspace > Ingestion`에서 실행해 DB에 저장하는 운영 지점을 붙였다.
+다음 P2-5B에서 loader와 Practical Validation connector를 붙인다.
 기존 `nyse_asset_profile`과 price history는 coverage gap을 설명하는 bridge / fallback으로 유지한다.

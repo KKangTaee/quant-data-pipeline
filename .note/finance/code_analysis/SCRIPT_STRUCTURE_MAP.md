@@ -70,6 +70,12 @@
 | `app/web/runtime/final_selected_portfolios.py` | Final Selection Decision V2 registry를 read-only로 읽어 최종 선정 포트폴리오 운영 대시보드 row / status summary / 기간 확장 replay recheck / current weight 또는 value / holding input 기반 drift check / drift alert preview로 변환 |
 | `app/web/runtime/portfolio_store.py` | Saved portfolio persistence helper |
 
+## App / Jobs
+
+| 스크립트 | 관리하는 기능 |
+|---|---|
+| `app/jobs/ingestion_jobs.py` | `Workspace > Ingestion`에서 실행하는 수집 / refresh job wrapper. OHLCV, fundamentals, statement refresh, asset profile, Practical Validation provider snapshot job을 표준 `JobResult`로 감싼다 |
+
 ## Finance Core
 
 | 스크립트 | 관리하는 기능 |

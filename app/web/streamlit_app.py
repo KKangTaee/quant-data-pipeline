@@ -15,6 +15,9 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from app.jobs.ingestion_jobs import (
+    run_collect_etf_holdings_exposure,
+    run_collect_etf_operability_provider,
+    run_collect_macro_market_context,
     run_daily_market_update,
     run_extended_statement_refresh,
     run_rebuild_statement_shadow,
@@ -131,6 +134,9 @@ SYMBOL_PRESETS = {
     "Custom": "",
 }
 PERIOD_PRESETS = ["1d", "7d", "1mo", "3mo", "6mo", "1y", "5y", "10y", "15y", "20y"]
+P2_PROVIDER_OPERABILITY_SYMBOLS = "AOR, IEF, TLT, SPY, BIL, GLD, QQQ"
+P2_PROVIDER_HOLDINGS_SYMBOLS = "AOR, IEF, TLT, SPY, BIL, QQQ"
+P2_PROVIDER_MACRO_SERIES = "VIXCLS, T10Y3M, BAA10Y"
 SYMBOL_SOURCE_OPTIONS = [
     "Manual",
     "NYSE Stocks",
@@ -351,6 +357,15 @@ def _dispatch_job(job: dict[str, Any], *, progress_callback: Any = None) -> JobR
         return run_rebuild_statement_shadow(**params)
     if action == "metadata_refresh":
         return run_metadata_refresh(**params)
+    if action == "collect_etf_operability_provider":
+        params["progress_callback"] = progress_callback
+        return run_collect_etf_operability_provider(**params)
+    if action == "collect_etf_holdings_exposure":
+        params["progress_callback"] = progress_callback
+        return run_collect_etf_holdings_exposure(**params)
+    if action == "collect_macro_market_context":
+        params["progress_callback"] = progress_callback
+        return run_collect_macro_market_context(**params)
     if action == "collect_ohlcv":
         params["progress_callback"] = progress_callback
         return run_collect_ohlcv(**params)
@@ -1419,6 +1434,10 @@ def _resolve_symbols(preset_name: str, manual_value: str) -> str:
     return preset_value if preset_name != "Custom" else manual_value
 
 
+def _parse_csv_items(value: str) -> list[str]:
+    return [item.strip().upper() for item in str(value or "").replace("\n", ",").split(",") if item.strip()]
+
+
 def _render_symbol_source_inputs(
     prefix: str,
     title: str = "Symbols",
@@ -1906,6 +1925,238 @@ def _render_ingestion_console() -> None:
                         label="Metadata Refresh",
                     )
                 _render_inline_last_completed_result("metadata_refresh")
+
+            with st.expander("Practical Validation Provider Snapshots", expanded=False):
+                st.write("Refresh the provider snapshots that Practical Validation will use for P2 diagnostics.")
+                st.caption(
+                    "This is the P2-5A bridge: it runs the ETF operability, ETF holdings / exposure, and macro market-context collectors "
+                    "from the Ingestion console. Practical Validation diagnostic scoring is connected in the next P2-5 step."
+                )
+                st.caption(
+                    "Writes to: `finance_meta.etf_operability_snapshot`, `finance_meta.etf_holdings_snapshot`, "
+                    "`finance_meta.etf_exposure_snapshot`, `finance_meta.macro_series_observation`"
+                )
+                provider_tab, holdings_tab, macro_tab = st.tabs(
+                    ["ETF Operability", "ETF Holdings / Exposure", "Macro Context"]
+                )
+
+                with provider_tab:
+                    st.caption(
+                        "Collects cost / liquidity / operability fields such as expense ratio, AUM, spread, premium/discount, leverage, and inverse flags."
+                    )
+                    operability_symbols_text = st.text_area(
+                        "ETF Symbols",
+                        value=P2_PROVIDER_OPERABILITY_SYMBOLS,
+                        key="p2_operability_symbols_input",
+                        help="Initial source-map coverage: AOR, IEF, TLT, SPY, BIL, GLD, QQQ.",
+                    )
+                    operability_symbols = _parse_csv_items(operability_symbols_text)
+                    operability_cols = st.columns(4)
+                    operability_provider = operability_cols[0].selectbox(
+                        "Provider",
+                        ["official", "auto", "db_bridge", "ishares", "ssga", "invesco"],
+                        index=0,
+                        key="p2_operability_provider",
+                    )
+                    operability_as_of = operability_cols[1].text_input(
+                        "As Of Date",
+                        value="",
+                        key="p2_operability_as_of",
+                        help="Optional YYYY-MM-DD. Blank means latest provider / DB snapshot date.",
+                    )
+                    operability_lookback = int(
+                        operability_cols[2].number_input(
+                            "Bridge Lookback Days",
+                            min_value=5,
+                            max_value=252,
+                            value=60,
+                            step=5,
+                            key="p2_operability_lookback",
+                        )
+                    )
+                    operability_timeframe = operability_cols[3].selectbox(
+                        "Bridge Timeframe",
+                        ["1d", "1wk", "1mo"],
+                        index=0,
+                        key="p2_operability_timeframe",
+                    )
+                    operability_check = check_symbol_input(operability_symbols)
+                    _render_check_result(operability_check)
+                    if st.button(
+                        "Run ETF Operability Snapshot",
+                        use_container_width=True,
+                        disabled=_has_running_job() or _is_blocking(operability_check),
+                    ):
+                        _schedule_job(
+                            {
+                                "action": "collect_etf_operability_provider",
+                                "job_name": "collect_etf_operability_provider",
+                                "spinner_text": "Running ETF operability provider snapshot...",
+                                "params": {
+                                    "symbols": operability_symbols,
+                                    "as_of_date": operability_as_of or None,
+                                    "provider": operability_provider,
+                                    "lookback_days": operability_lookback,
+                                    "timeframe": operability_timeframe,
+                                },
+                                "run_metadata": _job_metadata(
+                                    pipeline_type="practical_validation_provider_operability",
+                                    execution_mode="operational",
+                                    symbol_source="P2 provider source map",
+                                    symbol_count=len(operability_symbols),
+                                    execution_context=(
+                                        "Refresh ETF operability / cost / liquidity provider snapshot for Practical Validation P2 diagnostics."
+                                    ),
+                                    input_params={
+                                        "provider": operability_provider,
+                                        "as_of_date": operability_as_of or None,
+                                        "lookback_days": operability_lookback,
+                                        "timeframe": operability_timeframe,
+                                    },
+                                ),
+                            }
+                        )
+                    if _is_running_action("collect_etf_operability_provider"):
+                        current_progress_callback = _build_progress_callback(
+                            st.session_state.running_job,
+                            label="ETF Operability Snapshot",
+                        )
+                    _render_inline_last_completed_result("collect_etf_operability_provider")
+
+                with holdings_tab:
+                    st.caption(
+                        "Collects ETF holding rows, then rebuilds asset-class / sector / country / currency exposure snapshots. "
+                        "`GLD` row-level holdings are still pending, so it is not in the default list here."
+                    )
+                    holdings_symbols_text = st.text_area(
+                        "ETF Symbols",
+                        value=P2_PROVIDER_HOLDINGS_SYMBOLS,
+                        key="p2_holdings_symbols_input",
+                        help="Initial row-level holdings coverage: AOR, IEF, TLT, SPY, BIL, QQQ.",
+                    )
+                    holdings_symbols = _parse_csv_items(holdings_symbols_text)
+                    holdings_cols = st.columns(3)
+                    holdings_provider = holdings_cols[0].selectbox(
+                        "Provider",
+                        ["official", "ishares", "ssga", "invesco"],
+                        index=0,
+                        key="p2_holdings_provider",
+                    )
+                    holdings_as_of = holdings_cols[1].text_input(
+                        "As Of Date",
+                        value="",
+                        key="p2_holdings_as_of",
+                        help="Optional YYYY-MM-DD. Blank means provider latest and latest stored holdings for exposure aggregation.",
+                    )
+                    holdings_include_aggregates = holdings_cols[2].checkbox(
+                        "Provider Aggregate Sectors",
+                        value=True,
+                        key="p2_holdings_include_aggregates",
+                        help="Also store official aggregate sector exposure when the provider exposes it, currently SPY / QQQ.",
+                    )
+                    holdings_check = check_symbol_input(holdings_symbols)
+                    _render_check_result(holdings_check)
+                    if st.button(
+                        "Run ETF Holdings / Exposure Snapshot",
+                        use_container_width=True,
+                        disabled=_has_running_job() or _is_blocking(holdings_check),
+                    ):
+                        _schedule_job(
+                            {
+                                "action": "collect_etf_holdings_exposure",
+                                "job_name": "collect_etf_holdings_exposure",
+                                "spinner_text": "Running ETF holdings and exposure snapshots...",
+                                "params": {
+                                    "symbols": holdings_symbols,
+                                    "as_of_date": holdings_as_of or None,
+                                    "provider": holdings_provider,
+                                    "include_provider_aggregates": bool(holdings_include_aggregates),
+                                },
+                                "run_metadata": _job_metadata(
+                                    pipeline_type="practical_validation_provider_holdings_exposure",
+                                    execution_mode="operational",
+                                    symbol_source="P2 provider source map",
+                                    symbol_count=len(holdings_symbols),
+                                    execution_context=(
+                                        "Refresh ETF holdings and exposure provider snapshots for Practical Validation P2 diagnostics."
+                                    ),
+                                    input_params={
+                                        "provider": holdings_provider,
+                                        "as_of_date": holdings_as_of or None,
+                                        "include_provider_aggregates": bool(holdings_include_aggregates),
+                                    },
+                                ),
+                            }
+                        )
+                    if _is_running_action("collect_etf_holdings_exposure"):
+                        current_progress_callback = _build_progress_callback(
+                            st.session_state.running_job,
+                            label="ETF Holdings / Exposure Snapshot",
+                        )
+                    _render_inline_last_completed_result("collect_etf_holdings_exposure")
+
+                with macro_tab:
+                    st.caption(
+                        "Collects FRED market-context series used as macro / sentiment proxy inputs: VIX, yield-curve slope, and credit spread."
+                    )
+                    macro_series_text = st.text_area(
+                        "Macro Series IDs",
+                        value=P2_PROVIDER_MACRO_SERIES,
+                        key="p2_macro_series_input",
+                        help="Default P2 series: VIXCLS, T10Y3M, BAA10Y.",
+                    )
+                    macro_series = _parse_csv_items(macro_series_text)
+                    macro_cols = st.columns(3)
+                    macro_start = macro_cols[0].text_input("Start", value="2016-01-01", key="p2_macro_start")
+                    macro_end = macro_cols[1].text_input("End", value=date.today().isoformat(), key="p2_macro_end")
+                    macro_source_mode = macro_cols[2].selectbox(
+                        "Source Mode",
+                        ["auto", "csv", "api"],
+                        index=0,
+                        key="p2_macro_source_mode",
+                        help="`auto` uses FRED API when `FRED_API_KEY` exists, otherwise official FRED CSV download.",
+                    )
+                    macro_check = check_symbol_input(macro_series)
+                    _render_check_result(macro_check)
+                    if st.button(
+                        "Run Macro Context Snapshot",
+                        use_container_width=True,
+                        disabled=_has_running_job() or _is_blocking(macro_check),
+                    ):
+                        _schedule_job(
+                            {
+                                "action": "collect_macro_market_context",
+                                "job_name": "collect_macro_market_context",
+                                "spinner_text": "Running macro market-context snapshot...",
+                                "params": {
+                                    "series_ids": macro_series,
+                                    "start": macro_start or None,
+                                    "end": macro_end or None,
+                                    "source_mode": macro_source_mode,
+                                },
+                                "run_metadata": _job_metadata(
+                                    pipeline_type="practical_validation_macro_market_context",
+                                    execution_mode="operational",
+                                    symbol_source="FRED P2 source map",
+                                    symbol_count=len(macro_series),
+                                    execution_context=(
+                                        "Refresh FRED market-context observations for Practical Validation macro / sentiment diagnostics."
+                                    ),
+                                    input_params={
+                                        "series_ids": macro_series,
+                                        "start": macro_start or None,
+                                        "end": macro_end or None,
+                                        "source_mode": macro_source_mode,
+                                    },
+                                ),
+                            }
+                        )
+                    if _is_running_action("collect_macro_market_context"):
+                        current_progress_callback = _build_progress_callback(
+                            st.session_state.running_job,
+                            label="Macro Context Snapshot",
+                        )
+                    _render_inline_last_completed_result("collect_macro_market_context")
 
         with manual_tab:
             st.info(

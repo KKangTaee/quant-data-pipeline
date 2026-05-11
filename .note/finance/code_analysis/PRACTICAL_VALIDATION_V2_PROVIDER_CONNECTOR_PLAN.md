@@ -1123,15 +1123,40 @@ P2의 주 작업은 공식 provider / macro source에서 데이터를 수집해 
 
 ## 후속 구현 단위
 
-1. ETF operability official / bridge data를 같은 coverage summary로 읽는 loader 추가
-2. ETF holdings snapshot loader와 exposure aggregation 추가
-3. macro snapshot loader와 sentiment proxy context 추가
-4. Practical Validation provider coverage UI 연결
-5. Practical Validation macro / sentiment / operability domain 연결
-6. stress interpretation에서 macro snapshot과 stress window를 연결
+1. 완료: ETF operability official / bridge data를 같은 coverage summary로 읽는 loader 추가
+2. 완료: ETF holdings snapshot loader와 exposure aggregation 추가
+3. 완료: macro snapshot loader와 sentiment proxy context 추가
+4. 완료: `Workspace > Ingestion`에서 provider snapshot 수집을 실행하는 P2-5A UI / job wrapper 연결
+5. 진행 예정: Practical Validation provider coverage UI 연결
+6. 진행 예정: Practical Validation macro / sentiment / operability domain 연결
+7. 진행 예정: stress interpretation에서 macro snapshot과 stress window를 연결
+
+## P2-5A 구현 상태: Ingestion 실행 연결
+
+P2-5A는 "수집 코드는 있는데 사용자가 어디서 실행하는가?" 문제를 해결한다.
+Practical Validation 진단 로직에 붙이기 전에, provider snapshot을 DB에 채우는 실행 지점을 `Workspace > Ingestion`에 노출했다.
+
+구현 내용:
+
+- `app/jobs/ingestion_jobs.py`
+  - `run_collect_etf_operability_provider()`
+  - `run_collect_etf_holdings_exposure()`
+  - `run_collect_macro_market_context()`
+- `app/web/streamlit_app.py`
+  - `Operational Pipelines > Practical Validation Provider Snapshots` expander 추가
+  - `ETF Operability`, `ETF Holdings / Exposure`, `Macro Context` tabs 추가
+  - 각 tab에서 symbol / series, provider, 날짜 범위, source mode를 입력하고 수집 job을 실행
+
+아직 하지 않은 것:
+
+- Practical Validation 12개 진단 점수와 provider context 연결은 P2-5B에서 진행한다.
+- full holdings row와 full macro series는 JSONL에 저장하지 않는다.
+- `GLD` holdings는 row-level source pending 상태를 유지한다.
 
 ## 검증 기준
 
+- [x] provider snapshot 수집 job wrapper가 표준 `JobResult`를 반환한다.
+- [x] Ingestion 화면에서 P2 provider snapshot 실행 지점이 제공된다.
 - [ ] provider table이 없어도 loader와 UI가 실패하지 않는다.
 - [ ] 수집기는 같은 symbol / as_of_date / source 기준으로 반복 실행 가능하다.
 - [ ] 수집 결과에 `source`, `source_ref`, `as_of_date`, `collected_at`, `coverage_status`가 남는다.

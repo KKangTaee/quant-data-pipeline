@@ -3757,3 +3757,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - `finance/loaders/macro.py`와 loader export를 추가해 observation range 조회와 기준일 snapshot / staleness 조회를 제공했다.
   - smoke ingestion 결과 2026-01-01~2026-05-11 구간에서 265 rows를 저장했고, 2026-05-11 기준 3개 series 모두 `snapshot_status=actual`로 로딩됐다.
   - Practical Validation 진단 연결은 아직 하지 않았고 P2-5에서 Regime / Macro Suitability와 Sentiment / Risk-On-Off Overlay 진단에 연결한다.
+- Practical Validation V2 P2-5A provider snapshot ingestion UI / job wrapper 연결:
+  - `app/jobs/ingestion_jobs.py`에 `run_collect_etf_operability_provider()`, `run_collect_etf_holdings_exposure()`, `run_collect_macro_market_context()`를 추가했다.
+  - `Workspace > Ingestion > Practical Validation Provider Snapshots`에서 ETF operability, ETF holdings / exposure, macro context 수집을 실행할 수 있게 했다.
+  - 이 단계는 Practical Validation 진단 점수 연결이 아니라, DB snapshot을 채우는 운영 실행 지점 연결이다. 12개 diagnostics provider context 연결은 P2-5B에서 진행한다.
+  - smoke 결과 `AOR` operability `success 1 row`, `AOR` holdings / exposure `success 17 rows`, `VIXCLS` 2026-01-01~2026-01-05 macro `success 2 rows`를 확인했다.

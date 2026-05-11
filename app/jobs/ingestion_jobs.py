@@ -10,6 +10,12 @@ from finance.data.factors import upsert_factors, upsert_statement_factors_shadow
 from finance.data.financial_statements import upsert_financial_statements
 from finance.data.fundamentals import upsert_fundamentals, upsert_statement_fundamentals_shadow
 from finance.data.asset_profile import collect_and_store_asset_profiles
+from finance.data.etf_provider import (
+    aggregate_and_store_etf_exposures,
+    collect_and_store_etf_holdings,
+    collect_and_store_etf_operability,
+)
+from finance.data.macro import DEFAULT_MACRO_SERIES, collect_and_store_macro_series
 
 
 JobResult = dict[str, Any]
@@ -147,6 +153,33 @@ def _merge_step_failures(steps: list[JobResult], invalid_symbols: list[str] | No
     for step in steps:
         failures.extend(step.get("failed_symbols") or [])
     return failures
+
+
+def _failed_item_ids(failed_items: Iterable[Any], *, id_keys: tuple[str, ...] = ("symbol", "series_id")) -> list[str]:
+    ids: list[str] = []
+    for item in failed_items or []:
+        if isinstance(item, dict):
+            for key in id_keys:
+                value = item.get(key)
+                if value:
+                    ids.append(str(value).upper())
+                    break
+        elif item:
+            ids.append(str(item).upper())
+    return ids
+
+
+def _status_from_provider_summary(
+    *,
+    rows_written: int,
+    failed_items: list[str],
+    missing_items: list[str],
+) -> str:
+    if rows_written <= 0:
+        return "failed"
+    if failed_items or missing_items:
+        return "partial_success"
+    return "success"
 
 
 def _pipeline_status(steps: list[JobResult]) -> str:
@@ -1097,6 +1130,382 @@ def run_collect_asset_profiles(
             symbols_processed=0,
             message=f"Asset profile collection failed: {exc}",
             details={"kinds": list(kinds)},
+        )
+
+
+def run_collect_etf_operability_provider(
+    symbols: str | Iterable[str] | None,
+    *,
+    as_of_date: str | None = None,
+    provider: str = "official",
+    lookback_days: int = 60,
+    timeframe: str = "1d",
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
+) -> JobResult:
+    """Run the ETF operability connector and return a web-console job result."""
+    job_name = "collect_etf_operability_provider"
+    started_at = _now_str()
+    t0 = perf_counter()
+    parsed, invalid_symbols = split_valid_invalid_symbols(symbols)
+
+    if not parsed:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=0,
+            symbols_processed=0,
+            failed_symbols=invalid_symbols,
+            message="No valid ETF symbols provided.",
+            details={
+                "provider": provider,
+                "as_of_date": as_of_date,
+                "lookback_days": lookback_days,
+                "timeframe": timeframe,
+            },
+        )
+
+    if progress_callback is not None:
+        progress_callback({"event": "stage_start", "stage": "etf_operability", "stage_index": 1, "total_stages": 1})
+
+    try:
+        summary = collect_and_store_etf_operability(
+            parsed,
+            as_of_date=as_of_date or None,
+            provider=provider,
+            lookback_days=int(lookback_days),
+            timeframe=timeframe,
+        )
+        if progress_callback is not None:
+            progress_callback({"event": "stage_complete", "stage": "etf_operability", "stage_index": 1, "total_stages": 1})
+        rows_written = int(summary.get("stored") or 0)
+        missing_symbols = list(summary.get("missing") or [])
+        failed_symbols = _failed_item_ids(summary.get("failed") or [])
+        all_failed = invalid_symbols + failed_symbols + [sym for sym in missing_symbols if sym not in failed_symbols]
+        status = _status_from_provider_summary(
+            rows_written=rows_written,
+            failed_items=failed_symbols + invalid_symbols,
+            missing_items=missing_symbols,
+        )
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status=status,
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=rows_written,
+            symbols_requested=len(parsed),
+            symbols_processed=max(len(parsed) - len(set(missing_symbols + failed_symbols)), 0) if rows_written > 0 else 0,
+            failed_symbols=all_failed[:50],
+            message=(
+                "ETF operability provider snapshot completed."
+                if status == "success"
+                else "ETF operability provider snapshot completed with coverage gaps."
+                if status == "partial_success"
+                else "ETF operability provider snapshot wrote no rows."
+            ),
+            details={
+                "provider": summary.get("source") or provider,
+                "as_of_date": as_of_date,
+                "lookback_days": summary.get("lookback_days") or lookback_days,
+                "timeframe": timeframe,
+                "coverage": summary.get("coverage") or {},
+                "missing": missing_symbols,
+                "failed": summary.get("failed") or [],
+                "target_table": "finance_meta.etf_operability_snapshot",
+            },
+        )
+    except Exception as exc:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=len(parsed),
+            symbols_processed=0,
+            failed_symbols=(invalid_symbols + parsed)[:50],
+            message=f"ETF operability provider snapshot failed: {exc}",
+            details={
+                "provider": provider,
+                "as_of_date": as_of_date,
+                "lookback_days": lookback_days,
+                "timeframe": timeframe,
+                "target_table": "finance_meta.etf_operability_snapshot",
+            },
+        )
+
+
+def run_collect_etf_holdings_exposure(
+    symbols: str | Iterable[str] | None,
+    *,
+    as_of_date: str | None = None,
+    provider: str = "official",
+    include_provider_aggregates: bool = True,
+    refresh_mode: str = "canonical_refresh",
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
+) -> JobResult:
+    """Collect ETF holdings and rebuild the matching exposure snapshot for the same symbol set."""
+    job_name = "collect_etf_holdings_exposure"
+    started_at = _now_str()
+    t0 = perf_counter()
+    parsed, invalid_symbols = split_valid_invalid_symbols(symbols)
+
+    if not parsed:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=0,
+            symbols_processed=0,
+            failed_symbols=invalid_symbols,
+            message="No valid ETF symbols provided.",
+            details={"steps": [], "provider": provider, "as_of_date": as_of_date},
+        )
+
+    steps: list[JobResult] = []
+    try:
+        if progress_callback is not None:
+            progress_callback({"event": "stage_start", "stage": "etf_holdings", "stage_index": 1, "total_stages": 2})
+        holdings_summary = collect_and_store_etf_holdings(
+            parsed,
+            as_of_date=as_of_date or None,
+            provider=provider,
+            refresh_mode=refresh_mode,
+        )
+        holdings_missing = list(holdings_summary.get("missing") or [])
+        holdings_failed = _failed_item_ids(holdings_summary.get("failed") or [])
+        holdings_rows = int(holdings_summary.get("stored") or 0)
+        holdings_status = _status_from_provider_summary(
+            rows_written=holdings_rows,
+            failed_items=holdings_failed,
+            missing_items=holdings_missing,
+        )
+        steps.append(
+            _build_result(
+                job_name="collect_etf_holdings",
+                status=holdings_status,
+                started_at=started_at,
+                finished_at=_now_str(),
+                duration_sec=0.0,
+                rows_written=holdings_rows,
+                symbols_requested=len(parsed),
+                symbols_processed=max(len(parsed) - len(set(holdings_missing + holdings_failed)), 0) if holdings_rows > 0 else 0,
+                failed_symbols=(holdings_failed + holdings_missing)[:50],
+                message="ETF holdings snapshot step completed." if holdings_rows > 0 else "ETF holdings snapshot step wrote no rows.",
+                details=holdings_summary,
+            )
+        )
+        if progress_callback is not None:
+            progress_callback({"event": "stage_complete", "stage": "etf_holdings", "stage_index": 1, "total_stages": 2})
+            progress_callback({"event": "stage_start", "stage": "etf_exposure", "stage_index": 2, "total_stages": 2})
+
+        exposure_source = provider if str(provider or "").lower() in {"ishares", "ssga", "invesco"} else None
+        exposure_summary = aggregate_and_store_etf_exposures(
+            parsed,
+            as_of_date=as_of_date or None,
+            source=exposure_source,
+            latest=True,
+            include_provider_aggregates=bool(include_provider_aggregates),
+            refresh_mode=refresh_mode,
+        )
+        exposure_missing = list(exposure_summary.get("missing") or [])
+        exposure_failed = _failed_item_ids(exposure_summary.get("failed") or [])
+        exposure_rows = int(exposure_summary.get("stored") or 0)
+        exposure_status = _status_from_provider_summary(
+            rows_written=exposure_rows,
+            failed_items=exposure_failed,
+            missing_items=exposure_missing,
+        )
+        steps.append(
+            _build_result(
+                job_name="aggregate_etf_exposures",
+                status=exposure_status,
+                started_at=started_at,
+                finished_at=_now_str(),
+                duration_sec=0.0,
+                rows_written=exposure_rows,
+                symbols_requested=len(parsed),
+                symbols_processed=max(len(parsed) - len(set(exposure_missing + exposure_failed)), 0) if exposure_rows > 0 else 0,
+                failed_symbols=(exposure_failed + exposure_missing)[:50],
+                message="ETF exposure aggregation step completed." if exposure_rows > 0 else "ETF exposure aggregation step wrote no rows.",
+                details=exposure_summary,
+            )
+        )
+        if progress_callback is not None:
+            progress_callback({"event": "stage_complete", "stage": "etf_exposure", "stage_index": 2, "total_stages": 2})
+
+        total_rows = holdings_rows + exposure_rows
+        failed_symbols = _merge_step_failures(steps, invalid_symbols)
+        status = _pipeline_status(steps)
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status=status if total_rows > 0 else "failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=total_rows,
+            symbols_requested=len(parsed),
+            symbols_processed=max(len(parsed) - len(set(failed_symbols)), 0) if total_rows > 0 else 0,
+            failed_symbols=failed_symbols[:50],
+            message=(
+                "ETF holdings and exposure snapshots completed."
+                if status == "success" and total_rows > 0
+                else "ETF holdings and exposure snapshots completed with coverage gaps."
+                if total_rows > 0
+                else "ETF holdings and exposure snapshots wrote no rows."
+            ),
+            details={
+                "steps": steps,
+                "provider": provider,
+                "as_of_date": as_of_date,
+                "include_provider_aggregates": bool(include_provider_aggregates),
+                "refresh_mode": refresh_mode,
+                "target_tables": [
+                    "finance_meta.etf_holdings_snapshot",
+                    "finance_meta.etf_exposure_snapshot",
+                ],
+            },
+        )
+    except Exception as exc:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=sum((step.get("rows_written") or 0) for step in steps),
+            symbols_requested=len(parsed),
+            symbols_processed=0,
+            failed_symbols=(_merge_step_failures(steps, invalid_symbols) + parsed)[:50],
+            message=f"ETF holdings / exposure collection failed: {exc}",
+            details={
+                "steps": steps,
+                "provider": provider,
+                "as_of_date": as_of_date,
+                "include_provider_aggregates": bool(include_provider_aggregates),
+                "refresh_mode": refresh_mode,
+            },
+        )
+
+
+def run_collect_macro_market_context(
+    series_ids: str | Iterable[str] | None = None,
+    *,
+    start: str | None = None,
+    end: str | None = None,
+    source_mode: str = "auto",
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
+) -> JobResult:
+    """Run the FRED market-context connector for Practical Validation macro diagnostics."""
+    job_name = "collect_macro_market_context"
+    started_at = _now_str()
+    t0 = perf_counter()
+    effective_series = DEFAULT_MACRO_SERIES if series_ids is None or (isinstance(series_ids, str) and not series_ids.strip()) else series_ids
+    parsed, invalid_symbols = split_valid_invalid_symbols(effective_series)
+
+    if not parsed:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=0,
+            symbols_processed=0,
+            failed_symbols=invalid_symbols,
+            message="No valid macro series IDs provided.",
+            details={"start": start, "end": end, "source_mode": source_mode},
+        )
+
+    if progress_callback is not None:
+        progress_callback({"event": "stage_start", "stage": "macro_market_context", "stage_index": 1, "total_stages": 1})
+
+    try:
+        summary = collect_and_store_macro_series(
+            parsed,
+            start=start or None,
+            end=end or None,
+            provider="fred",
+            source_mode=source_mode,
+        )
+        if progress_callback is not None:
+            progress_callback({"event": "stage_complete", "stage": "macro_market_context", "stage_index": 1, "total_stages": 1})
+        rows_written = int(summary.get("stored") or 0)
+        missing_series = list(summary.get("missing") or [])
+        failed_series = _failed_item_ids(summary.get("failed") or [], id_keys=("series_id", "symbol"))
+        all_failed = invalid_symbols + failed_series + [series_id for series_id in missing_series if series_id not in failed_series]
+        status = _status_from_provider_summary(
+            rows_written=rows_written,
+            failed_items=failed_series + invalid_symbols,
+            missing_items=missing_series,
+        )
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status=status,
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=rows_written,
+            symbols_requested=len(parsed),
+            symbols_processed=max(len(parsed) - len(set(missing_series + failed_series)), 0) if rows_written > 0 else 0,
+            failed_symbols=all_failed[:50],
+            message=(
+                "Macro market-context snapshot completed."
+                if status == "success"
+                else "Macro market-context snapshot completed with coverage gaps."
+                if status == "partial_success"
+                else "Macro market-context snapshot wrote no rows."
+            ),
+            details={
+                "series_ids": parsed,
+                "start": summary.get("start") or start,
+                "end": summary.get("end") or end,
+                "source": summary.get("source") or "fred",
+                "source_mode": summary.get("source_mode") or source_mode,
+                "coverage": summary.get("coverage") or {},
+                "missing": missing_series,
+                "failed": summary.get("failed") or [],
+                "target_table": "finance_meta.macro_series_observation",
+            },
+        )
+    except Exception as exc:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=len(parsed),
+            symbols_processed=0,
+            failed_symbols=(invalid_symbols + parsed)[:50],
+            message=f"Macro market-context snapshot failed: {exc}",
+            details={
+                "series_ids": parsed,
+                "start": start,
+                "end": end,
+                "source": "fred",
+                "source_mode": source_mode,
+                "target_table": "finance_meta.macro_series_observation",
+            },
         )
 
 
