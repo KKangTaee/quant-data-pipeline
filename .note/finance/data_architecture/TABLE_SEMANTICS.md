@@ -38,19 +38,23 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 
 - Practical Validation V2의 ETF 운용성 / 비용 / 유동성 진단에 쓸 snapshot 저장
 - ETF별 AUM / bid-ask spread / 평균 거래량 / 평균 거래대금 / market price 같은 bridge/proxy evidence 보존
-- 후속 official issuer provider 수집 결과를 같은 table에 `source`별로 저장할 수 있는 경계 제공
+- official issuer provider 수집 결과를 같은 table에 `source`별로 저장
 
 성격:
 
 - provider snapshot table이다.
-- 현재 P2-2A 구현은 official provider actual row가 아니라 `db_bridge` source row를 저장한다.
+- P2-2A 구현은 `db_bridge` source row를 저장한다.
 - `db_bridge` row는 `nyse_price_history`에서 계산한 ADV / dollar volume proxy와
   `nyse_asset_profile`의 total assets / bid / ask bridge를 합친 것이다.
 - `coverage_status`가 `bridge` 또는 `proxy`면 actual provider data로 해석하지 않는다.
+- P2-2B 구현은 iShares / SSGA / Invesco official page row를 `source_type=official`로 저장한다.
+- official row의 `actual`은 핵심 operability field 묶음이 3개 이상 확인됐다는 뜻이고,
+  `partial`은 일부 field만 확인됐다는 뜻이다.
 
 주의:
 
-- expense ratio, NAV, premium / discount, official leveraged / inverse metadata는 아직 actual source가 아니다.
+- initial official source map 밖 ETF는 아직 official coverage가 없을 수 있다.
+- Invesco QQQ는 현재 expense ratio / inception만 있어 `partial`로 저장된다.
 - current snapshot이므로 historical point-in-time ETF 운용성 truth로 바로 해석하면 안 된다.
 - Practical Validation result JSONL에는 full row를 저장하지 않고 compact evidence / coverage status만 저장하는 방향이다.
 

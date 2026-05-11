@@ -22,7 +22,7 @@
 | `nyse_stock` | NYSE stock listing master |
 | `nyse_etf` | NYSE ETF listing master |
 | `nyse_asset_profile` | stock / ETF profile, universe filter, current ETF operability metadata |
-| `etf_operability_snapshot` | ETF 비용 / 규모 / 유동성 / spread / NAV 관련 provider snapshot. 현재는 DB bridge/proxy row부터 저장 |
+| `etf_operability_snapshot` | ETF 비용 / 규모 / 유동성 / spread / NAV 관련 provider snapshot. DB bridge/proxy row와 일부 issuer official actual/partial row를 source별로 저장 |
 
 ### `finance_price`
 

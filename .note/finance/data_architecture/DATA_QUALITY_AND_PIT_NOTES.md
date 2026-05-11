@@ -40,8 +40,10 @@
 - `status`, `is_spac`, country, sector, industry는 provider 품질에 의존한다.
 - historical listing / delisting / symbol-change truth가 아니다.
 - survivorship bias를 완전히 제거하지 못한다.
-- P2-2A의 `etf_operability_snapshot` `db_bridge` row는 official ETF provider actual data가 아니다.
-  expense ratio, NAV, premium / discount, leveraged / inverse metadata는 후속 official source가 필요하다.
+- `etf_operability_snapshot` `db_bridge` row는 official ETF provider actual data가 아니다.
+- P2-2B official row는 iShares / SSGA / Invesco page의 current snapshot을 normalize한 것이다.
+  다만 Invesco QQQ는 현재 expense ratio / inception만 확보되어 `partial`이며,
+  source map 밖 ticker는 official coverage가 없을 수 있다.
   current snapshot이므로 과거 특정 시점의 운용성 truth로 쓰면 안 된다.
 
 ## Fundamentals / factors

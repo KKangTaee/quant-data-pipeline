@@ -26,6 +26,7 @@ external source
 | EDGAR | detailed financial statements |
 | local DB | backtest runtime read path |
 | local DB bridge | ETF operability snapshot의 1차 bridge / proxy source. `nyse_price_history`, `nyse_asset_profile`에서 계산 |
+| ETF issuer official pages | ETF operability actual / partial source. 초기 구현은 iShares, SSGA / SPDR, Invesco 일부 ticker |
 
 ## Persistence 계층
 
@@ -35,7 +36,7 @@ external source
 | `finance/data/db/mysql.py` | MySQL connection / execution helper |
 | `finance/data/nyse_db.py` | NYSE CSV를 DB universe table로 적재 |
 | `finance/data/asset_profile.py` | asset profile 수집과 저장 |
-| `finance/data/etf_provider.py` | ETF provider snapshot 수집 / 저장 경계. 현재는 기존 DB 기반 operability bridge/proxy snapshot을 만든다 |
+| `finance/data/etf_provider.py` | ETF provider snapshot 수집 / 저장 경계. 기존 DB 기반 bridge/proxy row와 issuer official row를 `etf_operability_snapshot`에 저장한다 |
 | `finance/data/data.py` | price 수집 / DB read helper |
 | `finance/data/fundamentals.py` | fundamentals와 statement fundamentals shadow 적재 |
 | `finance/data/factors.py` | factor 생성과 statement factor shadow 적재 |
@@ -61,8 +62,8 @@ external source
 - factor / fundamental 전략은 rebalance date 기준 snapshot payload가 핵심 계약이다.
 - Practical Validation provider connector는 UI에서 외부 provider를 직접 호출하지 않고,
   `finance/data/*` ingestion이 저장한 snapshot을 `finance/loaders/provider.py`로 읽는다.
-  현재 구현된 `etf_operability_snapshot`은 official provider actual data가 아니라
-  기존 DB의 price/profile 기반 bridge/proxy snapshot부터 제공한다.
+  `etf_operability_snapshot`은 기존 DB의 price/profile 기반 bridge/proxy snapshot과
+  iShares / SSGA / Invesco official page 기반 actual/partial snapshot을 source별로 함께 제공한다.
 
 ## 데이터 무결성 체크포인트
 

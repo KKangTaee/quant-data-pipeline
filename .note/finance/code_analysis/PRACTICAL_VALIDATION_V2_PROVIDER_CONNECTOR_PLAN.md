@@ -359,7 +359,7 @@ P2-2의 첫 구현 단위는 official issuer actual 수집이 아니라,
 | `bid`, `ask`, `bid_ask_spread_pct` | `finance_meta.nyse_asset_profile` |
 | `fund_family` | `finance_meta.nyse_asset_profile` |
 
-아직 actual이 아닌 field:
+P2-2A만으로는 아직 actual이 아닌 field:
 
 - `expense_ratio`
 - `nav`
@@ -367,10 +367,40 @@ P2-2의 첫 구현 단위는 official issuer actual 수집이 아니라,
 - `median_bid_ask_spread_pct`
 - official `leverage_factor`, `is_inverse`, `has_daily_objective`
 
-다음 남은 P2-2B:
+## P2-2B 구현 상태: official issuer operability row
 
-- iShares / BlackRock, SSGA / SPDR, Invesco official source endpoint를 붙여 actual row를 저장한다.
-- 같은 table에 `source=ishares|ssga|invesco`, `source_type=official` row를 추가한다.
+상태: `initial_implementation_complete`
+
+P2-2B는 같은 `etf_operability_snapshot` table에 official issuer row를 추가한다.
+기존 `db_bridge` row를 대체하지 않고, source를 분리해서 같이 저장한다.
+
+구현 파일:
+
+| 파일 | 구현 내용 |
+|---|---|
+| `finance/data/etf_provider.py` | iShares / SSGA / Invesco official page fetch, normalize, `source_type=official` row 생성 |
+| `finance/loaders/provider.py` | 기존 loader가 official row도 같은 schema로 읽음 |
+
+초기 source map:
+
+| issuer | 초기 ticker | 현재 coverage |
+|---|---|---|
+| iShares / BlackRock | `AOR`, `IEF`, `TLT` | `actual`: expense ratio, net assets, NAV, closing price, premium/discount, 30-day median spread, 30-day average volume |
+| SSGA / SPDR | `SPY`, `BIL`, `GLD` | `actual`: gross expense ratio, AUM, NAV, closing price, premium/discount, median spread, exchange volume |
+| Invesco | `QQQ` | `partial`: official QQQ page에서 expense ratio와 inception date만 확보. AUM / NAV / spread는 아직 별도 endpoint 필요 |
+
+현재 official row 기준:
+
+- `source=ishares|ssga|invesco`
+- `source_type=official`
+- `coverage_status=actual|partial|missing|error`
+- percentage metric은 decimal fraction으로 저장한다. 예: `0.15% -> 0.0015`
+- iShares의 `30 Day Avg. Volume`은 `lookback_days=30`, SSGA의 `Exchange Volume`은 현재 page 기준 일간 volume이므로 `lookback_days=1`로 저장한다.
+
+남은 P2-2 후속:
+
+- Invesco QQQ의 NAV / AUM / spread / premium-discount actual endpoint를 추가 확인한다.
+- initial 7개 ticker 밖의 ETF는 official source map을 점진 확장한다.
 - Practical Validation 진단 연결은 P2-5에서 진행한다.
 
 ## 현재 있는 데이터
@@ -380,7 +410,7 @@ P2-2의 첫 구현 단위는 official issuer actual 수집이 아니라,
 | ETF / stock universe | `finance_meta.nyse_stock`, `finance_meta.nyse_etf` | symbol list | ETF 상세 비용 / holdings 없음 |
 | Asset profile | `finance_meta.nyse_asset_profile` | `kind`, `quote_type`, `fund_family`, `total_assets`, `bid`, `ask`, `status` | 실제 coverage가 낮고 expense ratio / holdings / NAV / premium-discount 없음 |
 | Price history | `finance_price.nyse_price_history` | OHLCV, volume, ADV / dollar volume proxy | spread, NAV, expense, holdings는 알 수 없음 |
-| ETF operability snapshot | `finance_meta.etf_operability_snapshot` | P2-2A 기준 `db_bridge` source의 price/profile bridge/proxy row | official provider actual field는 아직 없음 |
+| ETF operability snapshot | `finance_meta.etf_operability_snapshot` | `db_bridge` source의 price/profile bridge/proxy row와 P2-2B 기준 일부 official issuer row | Invesco QQQ는 partial이고, initial source map 밖 ETF는 아직 official row 없음 |
 | Runtime meta | `app/web/runtime/backtest.py` result meta | transaction cost bps, liquidity policy, ETF operability status | Practical Validation provider snapshot과 직접 결합되어 있지 않음 |
 | Practical Validation result | `PRACTICAL_VALIDATION_RESULTS.jsonl` | compact evidence / diagnostics summary | full raw provider data 저장 위치가 아님 |
 
@@ -388,7 +418,7 @@ P2-2의 첫 구현 단위는 official issuer actual 수집이 아니라,
 
 - `nyse_price_history`는 넓은 가격 / 거래량 coverage를 갖는다.
 - `nyse_asset_profile`은 ETF row는 많지만 `total_assets`, `bid`, `ask` coverage가 낮다.
-- `etf_operability_snapshot`은 P2-2A에서 기존 DB bridge/proxy row 저장 경로가 생겼다.
+- `etf_operability_snapshot`은 P2-2A에서 기존 DB bridge/proxy row 저장 경로가 생겼고, P2-2B에서 일부 iShares / SSGA / Invesco official row를 저장한다.
 - holdings, macro, sentiment 전용 table은 아직 없다.
 
 ## 문서 관리 원칙

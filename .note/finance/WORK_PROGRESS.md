@@ -3737,3 +3737,9 @@ Detailed historical logs were archived on `2026-04-13`.
   - `finance/loaders/provider.py`와 loader export를 추가해 `load_etf_operability_snapshot()` read path를 제공했다.
   - 현재 구현은 official issuer actual data 수집이 아니라 bridge/proxy foundation이다. expense ratio, NAV, premium/discount, official leverage/inverse metadata는 P2-2B actual provider 수집에서 보강한다.
   - code analysis / data architecture / comprehensive analysis 문서를 새 table과 loader 경계에 맞춰 갱신했다.
+- Practical Validation V2 P2-2B ETF operability official issuer row 초기 구현:
+  - `finance/data/etf_provider.py`에 iShares / SSGA / Invesco official page adapter를 추가했다.
+  - 초기 source map은 iShares `AOR`, `IEF`, `TLT`, SSGA / SPDR `SPY`, `BIL`, `GLD`, Invesco `QQQ`다.
+  - official row는 `etf_operability_snapshot`에 `source=ishares|ssga|invesco`, `source_type=official`, `coverage_status=actual|partial|missing|error`로 저장한다.
+  - smoke ingestion 결과 `AOR/IEF/TLT/SPY/BIL/GLD`는 `actual`, `QQQ`는 official QQQ page에서 expense ratio / inception만 확보되어 `partial`로 저장됐다.
+  - Practical Validation 진단 연결은 아직 하지 않았고 P2-5에서 loader context를 12개 진단에 연결한다.

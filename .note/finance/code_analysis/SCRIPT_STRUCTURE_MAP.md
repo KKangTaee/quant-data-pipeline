@@ -106,7 +106,7 @@
 | `finance/data/nyse.py` | NYSE universe source 수집 |
 | `finance/data/nyse_db.py` | NYSE universe DB persistence |
 | `finance/data/asset_profile.py` | Asset profile 수집. ETF operability snapshot의 bridge source로 일부 field를 제공 |
-| `finance/data/etf_provider.py` | ETF operability snapshot schema sync, 기존 price/profile DB 기반 bridge/proxy 수집, UPSERT 저장 |
+| `finance/data/etf_provider.py` | ETF operability snapshot schema sync, 기존 price/profile DB 기반 bridge/proxy 수집, iShares / SSGA / Invesco official row normalize, UPSERT 저장 |
 | `finance/data/fundamentals.py` | Fundamentals 수집 |
 | `finance/data/financial_statements.py` | Financial statement 수집 |
 | `finance/data/factors.py` | Factor 생성 / 저장 pipeline |

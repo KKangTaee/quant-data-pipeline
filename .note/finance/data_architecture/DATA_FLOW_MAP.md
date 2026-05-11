@@ -64,6 +64,9 @@ finance_price.nyse_price_history
 finance_meta.nyse_asset_profile
   -> total assets / bid / ask bridge
 
+iShares / SSGA / Invesco official ETF pages
+  -> expense ratio / AUM / NAV / premium-discount / spread / volume actual or partial snapshot
+
 finance.data.etf_provider.collect_and_store_etf_operability()
   -> finance_meta.etf_operability_snapshot
   -> finance.loaders.provider.load_etf_operability_snapshot()
@@ -72,9 +75,10 @@ finance.data.etf_provider.collect_and_store_etf_operability()
 
 의미:
 
-- P2-2A에서는 official ETF issuer provider actual data가 아니라 기존 DB 기반 `db_bridge` row를 먼저 저장한다.
 - `coverage_status=bridge` 또는 `proxy`는 실제 provider 검증 완료가 아니라, 기존 DB로 확인 가능한 보조 근거라는 뜻이다.
-- 후속 P2-2B에서 iShares / SSGA / Invesco 같은 official provider row가 붙으면 같은 table에 별도 `source`로 저장한다.
+- `coverage_status=actual` 또는 `partial`인 official row는 issuer page에서 직접 확인한 field를 normalize한 것이다.
+- P2-2B 초기 source map은 iShares `AOR/IEF/TLT`, SSGA `SPY/BIL/GLD`, Invesco `QQQ`다.
+- QQQ는 현재 공식 QQQ page에서 expense ratio / inception만 확보되어 `partial`로 저장한다.
 
 ## Broad fundamentals / factors 흐름
 
