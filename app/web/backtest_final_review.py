@@ -82,6 +82,10 @@ def _render_validation_summary(validation: dict[str, Any]) -> None:
             ]
         )
         st.dataframe(pd.DataFrame(diagnostic_rows), width="stretch", hide_index=True)
+        provider_rows = list(validation.get("provider_coverage_display_rows") or [])
+        if provider_rows:
+            st.markdown("###### Provider Coverage")
+            st.dataframe(pd.DataFrame(provider_rows), width="stretch", hide_index=True)
         not_run_critical = list(validation.get("not_run_critical_domains") or [])
         if not_run_critical:
             st.caption("NOT_RUN 항목은 선택을 자동 차단하지 않지만, 최종 판단 사유에서 확인해야 합니다.")

@@ -70,6 +70,8 @@ external source
   `finance/data/*` ingestion이 저장한 snapshot을 `finance/loaders/provider.py`로 읽는다.
   P2-5A부터 `Workspace > Ingestion > Practical Validation Provider Snapshots`에서
   해당 ingestion을 수동 실행할 수 있다.
+  P2-5B부터 `app/web/backtest_practical_validation_connectors.py`가 loader 결과를 compact provider context로 바꾸고,
+  Practical Validation diagnostics가 이 context를 proxy보다 우선 사용한다.
   `etf_operability_snapshot`은 기존 DB의 price/profile 기반 bridge/proxy snapshot과
   iShares / SSGA / Invesco official page 기반 actual/partial snapshot을 source별로 함께 제공한다.
   `etf_holdings_snapshot`은 official holdings download/API row를 저장하고,

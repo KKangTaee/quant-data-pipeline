@@ -3762,3 +3762,9 @@ Detailed historical logs were archived on `2026-04-13`.
   - `Workspace > Ingestion > Practical Validation Provider Snapshots`에서 ETF operability, ETF holdings / exposure, macro context 수집을 실행할 수 있게 했다.
   - 이 단계는 Practical Validation 진단 점수 연결이 아니라, DB snapshot을 채우는 운영 실행 지점 연결이다. 12개 diagnostics provider context 연결은 P2-5B에서 진행한다.
   - smoke 결과 `AOR` operability `success 1 row`, `AOR` holdings / exposure `success 17 rows`, `VIXCLS` 2026-01-01~2026-01-05 macro `success 2 rows`를 확인했다.
+- Practical Validation V2 P2-5B provider context diagnostics 연결:
+  - `app/web/backtest_practical_validation_connectors.py`를 추가해 ETF operability / holdings / exposure / FRED macro loader 결과를 compact provider context로 변환했다.
+  - Practical Validation 2, 3, 5, 6, 9, 10번 진단이 DB provider snapshot을 proxy보다 우선 사용하도록 연결했다.
+  - official provider row가 부족하고 bridge / proxy만 있으면 `PASS`로 보이지 않도록 `REVIEW`와 `db_bridge` / `price_proxy` origin을 남기게 했다.
+  - Practical Validation과 Final Review 화면에 Provider Coverage 요약 table을 추가했고, Final Review decision snapshot에는 compact provider coverage만 저장한다.
+  - smoke 결과 AOR 기준 provider coverage는 operability / exposure / macro `PASS`, holdings concentration `REVIEW`로 표시되고 JSON serialization이 통과했다.

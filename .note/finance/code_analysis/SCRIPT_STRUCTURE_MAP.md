@@ -44,6 +44,7 @@
 | `app/web/backtest_ui_components.py` | Backtest UI 공용 wrapping status card, artifact pipeline, compact badge strip, stage brief strip, route/readiness 판정 panel |
 | `app/web/backtest_practical_validation.py` | `Backtest > Practical Validation`에서 Clean V2 selection source 확인, 검증 프로필 입력, 최신 DB 데이터 기준 runtime 재검증 실행 버튼, V2 practical diagnostics board 표시, Final Review handoff를 담당하는 화면 render |
 | `app/web/backtest_practical_validation_helpers.py` | Clean V2 portfolio selection source 생성, validation profile threshold / score 해석, 12개 Practical Diagnostics result 생성 / 저장 / Final Review handoff helper |
+| `app/web/backtest_practical_validation_connectors.py` | Practical Validation P2 provider context adapter. ETF operability / holdings / exposure / FRED macro loader 결과를 compact coverage와 diagnostic evidence로 변환 |
 | `app/web/backtest_practical_validation_curve.py` | Practical Validation의 curve normalize / compact records / curve provenance / benchmark parity helper |
 | `app/web/backtest_practical_validation_replay.py` | Practical Validation source를 기존 strategy runtime으로 최신 DB 데이터 기준 재검증하거나 저장 기간 그대로 재현해 component / portfolio curve evidence를 만드는 helper |
 | `app/web/backtest_candidate_review.py` | `Backtest > Candidate Review`의 Candidate Packaging 화면 render, Review Note / current candidate registry 저장, Pre-Live 운영 기록 저장, Portfolio Proposal 이동 판단 |

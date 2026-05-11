@@ -70,6 +70,7 @@ iShares / SSGA / Invesco official ETF pages
 finance.data.etf_provider.collect_and_store_etf_operability()
   -> finance_meta.etf_operability_snapshot
   -> finance.loaders.provider.load_etf_operability_snapshot()
+  -> app.web.backtest_practical_validation_connectors.build_provider_context()
   -> Practical Validation provider context
 ```
 
@@ -80,6 +81,7 @@ finance.data.etf_provider.collect_and_store_etf_operability()
 - P2-2B 초기 source map은 iShares `AOR/IEF/TLT`, SSGA `SPY/BIL/GLD`, Invesco `QQQ`다.
 - QQQ는 현재 공식 QQQ page에서 expense ratio / inception만 확보되어 `partial`로 저장한다.
 - P2-5A부터 이 수집은 `Workspace > Ingestion > Practical Validation Provider Snapshots > ETF Operability`에서 실행할 수 있다.
+- P2-5B부터 Practical Validation 9번 / 10번 진단은 이 snapshot을 우선 읽는다. 공식 provider row가 부족하고 bridge / proxy만 있으면 `PASS`가 아니라 `REVIEW` 출처로 남긴다.
 
 ## ETF holdings / exposure provider snapshot 흐름
 
@@ -93,6 +95,7 @@ Invesco official holdings / weighted sector API
   -> finance_meta.etf_exposure_snapshot
   -> finance.loaders.provider.load_etf_holdings_snapshot()
   -> finance.loaders.provider.load_etf_exposure_snapshot()
+  -> app.web.backtest_practical_validation_connectors.build_provider_context()
   -> Practical Validation provider context
 ```
 
@@ -104,6 +107,7 @@ Invesco official holdings / weighted sector API
 - `GLD`는 row-level holdings source가 bar list PDF 성격이라 synthetic 100% commodity row를 만들지 않고 missing으로 둔다.
 - `AOR`은 현재 1차 ETF holdings만 저장하고, iShares Aggregate Underlying 구간은 2차 look-through expansion 후속으로 둔다.
 - P2-5A부터 이 수집과 exposure 재집계는 `Workspace > Ingestion > Practical Validation Provider Snapshots > ETF Holdings / Exposure`에서 실행할 수 있다.
+- P2-5B부터 Practical Validation 2번 / 3번 진단은 이 holdings / exposure snapshot을 우선 읽고, JSONL에는 full row가 아니라 compact provider coverage와 top evidence만 저장한다.
 
 ## Macro / sentiment market-context 흐름
 
@@ -113,6 +117,7 @@ FRED API or FRED official CSV download
   -> finance_meta.macro_series_observation
   -> finance.loaders.macro.load_macro_series_observations()
   -> finance.loaders.macro.load_macro_snapshot()
+  -> app.web.backtest_practical_validation_connectors.build_provider_context()
   -> Practical Validation market-context provider context
 ```
 
@@ -123,6 +128,7 @@ FRED API or FRED official CSV download
 - sentiment는 별도 composite index crawling이 아니라 VIX / credit spread / yield curve 기반 market-context proxy로 시작한다.
 - `load_macro_snapshot()`은 기준일 이전 최신 관측값과 `staleness_days`를 함께 반환한다.
 - P2-5A부터 이 수집은 `Workspace > Ingestion > Practical Validation Provider Snapshots > Macro Context`에서 실행할 수 있다.
+- P2-5B부터 Practical Validation 5번 / 6번 진단은 FRED snapshot을 우선 읽고, 없으면 기존 market proxy를 `REVIEW` fallback으로 표시한다.
 
 ## Broad fundamentals / factors 흐름
 

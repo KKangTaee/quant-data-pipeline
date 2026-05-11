@@ -452,6 +452,8 @@ def _build_final_review_decision_row(
             "diagnostic_summary": dict(validation.get("diagnostic_summary") or {}),
             "diagnostic_display_rows": list(validation.get("diagnostic_display_rows") or []),
             "diagnostic_results": list(validation.get("diagnostic_results") or []),
+            "provider_coverage": dict(validation.get("provider_coverage") or {}),
+            "provider_coverage_display_rows": list(validation.get("provider_coverage_display_rows") or []),
             "profile_score_rows": list(validation.get("profile_score_rows") or []),
             "curve_evidence": dict(validation.get("curve_evidence") or {}),
             "rolling_validation": dict(validation.get("rolling_validation") or {}),

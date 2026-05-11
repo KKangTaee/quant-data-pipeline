@@ -16,6 +16,7 @@ from app.web.backtest_practical_validation_curve import (
     build_curve_provenance,
     normalize_result_curve as normalize_validation_curve,
 )
+from app.web.backtest_practical_validation_connectors import build_provider_context
 from app.web.runtime import (
     FINAL_SELECTION_DECISION_V2_SCHEMA_VERSION,
     PORTFOLIO_SELECTION_SOURCE_SCHEMA_VERSION,
@@ -620,6 +621,44 @@ def _build_exposure_summary(active_components: list[dict[str, Any]]) -> dict[str
         "unknown_weight": round(asset_exposure.get("unknown", 0.0), 4),
         "component_rows": component_rows,
     }
+
+
+def _component_provider_symbol_weights(active_components: list[dict[str, Any]]) -> dict[str, float]:
+    """Approximate provider lookup weights from component target weights and ETF universes."""
+    weights: dict[str, float] = {}
+    for component in active_components:
+        component_weight = _component_weight(component)
+        contract = dict(component.get("contract") or {})
+        replay_contract = dict(component.get("replay_contract") or {})
+        settings = dict(replay_contract.get("settings_snapshot") or {})
+        raw_values = [component.get("universe"), contract.get("tickers"), settings.get("tickers")]
+        tickers: list[str] = []
+        for value in raw_values:
+            if isinstance(value, str):
+                tickers.extend(part.strip().upper() for part in re.split(r"[,\\s]+", value) if part.strip())
+            elif isinstance(value, (list, tuple, set)):
+                tickers.extend(str(part or "").strip().upper() for part in value if str(part or "").strip())
+        if not tickers:
+            tickers.extend(_component_tickers(component))
+        benchmark = str(component.get("benchmark") or "").strip().upper()
+        tickers = [ticker for ticker in dict.fromkeys(tickers) if ticker and ticker != "-" and ticker != benchmark]
+        if not tickers:
+            continue
+        ticker_weight = component_weight / len(tickers)
+        for ticker in tickers:
+            weights[ticker] = weights.get(ticker, 0.0) + ticker_weight
+    return {ticker: round(weight, 4) for ticker, weight in sorted(weights.items()) if weight > 0.0}
+
+
+def _provider_origin_label(provider_area: dict[str, Any]) -> str:
+    status = str(provider_area.get("status") or "").lower()
+    if status in {"actual", "partial"}:
+        return "provider_snapshot"
+    if status == "bridge":
+        return "db_bridge"
+    if status == "proxy":
+        return "price_proxy"
+    return "provider_context"
 
 
 def _domain_result(
@@ -1680,6 +1719,18 @@ def build_practical_validation_result(
     curve_provenance = build_curve_provenance(curve_context=curve_context, replay_result=replay_row)
     if benchmark_parity.get("status") == "REVIEW":
         review_gaps.append("Benchmark parity review 필요")
+    provider_as_of = _format_date(source_period.get("actual_end") or source_period.get("end"))
+    if provider_as_of is None and not portfolio_curve.empty:
+        provider_as_of = _format_date(portfolio_curve["Date"].max())
+    provider_symbol_weights = _component_provider_symbol_weights(active_components)
+    provider_context = build_provider_context(provider_symbol_weights, as_of_date=provider_as_of)
+    provider_coverage = dict(provider_context.get("coverage") or {})
+    provider_display_rows = list(provider_context.get("display_rows") or [])
+    provider_statuses = {
+        str(dict(item or {}).get("diagnostic_status") or "NOT_RUN")
+        for item in provider_coverage.values()
+        if isinstance(item, dict)
+    }
 
     input_checks = [
         {
@@ -1736,6 +1787,12 @@ def build_practical_validation_result(
             "Current": benchmark_parity.get("status") or "NOT_RUN",
             "Meaning": "후보와 benchmark가 같은 기간 / coverage / frequency로 비교되는지 봅니다.",
         },
+        {
+            "Criteria": "Provider coverage",
+            "Ready": "PASS" in provider_statuses or "REVIEW" in provider_statuses,
+            "Current": ", ".join(sorted(provider_statuses)) if provider_statuses else "NOT_RUN",
+            "Meaning": "ETF 운용성 / holdings / macro snapshot이 Practical Diagnostics에 연결될 수 있는지 봅니다.",
+        },
     ]
 
     exposure_summary = _build_exposure_summary(active_components)
@@ -1744,6 +1801,22 @@ def build_practical_validation_result(
     exposure_rows = list(exposure_summary.get("component_rows") or [])
     known_weight = _optional_float(exposure_summary.get("known_weight")) or 0.0
     unknown_weight = _optional_float(exposure_summary.get("unknown_weight")) or 0.0
+    provider_exposure = dict(provider_coverage.get("exposure") or {})
+    if provider_exposure.get("diagnostic_status") in {"PASS", "REVIEW"}:
+        provider_asset_exposure = dict(provider_exposure.get("asset_exposure") or {})
+        if provider_asset_exposure:
+            asset_exposure = provider_asset_exposure
+            known_weight = _optional_float(provider_exposure.get("coverage_weight")) or known_weight
+            unknown_weight = round(max(0.0, 100.0 - known_weight), 4)
+            exposure_rows = list(provider_exposure.get("evidence_rows") or exposure_rows)
+            exposure_summary = {
+                **exposure_summary,
+                "asset_exposure": asset_exposure,
+                "known_weight": known_weight,
+                "unknown_weight": unknown_weight,
+                "provider_status": provider_exposure.get("status"),
+                "provider_missing_symbols": list(provider_exposure.get("missing_symbols") or []),
+            }
     equity_exposure = _optional_float(asset_exposure.get("equity")) or 0.0
     max_weight = max([_component_weight(component) for component in active_components], default=0.0)
     repeated_benchmarks = {
@@ -1794,17 +1867,37 @@ def build_practical_validation_result(
     else:
         allocation_status = "PASS"
         allocation_summary = "현재 proxy 기준 자산군 분산은 프로필 기준 안에 있습니다."
+    allocation_origin = "new_diagnostic"
+    allocation_limitations = ["holdings look-through 데이터가 없으면 ticker/proxy 분류로만 판단합니다."]
+    if provider_exposure.get("diagnostic_status") in {"PASS", "REVIEW"}:
+        allocation_origin = _provider_origin_label(provider_exposure)
+        allocation_status = str(provider_exposure.get("diagnostic_status") or allocation_status)
+        if equity_exposure > (_optional_float(thresholds.get("equity_exposure_review")) or 85.0):
+            allocation_status = "REVIEW"
+            allocation_summary = f"Provider exposure 기준 주식성 노출이 {equity_exposure:.1f}%로 {profile_row['profile_label']} 기준보다 높습니다."
+        else:
+            allocation_summary = (
+                f"Provider exposure snapshot 기준 자산군 coverage가 "
+                f"{_optional_float(provider_exposure.get('coverage_weight')) or 0.0:.1f}%입니다."
+            )
+        allocation_limitations = [
+            "ETF-of-ETF는 현재 1차 holdings / exposure 기준이며, 2차 underlying look-through는 후속입니다.",
+            "Provider coverage가 없는 ETF는 missing symbol로 남깁니다.",
+        ]
+    elif active_components and allocation_status == "PASS":
+        allocation_status = "REVIEW"
+        allocation_summary = "ETF exposure provider snapshot이 없어 ticker/proxy 자산군 분류만 확인했습니다."
     diagnostics.append(
         _domain_result(
             domain="asset_allocation_fit",
             title="2. Asset Allocation Fit",
             status=allocation_status,
-            origin="new_diagnostic",
+            origin=allocation_origin,
             key_metric=f"equity {equity_exposure:.1f}% / unknown {unknown_weight:.1f}%",
             summary=allocation_summary,
             metrics=exposure_summary,
             evidence_rows=exposure_rows,
-            limitations=["holdings look-through 데이터가 없으면 ticker/proxy 분류로만 판단합니다."],
+            limitations=allocation_limitations,
             next_action="미분류 또는 과도한 주식성 노출이 있으면 ETF 구성과 목적을 재확인합니다.",
             profile_effect=f"{profile_row['profile_label']} equity review line {thresholds.get('equity_exposure_review')}%",
         )
@@ -1822,21 +1915,49 @@ def build_practical_validation_result(
     else:
         concentration_status = "PASS"
         concentration_summary = "component 비중 집중도와 proxy exposure가 즉시 차단 수준은 아닙니다."
+    provider_holdings = dict(provider_coverage.get("holdings") or {})
+    concentration_origin = "new_diagnostic"
+    concentration_key_metric = f"max component {max_weight:.1f}%"
+    concentration_metrics = {
+        "max_component_weight": round(max_weight, 4),
+        "duplicate_benchmark_count": duplicate_benchmark_count,
+        "flag_exposure": flag_exposure,
+    }
+    concentration_evidence_rows = exposure_rows
+    concentration_limitations = ["ETF holdings-level overlap은 아직 계산하지 않고 ticker/proxy signal로 먼저 표시합니다."]
+    if provider_holdings.get("diagnostic_status") in {"PASS", "REVIEW"}:
+        concentration_origin = _provider_origin_label(provider_holdings)
+        concentration_status = str(provider_holdings.get("diagnostic_status") or concentration_status)
+        concentration_summary = str(provider_holdings.get("summary") or concentration_summary)
+        concentration_key_metric = (
+            f"top holding {dict(provider_holdings.get('metrics') or {}).get('top_holding_weight', 0.0)}% / "
+            f"coverage {_optional_float(provider_holdings.get('coverage_weight')) or 0.0:.1f}%"
+        )
+        concentration_metrics = {
+            **concentration_metrics,
+            **dict(provider_holdings.get("metrics") or {}),
+            "provider_coverage_weight": provider_holdings.get("coverage_weight"),
+            "provider_missing_symbols": list(provider_holdings.get("missing_symbols") or []),
+        }
+        concentration_evidence_rows = list(provider_holdings.get("evidence_rows") or [])
+        concentration_limitations = [
+            "Holdings overlap은 최신 저장 snapshot 기준 compact top exposure만 저장합니다.",
+            "Full holdings row는 DB에만 있고 Practical Validation JSONL에는 저장하지 않습니다.",
+        ]
+    elif active_components and concentration_status == "PASS":
+        concentration_status = "REVIEW"
+        concentration_summary = "ETF holdings snapshot이 없어 holdings overlap 대신 component / ticker proxy 집중도만 확인했습니다."
     diagnostics.append(
         _domain_result(
             domain="concentration_overlap_exposure",
             title="3. Concentration / Overlap / Exposure",
             status=concentration_status,
-            origin="new_diagnostic",
-            key_metric=f"max component {max_weight:.1f}%",
+            origin=concentration_origin,
+            key_metric=concentration_key_metric,
             summary=concentration_summary,
-            metrics={
-                "max_component_weight": round(max_weight, 4),
-                "duplicate_benchmark_count": duplicate_benchmark_count,
-                "flag_exposure": flag_exposure,
-            },
-            evidence_rows=exposure_rows,
-            limitations=["ETF holdings-level overlap은 아직 계산하지 않고 ticker/proxy signal로 먼저 표시합니다."],
+            metrics=concentration_metrics,
+            evidence_rows=concentration_evidence_rows,
+            limitations=concentration_limitations,
             next_action="중복 benchmark 또는 sector/theme 집중이 있으면 단순 대안과 목적을 비교합니다.",
             profile_effect=f"{profile_row['profile_label']} max weight review line {thresholds.get('max_weight_review')}%",
         )
@@ -1881,34 +2002,77 @@ def build_practical_validation_result(
         )
     )
 
+    provider_macro = dict(provider_coverage.get("macro") or {})
+    provider_regime = dict(provider_macro.get("regime") or {})
+    provider_sentiment = dict(provider_macro.get("sentiment") or {})
     regime_evidence = _market_context_evidence(benchmark_curve if not benchmark_curve.empty else portfolio_curve, label="Regime")
+    if provider_regime.get("diagnostic_status") in {"PASS", "REVIEW"}:
+        regime_status = str(provider_regime.get("diagnostic_status"))
+        regime_origin = "provider_snapshot"
+        regime_key_metric = provider_regime.get("key_metric") or "FRED macro snapshot"
+        regime_summary = str(provider_regime.get("summary") or provider_macro.get("summary") or "FRED macro snapshot을 확인했습니다.")
+        regime_metrics = dict(provider_macro.get("metrics") or {})
+        regime_rows = list(provider_regime.get("evidence_rows") or provider_macro.get("evidence_rows") or [])
+        regime_limitations = ["FRED snapshot은 market-context evidence이며 trade signal이나 hard blocker가 아닙니다."]
+        regime_next_action = "VIX / yield curve / credit spread가 review 상태이면 Final Review에서 현재 국면과 후보 목적을 같이 확인합니다."
+    else:
+        regime_status = str(regime_evidence.get("status") or "NOT_RUN")
+        if regime_status == "PASS":
+            regime_status = "REVIEW"
+        regime_origin = "market_proxy" if regime_evidence.get("status") != "NOT_RUN" else "future_connector"
+        regime_key_metric = "benchmark recent context"
+        regime_summary = str(regime_evidence.get("summary") or "금리, 인플레이션, 경기 국면 데이터 connector가 아직 붙지 않아 macro suitability는 기록만 남깁니다.")
+        regime_metrics = dict(regime_evidence.get("metrics") or {})
+        regime_rows = list(regime_evidence.get("rows") or [])
+        regime_limitations = ["현재는 benchmark recent return/drawdown/vol proxy이며, FRED macro connector data가 없으면 proxy로만 표시합니다."]
+        regime_next_action = "Workspace > Ingestion에서 Macro Context Snapshot을 수집합니다."
     diagnostics.append(
         _domain_result(
             domain="regime_macro_suitability",
             title="5. Regime / Macro Suitability",
-            status=str(regime_evidence.get("status") or "NOT_RUN"),
-            origin="market_proxy" if regime_evidence.get("status") != "NOT_RUN" else "future_connector",
-            key_metric="benchmark recent context",
-            summary=str(regime_evidence.get("summary") or "금리, 인플레이션, 경기 국면 데이터 connector가 아직 붙지 않아 macro suitability는 기록만 남깁니다."),
-            metrics=dict(regime_evidence.get("metrics") or {}),
-            evidence_rows=list(regime_evidence.get("rows") or []),
-            limitations=["현재는 benchmark recent return/drawdown/vol proxy이며, FRED macro connector는 후속입니다."],
-            next_action="core Practical Validation 이후 FRED 기반 regime snapshot을 추가합니다.",
+            status=regime_status,
+            origin=regime_origin,
+            key_metric=regime_key_metric,
+            summary=regime_summary,
+            metrics=regime_metrics,
+            evidence_rows=regime_rows,
+            limitations=regime_limitations,
+            next_action=regime_next_action,
         )
     )
     sentiment_evidence = _market_context_evidence(benchmark_curve if not benchmark_curve.empty else portfolio_curve, label="Risk-on/off")
+    if provider_sentiment.get("diagnostic_status") in {"PASS", "REVIEW"}:
+        sentiment_status = str(provider_sentiment.get("diagnostic_status"))
+        sentiment_origin = "provider_snapshot"
+        sentiment_key_metric = provider_sentiment.get("key_metric") or "FRED risk-on/off context"
+        sentiment_summary = str(provider_sentiment.get("summary") or provider_macro.get("summary") or "FRED sentiment proxy를 확인했습니다.")
+        sentiment_metrics = dict(provider_macro.get("metrics") or {})
+        sentiment_rows = list(provider_sentiment.get("evidence_rows") or provider_macro.get("evidence_rows") or [])
+        sentiment_limitations = ["Sentiment는 VIX / credit spread / yield curve 기반 proxy이며 단독 매수/매도 신호가 아닙니다."]
+        sentiment_next_action = "Risk-off / caution이면 Final Review에서 추적 기간과 손실 감내 기준을 더 엄격히 확인합니다."
+    else:
+        sentiment_status = str(sentiment_evidence.get("status") or "NOT_RUN")
+        if sentiment_status == "PASS":
+            sentiment_status = "REVIEW"
+        sentiment_origin = "market_proxy" if sentiment_evidence.get("status") != "NOT_RUN" else "future_connector"
+        sentiment_key_metric = "risk-on/off proxy"
+        sentiment_summary = str(sentiment_evidence.get("summary") or "VIX, Fear & Greed, credit spread / yield curve 보조지표는 아직 connector가 필요합니다.")
+        sentiment_metrics = dict(sentiment_evidence.get("metrics") or {})
+        sentiment_rows = list(sentiment_evidence.get("rows") or [])
+        sentiment_limitations = ["VIX/Fear & Greed/Credit Spread가 아니라 price-action proxy입니다. 단독 hard blocker로 쓰지 않습니다."]
+        sentiment_next_action = "Workspace > Ingestion에서 Macro Context Snapshot을 수집합니다."
     diagnostics.append(
         _domain_result(
             domain="sentiment_risk_on_off_overlay",
             title="6. Sentiment / Risk-On-Off Overlay",
-            status=str(sentiment_evidence.get("status") or "NOT_RUN"),
-            origin="market_proxy" if sentiment_evidence.get("status") != "NOT_RUN" else "future_connector",
-            key_metric="risk-on/off proxy",
-            summary=str(sentiment_evidence.get("summary") or "VIX, Fear & Greed, credit spread / yield curve 보조지표는 아직 connector가 필요합니다."),
-            metrics=dict(sentiment_evidence.get("metrics") or {}),
-            evidence_rows=list(sentiment_evidence.get("rows") or []),
-            limitations=["VIX/Fear & Greed/Credit Spread가 아니라 price-action proxy입니다. 단독 hard blocker로 쓰지 않습니다."],
-            next_action="core 개발 후 FRED 기반 VIX / credit spread / yield curve snapshot부터 붙입니다.",
+            status=sentiment_status,
+            origin=sentiment_origin,
+            key_metric=sentiment_key_metric,
+            summary=sentiment_summary,
+            metrics=sentiment_metrics,
+            evidence_rows=sentiment_rows,
+            limitations=sentiment_limitations,
+            next_action=sentiment_next_action,
         )
     )
 
@@ -1986,17 +2150,50 @@ def build_practical_validation_result(
     else:
         leveraged_status = "PASS"
         leveraged_summary = "레버리지/인버스 ETF proxy 노출이 감지되지 않았습니다."
+    provider_operability = dict(provider_coverage.get("operability") or {})
+    provider_leverage = dict(provider_operability.get("leverage") or {})
+    leveraged_origin = "new_diagnostic"
+    leveraged_key_metric = f"{leveraged_exposure:.1f}%"
+    leveraged_metrics = {"leveraged_inverse_exposure": round(leveraged_exposure, 4), "flag_exposure": flag_exposure}
+    leveraged_rows = exposure_rows
+    leveraged_limitations = ["레버리지/인버스 적합성은 ticker proxy 기반이며 holding 목적과 rebalancing cadence를 함께 봐야 합니다."]
+    if provider_leverage.get("diagnostic_status") in {"PASS", "REVIEW"}:
+        provider_flagged_exposure = _optional_float(provider_leverage.get("flagged_exposure")) or 0.0
+        leveraged_exposure = provider_flagged_exposure
+        if provider_flagged_exposure > 20.0 and not complexity_allows_inverse:
+            leveraged_status = "BLOCKED"
+            leveraged_summary = f"Provider metadata 기준 레버리지/인버스 노출이 {provider_flagged_exposure:.1f}%인데 사용자 프로필에서 허용되지 않았습니다."
+        elif provider_flagged_exposure > 0.0:
+            leveraged_status = "REVIEW"
+            leveraged_summary = f"Provider metadata 기준 레버리지/인버스 노출 {provider_flagged_exposure:.1f}%는 운용 목적과 기간 확인이 필요합니다."
+        else:
+            leveraged_status = "PASS"
+            leveraged_summary = "Provider metadata 기준 레버리지/인버스 ETF가 감지되지 않았습니다."
+        leveraged_origin = _provider_origin_label(provider_operability)
+        leveraged_key_metric = f"{provider_flagged_exposure:.1f}%"
+        leveraged_metrics = {
+            "leveraged_inverse_exposure": round(provider_flagged_exposure, 4),
+            "provider_coverage_weight": provider_operability.get("coverage_weight"),
+        }
+        leveraged_rows = list(provider_leverage.get("evidence_rows") or [])
+        leveraged_limitations = [
+            "Provider metadata가 없는 ETF는 missing coverage로 남기며 ticker proxy보다 우선하지 않습니다.",
+            "레버리지/인버스 감지는 live approval이 아니라 Final Review 확인 근거입니다.",
+        ]
+    elif active_components and leveraged_status == "PASS":
+        leveraged_status = "REVIEW"
+        leveraged_summary = "Provider product metadata가 없어 ticker proxy 기준으로만 레버리지/인버스 노출 부재를 확인했습니다."
     diagnostics.append(
         _domain_result(
             domain="leveraged_inverse_etf_suitability",
             title="9. Leveraged / Inverse ETF Suitability",
             status=leveraged_status,
-            origin="new_diagnostic",
-            key_metric=f"{leveraged_exposure:.1f}%",
+            origin=leveraged_origin,
+            key_metric=leveraged_key_metric,
             summary=leveraged_summary,
-            metrics={"leveraged_inverse_exposure": round(leveraged_exposure, 4), "flag_exposure": flag_exposure},
-            evidence_rows=exposure_rows,
-            limitations=["레버리지/인버스 적합성은 ticker proxy 기반이며 holding 목적과 rebalancing cadence를 함께 봐야 합니다."],
+            metrics=leveraged_metrics,
+            evidence_rows=leveraged_rows,
+            limitations=leveraged_limitations,
             next_action="노출이 있으면 Final Review에서 목적, 보유기간, 손실 감내, 재검토 trigger를 명시합니다.",
             profile_effect=profile_row["answer_labels"].get("complexity_allowance", "-"),
         )
@@ -2020,33 +2217,65 @@ def build_practical_validation_result(
     else:
         operability_status = "REVIEW"
         operability_summary = "기본 source는 있으나 expense ratio, spread, ADV, turnover coverage는 아직 별도 확인이 필요합니다."
+    operability_origin = "new_diagnostic"
+    operability_key_metric = f"one-way {thresholds.get('one_way_cost_bps')} bps assumption"
+    operability_metrics = {
+        "one_way_cost_bps": thresholds.get("one_way_cost_bps"),
+        "excluded_tickers": excluded_tickers,
+        "cost_interpretation": thresholds.get("cost_interpretation"),
+    }
+    operability_rows = [
+        {
+            "Item": "Cost assumption",
+            "Current": f"one-way {thresholds.get('one_way_cost_bps')} bps",
+            "Meaning": "거래 수수료, spread, slippage를 포함한 보수적 시작값",
+        },
+        {
+            "Item": "Excluded tickers",
+            "Current": ", ".join(excluded_tickers) if excluded_tickers else "-",
+            "Meaning": "원본 backtest에서 가격/데이터 문제로 제외된 ticker",
+        },
+    ] + operability_evidence_rows
+    operability_limitations = ["ETF expense ratio / bid-ask spread 데이터는 후속 connector이며, 현재는 DB price/volume proxy입니다."]
+    operability_next_action = "Final Review 전에 cost/liquidity connector가 없다는 점을 판단 근거에 남깁니다."
+    if provider_operability.get("diagnostic_status") in {"PASS", "REVIEW"}:
+        operability_origin = _provider_origin_label(provider_operability)
+        operability_status = str(provider_operability.get("diagnostic_status") or operability_status)
+        operability_summary = str(provider_operability.get("summary") or operability_summary)
+        operability_key_metric = f"provider coverage {_optional_float(provider_operability.get('coverage_weight')) or 0.0:.1f}%"
+        operability_metrics = {
+            **operability_metrics,
+            **dict(provider_operability.get("metrics") or {}),
+            "provider_coverage_weight": provider_operability.get("coverage_weight"),
+            "provider_missing_symbols": list(provider_operability.get("missing_symbols") or []),
+        }
+        operability_rows = list(provider_operability.get("evidence_rows") or []) + [
+            {
+                "Item": "Cost assumption",
+                "Current": f"one-way {thresholds.get('one_way_cost_bps')} bps",
+                "Meaning": "provider cost/liquidity snapshot과 함께 보는 보수적 transaction cost 시작값",
+            }
+        ]
+        operability_limitations = [
+            "Provider별 field coverage가 다르므로 missing field가 있으면 REVIEW로 남깁니다.",
+            "거래 가능성은 자동 주문 승인이 아니라 Final Review 확인 근거입니다.",
+        ]
+        operability_next_action = "REVIEW ticker가 있으면 expense / AUM / ADV / spread / premium-discount를 Final Review에서 확인합니다."
+    elif operability_status == "PASS":
+        operability_status = "REVIEW"
+        operability_summary = "Provider operability snapshot이 없어 가격 / 거래대금 proxy만 확인했습니다."
     diagnostics.append(
         _domain_result(
             domain="operability_cost_liquidity",
             title="10. Operability / Cost / Liquidity",
             status=operability_status,
-            origin="new_diagnostic",
-            key_metric=f"one-way {thresholds.get('one_way_cost_bps')} bps assumption",
+            origin=operability_origin,
+            key_metric=operability_key_metric,
             summary=operability_summary,
-            metrics={
-                "one_way_cost_bps": thresholds.get("one_way_cost_bps"),
-                "excluded_tickers": excluded_tickers,
-                "cost_interpretation": thresholds.get("cost_interpretation"),
-            },
-            evidence_rows=[
-                {
-                    "Item": "Cost assumption",
-                    "Current": f"one-way {thresholds.get('one_way_cost_bps')} bps",
-                    "Meaning": "거래 수수료, spread, slippage를 포함한 보수적 시작값",
-                },
-                {
-                    "Item": "Excluded tickers",
-                    "Current": ", ".join(excluded_tickers) if excluded_tickers else "-",
-                    "Meaning": "원본 backtest에서 가격/데이터 문제로 제외된 ticker",
-                },
-            ] + operability_evidence_rows,
-            limitations=["ETF expense ratio / bid-ask spread 데이터는 후속 connector이며, 현재는 DB price/volume proxy입니다."],
-            next_action="Final Review 전에 cost/liquidity connector가 없다는 점을 판단 근거에 남깁니다.",
+            metrics=operability_metrics,
+            evidence_rows=operability_rows,
+            limitations=operability_limitations,
+            next_action=operability_next_action,
             profile_effect=str(thresholds.get("cost_interpretation") or "-"),
         )
     )
@@ -2213,7 +2442,10 @@ def build_practical_validation_result(
             "real_money_signal": real_money,
             "curve_provenance": curve_provenance,
             "benchmark_parity": benchmark_parity,
+            "provider_coverage": provider_context,
         },
+        "provider_coverage": provider_context,
+        "provider_coverage_display_rows": provider_display_rows,
         "diagnostic_results": diagnostics,
         "diagnostic_display_rows": _diagnostic_display_rows(diagnostics),
         "diagnostic_summary": {
@@ -2250,6 +2482,31 @@ def build_practical_validation_result(
             "runtime_recheck_extension_days": replay_row.get("extension_days"),
             "runtime_recheck_period": replay_row.get("requested_period") or {},
             "runtime_recheck_period_coverage": period_coverage,
+            "provider_coverage": {
+                "as_of_date": provider_context.get("as_of_date"),
+                "symbols": list(provider_context.get("symbols") or []),
+                "operability": {
+                    "status": dict(provider_coverage.get("operability") or {}).get("status"),
+                    "diagnostic_status": dict(provider_coverage.get("operability") or {}).get("diagnostic_status"),
+                    "coverage_weight": dict(provider_coverage.get("operability") or {}).get("coverage_weight"),
+                },
+                "holdings": {
+                    "status": dict(provider_coverage.get("holdings") or {}).get("status"),
+                    "diagnostic_status": dict(provider_coverage.get("holdings") or {}).get("diagnostic_status"),
+                    "coverage_weight": dict(provider_coverage.get("holdings") or {}).get("coverage_weight"),
+                },
+                "exposure": {
+                    "status": dict(provider_coverage.get("exposure") or {}).get("status"),
+                    "diagnostic_status": dict(provider_coverage.get("exposure") or {}).get("diagnostic_status"),
+                    "coverage_weight": dict(provider_coverage.get("exposure") or {}).get("coverage_weight"),
+                },
+                "macro": {
+                    "status": dict(provider_coverage.get("macro") or {}).get("status"),
+                    "diagnostic_status": dict(provider_coverage.get("macro") or {}).get("diagnostic_status"),
+                    "series_count": dict(provider_coverage.get("macro") or {}).get("series_count"),
+                    "stale_count": dict(provider_coverage.get("macro") or {}).get("stale_count"),
+                },
+            },
         },
         "component_rows": component_rows,
         "robustness_validation": {

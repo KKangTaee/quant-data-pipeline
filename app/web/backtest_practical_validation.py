@@ -256,6 +256,14 @@ def _render_validation_result(validation_result: dict[str, Any]) -> None:
     else:
         st.info("표시할 diagnostic row가 없습니다.")
 
+    provider_rows = list(validation_result.get("provider_coverage_display_rows") or [])
+    if provider_rows:
+        st.markdown("##### Provider Coverage")
+        st.caption(
+            "Ingestion에서 저장한 ETF provider / FRED snapshot이 Practical Diagnostics에 어떻게 연결됐는지 보여줍니다."
+        )
+        st.dataframe(pd.DataFrame(provider_rows), width="stretch", hide_index=True)
+
     mismatch_warnings = list(validation_result.get("intent_mismatch_warnings") or [])
     if mismatch_warnings:
         st.warning("사용자 프로필과 후보 특성이 충돌할 수 있습니다.")
