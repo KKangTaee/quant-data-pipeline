@@ -70,6 +70,7 @@ Backtest 주 흐름:
 Practical Validation V2의 현재 구현은 최소 contract를 Input Evidence로 읽고, profile-aware practical diagnostics board를 만든다.
 현재 board는 compact curve snapshot 또는 DB price proxy curve를 사용해 rolling validation, stress window 구간 성과, simple baseline challenge, component correlation / risk contribution proxy, drop-one / weight perturbation sensitivity를 계산한다.
 P2-5B부터 ETF asset allocation / concentration / leveraged-inverse / operability와 macro / sentiment 진단은 DB에 저장된 provider snapshot을 우선 사용하고, 없으면 proxy origin을 `REVIEW`로 남긴다.
+provider snapshot 조회 기준일은 저장된 backtest 종료일이 아니라 Practical Validation 실행일이다. 저장된 mix의 backtest 기간이 과거에 끝나도, 실전 투입 전 검증은 현재 수집된 ETF 운용성 / holdings / macro context로 확인한다.
 사용자가 명시적으로 `전략 재검증 실행`을 누르면 기존 strategy runtime으로 source를 다시 실행하고, 기본값은 DB의 최신 시장일까지 종료일을 확장한 재검증이다.
 보조 모드로 `저장 기간 그대로 재현`을 선택할 수 있으며, 화면은 저장 종료일, 재검증 종료일, 확장 일수, curve provenance와 benchmark parity를 표시해 결과가 최신 runtime 재검증인지, 저장 기간 재현인지, embedded snapshot인지, DB price proxy인지 구분한다.
 full holdings row와 full macro series는 DB에만 두고, Practical Validation result에는 compact provider coverage / top evidence만 저장한다.

@@ -1719,7 +1719,10 @@ def build_practical_validation_result(
     curve_provenance = build_curve_provenance(curve_context=curve_context, replay_result=replay_row)
     if benchmark_parity.get("status") == "REVIEW":
         review_gaps.append("Benchmark parity review 필요")
-    provider_as_of = _format_date(source_period.get("actual_end") or source_period.get("end"))
+    # Provider snapshots answer "what can be verified at validation time", not the saved backtest end.
+    provider_as_of = _format_date(now) or _format_date(source_row.get("created_at"))
+    if provider_as_of is None:
+        provider_as_of = _format_date(source_period.get("actual_end") or source_period.get("end"))
     if provider_as_of is None and not portfolio_curve.empty:
         provider_as_of = _format_date(portfolio_curve["Date"].max())
     provider_symbol_weights = _component_provider_symbol_weights(active_components)

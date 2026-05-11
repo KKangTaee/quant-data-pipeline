@@ -3768,3 +3768,10 @@ Detailed historical logs were archived on `2026-04-13`.
   - official provider row가 부족하고 bridge / proxy만 있으면 `PASS`로 보이지 않도록 `REVIEW`와 `db_bridge` / `price_proxy` origin을 남기게 했다.
   - Practical Validation과 Final Review 화면에 Provider Coverage 요약 table을 추가했고, Final Review decision snapshot에는 compact provider coverage만 저장한다.
   - smoke 결과 AOR 기준 provider coverage는 operability / exposure / macro `PASS`, holdings concentration `REVIEW`로 표시되고 JSON serialization이 통과했다.
+
+### 2026-05-12
+- Practical Validation V2 provider snapshot 기준일 보정:
+  - 2026-05-11 `saved_portfolio_mix` source에서 ETF Operability / Holdings Exposure가 수집 후에도 `NOT_RUN`으로 보이는 현상을 확인했다.
+  - 원인은 source의 backtest `actual_end=2026-02-28`을 provider snapshot 조회 기준일로 사용해, 2026-05월에 수집된 provider row를 loader가 제외한 것이었다.
+  - provider snapshot은 실전 투입 전 현재 검증 근거이므로 조회 기준일을 Practical Validation 실행일로 변경했다.
+  - 같은 source 기준으로 operability는 38.5%, holdings / exposure는 30.5% coverage까지 읽히며, 전체 11개 ETF 중 미수집 symbol은 partial `REVIEW`로 남는 것을 확인했다.
