@@ -4725,3 +4725,15 @@ Detailed historical analysis was archived on `2026-04-13`.
   - holdings와 macro는 dedicated table / loader contract를 먼저 잡고, Practical Validation에서는 provider coverage summary와 compact evidence만 저장하는 방향이 맞다
 - Follow-up:
   - 새 문서를 기존 Remaining Implementation Plan, Code Analysis README, Finance Doc Index에 연결했다
+
+### 2026-05-11 - P2 provider 문서를 더 늘리지 않고 compact하게 관리한다
+- User request:
+  - 사용자가 ETF holdings, macro series, sentiment series 수집 계획 때문에 또 새 문서를 만들면 나중에 찾기 어려워질 수 있다고 지적함
+- Interpreted goal:
+  - P2 provider 개발 문서는 너무 세분화하지 말고, 이미 만든 provider connector plan 안에서 수집 / 저장 / 로딩 / Practical Validation 연결 계획을 함께 관리해야 함
+- Analysis result:
+  - 별도 `PROVIDER_DATA_COLLECTION_PLAN`은 만들지 않는다
+  - `PRACTICAL_VALIDATION_V2_PROVIDER_CONNECTOR_PLAN.md`가 ETF holdings, macro series, sentiment series의 collector 계획까지 소유한다
+  - `PRACTICAL_VALIDATION_V2_P2_CONNECTOR_AND_STRESS_PLAN.md`는 P2 전체 순서와 사용자-facing 진단 목표만 맡는다
+- Follow-up:
+  - provider connector plan에 `데이터 수집 구현 계획` section을 추가하고, Finance Doc Index / code analysis README의 설명을 보정했다

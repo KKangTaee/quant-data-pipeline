@@ -3678,3 +3678,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - P2 범위를 Cost / Liquidity / ETF Operability connector, ETF holdings / sector look-through, Macro / Sentiment connector, Stress Interpretation, strategy-specific sensitivity runtime 경계로 정리했다.
   - `PRACTICAL_VALIDATION_V2_REMAINING_IMPLEMENTATION_PLAN.md`, `code_analysis/README.md`, `FINANCE_DOC_INDEX.md`에 새 문서 링크를 반영했다.
   - 제품 코드는 수정하지 않았다. 다음 작업은 provider connector 첫 구현 단위 확정 후 진행한다.
+- Practical Validation V2 provider 문서 compact 관리:
+  - user feedback에 따라 별도 data collection plan 문서를 만들지 않기로 했다.
+  - ETF holdings, macro series, sentiment series 수집 계획을 기존 `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_PROVIDER_CONNECTOR_PLAN.md` 안에 합쳤다.
+  - P2 문서 역할을 `P2 전체 계획`과 `provider 수집 / schema / loader 상세 설계` 두 개로 고정했다.

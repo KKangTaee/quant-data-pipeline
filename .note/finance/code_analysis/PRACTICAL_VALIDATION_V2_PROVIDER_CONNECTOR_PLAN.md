@@ -35,6 +35,148 @@ Practical Validation 화면에서 어떻게 `PASS / REVIEW / BLOCKED / NOT_RUN` 
 - `nyse_asset_profile`은 ETF row는 많지만 `total_assets`, `bid`, `ask` coverage가 낮다.
 - holdings, macro, sentiment 전용 table은 아직 없다.
 
+## 문서 관리 원칙
+
+P2 provider 개발 문서는 더 쪼개지지 않는다.
+이 문서가 provider 데이터의 수집, 저장, 로딩, Practical Validation 연결 경계를 함께 관리한다.
+
+| 문서 | 맡는 범위 |
+|---|---|
+| `PRACTICAL_VALIDATION_V2_P2_CONNECTOR_AND_STRESS_PLAN.md` | P2 전체 작업 순서와 사용자-facing 진단 목표 |
+| `PRACTICAL_VALIDATION_V2_PROVIDER_CONNECTOR_PLAN.md` | provider 데이터 수집 / DB schema / loader / adapter / 저장 경계 |
+
+새 문서를 만들기보다 이 문서 안의 작은 section을 갱신한다.
+단, 실제 DB table이 추가되면 `DATA_DB_PIPELINE_FLOW.md`와 data architecture 문서에는 table 의미만 별도로 반영한다.
+
+## 데이터 수집 구현 계획
+
+이 section은 ETF holdings, macro series, sentiment series를 먼저 수집해야 할 때의 구현 기준이다.
+세부 provider는 개발 직전에 coverage와 안정성을 확인하지만, 코드 구조는 아래처럼 고정한다.
+
+### 1. ETF Holdings 수집
+
+목표:
+
+- ETF 내부 보유종목과 sector / asset class exposure를 DB에 저장한다.
+- Practical Validation은 이 데이터를 읽어 ticker proxy 대신 holdings look-through를 사용한다.
+
+권장 파일:
+
+| 파일 | 역할 |
+|---|---|
+| `finance/data/etf_provider.py` | ETF holdings / exposure 수집과 DB 저장 |
+| `finance/loaders/provider.py` | holdings snapshot과 exposure snapshot read path |
+| `app/web/backtest_practical_validation_connectors.py` | loader 결과를 Practical Validation evidence로 변환 |
+
+수집 함수 후보:
+
+```python
+collect_and_store_etf_holdings(
+    symbols: list[str],
+    *,
+    as_of_date: str | None = None,
+    provider: str = "configured_provider",
+    refresh_mode: str = "upsert",
+) -> dict
+```
+
+저장 대상:
+
+- `finance_meta.etf_holdings_snapshot`
+- optional aggregate: `finance_meta.etf_exposure_snapshot`
+
+수집 / 저장 규칙:
+
+- `fund_symbol`, `as_of_date`, `source`, `holding_id`를 business key로 사용한다.
+- holdings provider가 `holding_id`를 주지 않으면 `holding_symbol + holding_name` 기반 fallback key를 만든다.
+- coverage가 없거나 provider가 실패한 ETF는 실패 row 요약만 남기고, full raw response는 저장하지 않는다.
+- Practical Validation result JSONL에는 holdings row 전체가 아니라 coverage와 top exposure summary만 저장한다.
+
+검증:
+
+- holdings가 있는 ETF는 top holdings / sector exposure가 loader에서 반환된다.
+- holdings가 없는 ETF는 `NOT_RUN` 또는 `REVIEW`로 남고 ticker bucket proxy fallback이 유지된다.
+
+### 2. Macro Series 수집
+
+목표:
+
+- Practical Validation의 market-context 진단에 쓸 macro series를 long-form DB table에 저장한다.
+
+1차 series 후보:
+
+| series | 용도 |
+|---|---|
+| `VIX` 또는 VIX-equivalent | volatility / risk-off context |
+| `T10Y3M` | yield curve inversion / recession risk context |
+| credit spread series | credit stress / liquidity stress context |
+
+권장 파일:
+
+| 파일 | 역할 |
+|---|---|
+| `finance/data/macro.py` | macro / market-context series 수집과 DB 저장 |
+| `finance/loaders/provider.py` 또는 `finance/loaders/macro.py` | macro snapshot read path |
+| `app/web/backtest_practical_validation_connectors.py` | validation date 기준 macro evidence 생성 |
+
+수집 함수 후보:
+
+```python
+collect_and_store_macro_series(
+    series_ids: list[str],
+    *,
+    start: str | None = None,
+    end: str | None = None,
+    provider: str = "fred",
+) -> dict
+```
+
+저장 대상:
+
+- `finance_meta.macro_series_observation`
+
+수집 / 저장 규칙:
+
+- `series_id`, `observation_date`, `source`를 business key로 사용한다.
+- release lag가 있는 series는 `release_lag_days` 또는 source note를 남긴다.
+- API key가 필요하면 hardcode하지 않고 환경변수 / config 경계로 둔다.
+- 실패 series는 summary로 반환하고, Practical Validation에서는 해당 series를 `NOT_RUN`으로 표시한다.
+
+검증:
+
+- 지정 기간의 macro row count가 확인된다.
+- `load_macro_snapshot(as_of_date=...)`가 validation date 근처 관측값과 staleness를 반환한다.
+
+### 3. Sentiment Series 수집
+
+목표:
+
+- 1차에서는 별도 감성지수를 무리하게 붙이지 않고, 재현 가능한 market-context series를 sentiment overlay로 사용한다.
+
+1차 범위:
+
+- VIX level / change
+- credit spread widening / narrowing
+- yield curve spread
+
+후속 optional:
+
+- Fear & Greed 같은 composite index
+- put / call ratio
+- market breadth
+
+수집 방식:
+
+- 1차는 `macro_series_observation` table을 공유한다.
+- `category`를 `volatility`, `credit_spread`, `yield_curve`, `sentiment_proxy`처럼 구분한다.
+- 안정적인 provider와 재현성이 확인되기 전까지 별도 `sentiment_series_observation` table은 만들지 않는다.
+
+Practical Validation 해석:
+
+- sentiment는 trade signal이 아니다.
+- `PASS / REVIEW / NOT_RUN`은 시장 분위기 확인 상태이지 매수 / 매도 판단이 아니다.
+- benchmark price-action proxy는 macro / sentiment series가 없을 때만 fallback으로 둔다.
+
 ## Connector 설계 원칙
 
 | 원칙 | 내용 |

@@ -18,7 +18,7 @@
 | Practical Validation을 실전 투자 진단 엔진으로 확장할 때 | `PRACTICAL_VALIDATION_V2_VALIDATION_DESIGN.md` |
 | Practical Validation V2의 남은 구현 범위와 개발 순서를 확인할 때 | `PRACTICAL_VALIDATION_V2_REMAINING_IMPLEMENTATION_PLAN.md` |
 | Practical Validation V2 P2 provider / macro / stress 개발 계획을 볼 때 | `PRACTICAL_VALIDATION_V2_P2_CONNECTOR_AND_STRESS_PLAN.md` |
-| Practical Validation V2 provider / DB / loader connector 상세 설계를 볼 때 | `PRACTICAL_VALIDATION_V2_PROVIDER_CONNECTOR_PLAN.md` |
+| Practical Validation V2 provider 데이터 수집 / DB / loader connector 상세 설계를 볼 때 | `PRACTICAL_VALIDATION_V2_PROVIDER_CONNECTOR_PLAN.md` |
 | 새 전략 family를 추가하거나 기존 전략 연결을 바꿀 때 | `STRATEGY_IMPLEMENTATION_FLOW.md` |
 | repo-local helper script나 automation 갱신 | `AUTOMATION_SCRIPTS_GUIDE.md` |
 

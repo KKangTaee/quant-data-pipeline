@@ -77,7 +77,7 @@
 | Backtest 3단계 workflow 재설계 가이드 | `.note/finance/code_analysis/BACKTEST_PORTFOLIO_SELECTION_WORKFLOW_REDESIGN_GUIDE.md` |
 | Practical Validation V2 남은 구현 계획 | `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_REMAINING_IMPLEMENTATION_PLAN.md` |
 | Practical Validation V2 P2 개발 계획 | `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_P2_CONNECTOR_AND_STRESS_PLAN.md` |
-| Practical Validation V2 Provider Connector 상세 설계 | `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_PROVIDER_CONNECTOR_PLAN.md` |
+| Practical Validation V2 Provider Connector / 데이터 수집 상세 설계 | `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_PROVIDER_CONNECTOR_PLAN.md` |
 
 현재 상태:
 
@@ -248,7 +248,7 @@
 | `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_VALIDATION_DESIGN.md` | Practical Validation을 실전 투자 진단 엔진으로 확장하기 위한 UI / JSON / domain 구현 설계 |
 | `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_REMAINING_IMPLEMENTATION_PLAN.md` | Practical Validation V2의 현재 구현 상태, 남은 구현 범위, helper 분리, replay / provider / Final Review 고도화 순서를 정리한 개발 계획 |
 | `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_P2_CONNECTOR_AND_STRESS_PLAN.md` | Practical Validation V2 P2의 Cost / Liquidity, ETF holdings, Macro / Sentiment, Stress Interpretation 개발 순서와 QA 기준 |
-| `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_PROVIDER_CONNECTOR_PLAN.md` | Practical Validation V2 provider connector의 DB schema 후보, loader 계약, provider coverage, JSONL 저장 경계 |
+| `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_PROVIDER_CONNECTOR_PLAN.md` | Practical Validation V2 provider connector의 데이터 수집 계획, DB schema 후보, loader 계약, provider coverage, JSONL 저장 경계 |
 | `.note/finance/code_analysis/STRATEGY_IMPLEMENTATION_FLOW.md` | 새 strategy family를 제품에 추가할 때 따라야 하는 구현 흐름 |
 | `.note/finance/code_analysis/AUTOMATION_SCRIPTS_GUIDE.md` | phase bootstrap, hygiene, candidate registry helper script 사용 기준 |
 | `.note/finance/code_analysis/BACKTEST_REFINEMENT_CODE_FLOW_GUIDE.md` | 기존 backtest refinement 중심 code flow guide |

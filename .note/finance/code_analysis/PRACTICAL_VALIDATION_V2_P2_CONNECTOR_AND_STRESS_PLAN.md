@@ -10,6 +10,10 @@ stress interpretation 고도화를 어떤 순서로 개발할지 정한다.
 상세 provider / DB / loader 설계는
 `PRACTICAL_VALIDATION_V2_PROVIDER_CONNECTOR_PLAN.md`를 기준으로 한다.
 
+문서가 지나치게 늘어나지 않도록, P2 provider 데이터 수집 계획은 별도 문서로 분리하지 않는다.
+ETF holdings, macro series, sentiment series의 collector / schema / loader 계획은
+`PRACTICAL_VALIDATION_V2_PROVIDER_CONNECTOR_PLAN.md` 안에서 함께 관리한다.
+
 ## 쉽게 말하면
 
 현재 Practical Validation은 이미 후보 source, 최신 runtime 재검증, curve provenance,
