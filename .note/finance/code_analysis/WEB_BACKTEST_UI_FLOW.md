@@ -71,6 +71,7 @@ Practical Validation V2의 현재 구현은 최소 contract를 Input Evidence로
 현재 board는 compact curve snapshot 또는 DB price proxy curve를 사용해 rolling validation, stress window 구간 성과, simple baseline challenge, component correlation / risk contribution proxy, drop-one / weight perturbation sensitivity를 계산한다.
 P2-5B부터 ETF asset allocation / concentration / leveraged-inverse / operability와 macro / sentiment 진단은 DB에 저장된 provider snapshot을 우선 사용하고, 없으면 proxy origin을 `REVIEW`로 남긴다.
 provider snapshot 조회 기준일은 저장된 backtest 종료일이 아니라 Practical Validation 실행일이다. 저장된 mix의 backtest 기간이 과거에 끝나도, 실전 투입 전 검증은 현재 수집된 ETF 운용성 / holdings / macro context로 확인한다.
+Provider Coverage 아래에는 ETF별 Provider Data Gaps 표를 표시한다. 사용자는 어떤 ETF의 operability / holdings / exposure가 부족한지 보고, 수집 가능한 부족 데이터는 같은 화면에서 일괄 수집 / 보강할 수 있다. 공식 source mapping이 없는 holdings / exposure는 버튼만으로 해결하지 않고 `connector mapping 필요`로 남긴다.
 사용자가 명시적으로 `전략 재검증 실행`을 누르면 기존 strategy runtime으로 source를 다시 실행하고, 기본값은 DB의 최신 시장일까지 종료일을 확장한 재검증이다.
 보조 모드로 `저장 기간 그대로 재현`을 선택할 수 있으며, 화면은 저장 종료일, 재검증 종료일, 확장 일수, curve provenance와 benchmark parity를 표시해 결과가 최신 runtime 재검증인지, 저장 기간 재현인지, embedded snapshot인지, DB price proxy인지 구분한다.
 full holdings row와 full macro series는 DB에만 두고, Practical Validation result에는 compact provider coverage / top evidence만 저장한다.
@@ -125,7 +126,7 @@ Ingestion / Data Trust
 - `Paper Tracking Ledger`는 Phase 33에서 추가된 append-only 기록 흐름이지만, 현재 주 사용자 흐름에서는 Final Review의 inline paper observation 기준으로 흡수한다. 기존 ledger row는 backward compatibility / 과거 QA 기록으로 읽을 수 있다.
 - Phase 35에서 별도 `Post-Selection Guide` panel은 과한 단계로 판단해 active workflow에서 제거했다. 최종 판단과 투자 가능 / 투자하면 안 됨 / 내용 부족 / 재검토 필요 해석은 `Backtest > Final Review`의 saved final decision review에서 확인한다.
 - Phase 36에서 선정 이후 운영 확인은 `Backtest` 주 workflow가 아니라 `Operations > Selected Portfolio Dashboard`로 분리했다. 이 화면은 Final Review selected row를 read-only로 읽고, 사용자가 지정한 시작일 / 종료일 / 가상 투자금으로 selected component contract를 다시 replay해 최신 기간 성과를 확인한다. `Review Signals`는 최신 Performance Recheck와 사용자가 명시적으로 반영한 Actual Allocation 상태를 `Clear / Watch / Breached / Needs Input / Optional`로 번역한다. current value 기반 Actual Allocation을 기본 입력으로 두고, shares x price / current weight 입력은 advanced 입력으로 둔다. shares x price 입력에서는 DB latest close를 보조로 불러올 수 있지만, account holding 자동 연결이나 주문 초안은 만들지 않는다.
-- Practical Validation P2 provider data는 `Workspace > Ingestion > Practical Validation Provider Snapshots`에서 먼저 수집한다. 이후 Practical Validation 화면은 loader / provider context를 읽어 12개 진단의 actual / proxy / `NOT_RUN` 상태를 표시한다.
+- Practical Validation P2 provider data는 `Workspace > Ingestion > Practical Validation Provider Snapshots`에서 먼저 수집할 수 있다. 이후 Practical Validation 화면은 loader / provider context를 읽어 12개 진단의 actual / proxy / `NOT_RUN` 상태를 표시한다. 화면 안의 Provider Data Gaps에서도 현재 source에 부족한 provider snapshot을 ETF별로 확인하고, 수집 가능한 항목은 일괄 보강할 수 있다.
 
 현재 Guides 화면은 제품형 의사결정 guide로 정리한다.
 

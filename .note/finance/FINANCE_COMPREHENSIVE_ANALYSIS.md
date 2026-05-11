@@ -21,7 +21,7 @@ DB / strategy / runtime / UI 연결을 한 번에 확인하기 위한 상세 분
 - 범위 포함: `finance` 패키지 전체
 - 범위 제외: `financial_advisor`
 - 최초 기준 시점: 2026-03-11
-- 최근 동기화 기준: 2026-05-11 / Practical Validation V2 P2-5B provider context diagnostics 연결
+- 최근 동기화 기준: 2026-05-12 / Practical Validation Provider Data Gaps 및 provider 기준일 보정
 
 ---
 
@@ -357,6 +357,7 @@ web UI가 그 wrapper의 result bundle을 받아 single / compare / Operations h
 - detailed financial statements의 raw truth는 `nyse_financial_statement_values`를 중심으로 본다.
 - Practical Validation provider snapshot은 `Workspace > Ingestion > Practical Validation Provider Snapshots`에서 실행할 수 있다.
 - P2-5B 기준으로 Practical Validation은 ETF operability / holdings / exposure / FRED macro loader 결과를 compact provider context로 읽고, 2 / 3 / 5 / 6 / 9 / 10번 진단에 actual / proxy / `NOT_RUN` 출처를 표시한다.
+- Practical Validation 화면은 Provider Coverage 아래에서 ETF별 Provider Data Gaps를 보여준다. 사용자는 어떤 ETF의 operability / holdings / exposure가 부족한지 확인하고, 수집 가능한 항목은 같은 화면에서 일괄 수집 / 보강할 수 있다. official source mapping이 없는 holdings / exposure는 connector mapping 필요 상태로 남긴다.
 
 ---
 

@@ -3775,3 +3775,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - 원인은 source의 backtest `actual_end=2026-02-28`을 provider snapshot 조회 기준일로 사용해, 2026-05월에 수집된 provider row를 loader가 제외한 것이었다.
   - provider snapshot은 실전 투입 전 현재 검증 근거이므로 조회 기준일을 Practical Validation 실행일로 변경했다.
   - 같은 source 기준으로 operability는 38.5%, holdings / exposure는 30.5% coverage까지 읽히며, 전체 11개 ETF 중 미수집 symbol은 partial `REVIEW`로 남는 것을 확인했다.
+- Practical Validation Provider Data Gaps UI / 일괄 수집 보강:
+  - Provider Coverage 아래에 ETF별 `Operability / Holdings / Exposure` 부족 여부와 source map 상태를 표시하도록 했다.
+  - 같은 화면에서 부족한 operability는 official 또는 DB bridge collector로 보강하고, holdings / exposure는 현재 connector source map이 있는 ETF만 일괄 수집할 수 있게 했다.
+  - source map이 없는 ETF는 `connector mapping 필요`로 표시해, 단순 미수집과 connector 미지원 상태를 분리했다.
+  - provider context coverage 계산에서 `missing/error` row가 covered symbol로 오해되지 않도록 보정했다.

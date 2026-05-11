@@ -173,6 +173,18 @@ def _coverage_quality(
     }
 
 
+def _supported_symbols(frame: pd.DataFrame, *, symbol_column: str) -> list[str]:
+    """Return symbols with usable provider rows, excluding explicit missing/error rows."""
+    if frame.empty or symbol_column not in frame.columns:
+        return []
+    work = frame.copy()
+    if "coverage_status" in work.columns:
+        work = work[
+            ~work["coverage_status"].astype(str).str.lower().isin({"missing", "error"})
+        ]
+    return sorted(set(work[symbol_column].astype(str).str.upper()))
+
+
 def _safe_loader(callable_obj: Any, *args: Any, **kwargs: Any) -> tuple[pd.DataFrame, str | None]:
     try:
         result = callable_obj(*args, **kwargs)
@@ -232,7 +244,7 @@ def _build_exposure_context(symbol_weights: dict[str, float], as_of_date: str | 
         }
 
     asset_rows = frame[frame["exposure_type"].astype(str).str.lower() == "asset_class"].copy()
-    covered_symbols = sorted(set(asset_rows["fund_symbol"].astype(str).str.upper()))
+    covered_symbols = _supported_symbols(asset_rows, symbol_column="fund_symbol")
     coverage_weight = round(sum(symbol_weights.get(symbol, 0.0) for symbol in covered_symbols), 4)
     missing_symbols = [symbol for symbol in symbols if symbol not in covered_symbols]
     asset_exposure: dict[str, float] = {
@@ -331,7 +343,7 @@ def _build_holdings_context(symbol_weights: dict[str, float], as_of_date: str | 
 
     work = frame.copy()
     work["fund_symbol"] = work["fund_symbol"].astype(str).str.upper()
-    covered_symbols = sorted(set(work["fund_symbol"]))
+    covered_symbols = _supported_symbols(work, symbol_column="fund_symbol")
     coverage_weight = round(sum(symbol_weights.get(symbol, 0.0) for symbol in covered_symbols), 4)
     missing_symbols = [symbol for symbol in symbols if symbol not in covered_symbols]
     work["holding_key"] = work.apply(
@@ -465,7 +477,7 @@ def _build_operability_context(symbol_weights: dict[str, float], as_of_date: str
         }
 
     best = _best_operability_rows(frame)
-    covered_symbols = sorted(set(best["symbol"].astype(str).str.upper()))
+    covered_symbols = _supported_symbols(best, symbol_column="symbol")
     coverage_weight = round(sum(symbol_weights.get(symbol, 0.0) for symbol in covered_symbols), 4)
     missing_symbols = [symbol for symbol in symbols if symbol not in covered_symbols]
     evidence_rows: list[dict[str, Any]] = []

@@ -5,6 +5,12 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
+from app.jobs.ingestion_jobs import (
+    run_collect_etf_holdings_exposure,
+    run_collect_etf_operability_provider,
+    run_collect_macro_market_context,
+)
+from app.jobs.run_history import append_run_history
 from app.web.backtest_practical_validation_helpers import (
     VALIDATION_PROFILE_OPTIONS,
     VALIDATION_PROFILE_QUESTIONS,
@@ -32,6 +38,14 @@ from app.web.runtime import (
     load_portfolio_selection_sources,
     load_practical_validation_results,
 )
+from finance.data.etf_provider import (
+    EXPOSURE_PROVIDER_SOURCES,
+    HOLDINGS_PROVIDER_SOURCES,
+    OFFICIAL_PROVIDER_SOURCES,
+)
+
+
+PROVIDER_GAP_STATE_PREFIX = "practical_validation_provider_gap_results"
 
 
 def _source_label(row: dict[str, Any]) -> str:
@@ -226,6 +240,295 @@ def _status_tone(status: Any) -> str:
     return "neutral"
 
 
+def _upper_symbol_set(values: Any) -> set[str]:
+    if values is None:
+        return set()
+    if isinstance(values, str):
+        raw_values = values.replace("\n", ",").split(",")
+    else:
+        raw_values = list(values or [])
+    return {str(value or "").strip().upper() for value in raw_values if str(value or "").strip()}
+
+
+def _provider_gap_state_key(validation_result: dict[str, Any]) -> str:
+    source_id = str(validation_result.get("selection_source_id") or "source").strip() or "source"
+    return f"{PROVIDER_GAP_STATE_PREFIX}_{source_id}"
+
+
+def _holdings_source_status(symbol: str) -> tuple[str, bool]:
+    source_info = HOLDINGS_PROVIDER_SOURCES.get(symbol)
+    if not source_info:
+        return "source map 없음", False
+    parser = str(source_info.get("parser") or "").strip().lower()
+    if parser == "pending":
+        return "source 준비 중", False
+    return f"{source_info.get('source') or 'official'} 수집 가능", True
+
+
+def _exposure_source_status(symbol: str) -> tuple[str, bool]:
+    source_info = EXPOSURE_PROVIDER_SOURCES.get(symbol)
+    if source_info:
+        return f"{source_info.get('source') or 'official'} aggregate 가능", True
+    holdings_status, holdings_collectable = _holdings_source_status(symbol)
+    if holdings_collectable:
+        return "holdings 기반 집계 가능", True
+    return holdings_status, False
+
+
+def _provider_gap_rows(validation_result: dict[str, Any]) -> list[dict[str, Any]]:
+    """Build ETF-level provider coverage rows so operators can see exactly what is missing."""
+    provider_context = dict(validation_result.get("provider_coverage") or {})
+    coverage = dict(provider_context.get("coverage") or {})
+    weights = {
+        str(symbol or "").strip().upper(): float(weight or 0.0)
+        for symbol, weight in dict(provider_context.get("symbol_weights") or {}).items()
+        if str(symbol or "").strip()
+    }
+    symbols = list(provider_context.get("symbols") or sorted(weights))
+    symbols = sorted(_upper_symbol_set(symbols) | set(weights))
+
+    operability = dict(coverage.get("operability") or {})
+    holdings = dict(coverage.get("holdings") or {})
+    exposure = dict(coverage.get("exposure") or {})
+    operability_missing = _upper_symbol_set(operability.get("missing_symbols"))
+    holdings_missing = _upper_symbol_set(holdings.get("missing_symbols"))
+    exposure_missing = _upper_symbol_set(exposure.get("missing_symbols"))
+
+    rows: list[dict[str, Any]] = []
+    for symbol in symbols:
+        op_missing = symbol in operability_missing
+        holdings_is_missing = symbol in holdings_missing
+        exposure_is_missing = symbol in exposure_missing
+        op_source_status = (
+            "official 수집 가능"
+            if symbol in OFFICIAL_PROVIDER_SOURCES
+            else "official map 없음 / DB bridge 가능"
+        )
+        holdings_source_status, holdings_collectable = _holdings_source_status(symbol)
+        exposure_source_status, exposure_collectable = _exposure_source_status(symbol)
+        actions: list[str] = []
+        if op_missing:
+            actions.append("운용성 보강")
+        if holdings_is_missing or exposure_is_missing:
+            if holdings_collectable or exposure_collectable:
+                actions.append("holdings/exposure 수집")
+            else:
+                actions.append("connector mapping 필요")
+        rows.append(
+            {
+                "ETF": symbol,
+                "Target Weight": round(weights.get(symbol, 0.0), 4),
+                "Operability": "부족" if op_missing else "있음",
+                "Operability Source": op_source_status,
+                "Holdings": "부족" if holdings_is_missing else "있음",
+                "Holdings Source": holdings_source_status,
+                "Exposure": "부족" if exposure_is_missing else "있음",
+                "Exposure Source": exposure_source_status,
+                "Action": ", ".join(actions) if actions else "조치 없음",
+            }
+        )
+    return rows
+
+
+def _provider_gap_collection_plan(validation_result: dict[str, Any]) -> dict[str, Any]:
+    provider_context = dict(validation_result.get("provider_coverage") or {})
+    coverage = dict(provider_context.get("coverage") or {})
+    operability_missing = _upper_symbol_set(dict(coverage.get("operability") or {}).get("missing_symbols"))
+    holdings_missing = _upper_symbol_set(dict(coverage.get("holdings") or {}).get("missing_symbols"))
+    exposure_missing = _upper_symbol_set(dict(coverage.get("exposure") or {}).get("missing_symbols"))
+    holdings_targets = sorted(holdings_missing | exposure_missing)
+    holdings_collectable = [
+        symbol
+        for symbol in holdings_targets
+        if _holdings_source_status(symbol)[1] or _exposure_source_status(symbol)[1]
+    ]
+    macro = dict(coverage.get("macro") or {})
+    macro_needs_collection = str(macro.get("diagnostic_status") or "").upper() in {"NOT_RUN", "REVIEW"} and (
+        int(macro.get("series_count") or 0) < 3 or int(macro.get("stale_count") or 0) > 0
+    )
+    return {
+        "operability_official": sorted(symbol for symbol in operability_missing if symbol in OFFICIAL_PROVIDER_SOURCES),
+        "operability_bridge": sorted(operability_missing),
+        "holdings_exposure": holdings_collectable,
+        "mapping_needed": sorted(
+            symbol
+            for symbol in holdings_targets
+            if symbol not in set(holdings_collectable)
+        ),
+        "macro": macro_needs_collection,
+    }
+
+
+def _record_provider_gap_result(result: dict[str, Any], *, source_id: str, area: str) -> dict[str, Any]:
+    record = dict(result)
+    metadata = dict(record.get("run_metadata") or {})
+    metadata.update(
+        {
+            "pipeline_type": "practical_validation_provider_gap_collection",
+            "execution_mode": "interactive",
+            "symbol_source": "Practical Validation Provider Data Gaps",
+            "symbol_count": record.get("symbols_requested"),
+            "execution_context": (
+                "Practical Validation 화면에서 현재 source의 부족한 provider snapshot을 보강하기 위해 실행했습니다."
+            ),
+            "input_params": {
+                "selection_source_id": source_id,
+                "provider_area": area,
+            },
+        }
+    )
+    record["run_metadata"] = metadata
+    append_run_history(record)
+    return record
+
+
+def _run_provider_gap_collection(validation_result: dict[str, Any]) -> list[dict[str, Any]]:
+    """Run only the provider collectors that can improve the current validation source."""
+    source_id = str(validation_result.get("selection_source_id") or "-")
+    plan = _provider_gap_collection_plan(validation_result)
+    results: list[dict[str, Any]] = []
+
+    if plan["operability_official"]:
+        result = run_collect_etf_operability_provider(
+            plan["operability_official"],
+            provider="official",
+            as_of_date=None,
+            lookback_days=60,
+            timeframe="1d",
+        )
+        results.append(_record_provider_gap_result(result, source_id=source_id, area="etf_operability_official"))
+
+    if plan["operability_bridge"]:
+        result = run_collect_etf_operability_provider(
+            plan["operability_bridge"],
+            provider="db_bridge",
+            as_of_date=None,
+            lookback_days=60,
+            timeframe="1d",
+        )
+        results.append(_record_provider_gap_result(result, source_id=source_id, area="etf_operability_db_bridge"))
+
+    if plan["holdings_exposure"]:
+        result = run_collect_etf_holdings_exposure(
+            plan["holdings_exposure"],
+            provider="official",
+            as_of_date=None,
+            include_provider_aggregates=True,
+            refresh_mode="canonical_refresh",
+        )
+        results.append(_record_provider_gap_result(result, source_id=source_id, area="etf_holdings_exposure"))
+
+    if plan["macro"]:
+        result = run_collect_macro_market_context()
+        results.append(_record_provider_gap_result(result, source_id=source_id, area="macro_context"))
+
+    return results
+
+
+def _render_provider_gap_collection_results(results: list[dict[str, Any]]) -> None:
+    if not results:
+        return
+    st.markdown("###### 최근 Provider 데이터 수집 결과")
+    st.dataframe(
+        pd.DataFrame(
+            [
+                {
+                    "Job": result.get("job_name"),
+                    "Status": result.get("status"),
+                    "Rows Written": result.get("rows_written"),
+                    "Symbols": result.get("symbols_requested"),
+                    "Failed": len(result.get("failed_symbols") or []),
+                    "Message": result.get("message"),
+                }
+                for result in results
+            ]
+        ),
+        width="stretch",
+        hide_index=True,
+    )
+
+
+def _render_provider_gap_section(validation_result: dict[str, Any]) -> None:
+    gap_rows = _provider_gap_rows(validation_result)
+    if not gap_rows:
+        return
+
+    st.markdown("##### Provider Data Gaps")
+    st.caption(
+        "현재 source에 필요한 ETF별 provider 데이터가 어디까지 채워졌는지 보여줍니다. "
+        "부족 데이터는 이 화면에서 바로 수집할 수 있고, source mapping이 없는 ETF는 connector 보강이 필요합니다."
+    )
+    st.dataframe(pd.DataFrame(gap_rows), width="stretch", hide_index=True)
+
+    plan = _provider_gap_collection_plan(validation_result)
+    if plan["operability_bridge"] or plan["operability_official"]:
+        st.warning(
+            "운용성 데이터 보강 필요: "
+            + ", ".join(sorted(set(plan["operability_official"]) | set(plan["operability_bridge"])))
+        )
+    if plan["holdings_exposure"]:
+        st.warning("Holdings / Exposure 수집 가능: " + ", ".join(plan["holdings_exposure"]))
+    if plan["mapping_needed"]:
+        st.info(
+            "Holdings / Exposure connector mapping 필요: "
+            + ", ".join(plan["mapping_needed"])
+        )
+    action_rows = [
+        {
+            "Area": "ETF Operability official",
+            "Symbols": ", ".join(plan["operability_official"]) or "-",
+            "Meaning": "공식 운용사 page에서 비용 / 상품 metadata를 수집합니다.",
+        },
+        {
+            "Area": "ETF Operability DB bridge",
+            "Symbols": ", ".join(plan["operability_bridge"]) or "-",
+            "Meaning": "공식 source map이 없거나 부족한 ETF를 DB price / asset profile 기반으로 보강합니다.",
+        },
+        {
+            "Area": "ETF Holdings / Exposure",
+            "Symbols": ", ".join(plan["holdings_exposure"]) or "-",
+            "Meaning": "공식 holdings를 수집하고 자산군 / 섹터 exposure를 재집계합니다.",
+        },
+        {
+            "Area": "Connector mapping needed",
+            "Symbols": ", ".join(plan["mapping_needed"]) or "-",
+            "Meaning": "버튼만으로 해결되지 않으며 issuer URL / parser mapping 추가가 필요합니다.",
+        },
+    ]
+    if plan["macro"]:
+        action_rows.append(
+            {
+                "Area": "Macro Context",
+                "Symbols": "VIXCLS, T10Y3M, BAA10Y",
+                "Meaning": "FRED market context series를 다시 수집합니다.",
+            }
+        )
+    st.dataframe(pd.DataFrame(action_rows), width="stretch", hide_index=True)
+
+    result_key = _provider_gap_state_key(validation_result)
+    latest_results = st.session_state.get(result_key)
+    if isinstance(latest_results, list):
+        _render_provider_gap_collection_results(latest_results)
+
+    has_collectable = any(
+        [
+            plan["operability_official"],
+            plan["operability_bridge"],
+            plan["holdings_exposure"],
+            plan["macro"],
+        ]
+    )
+    if not has_collectable:
+        st.info("현재 버튼으로 수집 가능한 provider gap은 없습니다. 남은 부족 ETF는 connector source mapping 추가가 필요합니다.")
+        return
+
+    if st.button("부족한 Provider 데이터 일괄 수집 / 보강", key=f"{result_key}_run", width="stretch"):
+        with st.spinner("현재 source에 필요한 provider snapshot을 수집 / 보강 중입니다..."):
+            results = _run_provider_gap_collection(validation_result)
+        st.session_state[result_key] = results
+        st.rerun()
+
+
 def _render_validation_result(validation_result: dict[str, Any]) -> None:
     profile = dict(validation_result.get("validation_profile") or {})
     status_counts = dict(dict(validation_result.get("diagnostic_summary") or {}).get("status_counts") or {})
@@ -263,6 +566,7 @@ def _render_validation_result(validation_result: dict[str, Any]) -> None:
             "Ingestion에서 저장한 ETF provider / FRED snapshot이 Practical Diagnostics에 어떻게 연결됐는지 보여줍니다."
         )
         st.dataframe(pd.DataFrame(provider_rows), width="stretch", hide_index=True)
+        _render_provider_gap_section(validation_result)
 
     mismatch_warnings = list(validation_result.get("intent_mismatch_warnings") or [])
     if mismatch_warnings:

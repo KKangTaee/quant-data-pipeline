@@ -42,7 +42,7 @@
 | `app/web/backtest_candidate_library.py` | `Operations > Candidate Library` 화면 render, 저장된 current / Pre-Live 후보 inspect, 저장 contract 기반 result curve rebuild |
 | `app/web/backtest_candidate_library_helpers.py` | Candidate Library용 registry join, 후보 table row, replay payload 생성, ETF 후보 replay runtime dispatch helper |
 | `app/web/backtest_ui_components.py` | Backtest UI 공용 wrapping status card, artifact pipeline, compact badge strip, stage brief strip, route/readiness 판정 panel |
-| `app/web/backtest_practical_validation.py` | `Backtest > Practical Validation`에서 Clean V2 selection source 확인, 검증 프로필 입력, 최신 DB 데이터 기준 runtime 재검증 실행 버튼, V2 practical diagnostics board 표시, Final Review handoff를 담당하는 화면 render |
+| `app/web/backtest_practical_validation.py` | `Backtest > Practical Validation`에서 Clean V2 selection source 확인, 검증 프로필 입력, 최신 DB 데이터 기준 runtime 재검증 실행 버튼, V2 practical diagnostics board / Provider Data Gaps 표시, 부족 provider snapshot 일괄 수집 / 보강 버튼, Final Review handoff를 담당하는 화면 render |
 | `app/web/backtest_practical_validation_helpers.py` | Clean V2 portfolio selection source 생성, validation profile threshold / score 해석, 12개 Practical Diagnostics result 생성 / 저장 / Final Review handoff helper |
 | `app/web/backtest_practical_validation_connectors.py` | Practical Validation P2 provider context adapter. ETF operability / holdings / exposure / FRED macro loader 결과를 compact coverage와 diagnostic evidence로 변환 |
 | `app/web/backtest_practical_validation_curve.py` | Practical Validation의 curve normalize / compact records / curve provenance / benchmark parity helper |
