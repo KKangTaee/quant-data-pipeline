@@ -21,6 +21,16 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-11 - 문서 작성 지침은 `이걸 하는 이유?` 중심으로 바꾼다
+- Request topic:
+  - 사용자가 새 문서 작성 시 기존의 분리형 요약 / 완료 효과 섹션을 제거하고, `이걸 하는 이유?`를 쉽게 정리하는 방식으로 지침 수정을 요청함
+- Interpreted goal:
+  - 계획 문서가 반복 섹션으로 길어지는 대신, 작업을 왜 하는지와 끝났을 때의 구체적 가치를 한 곳에서 바로 이해하게 만들고 싶음
+- Result:
+  - `AGENTS.md`, phase plan template, automation guide, bootstrap helper, local finance phase/doc-sync skill guidance를 수정했다
+  - 앞으로 새 phase / planning 문서에는 `이걸 하는 이유?` 섹션을 두고 문제 / 지금 필요한 이유 / 완료 후 가치를 쉽게 설명한다
+  - 기존 historical documents는 보존하고, 새로 생성되거나 크게 다시 쓰는 문서부터 적용한다
+
 ### 2026-05-11 - P2 provider connector는 데이터 수집 / DB 저장부터 개발한다
 - Request topic:
   - 사용자가 P2 provider connector 개발에서 ETF holdings, macro series, sentiment series를 어디서 어떻게 수집할지 확인하고, DB ingestion 중심으로 개발 순서를 수정해 달라고 요청함

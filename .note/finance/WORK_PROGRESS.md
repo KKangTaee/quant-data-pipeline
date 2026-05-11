@@ -22,6 +22,18 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-11
+- Updated finance document-writing guidance for future phase / planning documents.
+- Updated:
+  - `AGENTS.md`
+  - `.note/finance/PHASE_PLAN_TEMPLATE.md`
+  - `.note/finance/code_analysis/AUTOMATION_SCRIPTS_GUIDE.md`
+  - `plugins/quant-finance-workflow/scripts/bootstrap_finance_phase_bundle.py`
+  - local finance phase/doc-sync skill guidance
+- Durable decision:
+  - New or substantially rewritten plan documents should use `이걸 하는 이유?` as the plain-language purpose/value section.
+  - Separate plain-summary and end-benefit sections are no longer required.
+
+### 2026-05-11
 - Updated Practical Validation V2 P2 provider connector planning after source / ingestion direction review.
 - Updated:
   - `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_PROVIDER_CONNECTOR_PLAN.md`

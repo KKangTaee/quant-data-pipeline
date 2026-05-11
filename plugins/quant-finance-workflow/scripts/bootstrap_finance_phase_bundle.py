@@ -75,17 +75,17 @@ def _completion_skeleton(phase_number: int, title: str) -> str:
 
         - 이 phase에서 실제로 끝낸 구현/정리 내용을 적는다.
 
-        쉽게 말하면:
+        이걸 하는 이유?:
 
-        - 사용자가 무엇을 더 쉽게 하게 되었는지 적는다.
+        - 이 정리가 왜 필요했고, 끝나면 무엇이 좋아지는지 적는다.
 
         ## 아직 남아 있지만 closeout blocker는 아닌 것
 
         - 후속 polish 또는 다음 phase로 넘길 항목을 적는다.
 
-        쉽게 말하면:
+        이걸 하는 이유?:
 
-        - 지금 남아 있는 일은 무엇이고, 왜 이번 phase blocker가 아닌지 적는다.
+        - 지금 남아 있는 일이 무엇이고, 왜 이번 phase blocker가 아닌지 쉽게 적는다.
 
         ## closeout 판단
 
@@ -114,10 +114,10 @@ def _next_phase_skeleton(phase_number: int) -> str:
 
         ## 다음 phase에서 실제로 할 작업
 
-        쉽게 말하면:
+        이걸 하는 이유?:
 
         - 다음 phase에서 무엇을 실제로 만들거나 정리하는지 적는다.
-        - "왜 다음 phase인가"와 별개로 "무슨 작업을 하는가"가 바로 보이게 적는다.
+        - 왜 다음 phase로 다루는지와 끝나면 무엇이 좋아지는지 바로 보이게 적는다.
 
         주요 작업:
 

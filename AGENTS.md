@@ -162,10 +162,12 @@
 - Use `.note/finance/FINANCE_TERM_GLOSSARY.md` as the shared glossary for recurring quant / backtest / real-money terminology.
 - Use `.note/finance/backtest_reports/BACKTEST_REPORT_INDEX.md` as the dedicated index for durable backtest-result Markdown reports.
 - For phase plans, policy documents, validation rules, or real-money guidance documents, do not leave key terms as compressed jargon only.
-- When creating or substantially rewriting a phase plan document, include at minimum:
-  - `쉽게 말하면`
-  - `왜 필요한가`
-  - `이 phase가 끝나면 좋은 점`
+- When creating or substantially rewriting a phase plan document, do not require separate plain-summary / end-benefit sections.
+- Instead, include a clear plain-language section named `이걸 하는 이유?`.
+- In `이걸 하는 이유?`, explain:
+  - what problem or bottleneck this work addresses
+  - why this work is needed now
+  - what concrete value the work creates when finished
   so the plan reads as an explanation of purpose and value, not only as an internal task memo.
 - Use `.note/finance/PHASE_PLAN_TEMPLATE.md` as the default starting shape for new `finance` phase plan documents unless there is a strong reason to deviate.
 - When opening a new `finance` phase and the work would benefit from consistent boilerplate, prefer:
