@@ -32,6 +32,27 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - `status`, `is_spac`, country filter 등은 유용하지만 완전한 point-in-time truth는 아니다.
 - ETF AUM / bid-ask field는 current-operability 판단에 쓰이며, strict annual stock strategy의 PIT liquidity 판단과는 다른 층위다.
 
+## `etf_provider_source_map`
+
+역할:
+
+- ETF별 공식 provider endpoint와 parser mapping을 저장한다.
+- Practical Validation의 Provider Data Gaps가 "수집 가능한 부족 데이터"와 "아직 connector mapping이 필요한 데이터"를 구분할 때 사용한다.
+- `etf_operability_snapshot`, `etf_holdings_snapshot`, `etf_exposure_snapshot` 수집기가 static ticker map보다 먼저 참조하는 verified source cache다.
+
+성격:
+
+- connector metadata table이다.
+- 원천은 `nyse_etf`, `nyse_asset_profile`, issuer 공식 product list / 다운로드 endpoint 검증이다.
+- `source_status=verified`인 row만 실제 수집 가능 mapping으로 읽는다.
+- `failed`, `unsupported`, `missing` row는 자동 수집 불가 사유를 남기는 운영 metadata다.
+
+주의:
+
+- 이 table은 holdings나 operability data 자체를 저장하지 않는다. 어디서 어떻게 수집할지를 저장한다.
+- current provider endpoint 검증 cache이므로 과거 특정 시점의 provider URL truth가 아니다.
+- 운용사 사이트 구조가 바뀌면 discovery를 다시 실행하거나 adapter를 보강해야 한다.
+
 ## `etf_operability_snapshot`
 
 역할:
@@ -53,7 +74,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 
 주의:
 
-- initial official source map 밖 ETF는 아직 official coverage가 없을 수 있다.
+- source map discovery가 verified row를 만든 ETF는 static map 밖이어도 official coverage를 수집할 수 있다.
 - Invesco QQQ는 현재 expense ratio / inception만 있어 `partial`로 저장된다.
 - current snapshot이므로 historical point-in-time ETF 운용성 truth로 바로 해석하면 안 된다.
 - Practical Validation result JSONL에는 full row를 저장하지 않고 compact evidence / coverage status만 저장하는 방향이다.
@@ -76,7 +97,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 
 - current snapshot이므로 과거 특정 시점의 holdings truth로 바로 해석하면 안 된다.
 - `AOR`은 현재 1차 ETF holdings만 저장한다. Aggregate Underlying 2차 look-through는 후속이다.
-- `GLD`는 row-level holdings source가 bar list PDF 성격이라 synthetic 100% gold row를 만들지 않는다.
+- `GLD`, `IAU`는 금 현물 ETF 특성상 row-level stock holdings 대신 `commodity_gold` 100% gold row를 저장한다.
 
 ## `etf_exposure_snapshot`
 

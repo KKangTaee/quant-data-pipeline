@@ -343,8 +343,9 @@ web UI가 그 wrapper의 result bundle을 받아 single / compare / Operations h
 |---|---|---|
 | Universe | NYSE listing -> CSV -> `nyse_stock` / `nyse_etf` -> asset profile | `data_architecture/DATA_FLOW_MAP.md` |
 | Price | yfinance -> direct research path 또는 `nyse_price_history` DB path | `data_architecture/DATA_FLOW_MAP.md` |
-| ETF operability provider snapshot | `nyse_price_history` / `nyse_asset_profile` bridge + iShares / SSGA / Invesco official page -> `etf_operability_snapshot` -> provider loader | `data_architecture/DATA_FLOW_MAP.md` |
-| ETF holdings / exposure provider snapshot | iShares CSV / SSGA XLSX / Invesco API -> `etf_holdings_snapshot` / `etf_exposure_snapshot` -> provider loader | `data_architecture/DATA_FLOW_MAP.md` |
+| ETF provider source map | `nyse_etf` / `nyse_asset_profile` + issuer official endpoint verification -> `etf_provider_source_map` -> provider collectors | `data_architecture/DATA_FLOW_MAP.md` |
+| ETF operability provider snapshot | source map + `nyse_price_history` / `nyse_asset_profile` bridge + iShares / SSGA / Invesco official page -> `etf_operability_snapshot` -> provider loader | `data_architecture/DATA_FLOW_MAP.md` |
+| ETF holdings / exposure provider snapshot | source map + iShares CSV / SSGA XLSX / Invesco API / commodity gold rule -> `etf_holdings_snapshot` / `etf_exposure_snapshot` -> provider loader | `data_architecture/DATA_FLOW_MAP.md` |
 | Macro / sentiment market-context snapshot | FRED API 또는 official CSV -> `macro_series_observation` -> macro loader | `data_architecture/DATA_FLOW_MAP.md` |
 | Broad fundamentals / factors | yfinance statements -> `nyse_fundamentals` -> `nyse_factors` | `data_architecture/DATA_FLOW_MAP.md` |
 | Statement-driven path | EDGAR / statement values -> fundamentals shadow -> factors shadow | `data_architecture/DATA_FLOW_MAP.md` |
@@ -355,9 +356,9 @@ web UI가 그 wrapper의 result bundle을 받아 single / compare / Operations h
 - broad fundamentals / factors는 빠른 research convenience layer다.
 - statement-driven shadow path는 strict annual / quarterly factor strategy에서 더 중요하다.
 - detailed financial statements의 raw truth는 `nyse_financial_statement_values`를 중심으로 본다.
-- Practical Validation provider snapshot은 `Workspace > Ingestion > Practical Validation Provider Snapshots`에서 실행할 수 있다.
+- Practical Validation provider source map과 snapshot은 `Workspace > Ingestion > Practical Validation Provider Snapshots`에서 실행할 수 있다.
 - P2-5B 기준으로 Practical Validation은 ETF operability / holdings / exposure / FRED macro loader 결과를 compact provider context로 읽고, 2 / 3 / 5 / 6 / 9 / 10번 진단에 actual / proxy / `NOT_RUN` 출처를 표시한다.
-- Practical Validation 화면은 Provider Coverage 아래에서 ETF별 Provider Data Gaps를 보여준다. 사용자는 어떤 ETF의 operability / holdings / exposure가 부족한지 확인하고, 수집 가능한 항목은 같은 화면에서 일괄 수집 / 보강할 수 있다. official source mapping이 없는 holdings / exposure는 connector mapping 필요 상태로 남긴다.
+- Practical Validation 화면은 Provider Coverage 아래에서 ETF별 Provider Data Gaps를 보여준다. 사용자는 어떤 ETF의 operability / holdings / exposure가 부족한지 확인하고, source map discovery와 수집 가능한 항목을 같은 화면에서 일괄 보강할 수 있다. 자동 탐색 후에도 official source mapping이 없는 holdings / exposure만 connector mapping 필요 상태로 남긴다.
 
 ---
 
@@ -371,7 +372,7 @@ web UI가 그 wrapper의 result bundle을 받아 single / compare / Operations h
 
 | DB | 주요 table | 역할 |
 |---|---|---|
-| `finance_meta` | `nyse_stock`, `nyse_etf`, `nyse_asset_profile`, `etf_operability_snapshot`, `etf_holdings_snapshot`, `etf_exposure_snapshot`, `macro_series_observation` | universe / listing / profile metadata / ETF operability / holdings / exposure / macro market-context provider snapshot |
+| `finance_meta` | `nyse_stock`, `nyse_etf`, `nyse_asset_profile`, `etf_provider_source_map`, `etf_operability_snapshot`, `etf_holdings_snapshot`, `etf_exposure_snapshot`, `macro_series_observation` | universe / listing / profile metadata / ETF source mapping / ETF operability / holdings / exposure / macro market-context provider snapshot |
 | `finance_price` | `nyse_price_history` | stock / ETF 공용 price ledger |
 | `finance_fundamental` | `nyse_fundamentals`, `nyse_factors`, `nyse_fundamentals_statement`, `nyse_factors_statement`, statement filings / values / labels | fundamentals, factors, detailed statement data |
 
@@ -389,6 +390,7 @@ web UI가 그 wrapper의 result bundle을 받아 single / compare / Operations h
 |---|---|---|
 | master | universe / symbol master | `nyse_stock`, `nyse_etf` |
 | profile | current profile snapshot | `nyse_asset_profile` |
+| connector metadata | provider endpoint / parser mapping cache | `etf_provider_source_map` |
 | provider snapshot | 검증용 provider / DB bridge / official issuer / FRED snapshot | `etf_operability_snapshot`, `etf_holdings_snapshot`, `macro_series_observation` |
 | raw ledger | raw source에 가까운 fact ledger | `nyse_price_history`, `nyse_financial_statement_values` |
 | filing ledger | filing 단위 metadata | `nyse_financial_statement_filings` |

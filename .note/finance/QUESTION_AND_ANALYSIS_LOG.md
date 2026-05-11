@@ -4806,3 +4806,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - expense ratio, NAV, premium / discount, official leverage / inverse metadata는 아직 `missing_fields_json`에 남기고 P2-2B actual provider 수집에서 보강한다
 - Follow-up:
   - 다음 구현은 official issuer source map을 endpoint 수준으로 검증하고 `source_type=official` row를 저장하는 P2-2B다
+
+### 2026-05-12 - ETF provider source map을 DB로 관리하는 방향
+- User request:
+  - 사용자가 `nyse_etf`에 있는 ETF들을 기반으로 운용사 connector 정보를 일괄적으로 찾고, 테이블로 관리할 수 있는지 질문함
+- Interpreted goal:
+  - 새 ETF가 후보에 들어올 때마다 코드에 hardcoded source mapping을 직접 추가하는 흐름을 줄이고, Practical Validation이 "수집 가능 / 자동 탐색 필요 / 수동 connector 필요"를 구분해야 함
+- Analysis result:
+  - `nyse_etf`는 ticker / name / NYSE quote URL만 있으므로 provider endpoint 자체를 바로 제공하지 않는다
+  - `nyse_asset_profile`의 fund family / long name과 issuer 공식 product list / endpoint 검증을 결합하면 source map 후보를 만들 수 있다
+  - 검증된 endpoint는 `finance_meta.etf_provider_source_map`에 저장하고, ETF operability / holdings / exposure collector는 static map보다 이 verified source map을 먼저 사용하는 구조가 맞다
+  - 금 현물 ETF는 일반 주식 holdings가 아니므로 `GLD`, `IAU`는 synthetic `commodity_gold` 100% gold exposure로 처리한다
+- Follow-up:
+  - source map discovery / Ingestion tab / Practical Validation gap 보강 버튼 연결을 구현했고, 현재 saved portfolio mix 기준 connector mapping gap이 해소되는 것을 확인했다

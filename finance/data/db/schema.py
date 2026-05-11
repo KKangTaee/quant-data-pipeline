@@ -264,6 +264,37 @@ PRICE_SCHEMAS = {
 
 
 PROVIDER_SCHEMAS = {
+    "etf_provider_source_map": """
+        CREATE TABLE IF NOT EXISTS etf_provider_source_map (
+          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+          symbol VARCHAR(20) NOT NULL,
+          provider VARCHAR(64) NOT NULL,
+          data_kind ENUM('operability','holdings','exposure') NOT NULL,
+          parser VARCHAR(64) NOT NULL,
+          source_url VARCHAR(1024) NOT NULL,
+          source_ref VARCHAR(1024) NULL,
+
+          source_status ENUM('verified','candidate','missing','failed','unsupported') NOT NULL DEFAULT 'candidate',
+          fund_family VARCHAR(255) NULL,
+          product_id VARCHAR(64) NULL,
+          product_slug VARCHAR(255) NULL,
+          discovered_from VARCHAR(128) NULL,
+
+          metadata_json JSON NULL,
+          verified_at TIMESTAMP NULL,
+          last_checked_at TIMESTAMP NULL,
+          error_msg TEXT NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+          UNIQUE KEY uk_symbol_kind_provider_parser (symbol, data_kind, provider, parser),
+          KEY ix_symbol_kind (symbol, data_kind),
+          KEY ix_provider_kind (provider, data_kind),
+          KEY ix_source_status (source_status)
+        );
+    """,
     "etf_operability_snapshot": """
         CREATE TABLE IF NOT EXISTS etf_operability_snapshot (
           id BIGINT AUTO_INCREMENT PRIMARY KEY,

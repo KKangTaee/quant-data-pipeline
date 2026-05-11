@@ -22,6 +22,7 @@
 | `nyse_stock` | NYSE stock listing master |
 | `nyse_etf` | NYSE ETF listing master |
 | `nyse_asset_profile` | stock / ETF profile, universe filter, current ETF operability metadata |
+| `etf_provider_source_map` | ETF별 issuer 공식 endpoint / parser mapping cache. verified row를 provider snapshot collector가 사용 |
 | `etf_operability_snapshot` | ETF 비용 / 규모 / 유동성 / spread / NAV 관련 provider snapshot. DB bridge/proxy row와 일부 issuer official actual/partial row를 source별로 저장 |
 | `etf_holdings_snapshot` | ETF 내부 holdings row provider snapshot. official issuer download/API row를 저장 |
 | `etf_exposure_snapshot` | ETF holdings 또는 provider aggregate에서 만든 asset class / sector / country / currency exposure summary |
@@ -58,6 +59,7 @@
 |---|---|---|
 | master | universe / symbol master | `nyse_stock`, `nyse_etf` |
 | profile | 현재 snapshot 성격의 profile metadata | `nyse_asset_profile` |
+| connector metadata | provider endpoint / parser mapping cache | `etf_provider_source_map` |
 | provider snapshot | provider / DB bridge에서 온 검증용 snapshot | `etf_operability_snapshot`, `etf_holdings_snapshot`, `macro_series_observation` |
 | raw ledger | raw source에 가까운 fact ledger | `nyse_price_history`, `nyse_financial_statement_values` |
 | filing ledger | filing 단위 metadata | `nyse_financial_statement_filings` |

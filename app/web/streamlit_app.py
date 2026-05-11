@@ -17,6 +17,7 @@ if str(PROJECT_ROOT) not in sys.path:
 from app.jobs.ingestion_jobs import (
     run_collect_etf_holdings_exposure,
     run_collect_etf_operability_provider,
+    run_discover_etf_provider_source_map,
     run_collect_macro_market_context,
     run_daily_market_update,
     run_extended_statement_refresh,
@@ -136,6 +137,7 @@ SYMBOL_PRESETS = {
 PERIOD_PRESETS = ["1d", "7d", "1mo", "3mo", "6mo", "1y", "5y", "10y", "15y", "20y"]
 P2_PROVIDER_OPERABILITY_SYMBOLS = "AOR, IEF, TLT, SPY, BIL, GLD, QQQ"
 P2_PROVIDER_HOLDINGS_SYMBOLS = "AOR, IEF, TLT, SPY, BIL, QQQ"
+P2_PROVIDER_SOURCE_MAP_SYMBOLS = "AOR, IEF, TLT, SPY, BIL, GLD, QQQ"
 P2_PROVIDER_MACRO_SERIES = "VIXCLS, T10Y3M, BAA10Y"
 SYMBOL_SOURCE_OPTIONS = [
     "Manual",
@@ -357,6 +359,8 @@ def _dispatch_job(job: dict[str, Any], *, progress_callback: Any = None) -> JobR
         return run_rebuild_statement_shadow(**params)
     if action == "metadata_refresh":
         return run_metadata_refresh(**params)
+    if action == "discover_etf_provider_source_map":
+        return run_discover_etf_provider_source_map(**params)
     if action == "collect_etf_operability_provider":
         params["progress_callback"] = progress_callback
         return run_collect_etf_operability_provider(**params)
@@ -1933,12 +1937,87 @@ def _render_ingestion_console() -> None:
                     "이후 Practical Validation은 저장된 snapshot을 읽어서 비용 / 유동성, 자산배분, 집중도, 시장 국면 판단의 근거로 사용합니다."
                 )
                 st.caption(
-                    "전체 저장 대상: `finance_meta.etf_operability_snapshot`, `finance_meta.etf_holdings_snapshot`, "
-                    "`finance_meta.etf_exposure_snapshot`, `finance_meta.macro_series_observation`"
+                    "전체 저장 대상: `finance_meta.etf_provider_source_map`, `finance_meta.etf_operability_snapshot`, "
+                    "`finance_meta.etf_holdings_snapshot`, `finance_meta.etf_exposure_snapshot`, "
+                    "`finance_meta.macro_series_observation`"
                 )
-                provider_tab, holdings_tab, macro_tab = st.tabs(
-                    ["ETF Operability", "ETF Holdings / Exposure", "Macro Context"]
+                source_map_tab, provider_tab, holdings_tab, macro_tab = st.tabs(
+                    ["Provider Source Map", "ETF Operability", "ETF Holdings / Exposure", "Macro Context"]
                 )
+
+                with source_map_tab:
+                    st.caption(
+                        "`nyse_etf`와 ETF asset profile을 기준으로 운용사와 공식 endpoint 후보를 찾고 검증합니다. "
+                        "이 테이블이 채워져야 새 ETF도 holdings / exposure 수집 대상인지 자동으로 판단할 수 있습니다."
+                    )
+                    st.caption("저장 테이블: `finance_meta.etf_provider_source_map`")
+                    source_map_symbols_text = st.text_area(
+                        "ETF Symbols",
+                        value=P2_PROVIDER_SOURCE_MAP_SYMBOLS,
+                        key="p2_provider_source_map_symbols_input",
+                        help="비워두면 DB의 `nyse_etf` 전체를 대상으로 source map 후보를 만듭니다. 처음에는 현재 검증 ETF부터 실행하는 것을 권장합니다.",
+                    )
+                    source_map_symbols = _parse_csv_items(source_map_symbols_text)
+                    source_map_cols = st.columns(2)
+                    source_map_limit = int(
+                        source_map_cols[0].number_input(
+                            "Universe Limit",
+                            min_value=0,
+                            max_value=5000,
+                            value=0,
+                            step=50,
+                            key="p2_provider_source_map_limit",
+                            help="0이면 제한 없이 실행합니다. 전체 NYSE ETF를 한 번에 탐색하기 전에 작은 값으로 smoke 확인할 수 있습니다.",
+                        )
+                    )
+                    source_map_verify = source_map_cols[1].checkbox(
+                        "Verify Official URLs",
+                        value=True,
+                        key="p2_provider_source_map_verify",
+                        help="공식 URL / 다운로드 endpoint가 실제 응답하는지 확인한 row만 verified로 저장합니다.",
+                    )
+                    if source_map_symbols:
+                        _render_check_result(check_symbol_input(source_map_symbols))
+                    else:
+                        st.info("심볼 입력을 비우면 `nyse_etf` 전체를 대상으로 source map을 탐색합니다.")
+                    if st.button(
+                        "Run Provider Source Map Discovery",
+                        use_container_width=True,
+                        disabled=_has_running_job(),
+                    ):
+                        _schedule_job(
+                            {
+                                "action": "discover_etf_provider_source_map",
+                                "job_name": "discover_etf_provider_source_map",
+                                "spinner_text": "Discovering ETF provider source map...",
+                                "params": {
+                                    "symbols": source_map_symbols or None,
+                                    "limit": source_map_limit or None,
+                                    "verify": bool(source_map_verify),
+                                },
+                                "run_metadata": _job_metadata(
+                                    pipeline_type="practical_validation_provider_source_map",
+                                    execution_mode="operational",
+                                    symbol_source="nyse_etf / nyse_asset_profile",
+                                    symbol_count=len(source_map_symbols) if source_map_symbols else None,
+                                    execution_context=(
+                                        "Practical Validation에서 ETF holdings / exposure connector를 자동 판정할 수 있도록 "
+                                        "운용사 공식 URL과 parser mapping을 발견하고 검증합니다."
+                                    ),
+                                    input_params={
+                                        "symbols": source_map_symbols or None,
+                                        "limit": source_map_limit or None,
+                                        "verify": bool(source_map_verify),
+                                    },
+                                ),
+                            }
+                        )
+                    if _is_running_action("discover_etf_provider_source_map"):
+                        current_progress_callback = _build_progress_callback(
+                            st.session_state.running_job,
+                            label="Provider Source Map Discovery",
+                        )
+                    _render_inline_last_completed_result("discover_etf_provider_source_map")
 
                 with provider_tab:
                     st.caption(

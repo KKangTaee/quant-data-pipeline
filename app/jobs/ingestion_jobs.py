@@ -14,6 +14,7 @@ from finance.data.etf_provider import (
     aggregate_and_store_etf_exposures,
     collect_and_store_etf_holdings,
     collect_and_store_etf_operability,
+    discover_and_store_etf_provider_source_map,
 )
 from finance.data.macro import DEFAULT_MACRO_SERIES, collect_and_store_macro_series
 
@@ -1240,6 +1241,63 @@ def run_collect_etf_operability_provider(
                 "timeframe": timeframe,
                 "target_table": "finance_meta.etf_operability_snapshot",
             },
+        )
+
+
+def run_discover_etf_provider_source_map(
+    symbols: str | Iterable[str] | None = None,
+    *,
+    limit: int | None = None,
+    verify: bool = True,
+) -> JobResult:
+    """Discover ETF provider source endpoints from NYSE ETF/profile rows and cache them in DB."""
+    job_name = "discover_etf_provider_source_map"
+    started_at = _now_str()
+    t0 = perf_counter()
+    try:
+        summary = discover_and_store_etf_provider_source_map(
+            symbols=symbols,
+            limit=limit,
+            verify=bool(verify),
+        )
+        failed_items = _failed_item_ids(summary.get("failed") or [], id_keys=("symbol",))
+        rows_written = int(summary.get("stored") or 0)
+        verified = int(summary.get("verified") or 0)
+        status = "success" if rows_written > 0 and not failed_items else "partial_success" if rows_written > 0 else "failed"
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status=status,
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=rows_written,
+            symbols_requested=int(summary.get("requested") or 0),
+            symbols_processed=verified,
+            failed_symbols=failed_items[:50],
+            message=(
+                "ETF provider source map discovery completed."
+                if status == "success"
+                else "ETF provider source map discovery completed with gaps."
+                if status == "partial_success"
+                else "ETF provider source map discovery wrote no rows."
+            ),
+            details=summary,
+        )
+    except Exception as exc:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=0,
+            symbols_processed=0,
+            failed_symbols=[],
+            message=f"ETF provider source map discovery failed: {exc}",
+            details={"limit": limit, "verify": bool(verify)},
         )
 
 

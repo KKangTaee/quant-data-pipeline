@@ -58,6 +58,12 @@ yfinance
 ## ETF operability provider snapshot 흐름
 
 ```text
+finance_meta.nyse_etf
+finance_meta.nyse_asset_profile
+issuer official product list / endpoint verification
+  -> finance.data.etf_provider.discover_and_store_etf_provider_source_map()
+  -> finance_meta.etf_provider_source_map
+
 finance_price.nyse_price_history
   -> ADV / dollar volume / market price proxy
 
@@ -78,7 +84,8 @@ finance.data.etf_provider.collect_and_store_etf_operability()
 
 - `coverage_status=bridge` 또는 `proxy`는 실제 provider 검증 완료가 아니라, 기존 DB로 확인 가능한 보조 근거라는 뜻이다.
 - `coverage_status=actual` 또는 `partial`인 official row는 issuer page에서 직접 확인한 field를 normalize한 것이다.
-- P2-2B 초기 source map은 iShares `AOR/IEF/TLT`, SSGA `SPY/BIL/GLD`, Invesco `QQQ`다.
+- `etf_provider_source_map` verified row가 있으면 official 수집은 그 mapping을 static map보다 먼저 사용한다.
+- source map discovery는 iShares product list, SSGA holdings XLSX endpoint pattern, Invesco endpoint pattern, 금 현물 ETF `commodity_gold` rule을 사용한다.
 - QQQ는 현재 공식 QQQ page에서 expense ratio / inception만 확보되어 `partial`로 저장한다.
 - P2-5A부터 이 수집은 `Workspace > Ingestion > Practical Validation Provider Snapshots > ETF Operability`에서 실행할 수 있다.
 - P2-5B부터 Practical Validation 9번 / 10번 진단은 이 snapshot을 우선 읽는다. 공식 provider row가 부족하고 bridge / proxy만 있으면 `PASS`가 아니라 `REVIEW` 출처로 남긴다.
@@ -86,6 +93,9 @@ finance.data.etf_provider.collect_and_store_etf_operability()
 ## ETF holdings / exposure provider snapshot 흐름
 
 ```text
+iShares / SSGA / Invesco source map discovery
+  -> finance_meta.etf_provider_source_map
+
 iShares official holdings CSV
 SSGA / SPDR official daily holdings XLSX
 Invesco official holdings / weighted sector API
@@ -103,8 +113,8 @@ Invesco official holdings / weighted sector API
 
 - `etf_holdings_snapshot`은 ETF 내부 구성 row의 source-of-truth snapshot이다.
 - `etf_exposure_snapshot`은 holdings row 또는 provider aggregate에서 만든 derived summary다.
-- P2-3 초기 source map은 iShares `AOR/IEF/TLT`, SSGA `SPY/BIL`, Invesco `QQQ`다.
-- `GLD`는 row-level holdings source가 bar list PDF 성격이라 synthetic 100% commodity row를 만들지 않고 missing으로 둔다.
+- P2-5C부터 source map discovery가 verified endpoint를 DB에 저장한다. 현재 smoke 기준 `MTUM`, `QUAL`, `SOXX`, `USMV`, `XLE`, `XLU`도 자동 수집 가능한 mapping으로 검증됐다.
+- `GLD`, `IAU`는 금 현물 ETF 특성상 row-level stock holdings가 아니라 synthetic `commodity_gold` 100% gold exposure row로 저장한다.
 - `AOR`은 현재 1차 ETF holdings만 저장하고, iShares Aggregate Underlying 구간은 2차 look-through expansion 후속으로 둔다.
 - P2-5A부터 이 수집과 exposure 재집계는 `Workspace > Ingestion > Practical Validation Provider Snapshots > ETF Holdings / Exposure`에서 실행할 수 있다.
 - P2-5B부터 Practical Validation 2번 / 3번 진단은 이 holdings / exposure snapshot을 우선 읽고, JSONL에는 full row가 아니라 compact provider coverage와 top evidence만 저장한다.

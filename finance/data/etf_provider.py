@@ -21,6 +21,7 @@ from .db.schema import PROVIDER_SCHEMAS, sync_table_schema
 
 DB_META = "finance_meta"
 DB_PRICE = "finance_price"
+SOURCE_MAP_TABLE = "etf_provider_source_map"
 OPERABILITY_TABLE = "etf_operability_snapshot"
 HOLDINGS_TABLE = "etf_holdings_snapshot"
 EXPOSURE_TABLE = "etf_exposure_snapshot"
@@ -152,6 +153,556 @@ EXPOSURE_PROVIDER_SOURCES: dict[str, dict[str, Any]] = {
         "page_url": "https://www.invesco.com/qqq-etf/en/about.html",
     },
 }
+
+ISHARES_PRODUCT_LIST_URL = "https://www.ishares.com/us/products/etf-investments"
+SSGA_HOLDINGS_URL_TEMPLATE = (
+    "https://www.ssga.com/library-content/products/fund-data/etfs/us/"
+    "holdings-daily-us-en-{symbol}.xlsx"
+)
+INVESCO_HOLDINGS_URL_TEMPLATE = (
+    "https://dng-api.invesco.com/cache/v1/accounts/en_US/shareclasses/{symbol}/holdings/fund"
+    "?idType=ticker&interval=monthly&productType=ETF"
+)
+INVESCO_SECTOR_URL_TEMPLATE = (
+    "https://dng-api.invesco.com/cache/v1/accounts/en_US/shareclasses/{symbol}/weightedHoldings/fund"
+    "?idType=ticker&productType=ETF&breakdown=sector"
+)
+
+
+def _sync_provider_source_map_schema(db: MySQLClient) -> None:
+    db.execute(PROVIDER_SCHEMAS["etf_provider_source_map"])
+    sync_table_schema(db, SOURCE_MAP_TABLE, PROVIDER_SCHEMAS["etf_provider_source_map"], DB_META)
+
+
+def _infer_provider_key(*values: Any) -> str | None:
+    text = " ".join(str(value or "") for value in values).lower()
+    if "ishares" in text or "blackrock" in text:
+        return "ishares"
+    if "state street" in text or "spdr" in text or "select sector" in text:
+        return "ssga"
+    if "invesco" in text or "qqq" in text:
+        return "invesco"
+    if "vanguard" in text:
+        return "vanguard"
+    return None
+
+
+def _is_gold_or_commodity_etf(*values: Any) -> bool:
+    text = " ".join(str(value or "") for value in values).lower()
+    return "gold" in text or "bullion" in text
+
+
+def _fetch_ishares_product_index(timeout: int = OFFICIAL_REQUEST_TIMEOUT) -> dict[str, dict[str, str]]:
+    document = _fetch_official_html(ISHARES_PRODUCT_LIST_URL, timeout=timeout)
+    index: dict[str, dict[str, str]] = {}
+    pattern = re.compile(
+        r'<td class="links"><a href="(?P<href>/us/products/(?P<product_id>\d+)/(?P<slug>[^"]+))">'
+        r"(?P<symbol>[A-Z0-9.\-]+)</a></td>",
+        re.IGNORECASE,
+    )
+    for match in pattern.finditer(document):
+        symbol = match.group("symbol").upper()
+        href = html.unescape(match.group("href"))
+        index[symbol] = {
+            "symbol": symbol,
+            "product_id": match.group("product_id"),
+            "product_slug": match.group("slug"),
+            "product_url": f"https://www.ishares.com{href}",
+            "holdings_url": (
+                f"https://www.ishares.com{href}/1467271812596.ajax?"
+                f"fileType=csv&fileName={symbol}_holdings&dataType=fund"
+            ),
+        }
+    return index
+
+
+def _source_map_row(
+    *,
+    symbol: str,
+    provider: str,
+    data_kind: str,
+    parser: str,
+    source_url: str,
+    source_status: str = "candidate",
+    source_ref: str | None = None,
+    fund_family: str | None = None,
+    product_id: str | None = None,
+    product_slug: str | None = None,
+    discovered_from: str | None = None,
+    metadata: dict[str, Any] | None = None,
+    verified_at: str | None = None,
+    last_checked_at: str | None = None,
+    error_msg: str | None = None,
+) -> dict[str, Any]:
+    return {
+        "symbol": str(symbol or "").upper(),
+        "provider": provider,
+        "data_kind": data_kind,
+        "parser": parser,
+        "source_url": source_url,
+        "source_ref": source_ref,
+        "source_status": source_status,
+        "fund_family": fund_family,
+        "product_id": product_id,
+        "product_slug": product_slug,
+        "discovered_from": discovered_from,
+        "metadata_json": json.dumps(metadata or {}, ensure_ascii=False),
+        "verified_at": verified_at,
+        "last_checked_at": last_checked_at,
+        "error_msg": error_msg,
+    }
+
+
+def _static_source_map_rows(symbol: str) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    if symbol in OFFICIAL_PROVIDER_SOURCES:
+        info = OFFICIAL_PROVIDER_SOURCES[symbol]
+        rows.append(
+            _source_map_row(
+                symbol=symbol,
+                provider=str(info.get("source") or "official"),
+                data_kind="operability",
+                parser=str(info.get("parser") or ""),
+                source_url=str(info.get("url") or ""),
+                source_status="verified",
+                fund_family=info.get("fund_family"),
+                discovered_from="static_code_map",
+                metadata={key: info.get(key) for key in ("leverage_factor", "is_inverse", "has_daily_objective")},
+                verified_at=_utc_now_string(),
+                last_checked_at=_utc_now_string(),
+            )
+        )
+    if symbol in HOLDINGS_PROVIDER_SOURCES:
+        info = HOLDINGS_PROVIDER_SOURCES[symbol]
+        parser = str(info.get("parser") or "")
+        status = "unsupported" if parser == "pending" else "verified"
+        rows.append(
+            _source_map_row(
+                symbol=symbol,
+                provider=str(info.get("source") or "official"),
+                data_kind="holdings",
+                parser=parser,
+                source_url=str(info.get("url") or ""),
+                source_status=status,
+                source_ref=info.get("page_url"),
+                discovered_from="static_code_map",
+                metadata={key: info.get(key) for key in ("asset_class",)},
+                verified_at=_utc_now_string() if status == "verified" else None,
+                last_checked_at=_utc_now_string(),
+                error_msg="official row-level holdings source pending" if parser == "pending" else None,
+            )
+        )
+    if symbol in EXPOSURE_PROVIDER_SOURCES:
+        info = EXPOSURE_PROVIDER_SOURCES[symbol]
+        rows.append(
+            _source_map_row(
+                symbol=symbol,
+                provider=str(info.get("source") or "official"),
+                data_kind="exposure",
+                parser=str(info.get("parser") or ""),
+                source_url=str(info.get("url") or ""),
+                source_status="verified",
+                source_ref=info.get("page_url"),
+                discovered_from="static_code_map",
+                verified_at=_utc_now_string(),
+                last_checked_at=_utc_now_string(),
+            )
+        )
+    return rows
+
+
+def _verify_provider_source(row: dict[str, Any], *, timeout: int = OFFICIAL_REQUEST_TIMEOUT) -> dict[str, Any]:
+    checked_at = _utc_now_string()
+    parser = str(row.get("parser") or "")
+    source_url = str(row.get("source_url") or "")
+    try:
+        if parser == "ishares_csv":
+            data = _fetch_official_bytes(source_url, timeout=timeout, accept="text/csv,*/*")
+            ok = len(data) > 100 and (b"Fund Holdings as of" in data[:1000] or b"Ticker,Name" in data[:3000])
+            if not ok:
+                raise RuntimeError("iShares holdings CSV did not contain holdings content")
+        elif parser == "ssga_xlsx":
+            data = _fetch_official_bytes(
+                source_url,
+                timeout=timeout,
+                accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,*/*",
+            )
+            if data[:2] != b"PK":
+                raise RuntimeError("SSGA holdings endpoint did not return an XLSX payload")
+        elif parser == "invesco_json":
+            payload = _fetch_official_json(source_url, timeout=timeout)
+            if "holdings" not in payload:
+                raise RuntimeError("Invesco holdings payload has no holdings key")
+        elif parser == "invesco_sector_json":
+            payload = _fetch_official_json(source_url, timeout=timeout)
+            if "holdingWeights" not in payload:
+                raise RuntimeError("Invesco sector payload has no holdingWeights key")
+        elif parser == "commodity_gold":
+            pass
+        elif parser in {"ishares", "ssga", "invesco"}:
+            _fetch_official_html(source_url, timeout=timeout)
+        else:
+            return {**row, "source_status": "unsupported", "last_checked_at": checked_at, "error_msg": f"unsupported parser: {parser}"}
+    except Exception as exc:
+        return {**row, "source_status": "failed", "last_checked_at": checked_at, "error_msg": str(exc)[:1000]}
+    return {**row, "source_status": "verified", "verified_at": checked_at, "last_checked_at": checked_at, "error_msg": None}
+
+
+def _candidate_source_rows_for_universe_row(
+    row: dict[str, Any],
+    *,
+    ishares_index: dict[str, dict[str, str]] | None = None,
+) -> list[dict[str, Any]]:
+    symbol = str(row.get("symbol") or "").upper()
+    fund_family = _to_none(row.get("fund_family"))
+    long_name = _to_none(row.get("long_name"))
+    name = _to_none(row.get("name"))
+    provider = _infer_provider_key(fund_family, long_name, name)
+    rows = _static_source_map_rows(symbol)
+
+    if _is_gold_or_commodity_etf(long_name, name):
+        rows = [
+            source_row
+            for source_row in rows
+            if not (
+                source_row.get("data_kind") in {"holdings", "exposure"}
+                and source_row.get("parser") == "pending"
+            )
+        ]
+        if provider == "ishares" and ishares_index and symbol in ishares_index:
+            product = ishares_index[symbol]
+            rows.append(
+                _source_map_row(
+                    symbol=symbol,
+                    provider="ishares",
+                    data_kind="operability",
+                    parser="ishares",
+                    source_url=product["product_url"],
+                    source_status="candidate",
+                    fund_family=fund_family or "iShares",
+                    product_id=product.get("product_id"),
+                    product_slug=product.get("product_slug"),
+                    discovered_from="ishares_product_list",
+                )
+            )
+        gold_provider = provider or "commodity"
+        for data_kind in ("holdings", "exposure"):
+            rows.append(
+                _source_map_row(
+                    symbol=symbol,
+                    provider=gold_provider,
+                    data_kind=data_kind,
+                    parser="commodity_gold",
+                    source_url=str(row.get("url") or f"commodity://gold/{symbol.lower()}"),
+                    source_status="candidate",
+                    fund_family=fund_family,
+                    discovered_from="asset_profile_gold_rule",
+                    metadata={"asset_class": "Gold", "holding_name": "Gold Bullion"},
+                )
+            )
+        return rows
+
+    if provider == "ishares" and ishares_index and symbol in ishares_index:
+        product = ishares_index[symbol]
+        rows.append(
+            _source_map_row(
+                symbol=symbol,
+                provider="ishares",
+                data_kind="operability",
+                parser="ishares",
+                source_url=product["product_url"],
+                source_status="candidate",
+                fund_family=fund_family or "iShares",
+                product_id=product.get("product_id"),
+                product_slug=product.get("product_slug"),
+                discovered_from="ishares_product_list",
+            )
+        )
+        rows.append(
+            _source_map_row(
+                symbol=symbol,
+                provider="ishares",
+                data_kind="holdings",
+                parser="ishares_csv",
+                source_url=product["holdings_url"],
+                source_ref=product["product_url"],
+                source_status="candidate",
+                fund_family=fund_family or "iShares",
+                product_id=product.get("product_id"),
+                product_slug=product.get("product_slug"),
+                discovered_from="ishares_product_list",
+            )
+        )
+    elif provider == "ssga":
+        holdings_url = SSGA_HOLDINGS_URL_TEMPLATE.format(symbol=symbol.lower())
+        rows.append(
+            _source_map_row(
+                symbol=symbol,
+                provider="ssga",
+                data_kind="holdings",
+                parser="ssga_xlsx",
+                source_url=holdings_url,
+                source_status="candidate",
+                fund_family=fund_family,
+                discovered_from="ssga_symbol_pattern",
+                metadata={"asset_class": "Equity"},
+            )
+        )
+    elif provider == "invesco":
+        rows.append(
+            _source_map_row(
+                symbol=symbol,
+                provider="invesco",
+                data_kind="holdings",
+                parser="invesco_json",
+                source_url=INVESCO_HOLDINGS_URL_TEMPLATE.format(symbol=symbol),
+                source_status="candidate",
+                fund_family=fund_family,
+                discovered_from="invesco_symbol_pattern",
+                metadata={"asset_class": "Equity"},
+            )
+        )
+        rows.append(
+            _source_map_row(
+                symbol=symbol,
+                provider="invesco",
+                data_kind="exposure",
+                parser="invesco_sector_json",
+                source_url=INVESCO_SECTOR_URL_TEMPLATE.format(symbol=symbol),
+                source_status="candidate",
+                fund_family=fund_family,
+                discovered_from="invesco_symbol_pattern",
+            )
+        )
+
+    return rows
+
+
+def _dedupe_source_map_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    priority = {"verified": 5, "candidate": 4, "failed": 3, "unsupported": 2, "missing": 1}
+    deduped: dict[tuple[str, str, str, str], dict[str, Any]] = {}
+    for row in rows:
+        key = (
+            str(row.get("symbol") or "").upper(),
+            str(row.get("data_kind") or ""),
+            str(row.get("provider") or ""),
+            str(row.get("parser") or ""),
+        )
+        existing = deduped.get(key)
+        if existing is None or priority.get(str(row.get("source_status")), 0) >= priority.get(str(existing.get("source_status")), 0):
+            deduped[key] = row
+    return list(deduped.values())
+
+
+def _load_etf_universe_rows(
+    db: MySQLClient,
+    *,
+    symbols: list[str] | None = None,
+    limit: int | None = None,
+) -> list[dict[str, Any]]:
+    where: list[str] = []
+    params: list[Any] = []
+    if symbols:
+        placeholders = ",".join(["%s"] * len(symbols))
+        where.append(f"ne.symbol IN ({placeholders})")
+        params.extend(symbols)
+    base_where = f"WHERE {' AND '.join(where)}" if where else ""
+    limit_sql = " LIMIT %s" if limit is not None and int(limit) > 0 else ""
+    if limit_sql:
+        params.append(int(limit))
+    return db.query(
+        f"""
+        SELECT
+          ne.symbol,
+          ne.name,
+          ne.url,
+          nap.long_name,
+          nap.fund_family,
+          nap.exchange,
+          nap.total_assets,
+          nap.status AS profile_status
+        FROM nyse_etf ne
+        LEFT JOIN nyse_asset_profile nap
+          ON nap.symbol = ne.symbol
+         AND nap.kind = 'etf'
+        {base_where}
+        ORDER BY ne.symbol ASC
+        {limit_sql}
+        """,
+        params,
+    )
+
+
+def _upsert_etf_provider_source_map_rows(db: MySQLClient, rows: list[dict[str, Any]]) -> None:
+    if not rows:
+        return
+    sql = f"""
+    INSERT INTO {SOURCE_MAP_TABLE} (
+      symbol, provider, data_kind, parser, source_url, source_ref,
+      source_status, fund_family, product_id, product_slug, discovered_from,
+      metadata_json, verified_at, last_checked_at, error_msg
+    )
+    VALUES (
+      %(symbol)s, %(provider)s, %(data_kind)s, %(parser)s, %(source_url)s, %(source_ref)s,
+      %(source_status)s, %(fund_family)s, %(product_id)s, %(product_slug)s, %(discovered_from)s,
+      %(metadata_json)s, %(verified_at)s, %(last_checked_at)s, %(error_msg)s
+    )
+    ON DUPLICATE KEY UPDATE
+      source_url = VALUES(source_url),
+      source_ref = VALUES(source_ref),
+      source_status = VALUES(source_status),
+      fund_family = VALUES(fund_family),
+      product_id = VALUES(product_id),
+      product_slug = VALUES(product_slug),
+      discovered_from = VALUES(discovered_from),
+      metadata_json = VALUES(metadata_json),
+      verified_at = VALUES(verified_at),
+      last_checked_at = VALUES(last_checked_at),
+      error_msg = VALUES(error_msg)
+    """
+    db.executemany(sql, rows)
+
+
+def load_etf_provider_source_map(
+    symbols: str | Iterable[str] | None = None,
+    *,
+    data_kind: str | None = None,
+    only_verified: bool = True,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> list[dict[str, Any]]:
+    """Load cached ETF provider source mappings discovered from ETF universe/profile data."""
+    normalized_symbols = _normalize_symbols(symbols) if symbols is not None else []
+    where: list[str] = []
+    params: list[Any] = []
+    if normalized_symbols:
+        placeholders = ",".join(["%s"] * len(normalized_symbols))
+        where.append(f"symbol IN ({placeholders})")
+        params.extend(normalized_symbols)
+    if data_kind:
+        where.append("data_kind = %s")
+        params.append(str(data_kind).strip())
+    if only_verified:
+        where.append("source_status = 'verified'")
+    base_where = f"WHERE {' AND '.join(where)}" if where else ""
+
+    db = MySQLClient(host, user, password, port)
+    try:
+        db.use_db(DB_META)
+        _sync_provider_source_map_schema(db)
+        return db.query(
+            f"""
+            SELECT *
+            FROM {SOURCE_MAP_TABLE}
+            {base_where}
+            ORDER BY symbol ASC, data_kind ASC, provider ASC, parser ASC
+            """,
+            params,
+        )
+    finally:
+        db.close()
+
+
+def _source_map_info_by_symbol(symbols: list[str], *, data_kind: str, only_source: str | None = None) -> dict[str, dict[str, Any]]:
+    rows = load_etf_provider_source_map(symbols, data_kind=data_kind, only_verified=True)
+    out: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        symbol = str(row.get("symbol") or "").upper()
+        if not symbol:
+            continue
+        if only_source is not None and str(row.get("provider") or "").lower() != str(only_source).lower():
+            continue
+        metadata = {}
+        try:
+            metadata = json.loads(row.get("metadata_json") or "{}")
+        except Exception:
+            metadata = {}
+        out[symbol] = {
+            "source": row.get("provider"),
+            "parser": row.get("parser"),
+            "url": row.get("source_url"),
+            "page_url": row.get("source_ref"),
+            "asset_class": metadata.get("asset_class"),
+            "holding_name": metadata.get("holding_name"),
+            "fund_family": row.get("fund_family"),
+        }
+    return out
+
+
+def discover_and_store_etf_provider_source_map(
+    symbols: str | Iterable[str] | None = None,
+    *,
+    limit: int | None = None,
+    verify: bool = True,
+    timeout: int = OFFICIAL_REQUEST_TIMEOUT,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> dict[str, Any]:
+    """Discover official ETF provider endpoints from NYSE universe/profile rows and cache them in DB."""
+    normalized_symbols = _normalize_symbols(symbols) if symbols is not None else None
+    db = MySQLClient(host, user, password, port)
+    try:
+        db.use_db(DB_META)
+        _sync_provider_source_map_schema(db)
+        universe_rows = _load_etf_universe_rows(db, symbols=normalized_symbols, limit=limit)
+    finally:
+        db.close()
+
+    needs_ishares_index = any(
+        _infer_provider_key(row.get("fund_family"), row.get("long_name"), row.get("name")) == "ishares"
+        and not _is_gold_or_commodity_etf(row.get("long_name"), row.get("name"))
+        for row in universe_rows
+    )
+    ishares_index: dict[str, dict[str, str]] = {}
+    index_error: str | None = None
+    if needs_ishares_index:
+        try:
+            ishares_index = _fetch_ishares_product_index(timeout=timeout)
+        except Exception as exc:
+            index_error = str(exc)[:1000]
+
+    rows: list[dict[str, Any]] = []
+    for universe_row in universe_rows:
+        rows.extend(_candidate_source_rows_for_universe_row(universe_row, ishares_index=ishares_index))
+    rows = _dedupe_source_map_rows(rows)
+    if verify:
+        rows = [_verify_provider_source(row, timeout=timeout) for row in rows]
+    elif rows:
+        checked_at = _utc_now_string()
+        rows = [{**row, "last_checked_at": row.get("last_checked_at") or checked_at} for row in rows]
+
+    db = MySQLClient(host, user, password, port)
+    try:
+        db.use_db(DB_META)
+        _sync_provider_source_map_schema(db)
+        _upsert_etf_provider_source_map_rows(db, rows)
+    finally:
+        db.close()
+
+    status_counts: dict[str, int] = {}
+    for row in rows:
+        status = str(row.get("source_status") or "candidate")
+        status_counts[status] = status_counts.get(status, 0) + 1
+    failed = [
+        {"symbol": row.get("symbol"), "data_kind": row.get("data_kind"), "reason": row.get("error_msg")}
+        for row in rows
+        if row.get("source_status") in {"failed", "unsupported", "missing"}
+    ]
+    return {
+        "requested": len(universe_rows),
+        "stored": len(rows),
+        "verified": status_counts.get("verified", 0),
+        "status_counts": status_counts,
+        "failed": failed,
+        "index_error": index_error,
+        "symbols": [row.get("symbol") for row in universe_rows],
+        "target_table": f"{DB_META}.{SOURCE_MAP_TABLE}",
+    }
+
 
 _DATE_PATTERN = re.compile(
     r"\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)"
@@ -951,9 +1502,10 @@ def _build_official_rows(
         "ssga": _parse_ssga_operability,
         "invesco": _parse_invesco_operability,
     }
+    source_map = _source_map_info_by_symbol(symbols, data_kind="operability", only_source=only_source)
 
     for symbol in symbols:
-        source_info = OFFICIAL_PROVIDER_SOURCES.get(symbol)
+        source_info = source_map.get(symbol) or OFFICIAL_PROVIDER_SOURCES.get(symbol)
         if not source_info or (only_source is not None and source_info.get("source") != only_source):
             row = _official_row_base(
                 symbol,
@@ -1220,6 +1772,35 @@ def _parse_invesco_holdings_json(
     return _apply_holdings_coverage(rows)
 
 
+def _build_commodity_gold_holdings_rows(
+    fund_symbol: str,
+    source_info: dict[str, Any],
+    *,
+    as_of_fallback: str | None,
+    collected_at: str,
+) -> list[dict[str, Any]]:
+    row = _holdings_row_base(
+        fund_symbol,
+        source_info,
+        as_of_date=as_of_fallback or pd.Timestamp.utcnow().strftime("%Y-%m-%d"),
+        collected_at=collected_at,
+    )
+    row.update(
+        {
+            "holding_id": "gold_bullion",
+            "holding_symbol": "GOLD",
+            "holding_name": source_info.get("holding_name") or "Gold Bullion",
+            "holding_type": "Commodity",
+            "weight_pct": 100.0,
+            "asset_class": "Gold",
+            "currency": "USD",
+            "coverage_status": "actual",
+            "missing_fields_json": json.dumps([], ensure_ascii=False),
+        }
+    )
+    return [row]
+
+
 def _build_official_holdings_rows(
     symbols: list[str],
     *,
@@ -1231,9 +1812,10 @@ def _build_official_holdings_rows(
     rows: list[dict[str, Any]] = []
     missing: list[str] = []
     failed: list[dict[str, str]] = []
+    source_map = _source_map_info_by_symbol(symbols, data_kind="holdings", only_source=only_source)
 
     for symbol in symbols:
-        source_info = HOLDINGS_PROVIDER_SOURCES.get(symbol)
+        source_info = source_map.get(symbol) or HOLDINGS_PROVIDER_SOURCES.get(symbol)
         if not source_info or (only_source is not None and source_info.get("source") != only_source):
             missing.append(symbol)
             continue
@@ -1276,6 +1858,15 @@ def _build_official_holdings_rows(
                         symbol,
                         source_info,
                         payload,
+                        as_of_fallback=as_of_date,
+                        collected_at=collected_at,
+                    )
+                )
+            elif parser == "commodity_gold":
+                rows.extend(
+                    _build_commodity_gold_holdings_rows(
+                        symbol,
+                        source_info,
                         as_of_fallback=as_of_date,
                         collected_at=collected_at,
                     )
@@ -1689,8 +2280,9 @@ def _build_provider_aggregate_exposure_rows(
     collected_at = _utc_now_string()
     rows: list[dict[str, Any]] = []
     failed: list[dict[str, str]] = []
+    source_map = _source_map_info_by_symbol(symbols, data_kind="exposure", only_source=only_source)
     for symbol in symbols:
-        source_info = EXPOSURE_PROVIDER_SOURCES.get(symbol)
+        source_info = source_map.get(symbol) or EXPOSURE_PROVIDER_SOURCES.get(symbol)
         if not source_info or (only_source is not None and source_info.get("source") != only_source):
             continue
         try:
@@ -1714,6 +2306,22 @@ def _build_provider_aggregate_exposure_rows(
                         source_info,
                         payload,
                         as_of_fallback=as_of_date,
+                        collected_at=collected_at,
+                    )
+                )
+            elif parser == "commodity_gold":
+                rows.append(
+                    _exposure_row(
+                        fund_symbol=symbol,
+                        as_of_date=as_of_date or pd.Timestamp.utcnow().strftime("%Y-%m-%d"),
+                        source=str(source_info.get("source") or "commodity"),
+                        source_type="official",
+                        source_ref=source_info.get("url"),
+                        derived_from="provider_aggregate",
+                        exposure_type="asset_class",
+                        exposure_name="Gold",
+                        weight_pct=100.0,
+                        coverage_status="actual",
                         collected_at=collected_at,
                     )
                 )
