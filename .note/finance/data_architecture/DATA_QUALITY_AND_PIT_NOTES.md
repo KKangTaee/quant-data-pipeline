@@ -49,6 +49,9 @@
   AOR은 현재 1차 ETF holdings만 저장하고, 2차 Aggregate Underlying look-through는 후속이다.
   GLD는 row-level source가 bar list PDF 성격이라 synthetic holdings row를 만들지 않는다.
   holdings와 exposure 모두 과거 특정 검증일의 point-in-time truth로 쓰려면 해당 날짜의 provider snapshot이 DB에 있어야 한다.
+- `macro_series_observation`은 FRED observation date 기준 market-context series다.
+  FRED API key가 없으면 official CSV download를 사용하며, Practical Validation에서는 최신 관측값과 staleness를 함께 봐야 한다.
+  vintage / revision point-in-time까지 보장하는 ALFRED 계층은 아직 구현하지 않았다.
 
 ## Fundamentals / factors
 

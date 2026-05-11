@@ -217,9 +217,9 @@ P2-2부터는 이 계약을 기준으로 진행한다.
 |---|---|
 | `finance_price.nyse_price_history` | OHLCV / volume / latest market date / ADV proxy 계산 가능 |
 | `finance_meta.nyse_asset_profile` | `total_assets`, `bid`, `ask`, `fund_family`, `status`를 저장할 수 있으나 실제 coverage는 낮음 |
-| ETF holdings | 별도 table / loader 없음 |
-| Macro series | 별도 table / loader 없음 |
-| Sentiment series | 별도 table / loader 없음 |
+| ETF holdings | P2-3 기준 `etf_holdings_snapshot` / `etf_exposure_snapshot` table과 loader 있음. Practical Validation 연결은 P2-5 |
+| Macro series | P2-4 기준 `macro_series_observation` table과 `load_macro_snapshot()` loader 있음. Practical Validation 연결은 P2-5 |
+| Sentiment series | 별도 composite table은 없고, P2-4 기준 VIX / yield curve / credit spread 기반 market-context proxy를 macro table로 공유 |
 
 ## P2 범위
 
@@ -500,10 +500,12 @@ official provider / API / CSV / XLSX / yfinance fallback
 
 주요 작업:
 
-- FRED `series/observations` collector
-- 1차 series: `VIXCLS`, `T10Y3M`, `BAA10Y`
-- optional series: HY OAS 등은 coverage 기간을 확인한 뒤 추가
-- FRED API key는 hardcode하지 않고 env / config boundary로 둔다.
+- P2-4 구현 완료: `macro_series_observation` schema 추가
+- P2-4 구현 완료: `finance/data/macro.py` FRED collector 추가
+- P2-4 구현 완료: API key가 있으면 FRED `series/observations`, 없으면 FRED official CSV download를 사용하는 source mode 추가
+- P2-4 구현 완료: 1차 series `VIXCLS`, `T10Y3M`, `BAA10Y` 수집
+- P2-4 구현 완료: `finance/loaders/macro.py` range loader와 기준일 snapshot / staleness loader 추가
+- P2-4 후속: HY OAS, financial stress index, composite sentiment index는 coverage / source 안정성 확인 후 optional 확장
 
 검증:
 

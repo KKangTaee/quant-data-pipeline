@@ -97,6 +97,26 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - sector가 없는 holdings source는 asset class / currency exposure만 만들 수 있다.
 - Practical Validation result JSONL에는 full exposure table이 아니라 compact summary만 저장하는 방향이다.
 
+## `macro_series_observation`
+
+역할:
+
+- Practical Validation V2의 market-context 진단에 쓸 macro / sentiment proxy observation 저장
+- VIX, yield curve, credit spread 같은 series를 long-form으로 보존
+
+성격:
+
+- provider snapshot table이다.
+- P2-4 초기 구현은 FRED `VIXCLS`, `T10Y3M`, `BAA10Y`를 수집한다.
+- `series_id`, `observation_date`, `source`가 business key다.
+- API key가 있으면 FRED API, 없으면 FRED official CSV download를 사용한다.
+
+주의:
+
+- macro / sentiment는 trade signal이 아니라 validation 기준일의 시장 환경 설명 자료다.
+- FRED value는 observation date 기준 데이터이며, 실제 발표 / 수정 vintage point-in-time truth와는 구분해야 한다.
+- Practical Validation result JSONL에는 full series를 저장하지 않고 compact snapshot / staleness만 저장하는 방향이다.
+
 ## `nyse_price_history`
 
 역할:

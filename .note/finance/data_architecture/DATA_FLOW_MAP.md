@@ -103,6 +103,24 @@ Invesco official holdings / weighted sector API
 - `GLD`는 row-level holdings source가 bar list PDF 성격이라 synthetic 100% commodity row를 만들지 않고 missing으로 둔다.
 - `AOR`은 현재 1차 ETF holdings만 저장하고, iShares Aggregate Underlying 구간은 2차 look-through expansion 후속으로 둔다.
 
+## Macro / sentiment market-context 흐름
+
+```text
+FRED API or FRED official CSV download
+  -> finance.data.macro.collect_and_store_macro_series()
+  -> finance_meta.macro_series_observation
+  -> finance.loaders.macro.load_macro_series_observations()
+  -> finance.loaders.macro.load_macro_snapshot()
+  -> Practical Validation market-context provider context
+```
+
+의미:
+
+- P2-4 초기 series는 `VIXCLS`, `T10Y3M`, `BAA10Y`다.
+- API key가 있으면 FRED API를 쓰고, 없으면 official `fredgraph.csv` download를 사용한다.
+- sentiment는 별도 composite index crawling이 아니라 VIX / credit spread / yield curve 기반 market-context proxy로 시작한다.
+- `load_macro_snapshot()`은 기준일 이전 최신 관측값과 `staleness_days`를 함께 반환한다.
+
 ## Broad fundamentals / factors 흐름
 
 ```text

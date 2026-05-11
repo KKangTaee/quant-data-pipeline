@@ -26,6 +26,7 @@ from .fundamentals import (
     load_statement_fundamentals_shadow,
     load_statement_shadow_coverage_summary,
 )
+from .macro import load_macro_series_observations, load_macro_snapshot
 from .price import (
     load_latest_market_date,
     load_latest_prices,
@@ -51,6 +52,8 @@ __all__ = [
     "load_fundamental_snapshot",
     "load_statement_fundamentals_shadow",
     "load_statement_shadow_coverage_summary",
+    "load_macro_series_observations",
+    "load_macro_snapshot",
     "load_factors",
     "load_factor_snapshot",
     "load_factor_matrix",

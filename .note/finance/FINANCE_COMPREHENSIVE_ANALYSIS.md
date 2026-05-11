@@ -21,7 +21,7 @@ DB / strategy / runtime / UI 연결을 한 번에 확인하기 위한 상세 분
 - 범위 포함: `finance` 패키지 전체
 - 범위 제외: `financial_advisor`
 - 최초 기준 시점: 2026-03-11
-- 최근 동기화 기준: 2026-05-11 / Practical Validation V2 P2-3 ETF holdings / exposure snapshot initial implementation
+- 최근 동기화 기준: 2026-05-11 / Practical Validation V2 P2-4 macro / sentiment market-context snapshot initial implementation
 
 ---
 
@@ -337,7 +337,7 @@ web UI가 그 wrapper의 result bundle을 받아 single / compare / Operations h
 상세한 source -> table -> loader -> runtime 흐름은
 `.note/finance/data_architecture/DATA_FLOW_MAP.md`에서 관리한다.
 
-핵심 흐름은 네 가지다.
+핵심 흐름은 아래와 같다.
 
 | 흐름 | 요약 | 상세 문서 |
 |---|---|---|
@@ -345,6 +345,7 @@ web UI가 그 wrapper의 result bundle을 받아 single / compare / Operations h
 | Price | yfinance -> direct research path 또는 `nyse_price_history` DB path | `data_architecture/DATA_FLOW_MAP.md` |
 | ETF operability provider snapshot | `nyse_price_history` / `nyse_asset_profile` bridge + iShares / SSGA / Invesco official page -> `etf_operability_snapshot` -> provider loader | `data_architecture/DATA_FLOW_MAP.md` |
 | ETF holdings / exposure provider snapshot | iShares CSV / SSGA XLSX / Invesco API -> `etf_holdings_snapshot` / `etf_exposure_snapshot` -> provider loader | `data_architecture/DATA_FLOW_MAP.md` |
+| Macro / sentiment market-context snapshot | FRED API 또는 official CSV -> `macro_series_observation` -> macro loader | `data_architecture/DATA_FLOW_MAP.md` |
 | Broad fundamentals / factors | yfinance statements -> `nyse_fundamentals` -> `nyse_factors` | `data_architecture/DATA_FLOW_MAP.md` |
 | Statement-driven path | EDGAR / statement values -> fundamentals shadow -> factors shadow | `data_architecture/DATA_FLOW_MAP.md` |
 
@@ -367,7 +368,7 @@ web UI가 그 wrapper의 result bundle을 받아 single / compare / Operations h
 
 | DB | 주요 table | 역할 |
 |---|---|---|
-| `finance_meta` | `nyse_stock`, `nyse_etf`, `nyse_asset_profile`, `etf_operability_snapshot`, `etf_holdings_snapshot`, `etf_exposure_snapshot` | universe / listing / profile metadata / ETF operability / holdings / exposure provider snapshot |
+| `finance_meta` | `nyse_stock`, `nyse_etf`, `nyse_asset_profile`, `etf_operability_snapshot`, `etf_holdings_snapshot`, `etf_exposure_snapshot`, `macro_series_observation` | universe / listing / profile metadata / ETF operability / holdings / exposure / macro market-context provider snapshot |
 | `finance_price` | `nyse_price_history` | stock / ETF 공용 price ledger |
 | `finance_fundamental` | `nyse_fundamentals`, `nyse_factors`, `nyse_fundamentals_statement`, `nyse_factors_statement`, statement filings / values / labels | fundamentals, factors, detailed statement data |
 
@@ -385,7 +386,7 @@ web UI가 그 wrapper의 result bundle을 받아 single / compare / Operations h
 |---|---|---|
 | master | universe / symbol master | `nyse_stock`, `nyse_etf` |
 | profile | current profile snapshot | `nyse_asset_profile` |
-| provider snapshot | 검증용 provider / DB bridge / official issuer snapshot | `etf_operability_snapshot`, `etf_holdings_snapshot` |
+| provider snapshot | 검증용 provider / DB bridge / official issuer / FRED snapshot | `etf_operability_snapshot`, `etf_holdings_snapshot`, `macro_series_observation` |
 | raw ledger | raw source에 가까운 fact ledger | `nyse_price_history`, `nyse_financial_statement_values` |
 | filing ledger | filing 단위 metadata | `nyse_financial_statement_filings` |
 | broad summary | provider-normalized convenience summary | `nyse_fundamentals` |

@@ -38,9 +38,11 @@ from finance.data.asset_profile import(
     collect_and_store_asset_profiles,
     load_symbols_from_asset_profile
 )
+from finance.data.macro import collect_and_store_macro_series
 from .loaders import (
     load_asset_profile_status_summary,
     load_factor_snapshot,
+    load_macro_snapshot,
     load_price_history,
     load_statement_factor_snapshot_shadow,
     load_statement_factors_shadow,
@@ -2578,6 +2580,15 @@ def financial_statements_sample(symbols=None, freq="annual"):
         symbols = ["AAPL", "MSFT", "JPM"]
 
     return upsert_financial_statements(symbols=symbols, freq=freq, period=freq)
+
+
+def macro_market_context_sample(start="2026-01-01", end=None):
+    """
+    FRED market-context series 수집 후 기준일 snapshot을 확인하는 샘플.
+    """
+    collect_summary = collect_and_store_macro_series(start=start, end=end)
+    snapshot = load_macro_snapshot(as_of_date=end)
+    return collect_summary, snapshot
     """
         DB-backed runtime sample.
     """

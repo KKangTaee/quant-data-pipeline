@@ -28,6 +28,7 @@ external source
 | local DB bridge | ETF operability snapshot의 1차 bridge / proxy source. `nyse_price_history`, `nyse_asset_profile`에서 계산 |
 | ETF issuer official pages | ETF operability actual / partial source. 초기 구현은 iShares, SSGA / SPDR, Invesco 일부 ticker |
 | ETF issuer holdings downloads / APIs | ETF holdings / exposure source. 초기 구현은 iShares CSV, SSGA XLSX, Invesco holdings / sector API |
+| FRED official API / CSV download | Practical Validation market-context source. 초기 구현은 `VIXCLS`, `T10Y3M`, `BAA10Y` |
 
 ## Persistence 계층
 
@@ -38,6 +39,7 @@ external source
 | `finance/data/nyse_db.py` | NYSE CSV를 DB universe table로 적재 |
 | `finance/data/asset_profile.py` | asset profile 수집과 저장 |
 | `finance/data/etf_provider.py` | ETF provider snapshot 수집 / 저장 경계. 기존 DB 기반 bridge/proxy row와 issuer official row를 `etf_operability_snapshot`, `etf_holdings_snapshot`, `etf_exposure_snapshot`에 저장한다 |
+| `finance/data/macro.py` | FRED market-context series 수집 / 저장 경계. API key가 있으면 FRED API, 없으면 official CSV download를 사용해 `macro_series_observation`에 저장한다 |
 | `finance/data/data.py` | price 수집 / DB read helper |
 | `finance/data/fundamentals.py` | fundamentals와 statement fundamentals shadow 적재 |
 | `finance/data/factors.py` | factor 생성과 statement factor shadow 적재 |
@@ -50,6 +52,7 @@ external source
 | `finance/loaders/universe.py` | universe와 asset profile status 조회 |
 | `finance/loaders/price.py` | price history, price matrix, freshness, symbol별 latest price 조회 |
 | `finance/loaders/provider.py` | provider snapshot read path. ETF operability / holdings / exposure snapshot을 읽는다 |
+| `finance/loaders/macro.py` | market-context read path. macro observation range와 기준일 snapshot / staleness를 읽는다 |
 | `finance/loaders/fundamentals.py` | broad fundamentals와 statement shadow fundamentals 조회 |
 | `finance/loaders/factors.py` | broad factors와 statement factor snapshot 조회 |
 | `finance/loaders/financial_statements.py` | statement values / labels / strict snapshot / timing audit 조회 |
@@ -67,6 +70,8 @@ external source
   iShares / SSGA / Invesco official page 기반 actual/partial snapshot을 source별로 함께 제공한다.
   `etf_holdings_snapshot`은 official holdings download/API row를 저장하고,
   `etf_exposure_snapshot`은 holdings aggregate와 일부 provider aggregate sector exposure를 저장한다.
+  `macro_series_observation`은 FRED market-context observation을 long-form으로 저장하고,
+  `finance/loaders/macro.py`가 validation 기준일 근처 snapshot과 staleness를 읽는다.
 
 ## 데이터 무결성 체크포인트
 

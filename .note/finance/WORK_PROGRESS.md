@@ -3750,3 +3750,10 @@ Detailed historical logs were archived on `2026-04-13`.
   - smoke ingestion 결과 holdings는 `AOR/IEF/TLT/SPY/BIL/QQQ` 703 rows actual, `GLD`는 row-level holdings source pending으로 missing 처리됐다.
   - exposure smoke 결과 asset class / sector / country / currency exposure 49 rows actual이 저장되고 loader에서 SPY / QQQ sector aggregate를 확인했다.
   - Practical Validation 진단 연결은 아직 하지 않았고 P2-5에서 Asset Allocation Fit / Concentration / Exposure 진단에 연결한다.
+- Practical Validation V2 P2-4 macro / sentiment market-context foundation 구현:
+  - `finance/data/db/schema.py`에 `macro_series_observation` schema를 추가했다.
+  - `finance/data/macro.py`를 추가해 FRED `VIXCLS`, `T10Y3M`, `BAA10Y` series를 API 또는 official CSV download로 수집하고 UPSERT 저장하게 했다.
+  - FRED API key는 hardcode하지 않고 `FRED_API_KEY` 또는 함수 인자로만 받으며, key가 없으면 official CSV download를 사용한다.
+  - `finance/loaders/macro.py`와 loader export를 추가해 observation range 조회와 기준일 snapshot / staleness 조회를 제공했다.
+  - smoke ingestion 결과 2026-01-01~2026-05-11 구간에서 265 rows를 저장했고, 2026-05-11 기준 3개 series 모두 `snapshot_status=actual`로 로딩됐다.
+  - Practical Validation 진단 연결은 아직 하지 않았고 P2-5에서 Regime / Macro Suitability와 Sentiment / Risk-On-Off Overlay 진단에 연결한다.
