@@ -23,6 +23,8 @@
 | `nyse_etf` | NYSE ETF listing master |
 | `nyse_asset_profile` | stock / ETF profile, universe filter, current ETF operability metadata |
 | `etf_operability_snapshot` | ETF 비용 / 규모 / 유동성 / spread / NAV 관련 provider snapshot. DB bridge/proxy row와 일부 issuer official actual/partial row를 source별로 저장 |
+| `etf_holdings_snapshot` | ETF 내부 holdings row provider snapshot. official issuer download/API row를 저장 |
+| `etf_exposure_snapshot` | ETF holdings 또는 provider aggregate에서 만든 asset class / sector / country / currency exposure summary |
 
 ### `finance_price`
 
@@ -55,10 +57,10 @@
 |---|---|---|
 | master | universe / symbol master | `nyse_stock`, `nyse_etf` |
 | profile | 현재 snapshot 성격의 profile metadata | `nyse_asset_profile` |
-| provider snapshot | provider / DB bridge에서 온 검증용 snapshot | `etf_operability_snapshot` |
+| provider snapshot | provider / DB bridge에서 온 검증용 snapshot | `etf_operability_snapshot`, `etf_holdings_snapshot` |
 | raw ledger | raw source에 가까운 fact ledger | `nyse_price_history`, `nyse_financial_statement_values` |
 | filing ledger | filing 단위 metadata | `nyse_financial_statement_filings` |
 | broad summary | provider-normalized convenience summary | `nyse_fundamentals` |
-| derived | 계산된 factor table | `nyse_factors` |
+| derived | 계산된 factor table 또는 holdings aggregate | `nyse_factors`, `etf_exposure_snapshot` |
 | shadow | statement raw ledger에서 재구성한 검증/전략용 layer | `nyse_fundamentals_statement`, `nyse_factors_statement` |
 | convenience | UI / 해석 보조 layer | `nyse_financial_statement_labels` |

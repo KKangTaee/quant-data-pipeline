@@ -45,6 +45,10 @@
   다만 Invesco QQQ는 현재 expense ratio / inception만 확보되어 `partial`이며,
   source map 밖 ticker는 official coverage가 없을 수 있다.
   current snapshot이므로 과거 특정 시점의 운용성 truth로 쓰면 안 된다.
+- `etf_holdings_snapshot`과 `etf_exposure_snapshot`은 official holdings / aggregate source에서 온 current snapshot이다.
+  AOR은 현재 1차 ETF holdings만 저장하고, 2차 Aggregate Underlying look-through는 후속이다.
+  GLD는 row-level source가 bar list PDF 성격이라 synthetic holdings row를 만들지 않는다.
+  holdings와 exposure 모두 과거 특정 검증일의 point-in-time truth로 쓰려면 해당 날짜의 provider snapshot이 DB에 있어야 한다.
 
 ## Fundamentals / factors
 

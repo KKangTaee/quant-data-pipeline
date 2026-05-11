@@ -475,16 +475,21 @@ official provider / API / CSV / XLSX / yfinance fallback
 
 주요 작업:
 
-- iShares AOR / IEF / TLT holdings CSV adapter
-- SSGA SPY / GLD / BIL daily holdings XLSX adapter
-- Invesco QQQ holdings endpoint 안정성 확인 및 adapter
-- AOR 같은 ETF-of-ETF는 1차 holdings와 2차 look-through 가능 여부를 분리 기록
+- P2-3 구현 완료: `etf_holdings_snapshot`, `etf_exposure_snapshot` schema 추가
+- P2-3 구현 완료: iShares `AOR`, `IEF`, `TLT` holdings CSV adapter
+- P2-3 구현 완료: SSGA / SPDR `SPY`, `BIL` daily holdings XLSX adapter
+- P2-3 구현 완료: Invesco `QQQ` holdings API adapter와 sector aggregate API adapter
+- P2-3 구현 완료: SSGA `SPY` fund sector breakdown page parser
+- P2-3 구현 완료: holdings 기반 asset class / sector / country / currency exposure aggregation
+- P2-3 후속: `GLD`는 row-level holdings source가 bar list PDF 성격이라 이번 범위에서는 missing / pending으로 둔다
+- P2-3 후속: AOR 같은 ETF-of-ETF는 현재 1차 holdings만 저장하고, 2차 look-through expansion은 이후에 분리 구현한다
 
 검증:
 
 - holdings row count와 as-of date가 저장된다.
 - exposure aggregation이 holdings weight 합계와 크게 어긋나지 않는다.
 - full holdings row는 JSONL에 저장하지 않는다.
+- Practical Validation 화면 반영은 P2-5에서 진행한다.
 
 ### 작업 단위 4. Macro / Sentiment 데이터 수집
 

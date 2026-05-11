@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import csv
 import html
+import io
 import json
 import re
+import xml.etree.ElementTree as ET
+from zipfile import ZipFile
 from collections.abc import Iterable
 from datetime import datetime, timezone
 from typing import Any
@@ -18,6 +22,8 @@ from .db.schema import PROVIDER_SCHEMAS, sync_table_schema
 DB_META = "finance_meta"
 DB_PRICE = "finance_price"
 OPERABILITY_TABLE = "etf_operability_snapshot"
+HOLDINGS_TABLE = "etf_holdings_snapshot"
+EXPOSURE_TABLE = "etf_exposure_snapshot"
 DEFAULT_LOOKBACK_DAYS = 60
 OFFICIAL_REQUEST_TIMEOUT = 20
 OFFICIAL_USER_AGENT = (
@@ -87,6 +93,63 @@ OFFICIAL_PROVIDER_SOURCES: dict[str, dict[str, Any]] = {
         "leverage_factor": 1.0,
         "is_inverse": False,
         "has_daily_objective": False,
+    },
+}
+HOLDINGS_PROVIDER_SOURCES: dict[str, dict[str, Any]] = {
+    "AOR": {
+        "source": "ishares",
+        "parser": "ishares_csv",
+        "url": "https://www.ishares.com/us/products/239756/ishares-core-60-40-balanced-allocation-etf/1467271812596.ajax?fileType=csv&fileName=AOR_holdings&dataType=fund",
+    },
+    "IEF": {
+        "source": "ishares",
+        "parser": "ishares_csv",
+        "url": "https://www.ishares.com/us/products/239456/ishares-7-10-year-treasury-bond-etf/1467271812596.ajax?fileType=csv&fileName=IEF_holdings&dataType=fund",
+    },
+    "TLT": {
+        "source": "ishares",
+        "parser": "ishares_csv",
+        "url": "https://www.ishares.com/us/products/239454/ishares-20-year-treasury-bond-etf/1467271812596.ajax?fileType=csv&fileName=TLT_holdings&dataType=fund",
+    },
+    "SPY": {
+        "source": "ssga",
+        "parser": "ssga_xlsx",
+        "url": "https://www.ssga.com/library-content/products/fund-data/etfs/us/holdings-daily-us-en-spy.xlsx",
+        "page_url": "https://www.ssga.com/us/en/intermediary/etfs/state-street-spdr-sp-500-etf-trust-spy",
+        "asset_class": "Equity",
+    },
+    "BIL": {
+        "source": "ssga",
+        "parser": "ssga_xlsx",
+        "url": "https://www.ssga.com/library-content/products/fund-data/etfs/us/holdings-daily-us-en-bil.xlsx",
+        "page_url": "https://www.ssga.com/us/en/intermediary/etfs/spdr-bloomberg-1-3-month-t-bill-etf-bil",
+        "asset_class": "Fixed Income",
+    },
+    "GLD": {
+        "source": "ssga",
+        "parser": "pending",
+        "url": "https://www.spdrgoldshares.com/usa/gld/",
+        "asset_class": "Commodity",
+    },
+    "QQQ": {
+        "source": "invesco",
+        "parser": "invesco_json",
+        "url": "https://dng-api.invesco.com/cache/v1/accounts/en_US/shareclasses/QQQ/holdings/fund?idType=ticker&interval=monthly&productType=ETF",
+        "page_url": "https://www.invesco.com/qqq-etf/en/about.html",
+        "asset_class": "Equity",
+    },
+}
+EXPOSURE_PROVIDER_SOURCES: dict[str, dict[str, Any]] = {
+    "SPY": {
+        "source": "ssga",
+        "parser": "ssga_sector_page",
+        "url": "https://www.ssga.com/us/en/intermediary/etfs/state-street-spdr-sp-500-etf-trust-spy",
+    },
+    "QQQ": {
+        "source": "invesco",
+        "parser": "invesco_sector_json",
+        "url": "https://dng-api.invesco.com/cache/v1/accounts/en_US/shareclasses/QQQ/weightedHoldings/fund?idType=ticker&productType=ETF&breakdown=sector",
+        "page_url": "https://www.invesco.com/qqq-etf/en/about.html",
     },
 }
 
@@ -177,6 +240,40 @@ def _fetch_official_html(url: str, *, timeout: int = OFFICIAL_REQUEST_TIMEOUT) -
         raise RuntimeError(f"official provider HTTP {exc.code}") from exc
     except URLError as exc:
         raise RuntimeError(f"official provider fetch failed: {exc.reason}") from exc
+
+
+def _fetch_official_bytes(
+    url: str,
+    *,
+    timeout: int = OFFICIAL_REQUEST_TIMEOUT,
+    accept: str = "*/*",
+) -> bytes:
+    request = Request(
+        url,
+        headers={
+            "User-Agent": OFFICIAL_USER_AGENT,
+            "Accept": accept,
+            "Accept-Language": "en-US,en;q=0.9",
+        },
+    )
+    try:
+        with urlopen(request, timeout=timeout) as response:
+            return response.read()
+    except HTTPError as exc:
+        raise RuntimeError(f"official provider HTTP {exc.code}") from exc
+    except URLError as exc:
+        raise RuntimeError(f"official provider fetch failed: {exc.reason}") from exc
+
+
+def _fetch_official_json(url: str, *, timeout: int = OFFICIAL_REQUEST_TIMEOUT) -> dict[str, Any]:
+    data = _fetch_official_bytes(url, timeout=timeout, accept="application/json,text/plain,*/*")
+    try:
+        parsed = json.loads(data.decode("utf-8"))
+    except Exception as exc:
+        raise RuntimeError("official provider returned invalid JSON") from exc
+    if not isinstance(parsed, dict):
+        raise RuntimeError("official provider returned non-object JSON")
+    return parsed
 
 
 def _html_to_lines(document: str) -> list[str]:
@@ -283,6 +380,112 @@ def _ssga_metric_field(document: str, metric_key: str, field: str) -> str | None
     return html.unescape(match.group(1)).strip()
 
 
+def _column_index(cell_ref: str) -> int:
+    letters = re.sub(r"[^A-Z]", "", str(cell_ref).upper())
+    value = 0
+    for letter in letters:
+        value = value * 26 + (ord(letter) - ord("A") + 1)
+    return max(value - 1, 0)
+
+
+def _xlsx_first_sheet_rows(data: bytes) -> list[list[str]]:
+    ns = {"a": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
+    with ZipFile(io.BytesIO(data)) as workbook:
+        shared_strings: list[str] = []
+        if "xl/sharedStrings.xml" in workbook.namelist():
+            shared_root = ET.fromstring(workbook.read("xl/sharedStrings.xml"))
+            for item in shared_root.findall("a:si", ns):
+                texts = [node.text or "" for node in item.findall(".//a:t", ns)]
+                shared_strings.append("".join(texts))
+
+        sheet_root = ET.fromstring(workbook.read("xl/worksheets/sheet1.xml"))
+        rows: list[list[str]] = []
+        for row_node in sheet_root.findall(".//a:row", ns):
+            values: list[str] = []
+            for cell_node in row_node.findall("a:c", ns):
+                cell_idx = _column_index(cell_node.attrib.get("r", "A1"))
+                while len(values) <= cell_idx:
+                    values.append("")
+                cell_type = cell_node.attrib.get("t")
+                if cell_type == "inlineStr":
+                    text = "".join(node.text or "" for node in cell_node.findall(".//a:t", ns))
+                else:
+                    value_node = cell_node.find("a:v", ns)
+                    text = value_node.text if value_node is not None else ""
+                    if cell_type == "s" and text:
+                        text = shared_strings[int(text)]
+                values[cell_idx] = str(text).strip()
+            rows.append(values)
+    return rows
+
+
+def _clean_text(value: Any) -> str | None:
+    if value is None:
+        return None
+    text = html.unescape(str(value)).replace("\xa0", " ").strip()
+    if not text or text in {"-", "--", "—", "N/A", "n/a", "nan", "None"}:
+        return None
+    return re.sub(r"\s+", " ", text)
+
+
+def _parse_float_value(value: Any) -> float | None:
+    text = _clean_text(value)
+    if text is None:
+        return None
+    try:
+        return float(re.sub(r"[$,%\s,]", "", text))
+    except ValueError:
+        return None
+
+
+def _parse_holdings_as_of(value: Any) -> str | None:
+    text = _clean_text(value)
+    if text is None:
+        return None
+    text = re.sub(r"^as of\s+", "", text, flags=re.IGNORECASE)
+    parsed = pd.to_datetime(text, errors="coerce")
+    if pd.isna(parsed):
+        return _parse_provider_date(text)
+    return pd.Timestamp(parsed).strftime("%Y-%m-%d")
+
+
+def _holding_id_from_fields(row: dict[str, Any], row_number: int) -> str:
+    for field in ("holding_id", "cusip", "isin", "identifier"):
+        value = _clean_text(row.get(field))
+        if value:
+            return value.upper()
+    symbol = _clean_text(row.get("holding_symbol"))
+    name = _clean_text(row.get("holding_name"))
+    maturity = _clean_text(row.get("maturity"))
+    coupon = _clean_text(row.get("coupon"))
+    parts = [part for part in (symbol, name, maturity, coupon) if part]
+    if parts:
+        return "|".join(parts).upper()[:255]
+    return f"ROW_{row_number:06d}"
+
+
+def _holding_missing_fields(row: dict[str, Any]) -> list[str]:
+    checked_fields = ["holding_symbol", "sector", "asset_class", "country", "currency", "shares", "market_value"]
+    return [field for field in checked_fields if row.get(field) is None]
+
+
+def _holdings_coverage_status(rows: list[dict[str, Any]]) -> str:
+    if not rows:
+        return "missing"
+    weight_sum = sum(float(row.get("weight_pct") or 0.0) for row in rows)
+    if weight_sum >= 80:
+        return "actual"
+    return "partial"
+
+
+def _apply_holdings_coverage(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    status = _holdings_coverage_status(rows)
+    for row in rows:
+        row["coverage_status"] = status
+        row["missing_fields_json"] = json.dumps(_holding_missing_fields(row), ensure_ascii=False)
+    return rows
+
+
 def _is_missing_table_error(exc: Exception, table_name: str) -> bool:
     message = str(exc).lower()
     return table_name.lower() in message and ("doesn't exist" in message or "unknown table" in message)
@@ -306,6 +509,32 @@ def ensure_etf_operability_snapshot_schema(
             PROVIDER_SCHEMAS["etf_operability_snapshot"],
             DB_META,
         )
+    finally:
+        db.close()
+
+
+def ensure_etf_holdings_snapshot_schema(
+    *,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> None:
+    """Create or sync ETF holdings and exposure snapshot tables in finance_meta."""
+    db = MySQLClient(host, user, password, port)
+    try:
+        db.use_db(DB_META)
+        for key, table_name in (
+            ("etf_holdings_snapshot", HOLDINGS_TABLE),
+            ("etf_exposure_snapshot", EXPOSURE_TABLE),
+        ):
+            db.execute(PROVIDER_SCHEMAS[key])
+            sync_table_schema(
+                db,
+                table_name,
+                PROVIDER_SCHEMAS[key],
+                DB_META,
+            )
     finally:
         db.close()
 
@@ -777,6 +1006,306 @@ def fetch_official_etf_operability_rows(
     return _build_official_rows(normalized_symbols, as_of_date=as_of, timeout=int(timeout))
 
 
+def _holdings_row_base(
+    fund_symbol: str,
+    source_info: dict[str, Any],
+    *,
+    as_of_date: str,
+    collected_at: str,
+) -> dict[str, Any]:
+    return {
+        "fund_symbol": fund_symbol,
+        "as_of_date": as_of_date,
+        "source": source_info.get("source"),
+        "source_type": "official",
+        "source_ref": source_info.get("url"),
+        "holding_id": None,
+        "holding_symbol": None,
+        "holding_name": None,
+        "holding_type": None,
+        "weight_pct": None,
+        "shares": None,
+        "market_value": None,
+        "sector": None,
+        "asset_class": source_info.get("asset_class"),
+        "country": None,
+        "currency": None,
+        "coverage_status": "missing",
+        "missing_fields_json": None,
+        "collected_at": collected_at,
+        "error_msg": None,
+    }
+
+
+def _parse_ishares_holdings_csv(
+    fund_symbol: str,
+    source_info: dict[str, Any],
+    data: bytes,
+    *,
+    as_of_fallback: str | None,
+    collected_at: str,
+) -> list[dict[str, Any]]:
+    text = data.decode("utf-8-sig", errors="replace")
+    csv_rows = list(csv.reader(io.StringIO(text)))
+    as_of = as_of_fallback
+    header_idx: int | None = None
+    for idx, raw_row in enumerate(csv_rows):
+        row = [_clean_text(item) or "" for item in raw_row]
+        if row and row[0].lower().startswith("fund holdings as of") and len(row) > 1:
+            as_of = _parse_holdings_as_of(row[1]) or as_of
+        if {"Name", "Weight (%)"}.issubset(set(row)):
+            header_idx = idx
+            break
+    if header_idx is None:
+        raise RuntimeError("iShares holdings CSV header not found")
+
+    headers = [_clean_text(item) or "" for item in csv_rows[header_idx]]
+    rows: list[dict[str, Any]] = []
+    for row_number, raw_values in enumerate(csv_rows[header_idx + 1 :], start=1):
+        if not raw_values or not any(_clean_text(value) for value in raw_values):
+            break
+        if "Name" in raw_values and "Weight (%)" in raw_values:
+            break
+        record = {headers[idx]: raw_values[idx] if idx < len(raw_values) else None for idx in range(len(headers))}
+        weight = _parse_float_value(record.get("Weight (%)"))
+        name = _clean_text(record.get("Name"))
+        if weight is None or name is None:
+            continue
+        row = _holdings_row_base(
+            fund_symbol,
+            source_info,
+            as_of_date=as_of or pd.Timestamp.utcnow().strftime("%Y-%m-%d"),
+            collected_at=collected_at,
+        )
+        row.update(
+            {
+                "holding_symbol": _clean_text(record.get("Ticker")),
+                "holding_name": name,
+                "holding_type": _clean_text(record.get("Security Type")) or _clean_text(record.get("Asset Class")),
+                "weight_pct": weight,
+                "shares": _parse_float_value(record.get("Quantity") or record.get("Shares") or record.get("Par Value")),
+                "market_value": _parse_float_value(record.get("Market Value")),
+                "sector": _clean_text(record.get("Sector")),
+                "asset_class": _clean_text(record.get("Asset Class")) or source_info.get("asset_class"),
+                "country": _clean_text(record.get("Location")),
+                "currency": _clean_text(record.get("Currency")),
+            }
+        )
+        row["holding_id"] = _holding_id_from_fields(
+            {
+                "holding_id": record.get("CUSIP") or record.get("ISIN") or record.get("SEDOL"),
+                "holding_symbol": row["holding_symbol"],
+                "holding_name": row["holding_name"],
+                "maturity": record.get("Maturity"),
+                "coupon": record.get("Coupon (%)"),
+            },
+            row_number,
+        )
+        rows.append(row)
+    return _apply_holdings_coverage(rows)
+
+
+def _parse_ssga_holdings_xlsx(
+    fund_symbol: str,
+    source_info: dict[str, Any],
+    data: bytes,
+    *,
+    as_of_fallback: str | None,
+    collected_at: str,
+) -> list[dict[str, Any]]:
+    sheet_rows = _xlsx_first_sheet_rows(data)
+    as_of = as_of_fallback
+    header_idx: int | None = None
+    for idx, raw_row in enumerate(sheet_rows):
+        row = [_clean_text(item) or "" for item in raw_row]
+        if row and row[0].lower().startswith("holdings") and len(row) > 1:
+            as_of = _parse_holdings_as_of(row[1]) or as_of
+        if "Name" in row and "Weight" in row:
+            header_idx = idx
+            break
+    if header_idx is None:
+        raise RuntimeError("SSGA holdings XLSX header not found")
+
+    headers = [_clean_text(item) or "" for item in sheet_rows[header_idx]]
+    rows: list[dict[str, Any]] = []
+    for row_number, raw_values in enumerate(sheet_rows[header_idx + 1 :], start=1):
+        if not raw_values or not any(_clean_text(value) for value in raw_values):
+            continue
+        record = {headers[idx]: raw_values[idx] if idx < len(raw_values) else None for idx in range(len(headers))}
+        weight = _parse_float_value(record.get("Weight"))
+        name = _clean_text(record.get("Name"))
+        if weight is None or name is None:
+            continue
+        row = _holdings_row_base(
+            fund_symbol,
+            source_info,
+            as_of_date=as_of or pd.Timestamp.utcnow().strftime("%Y-%m-%d"),
+            collected_at=collected_at,
+        )
+        row.update(
+            {
+                "holding_symbol": _clean_text(record.get("Ticker")),
+                "holding_name": name,
+                "holding_type": _clean_text(record.get("Security Type")) or source_info.get("asset_class"),
+                "weight_pct": weight,
+                "shares": _parse_float_value(record.get("Shares Held") or record.get("Par Value")),
+                "market_value": _parse_float_value(record.get("Market Value")),
+                "sector": _clean_text(record.get("Sector")),
+                "asset_class": source_info.get("asset_class"),
+                "currency": _clean_text(record.get("Local Currency")),
+            }
+        )
+        row["holding_id"] = _holding_id_from_fields(
+            {
+                "identifier": record.get("Identifier") or record.get("SEDOL"),
+                "holding_symbol": row["holding_symbol"],
+                "holding_name": row["holding_name"],
+                "maturity": record.get("Maturity"),
+                "coupon": record.get("Coupon"),
+            },
+            row_number,
+        )
+        rows.append(row)
+    return _apply_holdings_coverage(rows)
+
+
+def _parse_invesco_holdings_json(
+    fund_symbol: str,
+    source_info: dict[str, Any],
+    payload: dict[str, Any],
+    *,
+    as_of_fallback: str | None,
+    collected_at: str,
+) -> list[dict[str, Any]]:
+    as_of = _date_string(payload.get("effectiveBusinessDate")) or _date_string(payload.get("effectiveDate")) or as_of_fallback
+    holdings = payload.get("holdings")
+    if not isinstance(holdings, list):
+        raise RuntimeError("Invesco holdings payload has no holdings list")
+
+    rows: list[dict[str, Any]] = []
+    for row_number, item in enumerate(holdings, start=1):
+        if not isinstance(item, dict):
+            continue
+        weight = _parse_float_value(item.get("percentageOfTotalNetAssets"))
+        name = _clean_text(item.get("issuerName"))
+        if weight is None or name is None:
+            continue
+        security_type = _clean_text(item.get("securityTypeName"))
+        row = _holdings_row_base(
+            fund_symbol,
+            source_info,
+            as_of_date=as_of or pd.Timestamp.utcnow().strftime("%Y-%m-%d"),
+            collected_at=collected_at,
+        )
+        row.update(
+            {
+                "holding_symbol": _clean_text(item.get("ticker")),
+                "holding_name": name,
+                "holding_type": security_type,
+                "weight_pct": weight,
+                "shares": _parse_float_value(item.get("units")),
+                "asset_class": "Equity" if security_type and "stock" in security_type.lower() else source_info.get("asset_class"),
+                "currency": _clean_text(item.get("currency")),
+            }
+        )
+        row["holding_id"] = _holding_id_from_fields(
+            {
+                "cusip": item.get("cusip"),
+                "holding_symbol": row["holding_symbol"],
+                "holding_name": row["holding_name"],
+            },
+            row_number,
+        )
+        rows.append(row)
+    return _apply_holdings_coverage(rows)
+
+
+def _build_official_holdings_rows(
+    symbols: list[str],
+    *,
+    as_of_date: str | None,
+    timeout: int = OFFICIAL_REQUEST_TIMEOUT,
+    only_source: str | None = None,
+) -> tuple[list[dict[str, Any]], list[str], list[dict[str, str]]]:
+    collected_at = _utc_now_string()
+    rows: list[dict[str, Any]] = []
+    missing: list[str] = []
+    failed: list[dict[str, str]] = []
+
+    for symbol in symbols:
+        source_info = HOLDINGS_PROVIDER_SOURCES.get(symbol)
+        if not source_info or (only_source is not None and source_info.get("source") != only_source):
+            missing.append(symbol)
+            continue
+        parser = str(source_info.get("parser") or "")
+        if parser == "pending":
+            missing.append(symbol)
+            failed.append({"symbol": symbol, "reason": "official row-level holdings source pending"})
+            continue
+        try:
+            if parser == "ishares_csv":
+                data = _fetch_official_bytes(str(source_info["url"]), timeout=timeout, accept="text/csv,*/*")
+                rows.extend(
+                    _parse_ishares_holdings_csv(
+                        symbol,
+                        source_info,
+                        data,
+                        as_of_fallback=as_of_date,
+                        collected_at=collected_at,
+                    )
+                )
+            elif parser == "ssga_xlsx":
+                data = _fetch_official_bytes(
+                    str(source_info["url"]),
+                    timeout=timeout,
+                    accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,*/*",
+                )
+                rows.extend(
+                    _parse_ssga_holdings_xlsx(
+                        symbol,
+                        source_info,
+                        data,
+                        as_of_fallback=as_of_date,
+                        collected_at=collected_at,
+                    )
+                )
+            elif parser == "invesco_json":
+                payload = _fetch_official_json(str(source_info["url"]), timeout=timeout)
+                rows.extend(
+                    _parse_invesco_holdings_json(
+                        symbol,
+                        source_info,
+                        payload,
+                        as_of_fallback=as_of_date,
+                        collected_at=collected_at,
+                    )
+                )
+            else:
+                missing.append(symbol)
+                failed.append({"symbol": symbol, "reason": f"unsupported holdings parser: {parser}"})
+        except Exception as exc:
+            failed.append({"symbol": symbol, "reason": str(exc)[:500]})
+
+    found_symbols = {str(row.get("fund_symbol") or "").upper() for row in rows}
+    for symbol in symbols:
+        if symbol not in found_symbols and symbol not in missing and not any(item["symbol"] == symbol for item in failed):
+            missing.append(symbol)
+    return rows, missing, failed
+
+
+def fetch_official_etf_holdings_rows(
+    symbols: str | Iterable[str],
+    *,
+    as_of_date: str | None = None,
+    timeout: int = OFFICIAL_REQUEST_TIMEOUT,
+) -> list[dict[str, Any]]:
+    """Fetch normalized ETF holdings rows from mapped official issuer downloads."""
+    normalized_symbols = _normalize_symbols(symbols)
+    as_of = _date_string(as_of_date) if as_of_date is not None else None
+    rows, _, _ = _build_official_holdings_rows(normalized_symbols, as_of_date=as_of, timeout=int(timeout))
+    return rows
+
+
 def _build_db_bridge_rows(
     symbols: list[str],
     *,
@@ -896,6 +1425,303 @@ def _upsert_etf_operability_rows(db: MySQLClient, rows: list[dict[str, Any]]) ->
     db.executemany(sql, rows)
 
 
+def _delete_snapshot_scope(
+    db: MySQLClient,
+    table_name: str,
+    *,
+    key_symbol_column: str,
+    scope_rows: list[dict[str, Any]],
+) -> None:
+    scopes = {
+        (
+            str(row.get(key_symbol_column) or "").upper(),
+            str(row.get("as_of_date") or ""),
+            str(row.get("source") or ""),
+        )
+        for row in scope_rows
+        if row.get(key_symbol_column) and row.get("as_of_date") and row.get("source")
+    }
+    for symbol, as_of_date, source in sorted(scopes):
+        db.execute(
+            f"""
+            DELETE FROM {table_name}
+            WHERE {key_symbol_column} = %s
+              AND as_of_date = %s
+              AND source = %s
+            """,
+            (symbol, as_of_date, source),
+        )
+
+
+def _upsert_etf_holdings_rows(db: MySQLClient, rows: list[dict[str, Any]]) -> None:
+    if not rows:
+        return
+
+    sql = f"""
+    INSERT INTO {HOLDINGS_TABLE} (
+      fund_symbol, as_of_date, source, source_type, source_ref,
+      holding_id, holding_symbol, holding_name, holding_type,
+      weight_pct, shares, market_value,
+      sector, asset_class, country, currency,
+      coverage_status, missing_fields_json, collected_at, error_msg
+    ) VALUES (
+      %(fund_symbol)s, %(as_of_date)s, %(source)s, %(source_type)s, %(source_ref)s,
+      %(holding_id)s, %(holding_symbol)s, %(holding_name)s, %(holding_type)s,
+      %(weight_pct)s, %(shares)s, %(market_value)s,
+      %(sector)s, %(asset_class)s, %(country)s, %(currency)s,
+      %(coverage_status)s, %(missing_fields_json)s, %(collected_at)s, %(error_msg)s
+    )
+    ON DUPLICATE KEY UPDATE
+      source_type = VALUES(source_type),
+      source_ref = VALUES(source_ref),
+      holding_symbol = VALUES(holding_symbol),
+      holding_name = VALUES(holding_name),
+      holding_type = VALUES(holding_type),
+      weight_pct = VALUES(weight_pct),
+      shares = VALUES(shares),
+      market_value = VALUES(market_value),
+      sector = VALUES(sector),
+      asset_class = VALUES(asset_class),
+      country = VALUES(country),
+      currency = VALUES(currency),
+      coverage_status = VALUES(coverage_status),
+      missing_fields_json = VALUES(missing_fields_json),
+      collected_at = VALUES(collected_at),
+      error_msg = VALUES(error_msg)
+    """
+    db.executemany(sql, rows)
+
+
+def _upsert_etf_exposure_rows(db: MySQLClient, rows: list[dict[str, Any]]) -> None:
+    if not rows:
+        return
+
+    sql = f"""
+    INSERT INTO {EXPOSURE_TABLE} (
+      fund_symbol, as_of_date, source, source_type, source_ref, derived_from,
+      exposure_type, exposure_name, weight_pct,
+      coverage_status, missing_fields_json, collected_at, error_msg
+    ) VALUES (
+      %(fund_symbol)s, %(as_of_date)s, %(source)s, %(source_type)s, %(source_ref)s, %(derived_from)s,
+      %(exposure_type)s, %(exposure_name)s, %(weight_pct)s,
+      %(coverage_status)s, %(missing_fields_json)s, %(collected_at)s, %(error_msg)s
+    )
+    ON DUPLICATE KEY UPDATE
+      source_type = VALUES(source_type),
+      source_ref = VALUES(source_ref),
+      derived_from = VALUES(derived_from),
+      weight_pct = VALUES(weight_pct),
+      coverage_status = VALUES(coverage_status),
+      missing_fields_json = VALUES(missing_fields_json),
+      collected_at = VALUES(collected_at),
+      error_msg = VALUES(error_msg)
+    """
+    db.executemany(sql, rows)
+
+
+def _exposure_row(
+    *,
+    fund_symbol: str,
+    as_of_date: str,
+    source: str,
+    source_type: str,
+    source_ref: str | None,
+    derived_from: str,
+    exposure_type: str,
+    exposure_name: str,
+    weight_pct: float | None,
+    coverage_status: str,
+    collected_at: str,
+    error_msg: str | None = None,
+) -> dict[str, Any]:
+    missing = []
+    if weight_pct is None:
+        missing.append("weight_pct")
+    return {
+        "fund_symbol": fund_symbol,
+        "as_of_date": as_of_date,
+        "source": source,
+        "source_type": source_type,
+        "source_ref": source_ref,
+        "derived_from": derived_from,
+        "exposure_type": exposure_type,
+        "exposure_name": exposure_name,
+        "weight_pct": weight_pct,
+        "coverage_status": coverage_status,
+        "missing_fields_json": json.dumps(missing, ensure_ascii=False),
+        "collected_at": collected_at,
+        "error_msg": error_msg,
+    }
+
+
+def _aggregate_exposure_rows_from_holdings(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    if not rows:
+        return []
+    frame = pd.DataFrame(rows)
+    if frame.empty:
+        return []
+    frame["weight_pct"] = pd.to_numeric(frame["weight_pct"], errors="coerce")
+    collected_at = _utc_now_string()
+    out: list[dict[str, Any]] = []
+    for (fund_symbol, as_of_date, source), group in frame.groupby(["fund_symbol", "as_of_date", "source"], dropna=False):
+        status = "actual" if float(group["weight_pct"].fillna(0).sum()) >= 80 else "partial"
+        source_ref = next((value for value in group.get("source_ref", []) if value), None)
+        source_type = next((value for value in group.get("source_type", []) if value), "official")
+        for exposure_type, column in (
+            ("asset_class", "asset_class"),
+            ("sector", "sector"),
+            ("country", "country"),
+            ("currency", "currency"),
+        ):
+            if column not in group.columns:
+                continue
+            clean_group = group.dropna(subset=[column, "weight_pct"]).copy()
+            if clean_group.empty:
+                continue
+            clean_group[column] = clean_group[column].astype(str).str.strip()
+            clean_group = clean_group[~clean_group[column].isin(["", "-", "None", "nan"])]
+            if clean_group.empty:
+                continue
+            for exposure_name, exposure_group in clean_group.groupby(column, dropna=False):
+                weight = float(exposure_group["weight_pct"].sum())
+                out.append(
+                    _exposure_row(
+                        fund_symbol=str(fund_symbol).upper(),
+                        as_of_date=str(as_of_date),
+                        source=str(source),
+                        source_type=str(source_type),
+                        source_ref=source_ref,
+                        derived_from=HOLDINGS_TABLE,
+                        exposure_type=exposure_type,
+                        exposure_name=str(exposure_name),
+                        weight_pct=weight,
+                        coverage_status=status,
+                        collected_at=collected_at,
+                    )
+                )
+    return out
+
+
+def _parse_ssga_sector_exposures(
+    fund_symbol: str,
+    source_info: dict[str, Any],
+    document: str,
+    *,
+    as_of_fallback: str | None,
+    collected_at: str,
+) -> list[dict[str, Any]]:
+    match = re.search(r'id="fund-sector-breakdown"\s+value="([^"]+)"', document, re.IGNORECASE | re.DOTALL)
+    if not match:
+        return []
+    payload = json.loads(html.unescape(match.group(1)))
+    as_of = _parse_holdings_as_of(payload.get("asOfDateSimple")) or _parse_holdings_as_of(payload.get("asOfDate")) or as_of_fallback
+    rows: list[dict[str, Any]] = []
+    for item in payload.get("attrArray", []):
+        name = ((item.get("name") or {}).get("value") if isinstance(item, dict) else None)
+        weight = ((item.get("weight") or {}).get("originalValue") if isinstance(item, dict) else None)
+        exposure_name = _clean_text(name)
+        weight_value = _parse_float_value(weight)
+        if exposure_name is None or weight_value is None:
+            continue
+        rows.append(
+            _exposure_row(
+                fund_symbol=fund_symbol,
+                as_of_date=as_of or pd.Timestamp.utcnow().strftime("%Y-%m-%d"),
+                source=source_info["source"],
+                source_type="official",
+                source_ref=source_info["url"],
+                derived_from="provider_aggregate",
+                exposure_type="sector",
+                exposure_name=exposure_name,
+                weight_pct=weight_value,
+                coverage_status="actual",
+                collected_at=collected_at,
+            )
+        )
+    return rows
+
+
+def _parse_invesco_sector_exposures(
+    fund_symbol: str,
+    source_info: dict[str, Any],
+    payload: dict[str, Any],
+    *,
+    as_of_fallback: str | None,
+    collected_at: str,
+) -> list[dict[str, Any]]:
+    as_of = _date_string(payload.get("effectiveDate")) or as_of_fallback
+    rows: list[dict[str, Any]] = []
+    holdings = payload.get("holdingWeights")
+    if not isinstance(holdings, list):
+        return rows
+    for item in holdings:
+        if not isinstance(item, dict):
+            continue
+        exposure_name = _clean_text(item.get("name"))
+        weight_value = _parse_float_value(item.get("value"))
+        if exposure_name is None or weight_value is None:
+            continue
+        rows.append(
+            _exposure_row(
+                fund_symbol=fund_symbol,
+                as_of_date=as_of or pd.Timestamp.utcnow().strftime("%Y-%m-%d"),
+                source=source_info["source"],
+                source_type="official",
+                source_ref=source_info["url"],
+                derived_from="provider_aggregate",
+                exposure_type="sector",
+                exposure_name=exposure_name,
+                weight_pct=weight_value,
+                coverage_status="actual",
+                collected_at=collected_at,
+            )
+        )
+    return rows
+
+
+def _build_provider_aggregate_exposure_rows(
+    symbols: list[str],
+    *,
+    as_of_date: str | None,
+    timeout: int = OFFICIAL_REQUEST_TIMEOUT,
+    only_source: str | None = None,
+) -> tuple[list[dict[str, Any]], list[dict[str, str]]]:
+    collected_at = _utc_now_string()
+    rows: list[dict[str, Any]] = []
+    failed: list[dict[str, str]] = []
+    for symbol in symbols:
+        source_info = EXPOSURE_PROVIDER_SOURCES.get(symbol)
+        if not source_info or (only_source is not None and source_info.get("source") != only_source):
+            continue
+        try:
+            parser = str(source_info.get("parser") or "")
+            if parser == "ssga_sector_page":
+                document = _fetch_official_html(str(source_info["url"]), timeout=timeout)
+                rows.extend(
+                    _parse_ssga_sector_exposures(
+                        symbol,
+                        source_info,
+                        document,
+                        as_of_fallback=as_of_date,
+                        collected_at=collected_at,
+                    )
+                )
+            elif parser == "invesco_sector_json":
+                payload = _fetch_official_json(str(source_info["url"]), timeout=timeout)
+                rows.extend(
+                    _parse_invesco_sector_exposures(
+                        symbol,
+                        source_info,
+                        payload,
+                        as_of_fallback=as_of_date,
+                        collected_at=collected_at,
+                    )
+                )
+        except Exception as exc:
+            failed.append({"symbol": symbol, "reason": str(exc)[:500]})
+    return rows, failed
+
+
 def collect_and_store_etf_operability(
     symbols: str | Iterable[str],
     *,
@@ -998,4 +1824,222 @@ def collect_and_store_etf_operability(
         "coverage": coverage,
         "source": normalized_provider,
         "lookback_days": int(lookback_days),
+    }
+
+
+def collect_and_store_etf_holdings(
+    symbols: str | Iterable[str],
+    *,
+    as_of_date: str | None = None,
+    provider: str = "official",
+    refresh_mode: str = "canonical_refresh",
+    timeout: int = OFFICIAL_REQUEST_TIMEOUT,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> dict[str, Any]:
+    """Fetch official ETF holdings downloads and store normalized row-level snapshots."""
+    normalized_symbols = _normalize_symbols(symbols)
+    if not normalized_symbols:
+        return {
+            "requested": 0,
+            "stored": 0,
+            "missing": [],
+            "failed": [],
+            "coverage": {},
+        }
+
+    normalized_provider = str(provider or "official").strip().lower()
+    if normalized_provider not in {"official", "auto", "ishares", "ssga", "invesco"}:
+        raise NotImplementedError("Unsupported ETF holdings provider.")
+    normalized_refresh = str(refresh_mode or "canonical_refresh").strip().lower()
+    if normalized_refresh not in {"canonical_refresh", "upsert"}:
+        raise NotImplementedError("Only canonical_refresh and upsert refresh modes are supported for ETF holdings.")
+
+    as_of = _date_string(as_of_date) if as_of_date is not None else None
+    only_source = normalized_provider if normalized_provider in {"ishares", "ssga", "invesco"} else None
+    rows, missing, failed = _build_official_holdings_rows(
+        normalized_symbols,
+        as_of_date=as_of,
+        timeout=int(timeout),
+        only_source=only_source,
+    )
+
+    db = MySQLClient(host, user, password, port)
+    try:
+        db.use_db(DB_META)
+        for key, table_name in (
+            ("etf_holdings_snapshot", HOLDINGS_TABLE),
+            ("etf_exposure_snapshot", EXPOSURE_TABLE),
+        ):
+            db.execute(PROVIDER_SCHEMAS[key])
+            sync_table_schema(db, table_name, PROVIDER_SCHEMAS[key], DB_META)
+        if normalized_refresh == "canonical_refresh":
+            _delete_snapshot_scope(db, HOLDINGS_TABLE, key_symbol_column="fund_symbol", scope_rows=rows)
+        _upsert_etf_holdings_rows(db, rows)
+    finally:
+        db.close()
+
+    coverage: dict[str, int] = {}
+    for row in rows:
+        status = str(row.get("coverage_status") or "missing")
+        coverage[status] = coverage.get(status, 0) + 1
+    found_symbols = {str(row.get("fund_symbol") or "").upper() for row in rows}
+    for symbol in normalized_symbols:
+        if symbol not in found_symbols and symbol not in missing:
+            missing.append(symbol)
+
+    return {
+        "requested": len(normalized_symbols),
+        "stored": len(rows),
+        "updated": None,
+        "missing": sorted(set(missing)),
+        "failed": failed,
+        "coverage": coverage,
+        "source": normalized_provider,
+        "refresh_mode": normalized_refresh,
+    }
+
+
+def _load_latest_holdings_for_exposure(
+    db: MySQLClient,
+    symbols: list[str],
+    *,
+    as_of_date: str | None,
+    source: str | None,
+    latest: bool,
+) -> list[dict[str, Any]]:
+    where: list[str] = []
+    params: list[Any] = []
+    if symbols:
+        placeholders = ",".join(["%s"] * len(symbols))
+        where.append(f"fund_symbol IN ({placeholders})")
+        params.extend(symbols)
+    if source is not None:
+        where.append("source = %s")
+        params.append(str(source).strip())
+
+    if latest:
+        latest_where_parts = list(where)
+        latest_params = list(params)
+        if as_of_date is not None:
+            latest_where_parts.append("as_of_date <= %s")
+            latest_params.append(as_of_date)
+        latest_where = f"WHERE {' AND '.join(latest_where_parts)}" if latest_where_parts else ""
+        sql = f"""
+        SELECT ehs.*
+        FROM {HOLDINGS_TABLE} ehs
+        INNER JOIN (
+            SELECT fund_symbol, source, MAX(as_of_date) AS latest_as_of_date
+            FROM {HOLDINGS_TABLE}
+            {latest_where}
+            GROUP BY fund_symbol, source
+        ) latest_rows
+            ON ehs.fund_symbol = latest_rows.fund_symbol
+           AND ehs.source = latest_rows.source
+           AND ehs.as_of_date = latest_rows.latest_as_of_date
+        ORDER BY ehs.fund_symbol ASC, ehs.source ASC, ehs.weight_pct DESC
+        """
+        return db.query(sql, latest_params)
+
+    if as_of_date is not None:
+        where.append("as_of_date = %s")
+        params.append(as_of_date)
+    base_where = f"WHERE {' AND '.join(where)}" if where else ""
+    return db.query(
+        f"""
+        SELECT *
+        FROM {HOLDINGS_TABLE}
+        {base_where}
+        ORDER BY fund_symbol ASC, source ASC, weight_pct DESC
+        """,
+        params,
+    )
+
+
+def aggregate_and_store_etf_exposures(
+    symbols: str | Iterable[str],
+    *,
+    as_of_date: str | None = None,
+    source: str | None = None,
+    latest: bool = True,
+    include_provider_aggregates: bool = True,
+    refresh_mode: str = "canonical_refresh",
+    timeout: int = OFFICIAL_REQUEST_TIMEOUT,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> dict[str, Any]:
+    """Aggregate stored ETF holdings into exposure snapshots and optional official aggregate rows."""
+    normalized_symbols = _normalize_symbols(symbols)
+    if not normalized_symbols:
+        return {
+            "requested": 0,
+            "stored": 0,
+            "missing": [],
+            "failed": [],
+            "coverage": {},
+        }
+    normalized_refresh = str(refresh_mode or "canonical_refresh").strip().lower()
+    if normalized_refresh not in {"canonical_refresh", "upsert"}:
+        raise NotImplementedError("Only canonical_refresh and upsert refresh modes are supported for ETF exposures.")
+
+    as_of = _date_string(as_of_date) if as_of_date is not None else None
+    db = MySQLClient(host, user, password, port)
+    failed: list[dict[str, str]] = []
+    try:
+        db.use_db(DB_META)
+        for key, table_name in (
+            ("etf_holdings_snapshot", HOLDINGS_TABLE),
+            ("etf_exposure_snapshot", EXPOSURE_TABLE),
+        ):
+            db.execute(PROVIDER_SCHEMAS[key])
+            sync_table_schema(db, table_name, PROVIDER_SCHEMAS[key], DB_META)
+        try:
+            holdings_rows = _load_latest_holdings_for_exposure(
+                db,
+                normalized_symbols,
+                as_of_date=as_of,
+                source=source,
+                latest=latest,
+            )
+        except Exception as exc:
+            if _is_missing_table_error(exc, HOLDINGS_TABLE):
+                holdings_rows = []
+            else:
+                raise
+        rows = _aggregate_exposure_rows_from_holdings(holdings_rows)
+        if include_provider_aggregates:
+            provider_rows, provider_failed = _build_provider_aggregate_exposure_rows(
+                normalized_symbols,
+                as_of_date=as_of,
+                timeout=int(timeout),
+                only_source=source,
+            )
+            rows.extend(provider_rows)
+            failed.extend(provider_failed)
+        if normalized_refresh == "canonical_refresh":
+            _delete_snapshot_scope(db, EXPOSURE_TABLE, key_symbol_column="fund_symbol", scope_rows=rows)
+        _upsert_etf_exposure_rows(db, rows)
+    finally:
+        db.close()
+
+    coverage: dict[str, int] = {}
+    for row in rows:
+        status = str(row.get("coverage_status") or "missing")
+        coverage[status] = coverage.get(status, 0) + 1
+    found_symbols = {str(row.get("fund_symbol") or "").upper() for row in rows}
+    missing = [symbol for symbol in normalized_symbols if symbol not in found_symbols]
+    return {
+        "requested": len(normalized_symbols),
+        "stored": len(rows),
+        "updated": None,
+        "missing": missing,
+        "failed": failed,
+        "coverage": coverage,
+        "source": source,
+        "refresh_mode": normalized_refresh,
+        "include_provider_aggregates": bool(include_provider_aggregates),
     }

@@ -311,6 +311,73 @@ PROVIDER_SCHEMAS = {
           KEY ix_symbol_asof (symbol, as_of_date),
           KEY ix_coverage_status (coverage_status)
         );
+    """,
+    "etf_holdings_snapshot": """
+        CREATE TABLE IF NOT EXISTS etf_holdings_snapshot (
+          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+          fund_symbol VARCHAR(20) NOT NULL,
+          as_of_date DATE NOT NULL,
+          source VARCHAR(64) NOT NULL,
+          source_type ENUM('official','database_bridge','computed_proxy') NOT NULL,
+          source_ref VARCHAR(255) NULL,
+
+          holding_id VARCHAR(255) NOT NULL,
+          holding_symbol VARCHAR(64) NULL,
+          holding_name VARCHAR(512) NOT NULL,
+          holding_type VARCHAR(128) NULL,
+
+          weight_pct DOUBLE NULL,
+          shares DOUBLE NULL,
+          market_value DOUBLE NULL,
+
+          sector VARCHAR(255) NULL,
+          asset_class VARCHAR(128) NULL,
+          country VARCHAR(128) NULL,
+          currency VARCHAR(16) NULL,
+
+          coverage_status ENUM('actual','partial','bridge','proxy','missing','error') NOT NULL DEFAULT 'actual',
+          missing_fields_json JSON NULL,
+          collected_at TIMESTAMP NULL,
+          error_msg TEXT NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+          UNIQUE KEY uk_fund_asof_source_holding (fund_symbol, as_of_date, source, holding_id),
+          KEY ix_fund_asof (fund_symbol, as_of_date),
+          KEY ix_holding_symbol (holding_symbol),
+          KEY ix_coverage_status (coverage_status)
+        );
+    """,
+    "etf_exposure_snapshot": """
+        CREATE TABLE IF NOT EXISTS etf_exposure_snapshot (
+          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+          fund_symbol VARCHAR(20) NOT NULL,
+          as_of_date DATE NOT NULL,
+          source VARCHAR(64) NOT NULL,
+          source_type ENUM('official','database_bridge','computed_proxy') NOT NULL,
+          source_ref VARCHAR(255) NULL,
+          derived_from VARCHAR(128) NOT NULL,
+
+          exposure_type VARCHAR(64) NOT NULL,
+          exposure_name VARCHAR(255) NOT NULL,
+          weight_pct DOUBLE NULL,
+
+          coverage_status ENUM('actual','partial','bridge','proxy','missing','error') NOT NULL DEFAULT 'actual',
+          missing_fields_json JSON NULL,
+          collected_at TIMESTAMP NULL,
+          error_msg TEXT NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+          UNIQUE KEY uk_fund_asof_source_exposure (fund_symbol, as_of_date, source, exposure_type, exposure_name),
+          KEY ix_fund_asof (fund_symbol, as_of_date),
+          KEY ix_exposure_type (exposure_type),
+          KEY ix_coverage_status (coverage_status)
+        );
     """
 }
 

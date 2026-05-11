@@ -3743,3 +3743,10 @@ Detailed historical logs were archived on `2026-04-13`.
   - official row는 `etf_operability_snapshot`에 `source=ishares|ssga|invesco`, `source_type=official`, `coverage_status=actual|partial|missing|error`로 저장한다.
   - smoke ingestion 결과 `AOR/IEF/TLT/SPY/BIL/GLD`는 `actual`, `QQQ`는 official QQQ page에서 expense ratio / inception만 확보되어 `partial`로 저장됐다.
   - Practical Validation 진단 연결은 아직 하지 않았고 P2-5에서 loader context를 12개 진단에 연결한다.
+- Practical Validation V2 P2-3 ETF holdings / exposure foundation 구현:
+  - `finance/data/db/schema.py`에 `etf_holdings_snapshot`, `etf_exposure_snapshot` schema를 추가했다.
+  - `finance/data/etf_provider.py`에 iShares holdings CSV, SSGA daily holdings XLSX, Invesco holdings / sector API adapter를 추가했다.
+  - holdings는 기본 `canonical_refresh`로 fund / as_of_date / source 범위를 삭제 후 재저장하고, exposure는 holdings aggregate와 provider aggregate sector row를 저장한다.
+  - smoke ingestion 결과 holdings는 `AOR/IEF/TLT/SPY/BIL/QQQ` 703 rows actual, `GLD`는 row-level holdings source pending으로 missing 처리됐다.
+  - exposure smoke 결과 asset class / sector / country / currency exposure 49 rows actual이 저장되고 loader에서 SPY / QQQ sector aggregate를 확인했다.
+  - Practical Validation 진단 연결은 아직 하지 않았고 P2-5에서 Asset Allocation Fit / Concentration / Exposure 진단에 연결한다.

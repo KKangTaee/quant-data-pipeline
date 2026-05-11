@@ -80,6 +80,29 @@ finance.data.etf_provider.collect_and_store_etf_operability()
 - P2-2B 초기 source map은 iShares `AOR/IEF/TLT`, SSGA `SPY/BIL/GLD`, Invesco `QQQ`다.
 - QQQ는 현재 공식 QQQ page에서 expense ratio / inception만 확보되어 `partial`로 저장한다.
 
+## ETF holdings / exposure provider snapshot 흐름
+
+```text
+iShares official holdings CSV
+SSGA / SPDR official daily holdings XLSX
+Invesco official holdings / weighted sector API
+  -> finance.data.etf_provider.collect_and_store_etf_holdings()
+  -> finance_meta.etf_holdings_snapshot
+  -> finance.data.etf_provider.aggregate_and_store_etf_exposures()
+  -> finance_meta.etf_exposure_snapshot
+  -> finance.loaders.provider.load_etf_holdings_snapshot()
+  -> finance.loaders.provider.load_etf_exposure_snapshot()
+  -> Practical Validation provider context
+```
+
+의미:
+
+- `etf_holdings_snapshot`은 ETF 내부 구성 row의 source-of-truth snapshot이다.
+- `etf_exposure_snapshot`은 holdings row 또는 provider aggregate에서 만든 derived summary다.
+- P2-3 초기 source map은 iShares `AOR/IEF/TLT`, SSGA `SPY/BIL`, Invesco `QQQ`다.
+- `GLD`는 row-level holdings source가 bar list PDF 성격이라 synthetic 100% commodity row를 만들지 않고 missing으로 둔다.
+- `AOR`은 현재 1차 ETF holdings만 저장하고, iShares Aggregate Underlying 구간은 2차 look-through expansion 후속으로 둔다.
+
 ## Broad fundamentals / factors 흐름
 
 ```text

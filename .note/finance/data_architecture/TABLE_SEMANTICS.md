@@ -58,6 +58,45 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - current snapshot이므로 historical point-in-time ETF 운용성 truth로 바로 해석하면 안 된다.
 - Practical Validation result JSONL에는 full row를 저장하지 않고 compact evidence / coverage status만 저장하는 방향이다.
 
+## `etf_holdings_snapshot`
+
+역할:
+
+- Practical Validation V2의 ETF 구성 / concentration / overlap 진단에 쓸 holdings row 저장
+- ETF별 보유종목, 비중, sector, asset class, country, currency field를 provider snapshot으로 보존
+
+성격:
+
+- provider snapshot table이다.
+- P2-3 초기 구현은 iShares holdings CSV, SSGA daily holdings XLSX, Invesco holdings API를 official source로 사용한다.
+- `weight_pct`는 decimal fraction이 아니라 provider가 표시하는 percent point다. 예: `34.13`은 34.13%다.
+- 반복 수집은 기본적으로 fund / as_of_date / source 범위를 canonical refresh한다.
+
+주의:
+
+- current snapshot이므로 과거 특정 시점의 holdings truth로 바로 해석하면 안 된다.
+- `AOR`은 현재 1차 ETF holdings만 저장한다. Aggregate Underlying 2차 look-through는 후속이다.
+- `GLD`는 row-level holdings source가 bar list PDF 성격이라 synthetic 100% gold row를 만들지 않는다.
+
+## `etf_exposure_snapshot`
+
+역할:
+
+- holdings row를 asset class / sector / country / currency 등으로 집계한 summary 저장
+- 일부 provider가 별도 aggregate exposure를 제공하면 `derived_from=provider_aggregate`로 저장
+
+성격:
+
+- derived summary table이다.
+- `derived_from=etf_holdings_snapshot`이면 저장된 holdings row에서 계산한 값이다.
+- `derived_from=provider_aggregate`이면 SSGA sector breakdown, Invesco weighted sector API처럼 provider가 제공한 aggregate다.
+
+주의:
+
+- exposure는 원천 holdings coverage와 provider aggregate coverage에 의존한다.
+- sector가 없는 holdings source는 asset class / currency exposure만 만들 수 있다.
+- Practical Validation result JSONL에는 full exposure table이 아니라 compact summary만 저장하는 방향이다.
+
 ## `nyse_price_history`
 
 역할:
