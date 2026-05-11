@@ -32,6 +32,17 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Macro / sentiment 1차 source는 FRED `VIXCLS`, `T10Y3M`, `BAA10Y`와 DB 가격 기반 risk proxy로 잡는다
   - P2 개발 순서는 source map / schema / collector / UPSERT 저장을 먼저 만들고, 그 다음 loader, Practical Validation connector, UI / diagnostics를 연결하는 방향으로 수정했다
 
+### 2026-05-11 - P2는 provider 플랫폼이 아니라 12개 검증 패턴 정상화 작업이다
+- Request topic:
+  - 사용자가 P2의 목적이 12개 Practical Validation 검증 패턴 중 아직 정상 검증되지 않는 항목을 후속 작업으로 정상화하는 것인지 확인함
+- Interpreted goal:
+  - P2를 데이터 수집 자체가 아니라 미완성 검증 항목을 actual / proxy / `NOT_RUN` 근거로 명확히 판정하게 만드는 작업으로 재정의해야 함
+- Result:
+  - P2 작업 순서를 `P2-0. 대상 항목 확정`부터 `P2-7. QA`까지 재정리했다
+  - P2 대상 진단은 2 Asset Allocation Fit, 3 Concentration / Overlap / Exposure, 5 Regime / Macro Suitability, 6 Sentiment / Risk-On-Off Overlay, 7 Stress / Scenario Diagnostics, 9 Leveraged / Inverse ETF Suitability, 10 Operability / Cost / Liquidity, 11 Robustness / Sensitivity / Overfit로 정리했다
+  - Provider / holdings / macro ingestion은 위 진단을 정상화하기 위한 구현 수단으로 문서화했다
+  - 정상화는 모든 항목이 PASS가 된다는 뜻이 아니라, 실제 데이터가 있으면 actual evidence로 검증하고 없으면 명확한 `NOT_RUN` 또는 `REVIEW` reason을 남기는 것으로 정의했다
+
 ### 2026-05-03 - Phase 34는 Final Portfolio Selection Decision Pack으로 시작한다
 - Request topic:
   - 사용자가 Phase 34 작업 시작을 요청함

@@ -31,6 +31,17 @@ Detailed historical logs were archived on `2026-04-13`.
   - Practical Validation / Dashboard must read provider data through loaders, not remote-fetch from the UI.
   - Official issuer / FRED sources are preferred; `yfinance`, `nyse_asset_profile`, and price-history ADV remain bridge / fallback evidence.
 
+### 2026-05-11
+- Reframed Practical Validation V2 P2 around diagnostic normalization rather than provider collection as the end goal.
+- Updated:
+  - `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_REMAINING_IMPLEMENTATION_PLAN.md`
+  - `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_P2_CONNECTOR_AND_STRESS_PLAN.md`
+  - `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_PROVIDER_CONNECTOR_PLAN.md`
+- Durable decision:
+  - P2 means normalizing the incomplete Practical Validation diagnostics among the 12 patterns.
+  - Provider / holdings / macro ingestion is the implementation method, not the product goal.
+  - P2 target diagnostics are primarily 2, 3, 5, 6, 7, 9, 10, and 11.
+
 ### 2026-05-10
 - Clarified `NOT_RUN` handling for Final Review route in Practical Validation docs.
 - Updated:

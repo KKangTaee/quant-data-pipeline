@@ -4,8 +4,11 @@
 
 이 문서는 Practical Validation V2의 P2 개발 범위를 실행 가능한 개발 계획으로 정리한다.
 기존 `PRACTICAL_VALIDATION_V2_REMAINING_IMPLEMENTATION_PLAN.md`가 전체 남은 구현 목록이라면,
-이 문서는 그중 P2에 해당하는 provider connector, macro / sentiment connector,
-stress interpretation 고도화를 어떤 순서로 개발할지 정한다.
+이 문서는 그중 P2에 해당하는 미완성 검증 항목 정상화 작업을 어떤 순서로 개발할지 정한다.
+
+P2의 본질은 provider connector 자체가 아니다.
+P2는 12개 Practical Validation 진단 중 아직 proxy / `NOT_RUN` / 설명 부족으로 남아 있는 항목을
+정상 검증 가능한 상태로 만드는 작업이다.
 
 상세 provider / DB / loader 설계는
 `PRACTICAL_VALIDATION_V2_PROVIDER_CONNECTOR_PLAN.md`를 기준으로 한다.
@@ -14,9 +17,10 @@ stress interpretation 고도화를 어떤 순서로 개발할지 정한다.
 ETF holdings, macro series, sentiment series의 collector / schema / loader 계획은
 `PRACTICAL_VALIDATION_V2_PROVIDER_CONNECTOR_PLAN.md` 안에서 함께 관리한다.
 
-P2 개발 순서는 provider data collection first로 고정한다.
-먼저 ingestion에서 공식 provider / FRED 데이터를 DB에 저장하고,
-그 다음 loader, Practical Validation connector, UI / diagnostics 해석을 연결한다.
+P2 개발 순서는 diagnostic normalization first로 고정한다.
+먼저 어떤 검증 항목이 정상화 대상인지 확정하고,
+그 검증에 필요한 provider / FRED 데이터를 ingestion에서 DB에 저장한 뒤,
+loader, Practical Validation connector, UI / diagnostics 해석을 연결한다.
 
 ## 쉽게 말하면
 
@@ -30,7 +34,8 @@ benchmark parity, rolling / stress / baseline / sensitivity 일부 계산을 갖
 - macro / sentiment: benchmark 최근 움직임 proxy
 - stress: 위기 구간 숫자는 계산하지만 "왜 약했는지" 해석은 약함
 
-P2의 목표는 이 proxy evidence를 더 실제적인 데이터와 해석으로 승격하는 것이다.
+P2의 목표는 이 proxy evidence를 더 실제적인 데이터와 해석으로 승격해서,
+검증 항목이 "막연히 통과 / 실패"가 아니라 "실제 근거 있음 / proxy만 있음 / 데이터 없어 NOT_RUN"으로 읽히게 만드는 것이다.
 
 ```text
 현재:
@@ -50,6 +55,43 @@ provider snapshot + macro context + stress interpretation 기반 진단
 - 위기 구간에서 숫자가 나빴다면, 그 원인이 자산군, component, benchmark mismatch 중 무엇인가?
 
 P2는 이 질문들을 Final Review에서 사람이 판단할 수 있는 evidence로 만든다.
+
+## P2 완료 기준
+
+P2 완료는 "모든 ETF와 모든 provider를 완벽히 지원"한다는 뜻이 아니다.
+아래가 충족되면 P2는 완료로 본다.
+
+- P2 대상 검증 항목이 actual / proxy / bridge / `NOT_RUN`을 명확히 구분한다.
+- 대표 ETF와 FRED macro series에서 실제 provider data 수집 / DB 저장 / loader read가 동작한다.
+- 데이터가 없거나 provider가 미지원이면 화면과 result row에 명확한 `NOT_RUN` 또는 `REVIEW` reason이 남는다.
+- full holdings row, full macro series, full raw response는 JSONL에 저장하지 않는다.
+- Final Review에서 사용자가 어떤 검증이 충분하고 어떤 검증이 부족한지 판단할 수 있다.
+
+## P2 작업 순서
+
+```text
+P2-0. 12개 진단 중 P2 대상 항목 확정
+P2-1. 각 항목에 필요한 데이터 목록 확정
+P2-2. ETF 운용성 / 비용 / 유동성 데이터 수집
+P2-3. ETF holdings / exposure 데이터 수집
+P2-4. macro / sentiment 데이터 수집
+P2-5. Practical Validation 12개 진단에 연결
+P2-6. stress / sensitivity 해석 보강
+P2-7. QA: proxy / NOT_RUN 항목이 정상적으로 설명되는지 확인
+```
+
+## P2 대상 진단
+
+| 검증 번호 | 검증 항목 | 현재 문제 | P2에서 정상화할 내용 |
+|---:|---|---|---|
+| 2 | Asset Allocation Fit | ticker 이름 기반 추정 | ETF holdings / asset class exposure 기반으로 보강 |
+| 3 | Concentration / Overlap / Exposure | ETF wrapper와 weight 중심 추정 | holdings overlap, top holding concentration, exposure 중복 계산 |
+| 5 | Regime / Macro Suitability | benchmark price-action proxy | FRED VIX / yield curve / credit spread snapshot 사용 |
+| 6 | Sentiment / Risk-On-Off Overlay | proxy 또는 `NOT_RUN` | VIX / spread / yield curve 기반 market context 표시 |
+| 7 | Stress / Scenario Diagnostics | 숫자 중심, 원인 해석 약함 | stress별 원인 해석, recovery, review trigger 추가 |
+| 9 | Leveraged / Inverse ETF Suitability | ticker 기반 추정 | leverage / inverse / daily objective provider field 확인 |
+| 10 | Operability / Cost / Liquidity | 가격 / 거래량 proxy | 비용, AUM, ADV, spread, premium/discount 확인 |
+| 11 | Robustness / Sensitivity / Overfit | 단순 perturbation 일부 | sensitivity 결과와 과최적화 해석 보강 |
 
 ## 이 P2가 끝나면 좋은 점
 
@@ -194,14 +236,15 @@ P2는 이 질문들을 Final Review에서 사람이 판단할 수 있는 evidenc
 현재 후보가 여전히 duration에 크게 의존하면 금리 재상승 구간에서 재검토가 필요합니다.
 ```
 
-### P2-5. Strategy-specific Sensitivity Runtime
+### P2-5. Robustness / Sensitivity 해석 보강
 
-이 항목은 P2 후반 또는 P3로 분리 가능하다.
-사용자가 P2 범위에 포함하길 원하면 provider connector 이후 붙인다.
+이 항목은 12개 진단 중 `11. Robustness / Sensitivity / Overfit`을 정상화하기 위한 보강이다.
+runtime 재계산까지 포함할지는 구현 중 결정하되, P2에서는 최소한 sensitivity 결과와 해석이
+사용자가 이해할 수 있게 표시되는 것을 목표로 한다.
 
 목표:
 
-- 기존 runtime이 허용하는 작은 설정 변경으로 sensitivity를 실제 재계산한다.
+- 단순 weight perturbation 또는 기존 runtime이 허용하는 작은 설정 변경 결과를 과최적화 검토 근거로 읽게 한다.
 
 예:
 
@@ -271,16 +314,18 @@ official provider / API / CSV / XLSX / yfinance fallback
 
 ## 구현 순서
 
-### 작업 단위 1. Provider source map / schema / ingestion contract
+### 작업 단위 1. P2 대상 검증 항목 / 필요 데이터 확정
 
 목표:
 
-- 먼저 어디서 데이터를 수집할지 source map을 고정한다.
-- 공식 provider / FRED 데이터를 저장할 DB schema와 ingestion contract를 만든다.
-- `yfinance`와 기존 DB 가격 / 거래량 값은 canonical provider가 아니라 fallback / bridge로 분리한다.
+- 12개 진단 중 P2에서 정상화할 항목을 확정한다.
+- 각 항목에 필요한 actual data, proxy fallback, `NOT_RUN` 사유를 정의한다.
+- provider source map과 DB schema는 이 진단 목표를 기준으로 설계한다.
 
 주요 작업:
 
+- P2 대상 진단: 2, 3, 5, 6, 7, 9, 10, 11
+- 진단별 필요 데이터: holdings, exposure, macro, operability, product metadata, stress/sensitivity context
 - ETF source map: iShares / BlackRock, SSGA / SPDR, Invesco, yfinance fallback
 - Macro source map: FRED `VIXCLS`, `T10Y3M`, `BAA10Y` 우선
 - schema: `etf_operability_snapshot`, `etf_holdings_snapshot`, `etf_exposure_snapshot`, `macro_series_observation`
@@ -292,6 +337,7 @@ official provider / API / CSV / XLSX / yfinance fallback
 - schema sync가 반복 실행 가능
 - 수집기가 빈 source / 실패 source를 실패 summary로 반환
 - 기존 Practical Validation은 아직 외부 수집에 의존하지 않음
+- 각 대상 진단마다 actual / proxy / `NOT_RUN` 상태 정의가 존재
 
 ### 작업 단위 2. Cost / Liquidity / Operability 데이터 수집
 
@@ -398,17 +444,20 @@ Macro            NOT_RUN  macro connector not configured
 - 후보 기간 밖 stress는 `NOT_RUN`
 - 후보 기간 안 stress는 return / MDD / benchmark spread / interpretation 표시
 
-### 작업 단위 8. Strategy-specific Sensitivity Runtime
+### 작업 단위 8. QA / P2 종료 판단
 
 목표:
 
-- provider connector 이후 실제 runtime 재계산 sensitivity를 붙일지 결정한다.
-- P2 후반 또는 P3로 분리 가능하다.
+- P2 대상 진단이 정상화됐는지 확인한다.
+- "데이터가 있어서 검증됨"과 "데이터가 없어서 `NOT_RUN`"이 화면과 result row에서 모두 명확한지 확인한다.
 
 검증:
 
-- 포함한다면 strategy별 perturbation 결과가 compact summary로 저장된다.
-- 제외한다면 `NOT_RUN / future work`로 남긴다.
+- provider table이 비어 있어도 Practical Validation이 깨지지 않는다.
+- actual provider data가 있는 항목은 proxy보다 우선 사용된다.
+- proxy만 가능한 항목은 `REVIEW` 또는 proxy origin으로 표시된다.
+- 실행하지 못한 항목은 `NOT_RUN` reason이 남는다.
+- Final Review에서 provider gap / stress gap / sensitivity gap을 판단 근거로 읽을 수 있다.
 
 ## QA 체크리스트
 
@@ -432,7 +481,7 @@ Macro            NOT_RUN  macro connector not configured
 | Macro source | FRED `series/observations` 기반 long-form series table |
 | Sentiment source | FRED 기반 VIX / credit spread / yield curve를 1차 sentiment proxy로 쓰고 Fear & Greed는 optional |
 | Stress interpretation rule | rule-based template로 시작하고, 숫자 / exposure / component contribution 기반 문장 생성 |
-| Sensitivity runtime 포함 여부 | provider connector 이후 P2 후반 또는 P3로 분리 가능 |
+| Sensitivity runtime 포함 여부 | P2에서는 최소 해석 정상화, 실제 strategy-specific runtime sweep은 필요 시 후속으로 분리 가능 |
 
 ## 결론
 

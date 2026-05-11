@@ -26,11 +26,53 @@ compact curve / DB price proxy 기반 rolling / stress / baseline / sensitivity 
 하지만 아직 모든 진단이 "실제 전략 runtime replay와 외부/DB provider 데이터"를 사용해 정밀 계산되는 상태는 아니다.
 일부는 proxy 계산이고, 일부는 `NOT_RUN` 또는 `REVIEW`로 남아 있다.
 
-따라서 다음 개발의 핵심은 아래 세 가지다.
+따라서 P2의 핵심은 provider connector 자체가 아니라,
+**12개 Practical Validation 진단 중 아직 정상 검증되지 않는 항목을 정상화하는 것**이다.
+
+정상화의 의미:
+
+- 데이터가 있으면 실제 provider / DB evidence로 검증한다.
+- 데이터가 없으면 왜 `NOT_RUN`인지 명확히 표시한다.
+- proxy만 가능하면 `proxy` 또는 `REVIEW`로 명확히 구분한다.
+- Final Review에서 사용자가 "이 검증을 믿을 수 있는지 / 아직 부족한지" 판단할 수 있게 만든다.
+
+다음 개발의 핵심은 아래 세 가지다.
 
 1. proxy와 실제 replay / 실제 provider 데이터를 명확히 분리한다.
 2. 실제 계산 가능한 진단은 전략 runtime 또는 DB provider로 고도화한다.
 3. Final Review와 Selected Portfolio Dashboard가 이 evidence를 믿고 읽을 수 있게 저장 계약을 정리한다.
+
+## 현재 작업 기준: P2는 12개 진단 정상화 트랙
+
+P2는 별도 phase가 아니라 Practical Validation V2 내부의 개발 트랙이다.
+현재 작업은 아래 순서로 진행한다.
+
+```text
+P2-0. 12개 진단 중 P2 대상 항목 확정
+P2-1. 각 항목에 필요한 데이터 목록 확정
+P2-2. ETF 운용성 / 비용 / 유동성 데이터 수집
+P2-3. ETF holdings / exposure 데이터 수집
+P2-4. macro / sentiment 데이터 수집
+P2-5. Practical Validation 12개 진단에 연결
+P2-6. stress / sensitivity 해석 보강
+P2-7. QA: proxy / NOT_RUN 항목이 정상적으로 설명되는지 확인
+```
+
+P2에서 직접 정상화하는 주 대상은 아래와 같다.
+
+| 검증 번호 | 검증 항목 | P2 정상화 방향 |
+|---:|---|---|
+| 2 | Asset Allocation Fit | ticker proxy 대신 ETF holdings / asset-class exposure 사용 |
+| 3 | Concentration / Overlap / Exposure | holdings overlap, top holding concentration, exposure 중복 확인 |
+| 5 | Regime / Macro Suitability | FRED 기반 VIX / yield curve / credit spread snapshot 사용 |
+| 6 | Sentiment / Risk-On-Off Overlay | VIX / spread / yield curve 기반 risk-on/off market context 사용 |
+| 7 | Stress / Scenario Diagnostics | stress 숫자에 원인 해석과 review trigger 추가 |
+| 9 | Leveraged / Inverse ETF Suitability | provider 상품 정보로 leverage / inverse / daily objective 확인 |
+| 10 | Operability / Cost / Liquidity | expense ratio, AUM, ADV, spread, premium/discount로 보강 |
+| 11 | Robustness / Sensitivity / Overfit | sensitivity 결과와 해석을 더 명확히 표시 |
+
+P2의 데이터 수집 / DB / loader 작업은 위 검증 항목을 정상화하기 위한 수단이다.
+즉 P2는 "provider 플랫폼 구축"이 아니라 "미완성 검증 항목 정상화"가 목표다.
 
 ## 현재 구현 상태
 
@@ -417,23 +459,22 @@ diagnostics 계산, persistence handoff까지 많은 책임을 갖고 있다.
 
 ## 개발 순서 제안
 
-권장 순서는 아래다.
+현재 P2 작업의 권장 순서는 아래다.
 
-1. Helper split과 behavior-preserving refactor
-2. Actual runtime replay + curve provenance
-3. Benchmark parity hardening
-4. Validation Inspector / profile comparison
-5. Strategy-specific sensitivity runtime
-6. Final Review Gate V2.1
-7. ETF holdings / cost / liquidity connector
-8. Macro / sentiment connector
-9. Selected Dashboard monitoring persistence
+1. 12개 진단 중 P2 대상 항목을 확정한다.
+2. 각 검증 항목에 필요한 데이터와 fallback 상태를 정의한다.
+3. ETF 운용성 / 비용 / 유동성 데이터를 수집하고 DB에 저장한다.
+4. ETF holdings / exposure 데이터를 수집하고 DB에 저장한다.
+5. macro / sentiment 데이터를 수집하고 DB에 저장한다.
+6. loader / provider context를 통해 Practical Validation 진단에 연결한다.
+7. stress / sensitivity 해석을 보강한다.
+8. proxy / actual / bridge / `NOT_RUN` 표시가 사용자가 이해할 수 있는지 QA한다.
 
 이 순서가 좋은 이유:
 
-- replay와 curve provenance가 먼저 잡혀야 rolling / stress / baseline / sensitivity 결과의 신뢰도가 올라간다.
-- provider connector는 데이터 source와 schema 의사결정이 필요하므로, core replay 이후 붙이는 편이 안전하다.
-- Final Review와 Selected Dashboard는 Practical Validation evidence contract가 안정된 뒤 고도화하는 것이 맞다.
+- P0의 runtime replay와 benchmark parity는 이미 구현되어 있으므로, 지금은 남은 proxy / `NOT_RUN` 진단을 정상화하는 것이 다음 병목이다.
+- provider connector는 독립 목적이 아니라 ETF / holdings / macro 관련 진단을 정상 검증하기 위한 데이터 경계다.
+- 데이터가 없더라도 실패가 아니라 명확한 `NOT_RUN` / `REVIEW` reason을 남겨 Final Review 판단 가능성을 높인다.
 
 ## 테스트 / 검증 기준
 
@@ -468,5 +509,6 @@ diagnostics 계산, persistence handoff까지 많은 책임을 갖고 있다.
 남은 핵심은 "더 많은 검증명을 추가하는 것"이 아니라,
 최신 runtime 재검증과 실제 provider 데이터를 붙여 proxy domain을 actual evidence로 승격하는 것이다.
 
-따라서 다음 개발은 helper split과 최신 runtime 재검증 / benchmark parity부터 진행하는 것이 가장 안전하다.
-첫 구현 단위인 `P0. 최신 Runtime 재검증과 Curve Provenance`는 2026-05-10에 2차 구현까지 완료되었고, 후속은 Validation Inspector / strategy-specific sensitivity / provider connector 순서로 이어간다.
+첫 구현 단위인 `P0. 최신 Runtime 재검증과 Curve Provenance`는 2026-05-10에 2차 구현까지 완료되었다.
+따라서 현재 다음 개발은 P2로 보고,
+12개 진단 중 provider / holdings / macro / stress / sensitivity 데이터가 부족해 정상 검증되지 않는 항목을 정상화한다.
