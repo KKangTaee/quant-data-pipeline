@@ -8,7 +8,6 @@ from typing import Any
 
 import pandas as pd
 import streamlit as st
-import streamlit.components.v1 as components
 
 # Ensure the project root is importable when Streamlit executes this file directly.
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -64,7 +63,6 @@ CSV_DIR = PROJECT_ROOT / "csv"
 GLOSSARY_DOC_PATH = PROJECT_ROOT / ".note" / "finance" / "FINANCE_TERM_GLOSSARY.md"
 GLOSSARY_META_SECTION_TITLES = {"목적", "사용 원칙"}
 APP_RUNTIME_LOADED_AT = datetime.now()
-PRACTICAL_VALIDATION_PROVIDER_SNAPSHOTS_ANCHOR = "practical-validation-provider-snapshots"
 
 
 def _read_git_short_sha() -> str | None:
@@ -228,8 +226,6 @@ def _init_state() -> None:
         st.session_state.ingestion_prefill_request = None
     if "ingestion_prefill_notice" not in st.session_state:
         st.session_state.ingestion_prefill_notice = None
-    if "ingestion_return_anchor" not in st.session_state:
-        st.session_state.ingestion_return_anchor = None
 
 
 def _apply_pending_ingestion_prefill() -> None:
@@ -305,33 +301,8 @@ def _schedule_job(job: dict[str, Any]) -> None:
     if _has_running_job():
         st.warning("Another ingestion job is already running. Wait for it to finish before starting a new one.")
         return
-    if job.get("return_anchor"):
-        st.session_state.ingestion_return_anchor = str(job["return_anchor"])
     st.session_state.pending_job = job
     st.rerun()
-
-
-def _should_restore_ingestion_anchor(anchor: str) -> bool:
-    return st.session_state.get("ingestion_return_anchor") == anchor
-
-
-def _render_ingestion_scroll_anchor(anchor: str) -> None:
-    st.markdown(f'<div id="{anchor}"></div>', unsafe_allow_html=True)
-    if not _should_restore_ingestion_anchor(anchor) or _has_running_job():
-        return
-
-    components.html(
-        f"""
-        <script>
-        const anchor = window.parent.document.getElementById("{anchor}");
-        if (anchor) {{
-          setTimeout(() => anchor.scrollIntoView({{ behavior: "smooth", block: "start" }}), 150);
-        }}
-        </script>
-        """,
-        height=0,
-    )
-    st.session_state.ingestion_return_anchor = None
 
 
 def _job_metadata(
@@ -1955,11 +1926,7 @@ def _render_ingestion_console() -> None:
                     )
                 _render_inline_last_completed_result("metadata_refresh")
 
-            restore_provider_snapshot_section = _should_restore_ingestion_anchor(
-                PRACTICAL_VALIDATION_PROVIDER_SNAPSHOTS_ANCHOR
-            )
-            _render_ingestion_scroll_anchor(PRACTICAL_VALIDATION_PROVIDER_SNAPSHOTS_ANCHOR)
-            with st.expander("Practical Validation Provider Snapshots", expanded=restore_provider_snapshot_section):
+            with st.expander("Practical Validation Provider Snapshots", expanded=False):
                 st.write("Practical Validation에서 포트폴리오를 검토할 때 사용할 provider snapshot 데이터를 수집합니다.")
                 st.caption(
                     "ETF의 운용 가능성, ETF 내부 구성, 시장 환경 데이터를 DB에 저장해 둡니다. "
@@ -2029,7 +1996,6 @@ def _render_ingestion_console() -> None:
                                 "action": "collect_etf_operability_provider",
                                 "job_name": "collect_etf_operability_provider",
                                 "spinner_text": "Running ETF operability provider snapshot...",
-                                "return_anchor": PRACTICAL_VALIDATION_PROVIDER_SNAPSHOTS_ANCHOR,
                                 "params": {
                                     "symbols": operability_symbols,
                                     "as_of_date": operability_as_of or None,
@@ -2108,7 +2074,6 @@ def _render_ingestion_console() -> None:
                                 "action": "collect_etf_holdings_exposure",
                                 "job_name": "collect_etf_holdings_exposure",
                                 "spinner_text": "Running ETF holdings and exposure snapshots...",
-                                "return_anchor": PRACTICAL_VALIDATION_PROVIDER_SNAPSHOTS_ANCHOR,
                                 "params": {
                                     "symbols": holdings_symbols,
                                     "as_of_date": holdings_as_of or None,
@@ -2175,7 +2140,6 @@ def _render_ingestion_console() -> None:
                                 "action": "collect_macro_market_context",
                                 "job_name": "collect_macro_market_context",
                                 "spinner_text": "Running macro market-context snapshot...",
-                                "return_anchor": PRACTICAL_VALIDATION_PROVIDER_SNAPSHOTS_ANCHOR,
                                 "params": {
                                     "series_ids": macro_series,
                                     "start": macro_start or None,
