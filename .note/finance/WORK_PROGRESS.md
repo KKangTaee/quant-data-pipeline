@@ -3726,3 +3726,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - user feedback에 따라 별도 data collection plan 문서를 만들지 않기로 했다.
   - ETF holdings, macro series, sentiment series 수집 계획을 기존 `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_PROVIDER_CONNECTOR_PLAN.md` 안에 합쳤다.
   - P2 문서 역할을 `P2 전체 계획`과 `provider 수집 / schema / loader 상세 설계` 두 개로 고정했다.
+- Practical Validation V2 P2-1 schema / ingestion field 계약 확정:
+  - P2-0에서 정한 8개 정상화 대상 진단을 실제 수집 / 저장 / 로딩 가능한 데이터 계약으로 변환했다.
+  - 신규 table 후보를 `etf_operability_snapshot`, `etf_holdings_snapshot`, `etf_exposure_snapshot`, `macro_series_observation` 4개로 고정했다.
+  - 각 table의 business key, actual / partial / bridge / proxy / NOT_RUN 판정 기준, ingestion 함수 계약, loader compact context 반환 기준을 문서화했다.
+  - 제품 코드는 아직 수정하지 않았다. 다음 작업은 P2-2 Cost / Liquidity / ETF Operability schema와 수집 foundation 구현이다.

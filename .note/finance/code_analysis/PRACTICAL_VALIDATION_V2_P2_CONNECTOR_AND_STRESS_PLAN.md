@@ -132,6 +132,61 @@ P2-0은 실제 provider 수집 코드를 작성하기 전에,
 - full holdings row, full macro series, full raw provider response는 `PRACTICAL_VALIDATION_RESULTS.jsonl`에 저장하지 않는다.
 - JSONL에는 coverage, compact evidence, missing reason, staleness, source reference만 저장한다.
 
+## P2-1 완료 산출물: schema / ingestion field 계약
+
+상태: `completed`
+
+P2-1은 P2-0에서 정한 진단 계약을 실제 수집 / 저장 / 로딩 가능한 데이터 계약으로 바꾸는 단계다.
+이 단계에서는 제품 코드를 수정하지 않고, 다음 구현에서 추가할 table, business key, 필수 field,
+fallback 판정 기준을 먼저 고정한다.
+
+### P2-1 기준 table 경계
+
+| table | 역할 | 직접 정상화하는 진단 | business key |
+|---|---|---|---|
+| `finance_meta.etf_operability_snapshot` | ETF 비용, 규모, spread, NAV / premium-discount, leverage / inverse 상품 정보를 저장 | 9, 10 | `(symbol, as_of_date, source)` |
+| `finance_meta.etf_holdings_snapshot` | ETF 내부 보유종목 row를 저장 | 2, 3 | `(fund_symbol, as_of_date, source, holding_id)` |
+| `finance_meta.etf_exposure_snapshot` | holdings에서 집계한 asset class / sector / country exposure를 저장 | 2, 3, 7 | `(fund_symbol, as_of_date, source, exposure_type, exposure_name)` |
+| `finance_meta.macro_series_observation` | FRED 계열 market-context series를 long-form으로 저장 | 5, 6, 7 | `(series_id, observation_date, source)` |
+
+기존 table은 새 provider table의 대체물이 아니라 bridge / proxy source로만 사용한다.
+
+| 기존 데이터 | P2에서 쓰는 방식 | 한계 |
+|---|---|---|
+| `finance_price.nyse_price_history` | ADV / dollar volume / benchmark price-action proxy | 비용, spread, holdings, NAV를 직접 알 수 없음 |
+| `finance_meta.nyse_asset_profile` | `total_assets`, `bid`, `ask`, `fund_family`, `status` bridge | coverage가 낮고 expense ratio / holdings / premium-discount 없음 |
+
+### 검증별 actual 최소조건
+
+| 검증 | actual 판정 최소조건 | bridge / proxy 판정 | `NOT_RUN` 또는 `REVIEW` 기준 |
+|---|---|---|---|
+| 2. Asset Allocation Fit | 핵심 ETF의 holdings 또는 exposure가 target weight 기준 80% 이상 커버되고 `asset_class` exposure가 계산됨 | ticker bucket 또는 strategy family 기반 분류 | 50~80% coverage면 `REVIEW`, 50% 미만이면 `NOT_RUN` |
+| 3. Concentration / Overlap / Exposure | holdings row에 `holding_id` 또는 fallback key, `weight_pct`가 있고 주요 ETF coverage가 80% 이상 | component weight concentration 또는 sector ticker proxy | holdings overlap 계산이 불가능하면 `NOT_RUN`, wrapper-level concentration만 있으면 `REVIEW` |
+| 5. Regime / Macro Suitability | `VIXCLS`, `T10Y3M`, `BAA10Y`가 기준일 lookback 안에서 snapshot으로 로딩됨 | benchmark recent return / drawdown / volatility proxy | 일부 series만 있거나 stale이면 `REVIEW`, 전부 없으면 `NOT_RUN` |
+| 6. Sentiment / Risk-On-Off Overlay | VIX level / change, credit spread, yield curve 중 2개 이상이 기준일 context로 계산됨 | benchmark risk-on/off proxy | macro-derived context가 1개 이하이면 `REVIEW` 또는 `NOT_RUN` |
+| 7. Stress / Scenario Diagnostics | portfolio / benchmark curve와 stress calendar가 있고, 가능하면 exposure / macro context가 결합됨 | curve-only stress return / MDD | 후보 기간 밖 stress는 `NOT_RUN`, 원인 설명 근거가 부족하면 `REVIEW` |
+| 9. Leveraged / Inverse ETF Suitability | provider product metadata가 leverage factor, inverse 여부, daily objective 여부를 확인 | ticker pattern / known leveraged ETF list | provider metadata가 없으면 `REVIEW`, ticker proxy도 없으면 `NOT_RUN` |
+| 10. Operability / Cost / Liquidity | 비용, 규모, 유동성, spread, NAV/premium-discount 5개 묶음 중 3개 이상이 provider 또는 명시 source로 확인 | price history ADV, asset_profile AUM / bid / ask bridge | 핵심 비용 / 거래 가능성 근거가 부족하면 `REVIEW`, 가격 / 거래량도 없으면 `NOT_RUN` 또는 `BLOCKED` |
+| 11. Robustness / Sensitivity / Overfit | drop-one, weight perturbation, window perturbation 중 2개 이상 계산되고 worst-case가 요약됨 | local simple perturbation 또는 trial count summary | 계산 입력이 부족하면 `NOT_RUN`, 단순 perturbation만 있으면 `REVIEW` |
+
+### 수집 / 저장 판정 규칙
+
+- official issuer 또는 FRED에서 온 row는 필요한 field coverage를 충족할 때만 `actual`로 쓴다.
+- 기존 DB 가격 / 거래량 / asset profile에서 만든 값은 `bridge` 또는 `proxy`로 남기고 `actual`처럼 승격하지 않는다.
+- provider가 일부 field만 주면 `partial` coverage로 저장하고 Practical Validation에서는 `REVIEW`로 읽는다.
+- source 실패, 미지원 ticker, 기준일 부재는 수집 summary와 `NOT_RUN` reason으로 남긴다.
+- full holdings row, full macro observation, raw provider response는 DB에 저장하고 JSONL result에는 compact evidence만 남긴다.
+
+### 다음 구현 기준
+
+P2-2부터는 이 계약을 기준으로 진행한다.
+
+1. `finance/data/db/schema.py`에 위 4개 table schema를 추가한다.
+2. ETF operability collector는 공식 provider row와 기존 DB bridge row의 출처를 분리한다.
+3. holdings collector는 `holding_id`가 없을 때 provider별 fallback key를 안정적으로 만든다.
+4. macro collector는 FRED `series_id`, `observation_date`, `source` 기준으로 UPSERT한다.
+5. loader는 table이 비어 있어도 빈 context와 `NOT_RUN` reason을 안정적으로 반환한다.
+
 ## 이 P2가 끝나면 좋은 점
 
 - `Operability / Cost / Liquidity`가 단순 proxy가 아니라 provider coverage를 함께 보여준다.

@@ -80,7 +80,16 @@ P2-0 현재 상태:
 - 대상 진단은 2, 3, 5, 6, 7, 9, 10, 11로 확정했다.
 - 각 대상 진단의 actual data, bridge / proxy fallback, `NOT_RUN` / `REVIEW` 조건은
   `PRACTICAL_VALIDATION_V2_P2_CONNECTOR_AND_STRESS_PLAN.md`의 `P2-0 완료 산출물: 대상 진단 계약`을 기준으로 한다.
-- 다음 작업은 P2-1로, 위 진단 계약을 구현하기 위한 실제 schema / ingestion data field를 고정하는 것이다.
+
+P2-1 현재 상태:
+
+- `completed`
+- P2-0 진단 계약을 구현하기 위한 schema / ingestion field contract를 확정했다.
+- 신규 table 후보는 `etf_operability_snapshot`, `etf_holdings_snapshot`, `etf_exposure_snapshot`,
+  `macro_series_observation` 4개다.
+- 각 table의 business key, actual 판정 최소조건, bridge / proxy 경계, loader 반환 기준은
+  `PRACTICAL_VALIDATION_V2_PROVIDER_CONNECTOR_PLAN.md`의 `P2-1 Schema / Ingestion Field Contract`를 기준으로 한다.
+- 다음 작업은 P2-2로, schema와 Cost / Liquidity / ETF Operability 수집 foundation을 실제 코드에 추가하는 것이다.
 
 ## 현재 구현 상태
 
@@ -469,9 +478,9 @@ diagnostics 계산, persistence handoff까지 많은 책임을 갖고 있다.
 
 현재 P2 작업의 권장 순서는 아래다.
 
-1. 12개 진단 중 P2 대상 항목을 확정한다.
-2. 각 검증 항목에 필요한 데이터와 fallback 상태를 정의한다.
-3. ETF 운용성 / 비용 / 유동성 데이터를 수집하고 DB에 저장한다.
+1. 12개 진단 중 P2 대상 항목을 확정한다. (`completed`)
+2. 각 검증 항목에 필요한 데이터와 fallback 상태를 정의한다. (`completed`)
+3. ETF 운용성 / 비용 / 유동성 데이터를 수집하고 DB에 저장한다. (`next`)
 4. ETF holdings / exposure 데이터를 수집하고 DB에 저장한다.
 5. macro / sentiment 데이터를 수집하고 DB에 저장한다.
 6. loader / provider context를 통해 Practical Validation 진단에 연결한다.

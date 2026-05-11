@@ -4780,3 +4780,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `PRACTICAL_VALIDATION_V2_P2_CONNECTOR_AND_STRESS_PLAN.md`는 P2 전체 순서와 사용자-facing 진단 목표만 맡는다
 - Follow-up:
   - provider connector plan에 `데이터 수집 구현 계획` section을 추가하고, Finance Doc Index / code analysis README의 설명을 보정했다
+
+### 2026-05-11 - Practical Validation V2 P2-1 schema / ingestion field 계약
+- User request:
+  - 사용자가 P2-0 완료 후 P2-1 진행을 요청함
+- Interpreted goal:
+  - provider collector 구현 전에 12개 진단 정상화에 필요한 DB table, 필수 field, business key, fallback 기준을 먼저 확정해야 함
+- Analysis result:
+  - P2-1은 코드 구현이 아니라 schema / ingestion / loader 계약 확정 단계로 진행했다
+  - 신규 table 후보는 `etf_operability_snapshot`, `etf_holdings_snapshot`, `etf_exposure_snapshot`, `macro_series_observation` 4개다
+  - 기존 `nyse_price_history`와 `nyse_asset_profile`은 actual provider data가 아니라 bridge / proxy source로만 읽는다
+  - actual 판정은 진단별 최소 coverage 조건을 만족할 때만 가능하며, 부족하면 `REVIEW` 또는 `NOT_RUN` reason을 남긴다
+- Follow-up:
+  - 다음 작업은 P2-2로, `finance/data/db/schema.py`와 ETF operability 수집 / 저장 foundation을 실제 코드에 추가한다

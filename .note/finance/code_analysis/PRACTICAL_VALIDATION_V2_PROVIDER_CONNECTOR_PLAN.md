@@ -58,6 +58,273 @@ P2-0에서 확정한 provider data 요구사항은 아래와 같다.
 - connector나 source coverage가 없으면 해당 진단은 `NOT_RUN` reason을 남긴다.
 - 가격 부재나 거래 불가처럼 검증을 계속하면 위험한 경우만 `BLOCKED` 후보로 다룬다.
 
+## P2-1 Schema / Ingestion Field Contract
+
+P2-1은 수집기를 만들기 전에 DB schema와 ingestion payload의 최소 계약을 고정하는 단계다.
+이 section은 다음 구현에서 `finance/data/db/schema.py`, `finance/data/etf_provider.py`,
+`finance/data/macro.py`, `finance/loaders/*`가 따라야 하는 기준이다.
+
+### table별 저장 성격
+
+| table | 성격 | raw / normalized / derived | source-of-truth |
+|---|---|---|---|
+| `finance_meta.etf_operability_snapshot` | ETF 상품 / 거래 가능성 snapshot | normalized snapshot. 일부 bridge metric은 source를 명시해 저장 가능 | 공식 issuer disclosure 우선, 기존 DB는 bridge |
+| `finance_meta.etf_holdings_snapshot` | ETF holdings row | normalized source row | 공식 issuer holdings download |
+| `finance_meta.etf_exposure_snapshot` | holdings에서 만든 exposure aggregate | derived summary | `etf_holdings_snapshot` |
+| `finance_meta.macro_series_observation` | market-context time series | normalized long-form observation | FRED 또는 안정 provider |
+
+`nyse_price_history`와 `nyse_asset_profile`은 새 table의 원천을 대체하지 않는다.
+다만 operability에서 provider coverage가 부족할 때 `source=nyse_price_history` 또는
+`source=nyse_asset_profile` bridge row를 만들 수 있다. 이 row는 `actual`이 아니라
+`bridge` / `proxy` coverage로만 읽는다.
+
+### 공통 metadata field
+
+새 snapshot / observation table은 최소 아래 metadata를 가진다.
+
+| field | 의미 |
+|---|---|
+| `source` | `ishares`, `ssga`, `invesco`, `fred`, `nyse_price_history`, `nyse_asset_profile` 등 |
+| `source_type` | `official`, `database_bridge`, `computed_proxy` |
+| `source_ref` | page, endpoint, file name, series id, 또는 내부 table reference |
+| `coverage_status` | `actual`, `partial`, `bridge`, `proxy`, `missing`, `error` |
+| `missing_fields_json` | 핵심 field 중 빠진 항목 요약 |
+| `collected_at` | 수집 시각 |
+| `error_msg` | source 실패나 normalize 실패 사유 |
+
+### 1. `etf_operability_snapshot`
+
+목적:
+
+- `9. Leveraged / Inverse ETF Suitability`
+- `10. Operability / Cost / Liquidity`
+
+business key:
+
+```text
+(symbol, as_of_date, source)
+```
+
+필수 identity field:
+
+| field | required | 비고 |
+|---|---:|---|
+| `symbol` | O | ETF ticker |
+| `as_of_date` | O | provider snapshot 기준일. 없으면 수집일을 쓰되 source note 필요 |
+| `source` | O | provider 또는 bridge table |
+| `source_type` | O | official / database_bridge / computed_proxy |
+| `coverage_status` | O | loader가 Practical Validation 상태로 변환 |
+
+핵심 metric 묶음:
+
+| 묶음 | field 후보 | 진단 의미 |
+|---|---|---|
+| 비용 | `expense_ratio`, `turnover_ratio` | 장기 보유 비용과 매매 부담 |
+| 규모 | `total_assets`, `net_assets`, `aum` | 상품 폐쇄 / 유동성 위험 proxy |
+| 유동성 | `avg_daily_volume`, `avg_daily_dollar_volume` | 실제 주문 규모를 소화할 수 있는지 |
+| spread | `bid`, `ask`, `bid_ask_spread_pct`, `median_bid_ask_spread_pct` | 진입 / 청산 비용 |
+| NAV 괴리 | `nav`, `market_price`, `premium_discount_pct` | ETF 시장가격과 순자산 괴리 |
+| 상품 구조 | `leverage_factor`, `is_inverse`, `has_daily_objective`, `inception_date`, `fund_family`, `category` | leveraged / inverse / daily objective 여부 |
+
+`actual` 판정:
+
+- 비용, 규모, 유동성, spread, NAV 괴리 5개 묶음 중 3개 이상이 공식 provider 또는 명시 source로 확인되면
+  `10. Operability / Cost / Liquidity`에서 `actual` 후보로 읽는다.
+- leveraged / inverse 판정은 `leverage_factor`, `is_inverse`, `has_daily_objective` 중 하나 이상이
+  공식 상품 metadata로 확인될 때 `actual`로 읽는다.
+- 기존 price / volume 또는 asset profile만으로 만든 row는 `bridge` 또는 `proxy`로 남긴다.
+
+### 2. `etf_holdings_snapshot`
+
+목적:
+
+- `2. Asset Allocation Fit`
+- `3. Concentration / Overlap / Exposure`
+
+business key:
+
+```text
+(fund_symbol, as_of_date, source, holding_id)
+```
+
+필수 field:
+
+| field | required | 비고 |
+|---|---:|---|
+| `fund_symbol` | O | ETF ticker |
+| `as_of_date` | O | holdings 기준일 |
+| `source` | O | provider |
+| `holding_id` | O | CUSIP / ISIN / provider id. 없으면 fallback key |
+| `holding_symbol` | 권장 | ETF / stock ticker가 없을 수 있음 |
+| `holding_name` | O | fallback key 생성에도 사용 |
+| `weight_pct` | O | holdings concentration / exposure 계산의 핵심 |
+| `shares` | optional | source가 제공할 때만 |
+| `market_value` | optional | source가 제공할 때만 |
+| `sector` | optional | sector exposure |
+| `asset_class` | optional | asset allocation fit의 핵심 |
+| `country` | optional | country exposure |
+| `currency` | optional | currency exposure |
+
+fallback `holding_id` 규칙:
+
+- provider가 CUSIP / ISIN을 주면 우선 사용한다.
+- 없으면 `holding_symbol + holding_name`을 정규화해 만든다.
+- symbol도 없으면 `holding_name + row_order` fallback을 만들되, overlap 정확도는 `REVIEW`로 낮춘다.
+
+portfolio-level `actual` 판정:
+
+- target allocation 기준 핵심 ETF의 holdings coverage가 80% 이상이면 holdings-based 진단을 `actual` 후보로 읽는다.
+- 50~80% coverage 또는 가장 큰 weight ETF가 빠져 있으면 `REVIEW`다.
+- 50% 미만이면 holdings 기반 진단은 `NOT_RUN`으로 둔다.
+
+### 3. `etf_exposure_snapshot`
+
+목적:
+
+- holdings row를 매번 full scan하지 않고 asset class / sector / country exposure를 빠르게 읽는다.
+- `7. Stress / Scenario Diagnostics`에서 stress 원인 해석의 보조 context로 쓴다.
+
+business key:
+
+```text
+(fund_symbol, as_of_date, source, exposure_type, exposure_name)
+```
+
+필수 field:
+
+| field | required | 비고 |
+|---|---:|---|
+| `fund_symbol` | O | ETF ticker |
+| `as_of_date` | O | exposure 기준일 |
+| `source` | O | 보통 holdings source와 동일 |
+| `derived_from` | O | `etf_holdings_snapshot` 또는 provider aggregate |
+| `exposure_type` | O | `asset_class`, `sector`, `country`, `issuer`, `duration_bucket` 등 |
+| `exposure_name` | O | exposure label |
+| `weight_pct` | O | exposure weight |
+| `coverage_status` | O | actual / partial / missing |
+
+`actual` 판정:
+
+- `asset_class` exposure는 `2. Asset Allocation Fit`의 최소 actual 조건이다.
+- `sector` / `country` exposure는 있으면 `3. Concentration / Overlap / Exposure`와 stress 해석을 보강한다.
+- holdings coverage가 낮은 상태에서 만든 exposure는 `partial`로 저장한다.
+
+### 4. `macro_series_observation`
+
+목적:
+
+- `5. Regime / Macro Suitability`
+- `6. Sentiment / Risk-On-Off Overlay`
+- `7. Stress / Scenario Diagnostics`의 market context 보조
+
+business key:
+
+```text
+(series_id, observation_date, source)
+```
+
+필수 field:
+
+| field | required | 비고 |
+|---|---:|---|
+| `series_id` | O | 예: `VIXCLS`, `T10Y3M`, `BAA10Y` |
+| `observation_date` | O | 관측일 |
+| `value` | O | numeric observation |
+| `source` | O | `fred` 우선 |
+| `series_name` | 권장 | UI 표시 이름 |
+| `category` | O | `volatility`, `yield_curve`, `credit_spread`, `sentiment_proxy` 등 |
+| `frequency` | O | daily / weekly / monthly |
+| `release_lag_days` | optional | source별 release lag note |
+
+초기 series:
+
+| series_id | category | 사용 |
+|---|---|---|
+| `VIXCLS` | `volatility` | risk-off / volatility context |
+| `T10Y3M` | `yield_curve` | yield curve inversion / recession risk context |
+| `BAA10Y` | `credit_spread` | credit stress context |
+
+`actual` 판정:
+
+- 기준일 또는 validation end 기준 `lookback_days=10` 안에서 3개 series가 모두 있으면 macro context는 `actual` 후보다.
+- 1~2개만 있거나 stale series가 있으면 `REVIEW`다.
+- 전부 없으면 `NOT_RUN`이다.
+
+### ingestion 함수 계약
+
+다음 구현에서 수집기는 아래 형태를 기준으로 한다.
+
+```python
+collect_and_store_etf_operability(
+    symbols: list[str],
+    *,
+    as_of_date: str | None = None,
+    provider: str = "auto",
+    refresh_mode: str = "upsert",
+) -> dict
+```
+
+```python
+collect_and_store_etf_holdings(
+    symbols: list[str],
+    *,
+    as_of_date: str | None = None,
+    provider: str = "configured_provider",
+    refresh_mode: str = "canonical_refresh",
+) -> dict
+```
+
+```python
+aggregate_and_store_etf_exposures(
+    symbols: list[str],
+    *,
+    as_of_date: str | None = None,
+    source: str | None = None,
+) -> dict
+```
+
+```python
+collect_and_store_macro_series(
+    series_ids: list[str],
+    *,
+    start: str | None = None,
+    end: str | None = None,
+    provider: str = "fred",
+) -> dict
+```
+
+반환 summary 공통 기준:
+
+| key | 의미 |
+|---|---|
+| `requested` | 요청 symbol / series count |
+| `stored` | 정상 저장 row count |
+| `updated` | UPSERT update count를 알 수 있으면 기록 |
+| `missing` | source 미지원 또는 데이터 없음 |
+| `failed` | 실패 symbol / series와 reason |
+| `coverage` | actual / partial / bridge / proxy / missing count |
+
+### loader / Practical Validation 연결 기준
+
+loader는 DB table이 아직 비어 있어도 예외 대신 빈 결과와 status summary를 반환해야 한다.
+Practical Validation adapter는 loader 결과를 아래 compact context로 바꾼다.
+
+```json
+{
+  "coverage": {
+    "operability": "actual | partial | bridge | proxy | not_run",
+    "holdings": "actual | partial | not_run",
+    "macro": "actual | partial | proxy | not_run"
+  },
+  "compact_evidence": [],
+  "missing_fields": [],
+  "not_run_reasons": []
+}
+```
+
+JSONL registry에는 이 compact context만 저장한다.
+raw holdings row, full macro observation, full provider payload는 JSONL에 저장하지 않는다.
+
 ## 현재 있는 데이터
 
 | 데이터 | 위치 | 현재 쓸 수 있는 것 | 한계 |
