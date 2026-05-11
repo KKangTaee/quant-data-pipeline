@@ -89,7 +89,13 @@ P2-1 현재 상태:
   `macro_series_observation` 4개다.
 - 각 table의 business key, actual 판정 최소조건, bridge / proxy 경계, loader 반환 기준은
   `PRACTICAL_VALIDATION_V2_PROVIDER_CONNECTOR_PLAN.md`의 `P2-1 Schema / Ingestion Field Contract`를 기준으로 한다.
-- 다음 작업은 P2-2로, schema와 Cost / Liquidity / ETF Operability 수집 foundation을 실제 코드에 추가하는 것이다.
+
+P2-2 현재 상태:
+
+- `partial_complete`
+- P2-2A로 `etf_operability_snapshot` schema, 기존 DB 기반 `db_bridge` 수집, UPSERT 저장, loader read path를 구현했다.
+- 현재 구현은 official issuer actual data 수집이 아니라 `nyse_price_history` / `nyse_asset_profile` 기반 bridge/proxy foundation이다.
+- 다음 P2-2B는 iShares / SSGA / Invesco official source를 붙여 `source_type=official` actual / partial row를 저장하는 것이다.
 
 ## 현재 구현 상태
 
@@ -480,7 +486,7 @@ diagnostics 계산, persistence handoff까지 많은 책임을 갖고 있다.
 
 1. 12개 진단 중 P2 대상 항목을 확정한다. (`completed`)
 2. 각 검증 항목에 필요한 데이터와 fallback 상태를 정의한다. (`completed`)
-3. ETF 운용성 / 비용 / 유동성 데이터를 수집하고 DB에 저장한다. (`next`)
+3. ETF 운용성 / 비용 / 유동성 데이터를 수집하고 DB에 저장한다. (`partial_complete`: DB bridge/proxy foundation 완료, official provider actual 수집 남음)
 4. ETF holdings / exposure 데이터를 수집하고 DB에 저장한다.
 5. macro / sentiment 데이터를 수집하고 DB에 저장한다.
 6. loader / provider context를 통해 Practical Validation 진단에 연결한다.

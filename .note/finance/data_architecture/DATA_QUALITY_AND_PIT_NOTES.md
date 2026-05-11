@@ -32,12 +32,17 @@
 좋은 점:
 
 - universe filtering과 ETF current-operability 판단에 실용적이다.
+- `etf_operability_snapshot`은 profile과 price history에서 얻은 bridge/proxy evidence를 별도 snapshot으로 분리해,
+  Practical Validation에서 출처와 coverage를 더 명확히 읽을 수 있게 한다.
 
 주의점:
 
 - `status`, `is_spac`, country, sector, industry는 provider 품질에 의존한다.
 - historical listing / delisting / symbol-change truth가 아니다.
 - survivorship bias를 완전히 제거하지 못한다.
+- P2-2A의 `etf_operability_snapshot` `db_bridge` row는 official ETF provider actual data가 아니다.
+  expense ratio, NAV, premium / discount, leveraged / inverse metadata는 후속 official source가 필요하다.
+  current snapshot이므로 과거 특정 시점의 운용성 truth로 쓰면 안 된다.
 
 ## Fundamentals / factors
 

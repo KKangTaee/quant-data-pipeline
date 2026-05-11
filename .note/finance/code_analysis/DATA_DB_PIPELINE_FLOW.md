@@ -25,6 +25,7 @@ external source
 | NYSE listing source | stock / ETF universe |
 | EDGAR | detailed financial statements |
 | local DB | backtest runtime read path |
+| local DB bridge | ETF operability snapshot의 1차 bridge / proxy source. `nyse_price_history`, `nyse_asset_profile`에서 계산 |
 
 ## Persistence 계층
 
@@ -34,6 +35,7 @@ external source
 | `finance/data/db/mysql.py` | MySQL connection / execution helper |
 | `finance/data/nyse_db.py` | NYSE CSV를 DB universe table로 적재 |
 | `finance/data/asset_profile.py` | asset profile 수집과 저장 |
+| `finance/data/etf_provider.py` | ETF provider snapshot 수집 / 저장 경계. 현재는 기존 DB 기반 operability bridge/proxy snapshot을 만든다 |
 | `finance/data/data.py` | price 수집 / DB read helper |
 | `finance/data/fundamentals.py` | fundamentals와 statement fundamentals shadow 적재 |
 | `finance/data/factors.py` | factor 생성과 statement factor shadow 적재 |
@@ -45,6 +47,7 @@ external source
 |---|---|
 | `finance/loaders/universe.py` | universe와 asset profile status 조회 |
 | `finance/loaders/price.py` | price history, price matrix, freshness, symbol별 latest price 조회 |
+| `finance/loaders/provider.py` | provider snapshot read path. 현재는 ETF operability snapshot을 읽는다 |
 | `finance/loaders/fundamentals.py` | broad fundamentals와 statement shadow fundamentals 조회 |
 | `finance/loaders/factors.py` | broad factors와 statement factor snapshot 조회 |
 | `finance/loaders/financial_statements.py` | statement values / labels / strict snapshot / timing audit 조회 |
@@ -56,6 +59,10 @@ external source
 - strict annual / quarterly factor strategy는 statement shadow / PIT snapshot 계층을 더 중요하게 본다.
 - 가격 기반 ETF 전략은 price loader와 `BacktestEngine` warmup / slice 경로가 중심이다.
 - factor / fundamental 전략은 rebalance date 기준 snapshot payload가 핵심 계약이다.
+- Practical Validation provider connector는 UI에서 외부 provider를 직접 호출하지 않고,
+  `finance/data/*` ingestion이 저장한 snapshot을 `finance/loaders/provider.py`로 읽는다.
+  현재 구현된 `etf_operability_snapshot`은 official provider actual data가 아니라
+  기존 DB의 price/profile 기반 bridge/proxy snapshot부터 제공한다.
 
 ## 데이터 무결성 체크포인트
 

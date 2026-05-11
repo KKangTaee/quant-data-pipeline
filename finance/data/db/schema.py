@@ -263,6 +263,58 @@ PRICE_SCHEMAS = {
 }
 
 
+PROVIDER_SCHEMAS = {
+    "etf_operability_snapshot": """
+        CREATE TABLE IF NOT EXISTS etf_operability_snapshot (
+          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+          symbol VARCHAR(20) NOT NULL,
+          as_of_date DATE NOT NULL,
+          source VARCHAR(64) NOT NULL,
+          source_type ENUM('official','database_bridge','computed_proxy') NOT NULL,
+          source_ref VARCHAR(255) NULL,
+
+          fund_family VARCHAR(255) NULL,
+          category VARCHAR(255) NULL,
+
+          expense_ratio DOUBLE NULL,
+          turnover_ratio DOUBLE NULL,
+          total_assets DOUBLE NULL,
+          net_assets DOUBLE NULL,
+          nav DOUBLE NULL,
+          market_price DOUBLE NULL,
+          premium_discount_pct DOUBLE NULL,
+
+          bid DOUBLE NULL,
+          ask DOUBLE NULL,
+          bid_ask_spread_pct DOUBLE NULL,
+          median_bid_ask_spread_pct DOUBLE NULL,
+
+          avg_daily_volume DOUBLE NULL,
+          avg_daily_dollar_volume DOUBLE NULL,
+          lookback_days INT NULL,
+
+          inception_date DATE NULL,
+          leverage_factor DOUBLE NULL,
+          is_inverse TINYINT(1) NULL,
+          has_daily_objective TINYINT(1) NULL,
+
+          coverage_status ENUM('actual','partial','bridge','proxy','missing','error') NOT NULL DEFAULT 'missing',
+          missing_fields_json JSON NULL,
+          collected_at TIMESTAMP NULL,
+          error_msg TEXT NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+          UNIQUE KEY uk_symbol_asof_source (symbol, as_of_date, source),
+          KEY ix_symbol_asof (symbol, as_of_date),
+          KEY ix_coverage_status (coverage_status)
+        );
+    """
+}
+
+
 FUNDAMENTAL_SCHEMAS = {
     "fundamentals": """
         CREATE TABLE IF NOT EXISTS nyse_fundamentals (

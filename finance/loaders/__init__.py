@@ -33,6 +33,7 @@ from .price import (
     load_price_history,
     load_price_matrix,
 )
+from .provider import load_etf_operability_snapshot
 from .runtime_adapter import adapt_price_history_to_strategy_dfs, load_price_strategy_dfs
 from .universe import load_asset_profile_status_summary, load_universe
 
@@ -43,6 +44,7 @@ __all__ = [
     "load_price_history",
     "load_price_freshness_summary",
     "load_price_matrix",
+    "load_etf_operability_snapshot",
     "load_fundamentals",
     "load_fundamental_snapshot",
     "load_statement_fundamentals_shadow",

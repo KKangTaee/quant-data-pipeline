@@ -55,6 +55,27 @@ yfinance
 - 제품 runtime은 점점 DB-backed path를 더 중요하게 본다.
 - ETF 전략에서는 moving average / trailing return warmup과 date alignment가 결과 기간을 줄일 수 있다.
 
+## ETF operability provider snapshot 흐름
+
+```text
+finance_price.nyse_price_history
+  -> ADV / dollar volume / market price proxy
+
+finance_meta.nyse_asset_profile
+  -> total assets / bid / ask bridge
+
+finance.data.etf_provider.collect_and_store_etf_operability()
+  -> finance_meta.etf_operability_snapshot
+  -> finance.loaders.provider.load_etf_operability_snapshot()
+  -> Practical Validation provider context
+```
+
+의미:
+
+- P2-2A에서는 official ETF issuer provider actual data가 아니라 기존 DB 기반 `db_bridge` row를 먼저 저장한다.
+- `coverage_status=bridge` 또는 `proxy`는 실제 provider 검증 완료가 아니라, 기존 DB로 확인 가능한 보조 근거라는 뜻이다.
+- 후속 P2-2B에서 iShares / SSGA / Invesco 같은 official provider row가 붙으면 같은 table에 별도 `source`로 저장한다.
+
 ## Broad fundamentals / factors 흐름
 
 ```text

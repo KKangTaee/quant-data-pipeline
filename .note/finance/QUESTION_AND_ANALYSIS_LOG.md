@@ -4793,3 +4793,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - actual 판정은 진단별 최소 coverage 조건을 만족할 때만 가능하며, 부족하면 `REVIEW` 또는 `NOT_RUN` reason을 남긴다
 - Follow-up:
   - 다음 작업은 P2-2로, `finance/data/db/schema.py`와 ETF operability 수집 / 저장 foundation을 실제 코드에 추가한다
+
+### 2026-05-11 - Practical Validation V2 P2-2A ETF operability bridge/proxy 구현
+- User request:
+  - 사용자가 P2-2를 진행하되, 먼저 실제 provider actual 수집이 아니라 기존 데이터 기반 bridge/proxy 상태를 만드는 것으로 이해하면 되는지 확인하고 진행을 요청함
+- Interpreted goal:
+  - official ETF provider endpoint를 붙이기 전에 `etf_operability_snapshot` table, 기존 DB 기반 수집, UPSERT 저장, loader read path를 먼저 만들어야 함
+- Analysis result:
+  - `nyse_price_history`는 market price, 평균 거래량, 평균 거래대금 proxy를 제공할 수 있다
+  - `nyse_asset_profile`은 일부 ETF의 total assets, bid, ask, fund family를 bridge evidence로 제공할 수 있다
+  - 이 데이터는 actual provider data가 아니므로 `source=db_bridge`, `coverage_status=bridge|proxy|missing`으로 저장해야 한다
+  - expense ratio, NAV, premium / discount, official leverage / inverse metadata는 아직 `missing_fields_json`에 남기고 P2-2B actual provider 수집에서 보강한다
+- Follow-up:
+  - 다음 구현은 official issuer source map을 endpoint 수준으로 검증하고 `source_type=official` row를 저장하는 P2-2B다

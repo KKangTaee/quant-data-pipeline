@@ -440,17 +440,26 @@ official provider / API / CSV / XLSX / yfinance fallback
 - ETF 비용, 규모, spread, NAV / premium-discount, 거래 가능성 snapshot을 DB에 저장한다.
 - 공식 provider 값과 기존 DB bridge 값을 분리한다.
 
+현재 구현 상태:
+
+- P2-2A `implementation_complete`
+- `etf_operability_snapshot` schema, 기존 DB 기반 `db_bridge` 수집, UPSERT 저장, loader read path를 추가했다.
+- 이 구현은 actual official provider 수집 완료가 아니라 bridge/proxy foundation이다.
+
 주요 작업:
 
-- iShares / SSGA / Invesco fund page 또는 다운로드 파일에서 가능한 operability field 수집
-- `nyse_price_history` 기반 ADV / dollar volume proxy 계산
-- `nyse_asset_profile` 기반 AUM / bid / ask bridge는 coverage gap 보조로만 사용
-- `coverage_status`를 `actual`, `partial`, `proxy`, `missing`, `error`로 저장
+- P2-2A 완료: `nyse_price_history` 기반 ADV / dollar volume proxy 계산
+- P2-2A 완료: `nyse_asset_profile` 기반 AUM / bid / ask bridge 저장
+- P2-2A 완료: `coverage_status`를 `bridge`, `proxy`, `missing`으로 저장
+- P2-2B 남음: iShares / SSGA / Invesco fund page 또는 다운로드 파일에서 가능한 operability field 수집
+- P2-2B 남음: official provider row에서 `actual`, `partial`, `error` coverage 저장
 
 검증:
 
-- `SPY / QQQ / GLD / IEF / TLT` 같은 ETF는 가능한 field를 보여준다.
-- coverage가 낮은 ETF는 `REVIEW` 또는 `NOT_RUN`으로 표시한다.
+- P2-2A 기준으로 loader가 `etf_operability_snapshot`을 읽을 수 있다.
+- provider table이 없거나 비어 있어도 loader는 빈 DataFrame을 반환한다.
+- official provider field가 없는 항목은 `missing_fields_json`에 남는다.
+- Practical Validation 화면 반영은 P2-5에서 진행한다.
 
 ### 작업 단위 3. ETF holdings / exposure 데이터 수집
 

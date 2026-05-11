@@ -3731,3 +3731,9 @@ Detailed historical logs were archived on `2026-04-13`.
   - 신규 table 후보를 `etf_operability_snapshot`, `etf_holdings_snapshot`, `etf_exposure_snapshot`, `macro_series_observation` 4개로 고정했다.
   - 각 table의 business key, actual / partial / bridge / proxy / NOT_RUN 판정 기준, ingestion 함수 계약, loader compact context 반환 기준을 문서화했다.
   - 제품 코드는 아직 수정하지 않았다. 다음 작업은 P2-2 Cost / Liquidity / ETF Operability schema와 수집 foundation 구현이다.
+- Practical Validation V2 P2-2A ETF operability bridge/proxy foundation 구현:
+  - `finance/data/db/schema.py`에 `PROVIDER_SCHEMAS["etf_operability_snapshot"]`를 추가했다.
+  - `finance/data/etf_provider.py`를 추가해 기존 `nyse_price_history`와 `nyse_asset_profile` 기반 `db_bridge` operability snapshot을 생성하고 UPSERT 저장하게 했다.
+  - `finance/loaders/provider.py`와 loader export를 추가해 `load_etf_operability_snapshot()` read path를 제공했다.
+  - 현재 구현은 official issuer actual data 수집이 아니라 bridge/proxy foundation이다. expense ratio, NAV, premium/discount, official leverage/inverse metadata는 P2-2B actual provider 수집에서 보강한다.
+  - code analysis / data architecture / comprehensive analysis 문서를 새 table과 loader 경계에 맞춰 갱신했다.

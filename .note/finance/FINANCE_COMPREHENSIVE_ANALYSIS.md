@@ -21,7 +21,7 @@ DB / strategy / runtime / UI 연결을 한 번에 확인하기 위한 상세 분
 - 범위 포함: `finance` 패키지 전체
 - 범위 제외: `financial_advisor`
 - 최초 기준 시점: 2026-03-11
-- 최근 동기화 기준: 2026-05-06 / Phase 36 Selected Portfolio Dashboard performance recheck 개편
+- 최근 동기화 기준: 2026-05-11 / Practical Validation V2 P2-2 ETF operability bridge snapshot foundation
 
 ---
 
@@ -343,6 +343,7 @@ web UI가 그 wrapper의 result bundle을 받아 single / compare / Operations h
 |---|---|---|
 | Universe | NYSE listing -> CSV -> `nyse_stock` / `nyse_etf` -> asset profile | `data_architecture/DATA_FLOW_MAP.md` |
 | Price | yfinance -> direct research path 또는 `nyse_price_history` DB path | `data_architecture/DATA_FLOW_MAP.md` |
+| ETF operability provider snapshot | `nyse_price_history` / `nyse_asset_profile` bridge -> `etf_operability_snapshot` -> provider loader | `data_architecture/DATA_FLOW_MAP.md` |
 | Broad fundamentals / factors | yfinance statements -> `nyse_fundamentals` -> `nyse_factors` | `data_architecture/DATA_FLOW_MAP.md` |
 | Statement-driven path | EDGAR / statement values -> fundamentals shadow -> factors shadow | `data_architecture/DATA_FLOW_MAP.md` |
 
@@ -365,7 +366,7 @@ web UI가 그 wrapper의 result bundle을 받아 single / compare / Operations h
 
 | DB | 주요 table | 역할 |
 |---|---|---|
-| `finance_meta` | `nyse_stock`, `nyse_etf`, `nyse_asset_profile` | universe / listing / profile metadata |
+| `finance_meta` | `nyse_stock`, `nyse_etf`, `nyse_asset_profile`, `etf_operability_snapshot` | universe / listing / profile metadata / ETF operability provider snapshot |
 | `finance_price` | `nyse_price_history` | stock / ETF 공용 price ledger |
 | `finance_fundamental` | `nyse_fundamentals`, `nyse_factors`, `nyse_fundamentals_statement`, `nyse_factors_statement`, statement filings / values / labels | fundamentals, factors, detailed statement data |
 
@@ -383,6 +384,7 @@ web UI가 그 wrapper의 result bundle을 받아 single / compare / Operations h
 |---|---|---|
 | master | universe / symbol master | `nyse_stock`, `nyse_etf` |
 | profile | current profile snapshot | `nyse_asset_profile` |
+| provider snapshot | 검증용 provider / DB bridge snapshot | `etf_operability_snapshot` |
 | raw ledger | raw source에 가까운 fact ledger | `nyse_price_history`, `nyse_financial_statement_values` |
 | filing ledger | filing 단위 metadata | `nyse_financial_statement_filings` |
 | broad summary | provider-normalized convenience summary | `nyse_fundamentals` |
