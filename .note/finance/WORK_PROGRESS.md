@@ -3670,3 +3670,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - `저장 기간 그대로 재현`은 보조 모드로 남겼고, validation result schema를 v4로 올려 mode, 저장 기간, 요청 기간, 실제 기간, 최신 시장일, 확장 일수, period coverage, curve provenance를 남기도록 했다.
   - 실제 실행은 성공했지만 component cadence / date alignment 때문에 portfolio curve가 요청 종료일까지 오지 못하면 `period_coverage=REVIEW`로 표시하도록 했다.
   - 관련 code analysis 문서와 comprehensive analysis를 최신 재검증 기준으로 갱신했다.
+- Quality / Value strict quarterly candidate search:
+  - candidate-search 본래 역할로 돌아와 `Quality / Value / Quality + Value > Strict Quarterly Prototype` 계열을 기존 DB-backed runtime으로 탐색했다.
+  - 조건은 `SPY` 초과, 3개월 이내 리밸런싱, 10개 내외 포지션으로 두고 `US Statement Coverage 100 / 300`, `Historical Dynamic PIT Universe`, monthly / quarterly cadence를 비교했다.
+  - 우선 follow-up 후보는 `Value v_price / Coverage 300 / top 10 / monthly`로 정리했다. Coverage 300 기준 CAGR `29.79%`, MDD `-24.26%`, 36M rolling win vs SPY `100%`로 나왔지만, quarterly prototype의 Real-Money hardening / PIT audit / sector exposure / stress validation은 아직 필요하다.
+  - 결과 문서는 `.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_QUARTERLY_PROTOTYPE_SEARCH_20260511.md`에 남겼다.

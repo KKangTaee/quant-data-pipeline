@@ -49,6 +49,9 @@
 - `strategies/QUALITY_VALUE_STRICT_ANNUAL_BACKTEST_LOG.md`
   - `Quality + Value > Strict Annual` 전략 run 기록 누적 문서
   - 최신 날짜순으로 읽고, 마지막 요약표에서 유지 / 교체 / 보류 판단을 빠르게 확인한다
+- `strategies/QUALITY_VALUE_STRICT_QUARTERLY_PROTOTYPE_SEARCH_20260511.md`
+  - `Quality / Value / Quality + Value > Strict Quarterly Prototype` 기반 후보 탐색 문서
+  - `SPY` 초과, 3개월 이내 리밸런싱, 10개 내외 포지션 조건에서 `Value v_price / Coverage 300 / top 10 / monthly`가 우선 follow-up 후보로 나온 결과와 검증 공백을 정리한다
 - `strategies/CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md`
   - 현재 `Value / Quality / Quality + Value` family에서 다시 볼 practical candidate를 한 장으로 요약한 문서
 - `strategies/QUALITY_VALUE_STRICT_ANNUAL_BEST_ADDITION_CURRENT_CANDIDATE.md`

@@ -4712,3 +4712,17 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 요청 종료일은 최신 DB 날짜까지 확장됐지만 실제 portfolio curve가 component cadence / intersection 때문에 따라오지 못하면 runtime 실행 성공과 별개로 `period_coverage=REVIEW`로 표시해야 한다
 - Follow-up:
   - Practical Validation UI와 replay helper, validation result schema, code analysis 문서를 최신 runtime recheck 기준으로 수정했다
+
+### 2026-05-11 - Quality / Value strict quarterly 후보 탐색과 검증 공백 분석
+- User request:
+  - 사용자가 기존 GTAA / Equal Weight 조합 외에 Quality, Value 또는 Quality + Value 기반으로 SPY보다 낫고, 3개월 이내 리밸런싱이며, 10개 내외 포지션인 후보를 찾으면서 프로그램의 부족한 검증도 알려달라고 요청함
+- Interpreted goal:
+  - 새 전략을 제품 코드에 구현하지 않고 기존 strict quarterly prototype runtime으로 후보를 탐색하고, 좋은 후보가 나왔을 때 실전 후보로 올리기 전에 어떤 검증이 부족한지 분리해 설명해야 함
+- Analysis result:
+  - 순수 Quality와 기본 Value / Q+V quarterly 후보는 대부분 SPY를 넘지 못하거나 drawdown이 컸다
+  - `Value v_price = book_to_market, earnings_yield, sales_yield, pcr, por, per` 조합이 가장 의미 있었다
+  - `US Statement Coverage 300 / Historical Dynamic PIT Universe / top 10 / monthly` 기준 `Value v_price`는 CAGR `29.79%`, MDD `-24.26%`, SPY 대비 36개월 rolling win `100%`로 우선 follow-up 후보가 됐다
+  - 다만 quarterly prototype은 transaction cost, liquidity, full promotion gate, PIT audit, sector exposure, stress / regime, trial-count overfit audit이 부족하므로 Real-Money / Deployment 상태는 `NOT_EVALUATED / NOT_APPROVED`로 봐야 한다
+- Follow-up:
+  - `.note/finance/backtest_reports/strategies/QUALITY_VALUE_STRICT_QUARTERLY_PROTOTYPE_SEARCH_20260511.md`에 결과와 검증 공백을 정리했다
+  - 다음 작업은 후보 등록이 아니라 Practical Validation 성격의 PIT / net-of-cost / universe sensitivity / stress / sector exposure / 기존 GTAA+EW mix sleeve 검증이어야 한다

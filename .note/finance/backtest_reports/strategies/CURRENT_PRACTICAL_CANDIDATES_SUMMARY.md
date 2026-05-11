@@ -24,6 +24,18 @@ strict annual family와 별도로 다시 볼 ETF 전략 후보를 한 장으로 
 | `GTAA` | `GTAA SPY Low-MDD Style Top-3, 1M / 6M, MA250` | `19.35%` | `-11.03%` | `real_money_candidate` | `paper_probation` | `paper_only` |
 | `Equal Weight` | `QQQ / SOXX / XLE / XLU / GLD, annual rebalance` | `17.55%` | `-18.98%` | `real_money_candidate` | `paper_probation` | `paper_only` |
 
+## 별도 탐색 메모
+
+- 2026-05-11에 `Quality / Value / Quality + Value > Strict Quarterly Prototype` 후보를 별도로 탐색했다.
+- 현재 우선 follow-up 후보는 `Value v_price / US Statement Coverage 300 / top 10 / monthly`다.
+  - `CAGR = 29.79%`
+  - `MDD = -24.26%`
+  - `36M rolling win vs SPY = 100%`
+- 다만 이 후보는 아직 `Strict Quarterly Prototype` 단계라서 full Real-Money hardening, transaction cost runtime 반영, PIT audit, sector exposure, stress / regime 검증 전이다.
+- 따라서 위 표의 current practical anchor로 승격하지 않고, 별도 Practical Validation follow-up 후보로만 둔다.
+- 바로 열 문서:
+  - [QUALITY_VALUE_STRICT_QUARTERLY_PROTOTYPE_SEARCH_20260511.md](QUALITY_VALUE_STRICT_QUARTERLY_PROTOTYPE_SEARCH_20260511.md)
+
 ## family별 해석
 
 ### 0. GTAA
