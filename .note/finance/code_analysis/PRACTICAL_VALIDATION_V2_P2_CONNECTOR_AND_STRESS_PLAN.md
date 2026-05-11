@@ -14,6 +14,10 @@ stress interpretation 고도화를 어떤 순서로 개발할지 정한다.
 ETF holdings, macro series, sentiment series의 collector / schema / loader 계획은
 `PRACTICAL_VALIDATION_V2_PROVIDER_CONNECTOR_PLAN.md` 안에서 함께 관리한다.
 
+P2 개발 순서는 provider data collection first로 고정한다.
+먼저 ingestion에서 공식 provider / FRED 데이터를 DB에 저장하고,
+그 다음 loader, Practical Validation connector, UI / diagnostics 해석을 연결한다.
+
 ## 쉽게 말하면
 
 현재 Practical Validation은 이미 후보 source, 최신 runtime 재검증, curve provenance,
@@ -228,7 +232,7 @@ P2에서 하지 않는 일:
 ## 권장 아키텍처
 
 ```text
-provider / existing DB
+official provider / API / CSV / XLSX / yfinance fallback
   -> finance/data/* collector
   -> finance_meta / finance_price snapshot tables
   -> finance/loaders/* read path
@@ -242,6 +246,7 @@ provider / existing DB
 핵심 원칙:
 
 - UI는 remote provider를 직접 호출하지 않는다.
+- provider data는 ingestion에서 수집하고 MySQL에 저장한다.
 - DB / loader / connector adapter / diagnostics를 분리한다.
 - provider data와 proxy data의 출처를 반드시 구분한다.
 - 데이터가 없을 때는 통과가 아니라 `NOT_RUN` 또는 `REVIEW`다.
@@ -266,34 +271,92 @@ provider / existing DB
 
 ## 구현 순서
 
-### 작업 단위 1. Provider schema / loader contract
+### 작업 단위 1. Provider source map / schema / ingestion contract
 
 목표:
 
-- 먼저 DB schema와 loader output contract를 고정한다.
-- provider data가 없어도 빈 snapshot을 안정적으로 반환한다.
+- 먼저 어디서 데이터를 수집할지 source map을 고정한다.
+- 공식 provider / FRED 데이터를 저장할 DB schema와 ingestion contract를 만든다.
+- `yfinance`와 기존 DB 가격 / 거래량 값은 canonical provider가 아니라 fallback / bridge로 분리한다.
+
+주요 작업:
+
+- ETF source map: iShares / BlackRock, SSGA / SPDR, Invesco, yfinance fallback
+- Macro source map: FRED `VIXCLS`, `T10Y3M`, `BAA10Y` 우선
+- schema: `etf_operability_snapshot`, `etf_holdings_snapshot`, `etf_exposure_snapshot`, `macro_series_observation`
+- collector skeleton: `finance/data/etf_provider.py`, `finance/data/macro.py`
+- UPSERT 기준: symbol / as_of_date / source, 또는 series_id / observation_date / source
 
 검증:
 
-- loader가 data 없음 상태에서 빈 DataFrame 또는 `NOT_RUN` context를 반환
-- 기존 Practical Validation은 깨지지 않음
+- schema sync가 반복 실행 가능
+- 수집기가 빈 source / 실패 source를 실패 summary로 반환
+- 기존 Practical Validation은 아직 외부 수집에 의존하지 않음
 
-### 작업 단위 2. Cost / Liquidity / Operability 실제 evidence 연결
+### 작업 단위 2. Cost / Liquidity / Operability 데이터 수집
 
 목표:
 
-- 기존 `nyse_asset_profile` + price history ADV를 bridge로 사용한다.
-- 별도 snapshot table이 준비되면 그 데이터를 우선한다.
+- ETF 비용, 규모, spread, NAV / premium-discount, 거래 가능성 snapshot을 DB에 저장한다.
+- 공식 provider 값과 기존 DB bridge 값을 분리한다.
+
+주요 작업:
+
+- iShares / SSGA / Invesco fund page 또는 다운로드 파일에서 가능한 operability field 수집
+- `nyse_price_history` 기반 ADV / dollar volume proxy 계산
+- `nyse_asset_profile` 기반 AUM / bid / ask bridge는 coverage gap 보조로만 사용
+- `coverage_status`를 `actual`, `partial`, `proxy`, `missing`, `error`로 저장
 
 검증:
 
 - `SPY / QQQ / GLD / IEF / TLT` 같은 ETF는 가능한 field를 보여준다.
 - coverage가 낮은 ETF는 `REVIEW` 또는 `NOT_RUN`으로 표시한다.
 
-### 작업 단위 3. Practical Validation Provider Coverage UI
+### 작업 단위 3. ETF holdings / exposure 데이터 수집
 
 목표:
 
+- ETF 내부 holdings와 sector / asset class exposure를 DB에 저장한다.
+- holdings가 없으면 추정으로 채우지 않고 `NOT_RUN` 또는 ticker proxy fallback으로 남긴다.
+
+주요 작업:
+
+- iShares AOR / IEF / TLT holdings CSV adapter
+- SSGA SPY / GLD / BIL daily holdings XLSX adapter
+- Invesco QQQ holdings endpoint 안정성 확인 및 adapter
+- AOR 같은 ETF-of-ETF는 1차 holdings와 2차 look-through 가능 여부를 분리 기록
+
+검증:
+
+- holdings row count와 as-of date가 저장된다.
+- exposure aggregation이 holdings weight 합계와 크게 어긋나지 않는다.
+- full holdings row는 JSONL에 저장하지 않는다.
+
+### 작업 단위 4. Macro / Sentiment 데이터 수집
+
+목표:
+
+- VIX / yield curve / credit spread snapshot을 DB에 저장한다.
+- sentiment는 별도 composite crawling보다 FRED 기반 market-context proxy로 시작한다.
+
+주요 작업:
+
+- FRED `series/observations` collector
+- 1차 series: `VIXCLS`, `T10Y3M`, `BAA10Y`
+- optional series: HY OAS 등은 coverage 기간을 확인한 뒤 추가
+- FRED API key는 hardcode하지 않고 env / config boundary로 둔다.
+
+검증:
+
+- 지정 기간 row count가 확인된다.
+- 최신 observation date와 staleness가 계산된다.
+- macro data가 없으면 Practical Validation에서 `NOT_RUN`으로 남길 수 있다.
+
+### 작업 단위 5. Loader / Provider Coverage context
+
+목표:
+
+- 수집된 DB snapshot을 Practical Validation이 읽을 수 있는 context로 변환한다.
 - 사용자가 "어떤 데이터가 실제 provider이고, 어떤 데이터가 proxy인지" 바로 이해하게 한다.
 
 표시 예:
@@ -307,18 +370,24 @@ Holdings         NOT_RUN  holdings connector not configured
 Macro            NOT_RUN  macro connector not configured
 ```
 
-### 작업 단위 4. Macro / Sentiment connector
+검증:
+
+- provider table이 비어 있어도 빈 context 또는 `NOT_RUN`이 안정적으로 반환된다.
+- provider snapshot과 DB price proxy 출처가 분리된다.
+
+### 작업 단위 6. Practical Validation diagnostics / UI 연결
 
 목표:
 
-- VIX / yield curve / credit spread snapshot을 validation date 기준으로 읽는다.
+- provider context를 각 Practical Validation domain에 연결한다.
+- 기존 proxy fallback은 유지하되, actual provider data가 있으면 우선 사용한다.
 
 검증:
 
-- series가 없으면 `NOT_RUN`
-- series가 있으면 snapshot date, source, value, interpretation이 표시됨
+- operability / holdings / macro coverage가 화면과 result row에 compact evidence로 남는다.
+- 기존 candidate / saved result / Final Review 흐름이 깨지지 않는다.
 
-### 작업 단위 5. Stress Interpretation
+### 작업 단위 7. Stress Interpretation
 
 목표:
 
@@ -329,16 +398,17 @@ Macro            NOT_RUN  macro connector not configured
 - 후보 기간 밖 stress는 `NOT_RUN`
 - 후보 기간 안 stress는 return / MDD / benchmark spread / interpretation 표시
 
-### 작업 단위 6. ETF holdings look-through
+### 작업 단위 8. Strategy-specific Sensitivity Runtime
 
 목표:
 
-- holdings provider가 확정된 뒤 holdings-level overlap과 sector exposure를 계산한다.
+- provider connector 이후 실제 runtime 재계산 sensitivity를 붙일지 결정한다.
+- P2 후반 또는 P3로 분리 가능하다.
 
 검증:
 
-- holdings coverage 없으면 proxy fallback 유지
-- holdings coverage 있으면 ticker bucket proxy보다 holdings-based exposure를 우선 표시
+- 포함한다면 strategy별 perturbation 결과가 compact summary로 저장된다.
+- 제외한다면 `NOT_RUN / future work`로 남긴다.
 
 ## QA 체크리스트
 
@@ -357,10 +427,10 @@ Macro            NOT_RUN  macro connector not configured
 
 | 결정 | 기본 제안 |
 |---|---|
-| ETF provider | 기존 yfinance profile field를 bridge로 쓰되, cost / holdings는 별도 provider snapshot 설계 |
-| Holdings provider | 안정 source 확정 전 schema / loader contract 먼저 설계 |
-| Macro source | FRED-compatible long-form series table을 우선 고려 |
-| Sentiment source | VIX / credit spread / yield curve를 1차 sentiment proxy로 쓰고 Fear & Greed는 optional |
+| ETF provider | 공식 issuer source 우선: iShares / BlackRock, SSGA / SPDR, Invesco. yfinance는 bridge / fallback |
+| Holdings provider | iShares AOR / IEF / TLT CSV부터 구현하고, SSGA holdings XLSX와 Invesco QQQ endpoint를 같은 adapter 구조로 확장 |
+| Macro source | FRED `series/observations` 기반 long-form series table |
+| Sentiment source | FRED 기반 VIX / credit spread / yield curve를 1차 sentiment proxy로 쓰고 Fear & Greed는 optional |
 | Stress interpretation rule | rule-based template로 시작하고, 숫자 / exposure / component contribution 기반 문장 생성 |
 | Sensitivity runtime 포함 여부 | provider connector 이후 P2 후반 또는 P3로 분리 가능 |
 
@@ -369,6 +439,7 @@ Macro            NOT_RUN  macro connector not configured
 P2는 새 전략을 만드는 작업이 아니라,
 Practical Validation이 이미 가진 12개 diagnostics를 실제 provider data와 더 좋은 해석으로 보강하는 단계다.
 
-첫 구현은 `Cost / Liquidity / ETF Operability Connector`가 가장 적합하다.
-이미 `nyse_asset_profile`과 price history가 있으므로 bridge를 만들 수 있고,
-동시에 provider coverage가 얼마나 부족한지도 UI에서 명확히 보여줄 수 있기 때문이다.
+첫 구현은 UI가 아니라 provider data collection foundation이다.
+공식 provider / FRED 데이터를 ingestion에서 DB에 저장한 다음,
+loader와 Practical Validation connector를 붙인다.
+기존 `nyse_asset_profile`과 price history는 coverage gap을 설명하는 bridge / fallback으로 유지한다.

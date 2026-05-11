@@ -21,6 +21,17 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-11 - P2 provider connector는 데이터 수집 / DB 저장부터 개발한다
+- Request topic:
+  - 사용자가 P2 provider connector 개발에서 ETF holdings, macro series, sentiment series를 어디서 어떻게 수집할지 확인하고, DB ingestion 중심으로 개발 순서를 수정해 달라고 요청함
+- Interpreted goal:
+  - Practical Validation이 실제 provider evidence를 쓰려면 먼저 공식 source에서 데이터를 수집해 DB에 저장해야 하며, UI가 직접 외부 사이트를 호출하는 구조는 피해야 함
+- Result:
+  - P2 provider source는 공식 issuer / FRED 우선으로 정리했다
+  - ETF source는 iShares / BlackRock, SSGA / SPDR, Invesco를 우선 확인하고, `yfinance`와 기존 `nyse_asset_profile` / `nyse_price_history` 값은 bridge / fallback으로 둔다
+  - Macro / sentiment 1차 source는 FRED `VIXCLS`, `T10Y3M`, `BAA10Y`와 DB 가격 기반 risk proxy로 잡는다
+  - P2 개발 순서는 source map / schema / collector / UPSERT 저장을 먼저 만들고, 그 다음 loader, Practical Validation connector, UI / diagnostics를 연결하는 방향으로 수정했다
+
 ### 2026-05-03 - Phase 34는 Final Portfolio Selection Decision Pack으로 시작한다
 - Request topic:
   - 사용자가 Phase 34 작업 시작을 요청함

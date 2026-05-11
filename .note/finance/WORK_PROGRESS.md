@@ -21,6 +21,16 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-11
+- Updated Practical Validation V2 P2 provider connector planning after source / ingestion direction review.
+- Updated:
+  - `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_PROVIDER_CONNECTOR_PLAN.md`
+  - `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_P2_CONNECTOR_AND_STRESS_PLAN.md`
+- Durable decision:
+  - P2 development starts with provider data collection through `finance/data/*` ingestion and MySQL persistence.
+  - Practical Validation / Dashboard must read provider data through loaders, not remote-fetch from the UI.
+  - Official issuer / FRED sources are preferred; `yfinance`, `nyse_asset_profile`, and price-history ADV remain bridge / fallback evidence.
+
 ### 2026-05-10
 - Clarified `NOT_RUN` handling for Final Review route in Practical Validation docs.
 - Updated:

@@ -48,10 +48,59 @@ P2 provider 개발 문서는 더 쪼개지지 않는다.
 새 문서를 만들기보다 이 문서 안의 작은 section을 갱신한다.
 단, 실제 DB table이 추가되면 `DATA_DB_PIPELINE_FLOW.md`와 data architecture 문서에는 table 의미만 별도로 반영한다.
 
+## Provider Source Decision
+
+P2 provider connector는 화면에서 외부 사이트를 직접 호출하지 않는다.
+수집은 `finance/data/*` ingestion layer에서 수행하고, 결과를 MySQL에 저장한 뒤,
+Practical Validation과 Dashboard는 `finance/loaders/*`를 통해 DB snapshot만 읽는다.
+
+```text
+공식 API / 공식 CSV / 공식 XLSX / yfinance fallback
+  -> finance/data/* collector
+  -> finance_meta / finance_price DB table
+  -> finance/loaders/* read path
+  -> app/web/backtest_practical_validation*.py
+```
+
+### Source 우선순위
+
+| 데이터 | 1차 source | fallback / bridge | 저장/해석 기준 |
+|---|---|---|---|
+| ETF 비용 / 규모 / spread / premium-discount | ETF 발행사 공식 fund page 또는 공식 CSV / XLSX / API. 우선 대상은 iShares / BlackRock, SSGA / SPDR, Invesco | `nyse_asset_profile`의 `total_assets`, `bid`, `ask`와 `nyse_price_history`의 ADV / dollar volume proxy | 공식 provider 값은 `actual`, DB 가격/거래량 계산값은 `proxy`, yfinance profile 값은 `bridge`로 구분 |
+| ETF holdings | 발행사 공식 holdings download. iShares는 AOR / IEF / TLT CSV endpoint를 우선 구현하고, SSGA는 SPY / GLD / BIL daily holdings XLSX를 우선 확인한다 | holdings가 없으면 full holdings를 추정하지 않고 ticker bucket proxy 또는 `NOT_RUN` | row 단위 holdings는 DB에 저장하고 JSONL에는 coverage / top exposure summary만 저장 |
+| ETF exposure / look-through | holdings snapshot에서 sector / asset class / country exposure를 집계 | holdings coverage가 없으면 기존 ticker bucket proxy | ETF-of-ETF 구조인 AOR은 1차 holdings와 가능한 2차 underlying ETF expansion을 구분 |
+| Macro series | FRED API `series/observations` | FRED CSV download. 외부 HTML crawling은 사용하지 않는 방향 | `series_id`, `observation_date`, `source` 기준 long-form 저장 |
+| Sentiment proxy | FRED 기반 VIX / credit spread / yield curve + 기존 DB 가격 momentum / drawdown | Fear & Greed 같은 composite index는 안정 source 확인 전 optional | sentiment는 trade signal이 아니라 market context overlay로만 사용 |
+
+### 초기 구현 대상
+
+초기 source map은 현재 Practical Validation과 Selected Portfolio Dashboard에서 자주 쓰는 ETF부터 작게 시작한다.
+
+| ticker | 우선 source | 메모 |
+|---|---|---|
+| `AOR`, `IEF`, `TLT` | iShares / BlackRock 공식 CSV | holdings CSV 응답 확인 완료. AOR은 ETF-of-ETF look-through가 중요 |
+| `SPY` | SSGA / SPDR 공식 fund page + daily holdings XLSX | AUM, expense ratio, premium-discount, median spread, holdings download 확인 대상 |
+| `GLD`, `BIL` | SSGA / SPDR 공식 fund page + holdings XLSX | SPDR adapter로 묶어서 구현 가능 |
+| `QQQ` | Invesco 공식 page / holdings Excel 또는 API endpoint | endpoint 안정성 확인 후 adapter 구현. 불안정하면 `provider_pending`으로 표시 |
+| macro 기본 series | FRED | `VIXCLS`, `T10Y3M`, `BAA10Y`를 1차 후보로 사용 |
+
+`yfinance`는 계속 사용하되, 공식 provider가 없는 field의 임시 bridge로만 취급한다.
+특히 expense ratio, median bid-ask spread, holdings의 canonical source로 두지 않는다.
+
 ## 데이터 수집 구현 계획
 
 이 section은 ETF holdings, macro series, sentiment series를 먼저 수집해야 할 때의 구현 기준이다.
-세부 provider는 개발 직전에 coverage와 안정성을 확인하지만, 코드 구조는 아래처럼 고정한다.
+P2 개발은 UI 표시나 diagnostics 해석보다 먼저 provider source map, DB schema, collector, UPSERT 저장을 만든다.
+데이터가 DB에 없으면 Practical Validation은 해당 domain을 `NOT_RUN` 또는 `REVIEW`로 표시한다.
+
+### 개발 시작 순서
+
+1. provider source map과 ticker-to-provider adapter mapping을 정의한다.
+2. `finance/data/db/schema.py`에 provider snapshot / holdings / macro table을 추가한다.
+3. `finance/data/etf_provider.py`와 `finance/data/macro.py`에서 수집 / normalize / UPSERT를 구현한다.
+4. `finance/loaders/*`에서 최신 snapshot과 기준일 snapshot을 읽는다.
+5. `app/web/backtest_practical_validation_connectors.py`가 loader 결과를 Practical Validation evidence로 변환한다.
+6. UI와 diagnostics는 마지막에 연결한다.
 
 ### 1. ETF Holdings 수집
 
@@ -591,35 +640,34 @@ def build_provider_context(
 
 ## 첫 구현 단위
 
-첫 구현은 ETF operability bridge가 가장 좋다.
-
-이유:
-
-- 현재 `nyse_asset_profile`에 이미 `total_assets`, `bid`, `ask` field가 있다.
-- `nyse_price_history`에 volume이 있어 ADV proxy를 만들 수 있다.
-- runtime `backtest.py`도 이미 ETF operability policy를 일부 계산하므로 개념이 낯설지 않다.
-- coverage 부족을 `Provider Coverage`로 보여주는 것만으로도 현재 Practical Validation의 설명력이 올라간다.
+첫 구현은 화면 연결이 아니라 provider data collection foundation이다.
+기존 `nyse_asset_profile`과 `nyse_price_history` bridge는 fallback으로 유지하되,
+P2의 주 작업은 공식 provider / macro source에서 데이터를 수집해 DB에 저장하는 것이다.
 
 첫 구현 범위:
 
-1. loader contract 추가
-2. `nyse_asset_profile` + price history ADV bridge
-3. provider coverage context 생성
-4. Practical Validation `Operability / Cost / Liquidity`에 actual / proxy / missing 구분 표시
-5. full provider schema는 확장 가능하게 optional field로 설계
+1. provider source map과 adapter mapping 추가
+2. `etf_operability_snapshot`, `etf_holdings_snapshot`, `macro_series_observation` schema 추가
+3. iShares / SSGA / Invesco / FRED 수집 adapter 골격 추가
+4. iShares AOR / IEF / TLT holdings CSV와 FRED 기본 series부터 수집 / UPSERT
+5. SSGA SPY / GLD / BIL, Invesco QQQ는 endpoint 안정성 확인 후 같은 adapter 구조로 확장
+6. 수집 결과 row count, coverage status, failed symbols summary를 반환
+7. 이후 loader와 Practical Validation provider context를 연결
 
 ## 후속 구현 단위
 
-1. ETF operability dedicated snapshot table 추가
-2. ETF holdings snapshot table + loader 추가
-3. holdings exposure aggregation 추가
-4. macro series observation table + loader 추가
-5. Practical Validation macro / sentiment domain 연결
+1. ETF operability official / bridge data를 같은 coverage summary로 읽는 loader 추가
+2. ETF holdings snapshot loader와 exposure aggregation 추가
+3. macro snapshot loader와 sentiment proxy context 추가
+4. Practical Validation provider coverage UI 연결
+5. Practical Validation macro / sentiment / operability domain 연결
 6. stress interpretation에서 macro snapshot과 stress window를 연결
 
 ## 검증 기준
 
 - [ ] provider table이 없어도 loader와 UI가 실패하지 않는다.
+- [ ] 수집기는 같은 symbol / as_of_date / source 기준으로 반복 실행 가능하다.
+- [ ] 수집 결과에 `source`, `source_ref`, `as_of_date`, `collected_at`, `coverage_status`가 남는다.
 - [ ] coverage가 낮은 ETF는 `REVIEW` 또는 `NOT_RUN`으로 보인다.
 - [ ] proxy data는 `provider_snapshot`처럼 표시되지 않는다.
 - [ ] `nyse_asset_profile` 기존 reader와 runtime ETF operability path가 깨지지 않는다.
@@ -631,8 +679,8 @@ def build_provider_context(
 
 | 결정 | 기본 방향 |
 |---|---|
-| dedicated table을 바로 만들지 여부 | 첫 구현은 bridge loader로 시작하고, 이후 table 추가 |
-| provider source | 안정성 / 재현성 / field coverage 확인 후 고정 |
+| dedicated table을 바로 만들지 여부 | P2 첫 구현에서 dedicated snapshot table을 추가한다. bridge loader는 fallback |
+| provider source | 공식 issuer / FRED 우선. yfinance는 bridge / fallback |
 | API key 필요 여부 | hardcoded credential 금지. env / config 경계 필요 |
 | holdings refresh cadence | provider와 source license 확인 후 결정 |
 | macro observation staleness | series별 frequency에 맞춰 stale threshold 분리 |
@@ -644,5 +692,6 @@ Provider connector는 "좋은 전략을 찾는 기능"이 아니라,
 이미 선택된 후보가 실제 ETF 상품과 시장 context 측면에서 검토 가능한 evidence를 갖췄는지 확인하는 데이터 경계다.
 
 따라서 첫 구현은 작게 시작한다.
-기존 `nyse_asset_profile`과 `nyse_price_history`로 operability bridge를 만들고,
-그 다음 dedicated provider snapshot table, holdings, macro series로 확장한다.
+하지만 시작점은 UI가 아니라 데이터 수집이다.
+공식 provider / FRED 데이터를 ingestion에서 DB에 저장하고,
+기존 `nyse_asset_profile`과 `nyse_price_history`는 coverage가 비는 영역의 bridge / fallback으로만 사용한다.
