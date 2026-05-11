@@ -1927,13 +1927,13 @@ def _render_ingestion_console() -> None:
                 _render_inline_last_completed_result("metadata_refresh")
 
             with st.expander("Practical Validation Provider Snapshots", expanded=False):
-                st.write("Refresh the provider snapshots that Practical Validation will use for P2 diagnostics.")
+                st.write("Practical Validation에서 포트폴리오를 검토할 때 사용할 provider snapshot 데이터를 수집합니다.")
                 st.caption(
-                    "This is the P2-5A bridge: it runs the ETF operability, ETF holdings / exposure, and macro market-context collectors "
-                    "from the Ingestion console. Practical Validation diagnostic scoring is connected in the next P2-5 step."
+                    "ETF의 운용 가능성, ETF 내부 구성, 시장 환경 데이터를 DB에 저장해 둡니다. "
+                    "이후 Practical Validation은 저장된 snapshot을 읽어서 비용 / 유동성, 자산배분, 집중도, 시장 국면 판단의 근거로 사용합니다."
                 )
                 st.caption(
-                    "Writes to: `finance_meta.etf_operability_snapshot`, `finance_meta.etf_holdings_snapshot`, "
+                    "전체 저장 대상: `finance_meta.etf_operability_snapshot`, `finance_meta.etf_holdings_snapshot`, "
                     "`finance_meta.etf_exposure_snapshot`, `finance_meta.macro_series_observation`"
                 )
                 provider_tab, holdings_tab, macro_tab = st.tabs(
@@ -1942,13 +1942,17 @@ def _render_ingestion_console() -> None:
 
                 with provider_tab:
                     st.caption(
-                        "Collects cost / liquidity / operability fields such as expense ratio, AUM, spread, premium/discount, leverage, and inverse flags."
+                        "ETF가 현재 실전 운용 대상으로 적절한지 확인하기 위한 비용, 규모, 유동성, 가격 괴리, 레버리지 / 인버스 정보를 수집합니다. "
+                        "Practical Validation에서는 거래 가능성, 비용 부담, 레버리지 / 인버스 상품 여부를 판단하는 근거로 사용합니다."
+                    )
+                    st.caption(
+                        "저장 테이블: `finance_meta.etf_operability_snapshot`"
                     )
                     operability_symbols_text = st.text_area(
                         "ETF Symbols",
                         value=P2_PROVIDER_OPERABILITY_SYMBOLS,
                         key="p2_operability_symbols_input",
-                        help="Initial source-map coverage: AOR, IEF, TLT, SPY, BIL, GLD, QQQ.",
+                        help="초기 공식 provider 수집 지원 대상: AOR, IEF, TLT, SPY, BIL, GLD, QQQ.",
                     )
                     operability_symbols = _parse_csv_items(operability_symbols_text)
                     operability_cols = st.columns(4)
@@ -1962,7 +1966,7 @@ def _render_ingestion_console() -> None:
                         "As Of Date",
                         value="",
                         key="p2_operability_as_of",
-                        help="Optional YYYY-MM-DD. Blank means latest provider / DB snapshot date.",
+                        help="선택 사항입니다. YYYY-MM-DD 형식으로 입력합니다. 비워두면 provider 또는 DB의 최신 기준일을 사용합니다.",
                     )
                     operability_lookback = int(
                         operability_cols[2].number_input(
@@ -2002,10 +2006,10 @@ def _render_ingestion_console() -> None:
                                 "run_metadata": _job_metadata(
                                     pipeline_type="practical_validation_provider_operability",
                                     execution_mode="operational",
-                                    symbol_source="P2 provider source map",
+                                    symbol_source="Practical Validation provider source map",
                                     symbol_count=len(operability_symbols),
                                     execution_context=(
-                                        "Refresh ETF operability / cost / liquidity provider snapshot for Practical Validation P2 diagnostics."
+                                        "Practical Validation에서 비용 / 유동성 / 거래 가능성을 판단할 때 사용할 ETF operability snapshot을 수집합니다."
                                     ),
                                     input_params={
                                         "provider": operability_provider,
@@ -2025,14 +2029,18 @@ def _render_ingestion_console() -> None:
 
                 with holdings_tab:
                     st.caption(
-                        "Collects ETF holding rows, then rebuilds asset-class / sector / country / currency exposure snapshots. "
-                        "`GLD` row-level holdings are still pending, so it is not in the default list here."
+                        "ETF 안에 무엇이 들어있는지와 자산군 / 섹터 / 국가 / 통화 노출이 어떻게 나뉘는지 수집합니다. "
+                        "Practical Validation에서는 포트폴리오 자산배분, 집중도, 중복 노출을 판단하는 근거로 사용합니다. "
+                        "`GLD`의 row-level holdings는 아직 수집 대기 상태라 기본 목록에는 넣지 않습니다."
+                    )
+                    st.caption(
+                        "저장 테이블: `finance_meta.etf_holdings_snapshot`, `finance_meta.etf_exposure_snapshot`"
                     )
                     holdings_symbols_text = st.text_area(
                         "ETF Symbols",
                         value=P2_PROVIDER_HOLDINGS_SYMBOLS,
                         key="p2_holdings_symbols_input",
-                        help="Initial row-level holdings coverage: AOR, IEF, TLT, SPY, BIL, QQQ.",
+                        help="초기 row-level holdings 수집 지원 대상: AOR, IEF, TLT, SPY, BIL, QQQ.",
                     )
                     holdings_symbols = _parse_csv_items(holdings_symbols_text)
                     holdings_cols = st.columns(3)
@@ -2046,13 +2054,13 @@ def _render_ingestion_console() -> None:
                         "As Of Date",
                         value="",
                         key="p2_holdings_as_of",
-                        help="Optional YYYY-MM-DD. Blank means provider latest and latest stored holdings for exposure aggregation.",
+                        help="선택 사항입니다. YYYY-MM-DD 형식으로 입력합니다. 비워두면 provider 최신 holdings와 최신 저장 holdings를 사용해 exposure를 집계합니다.",
                     )
                     holdings_include_aggregates = holdings_cols[2].checkbox(
                         "Provider Aggregate Sectors",
                         value=True,
                         key="p2_holdings_include_aggregates",
-                        help="Also store official aggregate sector exposure when the provider exposes it, currently SPY / QQQ.",
+                        help="provider가 공식 sector aggregate를 제공하면 함께 저장합니다. 현재는 SPY / QQQ에서 사용합니다.",
                     )
                     holdings_check = check_symbol_input(holdings_symbols)
                     _render_check_result(holdings_check)
@@ -2075,10 +2083,10 @@ def _render_ingestion_console() -> None:
                                 "run_metadata": _job_metadata(
                                     pipeline_type="practical_validation_provider_holdings_exposure",
                                     execution_mode="operational",
-                                    symbol_source="P2 provider source map",
+                                    symbol_source="Practical Validation provider source map",
                                     symbol_count=len(holdings_symbols),
                                     execution_context=(
-                                        "Refresh ETF holdings and exposure provider snapshots for Practical Validation P2 diagnostics."
+                                        "Practical Validation에서 자산배분 / 집중도 / 중복 노출을 판단할 때 사용할 ETF holdings와 exposure snapshot을 수집합니다."
                                     ),
                                     input_params={
                                         "provider": holdings_provider,
@@ -2097,13 +2105,17 @@ def _render_ingestion_console() -> None:
 
                 with macro_tab:
                     st.caption(
-                        "Collects FRED market-context series used as macro / sentiment proxy inputs: VIX, yield-curve slope, and credit spread."
+                        "VIX, 금리곡선, 신용스프레드 같은 시장 환경 데이터를 수집합니다. "
+                        "Practical Validation에서는 현재 시장 국면과 risk-on / risk-off 환경을 해석하는 근거로 사용합니다."
+                    )
+                    st.caption(
+                        "저장 테이블: `finance_meta.macro_series_observation`"
                     )
                     macro_series_text = st.text_area(
                         "Macro Series IDs",
                         value=P2_PROVIDER_MACRO_SERIES,
                         key="p2_macro_series_input",
-                        help="Default P2 series: VIXCLS, T10Y3M, BAA10Y.",
+                        help="기본 수집 series: VIXCLS, T10Y3M, BAA10Y.",
                     )
                     macro_series = _parse_csv_items(macro_series_text)
                     macro_cols = st.columns(3)
@@ -2114,7 +2126,7 @@ def _render_ingestion_console() -> None:
                         ["auto", "csv", "api"],
                         index=0,
                         key="p2_macro_source_mode",
-                        help="`auto` uses FRED API when `FRED_API_KEY` exists, otherwise official FRED CSV download.",
+                        help="`auto`는 `FRED_API_KEY`가 있으면 FRED API를 사용하고, 없으면 FRED 공식 CSV download를 사용합니다.",
                     )
                     macro_check = check_symbol_input(macro_series)
                     _render_check_result(macro_check)
@@ -2137,10 +2149,10 @@ def _render_ingestion_console() -> None:
                                 "run_metadata": _job_metadata(
                                     pipeline_type="practical_validation_macro_market_context",
                                     execution_mode="operational",
-                                    symbol_source="FRED P2 source map",
+                                    symbol_source="FRED market-context source map",
                                     symbol_count=len(macro_series),
                                     execution_context=(
-                                        "Refresh FRED market-context observations for Practical Validation macro / sentiment diagnostics."
+                                        "Practical Validation에서 시장 국면과 risk-on / risk-off 환경을 해석할 때 사용할 FRED market-context observations를 수집합니다."
                                     ),
                                     input_params={
                                         "series_ids": macro_series,
