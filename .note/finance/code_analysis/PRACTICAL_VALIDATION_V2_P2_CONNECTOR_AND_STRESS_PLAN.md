@@ -93,6 +93,45 @@ P2-7. QA: proxy / NOT_RUN 항목이 정상적으로 설명되는지 확인
 | 10 | Operability / Cost / Liquidity | 가격 / 거래량 proxy | 비용, AUM, ADV, spread, premium/discount 확인 |
 | 11 | Robustness / Sensitivity / Overfit | 단순 perturbation 일부 | sensitivity 결과와 과최적화 해석 보강 |
 
+## P2-0 완료 산출물: 대상 진단 계약
+
+상태: `completed`
+
+P2-0은 실제 provider 수집 코드를 작성하기 전에,
+어떤 검증 항목을 정상화할지와 각 항목이 어떤 데이터 상태를 가질 수 있는지 확정하는 단계다.
+이 단계의 산출물은 아래 계약이다.
+
+### 상태 / 출처 기준
+
+| 구분 | 의미 | Practical Validation 표시 |
+|---|---|---|
+| `actual` | 공식 provider, FRED, 또는 DB snapshot에서 해당 검증에 필요한 핵심 데이터가 충분함 | 해당 domain의 `PASS` / `REVIEW` 판단 근거로 사용 |
+| `bridge` | 기존 `nyse_asset_profile`, `nyse_price_history`처럼 목적 전용 provider는 아니지만 실제 DB에 있는 보조 데이터 | `REVIEW` 또는 보조 evidence로 표시 |
+| `proxy` | ticker 이름, component weight, benchmark price-action처럼 추정에 가까운 계산 | `REVIEW` 우선. 통과처럼 보이지 않게 origin 표시 |
+| `not_run` | connector, table, source, 기간, 또는 coverage가 없어 실행하지 못함 | `NOT_RUN`과 reason 표시 |
+| `blocked` | 가격 부재, 거래 불가, execution boundary 위반처럼 검증을 계속하면 위험한 상태 | `BLOCKED` 후보로 표시 |
+
+### 대상 진단별 데이터 계약
+
+| 검증 | actual data 요구사항 | bridge / proxy fallback | `NOT_RUN` 또는 `REVIEW` 조건 | compact evidence |
+|---|---|---|---|---|
+| 2. Asset Allocation Fit | ETF holdings 기반 `asset_class`, `sector`, `country`, component target weight | ticker bucket, strategy family, component label | 핵심 ETF holdings가 없으면 `NOT_RUN`; 일부만 있으면 `REVIEW` | asset-class 비중, coverage count, missing ETF |
+| 3. Concentration / Overlap / Exposure | holdings row의 `holding_id` / symbol / name / weight, top holding concentration | component weight concentration, ticker sector proxy | holdings overlap을 계산할 수 없으면 `NOT_RUN`; wrapper-level concentration만 있으면 `REVIEW` | top overlap, top concentration, coverage status |
+| 5. Regime / Macro Suitability | FRED `VIXCLS`, `T10Y3M`, `BAA10Y` 기준일 snapshot | benchmark recent return / drawdown / volatility proxy | 기준일 근처 macro snapshot이 없으면 `NOT_RUN`; 일부 series만 있으면 `REVIEW` | series value, observation date, staleness |
+| 6. Sentiment / Risk-On-Off Overlay | VIX / credit spread / yield curve 변화율과 level | benchmark risk-on/off proxy | macro-derived context가 없으면 `NOT_RUN`; proxy만 있으면 `REVIEW` | risk-on/off label, supporting series, stale count |
+| 7. Stress / Scenario Diagnostics | portfolio / benchmark curve, stress calendar, component contribution, optional exposure / macro context | curve-only stress return / MDD | stress window가 후보 기간 밖이면 `NOT_RUN`; 원인 근거가 부족하면 `REVIEW` | stress return, MDD, benchmark spread, interpretation |
+| 9. Leveraged / Inverse ETF Suitability | provider product metadata: leverage factor, inverse 여부, daily objective, holding-period note | ticker pattern, known ETF list | 상품 metadata가 없으면 `REVIEW`; ticker proxy도 없으면 `NOT_RUN` | flagged ETF, product type, mismatch reason |
+| 10. Operability / Cost / Liquidity | expense ratio, AUM / net assets, ADV / dollar volume, spread, premium/discount, NAV / market price | DB volume ADV, `nyse_asset_profile` total_assets / bid / ask | 비용 / spread / AUM 중 핵심 field가 없으면 `REVIEW`; 거래 데이터 없으면 `NOT_RUN` 또는 `BLOCKED` | per-ETF cost/liquidity summary, missing fields |
+| 11. Robustness / Sensitivity / Overfit | drop-one, weight +/- perturbation, window perturbation, optional runtime sensitivity result | local simple sensitivity, trial count, source metadata | sensitivity 계산 입력이 없으면 `NOT_RUN`; 단순 perturbation만 있으면 `REVIEW` | perturbation count, worst case, overfit review gap |
+
+### P2-0 확정 사항
+
+- P2는 위 8개 진단을 우선 정상화한다.
+- 1, 4, 8, 12번 진단은 P2의 주 대상이 아니다. 다만 provider context가 생기면 보조 evidence를 받을 수 있다.
+- 데이터 수집은 P2-2 이후 단계의 구현 수단이다. P2-0에서는 source / storage / fallback 계약만 고정한다.
+- full holdings row, full macro series, full raw provider response는 `PRACTICAL_VALIDATION_RESULTS.jsonl`에 저장하지 않는다.
+- JSONL에는 coverage, compact evidence, missing reason, staleness, source reference만 저장한다.
+
 ## 이 P2가 끝나면 좋은 점
 
 - `Operability / Cost / Liquidity`가 단순 proxy가 아니라 provider coverage를 함께 보여준다.
@@ -129,7 +168,7 @@ P2-7. QA: proxy / NOT_RUN 항목이 정상적으로 설명되는지 확인
 
 ## P2 범위
 
-### P2-1. Cost / Liquidity / ETF Operability Connector
+### 진단 축 A. Cost / Liquidity / ETF Operability Connector
 
 목표:
 
@@ -151,7 +190,7 @@ P2-7. QA: proxy / NOT_RUN 항목이 정상적으로 설명되는지 확인
 - 일부 `9. Leveraged / Inverse ETF Suitability`
 - provider coverage summary
 
-### P2-2. ETF Holdings / Sector Look-through
+### 진단 축 B. ETF Holdings / Sector Look-through
 
 목표:
 
@@ -179,7 +218,7 @@ P2-7. QA: proxy / NOT_RUN 항목이 정상적으로 설명되는지 확인
 - holdings는 시점별로 바뀌므로 point-in-time 한계를 UI와 result에 남긴다.
 - full holdings row를 JSONL에 저장하지 않고 DB 또는 loader 결과로 관리한다.
 
-### P2-3. Macro / Sentiment Connector
+### 진단 축 C. Macro / Sentiment Connector
 
 목표:
 
@@ -207,7 +246,7 @@ P2-7. QA: proxy / NOT_RUN 항목이 정상적으로 설명되는지 확인
 - 자동 매수 / 매도 판단이나 hard blocker로 쓰지 않는다.
 - 데이터가 없으면 `NOT_RUN`, proxy만 있으면 `REVIEW`로 남긴다.
 
-### P2-4. Stress Interpretation 고도화
+### 진단 축 D. Stress Interpretation 고도화
 
 목표:
 
@@ -236,7 +275,7 @@ P2-7. QA: proxy / NOT_RUN 항목이 정상적으로 설명되는지 확인
 현재 후보가 여전히 duration에 크게 의존하면 금리 재상승 구간에서 재검토가 필요합니다.
 ```
 
-### P2-5. Robustness / Sensitivity 해석 보강
+### 진단 축 E. Robustness / Sensitivity 해석 보강
 
 이 항목은 12개 진단 중 `11. Robustness / Sensitivity / Overfit`을 정상화하기 위한 보강이다.
 runtime 재계산까지 포함할지는 구현 중 결정하되, P2에서는 최소한 sensitivity 결과와 해석이

@@ -74,6 +74,14 @@ P2에서 직접 정상화하는 주 대상은 아래와 같다.
 P2의 데이터 수집 / DB / loader 작업은 위 검증 항목을 정상화하기 위한 수단이다.
 즉 P2는 "provider 플랫폼 구축"이 아니라 "미완성 검증 항목 정상화"가 목표다.
 
+P2-0 현재 상태:
+
+- `completed`
+- 대상 진단은 2, 3, 5, 6, 7, 9, 10, 11로 확정했다.
+- 각 대상 진단의 actual data, bridge / proxy fallback, `NOT_RUN` / `REVIEW` 조건은
+  `PRACTICAL_VALIDATION_V2_P2_CONNECTOR_AND_STRESS_PLAN.md`의 `P2-0 완료 산출물: 대상 진단 계약`을 기준으로 한다.
+- 다음 작업은 P2-1로, 위 진단 계약을 구현하기 위한 실제 schema / ingestion data field를 고정하는 것이다.
+
 ## 현재 구현 상태
 
 현재 Clean V2 흐름은 아래와 같다.

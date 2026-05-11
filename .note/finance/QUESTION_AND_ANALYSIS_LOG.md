@@ -43,6 +43,17 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Provider / holdings / macro ingestion은 위 진단을 정상화하기 위한 구현 수단으로 문서화했다
   - 정상화는 모든 항목이 PASS가 된다는 뜻이 아니라, 실제 데이터가 있으면 actual evidence로 검증하고 없으면 명확한 `NOT_RUN` 또는 `REVIEW` reason을 남기는 것으로 정의했다
 
+### 2026-05-11 - P2-0은 대상 진단 계약을 확정하는 작업이다
+- Request topic:
+  - 사용자가 Practical Validation V2 P2-0 작업 진행을 요청함
+- Interpreted goal:
+  - 코드 구현 전에 P2에서 정상화할 검증 항목, 필요한 actual data, bridge / proxy fallback, `NOT_RUN` / `REVIEW` 조건을 확정해야 함
+- Result:
+  - P2-0 산출물을 `PRACTICAL_VALIDATION_V2_P2_CONNECTOR_AND_STRESS_PLAN.md`에 추가했다
+  - 대상 진단은 2 Asset Allocation Fit, 3 Concentration / Overlap / Exposure, 5 Regime / Macro Suitability, 6 Sentiment / Risk-On-Off Overlay, 7 Stress / Scenario Diagnostics, 9 Leveraged / Inverse ETF Suitability, 10 Operability / Cost / Liquidity, 11 Robustness / Sensitivity / Overfit로 고정했다
+  - 각 진단별 actual data 요구사항, fallback, `NOT_RUN` / `REVIEW` 조건, compact evidence 경계를 정리했다
+  - Provider 상세 문서에는 P2-0 provider data 요구사항 표를 추가했고, 다음 작업은 P2-1 schema / ingestion field contract로 정리했다
+
 ### 2026-05-03 - Phase 34는 Final Portfolio Selection Decision Pack으로 시작한다
 - Request topic:
   - 사용자가 Phase 34 작업 시작을 요청함

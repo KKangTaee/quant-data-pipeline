@@ -42,6 +42,17 @@ Detailed historical logs were archived on `2026-04-13`.
   - Provider / holdings / macro ingestion is the implementation method, not the product goal.
   - P2 target diagnostics are primarily 2, 3, 5, 6, 7, 9, 10, and 11.
 
+### 2026-05-11
+- Completed Practical Validation V2 P2-0 target diagnostic contract.
+- Updated:
+  - `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_P2_CONNECTOR_AND_STRESS_PLAN.md`
+  - `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_PROVIDER_CONNECTOR_PLAN.md`
+  - `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_REMAINING_IMPLEMENTATION_PLAN.md`
+- Durable decision:
+  - P2-0 fixed the target diagnostics as 2, 3, 5, 6, 7, 9, 10, and 11.
+  - Each target diagnostic now has an actual-data requirement, bridge/proxy fallback, `NOT_RUN` / `REVIEW` condition, and compact evidence boundary.
+  - Next work is P2-1: schema / ingestion field contract based on the P2-0 diagnostic contract.
+
 ### 2026-05-10
 - Clarified `NOT_RUN` handling for Final Review route in Practical Validation docs.
 - Updated:

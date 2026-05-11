@@ -39,6 +39,25 @@ P2에서 provider connector가 직접 보강하는 진단은 아래와 같다.
 Stress / sensitivity 해석은 이 provider context를 보조 evidence로 사용할 수 있지만,
 전체 stress engine 자체는 이 문서가 아니라 P2 실행 계획 문서에서 다룬다.
 
+## P2-0 Provider 데이터 요구사항
+
+P2-0에서 확정한 provider data 요구사항은 아래와 같다.
+이 표는 이후 schema / collector / loader 구현의 입력 계약이다.
+
+| 데이터 묶음 | 필요한 주요 field | 직접 보강하는 진단 | 저장 후보 |
+|---|---|---|---|
+| ETF operability / cost | `expense_ratio`, `total_assets`, `nav`, `market_price`, `premium_discount_pct`, `bid_ask_spread_pct`, `median_bid_ask_spread_pct`, `avg_daily_dollar_volume`, `leverage_factor`, `is_inverse` | 9, 10 | `finance_meta.etf_operability_snapshot` |
+| ETF holdings | `fund_symbol`, `as_of_date`, `holding_id`, `holding_symbol`, `holding_name`, `weight_pct`, `sector`, `asset_class`, `country`, `currency` | 2, 3 | `finance_meta.etf_holdings_snapshot` |
+| ETF exposure aggregate | `fund_symbol`, `as_of_date`, `exposure_type`, `exposure_name`, `weight_pct` | 2, 3, 7 | `finance_meta.etf_exposure_snapshot` |
+| Macro / sentiment proxy | `series_id`, `observation_date`, `value`, `category`, `frequency`, `source`, `staleness_days` | 5, 6, 7 | `finance_meta.macro_series_observation` |
+
+데이터가 부족할 때의 처리:
+
+- official provider data가 있으면 `actual`로 쓴다.
+- 기존 DB 가격 / 거래량 또는 `nyse_asset_profile`만 있으면 `bridge` 또는 `proxy`로 표시한다.
+- connector나 source coverage가 없으면 해당 진단은 `NOT_RUN` reason을 남긴다.
+- 가격 부재나 거래 불가처럼 검증을 계속하면 위험한 경우만 `BLOCKED` 후보로 다룬다.
+
 ## 현재 있는 데이터
 
 | 데이터 | 위치 | 현재 쓸 수 있는 것 | 한계 |
