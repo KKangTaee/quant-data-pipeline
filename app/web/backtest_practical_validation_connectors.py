@@ -40,6 +40,14 @@ def _optional_float(value: Any) -> float | None:
     return numeric
 
 
+def _first_optional_float(*values: Any) -> float | None:
+    for value in values:
+        numeric = _optional_float(value)
+        if numeric is not None:
+            return numeric
+    return None
+
+
 def _date_text(value: Any) -> str | None:
     parsed = pd.to_datetime(value, errors="coerce")
     if pd.isna(parsed):
@@ -203,7 +211,66 @@ def _best_operability_rows(frame: pd.DataFrame) -> pd.DataFrame:
     work["_source_rank"] = work["source_type"].astype(str).str.lower().map(source_rank).fillna(0)
     work["_as_of"] = pd.to_datetime(work["as_of_date"], errors="coerce")
     work = work.sort_values(["symbol", "_coverage_rank", "_source_rank", "_as_of"], ascending=[True, False, False, False])
-    return work.drop_duplicates(subset=["symbol"], keep="first").drop(columns=["_coverage_rank", "_source_rank", "_as_of"])
+    merged_rows: list[pd.Series] = []
+    fill_columns = [
+        "expense_ratio",
+        "turnover_ratio",
+        "total_assets",
+        "net_assets",
+        "nav",
+        "market_price",
+        "premium_discount_pct",
+        "bid",
+        "ask",
+        "bid_ask_spread_pct",
+        "median_bid_ask_spread_pct",
+        "avg_daily_volume",
+        "avg_daily_dollar_volume",
+        "leverage_factor",
+        "is_inverse",
+        "has_daily_objective",
+        "inception_date",
+        "fund_family",
+        "category",
+    ]
+    for _, group in work.groupby("symbol", sort=False):
+        base = group.iloc[0].copy()
+        used_sources = [_first_text(base.get("source"))]
+        used_source_types = [_first_text(base.get("source_type"))]
+        for column in fill_columns:
+            if column not in group.columns:
+                continue
+            current = base.get(column)
+            try:
+                current_missing = pd.isna(current)
+            except Exception:
+                current_missing = current is None
+            if not current_missing:
+                continue
+            for _, candidate in group.iloc[1:].iterrows():
+                candidate_value = candidate.get(column)
+                try:
+                    candidate_missing = pd.isna(candidate_value)
+                except Exception:
+                    candidate_missing = candidate_value is None
+                if candidate_missing:
+                    continue
+                base[column] = candidate_value
+                source = _first_text(candidate.get("source"))
+                source_type = _first_text(candidate.get("source_type"))
+                if source and source not in used_sources:
+                    used_sources.append(source)
+                if source_type and source_type not in used_source_types:
+                    used_source_types.append(source_type)
+                break
+        if len([source for source in used_sources if source]) > 1:
+            base["source"] = " + ".join(source for source in used_sources if source)
+        if len([source_type for source_type in used_source_types if source_type]) > 1:
+            base["source_type"] = " + ".join(source_type for source_type in used_source_types if source_type)
+        merged_rows.append(base)
+    if not merged_rows:
+        return work.drop(columns=["_coverage_rank", "_source_rank", "_as_of"])
+    return pd.DataFrame(merged_rows).drop(columns=["_coverage_rank", "_source_rank", "_as_of"], errors="ignore")
 
 
 def _canonical_asset_bucket(name: Any) -> str:
@@ -416,9 +483,9 @@ def _operability_judgment(row: pd.Series) -> tuple[str, str]:
     coverage = str(row.get("coverage_status") or "").lower()
     if coverage in {"missing", "error"}:
         reasons.append(f"coverage={coverage}")
-    net_assets = _optional_float(row.get("net_assets")) or _optional_float(row.get("total_assets"))
+    net_assets = _first_optional_float(row.get("net_assets"), row.get("total_assets"))
     adv = _optional_float(row.get("avg_daily_dollar_volume"))
-    spread = _optional_float(row.get("bid_ask_spread_pct")) or _optional_float(row.get("median_bid_ask_spread_pct"))
+    spread = _first_optional_float(row.get("bid_ask_spread_pct"), row.get("median_bid_ask_spread_pct"))
     expense = _optional_float(row.get("expense_ratio"))
     premium = _optional_float(row.get("premium_discount_pct"))
     available_groups = sum(
@@ -513,9 +580,9 @@ def _build_operability_context(symbol_weights: dict[str, float], as_of_date: str
                 "Source": row.get("source"),
                 "Coverage": row.get("coverage_status"),
                 "Expense": _pct_text(row.get("expense_ratio")),
-                "Assets": _money_text(_optional_float(row.get("net_assets")) or _optional_float(row.get("total_assets"))),
+                "Assets": _money_text(_first_optional_float(row.get("net_assets"), row.get("total_assets"))),
                 "ADV": _money_text(row.get("avg_daily_dollar_volume")),
-                "Spread": _pct_text(_optional_float(row.get("bid_ask_spread_pct")) or _optional_float(row.get("median_bid_ask_spread_pct"))),
+                "Spread": _pct_text(_first_optional_float(row.get("bid_ask_spread_pct"), row.get("median_bid_ask_spread_pct"))),
                 "Premium/Discount": _pct_text(row.get("premium_discount_pct")),
                 "As Of": _date_text(row.get("as_of_date")),
                 "Judgment": judgment,
@@ -525,7 +592,9 @@ def _build_operability_context(symbol_weights: dict[str, float], as_of_date: str
 
     quality = _coverage_quality(best, symbol_column="symbol", symbol_weights=symbol_weights)
     diagnostic_status = str(quality.get("diagnostic_status") or _result_status_from_coverage(coverage_weight))
-    if diagnostic_status == "PASS" and review_count > 0:
+    if coverage_weight >= 80.0 and review_count == 0:
+        diagnostic_status = "PASS"
+    elif diagnostic_status == "PASS" and review_count > 0:
         diagnostic_status = "REVIEW"
     status = str(quality.get("status") or _coverage_status_from_weight(coverage_weight))
     leverage_status = "REVIEW" if flagged_exposure > 0.0 else "PASS" if coverage_weight > 0.0 else "NOT_RUN"

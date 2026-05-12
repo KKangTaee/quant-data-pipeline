@@ -166,14 +166,14 @@ fallback 판정 기준을 먼저 고정한다.
 | 6. Sentiment / Risk-On-Off Overlay | VIX level / change, credit spread, yield curve 중 2개 이상이 기준일 context로 계산됨 | benchmark risk-on/off proxy | macro-derived context가 1개 이하이면 `REVIEW` 또는 `NOT_RUN` |
 | 7. Stress / Scenario Diagnostics | portfolio / benchmark curve와 stress calendar가 있고, 가능하면 exposure / macro context가 결합됨 | curve-only stress return / MDD | 후보 기간 밖 stress는 `NOT_RUN`, 원인 설명 근거가 부족하면 `REVIEW` |
 | 9. Leveraged / Inverse ETF Suitability | provider product metadata가 leverage factor, inverse 여부, daily objective 여부를 확인 | ticker pattern / known leveraged ETF list | provider metadata가 없으면 `REVIEW`, ticker proxy도 없으면 `NOT_RUN` |
-| 10. Operability / Cost / Liquidity | 비용, 규모, 유동성, spread, NAV/premium-discount 5개 묶음 중 3개 이상이 provider 또는 명시 source로 확인 | price history ADV, asset_profile AUM / bid / ask bridge | 핵심 비용 / 거래 가능성 근거가 부족하면 `REVIEW`, 가격 / 거래량도 없으면 `NOT_RUN` 또는 `BLOCKED` |
-| 11. Robustness / Sensitivity / Overfit | drop-one, weight perturbation, window perturbation 중 2개 이상 계산되고 worst-case가 요약됨 | local simple perturbation 또는 trial count summary | 계산 입력이 부족하면 `NOT_RUN`, 단순 perturbation만 있으면 `REVIEW` |
+| 10. Operability / Cost / Liquidity | 비용, 규모, 유동성, spread, NAV/premium-discount 5개 묶음 중 3개 이상이 provider 또는 명시 source로 확인 | official row의 빈 field를 price history ADV, asset_profile AUM / bid / ask bridge로 보완 | 핵심 비용 / 거래 가능성 근거가 부족하면 `REVIEW`, 가격 / 거래량도 없으면 `NOT_RUN` 또는 `BLOCKED` |
+| 11. Robustness / Sensitivity / Overfit | window perturbation, drop-one, weight perturbation 중 2개 이상 계산되고 worst-case가 요약됨 | local simple perturbation 또는 trial count summary | 계산 입력이 부족하면 `NOT_RUN`, strategy-specific runtime perturbation은 별도 후속 |
 
 ### 수집 / 저장 판정 규칙
 
 - official issuer 또는 FRED에서 온 row는 필요한 field coverage를 충족할 때만 `actual`로 쓴다.
 - 기존 DB 가격 / 거래량 / asset profile에서 만든 값은 `bridge` 또는 `proxy`로 남기고 `actual`처럼 승격하지 않는다.
-- provider가 일부 field만 주면 `partial` coverage로 저장하고 Practical Validation에서는 `REVIEW`로 읽는다.
+- provider가 일부 field만 주면 `partial` coverage로 저장한다. Practical Validation 판정에서는 같은 ticker의 DB bridge field를 병합해 핵심 field가 충분하면 `PASS`할 수 있지만, source는 `official + db_bridge`처럼 표시한다.
 - source 실패, 미지원 ticker, 기준일 부재는 수집 summary와 `NOT_RUN` reason으로 남긴다.
 - full holdings row, full macro observation, raw provider response는 DB에 저장하고 JSONL result에는 compact evidence만 남긴다.
 
@@ -338,7 +338,8 @@ runtime 재계산까지 포함할지는 구현 중 결정하되, P2에서는 최
 
 목표:
 
-- 단순 weight perturbation 또는 기존 runtime이 허용하는 작은 설정 변경 결과를 과최적화 검토 근거로 읽게 한다.
+- curve 기반 window perturbation, component drop-one, weight perturbation 결과를 과최적화 검토 근거로 읽게 한다.
+- GTAA / Equal Weight 같은 strategy-specific parameter perturbation은 별도 runtime 실행 단위로 분리한다.
 
 예:
 
@@ -346,6 +347,7 @@ runtime 재계산까지 포함할지는 구현 중 결정하되, P2에서는 최
 - GRS: lookback, top_n
 - Equal Weight: rebalance frequency, ticker subset
 - Mix: component drop-one, weight +/-5%p
+- Window: recent 3Y / 5Y, first 12M 제외, last 12M 제외
 
 주의:
 
@@ -560,7 +562,9 @@ Macro            NOT_RUN  macro connector not configured
 현재 구현 상태:
 
 - P2-5B 기준으로 2, 3, 5, 6, 9, 10번 진단에 provider context가 연결됐다.
-- 7번 Stress Interpretation과 11번 Robustness / Sensitivity 해석 고도화는 다음 작업 단위에서 계속 진행한다.
+- P2-5C 이후 10번 Operability는 official partial row와 DB bridge row를 ticker 단위로 병합해 판정한다.
+- 11번 Robustness / Sensitivity는 window / drop-one / weight perturbation을 curve 기반으로 계산한다.
+- 7번 Stress Interpretation과 strategy-specific sensitivity runtime은 다음 작업 단위에서 계속 진행한다.
 
 검증:
 

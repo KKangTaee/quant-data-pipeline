@@ -980,6 +980,79 @@ def _combine_component_curves(
     return result
 
 
+def _window_perturbation_rows(
+    portfolio_curve: pd.DataFrame | None,
+    *,
+    base_summary: dict[str, Any],
+) -> list[dict[str, Any]]:
+    curve = _normalize_result_curve(portfolio_curve)
+    if curve.empty or not base_summary:
+        return [
+            {
+                "Scenario": "Window perturbation",
+                "Scope": "start/end, recent 3y/5y",
+                "Result Status": "NOT_RUN",
+                "Expected Check": "CAGR / MDD / Sharpe dispersion",
+            }
+        ]
+
+    base_cagr = _optional_float(base_summary.get("cagr"))
+    base_mdd = _optional_float(base_summary.get("mdd"))
+    if base_cagr is None and base_mdd is None:
+        return [
+            {
+                "Scenario": "Window perturbation",
+                "Scope": "start/end, recent 3y/5y",
+                "Result Status": "NOT_RUN",
+                "Expected Check": "CAGR / MDD / Sharpe dispersion",
+            }
+        ]
+
+    min_date = curve["Date"].min()
+    max_date = curve["Date"].max()
+    windows = [
+        ("Recent 3Y", max_date - pd.DateOffset(years=3), max_date),
+        ("Recent 5Y", max_date - pd.DateOffset(years=5), max_date),
+        ("Exclude first 12M", min_date + pd.DateOffset(months=12), max_date),
+        ("Exclude last 12M", min_date, max_date - pd.DateOffset(months=12)),
+    ]
+    rows: list[dict[str, Any]] = []
+    for scenario, start_date, end_date in windows:
+        window = curve[(curve["Date"] >= start_date) & (curve["Date"] <= end_date)].copy()
+        if window["Date"].nunique() < 12:
+            rows.append(
+                {
+                    "Scenario": scenario,
+                    "Scope": f"{_format_date(start_date)} -> {_format_date(end_date)}",
+                    "Result Status": "NOT_RUN",
+                    "Expected Check": "기간 변경 민감도",
+                    "Reason": "usable curve rows < 12",
+                }
+            )
+            continue
+        summary = _summary_metrics_from_curve(window, name=scenario)
+        window_cagr = _optional_float(summary.get("cagr"))
+        window_mdd = _optional_float(summary.get("mdd"))
+        cagr_delta = window_cagr - base_cagr if window_cagr is not None and base_cagr is not None else None
+        mdd_delta = window_mdd - base_mdd if window_mdd is not None and base_mdd is not None else None
+        review = (cagr_delta is not None and cagr_delta < -0.03) or (
+            mdd_delta is not None and mdd_delta < -0.05
+        )
+        rows.append(
+            {
+                "Scenario": scenario,
+                "Scope": f"{_format_date(summary.get('start') or start_date)} -> {_format_date(summary.get('end') or end_date)}",
+                "Result Status": "REVIEW" if review else "PASS",
+                "Expected Check": "기간 변경 민감도",
+                "CAGR": window_cagr,
+                "MDD": window_mdd,
+                "CAGR Delta": cagr_delta,
+                "MDD Delta": mdd_delta,
+            }
+        )
+    return rows
+
+
 def _build_curve_context(
     source_row: dict[str, Any],
     active_components: list[dict[str, Any]],
@@ -1414,15 +1487,9 @@ def _sensitivity_rows(
     component_curves: list[dict[str, Any]] | None = None,
     portfolio_curve: pd.DataFrame | None = None,
 ) -> list[dict[str, Any]]:
-    rows = [
-        {
-            "Scenario": "Window perturbation",
-            "Scope": "start/end, recent 3y/5y",
-            "Result Status": "NOT_RUN",
-            "Expected Check": "CAGR / MDD / Sharpe dispersion",
-        },
-    ]
+    rows: list[dict[str, Any]] = []
     portfolio_summary = _summary_metrics_from_curve(_normalize_result_curve(portfolio_curve), name="Portfolio")
+    rows.extend(_window_perturbation_rows(portfolio_curve, base_summary=portfolio_summary))
     if len(active_components) > 1:
         usable_curves = list(component_curves or [])
         if usable_curves and portfolio_summary:
@@ -2300,9 +2367,17 @@ def build_practical_validation_result(
     robustness_summary = (
         overfit_audit.get("interpretation")
         if overfit_audit.get("status") == "REVIEW"
-        else "sensitivity perturbation 일부를 curve 기반으로 계산했습니다."
+        else (
+            "curve 기반 sensitivity에서 REVIEW 항목이 있습니다. "
+            "window / drop-one / 비중 perturbation은 계산했고, 전략별 parameter sensitivity는 별도 runtime 실행이 필요합니다."
+        )
+        if "REVIEW" in sensitivity_status_values
+        else (
+            "window / drop-one / 비중 sensitivity를 curve 기반으로 계산했습니다. "
+            "전략별 parameter sensitivity는 별도 runtime 실행이 필요합니다."
+        )
         if robustness_status == "PASS"
-        else "sensitivity perturbation 목록은 생성했지만 실제 재계산은 아직 실행하지 않았습니다."
+        else "sensitivity 실행에 필요한 curve가 부족해 계산하지 못했습니다."
     )
     diagnostics.append(
         _domain_result(

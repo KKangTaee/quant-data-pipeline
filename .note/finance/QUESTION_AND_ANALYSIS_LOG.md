@@ -4819,3 +4819,15 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 금 현물 ETF는 일반 주식 holdings가 아니므로 `GLD`, `IAU`는 synthetic `commodity_gold` 100% gold exposure로 처리한다
 - Follow-up:
   - source map discovery / Ingestion tab / Practical Validation gap 보강 버튼 연결을 구현했고, 현재 saved portfolio mix 기준 connector mapping gap이 해소되는 것을 확인했다
+
+### 2026-05-12 - Operability REVIEW와 Sensitivity REVIEW의 의미 분리
+- User request:
+  - 사용자가 Provider Gap은 해소됐지만 `Operability / Cost / Liquidity`와 `Robustness / Sensitivity / Overfit`이 REVIEW로 남는 이유와 해결 범위를 질문함
+- Interpreted goal:
+  - 실제 데이터 부족, 판정 버그, 아직 별도 runtime이 필요한 sensitivity를 한 화면에서 구분할 수 있어야 함
+- Analysis result:
+  - `XLU`는 DB bridge row에 AUM / ADV / spread가 있었지만 `0.0` spread를 missing처럼 처리해 REVIEW가 났다
+  - `QQQ`는 Invesco official row에 expense ratio만 있어 partial이었고, DB bridge의 AUM / ADV / spread를 병합하지 못해 REVIEW가 났다
+  - Sensitivity는 drop-one / weight perturbation 일부는 계산됐지만 window perturbation이 실제 계산되지 않았고, strategy-specific parameter perturbation은 별도 runtime 작업으로 남겨야 했다
+- Follow-up:
+  - operability 병합 판정과 window perturbation 계산을 구현했고, strategy-specific sensitivity runtime은 후속 작업으로 유지했다

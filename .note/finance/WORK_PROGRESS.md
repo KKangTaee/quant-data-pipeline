@@ -3787,3 +3787,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - Ingestion의 Practical Validation Provider Snapshots에 `Provider Source Map` tab을 추가했고, Practical Validation Provider Data Gaps 버튼은 먼저 source map discovery를 실행한 뒤 수집 plan을 다시 계산한다.
   - smoke 결과 `GLD/IAU/MTUM/QUAL/SOXX/USMV/XLE/XLU` source map 16개 verified row를 저장했고, holdings / exposure 수집은 522 holdings rows, 81 exposure rows를 저장했다.
   - 2026-05-11 `saved_portfolio_mix` source 기준으로 Practical Validation holdings / exposure coverage가 100% actual로 올라가고 `connector mapping needed` 목록이 비는 것을 확인했다.
+- Practical Validation V2 operability / sensitivity REVIEW 해석 보강:
+  - ETF operability 판정에서 `0.0` spread를 missing으로 오해하던 값을 명시적으로 유효값으로 처리했다.
+  - 같은 ETF에 official partial row와 DB bridge row가 함께 있으면 빈 field를 병합해 판단하고, evidence source를 `invesco + db_bridge`처럼 표시하게 했다.
+  - saved mix 기준으로 `QQQ`는 official expense ratio와 DB bridge AUM / ADV / spread를 합쳐 PASS, `XLU`는 0.00% spread를 정상 인식해 PASS로 바뀌었다.
+  - Robustness / Sensitivity는 window perturbation을 curve 기반으로 계산하고, summary 문구를 "일부 계산 완료 / strategy-specific runtime은 별도 실행 필요"로 분리했다.
