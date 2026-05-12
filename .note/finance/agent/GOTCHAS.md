@@ -13,3 +13,5 @@ Last Verified: 2026-05-12
 - UI에서 provider / FRED를 직접 fetch하지 않는다. Ingestion -> DB -> Loader -> UI 흐름을 유지한다.
 - Final Review와 Selected Portfolio Dashboard는 live approval, broker order, auto rebalance가 아니다.
 - 문서 정리 중 기존 대형 문서를 그대로 새 `docs/`로 복붙하지 않는다. 장기 지식만 짧게 승격한다.
+- 새 backtest report는 phase 폴더가 아니라 `.note/finance/reports/backtests/runs/YYYY/`부터 시작한다.
+- backtest report는 사람이 읽는 근거 문서다. `registries/`와 `saved/`의 JSONL source-of-truth를 대체하지 않는다.

@@ -10,6 +10,7 @@
 - `.note/finance/phases/`: Main worktree가 관리하는 phase 단위 계획과 통합 기록
 - `.note/finance/tasks/`: 개별 실행 task의 계획, 진행 상태, 실행 결과
 - `.note/finance/agent/`: 반복 실수, 교훈, Codex 운영 팁
+- `.note/finance/reports/backtests/`: 사람이 읽는 backtest report, 전략 hub, 후보 근거, validation report
 - `.note/finance/registries/`: 제품 workflow가 읽고 쓰는 append-only JSONL registry
 - `.note/finance/saved/`: 사용자가 저장한 reusable portfolio setup
 
@@ -32,7 +33,8 @@
 5. 작업 성격에 맞는 `.note/finance/docs/architecture/`, `flows/`, `data/`, `runbooks/`
 6. 관련 active phase가 있으면 `.note/finance/phases/active/<phase>/`
 7. 관련 active task가 있으면 `.note/finance/tasks/active/<task>/`
-8. 반복 이슈가 의심되면 `.note/finance/agent/GOTCHAS.md`
+8. backtest report 작업이면 `.note/finance/reports/backtests/INDEX.md`
+9. 반복 이슈가 의심되면 `.note/finance/agent/GOTCHAS.md`
 
 마이그레이션이 끝나기 전까지 기존 `.note/finance/code_analysis/`, `data_architecture/`, `operations/`, `research/`, root markdown 문서는 legacy reference로만 본다.
 새 작업 기록과 새 장기 지식은 새 구조에 작성한다.
@@ -119,6 +121,8 @@ Task work는 실제 구현, 조사, 문서 정리, QA를 수행하는 실행 단
 
 - `.note/finance/registries/*.jsonl`은 workflow registry다. 명시 요청 없이 재작성하거나 정리하지 않는다.
 - `.note/finance/saved/*.jsonl`은 사용자 저장 setup이다. 문서 정리 과정에서 삭제하지 않는다.
+- `.note/finance/reports/backtests/`는 사람이 읽는 결과/근거 문서다. registry / saved source-of-truth를 대체하지 않는다.
+- 새 backtest report는 phase 폴더가 아니라 `.note/finance/reports/backtests/runs/YYYY/`부터 시작한다.
 - `run_history/*.jsonl`, `run_artifacts/`, temp CSV, notebook scratch, `.DS_Store`, `.playwright-mcp/`는 generated / local artifact로 보고 명시 요청 없이는 커밋하지 않는다.
 - 문서 체계 정리에서도 `registries/`와 `saved/`는 보존한다.
 

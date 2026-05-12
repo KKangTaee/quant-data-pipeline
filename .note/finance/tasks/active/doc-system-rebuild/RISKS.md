@@ -47,3 +47,15 @@ Mitigation:
 
 - 이번 1차 커밋에는 새 문서만 stage한다.
 - runtime/generated artifact는 커밋하지 않는다.
+
+## P2 - Legacy backtest archive가 영구 dump로 굳어짐
+
+Risk:
+
+- 기존 phase별 report를 `archive/legacy_phase/`로 옮긴 뒤 후속 분류를 하지 않으면 새 구조에서도 다시 찾기 어려운 창고가 될 수 있다.
+
+Mitigation:
+
+- `.note/finance/reports/backtests/LEGACY_MIGRATION.md`에 분류 규칙과 후속 순서를 명시한다.
+- phase24 / phase23처럼 validation 성격이 분명한 문서부터 먼저 흡수한다.
+- 후보 근거로 남길 문서는 `candidates/point_in_time/`로 승격하고, 중복 raw report는 삭제 후보로 표시한다.

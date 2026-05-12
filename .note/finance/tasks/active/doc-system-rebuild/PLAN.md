@@ -26,6 +26,7 @@ Task Path: `.note/finance/tasks/active/doc-system-rebuild/`
 - `.note/finance/phases/`가 phase 단위 계획과 통합 기록의 기준 위치가 된다.
 - `.note/finance/tasks/`가 개별 실행 task 기록의 기준 위치가 된다.
 - `.note/finance/agent/`가 Codex 반복 실수, 교훈, 운영 팁의 기준 위치가 된다.
+- `.note/finance/reports/backtests/`가 durable backtest report의 기준 위치가 된다.
 - `.note/finance/registries/`와 `.note/finance/saved/`는 삭제하지 않고 유지한다.
 - `AGENTS.md`는 새 문서 구조 기준으로 짧고 강한 작업 규칙 문서로 정리된다.
 - 기존 문서 중 장기적으로 필요한 내용만 새 `docs/` 문서에 최소 승격된다.
@@ -72,6 +73,15 @@ Task Path: `.note/finance/tasks/active/doc-system-rebuild/`
   agent/
     GOTCHAS.md
     LESSONS.md
+
+  reports/
+    backtests/
+      INDEX.md
+      strategies/
+      runs/
+      candidates/
+      validation/
+      archive/
 
   registries/
   saved/
@@ -161,12 +171,17 @@ Notion 가이드에서 적용할 원칙:
 - `AGENTS.md`는 작업 규칙과 문서 읽는 순서를 빠르게 전달한다.
 - 상세 시스템 설명은 `.note/finance/docs/`로 이동한다.
 
-### Step 5 - Remove Old Documentation Tree
+### Step 5 - Migrate / Remove Old Documentation Tree
+
+재배치 대상:
+
+- `.note/finance/backtest_reports/` -> `.note/finance/reports/backtests/`
+- `.note/finance/backtest_reports/strategies/` -> `.note/finance/reports/backtests/strategies/`
+- `.note/finance/backtest_reports/phase*/` -> `.note/finance/reports/backtests/archive/legacy_phase/`
 
 삭제 후보:
 
 - `.note/finance/archive/`
-- `.note/finance/backtest_reports/`
 - `.note/finance/code_analysis/`
 - `.note/finance/data_architecture/`
 - `.note/finance/operations/`
@@ -183,6 +198,7 @@ Notion 가이드에서 적용할 원칙:
 - `.note/finance/registries/`
 - `.note/finance/saved/`
 - 새 `.note/finance/docs/`
+- 새 `.note/finance/reports/backtests/`
 - 새 `.note/finance/phases/`
 - 새 `.note/finance/tasks/`
 - 새 `.note/finance/agent/`
@@ -190,6 +206,8 @@ Notion 가이드에서 적용할 원칙:
 완료 조건:
 
 - 오래된 문서 구조가 새 구조와 섞여 남지 않는다.
+- backtest report는 삭제하지 않고 새 report 구조로 이동한다.
+- `archive/legacy_phase/`는 후속 정리 전 임시 보관 위치로만 남는다.
 - runtime/generated artifact가 장기 문서처럼 남지 않는다.
 
 ### Step 6 - Verification

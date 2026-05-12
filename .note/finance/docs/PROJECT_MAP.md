@@ -21,6 +21,7 @@ Last Verified: 2026-05-12
 | `app/web/` | Streamlit Finance Console 화면과 runtime glue |
 | `app/jobs/` | Ingestion console에서 실행하는 job wrapper |
 | `.note/finance/docs/` | 장기 프로젝트 지식 |
+| `.note/finance/reports/backtests/` | backtest 결과 report, 전략 hub, 후보 근거, validation report |
 | `.note/finance/tasks/active/` | 현재 실행 task 기록 |
 | `.note/finance/phases/active/` | phase 단위 계획과 통합 기록 |
 | `.note/finance/registries/` | workflow JSONL registry |
@@ -77,6 +78,7 @@ Backtest Analysis
 |---|---|---|
 | Current / candidate / final decision registries | `.note/finance/registries/*.jsonl` | 명시 요청 없이는 새 runtime 생성물 커밋 금지 |
 | Saved portfolio setup | `.note/finance/saved/*.jsonl` | 보존 대상 |
+| Backtest result reports | `.note/finance/reports/backtests/` | 사람이 읽는 결과/근거 문서. JSONL source-of-truth 대체 금지 |
 | Backtest run history | `.note/finance/run_history/*.jsonl` | local runtime artifact, 보통 커밋 금지 |
 | Run artifacts | `.note/finance/run_artifacts/` | local runtime artifact, 보통 커밋 금지 |
 | Playwright output | `.playwright-mcp/` | generated artifact, 커밋 금지 |
@@ -90,4 +92,5 @@ Backtest Analysis
 | DB schema 변경 | `finance/data/db/schema.py` |
 | Ingestion job 변경 | `app/jobs/ingestion_jobs.py`, `finance/data/*` |
 | Strategy runtime 변경 | `finance/engine.py`, `finance/strategy.py`, `finance/transform.py`, `finance/performance.py` |
+| Backtest report 작성 / 정리 | `.note/finance/reports/backtests/INDEX.md` |
 | 문서 체계 변경 | `.note/finance/tasks/active/doc-system-rebuild/` |
