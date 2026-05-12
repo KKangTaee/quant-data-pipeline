@@ -100,4 +100,4 @@
 - [ ] survivorship bias를 악화시키지 않는가?
 - [ ] stale / missing row가 warning이나 metadata에 남는가?
 - [ ] loader가 source of truth table을 올바르게 읽는가?
-- [ ] `FINANCE_COMPREHENSIVE_ANALYSIS.md`, `docs/data/`, `code_analysis/` 중 어떤 문서를 갱신해야 하는가?
+- [ ] `FINANCE_COMPREHENSIVE_ANALYSIS.md`, `docs/data/`, `docs/architecture/` 중 어떤 문서를 갱신해야 하는가?

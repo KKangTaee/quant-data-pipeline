@@ -182,7 +182,7 @@ Notion 가이드에서 적용할 원칙:
 삭제 후보:
 
 - `.note/finance/archive/`
-- `.note/finance/code_analysis/`
+- `.note/finance/code_analysis/` -> current-state 문서는 `.note/finance/docs/architecture/`, `.note/finance/docs/flows/`, `.note/finance/docs/runbooks/`로 마이그레이션 후 제거
 - `.note/finance/data_architecture/` -> `.note/finance/docs/data/`로 마이그레이션 후 제거
 - `.note/finance/operations/`
 - `.note/finance/research/`

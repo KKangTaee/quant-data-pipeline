@@ -66,7 +66,7 @@ current candidate registry에 남은 후보를 검토 보드로 읽고,
 - `completed` third work-unit 문서 생성
 - `completed` fourth work-unit 문서 생성
 - `completed` roadmap / doc index / work log / question log sync
-- `completed` code_analysis sync
+- `completed` architecture / flows docs sync
 - `completed` glossary sync
 - `completed` current candidate registry guide sync
 

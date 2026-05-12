@@ -1,7 +1,7 @@
 # Finance Flows
 
 Status: Active
-Last Verified: 2026-05-12
+Last Verified: 2026-05-13
 
 ## Main User Flow
 
@@ -40,3 +40,10 @@ Workspace > Ingestion
 - Final Review decision도 broker order나 auto rebalance가 아니다.
 - Selected Dashboard는 read-only monitoring surface다.
 - 부족 provider data는 Practical Validation Provider Gaps에서 확인하고, 수집 가능한 항목은 ingestion job을 통해 보강한다.
+
+## Detailed Flow Docs
+
+| Need | Document |
+|---|---|
+| Backtest UI, history, saved replay, Practical Validation, Final Review 화면 흐름 | [BACKTEST_UI_FLOW.md](./BACKTEST_UI_FLOW.md) |
+| 후보 생성부터 최종 선정 후 dashboard까지의 Portfolio Selection V2 흐름 | [PORTFOLIO_SELECTION_FLOW.md](./PORTFOLIO_SELECTION_FLOW.md) |

@@ -21,6 +21,18 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-13 - code_analysis는 폴더 유지가 아니라 docs / active task로 분해한다
+- Request topic:
+  - `code_analysis` 폴더 안의 문서를 새 문서 구조에서 어디로 옮길지, 그대로 유지할지, 정리해야 할지 분석하고 마이그레이션 진행을 요청함.
+- Interpreted goal:
+  - 코드 수정자가 계속 봐야 하는 current-state 문서와 Practical Validation V2처럼 진행 중인 task 계획 문서를 분리해, 다음 세션이 문서 위치를 헷갈리지 않게 만드는 것.
+- Main result:
+  - current-state code / runtime / strategy / data pipeline 문서는 `docs/architecture/`로 이동한다.
+  - Backtest UI와 Portfolio Selection 사용자 흐름은 `docs/flows/`로 이동한다.
+  - repo-local helper script 사용법은 `docs/runbooks/`로 이동한다.
+  - Practical Validation V2 상세 설계와 P2 connector 계획은 장기 docs가 아니라 `tasks/active/practical-validation-v2/`의 active task 문서로 관리한다.
+  - legacy refinement guide와 workflow redesign guide는 그대로 보관하지 않고 현재 문서에 흡수한다.
+
 ### 2026-05-11 - 문서 작성 지침은 `이걸 하는 이유?` 중심으로 바꾼다
 - Request topic:
   - 사용자가 새 문서 작성 시 기존의 분리형 요약 / 완료 효과 섹션을 제거하고, `이걸 하는 이유?`를 쉽게 정리하는 방식으로 지침 수정을 요청함
@@ -59,7 +71,7 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal:
   - 코드 구현 전에 P2에서 정상화할 검증 항목, 필요한 actual data, bridge / proxy fallback, `NOT_RUN` / `REVIEW` 조건을 확정해야 함
 - Result:
-  - P2-0 산출물을 `PRACTICAL_VALIDATION_V2_P2_CONNECTOR_AND_STRESS_PLAN.md`에 추가했다
+  - P2-0 산출물을 `CONNECTOR_AND_STRESS_PLAN.md`에 추가했다
   - 대상 진단은 2 Asset Allocation Fit, 3 Concentration / Overlap / Exposure, 5 Regime / Macro Suitability, 6 Sentiment / Risk-On-Off Overlay, 7 Stress / Scenario Diagnostics, 9 Leveraged / Inverse ETF Suitability, 10 Operability / Cost / Liquidity, 11 Robustness / Sensitivity / Overfit로 고정했다
   - 각 진단별 actual data 요구사항, fallback, `NOT_RUN` / `REVIEW` 조건, compact evidence 경계를 정리했다
   - Provider 상세 문서에는 P2-0 provider data 요구사항 표를 추가했고, 다음 작업은 P2-1 schema / ingestion field contract로 정리했다
@@ -2363,26 +2375,26 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 새 긴 구현 이력은 `3-3`에 직접 append하지 않고, 현재 동작은 관련 주제 섹션, phase 진행은 phase 문서와 `WORK_PROGRESS.md`, 설계 판단은 `QUESTION_AND_ANALYSIS_LOG.md`, backtest 결과는 `backtest_reports/`, 후보 기록은 `CURRENT_CANDIDATE_REGISTRY.jsonl`로 분산 기록하도록 정리했다
   - 기존 긴 메모는 삭제하지 않고 주제별 색인과 기록 템플릿을 붙여, future agent와 사용자가 참고 기록과 현재 상태를 혼동하지 않도록 했다
 
-### 2026-04-20 - 코드 분석은 별도 `code_analysis/` 계층으로 관리한다
+### 2026-04-20 - 코드 분석은 별도 `docs/architecture/` 계층으로 관리한다
 - Request topic:
   - 사용자가 `FINANCE_COMPREHENSIVE_ANALYSIS.md` 하단의 script / code analysis 내용까지 한 파일에서 계속 관리하는 것이 맞는지 묻고, 앞으로 코드 수정이나 신규 script가 생길 때 기록할 체계를 만들자고 요청함
 - Interpreted goal:
   - 종합 분석 문서는 큰 지도 역할을 유지하고, 실제 코드 수정자가 따라야 하는 runtime / DB / UI / strategy / automation flow는 별도 developer-facing 문서로 관리해야 함
 - Result:
-  - `.note/finance/code_analysis/`를 새 canonical code flow 위치로 만들었다
-  - `BACKTEST_RUNTIME_FLOW.md`, `DATA_DB_PIPELINE_FLOW.md`, `WEB_BACKTEST_UI_FLOW.md`, `STRATEGY_IMPLEMENTATION_FLOW.md`, `AUTOMATION_SCRIPTS_GUIDE.md`, `README.md`를 추가했다
-  - `FINANCE_COMPREHENSIVE_ANALYSIS.md`는 high-level system map으로 유지하고 상세 code flow는 `code_analysis/`를 보도록 정리했다
+  - `.note/finance/docs/architecture/`를 새 canonical code flow 위치로 만들었다
+  - `BACKTEST_RUNTIME_FLOW.md`, `DATA_DB_PIPELINE_FLOW.md`, `BACKTEST_UI_FLOW.md`, `STRATEGY_IMPLEMENTATION_FLOW.md`, `AUTOMATION_SCRIPTS.md`, `README.md`를 추가했다
+  - `FINANCE_COMPREHENSIVE_ANALYSIS.md`는 high-level system map으로 유지하고 상세 code flow는 `docs/architecture/`를 보도록 정리했다
   - 앞으로 code analysis 문서는 모든 변경을 기록하는 history가 아니라, durable code flow가 바뀔 때만 갱신하는 evergreen 개발자 문서로 운영한다
 
-### 2026-04-20 - 종합 분석 문서의 코드 상세는 요약으로 줄이고 상세는 `code_analysis/`가 담당한다
+### 2026-04-20 - 종합 분석 문서의 코드 상세는 요약으로 줄이고 상세는 `docs/architecture/`가 담당한다
 - Request topic:
-  - 사용자가 `code_analysis/`를 만든 이상 `FINANCE_COMPREHENSIVE_ANALYSIS.md` 안의 코드 관련 상세를 삭제하거나 옮겨도 되는지 확인하고, 종합 문서는 간단한 요약만 남기자고 요청함
+  - 사용자가 `docs/architecture/`를 만든 이상 `FINANCE_COMPREHENSIVE_ANALYSIS.md` 안의 코드 관련 상세를 삭제하거나 옮겨도 되는지 확인하고, 종합 문서는 간단한 요약만 남기자고 요청함
 - Interpreted goal:
-  - 종합 문서가 다시 비대해지지 않도록 코드 세부 설명을 줄이고, 개발자용 상세 흐름은 `code_analysis/`로 일원화해야 함
+  - 종합 문서가 다시 비대해지지 않도록 코드 세부 설명을 줄이고, 개발자용 상세 흐름은 `docs/architecture/`로 일원화해야 함
 - Result:
   - `FINANCE_COMPREHENSIVE_ANALYSIS.md`의 파일 역할, 중요 함수, automation baseline 섹션을 간단한 요약 / entrypoint map으로 줄였다
   - strict annual contract, ETF runtime warning, real-money / guardrail / pre-live runtime 기준은 `STRATEGY_IMPLEMENTATION_FLOW.md`와 `BACKTEST_RUNTIME_FLOW.md` 쪽에 보강했다
-  - 앞으로 종합 문서는 current system map으로 읽고, 코드 수정 순서와 상세 계약은 `code_analysis/`에서 관리하는 방향으로 고정했다
+  - 앞으로 종합 문서는 current system map으로 읽고, 코드 수정 순서와 상세 계약은 `docs/architecture/`에서 관리하는 방향으로 고정했다
 
 ### 2026-04-20 - DB 구조와 데이터 흐름은 별도 `data_architecture/` 계층으로 관리한다
 - Request topic:
@@ -2393,7 +2405,7 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `.note/finance/data_architecture/`를 새 canonical data / DB architecture 위치로 만들었다
   - `DATA_FLOW_MAP.md`, `DB_SCHEMA_MAP.md`, `TABLE_SEMANTICS.md`, `DATA_QUALITY_AND_PIT_NOTES.md`, `README.md`를 추가했다
   - `FINANCE_COMPREHENSIVE_ANALYSIS.md`의 sections 5~7은 요약과 링크 중심으로 줄였다
-  - 앞으로 DB/table/source-of-truth/PIT/data-quality 의미 변경은 `data_architecture/`를 갱신하고, 코드 수정 flow는 `code_analysis/`에서 관리하는 방향으로 분리했다
+  - 앞으로 DB/table/source-of-truth/PIT/data-quality 의미 변경은 `data_architecture/`를 갱신하고, 코드 수정 flow는 `docs/architecture/`에서 관리하는 방향으로 분리했다
 
 ### 2026-04-20 - 종합 분석 문서의 8~18번은 현재 제품 지도와 문서 라우팅 역할로 정리한다
 - Request topic:
@@ -2403,7 +2415,7 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Result:
   - 8~9번을 현재 제품 / 전략 / portfolio / pre-live layer와 시스템 강점 중심으로 다시 썼다
   - 10~11번을 현재 남은 한계와 데이터 품질 / PIT 요약으로 줄이고, 상세 판단은 `data_architecture/`를 우선하도록 정리했다
-  - 12번을 함수 나열이 아니라 `code_analysis/`와 대표 코드 진입점으로 이어지는 지도 형태로 정리했다
+  - 12번을 함수 나열이 아니라 `docs/architecture/`와 대표 코드 진입점으로 이어지는 지도 형태로 정리했다
   - 13~18번을 투자 분석이 아닌 제품 개발 경계, Phase 25 pre-live 방향, 다음 개발 우선순위, 추가 데이터, 문서 사용법, automation / persistence baseline 중심으로 갱신했다
   - 앞으로 `FINANCE_COMPREHENSIVE_ANALYSIS.md`는 큰 지도 역할을 유지하고, 상세 code flow / DB semantics / phase execution / backtest result는 전용 문서로 관리한다
 
@@ -2414,7 +2426,7 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 종합 분석 문서가 다시 상세 기록 저장소처럼 비대해지지 않도록, high-level current-state map 역할과 업데이트 조건을 명확히 고정해야 함
 - Result:
   - `FINANCE_COMPREHENSIVE_ANALYSIS.md`는 `finance` 시스템의 큰 그림, 제품 표면, 주요 layer, data flow, strategy family, runtime / UI workflow, Real-Money / Pre-Live 경계가 바뀔 때만 갱신하는 문서로 정리했다
-  - 일회성 backtest 결과, phase checklist 상태, 상세 call flow, table별 상세 의미, 작은 UI copy, minor bug-fix 기록은 각각 `backtest_reports/`, `phases/phase*/`, `code_analysis/`, `data_architecture/`, `WORK_PROGRESS.md` 등으로 분산 관리하기로 했다
+  - 일회성 backtest 결과, phase checklist 상태, 상세 call flow, table별 상세 의미, 작은 UI copy, minor bug-fix 기록은 각각 `backtest_reports/`, `phases/phase*/`, `docs/architecture/`, `data_architecture/`, `WORK_PROGRESS.md` 등으로 분산 관리하기로 했다
   - `AGENTS.md`, `FINANCE_COMPREHENSIVE_ANALYSIS.md`, `FINANCE_DOC_INDEX.md`, active `finance-doc-sync` skill에 같은 기준을 반영했다
 
 ### 2026-04-20 - 종합 분석 문서의 legacy 상세 메모는 archive로 분리한다
@@ -2443,7 +2455,7 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal:
   - root에는 큰 지도 / 활성 로그 / 템플릿만 남기고, 운영성 문서, research 참고 자료, support-track 문서, developer flow 문서를 목적별 폴더로 이동해야 함
 - Result:
-  - 운영성 문서는 `.note/finance/operations/`, daily market update 문서는 `.note/finance/operations/daily_market_update/`, research 문서는 `.note/finance/research/`, support 논의 문서는 `.note/finance/support_tracks/`, 기존 backtest refinement flow guide는 `.note/finance/code_analysis/`로 이동했다
+  - 운영성 문서는 `.note/finance/operations/`, daily market update 문서는 `.note/finance/operations/daily_market_update/`, research 문서는 `.note/finance/research/`, support 논의 문서는 `.note/finance/support_tracks/`, 기존 backtest refinement flow guide는 `.note/finance/docs/architecture/`로 이동했다
   - `FINANCE_DOC_INDEX.md`와 관련 링크를 새 위치로 갱신했다
   - 앞으로 root `.note/finance/`는 `FINANCE_COMPREHENSIVE_ANALYSIS.md`, `MASTER_PHASE_ROADMAP.md`, `FINANCE_DOC_INDEX.md`, glossary, active logs, phase templates 중심으로 유지한다
 
@@ -3332,7 +3344,7 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 큰 파일이 다시 비대해지거나 기능 위치가 흐려지는 문제를 줄이고, 다음 작업자가 파일 책임을 빠르게 파악한 뒤 수정하게 만들어야 함
 - Analysis result:
   - `AGENTS.md`에 finance 코드 수정 전 `SCRIPT_STRUCTURE_MAP.md`와 관련 code analysis 문서를 먼저 확인하는 규칙을 추가했다
-  - `.note/finance/code_analysis/SCRIPT_STRUCTURE_MAP.md`를 새로 만들어 app/web, runtime, finance core, loaders, data/DB, repo-local automation의 script별 책임을 요약했다
+  - `.note/finance/docs/architecture/SCRIPT_STRUCTURE_MAP.md`를 새로 만들어 app/web, runtime, finance core, loaders, data/DB, repo-local automation의 script별 책임을 요약했다
   - 새 script 추가, 이동, 분리, 책임 변경 시 해당 map과 상세 flow 문서를 같이 갱신하도록 했다
   - 새 non-trivial domain / workflow / persistence / scoring 함수에는 목적 주석 또는 간결한 docstring을 남기되, 자명한 trivial helper에는 억지 주석을 달지 않는 기준으로 정리했다
 - Follow-up:
@@ -3776,7 +3788,7 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Analysis result:
   - canonical phase path를 `.note/finance/phases/phase<N>/`로 정했다
   - 새 phase 생성 helper도 이 위치로 생성하도록 바꿔야 이후 문서 구조가 다시 흩어지지 않는다
-  - `FINANCE_DOC_INDEX.md`에는 folder map을 추가해 phase / operations / backtest_reports / code_analysis / data_architecture / research / support_tracks / archive의 역할을 바로 구분하게 했다
+  - `FINANCE_DOC_INDEX.md`에는 folder map을 추가해 phase / operations / backtest_reports / architecture / flows docs / data_architecture / research / support_tracks / archive의 역할을 바로 구분하게 했다
 - Follow-up:
   - old `.note/finance/phaseN` 링크는 `.note/finance/phases/phaseN`으로 갱신했다
   - `.note/finance/phases/README.md`를 새 phase 문서 landing page로 추가했다
@@ -4091,7 +4103,7 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Portfolio Proposal 내부에 남아 있는 `Live Readiness` route label은 Phase31 legacy naming으로 보고, 현재 가이드에서는 Final Review 입력 준비로 해석한다
 - Follow-up:
   - `Reference > Guides`의 핵심 개념, 1~10 단계 실행 흐름, 단계 통과 기준, 문서 / 파일 안내를 갱신했다
-  - `WEB_BACKTEST_UI_FLOW.md`, historical walkthrough note, `FINANCE_DOC_INDEX.md`를 같은 기준으로 동기화했다
+  - `BACKTEST_UI_FLOW.md`, historical walkthrough note, `FINANCE_DOC_INDEX.md`를 같은 기준으로 동기화했다
 
 ### 2026-05-04 - Guides JSONL 저장소 설명 UX 개선
 - User request:
@@ -4259,7 +4271,7 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 선형 단계 목록은 공통 기준 설명에는 적합하지만, `단일 후보 직행`, `여러 후보 proposal 저장`, `saved mix -> Portfolio Proposal`, `blocker 재검토` 같은 분기 ownership을 드러내기 어렵다
   - Guide 상단에 경로 선택형 시각 플로우 맵을 두고, 상세 1~10단계는 그 아래 reference로 유지하는 구조가 가장 작은 UX 개선이다
 - Follow-up:
-  - `Reference > Guides`에 포트폴리오 플로우 맵을 추가하고, `WEB_BACKTEST_UI_FLOW.md`를 해당 Guide 구조에 맞춰 동기화했다
+  - `Reference > Guides`에 포트폴리오 플로우 맵을 추가하고, `BACKTEST_UI_FLOW.md`를 해당 Guide 구조에 맞춰 동기화했다
 
 ### 2026-05-06 - Guides 제품형 UX 개편 방향
 - User request:
@@ -4458,7 +4470,7 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Follow-up:
   - Compare workspace label을 `개별 전략 비교` / `저장된 비중 조합`으로 바꾸고, saved mix primary action을 `Mix 재실행 및 검증`으로 조정했다
   - `전략 비교에서 수정하기`는 검증이 아니라 저장 mix 구성을 편집 / 재구성하는 경로로 설명했다
-  - Guides와 `WEB_BACKTEST_UI_FLOW.md`에 mix는 Candidate Review가 아니라 Portfolio Proposal 초안으로 연결된다는 ownership을 반영했다
+  - Guides와 `BACKTEST_UI_FLOW.md`에 mix는 Candidate Review가 아니라 Portfolio Proposal 초안으로 연결된다는 ownership을 반영했다
 
 ### 2026-05-08 - Backtest 후보 선정 workflow는 3단계로 재설계해야 한다
 - User request:
@@ -4471,7 +4483,7 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Saved Mix는 이미 mix-level 검증 source를 갖고 있지만 Final Review / risk helper가 Current Candidate와 Pre-Live 존재를 기대해 마지막 단계에서 막힐 수 있다
   - 5개 panel label을 바로 3개 label로 바꾸면 `backtest_requested_panel`, history replay, saved mix handoff가 깨질 수 있으므로 visible stage와 internal route를 먼저 분리해야 한다
 - Follow-up:
-  - `.note/finance/code_analysis/BACKTEST_PORTFOLIO_SELECTION_WORKFLOW_REDESIGN_GUIDE.md`에 route / session key / registry dependency / source contract / 단계별 구현 순서를 정리했다
+  - `.note/finance/docs/flows/PORTFOLIO_SELECTION_FLOW.md`에 route / session key / registry dependency / source contract / 단계별 구현 순서를 정리했다
   - 제품 코드는 아직 수정하지 않았고, 사용자 확인 후 route foundation부터 구현한다
 
 ### 2026-05-10 - 기존 JSONL은 archive하고 Clean V2 저장 구조로 다시 시작할 수 있다
@@ -4484,7 +4496,7 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 기존 `Review Note -> Current Candidate -> Pre-Live -> Portfolio Proposal -> Final Decision` chain은 archive / legacy inspector로 내리고, 새 main flow는 `Selection Source -> Practical Validation Result -> Final Decision V2 -> Monitoring Log`로 단순화한다
   - 사용자 플로우는 `Backtest Analysis`에서 만들고 선택, `Practical Validation`에서 실전 검증, `Final Review`에서 최종 판단과 메모 저장, `Selected Portfolio Dashboard`에서 선정 이후 성과와 review signal 확인으로 정리한다
 - Follow-up:
-  - `.note/finance/code_analysis/BACKTEST_PORTFOLIO_SELECTION_WORKFLOW_REDESIGN_GUIDE.md`에 Clean V2 저장소 설계, legacy archive 정책, 새 JSONL 파일 역할, 사후관리 flow를 보강했다
+  - `.note/finance/docs/flows/PORTFOLIO_SELECTION_FLOW.md`에 Clean V2 저장소 설계, legacy archive 정책, 새 JSONL 파일 역할, 사후관리 flow를 보강했다
 
 ### 2026-05-10 - Clean V2 구현은 legacy 삭제보다 stage / storage 병행 전환이 맞다
 - User request:
@@ -4530,7 +4542,7 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 실전 후보 검증으로는 replay reproducibility, same-period benchmark, rolling / walk-forward, drawdown / tail / recovery, regime stress, cost / turnover, ETF investability, parameter / weight sensitivity, overfit audit, paper monitoring plan이 필요하다
   - 각 domain은 `PASS / REVIEW / BLOCKED / NOT_RUN`으로 분리해야 하며, `NOT_RUN`은 통과가 아니라 아직 확인하지 못한 상태로 표시해야 한다
 - Follow-up:
-  - `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_VALIDATION_DESIGN.md`에 조사 출처, domain 설계, v2 schema, UI 구조, 구현 slice를 문서화했다
+  - `.note/finance/tasks/active/practical-validation-v2/DESIGN.md`에 조사 출처, domain 설계, v2 schema, UI 구조, 구현 slice를 문서화했다
   - 제품 코드는 아직 수정하지 않았다
 
 ### 2026-05-10 - Practical Validation V2는 앞 단계 검증을 반복하면 안 된다
@@ -4543,7 +4555,7 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Compare 5단계 보드는 단일 후보 선택을 위한 Data Trust / Real-Money / 상대 순위 gate이고, Saved Mix 검증 보드는 replay 가능성과 V2 기록 연결성을 보는 gate다
   - Practical Validation V2는 이를 다시 점수화하는 단계가 아니라 upstream evidence를 상속하고, portfolio-level source contract / weight / mix alignment / missing domain / sensitivity / overfit / monitoring baseline을 추가하는 evidence pack이어야 한다
 - Follow-up:
-  - `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_VALIDATION_DESIGN.md`에 앞 단계 검증과의 중복 위험, Stage Ownership Matrix, domain `origin` 설계, 중복 감점 방지 원칙을 보강했다
+  - `.note/finance/tasks/active/practical-validation-v2/DESIGN.md`에 앞 단계 검증과의 중복 위험, Stage Ownership Matrix, domain `origin` 설계, 중복 감점 방지 원칙을 보강했다
 
 ### 2026-05-10 - Practical Validation은 실전 투자 진단 엔진으로 설계해야 한다
 - User request:
@@ -4556,7 +4568,7 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 단일 전략도 1개 component 100% 포트폴리오로 보고 같은 진단을 적용하며, mix는 component score 합산보다 exposure와 위험 구조를 우선 해석해야 한다
 - Follow-up:
   - `.note/finance/research/PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH.md`를 새로 작성했다
-  - `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_VALIDATION_DESIGN.md`를 evidence pack 중심에서 Practical Investment Diagnostics 중심으로 보강했다
+  - `.note/finance/tasks/active/practical-validation-v2/DESIGN.md`를 evidence pack 중심에서 Practical Investment Diagnostics 중심으로 보강했다
 
 ### 2026-05-10 - Practical Validation은 Validation Profile로 판정 기준을 조정해야 한다
 - User request:
@@ -4694,7 +4706,7 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ### 2026-05-10 - Practical Validation V2 core 구현 방향 확정
 - User request:
-  - 사용자가 새 전략 구현 없이 `PRACTICAL_VALIDATION_V2_VALIDATION_DESIGN`과 투자 진단 research 문서를 기반으로 Practical Validation 개발을 진행하길 요청함
+  - 사용자가 새 전략 구현 없이 `DESIGN.md`과 투자 진단 research 문서를 기반으로 Practical Validation 개발을 진행하길 요청함
 - Interpreted goal:
   - Backtest Analysis에서 넘어온 단일 전략 / Compare 후보 / weighted mix / saved mix를 같은 포트폴리오 검증 단위로 읽고, Final Review 전에 실전 후보로 올릴 수 있는지 profile-aware diagnostics로 보여줘야 함
 - Analysis result:
@@ -4720,7 +4732,7 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ### 2026-05-10 - Practical Validation V2 남은 구현 계획 문서화
 - User request:
-  - 사용자가 `PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH`와 `PRACTICAL_VALIDATION_V2_VALIDATION_DESIGN`에서 협의한 내용 중 아직 미완성인 항목과 구현 방식을 정리한 뒤, 문서 검토 후 개발을 진행하자고 요청함
+  - 사용자가 `PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH`와 `DESIGN.md`에서 협의한 내용 중 아직 미완성인 항목과 구현 방식을 정리한 뒤, 문서 검토 후 개발을 진행하자고 요청함
 - Interpreted goal:
   - 지금 코드가 완성된 범위와 남은 범위를 혼동하지 않도록, 실제 runtime replay / provider connector / Final Review 연동까지의 개발 계획을 검토 가능한 문서로 남겨야 함
 - Analysis result:
@@ -4728,7 +4740,7 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 남은 핵심은 새 검증명을 추가하는 것이 아니라 proxy evidence를 actual runtime replay와 provider snapshot으로 승격하는 것이다
   - 첫 개발 단위는 helper split 후 actual runtime replay / curve provenance / benchmark parity hardening으로 잡는 것이 가장 안전하다
 - Follow-up:
-  - `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_REMAINING_IMPLEMENTATION_PLAN.md`를 추가하고, 사용자가 검토한 뒤 개발 범위를 확정하기로 했다
+  - `.note/finance/tasks/active/practical-validation-v2/IMPLEMENTATION_PLAN.md`를 추가하고, 사용자가 검토한 뒤 개발 범위를 확정하기로 했다
 
 ### 2026-05-10 - Practical Validation V2 P0 개발 진행
 - User request:
@@ -4758,12 +4770,12 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ### 2026-05-11 - Practical Validation V2 P2 개발 문서가 필요하다
 - User request:
-  - 사용자가 P2 개발을 어떻게 진행할지 전용 개발 문서가 있는지 물었고, 없다면 정리하면서 `PRACTICAL_VALIDATION_V2_PROVIDER_CONNECTOR_PLAN.md`도 만들길 요청함
+  - 사용자가 P2 개발을 어떻게 진행할지 전용 개발 문서가 있는지 물었고, 없다면 정리하면서 `PROVIDER_CONNECTORS.md`도 만들길 요청함
 - Interpreted goal:
   - P2 provider connector / macro connector / stress interpretation 작업이 기존 남은 구현 계획에 흩어져 있으므로, 구현 전에 실행 계획과 provider 세부 설계를 분리해 durable 문서로 남겨야 함
 - Analysis result:
-  - P2 전체 계획은 `PRACTICAL_VALIDATION_V2_P2_CONNECTOR_AND_STRESS_PLAN.md`로 정리했다
-  - Provider / DB / loader 상세 설계는 `PRACTICAL_VALIDATION_V2_PROVIDER_CONNECTOR_PLAN.md`로 분리했다
+  - P2 전체 계획은 `CONNECTOR_AND_STRESS_PLAN.md`로 정리했다
+  - Provider / DB / loader 상세 설계는 `PROVIDER_CONNECTORS.md`로 분리했다
   - 첫 구현 단위는 기존 `nyse_asset_profile`과 `nyse_price_history`를 bridge로 쓰는 Cost / Liquidity / ETF Operability connector가 가장 안전하다
   - holdings와 macro는 dedicated table / loader contract를 먼저 잡고, Practical Validation에서는 provider coverage summary와 compact evidence만 저장하는 방향이 맞다
 - Follow-up:
@@ -4776,8 +4788,8 @@ Detailed historical analysis was archived on `2026-04-13`.
   - P2 provider 개발 문서는 너무 세분화하지 말고, 이미 만든 provider connector plan 안에서 수집 / 저장 / 로딩 / Practical Validation 연결 계획을 함께 관리해야 함
 - Analysis result:
   - 별도 `PROVIDER_DATA_COLLECTION_PLAN`은 만들지 않는다
-  - `PRACTICAL_VALIDATION_V2_PROVIDER_CONNECTOR_PLAN.md`가 ETF holdings, macro series, sentiment series의 collector 계획까지 소유한다
-  - `PRACTICAL_VALIDATION_V2_P2_CONNECTOR_AND_STRESS_PLAN.md`는 P2 전체 순서와 사용자-facing 진단 목표만 맡는다
+  - `PROVIDER_CONNECTORS.md`가 ETF holdings, macro series, sentiment series의 collector 계획까지 소유한다
+  - `CONNECTOR_AND_STRESS_PLAN.md`는 P2 전체 순서와 사용자-facing 진단 목표만 맡는다
 - Follow-up:
   - provider connector plan에 `데이터 수집 구현 계획` section을 추가하고, Finance Doc Index / code analysis README의 설명을 보정했다
 

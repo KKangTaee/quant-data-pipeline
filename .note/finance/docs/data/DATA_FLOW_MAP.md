@@ -202,4 +202,4 @@ MySQL tables
 중요 기준:
 
 - table 의미는 이 폴더에서 확인한다.
-- loader / runtime code flow는 `code_analysis/DATA_DB_PIPELINE_FLOW.md`와 `code_analysis/BACKTEST_RUNTIME_FLOW.md`에서 확인한다.
+- loader / runtime code flow는 `docs/architecture/DATA_DB_PIPELINE_FLOW.md`와 `docs/architecture/BACKTEST_RUNTIME_FLOW.md`에서 확인한다.

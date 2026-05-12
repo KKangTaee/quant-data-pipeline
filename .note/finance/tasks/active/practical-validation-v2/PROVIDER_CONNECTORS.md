@@ -3,7 +3,7 @@
 ## 목적
 
 이 문서는 Practical Validation V2 P2에서 사용할 provider / DB / loader connector의 상세 설계 문서다.
-상위 실행 계획은 `PRACTICAL_VALIDATION_V2_P2_CONNECTOR_AND_STRESS_PLAN.md`를 기준으로 하고,
+상위 실행 계획은 `CONNECTOR_AND_STRESS_PLAN.md`를 기준으로 하고,
 이 문서는 특히 아래 세 영역을 다룬다.
 
 1. Cost / Liquidity / ETF Operability connector
@@ -470,8 +470,8 @@ P2 provider 개발 문서는 더 쪼개지지 않는다.
 
 | 문서 | 맡는 범위 |
 |---|---|
-| `PRACTICAL_VALIDATION_V2_P2_CONNECTOR_AND_STRESS_PLAN.md` | P2 전체 작업 순서와 사용자-facing 진단 목표 |
-| `PRACTICAL_VALIDATION_V2_PROVIDER_CONNECTOR_PLAN.md` | provider 데이터 수집 / DB schema / loader / adapter / 저장 경계 |
+| `CONNECTOR_AND_STRESS_PLAN.md` | P2 전체 작업 순서와 사용자-facing 진단 목표 |
+| `PROVIDER_CONNECTORS.md` | provider 데이터 수집 / DB schema / loader / adapter / 저장 경계 |
 
 새 문서를 만들기보다 이 문서 안의 작은 section을 갱신한다.
 단, 실제 DB table이 추가되면 `DATA_DB_PIPELINE_FLOW.md`와 data architecture 문서에는 table 의미만 별도로 반영한다.

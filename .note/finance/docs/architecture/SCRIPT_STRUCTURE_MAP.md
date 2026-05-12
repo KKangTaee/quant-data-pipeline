@@ -133,8 +133,8 @@
 
 | 작업 종류 | 상세 문서 |
 |---|---|
-| Backtest UI / Candidate Review / History / Proposal | `.note/finance/code_analysis/WEB_BACKTEST_UI_FLOW.md` |
-| UI payload -> runtime -> result bundle | `.note/finance/code_analysis/BACKTEST_RUNTIME_FLOW.md` |
-| Data / DB / loader | `.note/finance/code_analysis/DATA_DB_PIPELINE_FLOW.md` |
-| Strategy family 추가 / 연결 | `.note/finance/code_analysis/STRATEGY_IMPLEMENTATION_FLOW.md` |
-| Repo-local helper script | `.note/finance/code_analysis/AUTOMATION_SCRIPTS_GUIDE.md` |
+| Backtest UI / Candidate Review / History / Proposal | `.note/finance/docs/flows/BACKTEST_UI_FLOW.md` |
+| UI payload -> runtime -> result bundle | `.note/finance/docs/architecture/BACKTEST_RUNTIME_FLOW.md` |
+| Data / DB / loader | `.note/finance/docs/architecture/DATA_DB_PIPELINE_FLOW.md` |
+| Strategy family 추가 / 연결 | `.note/finance/docs/architecture/STRATEGY_IMPLEMENTATION_FLOW.md` |
+| Repo-local helper script | `.note/finance/docs/runbooks/AUTOMATION_SCRIPTS.md` |

@@ -96,7 +96,7 @@ Phase 30 전체 목표와 첫 작업을 구분해서 읽는다.
 - `completed` sixth work-unit 문서 생성
 - `completed` seventh work-unit 문서 생성
 - `completed` Portfolio Proposal registry operations guide 생성
-- `completed` `WEB_BACKTEST_UI_FLOW.md` sync
+- `completed` `BACKTEST_UI_FLOW.md` sync
 - `completed` roadmap / doc index / work log / question log sync
 
 ## 현재 판단

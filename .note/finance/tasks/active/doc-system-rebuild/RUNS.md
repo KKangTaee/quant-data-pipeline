@@ -13,7 +13,7 @@ find .note/finance -maxdepth 2 -type f | sort
 
 Result:
 
-- 기존 root docs, `code_analysis`, `docs/data`, `operations`, `research`, `support_tracks`, `phases`, `registries`, `saved`, `run_history` 확인
+- 기존 root docs, `docs/architecture` / `docs/flows`, `docs/data`, `operations`, `research`, `support_tracks`, `phases`, `registries`, `saved`, `run_history` 확인
 - `registries/`와 `saved/`는 보존 대상으로 확인
 
 ## 2026-05-12 - Skeleton Creation
@@ -60,7 +60,7 @@ sed -n '1,220p' .note/finance/docs/PROJECT_MAP.md
 Result:
 
 - 기존 `AGENTS.md`의 핵심 운영 규칙을 새 `.note/finance/docs/` read order 기준으로 축약
-- legacy `.note/finance/code_analysis/`, `operations/`, `research/`, root markdown 문서는 마이그레이션 완료 전 임시 reference로만 두도록 명시
+- legacy `.note/finance/code_analysis/`는 `.note/finance/docs/architecture/`, `.note/finance/docs/flows/`, `.note/finance/docs/runbooks/`, active Practical Validation task 문서로 흡수 완료
 - legacy `.note/finance/data_architecture/`는 `.note/finance/docs/data/`로 흡수 완료
 - registry / saved 보존, generated artifact 커밋 금지, UX/workflow 승인 규칙 유지
 
@@ -125,3 +125,13 @@ Result:
 - phase22 portfolio baseline / weight alternative report 2개를 `candidates/point_in_time/portfolio_candidates/`로 이동
 - phase별 README와 빈 archive 폴더 제거
 - `.note/finance/reports/backtests/archive/legacy_phase/` 제거 완료
+
+## 2026-05-13 - Code Analysis Migration
+
+Result:
+
+- 기존 `.note/finance/code_analysis/` current-state 문서를 `.note/finance/docs/architecture/`, `.note/finance/docs/flows/`, `.note/finance/docs/runbooks/`로 이동
+- Practical Validation V2 상세 계획 문서를 `.note/finance/tasks/active/practical-validation-v2/`로 이동
+- Portfolio Selection redesign guide는 현재 구현 기준의 `docs/flows/PORTFOLIO_SELECTION_FLOW.md`로 재작성
+- legacy refinement guide는 `docs/architecture/BACKTEST_RUNTIME_FLOW.md`에 핵심 해석만 흡수
+- 기존 `.note/finance/code_analysis/` 폴더 제거

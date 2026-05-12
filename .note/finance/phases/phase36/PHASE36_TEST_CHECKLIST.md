@@ -120,7 +120,7 @@
   - `.note/finance/phases/phase36/PHASE36_CURRENT_CHAPTER_TODO.md`
   - `.note/finance/phases/phase36/PHASE36_COMPLETION_SUMMARY.md`
   - `.note/finance/phases/phase36/PHASE36_NEXT_PHASE_PREPARATION.md`
-  - `.note/finance/code_analysis/WEB_BACKTEST_UI_FLOW.md`
+  - `.note/finance/docs/flows/BACKTEST_UI_FLOW.md`
   - `.note/finance/FINANCE_DOC_INDEX.md`
 - 체크 항목:
   - [ ] Phase36이 Final Review 이후 새 판단 저장 단계가 아니라 Operations dashboard로 설명되는지

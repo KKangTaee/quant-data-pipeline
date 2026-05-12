@@ -9,7 +9,7 @@
 1. 최근 phase와 다음 예정 phase를 확인한다.
 2. 해당 phase의 `Plan`, `TODO`, `Test Checklist`를 본다.
 3. 구현 구조가 궁금하면 `FINANCE_COMPREHENSIVE_ANALYSIS.md`를 본다.
-4. 실제 코드 수정 흐름이 궁금하면 `code_analysis/README.md`를 본다.
+4. 실제 코드 수정 흐름이 궁금하면 `docs/architecture/README.md`를 본다.
 5. 데이터 / DB 의미가 궁금하면 `docs/data/README.md`를 본다.
 6. 용어가 헷갈리면 `FINANCE_TERM_GLOSSARY.md`를 본다.
 7. 백테스트 결과 문서는 `backtest_reports/BACKTEST_REPORT_INDEX.md`에서 찾는다.
@@ -74,10 +74,10 @@
 | 최근 완료 phase QA checklist | `.note/finance/phases/phase29/PHASE29_TEST_CHECKLIST.md` |
 | 최근 작업 로그 | `.note/finance/WORK_PROGRESS.md` |
 | 최근 질문 / 설계 판단 | `.note/finance/QUESTION_AND_ANALYSIS_LOG.md` |
-| Backtest 3단계 workflow 재설계 가이드 | `.note/finance/code_analysis/BACKTEST_PORTFOLIO_SELECTION_WORKFLOW_REDESIGN_GUIDE.md` |
-| Practical Validation V2 남은 구현 계획 | `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_REMAINING_IMPLEMENTATION_PLAN.md` |
-| Practical Validation V2 P2 개발 계획 | `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_P2_CONNECTOR_AND_STRESS_PLAN.md` |
-| Practical Validation V2 Provider Connector / 데이터 수집 상세 설계 | `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_PROVIDER_CONNECTOR_PLAN.md` |
+| Backtest 3단계 workflow 재설계 가이드 | `.note/finance/docs/flows/PORTFOLIO_SELECTION_FLOW.md` |
+| Practical Validation V2 남은 구현 계획 | `.note/finance/tasks/active/practical-validation-v2/IMPLEMENTATION_PLAN.md` |
+| Practical Validation V2 P2 개발 계획 | `.note/finance/tasks/active/practical-validation-v2/CONNECTOR_AND_STRESS_PLAN.md` |
+| Practical Validation V2 Provider Connector / 데이터 수집 상세 설계 | `.note/finance/tasks/active/practical-validation-v2/PROVIDER_CONNECTORS.md` |
 
 현재 상태:
 
@@ -160,7 +160,7 @@
 | `AGENTS.md` | 저장소 전체 작업 규칙, finance phase 운영 규칙, 문서화 규칙 |
 | `.note/finance/MASTER_PHASE_ROADMAP.md` | 전체 phase 방향, 현재 위치, 다음 phase 흐름 |
 | `.note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md` | finance 시스템의 큰 구조와 현재 상태를 설명하는 high-level map |
-| `.note/finance/code_analysis/README.md` | 코드 수정자가 보는 개발자용 flow 문서 index |
+| `.note/finance/docs/architecture/README.md` | 코드 수정자가 보는 개발자용 flow 문서 index |
 | `.note/finance/docs/data/README.md` | 데이터 흐름, DB 구조, table 의미를 보는 data architecture index |
 | `.note/finance/FINANCE_DOC_INDEX.md` | 지금 보고 있는 문서. finance 문서 지도 |
 | `.note/finance/FINANCE_TERM_GLOSSARY.md` | 반복 용어 사전. `Real-Money`, `Pre-Live`, `Validation Frame` 같은 용어 확인 |
@@ -180,7 +180,7 @@
 | `.note/finance/run_history/` | 로컬 backtest / web app 실행 이력 JSONL |
 | `.note/finance/saved/` | 사용자가 명시적으로 저장한 reusable portfolio setup JSONL |
 | `.note/finance/backtest_reports/` | durable backtest 결과와 strategy별 run log |
-| `.note/finance/code_analysis/` | 코드 수정자가 보는 runtime / UI / automation flow |
+| `.note/finance/docs/architecture/` | 코드 수정자가 보는 runtime / UI / automation flow |
 | `.note/finance/docs/data/` | DB, table, data flow, PIT / quality 의미 |
 | `.note/finance/research/` | phase 실행이 아닌 장기 research reference |
 | `.note/finance/support_tracks/` | plugin, skill, automation, roadmap rebase 같은 지원 트랙 |
@@ -191,7 +191,7 @@
 - 프로젝트 전체 방향은 `MASTER_PHASE_ROADMAP.md`
 - phase별 실행 문서는 `phases/README.md`와 `phases/phaseN/`
 - 코드/시스템 구조는 `FINANCE_COMPREHENSIVE_ANALYSIS.md`
-- 실제 코드 수정 흐름은 `code_analysis/README.md`
+- 실제 코드 수정 흐름은 `docs/architecture/README.md`
 - 데이터 / DB 의미는 `docs/data/README.md`
 - 문서 위치는 `FINANCE_DOC_INDEX.md`
 - 용어는 `FINANCE_TERM_GLOSSARY.md`
@@ -239,25 +239,24 @@
 
 | 문서 | 역할 |
 |---|---|
-| `.note/finance/code_analysis/README.md` | 코드 분석 문서의 기준, 갱신 조건, 읽는 순서 |
-| `.note/finance/code_analysis/SCRIPT_STRUCTURE_MAP.md` | 코드 수정 전 확인하는 script별 책임 지도 |
-| `.note/finance/code_analysis/BACKTEST_RUNTIME_FLOW.md` | UI payload에서 runtime, loader, strategy, result bundle까지의 실행 흐름 |
-| `.note/finance/code_analysis/DATA_DB_PIPELINE_FLOW.md` | data collection, DB persistence, loader read path 흐름 |
-| `.note/finance/code_analysis/WEB_BACKTEST_UI_FLOW.md` | Backtest UI, Single Strategy, Compare, History, Saved Portfolio 흐름 |
-| `.note/finance/code_analysis/BACKTEST_PORTFOLIO_SELECTION_WORKFLOW_REDESIGN_GUIDE.md` | Backtest 후보 선정 workflow를 3단계 구조로 바꾸기 전 route / registry / implementation impact를 정리한 개발 가이드 |
-| `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_VALIDATION_DESIGN.md` | Practical Validation을 실전 투자 진단 엔진으로 확장하기 위한 UI / JSON / domain 구현 설계 |
-| `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_REMAINING_IMPLEMENTATION_PLAN.md` | Practical Validation V2의 현재 구현 상태, 남은 구현 범위, helper 분리, replay / provider / Final Review 고도화 순서를 정리한 개발 계획 |
-| `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_P2_CONNECTOR_AND_STRESS_PLAN.md` | Practical Validation V2 P2의 Cost / Liquidity, ETF holdings, Macro / Sentiment, Stress Interpretation, Ingestion 실행 연결, QA 기준 |
-| `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_PROVIDER_CONNECTOR_PLAN.md` | Practical Validation V2 provider connector의 데이터 수집 계획, DB schema, loader 계약, Ingestion 실행 연결, provider coverage, JSONL 저장 경계 |
-| `.note/finance/code_analysis/STRATEGY_IMPLEMENTATION_FLOW.md` | 새 strategy family를 제품에 추가할 때 따라야 하는 구현 흐름 |
-| `.note/finance/code_analysis/AUTOMATION_SCRIPTS_GUIDE.md` | phase bootstrap, hygiene, candidate registry helper script 사용 기준 |
-| `.note/finance/code_analysis/BACKTEST_REFINEMENT_CODE_FLOW_GUIDE.md` | 기존 backtest refinement 중심 code flow guide |
+| `.note/finance/docs/architecture/README.md` | developer flow 문서의 기준, 갱신 조건, 읽는 순서 |
+| `.note/finance/docs/architecture/SCRIPT_STRUCTURE_MAP.md` | 코드 수정 전 확인하는 script별 책임 지도 |
+| `.note/finance/docs/architecture/BACKTEST_RUNTIME_FLOW.md` | UI payload에서 runtime, loader, strategy, result bundle까지의 실행 흐름 |
+| `.note/finance/docs/architecture/DATA_DB_PIPELINE_FLOW.md` | data collection, DB persistence, loader read path 흐름 |
+| `.note/finance/docs/flows/BACKTEST_UI_FLOW.md` | Backtest UI, Single Strategy, Compare, History, Saved Portfolio 흐름 |
+| `.note/finance/docs/flows/PORTFOLIO_SELECTION_FLOW.md` | Backtest Analysis -> Practical Validation -> Final Review -> Selected Dashboard의 현재 Portfolio Selection V2 흐름 |
+| `.note/finance/tasks/active/practical-validation-v2/DESIGN.md` | Practical Validation을 실전 투자 진단 엔진으로 확장하기 위한 UI / JSON / domain 구현 설계 |
+| `.note/finance/tasks/active/practical-validation-v2/IMPLEMENTATION_PLAN.md` | Practical Validation V2의 현재 구현 상태, 남은 구현 범위, helper 분리, replay / provider / Final Review 고도화 순서를 정리한 개발 계획 |
+| `.note/finance/tasks/active/practical-validation-v2/CONNECTOR_AND_STRESS_PLAN.md` | Practical Validation V2 P2의 Cost / Liquidity, ETF holdings, Macro / Sentiment, Stress Interpretation, Ingestion 실행 연결, QA 기준 |
+| `.note/finance/tasks/active/practical-validation-v2/PROVIDER_CONNECTORS.md` | Practical Validation V2 provider connector의 데이터 수집 계획, DB schema, loader 계약, Ingestion 실행 연결, provider coverage, JSONL 저장 경계 |
+| `.note/finance/docs/architecture/STRATEGY_IMPLEMENTATION_FLOW.md` | 새 strategy family를 제품에 추가할 때 따라야 하는 구현 흐름 |
+| `.note/finance/docs/runbooks/AUTOMATION_SCRIPTS.md` | phase bootstrap, hygiene, candidate registry helper script 사용 기준 |
 
 관리 기준:
 
 - `FINANCE_COMPREHENSIVE_ANALYSIS.md`에는 큰 구조와 핵심 파일 역할만 유지한다.
 - 현재 시스템의 큰 그림이 바뀌지 않은 작은 수정, 일회성 결과, phase 진행 상태는 `FINANCE_COMPREHENSIVE_ANALYSIS.md`에 누적하지 않는다.
-- 실제 코드 수정 순서와 flow-level 상세는 `code_analysis/`에 기록한다.
+- 실제 코드 수정 순서와 flow-level 상세는 `docs/architecture/`에 기록한다.
 - 작은 문구 수정, 일회성 실험 결과, phase 진행 내역은 code analysis 문서에 기록하지 않는다.
 
 ---
@@ -271,12 +270,12 @@
 | `.note/finance/docs/data/DB_SCHEMA_MAP.md` | DB와 주요 table 목록, table 성격 구분 |
 | `.note/finance/docs/data/TABLE_SEMANTICS.md` | table별 source / derived / shadow / convenience 의미 |
 | `.note/finance/docs/data/DATA_QUALITY_AND_PIT_NOTES.md` | PIT, look-ahead, survivorship, stale data 주의사항 |
-| `.note/finance/code_analysis/DATA_DB_PIPELINE_FLOW.md` | data / DB 관련 코드를 수정할 때 보는 developer flow |
+| `.note/finance/docs/architecture/DATA_DB_PIPELINE_FLOW.md` | data / DB 관련 코드를 수정할 때 보는 developer flow |
 
 관리 기준:
 
 - `docs/data/`는 데이터와 DB의 의미를 관리한다.
-- `code_analysis/DATA_DB_PIPELINE_FLOW.md`는 관련 코드를 어떻게 따라가고 수정할지 관리한다.
+- `docs/architecture/DATA_DB_PIPELINE_FLOW.md`는 관련 코드를 어떻게 따라가고 수정할지 관리한다.
 - `FINANCE_COMPREHENSIVE_ANALYSIS.md`에는 데이터 흐름과 DB 구조의 상위 요약만 남긴다.
 - table별 상세 의미, PIT 세부 규칙, stale data 해석은 `docs/data/`에서 관리한다.
 
@@ -980,7 +979,7 @@ Support Track은 main finance feature phase가 아니라,
 | 문서 | 역할 |
 |---|---|
 | `.note/finance/operations/README.md` | 운영성 문서 묶음 안내 |
-| `.note/finance/code_analysis/BACKTEST_REFINEMENT_CODE_FLOW_GUIDE.md` | Streamlit UI -> runtime -> finance strategy 흐름 안내 |
+| `.note/finance/docs/architecture/BACKTEST_RUNTIME_FLOW.md` | Streamlit UI -> runtime -> finance strategy 흐름 안내 |
 | `.note/finance/operations/FINAL_SELECTED_PORTFOLIO_OPERATIONS_DASHBOARD_GAP_20260504.md` | Phase35 이후 최종 선정 포트폴리오 운영 대시보드와 완성형 플랫폼 gap 정리 |
 | `.note/finance/operations/CONFIG_EXTERNALIZATION_INVENTORY.md` | 설정값 외부화 inventory |
 | `.note/finance/operations/DATA_COLLECTION_UI_STRATEGY.md` | 데이터 수집 UI 방향 |

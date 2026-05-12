@@ -11,7 +11,7 @@
 
 - 현재 시스템 구조를 파악할 때는 먼저 `.note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md`를 본다.
 - phase별 현재 상태는 `.note/finance/MASTER_PHASE_ROADMAP.md`와 각 `phase*/` 문서를 본다.
-- 코드 흐름은 `.note/finance/code_analysis/`를 본다.
+- 코드 흐름은 `.note/finance/docs/architecture/`를 본다.
 - DB / data 의미는 `.note/finance/data_architecture/`를 본다.
 - 이 문서는 과거 구현 배경, 당시 판단, 오래된 상세 메모를 확인할 때만 참고한다.
 
@@ -19,7 +19,7 @@
 
 - 아래 내용은 원문 보존용 legacy archive다.
 - 현재 구현 상태와 다를 수 있다.
-- 현재 상태를 판단할 때는 최신 roadmap, phase 문서, code, code_analysis, data_architecture를 우선한다.
+- 현재 상태를 판단할 때는 최신 roadmap, phase 문서, code, architecture / flows docs, data_architecture를 우선한다.
 
 ---
 

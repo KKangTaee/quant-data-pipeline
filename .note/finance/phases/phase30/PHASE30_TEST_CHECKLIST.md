@@ -32,7 +32,7 @@
 ## 2. 리팩토링 경계 확인
 
 - 확인 위치:
-  - `.note/finance/code_analysis/WEB_BACKTEST_UI_FLOW.md`
+  - `.note/finance/docs/flows/BACKTEST_UI_FLOW.md`
   - `.note/finance/phases/phase30/PHASE30_PRODUCT_FLOW_REORIENTATION_AND_BACKTEST_REFACTOR_BOUNDARY_FIRST_WORK_UNIT.md`
 - 체크 항목:
   - [ ] `backtest.py`가 왜 커졌는지 주요 책임 묶음이 이해되는지

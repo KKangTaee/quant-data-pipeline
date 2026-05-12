@@ -59,9 +59,9 @@ Last Verified: 2026-05-12
 ## Code Flow 문서와의 차이
 
 - `docs/data/`는 데이터가 어떤 의미를 갖고 어디에 저장되는지 보는 data / DB 의미 문서다.
-- `code_analysis/`는 코드를 어떻게 따라가고 수정할지 보는 개발자 flow 문서다.
+- `docs/architecture/`는 코드를 어떻게 따라가고 수정할지 보는 개발자 flow 문서다.
 
-예를 들어 새 loader 함수를 고칠 때는 `code_analysis/DATA_DB_PIPELINE_FLOW.md`를 먼저 보고, 그 loader가 읽는 table의 의미를 확인할 때는 이 폴더의 [TABLE_SEMANTICS.md](./TABLE_SEMANTICS.md)를 본다.
+예를 들어 새 loader 함수를 고칠 때는 `docs/architecture/DATA_DB_PIPELINE_FLOW.md`를 먼저 보고, 그 loader가 읽는 table의 의미를 확인할 때는 이 폴더의 [TABLE_SEMANTICS.md](./TABLE_SEMANTICS.md)를 본다.
 
 ## 갱신해야 하는 경우
 

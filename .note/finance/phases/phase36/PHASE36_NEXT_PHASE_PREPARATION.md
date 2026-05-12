@@ -80,6 +80,6 @@ Phase37은 `Selected Portfolio Performance Attribution And Review Alerts` 방향
 
 - `.note/finance/phases/phase36/PHASE36_CURRENT_CHAPTER_TODO.md`
 - `.note/finance/phases/phase36/PHASE36_TEST_CHECKLIST.md`
-- `.note/finance/code_analysis/WEB_BACKTEST_UI_FLOW.md`
+- `.note/finance/docs/flows/BACKTEST_UI_FLOW.md`
 - `app/web/runtime/final_selected_portfolios.py`
 - `app/web/final_selected_portfolio_dashboard.py`

@@ -1,7 +1,7 @@
 # STATUS - Finance Documentation System Rebuild
 
 Status: In Progress
-Last Updated: 2026-05-12
+Last Updated: 2026-05-13
 
 ## Goal
 
@@ -15,6 +15,8 @@ Notion Codex 문서 운영 가이드에 맞춰 `.note/finance/`를 장기 지식
 - backtest report 1차 구조 이동 진행 완료
 - backtest report 2차 validation 흡수 진행 완료
 - backtest report 3차 legacy archive 제거 완료
+- `data_architecture/`를 `docs/data/`로 마이그레이션 완료
+- `code_analysis/`를 `docs/architecture`, `docs/flows`, `docs/runbooks`, active Practical Validation task 문서로 마이그레이션 완료
 - 기존 문서 삭제는 아직 하지 않음
 - `AGENTS.md` 재작성 완료
 
@@ -32,6 +34,8 @@ Notion Codex 문서 운영 가이드에 맞춰 `.note/finance/`를 장기 지식
 - [x] 새 report README / INDEX / TEMPLATE / LEGACY_MIGRATION 작성
 - [x] legacy `phase23`, `phase24` validation report를 `validation/runtime`, `validation/ui_replay`로 흡수
 - [x] legacy `phase13`~`phase22` report를 `runs/`, `candidates/`, `validation/`으로 분류하고 archive 제거
+- [x] legacy `data_architecture/` 상세 문서를 `docs/data/`로 흡수하고 폴더 제거
+- [x] legacy `code_analysis/` 문서를 새 docs/task 구조로 흡수하고 폴더 제거
 
 ## Next
 
@@ -43,7 +47,7 @@ Notion Codex 문서 운영 가이드에 맞춰 `.note/finance/`를 장기 지식
 
 현재까지 아래는 하지 않았다.
 
-- 기존 대형 문서 삭제
+- operations / research / root markdown 등 남은 legacy tree 삭제
 - strategy hub/log와 raw run report 간 중복 해석 삭제 판단
 - registry / saved JSONL 수정
 - finance 코드 수정

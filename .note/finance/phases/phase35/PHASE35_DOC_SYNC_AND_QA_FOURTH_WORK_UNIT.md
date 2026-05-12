@@ -18,7 +18,7 @@
 ## 구현한 내용
 
 - Phase35 plan / TODO / work unit / completion / next preparation / checklist를 새 방향으로 고쳤다.
-- `WEB_BACKTEST_UI_FLOW.md`와 `SCRIPT_STRUCTURE_MAP.md`에서 삭제된 module 참조를 제거했다.
+- `BACKTEST_UI_FLOW.md`와 `SCRIPT_STRUCTURE_MAP.md`에서 삭제된 module 참조를 제거했다.
 - operations guide에서 final decision registry가 최종 판단 원본임을 명확히 했다.
 - README와 상위 finance 문서에서 workflow를 `Portfolio Proposal -> Final Review -> 최종 판단 완료`로 맞췄다.
 

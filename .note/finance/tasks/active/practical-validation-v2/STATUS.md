@@ -1,7 +1,7 @@
 # STATUS - Practical Validation V2
 
 Status: Active
-Last Updated: 2026-05-12
+Last Updated: 2026-05-13
 
 ## Current Status
 
@@ -17,6 +17,7 @@ P2 implementation은 대부분 완료된 상태다.
 - official + DB bridge evidence 병합 로직 보강
 - stress / sensitivity interpretation board 보강
 - 12개 진단 세부 근거에 사용자-facing 설명 추가
+- Practical Validation V2 상세 설계 / connector 계획 문서를 `code_analysis`에서 active task 문서로 이동
 
 ## Next
 

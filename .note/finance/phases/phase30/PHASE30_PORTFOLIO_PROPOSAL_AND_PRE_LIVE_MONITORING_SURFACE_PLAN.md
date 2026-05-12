@@ -67,7 +67,7 @@ Phase 29까지 오면서 좋은 백테스트 결과를 후보로 읽고,
 - `app/web/pages/backtest.py` 모듈 분리 경계
 - `app/web/runtime/candidate_registry.py` registry JSONL I/O helper
 - `app/web/runtime/portfolio_proposal.py` proposal JSONL I/O helper
-- `.note/finance/code_analysis/WEB_BACKTEST_UI_FLOW.md`
+- `.note/finance/docs/flows/BACKTEST_UI_FLOW.md`
 
 이번 phase에서 바로 다루지 않는 것:
 
@@ -140,7 +140,7 @@ Phase 29까지 오면서 좋은 백테스트 결과를 후보로 읽고,
 
 - 무엇을 바꾸는가:
   - Guide의 `테스트에서 상용화 후보 검토까지 사용하는 흐름`을 Phase 29 이후 기준으로 갱신한다.
-  - `WEB_BACKTEST_UI_FLOW.md`에 `backtest.py` 분리 후보와 순서를 남긴다.
+  - `BACKTEST_UI_FLOW.md`에 `backtest.py` 분리 후보와 순서를 남긴다.
   - Phase 30 첫 작업 단위 문서를 만든다.
 
 - 왜 필요한가:

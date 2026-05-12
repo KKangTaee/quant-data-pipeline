@@ -101,4 +101,4 @@ Phase 16까지 확인한 결론은 분명했다.
 
 - [PHASE16_NEXT_PHASE_PREPARATION.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phases/phase16/PHASE16_NEXT_PHASE_PREPARATION.md)
 - [CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/backtest_reports/strategies/CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md)
-- [BACKTEST_REFINEMENT_CODE_FLOW_GUIDE.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/code_analysis/BACKTEST_REFINEMENT_CODE_FLOW_GUIDE.md)
+- [BACKTEST_RUNTIME_FLOW.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/docs/architecture/BACKTEST_RUNTIME_FLOW.md)

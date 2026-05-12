@@ -59,7 +59,7 @@ Phase 28의 목표는 새 전략을 급하게 늘리는 것이 아니다.
 - `completed` fourth work-unit 문서 생성
 - `completed` fifth work-unit 문서 생성
 - `completed` roadmap / doc index / work log / question log sync
-- `completed` code_analysis sync
+- `completed` architecture / flows docs sync
 
 ## 현재 판단
 

@@ -81,7 +81,7 @@ Ingestion / Data Trust
 ## 이번 작업에서 바꾸는 것
 
 1. Guide의 `테스트에서 상용화 후보 검토까지 사용하는 흐름`을 새 canonical flow로 갱신한다.
-2. `WEB_BACKTEST_UI_FLOW.md`에 리팩토링 경계와 순서를 기록한다.
+2. `BACKTEST_UI_FLOW.md`에 리팩토링 경계와 순서를 기록한다.
 3. Phase 30 문서 bundle을 준비 작업 중심으로 갱신한다.
 4. roadmap / index / work log / question log를 Phase 30 active 상태에 맞춘다.
 

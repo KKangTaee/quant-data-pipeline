@@ -1,7 +1,7 @@
 # Finance Project Map
 
 Status: Active
-Last Verified: 2026-05-12
+Last Verified: 2026-05-13
 
 ## Project Summary
 
@@ -94,3 +94,14 @@ Backtest Analysis
 | Strategy runtime 변경 | `finance/engine.py`, `finance/strategy.py`, `finance/transform.py`, `finance/performance.py` |
 | Backtest report 작성 / 정리 | `.note/finance/reports/backtests/INDEX.md` |
 | 문서 체계 변경 | `.note/finance/tasks/active/doc-system-rebuild/` |
+
+## Detailed Documentation Maps
+
+| Need | Start Here |
+|---|---|
+| script별 책임 지도 | `.note/finance/docs/architecture/SCRIPT_STRUCTURE_MAP.md` |
+| backtest runtime / result bundle 흐름 | `.note/finance/docs/architecture/BACKTEST_RUNTIME_FLOW.md` |
+| data / DB / loader 코드 흐름 | `.note/finance/docs/architecture/DATA_DB_PIPELINE_FLOW.md` |
+| Backtest UI / Final Review / Selected Dashboard 화면 흐름 | `.note/finance/docs/flows/BACKTEST_UI_FLOW.md` |
+| Portfolio Selection V2 사용자 흐름 | `.note/finance/docs/flows/PORTFOLIO_SELECTION_FLOW.md` |
+| helper script / automation 사용법 | `.note/finance/docs/runbooks/AUTOMATION_SCRIPTS.md` |

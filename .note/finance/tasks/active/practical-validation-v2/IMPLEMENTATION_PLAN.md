@@ -2,7 +2,7 @@
 
 ## 목적
 
-이 문서는 `PRACTICAL_VALIDATION_V2_VALIDATION_DESIGN.md`와
+이 문서는 `DESIGN.md`와
 `PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH.md`에서 합의한 내용을 기준으로,
 현재 구현이 끝난 범위와 아직 남은 개발 범위를 분리해 정리한다.
 
@@ -15,8 +15,8 @@ P2 개발은 아래 두 문서로 더 구체화한다.
 
 | 문서 | 역할 |
 |---|---|
-| `PRACTICAL_VALIDATION_V2_P2_CONNECTOR_AND_STRESS_PLAN.md` | P2 전체 실행 계획. Cost / Liquidity, ETF holdings, Macro / Sentiment, Stress Interpretation, sensitivity runtime 경계를 정리 |
-| `PRACTICAL_VALIDATION_V2_PROVIDER_CONNECTOR_PLAN.md` | provider / DB / loader connector 상세 설계. ETF operability snapshot, holdings snapshot, macro series loader 계약을 정리 |
+| `CONNECTOR_AND_STRESS_PLAN.md` | P2 전체 실행 계획. Cost / Liquidity, ETF holdings, Macro / Sentiment, Stress Interpretation, sensitivity runtime 경계를 정리 |
+| `PROVIDER_CONNECTORS.md` | provider / DB / loader connector 상세 설계. ETF operability snapshot, holdings snapshot, macro series loader 계약을 정리 |
 
 ## 쉽게 말하면
 
@@ -79,7 +79,7 @@ P2-0 현재 상태:
 - `completed`
 - 대상 진단은 2, 3, 5, 6, 7, 9, 10, 11로 확정했다.
 - 각 대상 진단의 actual data, bridge / proxy fallback, `NOT_RUN` / `REVIEW` 조건은
-  `PRACTICAL_VALIDATION_V2_P2_CONNECTOR_AND_STRESS_PLAN.md`의 `P2-0 완료 산출물: 대상 진단 계약`을 기준으로 한다.
+  `CONNECTOR_AND_STRESS_PLAN.md`의 `P2-0 완료 산출물: 대상 진단 계약`을 기준으로 한다.
 
 P2-1 현재 상태:
 
@@ -88,7 +88,7 @@ P2-1 현재 상태:
 - 신규 table 후보는 `etf_operability_snapshot`, `etf_holdings_snapshot`, `etf_exposure_snapshot`,
   `macro_series_observation` 4개다.
 - 각 table의 business key, actual 판정 최소조건, bridge / proxy 경계, loader 반환 기준은
-  `PRACTICAL_VALIDATION_V2_PROVIDER_CONNECTOR_PLAN.md`의 `P2-1 Schema / Ingestion Field Contract`를 기준으로 한다.
+  `PROVIDER_CONNECTORS.md`의 `P2-1 Schema / Ingestion Field Contract`를 기준으로 한다.
 
 P2-2 현재 상태:
 
@@ -242,7 +242,7 @@ diagnostics 계산, persistence handoff까지 많은 책임을 갖고 있다.
 
 1. 먼저 behavior를 바꾸지 않고 순수 함수 이동만 한다.
 2. `backtest_practical_validation_helpers.py`는 기존 import 호환을 위해 public wrapper를 유지한다.
-3. 새 파일이 생기면 `SCRIPT_STRUCTURE_MAP.md`와 `WEB_BACKTEST_UI_FLOW.md`를 같이 갱신한다.
+3. 새 파일이 생기면 `SCRIPT_STRUCTURE_MAP.md`와 `BACKTEST_UI_FLOW.md`를 같이 갱신한다.
 4. 분리 후 `py_compile`과 Streamlit smoke를 먼저 돌리고, 기능 고도화는 그 다음 commit에서 진행한다.
 
 ## 우선순위별 구현 단위

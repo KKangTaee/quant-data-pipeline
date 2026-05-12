@@ -31,4 +31,4 @@ python3 plugins/quant-finance-workflow/scripts/bootstrap_finance_phase_bundle.py
 - phase 진행 문서는 `phases/phase*/`에 둔다.
 - phase 밖에서 반복 사용되는 운영 문서는 `../operations/`에 둔다.
 - backtest 결과나 후보 분석이 phase를 넘어 재사용되면 `../backtest_reports/`에 둔다.
-- 코드 구조 설명은 `../code_analysis/`, 데이터 / DB 의미는 `../docs/data/`에 둔다.
+- 코드 구조 설명은 `../docs/architecture/`, 데이터 / DB 의미는 `../docs/data/`에 둔다.

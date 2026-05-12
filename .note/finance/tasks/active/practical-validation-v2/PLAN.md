@@ -49,6 +49,15 @@ P2는 아래를 만족하면 closeout할 수 있다.
 - Practical Validation Result JSONL에는 compact evidence만 저장한다.
 - Final Review에서 사용자가 어떤 진단이 충분하고 어떤 진단이 부족한지 판단할 수 있다.
 
+## Detailed Task Docs
+
+| Document | Role |
+|---|---|
+| `DESIGN.md` | Practical Validation V2의 diagnostic domain, UI / JSON contract, stage ownership 설계 |
+| `IMPLEMENTATION_PLAN.md` | P0~P3 구현 범위와 완료 / 남은 항목 정리 |
+| `CONNECTOR_AND_STRESS_PLAN.md` | P2 대상 진단, provider / macro / stress 해석 정상화 작업 순서 |
+| `PROVIDER_CONNECTORS.md` | ETF operability, holdings / exposure, macro series 수집 / 저장 / loader 계약 |
+
 ## Out Of Scope
 
 - 모든 ETF issuer 완전 지원

@@ -1,7 +1,7 @@
 # Architecture Notes
 
 Status: Active
-Last Verified: 2026-05-12
+Last Verified: 2026-05-13
 
 ## Current Architecture
 
@@ -39,3 +39,12 @@ External Sources
 
 중요한 설계 결정을 새로 만들 때는 필요하면 `architecture/decisions/ADR-XXXX.md` 형태로 추가한다.
 아직 이 재구성 단계에서는 기존 긴 결정 문서를 모두 옮기지 않는다.
+
+## Detailed Maps
+
+| Need | Document |
+|---|---|
+| 어떤 script가 어떤 책임을 갖는지 빠르게 확인 | [SCRIPT_STRUCTURE_MAP.md](./SCRIPT_STRUCTURE_MAP.md) |
+| UI payload에서 strategy runtime과 result bundle까지의 흐름 확인 | [BACKTEST_RUNTIME_FLOW.md](./BACKTEST_RUNTIME_FLOW.md) |
+| data collection, DB persistence, loader read path 확인 | [DATA_DB_PIPELINE_FLOW.md](./DATA_DB_PIPELINE_FLOW.md) |
+| 새 strategy family 추가 / 변경 절차 확인 | [STRATEGY_IMPLEMENTATION_FLOW.md](./STRATEGY_IMPLEMENTATION_FLOW.md) |

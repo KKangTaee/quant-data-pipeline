@@ -153,7 +153,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 주의:
 
 - price missing row, stale date, provider no-data는 strategy result 기간에 직접 영향을 줄 수 있다.
-- date alignment 정책은 `code_analysis/BACKTEST_RUNTIME_FLOW.md`를 같이 본다.
+- date alignment 정책은 `docs/architecture/BACKTEST_RUNTIME_FLOW.md`를 같이 본다.
 
 ## `nyse_fundamentals`
 

@@ -1217,7 +1217,7 @@ v1 compatibility:
 | `app/web/backtest_final_review.py` | v2 evidence 표시 |
 | `app/web/runtime/portfolio_selection_v2.py` | schema version / persistence helper |
 | `app/web/final_selected_portfolio_dashboard_helpers.py` | 선정 후 monitoring signal이 v2 baseline을 읽게 할 경우 |
-| `.note/finance/code_analysis/WEB_BACKTEST_UI_FLOW.md` | flow 문서 갱신 |
+| `.note/finance/docs/flows/BACKTEST_UI_FLOW.md` | flow 문서 갱신 |
 | `Reference > Guides` 관련 문서 / UI | 사용자-facing 단계 설명 갱신 |
 
 명시 요청 전에는 아래를 건드리지 않는다.

@@ -21,12 +21,22 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-13
+- Migrated legacy `code_analysis/` into the new document system.
+- Moved current-state developer flow docs into:
+  - `.note/finance/docs/architecture/`
+  - `.note/finance/docs/flows/`
+  - `.note/finance/docs/runbooks/`
+- Moved Practical Validation V2 planning docs into `.note/finance/tasks/active/practical-validation-v2/`.
+- Rewrote the old portfolio selection redesign guide as the current-state `PORTFOLIO_SELECTION_FLOW.md`.
+- Removed the old `.note/finance/code_analysis/` folder and updated active references to the new paths.
+
 ### 2026-05-11
 - Updated finance document-writing guidance for future phase / planning documents.
 - Updated:
   - `AGENTS.md`
   - `.note/finance/PHASE_PLAN_TEMPLATE.md`
-  - `.note/finance/code_analysis/AUTOMATION_SCRIPTS_GUIDE.md`
+  - `.note/finance/docs/runbooks/AUTOMATION_SCRIPTS.md`
   - `plugins/quant-finance-workflow/scripts/bootstrap_finance_phase_bundle.py`
   - local finance phase/doc-sync skill guidance
 - Durable decision:
@@ -36,8 +46,8 @@ Detailed historical logs were archived on `2026-04-13`.
 ### 2026-05-11
 - Updated Practical Validation V2 P2 provider connector planning after source / ingestion direction review.
 - Updated:
-  - `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_PROVIDER_CONNECTOR_PLAN.md`
-  - `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_P2_CONNECTOR_AND_STRESS_PLAN.md`
+  - `.note/finance/tasks/active/practical-validation-v2/PROVIDER_CONNECTORS.md`
+  - `.note/finance/tasks/active/practical-validation-v2/CONNECTOR_AND_STRESS_PLAN.md`
 - Durable decision:
   - P2 development starts with provider data collection through `finance/data/*` ingestion and MySQL persistence.
   - Practical Validation / Dashboard must read provider data through loaders, not remote-fetch from the UI.
@@ -46,9 +56,9 @@ Detailed historical logs were archived on `2026-04-13`.
 ### 2026-05-11
 - Reframed Practical Validation V2 P2 around diagnostic normalization rather than provider collection as the end goal.
 - Updated:
-  - `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_REMAINING_IMPLEMENTATION_PLAN.md`
-  - `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_P2_CONNECTOR_AND_STRESS_PLAN.md`
-  - `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_PROVIDER_CONNECTOR_PLAN.md`
+  - `.note/finance/tasks/active/practical-validation-v2/IMPLEMENTATION_PLAN.md`
+  - `.note/finance/tasks/active/practical-validation-v2/CONNECTOR_AND_STRESS_PLAN.md`
+  - `.note/finance/tasks/active/practical-validation-v2/PROVIDER_CONNECTORS.md`
 - Durable decision:
   - P2 means normalizing the incomplete Practical Validation diagnostics among the 12 patterns.
   - Provider / holdings / macro ingestion is the implementation method, not the product goal.
@@ -57,9 +67,9 @@ Detailed historical logs were archived on `2026-04-13`.
 ### 2026-05-11
 - Completed Practical Validation V2 P2-0 target diagnostic contract.
 - Updated:
-  - `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_P2_CONNECTOR_AND_STRESS_PLAN.md`
-  - `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_PROVIDER_CONNECTOR_PLAN.md`
-  - `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_REMAINING_IMPLEMENTATION_PLAN.md`
+  - `.note/finance/tasks/active/practical-validation-v2/CONNECTOR_AND_STRESS_PLAN.md`
+  - `.note/finance/tasks/active/practical-validation-v2/PROVIDER_CONNECTORS.md`
+  - `.note/finance/tasks/active/practical-validation-v2/IMPLEMENTATION_PLAN.md`
 - Durable decision:
   - P2-0 fixed the target diagnostics as 2, 3, 5, 6, 7, 9, 10, and 11.
   - Each target diagnostic now has an actual-data requirement, bridge/proxy fallback, `NOT_RUN` / `REVIEW` condition, and compact evidence boundary.
@@ -69,7 +79,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - Clarified `NOT_RUN` handling for Final Review route in Practical Validation docs.
 - Updated:
   - `.note/finance/research/PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH.md`
-  - `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_VALIDATION_DESIGN.md`
+  - `.note/finance/tasks/active/practical-validation-v2/DESIGN.md`
   - `.note/finance/QUESTION_AND_ANALYSIS_LOG.md`
 - Durable decision:
   - `NOT_RUN` is not a pass. It means the diagnostic was not executed because data or implementation is missing.
@@ -80,7 +90,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - Clarified proxy classification and holdings look-through wording in Practical Validation design docs.
 - Updated:
   - `.note/finance/research/PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH.md`
-  - `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_VALIDATION_DESIGN.md`
+  - `.note/finance/tasks/active/practical-validation-v2/DESIGN.md`
   - `.note/finance/QUESTION_AND_ANALYSIS_LOG.md`
 - Durable decision:
   - Proxy classification means using ticker-level category proxies when holdings data is unavailable.
@@ -91,7 +101,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - Changed Practical Validation design-question status tables to a single checklist table.
 - Updated:
   - `.note/finance/research/PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH.md`
-  - `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_VALIDATION_DESIGN.md`
+  - `.note/finance/tasks/active/practical-validation-v2/DESIGN.md`
   - `.note/finance/QUESTION_AND_ANALYSIS_LOG.md`
 - Durable decision:
   - Use one table with `확인 여부`, `질문`, and `결정 / 기본 방향` columns instead of splitting design questions into completed and remaining sections.
@@ -101,7 +111,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - Refreshed Practical Validation open design questions.
 - Updated:
   - `.note/finance/research/PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH.md`
-  - `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_VALIDATION_DESIGN.md`
+  - `.note/finance/tasks/active/practical-validation-v2/DESIGN.md`
   - `.note/finance/QUESTION_AND_ANALYSIS_LOG.md`
 - Durable decision:
   - Practical Validation design questions are now split into `결정 완료` and `남은 구현 선택`.
@@ -111,7 +121,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - Finalized Korean-facing Validation Profile wording for Practical Validation design.
 - Updated:
   - `.note/finance/research/PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH.md`
-  - `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_VALIDATION_DESIGN.md`
+  - `.note/finance/tasks/active/practical-validation-v2/DESIGN.md`
   - `.note/finance/FINANCE_TERM_GLOSSARY.md`
   - `.note/finance/QUESTION_AND_ANALYSIS_LOG.md`
 - Durable decision:
@@ -124,7 +134,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - Clarified Practical Validation terminology and future sentiment connector scope.
 - Updated:
   - `.note/finance/research/PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH.md`
-  - `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_VALIDATION_DESIGN.md`
+  - `.note/finance/tasks/active/practical-validation-v2/DESIGN.md`
   - `.note/finance/FINANCE_TERM_GLOSSARY.md`
   - `.note/finance/QUESTION_AND_ANALYSIS_LOG.md`
 - Durable decision:
@@ -136,7 +146,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - Refined the Practical Validation diagnostics design with Validation Profile behavior.
 - Updated:
   - `.note/finance/research/PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH.md`
-  - `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_VALIDATION_DESIGN.md`
+  - `.note/finance/tasks/active/practical-validation-v2/DESIGN.md`
   - `.note/finance/QUESTION_AND_ANALYSIS_LOG.md`
 - Durable decision:
   - Practical Validation should ask 3~5 questions to create a Validation Profile, then use that profile to adjust thresholds, domain weights, blocker / review interpretation, and user-intent mismatch warnings.
@@ -149,10 +159,10 @@ Detailed historical logs were archived on `2026-04-13`.
 - Created:
   - `.note/finance/research/PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH.md`
 - Updated:
-  - `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_VALIDATION_DESIGN.md`
+  - `.note/finance/tasks/active/practical-validation-v2/DESIGN.md`
   - `.note/finance/research/README.md`
   - `.note/finance/FINANCE_DOC_INDEX.md`
-  - `.note/finance/code_analysis/README.md`
+  - `.note/finance/docs/architecture/README.md`
   - `.note/finance/QUESTION_AND_ANALYSIS_LOG.md`
 - Durable decision:
   - Practical Validation should not be only an upstream evidence summary. It should use upstream evidence as input, then run portfolio-level practical diagnostics such as asset allocation fit, concentration / overlap, correlation / risk contribution, macro / sentiment context, stress / scenario, alternative portfolio challenge, leveraged / inverse suitability, ETF operability, and robustness / overfit review.
@@ -1781,22 +1791,22 @@ Detailed historical logs were archived on `2026-04-13`.
 ### 2026-04-20
 - Established the first finance code analysis documentation system.
 - Changed:
-  - created `.note/finance/code_analysis/` as the developer-facing place for durable code flow documents
+  - created `.note/finance/docs/architecture/` as the developer-facing place for durable code flow documents
   - added flow docs for backtest runtime, data/DB pipeline, web backtest UI, strategy implementation, and automation scripts
-  - updated `FINANCE_COMPREHENSIVE_ANALYSIS.md` so it remains the high-level map and points detailed code flow readers to `code_analysis/`
+  - updated `FINANCE_COMPREHENSIVE_ANALYSIS.md` so it remains the high-level map and points detailed code flow readers to `docs/architecture/`
   - updated `FINANCE_DOC_INDEX.md`, `AGENTS.md`, and the active `finance-doc-sync` skill guidance to include the new code analysis update rule
 - Durable takeaway:
-  - Future code changes should update `code_analysis/` only when the durable code flow changes; small copy edits, one-off results, and phase status updates should stay out of those developer flow documents.
+  - Future code changes should update `docs/architecture/` only when the durable code flow changes; small copy edits, one-off results, and phase status updates should stay out of those developer flow documents.
 
 ### 2026-04-20
-- Slimmed `FINANCE_COMPREHENSIVE_ANALYSIS.md` now that `code_analysis/` exists.
+- Slimmed `FINANCE_COMPREHENSIVE_ANALYSIS.md` now that `docs/architecture/` exists.
 - Changed:
   - reduced section 4 from detailed file-by-file code notes to a concise system layer table
   - reduced section 12 from long strategy/contract implementation history to a compact code entrypoint map
   - reduced section 18 to a short automation baseline table
-  - moved durable strategy contract and runtime interpretation details into `code_analysis/STRATEGY_IMPLEMENTATION_FLOW.md` and `code_analysis/BACKTEST_RUNTIME_FLOW.md`
+  - moved durable strategy contract and runtime interpretation details into `docs/architecture/STRATEGY_IMPLEMENTATION_FLOW.md` and `docs/architecture/BACKTEST_RUNTIME_FLOW.md`
 - Durable takeaway:
-  - `FINANCE_COMPREHENSIVE_ANALYSIS.md` should now stay as the high-level map, while detailed developer flow should live under `.note/finance/code_analysis/`.
+  - `FINANCE_COMPREHENSIVE_ANALYSIS.md` should now stay as the high-level map, while detailed developer flow should live under `.note/finance/docs/architecture/`.
 
 ### 2026-04-20
 - Established the first finance data architecture documentation system.
@@ -1813,7 +1823,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - Changed:
   - updated sections 8~9 from older ETF/sample-strategy framing to the current product / strategy / portfolio / pre-live layer view
   - condensed sections 10~11 into current limitation and data-quality summaries that point to `data_architecture/`
-  - rewrote section 12 as a code entrypoint map that points to `code_analysis/`
+  - rewrote section 12 as a code entrypoint map that points to `docs/architecture/`
   - updated sections 13~18 to reflect the current development boundary, Phase 25 pre-live direction, future data priorities, and automation / persistence baseline
 - Durable takeaway:
   - `FINANCE_COMPREHENSIVE_ANALYSIS.md` now acts as a high-level orientation map for the current product, while detailed code, DB, phase, and result records are delegated to their canonical sub-documents.
@@ -1852,7 +1862,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - moved daily market update notes under `.note/finance/operations/daily_market_update/`
   - moved research reference docs under `.note/finance/research/`
   - moved support-track discussion docs under `.note/finance/support_tracks/`
-  - moved the legacy backtest refinement flow guide under `.note/finance/code_analysis/`
+  - moved the legacy backtest refinement flow guide under `.note/finance/docs/architecture/`
   - updated `FINANCE_DOC_INDEX.md`, active links, and added folder README files
 - Durable takeaway:
   - `.note/finance/` root should now stay focused on top-level maps, active logs, glossary, and templates.
@@ -2220,7 +2230,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - bootstrapped the Phase 30 document bundle for `Portfolio Proposal And Pre-Live Monitoring Surface`
   - updated the main Guide's `테스트에서 상용화 후보 검토까지 사용하는 흐름` to the post-Phase-29 flow:
     Data Trust -> Single Strategy -> Real-Money Signal -> Compare -> Candidate Draft -> Candidate Review Note -> Current Candidate Registry -> Candidate Board / Pre-Live -> Portfolio Proposal -> Live Readiness
-  - documented the `backtest.py` refactor boundary in `WEB_BACKTEST_UI_FLOW.md` and the Phase 30 first work-unit note
+  - documented the `backtest.py` refactor boundary in `BACKTEST_UI_FLOW.md` and the Phase 30 first work-unit note
   - synced Phase 30 status in roadmap, document index, comprehensive analysis, TODO, completion summary, and checklist draft
 - Validation:
   - `python3 -m py_compile app/web/streamlit_app.py app/web/pages/backtest.py` passed
@@ -2600,9 +2610,9 @@ Detailed historical logs were archived on `2026-04-13`.
 ### 2026-04-29
 - Added repository guidance for script responsibility mapping and function-purpose comments.
 - Changed:
-  - updated `AGENTS.md` so agents check `.note/finance/code_analysis/SCRIPT_STRUCTURE_MAP.md` and the matching code analysis flow doc before finance code edits
-  - added `.note/finance/code_analysis/SCRIPT_STRUCTURE_MAP.md` as the quick script responsibility map
-  - updated `code_analysis/README.md` and `FINANCE_DOC_INDEX.md` to point future code work to the new map
+  - updated `AGENTS.md` so agents check `.note/finance/docs/architecture/SCRIPT_STRUCTURE_MAP.md` and the matching code analysis flow doc before finance code edits
+  - added `.note/finance/docs/architecture/SCRIPT_STRUCTURE_MAP.md` as the quick script responsibility map
+  - updated `docs/architecture/README.md` and `FINANCE_DOC_INDEX.md` to point future code work to the new map
   - added a function documentation rule for new non-trivial domain / workflow / persistence / scoring helpers
 - Durable takeaway:
   - Future finance code changes should keep script responsibility documentation current when modules are added, moved, split, or materially repurposed.
@@ -3346,7 +3356,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - added a core concept guide for `Portfolio Proposal -> Final Review -> 최종 판단 완료`
   - updated stage pass criteria for 7->8, 8->9, 9->10, and final decision interpretation
   - refreshed the guide's document / file list with proposal, paper ledger, and final decision guide / registry paths
-  - synced `WEB_BACKTEST_UI_FLOW.md`, the historical walkthrough note, and `FINANCE_DOC_INDEX.md` so they no longer imply a separate active Live Readiness / Post-Selection step
+  - synced `BACKTEST_UI_FLOW.md`, the historical walkthrough note, and `FINANCE_DOC_INDEX.md` so they no longer imply a separate active Live Readiness / Post-Selection step
 - Decision:
   - `Backtest > Final Review > 기록된 최종 검토 결과 확인` is the current final check for whether a portfolio was selected as a practical candidate.
   - Portfolio Proposal UI may still contain legacy `Live Readiness` route labels, but the current user-facing interpretation is Final Review input readiness.
@@ -3481,7 +3491,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - Compare 결과 상단에 `5단계 Compare 검증 보드`를 두고 PASS / CONDITIONAL / FAIL, Readiness, Data Trust, 4개 검증 기준을 명시적으로 보여주도록 변경했다.
   - `Send Selected Strategy To Candidate Review` 버튼은 `다음 행동` 영역으로 분리해, 버튼을 누른 뒤부터 6단계 Candidate Review가 시작된다는 경계를 화면에 남겼다.
   - `Replay Saved Mix`는 `저장 Mix Replay 결과`와 `구성 전략 Compare 검증`을 나누어 표시해 mix 자체 결과와 개별 전략 handoff 검증을 구분하게 했다.
-  - `Reference > Guides`와 `WEB_BACKTEST_UI_FLOW.md`의 5단계 / 6단계 설명을 같은 흐름으로 갱신했다.
+  - `Reference > Guides`와 `BACKTEST_UI_FLOW.md`의 5단계 / 6단계 설명을 같은 흐름으로 갱신했다.
 
 ### 2026-05-06
 - Saved Mix replay UX 후속 개편:
@@ -3489,7 +3499,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `저장 Mix 다시 열기` 화면 안에서 replay 결과, `Portfolio Mix 검증 보드`, weighted portfolio 상세 결과를 바로 확인하게 했다.
   - mix 검증 보드는 `Saved Mix Replay`, `Mix Data Trust`, `Component Real-Money`, `Workflow Registry`를 따로 보여주며, saved mix setup과 5~10단계 workflow registry 기록을 구분한다.
   - `portfolio_gtaa_spy_low_mdd_60_ew_growth_sector_gold_40` 같은 saved setup은 replay 성과가 있어도 proposal / final review registry에 기록되지 않았으면 `Workflow Registry=NOT RECORDED`로 표시된다.
-  - `Reference > Guides`와 `WEB_BACKTEST_UI_FLOW.md`를 같은 경계로 갱신했다.
+  - `Reference > Guides`와 `BACKTEST_UI_FLOW.md`를 같은 경계로 갱신했다.
 
 ### 2026-05-06
 - Saved Mix -> Portfolio Proposal handoff 정리:
@@ -3543,7 +3553,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - 구현:
   - `Reference > Guides`의 `1~10 단계 실행 흐름` 앞에 `포트폴리오 플로우 맵`을 추가했다.
   - 경로 선택은 단일 후보, 여러 후보 포트폴리오, 저장 Mix, 재검토 / 막힘 경로로 나누고, 각 경로를 카드형 순서도 / 사용 상황 / 생략되는 단계 / 생성 또는 참조 기록 표로 보여준다.
-  - `.note/finance/code_analysis/WEB_BACKTEST_UI_FLOW.md`의 Guides 묶음 설명을 다섯 묶음 기준으로 동기화했다.
+  - `.note/finance/docs/flows/BACKTEST_UI_FLOW.md`의 Guides 묶음 설명을 다섯 묶음 기준으로 동기화했다.
 - 검증:
   - `py_compile`로 `app/web/streamlit_app.py`, `app/web/pages/backtest.py`, `app/web/backtest_*.py`를 확인했다.
   - worktree Streamlit 서버를 `127.0.0.1:8502`에 띄우고 `Reference > Guides`에서 플로우 맵 렌더링과 경로 선택 동작을 확인했다.
@@ -3622,13 +3632,13 @@ Detailed historical logs were archived on `2026-04-13`.
   - 저장 mix 화면의 primary action은 `Mix 재실행 및 검증`으로 바꾸고, 기존 load action은 `전략 비교에서 수정하기`라는 편집 / 재구성 경로로 낮췄다.
   - GTAA `interval > 1`, `month_end`에서 요청 종료일이 다음 정상 cadence close 전이면 Data Trust hard block이 아니라 cadence-aligned review로 해석하도록 Compare data trust helper를 보정했다.
   - `Portfolio Mix 검증 보드`는 saved mix의 replay, mix data trust, component Real-Money, workflow registry 기록 여부를 mix-level로 읽고 `포트폴리오 후보 초안으로 보내기`로 Portfolio Proposal에 연결한다.
-  - `Reference > Guides`와 `WEB_BACKTEST_UI_FLOW.md`를 새 용어와 단계 ownership 기준으로 동기화했다.
+  - `Reference > Guides`와 `BACKTEST_UI_FLOW.md`를 새 용어와 단계 ownership 기준으로 동기화했다.
 
 ### 2026-05-08
 - Backtest 후보 선정 workflow 3단계 재설계 사전 분석:
   - user feedback에 따라 Candidate Review / Portfolio Proposal / Final Review가 반복 저장과 중복 비중 조합처럼 보이는 구조를 깊게 분석했다.
   - sub-agent 4개 트랙으로 navigation / Candidate Review registry / Portfolio Proposal-Final Review schema / Guides 문서 영향을 분리 조사했다.
-  - 구현 전 기준 문서 `.note/finance/code_analysis/BACKTEST_PORTFOLIO_SELECTION_WORKFLOW_REDESIGN_GUIDE.md`를 추가했다.
+  - 구현 전 기준 문서 `.note/finance/docs/flows/PORTFOLIO_SELECTION_FLOW.md`를 추가했다.
   - 핵심 판단은 5개 panel label을 바로 3개로 치환하지 않고, visible stage와 legacy internal route를 먼저 분리하는 것이다.
   - 아직 제품 코드는 수정하지 않았다. 다음 단계는 사용자가 guide 방향을 확인한 뒤 route foundation부터 구현하는 것이다.
 
@@ -3652,7 +3662,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - user feedback에 따라 방금 만든 weighted portfolio mix를 저장 mix round-trip 없이 Practical Validation으로 보낼 수 없는 문제를 확인했다.
   - `Weighted Portfolio Result` 아래에 `현재 Mix를 Practical Validation으로 보내기` action을 추가해 mix 전체를 Clean V2 selection source로 저장하게 했다.
   - 저장 mix의 `전략 비교에서 수정하기`는 기존 stale compare / weighted 결과를 숨기고, 저장된 전략 / 기간 / 세부 설정 / weight를 form-first 상태로 다시 채우도록 조정했다.
-  - Compare / saved mix 문구와 `WEB_BACKTEST_UI_FLOW.md`를 Clean V2 Practical Validation ownership 기준으로 갱신했다.
+  - Compare / saved mix 문구와 `BACKTEST_UI_FLOW.md`를 Clean V2 Practical Validation ownership 기준으로 갱신했다.
 
 ### 2026-05-10
 - Portfolio Mix 검증 보드 legacy 문구 정리:
@@ -3663,7 +3673,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - Practical Validation V2 검증 설계 조사 / 문서화:
   - user request에 따라 현재 Practical Validation이 실제로 검증하는 항목과 실전 후보 검증으로 부족한 부분을 정리했다.
   - CFA backtesting / GIPS / SEC performance presentation / SR 11-7 model validation / overfitting / transaction cost / ETF liquidity reference를 조사해 검증 domain으로 번역했다.
-  - `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_VALIDATION_DESIGN.md`를 추가하고, source contract, replay, benchmark, rolling, drawdown, stress, cost, investability, sensitivity, overfit, monitoring plan domain과 구현 우선순위를 정리했다.
+  - `.note/finance/tasks/active/practical-validation-v2/DESIGN.md`를 추가하고, source contract, replay, benchmark, rolling, drawdown, stress, cost, investability, sensitivity, overfit, monitoring plan domain과 구현 우선순위를 정리했다.
   - 제품 코드는 아직 수정하지 않았다. 다음 작업은 사용자가 설계를 확인한 뒤 Slice 1 domain board부터 구현하는 것이 맞다.
 - Practical Validation V2 중복 검증 위험 보강:
   - user feedback에 따라 Practical Validation 이전 단계의 Data Trust / Real-Money / Compare / Saved Mix gate와 V2 설계가 겹칠 수 있는 지점을 확인했다.
@@ -3698,7 +3708,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - ETF operability는 DB price / volume proxy와 one-way cost assumption으로 1차 확인하고, macro / sentiment는 FRED connector 전까지 benchmark price-action proxy로 표시한다.
   - Final Review에는 profile score breakdown, curve evidence, rolling evidence를 snapshot으로 남기도록 연결했다.
 - Practical Validation V2 남은 구현 계획 문서화:
-  - user request에 따라 추가 개발 전 검토용 문서 `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_REMAINING_IMPLEMENTATION_PLAN.md`를 추가했다.
+  - user request에 따라 추가 개발 전 검토용 문서 `.note/finance/tasks/active/practical-validation-v2/IMPLEMENTATION_PLAN.md`를 추가했다.
   - 현재 구현 완료 범위와 proxy / NOT_RUN / REVIEW로 남은 범위를 12개 diagnostics domain별로 정리했다.
   - 다음 개발 순서를 helper split, actual runtime replay, benchmark parity, validation inspector, strategy-specific sensitivity, provider connector, Final Review / Selected Dashboard 고도화 순으로 제안했다.
   - 제품 코드는 수정하지 않았고, 사용자가 문서를 검토한 뒤 첫 구현 단위를 확정하는 상태다.
@@ -3717,14 +3727,14 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ### 2026-05-11
 - Practical Validation V2 P2 개발 문서 정리:
-  - user request에 따라 P2 실행 계획 문서 `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_P2_CONNECTOR_AND_STRESS_PLAN.md`를 추가했다.
-  - provider / DB / loader 상세 설계 문서 `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_PROVIDER_CONNECTOR_PLAN.md`를 추가했다.
+  - user request에 따라 P2 실행 계획 문서 `.note/finance/tasks/active/practical-validation-v2/CONNECTOR_AND_STRESS_PLAN.md`를 추가했다.
+  - provider / DB / loader 상세 설계 문서 `.note/finance/tasks/active/practical-validation-v2/PROVIDER_CONNECTORS.md`를 추가했다.
   - P2 범위를 Cost / Liquidity / ETF Operability connector, ETF holdings / sector look-through, Macro / Sentiment connector, Stress Interpretation, strategy-specific sensitivity runtime 경계로 정리했다.
-  - `PRACTICAL_VALIDATION_V2_REMAINING_IMPLEMENTATION_PLAN.md`, `code_analysis/README.md`, `FINANCE_DOC_INDEX.md`에 새 문서 링크를 반영했다.
+  - `IMPLEMENTATION_PLAN.md`, `docs/architecture/README.md`, `FINANCE_DOC_INDEX.md`에 새 문서 링크를 반영했다.
   - 제품 코드는 수정하지 않았다. 다음 작업은 provider connector 첫 구현 단위 확정 후 진행한다.
 - Practical Validation V2 provider 문서 compact 관리:
   - user feedback에 따라 별도 data collection plan 문서를 만들지 않기로 했다.
-  - ETF holdings, macro series, sentiment series 수집 계획을 기존 `.note/finance/code_analysis/PRACTICAL_VALIDATION_V2_PROVIDER_CONNECTOR_PLAN.md` 안에 합쳤다.
+  - ETF holdings, macro series, sentiment series 수집 계획을 기존 `.note/finance/tasks/active/practical-validation-v2/PROVIDER_CONNECTORS.md` 안에 합쳤다.
   - P2 문서 역할을 `P2 전체 계획`과 `provider 수집 / schema / loader 상세 설계` 두 개로 고정했다.
 - Practical Validation V2 P2-1 schema / ingestion field 계약 확정:
   - P2-0에서 정한 8개 정상화 대상 진단을 실제 수집 / 저장 / 로딩 가능한 데이터 계약으로 변환했다.

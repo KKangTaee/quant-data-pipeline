@@ -136,6 +136,26 @@ ETF basket 전략에서 특정 ticker의 가격 이력이나 결측이 부족하
 `Global Relative Strength`는 Phase 27 첫 작업부터 price freshness preflight와
 Data Trust Summary metadata를 남기는 첫 적용 대상이다.
 
+## Refinement / Compare 해석
+
+반복 backtest refinement를 다시 볼 때는 아래 순서로 추적한다.
+
+```text
+app/web/streamlit_app.py
+  -> app/web/pages/backtest.py
+  -> app/web/runtime/backtest.py
+  -> finance/engine.py / finance/strategy.py
+  -> result bundle / report / saved replay
+```
+
+구분:
+
+- `Compare`는 여러 전략의 개별 후보를 나란히 보는 연구 / 분석 표면이다.
+- `Weighted Portfolio`는 compare 결과를 월별 composite로 합치는 포트폴리오 합성 표면이다.
+- `Saved Portfolio`는 compare + weights + date policy를 저장해 rerun할 수 있게 만든 재현용 setup이다.
+
+이 셋은 곧바로 투자 승인이나 live-ready 판단을 만드는 계층이 아니다. 현재 제품 흐름에서는 Backtest Analysis에서 후보 source를 만들고, Practical Validation과 Final Review를 거쳐야 최종 후보 판단으로 이어진다.
+
 ## 갱신해야 하는 경우
 
 - 새 `run_*_backtest_from_db(...)` 함수가 추가될 때

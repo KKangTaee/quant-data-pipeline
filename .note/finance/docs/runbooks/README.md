@@ -1,7 +1,7 @@
 # Finance Runbooks
 
 Status: Active
-Last Verified: 2026-05-12
+Last Verified: 2026-05-13
 
 ## Local App
 
@@ -40,3 +40,7 @@ find .note/finance -maxdepth 3 -type f | sort
 - `registries/*.jsonl`, `run_history/*.jsonl`, runtime artifact, temp CSV는 명시 요청 없이는 커밋하지 않는다.
 - `.DS_Store`와 `.playwright-mcp/`는 커밋하지 않는다.
 - 문서 재구성처럼 큰 변경은 삭제 전후 구조 확인 결과를 최종 응답에 요약한다.
+
+## Automation Helpers
+
+Repo-local helper script 사용 기준은 [AUTOMATION_SCRIPTS.md](./AUTOMATION_SCRIPTS.md)를 본다.

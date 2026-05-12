@@ -90,7 +90,7 @@
   - `.note/finance/phases/phase35/PHASE35_CURRENT_CHAPTER_TODO.md`
   - `.note/finance/phases/phase35/PHASE35_COMPLETION_SUMMARY.md`
   - `.note/finance/phases/phase35/PHASE35_NEXT_PHASE_PREPARATION.md`
-  - `.note/finance/code_analysis/WEB_BACKTEST_UI_FLOW.md`
+  - `.note/finance/docs/flows/BACKTEST_UI_FLOW.md`
   - `.note/finance/operations/FINAL_PORTFOLIO_SELECTION_DECISIONS_GUIDE.md`
 - 체크 항목:
   - [ ] Phase35가 별도 후속 가이드 구현이 아니라 workflow 단순화 phase로 설명되는지
