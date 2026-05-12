@@ -52,10 +52,11 @@ Mitigation:
 
 Risk:
 
-- 기존 phase별 report를 `archive/legacy_phase/`로 옮긴 뒤 후속 분류를 하지 않으면 새 구조에서도 다시 찾기 어려운 창고가 될 수 있다.
+- 기존 phase별 report를 임시 archive로 옮긴 뒤 후속 분류를 하지 않으면 새 구조에서도 다시 찾기 어려운 창고가 될 수 있다.
 
 Mitigation:
 
 - `.note/finance/reports/backtests/LEGACY_MIGRATION.md`에 분류 규칙과 후속 순서를 명시한다.
-- phase24 / phase23처럼 validation 성격이 분명한 문서부터 먼저 흡수한다.
-- 후보 근거로 남길 문서는 `candidates/point_in_time/`로 승격하고, 중복 raw report는 삭제 후보로 표시한다.
+- phase24 / phase23처럼 validation 성격이 분명한 문서부터 먼저 흡수했다.
+- 3차에서 남은 phase13~phase22 report를 `runs/`, `candidates/`, `validation/`으로 분류하고 archive를 제거했다.
+- 남은 위험은 archive dump가 아니라 raw report와 strategy hub/log 사이의 중복 정리 여부다.

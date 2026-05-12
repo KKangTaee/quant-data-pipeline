@@ -217,7 +217,7 @@ balanced near-miss 문서도 같이 보는 게 맞다.
 
 - [VALUE_STRICT_ANNUAL.md](/Users/taeho/Project/quant-data-pipeline-worktrees/phase/.note/finance/reports/backtests/strategies/VALUE_STRICT_ANNUAL.md)
   - `Value` family 전체 허브
-- [PHASE13_VALUE_RAW_WINNER_BACKTEST_GUIDE.md](/Users/taeho/Project/quant-data-pipeline-worktrees/phase/.note/finance/reports/backtests/archive/legacy_phase/phase13/PHASE13_VALUE_RAW_WINNER_BACKTEST_GUIDE.md)
+- [PHASE13_VALUE_RAW_WINNER_BACKTEST_GUIDE.md](/Users/taeho/Project/quant-data-pipeline-worktrees/phase/.note/finance/reports/backtests/runs/2026/strategy_search/PHASE13_VALUE_RAW_WINNER_BACKTEST_GUIDE.md)
   - strongest raw winner를 처음 정리한 재현 가이드
-- [PHASE14_STRICT_ANNUAL_NONHOLD_CANDIDATE_REFRESH.md](/Users/taeho/Project/quant-data-pipeline-worktrees/phase/.note/finance/reports/backtests/archive/legacy_phase/phase14/PHASE14_STRICT_ANNUAL_NONHOLD_CANDIDATE_REFRESH.md)
+- [PHASE14_STRICT_ANNUAL_NONHOLD_CANDIDATE_REFRESH.md](/Users/taeho/Project/quant-data-pipeline-worktrees/phase/.note/finance/reports/backtests/runs/2026/strategy_search/PHASE14_STRICT_ANNUAL_NONHOLD_CANDIDATE_REFRESH.md)
   - current runtime practical refresh 기준으로 family별 strongest candidate를 다시 고정한 문서

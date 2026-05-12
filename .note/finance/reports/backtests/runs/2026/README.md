@@ -9,3 +9,9 @@ Last Verified: 2026-05-12
 
 - `YYYY-MM-DD_<strategy-family>_<goal>.md`
 - `YYYY-MM-DD_<candidate-or-mix>_<review-purpose>.md`
+
+## Current Subfolders
+
+| 위치 | 용도 |
+|---|---|
+| `strategy_search/` | phase13~phase18 legacy 전략 탐색 report를 보존한 위치 |

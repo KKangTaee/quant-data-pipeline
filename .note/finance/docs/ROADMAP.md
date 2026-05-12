@@ -8,7 +8,7 @@ Last Verified: 2026-05-12
 | Track | Status | Notes |
 |---|---|---|
 | Documentation System Rebuild | Active | `.note/finance/tasks/active/doc-system-rebuild/` |
-| Backtest Report Migration | Active | `.note/finance/reports/backtests/`, legacy phase archive 정리 중 |
+| Backtest Report Migration | Complete | `.note/finance/reports/backtests/`, legacy phase archive 제거 완료 |
 | Practical Validation V2 | Active | `.note/finance/tasks/active/practical-validation-v2/` |
 | Phase 36 Selected Portfolio Dashboard | Implementation complete before doc rebuild | 기존 phase 문서는 새 구조 정리 후 필요 시 `phases/done/`에 요약만 남긴다 |
 
@@ -52,6 +52,5 @@ P2에서 정상화하는 주요 진단:
 
 ## Next Decisions
 
-- backtest legacy phase archive를 `runs/`, `candidates/`, `validation/`, `strategies/`로 후속 분류할지 결정한다.
 - 문서 재구성 다음 작업에서 기존 `.note/finance` 문서 tree를 삭제하고 새 구조만 남긴다.
 - Practical Validation V2는 P2 QA 여부를 확인한 뒤 P3로 넘어갈지, P2를 closeout할지 결정한다.

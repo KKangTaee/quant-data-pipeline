@@ -210,7 +210,7 @@ Phase 22 문서에서는 섞어 쓰지 않는다.
 | `Value / Quality` defensive tilt | blended anchor 편중을 줄이고 drawdown tradeoff 확인 |
 | future diversified component 추가 | annual strict family끼리만 묶는 한계를 줄일 가능성 확인 |
 
-rerun 결과는 [PHASE22_WEIGHT_ALTERNATIVE_RERUN_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline-worktrees/phase/.note/finance/reports/backtests/archive/legacy_phase/phase22/PHASE22_WEIGHT_ALTERNATIVE_RERUN_FIRST_PASS.md)에 따로 정리했다.
+rerun 결과는 [PHASE22_WEIGHT_ALTERNATIVE_RERUN_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline-worktrees/phase/.note/finance/reports/backtests/candidates/point_in_time/portfolio_candidates/PHASE22_WEIGHT_ALTERNATIVE_RERUN_FIRST_PASS.md)에 따로 정리했다.
 
 ## Phase 22 다음 작업으로 넘길 질문
 
@@ -231,5 +231,5 @@ rerun 결과는 [PHASE22_WEIGHT_ALTERNATIVE_RERUN_FIRST_PASS.md](/Users/taeho/Pr
 
 - [PHASE22_PORTFOLIO_LEVEL_CANDIDATE_CONSTRUCTION_PLAN.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phases/phase22/PHASE22_PORTFOLIO_LEVEL_CANDIDATE_CONSTRUCTION_PLAN.md)
 - [PHASE22_PORTFOLIO_LEVEL_CANDIDATE_SEMANTICS_FIRST_WORK_UNIT.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phases/phase22/PHASE22_PORTFOLIO_LEVEL_CANDIDATE_SEMANTICS_FIRST_WORK_UNIT.md)
-- [PHASE21_PORTFOLIO_BRIDGE_VALIDATION_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline-worktrees/phase/.note/finance/reports/backtests/archive/legacy_phase/phase21/PHASE21_PORTFOLIO_BRIDGE_VALIDATION_FIRST_PASS.md)
+- [PHASE21_PORTFOLIO_BRIDGE_VALIDATION_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline-worktrees/phase/.note/finance/reports/backtests/validation/runtime/PHASE21_PORTFOLIO_BRIDGE_VALIDATION_FIRST_PASS.md)
 - [CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md](/Users/taeho/Project/quant-data-pipeline-worktrees/phase/.note/finance/reports/backtests/strategies/CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md)

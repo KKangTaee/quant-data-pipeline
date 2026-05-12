@@ -99,3 +99,28 @@ Result:
 - `phase24` Global Relative Strength UI replay smoke report를 UI replay validation으로 이동
 - `phase23`, `phase24` archive README는 색인 역할만 하던 문서라 제거하고 `validation/README.md`에 핵심 설명을 반영
 - 남은 legacy archive는 `phase13`~`phase22`
+
+## 2026-05-12 - Backtest Reports 3차 Legacy Archive Cleanup
+
+Command:
+
+```bash
+git mv .note/finance/reports/backtests/archive/legacy_phase/phase13/*.md .note/finance/reports/backtests/runs/2026/strategy_search/
+git mv .note/finance/reports/backtests/archive/legacy_phase/phase14/*.md .note/finance/reports/backtests/runs/2026/strategy_search/
+git mv .note/finance/reports/backtests/archive/legacy_phase/phase15/*.md .note/finance/reports/backtests/runs/2026/strategy_search/
+git mv .note/finance/reports/backtests/archive/legacy_phase/phase16/*.md .note/finance/reports/backtests/runs/2026/strategy_search/
+git mv .note/finance/reports/backtests/archive/legacy_phase/phase17/*.md .note/finance/reports/backtests/runs/2026/strategy_search/
+git mv .note/finance/reports/backtests/archive/legacy_phase/phase18/*.md .note/finance/reports/backtests/runs/2026/strategy_search/
+git mv .note/finance/reports/backtests/archive/legacy_phase/phase21/PHASE21_PORTFOLIO_BRIDGE_VALIDATION_FIRST_PASS.md .note/finance/reports/backtests/validation/runtime/
+git mv .note/finance/reports/backtests/archive/legacy_phase/phase21/*ANCHOR_AND_ALTERNATIVE_RERUN_FIRST_PASS.md .note/finance/reports/backtests/candidates/point_in_time/strategy_candidates/
+git mv .note/finance/reports/backtests/archive/legacy_phase/phase22/PHASE22_*.md .note/finance/reports/backtests/candidates/point_in_time/portfolio_candidates/
+```
+
+Result:
+
+- phase13~phase18 원본성 전략 탐색 report 38개를 `runs/2026/strategy_search/`로 이동
+- phase21 portfolio bridge validation report를 `validation/runtime/`으로 이동
+- phase21 strategy anchor / alternative rerun report 3개를 `candidates/point_in_time/strategy_candidates/`로 이동
+- phase22 portfolio baseline / weight alternative report 2개를 `candidates/point_in_time/portfolio_candidates/`로 이동
+- phase별 README와 빈 archive 폴더 제거
+- `.note/finance/reports/backtests/archive/legacy_phase/` 제거 완료

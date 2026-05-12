@@ -17,7 +17,7 @@
 
 - [GTAA_BACKTEST_LOG.md](/Users/taeho/Project/quant-data-pipeline-worktrees/phase/.note/finance/reports/backtests/strategies/GTAA_BACKTEST_LOG.md)
   - `GTAA`를 어떤 세팅으로 돌렸고 결과가 어땠는지 누적 관리하는 전략 log
-- [PHASE13_GTAA_NONHOLD_SPY_OUTPERFORMANCE_SEARCH.md](/Users/taeho/Project/quant-data-pipeline-worktrees/phase/.note/finance/reports/backtests/archive/legacy_phase/phase13/PHASE13_GTAA_NONHOLD_SPY_OUTPERFORMANCE_SEARCH.md)
+- [PHASE13_GTAA_NONHOLD_SPY_OUTPERFORMANCE_SEARCH.md](/Users/taeho/Project/quant-data-pipeline-worktrees/phase/.note/finance/reports/backtests/runs/2026/strategy_search/PHASE13_GTAA_NONHOLD_SPY_OUTPERFORMANCE_SEARCH.md)
   - 이전 practical non-hold reference를 정리한 문서
 - [GTAA_REAL_MONEY_CANDIDATE_SEARCH_20260418.md](/Users/taeho/Project/quant-data-pipeline-worktrees/phase/.note/finance/reports/backtests/strategies/GTAA_REAL_MONEY_CANDIDATE_SEARCH_20260418.md)
   - current DB/runtime 기준 `real_money_candidate` GTAA 후보를 다시 찾은 문서
@@ -106,7 +106,7 @@
 
 - [GTAA_REAL_MONEY_CANDIDATE_SEARCH_20260418.md](/Users/taeho/Project/quant-data-pipeline-worktrees/phase/.note/finance/reports/backtests/strategies/GTAA_REAL_MONEY_CANDIDATE_SEARCH_20260418.md)
 - [GTAA_EXPANDED_UNIVERSE_FOLLOWUP_20260420.md](/Users/taeho/Project/quant-data-pipeline-worktrees/phase/.note/finance/reports/backtests/strategies/GTAA_EXPANDED_UNIVERSE_FOLLOWUP_20260420.md)
-- [PHASE13_GTAA_NONHOLD_SPY_OUTPERFORMANCE_SEARCH.md](/Users/taeho/Project/quant-data-pipeline-worktrees/phase/.note/finance/reports/backtests/archive/legacy_phase/phase13/PHASE13_GTAA_NONHOLD_SPY_OUTPERFORMANCE_SEARCH.md)
+- [PHASE13_GTAA_NONHOLD_SPY_OUTPERFORMANCE_SEARCH.md](/Users/taeho/Project/quant-data-pipeline-worktrees/phase/.note/finance/reports/backtests/runs/2026/strategy_search/PHASE13_GTAA_NONHOLD_SPY_OUTPERFORMANCE_SEARCH.md)
 - [PHASE12_GTAA_DB_ETF_GROUP_SEARCH.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phases/phase12/PHASE12_GTAA_DB_ETF_GROUP_SEARCH.md)
 - [PHASE12_GTAA_INTERVAL1_UNIVERSE_VARIATION_SEARCH.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phases/phase12/PHASE12_GTAA_INTERVAL1_UNIVERSE_VARIATION_SEARCH.md)
 - [PHASE12_GTAA_VS_SPY_DOMINANCE_SEARCH.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phases/phase12/PHASE12_GTAA_VS_SPY_DOMINANCE_SEARCH.md)

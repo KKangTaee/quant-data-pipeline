@@ -21,7 +21,12 @@ Last Verified: 2026-05-12
 | `candidates/point_in_time/` | ready | 후보 선택 근거를 시점 기준으로 정리할 위치 |
 | `validation/runtime/` | ready | 코드/runtime smoke report 위치 |
 | `validation/ui_replay/` | ready | UI replay smoke report 위치 |
-| `archive/legacy_phase/` | migration_in_progress | 아직 분류되지 않은 기존 phase별 report 임시 보관 위치 |
+
+## Run Reports
+
+| Type | Location | Notes |
+|---|---|---|
+| Legacy strategy search raw reports | [runs/2026/strategy_search/](./runs/2026/strategy_search/README.md) | phase13~phase18에서 생성된 원본성 전략 탐색 report 38개 |
 
 ## Strategy Hubs
 
@@ -52,25 +57,20 @@ Last Verified: 2026-05-12
 
 | Type | Report |
 |---|---|
+| Runtime | [PHASE21_PORTFOLIO_BRIDGE_VALIDATION_FIRST_PASS.md](./validation/runtime/PHASE21_PORTFOLIO_BRIDGE_VALIDATION_FIRST_PASS.md) |
 | Runtime | [PHASE23_QUARTERLY_CONTRACT_SMOKE_VALIDATION_FIRST_PASS.md](./validation/runtime/PHASE23_QUARTERLY_CONTRACT_SMOKE_VALIDATION_FIRST_PASS.md) |
 | Runtime | [PHASE24_GLOBAL_RELATIVE_STRENGTH_CORE_RUNTIME_SMOKE_VALIDATION.md](./validation/runtime/PHASE24_GLOBAL_RELATIVE_STRENGTH_CORE_RUNTIME_SMOKE_VALIDATION.md) |
 | UI Replay | [PHASE24_GLOBAL_RELATIVE_STRENGTH_UI_REPLAY_SMOKE_VALIDATION.md](./validation/ui_replay/PHASE24_GLOBAL_RELATIVE_STRENGTH_UI_REPLAY_SMOKE_VALIDATION.md) |
 
-## Legacy Phase Archive
+## Point-In-Time Candidate Evidence
 
-기존 phase별 report는 아래 위치로 1차 이동했고, 성격이 분명한 일부 report는 2차에서 `validation/`으로 흡수했다.
+| Type | Location | Notes |
+|---|---|---|
+| Strategy candidate rerun evidence | [candidates/point_in_time/strategy_candidates/](./candidates/point_in_time/strategy_candidates/README.md) | phase21 family별 current anchor / alternative rerun report 3개 |
+| Portfolio candidate evidence | [candidates/point_in_time/portfolio_candidates/](./candidates/point_in_time/portfolio_candidates/README.md) | phase22 portfolio baseline / weight alternative report 2개 |
 
-| Legacy Folder | Files | Status |
-|---|---:|---|
-| `archive/legacy_phase/phase13/` | 15 | pending_classification |
-| `archive/legacy_phase/phase14/` | 2 | pending_classification |
-| `archive/legacy_phase/phase15/` | 15 | pending_classification |
-| `archive/legacy_phase/phase16/` | 5 | pending_classification |
-| `archive/legacy_phase/phase17/` | 4 | pending_classification |
-| `archive/legacy_phase/phase18/` | 3 | pending_classification |
-| `archive/legacy_phase/phase21/` | 5 | pending_classification |
-| `archive/legacy_phase/phase22/` | 3 | pending_classification |
-| `phase23` | 1 report moved | classified_to_validation_runtime |
-| `phase24` | 2 reports moved | classified_to_validation_runtime_and_ui_replay |
+## Legacy Migration Status
 
-후속 단계에서는 각 문서를 `runs/`, `candidates/`, `validation/`, `strategies/` 중 하나로 흡수하거나, 중복이면 삭제한다.
+기존 `archive/legacy_phase/`는 2026-05-12 3차 migration에서 비웠고 제거했다.
+
+분류 이력은 [LEGACY_MIGRATION.md](./LEGACY_MIGRATION.md)에 남긴다.

@@ -170,7 +170,7 @@
   - ETF operability / coverage interpretation이 완화되면 더 공격형 universe를 다시 비교한다
 - 관련 문서:
   - [GTAA.md](/Users/taeho/Project/quant-data-pipeline-worktrees/phase/.note/finance/reports/backtests/strategies/GTAA.md)
-  - [PHASE13_GTAA_NONHOLD_SPY_OUTPERFORMANCE_SEARCH.md](/Users/taeho/Project/quant-data-pipeline-worktrees/phase/.note/finance/reports/backtests/archive/legacy_phase/phase13/PHASE13_GTAA_NONHOLD_SPY_OUTPERFORMANCE_SEARCH.md)
+  - [PHASE13_GTAA_NONHOLD_SPY_OUTPERFORMANCE_SEARCH.md](/Users/taeho/Project/quant-data-pipeline-worktrees/phase/.note/finance/reports/backtests/runs/2026/strategy_search/PHASE13_GTAA_NONHOLD_SPY_OUTPERFORMANCE_SEARCH.md)
 
 ### 2026-04-30 - clean-6 AOR current candidate reset run
 

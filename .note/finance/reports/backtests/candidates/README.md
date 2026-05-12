@@ -10,3 +10,10 @@ Last Verified: 2026-05-12
 - 후보의 source-of-truth는 여기가 아니라 `.note/finance/registries/`다.
 - 이 폴더의 문서는 사람이 근거를 읽기 위한 설명서다.
 - registry row를 대체하거나 수정하지 않는다.
+
+## Current Locations
+
+| 위치 | 용도 |
+|---|---|
+| `point_in_time/strategy_candidates/` | 특정 시점의 단일 전략 후보 anchor / alternative rerun 근거 |
+| `point_in_time/portfolio_candidates/` | portfolio-level baseline / weight alternative 후보 근거 |

@@ -1,6 +1,6 @@
 # Legacy Backtest Report Migration
 
-Status: Active
+Status: Complete
 Last Verified: 2026-05-12
 
 ## Purpose
@@ -17,6 +17,8 @@ Last Verified: 2026-05-12
 - 신규: `.note/finance/reports/backtests/`
 - legacy phase archive: `.note/finance/reports/backtests/archive/legacy_phase/`
 
+이 archive는 3차 처리에서 모두 비웠고 제거했다.
+
 ## Classification Rules
 
 | 분류 | 이동 대상 |
@@ -32,14 +34,14 @@ Last Verified: 2026-05-12
 
 | Folder | Files | Likely Classification | Status |
 |---|---:|---|---|
-| `phase13/` | 15 | strategy search / candidate evidence | pending |
-| `phase14/` | 2 | candidate refresh | pending |
-| `phase15/` | 15 | candidate improvement / strategy search | pending |
-| `phase16/` | 5 | downside refinement / candidate search | pending |
-| `phase17/` | 4 | weighting / defensive sleeve tests | pending |
-| `phase18/` | 3 | next-ranked fill tests | pending |
-| `phase21/` | 5 | portfolio bridge validation / rerun | pending |
-| `phase22/` | 3 | portfolio candidate pack / weight alternative | pending |
+| `phase13/` | 14 reports, README removed | strategy search / candidate evidence | moved_to_runs_2026_strategy_search |
+| `phase14/` | 1 report, README removed | candidate refresh | moved_to_runs_2026_strategy_search |
+| `phase15/` | 14 reports, README removed | candidate improvement / strategy search | moved_to_runs_2026_strategy_search |
+| `phase16/` | 4 reports, README removed | downside refinement / candidate search | moved_to_runs_2026_strategy_search |
+| `phase17/` | 3 reports, README removed | weighting / defensive sleeve tests | moved_to_runs_2026_strategy_search |
+| `phase18/` | 2 reports, README removed | next-ranked fill tests | moved_to_runs_2026_strategy_search |
+| `phase21/` | 4 reports, README removed | portfolio bridge validation / rerun | moved_to_validation_and_candidate_evidence |
+| `phase22/` | 2 reports, README removed | portfolio candidate pack / weight alternative | moved_to_portfolio_candidate_evidence |
 | `phase23/` | 1 report, README removed | quarterly contract smoke validation | moved_to_validation_runtime |
 | `phase24/` | 2 reports, README removed | runtime / UI replay validation | moved_to_validation_runtime_and_ui_replay |
 
@@ -55,16 +57,34 @@ Last Verified: 2026-05-12
 
 `phase23/README.md`, `phase24/README.md`는 archive index 역할만 하던 문서라서 핵심 설명을 `validation/` README에 반영하고 제거했다.
 
-## 후속 작업 순서
+## 3차 처리 결과
 
-1. `phase13`~`phase18`의 search report는 전략 hub/log와 중복 여부를 확인한다.
-2. 현재 후보 판단에 남길 근거만 `candidates/point_in_time/`로 승격한다.
-3. `phase21`~`phase22`의 portfolio bridge / candidate pack report는 후보 근거인지 validation인지 분류한다.
-4. hub/log에 이미 충분히 반영된 raw report는 삭제 후보로 표시한다.
-5. `archive/legacy_phase/`가 비게 되면 폴더를 제거한다.
+2026-05-12 기준으로 남아 있던 legacy archive를 모두 비웠다.
+
+| Original | New Location | Reason |
+|---|---|---|
+| `phase13`~`phase18` search / refinement reports | `runs/2026/strategy_search/` | 전략 탐색과 개선 과정의 원본성 backtest run report |
+| `phase21/PHASE21_PORTFOLIO_BRIDGE_VALIDATION_FIRST_PASS.md` | `validation/runtime/` | weighted portfolio 저장 / replay workflow 검증 |
+| `phase21` family별 anchor / alternative rerun reports | `candidates/point_in_time/strategy_candidates/` | current anchor와 alternative 판단을 시점 기준 후보 근거로 읽는 문서 |
+| `phase22` portfolio candidate pack / weight alternative reports | `candidates/point_in_time/portfolio_candidates/` | portfolio-level baseline과 weight alternative 판단 근거 |
+
+각 phase별 `README.md`는 archive index 역할만 하던 문서라 제거했다. 현재 구조의 색인은 각 새 위치의 README와 `INDEX.md`가 담당한다.
+
+## Final State
+
+- `archive/legacy_phase/`는 비었고 제거됐다.
+- 새 report는 `runs/YYYY/`부터 시작한다.
+- 후보 판단 근거는 `candidates/point_in_time/`에 둔다.
+- runtime/UI 검증은 `validation/`에 둔다.
+- 전략 family 장기 해석은 `strategies/` hub/log에 둔다.
+
+## Remaining Follow-Up
+
+- `strategies/` hub/log와 `runs/2026/strategy_search/` 사이의 중복 해석은 나중에 정리할 수 있다.
+- 현재는 원문 보존을 우선해 raw report를 삭제하지 않았다.
 
 ## Guardrails
 
-- legacy 문서를 삭제하기 전에 현재 `registries/` 또는 `strategies/*_BACKTEST_LOG.md`에 핵심 근거가 남아 있는지 확인한다.
+- legacy 원문을 삭제하기 전에 현재 `registries/` 또는 `strategies/*_BACKTEST_LOG.md`에 핵심 근거가 남아 있는지 확인한다.
 - `registries/`와 `saved/`는 이 migration의 정리 대상이 아니다.
 - 후속 정리 중에도 새 report는 phase 폴더가 아니라 `runs/YYYY/`부터 시작한다.

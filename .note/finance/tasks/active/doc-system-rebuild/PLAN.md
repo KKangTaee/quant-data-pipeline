@@ -177,7 +177,7 @@ Notion 가이드에서 적용할 원칙:
 
 - `.note/finance/backtest_reports/` -> `.note/finance/reports/backtests/`
 - `.note/finance/backtest_reports/strategies/` -> `.note/finance/reports/backtests/strategies/`
-- `.note/finance/backtest_reports/phase*/` -> `.note/finance/reports/backtests/archive/legacy_phase/`
+- `.note/finance/backtest_reports/phase*/` -> 1차 임시 archive -> 최종적으로 `runs/`, `candidates/`, `validation/`으로 분류
 
 삭제 후보:
 
@@ -207,7 +207,7 @@ Notion 가이드에서 적용할 원칙:
 
 - 오래된 문서 구조가 새 구조와 섞여 남지 않는다.
 - backtest report는 삭제하지 않고 새 report 구조로 이동한다.
-- `archive/legacy_phase/`는 후속 정리 전 임시 보관 위치로만 남는다.
+- legacy phase archive는 후속 정리 전 임시 보관 위치로만 사용하고, 최종적으로 비운다.
 - runtime/generated artifact가 장기 문서처럼 남지 않는다.
 
 ### Step 6 - Verification

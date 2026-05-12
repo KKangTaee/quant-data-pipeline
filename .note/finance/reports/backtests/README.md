@@ -22,7 +22,6 @@ Last Verified: 2026-05-12
 | `runs/YYYY/` | 새 분석 세션에서 받은 원본성 backtest report |
 | `candidates/point_in_time/` | 특정 시점 후보의 선택 근거, near-miss, 재검토 근거 |
 | `validation/` | runtime smoke, UI replay, validation 결과 보고 |
-| `archive/legacy_phase/` | 기존 phase별 report를 안전하게 임시 보관하는 legacy staging 영역 |
 
 ## What Does Not Go Here
 
@@ -40,11 +39,11 @@ Last Verified: 2026-05-12
 - 전략 family 단위로 반복 확인할 가치가 있으면 `strategies/*_BACKTEST_LOG.md`에 요약 entry를 추가한다.
 - 최종 후보 판단에 쓰이는 핵심 근거는 `candidates/point_in_time/`로 승격한다.
 - runtime/UI 검증 문서는 `validation/`으로 분리한다.
-- `archive/legacy_phase/`는 영구 정답 위치가 아니다. 후속 migration에서 `runs/`, `candidates/`, `validation/`, `strategies/`로 흡수하거나 삭제한다.
+- 기존 phase별 raw archive는 2026-05-12 migration에서 `runs/`, `candidates/`, `validation/`으로 흡수했다.
 
 ## Read Order
 
 1. [INDEX.md](./INDEX.md)
 2. [strategies/README.md](./strategies/README.md)
 3. [LEGACY_MIGRATION.md](./LEGACY_MIGRATION.md)
-4. 필요한 경우에만 `archive/legacy_phase/`의 원본 report
+4. 원본성 탐색 report는 [runs/2026/strategy_search/README.md](./runs/2026/strategy_search/README.md)

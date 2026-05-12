@@ -14,6 +14,7 @@ Last Verified: 2026-05-12
 
 | Report | 위치 | 의미 |
 |---|---|---|
+| `PHASE21_PORTFOLIO_BRIDGE_VALIDATION_FIRST_PASS.md` | `runtime/` | current candidate를 weighted portfolio로 묶고 saved replay로 재현하는 workflow 검증 |
 | `PHASE23_QUARTERLY_CONTRACT_SMOKE_VALIDATION_FIRST_PASS.md` | `runtime/` | quarterly contract가 DB-backed runtime과 result meta에 보존되는지 검증 |
 | `PHASE24_GLOBAL_RELATIVE_STRENGTH_CORE_RUNTIME_SMOKE_VALIDATION.md` | `runtime/` | Global Relative Strength core/runtime smoke 검증 |
 | `PHASE24_GLOBAL_RELATIVE_STRENGTH_UI_REPLAY_SMOKE_VALIDATION.md` | `ui_replay/` | Global Relative Strength UI, compare, history, saved replay 연결 검증 |
