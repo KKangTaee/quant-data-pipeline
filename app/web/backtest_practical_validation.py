@@ -48,6 +48,25 @@ from finance.data.etf_provider import (
 
 
 PROVIDER_GAP_STATE_PREFIX = "practical_validation_provider_gap_results"
+DIAGNOSTIC_EXPLANATIONS = {
+    "input_evidence_layer": "원본 source, 비중 합계, Data Trust, 실행 경계가 검증 가능한 상태인지 확인합니다.",
+    "asset_allocation_fit": "ETF 내부 exposure 또는 proxy 기준으로 자산군 구성이 검증 프로필과 맞는지 확인합니다.",
+    "concentration_overlap_exposure": "보유 ETF와 내부 노출이 특정 자산, 섹터, 종목에 과도하게 몰려 있는지 확인합니다.",
+    "correlation_diversification_risk_contribution": "component 간 수익률 움직임과 위험 기여가 한쪽으로 쏠리지 않는지 확인합니다.",
+    "regime_macro_suitability": "현재 금리, 신용스프레드, 변동성 환경이 후보 전략의 약점과 충돌하는지 확인합니다.",
+    "sentiment_risk_on_off_overlay": "VIX, 금리곡선, credit spread로 현재 시장이 risk-on인지 caution 구간인지 확인합니다.",
+    "stress_scenario_diagnostics": "과거 위기 구간에서 후보가 얼마나 버텼고, 아직 계산되지 않은 stress window가 있는지 확인합니다.",
+    "alternative_portfolio_challenge": "SPY, QQQ, 60/40 같은 단순 대안보다 이 후보를 선택할 이유가 있는지 확인합니다.",
+    "leveraged_inverse_etf_suitability": "레버리지, 인버스, 일간 목표 상품이 포함되어 운용 목적과 충돌하지 않는지 확인합니다.",
+    "operability_cost_liquidity": "ETF 비용, 규모, 거래대금, 스프레드, premium/discount가 실전 운용에 충분한지 확인합니다.",
+    "robustness_sensitivity_overfit": "기간, 구성요소, 비중 변화에 결과가 과도하게 흔들리거나 과최적화된 흔적이 있는지 확인합니다.",
+    "monitoring_baseline_seed": "선정 이후 추적할 benchmark, component, review trigger의 기본 seed가 충분한지 확인합니다.",
+}
+
+
+def _diagnostic_explanation(diagnostic: dict[str, Any]) -> str:
+    domain = str(diagnostic.get("domain") or "").strip()
+    return DIAGNOSTIC_EXPLANATIONS.get(domain, "")
 
 
 def _source_label(row: dict[str, Any]) -> str:
@@ -766,6 +785,9 @@ def _render_validation_result(validation_result: dict[str, Any]) -> None:
     with st.expander("진단 세부 근거", expanded=False):
         for diagnostic in list(validation_result.get("diagnostic_results") or []):
             st.markdown(f"**{diagnostic.get('title')}**")
+            explanation = _diagnostic_explanation(diagnostic)
+            if explanation:
+                st.caption(explanation)
             render_badge_strip(
                 [
                     {"label": "Status", "value": diagnostic.get("status") or "-", "tone": _status_tone(diagnostic.get("status"))},
