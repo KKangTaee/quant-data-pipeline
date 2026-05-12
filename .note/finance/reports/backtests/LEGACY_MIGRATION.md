@@ -40,14 +40,26 @@ Last Verified: 2026-05-12
 | `phase18/` | 3 | next-ranked fill tests | pending |
 | `phase21/` | 5 | portfolio bridge validation / rerun | pending |
 | `phase22/` | 3 | portfolio candidate pack / weight alternative | pending |
-| `phase23/` | 2 | quarterly contract smoke validation | pending |
-| `phase24/` | 3 | runtime / UI replay validation | pending |
+| `phase23/` | 1 report, README removed | quarterly contract smoke validation | moved_to_validation_runtime |
+| `phase24/` | 2 reports, README removed | runtime / UI replay validation | moved_to_validation_runtime_and_ui_replay |
+
+## 2차 처리 결과
+
+2026-05-12 기준으로 성격이 분명한 개발 검증 report를 먼저 흡수했다.
+
+| Original | New Location | Reason |
+|---|---|---|
+| `phase23/PHASE23_QUARTERLY_CONTRACT_SMOKE_VALIDATION_FIRST_PASS.md` | `validation/runtime/PHASE23_QUARTERLY_CONTRACT_SMOKE_VALIDATION_FIRST_PASS.md` | quarterly contract가 DB-backed runtime과 result meta에 전달되는지 확인한 runtime smoke report |
+| `phase24/PHASE24_GLOBAL_RELATIVE_STRENGTH_CORE_RUNTIME_SMOKE_VALIDATION.md` | `validation/runtime/PHASE24_GLOBAL_RELATIVE_STRENGTH_CORE_RUNTIME_SMOKE_VALIDATION.md` | 신규 전략 core/runtime이 result bundle까지 생성되는지 확인한 runtime smoke report |
+| `phase24/PHASE24_GLOBAL_RELATIVE_STRENGTH_UI_REPLAY_SMOKE_VALIDATION.md` | `validation/ui_replay/PHASE24_GLOBAL_RELATIVE_STRENGTH_UI_REPLAY_SMOKE_VALIDATION.md` | 신규 전략이 single/compare/history/saved replay UI 흐름에 연결되는지 확인한 UI replay smoke report |
+
+`phase23/README.md`, `phase24/README.md`는 archive index 역할만 하던 문서라서 핵심 설명을 `validation/` README에 반영하고 제거했다.
 
 ## 후속 작업 순서
 
-1. `phase24`, `phase23`처럼 validation 성격이 분명한 문서를 먼저 `validation/`으로 흡수한다.
-2. `phase13`~`phase18`의 search report는 전략 hub/log와 중복 여부를 확인한다.
-3. 현재 후보 판단에 남길 근거만 `candidates/point_in_time/`로 승격한다.
+1. `phase13`~`phase18`의 search report는 전략 hub/log와 중복 여부를 확인한다.
+2. 현재 후보 판단에 남길 근거만 `candidates/point_in_time/`로 승격한다.
+3. `phase21`~`phase22`의 portfolio bridge / candidate pack report는 후보 근거인지 validation인지 분류한다.
 4. hub/log에 이미 충분히 반영된 raw report는 삭제 후보로 표시한다.
 5. `archive/legacy_phase/`가 비게 되면 폴더를 제거한다.
 

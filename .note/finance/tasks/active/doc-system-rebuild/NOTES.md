@@ -29,10 +29,11 @@ Last Updated: 2026-05-12
 - 새 문서에는 기존 상세 내용을 복붙하지 않고, 다음 세션이 작업을 재개할 수 있는 최소 기준만 남긴다.
 - backtest report는 phase 문서와 달리 분석 근거로 재사용될 가능성이 높으므로 삭제하지 않고 새 `reports/backtests/` 구조로 먼저 이동한다.
 - `archive/legacy_phase/`는 영구 위치가 아니라 후속 흡수/삭제 판단 전 staging 영역이다.
+- legacy report 중 개발 검증 성격이 분명한 `phase23`, `phase24`는 먼저 `validation/`으로 흡수한다.
 
 ## Open Questions
 
 - 기존 phase 문서를 전부 삭제해도 되는지 최종 승인 필요
-- legacy backtest phase archive 중 어떤 문서를 candidate evidence로 승격할지 결정 필요
+- legacy `phase13`~`phase22` archive 중 어떤 문서를 candidate evidence로 승격할지 결정 필요
 - `run_history/`와 `run_artifacts/` 삭제 여부 최종 승인 필요
 - `AGENTS.md` 축약 수준 최종 확인 필요

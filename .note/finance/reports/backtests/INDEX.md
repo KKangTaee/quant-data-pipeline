@@ -21,7 +21,7 @@ Last Verified: 2026-05-12
 | `candidates/point_in_time/` | ready | 후보 선택 근거를 시점 기준으로 정리할 위치 |
 | `validation/runtime/` | ready | 코드/runtime smoke report 위치 |
 | `validation/ui_replay/` | ready | UI replay smoke report 위치 |
-| `archive/legacy_phase/` | migration_pending | 기존 phase별 report 임시 보관 위치 |
+| `archive/legacy_phase/` | migration_in_progress | 아직 분류되지 않은 기존 phase별 report 임시 보관 위치 |
 
 ## Strategy Hubs
 
@@ -48,9 +48,17 @@ Last Verified: 2026-05-12
 - [QUALITY_VALUE_STRICT_ANNUAL_VALUE_REPLACEMENT_CURRENT_CANDIDATE.md](./strategies/QUALITY_VALUE_STRICT_ANNUAL_VALUE_REPLACEMENT_CURRENT_CANDIDATE.md)
 - [QUALITY_VALUE_STRICT_ANNUAL_POR_REPLACEMENT_CURRENT_CANDIDATE.md](./strategies/QUALITY_VALUE_STRICT_ANNUAL_POR_REPLACEMENT_CURRENT_CANDIDATE.md)
 
+## Validation Reports
+
+| Type | Report |
+|---|---|
+| Runtime | [PHASE23_QUARTERLY_CONTRACT_SMOKE_VALIDATION_FIRST_PASS.md](./validation/runtime/PHASE23_QUARTERLY_CONTRACT_SMOKE_VALIDATION_FIRST_PASS.md) |
+| Runtime | [PHASE24_GLOBAL_RELATIVE_STRENGTH_CORE_RUNTIME_SMOKE_VALIDATION.md](./validation/runtime/PHASE24_GLOBAL_RELATIVE_STRENGTH_CORE_RUNTIME_SMOKE_VALIDATION.md) |
+| UI Replay | [PHASE24_GLOBAL_RELATIVE_STRENGTH_UI_REPLAY_SMOKE_VALIDATION.md](./validation/ui_replay/PHASE24_GLOBAL_RELATIVE_STRENGTH_UI_REPLAY_SMOKE_VALIDATION.md) |
+
 ## Legacy Phase Archive
 
-기존 phase별 report는 아래 위치로 1차 이동했다.
+기존 phase별 report는 아래 위치로 1차 이동했고, 성격이 분명한 일부 report는 2차에서 `validation/`으로 흡수했다.
 
 | Legacy Folder | Files | Status |
 |---|---:|---|
@@ -62,7 +70,7 @@ Last Verified: 2026-05-12
 | `archive/legacy_phase/phase18/` | 3 | pending_classification |
 | `archive/legacy_phase/phase21/` | 5 | pending_classification |
 | `archive/legacy_phase/phase22/` | 3 | pending_classification |
-| `archive/legacy_phase/phase23/` | 2 | pending_classification |
-| `archive/legacy_phase/phase24/` | 3 | pending_classification |
+| `phase23` | 1 report moved | classified_to_validation_runtime |
+| `phase24` | 2 reports moved | classified_to_validation_runtime_and_ui_replay |
 
 후속 단계에서는 각 문서를 `runs/`, `candidates/`, `validation/`, `strategies/` 중 하나로 흡수하거나, 중복이면 삭제한다.

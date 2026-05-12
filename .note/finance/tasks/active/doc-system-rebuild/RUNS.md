@@ -81,3 +81,21 @@ Result:
 - 기존 phase13~phase24 report는 `archive/legacy_phase/`에 임시 보관
 - 새 `README.md`, `INDEX.md`, `TEMPLATE.md`, `LEGACY_MIGRATION.md`로 report 운영 기준 작성
 - legacy report의 세부 재분류와 삭제 판단은 후속 단계로 분리
+
+## 2026-05-12 - Backtest Reports 2차 Validation Classification
+
+Command:
+
+```bash
+git mv .note/finance/reports/backtests/archive/legacy_phase/phase23/PHASE23_QUARTERLY_CONTRACT_SMOKE_VALIDATION_FIRST_PASS.md .note/finance/reports/backtests/validation/runtime/
+git mv .note/finance/reports/backtests/archive/legacy_phase/phase24/PHASE24_GLOBAL_RELATIVE_STRENGTH_CORE_RUNTIME_SMOKE_VALIDATION.md .note/finance/reports/backtests/validation/runtime/
+git mv .note/finance/reports/backtests/archive/legacy_phase/phase24/PHASE24_GLOBAL_RELATIVE_STRENGTH_UI_REPLAY_SMOKE_VALIDATION.md .note/finance/reports/backtests/validation/ui_replay/
+```
+
+Result:
+
+- `phase23` quarterly contract smoke validation report를 runtime validation으로 이동
+- `phase24` Global Relative Strength core runtime smoke report를 runtime validation으로 이동
+- `phase24` Global Relative Strength UI replay smoke report를 UI replay validation으로 이동
+- `phase23`, `phase24` archive README는 색인 역할만 하던 문서라 제거하고 `validation/README.md`에 핵심 설명을 반영
+- 남은 legacy archive는 `phase13`~`phase22`

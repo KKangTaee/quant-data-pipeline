@@ -12,3 +12,22 @@ Last Verified: 2026-05-12
 - `validation/`으로 이동
 - `strategies/` hub/log에 흡수
 - 중복이면 삭제
+
+## 2차 처리 결과
+
+`phase23`, `phase24`는 개발 검증 report 성격이 분명해서 `validation/`으로 이동했다.
+
+- `phase23` quarterly contract smoke validation -> `validation/runtime/`
+- `phase24` Global Relative Strength core runtime smoke -> `validation/runtime/`
+- `phase24` Global Relative Strength UI replay smoke -> `validation/ui_replay/`
+
+## Remaining Legacy Folders
+
+- `phase13/`
+- `phase14/`
+- `phase15/`
+- `phase16/`
+- `phase17/`
+- `phase18/`
+- `phase21/`
+- `phase22/`
