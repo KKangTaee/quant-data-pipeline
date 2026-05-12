@@ -150,11 +150,11 @@ Notion 가이드에서 적용할 원칙:
 
 ### Step 4 - Rewrite AGENTS.md
 
-- [ ] 현재 긴 `AGENTS.md`를 새 문서 구조 기준으로 축약한다.
-- [ ] 필수 read order를 명확히 한다.
-- [ ] Main phase work와 Sub task work의 차이를 명확히 한다.
-- [ ] 삭제/커밋 금지 파일 규칙을 남긴다.
-- [ ] UX flow 승인 규칙처럼 프로젝트 운영에 꼭 필요한 규칙만 유지한다.
+- [x] 현재 긴 `AGENTS.md`를 새 문서 구조 기준으로 축약한다.
+- [x] 필수 read order를 명확히 한다.
+- [x] Main phase work와 Sub task work의 차이를 명확히 한다.
+- [x] 삭제/커밋 금지 파일 규칙을 남긴다.
+- [x] UX flow 승인 규칙처럼 프로젝트 운영에 꼭 필요한 규칙만 유지한다.
 
 완료 조건:
 

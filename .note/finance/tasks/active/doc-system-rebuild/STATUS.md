@@ -10,9 +10,10 @@ Notion Codex 문서 운영 가이드에 맞춰 `.note/finance/`를 장기 지식
 ## Current Status
 
 - 마이그레이션 기준 PLAN 작성 완료
-- 1차 작업 진행 중
+- 1차 새 구조 생성 완료
+- 2차 `AGENTS.md` 축약 완료
 - 기존 문서 삭제는 아직 하지 않음
-- `AGENTS.md` 재작성은 아직 하지 않음
+- `AGENTS.md` 재작성 완료
 
 ## Done
 
@@ -23,18 +24,18 @@ Notion Codex 문서 운영 가이드에 맞춰 `.note/finance/`를 장기 지식
 - [x] 새 `.note/finance/tasks/active`, `tasks/done` skeleton 생성
 - [x] 새 `.note/finance/agent/` skeleton 생성
 - [x] 최소 장기 지식 문서 초안 작성
+- [x] `AGENTS.md`를 새 read order / work mode 기준으로 축약
 
 ## Next
 
-- [ ] 1차 결과를 사용자에게 확인받기
-- [ ] 2차 작업에서 `AGENTS.md`를 새 read order 기준으로 축약하기
+- [x] 1차 결과를 사용자에게 확인받기
+- [x] 2차 작업에서 `AGENTS.md`를 새 read order 기준으로 축약하기
 - [ ] 3차 작업에서 기존 문서 tree 삭제와 검증 진행하기
 
 ## Current Boundary
 
-이번 1차 작업에서는 아래를 하지 않는다.
+현재까지 아래는 하지 않았다.
 
 - 기존 대형 문서 삭제
-- `AGENTS.md` 재작성
 - registry / saved JSONL 수정
 - finance 코드 수정
