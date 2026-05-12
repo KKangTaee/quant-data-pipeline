@@ -1,8 +1,8 @@
-# Phase 23 Quarterly Contract Smoke Validation First Pass
+# Quarterly Contract Runtime Smoke
 
 ## 이 문서는 무엇인가
 
-`Phase 23`에서 quarterly strict family에 연결한 `Portfolio Handling & Defensive Rules`가
+quarterly strict family에 연결한 `Portfolio Handling & Defensive Rules`가
 실제 DB-backed runtime에서도 깨지지 않는지 확인한 개발 검증 report다.
 
 여기서 중요한 것은 성과가 좋은 전략을 찾는 것이 아니다.
@@ -87,5 +87,5 @@ result bundle의 `meta`에 `weighting_mode`, `rejected_slot_handling_mode`,
 
 ## 한 줄 정리
 
-Phase 23 quarterly strict family는 실제 DB-backed smoke run 기준으로 portfolio handling contract 전달과 meta 보존까지 통과했으며,
+Quarterly strict family는 실제 DB-backed smoke run 기준으로 portfolio handling contract 전달과 meta 보존까지 통과했으며,
 남은 검증은 UI 수동 흐름 확인이다.

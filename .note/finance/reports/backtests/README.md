@@ -20,7 +20,6 @@ Last Verified: 2026-05-12
 |---|---|
 | `strategies/` | 전략 family별 hub, backtest log, 현재 후보 one-pager |
 | `runs/YYYY/` | 새 분석 세션에서 받은 원본성 backtest report |
-| `candidates/point_in_time/` | 특정 시점 후보의 선택 근거, near-miss, 재검토 근거 |
 | `validation/` | runtime smoke, UI replay, validation 결과 보고 |
 
 ## What Does Not Go Here
@@ -37,9 +36,9 @@ Last Verified: 2026-05-12
 
 - 새 분석 세션에서 받은 결과 report는 먼저 `runs/YYYY/`에 둔다.
 - 전략 family 단위로 반복 확인할 가치가 있으면 `strategies/*_BACKTEST_LOG.md`에 요약 entry를 추가한다.
-- 최종 후보 판단에 쓰이는 핵심 근거는 `candidates/point_in_time/`로 승격한다.
+- 최종 후보 판단에 쓰이는 핵심 근거는 registry / Final Review source-of-truth와 연결하고, 사람이 읽는 해석은 `strategies/` log나 `validation/` report에 흡수한다.
 - runtime/UI 검증 문서는 `validation/`으로 분리한다.
-- 기존 phase별 raw archive는 2026-05-12 migration에서 `runs/`, `candidates/`, `validation/`으로 흡수했다.
+- 기존 phase별 raw archive는 2026-05-12 migration에서 `runs/`, `strategies/`, `validation/`으로 흡수했다.
 
 ## Read Order
 

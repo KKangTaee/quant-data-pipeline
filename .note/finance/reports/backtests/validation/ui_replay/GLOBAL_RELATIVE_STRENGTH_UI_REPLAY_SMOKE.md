@@ -1,4 +1,4 @@
-# Phase 24 Global Relative Strength UI Replay Smoke Validation
+# Global Relative Strength UI Replay Smoke
 
 ## 이 문서는 무엇인가
 

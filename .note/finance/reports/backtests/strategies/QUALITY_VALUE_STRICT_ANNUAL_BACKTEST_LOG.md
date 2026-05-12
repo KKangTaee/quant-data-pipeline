@@ -22,11 +22,11 @@
 
 ## 기록
 
-### 2026-04-17 - phase21 integrated validation first pass
+### 2026-04-17 - strict annual integrated validation rerun
 
 - 목표:
   - `Quality + Value` current strongest point와 lower-MDD alternative를
-    `Phase 21` 공통 validation frame에서 다시 돌려,
+    공통 strict annual validation frame에서 다시 돌려,
     current representative anchor 유지 여부와 `Top N 9` alternative의 후보성을 재확인
 - 전략:
   - `Quality + Value > Strict Annual`
@@ -80,10 +80,7 @@
     `small_capital_trial` gate를 유지하지 못한다
   - 따라서 current representative anchor는 여전히 `Top N = 10` strongest point다
 - 다음 액션:
-  - representative portfolio bridge validation으로 이동한다
-- 관련 문서:
-  - [PHASE21_QUALITY_VALUE_ANCHOR_AND_ALTERNATIVE_RERUN_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline-worktrees/phase/.note/finance/reports/backtests/candidates/point_in_time/strategy_candidates/PHASE21_QUALITY_VALUE_ANCHOR_AND_ALTERNATIVE_RERUN_FIRST_PASS.md)
-  - [QUALITY_VALUE_STRICT_ANNUAL_STRONGEST_CURRENT_CANDIDATE.md](/Users/taeho/Project/quant-data-pipeline-worktrees/phase/.note/finance/reports/backtests/strategies/QUALITY_VALUE_STRICT_ANNUAL_STRONGEST_CURRENT_CANDIDATE.md)
+  - representative weighted portfolio replay validation으로 이동한다
 
 ### 2026-04-14 - next-ranked eligible fill representative rerun first pass
 
@@ -1071,7 +1068,7 @@
 | 날짜 | run | 핵심 결과 | 판단 |
 | --- | --- | --- | --- |
 | 2026-05-01 | 7단계 실습용 Q+V 후보 탐색/저장 | Coverage 100, Top N 10, SPY benchmark, `29.25% / -18.64%`, `real_money_candidate / paper_probation / review_required` | MDD -20% 이내 실습 후보로 Current/Pre-Live 등록 완료, 자동 승인 후보는 아님 |
-| 2026-04-17 | Phase 21 integrated validation | current strongest `31.82% / -26.63%`, `Top N 9` alternative `32.21% / -25.61%` | current strongest 유지, `Top N 9`는 weaker-gate alternative |
+| 2026-04-17 | Strict annual integrated validation | current strongest `31.82% / -26.63%`, `Top N 9` alternative `32.21% / -25.61%` | current strongest 유지, `Top N 9`는 weaker-gate alternative |
 | 2026-04-14 | next-ranked fill | fill on `26.64% / -28.05%`, cash share와 MDD는 줄었지만 gate는 `hold / blocked` | replacement 아님, reference contract로 보류 |
 | 2026-04-14 | defensive sleeve risk-off | cash-only `31.82% / -26.63%`, sleeve `31.79% / -27.19%` | sleeve로 교체하지 않음 |
 | 2026-04-14 | partial cash retention | cash retention on `20.03% / -15.07%`, drawdown은 개선됐지만 CAGR와 gate가 약함 | downside lever로만 보류 |

@@ -154,7 +154,7 @@
 ## 최근 backtest log snapshot
 
 - 최근 기록:
-  - `2026-04-16 - phase21 integrated validation first pass (value)`
+  - `2026-04-16 - strict annual integrated validation rerun`
 - 핵심 설정:
   - current anchor:
     - `Top N = 14 + psr`

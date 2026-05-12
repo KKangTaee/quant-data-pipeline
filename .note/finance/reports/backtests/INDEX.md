@@ -18,7 +18,6 @@ Last Verified: 2026-05-12
 |---|---|---|
 | `strategies/` | active | 전략 family별 hub, log, current-candidate one-pager |
 | `runs/2026/` | ready | 앞으로 새 backtest report를 받는 기본 위치 |
-| `candidates/point_in_time/` | ready | 후보 선택 근거를 시점 기준으로 정리할 위치 |
 | `validation/runtime/` | ready | 코드/runtime smoke report 위치 |
 | `validation/ui_replay/` | ready | UI replay smoke report 위치 |
 
@@ -40,7 +39,7 @@ Last Verified: 2026-05-12
 
 ## Current Candidate Notes
 
-현재 candidate one-pager는 아직 `strategies/` root에 남겨 둔다. 후속 migration에서 `candidates/point_in_time/`로 옮길지, 전략별 hub에 흡수할지 결정한다.
+현재 candidate one-pager는 `strategies/` root에 둔다. 장기적으로 반복 확인할 전략 후보 근거는 별도 candidate 폴더가 아니라 전략별 hub / backtest log에 흡수한다.
 
 - [CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md](./strategies/CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md)
 - [VALUE_STRICT_ANNUAL_STRONGEST_CURRENT_CANDIDATE.md](./strategies/VALUE_STRICT_ANNUAL_STRONGEST_CURRENT_CANDIDATE.md)
@@ -57,17 +56,19 @@ Last Verified: 2026-05-12
 
 | Type | Report |
 |---|---|
-| Runtime | [PHASE21_PORTFOLIO_BRIDGE_VALIDATION_FIRST_PASS.md](./validation/runtime/PHASE21_PORTFOLIO_BRIDGE_VALIDATION_FIRST_PASS.md) |
-| Runtime | [PHASE23_QUARTERLY_CONTRACT_SMOKE_VALIDATION_FIRST_PASS.md](./validation/runtime/PHASE23_QUARTERLY_CONTRACT_SMOKE_VALIDATION_FIRST_PASS.md) |
-| Runtime | [PHASE24_GLOBAL_RELATIVE_STRENGTH_CORE_RUNTIME_SMOKE_VALIDATION.md](./validation/runtime/PHASE24_GLOBAL_RELATIVE_STRENGTH_CORE_RUNTIME_SMOKE_VALIDATION.md) |
-| UI Replay | [PHASE24_GLOBAL_RELATIVE_STRENGTH_UI_REPLAY_SMOKE_VALIDATION.md](./validation/ui_replay/PHASE24_GLOBAL_RELATIVE_STRENGTH_UI_REPLAY_SMOKE_VALIDATION.md) |
+| Runtime | [WEIGHTED_PORTFOLIO_REPLAY_VALIDATION.md](./validation/runtime/WEIGHTED_PORTFOLIO_REPLAY_VALIDATION.md) |
+| Runtime | [QUARTERLY_CONTRACT_RUNTIME_SMOKE.md](./validation/runtime/QUARTERLY_CONTRACT_RUNTIME_SMOKE.md) |
+| Runtime | [GLOBAL_RELATIVE_STRENGTH_RUNTIME_SMOKE.md](./validation/runtime/GLOBAL_RELATIVE_STRENGTH_RUNTIME_SMOKE.md) |
+| UI Replay | [GLOBAL_RELATIVE_STRENGTH_UI_REPLAY_SMOKE.md](./validation/ui_replay/GLOBAL_RELATIVE_STRENGTH_UI_REPLAY_SMOKE.md) |
 
-## Point-In-Time Candidate Evidence
+## Candidate Evidence Handling
 
-| Type | Location | Notes |
+과거 후보 rerun report는 현재 후보 폴더로 따로 보관하지 않는다.
+
+| Evidence | Current Home | Notes |
 |---|---|---|
-| Strategy candidate rerun evidence | [candidates/point_in_time/strategy_candidates/](./candidates/point_in_time/strategy_candidates/README.md) | phase21 family별 current anchor / alternative rerun report 3개 |
-| Portfolio candidate evidence | [candidates/point_in_time/portfolio_candidates/](./candidates/point_in_time/portfolio_candidates/README.md) | phase22 portfolio baseline / weight alternative report 2개 |
+| Value / Quality / Quality + Value rerun 판단 | `strategies/*_BACKTEST_LOG.md` | 전략별 log에 내용 중심 entry로 흡수 |
+| Weighted portfolio baseline / weight alternative 판단 | `validation/runtime/WEIGHTED_PORTFOLIO_REPLAY_VALIDATION.md` | portfolio candidate가 아니라 replay / weighted builder smoke evidence로 정리 |
 
 ## Legacy Migration Status
 

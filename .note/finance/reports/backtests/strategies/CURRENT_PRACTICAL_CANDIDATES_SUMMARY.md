@@ -106,7 +106,7 @@ lower-MDD near-miss:
 
 - 숫자는 더 방어적으로 좋아졌지만
 - gate가 한 단계 내려가서 current anchor를 대체하진 못했다.
-- Phase 21 integrated validation first pass에서도
+- strict annual integrated validation rerun에서도
   이 해석은 그대로 유지되었다.
   - current anchor:
     - `28.13% / -24.55% / real_money_candidate / paper_probation / review_required`
@@ -163,7 +163,7 @@ cleaner alternative:
 
 - `LQD` 버전은 practical point
 - `SPY` 버전은 더 읽기 쉬운 cleaner alternative
-- Phase 21 integrated validation first pass에서도
+- strict annual integrated validation rerun에서도
   이 해석이 그대로 유지되었다.
   - current anchor:
     - `26.02% / -25.57% / real_money_candidate / paper_probation / review_required`
@@ -201,7 +201,7 @@ lower-MDD but weaker-gate near-miss:
 
 - 지금은 strongest practical point가 분명하고
 - 그보다 더 방어적인 대안도 있지만 gate가 약하다.
-- Phase 21 integrated validation first pass에서도
+- strict annual integrated validation rerun에서도
   이 해석은 그대로 유지되었다.
   - current strongest point:
     - `31.82% / -26.63% / real_money_candidate / small_capital_trial / review_required`
@@ -255,22 +255,18 @@ lower-MDD but weaker-gate near-miss:
      `operating_margin + pcr + por + per + Top N 10 + Candidate Universe Equal-Weight`
    - `Top N = 9` 대안은 `CAGR`와 `MDD`가 모두 매력적이지만
      `production_candidate / watchlist`로 내려가서 representative anchor는 아니다
-4. 다음 phase 방향
-   - Phase 21 integrated validation에서 annual strict family current anchor 3개는 모두 유지됐다
+4. weighted portfolio replay 검증 방향
+   - strict annual integrated validation에서 annual strict family current anchor 3개는 모두 유지됐다
    - lower-MDD alternative들은 의미 있지만,
      representative anchor replacement까지는 아니었다
    - representative portfolio bridge는
      `33 / 33 / 34` weighted bundle에서
      `28.66% / -25.42% / Sharpe 1.51`을 기록했고,
      saved replay도 exact match로 재현됐다
-   - 따라서 지금 다음 단계는
-     구조 실험을 하나 더 여는 것보다
-     **portfolio-level candidate construction을 여는 `Phase 22`**
-     쪽이 더 자연스럽다
-   - Phase 22 first baseline note:
+   - 이후 baseline note:
      - `33 / 33 / 34` shorthand는 saved definition 기준
        `[33.33, 33.33, 33.33]` equal-third baseline으로 정리했다
-     - `phase22_annual_strict_equal_third_baseline_v1`은
+     - annual strict equal-third baseline은
        `baseline_candidate / portfolio_watchlist / not_deployment_ready`
        상태로 유지한다
      - 즉 최종 portfolio winner가 아니라,
@@ -280,5 +276,4 @@ lower-MDD but weaker-gate near-miss:
 
 - [PHASE16_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phases/phase16/PHASE16_CURRENT_CHAPTER_TODO.md)
 - [BACKTEST_REPORT_INDEX.md](/Users/taeho/Project/quant-data-pipeline-worktrees/phase/.note/finance/reports/backtests/INDEX.md)
-- [PHASE21_PORTFOLIO_BRIDGE_VALIDATION_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline-worktrees/phase/.note/finance/reports/backtests/validation/runtime/PHASE21_PORTFOLIO_BRIDGE_VALIDATION_FIRST_PASS.md)
-- [PHASE22_BASELINE_PORTFOLIO_CANDIDATE_PACK_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline-worktrees/phase/.note/finance/reports/backtests/candidates/point_in_time/portfolio_candidates/PHASE22_BASELINE_PORTFOLIO_CANDIDATE_PACK_FIRST_PASS.md)
+- [WEIGHTED_PORTFOLIO_REPLAY_VALIDATION.md](/Users/taeho/Project/quant-data-pipeline-worktrees/phase/.note/finance/reports/backtests/validation/runtime/WEIGHTED_PORTFOLIO_REPLAY_VALIDATION.md)

@@ -22,11 +22,11 @@
 
 ## 기록
 
-### 2026-04-16 - phase21 integrated validation first pass (value)
+### 2026-04-16 - strict annual integrated validation rerun (Value)
 
 - 목표:
   - `Value > Strict Annual` current anchor와 lower-MDD alternative를
-    `Phase 21` 공통 validation frame에서 다시 확인한다
+    공통 strict annual validation frame에서 다시 확인한다
 - 전략:
   - `Value > Strict Annual`
 - 기간 / universe:
@@ -75,16 +75,12 @@
     - `Rolling Review = caution`
     - `Out-of-Sample Review = caution`
 - 해석:
-  - `Value` current anchor는 `Phase 21` frame에서도 그대로 유지된다
+  - `Value` current anchor는 이 validation frame에서도 그대로 유지된다
   - `+ pfcr`는 여전히 더 낮은 `MDD`를 보여주는 near-miss지만,
     gate는 한 단계 약한 대안으로 남는다
   - 즉 same-gate replacement나 actual rescue까지는 아니다
 - 다음 액션:
-  - `Quality` rerun pack을 같은 frame에서 진행
-  - 이후 `Quality + Value`, portfolio bridge까지 묶어 integrated 판단을 이어간다
-- 관련 문서:
-  - [PHASE21_VALUE_ANCHOR_AND_ALTERNATIVE_RERUN_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline-worktrees/phase/.note/finance/reports/backtests/candidates/point_in_time/strategy_candidates/PHASE21_VALUE_ANCHOR_AND_ALTERNATIVE_RERUN_FIRST_PASS.md)
-  - [PHASE21_VALIDATION_FRAME_DEFINITION_FIRST_WORK_UNIT.md](/Users/taeho/Project/quant-data-pipeline/.note/finance/phases/phase21/PHASE21_VALIDATION_FRAME_DEFINITION_FIRST_WORK_UNIT.md)
+  - `Quality`, `Quality + Value` rerun과 weighted portfolio replay 검증을 같은 기준으로 이어간다
 
 ### 2026-04-14 - next-ranked eligible fill representative rerun first pass
 
@@ -561,7 +557,7 @@
 
 | 날짜 | run | 핵심 결과 | 판단 |
 | --- | --- | --- | --- |
-| 2026-04-16 | Phase 21 integrated validation | current anchor `28.13% / -24.55%`, lower-MDD alternative `27.22% / -21.16%` | current anchor 유지, `+ pfcr`는 weaker-gate near-miss |
+| 2026-04-16 | Strict annual integrated validation | current anchor `28.13% / -24.55%`, lower-MDD alternative `27.22% / -21.16%` | current anchor 유지, `+ pfcr`는 weaker-gate near-miss |
 | 2026-04-14 | next-ranked fill | fill on `25.23% / -28.37%`, validation은 개선됐지만 gate는 `hold / blocked` | replacement 아님, reference contract로 보류 |
 | 2026-04-14 | fill anchor-near follow-up | best lower-MDD near-miss `24.47% / -24.89%`, `hold / blocked` | current anchor 유지 |
 | 2026-04-14 | defensive sleeve risk-off | cash-only `28.21% / -24.55%`, sleeve `28.11% / -25.14%` | sleeve로 교체하지 않음 |

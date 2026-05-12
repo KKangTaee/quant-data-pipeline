@@ -123,11 +123,11 @@
   - `PRE_LIVE_CANDIDATE_REGISTRY.jsonl`: `pre_live_quality_current_candidate_cov100_top10_aor_ma250_paper_only`
   - registry / pre-live validation 통과, Candidate Library에서 `paper_tracking` 후보로 로드 확인
 
-### 2026-04-16 - phase21 integrated validation first pass
+### 2026-04-16 - strict annual integrated validation rerun
 
 - 목표:
   - `Quality` current anchor와 cleaner alternative를
-    `Phase 21` 공통 validation frame에서 다시 돌려,
+    공통 strict annual validation frame에서 다시 돌려,
     current practical point 유지 여부와 comparison alternative의 현재 위치를 재확인
 - 전략:
   - `Quality > Strict Annual`
@@ -171,15 +171,11 @@
     - `Deployment = paper_only`
     - `Validation / Rolling / OOS = normal / normal / normal`
 - 해석:
-  - current anchor는 `Phase 21` validation frame에서도 그대로 practical reference point로 유지된다
+  - current anchor는 이 validation frame에서도 그대로 practical reference point로 유지된다
   - `SPY` cleaner alternative는 여전히 comparison surface로는 의미가 있지만,
     `paper_only`라서 replacement candidate는 아니다
 - 다음 액션:
-  - `Quality + Value` rerun pack을 같은 frame에서 실행
-  - portfolio bridge validation까지 이어서 integrated comparison을 완성
-- 관련 문서:
-  - [PHASE21_QUALITY_ANCHOR_AND_ALTERNATIVE_RERUN_FIRST_PASS.md](/Users/taeho/Project/quant-data-pipeline-worktrees/phase/.note/finance/reports/backtests/candidates/point_in_time/strategy_candidates/PHASE21_QUALITY_ANCHOR_AND_ALTERNATIVE_RERUN_FIRST_PASS.md)
-  - [QUALITY_STRICT_ANNUAL_DOWNSIDE_IMPROVED_CURRENT_CANDIDATE.md](/Users/taeho/Project/quant-data-pipeline-worktrees/phase/.note/finance/reports/backtests/strategies/QUALITY_STRICT_ANNUAL_DOWNSIDE_IMPROVED_CURRENT_CANDIDATE.md)
+  - `Quality + Value` rerun과 weighted portfolio replay 검증을 같은 기준으로 이어간다
 
 ### 2026-04-13 - rescued anchor alternate contract search third pass
 
@@ -554,7 +550,7 @@
 | --- | --- | --- | --- |
 | 2026-05-01 | paper_only 저장 후보 등록 | Coverage 100, Top N 10, AOR benchmark, factors `roe, roa, cash_ratio, debt_to_assets`, `14.38% / -14.56%`, `real_money_candidate / paper_probation / paper_only` | Current Candidate / Pre-Live 등록 완료, Candidate Library 표시 확인 |
 | 2026-05-01 | 7단계 실습용 Quality 후보 탐색 | Coverage 100, Top N 8, AOR benchmark, `20.02% / -13.42%`, `real_money_candidate / paper_probation / review_required` | 조건 충족 후보 발견, 저장은 사용자 확인 후 진행 |
-| 2026-04-16 | Phase 21 integrated validation | current anchor `26.02% / -25.57%`, cleaner alternative `25.18% / -25.57%` | current anchor 유지, cleaner alternative는 comparison-only |
+| 2026-04-16 | Strict annual integrated validation | current anchor `26.02% / -25.57%`, cleaner alternative `25.18% / -25.57%` | current anchor 유지, cleaner alternative는 comparison-only |
 | 2026-04-13 | alternate contract search | LQD anchor `26.02% / -25.57%`, SPY cleaner alternative `25.18% / -25.57%` | LQD + trend on + regime off 유지 |
 | 2026-04-13 | rescued anchor factor search | baseline `26.02% / -25.57%`, best addition `20.25% / -30.32%` | factor addition으로 교체하지 않음 |
 | 2026-04-13 | rescued anchor downside search | `Top N 12` `26.02% / -25.57%`, `Top N 16` `20.23% / -25.73%` | `Top N 12` downside-improved anchor 채택 |

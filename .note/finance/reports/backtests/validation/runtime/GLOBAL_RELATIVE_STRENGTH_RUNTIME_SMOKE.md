@@ -1,8 +1,8 @@
-# Phase 24 Global Relative Strength Core Runtime Smoke Validation
+# Global Relative Strength Runtime Smoke
 
 ## 이 문서는 무엇인가
 
-`Phase 24`에서 첫 신규 전략 후보로 고른 `Global Relative Strength`가
+`Global Relative Strength`가
 최소한 코드 레벨에서 실행 가능한지 확인한 개발 검증 report다.
 
 이번 문서는 “이 전략이 투자하기 좋다”를 판단하지 않는다.
@@ -134,8 +134,8 @@ DB-backed result bundle까지 만들 수 있는지 확인한다.
 
 ## 다음 작업
 
-이 core report 작성 당시 다음 Phase 24 구현 단위는 UI와 재진입 경로 연결이었다.
-이후 `PHASE24_GLOBAL_RELATIVE_STRENGTH_UI_REPLAY_SMOKE_VALIDATION.md`에서 해당 연결을 검증했다.
+이 core report 작성 당시 다음 구현 단위는 UI와 재진입 경로 연결이었다.
+이후 [GLOBAL_RELATIVE_STRENGTH_UI_REPLAY_SMOKE.md](../ui_replay/GLOBAL_RELATIVE_STRENGTH_UI_REPLAY_SMOKE.md)에서 해당 연결을 검증했다.
 
 - `app.web.backtest_strategy_catalog`에 `global_relative_strength` family 등록
 - `Backtest > Single Strategy` 입력 UI 추가

@@ -11,6 +11,6 @@ Backtest engine, replay runtime, Practical Validation runtime smoke report를 �
 
 | Report | Purpose |
 |---|---|
-| [PHASE21_PORTFOLIO_BRIDGE_VALIDATION_FIRST_PASS.md](./PHASE21_PORTFOLIO_BRIDGE_VALIDATION_FIRST_PASS.md) | current candidates를 weighted portfolio로 묶고 save / replay 결과가 재현되는지 확인 |
-| [PHASE23_QUARTERLY_CONTRACT_SMOKE_VALIDATION_FIRST_PASS.md](./PHASE23_QUARTERLY_CONTRACT_SMOKE_VALIDATION_FIRST_PASS.md) | quarterly strict family의 portfolio handling contract가 runtime meta에 보존되는지 확인 |
-| [PHASE24_GLOBAL_RELATIVE_STRENGTH_CORE_RUNTIME_SMOKE_VALIDATION.md](./PHASE24_GLOBAL_RELATIVE_STRENGTH_CORE_RUNTIME_SMOKE_VALIDATION.md) | Global Relative Strength core strategy와 DB-backed runtime wrapper가 result bundle을 생성하는지 확인 |
+| [WEIGHTED_PORTFOLIO_REPLAY_VALIDATION.md](./WEIGHTED_PORTFOLIO_REPLAY_VALIDATION.md) | 여러 전략 결과를 weighted portfolio로 묶고 save / replay 결과가 재현되는지 확인 |
+| [QUARTERLY_CONTRACT_RUNTIME_SMOKE.md](./QUARTERLY_CONTRACT_RUNTIME_SMOKE.md) | quarterly strict family의 portfolio handling contract가 runtime meta에 보존되는지 확인 |
+| [GLOBAL_RELATIVE_STRENGTH_RUNTIME_SMOKE.md](./GLOBAL_RELATIVE_STRENGTH_RUNTIME_SMOKE.md) | Global Relative Strength core strategy와 DB-backed runtime wrapper가 result bundle을 생성하는지 확인 |

@@ -3797,3 +3797,9 @@ Detailed historical logs were archived on `2026-04-13`.
   - Stress interpretation row에 worst computed MDD, benchmark spread, return shock, 현재 macro / exposure lens를 추가했다.
   - Robustness / Sensitivity는 rolling / window / component dependency / weight tilt / strategy runtime follow-up을 별도 interpretation row로 요약하게 했다.
   - Practical Validation과 Final Review의 Robustness summary에서 Stress / Sensitivity Interpretation tab을 읽을 수 있게 했다.
+- Backtest report content-oriented migration:
+  - user feedback에 따라 `candidates/point_in_time/`를 현재 후보 폴더처럼 유지하지 않기로 했다.
+  - Value / Quality / Quality + Value rerun 근거는 전략별 backtest log에 남아 있으므로 standalone candidate report를 제거했다.
+  - weighted portfolio baseline / weight alternative / saved replay 근거는 `validation/runtime/WEIGHTED_PORTFOLIO_REPLAY_VALIDATION.md`로 내용 중심 재작성했다.
+  - validation smoke report 파일명은 phase 번호 대신 `QUARTERLY_CONTRACT_RUNTIME_SMOKE`, `GLOBAL_RELATIVE_STRENGTH_RUNTIME_SMOKE`, `GLOBAL_RELATIVE_STRENGTH_UI_REPLAY_SMOKE`로 정리했다.
+  - backtest report README / INDEX / migration / validation README를 새 구조에 맞춰 갱신했다.

@@ -21,7 +21,7 @@ Last Verified: 2026-05-12
 
 현재 candidate one-pager는 기존 참조 안정성을 위해 이 폴더에 남겨 둔다.
 
-후속 migration에서 아래 문서들은 `../candidates/point_in_time/`로 옮기거나, 전략 hub/log에 요약 흡수한 뒤 삭제 후보로 정리한다.
+후보 판단의 source-of-truth는 registry이며, 이 폴더의 one-pager는 사람이 전략 맥락을 빠르게 읽기 위한 보조 문서다. 반복 참조할 가치가 있는 rerun 근거는 별도 candidate 폴더가 아니라 각 전략별 backtest log에 흡수한다.
 
 - [CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md](./CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md)
 - [VALUE_STRICT_ANNUAL_STRONGEST_CURRENT_CANDIDATE.md](./VALUE_STRICT_ANNUAL_STRONGEST_CURRENT_CANDIDATE.md)

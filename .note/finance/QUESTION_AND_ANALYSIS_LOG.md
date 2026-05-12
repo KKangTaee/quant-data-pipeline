@@ -4843,3 +4843,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - strategy-specific perturbation은 아직 별도 runtime 후속이며, P2-6에서는 후속 필요 상태를 숨기지 않고 표시하는 것이 맞다
 - Follow-up:
   - Stress / Sensitivity Interpretation row를 Practical Validation과 Final Review Robustness summary에 추가했다
+
+### 2026-05-12 - backtest report의 candidate / validation 폴더는 현재 후보처럼 보이지 않게 내용 중심으로 재분류한다
+- User request:
+  - 사용자가 `candidates`와 `validation` 폴더의 문서들이 현재 프로그램 기준으로도 쓸모가 있는지, 삭제해야 하는지, 또는 나중에 쓰임이 있는지 검토를 요청함
+  - archive 문서를 새로 늘리기보다 필요한 내용은 현재 구조에 맞게 마이그레이션하길 요청함
+- Interpreted goal:
+  - 과거 phase 번호를 기준으로 문서를 보존하지 않고, 실제로 나중에 참고할 수 있는 내용만 전략 log / validation smoke 문서로 흡수해야 함
+- Analysis result:
+  - Phase 21 계열 strategy rerun 문서는 독립 후보 문서로는 현재 source-of-truth가 아니지만, Value / Quality / Quality + Value 전략 log에 이미 핵심 근거가 남아 있으므로 standalone candidate report는 제거 가능하다
+  - Phase 22 portfolio candidate 문서는 현재 후보가 아니라 weighted portfolio builder / saved replay 검증 fixture로 읽어야 하므로, portfolio candidate report가 아니라 runtime validation note로 재작성하는 것이 맞다
+  - Quarterly contract와 Global Relative Strength smoke 문서는 현재 코드 이해와 회귀 검증에 가치가 있으므로 유지하되, phase 번호 파일명이 아니라 기능 중심 파일명으로 정리한다
+- Follow-up:
+  - `candidates/point_in_time/` 구조를 제거하고, weighted portfolio replay 검증과 validation smoke report를 내용 중심 이름으로 마이그레이션했다

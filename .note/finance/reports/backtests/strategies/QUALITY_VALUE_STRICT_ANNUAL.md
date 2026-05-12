@@ -68,7 +68,7 @@
 - 그리고 Phase 16 follow-up에서는
   더 낮은 `MDD` same-gate candidate는 못 찾았지만,
   같은 `MDD`에서 `CAGR`를 더 높이는 strongest point까지 갱신됐다
-- Phase 21 integrated validation first pass에서도
+- strict annual integrated validation rerun에서도
   current strongest point는 유지됐고,
   `Top N = 9` alternative는 숫자는 더 좋아 보이지만 gate가 한 단계 약하다는 점이 다시 확인됐다
 - 그래서 지금은
@@ -128,14 +128,14 @@
 해석:
 
 - 숫자만 보면 꽤 매력적이다
-- Phase 21 frame에서는 current strongest보다 `CAGR`도 높고 `MDD`도 낮게 나왔다
+- strict annual validation frame에서는 current strongest보다 `CAGR`도 높고 `MDD`도 낮게 나왔다
 - 하지만 strongest candidate보다 gate tier가 내려간다
 - 그래서 “대안 후보”로는 좋지만 대표 후보를 대체하진 못한다
 
 ## 최근 backtest log snapshot
 
 - 최근 기록:
-  - `2026-04-17 - phase21 integrated validation first pass`
+  - `2026-04-17 - strict annual integrated validation rerun`
 - 핵심 설정:
   - quality:
     - `roe`
@@ -235,7 +235,7 @@
 - Phase 16 second pass까지 반영하면
   strongest practical point는 current code에서도 그대로 유지되고,
   lower-MDD but weaker-gate 대안과 `SPY` benchmark 대안의 tradeoff까지 정리된 상태다
-- Phase 21 integrated validation까지 반영하면
+- strict annual integrated validation까지 반영하면
   `Top N = 9`는 `CAGR`와 `MDD`가 모두 매력적이지만
   gate가 `production_candidate / watchlist`로 내려가므로
   current anchor replacement는 아니다
