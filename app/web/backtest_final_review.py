@@ -42,6 +42,17 @@ from app.web.runtime import (
 )
 
 
+def _status_tone(status: Any) -> str:
+    status_text = str(status or "").upper()
+    if status_text == "PASS":
+        return "positive"
+    if status_text == "BLOCKED":
+        return "danger"
+    if status_text == "REVIEW":
+        return "warning"
+    return "neutral"
+
+
 def _render_validation_summary(validation: dict[str, Any]) -> None:
     metrics = dict(validation.get("metrics") or {})
     route = str(validation.get("validation_route") or "-")
@@ -147,6 +158,38 @@ def _render_robustness_summary(validation: dict[str, Any]) -> None:
         route_title="Robustness Preview",
         score_title="Robustness Score",
     )
+    stress_interpretation = dict(robustness.get("stress_interpretation") or validation.get("stress_interpretation") or {})
+    sensitivity_interpretation = dict(
+        robustness.get("sensitivity_interpretation") or validation.get("sensitivity_interpretation") or {}
+    )
+    if stress_interpretation or sensitivity_interpretation:
+        st.markdown("###### Stress / Sensitivity Interpretation")
+        interpretation_tabs = st.tabs(["Stress", "Sensitivity"])
+        with interpretation_tabs[0]:
+            render_badge_strip(
+                [
+                    {"label": "Status", "value": stress_interpretation.get("status") or "-", "tone": _status_tone(stress_interpretation.get("status"))},
+                    {"label": "Computed", "value": f"{stress_interpretation.get('computed_count', 0)}/{stress_interpretation.get('covered_count', 0)}", "tone": "neutral"},
+                    {"label": "Uncomputed", "value": stress_interpretation.get("uncomputed_count", 0), "tone": "warning" if stress_interpretation.get("uncomputed_count") else "neutral"},
+                ]
+            )
+            st.caption(str(stress_interpretation.get("summary") or "-"))
+            stress_rows = list(stress_interpretation.get("rows") or [])
+            if stress_rows:
+                st.dataframe(pd.DataFrame(stress_rows), width="stretch", hide_index=True)
+        with interpretation_tabs[1]:
+            render_badge_strip(
+                [
+                    {"label": "Status", "value": sensitivity_interpretation.get("status") or "-", "tone": _status_tone(sensitivity_interpretation.get("status"))},
+                    {"label": "Computed", "value": sensitivity_interpretation.get("computed_count", 0), "tone": "neutral"},
+                    {"label": "Review", "value": sensitivity_interpretation.get("review_count", 0), "tone": "warning" if sensitivity_interpretation.get("review_count") else "neutral"},
+                    {"label": "Runtime Follow-up", "value": sensitivity_interpretation.get("runtime_followup_count", 0), "tone": "warning" if sensitivity_interpretation.get("runtime_followup_count") else "neutral"},
+                ]
+            )
+            st.caption(str(sensitivity_interpretation.get("summary") or "-"))
+            sensitivity_rows = list(sensitivity_interpretation.get("rows") or [])
+            if sensitivity_rows:
+                st.dataframe(pd.DataFrame(sensitivity_rows), width="stretch", hide_index=True)
     stress_df = pd.DataFrame(robustness.get("stress_summary_rows") or [])
     if stress_df.empty:
         st.info("Stress / Sensitivity summary가 없습니다.")

@@ -69,6 +69,7 @@ Backtest 주 흐름:
 
 Practical Validation V2의 현재 구현은 최소 contract를 Input Evidence로 읽고, profile-aware practical diagnostics board를 만든다.
 현재 board는 compact curve snapshot 또는 DB price proxy curve를 사용해 rolling validation, stress window 구간 성과, simple baseline challenge, component correlation / risk contribution proxy, window / drop-one / weight perturbation sensitivity를 계산한다.
+Stress / Sensitivity Interpretation은 계산된 숫자를 그대로 두지 않고, covered stress 중 daily replay가 필요한 구간, worst MDD / benchmark spread, rolling / window / component dependency / weight tilt / strategy runtime follow-up을 별도 해석 row로 요약한다.
 P2-5B부터 ETF asset allocation / concentration / leveraged-inverse / operability와 macro / sentiment 진단은 DB에 저장된 provider snapshot을 우선 사용하고, 없으면 proxy origin을 `REVIEW`로 남긴다.
 provider snapshot 조회 기준일은 저장된 backtest 종료일이 아니라 Practical Validation 실행일이다. 저장된 mix의 backtest 기간이 과거에 끝나도, 실전 투입 전 검증은 현재 수집된 ETF 운용성 / holdings / macro context로 확인한다.
 Provider Coverage 아래에는 ETF별 Provider Data Gaps 표를 표시한다. 사용자는 어떤 ETF의 operability / holdings / exposure가 부족한지 보고, 수집 가능한 부족 데이터는 같은 화면에서 일괄 수집 / 보강할 수 있다. 공식 source mapping이 없는 holdings / exposure는 먼저 `etf_provider_source_map` discovery를 실행해 verified endpoint를 찾고, 자동 탐색 후에도 없을 때만 수동 connector mapping 필요로 남긴다.

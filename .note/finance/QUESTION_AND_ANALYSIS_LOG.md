@@ -4831,3 +4831,15 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Sensitivity는 drop-one / weight perturbation 일부는 계산됐지만 window perturbation이 실제 계산되지 않았고, strategy-specific parameter perturbation은 별도 runtime 작업으로 남겨야 했다
 - Follow-up:
   - operability 병합 판정과 window perturbation 계산을 구현했고, strategy-specific sensitivity runtime은 후속 작업으로 유지했다
+
+### 2026-05-12 - P2-6 stress / sensitivity 해석 보강 범위 확정
+- User request:
+  - 사용자가 P2-6에서 어떤 작업을 하는지 확인한 뒤 구현 진행을 요청함
+- Interpreted goal:
+  - stress / sensitivity 숫자표를 단순 PASS 표시로 끝내지 않고, Final Review에서 왜 REVIEW인지 또는 무엇을 더 확인해야 하는지 읽을 수 있게 해야 함
+- Analysis result:
+  - stress는 후보 기간과 겹치는 static event window 중 실제 curve로 계산된 구간과 compact monthly curve 때문에 계산되지 않은 구간을 분리해야 한다
+  - sensitivity는 rolling, window, drop-one, weight tilt, strategy-specific runtime follow-up을 한 표에서 섞어 보이면 의미가 흐려지므로 해석 row로 구분해야 한다
+  - strategy-specific perturbation은 아직 별도 runtime 후속이며, P2-6에서는 후속 필요 상태를 숨기지 않고 표시하는 것이 맞다
+- Follow-up:
+  - Stress / Sensitivity Interpretation row를 Practical Validation과 Final Review Robustness summary에 추가했다

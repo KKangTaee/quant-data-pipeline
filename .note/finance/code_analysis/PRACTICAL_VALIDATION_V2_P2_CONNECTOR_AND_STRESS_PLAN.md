@@ -22,7 +22,7 @@ P2 개발 순서는 diagnostic normalization first로 고정한다.
 그 검증에 필요한 provider / FRED 데이터를 ingestion에서 DB에 저장한 뒤,
 loader, Practical Validation connector, UI / diagnostics 해석을 연결한다.
 
-## 쉽게 말하면
+## 현재 문제
 
 현재 Practical Validation은 이미 후보 source, 최신 runtime 재검증, curve provenance,
 benchmark parity, rolling / stress / baseline / sensitivity 일부 계산을 갖고 있다.
@@ -187,7 +187,7 @@ P2-2부터는 이 계약을 기준으로 진행한다.
 4. macro collector는 FRED `series_id`, `observation_date`, `source` 기준으로 UPSERT한다.
 5. loader는 table이 비어 있어도 빈 context와 `NOT_RUN` reason을 안정적으로 반환한다.
 
-## 이 P2가 끝나면 좋은 점
+## P2 완료 후 판단 가능해지는 것
 
 - `Operability / Cost / Liquidity`가 단순 proxy가 아니라 provider coverage를 함께 보여준다.
 - `Regime / Macro Suitability`와 `Sentiment / Risk-On-Off Overlay`가 market-context snapshot을 읽는다.
@@ -564,7 +564,9 @@ Macro            NOT_RUN  macro connector not configured
 - P2-5B 기준으로 2, 3, 5, 6, 9, 10번 진단에 provider context가 연결됐다.
 - P2-5C 이후 10번 Operability는 official partial row와 DB bridge row를 ticker 단위로 병합해 판정한다.
 - 11번 Robustness / Sensitivity는 window / drop-one / weight perturbation을 curve 기반으로 계산한다.
-- 7번 Stress Interpretation과 strategy-specific sensitivity runtime은 다음 작업 단위에서 계속 진행한다.
+- P2-6 기준으로 7번 Stress Interpretation은 covered stress window 중 실제 계산된 window 수와 daily replay가 필요한 window를 분리해 `REVIEW` trigger로 표시한다.
+- P2-6 기준으로 11번 Robustness / Sensitivity는 rolling / window / drop-one / weight tilt / strategy runtime follow-up을 interpretation row로 요약한다.
+- strategy-specific sensitivity runtime은 다음 작업 단위 또는 후속 P3 범위에서 계속 진행한다.
 
 검증:
 
@@ -581,6 +583,8 @@ Macro            NOT_RUN  macro connector not configured
 
 - 후보 기간 밖 stress는 `NOT_RUN`
 - 후보 기간 안 stress는 return / MDD / benchmark spread / interpretation 표시
+- 후보 기간 안이지만 compact monthly curve로 계산하지 못한 stress는 `REVIEW`와 daily replay 필요 reason 표시
+- Final Review의 Robustness summary에서도 Stress / Sensitivity interpretation을 별도 tab으로 읽을 수 있음
 
 ### 작업 단위 8. QA / P2 종료 판단
 

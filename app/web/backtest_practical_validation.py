@@ -242,6 +242,15 @@ def _status_tone(status: Any) -> str:
     return "neutral"
 
 
+def _pct_badge_value(value: Any) -> str:
+    if value is None:
+        return "-"
+    try:
+        return f"{float(value):.2%}"
+    except (TypeError, ValueError):
+        return "-"
+
+
 def _upper_symbol_set(values: Any) -> set[str]:
     if values is None:
         return set()
@@ -611,6 +620,45 @@ def _render_provider_gap_section(validation_result: dict[str, Any]) -> None:
         st.rerun()
 
 
+def _render_stress_sensitivity_interpretation(validation_result: dict[str, Any]) -> None:
+    stress = dict(validation_result.get("stress_interpretation") or {})
+    sensitivity = dict(validation_result.get("sensitivity_interpretation") or {})
+    if not stress and not sensitivity:
+        return
+
+    st.markdown("##### Stress / Sensitivity Interpretation")
+    st.caption(
+        "Stress와 sensitivity 숫자를 Final Review에서 바로 읽을 수 있도록 원인, trigger, 다음 확인 항목으로 요약합니다."
+    )
+    stress_tab, sensitivity_tab = st.tabs(["Stress", "Sensitivity"])
+    with stress_tab:
+        render_badge_strip(
+            [
+                {"label": "Status", "value": stress.get("status") or "-", "tone": _status_tone(stress.get("status"))},
+                {"label": "Computed", "value": f"{stress.get('computed_count', 0)}/{stress.get('covered_count', 0)}", "tone": "neutral"},
+                {"label": "Uncomputed", "value": stress.get("uncomputed_count", 0), "tone": "warning" if stress.get("uncomputed_count") else "neutral"},
+                {"label": "Worst MDD", "value": _pct_badge_value(stress.get("worst_mdd")), "tone": "neutral"},
+            ]
+        )
+        st.caption(str(stress.get("summary") or "-"))
+        stress_rows = list(stress.get("rows") or [])
+        if stress_rows:
+            st.dataframe(pd.DataFrame(stress_rows), width="stretch", hide_index=True)
+    with sensitivity_tab:
+        render_badge_strip(
+            [
+                {"label": "Status", "value": sensitivity.get("status") or "-", "tone": _status_tone(sensitivity.get("status"))},
+                {"label": "Computed", "value": sensitivity.get("computed_count", 0), "tone": "neutral"},
+                {"label": "Review", "value": sensitivity.get("review_count", 0), "tone": "warning" if sensitivity.get("review_count") else "neutral"},
+                {"label": "Runtime Follow-up", "value": sensitivity.get("runtime_followup_count", 0), "tone": "warning" if sensitivity.get("runtime_followup_count") else "neutral"},
+            ]
+        )
+        st.caption(str(sensitivity.get("summary") or "-"))
+        sensitivity_rows = list(sensitivity.get("rows") or [])
+        if sensitivity_rows:
+            st.dataframe(pd.DataFrame(sensitivity_rows), width="stretch", hide_index=True)
+
+
 def _render_validation_result(validation_result: dict[str, Any]) -> None:
     profile = dict(validation_result.get("validation_profile") or {})
     status_counts = dict(dict(validation_result.get("diagnostic_summary") or {}).get("status_counts") or {})
@@ -649,6 +697,8 @@ def _render_validation_result(validation_result: dict[str, Any]) -> None:
         )
         st.dataframe(pd.DataFrame(provider_rows), width="stretch", hide_index=True)
         _render_provider_gap_section(validation_result)
+
+    _render_stress_sensitivity_interpretation(validation_result)
 
     mismatch_warnings = list(validation_result.get("intent_mismatch_warnings") or [])
     if mismatch_warnings:

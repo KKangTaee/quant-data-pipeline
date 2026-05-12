@@ -773,6 +773,13 @@ def _format_date(value: Any) -> str | None:
     return parsed.strftime("%Y-%m-%d")
 
 
+def _format_percent(value: Any) -> str:
+    numeric = _optional_float(value)
+    if numeric is None:
+        return "-"
+    return f"{numeric:.2%}"
+
+
 def _curve_records_from_df(result_df: pd.DataFrame, *, max_rows: int = 420) -> list[dict[str, Any]]:
     if not isinstance(result_df, pd.DataFrame) or result_df.empty:
         return []
@@ -1355,6 +1362,131 @@ def _stress_window_rows(
     return rows
 
 
+def _stress_interpretation_result(
+    stress_rows: list[dict[str, Any]],
+    *,
+    provider_macro: dict[str, Any] | None = None,
+    asset_exposure: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Turn stress-window measurements into operator-facing review triggers."""
+    rows = [dict(row or {}) for row in stress_rows]
+    covered_rows = [row for row in rows if row.get("Coverage") == "COVERED"]
+    computed_rows = [
+        row
+        for row in covered_rows
+        if str(row.get("Result Status") or "") in {"PASS", "REVIEW"}
+        and _optional_float(row.get("Portfolio MDD")) is not None
+    ]
+    uncomputed_rows = [row for row in covered_rows if str(row.get("Result Status") or "") == "NOT_RUN"]
+    review_rows = [row for row in computed_rows if str(row.get("Result Status") or "") == "REVIEW"]
+    worst_mdd_row = min(
+        computed_rows,
+        key=lambda row: _optional_float(row.get("Portfolio MDD")) or 0.0,
+    ) if computed_rows else {}
+    worst_return_row = min(
+        computed_rows,
+        key=lambda row: _optional_float(row.get("Portfolio Return")) or 0.0,
+    ) if computed_rows else {}
+    spread_rows = [row for row in computed_rows if _optional_float(row.get("Benchmark Spread")) is not None]
+    worst_spread_row = min(
+        spread_rows,
+        key=lambda row: _optional_float(row.get("Benchmark Spread")) or 0.0,
+    ) if spread_rows else {}
+
+    worst_mdd = _optional_float(worst_mdd_row.get("Portfolio MDD"))
+    worst_return = _optional_float(worst_return_row.get("Portfolio Return"))
+    worst_spread = _optional_float(worst_spread_row.get("Benchmark Spread"))
+    macro_metrics = dict(dict(provider_macro or {}).get("metrics") or {})
+    risk_label = str(macro_metrics.get("risk_label") or "-")
+    exposure = dict(asset_exposure or {})
+    exposure_lens = (
+        f"equity {_optional_float(exposure.get('equity')) or 0.0:.1f}% / "
+        f"bond {_optional_float(exposure.get('bond')) or 0.0:.1f}% / "
+        f"gold {_optional_float(exposure.get('gold')) or 0.0:.1f}%"
+    ) if exposure else "-"
+
+    trigger_reasons: list[str] = []
+    if review_rows:
+        trigger_reasons.append("stress MDD trigger")
+    if worst_spread is not None and worst_spread < -0.05:
+        trigger_reasons.append("benchmark spread < -5%p")
+    if uncomputed_rows:
+        trigger_reasons.append("covered stress windows need daily replay")
+
+    if not rows:
+        status = "NOT_RUN"
+        summary = "stress calendar를 읽지 못해 scenario 해석을 만들지 못했습니다."
+    elif not covered_rows:
+        status = "NOT_RUN"
+        summary = "후보 기간과 겹치는 static stress window가 없어 별도 scenario 해석이 없습니다."
+    elif computed_rows and not trigger_reasons:
+        status = "PASS"
+        summary = (
+            f"{len(computed_rows)}/{len(covered_rows)}개 stress window를 계산했고, "
+            f"worst MDD {_format_percent(worst_mdd)} / benchmark spread {_format_percent(worst_spread)}입니다."
+        )
+    else:
+        status = "REVIEW"
+        summary = (
+            f"{len(computed_rows)}/{len(covered_rows)}개 covered stress window만 계산됐습니다. "
+            f"확인 trigger: {', '.join(trigger_reasons) if trigger_reasons else 'stress replay 필요'}."
+        )
+
+    interpretation_rows = [
+        {
+            "Check": "Stress coverage",
+            "Status": status if covered_rows else "NOT_RUN",
+            "Finding": f"{len(computed_rows)}/{len(covered_rows)} covered windows computed",
+            "Why It Matters": "후보 기간에 포함된 위기 구간을 실제 curve로 잘라 볼 수 있는지 확인합니다.",
+            "Next Check": "NOT_RUN covered window는 daily runtime replay로 다시 계산합니다.",
+        },
+        {
+            "Check": "Worst computed MDD",
+            "Status": "REVIEW" if worst_mdd is not None and worst_mdd < -0.20 else "PASS" if worst_mdd is not None else "NOT_RUN",
+            "Finding": f"{worst_mdd_row.get('Scenario') or '-'} / MDD {_format_percent(worst_mdd)}",
+            "Why It Matters": "위기 구간에서 손실 방어가 선택 기준과 맞는지 확인합니다.",
+            "Next Check": "MDD가 커지면 해당 구간의 component와 asset exposure를 확인합니다.",
+        },
+        {
+            "Check": "Benchmark spread",
+            "Status": "REVIEW" if worst_spread is not None and worst_spread < -0.05 else "PASS" if worst_spread is not None else "NOT_RUN",
+            "Finding": f"{worst_spread_row.get('Scenario') or '-'} / spread {_format_percent(worst_spread)}",
+            "Why It Matters": "위기 구간에서 단순 benchmark보다 방어 또는 회복이 약했는지 봅니다.",
+            "Next Check": "benchmark보다 5%p 이상 약하면 후보 목적을 다시 확인합니다.",
+        },
+        {
+            "Check": "Return shock",
+            "Status": "REVIEW" if worst_return is not None and worst_return < -0.10 else "PASS" if worst_return is not None else "NOT_RUN",
+            "Finding": f"{worst_return_row.get('Scenario') or '-'} / return {_format_percent(worst_return)}",
+            "Why It Matters": "stress window의 절대 손실이 운영 감내선 안에 있는지 봅니다.",
+            "Next Check": "절대 손실이 크면 monitoring trigger를 더 엄격하게 둡니다.",
+        },
+        {
+            "Check": "Current macro / exposure lens",
+            "Status": "PASS" if risk_label == "neutral / risk-on" else "REVIEW" if risk_label != "-" else "NOT_RUN",
+            "Finding": f"macro {risk_label} / {exposure_lens}",
+            "Why It Matters": "과거 stress 취약점이 현재 금리/변동성/자산군 노출과 다시 맞물리는지 봅니다.",
+            "Next Check": "risk-off면 Final Review에서 신규 진입 또는 추적 기간을 보수적으로 둡니다.",
+        },
+    ]
+    return {
+        "status": status,
+        "summary": summary,
+        "rows": interpretation_rows,
+        "covered_count": len(covered_rows),
+        "computed_count": len(computed_rows),
+        "uncomputed_count": len(uncomputed_rows),
+        "review_count": len(review_rows),
+        "worst_mdd": worst_mdd,
+        "worst_mdd_scenario": worst_mdd_row.get("Scenario"),
+        "worst_return": worst_return,
+        "worst_return_scenario": worst_return_row.get("Scenario"),
+        "worst_benchmark_spread": worst_spread,
+        "worst_benchmark_spread_scenario": worst_spread_row.get("Scenario"),
+        "trigger_reasons": trigger_reasons,
+    }
+
+
 def _build_overfit_audit(source_row: dict[str, Any], active_components: list[dict[str, Any]]) -> dict[str, Any]:
     strategy_keys = {
         str(component.get("strategy_key") or component.get("strategy_family") or "").strip()
@@ -1570,6 +1702,157 @@ def _sensitivity_rows(
     if any("relative" in key or "grs" in key for key in strategy_keys):
         rows.append({"Scenario": "Relative Strength perturbation", "Scope": "lookback / top_n / skip period", "Result Status": "NOT_RUN", "Expected Check": "momentum window 민감도"})
     return rows
+
+
+def _worst_delta_row(rows: list[dict[str, Any]], *, prefix: str | None = None) -> dict[str, Any]:
+    candidates = [
+        dict(row)
+        for row in rows
+        if (prefix is None or str(row.get("Scenario") or "").startswith(prefix))
+        and (
+            _optional_float(row.get("MDD Delta")) is not None
+            or _optional_float(row.get("CAGR Delta")) is not None
+        )
+    ]
+    if not candidates:
+        return {}
+
+    def sort_key(row: dict[str, Any]) -> tuple[float, float]:
+        mdd_delta = _optional_float(row.get("MDD Delta"))
+        cagr_delta = _optional_float(row.get("CAGR Delta"))
+        return (mdd_delta if mdd_delta is not None else 0.0, cagr_delta if cagr_delta is not None else 0.0)
+
+    return min(candidates, key=sort_key)
+
+
+def _sensitivity_interpretation_result(
+    sensitivity_rows: list[dict[str, Any]],
+    *,
+    overfit_audit: dict[str, Any],
+    rolling_evidence: dict[str, Any],
+) -> dict[str, Any]:
+    """Summarize local sensitivity rows into the weakest assumptions to review."""
+    rows = [dict(row or {}) for row in sensitivity_rows]
+    computed_rows = [row for row in rows if str(row.get("Result Status") or "") in {"PASS", "REVIEW"}]
+    review_rows = [row for row in computed_rows if str(row.get("Result Status") or "") == "REVIEW"]
+    not_run_rows = [row for row in rows if str(row.get("Result Status") or "") == "NOT_RUN"]
+    window_rows = [row for row in computed_rows if str(row.get("Expected Check") or "") == "기간 변경 민감도"]
+    drop_rows = [row for row in computed_rows if str(row.get("Scenario") or "").startswith("Drop-one:")]
+    weight_rows = [row for row in computed_rows if str(row.get("Scenario") or "").startswith("Mix weight")]
+    runtime_followup_rows = [
+        row
+        for row in not_run_rows
+        if str(row.get("Expected Check") or "") in {"cadence 민감도", "ticker set 민감도", "momentum window 민감도"}
+    ]
+    worst_window = _worst_delta_row(window_rows)
+    worst_drop = _worst_delta_row(drop_rows)
+    worst_weight = _worst_delta_row(weight_rows)
+    all_delta_worst = _worst_delta_row(computed_rows)
+    rolling_metrics = dict(rolling_evidence.get("metrics") or {})
+    rolling_status = str(rolling_evidence.get("status") or "NOT_RUN")
+    overfit_status = str(overfit_audit.get("status") or "NOT_RUN")
+
+    trigger_reasons: list[str] = []
+    if overfit_status == "REVIEW":
+        trigger_reasons.append("local trial count review")
+    if rolling_status == "REVIEW":
+        trigger_reasons.append("rolling validation review")
+    if review_rows:
+        trigger_reasons.append("sensitivity worst-case review")
+
+    if not computed_rows and rolling_status == "NOT_RUN":
+        status = "NOT_RUN"
+        summary = "curve 기반 sensitivity와 rolling validation을 계산하지 못했습니다."
+    elif trigger_reasons:
+        status = "REVIEW"
+        worst_name = all_delta_worst.get("Scenario") or (review_rows[0].get("Scenario") if review_rows else "-")
+        summary = (
+            f"{len(computed_rows)}개 sensitivity를 계산했고, {worst_name}에서 검토 trigger가 있습니다. "
+            f"남은 strategy-specific runtime 항목은 {len(runtime_followup_rows)}개입니다."
+        )
+    else:
+        status = "PASS"
+        summary = (
+            f"{len(computed_rows)}개 curve 기반 sensitivity와 rolling validation이 즉시 review trigger 없이 계산됐습니다. "
+            f"strategy-specific runtime 후속 항목은 {len(runtime_followup_rows)}개입니다."
+        )
+
+    interpretation_rows = [
+        {
+            "Check": "Computed sensitivity coverage",
+            "Status": status if computed_rows else "NOT_RUN",
+            "Finding": (
+                f"computed {len(computed_rows)} / window {len(window_rows)} / "
+                f"drop-one {len(drop_rows)} / weight {len(weight_rows)} / runtime follow-up {len(runtime_followup_rows)}"
+            ),
+            "Why It Matters": "현재 결과가 단일 기간, 단일 구성, 단일 비중에만 의존하는지 봅니다.",
+            "Next Check": "runtime follow-up은 전략별 parameter perturbation 구현 후 다시 확인합니다.",
+        },
+        {
+            "Check": "Rolling validation",
+            "Status": rolling_status,
+            "Finding": (
+                f"windows {rolling_metrics.get('window_count', '-')} / "
+                f"worst CAGR {_format_percent(rolling_metrics.get('worst_rolling_cagr'))} / "
+                f"worst MDD {_format_percent(rolling_metrics.get('worst_rolling_mdd'))}"
+            ),
+            "Why It Matters": "한 번의 전체기간 성과가 아니라 여러 rolling 구간에서 성과가 유지되는지 봅니다.",
+            "Next Check": "negative rolling share가 커지면 추적 또는 보류 기준을 강화합니다.",
+        },
+        {
+            "Check": "Window sensitivity",
+            "Status": str(worst_window.get("Result Status") or "NOT_RUN"),
+            "Finding": (
+                f"{worst_window.get('Scenario') or '-'} / "
+                f"CAGR delta {_format_percent(worst_window.get('CAGR Delta'))} / "
+                f"MDD delta {_format_percent(worst_window.get('MDD Delta'))}"
+            ),
+            "Why It Matters": "시작일과 종료일을 조금 바꿔도 논리가 유지되는지 봅니다.",
+            "Next Check": "특정 기간 제외 시 성과가 무너지면 선택 근거를 다시 봅니다.",
+        },
+        {
+            "Check": "Component dependency",
+            "Status": str(worst_drop.get("Result Status") or "NOT_RUN"),
+            "Finding": (
+                f"{worst_drop.get('Scenario') or '-'} / "
+                f"CAGR delta {_format_percent(worst_drop.get('CAGR Delta'))} / "
+                f"MDD delta {_format_percent(worst_drop.get('MDD Delta'))}"
+            ),
+            "Why It Matters": "특정 component 하나가 빠졌을 때 포트폴리오 안정성이 급격히 약해지는지 봅니다.",
+            "Next Check": "REVIEW면 해당 component가 왜 필요한지 Final Review 근거에 남깁니다.",
+        },
+        {
+            "Check": "Weight tilt sensitivity",
+            "Status": str(worst_weight.get("Result Status") or "NOT_RUN"),
+            "Finding": (
+                f"{worst_weight.get('Scenario') or '-'} / "
+                f"CAGR delta {_format_percent(worst_weight.get('CAGR Delta'))} / "
+                f"MDD delta {_format_percent(worst_weight.get('MDD Delta'))}"
+            ),
+            "Why It Matters": "목표 비중이 조금 달라져도 결과가 과도하게 흔들리는지 봅니다.",
+            "Next Check": "비중 변화에 민감하면 rebalancing drift trigger를 좁힙니다.",
+        },
+        {
+            "Check": "Strategy runtime follow-up",
+            "Status": "FOLLOW_UP" if runtime_followup_rows else "PASS",
+            "Finding": ", ".join(str(row.get("Scenario") or "-") for row in runtime_followup_rows) or "-",
+            "Why It Matters": "GTAA interval, MA window 같은 전략 내부 parameter는 curve-only 계산만으로 대체할 수 없습니다.",
+            "Next Check": "후속 runtime perturbation이 붙기 전까지는 Final Review에서 별도 확인 항목으로 둡니다.",
+        },
+    ]
+    return {
+        "status": status,
+        "summary": summary,
+        "rows": interpretation_rows,
+        "computed_count": len(computed_rows),
+        "review_count": len(review_rows),
+        "not_run_count": len(not_run_rows),
+        "runtime_followup_count": len(runtime_followup_rows),
+        "worst_scenario": all_delta_worst.get("Scenario"),
+        "worst_cagr_delta": _optional_float(all_delta_worst.get("CAGR Delta")),
+        "worst_mdd_delta": _optional_float(all_delta_worst.get("MDD Delta")),
+        "trigger_reasons": trigger_reasons,
+    }
 
 
 def _correlation_risk_evidence(component_curves: list[dict[str, Any]]) -> dict[str, Any]:
@@ -2147,34 +2430,34 @@ def build_practical_validation_result(
     )
 
     stress_rows = _stress_window_rows(source_period, portfolio_curve=portfolio_curve, benchmark_curve=benchmark_curve)
-    covered_stress_count = sum(1 for row in stress_rows if row.get("Coverage") == "COVERED")
-    computed_stress_count = sum(1 for row in stress_rows if row.get("Coverage") == "COVERED" and row.get("Result Status") in {"PASS", "REVIEW"})
-    if not stress_rows:
-        stress_status = "NOT_RUN"
-        stress_summary = "static stress window calendar를 읽지 못했습니다."
-    elif any(row.get("Result Status") == "REVIEW" for row in stress_rows if row.get("Coverage") == "COVERED"):
-        stress_status = "REVIEW"
-        stress_summary = f"stress window {computed_stress_count}개를 계산했고, 일부 구간에서 drawdown review가 필요합니다."
-    elif computed_stress_count > 0:
-        stress_status = "PASS"
-        stress_summary = f"stress window {computed_stress_count}개를 계산했고 즉시 review 수준의 drawdown은 감지되지 않았습니다."
-    elif covered_stress_count > 0:
-        stress_status = "REVIEW"
-        stress_summary = f"백테스트 기간에 포함된 stress window {covered_stress_count}개가 있어 구간 replay가 필요합니다."
-    else:
-        stress_status = "NOT_RUN"
-        stress_summary = "현재 source 기간에 포함된 static stress window가 없어 별도 stress 결과가 없습니다."
+    stress_interpretation = _stress_interpretation_result(
+        stress_rows,
+        provider_macro=provider_macro,
+        asset_exposure=asset_exposure,
+    )
+    covered_stress_count = int(stress_interpretation.get("covered_count") or 0)
+    computed_stress_count = int(stress_interpretation.get("computed_count") or 0)
+    stress_status = str(stress_interpretation.get("status") or "NOT_RUN")
+    stress_summary = str(stress_interpretation.get("summary") or "stress interpretation을 생성하지 못했습니다.")
     diagnostics.append(
         _domain_result(
             domain="stress_scenario_diagnostics",
             title="7. Stress / Scenario Diagnostics",
             status=stress_status,
             origin="new_diagnostic",
-            key_metric=f"{covered_stress_count} covered windows",
+            key_metric=f"{computed_stress_count}/{covered_stress_count} computed stress windows",
             summary=stress_summary,
-            evidence_rows=stress_rows,
-            limitations=["현재 단계는 이벤트 구간 coverage 확인까지이며, 구간별 수익률/MDD replay는 후속 계산입니다."],
-            next_action="covered window가 있으면 해당 구간의 후보 대비 benchmark 성과를 계산합니다.",
+            metrics=stress_interpretation,
+            evidence_rows=list(stress_interpretation.get("rows") or []) + stress_rows,
+            limitations=[
+                "Compact monthly curve만 있으면 짧은 stress window는 NOT_RUN으로 남을 수 있습니다.",
+                "Daily runtime replay가 연결된 window만 구간 return / MDD / benchmark spread를 계산합니다.",
+            ],
+            next_action=(
+                "NOT_RUN covered window가 있으면 최신 DB 기준 실제 전략 replay를 실행해 stress evidence를 보강합니다."
+                if stress_interpretation.get("uncomputed_count")
+                else "REVIEW trigger가 있으면 해당 stress scenario의 component / macro / exposure 원인을 Final Review에서 확인합니다."
+            ),
         )
     )
 
@@ -2356,41 +2639,42 @@ def build_practical_validation_result(
         component_curves=list(curve_context.get("component_curves") or []),
         portfolio_curve=portfolio_curve,
     )
-    sensitivity_status_values = {str(row.get("Result Status") or "NOT_RUN") for row in sensitivity_rows}
+    sensitivity_interpretation = _sensitivity_interpretation_result(
+        sensitivity_rows,
+        overfit_audit=overfit_audit,
+        rolling_evidence=rolling_evidence,
+    )
     robustness_status = (
         "REVIEW"
-        if overfit_audit.get("status") == "REVIEW" or "REVIEW" in sensitivity_status_values or rolling_evidence.get("status") == "REVIEW"
+        if str(sensitivity_interpretation.get("status") or "NOT_RUN") == "REVIEW"
         else "PASS"
-        if "PASS" in sensitivity_status_values or rolling_evidence.get("status") == "PASS"
+        if str(sensitivity_interpretation.get("status") or "NOT_RUN") == "PASS"
         else "NOT_RUN"
     )
-    robustness_summary = (
-        overfit_audit.get("interpretation")
-        if overfit_audit.get("status") == "REVIEW"
-        else (
-            "curve 기반 sensitivity에서 REVIEW 항목이 있습니다. "
-            "window / drop-one / 비중 perturbation은 계산했고, 전략별 parameter sensitivity는 별도 runtime 실행이 필요합니다."
-        )
-        if "REVIEW" in sensitivity_status_values
-        else (
-            "window / drop-one / 비중 sensitivity를 curve 기반으로 계산했습니다. "
-            "전략별 parameter sensitivity는 별도 runtime 실행이 필요합니다."
-        )
-        if robustness_status == "PASS"
-        else "sensitivity 실행에 필요한 curve가 부족해 계산하지 못했습니다."
-    )
+    robustness_summary = str(sensitivity_interpretation.get("summary") or "sensitivity interpretation을 생성하지 못했습니다.")
     diagnostics.append(
         _domain_result(
             domain="robustness_sensitivity_overfit",
             title="11. Robustness / Sensitivity / Overfit",
             status=robustness_status,
             origin="new_diagnostic",
-            key_metric=f"local trials {overfit_audit.get('trial_count', 0)}",
+            key_metric=(
+                f"computed {sensitivity_interpretation.get('computed_count', 0)} / "
+                f"runtime follow-up {sensitivity_interpretation.get('runtime_followup_count', 0)}"
+            ),
             summary=str(robustness_summary),
-            metrics={**overfit_audit, "rolling_validation": dict(rolling_evidence.get("metrics") or {})},
-            evidence_rows=list(rolling_evidence.get("rows") or []) + sensitivity_rows,
+            metrics={
+                **overfit_audit,
+                "rolling_validation": dict(rolling_evidence.get("metrics") or {}),
+                "sensitivity_interpretation": sensitivity_interpretation,
+            },
+            evidence_rows=list(sensitivity_interpretation.get("rows") or []) + list(rolling_evidence.get("rows") or []) + sensitivity_rows,
             limitations=["run_history 원본은 저장하지 않고 local audit summary만 결과 row에 남깁니다. Curve proxy일 수 있습니다."],
-            next_action="후속 구현에서 weight +/-5%p, drop-one, window perturbation을 실제 재계산합니다.",
+            next_action=(
+                "REVIEW 항목은 Final Review에서 선택 근거와 monitoring trigger로 남기고, strategy-specific runtime은 후속 구현으로 보강합니다."
+                if robustness_status == "REVIEW"
+                else "strategy-specific runtime perturbation은 별도 후속으로 남기되, 현재 curve 기반 민감도는 계속 추적합니다."
+            ),
         )
     )
 
@@ -2587,6 +2871,8 @@ def build_practical_validation_result(
             },
         },
         "component_rows": component_rows,
+        "stress_interpretation": stress_interpretation,
+        "sensitivity_interpretation": sensitivity_interpretation,
         "robustness_validation": {
             "robustness_route": "READY_FOR_STRESS_SWEEP" if not hard_blockers else "BLOCKED_FOR_ROBUSTNESS",
             "robustness_score": validation_score if not hard_blockers else 0.0,
@@ -2595,6 +2881,8 @@ def build_practical_validation_result(
             "blockers": list(hard_blockers),
             "component_rows": component_rows,
             "stress_summary_rows": stress_rows + sensitivity_rows,
+            "stress_interpretation": stress_interpretation,
+            "sensitivity_interpretation": sensitivity_interpretation,
             "overfit_audit": overfit_audit,
             "sensitivity_rows": sensitivity_rows,
             "rolling_validation": rolling_evidence,

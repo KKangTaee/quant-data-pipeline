@@ -3792,3 +3792,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - 같은 ETF에 official partial row와 DB bridge row가 함께 있으면 빈 field를 병합해 판단하고, evidence source를 `invesco + db_bridge`처럼 표시하게 했다.
   - saved mix 기준으로 `QQQ`는 official expense ratio와 DB bridge AUM / ADV / spread를 합쳐 PASS, `XLU`는 0.00% spread를 정상 인식해 PASS로 바뀌었다.
   - Robustness / Sensitivity는 window perturbation을 curve 기반으로 계산하고, summary 문구를 "일부 계산 완료 / strategy-specific runtime은 별도 실행 필요"로 분리했다.
+- Practical Validation V2 P2-6 stress / sensitivity interpretation 구현:
+  - Stress / Scenario Diagnostics가 covered stress window와 실제 계산 완료 window를 분리해, compact monthly curve 때문에 daily replay가 필요한 구간을 `REVIEW` trigger로 표시하게 했다.
+  - Stress interpretation row에 worst computed MDD, benchmark spread, return shock, 현재 macro / exposure lens를 추가했다.
+  - Robustness / Sensitivity는 rolling / window / component dependency / weight tilt / strategy runtime follow-up을 별도 interpretation row로 요약하게 했다.
+  - Practical Validation과 Final Review의 Robustness summary에서 Stress / Sensitivity Interpretation tab을 읽을 수 있게 했다.
