@@ -4856,3 +4856,15 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Quarterly contract와 Global Relative Strength smoke 문서는 현재 코드 이해와 회귀 검증에 가치가 있으므로 유지하되, phase 번호 파일명이 아니라 기능 중심 파일명으로 정리한다
 - Follow-up:
   - `candidates/point_in_time/` 구조를 제거하고, weighted portfolio replay 검증과 validation smoke report를 내용 중심 이름으로 마이그레이션했다
+
+### 2026-05-12 - data_architecture 문서는 삭제가 아니라 docs/data로 정식 승격한다
+- User request:
+  - 사용자가 backtest report 정리 이후 `data_architecture` 폴더도 현재 문서 체계에 맞춰 어떻게 마이그레이션할지 검토하고 진행해 달라고 요청함
+- Interpreted goal:
+  - archive를 늘리지 않고, 현재에도 유효한 데이터 / DB 의미 문서를 새 장기 지식 구조인 `.note/finance/docs/data/`로 흡수해야 함
+- Analysis result:
+  - `DATA_FLOW_MAP`, `DB_SCHEMA_MAP`, `TABLE_SEMANTICS`, `DATA_QUALITY_AND_PIT_NOTES`는 모두 현재 Practical Validation P2 provider / DB / loader 구조와 맞는 핵심 문서라 삭제 대상이 아니다
+  - 기존 `data_architecture/` 루트 폴더를 유지하면 `docs/data/`와 canonical 위치가 갈라지므로, 상세 문서 4개를 이름 그대로 `docs/data/`로 옮기는 것이 맞다
+  - `docs/data/README.md`는 단순 table 목록이 아니라 읽는 순서, source-of-truth, 갱신 조건을 함께 가진 data 문서 index가 되어야 한다
+- Follow-up:
+  - 기존 `.note/finance/data_architecture/` 폴더를 제거하고, data 문서 canonical 위치를 `.note/finance/docs/data/`로 갱신했다

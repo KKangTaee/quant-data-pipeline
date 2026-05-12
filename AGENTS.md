@@ -36,8 +36,9 @@
 8. backtest report 작업이면 `.note/finance/reports/backtests/INDEX.md`
 9. 반복 이슈가 의심되면 `.note/finance/agent/GOTCHAS.md`
 
-마이그레이션이 끝나기 전까지 기존 `.note/finance/code_analysis/`, `data_architecture/`, `operations/`, `research/`, root markdown 문서는 legacy reference로만 본다.
+마이그레이션이 끝나기 전까지 기존 `.note/finance/code_analysis/`, `operations/`, `research/`, root markdown 문서는 legacy reference로만 본다.
 새 작업 기록과 새 장기 지식은 새 구조에 작성한다.
+데이터 / DB 의미의 canonical 위치는 `.note/finance/docs/data/`다.
 
 ## Work Modes
 

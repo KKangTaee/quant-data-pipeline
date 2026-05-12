@@ -25,4 +25,4 @@ daily market update 운영 같은 문서를 둔다.
 - 루트 `.note/finance/`에는 상위 지도, 활성 로그, 템플릿만 둔다.
 - 운영성 문서는 이 폴더로 모은다.
 - 코드 수정 흐름은 `../code_analysis/`를 우선한다.
-- DB / data 의미는 `../data_architecture/`를 우선한다.
+- DB / data 의미는 `../docs/data/`를 우선한다.

@@ -406,7 +406,7 @@ official provider / API / CSV / XLSX / yfinance fallback
 | `app/web/runtime/portfolio_selection_v2.py` | validation schema optional field 보강 |
 | `.note/finance/code_analysis/DATA_DB_PIPELINE_FLOW.md` | 새 DB / loader flow가 생기면 갱신 |
 | `.note/finance/code_analysis/WEB_BACKTEST_UI_FLOW.md` | Practical Validation 표시 흐름이 바뀌면 갱신 |
-| `.note/finance/data_architecture/*` | 새 table 의미 / source boundary / PIT 한계 갱신 |
+| `.note/finance/docs/data/*` | 새 table 의미 / source boundary / PIT 한계 갱신 |
 
 ## 구현 순서
 

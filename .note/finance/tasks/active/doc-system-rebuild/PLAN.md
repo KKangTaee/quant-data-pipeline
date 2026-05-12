@@ -183,7 +183,7 @@ Notion 가이드에서 적용할 원칙:
 
 - `.note/finance/archive/`
 - `.note/finance/code_analysis/`
-- `.note/finance/data_architecture/`
+- `.note/finance/data_architecture/` -> `.note/finance/docs/data/`로 마이그레이션 후 제거
 - `.note/finance/operations/`
 - `.note/finance/research/`
 - `.note/finance/support_tracks/`

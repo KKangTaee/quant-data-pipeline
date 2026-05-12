@@ -3803,3 +3803,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - weighted portfolio baseline / weight alternative / saved replay 근거는 `validation/runtime/WEIGHTED_PORTFOLIO_REPLAY_VALIDATION.md`로 내용 중심 재작성했다.
   - validation smoke report 파일명은 phase 번호 대신 `QUARTERLY_CONTRACT_RUNTIME_SMOKE`, `GLOBAL_RELATIVE_STRENGTH_RUNTIME_SMOKE`, `GLOBAL_RELATIVE_STRENGTH_UI_REPLAY_SMOKE`로 정리했다.
   - backtest report README / INDEX / migration / validation README를 새 구조에 맞춰 갱신했다.
+- Data architecture 문서 docs/data 마이그레이션:
+  - 기존 `.note/finance/data_architecture/`의 `DATA_FLOW_MAP`, `DB_SCHEMA_MAP`, `TABLE_SEMANTICS`, `DATA_QUALITY_AND_PIT_NOTES`를 `.note/finance/docs/data/`로 이동했다.
+  - `docs/data/README.md`를 데이터 문서 입구로 확장해 읽는 순서, DB 그룹, JSONL boundary, 갱신 기준을 합쳤다.
+  - `AGENTS.md`, `FINANCE_COMPREHENSIVE_ANALYSIS.md`, `FINANCE_DOC_INDEX.md`, phase / operations README, Practical Validation P2 계획의 data 문서 경로를 새 canonical 위치로 갱신했다.
+  - 기존 `.note/finance/data_architecture/` 폴더는 제거했다.

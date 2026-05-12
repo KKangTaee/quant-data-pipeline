@@ -11,7 +11,7 @@ Last Updated: 2026-05-12
 |---|---|---|
 | root current-state docs | `FINANCE_COMPREHENSIVE_ANALYSIS.md`, `FINANCE_DOC_INDEX.md`, `MASTER_PHASE_ROADMAP.md` | 핵심만 새 `docs/`로 재작성 |
 | code flow docs | `code_analysis/*` | 세부 문서는 삭제 후보. 핵심 entrypoint만 `docs/PROJECT_MAP.md`로 승격 |
-| data architecture docs | `data_architecture/*` | 핵심 DB boundary만 `docs/data/README.md`로 승격 |
+| data architecture docs | `docs/data/*` | 기존 `data_architecture/*` 상세 문서를 `docs/data/`로 흡수 |
 | operations guides | `operations/*` | 필요한 운영 경계만 `docs/runbooks/README.md`와 `PROJECT_MAP.md`에 축약 |
 | research docs | `research/*` | 당장 필요한 Practical Validation 개념만 승격. 상세 research는 삭제 후보 |
 | backtest reports | `backtest_reports/*` | 삭제가 아니라 `.note/finance/reports/backtests/`로 이관. phase별 원본은 legacy archive에서 후속 분류 |
@@ -32,6 +32,7 @@ Last Updated: 2026-05-12
 - legacy report 중 개발 검증 성격이 분명한 `phase23`, `phase24`는 먼저 `validation/`으로 흡수한다.
 - legacy `phase13`~`phase18`은 원본성 전략 탐색 report로 보고 `runs/2026/strategy_search/`에 둔다.
 - legacy `phase21`~`phase22`는 runtime validation과 point-in-time candidate evidence로 나눠 둔다.
+- legacy `data_architecture/`는 archive를 만들지 않고 `docs/data/`로 전체 마이그레이션했다.
 
 ## Open Questions
 
