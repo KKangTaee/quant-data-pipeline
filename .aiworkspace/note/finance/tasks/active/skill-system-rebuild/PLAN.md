@@ -18,7 +18,7 @@ Last Updated: 2026-05-13
 | 1차 | stale 문서 경로 보정, legacy phase skill 제거 | completed |
 | 2차 | workflow / domain skill 책임 재정의 | completed |
 | 3차 | SKILL.md 슬림화와 references 분리 | completed |
-| 4차 | validation, plugin placeholder 정리, 실제 trigger 점검 | pending |
+| 4차 | validation, plugin placeholder 정리, 실제 trigger 점검 | completed |
 
 ## 종료 조건
 

@@ -167,3 +167,70 @@ Additional checks:
 
 - 6개 활성 finance skill repo-local source와 global mirror `diff -qr` 일치
 - `.aiworkspace/plugins/quant-finance-workflow/.codex-plugin/plugin.json` JSON parse 성공
+
+## 4차 plugin placeholder / trigger path validation
+
+Actions:
+
+- `.aiworkspace/plugins/quant-finance-workflow/.codex-plugin/plugin.json`에서 공개 배포용 placeholder와 존재하지 않는 component 참조를 제거했다.
+- `.agents/plugins/marketplace.json`의 `quant-finance-workflow` source path를 `./.aiworkspace/plugins/quant-finance-workflow`로 보정했다.
+- repo-local plugin source는 7개 skill을 보관하고, global runtime mirror는 활성 6개 finance skill을 보관하는 구조로 확정했다.
+
+Validation:
+
+```bash
+python3 -m json.tool .aiworkspace/plugins/quant-finance-workflow/.codex-plugin/plugin.json >/dev/null
+python3 -m json.tool .agents/plugins/marketplace.json >/dev/null
+```
+
+Result:
+
+- plugin manifest와 marketplace JSON parse 성공.
+
+```bash
+python3 - <<'PY'
+import json
+from pathlib import Path
+root = Path(".")
+market = json.loads(Path(".agents/plugins/marketplace.json").read_text())
+entry = next(p for p in market["plugins"] if p["name"] == "quant-finance-workflow")
+plugin_root = root / entry["source"]["path"]
+manifest = json.loads((plugin_root / ".codex-plugin/plugin.json").read_text())
+skills = sorted(p.parent.name for p in (plugin_root / manifest["skills"]).glob("*/SKILL.md"))
+print(entry["source"]["path"])
+print(manifest["name"])
+print(len(skills))
+PY
+```
+
+Result:
+
+- marketplace path: `./.aiworkspace/plugins/quant-finance-workflow`
+- manifest name: `quant-finance-workflow`
+- plugin source skill count: `7`
+
+```bash
+for d in .aiworkspace/plugins/quant-finance-workflow/skills/finance-*; do
+  .venv/bin/python /Users/taeho/.codex/skills/.system/skill-creator/scripts/quick_validate.py "$d" || exit 1
+done
+```
+
+Result:
+
+- repo-local 7개 finance skill 모두 `Skill is valid!`
+
+```bash
+for d in /Users/taeho/.codex/skills/finance-*; do
+  .venv/bin/python /Users/taeho/.codex/skills/.system/skill-creator/scripts/quick_validate.py "$d" || exit 1
+done
+```
+
+Result:
+
+- global mirror 6개 finance skill 모두 `Skill is valid!`
+
+Additional checks:
+
+- 활성 6개 finance skill repo-local source와 global mirror `diff -qr` 일치
+- placeholder grep 출력 없음
+- `git diff --check` 출력 없음

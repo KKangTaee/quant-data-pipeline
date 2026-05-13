@@ -33,3 +33,11 @@ Last Updated: 2026-05-13
 - 3차에서는 plugin을 완전히 publish-ready로 만들지는 않았다. 남은 placeholder와 실제 trigger 검증은 4차 범위다.
 - AI workspace 이동 이후에는 repo-local plugin에만 남아 있는 skill도 함께 점검해야 한다. `finance-backtest-candidate-refinement`는 현재 runtime mirror에는 설치하지 않지만, repo-local source에 남아 있는 한 stale phase wording을 유지하면 다음 plugin 정리 때 혼선을 만든다.
 - candidate refinement skill은 phase raw report 중심이 아니라 registry-backed candidate state, strategy hub/log, backtest report, root handoff log를 연결하는 bounded refinement skill로 해석한다.
+
+## 4차 판단
+
+- `quant-finance-workflow` plugin은 공개 배포용 package가 아니라 repo-local AI workspace bundle이다.
+- 따라서 존재하지 않는 homepage / repository / icon / screenshots / hooks / MCP / app placeholder를 유지하지 않는다. 실제 존재하는 `skills/`와 helper `scripts/`를 설명하는 manifest만 둔다.
+- `plugin-creator`의 기본 marketplace convention은 `./plugins/<plugin-name>`이지만, 이 프로젝트는 사용자가 `.aiworkspace/plugins/`를 canonical 위치로 확정했다. 그래서 `.agents/plugins/marketplace.json`은 실제 존재하는 `./.aiworkspace/plugins/quant-finance-workflow`를 가리키게 한다.
+- 현재 Codex runtime은 global `~/.codex/skills/finance-*` mirror 6개를 읽고, repo-local plugin source는 7개 skill을 보관한다. `finance-backtest-candidate-refinement`는 plugin source에 남겨두되 현재 runtime mirror에는 설치하지 않는다.
+- 현재 세션에서 skill inventory 자체를 새로고침할 수는 없으므로, trigger 점검은 global mirror metadata 확인과 `quick_validate.py`, marketplace path 검증으로 판단한다.

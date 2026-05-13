@@ -1,47 +1,35 @@
 {
   "name": "quant-finance-workflow",
   "version": "0.1.0",
-  "description": "Repo-local workflow and implementation skill bundle for the finance workspace in quant-data-pipeline.",
+  "description": "Repo-local Codex skill and helper script bundle for the finance workspace in quant-data-pipeline.",
   "author": {
-    "name": "Local Draft",
-    "email": "[TODO: author@example.com]",
-    "url": "[TODO: https://github.com/author]"
+    "name": "Quant Data Pipeline Workspace"
   },
-  "homepage": "[TODO: https://docs.example.com/plugin]",
-  "repository": "[TODO: https://github.com/author/plugin]",
-  "license": "[TODO: MIT]",
+  "license": "UNLICENSED",
   "keywords": [
     "finance",
-    "backtest"
+    "backtest",
+    "quant",
+    "codex",
+    "workflow"
   ],
   "skills": "./skills/",
-  "hooks": "[TODO: ./hooks.json]",
-  "mcpServers": "[TODO: ./.mcp.json]",
-  "apps": "[TODO: ./.app.json]",
   "interface": {
     "displayName": "Quant Finance Workflow",
-    "shortDescription": "Repo-local finance workflow and implementation skills",
-    "longDescription": "Draft local plugin that packages finance task management, Backtest UI, DB pipeline, factor, strategy, documentation sync, and candidate-refinement skills for quant-data-pipeline.",
-    "developerName": "Local Draft",
+    "shortDescription": "Finance workspace skills and helper scripts",
+    "longDescription": "Repo-local plugin bundle for finance task management, Backtest UI work, DB ingestion, factor generation, strategy implementation, candidate refinement, and documentation sync in quant-data-pipeline.",
+    "developerName": "Quant Data Pipeline Workspace",
     "category": "Productivity",
     "capabilities": [
+      "Read",
       "Write"
     ],
-    "websiteURL": "[TODO: https://openai.com/]",
-    "privacyPolicyURL": "[TODO: https://openai.com/policies/row-privacy-policy/]",
-    "termsOfServiceURL": "[TODO: https://openai.com/policies/row-terms-of-use/]",
     "defaultPrompt": [
-      "Classify and manage a finance task in this repo.",
-      "Update a finance Backtest UI, DB pipeline, factor, or strategy workflow.",
-      "Sync finance documentation after an implementation or analysis unit."
+      "Classify a finance task and open the right docs.",
+      "Update a finance workflow with the right skill.",
+      "Sync finance docs after implementation."
     ],
     "brandColor": "#0F766E",
-    "composerIcon": "[TODO: ./assets/icon.png]",
-    "logo": "[TODO: ./assets/logo.png]",
-    "screenshots": [
-      "[TODO: ./assets/screenshot1.png]",
-      "[TODO: ./assets/screenshot2.png]",
-      "[TODO: ./assets/screenshot3.png]"
-    ]
+    "screenshots": []
   }
 }

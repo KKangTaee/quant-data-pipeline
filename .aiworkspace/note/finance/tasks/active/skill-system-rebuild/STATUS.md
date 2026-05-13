@@ -1,11 +1,11 @@
 # STATUS - Skill System Rebuild
 
-Status: Active
+Status: Complete
 Last Updated: 2026-05-13
 
 ## Current Status
 
-3차 SKILL.md 슬림화와 references 분리를 완료했다.
+4차 plugin placeholder 정리와 trigger / install 경로 점검까지 완료했다.
 
 AI workspace 이동 후 3차 산출물을 다시 점검했고, repo-local plugin 안에 남아 있던 `finance-backtest-candidate-refinement`도 새 `reports/backtests` / `tasks/active` 구조에 맞게 보정했다.
 
@@ -24,7 +24,10 @@ AI workspace 이동 후 3차 산출물을 다시 점검했고, repo-local plugin
 - global `~/.codex/skills/finance-*`는 repo-local source와 동기화한 설치본으로 갱신했다
 - repo-local `finance-backtest-candidate-refinement`의 오래된 phase report 중심 표현을 registry-backed candidate evidence / strategy log / backtest report 중심으로 수정했다
 - 7개 repo-local skill의 `agents/openai.yaml` default prompt가 `$skill-name`을 명시하도록 정리했다
+- `.aiworkspace/plugins/quant-finance-workflow/.codex-plugin/plugin.json`의 TODO placeholder와 존재하지 않는 hooks / MCP / app / asset 참조를 제거했다
+- `.agents/plugins/marketplace.json`의 plugin source path를 실제 위치인 `./.aiworkspace/plugins/quant-finance-workflow`로 보정했다
+- repo-local plugin source 7개 skill, global mirror 6개 skill, marketplace path, manifest JSON을 검증했다
 
 ## Next
 
-- 4차: plugin placeholder 정리와 실제 trigger 점검
+- Skill System Rebuild는 완료. 다음 작업은 Practical Validation V2 P2 closeout 또는 P3 진입 여부 결정이다.

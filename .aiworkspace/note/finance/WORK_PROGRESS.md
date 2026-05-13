@@ -3862,3 +3862,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - repo-local `finance-backtest-candidate-refinement` skill에 남아 있던 old phase report 중심 표현을 새 `reports/backtests` / registry-backed candidate evidence 흐름으로 정리했다.
   - 7개 repo-local finance skill의 `agents/openai.yaml` default prompt를 `$skill-name` 명시 방식으로 보정했다.
   - 활성 6개 finance skill mirror를 다시 동기화했고, 다음 작업은 4차 plugin placeholder / trigger 점검이다.
+- Skill System Rebuild 4차 완료:
+  - `quant-finance-workflow` plugin manifest에서 TODO placeholder와 없는 hooks / MCP / app / asset 참조를 제거했다.
+  - `.agents/plugins/marketplace.json`이 실제 plugin root인 `./.aiworkspace/plugins/quant-finance-workflow`를 가리키도록 수정했다.
+  - repo-local 7개 skill, global mirror 6개 skill, marketplace path, manifest JSON 검증을 완료했다.

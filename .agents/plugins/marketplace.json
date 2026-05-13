@@ -8,7 +8,7 @@
       "name": "quant-finance-workflow",
       "source": {
         "source": "local",
-        "path": "./plugins/quant-finance-workflow"
+        "path": "./.aiworkspace/plugins/quant-finance-workflow"
       },
       "policy": {
         "installation": "AVAILABLE",
