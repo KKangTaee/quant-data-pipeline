@@ -4951,3 +4951,14 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 기존 skill들은 역할 자체는 유효하지만 legacy root 문서, `code_analysis`, `data_architecture`, `backtest_reports`, `phase<N>` 경로를 참조하고 있어 1차 보정이 필요했다
 - Follow-up:
   - 1차에서 domain skill과 doc-sync skill의 문서 경로를 새 구조로 보정하고, `finance-phase-management`를 삭제했다
+
+### 2026-05-13 - Skill System Rebuild 2차 workflow / domain 경계
+- User request:
+  - 사용자가 skill 개편 2차 작업 진행을 요청함
+- Interpreted goal:
+  - task 운영과 실제 코드 구현 skill을 분리해, Codex가 새 docs / tasks 구조에서 일관되게 작업을 시작하도록 해야 함
+- Analysis result:
+  - `finance-doc-sync`에 task lifecycle까지 맡기면 작업 시작/진행과 closeout alignment가 섞이므로 별도 workflow skill이 필요하다
+  - 새 `finance-task-management`가 task 분류, active task 문서, root handoff log, domain skill routing을 맡고, Backtest UI / DB / factor / strategy skill은 구현 도메인만 맡는 구조가 적절하다
+- Follow-up:
+  - `finance-task-management`를 생성하고 기존 finance skill description / boundary와 `AGENTS.md` skill routing을 새 구조에 맞춰 보정했다

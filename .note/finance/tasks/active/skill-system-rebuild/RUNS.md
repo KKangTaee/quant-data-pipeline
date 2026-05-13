@@ -47,3 +47,44 @@ Result:
 
 - 5개 finance skill 모두 `Skill is valid!`
 - system Python은 `yaml` module이 없어 실패했으므로 repo `.venv/bin/python`으로 검증했다.
+
+## 2차 skill creation
+
+Command:
+
+```bash
+.venv/bin/python /Users/taeho/.codex/skills/.system/skill-creator/scripts/init_skill.py finance-task-management --path /Users/taeho/.codex/skills --interface display_name="Finance Task Management" --interface short_description="Classify finance requests and manage active task documents." --interface default_prompt="Classify this finance request and update the right active task documents."
+```
+
+Result:
+
+- `/Users/taeho/.codex/skills/finance-task-management/` 생성
+- `SKILL.md`와 `agents/openai.yaml` 생성 후 `SKILL.md`를 새 workflow 기준으로 재작성
+
+## 2차 skill validation
+
+Command:
+
+```bash
+for d in /Users/taeho/.codex/skills/finance-task-management \
+  /Users/taeho/.codex/skills/finance-backtest-web-workflow \
+  /Users/taeho/.codex/skills/finance-db-pipeline \
+  /Users/taeho/.codex/skills/finance-doc-sync \
+  /Users/taeho/.codex/skills/finance-factor-pipeline \
+  /Users/taeho/.codex/skills/finance-strategy-implementation; do
+  .venv/bin/python /Users/taeho/.codex/skills/.system/skill-creator/scripts/quick_validate.py "$d" || exit 1
+done
+```
+
+Result:
+
+- 6개 finance skill 모두 `Skill is valid!`
+
+Additional checks:
+
+- `rg --files /Users/taeho/.codex/skills | rg '/finance-[^/]+/SKILL\\.md$' | sort`
+  - `finance-task-management` 포함 6개 finance skill 확인
+- `rg -n "finance-phase-management|phase<N>|phases/phase|FINANCE_COMPREHENSIVE_ANALYSIS|FINANCE_DOC_INDEX|MASTER_PHASE_ROADMAP|FINANCE_TERM_GLOSSARY|code_analysis|data_architecture|backtest_reports" /Users/taeho/.codex/skills/finance-* AGENTS.md`
+  - 출력 없음
+- `git diff --check`
+  - 출력 없음

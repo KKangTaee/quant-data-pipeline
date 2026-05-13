@@ -43,6 +43,19 @@ legacy `operations/`, `research/`, `support_tracks/`, `archive/`, root current-s
 
 ## Work Modes
 
+### Skill Routing
+
+가능한 local Codex skill이 있으면 아래처럼 좁은 역할부터 적용한다.
+
+- 작업 분류, active task 생성/갱신, root handoff log 운영: `finance-task-management`
+- Backtest Streamlit UI, Candidate Review, Final Review, runtime JSONL helper: `finance-backtest-web-workflow`
+- ingestion, DB schema, UPSERT, loader/provider connector: `finance-db-pipeline`
+- factor generation, accounting-to-factor, PIT factor assumption: `finance-factor-pipeline`
+- strategy, transform, engine, performance, sample: `finance-strategy-implementation`
+- 구현 후 문서 alignment, index/roadmap/root log final sync: `finance-doc-sync`
+
+`finance-task-management`는 구현 skill이 아니다. 코드 변경은 위 domain skill 중 하나가 소유하고, `finance-doc-sync`는 작업 말미의 정렬용으로 사용한다.
+
 ### Main Phase Work
 
 Main phase work는 여러 task를 묶는 상위 방향, 설계, 통합을 관리한다.

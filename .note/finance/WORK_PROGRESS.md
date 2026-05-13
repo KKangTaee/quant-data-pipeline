@@ -3846,3 +3846,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.note/finance/tasks/active/skill-system-rebuild/`를 열고 stale skill path 보정 작업을 기록했다.
   - `finance-backtest-web-workflow`, `finance-db-pipeline`, `finance-factor-pipeline`, `finance-strategy-implementation`, `finance-doc-sync`가 새 `.note/finance/docs/` 구조를 참조하도록 수정했다.
   - legacy `finance-phase-management` skill은 삭제했고, roadmap에 skill rebuild active track을 추가했다.
+- Skill System Rebuild 2차:
+  - 새 `finance-task-management` skill을 만들어 task 분류, active task 운영, root handoff log 관리를 담당하게 했다.
+  - Backtest UI / DB / factor / strategy skill은 domain implementation skill로 경계를 보정하고, `finance-doc-sync`는 closeout alignment skill로 좁혔다.
+  - `AGENTS.md`와 skill-system-rebuild task 문서에 skill routing 기준과 검증 결과를 기록했다.
