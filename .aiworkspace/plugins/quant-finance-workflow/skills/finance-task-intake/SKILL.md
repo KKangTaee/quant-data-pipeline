@@ -30,6 +30,7 @@ For detailed task document rules, read `references/task-document-contract.md`.
 | Focused multi-step task | use or create `.aiworkspace/note/finance/tasks/active/<task-id>/` |
 | Major roadmap/product work | use an active task first; open a phase only when the user explicitly wants phase management |
 | Product direction research, benchmark research, feature opportunity synthesis | use or create `.aiworkspace/note/finance/researches/active/<research-id>/`; use task docs only for changing the research workflow or skills |
+| End-to-end product direction research run or research bundle validation | route to `finance-product-research-workflow` |
 | Product research iteration review or skill hardening after a research run | use or create `.aiworkspace/note/finance/tasks/active/<task-id>/`; do not put skill/workflow changes inside the research bundle |
 | Code implementation | pair with the matching domain implementation skill |
 | Documentation alignment after implementation | route to `finance-doc-sync` |
@@ -47,6 +48,7 @@ For detailed task document rules, read `references/task-document-contract.md`.
 - Product audit before roadmap planning: `finance-product-audit`
 - External benchmark and trend research: `finance-benchmark-research`
 - Feature candidate synthesis and prioritization: `finance-feature-opportunity`
+- End-to-end product research orchestration and bundle validation: `finance-product-research-workflow`
 
 If more than one domain is involved, state the boundary first and keep edits scoped to owning files.
 

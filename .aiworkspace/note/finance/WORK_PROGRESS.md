@@ -3910,3 +3910,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `Backtest Result / Strategy Report` 제품화 주제로 `.aiworkspace/note/finance/researches/active/2026-05-backtest-report-productization/` 리서치 번들을 작성했다.
   - 현행 `reports/backtests`, Streamlit result display, run history, validation/final review replay 구조를 audit했다.
   - QuantConnect, QuantRocket, TradingView, QuantStats/pyfolio, NautilusTrader 패턴을 바탕으로 `BacktestReportPack + Markdown draft generator`를 다음 구현 후보로 추천했다.
+- Product Research 5단계 plugin workflow hardening:
+  - `.aiworkspace/note/finance/tasks/active/product-research-plugin-stage5/`에서 product research workflow를 plugin 수준으로 고정했다.
+  - `finance-product-research-workflow` orchestration skill과 research bundle bootstrap/check helper script를 추가했다.
+  - 기존 두 active research bundle 검증, skill quick validation, plugin JSON validation, mirror sync를 완료했다.

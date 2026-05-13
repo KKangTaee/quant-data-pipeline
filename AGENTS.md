@@ -61,12 +61,14 @@ legacy `operations/`, `research/`, `support_tracks/`, `archive/`, root current-s
 
 제품 방향 research skill:
 
+- 제품 방향 리서치 전체 실행 / bundle 생성 / 검증: `finance-product-research-workflow`
 - 현재 제품 기능 / 구조 / 약점 분석: `finance-product-audit`
 - 유사 서비스 / 트렌드 / UI 패턴 조사: `finance-benchmark-research`
 - 리서치 결과 기반 기능 후보 / 근거 / 우선순위 정리: `finance-feature-opportunity`
 
 제품 방향 리서치의 본문 산출물은 `.aiworkspace/note/finance/researches/active/<research-id>/`에 둔다.
 리서치 workflow 자체를 만들거나 수정한 실행 기록은 `.aiworkspace/note/finance/tasks/active/<task>/`에 둔다.
+새 리서치 bundle 생성 또는 검증은 `.aiworkspace/plugins/quant-finance-workflow/scripts/bootstrap_product_research_bundle.py`, `check_product_research_bundle.py`를 사용할 수 있다.
 
 구현 domain skill:
 

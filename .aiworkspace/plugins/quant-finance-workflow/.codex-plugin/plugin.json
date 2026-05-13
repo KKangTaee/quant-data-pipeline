@@ -1,7 +1,7 @@
 {
   "name": "quant-finance-workflow",
   "version": "0.1.0",
-  "description": "Repo-local Codex workflow, research, and implementation skill bundle for the finance workspace in quant-data-pipeline.",
+  "description": "Repo-local Codex workflow, product research, and implementation skill bundle for the finance workspace in quant-data-pipeline.",
   "author": {
     "name": "Quant Data Pipeline Workspace"
   },
@@ -19,7 +19,7 @@
   "interface": {
     "displayName": "Quant Finance Workflow",
     "shortDescription": "Finance workspace research and implementation skills",
-    "longDescription": "Repo-local plugin bundle for finance task intake, product direction research, benchmark research, feature opportunity synthesis, documentation sync, integration review, runbook maintenance, Backtest UI work, DB ingestion, factor generation, and strategy implementation in quant-data-pipeline.",
+    "longDescription": "Repo-local plugin bundle for finance task intake, product direction research orchestration, benchmark research, feature opportunity synthesis, documentation sync, integration review, runbook maintenance, Backtest UI work, DB ingestion, factor generation, and strategy implementation in quant-data-pipeline.",
     "developerName": "Quant Data Pipeline Workspace",
     "category": "Productivity",
     "capabilities": [
@@ -28,6 +28,7 @@
     ],
     "defaultPrompt": [
       "Classify a finance request and choose the right skill.",
+      "Create and validate a finance product research bundle.",
       "Audit the finance product and identify sourced feature opportunities.",
       "Review a finance integration or merge result.",
       "Sync finance docs after implementation."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Finance Product Research Workflow"
+  short_description: "Run product research bundles."
+  default_prompt: "Use $finance-product-research-workflow to create, run, validate, or harden a finance product direction research bundle."

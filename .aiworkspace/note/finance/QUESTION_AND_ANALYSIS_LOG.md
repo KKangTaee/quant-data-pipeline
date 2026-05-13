@@ -5064,3 +5064,14 @@ Detailed historical analysis was archived on `2026-04-13`.
   - QuantConnect, QuantRocket, TradingView, QuantStats/pyfolio, NautilusTrader 패턴상 결과 화면, raw data, durable report를 분리하는 것이 적절하다
 - Follow-up:
   - 다음 구현 후보는 `BacktestReportPack + Markdown report draft generator`이며, 상세 근거는 `.aiworkspace/note/finance/researches/active/2026-05-backtest-report-productization/RECOMMENDATION.md`에 정리했다
+
+### 2026-05-14 - Product research 5단계는 plugin workflow로 고정한다
+- User request:
+  - 사용자가 지금까지의 리포트와 리서치가 플러그인을 만들기 위한 준비였다고 정리하고, 5단계 진행을 요청함
+- Interpreted goal:
+  - 새 리서치를 더 쓰는 것이 아니라, 검증된 product research 흐름을 기존 `quant-finance-workflow` plugin 안에서 반복 가능한 workflow로 만들어야 함
+- Analysis result:
+  - 별도 product research plugin 분리는 아직 이르며, 먼저 orchestration skill과 research bundle helper script를 기존 plugin에 넣는 것이 안전하다
+  - actual research body는 계속 `researches/active/<research-id>/`, workflow/script/skill 변경 기록은 `tasks/active/product-research-plugin-stage5/`에 둔다
+- Follow-up:
+  - `finance-product-research-workflow`, `bootstrap_product_research_bundle.py`, `check_product_research_bundle.py`를 추가했고 다음 반복 run부터 이 경로를 사용한다

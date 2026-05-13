@@ -14,6 +14,7 @@
       docs/                  # 장기 프로젝트 지식
       tasks/                 # active / done task 기록
       phases/                # phase 단위 통합 계획
+      researches/            # 제품 방향 리서치 산출물
       reports/               # 사람이 읽는 report
       agent/                 # Codex 운영 팁 / gotchas
       registries/            # workflow JSONL registry
@@ -48,6 +49,7 @@
 | `note/finance/docs/` | 오래 유지될 제품 / 구조 / 데이터 / 흐름 / runbook 문서 |
 | `note/finance/tasks/active/` | 현재 실행 중인 task의 계획, 상태, 실행 결과, 리스크 |
 | `note/finance/phases/active/` | 여러 task를 묶는 phase 단위 방향과 통합 기록 |
+| `note/finance/researches/active/` | 제품 방향, 벤치마킹, 기능 후보 리서치 산출물 |
 | `note/finance/reports/backtests/` | backtest 결과 report, 전략 hub, validation report |
 | `note/finance/agent/` | 반복 실수, 운영 팁, Codex 작업 gotcha |
 | `note/finance/registries/` | 제품 workflow가 읽고 쓰는 append-only JSONL registry |
@@ -68,9 +70,18 @@
 | Skill | 역할 |
 |---|---|
 | `finance-task-intake` | 요청을 분류하고 읽을 문서, active task 위치, 담당 skill을 결정 |
+| `finance-product-research-workflow` | 제품 방향 리서치 bundle 생성, 실행 순서 조정, output contract 검증 |
 | `finance-doc-sync` | 구현 / 분석 후 durable docs, index, roadmap, root logs 정렬 |
 | `finance-integration-review` | merge conflict, worktree 통합, sub 결과 통합, staged diff 검토 |
 | `finance-runbook-maintainer` | 반복 명령 / 운영 절차 / helper script 사용법을 runbook으로 정리 |
+
+### Product Research Skills
+
+| Skill | 역할 |
+|---|---|
+| `finance-product-audit` | 현재 제품 기능, 구조, 약점, surface boundary 분석 |
+| `finance-benchmark-research` | 유사 서비스, framework/API/UI 패턴, source evidence 조사 |
+| `finance-feature-opportunity` | 리서치 결과를 기능 후보, 우선순위, 추천안으로 합성 |
 
 ### Domain Skills
 
