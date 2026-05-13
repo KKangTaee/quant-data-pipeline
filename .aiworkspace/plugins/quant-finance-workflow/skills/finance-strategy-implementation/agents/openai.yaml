@@ -1,4 +1,4 @@
 interface:
   display_name: "Finance Strategy Implementation"
-  short_description: "Implement finance strategies, transforms, engine paths, and samples."
-  default_prompt: "Implement or update a finance strategy while preserving runtime and reporting contracts."
+  short_description: "Implement finance strategies and runtime paths."
+  default_prompt: "Use $finance-strategy-implementation to implement or update a finance strategy while preserving runtime contracts."

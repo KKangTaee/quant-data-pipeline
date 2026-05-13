@@ -3858,3 +3858,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.note/finance`와 `plugins/quant-finance-workflow`를 `.aiworkspace/note/finance`, `.aiworkspace/plugins/quant-finance-workflow` canonical 구조로 이동했다.
   - 코드 / 문서 / skill의 주요 경로를 새 AI workspace 기준으로 갱신하고 `.aiworkspace/README.md`를 추가했다.
   - run history의 기존 로컬 수정은 새 위치에 unstaged artifact로 보존한다.
+- Skill System Rebuild 3차 post-migration 보강:
+  - repo-local `finance-backtest-candidate-refinement` skill에 남아 있던 old phase report 중심 표현을 새 `reports/backtests` / registry-backed candidate evidence 흐름으로 정리했다.
+  - 7개 repo-local finance skill의 `agents/openai.yaml` default prompt를 `$skill-name` 명시 방식으로 보정했다.
+  - 활성 6개 finance skill mirror를 다시 동기화했고, 다음 작업은 4차 plugin placeholder / trigger 점검이다.

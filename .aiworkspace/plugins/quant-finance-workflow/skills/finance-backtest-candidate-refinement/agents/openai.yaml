@@ -1,4 +1,4 @@
 interface:
   display_name: "Finance Backtest Candidate Refinement"
-  short_description: "Bounded candidate refinement and documentation workflow"
-  default_prompt: "Use the finance backtest refinement workflow for this repo."
+  short_description: "Bounded candidate refinement and evidence sync."
+  default_prompt: "Use $finance-backtest-candidate-refinement to refine an existing finance backtest candidate and sync its evidence."

@@ -7,6 +7,8 @@ Last Updated: 2026-05-13
 
 3차 SKILL.md 슬림화와 references 분리를 완료했다.
 
+AI workspace 이동 후 3차 산출물을 다시 점검했고, repo-local plugin 안에 남아 있던 `finance-backtest-candidate-refinement`도 새 `reports/backtests` / `tasks/active` 구조에 맞게 보정했다.
+
 완료:
 
 - `finance-backtest-web-workflow`의 first-read 경로를 새 `docs/PROJECT_MAP`, `docs/architecture`, `docs/flows` 기준으로 변경
@@ -20,6 +22,8 @@ Last Updated: 2026-05-13
 - repo-local `.aiworkspace/plugins/quant-finance-workflow/skills/`를 finance skill 원본 위치로 정했다
 - 6개 finance skill을 repo-local source로 추가하고 `SKILL.md` / `references/` 구조로 분리했다
 - global `~/.codex/skills/finance-*`는 repo-local source와 동기화한 설치본으로 갱신했다
+- repo-local `finance-backtest-candidate-refinement`의 오래된 phase report 중심 표현을 registry-backed candidate evidence / strategy log / backtest report 중심으로 수정했다
+- 7개 repo-local skill의 `agents/openai.yaml` default prompt가 `$skill-name`을 명시하도록 정리했다
 
 ## Next
 

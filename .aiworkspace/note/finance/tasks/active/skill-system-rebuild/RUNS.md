@@ -131,3 +131,39 @@ Result:
 - `.aiworkspace/plugins/quant-finance-workflow/.codex-plugin/plugin.json` JSON parse 성공
 - stale legacy path grep 출력 없음
 - `git diff --check` 출력 없음
+
+## 3차 post-migration hardening
+
+Actions:
+
+- Repo-local `finance-backtest-candidate-refinement`를 새 `.aiworkspace` 문서 체계에 맞게 다시 정리했다.
+- 오래된 `phase report + active phase TODO` 중심 표현을 제거하고, `registry-backed candidate evidence`, strategy hub/log, backtest report, root handoff log 중심으로 수정했다.
+- 7개 repo-local skill의 `agents/openai.yaml` default prompt가 `$skill-name`을 명시하도록 정리했다.
+- 활성 6개 finance skill은 repo-local source에서 global `~/.codex/skills/finance-*` mirror로 다시 동기화했다.
+
+Validation:
+
+```bash
+for d in .aiworkspace/plugins/quant-finance-workflow/skills/finance-*; do
+  .venv/bin/python /Users/taeho/.codex/skills/.system/skill-creator/scripts/quick_validate.py "$d" || exit 1
+done
+```
+
+Result:
+
+- repo-local 7개 finance skill 모두 `Skill is valid!`
+
+```bash
+for d in /Users/taeho/.codex/skills/finance-*; do
+  .venv/bin/python /Users/taeho/.codex/skills/.system/skill-creator/scripts/quick_validate.py "$d" || exit 1
+done
+```
+
+Result:
+
+- global mirror 6개 finance skill 모두 `Skill is valid!`
+
+Additional checks:
+
+- 6개 활성 finance skill repo-local source와 global mirror `diff -qr` 일치
+- `.aiworkspace/plugins/quant-finance-workflow/.codex-plugin/plugin.json` JSON parse 성공

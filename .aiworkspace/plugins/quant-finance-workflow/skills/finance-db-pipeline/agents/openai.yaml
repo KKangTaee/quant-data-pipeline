@@ -1,4 +1,4 @@
 interface:
   display_name: "Finance DB Pipeline"
-  short_description: "Build finance ingestion, schema, loaders, and persistence flows."
-  default_prompt: "Update the finance ingestion or DB pipeline with idempotent writes and clear source boundaries."
+  short_description: "Build finance ingestion and DB persistence."
+  default_prompt: "Use $finance-db-pipeline to update finance ingestion or DB persistence with clear source boundaries."

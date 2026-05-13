@@ -31,3 +31,5 @@ Last Updated: 2026-05-13
 - 따라서 repo-local `.aiworkspace/plugins/quant-finance-workflow/skills/`를 원본으로 두고, `~/.codex/skills/finance-*`는 설치본처럼 동기화하는 구조가 맞다.
 - `SKILL.md`는 Codex가 처음 읽는 entry point라 짧아야 하며, domain rule과 긴 ownership 목록은 `references/`로 보내는 것이 맞다.
 - 3차에서는 plugin을 완전히 publish-ready로 만들지는 않았다. 남은 placeholder와 실제 trigger 검증은 4차 범위다.
+- AI workspace 이동 이후에는 repo-local plugin에만 남아 있는 skill도 함께 점검해야 한다. `finance-backtest-candidate-refinement`는 현재 runtime mirror에는 설치하지 않지만, repo-local source에 남아 있는 한 stale phase wording을 유지하면 다음 plugin 정리 때 혼선을 만든다.
+- candidate refinement skill은 phase raw report 중심이 아니라 registry-backed candidate state, strategy hub/log, backtest report, root handoff log를 연결하는 bounded refinement skill로 해석한다.
