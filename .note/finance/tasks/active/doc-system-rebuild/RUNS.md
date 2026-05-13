@@ -135,3 +135,19 @@ Result:
 - Portfolio Selection redesign guide는 현재 구현 기준의 `docs/flows/PORTFOLIO_SELECTION_FLOW.md`로 재작성
 - legacy refinement guide는 `docs/architecture/BACKTEST_RUNTIME_FLOW.md`에 핵심 해석만 흡수
 - 기존 `.note/finance/code_analysis/` 폴더 제거
+
+## 2026-05-13 - Reference / Glossary App Path Check
+
+Command:
+
+```bash
+rg -n "Path|read_text|open\(|\.md|REFERENCE|DOCUMENT|render_reference|st\.markdown" app/web/reference_guides.py
+rg -n "read_text|open\(|Path\(" app/web | sort
+```
+
+Result:
+
+- `Reference > Guides`는 md 본문을 읽지 않고 `app/web/reference_guides.py` 안의 guide text와 문서 경로 목록을 렌더링하는 구조로 확인
+- `Reference > Glossary`는 `GLOSSARY_DOC_PATH.read_text()`로 glossary md를 실제 읽는 구조로 확인
+- 삭제 전 안전장치로 `Guides` 문서 경로 목록을 새 `.note/finance/docs/` 기준으로 전환
+- 기존 root glossary 본문을 `.note/finance/docs/GLOSSARY.md`로 승격하고, `Reference > Glossary` 읽기 경로를 새 문서로 전환

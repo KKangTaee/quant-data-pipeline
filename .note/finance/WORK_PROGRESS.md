@@ -3818,3 +3818,8 @@ Detailed historical logs were archived on `2026-04-13`.
   - `docs/data/README.md`를 데이터 문서 입구로 확장해 읽는 순서, DB 그룹, JSONL boundary, 갱신 기준을 합쳤다.
   - `AGENTS.md`, `FINANCE_COMPREHENSIVE_ANALYSIS.md`, `FINANCE_DOC_INDEX.md`, phase / operations README, Practical Validation P2 계획의 data 문서 경로를 새 canonical 위치로 갱신했다.
   - 기존 `.note/finance/data_architecture/` 폴더는 제거했다.
+- Documentation System Rebuild Reference / Glossary 1차 안전장치:
+  - `Reference > Guides`가 md 본문을 읽는 구조가 아니라 `app/web/reference_guides.py`의 guide text와 문서 경로 목록을 렌더링하는 구조임을 확인했다.
+  - `Reference > Glossary`는 실제 md를 읽는 화면이므로 기존 root glossary 본문을 `.note/finance/docs/GLOSSARY.md`로 승격하고 앱 읽기 경로를 새 docs 구조로 바꿨다.
+  - `Reference > Guides`의 old root / operations / phase36 / code_analysis 문서 경로를 새 `.note/finance/docs/` 문서 경로로 교체했다.
+  - 삭제 전 1차 안전장치만 완료했으며, 남은 legacy root / operations / research / support 문서의 흡수 여부 판단은 다음 단계로 남겼다.

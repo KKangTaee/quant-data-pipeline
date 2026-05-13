@@ -61,7 +61,7 @@ from finance.loaders import load_statement_coverage_summary, load_statement_timi
 JobResult = dict[str, Any]
 LOG_DIR = PROJECT_ROOT / "logs"
 CSV_DIR = PROJECT_ROOT / "csv"
-GLOSSARY_DOC_PATH = PROJECT_ROOT / ".note" / "finance" / "FINANCE_TERM_GLOSSARY.md"
+GLOSSARY_DOC_PATH = PROJECT_ROOT / ".note" / "finance" / "docs" / "GLOSSARY.md"
 GLOSSARY_META_SECTION_TITLES = {"목적", "사용 원칙"}
 APP_RUNTIME_LOADED_AT = datetime.now()
 
@@ -2773,7 +2773,7 @@ def _render_glossary_page() -> None:
 
     meta_sections, term_sections = _load_glossary_sections()
     if not term_sections and not meta_sections:
-        st.error("`FINANCE_TERM_GLOSSARY.md`를 읽지 못했습니다. 문서 경로를 먼저 확인해 주세요.")
+        st.error("`.note/finance/docs/GLOSSARY.md`를 읽지 못했습니다. 문서 경로를 먼저 확인해 주세요.")
         st.code(str(GLOSSARY_DOC_PATH), language="text")
         return
 
@@ -2797,7 +2797,7 @@ def _render_glossary_page() -> None:
         metric_cols[0].metric("총 용어 수", len(term_sections))
         metric_cols[1].metric("검색 결과", len(matched_sections))
         metric_cols[2].metric("검색 범위", "제목+본문" if search_body else "제목만")
-        st.caption("source: `.note/finance/FINANCE_TERM_GLOSSARY.md`")
+        st.caption("source: `.note/finance/docs/GLOSSARY.md`")
 
     if meta_sections:
         with st.expander("이 reference를 어떻게 읽으면 되나", expanded=False):

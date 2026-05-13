@@ -364,53 +364,53 @@ def _storage_rows() -> list[dict[str, str]]:
 def _document_reference_rows() -> list[dict[str, str]]:
     return [
         {
-            "상황": "현재 finance 전체 구조를 잡고 싶을 때",
-            "문서": ".note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md",
-            "역할": "finance package의 현재 제품 표면, data / strategy / review layer 요약",
+            "상황": "현재 제품 방향과 만들지 않을 범위를 확인할 때",
+            "문서": ".note/finance/docs/PRODUCT_DIRECTION.md",
+            "역할": "finance console의 제품 목표, 핵심 원칙, no-live-trading 경계",
         },
         {
-            "상황": "과거 walkthrough 실습 맥락을 참고할 때",
-            "문서": ".note/finance/operations/BACKTEST_1_TO_11_WALKTHROUGH_SESSION.md",
-            "역할": "초기 1~11 실습 세션의 질문 / 후보 예시 / Guide 보조 기능 기록",
+            "상황": "현재 finance 전체 구조를 잡고 싶을 때",
+            "문서": ".note/finance/docs/PROJECT_MAP.md",
+            "역할": "finance package의 현재 제품 표면, 주요 entrypoint, data / strategy / review layer 요약",
+        },
+        {
+            "상황": "후보 생성부터 선정 후 관찰까지 사용자 흐름을 볼 때",
+            "문서": ".note/finance/docs/flows/PORTFOLIO_SELECTION_FLOW.md",
+            "역할": "Backtest Analysis -> Practical Validation -> Final Review -> Selected Dashboard 흐름과 stage ownership",
         },
         {
             "상황": "Backtest 화면이 어떤 순서로 동작하는지 볼 때",
-            "문서": ".note/finance/code_analysis/WEB_BACKTEST_UI_FLOW.md",
-            "역할": "Backtest Analysis / Practical Validation / Final Review V2 UI 흐름",
+            "문서": ".note/finance/docs/flows/BACKTEST_UI_FLOW.md",
+            "역할": "Backtest Analysis / Practical Validation / Final Review / Operations 보조 화면 흐름",
         },
         {
-            "상황": "legacy 포트폴리오 초안 저장소를 이해할 때",
-            "문서": ".note/finance/operations/PORTFOLIO_PROPOSAL_REGISTRY_GUIDE.md",
-            "역할": "기존 portfolio proposal draft가 무엇이고 Clean V2와 어떻게 구분되는지 설명",
+            "상황": "저장소, JSONL, DB, generated artifact 경계를 확인할 때",
+            "문서": ".note/finance/docs/data/README.md",
+            "역할": "registry / saved / run history / provider snapshot의 보존 경계와 데이터 의미",
         },
         {
-            "상황": "과거 paper tracking ledger 기록을 해석할 때",
-            "문서": ".note/finance/operations/PAPER_PORTFOLIO_TRACKING_LEDGER_GUIDE.md",
-            "역할": "Phase33 ledger의 호환성 / 관찰 기록 의미 설명",
-        },
-        {
-            "상황": "최종 판단 기록을 확인할 때",
-            "문서": ".note/finance/operations/FINAL_PORTFOLIO_SELECTION_DECISIONS_GUIDE.md",
-            "역할": "Final Review에서 저장한 선정 / 보류 / 거절 / 재검토 판단 기록 사용법. 현재 dashboard는 V2 decision을 우선 읽습니다.",
+            "상황": "로컬 실행, 검증 명령, 커밋 hygiene를 확인할 때",
+            "문서": ".note/finance/docs/runbooks/README.md",
+            "역할": "Streamlit 실행, focused check, generated artifact 제외 기준",
         },
         {
             "상황": "최종 선정 포트폴리오 운영 대시보드를 확인할 때",
-            "문서": ".note/finance/phases/phase36/PHASE36_FINAL_SELECTED_PORTFOLIO_MONITORING_AND_REBALANCE_OPERATIONS_PLAN.md",
-            "역할": "Operations > Selected Portfolio Dashboard가 Final Review selected row를 read-only로 읽는 방식 설명",
+            "문서": ".note/finance/docs/flows/PORTFOLIO_SELECTION_FLOW.md",
+            "역할": "Selected Portfolio Dashboard가 Final Review selected row를 read-only로 읽는 운영 경계",
         },
         {
             "상황": "용어가 헷갈릴 때",
-            "문서": ".note/finance/FINANCE_TERM_GLOSSARY.md",
+            "문서": ".note/finance/docs/GLOSSARY.md",
             "역할": "Real-Money, Pre-Live, Candidate Registry 같은 반복 용어 설명",
         },
         {
             "상황": "프로젝트의 큰 phase 위치를 확인할 때",
-            "문서": ".note/finance/MASTER_PHASE_ROADMAP.md",
+            "문서": ".note/finance/docs/ROADMAP.md",
             "역할": "전체 phase 흐름, 현재 방향, 이후 작업 축",
         },
         {
             "상황": "최신 문서 목록을 훑고 싶을 때",
-            "문서": ".note/finance/FINANCE_DOC_INDEX.md",
+            "문서": ".note/finance/docs/INDEX.md",
             "역할": "finance 문서의 상위 index",
         },
     ]
@@ -481,16 +481,16 @@ def _runtime_artifact_rows() -> list[dict[str, str]]:
 
 def _reference_path_lines() -> list[str]:
     return [
-        ".note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md",
-        ".note/finance/FINANCE_DOC_INDEX.md",
-        ".note/finance/MASTER_PHASE_ROADMAP.md",
-        ".note/finance/FINANCE_TERM_GLOSSARY.md",
-        ".note/finance/operations/BACKTEST_1_TO_11_WALKTHROUGH_SESSION.md",
-        ".note/finance/operations/PORTFOLIO_PROPOSAL_REGISTRY_GUIDE.md",
-        ".note/finance/operations/PAPER_PORTFOLIO_TRACKING_LEDGER_GUIDE.md",
-        ".note/finance/operations/FINAL_PORTFOLIO_SELECTION_DECISIONS_GUIDE.md",
-        ".note/finance/phases/phase36/PHASE36_FINAL_SELECTED_PORTFOLIO_MONITORING_AND_REBALANCE_OPERATIONS_PLAN.md",
-        ".note/finance/code_analysis/WEB_BACKTEST_UI_FLOW.md",
+        ".note/finance/docs/INDEX.md",
+        ".note/finance/docs/PRODUCT_DIRECTION.md",
+        ".note/finance/docs/ROADMAP.md",
+        ".note/finance/docs/PROJECT_MAP.md",
+        ".note/finance/docs/GLOSSARY.md",
+        ".note/finance/docs/architecture/SCRIPT_STRUCTURE_MAP.md",
+        ".note/finance/docs/flows/BACKTEST_UI_FLOW.md",
+        ".note/finance/docs/flows/PORTFOLIO_SELECTION_FLOW.md",
+        ".note/finance/docs/data/README.md",
+        ".note/finance/docs/runbooks/README.md",
         ".note/finance/registries/PORTFOLIO_SELECTION_SOURCES.jsonl",
         ".note/finance/registries/PRACTICAL_VALIDATION_RESULTS.jsonl",
         ".note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl",
@@ -505,8 +505,6 @@ def _reference_path_lines() -> list[str]:
         ".note/finance/run_history/BACKTEST_RUN_HISTORY.jsonl",
         ".note/finance/run_history/WEB_APP_RUN_HISTORY.jsonl",
         ".note/finance/saved/SAVED_PORTFOLIOS.jsonl",
-        ".note/finance/WORK_PROGRESS.md",
-        ".note/finance/QUESTION_AND_ANALYSIS_LOG.md",
     ]
 
 

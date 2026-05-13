@@ -4880,3 +4880,15 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `docs/data/README.md`는 단순 table 목록이 아니라 읽는 순서, source-of-truth, 갱신 조건을 함께 가진 data 문서 index가 되어야 한다
 - Follow-up:
   - 기존 `.note/finance/data_architecture/` 폴더를 제거하고, data 문서 canonical 위치를 `.note/finance/docs/data/`로 갱신했다
+
+### 2026-05-13 - Reference / Guides와 Glossary의 문서 의존성 확인
+- User request:
+  - 사용자가 문서 삭제 전 `Reference > Guides` 화면이 운영 정책 md 파일을 읽는 구조인지 확인하고, 실제 의존 문서는 삭제하지 말아야 한다고 요청함
+- Interpreted goal:
+  - 앱에서 직접 읽는 문서와 화면에 참고 경로로만 노출되는 문서를 구분해, legacy 문서 삭제 전에 끊기는 reference를 없애야 함
+- Analysis result:
+  - `Reference > Guides`는 md 본문을 읽지 않고 `app/web/reference_guides.py` 안의 hardcoded guide text와 문서 경로 목록을 렌더링한다
+  - `Reference > Glossary`는 `GLOSSARY_DOC_PATH.read_text()`로 glossary md를 실제 읽는다
+  - 따라서 Guides 경로 목록은 새 docs 기준으로 바꾸고, Glossary는 새 `.note/finance/docs/GLOSSARY.md`에 본문을 승격한 뒤 코드 읽기 경로를 바꾸는 것이 맞다
+- Follow-up:
+  - 1차 작업에서 Guides reference path와 Glossary read path를 새 docs 구조로 전환했다
