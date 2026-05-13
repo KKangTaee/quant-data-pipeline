@@ -6,13 +6,13 @@
 
 문서 역할은 아래처럼 구분한다.
 
-- `.note/finance/docs/`: 오래 유지될 프로젝트 지식
-- `.note/finance/phases/`: Main worktree가 관리하는 phase 단위 계획과 통합 기록
-- `.note/finance/tasks/`: 개별 실행 task의 계획, 진행 상태, 실행 결과
-- `.note/finance/agent/`: 반복 실수, 교훈, Codex 운영 팁
-- `.note/finance/reports/backtests/`: 사람이 읽는 backtest report, 전략 hub, 후보 근거, validation report
-- `.note/finance/registries/`: 제품 workflow가 읽고 쓰는 append-only JSONL registry
-- `.note/finance/saved/`: 사용자가 저장한 reusable portfolio setup
+- `.aiworkspace/note/finance/docs/`: 오래 유지될 프로젝트 지식
+- `.aiworkspace/note/finance/phases/`: Main worktree가 관리하는 phase 단위 계획과 통합 기록
+- `.aiworkspace/note/finance/tasks/`: 개별 실행 task의 계획, 진행 상태, 실행 결과
+- `.aiworkspace/note/finance/agent/`: 반복 실수, 교훈, Codex 운영 팁
+- `.aiworkspace/note/finance/reports/backtests/`: 사람이 읽는 backtest report, 전략 hub, 후보 근거, validation report
+- `.aiworkspace/note/finance/registries/`: 제품 workflow가 읽고 쓰는 append-only JSONL registry
+- `.aiworkspace/note/finance/saved/`: 사용자가 저장한 reusable portfolio setup
 
 ## Scope
 
@@ -26,20 +26,20 @@
 
 작업 시작 시 먼저 아래를 확인한다.
 
-1. `.note/finance/docs/INDEX.md`
-2. `.note/finance/docs/ROADMAP.md`
-3. `.note/finance/docs/PROJECT_MAP.md`
-4. 필요한 경우 `.note/finance/docs/GLOSSARY.md`
-5. 작업 성격에 맞는 `.note/finance/docs/architecture/`, `flows/`, `data/`, `runbooks/`
-6. 관련 active phase가 있으면 `.note/finance/phases/active/<phase>/`
-7. 관련 active task가 있으면 `.note/finance/tasks/active/<task>/`
-8. backtest report 작업이면 `.note/finance/reports/backtests/INDEX.md`
-9. 반복 이슈가 의심되면 `.note/finance/agent/GOTCHAS.md`
+1. `.aiworkspace/note/finance/docs/INDEX.md`
+2. `.aiworkspace/note/finance/docs/ROADMAP.md`
+3. `.aiworkspace/note/finance/docs/PROJECT_MAP.md`
+4. 필요한 경우 `.aiworkspace/note/finance/docs/GLOSSARY.md`
+5. 작업 성격에 맞는 `.aiworkspace/note/finance/docs/architecture/`, `flows/`, `data/`, `runbooks/`
+6. 관련 active phase가 있으면 `.aiworkspace/note/finance/phases/active/<phase>/`
+7. 관련 active task가 있으면 `.aiworkspace/note/finance/tasks/active/<task>/`
+8. backtest report 작업이면 `.aiworkspace/note/finance/reports/backtests/INDEX.md`
+9. 반복 이슈가 의심되면 `.aiworkspace/note/finance/agent/GOTCHAS.md`
 
 legacy `operations/`, `research/`, `support_tracks/`, `archive/`, root current-state markdown 문서는 새 구조로 흡수 후 제거했다.
 새 작업 기록과 새 장기 지식은 새 구조에 작성한다.
-데이터 / DB 의미의 canonical 위치는 `.note/finance/docs/data/`다.
-코드 구조와 실행 흐름의 canonical 위치는 `.note/finance/docs/architecture/`, 사용자 / 화면 흐름의 canonical 위치는 `.note/finance/docs/flows/`, 실행 절차의 canonical 위치는 `.note/finance/docs/runbooks/`다.
+데이터 / DB 의미의 canonical 위치는 `.aiworkspace/note/finance/docs/data/`다.
+코드 구조와 실행 흐름의 canonical 위치는 `.aiworkspace/note/finance/docs/architecture/`, 사용자 / 화면 흐름의 canonical 위치는 `.aiworkspace/note/finance/docs/flows/`, 실행 절차의 canonical 위치는 `.aiworkspace/note/finance/docs/runbooks/`다.
 
 ## Work Modes
 
@@ -47,7 +47,7 @@ legacy `operations/`, `research/`, `support_tracks/`, `archive/`, root current-s
 
 가능한 local Codex skill이 있으면 아래처럼 좁은 역할부터 적용한다.
 
-프로젝트 전용 finance skill의 원본은 `plugins/quant-finance-workflow/skills/`에 둔다. `~/.codex/skills/finance-*`는 현재 Codex runtime에서 읽는 설치본 / mirror로 취급한다.
+프로젝트 전용 finance skill의 원본은 `.aiworkspace/plugins/quant-finance-workflow/skills/`에 둔다. `~/.codex/skills/finance-*`는 현재 Codex runtime에서 읽는 설치본 / mirror로 취급한다.
 
 - 작업 분류, active task 생성/갱신, root handoff log 운영: `finance-task-management`
 - Backtest Streamlit UI, Candidate Review, Final Review, runtime JSONL helper: `finance-backtest-web-workflow`
@@ -65,7 +65,7 @@ Main phase work는 여러 task를 묶는 상위 방향, 설계, 통합을 관리
 위치:
 
 ```text
-.note/finance/phases/active/<phase-name>/
+.aiworkspace/note/finance/phases/active/<phase-name>/
   PLAN.md
   DESIGN.md
   TASKS.md
@@ -89,7 +89,7 @@ Task work는 실제 구현, 조사, 문서 정리, QA를 수행하는 실행 단
 위치:
 
 ```text
-.note/finance/tasks/active/<task-name>/
+.aiworkspace/note/finance/tasks/active/<task-name>/
   PLAN.md
   DESIGN.md
   STATUS.md
@@ -113,7 +113,7 @@ Task work는 실제 구현, 조사, 문서 정리, QA를 수행하는 실행 단
 
 ## Root Handoff Logs
 
-- `.note/finance/WORK_PROGRESS.md`와 `.note/finance/QUESTION_AND_ANALYSIS_LOG.md`는 root handoff log로 유지한다.
+- `.aiworkspace/note/finance/WORK_PROGRESS.md`와 `.aiworkspace/note/finance/QUESTION_AND_ANALYSIS_LOG.md`는 root handoff log로 유지한다.
 - root log는 작업 현장 기록이 아니라 지도 역할을 한다. 작업 단위당 3~5줄의 핵심 milestone / decision / handoff만 남긴다.
 - 상세 구현 과정, 긴 분석, 명령 출력, 시행착오, 중간 판단은 active task의 `STATUS.md`, `NOTES.md`, `RUNS.md`, `RISKS.md`로 보낸다.
 - `WORK_PROGRESS.md`에는 무엇을 끝냈는지와 다음에 어디를 보면 되는지만 남긴다.
@@ -122,7 +122,7 @@ Task work는 실제 구현, 조사, 문서 정리, QA를 수행하는 실행 단
 
 ## Code Work Rules
 
-- 코드 수정 전에는 `.note/finance/docs/PROJECT_MAP.md`에서 소유 파일과 경계를 확인한다.
+- 코드 수정 전에는 `.aiworkspace/note/finance/docs/PROJECT_MAP.md`에서 소유 파일과 경계를 확인한다.
 - Backtest / Streamlit UI 변경은 `app/web/pages/backtest.py`와 관련 `app/web/backtest_*.py` 소유 경계를 먼저 확인한다.
 - DB / ingestion 변경은 `finance/data/db/schema.py`와 관련 `finance/data/*`, `finance/loaders/*`를 먼저 확인한다.
 - Strategy 변경은 기존 분리를 따른다.
@@ -145,10 +145,10 @@ Task work는 실제 구현, 조사, 문서 정리, QA를 수행하는 실행 단
 
 ## Registry And Artifact Rules
 
-- `.note/finance/registries/*.jsonl`은 workflow registry다. 명시 요청 없이 재작성하거나 정리하지 않는다.
-- `.note/finance/saved/*.jsonl`은 사용자 저장 setup이다. 문서 정리 과정에서 삭제하지 않는다.
-- `.note/finance/reports/backtests/`는 사람이 읽는 결과/근거 문서다. registry / saved source-of-truth를 대체하지 않는다.
-- 새 backtest report는 phase 폴더가 아니라 `.note/finance/reports/backtests/runs/YYYY/`부터 시작한다.
+- `.aiworkspace/note/finance/registries/*.jsonl`은 workflow registry다. 명시 요청 없이 재작성하거나 정리하지 않는다.
+- `.aiworkspace/note/finance/saved/*.jsonl`은 사용자 저장 setup이다. 문서 정리 과정에서 삭제하지 않는다.
+- `.aiworkspace/note/finance/reports/backtests/`는 사람이 읽는 결과/근거 문서다. registry / saved source-of-truth를 대체하지 않는다.
+- 새 backtest report는 phase 폴더가 아니라 `.aiworkspace/note/finance/reports/backtests/runs/YYYY/`부터 시작한다.
 - `run_history/*.jsonl`, `run_artifacts/`, temp CSV, notebook scratch, `.DS_Store`, `.playwright-mcp/`는 generated / local artifact로 보고 명시 요청 없이는 커밋하지 않는다.
 - 문서 체계 정리에서도 `registries/`와 `saved/`는 보존한다.
 
@@ -176,7 +176,7 @@ UX / workflow / stage 구조 변경 전에는 다음을 설명한다.
 git status --short
 git diff --check
 .venv/bin/python -m py_compile app/web/backtest_practical_validation.py
-find .note/finance -maxdepth 3 -type f | sort
+find .aiworkspace/note/finance -maxdepth 3 -type f | sort
 ```
 
 실행하지 못한 검증은 최종 응답에 이유와 함께 남긴다.

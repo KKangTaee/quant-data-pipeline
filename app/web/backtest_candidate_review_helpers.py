@@ -695,7 +695,7 @@ def _build_pre_live_draft_from_current_candidate(
         "recorded_at": datetime.now().isoformat(timespec="seconds"),
         "record_status": "active",
         "source_kind": "current_candidate_registry",
-        "source_ref": ".note/finance/registries/CURRENT_CANDIDATE_REGISTRY.jsonl",
+        "source_ref": ".aiworkspace/note/finance/registries/CURRENT_CANDIDATE_REGISTRY.jsonl",
         "source_candidate_registry_id": registry_id,
         "title": f"{row.get('title') or registry_id} - Pre-Live review",
         "strategy_or_bundle": {
@@ -1597,7 +1597,7 @@ def _build_current_candidate_registry_row_from_review_note(
         "recorded_at": datetime.now().isoformat(timespec="seconds"),
         "status": "active",
         "source_kind": "candidate_review_note_registry_append",
-        "source_ref": ".note/finance/registries/CANDIDATE_REVIEW_NOTES.jsonl",
+        "source_ref": ".aiworkspace/note/finance/registries/CANDIDATE_REVIEW_NOTES.jsonl",
         "source_review_note_id": note.get("review_note_id"),
         "registry_id": str(registry_id).strip(),
         "revision_id": f"rev_{uuid4().hex[:12]}",

@@ -20,7 +20,7 @@ MySQL 기반 데이터 수집, 전략 백테스트, 실전형 검증, 최종 포
 | Practical Validation | 데이터 신뢰도, ETF 운용성, holdings / exposure, macro, stress, sensitivity 진단 |
 | Final Review | 선정 / 보류 / 거절 / 재검토 판단과 근거 기록 |
 | Selected Portfolio Dashboard | 최종 선정된 포트폴리오를 사용자가 지정한 기간과 가상 투자금으로 재확인 |
-| 문서 / 리포트 | 장기 프로젝트 지식, backtest report, task 기록을 `.note/finance/`에 정리 |
+| 문서 / 리포트 | 장기 프로젝트 지식, backtest report, task 기록을 `.aiworkspace/note/finance/`에 정리 |
 
 ## 하지 않는 일
 
@@ -115,7 +115,7 @@ finance/
   transform.py           # signal, factor, ranking, preprocessing
   performance.py         # performance metric / summary
 
-.note/finance/
+.aiworkspace/note/finance/
   docs/                  # 장기 제품 / 구조 / 데이터 / 흐름 / runbook 문서
   tasks/active/          # active task의 계획, 상태, 실행 결과, 리스크
   phases/active/         # phase 단위 통합 계획이 필요할 때 사용
@@ -130,21 +130,21 @@ finance/
 
 | 목적 | 문서 |
 |---|---|
-| 제품 목표와 경계 확인 | `.note/finance/docs/PRODUCT_DIRECTION.md` |
-| 현재 작업과 로드맵 확인 | `.note/finance/docs/ROADMAP.md` |
-| 코드 위치와 전체 구조 확인 | `.note/finance/docs/PROJECT_MAP.md` |
-| 포트폴리오 선정 사용자 흐름 확인 | `.note/finance/docs/flows/PORTFOLIO_SELECTION_FLOW.md` |
-| Backtest UI와 화면 책임 확인 | `.note/finance/docs/flows/BACKTEST_UI_FLOW.md` |
-| 데이터 / DB 의미와 table boundary 확인 | `.note/finance/docs/data/README.md` |
-| architecture와 code-flow map 확인 | `.note/finance/docs/architecture/README.md` |
-| 실행 명령과 운영 runbook 확인 | `.note/finance/docs/runbooks/README.md` |
-| backtest report와 strategy log 확인 | `.note/finance/reports/backtests/INDEX.md` |
+| 제품 목표와 경계 확인 | `.aiworkspace/note/finance/docs/PRODUCT_DIRECTION.md` |
+| 현재 작업과 로드맵 확인 | `.aiworkspace/note/finance/docs/ROADMAP.md` |
+| 코드 위치와 전체 구조 확인 | `.aiworkspace/note/finance/docs/PROJECT_MAP.md` |
+| 포트폴리오 선정 사용자 흐름 확인 | `.aiworkspace/note/finance/docs/flows/PORTFOLIO_SELECTION_FLOW.md` |
+| Backtest UI와 화면 책임 확인 | `.aiworkspace/note/finance/docs/flows/BACKTEST_UI_FLOW.md` |
+| 데이터 / DB 의미와 table boundary 확인 | `.aiworkspace/note/finance/docs/data/README.md` |
+| architecture와 code-flow map 확인 | `.aiworkspace/note/finance/docs/architecture/README.md` |
+| 실행 명령과 운영 runbook 확인 | `.aiworkspace/note/finance/docs/runbooks/README.md` |
+| backtest report와 strategy log 확인 | `.aiworkspace/note/finance/reports/backtests/INDEX.md` |
 
 Codex / agent 작업 전에는 아래도 함께 봅니다.
 
 - `AGENTS.md`
-- `.note/finance/docs/INDEX.md`
-- `.note/finance/tasks/active/README.md`
+- `.aiworkspace/note/finance/docs/INDEX.md`
+- `.aiworkspace/note/finance/tasks/active/README.md`
 
 ## 데이터와 저장 경계
 
@@ -155,10 +155,10 @@ finance 시스템은 DB table과 JSONL record를 함께 사용합니다.
 | MySQL `finance_meta` | universe, asset profile, ETF provider snapshot, macro context | metadata / provider context의 DB source |
 | MySQL `finance_price` | OHLCV, dividend, split history | price runtime의 DB source |
 | MySQL `finance_fundamental` | fundamentals, statements, derived factors | factor workflow의 DB source |
-| `.note/finance/registries/*.jsonl` | workflow source, validation result, decision record | append-only 제품 기록. 임의 재작성 금지 |
-| `.note/finance/saved/*.jsonl` | reusable saved portfolio setup | 명시 요청 없이는 보존 |
-| `.note/finance/run_history/*.jsonl` | local execution history | 보통 커밋하지 않음 |
-| `.note/finance/run_artifacts/` | local job artifact / diagnostics | 보통 커밋하지 않음 |
+| `.aiworkspace/note/finance/registries/*.jsonl` | workflow source, validation result, decision record | append-only 제품 기록. 임의 재작성 금지 |
+| `.aiworkspace/note/finance/saved/*.jsonl` | reusable saved portfolio setup | 명시 요청 없이는 보존 |
+| `.aiworkspace/note/finance/run_history/*.jsonl` | local execution history | 보통 커밋하지 않음 |
+| `.aiworkspace/note/finance/run_artifacts/` | local job artifact / diagnostics | 보통 커밋하지 않음 |
 
 ## 개발 원칙
 
@@ -171,12 +171,12 @@ finance 시스템은 DB table과 JSONL record를 함께 사용합니다.
 
 ## 현재 개발 초점
 
-현재 finance 작업 상태는 `.note/finance/docs/ROADMAP.md`와 `.note/finance/tasks/active/`에서 확인합니다.
+현재 finance 작업 상태는 `.aiworkspace/note/finance/docs/ROADMAP.md`와 `.aiworkspace/note/finance/tasks/active/`에서 확인합니다.
 
 이 README 갱신 시점의 active 방향은 아래입니다.
 
 - Practical Validation V2 provider / macro / stress diagnostics closeout
-- `.note/finance/docs/` 기반 새 문서 체계 정착
+- `.aiworkspace/note/finance/docs/` 기반 새 문서 체계 정착
 - `Backtest Analysis -> Practical Validation -> Final Review -> Selected Portfolio Dashboard`로 이어지는 Portfolio Selection V2 흐름 정리
 
 README는 상세 진행 로그가 아니라 첫 관문 문서입니다. 최신 작업 상태는 roadmap과 active task 문서를 기준으로 봅니다.

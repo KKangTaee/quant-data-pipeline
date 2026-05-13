@@ -134,7 +134,7 @@ def render_candidate_review_workspace() -> None:
             "- `운영 기록 저장 및 Portfolio Proposal 이동`: 저장된 후보를 실제 돈 없이 어떻게 추적할지 기록하고 다음 단계 가능 여부를 확인합니다.\n"
             "- 하단 보조 도구에서는 저장된 보드, note archive, raw candidate, compare 전송을 다시 확인할 수 있습니다.\n"
             "- 이 화면은 live trading 승인이나 최종 투자 판단을 하지 않습니다.\n"
-            "- 후보 목록은 `.note/finance/registries/CURRENT_CANDIDATE_REGISTRY.jsonl`의 active row 기준입니다."
+            "- 후보 목록은 `.aiworkspace/note/finance/registries/CURRENT_CANDIDATE_REGISTRY.jsonl`의 active row 기준입니다."
         )
 
     if not rows:

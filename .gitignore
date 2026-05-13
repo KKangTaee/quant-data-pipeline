@@ -17,10 +17,12 @@ AGENTS.md
 tmp/
 logs/
 .DS_Store
-.note/finance/.DS_Store
-.note/finance/SAVED_PORTFOLIOS.jsonl
-.note/finance/backtest_artifacts/
-.note/finance/run_artifacts/
-.note/finance/phase12/_tmp_gtaa_*.csv
+.playwright-mcp/
+.aiworkspace/note/finance/.DS_Store
+.aiworkspace/note/finance/SAVED_PORTFOLIOS.jsonl
+.aiworkspace/note/finance/backtest_artifacts/
+.aiworkspace/note/finance/run_artifacts/
+.aiworkspace/note/finance/run_history/WEB_APP_RUN_HISTORY.jsonl
+.aiworkspace/note/finance/phases/active/phase12/_tmp_gtaa_*.csv
 csv/*daily_market_update_failures.csv
 test*.ipynb
