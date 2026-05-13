@@ -1,7 +1,7 @@
 # Finance Research Workspace
 
 Status: Active
-Last Verified: 2026-05-13
+Last Verified: 2026-05-14
 
 ## Purpose
 
@@ -24,6 +24,12 @@ Last Verified: 2026-05-13
     RISKS.md
   done/<research-id>/
 ```
+
+## Active Researches
+
+| Research | Focus |
+| --- | --- |
+| `active/2026-05-ui-platform-research/` | Streamlit UX/UI를 Python quant engine + API + React/Next.js product surface로 분리할지 조사 |
 
 ## Rules
 

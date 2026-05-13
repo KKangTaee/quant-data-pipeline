@@ -5032,3 +5032,14 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `finance-backtest-candidate-refinement`는 candidate-search worktree 성격과 겹치므로 phase worktree 공통 skill에서 제거하는 것이 맞다
 - Follow-up:
   - repo-local plugin과 global mirror를 4 workflow + 4 domain skill 구조로 보정하기로 했다
+
+### 2026-05-14 - Streamlit UI를 API + React/Next.js로 분리할지 조사한다
+- User request:
+  - 사용자가 현재 Streamlit UX/UI의 상용화 한계를 우려하며, Python quant engine은 유지하고 React/Next.js 등 별도 UI/API 구조를 쓰는 방향을 현재 기능/약점 분석, 유사 서비스 벤치마킹, 기능 후보/추천안까지 조사해 달라고 요청함
+- Interpreted goal:
+  - 당장 UI를 갈아엎는 결정이 아니라, product research 2단계 산출물로 현재 구조와 외부 패턴을 근거화해 다음 개발 우선순위를 정해야 함
+- Analysis result:
+  - Streamlit은 내부 research / ops console로 유지하는 것이 합리적이지만, 상용 UI 후보 화면은 API contract와 read-only Next.js pilot으로 점진 분리하는 방향이 가장 안전하다
+  - full rewrite보다 `API/service contract extraction -> Selected Portfolio Dashboard read-only pilot -> job API` 순서가 리스크 대비 학습효과가 크다
+- Follow-up:
+  - 상세 산출물은 `.aiworkspace/note/finance/researches/active/2026-05-ui-platform-research/`에 작성했다

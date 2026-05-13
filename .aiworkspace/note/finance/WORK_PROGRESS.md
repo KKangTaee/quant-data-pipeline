@@ -3897,3 +3897,8 @@ Detailed historical logs were archived on `2026-04-13`.
 - AI Workspace README 갱신:
   - `.aiworkspace/README.md`를 현재 `note/finance`와 `plugins/quant-finance-workflow` 구조 기준으로 재작성했다.
   - 4 workflow + 4 domain skill taxonomy, 읽는 순서, artifact / registry 경계, skill 검증 명령을 첫 관문 문서에 반영했다.
+- Product Research 2단계 UI platform 조사:
+  - Streamlit 기반 UX/UI를 Python quant engine + API + React/Next.js 구조로 분리할지 검토하는 active research bundle을 열었다.
+  - 현행 `app/web` 구조, Streamlit coupling, session state 사용, durable workflow docs를 audit했다.
+  - 공식 문서/제품 페이지 기준으로 Streamlit, FastAPI, Next.js, Dash, QuantConnect, QuantRocket, OpenBB, TradingView, Composer를 비교했다.
+  - 결론과 산출물은 `.aiworkspace/note/finance/researches/active/2026-05-ui-platform-research/RECOMMENDATION.md`부터 보면 된다.
