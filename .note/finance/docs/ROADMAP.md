@@ -1,13 +1,14 @@
 # Finance Roadmap
 
 Status: Active
-Last Verified: 2026-05-12
+Last Verified: 2026-05-13
 
 ## Current Work
 
 | Track | Status | Notes |
 |---|---|---|
-| Documentation System Rebuild | Active | `.note/finance/tasks/active/doc-system-rebuild/`; legacy root / operations / research / support 흡수 기준 확정, 삭제 검증 준비 중 |
+| Documentation System Rebuild | Practical closeout | `.note/finance/tasks/active/doc-system-rebuild/`; legacy root / operations / research / support / phase history 제거 완료 |
+| Skill System Rebuild | Active | `.note/finance/tasks/active/skill-system-rebuild/`; 1차 stale path 보정과 legacy phase skill 삭제 완료 |
 | Backtest Report Migration | Complete | `.note/finance/reports/backtests/`, legacy phase archive 제거 완료 |
 | Practical Validation V2 | Active | `.note/finance/tasks/active/practical-validation-v2/` |
 | Phase 36 Selected Portfolio Dashboard | Implementation complete before doc rebuild | 기존 phase 문서는 새 구조 정리 후 필요 시 `phases/done/`에 요약만 남긴다 |
@@ -52,5 +53,5 @@ P2에서 정상화하는 주요 진단:
 
 ## Next Decisions
 
-- 문서 재구성 다음 작업에서 기존 `.note/finance` 문서 tree를 삭제하고 새 구조만 남긴다.
+- Skill System Rebuild 2차에서 workflow skill과 domain implementation skill 책임을 재정의한다.
 - Practical Validation V2는 P2 QA 여부를 확인한 뒤 P3로 넘어갈지, P2를 closeout할지 결정한다.

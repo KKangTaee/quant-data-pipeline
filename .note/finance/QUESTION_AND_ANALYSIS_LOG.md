@@ -4941,3 +4941,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - root log는 지도 역할로 두고, 상세 구현 과정 / 긴 분석 / 실행 로그는 active task 문서로 보내는 기준을 문서화하는 것이 좋다
 - Follow-up:
   - `AGENTS.md`와 `docs/runbooks/README.md`에 root handoff log 기준을 추가했다
+
+### 2026-05-13 - Skill System Rebuild 1차 범위 확정
+- User request:
+  - 사용자가 Notion의 skill / plugin 가이드를 기준으로 현재 finance skill을 검토하고, 1차 작업 진행을 요청함
+- Interpreted goal:
+  - 새 docs / tasks 구조에 맞지 않는 stale skill 경로를 먼저 제거하고, 더 이상 쓰지 않을 phase-management skill을 정리해야 함
+- Analysis result:
+  - 기존 skill들은 역할 자체는 유효하지만 legacy root 문서, `code_analysis`, `data_architecture`, `backtest_reports`, `phase<N>` 경로를 참조하고 있어 1차 보정이 필요했다
+- Follow-up:
+  - 1차에서 domain skill과 doc-sync skill의 문서 경로를 새 구조로 보정하고, `finance-phase-management`를 삭제했다

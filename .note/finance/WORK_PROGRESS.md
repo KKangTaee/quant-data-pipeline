@@ -3842,3 +3842,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - Root handoff log 운영 지침 추가:
   - `WORK_PROGRESS.md`와 `QUESTION_AND_ANALYSIS_LOG.md`는 root handoff map으로 유지하고, 상세 기록은 active task 문서로 보내는 기준을 `AGENTS.md`와 `docs/runbooks/README.md`에 추가했다.
   - root log는 작업 단위당 3~5줄 milestone / decision 중심으로 남기고, 실행 명령 / 긴 분석 / 시행착오는 `RUNS.md`, `NOTES.md`, `DESIGN.md`로 분리한다.
+- Skill System Rebuild 1차:
+  - `.note/finance/tasks/active/skill-system-rebuild/`를 열고 stale skill path 보정 작업을 기록했다.
+  - `finance-backtest-web-workflow`, `finance-db-pipeline`, `finance-factor-pipeline`, `finance-strategy-implementation`, `finance-doc-sync`가 새 `.note/finance/docs/` 구조를 참조하도록 수정했다.
+  - legacy `finance-phase-management` skill은 삭제했고, roadmap에 skill rebuild active track을 추가했다.
