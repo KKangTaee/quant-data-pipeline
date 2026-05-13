@@ -3870,3 +3870,6 @@ Detailed historical logs were archived on `2026-04-13`.
   - 사용자가 정의한 공통 workflow 4개 + 구현 domain 4개 구조로 skill bundle을 다시 맞췄다.
   - `finance-task-management`는 `finance-task-intake`로 rename했고, `finance-integration-review`, `finance-runbook-maintainer`를 추가했다.
   - `finance-backtest-candidate-refinement`는 phase worktree 공통 skill에서 제거했다.
+- AI Workspace README 갱신:
+  - `.aiworkspace/README.md`를 현재 `note/finance`와 `plugins/quant-finance-workflow` 구조 기준으로 재작성했다.
+  - 4 workflow + 4 domain skill taxonomy, 읽는 순서, artifact / registry 경계, skill 검증 명령을 첫 관문 문서에 반영했다.
