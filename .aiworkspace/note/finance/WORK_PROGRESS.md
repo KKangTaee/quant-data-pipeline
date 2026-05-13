@@ -22,6 +22,12 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-13
+- Completed Product Research Skill Stage 1 for future finance roadmap research.
+- Added the active task at `.aiworkspace/note/finance/tasks/active/product-research-skill-stage1/`.
+- New validated stage-1 skills are `finance-product-audit`, `finance-benchmark-research`, and `finance-feature-opportunity`.
+- The intent is to validate the research workflow before later packaging a dedicated product-research plugin.
+
+### 2026-05-13
 - Renamed finance worktrees / branches to the new role names:
   - `candidate-search` -> `research` / `codex/research`
   - `phase` -> `main-dev` / `codex/main-dev`

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Finance Product Audit"
+  short_description: "Audit current finance product gaps."
+  default_prompt: "Use $finance-product-audit to audit the current finance product capabilities, workflow boundaries, and weak points before feature planning."

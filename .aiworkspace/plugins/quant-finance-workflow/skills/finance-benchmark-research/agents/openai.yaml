@@ -1,0 +1,4 @@
+interface:
+  display_name: "Finance Benchmark Research"
+  short_description: "Research comparable finance tools."
+  default_prompt: "Use $finance-benchmark-research to compare current quant and portfolio analytics products and summarize sourced feature and UI patterns."

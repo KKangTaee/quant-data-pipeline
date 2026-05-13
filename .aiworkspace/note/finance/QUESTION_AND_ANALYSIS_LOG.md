@@ -21,6 +21,17 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-13 - 제품 방향 리서치는 스킬 3개로 시작한다
+- User request:
+  - Notion의 단계적 스킬/플러그인 개발 흐름에 맞춰 1단계를 진행해 달라고 요청함.
+- Interpreted goal:
+  - 현재 프로젝트 분석, 외부 벤치마킹, 기능 후보 도출을 분리해 future roadmap research를 반복 가능한 workflow로 만들고 싶음.
+- Analysis result:
+  - 1단계는 plugin 패키징이 아니라 `finance-product-audit`, `finance-benchmark-research`, `finance-feature-opportunity` 스킬 초안 작성으로 진행한다.
+  - 실제 외부 조사와 ROADMAP 반영은 후속 research worktree / 승인 흐름에서 수행한다.
+- Follow-up:
+  - 1~2회 실제 리서치 run 후 scoring, source quality, roadmap proposal, research-to-phase 스킬을 보강한다.
+
 ### 2026-05-13 - code_analysis는 폴더 유지가 아니라 docs / active task로 분해한다
 - Request topic:
   - `code_analysis` 폴더 안의 문서를 새 문서 구조에서 어디로 옮길지, 그대로 유지할지, 정리해야 할지 분석하고 마이그레이션 진행을 요청함.
