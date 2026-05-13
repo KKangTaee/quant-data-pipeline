@@ -38,10 +38,36 @@ Last Updated: 2026-05-12
   - user / screen flow: `docs/flows/`
   - helper script usage: `docs/runbooks/`
   - Practical Validation V2 planning: `tasks/active/practical-validation-v2/`
+- legacy root / operations / research / support 문서는 2차에서 아래처럼 흡수 기준을 확정했다.
+  - root current-state docs: `docs/INDEX.md`, `docs/PROJECT_MAP.md`, `docs/ROADMAP.md`, `docs/GLOSSARY.md`로 대체
+  - registry guide docs: `.note/finance/registries/README.md`에 current V2 / legacy compatibility 기준으로 흡수
+  - runtime artifact hygiene / data collection UI / config externalization: `docs/runbooks/README.md`에 운영 원칙만 흡수
+  - Practical Validation investment diagnostics research: `tasks/active/practical-validation-v2/DESIGN.md`에 진단 설계로 흡수
+  - static stress window JSON: `docs/data/practical_validation_stress_windows_v1.json`로 이동하고 runtime path 갱신
+  - Playwright / market research playbook: `docs/runbooks/README.md`의 external research 원칙으로 축약
+  - support track docs: `AGENTS.md`, `docs/runbooks/AUTOMATION_SCRIPTS.md`, `agent/GOTCHAS.md`, `agent/LESSONS.md`로 필요한 원칙만 흡수
 
 ## Open Questions
 
 - 기존 phase 문서를 전부 삭제해도 되는지 최종 승인 필요
 - strategy hub/log와 raw strategy search report 사이의 중복 삭제 여부 결정 필요
-- `run_history/`와 `run_artifacts/` 삭제 여부 최종 승인 필요
-- `AGENTS.md` 축약 수준 최종 확인 필요
+- `run_history/`와 `run_artifacts/`를 working tree에서 삭제할지, gitignore / local cleanup으로 둘지 최종 승인 필요
+
+## 2차 삭제 후보 판단
+
+3차에서 삭제 가능한 legacy 문서:
+
+| Legacy Area | 2차 판단 |
+|---|---|
+| root `FINANCE_COMPREHENSIVE_ANALYSIS.md`, `FINANCE_DOC_INDEX.md`, `MASTER_PHASE_ROADMAP.md`, `FINANCE_TERM_GLOSSARY.md` | 새 `docs/`와 앱 reference path로 대체됨 |
+| `operations/*.md` | registry / runbook / flow 기준으로 핵심 흡수 완료. 상세 세션 기록은 삭제 후보 |
+| `research/*.md` | Practical Validation 설계 / external research 원칙으로 핵심 흡수 완료. JSON reference data는 `docs/data/`로 이동 |
+| `support_tracks/*.md` | Codex 운영 / helper script 원칙만 새 구조로 흡수 완료. 상세 과거 support plan은 삭제 후보 |
+| `archive/*.md` | 과거 snapshot. 현재 새 구조에 직접 필요하지 않음 |
+
+3차에서 아직 주의할 것:
+
+- `WORK_PROGRESS.md`와 `QUESTION_AND_ANALYSIS_LOG.md`는 현재 hygiene helper와 handoff log가 보고 있으므로 바로 삭제하지 않는다.
+- `PHASE_PLAN_TEMPLATE.md`, `PHASE_TEST_CHECKLIST_TEMPLATE.md`는 phase 문서 삭제와 별도로 template 보존 / runbook 흡수 여부를 마지막에 판단한다.
+- `registries/`와 `saved/`는 삭제 대상이 아니다.
+- `run_history/`, `run_artifacts/`, `.DS_Store`, `.playwright-mcp/`는 generated / local artifact다. 커밋 대상이 아니다.

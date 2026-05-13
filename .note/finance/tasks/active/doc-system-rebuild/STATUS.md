@@ -18,6 +18,7 @@ Notion Codex 문서 운영 가이드에 맞춰 `.note/finance/`를 장기 지식
 - `data_architecture/`를 `docs/data/`로 마이그레이션 완료
 - `code_analysis/`를 `docs/architecture`, `docs/flows`, `docs/runbooks`, active Practical Validation task 문서로 마이그레이션 완료
 - Reference > Guides / Glossary 앱 참조 경로를 새 docs 구조 기준으로 1차 정리 완료
+- legacy root / operations / research / support 문서의 2차 흡수 기준 확정 완료
 - 기존 문서 삭제는 아직 하지 않음
 - `AGENTS.md` 재작성 완료
 
@@ -38,12 +39,14 @@ Notion Codex 문서 운영 가이드에 맞춰 `.note/finance/`를 장기 지식
 - [x] legacy `data_architecture/` 상세 문서를 `docs/data/`로 흡수하고 폴더 제거
 - [x] legacy `code_analysis/` 문서를 새 docs/task 구조로 흡수하고 폴더 제거
 - [x] `Reference > Guides` 문서 경로와 `Reference > Glossary` 읽기 경로를 새 docs 구조로 전환
+- [x] legacy root / operations / research / support 문서의 남길 정보와 삭제 후보를 정리
+- [x] Practical Validation static stress window JSON을 `docs/data/`로 이동하고 runtime path 갱신
 
 ## Next
 
 - [x] 1차 결과를 사용자에게 확인받기
 - [x] 2차 작업에서 `AGENTS.md`를 새 read order 기준으로 축약하기
-- [ ] 2차 작업에서 남은 legacy root / operations / research / support 문서 중 새 docs로 흡수할 내용 확정하기
+- [x] 2차 작업에서 남은 legacy root / operations / research / support 문서 중 새 docs로 흡수할 내용 확정하기
 - [ ] 3차 작업에서 나머지 기존 문서 tree 삭제와 검증 진행하기
 
 ## Current Boundary

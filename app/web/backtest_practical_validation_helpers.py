@@ -30,7 +30,7 @@ from finance.performance import portfolio_performance_summary
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-STRESS_WINDOW_FILE = PROJECT_ROOT / ".note" / "finance" / "research" / "practical_validation_stress_windows_v1.json"
+STRESS_WINDOW_FILE = PROJECT_ROOT / ".note" / "finance" / "docs" / "data" / "practical_validation_stress_windows_v1.json"
 
 VALIDATION_PROFILE_OPTIONS = {
     "conservative_defensive": {

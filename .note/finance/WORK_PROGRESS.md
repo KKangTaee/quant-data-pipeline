@@ -3823,3 +3823,9 @@ Detailed historical logs were archived on `2026-04-13`.
   - `Reference > Glossary`는 실제 md를 읽는 화면이므로 기존 root glossary 본문을 `.note/finance/docs/GLOSSARY.md`로 승격하고 앱 읽기 경로를 새 docs 구조로 바꿨다.
   - `Reference > Guides`의 old root / operations / phase36 / code_analysis 문서 경로를 새 `.note/finance/docs/` 문서 경로로 교체했다.
   - 삭제 전 1차 안전장치만 완료했으며, 남은 legacy root / operations / research / support 문서의 흡수 여부 판단은 다음 단계로 남겼다.
+- Documentation System Rebuild 2차 legacy 흡수:
+  - legacy root current-state docs는 새 `docs/INDEX.md`, `PROJECT_MAP.md`, `ROADMAP.md`, `GLOSSARY.md`로 대체 가능한 것으로 정리했다.
+  - operations registry guide 핵심은 `.note/finance/registries/README.md`에 current Selection V2 / legacy compatibility 기준으로 흡수했다.
+  - runtime artifact hygiene, external research, config externalization 원칙은 `docs/runbooks/README.md`로 축약했다.
+  - `research/practical_validation_stress_windows_v1.json`은 런타임 reference data로 확인되어 `.note/finance/docs/data/`로 이동하고 `STRESS_WINDOW_FILE` 경로를 갱신했다.
+  - Practical Validation investment diagnostics research 참조는 active task `DESIGN.md`에 흡수된 기준으로 바꿨고, 3차 삭제 후보 / 유지 주의사항을 doc-system-rebuild `NOTES.md`, `RISKS.md`에 기록했다.

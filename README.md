@@ -129,12 +129,12 @@ finance/
   engine.py              # orchestration
   performance.py         # performance summaries
 .note/finance/
-  FINANCE_COMPREHENSIVE_ANALYSIS.md
-  MASTER_PHASE_ROADMAP.md
-  WORK_PROGRESS.md
-  QUESTION_AND_ANALYSIS_LOG.md
-  FINANCE_TERM_GLOSSARY.md
-  backtest_reports/
+  docs/                  # product map, roadmap, glossary, architecture / flow / data / runbook docs
+  tasks/                 # active task plans, status, runs, risks
+  phases/                # phase-level planning and integration notes
+  reports/backtests/     # durable backtest reports and strategy logs
+  registries/            # append-only workflow JSONL registries
+  saved/                 # reusable saved portfolio setups
 ```
 
 ## 빠른 시작
@@ -161,15 +161,15 @@ uv sync
 
 가장 먼저 보면 좋은 문서는 아래입니다.
 
-- `.note/finance/FINANCE_COMPREHENSIVE_ANALYSIS.md`
-  - 현재 finance 구조와 runtime/data/strategy 흐름 종합 문서
-- `.note/finance/MASTER_PHASE_ROADMAP.md`
-  - 전체 phase 흐름과 현재 위치
-- `.note/finance/FINANCE_DOC_INDEX.md`
-  - finance 문서 인덱스
-- `.note/finance/FINANCE_TERM_GLOSSARY.md`
+- `.note/finance/docs/INDEX.md`
+  - 새 finance 문서 인덱스
+- `.note/finance/docs/PROJECT_MAP.md`
+  - 현재 finance 구조와 runtime/data/strategy 흐름 요약
+- `.note/finance/docs/ROADMAP.md`
+  - 현재 작업 흐름과 active task 위치
+- `.note/finance/docs/GLOSSARY.md`
   - 반복 용어 사전
-- `.note/finance/backtest_reports/BACKTEST_REPORT_INDEX.md`
+- `.note/finance/reports/backtests/INDEX.md`
   - 결과 중심 백테스트 리포트 인덱스
 
 ## 개발 원칙

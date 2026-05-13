@@ -9,9 +9,8 @@
 "이 전략을 실전 전략으로 사용할 수 있나?"라는 질문에 대해
 무엇을 어떤 기준으로 검증해야 하는지 정리하는 것이다.
 
-실전 투자 진단 module의 research 기준은
-[`PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH.md`](../research/PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH.md)에 정리한다.
-이 문서는 그 research를 실제 Backtest UI / JSON contract / 구현 slice로 옮기는 개발 가이드다.
+실전 투자 진단 module의 research 기준은 이 문서 안의 진단 설계와 source table에 흡수했다.
+이 문서는 그 기준을 실제 Backtest UI / JSON contract / 구현 단위로 옮기는 개발 가이드다.
 
 이 문서의 결론은 다음과 같다.
 
@@ -598,7 +597,7 @@ VaR / CVaR는 monthly return 기반으로 후속 추가한다.
 초기 stress window는 AI가 즉석에서 기억한 이벤트가 아니라
 버전 관리되는 static calendar preset으로 관리한다.
 1차 reference data는
-[`practical_validation_stress_windows_v1.json`](../research/practical_validation_stress_windows_v1.json)에 둔다.
+[`practical_validation_stress_windows_v1.json`](../../../docs/data/practical_validation_stress_windows_v1.json)에 둔다.
 
 Static stress calendar v1은 2000년 이후 미국 증시에 충격을 준 대표 구간을
 아래처럼 시작한다. 이 목록은 투자 신호가 아니라 검증용 기간 preset이다.

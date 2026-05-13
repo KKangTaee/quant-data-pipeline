@@ -151,3 +151,42 @@ Result:
 - `Reference > Glossary`는 `GLOSSARY_DOC_PATH.read_text()`로 glossary md를 실제 읽는 구조로 확인
 - 삭제 전 안전장치로 `Guides` 문서 경로 목록을 새 `.note/finance/docs/` 기준으로 전환
 - 기존 root glossary 본문을 `.note/finance/docs/GLOSSARY.md`로 승격하고, `Reference > Glossary` 읽기 경로를 새 문서로 전환
+
+## 2026-05-13 - Legacy Root / Operations / Research / Support Absorption
+
+Command:
+
+```bash
+find .note/finance -maxdepth 2 -type f | sort
+rg -n "practical_validation_stress_windows_v1|operations/|support_tracks/|FINANCE_COMPREHENSIVE_ANALYSIS|MASTER_PHASE_ROADMAP|FINANCE_DOC_INDEX|FINANCE_TERM_GLOSSARY" app finance .note/finance/docs .note/finance/tasks README.md
+```
+
+Result:
+
+- root current-state docs는 `docs/INDEX.md`, `docs/PROJECT_MAP.md`, `docs/ROADMAP.md`, `docs/GLOSSARY.md`로 대체 가능한 것으로 분류
+- operations registry guides는 `.note/finance/registries/README.md`에 current V2 / legacy compatibility 기준으로 흡수
+- runtime artifact, external research, config externalization 원칙은 `docs/runbooks/README.md`에 축약
+- `research/practical_validation_stress_windows_v1.json`은 런타임 reference data로 확인되어 `docs/data/practical_validation_stress_windows_v1.json`로 이동하고 코드 경로를 갱신
+- Practical Validation investment diagnostics research는 active task `DESIGN.md`에 흡수된 기준으로 정리하고 legacy research doc 참조를 제거
+- support track 문서는 `AGENTS.md`, runbook, agent gotchas / lessons로 핵심 운영 원칙만 흡수하고 상세 과거 plan은 3차 삭제 후보로 분류
+
+Verification:
+
+```bash
+.venv/bin/python -m py_compile app/web/backtest_practical_validation_helpers.py app/web/reference_guides.py app/web/streamlit_app.py
+.venv/bin/python - <<'PY'
+from app.web.backtest_practical_validation_helpers import _load_static_stress_windows
+windows = _load_static_stress_windows()
+print(len(windows))
+print(windows[0].get("id"))
+PY
+git diff --check
+python3 plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py
+```
+
+Result:
+
+- compile 통과
+- stress window loader가 새 위치에서 14개 window를 읽고 첫 id `dotcom_bust_2000_2002`를 반환
+- `git diff --check` 통과
+- hygiene helper 통과. run history / `.DS_Store` / `.playwright-mcp/`는 generated artifact로 unstaged 유지

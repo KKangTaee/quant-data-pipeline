@@ -2,8 +2,7 @@
 
 ## 목적
 
-이 문서는 `DESIGN.md`와
-`PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH.md`에서 합의한 내용을 기준으로,
+이 문서는 `DESIGN.md`에 흡수된 Practical Validation 진단 설계를 기준으로,
 현재 구현이 끝난 범위와 아직 남은 개발 범위를 분리해 정리한다.
 
 이번 문서의 목적은 개발 착수가 아니라, 사용자가 검토할 수 있는 남은 구현 계획을 만드는 것이다.

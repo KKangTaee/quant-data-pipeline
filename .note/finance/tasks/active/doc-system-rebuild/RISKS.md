@@ -48,6 +48,19 @@ Mitigation:
 - 이번 1차 커밋에는 새 문서만 stage한다.
 - runtime/generated artifact는 커밋하지 않는다.
 
+## P1 - Research 폴더 삭제 시 런타임 reference data 손실
+
+Risk:
+
+- `research/practical_validation_stress_windows_v1.json`은 단순 문서가 아니라 Practical Validation이 읽는 static stress calendar였다.
+- research 폴더를 통째로 삭제하면 stress / scenario diagnostics가 fallback으로 내려가거나 비게 될 수 있다.
+
+Mitigation:
+
+- 2차 작업에서 JSON reference data를 `.note/finance/docs/data/practical_validation_stress_windows_v1.json`로 이동했다.
+- `app/web/backtest_practical_validation_helpers.py`의 `STRESS_WINDOW_FILE` 경로를 새 위치로 갱신했다.
+- 3차 삭제 전에 `rg "practical_validation_stress_windows_v1|research/" app .note/finance/docs .note/finance/tasks`로 잔여 참조를 확인한다.
+
 ## P2 - Legacy backtest archive가 영구 dump로 굳어짐
 
 Risk:

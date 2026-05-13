@@ -7,7 +7,7 @@ Last Verified: 2026-05-12
 
 | Track | Status | Notes |
 |---|---|---|
-| Documentation System Rebuild | Active | `.note/finance/tasks/active/doc-system-rebuild/` |
+| Documentation System Rebuild | Active | `.note/finance/tasks/active/doc-system-rebuild/`; legacy root / operations / research / support 흡수 기준 확정, 삭제 검증 준비 중 |
 | Backtest Report Migration | Complete | `.note/finance/reports/backtests/`, legacy phase archive 제거 완료 |
 | Practical Validation V2 | Active | `.note/finance/tasks/active/practical-validation-v2/` |
 | Phase 36 Selected Portfolio Dashboard | Implementation complete before doc rebuild | 기존 phase 문서는 새 구조 정리 후 필요 시 `phases/done/`에 요약만 남긴다 |

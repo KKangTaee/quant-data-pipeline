@@ -133,8 +133,9 @@ strict annual family는 현재 여러 operator-facing contract를 가진다.
 새 전략을 추가하면 최소한 아래를 검토한다.
 
 - active phase plan / TODO / checklist
-- `FINANCE_COMPREHENSIVE_ANALYSIS.md`
-- `FINANCE_DOC_INDEX.md`
+- `docs/PROJECT_MAP.md`
+- `docs/INDEX.md`
+- `docs/ROADMAP.md`
 - `docs/architecture/STRATEGY_IMPLEMENTATION_FLOW.md`
 - strategy hub 또는 backtest report index
 - `WORK_PROGRESS.md`

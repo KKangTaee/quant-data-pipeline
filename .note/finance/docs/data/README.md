@@ -7,7 +7,7 @@ Last Verified: 2026-05-12
 
 이 폴더는 finance 프로젝트의 데이터 흐름, DB 구조, table 의미, 데이터 품질 / PIT 주의사항을 관리한다.
 
-`FINANCE_COMPREHENSIVE_ANALYSIS.md`에는 상위 요약만 남기고, DB와 데이터 의미의 상세 기준은 이 폴더에서 관리한다.
+상위 제품 / 코드 지도는 `docs/PROJECT_MAP.md`에 두고, DB와 데이터 의미의 상세 기준은 이 폴더에서 관리한다.
 
 ## Read Order
 
@@ -39,6 +39,7 @@ Last Verified: 2026-05-12
 | `etf_holdings_snapshot` | ETF holdings row snapshot |
 | `etf_exposure_snapshot` | holdings 또는 provider aggregate 기반 exposure summary |
 | `macro_series_observation` | FRED VIX / yield curve / credit spread observation |
+| `practical_validation_stress_windows_v1.json` | Practical Validation static stress window reference data. JSON reference file이며 DB table은 아님 |
 
 ## JSONL Boundaries
 
@@ -55,6 +56,7 @@ Last Verified: 2026-05-12
 - provider field는 안정적이거나 완전하다고 가정하지 않는다.
 - official row가 partial이면 DB bridge와 병합하되 source origin을 숨기지 않는다.
 - Practical Validation JSONL에는 compact evidence와 reason만 저장하고, full provider raw data는 DB에 둔다.
+- static stress window JSON은 투자 신호가 아니라 재현 가능한 검증 preset이다.
 
 ## Code Flow 문서와의 차이
 

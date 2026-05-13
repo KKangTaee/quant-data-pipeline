@@ -41,6 +41,51 @@ find .note/finance -maxdepth 3 -type f | sort
 - `.DS_Store`와 `.playwright-mcp/`는 커밋하지 않는다.
 - 문서 재구성처럼 큰 변경은 삭제 전후 구조 확인 결과를 최종 응답에 요약한다.
 
+## Runtime Artifact Hygiene
+
+Runtime artifact는 작업 중 상태를 재현하거나 디버깅하는 데는 쓸 수 있지만 장기 문서가 아니다.
+
+기본적으로 커밋하지 않는다.
+
+| Artifact | Policy |
+|---|---|
+| `.note/finance/run_history/*.jsonl` | local run history. 명시 요청 없이는 commit 제외 |
+| `.note/finance/run_artifacts/` | local job / ingestion artifact. commit 제외 |
+| `_tmp_*.csv`, failure CSV | 임시 산출물. 필요한 해석은 report나 task note에 요약 |
+| `.DS_Store`, `.playwright-mcp/` | generated / local output. commit 제외 |
+| `.note/finance/saved/*.jsonl` | 사용자가 저장한 reusable setup. 삭제 금지, 임의 재작성 금지 |
+
+중요한 backtest 결과를 남기려면 runtime artifact를 그대로 보존하지 말고
+`.note/finance/reports/backtests/` 아래 사람이 읽는 report나 strategy log에 요약한다.
+
+## External Research / Browser Research
+
+외부 리서치는 현재 구현 근거를 보강할 때만 장기 문서로 승격한다.
+
+원칙:
+
+- 공식 문서, provider 문서, 논문, 데이터 원천을 우선한다.
+- 웹 조사 결과는 source URL과 확인 날짜를 남긴다.
+- 투자 추천처럼 보이는 문구가 아니라 구현 판단, 데이터 출처, 검증 한계를 남긴다.
+- 반복 가능한 결과는 backtest report나 active task 문서에 둔다.
+- 오래 유지될 운영 기준만 `docs/`로 승격한다.
+
+Market / provider research 결과를 앱 기능으로 쓰려면
+`Ingestion -> DB -> Loader -> UI` 흐름으로 구현한다.
+UI에서 provider / FRED / 웹페이지를 직접 fetch하지 않는다.
+
+## Config / Constant Externalization
+
+설정 외부화는 아래 순서로 검토한다.
+
+1. DB credential이나 environment-specific 값
+2. ingestion batch size, retry, sleep 같은 운영 파라미터
+3. default lookback, period, provider source map 같은 재사용 설정
+4. 단순 UI label이나 낮은 우선순위 표시 상수
+
+단순히 코드 안에 상수가 있다는 이유만으로 config 파일을 늘리지 않는다.
+반복 실행, 환경 차이, provider 변경 가능성이 있을 때 우선 외부화한다.
+
 ## Automation Helpers
 
 Repo-local helper script 사용 기준은 [AUTOMATION_SCRIPTS.md](./AUTOMATION_SCRIPTS.md)를 본다.

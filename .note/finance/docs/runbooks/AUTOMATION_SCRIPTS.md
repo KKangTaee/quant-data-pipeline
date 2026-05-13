@@ -116,8 +116,7 @@ python3 plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registr
 
 ## 관련 문서
 
-- `../../operations/CURRENT_CANDIDATE_REGISTRY_GUIDE.md`
-- `../../operations/PRE_LIVE_CANDIDATE_REGISTRY_GUIDE.md`
-- `../../operations/RUNTIME_ARTIFACT_HYGIENE.md`
+- [Finance Registries](../../registries/README.md)
+- [Runbook README](./README.md)
 - [BACKTEST_RUNTIME_FLOW.md](../architecture/BACKTEST_RUNTIME_FLOW.md)
-- `../../FINANCE_DOC_INDEX.md`
+- [Finance Documentation Index](../INDEX.md)

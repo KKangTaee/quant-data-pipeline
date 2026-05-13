@@ -91,7 +91,7 @@ external source
 - survivorship bias 위험이 커지는지
 - UPSERT가 idempotent한지
 - provider field 누락이나 ticker별 coverage 차이를 warning으로 남기는지
-- schema 변경 시 `FINANCE_COMPREHENSIVE_ANALYSIS.md`와 이 문서가 필요한 만큼 갱신됐는지
+- schema 변경 시 `docs/PROJECT_MAP.md`, `docs/data/`, 이 문서가 필요한 만큼 갱신됐는지
 
 ## 갱신해야 하는 경우
 

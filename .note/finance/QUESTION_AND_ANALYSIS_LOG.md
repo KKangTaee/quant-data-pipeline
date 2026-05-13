@@ -4892,3 +4892,17 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 따라서 Guides 경로 목록은 새 docs 기준으로 바꾸고, Glossary는 새 `.note/finance/docs/GLOSSARY.md`에 본문을 승격한 뒤 코드 읽기 경로를 바꾸는 것이 맞다
 - Follow-up:
   - 1차 작업에서 Guides reference path와 Glossary read path를 새 docs 구조로 전환했다
+
+### 2026-05-13 - 삭제 전 2차 legacy 문서 흡수 기준
+- User request:
+  - 사용자가 삭제 전 마지막 마이그레이션 권장 작업의 2차를 진행해 달라고 요청함
+- Interpreted goal:
+  - legacy root / operations / research / support 문서에서 새 구조에 남길 핵심만 흡수하고, 3차 삭제 때 안전하게 지울 수 있는 후보와 유지해야 할 런타임 의존성을 분리해야 함
+- Analysis result:
+  - root current-state 문서는 새 `docs/` 4개 축으로 대체 가능하다
+  - operations registry guide는 여러 파일로 유지하기보다 `registries/README.md` 하나에 current Selection V2 / legacy compatibility를 모으는 것이 낫다
+  - runtime artifact hygiene, external research, config externalization은 runbook 원칙으로 축약하면 충분하다
+  - `practical_validation_stress_windows_v1.json`은 문서가 아니라 앱이 읽는 reference data라 삭제 대상이 아니며 새 `docs/data/` 위치로 이동해야 한다
+  - support track의 plugin / skill / automation 문서는 현재 canonical이 아니며, 필요한 원칙은 `AGENTS.md`, `docs/runbooks/`, `agent/` 문서로 충분하다
+- Follow-up:
+  - 2차 작업에서 registry / runbook / data / task / agent 문서를 갱신하고 stress window code path를 새 위치로 바꿨다
