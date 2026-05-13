@@ -8,7 +8,7 @@ Last Verified: 2026-05-13
 이 폴더는 `finance` 프로젝트의 장기 지식만 보관한다.
 
 작업 중 임시 분석, 실행 로그, 진행 상태는 `docs/`에 바로 넣지 않는다.
-진행 중 기록은 `.aiworkspace/note/finance/tasks/active/<task>/`, `.aiworkspace/note/finance/phases/active/<phase>/`, 또는 제품 방향 리서치의 경우 `.aiworkspace/note/finance/research/active/<research-id>/`에 두고,
+진행 중 기록은 `.aiworkspace/note/finance/tasks/active/<task>/`, `.aiworkspace/note/finance/phases/active/<phase>/`, 또는 제품 방향 리서치의 경우 `.aiworkspace/note/finance/researches/active/<research-id>/`에 두고,
 반복적으로 필요한 내용만 이 폴더로 승격한다.
 
 ## Read First
@@ -30,7 +30,7 @@ Last Verified: 2026-05-13
 | 사용자 / 런타임 흐름 확인 | [Flows](./flows/README.md) |
 | DB / JSONL / 저장 경계 확인 | [Data](./data/README.md) |
 | 실행 / 검증 / 운영 절차 확인 | [Runbooks](./runbooks/README.md) |
-| 제품 방향 / 벤치마킹 리서치 확인 | [Research](../research/README.md) |
+| 제품 방향 / 벤치마킹 리서치 확인 | [Research](../researches/README.md) |
 | backtest 결과 report 확인 | [Backtest Reports](../reports/backtests/INDEX.md) |
 
 ## Work Records
@@ -39,7 +39,7 @@ Last Verified: 2026-05-13
 |---|---|
 | `.aiworkspace/note/finance/phases/active/` | `main-dev` worktree가 관리하는 phase 단위 계획과 통합 기록 |
 | `.aiworkspace/note/finance/tasks/active/` | 개별 실행 task의 계획, 진행 상태, 실행 결과 |
-| `.aiworkspace/note/finance/research/active/` | 제품 방향, 벤치마킹, 기능 후보 리서치 산출물 |
+| `.aiworkspace/note/finance/researches/active/` | 제품 방향, 벤치마킹, 기능 후보 리서치 산출물 |
 | `.aiworkspace/note/finance/agent/` | Codex 반복 실수, 교훈, 운영 팁 |
 | `.aiworkspace/note/finance/reports/backtests/` | 전략 탐색, 후보 근거, validation report |
 | `.aiworkspace/note/finance/registries/` | 제품 workflow가 읽고 쓰는 append-only JSONL registry |

@@ -7,12 +7,12 @@ Last Verified: 2026-05-13
 
 이 폴더는 `finance` 제품 방향, 벤치마킹, 기능 후보, 전략적 의사결정 근거를 조사하는 작업장이다.
 
-`tasks/active/`가 실행 작업 기록이라면, `research/active/`는 실제 조사 산출물의 본문을 담는다.
+`tasks/active/`가 실행 작업 기록이라면, `researches/active/`는 실제 조사 산출물의 본문을 담는다.
 
 ## Structure
 
 ```text
-.aiworkspace/note/finance/research/
+.aiworkspace/note/finance/researches/
   active/<research-id>/
     RESEARCH_PLAN.md
     CURRENT_PROJECT_AUDIT.md
@@ -27,7 +27,7 @@ Last Verified: 2026-05-13
 
 ## Rules
 
-- 조사 중 사실, 추측, source notes, 비교표는 `research/active/<research-id>/`에 둔다.
+- 조사 중 사실, 추측, source notes, 비교표는 `researches/active/<research-id>/`에 둔다.
 - 채택된 장기 방향만 `docs/PRODUCT_DIRECTION.md` 또는 `docs/ROADMAP.md`로 승격한다.
 - 승인된 개발 단위만 `phases/active/` 또는 `tasks/active/`로 전환한다.
 - 외부 서비스, 가격, 기능, UI는 변할 수 있으므로 `SOURCES.md`에 접근 날짜와 evidence label을 남긴다.

@@ -22,7 +22,7 @@ Last Verified: 2026-05-13
 | `app/jobs/` | Ingestion console에서 실행하는 job wrapper |
 | `.aiworkspace/` | AI / Codex 작업 문서와 plugin source의 top-level workspace |
 | `.aiworkspace/note/finance/docs/` | 장기 프로젝트 지식 |
-| `.aiworkspace/note/finance/research/` | 제품 방향, 벤치마킹, 기능 후보 리서치 산출물 |
+| `.aiworkspace/note/finance/researches/` | 제품 방향, 벤치마킹, 기능 후보 리서치 산출물 |
 | `.aiworkspace/note/finance/reports/backtests/` | backtest 결과 report, 전략 hub, 후보 근거, validation report |
 | `.aiworkspace/note/finance/tasks/active/` | 현재 실행 task 기록 |
 | `.aiworkspace/note/finance/phases/active/` | phase 단위 계획과 통합 기록 |
@@ -95,7 +95,7 @@ Backtest Analysis
 | DB schema 변경 | `finance/data/db/schema.py` |
 | Ingestion job 변경 | `app/jobs/ingestion_jobs.py`, `finance/data/*` |
 | Strategy runtime 변경 | `finance/engine.py`, `finance/strategy.py`, `finance/transform.py`, `finance/performance.py` |
-| 제품 방향 / 벤치마킹 리서치 | `.aiworkspace/note/finance/research/README.md`, `.aiworkspace/note/finance/research/active/<research-id>/` |
+| 제품 방향 / 벤치마킹 리서치 | `.aiworkspace/note/finance/researches/README.md`, `.aiworkspace/note/finance/researches/active/<research-id>/` |
 | Backtest report 작성 / 정리 | `.aiworkspace/note/finance/reports/backtests/INDEX.md` |
 | 문서 / AI workspace 체계 변경 | `.aiworkspace/note/finance/tasks/active/doc-system-rebuild/`, `.aiworkspace/note/finance/tasks/active/ai-workspace-migration/` |
 

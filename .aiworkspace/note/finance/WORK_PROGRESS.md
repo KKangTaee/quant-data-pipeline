@@ -22,9 +22,14 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-13
-- Set `.aiworkspace/note/finance/research/` as the canonical workspace for product direction research output.
-- Added `research/README.md` plus `active/` and `done/` folders for audit, benchmark, feature candidate, recommendation, source, and risk notes.
-- Updated AGENTS, docs index/project map/roadmap, and the product research skills so actual research outputs go to `research/active/<research-id>/`.
+- Renamed the product direction research workspace from `.aiworkspace/note/finance/research/` to `.aiworkspace/note/finance/researches/`.
+- Updated AGENTS, durable docs, active task notes, and product research skills to use `researches/active/<research-id>/`.
+- Synced the global finance skill mirrors after the path rename.
+
+### 2026-05-13
+- Set `.aiworkspace/note/finance/researches/` as the canonical workspace for product direction research output.
+- Added `researches/README.md` plus `active/` and `done/` folders for audit, benchmark, feature candidate, recommendation, source, and risk notes.
+- Updated AGENTS, docs index/project map/roadmap, and the product research skills so actual research outputs go to `researches/active/<research-id>/`.
 - `tasks/active/` remains for execution records such as skill/workflow changes.
 
 ### 2026-05-13
@@ -97,7 +102,7 @@ Detailed historical logs were archived on `2026-04-13`.
 ### 2026-05-10
 - Clarified `NOT_RUN` handling for Final Review route in Practical Validation docs.
 - Updated:
-  - `.aiworkspace/note/finance/research/PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH.md`
+  - `.aiworkspace/note/finance/researches/PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH.md`
   - `.aiworkspace/note/finance/tasks/active/practical-validation-v2/DESIGN.md`
   - `.aiworkspace/note/finance/QUESTION_AND_ANALYSIS_LOG.md`
 - Durable decision:
@@ -108,7 +113,7 @@ Detailed historical logs were archived on `2026-04-13`.
 ### 2026-05-10
 - Clarified proxy classification and holdings look-through wording in Practical Validation design docs.
 - Updated:
-  - `.aiworkspace/note/finance/research/PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH.md`
+  - `.aiworkspace/note/finance/researches/PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH.md`
   - `.aiworkspace/note/finance/tasks/active/practical-validation-v2/DESIGN.md`
   - `.aiworkspace/note/finance/QUESTION_AND_ANALYSIS_LOG.md`
 - Durable decision:
@@ -119,7 +124,7 @@ Detailed historical logs were archived on `2026-04-13`.
 ### 2026-05-10
 - Changed Practical Validation design-question status tables to a single checklist table.
 - Updated:
-  - `.aiworkspace/note/finance/research/PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH.md`
+  - `.aiworkspace/note/finance/researches/PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH.md`
   - `.aiworkspace/note/finance/tasks/active/practical-validation-v2/DESIGN.md`
   - `.aiworkspace/note/finance/QUESTION_AND_ANALYSIS_LOG.md`
 - Durable decision:
@@ -129,7 +134,7 @@ Detailed historical logs were archived on `2026-04-13`.
 ### 2026-05-10
 - Refreshed Practical Validation open design questions.
 - Updated:
-  - `.aiworkspace/note/finance/research/PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH.md`
+  - `.aiworkspace/note/finance/researches/PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH.md`
   - `.aiworkspace/note/finance/tasks/active/practical-validation-v2/DESIGN.md`
   - `.aiworkspace/note/finance/QUESTION_AND_ANALYSIS_LOG.md`
 - Durable decision:
@@ -139,7 +144,7 @@ Detailed historical logs were archived on `2026-04-13`.
 ### 2026-05-10
 - Finalized Korean-facing Validation Profile wording for Practical Validation design.
 - Updated:
-  - `.aiworkspace/note/finance/research/PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH.md`
+  - `.aiworkspace/note/finance/researches/PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH.md`
   - `.aiworkspace/note/finance/tasks/active/practical-validation-v2/DESIGN.md`
   - `.aiworkspace/note/finance/FINANCE_TERM_GLOSSARY.md`
   - `.aiworkspace/note/finance/QUESTION_AND_ANALYSIS_LOG.md`
@@ -152,7 +157,7 @@ Detailed historical logs were archived on `2026-04-13`.
 ### 2026-05-10
 - Clarified Practical Validation terminology and future sentiment connector scope.
 - Updated:
-  - `.aiworkspace/note/finance/research/PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH.md`
+  - `.aiworkspace/note/finance/researches/PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH.md`
   - `.aiworkspace/note/finance/tasks/active/practical-validation-v2/DESIGN.md`
   - `.aiworkspace/note/finance/FINANCE_TERM_GLOSSARY.md`
   - `.aiworkspace/note/finance/QUESTION_AND_ANALYSIS_LOG.md`
@@ -164,7 +169,7 @@ Detailed historical logs were archived on `2026-04-13`.
 ### 2026-05-10
 - Refined the Practical Validation diagnostics design with Validation Profile behavior.
 - Updated:
-  - `.aiworkspace/note/finance/research/PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH.md`
+  - `.aiworkspace/note/finance/researches/PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH.md`
   - `.aiworkspace/note/finance/tasks/active/practical-validation-v2/DESIGN.md`
   - `.aiworkspace/note/finance/QUESTION_AND_ANALYSIS_LOG.md`
 - Durable decision:
@@ -176,10 +181,10 @@ Detailed historical logs were archived on `2026-04-13`.
 ### 2026-05-10
 - Documented the Practical Validation investment diagnostics direction.
 - Created:
-  - `.aiworkspace/note/finance/research/PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH.md`
+  - `.aiworkspace/note/finance/researches/PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH.md`
 - Updated:
   - `.aiworkspace/note/finance/tasks/active/practical-validation-v2/DESIGN.md`
-  - `.aiworkspace/note/finance/research/README.md`
+  - `.aiworkspace/note/finance/researches/README.md`
   - `.aiworkspace/note/finance/FINANCE_DOC_INDEX.md`
   - `.aiworkspace/note/finance/docs/architecture/README.md`
   - `.aiworkspace/note/finance/QUESTION_AND_ANALYSIS_LOG.md`
@@ -1879,7 +1884,7 @@ Detailed historical logs were archived on `2026-04-13`.
 - Changed:
   - moved operations / runtime / registry / ingestion reference docs under `.aiworkspace/note/finance/operations/`
   - moved daily market update notes under `.aiworkspace/note/finance/operations/daily_market_update/`
-  - moved research reference docs under `.aiworkspace/note/finance/research/`
+  - moved research reference docs under `.aiworkspace/note/finance/researches/`
   - moved support-track discussion docs under `.aiworkspace/note/finance/support_tracks/`
   - moved the legacy backtest refinement flow guide under `.aiworkspace/note/finance/docs/architecture/`
   - updated `FINANCE_DOC_INDEX.md`, active links, and added folder README files

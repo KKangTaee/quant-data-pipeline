@@ -5,14 +5,19 @@ Last Updated: 2026-05-13
 
 ## Decision
 
-실제 제품 방향 리서치 산출물은 `.aiworkspace/note/finance/research/active/<research-id>/` 아래에 둔다.
+실제 제품 방향 리서치 산출물은 `.aiworkspace/note/finance/researches/active/<research-id>/` 아래에 둔다.
 
 `tasks/active/`에는 리서치 workflow를 만들거나 수정한 실행 작업 기록을 남긴다.
+
+## Naming Decision
+
+폴더 이름은 repo의 복수형 convention에 맞춰 `researches/`로 둔다.
+문장 안에서는 product direction research처럼 자연스러운 표현을 유지하되, 경로는 `researches/active/<research-id>/`를 쓴다.
 
 ## Proposed Research Bundle
 
 ```text
-.aiworkspace/note/finance/research/active/<research-id>/
+.aiworkspace/note/finance/researches/active/<research-id>/
   RESEARCH_PLAN.md
   CURRENT_PROJECT_AUDIT.md
   BENCHMARKS.md

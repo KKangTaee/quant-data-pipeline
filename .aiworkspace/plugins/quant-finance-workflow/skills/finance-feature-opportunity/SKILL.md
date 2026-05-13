@@ -11,7 +11,7 @@ This is a synthesis and prioritization skill. It does not directly edit roadmap 
 
 ## First Reads
 
-Read `.aiworkspace/note/finance/research/README.md`, then read only what is needed from the active research folder under `.aiworkspace/note/finance/research/active/<research-id>/`:
+Read `.aiworkspace/note/finance/researches/README.md`, then read only what is needed from the active research folder under `.aiworkspace/note/finance/researches/active/<research-id>/`:
 - `CURRENT_PROJECT_AUDIT.md`
 - `BENCHMARKS.md`
 - `UI_PATTERNS.md`
@@ -31,7 +31,7 @@ For recommendation output, read `references/recommendation-template.md`.
 Write or update these files in the active research folder:
 
 ```text
-.aiworkspace/note/finance/research/active/<research-id>/
+.aiworkspace/note/finance/researches/active/<research-id>/
 ```
 
 - `FEATURE_CANDIDATES.md`

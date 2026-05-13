@@ -11,7 +11,7 @@ Last Verified: 2026-05-13
 | AI Workspace Migration | Practical closeout | `.aiworkspace/note/finance/tasks/active/ai-workspace-migration/`; `.aiworkspace/note/finance`와 `.aiworkspace/plugins` canonical 이동 및 검증 완료 |
 | Skill System Rebuild | Complete | `.aiworkspace/note/finance/tasks/active/skill-system-rebuild/`; 4 workflow + 4 domain skill taxonomy, repo-local source, global mirror, plugin manifest, marketplace path 검증 완료 |
 | Product Research Skill Stage 1 | Complete | `.aiworkspace/note/finance/tasks/active/product-research-skill-stage1/`; project audit / benchmark research / feature opportunity 스킬 초안과 global mirror 검증 완료 |
-| Product Research Output Contract | Complete | `.aiworkspace/note/finance/tasks/active/product-research-output-contract/`; 실제 리서치 산출물 위치를 `.aiworkspace/note/finance/research/active/`로 확정 |
+| Product Research Output Contract | Complete | `.aiworkspace/note/finance/tasks/active/product-research-output-contract/`; 실제 리서치 산출물 위치를 `.aiworkspace/note/finance/researches/active/`로 확정 |
 | Backtest Report Migration | Complete | `.aiworkspace/note/finance/reports/backtests/`, legacy phase archive 제거 완료 |
 | Practical Validation V2 | Active | `.aiworkspace/note/finance/tasks/active/practical-validation-v2/` |
 | Phase 36 Selected Portfolio Dashboard | Implementation complete before doc rebuild | 기존 phase 문서는 새 구조 정리 후 필요 시 `phases/done/`에 요약만 남긴다 |
@@ -60,7 +60,7 @@ P2에서 정상화하는 주요 진단:
 
 | Layer | Location | Meaning |
 |---|---|---|
-| Research | `.aiworkspace/note/finance/research/active/<research-id>/` | 현재 제품 분석, 외부 벤치마킹, 기능 후보, 추천안 산출물 |
+| Research | `.aiworkspace/note/finance/researches/active/<research-id>/` | 현재 제품 분석, 외부 벤치마킹, 기능 후보, 추천안 산출물 |
 | Task | `.aiworkspace/note/finance/tasks/active/<task>/` | 리서치 workflow / skill 자체를 만들거나 수정하는 실행 작업 |
 | Docs | `.aiworkspace/note/finance/docs/` | 사용자 승인 후 장기 방향으로 승격된 지식 |
 

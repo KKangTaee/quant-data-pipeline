@@ -12,8 +12,8 @@ This is a web research and synthesis skill. It does not change roadmap docs, cre
 ## First Reads
 
 Read only what is needed:
-- `.aiworkspace/note/finance/research/README.md`
-- the active research folder under `.aiworkspace/note/finance/research/active/<research-id>/`
+- `.aiworkspace/note/finance/researches/README.md`
+- the active research folder under `.aiworkspace/note/finance/researches/active/<research-id>/`
 - `CURRENT_PROJECT_AUDIT.md` when available
 - `.aiworkspace/note/finance/docs/PRODUCT_DIRECTION.md`
 - `.aiworkspace/note/finance/docs/ROADMAP.md`
@@ -39,7 +39,7 @@ Prefer current, primary, and inspectable sources. Browse the web for current pro
 Write or update these files in the active research folder:
 
 ```text
-.aiworkspace/note/finance/research/active/<research-id>/
+.aiworkspace/note/finance/researches/active/<research-id>/
 ```
 
 - `BENCHMARKS.md`: product-by-product benchmark notes

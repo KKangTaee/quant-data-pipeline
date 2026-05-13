@@ -21,17 +21,28 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
-### 2026-05-13 - 실제 제품 방향 리서치 산출물은 research/active에 둔다
+### 2026-05-13 - 제품 방향 리서치 폴더명은 researches로 맞춘다
+- User request:
+  - 프로젝트 폴더명이 `docs`, `tasks`, `phases`처럼 복수형이므로 `research`보다 `researches`가 일관적이지 않느냐고 질문하고 진행을 요청함.
+- Interpreted goal:
+  - 새 제품 방향 리서치 작업장을 repo naming convention에 맞추고, legacy `research/` 경로와도 구분하고 싶음.
+- Analysis result:
+  - `.aiworkspace/note/finance/research/`를 `.aiworkspace/note/finance/researches/`로 rename했다.
+  - AGENTS, docs, active task 기록, product research skills, global skill mirror의 경로를 `researches/active/<research-id>/` 기준으로 맞췄다.
+- Follow-up:
+  - 2단계 실제 리서치 run은 `researches/active/<research-id>/`에 생성한다.
+
+### 2026-05-13 - 실제 제품 방향 리서치 산출물은 researches/active에 둔다
 - User request:
   - 2단계에서 수행할 명확한 리서치 결과는 `tasks/active`보다 `research` 폴더에 두는 것이 맞다고 판단하고 진행을 요청함.
 - Interpreted goal:
   - 스킬 개발 기록과 실제 제품 방향 리서치 산출물을 분리해, 이후 research worktree에서 조사 결과를 관리하기 쉽게 만들고 싶음.
 - Analysis result:
-  - `.aiworkspace/note/finance/research/active/<research-id>/`를 제품 방향 리서치의 canonical output 위치로 확정했다.
+  - `.aiworkspace/note/finance/researches/active/<research-id>/`를 제품 방향 리서치의 canonical output 위치로 확정했다.
   - `tasks/active/`는 리서치 workflow나 스킬 자체를 만들고 수정한 실행 기록에 사용한다.
   - 채택된 장기 방향만 `docs/PRODUCT_DIRECTION.md` 또는 `docs/ROADMAP.md`로 승격하고, 승인된 개발 단위만 phase/task로 전환한다.
 - Follow-up:
-  - 2단계 실제 리서치 run은 `research/active/<research-id>/`에 `RESEARCH_PLAN.md`, `CURRENT_PROJECT_AUDIT.md`, `BENCHMARKS.md`, `FEATURE_CANDIDATES.md`, `RECOMMENDATION.md`, `SOURCES.md`, `RISKS.md`를 두고 시작한다.
+  - 2단계 실제 리서치 run은 `researches/active/<research-id>/`에 `RESEARCH_PLAN.md`, `CURRENT_PROJECT_AUDIT.md`, `BENCHMARKS.md`, `FEATURE_CANDIDATES.md`, `RECOMMENDATION.md`, `SOURCES.md`, `RISKS.md`를 두고 시작한다.
 
 ### 2026-05-13 - 제품 방향 리서치는 스킬 3개로 시작한다
 - User request:
@@ -2478,7 +2489,7 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Interpreted goal:
   - root에는 큰 지도 / 활성 로그 / 템플릿만 남기고, 운영성 문서, research 참고 자료, support-track 문서, developer flow 문서를 목적별 폴더로 이동해야 함
 - Result:
-  - 운영성 문서는 `.aiworkspace/note/finance/operations/`, daily market update 문서는 `.aiworkspace/note/finance/operations/daily_market_update/`, research 문서는 `.aiworkspace/note/finance/research/`, support 논의 문서는 `.aiworkspace/note/finance/support_tracks/`, 기존 backtest refinement flow guide는 `.aiworkspace/note/finance/docs/architecture/`로 이동했다
+  - 운영성 문서는 `.aiworkspace/note/finance/operations/`, daily market update 문서는 `.aiworkspace/note/finance/operations/daily_market_update/`, research 문서는 `.aiworkspace/note/finance/researches/`, support 논의 문서는 `.aiworkspace/note/finance/support_tracks/`, 기존 backtest refinement flow guide는 `.aiworkspace/note/finance/docs/architecture/`로 이동했다
   - `FINANCE_DOC_INDEX.md`와 관련 링크를 새 위치로 갱신했다
   - 앞으로 root `.aiworkspace/note/finance/`는 `FINANCE_COMPREHENSIVE_ANALYSIS.md`, `MASTER_PHASE_ROADMAP.md`, `FINANCE_DOC_INDEX.md`, glossary, active logs, phase templates 중심으로 유지한다
 
@@ -4590,7 +4601,7 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 주요 신규 module은 asset allocation fit, concentration / overlap, correlation / risk contribution, macro / regime, sentiment overlay, stress / scenario, alternative portfolio challenge, leveraged / inverse suitability, ETF operability, robustness / overfit audit이다
   - 단일 전략도 1개 component 100% 포트폴리오로 보고 같은 진단을 적용하며, mix는 component score 합산보다 exposure와 위험 구조를 우선 해석해야 한다
 - Follow-up:
-  - `.aiworkspace/note/finance/research/PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH.md`를 새로 작성했다
+  - `.aiworkspace/note/finance/researches/PRACTICAL_VALIDATION_INVESTMENT_DIAGNOSTICS_RESEARCH.md`를 새로 작성했다
   - `.aiworkspace/note/finance/tasks/active/practical-validation-v2/DESIGN.md`를 evidence pack 중심에서 Practical Investment Diagnostics 중심으로 보강했다
 
 ### 2026-05-10 - Practical Validation은 Validation Profile로 판정 기준을 조정해야 한다

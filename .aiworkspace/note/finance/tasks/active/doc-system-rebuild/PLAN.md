@@ -185,7 +185,7 @@ Notion 가이드에서 적용할 원칙:
 - `.aiworkspace/note/finance/code_analysis/` -> current-state 문서는 `.aiworkspace/note/finance/docs/architecture/`, `.aiworkspace/note/finance/docs/flows/`, `.aiworkspace/note/finance/docs/runbooks/`로 마이그레이션 후 제거
 - `.aiworkspace/note/finance/data_architecture/` -> `.aiworkspace/note/finance/docs/data/`로 마이그레이션 후 제거
 - `.aiworkspace/note/finance/operations/`
-- `.aiworkspace/note/finance/research/`
+- `.aiworkspace/note/finance/researches/`
 - `.aiworkspace/note/finance/support_tracks/`
 - 기존 `.aiworkspace/note/finance/phases/phase*/`
 - 기존 root markdown 문서

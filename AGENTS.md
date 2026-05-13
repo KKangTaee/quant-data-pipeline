@@ -9,7 +9,7 @@
 - `.aiworkspace/note/finance/docs/`: 오래 유지될 프로젝트 지식
 - `.aiworkspace/note/finance/phases/`: Main worktree가 관리하는 phase 단위 계획과 통합 기록
 - `.aiworkspace/note/finance/tasks/`: 개별 실행 task의 계획, 진행 상태, 실행 결과
-- `.aiworkspace/note/finance/research/`: 제품 방향, 벤치마킹, 기능 후보 리서치 산출물
+- `.aiworkspace/note/finance/researches/`: 제품 방향, 벤치마킹, 기능 후보 리서치 산출물
 - `.aiworkspace/note/finance/agent/`: 반복 실수, 교훈, Codex 운영 팁
 - `.aiworkspace/note/finance/reports/backtests/`: 사람이 읽는 backtest report, 전략 hub, 후보 근거, validation report
 - `.aiworkspace/note/finance/registries/`: 제품 workflow가 읽고 쓰는 append-only JSONL registry
@@ -34,12 +34,12 @@
 5. 작업 성격에 맞는 `.aiworkspace/note/finance/docs/architecture/`, `flows/`, `data/`, `runbooks/`
 6. 관련 active phase가 있으면 `.aiworkspace/note/finance/phases/active/<phase>/`
 7. 관련 active task가 있으면 `.aiworkspace/note/finance/tasks/active/<task>/`
-8. 제품 방향 / 벤치마킹 / 기능 후보 리서치면 `.aiworkspace/note/finance/research/README.md`와 관련 `.aiworkspace/note/finance/research/active/<research-id>/`
+8. 제품 방향 / 벤치마킹 / 기능 후보 리서치면 `.aiworkspace/note/finance/researches/README.md`와 관련 `.aiworkspace/note/finance/researches/active/<research-id>/`
 9. backtest report 작업이면 `.aiworkspace/note/finance/reports/backtests/INDEX.md`
 10. 반복 이슈가 의심되면 `.aiworkspace/note/finance/agent/GOTCHAS.md`
 
 legacy `operations/`, `research/`, `support_tracks/`, `archive/`, root current-state markdown 문서는 새 구조로 흡수 후 제거했다.
-현재 `.aiworkspace/note/finance/research/`는 legacy dump가 아니라 제품 방향 리서치 전용 active/done 작업장이다.
+현재 `.aiworkspace/note/finance/researches/`는 legacy dump가 아니라 제품 방향 리서치 전용 active/done 작업장이다.
 새 작업 기록과 새 장기 지식은 새 구조에 작성한다.
 데이터 / DB 의미의 canonical 위치는 `.aiworkspace/note/finance/docs/data/`다.
 코드 구조와 실행 흐름의 canonical 위치는 `.aiworkspace/note/finance/docs/architecture/`, 사용자 / 화면 흐름의 canonical 위치는 `.aiworkspace/note/finance/docs/flows/`, 실행 절차의 canonical 위치는 `.aiworkspace/note/finance/docs/runbooks/`다.
@@ -65,7 +65,7 @@ legacy `operations/`, `research/`, `support_tracks/`, `archive/`, root current-s
 - 유사 서비스 / 트렌드 / UI 패턴 조사: `finance-benchmark-research`
 - 리서치 결과 기반 기능 후보 / 근거 / 우선순위 정리: `finance-feature-opportunity`
 
-제품 방향 리서치의 본문 산출물은 `.aiworkspace/note/finance/research/active/<research-id>/`에 둔다.
+제품 방향 리서치의 본문 산출물은 `.aiworkspace/note/finance/researches/active/<research-id>/`에 둔다.
 리서치 workflow 자체를 만들거나 수정한 실행 기록은 `.aiworkspace/note/finance/tasks/active/<task>/`에 둔다.
 
 구현 domain skill:
@@ -129,7 +129,7 @@ Task work는 실제 구현, 조사, 문서 정리, QA를 수행하는 실행 단
 위치:
 
 ```text
-.aiworkspace/note/finance/research/active/<research-id>/
+.aiworkspace/note/finance/researches/active/<research-id>/
   RESEARCH_PLAN.md
   CURRENT_PROJECT_AUDIT.md
   BENCHMARKS.md
@@ -140,7 +140,7 @@ Task work는 실제 구현, 조사, 문서 정리, QA를 수행하는 실행 단
   RISKS.md
 ```
 
-실제 리서치 산출물은 `research/active/`에 둔다.
+실제 리서치 산출물은 `researches/active/`에 둔다.
 스킬 개발, 문서 체계 변경, 코드 구현 같은 실행 작업 기록은 `tasks/active/`에 둔다.
 채택된 장기 방향만 `docs/PRODUCT_DIRECTION.md` 또는 `docs/ROADMAP.md`로 승격하고, 승인된 개발 단위만 `phases/active/` 또는 `tasks/active/`로 전환한다.
 
@@ -148,7 +148,7 @@ Task work는 실제 구현, 조사, 문서 정리, QA를 수행하는 실행 단
 
 - `docs/`에는 오래 유지될 프로젝트 지식만 둔다.
 - 작업 중 추측, 조사 메모, 실패 로그는 task 또는 phase 문서에 먼저 둔다.
-- 제품 방향 리서치의 추측, 비교표, source note, 기능 후보는 `research/active/`에 먼저 둔다.
+- 제품 방향 리서치의 추측, 비교표, source note, 기능 후보는 `researches/active/`에 먼저 둔다.
 - 오래된 task 내용 중 반복 가치가 있는 것만 `docs/` 또는 `agent/GOTCHAS.md`로 승격한다.
 - `AGENTS.md`에는 상세 아키텍처 설명을 길게 넣지 않는다. 상세 지도는 `docs/`에 둔다.
 - 신규 또는 크게 바뀐 phase / task plan에는 `이걸 하는 이유?` 또는 그에 준하는 목적 설명을 포함한다.
