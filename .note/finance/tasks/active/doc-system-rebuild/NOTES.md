@@ -25,7 +25,7 @@ Last Updated: 2026-05-12
 
 - 장기 지식 위치는 `.note/finance/docs/`로 한다.
 - 현재 Practical Validation V2는 phase가 아니라 active task로 관리한다.
-- 기존 phase36 등 과거 phase 문서는 다음 마이그레이션에서 필요한 summary만 남기는 방향으로 정리한다.
+- 기존 phase1~phase36 상세 문서는 현재 구현과 맞지 않는 legacy history로 보고 3차에서 제거한다.
 - 새 문서에는 기존 상세 내용을 복붙하지 않고, 다음 세션이 작업을 재개할 수 있는 최소 기준만 남긴다.
 - backtest report는 phase 문서와 달리 분석 근거로 재사용될 가능성이 높으므로 삭제하지 않고 새 `reports/backtests/` 구조로 먼저 이동한다.
 - `archive/legacy_phase/`는 영구 위치가 아니라 후속 흡수/삭제 판단 전 staging 영역이며, 3차에서 제거했다.
@@ -55,7 +55,7 @@ Last Updated: 2026-05-12
 
 ## 2차 삭제 후보 판단
 
-3차에서 삭제 가능한 legacy 문서:
+3차에서 삭제한 legacy 문서:
 
 | Legacy Area | 2차 판단 |
 |---|---|
@@ -65,9 +65,10 @@ Last Updated: 2026-05-12
 | `support_tracks/*.md` | Codex 운영 / helper script 원칙만 새 구조로 흡수 완료. 상세 과거 support plan은 삭제 후보 |
 | `archive/*.md` | 과거 snapshot. 현재 새 구조에 직접 필요하지 않음 |
 
-3차에서 아직 주의할 것:
+3차 삭제 후 유지한 것:
 
 - `WORK_PROGRESS.md`와 `QUESTION_AND_ANALYSIS_LOG.md`는 현재 hygiene helper와 handoff log가 보고 있으므로 바로 삭제하지 않는다.
-- `PHASE_PLAN_TEMPLATE.md`, `PHASE_TEST_CHECKLIST_TEMPLATE.md`는 phase 문서 삭제와 별도로 template 보존 / runbook 흡수 여부를 마지막에 판단한다.
+- `PHASE_PLAN_TEMPLATE.md`, `PHASE_TEST_CHECKLIST_TEMPLATE.md`는 helper script가 읽는 source file이므로 `.note/finance/docs/runbooks/templates/`로 이동하고 `bootstrap_finance_phase_bundle.py` 경로를 갱신했다.
+- 기존 `phases/phase1` ~ `phases/phase36` 상세 문서는 새 docs / reports / task 구조에 필요한 내용을 흡수한 뒤 제거했다.
 - `registries/`와 `saved/`는 삭제 대상이 아니다.
 - `run_history/`, `run_artifacts/`, `.DS_Store`, `.playwright-mcp/`는 generated / local artifact다. 커밋 대상이 아니다.

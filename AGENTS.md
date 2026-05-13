@@ -36,7 +36,7 @@
 8. backtest report 작업이면 `.note/finance/reports/backtests/INDEX.md`
 9. 반복 이슈가 의심되면 `.note/finance/agent/GOTCHAS.md`
 
-마이그레이션이 끝나기 전까지 기존 `operations/`, `research/`, root markdown 문서는 legacy reference로만 본다.
+legacy `operations/`, `research/`, `support_tracks/`, `archive/`, root current-state markdown 문서는 새 구조로 흡수 후 제거했다.
 새 작업 기록과 새 장기 지식은 새 구조에 작성한다.
 데이터 / DB 의미의 canonical 위치는 `.note/finance/docs/data/`다.
 코드 구조와 실행 흐름의 canonical 위치는 `.note/finance/docs/architecture/`, 사용자 / 화면 흐름의 canonical 위치는 `.note/finance/docs/flows/`, 실행 절차의 canonical 위치는 `.note/finance/docs/runbooks/`다.

@@ -19,7 +19,7 @@ Notion Codex 문서 운영 가이드에 맞춰 `.note/finance/`를 장기 지식
 - `code_analysis/`를 `docs/architecture`, `docs/flows`, `docs/runbooks`, active Practical Validation task 문서로 마이그레이션 완료
 - Reference > Guides / Glossary 앱 참조 경로를 새 docs 구조 기준으로 1차 정리 완료
 - legacy root / operations / research / support 문서의 2차 흡수 기준 확정 완료
-- 기존 문서 삭제는 아직 하지 않음
+- legacy root / operations / research / support / archive 문서 삭제 완료
 - `AGENTS.md` 재작성 완료
 
 ## Done
@@ -41,19 +41,27 @@ Notion Codex 문서 운영 가이드에 맞춰 `.note/finance/`를 장기 지식
 - [x] `Reference > Guides` 문서 경로와 `Reference > Glossary` 읽기 경로를 새 docs 구조로 전환
 - [x] legacy root / operations / research / support 문서의 남길 정보와 삭제 후보를 정리
 - [x] Practical Validation static stress window JSON을 `docs/data/`로 이동하고 runtime path 갱신
+- [x] legacy root current-state docs, operations, research, support_tracks, archive 제거
+- [x] phase bootstrap template을 `docs/runbooks/templates/`로 이동하고 helper 경로 갱신
+- [x] legacy `phases/phase1` ~ `phases/phase36` 상세 문서 제거
 
 ## Next
 
 - [x] 1차 결과를 사용자에게 확인받기
 - [x] 2차 작업에서 `AGENTS.md`를 새 read order 기준으로 축약하기
 - [x] 2차 작업에서 남은 legacy root / operations / research / support 문서 중 새 docs로 흡수할 내용 확정하기
-- [ ] 3차 작업에서 나머지 기존 문서 tree 삭제와 검증 진행하기
+- [x] 3차 작업에서 나머지 기존 문서 tree 삭제와 검증 진행하기
 
 ## Current Boundary
 
 현재까지 아래는 하지 않았다.
 
-- operations / research / root markdown 등 남은 legacy tree 삭제
 - strategy hub/log와 raw run report 간 중복 해석 삭제 판단
 - registry / saved JSONL 수정
-- Reference / Glossary 이외 finance 기능 코드 수정
+- Finance product feature 동작 변경. 이번 code 변경은 문서 / reference data 경로 보정과 phase helper template path 갱신에 한정한다.
+
+3차 삭제 후에도 아래는 의도적으로 남아 있다.
+
+- `.note/finance/phases/active/`, `.note/finance/phases/done/`, `.note/finance/phases/README.md`: 새 phase skeleton으로 유지한다.
+- `.note/finance/run_history/`, `.note/finance/run_artifacts/`: local runtime artifact로 commit 제외 대상이다.
+- `.note/finance/WORK_PROGRESS.md`, `.note/finance/QUESTION_AND_ANALYSIS_LOG.md`: handoff log로 유지한다.

@@ -33,7 +33,12 @@
 
 생성 위치:
 
-- `.note/finance/phases/phase<N>/`
+- `.note/finance/phases/active/phase<N>/`
+
+Template source:
+
+- `.note/finance/docs/runbooks/templates/PHASE_PLAN_TEMPLATE.md`
+- `.note/finance/docs/runbooks/templates/PHASE_TEST_CHECKLIST_TEMPLATE.md`
 
 주의:
 

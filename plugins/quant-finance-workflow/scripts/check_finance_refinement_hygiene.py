@@ -17,7 +17,7 @@ GENERATED_PATTERNS = [
     ".note/finance/saved/SAVED_PORTFOLIOS.jsonl",
     ".note/finance/backtest_artifacts/*",
     ".note/finance/run_artifacts/*",
-    ".note/finance/phases/phase12/_tmp_gtaa_*.csv",
+    ".note/finance/phases/active/phase12/_tmp_gtaa_*.csv",
     "csv/*daily_market_update_failures.csv",
     "*.ipynb",
     "*.DS_Store",
@@ -29,8 +29,8 @@ ROOT_LOGS = {
 }
 
 INDEX_DOCS = {
-    ".note/finance/FINANCE_DOC_INDEX.md",
-    ".note/finance/backtest_reports/BACKTEST_REPORT_INDEX.md",
+    ".note/finance/docs/INDEX.md",
+    ".note/finance/reports/backtests/INDEX.md",
 }
 
 REGISTRY_DOCS = {
@@ -88,11 +88,11 @@ def _classify(paths: list[str]) -> dict[str, list[str]]:
             out["indexes"].append(path)
         elif path in REGISTRY_DOCS:
             out["registries"].append(path)
-        elif path.startswith(".note/finance/phases/phase") and path.endswith(".md"):
+        elif path.startswith(".note/finance/phases/active/phase") and path.endswith(".md"):
             out["phase_docs"].append(path)
-        elif path.startswith(".note/finance/backtest_reports/strategies/") and path.endswith("_BACKTEST_LOG.md"):
+        elif path.startswith(".note/finance/reports/backtests/strategies/") and path.endswith("_BACKTEST_LOG.md"):
             out["backtest_logs"].append(path)
-        elif path.startswith(".note/finance/backtest_reports/strategies/") and path.endswith(".md"):
+        elif path.startswith(".note/finance/reports/backtests/strategies/") and path.endswith(".md"):
             name = Path(path).name
             if name in {
                 "VALUE_STRICT_ANNUAL.md",
@@ -205,7 +205,7 @@ def _build_checks(groups: dict[str, list[str]]) -> list[dict[str, str]]:
             {
                 "name": "index docs reviewed",
                 "ok": "yes" if indexes else "no",
-                "detail": "FINANCE_DOC_INDEX or BACKTEST_REPORT_INDEX touched"
+                "detail": "docs/INDEX or reports/backtests/INDEX touched"
                 if indexes
                 else "durable docs changed but index docs were not touched",
             }

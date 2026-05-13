@@ -381,7 +381,7 @@ def _template_row() -> dict[str, Any]:
             "success_condition": None,
         },
         "docs": {
-            "source_report": ".note/finance/backtest_reports/strategies/GTAA.md",
+            "source_report": ".note/finance/reports/backtests/strategies/GTAA.md",
         },
         "notes": "Optional extra context.",
     }

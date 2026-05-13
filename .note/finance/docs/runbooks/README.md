@@ -89,3 +89,12 @@ UI에서 provider / FRED / 웹페이지를 직접 fetch하지 않는다.
 ## Automation Helpers
 
 Repo-local helper script 사용 기준은 [AUTOMATION_SCRIPTS.md](./AUTOMATION_SCRIPTS.md)를 본다.
+
+## Templates
+
+Phase helper가 사용하는 template은 아래에 둔다.
+
+- [PHASE_PLAN_TEMPLATE.md](./templates/PHASE_PLAN_TEMPLATE.md)
+- [PHASE_TEST_CHECKLIST_TEMPLATE.md](./templates/PHASE_TEST_CHECKLIST_TEMPLATE.md)
+
+이 template은 root legacy 문서가 아니라 helper script가 읽는 source file이다.

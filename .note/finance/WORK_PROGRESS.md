@@ -3829,3 +3829,9 @@ Detailed historical logs were archived on `2026-04-13`.
   - runtime artifact hygiene, external research, config externalization 원칙은 `docs/runbooks/README.md`로 축약했다.
   - `research/practical_validation_stress_windows_v1.json`은 런타임 reference data로 확인되어 `.note/finance/docs/data/`로 이동하고 `STRESS_WINDOW_FILE` 경로를 갱신했다.
   - Practical Validation investment diagnostics research 참조는 active task `DESIGN.md`에 흡수된 기준으로 바꿨고, 3차 삭제 후보 / 유지 주의사항을 doc-system-rebuild `NOTES.md`, `RISKS.md`에 기록했다.
+- Documentation System Rebuild 3차 legacy 제거:
+  - 새 docs 구조로 대체된 root current-state docs, `archive/`, `operations/`, 남은 `research/`, `support_tracks/`를 제거했다.
+  - 기존 `phases/phase1`~`phases/phase36` 상세 문서는 현재 구현과 맞지 않는 legacy history로 보고 제거했다.
+  - phase plan / checklist template은 삭제하지 않고 `.note/finance/docs/runbooks/templates/`로 이동했다.
+  - `bootstrap_finance_phase_bundle.py`는 새 template 경로를 읽고 `.note/finance/phases/active/phase<N>/`에 bundle을 생성하도록 갱신했다.
+  - `registries/`, `saved/`, root handoff log, active task docs는 보존했다.

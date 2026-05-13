@@ -2,11 +2,12 @@
 
 ## Read first
 
-- `.note/finance/backtest_reports/strategies/CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md`
+- `.note/finance/reports/backtests/strategies/CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md`
 - `.note/finance/registries/CURRENT_CANDIDATE_REGISTRY.jsonl`
-- `.note/finance/phases/phase20/PHASE20_CURRENT_CHAPTER_TODO.md`
-- `.note/finance/phases/phase20/PHASE20_OPERATOR_WORKFLOW_INVENTORY_FIRST_PASS.md`
-- `.note/finance/phases/phase21/PHASE21_CURRENT_CHAPTER_TODO.md`
+- `.note/finance/docs/INDEX.md`
+- `.note/finance/docs/ROADMAP.md`
+- `.note/finance/docs/PROJECT_MAP.md`
+- active task or phase docs under `.note/finance/tasks/active/` or `.note/finance/phases/active/`
 - relevant strategy hub:
   - `VALUE_STRICT_ANNUAL.md`
   - `QUALITY_STRICT_ANNUAL.md`

@@ -4906,3 +4906,16 @@ Detailed historical analysis was archived on `2026-04-13`.
   - support track의 plugin / skill / automation 문서는 현재 canonical이 아니며, 필요한 원칙은 `AGENTS.md`, `docs/runbooks/`, `agent/` 문서로 충분하다
 - Follow-up:
   - 2차 작업에서 registry / runbook / data / task / agent 문서를 갱신하고 stress window code path를 새 위치로 바꿨다
+
+### 2026-05-13 - 3차 legacy 문서 제거와 template 보존
+- User request:
+  - 사용자가 삭제 전 마이그레이션 1차 / 2차 이후 마지막 3차 작업 진행을 요청함
+- Interpreted goal:
+  - 새 docs 구조로 대체된 legacy 문서 tree를 실제로 제거하되, 런타임이나 helper가 읽는 파일은 깨지지 않게 유지해야 함
+- Analysis result:
+  - root current-state docs, `archive/`, `operations/`, 남은 `research/`, `support_tracks/`는 새 구조에 흡수 완료되어 삭제 가능하다
+  - 기존 `phases/phase1`~`phase36` 상세 문서는 현재 구조와 맞지 않는 legacy history라 새 phase skeleton만 남기는 것이 맞다
+  - `PHASE_PLAN_TEMPLATE.md`, `PHASE_TEST_CHECKLIST_TEMPLATE.md`는 phase helper가 읽는 source file이므로 삭제가 아니라 `docs/runbooks/templates/`로 이동하는 것이 맞다
+  - `WORK_PROGRESS.md`, `QUESTION_AND_ANALYSIS_LOG.md`, `registries/`, `saved/`, active task docs는 유지해야 한다
+- Follow-up:
+  - 3차 작업에서 legacy tree와 legacy phase docs 제거, template 이동, helper path 갱신, 삭제 후 검증을 진행했다

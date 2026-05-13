@@ -214,16 +214,17 @@ first-pass status:
 - Drift Alert / Review Trigger Preview는 read-only 해석이며 alert registry를 저장하지 않는다.
 - account holding 자동 연결, broker order, auto rebalance는 후속 phase에서 별도 계약을 정한 뒤 구현한다.
 
-## Phase 30 Portfolio Proposal 계약
+## Portfolio Proposal 계약
 
-Phase 30 두 번째 작업 이후 Portfolio Proposal은 단순 weighted portfolio 저장값이 아니라,
+Portfolio Proposal은 단순 weighted portfolio 저장값이 아니라,
 후보 묶음의 목적과 검토 근거를 함께 담는 제안 초안으로 본다.
 
-상세 계약은 아래 문서를 기준으로 한다.
+현재 상세 계약은 아래 문서를 기준으로 한다.
 
-- `.note/finance/phases/phase30/PHASE30_PORTFOLIO_PROPOSAL_CONTRACT_SECOND_WORK_UNIT.md`
+- [PORTFOLIO_SELECTION_FLOW.md](./PORTFOLIO_SELECTION_FLOW.md)
+- [Finance Registries](../../registries/README.md)
 
-Phase 30 네 번째 작업 이후 기본 저장 위치는
+기본 저장 위치는
 `.note/finance/registries/PORTFOLIO_PROPOSAL_REGISTRY.jsonl`이다.
 첫 proposal draft를 저장할 때 파일이 생성되며,
 append / load helper는 `app/web/runtime/portfolio_proposal.py`가 담당한다.
