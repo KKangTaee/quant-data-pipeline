@@ -41,6 +41,23 @@ find .note/finance -maxdepth 3 -type f | sort
 - `.DS_Store`와 `.playwright-mcp/`는 커밋하지 않는다.
 - 문서 재구성처럼 큰 변경은 삭제 전후 구조 확인 결과를 최종 응답에 요약한다.
 
+## Root Log Hygiene
+
+Root log는 긴 작업 노트를 보관하는 곳이 아니라, 다음 세션이 현재 위치를 빠르게 찾는 handoff map이다.
+
+| 문서 | root에 남길 내용 | 상세를 보낼 곳 |
+|---|---|---|
+| `.note/finance/WORK_PROGRESS.md` | 작업 단위당 3~5줄의 milestone, 완료 내용, 다음 확인 위치 | active task `STATUS.md`, `RUNS.md`, `NOTES.md` |
+| `.note/finance/QUESTION_AND_ANALYSIS_LOG.md` | 질문 주제, 해석한 목표, 결론, 후속 결정 | active task `NOTES.md` 또는 관련 `DESIGN.md` |
+
+운영 기준:
+
+- 실행 명령과 긴 출력은 root log가 아니라 `RUNS.md`에 남긴다.
+- 긴 설계 판단, 대안 비교, 시행착오는 `NOTES.md`나 `DESIGN.md`에 남긴다.
+- root log에는 "무엇을 결정 / 완료했고 어느 문서를 보면 되는지"만 남긴다.
+- 질문 분석은 `User request`, `Interpreted goal`, `Analysis result`, `Follow-up` 구조를 유지하되, 각 항목을 짧게 쓴다.
+- root log가 비대해질 것 같으면 먼저 active task 문서를 만들거나 기존 active task 문서로 상세를 넘긴다.
+
 ## Runtime Artifact Hygiene
 
 Runtime artifact는 작업 중 상태를 재현하거나 디버깅하는 데는 쓸 수 있지만 장기 문서가 아니다.

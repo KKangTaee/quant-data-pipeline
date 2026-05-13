@@ -3839,3 +3839,6 @@ Detailed historical logs were archived on `2026-04-13`.
   - 오래된 구현 목록 중심 README를 제거하고, 현재 finance 제품 boundary / 사용 흐름 / quick start / 문서 map 중심으로 다시 작성했다.
   - 사용자-facing program flow를 Mermaid chart로 추가해 `Ingestion -> Backtest Analysis -> Practical Validation -> Final Review -> Selected Portfolio Dashboard` 흐름을 첫 화면에서 이해할 수 있게 했다.
   - 상세 구현과 active progress는 README에 중복하지 않고 `.note/finance/docs/`와 active task 문서로 연결하는 구조로 정리했다.
+- Root handoff log 운영 지침 추가:
+  - `WORK_PROGRESS.md`와 `QUESTION_AND_ANALYSIS_LOG.md`는 root handoff map으로 유지하고, 상세 기록은 active task 문서로 보내는 기준을 `AGENTS.md`와 `docs/runbooks/README.md`에 추가했다.
+  - root log는 작업 단위당 3~5줄 milestone / decision 중심으로 남기고, 실행 명령 / 긴 분석 / 시행착오는 `RUNS.md`, `NOTES.md`, `DESIGN.md`로 분리한다.

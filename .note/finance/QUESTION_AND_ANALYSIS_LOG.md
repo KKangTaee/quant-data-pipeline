@@ -4931,3 +4931,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - README에는 live trading / broker order / auto rebalance가 현재 범위 밖이라는 non-goal을 명확히 두어 제품 경계를 오해하지 않게 해야 한다
 - Follow-up:
   - README를 현재 제품 boundary, Finance Console navigation, quick start, repository map, documentation map, data persistence boundary, development principles 중심으로 재작성했다
+
+### 2026-05-13 - root handoff log 비대화 방지 기준을 명시한다
+- User request:
+  - 사용자가 `WORK_PROGRESS.md`와 `QUESTION_AND_ANALYSIS_LOG.md`가 다시 너무 커질 수 있는지 우려하며, 그대로 둘지 지침을 추가할지 의견을 물음
+- Interpreted goal:
+  - root log를 유지하되 상세 작업 기록이 다시 누적되지 않도록 Codex가 따를 수 있는 기준을 명확히 해야 함
+- Analysis result:
+  - root log는 지도 역할로 두고, 상세 구현 과정 / 긴 분석 / 실행 로그는 active task 문서로 보내는 기준을 문서화하는 것이 좋다
+- Follow-up:
+  - `AGENTS.md`와 `docs/runbooks/README.md`에 root handoff log 기준을 추가했다

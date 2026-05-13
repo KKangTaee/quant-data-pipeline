@@ -96,6 +96,15 @@ Task work는 실제 구현, 조사, 문서 정리, QA를 수행하는 실행 단
 - `AGENTS.md`에는 상세 아키텍처 설명을 길게 넣지 않는다. 상세 지도는 `docs/`에 둔다.
 - 신규 또는 크게 바뀐 phase / task plan에는 `이걸 하는 이유?` 또는 그에 준하는 목적 설명을 포함한다.
 
+## Root Handoff Logs
+
+- `.note/finance/WORK_PROGRESS.md`와 `.note/finance/QUESTION_AND_ANALYSIS_LOG.md`는 root handoff log로 유지한다.
+- root log는 작업 현장 기록이 아니라 지도 역할을 한다. 작업 단위당 3~5줄의 핵심 milestone / decision / handoff만 남긴다.
+- 상세 구현 과정, 긴 분석, 명령 출력, 시행착오, 중간 판단은 active task의 `STATUS.md`, `NOTES.md`, `RUNS.md`, `RISKS.md`로 보낸다.
+- `WORK_PROGRESS.md`에는 무엇을 끝냈는지와 다음에 어디를 보면 되는지만 남긴다.
+- `QUESTION_AND_ANALYSIS_LOG.md`에는 `User request`, `Interpreted goal`, `Analysis result`, `Follow-up` 중심의 결론만 남기고 대화 전체를 옮기지 않는다.
+- root log가 길어지는 조짐이 있으면 먼저 task 문서로 분리하고, root에는 해당 task 문서 경로를 남긴다.
+
 ## Code Work Rules
 
 - 코드 수정 전에는 `.note/finance/docs/PROJECT_MAP.md`에서 소유 파일과 경계를 확인한다.
