@@ -1,197 +1,182 @@
 # Quant Data Pipeline
 
-DB-backed market data ingestion, factor generation, and strategy backtesting workspace for quant research and operator review.
+MySQL 기반 데이터 수집, 전략 백테스트, 실전형 검증, 최종 포트폴리오 판단, 선정 이후 모니터링을 한 흐름으로 다루는 퀀트 리서치 워크스페이스입니다.
 
-이 저장소의 현재 중심은 `finance` 패키지입니다.  
-주요 목표는 아래 두 가지입니다.
+현재 이 저장소의 active product scope는 `finance` 패키지와 Streamlit 기반 `Finance Console`입니다.
+`financial_advisor` 디렉터리는 저장소에 남아 있지만, 별도 요청이 없다면 현재 개발 중심 범위가 아닙니다.
 
-- 데이터 수집과 정규화
-- 전략 백테스트와 실전형 해석
+## 이 프로젝트가 하는 일
 
-`financial_advisor` 디렉터리는 저장소 안에 남아 있지만, 현재 활성 개발 범위의 중심은 아닙니다.
+이 프로젝트의 핵심 질문은 다음입니다.
 
-## 현재 제품 표면
+> 백테스트 결과가 좋아 보이는 전략을 실제로 추적 가능한 포트폴리오 후보로 봐도 되는가?
 
-현재 메인 진입점은 Streamlit 기반 `Finance Console`입니다.
+이를 위해 아래 흐름을 연결합니다.
 
-- `Overview`
-  - 후보 Top 3, candidate funnel, next actions, recent activity, system snapshot dashboard
-- `Ingestion`
-  - 일별 업데이트, statement refresh, 진단 작업
-- `Backtest`
-  - `Backtest Analysis -> Practical Validation -> Final Review` 3단계로 후보 source 생성, profile-aware 실전 진단, 최종 판단 기록을 처리
-- `Ops Review`
-  - Operations Dashboard 형태의 triage flow, run health, action inbox, failure artifact, logs, system snapshot 점검
-- `Selected Portfolio Dashboard`
-  - Final Review에서 선정된 포트폴리오를 최신 날짜 범위로 다시 계산하고, 가상 투자금 기준 성과 / benchmark spread / component contribution / Allocation drift를 read-only 운영 화면으로 확인
-- `Backtest Run History`
-  - 저장된 백테스트 실행 기록 검토, form 복원, 재실행, candidate review 초안 전달
-- `Guides`
-  - 현재 phase 문서, 체크리스트, 승격 해석 가이드, 단계형 운영 흐름 안내
-- `Glossary`
-  - 퀀트/백테스트/real-money 관련 용어를 검색하며 확인하는 reference 페이지
+| 영역 | 역할 |
+|---|---|
+| 데이터 수집 | 가격, 재무제표, ETF provider, macro context 데이터를 DB에 수집 |
+| 전략 백테스트 | ETF / factor strategy family를 재사용 가능한 runtime으로 실행 |
+| Practical Validation | 데이터 신뢰도, ETF 운용성, holdings / exposure, macro, stress, sensitivity 진단 |
+| Final Review | 선정 / 보류 / 거절 / 재검토 판단과 근거 기록 |
+| Selected Portfolio Dashboard | 최종 선정된 포트폴리오를 사용자가 지정한 기간과 가상 투자금으로 재확인 |
+| 문서 / 리포트 | 장기 프로젝트 지식, backtest report, task 기록을 `.note/finance/`에 정리 |
 
-## 현재 구현 범위
+## 하지 않는 일
 
-### Data / Ingestion
+현재 이 저장소는 아래 기능을 제공하지 않습니다.
 
-- OHLCV 수집 및 DB 적재
-- fundamentals / financial statements 수집
-- asset profile / ETF 운용 가능성 관련 메타데이터 수집
-- factor 계산 파이프라인
-- 진단 작업
-  - stale price
-  - statement coverage
-  - source payload inspection
+- broker account 연결
+- live trading 승인
+- 자동 주문 생성
+- 자동 리밸런싱 실행
+- 투자 수익 보장 표현
+- 모든 ETF provider endpoint에 대한 universal connector
 
-### Backtest / Research
+현재 경계는 리서치, 검증, 최종 판단, 선정 이후 모니터링 지원입니다. 자동 매매 시스템이 아닙니다.
 
-- ETF 전략
-  - `Equal Weight`
-  - `GTAA`
-  - `Global Relative Strength`
-  - `Risk Parity Trend`
-  - `Dual Momentum`
-- Strict annual factor family
-  - `Quality`
-  - `Value`
-  - `Quality + Value`
-  - strict annual trend overlay는 now optional `partial cash retention`을 받아,
-    일부 추세 탈락 슬롯을 survivor reweighting 대신 현금으로 남기는 구조 실험이 가능
-  - strict annual full risk-off는 now optional `defensive sleeve risk-off`를 받아,
-    `BIL / SHY / LQD` 같은 방어 sleeve로 회전하는 구조 실험이 가능
-  - strict annual weighting은 now optional `concentration-aware weighting`을 받아,
-    pure equal-weight 대신 mild `rank-tapered` top-N 배분을 실험할 수 있음
-- 실전형 해석 surface
-  - `Promotion`
-  - `Shortlist`
-  - `Probation`
-  - `Monitoring`
-  - `Deployment Readiness`
-  - `Validation / Rolling / Out-of-Sample Review`
-- persistent backtest history
-  - 실행 입력/요약뿐 아니라 `gate snapshot`도 함께 저장하는 history v2
-  - 이후 blocker audit, candidate review, rerun drilldown에 활용
-  - `Operations > Backtest Run History`에서 운영 기록처럼 확인하고, 필요 시 Backtest 흐름으로 다시 보냄
-- Clean V2 portfolio selection workflow
-  - `Backtest > Backtest Analysis`에서 Single Strategy / Compare / 저장 Mix replay를 실행하고 실전 검증 후보 source를 선택하는 흐름
-  - `.note/finance/registries/PORTFOLIO_SELECTION_SOURCES.jsonl`에 선택한 후보 source를 append-only로 저장하는 흐름
-  - `Backtest > Practical Validation`에서 선택 source의 component, weight, Data Trust, Real-Money signal을 Input Evidence로 읽고, curve snapshot / DB price proxy 기반 rolling, stress, baseline, correlation, sensitivity, operability 진단을 사용자 검증 profile과 함께 구조화하는 흐름
-  - `.note/finance/registries/PRACTICAL_VALIDATION_RESULTS.jsonl`에 검증 결과를 저장하되, 사용자 최종 메모는 Final Review에만 남기는 흐름
-  - `Backtest > Final Review`에서 Practical Validation 결과를 기준으로 최종 선정 / 보류 / 거절 / 재검토 판단을 한 번만 기록하는 흐름
-  - `.note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl`이 새 selected dashboard의 source-of-truth가 되는 흐름
-  - 기존 Candidate Review / Portfolio Proposal / Pre-Live JSONL은 legacy / archive compatibility 경로로 유지하고 새 workflow의 필수 join 조건으로 쓰지 않는 흐름
-- selected portfolio operations dashboard
-  - `Operations > Selected Portfolio Dashboard`에서 Final Review의 `SELECT_FOR_PRACTICAL_PORTFOLIO` row만 운영 대상으로 확인하는 흐름
-  - `.note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl`을 read-only로 읽는 흐름
-  - selected component의 저장 contract를 사용자가 지정한 시작일 / 종료일 / 가상 투자금으로 다시 실행해 최신 기간 성과를 확인하는 흐름
-  - portfolio value, total return, CAGR, MDD, benchmark spread, component contribution, strongest / weakest periods를 확인하는 흐름
-  - target allocation, benchmark, evidence, operator next action, current weight / current value / shares x price 기반 Allocation Check, disabled live approval / order boundary를 확인하는 흐름
-  - shares x price 입력에서는 DB latest close를 보조로 불러올 수 있지만, 실제 account holding 연결이나 주문 생성은 하지 않는 흐름
+## 프로그램 사용 흐름
 
-## 프로젝트 구조
+사용자-facing 주요 흐름은 아래와 같습니다.
 
-```text
-app/
-  jobs/                  # ingestion jobs, diagnostics, run history
-  web/
-    streamlit_app.py     # Finance Console entry point
-    overview_dashboard.py # Workspace > Overview dashboard UI
-    overview_dashboard_helpers.py # Overview 후보/Pre-Live/Proposal/History 집계 helper
-    backtest_analysis.py # Backtest Analysis 3단계 wrapper
-    backtest_practical_validation.py # Practical Validation UI
-    backtest_practical_validation_helpers.py # Clean V2 source / validation helper
-    backtest_workflow_routes.py # Backtest 3단계 route mapping
-    backtest_history.py  # Operations > Backtest Run History UI
-    backtest_candidate_library.py # Operations > Candidate Library UI
-    backtest_candidate_library_helpers.py # 저장 후보 목록 / replay payload / 후보 replay helper
-    final_selected_portfolio_dashboard.py # Operations > Selected Portfolio Dashboard UI
-    final_selected_portfolio_dashboard_helpers.py # 선정 포트폴리오 table / evidence / allocation input helper
-    backtest_ui_components.py # Backtest 공용 status/route UI component
-    backtest_candidate_review.py # Candidate Review / Candidate Packaging / Pre-Live 운영 기록 UI
-    backtest_candidate_review_helpers.py # Candidate Review 판단/변환/Pre-Live 운영 기록 helper
-    backtest_portfolio_proposal.py # Portfolio Proposal 작성 / 저장 / proposal feedback UI
-    backtest_portfolio_proposal_helpers.py # Portfolio Proposal 저장/검증/feedback helper
-    backtest_final_review.py # Final Review / 검증 근거 / 최종 판단 기록 UI
-    backtest_final_review_helpers.py # Final Review source/evidence/decision helper
-    pages/backtest.py    # Backtest shell, workflow navigation
-    runtime/             # UI-facing runtime wrappers
-      candidate_registry.py
-      portfolio_proposal.py
-      paper_portfolio_ledger.py
-      final_selection_decisions.py
-      portfolio_selection_v2.py
-      final_selected_portfolios.py
-finance/
-  data/                  # ingestion, DB schema, loaders, factors
-  strategy.py            # strategy simulation logic
-  transform.py           # reusable preprocessing
-  engine.py              # orchestration
-  performance.py         # performance summaries
-.note/finance/
-  docs/                  # product map, roadmap, glossary, architecture / flow / data / runbook docs
-  tasks/                 # active task plans, status, runs, risks
-  phases/                # phase-level planning and integration notes
-  reports/backtests/     # durable backtest reports and strategy logs
-  registries/            # append-only workflow JSONL registries
-  saved/                 # reusable saved portfolio setups
+```mermaid
+flowchart TD
+    A["Workspace > Ingestion<br/>DB 기반 데이터 수집 / 갱신"] --> B["Backtest > Backtest Analysis<br/>전략 실행 / 비교 / 후보 source 생성"]
+    B --> C["Backtest > Practical Validation<br/>12개 실전 진단"]
+    C --> D["Backtest > Final Review<br/>선정 / 보류 / 거절 / 재검토 판단"]
+    D --> E["Operations > Selected Portfolio Dashboard<br/>선정 이후 성과 재확인 / 모니터링"]
+
+    B -. "과거 실행 확인" .-> F["Operations > Backtest Run History"]
+    F -. "복원 / 재실행" .-> B
+
+    E -. "운영 기준 확인" .-> G["Reference > Guides / Glossary"]
 ```
 
-## 빠른 시작
+단계별 책임은 아래처럼 나뉩니다.
 
-### 1. 환경 준비
+| 단계 | 책임 |
+|---|---|
+| `Ingestion` | 백테스트와 검증에 필요한 데이터를 DB에 수집 |
+| `Backtest Analysis` | 단일 전략, 비교 실행, saved mix replay로 후보 source 생성 |
+| `Practical Validation` | 실전 검토에 필요한 12개 진단과 provider context 확인 |
+| `Final Review` | 최종 사용자 판단을 한 번 기록 |
+| `Selected Portfolio Dashboard` | 선정 이후 성과와 monitoring signal 확인. 주문 생성은 하지 않음 |
 
-이 프로젝트는 Python `3.12+` 기준입니다.
+## Finance Console
 
-```bash
-uv sync
-```
-
-또는 기존 가상환경이 이미 있다면 그대로 사용해도 됩니다.
-
-### 2. 콘솔 실행
+메인 앱은 Streamlit으로 실행합니다.
 
 ```bash
 .venv/bin/streamlit run app/web/streamlit_app.py
 ```
 
-앱이 열리면 상단 navigation에서 `Overview`, `Ingestion`, `Backtest`, `Ops Review`, `Selected Portfolio Dashboard`, `Backtest Run History`, `Candidate Library`, `Guides`, `Glossary`를 이동하며 사용합니다.
+상단 navigation은 아래 기준으로 구성됩니다.
 
-## 참고 문서
+| 그룹 | 화면 |
+|---|---|
+| `Workspace` | `Overview`, `Ingestion`, `Backtest` |
+| `Operations` | `Ops Review`, `Selected Portfolio Dashboard`, `Backtest Run History`, `Candidate Library` |
+| `Reference` | `Guides`, `Glossary` |
 
-가장 먼저 보면 좋은 문서는 아래입니다.
+## 빠른 시작
 
+의존성 설치:
+
+```bash
+uv sync
+```
+
+앱 실행:
+
+```bash
+.venv/bin/streamlit run app/web/streamlit_app.py
+```
+
+주의:
+
+- Python `3.12+` 기준입니다.
+- 주요 finance workflow는 DB-backed 구조라 로컬 MySQL과 finance schema 데이터가 필요합니다.
+- Practical Validation 결과를 신뢰하려면 먼저 Ingestion에서 가격, provider, 재무제표, macro 데이터를 수집해야 합니다.
+- runtime artifact, run history, 임시 CSV는 로컬 운영 산출물이며 보통 커밋하지 않습니다.
+
+## 저장소 구조
+
+```text
+app/
+  jobs/                  # ingestion, diagnostics, run history, artifact helper
+  web/                   # Streamlit Finance Console 화면과 UI runtime glue
+
+finance/
+  data/                  # data collector, provider connector, DB-backed ingestion
+  data/db/               # schema definition, MySQL helper
+  loaders/               # backtest / validation runtime용 DB read path
+  engine.py              # strategy orchestration
+  strategy.py            # portfolio simulation / rebalancing logic
+  transform.py           # signal, factor, ranking, preprocessing
+  performance.py         # performance metric / summary
+
+.note/finance/
+  docs/                  # 장기 제품 / 구조 / 데이터 / 흐름 / runbook 문서
+  tasks/active/          # active task의 계획, 상태, 실행 결과, 리스크
+  phases/active/         # phase 단위 통합 계획이 필요할 때 사용
+  reports/backtests/     # backtest report, strategy hub, strategy log
+  registries/            # append-only workflow JSONL registry
+  saved/                 # reusable saved portfolio setup
+```
+
+## 문서 지도
+
+먼저 볼 문서는 아래입니다.
+
+| 목적 | 문서 |
+|---|---|
+| 제품 목표와 경계 확인 | `.note/finance/docs/PRODUCT_DIRECTION.md` |
+| 현재 작업과 로드맵 확인 | `.note/finance/docs/ROADMAP.md` |
+| 코드 위치와 전체 구조 확인 | `.note/finance/docs/PROJECT_MAP.md` |
+| 포트폴리오 선정 사용자 흐름 확인 | `.note/finance/docs/flows/PORTFOLIO_SELECTION_FLOW.md` |
+| Backtest UI와 화면 책임 확인 | `.note/finance/docs/flows/BACKTEST_UI_FLOW.md` |
+| 데이터 / DB 의미와 table boundary 확인 | `.note/finance/docs/data/README.md` |
+| architecture와 code-flow map 확인 | `.note/finance/docs/architecture/README.md` |
+| 실행 명령과 운영 runbook 확인 | `.note/finance/docs/runbooks/README.md` |
+| backtest report와 strategy log 확인 | `.note/finance/reports/backtests/INDEX.md` |
+
+Codex / agent 작업 전에는 아래도 함께 봅니다.
+
+- `AGENTS.md`
 - `.note/finance/docs/INDEX.md`
-  - 새 finance 문서 인덱스
-- `.note/finance/docs/PROJECT_MAP.md`
-  - 현재 finance 구조와 runtime/data/strategy 흐름 요약
-- `.note/finance/docs/ROADMAP.md`
-  - 현재 작업 흐름과 active task 위치
-- `.note/finance/docs/GLOSSARY.md`
-  - 반복 용어 사전
-- `.note/finance/reports/backtests/INDEX.md`
-  - 결과 중심 백테스트 리포트 인덱스
+- `.note/finance/tasks/active/README.md`
+
+## 데이터와 저장 경계
+
+finance 시스템은 DB table과 JSONL record를 함께 사용합니다.
+
+| 저장 위치 | 역할 | 정책 |
+|---|---|---|
+| MySQL `finance_meta` | universe, asset profile, ETF provider snapshot, macro context | metadata / provider context의 DB source |
+| MySQL `finance_price` | OHLCV, dividend, split history | price runtime의 DB source |
+| MySQL `finance_fundamental` | fundamentals, statements, derived factors | factor workflow의 DB source |
+| `.note/finance/registries/*.jsonl` | workflow source, validation result, decision record | append-only 제품 기록. 임의 재작성 금지 |
+| `.note/finance/saved/*.jsonl` | reusable saved portfolio setup | 명시 요청 없이는 보존 |
+| `.note/finance/run_history/*.jsonl` | local execution history | 보통 커밋하지 않음 |
+| `.note/finance/run_artifacts/` | local job artifact / diagnostics | 보통 커밋하지 않음 |
 
 ## 개발 원칙
 
-- Point-in-time correctness를 항상 우선합니다.
-- Look-ahead bias와 survivorship bias를 명시적으로 경계합니다.
-- 전략 추가 시에는 가능하면:
-  - `finance/transform.py`에 전처리
-  - `finance/strategy.py`에 시뮬레이션
-  - `finance/engine.py`에 orchestration
-  구조를 유지합니다.
-- generated artifact, run history, temp CSV, notebook scratch 파일은 기본적으로 커밋하지 않습니다.
+- Point-in-time correctness를 우선합니다.
+- Look-ahead bias와 survivorship bias를 항상 경계합니다.
+- UI validation code에서 provider / FRED / issuer page를 직접 fetch하지 않습니다.
+- 기본 흐름은 `Ingestion -> DB -> Loader -> Runtime -> UI`입니다.
+- strategy logic은 `transform`, `strategy`, `engine`, `performance` 계층을 가능한 유지합니다.
+- generated artifact, run history, local scratch file, `.DS_Store`, Playwright output은 명시 요청 없이는 커밋하지 않습니다.
 
-## 현재 상태에 대한 메모
+## 현재 개발 초점
 
-이 저장소는 “백테스트가 되는 연구 코드”를 넘어서,  
-실전형 승격과 운영 준비도를 함께 읽는 쪽으로 계속 발전 중입니다.
+현재 finance 작업 상태는 `.note/finance/docs/ROADMAP.md`와 `.note/finance/tasks/active/`에서 확인합니다.
 
-즉 지금의 핵심은:
+이 README 갱신 시점의 active 방향은 아래입니다.
 
-- 좋은 전략을 찾는 것
-- 그 전략이 실전형 후보인지 구분하는 것
-- operator가 그 상태를 UI에서 바로 해석할 수 있게 만드는 것
+- Practical Validation V2 provider / macro / stress diagnostics closeout
+- `.note/finance/docs/` 기반 새 문서 체계 정착
+- `Backtest Analysis -> Practical Validation -> Final Review -> Selected Portfolio Dashboard`로 이어지는 Portfolio Selection V2 흐름 정리
 
-입니다.
+README는 상세 진행 로그가 아니라 첫 관문 문서입니다. 최신 작업 상태는 roadmap과 active task 문서를 기준으로 봅니다.

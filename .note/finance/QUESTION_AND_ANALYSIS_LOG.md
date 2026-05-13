@@ -4919,3 +4919,15 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `WORK_PROGRESS.md`, `QUESTION_AND_ANALYSIS_LOG.md`, `registries/`, `saved/`, active task docs는 유지해야 한다
 - Follow-up:
   - 3차 작업에서 legacy tree와 legacy phase docs 제거, template 이동, helper path 갱신, 삭제 후 검증을 진행했다
+
+### 2026-05-13 - README는 프로젝트 첫 관문 문서로 재작성한다
+- User request:
+  - 사용자가 프로젝트 초창기 README가 현재 finance 제품과 문서 체계에 맞지 않아 대규모 수정을 요청했고, 기존 내용을 억지로 살릴 필요 없이 처음부터 다시 써도 된다고 확인함
+- Interpreted goal:
+  - README를 상세 구현 로그가 아니라, 프로젝트 목적 / 사용 흐름 / 실행 방법 / 문서 위치 / 데이터 경계를 빠르게 이해하는 첫 관문으로 재정의해야 함
+- Analysis result:
+  - README에는 현재 핵심 workflow인 `Ingestion -> Backtest Analysis -> Practical Validation -> Final Review -> Selected Portfolio Dashboard`를 플로우차트로 보여주는 것이 가장 효과적이다
+  - 전략별 세부 구현, legacy Candidate Review / Portfolio Proposal 세부 흐름, active task 진행 로그는 README에 길게 두지 않고 `.note/finance/docs/`와 active task 문서로 연결해야 한다
+  - README에는 live trading / broker order / auto rebalance가 현재 범위 밖이라는 non-goal을 명확히 두어 제품 경계를 오해하지 않게 해야 한다
+- Follow-up:
+  - README를 현재 제품 boundary, Finance Console navigation, quick start, repository map, documentation map, data persistence boundary, development principles 중심으로 재작성했다

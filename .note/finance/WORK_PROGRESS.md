@@ -3835,3 +3835,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - phase plan / checklist template은 삭제하지 않고 `.note/finance/docs/runbooks/templates/`로 이동했다.
   - `bootstrap_finance_phase_bundle.py`는 새 template 경로를 읽고 `.note/finance/phases/active/phase<N>/`에 bundle을 생성하도록 갱신했다.
   - `registries/`, `saved/`, root handoff log, active task docs는 보존했다.
+- README 대규모 재작성:
+  - 오래된 구현 목록 중심 README를 제거하고, 현재 finance 제품 boundary / 사용 흐름 / quick start / 문서 map 중심으로 다시 작성했다.
+  - 사용자-facing program flow를 Mermaid chart로 추가해 `Ingestion -> Backtest Analysis -> Practical Validation -> Final Review -> Selected Portfolio Dashboard` 흐름을 첫 화면에서 이해할 수 있게 했다.
+  - 상세 구현과 active progress는 README에 중복하지 않고 `.note/finance/docs/`와 active task 문서로 연결하는 구조로 정리했다.
