@@ -5075,3 +5075,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - actual research body는 계속 `researches/active/<research-id>/`, workflow/script/skill 변경 기록은 `tasks/active/product-research-plugin-stage5/`에 둔다
 - Follow-up:
   - `finance-product-research-workflow`, `bootstrap_product_research_bundle.py`, `check_product_research_bundle.py`를 추가했고 다음 반복 run부터 이 경로를 사용한다
+
+### 2026-05-14 - Product research는 별도 plugin으로 분리한다
+- User request:
+  - 사용자가 `finance-product-research-workflow`가 플러그인인지 확인한 뒤, 기존 workflow plugin에 함께 있으면 복잡해질 수 있으니 리서치용 별도 plugin으로 분리해 달라고 요청함
+- Interpreted goal:
+  - product research skill과 helper script의 source-of-truth를 `quant-finance-workflow`에서 분리해 독립 plugin으로 관리해야 함
+- Analysis result:
+  - `quant-finance-workflow`는 구현/통합/운영 workflow 중심으로 남기고, `quant-finance-product-research`는 research bundle 생성/검증, audit, benchmark, opportunity synthesis를 소유하는 경계가 더 명확하다
+- Follow-up:
+  - `.aiworkspace/plugins/quant-finance-product-research/`를 만들고 marketplace에 등록했으며, global mirror와 검증을 완료했다

@@ -50,7 +50,9 @@ legacy `operations/`, `research/`, `support_tracks/`, `archive/`, root current-s
 
 가능한 local Codex skill이 있으면 아래처럼 좁은 역할부터 적용한다.
 
-프로젝트 전용 finance skill의 원본은 `.aiworkspace/plugins/quant-finance-workflow/skills/`에 둔다. `~/.codex/skills/finance-*`는 현재 Codex runtime에서 읽는 설치본 / mirror로 취급한다.
+프로젝트 전용 finance workflow / implementation skill의 원본은 `.aiworkspace/plugins/quant-finance-workflow/skills/`에 둔다.
+제품 방향 리서치 skill의 원본은 `.aiworkspace/plugins/quant-finance-product-research/skills/`에 둔다.
+`~/.codex/skills/finance-*`는 현재 Codex runtime에서 읽는 설치본 / mirror로 취급한다.
 
 공통 workflow skill:
 
@@ -68,7 +70,7 @@ legacy `operations/`, `research/`, `support_tracks/`, `archive/`, root current-s
 
 제품 방향 리서치의 본문 산출물은 `.aiworkspace/note/finance/researches/active/<research-id>/`에 둔다.
 리서치 workflow 자체를 만들거나 수정한 실행 기록은 `.aiworkspace/note/finance/tasks/active/<task>/`에 둔다.
-새 리서치 bundle 생성 또는 검증은 `.aiworkspace/plugins/quant-finance-workflow/scripts/bootstrap_product_research_bundle.py`, `check_product_research_bundle.py`를 사용할 수 있다.
+새 리서치 bundle 생성 또는 검증은 `.aiworkspace/plugins/quant-finance-product-research/scripts/bootstrap_product_research_bundle.py`, `check_product_research_bundle.py`를 사용할 수 있다.
 
 구현 domain skill:
 

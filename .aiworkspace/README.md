@@ -28,6 +28,10 @@
       .codex-plugin/
       skills/
       scripts/
+    quant-finance-product-research/
+      .codex-plugin/
+      skills/
+      scripts/
 ```
 
 ## 먼저 볼 곳
@@ -61,7 +65,8 @@
 
 ## Skill / Plugin 영역
 
-프로젝트 전용 finance skill의 원본은 `plugins/quant-finance-workflow/skills/`다.
+프로젝트 전용 finance workflow / implementation skill의 원본은 `plugins/quant-finance-workflow/skills/`다.
+제품 방향 리서치 skill의 원본은 `plugins/quant-finance-product-research/skills/`다.
 
 `~/.codex/skills/finance-*`는 Codex runtime에서 읽는 mirror / 설치본으로 취급한다. skill을 수정하면 repo-local source를 먼저 바꾸고, 필요한 경우 global mirror를 동기화한다.
 
@@ -82,6 +87,8 @@
 | `finance-product-audit` | 현재 제품 기능, 구조, 약점, surface boundary 분석 |
 | `finance-benchmark-research` | 유사 서비스, framework/API/UI 패턴, source evidence 조사 |
 | `finance-feature-opportunity` | 리서치 결과를 기능 후보, 우선순위, 추천안으로 합성 |
+
+Product research helper scripts live under `plugins/quant-finance-product-research/scripts/`.
 
 ### Domain Skills
 
@@ -109,8 +116,9 @@
 
 ```bash
 python3 -m json.tool .aiworkspace/plugins/quant-finance-workflow/.codex-plugin/plugin.json >/dev/null
+python3 -m json.tool .aiworkspace/plugins/quant-finance-product-research/.codex-plugin/plugin.json >/dev/null
 python3 -m json.tool .agents/plugins/marketplace.json >/dev/null
-for d in .aiworkspace/plugins/quant-finance-workflow/skills/finance-*; do
+for d in .aiworkspace/plugins/quant-finance-workflow/skills/finance-* .aiworkspace/plugins/quant-finance-product-research/skills/finance-*; do
   .venv/bin/python /Users/taeho/.codex/skills/.system/skill-creator/scripts/quick_validate.py "$d" || exit 1
 done
 git diff --check

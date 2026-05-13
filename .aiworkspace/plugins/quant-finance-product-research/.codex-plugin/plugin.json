@@ -1,0 +1,38 @@
+{
+  "name": "quant-finance-product-research",
+  "version": "0.1.0",
+  "description": "Repo-local Codex product direction research skill bundle for the finance workspace in quant-data-pipeline.",
+  "author": {
+    "name": "Quant Data Pipeline Workspace"
+  },
+  "license": "UNLICENSED",
+  "keywords": [
+    "finance",
+    "quant",
+    "product-research",
+    "benchmark",
+    "roadmap",
+    "codex",
+    "workflow"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Quant Finance Product Research",
+    "shortDescription": "Finance product research skills",
+    "longDescription": "Repo-local plugin bundle for finance product direction research orchestration, current-product audit, external benchmark research, UI and workflow pattern synthesis, feature opportunity prioritization, recommendation handoff, and research bundle validation in quant-data-pipeline.",
+    "developerName": "Quant Data Pipeline Workspace",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Create and validate a finance product research bundle.",
+      "Audit the finance product and identify sourced feature opportunities.",
+      "Research comparable quant products and extract UI/workflow patterns.",
+      "Turn audit and benchmark evidence into prioritized roadmap candidates."
+    ],
+    "brandColor": "#7C3AED",
+    "screenshots": []
+  }
+}

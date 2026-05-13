@@ -40,6 +40,8 @@ For detailed task document rules, read `references/task-document-contract.md`.
 
 ## Domain Skill Routing
 
+Product research skills live in the separate `quant-finance-product-research` plugin source, but keep the same `finance-*` skill names in runtime.
+
 - Backtest UI, Streamlit panels, Candidate Review, Final Review, runtime JSONL helpers: `finance-backtest-web-workflow`
 - Ingestion, collectors, DB schema, UPSERT, loaders: `finance-db-pipeline`
 - Factor generation, accounting-to-factor logic, PIT factor assumptions: `finance-factor-pipeline`

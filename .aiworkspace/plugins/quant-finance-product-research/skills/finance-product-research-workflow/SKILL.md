@@ -1,11 +1,11 @@
 ---
 name: finance-product-research-workflow
-description: Run or harden end-to-end product direction research for quant-data-pipeline finance. Use this when Codex needs to create a product research bundle, coordinate current-product audit, external benchmark research, UI/workflow pattern synthesis, feature opportunity prioritization, recommendation handoff, or validate the research output contract before later pluginization or implementation planning.
+description: Run or harden end-to-end product direction research for quant-data-pipeline finance. Use this when Codex needs to create a product research bundle, coordinate current-product audit, external benchmark research, UI/workflow pattern synthesis, feature opportunity prioritization, recommendation handoff, or validate the research output contract before implementation planning.
 ---
 
 # Finance Product Research Workflow
 
-Use this skill when the user wants an end-to-end product direction research run, or when a repeated research run should be hardened into the finance plugin workflow.
+Use this skill when the user wants an end-to-end product direction research run, or when a repeated research run should be hardened into the finance product research plugin workflow.
 
 This is an orchestration skill. It does not replace `finance-product-audit`, `finance-benchmark-research`, or `finance-feature-opportunity`; it coordinates them and validates the research bundle contract.
 
@@ -25,13 +25,13 @@ Read only what is needed:
 Use these scripts from repo root when a deterministic step helps:
 
 ```bash
-.venv/bin/python .aiworkspace/plugins/quant-finance-workflow/scripts/bootstrap_product_research_bundle.py \
+.venv/bin/python .aiworkspace/plugins/quant-finance-product-research/scripts/bootstrap_product_research_bundle.py \
   --title "Research Title" \
   --research-id 2026-05-example-research \
   --focus "Why this research exists." \
   --dry-run
 
-.venv/bin/python .aiworkspace/plugins/quant-finance-workflow/scripts/check_product_research_bundle.py \
+.venv/bin/python .aiworkspace/plugins/quant-finance-product-research/scripts/check_product_research_bundle.py \
   --research-id 2026-05-example-research
 ```
 
@@ -101,4 +101,3 @@ When hardening the workflow or plugin itself, use a task folder instead:
 - Do not treat research recommendations as committed roadmap.
 - Do not create live trading, broker order, or auto rebalance plans under the current product boundary.
 - Do not rewrite registry JSONL, saved setup, run history, or generated artifacts during research.
-- Do not create a separate product research plugin until the existing in-plugin workflow has been validated across more repeated runs.

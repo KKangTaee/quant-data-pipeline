@@ -3914,3 +3914,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/product-research-plugin-stage5/`에서 product research workflow를 plugin 수준으로 고정했다.
   - `finance-product-research-workflow` orchestration skill과 research bundle bootstrap/check helper script를 추가했다.
   - 기존 두 active research bundle 검증, skill quick validation, plugin JSON validation, mirror sync를 완료했다.
+- Product Research plugin 분리:
+  - product research 관련 4개 skill과 helper script 2개를 별도 `.aiworkspace/plugins/quant-finance-product-research/` plugin으로 이동했다.
+  - 기존 `quant-finance-workflow`는 task intake / doc sync / integration / runbook / implementation skill 중심으로 가볍게 정리했다.
+  - marketplace에 두 plugin을 모두 등록하고 skill validation, script dry-run, active research bundle check, mirror sync를 완료했다.
