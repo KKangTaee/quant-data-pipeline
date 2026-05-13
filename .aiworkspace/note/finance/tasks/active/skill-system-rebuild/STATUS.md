@@ -24,7 +24,7 @@ Last Updated: 2026-05-13
 - repo-local `.aiworkspace/plugins/quant-finance-workflow/skills/`를 finance skill 원본 위치로 정했다
 - 8개 finance skill을 repo-local source로 정리하고 `SKILL.md` / `references/` 구조로 분리했다
 - global `~/.codex/skills/finance-*`는 repo-local source와 동기화한 설치본으로 갱신했다
-- repo-local `finance-backtest-candidate-refinement`는 phase worktree 공통 skill에서 제거했다
+- repo-local `finance-backtest-candidate-refinement`는 main-dev worktree 공통 skill에서 제거했다
 - repo-local skill의 `agents/openai.yaml` default prompt가 `$skill-name`을 명시하도록 정리했다
 - `.aiworkspace/plugins/quant-finance-workflow/.codex-plugin/plugin.json`의 TODO placeholder와 존재하지 않는 hooks / MCP / app / asset 참조를 제거했다
 - `.agents/plugins/marketplace.json`의 plugin source path를 실제 위치인 `./.aiworkspace/plugins/quant-finance-workflow`로 보정했다

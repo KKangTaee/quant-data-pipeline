@@ -36,7 +36,7 @@ Last Verified: 2026-05-13
 
 | 위치 | 역할 |
 |---|---|
-| `.aiworkspace/note/finance/phases/active/` | Main phase worktree가 관리하는 phase 단위 계획과 통합 기록 |
+| `.aiworkspace/note/finance/phases/active/` | `main-dev` worktree가 관리하는 phase 단위 계획과 통합 기록 |
 | `.aiworkspace/note/finance/tasks/active/` | 개별 실행 task의 계획, 진행 상태, 실행 결과 |
 | `.aiworkspace/note/finance/agent/` | Codex 반복 실수, 교훈, 운영 팁 |
 | `.aiworkspace/note/finance/reports/backtests/` | 전략 탐색, 후보 근거, validation report |

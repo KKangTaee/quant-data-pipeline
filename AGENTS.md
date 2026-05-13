@@ -18,9 +18,9 @@
 
 - 이 worktree의 기본 활성 범위는 `finance` package와 Finance Streamlit app이다.
 - 사용자가 명시하지 않으면 `financial_advisor`는 out of scope로 둔다.
-- 이 세션은 `codex/phase` worktree 기준으로 phase / task 통합 흐름을 담당한다.
-- 후보 탐색 / 백테스트 리서치는 별도 candidate-search worktree로 넘긴다.
-- phase 범위를 벗어난 UX polish는 별도 UX/UI worktree로 넘긴다.
+- 이 세션은 `codex/main-dev` worktree 기준으로 phase / task 통합 흐름을 담당한다.
+- 후보 탐색 / 백테스트 리서치는 별도 `research` worktree로 넘긴다.
+- phase 범위를 벗어난 UX polish는 별도 `sub-dev` worktree로 넘긴다.
 
 ## Read Order
 

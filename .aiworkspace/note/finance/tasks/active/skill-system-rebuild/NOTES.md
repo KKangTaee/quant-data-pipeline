@@ -46,4 +46,4 @@ Last Updated: 2026-05-13
 - 사용자가 원한 구조는 명확히 4개 workflow skill과 4개 implementation domain skill이다.
 - `finance-task-management`라는 이름은 active task 운영까지 직접 소유하는 느낌이 강하므로, 요청 접수 / 분류 / 라우팅 중심의 `finance-task-intake`가 더 정확하다.
 - `finance-doc-sync`는 문서 alignment만 담당해야 하며, 통합 검토와 반복 절차 문서화는 각각 `finance-integration-review`, `finance-runbook-maintainer`로 분리한다.
-- `finance-backtest-candidate-refinement`는 candidate-search worktree 성격과 겹치므로 phase worktree의 공통 skill bundle에서는 제거한다.
+- `finance-backtest-candidate-refinement`는 research worktree 성격과 겹치므로 main-dev worktree의 공통 skill bundle에서는 제거한다.

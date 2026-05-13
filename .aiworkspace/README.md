@@ -89,8 +89,8 @@
 - registry JSONL, saved setup, run history, run artifacts는 문서가 아니라 workflow / runtime data다.
 - `registries/`와 `saved/`는 문서 정리 과정에서 삭제하거나 재작성하지 않는다.
 - `run_history/`, `run_artifacts/`, temp CSV, `.DS_Store`, Playwright output은 명시 요청 없이는 커밋하지 않는다.
-- 후보 탐색 / 백테스트 리서치 성격의 작업은 별도 candidate-search worktree로 넘긴다.
-- phase 범위를 벗어난 UX polish는 별도 UX/UI worktree로 넘긴다.
+- 후보 탐색 / 백테스트 리서치 성격의 작업은 별도 `research` worktree로 넘긴다.
+- phase 범위를 벗어난 UX polish는 별도 `sub-dev` worktree로 넘긴다.
 
 ## 변경 시 확인
 

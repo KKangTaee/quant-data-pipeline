@@ -22,6 +22,13 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-13
+- Renamed finance worktrees / branches to the new role names:
+  - `candidate-search` -> `research` / `codex/research`
+  - `phase` -> `main-dev` / `codex/main-dev`
+  - `ux-ui-polishing` -> `sub-dev` / `codex/sub-dev`
+- Updated active workspace guidance and skill-system notes so future routing uses `main-dev`, `research`, and `sub-dev`.
+
+### 2026-05-13
 - Migrated legacy `code_analysis/` into the new document system.
 - Moved current-state developer flow docs into:
   - `.aiworkspace/note/finance/docs/architecture/`
