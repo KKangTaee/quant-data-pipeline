@@ -21,6 +21,18 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-13 - 실제 제품 방향 리서치 산출물은 research/active에 둔다
+- User request:
+  - 2단계에서 수행할 명확한 리서치 결과는 `tasks/active`보다 `research` 폴더에 두는 것이 맞다고 판단하고 진행을 요청함.
+- Interpreted goal:
+  - 스킬 개발 기록과 실제 제품 방향 리서치 산출물을 분리해, 이후 research worktree에서 조사 결과를 관리하기 쉽게 만들고 싶음.
+- Analysis result:
+  - `.aiworkspace/note/finance/research/active/<research-id>/`를 제품 방향 리서치의 canonical output 위치로 확정했다.
+  - `tasks/active/`는 리서치 workflow나 스킬 자체를 만들고 수정한 실행 기록에 사용한다.
+  - 채택된 장기 방향만 `docs/PRODUCT_DIRECTION.md` 또는 `docs/ROADMAP.md`로 승격하고, 승인된 개발 단위만 phase/task로 전환한다.
+- Follow-up:
+  - 2단계 실제 리서치 run은 `research/active/<research-id>/`에 `RESEARCH_PLAN.md`, `CURRENT_PROJECT_AUDIT.md`, `BENCHMARKS.md`, `FEATURE_CANDIDATES.md`, `RECOMMENDATION.md`, `SOURCES.md`, `RISKS.md`를 두고 시작한다.
+
 ### 2026-05-13 - 제품 방향 리서치는 스킬 3개로 시작한다
 - User request:
   - Notion의 단계적 스킬/플러그인 개발 흐름에 맞춰 1단계를 진행해 달라고 요청함.

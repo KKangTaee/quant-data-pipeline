@@ -22,6 +22,12 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-13
+- Set `.aiworkspace/note/finance/research/` as the canonical workspace for product direction research output.
+- Added `research/README.md` plus `active/` and `done/` folders for audit, benchmark, feature candidate, recommendation, source, and risk notes.
+- Updated AGENTS, docs index/project map/roadmap, and the product research skills so actual research outputs go to `research/active/<research-id>/`.
+- `tasks/active/` remains for execution records such as skill/workflow changes.
+
+### 2026-05-13
 - Completed Product Research Skill Stage 1 for future finance roadmap research.
 - Added the active task at `.aiworkspace/note/finance/tasks/active/product-research-skill-stage1/`.
 - New validated stage-1 skills are `finance-product-audit`, `finance-benchmark-research`, and `finance-feature-opportunity`.

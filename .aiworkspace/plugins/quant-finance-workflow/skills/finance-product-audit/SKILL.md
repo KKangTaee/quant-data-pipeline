@@ -17,15 +17,22 @@ Read only what is needed:
 - `.aiworkspace/note/finance/docs/PRODUCT_DIRECTION.md`
 - `.aiworkspace/note/finance/docs/ROADMAP.md`
 - `.aiworkspace/note/finance/docs/PROJECT_MAP.md`
+- `.aiworkspace/note/finance/research/README.md`
 - `.aiworkspace/note/finance/docs/architecture/README.md` when system structure matters
 - `.aiworkspace/note/finance/docs/flows/README.md` when user workflow matters
-- the active research task folder when one exists
+- the active research folder under `.aiworkspace/note/finance/research/active/<research-id>/` when one exists
 
 For the detailed audit prompts, read `references/audit-checklist.md`.
 
 ## Output Contract
 
-Write or update `CURRENT_PROJECT_AUDIT.md` in the active research/task folder.
+Write or update `CURRENT_PROJECT_AUDIT.md` in the active research folder:
+
+```text
+.aiworkspace/note/finance/research/active/<research-id>/CURRENT_PROJECT_AUDIT.md
+```
+
+If no active research folder exists, create one before writing research output. Use `tasks/active/` only for the execution record of changing this workflow or its skills.
 
 Include:
 - current product promise and active user workflow
@@ -39,7 +46,7 @@ Include:
 
 ## Workflow
 
-1. Confirm the active research/task output folder.
+1. Confirm or create the active research output folder.
 2. Read the minimum docs needed to understand current scope.
 3. Inspect code only where docs are ambiguous or stale.
 4. Separate implemented facts from assumptions and hypotheses.

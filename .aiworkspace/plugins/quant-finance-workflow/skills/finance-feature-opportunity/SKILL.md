@@ -11,7 +11,7 @@ This is a synthesis and prioritization skill. It does not directly edit roadmap 
 
 ## First Reads
 
-Read only what is needed from the active research/task folder:
+Read `.aiworkspace/note/finance/research/README.md`, then read only what is needed from the active research folder under `.aiworkspace/note/finance/research/active/<research-id>/`:
 - `CURRENT_PROJECT_AUDIT.md`
 - `BENCHMARKS.md`
 - `UI_PATTERNS.md`
@@ -28,10 +28,16 @@ For recommendation output, read `references/recommendation-template.md`.
 
 ## Output Contract
 
-Write or update these files in the active research/task folder:
+Write or update these files in the active research folder:
+
+```text
+.aiworkspace/note/finance/research/active/<research-id>/
+```
 
 - `FEATURE_CANDIDATES.md`
 - `RECOMMENDATION.md`
+
+If no active research folder exists, create one before writing feature opportunity output. Use `tasks/active/` only for the execution record of changing this workflow or its skills.
 
 Include:
 - candidate title and problem statement

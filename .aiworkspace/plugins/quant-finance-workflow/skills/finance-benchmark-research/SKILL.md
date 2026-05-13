@@ -12,7 +12,8 @@ This is a web research and synthesis skill. It does not change roadmap docs, cre
 ## First Reads
 
 Read only what is needed:
-- the active research/task folder
+- `.aiworkspace/note/finance/research/README.md`
+- the active research folder under `.aiworkspace/note/finance/research/active/<research-id>/`
 - `CURRENT_PROJECT_AUDIT.md` when available
 - `.aiworkspace/note/finance/docs/PRODUCT_DIRECTION.md`
 - `.aiworkspace/note/finance/docs/ROADMAP.md`
@@ -35,11 +36,17 @@ Prefer current, primary, and inspectable sources. Browse the web for current pro
 
 ## Output Contract
 
-Write or update these files in the active research/task folder:
+Write or update these files in the active research folder:
+
+```text
+.aiworkspace/note/finance/research/active/<research-id>/
+```
 
 - `BENCHMARKS.md`: product-by-product benchmark notes
 - `UI_PATTERNS.md`: recurring workflow and UI patterns
 - `SOURCES.md`: source list with access dates and what each source supports
+
+If no active research folder exists, create one before writing benchmark output. Use `tasks/active/` only for the execution record of changing this workflow or its skills.
 
 Include:
 - product/service name and category

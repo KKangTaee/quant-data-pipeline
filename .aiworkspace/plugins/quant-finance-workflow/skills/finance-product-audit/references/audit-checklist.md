@@ -54,7 +54,7 @@ Map only files relevant to product direction:
 - data ingestion and loader boundaries
 - strategy, transform, engine, performance ownership
 - registry and saved setup boundaries
-- durable docs and active task docs
+- durable docs, active research docs, and active task docs
 
 ## Audit Output Template
 
