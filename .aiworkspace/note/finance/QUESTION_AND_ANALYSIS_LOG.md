@@ -5053,3 +5053,14 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 이번 run에서 특히 `RECOMMENDATION.md`의 1차 실행 범위와 장기 방향 구분, Streamlit 내부 콘솔 의미, research worktree stale 구조 처리, research 본문과 skill hardening task 위치 구분이 보강 포인트였다
 - Follow-up:
   - `product-research-skill-stage3` task를 열고 product research 관련 4개 skill과 reference template을 보강했다
+
+### 2026-05-14 - Backtest Result / Strategy Report 제품화를 조사한다
+- User request:
+  - 사용자가 4단계 반복 리서치 주제로 1번인 Backtest Result / Strategy Report 제품화 조사를 진행해 달라고 요청함
+- Interpreted goal:
+  - 현재 백테스트 결과와 report workspace를 audit하고, 외부 backtest/report 제품 패턴을 바탕으로 다음 기능 후보와 추천 구현 범위를 정리해야 함
+- Analysis result:
+  - 현 프로젝트는 evidence-first report 재료가 충분하지만, 아직 `BacktestReportPack` 같은 안정적인 report artifact contract가 없다
+  - QuantConnect, QuantRocket, TradingView, QuantStats/pyfolio, NautilusTrader 패턴상 결과 화면, raw data, durable report를 분리하는 것이 적절하다
+- Follow-up:
+  - 다음 구현 후보는 `BacktestReportPack + Markdown report draft generator`이며, 상세 근거는 `.aiworkspace/note/finance/researches/active/2026-05-backtest-report-productization/RECOMMENDATION.md`에 정리했다

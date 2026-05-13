@@ -3906,3 +3906,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - 2단계 UI platform research 실행 복기 결과를 `.aiworkspace/note/finance/tasks/active/product-research-skill-stage3/`에 기록했다.
   - `finance-task-intake`, `finance-product-audit`, `finance-benchmark-research`, `finance-feature-opportunity`가 research run과 skill hardening, product surface 분류, architecture benchmark, pilot/roadmap 구분을 더 명확히 안내하도록 보강했다.
   - repo-local skill source와 global `~/.codex/skills` mirror 정합성 검증을 완료했다.
+- Product Research 4단계 반복 run - Backtest Report Productization:
+  - `Backtest Result / Strategy Report` 제품화 주제로 `.aiworkspace/note/finance/researches/active/2026-05-backtest-report-productization/` 리서치 번들을 작성했다.
+  - 현행 `reports/backtests`, Streamlit result display, run history, validation/final review replay 구조를 audit했다.
+  - QuantConnect, QuantRocket, TradingView, QuantStats/pyfolio, NautilusTrader 패턴을 바탕으로 `BacktestReportPack + Markdown draft generator`를 다음 구현 후보로 추천했다.

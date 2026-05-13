@@ -30,6 +30,7 @@ Last Verified: 2026-05-14
 | Research | Focus |
 | --- | --- |
 | `active/2026-05-ui-platform-research/` | Streamlit UX/UI를 Python quant engine + API + React/Next.js product surface로 분리할지 조사 |
+| `active/2026-05-backtest-report-productization/` | Backtest Result / Strategy Report를 제품화하기 위한 report artifact, UI pattern, 기능 후보 조사 |
 
 ## Rules
 
