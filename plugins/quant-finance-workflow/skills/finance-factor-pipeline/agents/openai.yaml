@@ -1,0 +1,4 @@
+interface:
+  display_name: "Finance Factor Pipeline"
+  short_description: "Build finance factor-generation workflows with explicit timing assumptions."
+  default_prompt: "Update a finance factor workflow while preserving source, timing, and storage semantics."

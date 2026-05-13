@@ -1,0 +1,4 @@
+interface:
+  display_name: "Finance Task Management"
+  short_description: "Classify finance requests and manage active task documents."
+  default_prompt: "Classify this finance request and update the right active task documents."

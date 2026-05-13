@@ -1,0 +1,4 @@
+interface:
+  display_name: "Finance Backtest Web Workflow"
+  short_description: "Build and debug the finance Backtest Streamlit workflow."
+  default_prompt: "Update the Backtest UI workflow while preserving route and registry boundaries."

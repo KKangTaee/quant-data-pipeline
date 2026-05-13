@@ -24,3 +24,10 @@ Last Updated: 2026-05-13
 - 이유: task 생성 / 진행 상태 / root handoff log 운영은 작업 시작과 진행 중의 문제이고, `finance-doc-sync`는 작업 후반의 alignment 문제다.
 - 새 `finance-task-management`는 active task 문서 규칙과 domain skill routing을 담당한다.
 - domain skill은 각 코드 영역의 구현 규칙을 유지하고, task 운영은 새 workflow skill로 넘긴다.
+
+## 3차 판단
+
+- 프로젝트 전용 skill을 `~/.codex/skills`에만 두면 커밋 / 리뷰 / 다른 worktree 재현이 어렵다.
+- 따라서 repo-local `plugins/quant-finance-workflow/skills/`를 원본으로 두고, `~/.codex/skills/finance-*`는 설치본처럼 동기화하는 구조가 맞다.
+- `SKILL.md`는 Codex가 처음 읽는 entry point라 짧아야 하며, domain rule과 긴 ownership 목록은 `references/`로 보내는 것이 맞다.
+- 3차에서는 plugin을 완전히 publish-ready로 만들지는 않았다. 남은 placeholder와 실제 trigger 검증은 4차 범위다.

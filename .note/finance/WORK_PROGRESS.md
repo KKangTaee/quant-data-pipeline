@@ -3850,3 +3850,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - 새 `finance-task-management` skill을 만들어 task 분류, active task 운영, root handoff log 관리를 담당하게 했다.
   - Backtest UI / DB / factor / strategy skill은 domain implementation skill로 경계를 보정하고, `finance-doc-sync`는 closeout alignment skill로 좁혔다.
   - `AGENTS.md`와 skill-system-rebuild task 문서에 skill routing 기준과 검증 결과를 기록했다.
+- Skill System Rebuild 3차:
+  - finance project skill 원본을 repo-local `plugins/quant-finance-workflow/skills/`로 옮기고, global `~/.codex/skills/finance-*`는 mirror 설치본으로 동기화했다.
+  - 6개 finance skill의 `SKILL.md`를 trigger / first-read / core workflow 중심으로 줄이고, 긴 domain rule은 `references/`로 분리했다.
+  - 4차에는 plugin placeholder와 실제 skill trigger / 설치 흐름 검증이 남아 있다.

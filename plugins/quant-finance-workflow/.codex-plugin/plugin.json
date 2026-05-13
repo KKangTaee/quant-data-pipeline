@@ -1,7 +1,7 @@
 {
   "name": "quant-finance-workflow",
   "version": "0.1.0",
-  "description": "Repo-local workflow bundle for finance backtest refinement in quant-data-pipeline.",
+  "description": "Repo-local workflow and implementation skill bundle for the finance workspace in quant-data-pipeline.",
   "author": {
     "name": "Local Draft",
     "email": "[TODO: author@example.com]",
@@ -20,8 +20,8 @@
   "apps": "[TODO: ./.app.json]",
   "interface": {
     "displayName": "Quant Finance Workflow",
-    "shortDescription": "Repo-local finance backtest refinement workflow",
-    "longDescription": "Draft local plugin that packages the finance backtest candidate-refinement workflow for quant-data-pipeline.",
+    "shortDescription": "Repo-local finance workflow and implementation skills",
+    "longDescription": "Draft local plugin that packages finance task management, Backtest UI, DB pipeline, factor, strategy, documentation sync, and candidate-refinement skills for quant-data-pipeline.",
     "developerName": "Local Draft",
     "category": "Productivity",
     "capabilities": [
@@ -31,9 +31,9 @@
     "privacyPolicyURL": "[TODO: https://openai.com/policies/row-privacy-policy/]",
     "termsOfServiceURL": "[TODO: https://openai.com/policies/row-terms-of-use/]",
     "defaultPrompt": [
-      "Refine a current finance backtest candidate in this repo.",
-      "Update the strategy hub and backtest log after a rerun.",
-      "Summarize the current practical candidates across families."
+      "Classify and manage a finance task in this repo.",
+      "Update a finance Backtest UI, DB pipeline, factor, or strategy workflow.",
+      "Sync finance documentation after an implementation or analysis unit."
     ],
     "brandColor": "#0F766E",
     "composerIcon": "[TODO: ./assets/icon.png]",

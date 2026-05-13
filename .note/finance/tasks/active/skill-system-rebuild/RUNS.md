@@ -88,3 +88,46 @@ Additional checks:
   - 출력 없음
 - `git diff --check`
   - 출력 없음
+
+## 3차 repo-local skill source / references split
+
+Actions:
+
+- Added repo-local source skills under `plugins/quant-finance-workflow/skills/`:
+  - `finance-task-management`
+  - `finance-backtest-web-workflow`
+  - `finance-db-pipeline`
+  - `finance-factor-pipeline`
+  - `finance-strategy-implementation`
+  - `finance-doc-sync`
+- Split long domain rules into each skill's `references/` directory.
+- Synced global installed mirrors:
+
+```bash
+for skill in finance-task-management finance-backtest-web-workflow finance-db-pipeline finance-factor-pipeline finance-strategy-implementation finance-doc-sync; do
+  rm -rf "/Users/taeho/.codex/skills/$skill"
+  cp -R "plugins/quant-finance-workflow/skills/$skill" "/Users/taeho/.codex/skills/$skill"
+done
+```
+
+Validation commands:
+
+```bash
+for d in plugins/quant-finance-workflow/skills/finance-task-management \
+  plugins/quant-finance-workflow/skills/finance-backtest-web-workflow \
+  plugins/quant-finance-workflow/skills/finance-db-pipeline \
+  plugins/quant-finance-workflow/skills/finance-factor-pipeline \
+  plugins/quant-finance-workflow/skills/finance-strategy-implementation \
+  plugins/quant-finance-workflow/skills/finance-doc-sync; do
+  .venv/bin/python /Users/taeho/.codex/skills/.system/skill-creator/scripts/quick_validate.py "$d" || exit 1
+done
+```
+
+Result:
+
+- repo-local 6개 finance skill 모두 `Skill is valid!`
+- global mirror 6개 finance skill 모두 `Skill is valid!`
+- 기존 repo-local `finance-backtest-candidate-refinement`도 `Skill is valid!`
+- `plugins/quant-finance-workflow/.codex-plugin/plugin.json` JSON parse 성공
+- stale legacy path grep 출력 없음
+- `git diff --check` 출력 없음

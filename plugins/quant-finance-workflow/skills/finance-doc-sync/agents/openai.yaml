@@ -1,0 +1,4 @@
+interface:
+  display_name: "Finance Doc Sync"
+  short_description: "Align finance docs, indexes, roadmaps, and handoff logs after work."
+  default_prompt: "Sync the finance documentation after an implementation or workflow change."

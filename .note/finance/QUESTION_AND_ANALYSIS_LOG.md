@@ -4962,3 +4962,15 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 새 `finance-task-management`가 task 분류, active task 문서, root handoff log, domain skill routing을 맡고, Backtest UI / DB / factor / strategy skill은 구현 도메인만 맡는 구조가 적절하다
 - Follow-up:
   - `finance-task-management`를 생성하고 기존 finance skill description / boundary와 `AGENTS.md` skill routing을 새 구조에 맞춰 보정했다
+
+### 2026-05-13 - 프로젝트 전용 skill은 repo-local source로 관리한다
+- User request:
+  - 사용자가 현재 `~/.codex/skills`에 둔 프로젝트 skill을 repo 안에서 관리하는 것이 맞는지 확인했고, repo 안에서 관리하는 방향에 동의한 뒤 3차 진행을 요청함
+- Interpreted goal:
+  - skill 내용이 로컬 설정에만 남지 않고, 프로젝트 변경사항으로 리뷰 / 커밋 / 재현 가능해야 함
+- Analysis result:
+  - `~/.codex/skills`는 현재 Codex runtime용 설치본으로 적합하지만 프로젝트 source-of-truth로는 약하다
+  - finance 전용 skill 원본은 repo-local `plugins/quant-finance-workflow/skills/`에 두고, 필요 시 global skill 위치로 동기화하는 구조가 더 안정적이다
+  - `SKILL.md`는 짧게 유지하고 domain 세부 규칙은 `references/`로 분리하는 것이 Notion skill 가이드와 맞다
+- Follow-up:
+  - 3차에서 6개 finance skill을 repo-local source로 추가하고 global 설치본을 동기화했다

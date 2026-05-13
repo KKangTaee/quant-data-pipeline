@@ -47,6 +47,8 @@ legacy `operations/`, `research/`, `support_tracks/`, `archive/`, root current-s
 
 가능한 local Codex skill이 있으면 아래처럼 좁은 역할부터 적용한다.
 
+프로젝트 전용 finance skill의 원본은 `plugins/quant-finance-workflow/skills/`에 둔다. `~/.codex/skills/finance-*`는 현재 Codex runtime에서 읽는 설치본 / mirror로 취급한다.
+
 - 작업 분류, active task 생성/갱신, root handoff log 운영: `finance-task-management`
 - Backtest Streamlit UI, Candidate Review, Final Review, runtime JSONL helper: `finance-backtest-web-workflow`
 - ingestion, DB schema, UPSERT, loader/provider connector: `finance-db-pipeline`
