@@ -10,6 +10,7 @@ Prefer:
 - official docs, help centers, API docs, release notes, or changelogs
 - official pricing pages
 - public GitHub repositories for open-source tools
+- official framework documentation when comparing architecture or platform choices
 - reputable reviews only when primary sources do not cover the claim
 - screenshots or live UI inspection when available and allowed
 
@@ -43,3 +44,4 @@ Use these labels:
 - Do not include long copied passages.
 - If a fact is volatile, include the access date.
 - If source evidence is weak, say so in the benchmark note.
+- If using marketing pages for product capabilities, label them as `Claimed` unless an official doc or visible UI supports the behavior.

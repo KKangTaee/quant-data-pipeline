@@ -23,7 +23,7 @@ For citation and source quality rules, read `references/source-quality-rules.md`
 
 ## Research Scope
 
-Compare 3 to 5 relevant products or services unless the user asks otherwise.
+Compare 3 to 5 relevant products or services unless the user asks otherwise. When the question is about platform or architecture direction, include relevant frameworks, API patterns, or frontend/charting tools as benchmark classes, and keep the set small enough to synthesize.
 
 Possible benchmark classes:
 - quant research and backtesting platforms
@@ -31,6 +31,7 @@ Possible benchmark classes:
 - ETF/fund research tools
 - broker-adjacent portfolio monitoring tools
 - open-source quant dashboards and notebooks
+- data app frameworks, API frameworks, frontend frameworks, and financial charting libraries when the research question is about UI/platform direction
 
 Prefer current, primary, and inspectable sources. Browse the web for current product information, pricing, docs, screenshots, and public changelogs when doing an actual benchmark run.
 
@@ -56,12 +57,13 @@ Include:
 - data/evidence model when visible
 - pricing/packaging signals when relevant
 - applicability to this project
+- evidence label for important claims: observed, documented, claimed, inferred, or unknown
 - explicit limits of the source evidence
 
 ## Workflow
 
 1. Start from audit questions, not a broad market scan.
-2. Pick a small benchmark set with different angles.
+2. Pick a small benchmark set with different angles; explain why each class was included.
 3. Use current web sources and capture source dates.
 4. Separate observed product behavior from inference.
 5. Extract reusable patterns rather than copying features literally.

@@ -48,6 +48,7 @@ Include:
 - dependencies and blockers
 - rejected or parked ideas
 - recommended next step
+- clear separation between the immediate next build, later roadmap options, and ideas that are not approved yet
 
 ## Workflow
 
@@ -57,7 +58,8 @@ Include:
 4. Separate `Now`, `Next`, `Later`, and `Parking Lot`.
 5. Keep feature recommendations compatible with current product boundaries.
 6. Identify which existing domain skill would own future implementation.
-7. Produce a recommendation that a human can approve, reject, or narrow.
+7. State the decision checkpoint: what can be built next, what needs human approval, and what remains only a strategic option.
+8. Produce a recommendation that a human can approve, reject, or narrow.
 
 ## Handoff
 
@@ -66,6 +68,12 @@ After human approval:
 - use a future roadmap proposal skill to update `docs/ROADMAP.md`
 - use a future research-to-phase skill to create phase/task plans
 - use `finance-task-intake` and the relevant domain skill for implementation
+
+Until human approval:
+
+- do not present roadmap candidates as committed direction
+- do not imply full migration, rewrite, or product boundary change when the recommendation only supports a pilot
+- keep the first implementation slice narrow enough to validate the research conclusion
 
 ## Boundary
 

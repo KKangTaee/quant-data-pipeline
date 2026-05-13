@@ -10,11 +10,13 @@ Use this template for `BENCHMARKS.md` and `UI_PATTERNS.md`.
 Status:
 Last Updated:
 
+## Research Question
+
 ## Selection Criteria
 
 ## Benchmark Matrix
 
-| Product | Category | Target User | Relevant Workflow | Evidence Strength | Applicability |
+| Product Or Framework | Category | Target User | Relevant Workflow | Evidence Label | Applicability |
 |---|---|---|---|---|---|
 
 ## Product Notes
@@ -30,10 +32,13 @@ Last Updated:
 - Pricing/packaging signals:
 - Strong ideas for this project:
 - Ideas to avoid:
+- Evidence label:
 - Evidence limits:
 - Sources:
 
 ## Cross-Product Patterns
+
+## Architecture / Platform Implications
 
 ## Open Questions
 ```
@@ -61,6 +66,8 @@ Last Updated:
 - Risks:
 
 ## Patterns That Conflict With Current Boundaries
+
+## Patterns That Should Remain Internal/Ops Only
 
 ## Candidate Questions For Feature Opportunity
 ```

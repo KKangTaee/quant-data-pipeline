@@ -30,6 +30,7 @@ For detailed task document rules, read `references/task-document-contract.md`.
 | Focused multi-step task | use or create `.aiworkspace/note/finance/tasks/active/<task-id>/` |
 | Major roadmap/product work | use an active task first; open a phase only when the user explicitly wants phase management |
 | Product direction research, benchmark research, feature opportunity synthesis | use or create `.aiworkspace/note/finance/researches/active/<research-id>/`; use task docs only for changing the research workflow or skills |
+| Product research iteration review or skill hardening after a research run | use or create `.aiworkspace/note/finance/tasks/active/<task-id>/`; do not put skill/workflow changes inside the research bundle |
 | Code implementation | pair with the matching domain implementation skill |
 | Documentation alignment after implementation | route to `finance-doc-sync` |
 | Merge conflict, worktree integration, sub-result integration, final verification planning | route to `finance-integration-review` |
@@ -58,6 +59,17 @@ If more than one domain is involved, state the boundary first and keep edits sco
 5. If task docs are needed, create or update only the active task shell and initial status.
 6. If product direction research is needed, use or create a research bundle under `.aiworkspace/note/finance/researches/active/<research-id>/`.
 7. Hand off implementation to the domain skill, merge/integration to `finance-integration-review`, runbook changes to `finance-runbook-maintainer`, or final docs to `finance-doc-sync`.
+
+## Research Worktree Handling
+
+If the user says research should run in a separate research worktree:
+
+- verify that worktree has the current `.aiworkspace/note/finance/researches/` structure before writing
+- if the research worktree is stale or still uses a legacy `.note` layout, do the research in the current canonical worktree and record the reason
+- do not copy research output between worktrees unless the user asks for integration or branch handoff
+- keep the distinction clear:
+  - actual research body goes under `researches/active/<research-id>/`
+  - research workflow or skill improvements go under `tasks/active/<task-id>/`
 
 ## Safety
 

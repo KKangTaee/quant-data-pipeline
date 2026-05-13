@@ -27,11 +27,20 @@ Review the major surfaces:
 For each surface, capture:
 
 - purpose
+- role classification: user-facing product surface, internal/ops console, or mixed/transitional
 - main inputs
 - main outputs
 - downstream handoff
 - current friction
 - missing evidence or unclear state
+
+Use this distinction when the user asks about platform migration:
+
+| Role | Meaning | Migration implication |
+|---|---|---|
+| User-facing product surface | A screen a target user would directly value or share | candidate for polished API-backed product UI |
+| Internal/ops console | A screen for ingestion, QA, debugging, registry inspection, run health, or developer operations | can usually remain Streamlit longer |
+| Mixed/transitional | A screen that contains both user value and internal workflow machinery | split read-only product views from write/debug controls before migration |
 
 ## Data And Validation
 
@@ -71,6 +80,8 @@ Last Updated:
 ## Current Workflow
 
 ## Implemented Capabilities
+
+## Surface Role Classification
 
 ## Strengths
 

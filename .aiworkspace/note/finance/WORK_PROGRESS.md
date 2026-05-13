@@ -3902,3 +3902,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - 현행 `app/web` 구조, Streamlit coupling, session state 사용, durable workflow docs를 audit했다.
   - 공식 문서/제품 페이지 기준으로 Streamlit, FastAPI, Next.js, Dash, QuantConnect, QuantRocket, OpenBB, TradingView, Composer를 비교했다.
   - 결론과 산출물은 `.aiworkspace/note/finance/researches/active/2026-05-ui-platform-research/RECOMMENDATION.md`부터 보면 된다.
+- Product Research 3단계 skill hardening:
+  - 2단계 UI platform research 실행 복기 결과를 `.aiworkspace/note/finance/tasks/active/product-research-skill-stage3/`에 기록했다.
+  - `finance-task-intake`, `finance-product-audit`, `finance-benchmark-research`, `finance-feature-opportunity`가 research run과 skill hardening, product surface 분류, architecture benchmark, pilot/roadmap 구분을 더 명확히 안내하도록 보강했다.
+  - repo-local skill source와 global `~/.codex/skills` mirror 정합성 검증을 완료했다.

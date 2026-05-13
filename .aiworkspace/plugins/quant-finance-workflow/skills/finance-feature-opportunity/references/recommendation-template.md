@@ -47,11 +47,22 @@ Last Updated:
 
 ## Recommended Direction
 
+## Decision Scope
+
+- Immediate next build:
+- Needs human approval before execution:
+- Longer roadmap option:
+- Not approved / parking lot:
+
 ## Why This Direction
 
 ## What To Build First
 
+## Pilot Scope
+
 ## What To Defer
+
+## Decision Checkpoint
 
 ## Required Decisions
 

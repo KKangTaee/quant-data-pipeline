@@ -37,6 +37,7 @@ If no active research folder exists, create one before writing research output. 
 Include:
 - current product promise and active user workflow
 - implemented capabilities by area
+- screen/surface classification: user-facing product surface, internal/ops console, or mixed/transitional
 - important non-goals and safety boundaries
 - code and data ownership map relevant to future work
 - weak points, missing links, and product friction
@@ -50,9 +51,10 @@ Include:
 2. Read the minimum docs needed to understand current scope.
 3. Inspect code only where docs are ambiguous or stale.
 4. Separate implemented facts from assumptions and hypotheses.
-5. Record open questions instead of treating guesses as findings.
-6. Keep the audit focused on product direction and workflow gaps, not implementation fixes.
-7. Hand off benchmark questions to `finance-benchmark-research`.
+5. Classify each major surface by role before recommending platform or UX changes.
+6. Record open questions instead of treating guesses as findings.
+7. Keep the audit focused on product direction and workflow gaps, not implementation fixes.
+8. Hand off benchmark questions to `finance-benchmark-research`.
 
 ## Boundary
 

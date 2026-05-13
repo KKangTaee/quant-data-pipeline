@@ -5043,3 +5043,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - full rewrite보다 `API/service contract extraction -> Selected Portfolio Dashboard read-only pilot -> job API` 순서가 리스크 대비 학습효과가 크다
 - Follow-up:
   - 상세 산출물은 `.aiworkspace/note/finance/researches/active/2026-05-ui-platform-research/`에 작성했다
+
+### 2026-05-14 - Product research 3단계는 실행 복기를 skill에 반영한다
+- User request:
+  - 사용자가 2단계 실제 research 운영 이후 3단계인 반복 후 스킬강화를 진행해 달라고 요청하고, 필요한 질문이 있으면 정리해서 물어보는 방식이 맞는지 확인함
+- Interpreted goal:
+  - 새 리서치를 하는 것이 아니라, 직전 research run에서 생긴 혼동과 개선점을 finance product research skill에 반영해야 함
+- Analysis result:
+  - 이번 run에서 특히 `RECOMMENDATION.md`의 1차 실행 범위와 장기 방향 구분, Streamlit 내부 콘솔 의미, research worktree stale 구조 처리, research 본문과 skill hardening task 위치 구분이 보강 포인트였다
+- Follow-up:
+  - `product-research-skill-stage3` task를 열고 product research 관련 4개 skill과 reference template을 보강했다
