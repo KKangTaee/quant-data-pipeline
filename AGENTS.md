@@ -49,14 +49,21 @@ legacy `operations/`, `research/`, `support_tracks/`, `archive/`, root current-s
 
 프로젝트 전용 finance skill의 원본은 `.aiworkspace/plugins/quant-finance-workflow/skills/`에 둔다. `~/.codex/skills/finance-*`는 현재 Codex runtime에서 읽는 설치본 / mirror로 취급한다.
 
-- 작업 분류, active task 생성/갱신, root handoff log 운영: `finance-task-management`
-- Backtest Streamlit UI, Candidate Review, Final Review, runtime JSONL helper: `finance-backtest-web-workflow`
-- ingestion, DB schema, UPSERT, loader/provider connector: `finance-db-pipeline`
+공통 workflow skill:
+
+- 요청 분류, 읽을 문서 결정, active task 위치 결정: `finance-task-intake`
+- 구현 후 문서 alignment, index/roadmap/root log final sync: `finance-doc-sync`
+- merge conflict, worktree 통합, parallel/sub 결과 통합, staged diff 검토: `finance-integration-review`
+- 반복 명령, 운영 절차, helper script 사용법을 runbook으로 정리: `finance-runbook-maintainer`
+
+구현 domain skill:
+
+- Backtest Streamlit UI, Practical Validation, Final Review, Selected Portfolio Dashboard: `finance-backtest-web-workflow`
+- ingestion, DB schema, UPSERT, provider connector, loader source boundary: `finance-db-pipeline`
 - factor generation, accounting-to-factor, PIT factor assumption: `finance-factor-pipeline`
 - strategy, transform, engine, performance, sample: `finance-strategy-implementation`
-- 구현 후 문서 alignment, index/roadmap/root log final sync: `finance-doc-sync`
 
-`finance-task-management`는 구현 skill이 아니다. 코드 변경은 위 domain skill 중 하나가 소유하고, `finance-doc-sync`는 작업 말미의 정렬용으로 사용한다.
+`finance-task-intake`는 구현 skill이 아니다. 코드 변경은 domain skill 중 하나가 소유하고, 통합 검토는 `finance-integration-review`, 반복 절차 문서화는 `finance-runbook-maintainer`, 문서 최종 정렬은 `finance-doc-sync`가 맡는다.
 
 ### Main Phase Work
 

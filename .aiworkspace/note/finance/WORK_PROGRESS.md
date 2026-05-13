@@ -3866,3 +3866,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `quant-finance-workflow` plugin manifest에서 TODO placeholder와 없는 hooks / MCP / app / asset 참조를 제거했다.
   - `.agents/plugins/marketplace.json`이 실제 plugin root인 `./.aiworkspace/plugins/quant-finance-workflow`를 가리키도록 수정했다.
   - repo-local 7개 skill, global mirror 6개 skill, marketplace path, manifest JSON 검증을 완료했다.
+- Skill System Rebuild taxonomy 보정:
+  - 사용자가 정의한 공통 workflow 4개 + 구현 domain 4개 구조로 skill bundle을 다시 맞췄다.
+  - `finance-task-management`는 `finance-task-intake`로 rename했고, `finance-integration-review`, `finance-runbook-maintainer`를 추가했다.
+  - `finance-backtest-candidate-refinement`는 phase worktree 공통 skill에서 제거했다.

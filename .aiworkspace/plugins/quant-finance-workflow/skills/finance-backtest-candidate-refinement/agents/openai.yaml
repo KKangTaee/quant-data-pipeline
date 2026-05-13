@@ -1,4 +1,0 @@
-interface:
-  display_name: "Finance Backtest Candidate Refinement"
-  short_description: "Bounded candidate refinement and evidence sync."
-  default_prompt: "Use $finance-backtest-candidate-refinement to refine an existing finance backtest candidate and sync its evidence."

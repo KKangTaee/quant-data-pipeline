@@ -1,13 +1,13 @@
 ---
 name: finance-db-pipeline
-description: Build or update finance package data ingestion and MySQL persistence workflows. Use this when adding or changing collectors, DB schemas, UPSERT logic, batch ingestion, logging, retries, loaders, provider connectors, or finance/data pipeline behavior in the quant-data-pipeline project. Pair with finance-task-management for task setup/status and finance-doc-sync for closeout documentation.
+description: Build or update finance package data ingestion and MySQL persistence workflows. Use this when adding or changing collectors, DB schemas, UPSERT logic, batch ingestion, logging, retries, loaders, provider connectors, or finance/data pipeline behavior in the quant-data-pipeline project. Pair with finance-task-intake before broad work and finance-doc-sync for closeout documentation.
 ---
 
 # Finance DB Pipeline
 
 Use this skill when work touches ingestion and persistence under `finance/data/*`, `finance/data/db/*`, or `finance/loaders/*`.
 
-This is a data implementation skill. Use `finance-task-management` for active task setup and workflow ownership, then use `finance-doc-sync` near closeout when durable docs need alignment.
+This is a data implementation skill. Use `finance-task-intake` before broad work, then use `finance-doc-sync` near closeout when durable docs need alignment.
 
 ## First Reads
 

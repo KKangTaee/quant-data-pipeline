@@ -4986,3 +4986,15 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 기존 path 참조가 많으므로 이동과 함께 코드 / 문서 / skill path 갱신, stale path grep, helper script / skill validation이 필요하다
 - Follow-up:
   - AI Workspace Migration active task를 열고 폴더 이동과 주요 path 갱신을 진행했다
+
+### 2026-05-13 - finance skill taxonomy는 4 workflow + 4 domain으로 고정한다
+- User request:
+  - 사용자가 처음 합의한 skill 구조와 실제 완료된 skill 목록이 다르다고 지적하고, `finance-backtest-candidate-refinement` 제거 여부를 질문함
+- Interpreted goal:
+  - phase worktree에서 쓰는 finance skill을 요청 접수 / 문서 동기화 / 통합 검토 / runbook 유지와 구현 domain skill로 명확히 분리해야 함
+- Analysis result:
+  - `finance-task-management`는 역할이 넓고 이름도 active task 운영에 치우치므로 `finance-task-intake`가 더 정확하다
+  - `finance-integration-review`와 `finance-runbook-maintainer`는 `finance-doc-sync`나 intake에 섞지 않고 별도 workflow skill로 두는 것이 맞다
+  - `finance-backtest-candidate-refinement`는 candidate-search worktree 성격과 겹치므로 phase worktree 공통 skill에서 제거하는 것이 맞다
+- Follow-up:
+  - repo-local plugin과 global mirror를 4 workflow + 4 domain skill 구조로 보정하기로 했다

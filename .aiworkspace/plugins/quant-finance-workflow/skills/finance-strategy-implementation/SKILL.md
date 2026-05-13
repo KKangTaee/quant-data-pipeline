@@ -1,13 +1,13 @@
 ---
 name: finance-strategy-implementation
-description: Implement or update backtest strategies in the finance package. Use this when adding or changing transforms, strategy simulation logic, engine integration, result schema, samples, DB-backed runtime parity, or performance/reporting behavior for quant strategies in the quant-data-pipeline project. Pair with finance-task-management for task setup/status and finance-doc-sync for closeout documentation.
+description: Implement or update backtest strategies in the finance package. Use this when adding or changing transforms, strategy simulation logic, engine integration, result schema, samples, DB-backed runtime parity, or performance/reporting behavior for quant strategies in the quant-data-pipeline project. Pair with finance-task-intake before broad work and finance-doc-sync for closeout documentation.
 ---
 
 # Finance Strategy Implementation
 
 Use this skill when work touches the strategy and backtest layer under `finance/`.
 
-This is a strategy implementation skill. Use `finance-task-management` for active task setup and workflow ownership, then use `finance-doc-sync` near closeout when durable docs need alignment.
+This is a strategy implementation skill. Use `finance-task-intake` before broad work, then use `finance-doc-sync` near closeout when durable docs need alignment.
 
 ## First Reads
 

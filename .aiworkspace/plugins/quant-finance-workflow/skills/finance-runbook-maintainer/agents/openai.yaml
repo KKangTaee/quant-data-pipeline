@@ -1,0 +1,4 @@
+interface:
+  display_name: "Finance Runbook Maintainer"
+  short_description: "Maintain repeated finance operating procedures."
+  default_prompt: "Use $finance-runbook-maintainer to turn this repeated finance procedure into a durable runbook."

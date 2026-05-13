@@ -234,3 +234,42 @@ Additional checks:
 - 활성 6개 finance skill repo-local source와 global mirror `diff -qr` 일치
 - placeholder grep 출력 없음
 - `git diff --check` 출력 없음
+
+## 5차 final taxonomy correction
+
+Actions:
+
+- `finance-task-management`를 `finance-task-intake`로 rename했다.
+- `finance-integration-review`와 `finance-runbook-maintainer`를 추가했다.
+- `finance-backtest-candidate-refinement`를 repo-local plugin source에서 제거했다.
+- domain skill과 `finance-doc-sync`, `AGENTS.md`, plugin manifest, roadmap, root logs를 새 4 workflow + 4 domain 구조에 맞게 보정했다.
+- global `~/.codex/skills/finance-*` mirror를 repo-local source와 다시 동기화했다.
+
+Validation:
+
+```bash
+for d in .aiworkspace/plugins/quant-finance-workflow/skills/finance-*; do
+  .venv/bin/python /Users/taeho/.codex/skills/.system/skill-creator/scripts/quick_validate.py "$d" || exit 1
+done
+```
+
+Result:
+
+- repo-local 8개 finance skill 모두 `Skill is valid!`
+
+```bash
+for d in /Users/taeho/.codex/skills/finance-*; do
+  .venv/bin/python /Users/taeho/.codex/skills/.system/skill-creator/scripts/quick_validate.py "$d" || exit 1
+done
+```
+
+Result:
+
+- global mirror 8개 finance skill 모두 `Skill is valid!`
+
+Additional checks:
+
+- repo-local 8개 source와 global mirror `diff -qr` 일치
+- marketplace path는 `./.aiworkspace/plugins/quant-finance-workflow`
+- plugin source skill count는 `8`
+- `git diff --check` 출력 없음

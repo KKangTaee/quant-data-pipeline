@@ -19,6 +19,7 @@ Last Updated: 2026-05-13
 | 2차 | workflow / domain skill 책임 재정의 | completed |
 | 3차 | SKILL.md 슬림화와 references 분리 | completed |
 | 4차 | validation, plugin placeholder 정리, 실제 trigger 점검 | completed |
+| 5차 | 사용자가 정의한 4 workflow + 4 domain taxonomy로 보정 | completed |
 
 ## 종료 조건
 
@@ -26,3 +27,4 @@ Last Updated: 2026-05-13
 - task / workflow 중심 skill 구조가 정리된다.
 - SKILL.md는 핵심 절차와 reference 안내만 담고, 긴 설명은 references로 이동한다.
 - repo-local plugin은 검증된 skill 묶음만 담도록 정리된다.
+- 최종 skill 구조는 공통 workflow 4개와 구현 domain 4개로 유지된다.

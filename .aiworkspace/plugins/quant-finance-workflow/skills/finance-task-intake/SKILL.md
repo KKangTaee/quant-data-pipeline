@@ -1,13 +1,13 @@
 ---
-name: finance-task-management
-description: Classify and manage quant-data-pipeline finance work as an active task or optional phase. Use this when the user asks to plan, start, continue, checkpoint, close, or reorganize finance work; when task docs under .aiworkspace/note/finance/tasks/active need PLAN/DESIGN/STATUS/NOTES/RUNS/RISKS updates; when root handoff logs need concise milestone updates; or when deciding which finance implementation skill should own the code work.
+name: finance-task-intake
+description: Classify incoming quant-data-pipeline finance requests before work starts. Use this when deciding whether a request is phase work, active task work, code implementation, documentation-only work, integration review, runbook maintenance, or simple Q&A; when choosing which docs to read first; when choosing the active task location; or when routing to the right finance domain skill.
 ---
 
-# Finance Task Management
+# Finance Task Intake
 
-Use this skill for finance workflow control in the active `quant-data-pipeline` repo/worktree.
+Use this skill at the start of non-trivial finance work in the active `quant-data-pipeline` repo/worktree.
 
-This is a task-orchestration skill, not a domain implementation skill. Pair it with a narrower implementation skill when code changes are needed, then use `finance-doc-sync` near closeout when durable docs must be aligned.
+This is an intake and routing skill. It does not own implementation, merge review, runbook writing, or final documentation sync.
 
 ## First Reads
 
@@ -29,7 +29,9 @@ For detailed task document rules, read `references/task-document-contract.md`.
 | Focused multi-step task | use or create `.aiworkspace/note/finance/tasks/active/<task-id>/` |
 | Major roadmap/product work | use an active task first; open a phase only when the user explicitly wants phase management |
 | Code implementation | pair with the matching domain implementation skill |
-| Documentation alignment after implementation | pair with `finance-doc-sync` |
+| Documentation alignment after implementation | route to `finance-doc-sync` |
+| Merge conflict, worktree integration, sub-result integration, final verification planning | route to `finance-integration-review` |
+| Repeated command or operating procedure needs durable instructions | route to `finance-runbook-maintainer` |
 | Backtest report migration or durable result note | keep under `.aiworkspace/note/finance/reports/backtests/` and update its index |
 
 ## Domain Skill Routing
@@ -47,12 +49,9 @@ If more than one domain is involved, state the boundary first and keep edits sco
 1. Identify whether this is a new task, continued task, phase work, or simple answer.
 2. Read the minimum current-state docs and relevant active task docs.
 3. State the working scope in plain language before broad changes.
-4. Update task status as work moves from planned to in progress to completed.
-5. For code work, switch to the appropriate domain skill and follow its verification rules.
-6. Record important command outcomes in `RUNS.md`.
-7. Keep `.aiworkspace/note/finance/WORK_PROGRESS.md` and `.aiworkspace/note/finance/QUESTION_AND_ANALYSIS_LOG.md` concise.
-8. Before closeout, use `finance-doc-sync` when overview, roadmap, README, data architecture, flow docs, or indexes changed.
-9. Commit a coherent unit unless the user explicitly asks not to.
+4. Decide the owning skill or combination of skills.
+5. If task docs are needed, create or update only the active task shell and initial status.
+6. Hand off implementation to the domain skill, merge/integration to `finance-integration-review`, runbook changes to `finance-runbook-maintainer`, or final docs to `finance-doc-sync`.
 
 ## Safety
 

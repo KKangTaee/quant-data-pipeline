@@ -1,7 +1,7 @@
 {
   "name": "quant-finance-workflow",
   "version": "0.1.0",
-  "description": "Repo-local Codex skill and helper script bundle for the finance workspace in quant-data-pipeline.",
+  "description": "Repo-local Codex workflow and implementation skill bundle for the finance workspace in quant-data-pipeline.",
   "author": {
     "name": "Quant Data Pipeline Workspace"
   },
@@ -17,7 +17,7 @@
   "interface": {
     "displayName": "Quant Finance Workflow",
     "shortDescription": "Finance workspace skills and helper scripts",
-    "longDescription": "Repo-local plugin bundle for finance task management, Backtest UI work, DB ingestion, factor generation, strategy implementation, candidate refinement, and documentation sync in quant-data-pipeline.",
+    "longDescription": "Repo-local plugin bundle for finance task intake, documentation sync, integration review, runbook maintenance, Backtest UI work, DB ingestion, factor generation, and strategy implementation in quant-data-pipeline.",
     "developerName": "Quant Data Pipeline Workspace",
     "category": "Productivity",
     "capabilities": [
@@ -25,8 +25,8 @@
       "Write"
     ],
     "defaultPrompt": [
-      "Classify a finance task and open the right docs.",
-      "Update a finance workflow with the right skill.",
+      "Classify a finance request and choose the right skill.",
+      "Review a finance integration or merge result.",
       "Sync finance docs after implementation."
     ],
     "brandColor": "#0F766E",

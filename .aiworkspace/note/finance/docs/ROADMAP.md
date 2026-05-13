@@ -9,7 +9,7 @@ Last Verified: 2026-05-13
 |---|---|---|
 | Documentation System Rebuild | Practical closeout | `.aiworkspace/note/finance/tasks/active/doc-system-rebuild/`; legacy root / operations / research / support / phase history 제거 완료 |
 | AI Workspace Migration | Practical closeout | `.aiworkspace/note/finance/tasks/active/ai-workspace-migration/`; `.aiworkspace/note/finance`와 `.aiworkspace/plugins` canonical 이동 및 검증 완료 |
-| Skill System Rebuild | Complete | `.aiworkspace/note/finance/tasks/active/skill-system-rebuild/`; repo-local skill source, global mirror, plugin manifest, marketplace path 검증 완료 |
+| Skill System Rebuild | Complete | `.aiworkspace/note/finance/tasks/active/skill-system-rebuild/`; 4 workflow + 4 domain skill taxonomy, repo-local source, global mirror, plugin manifest, marketplace path 검증 완료 |
 | Backtest Report Migration | Complete | `.aiworkspace/note/finance/reports/backtests/`, legacy phase archive 제거 완료 |
 | Practical Validation V2 | Active | `.aiworkspace/note/finance/tasks/active/practical-validation-v2/` |
 | Phase 36 Selected Portfolio Dashboard | Implementation complete before doc rebuild | 기존 phase 문서는 새 구조 정리 후 필요 시 `phases/done/`에 요약만 남긴다 |

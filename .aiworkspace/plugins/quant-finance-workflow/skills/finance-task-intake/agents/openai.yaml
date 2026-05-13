@@ -1,0 +1,4 @@
+interface:
+  display_name: "Finance Task Intake"
+  short_description: "Classify finance requests and route work."
+  default_prompt: "Use $finance-task-intake to classify this finance request and choose the right docs and skill route."

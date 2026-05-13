@@ -1,0 +1,4 @@
+interface:
+  display_name: "Finance Integration Review"
+  short_description: "Review merges, conflicts, and integrated diffs."
+  default_prompt: "Use $finance-integration-review to review this finance merge or integration diff before commit."

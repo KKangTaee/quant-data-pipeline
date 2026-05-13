@@ -1,13 +1,13 @@
 ---
 name: finance-backtest-web-workflow
-description: Build, debug, or refactor the quant-data-pipeline Streamlit Backtest web workflow. Use this when work touches app/web/backtest_*.py, app/web/pages/backtest.py, Backtest UI panels, Candidate Review, Portfolio Proposal, History, Candidate Library, saved portfolio replay, runtime registry helpers, JSONL UI persistence, or user-facing validation / readiness flows. Pair with finance-task-management for task setup/status and finance-doc-sync for closeout documentation.
+description: Build, debug, or refactor the quant-data-pipeline Streamlit Backtest web workflow. Use this when work touches app/web/backtest_*.py, app/web/pages/backtest.py, Backtest UI panels, Candidate Review, Portfolio Proposal, History, Candidate Library, saved portfolio replay, runtime registry helpers, JSONL UI persistence, Practical Validation, Final Review, or Selected Portfolio Dashboard. Pair with finance-task-intake before broad work and finance-doc-sync for closeout documentation.
 ---
 
 # Finance Backtest Web Workflow
 
 Use this skill for Backtest web app work in the active `quant-data-pipeline` repo/worktree.
 
-This is a Backtest UI implementation skill. Use `finance-task-management` for active task setup and workflow ownership, then use `finance-doc-sync` near closeout when durable docs need alignment.
+This is a Backtest UI implementation skill. Use `finance-task-intake` before broad work, then use `finance-doc-sync` near closeout when durable docs need alignment.
 
 ## Boundaries
 
