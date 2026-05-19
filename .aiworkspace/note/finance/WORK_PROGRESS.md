@@ -26,7 +26,8 @@ Detailed historical logs were archived on `2026-04-13`.
 - Created the first audit task at `.aiworkspace/note/finance/tasks/active/ui-engine-boundary-audit/`.
 - Durable direction: keep Streamlit for now and introduce `app/services` as the UI-engine boundary.
 - Completed the first implementation task `.aiworkspace/note/finance/tasks/active/backtest-execution-service-boundary/` by moving Single Backtest dispatch / error normalization to `app/services/backtest_execution.py`.
-- Next implementation task: `compare-service-boundary`.
+- Started `.aiworkspace/note/finance/tasks/active/compare-service-boundary/` and moved manual compare execution loop / error normalization to `app/services/backtest_compare_execution.py`.
+- Next implementation slice: move the compare strategy runner catalog without importing Streamlit-adjacent `backtest_common.py` into services.
 
 ### 2026-05-13
 - Renamed the product direction research workspace from `.aiworkspace/note/finance/research/` to `.aiworkspace/note/finance/researches/`.

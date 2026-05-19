@@ -38,6 +38,7 @@ Last Verified: 2026-05-19
 | Finance Console | `app/web/streamlit_app.py` |
 | Backtest page | `app/web/pages/backtest.py` |
 | Single Backtest execution service | `app/services/backtest_execution.py` |
+| Manual Compare execution service | `app/services/backtest_compare_execution.py` |
 | Backtest Analysis | `app/web/backtest_analysis.py` |
 | Practical Validation | `app/web/backtest_practical_validation.py` |
 | Final Review | `app/web/backtest_final_review.py` |

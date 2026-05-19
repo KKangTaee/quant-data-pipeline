@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.services.backtest_compare_execution import execute_strategy_compare
 from app.web.backtest_common import *  # noqa: F401,F403
 from app.web.backtest_practical_validation_helpers import (
     build_selection_source_from_saved_mix_prefill,
@@ -5873,20 +5874,26 @@ def _render_strategy_compare_workspace() -> None:
             st.session_state.backtest_compare_error_kind = "input"
             st.session_state.backtest_compare_error = "Global Relative Strength Score Horizons must contain at least one lookback window."
         else:
-            try:
-                bundles = []
-                with st.spinner("Running multi-strategy comparison from DB..."):
-                    for strategy_name in selected_strategy_execution_names:
-                        bundles.append(
-                            _run_compare_strategy(
-                                strategy_name,
-                                start=compare_start.isoformat(),
-                                end=compare_end.isoformat(),
-                                timeframe=compare_timeframe,
-                                option=compare_option,
-                                overrides=compare_strategy_overrides.get(strategy_name),
-                            )
-                        )
+            with st.spinner("Running multi-strategy comparison from DB..."):
+                result = execute_strategy_compare(
+                    selected_strategy_execution_names,
+                    start=compare_start.isoformat(),
+                    end=compare_end.isoformat(),
+                    timeframe=compare_timeframe,
+                    option=compare_option,
+                    overrides_by_strategy=compare_strategy_overrides,
+                    run_strategy=_run_compare_strategy,
+                )
+            if not result.ok:
+                st.session_state.backtest_compare_bundles = None
+                st.session_state.backtest_compare_error_kind = result.error_kind
+                st.session_state.backtest_compare_error = result.error_message
+            elif result.bundles is None:
+                st.session_state.backtest_compare_bundles = None
+                st.session_state.backtest_compare_error_kind = "system"
+                st.session_state.backtest_compare_error = "Comparison execution failed: missing result bundles."
+            else:
+                bundles = result.bundles
                 st.session_state.backtest_compare_bundles = bundles
                 st.session_state.backtest_compare_error = None
                 st.session_state.backtest_compare_error_kind = None
@@ -5926,18 +5933,6 @@ def _render_strategy_compare_workspace() -> None:
                     },
                 )
                 st.success("Strategy comparison completed.")
-            except BacktestInputError as exc:
-                st.session_state.backtest_compare_bundles = None
-                st.session_state.backtest_compare_error_kind = "input"
-                st.session_state.backtest_compare_error = f"Comparison input issue: {exc}"
-            except BacktestDataError as exc:
-                st.session_state.backtest_compare_bundles = None
-                st.session_state.backtest_compare_error_kind = "data"
-                st.session_state.backtest_compare_error = f"Comparison data issue: {exc}"
-            except Exception as exc:
-                st.session_state.backtest_compare_bundles = None
-                st.session_state.backtest_compare_error_kind = "system"
-                st.session_state.backtest_compare_error = f"Comparison execution failed: {exc}"
         st.rerun()
     if st.session_state.backtest_compare_bundles:
         st.divider()

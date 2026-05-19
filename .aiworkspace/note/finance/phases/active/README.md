@@ -24,4 +24,4 @@ phases/active/<phase-name>/
 
 | Phase | Status | Notes |
 |---|---|---|
-| `ui-engine-boundary-foundation` | Active | Streamlit은 유지하고, `app/services`를 UI-engine boundary로 도입하는 phase. audit과 Single Backtest service extraction 완료. |
+| `ui-engine-boundary-foundation` | Active | Streamlit은 유지하고, `app/services`를 UI-engine boundary로 도입하는 phase. audit / Single Backtest service extraction 완료, Compare service boundary 진행 중. |

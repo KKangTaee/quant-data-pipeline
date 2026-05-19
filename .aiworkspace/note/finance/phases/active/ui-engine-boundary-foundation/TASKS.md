@@ -9,7 +9,7 @@ Created: 2026-05-19
 | --- | --- | --- | --- |
 | `ui-engine-boundary-audit` | docs + code flow audit | Complete | first implementation target selected: `backtest-execution-service-boundary` |
 | `backtest-execution-service-boundary` | Single Strategy execution service | Complete | `app/services/backtest_execution.py` added; UI runner delegates execution |
-| `compare-service-boundary` | Compare / weighted portfolio execution service | Pending | start only after Single Strategy pattern settles |
+| `compare-service-boundary` | Compare / weighted portfolio execution service | In progress | manual compare execution loop moved to `app/services/backtest_compare_execution.py`; runner catalog / weighted builder remain |
 | `practical-validation-service-boundary` | Practical Validation calculation/save/handoff split | Pending | coordinate with active Practical Validation V2 |
 | `evidence-read-model-boundary` | Final Review / Selected Dashboard read model | Pending | no frontend migration |
 
@@ -55,6 +55,13 @@ Goals:
 - identify compare execution functions currently embedded in `backtest_compare.py`
 - extract compare run dispatch after Task 2 pattern is stable
 - defer chart/render/session state cleanup
+
+Current slice:
+
+- In progress on 2026-05-19.
+- Task record: `.aiworkspace/note/finance/tasks/active/compare-service-boundary/`
+- Manual compare execution loop and error normalization moved to `app/services/backtest_compare_execution.py`.
+- Strategy runner catalog, weighted portfolio builder, and saved portfolio replay remain follow-up slices.
 
 ## Task 4. Practical Validation Service Boundary
 

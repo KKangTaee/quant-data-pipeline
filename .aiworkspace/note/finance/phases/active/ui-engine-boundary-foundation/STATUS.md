@@ -8,8 +8,8 @@ Created: 2026-05-19
 - Phase created after user approval.
 - First task `ui-engine-boundary-audit` is complete.
 - First implementation task `backtest-execution-service-boundary` is complete.
-- Product code changed only in the Single Strategy execution boundary.
-- Current focus can move to Compare service boundary planning.
+- `compare-service-boundary` is in progress.
+- Product code now has Single Strategy execution service and manual Compare execution service boundaries.
 
 ## Latest Findings
 
@@ -36,4 +36,4 @@ Reason:
 
 ## Next Action
 
-Open `compare-service-boundary` and identify the smallest Compare / Weighted Portfolio execution slice that can move behind `app/services` without changing chart render, saved replay UI, or session state behavior.
+Continue `compare-service-boundary` with the strategy runner catalog extraction, but only after strict universe preset dependencies can be moved without importing Streamlit-adjacent `backtest_common.py` into services.

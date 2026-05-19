@@ -62,6 +62,7 @@
 | 스크립트 | 관리하는 기능 |
 |---|---|
 | `app/services/backtest_execution.py` | Streamlit-free Single Strategy execution service. runtime dispatch, elapsed timing, input/data/system error normalization, result bundle metadata update를 담당 |
+| `app/services/backtest_compare_execution.py` | Streamlit-free manual Compare execution service. multi-strategy execution loop, elapsed timing, input/data/system error normalization을 담당 |
 
 ## App / Runtime
 

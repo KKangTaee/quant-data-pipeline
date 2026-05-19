@@ -26,3 +26,4 @@ tasks/active/<task-name>/
 |---|---|---|
 | `ui-engine-boundary-audit` | Complete | `ui-engine-boundary-foundation` phase의 첫 audit task. 다음 구현 후보는 `backtest-execution-service-boundary`. |
 | `backtest-execution-service-boundary` | Complete | Single Strategy runtime dispatch와 error normalization을 `app/services/backtest_execution.py`로 분리 완료. |
+| `compare-service-boundary` | In progress | Manual compare 실행 loop와 error normalization을 `app/services/backtest_compare_execution.py`로 분리. runner catalog / weighted builder는 후속 slice. |

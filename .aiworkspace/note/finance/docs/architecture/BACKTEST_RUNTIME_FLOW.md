@@ -24,11 +24,15 @@ app/web/streamlit_app.py
 ```
 
 Compare / weighted portfolio 흐름은 아직 service layer로 이동하지 않았다.
+수동 Compare 실행 loop와 error normalization은 `app/services/backtest_compare_execution.py`로 이동했지만,
+strategy별 runner catalog와 weighted portfolio builder는 아직 `app/web/backtest_compare.py`에 남아 있다.
 
 ```text
 app/web/streamlit_app.py
   -> app/web/pages/backtest.py
   -> app/web/backtest_compare.py
+  -> app/services/backtest_compare_execution.py
+  -> app/web/backtest_compare.py::_run_compare_strategy
   -> app/web/runtime/backtest.py
   -> finance/loaders/* / finance strategy runtime
   -> compare result / weighted portfolio result / saved replay
