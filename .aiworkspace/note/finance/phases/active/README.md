@@ -1,7 +1,7 @@
 # Active Finance Phases
 
 Status: Active
-Last Verified: 2026-05-12
+Last Verified: 2026-05-19
 
 이 폴더는 Main phase worktree가 관리하는 active phase 기록을 둔다.
 
@@ -19,3 +19,9 @@ phases/active/<phase-name>/
 
 현재 문서 체계 재구성 중에는 기존 `phases/phase*/` 문서를 바로 삭제하지 않는다.
 3차 마이그레이션에서 필요한 요약만 남기고 정리한다.
+
+## Current Active Phases
+
+| Phase | Status | Notes |
+|---|---|---|
+| `ui-engine-boundary-foundation` | Active | Streamlit은 유지하고, `app/services`를 UI-engine boundary로 도입하는 phase. audit과 Single Backtest service extraction 완료. |

@@ -7,16 +7,31 @@
 
 ## 현재 큰 흐름
 
+Single Strategy 실행 흐름:
+
 ```text
 app/web/streamlit_app.py
   -> app/web/pages/backtest.py
+  -> app/web/backtest_single_runner.py
+  -> app/services/backtest_execution.py
   -> app/web/runtime/backtest.py
   -> finance/loaders/*
   -> finance/engine.py / finance/transform.py
   -> finance/strategy.py
   -> finance/performance.py
   -> result bundle / metadata / warnings
-  -> Backtest UI latest result, history, compare, saved replay
+  -> Backtest UI latest result / history
+```
+
+Compare / weighted portfolio 흐름은 아직 service layer로 이동하지 않았다.
+
+```text
+app/web/streamlit_app.py
+  -> app/web/pages/backtest.py
+  -> app/web/backtest_compare.py
+  -> app/web/runtime/backtest.py
+  -> finance/loaders/* / finance strategy runtime
+  -> compare result / weighted portfolio result / saved replay
 ```
 
 ## 핵심 파일
@@ -25,6 +40,8 @@ app/web/streamlit_app.py
 |---|---|
 | `app/web/streamlit_app.py` | Finance Console navigation entry |
 | `app/web/pages/backtest.py` | form, panel, result surface, history, compare, saved portfolio UI |
+| `app/web/backtest_single_runner.py` | Single Strategy payload 표시, Streamlit spinner, session state / history append |
+| `app/services/backtest_execution.py` | Single Strategy runtime dispatch, elapsed timing, input/data/system error normalization |
 | `app/web/runtime/backtest.py` | UI payload를 DB-backed runtime 실행으로 변환 |
 | `finance/loaders/*` | DB read path와 point-in-time snapshot 조회 |
 | `finance/engine.py` | price-based strategy orchestration wrapper |

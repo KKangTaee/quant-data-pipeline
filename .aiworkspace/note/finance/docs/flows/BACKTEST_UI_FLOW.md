@@ -19,7 +19,8 @@ UI form, payload 복원, candidate review, history replay, candidate replay, sav
 | `app/web/backtest_analysis.py` | `Backtest Analysis` stage wrapper. Single Strategy와 Compare & Portfolio Builder를 submode로 렌더링 |
 | `app/web/backtest_single_strategy.py` | `Single Strategy` 화면 orchestration. strategy 선택, prefill notice, form dispatch, latest result 연결 |
 | `app/web/backtest_single_forms.py` | Single Strategy strategy-specific form render. Equal Weight, GTAA, GRS, Risk Parity, Dual Momentum, Quality / Value 계열 |
-| `app/web/backtest_single_runner.py` | Single Strategy payload 실행 dispatch, DB-backed runtime 호출, latest bundle state 저장, run history append |
+| `app/web/backtest_single_runner.py` | Single Strategy payload 표시, execution service 호출, latest bundle state 저장, run history append |
+| `app/services/backtest_execution.py` | Streamlit-free Single Strategy execution service. DB-backed runtime dispatch와 input/data/system error normalization 담당 |
 | `app/web/backtest_compare.py` | `Compare & Portfolio Builder` 화면 render, compare 실행, weighted portfolio builder, saved portfolio replay / load, candidate handoff |
 | `app/web/backtest_result_display.py` | Backtest 결과 공용 display. summary, chart, data trust, real-money detail, selection history, compare result helper |
 | `app/web/backtest_history.py` | `Operations > Backtest Run History` 화면 render, selected record inspect, run again / load into form / candidate draft handoff |

@@ -21,6 +21,13 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-19
+- Opened the active phase `.aiworkspace/note/finance/phases/active/ui-engine-boundary-foundation/`.
+- Created the first audit task at `.aiworkspace/note/finance/tasks/active/ui-engine-boundary-audit/`.
+- Durable direction: keep Streamlit for now and introduce `app/services` as the UI-engine boundary.
+- Completed the first implementation task `.aiworkspace/note/finance/tasks/active/backtest-execution-service-boundary/` by moving Single Backtest dispatch / error normalization to `app/services/backtest_execution.py`.
+- Next implementation task: `compare-service-boundary`.
+
 ### 2026-05-13
 - Renamed the product direction research workspace from `.aiworkspace/note/finance/research/` to `.aiworkspace/note/finance/researches/`.
 - Updated AGENTS, durable docs, active task notes, and product research skills to use `researches/active/<research-id>/`.

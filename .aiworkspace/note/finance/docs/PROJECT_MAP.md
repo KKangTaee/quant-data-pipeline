@@ -1,7 +1,7 @@
 # Finance Project Map
 
 Status: Active
-Last Verified: 2026-05-13
+Last Verified: 2026-05-19
 
 ## Project Summary
 
@@ -18,6 +18,7 @@ Last Verified: 2026-05-13
 | `finance/strategy.py` | portfolio simulation / rebalancing logic |
 | `finance/transform.py` | signal, factor, ranking transform |
 | `finance/performance.py` | 성과 요약과 portfolio performance metric |
+| `app/services/` | Streamlit-free application service boundary. UI에서 runtime / engine을 직접 호출하기 전에 use-case 단위 dispatch와 error normalization을 담당 |
 | `app/web/` | Streamlit Finance Console 화면과 runtime glue |
 | `app/jobs/` | Ingestion console에서 실행하는 job wrapper |
 | `.aiworkspace/` | AI / Codex 작업 문서와 plugin source의 top-level workspace |
@@ -36,6 +37,7 @@ Last Verified: 2026-05-13
 |---|---|
 | Finance Console | `app/web/streamlit_app.py` |
 | Backtest page | `app/web/pages/backtest.py` |
+| Single Backtest execution service | `app/services/backtest_execution.py` |
 | Backtest Analysis | `app/web/backtest_analysis.py` |
 | Practical Validation | `app/web/backtest_practical_validation.py` |
 | Final Review | `app/web/backtest_final_review.py` |
@@ -91,6 +93,7 @@ Backtest Analysis
 | Situation | Start Here |
 |---|---|
 | Backtest UI 수정 | `app/web/pages/backtest.py`, 관련 `app/web/backtest_*.py` |
+| UI-engine boundary 수정 | `app/services/*`, 호출하는 `app/web/backtest_*.py`, 관련 `app/web/runtime/*` |
 | Practical Validation P2 수정 | `app/web/backtest_practical_validation*.py`, `finance/data/etf_provider.py`, `finance/loaders/provider.py`, `finance/data/macro.py`, `finance/loaders/macro.py` |
 | DB schema 변경 | `finance/data/db/schema.py` |
 | Ingestion job 변경 | `app/jobs/ingestion_jobs.py`, `finance/data/*` |

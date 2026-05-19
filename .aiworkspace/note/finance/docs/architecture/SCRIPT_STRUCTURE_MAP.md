@@ -34,7 +34,7 @@
 | `app/web/backtest_analysis.py` | `Backtest > Backtest Analysis`에서 Single Strategy / Compare & Portfolio Builder를 submode로 렌더링하는 wrapper |
 | `app/web/backtest_single_strategy.py` | `Backtest > Single Strategy` 화면 orchestration, strategy 선택 / prefill notice / form dispatch / latest result 연결 |
 | `app/web/backtest_single_forms.py` | Single Strategy의 Equal Weight, GTAA, GRS, Risk Parity, Dual Momentum, Quality / Value 계열 strategy-specific form render |
-| `app/web/backtest_single_runner.py` | Single Strategy payload 실행 dispatch, DB-backed runtime 호출, latest bundle state 저장, run history append |
+| `app/web/backtest_single_runner.py` | Single Strategy payload 표시, execution service 호출, latest bundle state 저장, run history append |
 | `app/web/backtest_compare.py` | `Backtest > Compare & Portfolio Builder` 화면 render, compare 실행, weighted portfolio builder, saved portfolio replay / load, candidate handoff |
 | `app/web/backtest_result_display.py` | Backtest 결과 공용 display, summary / chart / data trust / real-money detail / selection history / compare result helper |
 | `app/web/backtest_history.py` | `Operations > Backtest Run History` 화면 render, history inspect / replay / form load / candidate draft handoff, Real-Money / Guardrail parity table render |
@@ -56,6 +56,12 @@
 | `app/web/final_selected_portfolio_dashboard.py` | `Operations > Selected Portfolio Dashboard` 화면 render, Final Review에서 선정된 포트폴리오 summary / compact selected portfolio picker / Snapshot / tabbed Performance Recheck / Portfolio Monitoring Review Signals / optional Actual Allocation / Audit 표시 |
 | `app/web/final_selected_portfolio_dashboard_helpers.py` | Selected Portfolio Dashboard용 table row, component row, evidence row, value / holding input row, drift row, alert preview row, filter option helper |
 | `app/web/pages/backtest.py` | Backtest page shell, `Backtest Analysis -> Practical Validation -> Final Review` workflow navigation, stage dispatch entry. 본문은 별도 module이 관리 |
+
+## App / Services
+
+| 스크립트 | 관리하는 기능 |
+|---|---|
+| `app/services/backtest_execution.py` | Streamlit-free Single Strategy execution service. runtime dispatch, elapsed timing, input/data/system error normalization, result bundle metadata update를 담당 |
 
 ## App / Runtime
 

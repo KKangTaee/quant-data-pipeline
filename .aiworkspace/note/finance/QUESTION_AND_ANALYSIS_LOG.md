@@ -21,6 +21,19 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-19 - UI와 engine 분리는 하나의 foundation phase로 시작한다
+- User request:
+  - Next.js / React 전환이 아니라, 현재 Python / Streamlit 프로그램 안에서 UI와 engine 결합도를 먼저 낮추는 phase를 열고 작업을 진행해 달라고 요청함.
+- Interpreted goal:
+  - 이후 UI agent와 engine agent가 서로 다른 파일 경계를 기준으로 병렬 작업할 수 있도록, Streamlit 화면과 backtest / validation runtime 책임을 분리하고 싶음.
+- Analysis result:
+  - 새 phase는 `.aiworkspace/note/finance/phases/active/ui-engine-boundary-foundation/`로 열었다.
+  - 첫 task는 `.aiworkspace/note/finance/tasks/active/ui-engine-boundary-audit/`이며, 현재 결론은 `app/services`를 UI-engine boundary로 두고 `app/web/backtest_single_runner.py`의 Single Backtest execution dispatch를 먼저 분리하는 것이다.
+  - 첫 구현 task `.aiworkspace/note/finance/tasks/active/backtest-execution-service-boundary/`에서 `app/services/backtest_execution.py`를 만들고 Single Backtest dispatch / error normalization을 Streamlit-free service로 이동했다.
+  - 이 phase에서는 React / Next.js / FastAPI, DB schema 변경, strategy engine 재설계, registry JSONL rewrite를 하지 않는다.
+- Follow-up:
+  - 다음 구현 task는 `compare-service-boundary`로 열고, `app/web/backtest_compare.py`에서 가장 작은 service extraction 후보를 먼저 확정한다.
+
 ### 2026-05-13 - 제품 방향 리서치 폴더명은 researches로 맞춘다
 - User request:
   - 프로젝트 폴더명이 `docs`, `tasks`, `phases`처럼 복수형이므로 `research`보다 `researches`가 일관적이지 않느냐고 질문하고 진행을 요청함.
