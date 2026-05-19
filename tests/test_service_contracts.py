@@ -101,6 +101,164 @@ print("streamlit" in sys.modules)
         self.assertEqual(result.stdout.strip(), "False")
 
 
+class ProviderGapCollectionServiceContractTests(unittest.TestCase):
+    def _validation_result(self) -> dict[str, object]:
+        return {
+            "selection_source_id": "source-provider-gap",
+            "provider_coverage": {
+                "symbols": ["SPY", "TLT", "XYZ"],
+                "symbol_weights": {"SPY": 0.6, "TLT": 0.3, "XYZ": 0.1},
+                "coverage": {
+                    "operability": {"missing_symbols": ["SPY", "XYZ"]},
+                    "holdings": {"missing_symbols": ["SPY", "XYZ"]},
+                    "exposure": {"missing_symbols": ["SPY", "XYZ"]},
+                    "macro": {
+                        "diagnostic_status": "REVIEW",
+                        "series_count": 2,
+                        "stale_count": 1,
+                    },
+                },
+            },
+        }
+
+    def test_provider_gap_rows_and_plan_are_built_without_ui_runtime(self) -> None:
+        from app.services import backtest_practical_validation as service
+
+        verified_rows = [
+            {"symbol": "SPY", "data_kind": "operability", "provider": "ishares", "parser": "factsheet"},
+            {"symbol": "SPY", "data_kind": "holdings", "provider": "ishares", "parser": "holdings_csv"},
+            {"symbol": "SPY", "data_kind": "exposure", "provider": "ishares", "parser": "provider_aggregate"},
+        ]
+
+        with patch.object(service, "load_etf_provider_source_map", return_value=verified_rows):
+            rows = service.build_provider_gap_rows(self._validation_result())
+            plan = service.build_provider_gap_collection_plan(self._validation_result())
+
+        rows_by_symbol = {row["ETF"]: row for row in rows}
+        self.assertEqual(rows_by_symbol["SPY"]["Action"], "운용성 보강, holdings/exposure 수집")
+        self.assertEqual(rows_by_symbol["TLT"]["Action"], "조치 없음")
+        self.assertEqual(rows_by_symbol["XYZ"]["Action"], "운용성 보강, source map 자동 탐색")
+        self.assertEqual(plan["source_map_discovery"], ["XYZ"])
+        self.assertEqual(plan["operability_official"], ["SPY"])
+        self.assertEqual(plan["operability_bridge"], ["SPY", "XYZ"])
+        self.assertEqual(plan["holdings_exposure"], ["SPY"])
+        self.assertTrue(plan["macro"])
+        self.assertEqual(
+            service.provider_gap_state_key(self._validation_result()),
+            "practical_validation_provider_gap_results_source-provider-gap",
+        )
+
+    def test_provider_gap_collection_runs_planned_jobs_and_records_history(self) -> None:
+        from app.services import backtest_practical_validation as service
+
+        first_plan = {
+            "source_map_discovery": ["XYZ"],
+            "source_symbols": ["SPY", "XYZ"],
+            "operability_official": [],
+            "operability_bridge": [],
+            "holdings_exposure": [],
+            "mapping_needed": [],
+            "macro": False,
+        }
+        second_plan = {
+            "source_map_discovery": [],
+            "source_symbols": ["SPY", "XYZ"],
+            "operability_official": ["SPY"],
+            "operability_bridge": ["SPY", "XYZ"],
+            "holdings_exposure": ["SPY"],
+            "mapping_needed": [],
+            "macro": True,
+        }
+
+        def result(job_name: str, symbols_requested: int | None = 1) -> dict[str, object]:
+            return {
+                "job_name": job_name,
+                "status": "success",
+                "rows_written": 1,
+                "symbols_requested": symbols_requested,
+                "failed_symbols": [],
+                "message": "ok",
+            }
+
+        with (
+            patch.object(
+                service,
+                "build_provider_gap_collection_plan",
+                side_effect=[first_plan, second_plan],
+            ) as build_plan,
+            patch.object(
+                service,
+                "run_discover_etf_provider_source_map",
+                return_value=result("discover"),
+            ) as discover,
+            patch.object(
+                service,
+                "run_collect_etf_operability_provider",
+                side_effect=[result("operability_official"), result("operability_bridge", 2)],
+            ) as operability,
+            patch.object(
+                service,
+                "run_collect_etf_holdings_exposure",
+                return_value=result("holdings_exposure"),
+            ) as holdings,
+            patch.object(
+                service,
+                "run_collect_macro_market_context",
+                return_value=result("macro", None),
+            ) as macro,
+            patch.object(service, "append_run_history") as append_history,
+        ):
+            results = service.run_provider_gap_collection(self._validation_result())
+
+        self.assertEqual(build_plan.call_count, 2)
+        discover.assert_called_once_with(["SPY", "XYZ"], verify=True)
+        operability.assert_any_call(
+            ["SPY"],
+            provider="official",
+            as_of_date=None,
+            lookback_days=60,
+            timeframe="1d",
+        )
+        operability.assert_any_call(
+            ["SPY", "XYZ"],
+            provider="db_bridge",
+            as_of_date=None,
+            lookback_days=60,
+            timeframe="1d",
+        )
+        holdings.assert_called_once_with(
+            ["SPY"],
+            provider="official",
+            as_of_date=None,
+            include_provider_aggregates=True,
+            refresh_mode="canonical_refresh",
+        )
+        macro.assert_called_once_with()
+        self.assertEqual(len(results), 5)
+        self.assertEqual(append_history.call_count, 5)
+        provider_areas = [
+            result["run_metadata"]["input_params"]["provider_area"]
+            for result in results
+        ]
+        self.assertEqual(
+            provider_areas,
+            [
+                "etf_provider_source_map",
+                "etf_operability_official",
+                "etf_operability_db_bridge",
+                "etf_holdings_exposure",
+                "macro_context",
+            ],
+        )
+        self.assertTrue(
+            all(
+                result["run_metadata"]["pipeline_type"]
+                == "practical_validation_provider_gap_collection"
+                for result in results
+            )
+        )
+
+
 class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
     def test_status_display_uses_current_decision_routes(self) -> None:
         from app.services.backtest_evidence_read_model import build_final_review_status_display

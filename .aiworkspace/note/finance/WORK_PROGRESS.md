@@ -3944,3 +3944,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/service-contract-tests/`를 열고 UI-engine boundary 후속 QA를 단일 task로 진행했다.
   - `tests/test_service_contracts.py`를 추가해 Practical Validation handoff와 Final Review evidence read model contract를 `unittest`로 검증한다.
   - 검증 명령은 `.aiworkspace/note/finance/docs/runbooks/README.md`와 script map / project map에 반영했다.
+- Provider Gap Collection Boundary:
+  - `.aiworkspace/note/finance/tasks/active/provider-gap-collection-boundary/`를 열고 Practical Validation Provider Data Gaps 수집 책임을 service로 이동했다.
+  - `app/web/backtest_practical_validation.py`는 provider gap 표시 / 버튼 / session state만 맡고, `app/services/backtest_practical_validation.py`가 row / plan / ingestion orchestration을 맡는다.
+  - `tests/test_service_contracts.py`에 provider gap plan / mocked job orchestration contract를 추가했다.

@@ -5145,3 +5145,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 우선 Practical Validation handoff와 Final Review evidence read model처럼 UI가 바로 소비하는 반환 형태를 contract test로 고정하는 것이 적절하다
 - Follow-up:
   - `tests/test_service_contracts.py`를 추가하고 runbook / project map / script map에 focused test 위치와 명령을 기록했다
+
+### 2026-05-20 - Provider gap collection을 UI에서 분리한다
+- User request:
+  - 사용자가 앞서 남겨둔 다음 작업인 Provider gap collection 분리를 진행해 달라고 요청함
+- Interpreted goal:
+  - Practical Validation 화면이 provider gap 수집 계획과 ingestion job 실행 책임까지 직접 들고 있지 않도록 service boundary로 옮겨야 함
+- Analysis result:
+  - UI에는 Provider Data Gaps 표시, 버튼, session state 반영만 남기고, source map lookup / collectable gap 판단 / job orchestration / run history metadata는 Practical Validation service가 맡는 구조가 적절하다
+- Follow-up:
+  - `app/services/backtest_practical_validation.py`로 provider gap row / plan / run orchestration을 이동하고, mocked service contract tests를 추가했다
