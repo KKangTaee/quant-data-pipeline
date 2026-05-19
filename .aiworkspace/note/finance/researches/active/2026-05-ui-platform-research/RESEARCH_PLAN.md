@@ -59,3 +59,16 @@
 - Quant engine, data ingestion, factor/backtest/validation logic은 Python에 남긴다.
 - UI 플랫폼 변경은 기존 workflow를 한 번에 다시 쓰는 방식이 아니라, API boundary와 read-only pilot부터 시작한다.
 - Streamlit은 당장 폐기 대상이 아니라 내부 ops / research console로 계속 가치가 있다.
+
+## 2026-05-19 Refocus: UI-Engine Boundary
+
+사용자 요청에 따라 이번 리서치의 중심 질문을 더 좁힌다.
+
+| 질문 | 이번 판단 기준 |
+| --- | --- |
+| UI와 엔진을 왜 분리해야 하는가? | 향후 UI/프론트엔드 담당 agent와 데이터 수집/백테스트 엔진 담당 agent가 같은 파일을 계속 건드리지 않게 하기 위해 |
+| 무엇을 먼저 분리해야 하는가? | 프론트엔드 플랫폼 전환보다 `service contract`, `request/result schema`, `runtime dispatch`, `registry read model` |
+| React/Next.js는 지금 당장 필요한가? | 아니다. 먼저 Python 내부 service boundary가 있어야 Next.js든 Streamlit이든 같은 결과를 읽을 수 있다 |
+| Streamlit은 제거 대상인가? | 아니다. 내부 연구/운영 console로 유지하되, business/runtime logic은 Streamlit 의존에서 빼낸다 |
+
+이번 refocus의 결론은 "프론트엔드 교체"가 아니라 "멀티에이전트 개발이 가능한 코드 소유 경계 만들기"다.

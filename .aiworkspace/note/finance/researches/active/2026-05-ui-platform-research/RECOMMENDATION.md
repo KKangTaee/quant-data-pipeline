@@ -170,3 +170,117 @@ Avoid for now:
 2단계 리서치의 결론은 React/Next.js 도입 가능성이 높다는 것이다. 다만 즉시 "UI를 React로 갈아엎기"가 아니라, "Python engine과 Streamlit workflow에서 API-ready contract를 추출하고 read-only product surface로 검증하기"가 맞다.
 
 가장 먼저 만들 기능은 `API/service contract extraction + Selected Portfolio Dashboard read-only pilot`이다. 이 조합은 현재 프로젝트 강점인 Final Review / Selected Dashboard를 살리면서도, 상용화 UI로 갈 수 있는지 가장 작고 현실적인 단위로 검증한다.
+
+## 2026-05-19 Refocused Recommendation
+
+### Updated One-Line Recommendation
+
+다음 개발 방향은 `Next.js 도입`이 아니라 `UI-engine service boundary 확립`이다. Streamlit은 내부 console로 유지하고, `app/services`에 Streamlit 없는 backtest / validation / selected portfolio contract를 먼저 만든 뒤, 그 contract 위에서 Streamlit UI와 future API/Next.js UI를 나란히 붙인다.
+
+### Why This Is The Right First Move
+
+사용자가 말한 문제의 핵심은 "UI와 엔진이 모두 Python으로 되어 있다"가 아니다. 문제는 `app/web` 안에서 화면 렌더링, `st.session_state`, runtime dispatch, registry write/read, validation 계산 일부가 같은 파일 흐름으로 움직인다는 점이다.
+
+현재 구조는 full rewrite보다 boundary extraction에 적합하다.
+
+```text
+Now:
+app/web Streamlit screen
+  -> app/web helper/runtime
+  -> finance loaders/engine/strategy/performance
+  -> JSONL registry/session state
+
+Target:
+app/web Streamlit screen
+  -> app/services contract layer
+  -> finance loaders/engine/strategy/performance
+  -> versioned read/write models
+
+Optional later:
+app/api FastAPI
+  -> app/services contract layer
+
+frontend Next.js
+  -> app/api or local JSON fixture
+```
+
+### Recommended Immediate Build: Boundary Phase A
+
+Phase A should be a narrow implementation task, not a frontend migration.
+
+| Step | Build | Owner Skill | Output |
+| --- | --- | --- | --- |
+| A1 | Backtest execution service extraction | `finance-backtest-web-workflow` + integration review | `app/services/backtest_execution.py`, service result object, Streamlit runner calls service |
+| A2 | Minimal contract tests | `finance-integration-review` for closeout | service imports without Streamlit, error categories stable, result JSON-compatible |
+| A3 | Practical Validation helper split plan | `finance-backtest-web-workflow` | identify pure diagnostics vs UI handoff functions |
+| A4 | Selected Portfolio read model contract | `finance-backtest-web-workflow` | selected snapshot/evidence object usable by Streamlit and future API |
+
+### First Implementation Slice
+
+Start with `Backtest execution service extraction`.
+
+Why:
+
+- It directly addresses the user's "백테스트 로직과 UI를 분리" goal.
+- It avoids starting with React/Next.js before the backend contract exists.
+- It gives future A/B agent split a real contract:
+  - A agent can change Streamlit/React screen behavior.
+  - B agent can change backtest runtime internals.
+  - Integration owner checks service tests and schema compatibility.
+
+The first slice should not change product behavior. It should only move responsibility.
+
+```text
+Before:
+app/web/backtest_single_runner.py
+  - renders payload
+  - opens spinner
+  - dispatches strategy runtime
+  - normalizes errors
+  - writes st.session_state
+  - appends history
+
+After:
+app/services/backtest_execution.py
+  - dispatches strategy runtime
+  - normalizes errors
+  - returns BacktestExecutionResult
+
+app/web/backtest_single_runner.py
+  - renders payload/spinner
+  - calls service
+  - writes session state
+  - appends history for now
+```
+
+History append can move later. Moving everything at once would make the first step too large.
+
+### Development Direction After Phase A
+
+| Order | Direction | Rationale |
+| --- | --- | --- |
+| 1 | Service contract foundation | 멀티에이전트 개발 경계의 기반 |
+| 2 | Validation/read model cleanup | Practical Validation과 Final Review evidence를 공통 object로 만들기 |
+| 3 | Read-only FastAPI endpoints | HTTP boundary는 service가 안정된 뒤 얇게 추가 |
+| 4 | Read-only product UI pilot | Selected Portfolio Dashboard 또는 Final Review Evidence Viewer |
+| 5 | Job model | ingestion/backtest/validation replay의 progress/retry/cancel 모델 |
+
+### What To Avoid Now
+
+- Full Streamlit rewrite.
+- Next.js project부터 만들기.
+- FastAPI server부터 만들고 내부 service contract를 나중에 생각하기.
+- `app/web/runtime/backtest.py`를 곧바로 public API처럼 노출하기.
+- live trading, broker order, auto rebalance scope 추가.
+
+### Decision To Ask The Human Next
+
+다음 구현으로 승인받을 범위는 아래 하나가 가장 적절하다.
+
+```text
+UI-Engine Boundary Phase A:
+Backtest single-run dispatch를 app/services/backtest_execution.py로 분리하고,
+Streamlit 화면 동작은 유지한 채 service contract와 최소 테스트를 만든다.
+```
+
+이 작업이 끝나면 이후 멀티에이전트 분담이 훨씬 명확해진다.

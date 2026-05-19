@@ -4,8 +4,12 @@ Scoring: 1 low, 5 high. `Priority`는 지금 시작할 순서다.
 
 | Priority | Candidate | Impact | Effort | Risk | Confidence | Fit | Recommendation |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
+| P0 | UI-engine ownership boundary and service contract rules | 5 | 2 | 2 | 5 | 5 | 바로 시작 |
+| P0 | Backtest execution service extraction | 5 | 3 | 3 | 4 | 5 | 바로 시작 |
 | P0 | API/service contract extraction | 5 | 3 | 3 | 5 | 5 | 바로 시작 |
 | P0 | Streamlit retained as internal console | 4 | 1 | 1 | 5 | 5 | 정책으로 확정 |
+| P1 | Remove Streamlit from mixed helper modules | 4 | 3 | 3 | 4 | 5 | service extraction 후 |
+| P1 | Contract tests for UI/engine handoff | 5 | 2 | 2 | 4 | 5 | P0와 함께 |
 | P1 | Read-only Next.js pilot for Selected Portfolio Dashboard | 4 | 4 | 3 | 4 | 5 | API contract 이후 |
 | P1 | EvidencePack / RunArtifact schema | 5 | 3 | 3 | 4 | 5 | API와 함께 |
 | P2 | Job-oriented backtest/validation execution API | 4 | 4 | 4 | 4 | 4 | pilot 이후 |
@@ -15,6 +19,85 @@ Scoring: 1 low, 5 high. `Priority`는 지금 시작할 순서다.
 | P3 | Auth / multi-user review workflow | 4 | 5 | 4 | 3 | 3 | productization 시점 |
 | Park | Full Streamlit rewrite to Next.js | 5 | 5 | 5 | 3 | 2 | 지금은 하지 않음 |
 | Park | Live trading / broker order UI | 5 | 5 | 5 | 5 | 1 | scope 밖 |
+
+## 2026-05-19 Priority Update
+
+이번 사용자 요청 기준으로 P0의 의미를 더 좁힌다. 지금 당장 할 일은 "Next.js 시작"이 아니라 "같은 Python 프로젝트 안에서 UI와 engine을 분리할 수 있는 service contract를 만드는 것"이다.
+
+### P0. UI-Engine Ownership Boundary And Service Contract Rules
+
+Goal:
+
+- future UI agent와 engine agent가 어떤 파일을 소유하는지 명확히 한다.
+- `app/services`를 실제 shared contract layer로 만든다.
+- Streamlit UI 파일이 engine internals에 직접 의존하는 경로를 줄인다.
+
+Proposed ownership:
+
+| Area | Owner |
+| --- | --- |
+| `app/web/*.py` | UI / product surface |
+| `finance/*`, `finance/loaders/*`, `finance/data/*`, `app/jobs/*` | engine / data / backtest |
+| `app/services/*`, `app/api/*`, schema/version contracts | shared integration boundary |
+
+Success criteria:
+
+- 새 runtime 기능을 추가할 때 `app/web` renderer 파일 수정이 필수가 아니게 된다.
+- UI 변경은 service contract를 깨뜨리지 않는 한 engine 파일을 건드리지 않는다.
+- service layer에는 `streamlit` import가 없다.
+
+### P0. Backtest Execution Service Extraction
+
+Goal:
+
+- `app/web/backtest_single_runner.py`의 strategy dispatch, error normalization, elapsed timing, bundle return을 Streamlit 없는 service function으로 뺀다.
+- UI runner는 payload 표시, spinner, session state 반영만 담당한다.
+
+Why first:
+
+- 사용자 요청의 핵심인 "백테스트 로직과 UI 분리"를 가장 직접적으로 검증한다.
+- `backtest_single_runner.py`는 현재 runtime call, Streamlit spinner/session state, history append가 한 함수에 섞여 있어 좋은 첫 분리 대상이다.
+
+Suggested shape:
+
+```text
+app/services/backtest_execution.py
+  BacktestExecutionRequest
+  BacktestExecutionResult
+  run_single_backtest(request)
+```
+
+First slice scope:
+
+- Single Strategy execution only.
+- Existing Streamlit UI behavior 유지.
+- No FastAPI, no Next.js, no DB schema change.
+- Result/error object가 JSON 직렬화 가능한지 테스트.
+
+### P1. Remove Streamlit From Mixed Helper Modules
+
+Target modules:
+
+| Module | Current issue | Direction |
+| --- | --- | --- |
+| `app/web/backtest_practical_validation_helpers.py` | diagnostics calculation, registry append, session handoff가 섞임 | calculation/save/handoff를 분리 |
+| `app/web/backtest_candidate_review_helpers.py` | helper지만 Streamlit session handoff가 일부 있음 | pure row/readiness helpers와 UI handoff를 분리 |
+| `app/web/backtest_compare.py` | compare run, weighted portfolio, saved replay, chart render가 거대하게 섞임 | compare execution service와 render 분리 |
+
+### P1. Contract Tests For UI/Engine Handoff
+
+Goal:
+
+- UI와 engine agent의 작업 계약을 테스트로 고정한다.
+
+Minimum tests:
+
+| Test | Assertion |
+| --- | --- |
+| single backtest service import | `app/services/backtest_execution.py` imports without Streamlit |
+| request/result serialization | request/result can be converted to plain JSON-compatible dict |
+| error normalization | input/data/system error categories are stable |
+| registry read model | old JSONL rows still load through versioned reader |
 
 ## P0. API / Service Contract Extraction
 

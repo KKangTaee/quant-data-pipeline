@@ -38,3 +38,22 @@
 2. 해당 snapshot을 JSON fixture로 저장하고 Next.js mock page에서 읽는 spike를 한다.
 3. FastAPI endpoint를 붙이기 전 service function test를 먼저 만든다.
 4. pilot 후 Streamlit 화면과 Next.js 화면의 사용자 흐름 차이를 비교한다.
+
+## 2026-05-19 Refocus Risks
+
+| Risk | Severity | Why it matters | Mitigation |
+| --- | --- | --- | --- |
+| Boundary layer becomes a new dumping ground | High | `app/services`가 생겨도 UI state, registry write, engine dispatch가 다시 섞이면 분리 효과가 없다 | `app/services`에는 Streamlit import 금지, request/result contract와 use case만 둔다 |
+| Multi-agent split happens before contracts | High | A/B agent가 동시에 `app/web/backtest_*.py`와 `app/web/runtime/backtest.py`를 건드리면 충돌 가능성이 높다 | 첫 task를 service contract extraction으로 제한한다 |
+| Pydantic/FastAPI dependency decision is rushed | Medium | 현재 `pyproject.toml`에는 FastAPI/Pydantic이 명시 dependency로 없다 | Phase A는 Python service + JSON-compatible dict/dataclass로 시작하고, API 단계에서 dependency를 명시 결정한다 |
+| Backtest dispatch refactor changes behavior | High | strategy별 payload/default가 많아 작은 이동도 결과를 바꿀 수 있다 | 기존 runner behavior를 유지하고, first slice는 dispatch/error normalization만 이동한다 |
+| Session state cleanup grows too broad | Medium | `st.session_state` hit가 많아 한 번에 정리하면 regression 가능성이 높다 | canonical state와 UI convenience state를 구분하고, high-value flow부터 단계적으로 줄인다 |
+| Registry path drift remains hidden | Medium | `.note` path reference가 남아 있으면 service/API extraction 후에도 source-of-truth 혼선이 생긴다 | contract extraction 중 path constants를 `.aiworkspace` 기준으로 정리할 후보로 기록한다 |
+
+## Updated Recommended Next Validation
+
+1. `app/services`에 Streamlit 없는 single backtest execution service를 만들 수 있는지 확인한다.
+2. `app/web/backtest_single_runner.py`가 기존 UI behavior를 유지하면서 service를 호출하게 한다.
+3. service result와 error categories를 Streamlit 없이 테스트한다.
+4. Practical Validation helper에서 pure diagnostic function과 UI/session handoff function을 분리할 후보를 표시한다.
+5. 이후에만 FastAPI endpoint 또는 Next.js pilot을 시작한다.
