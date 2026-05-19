@@ -3,26 +3,27 @@
 Status: In progress
 Created: 2026-05-19
 
-## Current Boundary After Slice 1
+## Current Boundary After Slice 2
 
 ```text
 app/web/backtest_compare.py
   -> app/services/backtest_compare_execution.py
-  -> app/web/backtest_compare.py::_run_compare_strategy
+  -> app/services/backtest_compare_catalog.py
   -> app/web/runtime/backtest.py
   -> finance/*
 ```
 
 This is an intermediate boundary.
-The service owns the manual compare execution loop and error normalization, while the strategy runner catalog still lives in `app/web/backtest_compare.py`.
+The services own the manual compare execution loop, error normalization, strategy runner catalog, compare defaults, universe resolution, and runtime dispatch.
+The UI still owns preset source dictionaries because `app/web/backtest_common.py` is Streamlit-adjacent, so it passes them to the service as a `ComparePresetCatalog`.
 
 ## Responsibility Split
 
 | Layer | Responsibility |
 | --- | --- |
-| `app/web/backtest_compare.py` | form render, validation before submit, spinner, session state, history append, result render, weighted UI |
+| `app/web/backtest_compare.py` | form render, validation before submit, spinner, session state, history append, result render, weighted UI, `ComparePresetCatalog` assembly |
 | `app/services/backtest_compare_execution.py` | manual multi-strategy execution loop, elapsed timing, error normalization |
-| `app/web/backtest_compare.py::_run_compare_strategy` | temporary strategy runner catalog and per-strategy runtime dispatch |
+| `app/services/backtest_compare_catalog.py` | strategy runner catalog, compare defaults, preset/manual universe resolution, runtime dispatch |
 | `app/web/runtime/backtest.py` | DB-backed runtime wrappers |
 
 ## Why Not Move Everything Now?
@@ -54,3 +55,6 @@ Error text remains compatible with the previous UI:
 - `Comparison input issue: ...`
 - `Comparison data issue: ...`
 - `Comparison execution failed: ...`
+
+`run_compare_strategy(...)` receives `ComparePresetCatalog` instead of importing `app/web/backtest_common.py`.
+That keeps the service Streamlit-free while preserving the existing preset dictionaries until a later preset module split.

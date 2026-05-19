@@ -35,7 +35,7 @@
 | `app/web/backtest_single_strategy.py` | `Backtest > Single Strategy` 화면 orchestration, strategy 선택 / prefill notice / form dispatch / latest result 연결 |
 | `app/web/backtest_single_forms.py` | Single Strategy의 Equal Weight, GTAA, GRS, Risk Parity, Dual Momentum, Quality / Value 계열 strategy-specific form render |
 | `app/web/backtest_single_runner.py` | Single Strategy payload 표시, execution service 호출, latest bundle state 저장, run history append |
-| `app/web/backtest_compare.py` | `Backtest > Compare & Portfolio Builder` 화면 render, compare 실행, weighted portfolio builder, saved portfolio replay / load, candidate handoff |
+| `app/web/backtest_compare.py` | `Backtest > Compare & Portfolio Builder` 화면 render, compare service 호출, weighted portfolio builder, saved portfolio replay / load, candidate handoff, preset catalog assembly |
 | `app/web/backtest_result_display.py` | Backtest 결과 공용 display, summary / chart / data trust / real-money detail / selection history / compare result helper |
 | `app/web/backtest_history.py` | `Operations > Backtest Run History` 화면 render, history inspect / replay / form load / candidate draft handoff, Real-Money / Guardrail parity table render |
 | `app/web/backtest_history_helpers.py` | Backtest history row 변환, replay payload 복원, History replay parity / Real-Money scope table helper |
@@ -63,6 +63,7 @@
 |---|---|
 | `app/services/backtest_execution.py` | Streamlit-free Single Strategy execution service. runtime dispatch, elapsed timing, input/data/system error normalization, result bundle metadata update를 담당 |
 | `app/services/backtest_compare_execution.py` | Streamlit-free manual Compare execution service. multi-strategy execution loop, elapsed timing, input/data/system error normalization을 담당 |
+| `app/services/backtest_compare_catalog.py` | Streamlit-free Compare runner catalog service. strategy별 default parameter, preset/manual universe resolution, runtime dispatch, runner signature filtering을 담당 |
 
 ## App / Runtime
 

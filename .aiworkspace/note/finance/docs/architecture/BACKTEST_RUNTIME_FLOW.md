@@ -23,16 +23,17 @@ app/web/streamlit_app.py
   -> Backtest UI latest result / history
 ```
 
-Compare / weighted portfolio 흐름은 아직 service layer로 이동하지 않았다.
-수동 Compare 실행 loop와 error normalization은 `app/services/backtest_compare_execution.py`로 이동했지만,
-strategy별 runner catalog와 weighted portfolio builder는 아직 `app/web/backtest_compare.py`에 남아 있다.
+Compare / weighted portfolio 흐름은 일부 service layer로 이동했다.
+수동 Compare 실행 loop와 error normalization은 `app/services/backtest_compare_execution.py`로 이동했고,
+strategy별 runner catalog와 compare default / universe resolution은 `app/services/backtest_compare_catalog.py`로 이동했다.
+weighted portfolio builder와 saved replay는 아직 `app/web/backtest_compare.py`에 남아 있다.
 
 ```text
 app/web/streamlit_app.py
   -> app/web/pages/backtest.py
   -> app/web/backtest_compare.py
   -> app/services/backtest_compare_execution.py
-  -> app/web/backtest_compare.py::_run_compare_strategy
+  -> app/services/backtest_compare_catalog.py
   -> app/web/runtime/backtest.py
   -> finance/loaders/* / finance strategy runtime
   -> compare result / weighted portfolio result / saved replay
@@ -46,6 +47,8 @@ app/web/streamlit_app.py
 | `app/web/pages/backtest.py` | form, panel, result surface, history, compare, saved portfolio UI |
 | `app/web/backtest_single_runner.py` | Single Strategy payload 표시, Streamlit spinner, session state / history append |
 | `app/services/backtest_execution.py` | Single Strategy runtime dispatch, elapsed timing, input/data/system error normalization |
+| `app/services/backtest_compare_execution.py` | Manual Compare execution loop, elapsed timing, input/data/system error normalization |
+| `app/services/backtest_compare_catalog.py` | Compare strategy runner catalog, default parameter, preset/manual universe resolution, runtime dispatch |
 | `app/web/runtime/backtest.py` | UI payload를 DB-backed runtime 실행으로 변환 |
 | `finance/loaders/*` | DB read path와 point-in-time snapshot 조회 |
 | `finance/engine.py` | price-based strategy orchestration wrapper |

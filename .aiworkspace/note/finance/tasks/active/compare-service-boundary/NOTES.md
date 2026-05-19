@@ -13,6 +13,8 @@ Created: 2026-05-19
 
 ## Implemented Slice
 
+### Slice 1
+
 Manual compare execution now calls `execute_strategy_compare(...)`.
 The service receives the selected execution names, common date/timeframe/option inputs, strategy override map, and the temporary runner callback.
 
@@ -24,8 +26,23 @@ This keeps the first slice small:
 - no weighted portfolio behavior change
 - no saved replay behavior change
 
+### Slice 2
+
+Strategy runner catalog and compare defaults now live in `app/services/backtest_compare_catalog.py`.
+`app/web/backtest_compare.py` keeps a small `_compare_preset_catalog()` wrapper and passes current preset dictionaries into the service.
+
+This deliberately avoids a service import of `app/web/backtest_common.py`, because that module imports Streamlit and owns broad UI/session-state helpers.
+
+Moved responsibilities:
+
+- `_strategy_compare_defaults`
+- strict annual / quarterly default parameter assembly
+- Equal Weight / GTAA / Global Relative Strength preset vs manual ticker resolution
+- strict Quality / Value preset universe resolution
+- runtime runner signature filtering
+
 ## Follow-Up Design Constraint
 
-The next move should avoid importing `app.web.backtest_common` into a service.
-That module imports Streamlit and owns broad UI/session-state helpers.
-Any strict universe preset extraction should go to a Streamlit-free service/helper module first.
+The next move should avoid importing display modules into a service.
+Weighted portfolio construction currently reaches data-only helper behavior through `app/web/backtest_result_display.py`, which is display-oriented.
+Before moving `_build_weighted_portfolio_bundle`, extract or identify a Streamlit-free result-bundle helper boundary.

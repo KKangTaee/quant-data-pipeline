@@ -39,6 +39,7 @@ Last Verified: 2026-05-19
 | Backtest page | `app/web/pages/backtest.py` |
 | Single Backtest execution service | `app/services/backtest_execution.py` |
 | Manual Compare execution service | `app/services/backtest_compare_execution.py` |
+| Compare runner catalog service | `app/services/backtest_compare_catalog.py` |
 | Backtest Analysis | `app/web/backtest_analysis.py` |
 | Practical Validation | `app/web/backtest_practical_validation.py` |
 | Final Review | `app/web/backtest_final_review.py` |
