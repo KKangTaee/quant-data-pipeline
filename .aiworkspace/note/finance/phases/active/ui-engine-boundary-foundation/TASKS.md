@@ -9,7 +9,7 @@ Created: 2026-05-19
 | --- | --- | --- | --- |
 | `ui-engine-boundary-audit` | docs + code flow audit | Complete | first implementation target selected: `backtest-execution-service-boundary` |
 | `backtest-execution-service-boundary` | Single Strategy execution service | Complete | `app/services/backtest_execution.py` added; UI runner delegates execution |
-| `compare-service-boundary` | Compare / weighted portfolio execution service | In progress | manual compare execution loop moved to `app/services/backtest_compare_execution.py`; runner catalog moved to `app/services/backtest_compare_catalog.py`; weighted builder / saved replay remain |
+| `compare-service-boundary` | Compare / weighted portfolio execution service | In progress | manual compare execution loop moved to `app/services/backtest_compare_execution.py`; runner catalog moved to `app/services/backtest_compare_catalog.py`; weighted builder moved to `app/services/backtest_weighted_portfolio.py`; saved replay orchestration remains |
 | `practical-validation-service-boundary` | Practical Validation calculation/save/handoff split | Pending | coordinate with active Practical Validation V2 |
 | `evidence-read-model-boundary` | Final Review / Selected Dashboard read model | Pending | no frontend migration |
 
@@ -62,7 +62,8 @@ Current slice:
 - Task record: `.aiworkspace/note/finance/tasks/active/compare-service-boundary/`
 - Manual compare execution loop and error normalization moved to `app/services/backtest_compare_execution.py`.
 - Strategy runner catalog and compare defaults moved to `app/services/backtest_compare_catalog.py`.
-- Weighted portfolio builder and saved portfolio replay remain follow-up slices.
+- Weighted portfolio bundle construction moved to `app/services/backtest_weighted_portfolio.py`.
+- Saved portfolio replay orchestration remains a follow-up slice.
 
 ## Task 4. Practical Validation Service Boundary
 

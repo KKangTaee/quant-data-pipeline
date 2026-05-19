@@ -9,7 +9,7 @@ Created: 2026-05-19
 - First task `ui-engine-boundary-audit` is complete.
 - First implementation task `backtest-execution-service-boundary` is complete.
 - `compare-service-boundary` is in progress.
-- Product code now has Single Strategy execution service, manual Compare execution service, and Compare runner catalog service boundaries.
+- Product code now has Single Strategy execution service, manual Compare execution service, Compare runner catalog service, result read model service, and weighted portfolio builder service boundaries.
 
 ## Latest Findings
 
@@ -36,5 +36,5 @@ Reason:
 
 ## Next Action
 
-Continue `compare-service-boundary` with the weighted portfolio builder boundary.
-Before moving it, separate or identify Streamlit-free result-bundle helper dependencies currently reached through `app/web/backtest_result_display.py`.
+Continue `compare-service-boundary` with saved portfolio replay execution/data assembly.
+Keep session state mutation, user notices, and render behavior in the UI until the execution contract is stable.

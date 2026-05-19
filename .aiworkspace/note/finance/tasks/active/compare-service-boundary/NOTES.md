@@ -9,7 +9,7 @@ Created: 2026-05-19
 - Manual compare submit flow validates UI inputs, then loops over selected strategy execution names and calls `_run_compare_strategy`.
 - The previous compare submit flow caught `BacktestInputError`, `BacktestDataError`, and generic exceptions directly inside the Streamlit file.
 - Weighted portfolio construction depends on `make_monthly_weighted_portfolio`, `build_backtest_result_bundle`, and data-only helper functions currently imported through `backtest_result_display.py`.
-- Saved portfolio replay also calls `_run_compare_strategy` and `_build_weighted_portfolio_bundle`, but it additionally owns session state and history append side effects.
+- Saved portfolio replay now calls service-backed strategy and weighted bundle helpers, but it still owns session state and history append side effects.
 
 ## Implemented Slice
 
@@ -41,8 +41,20 @@ Moved responsibilities:
 - strict Quality / Value preset universe resolution
 - runtime runner signature filtering
 
+### Slice 3
+
+Weighted portfolio bundle construction now lives in `app/services/backtest_weighted_portfolio.py`.
+The service receives strategy result bundles, weights, date policy, optional saved portfolio identity, and compare source context.
+It returns the same weighted result bundle shape previously built inside the UI file.
+
+To avoid importing `app/web/backtest_result_display.py` into a service, data-only helpers moved to `app/services/backtest_result_read_model.py`:
+
+- strategy data trust rows
+- monthly component contribution amount/share views
+
+`app/web/backtest_result_display.py` keeps its existing private helper names as wrappers, so display callers do not need to know about the service split.
+
 ## Follow-Up Design Constraint
 
-The next move should avoid importing display modules into a service.
-Weighted portfolio construction currently reaches data-only helper behavior through `app/web/backtest_result_display.py`, which is display-oriented.
-Before moving `_build_weighted_portfolio_bundle`, extract or identify a Streamlit-free result-bundle helper boundary.
+Saved portfolio replay still combines execution, weighted bundle creation, session state mutation, notice setup, and history append.
+The next slice should isolate the replay execution/data assembly without moving render behavior.

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from app.services.backtest_compare_catalog import ComparePresetCatalog, run_compare_strategy
 from app.services.backtest_compare_execution import execute_strategy_compare
+from app.services.backtest_result_read_model import build_strategy_data_trust_rows
+from app.services.backtest_weighted_portfolio import build_weighted_portfolio_bundle
 from app.web.backtest_common import *  # noqa: F401,F403
 from app.web.backtest_practical_validation_helpers import (
     build_selection_source_from_saved_mix_prefill,
@@ -80,7 +82,7 @@ def _compare_strategy_contract_label(bundle: dict[str, Any]) -> str:
 def _build_compare_strategy_overview_rows(bundles: list[dict[str, Any]]) -> list[dict[str, Any]]:
     data_trust_rows = {
         str(row.get("Strategy") or ""): row
-        for row in _build_strategy_data_trust_rows(bundles)
+        for row in build_strategy_data_trust_rows(bundles)
     }
     rows: list[dict[str, Any]] = []
     for bundle in bundles:
@@ -1601,77 +1603,6 @@ def _render_compare_results() -> None:
             )
         st.dataframe(pd.DataFrame(meta_rows), use_container_width=True)
 
-def _build_weighted_portfolio_bundle(
-    *,
-    bundles: list[dict[str, Any]],
-    weights_percent: list[float],
-    date_policy: str,
-    portfolio_name: str | None = None,
-    portfolio_id: str | None = None,
-    source_kind: str = "weighted_builder",
-    compare_source_context: dict[str, Any] | None = None,
-) -> dict[str, Any]:
-    strategy_names = [bundle["strategy_name"] for bundle in bundles]
-    total_weight = sum(float(weight) for weight in weights_percent)
-    if total_weight <= 0:
-        raise ValueError("At least one strategy weight must be greater than zero.")
-
-    normalized_weights = [float(weight) / total_weight for weight in weights_percent]
-    combined_result = make_monthly_weighted_portfolio(
-        dfs=[bundle["result_df"] for bundle in bundles],
-        ratios=weights_percent,
-        names=strategy_names,
-        date_policy=date_policy,
-    )
-    result_name = f"Saved Portfolio: {portfolio_name}" if portfolio_name else "Weighted Portfolio"
-    weighted_bundle = build_backtest_result_bundle(
-        combined_result,
-        strategy_name=result_name,
-        strategy_key="weighted_portfolio",
-        input_params={
-            "tickers": strategy_names,
-            "start": bundles[0]["meta"]["start"],
-            "end": bundles[0]["meta"]["end"],
-            "timeframe": bundles[0]["meta"]["timeframe"],
-            "option": bundles[0]["meta"]["option"],
-            "universe_mode": "strategy_mix",
-            "preset_name": "weighted_builder",
-        },
-        execution_mode="db",
-        data_mode="db_backed_composite",
-        summary_freq="M",
-        warnings=[],
-    )
-    contribution_amount_df, contribution_share_df = _build_monthly_component_balance_views(
-        bundles,
-        strategy_names=strategy_names,
-        weights=normalized_weights,
-        date_policy=date_policy,
-    )
-    component_data_trust_rows = _build_strategy_data_trust_rows(bundles)
-    weighted_bundle["component_contribution_amount_df"] = contribution_amount_df
-    weighted_bundle["component_contribution_share_df"] = contribution_share_df
-    weighted_bundle["component_data_trust_rows"] = component_data_trust_rows
-    weighted_bundle["component_input_weights"] = [float(weight) for weight in weights_percent]
-    weighted_bundle["component_weights"] = normalized_weights
-    weighted_bundle["component_strategy_names"] = strategy_names
-    weighted_bundle["date_policy"] = date_policy
-    weighted_bundle["meta"] = dict(weighted_bundle.get("meta") or {})
-    weighted_bundle["meta"].update(
-        {
-            "portfolio_name": portfolio_name,
-            "portfolio_id": portfolio_id,
-            "portfolio_source_kind": source_kind,
-            "selected_strategies": strategy_names,
-            "date_policy": date_policy,
-            "input_weights_percent": [float(weight) for weight in weights_percent],
-            "normalized_weights": normalized_weights,
-            "component_data_trust_rows": component_data_trust_rows,
-            "compare_source_context": dict(compare_source_context or {}),
-        }
-    )
-    return weighted_bundle
-
 def _build_saved_portfolio_display_rows(saved_portfolios: list[dict[str, Any]]) -> pd.DataFrame:
     rows: list[dict[str, Any]] = []
     for item in saved_portfolios:
@@ -2036,7 +1967,7 @@ def _run_saved_portfolio_record(record: dict[str, Any]) -> None:
     if len(weights_percent) != len(selected_strategies):
         raise BacktestInputError("Saved portfolio weight count does not match the saved strategy count.")
 
-    weighted_bundle = _build_weighted_portfolio_bundle(
+    weighted_bundle = build_weighted_portfolio_bundle(
         bundles=bundles,
         weights_percent=weights_percent,
         date_policy=str(portfolio_context.get("date_policy") or "intersection"),
@@ -2090,7 +2021,7 @@ def _run_saved_portfolio_record(record: dict[str, Any]) -> None:
         context={
             "selected_strategies": selected_strategies,
             "strategy_overrides": strategy_overrides,
-            "strategy_data_trust_rows": _build_strategy_data_trust_rows(bundles),
+            "strategy_data_trust_rows": build_strategy_data_trust_rows(bundles),
             "weights_percent": weights_percent,
             "date_policy": portfolio_context.get("date_policy"),
             "saved_portfolio_id": record.get("portfolio_id"),
@@ -2233,7 +2164,7 @@ def _render_weighted_portfolio_builder() -> None:
         return
 
     try:
-        weighted_bundle = _build_weighted_portfolio_bundle(
+        weighted_bundle = build_weighted_portfolio_bundle(
             bundles=bundles,
             weights_percent=weights,
             date_policy=date_policy,
@@ -2718,7 +2649,7 @@ def _render_saved_portfolio_workspace() -> None:
                 overview_rows = _build_compare_strategy_overview_rows(list(bundles))
                 if overview_rows:
                     st.dataframe(pd.DataFrame(overview_rows), use_container_width=True, hide_index=True)
-                data_rows = _build_strategy_data_trust_rows(list(bundles))
+                data_rows = build_strategy_data_trust_rows(list(bundles))
                 if data_rows:
                     st.markdown("##### Component Data Trust")
                     st.dataframe(pd.DataFrame(data_rows), use_container_width=True, hide_index=True)
@@ -5609,7 +5540,7 @@ def _render_strategy_compare_workspace() -> None:
                         "selected_strategies": selected_strategy_execution_names,
                         "selected_strategy_categories": selected_strategies,
                         "strategy_overrides": compare_strategy_overrides,
-                        "strategy_data_trust_rows": _build_strategy_data_trust_rows(bundles),
+                        "strategy_data_trust_rows": build_strategy_data_trust_rows(bundles),
                         "strategy_summaries": [
                             row
                             for bundle in bundles

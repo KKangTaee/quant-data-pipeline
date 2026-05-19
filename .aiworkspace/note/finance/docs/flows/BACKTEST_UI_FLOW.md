@@ -23,7 +23,9 @@ UI form, payload 복원, candidate review, history replay, candidate replay, sav
 | `app/services/backtest_execution.py` | Streamlit-free Single Strategy execution service. DB-backed runtime dispatch와 input/data/system error normalization 담당 |
 | `app/services/backtest_compare_execution.py` | Streamlit-free manual Compare execution service. 여러 전략 실행 loop와 input/data/system error normalization 담당 |
 | `app/services/backtest_compare_catalog.py` | Streamlit-free Compare runner catalog service. 전략별 default / universe resolution / runtime dispatch 담당 |
-| `app/web/backtest_compare.py` | `Compare & Portfolio Builder` 화면 render, compare service 호출, weighted portfolio builder, saved portfolio replay / load, candidate handoff |
+| `app/services/backtest_result_read_model.py` | Streamlit-free Backtest result read model helper. data trust row와 weighted component contribution view 담당 |
+| `app/services/backtest_weighted_portfolio.py` | Streamlit-free weighted portfolio builder service. compare 결과 bundle을 weighted portfolio result bundle로 합성 |
+| `app/web/backtest_compare.py` | `Compare & Portfolio Builder` 화면 render, compare / weighted portfolio service 호출, saved portfolio replay / load, candidate handoff |
 | `app/web/backtest_result_display.py` | Backtest 결과 공용 display. summary, chart, data trust, real-money detail, selection history, compare result helper |
 | `app/web/backtest_history.py` | `Operations > Backtest Run History` 화면 render, selected record inspect, run again / load into form / candidate draft handoff |
 | `app/web/backtest_history_helpers.py` | History table row, replay payload, replay parity, Real-Money / Guardrail scope helper |
@@ -285,7 +287,7 @@ Phase 30 third work unit status:
 - Final Review는 `app/web/backtest_final_review.py`와 `app/web/backtest_final_review_helpers.py`로 분리되어, `backtest.py`에는 panel dispatch만 남아 있다.
 - Phase35 보정 이후 Post-Selection Guide module과 panel dispatch는 제거했다. Final Review가 현재 workflow의 마지막 active panel이다.
 - Single Strategy는 `app/web/backtest_single_strategy.py`, `app/web/backtest_single_forms.py`, `app/web/backtest_single_runner.py`로 분리되어, form render와 runtime dispatch를 page shell에서 제거했다.
-- Compare / Portfolio Builder는 `app/web/backtest_compare.py`로 분리되어, compare 실행, weighted portfolio builder, saved portfolio replay / load, current-candidate compare prefill을 page shell에서 제거했다.
+- Compare / Portfolio Builder는 `app/web/backtest_compare.py`로 분리되어, compare / weighted portfolio service 호출, saved portfolio replay / load, current-candidate compare prefill을 page shell에서 제거했다.
 - Latest result / compare result / Real-Money detail / selection history display는 `app/web/backtest_result_display.py`가 담당한다.
 - 공용 preset, session state, 입력 컴포넌트, status label은 `app/web/backtest_common.py`가 담당한다. 이 파일은 다음 리팩토링에서 더 잘게 나눌 수 있는 transitional shared module이다.
 - 따라서 `app/web/pages/backtest.py`는 Backtest page shell과 workflow navigation만 유지한다.

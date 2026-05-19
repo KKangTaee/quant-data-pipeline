@@ -7,7 +7,7 @@ Last Verified: 2026-05-19
 
 | Track | Status | Notes |
 |---|---|---|
-| UI Engine Boundary Foundation | Active | `.aiworkspace/note/finance/phases/active/ui-engine-boundary-foundation/`; audit과 Single Backtest service extraction 완료. Compare service boundary는 manual execution service와 runner catalog service까지 진행 |
+| UI Engine Boundary Foundation | Active | `.aiworkspace/note/finance/phases/active/ui-engine-boundary-foundation/`; audit과 Single Backtest service extraction 완료. Compare service boundary는 manual execution / runner catalog / weighted builder service까지 진행 |
 | Documentation System Rebuild | Practical closeout | `.aiworkspace/note/finance/tasks/active/doc-system-rebuild/`; legacy root / operations / research / support / phase history 제거 완료 |
 | AI Workspace Migration | Practical closeout | `.aiworkspace/note/finance/tasks/active/ai-workspace-migration/`; `.aiworkspace/note/finance`와 `.aiworkspace/plugins` canonical 이동 및 검증 완료 |
 | Skill System Rebuild | Complete | `.aiworkspace/note/finance/tasks/active/skill-system-rebuild/`; 4 workflow + 4 domain skill taxonomy, repo-local source, global mirror, plugin manifest, marketplace path 검증 완료 |
@@ -72,5 +72,5 @@ P2에서 정상화하는 주요 진단:
 
 ## Next Decisions
 
-- UI Engine Boundary Foundation은 `compare-service-boundary`에서 다음 slice로 weighted portfolio builder를 옮길지 결정한다. 단, `backtest_result_display.py`의 display-adjacent helper 의존성을 먼저 정리해야 한다.
+- UI Engine Boundary Foundation은 `compare-service-boundary`에서 다음 slice로 saved portfolio replay execution/data assembly를 UI side effect와 분리할지 결정한다.
 - Practical Validation V2는 P2 QA 여부를 확인한 뒤 P3로 넘어갈지, P2를 closeout할지 결정한다.

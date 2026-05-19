@@ -40,6 +40,8 @@ Last Verified: 2026-05-19
 | Single Backtest execution service | `app/services/backtest_execution.py` |
 | Manual Compare execution service | `app/services/backtest_compare_execution.py` |
 | Compare runner catalog service | `app/services/backtest_compare_catalog.py` |
+| Backtest result read model service | `app/services/backtest_result_read_model.py` |
+| Weighted portfolio builder service | `app/services/backtest_weighted_portfolio.py` |
 | Backtest Analysis | `app/web/backtest_analysis.py` |
 | Practical Validation | `app/web/backtest_practical_validation.py` |
 | Final Review | `app/web/backtest_final_review.py` |

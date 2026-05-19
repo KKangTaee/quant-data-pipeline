@@ -25,11 +25,17 @@ Slice 2:
 - Strict Quality / Value universe preset은 UI가 `ComparePresetCatalog`로 주입해 service가 `backtest_common.py`를 import하지 않음
 - runtime runner signature filtering을 service가 담당
 
+Slice 3:
+
+- weighted portfolio bundle construction을 `app/services/backtest_weighted_portfolio.py`로 분리
+- data trust rows와 monthly component contribution views를 `app/services/backtest_result_read_model.py`로 분리
+- `app/web/backtest_result_display.py`는 기존 private helper names를 유지하되 새 read model helper로 위임
+- `app/web/backtest_compare.py`는 weight form, session state, history append, result render를 유지
+
 ## Remaining Scope
 
 이번 task에서 아직 제외:
 
-- weighted portfolio bundle builder 이동
 - saved portfolio replay 이동
 - compare chart / tab / Candidate handoff UI 변경
 - registry JSONL 변경
@@ -37,12 +43,13 @@ Slice 2:
 ## Done Criteria For Current Slice
 
 - compare execution / catalog service가 Streamlit을 import하지 않는다.
+- weighted portfolio / result read model service가 Streamlit을 import하지 않는다.
 - manual compare 실행은 service result를 통해 성공 / 실패를 UI에 반영한다.
 - strategy별 runner dispatch는 service를 통해 수행한다.
+- weighted portfolio result bundle은 service를 통해 생성한다.
 - existing compare session state key와 history append는 유지한다.
 - compile / import smoke / no-Streamlit check가 통과한다.
 
 ## Remaining Work In This Task
 
-- `_build_weighted_portfolio_bundle`를 service로 옮기려면 `backtest_result_display.py`의 data-only helper 의존성을 먼저 분리해야 한다.
 - saved portfolio replay는 manual compare service pattern이 안정된 뒤 별도 slice로 옮긴다.

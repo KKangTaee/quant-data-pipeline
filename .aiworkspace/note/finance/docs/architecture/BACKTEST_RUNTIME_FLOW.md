@@ -26,7 +26,8 @@ app/web/streamlit_app.py
 Compare / weighted portfolio 흐름은 일부 service layer로 이동했다.
 수동 Compare 실행 loop와 error normalization은 `app/services/backtest_compare_execution.py`로 이동했고,
 strategy별 runner catalog와 compare default / universe resolution은 `app/services/backtest_compare_catalog.py`로 이동했다.
-weighted portfolio builder와 saved replay는 아직 `app/web/backtest_compare.py`에 남아 있다.
+weighted portfolio bundle construction은 `app/services/backtest_weighted_portfolio.py`로 이동했다.
+saved replay orchestration은 아직 `app/web/backtest_compare.py`에 남아 있다.
 
 ```text
 app/web/streamlit_app.py
@@ -36,7 +37,10 @@ app/web/streamlit_app.py
   -> app/services/backtest_compare_catalog.py
   -> app/web/runtime/backtest.py
   -> finance/loaders/* / finance strategy runtime
-  -> compare result / weighted portfolio result / saved replay
+  -> compare result
+  -> app/services/backtest_weighted_portfolio.py
+  -> finance/performance.py / app/web/runtime/backtest.py
+  -> weighted portfolio result / saved replay
 ```
 
 ## 핵심 파일
@@ -49,6 +53,8 @@ app/web/streamlit_app.py
 | `app/services/backtest_execution.py` | Single Strategy runtime dispatch, elapsed timing, input/data/system error normalization |
 | `app/services/backtest_compare_execution.py` | Manual Compare execution loop, elapsed timing, input/data/system error normalization |
 | `app/services/backtest_compare_catalog.py` | Compare strategy runner catalog, default parameter, preset/manual universe resolution, runtime dispatch |
+| `app/services/backtest_result_read_model.py` | Strategy data trust rows, weighted component contribution amount/share views |
+| `app/services/backtest_weighted_portfolio.py` | Weighted portfolio result bundle construction from compared strategy bundles |
 | `app/web/runtime/backtest.py` | UI payload를 DB-backed runtime 실행으로 변환 |
 | `finance/loaders/*` | DB read path와 point-in-time snapshot 조회 |
 | `finance/engine.py` | price-based strategy orchestration wrapper |
