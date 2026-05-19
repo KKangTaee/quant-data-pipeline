@@ -52,6 +52,19 @@ rg '(^|[^[:alnum:]_])st\\.|import streamlit|from streamlit' app/services/backtes
 git diff --check
 ```
 
+Run after Evidence Read Model service slice:
+
+```bash
+.venv/bin/python -m py_compile app/services/backtest_evidence_read_model.py app/web/backtest_final_review_helpers.py app/web/backtest_final_review.py app/web/final_selected_portfolio_dashboard_helpers.py app/web/final_selected_portfolio_dashboard.py
+.venv/bin/python - <<'PY'
+import sys
+import app.services.backtest_evidence_read_model
+print("streamlit_loaded", "streamlit" in sys.modules)
+PY
+rg '(^|[^[:alnum:]_])st\\.|import streamlit|from streamlit' app/services/backtest_evidence_read_model.py
+git diff --check
+```
+
 ## Commit Strategy
 
 - Commit phase/task documentation as one coherent planning unit.

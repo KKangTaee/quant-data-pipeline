@@ -21,6 +21,18 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-20 - Final decision evidence는 공통 read model로 읽는다
+- User request:
+  - `ui-engine-boundary-foundation`의 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - Final Review와 Selected Portfolio Dashboard가 같은 최종 판단 evidence를 각자 해석하지 않도록, UI-independent read model 경계를 만들고 싶음.
+- Analysis result:
+  - `app/services/backtest_evidence_read_model.py`를 추가해 saved final decision status / table rows / evidence check rows를 공통 service로 분리했다.
+  - Final Review helper와 Selected Dashboard helper는 이 service 결과를 DataFrame으로 변환하고 렌더링만 담당한다.
+  - Selected Dashboard는 read-only 정책을 유지하며 registry schema나 저장 동작은 바꾸지 않았다.
+- Follow-up:
+  - `ui-engine-boundary-foundation`의 구현 task는 모두 완료됐다. 다음은 phase closeout QA 또는 더 큰 후속 boundary phase 결정이다.
+
 ### 2026-05-20 - Practical Validation은 service handoff contract부터 분리한다
 - User request:
   - `ui-engine-boundary-foundation`의 다음 task 진행을 요청함.

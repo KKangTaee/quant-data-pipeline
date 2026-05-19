@@ -10,7 +10,8 @@ Created: 2026-05-19
 - First implementation task `backtest-execution-service-boundary` is complete.
 - `compare-service-boundary` implementation is complete.
 - `practical-validation-service-boundary` first implementation slice is complete.
-- Product code now has Single Strategy execution service, manual Compare execution service, Compare runner catalog service, result read model service, weighted portfolio builder service, saved replay data assembly service boundary, and Practical Validation source/result handoff service boundary.
+- `evidence-read-model-boundary` implementation slice is complete.
+- Product code now has Single Strategy execution service, manual Compare execution service, Compare runner catalog service, result read model service, weighted portfolio builder service, saved replay data assembly service boundary, Practical Validation source/result handoff service boundary, and final decision evidence read model service boundary.
 
 ## Latest Findings
 
@@ -27,15 +28,15 @@ Created: 2026-05-19
 
 ## Current Decision
 
-Continue with `evidence-read-model-boundary` after Practical Validation service boundary verification.
+Implementation slices for this phase are complete; next decision is phase closeout QA or a follow-up boundary phase.
 
 Reason:
 
 - Single Strategy and Compare service slices proved the `app/services` boundary.
 - Practical Validation now has a first service contract without moving provider gap jobs or changing diagnostics.
-- Final Review / Selected Dashboard evidence read models are the remaining boundary area in this phase.
+- Final Review / Selected Dashboard now share a Streamlit-free final decision evidence read model.
 
 ## Next Action
 
-Start `evidence-read-model-boundary`.
-First inspect Final Review and Selected Dashboard helpers to identify shared read-only evidence construction that can move to `app/services` without changing selected dashboard write policy.
+Run phase closeout QA when requested.
+Suggested focus: compile all touched Backtest service/UI files, confirm `app/services` has no Streamlit imports, and decide whether to move completed phase docs to done or keep active until manual app QA.

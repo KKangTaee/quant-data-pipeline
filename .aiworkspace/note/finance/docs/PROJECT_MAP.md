@@ -44,6 +44,7 @@ Last Verified: 2026-05-20
 | Weighted portfolio builder service | `app/services/backtest_weighted_portfolio.py` |
 | Saved portfolio replay service | `app/services/backtest_saved_portfolio_replay.py` |
 | Practical Validation service | `app/services/backtest_practical_validation.py` |
+| Backtest evidence read model service | `app/services/backtest_evidence_read_model.py` |
 | Backtest Analysis | `app/web/backtest_analysis.py` |
 | Practical Validation | `app/web/backtest_practical_validation.py` |
 | Final Review | `app/web/backtest_final_review.py` |
@@ -67,6 +68,17 @@ Last Verified: 2026-05-20
 | `finance/loaders/provider.py` | ETF provider snapshot read path |
 | `finance/data/macro.py` | FRED macro series 수집 |
 | `finance/loaders/macro.py` | macro market-context read path |
+
+## Final Review / Selected Portfolio Evidence Files
+
+| File | Responsibility |
+|---|---|
+| `app/services/backtest_evidence_read_model.py` | Streamlit-free final decision status, saved decision table rows, shared evidence check rows |
+| `app/web/backtest_final_review.py` | Final Review screen render, final decision input, saved final decision review |
+| `app/web/backtest_final_review_helpers.py` | Final Review source selection, validation reuse, paper observation snapshot, save row construction |
+| `app/web/final_selected_portfolio_dashboard.py` | Selected Portfolio Dashboard screen render and selected portfolio monitoring controls |
+| `app/web/final_selected_portfolio_dashboard_helpers.py` | Dashboard table / component / drift / alert display helpers |
+| `app/web/runtime/final_selected_portfolios.py` | Read-only selected portfolio dashboard runtime model and performance recheck |
 
 ## Backtest Workflow Boundary
 

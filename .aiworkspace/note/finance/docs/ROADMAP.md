@@ -7,7 +7,7 @@ Last Verified: 2026-05-20
 
 | Track | Status | Notes |
 |---|---|---|
-| UI Engine Boundary Foundation | Active | `.aiworkspace/note/finance/phases/active/ui-engine-boundary-foundation/`; audit, Single Backtest service extraction, Compare / Weighted / Saved Replay service boundary 완료. 다음은 Practical Validation service boundary |
+| UI Engine Boundary Foundation | Implementation complete | `.aiworkspace/note/finance/phases/active/ui-engine-boundary-foundation/`; audit, Single Backtest, Compare / Weighted / Saved Replay, Practical Validation handoff, Final Review / Selected Dashboard evidence read model boundary 완료 |
 | Documentation System Rebuild | Practical closeout | `.aiworkspace/note/finance/tasks/active/doc-system-rebuild/`; legacy root / operations / research / support / phase history 제거 완료 |
 | AI Workspace Migration | Practical closeout | `.aiworkspace/note/finance/tasks/active/ai-workspace-migration/`; `.aiworkspace/note/finance`와 `.aiworkspace/plugins` canonical 이동 및 검증 완료 |
 | Skill System Rebuild | Complete | `.aiworkspace/note/finance/tasks/active/skill-system-rebuild/`; 4 workflow + 4 domain skill taxonomy, repo-local source, global mirror, plugin manifest, marketplace path 검증 완료 |
@@ -72,5 +72,5 @@ P2에서 정상화하는 주요 진단:
 
 ## Next Decisions
 
-- UI Engine Boundary Foundation은 `practical-validation-service-boundary`에서 Practical Validation 계산 / 저장 / Final Review handoff 경계를 분리한다.
+- UI Engine Boundary Foundation은 구현 slice가 완료됐다. 다음 결정은 phase closeout QA를 할지, 후속 phase로 더 큰 service/API 경계를 열지 정하는 것이다.
 - Practical Validation V2는 P2 QA 여부를 확인한 뒤 P3로 넘어갈지, P2를 closeout할지 결정한다.

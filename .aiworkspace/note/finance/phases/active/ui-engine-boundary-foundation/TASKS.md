@@ -11,7 +11,7 @@ Created: 2026-05-19
 | `backtest-execution-service-boundary` | Single Strategy execution service | Complete | `app/services/backtest_execution.py` added; UI runner delegates execution |
 | `compare-service-boundary` | Compare / weighted portfolio execution service | Complete | manual compare, runner catalog, weighted builder, result read model, saved replay data assembly moved to `app/services` |
 | `practical-validation-service-boundary` | Practical Validation calculation/save/handoff split | Complete | first service slice added for source/result append and Final Review handoff contract |
-| `evidence-read-model-boundary` | Final Review / Selected Dashboard read model | Pending | no frontend migration |
+| `evidence-read-model-boundary` | Final Review / Selected Dashboard read model | Complete | shared final decision evidence read model moved to `app/services` |
 
 ## Task 1. UI Engine Boundary Audit
 
@@ -91,6 +91,14 @@ Goals:
 - define common evidence/read model for Final Review and Selected Dashboard
 - keep selected dashboard read-only
 - avoid new frontend/API implementation
+
+Result:
+
+- Complete on 2026-05-20.
+- Task record: `.aiworkspace/note/finance/tasks/active/evidence-read-model-boundary/`
+- Added `app/services/backtest_evidence_read_model.py` for Final Review status / saved decision table rows / Selected Dashboard evidence checks.
+- Final Review and Selected Dashboard helpers now consume the same Streamlit-free read model.
+- Selected Dashboard remains read-only and no registry schema changed.
 
 ## Parking Lot
 

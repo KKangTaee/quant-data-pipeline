@@ -21,7 +21,7 @@ Created: 2026-05-19
 | Single Strategy | `backtest_single_runner.py` dispatches strategy runtime, handles Streamlit feedback, writes session state, appends history | Move dispatch/error normalization to `app/services/backtest_execution.py` |
 | Compare | `backtest_compare.py` owns runner registry, execution, weighted portfolio, saved replay, chart render, session state | Audit first; split execution after Single Strategy pattern is stable |
 | Practical Validation | UI renders diagnostics and provider gap actions; service now owns source/result append and handoff contract; helper builds source/profile/diagnostics without Streamlit | Later split provider gap job orchestration and possibly move the large diagnostic builder |
-| Selected Dashboard | runtime read model is already mostly Streamlit-free, but imports a web helper for candidate replay | Audit dependency and move replay/read model toward service layer |
+| Selected Dashboard | runtime read model is read-only; final decision evidence row display now uses service read model | Later move broader dashboard runtime/replay model only if a new phase needs it |
 | Ingestion | `streamlit_app.py` triggers `app/jobs/ingestion_jobs.py` wrappers | Not in first implementation; keep job wrappers as engine-adjacent boundary |
 
 ## Service Contract Shape

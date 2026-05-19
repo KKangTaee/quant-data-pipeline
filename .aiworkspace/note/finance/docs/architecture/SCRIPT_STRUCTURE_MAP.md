@@ -52,9 +52,9 @@
 | `app/web/backtest_portfolio_proposal.py` | `Backtest > Portfolio Proposal`의 단일 후보 직행 평가, 다중 후보 proposal 후보 선택, 목적 / 역할 / 비중 설계, proposal draft 저장, 저장 proposal monitoring / feedback 화면 render |
 | `app/web/backtest_portfolio_proposal_helpers.py` | Portfolio Proposal row 생성, 단일 후보 direct readiness / proposal save readiness 평가, 공유 validation / robustness 계산 helper, saved proposal monitoring / Pre-Live feedback / paper feedback table helper |
 | `app/web/backtest_final_review.py` | `Backtest > Final Review`의 단일 후보 / 저장 proposal 선택, Practical Diagnostics 요약, Validation / Robustness / Paper Observation 기준 확인, 최종 선정 / 보류 / 거절 / 재검토 결과 기록, 최종 판단 완료 review 화면 render |
-| `app/web/backtest_final_review_helpers.py` | Final Review source 선택, validation 재사용, Practical Diagnostics snapshot 포함, inline paper observation snapshot, final review evidence / save readiness / decision row 생성, saved final decision display helper |
+| `app/web/backtest_final_review_helpers.py` | Final Review source 선택, validation 재사용, Practical Diagnostics snapshot 포함, inline paper observation snapshot, final review evidence / save readiness / decision row 생성 helper |
 | `app/web/final_selected_portfolio_dashboard.py` | `Operations > Selected Portfolio Dashboard` 화면 render, Final Review에서 선정된 포트폴리오 summary / compact selected portfolio picker / Snapshot / tabbed Performance Recheck / Portfolio Monitoring Review Signals / optional Actual Allocation / Audit 표시 |
-| `app/web/final_selected_portfolio_dashboard_helpers.py` | Selected Portfolio Dashboard용 table row, component row, evidence row, value / holding input row, drift row, alert preview row, filter option helper |
+| `app/web/final_selected_portfolio_dashboard_helpers.py` | Selected Portfolio Dashboard용 table row, component row, value / holding input row, drift row, alert preview row, filter option helper. Evidence row는 service read model을 사용 |
 | `app/web/pages/backtest.py` | Backtest page shell, `Backtest Analysis -> Practical Validation -> Final Review` workflow navigation, stage dispatch entry. 본문은 별도 module이 관리 |
 
 ## App / Services
@@ -68,6 +68,7 @@
 | `app/services/backtest_weighted_portfolio.py` | Streamlit-free weighted portfolio builder service. compared strategy result bundle을 월별 weighted result bundle로 합성 |
 | `app/services/backtest_saved_portfolio_replay.py` | Streamlit-free saved portfolio replay service. 저장된 mix의 strategy rerun, weighted bundle 생성, replay source / history context 조립을 담당 |
 | `app/services/backtest_practical_validation.py` | Streamlit-free Practical Validation service. result 생성 wrapper, selection source / validation result append, Practical Validation / Final Review handoff contract 생성을 담당 |
+| `app/services/backtest_evidence_read_model.py` | Streamlit-free evidence read model service. Final Review final decision status / saved decision table row / Selected Dashboard evidence check row를 담당 |
 
 ## App / Runtime
 

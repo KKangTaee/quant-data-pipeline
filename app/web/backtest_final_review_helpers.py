@@ -5,6 +5,11 @@ from typing import Any
 
 import pandas as pd
 
+from app.services.backtest_evidence_read_model import (
+    FINAL_REVIEW_DECISION_LABELS,
+    build_final_review_decision_display_rows,
+    build_final_review_status_display,
+)
 from app.web.backtest_portfolio_proposal_helpers import (
     FINAL_SELECTION_DECISION_ROUTE_OPTIONS,
     _build_final_selection_decision_phase35_handoff,
@@ -30,48 +35,10 @@ FINAL_REVIEW_ROUTE_DESCRIPTIONS = {
     "REJECT_FOR_PRACTICAL_USE": "현재 근거로는 실전 후보에서 제외합니다.",
     "RE_REVIEW_REQUIRED": "구성, 비중, 검증 근거, 데이터 상태를 다시 검토합니다.",
 }
-FINAL_REVIEW_DECISION_LABELS = {
-    "SELECT_FOR_PRACTICAL_PORTFOLIO": "투자 가능 후보",
-    "HOLD_FOR_MORE_PAPER_TRACKING": "내용 부족 / 관찰 필요",
-    "REJECT_FOR_PRACTICAL_USE": "투자하면 안 됨",
-    "RE_REVIEW_REQUIRED": "재검토 필요",
-}
-FINAL_REVIEW_STATUS_DISPLAY = {
-    "SELECT_FOR_PRACTICAL_PORTFOLIO": {
-        "route": "FINAL_REVIEW_DECISION_COMPLETE",
-        "verdict": "최종 판단 완료: 실전 후보로 선정됨",
-        "next_action": "이 기록은 투자 후보 선정 판단입니다. 실제 투자 금액, 리밸런싱, 주문 승인 여부는 별도 운영 / 승인 단계에서 사용자가 결정합니다.",
-    },
-    "HOLD_FOR_MORE_PAPER_TRACKING": {
-        "route": "FINAL_REVIEW_HOLD_FOR_MORE_OBSERVATION",
-        "verdict": "최종 판단 보류: 내용 부족 / 추가 관찰 필요",
-        "next_action": "추가 paper observation이나 근거 보강 후 Final Review에서 다시 판단합니다.",
-    },
-    "REJECT_FOR_PRACTICAL_USE": {
-        "route": "FINAL_REVIEW_REJECTED",
-        "verdict": "최종 판단 완료: 실전 후보에서 제외됨",
-        "next_action": "필요하면 후보 탐색, Compare, Portfolio Proposal 단계로 되돌아갑니다.",
-    },
-    "RE_REVIEW_REQUIRED": {
-        "route": "FINAL_REVIEW_REVIEW_REQUIRED",
-        "verdict": "최종 판단 재검토 필요: 구성 / 비중 / 검증 근거를 다시 확인",
-        "next_action": "구성, 비중, validation, robustness, paper observation 근거를 보강한 뒤 Final Review에서 다시 판단합니다.",
-    },
-}
 
 
 def _build_final_review_status_display(row: dict[str, Any]) -> dict[str, str]:
-    """Translate saved final-decision rows into the current Final Review end-state copy."""
-    decision_route = str(row.get("decision_route") or "").strip()
-    status = dict(FINAL_REVIEW_STATUS_DISPLAY.get(decision_route) or {})
-    if status:
-        return status
-    legacy_handoff = dict(row.get("phase35_handoff") or {})
-    return {
-        "route": str(legacy_handoff.get("handoff_route") or "FINAL_REVIEW_STATUS_UNKNOWN"),
-        "verdict": "최종 판단 상태 확인 필요",
-        "next_action": "decision route와 evidence를 확인한 뒤 Final Review에서 다시 판단합니다.",
-    }
+    return build_final_review_status_display(row)
 
 
 def _final_review_current_label(row: dict[str, Any]) -> str:
@@ -481,23 +448,4 @@ def _build_final_review_decision_row(
 
 def _build_final_review_decision_rows_for_display(rows: list[dict[str, Any]]) -> pd.DataFrame:
     """Flatten final decision records for the Final Review saved-record table."""
-    display_rows: list[dict[str, Any]] = []
-    for row in rows:
-        evidence = dict(row.get("decision_evidence_snapshot") or {})
-        status_display = _build_final_review_status_display(row)
-        display_rows.append(
-            {
-                "Updated At": row.get("updated_at") or row.get("created_at"),
-                "Decision ID": row.get("decision_id"),
-                "Decision Route": row.get("decision_route"),
-                "투자 가능성": FINAL_REVIEW_DECISION_LABELS.get(str(row.get("decision_route") or ""), "재검토 필요"),
-                "Source": f"{row.get('source_type')} / {row.get('source_id')}",
-                "Observation": row.get("source_observation_id") or row.get("source_paper_ledger_id") or "-",
-                "Components": len(row.get("selected_components") or []),
-                "Evidence Route": evidence.get("route"),
-                "Evidence Score": evidence.get("score"),
-                "Final Status": status_display.get("route"),
-                "Live Approval": "Disabled",
-            }
-        )
-    return pd.DataFrame(display_rows)
+    return pd.DataFrame(build_final_review_decision_display_rows(rows))

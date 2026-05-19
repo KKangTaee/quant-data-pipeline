@@ -44,10 +44,11 @@ UI form, payload 복원, candidate review, history replay, candidate replay, sav
 | `app/web/backtest_candidate_review_helpers.py` | Candidate Review 판단, Review Note / registry 변환, Pre-Live status 추천 / draft 변환 / Portfolio Proposal 진입 readiness score helper |
 | `app/web/backtest_portfolio_proposal.py` | 단일 후보 직행 평가, 다중 후보 Portfolio Proposal 후보 선택 / 목적 / 역할 / 비중 설계, proposal draft 저장, 저장된 proposal monitoring / feedback section render logic |
 | `app/web/backtest_portfolio_proposal_helpers.py` | Portfolio Proposal row 생성, 단일 후보 direct readiness / proposal save readiness 평가, 공유 validation / robustness 계산 helper, monitoring / Pre-Live / paper feedback table helper |
+| `app/services/backtest_evidence_read_model.py` | Streamlit-free final decision evidence read model. Final Review saved decision status / table row와 Selected Dashboard evidence check row를 공통으로 만든다 |
 | `app/web/backtest_final_review.py` | Final Review 화면 render. 단일 후보 / 저장 proposal 선택, Validation / Robustness / Paper Observation 기준 확인, 최종 판단 기록, saved final decision review |
-| `app/web/backtest_final_review_helpers.py` | Final Review source 선택, validation 재사용, inline paper observation snapshot, final evidence / save readiness / decision row / display helper |
+| `app/web/backtest_final_review_helpers.py` | Final Review source 선택, validation 재사용, inline paper observation snapshot, final evidence / save readiness / decision row helper |
 | `app/web/final_selected_portfolio_dashboard.py` | `Operations > Selected Portfolio Dashboard` 화면 render. Final Review에서 선정된 포트폴리오를 운영 대상으로 읽고 compact selected portfolio picker / Snapshot / tabbed Performance Recheck / Portfolio Monitoring Review Signals / optional Actual Allocation / Audit을 보여준다 |
-| `app/web/final_selected_portfolio_dashboard_helpers.py` | Selected Portfolio Dashboard의 table / component / evidence / value / holding input / drift / alert preview / filter helper |
+| `app/web/final_selected_portfolio_dashboard_helpers.py` | Selected Portfolio Dashboard의 table / component / value / holding input / drift / alert preview / filter helper. Evidence table은 service read model을 표시한다 |
 | `app/web/runtime/backtest.py` | UI payload를 실행 가능한 runtime call로 변환 |
 | `app/web/runtime/candidate_registry.py` | current candidate / review note / pre-live registry JSONL read / append helper |
 | `app/web/runtime/portfolio_proposal.py` | portfolio proposal draft JSONL read / append helper |
@@ -182,8 +183,9 @@ Backtest > Final Review
 | 파일 | 역할 |
 |---|---|
 | `app/web/runtime/final_selected_portfolios.py` | Final Review final decision row를 읽고 selected dashboard row / status summary / selected component performance recheck / current weight 또는 value / holding input 기반 drift check / drift alert preview로 변환 |
+| `app/services/backtest_evidence_read_model.py` | Final Review final decision row의 status / evidence checks를 Streamlit-free read model로 변환 |
 | `app/web/final_selected_portfolio_dashboard.py` | Operations dashboard 화면 render, compact selected portfolio picker, Snapshot, Performance Recheck setup + result tabs, Portfolio Monitoring Review Signals / Why Selected / optional Actual Allocation / Audit 표시 |
-| `app/web/final_selected_portfolio_dashboard_helpers.py` | dashboard table, component table, evidence table, value / holding input table, drift table, alert preview table, filter helper |
+| `app/web/final_selected_portfolio_dashboard_helpers.py` | dashboard table, component table, value / holding input table, drift table, alert preview table, filter helper |
 | `app/web/streamlit_app.py` | Operations navigation에 `Selected Portfolio Dashboard` page 등록 |
 
 데이터 기준:

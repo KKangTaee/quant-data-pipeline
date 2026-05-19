@@ -15,6 +15,7 @@ Created: 2026-05-19
 | Engine logic drifts during UI boundary work | Medium | Do not touch `finance/strategy.py`, `finance/engine.py`, `finance/transform.py`, `finance/performance.py` in first task |
 | Path drift between `.note` and `.aiworkspace` persists | Medium | Track as cleanup candidate, but do not mix with first service extraction |
 | `__pycache__` traces confuse service/API state | Low | Treat current source state as no service/API source files present; ignore generated caches |
+| Evidence read model grows into write behavior | Medium | Keep `app/services/backtest_evidence_read_model.py` pure read model; no registry append/load in this service |
 
 ## Non-Negotiable Boundaries
 

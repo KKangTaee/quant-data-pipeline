@@ -22,6 +22,9 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-20
+- Completed `.aiworkspace/note/finance/tasks/active/evidence-read-model-boundary/`.
+- Added `app/services/backtest_evidence_read_model.py` so Final Review saved decision rows and Selected Dashboard evidence rows share a Streamlit-free read model.
+- `ui-engine-boundary-foundation` implementation slices are now complete; next decision is phase closeout QA or a follow-up boundary phase.
 - Completed `.aiworkspace/note/finance/tasks/active/practical-validation-service-boundary/`.
 - Added `app/services/backtest_practical_validation.py` as the Streamlit-free Practical Validation source/result append and handoff contract boundary.
 - `app/web/backtest_practical_validation_helpers.py` no longer imports Streamlit; UI modules apply service handoff contracts to session state.

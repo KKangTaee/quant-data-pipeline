@@ -5,6 +5,7 @@ from typing import Any
 
 import pandas as pd
 
+from app.services.backtest_evidence_read_model import build_final_decision_evidence_rows
 from app.web.runtime.final_selected_portfolios import FINAL_SELECTED_PORTFOLIO_STATUS_LABELS
 
 
@@ -187,41 +188,8 @@ def build_selected_portfolio_drift_alert_table(alert_preview: dict[str, Any]) ->
     return pd.DataFrame(display_rows)
 
 
-def _append_check_rows(
-    display_rows: list[dict[str, Any]],
-    *,
-    area: str,
-    checks: list[dict[str, Any]],
-) -> None:
-    for check in checks:
-        check_row = dict(check or {})
-        display_rows.append(
-            {
-                "Area": area,
-                "Criteria": check_row.get("Criteria") or check_row.get("criteria") or "-",
-                "Ready": check_row.get("Ready") if "Ready" in check_row else check_row.get("ready"),
-                "Current": check_row.get("Current")
-                or check_row.get("current")
-                or check_row.get("current_value")
-                or "-",
-                "Meaning": check_row.get("Meaning") or check_row.get("meaning") or "-",
-                "Score": check_row.get("Score") or check_row.get("score") or "-",
-            }
-        )
-
-
 def build_selected_portfolio_evidence_table(row: dict[str, Any]) -> pd.DataFrame:
-    raw_decision = dict(row.get("raw_decision") or {})
-    evidence = dict(raw_decision.get("decision_evidence_snapshot") or {})
-    risk_snapshot = dict(raw_decision.get("risk_and_validation_snapshot") or {})
-    robustness = dict(risk_snapshot.get("robustness_validation") or {})
-    paper_snapshot = dict(raw_decision.get("paper_tracking_snapshot") or {})
-    display_rows: list[dict[str, Any]] = []
-    _append_check_rows(display_rows, area="Final Review Evidence", checks=list(evidence.get("checks") or []))
-    _append_check_rows(display_rows, area="Validation", checks=list(risk_snapshot.get("validation_checks") or []))
-    _append_check_rows(display_rows, area="Robustness", checks=list(robustness.get("checks") or []))
-    _append_check_rows(display_rows, area="Paper Observation", checks=list(paper_snapshot.get("checks") or []))
-    return pd.DataFrame(display_rows)
+    return pd.DataFrame(build_final_decision_evidence_rows(row))
 
 
 def filter_selected_portfolio_rows(
