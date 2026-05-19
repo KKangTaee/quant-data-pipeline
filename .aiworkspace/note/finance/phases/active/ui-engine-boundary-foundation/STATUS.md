@@ -8,8 +8,8 @@ Created: 2026-05-19
 - Phase created after user approval.
 - First task `ui-engine-boundary-audit` is complete.
 - First implementation task `backtest-execution-service-boundary` is complete.
-- `compare-service-boundary` is in progress.
-- Product code now has Single Strategy execution service, manual Compare execution service, Compare runner catalog service, result read model service, and weighted portfolio builder service boundaries.
+- `compare-service-boundary` implementation is complete.
+- Product code now has Single Strategy execution service, manual Compare execution service, Compare runner catalog service, result read model service, weighted portfolio builder service, and saved replay data assembly service boundaries.
 
 ## Latest Findings
 
@@ -36,5 +36,5 @@ Reason:
 
 ## Next Action
 
-Continue `compare-service-boundary` with saved portfolio replay execution/data assembly.
-Keep session state mutation, user notices, and render behavior in the UI until the execution contract is stable.
+Start `practical-validation-service-boundary`.
+First inspect `app/web/backtest_practical_validation.py` and helpers to separate pure diagnostic computation from Streamlit save / handoff behavior while preserving `NOT_RUN` semantics.

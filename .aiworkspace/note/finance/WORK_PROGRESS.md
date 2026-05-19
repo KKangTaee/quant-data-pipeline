@@ -29,7 +29,8 @@ Detailed historical logs were archived on `2026-04-13`.
 - Started `.aiworkspace/note/finance/tasks/active/compare-service-boundary/` and moved manual compare execution loop / error normalization to `app/services/backtest_compare_execution.py`.
 - Moved the compare strategy runner catalog / defaults to `app/services/backtest_compare_catalog.py`; UI now injects current preset dictionaries as `ComparePresetCatalog`.
 - Moved weighted portfolio bundle construction to `app/services/backtest_weighted_portfolio.py` and data-only result helper logic to `app/services/backtest_result_read_model.py`.
-- Next implementation slice: separate saved portfolio replay execution/data assembly from UI side effects.
+- Moved saved portfolio replay execution / data assembly to `app/services/backtest_saved_portfolio_replay.py`; UI keeps session state, history append, notices, and render side effects.
+- Next implementation slice: start `practical-validation-service-boundary`.
 
 ### 2026-05-13
 - Renamed the product direction research workspace from `.aiworkspace/note/finance/research/` to `.aiworkspace/note/finance/researches/`.

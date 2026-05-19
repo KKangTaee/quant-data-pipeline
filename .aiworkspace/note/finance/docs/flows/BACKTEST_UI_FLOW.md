@@ -25,7 +25,8 @@ UI form, payload 복원, candidate review, history replay, candidate replay, sav
 | `app/services/backtest_compare_catalog.py` | Streamlit-free Compare runner catalog service. 전략별 default / universe resolution / runtime dispatch 담당 |
 | `app/services/backtest_result_read_model.py` | Streamlit-free Backtest result read model helper. data trust row와 weighted component contribution view 담당 |
 | `app/services/backtest_weighted_portfolio.py` | Streamlit-free weighted portfolio builder service. compare 결과 bundle을 weighted portfolio result bundle로 합성 |
-| `app/web/backtest_compare.py` | `Compare & Portfolio Builder` 화면 render, compare / weighted portfolio service 호출, saved portfolio replay / load, candidate handoff |
+| `app/services/backtest_saved_portfolio_replay.py` | Streamlit-free saved portfolio replay service. 저장된 mix의 strategy rerun / weighted bundle / replay context 조립 담당 |
+| `app/web/backtest_compare.py` | `Compare & Portfolio Builder` 화면 render, compare / weighted portfolio / saved replay service 호출, saved portfolio load, candidate handoff |
 | `app/web/backtest_result_display.py` | Backtest 결과 공용 display. summary, chart, data trust, real-money detail, selection history, compare result helper |
 | `app/web/backtest_history.py` | `Operations > Backtest Run History` 화면 render, selected record inspect, run again / load into form / candidate draft handoff |
 | `app/web/backtest_history_helpers.py` | History table row, replay payload, replay parity, Real-Money / Guardrail scope helper |

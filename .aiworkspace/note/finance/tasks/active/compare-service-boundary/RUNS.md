@@ -1,6 +1,6 @@
 # Compare Service Boundary Runs
 
-Status: In progress
+Status: Implementation complete
 Created: 2026-05-19
 
 ## Commands
@@ -24,3 +24,8 @@ Created: 2026-05-19
 | `.venv/bin/python -c "import sys; import app.services.backtest_result_read_model; import app.services.backtest_weighted_portfolio; print('streamlit' in sys.modules)"` | `False` | weighted portfolio service imports do not load Streamlit |
 | in-memory `build_weighted_portfolio_bundle(...)` smoke | `Weighted Portfolio 4 [0.6, 0.4] 2` | verifies weighted result rows, normalized weights, and data trust rows |
 | `app.web.backtest_result_display._build_strategy_data_trust_rows(...)` smoke | `A - 눈에 띄는 데이터 이슈 없음` | display wrapper delegates to read model |
+| `.venv/bin/python -m py_compile app/services/backtest_saved_portfolio_replay.py app/services/backtest_weighted_portfolio.py app/services/backtest_result_read_model.py app/web/backtest_compare.py` | pass | Slice 4 compile check |
+| `rg "import streamlit\|from streamlit\|st\\." app/services/backtest_saved_portfolio_replay.py app/services/backtest_weighted_portfolio.py app/services/backtest_result_read_model.py app/services/backtest_compare_catalog.py app/services/backtest_compare_execution.py` | no hits | services have no direct Streamlit references |
+| `.venv/bin/python -c "import sys; import app.services.backtest_saved_portfolio_replay; print('streamlit' in sys.modules)"` | `False` | saved replay service import does not load Streamlit |
+| fake `replay_saved_portfolio_record(...)` smoke | `2 Saved Portfolio: Test Mix [60.0, 40.0] saved_portfolio portfolio_test` | verifies component replay, weighted bundle, source context, and history context assembly |
+| `git diff --check` | pass | no whitespace errors |

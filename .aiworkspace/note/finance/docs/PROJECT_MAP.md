@@ -1,7 +1,7 @@
 # Finance Project Map
 
 Status: Active
-Last Verified: 2026-05-19
+Last Verified: 2026-05-20
 
 ## Project Summary
 
@@ -42,6 +42,7 @@ Last Verified: 2026-05-19
 | Compare runner catalog service | `app/services/backtest_compare_catalog.py` |
 | Backtest result read model service | `app/services/backtest_result_read_model.py` |
 | Weighted portfolio builder service | `app/services/backtest_weighted_portfolio.py` |
+| Saved portfolio replay service | `app/services/backtest_saved_portfolio_replay.py` |
 | Backtest Analysis | `app/web/backtest_analysis.py` |
 | Practical Validation | `app/web/backtest_practical_validation.py` |
 | Final Review | `app/web/backtest_final_review.py` |

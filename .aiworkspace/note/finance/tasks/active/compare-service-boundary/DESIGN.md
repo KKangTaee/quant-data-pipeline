@@ -1,9 +1,9 @@
 # Compare Service Boundary Design
 
-Status: In progress
+Status: Implementation complete
 Created: 2026-05-19
 
-## Current Boundary After Slice 3
+## Current Boundary After Slice 4
 
 ```text
 app/web/backtest_compare.py
@@ -17,22 +17,29 @@ app/web/backtest_compare.py
   -> app/services/backtest_result_read_model.py
   -> app/web/runtime/backtest.py
   -> finance/performance.py
+
+app/web/backtest_compare.py
+  -> app/services/backtest_saved_portfolio_replay.py
+  -> app/services/backtest_compare_catalog.py
+  -> app/services/backtest_weighted_portfolio.py
+  -> app/services/backtest_result_read_model.py
 ```
 
-This is an intermediate boundary.
 The services own the manual compare execution loop, error normalization, strategy runner catalog, compare defaults, universe resolution, and runtime dispatch.
 Weighted portfolio bundle construction and component contribution read models are also Streamlit-free services.
+Saved portfolio replay execution and history context assembly are now Streamlit-free service work.
 The UI still owns preset source dictionaries because `app/web/backtest_common.py` is Streamlit-adjacent, so it passes them to the service as a `ComparePresetCatalog`.
 
 ## Responsibility Split
 
 | Layer | Responsibility |
 | --- | --- |
-| `app/web/backtest_compare.py` | form render, validation before submit, spinner, session state, history append, result render, weighted UI, `ComparePresetCatalog` assembly |
+| `app/web/backtest_compare.py` | form render, validation before submit, spinner, session state, history append, result render, weighted UI, `ComparePresetCatalog` assembly, saved replay UI side effects |
 | `app/services/backtest_compare_execution.py` | manual multi-strategy execution loop, elapsed timing, error normalization |
 | `app/services/backtest_compare_catalog.py` | strategy runner catalog, compare defaults, preset/manual universe resolution, runtime dispatch |
 | `app/services/backtest_weighted_portfolio.py` | weighted portfolio result bundle construction, component metadata assembly |
 | `app/services/backtest_result_read_model.py` | data trust rows, monthly component contribution amount/share views |
+| `app/services/backtest_saved_portfolio_replay.py` | saved portfolio replay strategy rerun, weighted bundle creation, replay source context, history context assembly |
 | `app/web/runtime/backtest.py` | DB-backed runtime wrappers |
 
 ## Why Not Move Everything Now?
@@ -69,4 +76,15 @@ Error text remains compatible with the previous UI:
 That keeps the service Streamlit-free while preserving the existing preset dictionaries until a later preset module split.
 
 `build_weighted_portfolio_bundle(...)` receives already-built strategy result bundles and returns the same UI-facing weighted bundle shape as before.
+It does not write history, mutate `st.session_state`, or render the result.
+
+`replay_saved_portfolio_record(...)` receives a saved portfolio record, a strategy runner callback, and an optional dynamic input resolver callback.
+It returns `SavedPortfolioReplayResult` with:
+
+- component strategy bundles
+- weighted portfolio bundle
+- replay source context for session state
+- compare history bundle/context
+- weighted portfolio history context
+
 It does not write history, mutate `st.session_state`, or render the result.

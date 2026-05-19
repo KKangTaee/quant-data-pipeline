@@ -1,6 +1,6 @@
 # Compare Service Boundary Plan
 
-Status: In progress
+Status: Implementation complete
 Created: 2026-05-19
 
 ## 이걸 하는 이유?
@@ -32,24 +32,34 @@ Slice 3:
 - `app/web/backtest_result_display.py`는 기존 private helper names를 유지하되 새 read model helper로 위임
 - `app/web/backtest_compare.py`는 weight form, session state, history append, result render를 유지
 
-## Remaining Scope
+Slice 4:
+
+- saved portfolio replay execution / data assembly를 `app/services/backtest_saved_portfolio_replay.py`로 분리
+- service가 strategy rerun, weighted bundle 생성, replay source context, compare / weighted history context를 조립
+- `app/web/backtest_compare.py`는 replay 결과를 session state에 반영하고 history append / notice / render를 유지
+- Dynamic PIT universe 보정은 아직 `backtest_common.py` 의존이 있어 `resolve_dynamic_inputs` callback으로 주입
+
+## Out Of Scope
 
 이번 task에서 아직 제외:
 
-- saved portfolio replay 이동
 - compare chart / tab / Candidate handoff UI 변경
 - registry JSONL 변경
+- preset constant source split from `backtest_common.py`
 
-## Done Criteria For Current Slice
+## Done Criteria
 
 - compare execution / catalog service가 Streamlit을 import하지 않는다.
 - weighted portfolio / result read model service가 Streamlit을 import하지 않는다.
+- saved portfolio replay service가 Streamlit을 import하지 않는다.
 - manual compare 실행은 service result를 통해 성공 / 실패를 UI에 반영한다.
 - strategy별 runner dispatch는 service를 통해 수행한다.
 - weighted portfolio result bundle은 service를 통해 생성한다.
+- saved portfolio replay execution / data assembly는 service를 통해 수행한다.
 - existing compare session state key와 history append는 유지한다.
 - compile / import smoke / no-Streamlit check가 통과한다.
 
-## Remaining Work In This Task
+## Remaining Work
 
-- saved portfolio replay는 manual compare service pattern이 안정된 뒤 별도 slice로 옮긴다.
+- Manual DB-backed Compare / Weighted / Saved Replay app QA is still needed when DB state is available.
+- Next phase task: `practical-validation-service-boundary`.

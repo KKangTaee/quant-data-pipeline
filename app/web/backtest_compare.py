@@ -3,6 +3,7 @@ from __future__ import annotations
 from app.services.backtest_compare_catalog import ComparePresetCatalog, run_compare_strategy
 from app.services.backtest_compare_execution import execute_strategy_compare
 from app.services.backtest_result_read_model import build_strategy_data_trust_rows
+from app.services.backtest_saved_portfolio_replay import replay_saved_portfolio_record
 from app.services.backtest_weighted_portfolio import build_weighted_portfolio_bundle
 from app.web.backtest_common import *  # noqa: F401,F403
 from app.web.backtest_practical_validation_helpers import (
@@ -1939,121 +1940,31 @@ def _render_saved_portfolio_replay_parity_snapshot(record: dict[str, Any]) -> No
     )
 
 def _run_saved_portfolio_record(record: dict[str, Any]) -> None:
-    compare_context = dict(record.get("compare_context") or {})
-    source_context = dict(record.get("source_context") or {})
-    selected_strategies = list(compare_context.get("selected_strategies") or [])
-    if not selected_strategies:
-        raise BacktestInputError("Saved portfolio does not contain selected strategies.")
-
-    strategy_overrides = compare_context.get("strategy_overrides") or {}
-    bundles: list[dict[str, Any]] = []
-    for strategy_name in selected_strategies:
-        bundles.append(
-            _run_compare_strategy(
-                strategy_name,
-                start=str(compare_context.get("start")),
-                end=str(compare_context.get("end")),
-                timeframe=str(compare_context.get("timeframe") or "1d"),
-                option=str(compare_context.get("option") or "month_end"),
-                overrides=_resolve_saved_portfolio_dynamic_inputs(
-                    strategy_name=strategy_name,
-                    override=dict(strategy_overrides.get(strategy_name) or {}),
-                ),
-            )
-        )
-
-    portfolio_context = dict(record.get("portfolio_context") or {})
-    weights_percent = [float(weight) for weight in (portfolio_context.get("weights_percent") or [])]
-    if len(weights_percent) != len(selected_strategies):
-        raise BacktestInputError("Saved portfolio weight count does not match the saved strategy count.")
-
-    weighted_bundle = build_weighted_portfolio_bundle(
-        bundles=bundles,
-        weights_percent=weights_percent,
-        date_policy=str(portfolio_context.get("date_policy") or "intersection"),
-        portfolio_name=str(record.get("name") or ""),
-        portfolio_id=str(record.get("portfolio_id") or ""),
-        source_kind="saved_portfolio",
-        compare_source_context={
-            "source_kind": "saved_portfolio",
-            "source_label": record.get("name"),
-            "saved_portfolio_id": record.get("portfolio_id"),
-            "selected_strategies": selected_strategies,
-            "weights_percent": weights_percent,
-            "upstream_source_context": source_context,
-        },
+    replay_result = replay_saved_portfolio_record(
+        record,
+        run_strategy=_run_compare_strategy,
+        resolve_dynamic_inputs=_resolve_saved_portfolio_dynamic_inputs,
     )
 
-    st.session_state.backtest_compare_bundles = bundles
+    st.session_state.backtest_compare_bundles = replay_result.bundles
     st.session_state.backtest_compare_error = None
     st.session_state.backtest_compare_error_kind = None
-    st.session_state.backtest_weighted_bundle = weighted_bundle
+    st.session_state.backtest_weighted_bundle = replay_result.weighted_bundle
     st.session_state.backtest_weighted_error = None
-    st.session_state.backtest_compare_source_context = {
-        "source_kind": "saved_portfolio",
-        "source_label": record.get("name"),
-        "saved_portfolio_id": record.get("portfolio_id"),
-        "selected_strategies": selected_strategies,
-        "weights_percent": weights_percent,
-        "upstream_source_context": source_context,
-    }
+    st.session_state.backtest_compare_source_context = replay_result.replay_source_context
     st.session_state.backtest_saved_portfolio_replay_id = str(record.get("portfolio_id") or "")
     st.session_state.backtest_compare_result_notice = None
     st.session_state.backtest_requested_panel = "Compare & Portfolio Builder"
 
     append_backtest_run_history(
-        bundle={
-            "summary_df": pd.DataFrame(),
-            "meta": {
-                "strategy_key": "strategy_comparison",
-                "execution_mode": "db",
-                "data_mode": "db_backed_compare",
-                "tickers": selected_strategies,
-                "start": compare_context.get("start"),
-                "end": compare_context.get("end"),
-                "timeframe": compare_context.get("timeframe"),
-                "option": compare_context.get("option"),
-                "universe_mode": "strategy_compare",
-                "preset_name": "saved_portfolio_compare",
-            },
-        },
+        bundle=replay_result.compare_history_bundle,
         run_kind="strategy_compare",
-        context={
-            "selected_strategies": selected_strategies,
-            "strategy_overrides": strategy_overrides,
-            "strategy_data_trust_rows": build_strategy_data_trust_rows(bundles),
-            "weights_percent": weights_percent,
-            "date_policy": portfolio_context.get("date_policy"),
-            "saved_portfolio_id": record.get("portfolio_id"),
-            "saved_portfolio_name": record.get("name"),
-            "compare_source_context": {
-                "source_kind": "saved_portfolio",
-                "source_label": record.get("name"),
-                "saved_portfolio_id": record.get("portfolio_id"),
-            },
-            "strategy_summaries": [
-                row
-                for bundle in bundles
-                for row in json.loads(bundle["summary_df"].to_json(orient="records", date_format="iso"))
-            ],
-        },
+        context=replay_result.compare_history_context,
     )
     append_backtest_run_history(
-        bundle=weighted_bundle,
+        bundle=replay_result.weighted_bundle,
         run_kind="weighted_portfolio",
-        context={
-            "selected_strategies": selected_strategies,
-            "date_policy": portfolio_context.get("date_policy"),
-            "weights_percent": weights_percent,
-            "component_data_trust_rows": weighted_bundle.get("component_data_trust_rows") or [],
-            "saved_portfolio_id": record.get("portfolio_id"),
-            "saved_portfolio_name": record.get("name"),
-            "compare_source_context": {
-                "source_kind": "saved_portfolio",
-                "source_label": record.get("name"),
-                "saved_portfolio_id": record.get("portfolio_id"),
-            },
-        },
+        context=replay_result.weighted_history_context,
     )
 
 # Detect whether the latest compare result can offer GTAA / Equal Weight mix shortcuts.

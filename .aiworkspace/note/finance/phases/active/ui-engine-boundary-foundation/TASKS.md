@@ -9,7 +9,7 @@ Created: 2026-05-19
 | --- | --- | --- | --- |
 | `ui-engine-boundary-audit` | docs + code flow audit | Complete | first implementation target selected: `backtest-execution-service-boundary` |
 | `backtest-execution-service-boundary` | Single Strategy execution service | Complete | `app/services/backtest_execution.py` added; UI runner delegates execution |
-| `compare-service-boundary` | Compare / weighted portfolio execution service | In progress | manual compare execution loop moved to `app/services/backtest_compare_execution.py`; runner catalog moved to `app/services/backtest_compare_catalog.py`; weighted builder moved to `app/services/backtest_weighted_portfolio.py`; saved replay orchestration remains |
+| `compare-service-boundary` | Compare / weighted portfolio execution service | Complete | manual compare, runner catalog, weighted builder, result read model, saved replay data assembly moved to `app/services` |
 | `practical-validation-service-boundary` | Practical Validation calculation/save/handoff split | Pending | coordinate with active Practical Validation V2 |
 | `evidence-read-model-boundary` | Final Review / Selected Dashboard read model | Pending | no frontend migration |
 
@@ -58,12 +58,14 @@ Goals:
 
 Current slice:
 
-- In progress on 2026-05-19.
+- Complete on 2026-05-20.
 - Task record: `.aiworkspace/note/finance/tasks/active/compare-service-boundary/`
 - Manual compare execution loop and error normalization moved to `app/services/backtest_compare_execution.py`.
 - Strategy runner catalog and compare defaults moved to `app/services/backtest_compare_catalog.py`.
 - Weighted portfolio bundle construction moved to `app/services/backtest_weighted_portfolio.py`.
-- Saved portfolio replay orchestration remains a follow-up slice.
+- Result data trust / component contribution read model moved to `app/services/backtest_result_read_model.py`.
+- Saved portfolio replay execution / data assembly moved to `app/services/backtest_saved_portfolio_replay.py`.
+- UI still owns session state, history append calls, notices, and rendering.
 
 ## Task 4. Practical Validation Service Boundary
 
