@@ -18,7 +18,7 @@ from app.services.backtest_practical_validation import (
     save_practical_validation_result,
     source_components_dataframe,
 )
-from app.web.backtest_practical_validation_replay import (
+from app.services.backtest_practical_validation_replay import (
     RECHECK_MODE_EXTEND_TO_LATEST,
     RECHECK_MODE_LABELS,
     build_practical_validation_recheck_plan,

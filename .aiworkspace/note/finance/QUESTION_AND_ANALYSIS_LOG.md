@@ -5155,3 +5155,14 @@ Detailed historical analysis was archived on `2026-04-13`.
   - UI에는 Provider Data Gaps 표시, 버튼, session state 반영만 남기고, source map lookup / collectable gap 판단 / job orchestration / run history metadata는 Practical Validation service가 맡는 구조가 적절하다
 - Follow-up:
   - `app/services/backtest_practical_validation.py`로 provider gap row / plan / run orchestration을 이동하고, mocked service contract tests를 추가했다
+
+### 2026-05-20 - Practical Validation replay helper를 service로 이동한다
+- User request:
+  - 사용자가 다음 작업 진행을 요청함
+- Interpreted goal:
+  - Provider gap 다음 slice로 남아 있던 replay plan / actual replay result 책임을 UI 파일 경계 밖으로 옮겨야 함
+- Analysis result:
+  - replay helper는 이미 Streamlit-free였으므로 얇은 wrapper보다 파일 자체를 `app/services`로 이동하는 것이 책임 위치를 더 명확히 한다
+  - UI는 mode 선택, 실행 버튼, session state, 결과 표시만 유지하고 recheck period plan과 actual replay result construction은 service가 맡는 구조가 적절하다
+- Follow-up:
+  - `app/services/backtest_practical_validation_replay.py`로 이동하고 replay plan / blocked replay contract tests를 추가했다

@@ -89,6 +89,7 @@ class PracticalValidationServiceContractTests(unittest.TestCase):
 import sys
 import app.services.backtest_evidence_read_model
 import app.services.backtest_practical_validation
+import app.services.backtest_practical_validation_replay
 print("streamlit" in sys.modules)
 """
         result = subprocess.run(
@@ -99,6 +100,62 @@ print("streamlit" in sys.modules)
         )
 
         self.assertEqual(result.stdout.strip(), "False")
+
+
+class PracticalValidationReplayServiceContractTests(unittest.TestCase):
+    def test_recheck_plan_extends_to_latest_market_date(self) -> None:
+        from app.services import backtest_practical_validation_replay as replay_service
+
+        source = {
+            "selection_source_id": "source-replay",
+            "period": {"actual_start": "2020-01-31", "actual_end": "2020-12-31"},
+        }
+
+        with patch.object(replay_service, "load_latest_market_date", return_value="2021-01-08"):
+            plan = replay_service.build_practical_validation_recheck_plan(source)
+
+        self.assertEqual(plan["mode"], replay_service.RECHECK_MODE_EXTEND_TO_LATEST)
+        self.assertEqual(plan["status"], "EXTENDED")
+        self.assertEqual(plan["stored_period"], {"start": "2020-01-31", "end": "2020-12-31"})
+        self.assertEqual(plan["requested_period"], {"start": "2020-01-31", "end": "2021-01-08"})
+        self.assertEqual(plan["latest_market_date"], "2021-01-08")
+        self.assertEqual(plan["extension_days"], 8)
+        self.assertEqual(plan["curve_source"], "actual_runtime_latest_recheck")
+
+    def test_recheck_plan_stored_period_does_not_query_latest_market_date(self) -> None:
+        from app.services import backtest_practical_validation_replay as replay_service
+
+        source = {
+            "selection_source_id": "source-replay",
+            "period": {"start": "2020-01-31", "end": "2020-12-31"},
+        }
+
+        with patch.object(replay_service, "load_latest_market_date") as load_latest:
+            plan = replay_service.build_practical_validation_recheck_plan(
+                source,
+                mode=replay_service.RECHECK_MODE_STORED_PERIOD,
+            )
+
+        load_latest.assert_not_called()
+        self.assertEqual(plan["mode"], replay_service.RECHECK_MODE_STORED_PERIOD)
+        self.assertEqual(plan["status"], "STORED_PERIOD")
+        self.assertEqual(plan["requested_period"], {"start": "2020-01-31", "end": "2020-12-31"})
+        self.assertFalse(plan["uses_latest_db_date"])
+        self.assertEqual(plan["curve_source"], "actual_runtime_replay")
+
+    def test_actual_replay_returns_blocked_contract_when_source_period_is_missing(self) -> None:
+        from app.services import backtest_practical_validation_replay as replay_service
+
+        result = replay_service.run_practical_validation_actual_replay(
+            {"selection_source_id": "source-missing-period", "components": []}
+        )
+
+        self.assertEqual(result["status"], "BLOCKED")
+        self.assertEqual(result["source_id"], "source-missing-period")
+        self.assertEqual(result["recheck_plan"]["status"], "BLOCKED")
+        self.assertEqual(result["period_coverage"]["status"], "BLOCKED")
+        self.assertEqual(result["portfolio_curve"], [])
+        self.assertEqual(result["benchmark_curve"], [])
 
 
 class ProviderGapCollectionServiceContractTests(unittest.TestCase):

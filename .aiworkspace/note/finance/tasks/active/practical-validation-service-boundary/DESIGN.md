@@ -51,6 +51,9 @@ Streamlit UI
 
 ## Later Slices
 
-- provider gap collection plan / run orchestration service 분리
-- replay plan / actual replay result wrapper service 분리
 - large diagnostic builder를 `app/services` 또는 `finance` domain layer로 이동할지 재평가
+
+## Follow-up Slices Completed Later
+
+- `provider-gap-collection-boundary`: provider gap row / collection plan / ingestion job orchestration을 service로 이동.
+- `practical-validation-replay-service-boundary`: replay plan / actual replay result helper를 service module로 이동.

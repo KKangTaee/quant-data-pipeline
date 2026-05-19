@@ -3948,3 +3948,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/provider-gap-collection-boundary/`를 열고 Practical Validation Provider Data Gaps 수집 책임을 service로 이동했다.
   - `app/web/backtest_practical_validation.py`는 provider gap 표시 / 버튼 / session state만 맡고, `app/services/backtest_practical_validation.py`가 row / plan / ingestion orchestration을 맡는다.
   - `tests/test_service_contracts.py`에 provider gap plan / mocked job orchestration contract를 추가했다.
+- Practical Validation Replay Service Boundary:
+  - `.aiworkspace/note/finance/tasks/active/practical-validation-replay-service-boundary/`를 열고 Streamlit-free replay helper를 `app/services/backtest_practical_validation_replay.py`로 이동했다.
+  - Practical Validation UI는 replay mode 선택 / 버튼 / session state / 결과 표시만 맡고, service가 recheck plan과 actual replay result를 만든다.
+  - `tests/test_service_contracts.py`에 replay plan / blocked replay contract를 추가했다.
