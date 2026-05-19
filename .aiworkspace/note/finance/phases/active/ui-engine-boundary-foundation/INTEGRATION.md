@@ -13,7 +13,8 @@ Order:
 2. Extract Single Strategy execution service.
 3. Verify Streamlit behavior remains compatible.
 4. Use the same pattern for Compare only after the first slice is stable.
-5. Defer Practical Validation and evidence read models until their contracts are clear.
+5. Extract Practical Validation save / handoff contract after Compare is stable.
+6. Defer provider gap job orchestration and evidence read models until their contracts are clear.
 
 ## Verification Baseline
 
@@ -35,6 +36,19 @@ import app.services.backtest_execution
 print("ok")
 PY
 rg "import streamlit|st\\." app/services/backtest_execution.py
+git diff --check
+```
+
+Run after Practical Validation service slice:
+
+```bash
+.venv/bin/python -m py_compile app/services/backtest_practical_validation.py app/web/backtest_practical_validation.py app/web/backtest_practical_validation_helpers.py app/web/backtest_compare.py app/web/backtest_candidate_review_helpers.py
+.venv/bin/python - <<'PY'
+import sys
+import app.services.backtest_practical_validation
+print("streamlit_loaded", "streamlit" in sys.modules)
+PY
+rg '(^|[^[:alnum:]_])st\\.|import streamlit|from streamlit' app/services/backtest_practical_validation.py app/web/backtest_practical_validation_helpers.py
 git diff --check
 ```
 

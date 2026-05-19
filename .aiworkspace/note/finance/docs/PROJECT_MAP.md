@@ -43,6 +43,7 @@ Last Verified: 2026-05-20
 | Backtest result read model service | `app/services/backtest_result_read_model.py` |
 | Weighted portfolio builder service | `app/services/backtest_weighted_portfolio.py` |
 | Saved portfolio replay service | `app/services/backtest_saved_portfolio_replay.py` |
+| Practical Validation service | `app/services/backtest_practical_validation.py` |
 | Backtest Analysis | `app/web/backtest_analysis.py` |
 | Practical Validation | `app/web/backtest_practical_validation.py` |
 | Final Review | `app/web/backtest_final_review.py` |
@@ -56,8 +57,9 @@ Last Verified: 2026-05-20
 
 | File | Responsibility |
 |---|---|
-| `app/web/backtest_practical_validation.py` | Practical Validation UI render, profile input, recheck button, diagnostics board, provider gaps |
-| `app/web/backtest_practical_validation_helpers.py` | 12개 diagnostic result 생성, validation profile, save / Final Review handoff |
+| `app/services/backtest_practical_validation.py` | Streamlit-free Practical Validation result build wrapper, source/result registry append, Practical Validation / Final Review handoff contract |
+| `app/web/backtest_practical_validation.py` | Practical Validation UI render, profile input, recheck button, diagnostics board, provider gaps, session state handoff |
+| `app/web/backtest_practical_validation_helpers.py` | Clean V2 selection source 생성, validation profile, 12개 diagnostic result 생성 |
 | `app/web/backtest_practical_validation_connectors.py` | provider / macro loader output을 diagnostic evidence로 변환 |
 | `app/web/backtest_practical_validation_replay.py` | source를 최신 DB 데이터 기준으로 다시 실행하거나 저장 기간 그대로 재현 |
 | `app/web/backtest_practical_validation_curve.py` | curve normalize, provenance, benchmark parity |

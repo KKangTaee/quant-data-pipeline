@@ -21,6 +21,12 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-20
+- Completed `.aiworkspace/note/finance/tasks/active/practical-validation-service-boundary/`.
+- Added `app/services/backtest_practical_validation.py` as the Streamlit-free Practical Validation source/result append and handoff contract boundary.
+- `app/web/backtest_practical_validation_helpers.py` no longer imports Streamlit; UI modules apply service handoff contracts to session state.
+- Next implementation slice in the phase: `evidence-read-model-boundary`.
+
 ### 2026-05-19
 - Opened the active phase `.aiworkspace/note/finance/phases/active/ui-engine-boundary-foundation/`.
 - Created the first audit task at `.aiworkspace/note/finance/tasks/active/ui-engine-boundary-audit/`.

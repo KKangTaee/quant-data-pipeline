@@ -10,7 +10,7 @@ Created: 2026-05-19
 | `ui-engine-boundary-audit` | docs + code flow audit | Complete | first implementation target selected: `backtest-execution-service-boundary` |
 | `backtest-execution-service-boundary` | Single Strategy execution service | Complete | `app/services/backtest_execution.py` added; UI runner delegates execution |
 | `compare-service-boundary` | Compare / weighted portfolio execution service | Complete | manual compare, runner catalog, weighted builder, result read model, saved replay data assembly moved to `app/services` |
-| `practical-validation-service-boundary` | Practical Validation calculation/save/handoff split | Pending | coordinate with active Practical Validation V2 |
+| `practical-validation-service-boundary` | Practical Validation calculation/save/handoff split | Complete | first service slice added for source/result append and Final Review handoff contract |
 | `evidence-read-model-boundary` | Final Review / Selected Dashboard read model | Pending | no frontend migration |
 
 ## Task 1. UI Engine Boundary Audit
@@ -75,6 +75,14 @@ Goals:
 - keep provider / macro loader path intact
 - preserve `NOT_RUN` semantics
 - avoid interfering with active Practical Validation V2 work
+
+Result:
+
+- Complete on 2026-05-20.
+- Task record: `.aiworkspace/note/finance/tasks/active/practical-validation-service-boundary/`
+- Added `app/services/backtest_practical_validation.py` as a Streamlit-free source/result save and handoff contract boundary.
+- Removed direct Streamlit session-state writes from `app/web/backtest_practical_validation_helpers.py`.
+- UI modules still own buttons, session state, rendering, provider gap collection UI, and rerun behavior.
 
 ## Task 5. Evidence Read Model Boundary
 

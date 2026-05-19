@@ -9,7 +9,6 @@ from uuid import uuid4
 
 import numpy as np
 import pandas as pd
-import streamlit as st
 
 from app.web.backtest_practical_validation_curve import (
     build_benchmark_parity,
@@ -21,8 +20,6 @@ from app.web.runtime import (
     FINAL_SELECTION_DECISION_V2_SCHEMA_VERSION,
     PORTFOLIO_SELECTION_SOURCE_SCHEMA_VERSION,
     PRACTICAL_VALIDATION_RESULT_SCHEMA_VERSION,
-    append_portfolio_selection_source,
-    append_practical_validation_result,
     load_backtest_run_history,
 )
 from finance.loaders import load_price_history
@@ -507,20 +504,6 @@ def build_selection_source_from_weighted_mix_prefill(prefill: dict[str, Any]) ->
     row = dict(prefill or {})
     row.setdefault("source_kind", "weighted_portfolio_mix")
     return build_selection_source_from_saved_mix_prefill(row)
-
-
-def queue_practical_validation_source(source: dict[str, Any], *, persist: bool = True) -> None:
-    """Send a selected source into the Practical Validation stage and optionally persist it."""
-    source_row = dict(source or {})
-    if persist:
-        append_portfolio_selection_source(source_row)
-    st.session_state.backtest_practical_validation_source = source_row
-    st.session_state.backtest_practical_validation_notice = (
-        f"`{source_row.get('source_title') or source_row.get('selection_source_id')}`를 Practical Validation으로 보냈습니다. "
-        "이 기록은 후보 검증 자료이며 live approval이나 주문 지시가 아닙니다."
-    )
-    st.session_state.backtest_practical_validation_mode = "Selected Source"
-    st.session_state.backtest_requested_panel = "Practical Validation"
 
 
 def _component_title(component: dict[str, Any]) -> str:
@@ -2955,29 +2938,6 @@ def build_practical_validation_result(
         "selection_source_snapshot": source_row,
         "final_decision_schema_target": FINAL_SELECTION_DECISION_V2_SCHEMA_VERSION,
     }
-
-
-def save_practical_validation_result(result: dict[str, Any]) -> None:
-    append_practical_validation_result(dict(result or {}))
-
-
-def queue_final_review_source_from_validation(
-    *,
-    source: dict[str, Any],
-    validation_result: dict[str, Any],
-    persist_validation: bool = True,
-) -> None:
-    if persist_validation:
-        save_practical_validation_result(validation_result)
-    st.session_state.final_review_practical_validation_source = {
-        "source": dict(source or {}),
-        "validation_result": dict(validation_result or {}),
-    }
-    st.session_state.final_review_practical_validation_notice = (
-        f"`{validation_result.get('source_title') or validation_result.get('selection_source_id')}`를 Final Review로 보냈습니다."
-    )
-    st.session_state.backtest_requested_panel = "Final Review"
-
 
 def source_components_dataframe(source: dict[str, Any]) -> pd.DataFrame:
     rows: list[dict[str, Any]] = []

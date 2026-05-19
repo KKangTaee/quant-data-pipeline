@@ -21,6 +21,18 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-20 - Practical Validation은 service handoff contract부터 분리한다
+- User request:
+  - `ui-engine-boundary-foundation`의 다음 task 진행을 요청함.
+- Interpreted goal:
+  - Practical Validation 전체 재작성보다, UI와 engine / workflow 책임이 섞인 지점을 먼저 안정적으로 분리해야 함.
+- Analysis result:
+  - `app/services/backtest_practical_validation.py`를 추가해 source/result append와 Practical Validation / Final Review handoff contract를 Streamlit-free service로 분리했다.
+  - `app/web/backtest_practical_validation_helpers.py`는 source/profile/diagnostic 생성 helper로 축소하고 Streamlit import를 제거했다.
+  - UI modules는 여전히 버튼, 렌더링, `st.session_state`, provider gap collection UI를 담당한다.
+- Follow-up:
+  - 다음 phase task는 Final Review / Selected Dashboard evidence read model 경계를 확인하는 `evidence-read-model-boundary`다.
+
 ### 2026-05-19 - UI와 engine 분리는 하나의 foundation phase로 시작한다
 - User request:
   - Next.js / React 전환이 아니라, 현재 Python / Streamlit 프로그램 안에서 UI와 engine 결합도를 먼저 낮추는 phase를 열고 작업을 진행해 달라고 요청함.

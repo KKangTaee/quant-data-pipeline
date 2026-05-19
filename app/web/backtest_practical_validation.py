@@ -12,12 +12,12 @@ from app.jobs.ingestion_jobs import (
     run_discover_etf_provider_source_map,
 )
 from app.jobs.run_history import append_run_history
-from app.web.backtest_practical_validation_helpers import (
+from app.services.backtest_practical_validation import (
     VALIDATION_PROFILE_OPTIONS,
     VALIDATION_PROFILE_QUESTIONS,
     build_practical_validation_result,
     build_validation_profile,
-    queue_final_review_source_from_validation,
+    prepare_final_review_handoff_from_validation,
     save_practical_validation_result,
     source_components_dataframe,
 )
@@ -898,11 +898,14 @@ def render_practical_validation_workspace() -> None:
                 width="stretch",
                 disabled=is_blocked,
             ):
-                queue_final_review_source_from_validation(
+                handoff = prepare_final_review_handoff_from_validation(
                     source=source,
                     validation_result=validation_result,
                     persist_validation=True,
                 )
+                st.session_state.final_review_practical_validation_source = handoff.session_payload
+                st.session_state.final_review_practical_validation_notice = handoff.notice
+                st.session_state.backtest_requested_panel = handoff.requested_panel
                 st.rerun()
             if is_blocked:
                 st.caption("BLOCKED 상태는 Backtest Analysis에서 source를 보강한 뒤 Final Review로 보낼 수 있습니다.")

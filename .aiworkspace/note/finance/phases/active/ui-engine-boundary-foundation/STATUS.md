@@ -9,7 +9,8 @@ Created: 2026-05-19
 - First task `ui-engine-boundary-audit` is complete.
 - First implementation task `backtest-execution-service-boundary` is complete.
 - `compare-service-boundary` implementation is complete.
-- Product code now has Single Strategy execution service, manual Compare execution service, Compare runner catalog service, result read model service, weighted portfolio builder service, and saved replay data assembly service boundaries.
+- `practical-validation-service-boundary` first implementation slice is complete.
+- Product code now has Single Strategy execution service, manual Compare execution service, Compare runner catalog service, result read model service, weighted portfolio builder service, saved replay data assembly service boundary, and Practical Validation source/result handoff service boundary.
 
 ## Latest Findings
 
@@ -26,15 +27,15 @@ Created: 2026-05-19
 
 ## Current Decision
 
-Start with Single Strategy execution service extraction, not Compare or Practical Validation.
+Continue with `evidence-read-model-boundary` after Practical Validation service boundary verification.
 
 Reason:
 
-- It is smaller than Compare.
-- It directly addresses UI-engine execution coupling.
-- It lets the phase establish a repeatable extraction pattern before touching larger workflows.
+- Single Strategy and Compare service slices proved the `app/services` boundary.
+- Practical Validation now has a first service contract without moving provider gap jobs or changing diagnostics.
+- Final Review / Selected Dashboard evidence read models are the remaining boundary area in this phase.
 
 ## Next Action
 
-Start `practical-validation-service-boundary`.
-First inspect `app/web/backtest_practical_validation.py` and helpers to separate pure diagnostic computation from Streamlit save / handoff behavior while preserving `NOT_RUN` semantics.
+Start `evidence-read-model-boundary`.
+First inspect Final Review and Selected Dashboard helpers to identify shared read-only evidence construction that can move to `app/services` without changing selected dashboard write policy.

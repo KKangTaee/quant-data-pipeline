@@ -8,11 +8,11 @@ from uuid import uuid4
 import pandas as pd
 import streamlit as st
 
+from app.services.backtest_practical_validation import prepare_practical_validation_source_handoff
 from app.web.backtest_practical_validation_helpers import (
     build_selection_source_from_candidate_draft,
     compact_benchmark_curve_snapshot_from_bundle,
     compact_curve_snapshot_from_bundle,
-    queue_practical_validation_source,
 )
 from app.web.backtest_strategy_catalog import strategy_key_to_display_name as catalog_strategy_key_to_display_name
 from app.web.runtime import CURRENT_CANDIDATE_REGISTRY_FILE
@@ -954,7 +954,11 @@ def _queue_candidate_review_draft(draft: dict[str, Any]) -> None:
         "새 주 흐름은 Practical Validation으로 이어집니다."
     )
     source = build_selection_source_from_candidate_draft(draft)
-    queue_practical_validation_source(source, persist=True)
+    handoff = prepare_practical_validation_source_handoff(source, persist=True)
+    st.session_state.backtest_practical_validation_source = handoff.source_payload
+    st.session_state.backtest_practical_validation_notice = handoff.notice
+    st.session_state.backtest_practical_validation_mode = handoff.mode
+    st.session_state.backtest_requested_panel = handoff.requested_panel
 
 
 def _candidate_intake_value_present(value: Any) -> bool:

@@ -58,8 +58,8 @@ Streamlit UI
 | --- | --- | --- | --- |
 | 1 | `ui-engine-boundary-audit` | 파일별 책임과 결합 지점을 확정한다 | Complete |
 | 2 | `backtest-execution-service-boundary` | Single Strategy 실행 dispatch를 service로 분리한다 | Complete |
-| 3 | `compare-service-boundary` | Compare / weighted portfolio 실행 경계를 service 후보로 분리한다 | Pending |
-| 4 | `practical-validation-service-boundary` | diagnostics calculation, persistence, UI handoff를 분리한다 | Pending |
+| 3 | `compare-service-boundary` | Compare / weighted portfolio 실행 경계를 service 후보로 분리한다 | Complete |
+| 4 | `practical-validation-service-boundary` | diagnostics calculation, persistence, UI handoff를 분리한다 | Complete |
 | 5 | `evidence-read-model-boundary` | Final Review / Selected Dashboard가 공유할 read model을 정의한다 | Pending |
 
 ## First Implementation Slice

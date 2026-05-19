@@ -4,13 +4,13 @@ from app.services.backtest_compare_catalog import ComparePresetCatalog, run_comp
 from app.services.backtest_compare_execution import execute_strategy_compare
 from app.services.backtest_result_read_model import build_strategy_data_trust_rows
 from app.services.backtest_saved_portfolio_replay import replay_saved_portfolio_record
+from app.services.backtest_practical_validation import prepare_practical_validation_source_handoff
 from app.services.backtest_weighted_portfolio import build_weighted_portfolio_bundle
 from app.web.backtest_common import *  # noqa: F401,F403
 from app.web.backtest_practical_validation_helpers import (
     build_selection_source_from_saved_mix_prefill,
     build_selection_source_from_weighted_mix_prefill,
     compact_curve_snapshot_from_bundle,
-    queue_practical_validation_source,
 )
 from app.web.backtest_history import (
     render_real_money_guardrail_parity_snapshot as _render_real_money_guardrail_parity_snapshot,
@@ -28,6 +28,14 @@ def _compare_preset_catalog() -> ComparePresetCatalog:
         strict_annual_compare_default_preset=STRICT_ANNUAL_COMPARE_DEFAULT_PRESET,
         strict_quarterly_prototype_default_preset=STRICT_QUARTERLY_PROTOTYPE_DEFAULT_PRESET,
     )
+
+
+def _apply_practical_validation_source_handoff(source: dict) -> None:
+    handoff = prepare_practical_validation_source_handoff(source, persist=True)
+    st.session_state.backtest_practical_validation_source = handoff.source_payload
+    st.session_state.backtest_practical_validation_notice = handoff.notice
+    st.session_state.backtest_practical_validation_mode = handoff.mode
+    st.session_state.backtest_requested_panel = handoff.requested_panel
 
 
 def _run_compare_strategy(
@@ -1051,7 +1059,7 @@ def _render_saved_mix_validation_board(record: dict[str, Any]) -> None:
             ):
                 prefill = _build_saved_mix_proposal_prefill_payload(record)
                 source = build_selection_source_from_saved_mix_prefill(prefill)
-                queue_practical_validation_source(source, persist=True)
+                _apply_practical_validation_source_handoff(source)
                 st.session_state.portfolio_proposal_saved_mix_prefill = prefill
                 st.session_state.portfolio_proposal_saved_mix_notice = (
                     f"Saved Mix `{record.get('name')}`를 Practical Validation source로 저장했습니다. "
@@ -2372,7 +2380,7 @@ def _render_weighted_portfolio_practical_validation_panel(weighted_bundle: dict[
                 try:
                     prefill = _build_weighted_mix_practical_validation_prefill_payload(weighted_bundle)
                     source = build_selection_source_from_weighted_mix_prefill(prefill)
-                    queue_practical_validation_source(source, persist=True)
+                    _apply_practical_validation_source_handoff(source)
                     st.rerun()
                 except Exception as exc:
                     st.error(f"Practical Validation handoff failed: {exc}")
