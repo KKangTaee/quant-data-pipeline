@@ -28,6 +28,18 @@ Python UI/helper 변경:
 .venv/bin/python -m py_compile app/web/backtest_practical_validation.py
 ```
 
+Service contract 변경:
+
+```bash
+.venv/bin/python -m unittest tests/test_service_contracts.py
+```
+
+기대 결과:
+
+- Practical Validation / Final Review service handoff contract tests pass
+- service import 과정에서 `streamlit` module이 로드되지 않음
+- registry append는 mock / `persist=False` contract로만 확인하고 실제 JSONL을 쓰지 않음
+
 UI / engine boundary 변경:
 
 ```bash

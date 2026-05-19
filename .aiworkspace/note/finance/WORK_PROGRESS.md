@@ -3940,3 +3940,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - product research 관련 4개 skill과 helper script 2개를 별도 `.aiworkspace/plugins/quant-finance-product-research/` plugin으로 이동했다.
   - 기존 `quant-finance-workflow`는 task intake / doc sync / integration / runbook / implementation skill 중심으로 가볍게 정리했다.
   - marketplace에 두 plugin을 모두 등록하고 skill validation, script dry-run, active research bundle check, mirror sync를 완료했다.
+- Service Contract Tests:
+  - `.aiworkspace/note/finance/tasks/active/service-contract-tests/`를 열고 UI-engine boundary 후속 QA를 단일 task로 진행했다.
+  - `tests/test_service_contracts.py`를 추가해 Practical Validation handoff와 Final Review evidence read model contract를 `unittest`로 검증한다.
+  - 검증 명령은 `.aiworkspace/note/finance/docs/runbooks/README.md`와 script map / project map에 반영했다.

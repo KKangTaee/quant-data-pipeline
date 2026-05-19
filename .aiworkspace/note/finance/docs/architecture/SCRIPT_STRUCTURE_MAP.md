@@ -143,6 +143,12 @@
 | `.aiworkspace/plugins/quant-finance-workflow/scripts/manage_current_candidate_registry.py` | Current Candidate Registry list / show / validate / append helper |
 | `.aiworkspace/plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py` | Pre-Live Candidate Registry template / draft / list / show / validate / append helper |
 
+## Tests
+
+| 스크립트 | 관리하는 기능 |
+|---|---|
+| `tests/test_service_contracts.py` | `app/services`의 Practical Validation handoff와 Final Review evidence read model contract를 DB / Streamlit runtime 없이 검증 |
+
 ## 같이 볼 상세 문서
 
 | 작업 종류 | 상세 문서 |

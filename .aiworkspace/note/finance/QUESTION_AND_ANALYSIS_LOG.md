@@ -5134,3 +5134,14 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `quant-finance-workflow`는 구현/통합/운영 workflow 중심으로 남기고, `quant-finance-product-research`는 research bundle 생성/검증, audit, benchmark, opportunity synthesis를 소유하는 경계가 더 명확하다
 - Follow-up:
   - `.aiworkspace/plugins/quant-finance-product-research/`를 만들고 marketplace에 등록했으며, global mirror와 검증을 완료했다
+
+### 2026-05-20 - Service contract 테스트를 추가한다
+- User request:
+  - 사용자가 UI와 engine 분리 후속 작업으로 다음 task 진행을 요청함
+- Interpreted goal:
+  - 분리된 service boundary가 UI-facing payload contract를 안정적으로 유지하는지 DB / Streamlit 화면 실행 없이 검증해야 함
+- Analysis result:
+  - 현재 `.venv`에는 `pytest`가 없으므로 표준 `unittest`가 가장 작은 검증 단위다
+  - 우선 Practical Validation handoff와 Final Review evidence read model처럼 UI가 바로 소비하는 반환 형태를 contract test로 고정하는 것이 적절하다
+- Follow-up:
+  - `tests/test_service_contracts.py`를 추가하고 runbook / project map / script map에 focused test 위치와 명령을 기록했다
