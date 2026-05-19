@@ -21,6 +21,18 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-20 - UI-engine boundary는 lint helper로 보호한다
+- User request:
+  - UI / engine 분리 관점의 개선 후보 중 boundary lint 자동화를 진행해 달라고 요청함.
+- Interpreted goal:
+  - `app/services`가 다시 Streamlit UI 책임을 들고 오지 않도록 반복 가능한 자동 점검을 만들고 싶음.
+- Analysis result:
+  - 새 phase가 아니라 단일 task `.aiworkspace/note/finance/tasks/active/ui-engine-boundary-lint/`로 진행했다.
+  - `.aiworkspace/plugins/quant-finance-workflow/scripts/check_ui_engine_boundary.py`를 추가했다.
+  - hard fail은 `app/services`의 Streamlit 사용과 staged generated / registry / saved artifact이며, 현재 남아 있는 `app.services -> app.web` import는 advisory로 처리한다.
+- Follow-up:
+  - 후속 구조 정리에서는 advisory를 줄이도록 `app.web.runtime` / Streamlit-free helper를 더 적절한 runtime/repository 위치로 옮긴다.
+
 ### 2026-05-20 - Final decision evidence는 공통 read model로 읽는다
 - User request:
   - `ui-engine-boundary-foundation`의 다음 단계 진행을 요청함.

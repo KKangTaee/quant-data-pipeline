@@ -11,6 +11,7 @@
 |---|---|
 | `.aiworkspace/plugins/quant-finance-workflow/scripts/bootstrap_finance_phase_bundle.py` | 새 phase 문서 bundle 생성 |
 | `.aiworkspace/plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py` | phase / docs / logs / generated artifact hygiene 점검 |
+| `.aiworkspace/plugins/quant-finance-workflow/scripts/check_ui_engine_boundary.py` | `app/services` Streamlit-free boundary와 staged artifact guard 점검 |
 | `.aiworkspace/plugins/quant-finance-workflow/scripts/manage_current_candidate_registry.py` | current candidate registry list / show / validate / append |
 | `.aiworkspace/plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py` | pre-live candidate registry template / draft-from-current / list / show / validate / append |
 
@@ -68,6 +69,34 @@ Template source:
 - support tool이지 절대 blocker는 아니다.
 - generated JSONL은 보통 commit하지 않는다.
 - script output이 broad하게 권고해도 실제 diff 성격에 맞게 판단한다.
+
+## UI / engine boundary helper
+
+사용 시점:
+
+- `app/services`를 추가하거나 수정한 뒤
+- UI-engine boundary phase / task closeout 전
+- commit 전 service가 Streamlit UI 책임을 다시 들고 오지 않았는지 확인할 때
+
+대표 명령:
+
+```bash
+.venv/bin/python .aiworkspace/plugins/quant-finance-workflow/scripts/check_ui_engine_boundary.py
+.venv/bin/python .aiworkspace/plugins/quant-finance-workflow/scripts/check_ui_engine_boundary.py --json
+```
+
+Hard fail:
+
+- `app/services/*.py`의 `streamlit` import
+- `app/services/*.py`의 `st.*` 접근
+- staged generated / registry / saved / run-history / local artifact
+
+Advisory:
+
+- `app/services/*.py`의 `app.web.*` import
+
+현재 service layer는 transition 단계라 일부 Streamlit-free `app.web.runtime` / helper import가 남아 있다.
+이 advisory는 다음 구조 정리 후보를 보여주기 위한 것이며, 현재는 failure가 아니다.
 
 ## Current candidate registry helper
 

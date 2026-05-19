@@ -22,6 +22,8 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-20
+- Added `.aiworkspace/plugins/quant-finance-workflow/scripts/check_ui_engine_boundary.py` as a repo-local UI-engine boundary lint helper.
+- The helper hard-fails on Streamlit usage in `app/services` and staged generated / registry / saved artifacts, while reporting current `app.services -> app.web` imports as advisory transition debt.
 - Completed `.aiworkspace/note/finance/tasks/active/evidence-read-model-boundary/`.
 - Added `app/services/backtest_evidence_read_model.py` so Final Review saved decision rows and Selected Dashboard evidence rows share a Streamlit-free read model.
 - `ui-engine-boundary-foundation` implementation slices are now complete; next decision is phase closeout QA or a follow-up boundary phase.

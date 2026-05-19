@@ -28,6 +28,18 @@ Python UI/helper 변경:
 .venv/bin/python -m py_compile app/web/backtest_practical_validation.py
 ```
 
+UI / engine boundary 변경:
+
+```bash
+.venv/bin/python .aiworkspace/plugins/quant-finance-workflow/scripts/check_ui_engine_boundary.py
+```
+
+기대 결과:
+
+- `Hard violations: none`
+- `Result: PASS`
+- `app.services -> app.web` import는 현재 transition 단계에서는 advisory로만 읽는다.
+
 문서 구조 확인:
 
 ```bash
