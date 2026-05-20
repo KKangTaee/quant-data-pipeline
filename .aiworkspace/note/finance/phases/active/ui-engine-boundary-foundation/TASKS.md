@@ -84,6 +84,12 @@ Result:
 - Removed direct Streamlit session-state writes from `app/web/backtest_practical_validation_helpers.py`.
 - UI modules still own buttons, session state, rendering, provider gap collection UI, and rerun behavior.
 
+Follow-up slices:
+
+- `provider-gap-collection-boundary`: provider gap rows / collection plan / ingestion orchestration moved into the service.
+- `practical-validation-replay-service-boundary`: replay plan / actual replay service moved into `app/services/backtest_practical_validation_replay.py`.
+- `practical-validation-diagnostics-service-boundary`: large diagnostic builder and source/profile/compact curve helpers moved into `app/services/backtest_practical_validation_diagnostics.py`.
+
 ## Task 5. Evidence Read Model Boundary
 
 Goals:

@@ -21,6 +21,18 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-20 - Practical Validation diagnostics는 service boundary에 둔다
+- User request:
+  - UI / engine 분리 후속 작업의 다음 단계를 진행해 달라고 요청함.
+- Interpreted goal:
+  - `app/services`가 `app/web` helper를 호출하는 역방향 구조를 줄이고, 진단 계산 책임을 UI 렌더링에서 더 분리해야 함.
+- Analysis result:
+  - `app/web/backtest_practical_validation_helpers.py`를 `app/services/backtest_practical_validation_diagnostics.py`로 이동했다.
+  - Practical Validation service, Compare, Candidate Review는 source/profile/compact curve helper를 service module에서 import한다.
+  - 계산식과 registry schema는 바꾸지 않고 ownership boundary만 이동했다.
+- Follow-up:
+  - 남은 전이 부채는 diagnostics service가 일부 `app.web.runtime`, connector, curve helper를 참조한다는 점이며, 다음 cleanup 후보로 분리 가능하다.
+
 ### 2026-05-20 - UI-engine boundary는 lint helper로 보호한다
 - User request:
   - UI / engine 분리 관점의 개선 후보 중 boundary lint 자동화를 진행해 달라고 요청함.

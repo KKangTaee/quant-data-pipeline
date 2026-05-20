@@ -42,13 +42,14 @@ git diff --check
 Run after Practical Validation service slice:
 
 ```bash
-.venv/bin/python -m py_compile app/services/backtest_practical_validation.py app/web/backtest_practical_validation.py app/web/backtest_practical_validation_helpers.py app/web/backtest_compare.py app/web/backtest_candidate_review_helpers.py
+.venv/bin/python -m py_compile app/services/backtest_practical_validation.py app/services/backtest_practical_validation_diagnostics.py app/web/backtest_practical_validation.py app/web/backtest_compare.py app/web/backtest_candidate_review_helpers.py
 .venv/bin/python - <<'PY'
 import sys
 import app.services.backtest_practical_validation
+import app.services.backtest_practical_validation_diagnostics
 print("streamlit_loaded", "streamlit" in sys.modules)
 PY
-rg '(^|[^[:alnum:]_])st\\.|import streamlit|from streamlit' app/services/backtest_practical_validation.py app/web/backtest_practical_validation_helpers.py
+rg '(^|[^[:alnum:]_])st\\.|import streamlit|from streamlit' app/services/backtest_practical_validation.py app/services/backtest_practical_validation_diagnostics.py
 git diff --check
 ```
 

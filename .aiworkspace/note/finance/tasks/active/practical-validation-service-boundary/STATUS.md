@@ -9,8 +9,8 @@ Created: 2026-05-20
 - `app/web/backtest_practical_validation.py`, `app/web/backtest_compare.py`, and `app/web/backtest_candidate_review_helpers.py` apply the returned handoff data to Streamlit session state.
 - `app/web/backtest_practical_validation_helpers.py` no longer imports Streamlit or writes `st.session_state`.
 - Provider gap collection and diagnostic formulas were intentionally left unchanged.
+- Later follow-up slices moved provider gap orchestration, replay logic, and the large diagnostic builder into `app/services`.
 
 ## Next
 
-- Continue the phase with `evidence-read-model-boundary`.
-- Later Practical Validation slice can move provider gap job orchestration or the large diagnostic builder after a dedicated audit.
+- Further cleanup can reduce transitional dependencies from `app.services` back into `app.web.runtime` / connector helpers.

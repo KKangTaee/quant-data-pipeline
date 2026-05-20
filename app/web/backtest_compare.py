@@ -7,7 +7,7 @@ from app.services.backtest_saved_portfolio_replay import replay_saved_portfolio_
 from app.services.backtest_practical_validation import prepare_practical_validation_source_handoff
 from app.services.backtest_weighted_portfolio import build_weighted_portfolio_bundle
 from app.web.backtest_common import *  # noqa: F401,F403
-from app.web.backtest_practical_validation_helpers import (
+from app.services.backtest_practical_validation_diagnostics import (
     build_selection_source_from_saved_mix_prefill,
     build_selection_source_from_weighted_mix_prefill,
     compact_curve_snapshot_from_bundle,

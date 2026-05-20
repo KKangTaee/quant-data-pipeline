@@ -12,4 +12,5 @@
 - The first slice should not move the 12-diagnostic builder wholesale.
 - Source append and validation result append are service responsibilities.
 - Handoff notices / payloads are service contracts; Streamlit session-state writes stay in UI modules.
-- `app/web/backtest_practical_validation_helpers.py` can remain the calculation helper for now as long as it stays Streamlit-free.
+- At this task's first slice, `app/web/backtest_practical_validation_helpers.py` could remain the calculation helper as long as it stayed Streamlit-free.
+- Follow-up `practical-validation-diagnostics-service-boundary` later moved that helper to `app/services/backtest_practical_validation_diagnostics.py`.

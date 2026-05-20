@@ -5,6 +5,8 @@ import sys
 import unittest
 from unittest.mock import patch
 
+import pandas as pd
+
 
 class PracticalValidationServiceContractTests(unittest.TestCase):
     def test_source_handoff_without_persistence_is_ui_neutral(self) -> None:
@@ -88,6 +90,7 @@ class PracticalValidationServiceContractTests(unittest.TestCase):
         script = """
 import sys
 import app.services.backtest_evidence_read_model
+import app.services.backtest_practical_validation_diagnostics
 import app.services.backtest_practical_validation
 import app.services.backtest_practical_validation_replay
 print("streamlit" in sys.modules)
@@ -100,6 +103,43 @@ print("streamlit" in sys.modules)
         )
 
         self.assertEqual(result.stdout.strip(), "False")
+
+
+class PracticalValidationDiagnosticsServiceContractTests(unittest.TestCase):
+    def test_profile_builder_and_curve_snapshot_are_ui_neutral(self) -> None:
+        from app.services import backtest_practical_validation_diagnostics as diagnostics
+
+        profile = diagnostics.build_validation_profile(
+            "custom",
+            {
+                "primary_goal": "defensive",
+                "drawdown_tolerance": "dd_10",
+                "holding_period": "6_to_12m",
+                "complexity_allowance": "broad_etf_only",
+                "alternative_success_metric": "lower_mdd",
+            },
+        )
+        curve = diagnostics.compact_curve_snapshot_from_bundle(
+            {
+                "result_df": pd.DataFrame(
+                    [
+                        {"Date": "2020-01-31", "Total Balance": 100.0},
+                        {"Date": "2020-02-28", "Total Balance": 98.0},
+                    ]
+                )
+            }
+        )
+
+        self.assertEqual(profile["profile_id"], "custom")
+        self.assertEqual(profile["profile_label"], "사용자 지정")
+        self.assertEqual(profile["answers"]["primary_goal"], "defensive")
+        self.assertEqual(profile["answer_labels"]["drawdown_tolerance"], "-10% 내외")
+        self.assertEqual(profile["thresholds"]["mdd_review_line"], -10.0)
+        self.assertGreaterEqual(profile["domain_weights"]["stress_scenario_diagnostics"], 1.35)
+        self.assertEqual([row["Date"] for row in curve], ["2020-01-31", "2020-02-28"])
+        self.assertEqual([row["Total Balance"] for row in curve], [100.0, 98.0])
+        self.assertAlmostEqual(curve[0]["Total Return"], 0.0)
+        self.assertAlmostEqual(curve[1]["Total Return"], -0.02)
 
 
 class PracticalValidationReplayServiceContractTests(unittest.TestCase):

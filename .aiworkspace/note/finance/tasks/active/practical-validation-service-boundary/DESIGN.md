@@ -57,3 +57,4 @@ Streamlit UI
 
 - `provider-gap-collection-boundary`: provider gap row / collection plan / ingestion job orchestration을 service로 이동.
 - `practical-validation-replay-service-boundary`: replay plan / actual replay result helper를 service module로 이동.
+- `practical-validation-diagnostics-service-boundary`: large diagnostic builder와 source/profile/compact curve helper를 `app/services/backtest_practical_validation_diagnostics.py`로 이동.

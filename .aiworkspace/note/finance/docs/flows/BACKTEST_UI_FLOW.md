@@ -35,9 +35,9 @@ UI form, payload 복원, candidate review, history replay, candidate replay, sav
 | `app/web/pages/backtest.py` | Backtest page entry, workflow navigation, panel dispatch shell. 주요 panel 본문은 `app/web/backtest_*.py` module이 담당 |
 | `app/web/backtest_ui_components.py` | Backtest UI 공용 status card, artifact pipeline, compact badge strip, stage brief strip, route/readiness panel render helper |
 | `app/services/backtest_practical_validation.py` | Streamlit-free Practical Validation service. source/result 저장, Practical Validation / Final Review handoff contract, Provider Data Gaps row / collection plan / ingestion job orchestration을 만든다 |
+| `app/services/backtest_practical_validation_diagnostics.py` | Streamlit-free Practical Validation diagnostics service. Clean V2 source / validation profile / compact curve snapshot / 12개 Practical Diagnostics result를 만든다 |
 | `app/services/backtest_practical_validation_replay.py` | Streamlit-free Practical Validation replay service. 기존 strategy runtime 재검증 계획과 actual replay result를 만든다 |
 | `app/web/backtest_practical_validation.py` | `Practical Validation` stage render. Clean V2 source 확인, 검증 프로필 입력, 최신 DB 데이터 기준 runtime 재검증 실행 버튼, V2 practical diagnostics board, Provider Data Gaps 표시, service handoff 결과의 session state 반영을 담당 |
-| `app/web/backtest_practical_validation_helpers.py` | Clean V2 selection source / validation profile / 12개 Practical Diagnostics result 생성 helper |
 | `app/web/backtest_practical_validation_connectors.py` | P2 provider context adapter. DB에 저장된 ETF operability / holdings / exposure / FRED macro snapshot을 compact evidence로 바꿔 Practical Diagnostics에 연결 |
 | `app/web/backtest_practical_validation_curve.py` | Practical Validation curve normalize, compact curve records, curve provenance, benchmark parity helper |
 | `app/web/backtest_candidate_review.py` | Candidate Review / Candidate Packaging / Pre-Live 운영 기록 화면 render logic |

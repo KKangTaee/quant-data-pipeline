@@ -37,6 +37,7 @@ Service contract 변경:
 기대 결과:
 
 - Practical Validation / Final Review service handoff contract tests pass
+- Practical Validation diagnostics service import / profile / compact curve contract tests pass
 - Provider gap collection plan / job orchestration contract tests pass
 - Practical Validation replay plan contract tests pass
 - service import 과정에서 `streamlit` module이 로드되지 않음

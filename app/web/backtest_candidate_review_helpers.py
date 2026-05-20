@@ -9,7 +9,7 @@ import pandas as pd
 import streamlit as st
 
 from app.services.backtest_practical_validation import prepare_practical_validation_source_handoff
-from app.web.backtest_practical_validation_helpers import (
+from app.services.backtest_practical_validation_diagnostics import (
     build_selection_source_from_candidate_draft,
     compact_benchmark_curve_snapshot_from_bundle,
     compact_curve_snapshot_from_bundle,

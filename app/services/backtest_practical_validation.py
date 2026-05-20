@@ -10,7 +10,7 @@ from app.jobs.ingestion_jobs import (
     run_discover_etf_provider_source_map,
 )
 from app.jobs.run_history import append_run_history
-from app.web.backtest_practical_validation_helpers import (
+from app.services.backtest_practical_validation_diagnostics import (
     VALIDATION_PROFILE_OPTIONS,
     VALIDATION_PROFILE_QUESTIONS,
     build_practical_validation_result as _build_practical_validation_result,

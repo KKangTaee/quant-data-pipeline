@@ -22,6 +22,10 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-20
+- Completed `.aiworkspace/note/finance/tasks/active/practical-validation-diagnostics-service-boundary/`.
+- Moved the large Practical Validation diagnostic builder from `app/web` to `app/services/backtest_practical_validation_diagnostics.py`.
+- Practical Validation service, Compare, and Candidate Review now import diagnostic/source/compact curve helpers from the service boundary.
+- Added diagnostics service contract coverage to `tests/test_service_contracts.py`.
 - Added `.aiworkspace/plugins/quant-finance-workflow/scripts/check_ui_engine_boundary.py` as a repo-local UI-engine boundary lint helper.
 - The helper hard-fails on Streamlit usage in `app/services` and staged generated / registry / saved artifacts, while reporting current `app.services -> app.web` imports as advisory transition debt.
 - Completed `.aiworkspace/note/finance/tasks/active/evidence-read-model-boundary/`.
