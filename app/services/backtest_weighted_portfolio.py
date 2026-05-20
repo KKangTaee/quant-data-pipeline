@@ -6,7 +6,7 @@ from app.services.backtest_result_read_model import (
     build_monthly_component_balance_views,
     build_strategy_data_trust_rows,
 )
-from app.web.runtime.backtest import build_backtest_result_bundle
+from app.runtime.backtest import build_backtest_result_bundle
 from finance.performance import make_monthly_weighted_portfolio
 
 

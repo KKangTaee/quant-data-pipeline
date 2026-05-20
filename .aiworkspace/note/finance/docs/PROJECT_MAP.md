@@ -19,7 +19,8 @@ Last Verified: 2026-05-20
 | `finance/transform.py` | signal, factor, ranking transform |
 | `finance/performance.py` | 성과 요약과 portfolio performance metric |
 | `app/services/` | Streamlit-free application service boundary. UI에서 runtime / engine을 직접 호출하기 전에 use-case 단위 dispatch와 error normalization을 담당 |
-| `app/web/` | Streamlit Finance Console 화면과 runtime glue |
+| `app/runtime/` | Streamlit-free runtime / repository boundary. DB-backed backtest wrapper, JSONL registry / saved setup helper, selected portfolio runtime model |
+| `app/web/` | Streamlit Finance Console 화면, form, session state, routing, user feedback |
 | `app/jobs/` | Ingestion console에서 실행하는 job wrapper |
 | `tests/` | service contract와 workflow helper 회귀 검증을 위한 focused Python tests |
 | `.aiworkspace/` | AI / Codex 작업 문서와 plugin source의 top-level workspace |
@@ -80,7 +81,7 @@ Last Verified: 2026-05-20
 | `app/web/backtest_final_review_helpers.py` | Final Review source selection, validation reuse, paper observation snapshot, save row construction |
 | `app/web/final_selected_portfolio_dashboard.py` | Selected Portfolio Dashboard screen render and selected portfolio monitoring controls |
 | `app/web/final_selected_portfolio_dashboard_helpers.py` | Dashboard table / component / drift / alert display helpers |
-| `app/web/runtime/final_selected_portfolios.py` | Read-only selected portfolio dashboard runtime model and performance recheck |
+| `app/runtime/final_selected_portfolios.py` | Read-only selected portfolio dashboard runtime model and performance recheck |
 
 ## Backtest Workflow Boundary
 
@@ -114,7 +115,7 @@ Backtest Analysis
 | Situation | Start Here |
 |---|---|
 | Backtest UI 수정 | `app/web/pages/backtest.py`, 관련 `app/web/backtest_*.py` |
-| UI-engine boundary 수정 | `app/services/*`, 호출하는 `app/web/backtest_*.py`, 관련 `app/web/runtime/*` |
+| UI-engine boundary 수정 | `app/services/*`, 호출하는 `app/web/backtest_*.py`, 관련 `app/runtime/*` |
 | Service contract 회귀 검증 | `tests/test_service_contracts.py`, `.aiworkspace/note/finance/docs/runbooks/README.md` |
 | Practical Validation P2 수정 | `app/web/backtest_practical_validation*.py`, `finance/data/etf_provider.py`, `finance/loaders/provider.py`, `finance/data/macro.py`, `finance/loaders/macro.py` |
 | DB schema 변경 | `finance/data/db/schema.py` |

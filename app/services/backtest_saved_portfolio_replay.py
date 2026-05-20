@@ -9,7 +9,7 @@ import pandas as pd
 
 from app.services.backtest_result_read_model import build_strategy_data_trust_rows
 from app.services.backtest_weighted_portfolio import build_weighted_portfolio_bundle
-from app.web.runtime.backtest import BacktestInputError
+from app.runtime.backtest import BacktestInputError
 
 SavedPortfolioStrategyRunner = Callable[..., dict[str, Any]]
 SavedPortfolioOverrideResolver = Callable[..., dict[str, Any]]

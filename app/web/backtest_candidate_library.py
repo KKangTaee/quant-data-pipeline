@@ -5,7 +5,7 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
-from app.web.backtest_candidate_library_helpers import (
+from app.runtime.candidate_library import (
     build_candidate_badges,
     build_candidate_library_rows,
     build_candidate_replay_payload,
@@ -24,8 +24,8 @@ from app.web.backtest_result_display import (
     _render_real_money_details,
 )
 from app.web.backtest_ui_components import render_badge_strip, render_status_card_grid
-from app.web.runtime import CURRENT_CANDIDATE_REGISTRY_FILE, PRE_LIVE_CANDIDATE_REGISTRY_FILE
-from app.web.runtime.backtest import BacktestDataError, BacktestInputError
+from app.runtime import CURRENT_CANDIDATE_REGISTRY_FILE, PRE_LIVE_CANDIDATE_REGISTRY_FILE
+from app.runtime.backtest import BacktestDataError, BacktestInputError
 
 
 # Render the Operations-owned saved candidate inspector and replay surface.

@@ -40,7 +40,6 @@
 | `app/web/backtest_history.py` | `Operations > Backtest Run History` 화면 render, history inspect / replay / form load / candidate draft handoff, Real-Money / Guardrail parity table render |
 | `app/web/backtest_history_helpers.py` | Backtest history row 변환, replay payload 복원, History replay parity / Real-Money scope table helper |
 | `app/web/backtest_candidate_library.py` | `Operations > Candidate Library` 화면 render, 저장된 current / Pre-Live 후보 inspect, 저장 contract 기반 result curve rebuild |
-| `app/web/backtest_candidate_library_helpers.py` | Candidate Library용 registry join, 후보 table row, replay payload 생성, ETF 후보 replay runtime dispatch helper |
 | `app/web/backtest_ui_components.py` | Backtest UI 공용 wrapping status card, artifact pipeline, compact badge strip, stage brief strip, route/readiness 판정 panel |
 | `app/web/backtest_practical_validation.py` | `Backtest > Practical Validation`에서 Clean V2 selection source 확인, 검증 프로필 입력, 최신 DB 데이터 기준 runtime 재검증 실행 버튼, V2 practical diagnostics board / Provider Data Gaps 표시, provider gap / replay service 실행 버튼, service 결과를 session state에 반영하는 화면 render |
 | `app/web/backtest_practical_validation_connectors.py` | Practical Validation P2 provider context adapter. ETF operability / holdings / exposure / FRED macro loader 결과를 compact coverage와 diagnostic evidence로 변환 |
@@ -74,15 +73,16 @@
 
 | 스크립트 | 관리하는 기능 |
 |---|---|
-| `app/web/runtime/backtest.py` | UI payload를 DB-backed backtest 실행으로 변환하는 runtime wrapper, Real-Money / guardrail / benchmark 계약 처리 |
-| `app/web/runtime/candidate_registry.py` | current candidate, candidate review note, pre-live registry JSONL path / load / append helper |
-| `app/web/runtime/history.py` | Backtest run history persistence helper |
-| `app/web/runtime/portfolio_proposal.py` | Portfolio proposal draft registry JSONL path / load / append helper |
-| `app/web/runtime/paper_portfolio_ledger.py` | Paper Portfolio Tracking Ledger JSONL path / load / append helper |
-| `app/web/runtime/final_selection_decisions.py` | Final Portfolio Selection Decision JSONL path / load / append helper |
-| `app/web/runtime/portfolio_selection_v2.py` | Clean V2 portfolio selection source / Practical Validation result / Final Decision V2 / selected monitoring log / saved mix JSONL helper와 legacy archive copy helper |
-| `app/web/runtime/final_selected_portfolios.py` | Final Selection Decision V2 registry를 read-only로 읽어 최종 선정 포트폴리오 운영 대시보드 row / status summary / 기간 확장 replay recheck / current weight 또는 value / holding input 기반 drift check / drift alert preview로 변환 |
-| `app/web/runtime/portfolio_store.py` | Saved portfolio persistence helper |
+| `app/runtime/backtest.py` | UI payload를 DB-backed backtest 실행으로 변환하는 runtime wrapper, Real-Money / guardrail / benchmark 계약 처리 |
+| `app/runtime/candidate_library.py` | Candidate Library용 registry join, 후보 table row, replay payload 생성, ETF / strict annual equity 후보 replay runtime dispatch helper |
+| `app/runtime/candidate_registry.py` | current candidate, candidate review note, pre-live registry JSONL path / load / append helper |
+| `app/runtime/history.py` | Backtest run history persistence helper |
+| `app/runtime/portfolio_proposal.py` | Portfolio proposal draft registry JSONL path / load / append helper |
+| `app/runtime/paper_portfolio_ledger.py` | Paper Portfolio Tracking Ledger JSONL path / load / append helper |
+| `app/runtime/final_selection_decisions.py` | Final Portfolio Selection Decision JSONL path / load / append helper |
+| `app/runtime/portfolio_selection_v2.py` | Clean V2 portfolio selection source / Practical Validation result / Final Decision V2 / selected monitoring log / saved mix JSONL helper와 legacy archive copy helper |
+| `app/runtime/final_selected_portfolios.py` | Final Selection Decision V2 registry를 read-only로 읽어 최종 선정 포트폴리오 운영 대시보드 row / status summary / 기간 확장 replay recheck / current weight 또는 value / holding input 기반 drift check / drift alert preview로 변환 |
+| `app/runtime/portfolio_store.py` | Saved portfolio persistence helper |
 
 ## App / Jobs
 

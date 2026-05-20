@@ -5,7 +5,7 @@ from typing import Any
 
 import pandas as pd
 
-from app.web.runtime import (
+from app.runtime import (
     FINAL_SELECTION_DECISION_SCHEMA_VERSION,
     PAPER_PORTFOLIO_LEDGER_SCHEMA_VERSION,
     PORTFOLIO_PROPOSAL_SCHEMA_VERSION,

@@ -49,7 +49,7 @@ from app.web.backtest_ui_components import (
     render_readiness_route_panel,
     render_stage_brief,
 )
-from app.web.runtime import (
+from app.runtime import (
     CANDIDATE_REVIEW_NOTES_FILE,
     CURRENT_CANDIDATE_REGISTRY_FILE,
     PRE_LIVE_CANDIDATE_REGISTRY_FILE,

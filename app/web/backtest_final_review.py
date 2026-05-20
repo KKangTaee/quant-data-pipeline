@@ -31,7 +31,7 @@ from app.web.backtest_ui_components import (
     render_stage_brief,
     render_status_card_grid,
 )
-from app.web.runtime import (
+from app.runtime import (
     FINAL_SELECTION_DECISION_V2_FILE,
     append_final_selection_decision_v2,
     load_current_candidate_registry_latest,

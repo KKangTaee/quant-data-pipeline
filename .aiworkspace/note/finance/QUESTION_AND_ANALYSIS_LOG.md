@@ -21,6 +21,19 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-20 - Runtime은 app/web 밖의 app/runtime이 맡는다
+- User request:
+  - 남은 개선 후보인 `app/web/runtime` 위치 / 이름 정리를 다음 task로 진행해 달라고 요청함.
+- Interpreted goal:
+  - runtime / repository helper가 UI package 아래에 있어 service와 UI 경계가 흐려지는 문제를 정리해야 함.
+- Analysis result:
+  - Task 5를 `runtime-package-boundary`로 열고 `5-01`, `5-02`로 나눠 진행했다.
+  - `5-01`에서 `app/web/runtime/*.py`를 `app/runtime/*.py`로 이동하고 repo imports를 `app.runtime`으로 바꿨다.
+  - `5-02`에서 Streamlit-free Candidate Library replay helper를 `app/runtime/candidate_library.py`로 이동했다.
+  - boundary lint는 이제 `app/services`와 `app/runtime`을 함께 검사한다.
+- Follow-up:
+  - 남은 advisory는 Practical Validation curve / connector helper가 아직 `app/web`에 있는 부분이다.
+
 ### 2026-05-20 - Practical Validation diagnostics는 service boundary에 둔다
 - User request:
   - UI / engine 분리 후속 작업의 다음 단계를 진행해 달라고 요청함.
@@ -31,7 +44,7 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Practical Validation service, Compare, Candidate Review는 source/profile/compact curve helper를 service module에서 import한다.
   - 계산식과 registry schema는 바꾸지 않고 ownership boundary만 이동했다.
 - Follow-up:
-  - 남은 전이 부채는 diagnostics service가 일부 `app.web.runtime`, connector, curve helper를 참조한다는 점이며, 다음 cleanup 후보로 분리 가능하다.
+  - 남은 전이 부채는 diagnostics service가 일부 `app.web` connector / curve helper를 참조한다는 점이며, 다음 cleanup 후보로 분리 가능하다.
 
 ### 2026-05-20 - UI-engine boundary는 lint helper로 보호한다
 - User request:
@@ -41,9 +54,9 @@ Detailed historical analysis was archived on `2026-04-13`.
 - Analysis result:
   - 새 phase가 아니라 단일 task `.aiworkspace/note/finance/tasks/active/ui-engine-boundary-lint/`로 진행했다.
   - `.aiworkspace/plugins/quant-finance-workflow/scripts/check_ui_engine_boundary.py`를 추가했다.
-  - hard fail은 `app/services`의 Streamlit 사용과 staged generated / registry / saved artifact이며, 현재 남아 있는 `app.services -> app.web` import는 advisory로 처리한다.
+  - hard fail은 `app/services` / `app/runtime`의 Streamlit 사용과 staged generated / registry / saved artifact이며, 현재 남아 있는 `app.services/app.runtime -> app.web` import는 advisory로 처리한다.
 - Follow-up:
-  - 후속 구조 정리에서는 advisory를 줄이도록 `app.web.runtime` / Streamlit-free helper를 더 적절한 runtime/repository 위치로 옮긴다.
+  - 후속 구조 정리에서는 남은 Practical Validation Streamlit-free helper advisory를 service/runtime 위치로 옮길지 판단한다.
 
 ### 2026-05-20 - Final decision evidence는 공통 read model로 읽는다
 - User request:

@@ -5,7 +5,7 @@ from typing import Any
 
 import pandas as pd
 
-from app.web.runtime import (
+from app.runtime import (
     load_backtest_run_history,
     load_candidate_review_notes,
     load_current_candidate_registry_latest,

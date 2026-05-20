@@ -8,7 +8,7 @@ from uuid import uuid4
 import pandas as pd
 
 from app.web.backtest_practical_validation_curve import curve_records_from_df, optional_float
-from app.web.runtime.backtest import (
+from app.runtime.backtest import (
     ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT,
     ETF_OPERABILITY_DEFAULT_MIN_AUM_B,
     ETF_REAL_MONEY_DEFAULT_BENCHMARK,

@@ -106,6 +106,16 @@ Result:
 - Final Review and Selected Dashboard helpers now consume the same Streamlit-free read model.
 - Selected Dashboard remains read-only and no registry schema changed.
 
+## Post-Foundation Follow-up. Runtime Package Boundary
+
+Result:
+
+- Complete on 2026-05-20.
+- Task record: `.aiworkspace/note/finance/tasks/active/runtime-package-boundary/`
+- `5-01`: moved `app/web/runtime/*.py` to `app/runtime/*.py` and updated repo imports to `app.runtime`.
+- `5-02`: moved Streamlit-free Candidate Library replay helper to `app/runtime/candidate_library.py`.
+- Boundary lint now checks both `app/services` and `app/runtime` for Streamlit usage.
+
 ## Parking Lot
 
 - FastAPI endpoint

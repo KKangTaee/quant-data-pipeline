@@ -47,7 +47,7 @@ from app.web.backtest_ui_components import (
     render_stage_brief,
     render_status_card_grid,
 )
-from app.web.runtime import (
+from app.runtime import (
     CURRENT_CANDIDATE_REGISTRY_FILE,
     PORTFOLIO_PROPOSAL_REGISTRY_FILE,
     append_portfolio_proposal,

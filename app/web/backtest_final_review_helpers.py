@@ -25,7 +25,7 @@ from app.web.backtest_portfolio_proposal_helpers import (
     _portfolio_proposal_pre_live_record_by_registry_id,
     _portfolio_proposal_pre_live_status_by_registry_id,
 )
-from app.web.runtime import FINAL_SELECTION_DECISION_V2_SCHEMA_VERSION
+from app.runtime import FINAL_SELECTION_DECISION_V2_SCHEMA_VERSION
 
 
 FINAL_REVIEW_ROUTE_OPTIONS = FINAL_SELECTION_DECISION_ROUTE_OPTIONS

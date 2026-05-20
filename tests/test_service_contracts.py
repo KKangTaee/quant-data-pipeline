@@ -89,6 +89,9 @@ class PracticalValidationServiceContractTests(unittest.TestCase):
     def test_service_imports_do_not_load_streamlit(self) -> None:
         script = """
 import sys
+import app.runtime
+import app.runtime.backtest
+import app.runtime.candidate_library
 import app.services.backtest_evidence_read_model
 import app.services.backtest_practical_validation_diagnostics
 import app.services.backtest_practical_validation
@@ -103,6 +106,24 @@ print("streamlit" in sys.modules)
         )
 
         self.assertEqual(result.stdout.strip(), "False")
+
+    def test_runtime_package_import_does_not_load_streamlit(self) -> None:
+        script = """
+import sys
+import importlib.util
+import app.runtime
+import app.runtime.candidate_library
+print("streamlit" in sys.modules)
+print(importlib.util.find_spec("app.web.runtime") is None)
+"""
+        result = subprocess.run(
+            [sys.executable, "-c", script],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
+        self.assertEqual(result.stdout.splitlines(), ["False", "True"])
 
 
 class PracticalValidationDiagnosticsServiceContractTests(unittest.TestCase):

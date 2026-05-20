@@ -24,7 +24,7 @@ Created: 2026-05-19
   - `app/web/backtest_compare.py`: 269 hits
   - `app/web/streamlit_app.py`: 78 hits
 - `app/services` and `app/api` have no source `.py` files in the current worktree, only `__pycache__` traces.
-- `app/web/runtime/backtest.py` is Streamlit-free and is a good transition dependency for services.
+- `app/runtime/backtest.py` is Streamlit-free and is a good transition dependency for services.
 
 ## Current Decision
 

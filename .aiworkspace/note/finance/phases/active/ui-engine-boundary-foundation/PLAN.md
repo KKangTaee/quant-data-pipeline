@@ -40,7 +40,7 @@ Created: 2026-05-19
 ```text
 Streamlit UI
   -> app/services/*
-  -> app/web/runtime/* or finance/*
+  -> app/runtime/* or finance/*
   -> finance/loaders/*
   -> finance/sample.py / finance/engine.py / finance/strategy.py
   -> finance/performance.py

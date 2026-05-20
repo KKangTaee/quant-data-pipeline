@@ -14,6 +14,8 @@ from typing import Any
 # scripts live under .aiworkspace/plugins/quant-finance-workflow/scripts.
 REPO_ROOT = Path(__file__).resolve().parents[4]
 SERVICE_DIR = REPO_ROOT / "app" / "services"
+RUNTIME_DIR = REPO_ROOT / "app" / "runtime"
+BOUNDARY_DIRS = [SERVICE_DIR, RUNTIME_DIR]
 
 STREAMLIT_IMPORT_RE = re.compile(r"^\s*(?:import\s+streamlit\b|from\s+streamlit\s+import\b)")
 STREAMLIT_ACCESS_RE = re.compile(r"(?<![A-Za-z0-9_])st\.")
@@ -36,16 +38,18 @@ def _relative(path: Path) -> str:
     return path.relative_to(REPO_ROOT).as_posix()
 
 
-def _service_files() -> list[Path]:
-    if not SERVICE_DIR.exists():
-        return []
-    return sorted(path for path in SERVICE_DIR.glob("*.py") if path.is_file())
+def _boundary_files() -> list[Path]:
+    files: list[Path] = []
+    for directory in BOUNDARY_DIRS:
+        if directory.exists():
+            files.extend(path for path in directory.glob("*.py") if path.is_file())
+    return sorted(files)
 
 
-def _scan_services() -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+def _scan_boundary_files() -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     violations: list[dict[str, Any]] = []
     advisories: list[dict[str, Any]] = []
-    for path in _service_files():
+    for path in _boundary_files():
         rel_path = _relative(path)
         for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
             if STREAMLIT_IMPORT_RE.search(line):
@@ -109,15 +113,25 @@ def _staged_artifact_violations() -> list[dict[str, Any]]:
 
 
 def _build_report() -> dict[str, Any]:
-    service_violations, service_advisories = _scan_services()
+    boundary_violations, boundary_advisories = _scan_boundary_files()
     staged_violations = _staged_artifact_violations()
-    violations = service_violations + staged_violations
+    violations = boundary_violations + staged_violations
     return {
         "repo": str(REPO_ROOT),
-        "service_files": [_relative(path) for path in _service_files()],
+        "boundary_files": [_relative(path) for path in _boundary_files()],
+        "service_files": [
+            _relative(path)
+            for path in _boundary_files()
+            if path.is_relative_to(SERVICE_DIR)
+        ],
+        "runtime_files": [
+            _relative(path)
+            for path in _boundary_files()
+            if path.is_relative_to(RUNTIME_DIR)
+        ],
         "staged_paths": _git_staged_paths(),
         "violations": violations,
-        "advisories": service_advisories,
+        "advisories": boundary_advisories,
         "ok": not violations,
     }
 
@@ -126,7 +140,9 @@ def _render_text(report: dict[str, Any]) -> str:
     lines: list[str] = []
     lines.append("UI / Engine Boundary Check")
     lines.append(f"repo: {report['repo']}")
+    lines.append(f"boundary files: {len(report['boundary_files'])}")
     lines.append(f"service files: {len(report['service_files'])}")
+    lines.append(f"runtime files: {len(report['runtime_files'])}")
     lines.append(f"staged paths: {len(report['staged_paths'])}")
     lines.append("")
 
@@ -151,8 +167,8 @@ def _render_text(report: dict[str, Any]) -> str:
             )
         lines.append("")
         lines.append(
-            "Note: app.services -> app.web imports are advisory during the current transition. "
-            "They should trend down as runtime/repository modules move out of app.web."
+            "Note: app.services/app.runtime -> app.web imports are advisory during the current "
+            "transition. They should trend down as Streamlit-free helpers move out of app.web."
         )
     else:
         lines.append("Advisories: none")
@@ -163,7 +179,7 @@ def _render_text(report: dict[str, Any]) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Check UI/engine boundary hygiene for finance service modules.",
+        description="Check UI/engine boundary hygiene for finance service/runtime modules.",
     )
     parser.add_argument("--json", action="store_true", help="Print machine-readable JSON report.")
     args = parser.parse_args(argv)

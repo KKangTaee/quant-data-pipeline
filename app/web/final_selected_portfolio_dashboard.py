@@ -23,7 +23,7 @@ from app.web.final_selected_portfolio_dashboard_helpers import (
     selected_portfolio_source_type_options,
     selected_portfolio_status_options,
 )
-from app.web.runtime import (
+from app.runtime import (
     FINAL_SELECTION_DECISION_V2_FILE,
     FINAL_SELECTED_PORTFOLIO_STATUS_LABELS,
     FINAL_SELECTED_PORTFOLIO_VALUE_INPUT_MODE_LABELS,

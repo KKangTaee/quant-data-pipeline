@@ -6,7 +6,7 @@ from typing import Any
 import pandas as pd
 
 from app.services.backtest_evidence_read_model import build_final_decision_evidence_rows
-from app.web.runtime.final_selected_portfolios import FINAL_SELECTED_PORTFOLIO_STATUS_LABELS
+from app.runtime.final_selected_portfolios import FINAL_SELECTED_PORTFOLIO_STATUS_LABELS
 
 
 def _display_value(value: Any) -> str:

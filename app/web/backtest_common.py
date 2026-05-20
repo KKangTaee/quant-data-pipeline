@@ -19,7 +19,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[3]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from app.web.runtime import (
+from app.runtime import (
     CANDIDATE_REVIEW_NOTES_FILE,
     CURRENT_CANDIDATE_REGISTRY_FILE,
     SAVED_PORTFOLIO_FILE,
@@ -47,8 +47,8 @@ from app.web.runtime import (
     run_value_snapshot_strict_annual_backtest_from_db,
     run_value_snapshot_strict_quarterly_prototype_backtest_from_db,
 )
-from app.web.runtime.backtest import BacktestDataError, BacktestInputError
-from app.web.runtime.backtest import (
+from app.runtime.backtest import BacktestDataError, BacktestInputError
+from app.runtime.backtest import (
     ETF_REAL_MONEY_DEFAULT_BENCHMARK,
     GTAA_DEFAULT_SIGNAL_INTERVAL,
     ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT,

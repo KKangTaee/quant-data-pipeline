@@ -14,7 +14,7 @@ app/web/streamlit_app.py
   -> app/web/pages/backtest.py
   -> app/web/backtest_single_runner.py
   -> app/services/backtest_execution.py
-  -> app/web/runtime/backtest.py
+  -> app/runtime/backtest.py
   -> finance/loaders/*
   -> finance/engine.py / finance/transform.py
   -> finance/strategy.py
@@ -36,11 +36,11 @@ app/web/streamlit_app.py
   -> app/web/backtest_compare.py
   -> app/services/backtest_compare_execution.py
   -> app/services/backtest_compare_catalog.py
-  -> app/web/runtime/backtest.py
+  -> app/runtime/backtest.py
   -> finance/loaders/* / finance strategy runtime
   -> compare result
   -> app/services/backtest_weighted_portfolio.py
-  -> finance/performance.py / app/web/runtime/backtest.py
+  -> finance/performance.py / app/runtime/backtest.py
   -> weighted portfolio result
   -> app/services/backtest_saved_portfolio_replay.py
   -> saved replay result context
@@ -59,7 +59,7 @@ app/web/streamlit_app.py
 | `app/services/backtest_result_read_model.py` | Strategy data trust rows, weighted component contribution amount/share views |
 | `app/services/backtest_weighted_portfolio.py` | Weighted portfolio result bundle construction from compared strategy bundles |
 | `app/services/backtest_saved_portfolio_replay.py` | Saved portfolio replay strategy rerun, weighted bundle creation, replay source / history context assembly |
-| `app/web/runtime/backtest.py` | UI payload를 DB-backed runtime 실행으로 변환 |
+| `app/runtime/backtest.py` | UI payload를 DB-backed runtime 실행으로 변환 |
 | `finance/loaders/*` | DB read path와 point-in-time snapshot 조회 |
 | `finance/engine.py` | price-based strategy orchestration wrapper |
 | `finance/transform.py` | moving average, interval return, date alignment 같은 전처리 |
@@ -68,7 +68,7 @@ app/web/streamlit_app.py
 
 ## Runtime wrapper 기준
 
-`app/web/runtime/backtest.py`의 `run_*_backtest_from_db(...)` 함수는 제품 실행 경로의 중심이다.
+`app/runtime/backtest.py`의 `run_*_backtest_from_db(...)` 함수는 제품 실행 경로의 중심이다.
 
 대표 함수:
 
@@ -177,7 +177,7 @@ Data Trust Summary metadata를 남기는 첫 적용 대상이다.
 ```text
 app/web/streamlit_app.py
   -> app/web/pages/backtest.py
-  -> app/web/runtime/backtest.py
+  -> app/runtime/backtest.py
   -> finance/engine.py / finance/strategy.py
   -> result bundle / report / saved replay
 ```

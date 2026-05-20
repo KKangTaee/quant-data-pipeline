@@ -13,7 +13,7 @@ external source
   -> finance/data/db/schema.py
   -> MySQL tables
   -> finance/loaders/*
-  -> app/web/runtime/backtest.py or finance/sample.py
+  -> app/runtime/backtest.py or finance/sample.py
   -> strategy runtime
 ```
 

@@ -63,8 +63,8 @@ PORTFOLIO_SELECTION_SOURCES
 | Backtest Analysis | `app/web/backtest_analysis.py`, `app/web/backtest_single_*.py`, `app/web/backtest_compare.py` |
 | Practical Validation | `app/web/backtest_practical_validation*.py` |
 | Final Review | `app/web/backtest_final_review*.py` |
-| Selected Dashboard | `app/web/final_selected_portfolio_dashboard*.py`, `app/web/runtime/final_selected_portfolios.py` |
-| Selection V2 persistence | `app/web/runtime/portfolio_selection_v2.py` |
+| Selected Dashboard | `app/web/final_selected_portfolio_dashboard*.py`, `app/runtime/final_selected_portfolios.py` |
+| Selection V2 persistence | `app/runtime/portfolio_selection_v2.py` |
 
 ## Update Rules
 

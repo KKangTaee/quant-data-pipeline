@@ -16,7 +16,7 @@ from app.web.backtest_practical_validation_curve import (
     normalize_result_curve as normalize_validation_curve,
 )
 from app.web.backtest_practical_validation_connectors import build_provider_context
-from app.web.runtime import (
+from app.runtime import (
     FINAL_SELECTION_DECISION_V2_SCHEMA_VERSION,
     PORTFOLIO_SELECTION_SOURCE_SCHEMA_VERSION,
     PRACTICAL_VALIDATION_RESULT_SCHEMA_VERSION,

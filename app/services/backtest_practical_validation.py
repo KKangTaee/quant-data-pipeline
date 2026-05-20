@@ -17,7 +17,7 @@ from app.services.backtest_practical_validation_diagnostics import (
     build_validation_profile,
     source_components_dataframe,
 )
-from app.web.runtime import append_portfolio_selection_source, append_practical_validation_result
+from app.runtime import append_portfolio_selection_source, append_practical_validation_result
 from finance.data.etf_provider import (
     EXPOSURE_PROVIDER_SOURCES,
     HOLDINGS_PROVIDER_SOURCES,

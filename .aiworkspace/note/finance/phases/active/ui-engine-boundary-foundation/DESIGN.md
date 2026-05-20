@@ -9,7 +9,7 @@ Created: 2026-05-19
 | --- | --- | --- |
 | `app/web/*` | Streamlit render, forms, session state, navigation, user feedback | direct strategy internals, long business workflow logic, duplicated runtime dispatch |
 | `app/services/*` | use-case orchestration, request/result contract, UI-independent execution boundary | `streamlit` import, widget/session state access, direct UI rendering |
-| `app/web/runtime/*` | existing DB-backed runtime adapters and JSONL helpers | becoming a second UI layer or public API surface without contracts |
+| `app/runtime/*` | existing DB-backed runtime adapters and JSONL helpers | becoming a second UI layer or public API surface without contracts |
 | `finance/loaders/*` | DB read path and PIT/freshness data access | UI state or Streamlit feedback |
 | `finance/data/*` | ingestion, normalization, persistence | UI-triggered remote fetch outside jobs |
 | `finance/engine.py`, `finance/strategy.py`, `finance/transform.py`, `finance/performance.py` | core strategy execution, transforms, simulation, metrics | UI payload parsing or Streamlit dependency |
@@ -44,7 +44,7 @@ BacktestExecutionResult
   elapsed_seconds: float
 ```
 
-The service may call existing `app/web/runtime/backtest.py` functions during the transition.
+The service may call existing `app/runtime/backtest.py` functions during the transition.
 The important boundary is that it does not render UI and does not touch `st.session_state`.
 
 ## Migration Principles

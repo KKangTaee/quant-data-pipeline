@@ -53,7 +53,7 @@ UI / engine boundary 변경:
 
 - `Hard violations: none`
 - `Result: PASS`
-- `app.services -> app.web` import는 현재 transition 단계에서는 advisory로만 읽는다.
+- `app.services / app.runtime -> app.web` import는 현재 transition 단계에서는 advisory로만 읽는다.
 
 문서 구조 확인:
 

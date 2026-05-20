@@ -6,9 +6,7 @@ from typing import Any
 
 import pandas as pd
 
-from app.web.runtime import (
-    load_current_candidate_registry_latest,
-    load_pre_live_candidate_registry_latest,
+from .backtest import (
     run_dual_momentum_backtest_from_db,
     run_equal_weight_backtest_from_db,
     run_global_relative_strength_backtest_from_db,
@@ -18,7 +16,11 @@ from app.web.runtime import (
     run_risk_parity_trend_backtest_from_db,
     run_value_snapshot_strict_annual_backtest_from_db,
 )
-from app.web.runtime.backtest import (
+from .candidate_registry import (
+    load_current_candidate_registry_latest,
+    load_pre_live_candidate_registry_latest,
+)
+from .backtest import (
     BacktestDataError,
     BacktestInputError,
     ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT,

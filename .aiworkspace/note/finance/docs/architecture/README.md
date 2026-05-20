@@ -11,7 +11,7 @@ External Sources
   -> finance/data/db/*
   -> finance/loaders/*
   -> finance/engine.py / strategy.py / transform.py
-  -> app/web/runtime/*
+  -> app/runtime/*
   -> app/web Streamlit UI
 ```
 
@@ -23,7 +23,7 @@ External Sources
 | Persistence | MySQL table schema와 UPSERT 기반 저장 |
 | Loader | DB 데이터를 runtime / validation이 읽을 수 있는 형태로 변환 |
 | Strategy Runtime | 전략 계산, 리밸런싱, 성과 curve 생성 |
-| Web Runtime | UI payload와 strategy runtime / registry / saved setup 연결 |
+| App Runtime | UI payload와 strategy runtime / registry / saved setup 연결 |
 | Streamlit UI | 사용자가 후보 생성, 검증, 최종 판단, 운영 대시보드를 사용하는 화면 |
 
 ## Architecture Rules

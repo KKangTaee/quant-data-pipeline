@@ -7,7 +7,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from app.web.runtime.backtest import (
+from app.runtime.backtest import (
     ETF_REAL_MONEY_DEFAULT_BENCHMARK,
     GTAA_DEFAULT_SIGNAL_INTERVAL,
     STRICT_DEFAULT_BENCHMARK_CONTRACT,

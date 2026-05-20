@@ -780,7 +780,7 @@ def build_selected_portfolio_performance_recheck(
         return {"status": "error", "error": "재검증할 active component가 없습니다."}
 
     try:
-        from app.web.backtest_candidate_library_helpers import (
+        from .candidate_library import (
             build_candidate_replay_payload,
             run_candidate_replay_payload,
         )

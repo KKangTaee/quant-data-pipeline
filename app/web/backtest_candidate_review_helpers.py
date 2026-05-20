@@ -15,8 +15,8 @@ from app.services.backtest_practical_validation_diagnostics import (
     compact_curve_snapshot_from_bundle,
 )
 from app.web.backtest_strategy_catalog import strategy_key_to_display_name as catalog_strategy_key_to_display_name
-from app.web.runtime import CURRENT_CANDIDATE_REGISTRY_FILE
-from app.web.runtime.backtest import STRICT_BENCHMARK_CONTRACT_CANDIDATE_EQUAL_WEIGHT
+from app.runtime import CURRENT_CANDIDATE_REGISTRY_FILE
+from app.runtime.backtest import STRICT_BENCHMARK_CONTRACT_CANDIDATE_EQUAL_WEIGHT
 
 CANDIDATE_REVIEW_DECISION_OPTIONS = [
     "consider_registry_candidate",

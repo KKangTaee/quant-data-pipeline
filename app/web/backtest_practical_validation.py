@@ -30,7 +30,7 @@ from app.web.backtest_ui_components import (
     render_stage_brief,
     render_status_card_grid,
 )
-from app.web.runtime import (
+from app.runtime import (
     PORTFOLIO_SELECTION_SOURCE_FILE,
     PRACTICAL_VALIDATION_RESULT_FILE,
     load_portfolio_selection_sources,

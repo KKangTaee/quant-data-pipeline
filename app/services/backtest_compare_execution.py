@@ -5,7 +5,7 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
-from app.web.runtime.backtest import BacktestDataError, BacktestInputError
+from app.runtime.backtest import BacktestDataError, BacktestInputError
 
 CompareStrategyRunner = Callable[..., dict[str, Any]]
 

@@ -5,7 +5,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
-from app.web.runtime.backtest import (
+from app.runtime.backtest import (
     BacktestInputError,
     ETF_OPERABILITY_DEFAULT_MAX_BID_ASK_SPREAD_PCT,
     ETF_OPERABILITY_DEFAULT_MIN_AUM_B,
