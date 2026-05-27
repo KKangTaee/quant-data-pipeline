@@ -5285,3 +5285,14 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 이 task는 화면 변경이 아니라 helper script / contract test / runbook hardening이므로 browser QA보다 unit/lint 검증이 적절하다
 - Follow-up:
   - `check_ui_engine_boundary.py`가 `app_web_import`를 hard violation으로 보고하고, phase는 closeout 상태가 됐다
+
+### 2026-05-28 - Finance Console은 canonical `.aiworkspace/note/finance` 데이터를 읽어야 한다
+- User request:
+  - 사용자가 브라우저 실행 후 Overview와 여러 화면이 `registries`, `saved` 경로를 최신 위치에서 찾지 못한다고 수정 요청함
+- Interpreted goal:
+  - 예전 `.note/finance` 직접 참조를 제거하고, 현재 worktree의 `.aiworkspace/note/finance`를 app runtime / jobs / UI가 공통으로 읽게 해야 함
+- Analysis result:
+  - 여러 runtime / job / web helper가 `PROJECT_ROOT / ".note" / "finance"`를 직접 만들고 있었고, 특히 app/runtime 파일은 worktree parent 기준으로 잘못 계산될 위험이 있었다
+  - `app/workspace_paths.py`를 canonical path helper로 두는 것이 registry / saved / run-history 참조를 가장 작게 통일하는 방법이다
+- Follow-up:
+  - 서비스 계약 테스트에 canonical path contract를 추가했고, Browser smoke에서 Overview가 실제 JSONL 카운트와 Top 3 후보를 표시하는 것을 확인했다

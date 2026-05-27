@@ -4,10 +4,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from app.workspace_paths import REGISTRIES_DIR
 
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
-FINANCE_NOTE_DIR = PROJECT_ROOT / ".note" / "finance"
-REGISTRIES_DIR = FINANCE_NOTE_DIR / "registries"
 PORTFOLIO_PROPOSAL_REGISTRY_FILE = REGISTRIES_DIR / "PORTFOLIO_PROPOSAL_REGISTRY.jsonl"
 PORTFOLIO_PROPOSAL_SCHEMA_VERSION = 1
 

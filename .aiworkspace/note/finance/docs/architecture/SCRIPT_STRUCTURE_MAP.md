@@ -23,6 +23,7 @@
 
 | 스크립트 | 관리하는 기능 |
 |---|---|
+| `app/workspace_paths.py` | active worktree root 탐색과 canonical `.aiworkspace/note/finance`의 registries / saved / run_history / docs / artifact path 상수 |
 | `app/web/streamlit_app.py` | Finance Console top navigation, page entry, page-level routing |
 | `app/web/reference_guides.py` | `Reference > Guides`의 제품형 portfolio workflow guide, flowchart, decision gate, reference drawer render |
 | `app/web/ops_review.py` | `Operations > Ops Review`의 triage flow, 웹앱 run health, action inbox, failure artifact, log, system snapshot dashboard render |

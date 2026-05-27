@@ -14,6 +14,7 @@ from app.services.backtest_practical_validation_source import (
     build_selection_source_from_saved_mix_prefill,
     build_selection_source_from_weighted_mix_prefill,
 )
+from app.workspace_paths import REGISTRIES_DIR
 from app.web.backtest_history import (
     render_real_money_guardrail_parity_snapshot as _render_real_money_guardrail_parity_snapshot,
 )
@@ -582,14 +583,14 @@ def _find_saved_mix_workflow_references(record: dict[str, Any]) -> list[dict[str
         return []
 
     registry_paths = [
-        PROJECT_ROOT / ".note" / "finance" / "registries" / "PORTFOLIO_SELECTION_SOURCES.jsonl",
-        PROJECT_ROOT / ".note" / "finance" / "registries" / "PRACTICAL_VALIDATION_RESULTS.jsonl",
-        PROJECT_ROOT / ".note" / "finance" / "registries" / "FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl",
-        PROJECT_ROOT / ".note" / "finance" / "registries" / "SELECTED_PORTFOLIO_MONITORING_LOG.jsonl",
-        PROJECT_ROOT / ".note" / "finance" / "registries" / "CURRENT_CANDIDATE_REGISTRY.jsonl",
-        PROJECT_ROOT / ".note" / "finance" / "registries" / "PRE_LIVE_CANDIDATE_REGISTRY.jsonl",
-        PROJECT_ROOT / ".note" / "finance" / "registries" / "PORTFOLIO_PROPOSAL_REGISTRY.jsonl",
-        PROJECT_ROOT / ".note" / "finance" / "registries" / "FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl",
+        REGISTRIES_DIR / "PORTFOLIO_SELECTION_SOURCES.jsonl",
+        REGISTRIES_DIR / "PRACTICAL_VALIDATION_RESULTS.jsonl",
+        REGISTRIES_DIR / "FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl",
+        REGISTRIES_DIR / "SELECTED_PORTFOLIO_MONITORING_LOG.jsonl",
+        REGISTRIES_DIR / "CURRENT_CANDIDATE_REGISTRY.jsonl",
+        REGISTRIES_DIR / "PRE_LIVE_CANDIDATE_REGISTRY.jsonl",
+        REGISTRIES_DIR / "PORTFOLIO_PROPOSAL_REGISTRY.jsonl",
+        REGISTRIES_DIR / "FINAL_PORTFOLIO_SELECTION_DECISIONS.jsonl",
     ]
     references: list[dict[str, str]] = []
     for path in registry_paths:

@@ -4,10 +4,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from app.workspace_paths import REGISTRIES_DIR
 
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
-FINANCE_NOTE_DIR = PROJECT_ROOT / ".note" / "finance"
-REGISTRIES_DIR = FINANCE_NOTE_DIR / "registries"
 PAPER_PORTFOLIO_LEDGER_FILE = REGISTRIES_DIR / "PAPER_PORTFOLIO_TRACKING_LEDGER.jsonl"
 PAPER_PORTFOLIO_LEDGER_SCHEMA_VERSION = 1
 

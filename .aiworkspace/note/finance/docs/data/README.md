@@ -1,7 +1,7 @@
 # Finance Data Map
 
 Status: Active
-Last Verified: 2026-05-12
+Last Verified: 2026-05-28
 
 ## Purpose
 
@@ -49,6 +49,9 @@ Last Verified: 2026-05-12
 | `.aiworkspace/note/finance/saved/` | reusable saved portfolio setup | 보존 대상 |
 | `.aiworkspace/note/finance/run_history/` | local run history | 장기 문서 아님. 보통 커밋하지 않음 |
 | `.aiworkspace/note/finance/run_artifacts/` | local runtime artifact | 장기 문서 아님. 보통 커밋하지 않음 |
+
+앱 코드는 이 위치들을 `app/workspace_paths.py`의 canonical path 상수로 읽는다.
+새 registry / saved / run-history helper를 만들 때는 `.note/finance` 경로를 직접 만들지 않는다.
 
 ## Data Integrity Rules
 

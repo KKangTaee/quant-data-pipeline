@@ -3,15 +3,11 @@ from __future__ import annotations
 import json
 import re
 from datetime import datetime
-from pathlib import Path
 from typing import Any
 
+from app.workspace_paths import BACKTEST_ARTIFACT_DIR, RUN_HISTORY_DIR
 
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
-FINANCE_NOTE_DIR = PROJECT_ROOT / ".note" / "finance"
-RUN_HISTORY_DIR = FINANCE_NOTE_DIR / "run_history"
 BACKTEST_HISTORY_FILE = RUN_HISTORY_DIR / "BACKTEST_RUN_HISTORY.jsonl"
-BACKTEST_ARTIFACT_DIR = PROJECT_ROOT / ".note" / "finance" / "backtest_artifacts"
 BACKTEST_HISTORY_SCHEMA_VERSION = 2
 _SAFE_CHARS = re.compile(r"[^A-Za-z0-9_.-]+")
 

@@ -252,6 +252,39 @@ class BoundaryContractHardeningTests(unittest.TestCase):
         self.assertEqual(violations[0]["path"], "app/runtime/bad_runtime.py")
 
 
+class FinanceWorkspacePathContractTests(unittest.TestCase):
+    def test_runtime_and_job_paths_use_canonical_aiworkspace_note_root(self) -> None:
+        from app.jobs.result_artifacts import RUN_ARTIFACT_DIR
+        from app.jobs.run_history import HISTORY_FILE
+        from app.runtime import (
+            BACKTEST_HISTORY_FILE,
+            CURRENT_CANDIDATE_REGISTRY_FILE,
+            FINAL_SELECTION_DECISION_REGISTRY_FILE,
+            PORTFOLIO_PROPOSAL_REGISTRY_FILE,
+            SAVED_PORTFOLIO_FILE,
+        )
+        from app.workspace_paths import FINANCE_NOTE_DIR, PROJECT_ROOT, REGISTRIES_DIR, SAVED_DIR
+
+        expected_note_dir = PROJECT_ROOT / ".aiworkspace" / "note" / "finance"
+        self.assertEqual(FINANCE_NOTE_DIR, expected_note_dir)
+        self.assertEqual(REGISTRIES_DIR, expected_note_dir / "registries")
+        self.assertEqual(SAVED_DIR, expected_note_dir / "saved")
+
+        runtime_paths = [
+            CURRENT_CANDIDATE_REGISTRY_FILE,
+            FINAL_SELECTION_DECISION_REGISTRY_FILE,
+            PORTFOLIO_PROPOSAL_REGISTRY_FILE,
+            SAVED_PORTFOLIO_FILE,
+            BACKTEST_HISTORY_FILE,
+            HISTORY_FILE,
+            RUN_ARTIFACT_DIR,
+        ]
+        for path in runtime_paths:
+            path_text = str(path)
+            self.assertIn("/.aiworkspace/note/finance/", path_text)
+            self.assertNotIn("/.note/finance/", path_text)
+
+
 class BacktestRuntimeContractTests(unittest.TestCase):
     def test_result_bundle_public_compatibility_contract_is_preserved(self) -> None:
         import app.runtime

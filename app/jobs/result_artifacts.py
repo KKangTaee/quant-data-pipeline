@@ -8,9 +8,8 @@ from typing import Any
 
 import pandas as pd
 
+from app.workspace_paths import PROJECT_ROOT, RUN_ARTIFACT_DIR
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-RUN_ARTIFACT_DIR = PROJECT_ROOT / ".note" / "finance" / "run_artifacts"
 CSV_DIR = PROJECT_ROOT / "csv"
 _SAFE_CHARS = re.compile(r"[^A-Za-z0-9_.-]+")
 

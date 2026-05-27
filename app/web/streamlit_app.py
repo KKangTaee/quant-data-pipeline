@@ -56,12 +56,13 @@ from app.web.pages.backtest import render_backtest_tab
 from app.web.reference_guides import render_reference_guides_page
 from finance.data.financial_statements import inspect_financial_statement_source
 from finance.loaders import load_statement_coverage_summary, load_statement_timing_audit
+from app.workspace_paths import GLOSSARY_DOC_PATH, PROJECT_ROOT as CANONICAL_PROJECT_ROOT
 
 
 JobResult = dict[str, Any]
+PROJECT_ROOT = CANONICAL_PROJECT_ROOT
 LOG_DIR = PROJECT_ROOT / "logs"
 CSV_DIR = PROJECT_ROOT / "csv"
-GLOSSARY_DOC_PATH = PROJECT_ROOT / ".note" / "finance" / "docs" / "GLOSSARY.md"
 GLOSSARY_META_SECTION_TITLES = {"목적", "사용 원칙"}
 APP_RUNTIME_LOADED_AT = datetime.now()
 

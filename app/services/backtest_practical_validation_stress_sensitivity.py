@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 from typing import Any
 
 import numpy as np
 import pandas as pd
 
 from app.runtime import load_backtest_run_history
+from app.workspace_paths import PRACTICAL_VALIDATION_STRESS_WINDOW_FILE
 from app.services.backtest_practical_validation_curve_context import (
     _aligned_monthly_returns,
     _combine_component_curves,
@@ -22,8 +22,7 @@ from app.services.backtest_practical_validation_curve_context import (
 from app.services.backtest_practical_validation_source import _optional_float
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-STRESS_WINDOW_FILE = PROJECT_ROOT / ".note" / "finance" / "docs" / "data" / "practical_validation_stress_windows_v1.json"
+STRESS_WINDOW_FILE = PRACTICAL_VALIDATION_STRESS_WINDOW_FILE
 
 
 def _simple_component_title(component: dict[str, Any]) -> str:

@@ -1,7 +1,7 @@
 # Finance Project Map
 
 Status: Active
-Last Verified: 2026-05-27
+Last Verified: 2026-05-28
 
 ## Project Summary
 
@@ -20,6 +20,7 @@ Last Verified: 2026-05-27
 | `finance/performance.py` | 성과 요약과 portfolio performance metric |
 | `app/services/` | Streamlit-free application service boundary. UI에서 runtime / engine을 직접 호출하기 전에 use-case 단위 dispatch와 error normalization을 담당 |
 | `app/runtime/` | Streamlit-free runtime / repository boundary. DB-backed backtest wrapper, JSONL registry / saved setup helper, selected portfolio runtime model |
+| `app/workspace_paths.py` | active worktree root와 canonical `.aiworkspace/note/finance` JSONL / docs / artifact 경로 상수 |
 | `app/web/` | Streamlit Finance Console 화면, form, session state, routing, user feedback |
 | `app/jobs/` | Ingestion console에서 실행하는 job wrapper |
 | `tests/` | service contract와 workflow helper 회귀 검증을 위한 focused Python tests |
@@ -38,6 +39,7 @@ Last Verified: 2026-05-27
 | Area | Entry Point |
 |---|---|
 | Finance Console | `app/web/streamlit_app.py` |
+| Finance workspace path constants | `app/workspace_paths.py` |
 | Backtest page | `app/web/pages/backtest.py` |
 | Single Backtest execution service | `app/services/backtest_execution.py` |
 | Manual Compare execution service | `app/services/backtest_compare_execution.py` |
@@ -118,6 +120,8 @@ Backtest Analysis
 | Backtest run history | `.aiworkspace/note/finance/run_history/*.jsonl` | local runtime artifact, 보통 커밋 금지 |
 | Run artifacts | `.aiworkspace/note/finance/run_artifacts/` | local runtime artifact, 보통 커밋 금지 |
 | Playwright output | `.playwright-mcp/` | generated artifact, 커밋 금지 |
+
+Code resolves these paths through `app/workspace_paths.py`; app/runtime and app/jobs should not recreate legacy `.note/finance` paths directly.
 
 ## Where To Look
 

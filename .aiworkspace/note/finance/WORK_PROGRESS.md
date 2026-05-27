@@ -3993,3 +3993,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/boundary-contract-hardening/`에서 `app.services/app.runtime -> app.web` import를 boundary lint hard failure로 승격했다.
   - `tests/test_service_contracts.py`에 boundary checker behavior contract를 추가했고 service contract suite는 22 tests로 확장됐다.
   - `ui-engine-boundary-cleanup` phase는 Task 6~9 완료 상태로 closeout했다.
+- Canonical Finance Note Paths:
+  - `.aiworkspace/note/finance/tasks/active/canonical-finance-note-paths/`를 열고 legacy `.note/finance` 직접 참조를 정리했다.
+  - `app/workspace_paths.py`를 추가해 `registries`, `saved`, `run_history`, `run_artifacts`, docs path를 canonical `.aiworkspace/note/finance` 기준으로 통일했다.
+  - Overview browser smoke에서 Current Candidates / Paper Tracking / Proposal Drafts / Recent Runs가 canonical JSONL 데이터를 읽는 것을 확인했다.

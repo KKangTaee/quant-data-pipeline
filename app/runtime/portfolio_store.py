@@ -2,14 +2,11 @@ from __future__ import annotations
 
 import json
 from datetime import datetime
-from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+from app.workspace_paths import SAVED_DIR
 
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
-FINANCE_NOTE_DIR = PROJECT_ROOT / ".note" / "finance"
-SAVED_DIR = FINANCE_NOTE_DIR / "saved"
 SAVED_PORTFOLIO_FILE = SAVED_DIR / "SAVED_PORTFOLIOS.jsonl"
 SAVED_PORTFOLIO_SCHEMA_VERSION = 1
 
