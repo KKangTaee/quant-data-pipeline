@@ -8,9 +8,11 @@ from app.services.backtest_practical_validation import prepare_practical_validat
 from app.services.backtest_weighted_portfolio import build_weighted_portfolio_bundle
 from app.web.backtest_common import *  # noqa: F401,F403
 from app.services.backtest_practical_validation_diagnostics import (
+    compact_curve_snapshot_from_bundle,
+)
+from app.services.backtest_practical_validation_source import (
     build_selection_source_from_saved_mix_prefill,
     build_selection_source_from_weighted_mix_prefill,
-    compact_curve_snapshot_from_bundle,
 )
 from app.web.backtest_history import (
     render_real_money_guardrail_parity_snapshot as _render_real_money_guardrail_parity_snapshot,

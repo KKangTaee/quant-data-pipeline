@@ -98,6 +98,7 @@ import app.services.backtest_practical_validation_diagnostics
 import app.services.backtest_practical_validation
 import app.services.backtest_practical_validation_provider_context
 import app.services.backtest_practical_validation_replay
+import app.services.backtest_practical_validation_source
 print("streamlit" in sys.modules)
 """
         result = subprocess.run(
@@ -150,8 +151,9 @@ print(importlib.util.find_spec("app.web.backtest_practical_validation_connectors
 class PracticalValidationDiagnosticsServiceContractTests(unittest.TestCase):
     def test_profile_builder_and_curve_snapshot_are_ui_neutral(self) -> None:
         from app.services import backtest_practical_validation_diagnostics as diagnostics
+        from app.services import backtest_practical_validation_source as source_builders
 
-        profile = diagnostics.build_validation_profile(
+        profile = source_builders.build_validation_profile(
             "custom",
             {
                 "primary_goal": "defensive",

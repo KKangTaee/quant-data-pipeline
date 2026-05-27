@@ -46,6 +46,7 @@ Last Verified: 2026-05-27
 | Weighted portfolio builder service | `app/services/backtest_weighted_portfolio.py` |
 | Saved portfolio replay service | `app/services/backtest_saved_portfolio_replay.py` |
 | Practical Validation service | `app/services/backtest_practical_validation.py` |
+| Practical Validation source/profile service helper | `app/services/backtest_practical_validation_source.py` |
 | Practical Validation curve service helper | `app/services/backtest_practical_validation_curve.py` |
 | Practical Validation provider context service helper | `app/services/backtest_practical_validation_provider_context.py` |
 | Backtest evidence read model service | `app/services/backtest_evidence_read_model.py` |
@@ -64,7 +65,8 @@ Last Verified: 2026-05-27
 | File | Responsibility |
 |---|---|
 | `app/services/backtest_practical_validation.py` | Streamlit-free Practical Validation result build wrapper, source/result registry append, Practical Validation / Final Review handoff contract, provider gap row / collection plan / ingestion job orchestration |
-| `app/services/backtest_practical_validation_diagnostics.py` | Streamlit-free Practical Validation selection source builders, validation profile, compact curve snapshots, 12개 diagnostic result 생성 |
+| `app/services/backtest_practical_validation_source.py` | Streamlit-free validation profile / selection source builder helper |
+| `app/services/backtest_practical_validation_diagnostics.py` | Streamlit-free Practical Validation compact curve snapshots, diagnostics orchestration, 12개 diagnostic result 생성 |
 | `app/services/backtest_practical_validation_replay.py` | Streamlit-free Practical Validation replay service. source를 최신 DB 데이터 기준으로 다시 실행하거나 저장 기간 그대로 재현해 component / portfolio curve evidence 생성 |
 | `app/services/backtest_practical_validation_curve.py` | Streamlit-free curve normalize, provenance, benchmark parity helper |
 | `app/services/backtest_practical_validation_provider_context.py` | Streamlit-free provider / macro loader output to diagnostic evidence context adapter |

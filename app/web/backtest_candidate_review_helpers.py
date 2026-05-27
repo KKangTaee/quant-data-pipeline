@@ -10,10 +10,10 @@ import streamlit as st
 
 from app.services.backtest_practical_validation import prepare_practical_validation_source_handoff
 from app.services.backtest_practical_validation_diagnostics import (
-    build_selection_source_from_candidate_draft,
     compact_benchmark_curve_snapshot_from_bundle,
     compact_curve_snapshot_from_bundle,
 )
+from app.services.backtest_practical_validation_source import build_selection_source_from_candidate_draft
 from app.web.backtest_strategy_catalog import strategy_key_to_display_name as catalog_strategy_key_to_display_name
 from app.runtime import CURRENT_CANDIDATE_REGISTRY_FILE
 from app.runtime.backtest import STRICT_BENCHMARK_CONTRACT_CANDIDATE_EQUAL_WEIGHT

@@ -10,8 +10,9 @@ Created: 2026-05-27
 - Completed Task 6 `practical-validation-helper-boundary`.
 - Practical Validation curve / provider context helpers now live under `app/services`.
 - Current boundary lint: PASS, hard violations none, advisories none.
-- Next implementation task: `7. practical-validation-diagnostics-split`.
+- Started Task 7 `practical-validation-diagnostics-split`.
+- `7-01`: split validation profile / selection source builders into `app/services/backtest_practical_validation_source.py`.
 
 ## Current Next Step
 
-Start Task 7 with detailed code reading for `app/services/backtest_practical_validation_diagnostics.py` and decide the first safe helper extraction slice.
+Continue Task 7 with `7-02`: read curve context helpers in `app/services/backtest_practical_validation_diagnostics.py` and decide the first safe curve extraction slice.

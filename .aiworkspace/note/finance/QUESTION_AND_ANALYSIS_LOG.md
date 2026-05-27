@@ -21,6 +21,18 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-27 - Diagnostics split은 source/profile helper부터 시작한다
+- User request:
+  - UI-engine cleanup의 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - 큰 Practical Validation diagnostics service를 한 번에 쪼개지 않고, 안전한 helper family부터 분리해야 함.
+- Analysis result:
+  - `app/services/backtest_practical_validation_source.py`를 추가해 validation profile과 Clean V2 selection source builder를 분리했다.
+  - diagnostics module은 기존 public builder import 호환성을 유지하고, Compare / Candidate Review / Practical Validation service는 새 source helper를 직접 import한다.
+  - stress / sensitivity / provider / scoring 계산식은 바꾸지 않았다.
+- Follow-up:
+  - 다음은 Task 7-02로 curve context helper를 깊게 분석한 뒤 분리한다.
+
 ### 2026-05-27 - Practical Validation helper는 service boundary로 이동한다
 - User request:
   - UI-engine boundary cleanup의 다음 작업 진행을 요청함.
