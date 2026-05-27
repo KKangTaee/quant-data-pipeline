@@ -3997,3 +3997,11 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/canonical-finance-note-paths/`를 열고 legacy `.note/finance` 직접 참조를 정리했다.
   - `app/workspace_paths.py`를 추가해 `registries`, `saved`, `run_history`, `run_artifacts`, docs path를 canonical `.aiworkspace/note/finance` 기준으로 통일했다.
   - Overview browser smoke에서 Current Candidates / Paper Tracking / Proposal Drafts / Recent Runs가 canonical JSONL 데이터를 읽는 것을 확인했다.
+- Overview Market Intelligence research:
+  - `.aiworkspace/note/finance/researches/active/2026-05-overview-market-intelligence/`를 열고 Overview 개편 feasibility를 조사했다.
+  - Coverage 1000/2000 top movers와 sector / industry leadership은 기존 DB price/profile로 가능하다는 결론을 남겼다.
+  - FOMC calendar는 low-risk next slice, earnings calendar는 provider/API/persistence 결정 이후로 분리했다.
+- Overview Market Intelligence first slice:
+  - `.aiworkspace/note/finance/phases/active/overview-market-intelligence/`와 `.aiworkspace/note/finance/tasks/active/overview-market-intelligence-first-slice/`에서 scope lock 후 구현했다.
+  - `app/services/overview_market_intelligence.py`가 local DB 기반 market movers와 sector / industry leadership snapshot을 생성한다.
+  - Overview는 Market Movers / Sector-Industry / Events / Candidate Ops 탭 구조로 바뀌었고, calendar ingestion은 후속 task로 남겼다.

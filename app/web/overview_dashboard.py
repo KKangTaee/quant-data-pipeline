@@ -9,7 +9,11 @@ import pandas as pd
 import streamlit as st
 
 from app.web.backtest_ui_components import render_badge_strip, render_status_card_grid
-from app.web.overview_dashboard_helpers import load_overview_dashboard_snapshot
+from app.web.overview_dashboard_helpers import (
+    load_overview_dashboard_snapshot,
+    load_overview_group_leadership_snapshot,
+    load_overview_market_movers_snapshot,
+)
 
 
 # Render one ranked candidate card in the Overview priority section.
@@ -75,22 +79,237 @@ def _render_next_actions(actions: list[dict[str, Any]]) -> None:
             st.caption(str(action.get("detail") or ""))
 
 
-# Render the top-level product dashboard for Workspace > Overview.
-def render_overview_dashboard(
+# Return a compact display value for market-intelligence snapshot metadata.
+def _snapshot_value(value: Any) -> str:
+    if value in (None, ""):
+        return "-"
+    return str(value)
+
+
+def _render_snapshot_status_cards(snapshot: dict[str, Any]) -> None:
+    coverage = dict(snapshot.get("coverage") or {})
+    stale_days = coverage.get("stale_days")
+    stale_tone = "positive" if stale_days is not None and int(stale_days) <= 3 else "warning"
+    returnable = coverage.get("returnable_count") or 0
+    universe_count = coverage.get("universe_count") or 0
+    coverage_text = f"{returnable} / {universe_count}" if universe_count else "-"
+    render_status_card_grid(
+        [
+            {
+                "title": "Effective Market Date",
+                "value": _snapshot_value(coverage.get("effective_end_date")),
+                "detail": f"raw latest: {_snapshot_value(coverage.get('latest_raw_date'))}",
+                "tone": "positive" if coverage.get("effective_end_date") else "warning",
+            },
+            {
+                "title": "Returnable Coverage",
+                "value": coverage_text,
+                "detail": f"missing: {coverage.get('missing_count') or 0}",
+                "tone": "positive" if returnable else "warning",
+            },
+            {
+                "title": "Stale Days",
+                "value": _snapshot_value(stale_days),
+                "detail": "calendar days from effective date",
+                "tone": stale_tone,
+            },
+            {
+                "title": "Snapshot Status",
+                "value": snapshot.get("status") or "-",
+                "detail": f"coverage {snapshot.get('universe_limit') or '-'}",
+                "tone": "positive" if snapshot.get("status") == "OK" else "warning",
+            },
+        ]
+    )
+
+
+def _render_snapshot_warnings(snapshot: dict[str, Any]) -> None:
+    for warning in snapshot.get("warnings") or []:
+        st.warning(str(warning))
+
+
+def _build_return_bar_chart(rows: pd.DataFrame) -> alt.Chart:
+    chart_rows = rows.copy()
+    if chart_rows.empty:
+        chart_rows = pd.DataFrame([{"Symbol": "No Data", "Return %": 0.0}])
+    return (
+        alt.Chart(chart_rows)
+        .mark_bar(cornerRadiusEnd=3)
+        .encode(
+            x=alt.X("Return %:Q", title="Return %"),
+            y=alt.Y("Symbol:N", sort="-x", title=None),
+            color=alt.Color(
+                "Return %:Q",
+                scale=alt.Scale(range=["#d97706", "#0f766e"]),
+                legend=None,
+            ),
+            tooltip=["Rank:O", "Symbol:N", "Name:N", "Return %:Q", "Sector:N", "Industry:N"],
+        )
+        .properties(height=max(220, min(520, 28 * len(chart_rows))))
+    )
+
+
+def _render_market_movers_tab() -> None:
+    st.markdown("### Market Movers")
+    controls = st.columns([1, 1.15, 1, 1], gap="small")
+    universe_limit = int(
+        controls[0].selectbox(
+            "Coverage",
+            [1000, 2000],
+            index=0,
+            key="overview_market_movers_coverage",
+        )
+    )
+    period = str(
+        controls[1].radio(
+            "Period",
+            ["daily", "weekly", "monthly"],
+            index=0,
+            horizontal=True,
+            format_func=lambda value: {"daily": "Daily", "weekly": "Weekly", "monthly": "Monthly"}[value],
+            key="overview_market_movers_period",
+        )
+    )
+    top_n = int(
+        controls[2].number_input(
+            "Top N",
+            min_value=5,
+            max_value=100,
+            value=20,
+            step=5,
+            key="overview_market_movers_top_n",
+        )
+    )
+    if controls[3].button(
+        "Reload DB Snapshot",
+        key="overview_market_movers_reload",
+        use_container_width=True,
+    ):
+        st.session_state["overview_market_movers_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    reloaded_at = st.session_state.get("overview_market_movers_reloaded_at")
+    if reloaded_at:
+        st.caption(f"Last DB snapshot reload request: {reloaded_at}")
+
+    snapshot = load_overview_market_movers_snapshot(
+        universe_limit=universe_limit,
+        period=period,
+        top_n=top_n,
+    )
+    _render_snapshot_status_cards(snapshot)
+    _render_snapshot_warnings(snapshot)
+
+    rows = snapshot.get("rows")
+    if not isinstance(rows, pd.DataFrame) or rows.empty:
+        st.info("DB-backed market mover rows are not available for the selected controls.")
+        return
+
+    left, right = st.columns([0.95, 1.25], gap="medium")
+    with left:
+        st.altair_chart(_build_return_bar_chart(rows), width="stretch")
+    with right:
+        st.dataframe(rows, width="stretch", hide_index=True)
+
+
+def _render_sector_industry_tab() -> None:
+    st.markdown("### Sector / Industry Leadership")
+    controls = st.columns([1, 1.1, 1, 1], gap="small")
+    universe_limit = int(
+        controls[0].selectbox(
+            "Coverage",
+            [1000, 2000],
+            index=1,
+            key="overview_group_leadership_coverage",
+        )
+    )
+    group_by = str(
+        controls[1].radio(
+            "Group",
+            ["sector", "industry"],
+            index=0,
+            horizontal=True,
+            format_func=lambda value: {"sector": "Sector", "industry": "Industry"}[value],
+            key="overview_group_leadership_group",
+        )
+    )
+    top_n = int(
+        controls[2].number_input(
+            "Top N",
+            min_value=5,
+            max_value=100,
+            value=10,
+            step=5,
+            key="overview_group_leadership_top_n",
+        )
+    )
+    min_group_size = int(
+        controls[3].number_input(
+            "Min Symbols",
+            min_value=1,
+            max_value=50,
+            value=5,
+            step=1,
+            key="overview_group_leadership_min_symbols",
+        )
+    )
+
+    snapshot = load_overview_group_leadership_snapshot(
+        universe_limit=universe_limit,
+        group_by=group_by,
+        top_n=top_n,
+        min_group_size=min_group_size,
+    )
+    _render_snapshot_status_cards(snapshot)
+    _render_snapshot_warnings(snapshot)
+
+    rows = snapshot.get("rows")
+    if not isinstance(rows, pd.DataFrame) or rows.empty:
+        st.info("DB-backed group leadership rows are not available for the selected controls.")
+        return
+    st.dataframe(rows, width="stretch", hide_index=True)
+
+
+def _render_events_tab() -> None:
+    st.markdown("### Events")
+    render_status_card_grid(
+        [
+            {
+                "title": "FOMC Calendar",
+                "value": "Next Slice",
+                "detail": "official Fed source, free web parse",
+                "tone": "positive",
+            },
+            {
+                "title": "Earnings Calendar",
+                "value": "Prototype Later",
+                "detail": "free library / parser source label required",
+                "tone": "warning",
+            },
+            {
+                "title": "Data Flow",
+                "value": "Ingestion First",
+                "detail": "store before Overview display",
+                "tone": "neutral",
+            },
+        ]
+    )
+    cols = st.columns([1, 1, 2], gap="small")
+    cols[0].button("Refresh FOMC Calendar", key="overview_events_refresh_fomc_disabled", disabled=True)
+    cols[1].button("Refresh Earnings Calendar", key="overview_events_refresh_earnings_disabled", disabled=True)
+    cols[2].caption("Calendar collectors are intentionally separated from the first DB-backed market scan slice.")
+
+
+def _render_candidate_ops_tab(
     *,
+    snapshot: dict[str, Any],
+    latest_result: dict[str, Any] | None,
+    recent_results: list[dict[str, Any]],
     runtime_marker: str,
     loaded_at: datetime,
     git_sha: str | None,
-    latest_result: dict[str, Any] | None = None,
-    recent_results: list[dict[str, Any]] | None = None,
-    render_runtime_snapshot: Callable[[], None] | None = None,
+    render_runtime_snapshot: Callable[[], None] | None,
 ) -> None:
-    snapshot = load_overview_dashboard_snapshot()
     kpis = dict(snapshot["kpis"])
-    recent_results = recent_results or []
-
-    st.title("Finance Console")
-    st.caption("후보 발굴, 운영 기록, Portfolio Proposal, 다음 행동을 한 화면에서 읽는 퀀트 워크벤치 대시보드입니다.")
 
     render_status_card_grid(
         [
@@ -178,3 +397,40 @@ def render_overview_dashboard(
                     {"title": "Git SHA", "value": git_sha or "unknown", "tone": "neutral"},
                 ]
             )
+
+
+# Render the top-level product dashboard for Workspace > Overview.
+def render_overview_dashboard(
+    *,
+    runtime_marker: str,
+    loaded_at: datetime,
+    git_sha: str | None,
+    latest_result: dict[str, Any] | None = None,
+    recent_results: list[dict[str, Any]] | None = None,
+    render_runtime_snapshot: Callable[[], None] | None = None,
+) -> None:
+    snapshot = load_overview_dashboard_snapshot()
+    recent_results = recent_results or []
+
+    st.title("Finance Console")
+    st.caption("시장 스캔, 후보 운영, Portfolio Proposal, 다음 행동을 한 화면에서 읽는 퀀트 워크벤치 대시보드입니다.")
+
+    market_tab, group_tab, events_tab, candidate_tab = st.tabs(
+        ["Market Movers", "Sector / Industry", "Events", "Candidate Ops"]
+    )
+    with market_tab:
+        _render_market_movers_tab()
+    with group_tab:
+        _render_sector_industry_tab()
+    with events_tab:
+        _render_events_tab()
+    with candidate_tab:
+        _render_candidate_ops_tab(
+            snapshot=snapshot,
+            latest_result=latest_result,
+            recent_results=recent_results,
+            runtime_marker=runtime_marker,
+            loaded_at=loaded_at,
+            git_sha=git_sha,
+            render_runtime_snapshot=render_runtime_snapshot,
+        )

@@ -27,8 +27,8 @@
 | `app/web/streamlit_app.py` | Finance Console top navigation, page entry, page-level routing |
 | `app/web/reference_guides.py` | `Reference > Guides`의 제품형 portfolio workflow guide, flowchart, decision gate, reference drawer render |
 | `app/web/ops_review.py` | `Operations > Ops Review`의 triage flow, 웹앱 run health, action inbox, failure artifact, log, system snapshot dashboard render |
-| `app/web/overview_dashboard.py` | `Workspace > Overview`의 후보 Top 3, funnel chart, next actions, recent activity, system snapshot dashboard render |
-| `app/web/overview_dashboard_helpers.py` | Overview dashboard용 current candidate / Pre-Live / proposal / history / saved portfolio 집계, 후보 우선순위 scoring, funnel / activity table helper |
+| `app/web/overview_dashboard.py` | `Workspace > Overview`의 Market Movers, Sector / Industry, Events placeholder, Candidate Ops tab render |
+| `app/web/overview_dashboard_helpers.py` | Overview dashboard용 current candidate / Pre-Live / proposal / history / saved portfolio 집계, 후보 우선순위 scoring, market intelligence service wrapper |
 | `app/web/backtest_strategy_catalog.py` | Strategy display name, strategy key, family variant 선택 매핑 |
 | `app/web/backtest_common.py` | Backtest 공용 preset / session state / 3단계 stage routing compatibility / ticker universe input / real-money contract / guardrail input / label 변환 helper |
 | `app/web/backtest_workflow_routes.py` | Backtest visible stage 3개와 legacy panel route를 매핑하는 route helper |
@@ -72,6 +72,7 @@
 | `app/services/backtest_practical_validation_curve.py` | Streamlit-free Practical Validation curve normalize / compact records / curve provenance / benchmark parity helper |
 | `app/services/backtest_practical_validation_provider_context.py` | Streamlit-free Practical Validation provider context adapter. ETF operability / holdings / exposure / FRED macro loader 결과를 compact coverage와 diagnostic evidence로 변환 |
 | `app/services/backtest_evidence_read_model.py` | Streamlit-free evidence read model service. Final Review final decision status / saved decision table row / Selected Dashboard evidence check row를 담당 |
+| `app/services/overview_market_intelligence.py` | Streamlit-free Overview market intelligence service. Coverage 1000 / 2000 top movers, sector / industry leadership, effective market date, stale / coverage warning payload를 담당 |
 
 ## App / Runtime
 

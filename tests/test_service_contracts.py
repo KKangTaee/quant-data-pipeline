@@ -5,6 +5,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from datetime import date
 from pathlib import Path
 from unittest.mock import patch
 
@@ -103,6 +104,7 @@ import app.services.backtest_practical_validation
 import app.services.backtest_practical_validation_provider_context
 import app.services.backtest_practical_validation_replay
 import app.services.backtest_practical_validation_source
+import app.services.overview_market_intelligence
 print("streamlit" in sys.modules)
 """
         result = subprocess.run(
@@ -352,6 +354,141 @@ class BacktestRuntimeContractTests(unittest.TestCase):
                 strategy_key="equal_weight",
                 input_params={},
             )
+
+
+class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
+    def _query_fn(self, db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+        del db_name, params
+        if "MAX(`date`) AS latest_raw_date" in sql:
+            return [{"latest_raw_date": "2026-05-19"}]
+        if "GROUP BY `date`" in sql:
+            dates = [
+                "2026-05-18",
+                "2026-05-15",
+                "2026-05-14",
+                "2026-05-13",
+                "2026-05-12",
+                "2026-05-11",
+                "2026-05-08",
+                "2026-05-07",
+                "2026-05-06",
+                "2026-05-05",
+                "2026-05-04",
+                "2026-05-01",
+                "2026-04-30",
+                "2026-04-29",
+                "2026-04-28",
+                "2026-04-27",
+                "2026-04-24",
+                "2026-04-23",
+                "2026-04-22",
+                "2026-04-21",
+                "2026-04-20",
+                "2026-04-17",
+            ]
+            return [{"date": item, "usable_rows": 1200} for item in dates]
+        if "FROM nyse_asset_profile" in sql:
+            return [
+                {
+                    "symbol": "AAA",
+                    "long_name": "AAA Corp",
+                    "sector": "Technology",
+                    "industry": "Software",
+                    "market_cap": 100,
+                },
+                {
+                    "symbol": "BBB",
+                    "long_name": "BBB Corp",
+                    "sector": "Technology",
+                    "industry": "Software",
+                    "market_cap": 300,
+                },
+                {
+                    "symbol": "CCC",
+                    "long_name": "CCC Corp",
+                    "sector": "Healthcare",
+                    "industry": "Medical Devices",
+                    "market_cap": 200,
+                },
+                {
+                    "symbol": "DDD",
+                    "long_name": "DDD Corp",
+                    "sector": "Energy",
+                    "industry": "Oil & Gas",
+                    "market_cap": 100,
+                },
+            ]
+        if "COALESCE(adj_close, close) AS price" in sql:
+            return [
+                {"symbol": "AAA", "date": "2026-05-15", "price": 100.0},
+                {"symbol": "AAA", "date": "2026-05-18", "price": 110.0},
+                {"symbol": "AAA", "date": "2026-04-17", "price": 100.0},
+                {"symbol": "BBB", "date": "2026-05-15", "price": 100.0},
+                {"symbol": "BBB", "date": "2026-05-18", "price": 130.0},
+                {"symbol": "BBB", "date": "2026-04-17", "price": 100.0},
+                {"symbol": "CCC", "date": "2026-05-15", "price": 100.0},
+                {"symbol": "CCC", "date": "2026-05-18", "price": 120.0},
+                {"symbol": "CCC", "date": "2026-04-17", "price": 100.0},
+                {"symbol": "DDD", "date": "2026-05-18", "price": 140.0},
+            ]
+        return []
+
+    def test_effective_market_date_skips_sparse_latest_raw_date(self) -> None:
+        from app.services.overview_market_intelligence import resolve_effective_market_dates
+
+        window = resolve_effective_market_dates(
+            period="daily",
+            min_price_rows=1000,
+            today=date(2026, 5, 28),
+            query_fn=self._query_fn,
+        )
+
+        self.assertEqual(window["status"], "OK")
+        self.assertEqual(window["latest_raw_date"], "2026-05-19")
+        self.assertEqual(window["effective_end_date"], "2026-05-18")
+        self.assertEqual(window["start_date"], "2026-05-15")
+        self.assertEqual(window["stale_days"], 10)
+
+    def test_market_movers_snapshot_ranks_returnable_symbols_and_reports_gaps(self) -> None:
+        from app.services.overview_market_intelligence import build_market_movers_snapshot
+
+        snapshot = build_market_movers_snapshot(
+            universe_limit=100,
+            period="daily",
+            top_n=5,
+            today=date(2026, 5, 28),
+            query_fn=self._query_fn,
+        )
+
+        self.assertEqual(snapshot["status"], "OK")
+        self.assertEqual(snapshot["coverage"]["universe_count"], 4)
+        self.assertEqual(snapshot["coverage"]["returnable_count"], 3)
+        self.assertEqual(snapshot["coverage"]["missing_count"], 1)
+        self.assertEqual(snapshot["rows"].iloc[0]["Symbol"], "BBB")
+        self.assertEqual(snapshot["rows"].iloc[0]["Return %"], 30.0)
+        self.assertIn("Latest raw price date is sparse", snapshot["warnings"][0])
+
+    def test_group_leadership_snapshot_uses_monthly_weighted_and_equal_returns(self) -> None:
+        from app.services.overview_market_intelligence import build_group_leadership_snapshot
+
+        snapshot = build_group_leadership_snapshot(
+            universe_limit=100,
+            group_by="sector",
+            top_n=5,
+            min_group_size=1,
+            today=date(2026, 5, 28),
+            query_fn=self._query_fn,
+        )
+
+        self.assertEqual(snapshot["status"], "OK")
+        self.assertEqual(snapshot["date_window"]["period"], "monthly")
+        self.assertEqual(snapshot["coverage"]["returnable_count"], 3)
+        first_row = snapshot["rows"].iloc[0]
+        self.assertEqual(first_row["Group"], "Technology")
+        self.assertEqual(first_row["Symbols"], 2)
+        self.assertEqual(first_row["Equal Weight Return %"], 20.0)
+        self.assertEqual(first_row["Market Cap Weighted Return %"], 25.0)
+        self.assertEqual(first_row["Top Symbol"], "BBB")
 
 
 class PracticalValidationReplayServiceContractTests(unittest.TestCase):

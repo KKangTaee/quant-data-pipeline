@@ -5296,3 +5296,25 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `app/workspace_paths.py`를 canonical path helper로 두는 것이 registry / saved / run-history 참조를 가장 작게 통일하는 방법이다
 - Follow-up:
   - 서비스 계약 테스트에 canonical path contract를 추가했고, Browser smoke에서 Overview가 실제 JSONL 카운트와 Top 3 후보를 표시하는 것을 확인했다
+
+### 2026-05-28 - Overview를 market intelligence entry point로 바꿀 수 있는지 조사한다
+- User request:
+  - 사용자가 Overview에 일/주/月 top movers, 월별 sector / industry Top N, FOMC/earnings calendar 탭을 넣을 수 있는지 개발 전 조사와 청사진을 요청함
+- Interpreted goal:
+  - 현재 후보 우선순위 Overview를 유지하면서, DB-backed 시장 스캔과 이벤트 캘린더를 어떤 순서로 구현할지 판단해야 함
+- Analysis result:
+  - Coverage 1000/2000 top movers와 sector / industry leadership은 기존 `nyse_asset_profile`과 `nyse_price_history`로 바로 구현 가능하다
+  - 이벤트 캘린더는 FOMC는 공식 source로 가능하지만, earnings는 provider/API/persistence를 먼저 정해야 한다
+- Follow-up:
+  - 리서치 bundle은 `.aiworkspace/note/finance/researches/active/2026-05-overview-market-intelligence/`에 있고, 다음 구현은 사용자가 Overview 탭 구조를 승인하면 시작한다
+
+### 2026-05-28 - Overview Market Intelligence 1차 slice를 구현한다
+- User request:
+  - 사용자가 scope lock 포함 전체 흐름을 확인한 뒤 실제 작업 진행을 요청함
+- Interpreted goal:
+  - 무료 API / 크롤링 원칙을 지키되, 첫 구현은 이미 적재된 local DB만 사용해 Overview를 시장 스캔 entry point로 바꿔야 함
+- Analysis result:
+  - `nyse_asset_profile`과 `nyse_price_history`만으로 Coverage 1000/2000 movers와 sector / industry leadership은 구현 가능하다
+  - 화면에서 직접 원격 수집하지 않고, Events 탭은 ingestion 후속 slice를 받는 placeholder로 두는 것이 현재 구조와 가장 맞다
+- Follow-up:
+  - `app/services/overview_market_intelligence.py`와 Overview tabs를 추가했고, FOMC / earnings calendar ingestion은 다음 task 후보로 남겼다
