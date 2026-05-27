@@ -21,6 +21,18 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-27 - Diagnostics curve context helper는 service helper로 분리한다
+- User request:
+  - UI-engine cleanup의 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - Practical Validation diagnostics service 안에 남은 curve / 수익률 보조 계산을 별도 service helper로 분리해, diagnostics 파일이 orchestration에 더 가까워지게 해야 함.
+- Analysis result:
+  - `app/services/backtest_practical_validation_curve_context.py`를 추가해 compact curve snapshot, curve normalize, DB price proxy, component curve combination, window perturbation, aligned monthly returns helper를 분리했다.
+  - `_build_curve_context`는 component title / weight / ticker interpretation과 붙어 있어 이번 단계에서는 diagnostics에 남겼다.
+  - Compare / Candidate Review는 compact snapshot 함수를 새 curve context helper에서 직접 import한다.
+- Follow-up:
+  - 다음은 Task 7-03으로 stress / sensitivity helper cluster를 깊게 분석한 뒤 안전한 분리 단위를 정한다.
+
 ### 2026-05-27 - Diagnostics split은 source/profile helper부터 시작한다
 - User request:
   - UI-engine cleanup의 다음 단계 진행을 요청함.
@@ -31,7 +43,7 @@ Detailed historical analysis was archived on `2026-04-13`.
   - diagnostics module은 기존 public builder import 호환성을 유지하고, Compare / Candidate Review / Practical Validation service는 새 source helper를 직접 import한다.
   - stress / sensitivity / provider / scoring 계산식은 바꾸지 않았다.
 - Follow-up:
-  - 다음은 Task 7-02로 curve context helper를 깊게 분석한 뒤 분리한다.
+  - 해당 follow-up은 Task 7-02에서 curve context helper 분리로 처리했다.
 
 ### 2026-05-27 - Practical Validation helper는 service boundary로 이동한다
 - User request:

@@ -22,10 +22,14 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-27
+- Completed Task 7-02 under `.aiworkspace/note/finance/tasks/active/practical-validation-diagnostics-split/`.
+- Added `app/services/backtest_practical_validation_curve_context.py` for compact curve snapshots, curve normalize, DB price proxy, component curve combination, and monthly/window helpers.
+- Compare and Candidate Review now import compact curve snapshot helpers directly from the curve context service helper.
+- Next cleanup slice is Task 7-03 stress / sensitivity helper extraction.
 - Completed Task 7-01 under `.aiworkspace/note/finance/tasks/active/practical-validation-diagnostics-split/`.
 - Added `app/services/backtest_practical_validation_source.py` for validation profile and Clean V2 selection source builders.
 - Diagnostics service remains the public compatibility surface, while direct Compare / Candidate Review / Practical Validation service imports now use the source helper module.
-- Next cleanup slice is Task 7-02 curve context helper extraction.
+- Followed by Task 7-02 curve context helper extraction.
 - Completed `.aiworkspace/note/finance/tasks/active/practical-validation-helper-boundary/`.
 - Moved Practical Validation curve helper to `app/services/backtest_practical_validation_curve.py`.
 - Moved provider context adapter to `app/services/backtest_practical_validation_provider_context.py`.

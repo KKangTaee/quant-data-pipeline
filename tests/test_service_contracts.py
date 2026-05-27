@@ -133,6 +133,7 @@ print(importlib.util.find_spec("app.web.runtime") is None)
 import importlib.util
 import sys
 import app.services.backtest_practical_validation_curve
+import app.services.backtest_practical_validation_curve_context
 import app.services.backtest_practical_validation_provider_context
 print("streamlit" in sys.modules)
 print(importlib.util.find_spec("app.web.backtest_practical_validation_curve") is None)
@@ -150,7 +151,7 @@ print(importlib.util.find_spec("app.web.backtest_practical_validation_connectors
 
 class PracticalValidationDiagnosticsServiceContractTests(unittest.TestCase):
     def test_profile_builder_and_curve_snapshot_are_ui_neutral(self) -> None:
-        from app.services import backtest_practical_validation_diagnostics as diagnostics
+        from app.services import backtest_practical_validation_curve_context as curve_context
         from app.services import backtest_practical_validation_source as source_builders
 
         profile = source_builders.build_validation_profile(
@@ -163,7 +164,7 @@ class PracticalValidationDiagnosticsServiceContractTests(unittest.TestCase):
                 "alternative_success_metric": "lower_mdd",
             },
         )
-        curve = diagnostics.compact_curve_snapshot_from_bundle(
+        curve = curve_context.compact_curve_snapshot_from_bundle(
             {
                 "result_df": pd.DataFrame(
                     [
