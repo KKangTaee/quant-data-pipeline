@@ -15,7 +15,10 @@ Created: 2026-05-27
 - `7-02`: split shared curve context helpers into `app/services/backtest_practical_validation_curve_context.py`.
 - `7-03`: split rolling / stress / baseline / sensitivity helper family into `app/services/backtest_practical_validation_stress_sensitivity.py`.
 - `7-04`: moved source component table helper into source service helper and made diagnostics compatibility exports explicit.
+- Completed Task 8 `runtime-wrapper-cleanup`.
+- `8-01`~`8-02`: mapped `app/runtime/backtest.py` function families and public caller surface.
+- `8-03`~`8-04`: added result bundle compatibility/shape tests and split `build_backtest_result_bundle` into `app/runtime/backtest_result_bundle.py`.
 
 ## Current Next Step
 
-Start Task 8 `runtime-wrapper-cleanup` with runtime wrapper function-family mapping before any split.
+Start Task 9 `boundary-contract-hardening`.

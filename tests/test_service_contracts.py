@@ -92,6 +92,7 @@ import sys
 import app.runtime
 import app.runtime.backtest
 import app.runtime.candidate_library
+import app.runtime.backtest_result_bundle
 import app.services.backtest_evidence_read_model
 import app.services.backtest_practical_validation_curve
 import app.services.backtest_practical_validation_diagnostics
@@ -211,6 +212,75 @@ class PracticalValidationDiagnosticsServiceContractTests(unittest.TestCase):
         self.assertEqual([row["Total Balance"] for row in curve], [100.0, 98.0])
         self.assertAlmostEqual(curve[0]["Total Return"], 0.0)
         self.assertAlmostEqual(curve[1]["Total Return"], -0.02)
+
+
+class BacktestRuntimeContractTests(unittest.TestCase):
+    def test_result_bundle_public_compatibility_contract_is_preserved(self) -> None:
+        import app.runtime
+        from app.runtime import backtest as runtime_backtest
+        from app.runtime import backtest_result_bundle
+
+        self.assertIs(
+            runtime_backtest.build_backtest_result_bundle,
+            backtest_result_bundle.build_backtest_result_bundle,
+        )
+        self.assertIs(
+            app.runtime.build_backtest_result_bundle,
+            backtest_result_bundle.build_backtest_result_bundle,
+        )
+
+    def test_result_bundle_contract_sorts_dates_and_keeps_metadata(self) -> None:
+        from app.runtime.backtest_result_bundle import build_backtest_result_bundle
+
+        bundle = build_backtest_result_bundle(
+            pd.DataFrame(
+                [
+                    {"Date": "2020-02-29", "Total Balance": 102.0, "Total Return": 0.02},
+                    {"Date": "2020-01-31", "Total Balance": 100.0, "Total Return": 0.0},
+                ]
+            ),
+            strategy_name="Global Relative Strength",
+            strategy_key="global_relative_strength",
+            input_params={
+                "tickers": ["SPY", "TLT"],
+                "start": "2020-01-01",
+                "end": "2020-02-29",
+                "timeframe": "1d",
+                "option": "month_end",
+                "rebalance_interval": 1,
+                "score_lookback_months": [3, 6, 12],
+            },
+            warnings=["price freshness warning"],
+        )
+
+        self.assertEqual(bundle["strategy_name"], "Global Relative Strength")
+        self.assertEqual(
+            [date.strftime("%Y-%m-%d") for date in bundle["result_df"]["Date"]],
+            ["2020-01-31", "2020-02-29"],
+        )
+        self.assertEqual(
+            [date.strftime("%Y-%m-%d") for date in bundle["chart_df"]["Date"]],
+            ["2020-01-31", "2020-02-29"],
+        )
+        self.assertEqual(bundle["meta"]["strategy_family"], "Global Relative Strength")
+        self.assertEqual(bundle["meta"]["result_rows"], 2)
+        self.assertEqual(bundle["meta"]["actual_result_start"], "2020-01-31")
+        self.assertEqual(bundle["meta"]["actual_result_end"], "2020-02-29")
+        self.assertEqual(bundle["meta"]["tickers"], ["SPY", "TLT"])
+        self.assertEqual(bundle["meta"]["warnings"], ["price freshness warning"])
+        self.assertEqual(bundle["meta"]["score_lookback_months"], [3, 6, 12])
+        self.assertFalse(bundle["summary_df"].empty)
+
+    def test_result_bundle_rejects_missing_required_columns(self) -> None:
+        from app.runtime.backtest_result_bundle import build_backtest_result_bundle
+
+        with self.assertRaisesRegex(ValueError, "missing required columns"):
+            build_backtest_result_bundle(
+                pd.DataFrame([{"Date": "2020-01-31", "Total Balance": 100.0}]),
+                strategy_name="Equal Weight",
+                strategy_key="equal_weight",
+                input_params={},
+            )
 
 
 class PracticalValidationReplayServiceContractTests(unittest.TestCase):

@@ -10,7 +10,7 @@ Created: 2026-05-27
 | `0. ui-engine-boundary-cleanup-audit` | phase/task design, current code audit | Complete | hard violation 없음, advisory 3건과 Task 6~9 방향 확정 |
 | `6. practical-validation-helper-boundary` | Practical Validation curve / provider context helper 이동 | Complete | `app.services/app.runtime -> app.web` advisory 제거 |
 | `7. practical-validation-diagnostics-split` | 큰 diagnostics service 책임 분할 | Complete | `7-01`~`7-04` 완료; diagnostics public compatibility contract 명시 |
-| `8. runtime-wrapper-cleanup` | 큰 runtime wrapper 구조 분석과 낮은 위험 split | Planned | `app/runtime/backtest.py`를 바로 쪼개지 않고 characterization부터 진행 |
+| `8. runtime-wrapper-cleanup` | 큰 runtime wrapper 구조 분석과 낮은 위험 split | Complete | `8-01`~`8-04` 완료; result bundle helper를 `app/runtime/backtest_result_bundle.py`로 분리 |
 | `9. boundary-contract-hardening` | lint / test / docs hardening | Planned | advisory 0건 이후 `app.web` import를 hard fail로 승격 |
 
 ## Task 0. Cleanup Audit
@@ -86,10 +86,10 @@ Created: 2026-05-27
 
 | Step | Goal | Notes |
 | --- | --- | --- |
-| `8-01` | runtime function-family map 작성 | equal weight, GTAA, GRS, risk parity, dual momentum, quality/value, policy surface |
-| `8-02` | import cycle / public API 사용처 확인 | `rg` 기반 호출처 확인 |
-| `8-03` | characterization test 후보 추가 | result bundle / error class / helper contract 우선 |
-| `8-04` | 낮은 위험 split 적용 | 공통 policy / preflight helper 등 안전한 후보만 |
+| `8-01` | runtime function-family map 작성 | Complete |
+| `8-02` | import cycle / public API 사용처 확인 | Complete |
+| `8-03` | characterization test 후보 추가 | Complete |
+| `8-04` | 낮은 위험 split 적용 | Complete: result bundle helper split |
 
 주의:
 

@@ -3985,3 +3985,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/practical-validation-replay-service-boundary/`를 열고 Streamlit-free replay helper를 `app/services/backtest_practical_validation_replay.py`로 이동했다.
   - Practical Validation UI는 replay mode 선택 / 버튼 / session state / 결과 표시만 맡고, service가 recheck plan과 actual replay result를 만든다.
   - `tests/test_service_contracts.py`에 replay plan / blocked replay contract를 추가했다.
+- UI Engine Boundary Cleanup Task 8:
+  - `.aiworkspace/note/finance/tasks/active/runtime-wrapper-cleanup/`를 열고 `app/runtime/backtest.py` 함수군과 public caller surface를 지도화했다.
+  - `build_backtest_result_bundle`을 `app/runtime/backtest_result_bundle.py`로 분리하되 `app.runtime.backtest` / `app.runtime` public export는 유지했다.
+  - result bundle compatibility / shape contract tests를 추가했고 다음 작업은 Task 9 boundary contract hardening이다.

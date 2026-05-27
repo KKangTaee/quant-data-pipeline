@@ -60,6 +60,7 @@ app/web/streamlit_app.py
 | `app/services/backtest_weighted_portfolio.py` | Weighted portfolio result bundle construction from compared strategy bundles |
 | `app/services/backtest_saved_portfolio_replay.py` | Saved portfolio replay strategy rerun, weighted bundle creation, replay source / history context assembly |
 | `app/runtime/backtest.py` | UI payload를 DB-backed runtime 실행으로 변환 |
+| `app/runtime/backtest_result_bundle.py` | runtime 결과를 UI-facing result bundle / summary / chart / metadata contract로 변환 |
 | `finance/loaders/*` | DB read path와 point-in-time snapshot 조회 |
 | `finance/engine.py` | price-based strategy orchestration wrapper |
 | `finance/transform.py` | moving average, interval return, date alignment 같은 전처리 |
@@ -69,6 +70,8 @@ app/web/streamlit_app.py
 ## Runtime wrapper 기준
 
 `app/runtime/backtest.py`의 `run_*_backtest_from_db(...)` 함수는 제품 실행 경로의 중심이다.
+`build_backtest_result_bundle(...)` 구현은 `app/runtime/backtest_result_bundle.py`가 담당하지만,
+기존 caller 호환성을 위해 `app.runtime.backtest`와 `app.runtime`에서도 같은 이름으로 계속 export한다.
 
 대표 함수:
 

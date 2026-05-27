@@ -60,6 +60,7 @@ Last Verified: 2026-05-27
 | DB schema | `finance/data/db/schema.py` |
 | ETF provider ingestion | `finance/data/etf_provider.py` |
 | Macro ingestion | `finance/data/macro.py` |
+| Backtest result bundle runtime helper | `app/runtime/backtest_result_bundle.py` |
 | Service contract tests | `tests/test_service_contracts.py` |
 
 ## Practical Validation Core Files

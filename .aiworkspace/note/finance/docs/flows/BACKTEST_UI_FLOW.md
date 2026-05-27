@@ -53,6 +53,7 @@ UI form, payload 복원, candidate review, history replay, candidate replay, sav
 | `app/web/final_selected_portfolio_dashboard.py` | `Operations > Selected Portfolio Dashboard` 화면 render. Final Review에서 선정된 포트폴리오를 운영 대상으로 읽고 compact selected portfolio picker / Snapshot / tabbed Performance Recheck / Portfolio Monitoring Review Signals / optional Actual Allocation / Audit을 보여준다 |
 | `app/web/final_selected_portfolio_dashboard_helpers.py` | Selected Portfolio Dashboard의 table / component / value / holding input / drift / alert preview / filter helper. Evidence table은 service read model을 표시한다 |
 | `app/runtime/backtest.py` | UI payload를 실행 가능한 runtime call로 변환 |
+| `app/runtime/backtest_result_bundle.py` | Backtest runtime 결과를 UI가 읽는 summary / chart / metadata bundle로 변환 |
 | `app/runtime/candidate_registry.py` | current candidate / review note / pre-live registry JSONL read / append helper |
 | `app/runtime/portfolio_proposal.py` | portfolio proposal draft JSONL read / append helper |
 | `app/runtime/paper_portfolio_ledger.py` | paper portfolio tracking ledger JSONL read / append helper |

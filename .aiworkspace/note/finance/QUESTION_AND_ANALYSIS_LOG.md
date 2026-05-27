@@ -5263,3 +5263,14 @@ Detailed historical analysis was archived on `2026-04-13`.
   - UI는 mode 선택, 실행 버튼, session state, 결과 표시만 유지하고 recheck period plan과 actual replay result construction은 service가 맡는 구조가 적절하다
 - Follow-up:
   - `app/services/backtest_practical_validation_replay.py`로 이동하고 replay plan / blocked replay contract tests를 추가했다
+
+### 2026-05-27 - Runtime wrapper cleanup은 result bundle helper부터 분리한다
+- User request:
+  - 사용자가 UI-engine boundary cleanup의 다음 단계 진행을 요청함
+- Interpreted goal:
+  - `app/runtime/backtest.py`를 바로 대규모로 쪼개지 않고 함수군과 public API를 확인한 뒤, 낮은 위험 split부터 적용해야 함
+- Analysis result:
+  - public runtime wrapper와 Real-Money / strict policy surface는 아직 `app.runtime.backtest` 호환성이 중요하므로 유지한다
+  - 순수 result bundle 생성 helper는 DB / strategy 실행에 관여하지 않아 가장 안전한 첫 split 후보였다
+- Follow-up:
+  - `app/runtime/backtest_result_bundle.py`로 `build_backtest_result_bundle`을 이동하고 compatibility / shape contract tests를 추가했다
