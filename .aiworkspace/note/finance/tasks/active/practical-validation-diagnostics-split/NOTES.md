@@ -49,3 +49,24 @@ Created: 2026-05-27
 - Kept diagnostics re-export compatibility for compact snapshot builders.
 - Diagnostics line count dropped from 2541 to 2258.
 - No calculation formulas or Practical Validation result schema were changed.
+
+## 7-03 Choice
+
+- Add `app/services/backtest_practical_validation_stress_sensitivity.py`.
+- Move the helper family that is independent from Streamlit rendering and provider ingestion:
+  - rolling validation evidence
+  - static stress window rows and stress interpretation
+  - alternative baseline challenge rows
+  - sensitivity rows and sensitivity interpretation
+  - component correlation / risk contribution evidence
+  - market context evidence
+  - local run history overfit audit
+- Keep `_operability_rows` in diagnostics for now because it still depends on component ticker inference and price loader lookup.
+
+## 7-03 Result
+
+- Added `app/services/backtest_practical_validation_stress_sensitivity.py`.
+- Diagnostics now imports stress / sensitivity evidence helpers from the new service module.
+- Service import smoke test now imports the new stress / sensitivity helper.
+- Diagnostics line count dropped from 2258 to 1507.
+- No calculation formulas, Practical Validation result schema, or Streamlit UI behavior were changed.

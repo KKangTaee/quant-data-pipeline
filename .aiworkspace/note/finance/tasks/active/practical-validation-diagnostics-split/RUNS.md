@@ -65,3 +65,35 @@ git diff --check
 - Service contract tests: PASS, 17 tests.
 - Diff check: PASS.
 - Browser QA: not applicable because `7-02` changes service helper ownership/import paths only, with no visible Streamlit flow or displayed data shape change.
+
+## 7-03 Analysis Commands
+
+```bash
+rg -n "^def |^class " app/services/backtest_practical_validation_diagnostics.py
+rg -n "_load_static_stress_windows|_period_curve_metrics|_stress_window_rows|_stress_interpretation_result|_build_overfit_audit|_baseline_rows|_sensitivity_rows|_worst_delta_row|_sensitivity_interpretation_result|_correlation_risk_evidence|_market_context_evidence" app/services/backtest_practical_validation_diagnostics.py app tests -g '*.py'
+rg -n "json\\.|\\bjson\\b|uuid4|load_backtest_run_history|np\\." app/services/backtest_practical_validation_diagnostics.py
+wc -l app/services/backtest_practical_validation_diagnostics.py app/services/backtest_practical_validation_stress_sensitivity.py
+```
+
+## 7-03 Analysis Result
+
+- Rolling validation, static stress windows, baseline challenge, sensitivity rows, sensitivity interpretation, correlation risk, market context, and overfit audit can move together as a Streamlit-free helper family.
+- `_operability_rows` remains in diagnostics because it still depends on component ticker inference and direct price loader lookup.
+- Diagnostics line count is now 1507, and the new stress/sensitivity helper is 786 lines.
+
+## 7-03 Verification Commands
+
+```bash
+.venv/bin/python -m py_compile app/services/backtest_practical_validation_stress_sensitivity.py app/services/backtest_practical_validation_diagnostics.py tests/test_service_contracts.py
+.venv/bin/python .aiworkspace/plugins/quant-finance-workflow/scripts/check_ui_engine_boundary.py
+.venv/bin/python -m unittest tests.test_service_contracts
+git diff --check
+```
+
+## 7-03 Verification Results
+
+- Python compile: PASS.
+- Boundary lint: PASS, hard violations none, advisories none.
+- Service contract tests: PASS, 17 tests.
+- Diff check: PASS.
+- Browser QA: not applicable because `7-03` changes service helper ownership/import paths only, with no visible Streamlit flow or displayed data shape change.

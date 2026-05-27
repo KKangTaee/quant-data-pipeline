@@ -135,6 +135,7 @@ import sys
 import app.services.backtest_practical_validation_curve
 import app.services.backtest_practical_validation_curve_context
 import app.services.backtest_practical_validation_provider_context
+import app.services.backtest_practical_validation_stress_sensitivity
 print("streamlit" in sys.modules)
 print(importlib.util.find_spec("app.web.backtest_practical_validation_curve") is None)
 print(importlib.util.find_spec("app.web.backtest_practical_validation_connectors") is None)

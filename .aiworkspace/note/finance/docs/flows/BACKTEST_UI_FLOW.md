@@ -37,6 +37,7 @@ UI form, payload 복원, candidate review, history replay, candidate replay, sav
 | `app/services/backtest_practical_validation.py` | Streamlit-free Practical Validation service. source/result 저장, Practical Validation / Final Review handoff contract, Provider Data Gaps row / collection plan / ingestion job orchestration을 만든다 |
 | `app/services/backtest_practical_validation_source.py` | Streamlit-free validation profile / selection source builder. Candidate draft, saved mix, weighted mix를 Clean V2 source로 변환한다 |
 | `app/services/backtest_practical_validation_curve_context.py` | Streamlit-free curve context helper. compact curve snapshot, curve normalize, DB price proxy, component curve combination, window perturbation / monthly returns 계산을 맡는다 |
+| `app/services/backtest_practical_validation_stress_sensitivity.py` | Streamlit-free stress / sensitivity helper. rolling validation, stress window, baseline challenge, sensitivity 해석, correlation risk, market context, overfit audit를 맡는다 |
 | `app/services/backtest_practical_validation_diagnostics.py` | Streamlit-free Practical Validation diagnostics service. component context assembly와 12개 Practical Diagnostics result를 만든다 |
 | `app/services/backtest_practical_validation_replay.py` | Streamlit-free Practical Validation replay service. 기존 strategy runtime 재검증 계획과 actual replay result를 만든다 |
 | `app/services/backtest_practical_validation_curve.py` | Streamlit-free Practical Validation curve normalize, compact curve records, curve provenance, benchmark parity helper |
