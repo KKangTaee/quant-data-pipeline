@@ -670,6 +670,121 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertEqual(rows[2]["Current"], "WATCH")
         self.assertEqual(rows[3]["Current"], "OPTIONAL")
 
+    def test_investability_packet_ready_contract_is_ui_neutral(self) -> None:
+        from app.services.backtest_evidence_read_model import build_investability_evidence_packet
+
+        validation = {
+            "selection_source_id": "source-ready",
+            "validation_id": "validation-ready",
+            "validation_route": "READY_FOR_FINAL_REVIEW",
+            "diagnostic_summary": {"status_counts": {"PASS": 12, "REVIEW": 0, "BLOCKED": 0, "NOT_RUN": 0}},
+            "checks": [
+                {"Criteria": "Data Trust", "Ready": True, "Current": "ok"},
+                {"Criteria": "Runtime recheck", "Ready": True, "Current": "PASS"},
+                {"Criteria": "Runtime period coverage", "Ready": True, "Current": "PASS"},
+                {"Criteria": "Provider coverage", "Ready": True, "Current": "PASS"},
+                {"Criteria": "Benchmark parity", "Ready": True, "Current": "PASS"},
+            ],
+            "provider_coverage": {
+                "coverage": {
+                    "holdings": {"diagnostic_status": "PASS"},
+                    "operability": {"diagnostic_status": "PASS"},
+                }
+            },
+            "robustness_validation": {"robustness_route": "READY_FOR_STRESS_SWEEP"},
+        }
+
+        packet = build_investability_evidence_packet(
+            source={"source_type": "practical_validation_result", "source_id": "validation-ready"},
+            validation=validation,
+            paper_observation={"route": "PAPER_OBSERVATION_READY", "blockers": []},
+            decision_evidence={"route": "READY_FOR_FINAL_DECISION", "blockers": []},
+        )
+
+        self.assertEqual(packet["route"], "INVESTABILITY_PACKET_READY")
+        self.assertTrue(packet["select_ready"])
+        self.assertEqual(packet["source_chain"]["selection_source_id"], "source-ready")
+        self.assertEqual(packet["summary"]["not_run"], 0)
+        self.assertEqual(packet["critical_gaps"], [])
+        assumptions = [row["Assumption"] for row in packet["assumptions_and_limits"]]
+        self.assertIn("Hypothetical backtest", assumptions)
+        self.assertIn("No live approval / order", assumptions)
+
+    def test_investability_packet_blocks_selected_route_on_critical_not_run(self) -> None:
+        from app.services.backtest_evidence_read_model import (
+            SELECT_FOR_PRACTICAL_PORTFOLIO,
+            build_investability_evidence_packet,
+            build_selected_route_gate,
+        )
+
+        packet = build_investability_evidence_packet(
+            source={"source_type": "practical_validation_result", "source_id": "validation-gap"},
+            validation={
+                "selection_source_id": "source-gap",
+                "validation_id": "validation-gap",
+                "diagnostic_summary": {"status_counts": {"PASS": 10, "REVIEW": 1, "BLOCKED": 0, "NOT_RUN": 1}},
+                "checks": [
+                    {"Criteria": "Data Trust", "Ready": True, "Current": "ok"},
+                    {"Criteria": "Runtime recheck", "Ready": True, "Current": "PASS"},
+                    {"Criteria": "Runtime period coverage", "Ready": True, "Current": "PASS"},
+                    {"Criteria": "Provider coverage", "Ready": True, "Current": "REVIEW"},
+                    {"Criteria": "Benchmark parity", "Ready": True, "Current": "PASS"},
+                ],
+                "not_run_critical_domains": [
+                    {
+                        "domain": "stress_scenario_diagnostics",
+                        "title": "7. Stress / Scenario Diagnostics",
+                        "next_action": "daily replay evidence 필요",
+                    }
+                ],
+                "robustness_validation": {"robustness_route": "READY_FOR_STRESS_SWEEP"},
+            },
+            paper_observation={"route": "PAPER_OBSERVATION_READY", "blockers": []},
+            decision_evidence={"route": "READY_FOR_FINAL_DECISION", "blockers": []},
+        )
+
+        selected_gate = build_selected_route_gate(
+            decision_route=SELECT_FOR_PRACTICAL_PORTFOLIO,
+            investability_packet=packet,
+        )
+        hold_gate = build_selected_route_gate(
+            decision_route="HOLD_FOR_MORE_PAPER_TRACKING",
+            investability_packet=packet,
+        )
+
+        self.assertEqual(packet["route"], "INVESTABILITY_PACKET_BLOCKED")
+        self.assertFalse(packet["select_ready"])
+        self.assertFalse(selected_gate["Ready"])
+        self.assertTrue(hold_gate["Ready"])
+
+    def test_final_review_save_evaluation_uses_investability_packet_gate(self) -> None:
+        from app.web.backtest_final_review_helpers import _build_final_review_save_evaluation
+
+        blocked_packet = {
+            "route": "INVESTABILITY_PACKET_BLOCKED",
+            "select_ready": False,
+        }
+        selected = _build_final_review_save_evaluation(
+            evidence={"route": "READY_FOR_FINAL_DECISION"},
+            investability_packet=blocked_packet,
+            decision_id="decision-packet-blocked",
+            decision_route="SELECT_FOR_PRACTICAL_PORTFOLIO",
+            operator_reason="reason attached",
+            existing_decision_ids=set(),
+        )
+        hold = _build_final_review_save_evaluation(
+            evidence={"route": "READY_FOR_FINAL_DECISION"},
+            investability_packet=blocked_packet,
+            decision_id="decision-packet-hold",
+            decision_route="HOLD_FOR_MORE_PAPER_TRACKING",
+            operator_reason="reason attached",
+            existing_decision_ids=set(),
+        )
+
+        self.assertFalse(selected["can_save"])
+        self.assertIn("Investability evidence packet", selected["blockers"])
+        self.assertTrue(hold["can_save"])
+
 
 if __name__ == "__main__":
     unittest.main()

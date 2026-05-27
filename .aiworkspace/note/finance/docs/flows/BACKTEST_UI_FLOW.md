@@ -47,9 +47,9 @@ UI form, payload 복원, candidate review, history replay, candidate replay, sav
 | `app/web/backtest_candidate_review_helpers.py` | Candidate Review 판단, Review Note / registry 변환, Pre-Live status 추천 / draft 변환 / Portfolio Proposal 진입 readiness score helper |
 | `app/web/backtest_portfolio_proposal.py` | 단일 후보 직행 평가, 다중 후보 Portfolio Proposal 후보 선택 / 목적 / 역할 / 비중 설계, proposal draft 저장, 저장된 proposal monitoring / feedback section render logic |
 | `app/web/backtest_portfolio_proposal_helpers.py` | Portfolio Proposal row 생성, 단일 후보 direct readiness / proposal save readiness 평가, 공유 validation / robustness 계산 helper, monitoring / Pre-Live / paper feedback table helper |
-| `app/services/backtest_evidence_read_model.py` | Streamlit-free final decision evidence read model. Final Review saved decision status / table row와 Selected Dashboard evidence check row를 공통으로 만든다 |
-| `app/web/backtest_final_review.py` | Final Review 화면 render. 단일 후보 / 저장 proposal 선택, Validation / Robustness / Paper Observation 기준 확인, 최종 판단 기록, saved final decision review |
-| `app/web/backtest_final_review_helpers.py` | Final Review source 선택, validation 재사용, inline paper observation snapshot, final evidence / save readiness / decision row helper |
+| `app/services/backtest_evidence_read_model.py` | Streamlit-free final decision evidence read model. Final Review investability evidence packet / selected-route gate / saved decision status / table row와 Selected Dashboard evidence check row를 공통으로 만든다 |
+| `app/web/backtest_final_review.py` | Final Review 화면 render. 단일 후보 / 저장 proposal 선택, Validation / Robustness / Paper Observation / Investability Evidence Packet 기준 확인, 최종 판단 기록, saved final decision review |
+| `app/web/backtest_final_review_helpers.py` | Final Review source 선택, validation 재사용, inline paper observation snapshot, investability packet 연결, final evidence / save readiness / decision row helper |
 | `app/web/final_selected_portfolio_dashboard.py` | `Operations > Selected Portfolio Dashboard` 화면 render. Final Review에서 선정된 포트폴리오를 운영 대상으로 읽고 compact selected portfolio picker / Snapshot / tabbed Performance Recheck / Portfolio Monitoring Review Signals / optional Actual Allocation / Audit을 보여준다 |
 | `app/web/final_selected_portfolio_dashboard_helpers.py` | Selected Portfolio Dashboard의 table / component / value / holding input / drift / alert preview / filter helper. Evidence table은 service read model을 표시한다 |
 | `app/runtime/backtest.py` | UI payload를 실행 가능한 runtime call로 변환 |
@@ -77,7 +77,7 @@ Backtest 주 흐름:
 
 - `Backtest Analysis`: Single Strategy 실행, Compare, weighted portfolio builder, 저장된 비중 조합 replay를 통해 후보 source를 만들고 `PORTFOLIO_SELECTION_SOURCES.jsonl`에 Clean V2 source로 저장한다.
 - `Practical Validation`: 선택된 단일 전략 / Compare 후보 / Saved Mix source를 실전 투입 전 조건으로 검증한다. 사용자는 방어형 / 균형형 / 성장형 / 전술·헤지형 / 사용자 지정 profile과 5개 답변을 고르고, 화면은 Input Evidence와 12개 Practical Diagnostics를 `PASS / REVIEW / BLOCKED / NOT_RUN`으로 분리해 보여준다. 결과는 `PRACTICAL_VALIDATION_RESULTS.jsonl`에 저장하며 사용자 최종 메모는 받지 않는다.
-- `Final Review`: Practical Validation result와 diagnostics 요약, Robustness / Paper Observation 기준을 한 화면에서 확인하고, 최종 선정 / 보류 / 거절 / 재검토 판단과 최종 메모를 `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl`에 저장한다.
+- `Final Review`: Practical Validation result와 diagnostics 요약, Robustness / Paper Observation / Investability Evidence Packet을 한 화면에서 확인하고, 최종 선정 / 보류 / 거절 / 재검토 판단을 `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl`에 저장한다. critical gap이 남아 있으면 `SELECT_FOR_PRACTICAL_PORTFOLIO` 저장은 차단하지만, 보류 / 거절 / 재검토 판단은 기록할 수 있다.
 
 Practical Validation V2의 현재 구현은 최소 contract를 Input Evidence로 읽고, profile-aware practical diagnostics board를 만든다.
 현재 board는 compact curve snapshot 또는 DB price proxy curve를 사용해 rolling validation, stress window 구간 성과, simple baseline challenge, component correlation / risk contribution proxy, window / drop-one / weight perturbation sensitivity를 계산한다.

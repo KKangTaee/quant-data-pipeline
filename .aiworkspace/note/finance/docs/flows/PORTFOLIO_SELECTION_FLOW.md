@@ -22,7 +22,7 @@ Backtest > Backtest Analysis
 |---|---|---|---|
 | 1 | Backtest Analysis | 단일 전략 실행, compare, saved mix replay, 비중 조합을 수행하고 검증 후보 source를 만든다 | `PORTFOLIO_SELECTION_SOURCES.jsonl` |
 | 2 | Practical Validation | 선택된 source를 12개 practical diagnostic으로 검증한다 | `PRACTICAL_VALIDATION_RESULTS.jsonl` |
-| 3 | Final Review | 최종 select / hold / reject / re-review 판단과 사용자 최종 메모를 남긴다 | `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl` |
+| 3 | Final Review | Practical Validation evidence를 investability packet으로 확인하고 최종 select / hold / reject / re-review 판단을 남긴다 | `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl` |
 | 4 | Selected Portfolio Dashboard | 선정된 포트폴리오를 최신 기간과 가상 투자금 기준으로 다시 확인한다 | 사용자가 명시적으로 저장할 때만 monitoring log |
 
 ## Stage Ownership
@@ -31,7 +31,7 @@ Backtest > Backtest Analysis
 |---|---|---|
 | Backtest Analysis | 후보 생성, 전략 비교, saved mix replay, 비중 조합 | 최종 판단 |
 | Practical Validation | 실전 투입 전 검증, provider data gap, stress / sensitivity evidence | 투자 승인, 최종 사용자 메모 |
-| Final Review | 최종 후보 판단과 최종 메모 저장 | 새 비중 실험, provider data 수집 |
+| Final Review | 최종 후보 판단, investability evidence packet 확인, critical gap 기반 selected-route gate | 새 비중 실험, provider data 수집, 사용자 메모용 반복 저장 |
 | Selected Portfolio Dashboard | 선정 이후 성과 재확인, monitoring signal, optional allocation check | broker order, live approval, auto rebalance |
 
 ## Source Contract
@@ -53,6 +53,8 @@ PORTFOLIO_SELECTION_SOURCES
 - Practical Validation은 후보가 실전 검토에 충분한 근거를 갖는지 보여준다.
 - `NOT_RUN`은 pass가 아니다. 데이터나 구현이 부족해 검증하지 못했다는 뜻이다.
 - Final Review가 최종 판단 위치다. 중간 단계에서 최종 메모를 반복해서 저장하지 않는다.
+- Final Review의 investability packet은 새 저장 단계를 만들지 않고 기존 validation evidence를 compact하게 읽는다.
+- critical `NOT_RUN`, hard blocker, evidence blocker가 남아 있으면 실전 검토 통과 후보 선정은 차단하고, 보류 / 거절 / 재검토 판단으로 기록할 수 있다.
 - Selected Portfolio Dashboard는 선정 이후 상태 확인 화면이다. 주문이나 자동 리밸런싱을 만들지 않는다.
 
 ## Main Files

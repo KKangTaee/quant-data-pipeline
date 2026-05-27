@@ -16,6 +16,7 @@ Last Verified: 2026-05-27
 | Product Research Output Contract | Complete | `.aiworkspace/note/finance/tasks/active/product-research-output-contract/`; 실제 리서치 산출물 위치를 `.aiworkspace/note/finance/researches/active/`로 확정 |
 | Product Research Plugin Stage 5 | Complete | `.aiworkspace/note/finance/tasks/active/product-research-plugin-stage5/`; product research orchestration skill과 bundle bootstrap/check helper를 1차로 plugin workflow에 고정 |
 | Product Research Plugin Split | Complete | `.aiworkspace/note/finance/tasks/active/product-research-plugin-split/`; product research skill과 helper를 별도 `quant-finance-product-research` plugin으로 분리 완료 |
+| Investability Evidence Packet V1 | Active | `.aiworkspace/note/finance/tasks/active/investability-evidence-packet-v1/`; Final Review evidence packet / selected-route gate 1차 구현 |
 | Backtest Report Migration | Complete | `.aiworkspace/note/finance/reports/backtests/`, legacy phase archive 제거 완료 |
 | Practical Validation V2 | Active | `.aiworkspace/note/finance/tasks/active/practical-validation-v2/` |
 | Phase 36 Selected Portfolio Dashboard | Implementation complete before doc rebuild | 기존 phase 문서는 새 구조 정리 후 필요 시 `phases/done/`에 요약만 남긴다 |

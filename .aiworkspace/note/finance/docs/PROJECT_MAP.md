@@ -87,9 +87,9 @@ Last Verified: 2026-05-28
 
 | File | Responsibility |
 |---|---|
-| `app/services/backtest_evidence_read_model.py` | Streamlit-free final decision status, saved decision table rows, shared evidence check rows |
-| `app/web/backtest_final_review.py` | Final Review screen render, final decision input, saved final decision review |
-| `app/web/backtest_final_review_helpers.py` | Final Review source selection, validation reuse, paper observation snapshot, save row construction |
+| `app/services/backtest_evidence_read_model.py` | Streamlit-free final decision status, investability evidence packet / selected-route gate, saved decision table rows, shared evidence check rows |
+| `app/web/backtest_final_review.py` | Final Review screen render, investability packet display, final decision input, saved final decision review |
+| `app/web/backtest_final_review_helpers.py` | Final Review source selection, validation reuse, paper observation snapshot, investability packet wiring, save row construction |
 | `app/web/final_selected_portfolio_dashboard.py` | Selected Portfolio Dashboard screen render and selected portfolio monitoring controls |
 | `app/web/final_selected_portfolio_dashboard_helpers.py` | Dashboard table / component / drift / alert display helpers |
 | `app/runtime/final_selected_portfolios.py` | Read-only selected portfolio dashboard runtime model and performance recheck |

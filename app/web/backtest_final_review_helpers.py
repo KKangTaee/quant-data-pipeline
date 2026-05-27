@@ -7,8 +7,11 @@ import pandas as pd
 
 from app.services.backtest_evidence_read_model import (
     FINAL_REVIEW_DECISION_LABELS,
+    SELECT_FOR_PRACTICAL_PORTFOLIO,
+    build_investability_evidence_packet,
     build_final_review_decision_display_rows,
     build_final_review_status_display,
+    build_selected_route_gate,
 )
 from app.web.backtest_portfolio_proposal_helpers import (
     FINAL_SELECTION_DECISION_ROUTE_OPTIONS,
@@ -30,7 +33,7 @@ from app.runtime import FINAL_SELECTION_DECISION_V2_SCHEMA_VERSION
 
 FINAL_REVIEW_ROUTE_OPTIONS = FINAL_SELECTION_DECISION_ROUTE_OPTIONS
 FINAL_REVIEW_ROUTE_DESCRIPTIONS = {
-    "SELECT_FOR_PRACTICAL_PORTFOLIO": "실전 후보로 선정합니다. 승인/주문은 아니며 Final Review에서 최종 판단이 완료됩니다.",
+    SELECT_FOR_PRACTICAL_PORTFOLIO: "실전 검토 통과 후보로 선정합니다. 승인/주문은 아니며 Final Review에서 최종 판단이 완료됩니다.",
     "HOLD_FOR_MORE_PAPER_TRACKING": "근거는 남기되 실제 선정 전 더 관찰합니다.",
     "REJECT_FOR_PRACTICAL_USE": "현재 근거로는 실전 후보에서 제외합니다.",
     "RE_REVIEW_REQUIRED": "구성, 비중, 검증 근거, 데이터 상태를 다시 검토합니다.",
@@ -321,9 +324,24 @@ def _build_final_review_decision_evidence_pack(
     }
 
 
+def _build_investability_evidence_packet(
+    source: dict[str, Any],
+    validation: dict[str, Any],
+    paper_observation: dict[str, Any],
+    evidence: dict[str, Any],
+) -> dict[str, Any]:
+    return build_investability_evidence_packet(
+        source=source,
+        validation=validation,
+        paper_observation=paper_observation,
+        decision_evidence=evidence,
+    )
+
+
 def _build_final_review_save_evaluation(
     *,
     evidence: dict[str, Any],
+    investability_packet: dict[str, Any] | None = None,
     decision_id: str,
     decision_route: str,
     operator_reason: str,
@@ -332,6 +350,10 @@ def _build_final_review_save_evaluation(
     """Check whether the final review can be recorded as one durable decision row."""
     decision_id_clean = str(decision_id or "").strip()
     decision_route_clean = str(decision_route or "").strip()
+    packet_gate = build_selected_route_gate(
+        decision_route=decision_route_clean,
+        investability_packet=investability_packet,
+    )
     checks = [
         {
             "Criteria": "Decision identity",
@@ -353,11 +375,12 @@ def _build_final_review_save_evaluation(
         },
         {
             "Criteria": "Select readiness",
-            "Ready": decision_route_clean != "SELECT_FOR_PRACTICAL_PORTFOLIO"
+            "Ready": decision_route_clean != SELECT_FOR_PRACTICAL_PORTFOLIO
             or evidence.get("route") == "READY_FOR_FINAL_DECISION",
             "Current": evidence.get("route") or "-",
             "Meaning": "실전 후보 선정은 blocker가 없을 때만 저장합니다.",
         },
+        packet_gate,
     ]
     blockers = [str(row["Criteria"]) for row in checks if not row["Ready"]]
     if not blockers:
@@ -385,6 +408,7 @@ def _build_final_review_decision_row(
     validation: dict[str, Any],
     paper_observation: dict[str, Any],
     evidence: dict[str, Any],
+    investability_packet: dict[str, Any] | None = None,
     decision_id: str,
     decision_route: str,
     operator_reason: str,
@@ -411,6 +435,7 @@ def _build_final_review_decision_row(
         "validation_id": validation.get("validation_id"),
         "selected_components": list(paper_observation.get("active_components") or []),
         "decision_evidence_snapshot": evidence,
+        "investability_evidence_packet": dict(investability_packet or {}),
         "risk_and_validation_snapshot": {
             "validation_route": validation.get("validation_route"),
             "validation_score": validation.get("validation_score"),

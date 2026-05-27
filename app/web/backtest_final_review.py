@@ -11,6 +11,7 @@ from app.web.backtest_final_review_helpers import (
     FINAL_REVIEW_DECISION_LABELS,
     FINAL_REVIEW_ROUTE_DESCRIPTIONS,
     FINAL_REVIEW_ROUTE_OPTIONS,
+    _build_investability_evidence_packet,
     _build_final_review_decision_evidence_pack,
     _build_final_review_decision_row,
     _build_final_review_decision_rows_for_display,
@@ -225,6 +226,42 @@ def _render_paper_observation_summary(paper_observation: dict[str, Any]) -> None
             st.info(str(trigger))
 
 
+def _render_investability_packet(packet: dict[str, Any]) -> None:
+    summary = dict(packet.get("summary") or {})
+    source_chain = dict(packet.get("source_chain") or {})
+    route = str(packet.get("route") or "-")
+    render_readiness_route_panel(
+        route_label=route,
+        score=float(packet.get("score") or 0.0),
+        blockers_count=len(packet.get("critical_gaps") or []),
+        verdict=str(packet.get("verdict") or "-"),
+        next_action=str(packet.get("next_action") or "-"),
+        route_title="Investability Packet",
+        score_title="Packet Score",
+    )
+    render_badge_strip(
+        [
+            {"label": "Source", "value": source_chain.get("selection_source_id") or source_chain.get("source_id") or "-", "tone": "neutral"},
+            {"label": "Validation", "value": source_chain.get("validation_id") or "-", "tone": "neutral"},
+            {"label": "PASS", "value": summary.get("pass", 0), "tone": "positive"},
+            {"label": "REVIEW", "value": summary.get("review", 0), "tone": "warning"},
+            {"label": "BLOCKED", "value": summary.get("blocked", 0), "tone": "danger"},
+            {"label": "NOT_RUN", "value": summary.get("not_run", 0), "tone": "neutral"},
+            {"label": "Live Approval", "value": "Disabled", "tone": "neutral"},
+        ]
+    )
+    st.caption("이 packet은 새 저장소가 아니라 Final Review에서 기존 validation evidence를 읽는 compact 판단 근거입니다.")
+    st.dataframe(pd.DataFrame(packet.get("checks") or []), width="stretch", hide_index=True)
+    critical_gaps = list(packet.get("critical_gaps") or [])
+    if critical_gaps:
+        st.markdown("###### Critical Gaps")
+        st.dataframe(pd.DataFrame(critical_gaps), width="stretch", hide_index=True)
+    else:
+        st.success("critical gap 없음")
+    with st.expander("Assumptions & Limits", expanded=False):
+        st.dataframe(pd.DataFrame(packet.get("assumptions_and_limits") or []), width="stretch", hide_index=True)
+
+
 def _render_saved_final_review_decisions(final_decision_rows: list[dict[str, Any]]) -> None:
     if not final_decision_rows:
         st.info("아직 기록된 최종 검토 결과가 없습니다.")
@@ -265,6 +302,10 @@ def _render_saved_final_review_decisions(final_decision_rows: list[dict[str, Any
         st.info("이 기록에는 selected component가 없습니다.")
     else:
         st.dataframe(component_df, width="stretch", hide_index=True)
+    packet = dict(selected_row.get("investability_evidence_packet") or {})
+    if packet:
+        with st.expander("Investability Evidence Packet", expanded=False):
+            _render_investability_packet(packet)
     with st.expander("최종 검토 결과 JSON", expanded=False):
         st.json(selected_row)
 
@@ -341,6 +382,7 @@ def render_final_review_workspace() -> None:
     validation = _build_final_review_validation(source, current_rows=current_rows, pre_live_rows=pre_live_rows)
     paper_observation = _build_final_review_paper_observation_snapshot(validation)
     evidence = _build_final_review_decision_evidence_pack(validation, paper_observation)
+    investability_packet = _build_investability_evidence_packet(source, validation, paper_observation, evidence)
 
     st.markdown("#### 2. 검증 근거 확인")
     with st.container(border=True):
@@ -358,7 +400,15 @@ def render_final_review_workspace() -> None:
         )
         _render_paper_observation_summary(paper_observation)
 
-    st.markdown("#### 5. 최종 판단 및 테스트 검증")
+    st.markdown("#### 5. Investability Evidence Packet")
+    with st.container(border=True):
+        render_stage_brief(
+            purpose="새 저장 기능을 늘리지 않고, 기존 검증 결과를 최종 판단용 compact packet으로 읽습니다.",
+            result="Decision support packet",
+        )
+        _render_investability_packet(investability_packet)
+
+    st.markdown("#### 6. 최종 판단 및 테스트 검증")
     with st.container(border=True):
         render_readiness_route_panel(
             route_label=str(evidence.get("route") or "-"),
@@ -422,6 +472,7 @@ def render_final_review_workspace() -> None:
             )
         save_evaluation = _build_final_review_save_evaluation(
             evidence=evidence,
+            investability_packet=investability_packet,
             decision_id=decision_id,
             decision_route=str(decision_route),
             operator_reason=operator_reason,
@@ -441,6 +492,7 @@ def render_final_review_workspace() -> None:
             validation=validation,
             paper_observation=paper_observation,
             evidence=evidence,
+            investability_packet=investability_packet,
             decision_id=decision_id,
             decision_route=str(decision_route),
             operator_reason=operator_reason,
@@ -474,6 +526,6 @@ def render_final_review_workspace() -> None:
             st.json(final_row)
             st.caption(f"Path: {FINAL_SELECTION_DECISION_V2_FILE}")
 
-    st.markdown("#### 6. 기록된 최종 검토 결과 확인")
+    st.markdown("#### 7. 기록된 최종 검토 결과 확인")
     with st.container(border=True):
         _render_saved_final_review_decisions(final_decision_rows)

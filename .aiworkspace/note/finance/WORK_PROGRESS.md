@@ -3997,3 +3997,11 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/canonical-finance-note-paths/`를 열고 legacy `.note/finance` 직접 참조를 정리했다.
   - `app/workspace_paths.py`를 추가해 `registries`, `saved`, `run_history`, `run_artifacts`, docs path를 canonical `.aiworkspace/note/finance` 기준으로 통일했다.
   - Overview browser smoke에서 Current Candidates / Paper Tracking / Proposal Drafts / Recent Runs가 canonical JSONL 데이터를 읽는 것을 확인했다.
+- Product Research - Investable Workflow Gap Analysis:
+  - `.aiworkspace/note/finance/researches/active/2026-05-investable-workflow-gap-analysis/` 리서치 번들을 생성했다.
+  - 현재 Backtest -> Practical Validation -> Final Review -> Selected Dashboard 흐름을 audit하고 QuantConnect, Bloomberg PORT, Morningstar X-Ray, IBKR PortfolioAnalyst, Portfolio Lab, CFA / FINRA / NBER 근거와 비교했다.
+  - 1차 추천은 `Investability Evidence Packet`, `Validation Gate Hardening`, `Assumption Disclosure`, `Source Breadcrumb`를 먼저 확정하고 개발하는 방향이다.
+- Investability Evidence Packet V1:
+  - `.aiworkspace/note/finance/tasks/active/investability-evidence-packet-v1/`를 열고 Final Review evidence packet / selected-route gate를 구현했다.
+  - 새 JSONL registry는 만들지 않고, 기존 Final Review decision row에 compact packet snapshot만 연결했다.
+  - service contract 26 tests, UI-engine boundary check, Browser smoke를 통과했다.

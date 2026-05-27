@@ -5296,3 +5296,24 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `app/workspace_paths.py`를 canonical path helper로 두는 것이 registry / saved / run-history 참조를 가장 작게 통일하는 방법이다
 - Follow-up:
   - 서비스 계약 테스트에 canonical path contract를 추가했고, Browser smoke에서 Overview가 실제 JSONL 카운트와 Top 3 후보를 표시하는 것을 확인했다
+
+### 2026-05-28 - 실전 투자 판단 workflow의 약점과 개선 방향을 먼저 정리한다
+- User request:
+  - 사용자가 현재 Backtest -> Practical Validation -> Final Review -> Selected Dashboard 흐름이 실전 투자에는 부족하다고 보고, 상용 프로젝트와 비교해 약점 / 근거 / 개선 방향을 먼저 정리해 달라고 요청함
+- Interpreted goal:
+  - 바로 개발하지 않고 product direction research bundle을 열어 현재 약점, 외부 benchmark pattern, 기능 후보, 추천 가이드라인을 정리해야 함
+- Analysis result:
+  - 현재 흐름은 유지하되 `Investability Evidence Packet`, stricter validation gate, assumptions / limitations disclosure, source-of-truth breadcrumb를 먼저 만드는 것이 가장 높은 우선순위다
+  - broker 연결, live approval, auto rebalance는 현재 경계 밖으로 유지한다
+- Follow-up:
+  - 산출물은 `.aiworkspace/note/finance/researches/active/2026-05-investable-workflow-gap-analysis/RECOMMENDATION.md`와 관련 bundle 문서에서 이어서 보면 된다
+
+### 2026-05-28 - Final Review에서 investability evidence packet을 먼저 구현한다
+- User request:
+  - 사용자가 앞서 정리한 큰 개발 흐름을 실제 작업으로 진행해 달라고 요청함
+- Interpreted goal:
+  - 새 JSONL 저장소나 사용자 메모 저장 기능을 늘리지 않고, Final Review의 판단 근거와 selected-route gate를 먼저 강화해야 함
+- Analysis result:
+  - 기존 validation / robustness / paper observation evidence를 Streamlit-free packet read model로 묶고, critical gap이 있으면 `SELECT_FOR_PRACTICAL_PORTFOLIO` 저장을 차단하는 V1이 가장 작은 안전한 구현 단위다
+- Follow-up:
+  - 구현 기록과 검증 결과는 `.aiworkspace/note/finance/tasks/active/investability-evidence-packet-v1/`에서 확인한다
