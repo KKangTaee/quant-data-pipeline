@@ -11,7 +11,7 @@ Created: 2026-05-27
 | `6. practical-validation-helper-boundary` | Practical Validation curve / provider context helper 이동 | Complete | `app.services/app.runtime -> app.web` advisory 제거 |
 | `7. practical-validation-diagnostics-split` | 큰 diagnostics service 책임 분할 | Complete | `7-01`~`7-04` 완료; diagnostics public compatibility contract 명시 |
 | `8. runtime-wrapper-cleanup` | 큰 runtime wrapper 구조 분석과 낮은 위험 split | Complete | `8-01`~`8-04` 완료; result bundle helper를 `app/runtime/backtest_result_bundle.py`로 분리 |
-| `9. boundary-contract-hardening` | lint / test / docs hardening | Planned | advisory 0건 이후 `app.web` import를 hard fail로 승격 |
+| `9. boundary-contract-hardening` | lint / test / docs hardening | Complete | `app.web` import hard fail 승격, boundary contract test / runbook 정렬 |
 
 ## Task 0. Cleanup Audit
 
@@ -109,7 +109,7 @@ Created: 2026-05-27
 
 | Step | Goal | Notes |
 | --- | --- | --- |
-| `9-01` | boundary lint hardening | `APP_WEB_IMPORT_RE`를 violation으로 이동 |
-| `9-02` | service contract test 보강 | Streamlit-free import, helper contract, replay/diagnostics shape |
-| `9-03` | docs/runbook 정렬 | Project Map, Script Map, Automation Scripts |
-| `9-04` | phase closeout QA | lint/test/diff check, remaining risk 기록 |
+| `9-01` | boundary lint hardening | Complete |
+| `9-02` | service contract test 보강 | Complete |
+| `9-03` | docs/runbook 정렬 | Complete |
+| `9-04` | phase closeout QA | Complete |

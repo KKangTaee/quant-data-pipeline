@@ -1,6 +1,6 @@
 # UI Engine Boundary Cleanup Integration
 
-Status: Active
+Status: Complete
 Created: 2026-05-27
 
 ## Integration Order
@@ -23,6 +23,17 @@ git status --short --untracked-files=all
 ```
 
 For UI-visible task changes, additionally start the Streamlit app and use the browser to inspect the affected Backtest / Practical Validation screen.
+
+## Closeout Verification
+
+Task 9 closeout uses:
+
+```bash
+.venv/bin/python -m py_compile .aiworkspace/plugins/quant-finance-workflow/scripts/check_ui_engine_boundary.py tests/test_service_contracts.py
+.venv/bin/python .aiworkspace/plugins/quant-finance-workflow/scripts/check_ui_engine_boundary.py
+.venv/bin/python -m unittest tests.test_service_contracts
+git diff --check
+```
 
 ## Files Likely To Conflict
 

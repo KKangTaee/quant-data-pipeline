@@ -1,6 +1,6 @@
 # UI Engine Boundary Cleanup Design
 
-Status: Active
+Status: Complete
 Created: 2026-05-27
 
 ## Boundary Rule
@@ -49,4 +49,4 @@ Task 0은 문서 / audit 작업이라 브라우저로 확인할 화면이 없다
 - 계산식 변경과 구조 이동을 같은 sub-step에 섞지 않는다.
 - import 이동 후 public function name과 return shape를 유지한다.
 - function 이동이 어려운 큰 file은 먼저 characterization test 또는 import contract를 추가한다.
-- boundary lint가 advisory를 보여주는 동안은 advisory count가 줄어드는 방향으로만 진행한다.
+- boundary lint는 service/runtime의 Streamlit import, `st.*` 접근, `app.web` import를 hard violation으로 본다.

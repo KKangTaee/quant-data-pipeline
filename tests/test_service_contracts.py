@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import importlib.util
 import subprocess
 import sys
+import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 import pandas as pd
@@ -212,6 +215,41 @@ class PracticalValidationDiagnosticsServiceContractTests(unittest.TestCase):
         self.assertEqual([row["Total Balance"] for row in curve], [100.0, 98.0])
         self.assertAlmostEqual(curve[0]["Total Return"], 0.0)
         self.assertAlmostEqual(curve[1]["Total Return"], -0.02)
+
+
+class BoundaryContractHardeningTests(unittest.TestCase):
+    def _load_boundary_checker(self):
+        script_path = (
+            Path(__file__).resolve().parents[1]
+            / ".aiworkspace/plugins/quant-finance-workflow/scripts/check_ui_engine_boundary.py"
+        )
+        spec = importlib.util.spec_from_file_location("check_ui_engine_boundary", script_path)
+        self.assertIsNotNone(spec)
+        self.assertIsNotNone(spec.loader)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
+    def test_app_web_import_is_hard_boundary_violation(self) -> None:
+        checker = self._load_boundary_checker()
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            candidate = Path(tmp_dir) / "bad_runtime.py"
+            candidate.write_text(
+                "from app.web.backtest_common import format_percent\n",
+                encoding="utf-8",
+            )
+
+            with (
+                patch.object(checker, "_boundary_files", return_value=[candidate]),
+                patch.object(checker, "_relative", return_value="app/runtime/bad_runtime.py"),
+            ):
+                violations, advisories = checker._scan_boundary_files()
+
+        self.assertEqual(advisories, [])
+        self.assertEqual(len(violations), 1)
+        self.assertEqual(violations[0]["kind"], "app_web_import")
+        self.assertEqual(violations[0]["path"], "app/runtime/bad_runtime.py")
 
 
 class BacktestRuntimeContractTests(unittest.TestCase):

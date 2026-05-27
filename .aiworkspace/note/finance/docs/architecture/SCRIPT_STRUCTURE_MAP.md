@@ -143,7 +143,7 @@
 |---|---|
 | `.aiworkspace/plugins/quant-finance-workflow/scripts/bootstrap_finance_phase_bundle.py` | 새 finance phase 문서 bundle 생성 |
 | `.aiworkspace/plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py` | finance diff의 docs / logs / generated artifact hygiene 점검 |
-| `.aiworkspace/plugins/quant-finance-workflow/scripts/check_ui_engine_boundary.py` | `app/services` Streamlit-free boundary, transitional `app.web` import advisory, staged artifact guard 점검 |
+| `.aiworkspace/plugins/quant-finance-workflow/scripts/check_ui_engine_boundary.py` | `app/services` / `app/runtime` Streamlit-free boundary, `app.web` import 금지, staged artifact guard 점검 |
 | `.aiworkspace/plugins/quant-finance-workflow/scripts/manage_current_candidate_registry.py` | Current Candidate Registry list / show / validate / append helper |
 | `.aiworkspace/plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py` | Pre-Live Candidate Registry template / draft / list / show / validate / append helper |
 
@@ -151,7 +151,7 @@
 
 | 스크립트 | 관리하는 기능 |
 |---|---|
-| `tests/test_service_contracts.py` | `app/services`의 Practical Validation handoff와 Final Review evidence read model contract를 DB / Streamlit runtime 없이 검증 |
+| `tests/test_service_contracts.py` | `app/services` / `app/runtime` contract, Practical Validation handoff, Final Review evidence read model, boundary checker behavior를 DB / Streamlit runtime 없이 검증 |
 
 ## 같이 볼 상세 문서
 

@@ -71,9 +71,9 @@ def _scan_boundary_files() -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
                     }
                 )
             if APP_WEB_IMPORT_RE.search(line):
-                advisories.append(
+                violations.append(
                     {
-                        "kind": "transitional_app_web_import",
+                        "kind": "app_web_import",
                         "path": rel_path,
                         "line": lineno,
                         "detail": line.strip(),
@@ -165,11 +165,6 @@ def _render_text(report: dict[str, Any]) -> str:
             lines.append(
                 f"  [warn] {item['kind']} {item['path']}:{item['line']} - {item['detail']}"
             )
-        lines.append("")
-        lines.append(
-            "Note: app.services/app.runtime -> app.web imports are advisory during the current "
-            "transition. They should trend down as Streamlit-free helpers move out of app.web."
-        )
     else:
         lines.append("Advisories: none")
     lines.append("")

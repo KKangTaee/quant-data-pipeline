@@ -11,7 +11,7 @@
 |---|---|
 | `.aiworkspace/plugins/quant-finance-workflow/scripts/bootstrap_finance_phase_bundle.py` | 새 phase 문서 bundle 생성 |
 | `.aiworkspace/plugins/quant-finance-workflow/scripts/check_finance_refinement_hygiene.py` | phase / docs / logs / generated artifact hygiene 점검 |
-| `.aiworkspace/plugins/quant-finance-workflow/scripts/check_ui_engine_boundary.py` | `app/services` Streamlit-free boundary와 staged artifact guard 점검 |
+| `.aiworkspace/plugins/quant-finance-workflow/scripts/check_ui_engine_boundary.py` | `app/services` / `app/runtime` Streamlit-free boundary, `app.web` import 금지, staged artifact guard 점검 |
 | `.aiworkspace/plugins/quant-finance-workflow/scripts/manage_current_candidate_registry.py` | current candidate registry list / show / validate / append |
 | `.aiworkspace/plugins/quant-finance-workflow/scripts/manage_pre_live_candidate_registry.py` | pre-live candidate registry template / draft-from-current / list / show / validate / append |
 
@@ -89,14 +89,13 @@ Hard fail:
 
 - `app/services/*.py`, `app/runtime/*.py`의 `streamlit` import
 - `app/services/*.py`, `app/runtime/*.py`의 `st.*` 접근
+- `app/services/*.py`, `app/runtime/*.py`의 `app.web.*` import
 - staged generated / registry / saved / run-history / local artifact
 
-Advisory:
+기준:
 
-- `app/services/*.py`, `app/runtime/*.py`의 `app.web.*` import
-
-현재 service / runtime layer는 transition 단계라 일부 Streamlit-free `app.web` helper import가 남아 있다.
-이 advisory는 다음 구조 정리 후보를 보여주기 위한 것이며, 현재는 failure가 아니다.
+- `app/web`은 Streamlit 화면, form, session state, user feedback을 맡는다.
+- `app/services`와 `app/runtime`은 Streamlit-free layer이므로 UI helper를 역참조하지 않는다.
 
 ## Current candidate registry helper
 

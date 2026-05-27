@@ -5274,3 +5274,14 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 순수 result bundle 생성 helper는 DB / strategy 실행에 관여하지 않아 가장 안전한 첫 split 후보였다
 - Follow-up:
   - `app/runtime/backtest_result_bundle.py`로 `build_backtest_result_bundle`을 이동하고 compatibility / shape contract tests를 추가했다
+
+### 2026-05-27 - UI-engine boundary cleanup은 hard fail 기준으로 마감한다
+- User request:
+  - 사용자가 다음 단계 진행을 요청함
+- Interpreted goal:
+  - Task 6~8에서 정리한 service/runtime boundary가 다시 흐트러지지 않도록 lint, test, docs 기준을 강화해야 함
+- Analysis result:
+  - `app.services/app.runtime -> app.web` import는 더 이상 transitional advisory가 아니라 경계 위반으로 보는 것이 맞다
+  - 이 task는 화면 변경이 아니라 helper script / contract test / runbook hardening이므로 browser QA보다 unit/lint 검증이 적절하다
+- Follow-up:
+  - `check_ui_engine_boundary.py`가 `app_web_import`를 hard violation으로 보고하고, phase는 closeout 상태가 됐다

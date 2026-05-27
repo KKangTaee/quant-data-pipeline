@@ -14,7 +14,7 @@ Created: 2026-05-20
 포함:
 
 - `app/services`의 Streamlit import / `st.*` 사용 금지 검사
-- service source의 transitional `app.web` import advisory 출력
+- service/runtime source의 `app.web` import hard failure 검사
 - staged generated / registry / saved artifact guard 검사
 - helper script runbook 등록
 
@@ -29,5 +29,10 @@ Created: 2026-05-20
 
 - helper script가 현재 main-dev 상태에서 통과한다.
 - hard violation이 있으면 non-zero exit로 실패한다.
-- advisory는 현재 transitional import를 알려주되 실패시키지 않는다.
+- `app.web` import는 후속 cleanup Task 9 이후 hard violation으로 실패한다.
 - runbook에서 명령과 기대 결과를 찾을 수 있다.
+
+## Later Update
+
+2026-05-27 `ui-engine-boundary-cleanup` Task 9에서 transitional advisory 기간을 종료했다.
+현재 `app.services/app.runtime -> app.web` import는 hard failure다.

@@ -1,6 +1,6 @@
 # UI Engine Boundary Cleanup Status
 
-Status: Active
+Status: Complete
 Created: 2026-05-27
 
 ## 2026-05-27
@@ -18,7 +18,12 @@ Created: 2026-05-27
 - Completed Task 8 `runtime-wrapper-cleanup`.
 - `8-01`~`8-02`: mapped `app/runtime/backtest.py` function families and public caller surface.
 - `8-03`~`8-04`: added result bundle compatibility/shape tests and split `build_backtest_result_bundle` into `app/runtime/backtest_result_bundle.py`.
+- Completed Task 9 `boundary-contract-hardening`.
+- `9-01`: changed `app.services/app.runtime -> app.web` import from advisory to hard boundary violation.
+- `9-02`: added boundary checker behavior contract test; service contract suite now covers the hardened rule.
+- `9-03`~`9-04`: aligned runbooks / phase docs and completed closeout QA.
 
-## Current Next Step
+## Closeout
 
-Start Task 9 `boundary-contract-hardening`.
+UI Engine Boundary Cleanup is complete.
+Future work should open a new phase/task and keep `check_ui_engine_boundary.py` plus `tests.test_service_contracts` passing before commit.

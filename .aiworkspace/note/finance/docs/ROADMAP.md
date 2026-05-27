@@ -8,7 +8,7 @@ Last Verified: 2026-05-27
 | Track | Status | Notes |
 |---|---|---|
 | UI Engine Boundary Foundation | Implementation complete | `.aiworkspace/note/finance/phases/active/ui-engine-boundary-foundation/`; audit, Single Backtest, Compare / Weighted / Saved Replay, Practical Validation handoff, Final Review / Selected Dashboard evidence read model, runtime package boundary 완료 |
-| UI Engine Boundary Cleanup | Active | `.aiworkspace/note/finance/phases/active/ui-engine-boundary-cleanup/`; Task 8 runtime wrapper cleanup 완료, 다음은 Task 9 boundary contract hardening |
+| UI Engine Boundary Cleanup | Complete | `.aiworkspace/note/finance/phases/active/ui-engine-boundary-cleanup/`; Task 6~9 완료, `app.services/app.runtime -> app.web` import hard fail 적용 |
 | Documentation System Rebuild | Practical closeout | `.aiworkspace/note/finance/tasks/active/doc-system-rebuild/`; legacy root / operations / research / support / phase history 제거 완료 |
 | AI Workspace Migration | Practical closeout | `.aiworkspace/note/finance/tasks/active/ai-workspace-migration/`; `.aiworkspace/note/finance`와 `.aiworkspace/plugins` canonical 이동 및 검증 완료 |
 | Skill System Rebuild | Complete | `.aiworkspace/note/finance/tasks/active/skill-system-rebuild/`; 4 workflow + 4 domain skill taxonomy, repo-local source, global mirror, plugin manifest, marketplace path 검증 완료 |
@@ -73,5 +73,5 @@ P2에서 정상화하는 주요 진단:
 
 ## Next Decisions
 
-- UI Engine Boundary Cleanup은 Task 9로 진행한다. Task 6~8에서 정리한 경계를 boundary lint / service contract test / docs runbook으로 hardening한다.
+- UI Engine Boundary Cleanup은 완료됐다. 다음 구조 작업은 새 phase/task로 열고, 현재 경계는 boundary lint와 service contract test를 먼저 통과시키는 기준으로 유지한다.
 - Practical Validation V2는 P2 QA 여부를 확인한 뒤 P3로 넘어갈지, P2를 closeout할지 결정한다.

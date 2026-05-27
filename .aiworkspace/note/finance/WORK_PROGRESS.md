@@ -3989,3 +3989,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/runtime-wrapper-cleanup/`를 열고 `app/runtime/backtest.py` 함수군과 public caller surface를 지도화했다.
   - `build_backtest_result_bundle`을 `app/runtime/backtest_result_bundle.py`로 분리하되 `app.runtime.backtest` / `app.runtime` public export는 유지했다.
   - result bundle compatibility / shape contract tests를 추가했고 다음 작업은 Task 9 boundary contract hardening이다.
+- UI Engine Boundary Cleanup Task 9 / phase closeout:
+  - `.aiworkspace/note/finance/tasks/active/boundary-contract-hardening/`에서 `app.services/app.runtime -> app.web` import를 boundary lint hard failure로 승격했다.
+  - `tests/test_service_contracts.py`에 boundary checker behavior contract를 추가했고 service contract suite는 22 tests로 확장됐다.
+  - `ui-engine-boundary-cleanup` phase는 Task 6~9 완료 상태로 closeout했다.

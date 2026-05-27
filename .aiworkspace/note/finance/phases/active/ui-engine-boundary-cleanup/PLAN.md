@@ -1,6 +1,6 @@
 # UI Engine Boundary Cleanup Plan
 
-Status: Active
+Status: Complete
 Created: 2026-05-27
 
 ## 이걸 하는 이유?
@@ -9,7 +9,8 @@ Created: 2026-05-27
 지금의 목적은 새 UI framework로 갈아타는 것이 아니라, 현재 Python / Streamlit 구조 안에서 이미 만든 경계를 더 선명하게 만드는 것이다.
 
 현재 hard violation은 없다.
-다만 `app/services`가 아직 `app/web`의 Streamlit-free helper를 일부 import하고 있고, Practical Validation diagnostics와 runtime wrapper 일부 파일이 커져서 이후 UI agent와 engine agent가 같은 파일을 만질 가능성이 남아 있다.
+Task 6~9 이후 `app/services`와 `app/runtime`이 `app/web`을 import하지 않는 상태를 boundary lint hard failure로 보호한다.
+Practical Validation diagnostics와 runtime wrapper는 낮은 위험 helper부터 분리되어 이후 UI agent와 engine agent가 같은 파일을 건드릴 가능성이 줄었다.
 
 이 phase는 그 남은 구조 부채를 정리해, 다음 개발자가 파일 위치만 보고도 "화면 책임", "service orchestration", "runtime / repository", "finance engine"을 구분할 수 있게 만드는 cleanup phase다.
 
@@ -46,7 +47,8 @@ Created: 2026-05-27
   - `app/runtime/final_selected_portfolios.py`: 1064 lines
   - `app/runtime/candidate_library.py`: 800 lines
 
-Task 6 이후에는 Practical Validation curve / provider context helpers를 `app/services`로 이동했고 boundary lint advisory는 0건이다.
+Task 6 이후에는 Practical Validation curve / provider context helpers를 `app/services`로 이동했고 boundary lint advisory는 0건이 됐다.
+Task 9 이후에는 `app.services/app.runtime -> app.web` import가 hard failure로 승격됐다.
 
 ## Target Architecture
 
@@ -70,7 +72,7 @@ UI는 service / runtime 결과를 받아 표시하지만, service / runtime은 U
 ## Phase Done Criteria
 
 - boundary lint advisory가 0건이다.
-- `app.services/app.runtime -> app.web` import를 hard fail로 올릴 수 있다.
+- `app.services/app.runtime -> app.web` import가 hard fail로 승격됐다.
 - Practical Validation provider context / curve helper가 Streamlit-free 위치로 이동했다.
 - diagnostics service는 orchestration file과 계산 helper file의 책임이 구분되어 있다.
 - runtime 큰 파일은 최소한 function-family map과 안전한 split 기준이 문서화되어 있고, 가능한 낮은 위험 split이 적용되어 있다.
