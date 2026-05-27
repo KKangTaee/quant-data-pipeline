@@ -1,7 +1,7 @@
 # Finance Project Map
 
 Status: Active
-Last Verified: 2026-05-20
+Last Verified: 2026-05-27
 
 ## Project Summary
 
@@ -46,6 +46,8 @@ Last Verified: 2026-05-20
 | Weighted portfolio builder service | `app/services/backtest_weighted_portfolio.py` |
 | Saved portfolio replay service | `app/services/backtest_saved_portfolio_replay.py` |
 | Practical Validation service | `app/services/backtest_practical_validation.py` |
+| Practical Validation curve service helper | `app/services/backtest_practical_validation_curve.py` |
+| Practical Validation provider context service helper | `app/services/backtest_practical_validation_provider_context.py` |
 | Backtest evidence read model service | `app/services/backtest_evidence_read_model.py` |
 | Backtest Analysis | `app/web/backtest_analysis.py` |
 | Practical Validation | `app/web/backtest_practical_validation.py` |
@@ -64,9 +66,9 @@ Last Verified: 2026-05-20
 | `app/services/backtest_practical_validation.py` | Streamlit-free Practical Validation result build wrapper, source/result registry append, Practical Validation / Final Review handoff contract, provider gap row / collection plan / ingestion job orchestration |
 | `app/services/backtest_practical_validation_diagnostics.py` | Streamlit-free Practical Validation selection source builders, validation profile, compact curve snapshots, 12개 diagnostic result 생성 |
 | `app/services/backtest_practical_validation_replay.py` | Streamlit-free Practical Validation replay service. source를 최신 DB 데이터 기준으로 다시 실행하거나 저장 기간 그대로 재현해 component / portfolio curve evidence 생성 |
+| `app/services/backtest_practical_validation_curve.py` | Streamlit-free curve normalize, provenance, benchmark parity helper |
+| `app/services/backtest_practical_validation_provider_context.py` | Streamlit-free provider / macro loader output to diagnostic evidence context adapter |
 | `app/web/backtest_practical_validation.py` | Practical Validation UI render, profile input, recheck button, diagnostics board, provider gaps display, provider gap / replay service result session state handoff |
-| `app/web/backtest_practical_validation_connectors.py` | provider / macro loader output을 diagnostic evidence로 변환 |
-| `app/web/backtest_practical_validation_curve.py` | curve normalize, provenance, benchmark parity |
 | `finance/data/etf_provider.py` | ETF source map discovery, operability / holdings / exposure snapshot 수집과 저장 |
 | `finance/loaders/provider.py` | ETF provider snapshot read path |
 | `finance/data/macro.py` | FRED macro series 수집 |

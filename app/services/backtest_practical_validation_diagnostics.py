@@ -10,12 +10,12 @@ from uuid import uuid4
 import numpy as np
 import pandas as pd
 
-from app.web.backtest_practical_validation_curve import (
+from app.services.backtest_practical_validation_curve import (
     build_benchmark_parity,
     build_curve_provenance,
     normalize_result_curve as normalize_validation_curve,
 )
-from app.web.backtest_practical_validation_connectors import build_provider_context
+from app.services.backtest_practical_validation_provider_context import build_provider_context
 from app.runtime import (
     FINAL_SELECTION_DECISION_V2_SCHEMA_VERSION,
     PORTFOLIO_SELECTION_SOURCE_SCHEMA_VERSION,

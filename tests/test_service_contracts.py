@@ -93,8 +93,10 @@ import app.runtime
 import app.runtime.backtest
 import app.runtime.candidate_library
 import app.services.backtest_evidence_read_model
+import app.services.backtest_practical_validation_curve
 import app.services.backtest_practical_validation_diagnostics
 import app.services.backtest_practical_validation
+import app.services.backtest_practical_validation_provider_context
 import app.services.backtest_practical_validation_replay
 print("streamlit" in sys.modules)
 """
@@ -124,6 +126,25 @@ print(importlib.util.find_spec("app.web.runtime") is None)
         )
 
         self.assertEqual(result.stdout.splitlines(), ["False", "True"])
+
+    def test_practical_validation_helpers_are_not_web_modules(self) -> None:
+        script = """
+import importlib.util
+import sys
+import app.services.backtest_practical_validation_curve
+import app.services.backtest_practical_validation_provider_context
+print("streamlit" in sys.modules)
+print(importlib.util.find_spec("app.web.backtest_practical_validation_curve") is None)
+print(importlib.util.find_spec("app.web.backtest_practical_validation_connectors") is None)
+"""
+        result = subprocess.run(
+            [sys.executable, "-c", script],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
+        self.assertEqual(result.stdout.splitlines(), ["False", "True", "True"])
 
 
 class PracticalValidationDiagnosticsServiceContractTests(unittest.TestCase):

@@ -8,7 +8,7 @@ Last Verified: 2026-05-27
 | Track | Status | Notes |
 |---|---|---|
 | UI Engine Boundary Foundation | Implementation complete | `.aiworkspace/note/finance/phases/active/ui-engine-boundary-foundation/`; audit, Single Backtest, Compare / Weighted / Saved Replay, Practical Validation handoff, Final Review / Selected Dashboard evidence read model, runtime package boundary 완료 |
-| UI Engine Boundary Cleanup | Active | `.aiworkspace/note/finance/phases/active/ui-engine-boundary-cleanup/`; Task 0 audit 완료, 다음은 Practical Validation helper advisory 제거 |
+| UI Engine Boundary Cleanup | Active | `.aiworkspace/note/finance/phases/active/ui-engine-boundary-cleanup/`; Task 6 helper advisory 제거 완료, 다음은 Practical Validation diagnostics split |
 | Documentation System Rebuild | Practical closeout | `.aiworkspace/note/finance/tasks/active/doc-system-rebuild/`; legacy root / operations / research / support / phase history 제거 완료 |
 | AI Workspace Migration | Practical closeout | `.aiworkspace/note/finance/tasks/active/ai-workspace-migration/`; `.aiworkspace/note/finance`와 `.aiworkspace/plugins` canonical 이동 및 검증 완료 |
 | Skill System Rebuild | Complete | `.aiworkspace/note/finance/tasks/active/skill-system-rebuild/`; 4 workflow + 4 domain skill taxonomy, repo-local source, global mirror, plugin manifest, marketplace path 검증 완료 |
@@ -73,5 +73,5 @@ P2에서 정상화하는 주요 진단:
 
 ## Next Decisions
 
-- UI Engine Boundary Cleanup은 Task 6부터 진행한다. 먼저 Practical Validation curve / provider context helper를 Streamlit-free service 위치로 이동해 `app.services/app.runtime -> app.web` advisory를 0건으로 줄인다.
+- UI Engine Boundary Cleanup은 Task 7로 진행한다. Practical Validation diagnostics service를 source/profile, curve context, stress/sensitivity helper 단위로 나눌 후보를 먼저 깊게 분석한다.
 - Practical Validation V2는 P2 QA 여부를 확인한 뒤 P3로 넘어갈지, P2를 closeout할지 결정한다.

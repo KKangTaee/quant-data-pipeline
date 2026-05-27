@@ -36,18 +36,17 @@ Created: 2026-05-27
 
 ## Current Baseline
 
-2026-05-27 audit 기준:
+2026-05-27 Task 0 audit 기준:
 
 - `check_ui_engine_boundary.py` 결과: hard violations 없음, PASS
-- 남은 advisory 3건:
-  - `app/services/backtest_practical_validation_diagnostics.py` -> `app.web.backtest_practical_validation_curve`
-  - `app/services/backtest_practical_validation_diagnostics.py` -> `app.web.backtest_practical_validation_connectors`
-  - `app/services/backtest_practical_validation_replay.py` -> `app.web.backtest_practical_validation_curve`
+- Task 6 전에는 Practical Validation diagnostics / replay service가 `app/web`의 curve / provider context helper를 참조하는 advisory가 3건 있었다.
 - 큰 cleanup 후보:
   - `app/services/backtest_practical_validation_diagnostics.py`: 2956 lines
   - `app/runtime/backtest.py`: 5191 lines
   - `app/runtime/final_selected_portfolios.py`: 1064 lines
   - `app/runtime/candidate_library.py`: 800 lines
+
+Task 6 이후에는 Practical Validation curve / provider context helpers를 `app/services`로 이동했고 boundary lint advisory는 0건이다.
 
 ## Target Architecture
 

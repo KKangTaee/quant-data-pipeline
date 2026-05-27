@@ -8,7 +8,7 @@ Created: 2026-05-27
 | Task | Owner Scope | Status | Notes |
 | --- | --- | --- | --- |
 | `0. ui-engine-boundary-cleanup-audit` | phase/task design, current code audit | Complete | hard violation 없음, advisory 3건과 Task 6~9 방향 확정 |
-| `6. practical-validation-helper-boundary` | Practical Validation curve / provider context helper 이동 | Planned | `app.services/app.runtime -> app.web` advisory 제거 |
+| `6. practical-validation-helper-boundary` | Practical Validation curve / provider context helper 이동 | Complete | `app.services/app.runtime -> app.web` advisory 제거 |
 | `7. practical-validation-diagnostics-split` | 큰 diagnostics service 책임 분할 | Planned | source/profile, curve context, stress/sensitivity helper 후보 |
 | `8. runtime-wrapper-cleanup` | 큰 runtime wrapper 구조 분석과 낮은 위험 split | Planned | `app/runtime/backtest.py`를 바로 쪼개지 않고 characterization부터 진행 |
 | `9. boundary-contract-hardening` | lint / test / docs hardening | Planned | advisory 0건 이후 `app.web` import를 hard fail로 승격 |
@@ -36,9 +36,9 @@ Created: 2026-05-27
 
 | Step | Goal | Expected Files | Done Check |
 | --- | --- | --- | --- |
-| `6-01` | curve helper 이동 | `app/web/backtest_practical_validation_curve.py`, new service helper, imports | replay / diagnostics import가 service helper를 바라봄 |
-| `6-02` | provider context connector 이동 | `app/web/backtest_practical_validation_connectors.py`, new service helper, docs imports | diagnostics service가 `app.web` connector를 참조하지 않음 |
-| `6-03` | docs / tests / lint 정렬 | project map, script map, data flow docs, service tests | boundary lint advisory 0건 |
+| `6-01` | curve helper 이동 | `app/services/backtest_practical_validation_curve.py`, imports | Complete |
+| `6-02` | provider context connector 이동 | `app/services/backtest_practical_validation_provider_context.py`, imports | Complete |
+| `6-03` | docs / tests / lint 정렬 | project map, script map, data flow docs, service tests | Complete |
 
 권장 검증:
 

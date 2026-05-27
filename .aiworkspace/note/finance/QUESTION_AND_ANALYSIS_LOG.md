@@ -21,6 +21,18 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-27 - Practical Validation helper는 service boundary로 이동한다
+- User request:
+  - UI-engine boundary cleanup의 다음 작업 진행을 요청함.
+- Interpreted goal:
+  - 남은 `app.services/app.runtime -> app.web` advisory를 제거해 service/runtime이 web helper를 거꾸로 참조하지 않게 해야 함.
+- Analysis result:
+  - curve normalize / provenance / benchmark parity helper를 `app/services/backtest_practical_validation_curve.py`로 이동했다.
+  - provider / macro loader output adapter를 `app/services/backtest_practical_validation_provider_context.py`로 이동했다.
+  - diagnostics / replay service import를 새 service helper로 바꾸고 boundary lint advisory를 0건으로 줄였다.
+- Follow-up:
+  - 다음은 Task 7 `practical-validation-diagnostics-split`이며, 큰 diagnostics service를 계산 helper family 단위로 깊게 분석한 뒤 분리한다.
+
 ### 2026-05-27 - Cleanup phase는 전체 얕은 audit 후 task별 깊은 분석으로 진행한다
 - User request:
   - UI-engine 분리 cleanup 작업을 실제로 진행하되, 수정하면서 브라우저로 테스트 가능한 부분이 있으면 브라우저를 열어 확인을 유도해 달라고 요청함.

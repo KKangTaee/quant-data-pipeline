@@ -22,10 +22,14 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-27
+- Completed `.aiworkspace/note/finance/tasks/active/practical-validation-helper-boundary/`.
+- Moved Practical Validation curve helper to `app/services/backtest_practical_validation_curve.py`.
+- Moved provider context adapter to `app/services/backtest_practical_validation_provider_context.py`.
+- Boundary lint now reports no `app.services/app.runtime -> app.web` advisories; next cleanup task is diagnostics service split.
 - Opened `.aiworkspace/note/finance/phases/active/ui-engine-boundary-cleanup/`.
 - Completed Task 0 audit at `.aiworkspace/note/finance/tasks/active/ui-engine-boundary-cleanup-audit/`.
-- Current boundary lint passes with no hard violations; remaining advisories are 3 Practical Validation helper imports from `app/services` to `app/web`.
-- Next task is `6. practical-validation-helper-boundary`, split into `6-01` curve helper move, `6-02` provider context move, and `6-03` docs/tests/lint alignment.
+- Task 0 originally found 3 Practical Validation helper advisories; Task 6 resolved them.
+- Next task is `7. practical-validation-diagnostics-split`.
 
 ### 2026-05-20
 - Completed `.aiworkspace/note/finance/tasks/active/runtime-package-boundary/`.

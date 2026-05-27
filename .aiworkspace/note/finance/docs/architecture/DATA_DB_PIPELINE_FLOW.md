@@ -73,7 +73,7 @@ external source
   해당 ingestion을 수동 실행할 수 있다.
   `Provider Source Map` tab은 `nyse_etf`와 `nyse_asset_profile`을 기준으로 iShares / SSGA / Invesco 공식 endpoint 후보를 검증해
   `etf_provider_source_map`에 저장한다. 이후 snapshot collector는 이 verified source map을 static map보다 먼저 사용한다.
-  P2-5B부터 `app/web/backtest_practical_validation_connectors.py`가 loader 결과를 compact provider context로 바꾸고,
+  P2-5B부터 `app/services/backtest_practical_validation_provider_context.py`가 loader 결과를 compact provider context로 바꾸고,
   Practical Validation diagnostics가 이 context를 proxy보다 우선 사용한다.
   `etf_operability_snapshot`은 기존 DB의 price/profile 기반 bridge/proxy snapshot과
   iShares / SSGA / Invesco official page 기반 actual/partial snapshot을 source별로 함께 제공한다.

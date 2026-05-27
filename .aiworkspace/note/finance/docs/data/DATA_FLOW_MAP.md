@@ -76,7 +76,7 @@ iShares / SSGA / Invesco official ETF pages
 finance.data.etf_provider.collect_and_store_etf_operability()
   -> finance_meta.etf_operability_snapshot
   -> finance.loaders.provider.load_etf_operability_snapshot()
-  -> app.web.backtest_practical_validation_connectors.build_provider_context()
+  -> app.services.backtest_practical_validation_provider_context.build_provider_context()
   -> Practical Validation provider context
 ```
 
@@ -105,7 +105,7 @@ Invesco official holdings / weighted sector API
   -> finance_meta.etf_exposure_snapshot
   -> finance.loaders.provider.load_etf_holdings_snapshot()
   -> finance.loaders.provider.load_etf_exposure_snapshot()
-  -> app.web.backtest_practical_validation_connectors.build_provider_context()
+  -> app.services.backtest_practical_validation_provider_context.build_provider_context()
   -> Practical Validation provider context
 ```
 
@@ -127,7 +127,7 @@ FRED API or FRED official CSV download
   -> finance_meta.macro_series_observation
   -> finance.loaders.macro.load_macro_series_observations()
   -> finance.loaders.macro.load_macro_snapshot()
-  -> app.web.backtest_practical_validation_connectors.build_provider_context()
+  -> app.services.backtest_practical_validation_provider_context.build_provider_context()
   -> Practical Validation market-context provider context
 ```
 

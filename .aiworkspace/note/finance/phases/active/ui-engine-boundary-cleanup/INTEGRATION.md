@@ -28,8 +28,8 @@ For UI-visible task changes, additionally start the Streamlit app and use the br
 
 - `app/services/backtest_practical_validation_diagnostics.py`
 - `app/services/backtest_practical_validation_replay.py`
-- `app/web/backtest_practical_validation_curve.py`
-- `app/web/backtest_practical_validation_connectors.py`
+- `app/services/backtest_practical_validation_curve.py`
+- `app/services/backtest_practical_validation_provider_context.py`
 - `app/runtime/backtest.py`
 - `tests/test_service_contracts.py`
 - `.aiworkspace/plugins/quant-finance-workflow/scripts/check_ui_engine_boundary.py`
