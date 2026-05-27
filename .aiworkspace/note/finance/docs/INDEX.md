@@ -1,7 +1,7 @@
 # Finance Documentation Index
 
 Status: Active
-Last Verified: 2026-05-13
+Last Verified: 2026-05-27
 
 ## Purpose
 

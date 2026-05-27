@@ -21,6 +21,18 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-27 - Cleanup phase는 전체 얕은 audit 후 task별 깊은 분석으로 진행한다
+- User request:
+  - UI-engine 분리 cleanup 작업을 실제로 진행하되, 수정하면서 브라우저로 테스트 가능한 부분이 있으면 브라우저를 열어 확인을 유도해 달라고 요청함.
+- Interpreted goal:
+  - 바로 큰 refactor를 하기보다 현재 코드 흐름을 다시 확인하고, Task 6~9를 명확한 하위 단계와 검증 기준으로 진행해야 함.
+- Analysis result:
+  - `ui-engine-boundary-cleanup` phase와 `ui-engine-boundary-cleanup-audit` task를 열었다.
+  - 현재 boundary lint는 hard violation 없이 PASS이며, 남은 구조 부채는 Practical Validation의 `app.services -> app.web` helper advisory 3건이다.
+  - Task 6은 Practical Validation curve / provider context helper 이동, Task 7은 diagnostics service split, Task 8은 runtime wrapper map/low-risk cleanup, Task 9는 lint/test/docs hardening으로 정리했다.
+- Follow-up:
+  - Task 0은 문서 / audit 작업이라 브라우저 QA 대상이 없다. Task 6 이후 visible Streamlit 화면이나 표시 shape가 바뀌면 브라우저로 확인한다.
+
 ### 2026-05-20 - Runtime은 app/web 밖의 app/runtime이 맡는다
 - User request:
   - 남은 개선 후보인 `app/web/runtime` 위치 / 이름 정리를 다음 task로 진행해 달라고 요청함.

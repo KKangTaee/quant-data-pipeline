@@ -21,6 +21,12 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-27
+- Opened `.aiworkspace/note/finance/phases/active/ui-engine-boundary-cleanup/`.
+- Completed Task 0 audit at `.aiworkspace/note/finance/tasks/active/ui-engine-boundary-cleanup-audit/`.
+- Current boundary lint passes with no hard violations; remaining advisories are 3 Practical Validation helper imports from `app/services` to `app/web`.
+- Next task is `6. practical-validation-helper-boundary`, split into `6-01` curve helper move, `6-02` provider context move, and `6-03` docs/tests/lint alignment.
+
 ### 2026-05-20
 - Completed `.aiworkspace/note/finance/tasks/active/runtime-package-boundary/`.
 - `5-01`: moved `app/web/runtime` to `app/runtime` and updated repo imports to `app.runtime`.
