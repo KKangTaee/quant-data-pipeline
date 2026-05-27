@@ -9,7 +9,7 @@ Created: 2026-05-27
 | --- | --- | --- | --- |
 | `0. ui-engine-boundary-cleanup-audit` | phase/task design, current code audit | Complete | hard violation 없음, advisory 3건과 Task 6~9 방향 확정 |
 | `6. practical-validation-helper-boundary` | Practical Validation curve / provider context helper 이동 | Complete | `app.services/app.runtime -> app.web` advisory 제거 |
-| `7. practical-validation-diagnostics-split` | 큰 diagnostics service 책임 분할 | In Progress | `7-01` source/profile, `7-02` curve context, `7-03` stress/sensitivity helper 분리 완료; 다음은 orchestration import 정리 |
+| `7. practical-validation-diagnostics-split` | 큰 diagnostics service 책임 분할 | Complete | `7-01`~`7-04` 완료; diagnostics public compatibility contract 명시 |
 | `8. runtime-wrapper-cleanup` | 큰 runtime wrapper 구조 분석과 낮은 위험 split | Planned | `app/runtime/backtest.py`를 바로 쪼개지 않고 characterization부터 진행 |
 | `9. boundary-contract-hardening` | lint / test / docs hardening | Planned | advisory 0건 이후 `app.web` import를 hard fail로 승격 |
 
@@ -66,7 +66,7 @@ Created: 2026-05-27
 | `7-01` | source/profile builder 분리 | Complete |
 | `7-02` | curve context helper 분리 | Complete |
 | `7-03` | stress/sensitivity evidence helper 분리 | Complete |
-| `7-04` | orchestration import 정리 | public entry와 service contract tests 보강 |
+| `7-04` | orchestration import 정리 | Complete |
 
 주의:
 

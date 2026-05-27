@@ -22,10 +22,13 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-27
+- Completed Task 7-04 under `.aiworkspace/note/finance/tasks/active/practical-validation-diagnostics-split/`.
+- Moved `source_components_dataframe` into `app/services/backtest_practical_validation_source.py` and pinned diagnostics compatibility exports with `__all__`.
+- Task 7 `practical-validation-diagnostics-split` is complete; next cleanup slice is Task 8 runtime wrapper cleanup.
 - Completed Task 7-03 under `.aiworkspace/note/finance/tasks/active/practical-validation-diagnostics-split/`.
 - Added `app/services/backtest_practical_validation_stress_sensitivity.py` for rolling validation, stress windows, baseline challenge, sensitivity interpretation, correlation risk, market context, and overfit audit helpers.
 - Diagnostics service now focuses more on component context assembly and the 12 diagnostic result orchestration.
-- Next cleanup slice is Task 7-04 orchestration import / public contract cleanup.
+- Followed by Task 7-04 orchestration import / public contract cleanup.
 - Completed Task 7-02 under `.aiworkspace/note/finance/tasks/active/practical-validation-diagnostics-split/`.
 - Added `app/services/backtest_practical_validation_curve_context.py` for compact curve snapshots, curve normalize, DB price proxy, component curve combination, and monthly/window helpers.
 - Compare and Candidate Review now import compact curve snapshot helpers directly from the curve context service helper.

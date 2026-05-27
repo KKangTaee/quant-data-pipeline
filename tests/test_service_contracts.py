@@ -136,6 +136,7 @@ import app.services.backtest_practical_validation_curve
 import app.services.backtest_practical_validation_curve_context
 import app.services.backtest_practical_validation_provider_context
 import app.services.backtest_practical_validation_stress_sensitivity
+import app.services.backtest_practical_validation_source
 print("streamlit" in sys.modules)
 print(importlib.util.find_spec("app.web.backtest_practical_validation_curve") is None)
 print(importlib.util.find_spec("app.web.backtest_practical_validation_connectors") is None)
@@ -151,6 +152,30 @@ print(importlib.util.find_spec("app.web.backtest_practical_validation_connectors
 
 
 class PracticalValidationDiagnosticsServiceContractTests(unittest.TestCase):
+    def test_diagnostics_public_compatibility_contract_is_explicit(self) -> None:
+        from app.services import backtest_practical_validation_curve_context as curve_context
+        from app.services import backtest_practical_validation_diagnostics as diagnostics
+        from app.services import backtest_practical_validation_source as source_builders
+
+        self.assertEqual(
+            diagnostics.__all__,
+            [
+                "VALIDATION_PROFILE_OPTIONS",
+                "VALIDATION_PROFILE_QUESTIONS",
+                "build_practical_validation_result",
+                "build_selection_source_from_candidate_draft",
+                "build_selection_source_from_saved_mix_prefill",
+                "build_selection_source_from_weighted_mix_prefill",
+                "build_validation_profile",
+                "compact_benchmark_curve_snapshot_from_bundle",
+                "compact_curve_snapshot_from_bundle",
+                "source_components_dataframe",
+            ],
+        )
+        self.assertIs(diagnostics.build_validation_profile, source_builders.build_validation_profile)
+        self.assertIs(diagnostics.source_components_dataframe, source_builders.source_components_dataframe)
+        self.assertIs(diagnostics.compact_curve_snapshot_from_bundle, curve_context.compact_curve_snapshot_from_bundle)
+
     def test_profile_builder_and_curve_snapshot_are_ui_neutral(self) -> None:
         from app.services import backtest_practical_validation_curve_context as curve_context
         from app.services import backtest_practical_validation_source as source_builders

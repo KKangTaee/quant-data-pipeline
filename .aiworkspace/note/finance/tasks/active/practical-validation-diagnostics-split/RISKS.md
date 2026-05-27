@@ -13,3 +13,4 @@ Created: 2026-05-27
 | Browser QA is skipped despite a runtime import issue | Run service import tests; browser only if visible Streamlit flow changes |
 | Curve context extraction accidentally drags component interpretation into a generic helper | Keep `_build_curve_context` and `_component_universe_tickers` in diagnostics for 7-02; only move shared curve math / snapshot helpers |
 | Stress/sensitivity extraction changes component label or weight interpretation | Use the same title / target weight fallback inside the new helper and run service contract tests |
+| Diagnostics compatibility surface drifts after helper split | Pin diagnostics `__all__` and test re-export identities against source / curve helper modules |

@@ -70,3 +70,16 @@ Created: 2026-05-27
 - Service import smoke test now imports the new stress / sensitivity helper.
 - Diagnostics line count dropped from 2258 to 1507.
 - No calculation formulas, Practical Validation result schema, or Streamlit UI behavior were changed.
+
+## 7-04 Choice
+
+- Keep `build_practical_validation_result` as the diagnostics orchestration entry.
+- Move `source_components_dataframe` to `app/services/backtest_practical_validation_source.py` because it is a source read-model helper, not diagnostics assembly.
+- Keep legacy diagnostics re-exports for source builders and compact curve snapshots, but make that compatibility surface explicit with `__all__`.
+
+## 7-04 Result
+
+- Added diagnostics `__all__` for the public compatibility contract.
+- Added service contract coverage for diagnostics public compatibility exports.
+- Practical Validation service now imports `source_components_dataframe` from the source helper.
+- Task 7 diagnostics split is complete.

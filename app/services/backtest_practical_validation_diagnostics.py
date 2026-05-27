@@ -36,6 +36,7 @@ from app.services.backtest_practical_validation_source import (
     build_selection_source_from_saved_mix_prefill,
     build_selection_source_from_weighted_mix_prefill,
     build_validation_profile,
+    source_components_dataframe,
 )
 from app.services.backtest_practical_validation_stress_sensitivity import (
     _baseline_rows,
@@ -1490,18 +1491,16 @@ def build_practical_validation_result(
         "final_decision_schema_target": FINAL_SELECTION_DECISION_V2_SCHEMA_VERSION,
     }
 
-def source_components_dataframe(source: dict[str, Any]) -> pd.DataFrame:
-    rows: list[dict[str, Any]] = []
-    for component in list(dict(source or {}).get("components") or []):
-        component_row = dict(component or {})
-        rows.append(
-            {
-                "Component": component_row.get("title") or component_row.get("strategy_name") or component_row.get("component_id"),
-                "Weight": component_row.get("target_weight"),
-                "CAGR": component_row.get("baseline_cagr"),
-                "MDD": component_row.get("baseline_mdd"),
-                "Benchmark": component_row.get("benchmark"),
-                "Data Trust": component_row.get("data_trust_status"),
-            }
-        )
-    return pd.DataFrame(rows)
+
+__all__ = [
+    "VALIDATION_PROFILE_OPTIONS",
+    "VALIDATION_PROFILE_QUESTIONS",
+    "build_practical_validation_result",
+    "build_selection_source_from_candidate_draft",
+    "build_selection_source_from_saved_mix_prefill",
+    "build_selection_source_from_weighted_mix_prefill",
+    "build_validation_profile",
+    "compact_benchmark_curve_snapshot_from_bundle",
+    "compact_curve_snapshot_from_bundle",
+    "source_components_dataframe",
+]

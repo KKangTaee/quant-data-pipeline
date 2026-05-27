@@ -21,6 +21,18 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-27 - Diagnostics split의 public compatibility contract를 명시한다
+- User request:
+  - Task 7-04 작업 진행을 요청함.
+- Interpreted goal:
+  - helper 분리 이후 diagnostics가 어떤 public entry를 유지하는지 명확히 하고, Practical Validation service가 source read model을 올바른 helper에서 읽게 해야 함.
+- Analysis result:
+  - `source_components_dataframe`를 `app/services/backtest_practical_validation_source.py`로 이동했다.
+  - `app/services/backtest_practical_validation_diagnostics.py`에 `__all__`을 추가해 legacy compatibility export를 명시했다.
+  - service contract test가 diagnostics re-export identity를 검증하도록 보강됐다.
+- Follow-up:
+  - Task 7은 완료됐고, 다음은 Task 8 `runtime-wrapper-cleanup`이다.
+
 ### 2026-05-27 - Diagnostics stress / sensitivity helper는 별도 service helper로 분리한다
 - User request:
   - UI-engine cleanup의 다음 단계 진행을 요청함.
@@ -31,7 +43,7 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `_operability_rows`는 component ticker inference와 price loader lookup에 붙어 있어 이번 단계에서는 diagnostics에 남겼다.
   - 계산식과 Practical Validation result schema는 바꾸지 않았다.
 - Follow-up:
-  - 다음은 Task 7-04로 diagnostics orchestration import와 public compatibility contract를 정리한다.
+  - 해당 follow-up은 Task 7-04에서 public compatibility contract 정리로 처리했다.
 
 ### 2026-05-27 - Diagnostics curve context helper는 service helper로 분리한다
 - User request:

@@ -11,6 +11,7 @@ Created: 2026-05-27
 이 task는 계산 결과를 바꾸지 않고 diagnostics service를 helper family 단위로 나눈다.
 첫 단계는 가장 안전한 source/profile builder 분리였고, 두 번째 단계는 shared curve context helper 분리였다.
 세 번째 단계는 rolling / stress / baseline / sensitivity evidence helper 분리다.
+마지막 단계는 diagnostics의 public compatibility surface와 orchestration import를 명시적으로 고정하는 작업이다.
 
 ## Scope
 
@@ -52,4 +53,12 @@ Created: 2026-05-27
 - diagnostics service는 12개 diagnostic assembly와 component context orchestration에 집중한다.
 - service import smoke test가 새 helper module을 포함한다.
 - service contract tests와 boundary lint가 통과한다.
+- browser QA가 필요한지 판단이 기록된다.
+
+## Done Criteria For 7-04
+
+- diagnostics public compatibility surface가 `__all__`로 명시되어 있다.
+- `source_components_dataframe` 같은 source read-model helper는 source module이 소유한다.
+- service contract tests가 diagnostics compatibility export를 검증한다.
+- boundary lint와 service contract tests가 통과한다.
 - browser QA가 필요한지 판단이 기록된다.

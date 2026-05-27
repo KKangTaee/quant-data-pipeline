@@ -97,3 +97,34 @@ git diff --check
 - Service contract tests: PASS, 17 tests.
 - Diff check: PASS.
 - Browser QA: not applicable because `7-03` changes service helper ownership/import paths only, with no visible Streamlit flow or displayed data shape change.
+
+## 7-04 Analysis Commands
+
+```bash
+rg -n "from app\\.services\\.backtest_practical_validation_diagnostics import|import app\\.services\\.backtest_practical_validation_diagnostics|backtest_practical_validation_diagnostics" app tests -g '*.py'
+rg -n "compact_curve_snapshot_from_bundle|compact_benchmark_curve_snapshot_from_bundle|build_validation_profile|build_selection_source_from_candidate_draft|build_selection_source_from_saved_mix_prefill|build_selection_source_from_weighted_mix_prefill|source_components_dataframe|build_practical_validation_result" app tests -g '*.py'
+rg -n "__all__|build_practical_validation_result|source_components_dataframe|build_validation_profile" app/services/backtest_practical_validation*.py
+```
+
+## 7-04 Analysis Result
+
+- External diagnostics users are now limited to the Practical Validation service wrapper and service import smoke test.
+- Direct UI callers already use the source / curve context helpers rather than diagnostics.
+- `source_components_dataframe` belongs in the source helper because it is a compact source read model, not diagnostics assembly.
+
+## 7-04 Verification Commands
+
+```bash
+.venv/bin/python -m py_compile app/services/backtest_practical_validation_source.py app/services/backtest_practical_validation_diagnostics.py app/services/backtest_practical_validation.py tests/test_service_contracts.py
+.venv/bin/python .aiworkspace/plugins/quant-finance-workflow/scripts/check_ui_engine_boundary.py
+.venv/bin/python -m unittest tests.test_service_contracts
+git diff --check
+```
+
+## 7-04 Verification Results
+
+- Python compile: PASS.
+- Boundary lint: PASS, hard violations none, advisories none.
+- Service contract tests: PASS, 18 tests.
+- Diff check: PASS.
+- Browser QA: not applicable because `7-04` changes service helper ownership/import contract only, with no visible Streamlit flow or displayed data shape change.

@@ -35,10 +35,10 @@ UI form, payload 복원, candidate review, history replay, candidate replay, sav
 | `app/web/pages/backtest.py` | Backtest page entry, workflow navigation, panel dispatch shell. 주요 panel 본문은 `app/web/backtest_*.py` module이 담당 |
 | `app/web/backtest_ui_components.py` | Backtest UI 공용 status card, artifact pipeline, compact badge strip, stage brief strip, route/readiness panel render helper |
 | `app/services/backtest_practical_validation.py` | Streamlit-free Practical Validation service. source/result 저장, Practical Validation / Final Review handoff contract, Provider Data Gaps row / collection plan / ingestion job orchestration을 만든다 |
-| `app/services/backtest_practical_validation_source.py` | Streamlit-free validation profile / selection source builder. Candidate draft, saved mix, weighted mix를 Clean V2 source로 변환한다 |
+| `app/services/backtest_practical_validation_source.py` | Streamlit-free validation profile / selection source builder / source component table helper. Candidate draft, saved mix, weighted mix를 Clean V2 source로 변환한다 |
 | `app/services/backtest_practical_validation_curve_context.py` | Streamlit-free curve context helper. compact curve snapshot, curve normalize, DB price proxy, component curve combination, window perturbation / monthly returns 계산을 맡는다 |
 | `app/services/backtest_practical_validation_stress_sensitivity.py` | Streamlit-free stress / sensitivity helper. rolling validation, stress window, baseline challenge, sensitivity 해석, correlation risk, market context, overfit audit를 맡는다 |
-| `app/services/backtest_practical_validation_diagnostics.py` | Streamlit-free Practical Validation diagnostics service. component context assembly와 12개 Practical Diagnostics result를 만든다 |
+| `app/services/backtest_practical_validation_diagnostics.py` | Streamlit-free Practical Validation diagnostics service. component context assembly, 12개 Practical Diagnostics result, compatibility export를 만든다 |
 | `app/services/backtest_practical_validation_replay.py` | Streamlit-free Practical Validation replay service. 기존 strategy runtime 재검증 계획과 actual replay result를 만든다 |
 | `app/services/backtest_practical_validation_curve.py` | Streamlit-free Practical Validation curve normalize, compact curve records, curve provenance, benchmark parity helper |
 | `app/services/backtest_practical_validation_provider_context.py` | Streamlit-free P2 provider context adapter. DB에 저장된 ETF operability / holdings / exposure / FRED macro snapshot을 compact evidence로 바꿔 Practical Diagnostics에 연결 |

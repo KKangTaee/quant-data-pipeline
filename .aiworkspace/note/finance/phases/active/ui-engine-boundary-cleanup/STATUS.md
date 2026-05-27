@@ -14,7 +14,8 @@ Created: 2026-05-27
 - `7-01`: split validation profile / selection source builders into `app/services/backtest_practical_validation_source.py`.
 - `7-02`: split shared curve context helpers into `app/services/backtest_practical_validation_curve_context.py`.
 - `7-03`: split rolling / stress / baseline / sensitivity helper family into `app/services/backtest_practical_validation_stress_sensitivity.py`.
+- `7-04`: moved source component table helper into source service helper and made diagnostics compatibility exports explicit.
 
 ## Current Next Step
 
-Continue Task 7 with `7-04`: clean orchestration imports, public compatibility surface, and service contract docs.
+Start Task 8 `runtime-wrapper-cleanup` with runtime wrapper function-family mapping before any split.

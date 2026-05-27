@@ -431,3 +431,21 @@ def build_selection_source_from_weighted_mix_prefill(prefill: dict[str, Any]) ->
     row = dict(prefill or {})
     row.setdefault("source_kind", "weighted_portfolio_mix")
     return build_selection_source_from_saved_mix_prefill(row)
+
+
+def source_components_dataframe(source: dict[str, Any]) -> pd.DataFrame:
+    """Return the compact source component table used by the Practical Validation UI."""
+    rows: list[dict[str, Any]] = []
+    for component in list(dict(source or {}).get("components") or []):
+        component_row = dict(component or {})
+        rows.append(
+            {
+                "Component": component_row.get("title") or component_row.get("strategy_name") or component_row.get("component_id"),
+                "Weight": component_row.get("target_weight"),
+                "CAGR": component_row.get("baseline_cagr"),
+                "MDD": component_row.get("baseline_mdd"),
+                "Benchmark": component_row.get("benchmark"),
+                "Data Trust": component_row.get("data_trust_status"),
+            }
+        )
+    return pd.DataFrame(rows)
