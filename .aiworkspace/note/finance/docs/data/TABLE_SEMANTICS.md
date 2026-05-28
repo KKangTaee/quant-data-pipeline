@@ -53,6 +53,42 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - current provider endpoint 검증 cache이므로 과거 특정 시점의 provider URL truth가 아니다.
 - 운용사 사이트 구조가 바뀌면 discovery를 다시 실행하거나 adapter를 보강해야 한다.
 
+## `market_universe_member`
+
+역할:
+
+- Overview Market Movers에서 쓰는 관리형 universe membership을 저장한다.
+- 초기 구현은 S&P 500 current constituents를 `universe_code=SP500`으로 저장한다.
+
+성격:
+
+- current universe snapshot table이다.
+- source는 Wikipedia S&P 500 constituents table이며, ticker는 Yahoo Finance 호환을 위해 `.`을 `-`로 정규화한다.
+- Top1000 / Top2000 coverage는 이 table이 아니라 `nyse_asset_profile.market_cap` current snapshot을 직접 사용한다.
+
+주의:
+
+- historical S&P 500 membership이나 point-in-time constituent truth가 아니다.
+- 상장폐지 / 편입변경의 과거 재현이 필요한 backtest universe로 바로 쓰면 survivorship bias가 생길 수 있다.
+
+## `market_intraday_snapshot`
+
+역할:
+
+- Overview Market Movers의 S&P 500 daily view에서 전일 종가 대비 최신 intraday 가격 수익률을 저장한다.
+
+성격:
+
+- provider snapshot table이다.
+- source는 yfinance intraday / daily fallback이며, `previous_close`, `latest_price`, `return_pct`, `provider_status`, `error_msg`를 함께 저장한다.
+- UI는 정상 render 때 provider를 직접 호출하지 않고 이 table의 최신 snapshot을 읽는다.
+
+주의:
+
+- 무료 provider 기반이므로 지연, rate limit, ticker별 missing이 발생할 수 있다.
+- `provider_status != ok` row는 missing diagnostics로 노출하고 ranking에는 쓰지 않는다.
+- Top1000 / Top2000 intraday 확장은 별도 속도 / 안정성 검증 후 진행한다.
+
 ## `etf_operability_snapshot`
 
 역할:

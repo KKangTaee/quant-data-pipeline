@@ -263,6 +263,66 @@ PRICE_SCHEMAS = {
 }
 
 
+MARKET_INTELLIGENCE_SCHEMAS = {
+    "market_universe_member": """
+        CREATE TABLE IF NOT EXISTS market_universe_member (
+          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+          universe_code VARCHAR(32) NOT NULL,
+          symbol VARCHAR(20) NOT NULL,
+          source_symbol VARCHAR(32) NULL,
+          name VARCHAR(255) NULL,
+          sector VARCHAR(100) NULL,
+          industry VARCHAR(150) NULL,
+
+          source VARCHAR(64) NOT NULL,
+          source_url VARCHAR(1024) NULL,
+          as_of_date DATE NULL,
+          active TINYINT(1) NOT NULL DEFAULT 1,
+          collected_at TIMESTAMP NULL,
+          error_msg TEXT NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+          UNIQUE KEY uk_universe_symbol (universe_code, symbol),
+          KEY ix_universe_active (universe_code, active),
+          KEY ix_symbol (symbol)
+        );
+    """,
+    "market_intraday_snapshot": """
+        CREATE TABLE IF NOT EXISTS market_intraday_snapshot (
+          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+          universe_code VARCHAR(32) NOT NULL,
+          symbol VARCHAR(20) NOT NULL,
+          interval_code VARCHAR(10) NOT NULL,
+          snapshot_time_utc DATETIME NOT NULL,
+          quote_time_utc DATETIME NULL,
+
+          source VARCHAR(64) NOT NULL,
+          source_ref VARCHAR(255) NULL,
+
+          previous_close DOUBLE NULL,
+          latest_price DOUBLE NULL,
+          return_pct DOUBLE NULL,
+          volume BIGINT NULL,
+
+          provider_status ENUM('ok','missing','error') NOT NULL DEFAULT 'missing',
+          error_msg TEXT NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+          UNIQUE KEY uk_universe_symbol_interval_snapshot (universe_code, symbol, interval_code, snapshot_time_utc),
+          KEY ix_universe_snapshot (universe_code, interval_code, snapshot_time_utc),
+          KEY ix_symbol_snapshot (symbol, snapshot_time_utc),
+          KEY ix_provider_status (provider_status)
+        );
+    """,
+}
+
+
 PROVIDER_SCHEMAS = {
     "etf_provider_source_map": """
         CREATE TABLE IF NOT EXISTS etf_provider_source_map (

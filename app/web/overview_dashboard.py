@@ -8,10 +8,12 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 
+from app.jobs.ingestion_jobs import run_collect_sp500_intraday_snapshot, run_collect_sp500_universe
 from app.web.backtest_ui_components import render_badge_strip, render_status_card_grid
 from app.web.overview_dashboard_helpers import (
     load_overview_dashboard_snapshot,
     load_overview_group_leadership_snapshot,
+    load_overview_market_mover_sectors,
     load_overview_market_movers_snapshot,
 )
 
@@ -89,17 +91,27 @@ def _snapshot_value(value: Any) -> str:
 def _render_snapshot_status_cards(snapshot: dict[str, Any]) -> None:
     coverage = dict(snapshot.get("coverage") or {})
     stale_days = coverage.get("stale_days")
-    stale_tone = "positive" if stale_days is not None and int(stale_days) <= 3 else "warning"
+    stale_minutes = coverage.get("snapshot_stale_minutes")
+    if stale_minutes is not None:
+        age_value = f"{int(stale_minutes)}m"
+        age_detail = "from intraday snapshot"
+        age_tone = "positive" if int(stale_minutes) <= 10 else "warning"
+    else:
+        age_value = _snapshot_value(stale_days)
+        age_detail = "calendar days from effective date"
+        age_tone = "positive" if stale_days is not None and int(stale_days) <= 3 else "warning"
     returnable = coverage.get("returnable_count") or 0
     universe_count = coverage.get("universe_count") or 0
     coverage_text = f"{returnable} / {universe_count}" if universe_count else "-"
+    effective_value = coverage.get("snapshot_time_utc") or coverage.get("effective_end_date")
+    raw_detail = coverage.get("price_mode") or f"raw latest: {_snapshot_value(coverage.get('latest_raw_date'))}"
     render_status_card_grid(
         [
             {
-                "title": "Effective Market Date",
-                "value": _snapshot_value(coverage.get("effective_end_date")),
-                "detail": f"raw latest: {_snapshot_value(coverage.get('latest_raw_date'))}",
-                "tone": "positive" if coverage.get("effective_end_date") else "warning",
+                "title": "Effective Price Time",
+                "value": _snapshot_value(effective_value),
+                "detail": raw_detail,
+                "tone": "positive" if effective_value else "warning",
             },
             {
                 "title": "Returnable Coverage",
@@ -108,15 +120,15 @@ def _render_snapshot_status_cards(snapshot: dict[str, Any]) -> None:
                 "tone": "positive" if returnable else "warning",
             },
             {
-                "title": "Stale Days",
-                "value": _snapshot_value(stale_days),
-                "detail": "calendar days from effective date",
-                "tone": stale_tone,
+                "title": "Snapshot Age",
+                "value": age_value,
+                "detail": age_detail,
+                "tone": age_tone,
             },
             {
                 "title": "Snapshot Status",
                 "value": snapshot.get("status") or "-",
-                "detail": f"coverage {snapshot.get('universe_limit') or '-'}",
+                "detail": coverage.get("coverage_basis") or snapshot.get("universe_label") or "-",
                 "tone": "positive" if snapshot.get("status") == "OK" else "warning",
             },
         ]
@@ -149,55 +161,53 @@ def _build_return_bar_chart(rows: pd.DataFrame) -> alt.Chart:
     )
 
 
-def _render_market_movers_tab() -> None:
-    st.markdown("### Market Movers")
-    controls = st.columns([1, 1.15, 1, 1], gap="small")
-    universe_limit = int(
-        controls[0].selectbox(
-            "Coverage",
-            [1000, 2000],
-            index=0,
-            key="overview_market_movers_coverage",
-        )
-    )
-    period = str(
-        controls[1].radio(
-            "Period",
-            ["daily", "weekly", "monthly"],
-            index=0,
-            horizontal=True,
-            format_func=lambda value: {"daily": "Daily", "weekly": "Weekly", "monthly": "Monthly"}[value],
-            key="overview_market_movers_period",
-        )
-    )
-    top_n = int(
-        controls[2].number_input(
-            "Top N",
-            min_value=5,
-            max_value=100,
-            value=20,
-            step=5,
-            key="overview_market_movers_top_n",
-        )
-    )
-    if controls[3].button(
-        "Reload DB Snapshot",
-        key="overview_market_movers_reload",
-        use_container_width=True,
-    ):
-        st.session_state["overview_market_movers_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+def _render_missing_diagnostics(snapshot: dict[str, Any]) -> None:
+    missing_rows = snapshot.get("missing_rows")
+    if not isinstance(missing_rows, pd.DataFrame) or missing_rows.empty:
+        return
+    with st.expander(f"Coverage Diagnostics ({len(missing_rows)} missing)", expanded=False):
+        st.dataframe(missing_rows, width="stretch", hide_index=True)
 
-    reloaded_at = st.session_state.get("overview_market_movers_reloaded_at")
-    if reloaded_at:
-        st.caption(f"Last DB snapshot reload request: {reloaded_at}")
 
+def _render_sp500_job_result(result_key: str) -> None:
+    result = st.session_state.get(result_key)
+    if not isinstance(result, dict):
+        return
+    status = result.get("status")
+    message = result.get("message") or ""
+    if status == "success":
+        st.success(message)
+    elif status == "partial_success":
+        st.warning(message)
+    else:
+        st.error(message)
+    details = result.get("details") or {}
+    if details:
+        st.caption(
+            "Rows: "
+            f"{result.get('rows_written') or 0}, "
+            f"Processed: {result.get('symbols_processed') or 0} / {result.get('symbols_requested') or 0}"
+        )
+
+
+def _render_market_movers_snapshot_panel(
+    *,
+    universe_code: str,
+    universe_limit: int,
+    period: str,
+    top_n: int,
+    sector: str,
+) -> None:
     snapshot = load_overview_market_movers_snapshot(
         universe_limit=universe_limit,
+        universe_code=universe_code,
         period=period,
         top_n=top_n,
+        sector=None if sector == "All" else sector,
     )
     _render_snapshot_status_cards(snapshot)
     _render_snapshot_warnings(snapshot)
+    _render_missing_diagnostics(snapshot)
 
     rows = snapshot.get("rows")
     if not isinstance(rows, pd.DataFrame) or rows.empty:
@@ -209,6 +219,127 @@ def _render_market_movers_tab() -> None:
         st.altair_chart(_build_return_bar_chart(rows), width="stretch")
     with right:
         st.dataframe(rows, width="stretch", hide_index=True)
+
+
+def _render_market_movers_tab() -> None:
+    st.markdown("### Market Movers")
+    controls = st.columns([1.1, 1.2, 1.1, 1], gap="small")
+    coverage = str(
+        controls[0].selectbox(
+            "Coverage",
+            ["SP500", "TOP1000", "TOP2000"],
+            index=0,
+            format_func=lambda value: {
+                "SP500": "S&P 500",
+                "TOP1000": "Top 1000",
+                "TOP2000": "Top 2000",
+            }[value],
+            key="overview_market_movers_coverage",
+        )
+    )
+    universe_limit = {"SP500": 500, "TOP1000": 1000, "TOP2000": 2000}[coverage]
+    period = str(
+        controls[1].radio(
+            "Period",
+            ["daily", "weekly", "monthly", "yearly"],
+            index=0,
+            horizontal=True,
+            format_func=lambda value: {
+                "daily": "Daily",
+                "weekly": "Weekly",
+                "monthly": "Monthly",
+                "yearly": "Yearly",
+            }[value],
+            key="overview_market_movers_period",
+        )
+    )
+    sector_options = ["All"] + load_overview_market_mover_sectors(
+        universe_code=coverage,
+        universe_limit=universe_limit,
+    )
+    sector = str(
+        controls[2].selectbox(
+            "Sector",
+            sector_options,
+            index=0,
+            key="overview_market_movers_sector",
+        )
+    )
+    top_n = int(
+        controls[3].number_input(
+            "Top N",
+            min_value=5,
+            max_value=100,
+            value=20,
+            step=5,
+            key="overview_market_movers_top_n",
+        )
+    )
+    actions = st.columns([1, 1, 1, 1.15], gap="small")
+    if actions[0].button(
+        "Reload DB Snapshot",
+        key="overview_market_movers_reload",
+        use_container_width=True,
+    ):
+        st.session_state["overview_market_movers_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    if coverage == "SP500":
+        if actions[1].button(
+            "Refresh S&P 500 Universe",
+            key="overview_sp500_universe_refresh",
+            use_container_width=True,
+        ):
+            with st.spinner("Refreshing S&P 500 universe..."):
+                st.session_state["overview_sp500_universe_result"] = run_collect_sp500_universe()
+        if actions[2].button(
+            "Refresh 5m Daily Snapshot",
+            key="overview_sp500_intraday_refresh",
+            use_container_width=True,
+            disabled=period != "daily",
+        ):
+            with st.spinner("Collecting S&P 500 5m intraday snapshot..."):
+                st.session_state["overview_sp500_intraday_result"] = run_collect_sp500_intraday_snapshot(
+                    interval="5m",
+                    chunk_size=100,
+                )
+    refresh_mode = str(
+        actions[3].selectbox(
+            "View Refresh",
+            ["Manual", "5 min", "10 min"],
+            index=0,
+            key="overview_market_movers_view_refresh",
+            disabled=coverage != "SP500" or period != "daily",
+        )
+    )
+
+    reloaded_at = st.session_state.get("overview_market_movers_reloaded_at")
+    if reloaded_at:
+        st.caption(f"Last DB snapshot reload request: {reloaded_at}")
+    if coverage == "SP500" and period == "daily":
+        st.caption("Daily S&P 500 uses the latest stored intraday snapshot versus previous close when available.")
+        _render_sp500_job_result("overview_sp500_universe_result")
+        _render_sp500_job_result("overview_sp500_intraday_result")
+
+    refresh_seconds = {"5 min": 300, "10 min": 600}.get(refresh_mode)
+    if refresh_seconds:
+        @st.fragment(run_every=refresh_seconds)
+        def _auto_refresh_panel() -> None:
+            _render_market_movers_snapshot_panel(
+                universe_code=coverage,
+                universe_limit=universe_limit,
+                period=period,
+                top_n=top_n,
+                sector=sector,
+            )
+
+        _auto_refresh_panel()
+    else:
+        _render_market_movers_snapshot_panel(
+            universe_code=coverage,
+            universe_limit=universe_limit,
+            period=period,
+            top_n=top_n,
+            sector=sector,
+        )
 
 
 def _render_sector_industry_tab() -> None:

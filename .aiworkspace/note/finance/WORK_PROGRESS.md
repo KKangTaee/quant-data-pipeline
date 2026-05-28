@@ -4005,3 +4005,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/phases/active/overview-market-intelligence/`와 `.aiworkspace/note/finance/tasks/active/overview-market-intelligence-first-slice/`에서 scope lock 후 구현했다.
   - `app/services/overview_market_intelligence.py`가 local DB 기반 market movers와 sector / industry leadership snapshot을 생성한다.
   - Overview는 Market Movers / Sector-Industry / Events / Candidate Ops 탭 구조로 바뀌었고, calendar ingestion은 후속 task로 남겼다.
+- Overview Market Intelligence S&P 500 intraday slice:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-intelligence-sp500-intraday/`에서 S&P 500 current universe와 daily previous-close snapshot 방향을 구현했다.
+  - `finance/data/market_intelligence.py`와 `finance_price.market_intraday_snapshot` / `finance_meta.market_universe_member`가 추가됐다.
+  - Market Movers는 S&P 500 / Top1000 / Top2000, yearly period, sector filter, missing diagnostics를 제공한다.

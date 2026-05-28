@@ -16,6 +16,7 @@ from app.runtime import (
 from app.services.overview_market_intelligence import (
     build_group_leadership_snapshot,
     build_market_movers_snapshot,
+    load_market_mover_sector_options,
 )
 
 
@@ -360,13 +361,29 @@ def load_overview_dashboard_snapshot() -> dict[str, Any]:
 def load_overview_market_movers_snapshot(
     *,
     universe_limit: int = 1000,
+    universe_code: str | None = None,
     period: str = "daily",
     top_n: int = 20,
+    sector: str | None = None,
 ) -> dict[str, Any]:
     return build_market_movers_snapshot(
         universe_limit=universe_limit,
+        universe_code=universe_code,
         period=period,
         top_n=top_n,
+        sector=sector,
+    )
+
+
+# Load sector filter options for the current Overview market mover universe.
+def load_overview_market_mover_sectors(
+    *,
+    universe_code: str = "TOP1000",
+    universe_limit: int = 1000,
+) -> list[str]:
+    return load_market_mover_sector_options(
+        universe_code=universe_code,
+        universe_limit=universe_limit,
     )
 
 

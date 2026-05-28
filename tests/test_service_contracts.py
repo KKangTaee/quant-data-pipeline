@@ -359,8 +359,79 @@ class BacktestRuntimeContractTests(unittest.TestCase):
 class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
     def _query_fn(self, db_name: str, sql: str, params=None) -> list[dict[str, object]]:
         del db_name, params
+        if "FROM market_universe_member" in sql:
+            return [
+                {
+                    "symbol": "AAA",
+                    "long_name": "AAA Corp",
+                    "sector": "Technology",
+                    "industry": "Software",
+                    "market_cap": 100,
+                    "status": "active",
+                    "error_msg": None,
+                    "last_collected_at": "2026-05-18 10:00:00",
+                    "universe_as_of_date": "2026-05-28",
+                    "universe_collected_at": "2026-05-28 11:00:00",
+                    "universe_source": "wikipedia_sp500_constituents",
+                    "universe_source_url": "https://example.test/sp500",
+                },
+                {
+                    "symbol": "BBB",
+                    "long_name": "BBB Corp",
+                    "sector": "Healthcare",
+                    "industry": "Medical Devices",
+                    "market_cap": 200,
+                    "status": "active",
+                    "error_msg": None,
+                    "last_collected_at": "2026-05-18 10:00:00",
+                    "universe_as_of_date": "2026-05-28",
+                    "universe_collected_at": "2026-05-28 11:00:00",
+                    "universe_source": "wikipedia_sp500_constituents",
+                    "universe_source_url": "https://example.test/sp500",
+                },
+            ]
+        if "MAX(snapshot_time_utc) AS snapshot_time_utc" in sql:
+            return [{"snapshot_time_utc": "2026-05-18 15:35:00"}]
+        if "FROM market_intraday_snapshot s" in sql:
+            return [
+                {
+                    "symbol": "AAA",
+                    "interval_code": "5m",
+                    "snapshot_time_utc": "2026-05-18 15:35:00",
+                    "quote_time_utc": "2026-05-18 15:30:00",
+                    "previous_close": 100.0,
+                    "latest_price": 112.0,
+                    "return_pct": 12.0,
+                    "volume": 1000,
+                    "provider_status": "ok",
+                    "error_msg": None,
+                    "source": "yfinance",
+                    "source_ref": "test",
+                },
+                {
+                    "symbol": "BBB",
+                    "interval_code": "5m",
+                    "snapshot_time_utc": "2026-05-18 15:35:00",
+                    "quote_time_utc": None,
+                    "previous_close": None,
+                    "latest_price": None,
+                    "return_pct": None,
+                    "volume": None,
+                    "provider_status": "missing",
+                    "error_msg": "missing latest price",
+                    "source": "yfinance",
+                    "source_ref": "test",
+                },
+            ]
         if "MAX(`date`) AS latest_raw_date" in sql:
             return [{"latest_raw_date": "2026-05-19"}]
+        if "MAX(`date`) AS latest_price_date" in sql:
+            return [
+                {"symbol": "AAA", "latest_price_date": "2026-05-18"},
+                {"symbol": "BBB", "latest_price_date": "2026-05-18"},
+                {"symbol": "CCC", "latest_price_date": "2026-05-18"},
+                {"symbol": "DDD", "latest_price_date": "2026-05-18"},
+            ]
         if "GROUP BY `date`" in sql:
             dates = [
                 "2026-05-18",
@@ -467,6 +538,29 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(snapshot["rows"].iloc[0]["Symbol"], "BBB")
         self.assertEqual(snapshot["rows"].iloc[0]["Return %"], 30.0)
         self.assertIn("Latest raw price date is sparse", snapshot["warnings"][0])
+        self.assertEqual(snapshot["missing_rows"].iloc[0]["Symbol"], "DDD")
+        self.assertEqual(snapshot["missing_rows"].iloc[0]["Reason"], "missing start price")
+
+    def test_market_movers_snapshot_uses_sp500_intraday_previous_close_returns(self) -> None:
+        from app.services.overview_market_intelligence import build_market_movers_snapshot
+
+        snapshot = build_market_movers_snapshot(
+            universe_code="SP500",
+            period="daily",
+            top_n=5,
+            query_fn=self._query_fn,
+        )
+
+        self.assertEqual(snapshot["status"], "OK")
+        self.assertEqual(snapshot["universe_code"], "SP500")
+        self.assertEqual(snapshot["coverage"]["price_mode"], "Intraday Snapshot")
+        self.assertEqual(snapshot["coverage"]["coverage_basis"], "Current S&P 500 constituents")
+        self.assertEqual(snapshot["coverage"]["returnable_count"], 1)
+        self.assertEqual(snapshot["rows"].iloc[0]["Symbol"], "AAA")
+        self.assertEqual(snapshot["rows"].iloc[0]["Return %"], 12.0)
+        self.assertEqual(snapshot["rows"].iloc[0]["Start Date"], "Previous Close")
+        self.assertEqual(snapshot["missing_rows"].iloc[0]["Symbol"], "BBB")
+        self.assertEqual(snapshot["missing_rows"].iloc[0]["Reason"], "missing latest price")
 
     def test_group_leadership_snapshot_uses_monthly_weighted_and_equal_returns(self) -> None:
         from app.services.overview_market_intelligence import build_group_leadership_snapshot

@@ -17,6 +17,10 @@ from finance.data.etf_provider import (
     discover_and_store_etf_provider_source_map,
 )
 from finance.data.macro import DEFAULT_MACRO_SERIES, collect_and_store_macro_series
+from finance.data.market_intelligence import (
+    collect_and_store_sp500_intraday_snapshot,
+    collect_and_store_sp500_universe,
+)
 
 
 JobResult = dict[str, Any]
@@ -687,6 +691,96 @@ def run_daily_market_update(
     result.setdefault("details", {})
     result["details"]["pipeline_type"] = "daily_market_update"
     return result
+
+
+def run_collect_sp500_universe() -> JobResult:
+    job_name = "collect_sp500_universe"
+    started_at = _now_str()
+    t0 = perf_counter()
+    try:
+        result = collect_and_store_sp500_universe()
+        rows_written = int(result.get("rows_written") or 0)
+        symbols = list(result.get("symbols") or [])
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="success" if rows_written else "failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=rows_written,
+            symbols_requested=len(symbols),
+            symbols_processed=rows_written,
+            failed_symbols=[] if rows_written else symbols,
+            message="S&P 500 universe collection completed." if rows_written else "S&P 500 universe collection wrote no rows.",
+            details=result,
+        )
+    except Exception as exc:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=0,
+            symbols_processed=0,
+            message=f"S&P 500 universe collection failed: {exc}",
+        )
+
+
+def run_collect_sp500_intraday_snapshot(
+    *,
+    interval: str = "5m",
+    chunk_size: int = 100,
+) -> JobResult:
+    job_name = "collect_sp500_intraday_snapshot"
+    started_at = _now_str()
+    t0 = perf_counter()
+    try:
+        result = collect_and_store_sp500_intraday_snapshot(interval=interval, chunk_size=chunk_size)
+        rows_written = int(result.get("rows_written") or 0)
+        failed_symbols = list(result.get("failed_symbols") or [])
+        requested = int(result.get("symbols_requested") or 0)
+        processed = int(result.get("symbols_processed") or 0)
+        finished_at = _now_str()
+        if rows_written <= 0:
+            status = "failed"
+            message = "S&P 500 intraday snapshot wrote no rows."
+        elif failed_symbols:
+            status = "partial_success"
+            message = "S&P 500 intraday snapshot completed with missing symbols."
+        else:
+            status = "success"
+            message = "S&P 500 intraday snapshot completed."
+        return _build_result(
+            job_name=job_name,
+            status=status,
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=rows_written,
+            symbols_requested=requested,
+            symbols_processed=processed,
+            failed_symbols=failed_symbols,
+            message=message,
+            details=result,
+        )
+    except Exception as exc:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=0,
+            symbols_processed=0,
+            message=f"S&P 500 intraday snapshot failed: {exc}",
+            details={"interval": interval, "chunk_size": chunk_size},
+        )
 
 
 def run_weekly_fundamental_refresh(

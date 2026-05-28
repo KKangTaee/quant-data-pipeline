@@ -55,6 +55,26 @@ yfinance
 - 제품 runtime은 점점 DB-backed path를 더 중요하게 본다.
 - ETF 전략에서는 moving average / trailing return warmup과 date alignment가 결과 기간을 줄일 수 있다.
 
+## Overview market intelligence 흐름
+
+```text
+Wikipedia S&P 500 constituents
+  -> finance.data.market_intelligence.collect_and_store_sp500_universe()
+  -> finance_meta.market_universe_member
+
+yfinance intraday / daily fallback
+  -> finance.data.market_intelligence.collect_and_store_sp500_intraday_snapshot()
+  -> finance_price.market_intraday_snapshot
+  -> app.services.overview_market_intelligence.build_market_movers_snapshot()
+  -> Workspace > Overview > Market Movers
+```
+
+의미:
+
+- `market_universe_member`의 S&P 500은 current constituents snapshot이며 historical PIT membership이 아니다.
+- `market_intraday_snapshot`은 daily S&P 500 movers에서 전일 종가 대비 최신 intraday 가격을 빠르게 읽기 위한 snapshot이다.
+- Top1000 / Top2000 movers는 여전히 `nyse_asset_profile.market_cap` current snapshot과 `nyse_price_history` EOD DB를 사용한다.
+
 ## ETF operability provider snapshot 흐름
 
 ```text

@@ -5318,3 +5318,14 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 화면에서 직접 원격 수집하지 않고, Events 탭은 ingestion 후속 slice를 받는 placeholder로 두는 것이 현재 구조와 가장 맞다
 - Follow-up:
   - `app/services/overview_market_intelligence.py`와 Overview tabs를 추가했고, FOMC / earnings calendar ingestion은 다음 task 후보로 남겼다
+
+### 2026-05-28 - S&P 500 daily movers는 전일 종가 대비 intraday snapshot으로 시작한다
+- User request:
+  - 사용자가 Coverage 500 대신 S&P 500, daily 기준은 전일 종가 대비, intraday 확장은 먼저 S&P 500만 진행하자고 확정함
+- Interpreted goal:
+  - Top1000 / Top2000 EOD ranking은 유지하되, S&P 500 daily는 무료 provider 기반 준실시간 snapshot을 저장 후 Overview에서 빠르게 읽어야 함
+- Analysis result:
+  - `nyse_asset_profile.market_cap` 기준 Top1000 / Top2000은 현재 profile snapshot 기준임을 UI metadata와 docs에 드러내야 한다
+  - S&P 500 current constituents와 intraday return은 별도 table로 분리해 survivorship / provider delay 위험을 명시하는 것이 맞다
+- Follow-up:
+  - S&P 500 universe / intraday snapshot collector와 Overview controls를 구현했고, Top1000 / Top2000 intraday 확장은 실제 속도와 rate limit 확인 뒤 진행한다

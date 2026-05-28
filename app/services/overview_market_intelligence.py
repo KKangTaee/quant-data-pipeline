@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
-from datetime import date, datetime
+from datetime import date
 from typing import Any
 
 import pandas as pd
@@ -9,9 +9,14 @@ import pandas as pd
 
 QueryFn = Callable[[str, str, Sequence[Any] | None], list[dict[str, Any]]]
 
-VALID_PERIODS = {"daily": 1, "weekly": 5, "monthly": 21}
-PERIOD_LABELS = {"daily": "Daily", "weekly": "Weekly", "monthly": "Monthly"}
+VALID_PERIODS = {"daily": 1, "weekly": 5, "monthly": 21, "yearly": 252}
+PERIOD_LABELS = {"daily": "Daily", "weekly": "Weekly", "monthly": "Monthly", "yearly": "Yearly"}
 VALID_GROUPS = {"sector", "industry"}
+UNIVERSE_LABELS = {
+    "SP500": "S&P 500",
+    "TOP1000": "Top 1000 by market cap",
+    "TOP2000": "Top 2000 by market cap",
+}
 MOVERS_COLUMNS = [
     "Rank",
     "Symbol",
@@ -24,6 +29,22 @@ MOVERS_COLUMNS = [
     "Market Cap",
     "Start Date",
     "End Date",
+    "Price Source",
+]
+MISSING_COLUMNS = [
+    "Symbol",
+    "Name",
+    "Sector",
+    "Industry",
+    "Reason",
+    "Start Date",
+    "End Date",
+    "Start Price",
+    "End Price",
+    "Latest Price Date",
+    "Profile Status",
+    "Profile Error",
+    "Profile Collected At",
 ]
 GROUP_COLUMNS = [
     "Rank",
@@ -82,6 +103,15 @@ def _iso_date(value: Any) -> str | None:
     return ts.strftime("%Y-%m-%d")
 
 
+def _display_datetime(value: Any) -> str | None:
+    if value in (None, ""):
+        return None
+    ts = pd.Timestamp(value)
+    if pd.isna(ts):
+        return None
+    return ts.strftime("%Y-%m-%d %H:%M")
+
+
 def _stale_days(effective_date: str | None, *, today: date | None = None) -> int | None:
     if not effective_date:
         return None
@@ -92,21 +122,64 @@ def _stale_days(effective_date: str | None, *, today: date | None = None) -> int
     return max(0, int((today_value - effective_value).days))
 
 
+def _stale_minutes(snapshot_time: str | None) -> int | None:
+    if not snapshot_time:
+        return None
+    snapshot_value = pd.Timestamp(snapshot_time)
+    if pd.isna(snapshot_value):
+        return None
+    now_value = pd.Timestamp.now(tz="UTC")
+    if snapshot_value.tzinfo is None:
+        snapshot_value = snapshot_value.tz_localize("UTC")
+    else:
+        snapshot_value = snapshot_value.tz_convert("UTC")
+    return max(0, int((now_value - snapshot_value).total_seconds() // 60))
+
+
+def _normalize_limit(value: int, *, default: int, min_value: int, max_value: int) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        parsed = default
+    return max(min_value, min(parsed, max_value))
+
+
+def _normalize_universe_code(universe_code: str | None, universe_limit: int) -> str:
+    normalized = str(universe_code or "").strip().upper()
+    if normalized in UNIVERSE_LABELS:
+        return normalized
+    return "TOP2000" if int(universe_limit or 1000) >= 2000 else "TOP1000"
+
+
+def _universe_limit_from_code(universe_code: str, fallback: int) -> int:
+    if universe_code == "TOP2000":
+        return 2000
+    if universe_code == "TOP1000":
+        return 1000
+    return fallback
+
+
 def _empty_movers_snapshot(
     *,
     status: str,
     period: str,
+    universe_code: str,
     universe_limit: int,
     top_n: int,
     message: str,
+    sector: str | None = None,
 ) -> dict[str, Any]:
     return {
         "status": status,
         "period": period,
         "period_label": PERIOD_LABELS.get(period, period),
+        "universe_code": universe_code,
+        "universe_label": UNIVERSE_LABELS.get(universe_code, universe_code),
         "universe_limit": universe_limit,
+        "sector": sector or "All",
         "top_n": top_n,
         "rows": pd.DataFrame(columns=MOVERS_COLUMNS),
+        "missing_rows": pd.DataFrame(columns=MISSING_COLUMNS),
         "date_window": {},
         "coverage": {
             "universe_count": 0,
@@ -115,6 +188,7 @@ def _empty_movers_snapshot(
             "latest_raw_date": None,
             "effective_end_date": None,
             "stale_days": None,
+            "price_mode": "Unavailable",
         },
         "warnings": [message] if message else [],
     }
@@ -134,6 +208,7 @@ def _empty_group_snapshot(
         "universe_limit": universe_limit,
         "top_n": top_n,
         "rows": pd.DataFrame(columns=GROUP_COLUMNS),
+        "missing_rows": pd.DataFrame(columns=MISSING_COLUMNS),
         "date_window": {},
         "coverage": {
             "universe_count": 0,
@@ -145,14 +220,6 @@ def _empty_group_snapshot(
         },
         "warnings": [message] if message else [],
     }
-
-
-def _normalize_limit(value: int, *, default: int, min_value: int, max_value: int) -> int:
-    try:
-        parsed = int(value)
-    except (TypeError, ValueError):
-        parsed = default
-    return max(min_value, min(parsed, max_value))
 
 
 def _query_latest_raw_date(query_fn: QueryFn) -> str | None:
@@ -239,32 +306,97 @@ def resolve_effective_market_dates(
     }
 
 
+def _filter_sector(rows: list[dict[str, Any]], sector: str | None) -> list[dict[str, Any]]:
+    normalized = str(sector or "All").strip()
+    if not normalized or normalized == "All":
+        return rows
+    return [row for row in rows if str(row.get("sector") or "Unknown") == normalized]
+
+
 def _load_universe(
     *,
+    universe_code: str,
     universe_limit: int,
     query_fn: QueryFn,
+    sector: str | None = None,
 ) -> list[dict[str, Any]]:
-    return query_fn(
-        "finance_meta",
-        """
-        SELECT
-            symbol,
-            long_name,
-            sector,
-            industry,
-            market_cap
-        FROM nyse_asset_profile
-        WHERE kind = %s
-          AND country = %s
-          AND market_cap IS NOT NULL
-          AND market_cap > 0
-          AND (is_spac IS NULL OR is_spac <> 1)
-          AND (status IS NULL OR LOWER(status) NOT IN ('dilist', 'delist', 'delisted'))
-        ORDER BY market_cap DESC, symbol ASC
-        LIMIT %s
-        """,
-        ["stock", "United States", int(universe_limit)],
+    if universe_code == "SP500":
+        rows = query_fn(
+            "finance_meta",
+            """
+            SELECT
+                m.symbol,
+                COALESCE(p.long_name, m.name) AS long_name,
+                COALESCE(p.sector, m.sector) AS sector,
+                COALESCE(p.industry, m.industry) AS industry,
+                p.market_cap,
+                p.status,
+                p.error_msg,
+                p.last_collected_at,
+                m.as_of_date AS universe_as_of_date,
+                m.collected_at AS universe_collected_at,
+                m.source AS universe_source,
+                m.source_url AS universe_source_url
+            FROM market_universe_member m
+            LEFT JOIN nyse_asset_profile p
+              ON p.symbol = m.symbol
+             AND p.kind = %s
+            WHERE m.universe_code = %s
+              AND m.active = 1
+            ORDER BY COALESCE(p.market_cap, 0) DESC, m.symbol ASC
+            """,
+            ["stock", "SP500"],
+        )
+        return _filter_sector(rows, sector)
+
+    return _filter_sector(
+        query_fn(
+            "finance_meta",
+            """
+            SELECT
+                symbol,
+                long_name,
+                sector,
+                industry,
+                market_cap,
+                status,
+                error_msg,
+                last_collected_at,
+                NULL AS universe_as_of_date,
+                NULL AS universe_collected_at,
+                'nyse_asset_profile' AS universe_source,
+                NULL AS universe_source_url
+            FROM nyse_asset_profile
+            WHERE kind = %s
+              AND country = %s
+              AND market_cap IS NOT NULL
+              AND market_cap > 0
+              AND (is_spac IS NULL OR is_spac <> 1)
+              AND (status IS NULL OR LOWER(status) NOT IN ('dilist', 'delist', 'delisted'))
+            ORDER BY market_cap DESC, symbol ASC
+            LIMIT %s
+            """,
+            ["stock", "United States", int(universe_limit)],
+        ),
+        sector,
     )
+
+
+def load_market_mover_sector_options(
+    *,
+    universe_code: str = "TOP1000",
+    universe_limit: int = 1000,
+    query_fn: QueryFn | None = None,
+) -> list[str]:
+    query = query_fn or _default_query
+    try:
+        normalized = _normalize_universe_code(universe_code, universe_limit)
+        limit = _universe_limit_from_code(normalized, universe_limit)
+        rows = _load_universe(universe_code=normalized, universe_limit=limit, query_fn=query)
+    except Exception:
+        return []
+    sectors = sorted({str(row.get("sector") or "Unknown") for row in rows})
+    return sectors
 
 
 def _load_prices_for_dates(
@@ -303,24 +435,101 @@ def _load_prices_for_dates(
     return prices
 
 
+def _load_latest_price_dates(*, symbols: list[str], query_fn: QueryFn) -> dict[str, str]:
+    if not symbols:
+        return {}
+    placeholders = ",".join(["%s"] * len(symbols))
+    rows = query_fn(
+        "finance_price",
+        f"""
+        SELECT symbol, MAX(`date`) AS latest_price_date
+        FROM nyse_price_history
+        WHERE symbol IN ({placeholders})
+          AND timeframe = %s
+          AND COALESCE(adj_close, close) IS NOT NULL
+        GROUP BY symbol
+        """,
+        list(symbols) + ["1d"],
+    )
+    return {
+        str(row.get("symbol") or "").strip().upper(): _iso_date(row.get("latest_price_date")) or ""
+        for row in rows
+        if row.get("symbol")
+    }
+
+
+def _profile_collected_at(item: dict[str, Any]) -> str | None:
+    return _display_datetime(item.get("last_collected_at"))
+
+
+def _missing_row(
+    *,
+    item: dict[str, Any],
+    reason: str,
+    start_date: str,
+    end_date: str,
+    start_price: float | None,
+    end_price: float | None,
+    latest_price_date: str | None,
+) -> dict[str, Any]:
+    return {
+        "Symbol": str(item.get("symbol") or "").strip().upper(),
+        "Name": item.get("long_name") or "-",
+        "Sector": item.get("sector") or "Unknown",
+        "Industry": item.get("industry") or "Unknown",
+        "Reason": reason,
+        "Start Date": start_date,
+        "End Date": end_date,
+        "Start Price": round(float(start_price), 4) if start_price is not None else None,
+        "End Price": round(float(end_price), 4) if end_price is not None else None,
+        "Latest Price Date": latest_price_date,
+        "Profile Status": item.get("status") or "-",
+        "Profile Error": item.get("error_msg") or "-",
+        "Profile Collected At": _profile_collected_at(item) or "-",
+    }
+
+
 def _build_return_rows(
     *,
     universe: list[dict[str, Any]],
     start_date: str,
     end_date: str,
     query_fn: QueryFn,
-) -> list[dict[str, Any]]:
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     symbols = [str(row.get("symbol") or "").strip().upper() for row in universe if row.get("symbol")]
     price_map = _load_prices_for_dates(symbols=symbols, dates=[start_date, end_date], query_fn=query_fn)
+    latest_dates = _load_latest_price_dates(symbols=symbols, query_fn=query_fn)
     return_rows: list[dict[str, Any]] = []
+    missing_rows: list[dict[str, Any]] = []
 
     for item in universe:
         symbol = str(item.get("symbol") or "").strip().upper()
         start_price = price_map.get((symbol, start_date))
         end_price = price_map.get((symbol, end_date))
-        if start_price is None or end_price is None or start_price <= 0:
+        if start_price is None and end_price is None:
+            reason = "missing start and end price"
+        elif start_price is None:
+            reason = "missing start price"
+        elif end_price is None:
+            reason = "missing end price"
+        elif start_price <= 0:
+            reason = "non-positive start price"
+        else:
+            reason = ""
+        if reason:
+            missing_rows.append(
+                _missing_row(
+                    item=item,
+                    reason=reason,
+                    start_date=start_date,
+                    end_date=end_date,
+                    start_price=start_price,
+                    end_price=end_price,
+                    latest_price_date=latest_dates.get(symbol),
+                )
+            )
             continue
-        return_pct = (end_price / start_price - 1.0) * 100.0
+        return_pct = (float(end_price) / float(start_price) - 1.0) * 100.0
         return_rows.append(
             {
                 "symbol": symbol,
@@ -333,9 +542,10 @@ def _build_return_rows(
                 "return_pct": return_pct,
                 "start_date": start_date,
                 "end_date": end_date,
+                "price_source": "EOD DB",
             }
         )
-    return return_rows
+    return return_rows, missing_rows
 
 
 def _coverage(
@@ -343,15 +553,21 @@ def _coverage(
     universe_count: int,
     returnable_count: int,
     date_window: dict[str, Any],
+    price_mode: str = "EOD DB",
+    extra: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    return {
+    coverage = {
         "universe_count": universe_count,
         "returnable_count": returnable_count,
         "missing_count": max(0, universe_count - returnable_count),
         "latest_raw_date": date_window.get("latest_raw_date"),
         "effective_end_date": date_window.get("effective_end_date"),
         "stale_days": date_window.get("stale_days"),
+        "price_mode": price_mode,
     }
+    if extra:
+        coverage.update(extra)
+    return coverage
 
 
 def _coverage_warnings(coverage: dict[str, Any], *, date_window: dict[str, Any]) -> list[str]:
@@ -366,27 +582,295 @@ def _coverage_warnings(coverage: dict[str, Any], *, date_window: dict[str, Any])
         warnings.append(f"{missing_count} symbols in the selected universe are missing returnable price rows.")
     if date_window.get("status") != "OK":
         warnings.append(str(date_window.get("message") or "Market date window is unavailable."))
+    snapshot_stale = coverage.get("snapshot_stale_minutes")
+    if snapshot_stale is not None and int(snapshot_stale) > 15:
+        warnings.append(f"Latest intraday snapshot is {snapshot_stale} minutes old.")
     return warnings
+
+
+def _universe_metadata(universe: list[dict[str, Any]], *, universe_code: str) -> dict[str, Any]:
+    if not universe:
+        return {}
+    if universe_code == "SP500":
+        first = universe[0]
+        return {
+            "universe_as_of_date": _iso_date(first.get("universe_as_of_date")),
+            "universe_collected_at": _display_datetime(first.get("universe_collected_at")),
+            "universe_source": first.get("universe_source"),
+            "universe_source_url": first.get("universe_source_url"),
+            "coverage_basis": "Current S&P 500 constituents",
+        }
+    collected = [
+        _display_datetime(row.get("last_collected_at"))
+        for row in universe
+        if _display_datetime(row.get("last_collected_at"))
+    ]
+    return {
+        "profile_collected_at_max": max(collected) if collected else None,
+        "coverage_basis": "Latest asset_profile.market_cap snapshot",
+    }
+
+
+def _rows_frame(rows: list[dict[str, Any]], *, columns: list[str]) -> pd.DataFrame:
+    return pd.DataFrame(rows, columns=columns)
+
+
+def _ranked_movers_frame(rows: list[dict[str, Any]], *, top_n: int) -> pd.DataFrame:
+    ranked = sorted(rows, key=lambda row: (-float(row["return_pct"]), row["symbol"]))[:top_n]
+    out = [
+        {
+            "Rank": index,
+            "Symbol": row["symbol"],
+            "Name": row["name"] or "-",
+            "Return %": round(float(row["return_pct"]), 2),
+            "Start Price": round(float(row["start_price"]), 4),
+            "End Price": round(float(row["end_price"]), 4),
+            "Sector": row["sector"],
+            "Industry": row["industry"],
+            "Market Cap": int(row["market_cap"]) if row["market_cap"] else None,
+            "Start Date": row["start_date"],
+            "End Date": row["end_date"],
+            "Price Source": row.get("price_source") or "EOD DB",
+        }
+        for index, row in enumerate(ranked, start=1)
+    ]
+    return _rows_frame(out, columns=MOVERS_COLUMNS)
+
+
+def _latest_intraday_snapshot_time(
+    *,
+    universe_code: str,
+    interval: str,
+    query_fn: QueryFn,
+) -> str | None:
+    try:
+        rows = query_fn(
+            "finance_price",
+            """
+            SELECT MAX(snapshot_time_utc) AS snapshot_time_utc
+            FROM market_intraday_snapshot
+            WHERE universe_code = %s
+              AND interval_code = %s
+            """,
+            [universe_code, interval],
+        )
+    except Exception:
+        return None
+    if not rows:
+        return None
+    return _display_datetime(rows[0].get("snapshot_time_utc"))
+
+
+def _load_intraday_snapshot_rows(
+    *,
+    universe_code: str,
+    interval: str,
+    snapshot_time: str,
+    query_fn: QueryFn,
+) -> list[dict[str, Any]]:
+    try:
+        return query_fn(
+            "finance_price",
+            """
+            SELECT
+                s.symbol,
+                s.interval_code,
+                s.snapshot_time_utc,
+                s.quote_time_utc,
+                s.previous_close,
+                s.latest_price,
+                s.return_pct,
+                s.volume,
+                s.provider_status,
+                s.error_msg,
+                s.source,
+                s.source_ref
+            FROM market_intraday_snapshot s
+            WHERE s.universe_code = %s
+              AND s.interval_code = %s
+              AND s.snapshot_time_utc = %s
+            """,
+            [universe_code, interval, snapshot_time],
+        )
+    except Exception:
+        return []
+
+
+def _build_intraday_movers_snapshot(
+    *,
+    universe: list[dict[str, Any]],
+    universe_code: str,
+    universe_limit: int,
+    period: str,
+    top_n: int,
+    sector: str | None,
+    interval: str,
+    query_fn: QueryFn,
+) -> dict[str, Any] | None:
+    snapshot_time = _latest_intraday_snapshot_time(universe_code=universe_code, interval=interval, query_fn=query_fn)
+    if not snapshot_time:
+        return None
+    rows = _load_intraday_snapshot_rows(
+        universe_code=universe_code,
+        interval=interval,
+        snapshot_time=snapshot_time,
+        query_fn=query_fn,
+    )
+    if not rows:
+        return None
+
+    row_map = {str(row.get("symbol") or "").strip().upper(): row for row in rows}
+    return_rows: list[dict[str, Any]] = []
+    missing_rows: list[dict[str, Any]] = []
+    for item in universe:
+        symbol = str(item.get("symbol") or "").strip().upper()
+        row = row_map.get(symbol)
+        if not row:
+            missing_rows.append(
+                _missing_row(
+                    item=item,
+                    reason="missing intraday snapshot row",
+                    start_date="Previous Close",
+                    end_date=snapshot_time,
+                    start_price=None,
+                    end_price=None,
+                    latest_price_date=None,
+                )
+            )
+            continue
+        previous_close = _safe_float(row.get("previous_close"))
+        latest_price = _safe_float(row.get("latest_price"))
+        return_pct = _safe_float(row.get("return_pct"))
+        if row.get("provider_status") != "ok" or previous_close is None or latest_price is None or return_pct is None:
+            missing_rows.append(
+                _missing_row(
+                    item=item,
+                    reason=row.get("error_msg") or "missing intraday return",
+                    start_date="Previous Close",
+                    end_date=_display_datetime(row.get("quote_time_utc")) or snapshot_time,
+                    start_price=previous_close,
+                    end_price=latest_price,
+                    latest_price_date=_iso_date(row.get("quote_time_utc")),
+                )
+            )
+            continue
+        return_rows.append(
+            {
+                "symbol": symbol,
+                "name": item.get("long_name") or "",
+                "sector": item.get("sector") or "Unknown",
+                "industry": item.get("industry") or "Unknown",
+                "market_cap": _safe_float(item.get("market_cap")) or 0.0,
+                "start_price": previous_close,
+                "end_price": latest_price,
+                "return_pct": return_pct,
+                "start_date": "Previous Close",
+                "end_date": _display_datetime(row.get("quote_time_utc")) or snapshot_time,
+                "price_source": f"Intraday {interval}",
+            }
+        )
+
+    date_window = {
+        "status": "OK",
+        "period": period,
+        "period_label": PERIOD_LABELS[period],
+        "start_date": "Previous Close",
+        "end_date": snapshot_time,
+        "latest_raw_date": None,
+        "effective_end_date": snapshot_time,
+        "stale_days": None,
+        "message": "",
+    }
+    coverage = _coverage(
+        universe_count=len(universe),
+        returnable_count=len(return_rows),
+        date_window=date_window,
+        price_mode="Intraday Snapshot",
+        extra={
+            **_universe_metadata(universe, universe_code=universe_code),
+            "snapshot_time_utc": snapshot_time,
+            "snapshot_stale_minutes": _stale_minutes(snapshot_time),
+            "intraday_interval": interval,
+        },
+    )
+    return {
+        "status": "OK",
+        "period": period,
+        "period_label": PERIOD_LABELS[period],
+        "universe_code": universe_code,
+        "universe_label": UNIVERSE_LABELS.get(universe_code, universe_code),
+        "universe_limit": universe_limit,
+        "sector": sector or "All",
+        "top_n": top_n,
+        "rows": _ranked_movers_frame(return_rows, top_n=top_n),
+        "missing_rows": _rows_frame(missing_rows, columns=MISSING_COLUMNS),
+        "date_window": date_window,
+        "coverage": coverage,
+        "warnings": _coverage_warnings(coverage, date_window=date_window),
+    }
 
 
 def build_market_movers_snapshot(
     *,
     universe_limit: int = 1000,
+    universe_code: str | None = None,
     period: str = "daily",
     top_n: int = 20,
+    sector: str | None = None,
     min_price_rows: int = 1000,
     today: date | None = None,
+    prefer_intraday: bool = True,
+    intraday_interval: str = "5m",
     query_fn: QueryFn | None = None,
 ) -> dict[str, Any]:
     normalized_period = str(period or "daily").strip().lower()
-    normalized_limit = _normalize_limit(universe_limit, default=1000, min_value=100, max_value=3000)
     normalized_top_n = _normalize_limit(top_n, default=20, min_value=5, max_value=100)
+    normalized_universe = _normalize_universe_code(universe_code, universe_limit)
+    normalized_limit = _universe_limit_from_code(
+        normalized_universe,
+        _normalize_limit(universe_limit, default=1000, min_value=100, max_value=3000),
+    )
     query = query_fn or _default_query
 
+    if normalized_period not in VALID_PERIODS:
+        raise ValueError(f"Unsupported period: {period!r}")
+
     try:
+        universe = _load_universe(
+            universe_code=normalized_universe,
+            universe_limit=normalized_limit,
+            sector=sector,
+            query_fn=query,
+        )
+        if not universe:
+            return _empty_movers_snapshot(
+                status="NO_UNIVERSE",
+                period=normalized_period,
+                universe_code=normalized_universe,
+                universe_limit=normalized_limit,
+                top_n=normalized_top_n,
+                sector=sector,
+                message="Selected universe has no symbols. For S&P 500, run the universe refresh first.",
+            )
+
+        if normalized_universe == "SP500" and normalized_period == "daily" and prefer_intraday:
+            intraday_snapshot = _build_intraday_movers_snapshot(
+                universe=universe,
+                universe_code=normalized_universe,
+                universe_limit=normalized_limit,
+                period=normalized_period,
+                top_n=normalized_top_n,
+                sector=sector,
+                interval=intraday_interval,
+                query_fn=query,
+            )
+            if intraday_snapshot is not None:
+                return intraday_snapshot
+
+        effective_min_rows = min(int(min_price_rows), max(50, int(len(universe) * 0.75)))
         date_window = resolve_effective_market_dates(
             period=normalized_period,
-            min_price_rows=min_price_rows,
+            min_price_rows=effective_min_rows,
             today=today,
             query_fn=query,
         )
@@ -394,66 +878,63 @@ def build_market_movers_snapshot(
             snapshot = _empty_movers_snapshot(
                 status="INSUFFICIENT_DATA",
                 period=normalized_period,
+                universe_code=normalized_universe,
                 universe_limit=normalized_limit,
                 top_n=normalized_top_n,
+                sector=sector,
                 message=str(date_window.get("message") or ""),
             )
             snapshot["date_window"] = date_window
             snapshot["coverage"].update(
                 {
+                    "universe_count": len(universe),
                     "latest_raw_date": date_window.get("latest_raw_date"),
                     "effective_end_date": date_window.get("effective_end_date"),
                     "stale_days": date_window.get("stale_days"),
+                    **_universe_metadata(universe, universe_code=normalized_universe),
                 }
             )
             return snapshot
 
-        universe = _load_universe(universe_limit=normalized_limit, query_fn=query)
-        return_rows = _build_return_rows(
+        return_rows, missing_rows = _build_return_rows(
             universe=universe,
             start_date=str(date_window["start_date"]),
             end_date=str(date_window["end_date"]),
             query_fn=query,
         )
-        ranked = sorted(return_rows, key=lambda row: (-float(row["return_pct"]), row["symbol"]))[:normalized_top_n]
-        rows = [
-            {
-                "Rank": index,
-                "Symbol": row["symbol"],
-                "Name": row["name"] or "-",
-                "Return %": round(float(row["return_pct"]), 2),
-                "Start Price": round(float(row["start_price"]), 4),
-                "End Price": round(float(row["end_price"]), 4),
-                "Sector": row["sector"],
-                "Industry": row["industry"],
-                "Market Cap": int(row["market_cap"]) if row["market_cap"] else None,
-                "Start Date": row["start_date"],
-                "End Date": row["end_date"],
-            }
-            for index, row in enumerate(ranked, start=1)
-        ]
         coverage = _coverage(
             universe_count=len(universe),
             returnable_count=len(return_rows),
             date_window=date_window,
+            price_mode="EOD DB",
+            extra=_universe_metadata(universe, universe_code=normalized_universe),
         )
+        warnings = _coverage_warnings(coverage, date_window=date_window)
+        if normalized_universe == "SP500" and normalized_period == "daily" and prefer_intraday:
+            warnings.insert(0, "No S&P 500 intraday snapshot found; using daily DB close data.")
         return {
             "status": "OK",
             "period": normalized_period,
             "period_label": PERIOD_LABELS[normalized_period],
+            "universe_code": normalized_universe,
+            "universe_label": UNIVERSE_LABELS.get(normalized_universe, normalized_universe),
             "universe_limit": normalized_limit,
+            "sector": sector or "All",
             "top_n": normalized_top_n,
-            "rows": pd.DataFrame(rows, columns=MOVERS_COLUMNS),
+            "rows": _ranked_movers_frame(return_rows, top_n=normalized_top_n),
+            "missing_rows": _rows_frame(missing_rows, columns=MISSING_COLUMNS),
             "date_window": date_window,
             "coverage": coverage,
-            "warnings": _coverage_warnings(coverage, date_window=date_window),
+            "warnings": warnings,
         }
     except Exception as exc:
         return _empty_movers_snapshot(
             status="ERROR",
             period=normalized_period,
+            universe_code=normalized_universe,
             universe_limit=normalized_limit,
             top_n=normalized_top_n,
+            sector=sector,
             message=f"Market movers snapshot failed: {exc}",
         )
 
@@ -477,9 +958,10 @@ def build_group_leadership_snapshot(
     query = query_fn or _default_query
 
     try:
+        universe = _load_universe(universe_code="TOP2000", universe_limit=normalized_limit, query_fn=query)
         date_window = resolve_effective_market_dates(
             period="monthly",
-            min_price_rows=min_price_rows,
+            min_price_rows=min(min_price_rows, max(50, int(len(universe) * 0.75))),
             today=today,
             query_fn=query,
         )
@@ -494,6 +976,7 @@ def build_group_leadership_snapshot(
             snapshot["date_window"] = date_window
             snapshot["coverage"].update(
                 {
+                    "universe_count": len(universe),
                     "latest_raw_date": date_window.get("latest_raw_date"),
                     "effective_end_date": date_window.get("effective_end_date"),
                     "stale_days": date_window.get("stale_days"),
@@ -501,8 +984,7 @@ def build_group_leadership_snapshot(
             )
             return snapshot
 
-        universe = _load_universe(universe_limit=normalized_limit, query_fn=query)
-        return_rows = _build_return_rows(
+        return_rows, missing_rows = _build_return_rows(
             universe=universe,
             start_date=str(date_window["start_date"]),
             end_date=str(date_window["end_date"]),
@@ -576,6 +1058,7 @@ def build_group_leadership_snapshot(
             "universe_limit": normalized_limit,
             "top_n": normalized_top_n,
             "rows": pd.DataFrame(rows, columns=GROUP_COLUMNS),
+            "missing_rows": pd.DataFrame(missing_rows, columns=MISSING_COLUMNS),
             "date_window": date_window,
             "coverage": coverage,
             "warnings": _coverage_warnings(coverage, date_window=date_window),
