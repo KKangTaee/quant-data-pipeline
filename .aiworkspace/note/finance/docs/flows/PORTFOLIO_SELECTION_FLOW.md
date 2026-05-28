@@ -30,8 +30,8 @@ Backtest > Backtest Analysis
 | Stage | Owns | Does Not Own |
 |---|---|---|
 | Backtest Analysis | 후보 생성, 전략 비교, saved mix replay, 비중 조합 | 최종 판단 |
-| Practical Validation | 실전 투입 전 검증, provider data gap, stress / sensitivity evidence, validation efficacy / backtest realism evidence | 투자 승인, 최종 사용자 메모 |
-| Final Review | 최종 후보 판단, investability evidence packet 확인, validation efficacy / backtest realism 근거 확인, critical gap 기반 selected-route gate, saved decision dossier export | 새 비중 실험, provider data 수집, 사용자 메모용 반복 저장, 자동 report 파일 생성 |
+| Practical Validation | 실전 투입 전 검증, provider data gap, stress / sensitivity evidence, validation efficacy / data coverage / backtest realism evidence | 투자 승인, 최종 사용자 메모 |
+| Final Review | 최종 후보 판단, investability evidence packet 확인, validation efficacy / data coverage / backtest realism 근거 확인, critical gap 기반 selected-route gate, saved decision dossier export | 새 비중 실험, provider data 수집, 사용자 메모용 반복 저장, 자동 report 파일 생성 |
 | Selected Portfolio Dashboard | 선정 이후 성과 재확인, Final Review -> dashboard continuity check, read-only recheck readiness / symbol freshness / provider evidence / monitoring timeline / signal / recheck comparison, optional allocation check | broker order, live approval, auto rebalance |
 
 ## Source Contract
@@ -64,6 +64,7 @@ PORTFOLIO_SELECTION_SOURCES
 - Validation Efficacy Audit은 runtime replay, period coverage, benchmark parity, provider freshness, robustness, PIT / look-ahead, survivorship / universe, storage boundary를 분리해 본다. `NEEDS_INPUT` / `BLOCKED`는 selected-route blocker이며, `REVIEW`는 선정 전 review-required다.
 - Data Coverage Audit은 DB price window, provider freshness, PIT replay / period coverage, universe listing, survivorship evidence를 분리해 본다. `NEEDS_INPUT` / `BLOCKED`는 selected-route blocker이며, `REVIEW`는 선정 전 review-required다. 현재 listing / asset profile row는 current listing evidence일 뿐이므로 historical universe나 delisting coverage가 없으면 survivorship PASS로 보지 않는다.
 - Backtest Realism Audit은 transaction cost, turnover, liquidity / operability, net performance policy, rebalance timing, tax / account scope, execution boundary를 분리해 본다. `NEEDS_INPUT` / `BLOCKED`는 selected-route blocker이며, `REVIEW`는 선정 전 review-required다. 이 연결은 core strategy runtime이나 새 저장소를 만들지 않는다.
+- Integrated Investability Gate QA는 세 audit과 provider / robustness / paper observation / final evidence gate가 함께 작동할 때 ready는 selected-route를 허용하고, 다중 `REVIEW`는 hold / re-review로 보내며, 다중 blocker는 selected-route를 차단하는 service contract를 유지한다.
 - Selected Portfolio Dashboard는 선정 이후 상태 확인 화면이다. Recheck Readiness는 Performance Recheck 실행 전 DB latest market date와 selected component replay contract를 read-only로 확인한다. Symbol Freshness는 replay portfolio ticker와 benchmark ticker의 DB price latest date / row count / lag를 read-only로 확인한다. Provider Evidence는 selected component ticker weight로 기존 DB provider / holdings / exposure context를 read-only로 읽고 `NOT_RUN`, partial coverage, stale evidence를 pass로 처리하지 않는다. Continuity check는 Final Review selected row가 evidence packet / component target / review trigger / timeline / recheck input 경계를 갖췄는지 읽는다. Timeline은 selection / evidence gate / recheck / drift / trigger preview를 read-only로 읽고 monitoring log를 자동 저장하지 않는다. Recheck Comparison은 최신 Performance Recheck가 기존 Final Review baseline을 계속 지지하는지 read-only로 비교하며, 미실행이나 오류를 pass로 처리하지 않는다. 주문이나 자동 리밸런싱을 만들지 않는다.
 
 ## Storage Boundary

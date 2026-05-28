@@ -1078,6 +1078,92 @@ class ProviderContextProvenanceContractTests(unittest.TestCase):
 
 
 class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
+    def _integrated_gate_ready_validation(self) -> dict:
+        return {
+            "selection_source_id": "source-integrated-ready",
+            "validation_id": "validation-integrated-ready",
+            "validation_route": "READY_FOR_FINAL_REVIEW",
+            "validation_profile": {"profile_id": "balanced_core", "profile_label": "균형형"},
+            "diagnostic_summary": {
+                "status_counts": {"PASS": 12, "REVIEW": 0, "BLOCKED": 0, "NOT_RUN": 0}
+            },
+            "checks": [
+                {"Criteria": "Data Trust", "Ready": True, "Current": "PASS"},
+                {"Criteria": "Runtime recheck", "Ready": True, "Current": "PASS"},
+                {"Criteria": "Runtime period coverage", "Ready": True, "Current": "PASS"},
+                {"Criteria": "Provider coverage", "Ready": True, "Current": "PASS"},
+                {"Criteria": "Benchmark parity", "Ready": True, "Current": "PASS"},
+            ],
+            "provider_coverage": {
+                "coverage": {
+                    "holdings": {"diagnostic_status": "PASS"},
+                    "operability": {"diagnostic_status": "PASS"},
+                    "exposure": {"diagnostic_status": "PASS"},
+                }
+            },
+            "diagnostic_results": [],
+            "robustness_validation": {"robustness_route": "READY_FOR_STRESS_SWEEP"},
+            "validation_efficacy_audit": self._gate_audit(
+                route="VALIDATION_EFFICACY_READY",
+                label="Ready",
+                criteria="Runtime replay evidence",
+                status="PASS",
+                ready=True,
+                current="PASS",
+                meaning="runtime replay attached",
+            ),
+            "data_coverage_audit": self._gate_audit(
+                route="DATA_COVERAGE_READY",
+                label="Ready",
+                criteria="Price DB window coverage",
+                status="PASS",
+                ready=True,
+                current="100.0% / symbols=2",
+                meaning="data coverage attached",
+            ),
+            "backtest_realism_audit": self._gate_audit(
+                route="BACKTEST_REALISM_READY",
+                label="Ready",
+                criteria="Transaction cost model",
+                status="PASS",
+                ready=True,
+                current="10 bps / net curve applied",
+                meaning="realism evidence attached",
+            ),
+        }
+
+    def _gate_audit(
+        self,
+        *,
+        route: str,
+        label: str,
+        criteria: str,
+        status: str,
+        ready: bool,
+        current: str,
+        meaning: str,
+    ) -> dict:
+        return {
+            "route": route,
+            "route_label": label,
+            "rows": [
+                {
+                    "Criteria": criteria,
+                    "Status": status,
+                    "Ready": ready,
+                    "Current": current,
+                    "Meaning": meaning,
+                }
+            ],
+        }
+
+    def _gate_policy_severities(self, packet: dict) -> dict:
+        gate_policy = dict(packet.get("gate_policy_snapshot") or {})
+        return {
+            row.get("Group"): row.get("Severity")
+            for row in list(gate_policy.get("policy_rows") or [])
+        }
+
     def test_status_display_uses_current_decision_routes(self) -> None:
         from app.services.backtest_evidence_read_model import build_final_review_status_display
 
@@ -1336,6 +1422,176 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         assumptions = [row["Assumption"] for row in packet["assumptions_and_limits"]]
         self.assertIn("Hypothetical backtest", assumptions)
         self.assertIn("No live approval / order", assumptions)
+
+    def test_integrated_investability_gate_all_ready_allows_selected_route(self) -> None:
+        from app.services.backtest_evidence_read_model import (
+            SELECT_FOR_PRACTICAL_PORTFOLIO,
+            build_investability_evidence_packet,
+            build_selected_route_gate,
+        )
+
+        packet = build_investability_evidence_packet(
+            source={"source_type": "practical_validation_result", "source_id": "validation-integrated-ready"},
+            validation=self._integrated_gate_ready_validation(),
+            paper_observation={"route": "PAPER_OBSERVATION_READY", "blockers": []},
+            decision_evidence={"route": "READY_FOR_FINAL_DECISION", "blockers": []},
+        )
+        selected_gate = build_selected_route_gate(
+            decision_route=SELECT_FOR_PRACTICAL_PORTFOLIO,
+            investability_packet=packet,
+        )
+
+        self.assertEqual(packet["route"], "INVESTABILITY_PACKET_READY")
+        self.assertTrue(packet["select_ready"])
+        self.assertTrue(selected_gate["Ready"])
+        self.assertEqual(packet["gate_policy_snapshot"]["outcome"], "select_ready")
+        self.assertTrue(packet["gate_policy_snapshot"]["select_allowed"])
+        self.assertFalse(packet["gate_policy_snapshot"]["waiver_supported"])
+        severities = self._gate_policy_severities(packet)
+        self.assertEqual(severities["validation_efficacy"], "PASS")
+        self.assertEqual(severities["data_coverage"], "PASS")
+        self.assertEqual(severities["backtest_realism"], "PASS")
+        execution_boundary = next(row for row in packet["checks"] if row["Section"] == "Execution Boundary")
+        self.assertEqual(execution_boundary["Current"], "live approval disabled / order disabled")
+
+    def test_integrated_investability_gate_multiple_review_gaps_hold_selected_route(self) -> None:
+        from app.services.backtest_evidence_read_model import (
+            SELECT_FOR_PRACTICAL_PORTFOLIO,
+            build_investability_evidence_packet,
+            build_selected_route_gate,
+        )
+
+        validation = self._integrated_gate_ready_validation()
+        validation["checks"][3] = {"Criteria": "Provider coverage", "Ready": True, "Current": "REVIEW"}
+        validation["diagnostic_summary"] = {
+            "status_counts": {"PASS": 8, "REVIEW": 4, "BLOCKED": 0, "NOT_RUN": 0}
+        }
+        validation["diagnostic_results"] = [
+            {
+                "domain": "operability_cost_liquidity",
+                "title": "10. Operability / Cost / Liquidity",
+                "status": "REVIEW",
+                "next_action": "provider actual evidence 보강",
+            }
+        ]
+        validation["validation_efficacy_audit"] = self._gate_audit(
+            route="VALIDATION_EFFICACY_REVIEW",
+            label="Review Required",
+            criteria="PIT / look-ahead boundary",
+            status="REVIEW",
+            ready=False,
+            current="needs review",
+            meaning="PIT boundary needs review",
+        )
+        validation["data_coverage_audit"] = self._gate_audit(
+            route="DATA_COVERAGE_REVIEW",
+            label="Review Required",
+            criteria="Survivorship / delisting control",
+            status="REVIEW",
+            ready=False,
+            current="not proven",
+            meaning="current listing is not survivorship control",
+        )
+        validation["backtest_realism_audit"] = self._gate_audit(
+            route="BACKTEST_REALISM_REVIEW",
+            label="Review Required",
+            criteria="Tax / account scope",
+            status="REVIEW",
+            ready=False,
+            current="not modeled",
+            meaning="tax/account scope review",
+        )
+
+        packet = build_investability_evidence_packet(
+            source={"source_type": "practical_validation_result", "source_id": "validation-integrated-review"},
+            validation=validation,
+            paper_observation={"route": "PAPER_OBSERVATION_READY", "blockers": []},
+            decision_evidence={"route": "READY_FOR_FINAL_DECISION", "blockers": []},
+        )
+        selected_gate = build_selected_route_gate(
+            decision_route=SELECT_FOR_PRACTICAL_PORTFOLIO,
+            investability_packet=packet,
+        )
+        hold_gate = build_selected_route_gate(
+            decision_route="HOLD_FOR_MORE_PAPER_TRACKING",
+            investability_packet=packet,
+        )
+
+        self.assertEqual(packet["route"], "INVESTABILITY_PACKET_NEEDS_REVIEW")
+        self.assertFalse(packet["select_ready"])
+        self.assertFalse(selected_gate["Ready"])
+        self.assertTrue(hold_gate["Ready"])
+        self.assertEqual(packet["gate_policy_snapshot"]["outcome"], "hold_or_re_review")
+        self.assertEqual(packet["gate_policy_snapshot"]["blockers"], [])
+        self.assertTrue(packet["gate_policy_snapshot"]["waiver_required_for_select"])
+        severities = self._gate_policy_severities(packet)
+        self.assertEqual(severities["provider_coverage"], "REVIEW_REQUIRED")
+        self.assertEqual(severities["validation_efficacy"], "REVIEW_REQUIRED")
+        self.assertEqual(severities["data_coverage"], "REVIEW_REQUIRED")
+        self.assertEqual(severities["backtest_realism"], "REVIEW_REQUIRED")
+
+    def test_integrated_investability_gate_multiple_blockers_block_selected_route(self) -> None:
+        from app.services.backtest_evidence_read_model import (
+            SELECT_FOR_PRACTICAL_PORTFOLIO,
+            build_investability_evidence_packet,
+            build_selected_route_gate,
+        )
+
+        validation = self._integrated_gate_ready_validation()
+        validation["validation_efficacy_audit"] = self._gate_audit(
+            route="VALIDATION_EFFICACY_NEEDS_INPUT",
+            label="Evidence Input Needed",
+            criteria="Runtime replay evidence",
+            status="NEEDS_INPUT",
+            ready=False,
+            current="NOT_RUN",
+            meaning="runtime replay missing",
+        )
+        validation["data_coverage_audit"] = self._gate_audit(
+            route="DATA_COVERAGE_NEEDS_INPUT",
+            label="Coverage Input Needed",
+            criteria="Price DB window coverage",
+            status="NEEDS_INPUT",
+            ready=False,
+            current="0.0% / symbols=2",
+            meaning="price coverage missing",
+        )
+        validation["backtest_realism_audit"] = self._gate_audit(
+            route="BACKTEST_REALISM_BLOCKED",
+            label="Blocked",
+            criteria="Execution boundary",
+            status="BLOCKED",
+            ready=False,
+            current="execution model invalid",
+            meaning="execution assumption blocks selection",
+        )
+
+        packet = build_investability_evidence_packet(
+            source={"source_type": "practical_validation_result", "source_id": "validation-integrated-blocked"},
+            validation=validation,
+            paper_observation={"route": "PAPER_OBSERVATION_READY", "blockers": []},
+            decision_evidence={"route": "READY_FOR_FINAL_DECISION", "blockers": []},
+        )
+        selected_gate = build_selected_route_gate(
+            decision_route=SELECT_FOR_PRACTICAL_PORTFOLIO,
+            investability_packet=packet,
+        )
+        hold_gate = build_selected_route_gate(
+            decision_route="HOLD_FOR_MORE_PAPER_TRACKING",
+            investability_packet=packet,
+        )
+
+        self.assertEqual(packet["route"], "INVESTABILITY_PACKET_BLOCKED")
+        self.assertFalse(packet["select_ready"])
+        self.assertFalse(selected_gate["Ready"])
+        self.assertTrue(hold_gate["Ready"])
+        self.assertEqual(packet["gate_policy_snapshot"]["outcome"], "blocked")
+        self.assertTrue(packet["gate_policy_snapshot"]["waiver_required_for_select"])
+        severities = self._gate_policy_severities(packet)
+        self.assertEqual(severities["validation_efficacy"], "BLOCK")
+        self.assertEqual(severities["data_coverage"], "BLOCK")
+        self.assertEqual(severities["backtest_realism"], "BLOCK")
+        self.assertGreaterEqual(len(packet["gate_policy_snapshot"]["blockers"]), 3)
 
     def test_investability_packet_blocks_selected_route_on_critical_not_run(self) -> None:
         from app.services.backtest_evidence_read_model import (

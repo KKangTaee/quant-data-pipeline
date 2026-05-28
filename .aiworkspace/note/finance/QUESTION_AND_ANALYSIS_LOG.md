@@ -21,6 +21,18 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-28 - Integrated investability gate needs combination QA
+- User request:
+  - 다음 작업 진행을 요청함.
+- Interpreted goal:
+  - 개별 audit gate 연결 이후, 세 audit과 기존 provider / robustness / paper observation / final evidence gate가 함께 작동할 때 selected-route가 잘못 열리거나 보류 판단까지 막히지 않는지 확인한다.
+- Analysis result:
+  - Integrated gate QA contract를 추가했다.
+  - all-ready 조합은 selected-route를 허용하고, multi-review 조합은 `INVESTABILITY_PACKET_NEEDS_REVIEW`로 selected-route만 차단하며, multi-blocker 조합은 `INVESTABILITY_PACKET_BLOCKED`로 selected-route를 차단한다.
+  - 이 작업은 새 저장소, memo, preset, approval, order, auto rebalance를 추가하지 않았다.
+- Follow-up:
+  - 다음 큰 개선은 historical universe / delisting source, survivorship control, 또는 cost / turnover 실측 근거처럼 실제 데이터 소스 자체를 보강하는 작업이다.
+
 ### 2026-05-28 - Data coverage audit should affect selected-route gate
 - User request:
   - 추천 순서대로 작업 진행을 요청함.

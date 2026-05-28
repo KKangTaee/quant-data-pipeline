@@ -22,6 +22,9 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-28
+- Completed `.aiworkspace/note/finance/tasks/active/integrated-investability-gate-qa-v1/`.
+- Final Review evidence read model now has integrated contract coverage for all-ready, multi-review, and multi-blocker investability gate combinations.
+- This QA added no DB write, new JSONL registry, memo, preset, approval, order, or rebalance behavior.
 - Completed `.aiworkspace/note/finance/tasks/active/data-coverage-gate-policy-link-v1/`.
 - Data Coverage Audit now participates in the profile-aware gate policy: `NEEDS_INPUT` / `BLOCKED` blocks selected-route, and `REVIEW` requires hold / re-review before selection.
 - This uses the existing investability packet and selected-route gate; no DB write, new JSONL registry, memo, preset, approval, order, or rebalance behavior was added.
