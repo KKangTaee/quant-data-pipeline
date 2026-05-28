@@ -1169,6 +1169,29 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
             "raw_decision": {
                 "decision_id": "decision-selected",
                 "updated_at": "2026-05-28T10:00:00",
+                "decision_route": "SELECT_FOR_PRACTICAL_PORTFOLIO",
+                "selected_practical_portfolio": True,
+                "selected_components": [
+                    {
+                        "title": "Selected Component",
+                        "registry_id": "candidate-selected",
+                        "target_weight": 100.0,
+                        "benchmark": "SPY",
+                    }
+                ],
+                "decision_evidence_snapshot": {"route": "READY_FOR_FINAL_DECISION", "checks": [], "blockers": []},
+                "investability_evidence_packet": {
+                    "route": "INVESTABILITY_PACKET_READY",
+                    "gate_policy_snapshot": {
+                        "outcome": "select_ready",
+                        "select_allowed": True,
+                    },
+                },
+                "paper_tracking_snapshot": {
+                    "route": "PAPER_OBSERVATION_READY",
+                    "review_cadence": "monthly_or_rebalance_review",
+                    "review_triggers": ["CAGR deterioration review"],
+                },
             },
         }
 
@@ -1226,6 +1249,36 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertEqual(by_event["Actual Allocation drift"]["status"], "WATCH")
         self.assertEqual(by_event["Review trigger preview"]["status"], "WATCH")
         self.assertFalse(timeline["execution_boundary"]["auto_rebalance"])
+
+    def test_selected_continuity_check_requires_recheck_input_without_writing(self) -> None:
+        from app.runtime.final_selected_portfolios import build_selected_portfolio_continuity_check
+
+        continuity = build_selected_portfolio_continuity_check(self._selected_row())
+
+        self.assertEqual(continuity["schema_version"], "selected_continuity_check_v1")
+        self.assertEqual(continuity["route"], "CONTINUITY_NEEDS_INPUT")
+        checks = {row["Check"]: row for row in continuity["checks"]}
+        self.assertEqual(checks["Selected Final Review row"]["Status"], "PASS")
+        self.assertEqual(checks["Component target contract"]["Status"], "PASS")
+        self.assertEqual(checks["Performance Recheck input"]["Status"], "NEEDS_INPUT")
+        self.assertFalse(continuity["execution_boundary"]["monitoring_log_auto_write"])
+        self.assertFalse(continuity["execution_boundary"]["live_approval"])
+
+    def test_selected_continuity_check_blocks_non_selected_or_invalid_component_contract(self) -> None:
+        from app.runtime.final_selected_portfolios import build_selected_portfolio_continuity_check
+
+        row = self._selected_row()
+        row["raw_decision"]["decision_route"] = "HOLD_FOR_MORE_PAPER_TRACKING"
+        row["raw_decision"]["selected_practical_portfolio"] = False
+        row["raw_decision"]["selected_components"][0]["target_weight"] = 80.0
+
+        continuity = build_selected_portfolio_continuity_check(row)
+
+        self.assertEqual(continuity["route"], "CONTINUITY_BLOCKED")
+        checks = {item["Check"]: item for item in continuity["checks"]}
+        self.assertEqual(checks["Selected Final Review row"]["Status"], "BLOCKED")
+        self.assertEqual(checks["Component target contract"]["Status"], "BLOCKED")
+        self.assertFalse(continuity["execution_boundary"]["order_instruction"])
 
 
 class DecisionDossierContractTests(unittest.TestCase):

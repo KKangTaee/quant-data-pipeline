@@ -32,7 +32,7 @@ Backtest > Backtest Analysis
 | Backtest Analysis | 후보 생성, 전략 비교, saved mix replay, 비중 조합 | 최종 판단 |
 | Practical Validation | 실전 투입 전 검증, provider data gap, stress / sensitivity evidence | 투자 승인, 최종 사용자 메모 |
 | Final Review | 최종 후보 판단, investability evidence packet 확인, critical gap 기반 selected-route gate, saved decision dossier export | 새 비중 실험, provider data 수집, 사용자 메모용 반복 저장, 자동 report 파일 생성 |
-| Selected Portfolio Dashboard | 선정 이후 성과 재확인, read-only monitoring timeline / signal, optional allocation check | broker order, live approval, auto rebalance |
+| Selected Portfolio Dashboard | 선정 이후 성과 재확인, Final Review -> dashboard continuity check, read-only monitoring timeline / signal, optional allocation check | broker order, live approval, auto rebalance |
 
 ## Source Contract
 
@@ -61,7 +61,7 @@ PORTFOLIO_SELECTION_SOURCES
 - Provider / look-through evidence는 source mix, freshness, as-of range를 함께 본다. stale provider snapshot은 pass가 아니라 review evidence다.
 - Look-through Exposure Board는 holdings / exposure snapshot을 asset bucket, top holding, overlap, ETF별 coverage로 요약한다. Full holdings row는 DB 영역에 남고 workflow JSONL에는 compact summary만 남긴다.
 - Robustness Lab은 stress / rolling / sensitivity / overfit evidence를 compact summary로 묶어 Practical Validation과 Final Review가 같은 근거를 읽게 한다. Strategy-specific perturbation follow-up이나 `NOT_RUN` row는 pass가 아니다.
-- Selected Portfolio Dashboard는 선정 이후 상태 확인 화면이다. Timeline은 selection / evidence gate / recheck / drift / trigger preview를 read-only로 읽고 monitoring log를 자동 저장하지 않는다. 주문이나 자동 리밸런싱을 만들지 않는다.
+- Selected Portfolio Dashboard는 선정 이후 상태 확인 화면이다. Continuity check는 Final Review selected row가 evidence packet / component target / review trigger / timeline / recheck input 경계를 갖췄는지 읽는다. Timeline은 selection / evidence gate / recheck / drift / trigger preview를 read-only로 읽고 monitoring log를 자동 저장하지 않는다. 주문이나 자동 리밸런싱을 만들지 않는다.
 
 ## Storage Boundary
 

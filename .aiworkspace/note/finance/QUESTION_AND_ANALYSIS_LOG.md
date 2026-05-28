@@ -21,6 +21,19 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-28 - Selected Dashboard needs a continuity check before monitoring
+- User request:
+  - 다음 작업 진행을 요청함.
+- Interpreted goal:
+  - Practical Validation V2 P3의 첫 slice로 Final Review selected row가 Selected Dashboard monitoring에 필요한 근거를 갖췄는지 확인해야 함.
+- Analysis result:
+  - `practical-validation-v2-p3-continuity-check` task를 열고 구현했다.
+  - Selected Dashboard는 selected route, investability packet, component target, review trigger, monitoring timeline, Performance Recheck input, execution / storage boundary를 read-only continuity check로 표시한다.
+  - Performance Recheck 미실행은 `NEEDS_INPUT`으로 보이며 pass처럼 숨기지 않는다.
+  - monitoring log 자동 저장, live approval, broker order, auto rebalance는 계속 비활성이다.
+- Follow-up:
+  - 다음 P3 후보는 monitoring snapshot 명시 저장 또는 recheck evidence 비교 범위를 별도 task로 결정하는 것이다.
+
 ### 2026-05-28 - Practical Validation V2 P2 is closed out
 - User request:
   - 다음 단계 진행을 요청함.

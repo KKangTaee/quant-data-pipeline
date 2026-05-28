@@ -22,6 +22,9 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-28
+- Completed `.aiworkspace/note/finance/tasks/active/practical-validation-v2-p3-continuity-check/`.
+- Selected Portfolio Dashboard now shows a read-only Final Review -> Selected Dashboard continuity check.
+- The continuity check verifies selected route, investability packet, component target, review trigger, timeline connection, Performance Recheck input, and execution/storage boundary without auto-writing monitoring logs.
 - Completed Practical Validation V2 P2 closeout in `.aiworkspace/note/finance/tasks/active/practical-validation-v2/`.
 - Verified provider context / look-through / robustness / Final Review service contracts with `tests/test_service_contracts.py`.
 - P2 is now closed; next decision is whether to open P3 for Final Review handoff QA and Selected Portfolio Dashboard monitoring connection.

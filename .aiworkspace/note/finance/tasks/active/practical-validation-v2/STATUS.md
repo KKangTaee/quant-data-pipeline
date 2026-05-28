@@ -23,7 +23,7 @@ P2 implementation과 P2-7 QA / closeout 판단은 완료됐다.
 
 ## Next
 
-- P3 범위를 별도 task 또는 Practical Validation V2 후속 section으로 열지 결정
+- P3 first slice로 continuity check를 구현했다.
 - P3 후보: Final Review handoff QA, Selected Portfolio Dashboard monitoring 연결 정리, selected 이후 recheck evidence 비교
 - strategy-specific sensitivity runtime sweep은 별도 후속으로 분리
 

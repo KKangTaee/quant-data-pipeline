@@ -49,12 +49,19 @@ FINAL_SELECTED_PORTFOLIO_DRIFT_ALERT_ROUTE_LABELS = {
     "INPUT_REVIEW_ALERT": "입력 확인 경고",
 }
 SELECTED_MONITORING_TIMELINE_SCHEMA_VERSION = "selected_monitoring_timeline_v1"
+SELECTED_CONTINUITY_CHECK_SCHEMA_VERSION = "selected_continuity_check_v1"
 SELECTED_MONITORING_TIMELINE_STATUS_LABELS = {
     "CLEAR": "정상",
     "WATCH": "관찰",
     "BREACHED": "재검토",
     "NEEDS_INPUT": "입력 필요",
     "OPTIONAL": "선택",
+}
+SELECTED_CONTINUITY_ROUTE_LABELS = {
+    "CONTINUITY_READY": "사후 점검 준비 완료",
+    "CONTINUITY_NEEDS_INPUT": "입력 필요",
+    "CONTINUITY_REVIEW": "연결 검토 필요",
+    "CONTINUITY_BLOCKED": "연결 차단",
 }
 _TIMELINE_STATUS_RANK = {
     "OPTIONAL": 0,
@@ -899,6 +906,208 @@ def build_selected_portfolio_monitoring_timeline(
             "order_instruction": False,
             "auto_rebalance": False,
             "notes": "Timeline reads current decision and session results; it does not append monitoring logs.",
+        },
+    }
+
+
+def _continuity_check_row(
+    *,
+    check: str,
+    status: str,
+    ready: bool,
+    current: Any,
+    evidence: str,
+    next_action: str,
+    severity: str = "review",
+) -> dict[str, Any]:
+    return {
+        "Check": check,
+        "Status": status,
+        "Ready": bool(ready),
+        "Current": _clean_text(current),
+        "Evidence": _clean_text(evidence),
+        "Next Action": _clean_text(next_action),
+        "Severity": severity,
+    }
+
+
+def build_selected_portfolio_continuity_check(
+    row: dict[str, Any],
+    *,
+    monitoring_timeline: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Check whether a Final Review selected row is usable for dashboard monitoring."""
+
+    selected = dict(row or {})
+    raw_decision = dict(selected.get("raw_decision") or selected)
+    timeline = dict(monitoring_timeline or build_selected_portfolio_monitoring_timeline(selected))
+    evidence = dict(raw_decision.get("decision_evidence_snapshot") or {})
+    packet = dict(raw_decision.get("investability_evidence_packet") or {})
+    gate_policy = dict(raw_decision.get("gate_policy_snapshot") or packet.get("gate_policy_snapshot") or {})
+    paper_snapshot = dict(raw_decision.get("paper_tracking_snapshot") or {})
+    active_components = _active_components(raw_decision)
+    target_weight_total = _target_weight_total(raw_decision, active_components)
+    decision_route = _clean_text(raw_decision.get("decision_route") or selected.get("decision_route"), "")
+    selected_flag = (
+        raw_decision.get("selected_practical_portfolio") is True
+        or selected.get("selected_practical_portfolio") is True
+        or decision_route == SELECTED_PRACTICAL_PORTFOLIO_ROUTE
+    )
+    review_triggers = [
+        str(trigger).strip()
+        for trigger in list(selected.get("review_triggers") or paper_snapshot.get("review_triggers") or [])
+        if str(trigger).strip()
+    ]
+    timeline_boundary = dict(timeline.get("execution_boundary") or {})
+    timeline_metrics = dict(timeline.get("metrics") or {})
+    packet_route = _clean_text(packet.get("route"), "")
+    evidence_route = _clean_text(evidence.get("route") or selected.get("evidence_route"), "")
+    gate_outcome = _clean_text(gate_policy.get("outcome"), "")
+    gate_selected = bool(gate_policy.get("select_allowed")) if gate_policy else False
+    timeline_read_only = (
+        timeline.get("schema_version") == SELECTED_MONITORING_TIMELINE_SCHEMA_VERSION
+        and timeline_boundary.get("write_policy") == "read_only_timeline"
+        and timeline_boundary.get("monitoring_log_auto_write") is False
+    )
+    recheck_present = bool(timeline_metrics.get("performance_recheck_present"))
+
+    checks = [
+        _continuity_check_row(
+            check="Selected Final Review row",
+            status="PASS" if selected_flag else "BLOCKED",
+            ready=selected_flag,
+            current=decision_route or "-",
+            evidence="Final Review selected route attached" if selected_flag else "Selected route is missing",
+            next_action=(
+                "Selected Dashboard can read this row."
+                if selected_flag
+                else "Record a SELECT_FOR_PRACTICAL_PORTFOLIO decision in Final Review first."
+            ),
+            severity="block",
+        ),
+        _continuity_check_row(
+            check="Investability evidence handoff",
+            status="PASS" if packet_route == "INVESTABILITY_PACKET_READY" or gate_selected else "REVIEW",
+            ready=packet_route == "INVESTABILITY_PACKET_READY" or gate_selected,
+            current=f"packet={packet_route or '-'} / gate={gate_outcome or '-'} / evidence={evidence_route or '-'}",
+            evidence="Investability packet and gate policy are attached" if packet or gate_policy else "Investability packet is missing",
+            next_action=(
+                "Use the saved packet as the selected monitoring baseline."
+                if packet or gate_policy
+                else "Open Final Review and rebuild the decision from Practical Validation evidence."
+            ),
+            severity="review",
+        ),
+        _continuity_check_row(
+            check="Component target contract",
+            status="PASS" if active_components and abs(target_weight_total - 100.0) <= 0.01 else "BLOCKED",
+            ready=bool(active_components) and abs(target_weight_total - 100.0) <= 0.01,
+            current=f"{len(active_components)} components / {target_weight_total:.2f}%",
+            evidence="Active selected components are available" if active_components else "No active selected components",
+            next_action=(
+                "Performance Recheck and allocation monitoring can use this component contract."
+                if active_components and abs(target_weight_total - 100.0) <= 0.01
+                else "Fix selected components or target weights in the Final Review source."
+            ),
+            severity="block",
+        ),
+        _continuity_check_row(
+            check="Review cadence and triggers",
+            status="PASS" if paper_snapshot.get("review_cadence") and review_triggers else "REVIEW",
+            ready=bool(paper_snapshot.get("review_cadence") and review_triggers),
+            current=f"cadence={paper_snapshot.get('review_cadence') or '-'} / triggers={len(review_triggers)}",
+            evidence="Paper observation trigger seed is attached" if review_triggers else "Review trigger seed is missing",
+            next_action=(
+                "Use triggers in Review Signals and dossier context."
+                if review_triggers
+                else "Add review triggers through Final Review paper observation criteria."
+            ),
+            severity="review",
+        ),
+        _continuity_check_row(
+            check="Monitoring timeline connection",
+            status="PASS" if timeline_read_only else "REVIEW",
+            ready=timeline_read_only,
+            current=f"{timeline.get('schema_version') or '-'} / {timeline.get('timeline_status') or '-'}",
+            evidence=f"{timeline_metrics.get('row_count', 0)} timeline rows",
+            next_action=(
+                "Timeline is connected and remains read-only."
+                if timeline_read_only
+                else "Rebuild the selected monitoring timeline read model."
+            ),
+            severity="review",
+        ),
+        _continuity_check_row(
+            check="Performance Recheck input",
+            status="PASS" if recheck_present else "NEEDS_INPUT",
+            ready=recheck_present,
+            current="present" if recheck_present else "not run",
+            evidence="Latest recheck is in session state" if recheck_present else "Selected Dashboard needs a Performance Recheck run",
+            next_action=(
+                "Use Review Signals to compare recheck result with the selected baseline."
+                if recheck_present
+                else "Run Performance Recheck when evaluating this selected portfolio after selection."
+            ),
+            severity="input",
+        ),
+        _continuity_check_row(
+            check="Execution and storage boundary",
+            status="PASS"
+            if timeline_boundary.get("monitoring_log_auto_write") is False
+            and timeline_boundary.get("live_approval") is False
+            and timeline_boundary.get("order_instruction") is False
+            and timeline_boundary.get("auto_rebalance") is False
+            else "BLOCKED",
+            ready=timeline_boundary.get("monitoring_log_auto_write") is False
+            and timeline_boundary.get("live_approval") is False
+            and timeline_boundary.get("order_instruction") is False
+            and timeline_boundary.get("auto_rebalance") is False,
+            current=(
+                f"auto_write={timeline_boundary.get('monitoring_log_auto_write')} / "
+                f"approval={timeline_boundary.get('live_approval')} / "
+                f"order={timeline_boundary.get('order_instruction')} / "
+                f"rebalance={timeline_boundary.get('auto_rebalance')}"
+            ),
+            evidence="No auto-write, approval, order, or rebalance behavior",
+            next_action="Keep monitoring updates explicit and read-only.",
+            severity="block",
+        ),
+    ]
+    blocked = [check for check in checks if check["Status"] == "BLOCKED"]
+    needs_input = [check for check in checks if check["Status"] == "NEEDS_INPUT"]
+    review = [check for check in checks if check["Status"] == "REVIEW"]
+    if blocked:
+        route = "CONTINUITY_BLOCKED"
+        next_action = "Resolve blocked continuity checks before treating the row as monitorable."
+    elif needs_input:
+        route = "CONTINUITY_NEEDS_INPUT"
+        next_action = "Run the missing dashboard input checks before relying on monitoring signals."
+    elif review:
+        route = "CONTINUITY_REVIEW"
+        next_action = "Review missing or legacy evidence before continuing monitoring."
+    else:
+        route = "CONTINUITY_READY"
+        next_action = "Selected Dashboard can continue monitoring from this Final Review row."
+    return {
+        "schema_version": SELECTED_CONTINUITY_CHECK_SCHEMA_VERSION,
+        "route": route,
+        "route_label": SELECTED_CONTINUITY_ROUTE_LABELS.get(route, route),
+        "next_action": next_action,
+        "checks": checks,
+        "metrics": {
+            "check_count": len(checks),
+            "blocked_count": len(blocked),
+            "needs_input_count": len(needs_input),
+            "review_count": len(review),
+            "pass_count": sum(1 for check in checks if check["Status"] == "PASS"),
+        },
+        "execution_boundary": {
+            "write_policy": "read_only_continuity_check",
+            "monitoring_log_auto_write": False,
+            "live_approval": False,
+            "order_instruction": False,
+            "auto_rebalance": False,
+            "notes": "Continuity check reads existing final decision and timeline evidence; it does not persist monitoring state.",
         },
     }
 

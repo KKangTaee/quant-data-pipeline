@@ -10,6 +10,7 @@ import streamlit as st
 from app.services.backtest_evidence_read_model import build_decision_dossier
 from app.web.backtest_ui_components import render_badge_strip, render_status_card_grid
 from app.web.final_selected_portfolio_dashboard_helpers import (
+    build_selected_portfolio_continuity_table,
     build_selected_portfolio_current_weight_input_table,
     build_selected_portfolio_drift_alert_table,
     build_selected_portfolio_drift_table,
@@ -29,6 +30,7 @@ from app.runtime import (
     FINAL_SELECTION_DECISION_V2_FILE,
     FINAL_SELECTED_PORTFOLIO_STATUS_LABELS,
     FINAL_SELECTED_PORTFOLIO_VALUE_INPUT_MODE_LABELS,
+    build_selected_portfolio_continuity_check,
     build_selected_portfolio_current_weight_inputs,
     build_selected_portfolio_drift_alert_preview,
     build_selected_portfolio_drift_check,
@@ -67,6 +69,16 @@ def _review_trigger_tone(status: str) -> str:
     if normalized in {"Watch", "WATCH", "Needs Input", "NEEDS_INPUT"}:
         return "warning"
     if normalized in {"Breached", "BREACHED"}:
+        return "danger"
+    return "neutral"
+
+
+def _continuity_tone(route: str) -> str:
+    if route == "CONTINUITY_READY":
+        return "positive"
+    if route in {"CONTINUITY_NEEDS_INPUT", "CONTINUITY_REVIEW"}:
+        return "warning"
+    if route == "CONTINUITY_BLOCKED":
         return "danger"
     return "neutral"
 
@@ -697,6 +709,46 @@ def _render_operator_context(row: dict[str, Any]) -> None:
         min_width=190,
     )
     evidence_df = build_selected_portfolio_evidence_table(row)
+    continuity_timeline = _latest_monitoring_timeline(row)
+    continuity = build_selected_portfolio_continuity_check(row, monitoring_timeline=continuity_timeline)
+    continuity_metrics = dict(continuity.get("metrics") or {})
+    continuity_route = str(continuity.get("route") or "")
+    with st.container(border=True):
+        st.markdown("##### Final Review -> Selected Dashboard Continuity")
+        render_badge_strip(
+            [
+                {
+                    "label": "Continuity",
+                    "value": continuity.get("route_label"),
+                    "tone": _continuity_tone(continuity_route),
+                },
+                {
+                    "label": "Needs Input",
+                    "value": continuity_metrics.get("needs_input_count", 0),
+                    "tone": "warning" if continuity_metrics.get("needs_input_count") else "neutral",
+                },
+                {
+                    "label": "Review",
+                    "value": continuity_metrics.get("review_count", 0),
+                    "tone": "warning" if continuity_metrics.get("review_count") else "neutral",
+                },
+                {
+                    "label": "Blocked",
+                    "value": continuity_metrics.get("blocked_count", 0),
+                    "tone": "danger" if continuity_metrics.get("blocked_count") else "neutral",
+                },
+                {"label": "Auto Save", "value": "Disabled", "tone": "neutral"},
+            ]
+        )
+        if continuity_route == "CONTINUITY_BLOCKED":
+            st.warning(str(continuity.get("next_action") or "-"))
+        elif continuity_route in {"CONTINUITY_NEEDS_INPUT", "CONTINUITY_REVIEW"}:
+            st.info(str(continuity.get("next_action") or "-"))
+        else:
+            st.success(str(continuity.get("next_action") or "-"))
+        with st.expander("Continuity check rows", expanded=continuity_route != "CONTINUITY_READY"):
+            st.dataframe(build_selected_portfolio_continuity_table(continuity), width="stretch", hide_index=True)
+
     timeline_tab, trigger_tab, evidence_tab, allocation_tab, audit_tab = st.tabs(
         ["Timeline", "Review Signals", "Why Selected", "Actual Allocation", "Audit"]
     )
@@ -705,7 +757,7 @@ def _render_operator_context(row: dict[str, Any]) -> None:
             "Final Review 선정 이후 현재 화면에서 확인한 신호를 시간순으로 읽습니다. "
             "이 timeline은 monitoring log를 자동 저장하지 않습니다."
         )
-        timeline = _latest_monitoring_timeline(row)
+        timeline = continuity_timeline
         metrics = dict(timeline.get("metrics") or {})
         boundary = dict(timeline.get("execution_boundary") or {})
         render_badge_strip(
