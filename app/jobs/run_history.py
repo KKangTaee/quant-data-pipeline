@@ -29,6 +29,7 @@ def _infer_pipeline_type(record: dict[str, Any]) -> str | None:
         "collect_top2000_intraday_snapshot": "overview_market_snapshot",
         "collect_fomc_calendar": "overview_fomc_calendar_collection",
         "collect_earnings_calendar": "overview_earnings_calendar_collection",
+        "collect_macro_calendar": "overview_macro_calendar_collection",
     }
     return mapping.get(job_name)
 
@@ -65,6 +66,7 @@ def _infer_execution_context(record: dict[str, Any]) -> str | None:
         "overview_market_snapshot": "Overview market movers intraday previous-close snapshot refresh.",
         "overview_fomc_calendar_collection": "Overview FOMC calendar refresh from the official Fed page.",
         "overview_earnings_calendar_collection": "Overview bounded earnings calendar refresh for active event intelligence.",
+        "overview_macro_calendar_collection": "Overview macro calendar refresh from official BLS and BEA release schedules.",
     }
     return mapping.get(pipeline_type)
 

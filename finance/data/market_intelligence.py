@@ -27,6 +27,11 @@ SP500_SOURCE_URL = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
 SP500_SOURCE = "wikipedia_sp500_constituents"
 FOMC_CALENDAR_SOURCE_URL = "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
 FOMC_CALENDAR_SOURCE = "federal_reserve_fomc_calendar"
+BLS_MACRO_CALENDAR_SOURCE_URL_TEMPLATE = "https://www.bls.gov/schedule/{year}/"
+BLS_MACRO_CALENDAR_SOURCE = "bureau_labor_statistics_release_schedule"
+BEA_MACRO_CALENDAR_SOURCE_URL = "https://www.bea.gov/index.php/news/schedule/full"
+BEA_MACRO_CALENDAR_SOURCE = "bureau_economic_analysis_release_schedule"
+MACRO_CALENDAR_SOURCE = "official_macro_release_schedules"
 EARNINGS_CALENDAR_SOURCE = "yfinance_calendar"
 EARNINGS_CALENDAR_SOURCE_URL = "https://finance.yahoo.com/calendar/earnings"
 NASDAQ_EARNINGS_CALENDAR_SOURCE = "nasdaq_earnings_calendar"
@@ -45,6 +50,23 @@ MARKET_UNIVERSE_LABELS = {
     "TOP1000": "Top 1000",
     "TOP2000": "Top 2000",
 }
+BLS_MACRO_RELEASE_TYPES = [
+    {
+        "event_type": "MACRO_CPI",
+        "label": "CPI",
+        "match": "consumer price index",
+    },
+    {
+        "event_type": "MACRO_PPI",
+        "label": "PPI",
+        "match": "producer price index",
+    },
+    {
+        "event_type": "MACRO_EMPLOYMENT",
+        "label": "Employment Situation",
+        "match": "employment situation",
+    },
+]
 MONTH_NAME_TO_NUMBER = {
     "JAN": 1,
     "JANUARY": 1,
@@ -290,6 +312,23 @@ def _normalize_symbol_list(symbols: str | Sequence[Any] | None, *, max_symbols: 
     return out
 
 
+def _json_safe_payload_value(value: Any) -> Any:
+    if value is None:
+        return None
+    if isinstance(value, dict):
+        return {str(key): _json_safe_payload_value(val) for key, val in value.items()}
+    if isinstance(value, (list, tuple, set)):
+        return [_json_safe_payload_value(val) for val in value]
+    if isinstance(value, float) and pd.isna(value):
+        return None
+    try:
+        if pd.isna(value):
+            return None
+    except (TypeError, ValueError):
+        pass
+    return value
+
+
 def _json_payload(value: Any) -> str | None:
     if value in (None, ""):
         return None
@@ -298,8 +337,22 @@ def _json_payload(value: Any) -> str | None:
             parsed = json.loads(value)
         except json.JSONDecodeError:
             parsed = {"raw": value}
-        return json.dumps(parsed, ensure_ascii=False, sort_keys=True, separators=(",", ":"), default=str)
-    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), default=str)
+        return json.dumps(
+            _json_safe_payload_value(parsed),
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+            default=str,
+            allow_nan=False,
+        )
+    return json.dumps(
+        _json_safe_payload_value(value),
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+        default=str,
+        allow_nan=False,
+    )
 
 
 def _market_event_key(row: dict[str, Any]) -> str:
@@ -546,8 +599,12 @@ def load_market_event_calendar(
         conditions.append("event_date <= %s")
         params.append(normalized_end)
     if normalized_type:
-        conditions.append("event_type = %s")
-        params.append(normalized_type)
+        if normalized_type == "MACRO":
+            conditions.append("event_type LIKE %s")
+            params.append("MACRO_%")
+        else:
+            conditions.append("event_type = %s")
+            params.append(normalized_type)
     if normalized_symbol:
         conditions.append("symbol = %s")
         params.append(normalized_symbol)
@@ -733,6 +790,336 @@ def collect_and_store_fomc_calendar(
         "events_found": len(rows),
         "rows_written": rows_written,
         "event_dates": event_dates,
+        "collected_at": collected_at,
+    }
+
+
+def _normalize_release_time(value: Any) -> str | None:
+    text = _clean_text(value).upper().replace(".", "")
+    match = re.search(r"(\d{1,2}:\d{2})\s*([AP]M)", text)
+    if not match:
+        return None
+    try:
+        return datetime.strptime(f"{match.group(1)} {match.group(2)}", "%I:%M %p").strftime("%H:%M")
+    except ValueError:
+        return None
+
+
+def _parse_release_date_time(value: Any, *, default_year: int | None = None) -> tuple[str | None, str | None]:
+    text = _clean_text(value).replace("\xa0", " ")
+    if not text:
+        return None, None
+    text = re.sub(r"^[A-Za-z]+,\s*", "", text)
+    match = re.search(
+        r"([A-Za-z]+)\s+(\d{1,2}),?\s+(20\d{2})(?:\s+(\d{1,2}:\d{2})\s*([AP]\.?M\.?))?",
+        text,
+        flags=re.IGNORECASE,
+    )
+    if not match and default_year:
+        match = re.search(
+            r"([A-Za-z]+)\s+(\d{1,2})(?:\s+(\d{1,2}:\d{2})\s*([AP]\.?M\.?))?",
+            text,
+            flags=re.IGNORECASE,
+        )
+        if match:
+            month_text, day_text, time_text, meridiem = match.groups()
+            year = int(default_year)
+        else:
+            return None, None
+    elif match:
+        month_text, day_text, year_text, time_text, meridiem = match.groups()
+        year = int(year_text)
+    else:
+        return None, None
+    month_number = MONTH_NAME_TO_NUMBER.get(re.sub(r"[^A-Za-z]", "", month_text).upper())
+    if not month_number:
+        return None, None
+    try:
+        event_date = datetime(year, month_number, int(day_text)).date().isoformat()
+    except ValueError:
+        return None, None
+    release_time = _normalize_release_time(f"{time_text or ''} {meridiem or ''}")
+    return event_date, release_time
+
+
+def _frame_records_from_html_table(html: str) -> list[dict[str, Any]]:
+    try:
+        tables = pd.read_html(StringIO(html))
+    except ValueError:
+        return []
+    records: list[dict[str, Any]] = []
+    for frame in tables:
+        if frame.empty:
+            continue
+        normalized_frame = frame.copy()
+        normalized_frame.columns = [_clean_text(column) for column in normalized_frame.columns]
+        records.extend(normalized_frame.to_dict("records"))
+    return records
+
+
+def _record_value_by_hint(record: dict[str, Any], hints: Sequence[str], *, fallback_index: int | None = None) -> Any:
+    lowered_hints = [hint.lower() for hint in hints]
+    for key, value in record.items():
+        normalized_key = _clean_text(key).lower()
+        if any(hint in normalized_key for hint in lowered_hints):
+            return value
+    if fallback_index is not None:
+        values = list(record.values())
+        if 0 <= fallback_index < len(values):
+            return values[fallback_index]
+    return None
+
+
+def _bls_macro_release_type(release_title: Any) -> dict[str, str] | None:
+    normalized = _clean_text(release_title).lower()
+    for item in BLS_MACRO_RELEASE_TYPES:
+        if str(item["match"]) in normalized:
+            return item
+    return None
+
+
+def _reference_period_from_release_title(release_title: str) -> str | None:
+    match = re.search(r"\bfor\s+(.+)$", release_title, flags=re.IGNORECASE)
+    return _clean_text(match.group(1)) if match else None
+
+
+def _macro_event_row(
+    *,
+    event_date: str,
+    event_type: str,
+    title: str,
+    source: str,
+    source_url: str,
+    release_time_et: str | None,
+    confidence: float = 0.95,
+    raw_payload: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    payload = dict(raw_payload or {})
+    payload.setdefault("release_time_et", release_time_et)
+    payload.setdefault("event_date_basis", "official_release_date")
+    payload = _json_safe_payload_value(payload)
+    return {
+        "event_date": event_date,
+        "event_type": event_type,
+        "symbol": None,
+        "title": title,
+        "source": source,
+        "source_type": "official",
+        "validation_status": "official",
+        "event_status": "active",
+        "source_url": source_url,
+        "confidence": confidence,
+        "raw_payload": payload,
+    }
+
+
+def parse_bls_macro_calendar_events_from_html(
+    html: str,
+    *,
+    source_url: str,
+    year: int,
+) -> list[dict[str, Any]]:
+    events: list[dict[str, Any]] = []
+    for record in _frame_records_from_html_table(html):
+        release_title = _clean_text(_record_value_by_hint(record, ["release"], fallback_index=2))
+        release_type = _bls_macro_release_type(release_title)
+        if not release_type:
+            continue
+        date_time_text = _record_value_by_hint(record, ["date", "time"], fallback_index=0)
+        event_date, release_time = _parse_release_date_time(date_time_text, default_year=year)
+        if not event_date:
+            continue
+        label = release_type["label"]
+        events.append(
+            _macro_event_row(
+                event_date=event_date,
+                event_type=release_type["event_type"],
+                title=f"{label}: {release_title}",
+                source=BLS_MACRO_CALENDAR_SOURCE,
+                source_url=source_url,
+                release_time_et=release_time,
+                raw_payload={
+                    "agency": "BLS",
+                    "calendar_year": year,
+                    "release_title": release_title,
+                    "reference_period": _reference_period_from_release_title(release_title),
+                    "release_time_et": release_time,
+                    "source_row": record,
+                },
+            )
+        )
+    return events
+
+
+def _bea_schedule_year_from_records(records: list[dict[str, Any]]) -> int | None:
+    for record in records:
+        for key in record:
+            match = re.search(r"\b(20\d{2})\b", _clean_text(key))
+            if match:
+                return int(match.group(1))
+    return None
+
+
+def _is_bea_gdp_release(release_title: Any) -> bool:
+    normalized = _clean_text(release_title).lower()
+    if not normalized:
+        return False
+    if "gross domestic product by state" in normalized or "gross domestic product by county" in normalized:
+        return False
+    if "gdp by state" in normalized or "gdp by county" in normalized:
+        return False
+    return "gross domestic product" in normalized or normalized.startswith("gdp ")
+
+
+def parse_bea_gdp_calendar_events_from_html(
+    html: str,
+    *,
+    source_url: str = BEA_MACRO_CALENDAR_SOURCE_URL,
+    years: Sequence[int] | None = None,
+) -> list[dict[str, Any]]:
+    records = _frame_records_from_html_table(html)
+    default_year = _bea_schedule_year_from_records(records)
+    year_filter = {int(year) for year in years or []}
+    events: list[dict[str, Any]] = []
+    for record in records:
+        release_title = _clean_text(_record_value_by_hint(record, ["release"], fallback_index=2))
+        if not _is_bea_gdp_release(release_title):
+            continue
+        date_time_text = _record_value_by_hint(record, ["year", "date"], fallback_index=0)
+        event_date, release_time = _parse_release_date_time(date_time_text, default_year=default_year)
+        if not event_date:
+            continue
+        event_year = int(event_date[:4])
+        if year_filter and event_year not in year_filter:
+            continue
+        events.append(
+            _macro_event_row(
+                event_date=event_date,
+                event_type="MACRO_GDP",
+                title=f"GDP: {release_title}",
+                source=BEA_MACRO_CALENDAR_SOURCE,
+                source_url=source_url,
+                release_time_et=release_time,
+                raw_payload={
+                    "agency": "BEA",
+                    "calendar_year": event_year,
+                    "release_title": release_title,
+                    "release_time_et": release_time,
+                    "source_row": record,
+                },
+            )
+        )
+    return events
+
+
+def fetch_bls_macro_calendar_events(
+    *,
+    years: Sequence[int] | None = None,
+    source_url_template: str = BLS_MACRO_CALENDAR_SOURCE_URL_TEMPLATE,
+    html_fetcher: Callable[[str], str] | None = None,
+) -> list[dict[str, Any]]:
+    target_years = [int(year) for year in years] if years else [datetime.now(UTC).year]
+    fetcher = html_fetcher or _fetch_html
+    events: list[dict[str, Any]] = []
+    for year in target_years:
+        source_url = source_url_template.format(year=year)
+        html = fetcher(source_url)
+        events.extend(parse_bls_macro_calendar_events_from_html(html, source_url=source_url, year=year))
+    if not events:
+        raise RuntimeError(f"No BLS macro calendar events were parsed for years {target_years}.")
+    return events
+
+
+def fetch_bea_gdp_calendar_events(
+    *,
+    years: Sequence[int] | None = None,
+    source_url: str = BEA_MACRO_CALENDAR_SOURCE_URL,
+    html_fetcher: Callable[[str], str] | None = None,
+) -> list[dict[str, Any]]:
+    fetcher = html_fetcher or _fetch_html
+    events = parse_bea_gdp_calendar_events_from_html(fetcher(source_url), source_url=source_url, years=years)
+    if not events:
+        year_text = f" for years {list(years)}" if years else ""
+        raise RuntimeError(f"No BEA GDP calendar events were parsed{year_text}.")
+    return events
+
+
+def fetch_macro_calendar_events(
+    *,
+    years: Sequence[int] | None = None,
+    include_bls: bool = True,
+    include_bea: bool = True,
+    bls_fetcher: Callable[..., list[dict[str, Any]]] | None = None,
+    bea_fetcher: Callable[..., list[dict[str, Any]]] | None = None,
+) -> dict[str, Any]:
+    events: list[dict[str, Any]] = []
+    failed_sources: list[str] = []
+    if include_bls:
+        try:
+            fetcher = bls_fetcher or fetch_bls_macro_calendar_events
+            events.extend(fetcher(years=years))
+        except Exception as exc:
+            failed_sources.append(f"BLS: {exc}")
+    if include_bea:
+        try:
+            fetcher = bea_fetcher or fetch_bea_gdp_calendar_events
+            events.extend(fetcher(years=years))
+        except Exception as exc:
+            failed_sources.append(f"BEA: {exc}")
+    if not events:
+        detail = "; ".join(failed_sources) if failed_sources else "no enabled source returned events"
+        raise RuntimeError(f"No macro calendar events were collected: {detail}")
+    return {
+        "source": MACRO_CALENDAR_SOURCE,
+        "source_url": ", ".join(
+            [
+                item
+                for item in [
+                    BLS_MACRO_CALENDAR_SOURCE_URL_TEMPLATE.format(
+                        year=(int(years[0]) if years else datetime.now(UTC).year)
+                    )
+                    if include_bls
+                    else None,
+                    BEA_MACRO_CALENDAR_SOURCE_URL if include_bea else None,
+                ]
+                if item
+            ]
+        ),
+        "event_type": "MACRO",
+        "method": "official_html",
+        "years_requested": [int(year) for year in years] if years else None,
+        "events": events,
+        "events_found": len(events),
+        "failed_sources": failed_sources,
+    }
+
+
+def collect_and_store_macro_calendar(
+    *,
+    years: Sequence[int] | None = None,
+    include_bls: bool = True,
+    include_bea: bool = True,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+    macro_fetcher: Callable[..., dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Collect official macro release dates and persist them to the common event calendar."""
+    collected_at = _timestamp_str()
+    fetcher = macro_fetcher or fetch_macro_calendar_events
+    result = fetcher(years=years, include_bls=include_bls, include_bea=include_bea)
+    events = [{**row, "collected_at": collected_at} for row in result.get("events", [])]
+    rows_written = upsert_market_event_rows(events, host=host, user=user, password=password, port=port)
+    event_dates = sorted({str(row["event_date"]) for row in events if row.get("event_date")})
+    event_types = sorted({str(row["event_type"]) for row in events if row.get("event_type")})
+    return {
+        **result,
+        "rows_written": rows_written,
+        "event_dates": event_dates,
+        "event_types": event_types,
+        "include_bls": include_bls,
+        "include_bea": include_bea,
         "collected_at": collected_at,
     }
 

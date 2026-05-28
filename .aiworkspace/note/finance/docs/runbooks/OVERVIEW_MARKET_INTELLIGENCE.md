@@ -11,6 +11,7 @@ Last Verified: 2026-05-28
 
 - 장 시작 후 또는 장중에 daily movers snapshot을 새로 보고 싶을 때
 - FOMC calendar row를 갱신해야 할 때
+- CPI / PPI / Employment Situation / GDP 같은 macro release calendar row를 갱신해야 할 때
 - latest S&P 500 movers 또는 수동 ticker의 upcoming earnings event를 갱신해야 할 때
 - Overview Events / Market Movers 화면이 비어 있거나 오래된 것으로 보일 때
 
@@ -52,7 +53,14 @@ http://localhost:8501
    - 기본은 current year와 next year를 수집한다.
    - 결과는 `finance_meta.market_event_calendar`에 `event_type=FOMC_MEETING`으로 저장된다.
 
-5. `Workspace > Ingestion > Overview Market Event Calendar > Earnings`
+5. `Workspace > Ingestion > Overview Market Event Calendar > Macro`
+   - 기본은 current year와 next year를 수집한다.
+   - BLS source는 CPI / PPI / Employment Situation release schedule을 읽어 각각 `MACRO_CPI`, `MACRO_PPI`, `MACRO_EMPLOYMENT`로 저장한다.
+   - BEA source는 national GDP release schedule을 읽어 `MACRO_GDP`로 저장한다.
+   - 결과는 모두 `source_type=official`, `validation_status=official`로 저장된다.
+   - BLS가 HTTP 403 등으로 차단되면 BEA가 성공하더라도 job은 `partial_success`가 될 수 있다.
+
+6. `Workspace > Ingestion > Overview Market Event Calendar > Earnings`
    - 기본은 `Latest S&P 500 Movers` source를 사용한다.
    - broader coverage는 `S&P 500 Universe Batch`, `Top1000 Batch`, `Top2000 Batch`를 사용한다.
    - broader mode는 `Max Symbols`, `Batch Offset`, `Ticker Cooldown Sec`을 작게 잡아 저빈도로 실행한다.
@@ -63,8 +71,8 @@ http://localhost:8501
    - yfinance-only estimate는 `validation_status=estimate_only`, Nasdaq 확인 row는 `validation_status=cross_checked`, Nasdaq에서 확인하지 못한 row는 `validation_status=not_confirmed`가 된다.
    - 같은 symbol/source의 이전 active estimate는 새 수집 결과가 있으면 `event_status=superseded`로 정리된다.
 
-6. `Workspace > Overview > Events`
-   - `All`, `FOMC`, `Earnings` filter를 바꿔 저장 row를 확인한다.
+7. `Workspace > Overview > Events`
+   - `All`, `FOMC`, `Earnings`, `Macro` filter를 바꿔 저장 row를 확인한다.
    - `Window`, `Source Type`, `Validation` filter로 캘린더 범위와 source quality를 좁힌다.
    - `Calendar` 탭에서 event count timeline과 날짜별 grouped cards를 확인한다.
    - `Table` 탭에서 DB row-level detail을 확인한다.
@@ -72,9 +80,9 @@ http://localhost:8501
    - `Validation`, `Freshness`, `Age Days`, `Event Status`에서 cross-check 여부와 오래된 earnings estimate인지 확인한다.
    - Overview의 refresh buttons도 ingestion job wrapper를 호출한다. UI render 중 직접 외부 source를 scraping하지 않는다.
 
-7. `Workspace > Overview > Data Health`
-   - Market Intelligence 운영 대상 6개를 한 화면에서 확인한다.
-   - 대상은 S&P 500 universe, S&P 500 / Top1000 / Top2000 daily snapshot, FOMC calendar, Earnings calendar다.
+8. `Workspace > Overview > Data Health`
+   - Market Intelligence 운영 대상 7개를 한 화면에서 확인한다.
+   - 대상은 S&P 500 universe, S&P 500 / Top1000 / Top2000 daily snapshot, FOMC calendar, Macro calendar, Earnings calendar다.
    - 상태는 `OK`, `Due`, `Stale`, `Missing`, `Failed`, `Partial`로 표시된다.
    - `Latest Success`, `Latest Issue`, `Rows`, `Processed`, `Failed`, `Duration Sec`은 Overview refresh button이 남긴 `.aiworkspace/note/finance/run_history/WEB_APP_RUN_HISTORY.jsonl`의 local run history를 읽는다.
    - local run history가 비어 있어도 DB freshness만으로 상태와 next action은 표시돼야 한다.
@@ -100,6 +108,15 @@ print(load_latest_intraday_mover_symbols(universe_code="SP500", top_n=5))
 PY
 ```
 
+BEA GDP macro calendar smoke:
+
+```bash
+uv run python - <<'PY'
+from app.jobs.ingestion_jobs import run_collect_macro_calendar
+print(run_collect_macro_calendar(years=(2026,), include_bls=False, include_bea=True))
+PY
+```
+
 ## Expected Results
 
 - Market Movers daily snapshot shows `price_mode=Intraday Snapshot` and a recent `snapshot_time_utc`.
@@ -108,12 +125,14 @@ PY
 - Sector / Industry displays both `Heatmap` and `Table` tabs.
 - Missing diagnostics are visible with recommended action when provider rows are absent or incomplete.
 - FOMC rows have `source=federal_reserve_fomc_calendar`, `confidence=1.0`, and `Source Type=Official`.
+- Macro rows have `Type=MACRO_CPI`, `MACRO_PPI`, `MACRO_EMPLOYMENT`, or `MACRO_GDP`, `Source Type=Official`, and `Validation=Official`.
 - Earnings rows have `source=yfinance_calendar`, `Source Type=Provider Estimate`, and a validation label.
 - Nasdaq cross-checked earnings rows have `Validation=Cross-checked` and higher confidence.
 - Earnings rows collected more than 14 days ago show `Freshness=Stale estimate` and a warning.
 - Overview Events displays `Calendar` and `Table` tabs with Window / Source Type / Validation filters.
+- Overview Events has a `Macro` filter and `Refresh Macro Calendar` button.
 - Overview Events `Latest Collection` updates after a successful collector run.
-- Overview Data Health displays 6 collection targets with ops status cards, warning banner, status badges, and next-action table.
+- Overview Data Health displays 7 collection targets with ops status cards, warning banner, status badges, and next-action table.
 - Overview refresh buttons append their result to local web app run history; the JSONL file itself remains a generated local artifact and is not committed.
 
 ## Failure Handling
@@ -126,6 +145,8 @@ PY
 | Old earnings date remains in DB | Estimate date changed | Overview hides superseded rows by default; inspect DB if an audit trail is needed |
 | Market Movers missing count is high | Provider quote rows missing or DB previous close missing | Open `Coverage Diagnostics`, then refresh OHLCV / snapshot source if needed |
 | Events tab is empty | Matching collector has not been run or filter is too narrow | Run FOMC / Earnings refresh and select `All` |
+| Macro Calendar shows `Due` with covered `1/4` | Only BEA GDP rows are stored; BLS CPI / PPI / Jobs rows are missing or blocked | Retry BLS later, or treat current Macro view as GDP-only until BLS access succeeds |
+| Macro collection is partial | BLS schedule page rejected automated access, but BEA or another enabled source succeeded | Inspect failed source message and use stored official rows from successful sources |
 | Data Health shows stale daily snapshots | Stored 5m snapshot is older than the intraday freshness threshold | Run `Update Daily Snapshot` for the affected coverage |
 | Data Health shows blank latest success / issue | No Overview refresh button has written local run history yet | Use the relevant Overview refresh button or inspect Ingestion output directly |
 | Overview app looks stale after code change | Old Streamlit process still running | Restart the Streamlit server and confirm Runtime / Build metadata in Ingestion |

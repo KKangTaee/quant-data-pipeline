@@ -5452,3 +5452,14 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 새 외부 source나 schema를 추가하지 않고도 stale snapshot, missing collection, partial / failed run을 구분할 수 있다
 - Follow-up:
   - Overview `Data Health` 탭과 refresh-button run history 기록을 추가했다. 다음 고도화 후보는 scheduled refresh automation, macro calendar, official earnings source 중에서 선택한다
+
+### 2026-05-28 - Overview Events에 공식 macro calendar를 추가한다
+- User request:
+  - 사용자가 자동 리프레시는 보류하고 다음 작업 진행을 요청함
+- Interpreted goal:
+  - FOMC와 earnings 외에 CPI, PPI, 고용지표, GDP 같은 미국 증시 주요 macro release 일정을 Overview Events에 추가해야 함
+- Analysis result:
+  - 기존 `market_event_calendar` table contract로 macro 일정도 저장 가능하다
+  - BEA release schedule은 live parse와 저장이 가능하지만, BLS schedule page는 현재 환경에서 HTTP 403을 반환하므로 partial failure로 드러내는 것이 맞다
+- Follow-up:
+  - `MACRO_CPI`, `MACRO_PPI`, `MACRO_EMPLOYMENT`, `MACRO_GDP` event type과 Overview `Macro` filter를 추가했다. BLS 접근성 보강은 별도 후속 후보로 남긴다

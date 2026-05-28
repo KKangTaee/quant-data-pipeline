@@ -13,6 +13,7 @@ from app.jobs.run_history import append_run_history
 from app.jobs.ingestion_jobs import (
     run_collect_earnings_calendar,
     run_collect_fomc_calendar,
+    run_collect_macro_calendar,
     run_collect_market_intraday_snapshot,
     run_collect_sp500_universe,
 )
@@ -777,6 +778,10 @@ def _event_type_label(value: Any) -> str:
         "FOMC_MEETING": "FOMC",
         "EARNINGS": "Earnings",
         "MACRO": "Macro",
+        "MACRO_CPI": "CPI",
+        "MACRO_PPI": "PPI",
+        "MACRO_EMPLOYMENT": "Jobs",
+        "MACRO_GDP": "GDP",
     }
     return labels.get(str(value or ""), str(value or "-").replace("_", " ").title())
 
@@ -920,16 +925,17 @@ def _render_event_date_groups(rows: pd.DataFrame) -> None:
 def _render_events_tab() -> None:
     st.markdown("### Events")
     with st.container(border=True):
-        controls = st.columns([1.1, 1.4, 1.4, 2.1], gap="small", vertical_alignment="bottom")
+        controls = st.columns([1.1, 1.25, 1.25, 1.25, 1.8], gap="small", vertical_alignment="bottom")
         event_filter = str(
             controls[0].segmented_control(
                 "Type",
-                ["ALL", "FOMC_MEETING", "EARNINGS"],
+                ["ALL", "FOMC_MEETING", "EARNINGS", "MACRO"],
                 default="ALL",
                 format_func=lambda value: {
                     "ALL": "All",
                     "FOMC_MEETING": "FOMC",
                     "EARNINGS": "Earnings",
+                    "MACRO": "Macro",
                 }[value],
                 key="overview_events_type_filter",
             )
@@ -961,7 +967,20 @@ def _render_events_tab() -> None:
                     ),
                 )
             st.rerun()
-        controls[3].caption(
+        if controls[3].button(
+            "Refresh Macro Calendar",
+            key="overview_events_refresh_macro",
+            use_container_width=True,
+            help="Collects CPI, PPI, Employment Situation, and GDP release dates from official schedules.",
+        ):
+            current_year = datetime.now().year
+            with st.spinner("Collecting macro calendar from official BLS and BEA schedules..."):
+                _store_overview_job_result(
+                    "overview_macro_calendar_result",
+                    run_collect_macro_calendar(years=(current_year, current_year + 1)),
+                )
+            st.rerun()
+        controls[4].caption(
             "Overview reads stored rows from `finance_meta.market_event_calendar`; refresh writes through ingestion job wrappers."
         )
 
@@ -999,6 +1018,7 @@ def _render_events_tab() -> None:
     _render_snapshot_warnings(snapshot)
     _render_market_job_result("overview_fomc_calendar_result")
     _render_market_job_result("overview_earnings_calendar_result")
+    _render_market_job_result("overview_macro_calendar_result")
 
     rows = snapshot.get("rows")
     if not isinstance(rows, pd.DataFrame) or rows.empty:

@@ -132,6 +132,16 @@ OPS_EVENT_TARGETS = [
         "missing_action": "Run Refresh Earnings Calendar for latest movers or a bounded batch.",
         "due_action": "Refresh Earnings Calendar before relying on upcoming dates.",
     },
+    {
+        "area": "Macro Calendar",
+        "event_type": "MACRO",
+        "event_types": ["MACRO_CPI", "MACRO_PPI", "MACRO_EMPLOYMENT", "MACRO_GDP"],
+        "job_names": ["collect_macro_calendar"],
+        "fresh_days": 7,
+        "stale_days": 30,
+        "missing_action": "Run Refresh Macro Calendar.",
+        "due_action": "Refresh Macro Calendar from official BLS and BEA release schedules.",
+    },
 ]
 
 
@@ -850,8 +860,12 @@ def _load_market_event_rows(
     params: list[Any] = [start_date, end_date]
     normalized_type = _normalize_event_type_value(event_type)
     if normalized_type and normalized_type != "ALL":
-        conditions.append("event_type = %s")
-        params.append(normalized_type)
+        if normalized_type == "MACRO":
+            conditions.append("event_type LIKE %s")
+            params.append("MACRO_%")
+        else:
+            conditions.append("event_type = %s")
+            params.append(normalized_type)
     bounded_limit = _normalize_limit(limit, default=200, min_value=1, max_value=1000)
     active_conditions = conditions + ["COALESCE(event_status, 'active') <> %s"]
     active_params = params + ["superseded", bounded_limit]
@@ -1309,6 +1323,34 @@ def _days_based_ops_status(
     return "Stale", f"{age}d old"
 
 
+def _combined_event_ops_row(
+    event_rows: dict[str, dict[str, Any]],
+    event_types: Sequence[str],
+) -> dict[str, Any] | None:
+    rows = [event_rows.get(str(event_type).upper()) for event_type in event_types]
+    rows = [row for row in rows if row]
+    if not rows:
+        return None
+    covered_event_types = sorted(
+        {
+            str(row.get("event_type") or "").upper()
+            for row in rows
+            if row.get("event_type")
+        }
+    )
+    future_events = sum(int(row.get("future_events") or 0) for row in rows)
+    active_events = sum(int(row.get("active_events") or 0) for row in rows)
+    next_dates = [_iso_date(row.get("next_event_date")) for row in rows if _iso_date(row.get("next_event_date"))]
+    collected = [row.get("latest_collected_at") for row in rows if row.get("latest_collected_at")]
+    return {
+        "future_events": future_events,
+        "active_events": active_events,
+        "next_event_date": min(next_dates) if next_dates else None,
+        "latest_collected_at": max(collected, key=_timestamp_sort_value) if collected else None,
+        "covered_event_types": covered_event_types,
+    }
+
+
 def _ops_row(
     *,
     area: str,
@@ -1411,7 +1453,8 @@ def build_collection_ops_snapshot(
         )
 
     for target in OPS_EVENT_TARGETS:
-        event_row = event_rows.get(str(target["event_type"]))
+        target_event_types = list(target.get("event_types") or [target["event_type"]])
+        event_row = _combined_event_ops_row(event_rows, target_event_types)
         active_count = int((event_row or {}).get("future_events") or (event_row or {}).get("active_events") or 0)
         base_status, freshness = _days_based_ops_status(
             latest_collected_at=(event_row or {}).get("latest_collected_at"),
@@ -1421,6 +1464,13 @@ def build_collection_ops_snapshot(
             today=today_value,
             missing_text=f"No future {target['event_type']} rows",
         )
+        required_event_types = list(target.get("event_types") or [])
+        if event_row and required_event_types:
+            covered_count = len(event_row.get("covered_event_types") or [])
+            required_count = len(required_event_types)
+            freshness = f"{freshness}; covered {covered_count}/{required_count}"
+            if covered_count < required_count and base_status == "OK":
+                base_status = "Due"
         next_event = _iso_date((event_row or {}).get("next_event_date"))
         if next_event and freshness != "No future rows":
             freshness = f"{freshness}; next {next_event}"

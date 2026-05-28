@@ -698,6 +698,55 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(earnings_row["Source Type"], "Provider Estimate")
         self.assertEqual(earnings_row["Freshness"], "Current estimate")
 
+    def test_market_events_snapshot_macro_filter_reads_macro_prefix_rows(self) -> None:
+        from app.services.overview_market_intelligence import build_market_events_snapshot
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name
+            self.assertIn("event_type LIKE %s", sql)
+            self.assertIn("MACRO_%", params or [])
+            return [
+                {
+                    "event_date": "2026-06-10",
+                    "event_type": "MACRO_CPI",
+                    "symbol": None,
+                    "title": "CPI: Consumer Price Index for May 2026",
+                    "source": "bureau_labor_statistics_release_schedule",
+                    "source_type": "official",
+                    "validation_status": "official",
+                    "event_status": "active",
+                    "source_url": "https://www.bls.gov/schedule/2026/",
+                    "confidence": 0.95,
+                    "collected_at": "2026-05-28 04:00:00",
+                },
+                {
+                    "event_date": "2026-06-25",
+                    "event_type": "MACRO_GDP",
+                    "symbol": None,
+                    "title": "GDP: Gross Domestic Product, 1st Quarter 2026",
+                    "source": "bureau_economic_analysis_release_schedule",
+                    "source_type": "official",
+                    "validation_status": "official",
+                    "event_status": "active",
+                    "source_url": "https://www.bea.gov/index.php/news/schedule/full",
+                    "confidence": 0.95,
+                    "collected_at": "2026-05-28 04:00:00",
+                },
+            ]
+
+        snapshot = build_market_events_snapshot(
+            event_type="MACRO",
+            today=date(2026, 5, 28),
+            horizon_days=180,
+            query_fn=query_fn,
+        )
+
+        self.assertEqual(snapshot["status"], "OK")
+        self.assertEqual(snapshot["event_type"], "MACRO")
+        self.assertEqual(snapshot["coverage"]["event_count"], 2)
+        self.assertEqual(snapshot["coverage"]["official_count"], 2)
+        self.assertEqual(set(snapshot["rows"]["Type"]), {"MACRO_CPI", "MACRO_GDP"})
+
     def test_market_events_snapshot_warns_on_stale_earnings_estimates(self) -> None:
         from app.services.overview_market_intelligence import build_market_events_snapshot
 
@@ -850,6 +899,33 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         fomc_row = snapshot["rows"][snapshot["rows"]["Area"] == "FOMC Calendar"].iloc[0]
         self.assertEqual(fomc_row["Status"], "OK")
         self.assertIn("next 2026-06-17", fomc_row["Data Freshness"])
+
+    def test_collection_ops_snapshot_marks_macro_calendar_due_when_some_macro_types_missing(self) -> None:
+        from app.services.overview_market_intelligence import build_collection_ops_snapshot
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, params
+            if "FROM market_intraday_snapshot" in sql:
+                return []
+            if "FROM market_universe_member" in sql:
+                return []
+            if "FROM market_event_calendar" in sql:
+                return [
+                    {
+                        "event_type": "MACRO_GDP",
+                        "active_events": 2,
+                        "future_events": 2,
+                        "next_event_date": "2026-06-25",
+                        "latest_collected_at": "2026-05-28 04:00:00",
+                    }
+                ]
+            return []
+
+        snapshot = build_collection_ops_snapshot(today=date(2026, 5, 28), query_fn=query_fn)
+
+        macro_row = snapshot["rows"][snapshot["rows"]["Area"] == "Macro Calendar"].iloc[0]
+        self.assertEqual(macro_row["Status"], "Due")
+        self.assertIn("covered 1/4", macro_row["Data Freshness"])
 
 
 class MarketIntelligenceIngestionContractTests(unittest.TestCase):
@@ -1059,6 +1135,103 @@ class MarketIntelligenceEventCalendarContractTests(unittest.TestCase):
         self.assertEqual(result["events_found"], 1)
         self.assertEqual(result["rows_written"], 1)
         self.assertEqual(result["event_dates"], ["2026-06-17"])
+        self.assertEqual(captured_rows[0]["collected_at"], result["collected_at"])
+
+    def test_bls_macro_calendar_parser_builds_official_event_rows(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        html = """
+        <table>
+          <thead><tr><th>Date Time</th><th>Release</th></tr></thead>
+          <tbody>
+            <tr><td>Wednesday, June 10, 2026 08:30 AM</td><td>Consumer Price Index for May 2026</td></tr>
+            <tr><td>Thursday, June 11, 2026 08:30 AM</td><td>Producer Price Index for May 2026</td></tr>
+            <tr><td>Friday, June 5, 2026 08:30 AM</td><td>Employment Situation for May 2026</td></tr>
+            <tr><td>Friday, June 5, 2026 10:00 AM</td><td>Other Release for May 2026</td></tr>
+          </tbody>
+        </table>
+        """
+
+        rows = mi.parse_bls_macro_calendar_events_from_html(
+            html,
+            source_url="https://www.bls.gov/schedule/2026/",
+            year=2026,
+        )
+
+        self.assertEqual([row["event_type"] for row in rows], ["MACRO_CPI", "MACRO_PPI", "MACRO_EMPLOYMENT"])
+        self.assertEqual(rows[0]["event_date"], "2026-06-10")
+        self.assertEqual(rows[0]["source_type"], "official")
+        self.assertEqual(rows[0]["validation_status"], "official")
+        self.assertEqual(rows[0]["raw_payload"]["reference_period"], "May 2026")
+        self.assertEqual(rows[0]["raw_payload"]["release_time_et"], "08:30")
+
+    def test_bea_gdp_calendar_parser_excludes_state_and_county_gdp(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        html = """
+        <table>
+          <thead><tr><th>Year 2026</th><th>Type</th><th>Release</th><th></th></tr></thead>
+          <tbody>
+            <tr><td>June 25 8:30 AM</td><td>News</td><td>Gross Domestic Product, 1st Quarter 2026 (Third Estimate)</td><td></td></tr>
+            <tr><td>June 30 8:30 AM</td><td>News</td><td>Gross Domestic Product by State, 1st Quarter 2026</td><td>View</td></tr>
+            <tr><td>July 30 8:30 AM</td><td>News</td><td>GDP (Advance Estimate), 2nd Quarter 2026</td><td>View</td></tr>
+          </tbody>
+        </table>
+        """
+
+        rows = mi.parse_bea_gdp_calendar_events_from_html(
+            html,
+            source_url="https://www.bea.gov/index.php/news/schedule/full",
+            years=[2026],
+        )
+
+        self.assertEqual(len(rows), 2)
+        self.assertEqual([row["event_date"] for row in rows], ["2026-06-25", "2026-07-30"])
+        self.assertTrue(all(row["event_type"] == "MACRO_GDP" for row in rows))
+        self.assertEqual(rows[0]["raw_payload"]["release_time_et"], "08:30")
+        self.assertIsNone(rows[0]["raw_payload"]["source_row"]["Unnamed: 3"])
+
+    def test_collect_macro_calendar_writes_events_and_reports_failed_sources(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        captured_rows: list[dict[str, object]] = []
+
+        def capture_rows(rows, **kwargs):
+            del kwargs
+            captured_rows.extend(rows)
+            return len(rows)
+
+        def fake_fetcher(**kwargs):
+            self.assertEqual(kwargs["years"], [2026])
+            return {
+                "source": mi.MACRO_CALENDAR_SOURCE,
+                "source_url": "https://example.test/macro",
+                "event_type": "MACRO",
+                "method": "official_html",
+                "events": [
+                    {
+                        "event_date": "2026-06-10",
+                        "event_type": "MACRO_CPI",
+                        "title": "CPI: Consumer Price Index for May 2026",
+                        "source": mi.BLS_MACRO_CALENDAR_SOURCE,
+                        "source_type": "official",
+                        "validation_status": "official",
+                        "source_url": "https://www.bls.gov/schedule/2026/",
+                        "confidence": 0.95,
+                    }
+                ],
+                "events_found": 1,
+                "failed_sources": ["BEA: temporary failure"],
+            }
+
+        with patch.object(mi, "upsert_market_event_rows", side_effect=capture_rows):
+            result = mi.collect_and_store_macro_calendar(years=[2026], macro_fetcher=fake_fetcher)
+
+        self.assertEqual(result["source"], mi.MACRO_CALENDAR_SOURCE)
+        self.assertEqual(result["event_type"], "MACRO")
+        self.assertEqual(result["rows_written"], 1)
+        self.assertEqual(result["event_types"], ["MACRO_CPI"])
+        self.assertEqual(result["failed_sources"], ["BEA: temporary failure"])
         self.assertEqual(captured_rows[0]["collected_at"], result["collected_at"])
 
     def test_yfinance_earnings_calendar_builds_event_rows_for_window(self) -> None:

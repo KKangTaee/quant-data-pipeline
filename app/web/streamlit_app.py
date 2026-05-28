@@ -17,6 +17,7 @@ if str(PROJECT_ROOT) not in sys.path:
 from app.jobs.ingestion_jobs import (
     run_collect_earnings_calendar,
     run_collect_fomc_calendar,
+    run_collect_macro_calendar,
     run_collect_etf_holdings_exposure,
     run_collect_etf_operability_provider,
     run_discover_etf_provider_source_map,
@@ -377,6 +378,8 @@ def _dispatch_job(job: dict[str, Any], *, progress_callback: Any = None) -> JobR
         return run_collect_fomc_calendar(**params)
     if action == "collect_earnings_calendar":
         return run_collect_earnings_calendar(**params)
+    if action == "collect_macro_calendar":
+        return run_collect_macro_calendar(**params)
     if action == "collect_ohlcv":
         params["progress_callback"] = progress_callback
         return run_collect_ohlcv(**params)
@@ -1939,9 +1942,12 @@ def _render_ingestion_console() -> None:
 
             with st.expander("Overview Market Event Calendar", expanded=False):
                 st.write("Overview Events 탭에서 읽을 시장 이벤트 캘린더를 공식 무료 소스에서 수집합니다.")
-                st.caption("현재 구현 대상: Federal Reserve 공식 FOMC calendar, yfinance + Nasdaq cross-check 기반 earnings estimate.")
+                st.caption(
+                    "현재 구현 대상: Federal Reserve FOMC, BLS/BEA macro release schedule, "
+                    "yfinance + Nasdaq cross-check 기반 earnings estimate."
+                )
                 st.caption("저장 테이블: `finance_meta.market_event_calendar`")
-                fomc_tab, earnings_tab = st.tabs(["FOMC", "Earnings"])
+                fomc_tab, macro_event_tab, earnings_tab = st.tabs(["FOMC", "Macro", "Earnings"])
                 with fomc_tab:
                     current_year = date.today().year
                     fomc_year_options = list(range(current_year - 1, current_year + 3))
@@ -1975,6 +1981,61 @@ def _render_ingestion_console() -> None:
                                     ),
                                     input_params={
                                         "years": tuple(fomc_years) if fomc_years else None,
+                                    },
+                                ),
+                            }
+                        )
+                with macro_event_tab:
+                    current_year = date.today().year
+                    macro_year_options = list(range(current_year - 1, current_year + 3))
+                    macro_years = st.multiselect(
+                        "Macro Calendar Years",
+                        options=macro_year_options,
+                        default=[current_year, current_year + 1],
+                        key="overview_macro_calendar_years",
+                        help="BLS는 선택 연도별 schedule page를, BEA는 full release schedule에서 일치하는 연도를 수집합니다.",
+                    )
+                    macro_source_cols = st.columns(2, gap="small")
+                    macro_include_bls = macro_source_cols[0].checkbox(
+                        "BLS CPI / PPI / Jobs",
+                        value=True,
+                        key="overview_macro_include_bls",
+                    )
+                    macro_include_bea = macro_source_cols[1].checkbox(
+                        "BEA GDP",
+                        value=True,
+                        key="overview_macro_include_bea",
+                    )
+                    st.caption(
+                        "BLS request는 네트워크/정책에 따라 차단될 수 있습니다. 실패하면 job result와 Data Health에서 확인합니다."
+                    )
+                    if st.button(
+                        "Collect Macro Calendar",
+                        use_container_width=True,
+                        disabled=_has_running_job() or not (macro_include_bls or macro_include_bea),
+                    ):
+                        _schedule_job(
+                            {
+                                "action": "collect_macro_calendar",
+                                "job_name": "collect_macro_calendar",
+                                "spinner_text": "Collecting CPI / PPI / Jobs / GDP release dates from official schedules...",
+                                "params": {
+                                    "years": tuple(macro_years) if macro_years else None,
+                                    "include_bls": macro_include_bls,
+                                    "include_bea": macro_include_bea,
+                                },
+                                "run_metadata": _job_metadata(
+                                    pipeline_type="overview_market_event_calendar",
+                                    execution_mode="operational_low_frequency",
+                                    symbol_source="BLS and BEA official release schedules",
+                                    symbol_count=None,
+                                    execution_context=(
+                                        "Overview Events 탭에서 사용할 CPI, PPI, Employment Situation, GDP release calendar를 공식 HTML schedule에서 파싱해 DB에 저장합니다."
+                                    ),
+                                    input_params={
+                                        "years": tuple(macro_years) if macro_years else None,
+                                        "include_bls": macro_include_bls,
+                                        "include_bea": macro_include_bea,
                                     },
                                 ),
                             }
@@ -2116,7 +2177,7 @@ def _render_ingestion_console() -> None:
                                 ),
                             }
                         )
-                _render_inline_last_completed_result("collect_fomc_calendar", "collect_earnings_calendar")
+                _render_inline_last_completed_result("collect_fomc_calendar", "collect_macro_calendar", "collect_earnings_calendar")
 
             with st.expander("Practical Validation Provider Snapshots", expanded=False):
                 st.write("Practical Validation에서 포트폴리오를 검토할 때 사용할 provider snapshot 데이터를 수집합니다.")

@@ -4047,3 +4047,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/overview-mi-ops-hardening/`에서 Overview `Data Health` 탭을 추가했다.
   - Data Health는 DB freshness와 local `WEB_APP_RUN_HISTORY.jsonl`을 결합해 6개 수집 대상의 OK / Stale / Missing / Failed / Partial 상태와 next action을 보여준다.
   - Overview refresh buttons가 실행 결과를 local web app run history에 남기도록 연결했고, service contract / browser smoke 검증을 완료했다.
+- Overview Market Intelligence 6차 macro calendar:
+  - `.aiworkspace/note/finance/tasks/active/overview-mi-macro-calendar/`에서 BLS / BEA official macro release calendar collector를 추가했다.
+  - Events는 `Macro` filter와 `Refresh Macro Calendar` 버튼을 제공하고, Data Health는 Macro Calendar coverage를 7번째 운영 대상으로 표시한다.
+  - Local smoke에서 BEA GDP 13개 row 저장은 성공했고, BLS는 HTTP 403으로 차단되어 partial failure로 노출되는 것을 확인했다.
