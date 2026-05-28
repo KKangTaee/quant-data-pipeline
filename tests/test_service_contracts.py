@@ -1177,6 +1177,8 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
                         "registry_id": "candidate-selected",
                         "target_weight": 100.0,
                         "benchmark": "SPY",
+                        "period_start": "2020-01-01",
+                        "period_end": "2024-12-31",
                     }
                 ],
                 "decision_evidence_snapshot": {"route": "READY_FOR_FINAL_DECISION", "checks": [], "blockers": []},
@@ -1369,6 +1371,56 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertEqual(comparison["metrics"]["breached_count"], 0)
         self.assertEqual(comparison["metrics"]["watch_count"], 0)
         self.assertEqual(comparison["metrics"]["needs_input_count"], 0)
+
+    def test_recheck_readiness_blocks_missing_replay_contract_without_writing(self) -> None:
+        from app.runtime.final_selected_portfolios import build_selected_portfolio_recheck_readiness
+
+        readiness = build_selected_portfolio_recheck_readiness(
+            self._selected_row(),
+            latest_market_result={"status": "ok", "latest_market_date": "2026-05-28", "error": None},
+            candidate_rows_by_id={},
+        )
+
+        self.assertEqual(readiness["schema_version"], "selected_recheck_readiness_v1")
+        self.assertEqual(readiness["route"], "RECHECK_READINESS_BLOCKED")
+        rows = {row["Check"]: row for row in readiness["rows"]}
+        self.assertEqual(rows["Selected component contract"]["Status"], "PASS")
+        self.assertEqual(rows["Candidate replay contract"]["Status"], "BLOCKED")
+        self.assertFalse(readiness["execution_boundary"]["db_write"])
+        self.assertFalse(readiness["execution_boundary"]["registry_write"])
+        self.assertFalse(readiness["execution_boundary"]["monitoring_log_auto_write"])
+
+    def test_recheck_readiness_ready_when_db_latest_and_replay_contract_exist(self) -> None:
+        from app.runtime.final_selected_portfolios import build_selected_portfolio_recheck_readiness
+
+        readiness = build_selected_portfolio_recheck_readiness(
+            self._selected_row(),
+            latest_market_result={"status": "ok", "latest_market_date": "2026-05-28", "error": None},
+            candidate_rows_by_id={
+                "candidate-selected": {
+                    "registry_id": "candidate-selected",
+                    "title": "Selected Component",
+                    "strategy_family": "equal_weight",
+                    "contract": {
+                        "tickers": ["SPY", "QQQ"],
+                        "benchmark_ticker": "SPY",
+                        "start": "2020-01-01",
+                        "end": "2024-12-31",
+                        "rebalance_interval": 12,
+                    },
+                    "execution_context": {"start": "2020-01-01", "end": "2024-12-31"},
+                }
+            },
+        )
+
+        self.assertEqual(readiness["route"], "RECHECK_READINESS_READY")
+        self.assertEqual(readiness["metrics"]["blocked_count"], 0)
+        self.assertEqual(readiness["metrics"]["needs_input_count"], 0)
+        self.assertEqual(readiness["metrics"]["replay_contract_count"], 1)
+        self.assertEqual(readiness["metrics"]["symbol_count"], 2)
+        rows = {row["Check"]: row for row in readiness["rows"]}
+        self.assertEqual(rows["DB latest market date"]["Status"], "PASS")
+        self.assertEqual(rows["Default recheck period"]["Status"], "PASS")
 
 
 class DecisionDossierContractTests(unittest.TestCase):

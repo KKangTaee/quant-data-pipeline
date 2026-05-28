@@ -243,6 +243,22 @@ def build_selected_portfolio_recheck_comparison_table(comparison: dict[str, Any]
     return pd.DataFrame(display_rows)
 
 
+def build_selected_portfolio_recheck_readiness_table(readiness: dict[str, Any]) -> pd.DataFrame:
+    display_rows: list[dict[str, Any]] = []
+    for row in list(readiness.get("rows") or []):
+        display_rows.append(
+            {
+                "Check": row.get("Check"),
+                "Status": row.get("Status"),
+                "Ready": bool(row.get("Ready")),
+                "Current": row.get("Current"),
+                "Evidence": row.get("Evidence"),
+                "Next Action": row.get("Next Action"),
+            }
+        )
+    return pd.DataFrame(display_rows)
+
+
 def filter_selected_portfolio_rows(
     rows: list[dict[str, Any]],
     *,

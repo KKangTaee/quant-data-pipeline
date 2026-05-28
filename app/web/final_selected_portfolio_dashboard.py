@@ -19,6 +19,7 @@ from app.web.final_selected_portfolio_dashboard_helpers import (
     build_selected_portfolio_evidence_table,
     build_selected_portfolio_monitoring_timeline_table,
     build_selected_portfolio_recheck_comparison_table,
+    build_selected_portfolio_recheck_readiness_table,
     filter_selected_portfolio_rows,
     final_selected_portfolio_label,
     selected_portfolio_active_components,
@@ -38,6 +39,7 @@ from app.runtime import (
     build_selected_portfolio_monitoring_timeline,
     build_selected_portfolio_performance_recheck,
     build_selected_portfolio_recheck_comparison,
+    build_selected_portfolio_recheck_readiness,
     build_selected_portfolio_recheck_defaults,
     load_final_selected_portfolio_dashboard,
     load_latest_selected_portfolio_prices,
@@ -81,6 +83,16 @@ def _continuity_tone(route: str) -> str:
     if route in {"CONTINUITY_NEEDS_INPUT", "CONTINUITY_REVIEW"}:
         return "warning"
     if route == "CONTINUITY_BLOCKED":
+        return "danger"
+    return "neutral"
+
+
+def _recheck_readiness_tone(route: str) -> str:
+    if route == "RECHECK_READINESS_READY":
+        return "positive"
+    if route in {"RECHECK_READINESS_REVIEW", "RECHECK_READINESS_NEEDS_DATA"}:
+        return "warning"
+    if route == "RECHECK_READINESS_BLOCKED":
         return "danger"
     return "neutral"
 
@@ -969,11 +981,74 @@ def _render_performance_recheck(row: dict[str, Any]) -> None:
     if defaults.get("latest_market_date_error"):
         st.warning(f"최신 시장일 확인 실패: {defaults.get('latest_market_date_error')}")
 
+    decision_id = str(row.get("decision_id") or "selected_portfolio")
+    readiness = build_selected_portfolio_recheck_readiness(
+        row,
+        latest_market_result={
+            "status": defaults.get("latest_market_date_status"),
+            "latest_market_date": defaults.get("latest_market_date"),
+            "error": defaults.get("latest_market_date_error"),
+        },
+    )
+    readiness_metrics = dict(readiness.get("metrics") or {})
+    readiness_boundary = dict(readiness.get("execution_boundary") or {})
+    readiness_route = str(readiness.get("route") or "")
+    with st.container(border=True):
+        st.markdown("##### Recheck Readiness")
+        st.caption(
+            "Performance Recheck 실행 전에 DB 최신 시장일과 selected component replay contract가 준비됐는지 확인합니다. "
+            "이 확인은 데이터를 수집하거나 monitoring log를 저장하지 않습니다."
+        )
+        render_badge_strip(
+            [
+                {
+                    "label": "Readiness",
+                    "value": readiness.get("route_label"),
+                    "tone": _recheck_readiness_tone(readiness_route),
+                },
+                {
+                    "label": "DB Latest",
+                    "value": readiness_metrics.get("latest_market_date") or "-",
+                    "tone": "neutral",
+                },
+                {
+                    "label": "Replay Contracts",
+                    "value": f"{readiness_metrics.get('replay_contract_count', 0)}/{readiness_metrics.get('active_component_count', 0)}",
+                    "tone": "positive"
+                    if readiness_metrics.get("replay_contract_count") == readiness_metrics.get("active_component_count")
+                    and readiness_metrics.get("active_component_count")
+                    else "warning",
+                },
+                {
+                    "label": "Blocked",
+                    "value": readiness_metrics.get("blocked_count", 0),
+                    "tone": "danger" if readiness_metrics.get("blocked_count") else "neutral",
+                },
+                {"label": "Writes", "value": "Disabled", "tone": "neutral"},
+            ]
+        )
+        if readiness_route == "RECHECK_READINESS_BLOCKED":
+            st.warning(str(readiness.get("conclusion") or "-"))
+        elif readiness_route in {"RECHECK_READINESS_REVIEW", "RECHECK_READINESS_NEEDS_DATA"}:
+            st.info(str(readiness.get("conclusion") or "-"))
+        else:
+            st.success(str(readiness.get("conclusion") or "-"))
+        with st.expander("Readiness check rows", expanded=readiness_route != "RECHECK_READINESS_READY"):
+            readiness_df = build_selected_portfolio_recheck_readiness_table(readiness)
+            if readiness_df.empty:
+                st.info("표시할 readiness row가 없습니다.")
+            else:
+                st.dataframe(readiness_df, width="stretch", hide_index=True)
+            st.caption(
+                f"Write policy: {readiness_boundary.get('write_policy') or '-'} / "
+                f"DB write: {readiness_boundary.get('db_write')} / "
+                f"registry write: {readiness_boundary.get('registry_write')}"
+            )
+
     fallback_start = date(2016, 1, 1)
     fallback_end = date.today()
     default_start = _coerce_date(defaults.get("default_start"), fallback_start)
     default_end = _coerce_date(defaults.get("default_end"), fallback_end)
-    decision_id = str(row.get("decision_id") or "selected_portfolio")
     with st.container(border=True):
         st.markdown("##### Recheck Setup")
         setup_cols = st.columns([0.24, 0.24, 0.24, 0.28], gap="small")

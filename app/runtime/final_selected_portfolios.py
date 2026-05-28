@@ -51,6 +51,7 @@ FINAL_SELECTED_PORTFOLIO_DRIFT_ALERT_ROUTE_LABELS = {
 SELECTED_MONITORING_TIMELINE_SCHEMA_VERSION = "selected_monitoring_timeline_v1"
 SELECTED_CONTINUITY_CHECK_SCHEMA_VERSION = "selected_continuity_check_v1"
 SELECTED_RECHECK_COMPARISON_SCHEMA_VERSION = "selected_recheck_comparison_v1"
+SELECTED_RECHECK_READINESS_SCHEMA_VERSION = "selected_recheck_readiness_v1"
 SELECTED_MONITORING_TIMELINE_STATUS_LABELS = {
     "CLEAR": "정상",
     "WATCH": "관찰",
@@ -70,6 +71,12 @@ SELECTED_RECHECK_COMPARISON_ROUTE_LABELS = {
     "RECHECK_COMPARISON_WATCH": "관찰 필요",
     "RECHECK_COMPARISON_BREACHED": "재검토 필요",
     "RECHECK_COMPARISON_ERROR": "재검증 오류",
+}
+SELECTED_RECHECK_READINESS_ROUTE_LABELS = {
+    "RECHECK_READINESS_READY": "재검증 준비 완료",
+    "RECHECK_READINESS_REVIEW": "재검증 전 확인 필요",
+    "RECHECK_READINESS_NEEDS_DATA": "DB 데이터 확인 필요",
+    "RECHECK_READINESS_BLOCKED": "재검증 차단",
 }
 _TIMELINE_STATUS_RANK = {
     "OPTIONAL": 0,
@@ -1497,6 +1504,297 @@ def build_selected_portfolio_recheck_comparison(
             "order_instruction": False,
             "auto_rebalance": False,
             "notes": "Recheck comparison reads existing decision and session recheck evidence; it does not save monitoring logs.",
+        },
+    }
+
+
+def _readiness_check_row(
+    *,
+    check: str,
+    status: str,
+    current: Any,
+    evidence: str,
+    next_action: str,
+) -> dict[str, Any]:
+    return {
+        "Check": check,
+        "Status": status,
+        "Ready": status == "PASS",
+        "Current": _clean_text(current),
+        "Evidence": _clean_text(evidence),
+        "Next Action": _clean_text(next_action),
+    }
+
+
+def _safe_date_compare(left: Any, right: Any) -> int | None:
+    left_ts = pd.to_datetime(left, errors="coerce")
+    right_ts = pd.to_datetime(right, errors="coerce")
+    if pd.isna(left_ts) or pd.isna(right_ts):
+        return None
+    if left_ts < right_ts:
+        return -1
+    if left_ts > right_ts:
+        return 1
+    return 0
+
+
+def build_selected_portfolio_recheck_readiness(
+    row: dict[str, Any],
+    *,
+    latest_market_result: dict[str, Any] | None = None,
+    candidate_rows_by_id: dict[str, dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Build a read-only preflight view for Selected Dashboard Performance Recheck inputs."""
+
+    selected = dict(row or {})
+    raw_decision = dict(selected.get("raw_decision") or selected)
+    active_components = _active_components(raw_decision)
+    target_weight_total = _target_weight_total(raw_decision, active_components)
+    baseline = _baseline_snapshot(raw_decision)
+    decision_route = _clean_text(raw_decision.get("decision_route") or selected.get("decision_route"), "")
+    selected_flag = (
+        raw_decision.get("selected_practical_portfolio") is True
+        or selected.get("selected_practical_portfolio") is True
+        or decision_route == SELECTED_PRACTICAL_PORTFOLIO_ROUTE
+    )
+    rows: list[dict[str, Any]] = []
+
+    component_contract_ready = selected_flag and bool(active_components) and abs(target_weight_total - 100.0) <= 0.01
+    rows.append(
+        _readiness_check_row(
+            check="Selected component contract",
+            status="PASS" if component_contract_ready else "BLOCKED",
+            current=f"selected={selected_flag} / components={len(active_components)} / target={target_weight_total:.2f}%",
+            evidence=(
+                "Selected route, active components, and target weight contract are available."
+                if component_contract_ready
+                else "Selected route, active components, or target weight contract is incomplete."
+            ),
+            next_action=(
+                "Use this component contract for Performance Recheck."
+                if component_contract_ready
+                else "Fix the Final Review selected row before running Performance Recheck."
+            ),
+        )
+    )
+
+    if candidate_rows_by_id is None:
+        try:
+            candidate_rows = _find_candidate_rows_by_registry_id()
+            candidate_load_error = ""
+        except Exception as exc:  # pragma: no cover - registry read errors depend on local workspace state
+            candidate_rows = {}
+            candidate_load_error = str(exc)
+    else:
+        candidate_rows = dict(candidate_rows_by_id)
+        candidate_load_error = ""
+
+    try:
+        from .candidate_library import build_candidate_replay_payload
+
+        replay_builder_error = ""
+    except Exception as exc:  # pragma: no cover - defensive import boundary
+        build_candidate_replay_payload = None  # type: ignore[assignment]
+        replay_builder_error = str(exc)
+
+    valid_contracts = 0
+    missing_contracts: list[str] = []
+    invalid_contracts: list[str] = []
+    replay_symbols: set[str] = set()
+    replay_benchmarks: set[str] = set()
+    replay_periods: list[str] = []
+
+    for index, component in enumerate(active_components):
+        identity = _component_identity(component, index)
+        registry_id = _clean_text(component.get("registry_id"), "")
+        if not registry_id:
+            missing_contracts.append(f"{identity}: registry_id 없음")
+            continue
+        current_row = dict(candidate_rows.get(registry_id) or {})
+        if not current_row:
+            missing_contracts.append(f"{identity}: current candidate row 없음")
+            continue
+        if build_candidate_replay_payload is None:
+            invalid_contracts.append(f"{identity}: replay helper import 실패")
+            continue
+        try:
+            payload = build_candidate_replay_payload(current_row)
+        except Exception as exc:
+            invalid_contracts.append(f"{identity}: {exc}")
+            continue
+        valid_contracts += 1
+        replay_symbols.update(str(symbol).strip().upper() for symbol in list(payload.get("tickers") or []) if str(symbol).strip())
+        benchmark = str(payload.get("benchmark_ticker") or component.get("benchmark") or "").strip().upper()
+        if benchmark:
+            replay_benchmarks.add(benchmark)
+        replay_periods.append(f"{payload.get('start') or '-'} -> {payload.get('end') or '-'}")
+
+    expected_contracts = len(active_components)
+    if candidate_load_error or replay_builder_error:
+        replay_status = "NEEDS_INPUT"
+    elif expected_contracts <= 0:
+        replay_status = "BLOCKED"
+    elif valid_contracts == expected_contracts:
+        replay_status = "PASS"
+    elif valid_contracts > 0:
+        replay_status = "REVIEW"
+    else:
+        replay_status = "BLOCKED"
+    replay_evidence_parts = []
+    if replay_symbols:
+        replay_evidence_parts.append(f"symbols={len(replay_symbols)}")
+    if replay_benchmarks:
+        replay_evidence_parts.append("benchmarks=" + ", ".join(sorted(replay_benchmarks)))
+    if missing_contracts:
+        replay_evidence_parts.append("missing=" + "; ".join(missing_contracts[:3]))
+    if invalid_contracts:
+        replay_evidence_parts.append("invalid=" + "; ".join(invalid_contracts[:3]))
+    if candidate_load_error:
+        replay_evidence_parts.append(f"candidate_load_error={candidate_load_error}")
+    if replay_builder_error:
+        replay_evidence_parts.append(f"replay_builder_error={replay_builder_error}")
+    rows.append(
+        _readiness_check_row(
+            check="Candidate replay contract",
+            status=replay_status,
+            current=f"{valid_contracts}/{expected_contracts} contracts",
+            evidence=" / ".join(replay_evidence_parts) if replay_evidence_parts else "Replay contracts are available.",
+            next_action=(
+                "Performance Recheck can rebuild selected component payloads."
+                if replay_status == "PASS"
+                else "Review partial replay contract coverage before relying on recheck output."
+                if replay_status == "REVIEW"
+                else "Fix Candidate Registry replay contracts or selected component registry ids."
+                if replay_status == "BLOCKED"
+                else "Resolve candidate registry or replay helper availability before running recheck."
+            ),
+        )
+    )
+
+    latest_result = dict(latest_market_result) if latest_market_result is not None else load_selected_portfolio_latest_market_date()
+    latest_status = _clean_text(latest_result.get("status"), "")
+    latest_market_date = _date_text(latest_result.get("latest_market_date"))
+    baseline_start = _date_text(baseline.get("baseline_start"))
+    baseline_end = _date_text(baseline.get("baseline_end"))
+    latest_vs_baseline = _safe_date_compare(latest_market_date, baseline_end)
+    if latest_status == "error" or latest_result.get("error"):
+        latest_row_status = "NEEDS_INPUT"
+    elif not latest_market_date:
+        latest_row_status = "NEEDS_INPUT"
+    elif not baseline_end:
+        latest_row_status = "REVIEW"
+    elif latest_vs_baseline is not None and latest_vs_baseline > 0:
+        latest_row_status = "PASS"
+    else:
+        latest_row_status = "REVIEW"
+    rows.append(
+        _readiness_check_row(
+            check="DB latest market date",
+            status=latest_row_status,
+            current=f"latest={latest_market_date or '-'} / baseline_end={baseline_end or '-'}",
+            evidence=(
+                str(latest_result.get("error"))
+                if latest_result.get("error")
+                else "Latest DB market date extends beyond the selected baseline."
+                if latest_row_status == "PASS"
+                else "Latest DB market date is unavailable or does not extend beyond the selected baseline."
+            ),
+            next_action=(
+                "Use DB latest market date as the default recheck end date."
+                if latest_row_status == "PASS"
+                else "Refresh OHLCV data or check DB connectivity before treating recheck as latest evidence."
+                if latest_row_status == "NEEDS_INPUT"
+                else "Confirm whether the selected baseline already includes the latest DB market date."
+            ),
+        )
+    )
+
+    default_start = baseline_start or "2016-01-01"
+    default_end = latest_market_date or baseline_end or date.today().isoformat()
+    start_vs_end = _safe_date_compare(default_start, default_end)
+    if start_vs_end is None:
+        period_status = "NEEDS_INPUT"
+    elif start_vs_end > 0:
+        period_status = "BLOCKED"
+    elif latest_row_status == "NEEDS_INPUT":
+        period_status = "NEEDS_INPUT"
+    elif latest_row_status == "REVIEW":
+        period_status = "REVIEW"
+    else:
+        period_status = "PASS"
+    rows.append(
+        _readiness_check_row(
+            check="Default recheck period",
+            status=period_status,
+            current=f"{default_start} -> {default_end}",
+            evidence=(
+                f"baseline={baseline_start or '-'} -> {baseline_end or '-'}"
+                + (f" / replay_periods={'; '.join(replay_periods[:3])}" if replay_periods else "")
+            ),
+            next_action=(
+                "Default period can be used, or the user can choose a different recheck range."
+                if period_status == "PASS"
+                else "Adjust start/end dates or refresh DB latest market data before recheck."
+            ),
+        )
+    )
+
+    rows.append(
+        _readiness_check_row(
+            check="Execution and storage boundary",
+            status="PASS",
+            current="read_only / no auto write / no order",
+            evidence="Readiness only inspects existing selected row, registry contract, and DB latest date.",
+            next_action="Run Performance Recheck manually when ready; no monitoring log or order is created.",
+        )
+    )
+
+    blocked = [item for item in rows if item.get("Status") == "BLOCKED"]
+    needs_input = [item for item in rows if item.get("Status") == "NEEDS_INPUT"]
+    review = [item for item in rows if item.get("Status") == "REVIEW"]
+    if blocked:
+        route = "RECHECK_READINESS_BLOCKED"
+        conclusion = "Performance Recheck 실행 전 차단 항목을 먼저 해결해야 합니다."
+    elif needs_input:
+        route = "RECHECK_READINESS_NEEDS_DATA"
+        conclusion = "Performance Recheck를 최신 DB 근거로 보려면 데이터 / helper 입력을 확인해야 합니다."
+    elif review:
+        route = "RECHECK_READINESS_REVIEW"
+        conclusion = "실행은 가능하지만 최신성 또는 일부 근거를 확인해야 합니다."
+    else:
+        route = "RECHECK_READINESS_READY"
+        conclusion = "Performance Recheck를 실행할 기본 데이터와 contract가 준비되어 있습니다."
+
+    return {
+        "schema_version": SELECTED_RECHECK_READINESS_SCHEMA_VERSION,
+        "route": route,
+        "route_label": SELECTED_RECHECK_READINESS_ROUTE_LABELS.get(route, route),
+        "conclusion": conclusion,
+        "rows": rows,
+        "metrics": {
+            "check_count": len(rows),
+            "pass_count": sum(1 for item in rows if item.get("Status") == "PASS"),
+            "review_count": len(review),
+            "needs_input_count": len(needs_input),
+            "blocked_count": len(blocked),
+            "active_component_count": len(active_components),
+            "replay_contract_count": valid_contracts,
+            "missing_replay_contract_count": len(missing_contracts),
+            "invalid_replay_contract_count": len(invalid_contracts),
+            "symbol_count": len(replay_symbols),
+            "benchmark_count": len(replay_benchmarks),
+            "latest_market_date": latest_market_date,
+            "baseline_end": baseline_end,
+        },
+        "execution_boundary": {
+            "write_policy": "read_only_recheck_readiness",
+            "db_write": False,
+            "registry_write": False,
+            "monitoring_log_auto_write": False,
+            "live_approval": False,
+            "order_instruction": False,
+            "auto_rebalance": False,
+            "notes": "Readiness checks existing DB and registry evidence only; it does not ingest data or save monitoring records.",
         },
     }
 

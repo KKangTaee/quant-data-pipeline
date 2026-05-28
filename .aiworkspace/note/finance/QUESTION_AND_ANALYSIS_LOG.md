@@ -21,6 +21,18 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-28 - Selected Dashboard should show recheck readiness before execution
+- User request:
+  - 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - P3 selected monitoring의 검증 효력을 높이되, 새 저장 기능을 늘리지 않아야 함.
+- Analysis result:
+  - `selected_recheck_readiness_v1`은 DB latest market date, selected component replay contract, default period, execution/storage boundary를 read-only로 확인한다.
+  - Candidate replay contract 누락은 `BLOCKED`, DB latest market date 미확인은 `NEEDS_DATA`로 표시한다.
+  - 데이터 수집, monitoring log 저장, memo/preset 저장, approval/order/rebalance는 추가하지 않았다.
+- Follow-up:
+  - 더 깊은 다음 후보는 symbol-level DB freshness 또는 provider-level selected monitoring evidence다.
+
 ### 2026-05-28 - Selected Dashboard recheck result must be compared to the original baseline
 - User request:
   - Continue the next phase after clarifying that memo-like / preset-like / automatic monitoring storage should be avoided.
