@@ -28,7 +28,7 @@ Last Verified: 2026-05-28
 | `.aiworkspace/note/finance/registries/PORTFOLIO_SELECTION_SOURCES.jsonl` | Backtest Analysis가 만든 validation candidate source | Keep. Main workflow source-of-truth. |
 | `.aiworkspace/note/finance/registries/PRACTICAL_VALIDATION_RESULTS.jsonl` | Practical Validation result and compact evidence | Keep. Final Review input. |
 | `.aiworkspace/note/finance/registries/FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl` | Final Review decision and compact packet / gate snapshot | Keep. Selected Portfolio Dashboard input. |
-| `.aiworkspace/note/finance/registries/SELECTED_PORTFOLIO_MONITORING_LOG.jsonl` | Optional selected-portfolio monitoring snapshot | Explicit user action only. No automatic log sprawl. |
+| `.aiworkspace/note/finance/registries/SELECTED_PORTFOLIO_MONITORING_LOG.jsonl` | Optional selected-portfolio monitoring check record | Explicit user action only. No automatic log sprawl. |
 | `.aiworkspace/note/finance/saved/SAVED_PORTFOLIO_MIXES.jsonl` | Reusable V2 portfolio mix setup | Keep as setup, not evidence. |
 | `.aiworkspace/note/finance/saved/SAVED_PORTFOLIOS.jsonl` | Legacy reusable weighted portfolio setup | Preserve as compatibility; do not expand without migration. |
 | `.aiworkspace/note/finance/run_history/*.jsonl` | Local execution history | Debug/replay artifact, not decision source-of-truth. |

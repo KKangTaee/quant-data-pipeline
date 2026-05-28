@@ -1280,6 +1280,96 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertEqual(checks["Component target contract"]["Status"], "BLOCKED")
         self.assertFalse(continuity["execution_boundary"]["order_instruction"])
 
+    def test_recheck_comparison_requires_recheck_without_writing(self) -> None:
+        from app.runtime.final_selected_portfolios import build_selected_portfolio_recheck_comparison
+
+        comparison = build_selected_portfolio_recheck_comparison(self._selected_row())
+
+        self.assertEqual(comparison["schema_version"], "selected_recheck_comparison_v1")
+        self.assertEqual(comparison["route"], "RECHECK_COMPARISON_NOT_RUN")
+        self.assertEqual(comparison["overall_status"], "NEEDS_INPUT")
+        rows = {row["Check"]: row for row in comparison["rows"]}
+        self.assertEqual(rows["Performance Recheck input"]["Status"], "NEEDS_INPUT")
+        self.assertEqual(rows["CAGR vs selected baseline"]["Status"], "NEEDS_INPUT")
+        self.assertFalse(comparison["execution_boundary"]["monitoring_log_auto_write"])
+        self.assertFalse(comparison["execution_boundary"]["live_approval"])
+        self.assertFalse(comparison["execution_boundary"]["auto_rebalance"])
+
+    def test_recheck_comparison_surfaces_breach_from_recheck_delta(self) -> None:
+        from app.runtime.final_selected_portfolios import build_selected_portfolio_recheck_comparison
+
+        comparison = build_selected_portfolio_recheck_comparison(
+            self._selected_row(),
+            recheck_result={
+                "status": "ok",
+                "verdict_route": "PERFORMANCE_WEAKENED",
+                "verdict": "원래 검증 대비 CAGR이 의미 있게 낮아졌습니다.",
+                "period": {
+                    "start": "2024-01-01",
+                    "end": "2026-05-28",
+                    "baseline_start": "2020-01-01",
+                    "baseline_end": "2024-12-31",
+                    "added_days_vs_baseline": 513,
+                },
+                "portfolio_summary": {"cagr": 0.04, "mdd": -0.22},
+                "baseline_summary": {"cagr": 0.10, "mdd": -0.14, "start": "2020-01-01", "end": "2024-12-31"},
+                "benchmark_summary": {"cagr": 0.06},
+                "change_summary": {
+                    "cagr_delta_vs_baseline": -0.06,
+                    "mdd_delta_vs_baseline": -0.08,
+                    "benchmark_cagr": 0.06,
+                    "net_cagr_spread": -0.02,
+                },
+                "component_rows": [{"Component": "Selected Component", "Registry ID": "candidate-selected"}],
+                "blockers": [],
+            },
+        )
+
+        self.assertEqual(comparison["route"], "RECHECK_COMPARISON_BREACHED")
+        self.assertEqual(comparison["overall_status"], "BREACHED")
+        rows = {row["Check"]: row for row in comparison["rows"]}
+        self.assertEqual(rows["CAGR vs selected baseline"]["Status"], "BREACHED")
+        self.assertEqual(rows["MDD vs selected baseline"]["Status"], "BREACHED")
+        self.assertEqual(rows["Benchmark spread"]["Status"], "BREACHED")
+        self.assertFalse(comparison["execution_boundary"]["order_instruction"])
+        self.assertFalse(comparison["execution_boundary"]["auto_rebalance"])
+
+    def test_recheck_comparison_ready_when_thesis_holds(self) -> None:
+        from app.runtime.final_selected_portfolios import build_selected_portfolio_recheck_comparison
+
+        comparison = build_selected_portfolio_recheck_comparison(
+            self._selected_row(),
+            recheck_result={
+                "status": "ok",
+                "verdict_route": "SELECTION_THESIS_HOLDS",
+                "verdict": "선택한 재검증 기간에서 기존 선정 근거가 유지됩니다.",
+                "period": {
+                    "start": "2024-01-01",
+                    "end": "2026-05-28",
+                    "baseline_start": "2020-01-01",
+                    "baseline_end": "2024-12-31",
+                    "added_days_vs_baseline": 513,
+                },
+                "portfolio_summary": {"cagr": 0.12, "mdd": -0.12},
+                "baseline_summary": {"cagr": 0.10, "mdd": -0.14, "start": "2020-01-01", "end": "2024-12-31"},
+                "benchmark_summary": {"cagr": 0.08},
+                "change_summary": {
+                    "cagr_delta_vs_baseline": 0.02,
+                    "mdd_delta_vs_baseline": 0.02,
+                    "benchmark_cagr": 0.08,
+                    "net_cagr_spread": 0.04,
+                },
+                "component_rows": [{"Component": "Selected Component", "Registry ID": "candidate-selected"}],
+                "blockers": [],
+            },
+        )
+
+        self.assertEqual(comparison["route"], "RECHECK_COMPARISON_READY")
+        self.assertEqual(comparison["overall_status"], "CLEAR")
+        self.assertEqual(comparison["metrics"]["breached_count"], 0)
+        self.assertEqual(comparison["metrics"]["watch_count"], 0)
+        self.assertEqual(comparison["metrics"]["needs_input_count"], 0)
+
 
 class DecisionDossierContractTests(unittest.TestCase):
     def _final_decision_row(self) -> dict:

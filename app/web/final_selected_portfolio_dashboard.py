@@ -18,6 +18,7 @@ from app.web.final_selected_portfolio_dashboard_helpers import (
     build_selected_portfolio_dashboard_table,
     build_selected_portfolio_evidence_table,
     build_selected_portfolio_monitoring_timeline_table,
+    build_selected_portfolio_recheck_comparison_table,
     filter_selected_portfolio_rows,
     final_selected_portfolio_label,
     selected_portfolio_active_components,
@@ -36,6 +37,7 @@ from app.runtime import (
     build_selected_portfolio_drift_check,
     build_selected_portfolio_monitoring_timeline,
     build_selected_portfolio_performance_recheck,
+    build_selected_portfolio_recheck_comparison,
     build_selected_portfolio_recheck_defaults,
     load_final_selected_portfolio_dashboard,
     load_latest_selected_portfolio_prices,
@@ -819,6 +821,60 @@ def _render_operator_context(row: dict[str, Any]) -> None:
         else:
             st.success(board_conclusion)
         st.dataframe(pd.DataFrame(trigger_rows), width="stretch", hide_index=True)
+        recheck_comparison = build_selected_portfolio_recheck_comparison(
+            row,
+            recheck_result=_latest_recheck_result(row),
+        )
+        comparison_metrics = dict(recheck_comparison.get("metrics") or {})
+        comparison_boundary = dict(recheck_comparison.get("execution_boundary") or {})
+        st.markdown("##### Recheck Evidence Comparison")
+        st.caption(
+            "최신 Performance Recheck 결과가 Final Review에서 선정할 때의 baseline 근거를 계속 지지하는지 읽습니다. "
+            "이 비교는 monitoring log를 저장하지 않습니다."
+        )
+        render_badge_strip(
+            [
+                {
+                    "label": "Comparison",
+                    "value": recheck_comparison.get("route_label"),
+                    "tone": _review_trigger_tone(str(recheck_comparison.get("overall_status") or "")),
+                },
+                {
+                    "label": "Breached",
+                    "value": comparison_metrics.get("breached_count", 0),
+                    "tone": "danger" if comparison_metrics.get("breached_count") else "neutral",
+                },
+                {
+                    "label": "Watch",
+                    "value": comparison_metrics.get("watch_count", 0),
+                    "tone": "warning" if comparison_metrics.get("watch_count") else "neutral",
+                },
+                {
+                    "label": "Needs Input",
+                    "value": comparison_metrics.get("needs_input_count", 0),
+                    "tone": "warning" if comparison_metrics.get("needs_input_count") else "neutral",
+                },
+                {"label": "Auto Save", "value": "Disabled", "tone": "neutral"},
+            ]
+        )
+        comparison_status = str(recheck_comparison.get("overall_status") or "")
+        comparison_conclusion = str(recheck_comparison.get("conclusion") or "-")
+        if comparison_status == "BREACHED":
+            st.warning(comparison_conclusion)
+        elif comparison_status in {"WATCH", "NEEDS_INPUT"}:
+            st.info(comparison_conclusion)
+        else:
+            st.success(comparison_conclusion)
+        with st.expander("Recheck comparison rows", expanded=comparison_status != "CLEAR"):
+            comparison_df = build_selected_portfolio_recheck_comparison_table(recheck_comparison)
+            if comparison_df.empty:
+                st.info("표시할 recheck comparison row가 없습니다.")
+            else:
+                st.dataframe(comparison_df, width="stretch", hide_index=True)
+            st.caption(
+                f"Write policy: {comparison_boundary.get('write_policy') or '-'} / "
+                f"monitoring auto write: {comparison_boundary.get('monitoring_log_auto_write')}"
+            )
         with st.expander("Original Operator Notes", expanded=False):
             st.markdown(f"**선정 사유**  \n{row.get('operator_reason') or '-'}")
             st.markdown(f"**제약 조건**  \n{row.get('operator_constraints') or '-'}")

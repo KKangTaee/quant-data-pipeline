@@ -21,6 +21,17 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-28 - Selected Dashboard recheck result must be compared to the original baseline
+- User request:
+  - Continue the next phase after clarifying that memo-like / preset-like / automatic monitoring storage should be avoided.
+- Interpreted goal:
+  - Improve post-selection verification without adding another JSONL or user memo storage feature.
+- Analysis result:
+  - Implemented `selected_recheck_comparison_v1` as a read-only model that compares latest Performance Recheck result with Final Review baseline.
+  - Missing or failed Performance Recheck is `NEEDS_INPUT`, not pass; breached CAGR / MDD / benchmark spread routes to re-review.
+- Follow-up:
+  - Next useful work should focus on DB-backed verification evidence gaps, not user-facing recordkeeping.
+
 ### 2026-05-28 - Selected Dashboard needs a continuity check before monitoring
 - User request:
   - 다음 작업 진행을 요청함.
@@ -32,7 +43,7 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Performance Recheck 미실행은 `NEEDS_INPUT`으로 보이며 pass처럼 숨기지 않는다.
   - monitoring log 자동 저장, live approval, broker order, auto rebalance는 계속 비활성이다.
 - Follow-up:
-  - 다음 P3 후보는 monitoring snapshot 명시 저장 또는 recheck evidence 비교 범위를 별도 task로 결정하는 것이다.
+  - Recheck evidence 비교는 다음 P3 slice에서 read-only로 구현한다.
 
 ### 2026-05-28 - Practical Validation V2 P2 is closed out
 - User request:

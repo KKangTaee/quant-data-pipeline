@@ -226,6 +226,23 @@ def build_selected_portfolio_continuity_table(continuity: dict[str, Any]) -> pd.
     return pd.DataFrame(display_rows)
 
 
+def build_selected_portfolio_recheck_comparison_table(comparison: dict[str, Any]) -> pd.DataFrame:
+    display_rows: list[dict[str, Any]] = []
+    for row in list(comparison.get("rows") or []):
+        display_rows.append(
+            {
+                "Check": row.get("Check"),
+                "Status": row.get("Status"),
+                "Ready": bool(row.get("Ready")),
+                "Current": row.get("Current"),
+                "Threshold": row.get("Threshold"),
+                "Evidence": row.get("Evidence"),
+                "Next Action": row.get("Next Action"),
+            }
+        )
+    return pd.DataFrame(display_rows)
+
+
 def filter_selected_portfolio_rows(
     rows: list[dict[str, Any]],
     *,

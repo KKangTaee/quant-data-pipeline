@@ -22,6 +22,9 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-28
+- Completed `.aiworkspace/note/finance/tasks/active/practical-validation-v2-p3-recheck-comparison/`.
+- Selected Dashboard Review Signals now includes a read-only Recheck Evidence Comparison for CAGR, MDD, benchmark spread, component coverage, and period coverage.
+- Missing / failed Performance Recheck remains `NEEDS_INPUT`; no DB/JSONL monitoring log, memo, preset, report, approval, order, or auto rebalance write was added.
 - Completed `.aiworkspace/note/finance/tasks/active/practical-validation-v2-p3-continuity-check/`.
 - Selected Portfolio Dashboard now shows a read-only Final Review -> Selected Dashboard continuity check.
 - The continuity check verifies selected route, investability packet, component target, review trigger, timeline connection, Performance Recheck input, and execution/storage boundary without auto-writing monitoring logs.

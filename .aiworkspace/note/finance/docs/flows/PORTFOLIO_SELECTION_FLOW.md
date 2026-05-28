@@ -23,7 +23,7 @@ Backtest > Backtest Analysis
 | 1 | Backtest Analysis | 단일 전략 실행, compare, saved mix replay, 비중 조합을 수행하고 검증 후보 source를 만든다 | `PORTFOLIO_SELECTION_SOURCES.jsonl` |
 | 2 | Practical Validation | 선택된 source를 12개 practical diagnostic으로 검증한다 | `PRACTICAL_VALIDATION_RESULTS.jsonl` |
 | 3 | Final Review | Practical Validation evidence를 investability packet으로 확인하고 최종 select / hold / reject / re-review 판단을 남기며, 저장된 판단을 read-only dossier로 다시 읽는다 | `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl` |
-| 4 | Selected Portfolio Dashboard | 선정된 포트폴리오를 최신 기간, timeline, review signal, 가상 투자금 기준으로 다시 확인한다 | 사용자가 명시적으로 저장할 때만 monitoring log |
+| 4 | Selected Portfolio Dashboard | 선정된 포트폴리오를 최신 기간, timeline, review signal, recheck comparison, 가상 투자금 기준으로 다시 확인한다 | 사용자가 명시적으로 저장할 때만 monitoring log |
 
 ## Stage Ownership
 
@@ -32,7 +32,7 @@ Backtest > Backtest Analysis
 | Backtest Analysis | 후보 생성, 전략 비교, saved mix replay, 비중 조합 | 최종 판단 |
 | Practical Validation | 실전 투입 전 검증, provider data gap, stress / sensitivity evidence | 투자 승인, 최종 사용자 메모 |
 | Final Review | 최종 후보 판단, investability evidence packet 확인, critical gap 기반 selected-route gate, saved decision dossier export | 새 비중 실험, provider data 수집, 사용자 메모용 반복 저장, 자동 report 파일 생성 |
-| Selected Portfolio Dashboard | 선정 이후 성과 재확인, Final Review -> dashboard continuity check, read-only monitoring timeline / signal, optional allocation check | broker order, live approval, auto rebalance |
+| Selected Portfolio Dashboard | 선정 이후 성과 재확인, Final Review -> dashboard continuity check, read-only monitoring timeline / signal / recheck comparison, optional allocation check | broker order, live approval, auto rebalance |
 
 ## Source Contract
 
@@ -61,12 +61,12 @@ PORTFOLIO_SELECTION_SOURCES
 - Provider / look-through evidence는 source mix, freshness, as-of range를 함께 본다. stale provider snapshot은 pass가 아니라 review evidence다.
 - Look-through Exposure Board는 holdings / exposure snapshot을 asset bucket, top holding, overlap, ETF별 coverage로 요약한다. Full holdings row는 DB 영역에 남고 workflow JSONL에는 compact summary만 남긴다.
 - Robustness Lab은 stress / rolling / sensitivity / overfit evidence를 compact summary로 묶어 Practical Validation과 Final Review가 같은 근거를 읽게 한다. Strategy-specific perturbation follow-up이나 `NOT_RUN` row는 pass가 아니다.
-- Selected Portfolio Dashboard는 선정 이후 상태 확인 화면이다. Continuity check는 Final Review selected row가 evidence packet / component target / review trigger / timeline / recheck input 경계를 갖췄는지 읽는다. Timeline은 selection / evidence gate / recheck / drift / trigger preview를 read-only로 읽고 monitoring log를 자동 저장하지 않는다. 주문이나 자동 리밸런싱을 만들지 않는다.
+- Selected Portfolio Dashboard는 선정 이후 상태 확인 화면이다. Continuity check는 Final Review selected row가 evidence packet / component target / review trigger / timeline / recheck input 경계를 갖췄는지 읽는다. Timeline은 selection / evidence gate / recheck / drift / trigger preview를 read-only로 읽고 monitoring log를 자동 저장하지 않는다. Recheck Comparison은 최신 Performance Recheck가 기존 Final Review baseline을 계속 지지하는지 read-only로 비교하며, 미실행이나 오류를 pass로 처리하지 않는다. 주문이나 자동 리밸런싱을 만들지 않는다.
 
 ## Storage Boundary
 
 - Portfolio Selection V2의 main durable chain은 `PORTFOLIO_SELECTION_SOURCES.jsonl -> PRACTICAL_VALIDATION_RESULTS.jsonl -> FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl`이다.
-- `SELECTED_PORTFOLIO_MONITORING_LOG.jsonl`는 사용자가 명시적으로 남기는 optional monitoring snapshot이며 자동 저장 대상이 아니다.
+- `SELECTED_PORTFOLIO_MONITORING_LOG.jsonl`는 사용자가 명시적으로 남기는 optional monitoring check record이며 자동 저장 대상이 아니다.
 - Waiver persistence는 현재 없다. future implementation이 필요하면 새 JSONL registry가 아니라 compact final decision snapshot을 먼저 검토한다.
 - legacy candidate / proposal / paper registry는 보존하지만, 현재 main flow의 필수 단계로 확장하지 않는다.
 - raw provider / holdings / macro evidence는 DB에 두고, workflow JSONL에는 compact evidence와 blocker summary만 저장한다.

@@ -50,6 +50,7 @@ FINAL_SELECTED_PORTFOLIO_DRIFT_ALERT_ROUTE_LABELS = {
 }
 SELECTED_MONITORING_TIMELINE_SCHEMA_VERSION = "selected_monitoring_timeline_v1"
 SELECTED_CONTINUITY_CHECK_SCHEMA_VERSION = "selected_continuity_check_v1"
+SELECTED_RECHECK_COMPARISON_SCHEMA_VERSION = "selected_recheck_comparison_v1"
 SELECTED_MONITORING_TIMELINE_STATUS_LABELS = {
     "CLEAR": "정상",
     "WATCH": "관찰",
@@ -62,6 +63,13 @@ SELECTED_CONTINUITY_ROUTE_LABELS = {
     "CONTINUITY_NEEDS_INPUT": "입력 필요",
     "CONTINUITY_REVIEW": "연결 검토 필요",
     "CONTINUITY_BLOCKED": "연결 차단",
+}
+SELECTED_RECHECK_COMPARISON_ROUTE_LABELS = {
+    "RECHECK_COMPARISON_NOT_RUN": "재검증 필요",
+    "RECHECK_COMPARISON_READY": "선정 thesis 유지",
+    "RECHECK_COMPARISON_WATCH": "관찰 필요",
+    "RECHECK_COMPARISON_BREACHED": "재검토 필요",
+    "RECHECK_COMPARISON_ERROR": "재검증 오류",
 }
 _TIMELINE_STATUS_RANK = {
     "OPTIONAL": 0,
@@ -1108,6 +1116,387 @@ def build_selected_portfolio_continuity_check(
             "order_instruction": False,
             "auto_rebalance": False,
             "notes": "Continuity check reads existing final decision and timeline evidence; it does not persist monitoring state.",
+        },
+    }
+
+
+def _comparison_check_row(
+    *,
+    check: str,
+    status: str,
+    current: Any,
+    evidence: str,
+    next_action: str,
+    threshold: str = "-",
+) -> dict[str, Any]:
+    return {
+        "Check": check,
+        "Status": status,
+        "Ready": status == "PASS",
+        "Current": _clean_text(current),
+        "Threshold": _clean_text(threshold),
+        "Evidence": _clean_text(evidence),
+        "Next Action": _clean_text(next_action),
+    }
+
+
+def _status_from_comparison_delta(
+    value: Any,
+    *,
+    breach_below: float | None = None,
+    watch_below: float | None = None,
+) -> str:
+    numeric = _optional_float(value)
+    if numeric is None:
+        return "NEEDS_INPUT"
+    if breach_below is not None and numeric < breach_below:
+        return "BREACHED"
+    if watch_below is not None and numeric < watch_below:
+        return "WATCH"
+    return "PASS"
+
+
+def _metric_delta_text(metric_name: str, baseline: Any, latest: Any, delta: Any) -> str:
+    return (
+        f"{metric_name}: baseline={_clean_text(baseline)}, "
+        f"recheck={_clean_text(latest)}, delta={_clean_text(delta)}"
+    )
+
+
+def build_selected_portfolio_recheck_comparison(
+    row: dict[str, Any],
+    *,
+    recheck_result: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Compare latest Performance Recheck evidence against the selected Final Review baseline without writing logs."""
+
+    selected = dict(row or {})
+    raw_decision = dict(selected.get("raw_decision") or selected)
+    active_components = _active_components(raw_decision)
+    baseline = _baseline_snapshot(raw_decision)
+    result = dict(recheck_result or {})
+
+    if not result:
+        rows = [
+            _comparison_check_row(
+                check="Performance Recheck input",
+                status="NEEDS_INPUT",
+                current="not run",
+                threshold="required",
+                evidence="No latest Performance Recheck result is attached to this dashboard session.",
+                next_action="Run Performance Recheck before treating current Review Signals as complete.",
+            ),
+            _comparison_check_row(
+                check="CAGR vs selected baseline",
+                status="NEEDS_INPUT",
+                current="-",
+                threshold="watch < 0.00 / breach < -0.03",
+                evidence="CAGR deterioration cannot be evaluated without a recheck result.",
+                next_action="Run Performance Recheck and compare CAGR delta against the selected baseline.",
+            ),
+            _comparison_check_row(
+                check="MDD vs selected baseline",
+                status="NEEDS_INPUT",
+                current="-",
+                threshold="watch < 0.00 / breach < -0.05",
+                evidence="Drawdown expansion cannot be evaluated without a recheck result.",
+                next_action="Run Performance Recheck and compare MDD delta against the selected baseline.",
+            ),
+            _comparison_check_row(
+                check="Benchmark spread",
+                status="NEEDS_INPUT",
+                current="-",
+                threshold="watch < 0.02 / breach < 0.00",
+                evidence="Benchmark spread cannot be evaluated without a recheck result.",
+                next_action="Run Performance Recheck and confirm benchmark parity evidence.",
+            ),
+        ]
+        return {
+            "schema_version": SELECTED_RECHECK_COMPARISON_SCHEMA_VERSION,
+            "route": "RECHECK_COMPARISON_NOT_RUN",
+            "route_label": SELECTED_RECHECK_COMPARISON_ROUTE_LABELS["RECHECK_COMPARISON_NOT_RUN"],
+            "overall_status": "NEEDS_INPUT",
+            "conclusion": "Performance Recheck가 아직 없어 selected thesis 유지 여부를 판단할 수 없습니다.",
+            "rows": rows,
+            "metrics": {
+                "check_count": len(rows),
+                "pass_count": 0,
+                "watch_count": 0,
+                "breached_count": 0,
+                "needs_input_count": len(rows),
+                "active_component_count": len(active_components),
+                "recheck_component_count": 0,
+                "blocker_count": 0,
+                "recheck_present": False,
+            },
+            "execution_boundary": {
+                "write_policy": "read_only_recheck_comparison",
+                "monitoring_log_auto_write": False,
+                "live_approval": False,
+                "order_instruction": False,
+                "auto_rebalance": False,
+                "notes": "Recheck comparison reads existing decision and session recheck evidence; it does not save monitoring logs.",
+            },
+        }
+
+    if result.get("status") == "error":
+        error_text = _clean_text(result.get("error"), "Performance Recheck failed")
+        rows = [
+            _comparison_check_row(
+                check="Performance Recheck input",
+                status="NEEDS_INPUT",
+                current=error_text,
+                threshold="successful recheck required",
+                evidence="The latest recheck failed before comparison evidence could be built.",
+                next_action="Fix the selected component contract or period inputs, then rerun Performance Recheck.",
+            )
+        ]
+        return {
+            "schema_version": SELECTED_RECHECK_COMPARISON_SCHEMA_VERSION,
+            "route": "RECHECK_COMPARISON_ERROR",
+            "route_label": SELECTED_RECHECK_COMPARISON_ROUTE_LABELS["RECHECK_COMPARISON_ERROR"],
+            "overall_status": "NEEDS_INPUT",
+            "conclusion": "Performance Recheck 오류 때문에 selected thesis 유지 여부를 판단할 수 없습니다.",
+            "rows": rows,
+            "metrics": {
+                "check_count": len(rows),
+                "pass_count": 0,
+                "watch_count": 0,
+                "breached_count": 0,
+                "needs_input_count": len(rows),
+                "active_component_count": len(active_components),
+                "recheck_component_count": 0,
+                "blocker_count": len(list(result.get("blockers") or [])),
+                "recheck_present": True,
+            },
+            "execution_boundary": {
+                "write_policy": "read_only_recheck_comparison",
+                "monitoring_log_auto_write": False,
+                "live_approval": False,
+                "order_instruction": False,
+                "auto_rebalance": False,
+                "notes": "Recheck comparison reads existing decision and session recheck evidence; it does not save monitoring logs.",
+            },
+        }
+
+    change = dict(result.get("change_summary") or {})
+    portfolio_summary = dict(result.get("portfolio_summary") or {})
+    baseline_summary = dict(result.get("baseline_summary") or {})
+    benchmark_summary = dict(result.get("benchmark_summary") or {})
+    period = dict(result.get("period") or {})
+    component_rows = [dict(item or {}) for item in list(result.get("component_rows") or [])]
+    blockers = [str(item) for item in list(result.get("blockers") or []) if str(item)]
+
+    latest_cagr = _optional_float(portfolio_summary.get("cagr"))
+    latest_mdd = _optional_float(portfolio_summary.get("mdd"))
+    baseline_cagr = _optional_float(baseline_summary.get("cagr"))
+    baseline_mdd = _optional_float(baseline_summary.get("mdd"))
+    if baseline_cagr is None:
+        baseline_cagr = _optional_float(baseline.get("baseline_cagr"))
+    if baseline_mdd is None:
+        baseline_mdd = _optional_float(baseline.get("baseline_mdd"))
+    cagr_delta = _optional_float(change.get("cagr_delta_vs_baseline"))
+    mdd_delta = _optional_float(change.get("mdd_delta_vs_baseline"))
+    spread = _optional_float(change.get("net_cagr_spread"))
+    benchmark_cagr = _optional_float(change.get("benchmark_cagr"))
+    if benchmark_cagr is None:
+        benchmark_cagr = _optional_float(benchmark_summary.get("cagr"))
+
+    result_status = str(result.get("status") or "").strip()
+    input_status = "PASS" if result_status == "ok" else "WATCH" if result_status == "partial" else "NEEDS_INPUT"
+    rows = [
+        _comparison_check_row(
+            check="Performance Recheck input",
+            status=input_status,
+            current=result_status or "-",
+            threshold="ok or partial with explicit blockers",
+            evidence=_clean_text(result.get("verdict_route") or result.get("verdict")),
+            next_action=(
+                "Use metric rows below to decide whether the selected thesis still holds."
+                if input_status == "PASS"
+                else "Partial recheck must be reviewed before relying on the comparison."
+                if input_status == "WATCH"
+                else "Rerun Performance Recheck with a valid selected component contract."
+            ),
+        )
+    ]
+
+    cagr_status = _status_from_comparison_delta(cagr_delta, breach_below=-0.03, watch_below=0.0)
+    rows.append(
+        _comparison_check_row(
+            check="CAGR vs selected baseline",
+            status=cagr_status,
+            current=_metric_delta_text("CAGR", baseline_cagr, latest_cagr, cagr_delta),
+            threshold="watch < 0.00 / breach < -0.03",
+            evidence="Latest recheck CAGR compared with the Final Review baseline CAGR.",
+            next_action=(
+                "CAGR deterioration is large; review component contribution and thesis validity."
+                if cagr_status == "BREACHED"
+                else "CAGR is weaker; keep it on the next review cycle."
+                if cagr_status == "WATCH"
+                else "CAGR evidence still supports the selected thesis."
+                if cagr_status == "PASS"
+                else "Recheck result is missing CAGR delta evidence."
+            ),
+        )
+    )
+
+    mdd_status = _status_from_comparison_delta(mdd_delta, breach_below=-0.05, watch_below=0.0)
+    rows.append(
+        _comparison_check_row(
+            check="MDD vs selected baseline",
+            status=mdd_status,
+            current=_metric_delta_text("MDD", baseline_mdd, latest_mdd, mdd_delta),
+            threshold="watch < 0.00 / breach < -0.05",
+            evidence="Latest recheck MDD compared with the Final Review baseline MDD.",
+            next_action=(
+                "Drawdown expanded materially; review risk and weak periods before continuing."
+                if mdd_status == "BREACHED"
+                else "Drawdown is worse; keep it under review."
+                if mdd_status == "WATCH"
+                else "Drawdown evidence still supports the selected thesis."
+                if mdd_status == "PASS"
+                else "Recheck result is missing MDD delta evidence."
+            ),
+        )
+    )
+
+    spread_status = _status_from_comparison_delta(spread, breach_below=0.0, watch_below=0.02)
+    rows.append(
+        _comparison_check_row(
+            check="Benchmark spread",
+            status=spread_status,
+            current=f"spread={_clean_text(spread)}, benchmark_cagr={_clean_text(benchmark_cagr)}",
+            threshold="watch < 0.02 / breach < 0.00",
+            evidence="Latest recheck net CAGR spread against the benchmark.",
+            next_action=(
+                "Benchmark outperformed the selected portfolio; review the selection thesis."
+                if spread_status == "BREACHED"
+                else "Benchmark edge is thin; verify this again in the next recheck."
+                if spread_status == "WATCH"
+                else "Benchmark spread remains supportive."
+                if spread_status == "PASS"
+                else "Recheck result is missing benchmark spread evidence."
+            ),
+        )
+    )
+
+    expected_components = len(active_components)
+    actual_components = len(component_rows)
+    if expected_components <= 0 or actual_components <= 0:
+        coverage_status = "NEEDS_INPUT"
+    elif blockers or actual_components < expected_components:
+        coverage_status = "WATCH"
+    else:
+        coverage_status = "PASS"
+    rows.append(
+        _comparison_check_row(
+            check="Component evidence coverage",
+            status=coverage_status,
+            current=f"{actual_components}/{expected_components} components, blockers={len(blockers)}",
+            threshold="all active components should contribute or blockers must be reviewed",
+            evidence=", ".join(blockers[:3]) if blockers else "All active components contributed to the recheck comparison.",
+            next_action=(
+                "Fix component replay blockers before relying on the comparison."
+                if coverage_status == "NEEDS_INPUT"
+                else "Review partial component coverage and decide whether the comparison is representative."
+                if coverage_status == "WATCH"
+                else "Component coverage is complete."
+            ),
+        )
+    )
+
+    period_start = _date_text(period.get("start"))
+    period_end = _date_text(period.get("end"))
+    added_days = _optional_float(period.get("added_days_vs_baseline"))
+    if not period_start or not period_end:
+        period_status = "NEEDS_INPUT"
+    elif added_days is not None and added_days <= 0:
+        period_status = "WATCH"
+    else:
+        period_status = "PASS"
+    rows.append(
+        _comparison_check_row(
+            check="Recheck period coverage",
+            status=period_status,
+            current=f"{period_start or '-'} -> {period_end or '-'} / added_days={_clean_text(added_days)}",
+            threshold="latest period should extend beyond selected baseline when checking ongoing validity",
+            evidence=(
+                f"baseline={period.get('baseline_start') or baseline.get('baseline_start') or '-'}"
+                f" -> {period.get('baseline_end') or baseline.get('baseline_end') or '-'}"
+            ),
+            next_action=(
+                "Select a period that reaches the latest available market data."
+                if period_status == "WATCH"
+                else "Recheck period is available for comparison."
+                if period_status == "PASS"
+                else "Rerun Performance Recheck with a valid period."
+            ),
+        )
+    )
+
+    statuses = [str(item.get("Status") or "") for item in rows]
+    if "BREACHED" in statuses:
+        route = "RECHECK_COMPARISON_BREACHED"
+        overall_status = "BREACHED"
+        conclusion = "최신 재검증 결과가 기존 선정 근거를 훼손한 항목이 있습니다."
+    elif "NEEDS_INPUT" in statuses:
+        route = "RECHECK_COMPARISON_WATCH"
+        overall_status = "NEEDS_INPUT"
+        conclusion = "비교를 완료하려면 누락된 recheck evidence를 보강해야 합니다."
+    elif "WATCH" in statuses:
+        route = "RECHECK_COMPARISON_WATCH"
+        overall_status = "WATCH"
+        conclusion = "선정 thesis는 즉시 차단되지는 않지만 watch 항목이 있습니다."
+    else:
+        route = "RECHECK_COMPARISON_READY"
+        overall_status = "CLEAR"
+        conclusion = "현재 recheck evidence는 기존 선정 thesis를 계속 지지합니다."
+
+    return {
+        "schema_version": SELECTED_RECHECK_COMPARISON_SCHEMA_VERSION,
+        "route": route,
+        "route_label": SELECTED_RECHECK_COMPARISON_ROUTE_LABELS.get(route, route),
+        "overall_status": overall_status,
+        "conclusion": conclusion,
+        "rows": rows,
+        "metrics": {
+            "check_count": len(rows),
+            "pass_count": sum(1 for item in rows if item.get("Status") == "PASS"),
+            "watch_count": sum(1 for item in rows if item.get("Status") == "WATCH"),
+            "breached_count": sum(1 for item in rows if item.get("Status") == "BREACHED"),
+            "needs_input_count": sum(1 for item in rows if item.get("Status") == "NEEDS_INPUT"),
+            "active_component_count": expected_components,
+            "recheck_component_count": actual_components,
+            "blocker_count": len(blockers),
+            "recheck_present": True,
+        },
+        "evidence": {
+            "period": period,
+            "portfolio_summary": portfolio_summary,
+            "baseline_summary": {
+                "cagr": baseline_cagr,
+                "mdd": baseline_mdd,
+                "start": baseline_summary.get("start") or baseline.get("baseline_start"),
+                "end": baseline_summary.get("end") or baseline.get("baseline_end"),
+            },
+            "benchmark_summary": benchmark_summary,
+            "change_summary": {
+                "cagr_delta_vs_baseline": cagr_delta,
+                "mdd_delta_vs_baseline": mdd_delta,
+                "benchmark_cagr": benchmark_cagr,
+                "net_cagr_spread": spread,
+            },
+            "component_rows": component_rows,
+            "blockers": blockers,
+        },
+        "execution_boundary": {
+            "write_policy": "read_only_recheck_comparison",
+            "monitoring_log_auto_write": False,
+            "live_approval": False,
+            "order_instruction": False,
+            "auto_rebalance": False,
+            "notes": "Recheck comparison reads existing decision and session recheck evidence; it does not save monitoring logs.",
         },
     }
 
