@@ -582,6 +582,10 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertIn("Latest raw price date is sparse", snapshot["warnings"][0])
         self.assertEqual(snapshot["missing_rows"].iloc[0]["Symbol"], "DDD")
         self.assertEqual(snapshot["missing_rows"].iloc[0]["Reason"], "missing start price")
+        self.assertEqual(
+            snapshot["missing_rows"].iloc[0]["Recommended Action"],
+            "Refresh daily OHLCV history or inspect previous-close coverage.",
+        )
 
     def test_market_movers_snapshot_uses_sp500_intraday_previous_close_returns(self) -> None:
         from app.services.overview_market_intelligence import build_market_movers_snapshot
@@ -598,11 +602,18 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(snapshot["coverage"]["price_mode"], "Intraday Snapshot")
         self.assertEqual(snapshot["coverage"]["coverage_basis"], "Current S&P 500 constituents")
         self.assertEqual(snapshot["coverage"]["returnable_count"], 1)
+        self.assertEqual(snapshot["coverage"]["failed_count"], 1)
+        self.assertEqual(snapshot["coverage"]["refresh_state"]["status"], "stale")
+        self.assertTrue(snapshot["coverage"]["refresh_state"]["refresh_due"])
         self.assertEqual(snapshot["rows"].iloc[0]["Symbol"], "AAA")
         self.assertEqual(snapshot["rows"].iloc[0]["Return %"], 12.0)
         self.assertEqual(snapshot["rows"].iloc[0]["Start Date"], "Previous Close")
         self.assertEqual(snapshot["missing_rows"].iloc[0]["Symbol"], "BBB")
         self.assertEqual(snapshot["missing_rows"].iloc[0]["Reason"], "missing latest price")
+        self.assertEqual(
+            snapshot["missing_rows"].iloc[0]["Recommended Action"],
+            "Refresh the daily snapshot; if it persists, inspect provider quote coverage.",
+        )
 
     def test_market_movers_snapshot_uses_top1000_intraday_returns(self) -> None:
         from app.services.overview_market_intelligence import build_market_movers_snapshot
@@ -659,8 +670,12 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(snapshot["coverage"]["event_count"], 2)
         self.assertEqual(snapshot["coverage"]["next_event_date"], "2026-06-17")
         self.assertEqual(snapshot["coverage"]["latest_collected_at"], "2026-05-28 02:00")
+        self.assertEqual(snapshot["coverage"]["official_count"], 2)
+        self.assertEqual(snapshot["coverage"]["estimate_count"], 0)
         self.assertEqual(snapshot["rows"].iloc[0]["Type"], "FOMC_MEETING")
         self.assertEqual(snapshot["rows"].iloc[0]["Date"], "2026-06-17")
+        self.assertEqual(snapshot["rows"].iloc[0]["Source Type"], "Official")
+        self.assertEqual(snapshot["rows"].iloc[0]["Freshness"], "Official")
 
     def test_market_events_snapshot_can_read_all_event_types(self) -> None:
         from app.services.overview_market_intelligence import build_market_events_snapshot
@@ -675,7 +690,45 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(snapshot["status"], "OK")
         self.assertEqual(snapshot["event_type"], "All")
         self.assertEqual(snapshot["coverage"]["event_count"], 3)
+        self.assertEqual(snapshot["coverage"]["official_count"], 2)
+        self.assertEqual(snapshot["coverage"]["estimate_count"], 1)
+        self.assertEqual(snapshot["coverage"]["stale_estimate_count"], 0)
         self.assertEqual(set(snapshot["rows"]["Type"]), {"FOMC_MEETING", "EARNINGS"})
+        earnings_row = snapshot["rows"][snapshot["rows"]["Type"] == "EARNINGS"].iloc[0]
+        self.assertEqual(earnings_row["Source Type"], "Provider Estimate")
+        self.assertEqual(earnings_row["Freshness"], "Current estimate")
+
+    def test_market_events_snapshot_warns_on_stale_earnings_estimates(self) -> None:
+        from app.services.overview_market_intelligence import build_market_events_snapshot
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, sql, params
+            return [
+                {
+                    "event_date": "2026-07-30",
+                    "event_type": "EARNINGS",
+                    "symbol": "MSFT",
+                    "title": "MSFT Earnings Release",
+                    "source": "yfinance_calendar",
+                    "source_url": "https://finance.yahoo.com/quote/MSFT/analysis",
+                    "confidence": 0.65,
+                    "collected_at": "2026-05-01 03:00:00",
+                }
+            ]
+
+        snapshot = build_market_events_snapshot(
+            event_type="EARNINGS",
+            today=date(2026, 5, 28),
+            horizon_days=180,
+            query_fn=query_fn,
+        )
+
+        self.assertEqual(snapshot["status"], "OK")
+        self.assertEqual(snapshot["coverage"]["estimate_count"], 1)
+        self.assertEqual(snapshot["coverage"]["stale_estimate_count"], 1)
+        self.assertEqual(snapshot["rows"].iloc[0]["Freshness"], "Stale estimate")
+        self.assertEqual(snapshot["rows"].iloc[0]["Age Days"], 27)
+        self.assertIn("Refresh Earnings Calendar", snapshot["warnings"][0])
 
 
 class MarketIntelligenceIngestionContractTests(unittest.TestCase):

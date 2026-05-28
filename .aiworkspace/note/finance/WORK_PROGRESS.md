@@ -4032,3 +4032,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/tasks/active/overview-market-events-schema/`를 열고 `finance_meta.market_event_calendar` schema를 추가했다.
   - `finance/data/market_intelligence.py`에 event row normalize, `event_key` 기반 UPSERT, date-range read helper를 추가했다.
   - Local DB smoke에서 requested common event columns가 생성된 것을 확인했고, 다음 task는 FOMC collector다.
+- Overview Market Intelligence 2차 production baseline:
+  - `.aiworkspace/note/finance/phases/active/overview-market-intelligence-productionization/`의 2차 task 2-01~2-03을 완료했다.
+  - Market Movers는 refresh state와 missing recommended action을 보여주고, Events는 official / provider estimate / stale estimate read model을 제공한다.
+  - 2차 acceptance checklist와 runbook을 정리했고, 다음 단계는 3차 earnings source validation이다.

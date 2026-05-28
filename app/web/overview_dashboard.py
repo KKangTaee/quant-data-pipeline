@@ -105,6 +105,7 @@ def _snapshot_value(value: Any) -> str:
 
 def _render_snapshot_status_cards(snapshot: dict[str, Any]) -> None:
     coverage = dict(snapshot.get("coverage") or {})
+    refresh_state = dict(coverage.get("refresh_state") or {})
     stale_days = coverage.get("stale_days")
     stale_minutes = coverage.get("snapshot_stale_minutes")
     if stale_minutes is not None:
@@ -118,8 +119,14 @@ def _render_snapshot_status_cards(snapshot: dict[str, Any]) -> None:
     returnable = coverage.get("returnable_count") or 0
     universe_count = coverage.get("universe_count") or 0
     coverage_text = f"{returnable} / {universe_count}" if universe_count else "-"
+    missing_count = coverage.get("missing_count") or 0
+    failed_count = coverage.get("failed_count") or missing_count
     effective_value = coverage.get("snapshot_time_utc") or coverage.get("effective_end_date")
     raw_detail = coverage.get("price_mode") or f"raw latest: {_snapshot_value(coverage.get('latest_raw_date'))}"
+    status_title = "Refresh State" if refresh_state else "Snapshot Status"
+    status_value = refresh_state.get("label") or snapshot.get("status") or "-"
+    status_detail = refresh_state.get("detail") or coverage.get("coverage_basis") or snapshot.get("universe_label") or "-"
+    status_tone = refresh_state.get("tone") or ("positive" if snapshot.get("status") == "OK" else "warning")
     render_status_card_grid(
         [
             {
@@ -131,7 +138,7 @@ def _render_snapshot_status_cards(snapshot: dict[str, Any]) -> None:
             {
                 "title": "Returnable Coverage",
                 "value": coverage_text,
-                "detail": f"missing: {coverage.get('missing_count') or 0}",
+                "detail": f"missing: {missing_count}, failed: {failed_count}",
                 "tone": "positive" if returnable else "warning",
             },
             {
@@ -141,10 +148,10 @@ def _render_snapshot_status_cards(snapshot: dict[str, Any]) -> None:
                 "tone": age_tone,
             },
             {
-                "title": "Snapshot Status",
-                "value": snapshot.get("status") or "-",
-                "detail": coverage.get("coverage_basis") or snapshot.get("universe_label") or "-",
-                "tone": "positive" if snapshot.get("status") == "OK" else "warning",
+                "title": status_title,
+                "value": status_value,
+                "detail": status_detail,
+                "tone": status_tone,
             },
         ]
     )
@@ -181,6 +188,12 @@ def _render_missing_diagnostics(snapshot: dict[str, Any]) -> None:
     if not isinstance(missing_rows, pd.DataFrame) or missing_rows.empty:
         return
     with st.expander(f"Coverage Diagnostics ({len(missing_rows)} missing)", expanded=False):
+        reason_counts = missing_rows["Reason"].value_counts().head(3) if "Reason" in missing_rows else pd.Series()
+        if not reason_counts.empty:
+            st.caption(
+                "Top issues: "
+                + ", ".join(f"{reason} ({count})" for reason, count in reason_counts.items())
+            )
         st.dataframe(missing_rows, width="stretch", hide_index=True)
 
 
@@ -215,6 +228,10 @@ def _render_market_job_result(result_key: str) -> None:
                 f"Processed: {result.get('symbols_processed') or 0} / {result.get('symbols_requested') or 0}, "
                 f"Source: {source}, Method: {method}, Duration: {_snapshot_value(duration)}s"
             )
+    failed_symbols = result.get("failed_symbols") or []
+    if failed_symbols:
+        with st.expander(f"Failed / Missing Symbols ({len(failed_symbols)})", expanded=False):
+            st.write(", ".join(str(symbol) for symbol in failed_symbols[:100]))
 
 
 def _is_daily_intraday_refresh_due(snapshot: dict[str, Any], *, period: str) -> bool:
@@ -301,6 +318,23 @@ def _get_market_movers_refresh_state(
         return None
 
     coverage = dict(snapshot.get("coverage") or {})
+    service_state = dict(coverage.get("refresh_state") or {})
+    if service_state:
+        status = str(service_state.get("status") or "unknown")
+        dot_color = {
+            "fresh": "#0f766e",
+            "partial": "#b45309",
+            "due": "#b45309",
+            "stale": "#dc2626",
+            "failed": "#dc2626",
+        }.get(status, "#64748b")
+        return {
+            "dot_color": dot_color,
+            "label": str(service_state.get("label") or status.title()),
+            "detail": str(service_state.get("recommended_action") or service_state.get("detail") or ""),
+            "refresh_due": bool(service_state.get("refresh_due")),
+        }
+
     price_mode = str(coverage.get("price_mode") or "")
     stale_minutes = coverage.get("snapshot_stale_minutes")
     refresh_due = _is_daily_intraday_refresh_due(snapshot, period=period)
@@ -353,13 +387,21 @@ def _render_market_movers_refresh_bar(
 
     universe_label = MARKET_COVERAGE_LABELS.get(universe_code, universe_code)
     intraday_result_key = f"overview_{universe_code.lower()}_intraday_result"
+    state = _get_market_movers_refresh_state(snapshot, universe_code=universe_code, period=period)
 
     with st.container(border=True):
+        if state is not None:
+            _render_refresh_state_dot(
+                color=str(state["dot_color"]),
+                label=str(state["label"]),
+                detail=str(state["detail"]),
+            )
         cols = st.columns([1, 1, 1], gap="small", vertical_alignment="center")
         if cols[0].button(
             "Update Daily Snapshot",
             key=f"overview_{universe_code.lower()}_intraday_refresh",
             use_container_width=True,
+            help=str(state.get("detail") or "Collect the latest quote snapshot.") if state else None,
         ):
             with st.spinner(f"Updating {universe_label} quote snapshot..."):
                 st.session_state[intraday_result_key] = _run_collect_market_intraday_snapshot_compat(
@@ -396,7 +438,6 @@ def _render_market_movers_snapshot_panel(
     universe_code: str,
     period: str,
 ) -> None:
-    _render_market_movers_refresh_status(snapshot, universe_code=universe_code, period=period)
     _render_snapshot_status_cards(snapshot)
     _render_snapshot_warnings(snapshot)
     _render_missing_diagnostics(snapshot)
@@ -640,14 +681,20 @@ def _render_events_tab() -> None:
             {
                 "title": "Stored Events",
                 "value": coverage.get("event_count") or 0,
-                "detail": f"window: {snapshot.get('date_window', {}).get('start_date')} -> {snapshot.get('date_window', {}).get('end_date')}",
+                "detail": (
+                    f"official: {coverage.get('official_count') or 0}, "
+                    f"estimates: {coverage.get('estimate_count') or 0}"
+                ),
                 "tone": "positive" if coverage.get("event_count") else "warning",
             },
             {
                 "title": "Latest Collection",
                 "value": _snapshot_value(coverage.get("latest_collected_at")),
-                "detail": f"sources: {coverage.get('source_count') or 0}",
-                "tone": "neutral",
+                "detail": (
+                    f"sources: {coverage.get('source_count') or 0}, "
+                    f"stale estimates: {coverage.get('stale_estimate_count') or 0}"
+                ),
+                "tone": "warning" if coverage.get("stale_estimate_count") else "neutral",
             },
         ]
     )

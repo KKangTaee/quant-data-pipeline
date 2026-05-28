@@ -37,8 +37,9 @@ http://localhost:8501
 
 2. `Workspace > Overview > Market Movers`
    - `Coverage`, `Period`, `Sector`, `Top N`을 선택한다.
-   - daily period에서 5분 이상 stale이면 `Refresh Market Snapshot`을 눌러 새 snapshot을 저장한다.
-   - `Coverage Diagnostics`에서 missing symbol과 reason을 확인한다.
+   - daily period에서 refresh state가 `Update due`, `Stale`, `Failed`이면 `Update Daily Snapshot`을 눌러 새 snapshot을 저장한다.
+   - `Returnable Coverage`에서 missing / failed count를 확인한다.
+   - `Coverage Diagnostics`에서 missing symbol, reason, recommended action을 확인한다.
 
 3. `Workspace > Ingestion > Overview Market Event Calendar > FOMC`
    - 기본은 current year와 next year를 수집한다.
@@ -52,6 +53,8 @@ http://localhost:8501
 
 5. `Workspace > Overview > Events`
    - `All`, `FOMC`, `Earnings` filter를 바꿔 저장 row를 확인한다.
+   - `Source Type`에서 FOMC official row와 earnings provider estimate row를 구분한다.
+   - `Freshness`와 `Age Days`에서 오래된 earnings estimate인지 확인한다.
    - Overview의 refresh buttons도 ingestion job wrapper를 호출한다. UI render 중 직접 외부 source를 scraping하지 않는다.
 
 ## CLI Smoke Checks
@@ -77,9 +80,11 @@ PY
 ## Expected Results
 
 - Market Movers daily snapshot shows `price_mode=Intraday Snapshot` and a recent `snapshot_time_utc`.
-- Missing diagnostics are visible when provider rows are absent or incomplete.
-- FOMC rows have `source=federal_reserve_fomc_calendar` and `confidence=1.0`.
-- Earnings prototype rows have `source=yfinance_calendar` and `confidence=0.65`.
+- Market Movers daily refresh state shows `Fresh`, `Update due`, `Stale`, `Partial`, or `Failed`.
+- Missing diagnostics are visible with recommended action when provider rows are absent or incomplete.
+- FOMC rows have `source=federal_reserve_fomc_calendar`, `confidence=1.0`, and `Source Type=Official`.
+- Earnings prototype rows have `source=yfinance_calendar`, `confidence=0.65`, and `Source Type=Provider Estimate`.
+- Earnings rows collected more than 14 days ago show `Freshness=Stale estimate` and a warning.
 - Overview Events `Latest Collection` updates after a successful collector run.
 
 ## Failure Handling

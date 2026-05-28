@@ -12,6 +12,9 @@ QueryFn = Callable[[str, str, Sequence[Any] | None], list[dict[str, Any]]]
 VALID_PERIODS = {"daily": 1, "weekly": 5, "monthly": 21, "yearly": 252}
 PERIOD_LABELS = {"daily": "Daily", "weekly": "Weekly", "monthly": "Monthly", "yearly": "Yearly"}
 VALID_GROUPS = {"sector", "industry"}
+MARKET_INTRADAY_REFRESH_MINUTES = 5
+MARKET_INTRADAY_STALE_MINUTES = 15
+EVENT_ESTIMATE_STALE_DAYS = 14
 UNIVERSE_LABELS = {
     "SP500": "S&P 500",
     "TOP1000": "Top 1000 by market cap",
@@ -37,6 +40,7 @@ MISSING_COLUMNS = [
     "Sector",
     "Industry",
     "Reason",
+    "Recommended Action",
     "Start Date",
     "End Date",
     "Start Price",
@@ -63,6 +67,9 @@ EVENT_COLUMNS = [
     "Type",
     "Symbol",
     "Title",
+    "Source Type",
+    "Freshness",
+    "Age Days",
     "Source",
     "Confidence",
     "Collected At",
@@ -250,6 +257,9 @@ def _empty_events_snapshot(
             "next_event_date": None,
             "latest_collected_at": None,
             "source_count": 0,
+            "official_count": 0,
+            "estimate_count": 0,
+            "stale_estimate_count": 0,
         },
         "warnings": [message] if message else [],
     }
@@ -511,6 +521,7 @@ def _missing_row(
         "Sector": item.get("sector") or "Unknown",
         "Industry": item.get("industry") or "Unknown",
         "Reason": reason,
+        "Recommended Action": _missing_recommended_action(reason),
         "Start Date": start_date,
         "End Date": end_date,
         "Start Price": round(float(start_price), 4) if start_price is not None else None,
@@ -520,6 +531,21 @@ def _missing_row(
         "Profile Error": item.get("error_msg") or "-",
         "Profile Collected At": _profile_collected_at(item) or "-",
     }
+
+
+def _missing_recommended_action(reason: str) -> str:
+    normalized = str(reason or "").lower()
+    if "intraday snapshot row" in normalized:
+        return "Run Update Daily Snapshot for this coverage."
+    if "latest quote" in normalized or "latest price" in normalized or "intraday return" in normalized:
+        return "Refresh the daily snapshot; if it persists, inspect provider quote coverage."
+    if "previous close" in normalized or "start price" in normalized:
+        return "Refresh daily OHLCV history or inspect previous-close coverage."
+    if "end price" in normalized:
+        return "Refresh daily OHLCV history for the latest market date."
+    if "non-positive" in normalized:
+        return "Inspect price history for split or corporate action issues."
+    return "Inspect provider data, then rerun the relevant refresh."
 
 
 def _build_return_rows(
@@ -593,6 +619,7 @@ def _coverage(
         "universe_count": universe_count,
         "returnable_count": returnable_count,
         "missing_count": max(0, universe_count - returnable_count),
+        "failed_count": max(0, universe_count - returnable_count),
         "latest_raw_date": date_window.get("latest_raw_date"),
         "effective_end_date": date_window.get("effective_end_date"),
         "stale_days": date_window.get("stale_days"),
@@ -601,6 +628,84 @@ def _coverage(
     if extra:
         coverage.update(extra)
     return coverage
+
+
+def _intraday_refresh_state(
+    *,
+    snapshot_status: str,
+    period: str,
+    coverage: dict[str, Any],
+) -> dict[str, Any] | None:
+    if period != "daily":
+        return None
+    price_mode = str(coverage.get("price_mode") or "")
+    stale_minutes_value = coverage.get("snapshot_stale_minutes")
+    stale_minutes = int(stale_minutes_value) if stale_minutes_value is not None else None
+    missing_count = int(coverage.get("missing_count") or 0)
+    returnable_count = int(coverage.get("returnable_count") or 0)
+
+    if snapshot_status != "OK":
+        status = "failed"
+        label = "Failed"
+        detail = "snapshot build failed"
+        action = "Open warnings and rerun the relevant refresh."
+    elif price_mode != "Intraday Snapshot":
+        status = "failed"
+        label = "Snapshot missing"
+        detail = "using EOD fallback"
+        action = "Run Update Daily Snapshot; refresh S&P 500 universe first if no rows are available."
+    elif returnable_count <= 0:
+        status = "failed"
+        label = "Failed"
+        detail = "no returnable symbols"
+        action = "Run Update Daily Snapshot and inspect Coverage Diagnostics."
+    elif stale_minutes is None:
+        status = "due"
+        label = "Update due"
+        detail = "snapshot age unavailable"
+        action = "Run Update Daily Snapshot."
+    elif stale_minutes >= MARKET_INTRADAY_STALE_MINUTES:
+        status = "stale"
+        label = "Stale"
+        detail = f"{stale_minutes}m old"
+        action = "Run Update Daily Snapshot."
+    elif stale_minutes >= MARKET_INTRADAY_REFRESH_MINUTES:
+        status = "due"
+        label = "Update due"
+        detail = f"{stale_minutes}m old"
+        action = "Run Update Daily Snapshot."
+    elif missing_count:
+        status = "partial"
+        label = "Partial"
+        detail = f"{stale_minutes}m old, {missing_count} missing"
+        action = "Open Coverage Diagnostics; rerun refresh if missing count is unexpected."
+    else:
+        refresh_due_in = MARKET_INTRADAY_REFRESH_MINUTES - stale_minutes
+        status = "fresh"
+        label = "Fresh"
+        detail = f"{stale_minutes}m old, next check in {refresh_due_in}m"
+        action = "No action needed yet."
+
+    if status in {"due", "stale", "failed"} and missing_count and "missing" not in detail:
+        detail = f"{detail}, {missing_count} missing"
+
+    return {
+        "status": status,
+        "label": label,
+        "detail": detail,
+        "recommended_action": action,
+        "refresh_due": status in {"due", "stale", "failed"},
+        "is_partial": missing_count > 0,
+        "stale_minutes": stale_minutes,
+        "missing_count": missing_count,
+        "tone": {
+            "fresh": "positive",
+            "partial": "warning",
+            "due": "warning",
+            "stale": "danger",
+            "failed": "danger",
+        }.get(status, "neutral"),
+    }
 
 
 def _coverage_warnings(coverage: dict[str, Any], *, date_window: dict[str, Any]) -> list[str]:
@@ -692,13 +797,94 @@ def _load_market_event_rows(
         return []
 
 
-def _event_rows_frame(rows: list[dict[str, Any]]) -> pd.DataFrame:
+def _event_source_type(row: dict[str, Any]) -> str:
+    event_type = _normalize_event_type_value(row.get("event_type"))
+    source = str(row.get("source") or "").strip().lower()
+    if source == "federal_reserve_fomc_calendar":
+        return "Official"
+    if event_type == "EARNINGS":
+        if "official" in source or "company" in source:
+            return "Official"
+        return "Provider Estimate"
+    if source:
+        return "Provider"
+    return "Unknown"
+
+
+def _event_collected_age_days(row: dict[str, Any], *, today: date) -> int | None:
+    value = row.get("collected_at")
+    if value in (None, ""):
+        return None
+    try:
+        collected_at = pd.Timestamp(value)
+    except (TypeError, ValueError):
+        return None
+    if pd.isna(collected_at):
+        return None
+    if collected_at.tzinfo is not None:
+        collected_at = collected_at.tz_convert(None)
+    age = pd.Timestamp(today).normalize() - collected_at.normalize()
+    return max(0, int(age.days))
+
+
+def _event_freshness(row: dict[str, Any], *, today: date) -> str:
+    source_type = _event_source_type(row)
+    age_days = _event_collected_age_days(row, today=today)
+    if source_type == "Official":
+        return "Official"
+    if source_type == "Provider Estimate":
+        if age_days is None:
+            return "Estimate age unknown"
+        if age_days > EVENT_ESTIMATE_STALE_DAYS:
+            return "Stale estimate"
+        return "Current estimate"
+    if age_days is None:
+        return "Collection age unknown"
+    if age_days > EVENT_ESTIMATE_STALE_DAYS:
+        return "Stale source"
+    return "Current source"
+
+
+def _event_coverage(rows: list[dict[str, Any]], *, today: date) -> dict[str, Any]:
+    source_types = [_event_source_type(row) for row in rows]
+    freshness = [_event_freshness(row, today=today) for row in rows]
+    latest_collected_at = max(
+        (_display_datetime(row.get("collected_at")) or "" for row in rows),
+        default="",
+    ) or None
+    return {
+        "event_count": len(rows),
+        "next_event_date": _iso_date(rows[0].get("event_date")) if rows else None,
+        "latest_collected_at": latest_collected_at,
+        "source_count": len({str(row.get("source") or "") for row in rows if row.get("source")}),
+        "official_count": source_types.count("Official"),
+        "estimate_count": source_types.count("Provider Estimate"),
+        "stale_estimate_count": freshness.count("Stale estimate"),
+    }
+
+
+def _event_warnings(coverage: dict[str, Any]) -> list[str]:
+    stale_estimates = int(coverage.get("stale_estimate_count") or 0)
+    if stale_estimates <= 0:
+        return []
+    return [
+        (
+            f"{stale_estimates} earnings estimate row(s) were collected more than "
+            f"{EVENT_ESTIMATE_STALE_DAYS} days ago. Refresh Earnings Calendar before acting on those dates."
+        )
+    ]
+
+
+def _event_rows_frame(rows: list[dict[str, Any]], *, today: date) -> pd.DataFrame:
     out = [
         {
             "Date": _iso_date(row.get("event_date")) or "-",
             "Type": row.get("event_type") or "-",
             "Symbol": row.get("symbol") or "-",
             "Title": row.get("title") or "-",
+            "Source Type": _event_source_type(row),
+            "Freshness": _event_freshness(row, today=today),
+            "Age Days": _event_collected_age_days(row, today=today),
             "Source": row.get("source") or "-",
             "Confidence": (
                 round(float(row["confidence"]), 2)
@@ -744,23 +930,14 @@ def build_market_events_snapshot(
                 event_type=normalized_type,
                 message="No stored market events match the selected window. Run a matching event calendar collector first.",
             )
-        latest_collected_at = max(
-            (_display_datetime(row.get("collected_at")) or "" for row in rows),
-            default="",
-        ) or None
-        next_event_date = _iso_date(rows[0].get("event_date"))
+        coverage = _event_coverage(rows, today=today_value)
         return {
             "status": "OK",
             "event_type": normalized_type or "All",
-            "rows": _event_rows_frame(rows),
+            "rows": _event_rows_frame(rows, today=today_value),
             "date_window": {"start_date": normalized_start, "end_date": normalized_end},
-            "coverage": {
-                "event_count": len(rows),
-                "next_event_date": next_event_date,
-                "latest_collected_at": latest_collected_at,
-                "source_count": len({str(row.get("source") or "") for row in rows if row.get("source")}),
-            },
-            "warnings": [],
+            "coverage": coverage,
+            "warnings": _event_warnings(coverage),
         }
     except Exception as exc:
         return _empty_events_snapshot(
@@ -950,6 +1127,11 @@ def _build_intraday_movers_snapshot(
             "intraday_interval": interval,
         },
     )
+    coverage["refresh_state"] = _intraday_refresh_state(
+        snapshot_status="OK",
+        period=period,
+        coverage=coverage,
+    )
     return {
         "status": "OK",
         "period": period,
@@ -1066,6 +1248,12 @@ def build_market_movers_snapshot(
             price_mode="EOD DB",
             extra=_universe_metadata(universe, universe_code=normalized_universe),
         )
+        if normalized_period == "daily" and prefer_intraday:
+            coverage["refresh_state"] = _intraday_refresh_state(
+                snapshot_status="OK",
+                period=normalized_period,
+                coverage=coverage,
+            )
         warnings = _coverage_warnings(coverage, date_window=date_window)
         if normalized_period == "daily" and prefer_intraday:
             warnings.insert(0, "No intraday snapshot found for the selected universe; using daily DB close data.")

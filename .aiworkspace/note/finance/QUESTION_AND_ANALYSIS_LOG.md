@@ -5408,3 +5408,13 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 반복 수집 중복을 막으려면 요청된 공통 컬럼 외에 내부 business key인 `event_key`가 필요하다
 - Follow-up:
   - `market_event_calendar` schema, normalized UPSERT, date-range read helper, service contract tests를 추가했다. 다음 구현 단위는 FOMC collector다
+
+### 2026-05-28 - Overview Market Intelligence 2차 production baseline을 진행한다
+- User request:
+  - 사용자가 1차 구현 후 2차 작업부터 진행하자고 요청함
+- Interpreted goal:
+  - 새 source를 늘리기 전에 현재 Overview Market Movers와 Events가 최신성, 부분 실패, source 신뢰도, stale estimate를 명확하게 보여줘야 함
+- Analysis result:
+  - Market Movers refresh state는 기존 intraday snapshot metadata로 계산 가능하고, Events official / estimate 구분도 schema 변경 없이 `event_type`과 `source`에서 read model로 파생할 수 있다
+- Follow-up:
+  - 2차 baseline 구현과 acceptance checklist를 완료했다. 3차에서는 earnings provider estimate를 official/company 또는 대체 free source와 비교하는 source validation이 필요하다
