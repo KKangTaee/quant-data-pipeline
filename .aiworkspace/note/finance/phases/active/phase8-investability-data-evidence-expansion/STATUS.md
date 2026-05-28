@@ -10,7 +10,8 @@ Created: 2026-05-28
 - [x] Phase 8 board created.
 - [x] `symbol-lifecycle-event-fields-v1` implemented.
 - [x] Phase 8 source review completed.
-- [ ] Symbol directory snapshot ingestion started.
+- [x] Symbol directory snapshot ingestion implemented.
+- [ ] SEC CIK / exchange cross-check started.
 
 ## Latest Update
 
@@ -21,8 +22,9 @@ Created: 2026-05-28
 - `nyse_symbol_lifecycle` now carries event semantics for listing-observed and delisting rows.
 - `historical-membership-source-review-v1` found no free / official complete historical membership source ready for direct ingestion.
 - Nasdaq Daily List is strong but subscription / approval based; the next free-source-first implementation is Nasdaq public Symbol Directory current snapshot ingestion.
+- `symbol-directory-snapshot-ingestion-v1` added a DB-only collector and job wrapper for Nasdaq public current Symbol Directory files.
 
 ## Next
 
-- Start `symbol-directory-snapshot-ingestion-v1`.
-- Ingest public Nasdaq current symbol directory rows as partial `listing_observed` DB lifecycle evidence.
+- Start `sec-cik-exchange-crosscheck-v1`.
+- Use SEC current CIK / ticker / exchange associations as supporting lifecycle identity evidence.

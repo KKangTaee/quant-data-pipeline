@@ -788,6 +788,149 @@ class SecForm25DelistingCollectorContractTests(unittest.TestCase):
         self.assertIn("MISS", result["failed_symbols"])
 
 
+class SymbolDirectorySnapshotCollectorContractTests(unittest.TestCase):
+    def test_nasdaq_listed_snapshot_maps_to_partial_listing_observed_rows(self) -> None:
+        from finance.data.symbol_directory import build_symbol_directory_lifecycle_rows
+
+        text = "\n".join(
+            [
+                "Symbol|Security Name|Market Category|Test Issue|Financial Status|Round Lot Size|ETF|NextShares",
+                "AAPL|Apple Inc. Common Stock|Q|N|N|100|N|N",
+                "QQQ|Invesco QQQ Trust, Series 1|G|N|N|100|Y|N",
+                "TEST|Test Issue|Q|Y|N|100|N|N",
+                "File Creation Time: 0528202613:04|||||",
+            ]
+        )
+
+        rows, metadata = build_symbol_directory_lifecycle_rows(
+            "nasdaqlisted",
+            text,
+            collected_at="2026-05-28 00:00:00",
+        )
+
+        self.assertEqual(metadata["event_date"], "2026-05-28")
+        self.assertEqual(metadata["rows_built"], 2)
+        self.assertEqual(metadata["skipped_test_issues"], 1)
+        rows_by_symbol = {row["symbol"]: row for row in rows}
+        self.assertEqual(rows_by_symbol["AAPL"]["kind"], "stock")
+        self.assertEqual(rows_by_symbol["QQQ"]["kind"], "etf")
+        self.assertEqual(rows_by_symbol["AAPL"]["source"], "nasdaq_symdir_nasdaqlisted")
+        self.assertEqual(rows_by_symbol["AAPL"]["source_type"], "current_listing_snapshot")
+        self.assertEqual(rows_by_symbol["AAPL"]["coverage_status"], "partial")
+        self.assertEqual(rows_by_symbol["AAPL"]["event_type"], "listing_observed")
+        self.assertEqual(rows_by_symbol["AAPL"]["event_date"], "2026-05-28")
+        self.assertIn("not historical membership or delisting proof", rows_by_symbol["AAPL"]["evidence_json"])
+
+    def test_otherlisted_snapshot_maps_exchange_context_without_claiming_history(self) -> None:
+        from finance.data.symbol_directory import build_symbol_directory_lifecycle_rows
+
+        text = "\n".join(
+            [
+                "ACT Symbol|Security Name|Exchange|CQS Symbol|ETF|Round Lot Size|Test Issue|NASDAQ Symbol",
+                "SPY|SPDR S&P 500 ETF Trust|P|SPY|Y|100|N|SPY",
+                "GE|GE Aerospace Common Stock|N|GE|N|100|N|GE",
+                "File Creation Time: 0528202613:04|||||||",
+            ]
+        )
+
+        rows, metadata = build_symbol_directory_lifecycle_rows(
+            "otherlisted",
+            text,
+            collected_at="2026-05-28 00:00:00",
+        )
+
+        self.assertEqual(metadata["rows_built"], 2)
+        rows_by_symbol = {row["symbol"]: row for row in rows}
+        self.assertEqual(rows_by_symbol["SPY"]["kind"], "etf")
+        self.assertEqual(rows_by_symbol["SPY"]["source"], "nasdaq_symdir_otherlisted")
+        self.assertIn('"exchange": "P"', rows_by_symbol["SPY"]["evidence_json"])
+        self.assertIn('"nasdaq_symbol": "SPY"', rows_by_symbol["SPY"]["evidence_json"])
+        self.assertEqual(rows_by_symbol["GE"]["event_type"], "listing_observed")
+
+    def test_collector_writes_symbol_directory_rows_without_jsonl_side_effects(self) -> None:
+        from finance.data import symbol_directory
+
+        class FakeDB:
+            def __init__(self) -> None:
+                self.used_db: str | None = None
+                self.executemany_calls: list[tuple[str, list[dict]]] = []
+
+            def use_db(self, db_name: str) -> None:
+                self.used_db = db_name
+
+            def query(self, sql: str, params=None) -> list[dict]:
+                return []
+
+            def execute(self, sql: str, params=None) -> None:
+                return None
+
+            def executemany(self, sql: str, params: list[dict]) -> None:
+                self.executemany_calls.append((sql, params))
+
+            def close(self) -> None:
+                return None
+
+        def fake_fetch(url: str, user_agent: str, timeout: float) -> str:
+            if url == symbol_directory.NASDAQ_LISTED_URL:
+                return "\n".join(
+                    [
+                        "Symbol|Security Name|Market Category|Test Issue|Financial Status|Round Lot Size|ETF|NextShares",
+                        "AAPL|Apple Inc. Common Stock|Q|N|N|100|N|N",
+                        "File Creation Time: 0528202613:04|||||",
+                    ]
+                )
+            return "\n".join(
+                [
+                    "ACT Symbol|Security Name|Exchange|CQS Symbol|ETF|Round Lot Size|Test Issue|NASDAQ Symbol",
+                    "SPY|SPDR S&P 500 ETF Trust|P|SPY|Y|100|N|SPY",
+                    "File Creation Time: 0528202613:04|||||||",
+                ]
+            )
+
+        fake_db = FakeDB()
+        with patch.object(symbol_directory, "MySQLClient", return_value=fake_db), patch.object(
+            symbol_directory,
+            "sync_table_schema",
+        ):
+            summary = symbol_directory.collect_and_store_symbol_directory_snapshots(
+                user_agent="Unit Test unit@example.com",
+                fetch_text=fake_fetch,
+            )
+
+        self.assertEqual(fake_db.used_db, "finance_meta")
+        self.assertEqual(summary["rows_written"], 2)
+        self.assertEqual(summary["target_table"], "finance_meta.nyse_symbol_lifecycle")
+        self.assertFalse(summary["execution_boundary"]["registry_write"])
+        self.assertFalse(summary["execution_boundary"]["memo_persistence"])
+        self.assertFalse(summary["execution_boundary"]["preset_persistence"])
+        self.assertFalse(summary["execution_boundary"]["live_approval"])
+        written_rows = fake_db.executemany_calls[0][1]
+        self.assertEqual({row["source"] for row in written_rows}, {"nasdaq_symdir_nasdaqlisted", "nasdaq_symdir_otherlisted"})
+        self.assertEqual({row["event_type"] for row in written_rows}, {"listing_observed"})
+        self.assertEqual({row["coverage_status"] for row in written_rows}, {"partial"})
+
+    def test_ingestion_job_wraps_symbol_directory_snapshot_summary(self) -> None:
+        import app.jobs.ingestion_jobs as jobs
+
+        with patch.object(
+            jobs,
+            "collect_and_store_symbol_directory_snapshots",
+            return_value={
+                "rows_written": 2,
+                "rows_found": 2,
+                "errors": [],
+                "target_table": "finance_meta.nyse_symbol_lifecycle",
+                "execution_boundary": {"registry_write": False},
+            },
+        ):
+            result = jobs.run_collect_symbol_directory_snapshots(user_agent="Unit Test unit@example.com")
+
+        self.assertEqual(result["job_name"], "collect_symbol_directory_snapshots")
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["rows_written"], 2)
+        self.assertEqual(result["symbols_processed"], 2)
+
+
 class PracticalValidationDiagnosticsServiceContractTests(unittest.TestCase):
     def test_diagnostics_public_compatibility_contract_is_explicit(self) -> None:
         from app.services import backtest_practical_validation_curve_context as curve_context

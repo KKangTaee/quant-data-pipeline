@@ -18,6 +18,7 @@ from finance.data.etf_provider import (
 )
 from finance.data.macro import DEFAULT_MACRO_SERIES, collect_and_store_macro_series
 from finance.data.sec_delisting import collect_and_store_sec_form25_delistings
+from finance.data.symbol_directory import collect_and_store_symbol_directory_snapshots
 
 
 JobResult = dict[str, Any]
@@ -1388,6 +1389,73 @@ def run_collect_sec_form25_delistings(
                 "target_table": "finance_meta.nyse_symbol_lifecycle",
                 "include_archive_files": bool(include_archive_files),
                 "max_archive_files": int(max_archive_files),
+            },
+        )
+
+
+def run_collect_symbol_directory_snapshots(
+    sources: str | Iterable[str] | None = None,
+    *,
+    user_agent: str | None = None,
+    include_test_issues: bool = False,
+    snapshot_date: str | None = None,
+) -> JobResult:
+    """Collect Nasdaq public Symbol Directory current snapshots into lifecycle evidence."""
+    job_name = "collect_symbol_directory_snapshots"
+    started_at = _now_str()
+    t0 = perf_counter()
+
+    try:
+        summary = collect_and_store_symbol_directory_snapshots(
+            sources=sources,
+            user_agent=user_agent,
+            include_test_issues=bool(include_test_issues),
+            snapshot_date=snapshot_date,
+        )
+        rows_written = int(summary.get("rows_written") or 0)
+        errors = list(summary.get("errors") or [])
+        failed_sources = _failed_item_ids(errors, id_keys=("source",))
+        if rows_written <= 0:
+            status = "failed"
+            message = "Nasdaq Symbol Directory snapshot collection wrote no lifecycle rows."
+        elif errors:
+            status = "partial_success"
+            message = "Nasdaq Symbol Directory snapshot collection completed with source gaps."
+        else:
+            status = "success"
+            message = "Nasdaq Symbol Directory snapshot collection completed."
+
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status=status,
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=rows_written,
+            symbols_requested=int(summary.get("rows_found") or 0),
+            symbols_processed=rows_written,
+            failed_symbols=failed_sources[:50],
+            message=message,
+            details=summary,
+        )
+    except Exception as exc:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=0,
+            symbols_processed=0,
+            failed_symbols=[],
+            message=f"Nasdaq Symbol Directory snapshot collection failed: {exc}",
+            details={
+                "target_table": "finance_meta.nyse_symbol_lifecycle",
+                "sources": sources,
+                "include_test_issues": bool(include_test_issues),
             },
         )
 

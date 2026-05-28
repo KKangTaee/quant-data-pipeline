@@ -69,6 +69,12 @@ Nasdaq public SymDir files
 이 slice는 complete historical membership을 만들지 않는다.
 row는 `source_type=current_listing_snapshot`, `coverage_status=partial`, `event_type=listing_observed`로 저장한다.
 
+Implementation status:
+
+- `finance/data/symbol_directory.py` normalizes public Symbol Directory rows.
+- `app/jobs/ingestion_jobs.py` exposes `run_collect_symbol_directory_snapshots()`.
+- The collector writes only DB lifecycle rows and reports no registry / memo / preset side effects.
+
 ## Tradeoff
 
 Phase 8-1만으로 survivorship 문제가 완전히 해결되지는 않는다.

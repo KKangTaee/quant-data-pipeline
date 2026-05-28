@@ -10,7 +10,7 @@ Created: 2026-05-28
 | 8-0 | `phase8-board-open` | main-dev | Phase 8 official board, roadmap sync, carry-forward mapping | Complete |
 | 8-1 | `symbol-lifecycle-event-fields-v1` | `finance-db-pipeline` | lifecycle schema event fields, Form 25 / current listing row contract, loader/test/docs | Implementation complete |
 | 8-2 | `historical-membership-source-review-v1` | main-dev + `finance-db-pipeline` | free / official source 후보 조사, source contract, ingestion feasibility | Complete |
-| 8-3 | `symbol-directory-snapshot-ingestion-v1` | `finance-db-pipeline` | Nasdaq public current symbol directory files를 lifecycle `listing_observed` evidence로 적재 | Pending |
+| 8-3 | `symbol-directory-snapshot-ingestion-v1` | `finance-db-pipeline` | Nasdaq public current symbol directory files를 lifecycle `listing_observed` evidence로 적재 | Implementation complete |
 | 8-4 | `sec-cik-exchange-crosscheck-v1` | `finance-db-pipeline` | SEC current CIK / ticker / exchange association을 lifecycle evidence 보조 source로 연결 | Pending |
 | 8-5 | `computed-snapshot-lifecycle-v1` | `finance-db-pipeline` + `finance-backtest-web-workflow` | repeated current snapshots 기반 computed lifecycle evidence 설계 / scoring | Pending |
 | 8-6 | `lifecycle-audit-scoring-v1` | `finance-backtest-web-workflow` | Data Coverage Audit evidence scoring refinement | Pending |
@@ -26,13 +26,13 @@ Created: 2026-05-28
 
 ## Immediate Next Task
 
-`symbol-directory-snapshot-ingestion-v1`
+`sec-cik-exchange-crosscheck-v1`
 
 Goal:
 
-- Nasdaq public current symbol directory files를 DB lifecycle evidence로 적재한다.
-- current listing row는 `current_listing_snapshot` / `listing_observed` / `partial`로 저장한다.
-- survivorship PASS 기준은 완화하지 않는다.
+- SEC current CIK / ticker / exchange association을 lifecycle evidence 보조 source로 연결한다.
+- ticker identity와 exchange context를 cross-check한다.
+- complete historical membership proof로 해석하지 않는다.
 
 Out of scope:
 

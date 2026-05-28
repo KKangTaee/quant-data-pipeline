@@ -22,6 +22,9 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-28
+- Completed `.aiworkspace/note/finance/tasks/active/symbol-directory-snapshot-ingestion-v1/`.
+- Added `finance/data/symbol_directory.py` and `run_collect_symbol_directory_snapshots()` to store Nasdaq public Symbol Directory current rows as DB lifecycle `listing_observed` partial evidence.
+- The collector adds no workflow JSONL, memo, preset, approval, order, or rebalance behavior, and does not loosen survivorship PASS criteria.
 - Completed `.aiworkspace/note/finance/tasks/active/historical-membership-source-review-v1/`.
 - Source review found Nasdaq Daily List is the strongest corporate-action source but subscription / approval based, so Phase 8 free-source-first implementation should not start there.
 - Next Phase 8 implementation is `symbol-directory-snapshot-ingestion-v1`, using public Nasdaq Symbol Directory current files as DB lifecycle `listing_observed` partial evidence.

@@ -26,3 +26,9 @@ Created: 2026-05-28
 - No free / official complete historical membership source was selected in this review.
 - The next implementation source is Nasdaq public Symbol Directory current files.
 - SEC current ticker / exchange and Submissions metadata remain supporting identity / CIK sources.
+
+## Symbol Directory Ingestion Result
+
+- Public Symbol Directory ingestion is implemented.
+- It improves current listing snapshot coverage but does not by itself satisfy historical survivorship PASS.
+- Repeated snapshots and SEC cross-check remain separate follow-up tasks.

@@ -42,6 +42,10 @@ NYSE listing CSV
   -> finance.data.nyse_db.load_nyse_csv_to_mysql()
   -> finance_meta.nyse_symbol_lifecycle (current_listing_snapshot / listing_observed / partial)
 
+Nasdaq public Symbol Directory
+  -> finance.data.symbol_directory.collect_and_store_symbol_directory_snapshots()
+  -> finance_meta.nyse_symbol_lifecycle (current_listing_snapshot / listing_observed / partial)
+
 SEC company_tickers.json
 SEC submissions API Form 25 / 25-NSE metadata
   -> finance.data.sec_delisting.collect_and_store_sec_form25_delistings()
@@ -53,6 +57,7 @@ SEC submissions API Form 25 / 25-NSE metadata
 의미:
 
 - current listing snapshot은 현재 NYSE listing 관찰치이며 historical survivorship PASS 근거가 아니다.
+- Nasdaq Symbol Directory snapshot도 current listing 관찰치이며 historical survivorship PASS 근거가 아니다.
 - SEC Form 25 row는 official delisting / withdrawal evidence다.
 - Form 25가 없다는 사실은 active listing proof가 아니다.
 - complete historical universe membership은 여전히 별도 historical listing source가 필요하다.

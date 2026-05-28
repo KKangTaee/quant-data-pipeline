@@ -21,6 +21,18 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-28 - Symbol Directory snapshots become DB lifecycle evidence
+- User request:
+  - Phase 8 다음 작업 진행을 요청함.
+- Interpreted goal:
+  - Source review에서 정한 public Nasdaq Symbol Directory current files를 DB-backed lifecycle evidence로 적재한다.
+- Analysis result:
+  - `finance/data/symbol_directory.py` collector와 `run_collect_symbol_directory_snapshots()` job wrapper를 추가했다.
+  - `nasdaqlisted.txt` / `otherlisted.txt` row는 `source_type=current_listing_snapshot`, `coverage_status=partial`, `event_type=listing_observed`로 저장된다.
+  - 이 row는 current snapshot evidence이며 historical membership PASS, delisting proof, ticker action proof로 해석하지 않는다.
+- Follow-up:
+  - 다음 task는 `sec-cik-exchange-crosscheck-v1`로 SEC current CIK / ticker / exchange association을 lifecycle identity 보조 evidence로 연결한다.
+
 ### 2026-05-28 - Phase 8 source review chooses public current snapshot path first
 - User request:
   - Phase 8 다음 작업 진행을 요청함.
