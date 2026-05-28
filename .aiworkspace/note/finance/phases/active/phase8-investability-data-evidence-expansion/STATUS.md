@@ -9,7 +9,8 @@ Created: 2026-05-28
 - [x] Prior lifecycle work identified as Phase 8 foundation.
 - [x] Phase 8 board created.
 - [x] `symbol-lifecycle-event-fields-v1` implemented.
-- [ ] Phase 8 source review started.
+- [x] Phase 8 source review completed.
+- [ ] Symbol directory snapshot ingestion started.
 
 ## Latest Update
 
@@ -18,8 +19,10 @@ Created: 2026-05-28
 - Phase 8 starts after completed Phase 0~7 investability foundation work.
 - Immediate implementation slice is lifecycle event semantics in DB rows.
 - `nyse_symbol_lifecycle` now carries event semantics for listing-observed and delisting rows.
+- `historical-membership-source-review-v1` found no free / official complete historical membership source ready for direct ingestion.
+- Nasdaq Daily List is strong but subscription / approval based; the next free-source-first implementation is Nasdaq public Symbol Directory current snapshot ingestion.
 
 ## Next
 
-- Start `historical-membership-source-review-v1`.
-- Decide the first free / official source for ticker actions or historical membership evidence.
+- Start `symbol-directory-snapshot-ingestion-v1`.
+- Ingest public Nasdaq current symbol directory rows as partial `listing_observed` DB lifecycle evidence.

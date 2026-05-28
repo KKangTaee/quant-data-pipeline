@@ -22,6 +22,9 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-28
+- Completed `.aiworkspace/note/finance/tasks/active/historical-membership-source-review-v1/`.
+- Source review found Nasdaq Daily List is the strongest corporate-action source but subscription / approval based, so Phase 8 free-source-first implementation should not start there.
+- Next Phase 8 implementation is `symbol-directory-snapshot-ingestion-v1`, using public Nasdaq Symbol Directory current files as DB lifecycle `listing_observed` partial evidence.
 - Opened `.aiworkspace/note/finance/phases/active/phase8-investability-data-evidence-expansion/` as the official Phase 8 board for the 1차 hardening cycle.
 - Completed `.aiworkspace/note/finance/tasks/active/symbol-lifecycle-event-fields-v1/`.
 - `nyse_symbol_lifecycle` now has event semantics for lifecycle rows: NYSE current listing snapshot rows are `listing_observed` partial evidence, and SEC Form 25 rows are `delisting` actual evidence.

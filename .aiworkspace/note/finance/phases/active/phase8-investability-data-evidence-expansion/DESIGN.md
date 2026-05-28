@@ -54,6 +54,21 @@ Data Coverage Audit은 source를 보수적으로 해석한다.
 - Load event fields through `finance/loaders/universe.py`.
 - Keep JSONL boundary unchanged.
 
+## Next Source Slice
+
+`historical-membership-source-review-v1` 결과, 다음 구현은 Nasdaq public Symbol Directory current snapshot ingestion으로 정한다.
+
+```text
+Nasdaq public SymDir files
+  -> finance/data/symbol_directory.py
+  -> finance_meta.nyse_symbol_lifecycle
+  -> finance/loaders/universe.py
+  -> Data Coverage Audit
+```
+
+이 slice는 complete historical membership을 만들지 않는다.
+row는 `source_type=current_listing_snapshot`, `coverage_status=partial`, `event_type=listing_observed`로 저장한다.
+
 ## Tradeoff
 
 Phase 8-1만으로 survivorship 문제가 완전히 해결되지는 않는다.

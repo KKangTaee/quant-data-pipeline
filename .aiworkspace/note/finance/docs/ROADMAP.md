@@ -8,6 +8,7 @@ Last Verified: 2026-05-28
 | Track | Status | Notes |
 |---|---|---|
 | Phase 8 Investability Data Evidence Expansion | Active | `.aiworkspace/note/finance/phases/active/phase8-investability-data-evidence-expansion/`; Phase 0~7 이후 1차 hardening cycle의 다음 phase. lifecycle / survivorship / historical membership evidence를 DB-backed로 강화 |
+| Historical Membership Source Review V1 | Complete | `.aiworkspace/note/finance/tasks/active/historical-membership-source-review-v1/`; Nasdaq Daily List는 강하지만 구독 / 승인형이라 parking lot으로 두고, 다음 구현은 Nasdaq public Symbol Directory current snapshot ingestion으로 결정 |
 | Symbol Lifecycle Event Fields V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/symbol-lifecycle-event-fields-v1/`; `nyse_symbol_lifecycle`에 event semantics를 추가하고 current listing row는 `listing_observed`, SEC Form 25 row는 `delisting` event로 저장 |
 | SEC Form 25 Ingestion UI V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/sec-form25-ingestion-ui-v1/`; `Workspace > Ingestion`에서 SEC Form 25 delisting evidence collector를 수동 실행하는 UI 연결 추가 |
 | SEC Form 25 Delisting Backfill V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/sec-form25-delisting-backfill-v1/`; SEC EDGAR Form 25 filing metadata를 `nyse_symbol_lifecycle` delisting_feed evidence로 적재하는 collector / ingestion job wrapper 추가 |
@@ -104,6 +105,6 @@ P2에서 정상화하는 주요 진단:
 
 - UI Engine Boundary Cleanup은 완료됐다. 다음 구조 작업은 새 phase/task로 열고, 현재 경계는 boundary lint와 service contract test를 먼저 통과시키는 기준으로 유지한다.
 - Practical Validation V2 P3는 selected monitoring 연결과 closeout QA를 완료했다. Validation Efficacy, Backtest Realism, Data Coverage audit 표시 / gate 연결, Integrated Investability Gate QA, Historical Universe Survivorship V1, SEC Form 25 Delisting Backfill / UI, Symbol Lifecycle Event Fields V1을 완료했다.
-- Phase 8의 다음 큰 약점은 더 완전한 historical universe membership source와 ticker action source다. 다음 task는 `historical-membership-source-review-v1`로 free / official source 후보를 확인한다.
+- Phase 8의 source review는 완료됐다. Nasdaq Daily List는 ticker action source로 강하지만 구독 / 승인형이므로, 다음 task는 `symbol-directory-snapshot-ingestion-v1`로 public Nasdaq Symbol Directory current files를 DB lifecycle `listing_observed` evidence로 적재한다.
 - Phase 9 후보는 cost / turnover / slippage / liquidity 실측 근거다. Phase 8 source review와 lifecycle ingestion 우선순위가 끝난 뒤 시작한다.
 - Structured Waiver Policy V1은 구현 없이 정책만 확정했다. Waiver UI / persistence는 아직 별도 구현 task로 열지 않았다.

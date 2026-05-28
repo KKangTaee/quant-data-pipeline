@@ -12,9 +12,17 @@ Created: 2026-05-28
 | Free source coverage is incomplete | Phase 8 may not fully solve lifecycle evidence | Surface coverage gaps as REVIEW / NEEDS_INPUT |
 | Schema grows without source contract | Hard-to-maintain table semantics | Add only event fields needed for source-normalized rows |
 | New ingestion creates storage sprawl | User concern regression | DB only for evidence data; no memo / preset JSONL |
+| Nasdaq Daily List is paid / approval based | Strongest action source is not available under free-source-first constraint | Park it; use public current Symbol Directory snapshot path first |
+| Current snapshot absence is over-interpreted | False delisting / inactive evidence | Treat current snapshots as partial `listing_observed`; repeated snapshot diff needs separate conservative policy |
 
 ## Open Questions
 
 - Which free / official source should supply historical membership or ticker action events after Form 25?
 - Should future computed snapshot coverage be allowed to make survivorship PASS, and under what source contract?
 - How should old ticker -> new ticker mapping affect backtest replay symbols?
+
+## Source Review Result
+
+- No free / official complete historical membership source was selected in this review.
+- The next implementation source is Nasdaq public Symbol Directory current files.
+- SEC current ticker / exchange and Submissions metadata remain supporting identity / CIK sources.

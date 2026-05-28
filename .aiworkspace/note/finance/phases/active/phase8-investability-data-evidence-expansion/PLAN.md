@@ -52,11 +52,12 @@ Data Coverage / Validation Efficacy / Final Review가 symbol lifecycle evidence�
 | --- | --- | --- |
 | 8-0 | Phase 8 board open / previous lifecycle work 편입 | Complete |
 | 8-1 | Symbol lifecycle event field foundation | Implementation complete |
-| 8-2 | Historical membership / ticker action source 후보 조사 | Pending |
-| 8-3 | Free / official source ingestion slice 선정 | Pending |
-| 8-4 | Symbol change / merger mapping collector or import path | Pending |
-| 8-5 | Data Coverage Audit lifecycle evidence scoring refinement | Pending |
-| 8-6 | Phase 8 integrated QA / closeout | Pending |
+| 8-2 | Historical membership / ticker action source 후보 조사 | Complete |
+| 8-3 | Nasdaq public symbol directory snapshot ingestion | Pending |
+| 8-4 | SEC CIK / exchange cross-check evidence | Pending |
+| 8-5 | Computed snapshot lifecycle evidence | Pending |
+| 8-6 | Data Coverage Audit lifecycle evidence scoring refinement | Pending |
+| 8-7 | Phase 8 integrated QA / closeout | Pending |
 
 ## Done Criteria
 

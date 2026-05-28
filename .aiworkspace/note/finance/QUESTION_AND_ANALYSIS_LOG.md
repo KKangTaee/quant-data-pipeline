@@ -21,6 +21,18 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-28 - Phase 8 source review chooses public current snapshot path first
+- User request:
+  - Phase 8 다음 작업 진행을 요청함.
+- Interpreted goal:
+  - historical membership / ticker action source 후보를 확인하고, 무료 / 공식 source 우선 원칙에 맞는 다음 구현 대상을 정한다.
+- Analysis result:
+  - Nasdaq Daily List는 new listings, delistings, symbol/name changes 같은 corporate action source로 가장 강하지만 subscription / approval product이므로 parking lot으로 분리했다.
+  - Nasdaq public Symbol Directory `nasdaqlisted.txt` / `otherlisted.txt`는 current snapshot source로 바로 접근 가능하고, `listing_observed` partial lifecycle evidence를 DB에 적재하는 다음 구현 대상으로 적합하다.
+  - SEC company ticker / exchange file과 Submissions API는 CIK / exchange / former-name 보조 source로 유용하지만 complete historical membership proof는 아니다.
+- Follow-up:
+  - 다음 task는 `symbol-directory-snapshot-ingestion-v1`로 public current symbol directory rows를 `nyse_symbol_lifecycle`에 DB-backed partial evidence로 적재한다.
+
 ### 2026-05-28 - Phase 8 starts with lifecycle event semantics
 - User request:
   - 1차 hardening cycle을 목표로 Phase 8 작업 진행을 요청함.
