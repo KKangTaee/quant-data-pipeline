@@ -15,6 +15,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from app.jobs.ingestion_jobs import (
+    run_collect_fomc_calendar,
     run_collect_etf_holdings_exposure,
     run_collect_etf_operability_provider,
     run_discover_etf_provider_source_map,
@@ -371,6 +372,8 @@ def _dispatch_job(job: dict[str, Any], *, progress_callback: Any = None) -> JobR
     if action == "collect_macro_market_context":
         params["progress_callback"] = progress_callback
         return run_collect_macro_market_context(**params)
+    if action == "collect_fomc_calendar":
+        return run_collect_fomc_calendar(**params)
     if action == "collect_ohlcv":
         params["progress_callback"] = progress_callback
         return run_collect_ohlcv(**params)
@@ -1930,6 +1933,48 @@ def _render_ingestion_console() -> None:
                         label="Metadata Refresh",
                     )
                 _render_inline_last_completed_result("metadata_refresh")
+
+            with st.expander("Overview Market Event Calendar", expanded=False):
+                st.write("Overview Events 탭에서 읽을 시장 이벤트 캘린더를 공식 무료 소스에서 수집합니다.")
+                st.caption("현재 구현 대상: Federal Reserve 공식 FOMC meeting calendar.")
+                st.caption("저장 테이블: `finance_meta.market_event_calendar`")
+                current_year = date.today().year
+                fomc_year_options = list(range(current_year - 1, current_year + 3))
+                fomc_years = st.multiselect(
+                    "FOMC Years",
+                    options=fomc_year_options,
+                    default=[current_year, current_year + 1],
+                    key="overview_fomc_calendar_years",
+                    help="비워두면 Fed 페이지에서 파싱 가능한 모든 연도 row를 수집합니다.",
+                )
+                if st.button(
+                    "Collect FOMC Calendar",
+                    use_container_width=True,
+                    disabled=_has_running_job(),
+                ):
+                    _schedule_job(
+                        {
+                            "action": "collect_fomc_calendar",
+                            "job_name": "collect_fomc_calendar",
+                            "spinner_text": "Collecting FOMC calendar from the official Fed page...",
+                            "params": {
+                                "years": tuple(fomc_years) if fomc_years else None,
+                            },
+                            "run_metadata": _job_metadata(
+                                pipeline_type="overview_market_event_calendar",
+                                execution_mode="operational",
+                                symbol_source="Federal Reserve official FOMC calendar",
+                                symbol_count=None,
+                                execution_context=(
+                                    "Overview Events 탭에서 사용할 FOMC meeting calendar를 Fed 공식 HTML에서 파싱해 DB에 저장합니다."
+                                ),
+                                input_params={
+                                    "years": tuple(fomc_years) if fomc_years else None,
+                                },
+                            ),
+                        }
+                    )
+                _render_inline_last_completed_result("collect_fomc_calendar")
 
             with st.expander("Practical Validation Provider Snapshots", expanded=False):
                 st.write("Practical Validation에서 포트폴리오를 검토할 때 사용할 provider snapshot 데이터를 수집합니다.")

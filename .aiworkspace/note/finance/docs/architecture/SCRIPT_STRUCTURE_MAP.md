@@ -27,7 +27,7 @@
 | `app/web/streamlit_app.py` | Finance Console top navigation, page entry, page-level routing |
 | `app/web/reference_guides.py` | `Reference > Guides`의 제품형 portfolio workflow guide, flowchart, decision gate, reference drawer render |
 | `app/web/ops_review.py` | `Operations > Ops Review`의 triage flow, 웹앱 run health, action inbox, failure artifact, log, system snapshot dashboard render |
-| `app/web/overview_dashboard.py` | `Workspace > Overview`의 Market Movers, Sector / Industry, Events placeholder, Candidate Ops tab render |
+| `app/web/overview_dashboard.py` | `Workspace > Overview`의 Market Movers, Sector / Industry, Events, Candidate Ops tab render. Events 탭은 저장된 FOMC calendar row와 FOMC refresh 버튼을 제공 |
 | `app/web/overview_dashboard_helpers.py` | Overview dashboard용 current candidate / Pre-Live / proposal / history / saved portfolio 집계, 후보 우선순위 scoring, market intelligence service wrapper |
 | `app/web/backtest_strategy_catalog.py` | Strategy display name, strategy key, family variant 선택 매핑 |
 | `app/web/backtest_common.py` | Backtest 공용 preset / session state / 3단계 stage routing compatibility / ticker universe input / real-money contract / guardrail input / label 변환 helper |
@@ -72,7 +72,7 @@
 | `app/services/backtest_practical_validation_curve.py` | Streamlit-free Practical Validation curve normalize / compact records / curve provenance / benchmark parity helper |
 | `app/services/backtest_practical_validation_provider_context.py` | Streamlit-free Practical Validation provider context adapter. ETF operability / holdings / exposure / FRED macro loader 결과를 compact coverage와 diagnostic evidence로 변환 |
 | `app/services/backtest_evidence_read_model.py` | Streamlit-free evidence read model service. Final Review final decision status / saved decision table row / Selected Dashboard evidence check row를 담당 |
-| `app/services/overview_market_intelligence.py` | Streamlit-free Overview market intelligence service. S&P 500 / Top1000 / Top2000 movers, yearly period, sector filter, intraday snapshot read path, missing diagnostics, sector / industry leadership payload를 담당 |
+| `app/services/overview_market_intelligence.py` | Streamlit-free Overview market intelligence service. S&P 500 / Top1000 / Top2000 movers, yearly period, sector filter, intraday snapshot read path, missing diagnostics, sector / industry leadership, market event calendar payload를 담당 |
 
 ## App / Runtime
 
@@ -94,7 +94,7 @@
 
 | 스크립트 | 관리하는 기능 |
 |---|---|
-| `app/jobs/ingestion_jobs.py` | `Workspace > Ingestion` 또는 Overview 수동 refresh에서 실행하는 수집 / refresh job wrapper. OHLCV, fundamentals, statement refresh, asset profile, Practical Validation provider snapshot, S&P 500 universe / intraday snapshot job을 표준 `JobResult`로 감싼다 |
+| `app/jobs/ingestion_jobs.py` | `Workspace > Ingestion` 또는 Overview 수동 refresh에서 실행하는 수집 / refresh job wrapper. OHLCV, fundamentals, statement refresh, asset profile, Practical Validation provider snapshot, S&P 500 universe / intraday snapshot, FOMC calendar job을 표준 `JobResult`로 감싼다 |
 
 ## Finance Core
 
@@ -133,7 +133,7 @@
 | `finance/data/nyse.py` | NYSE universe source 수집 |
 | `finance/data/nyse_db.py` | NYSE universe DB persistence |
 | `finance/data/asset_profile.py` | Asset profile 수집. ETF operability snapshot의 bridge source로 일부 field를 제공 |
-| `finance/data/market_intelligence.py` | S&P 500 current constituent parsing / 저장, S&P 500 / Top1000 / Top2000 intraday previous-close snapshot 수집 / 저장, Overview market event calendar persistence helper |
+| `finance/data/market_intelligence.py` | S&P 500 current constituent parsing / 저장, S&P 500 / Top1000 / Top2000 intraday previous-close snapshot 수집 / 저장, Fed 공식 FOMC calendar parsing / 저장, Overview market event calendar persistence helper |
 | `finance/data/etf_provider.py` | ETF provider source map discovery, ETF operability / holdings / exposure snapshot schema sync, 기존 price/profile DB 기반 bridge/proxy 수집, iShares / SSGA / Invesco official row normalize, commodity gold exposure row 생성, holdings canonical refresh, exposure aggregation, UPSERT 저장 |
 | `finance/data/macro.py` | FRED market-context series 수집. VIX / yield curve / credit spread series를 `macro_series_observation`에 UPSERT 저장 |
 | `finance/data/fundamentals.py` | Fundamentals 수집 |

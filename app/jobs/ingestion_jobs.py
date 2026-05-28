@@ -18,6 +18,7 @@ from finance.data.etf_provider import (
 )
 from finance.data.macro import DEFAULT_MACRO_SERIES, collect_and_store_macro_series
 from finance.data.market_intelligence import (
+    collect_and_store_fomc_calendar,
     collect_and_store_market_intraday_snapshot,
     collect_and_store_sp500_universe,
 )
@@ -830,6 +831,53 @@ def run_collect_sp500_intraday_snapshot(
         method=method,
         fallback_to_yfinance=fallback_to_yfinance,
     )
+
+
+def run_collect_fomc_calendar(
+    *,
+    years: Iterable[int] | None = None,
+    source_url: str | None = None,
+) -> JobResult:
+    job_name = "collect_fomc_calendar"
+    started_at = _now_str()
+    t0 = perf_counter()
+    try:
+        normalized_years = tuple(int(year) for year in years) if years else None
+        result = collect_and_store_fomc_calendar(
+            years=normalized_years,
+            **({"source_url": source_url} if source_url else {}),
+        )
+        rows_written = int(result.get("rows_written") or 0)
+        events_found = int(result.get("events_found") or 0)
+        finished_at = _now_str()
+        status = "success" if rows_written > 0 else "failed"
+        message = (
+            f"FOMC calendar collected {events_found} events from the official Fed page."
+            if rows_written > 0
+            else "FOMC calendar collection wrote no rows."
+        )
+        return _build_result(
+            job_name=job_name,
+            status=status,
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=rows_written,
+            message=message,
+            details=result,
+        )
+    except Exception as exc:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            message=f"FOMC calendar collection failed: {exc}",
+            details={"years": list(years or []), "source_url": source_url},
+        )
 
 
 def run_weekly_fundamental_refresh(

@@ -12,9 +12,9 @@ UI form, payload 복원, candidate review, history replay, candidate replay, sav
 | `app/web/streamlit_app.py` | top navigation과 page entry |
 | `app/web/reference_guides.py` | `Reference > Guides`의 제품형 workflow guide, portfolio flowchart, decision gates, reference drawer |
 | `app/web/ops_review.py` | `Operations > Ops Review`의 triage flow, 웹앱 run health, action inbox, failure artifact, log, system snapshot dashboard |
-| `app/web/overview_dashboard.py` | `Workspace > Overview`에서 Market Movers, Sector / Industry, Events placeholder, Candidate Ops dashboard render. S&P 500 universe / quote snapshot refresh status bar, 5분 기준 update-needed 상태 표시, sector filter를 제공한다 |
+| `app/web/overview_dashboard.py` | `Workspace > Overview`에서 Market Movers, Sector / Industry, Events, Candidate Ops dashboard render. S&P 500 universe / quote snapshot refresh status bar, 5분 기준 update-needed 상태 표시, sector filter, FOMC calendar refresh / display를 제공한다 |
 | `app/web/overview_dashboard_helpers.py` | Overview dashboard용 current candidate / Pre-Live / proposal / history / saved portfolio 집계, candidate priority scoring, market intelligence service wrapper |
-| `app/services/overview_market_intelligence.py` | Streamlit-free Overview market intelligence service. S&P 500 / Top1000 / Top2000 movers, yearly period, sector / industry leadership, intraday snapshot read path, missing diagnostics를 만든다 |
+| `app/services/overview_market_intelligence.py` | Streamlit-free Overview market intelligence service. S&P 500 / Top1000 / Top2000 movers, yearly period, sector / industry leadership, intraday snapshot read path, missing diagnostics, market event calendar snapshot을 만든다 |
 | `app/web/backtest_common.py` | Backtest 공용 preset, session state, 3단계 stage routing compatibility, universe / real-money / guardrail input, status label helper |
 | `app/web/backtest_workflow_routes.py` | `Backtest Analysis`, `Practical Validation`, `Final Review` visible stage와 legacy panel route mapping |
 | `app/web/backtest_analysis.py` | `Backtest Analysis` stage wrapper. Single Strategy와 Compare & Portfolio Builder를 submode로 렌더링 |

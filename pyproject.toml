@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "beautifulsoup4>=4.14.3",
     "edgartools>=5.15.0",
     "firecrawl-py==2.16.3",
     "google-adk>=1.11.0",

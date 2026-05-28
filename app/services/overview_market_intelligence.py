@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
-from datetime import date
+from datetime import date, timedelta
 from typing import Any
 
 import pandas as pd
@@ -57,6 +57,16 @@ GROUP_COLUMNS = [
     "Top Symbol Return %",
     "Start Date",
     "End Date",
+]
+EVENT_COLUMNS = [
+    "Date",
+    "Type",
+    "Symbol",
+    "Title",
+    "Source",
+    "Confidence",
+    "Collected At",
+    "Source URL",
 ]
 
 
@@ -217,6 +227,29 @@ def _empty_group_snapshot(
             "latest_raw_date": None,
             "effective_end_date": None,
             "stale_days": None,
+        },
+        "warnings": [message] if message else [],
+    }
+
+
+def _empty_events_snapshot(
+    *,
+    status: str,
+    start_date: str,
+    end_date: str,
+    event_type: str | None,
+    message: str,
+) -> dict[str, Any]:
+    return {
+        "status": status,
+        "event_type": event_type or "All",
+        "rows": pd.DataFrame(columns=EVENT_COLUMNS),
+        "date_window": {"start_date": start_date, "end_date": end_date},
+        "coverage": {
+            "event_count": 0,
+            "next_event_date": None,
+            "latest_collected_at": None,
+            "source_count": 0,
         },
         "warnings": [message] if message else [],
     }
@@ -613,6 +646,130 @@ def _universe_metadata(universe: list[dict[str, Any]], *, universe_code: str) ->
 
 def _rows_frame(rows: list[dict[str, Any]], *, columns: list[str]) -> pd.DataFrame:
     return pd.DataFrame(rows, columns=columns)
+
+
+def _normalize_event_type_value(value: str | None) -> str | None:
+    normalized = str(value or "").strip().upper().replace(" ", "_")
+    return normalized or None
+
+
+def _load_market_event_rows(
+    *,
+    start_date: str,
+    end_date: str,
+    event_type: str | None,
+    limit: int,
+    query_fn: QueryFn,
+) -> list[dict[str, Any]]:
+    conditions = ["event_date >= %s", "event_date <= %s"]
+    params: list[Any] = [start_date, end_date]
+    normalized_type = _normalize_event_type_value(event_type)
+    if normalized_type and normalized_type != "ALL":
+        conditions.append("event_type = %s")
+        params.append(normalized_type)
+    params.append(_normalize_limit(limit, default=200, min_value=1, max_value=1000))
+    try:
+        return query_fn(
+            "finance_meta",
+            f"""
+            SELECT
+                event_date,
+                event_type,
+                symbol,
+                title,
+                source,
+                source_url,
+                confidence,
+                collected_at
+            FROM market_event_calendar
+            WHERE {" AND ".join(conditions)}
+            ORDER BY event_date ASC, event_type ASC, COALESCE(symbol, '') ASC, title ASC
+            LIMIT %s
+            """,
+            params,
+        )
+    except Exception:
+        return []
+
+
+def _event_rows_frame(rows: list[dict[str, Any]]) -> pd.DataFrame:
+    out = [
+        {
+            "Date": _iso_date(row.get("event_date")) or "-",
+            "Type": row.get("event_type") or "-",
+            "Symbol": row.get("symbol") or "-",
+            "Title": row.get("title") or "-",
+            "Source": row.get("source") or "-",
+            "Confidence": (
+                round(float(row["confidence"]), 2)
+                if _safe_float(row.get("confidence")) is not None
+                else None
+            ),
+            "Collected At": _display_datetime(row.get("collected_at")) or "-",
+            "Source URL": row.get("source_url") or "-",
+        }
+        for row in rows
+    ]
+    return pd.DataFrame(out, columns=EVENT_COLUMNS)
+
+
+def build_market_events_snapshot(
+    *,
+    start_date: str | None = None,
+    end_date: str | None = None,
+    event_type: str | None = "FOMC_MEETING",
+    horizon_days: int = 365,
+    limit: int = 200,
+    today: date | None = None,
+    query_fn: QueryFn | None = None,
+) -> dict[str, Any]:
+    today_value = today or date.today()
+    normalized_start = _iso_date(start_date) or today_value.isoformat()
+    normalized_end = _iso_date(end_date) or (today_value + timedelta(days=int(horizon_days or 365))).isoformat()
+    normalized_type = _normalize_event_type_value(event_type)
+    query = query_fn or _default_query
+    try:
+        rows = _load_market_event_rows(
+            start_date=normalized_start,
+            end_date=normalized_end,
+            event_type=normalized_type,
+            limit=limit,
+            query_fn=query,
+        )
+        if not rows:
+            return _empty_events_snapshot(
+                status="NO_EVENTS",
+                start_date=normalized_start,
+                end_date=normalized_end,
+                event_type=normalized_type,
+                message="No stored market events match the selected window. Run the FOMC calendar collector first.",
+            )
+        latest_collected_at = max(
+            (_display_datetime(row.get("collected_at")) or "" for row in rows),
+            default="",
+        ) or None
+        next_event_date = _iso_date(rows[0].get("event_date"))
+        return {
+            "status": "OK",
+            "event_type": normalized_type or "All",
+            "rows": _event_rows_frame(rows),
+            "date_window": {"start_date": normalized_start, "end_date": normalized_end},
+            "coverage": {
+                "event_count": len(rows),
+                "next_event_date": next_event_date,
+                "latest_collected_at": latest_collected_at,
+                "source_count": len({str(row.get("source") or "") for row in rows if row.get("source")}),
+            },
+            "warnings": [],
+        }
+    except Exception as exc:
+        return _empty_events_snapshot(
+            status="ERROR",
+            start_date=normalized_start,
+            end_date=normalized_end,
+            event_type=normalized_type,
+            message=f"Market events snapshot failed: {exc}",
+        )
 
 
 def _ranked_movers_frame(rows: list[dict[str, Any]], *, top_n: int) -> pd.DataFrame:

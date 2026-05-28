@@ -21,6 +21,18 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-28 - FOMC calendar는 Fed 공식 HTML을 DB-first로 저장한다
+- User request:
+  - overview-market-intelligence 다음 단계를 진행해 달라고 요청함.
+- Interpreted goal:
+  - Task 4에서 만든 `market_event_calendar`를 실제 공식 FOMC collector와 Overview Events 표시로 연결해야 함.
+- Analysis result:
+  - Fed 공식 FOMC calendar page를 파싱해 `event_type=FOMC_MEETING`, `source=federal_reserve_fomc_calendar`로 저장한다.
+  - meeting range는 정책 결정일 기준으로 마지막 날을 `event_date`로 저장하고, 원본 range / SEP 표시 / 공식 link는 `raw_payload_json`에 남긴다.
+  - Overview와 Ingestion 버튼은 직접 scraping하지 않고 `collect_fomc_calendar` job wrapper를 통해 DB를 갱신한다.
+- Follow-up:
+  - 다음 calendar slice는 earnings free-source prototype이며, FOMC와 같은 `market_event_calendar` contract를 재사용한다.
+
 ### 2026-05-27 - Diagnostics split의 public compatibility contract를 명시한다
 - User request:
   - Task 7-04 작업 진행을 요청함.

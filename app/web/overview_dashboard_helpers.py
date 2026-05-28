@@ -14,6 +14,7 @@ from app.runtime import (
     load_saved_portfolios,
 )
 from app.services.overview_market_intelligence import (
+    build_market_events_snapshot,
     build_group_leadership_snapshot,
     build_market_movers_snapshot,
     load_market_mover_sector_options,
@@ -400,4 +401,18 @@ def load_overview_group_leadership_snapshot(
         group_by=group_by,
         top_n=top_n,
         min_group_size=min_group_size,
+    )
+
+
+# Load the DB-backed market event calendar snapshot for the Overview Events tab.
+def load_overview_market_events_snapshot(
+    *,
+    event_type: str | None = "FOMC_MEETING",
+    horizon_days: int = 365,
+    limit: int = 200,
+) -> dict[str, Any]:
+    return build_market_events_snapshot(
+        event_type=event_type,
+        horizon_days=horizon_days,
+        limit=limit,
     )

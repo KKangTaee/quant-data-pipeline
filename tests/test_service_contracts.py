@@ -359,6 +359,29 @@ class BacktestRuntimeContractTests(unittest.TestCase):
 class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
     def _query_fn(self, db_name: str, sql: str, params=None) -> list[dict[str, object]]:
         del db_name
+        if "FROM market_event_calendar" in sql:
+            return [
+                {
+                    "event_date": "2026-06-17",
+                    "event_type": "FOMC_MEETING",
+                    "symbol": None,
+                    "title": "FOMC Meeting: June 16-17*, 2026",
+                    "source": "federal_reserve_fomc_calendar",
+                    "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+                    "confidence": 1.0,
+                    "collected_at": "2026-05-28 02:00:00",
+                },
+                {
+                    "event_date": "2026-07-29",
+                    "event_type": "FOMC_MEETING",
+                    "symbol": None,
+                    "title": "FOMC Meeting: July 28-29, 2026",
+                    "source": "federal_reserve_fomc_calendar",
+                    "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+                    "confidence": 1.0,
+                    "collected_at": "2026-05-28 02:00:00",
+                },
+            ]
         if "FROM market_universe_member" in sql:
             return [
                 {
@@ -605,6 +628,22 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(first_row["Market Cap Weighted Return %"], 25.0)
         self.assertEqual(first_row["Top Symbol"], "BBB")
 
+    def test_market_events_snapshot_reads_fomc_rows_from_db(self) -> None:
+        from app.services.overview_market_intelligence import build_market_events_snapshot
+
+        snapshot = build_market_events_snapshot(
+            today=date(2026, 5, 28),
+            horizon_days=180,
+            query_fn=self._query_fn,
+        )
+
+        self.assertEqual(snapshot["status"], "OK")
+        self.assertEqual(snapshot["coverage"]["event_count"], 2)
+        self.assertEqual(snapshot["coverage"]["next_event_date"], "2026-06-17")
+        self.assertEqual(snapshot["coverage"]["latest_collected_at"], "2026-05-28 02:00")
+        self.assertEqual(snapshot["rows"].iloc[0]["Type"], "FOMC_MEETING")
+        self.assertEqual(snapshot["rows"].iloc[0]["Date"], "2026-06-17")
+
 
 class MarketIntelligenceIngestionContractTests(unittest.TestCase):
     def test_sp500_snapshot_uses_fast_quote_rows_without_yfinance_download(self) -> None:
@@ -737,6 +776,78 @@ class MarketIntelligenceEventCalendarContractTests(unittest.TestCase):
         ]:
             self.assertIn(column, schema_sql)
         self.assertIn("UNIQUE KEY uk_market_event_key", schema_sql)
+
+    def test_fomc_calendar_parser_uses_final_meeting_day_and_official_links(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        html = """
+        <div class="panel panel-default">
+          <div class="panel-heading"><h4><a id="42828">2026 FOMC Meetings</a></h4></div>
+          <div class="row fomc-meeting">
+            <div class="fomc-meeting__month"><strong>June</strong></div>
+            <div class="fomc-meeting__date">16-17*</div>
+            <a href="/newsevents/pressreleases/monetary20260617a.htm">HTML</a>
+          </div>
+          <div class="row fomc-meeting">
+            <div class="fomc-meeting__month"><strong>Apr/May</strong></div>
+            <div class="fomc-meeting__date">30-1</div>
+          </div>
+        </div>
+        """
+
+        rows = mi._parse_fomc_calendar_events_from_html(  # noqa: SLF001
+            html,
+            source_url="https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+            years=[2026],
+        )
+
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(rows[0]["event_date"], "2026-06-17")
+        self.assertEqual(rows[0]["event_type"], "FOMC_MEETING")
+        self.assertTrue(rows[0]["raw_payload"]["has_summary_of_economic_projections"])
+        self.assertEqual(
+            rows[0]["raw_payload"]["links"][0]["url"],
+            "https://www.federalreserve.gov/newsevents/pressreleases/monetary20260617a.htm",
+        )
+        self.assertEqual(rows[1]["event_date"], "2026-05-01")
+
+    def test_collect_fomc_calendar_writes_event_rows(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        captured_rows: list[dict[str, object]] = []
+
+        def capture_rows(rows, **kwargs):
+            del kwargs
+            captured_rows.extend(rows)
+            return len(rows)
+
+        with (
+            patch.object(
+                mi,
+                "fetch_fomc_calendar_events",
+                return_value=[
+                    {
+                        "event_date": "2026-06-17",
+                        "event_type": "FOMC_MEETING",
+                        "symbol": None,
+                        "title": "FOMC Meeting: June 16-17*, 2026",
+                        "source": mi.FOMC_CALENDAR_SOURCE,
+                        "source_url": mi.FOMC_CALENDAR_SOURCE_URL,
+                        "confidence": 1.0,
+                        "raw_payload": {"meeting_range": "June 16-17*"},
+                    }
+                ],
+            ),
+            patch.object(mi, "upsert_market_event_rows", side_effect=capture_rows),
+        ):
+            result = mi.collect_and_store_fomc_calendar(years=[2026])
+
+        self.assertEqual(result["source"], mi.FOMC_CALENDAR_SOURCE)
+        self.assertEqual(result["event_type"], "FOMC_MEETING")
+        self.assertEqual(result["events_found"], 1)
+        self.assertEqual(result["rows_written"], 1)
+        self.assertEqual(result["event_dates"], ["2026-06-17"])
+        self.assertEqual(captured_rows[0]["collected_at"], result["collected_at"])
 
     def test_market_event_upsert_normalizes_payload_and_business_key(self) -> None:
         from finance.data import market_intelligence as mi

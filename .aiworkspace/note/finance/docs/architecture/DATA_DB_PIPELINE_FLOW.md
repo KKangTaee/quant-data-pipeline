@@ -30,6 +30,7 @@ external source
 | ETF issuer official pages | ETF operability actual / partial source. 초기 구현은 iShares, SSGA / SPDR, Invesco 일부 ticker |
 | ETF issuer holdings downloads / APIs | ETF holdings / exposure source. 초기 구현은 iShares CSV, SSGA XLSX, Invesco holdings / sector API |
 | FRED official API / CSV download | Practical Validation market-context source. 초기 구현은 `VIXCLS`, `T10Y3M`, `BAA10Y` |
+| Federal Reserve official FOMC calendar HTML | Overview Events FOMC meeting calendar source. `.gov` page를 파싱해 `market_event_calendar`에 저장 |
 
 ## Persistence 계층
 
@@ -39,14 +40,15 @@ external source
 | `finance/data/db/mysql.py` | MySQL connection / execution helper |
 | `finance/data/nyse_db.py` | NYSE CSV를 DB universe table로 적재 |
 | `finance/data/asset_profile.py` | asset profile 수집과 저장 |
+| `finance/data/market_intelligence.py` | Overview market intelligence 수집 / 저장 경계. S&P 500 current constituents, S&P 500 / Top1000 / Top2000 intraday previous-close snapshot, FOMC calendar collector, market event UPSERT/read helper를 제공한다 |
 | `finance/data/etf_provider.py` | ETF provider source map discovery와 provider snapshot 수집 / 저장 경계. `nyse_etf` / asset profile 기반으로 공식 endpoint map을 `etf_provider_source_map`에 저장하고, 기존 DB 기반 bridge/proxy row와 issuer official row를 `etf_operability_snapshot`, `etf_holdings_snapshot`, `etf_exposure_snapshot`에 저장한다 |
 | `finance/data/macro.py` | FRED market-context series 수집 / 저장 경계. API key가 있으면 FRED API, 없으면 official CSV download를 사용해 `macro_series_observation`에 저장한다 |
 | `finance/data/data.py` | price 수집 / DB read helper |
 | `finance/data/fundamentals.py` | fundamentals와 statement fundamentals shadow 적재 |
 | `finance/data/factors.py` | factor 생성과 statement factor shadow 적재 |
 | `finance/data/financial_statements.py` | EDGAR detailed statement filing/value/label 적재 |
-| `app/jobs/ingestion_jobs.py` | Streamlit Ingestion에서 실행되는 수집 job wrapper. provider collector 결과를 표준 `JobResult`로 변환한다 |
-| `app/web/streamlit_app.py` | `Workspace > Ingestion`의 provider snapshot 실행 화면. P2-5A 기준 ETF operability, ETF holdings / exposure, macro context 수집 버튼을 제공한다 |
+| `app/jobs/ingestion_jobs.py` | Streamlit Ingestion 또는 Overview refresh에서 실행되는 수집 job wrapper. provider / market intelligence collector 결과를 표준 `JobResult`로 변환한다 |
+| `app/web/streamlit_app.py` | `Workspace > Ingestion`의 provider / market intelligence snapshot 실행 화면. FOMC calendar, ETF operability, ETF holdings / exposure, macro context 수집 버튼을 제공한다 |
 
 ## Loader 계층
 

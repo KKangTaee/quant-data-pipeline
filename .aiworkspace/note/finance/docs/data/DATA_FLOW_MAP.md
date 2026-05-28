@@ -83,17 +83,26 @@ yfinance 5m OHLCV fallback
 ## Overview market event calendar 흐름
 
 ```text
-FOMC / earnings / market event source
+Federal Reserve official FOMC calendar HTML
+  -> finance.data.market_intelligence.collect_and_store_fomc_calendar()
+  -> finance_meta.market_event_calendar
+  -> app.services.overview_market_intelligence.build_market_events_snapshot()
+  -> Workspace > Overview > Events
+
+future earnings / market event source
+  -> normalized event rows
   -> finance.data.market_intelligence.upsert_market_event_rows()
   -> finance_meta.market_event_calendar
-  -> future Overview Events service / UI read path
+  -> Workspace > Overview > Events
 ```
 
 의미:
 
 - `market_event_calendar`는 event collector별 normalized output을 저장하는 공통 table이다.
 - 반복 수집은 `event_key` 기준 UPSERT로 같은 event row를 갱신한다.
-- Task 4는 schema와 persistence helper까지만 제공하고, 실제 FOMC / earnings collector와 Events UI 연결은 후속 task에서 붙인다.
+- FOMC collector는 Fed 공식 `.gov` calendar page를 파싱한다. meeting range의 마지막 날을 `event_date`로 저장하고, 원본 month/date text와 link evidence는 `raw_payload_json`에 남긴다.
+- Overview Events 탭과 refresh 버튼은 UI에서 직접 외부 페이지를 파싱하지 않고, ingestion job wrapper를 통해 DB에 저장한 뒤 service read model로 읽는다.
+- Earnings collector는 후속 task이며, 같은 table contract를 재사용한다.
 
 ## ETF operability provider snapshot 흐름
 

@@ -10,6 +10,7 @@ import pandas as pd
 import streamlit as st
 
 from app.jobs.ingestion_jobs import (
+    run_collect_fomc_calendar,
     run_collect_market_intraday_snapshot,
     run_collect_sp500_universe,
 )
@@ -17,6 +18,7 @@ from app.web.backtest_ui_components import render_badge_strip, render_status_car
 from app.web.overview_dashboard_helpers import (
     load_overview_dashboard_snapshot,
     load_overview_group_leadership_snapshot,
+    load_overview_market_events_snapshot,
     load_overview_market_mover_sectors,
     load_overview_market_movers_snapshot,
 )
@@ -198,12 +200,20 @@ def _render_market_job_result(result_key: str) -> None:
         source = details.get("source") or "-"
         method = details.get("method") or details.get("method_requested") or "-"
         duration = result.get("duration_sec")
-        st.caption(
-            "Rows: "
-            f"{result.get('rows_written') or 0}, "
-            f"Processed: {result.get('symbols_processed') or 0} / {result.get('symbols_requested') or 0}, "
-            f"Source: {source}, Method: {method}, Duration: {_snapshot_value(duration)}s"
-        )
+        if result.get("symbols_requested") is None and result.get("symbols_processed") is None:
+            st.caption(
+                "Rows: "
+                f"{result.get('rows_written') or 0}, "
+                f"Events: {details.get('events_found') or '-'}, "
+                f"Source: {source}, Method: {method}, Duration: {_snapshot_value(duration)}s"
+            )
+        else:
+            st.caption(
+                "Rows: "
+                f"{result.get('rows_written') or 0}, "
+                f"Processed: {result.get('symbols_processed') or 0} / {result.get('symbols_requested') or 0}, "
+                f"Source: {source}, Method: {method}, Duration: {_snapshot_value(duration)}s"
+            )
 
 
 def _is_daily_intraday_refresh_due(snapshot: dict[str, Any], *, period: str) -> bool:
@@ -574,32 +584,48 @@ def _render_sector_industry_tab() -> None:
 
 def _render_events_tab() -> None:
     st.markdown("### Events")
+    snapshot = load_overview_market_events_snapshot(event_type="FOMC_MEETING", horizon_days=540)
+    coverage = dict(snapshot.get("coverage") or {})
     render_status_card_grid(
         [
             {
                 "title": "FOMC Calendar",
-                "value": "Next Slice",
-                "detail": "official Fed source, free web parse",
-                "tone": "positive",
+                "value": _snapshot_value(coverage.get("next_event_date")),
+                "detail": "next stored policy-decision date",
+                "tone": "positive" if coverage.get("next_event_date") else "warning",
             },
             {
-                "title": "Earnings Calendar",
-                "value": "Prototype Later",
-                "detail": "free library / parser source label required",
-                "tone": "warning",
+                "title": "Stored Events",
+                "value": coverage.get("event_count") or 0,
+                "detail": f"window: {snapshot.get('date_window', {}).get('start_date')} -> {snapshot.get('date_window', {}).get('end_date')}",
+                "tone": "positive" if coverage.get("event_count") else "warning",
             },
             {
-                "title": "Data Flow",
-                "value": "Ingestion First",
-                "detail": "store before Overview display",
+                "title": "Latest Collection",
+                "value": _snapshot_value(coverage.get("latest_collected_at")),
+                "detail": "source: official Fed HTML",
                 "tone": "neutral",
             },
         ]
     )
+    _render_snapshot_warnings(snapshot)
     cols = st.columns([1, 1, 2], gap="small")
-    cols[0].button("Refresh FOMC Calendar", key="overview_events_refresh_fomc_disabled", disabled=True)
+    if cols[0].button("Refresh FOMC Calendar", key="overview_events_refresh_fomc", use_container_width=True):
+        current_year = datetime.now().year
+        with st.spinner("Collecting FOMC calendar from the official Fed page..."):
+            st.session_state["overview_fomc_calendar_result"] = run_collect_fomc_calendar(
+                years=(current_year, current_year + 1)
+            )
+        st.rerun()
     cols[1].button("Refresh Earnings Calendar", key="overview_events_refresh_earnings_disabled", disabled=True)
-    cols[2].caption("Calendar collectors are intentionally separated from the first DB-backed market scan slice.")
+    cols[2].caption("Overview reads stored event rows from `finance_meta.market_event_calendar`; refresh writes through the ingestion job wrapper.")
+    _render_market_job_result("overview_fomc_calendar_result")
+
+    rows = snapshot.get("rows")
+    if not isinstance(rows, pd.DataFrame) or rows.empty:
+        st.info("FOMC calendar rows are not available yet. Run `Refresh FOMC Calendar` here or `Collect FOMC Calendar` in Ingestion.")
+        return
+    st.dataframe(rows, width="stretch", hide_index=True)
 
 
 def _render_candidate_ops_tab(

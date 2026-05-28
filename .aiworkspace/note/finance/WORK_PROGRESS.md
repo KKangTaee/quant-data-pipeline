@@ -21,6 +21,12 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-28
+- Completed Task 5 under `.aiworkspace/note/finance/tasks/active/overview-fomc-collector/`.
+- Added Fed official FOMC calendar collection into `finance.data.market_intelligence`, wrapped it as `collect_fomc_calendar`, and wired Ingestion / Overview Events to `market_event_calendar`.
+- Local smoke wrote 16 FOMC rows for 2026/2027; service contract tests passed.
+- Next overview-market-intelligence item is the earnings free-source prototype.
+
 ### 2026-05-27
 - Completed Task 7-04 under `.aiworkspace/note/finance/tasks/active/practical-validation-diagnostics-split/`.
 - Moved `source_components_dataframe` into `app/services/backtest_practical_validation_source.py` and pinned diagnostics compatibility exports with `__all__`.

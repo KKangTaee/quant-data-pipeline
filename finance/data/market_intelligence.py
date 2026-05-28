@@ -2,14 +2,17 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from collections.abc import Callable, Iterable, Sequence
 from datetime import UTC, datetime
 from io import StringIO
 from typing import Any
+from urllib.parse import urljoin
 from urllib.request import Request, urlopen
 
 import pandas as pd
 import yfinance as yf
+from bs4 import BeautifulSoup
 from yfinance.data import YfData
 
 from .db.mysql import MySQLClient
@@ -20,6 +23,8 @@ DB_META = "finance_meta"
 DB_PRICE = "finance_price"
 SP500_SOURCE_URL = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
 SP500_SOURCE = "wikipedia_sp500_constituents"
+FOMC_CALENDAR_SOURCE_URL = "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+FOMC_CALENDAR_SOURCE = "federal_reserve_fomc_calendar"
 DEFAULT_INTRADAY_INTERVAL = "5m"
 YAHOO_QUOTE_URL = "https://query1.finance.yahoo.com/v7/finance/quote"
 VALID_INTRADAY_INTERVALS = {"1m", "2m", "5m", "15m", "30m", "60m", "90m", "1h"}
@@ -28,6 +33,32 @@ MARKET_UNIVERSE_LABELS = {
     "SP500": "S&P 500",
     "TOP1000": "Top 1000",
     "TOP2000": "Top 2000",
+}
+MONTH_NAME_TO_NUMBER = {
+    "JAN": 1,
+    "JANUARY": 1,
+    "FEB": 2,
+    "FEBRUARY": 2,
+    "MAR": 3,
+    "MARCH": 3,
+    "APR": 4,
+    "APRIL": 4,
+    "MAY": 5,
+    "JUN": 6,
+    "JUNE": 6,
+    "JUL": 7,
+    "JULY": 7,
+    "AUG": 8,
+    "AUGUST": 8,
+    "SEP": 9,
+    "SEPT": 9,
+    "SEPTEMBER": 9,
+    "OCT": 10,
+    "OCTOBER": 10,
+    "NOV": 11,
+    "NOVEMBER": 11,
+    "DEC": 12,
+    "DECEMBER": 12,
 }
 
 
@@ -359,6 +390,152 @@ def load_market_event_calendar(
         )
     finally:
         db.close()
+
+
+def _fetch_html(source_url: str) -> str:
+    request = Request(
+        source_url,
+        headers={
+            "User-Agent": (
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36"
+            )
+        },
+    )
+    with urlopen(request, timeout=30) as response:
+        return response.read().decode("utf-8", errors="replace")
+
+
+def _clean_text(value: Any) -> str:
+    return re.sub(r"\s+", " ", str(value or "")).strip()
+
+
+def _fomc_month_numbers(month_text: str) -> list[int]:
+    out: list[int] = []
+    for token in re.split(r"[/,&\s]+", month_text):
+        normalized = re.sub(r"[^A-Za-z]", "", token).upper()
+        month_number = MONTH_NAME_TO_NUMBER.get(normalized)
+        if month_number:
+            out.append(month_number)
+    return out
+
+
+def _fomc_event_date(year: int, month_text: str, date_text: str) -> str | None:
+    month_numbers = _fomc_month_numbers(month_text)
+    day_numbers = [int(item) for item in re.findall(r"\d{1,2}", date_text)]
+    if not month_numbers or not day_numbers:
+        return None
+
+    start_month = month_numbers[0]
+    end_month = month_numbers[-1]
+    start_day = day_numbers[0]
+    end_day = day_numbers[-1]
+    end_year = int(year)
+    if len(month_numbers) == 1 and len(day_numbers) >= 2 and end_day < start_day:
+        end_month = 1 if start_month == 12 else start_month + 1
+    if end_month < start_month:
+        end_year += 1
+    try:
+        return datetime(end_year, end_month, end_day).date().isoformat()
+    except ValueError:
+        return None
+
+
+def _parse_fomc_calendar_events_from_html(
+    html: str,
+    *,
+    source_url: str = FOMC_CALENDAR_SOURCE_URL,
+    years: Sequence[int] | None = None,
+) -> list[dict[str, Any]]:
+    year_filter = {int(year) for year in years or []}
+    soup = BeautifulSoup(html, "html.parser")
+    events: list[dict[str, Any]] = []
+
+    for panel in soup.select("div.panel.panel-default"):
+        heading = panel.find("h4")
+        heading_text = _clean_text(heading.get_text(" ")) if heading else ""
+        match = re.search(r"\b(20\d{2})\s+FOMC\s+Meetings\b", heading_text)
+        if not match:
+            continue
+        year = int(match.group(1))
+        if year_filter and year not in year_filter:
+            continue
+
+        for meeting in panel.select("div.fomc-meeting"):
+            month_node = meeting.select_one(".fomc-meeting__month")
+            date_node = meeting.select_one(".fomc-meeting__date")
+            month_text = _clean_text(month_node.get_text(" ")) if month_node else ""
+            date_text = _clean_text(date_node.get_text(" ")) if date_node else ""
+            event_date = _fomc_event_date(year, month_text, date_text)
+            if not event_date:
+                continue
+            links = [
+                {"label": _clean_text(link.get_text(" ")), "url": urljoin(source_url, str(link.get("href") or ""))}
+                for link in meeting.find_all("a")
+                if link.get("href")
+            ]
+            range_text = f"{month_text} {date_text}".strip()
+            events.append(
+                {
+                    "event_date": event_date,
+                    "event_type": "FOMC_MEETING",
+                    "symbol": None,
+                    "title": f"FOMC Meeting: {range_text}, {year}",
+                    "source": FOMC_CALENDAR_SOURCE,
+                    "source_url": source_url,
+                    "confidence": 1.0,
+                    "raw_payload": {
+                        "year": year,
+                        "month_text": month_text,
+                        "date_text": date_text,
+                        "meeting_range": range_text,
+                        "event_date_basis": "final_meeting_day",
+                        "has_summary_of_economic_projections": "*" in date_text,
+                        "links": links,
+                    },
+                }
+            )
+    return events
+
+
+def fetch_fomc_calendar_events(
+    *,
+    source_url: str = FOMC_CALENDAR_SOURCE_URL,
+    years: Sequence[int] | None = None,
+) -> list[dict[str, Any]]:
+    html = _fetch_html(source_url)
+    events = _parse_fomc_calendar_events_from_html(html, source_url=source_url, years=years)
+    if not events:
+        year_text = f" for years {list(years)}" if years else ""
+        raise RuntimeError(f"No FOMC calendar events were parsed{year_text}.")
+    return events
+
+
+def collect_and_store_fomc_calendar(
+    *,
+    source_url: str = FOMC_CALENDAR_SOURCE_URL,
+    years: Sequence[int] | None = None,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> dict[str, Any]:
+    collected_at = _timestamp_str()
+    events = fetch_fomc_calendar_events(source_url=source_url, years=years)
+    rows = [{**row, "collected_at": collected_at} for row in events]
+    rows_written = upsert_market_event_rows(rows, host=host, user=user, password=password, port=port)
+    event_dates = sorted({str(row["event_date"]) for row in rows if row.get("event_date")})
+    return {
+        "source": FOMC_CALENDAR_SOURCE,
+        "source_url": source_url,
+        "event_type": "FOMC_MEETING",
+        "method": "official_html",
+        "years_requested": [int(year) for year in years] if years else None,
+        "events_found": len(rows),
+        "rows_written": rows_written,
+        "event_dates": event_dates,
+        "collected_at": collected_at,
+    }
 
 
 def upsert_market_universe_members(
