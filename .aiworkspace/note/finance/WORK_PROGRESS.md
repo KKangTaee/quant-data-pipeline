@@ -22,6 +22,9 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-28
+- Completed `.aiworkspace/note/finance/tasks/active/structured-waiver-policy-v1/`.
+- Added `.aiworkspace/note/finance/docs/flows/STRUCTURED_WAIVER_POLICY.md`.
+- Policy: current implementation remains `waiver_supported=False`; future waiver cannot apply to `BLOCK` and can only consider structured, expiring `REVIEW_REQUIRED` gaps.
 - Closed out `.aiworkspace/note/finance/phases/active/investability-decision-foundation/` as implementation complete.
 - Added `.aiworkspace/note/finance/phases/done/investability-decision-foundation.md` as the concise closeout summary.
 - Carry-forward decisions are structured waiver policy, provider snapshot PIT/as-of requirement, and Practical Validation V2 P2 closeout.

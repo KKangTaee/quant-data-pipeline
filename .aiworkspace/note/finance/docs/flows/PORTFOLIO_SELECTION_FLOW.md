@@ -57,6 +57,7 @@ PORTFOLIO_SELECTION_SOURCES
 - Final Review의 profile-aware gate policy가 data trust, benchmark, provider / look-through, stress / robustness, leveraged / inverse, paper observation group을 판정한다.
 - Decision Dossier는 Final Review row와 Selected Dashboard timeline을 사람이 읽는 markdown으로 묶는 read-only export다. 자동 report 저장이나 새 판단 row를 만들지 않는다.
 - critical `NOT_RUN`, hard blocker, evidence blocker, selected-route policy blocker가 남아 있으면 실전 검토 통과 후보 선정은 차단하고, 보류 / 거절 / 재검토 판단으로 기록할 수 있다.
+- Structured waiver는 현재 구현하지 않는다. 향후 구현해도 `BLOCK` severity는 waiver 불가이고, 일부 `REVIEW_REQUIRED` gap만 expiry / review trigger / scope를 가진 구조화 waiver로 검토할 수 있다.
 - Provider / look-through evidence는 source mix, freshness, as-of range를 함께 본다. stale provider snapshot은 pass가 아니라 review evidence다.
 - Look-through Exposure Board는 holdings / exposure snapshot을 asset bucket, top holding, overlap, ETF별 coverage로 요약한다. Full holdings row는 DB 영역에 남고 workflow JSONL에는 compact summary만 남긴다.
 - Robustness Lab은 stress / rolling / sensitivity / overfit evidence를 compact summary로 묶어 Practical Validation과 Final Review가 같은 근거를 읽게 한다. Strategy-specific perturbation follow-up이나 `NOT_RUN` row는 pass가 아니다.
@@ -66,6 +67,7 @@ PORTFOLIO_SELECTION_SOURCES
 
 - Portfolio Selection V2의 main durable chain은 `PORTFOLIO_SELECTION_SOURCES.jsonl -> PRACTICAL_VALIDATION_RESULTS.jsonl -> FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl`이다.
 - `SELECTED_PORTFOLIO_MONITORING_LOG.jsonl`는 사용자가 명시적으로 남기는 optional monitoring snapshot이며 자동 저장 대상이 아니다.
+- Waiver persistence는 현재 없다. future implementation이 필요하면 새 JSONL registry가 아니라 compact final decision snapshot을 먼저 검토한다.
 - legacy candidate / proposal / paper registry는 보존하지만, 현재 main flow의 필수 단계로 확장하지 않는다.
 - raw provider / holdings / macro evidence는 DB에 두고, workflow JSONL에는 compact evidence와 blocker summary만 저장한다.
 - 자세한 저장 기준은 `docs/data/STORAGE_GOVERNANCE.md`를 따른다.

@@ -21,6 +21,19 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-28 - Structured waiver is not a pass
+- User request:
+  - 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - critical gap을 예외 처리할 수 있는지 여부를 구현 전에 정책으로 정해야 함.
+- Analysis result:
+  - `structured-waiver-policy-v1` task를 열고 documentation-only 정책을 확정했다.
+  - 현재 구현은 `waiver_supported=False`를 유지한다.
+  - `BLOCK` severity는 waiver 불가이고, future waiver는 일부 `REVIEW_REQUIRED` gap에만 expiry / review trigger / scope를 가진 구조화 snapshot으로 검토할 수 있다.
+  - 새 waiver JSONL registry나 free-form memo 저장은 허용하지 않는다.
+- Follow-up:
+  - 다음 후보는 Practical Validation V2 P2 closeout 또는 별도 waiver UI / persistence 구현 여부 판단이다.
+
 ### 2026-05-28 - Investability foundation implementation track is complete
 - User request:
   - 다음 단계 진행을 요청함.

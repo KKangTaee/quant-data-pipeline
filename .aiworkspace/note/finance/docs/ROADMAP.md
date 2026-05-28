@@ -7,6 +7,7 @@ Last Verified: 2026-05-28
 
 | Track | Status | Notes |
 |---|---|---|
+| Structured Waiver Policy V1 | Complete | `.aiworkspace/note/finance/tasks/active/structured-waiver-policy-v1/`, `.aiworkspace/note/finance/docs/flows/STRUCTURED_WAIVER_POLICY.md`; `BLOCK`은 waiver 불가, future waiver는 일부 `REVIEW_REQUIRED` gap에만 구조화 조건으로 제한 |
 | Investability Decision Foundation | Implementation complete | `.aiworkspace/note/finance/phases/active/investability-decision-foundation/`, closeout summary `.aiworkspace/note/finance/phases/done/investability-decision-foundation.md`; validation gate, storage governance, provenance, look-through, robustness, selected monitoring, decision dossier 완료 |
 | Investability Foundation Closeout | Complete | `.aiworkspace/note/finance/tasks/active/investability-decision-foundation-closeout/`; 계획된 구현 track 완료 처리, carry-forward decision을 structured waiver / Practical Validation V2 P2 closeout로 분리 |
 | Decision Dossier Report V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/decision-dossier-report-v1/`; Final Review와 Selected Dashboard에서 저장된 최종 판단을 read-only markdown dossier로 표시 / 다운로드 |
@@ -85,4 +86,4 @@ P2에서 정상화하는 주요 진단:
 
 - UI Engine Boundary Cleanup은 완료됐다. 다음 구조 작업은 새 phase/task로 열고, 현재 경계는 boundary lint와 service contract test를 먼저 통과시키는 기준으로 유지한다.
 - Practical Validation V2는 P2 QA 여부를 확인한 뒤 P3로 넘어갈지, P2를 closeout할지 결정한다.
-- Investability Decision Foundation은 implementation track을 closeout했다. 다음 후보는 structured waiver policy 허용 여부 결정 또는 Practical Validation V2 P2 closeout이다.
+- Structured Waiver Policy V1은 구현 없이 정책만 확정했다. 다음 후보는 Practical Validation V2 P2 closeout 또는 waiver UI / persistence 구현 여부를 별도 task로 판단하는 것이다.

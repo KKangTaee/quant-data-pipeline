@@ -39,6 +39,6 @@ The closeout task is documentation-only.
 
 ## Carry Forward
 
-- Decide whether `structured-waiver-policy-v1` should exist.
+- `structured-waiver-policy-v1` exists as documentation-only policy. `BLOCK` remains non-waiverable; future waiver implementation can only consider selected `REVIEW_REQUIRED` gaps.
 - Decide whether final selected decisions need as-of provider snapshot ids.
 - Decide whether Practical Validation V2 P2 is ready to close out before P3.

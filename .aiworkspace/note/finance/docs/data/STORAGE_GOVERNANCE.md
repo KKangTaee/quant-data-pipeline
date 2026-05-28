@@ -19,6 +19,7 @@ Last Verified: 2026-05-28
 - UI는 provider / FRED / crawler를 직접 fetch하지 않는다. `Ingestion -> DB -> Loader -> UI` 흐름을 유지한다.
 - `NOT_RUN`은 pass가 아니며, 저장 record에서도 실행 불가 / 데이터 부재로 남긴다.
 - Final Review와 Selected Portfolio Dashboard의 record는 live approval, broker order, auto rebalance가 아니다.
+- Structured waiver는 현재 구현하지 않는다. 향후 필요해도 `BLOCK`은 waiver 불가이며, 일부 `REVIEW_REQUIRED` gap만 compact final decision evidence로 검토한다.
 
 ## Current Storage Model
 
@@ -62,6 +63,12 @@ Before adding any new persistence path, answer these questions in the task plan:
 | Is it automatically written? | Avoid automatic writes unless a separate automation policy exists. |
 | How will stale / partial / `NOT_RUN` evidence be represented? | Do not silently convert gaps into pass. |
 | What is the commit policy? | Runtime row output should usually remain unstaged. |
+
+Waiver-specific persistence rule:
+
+- Do not create a new waiver registry by default.
+- Prefer a compact `structured_waiver_snapshot` inside the Final Review decision row only if a later implementation task explicitly approves waiver.
+- Waiver text must be structured and bounded; it must not become a free-form memo store.
 
 ## Free API And Crawling Boundary
 
