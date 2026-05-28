@@ -31,7 +31,7 @@ external source
 | ETF issuer holdings downloads / APIs | ETF holdings / exposure source. 초기 구현은 iShares CSV, SSGA XLSX, Invesco holdings / sector API |
 | FRED official API / CSV download | Practical Validation market-context source. 초기 구현은 `VIXCLS`, `T10Y3M`, `BAA10Y` |
 | Federal Reserve official FOMC calendar HTML | Overview Events FOMC meeting calendar source. `.gov` page를 파싱해 `market_event_calendar`에 저장 |
-| BLS official release schedule HTML | Overview Events macro calendar source. CPI / PPI / Employment Situation release dates를 `MACRO_CPI`, `MACRO_PPI`, `MACRO_EMPLOYMENT` row로 저장. 네트워크 정책상 자동 요청이 차단될 수 있다 |
+| BLS official release schedule HTML / `.ics` file | Overview Events macro calendar source. CPI / PPI / Employment Situation release dates를 `MACRO_CPI`, `MACRO_PPI`, `MACRO_EMPLOYMENT` row로 저장. 네트워크 정책상 자동 요청이 차단되면 사용자가 내려받은 공식 `.ics` 파일을 Ingestion에서 import할 수 있다 |
 | BEA official release schedule HTML | Overview Events macro calendar source. national GDP release dates를 `MACRO_GDP` row로 저장 |
 | Yahoo / yfinance ticker calendar | Overview Events earnings primary free provider estimate source. bounded symbol set만 조회해 `market_event_calendar`에 `EARNINGS` row로 저장 |
 | Nasdaq earnings calendar web endpoint | Overview Events earnings alternate free provider cross-check source. yfinance estimate의 같은 symbol/date 확인에만 사용하며 official source로 보지 않는다 |
@@ -52,7 +52,7 @@ external source
 | `finance/data/factors.py` | factor 생성과 statement factor shadow 적재 |
 | `finance/data/financial_statements.py` | EDGAR detailed statement filing/value/label 적재 |
 | `app/jobs/ingestion_jobs.py` | Streamlit Ingestion 또는 Overview refresh에서 실행되는 수집 job wrapper. provider / market intelligence collector 결과를 표준 `JobResult`로 변환한다 |
-| `app/web/streamlit_app.py` | `Workspace > Ingestion`의 provider / market intelligence snapshot 실행 화면. FOMC calendar, earnings estimate, ETF operability, ETF holdings / exposure, macro context 수집 버튼을 제공한다 |
+| `app/web/streamlit_app.py` | `Workspace > Ingestion`의 provider / market intelligence snapshot 실행 화면. FOMC calendar, macro calendar, BLS `.ics` import, earnings estimate, ETF operability, ETF holdings / exposure, macro context 수집 버튼을 제공한다 |
 
 ## Loader 계층
 

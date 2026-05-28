@@ -18,6 +18,7 @@ from app.jobs.ingestion_jobs import (
     run_collect_earnings_calendar,
     run_collect_fomc_calendar,
     run_collect_macro_calendar,
+    run_import_bls_macro_calendar_ics,
     run_collect_etf_holdings_exposure,
     run_collect_etf_operability_provider,
     run_discover_etf_provider_source_map,
@@ -380,6 +381,8 @@ def _dispatch_job(job: dict[str, Any], *, progress_callback: Any = None) -> JobR
         return run_collect_earnings_calendar(**params)
     if action == "collect_macro_calendar":
         return run_collect_macro_calendar(**params)
+    if action == "import_bls_macro_calendar_ics":
+        return run_import_bls_macro_calendar_ics(**params)
     if action == "collect_ohlcv":
         params["progress_callback"] = progress_callback
         return run_collect_ohlcv(**params)
@@ -2040,6 +2043,48 @@ def _render_ingestion_console() -> None:
                                 ),
                             }
                         )
+                    st.divider()
+                    bls_ics_file = st.file_uploader(
+                        "BLS Calendar .ics File",
+                        type=["ics"],
+                        key="overview_macro_bls_ics_file",
+                        help="BLS 공식 release schedule 캘린더 파일을 브라우저에서 내려받은 뒤 업로드합니다.",
+                    )
+                    if st.button(
+                        "Import BLS .ics Calendar",
+                        use_container_width=True,
+                        disabled=_has_running_job() or bls_ics_file is None,
+                    ):
+                        try:
+                            bls_ics_text = bls_ics_file.getvalue().decode("utf-8-sig", errors="replace")
+                        except Exception as exc:
+                            st.error(f"BLS .ics file could not be read: {exc}")
+                        else:
+                            _schedule_job(
+                                {
+                                    "action": "import_bls_macro_calendar_ics",
+                                    "job_name": "import_bls_macro_calendar_ics",
+                                    "spinner_text": "Importing BLS CPI / PPI / Jobs release dates from the uploaded .ics file...",
+                                    "params": {
+                                        "ics_text": bls_ics_text,
+                                        "years": tuple(macro_years) if macro_years else None,
+                                        "source_name": bls_ics_file.name,
+                                    },
+                                    "run_metadata": _job_metadata(
+                                        pipeline_type="overview_macro_calendar_collection",
+                                        execution_mode="manual_official_file_import",
+                                        symbol_source="BLS official release schedule ICS file",
+                                        symbol_count=None,
+                                        execution_context=(
+                                            "BLS backend request 차단 시 사용자가 내려받은 공식 .ics 파일에서 CPI, PPI, Employment Situation 일정을 파싱해 DB에 저장합니다."
+                                        ),
+                                        input_params={
+                                            "years": tuple(macro_years) if macro_years else None,
+                                            "source_name": bls_ics_file.name,
+                                        },
+                                    ),
+                                }
+                            )
                 with earnings_tab:
                     earnings_source_mode = st.selectbox(
                         "Symbol Source",

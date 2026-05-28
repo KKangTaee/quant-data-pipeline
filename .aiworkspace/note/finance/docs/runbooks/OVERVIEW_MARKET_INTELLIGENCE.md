@@ -59,6 +59,8 @@ http://localhost:8501
    - BEA source는 national GDP release schedule을 읽어 `MACRO_GDP`로 저장한다.
    - 결과는 모두 `source_type=official`, `validation_status=official`로 저장된다.
    - BLS가 HTTP 403 등으로 차단되면 BEA가 성공하더라도 job은 `partial_success`가 될 수 있다.
+   - BLS 자동 요청이 막히면 BLS 공식 release schedule `.ics` 파일을 브라우저로 내려받아 `BLS Calendar .ics File`에 업로드하고 `Import BLS .ics Calendar`를 실행한다.
+   - `.ics` import도 같은 `market_event_calendar` table에 저장되며, Data Health의 Macro Calendar coverage에 포함된다.
 
 6. `Workspace > Ingestion > Overview Market Event Calendar > Earnings`
    - 기본은 `Latest S&P 500 Movers` source를 사용한다.
@@ -117,6 +119,18 @@ print(run_collect_macro_calendar(years=(2026,), include_bls=False, include_bea=T
 PY
 ```
 
+BLS `.ics` file import smoke:
+
+```bash
+uv run python - <<'PY'
+from pathlib import Path
+from app.jobs.ingestion_jobs import run_import_bls_macro_calendar_ics
+
+ics_text = Path("/path/to/bls.ics").read_text(encoding="utf-8-sig")
+print(run_import_bls_macro_calendar_ics(ics_text=ics_text, years=(2026,), source_name="bls.ics"))
+PY
+```
+
 ## Expected Results
 
 - Market Movers daily snapshot shows `price_mode=Intraday Snapshot` and a recent `snapshot_time_utc`.
@@ -126,6 +140,7 @@ PY
 - Missing diagnostics are visible with recommended action when provider rows are absent or incomplete.
 - FOMC rows have `source=federal_reserve_fomc_calendar`, `confidence=1.0`, and `Source Type=Official`.
 - Macro rows have `Type=MACRO_CPI`, `MACRO_PPI`, `MACRO_EMPLOYMENT`, or `MACRO_GDP`, `Source Type=Official`, and `Validation=Official`.
+- BLS `.ics` import rows keep `source=bureau_labor_statistics_release_schedule` and `raw_payload_json.import_method=official_ics_file`.
 - Earnings rows have `source=yfinance_calendar`, `Source Type=Provider Estimate`, and a validation label.
 - Nasdaq cross-checked earnings rows have `Validation=Cross-checked` and higher confidence.
 - Earnings rows collected more than 14 days ago show `Freshness=Stale estimate` and a warning.
@@ -145,8 +160,8 @@ PY
 | Old earnings date remains in DB | Estimate date changed | Overview hides superseded rows by default; inspect DB if an audit trail is needed |
 | Market Movers missing count is high | Provider quote rows missing or DB previous close missing | Open `Coverage Diagnostics`, then refresh OHLCV / snapshot source if needed |
 | Events tab is empty | Matching collector has not been run or filter is too narrow | Run FOMC / Earnings refresh and select `All` |
-| Macro Calendar shows `Due` with covered `1/4` | Only BEA GDP rows are stored; BLS CPI / PPI / Jobs rows are missing or blocked | Retry BLS later, or treat current Macro view as GDP-only until BLS access succeeds |
-| Macro collection is partial | BLS schedule page rejected automated access, but BEA or another enabled source succeeded | Inspect failed source message and use stored official rows from successful sources |
+| Macro Calendar shows `Due` with covered `1/4` | Only BEA GDP rows are stored; BLS CPI / PPI / Jobs rows are missing or blocked | Import the official BLS `.ics` file, retry BLS later, or treat current Macro view as GDP-only until BLS rows are available |
+| Macro collection is partial | BLS schedule page rejected automated access, but BEA or another enabled source succeeded | Inspect failed source message, then use the BLS `.ics` import fallback if CPI / PPI / Jobs rows are needed |
 | Data Health shows stale daily snapshots | Stored 5m snapshot is older than the intraday freshness threshold | Run `Update Daily Snapshot` for the affected coverage |
 | Data Health shows blank latest success / issue | No Overview refresh button has written local run history yet | Use the relevant Overview refresh button or inspect Ingestion output directly |
 | Overview app looks stale after code change | Old Streamlit process still running | Restart the Streamlit server and confirm Runtime / Build metadata in Ingestion |

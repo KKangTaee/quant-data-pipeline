@@ -1165,6 +1165,82 @@ class MarketIntelligenceEventCalendarContractTests(unittest.TestCase):
         self.assertEqual(rows[0]["raw_payload"]["reference_period"], "May 2026")
         self.assertEqual(rows[0]["raw_payload"]["release_time_et"], "08:30")
 
+    def test_bls_macro_calendar_ics_parser_builds_official_event_rows(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        ics_text = """
+BEGIN:VCALENDAR
+BEGIN:VEVENT
+UID:cpi-20260610@bls.gov
+DTSTART:20260610T123000Z
+SUMMARY:Consumer Price Index for May 2026
+END:VEVENT
+BEGIN:VEVENT
+UID:ppi-20260611@bls.gov
+DTSTART;TZID=America/New_York:20260611T083000
+SUMMARY:Producer Price Index for May 2026
+END:VEVENT
+BEGIN:VEVENT
+UID:jobs-20260605@bls.gov
+DTSTART;VALUE=DATE:20260605
+SUMMARY:Employment Situation for May
+  2026
+END:VEVENT
+BEGIN:VEVENT
+UID:other-20260605@bls.gov
+DTSTART:20260605T140000Z
+SUMMARY:Other Release for May 2026
+END:VEVENT
+END:VCALENDAR
+        """
+
+        rows = mi.parse_bls_macro_calendar_events_from_ics(
+            ics_text,
+            years=[2026],
+            source_name="bls.ics",
+        )
+
+        self.assertEqual([row["event_type"] for row in rows], ["MACRO_CPI", "MACRO_PPI", "MACRO_EMPLOYMENT"])
+        self.assertEqual([row["event_date"] for row in rows], ["2026-06-10", "2026-06-11", "2026-06-05"])
+        self.assertEqual(rows[0]["raw_payload"]["release_time_et"], "08:30")
+        self.assertEqual(rows[0]["raw_payload"]["import_method"], "official_ics_file")
+        self.assertEqual(rows[0]["raw_payload"]["source_file_name"], "bls.ics")
+        self.assertEqual(rows[2]["raw_payload"]["reference_period"], "May 2026")
+
+    def test_collect_bls_macro_calendar_ics_writes_events(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        captured_rows: list[dict[str, object]] = []
+
+        def capture_rows(rows, **kwargs):
+            del kwargs
+            captured_rows.extend(rows)
+            return len(rows)
+
+        ics_text = """
+BEGIN:VCALENDAR
+BEGIN:VEVENT
+UID:cpi-20260610@bls.gov
+DTSTART:20260610T123000Z
+SUMMARY:Consumer Price Index for May 2026
+END:VEVENT
+END:VCALENDAR
+        """
+
+        with patch.object(mi, "upsert_market_event_rows", side_effect=capture_rows):
+            result = mi.collect_and_store_bls_macro_calendar_ics(
+                ics_text,
+                years=[2026],
+                source_name="bls.ics",
+            )
+
+        self.assertEqual(result["source"], mi.BLS_MACRO_CALENDAR_SOURCE)
+        self.assertEqual(result["event_type"], "MACRO")
+        self.assertEqual(result["method"], "official_ics_file")
+        self.assertEqual(result["event_types"], ["MACRO_CPI"])
+        self.assertEqual(result["rows_written"], 1)
+        self.assertEqual(captured_rows[0]["collected_at"], result["collected_at"])
+
     def test_bea_gdp_calendar_parser_excludes_state_and_county_gdp(self) -> None:
         from finance.data import market_intelligence as mi
 

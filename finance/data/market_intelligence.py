@@ -11,6 +11,7 @@ from time import sleep
 from typing import Any
 from urllib.parse import urljoin
 from urllib.request import Request, urlopen
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 import yfinance as yf
@@ -28,6 +29,7 @@ SP500_SOURCE = "wikipedia_sp500_constituents"
 FOMC_CALENDAR_SOURCE_URL = "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
 FOMC_CALENDAR_SOURCE = "federal_reserve_fomc_calendar"
 BLS_MACRO_CALENDAR_SOURCE_URL_TEMPLATE = "https://www.bls.gov/schedule/{year}/"
+BLS_MACRO_CALENDAR_ICS_SOURCE_URL = "https://www.bls.gov/schedule/news_release/bls.ics"
 BLS_MACRO_CALENDAR_SOURCE = "bureau_labor_statistics_release_schedule"
 BEA_MACRO_CALENDAR_SOURCE_URL = "https://www.bea.gov/index.php/news/schedule/full"
 BEA_MACRO_CALENDAR_SOURCE = "bureau_economic_analysis_release_schedule"
@@ -949,6 +951,193 @@ def parse_bls_macro_calendar_events_from_html(
             )
         )
     return events
+
+
+def _decode_ics_text(value: Any) -> str:
+    text = str(value or "")
+    return (
+        text.replace("\\n", " ")
+        .replace("\\N", " ")
+        .replace("\\,", ",")
+        .replace("\\;", ";")
+        .replace("\\\\", "\\")
+    )
+
+
+def _unfold_ics_lines(ics_text: str) -> list[str]:
+    lines: list[str] = []
+    for line in str(ics_text or "").replace("\r\n", "\n").replace("\r", "\n").split("\n"):
+        if line.startswith((" ", "\t")) and lines:
+            lines[-1] += line[1:]
+        elif line:
+            lines.append(line)
+    return lines
+
+
+def _parse_ics_property(line: str) -> tuple[str, dict[str, str], str] | None:
+    if ":" not in line:
+        return None
+    key_text, value = line.split(":", 1)
+    parts = key_text.split(";")
+    name = parts[0].strip().upper()
+    if not name:
+        return None
+    params: dict[str, str] = {}
+    for part in parts[1:]:
+        if "=" in part:
+            param_name, param_value = part.split("=", 1)
+            params[param_name.strip().upper()] = param_value.strip().strip('"')
+    return name, params, value.strip()
+
+
+def _parse_ics_events(ics_text: str) -> list[dict[str, dict[str, Any]]]:
+    events: list[dict[str, dict[str, Any]]] = []
+    current: dict[str, dict[str, Any]] | None = None
+    for line in _unfold_ics_lines(ics_text):
+        upper_line = line.strip().upper()
+        if upper_line == "BEGIN:VEVENT":
+            current = {}
+            continue
+        if upper_line == "END:VEVENT":
+            if current:
+                events.append(current)
+            current = None
+            continue
+        if current is None:
+            continue
+        parsed = _parse_ics_property(line)
+        if not parsed:
+            continue
+        name, params, raw_value = parsed
+        current[name] = {
+            "raw": raw_value,
+            "value": _clean_text(_decode_ics_text(raw_value)),
+            "params": params,
+        }
+    return events
+
+
+def _parse_ics_dtstart(prop: dict[str, Any] | None) -> tuple[str | None, str | None]:
+    if not prop:
+        return None, None
+    raw_value = str(prop.get("raw") or "").strip()
+    params = {str(key).upper(): str(value) for key, value in dict(prop.get("params") or {}).items()}
+    if not raw_value:
+        return None, None
+    if params.get("VALUE", "").upper() == "DATE" or re.fullmatch(r"\d{8}", raw_value):
+        try:
+            return datetime.strptime(raw_value[:8], "%Y%m%d").date().isoformat(), None
+        except ValueError:
+            return None, None
+    value = raw_value.rstrip("Z")
+    parsed: datetime | None = None
+    for pattern in ("%Y%m%dT%H%M%S", "%Y%m%dT%H%M"):
+        try:
+            parsed = datetime.strptime(value, pattern)
+            break
+        except ValueError:
+            continue
+    if parsed is None:
+        return None, None
+    if raw_value.endswith("Z"):
+        eastern = parsed.replace(tzinfo=UTC).astimezone(ZoneInfo("America/New_York"))
+        return eastern.date().isoformat(), eastern.strftime("%H:%M")
+    tzid = params.get("TZID")
+    if tzid:
+        try:
+            localized = parsed.replace(tzinfo=ZoneInfo(tzid))
+            return localized.date().isoformat(), localized.strftime("%H:%M")
+        except Exception:
+            pass
+    return parsed.date().isoformat(), parsed.strftime("%H:%M")
+
+
+def parse_bls_macro_calendar_events_from_ics(
+    ics_text: str,
+    *,
+    source_url: str = BLS_MACRO_CALENDAR_ICS_SOURCE_URL,
+    years: Sequence[int] | None = None,
+    source_name: str | None = None,
+) -> list[dict[str, Any]]:
+    year_filter = {int(year) for year in years or []}
+    events: list[dict[str, Any]] = []
+    for item in _parse_ics_events(ics_text):
+        summary = _clean_text((item.get("SUMMARY") or {}).get("value"))
+        description = _clean_text((item.get("DESCRIPTION") or {}).get("value"))
+        release_text = summary or description
+        release_type = _bls_macro_release_type(f"{summary} {description}")
+        if not release_type or not release_text:
+            continue
+        event_date, release_time = _parse_ics_dtstart(item.get("DTSTART"))
+        if not event_date:
+            continue
+        event_year = int(event_date[:4])
+        if year_filter and event_year not in year_filter:
+            continue
+        label = release_type["label"]
+        events.append(
+            _macro_event_row(
+                event_date=event_date,
+                event_type=release_type["event_type"],
+                title=f"{label}: {release_text}",
+                source=BLS_MACRO_CALENDAR_SOURCE,
+                source_url=source_url,
+                release_time_et=release_time,
+                raw_payload={
+                    "agency": "BLS",
+                    "calendar_year": event_year,
+                    "release_title": release_text,
+                    "reference_period": _reference_period_from_release_title(release_text),
+                    "release_time_et": release_time,
+                    "source_file_name": source_name,
+                    "import_method": "official_ics_file",
+                    "ics_uid": (item.get("UID") or {}).get("value"),
+                    "ics_dtstart": (item.get("DTSTART") or {}).get("raw"),
+                    "ics_summary": summary,
+                },
+            )
+        )
+    return events
+
+
+def collect_and_store_bls_macro_calendar_ics(
+    ics_text: str,
+    *,
+    years: Sequence[int] | None = None,
+    source_url: str = BLS_MACRO_CALENDAR_ICS_SOURCE_URL,
+    source_name: str | None = None,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> dict[str, Any]:
+    collected_at = _timestamp_str()
+    events = parse_bls_macro_calendar_events_from_ics(
+        ics_text,
+        source_url=source_url,
+        years=years,
+        source_name=source_name,
+    )
+    if not events:
+        year_text = f" for years {list(years)}" if years else ""
+        raise RuntimeError(f"No BLS macro calendar events were parsed from ICS{year_text}.")
+    rows = [{**row, "collected_at": collected_at} for row in events]
+    rows_written = upsert_market_event_rows(rows, host=host, user=user, password=password, port=port)
+    event_dates = sorted({str(row["event_date"]) for row in rows if row.get("event_date")})
+    event_types = sorted({str(row["event_type"]) for row in rows if row.get("event_type")})
+    return {
+        "source": BLS_MACRO_CALENDAR_SOURCE,
+        "source_url": source_url,
+        "event_type": "MACRO",
+        "method": "official_ics_file",
+        "years_requested": [int(year) for year in years] if years else None,
+        "source_name": source_name,
+        "events_found": len(rows),
+        "rows_written": rows_written,
+        "event_dates": event_dates,
+        "event_types": event_types,
+        "collected_at": collected_at,
+    }
 
 
 def _bea_schedule_year_from_records(records: list[dict[str, Any]]) -> int | None:

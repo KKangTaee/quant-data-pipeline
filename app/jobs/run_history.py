@@ -30,6 +30,7 @@ def _infer_pipeline_type(record: dict[str, Any]) -> str | None:
         "collect_fomc_calendar": "overview_fomc_calendar_collection",
         "collect_earnings_calendar": "overview_earnings_calendar_collection",
         "collect_macro_calendar": "overview_macro_calendar_collection",
+        "import_bls_macro_calendar_ics": "overview_macro_calendar_collection",
     }
     return mapping.get(job_name)
 

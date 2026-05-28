@@ -109,6 +109,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - FOMC meeting range는 정책 결정일 기준으로 마지막 날을 `event_date`로 저장한다. 예: `June 16-17*`는 `2026-06-17`로 저장한다.
 - Macro row는 공식 release schedule에서 온 event timing metadata다.
 - BLS source row는 `source=bureau_labor_statistics_release_schedule`이며 CPI / PPI / Employment Situation을 각각 `MACRO_CPI`, `MACRO_PPI`, `MACRO_EMPLOYMENT`로 저장한다.
+- BLS 자동 요청이 차단되면 사용자가 내려받은 공식 `.ics` 파일을 Ingestion에서 import할 수 있고, 이 row는 같은 source와 `raw_payload_json.import_method=official_ics_file`로 저장된다.
 - BEA source row는 `source=bureau_economic_analysis_release_schedule`이며 national GDP release를 `MACRO_GDP`로 저장한다.
 - Earnings row의 primary `source`는 `yfinance_calendar`, `event_type`은 `EARNINGS`, `source_type`은 `provider_estimate`이다.
 - Earnings row는 manual symbol list, latest S&P 500 movers, 또는 S&P 500 / Top1000 / Top2000 low-frequency batch에서 파생된 bounded symbol set을 대상으로 한다.
@@ -119,7 +120,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 
 - calendar row는 수집 시점의 provider snapshot이며 완전한 point-in-time historical event truth가 아니다.
 - FOMC의 `*` 표시는 Summary of Economic Projections 관련 meeting 의미이며 `raw_payload_json.has_summary_of_economic_projections`에 보존한다.
-- BLS schedule page는 공식 source지만 자동 요청이 HTTP 403으로 차단될 수 있다. 이 경우 macro collector는 가능한 source만 저장하고 partial failure를 job result에 남긴다.
+- BLS schedule page는 공식 source지만 자동 요청이 HTTP 403으로 차단될 수 있다. 이 경우 macro collector는 가능한 source만 저장하고 partial failure를 job result에 남기며, BLS `.ics` import fallback으로 CPI / PPI / Jobs row를 보강한다.
 - earnings free source는 provider별 coverage / delay / 누락 가능성이 크므로 yfinance-only row는 `confidence=0.65`, Nasdaq cross-checked row는 `confidence=0.75`를 사용한다.
 - generic company IR official parser는 아직 없다. 공식 source가 필요한 ticker는 후속 symbol-specific parser나 manual verification이 필요하다.
 - `raw_payload_json`은 UI 표시용 source of truth가 아니라 diagnostics와 후속 collector 개선을 위한 compact evidence다.

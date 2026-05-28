@@ -21,6 +21,18 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-28 - BLS macro calendar는 공식 `.ics` import fallback으로 보강한다
+- User request:
+  - BLS 자동 수집이 막힌 이유와 다른 경로를 확인한 뒤, 공식 `.ics` import 방향으로 진행해 달라고 요청함.
+- Interpreted goal:
+  - 비공식 우회나 유료 API 없이 CPI / PPI / Employment Situation 일정을 공식 출처 기반으로 `market_event_calendar`에 넣을 수 있어야 함.
+- Analysis result:
+  - BLS backend 자동 요청은 HTTP 403으로 차단될 수 있으므로 direct collector만으로는 Macro Calendar coverage가 `1/4`에 머문다.
+  - 사용자가 브라우저로 내려받은 BLS 공식 `.ics` 파일을 Ingestion에서 업로드하면 같은 DB table에 `MACRO_CPI`, `MACRO_PPI`, `MACRO_EMPLOYMENT` row로 저장하는 fallback을 추가했다.
+  - `raw_payload_json.import_method=official_ics_file`로 import 경로를 남기되, source/validation은 official schedule row로 유지한다.
+- Follow-up:
+  - 실제 BLS `.ics` 파일을 받은 뒤 end-to-end DB write를 한 번 확인하면 Macro Data Health coverage가 GDP 포함 `4/4`로 올라가는지 검증할 수 있다.
+
 ### 2026-05-28 - Overview market intelligence 4차는 운영 UX 정식화로 닫는다
 - User request:
   - 2차와 3차 이후 다음 단계 진행을 요청함.

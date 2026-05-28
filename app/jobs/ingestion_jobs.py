@@ -18,6 +18,7 @@ from finance.data.etf_provider import (
 )
 from finance.data.macro import DEFAULT_MACRO_SERIES, collect_and_store_macro_series
 from finance.data.market_intelligence import (
+    collect_and_store_bls_macro_calendar_ics,
     collect_and_store_earnings_calendar,
     collect_and_store_fomc_calendar,
     collect_and_store_macro_calendar,
@@ -1046,6 +1047,58 @@ def run_collect_macro_calendar(
                 "years": list(years or []),
                 "include_bls": include_bls,
                 "include_bea": include_bea,
+            },
+        )
+
+
+def run_import_bls_macro_calendar_ics(
+    *,
+    ics_text: str,
+    years: Iterable[int] | None = None,
+    source_name: str | None = None,
+) -> JobResult:
+    job_name = "import_bls_macro_calendar_ics"
+    started_at = _now_str()
+    t0 = perf_counter()
+    try:
+        normalized_years = tuple(int(year) for year in years) if years else None
+        result = collect_and_store_bls_macro_calendar_ics(
+            ics_text,
+            years=normalized_years,
+            source_name=source_name,
+        )
+        rows_written = int(result.get("rows_written") or 0)
+        events_found = int(result.get("events_found") or 0)
+        finished_at = _now_str()
+        status = "success" if rows_written > 0 else "failed"
+        message = (
+            f"BLS macro calendar imported {events_found} official release events from ICS."
+            if rows_written > 0
+            else "BLS macro calendar ICS import wrote no rows."
+        )
+        return _build_result(
+            job_name=job_name,
+            status=status,
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=rows_written,
+            message=message,
+            details=result,
+        )
+    except Exception as exc:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            message=f"BLS macro calendar ICS import failed: {exc}",
+            details={
+                "years": list(years or []),
+                "source_name": source_name,
             },
         )
 

@@ -136,11 +136,11 @@ OPS_EVENT_TARGETS = [
         "area": "Macro Calendar",
         "event_type": "MACRO",
         "event_types": ["MACRO_CPI", "MACRO_PPI", "MACRO_EMPLOYMENT", "MACRO_GDP"],
-        "job_names": ["collect_macro_calendar"],
+        "job_names": ["collect_macro_calendar", "import_bls_macro_calendar_ics"],
         "fresh_days": 7,
         "stale_days": 30,
-        "missing_action": "Run Refresh Macro Calendar.",
-        "due_action": "Refresh Macro Calendar from official BLS and BEA release schedules.",
+        "missing_action": "Run Refresh Macro Calendar or import the BLS .ics file.",
+        "due_action": "Refresh Macro Calendar from official schedules or import the BLS .ics file.",
     },
 ]
 
