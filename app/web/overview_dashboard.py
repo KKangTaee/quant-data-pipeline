@@ -178,6 +178,12 @@ def _symmetric_return_scale(values: pd.Series) -> alt.Scale:
     return alt.Scale(domain=_symmetric_return_domain(values), range=["#b91c1c", "#f8fafc", "#0f766e"])
 
 
+def _positive_return_domain(values: pd.Series) -> list[float]:
+    numeric = pd.to_numeric(values, errors="coerce").dropna()
+    max_value = max(1.0, float(numeric.max()) if not numeric.empty else 1.0)
+    return [0, max_value * 1.16]
+
+
 def _build_return_bar_chart(rows: pd.DataFrame) -> alt.Chart:
     chart_rows = rows.copy()
     if not chart_rows.empty and "Return %" in chart_rows:
@@ -185,25 +191,43 @@ def _build_return_bar_chart(rows: pd.DataFrame) -> alt.Chart:
         chart_rows = chart_rows.dropna(subset=["Return %"])
     if chart_rows.empty:
         chart_rows = pd.DataFrame([{"Symbol": "No Data", "Return %": 0.0}])
-    chart_rows["Return Label"] = chart_rows["Return %"].map(lambda value: f"{float(value):.2f}%" if pd.notna(value) else "-")
-    return (
-        alt.Chart(chart_rows)
+    if "Rank" in chart_rows:
+        chart_rows = chart_rows.sort_values("Rank")
+    chart_rows["Return Magnitude %"] = chart_rows["Return %"].abs()
+    chart_rows["Return Label"] = chart_rows["Return %"].map(
+        lambda value: f"{float(value):+.2f}%" if pd.notna(value) else "-"
+    )
+    symbol_order = chart_rows["Symbol"].drop_duplicates().tolist()
+    base = alt.Chart(chart_rows).encode(
+        x=alt.X(
+            "Return Magnitude %:Q",
+            title="Move Magnitude %",
+            stack=None,
+            scale=alt.Scale(domain=_positive_return_domain(chart_rows["Return Magnitude %"])),
+        ),
+        y=alt.Y("Symbol:N", sort=symbol_order, title=None, axis=alt.Axis(labelLimit=80)),
+        tooltip=["Rank:O", "Symbol:N", "Name:N", "Return Label:N", "Sector:N", "Industry:N"],
+    )
+    bars = (
+        base
         .mark_bar(cornerRadiusEnd=3)
         .encode(
-            x=alt.X(
-                "Return %:Q",
-                title="Return %",
-                stack=None,
-                scale=alt.Scale(domain=_symmetric_return_domain(chart_rows["Return %"])),
-            ),
-            y=alt.Y("Symbol:N", sort="-x", title=None, axis=alt.Axis(labelLimit=80)),
-            color=alt.Color(
-                "Return %:Q",
-                scale=_symmetric_return_scale(chart_rows["Return %"]),
-                legend=None,
-            ),
-            tooltip=["Rank:O", "Symbol:N", "Name:N", "Return Label:N", "Sector:N", "Industry:N"],
+            color=alt.condition(
+                "datum['Return %'] < 0",
+                alt.value("#dc2626"),
+                alt.value("#0f766e"),
+            )
         )
+    )
+    labels = (
+        base
+        .mark_text(align="left", baseline="middle", dx=5, fontSize=11, color="#111827")
+        .encode(
+            text=alt.Text("Return Label:N"),
+        )
+    )
+    return (
+        (bars + labels)
         .properties(height=max(220, min(520, 28 * len(chart_rows))))
     )
 
@@ -681,10 +705,10 @@ def _render_market_movers_tab() -> None:
     with st.container(border=True):
         controls = st.columns([1.1, 1.2, 1.1, 0.8, 0.9], gap="small", vertical_alignment="bottom")
         coverage = str(
-            controls[0].segmented_control(
+            controls[0].selectbox(
                 "Coverage",
                 ["SP500", "TOP1000", "TOP2000"],
-                default="SP500",
+                index=0,
                 format_func=lambda value: {
                     "SP500": "S&P 500",
                     "TOP1000": "Top 1000",
@@ -695,10 +719,10 @@ def _render_market_movers_tab() -> None:
         )
         universe_limit = {"SP500": 500, "TOP1000": 1000, "TOP2000": 2000}[coverage]
         period = str(
-            controls[1].segmented_control(
+            controls[1].selectbox(
                 "Period",
                 ["daily", "weekly", "monthly", "yearly"],
-                default="daily",
+                index=0,
                 format_func=lambda value: {
                     "daily": "Daily",
                     "weekly": "Weekly",
