@@ -13,7 +13,7 @@ Created: 2026-05-28
 | 8-3 | `symbol-directory-snapshot-ingestion-v1` | `finance-db-pipeline` | Nasdaq public current symbol directory files를 lifecycle `listing_observed` evidence로 적재 | Implementation complete |
 | 8-4 | `sec-cik-exchange-crosscheck-v1` | `finance-db-pipeline` | SEC current CIK / ticker / exchange association을 lifecycle evidence 보조 source로 연결 | Implementation complete |
 | 8-5 | `computed-snapshot-lifecycle-v1` | `finance-db-pipeline` + `finance-backtest-web-workflow` | repeated current snapshots 기반 computed lifecycle evidence 설계 / scoring | Implementation complete |
-| 8-6 | `lifecycle-audit-scoring-v1` | `finance-backtest-web-workflow` | Data Coverage Audit evidence scoring refinement | Pending |
+| 8-6 | `lifecycle-audit-scoring-v1` | `finance-backtest-web-workflow` | Data Coverage Audit evidence scoring refinement | Implementation complete |
 | 8-7 | `phase8-integrated-qa-closeout` | `finance-integration-review` + `finance-doc-sync` | compile, service contracts, docs, phase closeout | Pending |
 
 ## Previous Work Folded Into Phase 8
@@ -26,13 +26,13 @@ Created: 2026-05-28
 
 ## Immediate Next Task
 
-`lifecycle-audit-scoring-v1`
+`phase8-integrated-qa-closeout`
 
 Goal:
 
-- Data Coverage Audit의 lifecycle evidence scoring을 Phase 8 source semantics에 맞게 정교화한다.
-- current snapshot, SEC identity cross-check, computed partial, Form 25 actual evidence를 분리 표시한다.
-- operator가 왜 PASS / REVIEW / NEEDS_INPUT인지 더 명확히 볼 수 있게 compact metrics를 보강한다.
+- Phase 8 전체 lifecycle evidence path를 통합 QA한다.
+- service contracts, compile, docs consistency, storage boundary를 최종 확인한다.
+- Phase 8 완료 요약과 Phase 9 handoff를 정리한다.
 
 Out of scope:
 

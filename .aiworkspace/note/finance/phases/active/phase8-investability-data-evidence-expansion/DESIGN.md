@@ -44,6 +44,17 @@ Data Coverage Audit은 source를 보수적으로 해석한다.
 | computed snapshot coverage covering requested period | PASS candidate only when `coverage_status=actual`; partial computed rows stay REVIEW |
 | missing lifecycle row | NEEDS_INPUT or REVIEW depending other DB evidence |
 
+`lifecycle-audit-scoring-v1`부터 audit metrics는 lifecycle evidence를 아래처럼 분리한다.
+
+| Metric group | Meaning |
+| --- | --- |
+| actual coverage | requested period를 덮는 `coverage_status=actual` row |
+| actual non-covering | actual row는 있지만 requested period를 덮지 못하는 row |
+| current snapshot | NYSE / Nasdaq current listing observation |
+| SEC identity | SEC CIK / ticker / exchange current association |
+| computed partial | repeated current snapshot에서 만든 observed-window summary |
+| delisting actual | Form 25 같은 actual delisting evidence |
+
 ## First Implementation Slice
 
 이번 slice는 source crawler를 추가하기 전에 schema / row contract를 먼저 정리한다.

@@ -13,7 +13,8 @@ Created: 2026-05-28
 - [x] Symbol directory snapshot ingestion implemented.
 - [x] SEC CIK / exchange cross-check implemented.
 - [x] Computed snapshot lifecycle implemented.
-- [ ] Lifecycle audit scoring started.
+- [x] Lifecycle audit scoring implemented.
+- [ ] Phase 8 integrated QA closeout started.
 
 ## Latest Update
 
@@ -28,8 +29,9 @@ Created: 2026-05-28
 - `sec-cik-exchange-crosscheck-v1` added a DB-only SEC current CIK / ticker / exchange cross-check collector and job wrapper.
 - `computed-snapshot-lifecycle-v1` added a DB-only computed row builder / job wrapper that summarizes repeated current snapshot observations as partial `computed_from_snapshots` evidence.
 - Data Coverage Audit now requires `coverage_status=actual` before a lifecycle row can make survivorship PASS.
+- `lifecycle-audit-scoring-v1` refined Data Coverage Audit lifecycle evidence so current snapshot, SEC identity cross-check, computed partial, actual coverage, and delisting actual symbols are separated in metrics and evidence strings.
 
 ## Next
 
-- Start `lifecycle-audit-scoring-v1`.
-- Refine Data Coverage Audit lifecycle scoring display so partial snapshot, identity cross-check, computed partial, and actual delisting / historical evidence are separated clearly.
+- Start `phase8-integrated-qa-closeout`.
+- Run Phase 8 integrated verification and prepare phase closeout / Phase 9 handoff.

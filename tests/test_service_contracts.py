@@ -578,6 +578,7 @@ class DataCoverageAuditContractTests(unittest.TestCase):
         self.assertEqual(rows_by_criteria["Universe / listing evidence"]["Status"], "REVIEW")
         self.assertEqual(rows_by_criteria["Survivorship / delisting control"]["Status"], "REVIEW")
         self.assertIn("SPY", audit["metrics"]["lifecycle_partial_symbols"])
+        self.assertEqual(audit["metrics"]["lifecycle_current_snapshot_symbols"], ["SPY"])
 
     def test_missing_db_price_and_universe_evidence_are_not_passed(self) -> None:
         from app.services.backtest_data_coverage_audit import (
@@ -605,6 +606,136 @@ class DataCoverageAuditContractTests(unittest.TestCase):
         self.assertEqual(rows_by_criteria["Price DB window coverage"]["Status"], "NEEDS_INPUT")
         self.assertEqual(rows_by_criteria["Universe / listing evidence"]["Status"], "NEEDS_INPUT")
         self.assertEqual(rows_by_criteria["Survivorship / delisting control"]["Status"], "NEEDS_INPUT")
+
+    def test_lifecycle_audit_scoring_separates_partial_identity_computed_and_actual_evidence(self) -> None:
+        from app.services.backtest_data_coverage_audit import (
+            DATA_COVERAGE_REVIEW,
+            build_data_coverage_audit,
+        )
+
+        audit = build_data_coverage_audit(
+            {
+                "data_coverage_context": {
+                    "symbols": ["SPY", "AAPL", "ABC"],
+                    "symbol_weights": {"SPY": 40.0, "AAPL": 40.0, "ABC": 20.0},
+                    "requested_start": "2020-01-01",
+                    "requested_end": "2020-12-31",
+                    "price_window_rows": [
+                        {
+                            "symbol": "SPY",
+                            "first_window_date": "2020-01-01",
+                            "latest_window_date": "2020-12-31",
+                            "window_row_count": 252,
+                        },
+                        {
+                            "symbol": "AAPL",
+                            "first_window_date": "2020-01-01",
+                            "latest_window_date": "2020-12-31",
+                            "window_row_count": 252,
+                        },
+                        {
+                            "symbol": "ABC",
+                            "first_window_date": "2020-01-01",
+                            "latest_window_date": "2020-12-31",
+                            "window_row_count": 252,
+                        },
+                    ],
+                    "asset_profile_rows": [
+                        {"symbol": "SPY", "status": "active"},
+                        {"symbol": "AAPL", "status": "active"},
+                        {"symbol": "ABC", "status": "active"},
+                    ],
+                    "symbol_lifecycle_rows": [
+                        {
+                            "symbol": "SPY",
+                            "listing_status": "active",
+                            "source": "historical_feed",
+                            "source_type": "historical_listing",
+                            "coverage_status": "actual",
+                            "first_seen_date": "1993-01-29",
+                            "last_seen_date": None,
+                        },
+                        {
+                            "symbol": "AAPL",
+                            "listing_status": "active",
+                            "source": "nasdaq_symdir_nasdaqlisted",
+                            "source_type": "current_listing_snapshot",
+                            "coverage_status": "partial",
+                            "first_seen_date": "2026-05-28",
+                            "last_seen_date": "2026-05-28",
+                            "event_type": "listing_observed",
+                        },
+                        {
+                            "symbol": "AAPL",
+                            "listing_status": "active",
+                            "source": "sec_company_tickers_exchange",
+                            "source_type": "current_listing_snapshot",
+                            "coverage_status": "partial",
+                            "first_seen_date": "2026-05-28",
+                            "last_seen_date": "2026-05-28",
+                            "event_type": "listing_observed",
+                            "related_cik": 320193,
+                        },
+                        {
+                            "symbol": "AAPL",
+                            "listing_status": "active",
+                            "source": "computed_snapshot_lifecycle",
+                            "source_type": "computed_from_snapshots",
+                            "coverage_status": "partial",
+                            "first_seen_date": "2019-01-01",
+                            "last_seen_date": "2021-12-31",
+                            "event_type": "historical_membership",
+                        },
+                        {
+                            "symbol": "ABC",
+                            "listing_status": "delisted",
+                            "source": "sec_form25_abc",
+                            "source_type": "delisting_feed",
+                            "coverage_status": "actual",
+                            "first_seen_date": None,
+                            "last_seen_date": "2020-06-01",
+                            "event_type": "delisting",
+                            "event_date": "2020-06-01",
+                        },
+                    ],
+                },
+                "provider_coverage_display_rows": [{"Diagnostic Status": "PASS", "Freshness": "fresh"}],
+                "curve_evidence": {
+                    "portfolio_curve_source": "actual_runtime_replay",
+                    "curve_provenance": {
+                        "runtime_recheck_status": "PASS",
+                        "period_coverage_status": "PASS",
+                        "runtime_recheck_mode": "latest_market_replay",
+                    },
+                    "period_coverage": {"status": "PASS"},
+                },
+            }
+        )
+
+        rows_by_criteria = {row["Criteria"]: row for row in audit["rows"]}
+        self.assertEqual(audit["route"], DATA_COVERAGE_REVIEW)
+        self.assertEqual(audit["metrics"]["lifecycle_covered_symbols"], ["SPY"])
+        self.assertEqual(audit["metrics"]["lifecycle_partial_symbols"], ["AAPL", "ABC"])
+        self.assertEqual(audit["metrics"]["lifecycle_actual_symbols"], ["ABC", "SPY"])
+        self.assertEqual(audit["metrics"]["lifecycle_actual_noncovering_symbols"], ["ABC"])
+        self.assertEqual(audit["metrics"]["lifecycle_current_snapshot_symbols"], ["AAPL"])
+        self.assertEqual(audit["metrics"]["lifecycle_identity_crosscheck_symbols"], ["AAPL"])
+        self.assertEqual(audit["metrics"]["lifecycle_computed_partial_symbols"], ["AAPL"])
+        self.assertEqual(audit["metrics"]["lifecycle_delisting_actual_symbols"], ["ABC"])
+        self.assertEqual(
+            audit["metrics"]["lifecycle_row_counts_by_category"],
+            {
+                "computed_partial": 1,
+                "current_snapshot": 1,
+                "delisting_actual": 1,
+                "historical_actual": 1,
+                "identity_crosscheck": 1,
+            },
+        )
+        self.assertIn("current_snapshot=AAPL", rows_by_criteria["Universe / listing evidence"]["Evidence"])
+        self.assertIn("sec_identity=AAPL", rows_by_criteria["Universe / listing evidence"]["Evidence"])
+        self.assertIn("computed_partial=AAPL", rows_by_criteria["Survivorship / delisting control"]["Evidence"])
+        self.assertIn("delisting_actual=ABC", rows_by_criteria["Survivorship / delisting control"]["Evidence"])
 
 
 class SecForm25DelistingCollectorContractTests(unittest.TestCase):
@@ -1237,6 +1368,7 @@ class ComputedSnapshotLifecycleContractTests(unittest.TestCase):
         self.assertEqual(rows_by_criteria["Universe / listing evidence"]["Status"], "REVIEW")
         self.assertEqual(rows_by_criteria["Survivorship / delisting control"]["Status"], "REVIEW")
         self.assertIn("SPY", audit["metrics"]["lifecycle_partial_symbols"])
+        self.assertEqual(audit["metrics"]["lifecycle_computed_partial_symbols"], ["SPY"])
 
 
 class PracticalValidationDiagnosticsServiceContractTests(unittest.TestCase):

@@ -21,6 +21,18 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-28 - Lifecycle audit scoring separates evidence strength
+- User request:
+  - Phase 8 다음 작업 진행을 요청함.
+- Interpreted goal:
+  - Data Coverage Audit에서 lifecycle evidence가 어떤 종류의 근거인지 source semantics 기준으로 분리해 보여준다.
+- Analysis result:
+  - `app/services/backtest_data_coverage_audit.py`가 current snapshot, SEC identity cross-check, computed partial, actual coverage, actual non-covering, delisting actual symbol metrics를 분리한다.
+  - Universe / listing evidence와 Survivorship / delisting control row는 partial evidence class를 evidence string에 표시한다.
+  - `coverage_status=actual` requested-period coverage가 없으면 partial evidence는 계속 REVIEW다.
+- Follow-up:
+  - 다음 task는 `phase8-integrated-qa-closeout`으로 Phase 8 전체 lifecycle evidence path를 통합 검증하고 Phase 9 handoff를 정리한다.
+
 ### 2026-05-28 - Computed snapshot lifecycle remains partial evidence
 - User request:
   - Phase 8 다음 작업 진행을 요청함.

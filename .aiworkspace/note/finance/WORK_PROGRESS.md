@@ -22,6 +22,9 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-28
+- Completed `.aiworkspace/note/finance/tasks/active/lifecycle-audit-scoring-v1/`.
+- Data Coverage Audit now separates lifecycle evidence metrics for actual coverage, actual non-covering rows, current snapshots, SEC identity cross-check, computed partial rows, and actual delisting rows.
+- This is read-only audit scoring; it adds no DB table, ingestion collector, workflow JSONL, memo, preset, approval, order, or rebalance behavior.
 - Completed `.aiworkspace/note/finance/tasks/active/computed-snapshot-lifecycle-v1/`.
 - Added `finance/data/computed_lifecycle.py` and `run_collect_computed_snapshot_lifecycle()` to summarize repeated current snapshot lifecycle rows as DB `computed_from_snapshots` partial evidence.
 - Data Coverage Audit now requires `coverage_status=actual` before lifecycle evidence can make survivorship PASS; no workflow JSONL, memo, preset, approval, order, or rebalance behavior was added.

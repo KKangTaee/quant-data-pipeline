@@ -15,6 +15,7 @@ Created: 2026-05-28
 | Nasdaq Daily List is paid / approval based | Strongest action source is not available under free-source-first constraint | Park it; use public current Symbol Directory snapshot path first |
 | Current snapshot absence is over-interpreted | False delisting / inactive evidence | Treat current snapshots as partial `listing_observed`; repeated snapshot diff needs separate conservative policy |
 | Computed row treated as actual history | False survivorship PASS | Store Phase 8-5 computed rows as partial and require `coverage_status=actual` for PASS |
+| Audit scoring hides weak evidence type | Operator may over-trust partial evidence | Split current snapshot / SEC identity / computed partial / actual / delisting metrics |
 
 ## Open Questions
 
@@ -45,3 +46,9 @@ Created: 2026-05-28
 - Computed snapshot lifecycle ingestion is implemented.
 - It summarizes repeated current snapshot observation windows as partial `computed_from_snapshots` evidence.
 - Data Coverage Audit now requires `coverage_status=actual` before lifecycle evidence can make survivorship PASS.
+
+## Lifecycle Audit Scoring Result
+
+- Data Coverage Audit lifecycle evidence scoring is refined.
+- Audit metrics now separate actual coverage, actual non-covering rows, current snapshot symbols, SEC identity cross-check symbols, computed partial symbols, and delisting actual symbols.
+- Survivorship REVIEW evidence now names the partial evidence classes instead of collapsing everything into generic current listing evidence.

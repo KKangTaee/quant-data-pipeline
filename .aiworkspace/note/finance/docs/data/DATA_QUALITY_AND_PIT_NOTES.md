@@ -52,6 +52,8 @@
   이 row도 current association일 뿐이므로 historical membership, delisting, ticker action proof가 아니다.
 - computed snapshot lifecycle row는 existing current snapshot rows의 repeated observation window를 요약한다.
   Phase 8-5에서는 `coverage_status=partial`로 저장하며, missing snapshot을 delisting proof로 해석하지 않는다.
+- Data Coverage Audit은 lifecycle evidence를 current snapshot, SEC identity cross-check, computed partial, actual coverage, delisting actual로 분리해 표시한다.
+  이 분리는 operator 해석을 돕기 위한 read-only scoring이며, partial evidence를 PASS로 승격하지 않는다.
 - `etf_operability_snapshot` `db_bridge` row는 official ETF provider actual data가 아니다.
 - P2-2B official row는 iShares / SSGA / Invesco page의 current snapshot을 normalize한 것이다.
   다만 Invesco QQQ는 현재 expense ratio / inception만 확보되어 `partial`이며,

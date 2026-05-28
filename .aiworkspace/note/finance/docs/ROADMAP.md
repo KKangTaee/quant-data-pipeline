@@ -8,6 +8,7 @@ Last Verified: 2026-05-28
 | Track | Status | Notes |
 |---|---|---|
 | Phase 8 Investability Data Evidence Expansion | Active | `.aiworkspace/note/finance/phases/active/phase8-investability-data-evidence-expansion/`; Phase 0~7 이후 1차 hardening cycle의 다음 phase. lifecycle / survivorship / historical membership evidence를 DB-backed로 강화 |
+| Lifecycle Audit Scoring V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/lifecycle-audit-scoring-v1/`; Data Coverage Audit lifecycle evidence를 current snapshot / SEC identity / computed partial / actual coverage / delisting actual로 분리해 metrics와 row evidence에 표시 |
 | Computed Snapshot Lifecycle V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/computed-snapshot-lifecycle-v1/`; existing current snapshot lifecycle rows를 repeated observation window로 요약하되 partial evidence로 저장하고, Data Coverage Audit은 actual coverage row만 survivorship PASS 후보로 보도록 보수화 |
 | SEC CIK Exchange Crosscheck V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/sec-cik-exchange-crosscheck-v1/`; SEC `company_tickers_exchange.json` current CIK / ticker / exchange association을 lifecycle `listing_observed` partial evidence로 적재하는 DB collector / job wrapper 추가 |
 | Symbol Directory Snapshot Ingestion V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/symbol-directory-snapshot-ingestion-v1/`; Nasdaq public Symbol Directory current files를 `nyse_symbol_lifecycle` `listing_observed` partial evidence로 적재하는 DB collector / job wrapper 추가 |
@@ -108,6 +109,6 @@ P2에서 정상화하는 주요 진단:
 
 - UI Engine Boundary Cleanup은 완료됐다. 다음 구조 작업은 새 phase/task로 열고, 현재 경계는 boundary lint와 service contract test를 먼저 통과시키는 기준으로 유지한다.
 - Practical Validation V2 P3는 selected monitoring 연결과 closeout QA를 완료했다. Validation Efficacy, Backtest Realism, Data Coverage audit 표시 / gate 연결, Integrated Investability Gate QA, Historical Universe Survivorship V1, SEC Form 25 Delisting Backfill / UI, Symbol Lifecycle Event Fields V1을 완료했다.
-- Phase 8의 source review, Symbol Directory snapshot ingestion, SEC CIK / exchange crosscheck, computed snapshot lifecycle은 완료됐다. 다음 task는 `lifecycle-audit-scoring-v1`로 Data Coverage Audit evidence scoring refinement를 진행한다.
+- Phase 8의 source review, Symbol Directory snapshot ingestion, SEC CIK / exchange crosscheck, computed snapshot lifecycle, lifecycle audit scoring은 완료됐다. 다음 task는 `phase8-integrated-qa-closeout`으로 통합 QA와 phase closeout을 진행한다.
 - Phase 9 후보는 cost / turnover / slippage / liquidity 실측 근거다. Phase 8 source review와 lifecycle ingestion 우선순위가 끝난 뒤 시작한다.
 - Structured Waiver Policy V1은 구현 없이 정책만 확정했다. Waiver UI / persistence는 아직 별도 구현 task로 열지 않았다.

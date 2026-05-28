@@ -33,6 +33,7 @@ _STATUS_RANK = {
     "BLOCKED": 3,
 }
 _HISTORICAL_LIFECYCLE_SOURCE_TYPES = {"historical_listing", "delisting_feed", "computed_from_snapshots"}
+_SEC_IDENTITY_SOURCE = "sec_company_tickers_exchange"
 
 
 def _safe_text(value: Any, fallback: str = "-") -> str:
@@ -370,6 +371,37 @@ def _lifecycle_row_covers_requested_period(row: dict[str, Any], *, start: str | 
     return str(row.get("source_type") or "").strip().lower() in _HISTORICAL_LIFECYCLE_SOURCE_TYPES
 
 
+def _lifecycle_category(row: dict[str, Any]) -> str:
+    source = str(row.get("source") or "").strip().lower()
+    source_type = str(row.get("source_type") or "").strip().lower()
+    coverage_status = str(row.get("coverage_status") or "").strip().lower()
+    if source == _SEC_IDENTITY_SOURCE:
+        return "identity_crosscheck"
+    if source_type == "current_listing_snapshot":
+        return "current_snapshot"
+    if source_type == "computed_from_snapshots" and coverage_status != "actual":
+        return "computed_partial"
+    if source_type == "delisting_feed" and coverage_status == "actual":
+        return "delisting_actual"
+    if source_type == "historical_listing" and coverage_status == "actual":
+        return "historical_actual"
+    if source_type in _HISTORICAL_LIFECYCLE_SOURCE_TYPES and coverage_status == "actual":
+        return "actual_other"
+    if coverage_status in {"partial", "bridge", "proxy"}:
+        return "partial_other"
+    if coverage_status in {"missing", "error"}:
+        return "unusable"
+    return "unknown"
+
+
+def _symbol_preview(symbols: list[str], *, limit: int = 6) -> str:
+    clean = [str(symbol or "").upper() for symbol in symbols if str(symbol or "").strip()]
+    if not clean:
+        return "-"
+    suffix = "" if len(clean) <= limit else f"+{len(clean) - limit}"
+    return ",".join(clean[:limit]) + suffix
+
+
 def _symbol_lifecycle_evidence(context: dict[str, Any]) -> dict[str, Any]:
     symbols = [str(symbol or "").upper() for symbol in list(context.get("symbols") or []) if str(symbol or "").strip()]
     rows = [dict(row or {}) for row in _as_list(context.get("symbol_lifecycle_rows")) if isinstance(row, dict)]
@@ -383,6 +415,13 @@ def _symbol_lifecycle_evidence(context: dict[str, Any]) -> dict[str, Any]:
             "covered_symbols": [],
             "partial_symbols": [],
             "missing_symbols": symbols,
+            "actual_symbols": [],
+            "actual_noncovering_symbols": [],
+            "current_snapshot_symbols": [],
+            "identity_crosscheck_symbols": [],
+            "computed_partial_symbols": [],
+            "delisting_actual_symbols": [],
+            "row_counts_by_category": {},
         }
     if not symbols:
         return {
@@ -392,6 +431,13 @@ def _symbol_lifecycle_evidence(context: dict[str, Any]) -> dict[str, Any]:
             "covered_symbols": [],
             "partial_symbols": [],
             "missing_symbols": [],
+            "actual_symbols": [],
+            "actual_noncovering_symbols": [],
+            "current_snapshot_symbols": [],
+            "identity_crosscheck_symbols": [],
+            "computed_partial_symbols": [],
+            "delisting_actual_symbols": [],
+            "row_counts_by_category": {},
         }
     rows_by_symbol: dict[str, list[dict[str, Any]]] = {}
     for row in rows:
@@ -401,6 +447,13 @@ def _symbol_lifecycle_evidence(context: dict[str, Any]) -> dict[str, Any]:
     covered_symbols: list[str] = []
     partial_symbols: list[str] = []
     missing_symbols: list[str] = []
+    actual_symbols: set[str] = set()
+    actual_noncovering_symbols: set[str] = set()
+    current_snapshot_symbols: set[str] = set()
+    identity_crosscheck_symbols: set[str] = set()
+    computed_partial_symbols: set[str] = set()
+    delisting_actual_symbols: set[str] = set()
+    row_counts_by_category: dict[str, int] = {}
     evidence_sources: set[str] = set()
     for symbol in symbols:
         candidates = rows_by_symbol.get(symbol) or []
@@ -408,38 +461,77 @@ def _symbol_lifecycle_evidence(context: dict[str, Any]) -> dict[str, Any]:
             source_type = str(candidate.get("source_type") or "").strip().lower()
             event_type = str(candidate.get("event_type") or "").strip().lower()
             source = str(candidate.get("source") or "").strip()
+            category = _lifecycle_category(candidate)
+            row_counts_by_category[category] = row_counts_by_category.get(category, 0) + 1
+            if category in {"historical_actual", "delisting_actual", "actual_other"}:
+                actual_symbols.add(symbol)
+            if category == "current_snapshot":
+                current_snapshot_symbols.add(symbol)
+            elif category == "identity_crosscheck":
+                identity_crosscheck_symbols.add(symbol)
+            elif category == "computed_partial":
+                computed_partial_symbols.add(symbol)
+            elif category == "delisting_actual":
+                delisting_actual_symbols.add(symbol)
             if source_type:
                 event_label = f":{event_type}" if event_type else ""
-                evidence_sources.add(f"{source_type}{event_label}:{source or '-'}")
-        if any(
+                coverage_label = str(candidate.get("coverage_status") or "").strip().lower()
+                evidence_sources.add(f"{source_type}{event_label}:{coverage_label or '-'}:{source or '-'}")
+        has_covering_row = any(
             _lifecycle_row_covers_requested_period(candidate, start=requested_start, end=requested_end)
             for candidate in candidates
-        ):
+        )
+        if has_covering_row:
             covered_symbols.append(symbol)
         elif candidates:
             partial_symbols.append(symbol)
         else:
             missing_symbols.append(symbol)
+        if candidates and not has_covering_row and symbol in actual_symbols:
+            actual_noncovering_symbols.add(symbol)
+    actual_symbols_list = sorted(actual_symbols)
+    actual_noncovering_list = sorted(actual_noncovering_symbols)
+    current_snapshot_list = sorted(current_snapshot_symbols)
+    identity_crosscheck_list = sorted(identity_crosscheck_symbols)
+    computed_partial_list = sorted(computed_partial_symbols)
+    delisting_actual_list = sorted(delisting_actual_symbols)
+    source_mix = ", ".join(sorted(evidence_sources)[:6]) or "-"
     if len(covered_symbols) == len(symbols):
         status = "PASS"
-        evidence = "actual lifecycle rows cover requested period"
+        evidence = f"actual_covering={_symbol_preview(covered_symbols)} / sources={source_mix}"
     elif rows:
         status = "REVIEW"
         evidence = (
-            f"partial={', '.join(partial_symbols[:6]) or '-'} / "
-            f"missing={', '.join(missing_symbols[:6]) or '-'} / "
-            f"sources={', '.join(sorted(evidence_sources)[:4]) or '-'}"
+            f"partial={_symbol_preview(partial_symbols)} / "
+            f"missing={_symbol_preview(missing_symbols)} / "
+            f"actual_noncovering={_symbol_preview(actual_noncovering_list)} / "
+            f"current_snapshot={_symbol_preview(current_snapshot_list)} / "
+            f"sec_identity={_symbol_preview(identity_crosscheck_list)} / "
+            f"computed_partial={_symbol_preview(computed_partial_list)} / "
+            f"delisting_actual={_symbol_preview(delisting_actual_list)}"
         )
     else:
         status = "NEEDS_INPUT"
         evidence = "symbol lifecycle rows missing"
     return {
         "status": status,
-        "current": f"covered={len(covered_symbols)} / partial={len(partial_symbols)} / symbols={len(symbols)}",
+        "current": (
+            f"covered={len(covered_symbols)} / partial={len(partial_symbols)} / missing={len(missing_symbols)} / "
+            f"actual={len(actual_symbols_list)} / current={len(current_snapshot_list)} / "
+            f"sec={len(identity_crosscheck_list)} / computed={len(computed_partial_list)}"
+        ),
         "evidence": evidence,
         "covered_symbols": covered_symbols,
         "partial_symbols": partial_symbols,
         "missing_symbols": missing_symbols,
+        "actual_symbols": actual_symbols_list,
+        "actual_noncovering_symbols": actual_noncovering_list,
+        "current_snapshot_symbols": current_snapshot_list,
+        "identity_crosscheck_symbols": identity_crosscheck_list,
+        "computed_partial_symbols": computed_partial_list,
+        "delisting_actual_symbols": delisting_actual_list,
+        "row_counts_by_category": dict(sorted(row_counts_by_category.items())),
+        "source_mix": source_mix,
     }
 
 
@@ -495,13 +587,15 @@ def _survivorship_row(validation: dict[str, Any], context: dict[str, Any], unive
         evidence = lifecycle["evidence"]
     elif universe_status == "NEEDS_INPUT":
         status = "NEEDS_INPUT"
+        evidence = lifecycle["evidence"]
     else:
         status = "REVIEW"
+        evidence = lifecycle["evidence"]
     return _row(
         criteria="Survivorship / delisting control",
         status=status,
-        current=evidence if status == "PASS" else "not proven",
-        evidence=evidence if status == "PASS" else "current listing evidence is not enough for survivorship control",
+        current=evidence if status == "PASS" else f"not proven / {lifecycle['current']}",
+        evidence=evidence,
         next_action="historical universe / delisting 기준을 별도 DB evidence로 보강합니다." if status != "PASS" else "추가 조치 없음",
         meaning="과거에 사라진 종목을 배제해 성과가 과대평가되는 위험을 확인합니다.",
     )
@@ -586,6 +680,17 @@ def build_data_coverage_audit(validation: dict[str, Any]) -> dict[str, Any]:
             "lifecycle_covered_symbols": list(lifecycle_evidence.get("covered_symbols") or []),
             "lifecycle_partial_symbols": list(lifecycle_evidence.get("partial_symbols") or []),
             "lifecycle_missing_symbols": list(lifecycle_evidence.get("missing_symbols") or []),
+            "lifecycle_actual_symbols": list(lifecycle_evidence.get("actual_symbols") or []),
+            "lifecycle_actual_noncovering_symbols": list(
+                lifecycle_evidence.get("actual_noncovering_symbols") or []
+            ),
+            "lifecycle_current_snapshot_symbols": list(lifecycle_evidence.get("current_snapshot_symbols") or []),
+            "lifecycle_identity_crosscheck_symbols": list(
+                lifecycle_evidence.get("identity_crosscheck_symbols") or []
+            ),
+            "lifecycle_computed_partial_symbols": list(lifecycle_evidence.get("computed_partial_symbols") or []),
+            "lifecycle_delisting_actual_symbols": list(lifecycle_evidence.get("delisting_actual_symbols") or []),
+            "lifecycle_row_counts_by_category": dict(lifecycle_evidence.get("row_counts_by_category") or {}),
         },
         "execution_boundary": {
             "write_policy": "read_only_data_coverage_audit",
