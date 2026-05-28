@@ -216,6 +216,32 @@ def _render_backtest_realism_summary(validation: dict[str, Any]) -> None:
             st.caption(str(audit.get("next_action")))
 
 
+def _render_data_coverage_summary(validation: dict[str, Any]) -> None:
+    audit = dict(validation.get("data_coverage_audit") or {})
+    rows = list(validation.get("data_coverage_display_rows") or audit.get("rows") or [])
+    if not rows:
+        return
+    metrics = dict(audit.get("metrics") or {})
+    st.markdown("###### Data Coverage")
+    render_badge_strip(
+        [
+            {
+                "label": "Route",
+                "value": audit.get("route_label") or audit.get("route") or "-",
+                "tone": _status_tone(audit.get("overall_status")),
+            },
+            {"label": "PASS", "value": metrics.get("pass", 0), "tone": "positive"},
+            {"label": "REVIEW", "value": metrics.get("review", 0), "tone": "warning"},
+            {"label": "NEEDS_INPUT", "value": metrics.get("needs_input", 0), "tone": "warning"},
+            {"label": "Symbols", "value": metrics.get("symbol_count", 0), "tone": "neutral"},
+        ]
+    )
+    with st.expander("Data coverage rows", expanded=False):
+        st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+        if audit.get("next_action"):
+            st.caption(str(audit.get("next_action")))
+
+
 def _render_validation_summary(validation: dict[str, Any]) -> None:
     metrics = dict(validation.get("metrics") or {})
     route = str(validation.get("validation_route") or "-")
@@ -242,6 +268,7 @@ def _render_validation_summary(validation: dict[str, Any]) -> None:
     else:
         st.dataframe(component_df, width="stretch", hide_index=True)
     _render_validation_efficacy_summary(validation)
+    _render_data_coverage_summary(validation)
     _render_backtest_realism_summary(validation)
     diagnostic_rows = list(validation.get("diagnostic_display_rows") or [])
     if diagnostic_rows:

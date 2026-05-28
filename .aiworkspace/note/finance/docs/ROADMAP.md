@@ -7,6 +7,7 @@ Last Verified: 2026-05-28
 
 | Track | Status | Notes |
 |---|---|---|
+| Data Coverage Hardening V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/data-coverage-hardening-v1/`; DB price window summary, provider freshness, PIT replay / period coverage, universe listing, survivorship evidence를 read-only Data Coverage Audit으로 표시 |
 | Backtest Realism Gate Policy Link V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/backtest-realism-gate-policy-link-v1/`; Backtest Realism Audit route를 profile-aware gate policy에 연결해 `NEEDS_INPUT` / `BLOCKED`는 selected-route blocker, `REVIEW`는 review-required로 처리 |
 | Backtest Realism Hardening V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/backtest-realism-hardening-v1/`; Practical Validation / Final Review가 기존 result metadata와 compact evidence를 읽어 비용, turnover, liquidity, net performance policy, rebalance timing, tax/account scope, execution boundary를 read-only audit으로 표시 |
 | Validation Efficacy Gate Policy Link V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/validation-efficacy-gate-policy-link-v1/`; Validation Efficacy Audit route를 profile-aware gate policy에 연결해 `NEEDS_INPUT` / `BLOCKED`는 selected-route blocker, `REVIEW`는 review-required로 처리 |
@@ -95,5 +96,5 @@ P2에서 정상화하는 주요 진단:
 ## Next Decisions
 
 - UI Engine Boundary Cleanup은 완료됐다. 다음 구조 작업은 새 phase/task로 열고, 현재 경계는 boundary lint와 service contract test를 먼저 통과시키는 기준으로 유지한다.
-- Practical Validation V2 P3는 selected monitoring 연결과 closeout QA를 완료했다. Validation Efficacy Hardening V1 / Gate Policy Link V1과 Backtest Realism Hardening V1 / Gate Policy Link V1로 audit 표시와 selected-route gate 연결을 완료했다. 다음 작업은 Data Coverage Hardening으로 PIT / survivorship / universe evidence를 DB-backed로 보강하는 것이다.
+- Practical Validation V2 P3는 selected monitoring 연결과 closeout QA를 완료했다. Validation Efficacy Hardening V1 / Gate Policy Link V1과 Backtest Realism Hardening V1 / Gate Policy Link V1로 audit 표시와 selected-route gate 연결을 완료했고, Data Coverage Hardening V1로 DB-backed data coverage audit을 추가했다. 다음 작업은 Data Coverage Audit을 selected-route gate policy에 연결할지, 또는 historical universe / survivorship source 자체를 더 강하게 수집할지 결정하는 것이다.
 - Structured Waiver Policy V1은 구현 없이 정책만 확정했다. Waiver UI / persistence는 아직 별도 구현 task로 열지 않았다.

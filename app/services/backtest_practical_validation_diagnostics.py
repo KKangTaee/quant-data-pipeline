@@ -11,6 +11,10 @@ from app.services.backtest_practical_validation_curve import (
     build_curve_provenance,
     normalize_result_curve as normalize_validation_curve,
 )
+from app.services.backtest_data_coverage_audit import (
+    build_data_coverage_audit,
+    build_db_data_coverage_context,
+)
 from app.services.backtest_practical_validation_curve_context import (
     _combine_component_curves,
     _format_date,
@@ -227,6 +231,23 @@ def _component_provider_symbol_weights(active_components: list[dict[str, Any]]) 
             tickers.extend(_component_tickers(component))
         benchmark = str(component.get("benchmark") or "").strip().upper()
         tickers = [ticker for ticker in dict.fromkeys(tickers) if ticker and ticker != "-" and ticker != benchmark]
+        if not tickers:
+            continue
+        ticker_weight = component_weight / len(tickers)
+        for ticker in tickers:
+            weights[ticker] = weights.get(ticker, 0.0) + ticker_weight
+    return {ticker: round(weight, 4) for ticker, weight in sorted(weights.items()) if weight > 0.0}
+
+
+def _component_data_coverage_symbol_weights(active_components: list[dict[str, Any]]) -> dict[str, float]:
+    """Approximate price / listing coverage weights from component universes and benchmarks."""
+    weights: dict[str, float] = {}
+    for component in active_components:
+        component_weight = _component_weight(component)
+        tickers = _component_universe_tickers(component)
+        if not tickers:
+            tickers = _component_tickers(component)
+        tickers = [ticker for ticker in dict.fromkeys(tickers) if ticker and ticker != "-"]
         if not tickers:
             continue
         ticker_weight = component_weight / len(tickers)
@@ -618,6 +639,12 @@ def build_practical_validation_result(
     provider_coverage = dict(provider_context.get("coverage") or {})
     provider_display_rows = list(provider_context.get("display_rows") or [])
     provider_look_through_board = dict(provider_context.get("look_through_board") or {})
+    data_coverage_context = build_db_data_coverage_context(
+        _component_data_coverage_symbol_weights(active_components),
+        start=_format_date(source_period.get("actual_start") or source_period.get("start")),
+        end=_format_date(source_period.get("actual_end") or source_period.get("end")),
+        timeframe="1d",
+    )
 
     def _compact_provider_area(area_key: str) -> dict[str, Any]:
         area = dict(provider_coverage.get(area_key) or {})
@@ -1372,9 +1399,11 @@ def build_practical_validation_result(
             "curve_provenance": curve_provenance,
             "benchmark_parity": benchmark_parity,
             "provider_coverage": provider_context,
+            "data_coverage_context": data_coverage_context,
         },
         "provider_coverage": provider_context,
         "provider_coverage_display_rows": provider_display_rows,
+        "data_coverage_context": data_coverage_context,
         "diagnostic_results": diagnostics,
         "diagnostic_display_rows": _diagnostic_display_rows(diagnostics),
         "diagnostic_summary": {
@@ -1428,6 +1457,13 @@ def build_practical_validation_result(
                 "unknown_exposure_weight": provider_look_through_board.get("unknown_exposure_weight"),
                 "dominant_asset_bucket": provider_look_through_board.get("dominant_asset_bucket"),
                 "dominant_asset_weight": provider_look_through_board.get("dominant_asset_weight"),
+            },
+            "data_coverage": {
+                "symbols": list(data_coverage_context.get("symbols") or []),
+                "requested_start": data_coverage_context.get("requested_start"),
+                "requested_end": data_coverage_context.get("requested_end"),
+                "price_window_error": data_coverage_context.get("price_window_error"),
+                "asset_profile_error": data_coverage_context.get("asset_profile_error"),
             },
             "robustness_lab": {
                 "status": robustness_lab_board.get("status"),
@@ -1526,6 +1562,9 @@ def build_practical_validation_result(
         "selection_source_snapshot": source_row,
         "final_decision_schema_target": FINAL_SELECTION_DECISION_V2_SCHEMA_VERSION,
     }
+    data_coverage_audit = build_data_coverage_audit(result)
+    result["data_coverage_audit"] = data_coverage_audit
+    result["data_coverage_display_rows"] = list(data_coverage_audit.get("rows") or [])
     backtest_realism_audit = build_backtest_realism_audit(result)
     result["backtest_realism_audit"] = backtest_realism_audit
     result["backtest_realism_display_rows"] = list(backtest_realism_audit.get("rows") or [])

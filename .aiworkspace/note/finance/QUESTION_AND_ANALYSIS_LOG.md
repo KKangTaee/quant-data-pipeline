@@ -21,6 +21,19 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-28 - Data coverage needs explicit DB-backed audit evidence
+- User request:
+  - 추천 순서대로 작업 진행을 요청함.
+- Interpreted goal:
+  - Backtest Realism gate 연결 이후 PIT / survivorship / universe evidence를 DB-backed 근거로 더 명확히 확인한다.
+- Analysis result:
+  - `data_coverage_audit_v1`을 추가했다.
+  - Audit은 DB price window coverage, provider freshness, PIT replay / period coverage, universe listing, survivorship / delisting control, storage boundary를 분리한다.
+  - Current listing / asset profile row는 historical universe evidence가 아니므로 survivorship PASS로 보지 않는다.
+  - 새 JSONL registry, memo, preset, approval, order, auto rebalance는 추가하지 않았다.
+- Follow-up:
+  - 다음 선택지는 Data Coverage Audit을 selected-route gate policy에 연결하거나, historical universe / survivorship source 자체를 더 강하게 수집하는 것이다.
+
 ### 2026-05-28 - Backtest realism audit should affect selected-route gate
 - User request:
   - 추천 순서대로 다음 작업 진행을 요청함.

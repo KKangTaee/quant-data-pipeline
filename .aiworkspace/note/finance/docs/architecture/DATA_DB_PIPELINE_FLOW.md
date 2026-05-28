@@ -53,7 +53,7 @@ external source
 | 파일 | 역할 |
 |---|---|
 | `finance/loaders/universe.py` | universe와 asset profile status 조회 |
-| `finance/loaders/price.py` | price history, price matrix, freshness, symbol별 latest price 조회 |
+| `finance/loaders/price.py` | price history, price matrix, freshness, symbol별 latest price, validation window coverage summary 조회 |
 | `finance/loaders/provider.py` | provider snapshot read path. ETF operability / holdings / exposure snapshot을 읽는다 |
 | `finance/loaders/macro.py` | market-context read path. macro observation range와 기준일 snapshot / staleness를 읽는다 |
 | `finance/loaders/fundamentals.py` | broad fundamentals와 statement shadow fundamentals 조회 |
@@ -85,6 +85,8 @@ external source
   stale ETF provider snapshot은 `PASS`가 아니라 `REVIEW`로 남긴다.
   `look-through-exposure-board-v1`부터 같은 provider context가 holdings / exposure snapshot을 compact board로 접어 asset bucket, top holding, overlap, ETF별 coverage를 보여준다.
   이 board도 full holdings row를 JSONL에 저장하지 않고 DB-backed loader 결과에서 만든 summary / top rows만 저장한다.
+  `data-coverage-hardening-v1`부터 `finance/loaders/price.py`는 requested validation window의 symbol별 first / latest / row count summary를 제공한다.
+  Practical Validation은 이 summary와 asset profile status, provider freshness, runtime replay / period coverage를 `Data Coverage Audit`으로 묶어 보여주며, full OHLCV row나 full listing row를 workflow JSONL에 저장하지 않는다.
 
 ## 데이터 무결성 체크포인트
 

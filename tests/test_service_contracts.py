@@ -96,6 +96,7 @@ import app.runtime
 import app.runtime.backtest
 import app.runtime.candidate_library
 import app.runtime.backtest_result_bundle
+import app.services.backtest_data_coverage_audit
 import app.services.backtest_realism_audit
 import app.services.backtest_evidence_read_model
 import app.services.backtest_practical_validation_curve
@@ -138,6 +139,7 @@ print(importlib.util.find_spec("app.web.runtime") is None)
         script = """
 import importlib.util
 import sys
+import app.services.backtest_data_coverage_audit
 import app.services.backtest_realism_audit
 import app.services.backtest_practical_validation_curve
 import app.services.backtest_practical_validation_curve_context
@@ -331,6 +333,91 @@ class BacktestRealismAuditContractTests(unittest.TestCase):
         self.assertEqual(rows_by_criteria["Transaction cost model"]["Status"], "NEEDS_INPUT")
         self.assertEqual(rows_by_criteria["Liquidity / operability evidence"]["Status"], "NEEDS_INPUT")
         self.assertEqual(rows_by_criteria["Tax / account scope"]["Status"], "REVIEW")
+
+
+class DataCoverageAuditContractTests(unittest.TestCase):
+    def test_ready_audit_uses_db_price_provider_and_survivorship_evidence_without_writes(self) -> None:
+        from app.services.backtest_data_coverage_audit import (
+            DATA_COVERAGE_READY,
+            build_data_coverage_audit,
+        )
+
+        audit = build_data_coverage_audit(
+            {
+                "data_coverage_context": {
+                    "symbols": ["SPY", "TLT"],
+                    "symbol_weights": {"SPY": 60.0, "TLT": 40.0},
+                    "requested_start": "2020-01-01",
+                    "requested_end": "2020-12-31",
+                    "price_window_rows": [
+                        {
+                            "symbol": "SPY",
+                            "first_window_date": "2020-01-01",
+                            "latest_window_date": "2020-12-31",
+                            "window_row_count": 252,
+                        },
+                        {
+                            "symbol": "TLT",
+                            "first_window_date": "2020-01-01",
+                            "latest_window_date": "2020-12-31",
+                            "window_row_count": 252,
+                        },
+                    ],
+                    "asset_profile_rows": [
+                        {"symbol": "SPY", "status": "active"},
+                        {"symbol": "TLT", "status": "active"},
+                    ],
+                },
+                "provider_coverage_display_rows": [
+                    {"Diagnostic Status": "PASS", "Freshness": "fresh"},
+                    {"Diagnostic Status": "PASS", "Freshness": "fresh"},
+                ],
+                "curve_evidence": {
+                    "portfolio_curve_source": "actual_runtime_replay",
+                    "curve_provenance": {
+                        "runtime_recheck_status": "PASS",
+                        "period_coverage_status": "PASS",
+                        "runtime_recheck_mode": "latest_market_replay",
+                    },
+                    "period_coverage": {"status": "PASS"},
+                },
+                "survivorship_control": {"status": "controlled"},
+            }
+        )
+
+        self.assertEqual(audit["route"], DATA_COVERAGE_READY)
+        self.assertEqual(audit["metrics"]["pass"], 6)
+        self.assertEqual(audit["metrics"]["price_covered_weight"], 100.0)
+        self.assertFalse(audit["execution_boundary"]["db_write"])
+        self.assertFalse(audit["execution_boundary"]["registry_write"])
+        self.assertFalse(audit["execution_boundary"]["memo_persistence"])
+
+    def test_missing_db_price_and_universe_evidence_are_not_passed(self) -> None:
+        from app.services.backtest_data_coverage_audit import (
+            DATA_COVERAGE_NEEDS_INPUT,
+            build_data_coverage_audit,
+        )
+
+        audit = build_data_coverage_audit(
+            {
+                "data_coverage_context": {
+                    "symbols": ["SPY"],
+                    "symbol_weights": {"SPY": 100.0},
+                    "requested_start": "2020-01-01",
+                    "requested_end": "2020-12-31",
+                    "price_window_rows": [],
+                    "asset_profile_rows": [],
+                },
+                "provider_coverage_display_rows": [],
+                "curve_evidence": {},
+            }
+        )
+
+        rows_by_criteria = {row["Criteria"]: row for row in audit["rows"]}
+        self.assertEqual(audit["route"], DATA_COVERAGE_NEEDS_INPUT)
+        self.assertEqual(rows_by_criteria["Price DB window coverage"]["Status"], "NEEDS_INPUT")
+        self.assertEqual(rows_by_criteria["Universe / listing evidence"]["Status"], "NEEDS_INPUT")
+        self.assertEqual(rows_by_criteria["Survivorship / delisting control"]["Status"], "NEEDS_INPUT")
 
 
 class PracticalValidationDiagnosticsServiceContractTests(unittest.TestCase):
@@ -1077,6 +1164,17 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
                         }
                     ]
                 },
+                "data_coverage_audit": {
+                    "rows": [
+                        {
+                            "Criteria": "Price DB window coverage",
+                            "Status": "REVIEW",
+                            "Ready": False,
+                            "Current": "80.0% / symbols=2",
+                            "Meaning": "price coverage gap",
+                        }
+                    ]
+                },
                 "backtest_realism_audit": {
                     "rows": [
                         {
@@ -1127,6 +1225,7 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
                 "Final Review Evidence",
                 "Validation",
                 "Validation Efficacy",
+                "Data Coverage",
                 "Backtest Realism",
                 "Look-through Exposure",
                 "Robustness Lab",
@@ -1139,14 +1238,16 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertEqual(rows[1]["Current"], "REVIEW")
         self.assertEqual(rows[2]["Criteria"], "Runtime replay evidence")
         self.assertFalse(rows[2]["Ready"])
-        self.assertEqual(rows[3]["Criteria"], "Transaction cost model")
+        self.assertEqual(rows[3]["Criteria"], "Price DB window coverage")
         self.assertFalse(rows[3]["Ready"])
-        self.assertEqual(rows[4]["Criteria"], "Holdings Coverage")
-        self.assertTrue(rows[4]["Ready"])
-        self.assertEqual(rows[5]["Criteria"], "Sensitivity coverage")
-        self.assertFalse(rows[5]["Ready"])
-        self.assertEqual(rows[6]["Current"], "WATCH")
-        self.assertEqual(rows[7]["Current"], "OPTIONAL")
+        self.assertEqual(rows[4]["Criteria"], "Transaction cost model")
+        self.assertFalse(rows[4]["Ready"])
+        self.assertEqual(rows[5]["Criteria"], "Holdings Coverage")
+        self.assertTrue(rows[5]["Ready"])
+        self.assertEqual(rows[6]["Criteria"], "Sensitivity coverage")
+        self.assertFalse(rows[6]["Ready"])
+        self.assertEqual(rows[7]["Current"], "WATCH")
+        self.assertEqual(rows[8]["Current"], "OPTIONAL")
 
     def test_investability_packet_ready_contract_is_ui_neutral(self) -> None:
         from app.services.backtest_evidence_read_model import build_investability_evidence_packet
@@ -1183,6 +1284,19 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
                     }
                 ],
             },
+            "data_coverage_audit": {
+                "route": "DATA_COVERAGE_READY",
+                "route_label": "Ready",
+                "rows": [
+                    {
+                        "Criteria": "Price DB window coverage",
+                        "Status": "PASS",
+                        "Ready": True,
+                        "Current": "100.0% / symbols=2",
+                        "Meaning": "price coverage attached",
+                    }
+                ],
+            },
             "backtest_realism_audit": {
                 "route": "BACKTEST_REALISM_READY",
                 "route_label": "Ready",
@@ -1214,8 +1328,10 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertTrue(packet["gate_policy_snapshot"]["select_allowed"])
         sections = [row["Section"] for row in packet["checks"]]
         self.assertIn("Validation Efficacy Audit", sections)
+        self.assertIn("Data Coverage Audit", sections)
         self.assertIn("Backtest Realism Audit", sections)
         self.assertEqual(packet["summary"]["validation_efficacy_route"], "VALIDATION_EFFICACY_READY")
+        self.assertEqual(packet["summary"]["data_coverage_route"], "DATA_COVERAGE_READY")
         self.assertEqual(packet["summary"]["backtest_realism_route"], "BACKTEST_REALISM_READY")
         assumptions = [row["Assumption"] for row in packet["assumptions_and_limits"]]
         self.assertIn("Hypothetical backtest", assumptions)

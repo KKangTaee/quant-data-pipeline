@@ -33,6 +33,7 @@ from .price import (
     load_price_freshness_summary,
     load_price_history,
     load_price_matrix,
+    load_price_window_summary,
 )
 from .provider import load_etf_exposure_snapshot, load_etf_holdings_snapshot, load_etf_operability_snapshot
 from .runtime_adapter import adapt_price_history_to_strategy_dfs, load_price_strategy_dfs
@@ -44,6 +45,7 @@ __all__ = [
     "load_latest_prices",
     "load_price_history",
     "load_price_freshness_summary",
+    "load_price_window_summary",
     "load_price_matrix",
     "load_etf_operability_snapshot",
     "load_etf_holdings_snapshot",
