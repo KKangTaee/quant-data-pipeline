@@ -22,6 +22,10 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-28
+- Completed `.aiworkspace/note/finance/tasks/active/storage-governance-audit-v1/`.
+- Added `.aiworkspace/note/finance/docs/data/STORAGE_GOVERNANCE.md` as the durable DB / JSONL / saved setup / run artifact boundary.
+- Main investability chain remains `PORTFOLIO_SELECTION_SOURCES -> PRACTICAL_VALIDATION_RESULTS -> FINAL_PORTFOLIO_SELECTION_DECISIONS_V2`; no registry rewrite or new JSONL was added.
+- Next implementation candidate is `data-provenance-coverage-v1`.
 - Opened `.aiworkspace/note/finance/phases/active/investability-decision-foundation/` as the Phase 0 baseline for investability workflow hardening.
 - Completed `.aiworkspace/note/finance/tasks/active/validation-gate-hardening-v1/`.
 - Added profile-aware gate policy snapshot to `app/services/backtest_evidence_read_model.py` and Final Review display.

@@ -21,6 +21,19 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-28 - 새 저장은 stage handoff 또는 명시적 재사용일 때만 추가한다
+- User request:
+  - Investability Decision Foundation의 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - 의미 없는 JSONL 저장과 사용자 memo 저장이 다시 늘어나지 않도록, 기존 저장 지점을 먼저 분류해야 함.
+- Analysis result:
+  - `storage-governance-audit-v1` task를 열고 JSONL / artifact write surface를 감사했다.
+  - main source chain은 `PORTFOLIO_SELECTION_SOURCES -> PRACTICAL_VALIDATION_RESULTS -> FINAL_PORTFOLIO_SELECTION_DECISIONS_V2`로 유지한다.
+  - legacy candidate / proposal / paper registry는 보존하지만 main flow 의존성을 늘리지 않는다.
+  - raw provider / holdings / macro data는 DB에 두고 workflow JSONL에는 compact evidence만 남긴다.
+- Follow-up:
+  - 다음 구현은 `data-provenance-coverage-v1`로 provider / macro / holdings evidence의 source / freshness / coverage를 강화한다.
+
 ### 2026-05-28 - Final Review selected route는 profile-aware gate policy를 통과해야 한다
 - User request:
   - Phase 0 다음 단계 진행을 요청함.

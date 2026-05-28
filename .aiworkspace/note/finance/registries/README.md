@@ -1,7 +1,7 @@
 # Finance Registries
 
 Status: Active
-Last Verified: 2026-05-13
+Last Verified: 2026-05-28
 
 이 폴더는 앱과 운영 helper가 다시 읽어야 하는 append-only JSONL 저장소를 둔다.
 
@@ -18,6 +18,9 @@ Registry 파일은 단순 실행 로그가 아니라 다음 UI 단계가 읽는 
 | `PRACTICAL_VALIDATION_RESULTS.jsonl` | Practical Validation | Final Review | 12개 practical diagnostics, provider coverage, blocker / review 근거 저장 |
 | `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl` | Final Review | Selected Portfolio Dashboard | select / hold / reject / re-review 최종 판단 저장 |
 | `SELECTED_PORTFOLIO_MONITORING_LOG.jsonl` | Selected Portfolio Dashboard | Selected Portfolio Dashboard | 사용자가 명시적으로 남기는 monitoring 보조 기록 |
+
+이 4개를 제외한 registry는 현재 main flow의 source chain이 아니다.
+새 registry 추가 전에는 `docs/data/STORAGE_GOVERNANCE.md`의 checklist를 먼저 확인한다.
 
 ## Legacy / Compatibility Registries
 
@@ -38,11 +41,14 @@ Registry 파일은 단순 실행 로그가 아니라 다음 UI 단계가 읽는 
 - live approval이 아니다.
 - broker order가 아니다.
 - 자동매매 지시가 아니다.
+- 사용자 memo archive가 아니다.
 - runtime history나 임시 artifact를 대체하지 않는다.
 - 사람이 읽는 backtest report를 대체하지 않는다.
+- raw provider response, full holdings, full macro series를 보관하는 곳이 아니다.
 
 ## Commit Policy
 
 - registry JSONL은 제품 workflow 데이터이므로 삭제하거나 재작성하지 않는다.
 - 사용자가 명시적으로 요청하지 않으면 새 runtime row를 커밋 대상으로 만들지 않는다.
 - schema나 의미가 바뀌면 관련 runtime helper와 `docs/flows/PORTFOLIO_SELECTION_FLOW.md`를 같이 확인한다.
+- main flow 저장 경계가 바뀌면 `docs/data/STORAGE_GOVERNANCE.md`도 같이 확인한다.

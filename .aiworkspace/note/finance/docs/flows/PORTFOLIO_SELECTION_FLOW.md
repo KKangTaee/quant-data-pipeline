@@ -1,7 +1,7 @@
 # Portfolio Selection Flow
 
 Status: Active
-Last Verified: 2026-05-13
+Last Verified: 2026-05-28
 
 ## Purpose
 
@@ -57,6 +57,14 @@ PORTFOLIO_SELECTION_SOURCES
 - Final Review의 profile-aware gate policy가 data trust, benchmark, provider / look-through, stress / robustness, leveraged / inverse, paper observation group을 판정한다.
 - critical `NOT_RUN`, hard blocker, evidence blocker, selected-route policy blocker가 남아 있으면 실전 검토 통과 후보 선정은 차단하고, 보류 / 거절 / 재검토 판단으로 기록할 수 있다.
 - Selected Portfolio Dashboard는 선정 이후 상태 확인 화면이다. 주문이나 자동 리밸런싱을 만들지 않는다.
+
+## Storage Boundary
+
+- Portfolio Selection V2의 main durable chain은 `PORTFOLIO_SELECTION_SOURCES.jsonl -> PRACTICAL_VALIDATION_RESULTS.jsonl -> FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl`이다.
+- `SELECTED_PORTFOLIO_MONITORING_LOG.jsonl`는 사용자가 명시적으로 남기는 optional monitoring snapshot이며 자동 저장 대상이 아니다.
+- legacy candidate / proposal / paper registry는 보존하지만, 현재 main flow의 필수 단계로 확장하지 않는다.
+- raw provider / holdings / macro evidence는 DB에 두고, workflow JSONL에는 compact evidence와 blocker summary만 저장한다.
+- 자세한 저장 기준은 `docs/data/STORAGE_GOVERNANCE.md`를 따른다.
 
 ## Main Files
 

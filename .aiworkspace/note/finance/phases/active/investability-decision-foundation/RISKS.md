@@ -22,6 +22,7 @@ Created: 2026-05-28
 | Web crawler source changes | Ingestion breaks silently | Use source map, parser version, and failed-parse status |
 | Free API unavailable | Coverage gaps remain | Allow verified crawler through ingestion layer, not UI |
 | Raw data accidentally lands in JSONL | Registry becomes heavy and hard to govern | Keep raw provider / holdings / macro data in DB only |
+| Future persistence helper bypasses storage governance | JSONL sprawl returns under a new feature name | Require task plans to classify new persistence against `docs/data/STORAGE_GOVERNANCE.md` |
 
 ## Implementation Risks
 
