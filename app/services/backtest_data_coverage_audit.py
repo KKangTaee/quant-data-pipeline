@@ -365,7 +365,7 @@ def _lifecycle_row_covers_requested_period(row: dict[str, Any], *, start: str | 
     coverage_status = str(row.get("coverage_status") or "").strip().lower()
     if listing_status in {"error", "unknown", "not_found"}:
         return False
-    if coverage_status in {"missing", "error"}:
+    if coverage_status != "actual":
         return False
     return str(row.get("source_type") or "").strip().lower() in _HISTORICAL_LIFECYCLE_SOURCE_TYPES
 
@@ -422,7 +422,7 @@ def _symbol_lifecycle_evidence(context: dict[str, Any]) -> dict[str, Any]:
             missing_symbols.append(symbol)
     if len(covered_symbols) == len(symbols):
         status = "PASS"
-        evidence = "historical lifecycle rows cover requested period"
+        evidence = "actual lifecycle rows cover requested period"
     elif rows:
         status = "REVIEW"
         evidence = (

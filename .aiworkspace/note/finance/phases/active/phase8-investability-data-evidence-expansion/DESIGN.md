@@ -41,7 +41,7 @@ Data Coverage Audit은 source를 보수적으로 해석한다.
 | current listing snapshot only | REVIEW |
 | SEC Form 25 row only | delisting evidence, not complete membership |
 | historical listing row covering requested period | PASS candidate |
-| computed snapshot coverage covering requested period | PASS candidate if source contract is documented |
+| computed snapshot coverage covering requested period | PASS candidate only when `coverage_status=actual`; partial computed rows stay REVIEW |
 | missing lifecycle row | NEEDS_INPUT or REVIEW depending other DB evidence |
 
 ## First Implementation Slice
@@ -90,6 +90,22 @@ SEC company_tickers_exchange.json
 These rows use `source=sec_company_tickers_exchange`, `source_type=current_listing_snapshot`, `coverage_status=partial`, and `event_type=listing_observed`.
 The SEC CIK is stored as `related_cik`.
 This is not historical membership, delisting, or ticker action proof.
+
+## Computed Snapshot Lifecycle Slice
+
+`computed-snapshot-lifecycle-v1` summarizes repeated current snapshot observations without changing the storage boundary.
+
+```text
+existing current snapshot lifecycle rows
+  -> finance/data/computed_lifecycle.py
+  -> finance_meta.nyse_symbol_lifecycle
+  -> finance/loaders/universe.py
+  -> Data Coverage Audit
+```
+
+These rows use `source=computed_snapshot_lifecycle`, `source_type=computed_from_snapshots`, `coverage_status=partial`, and `event_type=historical_membership`.
+They summarize observed active presence across dates, but do not infer delisting from absence.
+Data Coverage Audit requires `coverage_status=actual` before lifecycle evidence can make survivorship PASS.
 
 ## Tradeoff
 

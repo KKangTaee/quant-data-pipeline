@@ -1055,6 +1055,190 @@ class SecCompanyTickerCrosscheckContractTests(unittest.TestCase):
         self.assertIn("MISS", result["failed_symbols"])
 
 
+class ComputedSnapshotLifecycleContractTests(unittest.TestCase):
+    def test_repeated_current_snapshots_build_partial_computed_row(self) -> None:
+        from finance.data.computed_lifecycle import build_computed_snapshot_lifecycle_rows
+
+        rows, metadata = build_computed_snapshot_lifecycle_rows(
+            [
+                {
+                    "symbol": "spy",
+                    "kind": "etf",
+                    "listing_status": "active",
+                    "source": "nasdaq_symdir_otherlisted",
+                    "source_type": "current_listing_snapshot",
+                    "coverage_status": "partial",
+                    "first_seen_date": "2026-05-01",
+                    "last_seen_date": "2026-05-28",
+                    "event_type": "listing_observed",
+                    "event_date": "2026-05-28",
+                    "name": "SPDR S&P 500 ETF Trust",
+                },
+                {
+                    "symbol": "ONE",
+                    "kind": "stock",
+                    "listing_status": "active",
+                    "source": "sec_company_tickers_exchange",
+                    "source_type": "current_listing_snapshot",
+                    "coverage_status": "partial",
+                    "first_seen_date": "2026-05-28",
+                    "last_seen_date": "2026-05-28",
+                    "event_type": "listing_observed",
+                    "event_date": "2026-05-28",
+                },
+            ],
+            collected_at="2026-05-28 00:00:00",
+        )
+
+        self.assertEqual(metadata["rows_built"], 1)
+        self.assertEqual(metadata["skipped_insufficient_observation_dates"], 1)
+        row = rows[0]
+        self.assertEqual(row["symbol"], "SPY")
+        self.assertEqual(row["kind"], "etf")
+        self.assertEqual(row["listing_status"], "active")
+        self.assertEqual(row["source"], "computed_snapshot_lifecycle")
+        self.assertEqual(row["source_type"], "computed_from_snapshots")
+        self.assertEqual(row["coverage_status"], "partial")
+        self.assertEqual(row["first_seen_date"], "2026-05-01")
+        self.assertEqual(row["last_seen_date"], "2026-05-28")
+        self.assertEqual(row["event_type"], "historical_membership")
+        self.assertEqual(row["event_date"], "2026-05-28")
+        self.assertIn('"pass_eligible": false', row["evidence_json"])
+        self.assertIn("absence from current snapshots is not delisting proof", row["evidence_json"])
+
+    def test_collector_writes_computed_rows_without_jsonl_side_effects(self) -> None:
+        from finance.data import computed_lifecycle
+
+        class FakeDB:
+            def __init__(self) -> None:
+                self.used_db: str | None = None
+                self.executemany_calls: list[tuple[str, list[dict]]] = []
+
+            def use_db(self, db_name: str) -> None:
+                self.used_db = db_name
+
+            def query(self, sql: str, params=None) -> list[dict]:
+                return [
+                    {
+                        "symbol": "SPY",
+                        "kind": "etf",
+                        "listing_status": "active",
+                        "source": "nasdaq_symdir_otherlisted",
+                        "source_type": "current_listing_snapshot",
+                        "coverage_status": "partial",
+                        "first_seen_date": "2026-05-01",
+                        "last_seen_date": "2026-05-28",
+                        "event_type": "listing_observed",
+                        "event_date": "2026-05-28",
+                        "name": "SPDR S&P 500 ETF Trust",
+                    }
+                ]
+
+            def execute(self, sql: str, params=None) -> None:
+                return None
+
+            def executemany(self, sql: str, params: list[dict]) -> None:
+                self.executemany_calls.append((sql, params))
+
+            def close(self) -> None:
+                return None
+
+        fake_db = FakeDB()
+        with patch.object(computed_lifecycle, "MySQLClient", return_value=fake_db), patch.object(
+            computed_lifecycle,
+            "sync_table_schema",
+        ):
+            summary = computed_lifecycle.collect_and_store_computed_snapshot_lifecycle(symbols=["SPY"])
+
+        self.assertEqual(fake_db.used_db, "finance_meta")
+        self.assertEqual(summary["rows_written"], 1)
+        self.assertEqual(summary["target_table"], "finance_meta.nyse_symbol_lifecycle")
+        self.assertFalse(summary["execution_boundary"]["registry_write"])
+        self.assertFalse(summary["execution_boundary"]["memo_persistence"])
+        self.assertFalse(summary["execution_boundary"]["preset_persistence"])
+        self.assertFalse(summary["execution_boundary"]["live_approval"])
+        written_row = fake_db.executemany_calls[0][1][0]
+        self.assertEqual(written_row["source_type"], "computed_from_snapshots")
+        self.assertEqual(written_row["coverage_status"], "partial")
+        self.assertIsNone(written_row["inactive_detected_at"])
+
+    def test_ingestion_job_wraps_computed_snapshot_summary(self) -> None:
+        import app.jobs.ingestion_jobs as jobs
+
+        with patch.object(
+            jobs,
+            "collect_and_store_computed_snapshot_lifecycle",
+            return_value={
+                "requested": 2,
+                "rows_written": 1,
+                "requested_missing_symbols": ["MISS"],
+                "target_table": "finance_meta.nyse_symbol_lifecycle",
+                "execution_boundary": {"registry_write": False},
+            },
+        ):
+            result = jobs.run_collect_computed_snapshot_lifecycle("SPY,MISS")
+
+        self.assertEqual(result["job_name"], "collect_computed_snapshot_lifecycle")
+        self.assertEqual(result["status"], "partial_success")
+        self.assertEqual(result["rows_written"], 1)
+        self.assertIn("MISS", result["failed_symbols"])
+
+    def test_partial_computed_snapshot_row_does_not_pass_survivorship(self) -> None:
+        from app.services.backtest_data_coverage_audit import (
+            DATA_COVERAGE_REVIEW,
+            build_data_coverage_audit,
+        )
+
+        audit = build_data_coverage_audit(
+            {
+                "data_coverage_context": {
+                    "symbols": ["SPY"],
+                    "symbol_weights": {"SPY": 100.0},
+                    "requested_start": "2020-01-01",
+                    "requested_end": "2020-12-31",
+                    "price_window_rows": [
+                        {
+                            "symbol": "SPY",
+                            "first_window_date": "2020-01-01",
+                            "latest_window_date": "2020-12-31",
+                            "window_row_count": 252,
+                        }
+                    ],
+                    "asset_profile_rows": [{"symbol": "SPY", "status": "active"}],
+                    "symbol_lifecycle_rows": [
+                        {
+                            "symbol": "SPY",
+                            "listing_status": "active",
+                            "source": "computed_snapshot_lifecycle",
+                            "source_type": "computed_from_snapshots",
+                            "coverage_status": "partial",
+                            "first_seen_date": "2019-01-01",
+                            "last_seen_date": "2021-12-31",
+                            "event_type": "historical_membership",
+                            "event_date": "2021-12-31",
+                        }
+                    ],
+                },
+                "provider_coverage_display_rows": [{"Diagnostic Status": "PASS", "Freshness": "fresh"}],
+                "curve_evidence": {
+                    "portfolio_curve_source": "actual_runtime_replay",
+                    "curve_provenance": {
+                        "runtime_recheck_status": "PASS",
+                        "period_coverage_status": "PASS",
+                        "runtime_recheck_mode": "latest_market_replay",
+                    },
+                    "period_coverage": {"status": "PASS"},
+                },
+            }
+        )
+
+        rows_by_criteria = {row["Criteria"]: row for row in audit["rows"]}
+        self.assertEqual(audit["route"], DATA_COVERAGE_REVIEW)
+        self.assertEqual(rows_by_criteria["Universe / listing evidence"]["Status"], "REVIEW")
+        self.assertEqual(rows_by_criteria["Survivorship / delisting control"]["Status"], "REVIEW")
+        self.assertIn("SPY", audit["metrics"]["lifecycle_partial_symbols"])
+
+
 class PracticalValidationDiagnosticsServiceContractTests(unittest.TestCase):
     def test_diagnostics_public_compatibility_contract_is_explicit(self) -> None:
         from app.services import backtest_practical_validation_curve_context as curve_context

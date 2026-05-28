@@ -30,8 +30,9 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - `source_type=current_listing_snapshot` row는 NYSE 현재 listing을 반복 관찰하기 위한 partial `event_type=listing_observed` evidence다.
 - `source=nasdaq_symdir_nasdaqlisted` 또는 `nasdaq_symdir_otherlisted` row도 Nasdaq Symbol Directory current snapshot에서 온 partial `listing_observed` evidence다.
 - `source=sec_company_tickers_exchange` row는 SEC current CIK / ticker / exchange association에서 온 partial `listing_observed` identity evidence다.
+- `source=computed_snapshot_lifecycle` row는 existing current snapshot rows에서 계산한 repeated observation window이며 partial `historical_membership` evidence다.
 - `source_type=delisting_feed` row는 SEC Form 25 같은 delisting source에서 온 actual `event_type=delisting` evidence를 담을 수 있다.
-- `source_type=historical_listing`, `delisting_feed`, `computed_from_snapshots` row가 requested backtest period를 덮을 때만 survivorship control PASS 근거가 된다.
+- `source_type=historical_listing`, `delisting_feed`, `computed_from_snapshots` row가 requested backtest period를 덮고 `coverage_status=actual`일 때만 survivorship control PASS 근거가 된다.
 - Phase 8부터 `event_type`, `event_date`, `related_symbol`, `related_cik`를 사용할 수 있다.
   이 필드는 ticker change / merger / delisting / membership event를 source-neutral하게 읽기 위한 nullable event semantics다.
 - `finance/data/nyse_db.py`는 기존 NYSE listing CSV 적재 시 current snapshot row를 idempotent하게 UPSERT할 수 있다.
@@ -44,6 +45,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - current listing snapshot만으로 과거 backtest 기간의 universe membership을 증명할 수 없다.
 - Form 25는 delisting / withdrawal evidence이며, Form 25 부재는 active listing proof가 아니다.
 - Form 25만으로 first listing date와 complete historical membership을 알 수 없으므로, full survivorship control에는 별도 historical listing source가 필요할 수 있다.
+- repeated current snapshot은 관찰 구간 요약일 뿐이고, missing snapshot을 delisting이나 inactive proof로 해석하지 않는다.
 - table이 생겼다고 survivorship bias가 자동 제거되는 것은 아니다. 과거 delisting / historical membership source를 실제로 적재해야 PASS 근거가 된다.
 - workflow JSONL에는 full lifecycle row를 저장하지 않고 compact audit evidence만 남긴다.
 

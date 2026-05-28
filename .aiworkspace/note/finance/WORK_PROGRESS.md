@@ -22,6 +22,9 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-28
+- Completed `.aiworkspace/note/finance/tasks/active/computed-snapshot-lifecycle-v1/`.
+- Added `finance/data/computed_lifecycle.py` and `run_collect_computed_snapshot_lifecycle()` to summarize repeated current snapshot lifecycle rows as DB `computed_from_snapshots` partial evidence.
+- Data Coverage Audit now requires `coverage_status=actual` before lifecycle evidence can make survivorship PASS; no workflow JSONL, memo, preset, approval, order, or rebalance behavior was added.
 - Completed `.aiworkspace/note/finance/tasks/active/sec-cik-exchange-crosscheck-v1/`.
 - Added `finance/data/sec_company_tickers.py` and `run_collect_sec_company_ticker_crosscheck()` to store SEC current CIK / ticker / exchange association as DB lifecycle `listing_observed` partial identity evidence.
 - The collector adds no workflow JSONL, memo, preset, approval, order, or rebalance behavior, and does not loosen survivorship PASS criteria.

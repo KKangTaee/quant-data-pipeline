@@ -12,7 +12,8 @@ Created: 2026-05-28
 - [x] Phase 8 source review completed.
 - [x] Symbol directory snapshot ingestion implemented.
 - [x] SEC CIK / exchange cross-check implemented.
-- [ ] Computed snapshot lifecycle design started.
+- [x] Computed snapshot lifecycle implemented.
+- [ ] Lifecycle audit scoring started.
 
 ## Latest Update
 
@@ -25,8 +26,10 @@ Created: 2026-05-28
 - Nasdaq Daily List is strong but subscription / approval based; the next free-source-first implementation is Nasdaq public Symbol Directory current snapshot ingestion.
 - `symbol-directory-snapshot-ingestion-v1` added a DB-only collector and job wrapper for Nasdaq public current Symbol Directory files.
 - `sec-cik-exchange-crosscheck-v1` added a DB-only SEC current CIK / ticker / exchange cross-check collector and job wrapper.
+- `computed-snapshot-lifecycle-v1` added a DB-only computed row builder / job wrapper that summarizes repeated current snapshot observations as partial `computed_from_snapshots` evidence.
+- Data Coverage Audit now requires `coverage_status=actual` before a lifecycle row can make survivorship PASS.
 
 ## Next
 
-- Start `computed-snapshot-lifecycle-v1`.
-- Define conservative repeated-snapshot evidence and scoring rules before treating computed lifecycle coverage as stronger than partial current snapshots.
+- Start `lifecycle-audit-scoring-v1`.
+- Refine Data Coverage Audit lifecycle scoring display so partial snapshot, identity cross-check, computed partial, and actual delisting / historical evidence are separated clearly.

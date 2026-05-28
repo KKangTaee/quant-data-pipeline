@@ -21,6 +21,18 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-28 - Computed snapshot lifecycle remains partial evidence
+- User request:
+  - Phase 8 다음 작업 진행을 요청함.
+- Interpreted goal:
+  - existing current snapshot lifecycle rows를 반복 관찰 근거로 요약하되, absence / disappearance를 delisting proof로 과대 해석하지 않는다.
+- Analysis result:
+  - `finance/data/computed_lifecycle.py` collector와 `run_collect_computed_snapshot_lifecycle()` job wrapper를 추가했다.
+  - computed row는 `source_type=computed_from_snapshots`, `coverage_status=partial`, `event_type=historical_membership`로 저장된다.
+  - Data Coverage Audit은 lifecycle row가 requested period를 덮더라도 `coverage_status=actual`이 아니면 survivorship PASS로 보지 않는다.
+- Follow-up:
+  - 다음 task는 `lifecycle-audit-scoring-v1`로 partial snapshot / identity cross-check / computed partial / actual evidence를 audit scoring에서 더 분명히 분리한다.
+
 ### 2026-05-28 - SEC CIK exchange crosscheck becomes DB lifecycle identity evidence
 - User request:
   - Phase 8 다음 작업 진행을 요청함.

@@ -66,6 +66,7 @@ Last Verified: 2026-05-28
 | SEC Form 25 delisting collector | `finance/data/sec_delisting.py` |
 | SEC CIK / ticker exchange crosscheck collector | `finance/data/sec_company_tickers.py` |
 | Nasdaq Symbol Directory snapshot collector | `finance/data/symbol_directory.py` |
+| Computed snapshot lifecycle collector | `finance/data/computed_lifecycle.py` |
 | ETF provider ingestion | `finance/data/etf_provider.py` |
 | Macro ingestion | `finance/data/macro.py` |
 | Backtest result bundle runtime helper | `app/runtime/backtest_result_bundle.py` |

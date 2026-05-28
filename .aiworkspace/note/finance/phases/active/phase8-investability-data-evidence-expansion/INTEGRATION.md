@@ -9,6 +9,7 @@ Created: 2026-05-28
 | --- | --- | --- |
 | DB schema | `finance/data/db/schema.py` | Adds nullable event fields to existing table |
 | Current listing ingestion | `finance/data/nyse_db.py` | Must keep current snapshot partial |
+| Computed lifecycle ingestion | `finance/data/computed_lifecycle.py`, `app/jobs/ingestion_jobs.py` | Must keep repeated snapshot evidence partial unless a future source contract can mark actual |
 | SEC Form 25 ingestion | `finance/data/sec_delisting.py` | Must keep delisting-only semantics |
 | Loader | `finance/loaders/universe.py` | Must remain read-only compact summary |
 | Data Coverage Audit | `app/services/backtest_data_coverage_audit.py` | Future scoring refinement only; current route policy must not loosen |
@@ -18,6 +19,6 @@ Created: 2026-05-28
 ## Verification Plan
 
 - `git diff --check`
-- `python -m py_compile finance/data/db/schema.py finance/data/nyse_db.py finance/data/sec_delisting.py finance/loaders/universe.py`
+- `python -m py_compile finance/data/db/schema.py finance/data/nyse_db.py finance/data/sec_delisting.py finance/data/computed_lifecycle.py finance/loaders/universe.py app/services/backtest_data_coverage_audit.py`
 - focused service contracts around lifecycle / Form 25
 - docs status review

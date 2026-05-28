@@ -12,7 +12,7 @@ Created: 2026-05-28
 | 8-2 | `historical-membership-source-review-v1` | main-dev + `finance-db-pipeline` | free / official source 후보 조사, source contract, ingestion feasibility | Complete |
 | 8-3 | `symbol-directory-snapshot-ingestion-v1` | `finance-db-pipeline` | Nasdaq public current symbol directory files를 lifecycle `listing_observed` evidence로 적재 | Implementation complete |
 | 8-4 | `sec-cik-exchange-crosscheck-v1` | `finance-db-pipeline` | SEC current CIK / ticker / exchange association을 lifecycle evidence 보조 source로 연결 | Implementation complete |
-| 8-5 | `computed-snapshot-lifecycle-v1` | `finance-db-pipeline` + `finance-backtest-web-workflow` | repeated current snapshots 기반 computed lifecycle evidence 설계 / scoring | Pending |
+| 8-5 | `computed-snapshot-lifecycle-v1` | `finance-db-pipeline` + `finance-backtest-web-workflow` | repeated current snapshots 기반 computed lifecycle evidence 설계 / scoring | Implementation complete |
 | 8-6 | `lifecycle-audit-scoring-v1` | `finance-backtest-web-workflow` | Data Coverage Audit evidence scoring refinement | Pending |
 | 8-7 | `phase8-integrated-qa-closeout` | `finance-integration-review` + `finance-doc-sync` | compile, service contracts, docs, phase closeout | Pending |
 
@@ -26,13 +26,13 @@ Created: 2026-05-28
 
 ## Immediate Next Task
 
-`computed-snapshot-lifecycle-v1`
+`lifecycle-audit-scoring-v1`
 
 Goal:
 
-- repeated current snapshots 기반으로 computed lifecycle evidence를 만들 수 있는 조건을 설계한다.
-- absence / disappearance를 delisting proof로 과도하게 해석하지 않는 보수적 정책을 고정한다.
-- Data Coverage Audit이 computed evidence를 언제 PASS 후보로 볼 수 있는지 정한다.
+- Data Coverage Audit의 lifecycle evidence scoring을 Phase 8 source semantics에 맞게 정교화한다.
+- current snapshot, SEC identity cross-check, computed partial, Form 25 actual evidence를 분리 표시한다.
+- operator가 왜 PASS / REVIEW / NEEDS_INPUT인지 더 명확히 볼 수 있게 compact metrics를 보강한다.
 
 Out of scope:
 

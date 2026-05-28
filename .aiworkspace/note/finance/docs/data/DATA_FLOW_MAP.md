@@ -54,6 +54,10 @@ SEC company_tickers.json
 SEC submissions API Form 25 / 25-NSE metadata
   -> finance.data.sec_delisting.collect_and_store_sec_form25_delistings()
   -> finance_meta.nyse_symbol_lifecycle (delisting_feed / delisting / actual)
+
+Existing current snapshot lifecycle rows
+  -> finance.data.computed_lifecycle.collect_and_store_computed_snapshot_lifecycle()
+  -> finance_meta.nyse_symbol_lifecycle (computed_from_snapshots / historical_membership / partial)
   -> finance.loaders.universe.load_symbol_lifecycle_coverage_summary()
   -> Data Coverage Audit / Validation Efficacy Audit
 ```
@@ -64,6 +68,7 @@ SEC submissions API Form 25 / 25-NSE metadata
 - Nasdaq Symbol Directory snapshot도 current listing 관찰치이며 historical survivorship PASS 근거가 아니다.
 - SEC CIK / ticker / exchange association도 current identity cross-check이며 historical survivorship PASS 근거가 아니다.
 - SEC Form 25 row는 official delisting / withdrawal evidence다.
+- computed snapshot lifecycle row는 repeated observation window 요약이며, `coverage_status=partial`이면 historical survivorship PASS 근거가 아니다.
 - Form 25가 없다는 사실은 active listing proof가 아니다.
 - complete historical universe membership은 여전히 별도 historical listing source가 필요하다.
 - Phase 8부터 lifecycle row는 `event_type`, `event_date`, `related_symbol`, `related_cik`를 받을 수 있다.

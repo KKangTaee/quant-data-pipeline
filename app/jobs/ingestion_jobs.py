@@ -10,6 +10,7 @@ from finance.data.factors import upsert_factors, upsert_statement_factors_shadow
 from finance.data.financial_statements import upsert_financial_statements
 from finance.data.fundamentals import upsert_fundamentals, upsert_statement_fundamentals_shadow
 from finance.data.asset_profile import collect_and_store_asset_profiles
+from finance.data.computed_lifecycle import collect_and_store_computed_snapshot_lifecycle
 from finance.data.etf_provider import (
     aggregate_and_store_etf_exposures,
     collect_and_store_etf_holdings,
@@ -1541,6 +1542,90 @@ def run_collect_sec_company_ticker_crosscheck(
             details={
                 "target_table": "finance_meta.nyse_symbol_lifecycle",
                 "symbols": parsed,
+            },
+        )
+
+
+def run_collect_computed_snapshot_lifecycle(
+    symbols: str | Iterable[str] | None = None,
+    *,
+    min_observation_dates: int = 2,
+) -> JobResult:
+    """Compute conservative lifecycle evidence from existing current snapshot rows."""
+    job_name = "collect_computed_snapshot_lifecycle"
+    started_at = _now_str()
+    t0 = perf_counter()
+    parsed, invalid_symbols = split_valid_invalid_symbols(symbols)
+
+    if symbols is not None and not parsed:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=0,
+            symbols_processed=0,
+            failed_symbols=invalid_symbols,
+            message="No valid symbols provided for computed snapshot lifecycle evidence.",
+            details={
+                "target_table": "finance_meta.nyse_symbol_lifecycle",
+                "symbols": parsed,
+                "min_observation_dates": int(min_observation_dates),
+            },
+        )
+
+    try:
+        summary = collect_and_store_computed_snapshot_lifecycle(
+            symbols=parsed,
+            min_observation_dates=int(min_observation_dates),
+        )
+        rows_written = int(summary.get("rows_written") or 0)
+        missing_symbols = list(summary.get("requested_missing_symbols") or [])
+        failed_symbols = invalid_symbols + missing_symbols
+        if rows_written <= 0:
+            status = "failed"
+            message = "Computed snapshot lifecycle wrote no lifecycle rows."
+        elif failed_symbols:
+            status = "partial_success"
+            message = "Computed snapshot lifecycle completed with coverage gaps."
+        else:
+            status = "success"
+            message = "Computed snapshot lifecycle completed."
+
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status=status,
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=rows_written,
+            symbols_requested=int(summary.get("requested") or len(parsed)),
+            symbols_processed=rows_written,
+            failed_symbols=failed_symbols[:50],
+            message=message,
+            details=summary,
+        )
+    except Exception as exc:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=len(parsed),
+            symbols_processed=0,
+            failed_symbols=(invalid_symbols + parsed)[:50],
+            message=f"Computed snapshot lifecycle failed: {exc}",
+            details={
+                "target_table": "finance_meta.nyse_symbol_lifecycle",
+                "symbols": parsed,
+                "min_observation_dates": int(min_observation_dates),
             },
         )
 
