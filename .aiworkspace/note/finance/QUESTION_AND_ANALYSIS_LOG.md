@@ -21,6 +21,18 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-28 - Survivorship control needs DB-backed lifecycle evidence
+- User request:
+  - 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - Data Coverage gate가 약한 evidence를 막게 됐으므로, 이제 survivorship / historical universe 근거 자체를 DB-backed로 받을 수 있게 만든다.
+- Analysis result:
+  - `nyse_symbol_lifecycle` schema, NYSE listing lifecycle UPSERT path, `load_symbol_lifecycle_coverage_summary`, Data Coverage Audit 연결을 추가했다.
+  - requested period를 덮는 `historical_listing`, `delisting_feed`, `computed_from_snapshots` lifecycle evidence가 있을 때만 survivorship control PASS가 된다.
+  - current listing snapshot과 asset profile만 있는 경우는 여전히 REVIEW다.
+- Follow-up:
+  - 다음 작업은 실제 historical delisting source backfill 또는 cost / turnover 실측 근거 보강이 적절하다.
+
 ### 2026-05-28 - Integrated investability gate needs combination QA
 - User request:
   - 다음 작업 진행을 요청함.

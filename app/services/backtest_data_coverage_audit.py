@@ -4,7 +4,11 @@ from typing import Any
 
 import pandas as pd
 
-from finance.loaders import load_asset_profile_status_summary, load_price_window_summary
+from finance.loaders import (
+    load_asset_profile_status_summary,
+    load_price_window_summary,
+    load_symbol_lifecycle_coverage_summary,
+)
 
 
 DATA_COVERAGE_AUDIT_SCHEMA_VERSION = "data_coverage_audit_v1"
@@ -28,6 +32,7 @@ _STATUS_RANK = {
     "NEEDS_INPUT": 2,
     "BLOCKED": 3,
 }
+_HISTORICAL_LIFECYCLE_SOURCE_TYPES = {"historical_listing", "delisting_feed", "computed_from_snapshots"}
 
 
 def _safe_text(value: Any, fallback: str = "-") -> str:
@@ -148,8 +153,10 @@ def build_db_data_coverage_context(
     symbols = list(weights)
     price_window_rows: list[dict[str, Any]] = []
     asset_profile_rows: list[dict[str, Any]] = []
+    symbol_lifecycle_rows: list[dict[str, Any]] = []
     price_window_error = None
     asset_profile_error = None
+    symbol_lifecycle_error = None
     if symbols:
         try:
             price_window_rows = _frame_records(
@@ -161,6 +168,12 @@ def build_db_data_coverage_context(
             asset_profile_rows = _frame_records(load_asset_profile_status_summary(symbols))
         except Exception as exc:  # pragma: no cover - DB failures are surfaced as evidence.
             asset_profile_error = str(exc)
+        try:
+            symbol_lifecycle_rows = _frame_records(
+                load_symbol_lifecycle_coverage_summary(symbols=symbols, start=start, end=end)
+            )
+        except Exception as exc:  # pragma: no cover - DB failures are surfaced as evidence.
+            symbol_lifecycle_error = str(exc)
     return {
         "schema_version": DATA_COVERAGE_CONTEXT_SCHEMA_VERSION,
         "source": "finance.loaders",
@@ -173,6 +186,8 @@ def build_db_data_coverage_context(
         "price_window_error": price_window_error,
         "asset_profile_rows": asset_profile_rows,
         "asset_profile_error": asset_profile_error,
+        "symbol_lifecycle_rows": symbol_lifecycle_rows,
+        "symbol_lifecycle_error": symbol_lifecycle_error,
     }
 
 
@@ -337,8 +352,98 @@ def _pit_window_row(validation: dict[str, Any], price_status: str) -> dict[str, 
     )
 
 
+def _lifecycle_row_covers_requested_period(row: dict[str, Any], *, start: str | None, end: str | None) -> bool:
+    first_seen = _date_text(row.get("first_seen_date"))
+    last_seen = _date_text(row.get("last_seen_date"))
+    if not start or not end:
+        return False
+    if not first_seen or first_seen > start:
+        return False
+    if last_seen and last_seen < end:
+        return False
+    listing_status = str(row.get("listing_status") or "").strip().lower()
+    coverage_status = str(row.get("coverage_status") or "").strip().lower()
+    if listing_status in {"error", "unknown", "not_found"}:
+        return False
+    if coverage_status in {"missing", "error"}:
+        return False
+    return str(row.get("source_type") or "").strip().lower() in _HISTORICAL_LIFECYCLE_SOURCE_TYPES
+
+
+def _symbol_lifecycle_evidence(context: dict[str, Any]) -> dict[str, Any]:
+    symbols = [str(symbol or "").upper() for symbol in list(context.get("symbols") or []) if str(symbol or "").strip()]
+    rows = [dict(row or {}) for row in _as_list(context.get("symbol_lifecycle_rows")) if isinstance(row, dict)]
+    requested_start = _date_text(context.get("requested_start"))
+    requested_end = _date_text(context.get("requested_end"))
+    if context.get("symbol_lifecycle_error"):
+        return {
+            "status": "NEEDS_INPUT",
+            "current": f"lifecycle error / symbols={len(symbols)}",
+            "evidence": context.get("symbol_lifecycle_error"),
+            "covered_symbols": [],
+            "partial_symbols": [],
+            "missing_symbols": symbols,
+        }
+    if not symbols:
+        return {
+            "status": "NEEDS_INPUT",
+            "current": "symbols=0",
+            "evidence": "requested symbols missing",
+            "covered_symbols": [],
+            "partial_symbols": [],
+            "missing_symbols": [],
+        }
+    rows_by_symbol: dict[str, list[dict[str, Any]]] = {}
+    for row in rows:
+        symbol = str(row.get("symbol") or "").upper()
+        if symbol:
+            rows_by_symbol.setdefault(symbol, []).append(row)
+    covered_symbols: list[str] = []
+    partial_symbols: list[str] = []
+    missing_symbols: list[str] = []
+    evidence_sources: set[str] = set()
+    for symbol in symbols:
+        candidates = rows_by_symbol.get(symbol) or []
+        for candidate in candidates:
+            source_type = str(candidate.get("source_type") or "").strip().lower()
+            source = str(candidate.get("source") or "").strip()
+            if source_type:
+                evidence_sources.add(f"{source_type}:{source or '-'}")
+        if any(
+            _lifecycle_row_covers_requested_period(candidate, start=requested_start, end=requested_end)
+            for candidate in candidates
+        ):
+            covered_symbols.append(symbol)
+        elif candidates:
+            partial_symbols.append(symbol)
+        else:
+            missing_symbols.append(symbol)
+    if len(covered_symbols) == len(symbols):
+        status = "PASS"
+        evidence = "historical lifecycle rows cover requested period"
+    elif rows:
+        status = "REVIEW"
+        evidence = (
+            f"partial={', '.join(partial_symbols[:6]) or '-'} / "
+            f"missing={', '.join(missing_symbols[:6]) or '-'} / "
+            f"sources={', '.join(sorted(evidence_sources)[:4]) or '-'}"
+        )
+    else:
+        status = "NEEDS_INPUT"
+        evidence = "symbol lifecycle rows missing"
+    return {
+        "status": status,
+        "current": f"covered={len(covered_symbols)} / partial={len(partial_symbols)} / symbols={len(symbols)}",
+        "evidence": evidence,
+        "covered_symbols": covered_symbols,
+        "partial_symbols": partial_symbols,
+        "missing_symbols": missing_symbols,
+    }
+
+
 def _universe_listing_row(validation: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
     historical, historical_evidence = _explicit_historical_universe(validation)
+    lifecycle = _symbol_lifecycle_evidence(context)
     rows = [dict(row or {}) for row in _as_list(context.get("asset_profile_rows")) if isinstance(row, dict)]
     symbols = list(context.get("symbols") or [])
     profile_symbols = {str(row.get("symbol") or "").upper() for row in rows}
@@ -347,6 +452,12 @@ def _universe_listing_row(validation: dict[str, Any], context: dict[str, Any]) -
     if historical:
         status = "PASS"
         evidence = historical_evidence
+    elif lifecycle["status"] == "PASS":
+        status = "PASS"
+        evidence = lifecycle["evidence"]
+    elif lifecycle["status"] == "REVIEW":
+        status = "REVIEW"
+        evidence = lifecycle["evidence"]
     elif context.get("asset_profile_error"):
         status = "NEEDS_INPUT"
         evidence = context.get("asset_profile_error")
@@ -365,17 +476,21 @@ def _universe_listing_row(validation: dict[str, Any], context: dict[str, Any]) -
     return _row(
         criteria="Universe / listing evidence",
         status=status,
-        current=f"profiles={len(rows)} / symbols={len(symbols)}",
+        current=f"profiles={len(rows)} / lifecycle={lifecycle['current']} / symbols={len(symbols)}",
         evidence=evidence,
         next_action="historical universe membership 또는 listing history evidence를 보강합니다." if status != "PASS" else "추가 조치 없음",
         meaning="검증 universe가 현재 생존 종목만으로 과거를 재구성하지 않는지 확인합니다.",
     )
 
 
-def _survivorship_row(validation: dict[str, Any], universe_status: str) -> dict[str, Any]:
+def _survivorship_row(validation: dict[str, Any], context: dict[str, Any], universe_status: str) -> dict[str, Any]:
     historical, evidence = _explicit_historical_universe(validation)
+    lifecycle = _symbol_lifecycle_evidence(context)
     if historical:
         status = "PASS"
+    elif lifecycle["status"] == "PASS":
+        status = "PASS"
+        evidence = lifecycle["evidence"]
     elif universe_status == "NEEDS_INPUT":
         status = "NEEDS_INPUT"
     else:
@@ -383,8 +498,8 @@ def _survivorship_row(validation: dict[str, Any], universe_status: str) -> dict[
     return _row(
         criteria="Survivorship / delisting control",
         status=status,
-        current=evidence if historical else "not proven",
-        evidence=evidence if historical else "current listing evidence is not enough for survivorship control",
+        current=evidence if status == "PASS" else "not proven",
+        evidence=evidence if status == "PASS" else "current listing evidence is not enough for survivorship control",
         next_action="historical universe / delisting 기준을 별도 DB evidence로 보강합니다." if status != "PASS" else "추가 조치 없음",
         meaning="과거에 사라진 종목을 배제해 성과가 과대평가되는 위험을 확인합니다.",
     )
@@ -421,7 +536,8 @@ def build_data_coverage_audit(validation: dict[str, Any]) -> dict[str, Any]:
     provider_row = _provider_snapshot_row(validation)
     pit_row = _pit_window_row(validation, str(price_row.get("Status") or "NEEDS_INPUT"))
     universe_row = _universe_listing_row(validation, context)
-    survivorship_row = _survivorship_row(validation, str(universe_row.get("Status") or "NEEDS_INPUT"))
+    lifecycle_evidence = _symbol_lifecycle_evidence(context)
+    survivorship_row = _survivorship_row(validation, context, str(universe_row.get("Status") or "NEEDS_INPUT"))
     rows = [
         price_row,
         provider_row,
@@ -465,6 +581,9 @@ def build_data_coverage_audit(validation: dict[str, Any]) -> dict[str, Any]:
             "symbol_count": price_metrics.get("symbol_count", 0),
             "price_covered_weight": price_metrics.get("covered_weight", 0.0),
             "missing_price_symbols": list(price_metrics.get("missing_symbols") or []),
+            "lifecycle_covered_symbols": list(lifecycle_evidence.get("covered_symbols") or []),
+            "lifecycle_partial_symbols": list(lifecycle_evidence.get("partial_symbols") or []),
+            "lifecycle_missing_symbols": list(lifecycle_evidence.get("missing_symbols") or []),
         },
         "execution_boundary": {
             "write_policy": "read_only_data_coverage_audit",

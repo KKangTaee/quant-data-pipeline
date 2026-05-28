@@ -330,6 +330,20 @@ def _nested_values_for_keys(value: Any, keys: set[str]) -> list[Any]:
     return found
 
 
+def _data_coverage_survivorship_evidence(validation: dict[str, Any]) -> tuple[str | None, str]:
+    audit = dict(validation.get("data_coverage_audit") or {})
+    for row in _as_list(audit.get("rows")):
+        if not isinstance(row, dict):
+            continue
+        row_data = dict(row or {})
+        if str(row_data.get("Criteria") or "").strip().lower() != "survivorship / delisting control":
+            continue
+        status = str(row_data.get("Status") or "").strip().upper()
+        evidence = _safe_text(row_data.get("Evidence") or row_data.get("Current"), status or "-")
+        return status or None, evidence
+    return None, "data coverage survivorship evidence not attached"
+
+
 def _survivorship_row(validation: dict[str, Any]) -> dict[str, Any]:
     keys = {
         "survivorship_control",
@@ -343,6 +357,7 @@ def _survivorship_row(validation: dict[str, Any]) -> dict[str, Any]:
     values = _nested_values_for_keys(validation, keys)
     status = "REVIEW"
     evidence = "historical universe / delisting evidence not attached"
+    data_coverage_status, data_coverage_evidence = _data_coverage_survivorship_evidence(validation)
     for value in values:
         if isinstance(value, dict):
             candidate = value.get("status") or value.get("Current") or value.get("current") or value.get("mode")
@@ -361,6 +376,12 @@ def _survivorship_row(validation: dict[str, Any]) -> dict[str, Any]:
             status = "BLOCKED"
             evidence = _safe_text(candidate)
             break
+    if status == "REVIEW" and data_coverage_status == "PASS":
+        status = "PASS"
+        evidence = data_coverage_evidence
+    elif data_coverage_status == "BLOCKED":
+        status = "BLOCKED"
+        evidence = data_coverage_evidence
     return _row(
         criteria="Survivorship / universe guard",
         status=status,

@@ -117,7 +117,7 @@
 | `finance/loaders/factors.py` | Factor snapshot read path |
 | `finance/loaders/fundamentals.py` | Fundamentals read path |
 | `finance/loaders/financial_statements.py` | Statement snapshot read path |
-| `finance/loaders/universe.py` | Universe / investability 관련 read path |
+| `finance/loaders/universe.py` | Universe / investability 관련 read path. asset profile status와 symbol lifecycle coverage summary를 제공 |
 | `finance/loaders/runtime_adapter.py` | loader output을 runtime / strategy 입력으로 맞추는 adapter |
 | `finance/loaders/_common.py` | loader 공통 DB / dataframe helper |
 
@@ -130,7 +130,7 @@
 | `finance/data/data.py` | 가격 데이터 수집 entry / orchestration |
 | `finance/data/data_format.py` | 수집 데이터 정규화 helper |
 | `finance/data/nyse.py` | NYSE universe source 수집 |
-| `finance/data/nyse_db.py` | NYSE universe DB persistence |
+| `finance/data/nyse_db.py` | NYSE universe DB persistence. current listing master와 `nyse_symbol_lifecycle` bridge row UPSERT를 담당 |
 | `finance/data/asset_profile.py` | Asset profile 수집. ETF operability snapshot의 bridge source로 일부 field를 제공 |
 | `finance/data/etf_provider.py` | ETF provider source map discovery, ETF operability / holdings / exposure snapshot schema sync, 기존 price/profile DB 기반 bridge/proxy 수집, iShares / SSGA / Invesco official row normalize, commodity gold exposure row 생성, holdings canonical refresh, exposure aggregation, UPSERT 저장 |
 | `finance/data/macro.py` | FRED market-context series 수집. VIX / yield curve / credit spread series를 `macro_series_observation`에 UPSERT 저장 |

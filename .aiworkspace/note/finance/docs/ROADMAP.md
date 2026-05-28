@@ -7,6 +7,7 @@ Last Verified: 2026-05-28
 
 | Track | Status | Notes |
 |---|---|---|
+| Historical Universe Survivorship V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/historical-universe-survivorship-v1/`; `nyse_symbol_lifecycle` schema / loader / Data Coverage Audit 연결을 추가해 historical lifecycle row가 requested period를 덮을 때만 survivorship PASS 처리 |
 | Integrated Investability Gate QA V1 | Complete | `.aiworkspace/note/finance/tasks/active/integrated-investability-gate-qa-v1/`; 세 audit과 기존 provider / robustness / paper / final evidence gate의 ready / review / blocker 조합을 service contract로 고정 |
 | Data Coverage Gate Policy Link V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/data-coverage-gate-policy-link-v1/`; Data Coverage Audit route를 profile-aware gate policy에 연결해 `NEEDS_INPUT` / `BLOCKED`는 selected-route blocker, `REVIEW`는 review-required로 처리 |
 | Data Coverage Hardening V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/data-coverage-hardening-v1/`; DB price window summary, provider freshness, PIT replay / period coverage, universe listing, survivorship evidence를 read-only Data Coverage Audit으로 표시 |
@@ -98,5 +99,5 @@ P2에서 정상화하는 주요 진단:
 ## Next Decisions
 
 - UI Engine Boundary Cleanup은 완료됐다. 다음 구조 작업은 새 phase/task로 열고, 현재 경계는 boundary lint와 service contract test를 먼저 통과시키는 기준으로 유지한다.
-- Practical Validation V2 P3는 selected monitoring 연결과 closeout QA를 완료했다. Validation Efficacy, Backtest Realism, Data Coverage audit 표시 / gate 연결과 Integrated Investability Gate QA를 완료했다. 다음 큰 약점은 historical universe / delisting source, survivorship control, 또는 cost / turnover 실측 근거처럼 실제 data source 자체가 부족한 영역이다.
+- Practical Validation V2 P3는 selected monitoring 연결과 closeout QA를 완료했다. Validation Efficacy, Backtest Realism, Data Coverage audit 표시 / gate 연결, Integrated Investability Gate QA, Historical Universe Survivorship V1을 완료했다. 다음 큰 약점은 실제 historical delisting source backfill 또는 cost / turnover 실측 근거처럼 데이터 소스 자체가 아직 부족한 영역이다.
 - Structured Waiver Policy V1은 구현 없이 정책만 확정했다. Waiver UI / persistence는 아직 별도 구현 task로 열지 않았다.

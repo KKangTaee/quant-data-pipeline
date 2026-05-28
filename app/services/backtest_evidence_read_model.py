@@ -607,12 +607,14 @@ def build_investability_evidence_packet(
     critical_gaps = _critical_gap_rows(validation, paper_observation, decision_evidence)
     blocking_gaps = [gap for gap in critical_gaps if str(gap.get("Severity") or "") == "BLOCK"]
     assumptions = _assumption_rows(validation)
-    validation_efficacy_audit = dict(
-        validation.get("validation_efficacy_audit") or build_validation_efficacy_audit(validation)
-    )
-    validation_efficacy_route = str(validation_efficacy_audit.get("route") or "")
     data_coverage_audit = dict(validation.get("data_coverage_audit") or build_data_coverage_audit(validation))
     data_coverage_route = str(data_coverage_audit.get("route") or "")
+    validation_for_efficacy = dict(validation)
+    validation_for_efficacy.setdefault("data_coverage_audit", data_coverage_audit)
+    validation_efficacy_audit = dict(
+        validation.get("validation_efficacy_audit") or build_validation_efficacy_audit(validation_for_efficacy)
+    )
+    validation_efficacy_route = str(validation_efficacy_audit.get("route") or "")
     backtest_realism_audit = dict(validation.get("backtest_realism_audit") or build_backtest_realism_audit(validation))
     backtest_realism_route = str(backtest_realism_audit.get("route") or "")
     source_chain = {

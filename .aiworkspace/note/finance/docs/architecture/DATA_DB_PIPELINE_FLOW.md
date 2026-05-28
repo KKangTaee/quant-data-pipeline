@@ -37,7 +37,7 @@ external source
 |---|---|
 | `finance/data/db/schema.py` | DB table definition과 schema migration 성격의 column 보강 |
 | `finance/data/db/mysql.py` | MySQL connection / execution helper |
-| `finance/data/nyse_db.py` | NYSE CSV를 DB universe table로 적재 |
+| `finance/data/nyse_db.py` | NYSE CSV를 DB universe table로 적재하고 current listing lifecycle bridge row를 UPSERT |
 | `finance/data/asset_profile.py` | asset profile 수집과 저장 |
 | `finance/data/etf_provider.py` | ETF provider source map discovery와 provider snapshot 수집 / 저장 경계. `nyse_etf` / asset profile 기반으로 공식 endpoint map을 `etf_provider_source_map`에 저장하고, 기존 DB 기반 bridge/proxy row와 issuer official row를 `etf_operability_snapshot`, `etf_holdings_snapshot`, `etf_exposure_snapshot`에 저장한다 |
 | `finance/data/macro.py` | FRED market-context series 수집 / 저장 경계. API key가 있으면 FRED API, 없으면 official CSV download를 사용해 `macro_series_observation`에 저장한다 |
@@ -52,7 +52,7 @@ external source
 
 | 파일 | 역할 |
 |---|---|
-| `finance/loaders/universe.py` | universe와 asset profile status 조회 |
+| `finance/loaders/universe.py` | universe, asset profile status, symbol lifecycle coverage summary 조회 |
 | `finance/loaders/price.py` | price history, price matrix, freshness, symbol별 latest price, validation window coverage summary 조회 |
 | `finance/loaders/provider.py` | provider snapshot read path. ETF operability / holdings / exposure snapshot을 읽는다 |
 | `finance/loaders/macro.py` | market-context read path. macro observation range와 기준일 snapshot / staleness를 읽는다 |
@@ -87,6 +87,9 @@ external source
   이 board도 full holdings row를 JSONL에 저장하지 않고 DB-backed loader 결과에서 만든 summary / top rows만 저장한다.
   `data-coverage-hardening-v1`부터 `finance/loaders/price.py`는 requested validation window의 symbol별 first / latest / row count summary를 제공한다.
   Practical Validation은 이 summary와 asset profile status, provider freshness, runtime replay / period coverage를 `Data Coverage Audit`으로 묶어 보여주며, full OHLCV row나 full listing row를 workflow JSONL에 저장하지 않는다.
+  `historical-universe-survivorship-v1`부터 `nyse_symbol_lifecycle`은 current listing snapshot, historical listing, delisting feed, computed snapshot evidence를 저장할 수 있는 lifecycle table이다.
+  `finance/loaders/universe.py`는 requested period 기준 compact lifecycle summary를 제공하고, Data Coverage Audit은 requested period를 덮는 historical / delisting evidence가 있을 때만 survivorship control을 PASS로 본다.
+  current listing snapshot이나 asset profile row만 있으면 REVIEW로 남긴다.
 
 ## 데이터 무결성 체크포인트
 

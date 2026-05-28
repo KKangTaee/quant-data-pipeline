@@ -17,6 +17,26 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - source는 NYSE listing 수집 경로
 - 완전한 historical listing membership table은 아니다
 
+## `nyse_symbol_lifecycle`
+
+역할:
+
+- symbol lifecycle, historical universe membership, delisting evidence를 저장한다.
+- Data Coverage Audit의 `Universe / listing evidence`와 `Survivorship / delisting control` row가 이 table의 compact loader summary를 읽는다.
+
+성격:
+
+- lifecycle evidence table이다.
+- `source_type=current_listing_snapshot` row는 NYSE 현재 listing을 반복 관찰하기 위한 partial evidence다.
+- `source_type=historical_listing`, `delisting_feed`, `computed_from_snapshots` row가 requested backtest period를 덮을 때만 survivorship control PASS 근거가 된다.
+- `finance/data/nyse_db.py`는 기존 NYSE listing CSV 적재 시 current snapshot row를 idempotent하게 UPSERT할 수 있다.
+
+주의:
+
+- current listing snapshot만으로 과거 backtest 기간의 universe membership을 증명할 수 없다.
+- table이 생겼다고 survivorship bias가 자동 제거되는 것은 아니다. 과거 delisting / historical membership source를 실제로 적재해야 PASS 근거가 된다.
+- workflow JSONL에는 full lifecycle row를 저장하지 않고 compact audit evidence만 남긴다.
+
 ## `nyse_asset_profile`
 
 역할:

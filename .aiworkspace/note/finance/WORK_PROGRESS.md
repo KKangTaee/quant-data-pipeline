@@ -22,6 +22,9 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-28
+- Completed `.aiworkspace/note/finance/tasks/active/historical-universe-survivorship-v1/`.
+- Added `nyse_symbol_lifecycle` schema, NYSE listing lifecycle UPSERT path, lifecycle coverage loader, and Data Coverage / Validation Efficacy survivorship integration.
+- Current listing snapshots remain partial evidence; only requested-period historical / delisting lifecycle evidence can make survivorship control PASS. No workflow JSONL, memo, preset, approval, order, or rebalance behavior was added.
 - Completed `.aiworkspace/note/finance/tasks/active/integrated-investability-gate-qa-v1/`.
 - Final Review evidence read model now has integrated contract coverage for all-ready, multi-review, and multi-blocker investability gate combinations.
 - This QA added no DB write, new JSONL registry, memo, preset, approval, order, or rebalance behavior.

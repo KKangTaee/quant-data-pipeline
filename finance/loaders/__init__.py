@@ -37,7 +37,7 @@ from .price import (
 )
 from .provider import load_etf_exposure_snapshot, load_etf_holdings_snapshot, load_etf_operability_snapshot
 from .runtime_adapter import adapt_price_history_to_strategy_dfs, load_price_strategy_dfs
-from .universe import load_asset_profile_status_summary, load_universe
+from .universe import load_asset_profile_status_summary, load_symbol_lifecycle_coverage_summary, load_universe
 
 __all__ = [
     "load_universe",
@@ -70,4 +70,5 @@ __all__ = [
     "adapt_price_history_to_strategy_dfs",
     "load_price_strategy_dfs",
     "load_asset_profile_status_summary",
+    "load_symbol_lifecycle_coverage_summary",
 ]

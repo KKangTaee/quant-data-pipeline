@@ -33,6 +33,7 @@ Last Verified: 2026-05-28
 |---|---|
 | `nyse_stock` | NYSE stock listing master |
 | `nyse_etf` | NYSE ETF listing master |
+| `nyse_symbol_lifecycle` | symbol lifecycle / historical universe / delisting evidence table |
 | `nyse_asset_profile` | stock / ETF profile and bridge metadata |
 | `nyse_price_history` | OHLCV price ledger |
 | `etf_provider_source_map` | ETF별 issuer endpoint / parser mapping cache |

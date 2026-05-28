@@ -40,6 +40,8 @@
 - `status`, `is_spac`, country, sector, industry는 provider 품질에 의존한다.
 - historical listing / delisting / symbol-change truth가 아니다.
 - survivorship bias를 완전히 제거하지 못한다.
+- `nyse_symbol_lifecycle`은 historical universe / delisting evidence를 담기 위한 table이다.
+  current listing snapshot row는 partial evidence이고, requested period를 덮는 `historical_listing`, `delisting_feed`, 또는 충분한 `computed_from_snapshots` source가 있어야 survivorship control PASS 근거가 된다.
 - `etf_operability_snapshot` `db_bridge` row는 official ETF provider actual data가 아니다.
 - P2-2B official row는 iShares / SSGA / Invesco page의 current snapshot을 normalize한 것이다.
   다만 Invesco QQQ는 현재 expense ratio / inception만 확보되어 `partial`이며,

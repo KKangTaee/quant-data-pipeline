@@ -258,6 +258,66 @@ class ValidationEfficacyAuditContractTests(unittest.TestCase):
         self.assertEqual(rows_by_criteria["Provider / freshness evidence"]["Status"], "NEEDS_INPUT")
         self.assertEqual(rows_by_criteria["Survivorship / universe guard"]["Status"], "REVIEW")
 
+    def test_survivorship_guard_uses_data_coverage_lifecycle_evidence(self) -> None:
+        from app.services.backtest_validation_efficacy import (
+            VALIDATION_EFFICACY_READY,
+            build_validation_efficacy_audit,
+        )
+
+        audit = build_validation_efficacy_audit(
+            {
+                "selection_source_id": "source-lifecycle",
+                "checks": [
+                    {"Criteria": "Selection source", "Ready": True, "Current": "source-lifecycle"},
+                    {"Criteria": "Active components", "Ready": True, "Current": "2"},
+                    {"Criteria": "Target weight total", "Ready": True, "Current": "100.00%"},
+                    {"Criteria": "Data Trust", "Ready": True, "Current": "PASS"},
+                    {"Criteria": "Runtime recheck", "Ready": True, "Current": "PASS"},
+                    {"Criteria": "Runtime period coverage", "Ready": True, "Current": "PASS"},
+                    {"Criteria": "Provider coverage", "Ready": True, "Current": "PASS"},
+                    {"Criteria": "Benchmark parity", "Ready": True, "Current": "PASS"},
+                ],
+                "curve_evidence": {
+                    "portfolio_curve_source": "actual_runtime_replay",
+                    "portfolio_curve_rows": 120,
+                    "curve_provenance": {
+                        "portfolio_curve_source": "actual_runtime_replay",
+                        "portfolio_curve_rows": 120,
+                        "runtime_recheck_status": "PASS",
+                        "period_coverage_status": "PASS",
+                        "runtime_recheck_mode": "latest_market_replay",
+                    },
+                    "period_coverage": {"status": "PASS"},
+                    "benchmark_parity": {
+                        "status": "PASS",
+                        "metrics": {"coverage_ratio": 1.0, "same_period": True, "same_frequency": True},
+                    },
+                },
+                "provider_coverage_display_rows": [
+                    {"Area": "ETF Operability", "Diagnostic Status": "PASS", "Freshness": "fresh"},
+                    {"Area": "ETF Holdings", "Diagnostic Status": "PASS", "Freshness": "fresh"},
+                ],
+                "robustness_validation": {
+                    "robustness_route": "READY_FOR_STRESS_SWEEP",
+                    "robustness_lab_board": {"status": "PASS", "summary": "stress / rolling / sensitivity attached"},
+                },
+                "data_coverage_audit": {
+                    "rows": [
+                        {
+                            "Criteria": "Survivorship / delisting control",
+                            "Status": "PASS",
+                            "Evidence": "historical lifecycle rows cover requested period",
+                        }
+                    ]
+                },
+                "diagnostic_summary": {"status_counts": {"NOT_RUN": 0}},
+            }
+        )
+
+        rows_by_criteria = {row["Criteria"]: row for row in audit["rows"]}
+        self.assertEqual(audit["route"], VALIDATION_EFFICACY_READY)
+        self.assertEqual(rows_by_criteria["Survivorship / universe guard"]["Status"], "PASS")
+
 
 class BacktestRealismAuditContractTests(unittest.TestCase):
     def test_ready_audit_uses_cost_turnover_and_liquidity_metadata_without_writes(self) -> None:
@@ -391,6 +451,133 @@ class DataCoverageAuditContractTests(unittest.TestCase):
         self.assertFalse(audit["execution_boundary"]["db_write"])
         self.assertFalse(audit["execution_boundary"]["registry_write"])
         self.assertFalse(audit["execution_boundary"]["memo_persistence"])
+
+    def test_lifecycle_rows_control_survivorship_without_explicit_flag(self) -> None:
+        from app.services.backtest_data_coverage_audit import (
+            DATA_COVERAGE_READY,
+            build_data_coverage_audit,
+        )
+
+        audit = build_data_coverage_audit(
+            {
+                "data_coverage_context": {
+                    "symbols": ["SPY", "TLT"],
+                    "symbol_weights": {"SPY": 60.0, "TLT": 40.0},
+                    "requested_start": "2020-01-01",
+                    "requested_end": "2020-12-31",
+                    "price_window_rows": [
+                        {
+                            "symbol": "SPY",
+                            "first_window_date": "2020-01-01",
+                            "latest_window_date": "2020-12-31",
+                            "window_row_count": 252,
+                        },
+                        {
+                            "symbol": "TLT",
+                            "first_window_date": "2020-01-01",
+                            "latest_window_date": "2020-12-31",
+                            "window_row_count": 252,
+                        },
+                    ],
+                    "asset_profile_rows": [
+                        {"symbol": "SPY", "status": "active"},
+                        {"symbol": "TLT", "status": "active"},
+                    ],
+                    "symbol_lifecycle_rows": [
+                        {
+                            "symbol": "SPY",
+                            "listing_status": "active",
+                            "source": "historical_feed",
+                            "source_type": "historical_listing",
+                            "coverage_status": "actual",
+                            "first_seen_date": "1993-01-29",
+                            "last_seen_date": None,
+                        },
+                        {
+                            "symbol": "TLT",
+                            "listing_status": "active",
+                            "source": "historical_feed",
+                            "source_type": "historical_listing",
+                            "coverage_status": "actual",
+                            "first_seen_date": "2002-07-26",
+                            "last_seen_date": None,
+                        },
+                    ],
+                },
+                "provider_coverage_display_rows": [
+                    {"Diagnostic Status": "PASS", "Freshness": "fresh"},
+                    {"Diagnostic Status": "PASS", "Freshness": "fresh"},
+                ],
+                "curve_evidence": {
+                    "portfolio_curve_source": "actual_runtime_replay",
+                    "curve_provenance": {
+                        "runtime_recheck_status": "PASS",
+                        "period_coverage_status": "PASS",
+                        "runtime_recheck_mode": "latest_market_replay",
+                    },
+                    "period_coverage": {"status": "PASS"},
+                },
+            }
+        )
+
+        rows_by_criteria = {row["Criteria"]: row for row in audit["rows"]}
+        self.assertEqual(audit["route"], DATA_COVERAGE_READY)
+        self.assertEqual(rows_by_criteria["Universe / listing evidence"]["Status"], "PASS")
+        self.assertEqual(rows_by_criteria["Survivorship / delisting control"]["Status"], "PASS")
+        self.assertEqual(audit["metrics"]["lifecycle_covered_symbols"], ["SPY", "TLT"])
+
+    def test_current_listing_snapshot_does_not_control_historical_survivorship(self) -> None:
+        from app.services.backtest_data_coverage_audit import (
+            DATA_COVERAGE_REVIEW,
+            build_data_coverage_audit,
+        )
+
+        audit = build_data_coverage_audit(
+            {
+                "data_coverage_context": {
+                    "symbols": ["SPY"],
+                    "symbol_weights": {"SPY": 100.0},
+                    "requested_start": "2020-01-01",
+                    "requested_end": "2020-12-31",
+                    "price_window_rows": [
+                        {
+                            "symbol": "SPY",
+                            "first_window_date": "2020-01-01",
+                            "latest_window_date": "2020-12-31",
+                            "window_row_count": 252,
+                        }
+                    ],
+                    "asset_profile_rows": [{"symbol": "SPY", "status": "active"}],
+                    "symbol_lifecycle_rows": [
+                        {
+                            "symbol": "SPY",
+                            "listing_status": "active",
+                            "source": "nyse_listings_directory",
+                            "source_type": "current_listing_snapshot",
+                            "coverage_status": "partial",
+                            "first_seen_date": "2026-05-28",
+                            "last_seen_date": "2026-05-28",
+                        }
+                    ],
+                },
+                "provider_coverage_display_rows": [{"Diagnostic Status": "PASS", "Freshness": "fresh"}],
+                "curve_evidence": {
+                    "portfolio_curve_source": "actual_runtime_replay",
+                    "curve_provenance": {
+                        "runtime_recheck_status": "PASS",
+                        "period_coverage_status": "PASS",
+                        "runtime_recheck_mode": "latest_market_replay",
+                    },
+                    "period_coverage": {"status": "PASS"},
+                },
+            }
+        )
+
+        rows_by_criteria = {row["Criteria"]: row for row in audit["rows"]}
+        self.assertEqual(audit["route"], DATA_COVERAGE_REVIEW)
+        self.assertEqual(rows_by_criteria["Universe / listing evidence"]["Status"], "REVIEW")
+        self.assertEqual(rows_by_criteria["Survivorship / delisting control"]["Status"], "REVIEW")
+        self.assertIn("SPY", audit["metrics"]["lifecycle_partial_symbols"])
 
     def test_missing_db_price_and_universe_evidence_are_not_passed(self) -> None:
         from app.services.backtest_data_coverage_audit import (
