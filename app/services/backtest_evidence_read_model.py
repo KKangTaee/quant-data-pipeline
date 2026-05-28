@@ -48,6 +48,7 @@ GATE_POLICY_GROUP_LABELS = {
     "paper_observation": "Paper Observation",
     "final_review_evidence": "Final Review Evidence",
     "validation_efficacy": "Validation Efficacy",
+    "data_coverage": "Data Coverage",
     "backtest_realism": "Backtest Realism",
 }
 GATE_POLICY_GROUP_ACTIONS = {
@@ -59,6 +60,7 @@ GATE_POLICY_GROUP_ACTIONS = {
     "paper_observation": "관찰 benchmark, active component, review trigger를 보강합니다.",
     "final_review_evidence": "Final Review evidence route가 ready가 되도록 validation / robustness / observation blocker를 해소합니다.",
     "validation_efficacy": "runtime replay, benchmark parity, provider freshness, robustness, PIT / survivorship evidence gap을 보강합니다.",
+    "data_coverage": "DB price window, provider freshness, PIT replay, universe / survivorship evidence gap을 보강합니다.",
     "backtest_realism": "거래비용, turnover, liquidity, net performance, tax/account scope 같은 실전성 근거를 보강합니다.",
 }
 GATE_POLICY_DOMAIN_GROUPS = {
@@ -85,6 +87,7 @@ GATE_POLICY_SECTION_GROUPS = {
     "paper observation": "paper_observation",
     "critical gaps": "final_review_evidence",
     "validation efficacy audit": "validation_efficacy",
+    "data coverage audit": "data_coverage",
     "backtest realism audit": "backtest_realism",
 }
 GATE_POLICY_CRITICAL_GROUPS_BY_PROFILE = {
@@ -97,6 +100,7 @@ GATE_POLICY_CRITICAL_GROUPS_BY_PROFILE = {
         "paper_observation",
         "final_review_evidence",
         "validation_efficacy",
+        "data_coverage",
         "backtest_realism",
     },
     "balanced_core": {
@@ -108,6 +112,7 @@ GATE_POLICY_CRITICAL_GROUPS_BY_PROFILE = {
         "paper_observation",
         "final_review_evidence",
         "validation_efficacy",
+        "data_coverage",
         "backtest_realism",
     },
     "growth_aggressive": {
@@ -118,6 +123,7 @@ GATE_POLICY_CRITICAL_GROUPS_BY_PROFILE = {
         "leveraged_inverse",
         "final_review_evidence",
         "validation_efficacy",
+        "data_coverage",
         "backtest_realism",
     },
     "hedged_tactical": {
@@ -128,6 +134,7 @@ GATE_POLICY_CRITICAL_GROUPS_BY_PROFILE = {
         "leveraged_inverse",
         "final_review_evidence",
         "validation_efficacy",
+        "data_coverage",
         "backtest_realism",
     },
     "custom": {
@@ -139,6 +146,7 @@ GATE_POLICY_CRITICAL_GROUPS_BY_PROFILE = {
         "paper_observation",
         "final_review_evidence",
         "validation_efficacy",
+        "data_coverage",
         "backtest_realism",
     },
 }

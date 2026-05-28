@@ -22,6 +22,9 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-28
+- Completed `.aiworkspace/note/finance/tasks/active/data-coverage-gate-policy-link-v1/`.
+- Data Coverage Audit now participates in the profile-aware gate policy: `NEEDS_INPUT` / `BLOCKED` blocks selected-route, and `REVIEW` requires hold / re-review before selection.
+- This uses the existing investability packet and selected-route gate; no DB write, new JSONL registry, memo, preset, approval, order, or rebalance behavior was added.
 - Completed `.aiworkspace/note/finance/tasks/active/data-coverage-hardening-v1/`.
 - Practical Validation and Final Review now show a read-only Data Coverage Audit for DB price window coverage, provider freshness, PIT replay / period coverage, universe listing, survivorship / delisting control, and storage boundary.
 - The audit reads existing DB loader summaries and compact validation evidence; it does not create a new JSONL registry, memo, preset, approval, order, or rebalance behavior.

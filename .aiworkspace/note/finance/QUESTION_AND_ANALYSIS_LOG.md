@@ -21,6 +21,18 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-28 - Data coverage audit should affect selected-route gate
+- User request:
+  - 추천 순서대로 작업 진행을 요청함.
+- Interpreted goal:
+  - Data Coverage Audit을 단순 표시가 아니라 최종 선정 조건에 반영한다.
+- Analysis result:
+  - `data_coverage` gate group을 추가했다.
+  - `DATA_COVERAGE_NEEDS_INPUT` / `DATA_COVERAGE_BLOCKED`는 selected-route blocker로 처리하고, `DATA_COVERAGE_REVIEW`는 review-required로 처리한다.
+  - 보류 / 거절 / 재검토 판단은 계속 기록 가능하며, 새 저장 기능이나 실거래 동작은 추가하지 않았다.
+- Follow-up:
+  - 다음 작업은 Integrated Investability Gate QA로 validation efficacy, data coverage, backtest realism, 기존 provider / robustness / paper observation gate가 함께 작동하는지 점검하는 것이다.
+
 ### 2026-05-28 - Data coverage needs explicit DB-backed audit evidence
 - User request:
   - 추천 순서대로 작업 진행을 요청함.
