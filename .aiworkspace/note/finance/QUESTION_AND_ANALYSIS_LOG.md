@@ -21,6 +21,18 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-28 - Market Movers ops는 DB status check와 provider refresh를 분리한다
+- User request:
+  - 남은 3번 작업, Market Movers 운영 고도화를 진행해 달라고 요청함.
+- Interpreted goal:
+  - 장중 daily movers에서 refresh 필요 여부와 stale / partial 상태를 빠르게 판단하되, 페이지 렌더나 status check가 자동 수집을 유발하면 안 됨.
+- Analysis result:
+  - Market Movers read model에 `returnable_ratio`, `returnable_pct`, `next_due_in_minutes`, `check_interval_minutes`, `stale_after_minutes` 같은 운영 필드를 추가했다.
+  - SP500뿐 아니라 TOP1000 / TOP2000 daily view도 `Status Check`로 stored DB snapshot 상태를 주기적으로 다시 읽는다.
+  - `Update Daily Snapshot`만 provider quote collection을 수행하고, status check는 DB reload만 수행한다.
+- Follow-up:
+  - 고도화 3개 축은 완료됐다. 다음 후보는 official earnings IR source, scheduled refresh automation, broader macro source expansion이다.
+
 ### 2026-05-28 - Events UX는 Focus 중심으로 먼저 읽게 한다
 - User request:
   - 남은 고도화 축 중 다음 작업을 진행해 달라고 요청함.

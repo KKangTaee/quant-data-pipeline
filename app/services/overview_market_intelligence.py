@@ -709,11 +709,15 @@ def _coverage(
     price_mode: str = "EOD DB",
     extra: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    missing_count = max(0, universe_count - returnable_count)
+    returnable_ratio = (returnable_count / universe_count) if universe_count else None
     coverage = {
         "universe_count": universe_count,
         "returnable_count": returnable_count,
-        "missing_count": max(0, universe_count - returnable_count),
-        "failed_count": max(0, universe_count - returnable_count),
+        "missing_count": missing_count,
+        "failed_count": missing_count,
+        "returnable_ratio": round(returnable_ratio, 4) if returnable_ratio is not None else None,
+        "returnable_pct": round(returnable_ratio * 100, 2) if returnable_ratio is not None else None,
         "latest_raw_date": date_window.get("latest_raw_date"),
         "effective_end_date": date_window.get("effective_end_date"),
         "stale_days": date_window.get("stale_days"),
@@ -737,6 +741,13 @@ def _intraday_refresh_state(
     stale_minutes = int(stale_minutes_value) if stale_minutes_value is not None else None
     missing_count = int(coverage.get("missing_count") or 0)
     returnable_count = int(coverage.get("returnable_count") or 0)
+    universe_count = int(coverage.get("universe_count") or 0)
+    returnable_pct = coverage.get("returnable_pct")
+    next_due_in = (
+        max(0, MARKET_INTRADAY_REFRESH_MINUTES - stale_minutes)
+        if stale_minutes is not None
+        else None
+    )
 
     if snapshot_status != "OK":
         status = "failed"
@@ -774,10 +785,9 @@ def _intraday_refresh_state(
         detail = f"{stale_minutes}m old, {missing_count} missing"
         action = "Open Coverage Diagnostics; rerun refresh if missing count is unexpected."
     else:
-        refresh_due_in = MARKET_INTRADAY_REFRESH_MINUTES - stale_minutes
         status = "fresh"
         label = "Fresh"
-        detail = f"{stale_minutes}m old, next check in {refresh_due_in}m"
+        detail = f"{stale_minutes}m old, next check in {next_due_in}m"
         action = "No action needed yet."
 
     if status in {"due", "stale", "failed"} and missing_count and "missing" not in detail:
@@ -792,6 +802,12 @@ def _intraday_refresh_state(
         "is_partial": missing_count > 0,
         "stale_minutes": stale_minutes,
         "missing_count": missing_count,
+        "returnable_count": returnable_count,
+        "universe_count": universe_count,
+        "returnable_pct": returnable_pct,
+        "next_due_in_minutes": next_due_in,
+        "check_interval_minutes": MARKET_INTRADAY_REFRESH_MINUTES,
+        "stale_after_minutes": MARKET_INTRADAY_STALE_MINUTES,
         "tone": {
             "fresh": "positive",
             "partial": "warning",

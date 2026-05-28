@@ -22,6 +22,9 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-28
+- Completed `.aiworkspace/note/finance/tasks/active/overview-mi-market-movers-ops-hardening/`.
+- Added Market Movers daily snapshot coverage %, richer refresh-state fields, and DB-only status auto-check for SP500 / TOP1000 / TOP2000.
+- Moved the Market Movers refresh bar into the timed DB reload fragment so stale / due guidance can update without automatic provider collection.
 - Completed `.aiworkspace/note/finance/tasks/active/overview-mi-events-calendar-ux/`.
 - Added Events `Days Until`, `Importance`, and `Focus` read-model fields, plus Focus / Calendar / Table tabs with an Importance filter.
 - Events calendar now stacks counts by event type so FOMC, Macro, and Earnings rows are distinguishable at a glance.

@@ -115,7 +115,7 @@ def _render_snapshot_status_cards(snapshot: dict[str, Any]) -> None:
     if stale_minutes is not None:
         age_value = f"{int(stale_minutes)}m"
         age_detail = "from intraday snapshot"
-        age_tone = "positive" if int(stale_minutes) <= 10 else "warning"
+        age_tone = refresh_state.get("tone") or ("positive" if int(stale_minutes) <= 10 else "warning")
     else:
         age_value = _snapshot_value(stale_days)
         age_detail = "calendar days from effective date"
@@ -123,6 +123,8 @@ def _render_snapshot_status_cards(snapshot: dict[str, Any]) -> None:
     returnable = coverage.get("returnable_count") or 0
     universe_count = coverage.get("universe_count") or 0
     coverage_text = f"{returnable} / {universe_count}" if universe_count else "-"
+    returnable_pct = coverage.get("returnable_pct")
+    coverage_detail = f"{float(returnable_pct):.2f}% returnable" if returnable_pct is not None else None
     missing_count = coverage.get("missing_count") or 0
     failed_count = coverage.get("failed_count") or missing_count
     effective_value = coverage.get("snapshot_time_utc") or coverage.get("effective_end_date")
@@ -142,7 +144,7 @@ def _render_snapshot_status_cards(snapshot: dict[str, Any]) -> None:
             {
                 "title": "Returnable Coverage",
                 "value": coverage_text,
-                "detail": f"missing: {missing_count}, failed: {failed_count}",
+                "detail": coverage_detail or f"missing: {missing_count}, failed: {failed_count}",
                 "tone": "positive" if returnable else "warning",
             },
             {
@@ -358,6 +360,22 @@ def _render_market_job_result(result_key: str) -> None:
                 f"Processed: {result.get('symbols_processed') or 0} / {result.get('symbols_requested') or 0}, "
                 f"Source: {source}, Method: {method}, Duration: {_snapshot_value(duration)}s"
             )
+            if details.get("universe_code") and details.get("snapshot_time_utc"):
+                with st.expander("Snapshot Diagnostics", expanded=False):
+                    metric_cols = st.columns(4)
+                    metric_cols[0].metric("Snapshot Time", _snapshot_value(details.get("snapshot_time_utc")))
+                    metric_cols[1].metric("Rows Written", result.get("rows_written") or 0)
+                    metric_cols[2].metric("Failed", len(result.get("failed_symbols") or []))
+                    metric_cols[3].metric("Method", method)
+                    diagnostics = details.get("diagnostics") or {}
+                    if diagnostics:
+                        diag_rows = [
+                            {"Key": key, "Value": str(value)}
+                            for key, value in diagnostics.items()
+                            if value not in (None, "", [], {})
+                        ]
+                        if diag_rows:
+                            st.dataframe(pd.DataFrame(diag_rows), width="stretch", hide_index=True)
     failed_symbols = result.get("failed_symbols") or []
     if failed_symbols:
         with st.expander(f"Failed / Missing Symbols ({len(failed_symbols)})", expanded=False):
@@ -560,6 +578,7 @@ def _render_market_movers_refresh_bar(
 
     universe_label = MARKET_COVERAGE_LABELS.get(universe_code, universe_code)
     intraday_result_key = f"overview_{universe_code.lower()}_intraday_result"
+    coverage = dict(snapshot.get("coverage") or {})
     state = _get_market_movers_refresh_state(snapshot, universe_code=universe_code, period=period)
 
     with st.container(border=True):
@@ -569,12 +588,35 @@ def _render_market_movers_refresh_bar(
                 label=str(state["label"]),
                 detail=str(state["detail"]),
             )
+        refresh_state = dict(coverage.get("refresh_state") or {})
+        returnable = coverage.get("returnable_count") or 0
+        universe_count = coverage.get("universe_count") or 0
+        returnable_pct = coverage.get("returnable_pct")
+        next_due = refresh_state.get("next_due_in_minutes")
+        next_check_text = "now" if next_due in (None, 0) else f"{int(next_due)}m"
+        render_badge_strip(
+            [
+                {"label": "Universe", "value": universe_label, "tone": "neutral"},
+                {"label": "Mode", "value": coverage.get("price_mode") or "-", "tone": "neutral"},
+                {
+                    "label": "Coverage",
+                    "value": (
+                        f"{returnable} / {universe_count}"
+                        + (f" ({float(returnable_pct):.1f}%)" if returnable_pct is not None else "")
+                    ),
+                    "tone": "positive" if universe_count and returnable == universe_count else "warning",
+                },
+                {"label": "Next Check", "value": next_check_text, "tone": "neutral"},
+            ]
+        )
+        if refresh_state.get("recommended_action"):
+            st.caption(str(refresh_state.get("recommended_action")))
         cols = st.columns([1, 1, 1], gap="small", vertical_alignment="center")
         if cols[0].button(
             "Update Daily Snapshot",
             key=f"overview_{universe_code.lower()}_intraday_refresh",
             use_container_width=True,
-            help=str(state.get("detail") or "Collect the latest quote snapshot.") if state else None,
+            help="Collect provider quotes and store a new DB snapshot. The timed status check only reloads stored DB rows.",
         ):
             with st.spinner(f"Updating {universe_label} quote snapshot..."):
                 _store_overview_job_result(
@@ -594,7 +636,7 @@ def _render_market_movers_refresh_bar(
                 _store_overview_job_result("overview_sp500_universe_result", run_collect_sp500_universe())
             st.rerun()
         if universe_code != "SP500":
-            cols[1].empty()
+            cols[1].caption("Universe is based on market-cap ranked asset profiles.")
         if cols[2].button(
             "Reload View",
             key=f"overview_{universe_code.lower()}_market_movers_reload",
@@ -694,7 +736,8 @@ def _render_market_movers_tab() -> None:
                 ["1 min", "5 min", "10 min"],
                 index=0,
                 key="overview_market_movers_status_check",
-                disabled=coverage != "SP500" or period != "daily",
+                disabled=period != "daily",
+                help="Reloads the stored DB snapshot status. It does not collect provider data automatically.",
             )
         )
 
@@ -702,24 +745,13 @@ def _render_market_movers_tab() -> None:
     if reloaded_at:
         st.caption(f"Last DB snapshot reload request: {reloaded_at}")
     if period == "daily":
-        st.caption("Daily movers use the latest stored quote snapshot versus previous close when available.")
-
-    snapshot = _load_market_movers_snapshot(
-        universe_code=coverage,
-        universe_limit=universe_limit,
-        period=period,
-        top_n=top_n,
-        sector=sector,
-    )
-    _render_market_movers_refresh_bar(
-        snapshot,
-        universe_code=coverage,
-        universe_limit=universe_limit,
-        period=period,
-    )
+        st.caption(
+            "Daily movers use the latest stored quote snapshot versus previous close when available. "
+            "Status Check reloads DB state only; provider refresh stays manual."
+        )
 
     refresh_seconds = {"1 min": 60, "5 min": 300, "10 min": 600}.get(refresh_mode)
-    if coverage != "SP500" or period != "daily":
+    if period != "daily":
         refresh_seconds = None
     if refresh_seconds:
         @st.fragment(run_every=refresh_seconds)
@@ -731,6 +763,12 @@ def _render_market_movers_tab() -> None:
                 top_n=top_n,
                 sector=sector,
             )
+            _render_market_movers_refresh_bar(
+                snapshot,
+                universe_code=coverage,
+                universe_limit=universe_limit,
+                period=period,
+            )
             _render_market_movers_snapshot_panel(
                 snapshot,
                 universe_code=coverage,
@@ -739,6 +777,19 @@ def _render_market_movers_tab() -> None:
 
         _auto_refresh_panel()
     else:
+        snapshot = _load_market_movers_snapshot(
+            universe_code=coverage,
+            universe_limit=universe_limit,
+            period=period,
+            top_n=top_n,
+            sector=sector,
+        )
+        _render_market_movers_refresh_bar(
+            snapshot,
+            universe_code=coverage,
+            universe_limit=universe_limit,
+            period=period,
+        )
         _render_market_movers_snapshot_panel(
             snapshot,
             universe_code=coverage,

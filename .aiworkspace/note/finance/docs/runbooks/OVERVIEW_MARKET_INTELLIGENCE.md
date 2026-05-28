@@ -38,7 +38,9 @@ http://localhost:8501
 
 2. `Workspace > Overview > Market Movers`
    - `Coverage`, `Period`, `Sector`, `Top N`을 선택한다.
+   - daily period의 `Status Check`는 SP500 / TOP1000 / TOP2000 모두에서 stored DB snapshot 상태를 주기적으로 다시 읽는다. provider quote 수집은 자동 실행하지 않는다.
    - daily period에서 refresh state가 `Update due`, `Stale`, `Failed`이면 `Update Daily Snapshot`을 눌러 새 snapshot을 저장한다.
+   - refresh bar에서 Universe, Mode, Coverage %, Next Check, recommended action을 확인한다.
    - `Rank` 탭에서 symbol-level return ranking을 확인한다.
    - `Sector Pulse` 탭에서 선택한 mover set 안에서 평균 return이 강한 sector를 확인한다.
    - `Returnable Coverage`에서 missing / failed count를 확인한다.
@@ -138,6 +140,9 @@ PY
 
 - Market Movers daily snapshot shows `price_mode=Intraday Snapshot` and a recent `snapshot_time_utc`.
 - Market Movers daily refresh state shows `Fresh`, `Update due`, `Stale`, `Partial`, or `Failed`.
+- Market Movers daily refresh bar shows coverage ratio / percent, next DB status check time, and the recommended next action for SP500 / TOP1000 / TOP2000.
+- Market Movers `Status Check` reloads the DB read model and refresh bar on the selected interval; it does not collect provider quotes automatically.
+- Market Movers refresh results expose `Snapshot Diagnostics` with snapshot time, rows written, failed count, method, and provider diagnostics when available.
 - Market Movers displays both `Rank` and `Sector Pulse` chart tabs.
 - Sector / Industry displays both `Heatmap` and `Table` tabs.
 - Missing diagnostics are visible with recommended action when provider rows are absent or incomplete.
