@@ -7,6 +7,7 @@ Last Verified: 2026-05-28
 
 | Track | Status | Notes |
 |---|---|---|
+| Practical Validation V2 P3 Closeout QA | Complete | `.aiworkspace/note/finance/tasks/active/practical-validation-v2-p3-closeout-qa/`; selected monitoring read models 통합 QA와 저장 경계 확인 완료 |
 | Practical Validation V2 P3 Selected Provider Evidence | Implementation complete | `.aiworkspace/note/finance/tasks/active/practical-validation-v2-p3-selected-provider-evidence/`; Selected Dashboard가 selected component ticker weight로 기존 DB provider / holdings / exposure context를 read-only로 읽고 `NOT_RUN` / stale / partial coverage를 표시 |
 | Practical Validation V2 P3 Symbol Freshness | Implementation complete | `.aiworkspace/note/finance/tasks/active/practical-validation-v2-p3-symbol-freshness/`; Selected Dashboard Performance Recheck 전 ticker / benchmark별 DB price latest date와 stale / missing 상태를 read-only로 표시 |
 | Practical Validation V2 P3 Recheck Readiness | Implementation complete | `.aiworkspace/note/finance/tasks/active/practical-validation-v2-p3-recheck-readiness/`; Selected Dashboard Performance Recheck 실행 전 DB latest market date / replay contract / 기간 기본값을 read-only로 확인 |
@@ -33,7 +34,7 @@ Last Verified: 2026-05-28
 | Product Research Plugin Split | Complete | `.aiworkspace/note/finance/tasks/active/product-research-plugin-split/`; product research skill과 helper를 별도 `quant-finance-product-research` plugin으로 분리 완료 |
 | Investability Evidence Packet V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/investability-evidence-packet-v1/`; Final Review evidence packet / selected-route gate 1차 구현. 후속 gate policy는 `investability-decision-foundation`에서 관리 |
 | Backtest Report Migration | Complete | `.aiworkspace/note/finance/reports/backtests/`, legacy phase archive 제거 완료 |
-| Practical Validation V2 | Active / P3 in progress | `.aiworkspace/note/finance/tasks/active/practical-validation-v2/`; P2 provider / macro / look-through / robustness evidence closeout 완료, P3 continuity check / recheck comparison / recheck readiness / symbol freshness / selected provider evidence slice 완료 |
+| Practical Validation V2 | P3 closeout complete | `.aiworkspace/note/finance/tasks/active/practical-validation-v2/`; P2 provider / macro / look-through / robustness evidence closeout 완료, P3 selected monitoring slice와 closeout QA 완료 |
 | Phase 36 Selected Portfolio Dashboard | Implementation complete before doc rebuild | 기존 phase 문서는 새 구조 정리 후 필요 시 `phases/done/`에 요약만 남긴다 |
 
 ## Practical Validation V2 Roadmap
@@ -43,7 +44,7 @@ Last Verified: 2026-05-28
 | P0 | 최신 runtime 재검증 보강 | Completed before this doc rebuild |
 | P1 | Practical Validation V2 기본 진단 구조 | Completed before this doc rebuild |
 | P2 | proxy / NOT_RUN 중심 진단을 provider / macro / stress evidence로 정상화 | Completed |
-| P3 | Final Review handoff QA, selected monitoring 연결 정리 | In progress; continuity check / recheck comparison / recheck readiness / symbol freshness / selected provider evidence complete |
+| P3 | Final Review handoff QA, selected monitoring 연결 정리 | Completed; continuity check / recheck comparison / recheck readiness / symbol freshness / selected provider evidence / closeout QA complete |
 
 ## P2 Scope Reminder
 
@@ -90,5 +91,5 @@ P2에서 정상화하는 주요 진단:
 ## Next Decisions
 
 - UI Engine Boundary Cleanup은 완료됐다. 다음 구조 작업은 새 phase/task로 열고, 현재 경계는 boundary lint와 service contract test를 먼저 통과시키는 기준으로 유지한다.
-- Practical Validation V2 P3는 continuity check, recheck comparison, recheck readiness, symbol freshness, selected provider evidence slice를 완료했다. 다음 결정은 P3 closeout QA 또는 remaining selected monitoring gap을 진행할지이다.
+- Practical Validation V2 P3는 selected monitoring 연결과 closeout QA를 완료했다. 다음 작업은 P3 연장이 아니라 Validation Efficacy Hardening, Backtest Realism Hardening, Data Coverage Hardening 중 하나를 새 task / phase로 여는 것이다.
 - Structured Waiver Policy V1은 구현 없이 정책만 확정했다. Waiver UI / persistence는 아직 별도 구현 task로 열지 않았다.

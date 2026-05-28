@@ -61,7 +61,7 @@ Closeout 기준:
 - provider table이 비어 있거나 stale이면 `NOT_RUN` / `REVIEW` reason으로 남긴다.
 - Final Review는 provider gap, stress gap, sensitivity gap을 investability evidence로 읽을 수 있다.
 
-P3는 새 실전 승인 기능이 아니라 Final Review handoff와 Selected Portfolio Dashboard monitoring 연결을 정리하는 후속 단계다. 현재 continuity check, recheck comparison, recheck readiness, symbol freshness, selected provider evidence slice가 완료됐다.
+P3는 새 실전 승인 기능이 아니라 Final Review handoff와 Selected Portfolio Dashboard monitoring 연결을 정리하는 후속 단계다. continuity check, recheck comparison, recheck readiness, symbol freshness, selected provider evidence slice와 P3 closeout QA가 완료됐다.
 
 ## Detailed Task Docs
 

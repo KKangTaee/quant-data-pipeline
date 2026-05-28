@@ -22,6 +22,9 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-28
+- Completed `.aiworkspace/note/finance/tasks/active/practical-validation-v2-p3-closeout-qa/`.
+- Practical Validation V2 P3 selected monitoring integration is now closeout complete: continuity, recheck comparison, recheck readiness, symbol freshness, and selected provider evidence passed service / boundary QA.
+- Next work should open a new task / phase for validation efficacy, backtest realism, or data coverage hardening rather than extending P3.
 - Completed `.aiworkspace/note/finance/tasks/active/practical-validation-v2-p3-selected-provider-evidence/`.
 - Selected Dashboard Performance Recheck now shows read-only provider evidence for selected component ticker weights, existing DB provider / holdings / exposure context, and compact look-through summary.
 - `NOT_RUN`, partial, stale, or missing provider evidence is visible before relying on selected monitoring; no provider collection, JSONL write, monitoring log, memo, preset, approval, order, or rebalance behavior was added.

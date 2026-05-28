@@ -1,12 +1,13 @@
 # STATUS - Practical Validation V2
 
-Status: Active
+Status: P3 closeout complete
 Last Updated: 2026-05-28
 
 ## Current Status
 
 P2 implementation과 P2-7 QA / closeout 판단은 완료됐다.
 P3 selected monitoring 연결은 continuity check, recheck comparison, recheck readiness, symbol freshness, selected provider evidence까지 완료됐다.
+P3 closeout QA도 완료되어 Practical Validation V2의 현재 planned selected monitoring scope는 닫을 수 있다.
 
 최근 완료된 내용:
 
@@ -24,8 +25,8 @@ P3 selected monitoring 연결은 continuity check, recheck comparison, recheck r
 
 ## Next
 
-- P3 selected monitoring slice로 continuity check, recheck comparison, recheck readiness, symbol freshness, selected provider evidence를 구현했다.
-- P3 후보: closeout QA 또는 remaining selected monitoring gap 점검
+- 다음 개선은 Practical Validation V2 P3 연장이 아니라 새 task / phase로 연다.
+- 후보: Validation Efficacy Hardening, Backtest Realism Hardening, Data Coverage Hardening.
 - strategy-specific sensitivity runtime sweep은 별도 후속으로 분리
 
 ## Current Development Boundary

@@ -21,6 +21,18 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-28 - Practical Validation V2 P3 selected monitoring can close out
+- User request:
+  - 다음 작업 진행을 요청함.
+- Interpreted goal:
+  - 새 기능 추가보다 P3 전체가 read-only selected monitoring 흐름으로 연결됐는지 확인하고 다음 큰 개선으로 넘어갈 준비를 한다.
+- Analysis result:
+  - P3 closeout QA에서 continuity, recheck comparison, recheck readiness, symbol freshness, selected provider evidence가 하나의 Selected Dashboard 흐름으로 연결된 것을 확인했다.
+  - service contract 46개, UI / engine boundary helper, selected dashboard append-path scan이 통과했다.
+  - provider 수집, JSONL 자동 저장, monitoring log 자동 저장, memo/preset 저장, approval/order/rebalance는 추가되지 않았다.
+- Follow-up:
+  - 다음 개선은 P3 연장이 아니라 Validation Efficacy Hardening, Backtest Realism Hardening, Data Coverage Hardening 중 하나를 새 task / phase로 여는 것이 맞다.
+
 ### 2026-05-28 - Selected Dashboard should show provider evidence after selection
 - User request:
   - 다음 작업 진행을 요청함.
