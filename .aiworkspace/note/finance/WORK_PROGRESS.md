@@ -22,6 +22,9 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-28
+- Opened `.aiworkspace/note/finance/phases/active/overview-market-intelligence-productionization/`.
+- Recommended formalization path: 1차 prototype complete, 2차 production baseline, 3차 earnings/events production, 4차 UX/automation polish.
+- Next implementation task is `Task 2-01 Refresh State And Diagnostics Baseline`.
 - Completed phase closeout under `.aiworkspace/note/finance/tasks/active/overview-market-intelligence-closeout/`.
 - Added `.aiworkspace/note/finance/docs/runbooks/OVERVIEW_MARKET_INTELLIGENCE.md` for Market Movers, FOMC, and earnings prototype refresh operations.
 - Updated phase plan/design/integration wording so Events is no longer described as a placeholder; closeout QA passed.
