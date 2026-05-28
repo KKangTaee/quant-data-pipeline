@@ -1,6 +1,6 @@
 # Recommendation
 
-Status: Draft
+Status: Accepted for Phase 0
 Last Updated: 2026-05-28
 
 ## Recommended Direction
@@ -125,7 +125,14 @@ Before development, decide these with the user:
 
 ## Proposed Next Handoff
 
-If this direction is approved, the next implementation task should be:
+This direction has been accepted into the active phase:
+
+```text
+phase: investability-decision-foundation
+location: .aiworkspace/note/finance/phases/active/investability-decision-foundation/
+```
+
+The first narrow implementation task was:
 
 ```text
 task: investability-evidence-packet-v1

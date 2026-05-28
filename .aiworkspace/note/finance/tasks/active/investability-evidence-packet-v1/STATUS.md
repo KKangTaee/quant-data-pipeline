@@ -1,6 +1,6 @@
 # STATUS - Investability Evidence Packet V1
 
-Status: Active
+Status: Implementation complete
 Last Updated: 2026-05-28
 
 ## Current Status
@@ -17,3 +17,4 @@ Last Updated: 2026-05-28
 
 - Decide whether a future V2 should support structured waiver with reason / expiry / review trigger.
 - Decide whether wording should stay as `실전 검토 통과 후보`.
+- Manage follow-up policy decisions under `.aiworkspace/note/finance/phases/active/investability-decision-foundation/`.

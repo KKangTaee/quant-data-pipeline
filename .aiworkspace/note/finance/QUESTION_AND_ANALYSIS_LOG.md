@@ -21,6 +21,18 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-28 - Investability workflow hardening starts with Phase 0 policy
+- User request:
+  - Backtest -> Practical Validation -> Final Review -> Selected Dashboard 흐름을 실전 투자 검토에 더 가깝게 만들기 위한 큰 개발 흐름 진행을 승인함.
+- Interpreted goal:
+  - 바로 기능을 늘리기보다, 의미 없는 JSONL 저장을 막고, critical `NOT_RUN` / proxy evidence / provider coverage / 데이터 수집 경계를 먼저 고정해야 함.
+- Analysis result:
+  - 새 active phase `.aiworkspace/note/finance/phases/active/investability-decision-foundation/`를 열었다.
+  - Phase 0 기본 정책은 새 JSONL registry와 사용자 memo 저장을 피하고, raw provider / holdings / macro data는 DB에 두며, UI는 remote source를 직접 fetch하지 않는 것이다.
+  - `investability-evidence-packet-v1`은 이 phase의 첫 landed slice로 편입했고, 후속 task는 `validation-gate-hardening-v1`이다.
+- Follow-up:
+  - structured waiver 허용 여부, profile별 critical diagnostic matrix, paper observation 필수 여부를 다음 gate hardening task에서 확정한다.
+
 ### 2026-05-27 - Diagnostics split의 public compatibility contract를 명시한다
 - User request:
   - Task 7-04 작업 진행을 요청함.

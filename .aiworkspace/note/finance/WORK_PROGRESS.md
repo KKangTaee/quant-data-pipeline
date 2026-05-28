@@ -21,6 +21,12 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-28
+- Opened `.aiworkspace/note/finance/phases/active/investability-decision-foundation/` as the Phase 0 baseline for investability workflow hardening.
+- Captured storage policy, validation gate policy, free-source-first data acquisition policy, wording boundaries, and follow-up task order.
+- Adopted `investability-evidence-packet-v1` as the first landed slice under this broader phase.
+- Next implementation task is `validation-gate-hardening-v1` after reviewing the Phase 0 board.
+
 ### 2026-05-27
 - Completed Task 7-04 under `.aiworkspace/note/finance/tasks/active/practical-validation-diagnostics-split/`.
 - Moved `source_components_dataframe` into `app/services/backtest_practical_validation_source.py` and pinned diagnostics compatibility exports with `__all__`.
