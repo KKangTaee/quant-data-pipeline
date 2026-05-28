@@ -29,8 +29,7 @@ from app.web.overview_dashboard_helpers import (
 
 
 MARKET_INTRADAY_REFRESH_MINUTES = 5
-MARKET_MOVER_CHART_HEIGHT = 460
-MARKET_MOVER_TABLE_HEIGHT = MARKET_MOVER_CHART_HEIGHT + 44
+MARKET_MOVER_TABLE_CHROME_HEIGHT = 44
 MARKET_COVERAGE_LABELS = {
     "SP500": "S&P 500",
     "TOP1000": "Top 1000",
@@ -186,6 +185,18 @@ def _positive_return_domain(values: pd.Series) -> list[float]:
     return [0, max_value * 1.16]
 
 
+def _market_mover_chart_height(row_count: int) -> int:
+    if row_count <= 20:
+        return 540
+    if row_count <= 30:
+        return 660
+    if row_count <= 50:
+        return 880
+    if row_count <= 75:
+        return 1120
+    return 1360
+
+
 def _build_return_bar_chart(rows: pd.DataFrame) -> alt.Chart:
     chart_rows = rows.copy()
     if not chart_rows.empty and "Return %" in chart_rows:
@@ -228,10 +239,11 @@ def _build_return_bar_chart(rows: pd.DataFrame) -> alt.Chart:
             text=alt.Text("Return Label:N"),
         )
     )
-    return (bars + labels).properties(height=MARKET_MOVER_CHART_HEIGHT)
+    return (bars + labels).properties(height=_market_mover_chart_height(len(chart_rows)))
 
 
 def _build_market_mover_sector_chart(rows: pd.DataFrame) -> alt.Chart:
+    source_row_count = len(rows)
     if rows.empty or "Sector" not in rows or "Return %" not in rows:
         chart_rows = pd.DataFrame([{"Sector": "No Data", "Average Return %": 0.0, "Count": 0, "Top Return %": 0.0}])
     else:
@@ -290,7 +302,7 @@ def _build_market_mover_sector_chart(rows: pd.DataFrame) -> alt.Chart:
             text=alt.Text("Average Return Label:N"),
         )
     )
-    return (bars + labels).properties(height=MARKET_MOVER_CHART_HEIGHT)
+    return (bars + labels).properties(height=_market_mover_chart_height(source_row_count))
 
 
 def _build_group_leadership_heatmap(rows: pd.DataFrame) -> alt.Chart:
@@ -713,7 +725,12 @@ def _render_market_movers_snapshot_panel(
         with sector_tab:
             st.altair_chart(_build_market_mover_sector_chart(rows), width="stretch")
     with right:
-        st.dataframe(rows, width="stretch", height=MARKET_MOVER_TABLE_HEIGHT, hide_index=True)
+        st.dataframe(
+            rows,
+            width="stretch",
+            height=_market_mover_chart_height(len(rows)) + MARKET_MOVER_TABLE_CHROME_HEIGHT,
+            hide_index=True,
+        )
 
 
 def _render_market_movers_tab() -> None:
