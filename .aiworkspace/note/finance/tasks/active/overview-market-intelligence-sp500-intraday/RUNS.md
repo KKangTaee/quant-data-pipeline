@@ -11,3 +11,8 @@
 | 2026-05-28 | `uv run python .aiworkspace/plugins/quant-finance-workflow/scripts/check_ui_engine_boundary.py` | PASS. |
 | 2026-05-28 | `git diff --check` | PASS. |
 | 2026-05-28 | Browser smoke at `http://localhost:8501/` | PASS: Market Movers defaults to S&P 500, shows daily previous-close snapshot note, EOD fallback warning, missing diagnostics expander, no console errors. |
+| 2026-05-28 | UI polish browser smoke at `http://localhost:8501/` | PASS: segmented Coverage / Period controls render, `Update needed` state dot appears, `Update 5m Snapshot` button is active when no fresh intraday snapshot exists, no console errors. |
+| 2026-05-28 | `uv run python -m py_compile app/web/overview_dashboard.py` | PASS. |
+| 2026-05-28 | `uv run python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests` | PASS, 4 tests. |
+| 2026-05-28 | `uv run python .aiworkspace/plugins/quant-finance-workflow/scripts/check_ui_engine_boundary.py` | PASS. |
+| 2026-05-28 | `git diff --check` | PASS. |

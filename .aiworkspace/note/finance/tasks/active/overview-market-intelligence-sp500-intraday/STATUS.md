@@ -4,3 +4,4 @@
 - 2026-05-28: Added S&P 500 universe table, intraday snapshot table, collector job wrappers, Overview controls, yearly period, sector filter, and missing diagnostics.
 - 2026-05-28: S&P 500 universe refresh smoke wrote 503 current constituents to local DB.
 - 2026-05-28: Browser smoke passed for Overview Market Movers with S&P 500 daily EOD fallback and coverage diagnostics.
+- 2026-05-28: Polished Market Movers top controls into a framed control bar and added 5-minute update-needed status dot / button behavior.

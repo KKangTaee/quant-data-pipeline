@@ -18,6 +18,9 @@ from app.web.overview_dashboard_helpers import (
 )
 
 
+SP500_INTRADAY_REFRESH_MINUTES = 5
+
+
 # Render one ranked candidate card in the Overview priority section.
 def _render_priority_candidate_card(candidate: dict[str, Any], rank: int) -> None:
     cagr = candidate.get("cagr")
@@ -190,6 +193,108 @@ def _render_sp500_job_result(result_key: str) -> None:
         )
 
 
+def _is_sp500_daily_refresh_due(snapshot: dict[str, Any], *, universe_code: str, period: str) -> bool:
+    if universe_code != "SP500" or period != "daily":
+        return False
+    coverage = dict(snapshot.get("coverage") or {})
+    if coverage.get("price_mode") != "Intraday Snapshot":
+        return True
+    stale_minutes = coverage.get("snapshot_stale_minutes")
+    if stale_minutes is None:
+        return True
+    return int(stale_minutes) >= SP500_INTRADAY_REFRESH_MINUTES
+
+
+def _render_refresh_state_dot(*, color: str, label: str, detail: str) -> None:
+    st.markdown(
+        f"""
+        <div style="
+            display:flex;
+            align-items:center;
+            gap:10px;
+            min-height:38px;
+            padding:7px 10px;
+            border:1px solid #e5e7eb;
+            border-radius:8px;
+            background:#ffffff;">
+            <span style="
+                width:10px;
+                height:10px;
+                border-radius:999px;
+                background:{color};
+                box-shadow:0 0 0 3px color-mix(in srgb, {color} 18%, transparent);"></span>
+            <span style="font-weight:600;color:#111827;">{escape(label)}</span>
+            <span style="color:#64748b;font-size:0.875rem;">{escape(detail)}</span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _render_market_movers_refresh_bar(
+    snapshot: dict[str, Any],
+    *,
+    universe_code: str,
+    period: str,
+) -> None:
+    is_sp500_daily = universe_code == "SP500" and period == "daily"
+    if not is_sp500_daily:
+        return
+
+    coverage = dict(snapshot.get("coverage") or {})
+    price_mode = str(coverage.get("price_mode") or "")
+    stale_minutes = coverage.get("snapshot_stale_minutes")
+    refresh_due = _is_sp500_daily_refresh_due(snapshot, universe_code=universe_code, period=period)
+    if price_mode != "Intraday Snapshot":
+        dot_color = "#dc2626"
+        label = "Update needed"
+        detail = "using EOD fallback"
+    elif refresh_due:
+        dot_color = "#dc2626"
+        label = "Update needed"
+        detail = f"{int(stale_minutes or 0)}m old"
+    else:
+        dot_color = "#0f766e"
+        label = "Fresh"
+        detail = f"{int(stale_minutes or 0)}m old"
+
+    with st.container(border=True):
+        cols = st.columns([1.25, 1, 1, 1.1], gap="small", vertical_alignment="center")
+        with cols[0]:
+            _render_refresh_state_dot(color=dot_color, label=label, detail=detail)
+        update_label = "Update 5m Snapshot" if refresh_due else "Snapshot Fresh"
+        if cols[1].button(
+            update_label,
+            key="overview_sp500_intraday_refresh",
+            use_container_width=True,
+            disabled=not refresh_due,
+        ):
+            with st.spinner("Collecting S&P 500 5m intraday snapshot..."):
+                st.session_state["overview_sp500_intraday_result"] = run_collect_sp500_intraday_snapshot(
+                    interval="5m",
+                    chunk_size=100,
+                )
+            st.rerun()
+        if cols[2].button(
+            "Refresh Universe",
+            key="overview_sp500_universe_refresh",
+            use_container_width=True,
+        ):
+            with st.spinner("Refreshing S&P 500 universe..."):
+                st.session_state["overview_sp500_universe_result"] = run_collect_sp500_universe()
+            st.rerun()
+        if cols[3].button(
+            "Reload View",
+            key="overview_market_movers_reload",
+            use_container_width=True,
+        ):
+            st.session_state["overview_market_movers_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            st.rerun()
+
+    _render_sp500_job_result("overview_sp500_universe_result")
+    _render_sp500_job_result("overview_sp500_intraday_result")
+
+
 def _render_market_movers_snapshot_panel(
     *,
     universe_code: str,
@@ -205,6 +310,7 @@ def _render_market_movers_snapshot_panel(
         top_n=top_n,
         sector=None if sector == "All" else sector,
     )
+    _render_market_movers_refresh_bar(snapshot, universe_code=universe_code, period=period)
     _render_snapshot_status_cards(snapshot)
     _render_snapshot_warnings(snapshot)
     _render_missing_diagnostics(snapshot)
@@ -223,103 +329,77 @@ def _render_market_movers_snapshot_panel(
 
 def _render_market_movers_tab() -> None:
     st.markdown("### Market Movers")
-    controls = st.columns([1.1, 1.2, 1.1, 1], gap="small")
-    coverage = str(
-        controls[0].selectbox(
-            "Coverage",
-            ["SP500", "TOP1000", "TOP2000"],
-            index=0,
-            format_func=lambda value: {
-                "SP500": "S&P 500",
-                "TOP1000": "Top 1000",
-                "TOP2000": "Top 2000",
-            }[value],
-            key="overview_market_movers_coverage",
+    with st.container(border=True):
+        controls = st.columns([1.1, 1.2, 1.1, 0.8, 0.9], gap="small", vertical_alignment="bottom")
+        coverage = str(
+            controls[0].segmented_control(
+                "Coverage",
+                ["SP500", "TOP1000", "TOP2000"],
+                default="SP500",
+                format_func=lambda value: {
+                    "SP500": "S&P 500",
+                    "TOP1000": "Top 1000",
+                    "TOP2000": "Top 2000",
+                }[value],
+                key="overview_market_movers_coverage",
+            )
         )
-    )
-    universe_limit = {"SP500": 500, "TOP1000": 1000, "TOP2000": 2000}[coverage]
-    period = str(
-        controls[1].radio(
-            "Period",
-            ["daily", "weekly", "monthly", "yearly"],
-            index=0,
-            horizontal=True,
-            format_func=lambda value: {
-                "daily": "Daily",
-                "weekly": "Weekly",
-                "monthly": "Monthly",
-                "yearly": "Yearly",
-            }[value],
-            key="overview_market_movers_period",
+        universe_limit = {"SP500": 500, "TOP1000": 1000, "TOP2000": 2000}[coverage]
+        period = str(
+            controls[1].segmented_control(
+                "Period",
+                ["daily", "weekly", "monthly", "yearly"],
+                default="daily",
+                format_func=lambda value: {
+                    "daily": "Daily",
+                    "weekly": "Weekly",
+                    "monthly": "Monthly",
+                    "yearly": "Yearly",
+                }[value],
+                key="overview_market_movers_period",
+            )
         )
-    )
-    sector_options = ["All"] + load_overview_market_mover_sectors(
-        universe_code=coverage,
-        universe_limit=universe_limit,
-    )
-    sector = str(
-        controls[2].selectbox(
-            "Sector",
-            sector_options,
-            index=0,
-            key="overview_market_movers_sector",
+        sector_options = ["All"] + load_overview_market_mover_sectors(
+            universe_code=coverage,
+            universe_limit=universe_limit,
         )
-    )
-    top_n = int(
-        controls[3].number_input(
-            "Top N",
-            min_value=5,
-            max_value=100,
-            value=20,
-            step=5,
-            key="overview_market_movers_top_n",
+        sector = str(
+            controls[2].selectbox(
+                "Sector",
+                sector_options,
+                index=0,
+                key="overview_market_movers_sector",
+            )
         )
-    )
-    actions = st.columns([1, 1, 1, 1.15], gap="small")
-    if actions[0].button(
-        "Reload DB Snapshot",
-        key="overview_market_movers_reload",
-        use_container_width=True,
-    ):
-        st.session_state["overview_market_movers_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    if coverage == "SP500":
-        if actions[1].button(
-            "Refresh S&P 500 Universe",
-            key="overview_sp500_universe_refresh",
-            use_container_width=True,
-        ):
-            with st.spinner("Refreshing S&P 500 universe..."):
-                st.session_state["overview_sp500_universe_result"] = run_collect_sp500_universe()
-        if actions[2].button(
-            "Refresh 5m Daily Snapshot",
-            key="overview_sp500_intraday_refresh",
-            use_container_width=True,
-            disabled=period != "daily",
-        ):
-            with st.spinner("Collecting S&P 500 5m intraday snapshot..."):
-                st.session_state["overview_sp500_intraday_result"] = run_collect_sp500_intraday_snapshot(
-                    interval="5m",
-                    chunk_size=100,
-                )
-    refresh_mode = str(
-        actions[3].selectbox(
-            "View Refresh",
-            ["Manual", "5 min", "10 min"],
-            index=0,
-            key="overview_market_movers_view_refresh",
-            disabled=coverage != "SP500" or period != "daily",
+        top_n = int(
+            controls[3].number_input(
+                "Top N",
+                min_value=5,
+                max_value=100,
+                value=20,
+                step=5,
+                key="overview_market_movers_top_n",
+            )
         )
-    )
+        refresh_mode = str(
+            controls[4].selectbox(
+                "Status Check",
+                ["1 min", "5 min", "10 min"],
+                index=0,
+                key="overview_market_movers_status_check",
+                disabled=coverage != "SP500" or period != "daily",
+            )
+        )
 
     reloaded_at = st.session_state.get("overview_market_movers_reloaded_at")
     if reloaded_at:
         st.caption(f"Last DB snapshot reload request: {reloaded_at}")
     if coverage == "SP500" and period == "daily":
         st.caption("Daily S&P 500 uses the latest stored intraday snapshot versus previous close when available.")
-        _render_sp500_job_result("overview_sp500_universe_result")
-        _render_sp500_job_result("overview_sp500_intraday_result")
 
-    refresh_seconds = {"5 min": 300, "10 min": 600}.get(refresh_mode)
+    refresh_seconds = {"1 min": 60, "5 min": 300, "10 min": 600}.get(refresh_mode)
+    if coverage != "SP500" or period != "daily":
+        refresh_seconds = None
     if refresh_seconds:
         @st.fragment(run_every=refresh_seconds)
         def _auto_refresh_panel() -> None:
