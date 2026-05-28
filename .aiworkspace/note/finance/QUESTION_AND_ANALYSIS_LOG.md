@@ -21,6 +21,18 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-28 - Backtest realism audit should affect selected-route gate
+- User request:
+  - 추천 순서대로 다음 작업 진행을 요청함.
+- Interpreted goal:
+  - 둘 다 해야 하는 작업 중 먼저 작은 안전장치인 Backtest Realism Gate 연결을 완료한다.
+- Analysis result:
+  - `backtest_realism` gate group을 추가했다.
+  - `BACKTEST_REALISM_NEEDS_INPUT` / `BACKTEST_REALISM_BLOCKED`는 selected-route blocker로 처리하고, `BACKTEST_REALISM_REVIEW`는 review-required로 처리한다.
+  - 보류 / 거절 / 재검토 판단은 계속 기록 가능하며, 새 저장 기능이나 실거래 동작은 추가하지 않았다.
+- Follow-up:
+  - 다음 작업은 Data Coverage Hardening으로 PIT / survivorship / universe evidence를 DB-backed로 보강하는 것이다.
+
 ### 2026-05-28 - Backtest realism gap should be visible before selection
 - User request:
   - 다음 단계 진행을 요청함.
@@ -31,7 +43,7 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Practical Validation, Final Review, investability packet, saved final decision evidence row가 같은 audit을 읽는다.
   - 새 DB write, JSONL registry, user memo, preset, approval, order, auto rebalance는 추가하지 않았다.
 - Follow-up:
-  - 다음 결정은 Backtest Realism Audit 일부를 selected-route gate policy에 연결할지, Data Coverage Hardening으로 PIT / survivorship evidence를 DB-backed로 보강할지다.
+  - Backtest Realism gate 연결은 완료됐다. 다음은 Data Coverage Hardening으로 PIT / survivorship evidence를 DB-backed로 보강한다.
 
 ### 2026-05-28 - Validation efficacy audit should affect selected-route gate
 - User request:

@@ -111,7 +111,7 @@ Backtest Analysis
 
 - Backtest Analysis는 후보 source를 만든다.
 - Practical Validation은 source를 실전 투입 전 조건으로 검증하고 Provider / Look-through / Robustness Lab / Validation Efficacy / Backtest Realism 근거를 compact하게 보여준다.
-- Final Review는 Provider / Look-through / Robustness Lab / Validation Efficacy / Backtest Realism 근거와 investability packet을 읽어 select / hold / reject / re-review 판단을 기록하고, 저장된 판단을 read-only dossier로 다시 보여준다.
+- Final Review는 Provider / Look-through / Robustness Lab / Validation Efficacy / Backtest Realism 근거와 investability packet을 읽어 profile-aware gate policy로 selected-route 가능 여부를 판정하고, select / hold / reject / re-review 판단을 기록하며, 저장된 판단을 read-only dossier로 다시 보여준다.
 - Selected Portfolio Dashboard는 선정 이후 성과와 read-only recheck readiness / symbol freshness / provider evidence / monitoring timeline / signal / recheck comparison을 확인한다.
 
 ## Data Boundary

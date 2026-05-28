@@ -1313,6 +1313,19 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
                         }
                     ],
                 },
+                "backtest_realism_audit": {
+                    "route": "BACKTEST_REALISM_READY",
+                    "route_label": "Ready",
+                    "rows": [
+                        {
+                            "Criteria": "Transaction cost model",
+                            "Status": "PASS",
+                            "Ready": True,
+                            "Current": "10 bps / net curve applied",
+                            "Meaning": "backtest realism ready",
+                        }
+                    ],
+                },
             },
             paper_observation={"route": "PAPER_OBSERVATION_READY", "blockers": []},
             decision_evidence={"route": "READY_FOR_FINAL_DECISION", "blockers": []},
@@ -1334,6 +1347,163 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertTrue(
             any(
                 row["Group"] == "validation_efficacy" and row["Severity"] == "BLOCK"
+                for row in packet["gate_policy_snapshot"]["policy_rows"]
+            )
+        )
+
+    def test_gate_policy_blocks_selected_route_on_backtest_realism_needs_input(self) -> None:
+        from app.services.backtest_evidence_read_model import (
+            SELECT_FOR_PRACTICAL_PORTFOLIO,
+            build_investability_evidence_packet,
+            build_selected_route_gate,
+        )
+
+        packet = build_investability_evidence_packet(
+            source={"source_type": "practical_validation_result", "source_id": "backtest-realism-gap"},
+            validation={
+                "selection_source_id": "source-realism-gap",
+                "validation_id": "validation-realism-gap",
+                "validation_profile": {"profile_id": "balanced_core", "profile_label": "균형형"},
+                "diagnostic_summary": {
+                    "status_counts": {"PASS": 12, "REVIEW": 0, "BLOCKED": 0, "NOT_RUN": 0}
+                },
+                "checks": [
+                    {"Criteria": "Data Trust", "Ready": True, "Current": "ok"},
+                    {"Criteria": "Runtime recheck", "Ready": True, "Current": "PASS"},
+                    {"Criteria": "Runtime period coverage", "Ready": True, "Current": "PASS"},
+                    {"Criteria": "Provider coverage", "Ready": True, "Current": "PASS"},
+                    {"Criteria": "Benchmark parity", "Ready": True, "Current": "PASS"},
+                ],
+                "provider_coverage": {
+                    "coverage": {
+                        "holdings": {"diagnostic_status": "PASS"},
+                        "operability": {"diagnostic_status": "PASS"},
+                    }
+                },
+                "robustness_validation": {"robustness_route": "READY_FOR_STRESS_SWEEP"},
+                "validation_efficacy_audit": {
+                    "route": "VALIDATION_EFFICACY_READY",
+                    "route_label": "Ready",
+                    "rows": [
+                        {
+                            "Criteria": "Runtime replay evidence",
+                            "Status": "PASS",
+                            "Ready": True,
+                            "Current": "PASS",
+                            "Meaning": "validation efficacy ready",
+                        }
+                    ],
+                },
+                "backtest_realism_audit": {
+                    "route": "BACKTEST_REALISM_NEEDS_INPUT",
+                    "route_label": "Realism Input Needed",
+                    "rows": [
+                        {
+                            "Criteria": "Transaction cost model",
+                            "Status": "NEEDS_INPUT",
+                            "Ready": False,
+                            "Current": "missing",
+                            "Meaning": "cost model missing",
+                        }
+                    ],
+                },
+            },
+            paper_observation={"route": "PAPER_OBSERVATION_READY", "blockers": []},
+            decision_evidence={"route": "READY_FOR_FINAL_DECISION", "blockers": []},
+        )
+        selected_gate = build_selected_route_gate(
+            decision_route=SELECT_FOR_PRACTICAL_PORTFOLIO,
+            investability_packet=packet,
+        )
+        hold_gate = build_selected_route_gate(
+            decision_route="HOLD_FOR_MORE_PAPER_TRACKING",
+            investability_packet=packet,
+        )
+
+        self.assertEqual(packet["route"], "INVESTABILITY_PACKET_BLOCKED")
+        self.assertFalse(packet["select_ready"])
+        self.assertEqual(packet["gate_policy_snapshot"]["outcome"], "blocked")
+        self.assertFalse(selected_gate["Ready"])
+        self.assertTrue(hold_gate["Ready"])
+        self.assertTrue(
+            any(
+                row["Group"] == "backtest_realism" and row["Severity"] == "BLOCK"
+                for row in packet["gate_policy_snapshot"]["policy_rows"]
+            )
+        )
+
+    def test_gate_policy_requires_review_on_backtest_realism_review(self) -> None:
+        from app.services.backtest_evidence_read_model import (
+            SELECT_FOR_PRACTICAL_PORTFOLIO,
+            build_investability_evidence_packet,
+            build_selected_route_gate,
+        )
+
+        packet = build_investability_evidence_packet(
+            source={"source_type": "practical_validation_result", "source_id": "backtest-realism-review"},
+            validation={
+                "selection_source_id": "source-realism-review",
+                "validation_id": "validation-realism-review",
+                "validation_profile": {"profile_id": "balanced_core", "profile_label": "균형형"},
+                "diagnostic_summary": {
+                    "status_counts": {"PASS": 12, "REVIEW": 0, "BLOCKED": 0, "NOT_RUN": 0}
+                },
+                "checks": [
+                    {"Criteria": "Data Trust", "Ready": True, "Current": "ok"},
+                    {"Criteria": "Runtime recheck", "Ready": True, "Current": "PASS"},
+                    {"Criteria": "Runtime period coverage", "Ready": True, "Current": "PASS"},
+                    {"Criteria": "Provider coverage", "Ready": True, "Current": "PASS"},
+                    {"Criteria": "Benchmark parity", "Ready": True, "Current": "PASS"},
+                ],
+                "provider_coverage": {
+                    "coverage": {
+                        "holdings": {"diagnostic_status": "PASS"},
+                        "operability": {"diagnostic_status": "PASS"},
+                    }
+                },
+                "robustness_validation": {"robustness_route": "READY_FOR_STRESS_SWEEP"},
+                "validation_efficacy_audit": {
+                    "route": "VALIDATION_EFFICACY_READY",
+                    "route_label": "Ready",
+                    "rows": [
+                        {
+                            "Criteria": "Runtime replay evidence",
+                            "Status": "PASS",
+                            "Ready": True,
+                            "Current": "PASS",
+                            "Meaning": "validation efficacy ready",
+                        }
+                    ],
+                },
+                "backtest_realism_audit": {
+                    "route": "BACKTEST_REALISM_REVIEW",
+                    "route_label": "Review Required",
+                    "rows": [
+                        {
+                            "Criteria": "Tax / account scope",
+                            "Status": "REVIEW",
+                            "Ready": False,
+                            "Current": "not modeled",
+                            "Meaning": "tax/account scope review",
+                        }
+                    ],
+                },
+            },
+            paper_observation={"route": "PAPER_OBSERVATION_READY", "blockers": []},
+            decision_evidence={"route": "READY_FOR_FINAL_DECISION", "blockers": []},
+        )
+        selected_gate = build_selected_route_gate(
+            decision_route=SELECT_FOR_PRACTICAL_PORTFOLIO,
+            investability_packet=packet,
+        )
+
+        self.assertEqual(packet["route"], "INVESTABILITY_PACKET_NEEDS_REVIEW")
+        self.assertFalse(packet["select_ready"])
+        self.assertEqual(packet["gate_policy_snapshot"]["outcome"], "hold_or_re_review")
+        self.assertFalse(selected_gate["Ready"])
+        self.assertTrue(
+            any(
+                row["Group"] == "backtest_realism" and row["Severity"] == "REVIEW_REQUIRED"
                 for row in packet["gate_policy_snapshot"]["policy_rows"]
             )
         )
@@ -1380,6 +1550,19 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
                             "Ready": True,
                             "Current": "PASS",
                             "Meaning": "validation efficacy ready",
+                        }
+                    ],
+                },
+                "backtest_realism_audit": {
+                    "route": "BACKTEST_REALISM_READY",
+                    "route_label": "Ready",
+                    "rows": [
+                        {
+                            "Criteria": "Transaction cost model",
+                            "Status": "PASS",
+                            "Ready": True,
+                            "Current": "10 bps / net curve applied",
+                            "Meaning": "backtest realism ready",
                         }
                     ],
                 },
