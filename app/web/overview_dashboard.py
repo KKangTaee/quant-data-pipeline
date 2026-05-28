@@ -29,6 +29,8 @@ from app.web.overview_dashboard_helpers import (
 
 
 MARKET_INTRADAY_REFRESH_MINUTES = 5
+MARKET_MOVER_CHART_HEIGHT = 460
+MARKET_MOVER_TABLE_HEIGHT = MARKET_MOVER_CHART_HEIGHT + 44
 MARKET_COVERAGE_LABELS = {
     "SP500": "S&P 500",
     "TOP1000": "Top 1000",
@@ -226,10 +228,7 @@ def _build_return_bar_chart(rows: pd.DataFrame) -> alt.Chart:
             text=alt.Text("Return Label:N"),
         )
     )
-    return (
-        (bars + labels)
-        .properties(height=max(220, min(520, 28 * len(chart_rows))))
-    )
+    return (bars + labels).properties(height=MARKET_MOVER_CHART_HEIGHT)
 
 
 def _build_market_mover_sector_chart(rows: pd.DataFrame) -> alt.Chart:
@@ -291,10 +290,7 @@ def _build_market_mover_sector_chart(rows: pd.DataFrame) -> alt.Chart:
             text=alt.Text("Average Return Label:N"),
         )
     )
-    return (
-        (bars + labels)
-        .properties(height=max(180, min(360, 26 * len(chart_rows))))
-    )
+    return (bars + labels).properties(height=MARKET_MOVER_CHART_HEIGHT)
 
 
 def _build_group_leadership_heatmap(rows: pd.DataFrame) -> alt.Chart:
@@ -717,7 +713,7 @@ def _render_market_movers_snapshot_panel(
         with sector_tab:
             st.altair_chart(_build_market_mover_sector_chart(rows), width="stretch")
     with right:
-        st.dataframe(rows, width="stretch", hide_index=True)
+        st.dataframe(rows, width="stretch", height=MARKET_MOVER_TABLE_HEIGHT, hide_index=True)
 
 
 def _render_market_movers_tab() -> None:
