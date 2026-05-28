@@ -92,6 +92,26 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - `provider_status != ok` row는 missing diagnostics로 노출하고 ranking에는 쓰지 않는다.
 - `TOP1000` / `TOP2000` UI refresh는 quote fast path만 사용하고, 광범위한 yfinance OHLCV fallback은 오래 걸릴 수 있어 자동 fallback하지 않는다.
 
+## `market_event_calendar`
+
+역할:
+
+- Overview Events 탭에서 보여줄 시장 이벤트 calendar row를 저장한다.
+- FOMC, earnings, 기타 macro / market schedule collector가 같은 table contract를 재사용한다.
+
+성격:
+
+- provider snapshot table이다.
+- `event_date`, `event_type`, `symbol`, `title`, `source`, `source_url`, `confidence`, `collected_at`, `raw_payload_json`을 공통 컬럼으로 둔다.
+- `event_key`는 반복 수집이 같은 event row를 UPSERT하도록 만든 내부 business key다.
+- UI는 정상 render 때 외부 페이지를 직접 파싱하지 않고 이 table을 읽는다.
+
+주의:
+
+- calendar row는 수집 시점의 provider snapshot이며 완전한 point-in-time historical event truth가 아니다.
+- earnings free source는 provider별 coverage / delay / 누락 가능성이 크므로 `confidence`와 `raw_payload_json`을 함께 남겨야 한다.
+- `raw_payload_json`은 UI 표시용 source of truth가 아니라 diagnostics와 후속 collector 개선을 위한 compact evidence다.
+
 ## `etf_operability_snapshot`
 
 역할:

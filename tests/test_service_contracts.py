@@ -718,6 +718,108 @@ class MarketIntelligenceIngestionContractTests(unittest.TestCase):
         self.assertAlmostEqual(float(written_rows[0]["return_pct"]), 12.0)
 
 
+class MarketIntelligenceEventCalendarContractTests(unittest.TestCase):
+    def test_market_event_schema_contains_required_columns(self) -> None:
+        from finance.data.db.schema import MARKET_INTELLIGENCE_SCHEMAS
+
+        schema_sql = MARKET_INTELLIGENCE_SCHEMAS["market_event_calendar"]
+
+        for column in [
+            "event_date",
+            "event_type",
+            "symbol",
+            "title",
+            "source",
+            "source_url",
+            "confidence",
+            "collected_at",
+            "raw_payload_json",
+        ]:
+            self.assertIn(column, schema_sql)
+        self.assertIn("UNIQUE KEY uk_market_event_key", schema_sql)
+
+    def test_market_event_upsert_normalizes_payload_and_business_key(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        class FakeDb:
+            def __init__(self) -> None:
+                self.used_dbs: list[str] = []
+                self.executemany_calls: list[tuple[str, list[dict[str, object]]]] = []
+                self.closed = False
+
+            def use_db(self, db_name: str) -> None:
+                self.used_dbs.append(db_name)
+
+            def executemany(self, sql: str, rows: list[dict[str, object]]) -> None:
+                self.executemany_calls.append((sql, rows))
+
+            def close(self) -> None:
+                self.closed = True
+
+        fake_db = FakeDb()
+        with (
+            patch.object(mi, "_db", return_value=fake_db),
+            patch.object(mi, "sync_table_schema") as sync_schema,
+        ):
+            rows_written = mi.upsert_market_event_rows(
+                [
+                    {
+                        "event_date": "2026-06-17",
+                        "event_type": "fomc meeting",
+                        "symbol": "",
+                        "title": "FOMC Meeting",
+                        "source": "federal_reserve",
+                        "source_url": "https://example.test/fomc",
+                        "confidence": "0.95",
+                        "raw_payload": {"meeting": "June"},
+                    }
+                ]
+            )
+
+        self.assertEqual(rows_written, 1)
+        self.assertEqual(fake_db.used_dbs, ["finance_meta"])
+        sync_schema.assert_called_once()
+        _, captured_rows = fake_db.executemany_calls[0]
+        captured = captured_rows[0]
+        self.assertEqual(captured["event_date"], "2026-06-17")
+        self.assertEqual(captured["event_type"], "FOMC_MEETING")
+        self.assertIsNone(captured["symbol"])
+        self.assertEqual(captured["confidence"], 0.95)
+        self.assertEqual(captured["raw_payload_json"], '{"meeting":"June"}')
+        self.assertEqual(len(str(captured["event_key"])), 64)
+        self.assertTrue(fake_db.closed)
+
+    def test_market_intelligence_sync_includes_event_calendar_table(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        class FakeDb:
+            def __init__(self) -> None:
+                self.used_dbs: list[str] = []
+
+            def use_db(self, db_name: str) -> None:
+                self.used_dbs.append(db_name)
+
+            def close(self) -> None:
+                pass
+
+        dbs = [FakeDb(), FakeDb()]
+
+        def fake_db(*args, **kwargs):
+            del args, kwargs
+            return dbs.pop(0)
+
+        with (
+            patch.object(mi, "_db", side_effect=fake_db),
+            patch.object(mi, "sync_table_schema") as sync_schema,
+        ):
+            mi.sync_market_intelligence_tables()
+
+        synced_tables = [call.args[1] for call in sync_schema.call_args_list]
+        self.assertIn("market_universe_member", synced_tables)
+        self.assertIn("market_event_calendar", synced_tables)
+        self.assertIn("market_intraday_snapshot", synced_tables)
+
+
 class PracticalValidationReplayServiceContractTests(unittest.TestCase):
     def test_recheck_plan_extends_to_latest_market_date(self) -> None:
         from app.services import backtest_practical_validation_replay as replay_service

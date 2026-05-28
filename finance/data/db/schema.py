@@ -320,6 +320,31 @@ MARKET_INTELLIGENCE_SCHEMAS = {
           KEY ix_provider_status (provider_status)
         );
     """,
+    "market_event_calendar": """
+        CREATE TABLE IF NOT EXISTS market_event_calendar (
+          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+
+          event_key CHAR(64) NOT NULL,
+          event_date DATE NOT NULL,
+          event_type VARCHAR(32) NOT NULL,
+          symbol VARCHAR(20) NULL,
+          title VARCHAR(512) NOT NULL,
+
+          source VARCHAR(64) NOT NULL,
+          source_url VARCHAR(1024) NULL,
+          confidence DOUBLE NULL,
+          collected_at TIMESTAMP NULL,
+          raw_payload_json JSON NULL,
+
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+          UNIQUE KEY uk_market_event_key (event_key),
+          KEY ix_event_date_type (event_date, event_type),
+          KEY ix_event_symbol_date (symbol, event_date),
+          KEY ix_event_source (source)
+        );
+    """,
 }
 
 

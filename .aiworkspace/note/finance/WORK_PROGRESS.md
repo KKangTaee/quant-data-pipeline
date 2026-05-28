@@ -4013,3 +4013,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - S&P 500 snapshot refresh 기본 경로를 Yahoo quote batch fast path로 바꾸고, yfinance 5m OHLCV를 fallback으로 남겼다. Local smoke에서 503개 quote snapshot 저장은 6.514초가 걸렸다.
   - Streamlit이 이전 job-wrapper import를 잡은 상태에서 `quote_batch_size` TypeError가 나던 UI click path를 수정했고, 재시작 후 브라우저에서 503개 snapshot 저장이 7.377초로 완료되는 것을 확인했다.
   - Top1000 / Top2000 daily intraday refresh를 같은 `market_intraday_snapshot` 저장 구조로 확장했다. Local smoke에서 Top1000은 1000 rows / 9.322초, Top2000은 2000 rows / 16.0초로 저장됐고 Overview가 intraday snapshot을 우선 표시한다.
+- Overview Market Intelligence Task 4 / Market Event DB Structure:
+  - `.aiworkspace/note/finance/tasks/active/overview-market-events-schema/`를 열고 `finance_meta.market_event_calendar` schema를 추가했다.
+  - `finance/data/market_intelligence.py`에 event row normalize, `event_key` 기반 UPSERT, date-range read helper를 추가했다.
+  - Local DB smoke에서 requested common event columns가 생성된 것을 확인했고, 다음 task는 FOMC collector다.

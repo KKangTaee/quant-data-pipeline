@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import json
 from collections.abc import Callable, Iterable, Sequence
 from datetime import UTC, datetime
 from io import StringIO
@@ -119,6 +121,12 @@ def sync_market_intelligence_tables(
             MARKET_INTELLIGENCE_SCHEMAS["market_universe_member"],
             DB_META,
         )
+        sync_table_schema(
+            meta_db,
+            "market_event_calendar",
+            MARKET_INTELLIGENCE_SCHEMAS["market_event_calendar"],
+            DB_META,
+        )
         price_db.use_db(DB_PRICE)
         sync_table_schema(
             price_db,
@@ -170,6 +178,187 @@ def fetch_sp500_constituents(source_url: str = SP500_SOURCE_URL) -> list[dict[st
             }
         )
     return rows
+
+
+def _event_date_str(value: Any) -> str | None:
+    if value in (None, ""):
+        return None
+    ts = pd.Timestamp(value)
+    if pd.isna(ts):
+        return None
+    return ts.strftime("%Y-%m-%d")
+
+
+def _normalize_event_type(value: Any) -> str:
+    return str(value or "").strip().upper().replace(" ", "_")
+
+
+def _normalize_event_symbol(value: Any) -> str | None:
+    symbol = _normalize_symbol(value)
+    return symbol or None
+
+
+def _json_payload(value: Any) -> str | None:
+    if value in (None, ""):
+        return None
+    if isinstance(value, str):
+        try:
+            parsed = json.loads(value)
+        except json.JSONDecodeError:
+            parsed = {"raw": value}
+        return json.dumps(parsed, ensure_ascii=False, sort_keys=True, separators=(",", ":"), default=str)
+    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), default=str)
+
+
+def _market_event_key(row: dict[str, Any]) -> str:
+    parts = [
+        str(row.get("event_date") or ""),
+        _normalize_event_type(row.get("event_type")),
+        _normalize_event_symbol(row.get("symbol")) or "",
+        str(row.get("title") or "").strip(),
+        str(row.get("source") or "").strip(),
+    ]
+    return hashlib.sha256("|".join(parts).encode("utf-8")).hexdigest()
+
+
+def normalize_market_event_rows(
+    rows: list[dict[str, Any]],
+    *,
+    collected_at: str | None = None,
+) -> list[dict[str, Any]]:
+    normalized_rows: list[dict[str, Any]] = []
+    default_collected_at = collected_at or _timestamp_str()
+    for item in rows:
+        event_date = _event_date_str(item.get("event_date"))
+        event_type = _normalize_event_type(item.get("event_type"))
+        title = str(item.get("title") or "").strip()
+        source = str(item.get("source") or "").strip()
+        if not event_date or not event_type or not title or not source:
+            continue
+        row = {
+            "event_date": event_date,
+            "event_type": event_type,
+            "symbol": _normalize_event_symbol(item.get("symbol")),
+            "title": title,
+            "source": source,
+            "source_url": item.get("source_url") or None,
+            "confidence": _safe_float(item.get("confidence")),
+            "collected_at": item.get("collected_at") or default_collected_at,
+            "raw_payload_json": _json_payload(item.get("raw_payload_json") or item.get("raw_payload")),
+        }
+        row["event_key"] = str(item.get("event_key") or "").strip() or _market_event_key(row)
+        normalized_rows.append(row)
+    return normalized_rows
+
+
+def upsert_market_event_rows(
+    rows: list[dict[str, Any]],
+    *,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> int:
+    normalized_rows = normalize_market_event_rows(rows)
+    if not normalized_rows:
+        return 0
+    db = _db(host, user, password, port)
+    try:
+        db.use_db(DB_META)
+        sync_table_schema(
+            db,
+            "market_event_calendar",
+            MARKET_INTELLIGENCE_SCHEMAS["market_event_calendar"],
+            DB_META,
+        )
+        sql = """
+        INSERT INTO market_event_calendar (
+          event_key, event_date, event_type, symbol, title,
+          source, source_url, confidence, collected_at, raw_payload_json
+        ) VALUES (
+          %(event_key)s, %(event_date)s, %(event_type)s, %(symbol)s, %(title)s,
+          %(source)s, %(source_url)s, %(confidence)s, %(collected_at)s, %(raw_payload_json)s
+        )
+        ON DUPLICATE KEY UPDATE
+          event_date = VALUES(event_date),
+          event_type = VALUES(event_type),
+          symbol = VALUES(symbol),
+          title = VALUES(title),
+          source = VALUES(source),
+          source_url = VALUES(source_url),
+          confidence = VALUES(confidence),
+          collected_at = VALUES(collected_at),
+          raw_payload_json = VALUES(raw_payload_json)
+        """
+        db.executemany(sql, normalized_rows)
+        return len(normalized_rows)
+    finally:
+        db.close()
+
+
+def load_market_event_calendar(
+    *,
+    start_date: str | None = None,
+    end_date: str | None = None,
+    event_type: str | None = None,
+    symbol: str | None = None,
+    limit: int = 500,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> list[dict[str, Any]]:
+    conditions = ["1=1"]
+    params: list[Any] = []
+    normalized_start = _event_date_str(start_date)
+    normalized_end = _event_date_str(end_date)
+    normalized_type = _normalize_event_type(event_type)
+    normalized_symbol = _normalize_event_symbol(symbol)
+    if normalized_start:
+        conditions.append("event_date >= %s")
+        params.append(normalized_start)
+    if normalized_end:
+        conditions.append("event_date <= %s")
+        params.append(normalized_end)
+    if normalized_type:
+        conditions.append("event_type = %s")
+        params.append(normalized_type)
+    if normalized_symbol:
+        conditions.append("symbol = %s")
+        params.append(normalized_symbol)
+    bounded_limit = max(1, min(int(limit or 500), 5000))
+
+    db = _db(host, user, password, port)
+    try:
+        db.use_db(DB_META)
+        sync_table_schema(
+            db,
+            "market_event_calendar",
+            MARKET_INTELLIGENCE_SCHEMAS["market_event_calendar"],
+            DB_META,
+        )
+        return db.query(
+            f"""
+            SELECT
+                event_key,
+                event_date,
+                event_type,
+                symbol,
+                title,
+                source,
+                source_url,
+                confidence,
+                collected_at,
+                raw_payload_json
+            FROM market_event_calendar
+            WHERE {" AND ".join(conditions)}
+            ORDER BY event_date ASC, event_type ASC, COALESCE(symbol, '') ASC, title ASC
+            LIMIT %s
+            """,
+            params + [bounded_limit],
+        )
+    finally:
+        db.close()
 
 
 def upsert_market_universe_members(

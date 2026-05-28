@@ -130,7 +130,7 @@ Code resolves these paths through `app/workspace_paths.py`; app/runtime and app/
 | Situation | Start Here |
 |---|---|
 | Overview market movers / sector leadership 수정 | `app/services/overview_market_intelligence.py`, `app/web/overview_dashboard.py`, `app/web/overview_dashboard_helpers.py` |
-| S&P 500 universe / intraday snapshot 수정 | `finance/data/market_intelligence.py`, `finance/data/db/schema.py`, `app/jobs/ingestion_jobs.py`, `app/services/overview_market_intelligence.py` |
+| S&P 500 universe / intraday snapshot / market event calendar 수정 | `finance/data/market_intelligence.py`, `finance/data/db/schema.py`, `app/jobs/ingestion_jobs.py`, `app/services/overview_market_intelligence.py` |
 | Backtest UI 수정 | `app/web/pages/backtest.py`, 관련 `app/web/backtest_*.py` |
 | UI-engine boundary 수정 | `app/services/*`, 호출하는 `app/web/backtest_*.py`, 관련 `app/runtime/*` |
 | Service contract 회귀 검증 | `tests/test_service_contracts.py`, `.aiworkspace/note/finance/docs/runbooks/README.md` |

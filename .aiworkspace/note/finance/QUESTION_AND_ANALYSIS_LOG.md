@@ -5351,3 +5351,14 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Top1000 / Top2000 universe는 current `nyse_asset_profile.market_cap` ranking 기준이며, quote-fast path는 충분히 빠르지만 yfinance OHLCV fallback은 넓은 coverage에서 오래 걸릴 수 있어 UI에서는 자동 fallback하지 않는 편이 맞다
 - Follow-up:
   - generic market intraday collector / job wrapper를 추가하고 Overview daily view가 Top1000 / Top2000 intraday snapshot을 우선 읽도록 확장했다
+
+### 2026-05-28 - Task 4 Market Event DB 구조를 먼저 만든다
+- User request:
+  - 사용자가 재정리된 Overview Market Intelligence phase 기준으로 Task 4 작업 진행을 요청함
+- Interpreted goal:
+  - FOMC와 earnings collector를 붙이기 전에 공통 event calendar table과 persistence contract를 먼저 만들어야 함
+- Analysis result:
+  - event calendar는 price fact가 아니라 Overview / ingestion metadata이므로 `finance_meta`에 두는 것이 맞다
+  - 반복 수집 중복을 막으려면 요청된 공통 컬럼 외에 내부 business key인 `event_key`가 필요하다
+- Follow-up:
+  - `market_event_calendar` schema, normalized UPSERT, date-range read helper, service contract tests를 추가했다. 다음 구현 단위는 FOMC collector다

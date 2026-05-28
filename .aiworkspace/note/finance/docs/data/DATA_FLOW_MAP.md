@@ -80,6 +80,21 @@ yfinance 5m OHLCV fallback
 - 기본 refresh path는 Yahoo quote batch이며, S&P 500은 quote path 실패 시 기존 yfinance 5m OHLCV download로 fallback할 수 있다.
 - Top1000 / Top2000 daily movers도 저장된 quote snapshot을 우선 읽는다. 해당 universe는 `nyse_asset_profile.market_cap` current snapshot 기준이며, UI refresh에서는 오래 걸리는 yfinance OHLCV fallback을 자동 실행하지 않는다.
 
+## Overview market event calendar 흐름
+
+```text
+FOMC / earnings / market event source
+  -> finance.data.market_intelligence.upsert_market_event_rows()
+  -> finance_meta.market_event_calendar
+  -> future Overview Events service / UI read path
+```
+
+의미:
+
+- `market_event_calendar`는 event collector별 normalized output을 저장하는 공통 table이다.
+- 반복 수집은 `event_key` 기준 UPSERT로 같은 event row를 갱신한다.
+- Task 4는 schema와 persistence helper까지만 제공하고, 실제 FOMC / earnings collector와 Events UI 연결은 후속 task에서 붙인다.
+
 ## ETF operability provider snapshot 흐름
 
 ```text
