@@ -22,6 +22,9 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-28
+- Completed 4차 production UX for `.aiworkspace/note/finance/phases/active/overview-market-intelligence-productionization/`.
+- Added Market Movers Rank / Sector Pulse tabs, Sector / Industry Heatmap / Table tabs, and Events Calendar / Table views with window/source/validation filters.
+- Updated runbook, phase acceptance notes, roadmap, and task handoff docs. Remaining future candidates are macro calendar sources, official earnings IR parsing, and scheduled refresh automation.
 - Opened `.aiworkspace/note/finance/phases/active/overview-market-intelligence-productionization/`.
 - Recommended formalization path: 1차 prototype complete, 2차 production baseline, 3차 earnings/events production, 4차 UX/automation polish.
 - Next implementation task is `Task 2-01 Refresh State And Diagnostics Baseline`.

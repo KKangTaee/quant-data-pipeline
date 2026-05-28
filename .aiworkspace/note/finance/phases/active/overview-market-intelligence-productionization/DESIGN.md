@@ -56,6 +56,13 @@ Productionization should add lifecycle semantics without breaking existing rows:
 - Add visual ranking only when it helps comparison: heatmap/treemap for sector/industry or movers.
 - Do not make events look like buy/sell recommendations.
 
+## 4차 UI Read Model
+
+- Market Movers has two chart views: `Rank` for symbol-level returns and `Sector Pulse` for sector-level aggregation inside the selected mover set.
+- Sector / Industry has `Heatmap` and `Table` views. The heatmap compares equal-weight, market-cap-weighted, and top-symbol return in one dense view.
+- Events has `Calendar` and `Table` views. Calendar mode applies window/source/validation filters, shows event counts over time, then groups rows by event date.
+- These views only transform stored service rows in memory; they do not add provider calls to the Overview render path.
+
 ## Verification Shape
 
 - service contract tests for read model and event lifecycle interpretation

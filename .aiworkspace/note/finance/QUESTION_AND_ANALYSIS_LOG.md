@@ -21,6 +21,18 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-28 - Overview market intelligence 4차는 운영 UX 정식화로 닫는다
+- User request:
+  - 2차와 3차 이후 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - 새 데이터 source를 추가하기보다 기존 Market Movers / Sector Leadership / Events를 실제로 매일 읽기 쉬운 화면으로 정식화해야 함.
+- Analysis result:
+  - Market Movers는 Rank와 Sector Pulse로 나눠 symbol-level과 sector-level 강도를 동시에 보게 했다.
+  - Sector / Industry는 equal-weight, cap-weighted, top-symbol return heatmap을 추가하고 table fallback을 유지했다.
+  - Events는 Window, Source Type, Validation filter와 Calendar / Table view로 단순 DB table에서 운영 calendar에 가까운 형태로 정리했다.
+- Follow-up:
+  - 후속 개발 후보는 macro calendar source, company IR official earnings parser, scheduled refresh automation이다.
+
 ### 2026-05-28 - Overview prototype 정식화는 4차 흐름이 적절하다
 - User request:
   - 1차 기능 구현 완료 이후 prototype을 정식화하려면 몇 차까지 진행해야 하는지 검토하고 phase / task를 다시 작성해 달라고 요청함.

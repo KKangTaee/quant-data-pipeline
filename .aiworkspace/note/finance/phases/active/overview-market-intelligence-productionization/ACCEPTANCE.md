@@ -79,3 +79,20 @@ git diff --check
 - Generic company IR official parser is still future work because each issuer site has different markup and calendar conventions.
 - Visual heatmap / dense mover chart remains 4차 work.
 - Calendar-like grouping and richer filters remain 4차 work.
+
+## 4차 Production UX Gate
+
+- Market Movers keeps the DB-backed rank table and adds a compact Rank chart.
+- Market Movers adds a Sector Pulse chart so users can see which sectors dominate the selected mover set.
+- Sector / Industry leadership shows a heatmap for Equal Weight, Cap Weighted, and Top Symbol return.
+- Sector / Industry keeps a Table view for row inspection.
+- Events adds Window, Source Type, and Validation filters.
+- Events shows a Calendar view with event counts over time and date-grouped event cards.
+- Events keeps a Table view for detailed row inspection.
+- Browser smoke checks the Overview tabs without new console errors.
+
+## Remaining After 4차
+
+- Company-specific official earnings IR parsing remains future work.
+- Macro calendar sources such as CPI, jobs report, and Fed speakers are not yet implemented.
+- Scheduled background refresh automation is not yet attached; refresh remains manual or Streamlit fragment status refresh.

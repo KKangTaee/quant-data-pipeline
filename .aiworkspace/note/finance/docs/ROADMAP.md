@@ -17,7 +17,7 @@ Last Verified: 2026-05-28
 | Product Research Plugin Stage 5 | Complete | `.aiworkspace/note/finance/tasks/active/product-research-plugin-stage5/`; product research orchestration skill과 bundle bootstrap/check helper를 1차로 plugin workflow에 고정 |
 | Product Research Plugin Split | Complete | `.aiworkspace/note/finance/tasks/active/product-research-plugin-split/`; product research skill과 helper를 별도 `quant-finance-product-research` plugin으로 분리 완료 |
 | Backtest Report Migration | Complete | `.aiworkspace/note/finance/reports/backtests/`, legacy phase archive 제거 완료 |
-| Overview Market Intelligence Productionization | Active | `.aiworkspace/note/finance/phases/active/overview-market-intelligence-productionization/`; 3차 earnings production baseline 완료, 다음은 4차 visuals / calendar UX polish |
+| Overview Market Intelligence Productionization | Production baseline complete | `.aiworkspace/note/finance/phases/active/overview-market-intelligence-productionization/`; 2차 refresh/diagnostics, 3차 earnings lifecycle, 4차 visuals/calendar UX 완료 |
 | Practical Validation V2 | Active | `.aiworkspace/note/finance/tasks/active/practical-validation-v2/` |
 | Phase 36 Selected Portfolio Dashboard | Implementation complete before doc rebuild | 기존 phase 문서는 새 구조 정리 후 필요 시 `phases/done/`에 요약만 남긴다 |
 
@@ -75,5 +75,5 @@ P2에서 정상화하는 주요 진단:
 ## Next Decisions
 
 - UI Engine Boundary Cleanup은 완료됐다. 다음 구조 작업은 새 phase/task로 열고, 현재 경계는 boundary lint와 service contract test를 먼저 통과시키는 기준으로 유지한다.
-- Overview Market Intelligence Productionization의 다음 implementation task는 4차 `Task 4-01 Market Intelligence Visuals`이다.
+- Overview Market Intelligence Productionization은 production baseline을 완료했다. 다음 후보는 macro calendar source, official earnings IR source, scheduled refresh automation 중 하나로 별도 phase/task에서 결정한다.
 - Practical Validation V2는 P2 QA 여부를 확인한 뒤 P3로 넘어갈지, P2를 closeout할지 결정한다.

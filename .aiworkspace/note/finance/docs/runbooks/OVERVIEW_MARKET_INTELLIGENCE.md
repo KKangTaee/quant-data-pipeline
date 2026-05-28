@@ -38,14 +38,21 @@ http://localhost:8501
 2. `Workspace > Overview > Market Movers`
    - `Coverage`, `Period`, `Sector`, `Top N`을 선택한다.
    - daily period에서 refresh state가 `Update due`, `Stale`, `Failed`이면 `Update Daily Snapshot`을 눌러 새 snapshot을 저장한다.
+   - `Rank` 탭에서 symbol-level return ranking을 확인한다.
+   - `Sector Pulse` 탭에서 선택한 mover set 안에서 평균 return이 강한 sector를 확인한다.
    - `Returnable Coverage`에서 missing / failed count를 확인한다.
    - `Coverage Diagnostics`에서 missing symbol, reason, recommended action을 확인한다.
 
-3. `Workspace > Ingestion > Overview Market Event Calendar > FOMC`
+3. `Workspace > Overview > Sector / Industry`
+   - `Coverage`, `Group`, `Top N`, `Min Symbols`를 선택한다.
+   - `Heatmap` 탭에서 Equal Weight, Cap Weighted, Top Symbol return을 함께 비교한다.
+   - `Table` 탭에서 구성 종목 수, 대표 symbol, raw return column을 확인한다.
+
+4. `Workspace > Ingestion > Overview Market Event Calendar > FOMC`
    - 기본은 current year와 next year를 수집한다.
    - 결과는 `finance_meta.market_event_calendar`에 `event_type=FOMC_MEETING`으로 저장된다.
 
-4. `Workspace > Ingestion > Overview Market Event Calendar > Earnings`
+5. `Workspace > Ingestion > Overview Market Event Calendar > Earnings`
    - 기본은 `Latest S&P 500 Movers` source를 사용한다.
    - broader coverage는 `S&P 500 Universe Batch`, `Top1000 Batch`, `Top2000 Batch`를 사용한다.
    - broader mode는 `Max Symbols`, `Batch Offset`, `Ticker Cooldown Sec`을 작게 잡아 저빈도로 실행한다.
@@ -56,8 +63,11 @@ http://localhost:8501
    - yfinance-only estimate는 `validation_status=estimate_only`, Nasdaq 확인 row는 `validation_status=cross_checked`, Nasdaq에서 확인하지 못한 row는 `validation_status=not_confirmed`가 된다.
    - 같은 symbol/source의 이전 active estimate는 새 수집 결과가 있으면 `event_status=superseded`로 정리된다.
 
-5. `Workspace > Overview > Events`
+6. `Workspace > Overview > Events`
    - `All`, `FOMC`, `Earnings` filter를 바꿔 저장 row를 확인한다.
+   - `Window`, `Source Type`, `Validation` filter로 캘린더 범위와 source quality를 좁힌다.
+   - `Calendar` 탭에서 event count timeline과 날짜별 grouped cards를 확인한다.
+   - `Table` 탭에서 DB row-level detail을 확인한다.
    - `Source Type`에서 FOMC official row와 earnings provider estimate row를 구분한다.
    - `Validation`, `Freshness`, `Age Days`, `Event Status`에서 cross-check 여부와 오래된 earnings estimate인지 확인한다.
    - Overview의 refresh buttons도 ingestion job wrapper를 호출한다. UI render 중 직접 외부 source를 scraping하지 않는다.
@@ -86,11 +96,14 @@ PY
 
 - Market Movers daily snapshot shows `price_mode=Intraday Snapshot` and a recent `snapshot_time_utc`.
 - Market Movers daily refresh state shows `Fresh`, `Update due`, `Stale`, `Partial`, or `Failed`.
+- Market Movers displays both `Rank` and `Sector Pulse` chart tabs.
+- Sector / Industry displays both `Heatmap` and `Table` tabs.
 - Missing diagnostics are visible with recommended action when provider rows are absent or incomplete.
 - FOMC rows have `source=federal_reserve_fomc_calendar`, `confidence=1.0`, and `Source Type=Official`.
 - Earnings rows have `source=yfinance_calendar`, `Source Type=Provider Estimate`, and a validation label.
 - Nasdaq cross-checked earnings rows have `Validation=Cross-checked` and higher confidence.
 - Earnings rows collected more than 14 days ago show `Freshness=Stale estimate` and a warning.
+- Overview Events displays `Calendar` and `Table` tabs with Window / Source Type / Validation filters.
 - Overview Events `Latest Collection` updates after a successful collector run.
 
 ## Failure Handling

@@ -62,11 +62,12 @@ def _build_funnel_chart(funnel_rows: pd.DataFrame) -> alt.Chart:
     chart_rows = funnel_rows.copy()
     if chart_rows.empty or int(chart_rows["Count"].sum()) <= 0:
         chart_rows = pd.DataFrame([{"Stage": "No Data", "Count": 1}])
+    total_count = max(1, int(chart_rows["Count"].sum()))
     return (
         alt.Chart(chart_rows)
         .mark_arc(innerRadius=58, outerRadius=96, stroke="#ffffff")
         .encode(
-            theta=alt.Theta("Count:Q", stack=True),
+            theta=alt.Theta("Count:Q", stack=True, scale=alt.Scale(domain=[0, total_count])),
             color=alt.Color(
                 "Stage:N",
                 scale=alt.Scale(
@@ -162,25 +163,151 @@ def _render_snapshot_warnings(snapshot: dict[str, Any]) -> None:
         st.warning(str(warning))
 
 
+def _symmetric_return_domain(values: pd.Series) -> list[float]:
+    numeric = pd.to_numeric(values, errors="coerce").dropna()
+    max_abs = max(1.0, float(numeric.abs().max()) if not numeric.empty else 1.0)
+    return [-max_abs, 0, max_abs]
+
+
+def _symmetric_return_scale(values: pd.Series) -> alt.Scale:
+    return alt.Scale(domain=_symmetric_return_domain(values), range=["#b91c1c", "#f8fafc", "#0f766e"])
+
+
 def _build_return_bar_chart(rows: pd.DataFrame) -> alt.Chart:
     chart_rows = rows.copy()
+    if not chart_rows.empty and "Return %" in chart_rows:
+        chart_rows["Return %"] = pd.to_numeric(chart_rows["Return %"], errors="coerce")
+        chart_rows = chart_rows.dropna(subset=["Return %"])
     if chart_rows.empty:
         chart_rows = pd.DataFrame([{"Symbol": "No Data", "Return %": 0.0}])
+    chart_rows["Return Label"] = chart_rows["Return %"].map(lambda value: f"{float(value):.2f}%" if pd.notna(value) else "-")
     return (
         alt.Chart(chart_rows)
         .mark_bar(cornerRadiusEnd=3)
         .encode(
-            x=alt.X("Return %:Q", title="Return %"),
-            y=alt.Y("Symbol:N", sort="-x", title=None),
+            x=alt.X(
+                "Return %:Q",
+                title="Return %",
+                stack=None,
+                scale=alt.Scale(domain=_symmetric_return_domain(chart_rows["Return %"])),
+            ),
+            y=alt.Y("Symbol:N", sort="-x", title=None, axis=alt.Axis(labelLimit=80)),
             color=alt.Color(
                 "Return %:Q",
-                scale=alt.Scale(range=["#d97706", "#0f766e"]),
+                scale=_symmetric_return_scale(chart_rows["Return %"]),
                 legend=None,
             ),
-            tooltip=["Rank:O", "Symbol:N", "Name:N", "Return %:Q", "Sector:N", "Industry:N"],
+            tooltip=["Rank:O", "Symbol:N", "Name:N", "Return Label:N", "Sector:N", "Industry:N"],
         )
         .properties(height=max(220, min(520, 28 * len(chart_rows))))
     )
+
+
+def _build_market_mover_sector_chart(rows: pd.DataFrame) -> alt.Chart:
+    if rows.empty or "Sector" not in rows or "Return %" not in rows:
+        chart_rows = pd.DataFrame([{"Sector": "No Data", "Average Return %": 0.0, "Count": 0, "Top Return %": 0.0}])
+    else:
+        chart_rows = (
+            rows.assign(
+                Sector=rows["Sector"].fillna("Unknown"),
+                **{"Return %": pd.to_numeric(rows["Return %"], errors="coerce")},
+            )
+            .dropna(subset=["Return %"])
+            .groupby("Sector", as_index=False)
+            .agg(
+                **{
+                    "Average Return %": ("Return %", "mean"),
+                    "Top Return %": ("Return %", "max"),
+                    "Count": ("Symbol", "count"),
+                }
+            )
+            .sort_values(["Average Return %", "Top Return %"], ascending=[False, False])
+            .head(12)
+        )
+        if chart_rows.empty:
+            chart_rows = pd.DataFrame([{"Sector": "No Data", "Average Return %": 0.0, "Count": 0, "Top Return %": 0.0}])
+    return (
+        alt.Chart(chart_rows)
+        .mark_bar(cornerRadiusEnd=3)
+        .encode(
+            x=alt.X(
+                "Average Return %:Q",
+                title="Avg Return %",
+                stack=None,
+                scale=alt.Scale(domain=_symmetric_return_domain(chart_rows["Average Return %"])),
+            ),
+            y=alt.Y("Sector:N", sort="-x", title=None, axis=alt.Axis(labelLimit=150)),
+            color=alt.Color(
+                "Average Return %:Q",
+                scale=_symmetric_return_scale(chart_rows["Average Return %"]),
+                legend=None,
+            ),
+            tooltip=["Sector:N", "Count:Q", "Average Return %:Q", "Top Return %:Q"],
+        )
+        .properties(height=max(180, min(360, 26 * len(chart_rows))))
+    )
+
+
+def _build_group_leadership_heatmap(rows: pd.DataFrame) -> alt.Chart:
+    metric_columns = [
+        "Equal Weight Return %",
+        "Market Cap Weighted Return %",
+        "Top Symbol Return %",
+    ]
+    if rows.empty:
+        chart_rows = pd.DataFrame(
+            [{"Group": "No Data", "Metric": "Equal Weight", "Return %": 0.0, "Symbols": 0, "Top Symbol": "-"}]
+        )
+    else:
+        available_metrics = [column for column in metric_columns if column in rows.columns]
+        chart_rows = rows.melt(
+            id_vars=[column for column in ["Group", "Symbols", "Top Symbol"] if column in rows.columns],
+            value_vars=available_metrics,
+            var_name="Metric",
+            value_name="Return %",
+        )
+        chart_rows["Metric"] = chart_rows["Metric"].replace(
+            {
+                "Equal Weight Return %": "Equal Weight",
+                "Market Cap Weighted Return %": "Cap Weighted",
+                "Top Symbol Return %": "Top Symbol",
+            }
+        )
+        chart_rows["Return %"] = pd.to_numeric(chart_rows["Return %"], errors="coerce")
+        chart_rows = chart_rows.dropna(subset=["Return %"])
+        if chart_rows.empty:
+            chart_rows = pd.DataFrame(
+                [{"Group": "No Data", "Metric": "Equal Weight", "Return %": 0.0, "Symbols": 0, "Top Symbol": "-"}]
+            )
+        chart_rows["Return Label"] = chart_rows["Return %"].map(
+            lambda value: f"{float(value):.2f}%" if pd.notna(value) else "-"
+        )
+    group_order = chart_rows["Group"].drop_duplicates().tolist() if "Group" in chart_rows else ["No Data"]
+    base = (
+        alt.Chart(chart_rows)
+        .mark_rect(cornerRadius=2)
+        .encode(
+            x=alt.X("Metric:N", title=None),
+            y=alt.Y("Group:N", sort=group_order, title=None, axis=alt.Axis(labelLimit=190)),
+            color=alt.Color(
+                "Return %:Q",
+                scale=_symmetric_return_scale(chart_rows["Return %"]),
+                legend=alt.Legend(title="Return %", orient="bottom"),
+            ),
+            tooltip=["Group:N", "Metric:N", "Return Label:N", "Symbols:Q", "Top Symbol:N"],
+        )
+    )
+    text = (
+        alt.Chart(chart_rows)
+        .mark_text(fontSize=11)
+        .encode(
+            x=alt.X("Metric:N", title=None),
+            y=alt.Y("Group:N", sort=group_order, title=None),
+            text=alt.Text("Return Label:N"),
+            color=alt.condition("datum['Return %'] >= 8 || datum['Return %'] <= -8", alt.value("#ffffff"), alt.value("#111827")),
+        )
+    )
+    return (base + text).properties(height=max(240, min(620, 30 * len(group_order))))
 
 
 def _render_missing_diagnostics(snapshot: dict[str, Any]) -> None:
@@ -449,7 +576,11 @@ def _render_market_movers_snapshot_panel(
 
     left, right = st.columns([0.95, 1.25], gap="medium")
     with left:
-        st.altair_chart(_build_return_bar_chart(rows), width="stretch")
+        chart_tab, sector_tab = st.tabs(["Rank", "Sector Pulse"])
+        with chart_tab:
+            st.altair_chart(_build_return_bar_chart(rows), width="stretch")
+        with sector_tab:
+            st.altair_chart(_build_market_mover_sector_chart(rows), width="stretch")
     with right:
         st.dataframe(rows, width="stretch", hide_index=True)
 
@@ -621,7 +752,156 @@ def _render_sector_industry_tab() -> None:
     if not isinstance(rows, pd.DataFrame) or rows.empty:
         st.info("DB-backed group leadership rows are not available for the selected controls.")
         return
-    st.dataframe(rows, width="stretch", hide_index=True)
+    heatmap_tab, table_tab = st.tabs(["Heatmap", "Table"])
+    with heatmap_tab:
+        st.altair_chart(_build_group_leadership_heatmap(rows), width="stretch")
+    with table_tab:
+        st.dataframe(rows, width="stretch", hide_index=True)
+
+
+def _event_type_label(value: Any) -> str:
+    labels = {
+        "FOMC_MEETING": "FOMC",
+        "EARNINGS": "Earnings",
+        "MACRO": "Macro",
+    }
+    return labels.get(str(value or ""), str(value or "-").replace("_", " ").title())
+
+
+def _prepare_event_calendar_frame(rows: pd.DataFrame) -> pd.DataFrame:
+    out = rows.copy()
+    out["Date Parsed"] = pd.to_datetime(out.get("Date"), errors="coerce")
+    today = pd.Timestamp(datetime.now().date())
+    out["Days Until"] = (out["Date Parsed"] - today).dt.days
+    out["Month"] = out["Date Parsed"].dt.strftime("%Y-%m")
+    out["Week"] = out["Date Parsed"].dt.to_period("W").astype(str)
+    out["Type Label"] = out.get("Type", pd.Series(dtype=str)).map(_event_type_label)
+    out["Symbol Label"] = out.get("Symbol", pd.Series(dtype=str)).replace({"-": ""})
+    out["Summary"] = out.apply(
+        lambda row: f"{row.get('Type Label')}: {row.get('Symbol Label') or row.get('Title') or '-'}",
+        axis=1,
+    )
+    return out
+
+
+def _filter_event_rows_for_calendar(rows: pd.DataFrame) -> pd.DataFrame:
+    if rows.empty:
+        return rows
+    filter_cols = st.columns([1, 1, 1], gap="small")
+    source_options = ["All"] + sorted(
+        value for value in rows.get("Source Type", pd.Series(dtype=str)).dropna().unique().tolist() if value != "-"
+    )
+    validation_options = ["All"] + sorted(
+        value for value in rows.get("Validation", pd.Series(dtype=str)).dropna().unique().tolist() if value != "-"
+    )
+    window = str(
+        filter_cols[0].segmented_control(
+            "Window",
+            ["30D", "90D", "All"],
+            default="90D",
+            key="overview_events_window_filter",
+        )
+    )
+    source_filter = str(
+        filter_cols[1].selectbox(
+            "Source Type",
+            source_options,
+            index=0,
+            key="overview_events_source_filter",
+        )
+    )
+    validation_filter = str(
+        filter_cols[2].selectbox(
+            "Validation",
+            validation_options,
+            index=0,
+            key="overview_events_validation_filter",
+        )
+    )
+
+    filtered = rows.copy()
+    if window != "All":
+        days = 30 if window == "30D" else 90
+        filtered = filtered[(filtered["Days Until"].isna()) | ((filtered["Days Until"] >= 0) & (filtered["Days Until"] <= days))]
+    if source_filter != "All" and "Source Type" in filtered:
+        filtered = filtered[filtered["Source Type"] == source_filter]
+    if validation_filter != "All" and "Validation" in filtered:
+        filtered = filtered[filtered["Validation"] == validation_filter]
+    return filtered
+
+
+def _build_event_calendar_chart(rows: pd.DataFrame) -> alt.Chart:
+    if rows.empty:
+        chart_rows = pd.DataFrame(
+            [{"Date Parsed": pd.Timestamp(datetime.now().date()), "Event Types": "No Data", "Count": 0}]
+        )
+    else:
+        valid_rows = rows.dropna(subset=["Date Parsed"])
+        if valid_rows.empty:
+            chart_rows = pd.DataFrame(
+                [{"Date Parsed": pd.Timestamp(datetime.now().date()), "Event Types": "No Data", "Count": 0}]
+            )
+        else:
+            chart_rows = (
+                valid_rows
+                .groupby("Date Parsed", as_index=False)
+                .agg(
+                    **{
+                        "Count": ("Type Label", "size"),
+                        "Event Types": ("Type Label", lambda values: ", ".join(sorted(set(values)))),
+                    }
+                )
+            )
+    date_min = chart_rows["Date Parsed"].min()
+    date_max = chart_rows["Date Parsed"].max()
+    if pd.isna(date_min) or pd.isna(date_max):
+        date_min = pd.Timestamp(datetime.now().date())
+        date_max = date_min + pd.Timedelta(days=1)
+    elif date_min == date_max:
+        date_max = date_min + pd.Timedelta(days=1)
+    max_count = max(1, int(chart_rows["Count"].max() or 0))
+    return (
+        alt.Chart(chart_rows)
+        .mark_line(point=True, color="#2563eb")
+        .encode(
+            x=alt.X(
+                "Date Parsed:T",
+                title=None,
+                axis=alt.Axis(format="%b %d", labelAngle=-35),
+                scale=alt.Scale(domain=[date_min, date_max]),
+            ),
+            y=alt.Y("Count:Q", title="Events", stack=None, scale=alt.Scale(domain=[0, max_count])),
+            tooltip=["Date Parsed:T", "Event Types:N", "Count:Q"],
+        )
+        .properties(height=240)
+    )
+
+
+def _render_event_date_groups(rows: pd.DataFrame) -> None:
+    if rows.empty:
+        st.info("No stored event rows match the selected calendar filters.")
+        return
+    display_columns = [
+        column
+        for column in ["Type Label", "Symbol", "Title", "Source Type", "Validation", "Freshness", "Age Days"]
+        if column in rows.columns
+    ]
+    for date_value, day_rows in rows.sort_values(["Date Parsed", "Type Label", "Symbol"]).groupby("Date", sort=True):
+        day_count = len(day_rows)
+        days_until = day_rows["Days Until"].dropna()
+        days_text = "-"
+        if not days_until.empty:
+            day_number = int(days_until.iloc[0])
+            days_text = "today" if day_number == 0 else f"{day_number}d"
+        type_counts = day_rows["Type Label"].value_counts().to_dict()
+        with st.container(border=True):
+            header_cols = st.columns([1, 2], gap="small", vertical_alignment="center")
+            header_cols[0].markdown(f"##### {date_value}")
+            header_cols[1].caption(
+                f"{days_text} | {day_count} events | "
+                + ", ".join(f"{key}: {value}" for key, value in type_counts.items())
+            )
+            st.dataframe(day_rows[display_columns], width="stretch", hide_index=True)
 
 
 def _render_events_tab() -> None:
@@ -707,7 +987,14 @@ def _render_events_tab() -> None:
     if not isinstance(rows, pd.DataFrame) or rows.empty:
         st.info("Stored market event rows are not available for the selected filter. Run the matching refresh here or from Ingestion.")
         return
-    st.dataframe(rows, width="stretch", hide_index=True)
+    calendar_rows = _prepare_event_calendar_frame(rows)
+    filtered_rows = _filter_event_rows_for_calendar(calendar_rows)
+    calendar_tab, table_tab = st.tabs(["Calendar", "Table"])
+    with calendar_tab:
+        st.altair_chart(_build_event_calendar_chart(filtered_rows), width="stretch")
+        _render_event_date_groups(filtered_rows)
+    with table_tab:
+        st.dataframe(filtered_rows.drop(columns=["Date Parsed"], errors="ignore"), width="stretch", hide_index=True)
 
 
 def _render_candidate_ops_tab(

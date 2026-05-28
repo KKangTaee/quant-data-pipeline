@@ -10,9 +10,9 @@
 | 3차 | Earnings Source Validation | Complete | `sub-dev` | yfinance estimate를 official/company source 또는 alternate free source와 비교하는 경로를 만든다. |
 | 3차 | Earnings Lifecycle Cleanup | Complete | `sub-dev` | 날짜 변경으로 생기는 older estimate row를 superseded/stale로 정리한다. |
 | 3차 | Low-Frequency Wider Collection | Complete | `sub-dev` | Top movers 외에 broader universe를 안전하게 저빈도 수집한다. |
-| 4차 | Market Intelligence Visuals | Next | `sub-dev` | heatmap/treemap 또는 dense chart로 sector/industry/movers 비교 경험을 높인다. |
-| 4차 | Calendar UX Polish | Planned | `sub-dev` | Events를 calendar-like view, filters, source labels로 읽기 쉽게 만든다. |
-| 4차 | Production Closeout | Planned | `sub-dev` | runbook, docs, browser QA, handoff를 정리하고 다음 phase로 넘긴다. |
+| 4차 | Market Intelligence Visuals | Complete | `sub-dev` | heatmap/treemap 또는 dense chart로 sector/industry/movers 비교 경험을 높인다. |
+| 4차 | Calendar UX Polish | Complete | `sub-dev` | Events를 calendar-like view, filters, source labels로 읽기 쉽게 만든다. |
+| 4차 | Production Closeout | Complete | `sub-dev` | runbook, docs, browser QA, handoff를 정리하고 다음 phase로 넘긴다. |
 
 ## Task Details
 
@@ -122,6 +122,8 @@ Work:
 Done:
 
 - 사용자가 table을 읽기 전에 강한 sector/industry를 빠르게 파악할 수 있다.
+- Market Movers는 Rank chart와 Sector Pulse chart를 탭으로 제공한다.
+- Sector / Industry leadership은 Equal Weight, Cap Weighted, Top Symbol return을 heatmap으로 비교한다.
 
 ### Task 4-02. Calendar UX Polish
 
@@ -134,6 +136,8 @@ Work:
 Done:
 
 - Events 탭이 단순 DB table이 아니라 운영 calendar로 읽힌다.
+- Events는 Window, Source Type, Validation filter를 제공한다.
+- Calendar view는 날짜별 event group과 timeline chart를 보여주고, Table view는 기존 row inspection을 유지한다.
 
 ### Task 4-03. Production Closeout
 
@@ -146,3 +150,4 @@ Work:
 Done:
 
 - Overview Market Intelligence를 정식 feature로 부를 수 있는 상태와 남은 한계를 문서화한다.
+- Phase 2차, 3차, 4차 task를 모두 완료했고 runbook / root handoff / acceptance checklist를 최신 상태로 맞춘다.
