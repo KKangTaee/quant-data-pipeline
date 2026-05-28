@@ -21,6 +21,18 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-28 - Backtest realism gap should be visible before selection
+- User request:
+  - 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - 검증 효력 gate 다음으로, 백테스트 성과가 실제 투자 환경의 비용 / turnover / liquidity / execution 가정을 충분히 반영했는지 확인할 수 있어야 함.
+- Analysis result:
+  - `backtest_realism_audit_v1`은 기존 result metadata와 compact validation evidence만 읽어 transaction cost, turnover, liquidity / operability, net performance policy, rebalance timing, tax / account scope, execution boundary를 `PASS / REVIEW / NEEDS_INPUT / BLOCKED`로 분리한다.
+  - Practical Validation, Final Review, investability packet, saved final decision evidence row가 같은 audit을 읽는다.
+  - 새 DB write, JSONL registry, user memo, preset, approval, order, auto rebalance는 추가하지 않았다.
+- Follow-up:
+  - 다음 결정은 Backtest Realism Audit 일부를 selected-route gate policy에 연결할지, Data Coverage Hardening으로 PIT / survivorship evidence를 DB-backed로 보강할지다.
+
 ### 2026-05-28 - Validation efficacy audit should affect selected-route gate
 - User request:
   - 다음 단계 진행을 요청함.

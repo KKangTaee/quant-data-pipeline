@@ -59,6 +59,7 @@ app/web/streamlit_app.py
 | `app/services/backtest_result_read_model.py` | Strategy data trust rows, weighted component contribution amount/share views |
 | `app/services/backtest_weighted_portfolio.py` | Weighted portfolio result bundle construction from compared strategy bundles |
 | `app/services/backtest_saved_portfolio_replay.py` | Saved portfolio replay strategy rerun, weighted bundle creation, replay source / history context assembly |
+| `app/services/backtest_realism_audit.py` | Practical Validation / Final Review가 읽는 read-only backtest realism audit. 기존 runtime metadata와 compact validation evidence에서 비용, turnover, liquidity, net policy, rebalance, tax/account, execution boundary gap을 해석한다 |
 | `app/runtime/backtest.py` | UI payload를 DB-backed runtime 실행으로 변환 |
 | `app/runtime/backtest_result_bundle.py` | runtime 결과를 UI-facing result bundle / summary / chart / metadata contract로 변환 |
 | `finance/loaders/*` | DB read path와 point-in-time snapshot 조회 |
@@ -150,6 +151,10 @@ runtime은 단순 성과표만 반환하지 않는다.
 - liquidity / coverage policy status
 - underperformance / drawdown guardrail trigger state
 - promotion / shortlist / deployment 또는 pre-live review status
+
+Backtest Realism Audit은 이 metadata를 새로 계산하거나 저장하지 않는다.
+기존 result bundle / Practical Validation evidence에 붙어 있는 비용, turnover, liquidity, net spread, rebalance cadence 같은 값을 읽어 실전성 공백을 `PASS / REVIEW / NEEDS_INPUT / BLOCKED`로 표시한다.
+metadata가 없으면 pass로 추정하지 않고 보강 필요로 남긴다.
 
 주의:
 

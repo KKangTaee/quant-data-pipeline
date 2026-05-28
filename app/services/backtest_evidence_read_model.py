@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.services.backtest_realism_audit import build_backtest_realism_audit
 from app.services.backtest_validation_efficacy import build_validation_efficacy_audit
 
 
@@ -591,6 +592,8 @@ def build_investability_evidence_packet(
         validation.get("validation_efficacy_audit") or build_validation_efficacy_audit(validation)
     )
     validation_efficacy_route = str(validation_efficacy_audit.get("route") or "")
+    backtest_realism_audit = dict(validation.get("backtest_realism_audit") or build_backtest_realism_audit(validation))
+    backtest_realism_route = str(backtest_realism_audit.get("route") or "")
     source_chain = {
         "source_type": source.get("source_type") or validation.get("source_type"),
         "source_id": source.get("source_id") or validation.get("selection_source_id"),
@@ -660,6 +663,16 @@ def build_investability_evidence_packet(
             "Meaning": "PIT / replay / benchmark / provider / robustness evidence gap을 최종 선택 전에 분리해서 봅니다.",
         },
         {
+            "Section": "Backtest Realism Audit",
+            "Ready": backtest_realism_route == "BACKTEST_REALISM_READY",
+            "Current": (
+                f"{backtest_realism_audit.get('route_label')} / {backtest_realism_route}"
+                if backtest_realism_audit.get("route_label") and backtest_realism_route
+                else backtest_realism_route or backtest_realism_audit.get("route_label") or "-"
+            ),
+            "Meaning": "거래비용, turnover, liquidity, net performance, tax/account scope 같은 실전성 가정을 분리해서 봅니다.",
+        },
+        {
             "Section": "Execution Boundary",
             "Ready": True,
             "Current": "live approval disabled / order disabled",
@@ -716,6 +729,7 @@ def build_investability_evidence_packet(
         "gate_policy_snapshot": gate_policy,
         "assumptions_and_limits": assumptions,
         "validation_efficacy_audit": validation_efficacy_audit,
+        "backtest_realism_audit": backtest_realism_audit,
         "summary": {
             "pass": int(status_counts.get("PASS", 0) or 0),
             "review": int(status_counts.get("REVIEW", 0) or 0),
@@ -726,6 +740,7 @@ def build_investability_evidence_packet(
             "robustness_route": robustness.get("robustness_route"),
             "gate_policy_outcome": gate_policy.get("outcome"),
             "validation_efficacy_route": validation_efficacy_audit.get("route"),
+            "backtest_realism_route": backtest_realism_audit.get("route"),
         },
     }
 
@@ -856,11 +871,13 @@ def build_final_decision_evidence_rows(row: dict[str, Any]) -> list[dict[str, An
     validation_efficacy = dict(
         risk_snapshot.get("validation_efficacy_audit") or packet.get("validation_efficacy_audit") or {}
     )
+    backtest_realism = dict(risk_snapshot.get("backtest_realism_audit") or packet.get("backtest_realism_audit") or {})
     _append_check_rows(display_rows, area="Final Review Evidence", checks=list(evidence.get("checks") or []))
     _append_check_rows(display_rows, area="Investability Packet", checks=list(packet.get("checks") or []))
     _append_check_rows(display_rows, area="Gate Policy", checks=list(gate_policy.get("policy_rows") or []))
     _append_check_rows(display_rows, area="Validation", checks=list(risk_snapshot.get("validation_checks") or []))
     _append_check_rows(display_rows, area="Validation Efficacy", checks=list(validation_efficacy.get("rows") or []))
+    _append_check_rows(display_rows, area="Backtest Realism", checks=list(backtest_realism.get("rows") or []))
     _append_check_rows(display_rows, area="Look-through Exposure", checks=list(look_through.get("summary_rows") or []))
     _append_check_rows(display_rows, area="Robustness Lab", checks=list(robustness_lab.get("summary_rows") or []))
     _append_check_rows(display_rows, area="Robustness", checks=list(robustness.get("checks") or []))

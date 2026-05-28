@@ -54,6 +54,7 @@ Last Verified: 2026-05-28
 | Practical Validation stress/sensitivity service helper | `app/services/backtest_practical_validation_stress_sensitivity.py` |
 | Practical Validation provider context service helper | `app/services/backtest_practical_validation_provider_context.py` |
 | Practical Validation efficacy audit service | `app/services/backtest_validation_efficacy.py` |
+| Backtest realism audit service | `app/services/backtest_realism_audit.py` |
 | Backtest evidence read model service | `app/services/backtest_evidence_read_model.py` |
 | Backtest Analysis | `app/web/backtest_analysis.py` |
 | Practical Validation | `app/web/backtest_practical_validation.py` |
@@ -79,6 +80,7 @@ Last Verified: 2026-05-28
 | `app/services/backtest_practical_validation_curve.py` | Streamlit-free curve normalize, provenance, benchmark parity helper |
 | `app/services/backtest_practical_validation_provider_context.py` | Streamlit-free provider / macro loader output to compact coverage, provenance, freshness, diagnostic evidence, and look-through board context adapter |
 | `app/services/backtest_validation_efficacy.py` | Streamlit-free validation efficacy audit read model. Existing compact evidence를 읽어 runtime replay, period coverage, benchmark parity, provider freshness, robustness, PIT / look-ahead, survivorship / universe, execution / storage boundary gap을 `PASS / REVIEW / NEEDS_INPUT / BLOCKED` row로 만든다 |
+| `app/services/backtest_realism_audit.py` | Streamlit-free backtest realism audit read model. Existing result metadata와 compact validation evidence를 읽어 transaction cost, turnover, liquidity / operability, net performance policy, rebalance timing, tax / account scope, execution boundary gap을 `PASS / REVIEW / NEEDS_INPUT / BLOCKED` row로 만든다 |
 | `app/web/backtest_practical_validation.py` | Practical Validation UI render, profile input, recheck button, diagnostics board, look-through board, Robustness Lab board, provider gaps display, provider gap / replay service result session state handoff |
 | `finance/data/etf_provider.py` | ETF source map discovery, operability / holdings / exposure snapshot 수집과 저장 |
 | `finance/loaders/provider.py` | ETF provider snapshot read path |
@@ -108,8 +110,8 @@ Backtest Analysis
 역할:
 
 - Backtest Analysis는 후보 source를 만든다.
-- Practical Validation은 source를 실전 투입 전 조건으로 검증하고 Provider / Look-through / Robustness Lab / Validation Efficacy 근거를 compact하게 보여준다.
-- Final Review는 Provider / Look-through / Robustness Lab / Validation Efficacy 근거와 investability packet을 읽어 select / hold / reject / re-review 판단을 기록하고, 저장된 판단을 read-only dossier로 다시 보여준다.
+- Practical Validation은 source를 실전 투입 전 조건으로 검증하고 Provider / Look-through / Robustness Lab / Validation Efficacy / Backtest Realism 근거를 compact하게 보여준다.
+- Final Review는 Provider / Look-through / Robustness Lab / Validation Efficacy / Backtest Realism 근거와 investability packet을 읽어 select / hold / reject / re-review 판단을 기록하고, 저장된 판단을 read-only dossier로 다시 보여준다.
 - Selected Portfolio Dashboard는 선정 이후 성과와 read-only recheck readiness / symbol freshness / provider evidence / monitoring timeline / signal / recheck comparison을 확인한다.
 
 ## Data Boundary

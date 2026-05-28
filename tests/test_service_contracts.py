@@ -96,6 +96,7 @@ import app.runtime
 import app.runtime.backtest
 import app.runtime.candidate_library
 import app.runtime.backtest_result_bundle
+import app.services.backtest_realism_audit
 import app.services.backtest_evidence_read_model
 import app.services.backtest_practical_validation_curve
 import app.services.backtest_practical_validation_diagnostics
@@ -137,6 +138,7 @@ print(importlib.util.find_spec("app.web.runtime") is None)
         script = """
 import importlib.util
 import sys
+import app.services.backtest_realism_audit
 import app.services.backtest_practical_validation_curve
 import app.services.backtest_practical_validation_curve_context
 import app.services.backtest_practical_validation_provider_context
@@ -253,6 +255,82 @@ class ValidationEfficacyAuditContractTests(unittest.TestCase):
         self.assertEqual(rows_by_criteria["Runtime replay evidence"]["Status"], "NEEDS_INPUT")
         self.assertEqual(rows_by_criteria["Provider / freshness evidence"]["Status"], "NEEDS_INPUT")
         self.assertEqual(rows_by_criteria["Survivorship / universe guard"]["Status"], "REVIEW")
+
+
+class BacktestRealismAuditContractTests(unittest.TestCase):
+    def test_ready_audit_uses_cost_turnover_and_liquidity_metadata_without_writes(self) -> None:
+        from app.services.backtest_realism_audit import (
+            BACKTEST_REALISM_READY,
+            build_backtest_realism_audit,
+        )
+
+        audit = build_backtest_realism_audit(
+            {
+                "selection_source_snapshot": {
+                    "construction": {"rebalance_cadence": "monthly"},
+                    "source_snapshot": {
+                        "settings_snapshot": {
+                            "transaction_cost_bps": 10.0,
+                            "rebalance_interval": 1,
+                            "operator_tax_scope_acknowledged": True,
+                        },
+                        "meta": {
+                            "real_money_hardening": True,
+                            "avg_turnover": 0.15,
+                            "max_turnover": 0.4,
+                            "net_cagr_spread": 0.03,
+                            "promotion_min_net_cagr_spread": -0.02,
+                        },
+                    },
+                },
+                "provider_coverage": {
+                    "coverage": {
+                        "operability": {
+                            "diagnostic_status": "PASS",
+                            "coverage_weight": 100.0,
+                            "summary": "official operability coverage",
+                        }
+                    }
+                },
+                "diagnostic_results": [
+                    {
+                        "domain": "operability_cost_liquidity",
+                        "status": "PASS",
+                        "metrics": {"one_way_cost_bps": 10.0},
+                    }
+                ],
+            }
+        )
+
+        self.assertEqual(audit["route"], BACKTEST_REALISM_READY)
+        self.assertEqual(audit["metrics"]["pass"], 7)
+        self.assertFalse(audit["execution_boundary"]["db_write"])
+        self.assertFalse(audit["execution_boundary"]["registry_write"])
+        self.assertFalse(audit["execution_boundary"]["memo_persistence"])
+
+    def test_missing_cost_and_liquidity_evidence_are_not_passed(self) -> None:
+        from app.services.backtest_realism_audit import (
+            BACKTEST_REALISM_NEEDS_INPUT,
+            build_backtest_realism_audit,
+        )
+
+        audit = build_backtest_realism_audit(
+            {
+                "selection_source_snapshot": {"construction": {}},
+                "diagnostic_results": [
+                    {
+                        "domain": "operability_cost_liquidity",
+                        "status": "NOT_RUN",
+                    }
+                ],
+            }
+        )
+
+        rows_by_criteria = {row["Criteria"]: row for row in audit["rows"]}
+        self.assertEqual(audit["route"], BACKTEST_REALISM_NEEDS_INPUT)
+        self.assertEqual(rows_by_criteria["Transaction cost model"]["Status"], "NEEDS_INPUT")
+        self.assertEqual(rows_by_criteria["Liquidity / operability evidence"]["Status"], "NEEDS_INPUT")
+        self.assertEqual(rows_by_criteria["Tax / account scope"]["Status"], "REVIEW")
 
 
 class PracticalValidationDiagnosticsServiceContractTests(unittest.TestCase):
@@ -999,6 +1077,17 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
                         }
                     ]
                 },
+                "backtest_realism_audit": {
+                    "rows": [
+                        {
+                            "Criteria": "Transaction cost model",
+                            "Status": "REVIEW",
+                            "Ready": False,
+                            "Current": "10 bps / assumption only",
+                            "Meaning": "cost model gap",
+                        }
+                    ]
+                },
                 "provider_look_through_board": {
                     "summary_rows": [
                         {
@@ -1038,6 +1127,7 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
                 "Final Review Evidence",
                 "Validation",
                 "Validation Efficacy",
+                "Backtest Realism",
                 "Look-through Exposure",
                 "Robustness Lab",
                 "Robustness",
@@ -1049,12 +1139,14 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertEqual(rows[1]["Current"], "REVIEW")
         self.assertEqual(rows[2]["Criteria"], "Runtime replay evidence")
         self.assertFalse(rows[2]["Ready"])
-        self.assertEqual(rows[3]["Criteria"], "Holdings Coverage")
-        self.assertTrue(rows[3]["Ready"])
-        self.assertEqual(rows[4]["Criteria"], "Sensitivity coverage")
-        self.assertFalse(rows[4]["Ready"])
-        self.assertEqual(rows[5]["Current"], "WATCH")
-        self.assertEqual(rows[6]["Current"], "OPTIONAL")
+        self.assertEqual(rows[3]["Criteria"], "Transaction cost model")
+        self.assertFalse(rows[3]["Ready"])
+        self.assertEqual(rows[4]["Criteria"], "Holdings Coverage")
+        self.assertTrue(rows[4]["Ready"])
+        self.assertEqual(rows[5]["Criteria"], "Sensitivity coverage")
+        self.assertFalse(rows[5]["Ready"])
+        self.assertEqual(rows[6]["Current"], "WATCH")
+        self.assertEqual(rows[7]["Current"], "OPTIONAL")
 
     def test_investability_packet_ready_contract_is_ui_neutral(self) -> None:
         from app.services.backtest_evidence_read_model import build_investability_evidence_packet
@@ -1091,6 +1183,19 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
                     }
                 ],
             },
+            "backtest_realism_audit": {
+                "route": "BACKTEST_REALISM_READY",
+                "route_label": "Ready",
+                "rows": [
+                    {
+                        "Criteria": "Transaction cost model",
+                        "Status": "PASS",
+                        "Ready": True,
+                        "Current": "10 bps / net curve applied",
+                        "Meaning": "cost model attached",
+                    }
+                ],
+            },
         }
 
         packet = build_investability_evidence_packet(
@@ -1109,7 +1214,9 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertTrue(packet["gate_policy_snapshot"]["select_allowed"])
         sections = [row["Section"] for row in packet["checks"]]
         self.assertIn("Validation Efficacy Audit", sections)
+        self.assertIn("Backtest Realism Audit", sections)
         self.assertEqual(packet["summary"]["validation_efficacy_route"], "VALIDATION_EFFICACY_READY")
+        self.assertEqual(packet["summary"]["backtest_realism_route"], "BACKTEST_REALISM_READY")
         assumptions = [row["Assumption"] for row in packet["assumptions_and_limits"]]
         self.assertIn("Hypothetical backtest", assumptions)
         self.assertIn("No live approval / order", assumptions)

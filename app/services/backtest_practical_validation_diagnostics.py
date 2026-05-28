@@ -22,6 +22,7 @@ from app.services.backtest_practical_validation_curve_context import (
     compact_curve_snapshot_from_bundle,
 )
 from app.services.backtest_practical_validation_provider_context import build_provider_context
+from app.services.backtest_realism_audit import build_backtest_realism_audit
 from app.services.backtest_validation_efficacy import build_validation_efficacy_audit
 from app.runtime import (
     FINAL_SELECTION_DECISION_V2_SCHEMA_VERSION,
@@ -1525,6 +1526,9 @@ def build_practical_validation_result(
         "selection_source_snapshot": source_row,
         "final_decision_schema_target": FINAL_SELECTION_DECISION_V2_SCHEMA_VERSION,
     }
+    backtest_realism_audit = build_backtest_realism_audit(result)
+    result["backtest_realism_audit"] = backtest_realism_audit
+    result["backtest_realism_display_rows"] = list(backtest_realism_audit.get("rows") or [])
     validation_efficacy_audit = build_validation_efficacy_audit(result)
     result["validation_efficacy_audit"] = validation_efficacy_audit
     result["validation_efficacy_display_rows"] = list(validation_efficacy_audit.get("rows") or [])

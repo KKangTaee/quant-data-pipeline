@@ -450,6 +450,8 @@ def _build_final_review_decision_row(
             "provider_coverage_display_rows": list(validation.get("provider_coverage_display_rows") or []),
             "validation_efficacy_audit": dict(validation.get("validation_efficacy_audit") or {}),
             "validation_efficacy_display_rows": list(validation.get("validation_efficacy_display_rows") or []),
+            "backtest_realism_audit": dict(validation.get("backtest_realism_audit") or {}),
+            "backtest_realism_display_rows": list(validation.get("backtest_realism_display_rows") or []),
             "profile_score_rows": list(validation.get("profile_score_rows") or []),
             "curve_evidence": dict(validation.get("curve_evidence") or {}),
             "rolling_validation": dict(validation.get("rolling_validation") or {}),

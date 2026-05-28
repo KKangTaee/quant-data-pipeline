@@ -22,6 +22,9 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-28
+- Completed `.aiworkspace/note/finance/tasks/active/backtest-realism-hardening-v1/`.
+- Practical Validation and Final Review now show a read-only Backtest Realism Audit for transaction cost, turnover, liquidity / operability, net performance policy, rebalance timing, tax / account scope, and execution boundary gaps.
+- The audit reads existing result metadata / compact validation evidence and feeds the investability packet / saved evidence rows; no DB write, new JSONL registry, memo, preset, approval, order, or rebalance behavior was added.
 - Completed `.aiworkspace/note/finance/tasks/active/validation-efficacy-gate-policy-link-v1/`.
 - Validation Efficacy Audit now participates in the profile-aware gate policy: `NEEDS_INPUT` / `BLOCKED` blocks selected-route, and `REVIEW` requires hold / re-review before selection.
 - This uses the existing investability packet and selected-route gate; no DB write, new JSONL registry, memo, preset, approval, order, or rebalance behavior was added.
