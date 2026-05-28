@@ -77,11 +77,12 @@ http://localhost:8501
 
 7. `Workspace > Overview > Events`
    - `All`, `FOMC`, `Earnings`, `Macro` filter를 바꿔 저장 row를 확인한다.
-   - `Window`, `Source Type`, `Validation` filter로 캘린더 범위와 source quality를 좁힌다.
-   - `Calendar` 탭에서 event count timeline과 날짜별 grouped cards를 확인한다.
+   - `Window`, `Source Type`, `Validation`, `Importance` filter로 캘린더 범위와 source quality를 좁힌다.
+   - `Focus` 탭에서 upcoming, needs review, high impact row를 먼저 확인한다.
+   - `Calendar` 탭에서 event type별 stacked event count와 날짜별 grouped cards를 확인한다.
    - `Table` 탭에서 DB row-level detail을 확인한다.
    - `Source Type`에서 FOMC official row와 earnings provider estimate row를 구분한다.
-   - `Validation`, `Freshness`, `Quality Action`, `Age Days`, `Event Status`에서 cross-check 여부, 오래된 earnings estimate, 다음 조치가 필요한 row를 확인한다.
+   - `Importance`, `Focus`, `Validation`, `Freshness`, `Quality Action`, `Age Days`, `Event Status`에서 high impact 일정, cross-check 여부, 오래된 earnings estimate, 다음 조치가 필요한 row를 확인한다.
    - Overview의 refresh buttons도 ingestion job wrapper를 호출한다. UI render 중 직접 외부 source를 scraping하지 않는다.
 
 8. `Workspace > Overview > Data Health`
@@ -148,7 +149,9 @@ PY
 - Earnings rows collected more than 14 days ago show `Freshness=Stale estimate` and a warning.
 - Earnings job results show `Earnings Diagnostics` when requested symbols are missing, outside the selected lookahead window, or fail at the provider layer.
 - Earnings event rows include `Quality Action`; `Estimate only` rows recommend cross-check or closer refresh, stale rows recommend refresh, and cross-checked rows show no action.
-- Overview Events displays `Calendar` and `Table` tabs with Window / Source Type / Validation filters.
+- Overview Events displays `Focus`, `Calendar`, and `Table` tabs with Window / Source Type / Validation / Importance filters.
+- Overview Events read model includes `Days Until`, `Importance`, and `Focus`; FOMC / macro rows are `High`, earnings rows are `Medium`, and rows with source / validation action show `Needs Review`.
+- Overview Events calendar chart is stacked by event type, not a single aggregate line.
 - Overview Events has a `Macro` filter and `Refresh Macro Calendar` button.
 - Overview Events `Latest Collection` updates after a successful collector run.
 - Overview Data Health displays 7 collection targets with ops status cards, warning banner, status badges, and next-action table.

@@ -821,14 +821,57 @@ def _event_type_label(value: Any) -> str:
     return labels.get(str(value or ""), str(value or "-").replace("_", " ").title())
 
 
+def _event_importance_from_type(value: Any) -> str:
+    event_type = str(value or "").upper()
+    if event_type == "FOMC_MEETING" or event_type == "MACRO" or event_type.startswith("MACRO_"):
+        return "High"
+    if event_type == "EARNINGS":
+        return "Medium"
+    return "Low"
+
+
+def _event_focus_from_row(row: pd.Series) -> str:
+    quality_action = str(row.get("Quality Action") or "")
+    if quality_action and quality_action != "No action":
+        return "Needs Review"
+    days_until = row.get("Days Until")
+    if pd.isna(days_until):
+        return "Unknown"
+    day_number = int(days_until)
+    if day_number < 0:
+        return "Past"
+    if day_number == 0:
+        return "Today"
+    if day_number <= 7:
+        return "This Week"
+    if day_number <= 30:
+        return "Next 30D"
+    return "Later"
+
+
 def _prepare_event_calendar_frame(rows: pd.DataFrame) -> pd.DataFrame:
     out = rows.copy()
     out["Date Parsed"] = pd.to_datetime(out.get("Date"), errors="coerce")
     today = pd.Timestamp(datetime.now().date())
-    out["Days Until"] = (out["Date Parsed"] - today).dt.days
+    calculated_days = (out["Date Parsed"] - today).dt.days
+    if "Days Until" in out:
+        out["Days Until"] = pd.to_numeric(out["Days Until"], errors="coerce")
+        out["Days Until"] = out["Days Until"].where(out["Days Until"].notna(), calculated_days)
+    else:
+        out["Days Until"] = calculated_days
     out["Month"] = out["Date Parsed"].dt.strftime("%Y-%m")
     out["Week"] = out["Date Parsed"].dt.to_period("W").astype(str)
     out["Type Label"] = out.get("Type", pd.Series(dtype=str)).map(_event_type_label)
+    if "Importance" not in out:
+        out["Importance"] = out.get("Type", pd.Series(dtype=str)).map(_event_importance_from_type)
+    else:
+        fallback_importance = out.get("Type", pd.Series(dtype=str)).map(_event_importance_from_type)
+        out["Importance"] = out["Importance"].where(out["Importance"].notna() & (out["Importance"] != ""), fallback_importance)
+    if "Focus" not in out:
+        out["Focus"] = out.apply(_event_focus_from_row, axis=1)
+    else:
+        fallback_focus = out.apply(_event_focus_from_row, axis=1)
+        out["Focus"] = out["Focus"].where(out["Focus"].notna() & (out["Focus"] != ""), fallback_focus)
     out["Symbol Label"] = out.get("Symbol", pd.Series(dtype=str)).replace({"-": ""})
     out["Summary"] = out.apply(
         lambda row: f"{row.get('Type Label')}: {row.get('Symbol Label') or row.get('Title') or '-'}",
@@ -840,13 +883,17 @@ def _prepare_event_calendar_frame(rows: pd.DataFrame) -> pd.DataFrame:
 def _filter_event_rows_for_calendar(rows: pd.DataFrame) -> pd.DataFrame:
     if rows.empty:
         return rows
-    filter_cols = st.columns([1, 1, 1], gap="small")
+    filter_cols = st.columns([1, 1, 1, 1], gap="small")
     source_options = ["All"] + sorted(
         value for value in rows.get("Source Type", pd.Series(dtype=str)).dropna().unique().tolist() if value != "-"
     )
     validation_options = ["All"] + sorted(
         value for value in rows.get("Validation", pd.Series(dtype=str)).dropna().unique().tolist() if value != "-"
     )
+    importance_values = rows.get("Importance", pd.Series(dtype=str)).dropna().unique().tolist()
+    importance_options = ["All"] + [
+        value for value in ["High", "Medium", "Low"] if value in importance_values
+    ]
     window = str(
         filter_cols[0].segmented_control(
             "Window",
@@ -871,6 +918,14 @@ def _filter_event_rows_for_calendar(rows: pd.DataFrame) -> pd.DataFrame:
             key="overview_events_validation_filter",
         )
     )
+    importance_filter = str(
+        filter_cols[3].selectbox(
+            "Importance",
+            importance_options,
+            index=0,
+            key="overview_events_importance_filter",
+        )
+    )
 
     filtered = rows.copy()
     if window != "All":
@@ -880,30 +935,28 @@ def _filter_event_rows_for_calendar(rows: pd.DataFrame) -> pd.DataFrame:
         filtered = filtered[filtered["Source Type"] == source_filter]
     if validation_filter != "All" and "Validation" in filtered:
         filtered = filtered[filtered["Validation"] == validation_filter]
+    if importance_filter != "All" and "Importance" in filtered:
+        filtered = filtered[filtered["Importance"] == importance_filter]
     return filtered
 
 
 def _build_event_calendar_chart(rows: pd.DataFrame) -> alt.Chart:
     if rows.empty:
         chart_rows = pd.DataFrame(
-            [{"Date Parsed": pd.Timestamp(datetime.now().date()), "Event Types": "No Data", "Count": 0}]
+            [{"Date Parsed": pd.Timestamp(datetime.now().date()), "Type Label": "No Data", "Count": 0}]
         )
     else:
         valid_rows = rows.dropna(subset=["Date Parsed"])
         if valid_rows.empty:
             chart_rows = pd.DataFrame(
-                [{"Date Parsed": pd.Timestamp(datetime.now().date()), "Event Types": "No Data", "Count": 0}]
+                [{"Date Parsed": pd.Timestamp(datetime.now().date()), "Type Label": "No Data", "Count": 0}]
             )
         else:
             chart_rows = (
                 valid_rows
-                .groupby("Date Parsed", as_index=False)
-                .agg(
-                    **{
-                        "Count": ("Type Label", "size"),
-                        "Event Types": ("Type Label", lambda values: ", ".join(sorted(set(values)))),
-                    }
-                )
+                .groupby(["Date Parsed", "Type Label"], as_index=False)
+                .size()
+                .rename(columns={"size": "Count"})
             )
     date_min = chart_rows["Date Parsed"].min()
     date_max = chart_rows["Date Parsed"].max()
@@ -912,10 +965,10 @@ def _build_event_calendar_chart(rows: pd.DataFrame) -> alt.Chart:
         date_max = date_min + pd.Timedelta(days=1)
     elif date_min == date_max:
         date_max = date_min + pd.Timedelta(days=1)
-    max_count = max(1, int(chart_rows["Count"].max() or 0))
+    max_count = max(1, int(chart_rows.groupby("Date Parsed")["Count"].sum().max() or 0))
     return (
         alt.Chart(chart_rows)
-        .mark_line(point=True, color="#2563eb")
+        .mark_bar(cornerRadiusTopLeft=2, cornerRadiusTopRight=2)
         .encode(
             x=alt.X(
                 "Date Parsed:T",
@@ -923,11 +976,103 @@ def _build_event_calendar_chart(rows: pd.DataFrame) -> alt.Chart:
                 axis=alt.Axis(format="%b %d", labelAngle=-35),
                 scale=alt.Scale(domain=[date_min, date_max]),
             ),
-            y=alt.Y("Count:Q", title="Events", stack=None, scale=alt.Scale(domain=[0, max_count])),
-            tooltip=["Date Parsed:T", "Event Types:N", "Count:Q"],
+            y=alt.Y("Count:Q", title="Events", stack="zero", scale=alt.Scale(domain=[0, max_count])),
+            color=alt.Color(
+                "Type Label:N",
+                title=None,
+                legend=alt.Legend(orient="bottom"),
+                scale=alt.Scale(range=["#2563eb", "#0f766e", "#b45309", "#7c3aed", "#475569", "#cbd5e1"]),
+            ),
+            tooltip=["Date Parsed:T", "Type Label:N", "Count:Q"],
         )
         .properties(height=240)
     )
+
+
+def _event_focus_display_columns(rows: pd.DataFrame) -> list[str]:
+    return [
+        column
+        for column in [
+            "Date",
+            "Days Until",
+            "Type Label",
+            "Symbol",
+            "Title",
+            "Importance",
+            "Focus",
+            "Validation",
+            "Quality Action",
+            "Freshness",
+        ]
+        if column in rows.columns
+    ]
+
+
+def _render_event_focus_table(rows: pd.DataFrame, *, empty_message: str) -> None:
+    if rows.empty:
+        st.info(empty_message)
+        return
+    st.dataframe(
+        rows[_event_focus_display_columns(rows)].head(20),
+        width="stretch",
+        hide_index=True,
+    )
+
+
+def _render_event_focus_panel(rows: pd.DataFrame) -> None:
+    if rows.empty:
+        st.info("No stored event rows match the selected filters.")
+        return
+    focus_rows = rows.copy()
+    focus_rows["Days Until"] = pd.to_numeric(focus_rows.get("Days Until"), errors="coerce")
+    upcoming_rows = focus_rows[focus_rows["Days Until"].isna() | (focus_rows["Days Until"] >= 0)].sort_values(
+        ["Date Parsed", "Importance", "Type Label", "Symbol"],
+        ascending=[True, True, True, True],
+    )
+    needs_review_rows = focus_rows[
+        (focus_rows.get("Focus") == "Needs Review")
+        | ((focus_rows.get("Quality Action") != "No action") & focus_rows.get("Quality Action").notna())
+    ].sort_values(["Date Parsed", "Type Label", "Symbol"])
+    high_impact_rows = focus_rows[focus_rows.get("Importance") == "High"].sort_values(
+        ["Date Parsed", "Type Label", "Symbol"]
+    )
+    this_week_count = int(focus_rows.get("Focus", pd.Series(dtype=str)).isin(["Today", "This Week"]).sum())
+    next_30d_count = int(((focus_rows["Days Until"] >= 0) & (focus_rows["Days Until"] <= 30)).sum())
+    render_status_card_grid(
+        [
+            {
+                "title": "This Week",
+                "value": this_week_count,
+                "detail": "today through 7D",
+                "tone": "positive" if this_week_count else "neutral",
+            },
+            {
+                "title": "Next 30D",
+                "value": next_30d_count,
+                "detail": "upcoming stored events",
+                "tone": "positive" if next_30d_count else "neutral",
+            },
+            {
+                "title": "High Impact",
+                "value": len(high_impact_rows),
+                "detail": "FOMC and macro rows",
+                "tone": "warning" if len(high_impact_rows) else "neutral",
+            },
+            {
+                "title": "Needs Review",
+                "value": len(needs_review_rows),
+                "detail": "estimate or source action",
+                "tone": "danger" if len(needs_review_rows) else "positive",
+            },
+        ]
+    )
+    upcoming_tab, review_tab, impact_tab = st.tabs(["Upcoming", "Needs Review", "High Impact"])
+    with upcoming_tab:
+        _render_event_focus_table(upcoming_rows, empty_message="No upcoming event rows match the selected filters.")
+    with review_tab:
+        _render_event_focus_table(needs_review_rows, empty_message="No rows currently require source or validation action.")
+    with impact_tab:
+        _render_event_focus_table(high_impact_rows, empty_message="No high impact FOMC or macro rows match the selected filters.")
 
 
 def _render_event_date_groups(rows: pd.DataFrame) -> None:
@@ -936,7 +1081,18 @@ def _render_event_date_groups(rows: pd.DataFrame) -> None:
         return
     display_columns = [
         column
-        for column in ["Type Label", "Symbol", "Title", "Source Type", "Validation", "Freshness", "Quality Action", "Age Days"]
+        for column in [
+            "Type Label",
+            "Symbol",
+            "Title",
+            "Importance",
+            "Focus",
+            "Source Type",
+            "Validation",
+            "Freshness",
+            "Quality Action",
+            "Age Days",
+        ]
         if column in rows.columns
     ]
     for date_value, day_rows in rows.sort_values(["Date Parsed", "Type Label", "Symbol"]).groupby("Date", sort=True):
@@ -1043,10 +1199,16 @@ def _render_events_tab() -> None:
                 "title": "Latest Collection",
                 "value": _snapshot_value(coverage.get("latest_collected_at")),
                 "detail": (
-                    f"cross-checked: {coverage.get('cross_checked_count') or 0}, "
-                    f"needs action: {coverage.get('action_required_count') or 0}"
+                    f"high impact: {coverage.get('high_importance_count') or 0}, "
+                    f"needs review: {coverage.get('needs_review_count') or 0}"
                 ),
                 "tone": "warning" if coverage.get("stale_estimate_count") or coverage.get("not_confirmed_count") else "neutral",
+            },
+            {
+                "title": "Upcoming Focus",
+                "value": coverage.get("next_30d_count") or 0,
+                "detail": f"this week: {coverage.get('this_week_count') or 0}",
+                "tone": "positive" if coverage.get("next_30d_count") else "neutral",
             },
         ]
     )
@@ -1061,7 +1223,9 @@ def _render_events_tab() -> None:
         return
     calendar_rows = _prepare_event_calendar_frame(rows)
     filtered_rows = _filter_event_rows_for_calendar(calendar_rows)
-    calendar_tab, table_tab = st.tabs(["Calendar", "Table"])
+    focus_tab, calendar_tab, table_tab = st.tabs(["Focus", "Calendar", "Table"])
+    with focus_tab:
+        _render_event_focus_panel(filtered_rows)
     with calendar_tab:
         st.altair_chart(_build_event_calendar_chart(filtered_rows), width="stretch")
         _render_event_date_groups(filtered_rows)

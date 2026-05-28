@@ -22,6 +22,7 @@ Last Verified: 2026-05-28
 | Overview Market Intelligence Macro Calendar | Complete | `.aiworkspace/note/finance/tasks/active/overview-mi-macro-calendar/`; BLS/BEA official macro release calendar collector, Events Macro filter, Data Health target 완료 |
 | Overview Market Intelligence BLS ICS Import | Complete | `.aiworkspace/note/finance/tasks/active/overview-mi-bls-ics-import/`; BLS backend 403 시 공식 `.ics` 파일 업로드/import fallback으로 CPI / PPI / Jobs calendar row 저장 |
 | Overview Market Intelligence Earnings Quality | Complete | `.aiworkspace/note/finance/tasks/active/overview-mi-earnings-quality-hardening/`; earnings missing/failure symbol diagnostics, reason counts, Events Quality Action 표시 완료 |
+| Overview Market Intelligence Events UX | Complete | `.aiworkspace/note/finance/tasks/active/overview-mi-events-calendar-ux/`; Events Focus view, Importance filter, event type stacked calendar, Days Until / Importance / Focus read model 완료 |
 | Practical Validation V2 | Active | `.aiworkspace/note/finance/tasks/active/practical-validation-v2/` |
 | Phase 36 Selected Portfolio Dashboard | Implementation complete before doc rebuild | 기존 phase 문서는 새 구조 정리 후 필요 시 `phases/done/`에 요약만 남긴다 |
 
@@ -79,5 +80,5 @@ P2에서 정상화하는 주요 진단:
 ## Next Decisions
 
 - UI Engine Boundary Cleanup은 완료됐다. 다음 구조 작업은 새 phase/task로 열고, 현재 경계는 boundary lint와 service contract test를 먼저 통과시키는 기준으로 유지한다.
-- Overview Market Intelligence는 production baseline, 5차 ops hardening, 6차 macro calendar baseline, BLS `.ics` official import fallback, earnings quality diagnostics를 완료했다. 다음 후보는 Events calendar UX 고도화, official earnings IR source, scheduled refresh automation, broader macro source expansion 중 하나로 별도 phase/task에서 결정한다.
+- Overview Market Intelligence는 production baseline, 5차 ops hardening, 6차 macro calendar baseline, BLS `.ics` official import fallback, earnings quality diagnostics, Events calendar UX 고도화를 완료했다. 다음 후보는 official earnings IR source, scheduled refresh automation, broader macro source expansion, Market Movers ops hardening 중 하나로 별도 phase/task에서 결정한다.
 - Practical Validation V2는 P2 QA 여부를 확인한 뒤 P3로 넘어갈지, P2를 closeout할지 결정한다.

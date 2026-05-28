@@ -21,6 +21,18 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-28 - Events UX는 Focus 중심으로 먼저 읽게 한다
+- User request:
+  - 남은 고도화 축 중 다음 작업을 진행해 달라고 요청함.
+- Interpreted goal:
+  - Events 탭에서 전체 DB table을 먼저 읽기보다, 이번 주 일정, high impact 일정, source / validation 조치가 필요한 row를 빠르게 파악해야 함.
+- Analysis result:
+  - Events read model에 `Days Until`, `Importance`, `Focus`를 추가했다.
+  - FOMC / Macro는 `High`, Earnings는 `Medium`으로 표시하고, `Quality Action != No action`인 row는 `Focus=Needs Review`로 우선 노출한다.
+  - Overview Events는 `Focus`, `Calendar`, `Table` 탭으로 나뉘며, Calendar chart는 event type별 stacked count로 바뀌었다.
+- Follow-up:
+  - 남은 주요 후보는 official earnings IR source, scheduled refresh automation, broader macro source expansion, Market Movers ops hardening이다.
+
 ### 2026-05-28 - Earnings 고도화 1차는 missing reason과 quality action을 먼저 보강한다
 - User request:
   - 남은 고도화 축 중 1번, Events / Earnings 데이터 품질 고도화를 먼저 진행해 달라고 요청함.

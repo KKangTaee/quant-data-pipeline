@@ -64,9 +64,12 @@ GROUP_COLUMNS = [
 ]
 EVENT_COLUMNS = [
     "Date",
+    "Days Until",
     "Type",
     "Symbol",
     "Title",
+    "Importance",
+    "Focus",
     "Source Type",
     "Validation",
     "Freshness",
@@ -932,6 +935,9 @@ def _event_source_type(row: dict[str, Any]) -> str:
     source = str(row.get("source") or "").strip().lower()
     if source == "federal_reserve_fomc_calendar":
         return "Official"
+    if event_type == "MACRO" or str(event_type or "").startswith("MACRO_"):
+        if any(term in source for term in ["bureau_labor_statistics", "bureau_economic_analysis", "bea"]):
+            return "Official"
     if event_type == "EARNINGS":
         if "official" in source or "company" in source:
             return "Official"
@@ -1027,11 +1033,54 @@ def _event_quality_action(row: dict[str, Any], *, today: date) -> str:
     return "Inspect source freshness"
 
 
+def _event_days_until(row: dict[str, Any], *, today: date) -> int | None:
+    event_date = row.get("event_date")
+    if event_date in (None, ""):
+        return None
+    try:
+        event_value = pd.Timestamp(event_date).normalize()
+    except (TypeError, ValueError):
+        return None
+    if pd.isna(event_value):
+        return None
+    today_value = pd.Timestamp(today).normalize()
+    return int((event_value - today_value).days)
+
+
+def _event_importance_label(row: dict[str, Any]) -> str:
+    event_type = _normalize_event_type_value(row.get("event_type"))
+    if event_type == "FOMC_MEETING" or event_type == "MACRO" or str(event_type or "").startswith("MACRO_"):
+        return "High"
+    if event_type == "EARNINGS":
+        return "Medium"
+    return "Low"
+
+
+def _event_focus_label(row: dict[str, Any], *, today: date) -> str:
+    if _event_quality_action(row, today=today) != "No action":
+        return "Needs Review"
+    days_until = _event_days_until(row, today=today)
+    if days_until is None:
+        return "Unknown"
+    if days_until < 0:
+        return "Past"
+    if days_until == 0:
+        return "Today"
+    if days_until <= 7:
+        return "This Week"
+    if days_until <= 30:
+        return "Next 30D"
+    return "Later"
+
+
 def _event_coverage(rows: list[dict[str, Any]], *, today: date) -> dict[str, Any]:
     source_types = [_event_source_type(row) for row in rows]
     freshness = [_event_freshness(row, today=today) for row in rows]
     validation = [_event_validation_label(row) for row in rows]
     statuses = [_event_status_label(row) for row in rows]
+    importance = [_event_importance_label(row) for row in rows]
+    focus = [_event_focus_label(row, today=today) for row in rows]
+    days_until = [_event_days_until(row, today=today) for row in rows]
     latest_collected_at = max(
         (_display_datetime(row.get("collected_at")) or "" for row in rows),
         default="",
@@ -1052,6 +1101,10 @@ def _event_coverage(rows: list[dict[str, Any]], *, today: date) -> dict[str, Any
             for row in rows
             if _event_quality_action(row, today=today) != "No action"
         ),
+        "high_importance_count": importance.count("High"),
+        "needs_review_count": focus.count("Needs Review"),
+        "this_week_count": sum(1 for value in focus if value in {"Today", "This Week"}),
+        "next_30d_count": sum(1 for value in days_until if value is not None and 0 <= value <= 30),
         "superseded_count": statuses.count("Superseded"),
     }
 
@@ -1076,9 +1129,12 @@ def _event_rows_frame(rows: list[dict[str, Any]], *, today: date) -> pd.DataFram
     out = [
         {
             "Date": _iso_date(row.get("event_date")) or "-",
+            "Days Until": _event_days_until(row, today=today),
             "Type": row.get("event_type") or "-",
             "Symbol": row.get("symbol") or "-",
             "Title": row.get("title") or "-",
+            "Importance": _event_importance_label(row),
+            "Focus": _event_focus_label(row, today=today),
             "Source Type": _event_source_type(row),
             "Validation": _event_validation_label(row),
             "Freshness": _event_freshness(row, today=today),

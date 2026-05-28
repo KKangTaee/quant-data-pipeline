@@ -22,6 +22,9 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-28
+- Completed `.aiworkspace/note/finance/tasks/active/overview-mi-events-calendar-ux/`.
+- Added Events `Days Until`, `Importance`, and `Focus` read-model fields, plus Focus / Calendar / Table tabs with an Importance filter.
+- Events calendar now stacks counts by event type so FOMC, Macro, and Earnings rows are distinguishable at a glance.
 - Completed `.aiworkspace/note/finance/tasks/active/overview-mi-earnings-quality-hardening/`.
 - Added earnings symbol diagnostics for missing / outside-window / provider-error cases, surfaced diagnostics in Ingestion and Overview refresh results, and added Events `Quality Action` read-model guidance.
 - Completed `.aiworkspace/note/finance/tasks/active/overview-mi-bls-ics-import/`.
