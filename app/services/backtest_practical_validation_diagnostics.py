@@ -48,6 +48,7 @@ from app.services.backtest_practical_validation_stress_sensitivity import (
     _sensitivity_rows,
     _stress_interpretation_result,
     _stress_window_rows,
+    build_robustness_lab_board,
 )
 from finance.loaders import load_price_history
 
@@ -1200,6 +1201,14 @@ def build_practical_validation_result(
         overfit_audit=overfit_audit,
         rolling_evidence=rolling_evidence,
     )
+    robustness_lab_board = build_robustness_lab_board(
+        stress_interpretation=stress_interpretation,
+        sensitivity_interpretation=sensitivity_interpretation,
+        stress_rows=stress_rows,
+        sensitivity_rows=sensitivity_rows,
+        overfit_audit=overfit_audit,
+        rolling_evidence=rolling_evidence,
+    )
     robustness_status = (
         "REVIEW"
         if str(sensitivity_interpretation.get("status") or "NOT_RUN") == "REVIEW"
@@ -1418,6 +1427,16 @@ def build_practical_validation_result(
                 "dominant_asset_bucket": provider_look_through_board.get("dominant_asset_bucket"),
                 "dominant_asset_weight": provider_look_through_board.get("dominant_asset_weight"),
             },
+            "robustness_lab": {
+                "status": robustness_lab_board.get("status"),
+                "covered_stress_windows": robustness_lab_board.get("metrics", {}).get("covered_stress_windows"),
+                "computed_stress_windows": robustness_lab_board.get("metrics", {}).get("computed_stress_windows"),
+                "computed_sensitivity_checks": robustness_lab_board.get("metrics", {}).get("computed_sensitivity_checks"),
+                "sensitivity_review_count": robustness_lab_board.get("metrics", {}).get("sensitivity_review_count"),
+                "runtime_followup_count": robustness_lab_board.get("metrics", {}).get("runtime_followup_count"),
+                "rolling_window_count": robustness_lab_board.get("metrics", {}).get("rolling_window_count"),
+                "local_trial_count": robustness_lab_board.get("metrics", {}).get("local_trial_count"),
+            },
         },
         "component_rows": component_rows,
         "stress_interpretation": stress_interpretation,
@@ -1432,6 +1451,7 @@ def build_practical_validation_result(
             "stress_summary_rows": stress_rows + sensitivity_rows,
             "stress_interpretation": stress_interpretation,
             "sensitivity_interpretation": sensitivity_interpretation,
+            "robustness_lab_board": robustness_lab_board,
             "overfit_audit": overfit_audit,
             "sensitivity_rows": sensitivity_rows,
             "rolling_validation": rolling_evidence,

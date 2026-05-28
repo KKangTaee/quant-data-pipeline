@@ -21,6 +21,19 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-28 - Robustness evidence는 compact lab board로 읽는다
+- User request:
+  - Investability Decision Foundation의 다음 작업 진행을 요청함.
+- Interpreted goal:
+  - stress / rolling / sensitivity / overfit 근거를 새 저장소 없이 Final Review에서 더 직접적으로 읽을 수 있어야 함.
+- Analysis result:
+  - `robustness-lab-v1` task를 열고 구현했다.
+  - Practical Validation result의 `robustness_validation.robustness_lab_board`에 compact summary / detail / follow-up row를 추가했다.
+  - Practical Validation, Final Review, final decision evidence read model이 같은 board를 읽는다.
+  - Raw run history와 strategy-specific perturbation artifact는 workflow JSONL에 저장하지 않는다.
+- Follow-up:
+  - 다음 후보는 `selected-monitoring-timeline-v1`로 selected 이후 review signal을 자동 저장 없이 더 잘 읽게 만드는 것이다.
+
 ### 2026-05-28 - Look-through evidence는 compact board로 읽는다
 - User request:
   - Investability Decision Foundation의 다음 작업 진행을 요청함.

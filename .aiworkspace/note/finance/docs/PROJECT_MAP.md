@@ -72,12 +72,12 @@ Last Verified: 2026-05-28
 | `app/services/backtest_practical_validation.py` | Streamlit-free Practical Validation result build wrapper, source/result registry append, Practical Validation / Final Review handoff contract, provider gap row / collection plan / ingestion job orchestration |
 | `app/services/backtest_practical_validation_source.py` | Streamlit-free validation profile / selection source builder / source component table helper |
 | `app/services/backtest_practical_validation_curve_context.py` | Streamlit-free compact curve snapshot, result curve normalize, DB price proxy curve, component curve combination, window perturbation / monthly returns helper |
-| `app/services/backtest_practical_validation_stress_sensitivity.py` | Streamlit-free rolling validation, stress window, baseline challenge, sensitivity interpretation, correlation risk, market context, overfit audit helper |
+| `app/services/backtest_practical_validation_stress_sensitivity.py` | Streamlit-free rolling validation, stress window, baseline challenge, sensitivity interpretation, correlation risk, market context, overfit audit, Robustness Lab board helper |
 | `app/services/backtest_practical_validation_diagnostics.py` | Streamlit-free Practical Validation diagnostics orchestration, component context assembly, 12개 diagnostic result 생성, public compatibility export |
 | `app/services/backtest_practical_validation_replay.py` | Streamlit-free Practical Validation replay service. source를 최신 DB 데이터 기준으로 다시 실행하거나 저장 기간 그대로 재현해 component / portfolio curve evidence 생성 |
 | `app/services/backtest_practical_validation_curve.py` | Streamlit-free curve normalize, provenance, benchmark parity helper |
 | `app/services/backtest_practical_validation_provider_context.py` | Streamlit-free provider / macro loader output to compact coverage, provenance, freshness, diagnostic evidence, and look-through board context adapter |
-| `app/web/backtest_practical_validation.py` | Practical Validation UI render, profile input, recheck button, diagnostics board, look-through board, provider gaps display, provider gap / replay service result session state handoff |
+| `app/web/backtest_practical_validation.py` | Practical Validation UI render, profile input, recheck button, diagnostics board, look-through board, Robustness Lab board, provider gaps display, provider gap / replay service result session state handoff |
 | `finance/data/etf_provider.py` | ETF source map discovery, operability / holdings / exposure snapshot 수집과 저장 |
 | `finance/loaders/provider.py` | ETF provider snapshot read path |
 | `finance/data/macro.py` | FRED macro series 수집 |
@@ -88,7 +88,7 @@ Last Verified: 2026-05-28
 | File | Responsibility |
 |---|---|
 | `app/services/backtest_evidence_read_model.py` | Streamlit-free final decision status, investability evidence packet / profile-aware gate policy snapshot / selected-route gate, saved decision table rows, shared evidence check rows |
-| `app/web/backtest_final_review.py` | Final Review screen render, investability packet display, final decision input, saved final decision review |
+| `app/web/backtest_final_review.py` | Final Review screen render, investability packet display, look-through / Robustness Lab summary, final decision input, saved final decision review |
 | `app/web/backtest_final_review_helpers.py` | Final Review source selection, validation reuse, paper observation snapshot, investability packet wiring, save row construction |
 | `app/web/final_selected_portfolio_dashboard.py` | Selected Portfolio Dashboard screen render and selected portfolio monitoring controls |
 | `app/web/final_selected_portfolio_dashboard_helpers.py` | Dashboard table / component / drift / alert display helpers |
@@ -106,8 +106,8 @@ Backtest Analysis
 역할:
 
 - Backtest Analysis는 후보 source를 만든다.
-- Practical Validation은 source를 실전 투입 전 조건으로 검증한다.
-- Final Review는 select / hold / reject / re-review 판단을 기록한다.
+- Practical Validation은 source를 실전 투입 전 조건으로 검증하고 Provider / Look-through / Robustness Lab 근거를 compact하게 보여준다.
+- Final Review는 Provider / Look-through / Robustness Lab 근거와 investability packet을 읽어 select / hold / reject / re-review 판단을 기록한다.
 - Selected Portfolio Dashboard는 선정 이후 성과와 monitoring signal을 확인한다.
 
 ## Data Boundary

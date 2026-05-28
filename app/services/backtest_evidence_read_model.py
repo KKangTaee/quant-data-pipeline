@@ -825,11 +825,13 @@ def build_final_decision_evidence_rows(row: dict[str, Any]) -> list[dict[str, An
     if not look_through:
         provider_context = dict(risk_snapshot.get("provider_coverage") or {})
         look_through = dict(provider_context.get("look_through_board") or {})
+    robustness_lab = dict(robustness.get("robustness_lab_board") or risk_snapshot.get("robustness_lab_board") or {})
     _append_check_rows(display_rows, area="Final Review Evidence", checks=list(evidence.get("checks") or []))
     _append_check_rows(display_rows, area="Investability Packet", checks=list(packet.get("checks") or []))
     _append_check_rows(display_rows, area="Gate Policy", checks=list(gate_policy.get("policy_rows") or []))
     _append_check_rows(display_rows, area="Validation", checks=list(risk_snapshot.get("validation_checks") or []))
     _append_check_rows(display_rows, area="Look-through Exposure", checks=list(look_through.get("summary_rows") or []))
+    _append_check_rows(display_rows, area="Robustness Lab", checks=list(robustness_lab.get("summary_rows") or []))
     _append_check_rows(display_rows, area="Robustness", checks=list(robustness.get("checks") or []))
     _append_check_rows(display_rows, area="Paper Observation", checks=list(paper_snapshot.get("checks") or []))
     return display_rows

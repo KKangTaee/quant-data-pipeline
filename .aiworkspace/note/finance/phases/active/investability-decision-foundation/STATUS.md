@@ -18,14 +18,15 @@ Last Updated: 2026-05-28
 - `storage-governance-audit-v1` classified JSONL write surfaces and added durable storage governance without rewriting registries.
 - `data-provenance-coverage-v1` added compact provider / macro provenance and freshness read models without adding storage.
 - `look-through-exposure-board-v1` added compact holdings / exposure board rows to Practical Validation and Final Review without adding storage.
+- `robustness-lab-v1` added a compact Robustness Lab board for stress / rolling / sensitivity / overfit evidence without adding storage.
 
 ## In Progress
 
-- Prepare `robustness-lab-v1` as the next implementation slice.
+- Prepare `selected-monitoring-timeline-v1` as the next implementation slice.
 
 ## Next
 
-1. Use `robustness-lab-v1` to make stress / sensitivity / overfit evidence easier to run and interpret.
+1. Use `selected-monitoring-timeline-v1` to make selected portfolio review signals easier to follow without automatic log sprawl.
 2. Decide structured waiver policy before allowing selected-route override.
 3. Keep storage governance checklist mandatory before adding persistence.
 
@@ -39,3 +40,4 @@ Last Updated: 2026-05-28
 - UI does not fetch provider or macro data directly.
 - Stale provider snapshot evidence is REVIEW, not PASS.
 - Look-through board rows are compact summaries; full holdings / exposure rows stay in DB.
+- Robustness Lab rows are compact summaries; raw run history and strategy-specific perturbation artifacts are not stored in JSONL.

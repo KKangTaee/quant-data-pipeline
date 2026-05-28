@@ -104,6 +104,65 @@ def _render_provider_look_through_summary(validation: dict[str, Any]) -> None:
                 st.info("표시할 ETF별 coverage row가 없습니다.")
 
 
+def _robustness_lab_board(validation: dict[str, Any]) -> dict[str, Any]:
+    robustness = dict(validation.get("robustness_validation") or {})
+    return dict(robustness.get("robustness_lab_board") or validation.get("robustness_lab_board") or {})
+
+
+def _render_robustness_lab_summary(board: dict[str, Any]) -> None:
+    metrics = dict(board.get("metrics") or {})
+    st.markdown("###### Robustness Lab")
+    render_badge_strip(
+        [
+            {"label": "Board", "value": board.get("status") or "-", "tone": _status_tone(board.get("status"))},
+            {
+                "label": "Stress",
+                "value": f"{metrics.get('computed_stress_windows', 0)}/{metrics.get('covered_stress_windows', 0)}",
+                "tone": _status_tone(metrics.get("stress_status")),
+            },
+            {
+                "label": "Sensitivity",
+                "value": metrics.get("computed_sensitivity_checks", 0),
+                "tone": _status_tone(metrics.get("sensitivity_status")),
+            },
+            {
+                "label": "Follow-up",
+                "value": metrics.get("runtime_followup_count", 0),
+                "tone": "warning" if metrics.get("runtime_followup_count") else "neutral",
+            },
+            {"label": "Rolling", "value": metrics.get("rolling_window_count") or "-", "tone": _status_tone(metrics.get("rolling_status"))},
+            {"label": "Trials", "value": metrics.get("local_trial_count", 0), "tone": _status_tone(metrics.get("overfit_status"))},
+        ]
+    )
+    st.caption(str(board.get("summary") or "-"))
+    summary_rows = list(board.get("summary_rows") or [])
+    if summary_rows:
+        st.dataframe(pd.DataFrame(summary_rows), width="stretch", hide_index=True)
+    with st.expander("Robustness Lab detail", expanded=False):
+        stress_tab, sensitivity_tab, follow_up_tab = st.tabs(["Stress", "Sensitivity", "Follow-up"])
+        with stress_tab:
+            stress_rows = list(board.get("stress_rows") or [])
+            if stress_rows:
+                st.dataframe(pd.DataFrame(stress_rows), width="stretch", hide_index=True)
+            else:
+                st.info("표시할 stress detail row가 없습니다.")
+        with sensitivity_tab:
+            sensitivity_rows = list(board.get("sensitivity_rows") or [])
+            if sensitivity_rows:
+                st.dataframe(pd.DataFrame(sensitivity_rows), width="stretch", hide_index=True)
+            else:
+                st.info("표시할 sensitivity detail row가 없습니다.")
+        with follow_up_tab:
+            follow_up_rows = list(board.get("follow_up_rows") or [])
+            if follow_up_rows:
+                st.dataframe(pd.DataFrame(follow_up_rows), width="stretch", hide_index=True)
+            else:
+                st.success("즉시 follow-up으로 남은 robustness row가 없습니다.")
+    limitations = list(board.get("limitations") or [])
+    if limitations:
+        st.caption("Limitations: " + " / ".join(str(item) for item in limitations))
+
+
 def _render_validation_summary(validation: dict[str, Any]) -> None:
     metrics = dict(validation.get("metrics") or {})
     route = str(validation.get("validation_route") or "-")
@@ -210,6 +269,11 @@ def _render_robustness_summary(validation: dict[str, Any]) -> None:
         route_title="Robustness Preview",
         score_title="Robustness Score",
     )
+    board = _robustness_lab_board(validation)
+    if board:
+        _render_robustness_lab_summary(board)
+        return
+
     stress_interpretation = dict(robustness.get("stress_interpretation") or validation.get("stress_interpretation") or {})
     sensitivity_interpretation = dict(
         robustness.get("sensitivity_interpretation") or validation.get("sensitivity_interpretation") or {}

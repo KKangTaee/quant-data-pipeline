@@ -23,6 +23,239 @@ from app.services.backtest_practical_validation_source import _optional_float
 
 
 STRESS_WINDOW_FILE = PRACTICAL_VALIDATION_STRESS_WINDOW_FILE
+ROBUSTNESS_LAB_BOARD_SCHEMA_VERSION = "robustness_lab_board_v1"
+
+
+def _robustness_status(value: Any) -> str:
+    text = str(value or "").strip().upper()
+    if text in {"BLOCK", "BLOCKED"}:
+        return "BLOCKED"
+    if text in {"REVIEW", "WATCH", "FOLLOW_UP", "NEEDS_REVIEW", "REVIEW_REQUIRED"}:
+        return "REVIEW"
+    if text in {"PASS", "READY", "COMPUTED", "OK"}:
+        return "PASS"
+    if text in {"NOT_RUN", "MISSING", "NEEDS_INPUT", ""}:
+        return "NOT_RUN"
+    return text
+
+
+def _combine_robustness_status(statuses: list[Any]) -> str:
+    normalized = [_robustness_status(status) for status in statuses if str(status or "").strip()]
+    if not normalized:
+        return "NOT_RUN"
+    if "BLOCKED" in normalized:
+        return "BLOCKED"
+    if "REVIEW" in normalized:
+        return "REVIEW"
+    if "NOT_RUN" in normalized:
+        return "NOT_RUN" if set(normalized) == {"NOT_RUN"} else "REVIEW"
+    if set(normalized) == {"PASS"}:
+        return "PASS"
+    return "REVIEW"
+
+
+def _row_status(row: dict[str, Any]) -> str:
+    return _robustness_status(row.get("Status") or row.get("Result Status") or row.get("Judgment"))
+
+
+def _compact_text(value: Any, fallback: str = "-") -> str:
+    text = str(value or "").strip()
+    return text or fallback
+
+
+def _stress_detail_row(row: dict[str, Any]) -> dict[str, Any]:
+    status = _row_status(row)
+    current_parts = [
+        f"return {_format_percent(row.get('Portfolio Return'))}",
+        f"MDD {_format_percent(row.get('Portfolio MDD'))}",
+        f"spread {_format_percent(row.get('Benchmark Spread'))}",
+    ]
+    return {
+        "Check": _compact_text(row.get("Scenario") or row.get("Check") or row.get("Metric")),
+        "Status": status,
+        "Current": " / ".join(current_parts),
+        "Evidence": _compact_text(row.get("Window") or row.get("Finding") or row.get("Judgment")),
+        "Meaning": _compact_text(row.get("Expected Check") or row.get("Why It Matters") or row.get("Decision Use")),
+        "Next Check": _compact_text(row.get("Next Check")),
+    }
+
+
+def _sensitivity_detail_row(row: dict[str, Any]) -> dict[str, Any]:
+    status = _row_status(row)
+    current_parts = [
+        f"CAGR delta {_format_percent(row.get('CAGR Delta'))}",
+        f"MDD delta {_format_percent(row.get('MDD Delta'))}",
+    ]
+    return {
+        "Check": _compact_text(row.get("Scenario") or row.get("Check") or row.get("Metric")),
+        "Status": status,
+        "Current": " / ".join(current_parts),
+        "Evidence": _compact_text(row.get("Scope") or row.get("Finding") or row.get("Judgment")),
+        "Meaning": _compact_text(row.get("Expected Check") or row.get("Why It Matters")),
+        "Next Check": _compact_text(row.get("Next Check")),
+    }
+
+
+def _interpretation_detail_row(row: dict[str, Any]) -> dict[str, Any]:
+    status = _row_status(row)
+    return {
+        "Check": _compact_text(row.get("Check") or row.get("Scenario") or row.get("Metric")),
+        "Status": status,
+        "Current": _compact_text(row.get("Finding") or row.get("Current") or row.get("Value")),
+        "Evidence": _compact_text(row.get("Why It Matters") or row.get("Evidence") or row.get("Threshold")),
+        "Meaning": _compact_text(row.get("Why It Matters") or row.get("Meaning") or row.get("Expected Check")),
+        "Next Check": _compact_text(row.get("Next Check") or row.get("Required Action")),
+    }
+
+
+def _limited_rows(rows: list[dict[str, Any]], *, limit: int = 12) -> list[dict[str, Any]]:
+    return [dict(row) for row in rows[:limit]]
+
+
+def build_robustness_lab_board(
+    *,
+    stress_interpretation: dict[str, Any] | None = None,
+    sensitivity_interpretation: dict[str, Any] | None = None,
+    stress_rows: list[dict[str, Any]] | None = None,
+    sensitivity_rows: list[dict[str, Any]] | None = None,
+    overfit_audit: dict[str, Any] | None = None,
+    rolling_evidence: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build a compact evidence board from existing robustness diagnostics."""
+
+    stress = dict(stress_interpretation or {})
+    sensitivity = dict(sensitivity_interpretation or {})
+    overfit = dict(overfit_audit or {})
+    rolling = dict(rolling_evidence or {})
+    rolling_metrics = dict(rolling.get("metrics") or {})
+    stress_computed = int(stress.get("computed_count") or 0)
+    stress_covered = int(stress.get("covered_count") or 0)
+    sensitivity_computed = int(sensitivity.get("computed_count") or 0)
+    sensitivity_review = int(sensitivity.get("review_count") or 0)
+    runtime_followup = int(sensitivity.get("runtime_followup_count") or 0)
+    local_trial_count = int(overfit.get("trial_count") or 0)
+    sensitivity_status = _robustness_status(sensitivity.get("status"))
+    if runtime_followup and sensitivity_status == "PASS":
+        sensitivity_status = "REVIEW"
+    status = _combine_robustness_status(
+        [
+            stress.get("status"),
+            sensitivity_status,
+            rolling.get("status"),
+            overfit.get("status"),
+        ]
+    )
+
+    stress_detail_rows = _limited_rows(
+        [_interpretation_detail_row(dict(row or {})) for row in list(stress.get("rows") or [])]
+        + [_stress_detail_row(dict(row or {})) for row in list(stress_rows or [])],
+        limit=12,
+    )
+    sensitivity_detail_rows = _limited_rows(
+        [_interpretation_detail_row(dict(row or {})) for row in list(sensitivity.get("rows") or [])]
+        + [_sensitivity_detail_row(dict(row or {})) for row in list(sensitivity_rows or [])],
+        limit=12,
+    )
+    rolling_status = _robustness_status(rolling.get("status"))
+    overfit_status = _robustness_status(overfit.get("status"))
+    summary_rows = [
+        {
+            "Check": "Stress window coverage",
+            "Status": _robustness_status(stress.get("status")),
+            "Current": f"{stress_computed}/{stress_covered} computed",
+            "Evidence": _compact_text(stress.get("summary")),
+            "Meaning": "후보 기간과 겹치는 위기 구간을 실제 curve로 계산했는지 확인합니다.",
+        },
+        {
+            "Check": "Worst computed stress",
+            "Status": _row_status({"Status": stress.get("status")}) if stress.get("worst_mdd") is None else (
+                "REVIEW" if (_optional_float(stress.get("worst_mdd")) or 0.0) < -0.20 else "PASS"
+            ),
+            "Current": (
+                f"{stress.get('worst_mdd_scenario') or '-'} / "
+                f"MDD {_format_percent(stress.get('worst_mdd'))} / "
+                f"spread {_format_percent(stress.get('worst_benchmark_spread'))}"
+            ),
+            "Evidence": "stress MDD와 benchmark spread",
+            "Meaning": "위기 구간 손실 방어와 단순 benchmark 대비 약점을 봅니다.",
+        },
+        {
+            "Check": "Sensitivity coverage",
+            "Status": sensitivity_status,
+            "Current": f"computed {sensitivity_computed} / review {sensitivity_review} / runtime follow-up {runtime_followup}",
+            "Evidence": _compact_text(sensitivity.get("summary")),
+            "Meaning": "기간, 구성요소, 비중 변화에 결과가 과도하게 흔들리는지 확인합니다.",
+        },
+        {
+            "Check": "Worst sensitivity delta",
+            "Status": "REVIEW" if sensitivity_review else sensitivity_status,
+            "Current": (
+                f"{sensitivity.get('worst_scenario') or '-'} / "
+                f"CAGR delta {_format_percent(sensitivity.get('worst_cagr_delta'))} / "
+                f"MDD delta {_format_percent(sensitivity.get('worst_mdd_delta'))}"
+            ),
+            "Evidence": "window / drop-one / weight tilt sensitivity",
+            "Meaning": "한 component나 특정 기간만으로 성과가 설명되는지 봅니다.",
+        },
+        {
+            "Check": "Rolling validation",
+            "Status": rolling_status,
+            "Current": (
+                f"windows {rolling_metrics.get('window_count', '-')} / "
+                f"worst CAGR {_format_percent(rolling_metrics.get('worst_rolling_cagr'))} / "
+                f"worst MDD {_format_percent(rolling_metrics.get('worst_rolling_mdd'))}"
+            ),
+            "Evidence": _compact_text(rolling.get("summary")),
+            "Meaning": "전체 기간 1회 성과가 아니라 여러 rolling 구간에서 논리가 유지되는지 봅니다.",
+        },
+        {
+            "Check": "Local overfit audit",
+            "Status": overfit_status,
+            "Current": f"{local_trial_count} local matched trials",
+            "Evidence": _compact_text(overfit.get("interpretation")),
+            "Meaning": "local run_history에서 과도한 반복 실험 흔적이 있는지 compact summary로만 확인합니다.",
+        },
+    ]
+    follow_up_rows = _limited_rows(
+        [row for row in summary_rows + stress_detail_rows + sensitivity_detail_rows if _robustness_status(row.get("Status")) != "PASS"],
+        limit=12,
+    )
+    limitations = [
+        "Robustness Lab은 기존 Practical Validation evidence의 compact read model이며 새 저장 체인이 아닙니다.",
+        "Strategy-specific parameter perturbation은 runtime follow-up으로 남기고, 구현 전에는 PASS로 간주하지 않습니다.",
+    ]
+    if stress.get("uncomputed_count"):
+        limitations.append("Covered stress window 중 daily replay가 필요한 항목은 NOT_RUN / REVIEW 근거로 남깁니다.")
+    if runtime_followup:
+        limitations.append("GTAA interval, MA window, momentum lookback 같은 전략 내부 parameter는 후속 runtime perturbation이 필요합니다.")
+
+    return {
+        "schema_version": ROBUSTNESS_LAB_BOARD_SCHEMA_VERSION,
+        "status": status,
+        "summary": (
+            f"Stress {stress_computed}/{stress_covered}, sensitivity {sensitivity_computed}, "
+            f"runtime follow-up {runtime_followup}, local trials {local_trial_count} 기준으로 robustness evidence를 요약했습니다."
+        ),
+        "summary_rows": summary_rows,
+        "stress_rows": stress_detail_rows,
+        "sensitivity_rows": sensitivity_detail_rows,
+        "follow_up_rows": follow_up_rows,
+        "metrics": {
+            "stress_status": _robustness_status(stress.get("status")),
+            "covered_stress_windows": stress_covered,
+            "computed_stress_windows": stress_computed,
+            "uncomputed_stress_windows": int(stress.get("uncomputed_count") or 0),
+            "sensitivity_status": sensitivity_status,
+            "computed_sensitivity_checks": sensitivity_computed,
+            "sensitivity_review_count": sensitivity_review,
+            "runtime_followup_count": runtime_followup,
+            "rolling_status": rolling_status,
+            "rolling_window_count": rolling_metrics.get("window_count"),
+            "overfit_status": overfit_status,
+            "local_trial_count": local_trial_count,
+        },
+        "limitations": limitations,
+    }
 
 
 def _simple_component_title(component: dict[str, Any]) -> str:

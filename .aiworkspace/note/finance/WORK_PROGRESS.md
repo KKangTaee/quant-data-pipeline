@@ -22,6 +22,10 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-28
+- Completed `.aiworkspace/note/finance/tasks/active/robustness-lab-v1/`.
+- Practical Validation now builds a compact `robustness_lab_board` from existing stress / rolling / sensitivity / overfit evidence.
+- Practical Validation, Final Review, and final decision evidence rows read the same board without adding a new JSONL registry or storing raw perturbation artifacts.
+- Next implementation candidate is `selected-monitoring-timeline-v1`.
 - Completed `.aiworkspace/note/finance/tasks/active/look-through-exposure-board-v1/`.
 - Provider context now includes a compact `look_through_board` for holdings / exposure asset buckets, top holdings, overlap, and ETF-level coverage.
 - Practical Validation and Final Review display the board without adding a new JSONL registry or duplicating full holdings rows.

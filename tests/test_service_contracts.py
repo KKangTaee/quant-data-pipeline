@@ -216,6 +216,74 @@ class PracticalValidationDiagnosticsServiceContractTests(unittest.TestCase):
         self.assertAlmostEqual(curve[0]["Total Return"], 0.0)
         self.assertAlmostEqual(curve[1]["Total Return"], -0.02)
 
+    def test_robustness_lab_board_keeps_compact_evidence_contract(self) -> None:
+        from app.services.backtest_practical_validation_stress_sensitivity import build_robustness_lab_board
+
+        board = build_robustness_lab_board(
+            stress_interpretation={
+                "status": "REVIEW",
+                "summary": "1/2개 covered stress window만 계산됐습니다.",
+                "covered_count": 2,
+                "computed_count": 1,
+                "uncomputed_count": 1,
+                "worst_mdd": -0.25,
+                "worst_mdd_scenario": "COVID crash",
+                "worst_benchmark_spread": -0.04,
+                "rows": [
+                    {
+                        "Check": "Stress coverage",
+                        "Status": "REVIEW",
+                        "Finding": "1/2 covered windows computed",
+                        "Why It Matters": "stress coverage compact summary",
+                        "Next Check": "daily replay",
+                    }
+                ],
+            },
+            sensitivity_interpretation={
+                "status": "PASS",
+                "summary": "2개 sensitivity 계산됨",
+                "computed_count": 2,
+                "review_count": 0,
+                "runtime_followup_count": 1,
+                "worst_scenario": "Mix weight +5%p: Core",
+                "worst_cagr_delta": -0.01,
+                "worst_mdd_delta": -0.02,
+            },
+            stress_rows=[
+                {
+                    "Scenario": "COVID crash",
+                    "Result Status": "REVIEW",
+                    "Window": "2020-02-19 -> 2020-03-23",
+                    "Portfolio Return": -0.18,
+                    "Portfolio MDD": -0.25,
+                    "Benchmark Spread": -0.04,
+                    "Expected Check": "return / MDD / benchmark spread",
+                }
+            ],
+            sensitivity_rows=[
+                {
+                    "Scenario": "GTAA parameter perturbation",
+                    "Scope": "interval / MA window",
+                    "Result Status": "NOT_RUN",
+                    "Expected Check": "cadence 민감도",
+                }
+            ],
+            overfit_audit={"status": "PASS", "trial_count": 4, "interpretation": "trial count ok"},
+            rolling_evidence={
+                "status": "PASS",
+                "summary": "12개월 rolling 계산됨",
+                "metrics": {"window_count": 8, "worst_rolling_cagr": 0.01, "worst_rolling_mdd": -0.08},
+            },
+        )
+
+        self.assertEqual(board["schema_version"], "robustness_lab_board_v1")
+        self.assertEqual(board["status"], "REVIEW")
+        self.assertEqual(board["metrics"]["computed_stress_windows"], 1)
+        self.assertEqual(board["metrics"]["runtime_followup_count"], 1)
+        self.assertEqual(len(board["summary_rows"]), 6)
+        self.assertTrue(any(row["Check"] == "Local overfit audit" for row in board["summary_rows"]))
+        self.assertTrue(any(row["Status"] == "NOT_RUN" for row in board["follow_up_rows"]))
+
 
 class BoundaryContractHardeningTests(unittest.TestCase):
     def _load_boundary_checker(self):
@@ -832,6 +900,17 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
                     ]
                 },
                 "robustness_validation": {
+                    "robustness_lab_board": {
+                        "summary_rows": [
+                            {
+                                "Check": "Sensitivity coverage",
+                                "Status": "REVIEW",
+                                "Current": "computed 3 / review 1 / runtime follow-up 1",
+                                "Evidence": "compact robustness lab summary",
+                                "Meaning": "sensitivity coverage compact summary",
+                            }
+                        ]
+                    },
                     "checks": [{"criteria": "Robustness status", "current_value": "WATCH"}]
                 },
             },
@@ -848,6 +927,7 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
                 "Final Review Evidence",
                 "Validation",
                 "Look-through Exposure",
+                "Robustness Lab",
                 "Robustness",
                 "Paper Observation",
             ],
@@ -857,8 +937,10 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertEqual(rows[1]["Current"], "REVIEW")
         self.assertEqual(rows[2]["Criteria"], "Holdings Coverage")
         self.assertTrue(rows[2]["Ready"])
-        self.assertEqual(rows[3]["Current"], "WATCH")
-        self.assertEqual(rows[4]["Current"], "OPTIONAL")
+        self.assertEqual(rows[3]["Criteria"], "Sensitivity coverage")
+        self.assertFalse(rows[3]["Ready"])
+        self.assertEqual(rows[4]["Current"], "WATCH")
+        self.assertEqual(rows[5]["Current"], "OPTIONAL")
 
     def test_investability_packet_ready_contract_is_ui_neutral(self) -> None:
         from app.services.backtest_evidence_read_model import build_investability_evidence_packet
