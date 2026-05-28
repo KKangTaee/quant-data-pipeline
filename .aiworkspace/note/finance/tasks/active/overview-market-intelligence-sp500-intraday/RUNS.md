@@ -24,3 +24,10 @@
 | 2026-05-28 | `uv run python -m unittest tests.test_service_contracts` | PASS, 28 tests. |
 | 2026-05-28 | `uv run python .aiworkspace/plugins/quant-finance-workflow/scripts/check_ui_engine_boundary.py` | PASS. |
 | 2026-05-28 | Browser smoke at `http://localhost:8501/` | PASS: `Snapshot Fresh` shown after quote fast path, no console errors. |
+| 2026-05-28 | Browser repro for `Update Daily Snapshot` click | REPRO: running Streamlit process held an older `run_collect_sp500_intraday_snapshot` signature and raised `unexpected keyword argument 'quote_batch_size'`. |
+| 2026-05-28 | `uv run python -m py_compile app/web/overview_dashboard.py` | PASS. |
+| 2026-05-28 | `uv run python -m unittest tests.test_service_contracts.MarketIntelligenceIngestionContractTests tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests` | PASS, 5 tests. |
+| 2026-05-28 | `uv run python .aiworkspace/plugins/quant-finance-workflow/scripts/check_ui_engine_boundary.py` | PASS. |
+| 2026-05-28 | `git diff --check` | PASS. |
+| 2026-05-28 | Browser smoke after Streamlit restart at `http://localhost:8501/` | PASS: `Update Daily Snapshot` completed with 503 rows, `yahoo_quote` / `quote_fast`, 7.377s, no console errors. |
+| 2026-05-28 | Browser smoke after final refresh-button cleanup at `http://localhost:8501/` | PASS: `Update Daily Snapshot` completed with 503 rows, `yahoo_quote` / `quote_fast`, 5.038s, no console errors. |

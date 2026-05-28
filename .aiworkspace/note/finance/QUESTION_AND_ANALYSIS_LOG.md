@@ -5329,3 +5329,14 @@ Detailed historical analysis was archived on `2026-04-13`.
   - S&P 500 current constituents와 intraday return은 별도 table로 분리해 survivorship / provider delay 위험을 명시하는 것이 맞다
 - Follow-up:
   - S&P 500 universe / intraday snapshot collector와 Overview controls를 구현했고, Top1000 / Top2000 intraday 확장은 실제 속도와 rate limit 확인 뒤 진행한다
+
+### 2026-05-28 - Market Movers update click TypeError 수정
+- User request:
+  - 사용자가 Overview `Update Daily Snapshot` 클릭 시 `run_collect_sp500_intraday_snapshot` 호출 지점에서 에러가 난다고 제보함
+- Interpreted goal:
+  - 브라우저에서 재현 가능한 UI click path를 안정화하고, 5분 상태 갱신 UX는 유지해야 함
+- Analysis result:
+  - 실행 중인 Streamlit 프로세스가 이전 job-wrapper 함수 시그니처를 메모리에 잡고 있어 새 `quote_batch_size` 인자를 못 받는 것이 직접 원인이었다
+  - 자동 새로고침 fragment 안에 수집 버튼과 `st.rerun()`이 같이 있던 구조도 불안정하므로 fragment는 DB 읽기 전용으로 분리하는 편이 맞다
+- Follow-up:
+  - Overview button action을 fragment 밖으로 옮기고, stale import 상황에서도 지원되는 인자만 넘기도록 호환 호출을 추가했다
