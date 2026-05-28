@@ -63,6 +63,7 @@ Last Verified: 2026-05-28
 | Selected Portfolio Dashboard | `app/web/final_selected_portfolio_dashboard.py` |
 | Ingestion jobs | `app/jobs/ingestion_jobs.py` |
 | DB schema | `finance/data/db/schema.py` |
+| SEC Form 25 delisting collector | `finance/data/sec_delisting.py` |
 | ETF provider ingestion | `finance/data/etf_provider.py` |
 | Macro ingestion | `finance/data/macro.py` |
 | Backtest result bundle runtime helper | `app/runtime/backtest_result_bundle.py` |

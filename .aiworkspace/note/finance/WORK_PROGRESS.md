@@ -22,6 +22,9 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-28
+- Completed `.aiworkspace/note/finance/tasks/active/sec-form25-delisting-backfill-v1/`.
+- Added SEC EDGAR Form 25 / 25-NSE delisting collector and ingestion job wrapper that write compact actual delisting evidence to `finance_meta.nyse_symbol_lifecycle`.
+- Form 25 evidence is treated as delisting evidence, not complete historical membership or active-listing proof. No workflow JSONL, memo, preset, report file, approval, order, or rebalance behavior was added.
 - Completed `.aiworkspace/note/finance/tasks/active/historical-universe-survivorship-v1/`.
 - Added `nyse_symbol_lifecycle` schema, NYSE listing lifecycle UPSERT path, lifecycle coverage loader, and Data Coverage / Validation Efficacy survivorship integration.
 - Current listing snapshots remain partial evidence; only requested-period historical / delisting lifecycle evidence can make survivorship control PASS. No workflow JSONL, memo, preset, approval, order, or rebalance behavior was added.

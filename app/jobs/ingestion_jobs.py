@@ -17,6 +17,7 @@ from finance.data.etf_provider import (
     discover_and_store_etf_provider_source_map,
 )
 from finance.data.macro import DEFAULT_MACRO_SERIES, collect_and_store_macro_series
+from finance.data.sec_delisting import collect_and_store_sec_form25_delistings
 
 
 JobResult = dict[str, Any]
@@ -1298,6 +1299,96 @@ def run_discover_etf_provider_source_map(
             failed_symbols=[],
             message=f"ETF provider source map discovery failed: {exc}",
             details={"limit": limit, "verify": bool(verify)},
+        )
+
+
+def run_collect_sec_form25_delistings(
+    symbols: str | Iterable[str] | None,
+    *,
+    user_agent: str | None = None,
+    include_archive_files: bool = True,
+    max_archive_files: int = 5,
+) -> JobResult:
+    """Collect SEC Form 25 delisting evidence into the lifecycle evidence table."""
+    job_name = "collect_sec_form25_delistings"
+    started_at = _now_str()
+    t0 = perf_counter()
+    parsed, invalid_symbols = split_valid_invalid_symbols(symbols)
+
+    if not parsed:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=0,
+            symbols_processed=0,
+            failed_symbols=invalid_symbols,
+            message="No valid symbols provided for SEC Form 25 delisting collection.",
+            details={
+                "target_table": "finance_meta.nyse_symbol_lifecycle",
+                "include_archive_files": bool(include_archive_files),
+                "max_archive_files": int(max_archive_files),
+            },
+        )
+
+    try:
+        summary = collect_and_store_sec_form25_delistings(
+            parsed,
+            user_agent=user_agent,
+            include_archive_files=bool(include_archive_files),
+            max_archive_files=int(max_archive_files),
+        )
+        rows_written = int(summary.get("rows_written") or 0)
+        unmapped_symbols = list(summary.get("unmapped_symbols") or [])
+        symbols_without_form25 = list(summary.get("symbols_without_form25") or [])
+        error_symbols = _failed_item_ids(summary.get("errors") or [], id_keys=("symbol",))
+        all_failed = invalid_symbols + error_symbols + unmapped_symbols + symbols_without_form25
+        if rows_written <= 0:
+            status = "failed"
+            message = "SEC Form 25 delisting collection wrote no lifecycle rows."
+        elif error_symbols or unmapped_symbols or symbols_without_form25 or invalid_symbols:
+            status = "partial_success"
+            message = "SEC Form 25 delisting collection completed with coverage gaps."
+        else:
+            status = "success"
+            message = "SEC Form 25 delisting collection completed."
+
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status=status,
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=rows_written,
+            symbols_requested=len(parsed),
+            symbols_processed=max(len(parsed) - len(set(all_failed)), 0) if rows_written > 0 else 0,
+            failed_symbols=all_failed[:50],
+            message=message,
+            details=summary,
+        )
+    except Exception as exc:
+        finished_at = _now_str()
+        return _build_result(
+            job_name=job_name,
+            status="failed",
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_sec=perf_counter() - t0,
+            rows_written=0,
+            symbols_requested=len(parsed),
+            symbols_processed=0,
+            failed_symbols=(invalid_symbols + parsed)[:50],
+            message=f"SEC Form 25 delisting collection failed: {exc}",
+            details={
+                "target_table": "finance_meta.nyse_symbol_lifecycle",
+                "include_archive_files": bool(include_archive_files),
+                "max_archive_files": int(max_archive_files),
+            },
         )
 
 

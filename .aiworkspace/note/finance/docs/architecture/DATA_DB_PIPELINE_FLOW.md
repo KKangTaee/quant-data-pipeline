@@ -24,6 +24,7 @@ external source
 | yfinance | price, profile, 일부 fundamentals |
 | NYSE listing source | stock / ETF universe |
 | EDGAR | detailed financial statements |
+| SEC EDGAR submissions / Form 25 | symbol lifecycle delisting evidence |
 | local DB | backtest runtime read path |
 | local DB bridge | ETF operability snapshot의 1차 bridge / proxy source. `nyse_price_history`, `nyse_asset_profile`에서 계산 |
 | ETF provider source map | `nyse_etf` / `nyse_asset_profile`와 issuer 공식 URL 검증을 이용해 ETF별 수집 endpoint / parser mapping을 저장 |
@@ -38,6 +39,7 @@ external source
 | `finance/data/db/schema.py` | DB table definition과 schema migration 성격의 column 보강 |
 | `finance/data/db/mysql.py` | MySQL connection / execution helper |
 | `finance/data/nyse_db.py` | NYSE CSV를 DB universe table로 적재하고 current listing lifecycle bridge row를 UPSERT |
+| `finance/data/sec_delisting.py` | SEC `company_tickers.json`와 submissions API에서 Form 25 / 25-NSE filing metadata를 읽어 `nyse_symbol_lifecycle` delisting_feed row로 UPSERT |
 | `finance/data/asset_profile.py` | asset profile 수집과 저장 |
 | `finance/data/etf_provider.py` | ETF provider source map discovery와 provider snapshot 수집 / 저장 경계. `nyse_etf` / asset profile 기반으로 공식 endpoint map을 `etf_provider_source_map`에 저장하고, 기존 DB 기반 bridge/proxy row와 issuer official row를 `etf_operability_snapshot`, `etf_holdings_snapshot`, `etf_exposure_snapshot`에 저장한다 |
 | `finance/data/macro.py` | FRED market-context series 수집 / 저장 경계. API key가 있으면 FRED API, 없으면 official CSV download를 사용해 `macro_series_observation`에 저장한다 |
@@ -90,6 +92,9 @@ external source
   `historical-universe-survivorship-v1`부터 `nyse_symbol_lifecycle`은 current listing snapshot, historical listing, delisting feed, computed snapshot evidence를 저장할 수 있는 lifecycle table이다.
   `finance/loaders/universe.py`는 requested period 기준 compact lifecycle summary를 제공하고, Data Coverage Audit은 requested period를 덮는 historical / delisting evidence가 있을 때만 survivorship control을 PASS로 본다.
   current listing snapshot이나 asset profile row만 있으면 REVIEW로 남긴다.
+  `sec-form25-delisting-backfill-v1`부터 `finance/data/sec_delisting.py`는 SEC EDGAR submissions API와 Form 25 / 25-NSE metadata를 official/free delisting source로 사용해
+  `source_type=delisting_feed`, `coverage_status=actual`, `listing_status=delisted` lifecycle row를 저장한다.
+  Form 25 row는 delisting evidence이며, Form 25 부재를 active proof로 해석하지 않는다.
 
 ## 데이터 무결성 체크포인트
 

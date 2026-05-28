@@ -93,7 +93,7 @@
 
 | 스크립트 | 관리하는 기능 |
 |---|---|
-| `app/jobs/ingestion_jobs.py` | `Workspace > Ingestion`에서 실행하는 수집 / refresh job wrapper. OHLCV, fundamentals, statement refresh, asset profile, Practical Validation provider snapshot job을 표준 `JobResult`로 감싼다 |
+| `app/jobs/ingestion_jobs.py` | `Workspace > Ingestion`에서 실행하는 수집 / refresh job wrapper. OHLCV, fundamentals, statement refresh, asset profile, Practical Validation provider snapshot, SEC Form 25 delisting evidence job을 표준 `JobResult`로 감싼다 |
 
 ## Finance Core
 
@@ -131,6 +131,7 @@
 | `finance/data/data_format.py` | 수집 데이터 정규화 helper |
 | `finance/data/nyse.py` | NYSE universe source 수집 |
 | `finance/data/nyse_db.py` | NYSE universe DB persistence. current listing master와 `nyse_symbol_lifecycle` bridge row UPSERT를 담당 |
+| `finance/data/sec_delisting.py` | SEC EDGAR Form 25 / 25-NSE filing metadata를 읽어 `nyse_symbol_lifecycle` delisting_feed evidence row로 UPSERT |
 | `finance/data/asset_profile.py` | Asset profile 수집. ETF operability snapshot의 bridge source로 일부 field를 제공 |
 | `finance/data/etf_provider.py` | ETF provider source map discovery, ETF operability / holdings / exposure snapshot schema sync, 기존 price/profile DB 기반 bridge/proxy 수집, iShares / SSGA / Invesco official row normalize, commodity gold exposure row 생성, holdings canonical refresh, exposure aggregation, UPSERT 저장 |
 | `finance/data/macro.py` | FRED market-context series 수집. VIX / yield curve / credit spread series를 `macro_series_observation`에 UPSERT 저장 |

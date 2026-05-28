@@ -607,6 +607,142 @@ class DataCoverageAuditContractTests(unittest.TestCase):
         self.assertEqual(rows_by_criteria["Survivorship / delisting control"]["Status"], "NEEDS_INPUT")
 
 
+class SecForm25DelistingCollectorContractTests(unittest.TestCase):
+    def test_form25_payload_maps_to_lifecycle_row_without_claiming_full_membership(self) -> None:
+        from finance.data.sec_delisting import (
+            build_sec_form25_lifecycle_rows,
+            extract_sec_form25_filings,
+            normalize_sec_ticker_map,
+        )
+
+        ticker_map = normalize_sec_ticker_map(
+            {
+                "0": {"cik_str": 123456, "ticker": "ABC", "title": "ABC Corp"},
+            }
+        )
+        filings = extract_sec_form25_filings(
+            {
+                "filings": {
+                    "recent": {
+                        "form": ["10-K", "25-NSE"],
+                        "accessionNumber": ["0000123456-26-000001", "0000123456-26-000002"],
+                        "filingDate": ["2026-02-01", "2026-03-15"],
+                        "reportDate": ["2026-01-01", ""],
+                        "primaryDocument": ["abc-10k.htm", "primary_doc.xml"],
+                    }
+                }
+            }
+        )
+        rows = build_sec_form25_lifecycle_rows(
+            "abc",
+            "stock",
+            ticker_map["ABC"],
+            filings,
+            collected_at="2026-05-28 00:00:00",
+        )
+
+        self.assertEqual(len(rows), 1)
+        row = rows[0]
+        self.assertEqual(row["symbol"], "ABC")
+        self.assertEqual(row["listing_status"], "delisted")
+        self.assertEqual(row["source_type"], "delisting_feed")
+        self.assertEqual(row["coverage_status"], "actual")
+        self.assertIsNone(row["first_seen_date"])
+        self.assertEqual(row["last_seen_date"], "2026-03-15")
+        self.assertIn("sec_form25_000012345626000002", row["source"])
+        self.assertIn("primary_doc.xml", row["source_ref"])
+        self.assertIn("absence of Form 25 is not active-listing proof", row["evidence_json"])
+
+    def test_collector_writes_db_lifecycle_rows_without_jsonl_side_effects(self) -> None:
+        from finance.data import sec_delisting
+
+        class FakeDB:
+            def __init__(self) -> None:
+                self.used_db: str | None = None
+                self.executemany_calls: list[tuple[str, list[dict]]] = []
+
+            def use_db(self, db_name: str) -> None:
+                self.used_db = db_name
+
+            def query(self, sql: str, params=None) -> list[dict]:
+                if "nyse_etf" in sql:
+                    return []
+                if "nyse_stock" in sql:
+                    return [{"symbol": "ABC"}]
+                return []
+
+            def execute(self, sql: str, params=None) -> None:
+                return None
+
+            def executemany(self, sql: str, params: list[dict]) -> None:
+                self.executemany_calls.append((sql, params))
+
+            def close(self) -> None:
+                return None
+
+        def fake_fetch(url: str, user_agent: str, timeout: float):
+            if url == sec_delisting.SEC_COMPANY_TICKERS_URL:
+                return {"0": {"cik_str": 123456, "ticker": "ABC", "title": "ABC Corp"}}
+            return {
+                "filings": {
+                    "recent": {
+                        "form": ["25-NSE"],
+                        "accessionNumber": ["0000123456-26-000002"],
+                        "filingDate": ["2026-03-15"],
+                        "reportDate": [""],
+                        "primaryDocument": ["primary_doc.xml"],
+                    },
+                    "files": [],
+                }
+            }
+
+        fake_db = FakeDB()
+        with patch.object(sec_delisting, "MySQLClient", return_value=fake_db), patch.object(
+            sec_delisting,
+            "sync_table_schema",
+        ):
+            summary = sec_delisting.collect_and_store_sec_form25_delistings(
+                ["ABC"],
+                user_agent="Unit Test unit@example.com",
+                fetch_json=fake_fetch,
+                request_sleep=0,
+            )
+
+        self.assertEqual(fake_db.used_db, "finance_meta")
+        self.assertEqual(summary["rows_written"], 1)
+        self.assertEqual(summary["target_table"], "finance_meta.nyse_symbol_lifecycle")
+        self.assertFalse(summary["execution_boundary"]["registry_write"])
+        self.assertFalse(summary["execution_boundary"]["memo_persistence"])
+        self.assertFalse(summary["execution_boundary"]["preset_persistence"])
+        self.assertFalse(summary["execution_boundary"]["live_approval"])
+        self.assertEqual(len(fake_db.executemany_calls), 1)
+        written_row = fake_db.executemany_calls[0][1][0]
+        self.assertEqual(written_row["kind"], "stock")
+        self.assertEqual(written_row["source_type"], "delisting_feed")
+
+    def test_ingestion_job_surfaces_form25_coverage_gaps(self) -> None:
+        import app.jobs.ingestion_jobs as jobs
+
+        with patch.object(
+            jobs,
+            "collect_and_store_sec_form25_delistings",
+            return_value={
+                "rows_written": 1,
+                "unmapped_symbols": ["MISS"],
+                "symbols_without_form25": [],
+                "errors": [],
+                "target_table": "finance_meta.nyse_symbol_lifecycle",
+                "execution_boundary": {"registry_write": False},
+            },
+        ):
+            result = jobs.run_collect_sec_form25_delistings("ABC,MISS", user_agent="Unit Test unit@example.com")
+
+        self.assertEqual(result["job_name"], "collect_sec_form25_delistings")
+        self.assertEqual(result["status"], "partial_success")
+        self.assertEqual(result["rows_written"], 1)
+        self.assertIn("MISS", result["failed_symbols"])
+
+
 class PracticalValidationDiagnosticsServiceContractTests(unittest.TestCase):
     def test_diagnostics_public_compatibility_contract_is_explicit(self) -> None:
         from app.services import backtest_practical_validation_curve_context as curve_context

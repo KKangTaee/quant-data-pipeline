@@ -21,6 +21,18 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-28 - SEC Form 25 can seed actual delisting evidence
+- User request:
+  - 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - Historical lifecycle table을 만들었으므로, 이제 무료 공식 source로 실제 delisting evidence를 채운다.
+- Analysis result:
+  - SEC `company_tickers.json`와 submissions API를 사용해 Form 25 / 25-NSE filing metadata를 수집하는 collector를 추가했다.
+  - 수집 row는 `nyse_symbol_lifecycle`에 `source_type=delisting_feed`, `coverage_status=actual`, `listing_status=delisted`로 UPSERT된다.
+  - Form 25는 delisting evidence이며, Form 25 부재는 active proof가 아니고 first listing date도 제공하지 않는다.
+- Follow-up:
+  - 다음 개선 후보는 Ingestion UI 연결, 더 완전한 historical listing membership source, 또는 cost / turnover 실측 근거 수집이다.
+
 ### 2026-05-28 - Survivorship control needs DB-backed lifecycle evidence
 - User request:
   - 다음 단계 진행을 요청함.
