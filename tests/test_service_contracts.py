@@ -730,6 +730,127 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(snapshot["rows"].iloc[0]["Age Days"], 27)
         self.assertIn("Refresh Earnings Calendar", snapshot["warnings"][0])
 
+    def test_collection_ops_snapshot_combines_db_freshness_and_run_history(self) -> None:
+        from app.services.overview_market_intelligence import build_collection_ops_snapshot
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            del db_name, params
+            if "FROM market_intraday_snapshot" in sql:
+                return [
+                    {"universe_code": "SP500", "interval_code": "5m", "latest_snapshot_time": "2026-05-28 00:00:00"},
+                    {"universe_code": "TOP1000", "interval_code": "5m", "latest_snapshot_time": "2026-05-28 00:00:00"},
+                ]
+            if "FROM market_universe_member" in sql:
+                return [
+                    {
+                        "universe_code": "SP500",
+                        "active_symbols": 503,
+                        "latest_collected_at": "2026-05-28 01:00:00",
+                        "latest_as_of_date": "2026-05-28",
+                    }
+                ]
+            if "FROM market_event_calendar" in sql:
+                return [
+                    {
+                        "event_type": "FOMC_MEETING",
+                        "active_events": 12,
+                        "future_events": 12,
+                        "next_event_date": "2026-06-17",
+                        "latest_collected_at": "2026-05-28 02:00:00",
+                    },
+                    {
+                        "event_type": "EARNINGS",
+                        "active_events": 3,
+                        "future_events": 3,
+                        "next_event_date": "2026-07-30",
+                        "latest_collected_at": "2026-05-28 03:00:00",
+                    },
+                ]
+            return []
+
+        snapshot = build_collection_ops_snapshot(
+            today=date(2026, 5, 28),
+            query_fn=query_fn,
+            history_rows=[
+                {
+                    "job_name": "collect_sp500_universe",
+                    "status": "success",
+                    "finished_at": "2026-05-28 01:01:00",
+                    "rows_written": 503,
+                    "symbols_processed": 503,
+                    "failed_symbols": [],
+                    "duration_sec": 1.2,
+                    "message": "S&P 500 universe collection completed.",
+                },
+                {
+                    "job_name": "collect_earnings_calendar",
+                    "status": "partial_success",
+                    "finished_at": "2026-05-28 03:01:00",
+                    "rows_written": 2,
+                    "symbols_processed": 2,
+                    "failed_symbols": ["AAA"],
+                    "duration_sec": 2.5,
+                    "message": "Earnings calendar completed with missing symbols.",
+                },
+            ],
+        )
+
+        rows = snapshot["rows"]
+        self.assertEqual(snapshot["status"], "REVIEW")
+        self.assertEqual(snapshot["coverage"]["partial_count"], 1)
+        universe_row = rows[rows["Area"] == "S&P 500 Universe"].iloc[0]
+        self.assertEqual(universe_row["Status"], "OK")
+        self.assertEqual(universe_row["Rows"], 503)
+        earnings_row = rows[rows["Area"] == "Earnings Calendar"].iloc[0]
+        self.assertEqual(earnings_row["Status"], "Partial")
+        self.assertEqual(earnings_row["Failed"], 1)
+        self.assertIn("Inspect failed symbols", earnings_row["Next Action"])
+
+    def test_collection_ops_snapshot_supports_legacy_event_calendar_schema(self) -> None:
+        from app.services.overview_market_intelligence import build_collection_ops_snapshot
+
+        event_query_count = 0
+
+        def query_fn(db_name: str, sql: str, params=None) -> list[dict[str, object]]:
+            nonlocal event_query_count
+            del db_name, params
+            if "FROM market_intraday_snapshot" in sql:
+                return [
+                    {"universe_code": "SP500", "interval_code": "5m", "latest_snapshot_time": "2026-05-28 00:00:00"},
+                    {"universe_code": "TOP1000", "interval_code": "5m", "latest_snapshot_time": "2026-05-28 00:00:00"},
+                    {"universe_code": "TOP2000", "interval_code": "5m", "latest_snapshot_time": "2026-05-28 00:00:00"},
+                ]
+            if "FROM market_universe_member" in sql:
+                return [
+                    {
+                        "universe_code": "SP500",
+                        "active_symbols": 503,
+                        "latest_collected_at": "2026-05-28 01:00:00",
+                        "latest_as_of_date": "2026-05-28",
+                    }
+                ]
+            if "FROM market_event_calendar" in sql:
+                event_query_count += 1
+                if "event_status" in sql:
+                    raise RuntimeError("Unknown column 'event_status'")
+                return [
+                    {
+                        "event_type": "FOMC_MEETING",
+                        "active_events": 12,
+                        "future_events": 12,
+                        "next_event_date": "2026-06-17",
+                        "latest_collected_at": "2026-05-28 02:00:00",
+                    }
+                ]
+            return []
+
+        snapshot = build_collection_ops_snapshot(today=date(2026, 5, 28), query_fn=query_fn)
+
+        self.assertEqual(event_query_count, 2)
+        fomc_row = snapshot["rows"][snapshot["rows"]["Area"] == "FOMC Calendar"].iloc[0]
+        self.assertEqual(fomc_row["Status"], "OK")
+        self.assertIn("next 2026-06-17", fomc_row["Data Freshness"])
+
 
 class MarketIntelligenceIngestionContractTests(unittest.TestCase):
     def test_sp500_snapshot_uses_fast_quote_rows_without_yfinance_download(self) -> None:

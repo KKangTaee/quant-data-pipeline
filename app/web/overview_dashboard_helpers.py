@@ -5,6 +5,7 @@ from typing import Any
 
 import pandas as pd
 
+from app.jobs.run_history import load_run_history
 from app.runtime import (
     load_backtest_run_history,
     load_candidate_review_notes,
@@ -14,6 +15,7 @@ from app.runtime import (
     load_saved_portfolios,
 )
 from app.services.overview_market_intelligence import (
+    build_collection_ops_snapshot,
     build_market_events_snapshot,
     build_group_leadership_snapshot,
     build_market_movers_snapshot,
@@ -416,3 +418,8 @@ def load_overview_market_events_snapshot(
         horizon_days=horizon_days,
         limit=limit,
     )
+
+
+# Load the DB freshness and persisted job history snapshot for Overview Data Health.
+def load_overview_collection_ops_snapshot() -> dict[str, Any]:
+    return build_collection_ops_snapshot(history_rows=load_run_history(limit=200))

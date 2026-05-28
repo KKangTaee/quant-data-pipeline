@@ -9,6 +9,7 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 
+from app.jobs.run_history import append_run_history
 from app.jobs.ingestion_jobs import (
     run_collect_earnings_calendar,
     run_collect_fomc_calendar,
@@ -17,6 +18,7 @@ from app.jobs.ingestion_jobs import (
 )
 from app.web.backtest_ui_components import render_badge_strip, render_status_card_grid
 from app.web.overview_dashboard_helpers import (
+    load_overview_collection_ops_snapshot,
     load_overview_dashboard_snapshot,
     load_overview_group_leadership_snapshot,
     load_overview_market_events_snapshot,
@@ -361,6 +363,14 @@ def _render_market_job_result(result_key: str) -> None:
             st.write(", ".join(str(symbol) for symbol in failed_symbols[:100]))
 
 
+def _store_overview_job_result(result_key: str, result: dict[str, Any]) -> None:
+    st.session_state[result_key] = result
+    try:
+        append_run_history(result)
+    except Exception as exc:  # pragma: no cover - UI resilience only
+        st.session_state["overview_run_history_warning"] = f"Run history write failed: {exc}"
+
+
 def _is_daily_intraday_refresh_due(snapshot: dict[str, Any], *, period: str) -> bool:
     if period != "daily":
         return False
@@ -531,9 +541,12 @@ def _render_market_movers_refresh_bar(
             help=str(state.get("detail") or "Collect the latest quote snapshot.") if state else None,
         ):
             with st.spinner(f"Updating {universe_label} quote snapshot..."):
-                st.session_state[intraday_result_key] = _run_collect_market_intraday_snapshot_compat(
-                    universe_code=universe_code,
-                    universe_limit=universe_limit,
+                _store_overview_job_result(
+                    intraday_result_key,
+                    _run_collect_market_intraday_snapshot_compat(
+                        universe_code=universe_code,
+                        universe_limit=universe_limit,
+                    ),
                 )
             st.rerun()
         if universe_code == "SP500" and cols[1].button(
@@ -542,7 +555,7 @@ def _render_market_movers_refresh_bar(
             use_container_width=True,
         ):
             with st.spinner("Refreshing S&P 500 universe..."):
-                st.session_state["overview_sp500_universe_result"] = run_collect_sp500_universe()
+                _store_overview_job_result("overview_sp500_universe_result", run_collect_sp500_universe())
             st.rerun()
         if universe_code != "SP500":
             cols[1].empty()
@@ -924,8 +937,9 @@ def _render_events_tab() -> None:
         if controls[1].button("Refresh FOMC Calendar", key="overview_events_refresh_fomc", use_container_width=True):
             current_year = datetime.now().year
             with st.spinner("Collecting FOMC calendar from the official Fed page..."):
-                st.session_state["overview_fomc_calendar_result"] = run_collect_fomc_calendar(
-                    years=(current_year, current_year + 1)
+                _store_overview_job_result(
+                    "overview_fomc_calendar_result",
+                    run_collect_fomc_calendar(years=(current_year, current_year + 1)),
                 )
             st.rerun()
         if controls[2].button(
@@ -935,13 +949,16 @@ def _render_events_tab() -> None:
             help="Collects upcoming earnings for the latest S&P 500 market movers snapshot.",
         ):
             with st.spinner("Collecting earnings dates from yfinance calendar for latest S&P 500 movers..."):
-                st.session_state["overview_earnings_calendar_result"] = run_collect_earnings_calendar(
-                    symbol_source="latest_movers",
-                    universe_code="SP500",
-                    top_movers_limit=20,
-                    lookahead_days=120,
-                    max_symbols=50,
-                    validate_with_nasdaq=True,
+                _store_overview_job_result(
+                    "overview_earnings_calendar_result",
+                    run_collect_earnings_calendar(
+                        symbol_source="latest_movers",
+                        universe_code="SP500",
+                        top_movers_limit=20,
+                        lookahead_days=120,
+                        max_symbols=50,
+                        validate_with_nasdaq=True,
+                    ),
                 )
             st.rerun()
         controls[3].caption(
@@ -995,6 +1012,75 @@ def _render_events_tab() -> None:
         _render_event_date_groups(filtered_rows)
     with table_tab:
         st.dataframe(filtered_rows.drop(columns=["Date Parsed"], errors="ignore"), width="stretch", hide_index=True)
+
+
+def _ops_tone(status: str) -> str:
+    normalized = str(status or "").lower()
+    if normalized == "ok":
+        return "positive"
+    if normalized in {"due", "partial"}:
+        return "warning"
+    if normalized in {"failed", "stale", "missing"}:
+        return "danger"
+    return "neutral"
+
+
+def _render_collection_ops_tab() -> None:
+    st.markdown("### Data Health")
+    st.caption("Stored DB freshness and local collection run history for Overview market intelligence.")
+    warning = st.session_state.get("overview_run_history_warning")
+    if warning:
+        st.warning(str(warning))
+
+    snapshot = load_overview_collection_ops_snapshot()
+    coverage = dict(snapshot.get("coverage") or {})
+    review_count = sum(
+        int(coverage.get(key) or 0)
+        for key in ("due_count", "stale_count", "missing_count", "failed_count", "partial_count")
+    )
+    render_status_card_grid(
+        [
+            {
+                "title": "Ops Status",
+                "value": snapshot.get("status") or "-",
+                "detail": f"{review_count} item(s) need review",
+                "tone": "positive" if snapshot.get("status") == "OK" else "warning",
+            },
+            {
+                "title": "Healthy",
+                "value": f"{coverage.get('ok_count') or 0} / {coverage.get('job_count') or 0}",
+                "detail": "collection targets",
+                "tone": "positive" if coverage.get("ok_count") else "neutral",
+            },
+            {
+                "title": "Latest Success",
+                "value": _snapshot_value(coverage.get("latest_success_at")),
+                "detail": "from local run history",
+                "tone": "positive" if coverage.get("latest_success_at") else "neutral",
+            },
+            {
+                "title": "Latest Issue",
+                "value": _snapshot_value(coverage.get("latest_issue_at")),
+                "detail": "failed or partial run",
+                "tone": "danger" if coverage.get("latest_issue_at") else "neutral",
+            },
+        ]
+    )
+    _render_snapshot_warnings(snapshot)
+
+    rows = snapshot.get("rows")
+    if not isinstance(rows, pd.DataFrame) or rows.empty:
+        st.info("No collection ops status is available yet.")
+        return
+
+    status_counts = rows["Status"].value_counts().to_dict() if "Status" in rows else {}
+    render_badge_strip(
+        [
+            {"label": str(status), "value": count, "tone": _ops_tone(str(status))}
+            for status, count in status_counts.items()
+        ]
+    )
+    st.dataframe(rows, width="stretch", hide_index=True)
 
 
 def _render_candidate_ops_tab(
@@ -1113,8 +1199,8 @@ def render_overview_dashboard(
     st.title("Finance Console")
     st.caption("시장 스캔, 후보 운영, Portfolio Proposal, 다음 행동을 한 화면에서 읽는 퀀트 워크벤치 대시보드입니다.")
 
-    market_tab, group_tab, events_tab, candidate_tab = st.tabs(
-        ["Market Movers", "Sector / Industry", "Events", "Candidate Ops"]
+    market_tab, group_tab, events_tab, ops_tab, candidate_tab = st.tabs(
+        ["Market Movers", "Sector / Industry", "Events", "Data Health", "Candidate Ops"]
     )
     with market_tab:
         _render_market_movers_tab()
@@ -1122,6 +1208,8 @@ def render_overview_dashboard(
         _render_sector_industry_tab()
     with events_tab:
         _render_events_tab()
+    with ops_tab:
+        _render_collection_ops_tab()
     with candidate_tab:
         _render_candidate_ops_tab(
             snapshot=snapshot,

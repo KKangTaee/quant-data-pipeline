@@ -72,6 +72,14 @@ http://localhost:8501
    - `Validation`, `Freshness`, `Age Days`, `Event Status`에서 cross-check 여부와 오래된 earnings estimate인지 확인한다.
    - Overview의 refresh buttons도 ingestion job wrapper를 호출한다. UI render 중 직접 외부 source를 scraping하지 않는다.
 
+7. `Workspace > Overview > Data Health`
+   - Market Intelligence 운영 대상 6개를 한 화면에서 확인한다.
+   - 대상은 S&P 500 universe, S&P 500 / Top1000 / Top2000 daily snapshot, FOMC calendar, Earnings calendar다.
+   - 상태는 `OK`, `Due`, `Stale`, `Missing`, `Failed`, `Partial`로 표시된다.
+   - `Latest Success`, `Latest Issue`, `Rows`, `Processed`, `Failed`, `Duration Sec`은 Overview refresh button이 남긴 `.aiworkspace/note/finance/run_history/WEB_APP_RUN_HISTORY.jsonl`의 local run history를 읽는다.
+   - local run history가 비어 있어도 DB freshness만으로 상태와 next action은 표시돼야 한다.
+   - 이 탭은 DB와 local JSONL만 읽고 외부 provider를 fetch하지 않는다.
+
 ## CLI Smoke Checks
 
 작은 수동 earnings smoke:
@@ -105,6 +113,8 @@ PY
 - Earnings rows collected more than 14 days ago show `Freshness=Stale estimate` and a warning.
 - Overview Events displays `Calendar` and `Table` tabs with Window / Source Type / Validation filters.
 - Overview Events `Latest Collection` updates after a successful collector run.
+- Overview Data Health displays 6 collection targets with ops status cards, warning banner, status badges, and next-action table.
+- Overview refresh buttons append their result to local web app run history; the JSONL file itself remains a generated local artifact and is not committed.
 
 ## Failure Handling
 
@@ -116,6 +126,8 @@ PY
 | Old earnings date remains in DB | Estimate date changed | Overview hides superseded rows by default; inspect DB if an audit trail is needed |
 | Market Movers missing count is high | Provider quote rows missing or DB previous close missing | Open `Coverage Diagnostics`, then refresh OHLCV / snapshot source if needed |
 | Events tab is empty | Matching collector has not been run or filter is too narrow | Run FOMC / Earnings refresh and select `All` |
+| Data Health shows stale daily snapshots | Stored 5m snapshot is older than the intraday freshness threshold | Run `Update Daily Snapshot` for the affected coverage |
+| Data Health shows blank latest success / issue | No Overview refresh button has written local run history yet | Use the relevant Overview refresh button or inspect Ingestion output directly |
 | Overview app looks stale after code change | Old Streamlit process still running | Restart the Streamlit server and confirm Runtime / Build metadata in Ingestion |
 
 ## Verification Commands

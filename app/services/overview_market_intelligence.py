@@ -77,6 +77,62 @@ EVENT_COLUMNS = [
     "Collected At",
     "Source URL",
 ]
+OPS_COLUMNS = [
+    "Area",
+    "Status",
+    "Data Freshness",
+    "Last Success",
+    "Last Issue",
+    "Rows",
+    "Processed",
+    "Failed",
+    "Duration Sec",
+    "Next Action",
+    "Message",
+]
+OPS_INTRADAY_TARGETS = [
+    {
+        "area": "S&P 500 Daily Snapshot",
+        "universe_code": "SP500",
+        "job_names": ["collect_sp500_intraday_snapshot"],
+        "missing_action": "Run Update Daily Snapshot for S&P 500.",
+        "due_action": "Refresh S&P 500 daily snapshot before using daily movers.",
+    },
+    {
+        "area": "Top1000 Daily Snapshot",
+        "universe_code": "TOP1000",
+        "job_names": ["collect_top1000_intraday_snapshot"],
+        "missing_action": "Run Update Daily Snapshot for Top1000.",
+        "due_action": "Refresh Top1000 daily snapshot before using daily movers.",
+    },
+    {
+        "area": "Top2000 Daily Snapshot",
+        "universe_code": "TOP2000",
+        "job_names": ["collect_top2000_intraday_snapshot"],
+        "missing_action": "Run Update Daily Snapshot for Top2000.",
+        "due_action": "Refresh Top2000 daily snapshot before using daily movers.",
+    },
+]
+OPS_EVENT_TARGETS = [
+    {
+        "area": "FOMC Calendar",
+        "event_type": "FOMC_MEETING",
+        "job_names": ["collect_fomc_calendar"],
+        "fresh_days": 30,
+        "stale_days": 90,
+        "missing_action": "Run Refresh FOMC Calendar.",
+        "due_action": "Refresh FOMC Calendar from the official Fed page.",
+    },
+    {
+        "area": "Earnings Calendar",
+        "event_type": "EARNINGS",
+        "job_names": ["collect_earnings_calendar"],
+        "fresh_days": 1,
+        "stale_days": EVENT_ESTIMATE_STALE_DAYS,
+        "missing_action": "Run Refresh Earnings Calendar for latest movers or a bounded batch.",
+        "due_action": "Refresh Earnings Calendar before relying on upcoming dates.",
+    },
+]
 
 
 def _default_query(db_name: str, sql: str, params: Sequence[Any] | None = None) -> list[dict[str, Any]]:
@@ -265,6 +321,25 @@ def _empty_events_snapshot(
             "not_confirmed_count": 0,
             "stale_estimate_count": 0,
             "superseded_count": 0,
+        },
+        "warnings": [message] if message else [],
+    }
+
+
+def _empty_ops_snapshot(*, message: str) -> dict[str, Any]:
+    return {
+        "status": "NO_STATUS",
+        "rows": pd.DataFrame(columns=OPS_COLUMNS),
+        "coverage": {
+            "job_count": 0,
+            "ok_count": 0,
+            "due_count": 0,
+            "stale_count": 0,
+            "missing_count": 0,
+            "failed_count": 0,
+            "partial_count": 0,
+            "latest_success_at": None,
+            "latest_issue_at": None,
         },
         "warnings": [message] if message else [],
     }
@@ -1026,6 +1101,359 @@ def build_market_events_snapshot(
             event_type=normalized_type,
             message=f"Market events snapshot failed: {exc}",
         )
+
+
+def _timestamp_sort_value(value: Any) -> str:
+    if value in (None, ""):
+        return ""
+    try:
+        parsed = pd.Timestamp(value)
+    except (TypeError, ValueError):
+        return str(value)
+    if pd.isna(parsed):
+        return ""
+    return parsed.isoformat()
+
+
+def _display_run_time(value: Any) -> str:
+    return _display_datetime(value) or "-"
+
+
+def _latest_history_item(history_rows: Sequence[dict[str, Any]], job_names: Sequence[str]) -> dict[str, Any] | None:
+    job_name_set = set(job_names)
+    matched = [row for row in history_rows if str(row.get("job_name") or "") in job_name_set]
+    if not matched:
+        return None
+    return max(matched, key=lambda row: _timestamp_sort_value(row.get("finished_at") or row.get("started_at")))
+
+
+def _latest_history_item_with_status(
+    history_rows: Sequence[dict[str, Any]],
+    job_names: Sequence[str],
+    statuses: set[str],
+) -> dict[str, Any] | None:
+    normalized_statuses = {status.lower() for status in statuses}
+    matched = [
+        row
+        for row in history_rows
+        if str(row.get("job_name") or "") in set(job_names)
+        and str(row.get("status") or "").lower() in normalized_statuses
+    ]
+    if not matched:
+        return None
+    return max(matched, key=lambda row: _timestamp_sort_value(row.get("finished_at") or row.get("started_at")))
+
+
+def _history_status_overlay(
+    base_status: str,
+    *,
+    latest_run: dict[str, Any] | None,
+    latest_success: dict[str, Any] | None,
+) -> str:
+    if latest_run is None:
+        return base_status
+    run_status = str(latest_run.get("status") or "").lower()
+    if run_status == "failed":
+        success_time = _timestamp_sort_value((latest_success or {}).get("finished_at") or (latest_success or {}).get("started_at"))
+        run_time = _timestamp_sort_value(latest_run.get("finished_at") or latest_run.get("started_at"))
+        if not success_time or run_time >= success_time:
+            return "Failed"
+    if run_status == "partial_success":
+        return "Partial"
+    return base_status
+
+
+def _history_metrics(
+    *,
+    latest_run: dict[str, Any] | None,
+    latest_success: dict[str, Any] | None,
+) -> dict[str, Any]:
+    source = latest_run or latest_success or {}
+    failed_symbols = source.get("failed_symbols") or []
+    if not isinstance(failed_symbols, list):
+        failed_symbols = []
+    return {
+        "Last Success": _display_run_time((latest_success or {}).get("finished_at") or (latest_success or {}).get("started_at")),
+        "Last Issue": _display_run_time(source.get("finished_at") or source.get("started_at"))
+        if str(source.get("status") or "").lower() in {"failed", "partial_success"}
+        else "-",
+        "Rows": source.get("rows_written") if source else None,
+        "Processed": source.get("symbols_processed") if source else None,
+        "Failed": len(failed_symbols),
+        "Duration Sec": source.get("duration_sec") if source else None,
+        "Message": source.get("message") or "-",
+    }
+
+
+def _age_days(value: Any, *, today: date) -> int | None:
+    if value in (None, ""):
+        return None
+    try:
+        parsed = pd.Timestamp(value)
+    except (TypeError, ValueError):
+        return None
+    if pd.isna(parsed):
+        return None
+    if parsed.tzinfo is not None:
+        parsed = parsed.tz_convert(None)
+    return max(0, int((pd.Timestamp(today).normalize() - parsed.normalize()).days))
+
+
+def _latest_intraday_ops_rows(query_fn: QueryFn) -> dict[str, dict[str, Any]]:
+    try:
+        rows = query_fn(
+            "finance_price",
+            """
+            SELECT universe_code, interval_code, MAX(snapshot_time_utc) AS latest_snapshot_time
+            FROM market_intraday_snapshot
+            WHERE interval_code = %s
+            GROUP BY universe_code, interval_code
+            """,
+            ["5m"],
+        )
+    except Exception:
+        return {}
+    return {str(row.get("universe_code") or "").upper(): row for row in rows}
+
+
+def _latest_universe_ops_rows(query_fn: QueryFn) -> dict[str, dict[str, Any]]:
+    try:
+        rows = query_fn(
+            "finance_meta",
+            """
+            SELECT
+                universe_code,
+                COUNT(*) AS active_symbols,
+                MAX(collected_at) AS latest_collected_at,
+                MAX(as_of_date) AS latest_as_of_date
+            FROM market_universe_member
+            WHERE active = 1
+            GROUP BY universe_code
+            """,
+            None,
+        )
+    except Exception:
+        return {}
+    return {str(row.get("universe_code") or "").upper(): row for row in rows}
+
+
+def _latest_event_ops_rows(query_fn: QueryFn, *, today: date) -> dict[str, dict[str, Any]]:
+    try:
+        rows = query_fn(
+            "finance_meta",
+            """
+            SELECT
+                event_type,
+                COUNT(*) AS active_events,
+                SUM(CASE WHEN event_date >= %s THEN 1 ELSE 0 END) AS future_events,
+                MIN(CASE WHEN event_date >= %s THEN event_date ELSE NULL END) AS next_event_date,
+                MAX(collected_at) AS latest_collected_at
+            FROM market_event_calendar
+            WHERE COALESCE(event_status, 'active') <> 'superseded'
+            GROUP BY event_type
+            """,
+            [today.isoformat(), today.isoformat()],
+        )
+    except Exception:
+        try:
+            rows = query_fn(
+                "finance_meta",
+                """
+                SELECT
+                    event_type,
+                    COUNT(*) AS active_events,
+                    SUM(CASE WHEN event_date >= %s THEN 1 ELSE 0 END) AS future_events,
+                    MIN(CASE WHEN event_date >= %s THEN event_date ELSE NULL END) AS next_event_date,
+                    MAX(collected_at) AS latest_collected_at
+                FROM market_event_calendar
+                GROUP BY event_type
+                """,
+                [today.isoformat(), today.isoformat()],
+            )
+        except Exception:
+            return {}
+    return {str(row.get("event_type") or "").upper(): row for row in rows}
+
+
+def _intraday_ops_status(row: dict[str, Any] | None) -> tuple[str, str, str]:
+    if not row or not row.get("latest_snapshot_time"):
+        return "Missing", "No stored 5m snapshot", "Run the daily snapshot collector."
+    age = _stale_minutes(row.get("latest_snapshot_time"))
+    if age is None:
+        return "Missing", "Snapshot age unknown", "Run the daily snapshot collector."
+    if age <= MARKET_INTRADAY_REFRESH_MINUTES:
+        return "OK", f"{age}m old", "No action needed."
+    if age <= MARKET_INTRADAY_STALE_MINUTES:
+        return "Due", f"{age}m old", "Refresh if you need live daily movers."
+    return "Stale", f"{age}m old", "Refresh before using daily movers."
+
+
+def _days_based_ops_status(
+    *,
+    latest_collected_at: Any,
+    active_count: int,
+    fresh_days: int,
+    stale_days: int,
+    today: date,
+    missing_text: str,
+) -> tuple[str, str]:
+    if active_count <= 0:
+        return "Missing", missing_text
+    age = _age_days(latest_collected_at, today=today)
+    if age is None:
+        return "Due", "Collection age unknown"
+    if age <= fresh_days:
+        return "OK", f"{age}d old"
+    if age <= stale_days:
+        return "Due", f"{age}d old"
+    return "Stale", f"{age}d old"
+
+
+def _ops_row(
+    *,
+    area: str,
+    base_status: str,
+    data_freshness: str,
+    next_action: str,
+    job_names: Sequence[str],
+    history_rows: Sequence[dict[str, Any]],
+) -> dict[str, Any]:
+    latest_run = _latest_history_item(history_rows, job_names)
+    latest_success = _latest_history_item_with_status(history_rows, job_names, {"success"})
+    status = _history_status_overlay(base_status, latest_run=latest_run, latest_success=latest_success)
+    metrics = _history_metrics(latest_run=latest_run, latest_success=latest_success)
+    if status == "OK":
+        action = "No action needed."
+    elif status == "Failed":
+        action = "Open run history details and rerun after checking the failure message."
+    elif status == "Partial":
+        action = "Inspect failed symbols, then rerun a bounded collection."
+    else:
+        action = next_action
+    return {
+        "Area": area,
+        "Status": status,
+        "Data Freshness": data_freshness,
+        **metrics,
+        "Next Action": action,
+    }
+
+
+def _ops_coverage(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    statuses = [str(row.get("Status") or "") for row in rows]
+    success_times = [row.get("Last Success") for row in rows if row.get("Last Success") not in (None, "-")]
+    issue_times = [row.get("Last Issue") for row in rows if row.get("Last Issue") not in (None, "-")]
+    return {
+        "job_count": len(rows),
+        "ok_count": statuses.count("OK"),
+        "due_count": statuses.count("Due"),
+        "stale_count": statuses.count("Stale"),
+        "missing_count": statuses.count("Missing"),
+        "failed_count": statuses.count("Failed"),
+        "partial_count": statuses.count("Partial"),
+        "latest_success_at": max(success_times) if success_times else None,
+        "latest_issue_at": max(issue_times) if issue_times else None,
+    }
+
+
+def build_collection_ops_snapshot(
+    *,
+    history_rows: Sequence[dict[str, Any]] | None = None,
+    today: date | None = None,
+    query_fn: QueryFn | None = None,
+) -> dict[str, Any]:
+    """Build the Overview Data Health read model from stored DB freshness and local job history."""
+    query = query_fn or _default_query
+    today_value = today or date.today()
+    history = list(history_rows or [])
+
+    try:
+        intraday_rows = _latest_intraday_ops_rows(query)
+        universe_rows = _latest_universe_ops_rows(query)
+        event_rows = _latest_event_ops_rows(query, today=today_value)
+    except Exception as exc:
+        return _empty_ops_snapshot(message=f"Collection ops snapshot failed: {exc}")
+
+    rows: list[dict[str, Any]] = []
+    sp500_universe = universe_rows.get("SP500")
+    universe_status, universe_freshness = _days_based_ops_status(
+        latest_collected_at=(sp500_universe or {}).get("latest_collected_at"),
+        active_count=int((sp500_universe or {}).get("active_symbols") or 0),
+        fresh_days=7,
+        stale_days=30,
+        today=today_value,
+        missing_text="No active S&P 500 universe rows",
+    )
+    rows.append(
+        _ops_row(
+            area="S&P 500 Universe",
+            base_status=universe_status,
+            data_freshness=universe_freshness,
+            next_action="Refresh S&P 500 universe membership.",
+            job_names=["collect_sp500_universe"],
+            history_rows=history,
+        )
+    )
+
+    for target in OPS_INTRADAY_TARGETS:
+        base_status, freshness, default_action = _intraday_ops_status(
+            intraday_rows.get(str(target["universe_code"]))
+        )
+        rows.append(
+            _ops_row(
+                area=str(target["area"]),
+                base_status=base_status,
+                data_freshness=freshness,
+                next_action=str(target["missing_action"] if base_status == "Missing" else target["due_action"] or default_action),
+                job_names=list(target["job_names"]),
+                history_rows=history,
+            )
+        )
+
+    for target in OPS_EVENT_TARGETS:
+        event_row = event_rows.get(str(target["event_type"]))
+        active_count = int((event_row or {}).get("future_events") or (event_row or {}).get("active_events") or 0)
+        base_status, freshness = _days_based_ops_status(
+            latest_collected_at=(event_row or {}).get("latest_collected_at"),
+            active_count=active_count,
+            fresh_days=int(target["fresh_days"]),
+            stale_days=int(target["stale_days"]),
+            today=today_value,
+            missing_text=f"No future {target['event_type']} rows",
+        )
+        next_event = _iso_date((event_row or {}).get("next_event_date"))
+        if next_event and freshness != "No future rows":
+            freshness = f"{freshness}; next {next_event}"
+        rows.append(
+            _ops_row(
+                area=str(target["area"]),
+                base_status=base_status,
+                data_freshness=freshness,
+                next_action=str(target["missing_action"] if base_status == "Missing" else target["due_action"]),
+                job_names=list(target["job_names"]),
+                history_rows=history,
+            )
+        )
+
+    coverage = _ops_coverage(rows)
+    review_count = sum(
+        int(coverage.get(key) or 0)
+        for key in ("due_count", "stale_count", "missing_count", "failed_count", "partial_count")
+    )
+    status = "OK" if review_count == 0 else "REVIEW"
+    warnings: list[str] = []
+    if int(coverage.get("failed_count") or 0) > 0:
+        warnings.append("One or more market intelligence collection jobs failed after the last successful run.")
+    if int(coverage.get("missing_count") or 0) > 0:
+        warnings.append("One or more market intelligence data sets are missing stored rows.")
+    if int(coverage.get("stale_count") or 0) > 0:
+        warnings.append("One or more market intelligence data sets are stale and should be refreshed.")
+    return {
+        "status": status,
+        "rows": pd.DataFrame(rows, columns=OPS_COLUMNS),
+        "coverage": coverage,
+        "warnings": warnings,
+    }
 
 
 def _ranked_movers_frame(rows: list[dict[str, Any]], *, top_n: int) -> pd.DataFrame:

@@ -4043,3 +4043,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - 3차 task 3-01~3-03을 완료해 earnings row에 source validation / lifecycle metadata를 저장한다.
   - yfinance earnings estimate는 선택적으로 Nasdaq earnings calendar와 cross-check하고, 변경된 이전 estimate는 superseded / stale 상태로 정리한다.
   - Ingestion은 latest movers 외에 S&P 500 / Top1000 / Top2000 low-frequency batch 수집을 지원하며 다음 단계는 4차 visuals / calendar UX polish다.
+- Overview Market Intelligence 5차 ops hardening:
+  - `.aiworkspace/note/finance/tasks/active/overview-mi-ops-hardening/`에서 Overview `Data Health` 탭을 추가했다.
+  - Data Health는 DB freshness와 local `WEB_APP_RUN_HISTORY.jsonl`을 결합해 6개 수집 대상의 OK / Stale / Missing / Failed / Partial 상태와 next action을 보여준다.
+  - Overview refresh buttons가 실행 결과를 local web app run history에 남기도록 연결했고, service contract / browser smoke 검증을 완료했다.

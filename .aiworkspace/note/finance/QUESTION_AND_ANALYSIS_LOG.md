@@ -5441,3 +5441,14 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 같은 symbol/source의 이전 active earnings estimate는 DB에 남기되 `superseded`로 숨기고, 오래된 provider estimate는 `stale`로 구분하는 것이 auditability와 UX를 모두 지킨다
 - Follow-up:
   - 3차 baseline을 구현했다. 다음은 4차에서 sector/mover visuals와 calendar-like Events UX를 다듬는 작업이다
+
+### 2026-05-28 - Overview Market Intelligence 5차는 운영 상태판을 먼저 보강한다
+- User request:
+  - 사용자가 5차 작업 진행을 요청함
+- Interpreted goal:
+  - macro calendar나 official earnings source 같은 새 데이터 확장 전에, 이미 만든 Overview 수집 흐름이 매일 운영 가능한지 상태와 실패 원인을 한 화면에서 봐야 함
+- Analysis result:
+  - 현재 DB freshness metadata와 local `WEB_APP_RUN_HISTORY.jsonl`만으로 1차 Data Health read model을 만들 수 있다
+  - 새 외부 source나 schema를 추가하지 않고도 stale snapshot, missing collection, partial / failed run을 구분할 수 있다
+- Follow-up:
+  - Overview `Data Health` 탭과 refresh-button run history 기록을 추가했다. 다음 고도화 후보는 scheduled refresh automation, macro calendar, official earnings source 중에서 선택한다

@@ -23,6 +23,12 @@ def _infer_pipeline_type(record: dict[str, Any]) -> str | None:
         "calculate_factors": "manual_factor_calculation",
         "collect_financial_statements": "manual_financial_statement_ingestion",
         "collect_asset_profiles": "manual_asset_profile_collection",
+        "collect_sp500_universe": "overview_sp500_universe_collection",
+        "collect_sp500_intraday_snapshot": "overview_market_snapshot",
+        "collect_top1000_intraday_snapshot": "overview_market_snapshot",
+        "collect_top2000_intraday_snapshot": "overview_market_snapshot",
+        "collect_fomc_calendar": "overview_fomc_calendar_collection",
+        "collect_earnings_calendar": "overview_earnings_calendar_collection",
     }
     return mapping.get(job_name)
 
@@ -55,6 +61,10 @@ def _infer_execution_context(record: dict[str, Any]) -> str | None:
         "manual_financial_statement_ingestion": "Manual detailed financial statement ingestion for the selected symbols or universe source.",
         "statement_shadow_rebuild": "Manual rebuild of statement shadow tables using already stored raw statement ledgers.",
         "manual_asset_profile_collection": "Manual asset-profile refresh for the tracked stock and ETF universes.",
+        "overview_sp500_universe_collection": "Overview S&P 500 universe membership refresh for market intelligence.",
+        "overview_market_snapshot": "Overview market movers intraday previous-close snapshot refresh.",
+        "overview_fomc_calendar_collection": "Overview FOMC calendar refresh from the official Fed page.",
+        "overview_earnings_calendar_collection": "Overview bounded earnings calendar refresh for active event intelligence.",
     }
     return mapping.get(pipeline_type)
 
