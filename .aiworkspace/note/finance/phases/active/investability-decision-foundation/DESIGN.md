@@ -1,6 +1,6 @@
 # Investability Decision Foundation Design
 
-Status: Active
+Status: Implementation Complete
 Created: 2026-05-28
 
 ## Design Summary
@@ -139,3 +139,16 @@ Final Review와 Selected Dashboard는 항상 아래 경계를 유지한다.
 | robustness / sensitivity runtime | `finance-strategy-implementation` plus backtest workflow | proven existing runtime preferred |
 | documentation sync | `finance-doc-sync` | roadmap, flow, root logs only after scope changes |
 | integration review | `finance-integration-review` | use before merging broad cross-domain changes |
+
+## Closed Implementation Slices
+
+| Slice | Result |
+| --- | --- |
+| Evidence Packet | Final Review reads validation / robustness / paper observation evidence as a compact investability packet |
+| Gate Hardening | Selected route is blocked by profile-aware critical policy gaps |
+| Storage Governance | JSONL write surfaces are classified; no registry rewrite was performed |
+| Data Provenance | Provider / macro source mix, freshness, and stale evidence are visible in compact form |
+| Look-through Board | Holdings / exposure evidence is summarized without storing full rows in workflow JSONL |
+| Robustness Lab | Stress / rolling / sensitivity / overfit evidence is summarized for Practical Validation and Final Review |
+| Selected Monitoring Timeline | Selected Dashboard shows read-only session-state review signals without auto log writes |
+| Decision Dossier | Saved final decisions can be exported as read-only markdown without auto report writes |

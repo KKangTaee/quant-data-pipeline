@@ -7,7 +7,8 @@ Last Verified: 2026-05-28
 
 | Track | Status | Notes |
 |---|---|---|
-| Investability Decision Foundation | Active | `.aiworkspace/note/finance/phases/active/investability-decision-foundation/`; validation gate, storage governance, data provenance baseline, look-through exposure board, robustness lab, selected monitoring timeline, decision dossier 완료, 다음은 phase closeout / structured waiver policy decision |
+| Investability Decision Foundation | Implementation complete | `.aiworkspace/note/finance/phases/active/investability-decision-foundation/`, closeout summary `.aiworkspace/note/finance/phases/done/investability-decision-foundation.md`; validation gate, storage governance, provenance, look-through, robustness, selected monitoring, decision dossier 완료 |
+| Investability Foundation Closeout | Complete | `.aiworkspace/note/finance/tasks/active/investability-decision-foundation-closeout/`; 계획된 구현 track 완료 처리, carry-forward decision을 structured waiver / Practical Validation V2 P2 closeout로 분리 |
 | Decision Dossier Report V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/decision-dossier-report-v1/`; Final Review와 Selected Dashboard에서 저장된 최종 판단을 read-only markdown dossier로 표시 / 다운로드 |
 | Selected Monitoring Timeline V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/selected-monitoring-timeline-v1/`; Selected Dashboard에 read-only Timeline tab을 추가해 selection / evidence gate / recheck / drift / trigger preview를 자동 저장 없이 시간순으로 표시 |
 | Robustness Lab V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/robustness-lab-v1/`; stress / rolling / sensitivity / overfit evidence를 compact board로 묶어 Practical Validation과 Final Review에 표시 |
@@ -84,4 +85,4 @@ P2에서 정상화하는 주요 진단:
 
 - UI Engine Boundary Cleanup은 완료됐다. 다음 구조 작업은 새 phase/task로 열고, 현재 경계는 boundary lint와 service contract test를 먼저 통과시키는 기준으로 유지한다.
 - Practical Validation V2는 P2 QA 여부를 확인한 뒤 P3로 넘어갈지, P2를 closeout할지 결정한다.
-- Investability Decision Foundation은 계획된 구현 task를 `decision-dossier-report-v1`까지 완료했다. 다음 후보는 phase closeout 또는 structured waiver policy 허용 여부 결정이다.
+- Investability Decision Foundation은 implementation track을 closeout했다. 다음 후보는 structured waiver policy 허용 여부 결정 또는 Practical Validation V2 P2 closeout이다.

@@ -22,6 +22,9 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-28
+- Closed out `.aiworkspace/note/finance/phases/active/investability-decision-foundation/` as implementation complete.
+- Added `.aiworkspace/note/finance/phases/done/investability-decision-foundation.md` as the concise closeout summary.
+- Carry-forward decisions are structured waiver policy, provider snapshot PIT/as-of requirement, and Practical Validation V2 P2 closeout.
 - Completed `.aiworkspace/note/finance/tasks/active/decision-dossier-report-v1/`.
 - Final Review saved records and Selected Portfolio Dashboard can now render/download a read-only markdown Decision Dossier.
 - Dossier generation reads existing final decision evidence and optional session timeline; it does not auto-write report files, monitoring logs, orders, or approval rows.

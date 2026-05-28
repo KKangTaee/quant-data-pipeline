@@ -1,6 +1,6 @@
 # Investability Decision Foundation Integration
 
-Status: Active
+Status: Implementation Complete
 Created: 2026-05-28
 
 ## Worktree Boundary
@@ -43,6 +43,7 @@ This phase belongs to `main-dev`.
 6. Robustness Lab.
 7. Monitoring timeline. Complete.
 8. Decision dossier / report. Complete.
+9. Phase closeout. Complete.
 
 ## Verification Baseline
 

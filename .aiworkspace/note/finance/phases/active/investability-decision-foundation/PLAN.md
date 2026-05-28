@@ -1,6 +1,6 @@
 # Investability Decision Foundation Plan
 
-Status: Active
+Status: Implementation Complete
 Created: 2026-05-28
 
 ## 이걸 하는 이유?
@@ -63,14 +63,14 @@ Backtest 중심 탐색 도구를 "실전 검토 가능한 포트폴리오 후보
 
 | Phase Slice | Goal | Status |
 | --- | --- | --- |
-| Phase 0 | 저장 / 검증 / 데이터 수집 / UX 용어 기준 확정 | Active |
-| Phase 1 | Final Review Investability Evidence Packet V1 | Landed before this phase board |
-| Phase 2 | Validation Gate Hardening V1 | Planned |
-| Phase 3 | Data Provenance / Storage Governance V1 | Planned |
-| Phase 4 | Look-through Exposure Board V1 | Planned |
-| Phase 5 | Robustness Lab V1 | Planned |
-| Phase 6 | Selected Monitoring Timeline V1 | Planned |
-| Phase 7 | Decision Dossier / Report V1 | Planned |
+| Phase 0 | 저장 / 검증 / 데이터 수집 / UX 용어 기준 확정 | Complete |
+| Phase 1 | Final Review Investability Evidence Packet V1 | Complete |
+| Phase 2 | Validation Gate Hardening V1 | Complete |
+| Phase 3 | Data Provenance / Storage Governance V1 | Complete |
+| Phase 4 | Look-through Exposure Board V1 | Complete |
+| Phase 5 | Robustness Lab V1 | Complete |
+| Phase 6 | Selected Monitoring Timeline V1 | Complete |
+| Phase 7 | Decision Dossier / Report V1 | Complete |
 
 ## Done Criteria
 
@@ -80,3 +80,14 @@ Backtest 중심 탐색 도구를 "실전 검토 가능한 포트폴리오 후보
 - Data acquisition policy states free API / official source first, crawler only through ingestion, DB as durable source, UI no direct fetch.
 - Task board identifies owners, dependencies, conflict files, and verification standards.
 - Durable docs point future workers to this phase board.
+
+## Closeout Result
+
+The planned implementation slices are complete as of 2026-05-28.
+The phase remains in `phases/active/` for discoverability, but its implementation track is closed.
+
+Carry-forward decisions:
+
+- Whether `structured-waiver-policy-v1` should exist at all.
+- Whether selected decisions should eventually require an as-of provider snapshot id.
+- Whether Practical Validation V2 P2 should be closed out or extended before P3.

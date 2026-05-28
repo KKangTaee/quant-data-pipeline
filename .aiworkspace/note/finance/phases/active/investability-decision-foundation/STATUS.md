@@ -1,13 +1,13 @@
 # Investability Decision Foundation Status
 
-Status: Active
+Status: Implementation Complete
 Last Updated: 2026-05-28
 
 ## Current Status
 
 - Phase opened from `2026-05-investable-workflow-gap-analysis` recommendation and user approval.
-- `investability-evidence-packet-v1` has already landed as the first narrow implementation slice.
-- Phase 0 is now defining the policy baseline around storage, validation gates, data acquisition, wording, and task order.
+- Planned implementation tasks 0-8 are complete.
+- The phase is closed at the implementation-track level; remaining items are policy decisions or next-phase candidates.
 
 ## Completed
 
@@ -24,12 +24,12 @@ Last Updated: 2026-05-28
 
 ## In Progress
 
-- Prepare phase closeout or structured waiver policy decision.
+- No implementation work in this phase.
 
 ## Next
 
-1. Decide whether to close out the phase now or open `structured-waiver-policy-v1`.
-2. Decide structured waiver policy before allowing selected-route override.
+1. Decide whether `structured-waiver-policy-v1` should exist.
+2. Decide whether Practical Validation V2 P2 should close out or continue before P3.
 3. Keep storage governance checklist mandatory before adding persistence.
 
 ## Current Defaults
@@ -45,3 +45,18 @@ Last Updated: 2026-05-28
 - Robustness Lab rows are compact summaries; raw run history and strategy-specific perturbation artifacts are not stored in JSONL.
 - Selected Monitoring Timeline rows are read-only summaries from existing final decision and session-state checks; they are not monitoring log writes.
 - Decision Dossier markdown is a user-initiated export string; the UI does not auto-write report files.
+
+## Closeout Summary
+
+This phase hardened the current workflow without changing the main storage chain.
+
+Main chain remains:
+
+```text
+PORTFOLIO_SELECTION_SOURCES
+  -> PRACTICAL_VALIDATION_RESULTS
+  -> FINAL_PORTFOLIO_SELECTION_DECISIONS_V2
+  -> read-only Selected Portfolio Dashboard / user-initiated exports
+```
+
+The most important carry-forward policy is that critical gaps still block selected route until a structured waiver policy is explicitly designed.

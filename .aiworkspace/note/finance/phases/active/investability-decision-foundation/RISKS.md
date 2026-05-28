@@ -1,6 +1,6 @@
 # Investability Decision Foundation Risks
 
-Status: Active
+Status: Implementation Complete
 Created: 2026-05-28
 
 ## Product Risks
@@ -42,3 +42,9 @@ Created: 2026-05-28
 - Is paper observation mandatory for every selected route, or only for specific strategy / product types?
 - Should current provider snapshot be acceptable, or should final decision require an as-of snapshot id?
 - What is the minimum monitoring obligation after a waived or watch-level selection?
+
+## Closeout Position
+
+- V1 does not implement waiver.
+- Until a structured waiver task is opened and approved, critical gaps continue to block selected route.
+- Current provider snapshots remain disclosed limitations, not point-in-time truth guarantees.

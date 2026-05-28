@@ -21,6 +21,18 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-28 - Investability foundation implementation track is complete
+- User request:
+  - 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - 계획된 구현 task가 끝난 phase를 계속 확장하지 말고 완료 상태와 다음 의사결정을 분리해야 함.
+- Analysis result:
+  - `investability-decision-foundation-closeout` task를 열고 closeout을 문서화했다.
+  - Phase status는 implementation complete로 정리했고, concise done summary를 `phases/done/investability-decision-foundation.md`에 추가했다.
+  - Main storage chain은 `PORTFOLIO_SELECTION_SOURCES -> PRACTICAL_VALIDATION_RESULTS -> FINAL_PORTFOLIO_SELECTION_DECISIONS_V2`로 유지된다.
+- Follow-up:
+  - 다음 후보는 `structured-waiver-policy-v1` 허용 여부 결정 또는 Practical Validation V2 P2 closeout이다.
+
 ### 2026-05-28 - Final decision evidence는 read-only dossier로 묶는다
 - User request:
   - Investability Decision Foundation의 다음 작업 진행을 요청함.

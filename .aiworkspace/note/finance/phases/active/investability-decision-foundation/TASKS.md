@@ -1,6 +1,6 @@
 # Investability Decision Foundation Tasks
 
-Status: Active
+Status: Implementation Complete
 Created: 2026-05-28
 
 ## Task Board
@@ -19,17 +19,17 @@ Created: 2026-05-28
 
 ## Immediate Next Task
 
-Next recommended step is phase closeout or a structured waiver policy decision.
+Next recommended step is a separate structured waiver policy decision or Practical Validation V2 P2 closeout.
 
 Goal:
 
-- `phase-closeout`: completed implementation slices를 검증하고, docs 승격 / 남은 risks / next phase candidate를 정리한다.
 - `structured-waiver-policy-v1`: critical gap waiver를 허용할지, 허용한다면 expiry / scope / review trigger를 어떻게 제한할지 결정한다.
+- `practical-validation-v2-p2-closeout`: provider / macro / stress evidence 정상화가 P2 기준을 충족했는지 확인한다.
 
 Expected files:
 
-- phase closeout: phase docs, roadmap, root logs.
 - structured waiver: `app/services/backtest_evidence_read_model.py`, `app/web/backtest_final_review*.py`, docs/flows, tests.
+- P2 closeout: `.aiworkspace/note/finance/tasks/active/practical-validation-v2/`, docs/data, docs/flows.
 
 Out of scope for the next task:
 
@@ -47,6 +47,7 @@ Out of scope for the next task:
 - Task 6 implemented a compact robustness board from existing stress / rolling / sensitivity / overfit evidence without adding a new registry.
 - Task 7 implemented a read-only Timeline tab and did not add automatic monitoring log writes. Monitoring snapshots should stay explicit user action unless a later automation policy is approved.
 - Task 8 implemented a read-only markdown dossier export without automatic report file writes.
+- Closeout recorded this phase as implementation complete. Follow-up work should open a new task instead of extending this board.
 
 ## Completion Standard Per Task
 
