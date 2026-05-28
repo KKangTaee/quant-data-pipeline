@@ -855,6 +855,11 @@ class MarketIntelligenceEventCalendarContractTests(unittest.TestCase):
             "symbol",
             "title",
             "source",
+            "source_type",
+            "validation_status",
+            "event_status",
+            "superseded_by_event_key",
+            "superseded_at",
             "source_url",
             "confidence",
             "collected_at",
@@ -967,7 +972,43 @@ class MarketIntelligenceEventCalendarContractTests(unittest.TestCase):
         self.assertEqual(row["symbol"], "AAA")
         self.assertEqual(row["event_type"], "EARNINGS")
         self.assertEqual(row["confidence"], 0.65)
+        self.assertEqual(row["source_type"], "provider_estimate")
+        self.assertEqual(row["validation_status"], "estimate_only")
         self.assertEqual(row["raw_payload"]["provider_calendar"]["Earnings Average"], 1.23)
+
+    def test_yfinance_earnings_calendar_can_cross_check_nasdaq_source(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        class FakeTicker:
+            def __init__(self, symbol: str) -> None:
+                self.calendar = {"Earnings Date": [date(2026, 7, 30)]}
+
+        def fake_nasdaq_fetcher(dates, **kwargs):
+            del kwargs
+            self.assertEqual(dates, ["2026-07-30"])
+            return {
+                "2026-07-30": {
+                    "symbols": ["AAA", "MSFT"],
+                    "source": mi.NASDAQ_EARNINGS_CALENDAR_SOURCE,
+                    "source_url": "https://api.nasdaq.test/calendar?date=2026-07-30",
+                    "status": "ok",
+                }
+            }
+
+        result = mi.fetch_yfinance_earnings_calendar_events(
+            ["AAA"],
+            start_date="2026-05-28",
+            lookahead_days=120,
+            validate_with_nasdaq=True,
+            nasdaq_fetcher=fake_nasdaq_fetcher,
+            ticker_factory=FakeTicker,
+        )
+
+        row = result["events"][0]
+        self.assertEqual(result["validation_source"], mi.NASDAQ_EARNINGS_CALENDAR_SOURCE)
+        self.assertEqual(row["validation_status"], "cross_checked")
+        self.assertEqual(row["confidence"], 0.75)
+        self.assertTrue(row["raw_payload"]["source_validation"]["fallback_order"][1]["matched"])
 
     def test_collect_earnings_calendar_writes_event_rows(self) -> None:
         from finance.data import market_intelligence as mi
@@ -998,6 +1039,8 @@ class MarketIntelligenceEventCalendarContractTests(unittest.TestCase):
                         "symbol": "AAA",
                         "title": "AAA Earnings Release",
                         "source": mi.EARNINGS_CALENDAR_SOURCE,
+                        "source_type": "provider_estimate",
+                        "validation_status": "estimate_only",
                         "source_url": "https://finance.yahoo.com/quote/AAA/analysis",
                         "confidence": 0.65,
                         "raw_payload": {"provider": mi.EARNINGS_CALENDAR_SOURCE},
@@ -1008,7 +1051,11 @@ class MarketIntelligenceEventCalendarContractTests(unittest.TestCase):
                 "failed_symbols": [],
             }
 
-        with patch.object(mi, "upsert_market_event_rows", side_effect=capture_rows):
+        with (
+            patch.object(mi, "upsert_market_event_rows", side_effect=capture_rows),
+            patch.object(mi, "mark_superseded_earnings_events", return_value=0),
+            patch.object(mi, "mark_stale_earnings_estimates", return_value=0),
+        ):
             result = mi.collect_and_store_earnings_calendar(
                 symbols=["AAA", "BBB"],
                 lookahead_days=90,
@@ -1022,7 +1069,70 @@ class MarketIntelligenceEventCalendarContractTests(unittest.TestCase):
         self.assertEqual(result["rows_written"], 1)
         self.assertEqual(result["event_dates"], ["2026-07-30"])
         self.assertEqual(result["missing_symbols"], ["BBB"])
+        self.assertEqual(result["superseded_rows_marked"], 0)
+        self.assertEqual(result["stale_rows_marked"], 0)
         self.assertEqual(captured_rows[0]["collected_at"], result["collected_at"])
+
+    def test_resolve_earnings_collection_symbols_supports_universe_batches(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        symbols, source = mi.resolve_earnings_collection_symbols(
+            symbol_source="top1000",
+            max_symbols=2,
+            batch_offset=1,
+            source_symbols_loader=lambda: ["AAA", "BBB", "CCC", "DDD"],
+        )
+
+        self.assertEqual(source, "top1000")
+        self.assertEqual(symbols, ["BBB", "CCC"])
+
+    def test_mark_superseded_earnings_events_marks_prior_active_rows(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        class FakeDb:
+            def __init__(self) -> None:
+                self.used_dbs: list[str] = []
+                self.queries: list[tuple[str, list[object]]] = []
+                self.executes: list[tuple[str, list[object]]] = []
+                self.closed = False
+
+            def use_db(self, db_name: str) -> None:
+                self.used_dbs.append(db_name)
+
+            def query(self, sql: str, params=None):
+                self.queries.append((sql, list(params or [])))
+                return [{"event_key": "old-key"}]
+
+            def execute(self, sql: str, params=None) -> None:
+                self.executes.append((sql, list(params or [])))
+
+            def close(self) -> None:
+                self.closed = True
+
+        fake_db = FakeDb()
+        with (
+            patch.object(mi, "_db", return_value=fake_db),
+            patch.object(mi, "sync_table_schema") as sync_schema,
+        ):
+            marked = mi.mark_superseded_earnings_events(
+                [
+                    {
+                        "event_date": "2026-07-30",
+                        "event_type": "EARNINGS",
+                        "symbol": "AAA",
+                        "title": "AAA Earnings Release",
+                        "source": mi.EARNINGS_CALENDAR_SOURCE,
+                    }
+                ],
+                superseded_at="2026-05-28 04:00:00",
+            )
+
+        self.assertEqual(marked, 1)
+        self.assertEqual(fake_db.used_dbs, ["finance_meta"])
+        sync_schema.assert_called_once()
+        self.assertEqual(fake_db.executes[0][1][0], "superseded")
+        self.assertEqual(fake_db.executes[0][1][-1], "old-key")
+        self.assertTrue(fake_db.closed)
 
     def test_market_event_upsert_normalizes_payload_and_business_key(self) -> None:
         from finance.data import market_intelligence as mi
@@ -1070,6 +1180,9 @@ class MarketIntelligenceEventCalendarContractTests(unittest.TestCase):
         self.assertEqual(captured["event_date"], "2026-06-17")
         self.assertEqual(captured["event_type"], "FOMC_MEETING")
         self.assertIsNone(captured["symbol"])
+        self.assertEqual(captured["source_type"], "unknown")
+        self.assertEqual(captured["validation_status"], "unknown")
+        self.assertEqual(captured["event_status"], "active")
         self.assertEqual(captured["confidence"], 0.95)
         self.assertEqual(captured["raw_payload_json"], '{"meeting":"June"}')
         self.assertEqual(len(str(captured["event_key"])), 64)

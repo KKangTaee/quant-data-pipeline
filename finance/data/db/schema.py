@@ -331,6 +331,11 @@ MARKET_INTELLIGENCE_SCHEMAS = {
           title VARCHAR(512) NOT NULL,
 
           source VARCHAR(64) NOT NULL,
+          source_type VARCHAR(32) NULL,
+          validation_status VARCHAR(32) NULL,
+          event_status VARCHAR(32) NOT NULL DEFAULT 'active',
+          superseded_by_event_key CHAR(64) NULL,
+          superseded_at TIMESTAMP NULL,
           source_url VARCHAR(1024) NULL,
           confidence DOUBLE NULL,
           collected_at TIMESTAMP NULL,
@@ -342,6 +347,7 @@ MARKET_INTELLIGENCE_SCHEMAS = {
           UNIQUE KEY uk_market_event_key (event_key),
           KEY ix_event_date_type (event_date, event_type),
           KEY ix_event_symbol_date (symbol, event_date),
+          KEY ix_event_status (event_type, event_status),
           KEY ix_event_source (source)
         );
     """,

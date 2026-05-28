@@ -4036,3 +4036,7 @@ Detailed historical logs were archived on `2026-04-13`.
   - `.aiworkspace/note/finance/phases/active/overview-market-intelligence-productionization/`의 2차 task 2-01~2-03을 완료했다.
   - Market Movers는 refresh state와 missing recommended action을 보여주고, Events는 official / provider estimate / stale estimate read model을 제공한다.
   - 2차 acceptance checklist와 runbook을 정리했고, 다음 단계는 3차 earnings source validation이다.
+- Overview Market Intelligence 3차 earnings production baseline:
+  - 3차 task 3-01~3-03을 완료해 earnings row에 source validation / lifecycle metadata를 저장한다.
+  - yfinance earnings estimate는 선택적으로 Nasdaq earnings calendar와 cross-check하고, 변경된 이전 estimate는 superseded / stale 상태로 정리한다.
+  - Ingestion은 latest movers 외에 S&P 500 / Top1000 / Top2000 low-frequency batch 수집을 지원하며 다음 단계는 4차 visuals / calendar UX polish다.

@@ -36,7 +36,7 @@ Last Verified: 2026-05-28
 | `nyse_price_history` | OHLCV price ledger |
 | `market_universe_member` | Overview market intelligence current universe membership |
 | `market_intraday_snapshot` | Overview daily market movers intraday previous-close snapshot for S&P 500 / Top1000 / Top2000 |
-| `market_event_calendar` | Overview Events calendar snapshot for FOMC, earnings, and other market events |
+| `market_event_calendar` | Overview Events calendar snapshot for FOMC, earnings, and other market events. Earnings rows carry source validation and lifecycle status metadata. |
 | `etf_provider_source_map` | ETF별 issuer endpoint / parser mapping cache |
 | `etf_operability_snapshot` | ETF 비용, 규모, 유동성, spread, NAV 관련 snapshot |
 | `etf_holdings_snapshot` | ETF holdings row snapshot |

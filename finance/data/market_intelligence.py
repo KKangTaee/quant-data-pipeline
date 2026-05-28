@@ -6,6 +6,8 @@ import re
 from collections.abc import Callable, Iterable, Sequence
 from datetime import UTC, date, datetime, timedelta
 from io import StringIO
+from inspect import Parameter, signature
+from time import sleep
 from typing import Any
 from urllib.parse import urljoin
 from urllib.request import Request, urlopen
@@ -27,6 +29,13 @@ FOMC_CALENDAR_SOURCE_URL = "https://www.federalreserve.gov/monetarypolicy/fomcca
 FOMC_CALENDAR_SOURCE = "federal_reserve_fomc_calendar"
 EARNINGS_CALENDAR_SOURCE = "yfinance_calendar"
 EARNINGS_CALENDAR_SOURCE_URL = "https://finance.yahoo.com/calendar/earnings"
+NASDAQ_EARNINGS_CALENDAR_SOURCE = "nasdaq_earnings_calendar"
+NASDAQ_EARNINGS_CALENDAR_API_URL = "https://api.nasdaq.com/api/calendar/earnings"
+COMPANY_IR_EARNINGS_SOURCE = "company_ir_calendar"
+EARNINGS_PROVIDER_ESTIMATE_CONFIDENCE = 0.65
+EARNINGS_CROSS_CHECKED_CONFIDENCE = 0.75
+EARNINGS_NOT_CONFIRMED_CONFIDENCE = 0.6
+EARNINGS_STALE_ESTIMATE_DAYS = 14
 DEFAULT_INTRADAY_INTERVAL = "5m"
 YAHOO_QUOTE_URL = "https://query1.finance.yahoo.com/v7/finance/quote"
 VALID_INTRADAY_INTERVALS = {"1m", "2m", "5m", "15m", "30m", "60m", "90m", "1h"}
@@ -231,6 +240,36 @@ def _normalize_event_symbol(value: Any) -> str | None:
     return symbol or None
 
 
+def _normalize_source_type(value: Any, *, event_type: str, source: str) -> str:
+    normalized = str(value or "").strip().lower().replace(" ", "_")
+    if normalized in {"official", "provider_estimate", "unknown"}:
+        return normalized
+    source_normalized = str(source or "").strip().lower()
+    if source_normalized in {FOMC_CALENDAR_SOURCE, COMPANY_IR_EARNINGS_SOURCE}:
+        return "official"
+    if _normalize_event_type(event_type) == "EARNINGS":
+        return "provider_estimate"
+    return "unknown"
+
+
+def _normalize_validation_status(value: Any, *, source_type: str) -> str:
+    normalized = str(value or "").strip().lower().replace(" ", "_")
+    if normalized in {"official", "estimate_only", "cross_checked", "not_confirmed", "conflict", "unknown"}:
+        return normalized
+    if source_type == "official":
+        return "official"
+    if source_type == "provider_estimate":
+        return "estimate_only"
+    return "unknown"
+
+
+def _normalize_event_status(value: Any) -> str:
+    normalized = str(value or "active").strip().lower().replace(" ", "_")
+    if normalized in {"active", "superseded", "stale"}:
+        return normalized
+    return "active"
+
+
 def _normalize_symbol_list(symbols: str | Sequence[Any] | None, *, max_symbols: int = 100) -> list[str]:
     if symbols is None:
         return []
@@ -288,12 +327,19 @@ def normalize_market_event_rows(
         source = str(item.get("source") or "").strip()
         if not event_date or not event_type or not title or not source:
             continue
+        source_type = _normalize_source_type(item.get("source_type"), event_type=event_type, source=source)
+        validation_status = _normalize_validation_status(item.get("validation_status"), source_type=source_type)
         row = {
             "event_date": event_date,
             "event_type": event_type,
             "symbol": _normalize_event_symbol(item.get("symbol")),
             "title": title,
             "source": source,
+            "source_type": source_type,
+            "validation_status": validation_status,
+            "event_status": _normalize_event_status(item.get("event_status")),
+            "superseded_by_event_key": str(item.get("superseded_by_event_key") or "").strip() or None,
+            "superseded_at": item.get("superseded_at") or None,
             "source_url": item.get("source_url") or None,
             "confidence": _safe_float(item.get("confidence")),
             "collected_at": item.get("collected_at") or default_collected_at,
@@ -327,10 +373,13 @@ def upsert_market_event_rows(
         sql = """
         INSERT INTO market_event_calendar (
           event_key, event_date, event_type, symbol, title,
-          source, source_url, confidence, collected_at, raw_payload_json
+          source, source_type, validation_status, event_status, superseded_by_event_key, superseded_at,
+          source_url, confidence, collected_at, raw_payload_json
         ) VALUES (
           %(event_key)s, %(event_date)s, %(event_type)s, %(symbol)s, %(title)s,
-          %(source)s, %(source_url)s, %(confidence)s, %(collected_at)s, %(raw_payload_json)s
+          %(source)s, %(source_type)s, %(validation_status)s, %(event_status)s,
+          %(superseded_by_event_key)s, %(superseded_at)s,
+          %(source_url)s, %(confidence)s, %(collected_at)s, %(raw_payload_json)s
         )
         ON DUPLICATE KEY UPDATE
           event_date = VALUES(event_date),
@@ -338,6 +387,11 @@ def upsert_market_event_rows(
           symbol = VALUES(symbol),
           title = VALUES(title),
           source = VALUES(source),
+          source_type = VALUES(source_type),
+          validation_status = VALUES(validation_status),
+          event_status = VALUES(event_status),
+          superseded_by_event_key = VALUES(superseded_by_event_key),
+          superseded_at = VALUES(superseded_at),
           source_url = VALUES(source_url),
           confidence = VALUES(confidence),
           collected_at = VALUES(collected_at),
@@ -345,6 +399,124 @@ def upsert_market_event_rows(
         """
         db.executemany(sql, normalized_rows)
         return len(normalized_rows)
+    finally:
+        db.close()
+
+
+def mark_superseded_earnings_events(
+    current_rows: list[dict[str, Any]],
+    *,
+    superseded_at: str | None = None,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> int:
+    normalized_rows = [
+        row
+        for row in normalize_market_event_rows(current_rows)
+        if row.get("event_type") == "EARNINGS" and row.get("symbol") and row.get("source")
+    ]
+    if not normalized_rows:
+        return 0
+
+    grouped: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    for row in normalized_rows:
+        grouped.setdefault((str(row["symbol"]), str(row["source"])), []).append(row)
+
+    db = _db(host, user, password, port)
+    marked = 0
+    try:
+        db.use_db(DB_META)
+        sync_table_schema(
+            db,
+            "market_event_calendar",
+            MARKET_INTELLIGENCE_SCHEMAS["market_event_calendar"],
+            DB_META,
+        )
+        for (symbol, source), rows in grouped.items():
+            current_keys = sorted({str(row["event_key"]) for row in rows if row.get("event_key")})
+            if not current_keys:
+                continue
+            placeholders = ",".join(["%s"] * len(current_keys))
+            candidates = db.query(
+                f"""
+                SELECT event_key
+                FROM market_event_calendar
+                WHERE event_type = %s
+                  AND symbol = %s
+                  AND source = %s
+                  AND COALESCE(event_status, 'active') = 'active'
+                  AND event_key NOT IN ({placeholders})
+                """,
+                ["EARNINGS", symbol, source] + current_keys,
+            )
+            candidate_keys = [str(row.get("event_key")) for row in candidates if row.get("event_key")]
+            if not candidate_keys:
+                continue
+            replacement_key = current_keys[0]
+            update_placeholders = ",".join(["%s"] * len(candidate_keys))
+            db.execute(
+                f"""
+                UPDATE market_event_calendar
+                SET event_status = %s,
+                    superseded_by_event_key = %s,
+                    superseded_at = %s
+                WHERE event_key IN ({update_placeholders})
+                """,
+                ["superseded", replacement_key, superseded_at or _timestamp_str()] + candidate_keys,
+            )
+            marked += len(candidate_keys)
+    finally:
+        db.close()
+    return marked
+
+
+def mark_stale_earnings_estimates(
+    *,
+    stale_after_days: int = EARNINGS_STALE_ESTIMATE_DAYS,
+    as_of_date: str | date | None = None,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> int:
+    today = _parse_window_date(as_of_date, default=datetime.now(UTC).date())
+    cutoff = today - timedelta(days=max(1, int(stale_after_days or EARNINGS_STALE_ESTIMATE_DAYS)))
+    db = _db(host, user, password, port)
+    try:
+        db.use_db(DB_META)
+        sync_table_schema(
+            db,
+            "market_event_calendar",
+            MARKET_INTELLIGENCE_SCHEMAS["market_event_calendar"],
+            DB_META,
+        )
+        candidates = db.query(
+            """
+            SELECT event_key
+            FROM market_event_calendar
+            WHERE event_type = %s
+              AND COALESCE(source_type, 'provider_estimate') = %s
+              AND COALESCE(event_status, 'active') = %s
+              AND collected_at IS NOT NULL
+              AND DATE(collected_at) < %s
+            """,
+            ["EARNINGS", "provider_estimate", "active", cutoff.isoformat()],
+        )
+        candidate_keys = [str(row.get("event_key")) for row in candidates if row.get("event_key")]
+        if not candidate_keys:
+            return 0
+        placeholders = ",".join(["%s"] * len(candidate_keys))
+        db.execute(
+            f"""
+            UPDATE market_event_calendar
+            SET event_status = %s
+            WHERE event_key IN ({placeholders})
+            """,
+            ["stale"] + candidate_keys,
+        )
+        return len(candidate_keys)
     finally:
         db.close()
 
@@ -399,6 +571,11 @@ def load_market_event_calendar(
                 symbol,
                 title,
                 source,
+                source_type,
+                validation_status,
+                event_status,
+                superseded_by_event_key,
+                superseded_at,
                 source_url,
                 confidence,
                 collected_at,
@@ -654,6 +831,164 @@ def _parse_window_date(value: Any, *, default: date) -> date:
     return datetime.strptime(parsed, "%Y-%m-%d").date()
 
 
+def _fetch_json(source_url: str, *, timeout: int = 20) -> dict[str, Any]:
+    request = Request(
+        source_url,
+        headers={
+            "User-Agent": (
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36"
+            ),
+            "Accept": "application/json, text/plain, */*",
+            "Origin": "https://www.nasdaq.com",
+            "Referer": "https://www.nasdaq.com/market-activity/earnings",
+        },
+    )
+    with urlopen(request, timeout=timeout) as response:
+        return json.loads(response.read().decode("utf-8", errors="replace"))
+
+
+def _parse_nasdaq_earnings_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    data = payload.get("data") if isinstance(payload, dict) else None
+    rows = data.get("rows") if isinstance(data, dict) else None
+    if not isinstance(rows, list):
+        return []
+    parsed: list[dict[str, Any]] = []
+    for item in rows:
+        if not isinstance(item, dict):
+            continue
+        symbol = _normalize_symbol(item.get("symbol"))
+        if not symbol:
+            continue
+        parsed.append(
+            {
+                "symbol": symbol,
+                "name": item.get("name"),
+                "time": item.get("time"),
+                "fiscalQuarterEnding": item.get("fiscalQuarterEnding"),
+                "epsForecast": item.get("epsForecast"),
+                "noOfEsts": item.get("noOfEsts"),
+            }
+        )
+    return parsed
+
+
+def fetch_nasdaq_earnings_calendar_by_date(
+    event_date: str | date,
+    *,
+    source_url: str = NASDAQ_EARNINGS_CALENDAR_API_URL,
+    http_json_fetcher: Callable[[str], dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    normalized_date = _event_date_str(event_date)
+    if not normalized_date:
+        return {"event_date": None, "symbols": [], "rows": [], "source_url": source_url}
+    request_url = f"{source_url}?date={normalized_date}"
+    fetcher = http_json_fetcher or _fetch_json
+    payload = fetcher(request_url)
+    rows = _parse_nasdaq_earnings_rows(payload)
+    symbols = sorted({row["symbol"] for row in rows if row.get("symbol")})
+    return {
+        "event_date": normalized_date,
+        "symbols": symbols,
+        "rows": rows,
+        "source": NASDAQ_EARNINGS_CALENDAR_SOURCE,
+        "source_url": request_url,
+    }
+
+
+def fetch_nasdaq_earnings_calendar_symbols_by_date(
+    dates: Sequence[Any],
+    *,
+    max_dates: int = 20,
+    request_sleep_sec: float = 0.1,
+    date_fetcher: Callable[..., dict[str, Any]] | None = None,
+) -> dict[str, dict[str, Any]]:
+    normalized_dates = []
+    seen: set[str] = set()
+    for item in dates:
+        parsed = _event_date_str(item)
+        if not parsed or parsed in seen:
+            continue
+        seen.add(parsed)
+        normalized_dates.append(parsed)
+        if len(normalized_dates) >= max(1, int(max_dates or 20)):
+            break
+
+    fetcher = date_fetcher or fetch_nasdaq_earnings_calendar_by_date
+    out: dict[str, dict[str, Any]] = {}
+    for index, item in enumerate(normalized_dates):
+        try:
+            result = fetcher(item)
+            out[item] = {
+                "symbols": list(result.get("symbols") or []),
+                "source": result.get("source") or NASDAQ_EARNINGS_CALENDAR_SOURCE,
+                "source_url": result.get("source_url"),
+                "status": "ok",
+            }
+        except Exception as exc:
+            out[item] = {
+                "symbols": [],
+                "source": NASDAQ_EARNINGS_CALENDAR_SOURCE,
+                "source_url": f"{NASDAQ_EARNINGS_CALENDAR_API_URL}?date={item}",
+                "status": "failed",
+                "error": str(exc),
+            }
+        if request_sleep_sec > 0 and index < len(normalized_dates) - 1:
+            sleep(float(request_sleep_sec))
+    return out
+
+
+def _earnings_source_validation_payload(
+    *,
+    symbol: str,
+    event_date: str,
+    nasdaq_by_date: dict[str, dict[str, Any]] | None,
+) -> tuple[str, float, dict[str, Any]]:
+    nasdaq_result = dict((nasdaq_by_date or {}).get(event_date) or {})
+    nasdaq_symbols = {_normalize_symbol(item) for item in nasdaq_result.get("symbols") or []}
+    checked = bool(nasdaq_result)
+    matched = checked and symbol in nasdaq_symbols
+    if matched:
+        validation_status = "cross_checked"
+        confidence = EARNINGS_CROSS_CHECKED_CONFIDENCE
+    elif checked and nasdaq_result.get("status") == "ok":
+        validation_status = "not_confirmed"
+        confidence = EARNINGS_NOT_CONFIRMED_CONFIDENCE
+    elif checked:
+        validation_status = "estimate_only"
+        confidence = EARNINGS_PROVIDER_ESTIMATE_CONFIDENCE
+    else:
+        validation_status = "estimate_only"
+        confidence = EARNINGS_PROVIDER_ESTIMATE_CONFIDENCE
+    payload = {
+        "source_type": "provider_estimate",
+        "validation_status": validation_status,
+        "fallback_order": [
+            {
+                "source": COMPANY_IR_EARNINGS_SOURCE,
+                "source_type": "official",
+                "status": "future_symbol_specific_parser",
+                "confidence": 0.95,
+            },
+            {
+                "source": NASDAQ_EARNINGS_CALENDAR_SOURCE,
+                "source_type": "provider_estimate",
+                "status": "checked" if checked else "not_requested",
+                "matched": matched if checked else None,
+                "source_url": nasdaq_result.get("source_url"),
+                "confidence": EARNINGS_CROSS_CHECKED_CONFIDENCE,
+            },
+            {
+                "source": EARNINGS_CALENDAR_SOURCE,
+                "source_type": "provider_estimate",
+                "status": "primary",
+                "confidence": EARNINGS_PROVIDER_ESTIMATE_CONFIDENCE,
+            },
+        ],
+    }
+    return validation_status, confidence, payload
+
+
 def fetch_yfinance_earnings_calendar_events(
     symbols: str | Sequence[Any],
     *,
@@ -661,6 +996,9 @@ def fetch_yfinance_earnings_calendar_events(
     end_date: str | date | None = None,
     lookahead_days: int = 120,
     max_symbols: int = 100,
+    validate_with_nasdaq: bool = False,
+    nasdaq_fetcher: Callable[..., dict[str, dict[str, Any]]] | None = None,
+    request_sleep_sec: float = 0.0,
     ticker_factory: Callable[[str], Any] | None = None,
 ) -> dict[str, Any]:
     """Build normalized earnings event rows from yfinance's lightweight calendar field."""
@@ -679,7 +1017,7 @@ def fetch_yfinance_earnings_calendar_events(
     missing_symbols: list[str] = []
     failed_symbols: list[str] = []
 
-    for symbol in normalized_symbols:
+    for index, symbol in enumerate(normalized_symbols):
         try:
             ticker = ticker_factory(symbol)
             calendar_value = getattr(ticker, "calendar", None)
@@ -703,8 +1041,11 @@ def fetch_yfinance_earnings_calendar_events(
                         "symbol": symbol,
                         "title": f"{symbol} Earnings Release",
                         "source": EARNINGS_CALENDAR_SOURCE,
+                        "source_type": "provider_estimate",
+                        "validation_status": "estimate_only",
+                        "event_status": "active",
                         "source_url": f"https://finance.yahoo.com/quote/{symbol}/analysis",
-                        "confidence": 0.65,
+                        "confidence": EARNINGS_PROVIDER_ESTIMATE_CONFIDENCE,
                         "raw_payload": {
                             "provider": EARNINGS_CALENDAR_SOURCE,
                             "provider_calendar": calendar,
@@ -713,17 +1054,42 @@ def fetch_yfinance_earnings_calendar_events(
                             "window_start": window_start.isoformat(),
                             "window_end": window_end.isoformat(),
                             "source_url": EARNINGS_CALENDAR_SOURCE_URL,
+                            "source_validation": {
+                                "source_type": "provider_estimate",
+                                "validation_status": "estimate_only",
+                            },
                         },
                     }
                 )
         except Exception as exc:
             failed_symbols.append(f"{symbol}: {exc}")
+        if request_sleep_sec > 0 and index < len(normalized_symbols) - 1:
+            sleep(float(request_sleep_sec))
+
+    validation_source = "not_requested"
+    if validate_with_nasdaq and events:
+        fetcher = nasdaq_fetcher or fetch_nasdaq_earnings_calendar_symbols_by_date
+        event_dates = sorted({str(row["event_date"]) for row in events if row.get("event_date")})
+        nasdaq_by_date = fetcher(event_dates)
+        validation_source = NASDAQ_EARNINGS_CALENDAR_SOURCE
+        for row in events:
+            validation_status, confidence, validation_payload = _earnings_source_validation_payload(
+                symbol=str(row["symbol"]),
+                event_date=str(row["event_date"]),
+                nasdaq_by_date=nasdaq_by_date,
+            )
+            row["validation_status"] = validation_status
+            row["confidence"] = confidence
+            raw_payload = dict(row.get("raw_payload") or {})
+            raw_payload["source_validation"] = validation_payload
+            row["raw_payload"] = raw_payload
 
     return {
         "source": EARNINGS_CALENDAR_SOURCE,
         "source_url": EARNINGS_CALENDAR_SOURCE_URL,
         "event_type": "EARNINGS",
         "method": "yfinance_ticker_calendar",
+        "validation_source": validation_source,
         "start_date": window_start.isoformat(),
         "end_date": window_end.isoformat(),
         "symbols_requested": len(normalized_symbols),
@@ -733,6 +1099,74 @@ def fetch_yfinance_earnings_calendar_events(
         "missing_symbols": missing_symbols,
         "failed_symbols": failed_symbols,
     }
+
+
+def _slice_symbols(symbols: Sequence[Any], *, offset: int = 0, max_symbols: int = 100) -> list[str]:
+    normalized = _normalize_symbol_list(symbols, max_symbols=max(len(symbols), max_symbols))
+    start = max(0, int(offset or 0))
+    end = start + max(1, int(max_symbols or 100))
+    return normalized[start:end]
+
+
+def resolve_earnings_collection_symbols(
+    *,
+    symbols: str | Sequence[Any] | None = None,
+    symbol_source: str = "latest_movers",
+    universe_code: str = "SP500",
+    universe_limit: int | None = None,
+    interval: str = DEFAULT_INTRADAY_INTERVAL,
+    top_movers_limit: int = 20,
+    max_symbols: int = 100,
+    batch_offset: int = 0,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+    source_symbols_loader: Callable[[], list[str]] | None = None,
+) -> tuple[list[str], str]:
+    if symbols is not None:
+        return _slice_symbols(symbols, offset=batch_offset, max_symbols=max_symbols), "manual"
+
+    normalized_source = str(symbol_source or "latest_movers").strip().lower()
+    if source_symbols_loader is not None:
+        return _slice_symbols(source_symbols_loader(), offset=batch_offset, max_symbols=max_symbols), normalized_source
+
+    if normalized_source == "latest_movers":
+        latest_limit = max(1, min(int(top_movers_limit or 20), int(max_symbols or 100)))
+        target_symbols = load_latest_intraday_mover_symbols(
+            universe_code=universe_code,
+            universe_limit=universe_limit,
+            interval=interval,
+            top_n=latest_limit,
+            host=host,
+            user=user,
+            password=password,
+            port=port,
+        )
+        return _slice_symbols(target_symbols, offset=batch_offset, max_symbols=max_symbols), normalized_source
+
+    source_to_universe = {
+        "sp500": "SP500",
+        "sp500_universe": "SP500",
+        "s&p500": "SP500",
+        "top1000": "TOP1000",
+        "top2000": "TOP2000",
+        "universe": universe_code,
+    }
+    resolved_universe = source_to_universe.get(normalized_source, universe_code)
+    normalized_universe, normalized_limit = _normalize_intraday_universe(resolved_universe, universe_limit)
+    if normalized_universe == "SP500":
+        rows = load_market_universe_members("SP500", host=host, user=user, password=password, port=port)
+    else:
+        rows = load_market_cap_universe_members(
+            normalized_universe,
+            universe_limit=normalized_limit,
+            host=host,
+            user=user,
+            password=password,
+            port=port,
+        )
+    return _slice_symbols([row.get("symbol") for row in rows], offset=batch_offset, max_symbols=max_symbols), normalized_source
 
 
 def collect_and_store_earnings_calendar(
@@ -745,6 +1179,9 @@ def collect_and_store_earnings_calendar(
     top_movers_limit: int = 20,
     lookahead_days: int = 120,
     max_symbols: int = 100,
+    batch_offset: int = 0,
+    validate_with_nasdaq: bool = False,
+    request_sleep_sec: float = 0.0,
     host: str = "localhost",
     user: str = "root",
     password: str = "1234",
@@ -754,24 +1191,21 @@ def collect_and_store_earnings_calendar(
 ) -> dict[str, Any]:
     """Collect bounded upcoming earnings events and persist them to the common event calendar."""
     collected_at = _timestamp_str()
-    normalized_source = str(symbol_source or "latest_movers").strip().lower()
-    if symbols is not None:
-        target_symbols = _normalize_symbol_list(symbols, max_symbols=max_symbols)
-        normalized_source = "manual"
-    else:
-        loader = source_symbols_loader or (
-            lambda: load_latest_intraday_mover_symbols(
-                universe_code=universe_code,
-                universe_limit=universe_limit,
-                interval=interval,
-                top_n=top_movers_limit,
-                host=host,
-                user=user,
-                password=password,
-                port=port,
-            )
-        )
-        target_symbols = _normalize_symbol_list(loader(), max_symbols=max_symbols)
+    target_symbols, normalized_source = resolve_earnings_collection_symbols(
+        symbols=symbols,
+        symbol_source=symbol_source,
+        universe_code=universe_code,
+        universe_limit=universe_limit,
+        interval=interval,
+        top_movers_limit=top_movers_limit,
+        max_symbols=max_symbols,
+        batch_offset=batch_offset,
+        host=host,
+        user=user,
+        password=password,
+        port=port,
+        source_symbols_loader=source_symbols_loader,
+    )
 
     if not target_symbols:
         return {
@@ -781,6 +1215,7 @@ def collect_and_store_earnings_calendar(
             "method": "yfinance_ticker_calendar",
             "symbol_source": normalized_source,
             "universe_code": universe_code,
+            "batch_offset": batch_offset,
             "rows_written": 0,
             "symbols_requested": 0,
             "symbols_processed": 0,
@@ -793,13 +1228,38 @@ def collect_and_store_earnings_calendar(
         }
 
     fetcher = earnings_fetcher or fetch_yfinance_earnings_calendar_events
+    fetch_kwargs = {
+        "lookahead_days": lookahead_days,
+        "max_symbols": max_symbols,
+        "validate_with_nasdaq": validate_with_nasdaq,
+        "request_sleep_sec": request_sleep_sec,
+    }
+    supported_params = signature(fetcher).parameters
+    if any(param.kind == Parameter.VAR_KEYWORD for param in supported_params.values()):
+        supported_kwargs = fetch_kwargs
+    else:
+        supported_kwargs = {key: value for key, value in fetch_kwargs.items() if key in supported_params}
     result = fetcher(
         target_symbols,
-        lookahead_days=lookahead_days,
-        max_symbols=max_symbols,
+        **supported_kwargs,
     )
     events = [{**row, "collected_at": collected_at} for row in result.get("events", [])]
     rows_written = upsert_market_event_rows(events, host=host, user=user, password=password, port=port)
+    superseded_rows_marked = mark_superseded_earnings_events(
+        events,
+        superseded_at=collected_at,
+        host=host,
+        user=user,
+        password=password,
+        port=port,
+    )
+    stale_rows_marked = mark_stale_earnings_estimates(
+        stale_after_days=EARNINGS_STALE_ESTIMATE_DAYS,
+        host=host,
+        user=user,
+        password=password,
+        port=port,
+    )
     event_dates = sorted({str(row["event_date"]) for row in events if row.get("event_date")})
     return {
         **result,
@@ -809,8 +1269,13 @@ def collect_and_store_earnings_calendar(
         "universe_limit": universe_limit,
         "interval": interval,
         "top_movers_limit": top_movers_limit,
+        "batch_offset": batch_offset,
+        "validate_with_nasdaq": validate_with_nasdaq,
+        "request_sleep_sec": request_sleep_sec,
         "target_symbols": target_symbols,
         "event_dates": event_dates,
+        "superseded_rows_marked": superseded_rows_marked,
+        "stale_rows_marked": stale_rows_marked,
         "collected_at": collected_at,
     }
 

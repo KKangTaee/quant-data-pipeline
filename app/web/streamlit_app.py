@@ -1939,9 +1939,9 @@ def _render_ingestion_console() -> None:
 
             with st.expander("Overview Market Event Calendar", expanded=False):
                 st.write("Overview Events 탭에서 읽을 시장 이벤트 캘린더를 공식 무료 소스에서 수집합니다.")
-                st.caption("현재 구현 대상: Federal Reserve 공식 FOMC calendar, yfinance 기반 earnings prototype.")
+                st.caption("현재 구현 대상: Federal Reserve 공식 FOMC calendar, yfinance + Nasdaq cross-check 기반 earnings estimate.")
                 st.caption("저장 테이블: `finance_meta.market_event_calendar`")
-                fomc_tab, earnings_tab = st.tabs(["FOMC", "Earnings Prototype"])
+                fomc_tab, earnings_tab = st.tabs(["FOMC", "Earnings"])
                 with fomc_tab:
                     current_year = date.today().year
                     fomc_year_options = list(range(current_year - 1, current_year + 3))
@@ -1982,11 +1982,11 @@ def _render_ingestion_console() -> None:
                 with earnings_tab:
                     earnings_source_mode = st.selectbox(
                         "Symbol Source",
-                        ["Latest S&P 500 Movers", "Manual Symbols"],
+                        ["Latest S&P 500 Movers", "S&P 500 Universe Batch", "Top1000 Batch", "Top2000 Batch", "Manual Symbols"],
                         index=0,
                         key="overview_earnings_symbol_source",
                     )
-                    earnings_cols = st.columns(3, gap="small")
+                    earnings_cols = st.columns(4, gap="small")
                     earnings_top_movers_limit = int(
                         earnings_cols[0].number_input(
                             "Top Movers",
@@ -2003,7 +2003,7 @@ def _render_ingestion_console() -> None:
                             "Lookahead Days",
                             min_value=7,
                             max_value=365,
-                            value=120,
+                            value=120 if earnings_source_mode == "Latest S&P 500 Movers" else 30,
                             step=7,
                             key="overview_earnings_lookahead_days",
                         )
@@ -2012,10 +2012,38 @@ def _render_ingestion_console() -> None:
                         earnings_cols[2].number_input(
                             "Max Symbols",
                             min_value=5,
-                            max_value=100,
-                            value=50,
+                            max_value=200,
+                            value=50 if earnings_source_mode == "Latest S&P 500 Movers" else 100,
                             step=5,
                             key="overview_earnings_max_symbols",
+                        )
+                    )
+                    earnings_batch_offset = int(
+                        earnings_cols[3].number_input(
+                            "Batch Offset",
+                            min_value=0,
+                            max_value=2000,
+                            value=0,
+                            step=50,
+                            key="overview_earnings_batch_offset",
+                            disabled=earnings_source_mode in {"Latest S&P 500 Movers", "Manual Symbols"},
+                        )
+                    )
+                    earnings_validation_cols = st.columns(2, gap="small")
+                    earnings_validate_with_nasdaq = earnings_validation_cols[0].checkbox(
+                        "Nasdaq cross-check",
+                        value=True,
+                        key="overview_earnings_validate_with_nasdaq",
+                        help="Cross-check yfinance earnings dates against Nasdaq's free earnings calendar endpoint when possible.",
+                    )
+                    earnings_request_sleep_sec = float(
+                        earnings_validation_cols[1].number_input(
+                            "Ticker Cooldown Sec",
+                            min_value=0.0,
+                            max_value=2.0,
+                            value=0.1 if earnings_source_mode != "Latest S&P 500 Movers" else 0.0,
+                            step=0.1,
+                            key="overview_earnings_request_sleep_sec",
                         )
                     )
                     manual_earnings_text = ""
@@ -2026,42 +2054,64 @@ def _render_ingestion_console() -> None:
                             key="overview_earnings_manual_symbols",
                         )
                     st.caption(
-                        "Latest movers mode uses the latest stored S&P 500 intraday snapshot; run Market Snapshot first if no movers are available."
+                        "Latest movers mode uses the latest stored S&P 500 intraday snapshot. Universe batch modes are low-frequency sweeps; keep Max Symbols bounded and use Batch Offset to continue later."
                     )
                     if st.button(
-                        "Collect Earnings Calendar Prototype",
+                        "Collect Earnings Calendar",
                         use_container_width=True,
                         disabled=_has_running_job(),
                     ):
                         manual_symbols = _parse_csv_items(manual_earnings_text)
-                        symbol_source = "manual" if earnings_source_mode == "Manual Symbols" else "latest_movers"
+                        symbol_source = {
+                            "Latest S&P 500 Movers": "latest_movers",
+                            "S&P 500 Universe Batch": "sp500_universe",
+                            "Top1000 Batch": "top1000",
+                            "Top2000 Batch": "top2000",
+                            "Manual Symbols": "manual",
+                        }[earnings_source_mode]
+                        earnings_universe_code = {
+                            "top1000": "TOP1000",
+                            "top2000": "TOP2000",
+                        }.get(symbol_source, "SP500")
+                        earnings_universe_limit = {
+                            "top1000": 1000,
+                            "top2000": 2000,
+                        }.get(symbol_source)
                         _schedule_job(
                             {
                                 "action": "collect_earnings_calendar",
                                 "job_name": "collect_earnings_calendar",
-                                "spinner_text": "Collecting earnings dates from yfinance calendar...",
+                                "spinner_text": "Collecting earnings dates from yfinance calendar and optional Nasdaq cross-check...",
                                 "params": {
                                     "symbols": manual_symbols if symbol_source == "manual" else None,
                                     "symbol_source": symbol_source,
-                                    "universe_code": "SP500",
+                                    "universe_code": earnings_universe_code,
+                                    "universe_limit": earnings_universe_limit,
                                     "top_movers_limit": earnings_top_movers_limit,
                                     "lookahead_days": earnings_lookahead_days,
                                     "max_symbols": earnings_max_symbols,
+                                    "batch_offset": earnings_batch_offset,
+                                    "validate_with_nasdaq": earnings_validate_with_nasdaq,
+                                    "request_sleep_sec": earnings_request_sleep_sec,
                                 },
                                 "run_metadata": _job_metadata(
                                     pipeline_type="overview_market_event_calendar",
-                                    execution_mode="prototype",
+                                    execution_mode="operational_low_frequency",
                                     symbol_source=symbol_source,
-                                    symbol_count=len(manual_symbols) if symbol_source == "manual" else earnings_top_movers_limit,
+                                    symbol_count=len(manual_symbols) if symbol_source == "manual" else earnings_max_symbols,
                                     execution_context=(
-                                        "Overview Events 탭에서 사용할 upcoming earnings calendar prototype을 무료 yfinance calendar field로 수집합니다."
+                                        "Overview Events 탭에서 사용할 upcoming earnings calendar estimate를 무료 provider source로 수집하고 source validation metadata를 저장합니다."
                                     ),
                                     input_params={
                                         "symbol_source": symbol_source,
-                                        "universe_code": "SP500",
+                                        "universe_code": earnings_universe_code,
+                                        "universe_limit": earnings_universe_limit,
                                         "top_movers_limit": earnings_top_movers_limit,
                                         "lookahead_days": earnings_lookahead_days,
                                         "max_symbols": earnings_max_symbols,
+                                        "batch_offset": earnings_batch_offset,
+                                        "validate_with_nasdaq": earnings_validate_with_nasdaq,
+                                        "request_sleep_sec": earnings_request_sleep_sec,
                                     },
                                 ),
                             }

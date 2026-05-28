@@ -6,7 +6,7 @@
 
 - DB-backed Market Movers: S&P 500 / Top1000 / Top2000, daily / weekly / monthly / yearly
 - Sector / Industry leadership: monthly equal-weight and market-cap-weighted ranking
-- Events: FOMC official rows and bounded yfinance earnings prototype rows
+- Events: FOMC official rows and bounded earnings provider-estimate rows with optional Nasdaq cross-check metadata
 - Refresh buttons: Market Snapshot, FOMC, Earnings
 - Runbook: manual refresh order and failure handling
 
@@ -47,7 +47,7 @@ Productionization should add lifecycle semantics without breaking existing rows:
 - stale row: collected too long ago for provider-estimated earnings
 - official row: event from official source or verified source
 
-The first implementation can model lifecycle in service/read-model metadata before adding schema columns. Schema changes should be added only if the UI and cleanup behavior need persisted state.
+3차 implementation persists lifecycle state in `market_event_calendar` so newer earnings estimates can supersede older rows while preserving an audit trail.
 
 ## UX Direction
 

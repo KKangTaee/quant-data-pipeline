@@ -5418,3 +5418,14 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Market Movers refresh state는 기존 intraday snapshot metadata로 계산 가능하고, Events official / estimate 구분도 schema 변경 없이 `event_type`과 `source`에서 read model로 파생할 수 있다
 - Follow-up:
   - 2차 baseline 구현과 acceptance checklist를 완료했다. 3차에서는 earnings provider estimate를 official/company 또는 대체 free source와 비교하는 source validation이 필요하다
+
+### 2026-05-28 - Overview Market Intelligence 3차 earnings production baseline을 진행한다
+- User request:
+  - 사용자가 2차 완료 후 3차 작업도 진행해 달라고 요청함
+- Interpreted goal:
+  - earnings calendar를 단순 yfinance prototype에서 source validation, lifecycle cleanup, broader low-frequency collection이 가능한 운영 baseline으로 올려야 함
+- Analysis result:
+  - 범용 company IR official parser는 회사별 markup 편차 때문에 바로 넣기 어렵고, Nasdaq earnings calendar는 무료 alternate provider cross-check로 쓰는 것이 현실적이다
+  - 같은 symbol/source의 이전 active earnings estimate는 DB에 남기되 `superseded`로 숨기고, 오래된 provider estimate는 `stale`로 구분하는 것이 auditability와 UX를 모두 지킨다
+- Follow-up:
+  - 3차 baseline을 구현했다. 다음은 4차에서 sector/mover visuals와 calendar-like Events UX를 다듬는 작업이다

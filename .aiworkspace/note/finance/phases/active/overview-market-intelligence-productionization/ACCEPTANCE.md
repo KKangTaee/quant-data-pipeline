@@ -61,3 +61,21 @@ git diff --check
 - Earnings lifecycle cleanup for changed estimate dates is still 3차 work.
 - Wider low-frequency event collection beyond latest movers is still 3차 work.
 - Heatmap / calendar-like visual polish is still 4차 work.
+
+## 3차 Earnings Production Baseline Gate
+
+- Earnings rows persist `source_type`, `validation_status`, and `event_status`.
+- yfinance-only rows are `provider_estimate / estimate_only`.
+- Nasdaq cross-check can promote rows to `provider_estimate / cross_checked`.
+- Nasdaq checked but unmatched rows are visible as `not_confirmed` and warning candidates.
+- Same symbol/source older active earnings estimates are marked `superseded` after a newer collection.
+- Provider estimate rows older than 14 days can be marked `stale`.
+- Overview Events hides superseded rows by default and surfaces validation counts in status cards.
+- Ingestion supports `Latest S&P 500 Movers`, `S&P 500 Universe Batch`, `Top1000 Batch`, `Top2000 Batch`, and manual symbols.
+- Universe batch collection is bounded by `Max Symbols`, `Batch Offset`, and optional ticker cooldown.
+
+## Remaining After 3차
+
+- Generic company IR official parser is still future work because each issuer site has different markup and calendar conventions.
+- Visual heatmap / dense mover chart remains 4차 work.
+- Calendar-like grouping and richer filters remain 4차 work.

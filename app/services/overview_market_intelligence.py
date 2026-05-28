@@ -68,7 +68,9 @@ EVENT_COLUMNS = [
     "Symbol",
     "Title",
     "Source Type",
+    "Validation",
     "Freshness",
+    "Event Status",
     "Age Days",
     "Source",
     "Confidence",
@@ -259,7 +261,10 @@ def _empty_events_snapshot(
             "source_count": 0,
             "official_count": 0,
             "estimate_count": 0,
+            "cross_checked_count": 0,
+            "not_confirmed_count": 0,
             "stale_estimate_count": 0,
+            "superseded_count": 0,
         },
         "warnings": [message] if message else [],
     }
@@ -772,7 +777,9 @@ def _load_market_event_rows(
     if normalized_type and normalized_type != "ALL":
         conditions.append("event_type = %s")
         params.append(normalized_type)
-    params.append(_normalize_limit(limit, default=200, min_value=1, max_value=1000))
+    bounded_limit = _normalize_limit(limit, default=200, min_value=1, max_value=1000)
+    active_conditions = conditions + ["COALESCE(event_status, 'active') <> %s"]
+    active_params = params + ["superseded", bounded_limit]
     try:
         return query_fn(
             "finance_meta",
@@ -783,21 +790,54 @@ def _load_market_event_rows(
                 symbol,
                 title,
                 source,
+                source_type,
+                validation_status,
+                event_status,
+                superseded_by_event_key,
+                superseded_at,
                 source_url,
                 confidence,
                 collected_at
             FROM market_event_calendar
-            WHERE {" AND ".join(conditions)}
+            WHERE {" AND ".join(active_conditions)}
             ORDER BY event_date ASC, event_type ASC, COALESCE(symbol, '') ASC, title ASC
             LIMIT %s
             """,
-            params,
+            active_params,
         )
     except Exception:
-        return []
+        try:
+            return query_fn(
+                "finance_meta",
+                f"""
+                SELECT
+                    event_date,
+                    event_type,
+                    symbol,
+                    title,
+                    source,
+                    source_url,
+                    confidence,
+                    collected_at
+                FROM market_event_calendar
+                WHERE {" AND ".join(conditions)}
+                ORDER BY event_date ASC, event_type ASC, COALESCE(symbol, '') ASC, title ASC
+                LIMIT %s
+                """,
+                params + [bounded_limit],
+            )
+        except Exception:
+            return []
 
 
 def _event_source_type(row: dict[str, Any]) -> str:
+    persisted = str(row.get("source_type") or "").strip().lower()
+    if persisted == "official":
+        return "Official"
+    if persisted == "provider_estimate":
+        return "Provider Estimate"
+    if persisted == "unknown":
+        return "Unknown"
     event_type = _normalize_event_type_value(row.get("event_type"))
     source = str(row.get("source") or "").strip().lower()
     if source == "federal_reserve_fomc_calendar":
@@ -809,6 +849,29 @@ def _event_source_type(row: dict[str, Any]) -> str:
     if source:
         return "Provider"
     return "Unknown"
+
+
+def _event_validation_label(row: dict[str, Any]) -> str:
+    status = str(row.get("validation_status") or "").strip().lower()
+    labels = {
+        "official": "Official",
+        "estimate_only": "Estimate only",
+        "cross_checked": "Cross-checked",
+        "not_confirmed": "Not confirmed",
+        "conflict": "Conflict",
+        "unknown": "Unknown",
+    }
+    return labels.get(status, "Unknown" if not status else status.replace("_", " ").title())
+
+
+def _event_status_label(row: dict[str, Any]) -> str:
+    status = str(row.get("event_status") or "active").strip().lower()
+    labels = {
+        "active": "Active",
+        "superseded": "Superseded",
+        "stale": "Stale",
+    }
+    return labels.get(status, status.replace("_", " ").title())
 
 
 def _event_collected_age_days(row: dict[str, Any], *, today: date) -> int | None:
@@ -828,6 +891,11 @@ def _event_collected_age_days(row: dict[str, Any], *, today: date) -> int | None
 
 
 def _event_freshness(row: dict[str, Any], *, today: date) -> str:
+    event_status = str(row.get("event_status") or "active").strip().lower()
+    if event_status == "superseded":
+        return "Superseded"
+    if event_status == "stale":
+        return "Stale estimate"
     source_type = _event_source_type(row)
     age_days = _event_collected_age_days(row, today=today)
     if source_type == "Official":
@@ -848,6 +916,8 @@ def _event_freshness(row: dict[str, Any], *, today: date) -> str:
 def _event_coverage(rows: list[dict[str, Any]], *, today: date) -> dict[str, Any]:
     source_types = [_event_source_type(row) for row in rows]
     freshness = [_event_freshness(row, today=today) for row in rows]
+    validation = [_event_validation_label(row) for row in rows]
+    statuses = [_event_status_label(row) for row in rows]
     latest_collected_at = max(
         (_display_datetime(row.get("collected_at")) or "" for row in rows),
         default="",
@@ -859,20 +929,27 @@ def _event_coverage(rows: list[dict[str, Any]], *, today: date) -> dict[str, Any
         "source_count": len({str(row.get("source") or "") for row in rows if row.get("source")}),
         "official_count": source_types.count("Official"),
         "estimate_count": source_types.count("Provider Estimate"),
+        "cross_checked_count": validation.count("Cross-checked"),
+        "not_confirmed_count": validation.count("Not confirmed"),
         "stale_estimate_count": freshness.count("Stale estimate"),
+        "superseded_count": statuses.count("Superseded"),
     }
 
 
 def _event_warnings(coverage: dict[str, Any]) -> list[str]:
+    warnings: list[str] = []
     stale_estimates = int(coverage.get("stale_estimate_count") or 0)
-    if stale_estimates <= 0:
-        return []
-    return [
-        (
+    if stale_estimates > 0:
+        warnings.append(
             f"{stale_estimates} earnings estimate row(s) were collected more than "
             f"{EVENT_ESTIMATE_STALE_DAYS} days ago. Refresh Earnings Calendar before acting on those dates."
         )
-    ]
+    not_confirmed = int(coverage.get("not_confirmed_count") or 0)
+    if not_confirmed > 0:
+        warnings.append(
+            f"{not_confirmed} earnings estimate row(s) were not confirmed by the alternate Nasdaq calendar cross-check."
+        )
+    return warnings
 
 
 def _event_rows_frame(rows: list[dict[str, Any]], *, today: date) -> pd.DataFrame:
@@ -883,7 +960,9 @@ def _event_rows_frame(rows: list[dict[str, Any]], *, today: date) -> pd.DataFram
             "Symbol": row.get("symbol") or "-",
             "Title": row.get("title") or "-",
             "Source Type": _event_source_type(row),
+            "Validation": _event_validation_label(row),
             "Freshness": _event_freshness(row, today=today),
+            "Event Status": _event_status_label(row),
             "Age Days": _event_collected_age_days(row, today=today),
             "Source": row.get("source") or "-",
             "Confidence": (

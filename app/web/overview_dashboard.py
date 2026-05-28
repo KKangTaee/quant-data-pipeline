@@ -661,6 +661,7 @@ def _render_events_tab() -> None:
                     top_movers_limit=20,
                     lookahead_days=120,
                     max_symbols=50,
+                    validate_with_nasdaq=True,
                 )
             st.rerun()
         controls[3].caption(
@@ -691,10 +692,10 @@ def _render_events_tab() -> None:
                 "title": "Latest Collection",
                 "value": _snapshot_value(coverage.get("latest_collected_at")),
                 "detail": (
-                    f"sources: {coverage.get('source_count') or 0}, "
-                    f"stale estimates: {coverage.get('stale_estimate_count') or 0}"
+                    f"cross-checked: {coverage.get('cross_checked_count') or 0}, "
+                    f"not confirmed: {coverage.get('not_confirmed_count') or 0}"
                 ),
-                "tone": "warning" if coverage.get("stale_estimate_count") else "neutral",
+                "tone": "warning" if coverage.get("stale_estimate_count") or coverage.get("not_confirmed_count") else "neutral",
             },
         ]
     )

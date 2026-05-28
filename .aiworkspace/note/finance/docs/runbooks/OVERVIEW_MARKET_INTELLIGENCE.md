@@ -45,16 +45,21 @@ http://localhost:8501
    - 기본은 current year와 next year를 수집한다.
    - 결과는 `finance_meta.market_event_calendar`에 `event_type=FOMC_MEETING`으로 저장된다.
 
-4. `Workspace > Ingestion > Overview Market Event Calendar > Earnings Prototype`
+4. `Workspace > Ingestion > Overview Market Event Calendar > Earnings`
    - 기본은 `Latest S&P 500 Movers` source를 사용한다.
+   - broader coverage는 `S&P 500 Universe Batch`, `Top1000 Batch`, `Top2000 Batch`를 사용한다.
+   - broader mode는 `Max Symbols`, `Batch Offset`, `Ticker Cooldown Sec`을 작게 잡아 저빈도로 실행한다.
+   - `Nasdaq cross-check`를 켜면 yfinance estimate를 Nasdaq의 무료 earnings calendar endpoint와 날짜 단위로 비교한다.
    - latest movers mode는 stored S&P 500 intraday snapshot이 먼저 있어야 한다.
    - 특정 ticker 확인이 필요하면 `Manual Symbols`를 사용한다.
-   - 결과는 `finance_meta.market_event_calendar`에 `event_type=EARNINGS`, `source=yfinance_calendar`, `confidence=0.65`로 저장된다.
+   - 결과는 `finance_meta.market_event_calendar`에 `event_type=EARNINGS`, `source=yfinance_calendar`, `source_type=provider_estimate`로 저장된다.
+   - yfinance-only estimate는 `validation_status=estimate_only`, Nasdaq 확인 row는 `validation_status=cross_checked`, Nasdaq에서 확인하지 못한 row는 `validation_status=not_confirmed`가 된다.
+   - 같은 symbol/source의 이전 active estimate는 새 수집 결과가 있으면 `event_status=superseded`로 정리된다.
 
 5. `Workspace > Overview > Events`
    - `All`, `FOMC`, `Earnings` filter를 바꿔 저장 row를 확인한다.
    - `Source Type`에서 FOMC official row와 earnings provider estimate row를 구분한다.
-   - `Freshness`와 `Age Days`에서 오래된 earnings estimate인지 확인한다.
+   - `Validation`, `Freshness`, `Age Days`, `Event Status`에서 cross-check 여부와 오래된 earnings estimate인지 확인한다.
    - Overview의 refresh buttons도 ingestion job wrapper를 호출한다. UI render 중 직접 외부 source를 scraping하지 않는다.
 
 ## CLI Smoke Checks
@@ -83,7 +88,8 @@ PY
 - Market Movers daily refresh state shows `Fresh`, `Update due`, `Stale`, `Partial`, or `Failed`.
 - Missing diagnostics are visible with recommended action when provider rows are absent or incomplete.
 - FOMC rows have `source=federal_reserve_fomc_calendar`, `confidence=1.0`, and `Source Type=Official`.
-- Earnings prototype rows have `source=yfinance_calendar`, `confidence=0.65`, and `Source Type=Provider Estimate`.
+- Earnings rows have `source=yfinance_calendar`, `Source Type=Provider Estimate`, and a validation label.
+- Nasdaq cross-checked earnings rows have `Validation=Cross-checked` and higher confidence.
 - Earnings rows collected more than 14 days ago show `Freshness=Stale estimate` and a warning.
 - Overview Events `Latest Collection` updates after a successful collector run.
 
@@ -93,6 +99,8 @@ PY
 |---|---|---|
 | Earnings latest movers mode writes no rows | No latest S&P 500 intraday snapshot | Run S&P 500 market snapshot first or switch to manual symbols |
 | Some earnings symbols are missing | yfinance calendar has no upcoming date in the selected window | Check `failed_symbols` / `missing_symbols`; retry with wider lookahead or manual source |
+| Earnings row is not confirmed | Nasdaq cross-check did not find the same symbol on that event date | Treat as provider estimate only; refresh later or inspect company IR manually |
+| Old earnings date remains in DB | Estimate date changed | Overview hides superseded rows by default; inspect DB if an audit trail is needed |
 | Market Movers missing count is high | Provider quote rows missing or DB previous close missing | Open `Coverage Diagnostics`, then refresh OHLCV / snapshot source if needed |
 | Events tab is empty | Matching collector has not been run or filter is too narrow | Run FOMC / Earnings refresh and select `All` |
 | Overview app looks stale after code change | Old Streamlit process still running | Restart the Streamlit server and confirm Runtime / Build metadata in Ingestion |

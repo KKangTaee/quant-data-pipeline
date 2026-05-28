@@ -891,6 +891,9 @@ def run_collect_earnings_calendar(
     top_movers_limit: int = 20,
     lookahead_days: int = 120,
     max_symbols: int = 100,
+    batch_offset: int = 0,
+    validate_with_nasdaq: bool = False,
+    request_sleep_sec: float = 0.0,
 ) -> JobResult:
     job_name = "collect_earnings_calendar"
     started_at = _now_str()
@@ -924,6 +927,9 @@ def run_collect_earnings_calendar(
             top_movers_limit=top_movers_limit,
             lookahead_days=lookahead_days,
             max_symbols=max_symbols,
+            batch_offset=batch_offset,
+            validate_with_nasdaq=validate_with_nasdaq,
+            request_sleep_sec=request_sleep_sec,
         )
         rows_written = int(result.get("rows_written") or 0)
         symbols_requested = int(result.get("symbols_requested") or 0)
@@ -973,8 +979,11 @@ def run_collect_earnings_calendar(
             details={
                 "symbol_source": symbol_source,
                 "universe_code": universe_code,
+                "batch_offset": batch_offset,
                 "top_movers_limit": top_movers_limit,
                 "lookahead_days": lookahead_days,
+                "validate_with_nasdaq": validate_with_nasdaq,
+                "request_sleep_sec": request_sleep_sec,
                 "invalid_symbols": invalid_symbols,
             },
         )

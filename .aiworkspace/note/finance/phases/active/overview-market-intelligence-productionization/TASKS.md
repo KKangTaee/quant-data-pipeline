@@ -7,10 +7,10 @@
 | 2차 | Refresh State And Diagnostics Baseline | Complete | `sub-dev` | 정식 기능의 첫 조건은 최신성 / 부분 실패 / missing reason을 사용자가 바로 읽는 것이다. |
 | 2차 | Event Read Model Hardening | Complete | `sub-dev` | FOMC와 earnings가 섞인 Events table에서 source confidence와 stale estimate를 분명히 보여준다. |
 | 2차 | QA And Acceptance Checklist | Complete | `sub-dev` | prototype 완료가 아니라 정식화 gate를 통과했는지 확인하는 checklist를 만든다. |
-| 3차 | Earnings Source Validation | Next | `sub-dev` | yfinance estimate를 official/company source 또는 alternate free source와 비교하는 경로를 만든다. |
-| 3차 | Earnings Lifecycle Cleanup | Planned | `sub-dev` | 날짜 변경으로 생기는 older estimate row를 superseded/stale로 정리한다. |
-| 3차 | Low-Frequency Wider Collection | Planned | `sub-dev` | Top movers 외에 broader universe를 안전하게 저빈도 수집한다. |
-| 4차 | Market Intelligence Visuals | Planned | `sub-dev` | heatmap/treemap 또는 dense chart로 sector/industry/movers 비교 경험을 높인다. |
+| 3차 | Earnings Source Validation | Complete | `sub-dev` | yfinance estimate를 official/company source 또는 alternate free source와 비교하는 경로를 만든다. |
+| 3차 | Earnings Lifecycle Cleanup | Complete | `sub-dev` | 날짜 변경으로 생기는 older estimate row를 superseded/stale로 정리한다. |
+| 3차 | Low-Frequency Wider Collection | Complete | `sub-dev` | Top movers 외에 broader universe를 안전하게 저빈도 수집한다. |
+| 4차 | Market Intelligence Visuals | Next | `sub-dev` | heatmap/treemap 또는 dense chart로 sector/industry/movers 비교 경험을 높인다. |
 | 4차 | Calendar UX Polish | Planned | `sub-dev` | Events를 calendar-like view, filters, source labels로 읽기 쉽게 만든다. |
 | 4차 | Production Closeout | Planned | `sub-dev` | runbook, docs, browser QA, handoff를 정리하고 다음 phase로 넘긴다. |
 
