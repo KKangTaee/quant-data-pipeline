@@ -23,6 +23,7 @@ This phase belongs to `main-dev`.
 | `app/web/backtest_final_review_helpers.py` | final decision save evaluation and row construction |
 | `app/services/backtest_practical_validation_provider_context.py` | provider / macro provenance and freshness read model share this service |
 | `app/services/backtest_practical_validation_diagnostics.py` | Practical Validation result schema includes compact provider coverage summary |
+| `app/web/backtest_practical_validation.py` | Provider Coverage, Look-through Board, Provider Data Gaps share the same visible validation area |
 | `tests/test_service_contracts.py` | focused contract tests for read model / gate behavior |
 | `.aiworkspace/note/finance/docs/ROADMAP.md` | active work map |
 | `.aiworkspace/note/finance/docs/flows/PORTFOLIO_SELECTION_FLOW.md` | user-facing workflow semantics |

@@ -614,6 +614,7 @@ def build_practical_validation_result(
     provider_context = build_provider_context(provider_symbol_weights, as_of_date=provider_as_of)
     provider_coverage = dict(provider_context.get("coverage") or {})
     provider_display_rows = list(provider_context.get("display_rows") or [])
+    provider_look_through_board = dict(provider_context.get("look_through_board") or {})
 
     def _compact_provider_area(area_key: str) -> dict[str, Any]:
         area = dict(provider_coverage.get(area_key) or {})
@@ -1406,6 +1407,16 @@ def build_practical_validation_result(
                 "holdings": _compact_provider_area("holdings"),
                 "exposure": _compact_provider_area("exposure"),
                 "macro": _compact_provider_area("macro"),
+            },
+            "provider_look_through": {
+                "status": provider_look_through_board.get("status"),
+                "holdings_coverage_weight": provider_look_through_board.get("holdings_coverage_weight"),
+                "exposure_coverage_weight": provider_look_through_board.get("exposure_coverage_weight"),
+                "top_holding_weight": provider_look_through_board.get("top_holding_weight"),
+                "top_overlap_weight": provider_look_through_board.get("top_overlap_weight"),
+                "unknown_exposure_weight": provider_look_through_board.get("unknown_exposure_weight"),
+                "dominant_asset_bucket": provider_look_through_board.get("dominant_asset_bucket"),
+                "dominant_asset_weight": provider_look_through_board.get("dominant_asset_weight"),
             },
         },
         "component_rows": component_rows,

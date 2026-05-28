@@ -12,22 +12,22 @@ Created: 2026-05-28
 | 2 | `validation-gate-hardening-v1` | `finance-backtest-web-workflow` | critical diagnostic matrix, route policy, optional waiver design | Implementation complete |
 | 3 | `storage-governance-audit-v1` | main-dev + doc sync | existing JSONL writes review and keep/remove policy | Complete |
 | 4 | `data-provenance-coverage-v1` | `finance-db-pipeline` | source provenance fields, freshness / coverage read model, free-source-first contracts | Implementation complete |
-| 5 | `look-through-exposure-board-v1` | `finance-db-pipeline` + `finance-backtest-web-workflow` | holdings / exposure coverage board and Final Review summary | Planned |
+| 5 | `look-through-exposure-board-v1` | `finance-db-pipeline` + `finance-backtest-web-workflow` | holdings / exposure coverage board and Final Review summary | Implementation complete |
 | 6 | `robustness-lab-v1` | `finance-strategy-implementation` + backtest workflow | walk-forward / sensitivity / stress evidence surface | Planned |
 | 7 | `selected-monitoring-timeline-v1` | `finance-backtest-web-workflow` | selected portfolio review signals over time without auto-save sprawl | Planned |
 | 8 | `decision-dossier-report-v1` | backtest workflow + doc sync | human-readable final decision dossier / export contract | Planned |
 
 ## Immediate Next Task
 
-Next recommended implementation task is `look-through-exposure-board-v1`.
+Next recommended implementation task is `robustness-lab-v1`.
 
 Goal:
 
-- `look-through-exposure-board-v1`: holdings / exposure coverage board and Final Review summary using the compact provenance baseline.
+- `robustness-lab-v1`: walk-forward / sensitivity / stress evidence surface using existing strategy runtime and current diagnostics.
 
 Expected files:
 
-- look-through board: `finance/loaders/provider.py`, `app/services/backtest_practical_validation_provider_context.py`, Practical Validation / Final Review display, docs/data.
+- robustness lab: `app/services/backtest_practical_validation_stress_sensitivity.py`, `app/services/backtest_practical_validation_diagnostics.py`, Practical Validation / Final Review display, docs/flows.
 
 Out of scope for the next task:
 
@@ -40,7 +40,7 @@ Out of scope for the next task:
 - Task 2 should land before report or monitoring work so downstream screens can rely on a stable gate contract.
 - Task 3 completed as documentation / audit only; it did not rewrite registries.
 - Task 4 implemented compact source / freshness fields without adding storage.
-- Task 5 can now build on the provenance contract instead of inventing another persistence layer.
+- Task 5 implemented a compact look-through board inside provider context; full holdings / exposure rows remain DB-only.
 - Task 6 should use existing strategy runtime / proven libraries where possible; avoid hand-rolled simulation if a reliable local implementation exists.
 - Task 7 should avoid automatic monitoring log writes. Monitoring snapshots should be explicit user action unless a later automation policy is approved.
 

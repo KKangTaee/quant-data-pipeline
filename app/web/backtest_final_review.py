@@ -54,6 +54,56 @@ def _status_tone(status: Any) -> str:
     return "neutral"
 
 
+def _provider_look_through_board(validation: dict[str, Any]) -> dict[str, Any]:
+    board = dict(validation.get("provider_look_through_board") or {})
+    if board:
+        return board
+    provider_context = dict(validation.get("provider_coverage") or {})
+    return dict(provider_context.get("look_through_board") or {})
+
+
+def _render_provider_look_through_summary(validation: dict[str, Any]) -> None:
+    board = _provider_look_through_board(validation)
+    if not board:
+        return
+
+    st.markdown("###### Look-through Exposure Board")
+    render_badge_strip(
+        [
+            {"label": "Board", "value": board.get("status") or "-", "tone": _status_tone(board.get("status"))},
+            {"label": "Holdings", "value": f"{board.get('holdings_coverage_weight', 0)}%", "tone": _status_tone(board.get("holdings_status"))},
+            {"label": "Exposure", "value": f"{board.get('exposure_coverage_weight', 0)}%", "tone": _status_tone(board.get("exposure_status"))},
+            {"label": "Top Holding", "value": f"{board.get('top_holding_weight', 0)}%", "tone": "warning" if (board.get("top_holding_weight") or 0) > 25 else "neutral"},
+            {"label": "Dominant", "value": f"{board.get('dominant_asset_bucket') or '-'} {board.get('dominant_asset_weight', 0)}%", "tone": "neutral"},
+            {"label": "Unknown", "value": f"{board.get('unknown_exposure_weight', 0)}%", "tone": "warning" if (board.get("unknown_exposure_weight") or 0) else "neutral"},
+        ]
+    )
+    st.caption(str(board.get("summary") or "-"))
+    summary_rows = list(board.get("summary_rows") or [])
+    if summary_rows:
+        st.dataframe(pd.DataFrame(summary_rows), width="stretch", hide_index=True)
+    with st.expander("Look-through detail", expanded=False):
+        detail_tabs = st.tabs(["Asset Buckets", "Top Holdings", "Fund Coverage"])
+        with detail_tabs[0]:
+            rows = list(board.get("asset_bucket_rows") or [])
+            if rows:
+                st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+            else:
+                st.info("표시할 asset bucket row가 없습니다.")
+        with detail_tabs[1]:
+            rows = list(board.get("top_holding_rows") or [])
+            if rows:
+                st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+            else:
+                st.info("표시할 top holdings row가 없습니다.")
+        with detail_tabs[2]:
+            rows = list(board.get("fund_coverage_rows") or [])
+            if rows:
+                st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+            else:
+                st.info("표시할 ETF별 coverage row가 없습니다.")
+
+
 def _render_validation_summary(validation: dict[str, Any]) -> None:
     metrics = dict(validation.get("metrics") or {})
     route = str(validation.get("validation_route") or "-")
@@ -98,6 +148,7 @@ def _render_validation_summary(validation: dict[str, Any]) -> None:
         if provider_rows:
             st.markdown("###### Provider Coverage")
             st.dataframe(pd.DataFrame(provider_rows), width="stretch", hide_index=True)
+            _render_provider_look_through_summary(validation)
         not_run_critical = list(validation.get("not_run_critical_domains") or [])
         if not_run_critical:
             st.caption("NOT_RUN 항목은 선택을 자동 차단하지 않지만, 최종 판단 사유에서 확인해야 합니다.")

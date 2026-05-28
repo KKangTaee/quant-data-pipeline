@@ -21,7 +21,7 @@ Created: 2026-05-28
 | Current ETF snapshot treated as historical truth | Look-ahead / PIT interpretation weakens | Disclose current snapshot limits; future task can add as-of snapshot id |
 | Web crawler source changes | Ingestion breaks silently | Use source map, parser version, and failed-parse status |
 | Free API unavailable | Coverage gaps remain | Allow verified crawler through ingestion layer, not UI |
-| Raw data accidentally lands in JSONL | Registry becomes heavy and hard to govern | Keep raw provider / holdings / macro data in DB only |
+| Raw data accidentally lands in JSONL | Registry becomes heavy and hard to govern | Keep raw provider / holdings / macro data in DB only; look-through board stores compact summary / top rows only |
 | Future persistence helper bypasses storage governance | JSONL sprawl returns under a new feature name | Require task plans to classify new persistence against `docs/data/STORAGE_GOVERNANCE.md` |
 
 ## Implementation Risks

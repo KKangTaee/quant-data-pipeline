@@ -7,7 +7,8 @@ Last Verified: 2026-05-28
 
 | Track | Status | Notes |
 |---|---|---|
-| Investability Decision Foundation | Active | `.aiworkspace/note/finance/phases/active/investability-decision-foundation/`; validation gate, storage governance, data provenance baseline 완료, 다음은 look-through exposure board |
+| Investability Decision Foundation | Active | `.aiworkspace/note/finance/phases/active/investability-decision-foundation/`; validation gate, storage governance, data provenance baseline, look-through exposure board 완료, 다음은 robustness lab |
+| Look-through Exposure Board V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/look-through-exposure-board-v1/`; holdings / exposure snapshot을 compact board로 요약해 Practical Validation과 Final Review에 표시 |
 | Data Provenance Coverage V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/data-provenance-coverage-v1/`; provider / macro context에 compact provenance / freshness read model과 stale REVIEW policy 추가 |
 | Storage Governance Audit V1 | Complete | `.aiworkspace/note/finance/tasks/active/storage-governance-audit-v1/`; JSONL write 지점 전수 감사와 `docs/data/STORAGE_GOVERNANCE.md` 기준선 추가 |
 | Validation Gate Hardening V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/validation-gate-hardening-v1/`; Final Review profile-aware gate policy matrix / compact gate snapshot / selected-route policy gate 구현 |
@@ -80,4 +81,4 @@ P2에서 정상화하는 주요 진단:
 
 - UI Engine Boundary Cleanup은 완료됐다. 다음 구조 작업은 새 phase/task로 열고, 현재 경계는 boundary lint와 service contract test를 먼저 통과시키는 기준으로 유지한다.
 - Practical Validation V2는 P2 QA 여부를 확인한 뒤 P3로 넘어갈지, P2를 closeout할지 결정한다.
-- Investability Decision Foundation은 `data-provenance-coverage-v1`까지 완료했다. 다음 후보는 holdings / exposure coverage를 더 직접적으로 보여주는 `look-through-exposure-board-v1`이다.
+- Investability Decision Foundation은 `look-through-exposure-board-v1`까지 완료했다. 다음 후보는 stress / sensitivity / robustness evidence를 더 직접적으로 다루는 `robustness-lab-v1`이다.

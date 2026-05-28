@@ -79,6 +79,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - current snapshot이므로 historical point-in-time ETF 운용성 truth로 바로 해석하면 안 된다.
 - Practical Validation result JSONL에는 full row를 저장하지 않고 compact evidence / coverage status만 저장하는 방향이다.
 - `data-provenance-coverage-v1` 이후 Practical Validation provider context는 `source`, `source_type`, `coverage_status`, `as_of_date`, `collected_at`을 compact provenance로 요약한다.
+- `look-through-exposure-board-v1` 이후 Practical Validation provider context는 `etf_holdings_snapshot` / `etf_exposure_snapshot`을 compact look-through board로 접어 asset bucket, top holdings, overlap, ETF별 coverage를 보여준다.
 - provider snapshot freshness가 오래됐으면 충분한 coverage라도 `REVIEW`로 남긴다.
 
 ## `etf_holdings_snapshot`
@@ -120,6 +121,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - sector가 없는 holdings source는 asset class / currency exposure만 만들 수 있다.
 - Practical Validation result JSONL에는 full exposure table이 아니라 compact summary만 저장하는 방향이다.
 - Practical Validation result JSONL에는 source mix / coverage status weight / stale symbol 같은 compact provenance만 저장하고 full holdings / exposure row는 저장하지 않는다.
+- Look-through board도 compact summary / top rows만 저장하며 full holdings / exposure source-of-truth는 이 table들과 DB loader다.
 
 ## `macro_series_observation`
 

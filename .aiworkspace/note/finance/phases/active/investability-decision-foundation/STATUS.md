@@ -17,14 +17,15 @@ Last Updated: 2026-05-28
 - `validation-gate-hardening-v1` implemented a profile-aware gate policy matrix and compact `gate_policy_snapshot`.
 - `storage-governance-audit-v1` classified JSONL write surfaces and added durable storage governance without rewriting registries.
 - `data-provenance-coverage-v1` added compact provider / macro provenance and freshness read models without adding storage.
+- `look-through-exposure-board-v1` added compact holdings / exposure board rows to Practical Validation and Final Review without adding storage.
 
 ## In Progress
 
-- Prepare `look-through-exposure-board-v1` as the next implementation slice.
+- Prepare `robustness-lab-v1` as the next implementation slice.
 
 ## Next
 
-1. Use `look-through-exposure-board-v1` to surface holdings / exposure coverage now that source / freshness fields are stable.
+1. Use `robustness-lab-v1` to make stress / sensitivity / overfit evidence easier to run and interpret.
 2. Decide structured waiver policy before allowing selected-route override.
 3. Keep storage governance checklist mandatory before adding persistence.
 
@@ -37,3 +38,4 @@ Last Updated: 2026-05-28
 - Selected route means `실전 검토 통과 후보`, not live approval.
 - UI does not fetch provider or macro data directly.
 - Stale provider snapshot evidence is REVIEW, not PASS.
+- Look-through board rows are compact summaries; full holdings / exposure rows stay in DB.

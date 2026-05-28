@@ -120,6 +120,7 @@ Invesco official holdings / weighted sector API
 - P2-5A부터 이 수집과 exposure 재집계는 `Workspace > Ingestion > Practical Validation Provider Snapshots > ETF Holdings / Exposure`에서 실행할 수 있다.
 - P2-5B부터 Practical Validation 2번 / 3번 진단은 이 holdings / exposure snapshot을 우선 읽고, JSONL에는 full row가 아니라 compact provider coverage와 top evidence만 저장한다.
 - `data-provenance-coverage-v1`부터 holdings / exposure context도 source mix, coverage status weight, freshness, stale symbols를 compact provenance로 제공한다. Full holdings / exposure row는 계속 DB에만 둔다.
+- `look-through-exposure-board-v1`부터 provider context는 holdings / exposure snapshot을 compact board로 요약한다. Board에는 asset bucket rows, top holding rows, ETF별 holdings / exposure coverage, exposure detail top rows만 남기며 full holdings row는 저장하지 않는다.
 
 ## Macro / sentiment market-context 흐름
 

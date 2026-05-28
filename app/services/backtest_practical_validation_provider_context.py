@@ -384,6 +384,195 @@ def _downgrade_pass_for_freshness(diagnostic_status: str, provenance: dict[str, 
     return status
 
 
+def _combined_look_through_status(*statuses: Any) -> str:
+    normalized = {str(status or "NOT_RUN").strip().upper() for status in statuses}
+    if "BLOCKED" in normalized:
+        return "BLOCKED"
+    if "REVIEW" in normalized:
+        return "REVIEW"
+    if "PASS" in normalized and "NOT_RUN" in normalized:
+        return "REVIEW"
+    if "PASS" in normalized:
+        return "PASS"
+    return "NOT_RUN"
+
+
+def _asset_bucket_rows(asset_exposure: dict[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for bucket, weight in sorted(
+        dict(asset_exposure or {}).items(),
+        key=lambda item: (_optional_float(item[1]) or 0.0),
+        reverse=True,
+    ):
+        numeric = round(_optional_float(weight) or 0.0, 4)
+        if numeric <= 0.0:
+            continue
+        rows.append(
+            {
+                "Asset Bucket": str(bucket),
+                "Portfolio Weight": numeric,
+                "Judgment": "REVIEW" if str(bucket) == "unknown" else "PASS",
+            }
+        )
+    return rows
+
+
+def _symbol_rows_by_symbol(provenance: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    rows: dict[str, dict[str, Any]] = {}
+    for raw_row in list(dict(provenance or {}).get("symbol_rows") or []):
+        row = dict(raw_row or {}) if isinstance(raw_row, dict) else {}
+        symbol = str(row.get("Symbol") or "").strip().upper()
+        if symbol:
+            rows[symbol] = row
+    return rows
+
+
+def _look_through_fund_coverage_rows(
+    symbol_weights: dict[str, float],
+    holdings_provenance: dict[str, Any],
+    exposure_provenance: dict[str, Any],
+) -> list[dict[str, Any]]:
+    holdings_rows = _symbol_rows_by_symbol(holdings_provenance)
+    exposure_rows = _symbol_rows_by_symbol(exposure_provenance)
+    rows: list[dict[str, Any]] = []
+    for symbol, weight in symbol_weights.items():
+        holding_row = holdings_rows.get(symbol, {})
+        exposure_row = exposure_rows.get(symbol, {})
+        rows.append(
+            {
+                "Symbol": symbol,
+                "Target Weight": round(weight, 4),
+                "Holdings Coverage": holding_row.get("Coverage") or "not_run",
+                "Holdings Freshness": holding_row.get("Freshness") or "-",
+                "Holdings As Of": holding_row.get("As Of") or "-",
+                "Exposure Coverage": exposure_row.get("Coverage") or "not_run",
+                "Exposure Freshness": exposure_row.get("Freshness") or "-",
+                "Exposure As Of": exposure_row.get("As Of") or "-",
+            }
+        )
+    return rows
+
+
+def _build_look_through_board(
+    symbol_weights: dict[str, float],
+    holdings: dict[str, Any],
+    exposure: dict[str, Any],
+) -> dict[str, Any]:
+    """Build a compact holdings / exposure board without storing full provider rows."""
+
+    holdings_provenance = dict(holdings.get("provenance") or {})
+    exposure_provenance = dict(exposure.get("provenance") or {})
+    holdings_status = str(holdings.get("diagnostic_status") or "NOT_RUN").upper()
+    exposure_status = str(exposure.get("diagnostic_status") or "NOT_RUN").upper()
+    status = _combined_look_through_status(holdings_status, exposure_status)
+    holdings_coverage = _optional_float(holdings.get("coverage_weight")) or 0.0
+    exposure_coverage = _optional_float(exposure.get("coverage_weight")) or 0.0
+    holdings_metrics = dict(holdings.get("metrics") or {})
+    asset_exposure = dict(exposure.get("asset_exposure") or {})
+    top_holding_weight = round(_optional_float(holdings_metrics.get("top_holding_weight")) or 0.0, 4)
+    top_overlap_weight = round(_optional_float(holdings_metrics.get("top_overlap_weight")) or 0.0, 4)
+    unknown_exposure = round(_optional_float(asset_exposure.get("unknown")) or 0.0, 4)
+    asset_rows = _asset_bucket_rows(asset_exposure)
+    known_asset_rows = [row for row in asset_rows if row.get("Asset Bucket") != "unknown"]
+    dominant_asset = known_asset_rows[0] if known_asset_rows else {}
+    dominant_asset_label = str(dominant_asset.get("Asset Bucket") or "-")
+    dominant_asset_weight = _optional_float(dominant_asset.get("Portfolio Weight")) or 0.0
+
+    summary_rows = [
+        {
+            "Check": "Holdings Coverage",
+            "Status": holdings_status,
+            "Current": f"{holdings_coverage:.1f}%",
+            "Evidence": (
+                f"{holdings_provenance.get('freshness_status') or '-'} / "
+                f"{holdings_provenance.get('source_mix') or '-'} / "
+                f"{holdings_provenance.get('as_of_range') or '-'}"
+            ),
+            "Meaning": "ETF holdings snapshot이 target weight 기준으로 얼마나 실제 holdings overlap에 연결됐는지 봅니다.",
+        },
+        {
+            "Check": "Exposure Coverage",
+            "Status": exposure_status,
+            "Current": f"{exposure_coverage:.1f}%",
+            "Evidence": (
+                f"{exposure_provenance.get('freshness_status') or '-'} / "
+                f"{exposure_provenance.get('source_mix') or '-'} / "
+                f"{exposure_provenance.get('as_of_range') or '-'}"
+            ),
+            "Meaning": "ETF exposure snapshot이 asset bucket look-through에 얼마나 연결됐는지 봅니다.",
+        },
+        {
+            "Check": "Top Holding",
+            "Status": "REVIEW" if top_holding_weight > 25.0 else "PASS" if holdings_coverage > 0.0 else "NOT_RUN",
+            "Current": f"{top_holding_weight:.1f}%",
+            "Evidence": f"{holdings_metrics.get('holding_count', 0)} compact holding row(s)",
+            "Meaning": "단일 underlying holding이 portfolio weight에서 차지하는 최대 비중입니다.",
+        },
+        {
+            "Check": "Top Overlap",
+            "Status": "REVIEW" if top_overlap_weight > 20.0 else "PASS" if holdings_coverage > 0.0 else "NOT_RUN",
+            "Current": f"{top_overlap_weight:.1f}%",
+            "Evidence": f"{holdings_metrics.get('overlap_count', 0)} overlapped holding row(s)",
+            "Meaning": "여러 ETF에 중복 포함된 holding의 최대 portfolio weight입니다.",
+        },
+        {
+            "Check": "Dominant Asset Bucket",
+            "Status": "PASS" if dominant_asset else "NOT_RUN",
+            "Current": f"{dominant_asset_label} {dominant_asset_weight:.1f}%" if dominant_asset else "-",
+            "Evidence": f"unknown {unknown_exposure:.1f}%",
+            "Meaning": "provider exposure 기준 가장 큰 자산군과 미분류 비중입니다.",
+        },
+    ]
+    if unknown_exposure > 0.0:
+        summary_rows.append(
+            {
+                "Check": "Unknown Exposure",
+                "Status": "REVIEW",
+                "Current": f"{unknown_exposure:.1f}%",
+                "Evidence": "missing exposure coverage",
+                "Meaning": "미분류 exposure는 자산군 판단의 남은 공백입니다.",
+            }
+        )
+
+    if status == "NOT_RUN":
+        summary = "ETF holdings / exposure snapshot이 없어 look-through board를 만들지 못했습니다."
+    else:
+        summary = (
+            f"Look-through board status {status}: holdings coverage {holdings_coverage:.1f}%, "
+            f"exposure coverage {exposure_coverage:.1f}%, dominant asset {dominant_asset_label} "
+            f"{dominant_asset_weight:.1f}%, top holding {top_holding_weight:.1f}%."
+        )
+
+    return {
+        "schema_version": "look_through_board_v1",
+        "status": status,
+        "summary": summary,
+        "holdings_status": holdings_status,
+        "exposure_status": exposure_status,
+        "holdings_coverage_weight": round(holdings_coverage, 4),
+        "exposure_coverage_weight": round(exposure_coverage, 4),
+        "top_holding_weight": top_holding_weight,
+        "top_overlap_weight": top_overlap_weight,
+        "unknown_exposure_weight": unknown_exposure,
+        "dominant_asset_bucket": dominant_asset_label,
+        "dominant_asset_weight": round(dominant_asset_weight, 4),
+        "summary_rows": summary_rows,
+        "asset_bucket_rows": asset_rows,
+        "top_holding_rows": list(holdings.get("evidence_rows") or [])[:12],
+        "fund_coverage_rows": _look_through_fund_coverage_rows(
+            symbol_weights,
+            holdings_provenance,
+            exposure_provenance,
+        ),
+        "exposure_detail_rows": list(exposure.get("evidence_rows") or [])[:12],
+        "limitations": [
+            "V1 board는 1차 ETF holdings / exposure snapshot 기준입니다.",
+            "ETF-of-ETF 2차 underlying look-through expansion은 후속 작업입니다.",
+            "Full holdings row는 DB에만 두고 validation / final decision에는 compact rows만 남깁니다.",
+        ],
+    }
+
+
 def _supported_symbols(frame: pd.DataFrame, *, symbol_column: str) -> list[str]:
     """Return symbols with usable provider rows, excluding explicit missing/error rows."""
     if frame.empty or symbol_column not in frame.columns:
@@ -1100,6 +1289,7 @@ def build_provider_context(
             ),
         }
         macro = _build_macro_context(as_of_date, max_staleness_days=max_macro_staleness_days)
+        look_through_board = _build_look_through_board({}, empty, empty)
         return {
             "schema_version": PROVIDER_CONTEXT_SCHEMA_VERSION,
             "as_of_date": as_of_date,
@@ -1111,6 +1301,7 @@ def build_provider_context(
                 "exposure": empty,
                 "macro": macro,
             },
+            "look_through_board": look_through_board,
             "display_rows": _provider_display_rows(empty, empty, empty, macro),
         }
 
@@ -1118,6 +1309,7 @@ def build_provider_context(
     holdings = _build_holdings_context(weights, as_of_date, max_staleness_days=provider_staleness_days)
     operability = _build_operability_context(weights, as_of_date, max_staleness_days=provider_staleness_days)
     macro = _build_macro_context(as_of_date, max_staleness_days=max_macro_staleness_days)
+    look_through_board = _build_look_through_board(weights, holdings, exposure)
     return {
         "schema_version": PROVIDER_CONTEXT_SCHEMA_VERSION,
         "as_of_date": as_of_date,
@@ -1129,6 +1321,7 @@ def build_provider_context(
             "exposure": exposure,
             "macro": macro,
         },
+        "look_through_board": look_through_board,
         "display_rows": _provider_display_rows(operability, holdings, exposure, macro),
     }
 

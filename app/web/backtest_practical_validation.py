@@ -378,6 +378,70 @@ def _render_provider_gap_section(validation_result: dict[str, Any]) -> None:
         st.rerun()
 
 
+def _provider_look_through_board(validation_result: dict[str, Any]) -> dict[str, Any]:
+    board = dict(validation_result.get("provider_look_through_board") or {})
+    if board:
+        return board
+    provider_context = dict(validation_result.get("provider_coverage") or {})
+    return dict(provider_context.get("look_through_board") or {})
+
+
+def _render_provider_look_through_board(validation_result: dict[str, Any]) -> None:
+    board = _provider_look_through_board(validation_result)
+    if not board:
+        return
+
+    st.markdown("##### Look-through Exposure Board")
+    st.caption(
+        "ETF holdings / exposure snapshot을 portfolio weight 기준으로 접어 본 compact board입니다. "
+        "full holdings row는 DB에만 있고, 여기에는 판단에 필요한 요약만 표시합니다."
+    )
+    render_badge_strip(
+        [
+            {"label": "Board", "value": board.get("status") or "-", "tone": _status_tone(board.get("status"))},
+            {"label": "Holdings", "value": f"{board.get('holdings_coverage_weight', 0)}%", "tone": _status_tone(board.get("holdings_status"))},
+            {"label": "Exposure", "value": f"{board.get('exposure_coverage_weight', 0)}%", "tone": _status_tone(board.get("exposure_status"))},
+            {"label": "Top Holding", "value": f"{board.get('top_holding_weight', 0)}%", "tone": "warning" if (board.get("top_holding_weight") or 0) > 25 else "neutral"},
+            {"label": "Dominant", "value": f"{board.get('dominant_asset_bucket') or '-'} {board.get('dominant_asset_weight', 0)}%", "tone": "neutral"},
+            {"label": "Unknown", "value": f"{board.get('unknown_exposure_weight', 0)}%", "tone": "warning" if (board.get("unknown_exposure_weight") or 0) else "neutral"},
+        ]
+    )
+    st.caption(str(board.get("summary") or "-"))
+    summary_rows = list(board.get("summary_rows") or [])
+    if summary_rows:
+        st.dataframe(pd.DataFrame(summary_rows), width="stretch", hide_index=True)
+
+    tabs = st.tabs(["Asset Buckets", "Top Holdings", "Fund Coverage", "Exposure Detail"])
+    with tabs[0]:
+        asset_rows = list(board.get("asset_bucket_rows") or [])
+        if asset_rows:
+            st.dataframe(pd.DataFrame(asset_rows), width="stretch", hide_index=True)
+        else:
+            st.info("표시할 asset bucket exposure가 없습니다.")
+    with tabs[1]:
+        holding_rows = list(board.get("top_holding_rows") or [])
+        if holding_rows:
+            st.dataframe(pd.DataFrame(holding_rows), width="stretch", hide_index=True)
+        else:
+            st.info("표시할 top holdings row가 없습니다.")
+    with tabs[2]:
+        fund_rows = list(board.get("fund_coverage_rows") or [])
+        if fund_rows:
+            st.dataframe(pd.DataFrame(fund_rows), width="stretch", hide_index=True)
+        else:
+            st.info("표시할 ETF별 coverage row가 없습니다.")
+    with tabs[3]:
+        exposure_rows = list(board.get("exposure_detail_rows") or [])
+        if exposure_rows:
+            st.dataframe(pd.DataFrame(exposure_rows), width="stretch", hide_index=True)
+        else:
+            st.info("표시할 exposure detail row가 없습니다.")
+
+    limitations = list(board.get("limitations") or [])
+    if limitations:
+        st.caption("Limitations: " + " / ".join(str(item) for item in limitations))
+
+
 def _render_stress_sensitivity_interpretation(validation_result: dict[str, Any]) -> None:
     stress = dict(validation_result.get("stress_interpretation") or {})
     sensitivity = dict(validation_result.get("sensitivity_interpretation") or {})
@@ -454,6 +518,7 @@ def _render_validation_result(validation_result: dict[str, Any]) -> None:
             "Ingestion에서 저장한 ETF provider / FRED snapshot이 Practical Diagnostics에 어떻게 연결됐는지 보여줍니다."
         )
         st.dataframe(pd.DataFrame(provider_rows), width="stretch", hide_index=True)
+        _render_provider_look_through_board(validation_result)
         _render_provider_gap_section(validation_result)
 
     _render_stress_sensitivity_interpretation(validation_result)

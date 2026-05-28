@@ -83,6 +83,8 @@ external source
   `finance/loaders/macro.py`가 validation 기준일 근처 snapshot과 staleness를 읽는다.
   `data-provenance-coverage-v1`부터 Practical Validation provider context는 loader 결과를 source mix / coverage status weight / as-of range / collected range / freshness로 요약하고,
   stale ETF provider snapshot은 `PASS`가 아니라 `REVIEW`로 남긴다.
+  `look-through-exposure-board-v1`부터 같은 provider context가 holdings / exposure snapshot을 compact board로 접어 asset bucket, top holding, overlap, ETF별 coverage를 보여준다.
+  이 board도 full holdings row를 JSONL에 저장하지 않고 DB-backed loader 결과에서 만든 summary / top rows만 저장한다.
 
 ## 데이터 무결성 체크포인트
 

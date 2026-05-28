@@ -21,6 +21,18 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-28 - Look-through evidence는 compact board로 읽는다
+- User request:
+  - Investability Decision Foundation의 다음 작업 진행을 요청함.
+- Interpreted goal:
+  - holdings / exposure raw row를 저장하지 않고도 Final Review에서 실제 underlying 노출을 확인할 수 있어야 함.
+- Analysis result:
+  - `look-through-exposure-board-v1` task를 열고 구현했다.
+  - Provider context에 compact `look_through_board`를 추가해 asset bucket, top holding, top overlap, ETF별 coverage를 표시한다.
+  - Practical Validation과 Final Review는 같은 board를 읽고, board는 `provider_coverage` 안에만 보존해 top-level 중복 저장을 피한다.
+- Follow-up:
+  - 다음 후보는 `robustness-lab-v1`로 stress / sensitivity / overfit 근거를 더 실행 가능한 surface로 만드는 것이다.
+
 ### 2026-05-28 - Provider evidence는 출처와 freshness를 함께 봐야 한다
 - User request:
   - Investability Decision Foundation의 다음 단계 진행을 요청함.

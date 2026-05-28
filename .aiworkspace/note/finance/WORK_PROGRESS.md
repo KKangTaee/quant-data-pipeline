@@ -22,6 +22,10 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-28
+- Completed `.aiworkspace/note/finance/tasks/active/look-through-exposure-board-v1/`.
+- Provider context now includes a compact `look_through_board` for holdings / exposure asset buckets, top holdings, overlap, and ETF-level coverage.
+- Practical Validation and Final Review display the board without adding a new JSONL registry or duplicating full holdings rows.
+- Next implementation candidate is `robustness-lab-v1`.
 - Completed `.aiworkspace/note/finance/tasks/active/data-provenance-coverage-v1/`.
 - Provider context schema v2 now carries compact source mix, freshness, as-of range, stale symbols / series, and coverage weights.
 - Stale ETF provider snapshot evidence now downgrades otherwise-PASS provider diagnostics to REVIEW; no DB schema or JSONL registry was added.

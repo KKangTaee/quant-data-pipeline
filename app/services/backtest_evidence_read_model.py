@@ -788,11 +788,17 @@ def _append_check_rows(
                 or check_row.get("criteria")
                 or check_row.get("Section")
                 or check_row.get("Group")
+                or check_row.get("Check")
                 or "-",
-                "Ready": check_row.get("Ready") if "Ready" in check_row else check_row.get("ready"),
+                "Ready": check_row.get("Ready")
+                if "Ready" in check_row
+                else check_row.get("ready")
+                if "ready" in check_row
+                else str(check_row.get("Status") or "").upper() == "PASS",
                 "Current": check_row.get("Current")
                 or check_row.get("current")
                 or check_row.get("current_value")
+                or check_row.get("Status")
                 or "-",
                 "Meaning": check_row.get("Meaning")
                 or check_row.get("meaning")
@@ -815,10 +821,15 @@ def build_final_decision_evidence_rows(row: dict[str, Any]) -> list[dict[str, An
     display_rows: list[dict[str, Any]] = []
     packet = dict(raw_decision.get("investability_evidence_packet") or {})
     gate_policy = dict(raw_decision.get("gate_policy_snapshot") or packet.get("gate_policy_snapshot") or {})
+    look_through = dict(risk_snapshot.get("provider_look_through_board") or {})
+    if not look_through:
+        provider_context = dict(risk_snapshot.get("provider_coverage") or {})
+        look_through = dict(provider_context.get("look_through_board") or {})
     _append_check_rows(display_rows, area="Final Review Evidence", checks=list(evidence.get("checks") or []))
     _append_check_rows(display_rows, area="Investability Packet", checks=list(packet.get("checks") or []))
     _append_check_rows(display_rows, area="Gate Policy", checks=list(gate_policy.get("policy_rows") or []))
     _append_check_rows(display_rows, area="Validation", checks=list(risk_snapshot.get("validation_checks") or []))
+    _append_check_rows(display_rows, area="Look-through Exposure", checks=list(look_through.get("summary_rows") or []))
     _append_check_rows(display_rows, area="Robustness", checks=list(robustness.get("checks") or []))
     _append_check_rows(display_rows, area="Paper Observation", checks=list(paper_snapshot.get("checks") or []))
     return display_rows

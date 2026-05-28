@@ -722,6 +722,21 @@ class ProviderContextProvenanceContractTests(unittest.TestCase):
         self.assertEqual(provenance["coverage_status_weights"], {"actual": 100.0})
         self.assertEqual(provenance["as_of_range"], "2026-03-01..2026-05-20")
 
+        board = context["look_through_board"]
+        self.assertEqual(board["schema_version"], "look_through_board_v1")
+        self.assertEqual(board["status"], "PASS")
+        self.assertEqual(board["holdings_coverage_weight"], 100.0)
+        self.assertEqual(board["exposure_coverage_weight"], 100.0)
+        self.assertEqual(board["top_holding_weight"], 3.5)
+        self.assertEqual(board["dominant_asset_bucket"], "equity")
+        self.assertEqual(board["dominant_asset_weight"], 70.0)
+        asset_rows_by_bucket = {row["Asset Bucket"]: row for row in board["asset_bucket_rows"]}
+        self.assertEqual(asset_rows_by_bucket["equity"]["Portfolio Weight"], 70.0)
+        self.assertEqual(asset_rows_by_bucket["bond"]["Portfolio Weight"], 30.0)
+        fund_rows_by_symbol = {row["Symbol"]: row for row in board["fund_coverage_rows"]}
+        self.assertEqual(fund_rows_by_symbol["SPY"]["Holdings Freshness"], "fresh")
+        self.assertEqual(fund_rows_by_symbol["TLT"]["Exposure Coverage"], "actual")
+
         rows_by_area = {row["Area"]: row for row in context["display_rows"]}
         self.assertEqual(rows_by_area["ETF Operability"]["Freshness"], "stale")
         self.assertEqual(rows_by_area["ETF Operability"]["Source Mix"], "official 100.0%")
@@ -805,6 +820,17 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
                         "Current": "REVIEW",
                     }
                 ],
+                "provider_look_through_board": {
+                    "summary_rows": [
+                        {
+                            "Check": "Holdings Coverage",
+                            "Status": "PASS",
+                            "Current": "100.0%",
+                            "Evidence": "fresh / official 100.0% / 2026-05-20",
+                            "Meaning": "holdings coverage compact summary",
+                        }
+                    ]
+                },
                 "robustness_validation": {
                     "checks": [{"criteria": "Robustness status", "current_value": "WATCH"}]
                 },
@@ -821,6 +847,7 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
             [
                 "Final Review Evidence",
                 "Validation",
+                "Look-through Exposure",
                 "Robustness",
                 "Paper Observation",
             ],
@@ -828,8 +855,10 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertEqual(rows[0]["Criteria"], "Evidence route")
         self.assertTrue(rows[0]["Ready"])
         self.assertEqual(rows[1]["Current"], "REVIEW")
-        self.assertEqual(rows[2]["Current"], "WATCH")
-        self.assertEqual(rows[3]["Current"], "OPTIONAL")
+        self.assertEqual(rows[2]["Criteria"], "Holdings Coverage")
+        self.assertTrue(rows[2]["Ready"])
+        self.assertEqual(rows[3]["Current"], "WATCH")
+        self.assertEqual(rows[4]["Current"], "OPTIONAL")
 
     def test_investability_packet_ready_contract_is_ui_neutral(self) -> None:
         from app.services.backtest_evidence_read_model import build_investability_evidence_packet
