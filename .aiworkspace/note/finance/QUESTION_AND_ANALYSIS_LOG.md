@@ -21,6 +21,18 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-28 - SEC Form 25 collector should be reachable from Ingestion
+- User request:
+  - 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - 이미 구현된 SEC Form 25 delisting collector를 실제 운영 화면에서 수동 실행할 수 있게 한다.
+- Analysis result:
+  - `Workspace > Ingestion > Practical Validation Provider Snapshots`에 `Delisting Evidence` tab을 추가했다.
+  - 이 tab은 symbol list와 SEC user-agent override를 받아 기존 `collect_sec_form25_delistings` job wrapper를 실행한다.
+  - Form 25 부재는 active proof가 아니며 complete historical membership은 별도 source가 필요하다는 경고를 화면에 남겼다.
+- Follow-up:
+  - 다음 개선 후보는 더 완전한 historical listing membership source 또는 cost / turnover 실측 근거 수집이다.
+
 ### 2026-05-28 - SEC Form 25 can seed actual delisting evidence
 - User request:
   - 다음 단계 진행을 요청함.

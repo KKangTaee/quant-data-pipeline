@@ -7,6 +7,7 @@ Last Verified: 2026-05-28
 
 | Track | Status | Notes |
 |---|---|---|
+| SEC Form 25 Ingestion UI V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/sec-form25-ingestion-ui-v1/`; `Workspace > Ingestion`에서 SEC Form 25 delisting evidence collector를 수동 실행하는 UI 연결 추가 |
 | SEC Form 25 Delisting Backfill V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/sec-form25-delisting-backfill-v1/`; SEC EDGAR Form 25 filing metadata를 `nyse_symbol_lifecycle` delisting_feed evidence로 적재하는 collector / ingestion job wrapper 추가 |
 | Historical Universe Survivorship V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/historical-universe-survivorship-v1/`; `nyse_symbol_lifecycle` schema / loader / Data Coverage Audit 연결을 추가해 historical lifecycle row가 requested period를 덮을 때만 survivorship PASS 처리 |
 | Integrated Investability Gate QA V1 | Complete | `.aiworkspace/note/finance/tasks/active/integrated-investability-gate-qa-v1/`; 세 audit과 기존 provider / robustness / paper / final evidence gate의 ready / review / blocker 조합을 service contract로 고정 |

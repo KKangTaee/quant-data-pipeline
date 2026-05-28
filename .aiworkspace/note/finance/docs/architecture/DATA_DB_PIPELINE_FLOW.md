@@ -48,7 +48,7 @@ external source
 | `finance/data/factors.py` | factor 생성과 statement factor shadow 적재 |
 | `finance/data/financial_statements.py` | EDGAR detailed statement filing/value/label 적재 |
 | `app/jobs/ingestion_jobs.py` | Streamlit Ingestion에서 실행되는 수집 job wrapper. provider collector 결과를 표준 `JobResult`로 변환한다 |
-| `app/web/streamlit_app.py` | `Workspace > Ingestion`의 provider snapshot 실행 화면. P2-5A 기준 ETF operability, ETF holdings / exposure, macro context 수집 버튼을 제공한다 |
+| `app/web/streamlit_app.py` | `Workspace > Ingestion`의 provider / evidence snapshot 실행 화면. ETF operability, ETF holdings / exposure, macro context, SEC Form 25 delisting evidence 수집 버튼을 제공한다 |
 
 ## Loader 계층
 

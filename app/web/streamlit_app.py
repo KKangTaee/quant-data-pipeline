@@ -17,6 +17,7 @@ if str(PROJECT_ROOT) not in sys.path:
 from app.jobs.ingestion_jobs import (
     run_collect_etf_holdings_exposure,
     run_collect_etf_operability_provider,
+    run_collect_sec_form25_delistings,
     run_discover_etf_provider_source_map,
     run_collect_macro_market_context,
     run_daily_market_update,
@@ -140,6 +141,7 @@ P2_PROVIDER_OPERABILITY_SYMBOLS = "AOR, IEF, TLT, SPY, BIL, GLD, QQQ"
 P2_PROVIDER_HOLDINGS_SYMBOLS = "AOR, IEF, TLT, SPY, BIL, QQQ"
 P2_PROVIDER_SOURCE_MAP_SYMBOLS = "AOR, IEF, TLT, SPY, BIL, GLD, QQQ"
 P2_PROVIDER_MACRO_SERIES = "VIXCLS, T10Y3M, BAA10Y"
+SEC_FORM25_DEFAULT_SYMBOLS = ""
 SYMBOL_SOURCE_OPTIONS = [
     "Manual",
     "NYSE Stocks",
@@ -371,6 +373,8 @@ def _dispatch_job(job: dict[str, Any], *, progress_callback: Any = None) -> JobR
     if action == "collect_macro_market_context":
         params["progress_callback"] = progress_callback
         return run_collect_macro_market_context(**params)
+    if action == "collect_sec_form25_delistings":
+        return run_collect_sec_form25_delistings(**params)
     if action == "collect_ohlcv":
         params["progress_callback"] = progress_callback
         return run_collect_ohlcv(**params)
@@ -1940,10 +1944,16 @@ def _render_ingestion_console() -> None:
                 st.caption(
                     "전체 저장 대상: `finance_meta.etf_provider_source_map`, `finance_meta.etf_operability_snapshot`, "
                     "`finance_meta.etf_holdings_snapshot`, `finance_meta.etf_exposure_snapshot`, "
-                    "`finance_meta.macro_series_observation`"
+                    "`finance_meta.macro_series_observation`, `finance_meta.nyse_symbol_lifecycle`"
                 )
-                source_map_tab, provider_tab, holdings_tab, macro_tab = st.tabs(
-                    ["Provider Source Map", "ETF Operability", "ETF Holdings / Exposure", "Macro Context"]
+                source_map_tab, provider_tab, holdings_tab, macro_tab, delisting_tab = st.tabs(
+                    [
+                        "Provider Source Map",
+                        "ETF Operability",
+                        "ETF Holdings / Exposure",
+                        "Macro Context",
+                        "Delisting Evidence",
+                    ]
                 )
 
                 with source_map_tab:
@@ -2249,6 +2259,91 @@ def _render_ingestion_console() -> None:
                             label="Macro Context Snapshot",
                         )
                     _render_inline_last_completed_result("collect_macro_market_context")
+
+                with delisting_tab:
+                    st.caption(
+                        "SEC Form 25 / 25-NSE filing metadata를 읽어 delisting / withdrawal evidence를 저장합니다. "
+                        "Data Coverage Audit의 survivorship / delisting control 근거를 보강하는 용도입니다."
+                    )
+                    st.caption(
+                        "저장 테이블: `finance_meta.nyse_symbol_lifecycle` "
+                        "(`source_type=delisting_feed`, `coverage_status=actual`)"
+                    )
+                    st.caption(
+                        "Form 25가 없다는 사실은 active listing proof가 아닙니다. "
+                        "complete historical universe membership은 별도 historical listing source가 필요합니다."
+                    )
+                    sec_form25_symbols_text = st.text_area(
+                        "Symbols",
+                        value=SEC_FORM25_DEFAULT_SYMBOLS,
+                        key="sec_form25_symbols_input",
+                        help="SEC ticker / CIK mapping으로 조회할 심볼을 입력합니다. 예: 과거 delisting이 의심되는 후보 ticker 목록.",
+                    )
+                    sec_form25_symbols = _parse_csv_items(sec_form25_symbols_text)
+                    sec_form25_user_agent = st.text_input(
+                        "SEC User-Agent Override",
+                        value="",
+                        key="sec_form25_user_agent",
+                        help="선택 사항입니다. 비워두면 `SEC_USER_AGENT` 환경변수 또는 collector 기본값을 사용합니다.",
+                    )
+                    sec_form25_cols = st.columns(2)
+                    sec_form25_include_archive = sec_form25_cols[0].checkbox(
+                        "Search Archived Filing Files",
+                        value=True,
+                        key="sec_form25_include_archive",
+                        help="recent filing 목록 밖의 archive JSON 파일도 일부 확인합니다.",
+                    )
+                    sec_form25_max_archive = int(
+                        sec_form25_cols[1].number_input(
+                            "Max Archive Files",
+                            min_value=0,
+                            max_value=20,
+                            value=5,
+                            step=1,
+                            key="sec_form25_max_archive_files",
+                        )
+                    )
+                    sec_form25_check = check_symbol_input(sec_form25_symbols)
+                    _render_check_result(sec_form25_check)
+                    if st.button(
+                        "Run SEC Form 25 Delisting Evidence",
+                        width="stretch",
+                        disabled=_has_running_job() or _is_blocking(sec_form25_check),
+                    ):
+                        _schedule_job(
+                            {
+                                "action": "collect_sec_form25_delistings",
+                                "job_name": "collect_sec_form25_delistings",
+                                "spinner_text": "Running SEC Form 25 delisting evidence collection...",
+                                "params": {
+                                    "symbols": sec_form25_symbols,
+                                    "user_agent": sec_form25_user_agent or None,
+                                    "include_archive_files": bool(sec_form25_include_archive),
+                                    "max_archive_files": sec_form25_max_archive,
+                                },
+                                "run_metadata": _job_metadata(
+                                    pipeline_type="data_coverage_delisting_evidence",
+                                    execution_mode="operational",
+                                    symbol_source="SEC EDGAR company_tickers / submissions API",
+                                    symbol_count=len(sec_form25_symbols),
+                                    execution_context=(
+                                        "Data Coverage Audit의 survivorship / delisting control을 보강하기 위해 "
+                                        "SEC Form 25 / 25-NSE delisting evidence를 DB lifecycle table에 수집합니다."
+                                    ),
+                                    input_params={
+                                        "include_archive_files": bool(sec_form25_include_archive),
+                                        "max_archive_files": sec_form25_max_archive,
+                                        "user_agent_override": bool(sec_form25_user_agent),
+                                    },
+                                ),
+                            }
+                        )
+                    if _is_running_action("collect_sec_form25_delistings"):
+                        current_progress_callback = _build_progress_callback(
+                            st.session_state.running_job,
+                            label="SEC Form 25 Delisting Evidence",
+                        )
+                    _render_inline_last_completed_result("collect_sec_form25_delistings")
 
         with manual_tab:
             st.info(

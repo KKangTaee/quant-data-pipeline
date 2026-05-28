@@ -22,6 +22,9 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-28
+- Completed `.aiworkspace/note/finance/tasks/active/sec-form25-ingestion-ui-v1/`.
+- `Workspace > Ingestion > Practical Validation Provider Snapshots` now has a `Delisting Evidence` tab that runs the SEC Form 25 lifecycle evidence collector.
+- The UI writes only through the existing DB collector path and adds no new workflow JSONL, memo, preset, report file, approval, order, or rebalance behavior.
 - Completed `.aiworkspace/note/finance/tasks/active/sec-form25-delisting-backfill-v1/`.
 - Added SEC EDGAR Form 25 / 25-NSE delisting collector and ingestion job wrapper that write compact actual delisting evidence to `finance_meta.nyse_symbol_lifecycle`.
 - Form 25 evidence is treated as delisting evidence, not complete historical membership or active-listing proof. No workflow JSONL, memo, preset, report file, approval, order, or rebalance behavior was added.
