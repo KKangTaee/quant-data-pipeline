@@ -21,6 +21,19 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-28 - Practical Validation V2 P2 is closed out
+- User request:
+  - 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - Investability foundation 이후 남은 carry-forward 중 Practical Validation V2 P2 closeout 가능 여부를 실제 검증 결과로 확정해야 함.
+- Analysis result:
+  - `practical-validation-v2` task의 P2-7 QA를 완료 처리했다.
+  - Service contract, py_compile, UI-engine boundary check가 통과했다.
+  - P2 기준은 모든 provider 완전 지원이 아니라 actual / bridge / proxy / `NOT_RUN` origin을 명확히 표시하고 Final Review가 그 gap을 판단 근거로 읽는 것이다.
+  - full holdings / full macro / raw provider payload는 JSONL에 저장하지 않는 경계를 유지한다.
+- Follow-up:
+  - 다음 후보는 P3 범위를 열어 Final Review handoff QA와 Selected Portfolio Dashboard monitoring 연결을 정리하는 것이다.
+
 ### 2026-05-28 - Structured waiver is not a pass
 - User request:
   - 다음 단계 진행을 요청함.
@@ -32,7 +45,7 @@ Detailed historical analysis was archived on `2026-04-13`.
   - `BLOCK` severity는 waiver 불가이고, future waiver는 일부 `REVIEW_REQUIRED` gap에만 expiry / review trigger / scope를 가진 구조화 snapshot으로 검토할 수 있다.
   - 새 waiver JSONL registry나 free-form memo 저장은 허용하지 않는다.
 - Follow-up:
-  - 다음 후보는 Practical Validation V2 P2 closeout 또는 별도 waiver UI / persistence 구현 여부 판단이다.
+  - Practical Validation V2 P2 closeout은 이후 완료됐다. Waiver UI / persistence는 아직 별도 구현 task로 열지 않았다.
 
 ### 2026-05-28 - Investability foundation implementation track is complete
 - User request:
@@ -44,7 +57,7 @@ Detailed historical analysis was archived on `2026-04-13`.
   - Phase status는 implementation complete로 정리했고, concise done summary를 `phases/done/investability-decision-foundation.md`에 추가했다.
   - Main storage chain은 `PORTFOLIO_SELECTION_SOURCES -> PRACTICAL_VALIDATION_RESULTS -> FINAL_PORTFOLIO_SELECTION_DECISIONS_V2`로 유지된다.
 - Follow-up:
-  - 다음 후보는 `structured-waiver-policy-v1` 허용 여부 결정 또는 Practical Validation V2 P2 closeout이다.
+  - `structured-waiver-policy-v1`과 Practical Validation V2 P2 closeout은 이후 완료됐다.
 
 ### 2026-05-28 - Final decision evidence는 read-only dossier로 묶는다
 - User request:

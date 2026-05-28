@@ -8,6 +8,16 @@
 이번 문서의 목적은 개발 착수가 아니라, 사용자가 검토할 수 있는 남은 구현 계획을 만드는 것이다.
 코드 변경은 이 문서 검토 후 별도 확인을 받고 진행한다.
 
+## 2026-05-28 P2 Closeout Update
+
+P2는 closeout 완료 상태다.
+
+- P2-0부터 P2-7까지 완료했다.
+- provider / macro / holdings snapshot은 DB / loader / provider context를 통해 Practical Validation에 연결됐다.
+- stress / sensitivity evidence는 compact Robustness Lab board로 Practical Validation, Final Review, final decision evidence에서 읽는다.
+- proxy / bridge / actual / `NOT_RUN` 출처는 compact evidence와 provider provenance로 남긴다.
+- P3는 selected 이후 monitoring 연결과 Final Review handoff QA를 별도 후속 범위로 판단한다.
+
 ## P2 전용 후속 문서
 
 P2 개발은 아래 두 문서로 더 구체화한다.
@@ -54,7 +64,7 @@ P2-3. ETF holdings / exposure 데이터 수집
 P2-4. macro / sentiment 데이터 수집
 P2-5. Practical Validation 12개 진단에 연결
 P2-6. stress / sensitivity 해석 보강
-P2-7. QA: proxy / NOT_RUN 항목이 정상적으로 설명되는지 확인
+P2-7. QA: proxy / NOT_RUN 항목이 정상적으로 설명되는지 확인 (`completed`)
 ```
 
 P2에서 직접 정상화하는 주 대상은 아래와 같다.
@@ -89,12 +99,12 @@ P2-1 현재 상태:
 - 각 table의 business key, actual 판정 최소조건, bridge / proxy 경계, loader 반환 기준은
   `PROVIDER_CONNECTORS.md`의 `P2-1 Schema / Ingestion Field Contract`를 기준으로 한다.
 
-P2-2 현재 상태:
+P2 closeout 현재 상태:
 
-- `partial_complete`
-- P2-2A로 `etf_operability_snapshot` schema, 기존 DB 기반 `db_bridge` 수집, UPSERT 저장, loader read path를 구현했다.
-- 현재 구현은 official issuer actual data 수집이 아니라 `nyse_price_history` / `nyse_asset_profile` 기반 bridge/proxy foundation이다.
-- 다음 P2-2B는 iShares / SSGA / Invesco official source를 붙여 `source_type=official` actual / partial row를 저장하는 것이다.
+- `completed`
+- ETF operability는 DB bridge / proxy foundation과 iShares / SSGA / Invesco official issuer row 초기 구현을 함께 사용한다.
+- ETF holdings / exposure와 FRED macro snapshot은 DB table / loader / provider context에 연결됐다.
+- Provider coverage가 없거나 stale이면 `REVIEW` / `NOT_RUN`으로 남기고, coverage가 충분한 actual / bridge evidence만 Practical Validation 진단에 반영한다.
 
 ## 현재 구현 상태
 
@@ -481,16 +491,16 @@ diagnostics 계산, persistence handoff까지 많은 책임을 갖고 있다.
 
 ## 개발 순서 제안
 
-현재 P2 작업의 권장 순서는 아래다.
+P2 작업 순서는 아래 상태로 closeout했다.
 
 1. 12개 진단 중 P2 대상 항목을 확정한다. (`completed`)
 2. 각 검증 항목에 필요한 데이터와 fallback 상태를 정의한다. (`completed`)
-3. ETF 운용성 / 비용 / 유동성 데이터를 수집하고 DB에 저장한다. (`partial_complete`: DB bridge/proxy foundation 완료, official provider actual 수집 남음)
-4. ETF holdings / exposure 데이터를 수집하고 DB에 저장한다.
-5. macro / sentiment 데이터를 수집하고 DB에 저장한다.
-6. loader / provider context를 통해 Practical Validation 진단에 연결한다.
-7. stress / sensitivity 해석을 보강한다.
-8. proxy / actual / bridge / `NOT_RUN` 표시가 사용자가 이해할 수 있는지 QA한다.
+3. ETF 운용성 / 비용 / 유동성 데이터를 수집하고 DB에 저장한다. (`completed`: DB bridge/proxy foundation + initial official issuer rows)
+4. ETF holdings / exposure 데이터를 수집하고 DB에 저장한다. (`completed`: initial provider coverage)
+5. macro / sentiment 데이터를 수집하고 DB에 저장한다. (`completed`: FRED market-context foundation)
+6. loader / provider context를 통해 Practical Validation 진단에 연결한다. (`completed`)
+7. stress / sensitivity 해석을 보강한다. (`completed`)
+8. proxy / actual / bridge / `NOT_RUN` 표시가 사용자가 이해할 수 있는지 QA한다. (`completed`)
 
 이 순서가 좋은 이유:
 
@@ -527,10 +537,9 @@ diagnostics 계산, persistence handoff까지 많은 책임을 갖고 있다.
 
 ## 이번 문서의 결론
 
-현재 Practical Validation V2는 core board와 1차 정량 진단이 구현되어 있다.
-남은 핵심은 "더 많은 검증명을 추가하는 것"이 아니라,
-최신 runtime 재검증과 실제 provider 데이터를 붙여 proxy domain을 actual evidence로 승격하는 것이다.
+현재 Practical Validation V2는 P2 closeout까지 완료했다.
+남은 핵심은 더 많은 검증명을 추가하는 것이 아니라,
+P3에서 Final Review handoff와 Selected Portfolio Dashboard monitoring 연결을 어디까지 제품 흐름에 넣을지 정하는 것이다.
 
-첫 구현 단위인 `P0. 최신 Runtime 재검증과 Curve Provenance`는 2026-05-10에 2차 구현까지 완료되었다.
-따라서 현재 다음 개발은 P2로 보고,
-12개 진단 중 provider / holdings / macro / stress / sensitivity 데이터가 부족해 정상 검증되지 않는 항목을 정상화한다.
+P3는 broker approval, live order, auto rebalance가 아니다.
+선정 이후 evidence recheck와 monitoring snapshot을 어떻게 명시 저장 / read-only 표시할지 결정하는 후속 범위다.

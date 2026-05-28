@@ -28,7 +28,7 @@ Last Verified: 2026-05-28
 | Product Research Plugin Split | Complete | `.aiworkspace/note/finance/tasks/active/product-research-plugin-split/`; product research skill과 helper를 별도 `quant-finance-product-research` plugin으로 분리 완료 |
 | Investability Evidence Packet V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/investability-evidence-packet-v1/`; Final Review evidence packet / selected-route gate 1차 구현. 후속 gate policy는 `investability-decision-foundation`에서 관리 |
 | Backtest Report Migration | Complete | `.aiworkspace/note/finance/reports/backtests/`, legacy phase archive 제거 완료 |
-| Practical Validation V2 | Active | `.aiworkspace/note/finance/tasks/active/practical-validation-v2/` |
+| Practical Validation V2 | Active / P2 closeout complete | `.aiworkspace/note/finance/tasks/active/practical-validation-v2/`; P2 provider / macro / look-through / robustness evidence closeout 완료, P3 범위 결정 대기 |
 | Phase 36 Selected Portfolio Dashboard | Implementation complete before doc rebuild | 기존 phase 문서는 새 구조 정리 후 필요 시 `phases/done/`에 요약만 남긴다 |
 
 ## Practical Validation V2 Roadmap
@@ -37,8 +37,8 @@ Last Verified: 2026-05-28
 |---|---|---|
 | P0 | 최신 runtime 재검증 보강 | Completed before this doc rebuild |
 | P1 | Practical Validation V2 기본 진단 구조 | Completed before this doc rebuild |
-| P2 | proxy / NOT_RUN 중심 진단을 provider / macro / stress evidence로 정상화 | In practical closeout |
-| P3 | QA, Final Review handoff, selected monitoring 연결 정리 | Planned |
+| P2 | proxy / NOT_RUN 중심 진단을 provider / macro / stress evidence로 정상화 | Completed |
+| P3 | Final Review handoff QA, selected monitoring 연결 정리 | Planned / next decision |
 
 ## P2 Scope Reminder
 
@@ -85,5 +85,5 @@ P2에서 정상화하는 주요 진단:
 ## Next Decisions
 
 - UI Engine Boundary Cleanup은 완료됐다. 다음 구조 작업은 새 phase/task로 열고, 현재 경계는 boundary lint와 service contract test를 먼저 통과시키는 기준으로 유지한다.
-- Practical Validation V2는 P2 QA 여부를 확인한 뒤 P3로 넘어갈지, P2를 closeout할지 결정한다.
-- Structured Waiver Policy V1은 구현 없이 정책만 확정했다. 다음 후보는 Practical Validation V2 P2 closeout 또는 waiver UI / persistence 구현 여부를 별도 task로 판단하는 것이다.
+- Practical Validation V2는 P2 closeout을 완료했다. 다음 결정은 P3를 열어 Final Review handoff QA / selected monitoring 연결을 정리할지 여부다.
+- Structured Waiver Policy V1은 구현 없이 정책만 확정했다. Waiver UI / persistence는 아직 별도 구현 task로 열지 않았다.
