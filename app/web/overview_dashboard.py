@@ -255,24 +255,44 @@ def _build_market_mover_sector_chart(rows: pd.DataFrame) -> alt.Chart:
         )
         if chart_rows.empty:
             chart_rows = pd.DataFrame([{"Sector": "No Data", "Average Return %": 0.0, "Count": 0, "Top Return %": 0.0}])
-    return (
-        alt.Chart(chart_rows)
+    chart_rows["Average Return Magnitude %"] = chart_rows["Average Return %"].abs()
+    chart_rows["Average Return Label"] = chart_rows["Average Return %"].map(
+        lambda value: f"{float(value):+.2f}%" if pd.notna(value) else "-"
+    )
+    chart_rows["Top Return Label"] = chart_rows["Top Return %"].map(
+        lambda value: f"{float(value):+.2f}%" if pd.notna(value) else "-"
+    )
+    sector_order = chart_rows["Sector"].drop_duplicates().tolist()
+    base = alt.Chart(chart_rows).encode(
+        x=alt.X(
+            "Average Return Magnitude %:Q",
+            title="Avg Move Magnitude %",
+            stack=None,
+            scale=alt.Scale(domain=_positive_return_domain(chart_rows["Average Return Magnitude %"])),
+        ),
+        y=alt.Y("Sector:N", sort=sector_order, title=None, axis=alt.Axis(labelLimit=150)),
+        tooltip=["Sector:N", "Count:Q", "Average Return Label:N", "Top Return Label:N"],
+    )
+    bars = (
+        base
         .mark_bar(cornerRadiusEnd=3)
         .encode(
-            x=alt.X(
-                "Average Return %:Q",
-                title="Avg Return %",
-                stack=None,
-                scale=alt.Scale(domain=_symmetric_return_domain(chart_rows["Average Return %"])),
-            ),
-            y=alt.Y("Sector:N", sort="-x", title=None, axis=alt.Axis(labelLimit=150)),
-            color=alt.Color(
-                "Average Return %:Q",
-                scale=_symmetric_return_scale(chart_rows["Average Return %"]),
-                legend=None,
-            ),
-            tooltip=["Sector:N", "Count:Q", "Average Return %:Q", "Top Return %:Q"],
+            color=alt.condition(
+                "datum['Average Return %'] < 0",
+                alt.value("#dc2626"),
+                alt.value("#0f766e"),
+            )
         )
+    )
+    labels = (
+        base
+        .mark_text(align="left", baseline="middle", dx=5, fontSize=11, color="#111827")
+        .encode(
+            text=alt.Text("Average Return Label:N"),
+        )
+    )
+    return (
+        (bars + labels)
         .properties(height=max(180, min(360, 26 * len(chart_rows))))
     )
 
