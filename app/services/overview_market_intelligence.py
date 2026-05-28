@@ -766,7 +766,7 @@ def _build_intraday_movers_snapshot(
                 "return_pct": return_pct,
                 "start_date": "Previous Close",
                 "end_date": _display_datetime(row.get("quote_time_utc")) or snapshot_time,
-                "price_source": f"Intraday {interval}",
+                "price_source": "Yahoo Quote" if row.get("source") == "yahoo_quote" else f"Intraday {interval}",
             }
         )
 

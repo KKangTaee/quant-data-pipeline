@@ -80,7 +80,8 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 성격:
 
 - provider snapshot table이다.
-- source는 yfinance intraday / daily fallback이며, `previous_close`, `latest_price`, `return_pct`, `provider_status`, `error_msg`를 함께 저장한다.
+- 기본 source는 yfinance 세션을 통한 Yahoo quote batch이고, 실패 시 yfinance 5m OHLCV fallback을 사용할 수 있다.
+- `previous_close`, `latest_price`, `return_pct`, `provider_status`, `error_msg`를 함께 저장한다.
 - UI는 정상 render 때 provider를 직접 호출하지 않고 이 table의 최신 snapshot을 읽는다.
 
 주의:

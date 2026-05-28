@@ -1,13 +1,14 @@
 from __future__ import annotations
 
-from io import StringIO
 from collections.abc import Callable, Iterable, Sequence
 from datetime import UTC, datetime
+from io import StringIO
 from typing import Any
 from urllib.request import Request, urlopen
 
 import pandas as pd
 import yfinance as yf
+from yfinance.data import YfData
 
 from .db.mysql import MySQLClient
 from .db.schema import MARKET_INTELLIGENCE_SCHEMAS, sync_table_schema
@@ -18,6 +19,7 @@ DB_PRICE = "finance_price"
 SP500_SOURCE_URL = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
 SP500_SOURCE = "wikipedia_sp500_constituents"
 DEFAULT_INTRADAY_INTERVAL = "5m"
+YAHOO_QUOTE_URL = "https://query1.finance.yahoo.com/v7/finance/quote"
 VALID_INTRADAY_INTERVALS = {"1m", "2m", "5m", "15m", "30m", "60m", "90m", "1h"}
 
 
@@ -63,6 +65,13 @@ def _to_utc_naive(value: Any) -> str | None:
     else:
         ts = ts.tz_convert(UTC)
     return ts.strftime("%Y-%m-%d %H:%M:%S")
+
+
+def _epoch_to_utc_naive(value: Any) -> str | None:
+    parsed = _safe_int(value)
+    if parsed is None:
+        return None
+    return datetime.fromtimestamp(parsed, tz=UTC).replace(tzinfo=None).strftime("%Y-%m-%d %H:%M:%S")
 
 
 def _db(host: str, user: str, password: str, port: int) -> MySQLClient:
@@ -248,6 +257,52 @@ def load_market_universe_members(
         db.close()
 
 
+def _load_db_previous_close_map(
+    symbols: Sequence[str],
+    *,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> dict[str, dict[str, Any]]:
+    if not symbols:
+        return {}
+    placeholders = ",".join(["%s"] * len(symbols))
+    db = _db(host, user, password, port)
+    try:
+        db.use_db(DB_PRICE)
+        rows = db.query(
+            f"""
+            SELECT p.symbol, p.`date`, COALESCE(p.adj_close, p.close) AS previous_close
+            FROM nyse_price_history p
+            JOIN (
+                SELECT symbol, MAX(`date`) AS max_date
+                FROM nyse_price_history
+                WHERE symbol IN ({placeholders})
+                  AND timeframe = %s
+                  AND COALESCE(adj_close, close) IS NOT NULL
+                GROUP BY symbol
+            ) latest
+              ON latest.symbol = p.symbol
+             AND latest.max_date = p.`date`
+            WHERE p.timeframe = %s
+            """,
+            list(symbols) + ["1d", "1d"],
+        )
+    finally:
+        db.close()
+    out: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        symbol = _normalize_symbol(row.get("symbol"))
+        if not symbol:
+            continue
+        out[symbol] = {
+            "previous_close": _safe_float(row.get("previous_close")),
+            "previous_close_date": row.get("date"),
+        }
+    return out
+
+
 def _chunked(items: Sequence[str], size: int) -> Iterable[list[str]]:
     for index in range(0, len(items), size):
         yield list(items[index : index + size])
@@ -272,6 +327,17 @@ def _download_prices(
         progress=progress,
         prepost=False,
     )
+
+
+def _fetch_yahoo_quote_rows(symbols: list[str], *, timeout: int = 15) -> list[dict[str, Any]]:
+    if not symbols:
+        return []
+    data = YfData().get_raw_json(
+        YAHOO_QUOTE_URL,
+        params={"symbols": ",".join(symbols)},
+        timeout=timeout,
+    )
+    return list(data.get("quoteResponse", {}).get("result", []) or [])
 
 
 def _symbol_frame(frame: pd.DataFrame, symbol: str) -> pd.DataFrame:
@@ -321,6 +387,63 @@ def _previous_close(daily_frame: pd.DataFrame, quote_time_utc: str | None) -> fl
     return None
 
 
+def _build_quote_snapshot_row(
+    *,
+    universe_code: str,
+    symbol: str,
+    interval_code: str,
+    snapshot_time_utc: str,
+    quote_row: dict[str, Any] | None,
+    db_previous_close: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    quote_row = dict(quote_row or {})
+    db_previous_close = dict(db_previous_close or {})
+    latest_price = _safe_float(quote_row.get("regularMarketPrice"))
+    previous_close = _safe_float(quote_row.get("regularMarketPreviousClose"))
+    previous_source = "quote"
+    if previous_close is None or previous_close <= 0:
+        previous_close = _safe_float(db_previous_close.get("previous_close"))
+        previous_source = "db_previous_close"
+    quote_time_utc = _epoch_to_utc_naive(quote_row.get("regularMarketTime")) or snapshot_time_utc
+    volume = _safe_int(quote_row.get("regularMarketVolume"))
+
+    status = "ok"
+    error_msg = None
+    if not quote_row:
+        status = "missing"
+        error_msg = "missing quote row"
+    elif latest_price is None:
+        status = "missing"
+        error_msg = "missing latest quote price"
+    elif previous_close is None or previous_close <= 0:
+        status = "missing"
+        error_msg = "missing previous close"
+
+    return_pct = None
+    if status == "ok" and latest_price is not None and previous_close:
+        return_pct = (latest_price / previous_close - 1.0) * 100.0
+
+    market_state = quote_row.get("marketState") or ""
+    source_ref = f"yahoo_quote_v7;previous_close={previous_source}"
+    if market_state:
+        source_ref += f";market_state={market_state}"
+    return {
+        "universe_code": universe_code,
+        "symbol": symbol,
+        "interval_code": interval_code,
+        "snapshot_time_utc": snapshot_time_utc,
+        "quote_time_utc": quote_time_utc,
+        "source": "yahoo_quote",
+        "source_ref": source_ref,
+        "previous_close": previous_close,
+        "latest_price": latest_price,
+        "return_pct": return_pct,
+        "volume": volume,
+        "provider_status": status,
+        "error_msg": error_msg,
+    }
+
+
 def _build_snapshot_row(
     *,
     universe_code: str,
@@ -367,6 +490,88 @@ def _build_snapshot_row(
         "provider_status": status,
         "error_msg": error_msg,
     }
+
+
+def _collect_quote_snapshot_rows(
+    symbols: list[str],
+    *,
+    universe_code: str,
+    interval_code: str,
+    snapshot_time: str,
+    quote_batch_size: int,
+    quote_fetcher: Callable[..., list[dict[str, Any]]] | None = None,
+    previous_close_map: dict[str, dict[str, Any]] | None = None,
+) -> tuple[list[dict[str, Any]], list[str], dict[str, Any]]:
+    fetcher = quote_fetcher or _fetch_yahoo_quote_rows
+    previous_close_map = previous_close_map or {}
+    rows: list[dict[str, Any]] = []
+    failed_symbols: list[str] = []
+    batches: list[dict[str, Any]] = []
+    for batch in _chunked(symbols, max(1, int(quote_batch_size))):
+        batch_started = datetime.now(UTC)
+        quote_rows = fetcher(batch)
+        quote_map = {
+            _normalize_symbol(row.get("symbol")): row
+            for row in quote_rows
+            if _normalize_symbol(row.get("symbol"))
+        }
+        batches.append(
+            {
+                "requested": len(batch),
+                "returned": len(quote_map),
+                "duration_sec": round((datetime.now(UTC) - batch_started).total_seconds(), 3),
+            }
+        )
+        for symbol in batch:
+            row = _build_quote_snapshot_row(
+                universe_code=universe_code,
+                symbol=symbol,
+                interval_code=interval_code,
+                snapshot_time_utc=snapshot_time,
+                quote_row=quote_map.get(symbol),
+                db_previous_close=previous_close_map.get(symbol),
+            )
+            if row["provider_status"] != "ok":
+                failed_symbols.append(symbol)
+            rows.append(row)
+    return rows, failed_symbols, {"quote_batches": batches}
+
+
+def _collect_yfinance_snapshot_rows(
+    symbols: list[str],
+    *,
+    universe_code: str,
+    interval_code: str,
+    snapshot_time: str,
+    chunk_size: int,
+    downloader: Callable[..., pd.DataFrame],
+) -> tuple[list[dict[str, Any]], list[str], dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    failed_symbols: list[str] = []
+    batches: list[dict[str, Any]] = []
+    for batch in _chunked(symbols, max(1, int(chunk_size))):
+        batch_started = datetime.now(UTC)
+        intraday = downloader(batch, period="1d", interval=interval_code, progress=False)
+        daily = downloader(batch, period="10d", interval="1d", progress=False)
+        batches.append(
+            {
+                "requested": len(batch),
+                "duration_sec": round((datetime.now(UTC) - batch_started).total_seconds(), 3),
+            }
+        )
+        for symbol in batch:
+            row = _build_snapshot_row(
+                universe_code=universe_code,
+                symbol=symbol,
+                interval_code=interval_code,
+                snapshot_time_utc=snapshot_time,
+                intraday_frame=_symbol_frame(intraday, symbol),
+                daily_frame=_symbol_frame(daily, symbol),
+            )
+            if row["provider_status"] != "ok":
+                failed_symbols.append(symbol)
+            rows.append(row)
+    return rows, failed_symbols, {"yfinance_batches": batches}
 
 
 def upsert_intraday_snapshot_rows(
@@ -419,17 +624,25 @@ def collect_and_store_sp500_intraday_snapshot(
     *,
     interval: str = DEFAULT_INTRADAY_INTERVAL,
     chunk_size: int = 100,
+    quote_batch_size: int = 200,
+    method: str = "quote_fast",
+    fallback_to_yfinance: bool = True,
     host: str = "localhost",
     user: str = "root",
     password: str = "1234",
     port: int = 3306,
     universe_loader: Callable[[], list[dict[str, Any]]] | None = None,
     price_downloader: Callable[..., pd.DataFrame] | None = None,
+    quote_fetcher: Callable[..., list[dict[str, Any]]] | None = None,
 ) -> dict[str, Any]:
     normalized_interval = str(interval or DEFAULT_INTRADAY_INTERVAL).strip()
     if normalized_interval not in VALID_INTRADAY_INTERVALS:
         raise ValueError(f"Unsupported intraday interval: {interval!r}")
+    normalized_method = str(method or "quote_fast").strip().lower()
+    if normalized_method not in {"quote_fast", "yfinance_5m"}:
+        raise ValueError(f"Unsupported snapshot method: {method!r}")
 
+    started_at = datetime.now(UTC)
     sync_market_intelligence_tables(host=host, user=user, password=password, port=port)
     loader = universe_loader or (
         lambda: load_market_universe_members("SP500", host=host, user=user, password=password, port=port)
@@ -452,23 +665,58 @@ def collect_and_store_sp500_intraday_snapshot(
 
     downloader = price_downloader or _download_prices
     snapshot_time = _timestamp_str(_utc_now())
-    snapshot_rows: list[dict[str, Any]] = []
-    failed_symbols: list[str] = []
-    for batch in _chunked(symbols, max(1, int(chunk_size))):
-        intraday = downloader(batch, period="1d", interval=normalized_interval, progress=False)
-        daily = downloader(batch, period="10d", interval="1d", progress=False)
-        for symbol in batch:
-            row = _build_snapshot_row(
+    diagnostics: dict[str, Any] = {"method_requested": normalized_method}
+    snapshot_rows: list[dict[str, Any]]
+    failed_symbols: list[str]
+    source = "yfinance"
+    method_used = "yfinance_5m"
+
+    if normalized_method == "quote_fast" and price_downloader is None:
+        previous_close_map = _load_db_previous_close_map(
+            symbols,
+            host=host,
+            user=user,
+            password=password,
+            port=port,
+        )
+        try:
+            snapshot_rows, failed_symbols, quote_diagnostics = _collect_quote_snapshot_rows(
+                symbols,
                 universe_code="SP500",
-                symbol=symbol,
                 interval_code=normalized_interval,
-                snapshot_time_utc=snapshot_time,
-                intraday_frame=_symbol_frame(intraday, symbol),
-                daily_frame=_symbol_frame(daily, symbol),
+                snapshot_time=snapshot_time,
+                quote_batch_size=quote_batch_size,
+                quote_fetcher=quote_fetcher,
+                previous_close_map=previous_close_map,
             )
-            if row["provider_status"] != "ok":
-                failed_symbols.append(symbol)
-            snapshot_rows.append(row)
+            diagnostics.update(quote_diagnostics)
+            source = "yahoo_quote"
+            method_used = "quote_fast"
+        except Exception as exc:
+            diagnostics["quote_fast_error"] = str(exc)
+            if not fallback_to_yfinance:
+                raise
+            snapshot_rows, failed_symbols, fallback_diagnostics = _collect_yfinance_snapshot_rows(
+                symbols,
+                universe_code="SP500",
+                interval_code=normalized_interval,
+                snapshot_time=snapshot_time,
+                chunk_size=chunk_size,
+                downloader=downloader,
+            )
+            diagnostics.update(fallback_diagnostics)
+            source = "yfinance"
+            method_used = "yfinance_5m_fallback"
+    else:
+        snapshot_rows, failed_symbols, yfinance_diagnostics = _collect_yfinance_snapshot_rows(
+            symbols,
+            universe_code="SP500",
+            interval_code=normalized_interval,
+            snapshot_time=snapshot_time,
+            chunk_size=chunk_size,
+            downloader=downloader,
+        )
+        diagnostics.update(yfinance_diagnostics)
 
     rows_written = upsert_intraday_snapshot_rows(
         snapshot_rows,
@@ -484,6 +732,9 @@ def collect_and_store_sp500_intraday_snapshot(
         "failed_symbols": failed_symbols,
         "snapshot_time_utc": snapshot_time,
         "interval": normalized_interval,
-        "source": "yfinance",
+        "source": source,
+        "method": method_used,
+        "duration_sec": round((datetime.now(UTC) - started_at).total_seconds(), 3),
+        "diagnostics": diagnostics,
         "message": "S&P 500 intraday snapshot completed.",
     }

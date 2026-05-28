@@ -186,10 +186,14 @@ def _render_sp500_job_result(result_key: str) -> None:
         st.error(message)
     details = result.get("details") or {}
     if details:
+        source = details.get("source") or "-"
+        method = details.get("method") or details.get("method_requested") or "-"
+        duration = result.get("duration_sec")
         st.caption(
             "Rows: "
             f"{result.get('rows_written') or 0}, "
-            f"Processed: {result.get('symbols_processed') or 0} / {result.get('symbols_requested') or 0}"
+            f"Processed: {result.get('symbols_processed') or 0} / {result.get('symbols_requested') or 0}, "
+            f"Source: {source}, Method: {method}, Duration: {_snapshot_value(duration)}s"
         )
 
 
@@ -262,17 +266,20 @@ def _render_market_movers_refresh_bar(
         cols = st.columns([1.25, 1, 1, 1.1], gap="small", vertical_alignment="center")
         with cols[0]:
             _render_refresh_state_dot(color=dot_color, label=label, detail=detail)
-        update_label = "Update 5m Snapshot" if refresh_due else "Snapshot Fresh"
+        update_label = "Update Daily Snapshot" if refresh_due else "Snapshot Fresh"
         if cols[1].button(
             update_label,
             key="overview_sp500_intraday_refresh",
             use_container_width=True,
             disabled=not refresh_due,
         ):
-            with st.spinner("Collecting S&P 500 5m intraday snapshot..."):
+            with st.spinner("Updating S&P 500 quote snapshot..."):
                 st.session_state["overview_sp500_intraday_result"] = run_collect_sp500_intraday_snapshot(
                     interval="5m",
                     chunk_size=100,
+                    quote_batch_size=200,
+                    method="quote_fast",
+                    fallback_to_yfinance=True,
                 )
             st.rerun()
         if cols[2].button(

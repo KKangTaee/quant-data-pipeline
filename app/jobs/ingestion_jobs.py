@@ -734,12 +734,21 @@ def run_collect_sp500_intraday_snapshot(
     *,
     interval: str = "5m",
     chunk_size: int = 100,
+    quote_batch_size: int = 200,
+    method: str = "quote_fast",
+    fallback_to_yfinance: bool = True,
 ) -> JobResult:
     job_name = "collect_sp500_intraday_snapshot"
     started_at = _now_str()
     t0 = perf_counter()
     try:
-        result = collect_and_store_sp500_intraday_snapshot(interval=interval, chunk_size=chunk_size)
+        result = collect_and_store_sp500_intraday_snapshot(
+            interval=interval,
+            chunk_size=chunk_size,
+            quote_batch_size=quote_batch_size,
+            method=method,
+            fallback_to_yfinance=fallback_to_yfinance,
+        )
         rows_written = int(result.get("rows_written") or 0)
         failed_symbols = list(result.get("failed_symbols") or [])
         requested = int(result.get("symbols_requested") or 0)
@@ -779,7 +788,13 @@ def run_collect_sp500_intraday_snapshot(
             symbols_requested=0,
             symbols_processed=0,
             message=f"S&P 500 intraday snapshot failed: {exc}",
-            details={"interval": interval, "chunk_size": chunk_size},
+            details={
+                "interval": interval,
+                "chunk_size": chunk_size,
+                "quote_batch_size": quote_batch_size,
+                "method": method,
+                "fallback_to_yfinance": fallback_to_yfinance,
+            },
         )
 
 

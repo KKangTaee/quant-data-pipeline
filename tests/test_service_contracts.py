@@ -585,6 +585,65 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(first_row["Top Symbol"], "BBB")
 
 
+class MarketIntelligenceIngestionContractTests(unittest.TestCase):
+    def test_sp500_snapshot_uses_fast_quote_rows_without_yfinance_download(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        members = [
+            {"symbol": "AAA"},
+            {"symbol": "BBB"},
+        ]
+
+        def quote_fetcher(symbols):
+            self.assertEqual(symbols, ["AAA", "BBB"])
+            return [
+                {
+                    "symbol": "AAA",
+                    "regularMarketPrice": 112.0,
+                    "regularMarketPreviousClose": 100.0,
+                    "regularMarketTime": 1779912000,
+                    "regularMarketVolume": 1000,
+                    "marketState": "REGULAR",
+                },
+                {
+                    "symbol": "BBB",
+                    "regularMarketPrice": 96.0,
+                    "regularMarketPreviousClose": 100.0,
+                    "regularMarketTime": 1779912001,
+                    "regularMarketVolume": 2000,
+                    "marketState": "REGULAR",
+                },
+            ]
+
+        written_rows: list[dict[str, object]] = []
+
+        def capture_rows(rows, **kwargs):
+            del kwargs
+            written_rows.extend(rows)
+            return len(rows)
+
+        with (
+            patch.object(mi, "sync_market_intelligence_tables", return_value=None),
+            patch.object(mi, "_load_db_previous_close_map", return_value={}),
+            patch.object(mi, "upsert_intraday_snapshot_rows", side_effect=capture_rows),
+        ):
+            result = mi.collect_and_store_sp500_intraday_snapshot(
+                universe_loader=lambda: members,
+                quote_fetcher=quote_fetcher,
+                quote_batch_size=200,
+                method="quote_fast",
+                fallback_to_yfinance=False,
+            )
+
+        self.assertEqual(result["source"], "yahoo_quote")
+        self.assertEqual(result["method"], "quote_fast")
+        self.assertEqual(result["rows_written"], 2)
+        self.assertEqual(result["symbols_processed"], 2)
+        self.assertEqual(written_rows[0]["source"], "yahoo_quote")
+        self.assertAlmostEqual(float(written_rows[0]["return_pct"]), 12.0)
+        self.assertAlmostEqual(float(written_rows[1]["return_pct"]), -4.0)
+
+
 class PracticalValidationReplayServiceContractTests(unittest.TestCase):
     def test_recheck_plan_extends_to_latest_market_date(self) -> None:
         from app.services import backtest_practical_validation_replay as replay_service

@@ -16,3 +16,11 @@
 | 2026-05-28 | `uv run python -m unittest tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests` | PASS, 4 tests. |
 | 2026-05-28 | `uv run python .aiworkspace/plugins/quant-finance-workflow/scripts/check_ui_engine_boundary.py` | PASS. |
 | 2026-05-28 | `git diff --check` | PASS. |
+| 2026-05-28 | Yahoo quote endpoint probe via `YfData().get_raw_json(...)` | PASS: direct urllib returned 401, yfinance cookie / crumb session returned quote rows. |
+| 2026-05-28 | S&P 500 quote batch benchmark | PASS: 503 symbols returned in ~2.2s before DB write. |
+| 2026-05-28 | `uv run python -m py_compile finance/data/market_intelligence.py app/jobs/ingestion_jobs.py app/services/overview_market_intelligence.py app/web/overview_dashboard.py tests/test_service_contracts.py` | PASS. |
+| 2026-05-28 | `uv run python -m unittest tests.test_service_contracts.MarketIntelligenceIngestionContractTests tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests` | PASS, 5 tests. |
+| 2026-05-28 | `run_collect_sp500_intraday_snapshot(method='quote_fast', quote_batch_size=200, fallback_to_yfinance=False)` | PASS: wrote 503 rows in 6.514s using `yahoo_quote` / `quote_fast`. |
+| 2026-05-28 | `uv run python -m unittest tests.test_service_contracts` | PASS, 28 tests. |
+| 2026-05-28 | `uv run python .aiworkspace/plugins/quant-finance-workflow/scripts/check_ui_engine_boundary.py` | PASS. |
+| 2026-05-28 | Browser smoke at `http://localhost:8501/` | PASS: `Snapshot Fresh` shown after quote fast path, no console errors. |

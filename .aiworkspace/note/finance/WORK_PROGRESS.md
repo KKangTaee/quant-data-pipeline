@@ -4010,3 +4010,4 @@ Detailed historical logs were archived on `2026-04-13`.
   - `finance/data/market_intelligence.py`와 `finance_price.market_intraday_snapshot` / `finance_meta.market_universe_member`가 추가됐다.
   - Market Movers는 S&P 500 / Top1000 / Top2000, yearly period, sector filter, missing diagnostics를 제공한다.
   - 상단 controls를 segmented control bar와 refresh status bar로 다듬고, S&P 500 daily snapshot이 5분 기준으로 stale이면 update-needed dot / 버튼이 보이도록 했다.
+  - S&P 500 snapshot refresh 기본 경로를 Yahoo quote batch fast path로 바꾸고, yfinance 5m OHLCV를 fallback으로 남겼다. Local smoke에서 503개 quote snapshot 저장은 6.514초가 걸렸다.
