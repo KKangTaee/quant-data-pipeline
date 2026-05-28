@@ -18,7 +18,7 @@ from finance.data.etf_provider import (
 )
 from finance.data.macro import DEFAULT_MACRO_SERIES, collect_and_store_macro_series
 from finance.data.market_intelligence import (
-    collect_and_store_sp500_intraday_snapshot,
+    collect_and_store_market_intraday_snapshot,
     collect_and_store_sp500_universe,
 )
 
@@ -730,19 +730,32 @@ def run_collect_sp500_universe() -> JobResult:
         )
 
 
-def run_collect_sp500_intraday_snapshot(
+MARKET_INTRADAY_LABELS = {
+    "SP500": "S&P 500",
+    "TOP1000": "Top 1000",
+    "TOP2000": "Top 2000",
+}
+
+
+def run_collect_market_intraday_snapshot(
     *,
+    universe_code: str = "SP500",
+    universe_limit: int | None = None,
     interval: str = "5m",
     chunk_size: int = 100,
     quote_batch_size: int = 200,
     method: str = "quote_fast",
     fallback_to_yfinance: bool = True,
 ) -> JobResult:
-    job_name = "collect_sp500_intraday_snapshot"
+    normalized_universe = str(universe_code or "SP500").strip().upper()
+    universe_label = MARKET_INTRADAY_LABELS.get(normalized_universe, normalized_universe)
+    job_name = f"collect_{normalized_universe.lower()}_intraday_snapshot"
     started_at = _now_str()
     t0 = perf_counter()
     try:
-        result = collect_and_store_sp500_intraday_snapshot(
+        result = collect_and_store_market_intraday_snapshot(
+            universe_code=normalized_universe,
+            universe_limit=universe_limit,
             interval=interval,
             chunk_size=chunk_size,
             quote_batch_size=quote_batch_size,
@@ -756,13 +769,13 @@ def run_collect_sp500_intraday_snapshot(
         finished_at = _now_str()
         if rows_written <= 0:
             status = "failed"
-            message = "S&P 500 intraday snapshot wrote no rows."
+            message = f"{universe_label} intraday snapshot wrote no rows."
         elif failed_symbols:
             status = "partial_success"
-            message = "S&P 500 intraday snapshot completed with missing symbols."
+            message = f"{universe_label} intraday snapshot completed with missing symbols."
         else:
             status = "success"
-            message = "S&P 500 intraday snapshot completed."
+            message = f"{universe_label} intraday snapshot completed."
         return _build_result(
             job_name=job_name,
             status=status,
@@ -787,8 +800,10 @@ def run_collect_sp500_intraday_snapshot(
             rows_written=0,
             symbols_requested=0,
             symbols_processed=0,
-            message=f"S&P 500 intraday snapshot failed: {exc}",
+            message=f"{universe_label} intraday snapshot failed: {exc}",
             details={
+                "universe_code": normalized_universe,
+                "universe_limit": universe_limit,
                 "interval": interval,
                 "chunk_size": chunk_size,
                 "quote_batch_size": quote_batch_size,
@@ -796,6 +811,25 @@ def run_collect_sp500_intraday_snapshot(
                 "fallback_to_yfinance": fallback_to_yfinance,
             },
         )
+
+
+def run_collect_sp500_intraday_snapshot(
+    *,
+    interval: str = "5m",
+    chunk_size: int = 100,
+    quote_batch_size: int = 200,
+    method: str = "quote_fast",
+    fallback_to_yfinance: bool = True,
+) -> JobResult:
+    return run_collect_market_intraday_snapshot(
+        universe_code="SP500",
+        universe_limit=500,
+        interval=interval,
+        chunk_size=chunk_size,
+        quote_batch_size=quote_batch_size,
+        method=method,
+        fallback_to_yfinance=fallback_to_yfinance,
+    )
 
 
 def run_weekly_fundamental_refresh(

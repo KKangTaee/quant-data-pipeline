@@ -31,3 +31,8 @@
 | 2026-05-28 | `git diff --check` | PASS. |
 | 2026-05-28 | Browser smoke after Streamlit restart at `http://localhost:8501/` | PASS: `Update Daily Snapshot` completed with 503 rows, `yahoo_quote` / `quote_fast`, 7.377s, no console errors. |
 | 2026-05-28 | Browser smoke after final refresh-button cleanup at `http://localhost:8501/` | PASS: `Update Daily Snapshot` completed with 503 rows, `yahoo_quote` / `quote_fast`, 5.038s, no console errors. |
+| 2026-05-28 | `uv run python -m unittest tests.test_service_contracts.MarketIntelligenceIngestionContractTests tests.test_service_contracts.OverviewMarketIntelligenceServiceContractTests` | PASS, 7 tests after Top1000 / Top2000 intraday extension. |
+| 2026-05-28 | `load_market_cap_universe_members("TOP1000"/"TOP2000")` smoke | PASS: loaded 1000 / 2000 symbols from current `nyse_asset_profile.market_cap` snapshot. |
+| 2026-05-28 | `run_collect_market_intraday_snapshot("TOP1000"/"TOP2000", fallback_to_yfinance=False)` smoke | PASS: Top1000 wrote 1000 rows / 987 returnable in 9.322s; Top2000 wrote 2000 rows / 1964 returnable in 16.0s, both via `yahoo_quote` / `quote_fast`. |
+| 2026-05-28 | local DB smoke for `build_market_movers_snapshot(universe_code="TOP1000"/"TOP2000", period="daily")` | PASS: both snapshots used `Intraday Snapshot` and displayed latest quote ranks. |
+| 2026-05-28 | Browser smoke at `http://localhost:8501/` | PASS: Top1000 / Top2000 daily render from intraday snapshot, Top1000 `Update Daily Snapshot` succeeds from UI, coverage switching has no duplicate panels, no console errors. |

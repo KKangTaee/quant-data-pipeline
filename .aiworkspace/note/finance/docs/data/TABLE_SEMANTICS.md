@@ -75,7 +75,8 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 
 역할:
 
-- Overview Market Movers의 S&P 500 daily view에서 전일 종가 대비 최신 intraday 가격 수익률을 저장한다.
+- Overview Market Movers의 daily view에서 전일 종가 대비 최신 intraday 가격 수익률을 coverage별로 저장한다.
+- 현재 coverage는 `SP500`, `TOP1000`, `TOP2000`이다.
 
 성격:
 
@@ -83,12 +84,13 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - 기본 source는 yfinance 세션을 통한 Yahoo quote batch이고, 실패 시 yfinance 5m OHLCV fallback을 사용할 수 있다.
 - `previous_close`, `latest_price`, `return_pct`, `provider_status`, `error_msg`를 함께 저장한다.
 - UI는 정상 render 때 provider를 직접 호출하지 않고 이 table의 최신 snapshot을 읽는다.
+- `TOP1000` / `TOP2000`은 `nyse_asset_profile.market_cap` current snapshot으로 universe를 구성해 저장한다.
 
 주의:
 
 - 무료 provider 기반이므로 지연, rate limit, ticker별 missing이 발생할 수 있다.
 - `provider_status != ok` row는 missing diagnostics로 노출하고 ranking에는 쓰지 않는다.
-- Top1000 / Top2000 intraday 확장은 별도 속도 / 안정성 검증 후 진행한다.
+- `TOP1000` / `TOP2000` UI refresh는 quote fast path만 사용하고, 광범위한 yfinance OHLCV fallback은 오래 걸릴 수 있어 자동 fallback하지 않는다.
 
 ## `etf_operability_snapshot`
 

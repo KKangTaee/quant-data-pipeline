@@ -853,7 +853,7 @@ def build_market_movers_snapshot(
                 message="Selected universe has no symbols. For S&P 500, run the universe refresh first.",
             )
 
-        if normalized_universe == "SP500" and normalized_period == "daily" and prefer_intraday:
+        if normalized_period == "daily" and prefer_intraday:
             intraday_snapshot = _build_intraday_movers_snapshot(
                 universe=universe,
                 universe_code=normalized_universe,
@@ -910,8 +910,8 @@ def build_market_movers_snapshot(
             extra=_universe_metadata(universe, universe_code=normalized_universe),
         )
         warnings = _coverage_warnings(coverage, date_window=date_window)
-        if normalized_universe == "SP500" and normalized_period == "daily" and prefer_intraday:
-            warnings.insert(0, "No S&P 500 intraday snapshot found; using daily DB close data.")
+        if normalized_period == "daily" and prefer_intraday:
+            warnings.insert(0, "No intraday snapshot found for the selected universe; using daily DB close data.")
         return {
             "status": "OK",
             "period": normalized_period,

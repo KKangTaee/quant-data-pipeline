@@ -34,7 +34,7 @@
 | Table | 역할 |
 |---|---|
 | `nyse_price_history` | stock / ETF 공용 OHLCV, dividend, split price ledger |
-| `market_intraday_snapshot` | Overview S&P 500 daily movers용 intraday latest price / previous close snapshot |
+| `market_intraday_snapshot` | Overview daily movers용 intraday latest price / previous close snapshot. S&P 500 / Top1000 / Top2000 coverage별 최신 refresh row를 저장 |
 
 ### `finance_fundamental`
 

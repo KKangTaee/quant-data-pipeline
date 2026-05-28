@@ -63,11 +63,11 @@ Wikipedia S&P 500 constituents
   -> finance_meta.market_universe_member
 
 yahoo quote batch via yfinance cookie / crumb session
-  -> finance.data.market_intelligence.collect_and_store_sp500_intraday_snapshot()
+  -> finance.data.market_intelligence.collect_and_store_market_intraday_snapshot()
   -> finance_price.market_intraday_snapshot
 
 yfinance 5m OHLCV fallback
-  -> finance.data.market_intelligence.collect_and_store_sp500_intraday_snapshot()
+  -> finance.data.market_intelligence.collect_and_store_market_intraday_snapshot()
   -> finance_price.market_intraday_snapshot
   -> app.services.overview_market_intelligence.build_market_movers_snapshot()
   -> Workspace > Overview > Market Movers
@@ -76,9 +76,9 @@ yfinance 5m OHLCV fallback
 의미:
 
 - `market_universe_member`의 S&P 500은 current constituents snapshot이며 historical PIT membership이 아니다.
-- `market_intraday_snapshot`은 daily S&P 500 movers에서 전일 종가 대비 최신 quote / intraday 가격을 빠르게 읽기 위한 snapshot이다.
-- 기본 refresh path는 Yahoo quote batch이며, quote path가 실패하면 기존 yfinance 5m OHLCV download로 fallback할 수 있다.
-- Top1000 / Top2000 movers는 여전히 `nyse_asset_profile.market_cap` current snapshot과 `nyse_price_history` EOD DB를 사용한다.
+- `market_intraday_snapshot`은 daily movers에서 전일 종가 대비 최신 quote / intraday 가격을 빠르게 읽기 위한 coverage별 snapshot이다.
+- 기본 refresh path는 Yahoo quote batch이며, S&P 500은 quote path 실패 시 기존 yfinance 5m OHLCV download로 fallback할 수 있다.
+- Top1000 / Top2000 daily movers도 저장된 quote snapshot을 우선 읽는다. 해당 universe는 `nyse_asset_profile.market_cap` current snapshot 기준이며, UI refresh에서는 오래 걸리는 yfinance OHLCV fallback을 자동 실행하지 않는다.
 
 ## ETF operability provider snapshot 흐름
 

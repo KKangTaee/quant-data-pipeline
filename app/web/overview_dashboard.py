@@ -9,7 +9,10 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 
-from app.jobs.ingestion_jobs import run_collect_sp500_intraday_snapshot, run_collect_sp500_universe
+from app.jobs.ingestion_jobs import (
+    run_collect_market_intraday_snapshot,
+    run_collect_sp500_universe,
+)
 from app.web.backtest_ui_components import render_badge_strip, render_status_card_grid
 from app.web.overview_dashboard_helpers import (
     load_overview_dashboard_snapshot,
@@ -19,7 +22,12 @@ from app.web.overview_dashboard_helpers import (
 )
 
 
-SP500_INTRADAY_REFRESH_MINUTES = 5
+MARKET_INTRADAY_REFRESH_MINUTES = 5
+MARKET_COVERAGE_LABELS = {
+    "SP500": "S&P 500",
+    "TOP1000": "Top 1000",
+    "TOP2000": "Top 2000",
+}
 
 
 # Render one ranked candidate card in the Overview priority section.
@@ -173,7 +181,7 @@ def _render_missing_diagnostics(snapshot: dict[str, Any]) -> None:
         st.dataframe(missing_rows, width="stretch", hide_index=True)
 
 
-def _render_sp500_job_result(result_key: str) -> None:
+def _render_market_job_result(result_key: str) -> None:
     result = st.session_state.get(result_key)
     if not isinstance(result, dict):
         return
@@ -198,8 +206,8 @@ def _render_sp500_job_result(result_key: str) -> None:
         )
 
 
-def _is_sp500_daily_refresh_due(snapshot: dict[str, Any], *, universe_code: str, period: str) -> bool:
-    if universe_code != "SP500" or period != "daily":
+def _is_daily_intraday_refresh_due(snapshot: dict[str, Any], *, period: str) -> bool:
+    if period != "daily":
         return False
     coverage = dict(snapshot.get("coverage") or {})
     if coverage.get("price_mode") != "Intraday Snapshot":
@@ -207,7 +215,7 @@ def _is_sp500_daily_refresh_due(snapshot: dict[str, Any], *, universe_code: str,
     stale_minutes = coverage.get("snapshot_stale_minutes")
     if stale_minutes is None:
         return True
-    return int(stale_minutes) >= SP500_INTRADAY_REFRESH_MINUTES
+    return int(stale_minutes) >= MARKET_INTRADAY_REFRESH_MINUTES
 
 
 def _render_refresh_state_dot(*, color: str, label: str, detail: str) -> None:
@@ -236,17 +244,23 @@ def _render_refresh_state_dot(*, color: str, label: str, detail: str) -> None:
     )
 
 
-def _run_collect_sp500_intraday_snapshot_compat() -> dict[str, Any]:
+def _run_collect_market_intraday_snapshot_compat(
+    *,
+    universe_code: str,
+    universe_limit: int,
+) -> dict[str, Any]:
     refresh_kwargs: dict[str, Any] = {
+        "universe_code": universe_code,
+        "universe_limit": universe_limit,
         "interval": "5m",
         "chunk_size": 100,
         "quote_batch_size": 200,
         "method": "quote_fast",
-        "fallback_to_yfinance": True,
+        "fallback_to_yfinance": universe_code == "SP500",
     }
-    supported_params = signature(run_collect_sp500_intraday_snapshot).parameters
+    supported_params = signature(run_collect_market_intraday_snapshot).parameters
     supported_kwargs = {key: value for key, value in refresh_kwargs.items() if key in supported_params}
-    return run_collect_sp500_intraday_snapshot(**supported_kwargs)
+    return run_collect_market_intraday_snapshot(**supported_kwargs)
 
 
 def _load_market_movers_snapshot(
@@ -272,14 +286,13 @@ def _get_market_movers_refresh_state(
     universe_code: str,
     period: str,
 ) -> dict[str, str | bool] | None:
-    is_sp500_daily = universe_code == "SP500" and period == "daily"
-    if not is_sp500_daily:
+    if period != "daily":
         return None
 
     coverage = dict(snapshot.get("coverage") or {})
     price_mode = str(coverage.get("price_mode") or "")
     stale_minutes = coverage.get("snapshot_stale_minutes")
-    refresh_due = _is_sp500_daily_refresh_due(snapshot, universe_code=universe_code, period=period)
+    refresh_due = _is_daily_intraday_refresh_due(snapshot, period=period)
     if price_mode != "Intraday Snapshot":
         dot_color = "#dc2626"
         label = "Update needed"
@@ -321,22 +334,29 @@ def _render_market_movers_refresh_bar(
     snapshot: dict[str, Any],
     *,
     universe_code: str,
+    universe_limit: int,
     period: str,
 ) -> None:
-    if universe_code != "SP500" or period != "daily":
+    if period != "daily":
         return
+
+    universe_label = MARKET_COVERAGE_LABELS.get(universe_code, universe_code)
+    intraday_result_key = f"overview_{universe_code.lower()}_intraday_result"
 
     with st.container(border=True):
         cols = st.columns([1, 1, 1], gap="small", vertical_alignment="center")
         if cols[0].button(
             "Update Daily Snapshot",
-            key="overview_sp500_intraday_refresh",
+            key=f"overview_{universe_code.lower()}_intraday_refresh",
             use_container_width=True,
         ):
-            with st.spinner("Updating S&P 500 quote snapshot..."):
-                st.session_state["overview_sp500_intraday_result"] = _run_collect_sp500_intraday_snapshot_compat()
+            with st.spinner(f"Updating {universe_label} quote snapshot..."):
+                st.session_state[intraday_result_key] = _run_collect_market_intraday_snapshot_compat(
+                    universe_code=universe_code,
+                    universe_limit=universe_limit,
+                )
             st.rerun()
-        if cols[1].button(
+        if universe_code == "SP500" and cols[1].button(
             "Refresh Universe",
             key="overview_sp500_universe_refresh",
             use_container_width=True,
@@ -344,16 +364,19 @@ def _render_market_movers_refresh_bar(
             with st.spinner("Refreshing S&P 500 universe..."):
                 st.session_state["overview_sp500_universe_result"] = run_collect_sp500_universe()
             st.rerun()
+        if universe_code != "SP500":
+            cols[1].empty()
         if cols[2].button(
             "Reload View",
-            key="overview_market_movers_reload",
+            key=f"overview_{universe_code.lower()}_market_movers_reload",
             use_container_width=True,
         ):
             st.session_state["overview_market_movers_reloaded_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             st.rerun()
 
-    _render_sp500_job_result("overview_sp500_universe_result")
-    _render_sp500_job_result("overview_sp500_intraday_result")
+    if universe_code == "SP500":
+        _render_market_job_result("overview_sp500_universe_result")
+    _render_market_job_result(intraday_result_key)
 
 
 def _render_market_movers_snapshot_panel(
@@ -446,8 +469,8 @@ def _render_market_movers_tab() -> None:
     reloaded_at = st.session_state.get("overview_market_movers_reloaded_at")
     if reloaded_at:
         st.caption(f"Last DB snapshot reload request: {reloaded_at}")
-    if coverage == "SP500" and period == "daily":
-        st.caption("Daily S&P 500 uses the latest stored intraday snapshot versus previous close when available.")
+    if period == "daily":
+        st.caption("Daily movers use the latest stored quote snapshot versus previous close when available.")
 
     snapshot = _load_market_movers_snapshot(
         universe_code=coverage,
@@ -456,7 +479,12 @@ def _render_market_movers_tab() -> None:
         top_n=top_n,
         sector=sector,
     )
-    _render_market_movers_refresh_bar(snapshot, universe_code=coverage, period=period)
+    _render_market_movers_refresh_bar(
+        snapshot,
+        universe_code=coverage,
+        universe_limit=universe_limit,
+        period=period,
+    )
 
     refresh_seconds = {"1 min": 60, "5 min": 300, "10 min": 600}.get(refresh_mode)
     if coverage != "SP500" or period != "daily":

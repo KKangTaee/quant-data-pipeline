@@ -4012,3 +4012,4 @@ Detailed historical logs were archived on `2026-04-13`.
   - 상단 controls를 segmented control bar와 refresh status bar로 다듬고, S&P 500 daily snapshot이 5분 기준으로 stale이면 update-needed dot / 버튼이 보이도록 했다.
   - S&P 500 snapshot refresh 기본 경로를 Yahoo quote batch fast path로 바꾸고, yfinance 5m OHLCV를 fallback으로 남겼다. Local smoke에서 503개 quote snapshot 저장은 6.514초가 걸렸다.
   - Streamlit이 이전 job-wrapper import를 잡은 상태에서 `quote_batch_size` TypeError가 나던 UI click path를 수정했고, 재시작 후 브라우저에서 503개 snapshot 저장이 7.377초로 완료되는 것을 확인했다.
+  - Top1000 / Top2000 daily intraday refresh를 같은 `market_intraday_snapshot` 저장 구조로 확장했다. Local smoke에서 Top1000은 1000 rows / 9.322초, Top2000은 2000 rows / 16.0초로 저장됐고 Overview가 intraday snapshot을 우선 표시한다.

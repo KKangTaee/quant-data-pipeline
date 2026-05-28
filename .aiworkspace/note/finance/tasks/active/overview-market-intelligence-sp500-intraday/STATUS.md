@@ -8,3 +8,4 @@
 - 2026-05-28: Replaced default S&P 500 snapshot refresh path with Yahoo quote batch fast path, keeping yfinance 5m OHLCV as fallback.
 - 2026-05-28: Browser smoke confirmed fresh quote snapshot state and disabled refresh button after the fast path run.
 - 2026-05-28: Fixed Overview refresh click error by moving collection actions outside the auto-refresh fragment and making the UI call compatible with stale Streamlit job-wrapper imports.
+- 2026-05-28: Extended daily intraday refresh to Top1000 / Top2000 using the same `market_intraday_snapshot` table and quote-fast collection path.

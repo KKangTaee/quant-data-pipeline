@@ -5340,3 +5340,14 @@ Detailed historical analysis was archived on `2026-04-13`.
   - 자동 새로고침 fragment 안에 수집 버튼과 `st.rerun()`이 같이 있던 구조도 불안정하므로 fragment는 DB 읽기 전용으로 분리하는 편이 맞다
 - Follow-up:
   - Overview button action을 fragment 밖으로 옮기고, stale import 상황에서도 지원되는 인자만 넘기도록 호환 호출을 추가했다
+
+### 2026-05-28 - Top1000 / Top2000 daily intraday refresh 확장
+- User request:
+  - 사용자가 S&P 500 refresh가 정상 작동하면 Top1000 / Top2000도 같은 방향으로 확장해 달라고 요청함
+- Interpreted goal:
+  - daily movers의 전일 종가 대비 quote snapshot을 S&P 500뿐 아니라 market-cap coverage에도 적용해야 함
+- Analysis result:
+  - 기존 `market_intraday_snapshot`은 `universe_code`가 unique key에 포함되어 있어 schema 변경 없이 `TOP1000`, `TOP2000` row를 저장할 수 있다
+  - Top1000 / Top2000 universe는 current `nyse_asset_profile.market_cap` ranking 기준이며, quote-fast path는 충분히 빠르지만 yfinance OHLCV fallback은 넓은 coverage에서 오래 걸릴 수 있어 UI에서는 자동 fallback하지 않는 편이 맞다
+- Follow-up:
+  - generic market intraday collector / job wrapper를 추가하고 Overview daily view가 Top1000 / Top2000 intraday snapshot을 우선 읽도록 확장했다

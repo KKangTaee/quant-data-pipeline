@@ -35,7 +35,7 @@ Last Verified: 2026-05-28
 | `nyse_asset_profile` | stock / ETF profile and bridge metadata |
 | `nyse_price_history` | OHLCV price ledger |
 | `market_universe_member` | Overview market intelligence current universe membership |
-| `market_intraday_snapshot` | Overview S&P 500 intraday previous-close snapshot |
+| `market_intraday_snapshot` | Overview daily market movers intraday previous-close snapshot for S&P 500 / Top1000 / Top2000 |
 | `etf_provider_source_map` | ETF별 issuer endpoint / parser mapping cache |
 | `etf_operability_snapshot` | ETF 비용, 규모, 유동성, spread, NAV 관련 snapshot |
 | `etf_holdings_snapshot` | ETF holdings row snapshot |

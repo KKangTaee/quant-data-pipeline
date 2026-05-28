@@ -21,6 +21,12 @@ SP500_SOURCE = "wikipedia_sp500_constituents"
 DEFAULT_INTRADAY_INTERVAL = "5m"
 YAHOO_QUOTE_URL = "https://query1.finance.yahoo.com/v7/finance/quote"
 VALID_INTRADAY_INTERVALS = {"1m", "2m", "5m", "15m", "30m", "60m", "90m", "1h"}
+MARKET_CAP_UNIVERSE_LIMITS = {"TOP1000": 1000, "TOP2000": 2000}
+MARKET_UNIVERSE_LABELS = {
+    "SP500": "S&P 500",
+    "TOP1000": "Top 1000",
+    "TOP2000": "Top 2000",
+}
 
 
 def _utc_now() -> datetime:
@@ -33,6 +39,24 @@ def _timestamp_str(value: datetime | None = None) -> str:
 
 def _normalize_symbol(value: Any) -> str:
     return str(value or "").strip().upper().replace(".", "-")
+
+
+def _normalize_intraday_universe(
+    universe_code: str | None,
+    universe_limit: int | None = None,
+) -> tuple[str, int]:
+    normalized = str(universe_code or "").strip().upper()
+    if normalized == "SP500":
+        return "SP500", 500
+    if normalized in MARKET_CAP_UNIVERSE_LIMITS:
+        return normalized, MARKET_CAP_UNIVERSE_LIMITS[normalized]
+    if universe_limit is not None:
+        try:
+            parsed_limit = int(universe_limit)
+        except (TypeError, ValueError):
+            parsed_limit = 1000
+        return ("TOP2000", 2000) if parsed_limit >= 2000 else ("TOP1000", 1000)
+    raise ValueError(f"Unsupported intraday universe: {universe_code!r}")
 
 
 def _safe_float(value: Any) -> float | None:
@@ -252,6 +276,53 @@ def load_market_universe_members(
             ORDER BY symbol ASC
             """,
             [universe_code],
+        )
+    finally:
+        db.close()
+
+
+def load_market_cap_universe_members(
+    universe_code: str = "TOP1000",
+    *,
+    universe_limit: int | None = None,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+) -> list[dict[str, Any]]:
+    normalized_code, normalized_limit = _normalize_intraday_universe(universe_code, universe_limit)
+    if normalized_code == "SP500":
+        return load_market_universe_members("SP500", host=host, user=user, password=password, port=port)
+
+    db = _db(host, user, password, port)
+    try:
+        db.use_db(DB_META)
+        return db.query(
+            """
+            SELECT
+                %s AS universe_code,
+                symbol,
+                symbol AS source_symbol,
+                long_name AS name,
+                sector,
+                industry,
+                'nyse_asset_profile.market_cap' AS source,
+                NULL AS source_url,
+                DATE(last_collected_at) AS as_of_date,
+                1 AS active,
+                last_collected_at AS collected_at,
+                error_msg
+            FROM nyse_asset_profile
+            WHERE kind = %s
+              AND country = %s
+              AND market_cap IS NOT NULL
+              AND market_cap > 0
+              AND (is_spac IS NULL OR is_spac <> 1)
+              AND (status IS NULL OR LOWER(status) NOT IN ('dilist', 'delist', 'delisted'))
+            ORDER BY market_cap DESC, symbol ASC
+            LIMIT %s
+            """,
+            [normalized_code, "stock", "United States", normalized_limit],
         )
     finally:
         db.close()
@@ -620,8 +691,10 @@ def upsert_intraday_snapshot_rows(
         db.close()
 
 
-def collect_and_store_sp500_intraday_snapshot(
+def collect_and_store_market_intraday_snapshot(
     *,
+    universe_code: str = "SP500",
+    universe_limit: int | None = None,
     interval: str = DEFAULT_INTRADAY_INTERVAL,
     chunk_size: int = 100,
     quote_batch_size: int = 200,
@@ -635,6 +708,8 @@ def collect_and_store_sp500_intraday_snapshot(
     price_downloader: Callable[..., pd.DataFrame] | None = None,
     quote_fetcher: Callable[..., list[dict[str, Any]]] | None = None,
 ) -> dict[str, Any]:
+    normalized_universe, normalized_limit = _normalize_intraday_universe(universe_code, universe_limit)
+    universe_label = MARKET_UNIVERSE_LABELS.get(normalized_universe, normalized_universe)
     normalized_interval = str(interval or DEFAULT_INTRADAY_INTERVAL).strip()
     if normalized_interval not in VALID_INTRADAY_INTERVALS:
         raise ValueError(f"Unsupported intraday interval: {interval!r}")
@@ -644,11 +719,21 @@ def collect_and_store_sp500_intraday_snapshot(
 
     started_at = datetime.now(UTC)
     sync_market_intelligence_tables(host=host, user=user, password=password, port=port)
-    loader = universe_loader or (
-        lambda: load_market_universe_members("SP500", host=host, user=user, password=password, port=port)
-    )
+    if universe_loader is not None:
+        loader = universe_loader
+    elif normalized_universe == "SP500":
+        loader = lambda: load_market_universe_members("SP500", host=host, user=user, password=password, port=port)
+    else:
+        loader = lambda: load_market_cap_universe_members(
+            normalized_universe,
+            universe_limit=normalized_limit,
+            host=host,
+            user=user,
+            password=password,
+            port=port,
+        )
     members = loader()
-    if not members:
+    if not members and normalized_universe == "SP500":
         collect_and_store_sp500_universe(host=host, user=user, password=password, port=port)
         members = loader()
     symbols = [_normalize_symbol(row.get("symbol")) for row in members if row.get("symbol")]
@@ -660,12 +745,18 @@ def collect_and_store_sp500_intraday_snapshot(
             "symbols_processed": 0,
             "failed_symbols": [],
             "snapshot_time_utc": None,
-            "message": "No S&P 500 symbols available.",
+            "universe_code": normalized_universe,
+            "universe_limit": normalized_limit,
+            "message": f"No {universe_label} symbols available.",
         }
 
     downloader = price_downloader or _download_prices
     snapshot_time = _timestamp_str(_utc_now())
-    diagnostics: dict[str, Any] = {"method_requested": normalized_method}
+    diagnostics: dict[str, Any] = {
+        "method_requested": normalized_method,
+        "universe_code": normalized_universe,
+        "universe_limit": normalized_limit,
+    }
     snapshot_rows: list[dict[str, Any]]
     failed_symbols: list[str]
     source = "yfinance"
@@ -682,7 +773,7 @@ def collect_and_store_sp500_intraday_snapshot(
         try:
             snapshot_rows, failed_symbols, quote_diagnostics = _collect_quote_snapshot_rows(
                 symbols,
-                universe_code="SP500",
+                universe_code=normalized_universe,
                 interval_code=normalized_interval,
                 snapshot_time=snapshot_time,
                 quote_batch_size=quote_batch_size,
@@ -698,7 +789,7 @@ def collect_and_store_sp500_intraday_snapshot(
                 raise
             snapshot_rows, failed_symbols, fallback_diagnostics = _collect_yfinance_snapshot_rows(
                 symbols,
-                universe_code="SP500",
+                universe_code=normalized_universe,
                 interval_code=normalized_interval,
                 snapshot_time=snapshot_time,
                 chunk_size=chunk_size,
@@ -710,7 +801,7 @@ def collect_and_store_sp500_intraday_snapshot(
     else:
         snapshot_rows, failed_symbols, yfinance_diagnostics = _collect_yfinance_snapshot_rows(
             symbols,
-            universe_code="SP500",
+            universe_code=normalized_universe,
             interval_code=normalized_interval,
             snapshot_time=snapshot_time,
             chunk_size=chunk_size,
@@ -731,10 +822,45 @@ def collect_and_store_sp500_intraday_snapshot(
         "symbols_processed": len(symbols) - len(failed_symbols),
         "failed_symbols": failed_symbols,
         "snapshot_time_utc": snapshot_time,
+        "universe_code": normalized_universe,
+        "universe_limit": normalized_limit,
         "interval": normalized_interval,
         "source": source,
         "method": method_used,
         "duration_sec": round((datetime.now(UTC) - started_at).total_seconds(), 3),
         "diagnostics": diagnostics,
-        "message": "S&P 500 intraday snapshot completed.",
+        "message": f"{universe_label} intraday snapshot completed.",
     }
+
+
+def collect_and_store_sp500_intraday_snapshot(
+    *,
+    interval: str = DEFAULT_INTRADAY_INTERVAL,
+    chunk_size: int = 100,
+    quote_batch_size: int = 200,
+    method: str = "quote_fast",
+    fallback_to_yfinance: bool = True,
+    host: str = "localhost",
+    user: str = "root",
+    password: str = "1234",
+    port: int = 3306,
+    universe_loader: Callable[[], list[dict[str, Any]]] | None = None,
+    price_downloader: Callable[..., pd.DataFrame] | None = None,
+    quote_fetcher: Callable[..., list[dict[str, Any]]] | None = None,
+) -> dict[str, Any]:
+    return collect_and_store_market_intraday_snapshot(
+        universe_code="SP500",
+        universe_limit=500,
+        interval=interval,
+        chunk_size=chunk_size,
+        quote_batch_size=quote_batch_size,
+        method=method,
+        fallback_to_yfinance=fallback_to_yfinance,
+        host=host,
+        user=user,
+        password=password,
+        port=port,
+        universe_loader=universe_loader,
+        price_downloader=price_downloader,
+        quote_fetcher=quote_fetcher,
+    )

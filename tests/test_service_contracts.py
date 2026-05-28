@@ -358,7 +358,7 @@ class BacktestRuntimeContractTests(unittest.TestCase):
 
 class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
     def _query_fn(self, db_name: str, sql: str, params=None) -> list[dict[str, object]]:
-        del db_name, params
+        del db_name
         if "FROM market_universe_member" in sql:
             return [
                 {
@@ -528,6 +528,7 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
             period="daily",
             top_n=5,
             today=date(2026, 5, 28),
+            prefer_intraday=False,
             query_fn=self._query_fn,
         )
 
@@ -559,6 +560,26 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(snapshot["rows"].iloc[0]["Symbol"], "AAA")
         self.assertEqual(snapshot["rows"].iloc[0]["Return %"], 12.0)
         self.assertEqual(snapshot["rows"].iloc[0]["Start Date"], "Previous Close")
+        self.assertEqual(snapshot["missing_rows"].iloc[0]["Symbol"], "BBB")
+        self.assertEqual(snapshot["missing_rows"].iloc[0]["Reason"], "missing latest price")
+
+    def test_market_movers_snapshot_uses_top1000_intraday_returns(self) -> None:
+        from app.services.overview_market_intelligence import build_market_movers_snapshot
+
+        snapshot = build_market_movers_snapshot(
+            universe_code="TOP1000",
+            period="daily",
+            top_n=5,
+            query_fn=self._query_fn,
+        )
+
+        self.assertEqual(snapshot["status"], "OK")
+        self.assertEqual(snapshot["universe_code"], "TOP1000")
+        self.assertEqual(snapshot["coverage"]["price_mode"], "Intraday Snapshot")
+        self.assertEqual(snapshot["coverage"]["coverage_basis"], "Latest asset_profile.market_cap snapshot")
+        self.assertEqual(snapshot["coverage"]["returnable_count"], 1)
+        self.assertEqual(snapshot["rows"].iloc[0]["Symbol"], "AAA")
+        self.assertEqual(snapshot["rows"].iloc[0]["Return %"], 12.0)
         self.assertEqual(snapshot["missing_rows"].iloc[0]["Symbol"], "BBB")
         self.assertEqual(snapshot["missing_rows"].iloc[0]["Reason"], "missing latest price")
 
@@ -642,6 +663,59 @@ class MarketIntelligenceIngestionContractTests(unittest.TestCase):
         self.assertEqual(written_rows[0]["source"], "yahoo_quote")
         self.assertAlmostEqual(float(written_rows[0]["return_pct"]), 12.0)
         self.assertAlmostEqual(float(written_rows[1]["return_pct"]), -4.0)
+
+    def test_top_universe_snapshot_writes_top1000_rows(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        members = [{"symbol": "AAA"}, {"symbol": "BBB"}]
+
+        def quote_fetcher(symbols):
+            self.assertEqual(symbols, ["AAA", "BBB"])
+            return [
+                {
+                    "symbol": "AAA",
+                    "regularMarketPrice": 112.0,
+                    "regularMarketPreviousClose": 100.0,
+                    "regularMarketTime": 1779912000,
+                    "regularMarketVolume": 1000,
+                },
+                {
+                    "symbol": "BBB",
+                    "regularMarketPrice": 96.0,
+                    "regularMarketPreviousClose": 100.0,
+                    "regularMarketTime": 1779912001,
+                    "regularMarketVolume": 2000,
+                },
+            ]
+
+        written_rows: list[dict[str, object]] = []
+
+        def capture_rows(rows, **kwargs):
+            del kwargs
+            written_rows.extend(rows)
+            return len(rows)
+
+        with (
+            patch.object(mi, "sync_market_intelligence_tables", return_value=None),
+            patch.object(mi, "_load_db_previous_close_map", return_value={}),
+            patch.object(mi, "upsert_intraday_snapshot_rows", side_effect=capture_rows),
+        ):
+            result = mi.collect_and_store_market_intraday_snapshot(
+                universe_code="TOP1000",
+                universe_limit=1000,
+                universe_loader=lambda: members,
+                quote_fetcher=quote_fetcher,
+                quote_batch_size=200,
+                method="quote_fast",
+                fallback_to_yfinance=False,
+            )
+
+        self.assertEqual(result["universe_code"], "TOP1000")
+        self.assertEqual(result["universe_limit"], 1000)
+        self.assertEqual(result["source"], "yahoo_quote")
+        self.assertEqual(result["rows_written"], 2)
+        self.assertEqual(written_rows[0]["universe_code"], "TOP1000")
+        self.assertAlmostEqual(float(written_rows[0]["return_pct"]), 12.0)
 
 
 class PracticalValidationReplayServiceContractTests(unittest.TestCase):
