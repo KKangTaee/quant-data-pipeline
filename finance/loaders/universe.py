@@ -132,6 +132,10 @@ def load_symbol_lifecycle_coverage_summary(
                 "first_seen_date",
                 "last_seen_date",
                 "inactive_detected_at",
+                "event_type",
+                "event_date",
+                "related_symbol",
+                "related_cik",
                 "collected_at",
                 "source_ref",
                 "name",
@@ -154,6 +158,10 @@ def load_symbol_lifecycle_coverage_summary(
             first_seen_date,
             last_seen_date,
             inactive_detected_at,
+            event_type,
+            event_date,
+            related_symbol,
+            related_cik,
             collected_at,
             source_ref,
             name,
@@ -190,7 +198,7 @@ def load_symbol_lifecycle_coverage_summary(
     if df.empty:
         return df
 
-    for column in ["first_seen_date", "last_seen_date", "inactive_detected_at", "collected_at"]:
+    for column in ["first_seen_date", "last_seen_date", "inactive_detected_at", "event_date", "collected_at"]:
         if column in df.columns:
             df[column] = pd.to_datetime(df[column], errors="coerce")
     if "symbol" in df.columns:

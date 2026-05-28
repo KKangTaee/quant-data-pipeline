@@ -40,12 +40,12 @@ NYSE 웹페이지
 ```text
 NYSE listing CSV
   -> finance.data.nyse_db.load_nyse_csv_to_mysql()
-  -> finance_meta.nyse_symbol_lifecycle (current_listing_snapshot / partial)
+  -> finance_meta.nyse_symbol_lifecycle (current_listing_snapshot / listing_observed / partial)
 
 SEC company_tickers.json
 SEC submissions API Form 25 / 25-NSE metadata
   -> finance.data.sec_delisting.collect_and_store_sec_form25_delistings()
-  -> finance_meta.nyse_symbol_lifecycle (delisting_feed / actual)
+  -> finance_meta.nyse_symbol_lifecycle (delisting_feed / delisting / actual)
   -> finance.loaders.universe.load_symbol_lifecycle_coverage_summary()
   -> Data Coverage Audit / Validation Efficacy Audit
 ```
@@ -56,6 +56,8 @@ SEC submissions API Form 25 / 25-NSE metadata
 - SEC Form 25 row는 official delisting / withdrawal evidence다.
 - Form 25가 없다는 사실은 active listing proof가 아니다.
 - complete historical universe membership은 여전히 별도 historical listing source가 필요하다.
+- Phase 8부터 lifecycle row는 `event_type`, `event_date`, `related_symbol`, `related_cik`를 받을 수 있다.
+  이 필드는 future ticker change / merger / historical membership source를 같은 table에 넣기 위한 DB row contract다.
 
 ## Price 흐름
 

@@ -13,13 +13,25 @@ Detailed historical analysis was archived on `2026-04-13`.
 ## Active Pointers
 
 - latest phase board:
-  - [PHASE34_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/phases/phase34/PHASE34_CURRENT_CHAPTER_TODO.md)
+  - [Phase 8 Investability Data Evidence Expansion](./phases/active/phase8-investability-data-evidence-expansion/PLAN.md)
 - current candidate summary:
-  - [CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/backtest_reports/strategies/CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md)
+  - no active strategy-search candidate summary in `main-dev`; current work is lifecycle evidence hardening
 - historical full archive:
   - [QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/QUESTION_AND_ANALYSIS_LOG_ARCHIVE_20260413.md)
 
 ## Entries
+
+### 2026-05-28 - Phase 8 starts with lifecycle event semantics
+- User request:
+  - 1차 hardening cycle을 목표로 Phase 8 작업 진행을 요청함.
+- Interpreted goal:
+  - Phase 0~7 완료 이후 남은 데이터 evidence 약점을 Phase 8로 공식화하고, lifecycle / survivorship 근거 강화의 첫 구현 slice를 진행한다.
+- Analysis result:
+  - Phase 8 board를 열고 `symbol-lifecycle-event-fields-v1`을 구현했다.
+  - `nyse_symbol_lifecycle`은 `event_type`, `event_date`, `related_symbol`, `related_cik`를 받을 수 있고, current listing row는 `listing_observed`, SEC Form 25 row는 `delisting` event로 저장된다.
+  - 이 변경은 lifecycle source semantics를 명확히 하는 DB-backed evidence 작업이며, 새 JSONL / memo / preset / approval / order / rebalance 동작을 추가하지 않았다.
+- Follow-up:
+  - 다음 Phase 8 task는 `historical-membership-source-review-v1`로 free / official historical membership 또는 ticker action source 후보를 확인한다.
 
 ### 2026-05-28 - SEC Form 25 collector should be reachable from Ingestion
 - User request:

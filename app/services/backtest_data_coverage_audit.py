@@ -406,9 +406,11 @@ def _symbol_lifecycle_evidence(context: dict[str, Any]) -> dict[str, Any]:
         candidates = rows_by_symbol.get(symbol) or []
         for candidate in candidates:
             source_type = str(candidate.get("source_type") or "").strip().lower()
+            event_type = str(candidate.get("event_type") or "").strip().lower()
             source = str(candidate.get("source") or "").strip()
             if source_type:
-                evidence_sources.add(f"{source_type}:{source or '-'}")
+                event_label = f":{event_type}" if event_type else ""
+                evidence_sources.add(f"{source_type}{event_label}:{source or '-'}")
         if any(
             _lifecycle_row_covers_requested_period(candidate, start=requested_start, end=requested_end)
             for candidate in candidates

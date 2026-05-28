@@ -95,6 +95,8 @@ external source
   `sec-form25-delisting-backfill-v1`부터 `finance/data/sec_delisting.py`는 SEC EDGAR submissions API와 Form 25 / 25-NSE metadata를 official/free delisting source로 사용해
   `source_type=delisting_feed`, `coverage_status=actual`, `listing_status=delisted` lifecycle row를 저장한다.
   Form 25 row는 delisting evidence이며, Form 25 부재를 active proof로 해석하지 않는다.
+  `symbol-lifecycle-event-fields-v1`부터 lifecycle row는 `event_type`, `event_date`, `related_symbol`, `related_cik`를 받을 수 있다.
+  NYSE current listing row는 `event_type=listing_observed`, SEC Form 25 row는 `event_type=delisting`으로 저장해 future ticker change / merger source와 같은 row contract를 쓴다.
 
 ## 데이터 무결성 체크포인트
 

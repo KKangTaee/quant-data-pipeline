@@ -649,9 +649,52 @@ class SecForm25DelistingCollectorContractTests(unittest.TestCase):
         self.assertEqual(row["coverage_status"], "actual")
         self.assertIsNone(row["first_seen_date"])
         self.assertEqual(row["last_seen_date"], "2026-03-15")
+        self.assertEqual(row["event_type"], "delisting")
+        self.assertEqual(row["event_date"], "2026-03-15")
+        self.assertEqual(row["related_cik"], 123456)
         self.assertIn("sec_form25_000012345626000002", row["source"])
         self.assertIn("primary_doc.xml", row["source_ref"])
+        self.assertIn('"event_type": "delisting"', row["evidence_json"])
         self.assertIn("absence of Form 25 is not active-listing proof", row["evidence_json"])
+
+    def test_current_listing_snapshot_maps_to_partial_listing_observed_event(self) -> None:
+        from finance.data import nyse_db
+
+        class FakeDB:
+            def __init__(self) -> None:
+                self.executemany_calls: list[tuple[str, list[dict]]] = []
+
+            def executemany(self, sql: str, params: list[dict]) -> None:
+                self.executemany_calls.append((sql, params))
+
+        fake_db = FakeDB()
+        frame = pd.DataFrame(
+            [
+                {
+                    "symbol": "spy",
+                    "name": "SPDR S&P 500 ETF Trust",
+                    "url": "https://www.nyse.com/quote/ARCX:SPY",
+                }
+            ]
+        )
+        with patch.object(nyse_db, "sync_table_schema"):
+            count = nyse_db._upsert_symbol_lifecycle_rows(  # noqa: SLF001 - contract locks DB row semantics.
+                fake_db,
+                kind="etf",
+                frame=frame,
+                snapshot_date="2026-05-28",
+            )
+
+        self.assertEqual(count, 1)
+        written_row = fake_db.executemany_calls[0][1][0]
+        self.assertEqual(written_row["symbol"], "SPY")
+        self.assertEqual(written_row["source_type"], "current_listing_snapshot")
+        self.assertEqual(written_row["coverage_status"], "partial")
+        self.assertEqual(written_row["event_type"], "listing_observed")
+        self.assertEqual(written_row["event_date"], "2026-05-28")
+        self.assertIsNone(written_row["related_symbol"])
+        self.assertIsNone(written_row["related_cik"])
+        self.assertIn("not sufficient alone for historical survivorship PASS", written_row["evidence_json"])
 
     def test_collector_writes_db_lifecycle_rows_without_jsonl_side_effects(self) -> None:
         from finance.data import sec_delisting
@@ -719,6 +762,8 @@ class SecForm25DelistingCollectorContractTests(unittest.TestCase):
         written_row = fake_db.executemany_calls[0][1][0]
         self.assertEqual(written_row["kind"], "stock")
         self.assertEqual(written_row["source_type"], "delisting_feed")
+        self.assertEqual(written_row["event_type"], "delisting")
+        self.assertEqual(written_row["event_date"], "2026-03-15")
 
     def test_ingestion_job_surfaces_form25_coverage_gaps(self) -> None:
         import app.jobs.ingestion_jobs as jobs

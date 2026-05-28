@@ -50,10 +50,16 @@ def _upsert_symbol_lifecycle_rows(
                 "evidence_json": json.dumps(
                     {
                         "snapshot_date": snapshot,
+                        "event_type": "listing_observed",
+                        "event_date": snapshot,
                         "source_note": "current NYSE listing snapshot; not sufficient alone for historical survivorship PASS",
                     },
                     ensure_ascii=False,
                 ),
+                "event_type": "listing_observed",
+                "event_date": snapshot,
+                "related_symbol": None,
+                "related_cik": None,
                 "collected_at": f"{snapshot} 00:00:00",
                 "error_msg": None,
             }
@@ -65,11 +71,13 @@ def _upsert_symbol_lifecycle_rows(
         INSERT INTO nyse_symbol_lifecycle (
             symbol, kind, listing_status, source, source_type, coverage_status,
             first_seen_date, last_seen_date, inactive_detected_at,
+            event_type, event_date, related_symbol, related_cik,
             name, source_ref, evidence_json, collected_at, error_msg
         )
         VALUES (
             %(symbol)s, %(kind)s, %(listing_status)s, %(source)s, %(source_type)s, %(coverage_status)s,
             %(first_seen_date)s, %(last_seen_date)s, %(inactive_detected_at)s,
+            %(event_type)s, %(event_date)s, %(related_symbol)s, %(related_cik)s,
             %(name)s, %(source_ref)s, %(evidence_json)s, %(collected_at)s, %(error_msg)s
         )
         ON DUPLICATE KEY UPDATE
@@ -87,6 +95,10 @@ def _upsert_symbol_lifecycle_rows(
                 ELSE last_seen_date
             END,
             inactive_detected_at = NULL,
+            event_type = VALUES(event_type),
+            event_date = VALUES(event_date),
+            related_symbol = VALUES(related_symbol),
+            related_cik = VALUES(related_cik),
             name = VALUES(name),
             source_ref = VALUES(source_ref),
             evidence_json = VALUES(evidence_json),

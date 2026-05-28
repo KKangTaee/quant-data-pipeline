@@ -13,15 +13,19 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Active Pointers
 
 - current phase board:
-  - [PHASE34_CURRENT_CHAPTER_TODO.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/phases/phase34/PHASE34_CURRENT_CHAPTER_TODO.md)
+  - [Phase 8 Investability Data Evidence Expansion](./phases/active/phase8-investability-data-evidence-expansion/PLAN.md)
 - current candidate summary:
-  - [CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/backtest_reports/strategies/CURRENT_PRACTICAL_CANDIDATES_SUMMARY.md)
+  - no active strategy-search candidate summary in `main-dev`; current work is lifecycle evidence hardening
 - historical full archive:
   - [WORK_PROGRESS_ARCHIVE_20260413.md](/Users/taeho/Project/quant-data-pipeline/.aiworkspace/note/finance/archive/WORK_PROGRESS_ARCHIVE_20260413.md)
 
 ## Entries
 
 ### 2026-05-28
+- Opened `.aiworkspace/note/finance/phases/active/phase8-investability-data-evidence-expansion/` as the official Phase 8 board for the 1차 hardening cycle.
+- Completed `.aiworkspace/note/finance/tasks/active/symbol-lifecycle-event-fields-v1/`.
+- `nyse_symbol_lifecycle` now has event semantics for lifecycle rows: NYSE current listing snapshot rows are `listing_observed` partial evidence, and SEC Form 25 rows are `delisting` actual evidence.
+- The change updates DB schema / writers / loader / contracts and adds no new workflow JSONL, memo, preset, approval, order, or rebalance behavior.
 - Completed `.aiworkspace/note/finance/tasks/active/sec-form25-ingestion-ui-v1/`.
 - `Workspace > Ingestion > Practical Validation Provider Snapshots` now has a `Delisting Evidence` tab that runs the SEC Form 25 lifecycle evidence collector.
 - The UI writes only through the existing DB collector path and adds no new workflow JSONL, memo, preset, report file, approval, order, or rebalance behavior.

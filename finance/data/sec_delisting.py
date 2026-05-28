@@ -215,6 +215,8 @@ def build_sec_form25_lifecycle_rows(
             "symbol": normalized_symbol,
             "cik": cik,
             "company_title": title,
+            "event_type": "delisting",
+            "event_date": filing_date,
             "form_type": form_type,
             "accession_no": accession_no,
             "filing_date": filing_date,
@@ -233,6 +235,10 @@ def build_sec_form25_lifecycle_rows(
                 "first_seen_date": None,
                 "last_seen_date": filing_date,
                 "inactive_detected_at": filing_date,
+                "event_type": "delisting",
+                "event_date": filing_date,
+                "related_symbol": None,
+                "related_cik": cik,
                 "name": title,
                 "source_ref": source_ref,
                 "evidence_json": json.dumps(evidence, ensure_ascii=False, sort_keys=True),
@@ -270,11 +276,13 @@ def _upsert_lifecycle_rows(db: MySQLClient, rows: list[dict[str, Any]]) -> int:
         INSERT INTO nyse_symbol_lifecycle (
             symbol, kind, listing_status, source, source_type, coverage_status,
             first_seen_date, last_seen_date, inactive_detected_at,
+            event_type, event_date, related_symbol, related_cik,
             name, source_ref, evidence_json, collected_at, error_msg
         )
         VALUES (
             %(symbol)s, %(kind)s, %(listing_status)s, %(source)s, %(source_type)s, %(coverage_status)s,
             %(first_seen_date)s, %(last_seen_date)s, %(inactive_detected_at)s,
+            %(event_type)s, %(event_date)s, %(related_symbol)s, %(related_cik)s,
             %(name)s, %(source_ref)s, %(evidence_json)s, %(collected_at)s, %(error_msg)s
         )
         ON DUPLICATE KEY UPDATE
@@ -284,6 +292,10 @@ def _upsert_lifecycle_rows(db: MySQLClient, rows: list[dict[str, Any]]) -> int:
             first_seen_date = COALESCE(first_seen_date, VALUES(first_seen_date)),
             last_seen_date = VALUES(last_seen_date),
             inactive_detected_at = VALUES(inactive_detected_at),
+            event_type = VALUES(event_type),
+            event_date = VALUES(event_date),
+            related_symbol = VALUES(related_symbol),
+            related_cik = VALUES(related_cik),
             name = VALUES(name),
             source_ref = VALUES(source_ref),
             evidence_json = VALUES(evidence_json),
