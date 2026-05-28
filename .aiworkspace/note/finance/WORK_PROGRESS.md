@@ -22,6 +22,9 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-28
+- Completed `.aiworkspace/note/finance/tasks/active/sec-cik-exchange-crosscheck-v1/`.
+- Added `finance/data/sec_company_tickers.py` and `run_collect_sec_company_ticker_crosscheck()` to store SEC current CIK / ticker / exchange association as DB lifecycle `listing_observed` partial identity evidence.
+- The collector adds no workflow JSONL, memo, preset, approval, order, or rebalance behavior, and does not loosen survivorship PASS criteria.
 - Completed `.aiworkspace/note/finance/tasks/active/symbol-directory-snapshot-ingestion-v1/`.
 - Added `finance/data/symbol_directory.py` and `run_collect_symbol_directory_snapshots()` to store Nasdaq public Symbol Directory current rows as DB lifecycle `listing_observed` partial evidence.
 - The collector adds no workflow JSONL, memo, preset, approval, order, or rebalance behavior, and does not loosen survivorship PASS criteria.

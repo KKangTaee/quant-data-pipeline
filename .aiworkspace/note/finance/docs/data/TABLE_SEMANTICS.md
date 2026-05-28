@@ -29,12 +29,14 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - lifecycle evidence table이다.
 - `source_type=current_listing_snapshot` row는 NYSE 현재 listing을 반복 관찰하기 위한 partial `event_type=listing_observed` evidence다.
 - `source=nasdaq_symdir_nasdaqlisted` 또는 `nasdaq_symdir_otherlisted` row도 Nasdaq Symbol Directory current snapshot에서 온 partial `listing_observed` evidence다.
+- `source=sec_company_tickers_exchange` row는 SEC current CIK / ticker / exchange association에서 온 partial `listing_observed` identity evidence다.
 - `source_type=delisting_feed` row는 SEC Form 25 같은 delisting source에서 온 actual `event_type=delisting` evidence를 담을 수 있다.
 - `source_type=historical_listing`, `delisting_feed`, `computed_from_snapshots` row가 requested backtest period를 덮을 때만 survivorship control PASS 근거가 된다.
 - Phase 8부터 `event_type`, `event_date`, `related_symbol`, `related_cik`를 사용할 수 있다.
   이 필드는 ticker change / merger / delisting / membership event를 source-neutral하게 읽기 위한 nullable event semantics다.
 - `finance/data/nyse_db.py`는 기존 NYSE listing CSV 적재 시 current snapshot row를 idempotent하게 UPSERT할 수 있다.
 - `finance/data/symbol_directory.py`는 Nasdaq public Symbol Directory current files를 idempotent하게 UPSERT할 수 있다.
+- `finance/data/sec_company_tickers.py`는 SEC current CIK / ticker / exchange association을 idempotent하게 UPSERT할 수 있다.
 - `finance/data/sec_delisting.py`는 SEC EDGAR Form 25 / 25-NSE filing metadata를 idempotent하게 UPSERT할 수 있다.
 
 주의:

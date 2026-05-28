@@ -75,6 +75,22 @@ Implementation status:
 - `app/jobs/ingestion_jobs.py` exposes `run_collect_symbol_directory_snapshots()`.
 - The collector writes only DB lifecycle rows and reports no registry / memo / preset side effects.
 
+## SEC Identity Cross-Check Slice
+
+`sec-cik-exchange-crosscheck-v1` adds SEC current CIK / ticker / exchange associations as identity evidence.
+
+```text
+SEC company_tickers_exchange.json
+  -> finance/data/sec_company_tickers.py
+  -> finance_meta.nyse_symbol_lifecycle
+  -> finance/loaders/universe.py
+  -> Data Coverage Audit
+```
+
+These rows use `source=sec_company_tickers_exchange`, `source_type=current_listing_snapshot`, `coverage_status=partial`, and `event_type=listing_observed`.
+The SEC CIK is stored as `related_cik`.
+This is not historical membership, delisting, or ticker action proof.
+
 ## Tradeoff
 
 Phase 8-1만으로 survivorship 문제가 완전히 해결되지는 않는다.

@@ -64,6 +64,7 @@ Last Verified: 2026-05-28
 | Ingestion jobs | `app/jobs/ingestion_jobs.py` |
 | DB schema | `finance/data/db/schema.py` |
 | SEC Form 25 delisting collector | `finance/data/sec_delisting.py` |
+| SEC CIK / ticker exchange crosscheck collector | `finance/data/sec_company_tickers.py` |
 | Nasdaq Symbol Directory snapshot collector | `finance/data/symbol_directory.py` |
 | ETF provider ingestion | `finance/data/etf_provider.py` |
 | Macro ingestion | `finance/data/macro.py` |

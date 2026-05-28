@@ -40,6 +40,7 @@ external source
 | `finance/data/db/mysql.py` | MySQL connection / execution helper |
 | `finance/data/nyse_db.py` | NYSE CSV를 DB universe table로 적재하고 current listing lifecycle bridge row를 UPSERT |
 | `finance/data/sec_delisting.py` | SEC `company_tickers.json`와 submissions API에서 Form 25 / 25-NSE filing metadata를 읽어 `nyse_symbol_lifecycle` delisting_feed row로 UPSERT |
+| `finance/data/sec_company_tickers.py` | SEC `company_tickers_exchange.json` current CIK / ticker / exchange association을 `nyse_symbol_lifecycle` listing_observed row로 UPSERT |
 | `finance/data/symbol_directory.py` | Nasdaq public Symbol Directory `nasdaqlisted.txt` / `otherlisted.txt` current snapshot을 `nyse_symbol_lifecycle` listing_observed row로 UPSERT |
 | `finance/data/asset_profile.py` | asset profile 수집과 저장 |
 | `finance/data/etf_provider.py` | ETF provider source map discovery와 provider snapshot 수집 / 저장 경계. `nyse_etf` / asset profile 기반으로 공식 endpoint map을 `etf_provider_source_map`에 저장하고, 기존 DB 기반 bridge/proxy row와 issuer official row를 `etf_operability_snapshot`, `etf_holdings_snapshot`, `etf_exposure_snapshot`에 저장한다 |
@@ -101,6 +102,9 @@ external source
   `symbol-directory-snapshot-ingestion-v1`부터 `finance/data/symbol_directory.py`는 Nasdaq public Symbol Directory current files를 읽어
   `source=nasdaq_symdir_nasdaqlisted` / `nasdaq_symdir_otherlisted`, `source_type=current_listing_snapshot`, `coverage_status=partial`, `event_type=listing_observed` row를 저장한다.
   이 row는 current snapshot evidence이며 historical membership PASS 근거가 아니다.
+  `sec-cik-exchange-crosscheck-v1`부터 `finance/data/sec_company_tickers.py`는 SEC `company_tickers_exchange.json` current association을 읽어
+  `source=sec_company_tickers_exchange`, `source_type=current_listing_snapshot`, `coverage_status=partial`, `event_type=listing_observed` row를 저장하고 CIK를 `related_cik`에 둔다.
+  이 row는 identity cross-check evidence이며 historical membership / delisting / ticker action proof가 아니다.
 
 ## 데이터 무결성 체크포인트
 

@@ -931,6 +931,130 @@ class SymbolDirectorySnapshotCollectorContractTests(unittest.TestCase):
         self.assertEqual(result["symbols_processed"], 2)
 
 
+class SecCompanyTickerCrosscheckContractTests(unittest.TestCase):
+    def test_sec_exchange_payload_maps_to_partial_listing_observed_rows(self) -> None:
+        from finance.data.sec_company_tickers import (
+            build_sec_company_ticker_lifecycle_rows,
+            normalize_sec_company_tickers_exchange,
+        )
+
+        records = normalize_sec_company_tickers_exchange(
+            {
+                "fields": ["cik", "name", "ticker", "exchange"],
+                "data": [
+                    [320193, "Apple Inc.", "AAPL", "Nasdaq"],
+                    [1067983, "BERKSHIRE HATHAWAY INC", "BRK-B", "NYSE"],
+                    ["bad", "Bad CIK", "BAD", "NYSE"],
+                ],
+            }
+        )
+        rows, metadata = build_sec_company_ticker_lifecycle_rows(
+            records,
+            kind_by_symbol={"AAPL": "stock", "BRK-B": "stock"},
+            symbols=["AAPL"],
+            collected_at="2026-05-28 00:00:00",
+            snapshot_date="2026-05-28",
+        )
+
+        self.assertEqual(len(records), 2)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(metadata["skipped_not_requested"], 1)
+        row = rows[0]
+        self.assertEqual(row["symbol"], "AAPL")
+        self.assertEqual(row["kind"], "stock")
+        self.assertEqual(row["source"], "sec_company_tickers_exchange")
+        self.assertEqual(row["source_type"], "current_listing_snapshot")
+        self.assertEqual(row["coverage_status"], "partial")
+        self.assertEqual(row["event_type"], "listing_observed")
+        self.assertEqual(row["event_date"], "2026-05-28")
+        self.assertEqual(row["related_cik"], 320193)
+        self.assertIn('"exchange": "Nasdaq"', row["evidence_json"])
+        self.assertIn("not historical membership proof", row["evidence_json"])
+
+    def test_collector_writes_sec_crosscheck_rows_without_jsonl_side_effects(self) -> None:
+        from finance.data import sec_company_tickers
+
+        class FakeDB:
+            def __init__(self) -> None:
+                self.used_db: str | None = None
+                self.executemany_calls: list[tuple[str, list[dict]]] = []
+
+            def use_db(self, db_name: str) -> None:
+                self.used_db = db_name
+
+            def query(self, sql: str, params=None) -> list[dict]:
+                if "nyse_etf" in sql:
+                    return [{"symbol": "QQQ"}]
+                if "nyse_stock" in sql:
+                    return [{"symbol": "AAPL"}]
+                return []
+
+            def execute(self, sql: str, params=None) -> None:
+                return None
+
+            def executemany(self, sql: str, params: list[dict]) -> None:
+                self.executemany_calls.append((sql, params))
+
+            def close(self) -> None:
+                return None
+
+        def fake_fetch(url: str, user_agent: str, timeout: float):
+            self.assertEqual(url, sec_company_tickers.SEC_COMPANY_TICKERS_EXCHANGE_URL)
+            return {
+                "fields": ["cik", "name", "ticker", "exchange"],
+                "data": [
+                    [320193, "Apple Inc.", "AAPL", "Nasdaq"],
+                    [111111, "Invesco QQQ Trust", "QQQ", "Nasdaq"],
+                ],
+            }
+
+        fake_db = FakeDB()
+        with patch.object(sec_company_tickers, "MySQLClient", return_value=fake_db), patch.object(
+            sec_company_tickers,
+            "sync_table_schema",
+        ):
+            summary = sec_company_tickers.collect_and_store_sec_company_ticker_crosscheck(
+                symbols=["AAPL", "QQQ"],
+                user_agent="Unit Test unit@example.com",
+                fetch_json=fake_fetch,
+                snapshot_date="2026-05-28",
+            )
+
+        self.assertEqual(fake_db.used_db, "finance_meta")
+        self.assertEqual(summary["rows_written"], 2)
+        self.assertEqual(summary["target_table"], "finance_meta.nyse_symbol_lifecycle")
+        self.assertFalse(summary["execution_boundary"]["registry_write"])
+        self.assertFalse(summary["execution_boundary"]["memo_persistence"])
+        self.assertFalse(summary["execution_boundary"]["preset_persistence"])
+        self.assertFalse(summary["execution_boundary"]["live_approval"])
+        rows_by_symbol = {row["symbol"]: row for row in fake_db.executemany_calls[0][1]}
+        self.assertEqual(rows_by_symbol["AAPL"]["kind"], "stock")
+        self.assertEqual(rows_by_symbol["QQQ"]["kind"], "etf")
+        self.assertEqual({row["coverage_status"] for row in rows_by_symbol.values()}, {"partial"})
+        self.assertEqual({row["event_type"] for row in rows_by_symbol.values()}, {"listing_observed"})
+
+    def test_ingestion_job_wraps_sec_crosscheck_summary(self) -> None:
+        import app.jobs.ingestion_jobs as jobs
+
+        with patch.object(
+            jobs,
+            "collect_and_store_sec_company_ticker_crosscheck",
+            return_value={
+                "requested": 2,
+                "rows_written": 1,
+                "requested_missing_symbols": ["MISS"],
+                "target_table": "finance_meta.nyse_symbol_lifecycle",
+                "execution_boundary": {"registry_write": False},
+            },
+        ):
+            result = jobs.run_collect_sec_company_ticker_crosscheck("AAPL,MISS", user_agent="Unit Test unit@example.com")
+
+        self.assertEqual(result["job_name"], "collect_sec_company_ticker_crosscheck")
+        self.assertEqual(result["status"], "partial_success")
+        self.assertEqual(result["rows_written"], 1)
+        self.assertIn("MISS", result["failed_symbols"])
+
+
 class PracticalValidationDiagnosticsServiceContractTests(unittest.TestCase):
     def test_diagnostics_public_compatibility_contract_is_explicit(self) -> None:
         from app.services import backtest_practical_validation_curve_context as curve_context

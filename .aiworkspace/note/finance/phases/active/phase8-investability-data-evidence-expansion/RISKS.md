@@ -32,3 +32,9 @@ Created: 2026-05-28
 - Public Symbol Directory ingestion is implemented.
 - It improves current listing snapshot coverage but does not by itself satisfy historical survivorship PASS.
 - Repeated snapshots and SEC cross-check remain separate follow-up tasks.
+
+## SEC Cross-Check Result
+
+- SEC current CIK / ticker / exchange ingestion is implemented.
+- It improves identity evidence but does not prove historical membership or ticker actions.
+- SEC file differences from exchange files should remain REVIEW evidence until a future scoring policy is defined.

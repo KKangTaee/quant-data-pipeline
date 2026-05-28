@@ -48,6 +48,8 @@
   SEC Form 25는 `delisting` event이고 current listing snapshot은 `listing_observed` event이므로 두 evidence를 같은 PASS 근거처럼 해석하면 안 된다.
 - Nasdaq public Symbol Directory current files는 `listing_observed` partial evidence로 저장할 수 있다.
   이 row는 current snapshot coverage를 넓히지만, missing symbol을 delisted로 만들거나 requested historical period membership을 증명하지 않는다.
+- SEC `company_tickers_exchange.json` row는 current CIK / ticker / exchange identity cross-check로 저장할 수 있다.
+  이 row도 current association일 뿐이므로 historical membership, delisting, ticker action proof가 아니다.
 - `etf_operability_snapshot` `db_bridge` row는 official ETF provider actual data가 아니다.
 - P2-2B official row는 iShares / SSGA / Invesco page의 current snapshot을 normalize한 것이다.
   다만 Invesco QQQ는 현재 expense ratio / inception만 확보되어 `partial`이며,

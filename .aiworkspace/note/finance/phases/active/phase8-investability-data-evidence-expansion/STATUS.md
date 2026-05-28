@@ -11,7 +11,8 @@ Created: 2026-05-28
 - [x] `symbol-lifecycle-event-fields-v1` implemented.
 - [x] Phase 8 source review completed.
 - [x] Symbol directory snapshot ingestion implemented.
-- [ ] SEC CIK / exchange cross-check started.
+- [x] SEC CIK / exchange cross-check implemented.
+- [ ] Computed snapshot lifecycle design started.
 
 ## Latest Update
 
@@ -23,8 +24,9 @@ Created: 2026-05-28
 - `historical-membership-source-review-v1` found no free / official complete historical membership source ready for direct ingestion.
 - Nasdaq Daily List is strong but subscription / approval based; the next free-source-first implementation is Nasdaq public Symbol Directory current snapshot ingestion.
 - `symbol-directory-snapshot-ingestion-v1` added a DB-only collector and job wrapper for Nasdaq public current Symbol Directory files.
+- `sec-cik-exchange-crosscheck-v1` added a DB-only SEC current CIK / ticker / exchange cross-check collector and job wrapper.
 
 ## Next
 
-- Start `sec-cik-exchange-crosscheck-v1`.
-- Use SEC current CIK / ticker / exchange associations as supporting lifecycle identity evidence.
+- Start `computed-snapshot-lifecycle-v1`.
+- Define conservative repeated-snapshot evidence and scoring rules before treating computed lifecycle coverage as stronger than partial current snapshots.
