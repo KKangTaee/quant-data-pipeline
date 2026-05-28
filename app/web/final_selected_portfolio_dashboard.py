@@ -20,6 +20,7 @@ from app.web.final_selected_portfolio_dashboard_helpers import (
     build_selected_portfolio_monitoring_timeline_table,
     build_selected_portfolio_recheck_comparison_table,
     build_selected_portfolio_recheck_readiness_table,
+    build_selected_portfolio_symbol_freshness_table,
     filter_selected_portfolio_rows,
     final_selected_portfolio_label,
     selected_portfolio_active_components,
@@ -40,6 +41,7 @@ from app.runtime import (
     build_selected_portfolio_performance_recheck,
     build_selected_portfolio_recheck_comparison,
     build_selected_portfolio_recheck_readiness,
+    build_selected_portfolio_recheck_symbol_freshness,
     build_selected_portfolio_recheck_defaults,
     load_final_selected_portfolio_dashboard,
     load_latest_selected_portfolio_prices,
@@ -93,6 +95,16 @@ def _recheck_readiness_tone(route: str) -> str:
     if route in {"RECHECK_READINESS_REVIEW", "RECHECK_READINESS_NEEDS_DATA"}:
         return "warning"
     if route == "RECHECK_READINESS_BLOCKED":
+        return "danger"
+    return "neutral"
+
+
+def _symbol_freshness_tone(route: str) -> str:
+    if route == "SYMBOL_FRESHNESS_READY":
+        return "positive"
+    if route in {"SYMBOL_FRESHNESS_WATCH", "SYMBOL_FRESHNESS_STALE", "SYMBOL_FRESHNESS_NEEDS_DATA"}:
+        return "warning"
+    if route in {"SYMBOL_FRESHNESS_MISSING", "SYMBOL_FRESHNESS_BLOCKED"}:
         return "danger"
     return "neutral"
 
@@ -1043,6 +1055,62 @@ def _render_performance_recheck(row: dict[str, Any]) -> None:
                 f"Write policy: {readiness_boundary.get('write_policy') or '-'} / "
                 f"DB write: {readiness_boundary.get('db_write')} / "
                 f"registry write: {readiness_boundary.get('registry_write')}"
+            )
+
+    symbol_freshness = build_selected_portfolio_recheck_symbol_freshness(
+        row,
+        latest_market_result={
+            "status": defaults.get("latest_market_date_status"),
+            "latest_market_date": defaults.get("latest_market_date"),
+            "error": defaults.get("latest_market_date_error"),
+        },
+    )
+    freshness_metrics = dict(symbol_freshness.get("metrics") or {})
+    freshness_boundary = dict(symbol_freshness.get("execution_boundary") or {})
+    freshness_route = str(symbol_freshness.get("route") or "")
+    with st.container(border=True):
+        st.markdown("##### Symbol Freshness")
+        st.caption(
+            "Performance Recheck에 쓰일 portfolio ticker와 benchmark ticker의 DB 가격 최신성을 확인합니다. "
+            "이 확인은 OHLCV를 수집하지 않고 기존 DB metadata만 읽습니다."
+        )
+        render_badge_strip(
+            [
+                {
+                    "label": "Freshness",
+                    "value": symbol_freshness.get("route_label"),
+                    "tone": _symbol_freshness_tone(freshness_route),
+                },
+                {"label": "Symbols", "value": freshness_metrics.get("symbol_count", 0), "tone": "neutral"},
+                {
+                    "label": "Missing",
+                    "value": freshness_metrics.get("missing_count", 0),
+                    "tone": "danger" if freshness_metrics.get("missing_count") else "neutral",
+                },
+                {
+                    "label": "Stale",
+                    "value": freshness_metrics.get("stale_count", 0),
+                    "tone": "warning" if freshness_metrics.get("stale_count") else "neutral",
+                },
+                {"label": "Writes", "value": "Disabled", "tone": "neutral"},
+            ]
+        )
+        if freshness_route in {"SYMBOL_FRESHNESS_MISSING", "SYMBOL_FRESHNESS_BLOCKED"}:
+            st.warning(str(symbol_freshness.get("conclusion") or "-"))
+        elif freshness_route in {"SYMBOL_FRESHNESS_WATCH", "SYMBOL_FRESHNESS_STALE", "SYMBOL_FRESHNESS_NEEDS_DATA"}:
+            st.info(str(symbol_freshness.get("conclusion") or "-"))
+        else:
+            st.success(str(symbol_freshness.get("conclusion") or "-"))
+        with st.expander("Symbol freshness rows", expanded=freshness_route != "SYMBOL_FRESHNESS_READY"):
+            freshness_df = build_selected_portfolio_symbol_freshness_table(symbol_freshness)
+            if freshness_df.empty:
+                st.info("표시할 symbol freshness row가 없습니다.")
+            else:
+                st.dataframe(freshness_df, width="stretch", hide_index=True)
+            st.caption(
+                f"Write policy: {freshness_boundary.get('write_policy') or '-'} / "
+                f"DB write: {freshness_boundary.get('db_write')} / "
+                f"registry write: {freshness_boundary.get('registry_write')}"
             )
 
     fallback_start = date(2016, 1, 1)

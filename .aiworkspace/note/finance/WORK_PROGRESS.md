@@ -22,6 +22,9 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-28
+- Completed `.aiworkspace/note/finance/tasks/active/practical-validation-v2-p3-symbol-freshness/`.
+- Selected Dashboard Performance Recheck now shows read-only symbol freshness for replay portfolio tickers and benchmark tickers.
+- Missing / stale price DB symbols are visible before running recheck; no OHLCV collection, monitoring log, memo, preset, approval, order, or rebalance behavior was added.
 - Completed `.aiworkspace/note/finance/tasks/active/practical-validation-v2-p3-recheck-readiness/`.
 - Selected Dashboard Performance Recheck now shows read-only readiness for DB latest market date, replay contract coverage, default period, and execution/storage boundary.
 - This does not collect data, save monitoring logs, create memo/preset records, approve orders, or rebalance.

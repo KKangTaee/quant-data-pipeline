@@ -1422,6 +1422,84 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertEqual(rows["DB latest market date"]["Status"], "PASS")
         self.assertEqual(rows["Default recheck period"]["Status"], "PASS")
 
+    def test_recheck_symbol_freshness_detects_missing_and_stale_without_writing(self) -> None:
+        from app.runtime.final_selected_portfolios import build_selected_portfolio_recheck_symbol_freshness
+
+        freshness = build_selected_portfolio_recheck_symbol_freshness(
+            self._selected_row(),
+            latest_market_result={"status": "ok", "latest_market_date": "2026-05-28", "error": None},
+            candidate_rows_by_id={
+                "candidate-selected": {
+                    "registry_id": "candidate-selected",
+                    "title": "Selected Component",
+                    "strategy_family": "equal_weight",
+                    "contract": {
+                        "tickers": ["SPY", "QQQ"],
+                        "benchmark_ticker": "DIA",
+                        "start": "2020-01-01",
+                        "end": "2024-12-31",
+                        "rebalance_interval": 12,
+                    },
+                    "execution_context": {"start": "2020-01-01", "end": "2024-12-31"},
+                }
+            },
+            freshness_df=pd.DataFrame(
+                [
+                    {"symbol": "SPY", "latest_date": "2026-05-28", "row_count": 1000},
+                    {"symbol": "QQQ", "latest_date": "2026-05-10", "row_count": 980},
+                ]
+            ),
+        )
+
+        self.assertEqual(freshness["schema_version"], "selected_recheck_symbol_freshness_v1")
+        self.assertEqual(freshness["route"], "SYMBOL_FRESHNESS_MISSING")
+        self.assertEqual(freshness["metrics"]["symbol_count"], 3)
+        self.assertEqual(freshness["metrics"]["stale_count"], 1)
+        self.assertEqual(freshness["metrics"]["missing_count"], 1)
+        rows = {row["Symbol"]: row for row in freshness["rows"]}
+        self.assertEqual(rows["QQQ"]["Status"], "STALE")
+        self.assertEqual(rows["DIA"]["Status"], "MISSING")
+        self.assertFalse(freshness["execution_boundary"]["db_write"])
+        self.assertFalse(freshness["execution_boundary"]["registry_write"])
+        self.assertFalse(freshness["execution_boundary"]["monitoring_log_auto_write"])
+
+    def test_recheck_symbol_freshness_ready_when_all_symbols_recent(self) -> None:
+        from app.runtime.final_selected_portfolios import build_selected_portfolio_recheck_symbol_freshness
+
+        freshness = build_selected_portfolio_recheck_symbol_freshness(
+            self._selected_row(),
+            latest_market_result={"status": "ok", "latest_market_date": "2026-05-28", "error": None},
+            candidate_rows_by_id={
+                "candidate-selected": {
+                    "registry_id": "candidate-selected",
+                    "title": "Selected Component",
+                    "strategy_family": "equal_weight",
+                    "contract": {
+                        "tickers": ["SPY", "QQQ"],
+                        "benchmark_ticker": "SPY",
+                        "start": "2020-01-01",
+                        "end": "2024-12-31",
+                        "rebalance_interval": 12,
+                    },
+                    "execution_context": {"start": "2020-01-01", "end": "2024-12-31"},
+                }
+            },
+            freshness_df=pd.DataFrame(
+                [
+                    {"symbol": "SPY", "latest_date": "2026-05-28", "row_count": 1000},
+                    {"symbol": "QQQ", "latest_date": "2026-05-27", "row_count": 999},
+                ]
+            ),
+        )
+
+        self.assertEqual(freshness["route"], "SYMBOL_FRESHNESS_READY")
+        self.assertEqual(freshness["metrics"]["pass_count"], 2)
+        self.assertEqual(freshness["metrics"]["missing_count"], 0)
+        self.assertEqual(freshness["metrics"]["stale_count"], 0)
+        rows = {row["Symbol"]: row for row in freshness["rows"]}
+        self.assertIn("benchmark", rows["SPY"]["Role"])
+        self.assertFalse(freshness["execution_boundary"]["order_instruction"])
+
 
 class DecisionDossierContractTests(unittest.TestCase):
     def _final_decision_row(self) -> dict:

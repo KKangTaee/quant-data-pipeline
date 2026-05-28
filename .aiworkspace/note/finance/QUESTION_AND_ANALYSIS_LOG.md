@@ -21,6 +21,18 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-28 - Selected Dashboard should show symbol-level price freshness before recheck
+- User request:
+  - 다음 작업 진행을 요청함.
+- Interpreted goal:
+  - Recheck Readiness 다음으로 ticker별 DB 가격 최신성을 확인해 최신 recheck의 검증 효력을 높인다.
+- Analysis result:
+  - `selected_recheck_symbol_freshness_v1`은 selected component replay payload의 portfolio ticker와 benchmark ticker를 모아 DB latest date / row count / lag를 read-only로 표시한다.
+  - Missing symbol은 `SYMBOL_FRESHNESS_MISSING`, stale symbol은 `SYMBOL_FRESHNESS_STALE`로 보이며 pass로 숨기지 않는다.
+  - OHLCV 수집, DB write, monitoring log 저장, memo/preset 저장, approval/order/rebalance는 추가하지 않았다.
+- Follow-up:
+  - 다음 후보는 provider-level selected monitoring evidence 또는 Practical Validation V2 P3 closeout QA다.
+
 ### 2026-05-28 - Selected Dashboard should show recheck readiness before execution
 - User request:
   - 다음 단계 진행을 요청함.

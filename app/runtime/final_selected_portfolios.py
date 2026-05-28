@@ -52,6 +52,7 @@ SELECTED_MONITORING_TIMELINE_SCHEMA_VERSION = "selected_monitoring_timeline_v1"
 SELECTED_CONTINUITY_CHECK_SCHEMA_VERSION = "selected_continuity_check_v1"
 SELECTED_RECHECK_COMPARISON_SCHEMA_VERSION = "selected_recheck_comparison_v1"
 SELECTED_RECHECK_READINESS_SCHEMA_VERSION = "selected_recheck_readiness_v1"
+SELECTED_RECHECK_SYMBOL_FRESHNESS_SCHEMA_VERSION = "selected_recheck_symbol_freshness_v1"
 SELECTED_MONITORING_TIMELINE_STATUS_LABELS = {
     "CLEAR": "정상",
     "WATCH": "관찰",
@@ -77,6 +78,14 @@ SELECTED_RECHECK_READINESS_ROUTE_LABELS = {
     "RECHECK_READINESS_REVIEW": "재검증 전 확인 필요",
     "RECHECK_READINESS_NEEDS_DATA": "DB 데이터 확인 필요",
     "RECHECK_READINESS_BLOCKED": "재검증 차단",
+}
+SELECTED_RECHECK_SYMBOL_FRESHNESS_ROUTE_LABELS = {
+    "SYMBOL_FRESHNESS_READY": "가격 최신성 준비 완료",
+    "SYMBOL_FRESHNESS_WATCH": "가격 최신성 관찰 필요",
+    "SYMBOL_FRESHNESS_STALE": "가격 데이터 stale",
+    "SYMBOL_FRESHNESS_MISSING": "가격 데이터 누락",
+    "SYMBOL_FRESHNESS_NEEDS_DATA": "가격 DB 확인 필요",
+    "SYMBOL_FRESHNESS_BLOCKED": "symbol 확인 차단",
 }
 _TIMELINE_STATUS_RANK = {
     "OPTIONAL": 0,
@@ -1795,6 +1804,342 @@ def build_selected_portfolio_recheck_readiness(
             "order_instruction": False,
             "auto_rebalance": False,
             "notes": "Readiness checks existing DB and registry evidence only; it does not ingest data or save monitoring records.",
+        },
+    }
+
+
+def _selected_recheck_symbols_from_contracts(
+    row: dict[str, Any],
+    *,
+    candidate_rows_by_id: dict[str, dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    raw_decision = dict(row.get("raw_decision") or row)
+    active_components = _active_components(raw_decision)
+    if candidate_rows_by_id is None:
+        try:
+            candidate_rows = _find_candidate_rows_by_registry_id()
+            candidate_load_error = ""
+        except Exception as exc:  # pragma: no cover - registry read errors depend on local workspace state
+            candidate_rows = {}
+            candidate_load_error = str(exc)
+    else:
+        candidate_rows = dict(candidate_rows_by_id)
+        candidate_load_error = ""
+
+    try:
+        from .candidate_library import build_candidate_replay_payload
+
+        replay_builder_error = ""
+    except Exception as exc:  # pragma: no cover - defensive import boundary
+        build_candidate_replay_payload = None  # type: ignore[assignment]
+        replay_builder_error = str(exc)
+
+    symbol_roles: dict[str, set[str]] = {}
+    symbol_components: dict[str, set[str]] = {}
+    missing_contracts: list[str] = []
+    invalid_contracts: list[str] = []
+    valid_contract_count = 0
+
+    for index, component in enumerate(active_components):
+        identity = _component_identity(component, index)
+        title = _clean_text(component.get("title") or identity)
+        registry_id = _clean_text(component.get("registry_id"), "")
+        if not registry_id:
+            missing_contracts.append(f"{identity}: registry_id 없음")
+            continue
+        current_row = dict(candidate_rows.get(registry_id) or {})
+        if not current_row:
+            missing_contracts.append(f"{identity}: current candidate row 없음")
+            continue
+        if build_candidate_replay_payload is None:
+            invalid_contracts.append(f"{identity}: replay helper import 실패")
+            continue
+        try:
+            payload = build_candidate_replay_payload(current_row)
+        except Exception as exc:
+            invalid_contracts.append(f"{identity}: {exc}")
+            continue
+        valid_contract_count += 1
+        for symbol in list(payload.get("tickers") or []):
+            cleaned = str(symbol or "").strip().upper()
+            if not cleaned:
+                continue
+            symbol_roles.setdefault(cleaned, set()).add("portfolio")
+            symbol_components.setdefault(cleaned, set()).add(title)
+        benchmark = str(payload.get("benchmark_ticker") or component.get("benchmark") or "").strip().upper()
+        if benchmark:
+            symbol_roles.setdefault(benchmark, set()).add("benchmark")
+            symbol_components.setdefault(benchmark, set()).add(title)
+
+    return {
+        "symbols": sorted(symbol_roles),
+        "symbol_roles": {symbol: sorted(roles) for symbol, roles in symbol_roles.items()},
+        "symbol_components": {symbol: sorted(components) for symbol, components in symbol_components.items()},
+        "active_component_count": len(active_components),
+        "valid_contract_count": valid_contract_count,
+        "missing_contracts": missing_contracts,
+        "invalid_contracts": invalid_contracts,
+        "candidate_load_error": candidate_load_error,
+        "replay_builder_error": replay_builder_error,
+    }
+
+
+def _symbol_freshness_status(days_lag: int | None, row_count: int | None) -> str:
+    if row_count is None or row_count <= 0 or days_lag is None:
+        return "MISSING"
+    if days_lag <= 2:
+        return "PASS"
+    if days_lag <= 5:
+        return "WATCH"
+    return "STALE"
+
+
+def build_selected_portfolio_recheck_symbol_freshness(
+    row: dict[str, Any],
+    *,
+    latest_market_result: dict[str, Any] | None = None,
+    candidate_rows_by_id: dict[str, dict[str, Any]] | None = None,
+    freshness_df: pd.DataFrame | None = None,
+    timeframe: str = "1d",
+) -> dict[str, Any]:
+    """Check selected recheck ticker price freshness without ingesting data or writing monitoring records."""
+
+    latest_result = dict(latest_market_result) if latest_market_result is not None else load_selected_portfolio_latest_market_date()
+    latest_market_date = _date_text(latest_result.get("latest_market_date"))
+    contract_evidence = _selected_recheck_symbols_from_contracts(row, candidate_rows_by_id=candidate_rows_by_id)
+    symbols = [str(symbol) for symbol in list(contract_evidence.get("symbols") or []) if str(symbol)]
+    symbol_roles = dict(contract_evidence.get("symbol_roles") or {})
+    symbol_components = dict(contract_evidence.get("symbol_components") or {})
+    blocker_messages = [
+        str(item)
+        for item in (
+            list(contract_evidence.get("missing_contracts") or [])
+            + list(contract_evidence.get("invalid_contracts") or [])
+        )
+        if str(item)
+    ]
+    if contract_evidence.get("candidate_load_error"):
+        blocker_messages.append(str(contract_evidence.get("candidate_load_error")))
+    if contract_evidence.get("replay_builder_error"):
+        blocker_messages.append(str(contract_evidence.get("replay_builder_error")))
+
+    if not symbols:
+        route = "SYMBOL_FRESHNESS_BLOCKED"
+        rows = [
+            {
+                "Symbol": "-",
+                "Role": "-",
+                "Components": "-",
+                "Status": "BLOCKED",
+                "Latest Date": "-",
+                "Market Date": latest_market_date or "-",
+                "Days Lag": None,
+                "Row Count": None,
+                "Evidence": "; ".join(blocker_messages[:3]) if blocker_messages else "No replay symbols were resolved.",
+                "Next Action": "Fix selected component replay contracts before checking DB price freshness.",
+            }
+        ]
+        return {
+            "schema_version": SELECTED_RECHECK_SYMBOL_FRESHNESS_SCHEMA_VERSION,
+            "route": route,
+            "route_label": SELECTED_RECHECK_SYMBOL_FRESHNESS_ROUTE_LABELS[route],
+            "conclusion": "symbol freshness를 확인할 replay symbol이 없습니다.",
+            "rows": rows,
+            "metrics": {
+                "symbol_count": 0,
+                "pass_count": 0,
+                "watch_count": 0,
+                "stale_count": 0,
+                "missing_count": 0,
+                "blocked_count": 1,
+                "latest_market_date": latest_market_date,
+                "timeframe": timeframe,
+            },
+            "execution_boundary": {
+                "write_policy": "read_only_symbol_freshness",
+                "db_write": False,
+                "registry_write": False,
+                "monitoring_log_auto_write": False,
+                "live_approval": False,
+                "order_instruction": False,
+                "auto_rebalance": False,
+                "notes": "Symbol freshness reads DB price metadata only; it does not ingest data or save monitoring records.",
+            },
+        }
+
+    if latest_result.get("status") == "error" or latest_result.get("error") or not latest_market_date:
+        route = "SYMBOL_FRESHNESS_NEEDS_DATA"
+        rows = [
+            {
+                "Symbol": symbol,
+                "Role": ", ".join(symbol_roles.get(symbol) or []),
+                "Components": ", ".join(symbol_components.get(symbol) or []),
+                "Status": "NEEDS_INPUT",
+                "Latest Date": "-",
+                "Market Date": latest_market_date or "-",
+                "Days Lag": None,
+                "Row Count": None,
+                "Evidence": str(latest_result.get("error") or "DB latest market date is unavailable."),
+                "Next Action": "Check DB connectivity or refresh OHLCV data before using latest recheck evidence.",
+            }
+            for symbol in symbols
+        ]
+        return {
+            "schema_version": SELECTED_RECHECK_SYMBOL_FRESHNESS_SCHEMA_VERSION,
+            "route": route,
+            "route_label": SELECTED_RECHECK_SYMBOL_FRESHNESS_ROUTE_LABELS[route],
+            "conclusion": "DB 최신 시장일을 확인할 수 없어 symbol freshness를 판단할 수 없습니다.",
+            "rows": rows,
+            "metrics": {
+                "symbol_count": len(symbols),
+                "pass_count": 0,
+                "watch_count": 0,
+                "stale_count": 0,
+                "missing_count": 0,
+                "blocked_count": 0,
+                "needs_input_count": len(symbols),
+                "latest_market_date": latest_market_date,
+                "timeframe": timeframe,
+            },
+            "execution_boundary": {
+                "write_policy": "read_only_symbol_freshness",
+                "db_write": False,
+                "registry_write": False,
+                "monitoring_log_auto_write": False,
+                "live_approval": False,
+                "order_instruction": False,
+                "auto_rebalance": False,
+                "notes": "Symbol freshness reads DB price metadata only; it does not ingest data or save monitoring records.",
+            },
+        }
+
+    try:
+        if freshness_df is None:
+            from finance.loaders.price import load_price_freshness_summary
+
+            freshness = load_price_freshness_summary(symbols=symbols, end=latest_market_date, timeframe=timeframe)
+        else:
+            freshness = freshness_df.copy()
+        loader_error = ""
+    except Exception as exc:  # pragma: no cover - depends on local MySQL availability
+        freshness = pd.DataFrame()
+        loader_error = str(exc)
+
+    if loader_error:
+        route = "SYMBOL_FRESHNESS_NEEDS_DATA"
+        rows = [
+            {
+                "Symbol": symbol,
+                "Role": ", ".join(symbol_roles.get(symbol) or []),
+                "Components": ", ".join(symbol_components.get(symbol) or []),
+                "Status": "NEEDS_INPUT",
+                "Latest Date": "-",
+                "Market Date": latest_market_date,
+                "Days Lag": None,
+                "Row Count": None,
+                "Evidence": loader_error,
+                "Next Action": "Check price loader / DB connectivity, then refresh this view.",
+            }
+            for symbol in symbols
+        ]
+    else:
+        freshness_by_symbol: dict[str, dict[str, Any]] = {}
+        if isinstance(freshness, pd.DataFrame) and not freshness.empty:
+            for record in freshness.to_dict("records"):
+                symbol = str(record.get("symbol") or "").strip().upper()
+                if symbol:
+                    freshness_by_symbol[symbol] = dict(record)
+
+        rows = []
+        market_ts = pd.to_datetime(latest_market_date, errors="coerce")
+        for symbol in symbols:
+            record = freshness_by_symbol.get(symbol, {})
+            latest_date = _date_text(record.get("latest_date"))
+            row_count_float = _optional_float(record.get("row_count"))
+            row_count = int(row_count_float) if row_count_float is not None else None
+            symbol_ts = pd.to_datetime(latest_date, errors="coerce")
+            days_lag: int | None = None
+            if not pd.isna(market_ts) and not pd.isna(symbol_ts):
+                days_lag = int((market_ts - symbol_ts).days)
+            status = _symbol_freshness_status(days_lag, row_count)
+            rows.append(
+                {
+                    "Symbol": symbol,
+                    "Role": ", ".join(symbol_roles.get(symbol) or []),
+                    "Components": ", ".join(symbol_components.get(symbol) or []),
+                    "Status": status,
+                    "Latest Date": latest_date or "-",
+                    "Market Date": latest_market_date,
+                    "Days Lag": days_lag,
+                    "Row Count": row_count,
+                    "Evidence": (
+                        "Symbol price history is recent enough for recheck preflight."
+                        if status == "PASS"
+                        else "Symbol is slightly behind latest DB market date."
+                        if status == "WATCH"
+                        else "Symbol price history is stale versus latest DB market date."
+                        if status == "STALE"
+                        else "Symbol price history is missing."
+                    ),
+                    "Next Action": (
+                        "Use this symbol in Performance Recheck."
+                        if status == "PASS"
+                        else "Review whether this lag is expected before relying on latest recheck output."
+                        if status == "WATCH"
+                        else "Refresh OHLCV data for this symbol before treating recheck as latest evidence."
+                    ),
+                }
+            )
+
+    pass_count = sum(1 for item in rows if item.get("Status") == "PASS")
+    watch_count = sum(1 for item in rows if item.get("Status") == "WATCH")
+    stale_count = sum(1 for item in rows if item.get("Status") == "STALE")
+    missing_count = sum(1 for item in rows if item.get("Status") == "MISSING")
+    needs_input_count = sum(1 for item in rows if item.get("Status") == "NEEDS_INPUT")
+    if missing_count:
+        route = "SYMBOL_FRESHNESS_MISSING"
+        conclusion = "일부 symbol의 가격 이력이 DB에서 누락되어 recheck 신뢰도가 낮습니다."
+    elif stale_count:
+        route = "SYMBOL_FRESHNESS_STALE"
+        conclusion = "일부 symbol 가격이 최신 DB 시장일보다 오래되어 recheck 전 데이터 보강이 필요합니다."
+    elif needs_input_count:
+        route = "SYMBOL_FRESHNESS_NEEDS_DATA"
+        conclusion = "가격 DB freshness를 확인하지 못했습니다."
+    elif watch_count:
+        route = "SYMBOL_FRESHNESS_WATCH"
+        conclusion = "일부 symbol이 최신 DB 시장일보다 약간 뒤처져 있습니다."
+    else:
+        route = "SYMBOL_FRESHNESS_READY"
+        conclusion = "선정 포트폴리오 recheck symbol의 가격 최신성이 준비되어 있습니다."
+
+    return {
+        "schema_version": SELECTED_RECHECK_SYMBOL_FRESHNESS_SCHEMA_VERSION,
+        "route": route,
+        "route_label": SELECTED_RECHECK_SYMBOL_FRESHNESS_ROUTE_LABELS.get(route, route),
+        "conclusion": conclusion,
+        "rows": rows,
+        "metrics": {
+            "symbol_count": len(symbols),
+            "pass_count": pass_count,
+            "watch_count": watch_count,
+            "stale_count": stale_count,
+            "missing_count": missing_count,
+            "needs_input_count": needs_input_count,
+            "blocked_count": 0,
+            "portfolio_symbol_count": sum(1 for symbol in symbols if "portfolio" in set(symbol_roles.get(symbol) or [])),
+            "benchmark_symbol_count": sum(1 for symbol in symbols if "benchmark" in set(symbol_roles.get(symbol) or [])),
+            "latest_market_date": latest_market_date,
+            "timeframe": timeframe,
+        },
+        "execution_boundary": {
+            "write_policy": "read_only_symbol_freshness",
+            "db_write": False,
+            "registry_write": False,
+            "monitoring_log_auto_write": False,
+            "live_approval": False,
+            "order_instruction": False,
+            "auto_rebalance": False,
+            "notes": "Symbol freshness reads DB price metadata only; it does not ingest data or save monitoring records.",
         },
     }
 

@@ -259,6 +259,26 @@ def build_selected_portfolio_recheck_readiness_table(readiness: dict[str, Any]) 
     return pd.DataFrame(display_rows)
 
 
+def build_selected_portfolio_symbol_freshness_table(freshness: dict[str, Any]) -> pd.DataFrame:
+    display_rows: list[dict[str, Any]] = []
+    for row in list(freshness.get("rows") or []):
+        display_rows.append(
+            {
+                "Symbol": row.get("Symbol"),
+                "Role": row.get("Role"),
+                "Components": row.get("Components"),
+                "Status": row.get("Status"),
+                "Latest Date": row.get("Latest Date"),
+                "Market Date": row.get("Market Date"),
+                "Days Lag": row.get("Days Lag"),
+                "Row Count": row.get("Row Count"),
+                "Evidence": row.get("Evidence"),
+                "Next Action": row.get("Next Action"),
+            }
+        )
+    return pd.DataFrame(display_rows)
+
+
 def filter_selected_portfolio_rows(
     rows: list[dict[str, Any]],
     *,
