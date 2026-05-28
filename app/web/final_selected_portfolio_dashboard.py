@@ -7,6 +7,7 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
+from app.services.backtest_evidence_read_model import build_decision_dossier
 from app.web.backtest_ui_components import render_badge_strip, render_status_card_grid
 from app.web.final_selected_portfolio_dashboard_helpers import (
     build_selected_portfolio_current_weight_input_table,
@@ -309,6 +310,7 @@ def _render_selected_row_detail(row: dict[str, Any]) -> None:
     _render_snapshot(row)
     _render_performance_recheck(row)
     _render_operator_context(row)
+    _render_decision_dossier(row)
 
     with st.expander("Audit / Developer Details", expanded=False):
         st.caption("데이터 출처, 화면 경계, 원본 저장 row 구조를 확인할 때만 펼쳐 봅니다.")
@@ -364,6 +366,15 @@ def _latest_drift_check(row: dict[str, Any]) -> dict[str, Any]:
 
 def _latest_drift_alert_preview(row: dict[str, Any]) -> dict[str, Any]:
     return dict(st.session_state.get(f"selected_portfolio_drift_alert_result_{_decision_key(row)}") or {})
+
+
+def _latest_monitoring_timeline(row: dict[str, Any]) -> dict[str, Any]:
+    return build_selected_portfolio_monitoring_timeline(
+        row,
+        recheck_result=_latest_recheck_result(row),
+        drift_check=_latest_drift_check(row),
+        alert_preview=_latest_drift_alert_preview(row),
+    )
 
 
 def _trigger_row(
@@ -694,12 +705,7 @@ def _render_operator_context(row: dict[str, Any]) -> None:
             "Final Review 선정 이후 현재 화면에서 확인한 신호를 시간순으로 읽습니다. "
             "이 timeline은 monitoring log를 자동 저장하지 않습니다."
         )
-        timeline = build_selected_portfolio_monitoring_timeline(
-            row,
-            recheck_result=_latest_recheck_result(row),
-            drift_check=_latest_drift_check(row),
-            alert_preview=_latest_drift_alert_preview(row),
-        )
+        timeline = _latest_monitoring_timeline(row)
         metrics = dict(timeline.get("metrics") or {})
         boundary = dict(timeline.get("execution_boundary") or {})
         render_badge_strip(
@@ -784,6 +790,52 @@ def _render_operator_context(row: dict[str, Any]) -> None:
         _render_selected_row_drift_check(row)
     with audit_tab:
         _render_execution_boundary()
+
+
+def _render_decision_dossier(row: dict[str, Any]) -> None:
+    st.markdown("#### Decision Dossier")
+    st.caption(
+        "Final Review 판단 근거와 현재 Selected Dashboard timeline을 markdown dossier로 읽습니다. "
+        "자동 report 저장, monitoring log 저장, 주문 지시는 만들지 않습니다."
+    )
+    dossier = build_decision_dossier(row, monitoring_timeline=_latest_monitoring_timeline(row))
+    decision = dict(dossier.get("decision") or {})
+    metrics = dict(dossier.get("metrics") or {})
+    boundary = dict(dossier.get("execution_boundary") or {})
+    render_badge_strip(
+        [
+            {"label": "Decision", "value": decision.get("decision_label"), "tone": "neutral"},
+            {"label": "Evidence", "value": metrics.get("evidence_check_count", 0), "tone": "neutral"},
+            {
+                "label": "Needs Review",
+                "value": metrics.get("not_ready_evidence_check_count", 0),
+                "tone": "warning" if metrics.get("not_ready_evidence_check_count") else "neutral",
+            },
+            {
+                "label": "Timeline",
+                "value": "Included" if metrics.get("monitoring_timeline_present") else "Not Included",
+                "tone": "neutral",
+            },
+            {"label": "Auto Write", "value": "Disabled", "tone": "neutral"},
+        ]
+    )
+    action_cols = st.columns([0.34, 0.66], gap="small")
+    with action_cols[0]:
+        st.download_button(
+            "Markdown 다운로드",
+            data=str(dossier.get("markdown") or ""),
+            file_name=str(dossier.get("filename") or "decision_dossier.md"),
+            mime="text/markdown",
+            key=f"selected_dossier_download_{row.get('decision_id') or 'selected'}",
+            width="stretch",
+        )
+    with action_cols[1]:
+        st.caption(
+            f"Write policy: {boundary.get('write_policy') or '-'} / "
+            f"report auto write: {boundary.get('report_auto_write')}"
+        )
+    with st.expander("Dossier preview", expanded=False):
+        st.markdown(str(dossier.get("markdown") or "-"))
 
 
 def _render_execution_boundary() -> None:

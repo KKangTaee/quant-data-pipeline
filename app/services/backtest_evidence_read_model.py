@@ -4,6 +4,7 @@ from typing import Any
 
 
 SELECT_FOR_PRACTICAL_PORTFOLIO = "SELECT_FOR_PRACTICAL_PORTFOLIO"
+DECISION_DOSSIER_SCHEMA_VERSION = "decision_dossier_v1"
 
 FINAL_REVIEW_DECISION_LABELS = {
     SELECT_FOR_PRACTICAL_PORTFOLIO: "실전 검토 통과 후보",
@@ -837,10 +838,247 @@ def build_final_decision_evidence_rows(row: dict[str, Any]) -> list[dict[str, An
     return display_rows
 
 
+def _markdown_value(value: Any, default: str = "-") -> str:
+    text = _safe_text(value, default)
+    return text.replace("|", "\\|").replace("\n", "<br>")
+
+
+def _markdown_table(rows: list[dict[str, Any]], columns: list[str]) -> list[str]:
+    if not rows:
+        return ["- 표시할 row가 없습니다."]
+    lines = [
+        "| " + " | ".join(columns) + " |",
+        "| " + " | ".join("---" for _ in columns) + " |",
+    ]
+    for row in rows:
+        lines.append("| " + " | ".join(_markdown_value(row.get(column)) for column in columns) + " |")
+    return lines
+
+
+def _decision_dossier_filename(decision_id: Any) -> str:
+    safe_id = "".join(
+        char if char.isalnum() or char in {"-", "_"} else "_"
+        for char in _safe_text(decision_id, "final_decision")
+    )
+    return f"{safe_id}_decision_dossier.md"
+
+
+def _decision_dossier_component_rows(raw_decision: dict[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for index, component in enumerate(list(raw_decision.get("selected_components") or []), start=1):
+        component_row = dict(component or {})
+        rows.append(
+            {
+                "Order": index,
+                "Title": component_row.get("title")
+                or component_row.get("strategy_name")
+                or component_row.get("registry_id")
+                or f"component_{index}",
+                "Registry ID": component_row.get("registry_id") or "-",
+                "Target Weight": component_row.get("target_weight") or component_row.get("weight") or "-",
+                "Benchmark": component_row.get("benchmark") or "-",
+            }
+        )
+    return rows
+
+
+def _decision_dossier_markdown(dossier: dict[str, Any]) -> str:
+    decision = dict(dossier.get("decision") or {})
+    operator = dict(dossier.get("operator") or {})
+    validation = dict(dossier.get("validation_summary") or {})
+    gate_policy = dict(dossier.get("gate_policy") or {})
+    monitoring = dict(dossier.get("monitoring_timeline") or {})
+    boundary = dict(dossier.get("execution_boundary") or {})
+    metrics = dict(dossier.get("metrics") or {})
+    lines = [
+        "# Final Decision Dossier",
+        "",
+        "## Summary",
+        f"- Decision ID: `{_markdown_value(decision.get('decision_id'))}`",
+        f"- Source: `{_markdown_value(decision.get('source_type'))}` / `{_markdown_value(decision.get('source_id'))}`",
+        f"- Title: {_markdown_value(decision.get('source_title'))}",
+        f"- Decision: {_markdown_value(decision.get('decision_label'))} (`{_markdown_value(decision.get('decision_route'))}`)",
+        f"- Final Status: `{_markdown_value(decision.get('status_route'))}`",
+        f"- Evidence Route: `{_markdown_value(decision.get('evidence_route'))}`",
+        f"- Gate Outcome: `{_markdown_value(gate_policy.get('outcome'))}`",
+        f"- Selected Practical Portfolio: `{_markdown_value(decision.get('selected_practical_portfolio'))}`",
+        "",
+        "## Operator Decision",
+        f"- Reason: {_markdown_value(operator.get('reason'))}",
+        f"- Constraints: {_markdown_value(operator.get('constraints'))}",
+        f"- Next Action: {_markdown_value(operator.get('next_action'))}",
+        f"- Review Cadence: `{_markdown_value(operator.get('review_cadence'))}`",
+        f"- Review Triggers: {_markdown_value(', '.join(operator.get('review_triggers') or []))}",
+        "",
+        "## Validation Snapshot",
+        f"- Validation Route: `{_markdown_value(validation.get('validation_route'))}`",
+        f"- Validation Score: `{_markdown_value(validation.get('validation_score'))}`",
+        f"- Robustness Route: `{_markdown_value(validation.get('robustness_route'))}`",
+        f"- Paper Observation Route: `{_markdown_value(validation.get('paper_observation_route'))}`",
+        f"- Diagnostic Counts: `{_markdown_value(validation.get('status_counts'))}`",
+        "",
+        "## Selected Components",
+        *_markdown_table(
+            list(dossier.get("components") or []),
+            ["Order", "Title", "Registry ID", "Target Weight", "Benchmark"],
+        ),
+        "",
+        "## Evidence Checks",
+        *_markdown_table(
+            list(dossier.get("evidence_checks") or []),
+            ["Area", "Criteria", "Ready", "Current", "Meaning", "Score"],
+        ),
+        "",
+        "## Gate Policy",
+        *_markdown_table(
+            list(gate_policy.get("policy_rows") or []),
+            ["Group", "Status", "Severity", "Current", "Evidence", "Required Action"],
+        ),
+        "",
+        "## Monitoring Timeline",
+    ]
+    if monitoring.get("present"):
+        lines.extend(
+            _markdown_table(
+                list(monitoring.get("rows") or []),
+                ["order", "event", "timestamp", "status_label", "signal", "next_action", "source"],
+            )
+        )
+    else:
+        lines.append("- 현재 dossier에는 Selected Dashboard session timeline이 포함되지 않았습니다.")
+    lines.extend(
+        [
+            "",
+            "## Execution Boundary",
+            *_markdown_table(
+                [
+                    {"Boundary": "Write Policy", "Value": boundary.get("write_policy")},
+                    {"Boundary": "Report Auto Write", "Value": boundary.get("report_auto_write")},
+                    {"Boundary": "Monitoring Log Auto Write", "Value": boundary.get("monitoring_log_auto_write")},
+                    {"Boundary": "Live Approval", "Value": boundary.get("live_approval")},
+                    {"Boundary": "Order Instruction", "Value": boundary.get("order_instruction")},
+                    {"Boundary": "Auto Rebalance", "Value": boundary.get("auto_rebalance")},
+                ],
+                ["Boundary", "Value"],
+            ),
+            "",
+            "## Metrics",
+            f"- Components: `{_markdown_value(metrics.get('component_count'))}`",
+            f"- Evidence Checks: `{_markdown_value(metrics.get('evidence_check_count'))}`",
+            f"- Not Ready Evidence Checks: `{_markdown_value(metrics.get('not_ready_evidence_check_count'))}`",
+            "",
+            "> This dossier is a decision-support export. It is not live approval, broker order instruction, or automated rebalance authorization.",
+        ]
+    )
+    return "\n".join(lines) + "\n"
+
+
+def build_decision_dossier(
+    row: dict[str, Any],
+    *,
+    monitoring_timeline: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build a read-only human-readable dossier for a saved final decision row."""
+
+    raw_decision = dict(row.get("raw_decision") or row or {})
+    evidence = dict(raw_decision.get("decision_evidence_snapshot") or {})
+    packet = dict(raw_decision.get("investability_evidence_packet") or {})
+    gate_policy = dict(raw_decision.get("gate_policy_snapshot") or packet.get("gate_policy_snapshot") or {})
+    risk_snapshot = dict(raw_decision.get("risk_and_validation_snapshot") or {})
+    robustness = dict(risk_snapshot.get("robustness_validation") or {})
+    paper_snapshot = dict(raw_decision.get("paper_tracking_snapshot") or {})
+    operator_decision = dict(raw_decision.get("operator_decision") or {})
+    status_display = build_final_review_status_display(raw_decision)
+    decision_route = _safe_text(raw_decision.get("decision_route"))
+    evidence_checks = build_final_decision_evidence_rows(raw_decision)
+    not_ready_count = sum(1 for check in evidence_checks if not bool(check.get("Ready")))
+    timeline = dict(monitoring_timeline or {})
+    monitoring_payload = {
+        "present": bool(timeline),
+        "schema_version": timeline.get("schema_version"),
+        "timeline_status": timeline.get("timeline_status"),
+        "timeline_label": timeline.get("timeline_label"),
+        "conclusion": timeline.get("conclusion"),
+        "rows": list(timeline.get("rows") or []),
+        "metrics": dict(timeline.get("metrics") or {}),
+    }
+    dossier: dict[str, Any] = {
+        "schema_version": DECISION_DOSSIER_SCHEMA_VERSION,
+        "decision": {
+            "decision_id": raw_decision.get("decision_id"),
+            "created_at": raw_decision.get("created_at"),
+            "updated_at": raw_decision.get("updated_at"),
+            "decision_route": decision_route,
+            "decision_label": FINAL_REVIEW_DECISION_LABELS.get(decision_route, "재검토 필요"),
+            "selected_practical_portfolio": bool(raw_decision.get("selected_practical_portfolio")),
+            "source_type": raw_decision.get("source_type"),
+            "source_id": raw_decision.get("source_id"),
+            "source_title": raw_decision.get("source_title"),
+            "selection_source_id": raw_decision.get("selection_source_id"),
+            "validation_id": raw_decision.get("validation_id"),
+            "evidence_route": evidence.get("route"),
+            "packet_route": packet.get("route"),
+            "status_route": status_display.get("route"),
+            "status_verdict": status_display.get("verdict"),
+            "status_next_action": status_display.get("next_action"),
+        },
+        "operator": {
+            "reason": operator_decision.get("reason"),
+            "constraints": operator_decision.get("constraints"),
+            "next_action": operator_decision.get("next_action"),
+            "review_cadence": paper_snapshot.get("review_cadence"),
+            "review_triggers": list(paper_snapshot.get("review_triggers") or []),
+        },
+        "validation_summary": {
+            "validation_route": risk_snapshot.get("validation_route"),
+            "validation_score": risk_snapshot.get("validation_score"),
+            "status_counts": dict(dict(risk_snapshot.get("diagnostic_summary") or {}).get("status_counts") or {}),
+            "provider_status": _provider_status_summary(risk_snapshot),
+            "robustness_route": robustness.get("robustness_route"),
+            "robustness_score": robustness.get("robustness_score"),
+            "paper_observation_route": paper_snapshot.get("route"),
+            "not_run_domains": list(risk_snapshot.get("not_run_domains") or []),
+            "not_run_critical_domains": list(risk_snapshot.get("not_run_critical_domains") or []),
+        },
+        "components": _decision_dossier_component_rows(raw_decision),
+        "evidence_checks": evidence_checks,
+        "gate_policy": {
+            "schema_version": gate_policy.get("schema_version"),
+            "outcome": gate_policy.get("outcome"),
+            "select_allowed": bool(gate_policy.get("select_allowed")),
+            "blockers": list(gate_policy.get("blockers") or []),
+            "review_required": list(gate_policy.get("review_required") or []),
+            "policy_rows": list(gate_policy.get("policy_rows") or []),
+        },
+        "monitoring_timeline": monitoring_payload,
+        "metrics": {
+            "component_count": len(raw_decision.get("selected_components") or []),
+            "evidence_check_count": len(evidence_checks),
+            "not_ready_evidence_check_count": not_ready_count,
+            "gate_policy_row_count": len(gate_policy.get("policy_rows") or []),
+            "monitoring_timeline_present": bool(timeline),
+        },
+        "execution_boundary": {
+            "write_policy": "read_only_dossier",
+            "report_auto_write": False,
+            "monitoring_log_auto_write": False,
+            "live_approval": False,
+            "order_instruction": False,
+            "auto_rebalance": False,
+            "notes": "Dossier is generated from existing final decision evidence and optional session timeline only.",
+        },
+    }
+    dossier["filename"] = _decision_dossier_filename(raw_decision.get("decision_id"))
+    dossier["markdown"] = _decision_dossier_markdown(dossier)
+    return dossier
+
+
 __all__ = [
+    "DECISION_DOSSIER_SCHEMA_VERSION",
     "FINAL_REVIEW_DECISION_LABELS",
     "FINAL_REVIEW_STATUS_DISPLAY",
     "SELECT_FOR_PRACTICAL_PORTFOLIO",
+    "build_decision_dossier",
     "build_investability_gate_policy",
     "build_investability_evidence_packet",
     "build_final_decision_evidence_rows",

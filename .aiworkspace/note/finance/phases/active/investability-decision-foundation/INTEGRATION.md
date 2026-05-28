@@ -42,7 +42,7 @@ This phase belongs to `main-dev`.
 5. Look-through board.
 6. Robustness Lab.
 7. Monitoring timeline. Complete.
-8. Decision dossier / report.
+8. Decision dossier / report. Complete.
 
 ## Verification Baseline
 
@@ -67,6 +67,14 @@ Selected Dashboard visible changes:
 
 ```bash
 .venv/bin/python -m py_compile app/runtime/final_selected_portfolios.py app/runtime/__init__.py app/web/final_selected_portfolio_dashboard.py app/web/final_selected_portfolio_dashboard_helpers.py
+.venv/bin/python -m unittest tests/test_service_contracts.py
+.venv/bin/python .aiworkspace/plugins/quant-finance-workflow/scripts/check_ui_engine_boundary.py
+```
+
+Decision Dossier visible changes:
+
+```bash
+.venv/bin/python -m py_compile app/services/backtest_evidence_read_model.py app/web/backtest_final_review.py app/web/final_selected_portfolio_dashboard.py
 .venv/bin/python -m unittest tests/test_service_contracts.py
 .venv/bin/python .aiworkspace/plugins/quant-finance-workflow/scripts/check_ui_engine_boundary.py
 ```

@@ -23,6 +23,7 @@ Created: 2026-05-28
 | Free API unavailable | Coverage gaps remain | Allow verified crawler through ingestion layer, not UI |
 | Raw data accidentally lands in JSONL | Registry becomes heavy and hard to govern | Keep raw provider / holdings / macro data in DB only; look-through board stores compact summary / top rows only |
 | Raw robustness experiment output lands in JSONL | Validation result becomes heavy and encourages overfit-by-recording | Keep Robustness Lab to compact summary rows; raw run history and strategy-specific perturbation artifacts stay out of workflow registries |
+| Decision dossier export becomes implicit report persistence | Report files multiply without user intent | Dossier V1 is in-memory markdown download only; any durable report write needs explicit storage governance |
 | Future persistence helper bypasses storage governance | JSONL sprawl returns under a new feature name | Require task plans to classify new persistence against `docs/data/STORAGE_GOVERNANCE.md` |
 
 ## Implementation Risks

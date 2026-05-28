@@ -1228,5 +1228,142 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         self.assertFalse(timeline["execution_boundary"]["auto_rebalance"])
 
 
+class DecisionDossierContractTests(unittest.TestCase):
+    def _final_decision_row(self) -> dict:
+        return {
+            "decision_id": "decision-dossier",
+            "created_at": "2026-05-28T09:00:00",
+            "updated_at": "2026-05-28T10:00:00",
+            "decision_route": "SELECT_FOR_PRACTICAL_PORTFOLIO",
+            "selected_practical_portfolio": True,
+            "source_type": "practical_validation_result",
+            "source_id": "source-dossier",
+            "source_title": "GTAA selected portfolio",
+            "selection_source_id": "source-dossier",
+            "validation_id": "validation-dossier",
+            "selected_components": [
+                {
+                    "title": "GTAA component",
+                    "registry_id": "candidate-gtaa",
+                    "target_weight": 100.0,
+                    "benchmark": "SPY",
+                }
+            ],
+            "decision_evidence_snapshot": {
+                "route": "READY_FOR_FINAL_DECISION",
+                "score": 8.2,
+                "checks": [
+                    {
+                        "Criteria": "Portfolio validation",
+                        "Ready": True,
+                        "Current": "READY_FOR_FINAL_REVIEW",
+                        "Meaning": "validation evidence attached",
+                        "Score": 2.4,
+                    }
+                ],
+                "blockers": [],
+            },
+            "investability_evidence_packet": {
+                "route": "INVESTABILITY_PACKET_READY",
+                "checks": [
+                    {
+                        "Section": "Execution Boundary",
+                        "Ready": True,
+                        "Current": "live approval disabled / order disabled",
+                        "Meaning": "not an order",
+                    }
+                ],
+                "gate_policy_snapshot": {
+                    "schema_version": "investability_gate_policy_v1",
+                    "outcome": "select_ready",
+                    "select_allowed": True,
+                    "blockers": [],
+                    "review_required": [],
+                    "policy_rows": [
+                        {
+                            "Group": "benchmark",
+                            "Status": "PASS",
+                            "Severity": "PASS",
+                            "Current": "PASS",
+                            "Evidence": "benchmark parity attached",
+                            "Required Action": "none",
+                        }
+                    ],
+                },
+            },
+            "risk_and_validation_snapshot": {
+                "validation_route": "READY_FOR_FINAL_REVIEW",
+                "validation_score": 8.5,
+                "diagnostic_summary": {"status_counts": {"PASS": 10, "REVIEW": 1, "NOT_RUN": 1}},
+                "robustness_validation": {"robustness_route": "READY_FOR_STRESS_SWEEP", "robustness_score": 7.8},
+            },
+            "paper_tracking_snapshot": {
+                "route": "PAPER_OBSERVATION_READY",
+                "review_cadence": "monthly_or_rebalance_review",
+                "review_triggers": ["CAGR deterioration review"],
+                "checks": [
+                    {
+                        "Criteria": "Review triggers",
+                        "Ready": True,
+                        "Current": "1",
+                        "Meaning": "trigger attached",
+                    }
+                ],
+            },
+            "operator_decision": {
+                "reason": "검증 근거가 충분합니다.",
+                "constraints": "실제 투자 전 금액과 중단 기준 확인",
+                "next_action": "Selected Dashboard에서 사후 점검",
+            },
+        }
+
+    def test_decision_dossier_is_read_only_markdown_export(self) -> None:
+        from app.services.backtest_evidence_read_model import build_decision_dossier
+
+        dossier = build_decision_dossier(self._final_decision_row())
+
+        self.assertEqual(dossier["schema_version"], "decision_dossier_v1")
+        self.assertEqual(dossier["decision"]["decision_id"], "decision-dossier")
+        self.assertEqual(dossier["metrics"]["component_count"], 1)
+        self.assertGreaterEqual(dossier["metrics"]["evidence_check_count"], 1)
+        self.assertEqual(dossier["execution_boundary"]["write_policy"], "read_only_dossier")
+        self.assertFalse(dossier["execution_boundary"]["report_auto_write"])
+        self.assertFalse(dossier["execution_boundary"]["live_approval"])
+        self.assertIn("# Final Decision Dossier", dossier["markdown"])
+        self.assertIn("decision-dossier", dossier["filename"])
+        self.assertIn("not live approval", dossier["markdown"])
+
+    def test_decision_dossier_can_include_selected_monitoring_timeline(self) -> None:
+        from app.services.backtest_evidence_read_model import build_decision_dossier
+
+        dossier = build_decision_dossier(
+            {"raw_decision": self._final_decision_row()},
+            monitoring_timeline={
+                "schema_version": "selected_monitoring_timeline_v1",
+                "timeline_status": "WATCH",
+                "timeline_label": "관찰",
+                "conclusion": "watch event가 있습니다.",
+                "rows": [
+                    {
+                        "order": 3,
+                        "event": "Performance Recheck",
+                        "timestamp": "2026-05-28",
+                        "status": "WATCH",
+                        "status_label": "관찰",
+                        "signal": "PARTIAL_RECHECK",
+                        "next_action": "다음 점검에서 확인",
+                        "source": "session_state.performance_recheck",
+                    }
+                ],
+                "metrics": {"row_count": 1},
+            },
+        )
+
+        self.assertTrue(dossier["monitoring_timeline"]["present"])
+        self.assertTrue(dossier["metrics"]["monitoring_timeline_present"])
+        self.assertIn("Performance Recheck", dossier["markdown"])
+        self.assertFalse(dossier["execution_boundary"]["monitoring_log_auto_write"])
+
+
 if __name__ == "__main__":
     unittest.main()

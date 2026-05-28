@@ -21,6 +21,19 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-28 - Final decision evidence는 read-only dossier로 묶는다
+- User request:
+  - Investability Decision Foundation의 다음 작업 진행을 요청함.
+- Interpreted goal:
+  - 최종 판단 근거를 여러 화면에서 흩어 읽지 않고, 사람이 읽는 handoff 문서로 확인할 수 있어야 함.
+- Analysis result:
+  - `decision-dossier-report-v1` task를 열고 구현했다.
+  - `build_decision_dossier`는 saved Final Review row와 optional Selected Dashboard monitoring timeline을 `decision_dossier_v1` read model과 markdown string으로 묶는다.
+  - Final Review saved record와 Selected Dashboard는 dossier markdown을 표시 / 다운로드할 수 있다.
+  - Dossier는 자동 report file write, monitoring log append, live approval, broker order, auto rebalance를 하지 않는다.
+- Follow-up:
+  - phase의 계획된 구현 task는 완료됐다. 다음은 phase closeout 또는 structured waiver policy 허용 여부 결정이다.
+
 ### 2026-05-28 - Selected monitoring은 read-only timeline으로 읽는다
 - User request:
   - Investability Decision Foundation의 다음 작업 진행을 요청함.

@@ -47,10 +47,10 @@ UI form, payload 복원, candidate review, history replay, candidate replay, sav
 | `app/web/backtest_candidate_review_helpers.py` | Candidate Review 판단, Review Note / registry 변환, Pre-Live status 추천 / draft 변환 / Portfolio Proposal 진입 readiness score helper |
 | `app/web/backtest_portfolio_proposal.py` | 단일 후보 직행 평가, 다중 후보 Portfolio Proposal 후보 선택 / 목적 / 역할 / 비중 설계, proposal draft 저장, 저장된 proposal monitoring / feedback section render logic |
 | `app/web/backtest_portfolio_proposal_helpers.py` | Portfolio Proposal row 생성, 단일 후보 direct readiness / proposal save readiness 평가, 공유 validation / robustness 계산 helper, monitoring / Pre-Live / paper feedback table helper |
-| `app/services/backtest_evidence_read_model.py` | Streamlit-free final decision evidence read model. Final Review investability evidence packet / selected-route gate / saved decision status / table row와 Selected Dashboard evidence check row를 공통으로 만든다 |
-| `app/web/backtest_final_review.py` | Final Review 화면 render. 단일 후보 / 저장 proposal 선택, Validation / Robustness / Paper Observation / Investability Evidence Packet 기준 확인, 최종 판단 기록, saved final decision review |
+| `app/services/backtest_evidence_read_model.py` | Streamlit-free final decision evidence read model. Final Review investability evidence packet / selected-route gate / saved decision status / table row, Selected Dashboard evidence check row, Decision Dossier markdown read model을 공통으로 만든다 |
+| `app/web/backtest_final_review.py` | Final Review 화면 render. 단일 후보 / 저장 proposal 선택, Validation / Robustness / Paper Observation / Investability Evidence Packet 기준 확인, 최종 판단 기록, saved final decision review, Decision Dossier download |
 | `app/web/backtest_final_review_helpers.py` | Final Review source 선택, validation 재사용, inline paper observation snapshot, investability packet 연결, final evidence / save readiness / decision row helper |
-| `app/web/final_selected_portfolio_dashboard.py` | `Operations > Selected Portfolio Dashboard` 화면 render. Final Review에서 선정된 포트폴리오를 운영 대상으로 읽고 compact selected portfolio picker / Snapshot / tabbed Performance Recheck / Portfolio Monitoring Review Signals / optional Actual Allocation / Audit을 보여준다 |
+| `app/web/final_selected_portfolio_dashboard.py` | `Operations > Selected Portfolio Dashboard` 화면 render. Final Review에서 선정된 포트폴리오를 운영 대상으로 읽고 compact selected portfolio picker / Snapshot / tabbed Performance Recheck / Portfolio Monitoring Timeline / Review Signals / optional Actual Allocation / Decision Dossier / Audit을 보여준다 |
 | `app/web/final_selected_portfolio_dashboard_helpers.py` | Selected Portfolio Dashboard의 table / component / value / holding input / drift / alert preview / filter helper. Evidence table은 service read model을 표시한다 |
 | `app/runtime/backtest.py` | UI payload를 실행 가능한 runtime call로 변환 |
 | `app/runtime/backtest_result_bundle.py` | Backtest runtime 결과를 UI가 읽는 summary / chart / metadata bundle로 변환 |
@@ -77,7 +77,7 @@ Backtest 주 흐름:
 
 - `Backtest Analysis`: Single Strategy 실행, Compare, weighted portfolio builder, 저장된 비중 조합 replay를 통해 후보 source를 만들고 `PORTFOLIO_SELECTION_SOURCES.jsonl`에 Clean V2 source로 저장한다.
 - `Practical Validation`: 선택된 단일 전략 / Compare 후보 / Saved Mix source를 실전 투입 전 조건으로 검증한다. 사용자는 방어형 / 균형형 / 성장형 / 전술·헤지형 / 사용자 지정 profile과 5개 답변을 고르고, 화면은 Input Evidence와 12개 Practical Diagnostics를 `PASS / REVIEW / BLOCKED / NOT_RUN`으로 분리해 보여준다. 결과는 `PRACTICAL_VALIDATION_RESULTS.jsonl`에 저장하며 사용자 최종 메모는 받지 않는다.
-- `Final Review`: Practical Validation result와 diagnostics 요약, Robustness / Paper Observation / Investability Evidence Packet을 한 화면에서 확인하고, profile-aware `Validation Gate Policy`로 selected-route 가능 여부를 판정한 뒤 최종 선정 / 보류 / 거절 / 재검토 판단을 `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl`에 저장한다. critical gap 또는 selected-route policy blocker가 남아 있으면 `SELECT_FOR_PRACTICAL_PORTFOLIO` 저장은 차단하지만, 보류 / 거절 / 재검토 판단은 기록할 수 있다.
+- `Final Review`: Practical Validation result와 diagnostics 요약, Robustness / Paper Observation / Investability Evidence Packet을 한 화면에서 확인하고, profile-aware `Validation Gate Policy`로 selected-route 가능 여부를 판정한 뒤 최종 선정 / 보류 / 거절 / 재검토 판단을 `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl`에 저장한다. critical gap 또는 selected-route policy blocker가 남아 있으면 `SELECT_FOR_PRACTICAL_PORTFOLIO` 저장은 차단하지만, 보류 / 거절 / 재검토 판단은 기록할 수 있다. 저장된 최종 판단은 read-only Decision Dossier markdown으로 다운로드할 수 있지만 report 파일을 자동 생성하지 않는다.
 
 Practical Validation V2의 현재 구현은 최소 contract를 Input Evidence로 읽고, profile-aware practical diagnostics board를 만든다.
 현재 board는 compact curve snapshot 또는 DB price proxy curve를 사용해 rolling validation, stress window 구간 성과, simple baseline challenge, component correlation / risk contribution proxy, window / drop-one / weight perturbation sensitivity를 계산한다.
@@ -102,7 +102,7 @@ Operations 보조 화면:
 - `Operations > Ops Review`: 웹앱 ingestion / refresh / factor job의 run health를 점검한다. triage flow, 최근 실행 상태, action inbox, failure CSV, run artifact, related logs, runtime snapshot을 보여주며, job 실행은 `Ingestion`, backtest replay는 `Backtest Run History`, 후보 replay는 `Candidate Library`로 분리한다.
 - `Operations > Backtest Run History`: 저장된 실행 기록을 inspect하고, 가능한 경우 run again, load into form, candidate draft handoff를 수행한다. 후보 검토 흐름의 주 단계가 아니라 과거 실행을 다시 열기 위한 운영 / 재현 도구로 둔다.
 - `Operations > Candidate Library`: `CURRENT_CANDIDATE_REGISTRY.jsonl`과 `PRE_LIVE_CANDIDATE_REGISTRY.jsonl`을 읽어 저장된 후보를 다시 열어 본다. registry에는 compact snapshot만 남으므로, 그래프 / result table이 필요할 때 저장 contract로 DB-backed result curve를 재생성한다. 후보 등록 단계가 아니라 보관함 / 재검토 도구다.
-- `Operations > Selected Portfolio Dashboard`: `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl`에서 `SELECT_FOR_PRACTICAL_PORTFOLIO`로 선정된 row만 읽어 최종 선정 포트폴리오의 compact 선택, Snapshot, 기간 확장 Performance Recheck tabs, Portfolio Monitoring의 Timeline / Review Signals / Why Selected / optional Actual Allocation / Audit을 보여준다. Timeline은 selection / evidence gate / recheck / drift / trigger preview를 read-only로 묶으며, live approval / broker order / auto rebalance는 disabled로 둔다.
+- `Operations > Selected Portfolio Dashboard`: `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl`에서 `SELECT_FOR_PRACTICAL_PORTFOLIO`로 선정된 row만 읽어 최종 선정 포트폴리오의 compact 선택, Snapshot, 기간 확장 Performance Recheck tabs, Portfolio Monitoring의 Timeline / Review Signals / Why Selected / optional Actual Allocation / Decision Dossier / Audit을 보여준다. Timeline과 Dossier는 read-only이며, live approval / broker order / auto rebalance는 disabled로 둔다.
 
 ## 현재 Reference Guide 제품 흐름
 
@@ -190,8 +190,8 @@ Backtest > Final Review
 | 파일 | 역할 |
 |---|---|
 | `app/runtime/final_selected_portfolios.py` | Final Review final decision row를 읽고 selected dashboard row / status summary / selected component performance recheck / current weight 또는 value / holding input 기반 drift check / drift alert preview / monitoring timeline으로 변환 |
-| `app/services/backtest_evidence_read_model.py` | Final Review final decision row의 status / evidence checks를 Streamlit-free read model로 변환 |
-| `app/web/final_selected_portfolio_dashboard.py` | Operations dashboard 화면 render, compact selected portfolio picker, Snapshot, Performance Recheck setup + result tabs, Portfolio Monitoring Timeline / Review Signals / Why Selected / optional Actual Allocation / Audit 표시 |
+| `app/services/backtest_evidence_read_model.py` | Final Review final decision row의 status / evidence checks / decision dossier를 Streamlit-free read model로 변환 |
+| `app/web/final_selected_portfolio_dashboard.py` | Operations dashboard 화면 render, compact selected portfolio picker, Snapshot, Performance Recheck setup + result tabs, Portfolio Monitoring Timeline / Review Signals / Why Selected / optional Actual Allocation / Decision Dossier / Audit 표시 |
 | `app/web/final_selected_portfolio_dashboard_helpers.py` | dashboard table, component table, timeline table, value / holding input table, drift table, alert preview table, filter helper |
 | `app/web/streamlit_app.py` | Operations navigation에 `Selected Portfolio Dashboard` page 등록 |
 
@@ -230,6 +230,7 @@ first-pass status:
 - DB latest close 조회는 shares x price 입력을 돕는 보조 기능이다.
 - Drift Alert / Review Trigger Preview는 read-only 해석이며 alert registry를 저장하지 않는다.
 - Timeline은 현재 decision row와 session-state recheck / drift / alert preview를 읽는 read model이며 monitoring log를 append하지 않는다.
+- Decision Dossier는 현재 final decision evidence와 optional session-state timeline을 markdown으로 export하는 read model이며 report 파일을 자동 저장하지 않는다.
 - account holding 자동 연결, broker order, auto rebalance는 후속 phase에서 별도 계약을 정한 뒤 구현한다.
 
 ## Portfolio Proposal 계약

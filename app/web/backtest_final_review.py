@@ -7,6 +7,7 @@ from uuid import uuid4
 import pandas as pd
 import streamlit as st
 
+from app.services.backtest_evidence_read_model import build_decision_dossier
 from app.web.backtest_final_review_helpers import (
     FINAL_REVIEW_DECISION_LABELS,
     FINAL_REVIEW_ROUTE_DESCRIPTIONS,
@@ -394,6 +395,48 @@ def _render_investability_packet(packet: dict[str, Any]) -> None:
         st.dataframe(pd.DataFrame(packet.get("assumptions_and_limits") or []), width="stretch", hide_index=True)
 
 
+def _render_decision_dossier_export(row: dict[str, Any], *, key_prefix: str) -> None:
+    dossier = build_decision_dossier(row)
+    decision = dict(dossier.get("decision") or {})
+    metrics = dict(dossier.get("metrics") or {})
+    boundary = dict(dossier.get("execution_boundary") or {})
+    st.markdown("###### Decision Dossier")
+    st.caption(
+        "저장된 Final Review row를 사람이 읽는 markdown dossier로 묶습니다. "
+        "이 export는 report 파일을 자동 저장하지 않습니다."
+    )
+    render_badge_strip(
+        [
+            {"label": "Schema", "value": dossier.get("schema_version"), "tone": "neutral"},
+            {"label": "Decision", "value": decision.get("decision_label"), "tone": "neutral"},
+            {"label": "Evidence", "value": metrics.get("evidence_check_count", 0), "tone": "neutral"},
+            {
+                "label": "Needs Review",
+                "value": metrics.get("not_ready_evidence_check_count", 0),
+                "tone": "warning" if metrics.get("not_ready_evidence_check_count") else "neutral",
+            },
+            {"label": "Auto Write", "value": "Disabled", "tone": "neutral"},
+        ]
+    )
+    action_cols = st.columns([0.36, 0.64], gap="small")
+    with action_cols[0]:
+        st.download_button(
+            "Markdown 다운로드",
+            data=str(dossier.get("markdown") or ""),
+            file_name=str(dossier.get("filename") or "decision_dossier.md"),
+            mime="text/markdown",
+            key=f"{key_prefix}_download",
+            width="stretch",
+        )
+    with action_cols[1]:
+        st.caption(
+            f"Write policy: {boundary.get('write_policy') or '-'} / "
+            f"report auto write: {boundary.get('report_auto_write')}"
+        )
+    with st.expander("Dossier preview", expanded=False):
+        st.markdown(str(dossier.get("markdown") or "-"))
+
+
 def _render_saved_final_review_decisions(final_decision_rows: list[dict[str, Any]]) -> None:
     if not final_decision_rows:
         st.info("아직 기록된 최종 검토 결과가 없습니다.")
@@ -434,6 +477,10 @@ def _render_saved_final_review_decisions(final_decision_rows: list[dict[str, Any
         st.info("이 기록에는 selected component가 없습니다.")
     else:
         st.dataframe(component_df, width="stretch", hide_index=True)
+    _render_decision_dossier_export(
+        selected_row,
+        key_prefix=f"final_review_dossier_{selected_row.get('decision_id') or 'saved'}",
+    )
     packet = dict(selected_row.get("investability_evidence_packet") or {})
     if packet:
         with st.expander("Investability Evidence Packet", expanded=False):

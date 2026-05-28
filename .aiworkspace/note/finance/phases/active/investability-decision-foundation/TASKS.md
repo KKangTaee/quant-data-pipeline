@@ -15,19 +15,21 @@ Created: 2026-05-28
 | 5 | `look-through-exposure-board-v1` | `finance-db-pipeline` + `finance-backtest-web-workflow` | holdings / exposure coverage board and Final Review summary | Implementation complete |
 | 6 | `robustness-lab-v1` | `finance-strategy-implementation` + backtest workflow | walk-forward / sensitivity / stress evidence surface | Implementation complete |
 | 7 | `selected-monitoring-timeline-v1` | `finance-backtest-web-workflow` | selected portfolio review signals over time without auto-save sprawl | Implementation complete |
-| 8 | `decision-dossier-report-v1` | backtest workflow + doc sync | human-readable final decision dossier / export contract | Planned |
+| 8 | `decision-dossier-report-v1` | backtest workflow + doc sync | human-readable final decision dossier / export contract | Implementation complete |
 
 ## Immediate Next Task
 
-Next recommended implementation task is `decision-dossier-report-v1`.
+Next recommended step is phase closeout or a structured waiver policy decision.
 
 Goal:
 
-- `decision-dossier-report-v1`: Final Review 판단 근거와 Selected Dashboard evidence를 사람이 읽는 dossier / export contract로 묶는다.
+- `phase-closeout`: completed implementation slices를 검증하고, docs 승격 / 남은 risks / next phase candidate를 정리한다.
+- `structured-waiver-policy-v1`: critical gap waiver를 허용할지, 허용한다면 expiry / scope / review trigger를 어떻게 제한할지 결정한다.
 
 Expected files:
 
-- decision dossier: likely `app/runtime/final_selected_portfolios.py`, `app/web/backtest_final_review*.py`, report/export helper, docs/flows.
+- phase closeout: phase docs, roadmap, root logs.
+- structured waiver: `app/services/backtest_evidence_read_model.py`, `app/web/backtest_final_review*.py`, docs/flows, tests.
 
 Out of scope for the next task:
 
@@ -44,7 +46,7 @@ Out of scope for the next task:
 - Task 5 implemented a compact look-through board inside provider context; full holdings / exposure rows remain DB-only.
 - Task 6 implemented a compact robustness board from existing stress / rolling / sensitivity / overfit evidence without adding a new registry.
 - Task 7 implemented a read-only Timeline tab and did not add automatic monitoring log writes. Monitoring snapshots should stay explicit user action unless a later automation policy is approved.
-- Task 8 should package existing evidence for human review without becoming another persistence chain.
+- Task 8 implemented a read-only markdown dossier export without automatic report file writes.
 
 ## Completion Standard Per Task
 
