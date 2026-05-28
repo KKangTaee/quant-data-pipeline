@@ -12,6 +12,7 @@
 | Market Event DB Structure | Complete | `sub-dev` | `finance_meta.market_event_calendar` schema and common UPSERT/read helpers. |
 | FOMC Events | Complete | `sub-dev` | Official Fed source collection, ingestion button, DB-backed Events tab display. |
 | Earnings Free Source Prototype | Complete | `sub-dev` | yfinance calendar prototype for manual symbols or latest S&P 500 movers, stored as `EARNINGS` rows. |
+| Phase Closeout / Runbook | Complete | `sub-dev` | Phase stale docs cleaned up, Overview market intelligence operations runbook added, final QA recorded. |
 
 ## First Implementation Unit
 
@@ -23,6 +24,7 @@ Active task:
 .aiworkspace/note/finance/tasks/active/overview-market-events-schema/
 .aiworkspace/note/finance/tasks/active/overview-fomc-collector/
 .aiworkspace/note/finance/tasks/active/overview-earnings-prototype/
+.aiworkspace/note/finance/tasks/active/overview-market-intelligence-closeout/
 ```
 
 ## Dependency Notes

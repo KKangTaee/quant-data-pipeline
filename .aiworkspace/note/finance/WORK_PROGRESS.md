@@ -22,6 +22,9 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-28
+- Completed phase closeout under `.aiworkspace/note/finance/tasks/active/overview-market-intelligence-closeout/`.
+- Added `.aiworkspace/note/finance/docs/runbooks/OVERVIEW_MARKET_INTELLIGENCE.md` for Market Movers, FOMC, and earnings prototype refresh operations.
+- Updated phase plan/design/integration wording so Events is no longer described as a placeholder; closeout QA passed.
 - Completed Task 6 under `.aiworkspace/note/finance/tasks/active/overview-earnings-prototype/`.
 - Added bounded yfinance earnings calendar collection into `market_event_calendar` as `EARNINGS`, wired Ingestion prototype controls and Overview Events filter/refresh.
 - Local smoke wrote 3 earnings rows for `AAPL`, `MSFT`, `NVDA`; service contract tests passed.

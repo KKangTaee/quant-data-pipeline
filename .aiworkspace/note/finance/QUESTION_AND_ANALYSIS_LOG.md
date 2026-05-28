@@ -21,6 +21,17 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-28 - Overview market intelligence는 closeout/runbook 단계로 전환한다
+- User request:
+  - Task 6 이후 다음 단계를 진행해 달라고 요청함.
+- Interpreted goal:
+  - 기존 task list가 모두 완료됐으므로 새 기능 추가가 아니라 phase 운영 절차와 문서 상태를 정리해야 함.
+- Analysis result:
+  - Phase 문서에는 Events를 placeholder로 설명하는 stale wording이 남아 있었다.
+  - `OVERVIEW_MARKET_INTELLIGENCE.md` runbook을 추가해 Market Snapshot, FOMC, Earnings prototype refresh 순서와 실패 대응을 정리했다.
+- Follow-up:
+  - 다음 실제 기능 후보는 heatmap/treemap visual, earnings official-source validation, event estimate cleanup 중 하나로 별도 task를 열어야 한다.
+
 ### 2026-05-28 - Earnings calendar prototype는 bounded yfinance source로 시작한다
 - User request:
   - overview-market-intelligence의 FOMC 이후 다음 단계를 진행해 달라고 요청함.
