@@ -18,6 +18,8 @@ from app.web.final_selected_portfolio_dashboard_helpers import (
     build_selected_portfolio_dashboard_table,
     build_selected_portfolio_evidence_table,
     build_selected_portfolio_monitoring_timeline_table,
+    build_selected_portfolio_provider_evidence_table,
+    build_selected_portfolio_provider_symbol_weight_table,
     build_selected_portfolio_recheck_comparison_table,
     build_selected_portfolio_recheck_readiness_table,
     build_selected_portfolio_symbol_freshness_table,
@@ -39,6 +41,7 @@ from app.runtime import (
     build_selected_portfolio_drift_check,
     build_selected_portfolio_monitoring_timeline,
     build_selected_portfolio_performance_recheck,
+    build_selected_portfolio_provider_evidence,
     build_selected_portfolio_recheck_comparison,
     build_selected_portfolio_recheck_readiness,
     build_selected_portfolio_recheck_symbol_freshness,
@@ -105,6 +108,16 @@ def _symbol_freshness_tone(route: str) -> str:
     if route in {"SYMBOL_FRESHNESS_WATCH", "SYMBOL_FRESHNESS_STALE", "SYMBOL_FRESHNESS_NEEDS_DATA"}:
         return "warning"
     if route in {"SYMBOL_FRESHNESS_MISSING", "SYMBOL_FRESHNESS_BLOCKED"}:
+        return "danger"
+    return "neutral"
+
+
+def _provider_evidence_tone(route: str) -> str:
+    if route == "SELECTED_PROVIDER_READY":
+        return "positive"
+    if route in {"SELECTED_PROVIDER_REVIEW", "SELECTED_PROVIDER_NEEDS_DATA"}:
+        return "warning"
+    if route == "SELECTED_PROVIDER_BLOCKED":
         return "danger"
     return "neutral"
 
@@ -1112,6 +1125,80 @@ def _render_performance_recheck(row: dict[str, Any]) -> None:
                 f"DB write: {freshness_boundary.get('db_write')} / "
                 f"registry write: {freshness_boundary.get('registry_write')}"
             )
+
+    provider_evidence = build_selected_portfolio_provider_evidence(
+        row,
+        as_of_date=defaults.get("latest_market_date") or date.today().isoformat(),
+    )
+    provider_metrics = dict(provider_evidence.get("metrics") or {})
+    provider_boundary = dict(provider_evidence.get("execution_boundary") or {})
+    provider_route = str(provider_evidence.get("route") or "")
+    look_through = dict(provider_evidence.get("look_through_board") or {})
+    with st.container(border=True):
+        st.markdown("##### Provider Evidence")
+        st.caption(
+            "선정 포트폴리오의 ETF provider / holdings / exposure snapshot을 기존 DB에서 읽어 coverage와 stale 상태를 확인합니다. "
+            "이 확인은 provider 데이터를 수집하거나 JSONL / monitoring log를 저장하지 않습니다."
+        )
+        render_badge_strip(
+            [
+                {
+                    "label": "Provider",
+                    "value": provider_evidence.get("route_label"),
+                    "tone": _provider_evidence_tone(provider_route),
+                },
+                {"label": "Symbols", "value": provider_metrics.get("provider_symbol_count", 0), "tone": "neutral"},
+                {
+                    "label": "Holdings",
+                    "value": f"{provider_metrics.get('holdings_coverage_weight', 0) or 0}%",
+                    "tone": "warning"
+                    if provider_metrics.get("holdings_coverage_weight") is not None
+                    and float(provider_metrics.get("holdings_coverage_weight") or 0.0) < 80.0
+                    else "neutral",
+                },
+                {
+                    "label": "Exposure",
+                    "value": f"{provider_metrics.get('exposure_coverage_weight', 0) or 0}%",
+                    "tone": "warning"
+                    if provider_metrics.get("exposure_coverage_weight") is not None
+                    and float(provider_metrics.get("exposure_coverage_weight") or 0.0) < 80.0
+                    else "neutral",
+                },
+                {
+                    "label": "Needs Data",
+                    "value": provider_metrics.get("needs_input_count", 0),
+                    "tone": "warning" if provider_metrics.get("needs_input_count") else "neutral",
+                },
+                {"label": "Writes", "value": "Disabled", "tone": "neutral"},
+            ]
+        )
+        if provider_route == "SELECTED_PROVIDER_BLOCKED":
+            st.warning(str(provider_evidence.get("conclusion") or "-"))
+        elif provider_route in {"SELECTED_PROVIDER_REVIEW", "SELECTED_PROVIDER_NEEDS_DATA"}:
+            st.info(str(provider_evidence.get("conclusion") or "-"))
+        else:
+            st.success(str(provider_evidence.get("conclusion") or "-"))
+        with st.expander("Provider evidence rows", expanded=provider_route != "SELECTED_PROVIDER_READY"):
+            provider_df = build_selected_portfolio_provider_evidence_table(provider_evidence)
+            if provider_df.empty:
+                st.info("표시할 provider evidence row가 없습니다.")
+            else:
+                st.dataframe(provider_df, width="stretch", hide_index=True)
+            symbol_weight_df = build_selected_portfolio_provider_symbol_weight_table(provider_evidence)
+            if not symbol_weight_df.empty:
+                st.markdown("###### Selected provider symbol weights")
+                st.dataframe(symbol_weight_df, width="stretch", hide_index=True)
+            st.caption(
+                f"Write policy: {provider_boundary.get('write_policy') or '-'} / "
+                f"DB read: {provider_boundary.get('db_read')} / "
+                f"DB write: {provider_boundary.get('db_write')} / "
+                f"provider collection: {provider_boundary.get('provider_collection')}"
+            )
+        summary_rows = list(look_through.get("summary_rows") or [])
+        if summary_rows:
+            with st.expander("Look-through summary", expanded=False):
+                st.caption(str(look_through.get("summary") or "-"))
+                st.dataframe(pd.DataFrame(summary_rows), width="stretch", hide_index=True)
 
     fallback_start = date(2016, 1, 1)
     fallback_end = date.today()

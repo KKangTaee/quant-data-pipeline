@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from datetime import date
 from typing import Any
 
@@ -53,6 +54,7 @@ SELECTED_CONTINUITY_CHECK_SCHEMA_VERSION = "selected_continuity_check_v1"
 SELECTED_RECHECK_COMPARISON_SCHEMA_VERSION = "selected_recheck_comparison_v1"
 SELECTED_RECHECK_READINESS_SCHEMA_VERSION = "selected_recheck_readiness_v1"
 SELECTED_RECHECK_SYMBOL_FRESHNESS_SCHEMA_VERSION = "selected_recheck_symbol_freshness_v1"
+SELECTED_PROVIDER_EVIDENCE_SCHEMA_VERSION = "selected_provider_evidence_v1"
 SELECTED_MONITORING_TIMELINE_STATUS_LABELS = {
     "CLEAR": "정상",
     "WATCH": "관찰",
@@ -86,6 +88,12 @@ SELECTED_RECHECK_SYMBOL_FRESHNESS_ROUTE_LABELS = {
     "SYMBOL_FRESHNESS_MISSING": "가격 데이터 누락",
     "SYMBOL_FRESHNESS_NEEDS_DATA": "가격 DB 확인 필요",
     "SYMBOL_FRESHNESS_BLOCKED": "symbol 확인 차단",
+}
+SELECTED_PROVIDER_EVIDENCE_ROUTE_LABELS = {
+    "SELECTED_PROVIDER_READY": "Provider 근거 준비 완료",
+    "SELECTED_PROVIDER_REVIEW": "Provider 근거 검토 필요",
+    "SELECTED_PROVIDER_NEEDS_DATA": "Provider DB 확인 필요",
+    "SELECTED_PROVIDER_BLOCKED": "Provider 근거 차단",
 }
 _TIMELINE_STATUS_RANK = {
     "OPTIONAL": 0,
@@ -2140,6 +2148,391 @@ def build_selected_portfolio_recheck_symbol_freshness(
             "order_instruction": False,
             "auto_rebalance": False,
             "notes": "Symbol freshness reads DB price metadata only; it does not ingest data or save monitoring records.",
+        },
+    }
+
+
+def _provider_symbol_candidates_from_value(value: Any) -> list[str]:
+    if isinstance(value, str):
+        raw_values = re.split(r"[,/\s]+", value)
+    elif isinstance(value, (list, tuple, set)):
+        raw_values = list(value)
+    else:
+        raw_values = [value]
+    symbols: list[str] = []
+    for raw in raw_values:
+        text = str(raw or "").strip().upper()
+        if not text or text in {"-", "N/A", "NONE"}:
+            continue
+        if re.fullmatch(r"[A-Z0-9][A-Z0-9.\-]{0,14}", text):
+            symbols.append(text)
+    return list(dict.fromkeys(symbols))
+
+
+def _fallback_provider_symbols_from_component(component: dict[str, Any]) -> list[str]:
+    contract = dict(component.get("contract") or {})
+    replay_contract = dict(component.get("replay_contract") or {})
+    settings = dict(replay_contract.get("settings_snapshot") or {})
+    raw_values = [
+        contract.get("tickers"),
+        settings.get("tickers"),
+        component.get("universe"),
+        component.get("holding_symbol"),
+        component.get("asset_symbol"),
+        component.get("symbol"),
+        component.get("ticker"),
+    ]
+    symbols: list[str] = []
+    for value in raw_values:
+        symbols.extend(_provider_symbol_candidates_from_value(value))
+    return list(dict.fromkeys(symbols))
+
+
+def _selected_provider_symbol_weights(
+    row: dict[str, Any],
+    *,
+    candidate_rows_by_id: dict[str, dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Resolve selected portfolio ETF weights for provider evidence without writing user state."""
+
+    raw_decision = dict(row.get("raw_decision") or row)
+    active_components = _active_components(raw_decision)
+    if candidate_rows_by_id is None:
+        try:
+            candidate_rows = _find_candidate_rows_by_registry_id()
+            candidate_load_error = ""
+        except Exception as exc:  # pragma: no cover - registry read errors depend on local workspace state
+            candidate_rows = {}
+            candidate_load_error = str(exc)
+    else:
+        candidate_rows = dict(candidate_rows_by_id)
+        candidate_load_error = ""
+
+    try:
+        from .candidate_library import build_candidate_replay_payload
+
+        replay_builder_error = ""
+    except Exception as exc:  # pragma: no cover - defensive import boundary
+        build_candidate_replay_payload = None  # type: ignore[assignment]
+        replay_builder_error = str(exc)
+
+    symbol_weights: dict[str, float] = {}
+    component_rows: list[dict[str, Any]] = []
+    valid_contract_count = 0
+    fallback_contracts: list[str] = []
+    missing_contracts: list[str] = []
+    invalid_contracts: list[str] = []
+
+    for index, component in enumerate(active_components):
+        identity = _component_identity(component, index)
+        title = _clean_text(component.get("title") or identity)
+        registry_id = _clean_text(component.get("registry_id"), "")
+        component_weight = _optional_float(component.get("target_weight")) or 0.0
+        current_row = dict(candidate_rows.get(registry_id) or {}) if registry_id else {}
+        source = "candidate_replay_contract"
+        evidence = "Candidate replay contract provided portfolio tickers."
+        status = "PASS"
+        tickers: list[str] = []
+
+        if not registry_id:
+            missing_contracts.append(f"{identity}: registry_id 없음")
+        elif not current_row:
+            missing_contracts.append(f"{identity}: current candidate row 없음")
+
+        if registry_id and current_row and build_candidate_replay_payload is not None:
+            try:
+                payload = build_candidate_replay_payload(current_row)
+                tickers = _provider_symbol_candidates_from_value(payload.get("tickers"))
+                if tickers:
+                    valid_contract_count += 1
+            except Exception as exc:
+                invalid_contracts.append(f"{identity}: {exc}")
+        elif registry_id and current_row and build_candidate_replay_payload is None:
+            invalid_contracts.append(f"{identity}: replay helper import 실패")
+
+        if not tickers:
+            tickers = _fallback_provider_symbols_from_component(component)
+            if not tickers and current_row:
+                contract = dict(current_row.get("contract") or {})
+                tickers = _provider_symbol_candidates_from_value(contract.get("tickers"))
+            if tickers:
+                source = "selected_component_fallback"
+                status = "REVIEW"
+                evidence = "Replay contract was incomplete; selected component ticker fields were used as fallback."
+                fallback_contracts.append(identity)
+            else:
+                source = "unresolved"
+                status = "BLOCKED"
+                evidence = "No provider ticker symbols could be resolved for this selected component."
+
+        for ticker in tickers:
+            symbol_weights[ticker] = symbol_weights.get(ticker, 0.0) + (component_weight / len(tickers))
+
+        component_rows.append(
+            {
+                "Component": title,
+                "Registry ID": registry_id or "-",
+                "Target Weight": round(component_weight, 4),
+                "Symbols": ", ".join(tickers) if tickers else "-",
+                "Source": source,
+                "Status": status,
+                "Evidence": evidence,
+            }
+        )
+
+    return {
+        "symbol_weights": {symbol: round(weight, 4) for symbol, weight in sorted(symbol_weights.items()) if weight > 0.0},
+        "component_rows": component_rows,
+        "active_component_count": len(active_components),
+        "valid_contract_count": valid_contract_count,
+        "fallback_contract_count": len(fallback_contracts),
+        "missing_contracts": missing_contracts,
+        "invalid_contracts": invalid_contracts,
+        "candidate_load_error": candidate_load_error,
+        "replay_builder_error": replay_builder_error,
+    }
+
+
+def _selected_provider_status(value: Any) -> str:
+    normalized = str(value or "").strip().upper()
+    if normalized in {"PASS", "READY", "CLEAR"}:
+        return "PASS"
+    if normalized in {"REVIEW", "WATCH", "PARTIAL"}:
+        return "REVIEW"
+    if normalized in {"BLOCKED", "BREACHED", "ERROR"}:
+        return "BLOCKED"
+    return "NEEDS_INPUT"
+
+
+def _provider_evidence_next_action(status: str, *, area: str) -> str:
+    if status == "PASS":
+        return "Use this provider evidence as a current selected portfolio check."
+    if status == "REVIEW":
+        return f"Review partial or stale {area} coverage before relying on this selected portfolio."
+    if status == "BLOCKED":
+        return f"Resolve blocked {area} evidence before treating provider evidence as usable."
+    return f"Refresh or collect {area} provider data through the ingestion -> DB path, then re-open this view."
+
+
+def _provider_evidence_row_from_display(row: dict[str, Any]) -> dict[str, Any]:
+    area = _clean_text(row.get("Area"))
+    status = _selected_provider_status(row.get("Diagnostic Status"))
+    return {
+        "Area": area,
+        "Status": status,
+        "Diagnostic Status": _clean_text(row.get("Diagnostic Status")),
+        "Coverage": _clean_text(row.get("Coverage")),
+        "Coverage Weight": _optional_float(row.get("Coverage Weight")),
+        "Freshness": _clean_text(row.get("Freshness")),
+        "As Of Range": _clean_text(row.get("As Of Range")),
+        "Source Mix": _clean_text(row.get("Source Mix")),
+        "Summary": _clean_text(row.get("Summary")),
+        "Next Action": _provider_evidence_next_action(status, area=area),
+    }
+
+
+def build_selected_portfolio_provider_evidence(
+    row: dict[str, Any],
+    *,
+    provider_context: dict[str, Any] | None = None,
+    candidate_rows_by_id: dict[str, dict[str, Any]] | None = None,
+    as_of_date: str | None = None,
+    max_provider_staleness_days: int = 45,
+) -> dict[str, Any]:
+    """Read selected ETF provider evidence from existing DB snapshots without collecting or persisting data."""
+
+    contract_evidence = _selected_provider_symbol_weights(row, candidate_rows_by_id=candidate_rows_by_id)
+    symbol_weights = dict(contract_evidence.get("symbol_weights") or {})
+    contract_component_rows = [dict(item or {}) for item in list(contract_evidence.get("component_rows") or [])]
+    contract_blockers = [
+        str(item)
+        for item in (
+            list(contract_evidence.get("missing_contracts") or [])
+            + list(contract_evidence.get("invalid_contracts") or [])
+        )
+        if str(item)
+    ]
+    if contract_evidence.get("candidate_load_error"):
+        contract_blockers.append(str(contract_evidence.get("candidate_load_error")))
+    if contract_evidence.get("replay_builder_error"):
+        contract_blockers.append(str(contract_evidence.get("replay_builder_error")))
+
+    if not symbol_weights:
+        rows = [
+            {
+                "Area": "Selected Symbol Contract",
+                "Status": "BLOCKED",
+                "Diagnostic Status": "BLOCKED",
+                "Coverage": "not_run",
+                "Coverage Weight": 0.0,
+                "Freshness": "-",
+                "As Of Range": "-",
+                "Source Mix": "-",
+                "Summary": "; ".join(contract_blockers[:3]) if contract_blockers else "No selected provider symbols were resolved.",
+                "Next Action": "Fix selected component replay contracts before checking provider evidence.",
+            }
+        ]
+        return {
+            "schema_version": SELECTED_PROVIDER_EVIDENCE_SCHEMA_VERSION,
+            "route": "SELECTED_PROVIDER_BLOCKED",
+            "route_label": SELECTED_PROVIDER_EVIDENCE_ROUTE_LABELS["SELECTED_PROVIDER_BLOCKED"],
+            "conclusion": "provider evidence를 확인할 selected portfolio symbol이 없습니다.",
+            "rows": rows,
+            "symbol_weights": symbol_weights,
+            "component_rows": contract_component_rows,
+            "provider_context": {},
+            "look_through_board": {},
+            "metrics": {
+                "area_count": len(rows),
+                "pass_count": 0,
+                "review_count": 0,
+                "needs_input_count": 0,
+                "blocked_count": 1,
+                "provider_symbol_count": 0,
+                "total_symbol_weight": 0.0,
+                "active_component_count": contract_evidence.get("active_component_count", 0),
+                "valid_contract_count": contract_evidence.get("valid_contract_count", 0),
+                "fallback_contract_count": contract_evidence.get("fallback_contract_count", 0),
+                "max_provider_staleness_days": max_provider_staleness_days,
+            },
+            "execution_boundary": {
+                "write_policy": "read_only_selected_provider_evidence",
+                "db_read": False,
+                "db_write": False,
+                "registry_write": False,
+                "provider_collection": False,
+                "monitoring_log_auto_write": False,
+                "live_approval": False,
+                "order_instruction": False,
+                "auto_rebalance": False,
+                "notes": "Provider evidence failed before DB reads because no selected provider symbols were resolved.",
+            },
+        }
+
+    context_error = ""
+    if provider_context is None:
+        try:
+            from app.services.backtest_practical_validation_provider_context import build_provider_context
+
+            context = build_provider_context(
+                symbol_weights,
+                as_of_date=as_of_date or date.today().isoformat(),
+                max_provider_staleness_days=max_provider_staleness_days,
+            )
+        except Exception as exc:  # pragma: no cover - depends on local DB/provider availability
+            context = {}
+            context_error = str(exc)
+    else:
+        context = dict(provider_context)
+
+    contract_status = "PASS"
+    if any(row.get("Status") == "BLOCKED" for row in contract_component_rows):
+        contract_status = "BLOCKED"
+    elif (
+        contract_blockers
+        or int(contract_evidence.get("fallback_contract_count") or 0) > 0
+        or int(contract_evidence.get("valid_contract_count") or 0) < int(contract_evidence.get("active_component_count") or 0)
+    ):
+        contract_status = "REVIEW"
+
+    rows: list[dict[str, Any]] = [
+        {
+            "Area": "Selected Symbol Contract",
+            "Status": contract_status,
+            "Diagnostic Status": contract_status,
+            "Coverage": "selected_contract",
+            "Coverage Weight": round(sum(float(value or 0.0) for value in symbol_weights.values()), 4),
+            "Freshness": "-",
+            "As Of Range": "-",
+            "Source Mix": "candidate_replay_contract"
+            if contract_status == "PASS"
+            else "candidate_replay_contract / selected_component_fallback",
+            "Summary": (
+                f"{len(symbol_weights)} provider symbols resolved from selected component contract."
+                if contract_status == "PASS"
+                else "; ".join(contract_blockers[:3])
+                if contract_blockers
+                else "Some selected provider symbols used component fallback fields."
+            ),
+            "Next Action": _provider_evidence_next_action(contract_status, area="Selected Symbol Contract"),
+        }
+    ]
+
+    if context_error:
+        rows.append(
+            {
+                "Area": "Provider Context",
+                "Status": "NEEDS_INPUT",
+                "Diagnostic Status": "NEEDS_INPUT",
+                "Coverage": "error",
+                "Coverage Weight": 0.0,
+                "Freshness": "-",
+                "As Of Range": "-",
+                "Source Mix": "-",
+                "Summary": context_error,
+                "Next Action": "Check provider loader / DB connectivity, then refresh this view.",
+            }
+        )
+    else:
+        rows.extend(_provider_evidence_row_from_display(dict(item or {})) for item in list(context.get("display_rows") or []))
+
+    pass_count = sum(1 for item in rows if item.get("Status") == "PASS")
+    review_count = sum(1 for item in rows if item.get("Status") == "REVIEW")
+    needs_input_count = sum(1 for item in rows if item.get("Status") == "NEEDS_INPUT")
+    blocked_count = sum(1 for item in rows if item.get("Status") == "BLOCKED")
+    if blocked_count:
+        route = "SELECTED_PROVIDER_BLOCKED"
+        conclusion = "selected provider evidence에 차단 항목이 있어 먼저 contract 또는 provider 근거를 보강해야 합니다."
+    elif needs_input_count:
+        route = "SELECTED_PROVIDER_NEEDS_DATA"
+        conclusion = "provider DB 근거가 부족하거나 읽히지 않아 selected portfolio의 provider evidence를 완료할 수 없습니다."
+    elif review_count:
+        route = "SELECTED_PROVIDER_REVIEW"
+        conclusion = "provider evidence는 읽혔지만 coverage, stale, fallback 등 검토 항목이 남아 있습니다."
+    else:
+        route = "SELECTED_PROVIDER_READY"
+        conclusion = "selected portfolio의 provider / holdings / exposure 근거가 현재 읽기 기준을 통과했습니다."
+
+    board = dict(context.get("look_through_board") or {})
+    return {
+        "schema_version": SELECTED_PROVIDER_EVIDENCE_SCHEMA_VERSION,
+        "route": route,
+        "route_label": SELECTED_PROVIDER_EVIDENCE_ROUTE_LABELS.get(route, route),
+        "conclusion": conclusion,
+        "rows": rows,
+        "symbol_weights": symbol_weights,
+        "component_rows": contract_component_rows,
+        "provider_context": context,
+        "look_through_board": board,
+        "metrics": {
+            "area_count": len(rows),
+            "pass_count": pass_count,
+            "review_count": review_count,
+            "needs_input_count": needs_input_count,
+            "blocked_count": blocked_count,
+            "provider_symbol_count": len(symbol_weights),
+            "total_symbol_weight": round(sum(float(value or 0.0) for value in symbol_weights.values()), 4),
+            "active_component_count": contract_evidence.get("active_component_count", 0),
+            "valid_contract_count": contract_evidence.get("valid_contract_count", 0),
+            "fallback_contract_count": contract_evidence.get("fallback_contract_count", 0),
+            "max_provider_staleness_days": max_provider_staleness_days,
+            "look_through_status": board.get("status"),
+            "holdings_coverage_weight": board.get("holdings_coverage_weight"),
+            "exposure_coverage_weight": board.get("exposure_coverage_weight"),
+            "unknown_exposure_weight": board.get("unknown_exposure_weight"),
+            "top_holding_weight": board.get("top_holding_weight"),
+        },
+        "execution_boundary": {
+            "write_policy": "read_only_selected_provider_evidence",
+            "db_read": provider_context is None,
+            "db_write": False,
+            "registry_write": False,
+            "provider_collection": False,
+            "monitoring_log_auto_write": False,
+            "live_approval": False,
+            "order_instruction": False,
+            "auto_rebalance": False,
+            "notes": "Provider evidence reads selected component contracts and existing provider DB snapshots only; it does not collect data or save monitoring records.",
         },
     }
 

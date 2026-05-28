@@ -279,6 +279,38 @@ def build_selected_portfolio_symbol_freshness_table(freshness: dict[str, Any]) -
     return pd.DataFrame(display_rows)
 
 
+def build_selected_portfolio_provider_evidence_table(evidence: dict[str, Any]) -> pd.DataFrame:
+    display_rows: list[dict[str, Any]] = []
+    for row in list(evidence.get("rows") or []):
+        display_rows.append(
+            {
+                "Area": row.get("Area"),
+                "Status": row.get("Status"),
+                "Coverage": row.get("Coverage"),
+                "Coverage Weight": row.get("Coverage Weight"),
+                "Freshness": row.get("Freshness"),
+                "As Of Range": row.get("As Of Range"),
+                "Source Mix": row.get("Source Mix"),
+                "Summary": row.get("Summary"),
+                "Next Action": row.get("Next Action"),
+            }
+        )
+    return pd.DataFrame(display_rows)
+
+
+def build_selected_portfolio_provider_symbol_weight_table(evidence: dict[str, Any]) -> pd.DataFrame:
+    symbol_weights = dict(evidence.get("symbol_weights") or {})
+    return pd.DataFrame(
+        [
+            {
+                "Symbol": symbol,
+                "Provider Weight": weight,
+            }
+            for symbol, weight in sorted(symbol_weights.items())
+        ]
+    )
+
+
 def filter_selected_portfolio_rows(
     rows: list[dict[str, Any]],
     *,

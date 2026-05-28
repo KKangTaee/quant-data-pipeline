@@ -22,6 +22,9 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-28
+- Completed `.aiworkspace/note/finance/tasks/active/practical-validation-v2-p3-selected-provider-evidence/`.
+- Selected Dashboard Performance Recheck now shows read-only provider evidence for selected component ticker weights, existing DB provider / holdings / exposure context, and compact look-through summary.
+- `NOT_RUN`, partial, stale, or missing provider evidence is visible before relying on selected monitoring; no provider collection, JSONL write, monitoring log, memo, preset, approval, order, or rebalance behavior was added.
 - Completed `.aiworkspace/note/finance/tasks/active/practical-validation-v2-p3-symbol-freshness/`.
 - Selected Dashboard Performance Recheck now shows read-only symbol freshness for replay portfolio tickers and benchmark tickers.
 - Missing / stale price DB symbols are visible before running recheck; no OHLCV collection, monitoring log, memo, preset, approval, order, or rebalance behavior was added.

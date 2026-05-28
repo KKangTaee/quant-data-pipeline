@@ -90,9 +90,9 @@ Last Verified: 2026-05-28
 | `app/services/backtest_evidence_read_model.py` | Streamlit-free final decision status, investability evidence packet / profile-aware gate policy snapshot / selected-route gate, saved decision table rows, shared evidence check rows, decision dossier markdown read model |
 | `app/web/backtest_final_review.py` | Final Review screen render, investability packet display, look-through / Robustness Lab summary, final decision input, saved final decision review, decision dossier download |
 | `app/web/backtest_final_review_helpers.py` | Final Review source selection, validation reuse, paper observation snapshot, investability packet wiring, save row construction |
-| `app/web/final_selected_portfolio_dashboard.py` | Selected Portfolio Dashboard screen render, continuity check, Recheck Readiness, Symbol Freshness, Timeline / Review Signals / recheck comparison / allocation monitoring controls |
-| `app/web/final_selected_portfolio_dashboard_helpers.py` | Dashboard table / component / continuity / timeline / recheck readiness / symbol freshness / recheck comparison / drift / alert display helpers |
-| `app/runtime/final_selected_portfolios.py` | Read-only selected portfolio dashboard runtime model, Final Review -> Selected Dashboard continuity check, performance recheck readiness, symbol freshness, performance recheck, recheck comparison, drift check, alert preview, monitoring timeline |
+| `app/web/final_selected_portfolio_dashboard.py` | Selected Portfolio Dashboard screen render, continuity check, Recheck Readiness, Symbol Freshness, Provider Evidence, Timeline / Review Signals / recheck comparison / allocation monitoring controls |
+| `app/web/final_selected_portfolio_dashboard_helpers.py` | Dashboard table / component / continuity / timeline / recheck readiness / symbol freshness / provider evidence / recheck comparison / drift / alert display helpers |
+| `app/runtime/final_selected_portfolios.py` | Read-only selected portfolio dashboard runtime model, Final Review -> Selected Dashboard continuity check, performance recheck readiness, symbol freshness, selected provider evidence, performance recheck, recheck comparison, drift check, alert preview, monitoring timeline |
 
 ## Backtest Workflow Boundary
 
@@ -108,7 +108,7 @@ Backtest Analysis
 - Backtest Analysis는 후보 source를 만든다.
 - Practical Validation은 source를 실전 투입 전 조건으로 검증하고 Provider / Look-through / Robustness Lab 근거를 compact하게 보여준다.
 - Final Review는 Provider / Look-through / Robustness Lab 근거와 investability packet을 읽어 select / hold / reject / re-review 판단을 기록하고, 저장된 판단을 read-only dossier로 다시 보여준다.
-- Selected Portfolio Dashboard는 선정 이후 성과와 read-only recheck readiness / symbol freshness / monitoring timeline / signal / recheck comparison을 확인한다.
+- Selected Portfolio Dashboard는 선정 이후 성과와 read-only recheck readiness / symbol freshness / provider evidence / monitoring timeline / signal / recheck comparison을 확인한다.
 
 ## Data Boundary
 

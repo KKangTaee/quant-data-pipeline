@@ -6,6 +6,7 @@ Last Updated: 2026-05-28
 ## Current Status
 
 P2 implementation과 P2-7 QA / closeout 판단은 완료됐다.
+P3 selected monitoring 연결은 continuity check, recheck comparison, recheck readiness, symbol freshness, selected provider evidence까지 완료됐다.
 
 최근 완료된 내용:
 
@@ -23,8 +24,8 @@ P2 implementation과 P2-7 QA / closeout 판단은 완료됐다.
 
 ## Next
 
-- P3 first slice로 continuity check를 구현했다.
-- P3 후보: Final Review handoff QA, Selected Portfolio Dashboard monitoring 연결 정리, selected 이후 recheck evidence 비교
+- P3 selected monitoring slice로 continuity check, recheck comparison, recheck readiness, symbol freshness, selected provider evidence를 구현했다.
+- P3 후보: closeout QA 또는 remaining selected monitoring gap 점검
 - strategy-specific sensitivity runtime sweep은 별도 후속으로 분리
 
 ## Current Development Boundary

@@ -1197,6 +1197,23 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
             },
         }
 
+    def _candidate_rows_by_id(self) -> dict:
+        return {
+            "candidate-selected": {
+                "registry_id": "candidate-selected",
+                "title": "Selected Component",
+                "strategy_family": "equal_weight",
+                "contract": {
+                    "tickers": ["SPY", "QQQ"],
+                    "benchmark_ticker": "SPY",
+                    "start": "2020-01-01",
+                    "end": "2024-12-31",
+                    "rebalance_interval": 12,
+                },
+                "execution_context": {"start": "2020-01-01", "end": "2024-12-31"},
+            }
+        }
+
     def test_monitoring_timeline_is_read_only_and_requires_recheck_input(self) -> None:
         from app.runtime.final_selected_portfolios import build_selected_portfolio_monitoring_timeline
 
@@ -1499,6 +1516,166 @@ class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
         rows = {row["Symbol"]: row for row in freshness["rows"]}
         self.assertIn("benchmark", rows["SPY"]["Role"])
         self.assertFalse(freshness["execution_boundary"]["order_instruction"])
+
+    def test_selected_provider_evidence_ready_from_injected_provider_context(self) -> None:
+        from app.runtime.final_selected_portfolios import build_selected_portfolio_provider_evidence
+
+        evidence = build_selected_portfolio_provider_evidence(
+            self._selected_row(),
+            candidate_rows_by_id=self._candidate_rows_by_id(),
+            provider_context={
+                "display_rows": [
+                    {
+                        "Area": "ETF Operability",
+                        "Coverage": "actual",
+                        "Diagnostic Status": "PASS",
+                        "Coverage Weight": 100.0,
+                        "Source Mix": "official: 100.0%",
+                        "Freshness": "fresh",
+                        "As Of Range": "2026-05-28 -> 2026-05-28",
+                        "Summary": "ETF operability snapshot covers 100.0% of target weight.",
+                    },
+                    {
+                        "Area": "ETF Holdings",
+                        "Coverage": "actual",
+                        "Diagnostic Status": "PASS",
+                        "Coverage Weight": 100.0,
+                        "Source Mix": "official: 100.0%",
+                        "Freshness": "fresh",
+                        "As Of Range": "2026-05-28 -> 2026-05-28",
+                        "Summary": "ETF holdings snapshot covers 100.0% of target weight.",
+                    },
+                    {
+                        "Area": "ETF Exposure",
+                        "Coverage": "actual",
+                        "Diagnostic Status": "PASS",
+                        "Coverage Weight": 100.0,
+                        "Source Mix": "official: 100.0%",
+                        "Freshness": "fresh",
+                        "As Of Range": "2026-05-28 -> 2026-05-28",
+                        "Summary": "ETF exposure snapshot covers 100.0% of target weight.",
+                    },
+                    {
+                        "Area": "Macro Context",
+                        "Coverage": "actual",
+                        "Diagnostic Status": "PASS",
+                        "Coverage Weight": None,
+                        "Source Mix": "fred: 100.0%",
+                        "Freshness": "fresh",
+                        "As Of Range": "2026-05-28 -> 2026-05-28",
+                        "Summary": "Macro context is available.",
+                    },
+                ],
+                "look_through_board": {
+                    "status": "PASS",
+                    "holdings_coverage_weight": 100.0,
+                    "exposure_coverage_weight": 100.0,
+                    "unknown_exposure_weight": 0.0,
+                    "top_holding_weight": 9.5,
+                    "summary_rows": [{"Check": "Holdings coverage", "Status": "PASS"}],
+                },
+            },
+        )
+
+        self.assertEqual(evidence["schema_version"], "selected_provider_evidence_v1")
+        self.assertEqual(evidence["route"], "SELECTED_PROVIDER_READY")
+        self.assertEqual(evidence["metrics"]["provider_symbol_count"], 2)
+        self.assertEqual(evidence["metrics"]["needs_input_count"], 0)
+        self.assertEqual(evidence["symbol_weights"], {"QQQ": 50.0, "SPY": 50.0})
+        self.assertFalse(evidence["execution_boundary"]["db_write"])
+        self.assertFalse(evidence["execution_boundary"]["provider_collection"])
+        self.assertFalse(evidence["execution_boundary"]["monitoring_log_auto_write"])
+
+    def test_selected_provider_evidence_surfaces_not_run_without_writing(self) -> None:
+        from app.runtime.final_selected_portfolios import build_selected_portfolio_provider_evidence
+
+        evidence = build_selected_portfolio_provider_evidence(
+            self._selected_row(),
+            candidate_rows_by_id=self._candidate_rows_by_id(),
+            provider_context={
+                "display_rows": [
+                    {
+                        "Area": "ETF Operability",
+                        "Coverage": "actual",
+                        "Diagnostic Status": "PASS",
+                        "Coverage Weight": 100.0,
+                        "Source Mix": "official: 100.0%",
+                        "Freshness": "fresh",
+                        "As Of Range": "2026-05-28 -> 2026-05-28",
+                        "Summary": "ETF operability snapshot covers 100.0% of target weight.",
+                    },
+                    {
+                        "Area": "ETF Holdings",
+                        "Coverage": "not_run",
+                        "Diagnostic Status": "NOT_RUN",
+                        "Coverage Weight": 0.0,
+                        "Source Mix": "-",
+                        "Freshness": "missing",
+                        "As Of Range": "-",
+                        "Summary": "ETF holdings snapshot coverage is unavailable.",
+                    },
+                    {
+                        "Area": "ETF Exposure",
+                        "Coverage": "partial",
+                        "Diagnostic Status": "REVIEW",
+                        "Coverage Weight": 50.0,
+                        "Source Mix": "official: 50.0%",
+                        "Freshness": "stale",
+                        "As Of Range": "2026-04-01 -> 2026-04-01",
+                        "Summary": "ETF exposure snapshot covers 50.0% of target weight.",
+                    },
+                ],
+                "look_through_board": {
+                    "status": "REVIEW",
+                    "holdings_coverage_weight": 0.0,
+                    "exposure_coverage_weight": 50.0,
+                    "unknown_exposure_weight": 50.0,
+                    "top_holding_weight": 0.0,
+                },
+            },
+        )
+
+        self.assertEqual(evidence["route"], "SELECTED_PROVIDER_NEEDS_DATA")
+        self.assertEqual(evidence["metrics"]["needs_input_count"], 1)
+        self.assertEqual(evidence["metrics"]["review_count"], 1)
+        rows = {row["Area"]: row for row in evidence["rows"]}
+        self.assertEqual(rows["ETF Holdings"]["Status"], "NEEDS_INPUT")
+        self.assertEqual(rows["ETF Exposure"]["Status"], "REVIEW")
+        self.assertFalse(evidence["execution_boundary"]["registry_write"])
+        self.assertFalse(evidence["execution_boundary"]["order_instruction"])
+
+    def test_selected_provider_evidence_marks_component_fallback_as_review(self) -> None:
+        from app.runtime.final_selected_portfolios import build_selected_portfolio_provider_evidence
+
+        row = self._selected_row()
+        row["raw_decision"]["selected_components"][0]["universe"] = "SPY QQQ"
+
+        evidence = build_selected_portfolio_provider_evidence(
+            row,
+            candidate_rows_by_id={},
+            provider_context={
+                "display_rows": [
+                    {
+                        "Area": "ETF Operability",
+                        "Coverage": "actual",
+                        "Diagnostic Status": "PASS",
+                        "Coverage Weight": 100.0,
+                        "Source Mix": "official: 100.0%",
+                        "Freshness": "fresh",
+                        "As Of Range": "2026-05-28 -> 2026-05-28",
+                        "Summary": "ETF operability snapshot covers 100.0% of target weight.",
+                    }
+                ],
+                "look_through_board": {"status": "PASS"},
+            },
+        )
+
+        self.assertEqual(evidence["route"], "SELECTED_PROVIDER_REVIEW")
+        self.assertEqual(evidence["symbol_weights"], {"QQQ": 50.0, "SPY": 50.0})
+        self.assertEqual(evidence["metrics"]["fallback_contract_count"], 1)
+        rows = {row["Area"]: row for row in evidence["rows"]}
+        self.assertEqual(rows["Selected Symbol Contract"]["Status"], "REVIEW")
+        self.assertFalse(evidence["execution_boundary"]["monitoring_log_auto_write"])
 
 
 class DecisionDossierContractTests(unittest.TestCase):

@@ -21,6 +21,18 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-28 - Selected Dashboard should show provider evidence after selection
+- User request:
+  - 다음 작업 진행을 요청함.
+- Interpreted goal:
+  - 선정 이후 성과 재검증 전후로 ETF provider / holdings / exposure 근거도 현재 selected portfolio 기준으로 확인한다.
+- Analysis result:
+  - `selected_provider_evidence_v1`은 selected component ticker weight를 만들고 기존 DB provider context를 read-only로 읽는다.
+  - Provider `NOT_RUN`, partial coverage, stale evidence, replay contract fallback은 pass로 숨기지 않고 `NEEDS_DATA` 또는 `REVIEW`로 표시한다.
+  - provider 수집, JSONL 저장, monitoring log 저장, memo/preset 저장, approval/order/rebalance는 추가하지 않았다.
+- Follow-up:
+  - 다음 후보는 Practical Validation V2 P3 closeout QA 또는 remaining selected monitoring gap 점검이다.
+
 ### 2026-05-28 - Selected Dashboard should show symbol-level price freshness before recheck
 - User request:
   - 다음 작업 진행을 요청함.
