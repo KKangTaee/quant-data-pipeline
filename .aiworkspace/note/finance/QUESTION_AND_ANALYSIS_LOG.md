@@ -21,6 +21,18 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-28 - Earnings 고도화 1차는 missing reason과 quality action을 먼저 보강한다
+- User request:
+  - 남은 고도화 축 중 1번, Events / Earnings 데이터 품질 고도화를 먼저 진행해 달라고 요청함.
+- Interpreted goal:
+  - 새 공식 IR parser를 바로 붙이기보다, 기존 yfinance / Nasdaq 기반 수집 결과의 품질과 누락 이유를 사용자가 이해할 수 있어야 함.
+- Analysis result:
+  - Earnings collector가 `symbol_diagnostics`를 남기도록 보강했다. 주요 reason은 `no_provider_earnings_date`, `outside_window`, `provider_error`다.
+  - Ingestion / Overview refresh 결과에서 `Earnings Diagnostics` expander로 issue count, reason count, symbol-level detail을 확인할 수 있다.
+  - Overview Events row에는 `Quality Action`을 추가해 estimate-only, not-confirmed, stale row의 다음 조치를 표시한다.
+- Follow-up:
+  - 다음 고도화 후보는 Events 캘린더 UX 정리 또는 company IR official parser prototype이다.
+
 ### 2026-05-28 - BLS macro calendar는 공식 `.ics` import fallback으로 보강한다
 - User request:
   - BLS 자동 수집이 막힌 이유와 다른 경로를 확인한 뒤, 공식 `.ics` import 방향으로 진행해 달라고 요청함.

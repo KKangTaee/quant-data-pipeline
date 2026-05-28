@@ -287,6 +287,47 @@ class FinanceWorkspacePathContractTests(unittest.TestCase):
             self.assertNotIn("/.note/finance/", path_text)
 
 
+class JobResultArtifactContractTests(unittest.TestCase):
+    def test_earnings_symbol_diagnostics_become_failure_rows(self) -> None:
+        from app.jobs.result_artifacts import _extract_failure_rows
+
+        rows = _extract_failure_rows(
+            {
+                "job_name": "collect_earnings_calendar",
+                "status": "partial_success",
+                "started_at": "2026-05-28 10:00:00",
+                "finished_at": "2026-05-28 10:00:01",
+                "failed_symbols": ["AAA", "BBB"],
+                "message": "Earnings calendar completed with issues.",
+                "details": {
+                    "missing_symbols": ["AAA"],
+                    "symbol_diagnostics": [
+                        {
+                            "symbol": "AAA",
+                            "status": "missing",
+                            "reason": "outside_window",
+                            "detail": "Provider date was outside the selected window.",
+                        },
+                        {
+                            "symbol": "BBB",
+                            "status": "failed",
+                            "reason": "provider_error",
+                            "detail": "provider unavailable",
+                        },
+                    ]
+                },
+            }
+        )
+
+        self.assertEqual(
+            [(row["symbol"], row["kind"], row["detail"]) for row in rows],
+            [
+                ("AAA", "earnings_missing", "outside_window"),
+                ("BBB", "earnings_failed", "provider_error"),
+            ],
+        )
+
+
 class BacktestRuntimeContractTests(unittest.TestCase):
     def test_result_bundle_public_compatibility_contract_is_preserved(self) -> None:
         import app.runtime
@@ -692,11 +733,14 @@ class OverviewMarketIntelligenceServiceContractTests(unittest.TestCase):
         self.assertEqual(snapshot["coverage"]["event_count"], 3)
         self.assertEqual(snapshot["coverage"]["official_count"], 2)
         self.assertEqual(snapshot["coverage"]["estimate_count"], 1)
+        self.assertEqual(snapshot["coverage"]["estimate_only_count"], 1)
+        self.assertEqual(snapshot["coverage"]["action_required_count"], 1)
         self.assertEqual(snapshot["coverage"]["stale_estimate_count"], 0)
         self.assertEqual(set(snapshot["rows"]["Type"]), {"FOMC_MEETING", "EARNINGS"})
         earnings_row = snapshot["rows"][snapshot["rows"]["Type"] == "EARNINGS"].iloc[0]
         self.assertEqual(earnings_row["Source Type"], "Provider Estimate")
         self.assertEqual(earnings_row["Freshness"], "Current estimate")
+        self.assertEqual(earnings_row["Quality Action"], "Enable cross-check or refresh closer to date")
 
     def test_market_events_snapshot_macro_filter_reads_macro_prefix_rows(self) -> None:
         from app.services.overview_market_intelligence import build_market_events_snapshot
@@ -1345,6 +1389,41 @@ END:VCALENDAR
         self.assertEqual(row["source_type"], "provider_estimate")
         self.assertEqual(row["validation_status"], "estimate_only")
         self.assertEqual(row["raw_payload"]["provider_calendar"]["Earnings Average"], 1.23)
+        self.assertEqual(result["symbols_with_events"], 1)
+        self.assertEqual(result["missing_reason_counts"], {"no_provider_earnings_date": 1})
+        self.assertEqual(result["symbol_diagnostics"][0]["status"], "event_found")
+        self.assertEqual(result["symbol_diagnostics"][1]["reason"], "no_provider_earnings_date")
+        self.assertEqual(row["raw_payload"]["collection_quality"]["in_window_date_count"], 1)
+
+    def test_yfinance_earnings_calendar_diagnostics_explain_outside_window_and_errors(self) -> None:
+        from finance.data import market_intelligence as mi
+
+        calendars = {
+            "AAA": {"Earnings Date": [date(2026, 12, 30)]},
+            "BBB": RuntimeError("provider unavailable"),
+        }
+
+        class FakeTicker:
+            def __init__(self, symbol: str) -> None:
+                value = calendars[symbol]
+                if isinstance(value, Exception):
+                    raise value
+                self.calendar = value
+
+        result = mi.fetch_yfinance_earnings_calendar_events(
+            ["AAA", "BBB"],
+            start_date="2026-05-28",
+            lookahead_days=30,
+            ticker_factory=FakeTicker,
+        )
+
+        self.assertEqual(result["events_found"], 0)
+        self.assertEqual(result["missing_symbols"], ["AAA"])
+        self.assertEqual(result["failed_symbols"], ["BBB"])
+        self.assertEqual(result["missing_reason_counts"], {"outside_window": 1})
+        self.assertEqual(result["failed_reason_counts"], {"provider_error": 1})
+        self.assertEqual(result["symbol_diagnostics"][0]["provider_dates"], ["2026-12-30"])
+        self.assertEqual(result["symbol_diagnostics"][1]["detail"], "provider unavailable")
 
     def test_yfinance_earnings_calendar_can_cross_check_nasdaq_source(self) -> None:
         from finance.data import market_intelligence as mi

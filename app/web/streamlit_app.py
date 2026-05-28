@@ -600,6 +600,45 @@ def _render_inline_last_completed_result(*job_names: str) -> None:
     st.session_state.last_completed_result = None
 
 
+def _render_earnings_diagnostics(details: dict[str, Any]) -> None:
+    diagnostics = [item for item in details.get("symbol_diagnostics") or [] if isinstance(item, dict)]
+    if not diagnostics:
+        return
+    issue_rows = [
+        {
+            "Symbol": item.get("symbol") or "-",
+            "Status": item.get("status") or "-",
+            "Reason": item.get("reason") or "-",
+            "Detail": item.get("detail") or "-",
+            "Provider Dates": ", ".join(str(value) for value in item.get("provider_dates") or []),
+            "Event Dates": ", ".join(str(value) for value in item.get("event_dates") or []),
+        }
+        for item in diagnostics
+        if item.get("status") != "event_found"
+    ]
+    with st.expander(f"Earnings Diagnostics ({len(issue_rows)} issue symbols)", expanded=False):
+        metric_cols = st.columns(4)
+        metric_cols[0].metric("With Events", details.get("symbols_with_events") or 0)
+        metric_cols[1].metric("Missing", details.get("symbols_missing_count") or len(details.get("missing_symbols") or []))
+        metric_cols[2].metric("Failed", details.get("symbols_failed_count") or len(details.get("failed_symbols") or []))
+        metric_cols[3].metric("Events Found", details.get("events_found") or 0)
+        reason_rows = [
+            {"Status": "missing", "Reason": key, "Count": value}
+            for key, value in (details.get("missing_reason_counts") or {}).items()
+        ] + [
+            {"Status": "failed", "Reason": key, "Count": value}
+            for key, value in (details.get("failed_reason_counts") or {}).items()
+        ]
+        if reason_rows:
+            st.caption("Issue reason counts")
+            st.dataframe(pd.DataFrame(reason_rows), width="stretch", hide_index=True)
+        if issue_rows:
+            st.caption("Symbol-level issues")
+            st.dataframe(pd.DataFrame(issue_rows), width="stretch", hide_index=True)
+        else:
+            st.success("All requested symbols had at least one earnings date in the selected window.")
+
+
 def _render_result_summary(result: JobResult) -> None:
     banner = _status_to_banner(result["status"])
     banner(f'[{result["job_name"]}] {result["message"]}')
@@ -630,6 +669,8 @@ def _render_result_summary(result: JobResult) -> None:
 
     if failed_count:
         st.write("Failed Symbols:", ", ".join((result.get("failed_symbols") or [])[:20]))
+
+    _render_earnings_diagnostics(result.get("details") or {})
 
     with st.expander("Result Details", expanded=False):
         st.json(result)

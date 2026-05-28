@@ -362,6 +362,41 @@ def _render_market_job_result(result_key: str) -> None:
     if failed_symbols:
         with st.expander(f"Failed / Missing Symbols ({len(failed_symbols)})", expanded=False):
             st.write(", ".join(str(symbol) for symbol in failed_symbols[:100]))
+    diagnostics = [item for item in details.get("symbol_diagnostics") or [] if isinstance(item, dict)]
+    if diagnostics:
+        issue_rows = [
+            {
+                "Symbol": item.get("symbol") or "-",
+                "Status": item.get("status") or "-",
+                "Reason": item.get("reason") or "-",
+                "Detail": item.get("detail") or "-",
+                "Provider Dates": ", ".join(str(value) for value in item.get("provider_dates") or []),
+                "Event Dates": ", ".join(str(value) for value in item.get("event_dates") or []),
+            }
+            for item in diagnostics
+            if item.get("status") != "event_found"
+        ]
+        with st.expander(f"Earnings Diagnostics ({len(issue_rows)} issue symbols)", expanded=False):
+            metric_cols = st.columns(4)
+            metric_cols[0].metric("With Events", details.get("symbols_with_events") or 0)
+            metric_cols[1].metric("Missing", details.get("symbols_missing_count") or len(details.get("missing_symbols") or []))
+            metric_cols[2].metric("Failed", details.get("symbols_failed_count") or len(details.get("failed_symbols") or []))
+            metric_cols[3].metric("Events Found", details.get("events_found") or 0)
+            reason_rows = [
+                {"Status": "missing", "Reason": key, "Count": value}
+                for key, value in (details.get("missing_reason_counts") or {}).items()
+            ] + [
+                {"Status": "failed", "Reason": key, "Count": value}
+                for key, value in (details.get("failed_reason_counts") or {}).items()
+            ]
+            if reason_rows:
+                st.caption("Issue reason counts")
+                st.dataframe(pd.DataFrame(reason_rows), width="stretch", hide_index=True)
+            if issue_rows:
+                st.caption("Symbol-level issues")
+                st.dataframe(pd.DataFrame(issue_rows), width="stretch", hide_index=True)
+            else:
+                st.success("All requested symbols had at least one earnings date in the selected window.")
 
 
 def _store_overview_job_result(result_key: str, result: dict[str, Any]) -> None:
@@ -901,7 +936,7 @@ def _render_event_date_groups(rows: pd.DataFrame) -> None:
         return
     display_columns = [
         column
-        for column in ["Type Label", "Symbol", "Title", "Source Type", "Validation", "Freshness", "Age Days"]
+        for column in ["Type Label", "Symbol", "Title", "Source Type", "Validation", "Freshness", "Quality Action", "Age Days"]
         if column in rows.columns
     ]
     for date_value, day_rows in rows.sort_values(["Date Parsed", "Type Label", "Symbol"]).groupby("Date", sort=True):
@@ -1009,7 +1044,7 @@ def _render_events_tab() -> None:
                 "value": _snapshot_value(coverage.get("latest_collected_at")),
                 "detail": (
                     f"cross-checked: {coverage.get('cross_checked_count') or 0}, "
-                    f"not confirmed: {coverage.get('not_confirmed_count') or 0}"
+                    f"needs action: {coverage.get('action_required_count') or 0}"
                 ),
                 "tone": "warning" if coverage.get("stale_estimate_count") or coverage.get("not_confirmed_count") else "neutral",
             },

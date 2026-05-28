@@ -22,6 +22,8 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-28
+- Completed `.aiworkspace/note/finance/tasks/active/overview-mi-earnings-quality-hardening/`.
+- Added earnings symbol diagnostics for missing / outside-window / provider-error cases, surfaced diagnostics in Ingestion and Overview refresh results, and added Events `Quality Action` read-model guidance.
 - Completed `.aiworkspace/note/finance/tasks/active/overview-mi-bls-ics-import/`.
 - Added official BLS `.ics` file import fallback for Macro Calendar so CPI / PPI / Employment Situation rows can be stored when backend BLS requests return HTTP 403.
 - Ingestion Macro tab now exposes `.ics` upload/import; Data Health treats `import_bls_macro_calendar_ics` as a Macro Calendar refresh path.

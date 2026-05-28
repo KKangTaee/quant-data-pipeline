@@ -63,7 +63,14 @@ def _extract_failure_rows(result: dict[str, Any]) -> list[dict[str, Any]]:
     }
     rows: list[dict[str, Any]] = []
 
+    diagnostic_symbols = {
+        str(item.get("symbol") or "")
+        for item in details.get("symbol_diagnostics") or []
+        if item.get("symbol")
+    }
     for symbol in result.get("failed_symbols") or []:
+        if result.get("job_name") == "collect_earnings_calendar" and str(symbol) in diagnostic_symbols:
+            continue
         rows.append(
             {
                 **base,
@@ -81,6 +88,8 @@ def _extract_failure_rows(result: dict[str, Any]) -> list[dict[str, Any]]:
     }
     for key, kind in issue_mappings.items():
         for symbol in details.get(key) or []:
+            if result.get("job_name") == "collect_earnings_calendar" and str(symbol) in diagnostic_symbols:
+                continue
             rows.append(
                 {
                     **base,
@@ -89,6 +98,20 @@ def _extract_failure_rows(result: dict[str, Any]) -> list[dict[str, Any]]:
                     "detail": key,
                 }
             )
+
+    for item in details.get("symbol_diagnostics") or []:
+        symbol = item.get("symbol")
+        status = str(item.get("status") or "")
+        if not symbol or status == "event_found":
+            continue
+        rows.append(
+            {
+                **base,
+                "symbol": symbol,
+                "kind": f"earnings_{status}",
+                "detail": item.get("reason") or item.get("detail") or "unknown",
+            }
+        )
 
     for row in details.get("rows") or []:
         symbol = row.get("symbol")

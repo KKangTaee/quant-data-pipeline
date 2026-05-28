@@ -115,6 +115,8 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - Earnings row는 manual symbol list, latest S&P 500 movers, 또는 S&P 500 / Top1000 / Top2000 low-frequency batch에서 파생된 bounded symbol set을 대상으로 한다.
 - Nasdaq earnings calendar는 같은 symbol/date를 확인하는 alternate free provider cross-check로만 사용한다. `validation_status=cross_checked`는 official row를 뜻하지 않는다.
 - 날짜가 변경된 같은 symbol/source의 이전 active earnings estimate는 `event_status=superseded`로 남긴다.
+- 요청 ticker 중 저장 row가 없는 symbol의 missing / failure reason은 `market_event_calendar`에 별도 row로 쓰지 않고 job result의 `symbol_diagnostics`와 generated failure CSV에 남긴다.
+- Overview read model은 `Validation`, `Freshness`, `Quality Action`을 계산해 estimate-only / not-confirmed / stale row의 다음 조치를 표시한다.
 
 주의:
 
@@ -122,6 +124,7 @@ schema column 전체를 복제하지 않고, table의 source / derived / shadow 
 - FOMC의 `*` 표시는 Summary of Economic Projections 관련 meeting 의미이며 `raw_payload_json.has_summary_of_economic_projections`에 보존한다.
 - BLS schedule page는 공식 source지만 자동 요청이 HTTP 403으로 차단될 수 있다. 이 경우 macro collector는 가능한 source만 저장하고 partial failure를 job result에 남기며, BLS `.ics` import fallback으로 CPI / PPI / Jobs row를 보강한다.
 - earnings free source는 provider별 coverage / delay / 누락 가능성이 크므로 yfinance-only row는 `confidence=0.65`, Nasdaq cross-checked row는 `confidence=0.75`를 사용한다.
+- `symbol_diagnostics.reason`의 주요 값은 `no_provider_earnings_date`, `outside_window`, `provider_error`다. 이는 수집 운영 진단이며 event calendar fact row는 아니다.
 - generic company IR official parser는 아직 없다. 공식 source가 필요한 ticker는 후속 symbol-specific parser나 manual verification이 필요하다.
 - `raw_payload_json`은 UI 표시용 source of truth가 아니라 diagnostics와 후속 collector 개선을 위한 compact evidence다.
 

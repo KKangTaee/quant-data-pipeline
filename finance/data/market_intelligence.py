@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from collections import Counter
 from collections.abc import Callable, Iterable, Sequence
 from datetime import UTC, date, datetime, timedelta
 from io import StringIO
@@ -1400,6 +1401,38 @@ def _event_date_values(value: Any) -> list[str]:
     return out
 
 
+def _earnings_symbol_diagnostic(
+    *,
+    symbol: str,
+    status: str,
+    reason: str,
+    detail: str,
+    event_dates: Sequence[str] | None = None,
+    provider_dates: Sequence[str] | None = None,
+) -> dict[str, Any]:
+    return {
+        "symbol": _normalize_symbol(symbol),
+        "status": status,
+        "reason": reason,
+        "detail": detail,
+        "event_dates": list(event_dates or []),
+        "provider_dates": list(provider_dates or []),
+    }
+
+
+def _earnings_reason_counts(
+    diagnostics: Sequence[dict[str, Any]],
+    *,
+    statuses: set[str],
+) -> dict[str, int]:
+    counts = Counter(
+        str(item.get("reason") or "unknown")
+        for item in diagnostics
+        if str(item.get("status") or "") in statuses
+    )
+    return dict(sorted(counts.items()))
+
+
 def _parse_window_date(value: Any, *, default: date) -> date:
     parsed = _event_date_str(value)
     if not parsed:
@@ -1592,6 +1625,7 @@ def fetch_yfinance_earnings_calendar_events(
     events: list[dict[str, Any]] = []
     missing_symbols: list[str] = []
     failed_symbols: list[str] = []
+    symbol_diagnostics: list[dict[str, Any]] = []
 
     for index, symbol in enumerate(normalized_symbols):
         try:
@@ -1608,7 +1642,39 @@ def fetch_yfinance_earnings_calendar_events(
             ]
             if not in_window_dates:
                 missing_symbols.append(symbol)
+                if earnings_dates:
+                    symbol_diagnostics.append(
+                        _earnings_symbol_diagnostic(
+                            symbol=symbol,
+                            status="missing",
+                            reason="outside_window",
+                            detail=(
+                                f"Provider returned earnings date(s), but none are within "
+                                f"{window_start.isoformat()} to {window_end.isoformat()}."
+                            ),
+                            provider_dates=earnings_dates,
+                        )
+                    )
+                else:
+                    symbol_diagnostics.append(
+                        _earnings_symbol_diagnostic(
+                            symbol=symbol,
+                            status="missing",
+                            reason="no_provider_earnings_date",
+                            detail="Provider calendar did not include an upcoming earnings date.",
+                        )
+                    )
                 continue
+            symbol_diagnostics.append(
+                _earnings_symbol_diagnostic(
+                    symbol=symbol,
+                    status="event_found",
+                    reason="ok",
+                    detail="Provider calendar returned at least one earnings date in the selected window.",
+                    event_dates=in_window_dates,
+                    provider_dates=earnings_dates,
+                )
+            )
             for event_date in in_window_dates:
                 events.append(
                     {
@@ -1630,6 +1696,11 @@ def fetch_yfinance_earnings_calendar_events(
                             "window_start": window_start.isoformat(),
                             "window_end": window_end.isoformat(),
                             "source_url": EARNINGS_CALENDAR_SOURCE_URL,
+                            "collection_quality": {
+                                "symbol_status": "event_found",
+                                "provider_date_count": len(earnings_dates),
+                                "in_window_date_count": len(in_window_dates),
+                            },
                             "source_validation": {
                                 "source_type": "provider_estimate",
                                 "validation_status": "estimate_only",
@@ -1638,7 +1709,15 @@ def fetch_yfinance_earnings_calendar_events(
                     }
                 )
         except Exception as exc:
-            failed_symbols.append(f"{symbol}: {exc}")
+            failed_symbols.append(symbol)
+            symbol_diagnostics.append(
+                _earnings_symbol_diagnostic(
+                    symbol=symbol,
+                    status="failed",
+                    reason="provider_error",
+                    detail=str(exc),
+                )
+            )
         if request_sleep_sec > 0 and index < len(normalized_symbols) - 1:
             sleep(float(request_sleep_sec))
 
@@ -1674,6 +1753,16 @@ def fetch_yfinance_earnings_calendar_events(
         "events_found": len(events),
         "missing_symbols": missing_symbols,
         "failed_symbols": failed_symbols,
+        "symbol_diagnostics": symbol_diagnostics,
+        "missing_reason_counts": _earnings_reason_counts(symbol_diagnostics, statuses={"missing"}),
+        "failed_reason_counts": _earnings_reason_counts(symbol_diagnostics, statuses={"failed"}),
+        "symbols_with_events": len(
+            {
+                str(item.get("symbol") or "")
+                for item in symbol_diagnostics
+                if item.get("status") == "event_found"
+            }
+        ),
     }
 
 
@@ -1798,6 +1887,10 @@ def collect_and_store_earnings_calendar(
             "events_found": 0,
             "missing_symbols": [],
             "failed_symbols": [],
+            "symbol_diagnostics": [],
+            "missing_reason_counts": {},
+            "failed_reason_counts": {},
+            "symbols_with_events": 0,
             "event_dates": [],
             "collected_at": collected_at,
             "message": "No target symbols were available for earnings calendar collection.",
@@ -1837,6 +1930,21 @@ def collect_and_store_earnings_calendar(
         port=port,
     )
     event_dates = sorted({str(row["event_date"]) for row in events if row.get("event_date")})
+    symbol_diagnostics = list(result.get("symbol_diagnostics") or [])
+    if symbol_diagnostics:
+        missing_reason_counts = _earnings_reason_counts(symbol_diagnostics, statuses={"missing"})
+        failed_reason_counts = _earnings_reason_counts(symbol_diagnostics, statuses={"failed"})
+        symbols_with_events = len(
+            {
+                str(item.get("symbol") or "")
+                for item in symbol_diagnostics
+                if item.get("status") == "event_found"
+            }
+        )
+    else:
+        missing_reason_counts = dict(result.get("missing_reason_counts") or {})
+        failed_reason_counts = dict(result.get("failed_reason_counts") or {})
+        symbols_with_events = int(result.get("symbols_with_events") or 0)
     return {
         **result,
         "rows_written": rows_written,
@@ -1850,6 +1958,12 @@ def collect_and_store_earnings_calendar(
         "request_sleep_sec": request_sleep_sec,
         "target_symbols": target_symbols,
         "event_dates": event_dates,
+        "symbol_diagnostics": symbol_diagnostics,
+        "missing_reason_counts": missing_reason_counts,
+        "failed_reason_counts": failed_reason_counts,
+        "symbols_with_events": symbols_with_events,
+        "symbols_missing_count": len(result.get("missing_symbols") or []),
+        "symbols_failed_count": len(result.get("failed_symbols") or []),
         "superseded_rows_marked": superseded_rows_marked,
         "stale_rows_marked": stale_rows_marked,
         "collected_at": collected_at,

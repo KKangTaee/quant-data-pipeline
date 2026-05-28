@@ -72,6 +72,8 @@ http://localhost:8501
    - 결과는 `finance_meta.market_event_calendar`에 `event_type=EARNINGS`, `source=yfinance_calendar`, `source_type=provider_estimate`로 저장된다.
    - yfinance-only estimate는 `validation_status=estimate_only`, Nasdaq 확인 row는 `validation_status=cross_checked`, Nasdaq에서 확인하지 못한 row는 `validation_status=not_confirmed`가 된다.
    - 같은 symbol/source의 이전 active estimate는 새 수집 결과가 있으면 `event_status=superseded`로 정리된다.
+   - 수집 결과에는 `symbol_diagnostics`가 포함되며 `no_provider_earnings_date`, `outside_window`, `provider_error` 같은 missing / failure reason을 확인할 수 있다.
+   - Ingestion 실행 결과와 Overview refresh 결과의 `Earnings Diagnostics` expander에서 issue count, reason count, symbol-level detail을 확인한다.
 
 7. `Workspace > Overview > Events`
    - `All`, `FOMC`, `Earnings`, `Macro` filter를 바꿔 저장 row를 확인한다.
@@ -79,7 +81,7 @@ http://localhost:8501
    - `Calendar` 탭에서 event count timeline과 날짜별 grouped cards를 확인한다.
    - `Table` 탭에서 DB row-level detail을 확인한다.
    - `Source Type`에서 FOMC official row와 earnings provider estimate row를 구분한다.
-   - `Validation`, `Freshness`, `Age Days`, `Event Status`에서 cross-check 여부와 오래된 earnings estimate인지 확인한다.
+   - `Validation`, `Freshness`, `Quality Action`, `Age Days`, `Event Status`에서 cross-check 여부, 오래된 earnings estimate, 다음 조치가 필요한 row를 확인한다.
    - Overview의 refresh buttons도 ingestion job wrapper를 호출한다. UI render 중 직접 외부 source를 scraping하지 않는다.
 
 8. `Workspace > Overview > Data Health`
@@ -144,6 +146,8 @@ PY
 - Earnings rows have `source=yfinance_calendar`, `Source Type=Provider Estimate`, and a validation label.
 - Nasdaq cross-checked earnings rows have `Validation=Cross-checked` and higher confidence.
 - Earnings rows collected more than 14 days ago show `Freshness=Stale estimate` and a warning.
+- Earnings job results show `Earnings Diagnostics` when requested symbols are missing, outside the selected lookahead window, or fail at the provider layer.
+- Earnings event rows include `Quality Action`; `Estimate only` rows recommend cross-check or closer refresh, stale rows recommend refresh, and cross-checked rows show no action.
 - Overview Events displays `Calendar` and `Table` tabs with Window / Source Type / Validation filters.
 - Overview Events has a `Macro` filter and `Refresh Macro Calendar` button.
 - Overview Events `Latest Collection` updates after a successful collector run.
@@ -155,7 +159,7 @@ PY
 | Symptom | Likely Cause | Action |
 |---|---|---|
 | Earnings latest movers mode writes no rows | No latest S&P 500 intraday snapshot | Run S&P 500 market snapshot first or switch to manual symbols |
-| Some earnings symbols are missing | yfinance calendar has no upcoming date in the selected window | Check `failed_symbols` / `missing_symbols`; retry with wider lookahead or manual source |
+| Some earnings symbols are missing | yfinance calendar has no upcoming date, date is outside the selected window, or provider request failed | Open `Earnings Diagnostics`; retry with wider lookahead for `outside_window`, retry later for `provider_error`, or inspect ticker manually for `no_provider_earnings_date` |
 | Earnings row is not confirmed | Nasdaq cross-check did not find the same symbol on that event date | Treat as provider estimate only; refresh later or inspect company IR manually |
 | Old earnings date remains in DB | Estimate date changed | Overview hides superseded rows by default; inspect DB if an audit trail is needed |
 | Market Movers missing count is high | Provider quote rows missing or DB previous close missing | Open `Coverage Diagnostics`, then refresh OHLCV / snapshot source if needed |

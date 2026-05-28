@@ -947,11 +947,14 @@ def run_collect_earnings_calendar(
         else:
             status = "failed"
         events_found = int(result.get("events_found") or 0)
+        issue_suffix = ""
+        if surfaced_symbols:
+            issue_suffix = f" Missing/failed symbols: {len(surfaced_symbols)}."
         message = (
             f"Earnings calendar collected {events_found} events for {symbols_processed} / {symbols_requested} symbols."
             if rows_written > 0
             else "Earnings calendar collection wrote no rows."
-        )
+        ) + issue_suffix
         return _build_result(
             job_name=job_name,
             status=status,

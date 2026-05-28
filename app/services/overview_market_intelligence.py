@@ -70,6 +70,7 @@ EVENT_COLUMNS = [
     "Source Type",
     "Validation",
     "Freshness",
+    "Quality Action",
     "Event Status",
     "Age Days",
     "Source",
@@ -942,6 +943,8 @@ def _event_source_type(row: dict[str, Any]) -> str:
 
 def _event_validation_label(row: dict[str, Any]) -> str:
     status = str(row.get("validation_status") or "").strip().lower()
+    if not status and _event_source_type(row) == "Provider Estimate":
+        status = "estimate_only"
     labels = {
         "official": "Official",
         "estimate_only": "Estimate only",
@@ -1002,6 +1005,28 @@ def _event_freshness(row: dict[str, Any], *, today: date) -> str:
     return "Current source"
 
 
+def _event_quality_action(row: dict[str, Any], *, today: date) -> str:
+    event_type = _normalize_event_type_value(row.get("event_type"))
+    validation = _event_validation_label(row)
+    freshness = _event_freshness(row, today=today)
+    source_type = _event_source_type(row)
+    if freshness == "Stale estimate":
+        return "Refresh earnings calendar"
+    if event_type == "EARNINGS":
+        if validation == "Cross-checked":
+            return "No action"
+        if validation == "Not confirmed":
+            return "Treat as unconfirmed; retry later or inspect source"
+        if validation == "Estimate only":
+            return "Enable cross-check or refresh closer to date"
+        if source_type == "Official":
+            return "No action"
+        return "Inspect provider source"
+    if source_type == "Official":
+        return "No action"
+    return "Inspect source freshness"
+
+
 def _event_coverage(rows: list[dict[str, Any]], *, today: date) -> dict[str, Any]:
     source_types = [_event_source_type(row) for row in rows]
     freshness = [_event_freshness(row, today=today) for row in rows]
@@ -1018,9 +1043,15 @@ def _event_coverage(rows: list[dict[str, Any]], *, today: date) -> dict[str, Any
         "source_count": len({str(row.get("source") or "") for row in rows if row.get("source")}),
         "official_count": source_types.count("Official"),
         "estimate_count": source_types.count("Provider Estimate"),
+        "estimate_only_count": validation.count("Estimate only"),
         "cross_checked_count": validation.count("Cross-checked"),
         "not_confirmed_count": validation.count("Not confirmed"),
         "stale_estimate_count": freshness.count("Stale estimate"),
+        "action_required_count": sum(
+            1
+            for row in rows
+            if _event_quality_action(row, today=today) != "No action"
+        ),
         "superseded_count": statuses.count("Superseded"),
     }
 
@@ -1051,6 +1082,7 @@ def _event_rows_frame(rows: list[dict[str, Any]], *, today: date) -> pd.DataFram
             "Source Type": _event_source_type(row),
             "Validation": _event_validation_label(row),
             "Freshness": _event_freshness(row, today=today),
+            "Quality Action": _event_quality_action(row, today=today),
             "Event Status": _event_status_label(row),
             "Age Days": _event_collected_age_days(row, today=today),
             "Source": row.get("source") or "-",
