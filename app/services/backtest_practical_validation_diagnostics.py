@@ -22,6 +22,7 @@ from app.services.backtest_practical_validation_curve_context import (
     compact_curve_snapshot_from_bundle,
 )
 from app.services.backtest_practical_validation_provider_context import build_provider_context
+from app.services.backtest_validation_efficacy import build_validation_efficacy_audit
 from app.runtime import (
     FINAL_SELECTION_DECISION_V2_SCHEMA_VERSION,
     PRACTICAL_VALIDATION_RESULT_SCHEMA_VERSION,
@@ -1341,7 +1342,7 @@ def build_practical_validation_result(
         for idx, component in enumerate(active_components)
     ]
 
-    return {
+    result = {
         "schema_version": PRACTICAL_VALIDATION_RESULT_SCHEMA_VERSION,
         "validation_id": f"validation_{_slug(source_id)}_{uuid4().hex[:8]}",
         "selection_source_id": source_id,
@@ -1524,6 +1525,10 @@ def build_practical_validation_result(
         "selection_source_snapshot": source_row,
         "final_decision_schema_target": FINAL_SELECTION_DECISION_V2_SCHEMA_VERSION,
     }
+    validation_efficacy_audit = build_validation_efficacy_audit(result)
+    result["validation_efficacy_audit"] = validation_efficacy_audit
+    result["validation_efficacy_display_rows"] = list(validation_efficacy_audit.get("rows") or [])
+    return result
 
 
 __all__ = [

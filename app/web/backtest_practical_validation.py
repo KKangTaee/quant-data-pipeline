@@ -246,7 +246,7 @@ def _status_tone(status: Any) -> str:
         return "positive"
     if status_text == "BLOCKED":
         return "danger"
-    if status_text == "REVIEW":
+    if status_text in {"REVIEW", "NEEDS_INPUT"}:
         return "warning"
     return "neutral"
 
@@ -575,6 +575,7 @@ def _render_validation_result(validation_result: dict[str, Any]) -> None:
     )
     st.markdown("##### Input Evidence")
     st.dataframe(pd.DataFrame(validation_result.get("checks") or []), width="stretch", hide_index=True)
+    _render_validation_efficacy_audit(validation_result)
     st.markdown("##### Practical Diagnostics")
     diagnostic_rows = list(validation_result.get("diagnostic_display_rows") or [])
     if diagnostic_rows:
@@ -681,6 +682,37 @@ def _render_validation_result(validation_result: dict[str, Any]) -> None:
     if profile_score_rows:
         with st.expander("Profile-aware score breakdown", expanded=False):
             st.dataframe(pd.DataFrame(profile_score_rows), width="stretch", hide_index=True)
+
+
+def _render_validation_efficacy_audit(validation_result: dict[str, Any]) -> None:
+    audit = dict(validation_result.get("validation_efficacy_audit") or {})
+    rows = list(validation_result.get("validation_efficacy_display_rows") or audit.get("rows") or [])
+    if not rows:
+        return
+    metrics = dict(audit.get("metrics") or {})
+    boundary = dict(audit.get("execution_boundary") or {})
+    st.markdown("##### Validation Efficacy Audit")
+    render_badge_strip(
+        [
+            {
+                "label": "Route",
+                "value": audit.get("route_label") or audit.get("route") or "-",
+                "tone": _status_tone(audit.get("overall_status")),
+            },
+            {"label": "PASS", "value": metrics.get("pass", 0), "tone": "positive"},
+            {"label": "REVIEW", "value": metrics.get("review", 0), "tone": "warning"},
+            {"label": "NEEDS_INPUT", "value": metrics.get("needs_input", 0), "tone": "warning"},
+            {"label": "BLOCKED", "value": metrics.get("blocked", 0), "tone": "danger"},
+            {
+                "label": "Writes",
+                "value": "Disabled" if not boundary.get("db_write") and not boundary.get("registry_write") else "Review",
+                "tone": "neutral",
+            },
+        ]
+    )
+    st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+    if audit.get("conclusion"):
+        st.caption(str(audit.get("conclusion")))
 
 
 def render_practical_validation_workspace() -> None:

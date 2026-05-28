@@ -22,6 +22,10 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-28
+- Completed `.aiworkspace/note/finance/tasks/active/validation-efficacy-hardening-v1/`.
+- Practical Validation and Final Review now show a read-only Validation Efficacy Audit for runtime replay, period coverage, benchmark parity, provider freshness, robustness, PIT / look-ahead, survivorship / universe, and execution/storage boundary gaps.
+- The audit uses existing compact evidence only; no DB write, new JSONL registry, user memo, preset, approval, order, or rebalance behavior was added.
+- Next decision is whether to turn parts of this audit into selected-route gate policy or move to Backtest Realism / Data Coverage hardening.
 - Completed `.aiworkspace/note/finance/tasks/active/practical-validation-v2-p3-closeout-qa/`.
 - Practical Validation V2 P3 selected monitoring integration is now closeout complete: continuity, recheck comparison, recheck readiness, symbol freshness, and selected provider evidence passed service / boundary QA.
 - Next work should open a new task / phase for validation efficacy, backtest realism, or data coverage hardening rather than extending P3.

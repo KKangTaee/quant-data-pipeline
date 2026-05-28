@@ -21,6 +21,18 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-28 - Validation efficacy must be visible before final selection
+- User request:
+  - 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - Practical Validation / Final Review의 검증 효력을 높이되, 새 memo / preset / monitoring storage를 늘리지 않는다.
+- Analysis result:
+  - `validation_efficacy_audit_v1`은 기존 compact validation evidence만 읽어 runtime replay, period coverage, benchmark parity, provider freshness, robustness, PIT / look-ahead, survivorship / universe, execution/storage boundary를 `PASS / REVIEW / NEEDS_INPUT / BLOCKED`로 분리한다.
+  - missing runtime replay, stale / missing provider evidence, 명시되지 않은 survivorship evidence는 pass로 추론하지 않는다.
+  - 새 DB write, JSONL registry, user memo, preset, approval, order, auto rebalance는 추가하지 않았다.
+- Follow-up:
+  - 다음 결정은 Validation Efficacy audit을 selected-route gate policy에 연결할지, 또는 Backtest Realism / Data Coverage hardening으로 넘어갈지다.
+
 ### 2026-05-28 - Practical Validation V2 P3 selected monitoring can close out
 - User request:
   - 다음 작업 진행을 요청함.

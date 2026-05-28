@@ -103,6 +103,7 @@ import app.services.backtest_practical_validation
 import app.services.backtest_practical_validation_provider_context
 import app.services.backtest_practical_validation_replay
 import app.services.backtest_practical_validation_source
+import app.services.backtest_validation_efficacy
 print("streamlit" in sys.modules)
 """
         result = subprocess.run(
@@ -141,6 +142,7 @@ import app.services.backtest_practical_validation_curve_context
 import app.services.backtest_practical_validation_provider_context
 import app.services.backtest_practical_validation_stress_sensitivity
 import app.services.backtest_practical_validation_source
+import app.services.backtest_validation_efficacy
 print("streamlit" in sys.modules)
 print(importlib.util.find_spec("app.web.backtest_practical_validation_curve") is None)
 print(importlib.util.find_spec("app.web.backtest_practical_validation_connectors") is None)
@@ -153,6 +155,104 @@ print(importlib.util.find_spec("app.web.backtest_practical_validation_connectors
         )
 
         self.assertEqual(result.stdout.splitlines(), ["False", "True", "True"])
+
+
+class ValidationEfficacyAuditContractTests(unittest.TestCase):
+    def test_ready_audit_uses_compact_evidence_without_writes(self) -> None:
+        from app.services.backtest_validation_efficacy import (
+            VALIDATION_EFFICACY_READY,
+            build_validation_efficacy_audit,
+        )
+
+        audit = build_validation_efficacy_audit(
+            {
+                "selection_source_id": "source-ready",
+                "checks": [
+                    {"Criteria": "Selection source", "Ready": True, "Current": "source-ready"},
+                    {"Criteria": "Active components", "Ready": True, "Current": "3"},
+                    {"Criteria": "Target weight total", "Ready": True, "Current": "100.00%"},
+                    {"Criteria": "Data Trust", "Ready": True, "Current": "ok"},
+                    {"Criteria": "Runtime recheck", "Ready": True, "Current": "PASS"},
+                    {"Criteria": "Runtime period coverage", "Ready": True, "Current": "PASS"},
+                    {"Criteria": "Provider coverage", "Ready": True, "Current": "PASS"},
+                    {"Criteria": "Benchmark parity", "Ready": True, "Current": "PASS"},
+                ],
+                "curve_evidence": {
+                    "portfolio_curve_source": "actual_runtime_replay",
+                    "portfolio_curve_rows": 120,
+                    "curve_provenance": {
+                        "portfolio_curve_source": "actual_runtime_replay",
+                        "portfolio_curve_rows": 120,
+                        "runtime_recheck_status": "PASS",
+                        "runtime_recheck_id": "replay-1",
+                        "period_coverage_status": "PASS",
+                        "runtime_recheck_mode": "latest_market_replay",
+                        "actual_period": {"start": "2020-01-31", "end": "2026-05-20"},
+                        "requested_period": {"start": "2020-01-31", "end": "2026-05-20"},
+                    },
+                    "period_coverage": {
+                        "status": "PASS",
+                        "actual_period": {"start": "2020-01-31", "end": "2026-05-20"},
+                        "requested_period": {"start": "2020-01-31", "end": "2026-05-20"},
+                    },
+                    "benchmark_parity": {
+                        "status": "PASS",
+                        "metrics": {"coverage_ratio": 1.0, "same_period": True, "same_frequency": True},
+                    },
+                },
+                "provider_coverage_display_rows": [
+                    {"Area": "ETF Operability", "Diagnostic Status": "PASS", "Freshness": "fresh"},
+                    {"Area": "ETF Holdings", "Diagnostic Status": "PASS", "Freshness": "fresh"},
+                    {"Area": "ETF Exposure", "Diagnostic Status": "PASS", "Freshness": "fresh"},
+                    {"Area": "Macro Context", "Diagnostic Status": "PASS", "Freshness": "fresh"},
+                ],
+                "robustness_validation": {
+                    "robustness_route": "READY_FOR_STRESS_SWEEP",
+                    "robustness_lab_board": {"status": "PASS", "summary": "stress / rolling / sensitivity attached"},
+                },
+                "survivorship_control": {"status": "controlled"},
+                "diagnostic_summary": {"status_counts": {"NOT_RUN": 0}},
+            }
+        )
+
+        self.assertEqual(audit["route"], VALIDATION_EFFICACY_READY)
+        self.assertEqual(audit["metrics"]["pass"], 10)
+        self.assertFalse(audit["execution_boundary"]["db_write"])
+        self.assertFalse(audit["execution_boundary"]["registry_write"])
+        self.assertFalse(audit["execution_boundary"]["memo_persistence"])
+
+    def test_missing_runtime_and_provider_evidence_are_not_passed(self) -> None:
+        from app.services.backtest_validation_efficacy import (
+            VALIDATION_EFFICACY_NEEDS_INPUT,
+            build_validation_efficacy_audit,
+        )
+
+        audit = build_validation_efficacy_audit(
+            {
+                "selection_source_id": "source-gap",
+                "checks": [
+                    {"Criteria": "Selection source", "Ready": True, "Current": "source-gap"},
+                    {"Criteria": "Active components", "Ready": True, "Current": "2"},
+                    {"Criteria": "Target weight total", "Ready": True, "Current": "100.00%"},
+                    {"Criteria": "Data Trust", "Ready": True, "Current": "ok"},
+                    {"Criteria": "Runtime recheck", "Ready": False, "Current": "NOT_RUN"},
+                    {"Criteria": "Runtime period coverage", "Ready": False, "Current": "NOT_RUN"},
+                    {"Criteria": "Provider coverage", "Ready": False, "Current": "NOT_RUN"},
+                    {"Criteria": "Benchmark parity", "Ready": False, "Current": "NOT_RUN"},
+                ],
+                "provider_coverage_display_rows": [
+                    {"Area": "ETF Operability", "Diagnostic Status": "NOT_RUN", "Freshness": "not_run"},
+                    {"Area": "ETF Holdings", "Diagnostic Status": "NOT_RUN", "Freshness": "not_run"},
+                ],
+                "diagnostic_summary": {"status_counts": {"NOT_RUN": 4}},
+            }
+        )
+
+        rows_by_criteria = {row["Criteria"]: row for row in audit["rows"]}
+        self.assertEqual(audit["route"], VALIDATION_EFFICACY_NEEDS_INPUT)
+        self.assertEqual(rows_by_criteria["Runtime replay evidence"]["Status"], "NEEDS_INPUT")
+        self.assertEqual(rows_by_criteria["Provider / freshness evidence"]["Status"], "NEEDS_INPUT")
+        self.assertEqual(rows_by_criteria["Survivorship / universe guard"]["Status"], "REVIEW")
 
 
 class PracticalValidationDiagnosticsServiceContractTests(unittest.TestCase):
@@ -888,6 +988,17 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
                         "Current": "REVIEW",
                     }
                 ],
+                "validation_efficacy_audit": {
+                    "rows": [
+                        {
+                            "Criteria": "Runtime replay evidence",
+                            "Status": "NEEDS_INPUT",
+                            "Ready": False,
+                            "Current": "NOT_RUN",
+                            "Meaning": "runtime replay gap",
+                        }
+                    ]
+                },
                 "provider_look_through_board": {
                     "summary_rows": [
                         {
@@ -926,6 +1037,7 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
             [
                 "Final Review Evidence",
                 "Validation",
+                "Validation Efficacy",
                 "Look-through Exposure",
                 "Robustness Lab",
                 "Robustness",
@@ -935,12 +1047,14 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertEqual(rows[0]["Criteria"], "Evidence route")
         self.assertTrue(rows[0]["Ready"])
         self.assertEqual(rows[1]["Current"], "REVIEW")
-        self.assertEqual(rows[2]["Criteria"], "Holdings Coverage")
-        self.assertTrue(rows[2]["Ready"])
-        self.assertEqual(rows[3]["Criteria"], "Sensitivity coverage")
-        self.assertFalse(rows[3]["Ready"])
-        self.assertEqual(rows[4]["Current"], "WATCH")
-        self.assertEqual(rows[5]["Current"], "OPTIONAL")
+        self.assertEqual(rows[2]["Criteria"], "Runtime replay evidence")
+        self.assertFalse(rows[2]["Ready"])
+        self.assertEqual(rows[3]["Criteria"], "Holdings Coverage")
+        self.assertTrue(rows[3]["Ready"])
+        self.assertEqual(rows[4]["Criteria"], "Sensitivity coverage")
+        self.assertFalse(rows[4]["Ready"])
+        self.assertEqual(rows[5]["Current"], "WATCH")
+        self.assertEqual(rows[6]["Current"], "OPTIONAL")
 
     def test_investability_packet_ready_contract_is_ui_neutral(self) -> None:
         from app.services.backtest_evidence_read_model import build_investability_evidence_packet
@@ -964,6 +1078,19 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
                 }
             },
             "robustness_validation": {"robustness_route": "READY_FOR_STRESS_SWEEP"},
+            "validation_efficacy_audit": {
+                "route": "VALIDATION_EFFICACY_READY",
+                "route_label": "Ready",
+                "rows": [
+                    {
+                        "Criteria": "Runtime replay evidence",
+                        "Status": "PASS",
+                        "Ready": True,
+                        "Current": "PASS",
+                        "Meaning": "runtime replay attached",
+                    }
+                ],
+            },
         }
 
         packet = build_investability_evidence_packet(
@@ -980,6 +1107,9 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertEqual(packet["critical_gaps"], [])
         self.assertEqual(packet["gate_policy_snapshot"]["outcome"], "select_ready")
         self.assertTrue(packet["gate_policy_snapshot"]["select_allowed"])
+        sections = [row["Section"] for row in packet["checks"]]
+        self.assertIn("Validation Efficacy Audit", sections)
+        self.assertEqual(packet["summary"]["validation_efficacy_route"], "VALIDATION_EFFICACY_READY")
         assumptions = [row["Assumption"] for row in packet["assumptions_and_limits"]]
         self.assertIn("Hypothetical backtest", assumptions)
         self.assertIn("No live approval / order", assumptions)

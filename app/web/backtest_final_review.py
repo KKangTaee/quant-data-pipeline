@@ -50,7 +50,7 @@ def _status_tone(status: Any) -> str:
         return "positive"
     if status_text == "BLOCKED":
         return "danger"
-    if status_text == "REVIEW":
+    if status_text in {"REVIEW", "NEEDS_INPUT"}:
         return "warning"
     return "neutral"
 
@@ -164,6 +164,32 @@ def _render_robustness_lab_summary(board: dict[str, Any]) -> None:
         st.caption("Limitations: " + " / ".join(str(item) for item in limitations))
 
 
+def _render_validation_efficacy_summary(validation: dict[str, Any]) -> None:
+    audit = dict(validation.get("validation_efficacy_audit") or {})
+    rows = list(validation.get("validation_efficacy_display_rows") or audit.get("rows") or [])
+    if not rows:
+        return
+    metrics = dict(audit.get("metrics") or {})
+    st.markdown("###### Validation Efficacy")
+    render_badge_strip(
+        [
+            {
+                "label": "Route",
+                "value": audit.get("route_label") or audit.get("route") or "-",
+                "tone": _status_tone(audit.get("overall_status")),
+            },
+            {"label": "PASS", "value": metrics.get("pass", 0), "tone": "positive"},
+            {"label": "REVIEW", "value": metrics.get("review", 0), "tone": "warning"},
+            {"label": "NEEDS_INPUT", "value": metrics.get("needs_input", 0), "tone": "warning"},
+            {"label": "BLOCKED", "value": metrics.get("blocked", 0), "tone": "danger"},
+        ]
+    )
+    with st.expander("Validation efficacy rows", expanded=False):
+        st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+        if audit.get("next_action"):
+            st.caption(str(audit.get("next_action")))
+
+
 def _render_validation_summary(validation: dict[str, Any]) -> None:
     metrics = dict(validation.get("metrics") or {})
     route = str(validation.get("validation_route") or "-")
@@ -189,6 +215,7 @@ def _render_validation_summary(validation: dict[str, Any]) -> None:
         st.info("최종 검토에 연결된 component가 없습니다.")
     else:
         st.dataframe(component_df, width="stretch", hide_index=True)
+    _render_validation_efficacy_summary(validation)
     diagnostic_rows = list(validation.get("diagnostic_display_rows") or [])
     if diagnostic_rows:
         st.markdown("###### Practical Diagnostics")

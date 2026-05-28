@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.services.backtest_validation_efficacy import build_validation_efficacy_audit
+
 
 SELECT_FOR_PRACTICAL_PORTFOLIO = "SELECT_FOR_PRACTICAL_PORTFOLIO"
 DECISION_DOSSIER_SCHEMA_VERSION = "decision_dossier_v1"
@@ -577,6 +579,10 @@ def build_investability_evidence_packet(
     critical_gaps = _critical_gap_rows(validation, paper_observation, decision_evidence)
     blocking_gaps = [gap for gap in critical_gaps if str(gap.get("Severity") or "") == "BLOCK"]
     assumptions = _assumption_rows(validation)
+    validation_efficacy_audit = dict(
+        validation.get("validation_efficacy_audit") or build_validation_efficacy_audit(validation)
+    )
+    validation_efficacy_route = str(validation_efficacy_audit.get("route") or "")
     source_chain = {
         "source_type": source.get("source_type") or validation.get("source_type"),
         "source_id": source.get("source_id") or validation.get("selection_source_id"),
@@ -636,6 +642,12 @@ def build_investability_evidence_packet(
             "Meaning": "critical NOT_RUN, hard blocker, evidence blocker가 선택을 막는지 봅니다.",
         },
         {
+            "Section": "Validation Efficacy Audit",
+            "Ready": validation_efficacy_route == "VALIDATION_EFFICACY_READY",
+            "Current": validation_efficacy_audit.get("route_label") or validation_efficacy_route or "-",
+            "Meaning": "PIT / replay / benchmark / provider / robustness evidence gap을 최종 선택 전에 분리해서 봅니다.",
+        },
+        {
             "Section": "Execution Boundary",
             "Ready": True,
             "Current": "live approval disabled / order disabled",
@@ -691,6 +703,7 @@ def build_investability_evidence_packet(
         "critical_gaps": critical_gaps,
         "gate_policy_snapshot": gate_policy,
         "assumptions_and_limits": assumptions,
+        "validation_efficacy_audit": validation_efficacy_audit,
         "summary": {
             "pass": int(status_counts.get("PASS", 0) or 0),
             "review": int(status_counts.get("REVIEW", 0) or 0),
@@ -700,6 +713,7 @@ def build_investability_evidence_packet(
             "decision_evidence_route": decision_evidence.get("route"),
             "robustness_route": robustness.get("robustness_route"),
             "gate_policy_outcome": gate_policy.get("outcome"),
+            "validation_efficacy_route": validation_efficacy_audit.get("route"),
         },
     }
 
@@ -827,10 +841,14 @@ def build_final_decision_evidence_rows(row: dict[str, Any]) -> list[dict[str, An
         provider_context = dict(risk_snapshot.get("provider_coverage") or {})
         look_through = dict(provider_context.get("look_through_board") or {})
     robustness_lab = dict(robustness.get("robustness_lab_board") or risk_snapshot.get("robustness_lab_board") or {})
+    validation_efficacy = dict(
+        risk_snapshot.get("validation_efficacy_audit") or packet.get("validation_efficacy_audit") or {}
+    )
     _append_check_rows(display_rows, area="Final Review Evidence", checks=list(evidence.get("checks") or []))
     _append_check_rows(display_rows, area="Investability Packet", checks=list(packet.get("checks") or []))
     _append_check_rows(display_rows, area="Gate Policy", checks=list(gate_policy.get("policy_rows") or []))
     _append_check_rows(display_rows, area="Validation", checks=list(risk_snapshot.get("validation_checks") or []))
+    _append_check_rows(display_rows, area="Validation Efficacy", checks=list(validation_efficacy.get("rows") or []))
     _append_check_rows(display_rows, area="Look-through Exposure", checks=list(look_through.get("summary_rows") or []))
     _append_check_rows(display_rows, area="Robustness Lab", checks=list(robustness_lab.get("summary_rows") or []))
     _append_check_rows(display_rows, area="Robustness", checks=list(robustness.get("checks") or []))

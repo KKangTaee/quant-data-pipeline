@@ -7,6 +7,7 @@ Last Verified: 2026-05-28
 
 | Track | Status | Notes |
 |---|---|---|
+| Validation Efficacy Hardening V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/validation-efficacy-hardening-v1/`; Practical Validation / Final Review가 기존 compact evidence를 읽어 runtime replay, period coverage, benchmark parity, provider freshness, robustness, PIT / look-ahead, survivorship / universe, storage boundary gap을 read-only audit으로 표시 |
 | Practical Validation V2 P3 Closeout QA | Complete | `.aiworkspace/note/finance/tasks/active/practical-validation-v2-p3-closeout-qa/`; selected monitoring read models 통합 QA와 저장 경계 확인 완료 |
 | Practical Validation V2 P3 Selected Provider Evidence | Implementation complete | `.aiworkspace/note/finance/tasks/active/practical-validation-v2-p3-selected-provider-evidence/`; Selected Dashboard가 selected component ticker weight로 기존 DB provider / holdings / exposure context를 read-only로 읽고 `NOT_RUN` / stale / partial coverage를 표시 |
 | Practical Validation V2 P3 Symbol Freshness | Implementation complete | `.aiworkspace/note/finance/tasks/active/practical-validation-v2-p3-symbol-freshness/`; Selected Dashboard Performance Recheck 전 ticker / benchmark별 DB price latest date와 stale / missing 상태를 read-only로 표시 |
@@ -91,5 +92,5 @@ P2에서 정상화하는 주요 진단:
 ## Next Decisions
 
 - UI Engine Boundary Cleanup은 완료됐다. 다음 구조 작업은 새 phase/task로 열고, 현재 경계는 boundary lint와 service contract test를 먼저 통과시키는 기준으로 유지한다.
-- Practical Validation V2 P3는 selected monitoring 연결과 closeout QA를 완료했다. 다음 작업은 P3 연장이 아니라 Validation Efficacy Hardening, Backtest Realism Hardening, Data Coverage Hardening 중 하나를 새 task / phase로 여는 것이다.
+- Practical Validation V2 P3는 selected monitoring 연결과 closeout QA를 완료했다. Validation Efficacy Hardening V1은 read-only audit board로 첫 slice를 완료했다. 다음 작업은 이 audit을 gate policy에 반영할지, Backtest Realism Hardening으로 비용 / slippage / execution realism을 보강할지, Data Coverage Hardening으로 PIT / survivorship evidence를 DB-backed로 보강할지 결정하는 것이다.
 - Structured Waiver Policy V1은 구현 없이 정책만 확정했다. Waiver UI / persistence는 아직 별도 구현 task로 열지 않았다.
