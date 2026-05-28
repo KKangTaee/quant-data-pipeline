@@ -14,18 +14,17 @@ Last Updated: 2026-05-28
 - Product gap analysis completed under `.aiworkspace/note/finance/researches/active/2026-05-investable-workflow-gap-analysis/`.
 - Final Review now has an Investability Evidence Packet and selected-route gate.
 - Final decision row stores a compact packet snapshot without adding a new JSONL registry.
+- `validation-gate-hardening-v1` implemented a profile-aware gate policy matrix and compact `gate_policy_snapshot`.
 
 ## In Progress
 
-- Phase 0 documentation bundle.
-- Roadmap / active phase index / root handoff log alignment.
+- Decide whether the next task should be storage governance audit or data provenance / coverage.
 
 ## Next
 
-1. Review this phase board with the user.
-2. Start `validation-gate-hardening-v1` after direction confirmation.
-3. Decide structured waiver policy before allowing selected-route override.
-4. Use `storage-governance-audit-v1` before adding any new persistence surface.
+1. Review whether to start `storage-governance-audit-v1` before data provenance work.
+2. Decide structured waiver policy before allowing selected-route override.
+3. Use `data-provenance-coverage-v1` before strict look-through board work.
 
 ## Current Defaults
 

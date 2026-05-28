@@ -706,6 +706,8 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertEqual(packet["source_chain"]["selection_source_id"], "source-ready")
         self.assertEqual(packet["summary"]["not_run"], 0)
         self.assertEqual(packet["critical_gaps"], [])
+        self.assertEqual(packet["gate_policy_snapshot"]["outcome"], "select_ready")
+        self.assertTrue(packet["gate_policy_snapshot"]["select_allowed"])
         assumptions = [row["Assumption"] for row in packet["assumptions_and_limits"]]
         self.assertIn("Hypothetical backtest", assumptions)
         self.assertIn("No live approval / order", assumptions)
@@ -754,8 +756,62 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
 
         self.assertEqual(packet["route"], "INVESTABILITY_PACKET_BLOCKED")
         self.assertFalse(packet["select_ready"])
+        self.assertEqual(packet["gate_policy_snapshot"]["outcome"], "blocked")
+        self.assertTrue(packet["gate_policy_snapshot"]["waiver_required_for_select"])
         self.assertFalse(selected_gate["Ready"])
         self.assertTrue(hold_gate["Ready"])
+
+    def test_gate_policy_blocks_selected_route_on_provider_review_for_balanced_profile(self) -> None:
+        from app.services.backtest_evidence_read_model import (
+            SELECT_FOR_PRACTICAL_PORTFOLIO,
+            build_investability_evidence_packet,
+            build_selected_route_gate,
+        )
+
+        packet = build_investability_evidence_packet(
+            source={"source_type": "practical_validation_result", "source_id": "validation-provider-review"},
+            validation={
+                "selection_source_id": "source-provider-review",
+                "validation_id": "validation-provider-review",
+                "validation_profile": {"profile_id": "balanced_core", "profile_label": "균형형"},
+                "diagnostic_summary": {
+                    "status_counts": {"PASS": 11, "REVIEW": 1, "BLOCKED": 0, "NOT_RUN": 0}
+                },
+                "checks": [
+                    {"Criteria": "Data Trust", "Ready": True, "Current": "ok"},
+                    {"Criteria": "Runtime recheck", "Ready": True, "Current": "PASS"},
+                    {"Criteria": "Runtime period coverage", "Ready": True, "Current": "PASS"},
+                    {"Criteria": "Provider coverage", "Ready": True, "Current": "REVIEW"},
+                    {"Criteria": "Benchmark parity", "Ready": True, "Current": "PASS"},
+                ],
+                "diagnostic_results": [
+                    {
+                        "domain": "operability_cost_liquidity",
+                        "title": "10. Operability / Cost / Liquidity",
+                        "status": "REVIEW",
+                        "next_action": "provider actual evidence 보강",
+                    }
+                ],
+                "robustness_validation": {"robustness_route": "READY_FOR_STRESS_SWEEP"},
+            },
+            paper_observation={"route": "PAPER_OBSERVATION_READY", "blockers": []},
+            decision_evidence={"route": "READY_FOR_FINAL_DECISION", "blockers": []},
+        )
+        selected_gate = build_selected_route_gate(
+            decision_route=SELECT_FOR_PRACTICAL_PORTFOLIO,
+            investability_packet=packet,
+        )
+
+        self.assertEqual(packet["route"], "INVESTABILITY_PACKET_NEEDS_REVIEW")
+        self.assertFalse(packet["select_ready"])
+        self.assertEqual(packet["gate_policy_snapshot"]["outcome"], "hold_or_re_review")
+        self.assertFalse(selected_gate["Ready"])
+        self.assertTrue(
+            any(
+                row["Group"] == "provider_coverage" and row["Severity"] == "REVIEW_REQUIRED"
+                for row in packet["gate_policy_snapshot"]["policy_rows"]
+            )
+        )
 
     def test_final_review_save_evaluation_uses_investability_packet_gate(self) -> None:
         from app.web.backtest_final_review_helpers import _build_final_review_save_evaluation
@@ -784,6 +840,43 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertFalse(selected["can_save"])
         self.assertIn("Investability evidence packet", selected["blockers"])
         self.assertTrue(hold["can_save"])
+
+    def test_final_review_decision_row_stores_compact_gate_policy_snapshot(self) -> None:
+        from app.web.backtest_final_review_helpers import _build_final_review_decision_row
+
+        packet = {
+            "route": "INVESTABILITY_PACKET_READY",
+            "select_ready": True,
+            "gate_policy_snapshot": {
+                "schema_version": "investability_gate_policy_v1",
+                "outcome": "select_ready",
+                "select_allowed": True,
+                "policy_rows": [
+                    {
+                        "Criteria": "Benchmark Parity",
+                        "Group": "benchmark",
+                        "Ready": True,
+                        "Severity": "PASS",
+                    }
+                ],
+            },
+        }
+
+        row = _build_final_review_decision_row(
+            source={"source_id": "source-row", "source_type": "practical_validation_result"},
+            validation={"selection_source_id": "source-row", "validation_id": "validation-row"},
+            paper_observation={"active_components": [], "checks": []},
+            evidence={"route": "READY_FOR_FINAL_DECISION", "checks": [], "blockers": []},
+            investability_packet=packet,
+            decision_id="decision-row",
+            decision_route="SELECT_FOR_PRACTICAL_PORTFOLIO",
+            operator_reason="reason",
+            operator_constraints="constraints",
+            operator_next_action="next",
+        )
+
+        self.assertEqual(row["gate_policy_snapshot"]["outcome"], "select_ready")
+        self.assertEqual(row["gate_policy_snapshot"]["policy_rows"][0]["Group"], "benchmark")
 
 
 if __name__ == "__main__":

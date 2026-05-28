@@ -21,6 +21,19 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-28 - Final Review selected route는 profile-aware gate policy를 통과해야 한다
+- User request:
+  - Phase 0 다음 단계 진행을 요청함.
+- Interpreted goal:
+  - V1 evidence packet을 더 명시적인 gate policy matrix로 강화하고, selected route가 어떤 이유로 차단되는지 Final Review에서 설명해야 함.
+- Analysis result:
+  - `validation-gate-hardening-v1` task를 열고 구현했다.
+  - `app/services/backtest_evidence_read_model.py`에 profile-aware `gate_policy_snapshot`을 추가했다.
+  - Final Review는 `Validation Gate Policy` 표를 표시하고, final decision row에는 compact policy snapshot만 저장한다.
+  - 새 JSONL registry, waiver UI, DB schema, crawler는 추가하지 않았다.
+- Follow-up:
+  - 다음 후보는 기존 JSONL 저장 흐름을 점검하는 `storage-governance-audit-v1` 또는 provider / macro / holdings provenance를 강화하는 `data-provenance-coverage-v1`이다.
+
 ### 2026-05-28 - Investability workflow hardening starts with Phase 0 policy
 - User request:
   - Backtest -> Practical Validation -> Final Review -> Selected Dashboard 흐름을 실전 투자 검토에 더 가깝게 만들기 위한 큰 개발 흐름 진행을 승인함.

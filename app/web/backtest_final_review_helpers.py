@@ -418,6 +418,7 @@ def _build_final_review_decision_row(
     """Create one final review record that includes validation, observation, and decision evidence."""
     now = datetime.now().isoformat(timespec="seconds")
     source_id = str(source.get("source_id") or "").strip()
+    gate_policy_snapshot = dict(dict(investability_packet or {}).get("gate_policy_snapshot") or {})
     row = {
         "schema_version": FINAL_SELECTION_DECISION_V2_SCHEMA_VERSION,
         "decision_id": str(decision_id or "").strip(),
@@ -436,6 +437,7 @@ def _build_final_review_decision_row(
         "selected_components": list(paper_observation.get("active_components") or []),
         "decision_evidence_snapshot": evidence,
         "investability_evidence_packet": dict(investability_packet or {}),
+        "gate_policy_snapshot": gate_policy_snapshot,
         "risk_and_validation_snapshot": {
             "validation_route": validation.get("validation_route"),
             "validation_score": validation.get("validation_score"),

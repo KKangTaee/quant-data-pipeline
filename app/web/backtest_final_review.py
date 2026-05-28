@@ -229,11 +229,13 @@ def _render_paper_observation_summary(paper_observation: dict[str, Any]) -> None
 def _render_investability_packet(packet: dict[str, Any]) -> None:
     summary = dict(packet.get("summary") or {})
     source_chain = dict(packet.get("source_chain") or {})
+    gate_policy = dict(packet.get("gate_policy_snapshot") or {})
+    policy_blocker_count = len(gate_policy.get("blockers") or []) + len(gate_policy.get("review_required") or [])
     route = str(packet.get("route") or "-")
     render_readiness_route_panel(
         route_label=route,
         score=float(packet.get("score") or 0.0),
-        blockers_count=len(packet.get("critical_gaps") or []),
+        blockers_count=policy_blocker_count or len(packet.get("critical_gaps") or []),
         verdict=str(packet.get("verdict") or "-"),
         next_action=str(packet.get("next_action") or "-"),
         route_title="Investability Packet",
@@ -247,17 +249,32 @@ def _render_investability_packet(packet: dict[str, Any]) -> None:
             {"label": "REVIEW", "value": summary.get("review", 0), "tone": "warning"},
             {"label": "BLOCKED", "value": summary.get("blocked", 0), "tone": "danger"},
             {"label": "NOT_RUN", "value": summary.get("not_run", 0), "tone": "neutral"},
+            {"label": "Gate", "value": gate_policy.get("outcome") or "-", "tone": "positive" if gate_policy.get("select_allowed") else "warning"},
             {"label": "Live Approval", "value": "Disabled", "tone": "neutral"},
         ]
     )
     st.caption("이 packet은 새 저장소가 아니라 Final Review에서 기존 validation evidence를 읽는 compact 판단 근거입니다.")
     st.dataframe(pd.DataFrame(packet.get("checks") or []), width="stretch", hide_index=True)
+    policy_rows = list(gate_policy.get("policy_rows") or [])
+    if policy_rows:
+        st.markdown("###### Validation Gate Policy")
+        st.caption("profile-aware gate matrix입니다. `Selected Route = Blocked`이면 선정 대신 보류 / 재검토로 기록합니다.")
+        st.dataframe(pd.DataFrame(policy_rows), width="stretch", hide_index=True)
+        if gate_policy.get("blockers"):
+            for blocker in list(gate_policy.get("blockers") or []):
+                st.error(str(blocker))
+        if gate_policy.get("review_required"):
+            for item in list(gate_policy.get("review_required") or []):
+                st.warning(str(item))
     critical_gaps = list(packet.get("critical_gaps") or [])
     if critical_gaps:
         st.markdown("###### Critical Gaps")
         st.dataframe(pd.DataFrame(critical_gaps), width="stretch", hide_index=True)
     else:
-        st.success("critical gap 없음")
+        if gate_policy.get("blockers") or gate_policy.get("review_required"):
+            st.info("packet critical gap은 없지만 gate policy상 선정 전 보강 항목이 있습니다.")
+        else:
+            st.success("critical gap 없음")
     with st.expander("Assumptions & Limits", expanded=False):
         st.dataframe(pd.DataFrame(packet.get("assumptions_and_limits") or []), width="stretch", hide_index=True)
 

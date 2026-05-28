@@ -71,7 +71,7 @@
 | `app/services/backtest_practical_validation_replay.py` | Streamlit-free Practical Validation replay service. 기존 strategy runtime으로 최신 DB 데이터 기준 재검증하거나 저장 기간 그대로 재현해 component / portfolio curve evidence를 만든다 |
 | `app/services/backtest_practical_validation_curve.py` | Streamlit-free Practical Validation curve normalize / compact records / curve provenance / benchmark parity helper |
 | `app/services/backtest_practical_validation_provider_context.py` | Streamlit-free Practical Validation provider context adapter. ETF operability / holdings / exposure / FRED macro loader 결과를 compact coverage와 diagnostic evidence로 변환 |
-| `app/services/backtest_evidence_read_model.py` | Streamlit-free evidence read model service. Final Review final decision status / investability evidence packet / selected-route gate / saved decision table row / Selected Dashboard evidence check row를 담당 |
+| `app/services/backtest_evidence_read_model.py` | Streamlit-free evidence read model service. Final Review final decision status / investability evidence packet / profile-aware gate policy snapshot / selected-route gate / saved decision table row / Selected Dashboard evidence check row를 담당 |
 
 ## App / Runtime
 

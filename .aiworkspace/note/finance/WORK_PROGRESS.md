@@ -23,9 +23,10 @@ Detailed historical logs were archived on `2026-04-13`.
 
 ### 2026-05-28
 - Opened `.aiworkspace/note/finance/phases/active/investability-decision-foundation/` as the Phase 0 baseline for investability workflow hardening.
-- Captured storage policy, validation gate policy, free-source-first data acquisition policy, wording boundaries, and follow-up task order.
-- Adopted `investability-evidence-packet-v1` as the first landed slice under this broader phase.
-- Next implementation task is `validation-gate-hardening-v1` after reviewing the Phase 0 board.
+- Completed `.aiworkspace/note/finance/tasks/active/validation-gate-hardening-v1/`.
+- Added profile-aware gate policy snapshot to `app/services/backtest_evidence_read_model.py` and Final Review display.
+- Final decision rows now keep compact `gate_policy_snapshot`; no new JSONL registry was added.
+- Next investability foundation choice is storage governance audit versus data provenance / coverage.
 
 ### 2026-05-27
 - Completed Task 7-04 under `.aiworkspace/note/finance/tasks/active/practical-validation-diagnostics-split/`.

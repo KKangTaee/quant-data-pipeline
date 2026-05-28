@@ -7,9 +7,9 @@ Created: 2026-05-28
 
 | Order | Task | Owner | Scope | Status |
 | --- | --- | --- | --- | --- |
-| 0 | `investability-decision-foundation-phase0` | main-dev | phase policy, task graph, roadmap sync | In progress |
-| 1 | `investability-evidence-packet-v1` | `finance-backtest-web-workflow` | Final Review packet / selected route gate / compact snapshot | Landed |
-| 2 | `validation-gate-hardening-v1` | `finance-backtest-web-workflow` | critical diagnostic matrix, route policy, optional waiver design | Planned |
+| 0 | `investability-decision-foundation-phase0` | main-dev | phase policy, task graph, roadmap sync | Complete |
+| 1 | `investability-evidence-packet-v1` | `finance-backtest-web-workflow` | Final Review packet / selected route gate / compact snapshot | Implementation complete |
+| 2 | `validation-gate-hardening-v1` | `finance-backtest-web-workflow` | critical diagnostic matrix, route policy, optional waiver design | Implementation complete |
 | 3 | `storage-governance-audit-v1` | main-dev + doc sync | existing JSONL writes review and keep/remove policy | Planned |
 | 4 | `data-provenance-coverage-v1` | `finance-db-pipeline` | source provenance fields, freshness / coverage read model, free-source-first contracts | Planned |
 | 5 | `look-through-exposure-board-v1` | `finance-db-pipeline` + `finance-backtest-web-workflow` | holdings / exposure coverage board and Final Review summary | Planned |
@@ -19,29 +19,23 @@ Created: 2026-05-28
 
 ## Immediate Next Task
 
-Next recommended implementation task is `validation-gate-hardening-v1`.
+Next recommended implementation task is `storage-governance-audit-v1` or `data-provenance-coverage-v1`.
 
 Goal:
 
-- Turn the current V1 packet gate into an explicit policy matrix.
-- Decide which diagnostics are critical by profile.
-- Define whether structured waiver is allowed and what fields it requires.
-- Keep selected route blocked when there is no safe structured waiver contract.
+- `storage-governance-audit-v1`: existing JSONL writes review and keep/remove/defer policy. This should happen before adding more persistence.
+- `data-provenance-coverage-v1`: source / freshness / coverage fields for DB-backed provider / macro / holdings evidence.
 
 Expected files:
 
-- `app/services/backtest_evidence_read_model.py`
-- `app/web/backtest_final_review_helpers.py`
-- `app/web/backtest_final_review.py`
-- `tests/test_service_contracts.py`
-- `.aiworkspace/note/finance/tasks/active/validation-gate-hardening-v1/`
+- storage governance: runtime JSONL helpers and docs only first; no registry rewrite.
+- data provenance: `finance/data/*`, loaders, Practical Validation provider context, docs/data.
 
 Out of scope for the next task:
 
-- DB schema change
 - new JSONL registry
-- full provider crawler
-- report export
+- registry rewrite
+- user memo storage
 
 ## Dependency Notes
 

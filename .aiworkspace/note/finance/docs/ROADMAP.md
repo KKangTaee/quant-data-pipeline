@@ -8,6 +8,7 @@ Last Verified: 2026-05-28
 | Track | Status | Notes |
 |---|---|---|
 | Investability Decision Foundation | Active | `.aiworkspace/note/finance/phases/active/investability-decision-foundation/`; 저장 정책, validation gate, 데이터 수집 경계, 후속 task 순서를 Phase 0 기준선으로 확정 중 |
+| Validation Gate Hardening V1 | Implementation complete | `.aiworkspace/note/finance/tasks/active/validation-gate-hardening-v1/`; Final Review profile-aware gate policy matrix / compact gate snapshot / selected-route policy gate 구현 |
 | UI Engine Boundary Foundation | Implementation complete | `.aiworkspace/note/finance/phases/active/ui-engine-boundary-foundation/`; audit, Single Backtest, Compare / Weighted / Saved Replay, Practical Validation handoff, Final Review / Selected Dashboard evidence read model, runtime package boundary 완료 |
 | UI Engine Boundary Cleanup | Complete | `.aiworkspace/note/finance/phases/active/ui-engine-boundary-cleanup/`; Task 6~9 완료, `app.services/app.runtime -> app.web` import hard fail 적용 |
 | Documentation System Rebuild | Practical closeout | `.aiworkspace/note/finance/tasks/active/doc-system-rebuild/`; legacy root / operations / research / support / phase history 제거 완료 |
@@ -77,4 +78,4 @@ P2에서 정상화하는 주요 진단:
 
 - UI Engine Boundary Cleanup은 완료됐다. 다음 구조 작업은 새 phase/task로 열고, 현재 경계는 boundary lint와 service contract test를 먼저 통과시키는 기준으로 유지한다.
 - Practical Validation V2는 P2 QA 여부를 확인한 뒤 P3로 넘어갈지, P2를 closeout할지 결정한다.
-- Investability Decision Foundation은 Phase 0 기준선 확정 후 `validation-gate-hardening-v1`로 이어간다. 새 JSONL registry / 사용자 메모 저장 / UI 직접 fetch는 기본 금지로 둔다.
+- Investability Decision Foundation은 `validation-gate-hardening-v1`까지 구현했다. 다음 후보는 새 저장 기능 추가 전 `storage-governance-audit-v1`, 또는 provider / macro / holdings 근거를 더 엄격히 읽는 `data-provenance-coverage-v1`이다.
