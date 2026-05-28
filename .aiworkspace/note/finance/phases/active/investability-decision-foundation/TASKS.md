@@ -14,26 +14,27 @@ Created: 2026-05-28
 | 4 | `data-provenance-coverage-v1` | `finance-db-pipeline` | source provenance fields, freshness / coverage read model, free-source-first contracts | Implementation complete |
 | 5 | `look-through-exposure-board-v1` | `finance-db-pipeline` + `finance-backtest-web-workflow` | holdings / exposure coverage board and Final Review summary | Implementation complete |
 | 6 | `robustness-lab-v1` | `finance-strategy-implementation` + backtest workflow | walk-forward / sensitivity / stress evidence surface | Implementation complete |
-| 7 | `selected-monitoring-timeline-v1` | `finance-backtest-web-workflow` | selected portfolio review signals over time without auto-save sprawl | Planned |
+| 7 | `selected-monitoring-timeline-v1` | `finance-backtest-web-workflow` | selected portfolio review signals over time without auto-save sprawl | Implementation complete |
 | 8 | `decision-dossier-report-v1` | backtest workflow + doc sync | human-readable final decision dossier / export contract | Planned |
 
 ## Immediate Next Task
 
-Next recommended implementation task is `selected-monitoring-timeline-v1`.
+Next recommended implementation task is `decision-dossier-report-v1`.
 
 Goal:
 
-- `selected-monitoring-timeline-v1`: selected portfolio 상태 변화를 자동 저장 없이 review signal timeline으로 읽는다.
+- `decision-dossier-report-v1`: Final Review 판단 근거와 Selected Dashboard evidence를 사람이 읽는 dossier / export contract로 묶는다.
 
 Expected files:
 
-- selected monitoring timeline: `app/runtime/final_selected_portfolios.py`, `app/web/final_selected_portfolio_dashboard*.py`, selected monitoring docs/flows.
+- decision dossier: likely `app/runtime/final_selected_portfolios.py`, `app/web/backtest_final_review*.py`, report/export helper, docs/flows.
 
 Out of scope for the next task:
 
 - new JSONL registry
 - registry rewrite
 - user memo storage
+- live approval / broker order / auto rebalance
 
 ## Dependency Notes
 
@@ -42,7 +43,8 @@ Out of scope for the next task:
 - Task 4 implemented compact source / freshness fields without adding storage.
 - Task 5 implemented a compact look-through board inside provider context; full holdings / exposure rows remain DB-only.
 - Task 6 implemented a compact robustness board from existing stress / rolling / sensitivity / overfit evidence without adding a new registry.
-- Task 7 should avoid automatic monitoring log writes. Monitoring snapshots should be explicit user action unless a later automation policy is approved.
+- Task 7 implemented a read-only Timeline tab and did not add automatic monitoring log writes. Monitoring snapshots should stay explicit user action unless a later automation policy is approved.
+- Task 8 should package existing evidence for human review without becoming another persistence chain.
 
 ## Completion Standard Per Task
 

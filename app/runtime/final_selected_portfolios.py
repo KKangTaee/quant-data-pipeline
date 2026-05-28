@@ -48,6 +48,21 @@ FINAL_SELECTED_PORTFOLIO_DRIFT_ALERT_ROUTE_LABELS = {
     "REBALANCE_REVIEW_ALERT": "리밸런싱 검토 경고",
     "INPUT_REVIEW_ALERT": "입력 확인 경고",
 }
+SELECTED_MONITORING_TIMELINE_SCHEMA_VERSION = "selected_monitoring_timeline_v1"
+SELECTED_MONITORING_TIMELINE_STATUS_LABELS = {
+    "CLEAR": "정상",
+    "WATCH": "관찰",
+    "BREACHED": "재검토",
+    "NEEDS_INPUT": "입력 필요",
+    "OPTIONAL": "선택",
+}
+_TIMELINE_STATUS_RANK = {
+    "OPTIONAL": 0,
+    "CLEAR": 1,
+    "WATCH": 2,
+    "NEEDS_INPUT": 3,
+    "BREACHED": 4,
+}
 
 
 def _optional_float(value: Any) -> float | None:
@@ -595,6 +610,295 @@ def build_selected_portfolio_drift_alert_preview(
             "order_instruction": False,
             "alert_persistence": False,
             "notes": "This preview is read-only and does not save alert records or create orders.",
+        },
+    }
+
+
+def _timeline_status_label(status: str) -> str:
+    return SELECTED_MONITORING_TIMELINE_STATUS_LABELS.get(status, status)
+
+
+def _timeline_overall_status(rows: list[dict[str, Any]]) -> str:
+    statuses = [str(row.get("status") or "OPTIONAL") for row in rows]
+    if not statuses:
+        return "NEEDS_INPUT"
+    return max(statuses, key=lambda status: _TIMELINE_STATUS_RANK.get(status, 0))
+
+
+def _timeline_row(
+    *,
+    order: int,
+    event: str,
+    status: str,
+    signal: str,
+    evidence: str,
+    next_action: str,
+    source: str,
+    timestamp: Any = None,
+) -> dict[str, Any]:
+    return {
+        "order": order,
+        "event": event,
+        "timestamp": _clean_text(_format_date_value(timestamp), "-"),
+        "status": status,
+        "status_label": _timeline_status_label(status),
+        "signal": _clean_text(signal),
+        "evidence": _clean_text(evidence),
+        "next_action": _clean_text(next_action),
+        "source": _clean_text(source),
+    }
+
+
+def _status_from_operation_status(operation_status: str) -> str:
+    if operation_status == "normal":
+        return "CLEAR"
+    if operation_status in {"watch", "rebalance_needed"}:
+        return "WATCH"
+    if operation_status in {"re_review_needed", "blocked"}:
+        return "BREACHED"
+    return "WATCH"
+
+
+def _status_from_recheck_result(recheck_result: dict[str, Any]) -> tuple[str, str, str, str]:
+    if not recheck_result:
+        return (
+            "NEEDS_INPUT",
+            "Performance Recheck not run",
+            "최신 기간 재검증 결과가 아직 없습니다.",
+            "Performance Recheck를 실행해 선정 thesis가 유지되는지 확인합니다.",
+        )
+    if recheck_result.get("status") == "error":
+        error_text = _clean_text(recheck_result.get("error"), "Performance Recheck failed")
+        return (
+            "NEEDS_INPUT",
+            error_text,
+            "성과 유지 여부를 판단하려면 recheck 결과가 필요합니다.",
+            "입력 기간과 selected component contract를 확인한 뒤 다시 실행합니다.",
+        )
+    route = str(recheck_result.get("verdict_route") or "").strip()
+    if route == "SELECTION_THESIS_HOLDS":
+        status = "CLEAR"
+    elif route in {"PERFORMANCE_WEAKENED", "RISK_DRAWDOWN_EXPANDED"}:
+        status = "BREACHED"
+    elif route == "PARTIAL_RECHECK":
+        status = "WATCH"
+    else:
+        status = "WATCH"
+    change = dict(recheck_result.get("change_summary") or {})
+    period = dict(recheck_result.get("period") or {})
+    signal = (
+        f"{route or '-'} / CAGR delta={change.get('cagr_delta_vs_baseline', '-')} / "
+        f"MDD delta={change.get('mdd_delta_vs_baseline', '-')}"
+    )
+    evidence = f"{period.get('start') or '-'} -> {period.get('end') or '-'}"
+    return (
+        status,
+        signal,
+        evidence,
+        _clean_text(recheck_result.get("verdict"), "Performance Recheck 결과를 Review Signals에서 확인합니다."),
+    )
+
+
+def _status_from_drift_check(drift_check: dict[str, Any]) -> tuple[str, str, str, str]:
+    if not drift_check:
+        return (
+            "OPTIONAL",
+            "Actual Allocation not checked",
+            "실제 또는 가상 보유금액 입력은 선택 점검입니다.",
+            "보유금액 배분까지 관리할 때 Actual Allocation tab에서 입력합니다.",
+        )
+    route = str(drift_check.get("route") or "").strip()
+    if route == "DRIFT_ALIGNED":
+        status = "CLEAR"
+    elif route == "DRIFT_WATCH":
+        status = "WATCH"
+    elif route == "REBALANCE_NEEDED":
+        status = "BREACHED"
+    else:
+        status = "NEEDS_INPUT"
+    metrics = dict(drift_check.get("metrics") or {})
+    signal = (
+        f"{drift_check.get('route_label') or route or '-'} / "
+        f"max drift={metrics.get('max_abs_drift', '-')} / "
+        f"current total={metrics.get('current_weight_total', '-')}"
+    )
+    return (
+        status,
+        signal,
+        _clean_text(drift_check.get("verdict")),
+        _clean_text(drift_check.get("next_action")),
+    )
+
+
+def _status_from_alert_preview(alert_preview: dict[str, Any]) -> tuple[str, str, str, str]:
+    if not alert_preview:
+        return (
+            "OPTIONAL",
+            "Alert preview not applied",
+            "drift alert preview는 session state에 반영될 때 timeline에 표시됩니다.",
+            "Actual Allocation에서 Update Review Signals를 누르면 preview를 반영합니다.",
+        )
+    route = str(alert_preview.get("alert_route") or "").strip()
+    if route == "NO_ALERT":
+        status = "CLEAR"
+    elif route == "WATCH_ALERT":
+        status = "WATCH"
+    elif route == "REBALANCE_REVIEW_ALERT":
+        status = "BREACHED"
+    else:
+        status = "NEEDS_INPUT"
+    metrics = dict(alert_preview.get("metrics") or {})
+    signal = (
+        f"{alert_preview.get('alert_route_label') or route or '-'} / "
+        f"rows={metrics.get('alert_row_count', 0)} / "
+        f"triggers={metrics.get('review_trigger_count', 0)}"
+    )
+    return (
+        status,
+        signal,
+        _clean_text(alert_preview.get("verdict")),
+        _clean_text(alert_preview.get("next_action")),
+    )
+
+
+def build_selected_portfolio_monitoring_timeline(
+    row: dict[str, Any],
+    *,
+    recheck_result: dict[str, Any] | None = None,
+    drift_check: dict[str, Any] | None = None,
+    alert_preview: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build a read-only monitoring timeline for a selected portfolio dashboard row."""
+
+    selected = dict(row or {})
+    raw_decision = dict(selected.get("raw_decision") or selected)
+    recheck = dict(recheck_result or {})
+    drift = dict(drift_check or {})
+    alert = dict(alert_preview or {})
+    operation_status = str(selected.get("operation_status") or "").strip()
+    operation_label = _clean_text(selected.get("operation_status_label") or operation_status)
+    rows: list[dict[str, Any]] = [
+        _timeline_row(
+            order=1,
+            event="Final Review selection",
+            timestamp=selected.get("updated_at") or raw_decision.get("updated_at") or raw_decision.get("created_at"),
+            status=_status_from_operation_status(operation_status),
+            signal=operation_label,
+            evidence=_clean_text(selected.get("status_reason")),
+            next_action=(
+                "선정 row를 운영 대상으로 계속 읽습니다."
+                if operation_status == "normal"
+                else "Why Selected에서 남은 blocker와 watch 이유를 먼저 확인합니다."
+            ),
+            source="FINAL_PORTFOLIO_SELECTION_DECISIONS_V2",
+        )
+    ]
+
+    evidence_route = _clean_text(selected.get("evidence_route"))
+    validation_route = _clean_text(selected.get("validation_route"))
+    robustness_route = _clean_text(selected.get("robustness_route"))
+    paper_route = _clean_text(selected.get("paper_observation_route"))
+    blockers = [str(blocker) for blocker in list(selected.get("blockers") or []) if str(blocker)]
+    evidence_clear = (
+        not blockers
+        and evidence_route == "READY_FOR_FINAL_DECISION"
+        and validation_route in {"READY_FOR_FINAL_REVIEW", "READY_FOR_ROBUSTNESS_REVIEW", "-"}
+        and robustness_route in {"READY_FOR_STRESS_SWEEP", "-"}
+        and paper_route in {"PAPER_OBSERVATION_READY", "-"}
+    )
+    rows.append(
+        _timeline_row(
+            order=2,
+            event="Evidence gate snapshot",
+            timestamp=selected.get("updated_at") or raw_decision.get("updated_at") or raw_decision.get("created_at"),
+            status="CLEAR" if evidence_clear else "WATCH",
+            signal=f"evidence={evidence_route} / validation={validation_route} / robustness={robustness_route} / paper={paper_route}",
+            evidence="blockers 없음" if not blockers else ", ".join(blockers[:3]),
+            next_action=(
+                "정기 점검으로 넘어갑니다."
+                if evidence_clear
+                else "Final Review evidence와 gate policy blocker를 다시 확인합니다."
+            ),
+            source="Final Review evidence packet",
+        )
+    )
+
+    recheck_status, recheck_signal, recheck_evidence, recheck_action = _status_from_recheck_result(recheck)
+    recheck_period = dict(recheck.get("period") or {})
+    rows.append(
+        _timeline_row(
+            order=3,
+            event="Performance Recheck",
+            timestamp=recheck_period.get("end"),
+            status=recheck_status,
+            signal=recheck_signal,
+            evidence=recheck_evidence,
+            next_action=recheck_action,
+            source="session_state.performance_recheck",
+        )
+    )
+
+    drift_status, drift_signal, drift_evidence, drift_action = _status_from_drift_check(drift)
+    rows.append(
+        _timeline_row(
+            order=4,
+            event="Actual Allocation drift",
+            timestamp=None,
+            status=drift_status,
+            signal=drift_signal,
+            evidence=drift_evidence,
+            next_action=drift_action,
+            source="session_state.drift_check",
+        )
+    )
+
+    alert_status, alert_signal, alert_evidence, alert_action = _status_from_alert_preview(alert)
+    rows.append(
+        _timeline_row(
+            order=5,
+            event="Review trigger preview",
+            timestamp=None,
+            status=alert_status,
+            signal=alert_signal,
+            evidence=alert_evidence,
+            next_action=alert_action,
+            source="session_state.alert_preview",
+        )
+    )
+
+    timeline_status = _timeline_overall_status(rows)
+    if timeline_status == "BREACHED":
+        conclusion = "재검토가 필요한 monitoring event가 있습니다. BREACHED row의 next action부터 확인합니다."
+    elif timeline_status == "NEEDS_INPUT":
+        conclusion = "timeline을 완성하려면 Performance Recheck 또는 입력값 확인이 필요합니다."
+    elif timeline_status == "WATCH":
+        conclusion = "차단은 아니지만 watch event가 있습니다. 다음 점검에서 같은 항목이 악화되는지 봅니다."
+    else:
+        conclusion = "현재 timeline 기준으로 selected thesis와 운영 점검 상태가 유지됩니다."
+
+    return {
+        "schema_version": SELECTED_MONITORING_TIMELINE_SCHEMA_VERSION,
+        "timeline_status": timeline_status,
+        "timeline_label": _timeline_status_label(timeline_status),
+        "conclusion": conclusion,
+        "rows": rows,
+        "metrics": {
+            "row_count": len(rows),
+            "breached_count": sum(1 for item in rows if item.get("status") == "BREACHED"),
+            "watch_count": sum(1 for item in rows if item.get("status") == "WATCH"),
+            "needs_input_count": sum(1 for item in rows if item.get("status") == "NEEDS_INPUT"),
+            "optional_count": sum(1 for item in rows if item.get("status") == "OPTIONAL"),
+            "performance_recheck_present": bool(recheck),
+            "drift_check_present": bool(drift),
+            "alert_preview_present": bool(alert),
+        },
+        "execution_boundary": {
+            "write_policy": "read_only_timeline",
+            "monitoring_log_auto_write": False,
+            "live_approval": False,
+            "order_instruction": False,
+            "auto_rebalance": False,
+            "notes": "Timeline reads current decision and session results; it does not append monitoring logs.",
         },
     }
 

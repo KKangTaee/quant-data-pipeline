@@ -102,7 +102,7 @@ Operations 보조 화면:
 - `Operations > Ops Review`: 웹앱 ingestion / refresh / factor job의 run health를 점검한다. triage flow, 최근 실행 상태, action inbox, failure CSV, run artifact, related logs, runtime snapshot을 보여주며, job 실행은 `Ingestion`, backtest replay는 `Backtest Run History`, 후보 replay는 `Candidate Library`로 분리한다.
 - `Operations > Backtest Run History`: 저장된 실행 기록을 inspect하고, 가능한 경우 run again, load into form, candidate draft handoff를 수행한다. 후보 검토 흐름의 주 단계가 아니라 과거 실행을 다시 열기 위한 운영 / 재현 도구로 둔다.
 - `Operations > Candidate Library`: `CURRENT_CANDIDATE_REGISTRY.jsonl`과 `PRE_LIVE_CANDIDATE_REGISTRY.jsonl`을 읽어 저장된 후보를 다시 열어 본다. registry에는 compact snapshot만 남으므로, 그래프 / result table이 필요할 때 저장 contract로 DB-backed result curve를 재생성한다. 후보 등록 단계가 아니라 보관함 / 재검토 도구다.
-- `Operations > Selected Portfolio Dashboard`: `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl`에서 `SELECT_FOR_PRACTICAL_PORTFOLIO`로 선정된 row만 읽어 최종 선정 포트폴리오의 compact 선택, Snapshot, 기간 확장 Performance Recheck tabs, Portfolio Monitoring의 Review Signals / Why Selected / optional Actual Allocation / Audit을 보여준다. live approval / broker order / auto rebalance는 disabled로 둔다.
+- `Operations > Selected Portfolio Dashboard`: `FINAL_PORTFOLIO_SELECTION_DECISIONS_V2.jsonl`에서 `SELECT_FOR_PRACTICAL_PORTFOLIO`로 선정된 row만 읽어 최종 선정 포트폴리오의 compact 선택, Snapshot, 기간 확장 Performance Recheck tabs, Portfolio Monitoring의 Timeline / Review Signals / Why Selected / optional Actual Allocation / Audit을 보여준다. Timeline은 selection / evidence gate / recheck / drift / trigger preview를 read-only로 묶으며, live approval / broker order / auto rebalance는 disabled로 둔다.
 
 ## 현재 Reference Guide 제품 흐름
 
@@ -141,7 +141,7 @@ Ingestion / Data Trust
 - `Robustness / Stress Validation Pack`은 Phase 32에서 추가된 surface다. 현재 주 흐름에서는 Practical Validation의 Robustness Lab board가 stress / rolling / sensitivity / overfit 근거를 compact하게 요약하고 Final Review가 같은 board를 읽는다. Strategy-specific parameter perturbation이 아직 없는 항목은 follow-up으로 남기며 PASS로 간주하지 않는다.
 - `Paper Tracking Ledger`는 Phase 33에서 추가된 append-only 기록 흐름이지만, 현재 주 사용자 흐름에서는 Final Review의 inline paper observation 기준으로 흡수한다. 기존 ledger row는 backward compatibility / 과거 QA 기록으로 읽을 수 있다.
 - Phase 35에서 별도 `Post-Selection Guide` panel은 과한 단계로 판단해 active workflow에서 제거했다. 최종 판단과 투자 가능 / 투자하면 안 됨 / 내용 부족 / 재검토 필요 해석은 `Backtest > Final Review`의 saved final decision review에서 확인한다.
-- Phase 36에서 선정 이후 운영 확인은 `Backtest` 주 workflow가 아니라 `Operations > Selected Portfolio Dashboard`로 분리했다. 이 화면은 Final Review selected row를 read-only로 읽고, 사용자가 지정한 시작일 / 종료일 / 가상 투자금으로 selected component contract를 다시 replay해 최신 기간 성과를 확인한다. `Review Signals`는 최신 Performance Recheck와 사용자가 명시적으로 반영한 Actual Allocation 상태를 `Clear / Watch / Breached / Needs Input / Optional`로 번역한다. current value 기반 Actual Allocation을 기본 입력으로 두고, shares x price / current weight 입력은 advanced 입력으로 둔다. shares x price 입력에서는 DB latest close를 보조로 불러올 수 있지만, account holding 자동 연결이나 주문 초안은 만들지 않는다.
+- Phase 36에서 선정 이후 운영 확인은 `Backtest` 주 workflow가 아니라 `Operations > Selected Portfolio Dashboard`로 분리했다. 이 화면은 Final Review selected row를 read-only로 읽고, 사용자가 지정한 시작일 / 종료일 / 가상 투자금으로 selected component contract를 다시 replay해 최신 기간 성과를 확인한다. `Timeline`은 Final Review selection, evidence gate snapshot, Performance Recheck, Actual Allocation drift, Review trigger preview를 시간순으로 보여주며 monitoring log를 자동 저장하지 않는다. `Review Signals`는 최신 Performance Recheck와 사용자가 명시적으로 반영한 Actual Allocation 상태를 `Clear / Watch / Breached / Needs Input / Optional`로 번역한다. current value 기반 Actual Allocation을 기본 입력으로 두고, shares x price / current weight 입력은 advanced 입력으로 둔다. shares x price 입력에서는 DB latest close를 보조로 불러올 수 있지만, account holding 자동 연결이나 주문 초안은 만들지 않는다.
 - Practical Validation P2 provider data는 `Workspace > Ingestion > Practical Validation Provider Snapshots`에서 먼저 수집할 수 있다. `Provider Source Map` tab은 `nyse_etf` / `nyse_asset_profile` 기반으로 ETF별 공식 endpoint와 parser mapping을 검증해 저장한다. 이후 Practical Validation 화면은 loader / provider context를 읽어 12개 진단의 actual / proxy / `NOT_RUN` 상태와 Look-through Exposure Board를 표시한다. 화면 안의 Provider Data Gaps에서도 현재 source에 부족한 provider snapshot을 ETF별로 확인하고, source map discovery와 수집 가능한 항목은 일괄 보강할 수 있다.
 
 현재 Guides 화면은 제품형 의사결정 guide로 정리한다.
@@ -189,10 +189,10 @@ Backtest > Final Review
 
 | 파일 | 역할 |
 |---|---|
-| `app/runtime/final_selected_portfolios.py` | Final Review final decision row를 읽고 selected dashboard row / status summary / selected component performance recheck / current weight 또는 value / holding input 기반 drift check / drift alert preview로 변환 |
+| `app/runtime/final_selected_portfolios.py` | Final Review final decision row를 읽고 selected dashboard row / status summary / selected component performance recheck / current weight 또는 value / holding input 기반 drift check / drift alert preview / monitoring timeline으로 변환 |
 | `app/services/backtest_evidence_read_model.py` | Final Review final decision row의 status / evidence checks를 Streamlit-free read model로 변환 |
-| `app/web/final_selected_portfolio_dashboard.py` | Operations dashboard 화면 render, compact selected portfolio picker, Snapshot, Performance Recheck setup + result tabs, Portfolio Monitoring Review Signals / Why Selected / optional Actual Allocation / Audit 표시 |
-| `app/web/final_selected_portfolio_dashboard_helpers.py` | dashboard table, component table, value / holding input table, drift table, alert preview table, filter helper |
+| `app/web/final_selected_portfolio_dashboard.py` | Operations dashboard 화면 render, compact selected portfolio picker, Snapshot, Performance Recheck setup + result tabs, Portfolio Monitoring Timeline / Review Signals / Why Selected / optional Actual Allocation / Audit 표시 |
+| `app/web/final_selected_portfolio_dashboard_helpers.py` | dashboard table, component table, timeline table, value / holding input table, drift table, alert preview table, filter helper |
 | `app/web/streamlit_app.py` | Operations navigation에 `Selected Portfolio Dashboard` page 등록 |
 
 데이터 기준:
@@ -205,6 +205,7 @@ Backtest > Final Review
   - read-only
   - 새 final decision row를 저장하지 않음
   - proposal / candidate registry를 덮어쓰지 않음
+  - monitoring timeline을 자동 저장하지 않음
 - performance recheck:
   - selected component의 `registry_id`로 Current Candidate Registry의 replay contract를 찾음
   - 사용자가 지정한 recheck start / end / virtual capital로 DB-backed strategy replay 실행
@@ -228,6 +229,7 @@ first-pass status:
 - current value 기반 Actual Allocation을 기본 입력으로 두고, current weight 직접 입력과 shares x price 입력 기반 drift check는 advanced 입력으로 둔다.
 - DB latest close 조회는 shares x price 입력을 돕는 보조 기능이다.
 - Drift Alert / Review Trigger Preview는 read-only 해석이며 alert registry를 저장하지 않는다.
+- Timeline은 현재 decision row와 session-state recheck / drift / alert preview를 읽는 read model이며 monitoring log를 append하지 않는다.
 - account holding 자동 연결, broker order, auto rebalance는 후속 phase에서 별도 계약을 정한 뒤 구현한다.
 
 ## Portfolio Proposal 계약

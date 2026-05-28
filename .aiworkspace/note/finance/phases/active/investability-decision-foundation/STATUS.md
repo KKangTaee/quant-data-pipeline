@@ -19,14 +19,15 @@ Last Updated: 2026-05-28
 - `data-provenance-coverage-v1` added compact provider / macro provenance and freshness read models without adding storage.
 - `look-through-exposure-board-v1` added compact holdings / exposure board rows to Practical Validation and Final Review without adding storage.
 - `robustness-lab-v1` added a compact Robustness Lab board for stress / rolling / sensitivity / overfit evidence without adding storage.
+- `selected-monitoring-timeline-v1` added a read-only Selected Dashboard Timeline for selection, evidence gate, recheck, drift, and trigger preview signals without adding storage.
 
 ## In Progress
 
-- Prepare `selected-monitoring-timeline-v1` as the next implementation slice.
+- Prepare `decision-dossier-report-v1` as the next implementation slice.
 
 ## Next
 
-1. Use `selected-monitoring-timeline-v1` to make selected portfolio review signals easier to follow without automatic log sprawl.
+1. Use `decision-dossier-report-v1` to make final decision evidence easier to hand off as a human-readable dossier without adding a new registry chain.
 2. Decide structured waiver policy before allowing selected-route override.
 3. Keep storage governance checklist mandatory before adding persistence.
 
@@ -41,3 +42,4 @@ Last Updated: 2026-05-28
 - Stale provider snapshot evidence is REVIEW, not PASS.
 - Look-through board rows are compact summaries; full holdings / exposure rows stay in DB.
 - Robustness Lab rows are compact summaries; raw run history and strategy-specific perturbation artifacts are not stored in JSONL.
+- Selected Monitoring Timeline rows are read-only summaries from existing final decision and session-state checks; they are not monitoring log writes.

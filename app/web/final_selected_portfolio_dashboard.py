@@ -15,6 +15,7 @@ from app.web.final_selected_portfolio_dashboard_helpers import (
     build_selected_portfolio_component_table,
     build_selected_portfolio_dashboard_table,
     build_selected_portfolio_evidence_table,
+    build_selected_portfolio_monitoring_timeline_table,
     filter_selected_portfolio_rows,
     final_selected_portfolio_label,
     selected_portfolio_active_components,
@@ -30,6 +31,7 @@ from app.runtime import (
     build_selected_portfolio_current_weight_inputs,
     build_selected_portfolio_drift_alert_preview,
     build_selected_portfolio_drift_check,
+    build_selected_portfolio_monitoring_timeline,
     build_selected_portfolio_performance_recheck,
     build_selected_portfolio_recheck_defaults,
     load_final_selected_portfolio_dashboard,
@@ -58,11 +60,12 @@ def _alert_tone(alert_route: str) -> str:
 
 
 def _review_trigger_tone(status: str) -> str:
-    if status == "Clear":
+    normalized = str(status or "")
+    if normalized in {"Clear", "CLEAR"}:
         return "positive"
-    if status == "Watch":
+    if normalized in {"Watch", "WATCH", "Needs Input", "NEEDS_INPUT"}:
         return "warning"
-    if status == "Breached":
+    if normalized in {"Breached", "BREACHED"}:
         return "danger"
     return "neutral"
 
@@ -359,6 +362,10 @@ def _latest_drift_check(row: dict[str, Any]) -> dict[str, Any]:
     return dict(st.session_state.get(f"selected_portfolio_drift_check_result_{_decision_key(row)}") or {})
 
 
+def _latest_drift_alert_preview(row: dict[str, Any]) -> dict[str, Any]:
+    return dict(st.session_state.get(f"selected_portfolio_drift_alert_result_{_decision_key(row)}") or {})
+
+
 def _trigger_row(
     *,
     trigger: str,
@@ -646,25 +653,31 @@ def _render_operator_context(row: dict[str, Any]) -> None:
     _render_info_card_grid(
         [
             {
-                "title": "1. Review Signals",
+                "title": "1. Timeline",
+                "value": "Read Only",
+                "detail": "선정, 재검증, drift, trigger preview를 시간순으로 확인",
+                "tone": "neutral",
+            },
+            {
+                "title": "2. Review Signals",
                 "value": "Latest Check",
                 "detail": "성과 약화, drawdown 확대, benchmark 우위, allocation drift를 한 번에 확인",
                 "tone": "neutral",
             },
             {
-                "title": "2. Why Selected",
+                "title": "3. Why Selected",
                 "value": row.get("evidence_route"),
                 "detail": "Final Review에서 이 포트폴리오를 통과시킨 근거",
                 "tone": "positive" if not blockers else "warning",
             },
             {
-                "title": "3. Actual Allocation",
+                "title": "4. Actual Allocation",
                 "value": "Optional",
                 "detail": "실제 또는 가상 보유금액을 target allocation과 비교할 때만 사용",
                 "tone": "neutral",
             },
             {
-                "title": "4. Audit",
+                "title": "5. Audit",
                 "value": "Read Only",
                 "detail": "승인, 주문, 자동 리밸런싱은 생성하지 않음",
                 "tone": "neutral",
@@ -673,9 +686,60 @@ def _render_operator_context(row: dict[str, Any]) -> None:
         min_width=190,
     )
     evidence_df = build_selected_portfolio_evidence_table(row)
-    trigger_tab, evidence_tab, allocation_tab, audit_tab = st.tabs(
-        ["Review Signals", "Why Selected", "Actual Allocation", "Audit"]
+    timeline_tab, trigger_tab, evidence_tab, allocation_tab, audit_tab = st.tabs(
+        ["Timeline", "Review Signals", "Why Selected", "Actual Allocation", "Audit"]
     )
+    with timeline_tab:
+        st.caption(
+            "Final Review 선정 이후 현재 화면에서 확인한 신호를 시간순으로 읽습니다. "
+            "이 timeline은 monitoring log를 자동 저장하지 않습니다."
+        )
+        timeline = build_selected_portfolio_monitoring_timeline(
+            row,
+            recheck_result=_latest_recheck_result(row),
+            drift_check=_latest_drift_check(row),
+            alert_preview=_latest_drift_alert_preview(row),
+        )
+        metrics = dict(timeline.get("metrics") or {})
+        boundary = dict(timeline.get("execution_boundary") or {})
+        render_badge_strip(
+            [
+                {
+                    "label": "Timeline",
+                    "value": timeline.get("timeline_label"),
+                    "tone": _review_trigger_tone(str(timeline.get("timeline_status") or "")),
+                },
+                {"label": "Rows", "value": metrics.get("row_count", 0), "tone": "neutral"},
+                {
+                    "label": "Needs Input",
+                    "value": metrics.get("needs_input_count", 0),
+                    "tone": "warning" if metrics.get("needs_input_count") else "neutral",
+                },
+                {
+                    "label": "Breached",
+                    "value": metrics.get("breached_count", 0),
+                    "tone": "danger" if metrics.get("breached_count") else "neutral",
+                },
+                {"label": "Auto Save", "value": "Disabled", "tone": "neutral"},
+            ]
+        )
+        status = str(timeline.get("timeline_status") or "")
+        conclusion = str(timeline.get("conclusion") or "-")
+        if status == "BREACHED":
+            st.warning(conclusion)
+        elif status in {"WATCH", "NEEDS_INPUT"}:
+            st.info(conclusion)
+        else:
+            st.success(conclusion)
+        timeline_df = build_selected_portfolio_monitoring_timeline_table(timeline)
+        if timeline_df.empty:
+            st.info("표시할 timeline row가 없습니다.")
+        else:
+            st.dataframe(timeline_df, width="stretch", hide_index=True)
+        st.caption(
+            f"Write policy: {boundary.get('write_policy') or '-'} / "
+            f"monitoring auto write: {boundary.get('monitoring_log_auto_write')}"
+        )
     with trigger_tab:
         st.caption(
             "Performance Recheck와 Actual Allocation의 최신 입력을 운영 signal 상태로 번역합니다. "

@@ -22,6 +22,10 @@ Detailed historical logs were archived on `2026-04-13`.
 ## Entries
 
 ### 2026-05-28
+- Completed `.aiworkspace/note/finance/tasks/active/selected-monitoring-timeline-v1/`.
+- Selected Portfolio Dashboard now has a read-only Timeline tab for Final Review selection, evidence gate, Performance Recheck, Actual Allocation drift, and review trigger preview.
+- Timeline generation does not append monitoring logs, create user memo storage, approve orders, or trigger auto rebalance.
+- Next implementation candidate is `decision-dossier-report-v1`.
 - Completed `.aiworkspace/note/finance/tasks/active/robustness-lab-v1/`.
 - Practical Validation now builds a compact `robustness_lab_board` from existing stress / rolling / sensitivity / overfit evidence.
 - Practical Validation, Final Review, and final decision evidence rows read the same board without adding a new JSONL registry or storing raw perturbation artifacts.

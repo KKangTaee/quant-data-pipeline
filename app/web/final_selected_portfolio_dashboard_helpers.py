@@ -192,6 +192,24 @@ def build_selected_portfolio_evidence_table(row: dict[str, Any]) -> pd.DataFrame
     return pd.DataFrame(build_final_decision_evidence_rows(row))
 
 
+def build_selected_portfolio_monitoring_timeline_table(timeline: dict[str, Any]) -> pd.DataFrame:
+    display_rows: list[dict[str, Any]] = []
+    for row in list(timeline.get("rows") or []):
+        display_rows.append(
+            {
+                "Order": row.get("order"),
+                "Event": row.get("event"),
+                "When": row.get("timestamp"),
+                "Status": row.get("status_label") or row.get("status"),
+                "Signal": row.get("signal"),
+                "Evidence": row.get("evidence"),
+                "Next Action": row.get("next_action"),
+                "Source": row.get("source"),
+            }
+        )
+    return pd.DataFrame(display_rows)
+
+
 def filter_selected_portfolio_rows(
     rows: list[dict[str, Any]],
     *,

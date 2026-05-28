@@ -25,6 +25,9 @@ This phase belongs to `main-dev`.
 | `app/services/backtest_practical_validation_diagnostics.py` | Practical Validation result schema includes compact provider coverage summary |
 | `app/services/backtest_practical_validation_stress_sensitivity.py` | stress / rolling / sensitivity / overfit evidence and Robustness Lab board share this helper |
 | `app/web/backtest_practical_validation.py` | Provider Coverage, Look-through Board, Provider Data Gaps share the same visible validation area |
+| `app/runtime/final_selected_portfolios.py` | Selected Dashboard row, recheck, drift, alert preview, and monitoring timeline share this read model |
+| `app/web/final_selected_portfolio_dashboard.py` | Selected Dashboard Timeline / Review Signals / Allocation tabs share session-state context |
+| `app/web/final_selected_portfolio_dashboard_helpers.py` | Selected Dashboard table conversion helpers include timeline / drift / alert display rows |
 | `tests/test_service_contracts.py` | focused contract tests for read model / gate behavior |
 | `.aiworkspace/note/finance/docs/ROADMAP.md` | active work map |
 | `.aiworkspace/note/finance/docs/flows/PORTFOLIO_SELECTION_FLOW.md` | user-facing workflow semantics |
@@ -38,7 +41,7 @@ This phase belongs to `main-dev`.
 4. Data provenance and provider coverage contract.
 5. Look-through board.
 6. Robustness Lab.
-7. Monitoring timeline.
+7. Monitoring timeline. Complete.
 8. Decision dossier / report.
 
 ## Verification Baseline
@@ -59,6 +62,14 @@ Backtest / Final Review visible changes:
 ```
 
 Use Browser smoke when visible Streamlit behavior changes.
+
+Selected Dashboard visible changes:
+
+```bash
+.venv/bin/python -m py_compile app/runtime/final_selected_portfolios.py app/runtime/__init__.py app/web/final_selected_portfolio_dashboard.py app/web/final_selected_portfolio_dashboard_helpers.py
+.venv/bin/python -m unittest tests/test_service_contracts.py
+.venv/bin/python .aiworkspace/plugins/quant-finance-workflow/scripts/check_ui_engine_boundary.py
+```
 
 ## Commit Policy
 

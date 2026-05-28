@@ -1151,5 +1151,82 @@ class FinalReviewEvidenceReadModelContractTests(unittest.TestCase):
         self.assertEqual(row["gate_policy_snapshot"]["policy_rows"][0]["Group"], "benchmark")
 
 
+class SelectedPortfolioMonitoringTimelineContractTests(unittest.TestCase):
+    def _selected_row(self) -> dict:
+        return {
+            "decision_id": "decision-selected",
+            "updated_at": "2026-05-28T10:00:00",
+            "operation_status": "normal",
+            "operation_status_label": "정상 관찰",
+            "status_reason": "selected row is operational",
+            "evidence_route": "READY_FOR_FINAL_DECISION",
+            "validation_route": "READY_FOR_FINAL_REVIEW",
+            "robustness_route": "READY_FOR_STRESS_SWEEP",
+            "paper_observation_route": "PAPER_OBSERVATION_READY",
+            "review_cadence": "monthly_or_rebalance_review",
+            "review_triggers": ["CAGR deterioration review"],
+            "blockers": [],
+            "raw_decision": {
+                "decision_id": "decision-selected",
+                "updated_at": "2026-05-28T10:00:00",
+            },
+        }
+
+    def test_monitoring_timeline_is_read_only_and_requires_recheck_input(self) -> None:
+        from app.runtime.final_selected_portfolios import build_selected_portfolio_monitoring_timeline
+
+        timeline = build_selected_portfolio_monitoring_timeline(self._selected_row())
+
+        self.assertEqual(timeline["schema_version"], "selected_monitoring_timeline_v1")
+        self.assertEqual(timeline["timeline_status"], "NEEDS_INPUT")
+        self.assertEqual([row["event"] for row in timeline["rows"]], [
+            "Final Review selection",
+            "Evidence gate snapshot",
+            "Performance Recheck",
+            "Actual Allocation drift",
+            "Review trigger preview",
+        ])
+        self.assertFalse(timeline["execution_boundary"]["monitoring_log_auto_write"])
+        self.assertEqual(timeline["execution_boundary"]["write_policy"], "read_only_timeline")
+
+    def test_monitoring_timeline_surfaces_recheck_breach_and_drift_watch(self) -> None:
+        from app.runtime.final_selected_portfolios import build_selected_portfolio_monitoring_timeline
+
+        timeline = build_selected_portfolio_monitoring_timeline(
+            self._selected_row(),
+            recheck_result={
+                "status": "ok",
+                "verdict_route": "PERFORMANCE_WEAKENED",
+                "verdict": "원래 검증 대비 CAGR이 의미 있게 낮아졌습니다.",
+                "period": {"start": "2024-01-01", "end": "2026-05-28"},
+                "change_summary": {
+                    "cagr_delta_vs_baseline": -0.05,
+                    "mdd_delta_vs_baseline": -0.02,
+                },
+            },
+            drift_check={
+                "route": "DRIFT_WATCH",
+                "route_label": "비중 관찰 필요",
+                "verdict": "일부 drift가 watch 기준을 넘었습니다.",
+                "next_action": "다음 점검일에 drift 확대 여부를 확인합니다.",
+                "metrics": {"max_abs_drift": 2.5, "current_weight_total": 100.0},
+            },
+            alert_preview={
+                "alert_route": "WATCH_ALERT",
+                "alert_route_label": "관찰 경고",
+                "verdict": "watch component를 다음 관찰 주기에 확인합니다.",
+                "next_action": "watch component의 drift 확대 여부를 봅니다.",
+                "metrics": {"alert_row_count": 2, "review_trigger_count": 1},
+            },
+        )
+
+        self.assertEqual(timeline["timeline_status"], "BREACHED")
+        by_event = {row["event"]: row for row in timeline["rows"]}
+        self.assertEqual(by_event["Performance Recheck"]["status"], "BREACHED")
+        self.assertEqual(by_event["Actual Allocation drift"]["status"], "WATCH")
+        self.assertEqual(by_event["Review trigger preview"]["status"], "WATCH")
+        self.assertFalse(timeline["execution_boundary"]["auto_rebalance"])
+
+
 if __name__ == "__main__":
     unittest.main()

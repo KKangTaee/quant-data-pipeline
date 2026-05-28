@@ -21,6 +21,19 @@ Detailed historical analysis was archived on `2026-04-13`.
 
 ## Entries
 
+### 2026-05-28 - Selected monitoring은 read-only timeline으로 읽는다
+- User request:
+  - Investability Decision Foundation의 다음 작업 진행을 요청함.
+- Interpreted goal:
+  - selected 이후 상태 변화를 새 자동 저장 없이 시간순으로 확인할 수 있어야 함.
+- Analysis result:
+  - `selected-monitoring-timeline-v1` task를 열고 구현했다.
+  - Selected Dashboard Timeline은 Final Review selection, evidence gate snapshot, Performance Recheck, Actual Allocation drift, Review trigger preview를 compact row로 묶는다.
+  - Missing Performance Recheck는 `NEEDS_INPUT`이며, Actual Allocation과 alert preview는 입력이 있을 때만 반영되는 optional session-state evidence다.
+  - Timeline은 `read_only_timeline`이고 `SELECTED_PORTFOLIO_MONITORING_LOG.jsonl`를 자동 append하지 않는다.
+- Follow-up:
+  - 다음 후보는 final decision evidence를 사람이 읽는 dossier / export contract로 묶는 `decision-dossier-report-v1`이다.
+
 ### 2026-05-28 - Robustness evidence는 compact lab board로 읽는다
 - User request:
   - Investability Decision Foundation의 다음 작업 진행을 요청함.
